@@ -293,7 +293,7 @@ static void generate(private_encryption_payload_t *this)
 		/* no paylads? */
 		DBG2(DBG_ENC, "generating contained payloads, but none available");
 		free(this->decrypted.ptr);
-		this->decrypted = CHUNK_INITIALIZER;
+		this->decrypted = chunk_empty;
 		iterator->destroy(iterator);
 		return;
 	}
@@ -636,8 +636,8 @@ encryption_payload_t *encryption_payload_create()
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = ENCRYPTION_PAYLOAD_HEADER_LENGTH;
-	this->encrypted = CHUNK_INITIALIZER;
-	this->decrypted = CHUNK_INITIALIZER;
+	this->encrypted = chunk_empty;
+	this->decrypted = chunk_empty;
 	this->signer = NULL;
 	this->crypter = NULL;
 	this->payloads = linked_list_create();

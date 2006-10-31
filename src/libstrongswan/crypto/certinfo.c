@@ -22,8 +22,7 @@
 
 #include <time.h>
 
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 
 #include "certinfo.h"
 

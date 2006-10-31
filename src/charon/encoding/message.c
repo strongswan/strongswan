@@ -28,7 +28,7 @@
 
 #include "message.h"
 
-#include <types.h>
+#include <library.h>
 #include <daemon.h>
 #include <sa/ike_sa_id.h>
 #include <encoding/generator.h>
@@ -589,23 +589,11 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * arginfo handler in printf()
- */
-static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
  * register printf() handlers
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(MESSAGE_PRINTF_SPEC, print, print_arginfo);
+	register_printf_function(PRINTF_MESSAGE, print, arginfo_ptr);
 }
 
 /**

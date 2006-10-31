@@ -685,7 +685,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		}
 		else
 		{
-			my_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);
+			my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 		}
 	}
 	
@@ -1116,10 +1116,10 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa)
 	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
-	this->nonce_i = CHUNK_INITIALIZER;
-	this->nonce_r = CHUNK_INITIALIZER;
-	this->init_request = CHUNK_INITIALIZER;
-	this->init_response = CHUNK_INITIALIZER;
+	this->nonce_i = chunk_empty;
+	this->nonce_r = chunk_empty;
+	this->init_request = chunk_empty;
+	this->init_response = chunk_empty;
 	this->child_sa = NULL;
 	this->proposal = NULL;
 	this->tsi = NULL;

@@ -25,7 +25,7 @@
 
 typedef struct local_policy_store_t local_policy_store_t;
 
-#include <types.h>
+#include <library.h>
 #include <config/policies/policy_store.h>
 
 

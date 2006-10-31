@@ -25,9 +25,8 @@
 #include <string.h>
 #include <printf.h>
 
-#include <types.h>
 #include <library.h>
-#include <definitions.h>
+#include <debug.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
@@ -219,7 +218,7 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 	asn1_ctx_t ctx;
 	bool critical;
 	chunk_t extnID;
-	chunk_t userCertificate = CHUNK_INITIALIZER;
+	chunk_t userCertificate = chunk_empty;
 	revokedCert_t *revokedCert = NULL;
 	chunk_t object;
 	u_int level;
@@ -474,33 +473,11 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * arginfo handler in printf()
- */
-static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (info->alt)
-	{
-		if (n > 1)
-		{
-			argtypes[0] = PA_POINTER;
-			argtypes[1] = PA_INT;
-		}
-		return 2;
-	}
-	
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
  * register printf() handlers
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(CRL_PRINTF_SPEC, print, print_arginfo);
+	register_printf_function(PRINTF_CRL, print, arginfo_ptr_alt_ptr_int);
 }
 
 /*
@@ -512,11 +489,11 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 	
 	/* initialize */
 	this->crlDistributionPoints = linked_list_create();
-	this->tbsCertList = CHUNK_INITIALIZER;
+	this->tbsCertList = chunk_empty;
 	this->issuer = NULL;
 	this->revokedCertificates = linked_list_create();
-	this->authKeyID = CHUNK_INITIALIZER;
-	this->authKeySerialNumber = CHUNK_INITIALIZER;
+	this->authKeyID = chunk_empty;
+	this->authKeySerialNumber = chunk_empty;
 	
 	/* public functions */
 	this->public.get_issuer = (identification_t* (*) (const crl_t*))get_issuer;
@@ -543,7 +520,7 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 crl_t *crl_create_from_file(const char *filename)
 {
 	bool pgp = FALSE;
-	chunk_t chunk = CHUNK_INITIALIZER;
+	chunk_t chunk = chunk_empty;
 	crl_t *crl = NULL;
 
 	if (!pem_asn1_load_file(filename, NULL, "crl", &chunk, &pgp))

@@ -27,9 +27,7 @@
 typedef enum encoding_type_t encoding_type_t;
 typedef struct encoding_rule_t encoding_rule_t;
 
-
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 
 /**
  * @brief All different kinds of encoding types. 

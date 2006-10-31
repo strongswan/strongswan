@@ -26,7 +26,7 @@
 
 typedef struct packet_t packet_t;
 
-#include <types.h>
+#include <library.h>
 #include <utils/host.h>
 
 /**

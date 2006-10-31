@@ -19,7 +19,7 @@
 #include <stdarg.h>
 #include <gmp.h>
 
-#include <types.h>
+#include <library.h>
 #include <asn1/oid.h>
 
 

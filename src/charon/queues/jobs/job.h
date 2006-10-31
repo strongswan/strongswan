@@ -27,8 +27,7 @@
 typedef enum job_type_t job_type_t;
 typedef struct job_t job_t;
 
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 
 /**
  * @brief Definition of the various job types.

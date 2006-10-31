@@ -34,7 +34,7 @@
 
 #include "stroke_interface.h"
 
-#include <types.h>
+#include <library.h>
 #include <stroke.h>
 #include <daemon.h>
 #include <crypto/x509.h>

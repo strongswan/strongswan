@@ -1,5 +1,13 @@
+/**
+ * @file library.c
+ *
+ * @brief Logging functions for the library.
+ *
+ */
+
 /*
- * Copyright (C) 2001-2004 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2006 Martin Willi
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -12,16 +20,22 @@
  * for more details.
  */
 
-#ifndef PEM_H_
-#define PEM_H_
-
+#include <stdarg.h>
 #include <stdio.h>
 
-#include <library.h>
+#include "debug.h"
 
-err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp);
+/**
+ * default dbg function which printf all to stderr
+ */
+static void dbg_stderr(int level, char *fmt, ...)
+{
+	va_list args;
+	
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	fprintf(stderr, "\n");
+	va_end(args);
+}
 
-bool pem_asn1_load_file(const char *filename, chunk_t *passphrase,
-						const char *type, chunk_t *blob, bool *pgp);
-
-#endif /*PEM_H_*/
+void (*dbg) (int level, char *fmt, ...) = dbg_stderr;

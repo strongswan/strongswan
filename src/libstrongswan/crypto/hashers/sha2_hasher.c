@@ -27,8 +27,6 @@
 
 #include "sha2_hasher.h"
 
-#include <definitions.h>
-
 
 typedef struct private_sha512_hasher_t private_sha512_hasher_t;
 

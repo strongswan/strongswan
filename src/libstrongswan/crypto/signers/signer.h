@@ -27,8 +27,7 @@
 typedef enum integrity_algorithm_t integrity_algorithm_t;
 typedef struct signer_t signer_t;
 
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 
 /**
  * @brief Integrity algorithm, as in IKEv2 RFC 3.3.2.

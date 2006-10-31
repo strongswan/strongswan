@@ -157,11 +157,9 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 	
 	if (found)
 	{
-		identification_t *found_my_id = found->get_my_id(found);
-		identification_t *found_other_id = found->get_other_id(found);
-		
 		DBG1(DBG_CFG, "found matching policy '%s': %D...%D (prio=%d)",
-			 found->get_name(found), found_my_id, found_other_id, best_prio);
+			 found->get_name(found), found->get_my_id(found),
+			 found->get_other_id(found), best_prio);
 		/* give out a new reference to it */
 		found->get_ref(found);
 	}

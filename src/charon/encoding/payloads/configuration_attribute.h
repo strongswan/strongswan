@@ -27,7 +27,7 @@
 typedef enum configuration_attribute_type_t configuration_attribute_type_t;
 typedef struct configuration_attribute_t configuration_attribute_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 
 

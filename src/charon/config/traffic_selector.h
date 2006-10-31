@@ -27,13 +27,8 @@
 typedef enum ts_type_t ts_type_t;
 typedef struct traffic_selector_t traffic_selector_t;
 
-#include <types.h>
+#include <library.h>
 #include <utils/host.h>
-
-/**
- * printf() specifier for tRaffic selectors
- */
-#define TRAFFIC_SELECTOR_PRINTF_SPEC 'R'
 
 /**
  * Traffic selector types.

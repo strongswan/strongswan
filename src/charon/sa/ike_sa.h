@@ -28,7 +28,7 @@
 typedef enum ike_sa_state_t ike_sa_state_t;
 typedef struct ike_sa_t ike_sa_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/message.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <sa/ike_sa_id.h>
@@ -42,8 +42,6 @@ typedef struct ike_sa_t ike_sa_t;
 #include <config/connections/connection.h>
 #include <config/policies/policy.h>
 #include <config/proposal.h>
-
-#define IKE_SA_PRINTF_SPEC 'K'
 
 /**
  * @brief State of an IKE_SA.

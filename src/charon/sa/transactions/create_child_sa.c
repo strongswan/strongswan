@@ -540,7 +540,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING ||
 		this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
-		build_notify(NO_ADDITIONAL_SAS, CHUNK_INITIALIZER, response, TRUE);
+		build_notify(NO_ADDITIONAL_SAS, chunk_empty, response, TRUE);
 		DBG1(DBG_IKE, "unable to create new CHILD_SAs, as rekeying in progress");
 		return FAILED;
 	}
@@ -605,7 +605,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	/* check if we have all payloads */
 	if (!(sa_request && nonce_request && tsi_request && tsr_request))
 	{
-		build_notify(INVALID_SYNTAX, CHUNK_INITIALIZER, response, TRUE);
+		build_notify(INVALID_SYNTAX, chunk_empty, response, TRUE);
 		SIG(this->failsig, "request message incomplete, no CHILD_SA created");
 		return FAILED;
 	}
@@ -615,7 +615,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
 			NONCE_SIZE, &this->nonce_r) != SUCCESS)
 		{
-			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+			build_notify(NO_PROPOSAL_CHOSEN, chunk_empty, response, TRUE);
 			SIG(this->failsig, "nonce generation failed, no CHILD_SA created");
 			return FAILED;
 		}
@@ -649,7 +649,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		if (this->policy == NULL)
 		{
 			SIG(this->failsig, "no acceptable policy found, sending TS_UNACCEPTABLE notify");
-			build_notify(TS_UNACCEPTABLE, CHUNK_INITIALIZER, response, TRUE);
+			build_notify(TS_UNACCEPTABLE, chunk_empty, response, TRUE);
 			return FAILED;
 		}
 	}
@@ -672,14 +672,14 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		if (this->proposal == NULL)
 		{
 			SIG(this->failsig, "CHILD_SA proposals unacceptable, sending NO_PROPOSAL_CHOSEN notify");
-			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+			build_notify(NO_PROPOSAL_CHOSEN, chunk_empty, response, TRUE);
 			return FAILED;
 		}
 		/* do we have traffic selectors? */
 		else if (this->tsi->get_count(this->tsi) == 0 || this->tsr->get_count(this->tsr) == 0)
 		{
 			SIG(this->failsig, "CHILD_SA traffic selectors unacceptable, sending TS_UNACCEPTABLE notify");
-			build_notify(TS_UNACCEPTABLE, CHUNK_INITIALIZER, response, TRUE);
+			build_notify(TS_UNACCEPTABLE, chunk_empty, response, TRUE);
 			return FAILED;
 		}
 		else
@@ -700,7 +700,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 			if (install_child_sa(this, FALSE) != SUCCESS)
 			{
 				SIG(this->failsig, "installing CHILD_SA failed, sending NO_PROPOSAL_CHOSEN notify");
-				build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+				build_notify(NO_PROPOSAL_CHOSEN, chunk_empty, response, TRUE);
 				return FAILED;
 			}
 			/* add proposal to sa payload */
@@ -975,9 +975,9 @@ create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa)
 	this->requested = 0;
 	this->rekey_spi = 0;
 	this->reqid = 0;
-	this->nonce_i = CHUNK_INITIALIZER;
-	this->nonce_r = CHUNK_INITIALIZER;
-	this->nonce_s = CHUNK_INITIALIZER;
+	this->nonce_i = chunk_empty;
+	this->nonce_r = chunk_empty;
+	this->nonce_s = chunk_empty;
 	this->child_sa = NULL;
 	this->rekeyed_sa = NULL;
 	this->lost = FALSE;

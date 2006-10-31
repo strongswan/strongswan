@@ -27,7 +27,7 @@
 
 typedef struct message_t message_t;
 
-#include <types.h>
+#include <library.h>
 #include <sa/ike_sa_id.h>
 #include <network/packet.h>
 #include <encoding/payloads/ike_header.h>
@@ -35,11 +35,6 @@ typedef struct message_t message_t;
 #include <utils/linked_list.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
-
-/**
- * printf() specifier for message
- */
-#define MESSAGE_PRINTF_SPEC 'M'
 
 /**
  * @brief This class is used to represent an IKEv2-Message.

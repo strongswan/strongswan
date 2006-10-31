@@ -28,8 +28,7 @@ typedef struct rsa_public_key_t rsa_public_key_t;
 
 #include <gmp.h>
 
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 
 /**
  * @brief RSA public key with associated functions.

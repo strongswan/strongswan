@@ -27,7 +27,7 @@
 
 typedef struct ts_payload_t ts_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <utils/linked_list.h>
 #include <config/traffic_selector.h>
 #include <encoding/payloads/payload.h>

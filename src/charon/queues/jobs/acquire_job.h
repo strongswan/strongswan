@@ -25,7 +25,7 @@
 
 typedef struct acquire_job_t acquire_job_t;
 
-#include <types.h>
+#include <library.h>
 #include <queues/jobs/job.h>
 
 /**

@@ -27,7 +27,7 @@
 typedef enum exchange_type_t exchange_type_t;
 typedef struct ike_header_t ike_header_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 
 /**

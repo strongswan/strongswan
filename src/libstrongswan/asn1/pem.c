@@ -23,6 +23,7 @@
 #include "pem.h"
 
 #include <library.h>
+#include <debug.h>
 #include <asn1/asn1.h>
 #include <asn1/ttodata.h>
 
@@ -53,7 +54,7 @@ static bool present(const char* pattern, chunk_t* ch)
  */
 static bool find_boundary(const char* tag, chunk_t *line)
 {
-	chunk_t name = CHUNK_INITIALIZER;
+	chunk_t name = chunk_empty;
 
 	if (!present("-----", line))
 		return FALSE;
@@ -162,8 +163,8 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 
 	chunk_t src    = *blob;
 	chunk_t dst    = *blob;
-	chunk_t line   = CHUNK_INITIALIZER;
-	chunk_t iv     = CHUNK_INITIALIZER;
+	chunk_t line   = chunk_empty;
+	chunk_t iv     = chunk_empty;
 
 	u_char iv_buf[16]; /* MD5 digest size */
 
@@ -198,8 +199,8 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 			if (state == PEM_HEADER)
 			{
 				err_t ugh = NULL;
-				chunk_t name  = CHUNK_INITIALIZER;
-				chunk_t value = CHUNK_INITIALIZER;
+				chunk_t name  = chunk_empty;
+				chunk_t value = chunk_empty;
 
 				/* an empty line separates HEADER and BODY */
 				if (line.len == 0)

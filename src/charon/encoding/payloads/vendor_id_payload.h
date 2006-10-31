@@ -26,7 +26,7 @@
 
 typedef struct vendor_id_payload_t vendor_id_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 
 /**

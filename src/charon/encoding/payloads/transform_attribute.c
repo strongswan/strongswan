@@ -27,7 +27,7 @@
 #include "transform_attribute.h"
 
 #include <encoding/payloads/encodings.h>
-#include <types.h>
+#include <library.h>
 
 typedef struct private_transform_attribute_t private_transform_attribute_t;
 

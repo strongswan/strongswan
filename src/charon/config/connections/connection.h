@@ -27,7 +27,7 @@
 typedef enum cert_policy_t cert_policy_t;
 typedef struct connection_t connection_t;
 
-#include <types.h>
+#include <library.h>
 #include <utils/host.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>

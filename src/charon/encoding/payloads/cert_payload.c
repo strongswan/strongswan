@@ -271,7 +271,7 @@ cert_payload_t *cert_payload_create()
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length =CERT_PAYLOAD_HEADER_LENGTH;
-	this->cert_data = CHUNK_INITIALIZER;
+	this->cert_data = chunk_empty;
 
 	return (&(this->public));
 }

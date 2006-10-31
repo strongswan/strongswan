@@ -170,25 +170,12 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * arginfo handler in printf()
- */
-static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
  * register printf() handlers
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(IKE_SA_ID_PRINTF_SPEC, print, print_arginfo);
+	register_printf_function(PRINTF_IKE_SA_ID, print, arginfo_ptr);
 }
-
 
 /**
  * Implementation of ike_sa_id_t.destroy.

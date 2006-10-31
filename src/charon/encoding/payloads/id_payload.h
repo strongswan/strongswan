@@ -27,7 +27,7 @@
 
 typedef struct id_payload_t id_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <utils/identification.h>
 #include <encoding/payloads/payload.h>
 

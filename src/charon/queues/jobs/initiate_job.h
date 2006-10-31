@@ -25,7 +25,7 @@
 
 typedef struct initiate_job_t initiate_job_t;
 
-#include <types.h>
+#include <library.h>
 #include <queues/jobs/job.h>
 #include <config/connections/connection.h>
 #include <config/policies/policy.h>

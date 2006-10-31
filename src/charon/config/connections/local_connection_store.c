@@ -113,11 +113,9 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 	
 	if (found)
 	{
-		host_t *found_my_host    = found->get_my_host(found);
-		host_t *found_other_host = found->get_other_host(found);
-		
 		DBG2(DBG_CFG, "found matching connection \"%s\": %H...%H (prio=%d)",
-			 found->get_name(found), found_my_host, found_other_host, best_prio);
+			 found->get_name(found), found->get_my_host(found),
+			 found->get_other_host(found), best_prio);
 		
 		/* give out a new reference to it */
 		found->get_ref(found);

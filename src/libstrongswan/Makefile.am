@@ -1,9 +1,11 @@
 lib_LTLIBRARIES = libstrongswan.la
 
 libstrongswan_la_SOURCES = \
-definitions.c definitions.h \
-types.c types.h \
 library.c library.h \
+chunk.c chunk.h \
+debug.c debug.h \
+enum.c enum.h \
+printf_hook.c printf_hook.h \
 asn1/oid.c asn1/oid.h \
 asn1/asn1.c asn1/asn1.h \
 asn1/pem.c asn1/pem.h \

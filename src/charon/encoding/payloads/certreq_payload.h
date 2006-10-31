@@ -26,7 +26,7 @@
 
 typedef struct certreq_payload_t certreq_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/cert_payload.h>
 

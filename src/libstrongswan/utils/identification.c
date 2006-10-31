@@ -30,7 +30,6 @@
 #include <ctype.h>
 #include <printf.h>
 
-#include "definitions.h"
 #include "identification.h"
 
 #include <asn1/asn1.h>
@@ -251,8 +250,8 @@ static chunk_t sanitize_chunk(chunk_t chunk)
  */
 static status_t init_rdn(chunk_t dn, chunk_t *rdn, chunk_t *attribute, bool *next)
 {
-	*rdn = CHUNK_INITIALIZER;
-	*attribute = CHUNK_INITIALIZER;
+	*rdn = chunk_empty;
+	*attribute = chunk_empty;
 	
 	/* a DN is a SEQUENCE OF RDNs */
 	if (*dn.ptr != ASN1_SEQUENCE)
@@ -285,8 +284,8 @@ static status_t get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, ch
 	chunk_t body;
 
 	/* initialize return values */
-	*oid   = CHUNK_INITIALIZER;
-	*value = CHUNK_INITIALIZER;
+	*oid   = chunk_empty;
+	*value = chunk_empty;
 
 	/* if all attributes have been parsed, get next rdn */
 	if (attribute->len <= 0)
@@ -569,8 +568,8 @@ static status_t atodn(char *src, chunk_t *dn)
 		UNKNOWN_OID =	4
 	} state_t;
 	
-	chunk_t oid  = CHUNK_INITIALIZER;
-	chunk_t name = CHUNK_INITIALIZER;
+	chunk_t oid  = chunk_empty;
+	chunk_t name = chunk_empty;
 	chunk_t rdns[RDN_MAX];
 	int rdn_count = 0;
 	int dn_len = 0;
@@ -614,7 +613,7 @@ static status_t atodn(char *src, chunk_t *dn)
 						break;
 					}
 					/* reset oid and change state */
-					oid = CHUNK_INITIALIZER;
+					oid = chunk_empty;
 					state = SEARCH_NAME;
 				}
 				break;
@@ -658,7 +657,7 @@ static status_t atodn(char *src, chunk_t *dn)
 						status = OUT_OF_RES;
 					}
 					/* reset name and change state */
-					name = CHUNK_INITIALIZER;
+					name = chunk_empty;
 					state = SEARCH_OID;
 				}
 				break;
@@ -683,7 +682,7 @@ static status_t atodn(char *src, chunk_t *dn)
 	if (status != SUCCESS)
 	{
 		free(dn->ptr);
-		*dn = CHUNK_INITIALIZER;
+		*dn = chunk_empty;
 	}
 	return status;
 }
@@ -912,23 +911,11 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * arginfo handler in printf()
- */
-static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
  * register printf() handlers
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(IDENTIFICATION_PRINTF_SPEC, print, print_arginfo);
+	register_printf_function(PRINTF_IDENTIFICATION, print, arginfo_ptr);
 }
 
 /**
@@ -971,7 +958,7 @@ static private_identification_t *identification_create(void)
 	this->public.equals = (bool (*) (identification_t*,identification_t*))equals_binary;
 	this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_binary;
 	
-	this->encoded = CHUNK_INITIALIZER;
+	this->encoded = chunk_empty;
 	
 	return this;
 }

@@ -26,7 +26,6 @@
 typedef struct hmac_t hmac_t;
 
 #include <crypto/hashers/hasher.h>
-#include <definitions.h>
 
 /**
  * @brief Message authentication using hash functions.

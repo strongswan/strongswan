@@ -26,7 +26,7 @@
 
 typedef struct eap_payload_t eap_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 
 /**

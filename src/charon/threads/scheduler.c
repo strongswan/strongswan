@@ -27,7 +27,6 @@
 #include "scheduler.h"
 
 #include <daemon.h>
-#include <definitions.h>
 #include <queues/job_queue.h>
 
 

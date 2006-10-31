@@ -25,19 +25,11 @@
 
 typedef struct x509_t x509_t;
 
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <crypto/certinfo.h>
 #include <utils/identification.h>
 #include <utils/iterator.h>
-
-/**
- * printf specifier for printing certificates. When using the
- * #-modifier, an additional bool argument defines if dates
- * are printed in UTC.
- */
-#define X509_PRINTF_SPEC 'Q'
 
 /**
  * @brief X.509 certificate.

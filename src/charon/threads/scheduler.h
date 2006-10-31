@@ -26,7 +26,7 @@
 
 typedef struct scheduler_t scheduler_t;
 
-#include <types.h>
+#include <library.h>
 
 /**
  * @brief The scheduler thread is responsible for timed events.

@@ -445,7 +445,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 	/* if we already initiate a delete, we do not allow rekeying */
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
-		build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+		build_notify(NO_PROPOSAL_CHOSEN, chunk_empty, response, TRUE);
 		DBG1(DBG_IKE, "unable to rekey, as delete in progress. Sending NO_PROPOSAL_CHOSEN");
 		return FAILED;
 	}
@@ -459,7 +459,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 			state == CHILD_REKEYING ||
 			state == CHILD_DELETING)
 		{
-			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+			build_notify(NO_PROPOSAL_CHOSEN, chunk_empty, response, TRUE);
 			DBG1(DBG_IKE, "unable to rekey, one CHILD_SA is half open. Sending NO_PROPOSAL_CHOSEN");
 			iterator->destroy(iterator);
 			return FAILED;
@@ -482,7 +482,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 		if (this->connection == NULL)
 		{
 			DBG1(DBG_IKE, "no connection found to rekey IKE_SA, sending NO_RROPOSAL_CHOSEN");
-			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+			build_notify(NO_PROPOSAL_CHOSEN, chunk_empty, response, TRUE);
 			return FAILED;
 		}
 	}
@@ -527,7 +527,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 	/* check if we have all payloads */
 	if (!(sa_request && nonce_request && ke_request))
 	{
-		build_notify(INVALID_SYNTAX, CHUNK_INITIALIZER, response, TRUE);
+		build_notify(INVALID_SYNTAX, chunk_empty, response, TRUE);
 		DBG1(DBG_IKE, "request message incomplete, IKE_SA rekeying failed");
 		return FAILED;
 	}
@@ -537,7 +537,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 		if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
 			NONCE_SIZE, &this->nonce_r) != SUCCESS)
 		{
-			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+			build_notify(NO_PROPOSAL_CHOSEN, chunk_empty, response, TRUE);
 			return FAILED;
 		}
 		nonce_response = nonce_payload_create();
@@ -561,7 +561,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 		if (this->proposal == NULL)
 		{
 			DBG1(DBG_IKE, "no proposals acceptable to rekey IKE_SA, sending NO_PROPOSAL_CHOSEN");
-			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+			build_notify(NO_PROPOSAL_CHOSEN, chunk_empty, response, TRUE);
 			return FAILED;
 		}
 		
@@ -874,9 +874,9 @@ rekey_ike_sa_t *rekey_ike_sa_create(ike_sa_t *ike_sa)
 	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
-	this->nonce_i = CHUNK_INITIALIZER;
-	this->nonce_r = CHUNK_INITIALIZER;
-	this->nonce_s = CHUNK_INITIALIZER;
+	this->nonce_i = chunk_empty;
+	this->nonce_r = chunk_empty;
+	this->nonce_s = chunk_empty;
 	this->new_sa = NULL;
 	this->lost = FALSE;
 	this->connection = NULL;

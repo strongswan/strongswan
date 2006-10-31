@@ -19,8 +19,8 @@
 
 #include "asn1.h"
 
-#include <types.h>
 #include <library.h>
+#include <debug.h>
 
 /* some common prefabricated ASN.1 constants */
 static u_char ASN1_INTEGER_0_str[] = { 0x02, 0x00 };
@@ -98,7 +98,7 @@ chunk_t asn1_algorithmIdentifier(int oid)
 		case OID_SHA1:
 			return ASN1_sha1_id;
 		default:
-			return CHUNK_INITIALIZER;
+			return chunk_empty;
 	}
 }
 
@@ -320,9 +320,13 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type, bool private)
 			break;
 	}
 	if (private)
+	{
 		DBG4("%B", &object);
+	}
 	else
+	{
 		DBG3("%B", &object);
+	}
 }
 
 /**
@@ -335,7 +339,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	chunk_t *blob1;
 	u_char *start_ptr;
 	
-	*object = CHUNK_INITIALIZER;
+	*object = chunk_empty;
 	
 	if (obj.flags & ASN1_END)  /* end of loop or option found */
 	{
@@ -447,9 +451,13 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 		object->ptr = start_ptr;
 		object->len = (size_t)(blob->ptr - start_ptr);
 		if (ctx->private)
+		{
 			DBG4("%B", object);
+		}
 		else
+		{
 			DBG3("%B", object);
+		}
 	}
 	else if (obj.flags & ASN1_BODY)
 	{

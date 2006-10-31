@@ -25,7 +25,7 @@
 
 #include "configuration.h"
 
-#include <types.h>
+#include <library.h>
 
 /**
  * Timeout in milliseconds after that a half open IKE_SA gets deleted.

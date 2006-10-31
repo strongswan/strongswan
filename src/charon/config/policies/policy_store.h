@@ -25,7 +25,7 @@
 
 typedef struct policy_store_t policy_store_t;
 
-#include <types.h>
+#include <library.h>
 #include <config/policies/policy.h>
 #include <utils/linked_list.h>
 

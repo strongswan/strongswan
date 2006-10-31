@@ -26,7 +26,7 @@
 
 typedef struct delete_ike_sa_job_t delete_ike_sa_job_t;
 
-#include <types.h>
+#include <library.h>
 #include <sa/ike_sa_id.h>
 #include <queues/jobs/job.h>
 

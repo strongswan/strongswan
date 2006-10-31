@@ -26,7 +26,7 @@
 
 typedef struct delete_payload_t delete_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
 

@@ -26,8 +26,7 @@
 
 typedef struct transform_substructure_t transform_substructure_t;
 
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_attribute.h>
 #include <utils/linked_list.h>

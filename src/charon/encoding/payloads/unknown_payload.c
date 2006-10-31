@@ -202,7 +202,7 @@ unknown_payload_t *unknown_payload_create()
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = UNKNOWN_PAYLOAD_HEADER_LENGTH;
-	this->data = CHUNK_INITIALIZER;
+	this->data = chunk_empty;
 
 	return (&(this->public));
 }

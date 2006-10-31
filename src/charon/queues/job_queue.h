@@ -26,7 +26,7 @@
 
 typedef struct job_queue_t job_queue_t;
 
-#include <types.h>
+#include <library.h>
 #include <queues/jobs/job.h>
 
 /**

@@ -36,7 +36,7 @@
 
 #include "daemon.h"
 
-#include <types.h>
+#include <library.h>
 #include <config/credentials/local_credential_store.h>
 #include <config/connections/local_connection_store.h>
 #include <config/policies/local_policy_store.h>

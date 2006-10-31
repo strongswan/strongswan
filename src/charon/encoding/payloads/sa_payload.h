@@ -26,7 +26,7 @@
 
 typedef struct sa_payload_t sa_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <utils/linked_list.h>

@@ -26,7 +26,7 @@
 
 typedef struct ike_sa_manager_t ike_sa_manager_t;
 
-#include <types.h>
+#include <library.h>
 #include <sa/ike_sa.h>
 
 /**

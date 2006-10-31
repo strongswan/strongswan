@@ -28,8 +28,6 @@
 
 #include "sha1_hasher.h"
 
-#include <definitions.h>
-
 /*
  * ugly macro stuff
  */ 

@@ -762,7 +762,7 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 rsa_private_key_t *rsa_private_key_create_from_file(char *filename, chunk_t *passphrase)
 {
 	bool pgp = FALSE;
-	chunk_t chunk = CHUNK_INITIALIZER;
+	chunk_t chunk = chunk_empty;
 	rsa_private_key_t *key = NULL;
 
 	if (!pem_asn1_load_file(filename, passphrase, "private key", &chunk, &pgp))

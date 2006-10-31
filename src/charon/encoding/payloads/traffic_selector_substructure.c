@@ -255,8 +255,8 @@ traffic_selector_substructure_t *traffic_selector_substructure_create()
 	this->payload_length = TRAFFIC_SELECTOR_HEADER_LENGTH;
 	this->start_port = 0;
 	this->end_port = 0;
-	this->starting_address = CHUNK_INITIALIZER;
-	this->ending_address = CHUNK_INITIALIZER;
+	this->starting_address = chunk_empty;
+	this->ending_address = chunk_empty;
 	this->ip_protocol_id = 0;
 	/* must be set to be valid */
 	this->ts_type = TS_IPV4_ADDR_RANGE;

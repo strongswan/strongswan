@@ -25,8 +25,6 @@
 
 #include "prf_plus.h"
 
-#include <definitions.h>
-
 typedef struct private_prf_plus_t private_prf_plus_t;
 
 /**

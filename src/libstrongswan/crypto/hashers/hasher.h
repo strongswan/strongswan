@@ -27,7 +27,7 @@
 typedef enum hash_algorithm_t hash_algorithm_t;
 typedef struct hasher_t hasher_t;
 
-#include <types.h>
+#include <library.h>
 
 /**
  * @brief Algorithms to use for hashing.

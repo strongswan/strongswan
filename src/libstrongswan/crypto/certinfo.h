@@ -27,8 +27,7 @@ typedef enum cert_status_t cert_status_t;
 typedef enum crl_reason_t crl_reason_t;
 typedef struct certinfo_t certinfo_t;
 
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 
 /**
  * RFC 2560 OCSP - certificate status

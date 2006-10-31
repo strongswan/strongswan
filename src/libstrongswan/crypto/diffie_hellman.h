@@ -27,7 +27,7 @@
 typedef enum diffie_hellman_group_t diffie_hellman_group_t;
 typedef struct diffie_hellman_t diffie_hellman_t;
 
-#include <types.h>
+#include <library.h>
 
 /**
  * @brief Diffie-Hellman group.

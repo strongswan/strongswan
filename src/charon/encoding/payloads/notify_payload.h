@@ -29,7 +29,7 @@
 typedef enum notify_type_t notify_type_t;
 typedef struct notify_payload_t notify_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <utils/linked_list.h>

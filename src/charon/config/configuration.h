@@ -25,7 +25,7 @@
 
 typedef struct configuration_t configuration_t;
 
-#include <types.h>
+#include <library.h>
 
 /**
  * @brief The interface for various daemon related configs.

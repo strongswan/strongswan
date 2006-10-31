@@ -27,7 +27,7 @@
 
 typedef struct traffic_selector_substructure_t traffic_selector_substructure_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 #include <utils/host.h>
 #include <config/traffic_selector.h>

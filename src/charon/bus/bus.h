@@ -146,6 +146,43 @@ enum level_t {
 	LEVEL_PRIVATE = LEVEL_4,
 };
 
+#ifndef DEBUG_LEVEL
+# define DEBUG_LEVEL 4
+#endif /* DEBUG_LEVEL */
+
+#if DEBUG_LEVEL >= 1
+/**
+ * @brief Log a debug message via the signal bus.
+ *
+ * @param signal	signal_t signal description
+ * @param format	printf() style format string
+ * @param ...		printf() style agument list
+ */
+# define DBG1(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_1, format, ##__VA_ARGS__)
+#endif /* DEBUG_LEVEL */
+#if DEBUG_LEVEL >= 2
+#define DBG2(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_2, format, ##__VA_ARGS__)
+#endif /* DEBUG_LEVEL */
+#if DEBUG_LEVEL >= 3
+#define DBG3(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_3, format, ##__VA_ARGS__)
+#endif /* DEBUG_LEVEL */
+#if DEBUG_LEVEL >= 4
+#define DBG4(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_4, format, ##__VA_ARGS__)
+#endif /* DEBUG_LEVEL */
+
+#ifndef DBG1
+# define DBG1(...) {}
+#endif /* DBG1 */
+#ifndef DBG2
+# define DBG2(...) {}
+#endif /* DBG2 */
+#ifndef DBG3
+# define DBG3(...) {}
+#endif /* DBG3 */
+#ifndef DBG4
+# define DBG4(...) {}
+#endif /* DBG4 */
+
 /**
  * @brief Raise a signal for an occured event.
  *
@@ -154,18 +191,6 @@ enum level_t {
  * @param ...		printf() style agument list
  */
 #define SIG(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_0, format, ##__VA_ARGS__)
-
-/**
- * @brief Log a debug message via the signal bus.
- *
- * @param signal	signal_t signal description
- * @param format	printf() style format string
- * @param ...		printf() style agument list
- */
-#define DBG1(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_1, format, ##__VA_ARGS__)
-#define DBG2(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_2, format, ##__VA_ARGS__)
-#define DBG3(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_3, format, ##__VA_ARGS__)
-#define DBG4(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_4, format, ##__VA_ARGS__)
 
 /**
  * @brief Get the type of a signal.

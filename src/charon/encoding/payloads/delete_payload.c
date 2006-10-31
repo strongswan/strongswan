@@ -355,7 +355,7 @@ delete_payload_t *delete_payload_create(protocol_id_t protocol_id)
 	this->protocol_id = protocol_id;
 	this->spi_size = protocol_id == PROTO_AH || protocol_id == PROTO_ESP ? 4 : 0;
 	this->spi_count = 0;
-	this->spis = CHUNK_INITIALIZER;
+	this->spis = chunk_empty;
 	this->spi_list = NULL;
 
 	return (&this->public);

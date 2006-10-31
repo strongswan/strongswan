@@ -1,8 +1,8 @@
 /**
- * @file types.c
- * 
- * @brief Generic types.
- * 
+ * @file chunk.c
+ *
+ * @brief Pointer/lenght abstraction and its functions.
+ *
  */
 
 /*
@@ -21,41 +21,23 @@
  * for more details.
  */
 
-#include <string.h>
-#include <time.h>
 #include <stdio.h>
-#include <stdarg.h>
-#include <pthread.h>
-#include <printf.h>
 
-#include "types.h"
+#include "chunk.h"
 
-ENUM(status_names, SUCCESS, DESTROY_ME,
-	"SUCCESS",
-	"FAILED",
-	"OUT_OF_RES",
-	"ALREADY_DONE",
-	"NOT_SUPPORTED",
-	"INVALID_ARG",
-	"NOT_FOUND",
-	"PARSE_ERROR",
-	"VERIFY_ERROR",
-	"INVALID_STATE",
-	"DESTROY_ME",
-);
-
+#include <printf_hook.h>
 
 /**
  * Empty chunk.
  */
-chunk_t CHUNK_INITIALIZER = { NULL, 0 };
+chunk_t chunk_empty = { NULL, 0 };
 
 /**
  * Described in header.
  */
 chunk_t chunk_clone(chunk_t chunk)
 {
-	chunk_t clone = CHUNK_INITIALIZER;
+	chunk_t clone = chunk_empty;
 	
 	if (chunk.ptr && chunk.len > 0)
 	{
@@ -142,7 +124,7 @@ chunk_t chunk_alloc(size_t bytes)
 bool chunk_equals(chunk_t a, chunk_t b)
 {
 	return a.ptr != NULL  && b.ptr != NULL &&
-		   a.len == b.len && memeq(a.ptr, b.ptr, a.len);
+			a.len == b.len && memeq(a.ptr, b.ptr, a.len);
 }
 
 /**
@@ -153,56 +135,6 @@ bool chunk_equals_or_null(chunk_t a, chunk_t b)
 	if (a.ptr == NULL || b.ptr == NULL)
 		return TRUE;
 	return a.len == b.len && memeq(a.ptr, b.ptr, a.len);
-}
-
-/**
- * Described in header.
- */
-void *clalloc(void * pointer, size_t size)
-{
-	void *data;
-	data = malloc(size);
-	
-	memcpy(data, pointer,size);
-	
-	return (data);
-}
-
-/**
- * We use a single mutex for all refcount variables. This
- * is not optimal for performance, but the critical section
- * is not that long...
- * TODO: Consider to include a mutex in each refcount_t variable.
- */
-static pthread_mutex_t ref_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-/**
- * Described in header.
- * 
- * TODO: May be implemented with atomic CPU instructions
- * instead of a mutex.
- */
-void ref_get(refcount_t *ref)
-{
-	pthread_mutex_lock(&ref_mutex);
-	(*ref)++;
-	pthread_mutex_unlock(&ref_mutex);
-}
-
-/**
- * Described in header.
- * 
- * TODO: May be implemented with atomic CPU instructions
- * instead of a mutex.
- */
-bool ref_put(refcount_t *ref)
-{
-	bool more_refs;
-	
-	pthread_mutex_lock(&ref_mutex);
-	more_refs = --(*ref);
-	pthread_mutex_unlock(&ref_mutex);
-	return !more_refs;
 }
 
 /**
@@ -253,7 +185,7 @@ static int print_bytes(FILE *stream, const struct printf_info *info,
 			ascii_buffer[i] = '\0';
 			
 			written += fprintf(stream, "\n%4d: %s  %s",
-							  line_start, buffer, ascii_buffer);
+							   line_start, buffer, ascii_buffer);
 
 			
 			buffer_pos = buffer;
@@ -302,137 +234,10 @@ static int print_chunk(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * output handler in printf() for time_t
- */
-static int print_time(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
-{
-	static const char* months[] = {
-		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-	};
-	time_t time = *((time_t*)(args[0]));
-	bool utc = TRUE;
-	struct tm t;
-	
-	if (info->alt)
-	{
-		utc = *((bool*)(args[1]));
-	}
-	if (time == UNDEFINED_TIME)
-	{
-		return fprintf(stream, "--- -- --:--:--%s----",
-					   info->alt ? " UTC " : " ");
-	}
-	if (utc)
-	{
-		gmtime_r(&time, &t);
-	}
-	else
-	{
-		localtime_r(&time, &t);
-	}
-	return fprintf(stream, "%s %02d %02d:%02d:%02d%s%04d",
-				   months[t.tm_mon], t.tm_mday, t.tm_hour, t.tm_min,
-				   t.tm_sec, utc ? " UTC " : " ", t.tm_year + 1900);
-}
-
-/**
- * output handler in printf() for time deltas
- */
-static int print_time_delta(FILE *stream, const struct printf_info *info,
-					  const void *const *args)
-{
-	time_t start = *((time_t*)(args[0]));
-	time_t end = *((time_t*)(args[1]));
-	u_int delta = abs(end - start);
-	char* unit = "second";
-	
-	if (delta > 2 * 60 * 60 * 24)
-	{
-		delta /= 60 * 60 * 24;
-		unit = "days";
-	}
-	else if (delta > 2 * 60 * 60)
-	{
-		delta /= 60 * 60;
-		unit = "hours";
-	}
-	else if (delta > 2 * 60)
-	{
-		delta /= 60;
-		unit = "minutes";
-	}
-	return fprintf(stream, "%d %s", delta, unit);
-}
-
-/**
- * arginfo handler in printf() for byte ranges
- */
-static int print_bytes_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 1)
-	{
-		argtypes[0] = PA_POINTER;
-		argtypes[1] = PA_INT;
-	}
-	return 2;
-}
-
-/**
- * arginfo handler in printf() for time deltas
- */
-static int print_time_delta_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 1)
-	{
-		argtypes[0] = PA_INT;
-		argtypes[1] = PA_INT;
-	}
-	return 2;
-}
-
-/**
- * arginfo handler in printf() for time_t
- */
-static int print_time_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (info->alt)
-	{
-		if (n > 1)
-		{
-			argtypes[0] = PA_INT;
-			argtypes[1] = PA_INT;
-		}
-		return 2;
-	}
-	
-	if (n > 0)
-	{
-		argtypes[0] = PA_INT;
-	}
-	return 1;
-}
-
-/**
- * arginfo handler in printf() for chunks
- */
-static int print_chunk_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
- * register printf() handlers for time_t
+ * register printf() handlers
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(CHUNK_PRINTF_SPEC, print_chunk, print_chunk_arginfo);
-	register_printf_function(BYTES_PRINTF_SPEC, print_bytes, print_bytes_arginfo);
-	register_printf_function(TIME_PRINTF_SPEC, print_time, print_time_arginfo);
-	register_printf_function(TIME_DELTA_PRINTF_SPEC, print_time_delta, print_time_delta_arginfo);
+	register_printf_function(PRINTF_CHUNK, print_chunk, arginfo_ptr);
+	register_printf_function(PRINTF_BYTES, print_bytes, arginfo_ptr_int);
 }

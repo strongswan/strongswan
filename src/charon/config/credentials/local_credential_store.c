@@ -25,7 +25,7 @@
 #include <string.h>
 #include <pthread.h>
 
-#include <types.h>
+#include <library.h>
 #include <utils/lexparser.h>
 #include <utils/linked_list.h>
 #include <crypto/certinfo.h>
@@ -152,7 +152,7 @@ static status_t get_shared_key(private_local_credential_store_t *this,
 	} prio_t;
 
 	prio_t best_prio = PRIO_UNDEFINED;
-	chunk_t found = CHUNK_INITIALIZER;
+	chunk_t found = chunk_empty;
 	shared_key_t *shared_key;
 
 	iterator_t *iterator = this->shared_keys->create_iterator(this->shared_keys, TRUE);
@@ -511,11 +511,8 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 		rsa_public_key_t *issuer_public_key;
 		bool valid_signature;
 
-		identification_t *subject = cert->get_subject(cert);
-		identification_t *issuer  = cert->get_issuer(cert);
-
-		DBG2(DBG_CFG, "subject: '%D'", subject);
-		DBG2(DBG_CFG, "issuer:  '%D'", issuer);
+		DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
+		DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
 
 		ugh = cert->is_valid(cert, &until);
 		if (ugh != NULL)

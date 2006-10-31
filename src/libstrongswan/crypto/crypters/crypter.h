@@ -27,7 +27,7 @@
 typedef enum encryption_algorithm_t encryption_algorithm_t;
 typedef struct crypter_t crypter_t;
 
-#include <types.h>
+#include <library.h>
 
 /**
  * @brief Encryption algorithm, as in IKEv2 RFC 3.3.2.

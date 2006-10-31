@@ -28,7 +28,7 @@
 typedef enum child_sa_state_t child_sa_state_t;
 typedef struct child_sa_t child_sa_t;
 
-#include <types.h>
+#include <library.h>
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <config/proposal.h>
@@ -38,11 +38,6 @@ typedef struct child_sa_t child_sa_t;
  * Where we should start with reqid enumeration
  */
 #define REQID_START 2000000000
-
-/**
- * Printf() specifier for child_sa_t
- */
-#define CHILD_SA_PRINTF_SPEC 'P'
 
 /**
  * @brief States of a CHILD_SA

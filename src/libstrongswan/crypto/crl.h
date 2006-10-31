@@ -25,19 +25,11 @@
 
 typedef struct crl_t crl_t;
 
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <crypto/certinfo.h>
 #include <utils/identification.h>
 #include <utils/iterator.h>
-
-/**
- * printf specifier for printing crls. When using the
- * #-modifier, an additional bool argument defines if dates 
- * are printed in UTC.
- */
-#define CRL_PRINTF_SPEC 'U'
 
 /**
  * @brief X.509 certificate revocation list

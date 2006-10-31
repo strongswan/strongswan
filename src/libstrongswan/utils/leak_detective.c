@@ -37,8 +37,8 @@
 
 #include "leak_detective.h"
 
-#include <types.h>
 #include <library.h>
+#include <debug.h>
 
 #ifdef LEAK_DETECTIVE
 

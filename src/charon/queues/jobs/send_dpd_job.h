@@ -24,7 +24,7 @@
 
 typedef struct send_dpd_job_t send_dpd_job_t;
 
-#include <types.h>
+#include <library.h>
 #include <queues/jobs/job.h>
 #include <config/connections/connection.h>
 #include <sa/ike_sa_id.h>

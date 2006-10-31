@@ -27,7 +27,7 @@
 typedef enum auth_method_t auth_method_t;
 typedef struct authenticator_t authenticator_t;
 
-#include <types.h>
+#include <library.h>
 #include <sa/ike_sa.h>
 #include <encoding/payloads/auth_payload.h>
 

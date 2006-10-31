@@ -168,7 +168,7 @@ packet_t *packet_create(void)
 	
 	this->destination = NULL;
 	this->source = NULL;
-	this->data = CHUNK_INITIALIZER;
+	this->data = chunk_empty;
 	
 	return &(this->public);
 }

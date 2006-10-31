@@ -25,7 +25,7 @@
 
 typedef struct connection_store_t connection_store_t;
 
-#include <types.h>
+#include <library.h>
 #include <config/connections/connection.h>
 #include <utils/iterator.h>
 

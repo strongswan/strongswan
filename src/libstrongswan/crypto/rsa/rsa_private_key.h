@@ -26,8 +26,7 @@
 
 typedef struct rsa_private_key_t rsa_private_key_t;
 
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <crypto/hashers/hasher.h>
 

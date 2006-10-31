@@ -36,14 +36,7 @@ typedef struct host_t host_t;
 #include <arpa/inet.h>
 #include <linux/xfrm.h>
 
-#include <types.h>
-
-/**
- * printf() specifier to print a host.
- * The specifier option '#' does include the port number, e.g.:
- * printf("my host is %#H\n", my_host);
- */
-#define HOST_PRINTF_SPEC 'H'
+#include <library.h>
 
 /**
  * Differences between two hosts. They differ in

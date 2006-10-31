@@ -26,7 +26,7 @@
 
 typedef struct credential_store_t credential_store_t;
 
-#include <types.h>
+#include <library.h>
 #include <crypto/x509.h>
 #include <crypto/rsa/rsa_private_key.h>
 #include <crypto/rsa/rsa_public_key.h>

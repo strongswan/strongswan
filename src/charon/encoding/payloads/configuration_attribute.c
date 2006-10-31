@@ -26,7 +26,7 @@
 #include "configuration_attribute.h"
 
 #include <encoding/payloads/encodings.h>
-#include <types.h>
+#include <library.h>
 
 
 typedef struct private_configuration_attribute_t private_configuration_attribute_t;
@@ -272,7 +272,7 @@ configuration_attribute_t *configuration_attribute_create()
 	
 	/* set default values of the fields */
 	this->attribute_type = 0;
-	this->attribute_value = CHUNK_INITIALIZER;
+	this->attribute_value = chunk_empty;
 	this->attribute_length = 0;
 
 	return (&(this->public));

@@ -28,9 +28,8 @@
 
 #include "x509.h"
 
-#include <types.h>
 #include <library.h>
-#include <definitions.h>
+#include <debug.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
@@ -1162,33 +1161,11 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * arginfo handler in printf()
- */
-static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (info->alt)
-	{
-		if (n > 1)
-		{
-			argtypes[0] = PA_POINTER;
-			argtypes[1] = PA_INT;
-		}
-		return 2;
-	}
-	
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
  * register printf() handlers
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(X509_PRINTF_SPEC, print, print_arginfo);
+	register_printf_function(PRINTF_X509, print, arginfo_ptr_alt_ptr_int);
 }
 
 /**
@@ -1215,15 +1192,15 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	private_x509_t *this = malloc_thing(private_x509_t);
 	
 	/* initialize */
-	this->subjectPublicKey = CHUNK_INITIALIZER;
+	this->subjectPublicKey = chunk_empty;
 	this->public_key = NULL;
 	this->subject = NULL;
 	this->issuer = NULL;
 	this->subjectAltNames = linked_list_create();
 	this->crlDistributionPoints = linked_list_create();
-	this->subjectKeyID = CHUNK_INITIALIZER;
-	this->authKeyID = CHUNK_INITIALIZER;
-	this->authKeySerialNumber = CHUNK_INITIALIZER;
+	this->subjectKeyID = chunk_empty;
+	this->authKeyID = chunk_empty;
+	this->authKeySerialNumber = chunk_empty;
 	
 	/* public functions */
 	this->public.equals = (bool (*) (const x509_t*,const x509_t*))equals;
@@ -1270,7 +1247,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 x509_t *x509_create_from_file(const char *filename, const char *label)
 {
 	bool pgp = FALSE;
-	chunk_t chunk = CHUNK_INITIALIZER;
+	chunk_t chunk = chunk_empty;
 	x509_t *cert = NULL;
 
 	if (!pem_asn1_load_file(filename, NULL, label, &chunk, &pgp))

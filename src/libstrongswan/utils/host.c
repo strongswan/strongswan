@@ -155,23 +155,11 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * arginfo handler in printf()
- */
-static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
  * register printf() handlers
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(HOST_PRINTF_SPEC, print, print_arginfo);
+	register_printf_function(PRINTF_HOST, print, arginfo_ptr);
 }
 
 /**
@@ -179,7 +167,7 @@ static void __attribute__ ((constructor))print_register()
  */
 static chunk_t get_address(private_host_t *this)
 {
-	chunk_t address = CHUNK_INITIALIZER;
+	chunk_t address = chunk_empty;
 	
 	switch (this->address.sa_family) 
 	{

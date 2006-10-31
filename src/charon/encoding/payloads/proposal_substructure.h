@@ -26,7 +26,7 @@
 
 typedef struct proposal_substructure_t proposal_substructure_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_substructure.h>
 #include <config/proposal.h>

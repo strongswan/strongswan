@@ -26,7 +26,7 @@
 
 #include "event_queue.h"
 
-#include <types.h>
+#include <library.h>
 #include <utils/linked_list.h>
 
 

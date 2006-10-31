@@ -25,7 +25,7 @@
 
 typedef struct transaction_t transaction_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/message.h>
 #include <sa/ike_sa.h>
 

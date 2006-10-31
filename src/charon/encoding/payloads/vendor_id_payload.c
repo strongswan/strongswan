@@ -222,7 +222,7 @@ vendor_id_payload_t *vendor_id_payload_create()
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = VENDOR_ID_PAYLOAD_HEADER_LENGTH;
-	this->vendor_id_data = CHUNK_INITIALIZER;
+	this->vendor_id_data = chunk_empty;
 
 	return (&(this->public));
 }

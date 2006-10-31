@@ -26,7 +26,7 @@
 
 typedef struct randomizer_t randomizer_t;
 
-#include <types.h>
+#include <library.h>
 
 #ifndef DEV_RANDOM
 /**

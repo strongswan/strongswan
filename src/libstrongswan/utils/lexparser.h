@@ -19,7 +19,7 @@
  * for more details.
  */
 
-#include <types.h>
+#include <library.h>
 
 /**
  * @brief Eats whitespace

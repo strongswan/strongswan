@@ -26,7 +26,7 @@
 
 typedef struct nonce_payload_t nonce_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 
 /**

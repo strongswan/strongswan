@@ -27,7 +27,7 @@
 typedef enum cert_encoding_t cert_encoding_t;
 typedef struct cert_payload_t cert_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <crypto/x509.h>
 #include <encoding/payloads/payload.h>
 

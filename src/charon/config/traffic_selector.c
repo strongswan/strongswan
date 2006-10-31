@@ -238,23 +238,11 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * arginfo handler in printf()
- */
-static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
  * register printf() handlers
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(TRAFFIC_SELECTOR_PRINTF_SPEC, print, print_arginfo);
+	register_printf_function(PRINTF_TRAFFIC_SELECTOR, print, arginfo_ptr);
 }
 
 /**
@@ -368,7 +356,7 @@ static bool equals(private_traffic_selector_t *this, private_traffic_selector_t 
  */
 static chunk_t get_from_address(private_traffic_selector_t *this)
 {
-	chunk_t from = CHUNK_INITIALIZER;
+	chunk_t from = chunk_empty;
 	
 	switch (this->type)
 	{
@@ -395,7 +383,7 @@ static chunk_t get_from_address(private_traffic_selector_t *this)
  */
 static chunk_t get_to_address(private_traffic_selector_t *this)
 {
-	chunk_t to = CHUNK_INITIALIZER;
+	chunk_t to = chunk_empty;
 	
 	switch (this->type)
 	{

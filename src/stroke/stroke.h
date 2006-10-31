@@ -82,7 +82,7 @@ struct stroke_end_t {
 	char *subnet;
 	int subnet_mask;
 	int sendcert;
-	bool hostaccess;
+	int hostaccess;
 	u_int8_t protocol;
 	u_int16_t port;
 };
@@ -135,7 +135,7 @@ struct stroke_msg_t {
 		/* data for STR_ADD_CONN */
 		struct {
 			char *name;
-			bool ikev2;
+			int ikev2;
 			int auth_method;
 			struct {
 				char *ike;
@@ -164,7 +164,7 @@ struct stroke_msg_t {
 		/* data for STR_LIST */
 		struct {
 			list_flag_t flags;
-			bool utc;
+			int utc;
 		} list;
 
 		/* data for STR_REREAD */

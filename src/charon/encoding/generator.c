@@ -29,7 +29,7 @@
 
 #include "generator.h"
 
-#include <types.h>
+#include <library.h>
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <encoding/payloads/payload.h>

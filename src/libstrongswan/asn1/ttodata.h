@@ -16,7 +16,7 @@
 #ifndef TTODATA_H_
 #define TTODATA_H_
 
-#include <types.h>
+#include <library.h>
 
 #define	TTODATAV_BUF	40	/* ttodatav's largest non-literal message */
 #define TTODATAV_IGNORESPACE  (1<<1)  /* ignore spaces in base64 encodings*/

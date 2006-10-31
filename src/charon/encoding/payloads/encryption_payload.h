@@ -25,7 +25,7 @@
 
 typedef struct encryption_payload_t encryption_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
 #include <encoding/payloads/payload.h>

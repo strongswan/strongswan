@@ -26,7 +26,7 @@
 
 typedef struct hmac_prf_t hmac_prf_t;
 
-#include <types.h>
+#include <library.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/hashers/hasher.h>
 

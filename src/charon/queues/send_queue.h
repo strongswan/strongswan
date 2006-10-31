@@ -26,7 +26,7 @@
 
 typedef struct send_queue_t send_queue_t;
 
-#include <types.h>
+#include <library.h>
 #include <network/packet.h>
 
 /**

@@ -303,7 +303,7 @@ id_payload_t *id_payload_create(bool is_initiator)
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length =ID_PAYLOAD_HEADER_LENGTH;
-	this->id_data = CHUNK_INITIALIZER;
+	this->id_data = chunk_empty;
 	this->is_initiator = is_initiator;
 
 	return (&(this->public));

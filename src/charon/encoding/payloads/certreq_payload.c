@@ -258,7 +258,7 @@ certreq_payload_t *certreq_payload_create()
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length =CERTREQ_PAYLOAD_HEADER_LENGTH;
-	this->certreq_data = CHUNK_INITIALIZER;
+	this->certreq_data = chunk_empty;
 
 	return (&(this->public));
 }

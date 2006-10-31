@@ -29,7 +29,7 @@ typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
 typedef struct algorithm_t algorithm_t;
 typedef struct proposal_t proposal_t;
 
-#include <types.h>
+#include <library.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
 #include <utils/host.h>

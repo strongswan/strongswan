@@ -28,9 +28,8 @@
 
 #include "ike_sa.h"
 
-#include <types.h>
+#include <library.h>
 #include <daemon.h>
-#include <definitions.h>
 #include <utils/linked_list.h>
 #include <crypto/diffie_hellman.h>
 #include <crypto/prf_plus.h>
@@ -1898,23 +1897,11 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * arginfo handler in printf()
- */
-static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
  * register printf() handlers
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(IKE_SA_PRINTF_SPEC, print, print_arginfo);
+	register_printf_function(PRINTF_IKE_SA, print, arginfo_ptr);
 }
 
 /**
@@ -2006,8 +1993,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->child_sas = linked_list_create();
 	this->my_host = host_create_from_string("0.0.0.0", 0);
 	this->other_host = host_create_from_string("0.0.0.0", 0);
-	this->my_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);
-	this->other_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);
+	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
+	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->signer_in = NULL;

@@ -27,7 +27,7 @@
 typedef enum config_type_t config_type_t;
 typedef struct cp_payload_t cp_payload_t;
 
-#include <types.h>
+#include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/configuration_attribute.h>
 #include <utils/linked_list.h>

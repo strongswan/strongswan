@@ -28,7 +28,7 @@ typedef struct thread_pool_t thread_pool_t;
 
 #include <stdlib.h>
 
-#include <types.h>
+#include <library.h>
 
 /**
  * @brief A thread_pool consists of a pool of threads processing jobs from the job queue.

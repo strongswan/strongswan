@@ -27,7 +27,7 @@
 typedef enum dpd_action_t dpd_action_t;
 typedef struct policy_t policy_t;
 
-#include <types.h>
+#include <library.h>
 #include <utils/identification.h>
 #include <config/traffic_selector.h>
 #include <config/proposal.h>

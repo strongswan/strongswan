@@ -30,8 +30,6 @@
 
 #include "md5_hasher.h"
 
-#include <definitions.h>
-
 
 /* Constants for MD5Transform routine. */
 #define S11 7

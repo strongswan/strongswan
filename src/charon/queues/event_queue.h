@@ -28,7 +28,7 @@ typedef struct event_queue_t event_queue_t;
 
 #include <sys/time.h>
 
-#include <types.h>
+#include <library.h>
 #include <queues/jobs/job.h>
 
 /**

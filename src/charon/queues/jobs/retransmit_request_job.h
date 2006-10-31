@@ -26,7 +26,7 @@
 
 typedef struct retransmit_request_job_t retransmit_request_job_t;
 
-#include <types.h>
+#include <library.h>
 #include <queues/jobs/job.h>
 #include <sa/ike_sa_id.h>
 

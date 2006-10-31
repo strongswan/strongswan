@@ -27,8 +27,7 @@
 typedef enum payload_type_t payload_type_t;
 typedef struct payload_t payload_t;
 
-#include <types.h>
-#include <definitions.h>
+#include <library.h>
 #include <encoding/payloads/encodings.h>
 
 

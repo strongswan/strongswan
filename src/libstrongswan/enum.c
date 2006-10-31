@@ -1,13 +1,12 @@
 /**
- * @file definitions.c
- * 
- * @brief General purpose definitions and macros.
- * 
+ * @file library.c
+ *
+ * @brief enum value to string conversion functions.
+ *
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
- * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -21,13 +20,15 @@
  * for more details.
  */
 
-#include <printf.h>
+#include <stddef.h>
 #include <stdio.h>
 
-#include "definitions.h"
+#include "enum.h"
 
-/*
- * Described in header
+#include <printf_hook.h>
+
+/**
+ * get the name of an enum value in a enum_name_t list
  */
 static char *enum_name(enum_name_t *e, long val)
 {
@@ -42,15 +43,14 @@ static char *enum_name(enum_name_t *e, long val)
 	return NULL;
 }
 
-
 /**
  * output handler in printf() for enum names
  */
 static int print_enum(FILE *stream, const struct printf_info *info,
-					   const void *const *args)
+					  const void *const *args)
 {
 	enum_name_t *ed = *((void**)(args[0]));
-	long val = *((size_t*)(args[1]));
+	long val = *((long*)(args[1]));
 	char *name;
 	
 	name = enum_name(ed, val);
@@ -62,24 +62,9 @@ static int print_enum(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * arginfo handler in printf() for enum names
- */
-static int print_enum_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 1)
-	{
-		/* enum_names ptr */
-		argtypes[0] = PA_POINTER;
-		/* value */
-		argtypes[1] = PA_INT;
-	}
-	return 2;
-}
-
-/**
- * register printf() handlers for enum names
+ * register printf() handlers
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(ENUM_PRINTF_SPEC, print_enum, print_enum_arginfo);
+	register_printf_function(PRINTF_ENUM, print_enum, arginfo_ptr_int);
 }

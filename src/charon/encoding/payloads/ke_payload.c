@@ -256,7 +256,7 @@ ke_payload_t *ke_payload_create()
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = KE_PAYLOAD_HEADER_LENGTH;
-	this->key_exchange_data = CHUNK_INITIALIZER;
+	this->key_exchange_data = chunk_empty;
 	this->dh_group_number = MODP_NONE;
 
 	return &this->public;

@@ -669,15 +669,15 @@ static iterator_t *create_iterator(private_linked_list_t *linked_list, bool forw
 {
 	private_iterator_t *this = malloc_thing(private_iterator_t);
 	
-	this->public.get_count = (bool (*) (iterator_t *this)) get_list_count;
-	this->public.iterate = (bool (*) (iterator_t *this, void **value)) iterate;
-	this->public.set_iterator_hook = (void(*)(iterator_t *this, void*(*)(void*)))set_iterator_hook;
-	this->public.insert_before = (void (*) (iterator_t *this, void *item)) insert_before;
-	this->public.insert_after = (void (*) (iterator_t *this, void *item)) insert_after;
-	this->public.replace = (status_t (*) (iterator_t *, void **, void *)) replace;
-	this->public.remove = (status_t (*) (iterator_t *this)) remove_;
-	this->public.reset = (void (*) (iterator_t *this)) iterator_reset;
-	this->public.destroy = (void (*) (iterator_t *this)) iterator_destroy;
+	this->public.get_count = (int (*) (iterator_t*)) get_list_count;
+	this->public.iterate = (bool (*) (iterator_t*, void **value)) iterate;
+	this->public.set_iterator_hook = (void(*)(iterator_t*, void*(*)(void*)))set_iterator_hook;
+	this->public.insert_before = (void (*) (iterator_t*, void *item)) insert_before;
+	this->public.insert_after = (void (*) (iterator_t*, void *item)) insert_after;
+	this->public.replace = (status_t (*) (iterator_t*, void **, void *)) replace;
+	this->public.remove = (status_t (*) (iterator_t*)) remove_;
+	this->public.reset = (void (*) (iterator_t*)) iterator_reset;
+	this->public.destroy = (void (*) (iterator_t*)) iterator_destroy;
 	
 	this->forward = forward;
 	this->current = NULL;

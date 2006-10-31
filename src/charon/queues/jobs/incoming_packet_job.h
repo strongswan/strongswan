@@ -26,7 +26,7 @@
 
 typedef struct incoming_packet_job_t incoming_packet_job_t;
 
-#include <types.h>
+#include <library.h>
 #include <network/packet.h>
 #include <queues/jobs/job.h>
 

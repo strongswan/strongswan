@@ -52,7 +52,7 @@ bool extract_token(chunk_t *token, const char termination, chunk_t *src)
 	u_char *eot = memchr(src->ptr, termination, src->len);
 	
 	/* initialize empty token */
-	*token = CHUNK_INITIALIZER;
+	*token = chunk_empty;
 	
 	if (eot == NULL) /* termination symbol not found */
 	{
@@ -98,7 +98,7 @@ err_t extract_value(chunk_t *value, chunk_t *line)
 
 	if (!eat_whitespace(line))
 	{
-		*value = CHUNK_INITIALIZER;
+		*value = chunk_empty;
 		return NULL;
 	}
 	if (*line->ptr == '\'' || *line->ptr == '"')

@@ -26,7 +26,7 @@
 
 typedef struct sender_t sender_t;
 
-#include <types.h>
+#include <library.h>
 
 /**
  * @brief Thread responsible for sending packets over the socket.

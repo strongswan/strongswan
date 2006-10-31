@@ -1099,8 +1099,8 @@ ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 	this->message = NULL;
 	this->requested = 0;
 	this->diffie_hellman = NULL;
-	this->nonce_i = CHUNK_INITIALIZER;
-	this->nonce_r = CHUNK_INITIALIZER;
+	this->nonce_i = chunk_empty;
+	this->nonce_r = chunk_empty;
 	this->connection = NULL;
 	this->policy = NULL;
 	this->proposal = NULL;
@@ -1108,8 +1108,8 @@ ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 	this->reqid = 0;
 	this->randomizer = randomizer_create();
 	this->nat_hasher = hasher_create(HASH_SHA1);
-	this->natd_src_hash = CHUNK_INITIALIZER;
-	this->natd_dst_hash = CHUNK_INITIALIZER;
+	this->natd_src_hash = chunk_empty;
+	this->natd_dst_hash = chunk_empty;
 	this->natd_src_seen = FALSE;
 	this->natd_dst_seen = FALSE;
 	this->natd_src_matched = FALSE;

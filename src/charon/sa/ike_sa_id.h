@@ -27,12 +27,8 @@
 
 typedef struct ike_sa_id_t ike_sa_id_t;
 
-#include <types.h>
+#include <library.h>
 
-/**
- * printf() specifier to print a ike_sa_id.
- */
-#define IKE_SA_ID_PRINTF_SPEC 'J'
 
 /**
  * @brief An object of type ike_sa_id_t is used to identify an IKE_SA.

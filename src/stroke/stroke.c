@@ -24,8 +24,6 @@
 #include <stdio.h>
 #include <linux/stddef.h>
 
-#include <types.h>
-
 #include "stroke.h"
 #include "stroke_keywords.h"
 
@@ -128,7 +126,7 @@ static int add_connection(char *name,
 	msg.add_conn.me.cert = NULL;
 	msg.add_conn.me.ca = NULL;
 	msg.add_conn.me.sendcert = 1;
-	msg.add_conn.me.hostaccess = FALSE;
+	msg.add_conn.me.hostaccess = 0;
 	msg.add_conn.me.protocol = 0;
 	msg.add_conn.me.port = 0;
 	
@@ -139,7 +137,7 @@ static int add_connection(char *name,
 	msg.add_conn.other.cert = NULL;
 	msg.add_conn.other.ca = NULL;
 	msg.add_conn.other.sendcert = 1;
-	msg.add_conn.other.hostaccess = FALSE;
+	msg.add_conn.other.hostaccess = 0;
 	msg.add_conn.other.protocol = 0;
 	msg.add_conn.other.port = 0;
 	
@@ -213,7 +211,7 @@ static int list_flags[] = {
 	LIST_ALL
 };
 
-static int list(stroke_keyword_t kw, bool utc)
+static int list(stroke_keyword_t kw, int utc)
 {
 	stroke_msg_t msg;
 	
@@ -373,7 +371,7 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_CACERTS:
 		case STROKE_LIST_CRLS:
 		case STROKE_LIST_ALL:
-			res = list(token->kw, argc > 2 && streq(argv[2], "--utc"));
+			res = list(token->kw, argc > 2 && strcmp(argv[2], "--utc") == 0);
 			break;
 		case STROKE_REREAD_CACERTS:
 		case STROKE_REREAD_CRLS:
