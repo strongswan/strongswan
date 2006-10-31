@@ -421,9 +421,11 @@ static void build_notify(notify_type_t type, message_t *message, bool flush_mess
 /**
  * Import certificate requests from a certreq payload
  */
-static void import_certificate_request(certreq_payload_t *certreq_payload)
+static void add_certificate_request(certreq_payload_t *certreq_payload,
+									linked_list_t *requested_ca_keyids)
 {
 	chunk_t keyids;
+
 	cert_encoding_t encoding = certreq_payload->get_cert_encoding(certreq_payload);
 
 	if (encoding != CERT_X509_SIGNATURE)
@@ -441,9 +443,14 @@ static void import_certificate_request(certreq_payload_t *certreq_payload)
 		x509_t *cacert = charon->credentials->get_ca_certificate_by_keyid(charon->credentials, keyid);
 
 		if (cacert)
+		{
 			DBG2(DBG_IKE, "request for certificate issued by ca '%D'", cacert->get_subject(cacert));
+			requested_ca_keyids->insert_last(requested_ca_keyids, (void *)&keyid);
+		}
 		else
+		{
 			DBG2(DBG_IKE, "request for certificate issued by unknown ca");
+		}
 		DBG2(DBG_IKE, "  with keyid %#B", &keyid);
 
 		keyids.ptr += HASH_SIZE_SHA1;
@@ -550,6 +557,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 {
 	host_t *me, *other;
 	identification_t *my_id, *other_id;
+	linked_list_t *requested_ca_keyids;
 	message_t *response;
 	status_t status;
 	iterator_t *payloads;
@@ -596,6 +604,9 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		return DESTROY_ME;
 	}
 	
+	/* initialize list of requested ca keyids */
+	requested_ca_keyids = linked_list_create();
+
 	/* Iterate over all payloads. */
 	payloads = request->get_payload_iterator(request);
 	while (payloads->iterate(payloads, (void**)&payload))
@@ -613,6 +624,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 				break;
 			case CERTIFICATE_REQUEST:
 				certreq_request = (certreq_payload_t*)payload;
+				add_certificate_request(certreq_request, requested_ca_keyids);
 				break;
 			case CERTIFICATE:
 				cert_request = (cert_payload_t*)payload;
@@ -632,12 +644,14 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 				if (status == FAILED)
 				{
 					payloads->destroy(payloads);
+					requested_ca_keyids->destroy(requested_ca_keyids);
 					/* we return SUCCESS, returned FAILED means do next transaction */
 					return SUCCESS;
 				}
 				if (status == DESTROY_ME)
 				{
 					payloads->destroy(payloads);
+					requested_ca_keyids->destroy(requested_ca_keyids);
 					SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 					return DESTROY_ME;
 				}
@@ -659,6 +673,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		build_notify(INVALID_SYNTAX, response, TRUE);
 		SIG(IKE_UP_FAILED, "request message incomplete, deleting IKE_SA");
 		SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+		requested_ca_keyids->destroy(requested_ca_keyids);
 		return DESTROY_ME;
 	}
 	
@@ -674,10 +689,6 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		}
 	}
 	
-	if (certreq_request)
-	{	/* process certificate request payload */
-		import_certificate_request(certreq_request);
-	}
 
 	{	/* get a policy and process traffic selectors */
 		linked_list_t *my_ts, *other_ts;
@@ -688,7 +699,10 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		this->policy = charon->policies->get_policy(charon->policies,
 													my_id, other_id,
 													my_ts, other_ts,
-												    me, other);
+												    me, other,
+													requested_ca_keyids);
+		requested_ca_keyids->destroy(requested_ca_keyids);
+
 		if (this->policy)
 		{
 			this->tsr = this->policy->select_my_traffic_selectors(this->policy, my_ts, me);
