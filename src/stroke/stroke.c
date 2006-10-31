@@ -34,7 +34,7 @@ struct stroke_token {
 
 static char* push_string(stroke_msg_t *msg, char *string)
 {
-	u_int string_start = msg->length;
+	unsigned long string_start = msg->length;
 
 	if (string == NULL ||  msg->length + strlen(string) >= sizeof(stroke_msg_t))
 	{

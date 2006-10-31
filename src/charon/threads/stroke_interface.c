@@ -93,14 +93,14 @@ static void pop_string(stroke_msg_t *msg, char **string)
 	/* check for sanity of string pointer and string */
 	if (string < (char**)msg
 	||	string > (char**)msg + sizeof(stroke_msg_t)
-	|| (u_int)*string < (u_int)((char*)msg->buffer - (char*)msg)
-	|| (u_int)*string > msg->length)
+	|| (unsigned long)*string < (unsigned long)((char*)msg->buffer - (char*)msg)
+	|| (unsigned long)*string > msg->length)
 	{
 		*string = "(invalid pointer in stroke msg)";
 	}
 	else
 	{
-		*string = (char*)msg + (u_int)*string;
+		*string = (char*)msg + (unsigned long)*string;
 	}
 }
 
