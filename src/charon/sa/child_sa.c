@@ -769,18 +769,18 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	now = (u_int32_t)time(NULL);
 	
-	written += fprintf(stream, "%10s:  %N, reqid: %d", this->name,
+	written += fprintf(stream, "%12s:  %N, reqid: %d", this->name,
 					   child_sa_state_names, this->state, this->reqid);
 	
 	if (this->state == CHILD_INSTALLED)
 	{
-		written += fprintf(stream, ", %N, SPIs (in/out): 0x%x/0x%x",
+		written += fprintf(stream, ", %N SPIs: 0x%0x_i 0x%0x_o",
 						   protocol_id_names, this->protocol,
 						   htonl(this->me.spi), htonl(this->other.spi));
 		
 		if (info->alt)
 		{
-			written += fprintf(stream, "\n%10s:   ", this->name);
+			written += fprintf(stream, "\n%12s:  ", this->name);
 			
 			if (this->protocol == PROTO_ESP)
 			{
@@ -800,13 +800,13 @@ static int print(FILE *stream, const struct printf_info *info,
 			{
 				written += fprintf(stream, "-%d", this->integrity.key_size);
 			}
-			written += fprintf(stream, ", rekeying: ");
+			written += fprintf(stream, ", rekeying ");
 			
 			/* calculate rekey times */
 			if (this->soft_lifetime)
 			{
 				rekeying = this->soft_lifetime - (now - this->install_time);
-				written += fprintf(stream, "%ds", rekeying);
+				written += fprintf(stream, "in %ds", rekeying);
 			}
 			else
 			{
@@ -817,7 +817,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->iterate(iterator, (void**)&policy))
 	{
-		written += fprintf(stream, "\n%10s:    %R===%R, last use (in/out/fwd): ",
+		written += fprintf(stream, "\n%12s:   %R===%R, last use: ",
 						   this->name, policy->my_ts, policy->other_ts);
 		
 		/* query policy times */
@@ -825,31 +825,31 @@ static int print(FILE *stream, const struct printf_info *info,
 							policy->other_ts, policy->my_ts, POLICY_IN, &use);
 		if (status == SUCCESS && use)
 		{
-			written += fprintf(stream, "%ds/", now - use);
+			written += fprintf(stream, "%ds_in ", now - use);
 		}
 		else
 		{
-			written += fprintf(stream, "unused/");
+			written += fprintf(stream, "no_in ");
 		}
 		status = charon->kernel_interface->query_policy(charon->kernel_interface,
 							policy->my_ts, policy->other_ts, POLICY_OUT, &use);
 		if (status == SUCCESS && use)
 		{
-			written += fprintf(stream, "%ds/", now - use);
+			written += fprintf(stream, "%ds_out ", now - use);
 		}
 		else
 		{
-			written += fprintf(stream, "unused/");
+			written += fprintf(stream, "no_out ");
 		}
 		status = charon->kernel_interface->query_policy(charon->kernel_interface,
 				policy->other_ts, policy->my_ts, POLICY_FWD, &use);
 		if (status == SUCCESS && use)
 		{
-			written += fprintf(stream, "%ds", now - use);
+			written += fprintf(stream, "%ds_fwd", now - use);
 		}
 		else
 		{
-			written += fprintf(stream, "unused");
+			written += fprintf(stream, "no_fwd");
 		}
 	}
 	iterator->destroy(iterator);

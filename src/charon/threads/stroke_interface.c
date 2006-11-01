@@ -645,15 +645,17 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 	
 	leak_detective_status(this->out);
 	
-	fprintf(this->out, "worker threads idle: %d of %d\n",
+	fprintf(this->out, "Performance:\n");
+	fprintf(this->out, "  worker threads: %d idle of %d,",
 			charon->thread_pool->get_idle_threads(charon->thread_pool),
 			charon->thread_pool->get_pool_size(charon->thread_pool));
-	fprintf(this->out, "job queue load: %d\n",
+	fprintf(this->out, "  job queue load: %d,",
 			charon->job_queue->get_count(charon->job_queue));
-	fprintf(this->out, "scheduled events: %d\n",
+	fprintf(this->out, "  scheduled events: %d\n",
 			charon->event_queue->get_count(charon->event_queue));
 	list = charon->socket->create_local_address_list(charon->socket);
-	fprintf(this->out, "listening on %d addresses:\n", list->get_count(list));
+
+	fprintf(this->out, "Listening on %d IP addresses:\n", list->get_count(list));
 	while (list->remove_first(list, (void**)&host) == SUCCESS)
 	{
 		fprintf(this->out, "  %H\n", host);
@@ -666,14 +668,17 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 		pop_string(msg, &(msg->status.name));
 	}
 	
-	fprintf(this->out, "connections:\n");
 	iterator = charon->connections->create_iterator(charon->connections);
+	if (iterator->get_count(iterator) > 0)
+	{
+		fprintf(this->out, "Connections:\n");
+	}
 	while (iterator->iterate(iterator, (void**)&connection))
 	{
-		if (connection->is_ikev2(connection) && (msg->status.name == NULL ||
-			streq(msg->status.name, connection->get_name(connection))))
+		if (connection->is_ikev2(connection) && (msg->status.name == NULL
+		||	streq(msg->status.name, connection->get_name(connection))))
 		{
-			fprintf(this->out, "%10s: %H...%H\n",
+			fprintf(this->out, "%12s:  %H...%H\n",
 					connection->get_name(connection),
 					connection->get_my_host(connection),
 					connection->get_other_host(connection));
@@ -681,14 +686,17 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	iterator->destroy(iterator);
 	
-	fprintf(this->out, "policies:\n");
 	iterator = charon->policies->create_iterator(charon->policies);
+	if (iterator->get_count(iterator) > 0)
+	{
+		fprintf(this->out, "Policies:\n");
+	}
 	while (iterator->iterate(iterator, (void**)&policy))
 	{
-		if (msg->status.name == NULL ||
-			streq(msg->status.name, policy->get_name(policy)))
+		if (msg->status.name == NULL
+		||	streq(msg->status.name, policy->get_name(policy)))
 		{
-			fprintf(this->out, "%10s: %D...%D\n",
+			fprintf(this->out, "%12s:  '%D'...'%D'\n",
 					policy->get_name(policy),
 					policy->get_my_id(policy),
 					policy->get_other_id(policy));
@@ -696,19 +704,23 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	iterator->destroy(iterator);
 	
-	fprintf(this->out,  "IKE_SAs:\n");
 	iterator = charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
+	if (iterator->get_count(iterator) > 0)
+	{
+		fprintf(this->out, "Security Associations:\n");
+	}
 	while (iterator->iterate(iterator, (void**)&ike_sa))
 	{
 		bool ike_sa_printed = FALSE;
 		child_sa_t *child_sa;
 		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
+
 		while (children->iterate(children, (void**)&child_sa))
 		{
-			if (!ike_sa_printed &&
-			   (msg->status.name == NULL ||
-				streq(msg->status.name, child_sa->get_name(child_sa)) ||
-				streq(msg->status.name, ike_sa->get_name(ike_sa))))
+			if (!ike_sa_printed
+			&& (msg->status.name == NULL
+				|| streq(msg->status.name, child_sa->get_name(child_sa))
+				|| streq(msg->status.name, ike_sa->get_name(ike_sa))))
 			{
 				fprintf(this->out, "%#K\n", ike_sa);
 				ike_sa_printed = TRUE;
@@ -742,12 +754,13 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 		bool ike_sa_printed = FALSE;
 		child_sa_t *child_sa;
 		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
+
 		while (children->iterate(children, (void**)&child_sa))
 		{
-			if (!ike_sa_printed &&
-				(msg->status.name == NULL ||
-				streq(msg->status.name, child_sa->get_name(child_sa)) ||
-				streq(msg->status.name, ike_sa->get_name(ike_sa))))
+			if (!ike_sa_printed
+			&& (msg->status.name == NULL
+				|| streq(msg->status.name, child_sa->get_name(child_sa))
+				|| streq(msg->status.name, ike_sa->get_name(ike_sa))))
 			{
 				fprintf(this->out, "%K\n", ike_sa);
 				ike_sa_printed = TRUE;

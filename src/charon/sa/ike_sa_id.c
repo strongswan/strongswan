@@ -164,9 +164,11 @@ static int print(FILE *stream, const struct printf_info *info,
 	{
 		return fprintf(stream, "(null)");
 	}
-	return fprintf(stream, "%llx:%llx[%c]",
-				   this->initiator_spi, this->responder_spi,
-				   this->is_initiator_flag ? 'i' : 'r');
+	return fprintf(stream, "0x%0llx_i%s 0x%0llx_r%s",
+				   this->initiator_spi,
+				   this->is_initiator_flag ? "*" : "",
+				   this->responder_spi,
+				   this->is_initiator_flag ? "" : "*");
 }
 
 /**

@@ -1883,6 +1883,7 @@ static void enable_natt(private_ike_sa_t *this, bool local)
 static int print(FILE *stream, const struct printf_info *info,
 				 const void *const *args)
 {
+	int written = 0;
 	private_ike_sa_t *this = *((private_ike_sa_t**)(args[0]));
 	
 	if (this == NULL)
@@ -1890,10 +1891,16 @@ static int print(FILE *stream, const struct printf_info *info,
 		return fprintf(stream, "(null)");
 	}
 	
-	return fprintf(stream, "%10s: %N, %H[%D]...%H[%D] (%J)",
-				   this->name, ike_sa_state_names, this->state,
-				   this->my_host, this->my_id, this->other_host, this->other_id,
-				   this->ike_sa_id);
+	written = fprintf(stream, "%12s: %N, %H[%D]...%H[%D], IKE SPIs: %J",
+					  this->name, ike_sa_state_names, this->state,
+					  this->my_host, this->my_id, this->other_host, this->other_id,
+					  this->ike_sa_id);
+
+	if (info->alt)
+	{
+
+	}
+	return written;
 }
 
 /**
