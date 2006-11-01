@@ -16,4 +16,3 @@ moon::scp carol:/etc/ipsec.d/certs/selfCert.der /etc/ipsec.d/certs/peerCert.der
 moon::ipsec reload 
 carol::ipsec reload 
 carol::ipsec up home
-carol::sleep 1

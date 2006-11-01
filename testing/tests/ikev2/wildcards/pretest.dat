@@ -7,4 +7,3 @@ carol::ipsec up alice
 carol::ipsec up venus
 dave::ipsec up venus
 dave::ipsec up alice
-carol::sleep 1

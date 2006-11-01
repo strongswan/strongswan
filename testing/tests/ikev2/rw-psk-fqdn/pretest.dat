@@ -10,4 +10,3 @@ dave::ipsec start
 carol::sleep 1
 carol::ipsec up home
 dave::ipsec up home
-carol::sleep 1 
