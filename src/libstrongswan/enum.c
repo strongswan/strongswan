@@ -30,7 +30,7 @@
 /**
  * get the name of an enum value in a enum_name_t list
  */
-static char *enum_name(enum_name_t *e, long val)
+static char *enum_name(enum_name_t *e, int val)
 {
 	do
 	{
@@ -49,16 +49,19 @@ static char *enum_name(enum_name_t *e, long val)
 static int print_enum(FILE *stream, const struct printf_info *info,
 					  const void *const *args)
 {
-	enum_name_t *ed = *((void**)(args[0]));
-	long val = *((long*)(args[1]));
-	char *name;
-	
-	name = enum_name(ed, val);
+	enum_name_t *ed = *((enum_name_t**)(args[0]));
+	int val = *((int*)(args[1]));
+
+	char *name = enum_name(ed, val);
+
 	if (name == NULL)
 	{
-		return fprintf(stream, "(unknown enum value: %ld)", val);
+		return fprintf(stream, "(%d)", val);
 	}
-	return fprintf(stream, "%s", name);
+	else
+	{
+		return fprintf(stream, "%s", name);
+	}
 }
 
 /**

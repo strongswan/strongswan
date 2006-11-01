@@ -52,9 +52,9 @@ typedef struct enum_name_t enum_name_t;
  */
 struct enum_name_t {
 	/** value of the first enum string */
-	long first;
+	int first;
 	/** value of the last enum string */
-	long last;
+	int last;
 	/** next enum_name_t in list */
 	enum_name_t *next;
 	/** array of strings containing names from first to last */
