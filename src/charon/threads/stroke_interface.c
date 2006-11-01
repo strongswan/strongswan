@@ -642,7 +642,8 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 	connection_t *connection;
 	policy_t *policy;
 	ike_sa_t *ike_sa;
-	
+	char *name = NULL;
+
 	leak_detective_status(this->out);
 	
 	fprintf(this->out, "Performance:\n");
@@ -666,6 +667,7 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 	if (msg->status.name)
 	{
 		pop_string(msg, &(msg->status.name));
+		name = msg->status.name;
 	}
 	
 	iterator = charon->connections->create_iterator(charon->connections);
@@ -675,8 +677,8 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	while (iterator->iterate(iterator, (void**)&connection))
 	{
-		if (connection->is_ikev2(connection) && (msg->status.name == NULL
-		||	streq(msg->status.name, connection->get_name(connection))))
+		if (connection->is_ikev2(connection)
+		&& (name == NULL || streq(name, connection->get_name(connection))))
 		{
 			fprintf(this->out, "%12s:  %H...%H\n",
 					connection->get_name(connection),
@@ -693,8 +695,7 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	while (iterator->iterate(iterator, (void**)&policy))
 	{
-		if (msg->status.name == NULL
-		||	streq(msg->status.name, policy->get_name(policy)))
+		if (name == NULL || streq(name, policy->get_name(policy)))
 		{
 			fprintf(this->out, "%12s:  '%D'...'%D'\n",
 					policy->get_name(policy),
@@ -718,9 +719,9 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 		while (children->iterate(children, (void**)&child_sa))
 		{
 			if (!ike_sa_printed
-			&& (msg->status.name == NULL
-				|| streq(msg->status.name, child_sa->get_name(child_sa))
-				|| streq(msg->status.name, ike_sa->get_name(ike_sa))))
+			&& (name == NULL ||
+				strncmp(name, child_sa->get_name(child_sa), strlen(name)) == 0 ||
+				strncmp(name, ike_sa->get_name(ike_sa), strlen(name)) == 0))
 			{
 				fprintf(this->out, "%#K\n", ike_sa);
 				ike_sa_printed = TRUE;
@@ -742,10 +743,12 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 {
 	iterator_t *iterator;
 	ike_sa_t *ike_sa;
+	char *name = NULL;
 	
 	if (msg->status.name)
 	{
 		pop_string(msg, &(msg->status.name));
+		name = msg->status.name;
 	}
 	
 	iterator = charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
@@ -758,9 +761,9 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 		while (children->iterate(children, (void**)&child_sa))
 		{
 			if (!ike_sa_printed
-			&& (msg->status.name == NULL
-				|| streq(msg->status.name, child_sa->get_name(child_sa))
-				|| streq(msg->status.name, ike_sa->get_name(ike_sa))))
+			&& (name == NULL ||
+				strncmp(name, child_sa->get_name(child_sa), strlen(name)) == 0 ||
+				strncmp(name, ike_sa->get_name(ike_sa), strlen(name)) == 0))
 			{
 				fprintf(this->out, "%K\n", ike_sa);
 				ike_sa_printed = TRUE;
