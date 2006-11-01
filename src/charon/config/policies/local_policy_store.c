@@ -107,7 +107,7 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 	policy_t *candidate;
 	policy_t *found = NULL;
 	
-	DBG2(DBG_CFG, "searching policy for ID pair %D...%D", my_id, other_id);
+	DBG2(DBG_CFG, "searching policy for ID pair '%D'...'%D'", my_id, other_id);
 
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
@@ -142,7 +142,7 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 				continue;
 			}
 
-			DBG2(DBG_CFG, "candidate policy '%s': %D...%D (prio=%d)",
+			DBG2(DBG_CFG, "candidate policy '%s': '%D'...'%D' (prio=%d)",
 				 candidate->get_name(candidate),
 				 candidate_my_id, candidate_other_id, prio);
 
@@ -157,7 +157,7 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 	
 	if (found)
 	{
-		DBG1(DBG_CFG, "found matching policy '%s': %D...%D (prio=%d)",
+		DBG1(DBG_CFG, "found matching policy '%s': '%D'...'%D' (prio=%d)",
 			 found->get_name(found), found->get_my_id(found),
 			 found->get_other_id(found), best_prio);
 		/* give out a new reference to it */
