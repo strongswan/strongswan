@@ -1,3 +1,29 @@
+strongswan-4.0.5
+----------------
+
+- IKEv1: Implementation of ModeConfig push mode via the new connection
+  keyword modeconfig=push allows interoperability with Cisco VPN gateways.
+
+- IKEv1: The command ipsec statusall now shows "DPD active" for all
+  ISAKMP SAs that are under active Dead Peer Detection control.
+
+- IKEv2: Charon's logging and debugging framework has been completely rewritten.
+  Instead of logger, special printf() functions are used to directly
+  print objects like hosts (%H) identifications (%D), certificates (%Q),
+  etc. The number of debugging levels have been reduced to:
+  
+    0 (audit), 1 (control), 2 (controlmore),  3 (raw), 4 (private)
+    
+  The debugging levels can either be specified statically in ipsec.conf as
+
+    config setup
+           charondebug="lib 1, cfg 3"
+
+  or changed dynamically via stroke as
+
+    ipsec stroke --debug-lib 1 --debug-cfg 3
+
+
 strongswan-4.0.4
 ----------------
 
