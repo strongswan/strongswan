@@ -1891,10 +1891,10 @@ static int print(FILE *stream, const struct printf_info *info,
 		return fprintf(stream, "(null)");
 	}
 	
-	written = fprintf(stream, "%12s: %N, %H[%D]...%H[%D], IKE SPIs: %J",
+	written = fprintf(stream, "%12s: %N, %H[%D]...%H[%D]",
 					  this->name, ike_sa_state_names, this->state,
-					  this->my_host, this->my_id, this->other_host, this->other_id,
-					  this->ike_sa_id);
+					  this->my_host, this->my_id, this->other_host, this->other_id);
+	written += fprintf(stream, "\n%12s: IKE SPIs: %J", this->name, this->ike_sa_id);
 
 	if (info->alt)
 	{
