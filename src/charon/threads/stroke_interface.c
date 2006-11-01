@@ -650,9 +650,9 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 	fprintf(this->out, "  worker threads: %d idle of %d,",
 			charon->thread_pool->get_idle_threads(charon->thread_pool),
 			charon->thread_pool->get_pool_size(charon->thread_pool));
-	fprintf(this->out, "  job queue load: %d,",
+	fprintf(this->out, " job queue load: %d,",
 			charon->job_queue->get_count(charon->job_queue));
-	fprintf(this->out, "  scheduled events: %d\n",
+	fprintf(this->out, " scheduled events: %d\n",
 			charon->event_queue->get_count(charon->event_queue));
 	list = charon->socket->create_local_address_list(charon->socket);
 
