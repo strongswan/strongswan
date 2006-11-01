@@ -159,12 +159,13 @@ struct private_bus_t {
  */
 static int get_thread_number(private_bus_t *this)
 {
-	static int current_num = 0, stored_num;
+	static long current_num = 0;
+	static long stored_num;
 	
-	stored_num = (int)(intptr_t)pthread_getspecific(this->thread_id);
+	stored_num = (long)pthread_getspecific(this->thread_id);
 	if (stored_num == 0)
 	{	/* first call of current thread */
-		pthread_setspecific(this->thread_id, (void*)(intptr_t)++current_num);
+		pthread_setspecific(this->thread_id, (void*)++current_num);
 		return current_num;
 	}
 	else
