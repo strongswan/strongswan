@@ -305,7 +305,7 @@ static status_t replace(private_iterator_t *this, void **old_item, void *new_ite
 	}
 	if (old_item != NULL)
 	{
-		*old_item = this->hook(this->current->value);
+		*old_item = this->current->value;
 	}
 	this->current->value = new_item;
 	
