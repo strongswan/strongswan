@@ -717,17 +717,27 @@ static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 		child_sa_t *child_sa;
 		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
 
+		/* print IKE_SA */
+		if (name == NULL || strncmp(name, ike_sa->get_name(ike_sa), strlen(name)) == 0)
+		{
+			fprintf(this->out, "%#K\n", ike_sa);
+			ike_sa_printed = TRUE;
+		}
+
 		while (children->iterate(children, (void**)&child_sa))
 		{
-			if (!ike_sa_printed
-			&& (name == NULL ||
-				strncmp(name, child_sa->get_name(child_sa), strlen(name)) == 0 ||
-				strncmp(name, ike_sa->get_name(ike_sa), strlen(name)) == 0))
+			bool child_sa_match = name == NULL ||
+								  strncmp(name, child_sa->get_name(child_sa), strlen(name)) == 0;
+
+			/* print IKE_SA if its name differs from the CHILD_SA's name */
+			if (!ike_sa_printed && child_sa_match)
 			{
 				fprintf(this->out, "%#K\n", ike_sa);
 				ike_sa_printed = TRUE;
 			}
-			if (ike_sa_printed)
+
+			/* print CHILD_SA */
+			if (child_sa_match)
 			{
 				fprintf(this->out, "%#P\n", child_sa);
 			}
@@ -759,17 +769,27 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 		child_sa_t *child_sa;
 		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
 
+		/* print IKE_SA */
+		if (name == NULL || strncmp(name, ike_sa->get_name(ike_sa), strlen(name)) == 0)
+		{
+			fprintf(this->out, "%K\n", ike_sa);
+			ike_sa_printed = TRUE;
+		}
+
 		while (children->iterate(children, (void**)&child_sa))
 		{
-			if (!ike_sa_printed
-			&& (name == NULL ||
-				strncmp(name, child_sa->get_name(child_sa), strlen(name)) == 0 ||
-				strncmp(name, ike_sa->get_name(ike_sa), strlen(name)) == 0))
+			bool child_sa_match = name == NULL ||
+								  strncmp(name, child_sa->get_name(child_sa), strlen(name)) == 0;
+
+			/* print IKE_SA if its name differs from the CHILD_SA's name */
+			if (!ike_sa_printed && child_sa_match)
 			{
 				fprintf(this->out, "%K\n", ike_sa);
 				ike_sa_printed = TRUE;
 			}
-			if (ike_sa_printed)
+
+			/* print CHILD_SA */
+			if (child_sa_match)
 			{
 				fprintf(this->out, "%P\n", child_sa);
 			}
