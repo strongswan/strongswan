@@ -107,7 +107,7 @@ The ipsec starter is based on Mathieu Lafon's original work.
 Jan Hutter and Martin Willi developed the scepclient which fully
 supports Cisco's Simple Certificate Enrollment Protocol (SCEP).
 
-Tobias Brunner and Thomas Roethlisberger implemented NAT traversal and dead
+Tobias Brunner and Daniel Roethlisberger implemented NAT traversal and dead
 peer detection for the IKEv2 keying daemon.
 
 This file is RCSID $Id: CREDITS,v 1.6 2006/01/22 21:28:27 as Exp $
