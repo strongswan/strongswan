@@ -559,6 +559,7 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		{
 			case CHILD_UP_SUCCESS:
 			case CHILD_UP_FAILED:
+			case IKE_UP_FAILED:
 				if (ike_sa == init_ike_sa)
 				{
 					charon->bus->set_listen_state(charon->bus, FALSE);
