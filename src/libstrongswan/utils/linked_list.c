@@ -392,12 +392,12 @@ static void insert_first(private_linked_list_t *this, void *item)
  */
 static status_t remove_first(private_linked_list_t *this, void **item)
 {
-	if (this->count == 0)
+	element_t *element = this->first;
+	
+	if (element == NULL)
 	{
 		return NOT_FOUND;
 	}
-	
-	element_t *element = this->first;
 	if (element->next != NULL)
 	{
 		element->next->previous = NULL;
@@ -408,8 +408,13 @@ static status_t remove_first(private_linked_list_t *this, void **item)
 	{
 		*item = element->value;
 	}
-	this->count--;
+	if (--this->count == 0)
+	{
+		this->last = NULL;
+	}
+	
 	free(element);
+	
 	return SUCCESS;
 }
 
@@ -457,26 +462,29 @@ static void insert_last(private_linked_list_t *this, void *item)
  */
 static status_t remove_last(private_linked_list_t *this, void **item)
 {
-	if (this->count == 0)
+	element_t *element = this->last;
+	
+	if (element == NULL)
 	{
 		return NOT_FOUND;
 	}
-	
-	element_t *element = this->last;
-	
 	if (element->previous != NULL)
 	{
 		element->previous->next = NULL;
 	}
 	this->last = element->previous;
-
+	
 	if (item != NULL)
 	{
 		*item = element->value;
 	}
+	if (--this->count == 0)
+	{
+		this->first = NULL;
+	}
 	
-	this->count--;
 	free(element);
+	
 	return SUCCESS;
 }
 
