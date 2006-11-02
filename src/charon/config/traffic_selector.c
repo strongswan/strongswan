@@ -160,11 +160,10 @@ static int print(FILE *stream, const struct printf_info *info,
 {
 	private_traffic_selector_t *this = *((private_traffic_selector_t**)(args[0]));
 	char addr_str[INET6_ADDRSTRLEN] = "";
-	u_int8_t mask;
-	struct protoent *proto;
-	struct servent *serv;
 	char *serv_proto = NULL;
-	bool has_proto = FALSE;
+	u_int8_t mask;
+	bool has_proto;
+	bool has_ports;
 	size_t written = 0;
 	
 	if (this == NULL)
@@ -184,56 +183,62 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	written += fprintf(stream, "%s/%d", addr_str, mask);
 	
-	/* build protocol string */
-	if (this->protocol)
+	/* check if we have protocol and/or port selectors */
+	has_proto = this->protocol != 0;
+	has_ports = !(this->from_port == 0 && this->to_port == 0xFFFF);
+
+	if (!has_proto && !has_ports)
 	{
-		proto = getprotobynumber(this->protocol);
+		return written;
+	}
+
+	written += fprintf(stream, "[");
+
+	/* build protocol string */
+	if (has_proto)
+	{
+		struct protoent *proto = getprotobynumber(this->protocol);
+
 		if (proto)
 		{
-			written += fprintf(stream, "[%s", proto->p_name);
+			written += fprintf(stream, "%s", proto->p_name);
 			serv_proto = proto->p_name;
 		}
 		else
 		{
-			written += fprintf(stream, "[%d", this->protocol);
+			written += fprintf(stream, "%d", this->protocol);
 		}
-		has_proto = TRUE;
 	}
 	
+	if (has_proto && has_ports)
+	{
+		written += fprintf(stream, "/");
+	}
+
 	/* build port string */
-	if (this->from_port == this->to_port)
+	if (has_ports)
 	{
-		if (has_proto)
+		if (this->from_port == this->to_port)
 		{
-			written += fprintf(stream, "/");
+			struct servent *serv = getservbyport(htons(this->from_port), serv_proto);
+
+			if (serv)
+			{
+				written += fprintf(stream, "%s", serv->s_name);
+			}
+			else
+			{
+				written += fprintf(stream, "%d", this->from_port);
+			}
 		}
 		else
 		{
-			written += fprintf(stream, "[");
+			written += fprintf(stream, "%d-%d", this->from_port, this->to_port);
 		}
-		serv = getservbyport(htons(this->from_port), serv_proto);
-		if (serv)
-		{
-			written += fprintf(stream, "%s]", serv->s_name);
-		}
-		else
-		{
-			written += fprintf(stream, "%d]", this->from_port);
-		}
-	}
-	else if (!(this->from_port == 0 && this->to_port == 0xFFFF))
-	{
-		if (has_proto)
-		{
-			written += fprintf(stream, "/");
-		}
-		else
-		{
-			written += fprintf(stream, "[");
-		}
-		written += fprintf(stream, "%d-%d]", this->from_port, this->to_port);
 	}
 	
+	written += fprintf(stream, "]");
+
 	return written;
 }
 
