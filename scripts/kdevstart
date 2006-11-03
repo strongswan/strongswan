@@ -7,7 +7,7 @@
 
 mv src/libstrongswan/crypto/crypters/aes_cbc_crypter.c libstrongswan_aes.c
 mv src/libcrypto/libaes/aes.c libcrypto_aes.c
-kdevelop3 &
+kdevelop3 strongSwan.kdevelop &
 sleep 20
 mv libstrongswan_aes.c src/libstrongswan/crypto/crypters/aes_cbc_crypter.c 
 mv libcrypto_aes.c src/libcrypto/libaes/aes.c 
