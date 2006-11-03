@@ -157,7 +157,7 @@ Contents
     --------------------
 
     The strongSwan 4.x series currently support only 2.6 kernels and its
-    nativ IPsec stack. Please make sure that the the following IPsec kernel
+    native IPsec stack. Please make sure that the following IPsec kernel
     modules are available:
 
       o af_key
@@ -167,7 +167,7 @@ Contents
       o xfrm_user
       o xfrm4_tunnel
 
-    These may be build into the kernel or as modules. Modules get loaded
+    These may be built into the kernel or as modules. Modules get loaded
     automatically at strongSwan startup.
 
     Also the built-in kernel Cryptoapi modules with selected encryption and
