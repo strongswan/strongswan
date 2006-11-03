@@ -1,3 +1,177 @@
+ strongswan-4.0.5 / R:1447 
+===========================
+
+fixed typos
+improved selection of ipsec status|statusall <name>
+fixed NEWS (runtime debug level options)
+fixed credits
+fixed very old bug in linked_list's remove_first and remove_last
+proper "ipsec up" signal handling when initiating to %any
+removed iterator hook for replace
+fixed output of proto/port selectors
+cosmetics
+due to console logging, no need for final sleep anymore
+adapted checks to changed ipsec status output
+due to narrowing no need for rightsubnetwithin
+no need to send certreq
+fixed ipsec status|statusall <name>
+log IKE SPIs on a separate line
+redesigned formatting of ipsec status|statusall
+cosmetics
+version bumps of strongSwan, Linux kernel and Gentoo root file system
+corrected description
+added dpd-hold scenario
+added new features
+fixed 64 bit issue
+solved 64 bit issue by changing long to int
+solved 64 bit issue in push/pop stroke interface
+fixed 64 bit issue
+some fixes for doxygen
+better split up of library files "types.h" & "definitions.h"
+centralized all printf specifier character definitions
+reuse of arginfo handlers
+more cleanups
+fixed more AMD64 issues
+added DEBUG_LEVEL compile flag to exclude DBGn() statements
+added nodebug configure script without any debug messages and without -g
+preparations to include certreqs in policy decisions
+do not sent certreq payloads when the peer is known to use PSK
+position of (myself) moved in log output
+do not sent certreq payloads when using self-signed certs
+moved (myself) in log output
+moved typedefs to beginning of files to solve some include problems
+splitted authenticator to have a separate implementation for each auth_method_t
+using va_copy to clone va_lists, should fix proplems on AMD64
+some other cleanups
+do not sanitize '*' character
+fixed SIGSEGV when setup of an additional CHILD_SA fails
+added IKEv2 clarifications RFC
+changed debug level of certreq log output
+cosmetics in debug output
+support of certreq payload in IKE_AUTH messages
+chunk_to_hex() function declaration deleted
+added function certreq_payload_create_from_x509()
+send a certreq as initiator if other_ca is set
+added method get_ca_certificate()
+added methods get_my_ca() and get_other_ca()
+added methods get_my_ca() and get_other_ca()
+added some missing 'AUD' entries
+cosmetics
+cosmetics
+change due to change debug output
+spaces should not be sanitized
+fixed due to new logging concept
+some improvements in signaling code
+include only source NATD payloads really needed
+updated for NAT team
+improved signal handling and emitting
+support of ModeCfg Push mode
+support of mixed RSA/PSK static connections
+support of ipsec statusall in state output
+output of 'DPD active' in ISAKMP SAs
+support of ipsec statusall in state output
+added natip support
+added has_natip flag
+added ModeCfg push policy and states
+added ModeCfg push policy and states
+fixed typo in debug statement
+redesigned list output format
+added 'modeconfig=pull|push' and 'left|rightnatip' keywords
+added has_natip flag
+added has_natip flag
+added 'exit' statement in listcerts,.. case
+fixed two bugs in the time_t and chunk_ct print functions
+redesigned format of print function
+replaced 'times' by 'dates'
+added private flag to asn1_init
+added private flag to asn1_ctx_t
+removed DES-EDE3-CBC only comment
+removed deprecated iterator methods (has_next & current)
+added iterator hook to manipulate iterator the clean way
+linked list cleanups
+added list methods invoke(), destroy_offset(), destroy_function()
+simplified list destruction when destroying its items
+added verbosity level to stroke
+upgrade to new Gentoo root file system and tcpdump command
+added
+deleted
+renamed ikev1 scenario and added ikev2 scenario
+added new scenarios
+Version bumps of UML kernel, Gentoo root file system and strongSwan release
+code cleanups in printf handlers
+added eap authentication draft for ikev2
+updated stroke to allow run-time manipulation of debug levels
+added charondebug config parameter to set debug level at startup
+introduced new logging subsystem using bus:
+  passive listeners can register on the bus
+  active listeners wait for signals actively
+  multiplexing allows multiple listeners to receive debug signals
+  a lot more...
+updated file filter for kdev project
+include CREDITS file in distribution
+moved various scripts in scripts/ dir
+add configure script wrappers
+removed txt files from doxygen
+removed module tests, outdated. We need something more system-test like
+added missing -DDEBUG compile option
+fixed auxillary message data parsing for IPV6 socket
+using SOL_* constants for socket level
+fixed IPV6_PKTINFO setsockopt() to work with most kernel headers
+replaced strerror(errno) with %m printf specifier
+added stronger certs for moon, carol, and dave
+added IPv6 hw and multicast addresses
+adapted to new tcpdump ipv6 output
+multi-level-ca scenarios use unencrypted private key
+added scenario
+fixed timing
+new gentoo root file system
+fixed bug with openldap 2.3
+removed ipsec.conf version information
+carolKey.pem is now protected by 3DES passphrase
+updated net runlevel scripts
+updated net init scripts
+new net configuration format
+HW addresses must be predefined
+cosmetics
+added USE_LIBCURL
+cosmetics
+found libraries are not appended to LIBS anymore
+version bump to 4.0.5
+fixed DPD to survive IKE_SA rekeying
+introduced printf() specifiers for:
+  host_t (%H)
+  identification_t (%D)
+  chunk pointers (%B)
+  memory pointer/length (%b)
+added a signaling bus:
+  receives event and debug messages, sends them to its listeners
+  stream_logger, sys_logger, file_logger added, listen to bus
+some other tweaks here and there
+added often used RFCs and drafts
+DES for private key encryption is not supported
+updated NEWS and ChangeLog for 4.0.4 release
+fixed retransmission policy for responder
+fixed dpd for responder
+added ID_ANY check to matches_binary()
+replaced 'missing value' warning by zero length chunk_t value
+defined maximum hash size
+support of AES-192-CBC private key encryption
+added hostaccess support
+added hostaccess support
+moved auth_method to policy
+added hostaccess support
+added hostaccess support
+more consistent authentication logging
+added hostaccess support
+moved auth_method to policy
+moved auth_method to policy
+added hostaccess support; moved auth_method to policy
+added hostaccess support
+added hostaccess support
+added new test scenarios
+fixed some compiler warnings
+
+
  strongswan-4.0.4 / R:1289 
 ===========================
 
