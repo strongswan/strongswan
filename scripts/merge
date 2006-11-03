@@ -1,0 +1,22 @@
+#!/bin/bash
+
+REPO="svn+ssh://svn.strongswan.org/strongswan"
+PORT=`svn propget trunk-rev-backport`
+HEAD=`svn info $REPO | grep Revision: | awk '{ print $2 }'`
+
+
+if [ "$1" == "diff" ]
+then
+	echo "showing diff I would merge from trunk revisions $PORT:$HEAD"
+	svn diff $REPO/trunk -r $PORT:$HEAD
+elif [ "$1" == "dry" ]
+then
+	echo "showing files I would merge from trunk revisions $PORT:$HEAD"
+	svn merge $REPO/trunk -r $PORT:$HEAD --dry-run
+elif [ "$1" == "run" ]
+then
+	echo "merging files from trunk revisions $PORT:$HEAD to branch"
+	svn merge $REPO/trunk -r $PORT:$HEAD && svn propset trunk-rev-backport $HEAD .
+else
+	echo "Usage: $0 diff|dry|run"
+fi
