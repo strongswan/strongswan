@@ -3048,6 +3048,13 @@ main_inI1_outR1(struct msg_digest *md)
 	    c = rw_instantiate(c, &md->sender, md->sender_port, NULL, NULL);
 	}
     }
+    else if (c->kind == CK_TEMPLATE)
+    {
+	/* Create an instance
+	 * This is a rare case: wildcard peer ID but static peer IP address
+	 */
+	 c = rw_instantiate(c, &md->sender, md->sender_port, NULL, &c->spd.that.id);
+    }
 
     /* Set up state */
     md->st = st = new_state();
