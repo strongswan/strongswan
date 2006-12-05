@@ -88,6 +88,15 @@
 #define SEND_XAUTH_VID	0
 #endif /* !XAUTH_VID */
 
+/*
+ * are we sending a Cisco Unity VID?
+ */
+#ifdef CISCO_QUIRKS
+#define SEND_CISCO_UNITY_VID	1
+#else /* !CISCO_QUIRKS */
+#define SEND_XAUTH_VID	0
+#endif /* !CISCO_QUIRKS */
+
 /* MAGIC: perform f, a function that returns notification_t
  * and return from the ENCLOSING stf_status returning function if it fails.
  */
@@ -893,6 +902,8 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	vids_to_send++;
     if (SEND_XAUTH_VID)
 	vids_to_send++;
+    if (SEND_CISCO_UNITY_VID)
+	vids_to_send++;
     if (c->spd.this.cert.type == CERT_PGP)
 	vids_to_send++;
     /* always send DPD Vendor ID */
@@ -974,6 +985,16 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	}
     }
 
+    /* if enabled send Cisco Unity Vendor ID */
+    if (SEND_CISCO_UNITY_VID)
+    {
+	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
+	, &rbody, VID_CISCO_UNITY))
+	{
+	    reset_cur_state();
+	    return STF_INTERNAL_ERROR;
+	}
+    }
     /* if we  have an OpenPGP certificate we assume an
      * OpenPGP peer and have to send the Vendor ID
      */
@@ -3095,6 +3116,8 @@ main_inI1_outR1(struct msg_digest *md)
 	vids_to_send++;
     if (SEND_XAUTH_VID)
 	vids_to_send++;
+    if (SEND_CISCO_UNITY_VID)
+	vids_to_send++;
     if (md->openpgp)
 	vids_to_send++;
     /* always send DPD Vendor ID */
@@ -3145,6 +3168,16 @@ main_inI1_outR1(struct msg_digest *md)
     {
 	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
 	, &md->rbody, VID_MISC_XAUTH))
+	{
+	    return STF_INTERNAL_ERROR;
+	}
+    }
+
+    /* if enabled send Cisco Unity Vendor ID */
+    if (SEND_CISCO_UNITY_VID)
+    {
+	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
+	, &md->rbody, VID_CISCO_UNITY))
 	{
 	    return STF_INTERNAL_ERROR;
 	}
