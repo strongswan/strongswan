@@ -410,7 +410,7 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			KW_POLICY_FLAG("ah", "esp", POLICY_AUTHENTICATE)
 			break; 
 		case KW_AUTHBY:
-			conn->policy &= ~(POLICY_RSASIG | POLICY_PSK | POLICY_ENCRYPT);
+			conn->policy &= ~(POLICY_ID_AUTH_MASK | POLICY_ENCRYPT);
 
 			if (strcmp(kw->value, "never") != 0)
 			{
@@ -425,8 +425,12 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 				{
 					if (streq(value, "rsasig"))
 						conn->policy |= POLICY_RSASIG | POLICY_ENCRYPT;
-					else if (streq(value, "secret"))
+					else if (streq(value, "secret") || streq(value, "psk"))
 						conn->policy |= POLICY_PSK | POLICY_ENCRYPT;
+					else if (streq(value, "xauthrsasig"))
+						conn->policy |= POLICY_XAUTH_RSASIG | POLICY_ENCRYPT;
+					else if (streq(value, "xauthpsk"))
+						conn->policy |= POLICY_XAUTH_PSK | POLICY_ENCRYPT;
 					else
 					{
 						plog("# bad policy value: %s=%s", kw->entry->name, kw->value);
@@ -445,6 +449,9 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			break;
 		case KW_MODECONFIG:
 			KW_POLICY_FLAG("push", "pull", POLICY_MODECFG_PUSH)
+			break;
+		case KW_XAUTH:
+			KW_POLICY_FLAG("server", "client", POLICY_XAUTH_SERVER)
 			break;
 		default:
 			break;

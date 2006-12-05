@@ -69,6 +69,7 @@ dpddelay,          KW_DPDDELAY
 dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION
 modeconfig,        KW_MODECONFIG
+xauth,             KW_XAUTH
 cacert,            KW_CACERT
 ldaphost,          KW_LDAPHOST
 ldapbase,          KW_LDAPBASE

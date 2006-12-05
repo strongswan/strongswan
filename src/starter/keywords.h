@@ -80,9 +80,10 @@ typedef enum {
     KW_DPDTIMEOUT,
     KW_DPDACTION,
     KW_MODECONFIG,
+    KW_XAUTH,
 
 #define KW_CONN_FIRST	KW_CONN_SETUP
-#define KW_CONN_LAST	KW_MODECONFIG
+#define KW_CONN_LAST	KW_XAUTH
 
    /* ca section keywords */
     KW_CA_NAME,
