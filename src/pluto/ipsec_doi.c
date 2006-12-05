@@ -94,7 +94,7 @@
 #ifdef CISCO_QUIRKS
 #define SEND_CISCO_UNITY_VID	1
 #else /* !CISCO_QUIRKS */
-#define SEND_XAUTH_VID	0
+#define SEND_CISCO_UNITY_VID	0
 #endif /* !CISCO_QUIRKS */
 
 /* MAGIC: perform f, a function that returns notification_t
