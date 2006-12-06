@@ -213,6 +213,11 @@ struct state
 	bool started;
     } st_modecfg;
 
+    struct {
+	int attempt;
+	bool started;
+    } st_xauth;
+
     u_int32_t         nat_traversal;
     ip_address        nat_oa;
 
