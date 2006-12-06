@@ -285,6 +285,7 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
  */
 void signal_handler(int signal)
 {
+#ifndef HAVE_BACKTRACE
 	void *array[20];
 	size_t size;
 	char **strings;
@@ -294,13 +295,17 @@ void signal_handler(int signal)
 	strings = backtrace_symbols(array, size);
 
 	DBG1(DBG_DMN, "thread %u received %s. Dumping %d frames from stack:",
-		 signal == SIGSEGV ? "SIGSEGV" : "SIGILL", pthread_self(), size);
+		 pthread_self(), signal == SIGSEGV ? "SIGSEGV" : "SIGILL", size);
 
 	for (i = 0; i < size; i++)
 	{
 		DBG1(DBG_DMN, "    %s", strings[i]);
 	}
 	free (strings);
+#else /* !HAVE_BACKTRACE */
+	DBG1(DBG_DMN, "thread %u received %s",
+		 pthread_self(), signal == SIGSEGV ? "SIGSEGV" : "SIGILL");
+#endif /* HAVE_BACKTRACE */
 	DBG1(DBG_DMN, "killing ourself hard after SIGSEGV");
 	raise(SIGKILL);
 }

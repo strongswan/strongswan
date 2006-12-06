@@ -96,6 +96,8 @@ dnl ==========================
 dnl  check required libraries
 dnl ==========================
 
+AC_CHECK_FUNCS(backtrace getifaddrs)
+
 AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])	
 if test "$ldap" = "true"; then
     AC_HAVE_LIBRARY([ldap],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP enabled, but library ldap not found])])

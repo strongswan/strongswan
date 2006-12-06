@@ -140,6 +140,7 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
  */
 static void log_stack_frames(void **stack_frames, int stack_frame_count)
 {
+#ifdef HAVE_BACKTRACE
 	char **strings;
 	size_t i;
 
@@ -152,6 +153,7 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
 		DBG1("    %s", strings[i]);
 	}
 	free (strings);
+#endif /* HAVE_BACKTRACE */
 }
 
 /**
