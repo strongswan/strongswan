@@ -183,6 +183,9 @@ static const char *const state_name[] = {
 	"STATE_INFO",
 	"STATE_INFO_PROTECTED",
 
+	"STATE_XAUTH_R0",
+	"STATE_XAUTH_R1",
+
 	"STATE_MODE_CFG_R0",
 	"STATE_MODE_CFG_R1",
 	"STATE_MODE_CFG_R2",
@@ -216,7 +219,10 @@ const char *const state_story[] = {
 
 	"got Informational Message in clear",	 /* STATE_INFO */
 	"got encrypted Informational Message",	 /* STATE_INFO_PROTECTED */
-	
+
+	"sent XAUTH request, expecting reply",	 /* STATE_XAUTH_R0 */
+	"sent XAUTH status, expecting ack",	 /* STATE_XAUTH_R1 */
+
 	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R0 */
 	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R1 */
 	"received ModeCfg ack",			 /* STATE_MODE_CFG_R2 */
@@ -487,6 +493,9 @@ const char *const sa_policy_bit_names[] = {
 	"GROUTED",
 	"UP",
 	"MODECFGPUSH",
+	"XAUTHPSK",
+	"XAUTHRSASIG",
+	"XAUTHSERVER",
 	NULL
     };
 
@@ -675,7 +684,49 @@ enum_names auth_alg_names =
     { AUTH_ALGORITHM_HMAC_MD5, AUTH_ALGORITHM_HMAC_RIPEMD, auth_alg_name
 	, &extended_auth_alg_names };
 
-const char *const modecfg_attr_name[] = {
+/* From draft-beaulieu-ike-xauth */
+static const char *const xauth_type_name[] = {
+  "Generic",
+  "RADIUS-CHAP",
+  "OTP",
+  "S/KEY",
+};
+
+enum_names xauth_type_names =
+  { XAUTH_TYPE_GENERIC, XAUTH_TYPE_SKEY, xauth_type_name, NULL};
+
+/* From draft-beaulieu-ike-xauth */
+static const char *const xauth_attr_tv_name[] = {
+	"XAUTH_TYPE",
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	"XAUTH_STATUS",
+    };
+
+enum_names xauth_attr_tv_names = {
+    XAUTH_TYPE   + ISAKMP_ATTR_AF_TV,
+    XAUTH_STATUS + ISAKMP_ATTR_AF_TV, xauth_attr_tv_name, NULL };
+
+static const char *const xauth_attr_name[] = {
+	"XAUTH_USER_NAME",
+	"XAUTH_USER_PASSWORD",
+	"XAUTH_PASSCODE",
+	"XAUTH_MESSAGE",
+	"XAUTH_CHALLENGE",
+	"XAUTH_DOMAIN",
+	"XAUTH_STATUS (wrong TLV syntax, should be TV)",
+	"XAUTH_NEXT_PIN",
+	"XAUTH_ANSWER",
+    };
+
+enum_names xauth_attr_names =
+    { XAUTH_USER_NAME , XAUTH_ANSWER, xauth_attr_name , &xauth_attr_tv_names };
+
+static const char *const modecfg_attr_name[] = {
 	"INTERNAL_IP4_ADDRESS",
 	"INTERNAL_IP4_NETMASK",
 	"INTERNAL_IP4_DNS",
@@ -695,7 +746,7 @@ const char *const modecfg_attr_name[] = {
     };
 
 enum_names modecfg_attr_names =
-    { INTERNAL_IP4_ADDRESS , INTERNAL_IP6_SUBNET, modecfg_attr_name , NULL };
+    { INTERNAL_IP4_ADDRESS, INTERNAL_IP6_SUBNET, modecfg_attr_name , &xauth_attr_names };
 
 /* Oakley Lifetime Type attribute */
 
