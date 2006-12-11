@@ -29,10 +29,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <time.h>
-#include <execinfo.h>
 #include <string.h>
 #include <getopt.h>
 #include <errno.h>
+#ifdef HAVE_BACKTRACE
+# include <execinfo.h>
+#endif /* HAVE_BACKTRACE */
 
 #include "daemon.h"
 
@@ -285,7 +287,7 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
  */
 void signal_handler(int signal)
 {
-#ifndef HAVE_BACKTRACE
+#ifdef HAVE_BACKTRACE
 	void *array[20];
 	size_t size;
 	char **strings;

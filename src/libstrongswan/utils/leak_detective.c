@@ -23,7 +23,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <malloc.h>
-#include <execinfo.h>
 #include <signal.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -34,6 +33,9 @@
 #include <pthread.h>
 #include <netdb.h>
 #include <printf.h>
+#ifdef HAVE_BACKTRACE
+# include <execinfo.h>
+#endif /* HAVE_BACKTRACE */
 
 #include "leak_detective.h"
 

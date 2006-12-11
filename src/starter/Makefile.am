@@ -28,10 +28,10 @@ keywords.c:	keywords.txt keywords.h
 		$(GPERF) -C -G -t < keywords.txt > keywords.c
 
 loglite.o:	$(OPENACDIR)/loglite.c $(PLUTODIR)/log.h
-		$(CC) $(AM_CFLAGS) $(INCLUDES) -c -o $@ $<
+		$(COMPILE) -c -o $@ $<
 
 defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
-		$(CC) $(AM_CFLAGS) $(INCLUDES) -c -o $@ $<
+		$(COMPILE) -c -o $@ $<
 
 install-exec-local :
 		test -e "$(sysconfdir)/ipsec.conf" || $(INSTALL) ipsec.conf $(sysconfdir)/ipsec.conf
