@@ -58,7 +58,7 @@ struct private_ke_payload_t {
 	/**
 	 * DH Group Number.
 	 */
-	diffie_hellman_group_t dh_group_number;
+	u_int16_t dh_group_number;
 	
 	/**
 	 * Key Exchange Data of this KE payload.

@@ -381,11 +381,14 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			/* get value of attribute format flag */
 			u_int8_t attribute_format_flag = *(this->out_position) & 0x80;
 			/* get attribute type value as 16 bit integer*/
-			u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
-			/* last bit must be unset */
-			int16_val = int16_val & 0xFF7F;
-			
-			int16_val = int16_val | attribute_format_flag;
+			u_int16_t int16_val = *((u_int16_t*)(this->data_struct + offset));
+			/* unset most significant bit */
+			int16_val &= 0x7FFF;
+			if (attribute_format_flag)
+			{
+				int16_val |= 0x8000;
+			}
+			int16_val = htons(int16_val);
 			DBG3(DBG_ENC, "   => %d", int16_val);
 			/* write bytes to buffer (set bit is overwritten)*/				
 			this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
