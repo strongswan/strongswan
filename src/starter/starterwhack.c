@@ -17,7 +17,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <linux/stddef.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <errno.h>
 

@@ -22,7 +22,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
-#include <linux/stddef.h>
+#include <stddef.h>
 
 #include "stroke.h"
 #include "stroke_keywords.h"
