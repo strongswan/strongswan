@@ -59,12 +59,12 @@ Todo-List for charon
 + find existing IKE_SA on CHILD_SA initiation
 
 + use dpdaction/dpddelay parameters from ipsec.conf
-/ add firewall script support
++ add firewall script support
 + do not link unneeded libraries in bins
 + include only a minimum of NATD payloads
 + implement 3DES to load encrypted pem files
 + implement a "event bus" mechanism
-  / add more output to to up/down, somehow...
+  + add more output to to up/down, somehow...
   - detach console after first keyingtry
   - proper handling of CTRL+C console detach (SIG_PIPE)
 - configure flag which allows to ommit vendor id in pluto
@@ -78,6 +78,7 @@ Todo-List for charon
 - add a Rekey-Counter for SAs in "statusall"
 - ipsec status:
   + on one line: ip, id, spi
-  - no key age, rekey for IKE
+  + no key age, rekey for IKE
   - byte count
 - retry transaction on failure while keyingtries > 1
+- reduce printf handlers count to 10, as uClibc does not support more
