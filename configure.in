@@ -88,7 +88,7 @@ AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 AC_PROG_LEX
 AC_PROG_YACC
-AC_PROG_CC(intel)
+AC_PROG_CC()
 AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 
@@ -96,7 +96,7 @@ dnl ==========================
 dnl  check required libraries
 dnl ==========================
 
-AC_CHECK_FUNCS(backtrace getifaddrs)
+AC_CHECK_FUNCS(backtrace)
 
 AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])	
 if test "$ldap" = "true"; then

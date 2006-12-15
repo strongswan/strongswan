@@ -75,6 +75,11 @@
 #define IPV6_2292PKTINFO 2
 #endif /*IPV6_2292PKTINFO*/
 
+/* missing on uclibc */
+#ifndef IPV6_IPSEC_POLICY
+#define IPV6_IPSEC_POLICY 34
+#endif /*IPV6_IPSEC_POLICY*/
+
 typedef struct private_socket_t private_socket_t;
 
 /**
@@ -545,13 +550,11 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	}
 	
 	/* bypass outgoung IKE traffic on send socket */
+	memset(&policy, 0, sizeof(policy));
 	policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
 	policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 	policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
 	policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
-	policy.sadb_x_policy_reserved = 0;
-	policy.sadb_x_policy_id = 0;
-	policy.sadb_x_policy_priority = 0;
 	
 	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
@@ -687,13 +690,11 @@ static int open_recv_socket(private_socket_t *this, int family)
 	}
 	
 	/* bypass incomining IKE traffic on this socket */
+	memset(&policy, 0, sizeof(policy));
 	policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
 	policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 	policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
 	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
-	policy.sadb_x_policy_reserved = 0;
-	policy.sadb_x_policy_id = 0;
-	policy.sadb_x_policy_priority = 0;
 	
 	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
