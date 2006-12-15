@@ -508,8 +508,11 @@ enum state_kind {
 
     /* XAUTH states */
 
-    STATE_XAUTH_R0,              /* server state: sent request, awaiting reply */
-    STATE_XAUTH_R1,              /* server state: sent success/fail, awaiting reply */
+    STATE_XAUTH_R0,              /* responder states (server) */
+    STATE_XAUTH_R1,
+
+    STATE_XAUTH_I1,              /* initiator states (client) */
+    STATE_XAUTH_I2,
 
     /* Mode Config states */
 

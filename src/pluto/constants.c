@@ -185,6 +185,8 @@ static const char *const state_name[] = {
 
 	"STATE_XAUTH_R0",
 	"STATE_XAUTH_R1",
+	"STATE_XAUTH_I1",
+	"STATE_XAUTH_I2",
 
 	"STATE_MODE_CFG_R0",
 	"STATE_MODE_CFG_R1",
@@ -222,6 +224,8 @@ const char *const state_story[] = {
 
 	"sent XAUTH request, expecting reply",	 /* STATE_XAUTH_R0 */
 	"sent XAUTH status, expecting ack",	 /* STATE_XAUTH_R1 */
+	"received XAUTH request, sent reply",	 /* STATE_XAUTH_I1 */
+	"received XAUTH status, sent ack",	 /* STATE_XAUTH_I2 */
 
 	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R0 */
 	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R1 */
