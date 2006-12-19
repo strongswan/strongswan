@@ -11,14 +11,7 @@ strongSwan IPsec subsystem.
 (The major exception is secrets for authentication;
 see
 .IR ipsec.secrets (5).)
-Its contents are not security-sensitive
-.I unless
-manual keying is being done for more than just testing,
-in which case the encryption/authentication keys in the
-descriptions for the manually-keyed connections are very sensitive
-(and those connection descriptions
-are probably best kept in a separate file,
-via the include facility described below).
+Its contents are not security-sensitive.
 .PP
 The file is a text file, consisting of one or more
 .IR sections .
@@ -56,11 +49,6 @@ Note also the
 .B also
 parameter (described below) which permits splitting a single logical
 section (e.g. a connection description) into several actual sections.
-.PP
-The first significant line of the file must specify the version
-of this specification that it conforms to:
-.PP
-\fBversion 2\fP
 .PP
 A section
 begins with a line of the form:
@@ -125,30 +113,6 @@ and there may be more than one
 .B also
 in a single section,
 although it is forbidden to append the same section more than once.)
-This allows, for example, keeping the encryption keys
-for a connection in a separate file
-from the rest of the description, by using both an
-.B also
-parameter and an
-.B include
-line.
-.PP
-Parameter names beginning with
-.B x-
-(or
-.BR X- ,
-or
-.BR x_ ,
-or
-.BR X_ )
-are reserved for user extensions and will never be assigned meanings
-by IPsec.
-Parameters with such names must still observe the syntax rules
-(limits on characters used in the name;
-no white space in a non-quoted value;
-no newlines or double quotes within the value).
-All other as-yet-unused parameter names are reserved for future IPsec
-improvements.
 .PP
 A section with name
 .B %default
@@ -186,10 +150,7 @@ A
 section contains a
 .IR "connection specification" ,
 defining a network connection to be made using IPsec.
-The name given is arbitrary, and is used to identify the connection to
-.IR ipsec_auto (8)
-and
-.IR ipsec_manual (8).
+The name given is arbitrary, and is used to identify the connection.
 Here's a simple example:
 .PP
 .ne 10
@@ -207,14 +168,15 @@ conn snt
 .ft
 .fi
 .PP
-A note on terminology...
-In automatic keying, there are two kinds of communications going on:
+A note on terminology: There are two kinds of communications going on:
 transmission of user IP packets, and gateway-to-gateway negotiations for
 keying, rekeying, and general control.
-The data path (a set of ``IPsec SAs'') used for user packets is herein
-referred to as the ``connection'';
-the path used for negotiations (built with ``ISAKMP SAs'') is referred to as
-the ``keying channel''.
+The path to control the connection is called 'ISAKMP SA' in IKEv1 and
+'IKE SA' in the IKEv2 protocol. That what is beeing negotiated, the kernel
+level data path, is called 'IPsec SA'.
+strongSwan currently uses two separate keying daemons. Pluto handles
+all IKEv1 connections, Charon is the new daemon supporting the IKEv2 protocol.
+Charon does not support all keywords yet.
 .PP
 To avoid trivial editing of the configuration file to suit it to each system
 involved in a connection,
@@ -252,13 +214,9 @@ and
 .B right
 reversed.
 .PP
-Parameters are optional unless marked ``(required)'';
-a parameter required for manual keying need not be included for
-a connection which will use only automatic keying, and vice versa.
-.SS "CONN PARAMETERS:  GENERAL"
-The following parameters are relevant to both automatic and manual keying.
-Unless otherwise noted,
-for a connection to work,
+Parameters are optional unless marked '(required)'.
+.SS "CONN PARAMETERS"
+Unless otherwise noted, for a connection to work,
 in general it is necessary for the two ends to agree exactly
 on the values of these parameters.
 .TP 14
@@ -276,6 +234,9 @@ signifying that no IPsec processing should be done at all;
 signifying that packets should be discarded; and
 .BR reject ,
 signifying that packets should be discarded and a diagnostic ICMP returned.
+Charon currently supports only the
+.BR tunnel
+connection type.
 .TP
 .B left
 (required)
@@ -309,22 +270,6 @@ The value
 .B %any
 signifies an address to be filled in (by automatic keying) during
 negotiation.
-The value
-.B %opportunistic
-signifies that both
-.B left
-and
-.B leftnexthop
-are to be filled in (by automatic keying) from DNS data for
-.BR left 's
-client.
-The values
-.B %group
-and
-.B %opportunisticgroup
-makes this a policy group conn: one that will be instantiated
-into a regular or opportunistic conn for each CIDR block listed in the
-policy group file with the same name as the conn.
 .TP
 .B leftsubnet
 private subnet behind the left participant, expressed as
@@ -332,7 +277,9 @@ private subnet behind the left participant, expressed as
 (actually, any form acceptable to
 .IR ipsec_ttosubnet (3));
 if omitted, essentially assumed to be \fIleft\fB/32\fR,
-signifying that the left end of the connection goes to the left participant only
+signifying that the left end of the connection goes to the left participant
+only. When using IKEv2, the configured subnet of the peers may differ, the
+protocol narrows it to the greates common subnet.
 .TP
 .B leftnexthop
 next-hop gateway IP address for the left participant's connection
@@ -364,7 +311,8 @@ The magic value
 .B %direct
 signifies a value to be filled in (by automatic keying)
 with the peer's address.
-Relevant only locally, other end need not agree on it.
+Relevant only locally, other end need not agree on it. Currently not supported
+in IKEv2.
 .TP
 .B leftupdown
 what ``updown'' script to run to adjust routing and/or firewalling
@@ -377,7 +325,9 @@ including shell metacharacters is unwise.
 See
 .IR ipsec_pluto (8)
 for details.
-Relevant only locally, other end need not agree on it.
+Relevant only locally, other end need not agree on it. IKEv2 uses the updown
+script to insert firewall rules only. Routing is not support and will be
+implemented directly into Charon.
 .TP
 .B leftfirewall
 whether the left participant is doing forwarding-firewalling
@@ -395,7 +345,7 @@ Implemented as a parameter to the default
 script.
 See notes below.
 Relevant only locally, other end need not agree on it.
-.PP
+
 If one or both security gateways are doing forwarding firewalling
 (possibly including masquerading),
 and this is specified using the firewall parameters,
@@ -407,51 +357,37 @@ This is done by the default
 .I updown
 script (see
 .IR ipsec_pluto (8)).
-.PP
-The implementation of this makes certain assumptions about firewall setup,
-notably the use of the old
-.I ipfwadm
-interface to the firewall.
+
 In situations calling for more control,
 it may be preferable for the user to supply his own
 .I updown
 script,
 which makes the appropriate adjustments for his system.
-.SS "CONN PARAMETERS:  AUTOMATIC KEYING"
-The following parameters are relevant only to automatic keying,
-and are ignored in manual keying.
-Unless otherwise noted,
-for a connection to work,
-in general it is necessary for the two ends to agree exactly
-on the values of these parameters.
-.TP 14
+.TP
 .B auto
 what operation, if any, should be done automatically at IPsec startup;
 currently-accepted values are
 .B add
-(signifying an
-.B ipsec auto
-.BR \-\-add ),
+,
 .B route
-(signifying that plus an
-.B ipsec auto
-.BR \-\-route ),
+,
 .B start
-(signifying that plus an
-.B ipsec auto
-.BR \-\-up ),
-.B manual
-(signifying an
-.B ipsec
-.B manual
-.BR \-\-up ),
 and
 .B ignore
-(also the default) (signifying no automatic startup operation).
-See the
-.B config
-.B setup
-discussion below.
+.
+.B add
+loads a connection without starting it.
+.B route
+loads a connection and installs kernel traps. If traffic is detected between
+.B leftsubnet
+and
+.B rightsubnet
+, a connection is established.
+.B start
+loads a connection and brings it up immediatly.
+.B ignore
+ignores the connection. This is equal to delete a connection from the config
+file. 
 Relevant only locally, other end need not agree on it
 (but in general, for an intended-to-be-permanent connection,
 both ends should use
@@ -465,6 +401,7 @@ acceptable values are
 .B esp
 (the default) and
 .BR ah .
+The IKEv2 daemon currently supports only ESP.
 .TP
 .B authby
 how the two security gateways should authenticate each other;
@@ -477,7 +414,9 @@ for RSA digital signatures (the default),
 for either, and
 .B never
 if negotiation is never to be attempted or accepted (useful for shunt-only conns).
-Digital signatures are superior in every way to shared secrets.
+Digital signatures are superior in every way to shared secrets. In IKEv2, the
+two ends must not agree on this parameter, it is relevant for the own
+authentication method only.
 .TP
 .B compress
 whether IPComp compression of content is proposed on the connection
@@ -487,9 +426,7 @@ acceptable values are
 .B yes
 and
 .B no
-(the default).
-The two ends need not agree.
-A value of
+(the default). A value of
 .B yes
 causes IPsec to propose both compressed and uncompressed,
 and prefer compressed.
@@ -497,6 +434,7 @@ A value of
 .B no
 prevents IPsec from proposing compression;
 a proposal to compress will still be accepted.
+IKEv2 does not support IP compression yet.
 .TP
 .B dpdaction
 controls the use of the Dead Peer Detection protocol (DPD, RFC 3706) where
@@ -546,10 +484,10 @@ no shunt;
 .BR drop ,
 and
 .B reject
-have the obvious meanings.
+have the obvious meanings. Has no effect in IKEv2 yet.
 .TP
 .B ikelifetime
-how long the keying channel of a connection (buzzphrase:  ``ISAKMP SA'')
+how long the keying channel of a connection ('ISAKMP/IKE SA')
 should last before being renegotiated.
 .TP
 .B keyexchange
@@ -566,23 +504,13 @@ setting. The default value
 currently behaves exactly as
 .B ikev1.
 .TP
-.B keylife
-(default set by
-.IR ipsec_pluto (8),
-currently
-.BR 3h ,
-maximum
-.BR 24h ).
-The two-ends-disagree case is similar to that of
-.BR keylife .
-.TP
 .B keyingtries
 how many attempts (a whole number or \fB%forever\fP) should be made to
 negotiate a connection, or a replacement for one, before giving up
 (default
 .BR %forever ).
 The value \fB%forever\fP
-means ``never give up'' (obsolete: this can be written \fB0\fP).
+means 'never give up'.
 Relevant only locally, other end need not agree on it.
 .TP
 .B keylife
@@ -639,7 +567,7 @@ parameter is present then the peer must be a member of at least one
 of the groups defined by the parameter. Group membership must be certified
 by a valid attribute certificate stored in \fI/etc/ipsec.d/acerts\fP thas has been
 issued to the peer by a trusted Authorization Authority stored in
-\fI/etc/ipsec.d/aacerts\fP.
+\fI/etc/ipsec.d/aacerts\fP. Attribute certificates are not supported in IKEv2 yet.
 .TP
 .B leftid
 how
@@ -660,57 +588,11 @@ This is set in \fBconfig setup\fP or by \fIipsec_whack\fP(8)), or, if not set,
 it is the IP address in \fB%defaultroute\fP (if that is supported by a TXT record in its reverse domain), or otherwise
 it is the system's hostname (if that is supported by a TXT record in its forward domain), or otherwise it is undefined.
 .TP
-.B leftrsasigkey
-the left participant's
-public key for RSA signature authentication,
-in RFC 2537 format using
-.IR ipsec_ttodata (3)
-encoding.
-The magic value
-.B %none
-means the same as not specifying a value (useful to override a default).
-The value
-.B %cert
-(the default)
-means that the key is extracted from a certificate.
-The value
-.B %dnsondemand
-means the key is to be fetched from DNS at the time it is needed.
-The value
-.B %dnsonload
-means the key is to be fetched from DNS at the time
-the connection description is read from
-.IR ipsec.conf ;
-currently this will be treated as
-.B %none
-if
-.B right=%any
-or
-.BR right=%opportunistic .
-The value
-.B %dns
-is currently treated as
-.B %dnsonload
-but will change to
-.B %dnsondemand
-in the future.
-The identity used for the left participant
-must be a specific host, not
-.B %any
-or another magic value.
-.B Caution:
-if two connection descriptions
-specify different public keys for the same
-.BR leftid ,
-confusion and madness will ensue.
-.TP
-.B leftrsasigkey2
-if present, a second public key.
-Either key can authenticate the signature, allowing for key rollover.
-.TP
 .B leftsourceip
+Not supported in IKEv2 yet.
 .TP
 .B leftsubnetwithin
+Not relevant for IKEv2, as subnets are narrowed.
 .TP
 .B pfs
 whether Perfect Forward Secrecy of keys is desired on the connection's
@@ -721,7 +603,9 @@ acceptable values are
 .B yes
 (the default)
 and
-.BR no .
+.BR no
+. IKEv2 always uses PFS for IKE_SA rekeying. PFS for rekeying IPsec SAs is
+currently not supported.
 .TP
 .B rekey
 whether a connection should be renegotiated when it is about to expire;
@@ -779,155 +663,26 @@ begin; acceptable values as for
 (default
 .BR 9m ).
 Relevant only locally, other end need not agree on it.
-.SS "CONN PARAMETERS:  MANUAL KEYING"
-The following parameters are relevant only to manual keying,
-and are ignored in automatic keying.
-Unless otherwise noted,
-for a connection to work,
-in general it is necessary for the two ends to agree exactly
-on the values of these parameters.
-A manually-keyed
-connection must specify at least one of AH or ESP.
-.TP 14
-.B spi
-(this or
-.B spibase
-required for manual keying)
-the SPI number to be used for the connection (see
-.IR ipsec_manual (8));
-must be of the form \fB0x\fIhex\fB\fR,
-where
-.I hex
-is one or more hexadecimal digits
-(note, it will generally be necessary to make
-.I spi
-at least
-.B 0x100
-to be acceptable to KLIPS,
-and use of SPIs in the range
-.BR 0x100 - 0xfff
-is recommended)
-.TP 14
-.B spibase
-(this or
-.B spi
-required for manual keying)
-the base number for the SPIs to be used for the connection (see
-.IR ipsec_manual (8));
-must be of the form \fB0x\fIhex\fB0\fR,
-where
-.I hex
-is one or more hexadecimal digits
-(note, it will generally be necessary to make
-.I spibase
-at least
-.B 0x100
-for the resulting SPIs
-to be acceptable to KLIPS,
-and use of numbers in the range
-.BR 0x100 - 0xff0
-is recommended)
+.TP
+.B ike
+IKE/ISAKMP SA encryption/authentication algorithm to be used, e.g.
+.B aes128-sha1-modp2048
+(encryption-integrity-dhgroup).
 .TP
 .B esp
 ESP encryption/authentication algorithm to be used
 for the connection, e.g.
-.B 3des-md5-96
-(must be suitable as a value of
-.IR ipsec_spi (8)'s
-.B \-\-esp
-option);
-default is not to use ESP
-.TP
-.B espenckey
-ESP encryption key
-(must be suitable as a value of
-.IR ipsec_spi (8)'s
-.B \-\-enckey
-option)
-(may be specified separately for each direction using
-.B leftespenckey
-(leftward SA)
-and
-.B rightespenckey
-parameters)
-.TP
-.B espauthkey
-ESP authentication key
-(must be suitable as a value of
-.IR ipsec_spi (8)'s
-.B \-\-authkey
-option)
-(may be specified separately for each direction using
-.B leftespauthkey
-(leftward SA)
-and
-.B rightespauthkey
-parameters)
-.TP
-.B espreplay_window
-ESP replay-window setting,
-an integer from
-.B 0
-(the
-.IR ipsec_manual
-default, which turns off replay protection) to
-.BR 64 ;
-relevant only if ESP authentication is being used
-.TP
-.B leftespspi
-SPI to be used for the leftward ESP SA, overriding
-automatic assignment using
-.B spi
-or
-.BR spibase ;
-typically a hexadecimal number beginning with
-.B 0x
+.B 3des-md5
+(encryption-integrity).
 .TP
 .B ah
 AH authentication algorithm to be used
 for the connection, e.g.
-.B hmac-md5-96
-(must be suitable as a value of
-.IR ipsec_spi (8)'s
-.B \-\-ah
-option);
-default is not to use AH
-.TP
-.B ahkey
-(required if
-.B ah
-is present) AH authentication key
-(must be suitable as a value of
-.IR ipsec_spi (8)'s
-.B \-\-authkey
-option)
-(may be specified separately for each direction using
-.B leftahkey
-(leftward SA)
-and
-.B rightahkey
-parameters)
-.TP
-.B ahreplay_window
-AH replay-window setting,
-an integer from
-.B 0
-(the
-.I ipsec_manual
-default, which turns off replay protection) to
-.B 64
-.TP
-.B leftahspi
-SPI to be used for the leftward AH SA, overriding
-automatic assignment using
-.B spi
-or
-.BR spibase ;
-typically a hexadecimal number beginning with
-.B 0x
+.B hmac-md5.
 .SH "CA SECTIONS"
 This are optional sections that can be used to assign special
-parameters to a Certification Authority (CA).
+parameters to a Certification Authority (CA). These parameters are not 
+supported in IKEv2 yet.
 .TP 10
 .B auto
 currently can have either the value
@@ -1054,20 +809,6 @@ startup/shutdown log messages,
 default
 .BR daemon.error .
 .TP
-.B klipsdebug
-how much KLIPS debugging output should be logged.
-An empty value,
-or the magic value
-.BR none ,
-means no debugging output (the default).
-The magic value
-.B all
-means full output.
-Otherwise only the specified types of output
-(a quoted list, names separated by white space) are enabled;
-for details on available debugging types, see
-.IR ipsec_klipsdebug (8).
-.TP
 .B plutodebug
 how much Pluto debugging output should be logged.
 An empty value,
@@ -1111,13 +852,6 @@ in what directory should things started by
 dump core?
 The empty value (the default) means they are not
 allowed to.
-.TP
-.B manualstart
-which manually-keyed connections to set up at startup
-(empty, a name, or a quoted list of names separated by white space);
-see
-.IR ipsec_manual (8).
-Default is none.
 .TP
 .B pluto
 whether to start Pluto or not;
@@ -1244,7 +978,8 @@ Written  for  the  FreeS/WAN project
 <http://www.freeswan.org>
 by Henry Spencer.  Extended for the strongSwan project
 <http://www.strongswan.org>
-by Andreas Steffen.
+by Andreas Steffen. Update to respect IKEv2 specific configuration
+by Martin Willi.
 .SH BUGS
 .PP
 When
