@@ -347,6 +347,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 								   msg->add_conn.other.sendcert,
 								   my_host, other_host,
 								   msg->add_conn.dpd.delay,
+								   msg->add_conn.rekey.reauth,
 								   msg->add_conn.rekey.tries,
 								   msg->add_conn.rekey.ike_lifetime,
 								   msg->add_conn.rekey.ike_lifetime - msg->add_conn.rekey.margin,

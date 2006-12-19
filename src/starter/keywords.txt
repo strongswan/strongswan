@@ -62,6 +62,7 @@ ikelifetime,       KW_IKELIFETIME
 keyingtries,       KW_KEYINGTRIES
 rekeyfuzz,         KW_REKEYFUZZ
 rekey,             KW_REKEY
+reauth,            KW_REAUTH
 esp,               KW_ESP
 ike,               KW_IKE
 pfsgroup,          KW_PFSGROUP

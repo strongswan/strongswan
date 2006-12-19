@@ -107,6 +107,7 @@ static int add_connection(char *name,
 	msg.add_conn.name = push_string(&msg, name);
 	msg.add_conn.ikev2 = 1;
 	
+	msg.add_conn.rekey.reauth = 0;
 	msg.add_conn.rekey.ipsec_lifetime = 0;
 	msg.add_conn.rekey.ike_lifetime = 0;
 	msg.add_conn.rekey.margin = 0;

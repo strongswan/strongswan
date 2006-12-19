@@ -190,6 +190,7 @@ static const token_info_t token_info[] =
     { ARG_ULNG, offsetof(starter_conn_t, sa_keying_tries), NULL                    },
     { ARG_PCNT, offsetof(starter_conn_t, sa_rekey_fuzz), NULL                      },
     { ARG_MISC, 0, NULL  /* KW_REKEY */                                            },
+    { ARG_MISC, 0, NULL  /* KW_REAUTH */                                           },
     { ARG_STR,  offsetof(starter_conn_t, ike), NULL                                },
     { ARG_STR,  offsetof(starter_conn_t, esp), NULL                                },
     { ARG_STR,  offsetof(starter_conn_t, pfsgroup), LST_pfsgroup                   },

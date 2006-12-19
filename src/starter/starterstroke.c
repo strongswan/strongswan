@@ -205,6 +205,7 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	}
 	else
 	{
+		msg.add_conn.rekey.reauth = (conn->policy & POLICY_REAUTH);	
 		msg.add_conn.rekey.ipsec_lifetime = conn->sa_ipsec_life_seconds;
 		msg.add_conn.rekey.ike_lifetime = conn->sa_ike_life_seconds;
 		msg.add_conn.rekey.margin = conn->sa_rekey_margin;

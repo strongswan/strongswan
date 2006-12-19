@@ -323,6 +323,12 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 			continue;
 		}
 		
+		if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
+		{
+			/* skip IKE_SA which are not useable */
+			continue;
+		}
+		
 		found_my_id = entry->ike_sa->get_my_id(entry->ike_sa);
 		found_other_id = entry->ike_sa->get_other_id(entry->ike_sa);
 		found_my_host = entry->ike_sa->get_my_host(entry->ike_sa);

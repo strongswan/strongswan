@@ -366,6 +366,7 @@ static status_t switchto_new_sa(private_rekey_ike_sa_t* this, bool initiator)
 	this->new_sa->apply_connection(this->new_sa, this->connection);
 	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
 	this->new_sa->set_lifetimes(this->new_sa,
+						this->connection->get_reauth(this->connection),
 						this->connection->get_soft_lifetime(this->connection),
 						this->connection->get_hard_lifetime(this->connection));
 	return SUCCESS;

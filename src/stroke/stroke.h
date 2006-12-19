@@ -142,6 +142,7 @@ struct stroke_msg_t {
 				char *esp;
 			} algorithms;
 			struct {
+				int reauth;
 				time_t ipsec_lifetime;
 				time_t ike_lifetime;
 				time_t margin;

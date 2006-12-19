@@ -50,10 +50,11 @@ struct rekey_ike_sa_job_t {
  * @brief Creates a job of type REKEY_IKE_SA.
  *
  * @param ike_sa_id		ID of the IKE_SA to rekey
+ * @param reauth		TRUE to reauthenticate peer, FALSE for rekeying only
  * @return				rekey_ike_sa_job_t object
  * 
  * @ingroup jobs
  */
-rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id);
+rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id, bool reauth);
 
 #endif /* REKEY_IKE_SA_JOB_H_ */

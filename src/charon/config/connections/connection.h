@@ -133,6 +133,14 @@ struct connection_t {
 	u_int32_t (*get_dpd_delay) (connection_t *this);
 	
 	/**
+	 * @brief Should a full reauthentication be done instead of rekeying?
+	 * 
+	 * @param this		calling object
+	 * @return			TRUE to use full reauthentication
+	 */
+	bool (*get_reauth) (connection_t *this);
+	
+	/**
 	 * @brief Get the max number of retransmission sequences.
 	 *
 	 * After this number of sequences, a not responding peer is considered
@@ -267,6 +275,7 @@ struct connection_t {
  * @param my_host			host_t representing local address
  * @param other_host		host_t representing remote address
  * @param dpd_delay			interval of DPD liveness checks
+ * @param reauth			use full reauthentication instead of rekeying
  * @param retrans_sequences	number of retransmit sequences to use
  * @param hard_lifetime		lifetime before deleting an IKE_SA
  * @param soft_lifetime		lifetime before rekeying an IKE_SA
@@ -278,7 +287,8 @@ struct connection_t {
 connection_t * connection_create(char *name, bool ikev2,
 								 cert_policy_t cert_pol, cert_policy_t req_pol,
 								 host_t *my_host, host_t *other_host,
-								 u_int32_t dpd_delay, u_int32_t retrans_sequences,
+								 u_int32_t dpd_delay, bool reauth,
+								 u_int32_t retrans_sequences,
 								 u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
 								 u_int32_t jitter);
 

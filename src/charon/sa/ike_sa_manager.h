@@ -72,7 +72,8 @@ struct ike_sa_manager_t {
 	 * Allows the lookup of an IKE_SA by user IDs and hosts. It returns the
 	 * first found occurence, if there are multiple candidates. Supplied IDs
 	 * may contain wildcards, hosts may be %any. 
-	 * If no IKE_SA is found, a new one is created.
+	 * If no IKE_SA is found, a new one is created. This is also the case when
+	 * the found IKE_SA is in the DELETING state.
 	 *
 	 * @param this			 	the manager object
 	 * @param my_host			address of our host

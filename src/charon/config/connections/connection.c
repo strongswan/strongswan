@@ -110,6 +110,11 @@ struct private_connection_t {
 	u_int32_t hard_lifetime;
 	
 	/**
+	 * Use full reauthentication instead of rekeying
+	 */
+	bool reauth;
+	
+	/**
 	 * Time, which specifies the range of a random value
 	 * substracted from soft_lifetime.
 	 */
@@ -306,11 +311,19 @@ static u_int32_t get_soft_lifetime(private_connection_t *this)
 }
 
 /**
- * Implementation of connection_t.get_hard_lifetime
+ * Implementation of connection_t.get_hard_lifetime.
  */
 static u_int32_t get_hard_lifetime(private_connection_t *this)
 {
 	return this->hard_lifetime;
+}
+
+/**
+ * Implementation of connection_t.get_reauth.
+ */
+static bool get_reauth(private_connection_t *this)
+{
+	return this->reauth;
 }
 
 /**
@@ -343,7 +356,7 @@ connection_t * connection_create(char *name, bool ikev2,
 								 cert_policy_t cert_policy,
 								 cert_policy_t certreq_policy,
 								 host_t *my_host, host_t *other_host,
-								 u_int32_t dpd_delay,
+								 u_int32_t dpd_delay, bool reauth,
 								 u_int32_t retrans_sequences,
 								 u_int32_t hard_lifetime,
 								 u_int32_t soft_lifetime, u_int32_t jitter)
@@ -361,6 +374,7 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->public.select_proposal = (proposal_t*(*)(connection_t*,linked_list_t*))select_proposal;
 	this->public.add_proposal = (void(*)(connection_t*, proposal_t*)) add_proposal;
 	this->public.get_dpd_delay = (u_int32_t(*)(connection_t*)) get_dpd_delay;
+	this->public.get_reauth = (bool(*)(connection_t*)) get_reauth;
 	this->public.get_retrans_seq = (u_int32_t(*)(connection_t*)) get_retrans_seq;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(connection_t*)) get_dh_group;
 	this->public.check_dh_group = (bool(*)(connection_t*,diffie_hellman_group_t)) check_dh_group;
@@ -378,6 +392,7 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->my_host = my_host;
 	this->other_host = other_host;
 	this->dpd_delay = dpd_delay;
+	this->reauth = reauth;
 	this->retrans_sequences = retrans_sequences;
 	this->hard_lifetime = hard_lifetime;
 	this->soft_lifetime = soft_lifetime;

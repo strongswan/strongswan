@@ -40,6 +40,11 @@ struct private_rekey_ike_sa_job_t {
 	 * ID of the IKE_SA to rekey
 	 */
 	ike_sa_id_t *ike_sa_id;
+	
+	/**
+	 * force reauthentication of the peer (full IKE_SA setup)
+	 */
+	bool reauth;
 };
 
 /**
@@ -56,6 +61,7 @@ static job_type_t get_type(private_rekey_ike_sa_job_t *this)
 static status_t execute(private_rekey_ike_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
+	status_t status;
 	
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 											  this->ike_sa_id);
@@ -64,9 +70,24 @@ static status_t execute(private_rekey_ike_sa_job_t *this)
 		DBG2(DBG_JOB, "IKE_SA %J to rekey not found", this->ike_sa_id);
 		return DESTROY_ME;
 	}
-	ike_sa->rekey(ike_sa);
 	
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	if (this->reauth)
+	{
+		status = ike_sa->reauth(ike_sa);
+	}
+	else
+	{
+		status = ike_sa->rekey(ike_sa);
+	}
+	
+	if (status == DESTROY_ME)
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+	}
+	else
+	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	}
 	return DESTROY_ME;
 }
 
@@ -82,7 +103,7 @@ static void destroy(private_rekey_ike_sa_job_t *this)
 /*
  * Described in header
  */
-rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
+rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id, bool reauth)
 {
 	private_rekey_ike_sa_job_t *this = malloc_thing(private_rekey_ike_sa_job_t);
 	
@@ -93,6 +114,7 @@ rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
 		
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
+	this->reauth = reauth;
 	
 	return &(this->public);
 }

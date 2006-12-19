@@ -1730,7 +1730,7 @@ static status_t destroy_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 /**
  * Implementation of ike_sa_t.set_lifetimes.
  */
-static void set_lifetimes(private_ike_sa_t *this,
+static void set_lifetimes(private_ike_sa_t *this, bool reauth,
 						  u_int32_t soft_lifetime, u_int32_t hard_lifetime)
 {
 	job_t *job;
@@ -1738,7 +1738,7 @@ static void set_lifetimes(private_ike_sa_t *this,
 	if (soft_lifetime)
 	{
 		this->time.rekey = this->time.established + soft_lifetime;
-		job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id);
+		job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
 		charon->event_queue->add_relative(charon->event_queue, job,
 										  soft_lifetime * 1000);
 	}
@@ -1749,58 +1749,6 @@ static void set_lifetimes(private_ike_sa_t *this,
 		job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
 		charon->event_queue->add_relative(charon->event_queue, job,
 										  hard_lifetime * 1000);
-	}
-}
-
-/**
- * Implementation of ike_sa_t.rekey.
- */
-static status_t rekey(private_ike_sa_t *this)
-{
-	rekey_ike_sa_t *rekey_ike_sa;
-	
-	DBG1(DBG_IKE, "rekeying IKE_SA between %H[%D]..%H[%D]",
-		 this->my_host, this->my_id, this->other_host, this->other_id);
-	
-	if (this->state != IKE_ESTABLISHED)
-	{
-		SIG(IKE_REKEY_START, "rekeying IKE_SA");
-		SIG(IKE_REKEY_FAILED, "unable to rekey IKE_SA in state %N",
-			ike_sa_state_names, this->state);
-		return FAILED;
-	}
-	
-	rekey_ike_sa = rekey_ike_sa_create(&this->public);
-	return queue_transaction(this, (transaction_t*)rekey_ike_sa, FALSE);
-}
-
-/**
- * Implementation of ike_sa_t.get_rekeying_transaction.
- */
-static transaction_t* get_rekeying_transaction(private_ike_sa_t *this)
-{
-	return this->rekeying_transaction;
-}
-
-/**
- * Implementation of ike_sa_t.set_rekeying_transaction.
- */
-static void set_rekeying_transaction(private_ike_sa_t *this, transaction_t *rekey)
-{
-	this->rekeying_transaction = rekey;
-}
-
-/**
- * Implementation of ike_sa_t.adopt_children.
- */
-static void adopt_children(private_ike_sa_t *this, private_ike_sa_t *other)
-{
-	child_sa_t *child_sa;
-	
-	while (other->child_sas->remove_last(other->child_sas,
-		   								 (void**)&child_sa) == SUCCESS)
-	{
-		this->child_sas->insert_first(this->child_sas, (void*)child_sa);
 	}
 }
 
@@ -1839,6 +1787,109 @@ static status_t delete_(private_ike_sa_t *this)
 				this->my_host, this->my_id, this->other_host, this->other_id);
 			return DESTROY_ME;
 		}
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.rekey.
+ */
+static status_t rekey(private_ike_sa_t *this)
+{
+	rekey_ike_sa_t *rekey_ike_sa;
+	
+	DBG1(DBG_IKE, "rekeying IKE_SA between %H[%D]..%H[%D]",
+		 this->my_host, this->my_id, this->other_host, this->other_id);
+	
+	if (this->state != IKE_ESTABLISHED)
+	{
+		SIG(IKE_REKEY_START, "rekeying IKE_SA");
+		SIG(IKE_REKEY_FAILED, "unable to rekey IKE_SA in state %N",
+			ike_sa_state_names, this->state);
+		return FAILED;
+	}
+	
+	rekey_ike_sa = rekey_ike_sa_create(&this->public);
+	return queue_transaction(this, (transaction_t*)rekey_ike_sa, FALSE);
+}
+
+/**
+ * Implementation of ike_sa_t.reauth.
+ */
+static status_t reauth(private_ike_sa_t *this)
+{
+	connection_t *connection;
+	child_sa_t *child_sa;
+	iterator_t *iterator;
+	
+	DBG1(DBG_IKE, "reauthenticating IKE_SA between %H[%D]..%H[%D]",
+		 this->my_host, this->my_id, this->other_host, this->other_id);	
+	
+	/* get a connection to initiate */
+	connection = charon->connections->get_connection_by_hosts(charon->connections,
+												this->my_host, this->other_host);
+	if (connection == NULL)
+	{
+		DBG1(DBG_IKE, "no connection found to reauthenticate");	
+		return FAILED;
+	}
+	
+	/* queue CREATE_CHILD_SA transactions to set up all CHILD_SAs */
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		job_t *job;
+		policy_t *policy;
+		linked_list_t *my_ts, *other_ts;
+		my_ts = child_sa->get_my_traffic_selectors(child_sa);
+		other_ts = child_sa->get_other_traffic_selectors(child_sa);
+		policy = charon->policies->get_policy(charon->policies,
+						this->my_id, this->other_id, my_ts, other_ts,
+						this->my_host, this->other_host, NULL);
+		if (policy == NULL)
+		{
+			DBG1(DBG_IKE, "policy not found to recreate CHILD_SA, skipped");
+			continue;
+		}
+		
+		connection->get_ref(connection);
+		job = (job_t*)initiate_job_create(connection, policy);
+		charon->job_queue->add(charon->job_queue, job);
+	}
+	iterator->destroy(iterator);
+	connection->destroy(connection);
+	
+	/* delete the old IKE_SA
+	 * TODO: we should delay the delete to avoid connectivity gaps?! */
+	return delete_(this);
+}
+
+/**
+ * Implementation of ike_sa_t.get_rekeying_transaction.
+ */
+static transaction_t* get_rekeying_transaction(private_ike_sa_t *this)
+{
+	return this->rekeying_transaction;
+}
+
+/**
+ * Implementation of ike_sa_t.set_rekeying_transaction.
+ */
+static void set_rekeying_transaction(private_ike_sa_t *this, transaction_t *rekey)
+{
+	this->rekeying_transaction = rekey;
+}
+
+/**
+ * Implementation of ike_sa_t.adopt_children.
+ */
+static void adopt_children(private_ike_sa_t *this, private_ike_sa_t *other)
+{
+	child_sa_t *child_sa;
+	
+	while (other->child_sas->remove_last(other->child_sas,
+		   								 (void**)&child_sa) == SUCCESS)
+	{
+		this->child_sas->insert_first(this->child_sas, (void*)child_sa);
 	}
 }
 
@@ -1987,9 +2038,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
 	this->public.enable_natt = (void(*)(ike_sa_t*, bool)) enable_natt;
 	this->public.is_natt_enabled = (bool(*)(ike_sa_t*)) is_natt_enabled;
-	this->public.set_lifetimes = (void(*)(ike_sa_t*,u_int32_t,u_int32_t))set_lifetimes;
+	this->public.set_lifetimes = (void(*)(ike_sa_t*,bool,u_int32_t,u_int32_t))set_lifetimes;
 	this->public.apply_connection = (void(*)(ike_sa_t*,connection_t*))apply_connection;
 	this->public.rekey = (status_t(*)(ike_sa_t*))rekey;
+	this->public.reauth = (status_t(*)(ike_sa_t*))reauth;
 	this->public.get_rekeying_transaction = (transaction_t*(*)(ike_sa_t*))get_rekeying_transaction;
 	this->public.set_rekeying_transaction = (void(*)(ike_sa_t*,transaction_t*))set_rekeying_transaction;
 	this->public.adopt_children = (void(*)(ike_sa_t*,ike_sa_t*))adopt_children;

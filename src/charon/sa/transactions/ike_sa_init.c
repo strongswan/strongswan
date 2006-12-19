@@ -790,7 +790,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 		return DESTROY_ME;
 	}
 	
-	this->ike_sa->set_lifetimes(this->ike_sa, 
+	this->ike_sa->set_lifetimes(this->ike_sa,
+					this->connection->get_reauth(this->connection),
 					this->connection->get_soft_lifetime(this->connection),
 					this->connection->get_hard_lifetime(this->connection));
 	
@@ -1030,6 +1031,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	}
 	
 	this->ike_sa->set_lifetimes(this->ike_sa, 
+					this->connection->get_reauth(this->connection),
 					this->connection->get_soft_lifetime(this->connection),
 					this->connection->get_hard_lifetime(this->connection));
 	

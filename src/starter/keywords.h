@@ -73,6 +73,7 @@ typedef enum {
     KW_KEYINGTRIES,
     KW_REKEYFUZZ,
     KW_REKEY,
+    KW_REAUTH,
     KW_IKE,
     KW_ESP,
     KW_PFSGROUP,

@@ -733,11 +733,20 @@ and
 The two ends need not agree,
 but while a value of
 .B no
-prevents Pluto from requesting renegotiation,
+prevents Pluto/Charon from requesting renegotiation,
 it does not prevent responding to renegotiation requested from the other end,
 so
 .B no
 will be largely ineffective unless both ends agree on it.
+.TP
+.B reauth
+whether rekeying of an IKE_SA should also reauthenticate the peer. In IKEv1,
+reauthentication is always done. In IKEv2, a value of
+.B no
+rekeys without uninstalling the IPsec SAs, a value of
+.B yes
+(the default) creates a new IKE_SA from scratch and tries to recreate
+all IPsec SAs.
 .TP
 .B rekeyfuzz
 maximum percentage by which

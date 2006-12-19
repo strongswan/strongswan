@@ -545,10 +545,11 @@ struct ike_sa_t {
 	 * hard_lifetime is only reached when rekeying at soft_lifetime fails.
 	 *
 	 * @param this 			calling object
+	 * @param reauth		use full reauthentication instead of rekeying.
 	 * @param soft_lifetime	soft_lifetime
 	 * @param hard_lifetime	hard_lifetime
 	 */
-	void (*set_lifetimes) (ike_sa_t *this,
+	void (*set_lifetimes) (ike_sa_t *this, bool reauth,
 						   u_int32_t soft_lifetime, u_int32_t hard_lifetime);
 
 	/**
@@ -560,6 +561,17 @@ struct ike_sa_t {
 	 * @return				- SUCCESS, if IKE_SA rekeying initiated
 	 */
 	status_t (*rekey) (ike_sa_t *this);
+
+	/**
+	 * @brief Reauthentication the IKE_SA.
+	 *
+	 * Create a completely new IKE_SA with authentication, recreates all children
+	 * within the IKE_SA and shuts the old SA down.
+	 *
+	 * @param this 			calling object
+	 * @return				- SUCCESS, if IKE_SA rekeying initiated
+	 */
+	status_t (*reauth) (ike_sa_t *this);
 
 	/**
 	 * @brief Get the transaction which rekeys this IKE_SA.
