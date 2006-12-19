@@ -1,0 +1,84 @@
+                 -------------------------
+                  strongSwan - Roadmap
+                 -------------------------
+
+These notes mostly belong to charon, the new IKEv2 daemon. The plan is to
+migrate IKEv1 into charon. It's hard to say how much effort is needed to
+do that, and how much code we can reuse from pluto. But a port IS necessary to
+gain hassle-free confiugration, version negotiation and maintainability.
+
+Roadmap for 2007
+================
+
+ Jan  ¦   - first stable release of the strongSwan 4.x branch, 4.1.0?
+      ¦
+ Feb  ¦   - refactoring of exchange handling for better code sharing,
+      ¦     we need to separate specific tasks to reuse them in multiple
+      ¦     exchanges
+      ¦   - merge of EAP authentication code / plugin loader
+      ¦   - merge of the virtual IP support currently in the pipeline
+      ¦   - merge of the experimental "mediated double-NAT" support
+      ¦   - write an IETF draft for this feature
+      ¦
+ Mar  ¦   - interface in charon for the new SMP management interface
+      ¦   - full certificate support
+      ¦   - Cookie support, other fixes to mature against DoS
+      ¦
+ Apr  ¦   - start porting efforts of IKEv1 into charon
+      ¦   - support of IKEv1 messages and payloads in charon
+      ¦
+ May  ¦   - migration of plutos state machine into charon
+      ¦
+ Jun  ¦   - get a useable IKEv1 implementation for simple cases
+      ¦
+ Jul  ¦   - first release of charon supporting IKEv2 and IKEv1, 4.9.0?
+      ¦   - holidays :-)
+      ¦
+ Aug  ¦   - get IKEv1 support to the level of pluto
+      ¦
+ Sep  ¦
+      ¦
+ Oct  ¦
+      ¦
+ Nov  ¦
+      ¦
+ Dec  ¦   - feature complete release, 5.0.0!
+      ¦   - world domination
+
+
+TODO-List
+=========
+
+A set of TODOs. This is only a list of things I write down to not forget them.
+Watch out for TODOs in the code.
+  
+Build system
+------------
+- configure flag which allows to ommit vendor id in pluto
+- reduce printf handlers count to 10, as uClibc does not support more
+
+Denail of service
+-----------------
+- Cookie support
+- thread exhaustion (multiple messages to a single IKE_SA)
+
+Certificate support
+-------------------
+- New trustchain mechanism?
+- proper CERTREQ support
+- proper handling of multiple certificate payloads (import order)
+- synchronized CRL fetcher
+- OCSP support
+- Smartcard interface
+- Attribute certificates
+
+Stroke interface
+----------------
+- add a Rekey-Counter for SAs in "statusall"
+- ipsec statusall bytecount
+- detach console after first keyingtry
+- proper handling of CTRL+C console detach (SIG_PIPE)
+
+Misc
+----
+- retry transaction on failure while keyingtries > 1

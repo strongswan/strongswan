@@ -1,3 +1,13 @@
+strongswan-4.0.6
+----------------
+
+- IKEv2: Support for reauthentication when rekeying
+
+- fixed most (all?) bugs related to byte order
+
+- a lot of bugfixes
+
+
 strongswan-4.0.5
 ----------------
 
