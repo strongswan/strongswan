@@ -15,7 +15,11 @@
  * RCSID $Id: modecfg.h,v 1.1 2005/01/06 22:10:15 as Exp $
  */
 
+#ifndef _MODECFG_H
+#define _MODECFG_H
+
 struct state;
+struct msg_digest;
 
 /* ModeConfig starting functions */
 extern stf_status modecfg_send_request(struct state *st);
@@ -26,3 +30,14 @@ extern stf_status modecfg_inR0(struct msg_digest *md);
 extern stf_status modecfg_inR1(struct msg_digest *md);
 extern stf_status modecfg_inI1(struct msg_digest *md);
 extern stf_status modecfg_inI2(struct msg_digest *md);
+
+/* XAUTH start function */
+extern stf_status xauth_send_request(struct state *st);
+
+/* XAUTH state transition funcgtions */
+extern stf_status xauth_inR1(struct msg_digest *md);
+extern stf_status xauth_inR2(struct msg_digest *md);
+extern stf_status xauth_inI0(struct msg_digest *md);
+extern stf_status xauth_inI1(struct msg_digest *md);
+
+#endif /* _MODECFG_H */

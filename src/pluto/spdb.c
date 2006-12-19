@@ -50,156 +50,24 @@
 
 /**************** Oakely (main mode) SA database ****************/
 
-/* arrays of attributes for transforms, preshared key */
-
-static struct db_attr otpsk1024des3md5[] = {
-	{ OAKLEY_ENCRYPTION_ALGORITHM, OAKLEY_3DES_CBC },
-	{ OAKLEY_HASH_ALGORITHM, OAKLEY_MD5 },
-	{ OAKLEY_AUTHENTICATION_METHOD, OAKLEY_PRESHARED_KEY },
-	{ OAKLEY_GROUP_DESCRIPTION, OAKLEY_GROUP_MODP1024 },
-	};
-
-static struct db_attr otpsk1536des3md5[] = {
-	{ OAKLEY_ENCRYPTION_ALGORITHM, OAKLEY_3DES_CBC },
-	{ OAKLEY_HASH_ALGORITHM, OAKLEY_MD5 },
-	{ OAKLEY_AUTHENTICATION_METHOD, OAKLEY_PRESHARED_KEY },
-	{ OAKLEY_GROUP_DESCRIPTION, OAKLEY_GROUP_MODP1536 },
-	};
-
-static struct db_attr otpsk1024des3sha[] = {
-	{ OAKLEY_ENCRYPTION_ALGORITHM, OAKLEY_3DES_CBC },
-	{ OAKLEY_HASH_ALGORITHM, OAKLEY_SHA },
-	{ OAKLEY_AUTHENTICATION_METHOD, OAKLEY_PRESHARED_KEY },
-	{ OAKLEY_GROUP_DESCRIPTION, OAKLEY_GROUP_MODP1024 },
-	};
-
-static struct db_attr otpsk1536des3sha[] = {
-	{ OAKLEY_ENCRYPTION_ALGORITHM, OAKLEY_3DES_CBC },
-	{ OAKLEY_HASH_ALGORITHM, OAKLEY_SHA },
-	{ OAKLEY_AUTHENTICATION_METHOD, OAKLEY_PRESHARED_KEY },
-	{ OAKLEY_GROUP_DESCRIPTION, OAKLEY_GROUP_MODP1536 },
-	};
-
-/* arrays of attributes for transforms, RSA signatures */
-
-static struct db_attr otrsasig1024des3md5[] = {
-	{ OAKLEY_ENCRYPTION_ALGORITHM, OAKLEY_3DES_CBC },
-	{ OAKLEY_HASH_ALGORITHM, OAKLEY_MD5 },
-	{ OAKLEY_AUTHENTICATION_METHOD, OAKLEY_RSA_SIG },
-	{ OAKLEY_GROUP_DESCRIPTION, OAKLEY_GROUP_MODP1024 },
-	};
-
-static struct db_attr otrsasig1536des3md5[] = {
-	{ OAKLEY_ENCRYPTION_ALGORITHM, OAKLEY_3DES_CBC },
-	{ OAKLEY_HASH_ALGORITHM, OAKLEY_MD5 },
-	{ OAKLEY_AUTHENTICATION_METHOD, OAKLEY_RSA_SIG },
-	{ OAKLEY_GROUP_DESCRIPTION, OAKLEY_GROUP_MODP1536 },
-	};
-
-static struct db_attr otrsasig1024des3sha[] = {
-	{ OAKLEY_ENCRYPTION_ALGORITHM, OAKLEY_3DES_CBC },
-	{ OAKLEY_HASH_ALGORITHM, OAKLEY_SHA },
-	{ OAKLEY_AUTHENTICATION_METHOD, OAKLEY_RSA_SIG },
-	{ OAKLEY_GROUP_DESCRIPTION, OAKLEY_GROUP_MODP1024 },
-	};
-
-static struct db_attr otrsasig1536des3sha[] = {
-	{ OAKLEY_ENCRYPTION_ALGORITHM, OAKLEY_3DES_CBC },
-	{ OAKLEY_HASH_ALGORITHM, OAKLEY_SHA },
-	{ OAKLEY_AUTHENTICATION_METHOD, OAKLEY_RSA_SIG },
-	{ OAKLEY_GROUP_DESCRIPTION, OAKLEY_GROUP_MODP1536 },
-	};
-
-/* We won't accept this, but by proposing it, we get to test
- * our rejection.  We better not propose it to an IKE daemon
- * that will accept it!
- */
-#ifdef TEST_INDECENT_PROPOSAL
-static struct db_attr otpsk1024des3tiger[] = {
-	{ OAKLEY_ENCRYPTION_ALGORITHM, OAKLEY_3DES_CBC },
-	{ OAKLEY_HASH_ALGORITHM, OAKLEY_TIGER },
-	{ OAKLEY_AUTHENTICATION_METHOD, OAKLEY_PRESHARED_KEY },
-	{ OAKLEY_GROUP_DESCRIPTION, OAKLEY_GROUP_MODP1024 },
-	};
-#endif /* TEST_INDECENT_PROPOSAL */
-
-/* tables of transforms, in preference order (select based on AUTH) */
-
-static struct db_trans oakley_trans_psk[] = {
-#ifdef TEST_INDECENT_PROPOSAL
-	{ KEY_IKE, AD(otpsk1024des3tiger) },
-#endif
-	{ KEY_IKE, AD(otpsk1536des3md5) },
-	{ KEY_IKE, AD(otpsk1536des3sha) },
-	{ KEY_IKE, AD(otpsk1024des3sha) },
-	{ KEY_IKE, AD(otpsk1024des3md5) },
-    };
-
-static struct db_trans oakley_trans_rsasig[] = {
-	{ KEY_IKE, AD(otrsasig1536des3md5) },
-	{ KEY_IKE, AD(otrsasig1536des3sha) },
-	{ KEY_IKE, AD(otrsasig1024des3sha) },
-	{ KEY_IKE, AD(otrsasig1024des3md5) },
-    };
-
-/* In this table, either PSK or RSA sig is accepted.
- * The order matters, but I don't know what would be best.
- */
-static struct db_trans oakley_trans_pskrsasig[] = {
-#ifdef TEST_INDECENT_PROPOSAL
-	{ KEY_IKE, AD(otpsk1024des3tiger) },
-#endif
-	{ KEY_IKE, AD(otrsasig1536des3md5) },
-	{ KEY_IKE, AD(otpsk1536des3md5) },
-	{ KEY_IKE, AD(otrsasig1536des3sha) },
-	{ KEY_IKE, AD(otpsk1536des3sha) },
-	{ KEY_IKE, AD(otrsasig1024des3sha) },
-	{ KEY_IKE, AD(otpsk1024des3sha) },
-	{ KEY_IKE, AD(otrsasig1024des3md5) },
-	{ KEY_IKE, AD(otpsk1024des3md5) },
-    };
-
 /* array of proposals to be conjoined (can only be one for Oakley) */
 
-static struct db_prop oakley_pc_psk[] =
-    { { PROTO_ISAKMP, AD(oakley_trans_psk) } };
-
-static struct db_prop oakley_pc_rsasig[] =
-    { { PROTO_ISAKMP, AD(oakley_trans_rsasig) } };
-
-static struct db_prop oakley_pc_pskrsasig[] =
-    { { PROTO_ISAKMP, AD(oakley_trans_pskrsasig) } };
+static struct db_prop oakley_pc[] =
+    { { PROTO_ISAKMP, AD_NULL } };
 
 /* array of proposal conjuncts (can only be one) */
 
-static struct db_prop_conj oakley_props_psk[] = { { AD(oakley_pc_psk) } };
+static struct db_prop_conj oakley_props[] = { { AD(oakley_pc) } };
 
-static struct db_prop_conj oakley_props_rsasig[] = { { AD(oakley_pc_rsasig) } };
-
-static struct db_prop_conj oakley_props_pskrsasig[] = { { AD(oakley_pc_pskrsasig) } };
-
-/* the sadb entry, subscripted by POLICY_PSK and POLICY_RSASIG bits */
-struct db_sa oakley_sadb[] = {
-    { AD_NULL },	/* none */
-    { AD(oakley_props_psk) },	/* POLICY_PSK */
-    { AD(oakley_props_rsasig) },	/* POLICY_RSASIG */
-    { AD(oakley_props_pskrsasig) },	/* POLICY_PSK + POLICY_RSASIG */
-    };
+/* the sadb entry */
+struct db_sa oakley_sadb = { AD(oakley_props) };
 
 /**************** IPsec (quick mode) SA database ****************/
 
 /* arrays of attributes for transforms */
 
-static struct db_attr espmd5_attr[] = {
-    { AUTH_ALGORITHM, AUTH_ALGORITHM_HMAC_MD5 },
-    };
-
 static struct db_attr espsha1_attr[] = {
     { AUTH_ALGORITHM, AUTH_ALGORITHM_HMAC_SHA1 },
-    };
-
-static struct db_attr ah_HMAC_MD5_attr[] = {
-    { AUTH_ALGORITHM, AUTH_ALGORITHM_HMAC_MD5 },
     };
 
 static struct db_attr ah_HMAC_SHA1_attr[] = {
@@ -209,7 +77,6 @@ static struct db_attr ah_HMAC_SHA1_attr[] = {
 /* arrays of transforms, each in in preference order */
 
 static struct db_trans espa_trans[] = {
-    { ESP_3DES, AD(espmd5_attr) },
     { ESP_3DES, AD(espsha1_attr) },
     };
 
@@ -219,13 +86,11 @@ static struct db_trans esp_trans[] = {
 
 #ifdef SUPPORT_ESP_NULL
 static struct db_trans espnull_trans[] = {
-    { ESP_NULL, AD(espmd5_attr) },
     { ESP_NULL, AD(espsha1_attr) },
     };
 #endif /* SUPPORT_ESP_NULL */
 
 static struct db_trans ah_trans[] = {
-    { AH_MD5, AD(ah_HMAC_MD5_attr) },
     { AH_SHA, AD(ah_HMAC_SHA1_attr) },
     };
 
@@ -448,7 +313,7 @@ out_sa(pb_stream *outs
 	    proposal.isap_spisize = oakley_mode ? 0
 		: p->protoid == PROTO_IPCOMP ? IPCOMP_CPI_SIZE
 		: IPSEC_DOI_SPI_SIZE;
-	    
+
 	    /* In quick mode ONLY, create proposal for runtime kernel algos.
 	     *  Replace ESP proposals with runtime created one
 	     */
@@ -499,7 +364,7 @@ out_sa(pb_stream *outs
 		    return_on(ret, FALSE);
 		}
 	    }
-	    
+
 	    proposal.isap_notrans = p->trans_cnt;
 	    if (!out_struct(&proposal, &isakmp_proposal_desc, &sa_pbs, &proposal_pbs))
 		return_on(ret, FALSE);
@@ -877,7 +742,9 @@ restore_pbs(pb_stream *pbs)
  * Parse an ISAKMP Proposal Payload for RSA and PSK authentication policies
  */
 notification_t
-parse_isakmp_policy(pb_stream *proposal_pbs, u_int notrans, lset_t *policy)
+parse_isakmp_policy(pb_stream *proposal_pbs
+		  , u_int notrans
+		  , lset_t *policy)
 {
     int last_transnum = -1;
 
@@ -934,6 +801,18 @@ parse_isakmp_policy(pb_stream *proposal_pbs, u_int notrans, lset_t *policy)
 		case OAKLEY_RSA_SIG:
 		    *policy |= POLICY_RSASIG;
 		    break;
+		case XAUTHInitPreShared:
+		    *policy |= POLICY_XAUTH_SERVER;
+		    /* fall through */
+		case XAUTHRespPreShared:
+		    *policy |= POLICY_XAUTH_PSK;
+		    break;
+		case XAUTHInitRSA:
+		    *policy |= POLICY_XAUTH_SERVER;
+		    /* fall through */
+		case XAUTHRespRSA:
+		    *policy |= POLICY_XAUTH_RSASIG;
+		    break;
 		default:
 		    break;
 		}
@@ -943,23 +822,35 @@ parse_isakmp_policy(pb_stream *proposal_pbs, u_int notrans, lset_t *policy)
 	    }
 	}
     }
-
-    if ((*policy & POLICY_PSK) && (*policy & POLICY_RSASIG))
-    {
-	DBG(DBG_CONTROL|DBG_PARSING,
-	   DBG_log("preparse_isakmp_policy: "
-		   "peer supports both PSK and RSASIG authentication")
-	)
-	*policy = LEMPTY;
-    }
-    else
-    {
-	DBG(DBG_CONTROL|DBG_PARSING,
-	   DBG_log("preparse_isakmp_policy: peer requests %s authentication"
-		, (*policy & POLICY_PSK) ? "PSK":"RSASIG")
-	)
-    }
+    DBG(DBG_CONTROL|DBG_PARSING,
+	DBG_log("preparse_isakmp_policy: peer requests %s authentication"
+		, prettypolicy(*policy))
+    )
     return NOTHING_WRONG;
+}
+
+/* 
+ * check that we can find a preshared secret
+ */
+static err_t
+find_preshared_key(struct state* st)
+{
+    err_t ugh = NULL;
+    struct connection *c = st->st_connection;
+
+    if (get_preshared_secret(c) == NULL)
+    {
+	char my_id[BUF_LEN], his_id[BUF_LEN];
+
+	idtoa(&c->spd.this.id, my_id, sizeof(my_id));
+	if (his_id_was_instantiated(c))
+	    strcpy(his_id, "%any");
+	else
+	    idtoa(&c->spd.that.id, his_id, sizeof(his_id));
+	ugh = builddiag("Can't authenticate: no preshared key found for `%s' and `%s'"
+			, my_id, his_id);
+    }
+    return ugh;
 }
 
 /* Parse the body of an ISAKMP SA Payload (i.e. Phase 1 / Main Mode).
@@ -976,7 +867,8 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 		   , pb_stream *proposal_pbs
 		   , struct isakmp_proposal *proposal
 		   , pb_stream *r_sa_pbs
-		   , struct state *st)
+		   , struct state *st
+		   , bool initiator)
 {
     struct connection *c = st->st_connection;
     unsigned no_trans_left;
@@ -1082,6 +974,10 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 		    /* check that authentication method is acceptable */
 		    lset_t iap = st->st_policy & POLICY_ID_AUTH_MASK;
 
+		    /* is the initiator the XAUTH client? */
+		    bool xauth_init = initiator && (st->st_policy & POLICY_XAUTH_SERVER) == LEMPTY
+				  || !initiator && (st->st_policy & POLICY_XAUTH_SERVER) != LEMPTY;
+
 		    switch (val)
 		    {
 		    case OAKLEY_PRESHARED_KEY:
@@ -1091,23 +987,30 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 			}
 			else
 			{
-			    /* check that we can find a preshared secret */
-			    struct connection *c = st->st_connection;
-
-			    if (get_preshared_secret(c) == NULL)
-			    {
-				char mid[BUF_LEN]
-				    , hid[BUF_LEN];
-
-				idtoa(&c->spd.this.id, mid, sizeof(mid));
-				if (his_id_was_instantiated(c))
-				    strcpy(hid, "%any");
-				else
-				    idtoa(&c->spd.that.id, hid, sizeof(hid));
-				ugh = builddiag("Can't authenticate: no preshared key found for `%s' and `%s'"
-				    , mid, hid);
-			    }
-			    ta.auth = val;
+			    ugh = find_preshared_key(st);
+			    ta.auth = OAKLEY_PRESHARED_KEY;
+			}
+			break;
+		    case XAUTHInitPreShared:
+			if ((iap & POLICY_XAUTH_PSK) == LEMPTY || !xauth_init)
+			{
+			    ugh = "policy does not allow XAUTHInitPreShared authentication";
+			}
+			else
+			{
+			    ugh = find_preshared_key(st);
+			    ta.auth = XAUTHInitPreShared;
+			}
+			break;
+		    case XAUTHRespPreShared:
+			if ((iap & POLICY_XAUTH_PSK) == LEMPTY || xauth_init)
+			{
+			    ugh = "policy does not allow XAUTHRespPreShared authentication";
+			}
+			else
+			{
+			    ugh = find_preshared_key(st);
+			    ta.auth = XAUTHRespPreShared;
 			}
 			break;
 		    case OAKLEY_RSA_SIG:
@@ -1118,18 +1021,29 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 			}
 			else
 			{
-			    /* We'd like to check that we can find a public
-			     * key for him and a private key for us that is
-			     * suitable, but we don't yet have his
-			     * Id Payload, so it seems futile to try.
-			     * We can assume that if he proposes it, he
-			     * thinks we've got it.  If we proposed it,
-			     * perhaps we know what we're doing.
-			     */
-			    ta.auth = val;
+			    ta.auth = OAKLEY_RSA_SIG;
 			}
 			break;
-
+		    case XAUTHInitRSA:
+			if ((iap & POLICY_XAUTH_RSASIG) == LEMPTY || !xauth_init)
+			{
+			    ugh = "policy does not allow XAUTHInitRSA authentication";
+			}
+			else
+			{
+			    ta.auth = XAUTHInitRSA;
+			}
+			break;
+		    case XAUTHRespRSA:
+			if ((iap & POLICY_XAUTH_RSASIG) == LEMPTY || xauth_init)
+			{
+			    ugh = "policy does not allow XAUTHRespRSA authentication";
+			}
+			else
+			{
+			    ta.auth = XAUTHRespRSA;
+			}
+			break;
 		    default:
 			ugh = builddiag("Pluto does not support %s authentication"
 			    , enum_show(&oakley_auth_names, val));
@@ -1183,10 +1097,23 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 		{
 		case OAKLEY_LIFE_SECONDS:
 		    if (val > OAKLEY_ISAKMP_SA_LIFETIME_MAXIMUM)
+		    {
+#ifdef CISCO_QUIRKS
+			plog("peer requested %lu seconds"
+					" which exceeds our limit %d seconds"
+					, (long) val
+					, OAKLEY_ISAKMP_SA_LIFETIME_MAXIMUM);
+			plog("lifetime reduced to %d seconds "
+                             		"(todo: IPSEC_RESPONDER_LIFETIME notification)"
+					, OAKLEY_ISAKMP_SA_LIFETIME_MAXIMUM);
+			val = OAKLEY_ISAKMP_SA_LIFETIME_MAXIMUM;
+#else
 			ugh = builddiag("peer requested %lu seconds"
 					" which exceeds our limit %d seconds"
 					, (long) val
 					, OAKLEY_ISAKMP_SA_LIFETIME_MAXIMUM);
+#endif
+		    }	
 		    ta.life_seconds = val;
 		    break;
 		case OAKLEY_LIFE_KILOBYTES:

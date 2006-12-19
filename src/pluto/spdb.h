@@ -60,10 +60,8 @@ struct db_sa {
      */
 };
 
-/* The oakley sadb is subscripted by a bitset with members
- * from POLICY_PSK and POLICY_RSASIG.
- */
-extern struct db_sa oakley_sadb[1 << 2];
+/* The oakley sadb */
+extern struct db_sa oakley_sadb;
 
 /* The ipsec sadb is subscripted by a bitset with members
  * from POLICY_ENCRYPT, POLICY_AUTHENTICATE, POLICY_COMPRESS
@@ -90,14 +88,15 @@ extern notification_t preparse_isakmp_sa_body(
 extern notification_t parse_isakmp_policy(
     pb_stream *proposal_pbs,	/* body of proposal Payload */
     u_int notrans,		/* number of transforms */
-    lset_t *policy);		/* RSA or PSK policy */
+    lset_t *policy);		/* RSA, PSK or XAUTH policy */
 
 extern notification_t parse_isakmp_sa_body(
     u_int32_t ipsecdoisit,	/* IPsec DOI SIT bitset */
     pb_stream *proposal_pbs,	/* body of proposal Payload */
     struct isakmp_proposal *proposal,
     pb_stream *r_sa_pbs,	/* if non-NULL, where to emit winning SA */
-    struct state *st);		/* current state object */
+    struct state *st,		/* current state object */
+    bool initiator);		/* is caller initiator? */
 
 extern notification_t parse_ipsec_sa_body(
     pb_stream *sa_pbs,		/* body of input SA Payload */

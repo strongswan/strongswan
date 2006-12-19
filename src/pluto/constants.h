@@ -508,10 +508,12 @@ enum state_kind {
 
     /* XAUTH states */
 
-    STATE_XAUTH_R0,              /* responder states (server) */
-    STATE_XAUTH_R1,
+    STATE_XAUTH_R1,              /* responder states (server) */
+    STATE_XAUTH_R2,
+    STATE_XAUTH_R3,
 
-    STATE_XAUTH_I1,              /* initiator states (client) */
+    STATE_XAUTH_I0,              /* initiator states (client) */
+    STATE_XAUTH_I1,
     STATE_XAUTH_I2,
 
     /* Mode Config states */
@@ -531,18 +533,26 @@ enum state_kind {
 
 #define PHASE1_INITIATOR_STATES	 (LELEM(STATE_MAIN_I1) | LELEM(STATE_MAIN_I2) \
     | LELEM(STATE_MAIN_I3) | LELEM(STATE_MAIN_I4))
-#define ISAKMP_SA_ESTABLISHED_STATES  (LELEM(STATE_MAIN_R3) | LELEM(STATE_MAIN_I4) \
+#define ISAKMP_SA_ESTABLISHED_STATES ( \
+      LELEM(STATE_MAIN_R3)     | LELEM(STATE_MAIN_I4)     \
+    | LELEM(STATE_XAUTH_R1)    | LELEM(STATE_XAUTH_R2) | LELEM(STATE_XAUTH_R3) \
+    | LELEM(STATE_XAUTH_I1)    | LELEM(STATE_XAUTH_I2)    \
     | LELEM(STATE_MODE_CFG_R1) | LELEM(STATE_MODE_CFG_R2) \
     | LELEM(STATE_MODE_CFG_I2) | LELEM(STATE_MODE_CFG_I3))
 
 #define IS_PHASE1(s) ((STATE_MAIN_R0 <= (s) && (s) <= STATE_MAIN_I4) \
+		   || (STATE_XAUTH_R1 <= (s) && (s) <= STATE_XAUTH_I2) \
 		   || (STATE_MODE_CFG_R0 <= (s) && (s) <= STATE_MODE_CFG_I3))
 #define IS_QUICK(s) (STATE_QUICK_R0 <= (s) && (s) <= STATE_QUICK_R2)
 #define IS_ISAKMP_ENCRYPTED(s) (STATE_MAIN_I2 <= (s))
 #define IS_ISAKMP_SA_ESTABLISHED(s) (         \
-					 (s) == STATE_MAIN_R3     \
+				     (s) == STATE_MAIN_R3     \
 				  || (s) == STATE_MAIN_I4     \
-				  || (s) == STATE_MODE_CFG_R0 \
+				  || (s) == STATE_XAUTH_R1    \
+				  || (s) == STATE_XAUTH_R2    \
+				  || (s) == STATE_XAUTH_R3    \
+				  || (s) == STATE_XAUTH_I1    \
+				  || (s) == STATE_XAUTH_I2    \
 				  || (s) == STATE_MODE_CFG_R1 \
 				  || (s) == STATE_MODE_CFG_R2 \
 				  || (s) == STATE_MODE_CFG_I2 \

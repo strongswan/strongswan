@@ -72,6 +72,7 @@ struct secret {
     union {
 	chunk_t preshared_secret;
 	RSA_private_key_t RSA_private_key;
+	xauth_t xauth_secret;
 	smartcard_t *smartcard;
     } u;
     secret_t *next;
@@ -293,14 +294,12 @@ get_preshared_secret(const struct connection *c)
 {
     const secret_t *s = get_secret(c, PPK_PSK, FALSE);
 
-#ifdef DEBUG
     DBG(DBG_PRIVATE,
 	if (s == NULL)
 	    DBG_log("no Preshared Key Found");
 	else
 	    DBG_dump_chunk("Preshared Key", s->u.preshared_secret);
-	);
-#endif
+    )
     return s == NULL? NULL : &s->u.preshared_secret;
 }
 
@@ -584,6 +583,98 @@ process_rsa_keyfile(RSA_private_key_t *rsak, int whackfd)
 }
 
 /*
+ * process xauth secret read from ipsec.secrets
+ */
+static err_t
+process_xauth(secret_t *s)
+{
+    chunk_t user_name;
+    chunk_t user_password;
+
+    s->kind = PPK_XAUTH;
+
+    if (!shift())
+	return "missing xauth user name";
+    if (*tok == '"' || *tok == '\'')  /* quoted user name */
+    {
+	user_name.ptr = tok + 1;
+	user_name.len = flp->cur - tok - 2;
+    }
+    else
+    {
+	user_name.ptr = tok;
+	user_name.len = flp->cur - tok;
+    }
+    if (!shift())
+	return "missing xauth user password";
+    if (*tok == '"' || *tok == '\'')  /* quoted user password */
+    {
+	user_password.ptr = tok + 1;
+	user_password.len = flp->cur - tok - 2;
+    }
+    else
+    {
+	user_password.ptr = tok;
+	user_password.len = flp->cur - tok;
+    }
+    if (shift())
+	return "unexpected token after xauth user passpword";
+    clonetochunk(s->u.xauth_secret.user_name
+	, user_name.ptr, user_name.len, "user_name");
+    clonetochunk(s->u.xauth_secret.user_password
+	, user_password.ptr, user_password.len, "user_password");
+    return NULL;
+}
+
+/* get XAUTH secret from chained secrets lists
+ * only one entry is currently supported
+ */
+bool
+xauth_get_secret(xauth_t *xauth_secret)
+{
+    secret_t *s;
+    bool found = FALSE;
+
+    for (s = secrets; s != NULL; s = s->next)
+    {
+	if (s->kind == PPK_XAUTH)
+	{
+	    if (found)
+	    {
+		plog("found multiple xauth secrets - first selected");
+	    }
+	    else
+	    {
+		found = TRUE;
+		*xauth_secret = s->u.xauth_secret;
+	    }
+	}
+    }
+    return found;
+}
+
+/*
+ * find a matching secret
+ */
+bool
+xauth_verify_secret(const xauth_t *xauth_secret)
+{
+    secret_t *s;
+
+    for (s = secrets; s != NULL; s = s->next)
+    {
+	if (s->kind == PPK_XAUTH)
+	{
+	    if (!same_chunk(xauth_secret->user_name, s->u.xauth_secret.user_name))
+		continue;
+	    if (same_chunk(xauth_secret->user_password, s->u.xauth_secret.user_password))
+		return TRUE;
+	}
+    }
+    return FALSE;
+}
+
+/*
  * process pin read from ipsec.secrets or prompted for it using whack
  */
 static err_t
@@ -693,6 +784,10 @@ process_secret(secret_t *s, int whackfd)
 	{
 	   ugh = process_rsa_keyfile(&s->u.RSA_private_key, whackfd);
 	}
+    }
+    else if (tokeqword("xauth"))
+    {
+	ugh = process_xauth(s);
     }
     else if (tokeqword("pin"))
     {
@@ -923,7 +1018,7 @@ void
 free_preshared_secrets(void)
 {
     lock_certs_and_keys("free_preshared_secrets");
-    
+
     if (secrets != NULL)
     {
 	secret_t *s, *ns;
@@ -949,6 +1044,10 @@ free_preshared_secrets(void)
 	    case PPK_RSA:
 		free_RSA_private_content(&s->u.RSA_private_key);
 		break;
+	    case PPK_XAUTH:
+		pfree(s->u.xauth_secret.user_name.ptr);
+		pfree(s->u.xauth_secret.user_password.ptr);
+		break;
 	    case PPK_PIN:
 		scx_release(s->u.smartcard);
 		break;
@@ -959,7 +1058,7 @@ free_preshared_secrets(void)
 	}
 	secrets = NULL;
     }
-    
+
     unlock_certs_and_keys("free_preshard_secrets");
 }
 

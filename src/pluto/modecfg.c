@@ -39,6 +39,7 @@
 #include "crypto.h"
 #include "modecfg.h"
 #include "whack.h"
+#include "keys.h"
 
 #define SUPPORTED_ATTR_SET   ( LELEM(INTERNAL_IP4_ADDRESS) \
                              | LELEM(INTERNAL_IP4_NETMASK) \
@@ -53,10 +54,17 @@ typedef struct internal_addr internal_addr_t;
 
 struct internal_addr
 {
-    lset_t        attr_set;
-    ip_address    ipaddr;
-    ip_address    dns[2];
-    ip_address    wins[2];
+    lset_t attr_set;
+
+    /* ModeCfg variables */
+    ip_address ipaddr;
+    ip_address dns[2];
+    ip_address wins[2];
+
+    /* XAUTH variables */
+    u_int16_t  xauth_type;
+    xauth_t    xauth_secret;
+    bool       xauth_status;
 };
 
 /*
@@ -66,6 +74,10 @@ static void
 init_internal_addr(internal_addr_t *ia)
 {
     ia->attr_set = LEMPTY;
+    ia->xauth_secret.user_name = empty_chunk;
+    ia->xauth_secret.user_password = empty_chunk;
+    ia->xauth_status = FALSE;
+
     anyaddr(AF_INET, &ia->ipaddr);
     anyaddr(AF_INET, &ia->dns[0]);
     anyaddr(AF_INET, &ia->dns[1]);
@@ -218,7 +230,20 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 		u_int len;
 
 		/* ISAKMP attr out */
-		attr.isaat_af_type = attr_type | ISAKMP_ATTR_AF_TLV;
+		if (attr_type == XAUTH_TYPE)
+		{
+		    attr.isaat_af_type = attr_type | ISAKMP_ATTR_AF_TV;
+		    attr.isaat_lv = ia->xauth_type;
+		}
+		else if (attr_type == XAUTH_STATUS)
+		{
+		    attr.isaat_af_type = attr_type | ISAKMP_ATTR_AF_TV;
+		    attr.isaat_lv = ia->xauth_status;
+		}
+		else
+		{
+		    attr.isaat_af_type = attr_type | ISAKMP_ATTR_AF_TLV;
+		}
 		out_struct(&attr, &isakmp_modecfg_attribute_desc, &strattr, &attrval);
 
 		switch (attr_type)
@@ -288,14 +313,34 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 		case INTERNAL_IP4_NBNS:
 		    if (!isanyaddr(&ia->wins[wins_idx]))
 		    {
- 			len = addrbytesptr(&ia->wins[wins_idx++], &byte_ptr);
- 			out_raw(byte_ptr, len, &attrval, "IP4_wins");
+			len = addrbytesptr(&ia->wins[wins_idx++], &byte_ptr);
+			out_raw(byte_ptr, len, &attrval, "IP4_wins");
 		    }
 		    if (wins_idx < 2 && !isanyaddr(&ia->wins[wins_idx]))
 		    {
 			dont_advance = TRUE;
 		    }
- 		    break;
+		    break;
+		case XAUTH_TYPE:
+		    break;
+		case XAUTH_USER_NAME:
+		    if (ia->xauth_secret.user_name.ptr != NULL)
+		    {
+			out_raw(ia->xauth_secret.user_name.ptr
+			      , ia->xauth_secret.user_name.len
+			      , &attrval, "xauth_user_name");
+		    }
+		    break;
+		case XAUTH_USER_PASSWORD:
+		    if (ia->xauth_secret.user_password.ptr != NULL)
+		    {
+			out_raw(ia->xauth_secret.user_password.ptr
+			      , ia->xauth_secret.user_password.len
+			      , &attrval, "xauth_user_password");
+		    }
+		    break;
+		case XAUTH_STATUS:
+		    break;
 		default:
 		    plog("attempt to send unsupported mode cfg attribute %s."
 			 , enum_show(&modecfg_attr_names, attr_type));
@@ -306,13 +351,17 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 	    if (!dont_advance)
 	    {
 		attr_type++;
+		if (attr_type == MODECFG_ROOF)
+		{
+		    attr_type = XAUTH_BASE;
+		}
 		attr_set >>= 1;
 	    }
 	}
 	close_message(&strattr);
     }
 
-    modecfg_hash(r_hashval, r_hash_start, rbody->cur,st);
+    modecfg_hash(r_hashval, r_hash_start, rbody->cur, st);
     close_message(rbody);
     encrypt_message(rbody, st);
     return STF_OK;
@@ -371,7 +420,6 @@ modecfg_send_msg(struct state *st, int isama_type, internal_addr_t *ia)
 	delete_event(st);
 	event_schedule(EVENT_RETRANSMIT, EVENT_RETRANSMIT_DELAY_0, st);
     }
-    st->st_modecfg.started = TRUE;
     return STF_OK;
 }
 
@@ -381,6 +429,7 @@ modecfg_send_msg(struct state *st, int isama_type, internal_addr_t *ia)
 stf_status
 modecfg_send_request(struct state *st)
 {
+    stf_status stat;
     internal_addr_t ia;
 
     init_internal_addr(&ia);
@@ -389,7 +438,10 @@ modecfg_send_request(struct state *st)
 
     plog("sending ModeCfg request");
     st->st_state = STATE_MODE_CFG_I1;
-    return modecfg_send_msg(st, ISAKMP_CFG_REQUEST, &ia);
+    stat = modecfg_send_msg(st, ISAKMP_CFG_REQUEST, &ia);
+    if (stat == STF_OK)
+	st->st_modecfg.started = TRUE;
+    return stat;
 }
 
 /*
@@ -398,13 +450,38 @@ modecfg_send_request(struct state *st)
 stf_status
 modecfg_send_set(struct state *st)
 {
+    stf_status stat;
     internal_addr_t ia;
 
     get_internal_addr(st->st_connection, &ia);
 
     plog("sending ModeCfg set");
     st->st_state = STATE_MODE_CFG_R1;
-    return modecfg_send_msg(st, ISAKMP_CFG_SET, &ia);
+    stat = modecfg_send_msg(st, ISAKMP_CFG_SET, &ia);
+    if (stat == STF_OK)
+	st->st_modecfg.started = TRUE;
+    return stat;
+}
+
+/*
+ * Send XAUTH credentials request (username + password)
+ */
+stf_status
+xauth_send_request(struct state *st)
+{
+    stf_status stat;
+    internal_addr_t ia;
+
+    init_internal_addr(&ia);
+    ia.attr_set = LELEM(XAUTH_USER_NAME     - XAUTH_BASE + MODECFG_ROOF)
+	        | LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE + MODECFG_ROOF);
+
+    plog("sending XAUTH request");
+    st->st_state = STATE_XAUTH_R1;
+    stat = modecfg_send_msg(st, ISAKMP_CFG_REQUEST, &ia);
+    if (stat == STF_OK)
+	st->st_xauth.started = TRUE;
+    return stat;
 }
 
 /*
@@ -441,6 +518,22 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 	case INTERNAL_IP4_SUBNET:
 	case INTERNAL_IP4_NBNS:
 	    ia->attr_set |= LELEM(attr_type);
+	    break;
+	case XAUTH_TYPE:
+	    ia->xauth_type = attr.isaat_lv;
+	    ia->attr_set |= LELEM(attr_type - XAUTH_BASE + MODECFG_ROOF);
+	    break;
+	case XAUTH_USER_NAME:
+	    setchunk(ia->xauth_secret.user_name, strattr.cur, attr_len);
+	    ia->attr_set |= LELEM(attr_type - XAUTH_BASE + MODECFG_ROOF);
+	    break;
+	case XAUTH_USER_PASSWORD:
+	    setchunk(ia->xauth_secret.user_password, strattr.cur, attr_len);
+	    ia->attr_set |= LELEM(attr_type - XAUTH_BASE + MODECFG_ROOF);
+	    break;
+	case XAUTH_STATUS:
+	    ia->xauth_status = attr.isaat_lv;
+	    ia->attr_set |= LELEM(attr_type - XAUTH_BASE + MODECFG_ROOF);
 	    break;
 	default:
 	    plog("unsupported ModeCfg attribute %s received."
@@ -483,7 +576,7 @@ modecfg_parse_msg(struct msg_digest *md, int isama_type, u_int16_t *isama_id
 	    stat = modecfg_parse_attributes(&p->pbs, &ia_candidate);
 	    if (stat == STF_OK)
 	    {
-		/* retrun with a valid set of attributes */
+		/* return with a valid set of attributes */
 		*ia = ia_candidate;
 		return STF_OK;
 	    }
@@ -521,7 +614,8 @@ modecfg_inR0(struct msg_digest *md)
 
     get_internal_addr(st->st_connection, &ia);
 
-    /* build ISAKMP_CFG_REPLY */ 
+    plog("sending ModeCfg reply");
+
     stat = modecfg_build_msg(st, &md->rbody
 			       , ISAKMP_CFG_REPLY
 			       , &ia
@@ -611,6 +705,8 @@ modecfg_inI2(struct msg_digest *md)
     init_internal_addr(&ia);
     ia.attr_set = attr_set & SUPPORTED_ATTR_SET;
 
+    plog("sending ModeCfg ack");
+
     stat = modecfg_build_msg(st, &md->rbody
 			       , ISAKMP_CFG_ACK
 			       , &ia
@@ -624,4 +720,188 @@ modecfg_inI2(struct msg_digest *md)
 
     st->st_msgid = 0;
     return STF_OK;
+}
+
+/* STATE_XAUTH_R1:
+ *  HDR*, HASH, ATTR(REPLY=USERNAME/PASSWORD) --> HDR*, HASH, ATTR(STATUS)
+ *
+ *  used on the XAUTH server (responder)
+ */
+stf_status
+xauth_inR1(struct msg_digest *md)
+{
+    struct state *const st = md->st;
+    u_int16_t isama_id;
+    internal_addr_t ia;
+    stf_status stat;
+    bool status;
+
+    plog("parsing XAUTH reply");
+
+    stat = modecfg_parse_msg(md, ISAKMP_CFG_REPLY, &isama_id, &ia);
+    if (stat != STF_OK)
+	return stat;
+
+    /* check XAUTH reply */
+    if ((ia.attr_set & LELEM(XAUTH_STATUS - XAUTH_BASE + MODECFG_ROOF)) != LEMPTY)
+    {
+	plog("received FAIL status in XAUTH reply");
+	return STF_INTERNAL_ERROR;
+    }
+    if ((ia.attr_set & LELEM(XAUTH_USER_NAME - XAUTH_BASE + MODECFG_ROOF)) == LEMPTY)
+    {
+	plog("user name attribute is missing in XAUTH reply");
+	return STF_SUSPEND;
+    }
+    if ((ia.attr_set & LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE + MODECFG_ROOF)) == LEMPTY)
+    {
+	plog("user password attribute is missing in XAUTH reply");
+	return STF_SUSPEND;
+    }
+
+    status = xauth_verify_secret(&ia.xauth_secret);
+
+    /* prepare XAUTH set which sends the authentication status */
+    init_internal_addr(&ia);
+    ia.attr_set = LELEM(XAUTH_STATUS - XAUTH_BASE + MODECFG_ROOF);
+    ia.xauth_status = status;
+
+    plog("sending XAUTH status: %s", status? "OK":"FAIL");
+
+    stat = modecfg_build_msg(st, &md->rbody
+			       , ISAKMP_CFG_SET
+			       , &ia
+			       , isama_id);
+    return STF_OK;
+}
+
+/* STATE_XAUTH_R2:
+ * HDR*, ATTR(STATUS), HASH --> Done
+ *
+ * used on the XAUTH server (responder)
+ */
+stf_status
+xauth_inR2(struct msg_digest *md)
+{
+    struct state *const st = md->st;
+    u_int16_t isama_id;
+    internal_addr_t ia;
+    stf_status stat;
+
+    plog("parsing XAUTH ack");
+
+    stat = modecfg_parse_msg(md, ISAKMP_CFG_ACK, &isama_id, &ia);
+    if (stat != STF_OK)
+	return stat;
+
+    st->st_msgid = 0;
+    return STF_OK;
+}
+
+/* STATE_XAUTH_I0:
+ * HDR*, HASH, ATTR(REQ) --> HDR*, HASH, ATTR(REPLY=USERNAME/PASSWORD)
+ *
+ * used on the XAUTH client (initiator)
+ */
+stf_status
+xauth_inI0(struct msg_digest *md)
+{
+    struct state *const st = md->st;
+    u_int16_t isama_id;
+    internal_addr_t ia;
+    stf_status stat;
+
+    plog("parsing XAUTH request");
+
+    stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia);
+    if (stat != STF_OK)
+	return stat;
+ 
+    /* check XAUTH request */
+    if ((ia.attr_set & LELEM(XAUTH_TYPE - XAUTH_BASE + MODECFG_ROOF)) != LEMPTY
+    && ia.xauth_type != XAUTH_TYPE_GENERIC)
+    {
+	plog("xauth type %s is not supported", enum_name(&xauth_type_names, ia.xauth_type));
+	stat = STF_FAIL;
+    }
+    if ((ia.attr_set & LELEM(XAUTH_USER_NAME - XAUTH_BASE + MODECFG_ROOF)) == LEMPTY)
+    {
+	plog("user name attribute is missing in XAUTH request");
+	stat = STF_FAIL;
+    }
+    if ((ia.attr_set & LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE + MODECFG_ROOF)) == LEMPTY)
+    {
+	plog("user password attribute is missing in XAUTH request");
+	stat = STF_FAIL;
+    }
+
+    /* prepare XAUTH reply */
+    init_internal_addr(&ia);
+
+    if (stat == STF_OK)
+    {
+	/* get user credentials */
+	if (!xauth_get_secret(&ia.xauth_secret))
+	{
+	    plog("xauth user credentials not found");
+	    stat = STF_FAIL;
+	}
+    }
+    if (stat == STF_OK)
+    {
+	ia.attr_set = LELEM(XAUTH_USER_NAME - XAUTH_BASE + MODECFG_ROOF)
+		    | LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE + MODECFG_ROOF);
+    }
+    else
+    {
+	ia.attr_set = LELEM(XAUTH_STATUS - XAUTH_BASE + MODECFG_ROOF);
+	ia.xauth_status = FALSE;
+    }
+
+    plog("sending XAUTH reply");
+
+    stat = modecfg_build_msg(st, &md->rbody
+			       , ISAKMP_CFG_REPLY
+			       , &ia
+			       , isama_id);
+    if (stat != STF_OK)
+    {
+	/* notification payload - not exactly the right choice, but okay */
+	md->note = ATTRIBUTES_NOT_SUPPORTED;
+	return stat;
+    }
+    st->st_xauth.started = TRUE;
+    return STF_OK;
+}
+
+/* STATE_XAUTH_I1:
+ * HDR*, HASH, ATTR(STATUS) --> HDR*, HASH, ATTR(ACK)
+ *
+ * used on the XAUTH client (initiator)
+ */
+stf_status
+xauth_inI1(struct msg_digest *md)
+{
+     struct state *const st = md->st;
+    u_int16_t isama_id;
+    internal_addr_t ia;
+    stf_status stat;
+
+    plog("parsing XAUTH status");
+
+    stat = modecfg_parse_msg(md, ISAKMP_CFG_SET, &isama_id, &ia);
+    if (stat != STF_OK)
+	return stat;
+
+    /* prepare XAUTH set which sends the authentication status */
+    init_internal_addr(&ia);
+
+    plog("sending XAUTH ack");
+
+    stat = modecfg_build_msg(st, &md->rbody
+			       , ISAKMP_CFG_ACK
+			       , &ia
+			       , isama_id);
+    st->st_msgid = 0;
+    return stat;
 }

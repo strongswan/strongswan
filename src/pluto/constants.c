@@ -183,8 +183,10 @@ static const char *const state_name[] = {
 	"STATE_INFO",
 	"STATE_INFO_PROTECTED",
 
-	"STATE_XAUTH_R0",
 	"STATE_XAUTH_R1",
+	"STATE_XAUTH_R2",
+	"STATE_XAUTH_R3",
+	"STATE_XAUTH_I0",
 	"STATE_XAUTH_I1",
 	"STATE_XAUTH_I2",
 
@@ -222,16 +224,18 @@ const char *const state_story[] = {
 	"got Informational Message in clear",	 /* STATE_INFO */
 	"got encrypted Informational Message",	 /* STATE_INFO_PROTECTED */
 
-	"sent XAUTH request, expecting reply",	 /* STATE_XAUTH_R0 */
-	"sent XAUTH status, expecting ack",	 /* STATE_XAUTH_R1 */
-	"received XAUTH request, sent reply",	 /* STATE_XAUTH_I1 */
-	"received XAUTH status, sent ack",	 /* STATE_XAUTH_I2 */
+	"sent XAUTH request, expecting reply",	 /* STATE_XAUTH_R1 */
+	"sent XAUTH status, expecting ack",	 /* STATE_XAUTH_R2 */
+	"received XAUTH ack, established",	 /* STATE_XAUTH_R3 */
+	"expecting XAUTH request",		 /* STATE_XAUTH_I0 */
+	"sent XAUTH reply, expecting status",	 /* STATE_XAUTH_I1 */
+	"sent XAUTH ack, established",		 /* STATE_XAUTH_I2 */
 
-	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R0 */
-	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R1 */
-	"received ModeCfg ack",			 /* STATE_MODE_CFG_R2 */
+	"expecting ModeCfg request",		 /* STATE_MODE_CFG_R0 */
+	"sent ModeCfg reply, expecting ack",	 /* STATE_MODE_CFG_R1 */
+	"received ModeCfg ack, established"	 /* STATE_MODE_CFG_R2 */
 	"sent ModeCfg request, expecting reply", /* STATE_MODE_CFG_I1 */
-	"received ModeCfg reply",		 /* STATE_MODE_CFG_I2 */
+	"sent ModeCfg ack, established",	 /* STATE_MODE_CFG_I2 */
 	"received ModeCfg set, sent ack",	 /* STATE_MODE_CFG_I3 */
     };
 

@@ -950,8 +950,8 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	u_char *sa_start = rbody.cur;
 	lset_t auth_policy = policy & POLICY_ID_AUTH_MASK;
 
-	if (!out_sa(&rbody, &oakley_sadb[auth_policy >> POLICY_ISAKMP_SHIFT]
-	, st, TRUE, vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE))
+	if (!out_sa(&rbody, &oakley_sadb, st, TRUE
+	, vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE))
 	{
 	    reset_cur_state();
 	    return STF_INTERNAL_ERROR;
@@ -1211,11 +1211,15 @@ generate_skeyids_iv(struct state *st)
     switch (st->st_oakley.auth)
     {
 	case OAKLEY_PRESHARED_KEY:
+	case XAUTHInitPreShared:
+	case XAUTHRespPreShared:
 	    if (!skeyid_preshared(st))
 		return FALSE;
 	    break;
 
 	case OAKLEY_RSA_SIG:
+	case XAUTHInitRSA:
+	case XAUTHRespRSA:
 	    if (!skeyid_digisig(st))
 		return FALSE;
 	    break;
@@ -3151,7 +3155,7 @@ main_inI1_outR1(struct msg_digest *md)
 
     /* SA body in and out */
     RETURN_STF_FAILURE(parse_isakmp_sa_body(ipsecdoisit, &proposal_pbs
-	,&proposal, &r_sa_pbs, st));
+	,&proposal, &r_sa_pbs, st, FALSE));
 
     /* if enabled send Pluto Vendor ID */
     if (SEND_PLUTO_VID)
@@ -3258,7 +3262,7 @@ main_inR1_outI2(struct msg_digest *md)
 	    RETURN_STF_FAILURE(BAD_PROPOSAL_SYNTAX);
         }
 	RETURN_STF_FAILURE(parse_isakmp_sa_body(ipsecdoisit
-	    , &proposal_pbs, &proposal, NULL, st));
+	    , &proposal_pbs, &proposal, NULL, st, TRUE));
     }
 
     if (nat_traversal_enabled && md->nat_traversal_vid)
@@ -3343,9 +3347,11 @@ main_inI2_outR2(struct msg_digest *md)
     pb_stream *keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
  
     /* send CR if auth is RSA and no preloaded RSA public key exists*/
-    bool send_cr = !no_cr_send && (st->st_oakley.auth == OAKLEY_RSA_SIG) &&
-		   !has_preloaded_public_key(st);
-   
+    bool RSA_auth = st->st_oakley.auth == OAKLEY_RSA_SIG
+		 || st->st_oakley.auth == XAUTHInitRSA
+		 || st->st_oakley.auth == XAUTHRespRSA;
+    bool send_cr = !no_cr_send && RSA_auth && !has_preloaded_public_key(st);
+
     u_int8_t np = ISAKMP_NEXT_NONE;
 
     /* KE in */
@@ -3488,6 +3494,10 @@ main_inR2_outI3(struct msg_digest *md)
     cert_t mycert = st->st_connection->spd.this.cert;
     bool requested, send_cert, send_cr;
 
+    bool RSA_auth = st->st_oakley.auth == OAKLEY_RSA_SIG
+		 || st->st_oakley.auth == XAUTHInitRSA
+		 || st->st_oakley.auth == XAUTHRespRSA;
+
     /* KE in */
     RETURN_STF_FAILURE(accept_KE(&st->st_gr, "Gr", st->st_oakley.group, keyex_pbs));
 
@@ -3509,8 +3519,7 @@ main_inR2_outI3(struct msg_digest *md)
      */
     requested = cert_policy == CERT_SEND_IF_ASKED
 		&& st->st_connection->got_certrequest;
-    send_cert = st->st_oakley.auth == OAKLEY_RSA_SIG
-		&& mycert.type != CERT_NONE
+    send_cert = RSA_auth && mycert.type != CERT_NONE
 		&& (cert_policy == CERT_ALWAYS_SEND || requested);
 
     /* send certificate request if we don't have a preloaded RSA public key */
@@ -3554,7 +3563,7 @@ main_inR2_outI3(struct msg_digest *md)
     }
 
     /* CERT out */
-    if ( st->st_oakley.auth == OAKLEY_RSA_SIG)
+    if (RSA_auth)
     {
 	DBG(DBG_CONTROL,
 	    DBG_log("our certificate policy is %s"
@@ -3710,6 +3719,8 @@ main_id_and_auth(struct msg_digest *md
     switch (st->st_oakley.auth)
     {
     case OAKLEY_PRESHARED_KEY:
+    case XAUTHInitPreShared:
+    case XAUTHRespPreShared:
 	{
 	    pb_stream *const hash_pbs = &md->chain[ISAKMP_NEXT_HASH]->pbs;
 
@@ -3726,6 +3737,8 @@ main_id_and_auth(struct msg_digest *md
 	break;
 
     case OAKLEY_RSA_SIG:
+    case XAUTHInitRSA:
+    case XAUTHRespRSA:
 	r = RSA_check_signature(&peer, st, hash_val, hash_len
 	    , &md->chain[ISAKMP_NEXT_SIG]->pbs
 #ifdef USE_KEYRR
@@ -3903,6 +3916,7 @@ main_inI3_outR3_tail(struct msg_digest *md
     pb_stream r_id_pbs;	/* ID Payload; also used for hash calculation */
     certpolicy_t cert_policy;
     cert_t mycert;
+    bool RSA_auth;
     bool send_cert;
     bool requested;
 
@@ -3925,7 +3939,10 @@ main_inI3_outR3_tail(struct msg_digest *md
     mycert = st->st_connection->spd.this.cert;
     requested = cert_policy == CERT_SEND_IF_ASKED
 		&& st->st_connection->got_certrequest;
-    send_cert = st->st_oakley.auth == OAKLEY_RSA_SIG
+    RSA_auth = st->st_oakley.auth == OAKLEY_RSA_SIG
+	    || st->st_oakley.auth == XAUTHInitRSA
+            || st->st_oakley.auth == XAUTHRespRSA;
+    send_cert = RSA_auth
 		&& mycert.type != CERT_NONE
 		&& (cert_policy == CERT_ALWAYS_SEND || requested);
 
@@ -3963,7 +3980,7 @@ main_inI3_outR3_tail(struct msg_digest *md
     }
 
     /* CERT out */
-    if (st->st_oakley.auth == OAKLEY_RSA_SIG)
+    if (RSA_auth)
     {
 	DBG(DBG_CONTROL,
 	    DBG_log("our certificate policy is %s"

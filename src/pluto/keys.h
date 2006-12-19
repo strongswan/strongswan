@@ -37,6 +37,7 @@ enum PrivateKeyKind {
     PPK_PSK,
  /* PPK_DSS, */	/* not implemented */
     PPK_RSA,
+    PPK_XAUTH,
     PPK_PIN
 };
 
@@ -100,11 +101,21 @@ extern void add_pgp_public_key(pgpcert_t *cert, time_t until
 extern void remove_x509_public_key(const x509cert_t *cert);
 extern void list_public_keys(bool utc);
 
+/* XAUTH credentials */
+
+typedef struct {
+    chunk_t user_name;
+    chunk_t user_password;
+} xauth_t;
+
+extern bool xauth_get_secrect(const xauth_t *xauth_secret);
+extern bool xauth_verify_secret(const xauth_t *xauth_secret);
+
 struct gw_info;	/* forward declaration of tag (defined in dnskey.h) */
 extern void transfer_to_public_keys(struct gw_info *gateways_from_dns
 #ifdef USE_KEYRR
     , pubkey_list_t **keys
 #endif /* USE_KEYRR */
     );
-    
+
 #endif /* _KEYS_H */
