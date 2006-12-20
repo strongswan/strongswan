@@ -10,40 +10,39 @@ gain hassle-free confiugration, version negotiation and maintainability.
 Roadmap for 2007
 ================
 
- Jan  ¦   - first stable release of the strongSwan 4.x branch, 4.1.0?
-      ¦
- Feb  ¦   - refactoring of exchange handling for better code sharing,
-      ¦     we need to separate specific tasks to reuse them in multiple
-      ¦     exchanges
-      ¦   - merge of EAP authentication code / plugin loader
-      ¦   - merge of the virtual IP support currently in the pipeline
-      ¦   - merge of the experimental "mediated double-NAT" support
-      ¦   - write an IETF draft for this feature
-      ¦
- Mar  ¦   - interface in charon for the new SMP management interface
-      ¦   - full certificate support
-      ¦   - Cookie support, other fixes to mature against DoS
-      ¦
- Apr  ¦   - start porting efforts of IKEv1 into charon
-      ¦   - support of IKEv1 messages and payloads in charon
-      ¦
- May  ¦   - migration of plutos state machine into charon
-      ¦
- Jun  ¦   - get a useable IKEv1 implementation for simple cases
-      ¦
- Jul  ¦   - first release of charon supporting IKEv2 and IKEv1, 4.9.0?
-      ¦   - holidays :-)
-      ¦
- Aug  ¦   - get IKEv1 support to the level of pluto
-      ¦
- Sep  ¦
-      ¦
- Oct  ¦
-      ¦
- Nov  ¦
-      ¦
- Dec  ¦   - feature complete release, 5.0.0!
-      ¦   - world domination
+ Jan  !   - first stable release of the strongSwan 4.x branch
+      !
+ Feb  !   - refactoring of exchange handling for better code sharing,
+      !     we need to separate specific tasks to reuse them in multiple
+      !     exchanges
+      !   - merge of EAP authentication code / plugin loader
+      !   - merge of the virtual IP support currently in the pipeline
+      !   - merge of the experimental "mediated double-NAT" support
+      !   - write an IETF draft for this feature
+      !
+ Mar  !   - interface in charon for the new SMP management interface
+      !   - full certificate support
+      !   - Cookie support, other fixes to mature against DoS
+      !
+ Apr  !   - start porting efforts of IKEv1 into charon
+      !   - support of IKEv1 messages and payloads in charon
+      !
+ May  !   - migration of plutos state machine into charon
+      !
+ Jun  !   - get a useable IKEv1 implementation for simple cases
+      !
+ Jul  !   - first release of charon supporting IKEv2 and IKEv1
+      !
+ Aug  !   - get IKEv1 support to the level of pluto
+      !
+ Sep  !
+      !
+ Oct  !
+      !
+ Nov  !
+      !
+ Dec  !   - feature complete release
+      !
 
 
 TODO-List
