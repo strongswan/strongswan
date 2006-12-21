@@ -398,7 +398,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 						   msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
 						   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
 						   msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
-						   msg->add_conn.dpd.action);
+						   msg->add_conn.mode, msg->add_conn.dpd.action);
 	policy->add_my_traffic_selector(policy, my_ts);
 	policy->add_other_traffic_selector(policy, other_ts);
 	policy->add_authorities(policy, my_ca, other_ca);

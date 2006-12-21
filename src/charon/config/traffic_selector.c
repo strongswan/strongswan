@@ -447,15 +447,27 @@ static u_int8_t get_protocol(private_traffic_selector_t *this)
  */
 static bool is_host(private_traffic_selector_t *this, host_t *host)
 {
-	chunk_t addr;
-	int family = host->get_family(host);
-	
-	if ((family == AF_INET && this->type == TS_IPV4_ADDR_RANGE) ||
-		(family == AF_INET6 && this->type == TS_IPV6_ADDR_RANGE))
+	if (host)
 	{
-		addr = host->get_address(host);
-		if (memeq(addr.ptr, this->from, addr.len) &&
-			memeq(addr.ptr, this->to, addr.len))
+		chunk_t addr;
+		int family = host->get_family(host);
+		
+		if ((family == AF_INET && this->type == TS_IPV4_ADDR_RANGE) ||
+			(family == AF_INET6 && this->type == TS_IPV6_ADDR_RANGE))
+		{
+			addr = host->get_address(host);
+			if (memeq(addr.ptr, this->from, addr.len) &&
+				memeq(addr.ptr, this->to, addr.len))
+			{
+				return TRUE;
+			}
+		}
+	}
+	else
+	{
+		size_t length =  (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+		
+		if (memeq(this->from, this->to, length))
 		{
 			return TRUE;
 		}

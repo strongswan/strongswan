@@ -164,6 +164,8 @@ struct traffic_selector_t {
 	 * Traffic selector may describe the end of *-to-host tunnel. In this
 	 * case, the address range is a single address equal to the hosts
 	 * peer address.
+	 * If host is NULL, the traffic selector is checked if it is a single host,
+	 * but not a specific one.
 	 *
 	 * @param this		calling obect
 	 * @param host		host_t specifying the address range

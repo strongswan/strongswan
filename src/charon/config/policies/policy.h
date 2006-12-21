@@ -53,6 +53,22 @@ enum dpd_action_t {
 };
 
 /**
+ * @brief Mode of an IPsec SA.
+ *
+ * These are equal to those defined in XFRM, so don't change.
+ *
+ * @ingroup config
+ */
+enum mode_t {
+	/** transport mode, no inner address */
+	MODE_TRANSPORT = 0,
+	/** tunnel mode, inner and outer addresses */
+	MODE_TUNNEL = 1,
+	/** BEET mode, tunnel mode but fixed, bound inner addresses */
+	MODE_BEET = 4,
+};
+
+/**
  * enum names for dpd_action_t.
  */
 extern enum_name_t *dpd_action_names;
@@ -291,6 +307,14 @@ struct policy_t {
 	u_int32_t (*get_hard_lifetime) (policy_t *this);
 	
 	/**
+	 * @brief Get the mode to use for the CHILD_SA, tunnel, transport or BEET.
+	 * 
+	 * @param this			policy
+	 * @return				lifetime in seconds
+	 */
+	mode_t (*get_mode) (policy_t *this);
+	
+	/**
 	 * @brief Get a new reference.
 	 *
 	 * Get a new reference to this policy by increasing
@@ -334,6 +358,7 @@ struct policy_t {
  * @param jitter			range of randomization time
  * @param updown			updown script to execute on up/down event
  * @param hostaccess		allow access to the host itself (used by the updown script)
+ * @param mode				mode to propose for CHILD_SA, transport, tunnel or BEET
  * @param dpd_action		what to to with a CHILD_SA when other peer does not respond
  * @return 					policy_t object
  * 
@@ -343,8 +368,7 @@ policy_t *policy_create(char *name,
 						identification_t *my_id, identification_t *other_id,
 						auth_method_t auth_method,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime,
-						u_int32_t jitter,
-						char *updown, bool hostaccess,
-						dpd_action_t dpd_action);
+						u_int32_t jitter, char *updown, bool hostaccess,
+						mode_t mode, dpd_action_t dpd_action);
 
 #endif /* POLICY_H_ */

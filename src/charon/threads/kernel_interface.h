@@ -118,6 +118,7 @@ struct kernel_interface_t {
 	 * @param int_alg		Algorithm to use for integrity protection
 	 * @param prf_plus		PRF to derive keys from
 	 * @param natt			NAT-T Configuration, or NULL of no NAT-T used
+	 * @param mode			mode of the SA (tunnel, transport)
 	 * @param replace		Should an already installed SA be updated?
 	 * @return
 	 * 						- SUCCESS
@@ -128,7 +129,8 @@ struct kernel_interface_t {
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int64_t expire_soft, u_int64_t expire_hard,
 						algorithm_t *enc_alg, algorithm_t *int_alg,
-						prf_plus_t *prf_plus, natt_conf_t *natt, bool update);
+						prf_plus_t *prf_plus, natt_conf_t *natt,
+						mode_t mode, bool update);
 	
 	/**
 	 * @brief Update the hosts on an installed SA.
@@ -206,6 +208,7 @@ struct kernel_interface_t {
 	 * @param protocol		protocol to use to protect traffic (AH/ESP)
 	 * @param reqid			uniqe ID of an SA to use to enforce policy
 	 * @param high_prio		if TRUE, uses a higher priority than any with FALSE
+	 * @param mode			mode of SA (tunnel, transport)
 	 * @param update		update an existing policy, if TRUE
 	 * @return
 	 * 						- SUCCESS
@@ -216,7 +219,8 @@ struct kernel_interface_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, protocol_id_t protocol,
-							u_int32_t reqid, bool high_prio, bool update);
+							u_int32_t reqid, bool high_prio, 
+							mode_t mode, bool update);
 	
 	/**
 	 * @brief Query the use time of a policy.

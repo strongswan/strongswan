@@ -167,10 +167,12 @@ struct child_sa_t {
 	 *
 	 * @param this 		calling object
 	 * @param proposal	proposal for which SPIs are allocated
+	 * @param mode		mode for the CHILD_SA
 	 * @param prf_plus	key material to use for key derivation
 	 * @return			SUCCESS or FAILED
 	 */
-	status_t (*add)(child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus);
+	status_t (*add)(child_sa_t *this, proposal_t *proposal, mode_t mode,
+					prf_plus_t *prf_plus);
 	
 	/**
 	 * @brief Install the kernel SAs for a proposal, after SPIs have been allocated.
@@ -179,10 +181,12 @@ struct child_sa_t {
 	 *
 	 * @param this 		calling object
 	 * @param proposal	proposal for which SPIs are allocated
+	 * @param mode		mode for the CHILD_SA
 	 * @param prf_plus	key material to use for key derivation
 	 * @return			SUCCESS or FAILED
 	 */
-	status_t (*update)(child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus);
+	status_t (*update)(child_sa_t *this, proposal_t *proposal, mode_t mode,
+					   prf_plus_t *prf_plus);
 
 	/**
 	 * @brief Update the hosts in the kernel SAs and policies
@@ -208,11 +212,11 @@ struct child_sa_t {
 	 * @param this 		calling object
 	 * @param my_ts		traffic selectors for local site
 	 * @param other_ts	traffic selectors for remote site
+	 * @param mode		mode for the SA: tunnel/transport
 	 * @return			SUCCESS or FAILED
 	 */	
-	status_t (*add_policies)(child_sa_t *this, 
-							 linked_list_t *my_ts_list,
-							 linked_list_t *other_ts_list);
+	status_t (*add_policies)(child_sa_t *this, linked_list_t *my_ts_list,
+							 linked_list_t *other_ts_list, mode_t mode);
 	
 	/**
 	 * @brief Get the traffic selectors of added policies of local host.

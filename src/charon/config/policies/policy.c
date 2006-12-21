@@ -130,6 +130,11 @@ struct private_policy_t {
 	 * What to do with an SA when other peer seams to be dead?
 	 */
 	bool dpd_action;
+	
+	/**
+	 * Mode to propose for a initiated CHILD: tunnel/transport
+	 */
+	mode_t mode;
 };
 
 /**
@@ -378,7 +383,6 @@ static dpd_action_t get_dpd_action(private_policy_t *this)
 	return this->dpd_action;
 }
 
-
 /**
  * Implementation of policy_t.add_my_traffic_selector
  */
@@ -421,6 +425,14 @@ static u_int32_t get_soft_lifetime(private_policy_t *this)
 static u_int32_t get_hard_lifetime(private_policy_t *this)
 {
 	return this->hard_lifetime;
+}
+
+/**
+ * Implementation of policy_t.get_mode.
+ */
+static mode_t get_mode(private_policy_t *this)
+{
+	return this->mode;
 }
 
 /**
@@ -475,7 +487,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 						auth_method_t auth_method,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
 						u_int32_t jitter, char *updown, bool hostaccess,
-						dpd_action_t dpd_action)
+						mode_t mode, dpd_action_t dpd_action)
 {
 	private_policy_t *this = malloc_thing(private_policy_t);
 
@@ -501,6 +513,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.get_dpd_action = (dpd_action_t (*) (policy_t*))get_dpd_action;
 	this->public.get_soft_lifetime = (u_int32_t (*) (policy_t *))get_soft_lifetime;
 	this->public.get_hard_lifetime = (u_int32_t (*) (policy_t *))get_hard_lifetime;
+	this->public.get_mode = (mode_t (*) (policy_t *))get_mode;
 	this->public.get_ref = (void (*) (policy_t*))get_ref;
 	this->public.destroy = (void (*) (policy_t*))destroy;
 	
@@ -515,6 +528,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->updown = (updown == NULL) ? NULL : strdup(updown);
 	this->hostaccess = hostaccess;
 	this->dpd_action = dpd_action;
+	this->mode = mode;
 	
 	/* initialize private members*/
 	this->refcount = 1;

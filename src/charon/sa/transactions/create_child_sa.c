@@ -120,6 +120,11 @@ struct private_create_child_sa_t {
 	child_sa_t *rekeyed_sa;
 	
 	/**
+	 * mode of the CHILD_SA to create: transport/tunnel
+	 */
+	mode_t mode;
+	
+	/**
 	 * Have we lost the simultaneous rekeying nonce compare?
 	 */
 	bool lost;
@@ -184,6 +189,31 @@ static void cancel(private_create_child_sa_t *this)
 {
 	this->rekeyed_sa = NULL;
 	this->lost = TRUE;
+}
+
+/**
+ * Build a notify message.
+ */
+static void build_notify(notify_type_t type, chunk_t data, message_t *message, bool flush_message)
+{
+	notify_payload_t *notify;
+	
+	if (flush_message)
+	{
+		payload_t *payload;
+		iterator_t *iterator = message->get_payload_iterator(message);
+		while (iterator->iterate(iterator, (void**)&payload))
+		{
+			payload->destroy(payload);
+			iterator->remove(iterator);
+		}
+		iterator->destroy(iterator);
+	}
+	
+	notify = notify_payload_create();
+	notify->set_notify_type(notify, type);
+	notify->set_notification_data(notify, data);
+	message->add_payload(message, (payload_t*)notify);
 }
 
 /**
@@ -293,6 +323,28 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		request->add_payload(request, (payload_t*)sa_payload);
 	}
 	
+	/* notify for transport/BEET mode, we propose it 
+	 * independent of the traffic selectors */
+	switch (this->policy->get_mode(this->policy))
+	{
+		case MODE_TUNNEL:
+			/* is the default */
+			break;
+		case MODE_TRANSPORT:
+			if (this->ike_sa->is_natt_enabled(this->ike_sa))
+			{
+				DBG1(DBG_IKE, "not using tranport mode, as connection NATed");
+			}
+			else
+			{
+				build_notify(USE_TRANSPORT_MODE, chunk_empty, request, FALSE);
+			}
+			break;
+		case MODE_BEET:
+			build_notify(USE_BEET_MODE, chunk_empty, request, FALSE);
+			break;
+	}
+	
 	{	/* build the NONCE payload for us (initiator) */
 		nonce_payload_t *nonce_payload;
 		
@@ -374,6 +426,16 @@ static status_t process_notifys(private_create_child_sa_t *this, notify_payload_
 			SIG(this->failsig, "received NO_PROPOSAL_CHOSEN notify");
 			return FAILED;
 		}
+		case USE_TRANSPORT_MODE:
+		{
+			this->mode = MODE_TRANSPORT;
+			return SUCCESS;
+		}
+		case USE_BEET_MODE:
+		{
+			this->mode = MODE_BEET;
+			return SUCCESS;
+		}
 		case REKEY_SA:
 		{
 			u_int32_t spi;
@@ -414,28 +476,20 @@ static status_t process_notifys(private_create_child_sa_t *this, notify_payload_
 }
 
 /**
- * Build a notify message.
+ * Check a list of traffic selectors if any selector belongs to host
  */
-static void build_notify(notify_type_t type, chunk_t data, message_t *message, bool flush_message)
+static bool ts_list_is_host(linked_list_t *list, host_t *host)
 {
-	notify_payload_t *notify;
+	traffic_selector_t *ts;
+	bool is_host = TRUE;
+	iterator_t *iterator = list->create_iterator(list, TRUE);
 	
-	if (flush_message)
+	while (is_host && iterator->iterate(iterator, (void**)&ts))
 	{
-		payload_t *payload;
-		iterator_t *iterator = message->get_payload_iterator(message);
-		while (iterator->iterate(iterator, (void**)&payload))
-		{
-			payload->destroy(payload);
-			iterator->remove(iterator);
-		}
-		iterator->destroy(iterator);
+		is_host = is_host && ts->is_host(ts, host);
 	}
-	
-	notify = notify_payload_create();
-	notify->set_notify_type(notify, type);
-	notify->set_notification_data(notify, data);
-	message->add_payload(message, (payload_t*)notify);
+	iterator->destroy(iterator);
+	return is_host;
 }
 
 /**
@@ -455,11 +509,11 @@ static status_t install_child_sa(private_create_child_sa_t *this, bool initiator
 	
 	if (initiator)
 	{
-		status = this->child_sa->update(this->child_sa, this->proposal, prf_plus);
+		status = this->child_sa->update(this->child_sa, this->proposal, 1, prf_plus);
 	}
 	else
 	{
-		status = this->child_sa->add(this->child_sa, this->proposal, prf_plus);
+		status = this->child_sa->add(this->child_sa, this->proposal, 1, prf_plus);
 	}
 	prf_plus->destroy(prf_plus);
 	if (status != SUCCESS)
@@ -468,11 +522,11 @@ static status_t install_child_sa(private_create_child_sa_t *this, bool initiator
 	}
 	if (initiator)
 	{
-		status = this->child_sa->add_policies(this->child_sa, this->tsi, this->tsr);
+		status = this->child_sa->add_policies(this->child_sa, this->tsi, this->tsr, 1);
 	}
 	else
 	{
-		status = this->child_sa->add_policies(this->child_sa, this->tsr, this->tsi);
+		status = this->child_sa->add_policies(this->child_sa, this->tsr, this->tsi, 1);
 	}
 	if (status != SUCCESS)
 	{
@@ -697,6 +751,44 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 											 this->policy->get_hostaccess(this->policy),
 											 use_natt);
 			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
+			
+			/* check mode, and include notify into reply */
+			switch (this->mode)
+			{
+				case MODE_TUNNEL:
+					/* is the default */
+					break;
+				case MODE_TRANSPORT:
+					if (!ts_list_is_host(this->tsi, other) ||
+						!ts_list_is_host(this->tsr, me))
+					{
+						this->mode = MODE_TUNNEL;
+						DBG1(DBG_IKE, "not using tranport mode, not host-to-host");
+					}
+					else if (this->ike_sa->is_natt_enabled(this->ike_sa))
+					{
+						this->mode = MODE_TUNNEL;
+						DBG1(DBG_IKE, "not using tranport mode, as connection NATed");
+					}
+					else 
+					{
+						build_notify(USE_TRANSPORT_MODE, chunk_empty, response, FALSE);
+					}
+					break;
+				case MODE_BEET:
+					if (!ts_list_is_host(this->tsi, NULL) ||
+						!ts_list_is_host(this->tsr, NULL))
+					{
+						this->mode = MODE_TUNNEL;
+						DBG1(DBG_IKE, "not using BEET mode, not host-to-host");
+					}
+					else
+					{
+						build_notify(USE_BEET_MODE, chunk_empty, response, FALSE);
+					}
+					break;
+			}
+			
 			if (install_child_sa(this, FALSE) != SUCCESS)
 			{
 				SIG(this->failsig, "installing CHILD_SA failed, sending NO_PROPOSAL_CHOSEN notify");
@@ -855,6 +947,38 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 			SIG(this->failsig, "CHILD_SA negotiation failed, no CHILD_SA built");
 			return FAILED;
 		}
+		
+		/* check mode if it is acceptable */
+		switch (this->mode)
+		{
+			case MODE_TUNNEL:
+				/* is the default */
+				break;
+			case MODE_TRANSPORT:
+				/* TODO: we should close the CHILD_SA if negotiated
+				 * mode is not acceptable for us */
+				if (!ts_list_is_host(this->tsi, me) ||
+					!ts_list_is_host(this->tsr, other))
+				{
+					this->mode = MODE_TUNNEL;
+					DBG1(DBG_IKE, "not using tranport mode, not host-to-host");
+				}
+				else if (this->ike_sa->is_natt_enabled(this->ike_sa))
+				{
+					this->mode = MODE_TUNNEL;
+					DBG1(DBG_IKE, "not using tranport mode, as connection NATed");
+				}
+				break;
+			case MODE_BEET:
+				if (!ts_list_is_host(this->tsi, NULL) ||
+					!ts_list_is_host(this->tsr, NULL))
+				{
+					this->mode = MODE_TUNNEL;
+					DBG1(DBG_IKE, "not using BEET mode, not host-to-host");
+				}
+				break;
+		}
+		
 		new_child = this->child_sa;
 		if (install_child_sa(this, TRUE) != SUCCESS)
 		{
@@ -985,6 +1109,7 @@ create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa)
 	this->policy = NULL;
 	this->tsi = NULL;
 	this->tsr = NULL;
+	this->mode = MODE_TUNNEL;
 	this->randomizer = randomizer_create();
 	this->failsig = CHILD_UP_FAILED;
 	

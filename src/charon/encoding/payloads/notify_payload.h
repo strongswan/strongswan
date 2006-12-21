@@ -88,6 +88,8 @@ enum notify_type_t {
 	NO_NATS_ALLOWED = 16402,
 	/* repeated authentication extension, RFC4478 */
 	AUTH_LIFETIME = 16403,
+	/* BEET mode, not even a draft yet. private use */
+	USE_BEET_MODE = 40960,
 };
 
 /**
@@ -96,7 +98,6 @@ enum notify_type_t {
  * @ingroup payloads
  */
 extern enum_name_t *notify_type_names;
-
 
 /**
  * @brief Class representing an IKEv2-Notify Payload.

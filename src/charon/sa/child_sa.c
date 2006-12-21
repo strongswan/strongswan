@@ -167,6 +167,11 @@ struct private_child_sa_t {
 	 * Specifies if NAT traversal is used
 	 */
 	bool use_natt;
+	
+	/**
+	 * mode this SA uses, tunnel/transport
+	 */
+	mode_t mode;
 };
 
 /**
@@ -439,7 +444,8 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 	return SUCCESS;
 }
 
-static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus, bool mine)
+static status_t install(private_child_sa_t *this, proposal_t *proposal,
+						mode_t mode, prf_plus_t *prf_plus, bool mine)
 {
 	u_int32_t spi;
 	algorithm_t *enc_algo, *int_algo;
@@ -536,7 +542,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 											  mine ? this->soft_lifetime : 0,
 											  this->hard_lifetime,
 											  enc_algo, int_algo,
-											  prf_plus, natt, mine);
+											  prf_plus, natt, mode, mine);
 	
 	this->encryption = *enc_algo;
 	this->integrity = *int_algo;
@@ -545,7 +551,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	return status;
 }
 
-static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus)
+static status_t add(private_child_sa_t *this, proposal_t *proposal, 
+					mode_t mode, prf_plus_t *prf_plus)
 {
 	u_int32_t outbound_spi, inbound_spi;
 	
@@ -560,14 +567,14 @@ static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *
 	inbound_spi = proposal->get_spi(proposal);
 	
 	/* install inbound SAs */
-	if (install(this, proposal, prf_plus, TRUE) != SUCCESS)
+	if (install(this, proposal, mode, prf_plus, TRUE) != SUCCESS)
 	{
 		return FAILED;
 	}
 	
 	/* install outbound SAs, restore spi*/
 	proposal->set_spi(proposal, outbound_spi);
-	if (install(this, proposal, prf_plus, FALSE) != SUCCESS)
+	if (install(this, proposal, mode, prf_plus, FALSE) != SUCCESS)
 	{
 		return FAILED;
 	}
@@ -576,7 +583,8 @@ static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *
 	return SUCCESS;
 }
 
-static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus)
+static status_t update(private_child_sa_t *this, proposal_t *proposal,
+					   mode_t mode, prf_plus_t *prf_plus)
 {
 	u_int32_t inbound_spi;
 	
@@ -584,7 +592,7 @@ static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_
 	inbound_spi = proposal->get_spi(proposal);
 	
 	/* install outbound SAs */
-	if (install(this, proposal, prf_plus, FALSE) != SUCCESS)
+	if (install(this, proposal, mode, prf_plus, FALSE) != SUCCESS)
 	{
 		return FAILED;
 	}
@@ -592,7 +600,7 @@ static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_
 	/* restore spi */
 	proposal->set_spi(proposal, inbound_spi);
 	/* install inbound SAs */
-	if (install(this, proposal, prf_plus, TRUE) != SUCCESS)
+	if (install(this, proposal, mode, prf_plus, TRUE) != SUCCESS)
 	{
 		return FAILED;
 	}
@@ -600,7 +608,9 @@ static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_
 	return SUCCESS;
 }
 
-static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list, linked_list_t *other_ts_list)
+static status_t add_policies(private_child_sa_t *this,
+							 linked_list_t *my_ts_list,
+							 linked_list_t *other_ts_list, mode_t mode)
 {
 	iterator_t *my_iter, *other_iter;
 	traffic_selector_t *my_ts, *other_ts;
@@ -637,16 +647,16 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			
 			/* install 3 policies: out, in and forward */
 			status = charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->me.addr, this->other.addr, my_ts, other_ts, 
-					POLICY_OUT, this->protocol, this->reqid, high_prio, FALSE);
+					this->me.addr, this->other.addr, my_ts, other_ts, POLICY_OUT,
+					this->protocol, this->reqid, high_prio, mode, FALSE);
 			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->other.addr, this->me.addr, other_ts, my_ts,
-					POLICY_IN, this->protocol, this->reqid, high_prio, FALSE);
+					this->other.addr, this->me.addr, other_ts, my_ts, POLICY_IN,
+					this->protocol, this->reqid, high_prio, mode, FALSE);
 			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->other.addr, this->me.addr, other_ts, my_ts,
-					POLICY_FWD, this->protocol, this->reqid, high_prio, FALSE);
+					this->other.addr, this->me.addr, other_ts, my_ts, POLICY_FWD,
+					this->protocol, this->reqid, high_prio, mode, FALSE);
 			
 			if (status != SUCCESS)
 			{
@@ -673,7 +683,8 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 	{
 		this->state = CHILD_ROUTED;
 	}
-	
+	/* needed to update hosts */
+	this->mode = mode;
 	return SUCCESS;
 }
 
@@ -928,19 +939,19 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
 				charon->kernel_interface,
 				new_me, new_other,
 				policy->my_ts, policy->other_ts,
-				POLICY_OUT, this->protocol, this->reqid, TRUE, TRUE);
+				POLICY_OUT, this->protocol, this->reqid, TRUE, this->mode, TRUE);
 		
 		status |= charon->kernel_interface->add_policy(
 				charon->kernel_interface,
 				new_other, new_me,
 				policy->other_ts, policy->my_ts,
-				POLICY_IN, this->protocol, this->reqid, TRUE, TRUE);
+				POLICY_IN, this->protocol, this->reqid, TRUE, this->mode, TRUE);
 		
 		status |= charon->kernel_interface->add_policy(
 				charon->kernel_interface,
 				new_other, new_me,
 				policy->other_ts, policy->my_ts,
-				POLICY_FWD, this->protocol, this->reqid, TRUE, TRUE);
+				POLICY_FWD, this->protocol, this->reqid, TRUE, this->mode, TRUE);
 		
 		if (status != SUCCESS)
 		{
@@ -1085,10 +1096,10 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
-	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
-	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
+	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))add;
+	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))update;
 	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,host_diff_t,host_diff_t))update_hosts;
-	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
+	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,mode_t))add_policies;
 	this->public.get_my_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_my_traffic_selectors;
 	this->public.get_other_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_other_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
@@ -1124,6 +1135,7 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();
 	this->protocol = PROTO_NONE;
+	this->mode = MODE_TUNNEL;
 	this->rekeying_transaction = NULL;
 	
 	return &this->public;

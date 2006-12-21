@@ -194,6 +194,7 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
 	msg.add_conn.auth_method = (conn->policy & POLICY_PSK)?
 		SHARED_KEY_MESSAGE_INTEGRITY_CODE : RSA_DIGITAL_SIGNATURE;
+	msg.add_conn.mode = (conn->policy & POLICY_TUNNEL) ? 1 : 0;
  
 	if (conn->policy & POLICY_DONT_REKEY)
 	{

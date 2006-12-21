@@ -503,7 +503,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 					   protocol_id_t protocol, u_int32_t reqid,
 					   u_int64_t expire_soft, u_int64_t expire_hard,
 					   algorithm_t *enc_alg, algorithm_t *int_alg,
-					   prf_plus_t *prf_plus, natt_conf_t *natt,
+					   prf_plus_t *prf_plus, natt_conf_t *natt, mode_t mode,
 					   bool replace)
 {
 	unsigned char request[BUFFER_SIZE];
@@ -529,7 +529,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	sa->id.spi = spi;
 	sa->id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	sa->family = src->get_family(src);
-	sa->mode = TRUE; /* tunnel mode */
+	sa->mode = mode;
 	sa->replay_window = 32;
 	sa->reqid = reqid;
 	/* we currently do not expire SAs by volume/packet count */
@@ -970,7 +970,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
 						   policy_dir_t direction, protocol_id_t protocol,
-						   u_int32_t reqid, bool high_prio, bool update)
+						   u_int32_t reqid, bool high_prio, mode_t mode,
+						   bool update)
 {
 	iterator_t *iterator;
 	kernel_policy_t *current, *policy;
@@ -992,7 +993,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->iterate(iterator, (void**)&current))
 	{
-		if (memcmp(current, policy, sizeof(struct xfrm_selector)) == 0 &&
+		if (memcmp(&current->sel, &policy->sel, sizeof(struct xfrm_selector)) == 0 &&
 			policy->direction == current->direction)
 		{
 			free(policy);
@@ -1068,7 +1069,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	tmpl->reqid = reqid;
 	tmpl->id.proto = (protocol == PROTO_AH) ? KERNEL_AH : KERNEL_ESP;
 	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
-	tmpl->mode = TRUE;
+	tmpl->mode = mode;
 	tmpl->family = src->get_family(src);
 	
 	host2xfrm(src, &tmpl->saddr);
@@ -1266,11 +1267,11 @@ kernel_interface_t *kernel_interface_create()
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,natt_conf_t*,bool))add_sa;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,natt_conf_t*,mode_t,bool))add_sa;
 	this->public.update_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_diff_t,host_diff_t))update_sa;
 	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
-	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,bool))add_policy;
+	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t,bool))add_policy;
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;

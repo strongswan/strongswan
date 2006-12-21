@@ -1173,7 +1173,8 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	child_sa->set_name(child_sa, policy->get_name(policy));
 	my_ts = policy->get_my_traffic_selectors(policy, this->my_host);
 	other_ts = policy->get_other_traffic_selectors(policy, this->other_host);
-	status = child_sa->add_policies(child_sa, my_ts, other_ts);
+	status = child_sa->add_policies(child_sa, my_ts, other_ts,
+									policy->get_mode(policy));
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 	this->child_sas->insert_last(this->child_sas, child_sa);
