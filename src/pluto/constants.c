@@ -504,6 +504,7 @@ const char *const sa_policy_bit_names[] = {
 	"XAUTHPSK",
 	"XAUTHRSASIG",
 	"XAUTHSERVER",
+	"DONTREAUTH",
 	NULL
     };
 
