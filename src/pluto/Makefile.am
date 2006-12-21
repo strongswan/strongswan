@@ -80,7 +80,8 @@ AM_CFLAGS = \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG \
--DVENDORID  -DTHREADS
+-DVENDORID -DXAUTH_VID -DTHREADS
+#-DCISCO_QUIRKS
 
 pluto_LDADD = \
 $(top_srcdir)/src/libfreeswan/libfreeswan.a \
