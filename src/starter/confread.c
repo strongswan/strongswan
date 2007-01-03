@@ -388,6 +388,8 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			conn->policy &= ~(POLICY_TUNNEL | POLICY_SHUNT_MASK);
 			if (streq(kw->value, "tunnel"))
 				conn->policy |= POLICY_TUNNEL;
+			else if (streq(kw->value, "beet"))
+				conn->policy |= POLICY_BEET;
 			else if (streq(kw->value, "passthrough") || streq(kw->value, "pass"))
 				conn->policy |= POLICY_SHUNT_PASS;
 			else if (streq(kw->value, "drop"))

@@ -845,6 +845,7 @@ extern const char *prettypolicy(lset_t policy);
 #define POLICY_XAUTH_RSASIG	LELEM(19)	/* do we support XAUTH????RSA? */
 #define POLICY_XAUTH_SERVER	LELEM(20)	/* are we an XAUTH server? */
 #define POLICY_DONT_REAUTH	LELEM(21)	/* don't reauthenticate on rekeying, IKEv2 only */
+#define POLICY_BEET		LELEM(22)	/* bound end2end tunnel, IKEv2 */
 
 /* Any IPsec policy?  If not, a connection description
  * is only for ISAKMP SA, not IPSEC SA.  (A pun, I admit.)
