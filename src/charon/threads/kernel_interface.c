@@ -428,7 +428,7 @@ static void receive_messages(private_kernel_interface_t *this)
 static void host2xfrm(host_t *host, xfrm_address_t *xfrm)
 {
 	chunk_t chunk = host->get_address(host);
-	memcpy(xfrm, chunk.ptr, max(chunk.len, sizeof(xfrm_address_t)));	
+	memcpy(xfrm, chunk.ptr, min(chunk.len, sizeof(xfrm_address_t)));	
 }
 
 /**
@@ -631,7 +631,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 		
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
-
+	
 	if (send_message(this, hdr, &response) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "netlink communication failed");
