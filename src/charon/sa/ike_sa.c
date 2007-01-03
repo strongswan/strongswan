@@ -484,7 +484,7 @@ static void dpd_detected(private_ike_sa_t *this)
 				break;
 			case DPD_RESTART:
 				connection->get_ref(connection);
-				job = (job_t*)initiate_job_create(connection, policy);
+				job = (job_t*)initiate_job_create(connection, NULL, policy);
 				charon->job_queue->add(charon->job_queue, job);
 				break;
 			default:
@@ -894,12 +894,18 @@ static status_t initiate(private_ike_sa_t *this,
 			ike_sa_init_t *ike_sa_init;
 			
 			DBG2(DBG_IKE, "initiating new IKE_SA for CHILD_SA");
-			DESTROY_IF(this->my_host);
-			this->my_host = connection->get_my_host(connection);
-			this->my_host = this->my_host->clone(this->my_host);
-			DESTROY_IF(this->other_host);
-			this->other_host = connection->get_other_host(connection);
-			this->other_host = this->other_host->clone(this->other_host);
+			if (this->my_host->is_anyaddr(this->my_host))
+			{
+				this->my_host->destroy(this->my_host);
+				this->my_host = connection->get_my_host(connection);
+				this->my_host = this->my_host->clone(this->my_host);
+			}
+			if (this->other_host->is_anyaddr(this->other_host))
+			{
+				this->other_host->destroy(this->other_host);
+				this->other_host = connection->get_other_host(connection);
+				this->other_host = this->other_host->clone(this->other_host);
+			}
 			this->retrans_sequences = connection->get_retrans_seq(connection);
 			this->dpd_delay = connection->get_dpd_delay(connection);
 			
@@ -1841,6 +1847,8 @@ static status_t reauth(private_ike_sa_t *this)
 		job_t *job;
 		policy_t *policy;
 		linked_list_t *my_ts, *other_ts;
+		host_t *other;
+		
 		my_ts = child_sa->get_my_traffic_selectors(child_sa);
 		other_ts = child_sa->get_other_traffic_selectors(child_sa);
 		policy = charon->policies->get_policy(charon->policies,
@@ -1851,9 +1859,9 @@ static status_t reauth(private_ike_sa_t *this)
 			DBG1(DBG_IKE, "policy not found to recreate CHILD_SA, skipped");
 			continue;
 		}
-		
 		connection->get_ref(connection);
-		job = (job_t*)initiate_job_create(connection, policy);
+		other = this->other_host->clone(this->other_host);
+		job = (job_t*)initiate_job_create(connection, other, policy);
 		charon->job_queue->add(charon->job_queue, job);
 	}
 	iterator->destroy(iterator);

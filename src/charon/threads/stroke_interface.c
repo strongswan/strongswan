@@ -522,7 +522,7 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 	
-	job = initiate_job_create(connection, policy);
+	job = initiate_job_create(connection, NULL, policy);
 	/*
 	if (msg->output_verbosity < 0)
 	{

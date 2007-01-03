@@ -818,7 +818,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		if (other)
 		{
 			/* store our lower nonce in the simultaneus transaction, it 
-			 * will later compare it against his nonces when it calls conclude().
+			 * will later compare it against its nonces when it calls conclude().
 			 */
 			if (memcmp(this->nonce_i.ptr, this->nonce_r.ptr,
 				min(this->nonce_i.len, this->nonce_r.len)) < 0)
