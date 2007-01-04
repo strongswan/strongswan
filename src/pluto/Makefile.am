@@ -60,6 +60,7 @@ state.c state.h \
 timer.c timer.h \
 vendor.c vendor.h \
 virtual.c virtual.h \
+xauth.c xauth.h \
 x509.c x509.h \
 alg/ike_alg_aes.c alg/ike_alg_blowfish.c alg/ike_alg_twofish.c \
 alg/ike_alg_serpent.c alg/ike_alg_sha2.c alg/ike_alginit.c \
@@ -80,8 +81,7 @@ AM_CFLAGS = \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG \
--DVENDORID -DXAUTH_VID -DTHREADS
-#-DCISCO_QUIRKS
+-DVENDORID -DTHREADS
 
 pluto_LDADD = \
 $(top_srcdir)/src/libfreeswan/libfreeswan.a \
