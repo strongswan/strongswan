@@ -599,6 +599,7 @@ main(int argc, char **argv)
     init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
     init_virtual_ip(virtual_private);
     scx_init(pkcs11_module_path);   /* load and initialize PKCS #11 module */
+    xauth_init();		    /* load and initialize XAUTH module */
     init_rnd_pool();
     init_secret();
     init_states();
@@ -649,6 +650,7 @@ exit_pluto(int status)
     free_ocsp();		/* free ocsp cache */
     free_ifaces();
     scx_finalize();		/* finalize and unload PKCS #11 module */
+    xauth_finalize();		/* finalize and unload XAUTH module */
     stop_adns();
     free_md_pool();
     delete_lock();
