@@ -74,6 +74,14 @@ AC_ARG_ENABLE(
 AM_CONDITIONAL(USE_SMARTCARD, test x$smartcard = xtrue)
 
 AC_ARG_ENABLE(
+    [cisco_quirks],
+    AS_HELP_STRING([--enable-cisco-quirks],[enable support of Cisco VPN client (default is NO).]),
+    cisco_quirks=true
+    AC_DEFINE(CISCO_QUIRKS)
+)
+AM_CONDITIONAL(USE_CISCO_QUIRKS, test x$cisco_quirks = xtrue)
+
+AC_ARG_ENABLE(
     [leak-detective],
     AS_HELP_STRING([--enable-leak-detective],[enable malloc hooks to find memory leaks (default is NO).]),
     leak_detective=true
