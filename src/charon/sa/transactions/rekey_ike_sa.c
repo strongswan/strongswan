@@ -333,7 +333,7 @@ static status_t process_notifys(private_rekey_ike_sa_t *this, notify_payload_t *
 }
 
 /**
- * Switch to the new created IKE_SA
+ * Switch to the newly created IKE_SA
  */
 static status_t switchto_new_sa(private_rekey_ike_sa_t* this, bool initiator)
 {
