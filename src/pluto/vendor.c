@@ -394,6 +394,9 @@ handle_known_vendorid (struct msg_digest *md
 	md->dpd = TRUE;
 	vid_useful = TRUE;
 	break;
+    case VID_MISC_XAUTH:
+	vid_useful = TRUE;
+	break;
     default:
 	break;
     }

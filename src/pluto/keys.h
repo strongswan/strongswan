@@ -41,6 +41,11 @@ enum PrivateKeyKind {
     PPK_PIN
 };
 
+extern void xauth_defaults(void);
+
+/* forward declaration */
+struct connection;
+
 extern const chunk_t *get_preshared_secret(const struct connection *c);
 extern err_t unpack_RSA_public_key(RSA_public_key_t *rsa, const chunk_t *pubkey);
 extern const RSA_private_key_t *get_RSA_private_key(const struct connection *c);
@@ -86,7 +91,6 @@ extern void delete_public_keys(const struct id *id, enum pubkey_alg alg
 extern pubkey_t *reference_key(pubkey_t *pk);
 extern void unreference_key(pubkey_t **pkp);
 
-
 extern err_t add_public_key(const struct id *id
     , enum dns_auth_level dns_auth_level
     , enum pubkey_alg alg
@@ -100,16 +104,6 @@ extern void add_pgp_public_key(pgpcert_t *cert, time_t until
     , enum dns_auth_level dns_auth_level);
 extern void remove_x509_public_key(const x509cert_t *cert);
 extern void list_public_keys(bool utc);
-
-/* XAUTH credentials */
-
-typedef struct {
-    chunk_t user_name;
-    chunk_t user_password;
-} xauth_t;
-
-extern bool xauth_get_secrect(const xauth_t *xauth_secret);
-extern bool xauth_verify_secret(const xauth_t *xauth_secret);
 
 struct gw_info;	/* forward declaration of tag (defined in dnskey.h) */
 extern void transfer_to_public_keys(struct gw_info *gateways_from_dns

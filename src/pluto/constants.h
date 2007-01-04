@@ -508,23 +508,27 @@ enum state_kind {
 
     /* XAUTH states */
 
-    STATE_XAUTH_R1,              /* responder states (server) */
+    STATE_XAUTH_I0,              /* initiator state (client) */
+    STATE_XAUTH_R1,              /* responder state (server) */
+    STATE_XAUTH_I1,
     STATE_XAUTH_R2,
+    STATE_XAUTH_I2,
     STATE_XAUTH_R3,
 
-    STATE_XAUTH_I0,              /* initiator states (client) */
-    STATE_XAUTH_I1,
-    STATE_XAUTH_I2,
 
-    /* Mode Config states */
+    /* Mode Config pull states */
 
-    STATE_MODE_CFG_R0,           /* responder states */
+    STATE_MODE_CFG_R0,           /* responder state (server) */
+    STATE_MODE_CFG_I1,           /* initiator state (client) */
     STATE_MODE_CFG_R1,
-    STATE_MODE_CFG_R2,
-
-    STATE_MODE_CFG_I1,           /* initiator states */
     STATE_MODE_CFG_I2,
+
+    /* Mode Config push states */
+
+    STATE_MODE_CFG_I0,           /* initiator state (client) */
+    STATE_MODE_CFG_R3,           /* responder state (server) */
     STATE_MODE_CFG_I3,
+    STATE_MODE_CFG_R4,
 
     STATE_IKE_ROOF
 };
@@ -537,26 +541,26 @@ enum state_kind {
       LELEM(STATE_MAIN_R3)     | LELEM(STATE_MAIN_I4)     \
     | LELEM(STATE_XAUTH_R1)    | LELEM(STATE_XAUTH_R2) | LELEM(STATE_XAUTH_R3) \
     | LELEM(STATE_XAUTH_I1)    | LELEM(STATE_XAUTH_I2)    \
-    | LELEM(STATE_MODE_CFG_R1) | LELEM(STATE_MODE_CFG_R2) \
-    | LELEM(STATE_MODE_CFG_I2) | LELEM(STATE_MODE_CFG_I3))
+    | LELEM(STATE_MODE_CFG_I1) | LELEM(STATE_MODE_CFG_R1) | LELEM(STATE_MODE_CFG_I2) \
+    | LELEM(STATE_MODE_CFG_R3) | LELEM(STATE_MODE_CFG_I3) | LELEM(STATE_MODE_CFG_R4))
 
 #define IS_PHASE1(s) ((STATE_MAIN_R0 <= (s) && (s) <= STATE_MAIN_I4) \
-		   || (STATE_XAUTH_R1 <= (s) && (s) <= STATE_XAUTH_I2) \
-		   || (STATE_MODE_CFG_R0 <= (s) && (s) <= STATE_MODE_CFG_I3))
+		   || (STATE_XAUTH_I0 <= (s) && (s) <= STATE_XAUTH_R3) \
+		   || (STATE_MODE_CFG_R0 <= (s) && (s) <= STATE_MODE_CFG_R4))
+
 #define IS_QUICK(s) (STATE_QUICK_R0 <= (s) && (s) <= STATE_QUICK_R2)
 #define IS_ISAKMP_ENCRYPTED(s) (STATE_MAIN_I2 <= (s))
-#define IS_ISAKMP_SA_ESTABLISHED(s) (         \
-				     (s) == STATE_MAIN_R3     \
-				  || (s) == STATE_MAIN_I4     \
-				  || (s) == STATE_XAUTH_R1    \
-				  || (s) == STATE_XAUTH_R2    \
-				  || (s) == STATE_XAUTH_R3    \
-				  || (s) == STATE_XAUTH_I1    \
-				  || (s) == STATE_XAUTH_I2    \
-				  || (s) == STATE_MODE_CFG_R1 \
-				  || (s) == STATE_MODE_CFG_R2 \
-				  || (s) == STATE_MODE_CFG_I2 \
-				  || (s) == STATE_MODE_CFG_I3)
+
+#define IS_ISAKMP_SA_ESTABLISHED(s) (        \
+		   (s) == STATE_MAIN_R3      \
+		|| (s) == STATE_MAIN_I4      \
+		|| (s) == STATE_XAUTH_R3     \
+		|| (s) == STATE_XAUTH_I2     \
+		|| (s) == STATE_MODE_CFG_R1  \
+		|| (s) == STATE_MODE_CFG_I2  \
+		|| (s) == STATE_MODE_CFG_I3  \
+		|| (s) == STATE_MODE_CFG_R4)
+
 #define IS_IPSEC_SA_ESTABLISHED(s) ((s) == STATE_QUICK_I2 || (s) == STATE_QUICK_R2)
 #define IS_ONLY_INBOUND_IPSEC_SA_ESTABLISHED(s) ((s) == STATE_QUICK_R1)
 

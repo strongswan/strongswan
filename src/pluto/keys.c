@@ -54,6 +54,7 @@
 #include "whack.h"	/* for RC_LOG_SERIOUS */
 #include "timer.h"
 #include "fetch.h"
+#include "xauth.h"
 
 const char *shared_secrets_file = SHARED_SECRETS_FILE;
 
@@ -97,11 +98,11 @@ allocate_RSA_public_key(const cert_t cert)
     default:
 	plog("RSA public key allocation error");
     }
-    init_RSA_public_key(&pk->u.rsa, e, n);
 
-#ifdef DEBUG
-    DBG(DBG_PRIVATE, RSA_show_public_key(&pk->u.rsa));
-#endif
+    init_RSA_public_key(&pk->u.rsa, e, n);
+    DBG(DBG_RAW,
+	RSA_show_public_key(&pk->u.rsa)
+    )
 
     pk->alg = PUBKEY_ALG_RSA;
     pk->id  = empty_id;
@@ -182,7 +183,7 @@ get_secret(const struct connection *c, enum PrivateKeyKind kind, bool asym)
 	his_id = &rw_id;
     }
     else if (kind == PPK_PSK
-    && (c->policy & POLICY_PSK)
+    && (c->policy & (POLICY_PSK | POLICY_XAUTH_PSK))
     && ((c->kind == CK_TEMPLATE && c->spd.that.id.kind == ID_NONE) ||
         (c->kind == CK_INSTANCE && id_is_ipaddr(&c->spd.that.id))))
     {
@@ -414,7 +415,7 @@ process_psk_secret(chunk_t *psk)
     }
     else
     {
-	char buf[RSA_MAX_ENCODING_BYTES];	/* limit on size of binary representation of key */
+	char buf[BUF_LEN];	/* limit on size of binary representation of key */
 	size_t sz;
 
 	ugh = ttodatav(tok, flp->cur - tok, 0, buf, sizeof(buf), &sz
@@ -589,7 +590,6 @@ static err_t
 process_xauth(secret_t *s)
 {
     chunk_t user_name;
-    chunk_t user_password;
 
     s->kind = PPK_XAUTH;
 
@@ -605,31 +605,21 @@ process_xauth(secret_t *s)
 	user_name.ptr = tok;
 	user_name.len = flp->cur - tok;
     }
+    plog("  loaded xauth credentials of user '%.*s'"
+		, user_name.len
+		, user_name.ptr);
+    clonetochunk(s->u.xauth_secret.user_name
+	, user_name.ptr, user_name.len, "xauth user name");
+
     if (!shift())
 	return "missing xauth user password";
-    if (*tok == '"' || *tok == '\'')  /* quoted user password */
-    {
-	user_password.ptr = tok + 1;
-	user_password.len = flp->cur - tok - 2;
-    }
-    else
-    {
-	user_password.ptr = tok;
-	user_password.len = flp->cur - tok;
-    }
-    if (shift())
-	return "unexpected token after xauth user passpword";
-    clonetochunk(s->u.xauth_secret.user_name
-	, user_name.ptr, user_name.len, "user_name");
-    clonetochunk(s->u.xauth_secret.user_password
-	, user_password.ptr, user_password.len, "user_password");
-    return NULL;
+    return process_psk_secret(&s->u.xauth_secret.user_password);
 }
 
 /* get XAUTH secret from chained secrets lists
  * only one entry is currently supported
  */
-bool
+static bool
 xauth_get_secret(xauth_t *xauth_secret)
 {
     secret_t *s;
@@ -656,9 +646,10 @@ xauth_get_secret(xauth_t *xauth_secret)
 /*
  * find a matching secret
  */
-bool
+static bool
 xauth_verify_secret(const xauth_t *xauth_secret)
 {
+    bool found = FALSE;
     secret_t *s;
 
     for (s = secrets; s != NULL; s = s->next)
@@ -667,12 +658,43 @@ xauth_verify_secret(const xauth_t *xauth_secret)
 	{
 	    if (!same_chunk(xauth_secret->user_name, s->u.xauth_secret.user_name))
 		continue;
+	    found = TRUE;
 	    if (same_chunk(xauth_secret->user_password, s->u.xauth_secret.user_password))
 		return TRUE;
 	}
     }
+    plog("xauth user '%.*s' %s"
+       , xauth_secret->user_name.len, xauth_secret->user_name.ptr
+       , found? "sent wrong password":"not found");
     return FALSE;
 }
+
+/*
+ * the global xauth_module struct is defined here
+ */
+xauth_module_t xauth_module;
+
+/*
+ * assign the default xauth functions to any null function pointers
+ */
+void
+xauth_defaults(void)
+{
+    if (xauth_module.get_secret == NULL)
+    {
+	DBG(DBG_CONTROL,
+	    DBG_log("xauth_module: using default get_secret() function")
+	)
+	xauth_module.get_secret = xauth_get_secret;
+    }
+    if (xauth_module.verify_secret == NULL)
+    {
+	DBG(DBG_CONTROL,
+	    DBG_log("xauth_module: using default verify_secret() function")
+	)
+	xauth_module.verify_secret = xauth_verify_secret;
+    }
+};
 
 /*
  * process pin read from ipsec.secrets or prompted for it using whack
@@ -1202,14 +1224,11 @@ unpack_RSA_public_key(RSA_public_key_t *rsa, const chunk_t *pubkey)
 	return RSA_MAX_OCTETS_UGH;
 
     init_RSA_public_key(rsa, exp, mod);
-
-#ifdef DEBUG
-    DBG(DBG_PRIVATE, RSA_show_public_key(rsa));
-#endif
-
-
     rsa->k = mpz_sizeinbase(&rsa->n, 2);	/* size in bits, for a start */
     rsa->k = (rsa->k + BITS_PER_BYTE - 1) / BITS_PER_BYTE;	/* now octets */
+    DBG(DBG_RAW,
+	RSA_show_public_key(rsa)
+    )
 
     if (rsa->k != mod.len)
     {

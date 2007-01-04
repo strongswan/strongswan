@@ -54,8 +54,8 @@ const char compile_time_interop_options[] = ""
 #ifdef VENDORID
 	" VENDORID"
 #endif
-#ifdef XAUTH_VID
-	" XAUTH_VID"
+#ifdef CISCO_QUIRKS
+	" CISCO_QUIRKS"
 #endif
 #ifdef USE_KEYRR
 	" KEYRR"
@@ -183,19 +183,22 @@ static const char *const state_name[] = {
 	"STATE_INFO",
 	"STATE_INFO_PROTECTED",
 
-	"STATE_XAUTH_R1",
-	"STATE_XAUTH_R2",
-	"STATE_XAUTH_R3",
 	"STATE_XAUTH_I0",
+	"STATE_XAUTH_R1",
 	"STATE_XAUTH_I1",
+	"STATE_XAUTH_R2",
 	"STATE_XAUTH_I2",
+	"STATE_XAUTH_R3",
 
 	"STATE_MODE_CFG_R0",
-	"STATE_MODE_CFG_R1",
-	"STATE_MODE_CFG_R2",
 	"STATE_MODE_CFG_I1",
+	"STATE_MODE_CFG_R1",
 	"STATE_MODE_CFG_I2",
+
+	"STATE_MODE_CFG_I0",
+	"STATE_MODE_CFG_R3",
 	"STATE_MODE_CFG_I3",
+	"STATE_MODE_CFG_R4",
 
 	"STATE_IKE_ROOF"
     };
@@ -224,19 +227,22 @@ const char *const state_story[] = {
 	"got Informational Message in clear",	 /* STATE_INFO */
 	"got encrypted Informational Message",	 /* STATE_INFO_PROTECTED */
 
-	"sent XAUTH request, expecting reply",	 /* STATE_XAUTH_R1 */
-	"sent XAUTH status, expecting ack",	 /* STATE_XAUTH_R2 */
-	"received XAUTH ack, established",	 /* STATE_XAUTH_R3 */
 	"expecting XAUTH request",		 /* STATE_XAUTH_I0 */
+	"sent XAUTH request, expecting reply",	 /* STATE_XAUTH_R1 */
 	"sent XAUTH reply, expecting status",	 /* STATE_XAUTH_I1 */
+	"sent XAUTH status, expecting ack",	 /* STATE_XAUTH_R2 */
 	"sent XAUTH ack, established",		 /* STATE_XAUTH_I2 */
+	"received XAUTH ack, established",	 /* STATE_XAUTH_R3 */
 
 	"expecting ModeCfg request",		 /* STATE_MODE_CFG_R0 */
-	"sent ModeCfg reply, expecting ack",	 /* STATE_MODE_CFG_R1 */
-	"received ModeCfg ack, established"	 /* STATE_MODE_CFG_R2 */
 	"sent ModeCfg request, expecting reply", /* STATE_MODE_CFG_I1 */
-	"sent ModeCfg ack, established",	 /* STATE_MODE_CFG_I2 */
-	"received ModeCfg set, sent ack",	 /* STATE_MODE_CFG_I3 */
+	"sent ModeCfg reply, established",	 /* STATE_MODE_CFG_R1 */
+	"received ModeCfg reply, established",	 /* STATE_MODE_CFG_I2 */
+
+	"expecting ModeCfg set",		 /* STATE_MODE_CFG_I0 */
+	"sent ModeCfg set, expecting ack",	 /* STATE_MODE_CFG_R3 */
+	"sent ModeCfg ack, established",	 /* STATE_MODE_CFG_I3 */
+	"received ModeCfg ack, established",	 /* STATE_MODE_CFG_R4 */
     };
 
 /* kind of struct connection */

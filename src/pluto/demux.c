@@ -436,73 +436,77 @@ static const struct state_microcode state_microcode_table[] = {
     , P(HASH), LEMPTY, PT(NONE)
     , EVENT_NULL, informational },
 
-    /* XAUTH server */
+    /* XAUTH state transitions */
+    { STATE_XAUTH_I0, STATE_XAUTH_I1
+    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY
+    , P(ATTR) | P(HASH), P(VID), PT(HASH)
+    , EVENT_RETRANSMIT, xauth_inI0 },
+
     { STATE_XAUTH_R1, STATE_XAUTH_R2
     , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY
     , P(ATTR) | P(HASH), P(VID), PT(HASH)
     , EVENT_RETRANSMIT, xauth_inR1 },
-
-    { STATE_XAUTH_R2, STATE_XAUTH_R3
-    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_RELEASE_PENDING_P2
-    , P(ATTR) | P(HASH), P(VID), PT(NONE)
-    , EVENT_SA_REPLACE, xauth_inR2 },
-
-    { STATE_XAUTH_R3, STATE_UNDEFINED
-    , SMF_ALL_AUTH | SMF_ENCRYPTED
-    , LEMPTY, LEMPTY, PT(NONE)
-    , EVENT_NULL, unexpected },
-
-    /* XAUTH client */
-    { STATE_XAUTH_I0, STATE_XAUTH_I1
-    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY
-    , P(ATTR) | P(HASH), P(VID), PT(HASH)
-    , EVENT_SA_REPLACE, xauth_inI0 },
 
     { STATE_XAUTH_I1, STATE_XAUTH_I2
     , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY | SMF_RELEASE_PENDING_P2
     , P(ATTR) | P(HASH), P(VID), PT(HASH)
     , EVENT_SA_REPLACE, xauth_inI1 },
 
+    { STATE_XAUTH_R2, STATE_XAUTH_R3
+    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_RELEASE_PENDING_P2
+    , P(ATTR) | P(HASH), P(VID), PT(NONE)
+    , EVENT_SA_REPLACE, xauth_inR2 },
+
     { STATE_XAUTH_I2, STATE_UNDEFINED
     , SMF_ALL_AUTH | SMF_ENCRYPTED
     , LEMPTY, LEMPTY, PT(NONE)
     , EVENT_NULL, unexpected },
 
-    /* MODE_CFG_x:
-     * Case R0:  Responder  ->	Initiator
-     *			   <-	Req(addr=0)
-     *	    Reply(ad=x)	    ->
-     *
-     * Case R1: Set(addr=x) ->
-     *			   <-	Ack(ok)
-     */
-
-    { STATE_MODE_CFG_R0, STATE_MODE_CFG_R1
-    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY
-    , P(ATTR) | P(HASH), P(VID), PT(HASH)
-    , EVENT_SA_REPLACE, modecfg_inR0 },
-
-    { STATE_MODE_CFG_R1, STATE_MODE_CFG_R2
-    , SMF_ALL_AUTH | SMF_ENCRYPTED
-    , P(ATTR) | P(HASH), P(VID), PT(HASH)
-    , EVENT_SA_REPLACE, modecfg_inR1 },
-
-    { STATE_MODE_CFG_R2, STATE_UNDEFINED
+    { STATE_XAUTH_R3, STATE_UNDEFINED
     , SMF_ALL_AUTH | SMF_ENCRYPTED
     , LEMPTY, LEMPTY, PT(NONE)
     , EVENT_NULL, unexpected },
+
+    /* ModeCfg pull mode state transitions */
+
+    { STATE_MODE_CFG_R0, STATE_MODE_CFG_R1
+    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY | SMF_RELEASE_PENDING_P2
+    , P(ATTR) | P(HASH), P(VID), PT(HASH)
+    , EVENT_SA_REPLACE, modecfg_inR0 },
 
     { STATE_MODE_CFG_I1, STATE_MODE_CFG_I2
     , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_RELEASE_PENDING_P2
     , P(ATTR) | P(HASH), P(VID), PT(HASH)
     , EVENT_SA_REPLACE, modecfg_inI1 },
 
-    { STATE_MODE_CFG_I2, STATE_MODE_CFG_I3
+    { STATE_MODE_CFG_R1, STATE_UNDEFINED
+    , SMF_ALL_AUTH | SMF_ENCRYPTED
+    , LEMPTY, LEMPTY, PT(NONE)
+    , EVENT_NULL, unexpected },
+
+    { STATE_MODE_CFG_I2, STATE_UNDEFINED
+    , SMF_ALL_AUTH | SMF_ENCRYPTED
+    , LEMPTY, LEMPTY, PT(NONE)
+    , EVENT_NULL, unexpected },
+
+   /* ModeCfg push mode state transitions */
+
+    { STATE_MODE_CFG_I0, STATE_MODE_CFG_I3
     , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY | SMF_RELEASE_PENDING_P2
     , P(ATTR) | P(HASH), P(VID), PT(HASH)
-    , EVENT_SA_REPLACE, modecfg_inI2 },
+    , EVENT_SA_REPLACE, modecfg_inI0 },
+
+    { STATE_MODE_CFG_R3, STATE_MODE_CFG_R4
+    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_RELEASE_PENDING_P2
+    , P(ATTR) | P(HASH), P(VID), PT(HASH)
+    , EVENT_SA_REPLACE, modecfg_inR3 },
 
     { STATE_MODE_CFG_I3, STATE_UNDEFINED
+    , SMF_ALL_AUTH | SMF_ENCRYPTED
+    , LEMPTY, LEMPTY, PT(NONE)
+    , EVENT_NULL, unexpected },
+
+    { STATE_MODE_CFG_R4, STATE_UNDEFINED
     , SMF_ALL_AUTH | SMF_ENCRYPTED
     , LEMPTY, LEMPTY, PT(NONE)
     , EVENT_NULL, unexpected },
@@ -1464,11 +1468,6 @@ process_packet(struct msg_digest **mdp)
 		return;
 	    }
 
-	    if (st->st_state == STATE_MODE_CFG_R2)   /* Have we just give an IP address to peer? */
-	    {
-		st->st_state = STATE_MAIN_R3;	    /* ISAKMP is up... */
-	    }
-
 	    set_cur_state(st);
 
 	    if (!IS_ISAKMP_SA_ESTABLISHED(st->st_state))
@@ -1588,7 +1587,7 @@ process_packet(struct msg_digest **mdp)
 			       & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK))
 			       != LEMPTY;
 
-	    if (has_xauth_policy
+	    if (has_xauth_policy && !st->st_xauth.started
 	    && IS_PHASE1(st->st_state))
 	    {
 		from_state = STATE_XAUTH_I0;
@@ -1601,7 +1600,7 @@ process_packet(struct msg_digest **mdp)
 	    else if (st->st_connection->spd.this.modecfg
 	    && IS_PHASE1(st->st_state))
 	    {
-		from_state = STATE_MODE_CFG_I2;
+		from_state = STATE_MODE_CFG_I0;
 	    }
 	    else
 	    {
@@ -1616,7 +1615,6 @@ process_packet(struct msg_digest **mdp)
 	    set_cur_state(st);
 	    from_state = st->st_state;
 	}
-
 	break;
 
 #ifdef NOTYET
@@ -2358,7 +2356,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 		}
 
 		if (IS_ISAKMP_SA_ESTABLISHED(st->st_state)
-		|| IS_IPSEC_SA_ESTABLISHED(st->st_state))
+		||  IS_IPSEC_SA_ESTABLISHED(st->st_state))
 		{
 		    /* log our success */
 		    plog("%s%s", story, sadetails);
@@ -2391,6 +2389,17 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 		break;
 	    }
 
+	    /* Wait for XAUTH request from server */
+	    if (has_xauth_policy && !is_xauth_server
+	    && IS_ISAKMP_SA_ESTABLISHED(st->st_state)
+	    && !st->st_xauth.started)
+	    {
+		DBG(DBG_CONTROL,
+		    DBG_log("waiting for XAUTH request from server")
+		)
+		break;
+	    }
+
 	    /* Should we start ModeConfig as a client? */
 	    if (st->st_connection->spd.this.modecfg
 	    && IS_ISAKMP_SA_ESTABLISHED(st->st_state)
@@ -2414,17 +2423,6 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 		    DBG_log("starting ModeCfg server in push mode")
 		)
 		modecfg_send_set(st);
-		break;
-	    }
-
-	    /* Wait for XAUTH request from server */
-	    if (has_xauth_policy && !is_xauth_server
-	    && IS_ISAKMP_SA_ESTABLISHED(st->st_state)
-	    && !st->st_xauth.started)
-	    {
-		DBG(DBG_CONTROL,
-		    DBG_log("waiting for XAUTH request from server")
-		)
 		break;
 	    }
 
@@ -2453,7 +2451,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 	    }
 
 	    if (IS_ISAKMP_SA_ESTABLISHED(st->st_state)
-	    || IS_IPSEC_SA_ESTABLISHED(st->st_state))
+	    ||  IS_IPSEC_SA_ESTABLISHED(st->st_state))
 		release_whack(st);
 	    break;
 

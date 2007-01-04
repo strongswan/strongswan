@@ -80,15 +80,6 @@
 #endif /* !VENDORID */
 
 /*
- * are we sending an XAUTH VID (Cisco Mode Config Interoperability)?
- */
-#ifdef XAUTH_VID
-#define SEND_XAUTH_VID	1
-#else /* !XAUTH_VID */
-#define SEND_XAUTH_VID	0
-#endif /* !XAUTH_VID */
-
-/*
  * are we sending a Cisco Unity VID?
  */
 #ifdef CISCO_QUIRKS
@@ -900,11 +891,11 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
     /* determine how many Vendor ID payloads we will be sending */
     if (SEND_PLUTO_VID)
 	vids_to_send++;
-    if (SEND_XAUTH_VID)
-	vids_to_send++;
     if (SEND_CISCO_UNITY_VID)
 	vids_to_send++;
     if (c->spd.this.cert.type == CERT_PGP)
+	vids_to_send++;
+    /* always send XAUTH Vendor ID */
 	vids_to_send++;
     /* always send DPD Vendor ID */
 	vids_to_send++;
@@ -974,17 +965,6 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	}
     }
 
-    /* if enabled send XAUTH Vendor ID */
-    if (SEND_XAUTH_VID)
-    {
-	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
-	, &rbody, VID_MISC_XAUTH))
-	{
-	    reset_cur_state();
-	    return STF_INTERNAL_ERROR;
-	}
-    }
-
     /* if enabled send Cisco Unity Vendor ID */
     if (SEND_CISCO_UNITY_VID)
     {
@@ -1006,6 +986,14 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	    reset_cur_state();
 	    return STF_INTERNAL_ERROR;
 	}
+    }
+
+    /* Announce our ability to do eXtended AUTHentication to the peer */
+    if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
+    , &rbody, VID_MISC_XAUTH))
+    {
+	reset_cur_state();
+	return STF_INTERNAL_ERROR;
     }
 
     /* Announce our ability to do Dead Peer Detection to the peer */
@@ -3118,11 +3106,11 @@ main_inI1_outR1(struct msg_digest *md)
     /* determine how many Vendor ID payloads we will be sending */
     if (SEND_PLUTO_VID)
 	vids_to_send++;
-    if (SEND_XAUTH_VID)
-	vids_to_send++;
     if (SEND_CISCO_UNITY_VID)
 	vids_to_send++;
     if (md->openpgp)
+	vids_to_send++;
+    /* always send XAUTH Vendor ID */
 	vids_to_send++;
     /* always send DPD Vendor ID */
 	vids_to_send++;
@@ -3167,16 +3155,6 @@ main_inI1_outR1(struct msg_digest *md)
 	}
     }
 
-    /* if enabled send XAUTH Vendor ID */
-    if (SEND_XAUTH_VID)
-    {
-	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
-	, &md->rbody, VID_MISC_XAUTH))
-	{
-	    return STF_INTERNAL_ERROR;
-	}
-    }
-
     /* if enabled send Cisco Unity Vendor ID */
     if (SEND_CISCO_UNITY_VID)
     {
@@ -3199,13 +3177,18 @@ main_inI1_outR1(struct msg_digest *md)
 	}
     }
 
-    /* Announce our ability to do Dead Peer Detection to the peer */
+    /* Announce our ability to do eXtended AUTHentication to the peer */
+    if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
+    , &md->rbody, VID_MISC_XAUTH))
     {
-	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
-	, &md->rbody, VID_MISC_DPD))
-	{
-	    return STF_INTERNAL_ERROR;
-	}
+	return STF_INTERNAL_ERROR;
+    }
+
+    /* Announce our ability to do Dead Peer Detection to the peer */
+    if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
+    , &md->rbody, VID_MISC_DPD))
+    {
+	return STF_INTERNAL_ERROR;
     }
 
     if (md->nat_traversal_vid && nat_traversal_enabled)
@@ -3486,8 +3469,6 @@ main_inR2_outI3(struct msg_digest *md)
 {
     struct state *const st = md->st;
     pb_stream *const keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
-    int auth_payload = st->st_oakley.auth == OAKLEY_PRESHARED_KEY
-	? ISAKMP_NEXT_HASH : ISAKMP_NEXT_SIG;
     pb_stream id_pbs;	/* ID Payload; also used for hash calculation */
 
     certpolicy_t cert_policy = st->st_connection->spd.this.sendcert;
@@ -3497,6 +3478,8 @@ main_inR2_outI3(struct msg_digest *md)
     bool RSA_auth = st->st_oakley.auth == OAKLEY_RSA_SIG
 		 || st->st_oakley.auth == XAUTHInitRSA
 		 || st->st_oakley.auth == XAUTHRespRSA;
+
+    int auth_payload = RSA_auth ? ISAKMP_NEXT_SIG : ISAKMP_NEXT_HASH;
 
     /* KE in */
     RETURN_STF_FAILURE(accept_KE(&st->st_gr, "Gr", st->st_oakley.group, keyex_pbs));
@@ -3960,8 +3943,7 @@ main_inI3_outR3_tail(struct msg_digest *md
      */
     echo_hdr(md, TRUE, ISAKMP_NEXT_ID);
 
-    auth_payload = st->st_oakley.auth == OAKLEY_PRESHARED_KEY
-	? ISAKMP_NEXT_HASH : ISAKMP_NEXT_SIG;
+    auth_payload = RSA_auth ? ISAKMP_NEXT_SIG : ISAKMP_NEXT_HASH;
 
     /* IDir out */
     {

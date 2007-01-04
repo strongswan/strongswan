@@ -3333,6 +3333,9 @@ refine_host_connection(const struct state *st, const struct id *peer_id
     case XAUTHInitPreShared:
     case XAUTHRespPreShared:
 	auth_policy = POLICY_XAUTH_PSK;
+	psk = get_preshared_secret(c);
+	if (psk == NULL)
+	    return NULL;	/* cannot determine PSK! */
 	break;
     case OAKLEY_RSA_SIG:
 	auth_policy = POLICY_RSASIG;

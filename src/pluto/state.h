@@ -216,6 +216,7 @@ struct state
     struct {
 	int attempt;
 	bool started;
+	bool status;
     } st_xauth;
 
     u_int32_t         nat_traversal;
