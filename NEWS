@@ -1,6 +1,12 @@
 strongswan-4.0.6
 ----------------
 
+- IKEv1: Support for extended authentication (XAUTH) in combination
+  with ISAKMP Main Mode RSA or PSK authentication. Both client and
+  server side were implemented. Handling of user credentials can
+  be done by a run-time loadable XAUTH module. By default user
+  credentials are stored in ipsec.secrets. 
+	  
 - IKEv2: Support for reauthentication when rekeying
 
 - IKEv2: Support for transport and (experimental!) BEET mode
