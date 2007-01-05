@@ -36,6 +36,12 @@ AC_ARG_WITH(
 )
 
 AC_ARG_WITH(
+    [default-xauth],
+    AS_HELP_STRING([--with-xauth-module=lib],[set the path to the XAUTH module]),
+    [AC_DEFINE_UNQUOTED(XAUTH_DEFAULT_LIB, "$withval")],
+)
+
+AC_ARG_WITH(
     [random-device],
     AS_HELP_STRING([--with-random-device=dev],[set the device for real random data other than /dev/random]),
     [AC_DEFINE_UNQUOTED(DEV_RANDOM, "$withval")],
