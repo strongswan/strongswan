@@ -15,22 +15,63 @@
  * RCSID $Id: xauth.c,v 1.1 2005/01/06 22:10:15 as Exp $
  */
 
+#include <dlfcn.h>
+
 #include <freeswan.h>
 
 #include "constants.h"
 #include "defs.h"
 #include "xauth.h"
 #include "keys.h"
+#include "log.h"
 
 void 
 xauth_init(void)
 {
-    /* TODO: locate and load dynamic XAUTH module */
+#ifdef XAUTH_DEFAULT_LIB
+    xauth_module.handle = dlopen(XAUTH_DEFAULT_LIB, RTLD_NOW);
+
+    if (xauth_module.handle != NULL)
+    {
+	DBG(DBG_CONTROL,
+	    DBG_log("xauth module '%s' loading'", XAUTH_DEFAULT_LIB)
+	)
+	xauth_module.get_secret = (bool (*) (const xauth_t*))
+			dlsym(xauth_module.handle, "get_secret");
+	DBG(DBG_CONTROL,
+	    if (xauth_module.get_secret != NULL)
+	    {
+		DBG_log("xauth module: found get_secret() function");
+	    }
+	)
+	xauth_module.verify_secret = (bool (*) (const xauth_t*))
+			dlsym(xauth_module.handle, "verify_secret");
+	DBG(DBG_CONTROL,
+	    if (xauth_module.verify_secret != NULL)
+	    {
+		DBG_log("xauth module: found verify_secret() function");
+	    }
+	)
+    }
+#endif
+    /* any null function pointers will be filled in by default functions */
     xauth_defaults();
 }
 
 void
 xauth_finalize(void)
 {
-    /* TODO: unload dynamic XAUTH module */
+    if (xauth_module.handle != NULL)
+    {
+	if (dlclose(xauth_module.handle))
+	{
+	    plog("failed to unload xauth module");
+	}
+	else
+	{
+	    DBG(DBG_CONTROL,
+		DBG_log("xauth module unloaded")
+	    )
+	}
+    }
 }

@@ -683,14 +683,14 @@ xauth_defaults(void)
     if (xauth_module.get_secret == NULL)
     {
 	DBG(DBG_CONTROL,
-	    DBG_log("xauth_module: using default get_secret() function")
+	    DBG_log("xauth module: using default get_secret() function")
 	)
 	xauth_module.get_secret = xauth_get_secret;
     }
     if (xauth_module.verify_secret == NULL)
     {
 	DBG(DBG_CONTROL,
-	    DBG_log("xauth_module: using default verify_secret() function")
+	    DBG_log("xauth module: using default verify_secret() function")
 	)
 	xauth_module.verify_secret = xauth_verify_secret;
     }

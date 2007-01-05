@@ -28,6 +28,7 @@ typedef struct {
 } xauth_t;
 
 typedef struct {
+    void *handle;
     bool (*get_secret) (const xauth_t *xauth_secret);
     bool (*verify_secret) (const xauth_t *xauth_secret);
 } xauth_module_t;
