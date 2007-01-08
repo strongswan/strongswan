@@ -1,3 +1,64 @@
+ strongswan-4.0.6 / R:2131 
+===========================
+
+updated NEWS for 4.0.6
+readded tranport mode test using new status output
+removed dublicated host2host-transport test
+fixed reauthentication when using %any hosts
+support for transport in create_child_sa
+include TRANSPORT/TUNNEL information in statusall
+load xauth module via dlopen()
+define path to xauth module
+added host2host-transport scenario
+removed trailing lines
+added XAUTH support
+fixed typo
+added XAUTH server and client support
+load and unload XAUTH module
+added xauth.h and xauth.c
+added enable-cisco-quirks configure option
+added xauth scenarios
+added config option for BEET mode
+fixed reuathentication when connections other host is %any
+fixed host conversion length check
+negated POLICY_REAUTH to POLICY_DONT_REAUTH
+negated POLICY_REAUTH to POLICY_DONT_REAUTH
+enable XAUTH_VID by default
+added support for transport mode and (experimental!) BEET mode
+support for the type=transport/tunnel parameter in charon
+fixed charset & cleanups
+added XAUTH server and client support
+additional parentheses for same_chunk() macro
+renamed to appear in doxygen build
+added a roadmap of the strongSwan project (TODO)
+added some NEWS
+first try to update ipsec.conf manual
+implemented reauthentication using the new reauth=yes|no parameter 
+fixed more uClibc issues
+should compile against a uClibc > 0.9.28 (untested)
+added XAUTH client states
+version bump to 4.0.6
+fixed stddef.h include
+fixed encoding rules string
+updated todo
+fixed some byte-order issues
+fixed HAVE_BACKTRACE checks
+starter Makefile now uses proper $(COMPILE) to build pluto objects
+made backtrace() calls optional to support uClibc
+XAUTH support
+XAUTH support
+fixed bug in ifdef CISCO_QUIRKS
+added XAUTH support
+support of Cisco Unity VID
+added new VIDs
+version bump to 4.0.6
+fixed case with wildcard peer ID and static peer address
+added simple script to port trunk changes into branches
+start kdevelop with project file from actual branch
+updated changelog
+fixed typos
+
+
  strongswan-4.0.5 / R:1447 
 ===========================
 
