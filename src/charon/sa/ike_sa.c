@@ -900,8 +900,6 @@ static status_t initiate(private_ike_sa_t *this,
 				this->my_host = connection->get_my_host(connection);
 				this->my_host = this->my_host->clone(this->my_host);
 			}
-			DBG1(DBG_IKE, "this->other: %H", this->other_host);
-			DBG1(DBG_IKE, "connections other: %H", connection->get_other_host(connection));
 			if (this->other_host->is_anyaddr(this->other_host))
 			{
 				this->other_host->destroy(this->other_host);
