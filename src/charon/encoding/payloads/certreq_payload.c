@@ -268,11 +268,21 @@ certreq_payload_t *certreq_payload_create()
  */
 certreq_payload_t *certreq_payload_create_from_cacert(identification_t *id)
 {
-	x509_t *cacert = charon->credentials->get_ca_certificate(charon->credentials, id);
-	rsa_public_key_t *pubkey = cacert->get_public_key(cacert);
-	chunk_t keyid = pubkey->get_keyid(pubkey);
+	x509_t *cacert;
+	rsa_public_key_t *pubkey;
+	chunk_t keyid;
+	certreq_payload_t *this;
+	
+	cacert = charon->credentials->get_ca_certificate(charon->credentials, id);
+	if (cacert == NULL)
+	{
+		/* no such CA cert */
+		return NULL;
+	}
 
-	certreq_payload_t *this = certreq_payload_create();
+	this = certreq_payload_create();
+	pubkey = cacert->get_public_key(cacert);
+	keyid = pubkey->get_keyid(pubkey);
 
 	DBG2(DBG_IKE, "requesting certificate issued by '%D'", id);
 	DBG2(DBG_IKE, "  with keyid %#B", &keyid);

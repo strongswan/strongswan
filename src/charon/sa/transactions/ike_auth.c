@@ -255,14 +255,21 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	{
 		certreq_payload_t *certreq_payload;
 		identification_t *other_ca = this->policy->get_other_ca(this->policy);
-
-		certreq_payload = (other_ca->get_type(other_ca) == ID_ANY)
-			? certreq_payload_create_from_cacerts()
-			: certreq_payload_create_from_cacert(other_ca);
-
-		if (certreq_payload != NULL)
+		
+		if (other_ca)
 		{
-			request->add_payload(request, (payload_t*)certreq_payload);
+			if (other_ca->get_type(other_ca) == ID_ANY)
+			{
+				certreq_payload = certreq_payload_create_from_cacerts();
+			}
+			else
+			{
+				certreq_payload = certreq_payload_create_from_cacert(other_ca);
+			}
+			if (certreq_payload != NULL)
+			{
+				request->add_payload(request, (payload_t*)certreq_payload);
+			}
 		}
 	}
 	
