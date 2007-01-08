@@ -53,6 +53,11 @@ enum dpd_action_t {
 };
 
 /**
+ * enum names for dpd_action_t.
+ */
+extern enum_name_t *dpd_action_names;
+
+/**
  * @brief Mode of an IPsec SA.
  *
  * These are equal to those defined in XFRM, so don't change.
@@ -69,9 +74,9 @@ enum mode_t {
 };
 
 /**
- * enum names for dpd_action_t.
+ * enum names for mode_t.
  */
-extern enum_name_t *dpd_action_names;
+extern enum_name_t *mode_names;
 
 /**
  * @brief A policy_t defines the policies to apply to CHILD_SAs.

@@ -780,8 +780,9 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	now = (u_int32_t)time(NULL);
 	
-	written += fprintf(stream, "%12s:  %N, reqid: %d", this->name,
-					   child_sa_state_names, this->state, this->reqid);
+	written += fprintf(stream, "%12s:  %N, reqid: %d, %N", this->name,
+					   child_sa_state_names, this->state, this->reqid,
+					   mode_names, this->mode);
 	
 	if (this->state == CHILD_INSTALLED)
 	{

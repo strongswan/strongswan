@@ -509,11 +509,13 @@ static status_t install_child_sa(private_create_child_sa_t *this, bool initiator
 	
 	if (initiator)
 	{
-		status = this->child_sa->update(this->child_sa, this->proposal, 1, prf_plus);
+		status = this->child_sa->update(this->child_sa, this->proposal,
+										this->mode, prf_plus);
 	}
 	else
 	{
-		status = this->child_sa->add(this->child_sa, this->proposal, 1, prf_plus);
+		status = this->child_sa->add(this->child_sa, this->proposal,
+									 this->mode, prf_plus);
 	}
 	prf_plus->destroy(prf_plus);
 	if (status != SUCCESS)
@@ -522,11 +524,13 @@ static status_t install_child_sa(private_create_child_sa_t *this, bool initiator
 	}
 	if (initiator)
 	{
-		status = this->child_sa->add_policies(this->child_sa, this->tsi, this->tsr, 1);
+		status = this->child_sa->add_policies(this->child_sa, this->tsi,
+											  this->tsr, this->mode);
 	}
 	else
 	{
-		status = this->child_sa->add_policies(this->child_sa, this->tsr, this->tsi, 1);
+		status = this->child_sa->add_policies(this->child_sa, this->tsr,
+											  this->tsi, this->mode);
 	}
 	if (status != SUCCESS)
 	{

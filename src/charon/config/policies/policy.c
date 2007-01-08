@@ -38,6 +38,14 @@ ENUM(dpd_action_names, DPD_NONE, DPD_RESTART,
 	"DPD_RESTART"
 );
 
+ENUM(mode_names, MODE_TRANSPORT, MODE_BEET,
+	"TRANSPORT",
+	"TUNNEL",
+	"2",
+	"3",
+	"BEET"
+);
+
 typedef struct private_policy_t private_policy_t;
 
 /**
