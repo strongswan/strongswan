@@ -276,8 +276,8 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		return SUCCESS;
 	}
 	
-	me = this->connection->get_my_host(this->connection);
-	other = this->connection->get_other_host(this->connection);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
 	
 	/* we already set up the IDs. Mine is already fully qualified, other
 	 * will be updated in the ike_auth transaction */
@@ -372,7 +372,7 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		/* N(NAT_DETECTION_SOURCE_IP)+
 		 * we include only one notify if our address is defined, but all
 		 * possible if not */
-		host = this->connection->get_my_host(this->connection);
+		host = this->ike_sa->get_my_host(this->ike_sa);
 		if (host->is_anyaddr(host))
 		{
 			/* TODO: we could get the src address from netlink */
@@ -867,8 +867,8 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	/* allow setting of next transaction in other functions */
 	this->next = next;
 	
-	me = this->connection->get_my_host(this->connection);
-	other = this->connection->get_other_host(this->connection);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
 	
 	/* check if SPI has been updated, but apply only if all goes ok later */
 	responder_spi = response->get_responder_spi(response);

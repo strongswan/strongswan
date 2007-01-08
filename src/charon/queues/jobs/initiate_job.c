@@ -78,6 +78,7 @@ static status_t execute(private_initiate_job_t *this)
 	
 	if (this->other)
 	{
+		DBG1(DBG_JOB, "using other host %H", this->other);
 		ike_sa->set_other_host(ike_sa, this->other->clone(this->other));
 	}
 	

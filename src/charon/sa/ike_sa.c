@@ -900,15 +900,14 @@ static status_t initiate(private_ike_sa_t *this,
 				this->my_host = connection->get_my_host(connection);
 				this->my_host = this->my_host->clone(this->my_host);
 			}
+			DBG1(DBG_IKE, "this->other: %H", this->other_host);
+			DBG1(DBG_IKE, "connections other: %H", connection->get_other_host(connection));
 			if (this->other_host->is_anyaddr(this->other_host))
 			{
 				this->other_host->destroy(this->other_host);
 				this->other_host = connection->get_other_host(connection);
 				this->other_host = this->other_host->clone(this->other_host);
 			}
-			this->retrans_sequences = connection->get_retrans_seq(connection);
-			this->dpd_delay = connection->get_dpd_delay(connection);
-			
 			if (this->other_host->is_anyaddr(this->other_host))
 			{
 				SIG(IKE_UP_START, "establishing new IKE_SA for CHILD_SA");
@@ -917,6 +916,9 @@ static status_t initiate(private_ike_sa_t *this,
 				connection->destroy(connection);
 				return DESTROY_ME;
 			}
+			
+			this->retrans_sequences = connection->get_retrans_seq(connection);
+			this->dpd_delay = connection->get_dpd_delay(connection);
 			
 			this->message_id_out = 1;
 			ike_sa_init = ike_sa_init_create(&this->public);
