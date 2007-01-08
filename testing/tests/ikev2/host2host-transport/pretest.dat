@@ -1,0 +1,4 @@
+moon::ipsec start
+sun::ipsec start
+moon::sleep 1 
+moon::ipsec up host-host
