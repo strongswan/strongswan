@@ -90,7 +90,7 @@ $(top_srcdir)/src/libcrypto/libcrypto.a \
 
 _pluto_adns_LDADD = \
 $(top_srcdir)/src/libfreeswan/libfreeswan.a \
--lresolv
+-lresolv -ldl
 
 dist_man_MANS = pluto.8 ipsec.secrets.5
 EXTRA_DIST = oid.pl oid.txt
@@ -111,11 +111,6 @@ endif
 # This compile option activates dynamic LDAP CRL fetching
 if USE_LDAP
   pluto_LDADD += -lldap -llber
-endif
-
-# This compile option activates smartcard support
-if USE_SMARTCARD
-  pluto_LDADD += -ldl
 endif
 
 install-exec-local :
