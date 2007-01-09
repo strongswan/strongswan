@@ -599,7 +599,7 @@ main(int argc, char **argv)
     init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
     init_virtual_ip(virtual_private);
     scx_init(pkcs11_module_path);   /* load and initialize PKCS #11 module */
-    xauth_init();  		    /* load and initialize XAUTH module */
+    xauth_init();		    /* load and initialize XAUTH module */
     init_rnd_pool();
     init_secret();
     init_states();
