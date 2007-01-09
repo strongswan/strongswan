@@ -82,7 +82,7 @@ typedef struct chunk chunk_t;
 #define chunkcpy(dst, chunk) \
     { memcpy(dst, chunk.ptr, chunk.len); dst += chunk.len;}
 #define same_chunk(a, b) \
-    ((a ).len == (b).len && memcmp((a).ptr, (b).ptr, (b).len) == 0 )
+    ( (a).len == (b).len && memcmp((a).ptr, (b).ptr, (b).len) == 0 )
 
 extern char* temporary_cyclic_buffer(void);
 extern const char* concatenate_paths(const char *a, const char *b);
