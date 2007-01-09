@@ -31,8 +31,6 @@ const char *shared_secrets_file;
 extern void load_preshared_secrets(int whackfd);
 extern void free_preshared_secrets(void);
 
-struct state;	/* forward declaration */
-
 enum PrivateKeyKind {
     PPK_PSK,
  /* PPK_DSS, */	/* not implemented */
