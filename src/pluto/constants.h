@@ -515,7 +515,6 @@ enum state_kind {
     STATE_XAUTH_I2,
     STATE_XAUTH_R3,
 
-
     /* Mode Config pull states */
 
     STATE_MODE_CFG_R0,           /* responder state (server) */
