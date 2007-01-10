@@ -769,7 +769,8 @@ static int print(FILE *stream, const struct printf_info *info,
 	private_child_sa_t *this = *((private_child_sa_t**)(args[0]));
 	iterator_t *iterator;
 	sa_policy_t *policy;
-	u_int32_t now, rekeying, use;
+	u_int32_t now, rekeying;
+	u_int32_t use, use_in, use_fwd;
 	status_t status;
 	size_t written = 0;
 	
@@ -832,36 +833,35 @@ static int print(FILE *stream, const struct printf_info *info,
 		written += fprintf(stream, "\n%12s:   %R===%R, last use: ",
 						   this->name, policy->my_ts, policy->other_ts);
 		
-		/* query policy times */
+		/* query time of last policy use */
+
+		/* inbound: POLICY_IN or POLICY_FWD */
 		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-							policy->other_ts, policy->my_ts, POLICY_IN, &use);
-		if (status == SUCCESS && use)
+							policy->other_ts, policy->my_ts, POLICY_IN, &use_in);
+		use_in = (status == SUCCESS)? use_in : 0;
+		status = charon->kernel_interface->query_policy(charon->kernel_interface,
+				policy->other_ts, policy->my_ts, POLICY_FWD, &use_fwd);
+		use_fwd = (status == SUCCESS)? use_fwd : 0;
+		use = max(use_in, use_fwd);
+		if (use)
 		{
-			written += fprintf(stream, "%ds_in ", now - use);
+			written += fprintf(stream, "%ds_i ", now - use);
 		}
 		else
 		{
-			written += fprintf(stream, "no_in ");
+			written += fprintf(stream, "no_i ");
 		}
+
+		/* outbound: POLICY_OUT */
 		status = charon->kernel_interface->query_policy(charon->kernel_interface,
 							policy->my_ts, policy->other_ts, POLICY_OUT, &use);
 		if (status == SUCCESS && use)
 		{
-			written += fprintf(stream, "%ds_out ", now - use);
+			written += fprintf(stream, "%ds_o ", now - use);
 		}
 		else
 		{
-			written += fprintf(stream, "no_out ");
-		}
-		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-				policy->other_ts, policy->my_ts, POLICY_FWD, &use);
-		if (status == SUCCESS && use)
-		{
-			written += fprintf(stream, "%ds_fwd", now - use);
-		}
-		else
-		{
-			written += fprintf(stream, "no_fwd");
+			written += fprintf(stream, "no_o ");
 		}
 	}
 	iterator->destroy(iterator);
