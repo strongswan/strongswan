@@ -178,6 +178,11 @@ struct private_ike_sa_t {
 	u_int32_t message_id_out;
 
 	/**
+	 * will the IKE_SA be fully reauthenticated or rekeyed only?
+	 */
+	bool reauth;
+
+	/**
 	 * Timestamps for this IKE_SA
 	 */
 	struct {
@@ -1741,10 +1746,13 @@ static void set_lifetimes(private_ike_sa_t *this, bool reauth,
 						  u_int32_t soft_lifetime, u_int32_t hard_lifetime)
 {
 	job_t *job;
-	
+	u_int32_t now = time(NULL);
+
+	this->reauth = reauth;
+
 	if (soft_lifetime)
 	{
-		this->time.rekey = this->time.established + soft_lifetime;
+		this->time.rekey = now + soft_lifetime;
 		job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
 		charon->event_queue->add_relative(charon->event_queue, job,
 										  soft_lifetime * 1000);
@@ -1752,7 +1760,7 @@ static void set_lifetimes(private_ike_sa_t *this, bool reauth,
 	
 	if (hard_lifetime)
 	{
-		this->time.delete = this->time.established + hard_lifetime;
+		this->time.delete = now + hard_lifetime;
 		job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
 		charon->event_queue->add_relative(charon->event_queue, job,
 										  hard_lifetime * 1000);
@@ -1954,7 +1962,10 @@ static int print(FILE *stream, const struct printf_info *info,
 	written = fprintf(stream, "%12s: %N, %H[%D]...%H[%D]",
 					  this->name, ike_sa_state_names, this->state,
 					  this->my_host, this->my_id, this->other_host, this->other_id);
-	written += fprintf(stream, "\n%12s: IKE SPIs: %J", this->name, this->ike_sa_id);
+	written += fprintf(stream, "\n%12s: IKE SPIs: %J, %s in %ds",
+					  this->name, this->ike_sa_id,
+					  this->reauth? "reauthentication":"rekeying",
+					  this->time.rekey - time(NULL));
 
 	if (info->alt)
 	{
