@@ -955,7 +955,8 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			
 			if (install_child_sa(this, FALSE) != SUCCESS)
 			{
-				SIG(CHILD_UP_FAILED, "installing CHILD_SA failed, no CHILD_SA created");
+				SIG(CHILD_UP_FAILED, "installing CHILD_SA '%s' failed, no CHILD_SA created",
+						this->policy->get_name(this->policy));
 				DBG1(DBG_IKE, "adding NO_PROPOSAL_CHOSEN notify to response");
 				build_notify(NO_PROPOSAL_CHOSEN, response, FALSE);
 			}
@@ -963,7 +964,8 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			{
 				/* add proposal to sa payload */
 				sa_response->add_proposal(sa_response, this->proposal);
-				SIG(CHILD_UP_SUCCESS, "CHILD_SA created");
+				SIG(CHILD_UP_SUCCESS, "CHILD_SA '%s' created",
+						this->policy->get_name(this->policy));
 			}
 		}
 		response->add_payload(response, (payload_t*)sa_response);
@@ -1184,13 +1186,15 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		
 			if (install_child_sa(this, TRUE) != SUCCESS)
 			{
-				SIG(CHILD_UP_FAILED, "installing CHILD_SA failed, no CHILD_SA built");
+				SIG(CHILD_UP_FAILED, "installing CHILD_SA '%s' failed, no CHILD_SA built",
+						this->policy->get_name(this->policy));
 				/* TODO: we should send a DELETE for that CHILD to stay
 				 * synchronous with the peer */
 			}
 			else
 			{
-				SIG(CHILD_UP_SUCCESS, "CHILD_SA created");
+				SIG(CHILD_UP_SUCCESS, "CHILD_SA '%s' created",
+						this->policy->get_name(this->policy));
 			}
 		}
 	}
