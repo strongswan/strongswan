@@ -956,7 +956,7 @@ static void stroke_receive(private_stroke_t *this)
 		bytes_read = recv(strokefd, &msg_length, sizeof(msg_length), MSG_PEEK);
 		if (bytes_read != sizeof(msg_length))
 		{
-			DBG1(DBG_CFG, "reading lenght of stroke message failed");
+			DBG1(DBG_CFG, "reading length of stroke message failed");
 			close(strokefd);
 			continue;
 		}
