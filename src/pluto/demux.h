@@ -64,7 +64,7 @@ struct msg_digest {
     bool dpd;           	/* peer supports RFC 3706 DPD */
     bool openpgp;		/* peer supports OpenPGP certificates */
 
-#   define PAYLIMIT 20
+#   define PAYLIMIT 40
     struct payload_digest
 	digest[PAYLIMIT],
 	*digest_roof,
