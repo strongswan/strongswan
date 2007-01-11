@@ -90,14 +90,13 @@ do
 	exit 1
     fi
 
-    pid=`cat ~/.uml/$host/pid`
-    up=`ps up $pid | grep agetty | wc -l`
+    up=`uml_mconsole $host proc net/route 2> /dev/null | grep eth0 | wc -l`
 
     while [ $count -lt $count_max ] && [ $up -eq 0 ]
     do
 	cecho-n "."
 	sleep 5
-	up=`ps up $pid | grep agetty | wc -l`
+	up=`uml_mconsole $host proc net/route 2> /dev/null | grep eth0 | wc -l`
 	let "count+=1"
     done
 

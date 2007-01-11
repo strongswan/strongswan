@@ -35,6 +35,12 @@ BOOTING_HOSTS=""
 count_max=12
 count=0
 
+#position of xterm window on the desktop
+x0=8
+y0=8
+dx=12
+dy=24
+
 for host in $HOSTS
 do
     up=0
@@ -57,13 +63,16 @@ do
 	[ -f  $UMLHOSTFS ] || die "!! uml root file system '$UMLHOSTFS' not found"
 
 	cecho-n " * Starting ${host}.."
-	eval xterm -title ${host} -rightbar -sb -sl 500 -e "$UMLKERNEL \
+	eval xterm -title ${host} -geometry "+${x0}+${y0}" -rightbar -sb -sl 500 -e "$UMLKERNEL \
 	    umid=${host} \
 	    ubda=$UMLHOSTFS \
 	    \$SWITCH_${host} \
 	    mem=${MEM}M con=pty con0=fd:0,fd:1" &
         cecho "done"
     fi
+    let "x0+=dx"
+    let "y0+=dy"
+    sleep 15
 done
 
 if [ -z "$BOOTING_HOSTS" ]
@@ -90,14 +99,13 @@ do
 	exit 1
     fi
 
-    pid=`cat ~/.uml/$host/pid`
-    up=`ps up $pid | grep agetty | wc -l`
+    up=`uml_mconsole $host proc net/route 2> /dev/null | grep eth0 | wc -l`
 
     while [ $count -lt $count_max ] && [ $up -eq 0 ]
     do
 	cecho-n "."
 	sleep 5
-	up=`ps up $pid | grep agetty | wc -l`
+	up=`uml_mconsole $host proc net/route 2> /dev/null | grep eth0 | wc -l`
 	let "count+=1"
     done
 
