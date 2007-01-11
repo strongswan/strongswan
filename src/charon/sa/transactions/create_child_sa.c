@@ -843,7 +843,8 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	}
 	else
 	{
-		SIG(CHILD_UP_SUCCESS, "CHILD_SA created");
+		SIG(CHILD_UP_SUCCESS, "CHILD_SA '%s' created",
+				this->policy->get_name(this->policy));
 	}
 	return SUCCESS;
 }
@@ -1039,7 +1040,8 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 	}
 	else
 	{
-		SIG(CHILD_UP_SUCCESS, "CHILD_SA created");
+		SIG(CHILD_UP_SUCCESS, "CHILD_SA '%s' created",
+				this->policy->get_name(this->policy));
 	}
 	if (this->lost)
 	{
