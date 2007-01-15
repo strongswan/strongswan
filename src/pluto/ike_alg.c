@@ -231,10 +231,11 @@ ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
 {
     struct db_context *db_ctx = NULL;
     struct ike_info *ike_info;
-    u_int ealg, halg, modp, eklen = 0;
     struct encrypt_desc *enc_desc;
-    bool is_xauth_server;
+    u_int ealg, halg, modp, eklen = 0;
     int i;
+
+    bool is_xauth_server = (policy & POLICY_XAUTH_SERVER) != LEMPTY;
 
     if (!ai)
     {
@@ -304,8 +305,6 @@ ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
 	    db_attr_add_values(db_ctx, OAKLEY_AUTHENTICATION_METHOD, OAKLEY_PRESHARED_KEY);
 	    db_attr_add_values(db_ctx, OAKLEY_GROUP_DESCRIPTION, modp);
 	}
-
-	is_xauth_server = (policy & POLICY_XAUTH_SERVER) != LEMPTY;
 
 	if (policy & POLICY_XAUTH_RSASIG)
 	{
