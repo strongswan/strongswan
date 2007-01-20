@@ -35,6 +35,19 @@ int arginfo_ptr(const struct printf_info *info, size_t n, int *argtypes)
 }
 
 /**
+ * arginfo handler for two prt arguments
+ */
+int arginfo_ptr_ptr(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 1)
+	{
+		argtypes[0] = PA_POINTER;
+		argtypes[1] = PA_POINTER;
+	}
+	return 2;
+}
+
+/**
  * arginfo handler for one ptr, one int
  */
 int arginfo_ptr_int(const struct printf_info *info, size_t n, int *argtypes)

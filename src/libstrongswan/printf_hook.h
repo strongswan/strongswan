@@ -36,9 +36,9 @@
 #define PRINTF_CHUNK			'B'
 /** 2 arguments: u_char *buffer, int size */
 #define PRINTF_BYTES			'b'
-/** 1 argument: int time; with #-modifier 2 arguments: int time, bool utc */
+/** 1 argument: time_t *time; with #-modifier 2 arguments: time_t *time, bool utc */
 #define PRINTF_TIME				'T'
-/** 2 arguments: integer begin, int end */
+/** 2 arguments: time_t *begin, time_t *end */
 #define PRINTF_TIME_DELTA		'V'
 /** 1 argument: x509_t *cert; with #-modifier 2 arguments: x509_t *cert, bool utc */
 #define PRINTF_X509				'Q'
@@ -63,6 +63,7 @@
  * Generic arginfo handlers for printf() hooks
  */
 int arginfo_ptr(const struct printf_info *info, size_t n, int *argtypes);
+int arginfo_ptr_ptr(const struct printf_info *info, size_t n, int *argtypes);
 int arginfo_ptr_int(const struct printf_info *info, size_t n, int *argtypes);
 int arginfo_int_int(const struct printf_info *info, size_t n, int *argtypes);
 int arginfo_ptr_alt_ptr_int(const struct printf_info *info, size_t n, int *argtypes);

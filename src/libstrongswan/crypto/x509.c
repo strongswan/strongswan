@@ -1068,7 +1068,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	/* determine the current time */
 	time_t now = time(NULL);
 
-	written += fprintf(stream, "%#T\n", this->installed, utc);
+	written += fprintf(stream, "%#T\n", &this->installed, utc);
 
 	if (this->subjectAltNames->get_count(this->subjectAltNames))
 	{
@@ -1095,27 +1095,27 @@ static int print(FILE *stream, const struct printf_info *info,
 	written += fprintf(stream, "    subject:   '%D'\n", this->subject);
 	written += fprintf(stream, "    issuer:    '%D'\n", this->issuer);
 	written += fprintf(stream, "    serial:     %#B\n", &this->serialNumber);
-	written += fprintf(stream, "    validity:   not before %#T, ", this->notBefore, utc);
+	written += fprintf(stream, "    validity:   not before %#T, ", &this->notBefore, utc);
 	if (now < this->notBefore)
 	{
-		written += fprintf(stream, "not valid yet (valid in %V)\n", now, this->notBefore);
+		written += fprintf(stream, "not valid yet (valid in %V)\n", &now, &this->notBefore);
 	}
 	else
 	{
 		written += fprintf(stream, "ok\n");
 	}
 	
-	written += fprintf(stream, "                not after  %#T, ", this->notAfter, utc);
+	written += fprintf(stream, "                not after  %#T, ", &this->notAfter, utc);
 	if (now > this->notAfter)
 	{
-		written += fprintf(stream, "expired (since %V)\n", now, this->notAfter);
+		written += fprintf(stream, "expired (since %V)\n", &now, &this->notAfter);
 	}
 	else
 	{
 		written += fprintf(stream, "ok");
 		if (now > this->notAfter - CERT_WARNING_INTERVAL * 60 * 60 * 24)
 		{
-			written += fprintf(stream, " (expires in %V)", now, this->notAfter);
+			written += fprintf(stream, " (expires in %V)", &now, &this->notAfter);
 		}
 		written += fprintf(stream, " \n");
 	}
@@ -1146,10 +1146,10 @@ static int print(FILE *stream, const struct printf_info *info,
 	switch (this->status)
 	{
 		case CERT_GOOD:
-			written += fprintf(stream, " until %#T", this->until, utc);
+			written += fprintf(stream, " until %#T", &this->until, utc);
 			break;
 		case CERT_REVOKED:
-			written += fprintf(stream, " on %#T", this->until, utc);
+			written += fprintf(stream, " on %#T", &this->until, utc);
 			break;
 		case CERT_UNKNOWN:
 		case CERT_UNDEFINED:
