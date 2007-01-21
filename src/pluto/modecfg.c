@@ -357,6 +357,10 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 		{
 		    attr_type = XAUTH_BASE;
 		}
+		else if (attr_type == XAUTH_ROOF)
+		{
+		    attr_type = UNITY_BASE;
+		}
 		attr_set >>= 1;
 	    }
 	}

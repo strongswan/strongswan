@@ -1,3 +1,4 @@
+
 /* manifest constants
  * Copyright (C) 1997 Angelos D. Keromytis.
  * Copyright (C) 1998-2002  D. Hugh Redelmeier.
@@ -666,6 +667,7 @@ extern enum_names attr_msg_type_names;
 #define    MODECFG_ROOF               16
 
 extern enum_names modecfg_attr_names;
+
 /* XAUTH attribute values */
 #define    XAUTH_TYPE                16520
 #define    XAUTH_USER_NAME           16521
@@ -679,14 +681,36 @@ extern enum_names modecfg_attr_names;
 #define    XAUTH_ANSWER              16529
 
 #define    XAUTH_BASE                XAUTH_TYPE
+#define    XAUTH_ROOF                16530
 
 extern enum_names xauth_attr_names;
+
+/* ISAKMP mode config attributes specific to the Unity vendor Id */
+#define   UNITY_BANNER		    28672
+#define   UNITY_SAVE_PASSWD	    28673
+#define   UNITY_DEF_DOMAIN	    28674
+#define   UNITY_SPLITDNS_NAME	    28675
+#define   UNITY_SPLIT_INCLUDE	    28676
+#define   UNITY_NATT_PORT	    28677
+#define   UNITY_LOCAL_LAN	    28678
+#define   UNITY_PFS		    28679
+#define   UNITY_FW_TYPE		    28680
+#define   UNITY_BACKUP_SERVERS	    28681
+#define   UNITY_DDNS_HOSTNAME	    28682
+
+#define   UNITY_BASE                UNITY_BANNER
+
+extern enum_names unity_attr_names;
 
 /* XAUTH authentication types */
 #define XAUTH_TYPE_GENERIC 0
 #define XAUTH_TYPE_CHAP    1
 #define XAUTH_TYPE_OTP     2
 #define XAUTH_TYPE_SKEY    3
+
+/* Values for XAUTH_STATUS */
+#define	XAUTH_STATUS_FAIL       0
+#define	XAUTH_STATUS_OK         1
 
 extern enum_names xauth_type_names;
 
