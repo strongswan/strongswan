@@ -465,6 +465,15 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 	case INTERNAL_IP4_NBNS:
 	    ia->attr_set |= LELEM(attr_type);
 	    break;
+	case APPLICATION_VERSION:
+	case UNITY_DDNS_HOSTNAME:
+	    if (attr_len > 0)
+	    {
+		DBG(DBG_PARSING,
+		    DBG_log("   '%.*s'", attr_len, strattr.cur)
+		)
+	    }
+	    break;
 	case XAUTH_TYPE:
 	    ia->xauth_type = attr.isaat_lv;
 	    ia->attr_set |= LELEM(attr_type - XAUTH_BASE + MODECFG_ROOF);
