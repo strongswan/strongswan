@@ -1,3 +1,12 @@
+strongswan-4.0.7
+----------------
+
+- Fixed a couple of XAUTH-related bugs.
+
+- UNITY attributes are now recognized and UNITY_BANNER is set
+  to a default string.
+
+
 strongswan-4.0.6
 ----------------
 
