@@ -664,7 +664,6 @@ extern enum_names attr_msg_type_names;
 #define    SUPPORTED_ATTRIBUTES       14
 #define    INTERNAL_IP6_SUBNET        15
 
-#define    MODECFG_ROOF               16
 
 extern enum_names modecfg_attr_names;
 
@@ -681,7 +680,6 @@ extern enum_names modecfg_attr_names;
 #define    XAUTH_ANSWER              16529
 
 #define    XAUTH_BASE                XAUTH_TYPE
-#define    XAUTH_ROOF                16530
 
 extern enum_names xauth_attr_names;
 
