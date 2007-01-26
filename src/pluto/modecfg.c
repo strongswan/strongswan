@@ -88,7 +88,8 @@ init_internal_addr(internal_addr_t *ia)
     ia->xauth_attr_set = LEMPTY;
     ia->xauth_secret.user_name = empty_chunk;
     ia->xauth_secret.user_password = empty_chunk;
-    ia->xauth_status = FALSE;
+    ia->xauth_type = XAUTH_TYPE_GENERIC;
+    ia->xauth_status = XAUTH_STATUS_FAIL;
     ia->unity_attr_set = LEMPTY;
     ia->unity_banner = NULL;
 
@@ -492,6 +493,15 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 	case INTERNAL_IP4_DNS:
 	case INTERNAL_IP4_SUBNET:
 	case INTERNAL_IP4_NBNS:
+	case INTERNAL_ADDRESS_EXPIRY:
+	case INTERNAL_IP4_DHCP:
+	case INTERNAL_IP6_ADDRESS:
+	case INTERNAL_IP6_NETMASK:
+	case INTERNAL_IP6_DNS:
+	case INTERNAL_IP6_NBNS:
+	case INTERNAL_IP6_DHCP:
+	case SUPPORTED_ATTRIBUTES:
+	case INTERNAL_IP6_SUBNET:
 	    ia->attr_set |= LELEM(attr_type);
 	    break;
 	case APPLICATION_VERSION:
@@ -519,8 +529,15 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 	    ia->xauth_status = attr.isaat_lv;
 	    ia->xauth_attr_set |= LELEM(attr_type - XAUTH_BASE);
 	    break;
-	case XAUTH_PASSCODE:
 	case XAUTH_MESSAGE:
+	    if (attr_len > 0)
+	    {
+		DBG(DBG_PARSING,
+		    DBG_log("   '%.*s'", attr_len, strattr.cur)
+		)
+	    }
+	    /* fall through to set attribute flag */
+	case XAUTH_PASSCODE:
 	case XAUTH_CHALLENGE:
 	case XAUTH_DOMAIN:
 	case XAUTH_NEXT_PIN:
@@ -819,6 +836,7 @@ xauth_inI0(struct msg_digest *md)
     u_int16_t isama_id;
     internal_addr_t ia;
     stf_status stat, stat_build;
+    bool xauth_type_present;
 
     plog("parsing XAUTH request");
 
@@ -827,8 +845,9 @@ xauth_inI0(struct msg_digest *md)
 	return stat;
  
     /* check XAUTH attributes */
-    if ((ia.xauth_attr_set & LELEM(XAUTH_TYPE - XAUTH_BASE)) != LEMPTY
-    && ia.xauth_type != XAUTH_TYPE_GENERIC)
+    xauth_type_present = (ia.xauth_attr_set & LELEM(XAUTH_TYPE - XAUTH_BASE)) != LEMPTY;
+
+    if (xauth_type_present && ia.xauth_type != XAUTH_TYPE_GENERIC)
     {
 	plog("xauth type %s is not supported", enum_name(&xauth_type_names, ia.xauth_type));
 	stat = STF_FAIL;
@@ -870,6 +889,8 @@ xauth_inI0(struct msg_digest *md)
 	)
 	ia.xauth_attr_set = LELEM(XAUTH_USER_NAME     - XAUTH_BASE)
 		 	  | LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE);
+        if (xauth_type_present)
+	    ia.xauth_attr_set |= LELEM(XAUTH_TYPE - XAUTH_BASE);
     }
     else
     {
