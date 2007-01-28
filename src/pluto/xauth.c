@@ -61,6 +61,7 @@ xauth_init(void)
 void
 xauth_finalize(void)
 {
+#ifdef XAUTH_DEFAULT_LIB
     if (xauth_module.handle != NULL)
     {
 	if (dlclose(xauth_module.handle))
@@ -74,4 +75,5 @@ xauth_finalize(void)
 	    )
 	}
     }
+#endif
 }
