@@ -86,7 +86,7 @@ AM_CFLAGS = \
 pluto_LDADD = \
 $(top_srcdir)/src/libfreeswan/libfreeswan.a \
 $(top_srcdir)/src/libcrypto/libcrypto.a \
--lgmp -lresolv -lpthread
+-lgmp -lresolv -lpthread -ldl
 
 _pluto_adns_LDADD = \
 $(top_srcdir)/src/libfreeswan/libfreeswan.a \
