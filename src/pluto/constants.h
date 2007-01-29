@@ -554,8 +554,8 @@ enum state_kind {
 #define IS_ISAKMP_SA_ESTABLISHED(s) (        \
 		   (s) == STATE_MAIN_R3      \
 		|| (s) == STATE_MAIN_I4      \
-		|| (s) == STATE_XAUTH_R3     \
 		|| (s) == STATE_XAUTH_I2     \
+		|| (s) == STATE_XAUTH_R3     \
 		|| (s) == STATE_MODE_CFG_R1  \
 		|| (s) == STATE_MODE_CFG_I2  \
 		|| (s) == STATE_MODE_CFG_I3  \

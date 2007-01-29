@@ -910,6 +910,7 @@ xauth_inI0(struct msg_digest *md)
     if (stat == STF_OK)
     {
 	st->st_xauth.started = TRUE;
+	st->st_msgid = 0;
 	return STF_OK;
     }
     else
@@ -988,11 +989,8 @@ xauth_inR1(struct msg_digest *md)
 
     plog("sending XAUTH status:");
 
-    stat_build = modecfg_build_msg(st, &md->rbody
-			 	     , ISAKMP_CFG_SET
-			 	     , &ia
-			 	     , isama_id);
-     if (stat_build != STF_OK)
+    stat_build = modecfg_send_msg(st, ISAKMP_CFG_SET, &ia);
+    if (stat_build != STF_OK)
 	return stat_build;
     return STF_OK;
 }
