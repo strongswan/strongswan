@@ -41,7 +41,7 @@ Contents
 	6.1 Loading private key files in PKCS#1 format
 	6.2 Entering passphrases interactively
 	6.3 Multiple private keys
-   7. Configuring CA properties - ipsec.conf
+   7. Configuring CA properties - ipsec.onf
    8. Smartcard support
 	8.1 Configuring a smartcard-based connection
 	8.2 Entering the PIN code
@@ -57,7 +57,7 @@ Contents
   10. Monitoring functions
   11. Firewall support functions
        11.1 Environment variables in the updown script
-       11.2 Automatic insertion and deletion of iptables firewall rules  (NEW)
+       11.2 Automatic insertion and deletion of iptables firewall rules
        11.3 Sample Linux 2.6 _updown_espmark script for iptables < 1.3.5
   12. Authentication with raw RSA public keys
   13. Authentication with OpenPGP certificates
@@ -69,7 +69,9 @@ Contents
        14.1 Authentication and encryption algorithms
        14.2 NAT traversal
        14.3 Dead peer detection
-       14.4 IKE Mode Config
+       14.4 IKE Mode Config Pull Mode
+       14.5 IKE Mode Config Push Mode
+       14.6 XAUTH - Extended Authentication  (NEW)
   15. Copyright statement and acknowledgements
 
 
@@ -104,7 +106,10 @@ and currently supports the following features:
  
   * NAT-Traversal (RFC 3947)
 
-  * Support of Virtual IPs via static configuratin and IKE Mode Config
+  * Support of Virtual IPs via static configuration and IKE Mode Config
+
+  * XAUTH client and server functionality in conjunction with either PSK
+    or RSA IKE Main Mode authentication.
 
   * Support of Delete SA and informational Notification messages.
 
@@ -2918,8 +2923,8 @@ even if they might be supported by the responder.
 
 Currently please refer to README.NAT-Traversal document in the strongSwan
 distribution.
-     
-     
+
+
 14.3 Dead peer detection
     --------------------
 
@@ -2969,14 +2974,15 @@ dpdaction=clear for dynamic roadwarrior connections. The default value is
 dpdaction=none, which disables DPD.
 
 
-14.4 IKE Mode Config
-     ---------------
-     
+14.4 IKE Mode Config Pull Mode
+     -------------------------
+
 The IKE Mode Config protocol <draft-ietf-ipsec-isakmp-mode-cfg-04.txt> allows
 the dynamic assignment of virtual IP addresses and optional DNS and WINS server
-information to IPsec clients. Currently only "Mode Config Pull Mode" is
-implemented where the client actively sends a Mode Config request to the server
-in order to obtain a virtual IP.
+information to IPsec clients. As a default the "Mode Config Pull Mode" is
+used where the client actively sends a Mode Config request to the server
+in order to obtain a virtual IP. The server answers with a Mode Config reply
+message containing the requested information.
 
 Client side configuration (carol):
 
@@ -3006,6 +3012,60 @@ The wildcard %modeconfig or %modecfg used in the leftsourceip parameter of the
 client will trigger a Mode Config request. Currently the server will return
 the virtual IP address defined by the rightsourceip parameter. In the future
 an LDAP-based lookup mechanism will be supported.
+
+
+14.5 IKE Mode Config Push Mode
+     -------------------------
+
+Cisco VPN equipment uses the alternative "Mode Config Push Mode" where the
+initiating clients waits for the server to push down a virtual address via
+a Mode Config set message. The receipt is acknowledged by the client with a
+Mode Config ack message.
+
+Mode Config Push Mode is activated by the parameter
+
+  modeconfig=push
+
+as part of the connection definition in ipsec.conf. The default value is 
+modeconfig=pull.
+
+
+14.6 XAUTH - Extended Authentication
+     -------------------------------
+
+The XAUTH protocol <draft-beaulieu-ike-xauth-02.txt> allows an extended
+client authentication using e.g. a username/password paradigm in addition
+to the IKE Main Mode authentication. Thus XAUTH can be used in conjunction
+with Pre-Shared Keys (PSK) by defining
+
+  authby=xauthpsk
+
+or with RSA signatures
+
+  authby=xauthrsasig
+
+in the connection definition, correspondingly. strongSwan can act either as
+an XAUTH client with
+
+  xauth=client
+
+or as an XAUTH server with
+
+  xauth=server
+
+with xauth=client being the default value. strongSwan integrates a default
+implementation where the XAUTH user credentials are stored on both the
+server and the client in the /etc/ipsec.secrets file, using the syntax
+
+  : XAUTH john "rT6q!V2p"
+
+The client must not have more than one XAUTH entry whereas the server can
+contain an unlimited number of user credentials in ipsec.secrets.
+
+Either the prompting on the client side or the verification of the user
+credentials on the server side can be implemented as a customized XAUTH
+dynamic library module. The corresponding library interface is defined
+by the pluto/xauth.h header file.
 
 
 15. Copyright statement and acknowledgements
@@ -3041,7 +3101,7 @@ an LDAP-based lookup mechanism will be supported.
 
 		   Copyright (c) 2002, Stephane Laroche
 
-		        IKE Mode Config protocol:
+		        IKE Mode Config and XAUTH protocol:
 
 		   Copyright (c) 2001-2002, Colubris Networks
 
@@ -3058,7 +3118,7 @@ an LDAP-based lookup mechanism will be supported.
 	               Copyright (c) 2000, Kai Martius
 
 		   X.509, OCSP and smartcard functionality:
-
+°
   Copyright (c) 2000, Andreas Hess, Patric Lichtsteiner, Roger Wegmann
   Copyright (c) 2001, Marco Bertossa, Andreas Schleiss
   Copyright (c) 2002, Uli Galizzi, Ariane Seiler, Mario Strasser
@@ -3072,7 +3132,7 @@ an LDAP-based lookup mechanism will be supported.
 				scepclient:
 
                Copyright (c) 2005, Jan Hutter, Martin Willi
-               Copyright (c) 2005-2006, Andreas Steffen
+               Copyright (c) 2005-2007, Andreas Steffen
 
         University of Applied Sciences in Rapperswil, Switzerland
 
@@ -3087,5 +3147,5 @@ an LDAP-based lookup mechanism will be supported.
   for more details.
 -----------------------------------------------------------------------------
 
-This file is RCSID $Id: README,v 1.33 2006/04/24 21:27:49 as Exp $
+This file is RCSID $Id: README,v 1.38 2007/01/14 18:16:51 as Exp $
 
