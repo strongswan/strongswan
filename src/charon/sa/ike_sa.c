@@ -498,6 +498,23 @@ static void dpd_detected(private_ike_sa_t *this)
 		}
 		child_sa->destroy(child_sa);
 	}
+	
+	/* send a proper signal to brief interested bus listeners */
+	switch (this->state)
+	{
+		case IKE_CONNECTING:
+			SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
+			break;
+		case IKE_REKEYING:
+			SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
+			break;
+		case IKE_DELETING:
+			SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
+			break;
+		default:
+			break;
+	}
+	
 	DESTROY_IF(connection);
 }
 
