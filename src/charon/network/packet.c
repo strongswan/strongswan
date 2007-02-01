@@ -130,7 +130,7 @@ static void destroy(private_packet_t *this)
 /**
  * Implements packet_t.clone.
  */
-static packet_t *clone(private_packet_t *this)
+static packet_t *clone_(private_packet_t *this)
 {
 	private_packet_t *other = (private_packet_t*)packet_create();
 	
@@ -163,7 +163,7 @@ packet_t *packet_create(void)
 	this->public.get_source = (host_t*(*) (packet_t *)) get_source;
 	this->public.set_destination = (void(*) (packet_t *,host_t*)) set_destination;
 	this->public.get_destination = (host_t*(*) (packet_t *)) get_destination;
-	this->public.clone = (packet_t*(*) (packet_t *))clone;
+	this->public.clone = (packet_t*(*) (packet_t *))clone_;
 	this->public.destroy = (void(*) (packet_t *)) destroy;
 	
 	this->destination = NULL;

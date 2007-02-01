@@ -248,7 +248,7 @@ static void set_port(private_host_t *this, u_int16_t port)
 /**
  * Implements host_t.clone.
  */
-static private_host_t *clone(private_host_t *this)
+static private_host_t *clone_(private_host_t *this)
 {
 	private_host_t *new = malloc_thing(private_host_t);
 	
@@ -368,7 +368,7 @@ static private_host_t *host_create_empty(void)
 	
 	this->public.get_sockaddr = (sockaddr_t* (*) (host_t*))get_sockaddr;
 	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
-	this->public.clone = (host_t* (*) (host_t*))clone;
+	this->public.clone = (host_t* (*) (host_t*))clone_;
 	this->public.get_family = (int (*) (host_t*))get_family;
 	this->public.get_address = (chunk_t (*) (host_t *)) get_address;
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;

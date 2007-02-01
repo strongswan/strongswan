@@ -921,7 +921,7 @@ static void __attribute__ ((constructor))print_register()
 /**
  * Implementation of identification_t.clone.
  */
-static identification_t *clone(private_identification_t *this)
+static identification_t *clone_(private_identification_t *this)
 {
 	private_identification_t *clone = identification_create();
 	
@@ -952,7 +952,7 @@ static private_identification_t *identification_create(void)
 	this->public.get_encoding = (chunk_t (*) (identification_t*))get_encoding;
 	this->public.get_type = (id_type_t (*) (identification_t*))get_type;
 	this->public.contains_wildcards = (bool (*) (identification_t *this))contains_wildcards;
-	this->public.clone = (identification_t* (*) (identification_t*))clone;
+	this->public.clone = (identification_t* (*) (identification_t*))clone_;
 	this->public.destroy = (void (*) (identification_t*))destroy;
 	/* we use these as defaults, the may be overloaded for special ID types */
 	this->public.equals = (bool (*) (identification_t*,identification_t*))equals_binary;

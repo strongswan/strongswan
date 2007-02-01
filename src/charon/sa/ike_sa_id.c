@@ -147,7 +147,7 @@ static bool switch_initiator(private_ike_sa_id_t *this)
 /**
  * Implementation of ike_sa_id_t.clone.
  */
-static ike_sa_id_t* clone(private_ike_sa_id_t *this)
+static ike_sa_id_t* clone_(private_ike_sa_id_t *this)
 {
 	return ike_sa_id_create(this->initiator_spi, this->responder_spi, this->is_initiator_flag);
 }
@@ -203,7 +203,7 @@ ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi,
 	this->public.replace_values = (void(*)(ike_sa_id_t*,ike_sa_id_t*)) replace_values;
 	this->public.is_initiator = (bool(*)(ike_sa_id_t*)) is_initiator;
 	this->public.switch_initiator = (bool(*)(ike_sa_id_t*)) switch_initiator;
-	this->public.clone = (ike_sa_id_t*(*)(ike_sa_id_t*)) clone;
+	this->public.clone = (ike_sa_id_t*(*)(ike_sa_id_t*)) clone_;
 	this->public.destroy = (void(*)(ike_sa_id_t*))destroy;
 
 	/* private data */

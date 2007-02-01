@@ -1,6 +1,12 @@
 #!/bin/bash
-make install || exit
-ipsec start --nofork &
+CMD=`tempfile`
+LOG="debug.log"
+ipsec start --nofork 2>&1 > $LOG &
 sleep 1
-gdb /usr/local/libexec/ipsec/charon `cat /var/run/charon.pid`
+echo >> $LOG
+echo >> $LOG
+echo >> $LOG
+echo "c" > $CMD
+gdb -batch /usr/local/libexec/ipsec/charon `cat /var/run/charon.pid ` -x $CMD 2>&1 >> $LOG
 ipsec stop
+rm $CMD
