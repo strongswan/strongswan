@@ -391,6 +391,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
  */
 static bool is_local_address(private_socket_t *this, host_t *host, char **dev)
 {
+#ifdef HAVE_GETIFADDRS
 	struct ifaddrs *list;
 	struct ifaddrs *cur;
 	bool found = FALSE;
@@ -456,14 +457,50 @@ static bool is_local_address(private_socket_t *this, host_t *host, char **dev)
 	}
 	freeifaddrs(list);
 	return found;
-}
+#else /* !HAVE_GETIFADDRS */
+    
+    int skt = socket(AF_INET, SOCK_DGRAM, 0);
+    struct ifconf conf;
+    struct ifreq reqs[16];
+    
+    conf.ifc_len = sizeof(reqs);
+    conf.ifc_req = reqs;
 
+    if (ioctl(skt, SIOCGIFCONF, &conf) == -1)
+    {
+        DBG1(DBG_NET, "checking address using ioctl() failed: %m");
+        close(skt);
+        return FALSE;
+    }
+    close(skt);
+    
+    while (conf.ifc_len >= sizeof(struct ifreq))
+    {
+        /* only IPv4 supported yet */
+        if (conf.ifc_req->ifr_addr.sa_family == AF_INET && 
+            host->get_family(host) == AF_INET)
+        {
+            struct sockaddr_in *listed, *requested;
+			listed = (struct sockaddr_in*)&conf.ifc_req->ifr_addr;
+			requested = (struct sockaddr_in*)host->get_sockaddr(host);
+			if (listed->sin_addr.s_addr == requested->sin_addr.s_addr)
+			{
+				return TRUE;
+			}
+        }
+        conf.ifc_len -= sizeof(struct ifreq);
+        conf.ifc_req++;    
+    }
+    return FALSE;
+#endif /* HAVE_GETIFADDRS */
+}
 
 /**
  * implements socket_t.create_local_address_list
  */
 static linked_list_t* create_local_address_list(private_socket_t *this)
 {
+#ifdef HAVE_GETIFADDRS
 	struct ifaddrs *list;
 	struct ifaddrs *cur;
 	host_t *host;
@@ -493,6 +530,43 @@ static linked_list_t* create_local_address_list(private_socket_t *this)
 	}
 	freeifaddrs(list);
 	return result;
+#else /* !HAVE_GETIFADDRS */
+    int skt = socket(AF_INET, SOCK_DGRAM, 0);
+    struct ifconf conf;
+    struct ifreq reqs[16];
+	linked_list_t *result = linked_list_create();
+	host_t *host;
+    
+    conf.ifc_len = sizeof(reqs);
+    conf.ifc_req = reqs;
+
+    if (ioctl(skt, SIOCGIFCONF, &conf) == -1)
+    {
+        DBG1(DBG_NET, "getting address list using ioctl() failed: %m");
+        close(skt);
+        return FALSE;
+    }
+    close(skt);
+    
+    while (conf.ifc_len >= sizeof(struct ifreq))
+    {
+        /* only IPv4 supported yet */
+        if (conf.ifc_req->ifr_addr.sa_family == AF_INET)
+        {
+            host = host_create_from_sockaddr(&conf.ifc_req->ifr_addr);
+    		if (host)
+    		{
+    			/* we use always the IKEv2 port. This is relevant for
+    			 * natd payload hashing. */
+    			host->set_port(host, this->port);
+    			result->insert_last(result, host);
+    		}
+        }
+        conf.ifc_len -= sizeof(struct ifreq);
+        conf.ifc_req++;    
+    }
+    return result;
+#endif /* HAVE_GETIFADDRS */
 }
 
 /**
