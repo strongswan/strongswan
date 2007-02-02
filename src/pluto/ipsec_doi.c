@@ -1772,7 +1772,7 @@ RSA_check_signature(const struct id* peer
     {
 	char id_buf[BUF_LEN];	/* arbitrary limit on length of ID reported */
 
-	(void) idtoa(&st->st_connection->spd.that.id, id_buf, sizeof(id_buf));
+	(void) idtoa(peer, id_buf, sizeof(id_buf));
 
 	if (s.best_ugh == NULL)
 	{
