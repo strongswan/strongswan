@@ -41,7 +41,7 @@ Contents
 	6.1 Loading private key files in PKCS#1 format
 	6.2 Entering passphrases interactively
 	6.3 Multiple private keys
-   7. Configuring CA properties - ipsec.onf
+   7. Configuring CA properties - ipsec.conf
    8. Smartcard support
 	8.1 Configuring a smartcard-based connection
 	8.2 Entering the PIN code
