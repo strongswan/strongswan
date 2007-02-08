@@ -191,15 +191,8 @@ static status_t verify(private_notify_payload_t *this)
 	{
 		case PROTO_NONE:
 		case PROTO_IKE:
-			break;
 		case PROTO_AH:
 		case PROTO_ESP:
-			if (this->spi.len != 4)
-			{
-				DBG1(DBG_ENC, "Invalid SPI size for %N", 
-					 protocol_id_names, this->protocol_id);
-				return FAILED;
-			}
 			break;
 		default:
 			DBG1(DBG_ENC, "Unknown protocol (%d)", this->protocol_id);
@@ -364,10 +357,14 @@ static u_int32_t get_spi(private_notify_payload_t *this)
 	{
 		case PROTO_AH:
 		case PROTO_ESP:
-			return *((u_int32_t*)this->spi.ptr);
+			if (this->spi.len == 4)
+			{
+				return *((u_int32_t*)this->spi.ptr);
+			}
 		default:
-			return 0;
+			break;
 	}
+	return 0;
 }
 
 /**
