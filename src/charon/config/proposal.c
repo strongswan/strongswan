@@ -391,7 +391,11 @@ static proposal_t *clone_(private_proposal_t *this)
 
 static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 {
-	if (strncmp(alg.ptr, "aes128", alg.len) == 0)
+	if (strncmp(alg.ptr, "null", alg.len) == 0)
+	{
+		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_NULL, 0);
+	}
+	else if (strncmp(alg.ptr, "aes128", alg.len) == 0)
 	{
 		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 128);
 	}
