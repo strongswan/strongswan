@@ -440,22 +440,22 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	now = time(NULL);
 	
-	written += fprintf(stream, "%#T, revoked certs: %d\n", &this->installed, utc,
+	written += fprintf(stream, "%#T, revoked certs: %d\n", this->installed, utc,
 					   this->revokedCertificates->get_count(this->revokedCertificates));
 	written += fprintf(stream, "    issuer:    '%D'\n", this->issuer);
-	written += fprintf(stream, "    updates:    this %#T\n", &this->thisUpdate, utc);
-	written += fprintf(stream, "                next %#T ",  &this->nextUpdate, utc);
+	written += fprintf(stream, "    updates:    this %#T\n", this->thisUpdate, utc);
+	written += fprintf(stream, "                next %#T ",  this->nextUpdate, utc);
 	if (this->nextUpdate == UNDEFINED_TIME)
 	{
 		written += fprintf(stream, "ok (expires never)");
 	}
 	else if (now > this->nextUpdate)
 	{
-		written += fprintf(stream, "expired (since %V)", &now, &this->nextUpdate);
+		written += fprintf(stream, "expired (since %V)", now, this->nextUpdate);
 	}
 	else if (now > this->nextUpdate - CRL_WARNING_INTERVAL * 60 * 60 * 24)
 	{
-		written += fprintf(stream, "ok (expires in %V)", &now, &this->nextUpdate);
+		written += fprintf(stream, "ok (expires in %V)", now, this->nextUpdate);
 	}
 	else
 	{
