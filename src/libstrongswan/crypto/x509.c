@@ -886,9 +886,9 @@ static err_t is_valid(const private_x509_t *this, time_t *until)
 {
 	time_t current_time = time(NULL);
 	
-	DBG2("  not before  : %T", this->notBefore);
-	DBG2("  current time: %T", current_time);
-	DBG2("  not after   : %T", this->notAfter);
+	DBG2("  not before  : %T", &this->notBefore);
+	DBG2("  current time: %T", &current_time);
+	DBG2("  not after   : %T", &this->notAfter);
 
 	if (until != NULL &&
 		(*until == UNDEFINED_TIME || this->notAfter < *until))
@@ -1068,7 +1068,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	/* determine the current time */
 	time_t now = time(NULL);
 
-	written += fprintf(stream, "%#T\n", this->installed, utc);
+	written += fprintf(stream, "%#T\n", &this->installed, utc);
 
 	if (this->subjectAltNames->get_count(this->subjectAltNames))
 	{
@@ -1095,20 +1095,20 @@ static int print(FILE *stream, const struct printf_info *info,
 	written += fprintf(stream, "    subject:   '%D'\n", this->subject);
 	written += fprintf(stream, "    issuer:    '%D'\n", this->issuer);
 	written += fprintf(stream, "    serial:     %#B\n", &this->serialNumber);
-	written += fprintf(stream, "    validity:   not before %#T, ", this->notBefore, utc);
+	written += fprintf(stream, "    validity:   not before %#T, ", &this->notBefore, utc);
 	if (now < this->notBefore)
 	{
-		written += fprintf(stream, "not valid yet (valid in %V)\n", now, this->notBefore);
+		written += fprintf(stream, "not valid yet (valid in %V)\n", &now, &this->notBefore);
 	}
 	else
 	{
-		written += fprintf(stream, "ok (expires in %V)\n", now, this->notAfter);
+		written += fprintf(stream, "ok\n");
 	}
 	
-	written += fprintf(stream, "                not after  %#T, ", this->notAfter, utc);
+	written += fprintf(stream, "                not after  %#T, ", &this->notAfter, utc);
 	if (now > this->notAfter)
 	{
-		written += fprintf(stream, "expired (since %V)\n", now, this->notAfter);
+		written += fprintf(stream, "expired (since %V)\n", &now, &this->notAfter);
 	}
 	else
 	{
@@ -1146,10 +1146,10 @@ static int print(FILE *stream, const struct printf_info *info,
 	switch (this->status)
 	{
 		case CERT_GOOD:
-			written += fprintf(stream, " until %#T", this->until, utc);
+			written += fprintf(stream, " until %#T", &this->until, utc);
 			break;
 		case CERT_REVOKED:
-			written += fprintf(stream, " on %#T", this->until, utc);
+			written += fprintf(stream, " on %#T", &this->until, utc);
 			break;
 		case CERT_UNKNOWN:
 		case CERT_UNDEFINED:

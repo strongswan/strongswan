@@ -36,9 +36,9 @@
 #define PRINTF_CHUNK			'B'
 /** 2 arguments: u_char *buffer, int size */
 #define PRINTF_BYTES			'b'
-/** 1 argument: time_t time; with #-modifier 2 arguments: time_t time, bool utc */
+/** 1 argument: time_t *time; with #-modifier 2 arguments: time_t *time, bool utc */
 #define PRINTF_TIME				'T'
-/** 2 arguments: time_t begin, time_t end */
+/** 2 arguments: time_t *begin, time_t *end */
 #define PRINTF_TIME_DELTA		'V'
 /** 1 argument: x509_t *cert; with #-modifier 2 arguments: x509_t *cert, bool utc */
 #define PRINTF_X509				'Q'

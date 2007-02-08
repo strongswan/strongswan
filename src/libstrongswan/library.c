@@ -105,7 +105,7 @@ static int print_time(FILE *stream, const struct printf_info *info,
 		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 	};
-	time_t time = *((time_t*)(args[0]));
+	time_t *time = *((time_t**)(args[0]));
 	bool utc = TRUE;
 	struct tm t;
 	
@@ -120,11 +120,11 @@ static int print_time(FILE *stream, const struct printf_info *info,
 	}
 	if (utc)
 	{
-		gmtime_r(&time, &t);
+		gmtime_r(time, &t);
 	}
 	else
 	{
-		localtime_r(&time, &t);
+		localtime_r(time, &t);
 	}
 	return fprintf(stream, "%s %02d %02d:%02d:%02d%s%04d",
 				   months[t.tm_mon], t.tm_mday, t.tm_hour, t.tm_min,
@@ -137,9 +137,9 @@ static int print_time(FILE *stream, const struct printf_info *info,
 static int print_time_delta(FILE *stream, const struct printf_info *info,
 							const void *const *args)
 {
-	time_t start = *((time_t*)(args[0]));
-	time_t end   = *((time_t*)(args[1]));
-	u_int delta   = abs(end - start);
+	time_t *start = *((time_t**)(args[0]));
+	time_t *end   = *((time_t**)(args[1]));
+	u_int delta   = abs(*end - *start);
 
 	char* unit = "second";
 
@@ -166,6 +166,6 @@ static int print_time_delta(FILE *stream, const struct printf_info *info,
  */
 static void __attribute__ ((constructor))print_register()
 {
-	register_printf_function(PRINTF_TIME, print_time, arginfo_int_alt_int_int);
-	register_printf_function(PRINTF_TIME_DELTA, print_time_delta, arginfo_int_int);
+	register_printf_function(PRINTF_TIME, print_time, arginfo_ptr_alt_ptr_int);
+	register_printf_function(PRINTF_TIME_DELTA, print_time_delta, arginfo_ptr_ptr);
 }

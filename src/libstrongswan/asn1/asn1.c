@@ -313,7 +313,9 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type, bool private)
 		case ASN1_UTCTIME:
 		case ASN1_GENERALIZEDTIME:
 			{
-				DBG2("  '%T'", asn1totime(&object, type));
+				time_t time = asn1totime(&object, type);
+
+				DBG2("  '%T'", &time);
 			}
 			return;
 		default:
