@@ -599,7 +599,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 						time_t revocationTime = certinfo->get_revocationTime(certinfo);
 						DBG1(DBG_CFG,
 							 "certificate was revoked on %T, reason: %N",
-							 revocationTime, crl_reason_names,
+							 &revocationTime, crl_reason_names,
 							 certinfo->get_revocationReason(certinfo));
 
 						/* set revocationTime */
