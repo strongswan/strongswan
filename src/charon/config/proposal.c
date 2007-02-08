@@ -538,10 +538,12 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_BLOWFISH,   256);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96, 0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,  0);
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 			break;
 		case PROTO_AH:
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96, 0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,  0);
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 			break;
 		default:
 			break;
@@ -582,5 +584,9 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 		return NULL;
 	}
 	
+	if (protocol == PROTO_AH || protocol == PROTO_ESP)
+	{
+		add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+	}
 	return &this->public;
 }
