@@ -88,8 +88,10 @@ enum notify_type_t {
 	NO_NATS_ALLOWED = 16402,
 	/* repeated authentication extension, RFC4478 */
 	AUTH_LIFETIME = 16403,
+	/* draft-eronen-ipsec-ikev2-eap-auth, not assigned by IANA yet */
+	EAP_ONLY_AUTHENTICATION = 40960,
 	/* BEET mode, not even a draft yet. private use */
-	USE_BEET_MODE = 40960,
+	USE_BEET_MODE = 40961,
 };
 
 /**

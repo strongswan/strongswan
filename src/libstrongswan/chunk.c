@@ -35,13 +35,22 @@ chunk_t chunk_empty = { NULL, 0 };
 /**
  * Described in header.
  */
-chunk_t chunk_clone(chunk_t chunk)
+chunk_t chunk_create(u_char *ptr, size_t len)
+{
+	chunk_t chunk = {ptr, len};
+	return chunk;
+}
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_create_clone(u_char *ptr, chunk_t chunk)
 {
 	chunk_t clone = chunk_empty;
 	
 	if (chunk.ptr && chunk.len > 0)
 	{
-		clone.ptr = malloc(chunk.len);
+		clone.ptr = ptr;
 		clone.len = chunk.len;
 		memcpy(clone.ptr, chunk.ptr, chunk.len);
 	}
@@ -52,50 +61,150 @@ chunk_t chunk_clone(chunk_t chunk)
 /**
  * Decribed in header.
  */
-chunk_t chunk_cat(const char* mode, ...)
+size_t chunk_length(const char* mode, ...)
 {
-	chunk_t construct;
 	va_list chunks;
-	u_char *pos;
-	int i;
-	int count = strlen(mode);
-
-	/* sum up lengths of individual chunks */
+	size_t length = 0;
+	
 	va_start(chunks, mode);
-	construct.len = 0;
-	for (i = 0; i < count; i++)
+	while (TRUE)
 	{
-		chunk_t ch = va_arg(chunks, chunk_t);
-		construct.len += ch.len;
-	}
-	va_end(chunks);
-
-	/* allocate needed memory for construct */
-	construct.ptr = malloc(construct.len);
-	pos = construct.ptr;
-
-	/* copy or move the chunks */
-	va_start(chunks, mode);
-	for (i = 0; i < count; i++)
-	{
-		chunk_t ch = va_arg(chunks, chunk_t);
 		switch (*mode++)
 		{
 			case 'm':
-				memcpy(pos, ch.ptr, ch.len); 
-				pos += ch.len;
-				free(ch.ptr);
-				break;
 			case 'c':
+			{
+				chunk_t ch = va_arg(chunks, chunk_t);
+				length += ch.len;
+				continue;
+			}
 			default:
-				memcpy(pos, ch.ptr, ch.len); 
-				pos += ch.len;
+				break;
 		}
+		break;
+	}
+	va_end(chunks);
+	return length;
+}
+
+/**
+ * Decribed in header.
+ */
+chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...)
+{
+	va_list chunks;
+	chunk_t construct = chunk_create(ptr, 0);
+	
+	va_start(chunks, mode);
+	while (TRUE)
+	{
+		bool free_chunk = FALSE;
+		switch (*mode++)
+		{
+			case 'm':
+			{
+				free_chunk = TRUE;
+			}
+			case 'c':
+			{
+				chunk_t ch = va_arg(chunks, chunk_t);
+				memcpy(ptr, ch.ptr, ch.len); 
+				ptr += ch.len;
+				construct.len += ch.len;
+				if (free_chunk)
+				{
+					free(ch.ptr);
+				}
+				continue;
+			}
+			default:
+				break;
+		}
+		break;
 	}
 	va_end(chunks);
 	
 	return construct;
 }
+
+/**
+ * Decribed in header.
+ */
+void chunk_split(chunk_t chunk, const char *mode, ...)
+{
+	va_list chunks;
+	size_t len;
+	chunk_t *ch;
+	
+	va_start(chunks, mode);
+	while (TRUE)
+	{
+		if (*mode == '\0')
+		{
+			break;
+		}
+		len = va_arg(chunks, size_t);
+		ch = va_arg(chunks, chunk_t*);
+		/* a null chunk means skip len bytes */
+		if (ch == NULL)
+		{
+			chunk = chunk_skip(chunk, len);
+			continue;
+		}
+		switch (*mode++)
+		{
+			case 'm':
+			{
+				ch->len = min(chunk.len, len);
+				if (ch->len)
+				{
+					ch->ptr = chunk.ptr;
+				}
+				else
+				{
+					ch->ptr = NULL;
+				}
+				chunk = chunk_skip(chunk, ch->len);
+				continue;
+			}
+			case 'a':
+			{
+				ch->len = min(chunk.len, len);
+				if (ch->len)
+				{
+					ch->ptr = malloc(ch->len);
+					memcpy(ch->ptr, chunk.ptr, ch->len);
+				}
+				else
+				{
+					ch->ptr = NULL;
+				}
+				chunk = chunk_skip(chunk, ch->len);
+				continue;
+			}
+			case 'c':
+			{
+				ch->len = min(ch->len, chunk.len);
+				ch->len = min(ch->len, len);
+				if (ch->len)
+				{
+					memcpy(ch->ptr, chunk.ptr, ch->len);
+				}
+				else
+				{
+					ch->ptr = NULL;
+				}
+				chunk = chunk_skip(chunk, ch->len);
+				continue;
+			}
+			default:
+				break;
+		}
+		break;
+	}
+	va_end(chunks);
+}
+
 
 /**
  * Described in header.
@@ -110,12 +219,15 @@ void chunk_free(chunk_t *chunk)
 /**
  * Described in header.
  */
-chunk_t chunk_alloc(size_t bytes)
+chunk_t chunk_skip(chunk_t chunk, size_t bytes)
 {
-	chunk_t new_chunk;
-	new_chunk.ptr = malloc(bytes);
-	new_chunk.len = bytes;
-	return new_chunk;
+	if (chunk.len > bytes)
+	{
+		chunk.ptr += bytes;
+		chunk.len -= bytes;
+		return chunk;
+	}
+	return chunk_empty;
 }
 
 /**

@@ -454,8 +454,7 @@ static void dpd_detected(private_ike_sa_t *this)
 		policy = charon->policies->get_policy(charon->policies,
 											  this->my_id, this->other_id,
 											  my_ts, other_ts,
-											  this->my_host, this->other_host,
-											  NULL);
+											  this->my_host, this->other_host);
 		if (policy == NULL)
 		{
 			DBG1(DBG_IKE, "no policy for CHILD to handle DPD");
@@ -1021,8 +1020,7 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	policy = charon->policies->get_policy(charon->policies, 
 										  this->my_id, this->other_id, 
 										  my_ts, other_ts, 
-										  this->my_host, this->other_host,
-										  NULL);
+										  this->my_host, this->other_host);
 	if (policy == NULL)
 	{
 		SIG(CHILD_UP_START, "acquiring CHILD_SA with reqid %d", reqid);
@@ -1878,7 +1876,7 @@ static status_t reauth(private_ike_sa_t *this)
 		other_ts = child_sa->get_other_traffic_selectors(child_sa);
 		policy = charon->policies->get_policy(charon->policies,
 						this->my_id, this->other_id, my_ts, other_ts,
-						this->my_host, this->other_host, NULL);
+						this->my_host, this->other_host);
 		if (policy == NULL)
 		{
 			DBG1(DBG_IKE, "policy not found to recreate CHILD_SA, skipped");

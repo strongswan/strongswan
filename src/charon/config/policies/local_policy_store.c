@@ -92,8 +92,7 @@ static bool contains_traffic_selectors(policy_t *policy, bool mine,
 static policy_t *get_policy(private_local_policy_store_t *this, 
 							identification_t *my_id, identification_t *other_id,
 						    linked_list_t *my_ts, linked_list_t *other_ts,
-						    host_t *my_host, host_t *other_host,
-							linked_list_t *requested_ca_keyids)
+						    host_t *my_host, host_t *other_host)
 {
 	typedef enum {
 		PRIO_UNDEFINED = 	0x00,
@@ -254,7 +253,7 @@ local_policy_store_t *local_policy_store_create(void)
 	
 	this->public.policy_store.add_policy = (void (*) (policy_store_t*,policy_t*))add_policy;
 	this->public.policy_store.get_policy = (policy_t* (*) (policy_store_t*,identification_t*,identification_t*,
-											linked_list_t*,linked_list_t*,host_t*,host_t*,linked_list_t*))get_policy;
+											linked_list_t*,linked_list_t*,host_t*,host_t*))get_policy;
 	this->public.policy_store.get_policy_by_name = (policy_t* (*) (policy_store_t*,char*))get_policy_by_name;
 	this->public.policy_store.delete_policy = (status_t (*) (policy_store_t*,char*))delete_policy;
 	this->public.policy_store.create_iterator = (iterator_t* (*) (policy_store_t*))create_iterator;

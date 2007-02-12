@@ -42,6 +42,7 @@
 #include <config/credentials/local_credential_store.h>
 #include <config/connections/local_connection_store.h>
 #include <config/policies/local_policy_store.h>
+#include <sa/authenticators/eap/eap_method.h>
 
 
 typedef struct private_daemon_t private_daemon_t;
@@ -393,6 +394,7 @@ int main(int argc, char *argv[])
 {
 	bool strict_crl_policy = FALSE;
 	bool use_syslog = FALSE;
+	char *eapdir = IPSEC_EAPDIR;
 
 	private_daemon_t *private_charon;
 	FILE *pid_file;
@@ -416,6 +418,7 @@ int main(int argc, char *argv[])
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
 			{ "strictcrlpolicy", no_argument, NULL, 'r' },
+			{ "eapdir", required_argument, NULL, 'e' },
 			/* TODO: handle "debug-all" */
 			{ "debug-dmn", required_argument, &signal, DBG_DMN },
 			{ "debug-mgr", required_argument, &signal, DBG_MGR },
@@ -447,6 +450,9 @@ int main(int argc, char *argv[])
 			case 'r':
 				strict_crl_policy = TRUE;
 				continue;
+			case 'e':
+				eapdir = optarg;
+				continue;
 			case 0:
 				/* option is in signal */
 				levels[signal] = atoi(optarg);
@@ -463,6 +469,8 @@ int main(int argc, char *argv[])
 	
 	/* initialize daemon */
 	initialize(private_charon, strict_crl_policy, use_syslog, levels);
+	/* load pluggable EAP modules */
+	eap_method_load(eapdir);
 	
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)
@@ -477,6 +485,7 @@ int main(int argc, char *argv[])
 		fprintf(pid_file, "%d\n", getpid());
 		fclose(pid_file);
 	}
+	
 	/* log socket info */
 	list = charon->socket->create_local_address_list(charon->socket);
 	DBG1(DBG_NET, "listening on %d addresses:", list->get_count(list));
@@ -490,6 +499,7 @@ int main(int argc, char *argv[])
 	/* run daemon */
 	run(private_charon);
 	
+	eap_method_unload();
 	/* normal termination, cleanup and exit */
 	destroy(private_charon);
 	unlink(PID_FILE);

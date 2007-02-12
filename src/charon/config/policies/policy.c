@@ -84,6 +84,11 @@ struct private_policy_t {
 	auth_method_t auth_method;
 	
 	/**
+	 * EAP type to use for peer authentication
+	 */
+	eap_type_t eap_type;
+	
+	/**
 	 * we have a cert issued by this CA
 	 */
 	identification_t *my_ca;
@@ -191,6 +196,14 @@ static identification_t *get_other_ca(private_policy_t *this)
 static auth_method_t get_auth_method(private_policy_t *this)
 {
 	return this->auth_method;
+}
+
+/**
+ * Implementation of connection_t.get_eap_type.
+ */
+static eap_type_t get_eap_type(private_policy_t *this)
+{
+	return this->eap_type;
 }
 
 /**
@@ -492,7 +505,7 @@ static void destroy(private_policy_t *this)
  * Described in header-file
  */
 policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id,
-						auth_method_t auth_method,
+						auth_method_t auth_method, eap_type_t eap_type,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
 						u_int32_t jitter, char *updown, bool hostaccess,
 						mode_t mode, dpd_action_t dpd_action)
@@ -506,6 +519,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.get_my_ca = (identification_t* (*) (policy_t*))get_my_ca;
 	this->public.get_other_ca = (identification_t* (*) (policy_t*))get_other_ca;
 	this->public.get_auth_method = (auth_method_t (*) (policy_t*)) get_auth_method;
+	this->public.get_eap_type = (eap_type_t (*) (policy_t*)) get_eap_type;
 	this->public.get_my_traffic_selectors = (linked_list_t* (*) (policy_t*,host_t*))get_my_traffic_selectors;
 	this->public.get_other_traffic_selectors = (linked_list_t* (*) (policy_t*,host_t*))get_other_traffic_selectors;
 	this->public.select_my_traffic_selectors = (linked_list_t* (*) (policy_t*,linked_list_t*,host_t*))select_my_traffic_selectors;
@@ -530,6 +544,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->my_id = my_id;
 	this->other_id = other_id;
 	this->auth_method = auth_method;
+	this->eap_type = eap_type;
 	this->hard_lifetime = hard_lifetime;
 	this->soft_lifetime = soft_lifetime;
 	this->jitter = jitter;

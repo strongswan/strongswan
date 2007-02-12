@@ -37,29 +37,13 @@
 #include "files.h"
 
 /**
- * AUTH Method to use.
- * 
- * @ingroup config
+ * Authentication mehtods, must be the same values as in charon
  */
 enum auth_method_t {
-	/**
-	 * Computed as specified in section 2.15 of RFC using 
-	 * an RSA private key over a PKCS#1 padded hash.
-	 */
-	RSA_DIGITAL_SIGNATURE = 1,
-	
-	/** 
-	 * Computed as specified in section 2.15 of RFC using the 
-	 * shared key associated with the identity in the ID payload 
-	 * and the negotiated prf function
-	 */
-	SHARED_KEY_MESSAGE_INTEGRITY_CODE = 2,
-	
-	/**
-	 * Computed as specified in section 2.15 of RFC using a 
-	 * DSS private key over a SHA-1 hash.
-	 */
-	DSS_DIGITAL_SIGNATURE = 3,
+	AUTH_RSA = 1,
+	AUTH_PSK = 2,
+	AUTH_DSS = 3,
+	AUTH_EAP = 201,
 };
 
 static char* push_string(stroke_msg_t *msg, char *string)
@@ -192,8 +176,22 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.add_conn.ikev2 = conn->keyexchange == KEY_EXCHANGE_IKEV2;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
-	msg.add_conn.auth_method = (conn->policy & POLICY_PSK)?
-		SHARED_KEY_MESSAGE_INTEGRITY_CODE : RSA_DIGITAL_SIGNATURE;
+	
+	/* RSA is preferred before PSK and EAP */
+	if (conn->policy & POLICY_RSASIG)
+	{
+		msg.add_conn.auth_method = AUTH_RSA;
+	}
+	else if (conn->policy & POLICY_PSK)
+	{
+		msg.add_conn.auth_method = AUTH_PSK;
+	}
+	else
+	{
+		msg.add_conn.auth_method = AUTH_EAP;
+	}
+	msg.add_conn.eap_type = conn->eap;
+	
 	if (conn->policy & POLICY_TUNNEL)
 	{
 		msg.add_conn.mode = 1; /* XFRM_MODE_TRANSPORT */

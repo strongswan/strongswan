@@ -31,11 +31,10 @@ typedef struct prf_t prf_t;
 
 /**
  * @brief Pseudo random function, as in IKEv2 RFC 3.3.2.
- * 
- * Currently only the following algorithms are implemented:
- * - PRF_HMAC_MD5
- * - PRF_HMAC_SHA1
- * 
+ *
+ * PRF algorithms not defined in IKEv2 are allocated in "private use"
+ * space.
+ *
  * @ingroup prfs
  */
 enum pseudo_random_function_t {
@@ -46,6 +45,10 @@ enum pseudo_random_function_t {
 	PRF_HMAC_SHA1 = 2,
 	PRF_HMAC_TIGER = 3,
 	PRF_AES128_CBC = 4,
+	/** Implemented via fips_prf_t, other output sizes would be possible */
+	PRF_FIPS_SHA1_160 = 1025,
+	/** Could be implemented via fips_prf_t, uses fixed output size of 160bit */
+	PRF_FIPS_DES = 1026,
 };
 
 /**
@@ -93,6 +96,9 @@ struct prf_t {
 	
 	/**
 	 * @brief Get the key size of this prf_t object.
+	 *
+	 * This is a suggestion only, all implemented PRFs accept variable key
+	 * length.
 	 * 
 	 * @param this			calling object
 	 * @return				key size in bytes

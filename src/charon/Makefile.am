@@ -1,5 +1,9 @@
 # SUBDIRS = . testing
 
+eap_LTLIBRARIES =
+
+# build optional EAP modules
+
 ipsec_PROGRAMS = charon
 
 charon_SOURCES = \
@@ -24,6 +28,8 @@ sa/transactions/rekey_ike_sa.h sa/transactions/rekey_ike_sa.c \
 sa/authenticators/authenticator.h sa/authenticators/authenticator.c \
 sa/authenticators/rsa_authenticator.h sa/authenticators/rsa_authenticator.c \
 sa/authenticators/psk_authenticator.h sa/authenticators/psk_authenticator.c \
+sa/authenticators/eap_authenticator.h sa/authenticators/eap_authenticator.c \
+sa/authenticators/eap/eap_method.h sa/authenticators/eap/eap_method.c \
 sa/child_sa.c sa/child_sa.h sa/ike_sa.c sa/ike_sa.h sa/ike_sa_manager.c sa/ike_sa_manager.h \
 sa/ike_sa_id.c sa/ike_sa_id.h encoding/payloads/encryption_payload.c \
 encoding/payloads/cert_payload.c encoding/payloads/payload.h encoding/payloads/traffic_selector_substructure.c \
@@ -59,5 +65,5 @@ threads/sender.h threads/kernel_interface.h threads/scheduler.h threads/receiver
 threads/thread_pool.h threads/receiver.h threads/stroke_interface.h
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
-AM_CFLAGS = -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\"
-charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread -lm
+AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_EAPDIR=\"${eapdir}\"
+charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread -lm -ldl

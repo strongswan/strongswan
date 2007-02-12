@@ -180,6 +180,14 @@ typedef struct daemon_t daemon_t;
  */
 
 /**
+ * @defgroup eap eap
+ *
+ * EAP authentication module interface and it's implementations.
+ *
+ * @ingroup authenticators
+ */
+
+/**
  * @defgroup threads threads
  *
  * Threaded classes, which will do their job alone.

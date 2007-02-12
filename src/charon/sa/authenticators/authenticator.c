@@ -26,6 +26,7 @@
 
 #include <sa/authenticators/rsa_authenticator.h>
 #include <sa/authenticators/psk_authenticator.h>
+#include <sa/authenticators/eap_authenticator.h>
 
 
 ENUM_BEGIN(auth_method_names, AUTH_RSA, AUTH_DSS,
@@ -47,6 +48,8 @@ authenticator_t *authenticator_create(ike_sa_t *ike_sa, auth_method_t auth_metho
 			return (authenticator_t*)rsa_authenticator_create(ike_sa);
 		case AUTH_PSK:
 			return (authenticator_t*)psk_authenticator_create(ike_sa);
+		case AUTH_EAP:
+			return (authenticator_t*)eap_authenticator_create(ike_sa);
 		default:
 			return NULL;
 	}

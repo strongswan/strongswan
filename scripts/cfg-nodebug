@@ -1,2 +1,3 @@
 #!/bin/bash
-CFLAGS="-Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing -O2 -DDEBUG_LEVEL=0" ./configure --sysconfdir=/etc --with-random-device=/dev/urandom --enable-ldap --enable-http
+CFLAGS="-Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing -O2 -DDEBUG_LEVEL=0" ./configure \
+--sysconfdir=/etc --with-random-device=/dev/urandom --enable-ldap --enable-http

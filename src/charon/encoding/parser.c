@@ -626,7 +626,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;					
+				break;
 			}
 			case U_INT_32:
 			{
@@ -635,7 +635,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;		
+				break;
 			}
 			case U_INT_64:
 			{
@@ -644,7 +644,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;	
+				break;
 			}
 			case IKE_SPI:
 			{
@@ -653,7 +653,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;	
+				break;
 			}
 			case RESERVED_BIT:
 			{
@@ -662,7 +662,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;	
+				break;
 			}
 			case RESERVED_BYTE:
 			{
@@ -680,7 +680,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;	
+				break;
 			}
 			case PAYLOAD_LENGTH:
 			{
@@ -690,7 +690,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					return PARSE_ERROR;
 				}
 				payload_length = *(u_int16_t*)(output + rule->offset);
-				break;							
+				break;
 			}
 			case HEADER_LENGTH:
 			{
@@ -699,7 +699,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;							
+				break;
 			}
 			case SPI_SIZE:
 			{
@@ -709,7 +709,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					return PARSE_ERROR;
 				}
 				spi_size = *(u_int8_t*)(output + rule->offset);
-				break;							
+				break;
 			}
 			case SPI:
 			{
@@ -718,7 +718,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;							
+				break;
 			}
 			case PROPOSALS:
 			{
@@ -728,7 +728,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;							
+				break;
 			}
 			case TRANSFORMS:
 			{
@@ -738,7 +738,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;							
+				break;
 			}
 			case TRANSFORM_ATTRIBUTES:
 			{
@@ -748,7 +748,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;							
+				break;
 			}
 			case CONFIGURATION_ATTRIBUTES:
 			{
@@ -758,7 +758,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;							
+				break;
 			}
 			case ATTRIBUTE_FORMAT:
 			{
@@ -789,7 +789,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				}
 				attribute_length = *(u_int16_t*)(output + rule->offset);
 				break;
-			}			
+			}
 			case ATTRIBUTE_LENGTH_OR_VALUE:
 			{	
 				if (this->parse_uint16(this, rule_number, output + rule->offset) != SUCCESS) 
@@ -820,7 +820,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}		
-				break;			
+				break;
 			}
 			case ID_DATA:
 			{
@@ -830,7 +830,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}	
-				break;			
+				break;
 			}
 			case AUTH_DATA:
 			{
@@ -839,8 +839,8 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
-				break;			
+				}
+				break;
 			}
 			case CERT_DATA:
 			{
@@ -849,8 +849,8 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
-				break;			
+				}
+				break;
 			}
 			case CERTREQ_DATA:
 			{
@@ -859,18 +859,18 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
-				break;			
+				}
+				break;
 			}
-			case EAP_MESSAGE:
+			case EAP_DATA:
 			{
 				size_t data_length = payload_length - EAP_PAYLOAD_HEADER_LENGTH;
 				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
-				break;			
+				}
+				break;
 			}
 			case SPIS:
 			{

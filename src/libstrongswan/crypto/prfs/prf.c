@@ -26,10 +26,13 @@
 
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/hmac_prf.h>
+#include <crypto/prfs/fips_prf.h>
 
-ENUM_BEGIN(pseudo_random_function_names, PRF_UNDEFINED, PRF_UNDEFINED,
-	"PRF_UNDEFINED");
-ENUM_NEXT(pseudo_random_function_names, PRF_HMAC_MD5, PRF_AES128_CBC, PRF_UNDEFINED,
+ENUM_BEGIN(pseudo_random_function_names, PRF_UNDEFINED, PRF_FIPS_DES,
+	"PRF_UNDEFINED",
+	"PRF_FIPS_SHA1_160",
+	"PRF_FIPS_DES");
+ENUM_NEXT(pseudo_random_function_names, PRF_HMAC_MD5, PRF_AES128_CBC, PRF_FIPS_DES,
 	"PRF_HMAC_MD5",
 	"PRF_HMAC_SHA1",
 	"PRF_HMAC_TIGER",
@@ -44,13 +47,12 @@ prf_t *prf_create(pseudo_random_function_t pseudo_random_function)
 	switch (pseudo_random_function)
 	{
 		case PRF_HMAC_SHA1:
-		{
 			return (prf_t*)hmac_prf_create(HASH_SHA1);
-		}
 		case PRF_HMAC_MD5:
-		{
 			return (prf_t*)hmac_prf_create(HASH_MD5);
-		}
+		case PRF_FIPS_SHA1_160:
+			return (prf_t*)fips_prf_create(20, g_sha1);
+		case PRF_FIPS_DES:
 		case PRF_HMAC_TIGER:
 		case PRF_AES128_CBC:
 		default:

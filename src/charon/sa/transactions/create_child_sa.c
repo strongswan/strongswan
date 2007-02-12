@@ -291,8 +291,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 			this->policy = charon->policies->get_policy(charon->policies,
 														my_id, other_id,
 														my_ts, other_ts,
-													    me, other,
-														NULL);
+													    me, other);
 			
 			this->reqid = this->rekeyed_sa->get_reqid(this->rekeyed_sa);
 			
@@ -694,8 +693,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		this->policy = charon->policies->get_policy(charon->policies,
 													my_id, other_id,
 													my_ts, other_ts,
-												    me, other,
-													NULL);
+												    me, other);
 		if (this->policy)
 		{
 			this->tsr = this->policy->select_my_traffic_selectors(this->policy, my_ts, me);

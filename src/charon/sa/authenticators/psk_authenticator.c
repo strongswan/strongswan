@@ -1,7 +1,7 @@
 /**
- * @file authenticator.c
+ * @file psk_authenticator.c
  *
- * @brief Implementation of authenticator_t.
+ * @brief Implementation of psk_authenticator_t.
  *
  */
 
@@ -54,24 +54,35 @@ struct private_psk_authenticator_t {
 };
 
 /**
- * Function implemented in rsa_authenticator.c
+ * Builds the octets to be signed as described in section 2.15 of RFC 4306
  */
-extern chunk_t build_tbs_octets(private_psk_authenticator_t *this, chunk_t ike_sa_init,
-								chunk_t nonce, identification_t *id, prf_t *prf);
+chunk_t build_tbs_octets(chunk_t ike_sa_init, chunk_t nonce,
+						 identification_t *id, prf_t *prf)
+{
+	u_int8_t id_header_buf[] = {0x00, 0x00, 0x00, 0x00};
+	chunk_t id_header = chunk_from_buf(id_header_buf);
+	chunk_t id_with_header, id_prfd, id_encoding;
+	
+	id_header_buf[0] = id->get_type(id);
+	id_encoding = id->get_encoding(id);
+	
+	id_with_header = chunk_cat("cc", id_header, id_encoding);
+	prf->allocate_bytes(prf, id_with_header, &id_prfd);
+	chunk_free(&id_with_header);
+	
+	return chunk_cat("ccm", ike_sa_init, nonce, id_prfd);
+}
 
 /**
  * Creates the AUTH data using auth method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
  */
-static chunk_t build_shared_key_signature(private_psk_authenticator_t *this,
-										  chunk_t ike_sa_init,
-										  chunk_t nonce,
-										  chunk_t secret,
-										  identification_t *id,
-										  prf_t *prf)
+chunk_t build_shared_key_signature(chunk_t ike_sa_init, chunk_t nonce,
+								   chunk_t secret, identification_t *id,
+								   prf_t *prf)
 {
 	chunk_t key_pad, key, auth_data, octets;
 	
-	octets = build_tbs_octets(this, ike_sa_init, nonce, id, prf);
+	octets = build_tbs_octets(ike_sa_init, nonce, id, prf);
 	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
 	key_pad.ptr = IKEV2_KEY_PAD;
 	key_pad.len = IKEV2_KEY_PAD_LENGTH;
@@ -94,7 +105,7 @@ static chunk_t build_shared_key_signature(private_psk_authenticator_t *this,
  * Implementation of authenticator_t.verify.
  */
 static status_t verify(private_psk_authenticator_t *this, chunk_t ike_sa_init,
- 					   chunk_t my_nonce, auth_payload_t *auth_payload)
+ 				chunk_t my_nonce, auth_payload_t *auth_payload)
 {
 	status_t status;
 	chunk_t auth_data, recv_auth_data, shared_key;
@@ -110,7 +121,7 @@ static status_t verify(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 		return status;
 	}
 	
-	auth_data = build_shared_key_signature(this, ike_sa_init, my_nonce,
+	auth_data = build_shared_key_signature(ike_sa_init, my_nonce,
 										   shared_key, other_id,
 										   this->ike_sa->get_auth_verify(this->ike_sa));
 	chunk_free(&shared_key);
@@ -153,7 +164,7 @@ static status_t build(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 		return status;
 	}
 			
-	auth_data = build_shared_key_signature(this, ike_sa_init,
+	auth_data = build_shared_key_signature(ike_sa_init,
 										   other_nonce,  shared_key, my_id,
 										   this->ike_sa->get_auth_build(this->ike_sa));
 	DBG2(DBG_IKE, "successfully created shared key MAC");

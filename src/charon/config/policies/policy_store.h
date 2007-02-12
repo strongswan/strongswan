@@ -49,14 +49,13 @@ struct policy_store_t {
 	 * other_id must be fully qualified. my_id may be %any, as the
 	 * other peer may not include an IDr Request.
 	 *
-	 * @param this					calling object
-	 * @param my_id					own ID of the policy
-	 * @param other_id				others ID of the policy
-	 * @param my_ts					traffic selectors requested for local host
-	 * @param other_ts				traffic selectors requested for remote host
-	 * @param my_host				host to use for wilcards in TS compare
-	 * @param other_host			host to use for wildcards in TS compare
-	 * @param requested_ca_keyids	list of requested CA keyids
+	 * @param this			calling object
+	 * @param my_id			own ID of the policy
+	 * @param other_id		others ID of the policy
+	 * @param my_ts			traffic selectors requested for local host
+	 * @param other_ts		traffic selectors requested for remote host
+	 * @param my_host		host to use for wilcards in TS compare
+	 * @param other_host	host to use for wildcards in TS compare
 	 * @return
 	 *						- matching policy_t, if found
 	 *						- NULL otherwise
@@ -64,8 +63,7 @@ struct policy_store_t {
 	policy_t *(*get_policy) (policy_store_t *this, 
 							 identification_t *my_id, identification_t *other_id,
 							 linked_list_t *my_ts, linked_list_t *other_ts,
-							 host_t *my_host, host_t* other_host,
-							 linked_list_t *requested_ca_keyids);
+							 host_t *my_host, host_t* other_host);
 
 	/**
 	 * @brief Returns a policy identified by a connection name.

@@ -123,9 +123,23 @@ struct hasher_t {
 	void (*reset) (hasher_t *this);
 	
 	/**
+	 * @brief Get the state of the hasher.
+	 *
+	 * A hasher stores internal state information. This state may be
+	 * manipulated to include a "seed" into the hashing operation. It used by
+	 * some exotic protocols (such as AKA).
+	 * The data pointed by chunk may be manipulated, but not replaced nor freed.
+	 * This is more a hack than a feature. The hasher's state may be byte
+	 * order dependant; use with care.
+	 *
+	 * @param this			calling object
+	 */
+	chunk_t (*get_state) (hasher_t *this);
+	
+	/**
 	 * @brief Destroys a hasher object.
 	 *
-	 * @param this 	calling object
+	 * @param this 			calling object
 	 */
 	void (*destroy) (hasher_t *this);
 };

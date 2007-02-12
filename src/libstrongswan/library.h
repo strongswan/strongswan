@@ -226,6 +226,11 @@ enum status_t {
 	 * Destroy object which called method belongs to.
 	 */
 	DESTROY_ME,
+	
+	/**
+	 * Another call to the method is required.
+	 */
+	NEED_MORE,
 };
 
 /**
@@ -258,6 +263,11 @@ typedef struct sockaddr sockaddr_t;
  * Clone a data to a newly allocated buffer
  */
 void *clalloc(void *pointer, size_t size);
+
+/**
+ * Same as memcpy, but XORs src into dst instead of copy
+ */
+void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 
 /**
  * Special type to count references

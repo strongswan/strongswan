@@ -31,11 +31,9 @@ typedef struct signer_t signer_t;
 
 /**
  * @brief Integrity algorithm, as in IKEv2 RFC 3.3.2.
- * 
- * Currently only the following algorithms are implemented and therefore supported:
- * - AUTH_HMAC_MD5_96
- * - AUTH_HMAC_SHA1_96
- * 
+ *
+ * Algorithms not specified in IKEv2 are allocated in private use space.
+ *
  * @ingroup signers
  */
 enum integrity_algorithm_t {
@@ -46,7 +44,9 @@ enum integrity_algorithm_t {
 	AUTH_HMAC_SHA1_96 = 2,
 	AUTH_DES_MAC = 3,
 	AUTH_KPDK_MD5 = 4,
-	AUTH_AES_XCBC_96 = 5
+	AUTH_AES_XCBC_96 = 5,
+	/** Implemented via hmac_signer_t */
+	AUTH_HMAC_SHA1_128 = 1025,
 };
 
 /**

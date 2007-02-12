@@ -223,7 +223,7 @@ static size_t get_hash_size(private_sha1_hasher_t *this)
 {
 	return HASH_SIZE_SHA1;
 }
-	
+
 /**
  * Implementation of hasher_t.reset.
  */
@@ -237,6 +237,20 @@ static void reset(private_sha1_hasher_t *this)
     this->count[0] = 0;
     this->count[1] = 0;
 }
+
+/**
+ * Implementation of hasher_t.get_state
+ */
+static chunk_t get_state(private_sha1_hasher_t *this)
+{
+	chunk_t chunk;
+	
+	chunk.ptr = (u_char*)&this->state[0];
+	chunk.len = sizeof(this->state);
+	
+	return chunk;
+}
+
 /**
  * Implementation of hasher_t.destroy.
  */
@@ -256,6 +270,7 @@ sha1_hasher_t *sha1_hasher_create(void)
 	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
 	this->public.hasher_interface.get_hash_size = (size_t (*) (hasher_t*))get_hash_size;
 	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
+	this->public.hasher_interface.get_state = (chunk_t (*) (hasher_t*))get_state;
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
 	
 	/* initialize */

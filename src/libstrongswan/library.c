@@ -43,6 +43,7 @@ ENUM(status_names, SUCCESS, DESTROY_ME,
 	"VERIFY_ERROR",
 	"INVALID_STATE",
 	"DESTROY_ME",
+	"NEED_MORE",
 );
 
 /**
@@ -56,6 +57,18 @@ void *clalloc(void * pointer, size_t size)
 	memcpy(data, pointer,size);
 	
 	return (data);
+}
+
+/**
+ * Described in header.
+ */
+void memxor(u_int8_t dest[], u_int8_t src[], size_t n)
+{
+	size_t i;
+	for (i = 0; i < n; i++)
+	{
+		dest[i] ^= src[i];
+	}
 }
 
 /**

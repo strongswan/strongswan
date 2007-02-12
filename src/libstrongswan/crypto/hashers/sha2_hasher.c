@@ -587,6 +587,38 @@ static void reset512(private_sha512_hasher_t *ctx)
 }
 
 /**
+ * Implementation of hasher_t.get_state for SHA256
+ */
+static chunk_t get_state256(private_sha256_hasher_t *ctx)
+{
+	chunk_t chunk;
+	chunk.ptr = (u_char*)&ctx->sha_H[0];
+	chunk.len = HASH_SIZE_SHA256;
+	return chunk;
+}
+
+/**
+ * Implementation of hasher_t.get_state for SHA384
+ */
+static chunk_t get_state384(private_sha512_hasher_t *ctx)
+{
+	chunk_t chunk;
+	chunk.ptr = (u_char*)&ctx->sha_H[0];
+	chunk.len = HASH_SIZE_SHA384;
+	return chunk;
+}
+/**
+ * Implementation of hasher_t.get_state for SHA512
+ */
+static chunk_t get_state512(private_sha512_hasher_t *ctx)
+{
+	chunk_t chunk;
+	chunk.ptr = (u_char*)&ctx->sha_H[0];
+	chunk.len = HASH_SIZE_SHA512;
+	return chunk;
+}
+
+/**
  * Implementation of hasher_t.destroy.
  */
 static void destroy(sha2_hasher_t *this)
@@ -606,6 +638,7 @@ sha2_hasher_t *sha2_hasher_create(hash_algorithm_t algorithm)
 		case HASH_SHA256:
 			this = (sha2_hasher_t*)malloc_thing(private_sha256_hasher_t);
 			this->hasher_interface.reset = (void(*)(hasher_t*))reset256;
+			this->hasher_interface.get_state = (chunk_t(*)(hasher_t*))get_state256;
 			this->hasher_interface.get_hash_size = (size_t(*)(hasher_t*))get_hash_size256;
 			this->hasher_interface.get_hash = (void(*)(hasher_t*,chunk_t,u_int8_t*))get_hash256;
 			this->hasher_interface.allocate_hash = (void(*)(hasher_t*,chunk_t,chunk_t*))allocate_hash256;
@@ -614,6 +647,7 @@ sha2_hasher_t *sha2_hasher_create(hash_algorithm_t algorithm)
 			/* uses SHA512 data structure */
 			this = (sha2_hasher_t*)malloc_thing(private_sha512_hasher_t);
 			this->hasher_interface.reset = (void(*)(hasher_t*))reset384;
+			this->hasher_interface.get_state = (chunk_t(*)(hasher_t*))get_state384;
 			this->hasher_interface.get_hash_size = (size_t(*)(hasher_t*))get_hash_size384;
 			this->hasher_interface.get_hash = (void(*)(hasher_t*,chunk_t,u_int8_t*))get_hash384;
 			this->hasher_interface.allocate_hash = (void(*)(hasher_t*,chunk_t,chunk_t*))allocate_hash384;
@@ -621,6 +655,7 @@ sha2_hasher_t *sha2_hasher_create(hash_algorithm_t algorithm)
 		case HASH_SHA512:
 			this = (sha2_hasher_t*)malloc_thing(private_sha512_hasher_t);
 			this->hasher_interface.reset = (void(*)(hasher_t*))reset512;
+			this->hasher_interface.get_state = (chunk_t(*)(hasher_t*))get_state512;
 			this->hasher_interface.get_hash_size = (size_t(*)(hasher_t*))get_hash_size512;
 			this->hasher_interface.get_hash = (void(*)(hasher_t*,chunk_t,u_int8_t*))get_hash512;
 			this->hasher_interface.allocate_hash = (void(*)(hasher_t*,chunk_t,chunk_t*))allocate_hash512;

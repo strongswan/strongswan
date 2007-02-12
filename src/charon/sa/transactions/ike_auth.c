@@ -34,6 +34,7 @@
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/ts_payload.h>
 #include <sa/authenticators/authenticator.h>
+#include <sa/authenticators/eap_authenticator.h>
 #include <sa/child_sa.h>
 
 
@@ -128,6 +129,31 @@ struct private_ike_auth_t {
 	 * reqid to use for CHILD_SA setup
 	 */
 	u_int32_t reqid;
+	
+	/**
+	 * List of CA certificates the other peer trusts
+	 */
+	linked_list_t *cacerts;
+	
+	/**
+	 * EAP uses this authentication, which is passed along multiple ike_auths
+	 */
+	eap_authenticator_t *eap_auth;
+	
+	/**
+	 * if the client receives a EAP request, it is stored here for later use
+	 */
+	eap_payload_t *eap_next;
+	
+	/**
+	 * set to TRUE if authentication should be done with EAP only
+	 */
+	bool eap_only;
+	
+	/**
+	 * has the other peer been authenticated yet?
+	 */
+	bool peer_authenticated;
 	
 	/**
 	 * mode the CHILD_SA uses: tranport, tunnel, BEET
@@ -245,6 +271,57 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	/* store for retransmission */
 	this->message = request;
 	
+	this->message_id = this->ike_sa->get_next_message_id(this->ike_sa);
+	request->set_message_id(request, this->message_id);
+	
+	if (this->eap_auth)
+	{
+		/* we already sent ID, SA, TS in an earlier ike_auth, we now
+		 * continiue EAP processing */
+		if (this->eap_next)
+		{
+			/* if we have another outstanding EAP response, send it */
+			request->add_payload(request, (payload_t*)this->eap_next);
+			this->eap_next = NULL;
+			return SUCCESS;
+		}
+		else
+		{
+			/* if not, we have received an EAP_SUCCESS, send AUTH payload.
+			 * we only send our data if:
+			 * a) The peer has been authenticated using RSA/PSK, or
+			 * b) The EAP method is mutual and gives us enough security
+			 */
+			if (this->eap_auth->is_mutual(this->eap_auth) ||
+				this->peer_authenticated)
+			{
+				auth_payload_t *auth_payload;
+				authenticator_t *authenticator = (authenticator_t*)this->eap_auth;
+				
+				if (authenticator->build(authenticator, this->init_request,
+										 this->nonce_r, &auth_payload) != SUCCESS)
+				{
+					SIG(IKE_UP_FAILED,
+						"EAP authentication data generation failed, deleting IKE_SA");
+					SIG(CHILD_UP_FAILED,
+						"initiating CHILD_SA failed, unable to create IKE_SA");
+					return DESTROY_ME;
+				}
+				request->add_payload(request, (payload_t*)auth_payload);
+				return SUCCESS;
+			}
+			else
+			{
+				SIG(IKE_UP_FAILED,
+					"peer didn't send authentication data, deleting IKE_SA");
+				SIG(CHILD_UP_FAILED,
+					"initiating CHILD_SA failed, unable to create IKE_SA");
+				return DESTROY_ME;
+			}
+		}
+	}
+	/* otherwise we do a normal ike_auth request... */
+	
 	{	/* build ID payload */
 		my_id_payload = id_payload_create_from_identification(TRUE, my_id);
 		request->add_payload(request, (payload_t*)my_id_payload);
@@ -274,8 +351,8 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	}
 	
 	/* build certificate payload. TODO: Handle certreq from init_ike_sa. */
-	if (this->policy->get_auth_method(this->policy) == AUTH_RSA
-	&&  this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
+	if (this->policy->get_auth_method(this->policy) == AUTH_RSA &&
+		this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
 	{
 		cert_payload_t *cert_payload;
 		
@@ -301,6 +378,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		}
 	}
 	
+	if (this->policy->get_auth_method(this->policy) != AUTH_EAP)
 	{	/* build auth payload */
 		authenticator_t *authenticator;
 		auth_payload_t *auth_payload;
@@ -326,6 +404,12 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 			return DESTROY_ME;
 		}
 		request->add_payload(request, (payload_t*)auth_payload);
+	}
+	else
+	{
+		this->eap_auth = eap_authenticator_create(this->ike_sa);
+		/* include notify that we support EAP only authentication */
+		build_notify(EAP_ONLY_AUTHENTICATION, request, FALSE);
 	}
 	
 	{	/* build SA payload for CHILD_SA */
@@ -399,8 +483,6 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		request->add_payload(request, (payload_t*)ts_payload);
 	}
 	
-	this->message_id = this->ike_sa->get_next_message_id(this->ike_sa);
-	request->set_message_id(request, this->message_id);
 	return SUCCESS;
 }
 
@@ -434,6 +516,12 @@ static status_t process_notifies(private_ike_auth_t *this, notify_payload_t *not
 			this->build_child = FALSE;
 			return SUCCESS;
 		}
+		case EAP_ONLY_AUTHENTICATION:
+		{
+			DBG1(DBG_IKE, "peer requested EAP_ONLY_AUTHENTICATION");
+			this->eap_only = TRUE;
+			return SUCCESS;
+		}
 		case USE_TRANSPORT_MODE:
 		{
 			this->mode = MODE_TRANSPORT;
@@ -465,38 +553,37 @@ static status_t process_notifies(private_ike_auth_t *this, notify_payload_t *not
 /**
  * Import certificate requests from a certreq payload
  */
-static void add_certificate_request(certreq_payload_t *certreq_payload,
-									linked_list_t *requested_ca_keyids)
+static void process_certificate_request(private_ike_auth_t *this,
+										certreq_payload_t *certreq_payload)
 {
 	chunk_t keyids;
-
 	cert_encoding_t encoding = certreq_payload->get_cert_encoding(certreq_payload);
-
+	
 	if (encoding != CERT_X509_SIGNATURE)
 	{
 		DBG1(DBG_IKE, "certreq payload %N not supported, ignored",
 			 cert_encoding_names, encoding);
 		return;
 	}
-
+	
 	keyids = certreq_payload->get_data(certreq_payload);
-
 	while (keyids.len >= HASH_SIZE_SHA1)
 	{
 		chunk_t keyid = { keyids.ptr, HASH_SIZE_SHA1};
-		x509_t *cacert = charon->credentials->get_ca_certificate_by_keyid(charon->credentials, keyid);
-
+		x509_t *cacert = charon->credentials->get_ca_certificate_by_keyid(
+													charon->credentials, keyid);
 		if (cacert)
 		{
-			DBG2(DBG_IKE, "request for certificate issued by ca '%D'", cacert->get_subject(cacert));
-			requested_ca_keyids->insert_last(requested_ca_keyids, (void *)&keyid);
+			DBG2(DBG_IKE, "request for certificate issued by ca '%D'",
+				 cacert->get_subject(cacert));
+			this->cacerts->insert_last(this->cacerts, cacert);
 		}
 		else
 		{
 			DBG2(DBG_IKE, "request for certificate issued by unknown ca");
 		}
 		DBG2(DBG_IKE, "  with keyid %#B", &keyid);
-
+		
 		keyids.ptr += HASH_SIZE_SHA1;
 		keyids.len -= HASH_SIZE_SHA1;
 	}
@@ -615,6 +702,113 @@ static status_t install_child_sa(private_ike_auth_t *this, bool initiator)
 }
 
 /**
+ * create a CHILD SA, install it, and build response message
+ */
+static void setup_child_sa(private_ike_auth_t *this, message_t *response)
+{
+	bool use_natt;
+	u_int32_t soft_lifetime, hard_lifetime;
+	host_t *me, *other;
+	identification_t *my_id, *other_id;
+	
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
+	my_id = this->ike_sa->get_my_id(this->ike_sa);
+	other_id = this->ike_sa->get_other_id(this->ike_sa);
+	
+	soft_lifetime = this->policy->get_soft_lifetime(this->policy);
+	hard_lifetime = this->policy->get_hard_lifetime(this->policy);
+	use_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
+	this->child_sa = child_sa_create(this->reqid, me, other, my_id, other_id,
+									 soft_lifetime, hard_lifetime,
+									 this->policy->get_updown(this->policy),
+									 this->policy->get_hostaccess(this->policy),
+									 use_natt);
+	this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
+    /* check mode, and include notify into reply */
+    switch (this->mode)
+    {
+		case MODE_TUNNEL:
+	        /* is the default */
+	        break;
+		case MODE_TRANSPORT:
+	        if (!ts_list_is_host(this->tsi, other) ||
+                !ts_list_is_host(this->tsr, me))
+	        {
+                this->mode = MODE_TUNNEL;
+                DBG1(DBG_IKE, "not using tranport mode, not host-to-host");
+	        }
+	        else if (this->ike_sa->is_natt_enabled(this->ike_sa))
+	        {
+                this->mode = MODE_TUNNEL;
+                DBG1(DBG_IKE, "not using tranport mode, as connection NATed");
+	        }
+	        else 
+	        {
+                build_notify(USE_TRANSPORT_MODE, response, FALSE);
+	        }
+	        break;
+		case MODE_BEET:
+	        if (!ts_list_is_host(this->tsi, NULL) ||
+                !ts_list_is_host(this->tsr, NULL))
+	        {
+                this->mode = MODE_TUNNEL;
+                DBG1(DBG_IKE, "not using BEET mode, not host-to-host");
+	        }
+	        else
+	        {
+                build_notify(USE_BEET_MODE, response, FALSE);
+	        }
+	        break;
+    }
+
+	if (install_child_sa(this, FALSE) != SUCCESS)
+	{
+		SIG(CHILD_UP_FAILED, "installing CHILD_SA %s failed, no CHILD_SA created",
+			this->policy->get_name(this->policy));
+		DBG1(DBG_IKE, "adding NO_PROPOSAL_CHOSEN notify to response");
+		build_notify(NO_PROPOSAL_CHOSEN, response, FALSE);
+	}
+	else
+	{
+		/* build SA and TS payloads */
+		SIG(CHILD_UP_SUCCESS, "CHILD_SA created");
+		ts_payload_t *ts_response;
+		sa_payload_t *sa_response = sa_payload_create();
+		sa_response->add_proposal(sa_response, this->proposal);
+		response->add_payload(response, (payload_t*)sa_response);
+		ts_response = ts_payload_create_from_traffic_selectors(TRUE, this->tsi);
+		response->add_payload(response, (payload_t*)ts_response);
+		ts_response = ts_payload_create_from_traffic_selectors(FALSE, this->tsr);
+		response->add_payload(response, (payload_t*)ts_response);
+	}
+}
+
+/**
+ * clone the transaction to requeue it for EAP handling
+ */
+static private_ike_auth_t *clone_for_eap(private_ike_auth_t *this)
+{
+	private_ike_auth_t *clone;
+	clone = (private_ike_auth_t*)ike_auth_create(this->ike_sa);
+	
+	clone->tsi = this->tsi; this->tsi = NULL;
+	clone->tsr = this->tsr; this->tsr = NULL;
+	clone->eap_auth = this->eap_auth; this->eap_auth = NULL;
+	clone->eap_next = this->eap_next; this->eap_next = NULL;
+	clone->build_child = this->build_child;
+	clone->nonce_i = this->nonce_i; this->nonce_i = chunk_empty;
+	clone->nonce_r = this->nonce_r; this->nonce_r = chunk_empty;
+	clone->child_sa = this->child_sa; this->child_sa = NULL;
+	clone->proposal = this->proposal; this->proposal = NULL;
+	clone->peer_authenticated = this->peer_authenticated;
+	clone->connection = this->connection; this->connection = NULL;
+	clone->policy = this->policy; this->policy = NULL;
+	
+	return clone;
+}
+
+/**
  * Implementation of transaction_t.get_response.
  */
 static status_t get_response(private_ike_auth_t *this, message_t *request, 
@@ -622,7 +816,6 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 {
 	host_t *me, *other;
 	identification_t *my_id, *other_id;
-	linked_list_t *requested_ca_keyids;
 	message_t *response;
 	status_t status;
 	iterator_t *payloads;
@@ -635,6 +828,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	sa_payload_t *sa_request = NULL;
 	ts_payload_t *tsi_request = NULL;
 	ts_payload_t *tsr_request = NULL;
+	eap_payload_t *eap_request = NULL;
 	id_payload_t *idr_response;
 	
 	/* check if we already have built a response (retransmission) */
@@ -648,6 +842,8 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
+	my_id = this->ike_sa->get_my_id(this->ike_sa);
+	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	this->message_id = request->get_message_id(request);
 	
 	/* set up response */
@@ -668,9 +864,6 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 		return DESTROY_ME;
 	}
-	
-	/* initialize list of requested ca keyids */
-	requested_ca_keyids = linked_list_create();
 
 	/* Iterate over all payloads. */
 	payloads = request->get_payload_iterator(request);
@@ -689,7 +882,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 				break;
 			case CERTIFICATE_REQUEST:
 				certreq_request = (certreq_payload_t*)payload;
-				add_certificate_request(certreq_request, requested_ca_keyids);
+				process_certificate_request(this, certreq_request);
 				break;
 			case CERTIFICATE:
 				cert_request = (cert_payload_t*)payload;
@@ -703,20 +896,21 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			case TRAFFIC_SELECTOR_RESPONDER:
 				tsr_request = (ts_payload_t*)payload;
 				break;
+			case EXTENSIBLE_AUTHENTICATION:
+				eap_request = (eap_payload_t*)payload;
+				break;
 			case NOTIFY:
 			{
 				status = process_notifies(this, (notify_payload_t*)payload);
 				if (status == FAILED)
 				{
 					payloads->destroy(payloads);
-					requested_ca_keyids->destroy(requested_ca_keyids);
 					/* we return SUCCESS, returned FAILED means do next transaction */
 					return SUCCESS;
 				}
 				if (status == DESTROY_ME)
 				{
 					payloads->destroy(payloads);
-					requested_ca_keyids->destroy(requested_ca_keyids);
 					SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 					return DESTROY_ME;
 				}
@@ -732,13 +926,67 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	}
 	payloads->destroy(payloads);
 	
-	/* check if we have all payloads */
-	if (!(idi_request && auth_request && sa_request && tsi_request && tsr_request))
+	/* if message contains an EAP payload, we process it */
+	if (eap_request && this->eap_auth)
+	{
+		eap_payload_t *eap_response;
+		private_ike_auth_t *next_auth;
+		
+		status = this->eap_auth->process(this->eap_auth, eap_request, &eap_response);
+		response->add_payload(response, (payload_t*)eap_response);
+		
+		if (status == FAILED)
+		{
+			/* shut down if EAP message is EAP_FAILURE */
+			return DESTROY_ME;
+		}
+		
+		next_auth = clone_for_eap(this);
+		next_auth->message_id = this->message_id + 1;
+		*next = (transaction_t*)next_auth;
+		return SUCCESS;
+	}
+	
+	/* if we do EAP authentication and a AUTH payload comes in, verify it */
+	if (auth_request && this->eap_auth)
+	{
+		auth_payload_t *auth_response;
+		authenticator_t *authenticator = (authenticator_t*)this->eap_auth;
+		
+		if (authenticator->verify(authenticator, this->init_request,
+								  this->nonce_r, auth_request) != SUCCESS)
+		{
+			SIG(IKE_UP_FAILED, "authentication with EAP failed, deleting IKE_SA");
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+			build_notify(AUTHENTICATION_FAILED, response, TRUE);
+			return DESTROY_ME;
+		}
+		
+		if (authenticator->build(authenticator, this->init_response,
+								 this->nonce_i, &auth_response) != SUCCESS)
+		{
+			SIG(IKE_UP_FAILED, "EAP authentication data generation failed, deleting IKE_SA");
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+			build_notify(AUTHENTICATION_FAILED, response, TRUE);
+			return DESTROY_ME;
+		}
+		response->add_payload(response, (payload_t*)auth_response);
+		
+		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...%H[%D]",
+			this->ike_sa->get_name(this->ike_sa), me, my_id, other, other_id);
+		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+		
+		setup_child_sa(this, response);
+		
+		return SUCCESS;
+	}
+	
+	/* check if we have all payloads (AUTH is not checked, not required with EAP) */
+	if (!(idi_request && sa_request && tsi_request && tsr_request))
 	{
 		build_notify(INVALID_SYNTAX, response, TRUE);
 		SIG(IKE_UP_FAILED, "request message incomplete, deleting IKE_SA");
 		SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
-		requested_ca_keyids->destroy(requested_ca_keyids);
 		return DESTROY_ME;
 	}
 	
@@ -754,7 +1002,6 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		}
 	}
 	
-
 	{	/* get a policy and process traffic selectors */
 		linked_list_t *my_ts, *other_ts;
 		
@@ -764,9 +1011,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		this->policy = charon->policies->get_policy(charon->policies,
 													my_id, other_id,
 													my_ts, other_ts,
-												    me, other,
-													requested_ca_keyids);
-		requested_ca_keyids->destroy(requested_ca_keyids);
+												    me, other);
 
 		if (this->policy)
 		{
@@ -799,8 +1044,8 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		response->add_payload(response, (payload_t*)idr_response);
 	}
 	
-	if (this->policy->get_auth_method(this->policy) == AUTH_RSA
-	&&  this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
+	if (this->policy->get_auth_method(this->policy) == AUTH_RSA &&
+		this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
 	{	/* build certificate payload */
 		x509_t *cert;
 		cert_payload_t *cert_payload;
@@ -822,9 +1067,76 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		import_certificate(cert_request);
 	}
 	
-	{	/* process auth payload */
-		authenticator_t *authenticator;
+	{	/* process SA payload */
+		linked_list_t *proposal_list;
+		
+		/* get proposals from request, and select one with ours */
+		proposal_list = sa_request->get_proposals(sa_request);
+		DBG2(DBG_IKE, "selecting proposals:");
+		this->proposal = this->policy->select_proposal(this->policy, proposal_list);
+		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
+
+		/* do we have a proposal? */
+		if (this->proposal == NULL)
+		{
+			SIG(CHILD_UP_FAILED, "CHILD_SA proposals unacceptable, no CHILD_SA created");
+			DBG1(DBG_IKE, "adding NO_PROPOSAL_CHOSEN notify to response");
+			build_notify(NO_PROPOSAL_CHOSEN, response, FALSE);
+			this->build_child = FALSE;
+		}
+		/* do we have traffic selectors? */
+		else if (this->tsi->get_count(this->tsi) == 0 || this->tsr->get_count(this->tsr) == 0)
+		{
+			SIG(CHILD_UP_FAILED, "CHILD_SA traffic selectors unacceptable, no CHILD_SA created");
+			DBG1(DBG_IKE, "adding TS_UNACCEPTABLE notify to response");
+			build_notify(TS_UNACCEPTABLE, response, FALSE);
+			this->build_child = FALSE;
+		}
+	}
+	
+	if (!this->eap_only || this->policy->get_auth_method(this->policy) != AUTH_EAP)
+	{	/* build response AUTH payload when not using a mutual EAP authentication */
 		auth_payload_t *auth_response;
+		authenticator_t *authenticator;
+		auth_method_t auth_method;
+		status_t status;
+		
+		auth_method = this->policy->get_auth_method(this->policy);
+		if (auth_method == AUTH_EAP)
+		{
+			SIG(IKE_UP_FAILED,
+				"peer does not support EAP only authentication, deleting IKE_SA");
+			SIG(CHILD_UP_FAILED,
+				"initiating CHILD_SA failed, unable to create IKE_SA");
+			build_notify(AUTHENTICATION_FAILED, response, TRUE);
+			return DESTROY_ME;
+		}
+		
+		authenticator = authenticator_create(this->ike_sa, auth_method);
+		if (authenticator == NULL)
+		{
+			SIG(IKE_UP_FAILED, "auth method %N not supported, deleting IKE_SA",
+				auth_method_names, auth_method);
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+			build_notify(AUTHENTICATION_FAILED, response, TRUE);
+			return DESTROY_ME;
+		}
+		status = authenticator->build(authenticator, this->init_response,
+									  this->nonce_i, &auth_response);
+		authenticator->destroy(authenticator);
+		if (status != SUCCESS)
+		{
+			SIG(IKE_UP_FAILED, "authentication data generation failed, deleting IKE_SA");
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+			build_notify(AUTHENTICATION_FAILED, response, TRUE);
+			return DESTROY_ME;
+		}
+		response->add_payload(response, (payload_t*)auth_response);
+	}
+	
+	if (auth_request)
+	{	/* process auth payload, if not using EAP */
+		authenticator_t *authenticator;
 		auth_method_t auth_method;
 		status_t status;
 		
@@ -848,145 +1160,51 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			return DESTROY_ME;
 		}
 		
-		auth_method = this->policy->get_auth_method(this->policy);
-		authenticator = authenticator_create(this->ike_sa, auth_method);
-		if (authenticator == NULL)
+		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...%H[%D]",
+			this->ike_sa->get_name(this->ike_sa), me, my_id, other, other_id);
+		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+		
+		/* set up CHILD_SA if negotiation succeded */
+		if (this->build_child)
 		{
-			SIG(IKE_UP_FAILED, "auth method %N not supported, deleting IKE_SA",
-				auth_method_names, auth_method);
-			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+			setup_child_sa(this, response);
+		}
+		
+		this->peer_authenticated = TRUE;
+	}
+	else
+	{
+		/* if no AUTH payload was included, we start with an EAP exchange.
+		 * eap_response is a request in the EAP meaning, but is
+		 * contained in a IKEv2 response */
+		eap_payload_t *eap_response;
+		private_ike_auth_t *next_auth;
+		eap_type_t eap_type;
+		
+		eap_type = this->policy->get_eap_type(this->policy);
+		this->eap_auth = eap_authenticator_create(this->ike_sa);
+		status = this->eap_auth->initiate(this->eap_auth, eap_type, &eap_response);
+		response->add_payload(response, (payload_t*)eap_response);
+		
+		if (status == FAILED)
+		{
+			/* EAP initiaton failed, we send the EAP_FAILURE message and quit */
 			return DESTROY_ME;
 		}
-		status = authenticator->build(authenticator, this->init_response,
-									  this->nonce_i, &auth_response);
-		authenticator->destroy(authenticator);
-		if (status != SUCCESS)
-		{
-			SIG(IKE_UP_FAILED, "authentication data generation failed, deleting IKE_SA");
-			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
-			build_notify(AUTHENTICATION_FAILED, response, TRUE);
-			return DESTROY_ME;
-		}
-		response->add_payload(response, (payload_t*)auth_response);
+		/* we send an EAP request. to handle the reply, we reschedule
+		 * this transaction, as it knows how to handle the reply */
+		next_auth = clone_for_eap(this);
+		next_auth->message_id = this->message_id + 1;
+		*next = (transaction_t*)next_auth;
 	}
-	
-	SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...%H[%D]",
-		this->ike_sa->get_name(this->ike_sa), me, my_id, other, other_id);
-	
-	{	/* process SA payload */
-		linked_list_t *proposal_list;
-		sa_payload_t *sa_response;
-		ts_payload_t *ts_response;
-		bool use_natt;
-		u_int32_t soft_lifetime, hard_lifetime;
-		
-		/* prepare reply */
-		sa_response = sa_payload_create();
-		
-		/* get proposals from request, and select one with ours */
-		proposal_list = sa_request->get_proposals(sa_request);
-		DBG2(DBG_IKE, "selecting proposals:");
-		this->proposal = this->policy->select_proposal(this->policy, proposal_list);
-		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
-
-		/* do we have a proposal? */
-		if (this->proposal == NULL)
-		{
-			SIG(CHILD_UP_FAILED, "CHILD_SA proposals unacceptable, no CHILD_SA created");
-			DBG1(DBG_IKE, "adding NO_PROPOSAL_CHOSEN notify to response");
-			build_notify(NO_PROPOSAL_CHOSEN, response, FALSE);
-		}
-		/* do we have traffic selectors? */
-		else if (this->tsi->get_count(this->tsi) == 0 || this->tsr->get_count(this->tsr) == 0)
-		{
-			SIG(CHILD_UP_FAILED, "CHILD_SA traffic selectors unacceptable, no CHILD_SA created");
-			DBG1(DBG_IKE, "adding TS_UNACCEPTABLE notify to response");
-			build_notify(TS_UNACCEPTABLE, response, FALSE);
-		}
-		else
-		{
-			/* create child sa */
-			soft_lifetime = this->policy->get_soft_lifetime(this->policy);
-			hard_lifetime = this->policy->get_hard_lifetime(this->policy);
-			use_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
-			this->child_sa = child_sa_create(this->reqid, me, other, my_id, other_id,
-											 soft_lifetime, hard_lifetime, 
-											 this->policy->get_updown(this->policy),
-											 this->policy->get_hostaccess(this->policy),
-											 use_natt);
-			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
-			
-			/* check mode, and include notify into reply */
-			switch (this->mode)
-			{
-				case MODE_TUNNEL:
-					/* is the default */
-					break;
-				case MODE_TRANSPORT:
-					if (!ts_list_is_host(this->tsi, other) ||
-						!ts_list_is_host(this->tsr, me))
-					{
-						this->mode = MODE_TUNNEL;
-						DBG1(DBG_IKE, "not using tranport mode, not host-to-host");
-					}
-					else if (this->ike_sa->is_natt_enabled(this->ike_sa))
-					{
-						this->mode = MODE_TUNNEL;
-						DBG1(DBG_IKE, "not using tranport mode, as connection NATed");
-					}
-					else 
-					{
-						build_notify(USE_TRANSPORT_MODE, response, FALSE);
-					}
-					break;
-				case MODE_BEET:
-					if (!ts_list_is_host(this->tsi, NULL) ||
-						!ts_list_is_host(this->tsr, NULL))
-					{
-						this->mode = MODE_TUNNEL;
-						DBG1(DBG_IKE, "not using BEET mode, not host-to-host");
-					}
-					else
-					{
-						build_notify(USE_BEET_MODE, response, FALSE);
-					}
-					break;
-			}
-			
-			if (install_child_sa(this, FALSE) != SUCCESS)
-			{
-				SIG(CHILD_UP_FAILED, "installing CHILD_SA '%s' failed, no CHILD_SA created",
-						this->policy->get_name(this->policy));
-				DBG1(DBG_IKE, "adding NO_PROPOSAL_CHOSEN notify to response");
-				build_notify(NO_PROPOSAL_CHOSEN, response, FALSE);
-			}
-			else
-			{
-				/* add proposal to sa payload */
-				sa_response->add_proposal(sa_response, this->proposal);
-				SIG(CHILD_UP_SUCCESS, "CHILD_SA '%s' created",
-						this->policy->get_name(this->policy));
-			}
-		}
-		response->add_payload(response, (payload_t*)sa_response);
-		
-		/* add ts payload after sa payload */
-		ts_response = ts_payload_create_from_traffic_selectors(TRUE, this->tsi);
-		response->add_payload(response, (payload_t*)ts_response);
-		ts_response = ts_payload_create_from_traffic_selectors(FALSE, this->tsr);
-		response->add_payload(response, (payload_t*)ts_response);
-	}
-	/* set established state */
-	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 	return SUCCESS;
 }
-
 
 /**
  * Implementation of transaction_t.conclude
  */
 static status_t conclude(private_ike_auth_t *this, message_t *response, 
-						 transaction_t **transaction)
+						 transaction_t **next)
 {
 	iterator_t *payloads;
 	payload_t *payload;
@@ -998,6 +1216,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	cert_payload_t *cert_payload = NULL;
 	auth_payload_t *auth_payload = NULL;
 	sa_payload_t *sa_payload = NULL;
+	eap_payload_t *eap_payload = NULL;
 	status_t status;
 	
 	/* check message type */
@@ -1010,6 +1229,8 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
+	my_id = this->ike_sa->get_my_id(this->ike_sa);
+	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	
 	/* Iterate over all payloads to collect them */
 	payloads = response->get_payload_iterator(response);
@@ -1034,6 +1255,9 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 				break;	
 			case TRAFFIC_SELECTOR_RESPONDER:
 				tsr_payload = (ts_payload_t*)payload;
+				break;
+			case EXTENSIBLE_AUTHENTICATION:
+				eap_payload = (eap_payload_t*)payload;
 				break;
 			case NOTIFY:
 			{
@@ -1062,13 +1286,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	}
 	payloads->destroy(payloads);
 	
-	if (!(idr_payload && auth_payload && sa_payload && tsi_payload && tsr_payload))
-	{
-		SIG(IKE_UP_FAILED, "response message incomplete, deleting IKE_SA");
-		SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
-		return DESTROY_ME;
-	}
-	
+	if (idr_payload)
 	{	/* process idr payload */
 		identification_t *configured_other_id;
 		int wildcards;
@@ -1080,7 +1298,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		{
 			other_id->destroy(other_id);
 			SIG(IKE_UP_FAILED, "other peer uses unacceptable ID (%D, excepted "
-				"%D), deleting IKE_SA", other_id, configured_other_id);
+					"%D), deleting IKE_SA", other_id, configured_other_id);
 			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 			return DESTROY_ME;
 		}
@@ -1093,6 +1311,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		import_certificate(cert_payload);
 	}
 	
+	if (auth_payload && idr_payload)
 	{	/* authenticate peer */
 		authenticator_t *authenticator;
 		auth_method_t auth_method;
@@ -1118,10 +1337,72 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 			return DESTROY_ME;	
 		}
+		this->peer_authenticated = TRUE;
+	}
+	
+	if (eap_payload && this->eap_auth)
+	{
+		switch (this->eap_auth->process(this->eap_auth, eap_payload, &this->eap_next))
+		{
+			case SUCCESS:
+			{
+				/* EAP message was EAP_SUCCESS, send AUTH in next transaction */
+				DBG2(DBG_IKE, "EAP authentication exchanges completed successful");
+				this->eap_next = NULL;
+				/* fall through */
+			}
+			case NEED_MORE:
+			{
+				/* EAP message was a EAP_REQUEST, handle it in next transaction */
+				private_ike_auth_t *next_auth = clone_for_eap(this);
+				next_auth->message_id = this->message_id + 1;
+				*next = (transaction_t*)next_auth;
+				return SUCCESS;
+			}
+			case FAILED:
+			default:
+			{
+				/* EAP message was EAP_FAILURE */
+				SIG(IKE_UP_FAILED, "EAP authentication failed, deleting IKE_SA");
+				SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+				return DESTROY_ME;
+			}
+		}
+	}
+	
+	if (!(auth_payload && sa_payload && tsi_payload && tsr_payload))
+	{
+		SIG(IKE_UP_FAILED, "response message incomplete, deleting IKE_SA");
+		SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+		return DESTROY_ME;
+	}
+	
+	/* if we do EAP authentication and a AUTH payload comes in, verify it */
+	if (this->eap_auth &&
+		(this->eap_auth->is_mutual(this->eap_auth) || this->peer_authenticated))
+	{
+		authenticator_t *authenticator = (authenticator_t*)this->eap_auth;
+		
+		if (authenticator->verify(authenticator, this->init_response,
+								  this->nonce_i, auth_payload) != SUCCESS)
+		{
+			SIG(IKE_UP_FAILED, "authentication with EAP failed, deleting IKE_SA");
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+			return DESTROY_ME;
+		}
+		this->peer_authenticated = TRUE;
+	}
+	
+	if (!this->peer_authenticated)
+	{
+		SIG(IKE_UP_FAILED, "server didn't send authentication data, deleting IKE_SA");
+		SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+		return DESTROY_ME;
 	}
 	
 	SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...%H[%D]",
 		this->ike_sa->get_name(this->ike_sa), me, my_id, other, other_id);
+	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 	
 	{	/* process traffic selectors for us */
 		linked_list_t *ts_received = tsi_payload->get_traffic_selectors(tsi_payload);
@@ -1198,8 +1479,6 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 			}
 		}
 	}
-	/* set new state */
-	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 	return SUCCESS;
 }
 
@@ -1213,6 +1492,12 @@ static void destroy(private_ike_auth_t *this)
 	DESTROY_IF(this->child_sa);
 	DESTROY_IF(this->policy);
 	DESTROY_IF(this->connection);
+	DESTROY_IF(this->cacerts);
+	if (this->eap_auth)
+	{
+		this->eap_auth->authenticator_interface.destroy(&this->eap_auth->authenticator_interface);
+	}
+	DESTROY_IF(this->eap_next);
 	if (this->tsi)
 	{
 		this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
@@ -1260,10 +1545,17 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa)
 	this->init_response = chunk_empty;
 	this->child_sa = NULL;
 	this->proposal = NULL;
+	this->policy = NULL;
+	this->connection = NULL;
 	this->tsi = NULL;
 	this->tsr = NULL;
 	this->build_child = TRUE;
+	this->eap_auth = NULL;
+	this->eap_next = NULL;
+	this->eap_only = FALSE;
+	this->peer_authenticated = FALSE;
 	this->reqid = 0;
+	this->cacerts = linked_list_create();
 	this->mode = MODE_TUNNEL;
 	
 	return &this->public;

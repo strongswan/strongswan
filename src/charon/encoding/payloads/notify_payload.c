@@ -75,7 +75,9 @@ ENUM_NEXT(notify_type_names, INITIAL_CONTACT, AUTH_LIFETIME, INVALID_SELECTORS,
 	"COOKIE2",
 	"NO_NATS_ALLOWED",
 	"AUTH_LIFETIME");
-ENUM_END(notify_type_names, AUTH_LIFETIME);
+ENUM_NEXT(notify_type_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, AUTH_LIFETIME,
+	"EAP_ONLY_AUTHENTICATION");
+ENUM_END(notify_type_names, EAP_ONLY_AUTHENTICATION);
 
 typedef struct private_notify_payload_t private_notify_payload_t;
 

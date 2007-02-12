@@ -25,9 +25,10 @@
 
 #include <crypto/signers/hmac_signer.h>
 
-ENUM_BEGIN(integrity_algorithm_names, AUTH_UNDEFINED, AUTH_UNDEFINED,
-	"UNDEFINED");
-ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_MD5_96, AUTH_AES_XCBC_96, AUTH_UNDEFINED,
+ENUM_BEGIN(integrity_algorithm_names, AUTH_UNDEFINED, AUTH_HMAC_SHA1_128,
+	"UNDEFINED",
+	"AUTH_HMAC_SHA1_128");
+ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_MD5_96, AUTH_AES_XCBC_96, AUTH_HMAC_SHA1_128,
 	"HMAC_MD5_96",
 	"HMAC_SHA1_96",
 	"DES_MAC",
@@ -43,13 +44,11 @@ signer_t *signer_create(integrity_algorithm_t integrity_algorithm)
 	switch(integrity_algorithm)
 	{
 		case AUTH_HMAC_SHA1_96:
-		{
-			return ((signer_t *) hmac_signer_create(HASH_SHA1));
-		}
+			return (signer_t *)hmac_signer_create(HASH_SHA1, 12);
+		case AUTH_HMAC_SHA1_128:
+			return (signer_t *)hmac_signer_create(HASH_SHA1, 16);
 		case AUTH_HMAC_MD5_96:
-		{
-			return ((signer_t *) hmac_signer_create(HASH_MD5));
-		}
+			return (signer_t *)hmac_signer_create(HASH_MD5, 12);
 		default:
 			return NULL;
 	}

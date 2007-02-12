@@ -186,6 +186,7 @@ whitelist_t whitelist[] = {
 	{getservbyport,				 311},
 	{register_printf_function,	 159},
 	{syslog,					  45},
+	{dlopen,					 109},
 };
 
 /**

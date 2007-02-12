@@ -30,9 +30,11 @@ typedef struct hmac_signer_t hmac_signer_t;
 #include <crypto/hashers/hasher.h>
 
 /**
- * @brief Implementation of signer_t interface using the
- * HMAC algorithm in combination with either MD5 or SHA1.
- * 
+ * @brief Implementation of signer_t interface using HMAC.
+ *
+ * HMAC uses a standard hash function implemented in a hasher_t to build
+ * a MAC.
+ *
  * @ingroup signers
  */
 struct hmac_signer_t {
@@ -45,15 +47,22 @@ struct hmac_signer_t {
 
 /**
  * @brief Creates a new hmac_signer_t.
- * 
+ *
+ * HMAC signatures are often truncated to shorten them to a more usable, but
+ * still secure enough length.
+ * Block size must be equal or smaller then the hash algorithms
+ * hash.
+ *
  * @param hash_algoritm		Hash algorithm to use with signer
+ * @param block_size		Size of resulting signature (truncated to block_size)
  * @return					
  * 							- hmac_signer_t
  * 							- NULL if hash algorithm not supported
  * 
  * @ingroup signers
  */
-hmac_signer_t *hmac_signer_create(hash_algorithm_t hash_algoritm);
+hmac_signer_t *hmac_signer_create(hash_algorithm_t hash_algoritm,
+								  size_t block_size);
 
 
 #endif /*HMAC_SIGNER_H_*/

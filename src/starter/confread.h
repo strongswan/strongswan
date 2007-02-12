@@ -95,6 +95,7 @@ struct starter_conn {
 	starter_state_t	state;
 
 	keyexchange_t	keyexchange;
+	int			eap;
 	lset_t 		policy;
 	time_t 		sa_ike_life_seconds;
 	time_t		sa_ipsec_life_seconds;
@@ -167,6 +168,7 @@ struct starter_config {
 		bool	nat_traversal;
 		u_int	keep_alive;
 		char	*virtual_private;
+		char	*eapdir;
 		char	*pkcs11module;
 		bool	pkcs11keepstate;
 		bool	pkcs11proxy;

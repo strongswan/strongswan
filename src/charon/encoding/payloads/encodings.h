@@ -449,7 +449,7 @@ enum encoding_type_t {
 	 * 
 	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
 	 */
-	EAP_MESSAGE,
+	EAP_DATA,
 	
 	/**
 	 * Representating the SPIS field in a DELETE payload.

@@ -1,7 +1,7 @@
 /**
- * @file authenticator.c
+ * @file rsa_authenticator.c
  *
- * @brief Implementation of authenticator_t.
+ * @brief Implementation of rsa_authenticator_t.
  *
  */
 
@@ -48,24 +48,10 @@ struct private_rsa_authenticator_t {
 };
 
 /**
- * Builds the octets to be signed as described in section 2.15 of RFC 4306
+ * Function implemented in psk_authenticator.c
  */
-chunk_t build_tbs_octets(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
-						 chunk_t nonce, identification_t *id, prf_t *prf)
-{
-	u_int8_t id_header_buf[] = {0x00, 0x00, 0x00, 0x00};
-	chunk_t id_header = chunk_from_buf(id_header_buf);
-	chunk_t id_with_header, id_prfd, id_encoding;
-	
-	id_header_buf[0] = id->get_type(id);
-	id_encoding = id->get_encoding(id);
-	
-	id_with_header = chunk_cat("cc", id_header, id_encoding);
-	prf->allocate_bytes(prf, id_with_header, &id_prfd);
-	chunk_free(&id_with_header);
-	
-	return chunk_cat("ccm", ike_sa_init, nonce, id_prfd);
-}
+extern chunk_t build_tbs_octets(chunk_t ike_sa_init, chunk_t nonce,
+								identification_t *id, prf_t *prf);
 
 /**
  * Implementation of authenticator_t.verify.
@@ -92,7 +78,7 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 		DBG1(DBG_IKE, "no RSA public key found for '%D'", other_id);
 		return NOT_FOUND;
 	}
-	octets = build_tbs_octets(this, ike_sa_init, my_nonce, other_id,
+	octets = build_tbs_octets(ike_sa_init, my_nonce, other_id,
 							  this->ike_sa->get_auth_verify(this->ike_sa));
 	status = public_key->verify_emsa_pkcs1_signature(public_key, octets, auth_data);
 	chunk_free(&octets);
@@ -145,7 +131,7 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	}
 	DBG2(DBG_IKE, "matching RSA private key found");
 
-	octets = build_tbs_octets(this, ike_sa_init, other_nonce, my_id,
+	octets = build_tbs_octets(ike_sa_init, other_nonce, my_id,
 							  this->ike_sa->get_auth_build(this->ike_sa));
 	status = my_key->build_emsa_pkcs1_signature(my_key, HASH_SHA1, octets, &auth_data);
 	chunk_free(&octets);

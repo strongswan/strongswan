@@ -63,6 +63,7 @@ static void default_values(starter_config_t *cfg)
 	cfg->setup.interfaces  = new_list("%defaultroute");
 	cfg->setup.charonstart = TRUE;
 	cfg->setup.plutostart  = TRUE;
+	cfg->setup.eapdir      = IPSEC_EAPDIR;
 
 	cfg->conn_default.seen    = LEMPTY;
 	cfg->conn_default.startup = STARTUP_NO;
@@ -414,7 +415,7 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 		case KW_AUTHBY:
 			conn->policy &= ~(POLICY_ID_AUTH_MASK | POLICY_ENCRYPT);
 
-			if (strcmp(kw->value, "never") != 0)
+			if (!(streq(kw->value, "never") || streq(kw->value, "eap")))
 			{
 				char *value = kw->value;
 				char *second = strchr(kw->value, '|');
@@ -443,6 +444,20 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 						break;
 					value = second;
 					second = NULL; /* traverse the loop no more than twice */
+				}
+			}
+			break;
+		case KW_EAP:
+			/* TODO: a gperf function for all EAP types */
+			if (streq(kw->value, "aka"))
+				conn->eap = 23;
+			else
+			{
+				conn->eap = atoi(kw->value);
+				if (conn->eap == 0)
+				{
+					plog("# unknown EAP type: %s=%s", kw->entry->name, kw->value);
+					cfg->err++;
 				}
 			}
 			break;

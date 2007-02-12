@@ -393,7 +393,7 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	}
 	
 	policy = policy_create(msg->add_conn.name, my_id, other_id,
-						   msg->add_conn.auth_method,
+						   msg->add_conn.auth_method, msg->add_conn.eap_type,
 						   msg->add_conn.rekey.ipsec_lifetime,
 						   msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
 						   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 

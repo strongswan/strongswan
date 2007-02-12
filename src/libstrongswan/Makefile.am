@@ -12,6 +12,7 @@ asn1/pem.c asn1/pem.h \
 asn1/ttodata.c asn1/ttodata.h \
 crypto/rsa/rsa_private_key.c crypto/rsa/rsa_private_key.h \
 crypto/rsa/rsa_public_key.h  crypto/rsa/rsa_public_key.c \
+crypto/prfs/fips_prf.c crypto/prfs/fips_prf.h \
 crypto/prfs/hmac_prf.c crypto/prfs/hmac_prf.h \
 crypto/prfs/prf.c crypto/prfs/prf.h \
 crypto/signers/hmac_signer.c crypto/signers/hmac_signer.h \

@@ -47,6 +47,10 @@ case $UMLSTARTMODE in
 	cecho "Start the uml instances  (scripts/kstart-umls)"
 	$DIR/scripts/kstart-umls $HOSTS
 	;;
+    gnome-terminal)
+	cecho "Start the uml instances  (scripts/gstart-umls)"
+	$DIR/scripts/gstart-umls $HOSTS
+	;;
     xterm)
 	cecho "Start the uml instances  (scripts/xstart-umls)"
 	$DIR/scripts/xstart-umls $HOSTS

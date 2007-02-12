@@ -32,6 +32,7 @@ typedef struct policy_t policy_t;
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
 #include <sa/authenticators/authenticator.h>
+#include <sa/authenticators/eap/eap_method.h>
 
 
 /**
@@ -148,6 +149,14 @@ struct policy_t {
 	 * @return			authentication method
 	 */
 	auth_method_t (*get_auth_method) (policy_t *this);
+
+	/**
+	 * @brief Get the EAP type to use for peer authentication.
+	 * 
+	 * @param this		calling object
+	 * @return			authentication method
+	 */
+	eap_type_t (*get_eap_type) (policy_t *this);
 	
 	/**
 	 * @brief Get configured traffic selectors for our site.
@@ -358,6 +367,7 @@ struct policy_t {
  * @param my_id 			identification_t for ourselves
  * @param other_id 			identification_t for the remote guy
  * @param auth_method		Authentication method to use for our(!) auth data
+ * @param eap_type			EAP type to use for peer authentication
  * @param hard_lifetime		lifetime before deleting an SA
  * @param soft_lifetime		lifetime before rekeying an SA
  * @param jitter			range of randomization time
@@ -371,7 +381,7 @@ struct policy_t {
  */
 policy_t *policy_create(char *name, 
 						identification_t *my_id, identification_t *other_id,
-						auth_method_t auth_method,
+						auth_method_t auth_method, eap_type_t eap_type,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime,
 						u_int32_t jitter, char *updown, bool hostaccess,
 						mode_t mode, dpd_action_t dpd_action);

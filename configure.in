@@ -19,9 +19,7 @@ dnl ===========================
 AC_INIT(strongSwan,4.0.8)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_C_BIGENDIAN
-AC_SUBST(ipsecdir, '${libexecdir}/ipsec')
 AC_SUBST(confdir, '${sysconfdir}')
-AC_SUBST(piddir, '/var/run')
 
 dnl =================================
 dnl  check --enable-xxx & --with-xxx
@@ -30,7 +28,7 @@ dnl =================================
 
 AC_ARG_WITH(
     [default-pkcs11],
-    AS_HELP_STRING([--with-default-pkcs11=lib],[set the default PKCS11 library other than /usr/lib/opensc-pkcs11.so]),
+    AS_HELP_STRING([--with-default-pkcs11=lib],[set the default PKCS11 library other than "/usr/lib/opensc-pkcs11.so"]),
     [AC_DEFINE_UNQUOTED(PKCS11_DEFAULT_LIB, "$withval")],
     [AC_DEFINE_UNQUOTED(PKCS11_DEFAULT_LIB, "/usr/lib/opensc-pkcs11.so")]
 )
@@ -43,16 +41,37 @@ AC_ARG_WITH(
 
 AC_ARG_WITH(
     [random-device],
-    AS_HELP_STRING([--with-random-device=dev],[set the device for real random data other than /dev/random]),
+    AS_HELP_STRING([--with-random-device=dev],[set the device for real random data other than "/dev/random"]),
     [AC_DEFINE_UNQUOTED(DEV_RANDOM, "$withval")],
     [AC_DEFINE_UNQUOTED(DEV_RANDOM, "/dev/random")]
 )
 
 AC_ARG_WITH(
     [urandom-device],
-    AS_HELP_STRING([--with-urandom-device=dev],[set the device for pseudo random data other than /dev/urandom]),
+    AS_HELP_STRING([--with-urandom-device=dev],[set the device for pseudo random data other than "/dev/urandom"]),
     [AC_DEFINE_UNQUOTED(DEV_URANDOM, "$withval")],
     [AC_DEFINE_UNQUOTED(DEV_URANDOM, "/dev/urandom")]
+)
+
+AC_ARG_WITH(
+    [ipsecdir],
+    AS_HELP_STRING([--with-ipsecdir=dir],[installation path for ipsec tools other than "libexecdir/ipsec"]),
+    [AC_SUBST(ipsecdir, "$withval")],
+    [AC_SUBST(ipsecdir, "${libexecdir}/ipsec")]
+)
+
+AC_ARG_WITH(
+    [piddir],
+    AS_HELP_STRING([--with-piddir=dir],[path for PID and UNIX socket files other than "/var/run"]),
+    [AC_SUBST(piddir, "$withval")],
+    [AC_SUBST(piddir, "/var/run")]
+)
+
+AC_ARG_WITH(
+    [eapdir],
+    AS_HELP_STRING([--with-eapdir=dir],[path for pluggable EAP modules other than "ipsecdir/eap"]),
+    [AC_SUBST(eapdir, "$withval")],
+    [AC_SUBST(eapdir, "${ipsecdir}/eap")]
 )
 
 AC_ARG_ENABLE(
