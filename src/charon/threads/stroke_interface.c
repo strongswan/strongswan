@@ -634,6 +634,22 @@ static void stroke_terminate(stroke_msg_t *msg, FILE *out)
 }
 
 /**
+ * Add a ca information record to the cainfo list
+ */
+static void stroke_add_ca(stroke_msg_t *msg, FILE *out)
+{
+	/* TODO add code */
+}
+
+/**
+ * Delete a ca information record from the cainfo list
+ */
+static void stroke_del_ca(stroke_msg_t *msg, FILE *out)
+{
+	/* TODO add code */
+}
+
+/**
  * show status of daemon
  */
 static void stroke_statusall(stroke_msg_t *msg, FILE *out)
@@ -882,6 +898,17 @@ static void stroke_reread(stroke_msg_t *msg, FILE *out)
 	}
 }
 
+/**
+ * purge various information
+ */
+static void stroke_purge(stroke_msg_t *msg, FILE *out)
+{
+	if (msg->purge.flags & PURGE_OCSP)
+	{
+		/* TODO charon->credentials->purge_ocsp(charon->credentials); */
+	}
+}
+
 signal_t get_signal_from_logtype(char *type)
 {
 	if      (strcasecmp(type, "any") == 0) return SIG_ANY;
@@ -986,6 +1013,12 @@ static void stroke_process(int *fd)
 		case STR_DEL_CONN:
 			stroke_del_conn(msg, out);
 			break;
+		case STR_ADD_CA:
+			stroke_add_ca(msg, out);
+			break;
+		case STR_DEL_CA:
+			stroke_del_ca(msg, out);
+			break;
 		case STR_LOGLEVEL:
 			stroke_loglevel(msg, out);
 			break;
@@ -994,6 +1027,9 @@ static void stroke_process(int *fd)
 			break;
 		case STR_REREAD:
 			stroke_reread(msg, out);
+			break;
+		case STR_PURGE:
+			stroke_purge(msg, out);
 			break;
 		default:
 			DBG1(DBG_CFG, "received unknown stroke");
