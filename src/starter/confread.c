@@ -63,7 +63,6 @@ static void default_values(starter_config_t *cfg)
 	cfg->setup.interfaces  = new_list("%defaultroute");
 	cfg->setup.charonstart = TRUE;
 	cfg->setup.plutostart  = TRUE;
-	cfg->setup.eapdir      = IPSEC_EAPDIR;
 
 	cfg->conn_default.seen    = LEMPTY;
 	cfg->conn_default.startup = STARTUP_NO;
@@ -276,12 +275,27 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			plog("# natip and sourceip cannot be defined at the same time");
 			goto err;
 		}
-		conn->tunnel_addr_family = ip_version(value);
-		ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &end->srcip);
-		if (ugh != NULL)
+		if (streq(value, "%defaultroute"))
 		{
-			plog("# bad addr: %s=%s [%s]", name, value, ugh);
-			goto err;
+			if (cfg->defaultroute.defined)
+			{
+				end->srcip    = cfg->defaultroute.addr;
+			}
+			else
+			{
+				plog("# default route not known: %s=%s", name, value);
+				goto err;
+			}
+		}
+		else
+		{
+			conn->tunnel_addr_family = ip_version(value);
+			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &end->srcip);
+			if (ugh != NULL)
+			{
+				plog("# bad addr: %s=%s [%s]", name, value, ugh);
+				goto err;
+			}
 		}
 		end->has_natip = TRUE;
 		conn->policy |= POLICY_TUNNEL;
