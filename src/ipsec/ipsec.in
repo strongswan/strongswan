@@ -112,10 +112,9 @@ down)
 	exit 0
 	;;
 listalgs|listpubkeys|listaacerts|\
-listocspcerts|listacerts|listgroups|\
-listcainfos|listocsp|listcards|\
-purgeocsp|rereadsecrets|rereadgroups|\
-rereadaacerts|rereadocspcerts|rereadacerts)
+listacerts|listgroups|\listcards|\
+rereadsecrets|rereadgroups|\
+rereadaacerts|rereadacerts)
 	op="$1"
 	shift
 	if test -e $IPSEC_PLUTO_PID
@@ -124,8 +123,10 @@ rereadaacerts|rereadocspcerts|rereadacerts)
 	fi
 	exit 0
 	;;
-listcerts|listcacerts|listcrls|listall|\
-rereadcacerts|rereadcrls|rereadall)
+listcerts|listcacerts|listocspcerts|\
+listcainfos|listcrls|listocsp|listall|\
+rereadcacerts|rereadocspcerts|rereadcrls|\
+rereadall|purgeocsp)
 	op="$1"
 	shift
 	if test -e $IPSEC_PLUTO_PID
