@@ -44,6 +44,8 @@
 #define PRINTF_X509				'Q'
 /** 1 argument: crl_t *crl; with #-modifier 2 arguments: crl_t *crl, bool utc */
 #define PRINTF_CRL				'U'
+/** 1 argument: ca_info_t *ca_info; with #-modifier 2 arguments: ca_info_t *ca_info, bool utc */
+#define PRINTF_CAINFO			'C'
 /** 1 argumnet: host_t *host; use #-modifier to include port number */
 #define PRINTF_HOST				'H'
 /** 1 argument: identification_t *id */
