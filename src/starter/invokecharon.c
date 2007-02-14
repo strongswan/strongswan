@@ -116,8 +116,11 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     {
 	arg[argc++] = "--strictcrlpolicy";
     }
-    arg[argc++] = "--eapdir";
-    arg[argc++] = cfg->setup.eapdir;
+    if (cfg->setup.eapdir)
+    {
+	arg[argc++] = "--eapdir";
+	arg[argc++] = cfg->setup.eapdir;
+    }
 
     {   /* parse debug string */
     	char *pos, *level, *buf_pos, type[4], buffer[512];
