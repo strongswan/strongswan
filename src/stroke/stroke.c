@@ -211,7 +211,10 @@ static int show_status(stroke_keyword_t kw, char *connection)
 static int list_flags[] = {
 	LIST_CERTS,
 	LIST_CACERTS,
+	LIST_OCSPCERTS,
+	LIST_CAINFOS,
 	LIST_CRLS,
+	LIST_OCSP,
 	LIST_ALL
 };
 
@@ -228,6 +231,7 @@ static int list(stroke_keyword_t kw, int utc)
 
 static int reread_flags[] = {
 	REREAD_CACERTS,
+	REREAD_OCSPCERTS,
 	REREAD_CRLS,
 	REREAD_ALL
 };
@@ -239,6 +243,20 @@ static int reread(stroke_keyword_t kw)
 	msg.type = STR_REREAD;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.reread.flags = reread_flags[kw - STROKE_REREAD_FIRST];
+	return send_stroke_msg(&msg);
+}
+
+static int purge_flags[] = {
+	PURGE_OCSP
+};
+
+static int purge(stroke_keyword_t kw)
+{
+	stroke_msg_t msg;
+	
+	msg.type = STR_PURGE;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.purge.flags = purge_flags[kw - STROKE_PURGE_FIRST];
 	return send_stroke_msg(&msg);
 }
 
@@ -288,9 +306,11 @@ static void exit_usage(char *error)
 	printf("  Show connection status:\n");
 	printf("    stroke status\n");
 	printf("  Show list of locally loaded certificates and crls:\n");
-	printf("    stroke listcerts|listcacerts|listcrls|listall\n");
+	printf("    stroke listcerts|listcacerts|listocspcerts|listcainfos|listcrls|listocsp|listall\n");
 	printf("  Reload ca certificates and crls:\n");
 	printf("    stroke rereadcacerts|rereadcrls|rereadall\n");
+	printf("  Purge ocsp cache entries:\n");
+	printf("    stroke purgeocsp\n");
 	exit_error(error);
 }
 
@@ -373,7 +393,10 @@ int main(int argc, char *argv[])
 			break;
 		case STROKE_LIST_CERTS:
 		case STROKE_LIST_CACERTS:
+		case STROKE_LIST_OCSPCERTS:
+		case STROKE_LIST_CAINFOS:
 		case STROKE_LIST_CRLS:
+		case STROKE_LIST_OCSP:
 		case STROKE_LIST_ALL:
 			res = list(token->kw, argc > 2 && strcmp(argv[2], "--utc") == 0);
 			break;
@@ -381,6 +404,9 @@ int main(int argc, char *argv[])
 		case STROKE_REREAD_CRLS:
 		case STROKE_REREAD_ALL:
 			res = reread(token->kw);
+			break;
+		case STROKE_PURGE_OCSP:
+			res = purge(token->kw);
 			break;
 		default:
 			exit_usage(NULL);

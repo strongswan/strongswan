@@ -40,15 +40,21 @@ typedef enum list_flag_t list_flag_t;
  */
 enum list_flag_t {
 	/** don't list anything */
-	LIST_NONE = 	0x0000,
+	LIST_NONE =			0x0000,
 	/** list all host/user certs */
-	LIST_CERTS =	0x0001,
+	LIST_CERTS =		0x0001,
 	/** list all ca certs */
-	LIST_CACERTS =	0x0002,
+	LIST_CACERTS =		0x0002,
+	/** list all ocsp signer certs */
+	LIST_OCSPCERTS =	0x0004,
+	/** list all ca information records */
+	LIST_CAINFOS =		0x0008,
 	/** list all crls */
-	LIST_CRLS =		0x0004,
+	LIST_CRLS =			0x0010,
+	/** list all ocsp cache entries */
+	LIST_OCSP =			0x0020,
 	/** all list options */
-	LIST_ALL =		0x0007,
+	LIST_ALL =			0x003F,
 };
 
 typedef enum reread_flag_t reread_flag_t;
@@ -59,13 +65,28 @@ typedef enum reread_flag_t reread_flag_t;
  */
 enum reread_flag_t {
 	/** don't reread anything */
-	REREAD_NONE = 		0x0000,
+	REREAD_NONE =		0x0000,
 	/** reread all ca certs */
-	REREAD_CACERTS = 	0x0001,
+	REREAD_CACERTS =	0x0001,
+	/** reread all ocsp signer certs */
+	REREAD_OCSPCERTS =	0x0002,
 	/** reread all crls */
-	REREAD_CRLS = 		0x0002,
+	REREAD_CRLS =		0x0004,
 	/** all reread options */
-	REREAD_ALL = 		0x0003,
+	REREAD_ALL =		0x0007,
+};
+
+typedef enum purge_flag_t purge_flag_t;
+
+/**
+ * Definition of the PURGE flags, currently used for
+ * the stroke purgeocsp command.
+ */
+enum purge_flag_t {
+	/** don't purge anything */
+	PURGE_NONE =		0x0000,
+	/** purge ocsp cache entries */
+	PURGE_OCSP =		0x0001,
 };
 
 typedef struct stroke_end_t stroke_end_t;
@@ -114,12 +135,18 @@ struct stroke_msg_t {
 		STR_STATUS,
 		/* show verbose connection status */
 		STR_STATUS_ALL,
+		/* add a ca information record */
+		STR_ADD_CA,
+		/* delete ca information record */
+		STR_DEL_CA,
 		/* set a log type to log/not log */
 		STR_LOGLEVEL,
 		/* list various objects */
 		STR_LIST,
 		/* reread various objects */
-		STR_REREAD
+		STR_REREAD,
+		/* purge various objects */
+		STR_PURGE
 		/* more to come */
 	} type;
 	
@@ -130,7 +157,7 @@ struct stroke_msg_t {
 		/* data for STR_INITIATE, STR_ROUTE, STR_UP, STR_DOWN, ... */
 		struct {
 			char *name;
-		} initiate, route, unroute, terminate, status, del_conn;
+		} initiate, route, unroute, terminate, status, del_conn, del_ca;
 
 		/* data for STR_ADD_CONN */
 		struct {
@@ -158,6 +185,15 @@ struct stroke_msg_t {
 			stroke_end_t me, other;
 		} add_conn;
 
+		/* data for STR_ADD_CA */
+		struct {
+			char *name;
+			char *cacert;
+			char *crluri;
+			char *crluri2;
+			char *ocspuri;
+		} add_ca;
+
 		/* data for STR_LOGLEVEL */
 		struct {
 			char *type;
@@ -175,6 +211,10 @@ struct stroke_msg_t {
 			reread_flag_t flags;
 		} reread;
 
+		/* data for STR_PURGE */
+		struct {
+			purge_flag_t flags;
+		} purge;
 	};
 	char buffer[STROKE_BUF_LEN];
 };
