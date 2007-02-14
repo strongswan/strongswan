@@ -346,11 +346,15 @@ int main (int argc, char **argv)
 		{
 		    if (ca->state == STATE_ADDED)
 		    {
+			if (starter_charon_pid())
+			{
+			    starter_stroke_del_ca(ca);
+			}
 			if (starter_pluto_pid())
 			{
 			    starter_whack_del_ca(ca);
-			    ca->state = STATE_TO_ADD;
 			}
+			ca->state = STATE_TO_ADD;
 		    }
 		}
 	    }
@@ -539,11 +543,15 @@ int main (int argc, char **argv)
 	    {
 		if (ca->state == STATE_TO_ADD)
 		{
+		    if (starter_charon_pid())
+		    {
+			starter_stroke_add_ca(ca);
+		    }
 		    if (starter_pluto_pid())
 		    {
 			starter_whack_add_ca(ca);
-			ca->state = STATE_ADDED;
 		    }
+		    ca->state = STATE_ADDED;
 		}
 	    }
 

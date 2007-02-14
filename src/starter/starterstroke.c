@@ -262,3 +262,29 @@ int starter_stroke_initiate_conn(starter_conn_t *conn)
 	msg.initiate.name = push_string(&msg, connection_name(conn));
 	return send_stroke_msg(&msg);
 }
+
+int starter_stroke_add_ca(starter_ca_t *ca)
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_ADD_CA;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.add_ca.name =    push_string(&msg, ca->name);
+	msg.add_ca.cacert =  push_string(&msg, ca->cacert);
+	msg.add_ca.crluri =  push_string(&msg, ca->crluri);
+	msg.add_ca.crluri2 = push_string(&msg, ca->crluri2);
+	msg.add_ca.ocspuri = push_string(&msg, ca->ocspuri);
+	return send_stroke_msg(&msg);
+}
+
+int starter_stroke_del_ca(starter_ca_t *ca)
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_DEL_CA;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.del_ca.name = push_string(&msg, ca->name);
+	return send_stroke_msg(&msg);
+}
+
+
