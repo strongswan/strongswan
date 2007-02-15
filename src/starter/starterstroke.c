@@ -227,8 +227,8 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	msg.add_conn.dpd.delay = conn->dpd_delay;
 	msg.add_conn.dpd.action = conn->dpd_action;
 
-	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->right);
-	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->left);
+	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->left);
+	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->right);
 
 	return send_stroke_msg(&msg);
 }

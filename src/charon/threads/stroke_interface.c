@@ -182,16 +182,16 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	DBG1(DBG_CFG, "received stroke: add connection '%s'", msg->add_conn.name);
 	
 	DBG2(DBG_CFG, "conn %s", msg->add_conn.name);
-	DBG2(DBG_CFG, "  right=%s", msg->add_conn.me.address);
-	DBG2(DBG_CFG, "  left=%s", msg->add_conn.other.address);
-	DBG2(DBG_CFG, "  rightsubnet=%s", msg->add_conn.me.subnet);
-	DBG2(DBG_CFG, "  leftsubnet=%s", msg->add_conn.other.subnet);
-	DBG2(DBG_CFG, "  rightid=%s", msg->add_conn.me.id);
-	DBG2(DBG_CFG, "  leftid=%s", msg->add_conn.other.id);
-	DBG2(DBG_CFG, "  rightcert=%s", msg->add_conn.me.cert);
-	DBG2(DBG_CFG, "  leftcert=%s", msg->add_conn.other.cert);
-	DBG2(DBG_CFG, "  rightca=%s", msg->add_conn.me.ca);
-	DBG2(DBG_CFG, "  leftca=%s", msg->add_conn.other.ca);
+	DBG2(DBG_CFG, "  left=%s", msg->add_conn.me.address);
+	DBG2(DBG_CFG, "  right=%s", msg->add_conn.other.address);
+	DBG2(DBG_CFG, "  leftsubnet=%s", msg->add_conn.me.subnet);
+	DBG2(DBG_CFG, "  rightsubnet=%s", msg->add_conn.other.subnet);
+	DBG2(DBG_CFG, "  leftid=%s", msg->add_conn.me.id);
+	DBG2(DBG_CFG, "  rightid=%s", msg->add_conn.other.id);
+	DBG2(DBG_CFG, "  leftcert=%s", msg->add_conn.me.cert);
+	DBG2(DBG_CFG, "  rightcert=%s", msg->add_conn.other.cert);
+	DBG2(DBG_CFG, "  leftca=%s", msg->add_conn.me.ca);
+	DBG2(DBG_CFG, "  rightca=%s", msg->add_conn.other.ca);
 	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	
