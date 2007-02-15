@@ -320,6 +320,9 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	ssize_t bytes_sent;
 	chunk_t data, marked;
 	host_t *src, *dst;
+	struct msghdr msg;
+	struct cmsghdr *cmsg;
+	struct iovec iov;
 	
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
@@ -375,8 +378,54 @@ status_t sender(private_socket_t *this, packet_t *packet)
 		return FAILED;
 	}
 	
-	bytes_sent = sendto(skt, data.ptr, data.len, 0,
-						dst->get_sockaddr(dst), *(dst->get_sockaddr_len(dst)));
+	memset(&msg, 0, sizeof(struct msghdr));
+	msg.msg_name = dst->get_sockaddr(dst);;
+	msg.msg_namelen = *dst->get_sockaddr_len(dst);
+	iov.iov_base = data.ptr;
+	iov.iov_len = data.len;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	msg.msg_flags = 0;
+	
+	if (!dst->is_anyaddr(dst))
+	{
+		if (family == AF_INET)
+		{
+			char buf[CMSG_SPACE(sizeof(struct in_pktinfo))];
+			struct in_pktinfo *pktinfo;
+			struct sockaddr_in *sin;
+			
+			msg.msg_control = buf;
+			msg.msg_controllen = sizeof(buf);
+			cmsg = CMSG_FIRSTHDR(&msg);
+			cmsg->cmsg_level = SOL_IP;
+			cmsg->cmsg_type = IP_PKTINFO;
+			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+			pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
+			memset(pktinfo, 0, sizeof(struct in_pktinfo));
+			sin = (struct sockaddr_in*)src->get_sockaddr(src);
+			memcpy(&pktinfo->ipi_spec_dst, &sin->sin_addr, sizeof(struct in_addr));
+		}
+		else
+		{
+			char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+			struct in6_pktinfo *pktinfo;
+			struct sockaddr_in6 *sin;
+			
+			msg.msg_control = buf;
+			msg.msg_controllen = sizeof(buf);
+			cmsg = CMSG_FIRSTHDR(&msg);
+			cmsg->cmsg_level = SOL_IPV6;
+			cmsg->cmsg_type = IPV6_2292PKTINFO;
+			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+			pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+			memset(pktinfo, 0, sizeof(struct in6_pktinfo));
+			sin = (struct sockaddr_in6*)src->get_sockaddr(src);
+			memcpy(&pktinfo->ipi6_addr, &sin->sin6_addr, sizeof(struct in6_addr));
+		}
+	}
+	
+	bytes_sent = sendmsg(skt, &msg, 0);
 
 	if (bytes_sent != data.len)
 	{
