@@ -155,9 +155,9 @@
           0x03               "csor"
             0x04             "nistalgorithm"
               0x02           "hashalgs"
-                0x01         "id-SHA-256"
-                0x02         "id-SHA-384"
-                0x03         "id-SHA-512"
+                0x01         "id-SHA-256"		OID_SHA256
+                0x02         "id-SHA-384"		OID_SHA384
+                0x03         "id-SHA-512"		OID_SHA512
         0x86                 ""
           0xf8               ""
             0x42             "netscape"
