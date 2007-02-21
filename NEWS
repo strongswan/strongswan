@@ -1,3 +1,15 @@
+strongswan-4.0.8
+----------------
+
+- Support of SHA2_384 hash function for protecting IKEv1
+  negotiations and support of SHA2 signatures in X.509 certificates.
+
+- Fixed a serious bug in the computation of the SHA2-512 HMAC
+  function. Introduced automatic self-test of all IKEv1 hash
+  and hmac functions during pluto startup. Failure of a self-test
+  currently issues a warning only but does not exit pluto [yet].
+
+
 strongswan-4.0.7
 ----------------
 
