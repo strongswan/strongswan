@@ -10,3 +10,10 @@ dave::/etc/init.d/iptables stop 2> /dev/null
 moon::rm /etc/ipsec.d/crls/*
 carol::rm /etc/ipsec.d/crls/*
 dave::rm /etc/ipsec.d/crls/*
+moon::rm /etc/ipsec.d/private/*
+carol::rm /etc/ipsec.d/private/*
+dave::rm /etc/ipsec.d/private/*
+moon::rm /etc/ipsec.d/certs/*
+carol::rm /etc/ipsec.d/certs/*
+dave::rm /etc/ipsec.d/certs/*
+
