@@ -289,22 +289,26 @@ extern const char sparse_end[];
 #define COOKIE_SIZE 8
 #define MAX_ISAKMP_SPI_SIZE 16
 
-#define MD2_DIGEST_SIZE		(128 / BITS_PER_BYTE)	/* ought to be supplied by md2.h */
-#define MD5_DIGEST_SIZE		(128 / BITS_PER_BYTE)	/* ought to be supplied by md5.h */
-#define SHA1_DIGEST_SIZE	(160 / BITS_PER_BYTE)	/* ought to be supplied by sha1.h */
+#define MD2_DIGEST_SIZE		(128 / BITS_PER_BYTE)
+#define MD5_DIGEST_SIZE		(128 / BITS_PER_BYTE)
+#define SHA1_DIGEST_SIZE	(160 / BITS_PER_BYTE)
+#define SHA2_256_DIGEST_SIZE	(256 / BITS_PER_BYTE)
+#define SHA2_384_DIGEST_SIZE	(384 / BITS_PER_BYTE)
+#define SHA2_512_DIGEST_SIZE	(512 / BITS_PER_BYTE)
+
+#define MD5_BLOCK_SIZE		(512 / BITS_PER_BYTE)
+#define SHA1_BLOCK_SIZE		(512 / BITS_PER_BYTE)
+#define SHA2_256_BLOCK_SIZE	(512 / BITS_PER_BYTE)
+#define SHA2_384_BLOCK_SIZE	(1024 / BITS_PER_BYTE)
+#define SHA2_512_BLOCK_SIZE	(1024 / BITS_PER_BYTE)
 
 #define DES_CBC_BLOCK_SIZE	(64 / BITS_PER_BYTE)
 
 #define DSS_QBITS	160	/* bits in DSS's "q" (FIPS 186-1) */
 
-/* to statically allocate IV, we need max of
- * MD5_DIGEST_SIZE, SHA1_DIGEST_SIZE, and DES_CBC_BLOCK_SIZE.
- * To avoid combinatorial explosion, we leave out DES_CBC_BLOCK_SIZE.
- */
-#define MAX_DIGEST_LEN_OLD (MD5_DIGEST_SIZE > SHA1_DIGEST_SIZE? MD5_DIGEST_SIZE : SHA1_DIGEST_SIZE)
-  
-/* for max: SHA2_512 */
-#define MAX_DIGEST_LEN (512/BITS_PER_BYTE)
+/* Maximum is required for SHA2_512 */
+#define MAX_DIGEST_LEN		SHA2_512_DIGEST_SIZE
+#define MAX_HASH_BLOCK_SIZE	SHA2_512_BLOCK_SIZE
 
 /* RFC 2404 "HMAC-SHA-1-96" section 3 */
 #define HMAC_SHA1_KEY_LEN    SHA1_DIGEST_SIZE
@@ -1012,7 +1016,6 @@ extern enum_names oakley_prf_names;
 
 #define HMAC_IPAD            0x36
 #define HMAC_OPAD            0x5C
-#define HMAC_BUFSIZE         64
 
 /* Oakley Encryption Algorithm attribute
  * draft-ietf-ipsec-ike-01.txt appendix A

@@ -76,7 +76,8 @@ struct hmac_ctx {
     const struct hash_desc *h;	/* underlying hash function */
     size_t hmac_digest_size;	/* copy of h->hash_digest_size */
     union hash_ctx hash_ctx;	/* ctx for hash function */
-    u_char buf1[HMAC_BUFSIZE], buf2[HMAC_BUFSIZE];
+    u_char buf1[MAX_HASH_BLOCK_SIZE];
+    u_char buf2[MAX_HASH_BLOCK_SIZE];
     };
 
 extern void hmac_init(

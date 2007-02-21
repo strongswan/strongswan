@@ -437,6 +437,113 @@ ike_alg_show_connection(struct connection *c, const char *instance)
 }
 
 /*
+ * Apply a suite of testvectors to a hash algorithm
+ */
+static bool
+ike_hash_test(const struct hash_desc *desc)
+{
+    bool hash_results = TRUE;
+    bool hmac_results = TRUE;
+
+    if (desc->hash_testvectors == NULL)
+    {
+	plog("  %s hash self-test not available", enum_name(&oakley_hash_names, desc->algo_id));
+    }
+    else
+    {
+	int i;
+
+	for (i = 0; desc->hash_testvectors[i].msg_digest != NULL; i++)
+	{
+	    u_char digest[MAX_DIGEST_LEN];
+	    bool result;
+
+	    union hash_ctx ctx;
+
+	    desc->hash_init(&ctx);
+	    desc->hash_update(&ctx, desc->hash_testvectors[i].msg
+				   ,desc->hash_testvectors[i].msg_size);
+	    desc->hash_final(digest, &ctx);
+	    result = memcmp(digest, desc->hash_testvectors[i].msg_digest
+				  , desc->hash_digest_size) == 0;
+	    DBG(DBG_CRYPT,
+		DBG_log("  hash testvector %d: %s", i, result ? "ok":"failed")
+	    )
+	    hash_results &= result;
+	}
+	plog("  %s hash self-test %s", enum_name(&oakley_hash_names, desc->algo_id)
+				, hash_results ? "passed":"failed");
+    }
+
+    if (desc->hmac_testvectors == NULL)
+    {
+	plog("  %s hmac self-test not available", enum_name(&oakley_hash_names, desc->algo_id));
+    }
+    else
+    {
+	int i;
+
+	for (i = 0; desc->hmac_testvectors[i].hmac != NULL; i++)
+	{
+	    u_char digest[MAX_DIGEST_LEN];
+	    bool result;
+
+	    struct hmac_ctx ctx;
+
+	    hmac_init(&ctx, desc, desc->hmac_testvectors[i].key
+				, desc->hmac_testvectors[i].key_size);
+	    hmac_update(&ctx, desc->hmac_testvectors[i].msg
+			     ,desc->hmac_testvectors[i].msg_size);
+	    hmac_final(digest, &ctx);
+	    result = memcmp(digest, desc->hmac_testvectors[i].hmac
+				  , desc->hash_digest_size) == 0;
+	    DBG(DBG_CRYPT,
+		DBG_log("  hmac testvector %d: %s", i, result ? "ok":"failed")
+	    )
+	    hmac_results &= result;
+	}
+	plog("  %s hmac self-test %s", enum_name(&oakley_hash_names, desc->algo_id)
+				, hmac_results ? "passed":"failed");
+    }
+    return hash_results && hmac_results;
+}
+
+/*
+ * Apply test vectors to registered encryption and hash algorithms
+ */
+bool
+ike_alg_test(void)
+{
+    bool all_results = TRUE;
+    struct ike_alg *a;
+
+    plog("Testing registered IKE encryption algorithms:");
+
+    for (a = ike_alg_base[IKE_ALG_ENCRYPT]; a != NULL; a = a->algo_next)
+    {
+	
+        struct encrypt_desc *desc = (struct encrypt_desc*)a;
+
+	plog("  %s self-test not available", enum_name(&oakley_enc_names, a->algo_id));
+    }
+
+    plog("Testing registered IKE hash algorithms:");
+
+    for (a = ike_alg_base[IKE_ALG_HASH]; a != NULL; a = a->algo_next)
+    {
+        struct hash_desc *desc = (struct hash_desc*)a;
+
+	all_results &= ike_hash_test(desc);
+    }
+
+    if (all_results)
+	plog("All crypto self-tests passed");
+    else
+	plog("Some crypto self-tests failed");
+    return all_results;
+}
+
+/*
  * ML: make F_STRICT logic consider enc,hash/auth,modp algorithms
  */
 bool
