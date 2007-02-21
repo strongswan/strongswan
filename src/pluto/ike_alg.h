@@ -86,7 +86,7 @@ extern const struct oakley_group_desc* ike_alg_pfsgroup(struct connection *c
 extern struct db_context * ike_alg_db_new(struct alg_info_ike *ai, lset_t policy);
 extern void ike_alg_list(void);
 extern void ike_alg_show_connection(struct connection *c, const char *instance);
-extern bool ik_alg_test(void);
+extern bool ike_alg_test(void);
 extern bool ike_alg_ok_final(u_int ealg, u_int key_len, u_int aalg, u_int group
     , struct alg_info_ike *alg_info_ike);
 extern int ike_alg_init(void);
