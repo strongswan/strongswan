@@ -97,6 +97,7 @@ typedef enum {
     KW_CRLURI,
     KW_CRLURI2,
     KW_OCSPURI,
+    KW_OCSPURI2,
 
 #define KW_CA_FIRST	KW_CA_SETUP
 #define KW_CA_LAST	KW_OCSPURI

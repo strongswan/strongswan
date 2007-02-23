@@ -138,6 +138,7 @@ struct starter_ca {
 	char		*crluri;
 	char		*crluri2;
 	char		*ocspuri;
+	char		*ocspuri2;
 
 	bool		strict;
 

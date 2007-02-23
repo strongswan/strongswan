@@ -77,8 +77,11 @@ cacert,            KW_CACERT
 ldaphost,          KW_LDAPHOST
 ldapbase,          KW_LDAPBASE
 crluri,            KW_CRLURI
+crluri1,           KW_CRLURI
 crluri2,           KW_CRLURI2
 ocspuri,           KW_OCSPURI
+ocspuri1,          KW_OCSPURI
+ocspuri2,          KW_OCSPURI2
 left,              KW_LEFT
 leftnexthop,       KW_LEFTNEXTHOP
 leftsubnet,        KW_LEFTSUBNET
