@@ -28,6 +28,7 @@ typedef struct credential_store_t credential_store_t;
 
 #include <library.h>
 #include <crypto/x509.h>
+#include <crypto/ca.h>
 #include <crypto/rsa/rsa_private_key.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <utils/identification.h>
@@ -162,6 +163,15 @@ struct credential_store_t {
 	x509_t* (*add_ca_certificate) (credential_store_t *this, x509_t *cert);
 
 	/**
+	 * @brief If a ca info record does not already exists in the credential store then add it.
+	 *
+	 * @param this		calling object
+	 * @param cert		ca info record to be added
+	 * @return			pointer to the added or already existing ca info record
+	 */
+	ca_info_t* (*add_ca_info) (credential_store_t *this, ca_info_t *ca_info);
+
+	/**
 	 * @brief Create an iterator over all end certificates.
 	 *
 	 * @param this		calling object
@@ -176,6 +186,14 @@ struct credential_store_t {
 	 * @return 			iterator
 	 */
 	iterator_t* (*create_cacert_iterator) (credential_store_t *this);
+
+	/**
+	 * @brief Create an iterator over all CA info records
+	 *
+	 * @param this		calling object
+	 * @return 			iterator
+	 */
+	iterator_t* (*create_cainfo_iterator) (credential_store_t *this);
 
 	/**
 	 * @brief Create an iterator over all CRLs.

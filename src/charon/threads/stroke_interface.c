@@ -38,6 +38,7 @@
 #include <stroke.h>
 #include <daemon.h>
 #include <crypto/x509.h>
+#include <crypto/ca.h>
 #include <crypto/crl.h>
 #include <queues/jobs/initiate_job.h>
 #include <queues/jobs/route_job.h>
@@ -148,6 +149,42 @@ static x509_t* load_end_certificate(const char *filename, identification_t **idp
 }
 
 /**
+ * Load ca certificate
+ */
+static x509_t* load_ca_certificate(const char *filename)
+{
+	char path[PATH_BUF];
+	x509_t *cert;
+
+	if (*filename == '/')
+	{
+		/* absolute path name */
+		snprintf(path, sizeof(path), "%s", filename);
+	}
+	else
+	{
+		/* relative path name */
+		snprintf(path, sizeof(path), "%s/%s", CA_CERTIFICATE_DIR, filename);
+	}
+
+	cert = x509_create_from_file(path, "ca certificate");
+
+	if (cert)
+	{
+		if (cert->is_ca(cert))
+		{
+			return charon->credentials->add_ca_certificate(charon->credentials, cert);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "  CA basic constraints flag not set, cert discarded");
+			cert->destroy(cert);
+		}
+	}
+	return NULL;
+}
+
+/**
  * Add a connection to the configuration list
  */
 static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
@@ -158,7 +195,7 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	identification_t *my_ca = NULL;
 	identification_t *other_ca = NULL;
 	bool my_ca_same = FALSE;
-    bool other_ca_same =FALSE;
+	bool other_ca_same =FALSE;
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
@@ -638,7 +675,43 @@ static void stroke_terminate(stroke_msg_t *msg, FILE *out)
  */
 static void stroke_add_ca(stroke_msg_t *msg, FILE *out)
 {
-	/* TODO add code */
+	x509_t *cacert;
+	ca_info_t *ca_info;
+
+	pop_string(msg, &msg->add_ca.name);
+	pop_string(msg, &msg->add_ca.cacert);
+	pop_string(msg, &msg->add_ca.crluri);
+	pop_string(msg, &msg->add_ca.crluri2);
+	pop_string(msg, &msg->add_ca.ocspuri);
+	pop_string(msg, &msg->add_ca.ocspuri2);
+	
+	DBG1(DBG_CFG, "received stroke: add ca info '%s'", msg->add_ca.name);
+	
+	DBG2(DBG_CFG, "ca %s",        msg->add_ca.name);
+	DBG2(DBG_CFG, "  cacert=%s",  msg->add_ca.cacert);
+	DBG2(DBG_CFG, "  crluri=%s",  msg->add_ca.crluri);
+	DBG2(DBG_CFG, "  crluri2=%s", msg->add_ca.crluri2);
+	DBG2(DBG_CFG, "  ocspuri=%s", msg->add_ca.ocspuri);
+	DBG2(DBG_CFG, "  ocspuri2=%s", msg->add_ca.ocspuri2);
+
+	if (msg->add_ca.cacert == NULL)
+	{
+		DBG1(DBG_CFG, "missing cacert parameter\n");
+		return;
+	}
+
+	cacert = load_ca_certificate(msg->add_ca.cacert);
+
+	if (cacert == NULL)
+	{
+		return;
+	}
+	ca_info = ca_info_create(msg->add_ca.name, cacert);
+	ca_info->add_crluri(ca_info, msg->add_ca.crluri);
+	ca_info->add_crluri(ca_info, msg->add_ca.crluri2);
+	ca_info->add_ocspuri(ca_info, msg->add_ca.ocspuri);
+	ca_info->add_ocspuri(ca_info, msg->add_ca.ocspuri2);
+	charon->credentials->add_ca_info(charon->credentials, ca_info);
 }
 
 /**
@@ -861,6 +934,23 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
 		while (iterator->iterate(iterator, (void**)&cert))
 		{
 			fprintf(out, "%#Q\n", cert, msg->list.utc);
+		}
+		iterator->destroy(iterator);
+	}
+	if (msg->list.flags & LIST_CAINFOS)
+	{
+		ca_info_t *ca_info;
+
+		iterator = charon->credentials->create_cainfo_iterator(charon->credentials);
+		if (iterator->get_count(iterator))
+		{
+			fprintf(out, "\n");
+			fprintf(out, "List of X.509 CA Information Records:\n");
+			fprintf(out, "\n");
+		}
+		while (iterator->iterate(iterator, (void**)&ca_info))
+		{
+			fprintf(out, "%#C\n", ca_info, msg->list.utc);
 		}
 		iterator->destroy(iterator);
 	}

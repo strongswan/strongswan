@@ -31,6 +31,7 @@
 #include <crypto/certinfo.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <crypto/x509.h>
+#include <crypto/ca.h>
 #include <crypto/crl.h>
 #include <asn1/ttodata.h>
 
@@ -119,6 +120,11 @@ struct private_local_credential_store_t {
 	 * list of X.509 CA certificates with public keys
 	 */
 	linked_list_t *ca_certs;
+
+	/**
+	 * list of X.509 CA information records
+	 */
+	linked_list_t *ca_infos;
 
 	/**
 	 * list of X.509 CRLs
@@ -681,6 +687,15 @@ static x509_t* add_ca_certificate(private_local_credential_store_t *this, x509_t
 }
 
 /**
+ * Add a unique ca info record to a linked list
+ */
+static ca_info_t* add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_info)
+{
+	this->ca_infos->insert_last(this->ca_infos, (void*)ca_info);
+	return ca_info;
+}
+
+/**
  * Implements local_credential_store_t.create_cert_iterator
  */
 static iterator_t* create_cert_iterator(private_local_credential_store_t *this)
@@ -694,6 +709,14 @@ static iterator_t* create_cert_iterator(private_local_credential_store_t *this)
 static iterator_t* create_cacert_iterator(private_local_credential_store_t *this)
 {
 	return this->ca_certs->create_iterator(this->ca_certs, TRUE);
+}
+
+/**
+ * Implements local_credential_store_t.create_cainfo_iterator
+ */
+static iterator_t* create_cainfo_iterator(private_local_credential_store_t *this)
+{
+	return this->ca_infos->create_iterator(this->ca_infos, TRUE);
 }
 
 /**
@@ -1102,6 +1125,7 @@ static void destroy(private_local_credential_store_t *this)
 {
 	this->certs->destroy_offset(this->certs, offsetof(x509_t, destroy));
 	this->ca_certs->destroy_offset(this->ca_certs, offsetof(x509_t, destroy));
+	this->ca_infos->destroy_offset(this->ca_infos, offsetof(ca_info_t, destroy));
 	this->crls->destroy_offset(this->crls, offsetof(crl_t, destroy));
 	this->private_keys->destroy_offset(this->private_keys, offsetof(rsa_private_key_t, destroy));
 	this->shared_keys->destroy_function(this->shared_keys, (void*)shared_key_destroy);
@@ -1127,8 +1151,10 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
 	this->public.credential_store.add_ca_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_ca_certificate;
+	this->public.credential_store.add_ca_info = (ca_info_t* (*) (credential_store_t*,ca_info_t*))add_ca_info;
 	this->public.credential_store.create_cert_iterator = (iterator_t* (*) (credential_store_t*))create_cert_iterator;
 	this->public.credential_store.create_cacert_iterator = (iterator_t* (*) (credential_store_t*))create_cacert_iterator;
+	this->public.credential_store.create_cainfo_iterator = (iterator_t* (*) (credential_store_t*))create_cainfo_iterator;
 	this->public.credential_store.create_crl_iterator = (iterator_t* (*) (credential_store_t*))create_crl_iterator;
 	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
 	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;
@@ -1143,6 +1169,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->private_keys = linked_list_create();
 	this->certs = linked_list_create();
 	this->ca_certs = linked_list_create();
+	this->ca_infos = linked_list_create();
 	this->crls = linked_list_create();
 	this->strict = strict;
 
