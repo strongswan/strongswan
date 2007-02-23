@@ -192,6 +192,7 @@ struct stroke_msg_t {
 			char *crluri;
 			char *crluri2;
 			char *ocspuri;
+			char *ocspuri2;
 		} add_ca;
 
 		/* data for STR_LOGLEVEL */
