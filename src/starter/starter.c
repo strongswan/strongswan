@@ -449,6 +449,10 @@ int main (int argc, char **argv)
 		    {
 			if (ca->state == STATE_ADDED)
 			{
+			    if (starter_charon_pid())
+			    {
+				starter_stroke_del_ca(ca);
+			    }
 			    if (starter_pluto_pid())
 			    {
 				starter_whack_del_ca(ca);
