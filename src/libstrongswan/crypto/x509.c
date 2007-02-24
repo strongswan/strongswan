@@ -1045,6 +1045,14 @@ static cert_status_t get_status(const private_x509_t *this)
 }
 
 /**
+ * Implements x509_t.create_crluri_iterator
+ */
+static iterator_t *create_crluri_iterator(const private_x509_t *this)
+{
+	return this->crlDistributionPoints->create_iterator(this->crlDistributionPoints, TRUE);
+}
+
+/**
  * Implements x509_t.verify
  */
 static bool verify(const private_x509_t *this, const rsa_public_key_t *signer)
@@ -1228,6 +1236,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->public.get_until = (time_t (*) (const x509_t*))get_until;
 	this->public.set_status = (void (*) (x509_t*,cert_status_t))set_status;
 	this->public.get_status = (cert_status_t (*) (const x509_t*))get_status;
+	this->public.create_crluri_iterator = (iterator_t* (*) (const x509_t*))create_crluri_iterator;
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	
