@@ -502,7 +502,7 @@ static void stroke_del_conn(stroke_msg_t *msg, FILE *out)
 	status_t status;
 	
 	pop_string(msg, &(msg->del_conn.name));
-	DBG1(DBG_CFG, "received stroke: delete '%s'", msg->del_conn.name);
+	DBG1(DBG_CFG, "received stroke: delete connection '%s'", msg->del_conn.name);
 	
 	status = charon->connections->delete_connection(charon->connections, 
 													msg->del_conn.name);
@@ -707,11 +707,34 @@ static void stroke_add_ca(stroke_msg_t *msg, FILE *out)
 		return;
 	}
 	ca_info = ca_info_create(msg->add_ca.name, cacert);
-	ca_info->add_crluri(ca_info, msg->add_ca.crluri);
-	ca_info->add_crluri(ca_info, msg->add_ca.crluri2);
-	ca_info->add_ocspuri(ca_info, msg->add_ca.ocspuri);
-	ca_info->add_ocspuri(ca_info, msg->add_ca.ocspuri2);
+
+	if (msg->add_ca.crluri)
+	{
+		chunk_t uri = { msg->add_ca.crluri, strlen(msg->add_ca.crluri) };
+		
+		ca_info->add_crluri(ca_info, uri);
+	}
+	if (msg->add_ca.crluri2)
+	{
+		chunk_t uri = { msg->add_ca.crluri2, strlen(msg->add_ca.crluri2) };
+		
+		ca_info->add_crluri(ca_info, uri);
+	}
+	if (msg->add_ca.ocspuri)
+	{
+		chunk_t uri = { msg->add_ca.ocspuri, strlen(msg->add_ca.ocspuri) };
+		
+		ca_info->add_ocspuri(ca_info, uri);
+	}
+	if (msg->add_ca.ocspuri2)
+	{
+		chunk_t uri = { msg->add_ca.ocspuri2, strlen(msg->add_ca.ocspuri2) };
+		
+		ca_info->add_ocspuri(ca_info, uri);
+	}
 	charon->credentials->add_ca_info(charon->credentials, ca_info);
+	DBG1(DBG_CFG, "added ca '%s'", msg->add_ca.name);
+
 }
 
 /**
@@ -719,7 +742,22 @@ static void stroke_add_ca(stroke_msg_t *msg, FILE *out)
  */
 static void stroke_del_ca(stroke_msg_t *msg, FILE *out)
 {
-	/* TODO add code */
+	status_t status;
+	
+	pop_string(msg, &(msg->del_ca.name));
+	DBG1(DBG_CFG, "received stroke: delete ca info '%s'", msg->del_ca.name);
+	
+	status = charon->credentials->release_ca_info(charon->credentials,
+												  msg->del_ca.name);
+
+	if (status == SUCCESS)
+	{
+		fprintf(out, "deleted ca info '%s'\n", msg->del_ca.name);
+	}
+	else
+	{
+		fprintf(out, "no ca info named '%s'\n", msg->del_ca.name);
+	}
 }
 
 /**
@@ -950,7 +988,7 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
 		}
 		while (iterator->iterate(iterator, (void**)&ca_info))
 		{
-			fprintf(out, "%#C\n", ca_info, msg->list.utc);
+			fprintf(out, "%#W", ca_info, msg->list.utc);
 		}
 		iterator->destroy(iterator);
 	}
