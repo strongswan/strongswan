@@ -24,7 +24,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
-#include <printf.h>
+#include <stdio.h>
 
 #include "x509.h"
 
@@ -989,6 +989,14 @@ static chunk_t get_subjectKeyID(const private_x509_t *this)
 }
 
 /**
+ * Implements x509_t.get_keyid
+ */
+static chunk_t get_keyid(const private_x509_t *this)
+{
+	return this->public_key->get_keyid(this->public_key);
+}
+
+/**
  * Implements x509_t.get_issuer
  */
 static identification_t *get_issuer(const private_x509_t *this)
@@ -1213,6 +1221,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->public.get_public_key = (rsa_public_key_t* (*) (const x509_t*))get_public_key;
 	this->public.get_serialNumber = (chunk_t (*) (const x509_t*))get_serialNumber;
 	this->public.get_subjectKeyID = (chunk_t (*) (const x509_t*))get_subjectKeyID;
+	this->public.get_keyid = (chunk_t (*) (const x509_t*))get_keyid;
 	this->public.get_issuer = (identification_t* (*) (const x509_t*))get_issuer;
 	this->public.get_subject = (identification_t* (*) (const x509_t*))get_subject;
 	this->public.set_until = (void (*) (x509_t*,time_t))set_until;

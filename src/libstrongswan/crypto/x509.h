@@ -111,6 +111,14 @@ struct x509_t {
 	chunk_t (*get_subjectKeyID) (const x509_t *this);
 
 	/**
+	 * @brief Get keyid from the certificate's public key.
+	 * 
+	 * @param this				calling object
+	 * @return					keyid
+	 */
+	chunk_t (*get_keyid) (const x509_t *this);
+
+	/**
 	 * @brief Get the certificate issuer's ID.
 	 * 
 	 * The resulting ID is always a identification_t
