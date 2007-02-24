@@ -23,7 +23,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
-#include <printf.h>
+#include <stdio.h>
 
 #include <library.h>
 #include <debug.h>
