@@ -126,7 +126,7 @@ struct credential_store_t {
 	x509_t* (*get_ca_certificate_by_keyid) (credential_store_t *this, chunk_t keyid);
 	
 	/**
-	 * @brief Returns the ca certificate of a specific subject distinguished name.
+	 * @brief Returns the issuer certificate of a given certificate.
 	 * 
 	 * @param this					calling object
 	 * @param id					certificate for which issuer cert is required
@@ -166,10 +166,20 @@ struct credential_store_t {
 	 * @brief If a ca info record does not already exists in the credential store then add it.
 	 *
 	 * @param this		calling object
-	 * @param cert		ca info record to be added
-	 * @return			pointer to the added or already existing ca info record
+	 * @param ca_info	ca info record to be added
 	 */
-	ca_info_t* (*add_ca_info) (credential_store_t *this, ca_info_t *ca_info);
+	void (*add_ca_info) (credential_store_t *this, ca_info_t *ca_info);
+
+	/**
+	 * @brief Release a ca info record with a given name.
+	 *
+	 * @param this		calling object
+	 * @param name		name of the ca info record to be released
+	 * @return
+	 * 							- SUCCESS, or
+	 * 							- NOT_FOUND
+	 */
+	status_t (*release_ca_info) (credential_store_t *this, const char *name);
 
 	/**
 	 * @brief Create an iterator over all end certificates.

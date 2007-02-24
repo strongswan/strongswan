@@ -127,6 +127,11 @@ struct private_local_credential_store_t {
 	linked_list_t *ca_infos;
 
 	/**
+	 * mutex controlling the access to the ca_infos linked list
+	 */
+	pthread_mutex_t ca_infos_mutex;
+
+	/**
 	 * list of X.509 CRLs
 	 */
 	linked_list_t *crls;
@@ -473,7 +478,7 @@ static cert_status_t verify_by_ocsp(private_local_credential_store_t* this,
 /**
  * Find an exact copy of a certificate in a linked list
  */
-static x509_t* find_certificate_copy(linked_list_t *certs, x509_t *cert)
+static x509_t* find_certificate(linked_list_t *certs, x509_t *cert)
 {
 	x509_t *found_cert = NULL, *current_cert;
 
@@ -501,7 +506,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 	time_t until = UNDEFINED_TIME;
 
 	x509_t *end_cert = cert;
-	x509_t *cert_copy = find_certificate_copy(this->certs, end_cert);
+	x509_t *cert_copy = find_certificate(this->certs, end_cert);
 	
 	*found = (cert_copy != NULL);
 	if (*found)
@@ -656,7 +661,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
  */
 static x509_t* add_certificate(linked_list_t *certs, x509_t *cert)
 {
-	x509_t *found_cert = find_certificate_copy(certs, cert);
+	x509_t *found_cert = find_certificate(certs, cert);
 
 	if (found_cert)
 	{
@@ -671,11 +676,85 @@ static x509_t* add_certificate(linked_list_t *certs, x509_t *cert)
 }
 
 /**
+ * Add a unique ca info record to a linked list
+ */
+static void add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_info)
+{
+	ca_info_t *current_ca_info;
+	ca_info_t *found_ca_info = NULL;
+
+	iterator_t *iterator = this->ca_infos->create_iterator_locked(this->ca_infos, &(this->ca_infos_mutex));
+
+	while (iterator->iterate(iterator, (void**)&current_ca_info))
+	{
+		if (current_ca_info->equals(current_ca_info, ca_info))
+		{
+			found_ca_info = current_ca_info;
+			break;
+		}
+	}
+	if (found_ca_info)
+	{
+		current_ca_info->add_info(current_ca_info, ca_info);
+		ca_info->destroy(ca_info);
+	}
+	else
+	{
+		this->ca_infos->insert_last(this->ca_infos, (void*)ca_info);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
+ * Release ca info record of a given name
+ */
+static status_t release_ca_info(private_local_credential_store_t *this, const char *name)
+{
+	status_t status = NOT_FOUND;
+	ca_info_t *ca_info;
+
+	iterator_t *iterator = this->ca_infos->create_iterator_locked(this->ca_infos, &(this->ca_infos_mutex));
+
+	while (iterator->iterate(iterator, (void**)&ca_info))
+	{
+		if (ca_info->equals_name(ca_info, name))
+		{
+			ca_info->release_info(ca_info);
+			status = SUCCESS;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implements local_credential_store_t.add_end_certificate
  */
 static x509_t* add_end_certificate(private_local_credential_store_t *this, x509_t *cert)
 {
-	return add_certificate(this->certs, cert);
+	x509_t *ret_cert = add_certificate(this->certs, cert);
+
+	if (ret_cert == cert)
+	{
+		x509_t *issuer_cert = get_issuer_certificate(this, cert);
+
+		if (issuer_cert)
+		{
+			ca_info_t *ca_info = ca_info_create(NULL, issuer_cert);
+			iterator_t *iterator = cert->create_crluri_iterator(cert);
+
+			identification_t *uri;
+	
+			while (iterator->iterate(iterator, (void**)&uri))
+			{
+				ca_info->add_crluri(ca_info, uri->get_encoding(uri));
+			}
+			iterator->destroy(iterator);
+
+			add_ca_info(this, ca_info);
+		}
+	}
+	return ret_cert;
 }
 
 /**
@@ -683,16 +762,7 @@ static x509_t* add_end_certificate(private_local_credential_store_t *this, x509_
  */
 static x509_t* add_ca_certificate(private_local_credential_store_t *this, x509_t *cert)
 {
-	return add_certificate(this->ca_certs, cert);
-}
-
-/**
- * Add a unique ca info record to a linked list
- */
-static ca_info_t* add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_info)
-{
-	this->ca_infos->insert_last(this->ca_infos, (void*)ca_info);
-	return ca_info;
+	 add_certificate(this->ca_certs, cert);
 }
 
 /**
@@ -716,7 +786,7 @@ static iterator_t* create_cacert_iterator(private_local_credential_store_t *this
  */
 static iterator_t* create_cainfo_iterator(private_local_credential_store_t *this)
 {
-	return this->ca_infos->create_iterator(this->ca_infos, TRUE);
+	return this->ca_infos->create_iterator_locked(this->ca_infos, &(this->ca_infos_mutex));
 }
 
 /**
@@ -735,7 +805,6 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 	struct dirent* entry;
 	struct stat stb;
 	DIR* dir;
-	x509_t *cert;
 	
 	DBG1(DBG_CFG, "loading ca certificates from '%s/'", CA_CERTIFICATE_DIR);
 
@@ -759,7 +828,8 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 		/* try to parse all regular files */
 		if (stb.st_mode & S_IFREG)
 		{
-			cert = x509_create_from_file(file, "ca certificate");
+			x509_t *cert = x509_create_from_file(file, "ca certificate");
+
 			if (cert)
 			{
 				err_t ugh = cert->is_valid(cert, NULL);
@@ -770,7 +840,14 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 				}
 				if (cert->is_ca(cert))
 				{
-					cert = add_certificate(this->ca_certs, cert);
+					x509_t *ret_cert = add_certificate(this->ca_certs, cert);
+
+					if (ret_cert == cert)
+					{
+						ca_info_t *ca_info = ca_info_create(NULL, cert);
+
+						add_ca_info(this, ca_info);
+					}
 				}
 				else
 				{
@@ -1151,7 +1228,8 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
 	this->public.credential_store.add_ca_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_ca_certificate;
-	this->public.credential_store.add_ca_info = (ca_info_t* (*) (credential_store_t*,ca_info_t*))add_ca_info;
+	this->public.credential_store.add_ca_info = (void (*) (credential_store_t*,ca_info_t*))add_ca_info;
+	this->public.credential_store.release_ca_info = (status_t (*) (credential_store_t*,const char*))release_ca_info;
 	this->public.credential_store.create_cert_iterator = (iterator_t* (*) (credential_store_t*))create_cert_iterator;
 	this->public.credential_store.create_cacert_iterator = (iterator_t* (*) (credential_store_t*))create_cacert_iterator;
 	this->public.credential_store.create_cainfo_iterator = (iterator_t* (*) (credential_store_t*))create_cainfo_iterator;
@@ -1163,6 +1241,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	
 	/* initialize mutexes */
 	pthread_mutex_init(&(this->crls_mutex), NULL);
+	pthread_mutex_init(&(this->ca_infos_mutex), NULL);
 
 	/* private variables */
 	this->shared_keys = linked_list_create();
