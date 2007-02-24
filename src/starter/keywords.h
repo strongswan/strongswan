@@ -100,7 +100,7 @@ typedef enum {
     KW_OCSPURI2,
 
 #define KW_CA_FIRST	KW_CA_SETUP
-#define KW_CA_LAST	KW_OCSPURI
+#define KW_CA_LAST	KW_OCSPURI2
 
    /* end keywords */
     KW_HOST,
