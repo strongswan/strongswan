@@ -23,7 +23,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
-#include <printf.h>
+#include <stdio.h>
 
 #include "ca.h"
 
@@ -56,27 +56,17 @@ struct private_ca_info_t {
 	/**
 	 * Distinguished Name of the CA
 	 */
-	identification_t *authName;
-	
-	/**
-	 * Authority Key Identifier
-	 */
-	chunk_t authKeyID;
-
-	/**
-	 * Authority Key Serial Number
-	 */
-	chunk_t authKeySerialNumber;
+	x509_t *cacert;
 	
 	/**
 	 * List of crlDistributionPoints
 	 */
-	linked_list_t *crlDistributionPoints;
+	linked_list_t *crlURIs;
 
 	/**
 	 * List of ocspAccessPoints
 	 */
-	linked_list_t *ocspAccessPoints;
+	linked_list_t *ocspURIs;
 };
 
 /**
@@ -88,12 +78,12 @@ static void add_crluri(private_ca_info_t *this, const char* uri)
 	{
 		return;
 	}
-	if (!strncasecmp(uri, "http", 4)
-    &&  !strncasecmp(uri, "ldap", 4)
-    &&  !strncasecmp(uri, "file", 4)
-	&&  !strncasecmp(uri, "ftp",  3))
+	if (strncasecmp(uri, "http", 4) != 0
+    &&  strncasecmp(uri, "ldap", 4) != 0
+    &&  strncasecmp(uri, "file", 4) != 0 
+	&&  strncasecmp(uri, "ftp",  3) != 0)
 	{
-		DBG1("  invalid CRL URI: '%s'", uri);
+		DBG1("  invalid crl uri '%s'", uri);
 		return;
 	}
 }
@@ -107,9 +97,9 @@ static void add_ocspuri(private_ca_info_t *this, const char* uri)
 	{
 		return;
 	}
-	if (!strncasecmp(uri, "http", 4))
+	if (strncasecmp(uri, "http", 4) != 0)
 	{
-		DBG1("  invalid OCSP URI: '%s'", uri);
+		DBG1("  invalid ocsp uri '%s'", uri);
 		return;
 	}
 }
@@ -119,13 +109,10 @@ static void add_ocspuri(private_ca_info_t *this, const char* uri)
  */
 static void destroy(private_ca_info_t *this)
 {
-	this->crlDistributionPoints->destroy_offset(this->crlDistributionPoints,
-												offsetof(identification_t, destroy));
-	this->ocspAccessPoints->destroy_offset(this->ocspAccessPoints,
-												offsetof(identification_t, destroy));
-	DESTROY_IF(this->authName);
-	free(this->authKeyID.ptr);
-	free(this->authKeySerialNumber.ptr);
+	this->crlURIs->destroy_offset(this->crlURIs,
+								  offsetof(identification_t, destroy));
+	this->ocspURIs->destroy_offset(this->ocspURIs,
+								   offsetof(identification_t, destroy));
 	free(this->name);
 	free(this);
 }
@@ -139,7 +126,8 @@ static int print(FILE *stream, const struct printf_info *info,
 	private_ca_info_t *this = *((private_ca_info_t**)(args[0]));
 	bool utc = TRUE;
 	int written = 0;
-	time_t now;
+	x509_t *cacert;
+	chunk_t keyid;
 	
 	if (info->alt)
 	{
@@ -151,11 +139,13 @@ static int print(FILE *stream, const struct printf_info *info,
 		return fprintf(stream, "(null)");
 	}
 	
-	now = time(NULL);
-	
-	written += fprintf(stream, "%#T, ", &this->installed, utc);
-	written += fprintf(stream, "\"%s\"\n", this->name);
-	written += fprintf(stream, "    authname:  '%D'\n", this->authName);
+	written += fprintf(stream, "%#T, \"%s\"\n", &this->installed, utc, this->name);
+
+	cacert = this->cacert;
+	written += fprintf(stream, "    authname:  '%D'\n", cacert->get_subject(cacert));
+
+	keyid = cacert->get_keyid(cacert);
+	written += fprintf(stream, "    keyid:      %#B\n", &keyid);
 
 	return written;
 }
@@ -176,12 +166,11 @@ ca_info_t *ca_info_create(const char *name, const x509_t *cacert)
 	private_ca_info_t *this = malloc_thing(private_ca_info_t);
 	
 	/* initialize */
+	this->installed = time(NULL);
 	this->name = strdup(name);
-	this->authName = NULL;
-	this->authKeyID = chunk_empty;
-	this->authKeySerialNumber = chunk_empty;
-	this->crlDistributionPoints = linked_list_create();
-	this->ocspAccessPoints = linked_list_create();
+	this->cacert = cacert;
+	this->crlURIs = linked_list_create();
+	this->ocspURIs = linked_list_create();
 	
 	/* public functions */
 	this->public.add_crluri = (void (*) (ca_info_t*,const char*))add_crluri;
