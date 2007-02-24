@@ -26,6 +26,7 @@
 typedef struct ca_info_t ca_info_t;
 
 #include <library.h>
+#include <chunk.h>
 
 #include "x509.h"
 
@@ -40,20 +41,54 @@ typedef struct ca_info_t ca_info_t;
 struct ca_info_t {
 
 	/**
-	 * @brief Adds a CRL URI to a list
+	 * @brief Compare two ca info records
+	 *
+	 * Comparison is doen via the keyid of the ca certificate
+     *
+	 * @param this			first ca info object
+	 * @param that			second ca info objct
+	 * @return				TRUE if a match is found
+	 */
+	bool (*equals) (const ca_info_t *this, const ca_info_t* that);
+
+	/**
+	 * @brief Checks if the ca info record has the same name
 	 * 
 	 * @param this			ca info object
-	 * @param uri			crl uri string to be added
+	 * @return				TRUE if a match is found
 	 */
-	void (*add_crluri) (ca_info_t *this, const char* uri);
+	bool (*equals_name) (const ca_info_t *this, const char *name);
+
+	/**
+	 * @brief Merges info from a secondary ca info object
+	 * 
+	 * @param this			primary ca info object
+	 * @param that			secondary ca info object
+	 */
+	void (*add_info) (ca_info_t *this, const ca_info_t *that);
 
 	/**
 	 * @brief Adds a CRL URI to a list
 	 * 
 	 * @param this			ca info object
-	 * @param uri			ocsp uri string to be added
+	 * @param uri			crl uri to be added
 	 */
-	void (*add_ocspuri) (ca_info_t *this, const char* uri);
+	void (*add_crluri) (ca_info_t *this, chunk_t uri);
+
+	/**
+	 * @brief Adds a CRL URI to a list
+	 * 
+	 * @param this			ca info object
+	 * @param uri			ocsp uri to be added
+	 */
+	void (*add_ocspuri) (ca_info_t *this, chunk_t uri);
+
+	/**
+	 * @brief Releases the name and URIs of ca info record
+	 * 
+	 * @param this			ca info to release
+	 */
+	void (*release_info) (ca_info_t *this);
 
 	/**
 	 * @brief Destroys a ca info record
