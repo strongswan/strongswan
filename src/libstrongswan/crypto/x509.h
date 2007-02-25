@@ -149,6 +149,14 @@ struct x509_t {
 	iterator_t *(*create_crluri_iterator) (const x509_t *this);
 
 	/**
+	 * @brief Create an iterator for the ocspAccessLocations.
+	 * 
+	 * @param this				calling object
+	 * @return					iterator for ocspAccessLocations
+	 */
+	iterator_t *(*create_ocspuri_iterator) (const x509_t *this);
+
+	/**
 	 * @brief Check if a certificate is trustworthy
 	 * 
 	 * @param this			calling object

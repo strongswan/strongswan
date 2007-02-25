@@ -137,6 +137,11 @@ struct private_x509_t {
 	linked_list_t *crlDistributionPoints;
 
 	/**
+	 * List of identification_t's representing ocspAccessLocations
+	 */
+	linked_list_t *ocspAccessLocations;
+
+	/**
 	 * Subject RSA public key, if subjectPublicKeyAlgorithm == RSA
 	 */
 	rsa_public_key_t *public_key;
@@ -174,7 +179,6 @@ struct private_x509_t {
 	u_char authority_flags;
 	chunk_t subjectPublicKey;
 	bool isOcspSigner; /* ocsp */
-	chunk_t accessLocation; /* ocsp */
 };
 
 /**
@@ -638,7 +642,7 @@ void parse_authorityKeyIdentifier(chunk_t blob, int level0 , chunk_t *authKeyID,
 /**
  * extracts an authorityInfoAcess location
  */
-static void parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessLocation)
+static void parse_authorityInfoAccess(chunk_t blob, int level0, linked_list_t *list)
 {
 	asn1_ctx_t ctx;
 	chunk_t object;
@@ -666,17 +670,14 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessL
 					case OID_OCSP:
 						if (*object.ptr == ASN1_CONTEXT_S_6)
 						{
+							identification_t *accessLocation;
+
 							if (asn1_length(&object) == ASN1_INVALID_LENGTH)
 								return;
 							DBG2("  '%.*s'",(int)object.len, object.ptr);
-							/* only HTTP(S) URIs accepted */
-							if (strncasecmp(object.ptr, "http", 4) == 0)
-							{
-								*accessLocation = object;
-								return;
-							}
+							accessLocation = identification_create_from_encoding(ID_DER_ASN1_GN_URI, object);
+							list->insert_last(list, (void *)accessLocation);
 						}
-						DBG2("ignoring OCSP InfoAccessLocation with unkown protocol");
 						break;
 					default:
 						/* unkown accessMethod, ignoring */
@@ -847,7 +848,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 						parse_authorityKeyIdentifier(object, level , &cert->authKeyID, &cert->authKeySerialNumber);
 						break;
 					case OID_AUTHORITY_INFO_ACCESS:
-						parse_authorityInfoAccess(object, level, &cert->accessLocation);
+						parse_authorityInfoAccess(object, level, cert->ocspAccessLocations);
 						break;
 					case OID_EXTENDED_KEY_USAGE:
 						cert->isOcspSigner = parse_extendedKeyUsage(object, level);
@@ -1053,6 +1054,14 @@ static iterator_t *create_crluri_iterator(const private_x509_t *this)
 }
 
 /**
+ * Implements x509_t.create_crluri_iterator
+ */
+static iterator_t *create_ocspuri_iterator(const private_x509_t *this)
+{
+	return this->ocspAccessLocations->create_iterator(this->ocspAccessLocations, TRUE);
+}
+
+/**
  * Implements x509_t.verify
  */
 static bool verify(const private_x509_t *this, const rsa_public_key_t *signer)
@@ -1193,6 +1202,8 @@ static void destroy(private_x509_t *this)
 								offsetof(identification_t, destroy));
 	this->crlDistributionPoints->destroy_offset(this->crlDistributionPoints,
 								offsetof(identification_t, destroy));
+	this->ocspAccessLocations->destroy_offset(this->ocspAccessLocations,
+								offsetof(identification_t, destroy));
 	DESTROY_IF(this->issuer);
 	DESTROY_IF(this->subject);
 	DESTROY_IF(this->public_key);
@@ -1214,6 +1225,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->issuer = NULL;
 	this->subjectAltNames = linked_list_create();
 	this->crlDistributionPoints = linked_list_create();
+	this->ocspAccessLocations = linked_list_create();
 	this->subjectKeyID = chunk_empty;
 	this->authKeyID = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
@@ -1237,6 +1249,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->public.set_status = (void (*) (x509_t*,cert_status_t))set_status;
 	this->public.get_status = (cert_status_t (*) (const x509_t*))get_status;
 	this->public.create_crluri_iterator = (iterator_t* (*) (const x509_t*))create_crluri_iterator;
+	this->public.create_ocspuri_iterator = (iterator_t* (*) (const x509_t*))create_ocspuri_iterator;
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	
