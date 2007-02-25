@@ -323,7 +323,7 @@ ca_info_t *ca_info_create(const char *name, const x509_t *cacert)
 	/* public functions */
 	this->public.equals = (bool (*) (const ca_info_t*,const ca_info_t*))equals;
 	this->public.equals_name = (bool (*) (const ca_info_t*,const char*))equals_name;
-	this->public.add_info = (void (*) (ca_info_t*,ca_info_t*))add_info;
+	this->public.add_info = (void (*) (ca_info_t*,const ca_info_t*))add_info;
 	this->public.add_crluri = (void (*) (ca_info_t*,chunk_t))add_crluri;
 	this->public.add_ocspuri = (void (*) (ca_info_t*,chunk_t))add_ocspuri;
 	this->public.release_info = (void (*) (ca_info_t*))release_info;
