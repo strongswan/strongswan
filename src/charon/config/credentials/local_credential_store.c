@@ -741,15 +741,27 @@ static x509_t* add_end_certificate(private_local_credential_store_t *this, x509_
 		if (issuer_cert)
 		{
 			ca_info_t *ca_info = ca_info_create(NULL, issuer_cert);
-			iterator_t *iterator = cert->create_crluri_iterator(cert);
 
-			identification_t *uri;
-	
-			while (iterator->iterate(iterator, (void**)&uri))
 			{
-				ca_info->add_crluri(ca_info, uri->get_encoding(uri));
+				iterator_t *iterator = cert->create_crluri_iterator(cert);
+				identification_t *uri;
+	
+				while (iterator->iterate(iterator, (void**)&uri))
+				{
+					ca_info->add_crluri(ca_info, uri->get_encoding(uri));
+				}
+				iterator->destroy(iterator);
 			}
-			iterator->destroy(iterator);
+			{
+				iterator_t *iterator = cert->create_ocspuri_iterator(cert);
+				identification_t *uri;
+	
+				while (iterator->iterate(iterator, (void**)&uri))
+				{
+					ca_info->add_ocspuri(ca_info, uri->get_encoding(uri));
+				}
+				iterator->destroy(iterator);
+			}
 
 			add_ca_info(this, ca_info);
 		}
