@@ -685,7 +685,7 @@ static void stroke_add_ca(stroke_msg_t *msg, FILE *out)
 	pop_string(msg, &msg->add_ca.ocspuri);
 	pop_string(msg, &msg->add_ca.ocspuri2);
 	
-	DBG1(DBG_CFG, "received stroke: add ca info '%s'", msg->add_ca.name);
+	DBG1(DBG_CFG, "received stroke: add ca '%s'", msg->add_ca.name);
 	
 	DBG2(DBG_CFG, "ca %s",        msg->add_ca.name);
 	DBG2(DBG_CFG, "  cacert=%s",  msg->add_ca.cacert);
@@ -745,18 +745,18 @@ static void stroke_del_ca(stroke_msg_t *msg, FILE *out)
 	status_t status;
 	
 	pop_string(msg, &(msg->del_ca.name));
-	DBG1(DBG_CFG, "received stroke: delete ca info '%s'", msg->del_ca.name);
+	DBG1(DBG_CFG, "received stroke: delete ca '%s'", msg->del_ca.name);
 	
 	status = charon->credentials->release_ca_info(charon->credentials,
 												  msg->del_ca.name);
 
 	if (status == SUCCESS)
 	{
-		fprintf(out, "deleted ca info '%s'\n", msg->del_ca.name);
+		fprintf(out, "deleted ca '%s'\n", msg->del_ca.name);
 	}
 	else
 	{
-		fprintf(out, "no ca info named '%s'\n", msg->del_ca.name);
+		fprintf(out, "no ca named '%s'\n", msg->del_ca.name);
 	}
 }
 
