@@ -9,6 +9,10 @@ strongswan-4.0.8
   and hmac functions during pluto startup. Failure of a self-test
   currently issues a warning only but does not exit pluto [yet].
 
+- Full support of CA information sections. ipsec listcainfos
+  now shows all collected crlDistributionPoints and OCSP 
+  accessLocations.
+
 
 strongswan-4.0.7
 ----------------
