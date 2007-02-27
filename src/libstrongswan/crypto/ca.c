@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include "ca.h"
+#include "certinfo.h"
 
 #include <library.h>
 #include <debug.h>
@@ -61,12 +62,17 @@ struct private_ca_info_t {
 	/**
 	 * List of crl URIs
 	 */
-	linked_list_t *crlURIs;
+	linked_list_t *crluris;
 
 	/**
 	 * List of ocsp URIs
 	 */
-	linked_list_t *ocspURIs;
+	linked_list_t *ocspuris;
+
+	/**
+	 * List of certificate info records
+	 */
+	linked_list_t *certinfos;
 };
 
 /**
@@ -143,9 +149,9 @@ static void add_crluri(private_ca_info_t *this, chunk_t uri)
 	}
 	else
 	{
-		identification_t *crlURI = identification_create_from_encoding(ID_DER_ASN1_GN_URI, uri);
+		identification_t *crluri = identification_create_from_encoding(ID_DER_ASN1_GN_URI, uri);
 
-		add_identification(this->crlURIs, crlURI);
+		add_identification(this->crluris, crluri);
 	}
 }
 
@@ -161,9 +167,9 @@ static void add_ocspuri(private_ca_info_t *this, chunk_t uri)
 	}
 	else
 	{
-		identification_t *ocspURI = identification_create_from_encoding(ID_DER_ASN1_GN_URI, uri);
+		identification_t *ocspuri = identification_create_from_encoding(ID_DER_ASN1_GN_URI, uri);
 
-		add_identification(this->ocspURIs, ocspURI);
+		add_identification(this->ocspuris, ocspuri);
 	}
 }
 
@@ -179,7 +185,7 @@ void add_info (private_ca_info_t *this, const private_ca_info_t *that)
 	{
 		identification_t *uri;
 
-		iterator_t *iterator = that->crlURIs->create_iterator(that->crlURIs, TRUE);
+		iterator_t *iterator = that->crluris->create_iterator(that->crluris, TRUE);
 
 		while (iterator->iterate(iterator, (void**)&uri))
 		{
@@ -190,7 +196,7 @@ void add_info (private_ca_info_t *this, const private_ca_info_t *that)
 	{
 		identification_t *uri;
 
-		iterator_t *iterator = that->ocspURIs->create_iterator(that->ocspURIs, TRUE);
+		iterator_t *iterator = that->ocspuris->create_iterator(that->ocspuris, TRUE);
 
 		while (iterator->iterate(iterator, (void**)&uri))
 		{
@@ -205,13 +211,13 @@ void add_info (private_ca_info_t *this, const private_ca_info_t *that)
  */
 static void release_info(private_ca_info_t *this)
 {
-	this->crlURIs->destroy_offset(this->crlURIs,
+	this->crluris->destroy_offset(this->crluris,
 								  offsetof(identification_t, destroy));
-	this->crlURIs = linked_list_create();
+	this->crluris = linked_list_create();
 
-	this->ocspURIs->destroy_offset(this->ocspURIs,
+	this->ocspuris->destroy_offset(this->ocspuris,
 								   offsetof(identification_t, destroy));
-	this->ocspURIs = linked_list_create();
+	this->ocspuris = linked_list_create();
 
 	free(this->name);
 	this->name = NULL;
@@ -222,10 +228,12 @@ static void release_info(private_ca_info_t *this)
  */
 static void destroy(private_ca_info_t *this)
 {
-	this->crlURIs->destroy_offset(this->crlURIs,
+	this->crluris->destroy_offset(this->crluris,
 								  offsetof(identification_t, destroy));
-	this->ocspURIs->destroy_offset(this->ocspURIs,
+	this->ocspuris->destroy_offset(this->ocspuris,
 								   offsetof(identification_t, destroy));
+	this->certinfos->destroy_offset(this->certinfos,
+								   offsetof(certinfo_t, destroy));
 	free(this->name);
 	free(this);
 }
@@ -270,27 +278,27 @@ static int print(FILE *stream, const struct printf_info *info,
 		written += fprintf(stream, "    keyid:      %#B\n", &keyid);
 	}
 	{
-		identification_t *crlURI;
-		iterator_t *iterator = this->crlURIs->create_iterator(this->crlURIs, TRUE);
+		identification_t *crluri;
+		iterator_t *iterator = this->crluris->create_iterator(this->crluris, TRUE);
 		bool first = TRUE;
 
-		while (iterator->iterate(iterator, (void**)&crlURI))
+		while (iterator->iterate(iterator, (void**)&crluri))
 		{
 			written += fprintf(stream, "    %s   '%D'\n",
-							   first? "crluris:":"        ", crlURI);
+							   first? "crluris:":"        ", crluri);
 			first = FALSE;
 		}
 		iterator->destroy(iterator);
 	}
 	{
-		identification_t *ocspURI;
-		iterator_t *iterator = this->ocspURIs->create_iterator(this->ocspURIs, TRUE);
+		identification_t *ocspuri;
+		iterator_t *iterator = this->ocspuris->create_iterator(this->ocspuris, TRUE);
 		bool first = TRUE;
 
-		while (iterator->iterate(iterator, (void**)&ocspURI))
+		while (iterator->iterate(iterator, (void**)&ocspuri))
 		{
 			written += fprintf(stream, "    %s  '%D'\n",
-							   first? "ocspuris:":"         ", ocspURI);
+							   first? "ocspuris:":"         ", ocspuri);
 			first = FALSE;
 		}
 		iterator->destroy(iterator);
@@ -317,8 +325,9 @@ ca_info_t *ca_info_create(const char *name, const x509_t *cacert)
 	this->installed = time(NULL);
 	this->name = (name == NULL)? NULL:strdup(name);
 	this->cacert = cacert;
-	this->crlURIs = linked_list_create();
-	this->ocspURIs = linked_list_create();
+	this->crluris = linked_list_create();
+	this->ocspuris = linked_list_create();
+	this->certinfos = linked_list_create();
 	
 	/* public functions */
 	this->public.equals = (bool (*) (const ca_info_t*,const ca_info_t*))equals;
