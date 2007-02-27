@@ -48,6 +48,11 @@ struct private_certinfo_t {
 	cert_status_t status;
 
 	/**
+	 * Certificate status is for one-time use only
+	 */
+	bool once;
+
+	/**
 	 * Time when the certificate status info was generated
 	 */
 	time_t thisUpdate;
