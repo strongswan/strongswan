@@ -120,7 +120,7 @@ struct private_md5_hasher_t {
 /* Encodes input (u_int32_t) into output (u_int8_t). Assumes len is
  * a multiple of 4.
  */
-static void Encode (u_int8_t *output, u_int32_t *input, size_t *len)
+static void Encode (u_int8_t *output, u_int32_t *input, size_t len)
 {
 	size_t i, j;
 
