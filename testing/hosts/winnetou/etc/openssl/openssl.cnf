@@ -43,7 +43,7 @@ crl_extensions	= crl_ext  		  # The extentions to add to the CRL
 
 default_days    = 1825                    # how long to certify for
 default_crl_days= 30			  # how long before next CRL
-default_md      = md5                     # which md to use.
+default_md      = sha1                    # which md to use.
 preserve        = no                      # keep passed DN ordering
 email_in_dn	= no			  # allow/forbid EMail in DN
 
@@ -158,6 +158,7 @@ keyUsage                        = digitalSignature, keyEncipherment, keyAgreemen
 subjectKeyIdentifier            = hash
 authorityKeyIdentifier          = keyid, issuer:always
 subjectAltName                  = email:$ENV::COMMON_NAME 
+#authorityInfoAccess		= OCSP;URI:http://ocsp.strongswan.org:8880
 crlDistributionPoints          	= URI:http://crl.strongswan.org/strongswan.crl
 
 ####################################################################
