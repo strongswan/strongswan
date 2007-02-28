@@ -1470,6 +1470,8 @@ static void reestablish(private_ike_sa_t *this)
 	other_id->destroy(other_id);
 	
 	apply_config(other, this->connection, this->policy);
+	other->other_host->destroy(other->other_host);
+	other->other_host = this->other_host->clone(this->other_host);
 		
 	if (this->state == IKE_ESTABLISHED)
 	{
