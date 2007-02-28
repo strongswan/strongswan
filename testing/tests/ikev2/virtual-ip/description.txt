@@ -1,0 +1,3 @@
+A tunnel connecting roadwarrior <b>carol</b> with <b>moon</b> and the network behind it is established. <b>carol</b> requests and gets a virtual IP from <b>moon</b>. The connection is tested by client <b>carol</b> pinging client <b>alice</b> located behind gateway <b>moon</b> as well as the inner interface of the gateway.
+<p/>
+Appropriate routes are automatically configured on the IPsec hosts.
