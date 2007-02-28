@@ -497,7 +497,10 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 	bool next_a, next_b;
 
 	/* initialize wildcard counter */
-	*wildcards = 0;
+	if (wildcards)
+	{
+		*wildcards = 0;
+	}
 
 	/* initialize DN parsing */
 	if (init_rdn(a, &rdn_a, &attribute_a, &next_a) != SUCCESS
@@ -522,7 +525,10 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 		/* does rdn_b contain a wildcard? */
 		if (value_b.len == 1 && *value_b.ptr == '*')
 		{
-			(*wildcards)++;
+			if (wildcards)
+			{
+				(*wildcards)++;
+			}
 			continue;
 		}
 		/* same lengths for values */
@@ -549,7 +555,10 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 	}
 
 	/* the two DNs match! */
-	*wildcards = min(*wildcards, MAX_WILDCARDS);
+	if (wildcards)
+	{
+		*wildcards = min(*wildcards, MAX_WILDCARDS);
+	}
 	return TRUE;
 }
 
@@ -750,10 +759,16 @@ static bool matches_binary(private_identification_t *this,
 {
 	if (other->type == ID_ANY)
 	{
-		*wildcards = MAX_WILDCARDS;
+		if (wildcards)
+		{
+			*wildcards = MAX_WILDCARDS;
+		}
 		return TRUE;
 	}
-	*wildcards = 0;
+	if (wildcards)
+	{
+		*wildcards = 0;
+	}
 	return this->type == other->type &&
 							chunk_equals(this->encoded, other->encoded);
 }
@@ -769,7 +784,10 @@ static bool matches_string(private_identification_t *this,
 	
 	if (other->type == ID_ANY)
 	{
-		*wildcards = MAX_WILDCARDS;
+		if (wildcards)
+		{
+			*wildcards = MAX_WILDCARDS;
+		}
 		return TRUE;
 	}
 	
@@ -779,7 +797,10 @@ static bool matches_string(private_identification_t *this,
 	/* try a binary comparison first */
 	if (equals_binary(this, other))
 	{
-		*wildcards = 0;
+		if (wildcards)
+		{
+			*wildcards = 0;
+		}
 		return TRUE;
 	}
 	
@@ -789,7 +810,10 @@ static bool matches_string(private_identification_t *this,
 	/* check for single wildcard at the head of the string */
 	if (*other->encoded.ptr == '*')
 	{
-		*wildcards = 1;
+		if (wildcards)
+		{
+			*wildcards = 1;
+		}
 
 		/* single asterisk matches any string */
 		if (len-- == 1)
@@ -809,7 +833,10 @@ static bool matches_string(private_identification_t *this,
 static bool matches_any(private_identification_t *this,
 						private_identification_t *other, int *wildcards)
 {
-	*wildcards = 0;
+	if (wildcards)
+	{
+		*wildcards = 0;
+	}
 	return other->type == ID_ANY;
 }
 
@@ -822,7 +849,10 @@ static bool matches_dn(private_identification_t *this,
 {
 	if (other->type == ID_ANY)
 	{
-		*wildcards = MAX_WILDCARDS;
+		if (wildcards)
+		{
+			*wildcards = MAX_WILDCARDS;
+		}
 		return TRUE;
 	}
 	

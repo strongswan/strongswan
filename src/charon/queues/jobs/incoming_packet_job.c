@@ -64,6 +64,13 @@ static void send_notify_response(private_incoming_packet_job_t *this,
 	packet_t *packet;
 	ike_sa_id_t *ike_sa_id;
 	
+	if (request->get_exchange_type(request) != IKE_SA_INIT)
+	{
+		/* TODO: Use transforms implementing the "NULL" algorithm,
+		   we are unable to generate message otherwise */
+		return;
+	}
+	
 	ike_sa_id = request->get_ike_sa_id(request);
 	ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	ike_sa_id->switch_initiator(ike_sa_id);
@@ -80,8 +87,6 @@ static void send_notify_response(private_incoming_packet_job_t *this,
 	ike_sa_id->destroy(ike_sa_id);
 	notify = notify_payload_create_from_protocol_and_type(PROTO_NONE, type);
 	response->add_payload(response, (payload_t *)notify);
-	/* generation may fail, as most messages need a crypter/signer.
-	 * TODO: Use transforms implementing the "NULL" algorithm */
 	if (response->generate(response, NULL, NULL, &packet) != SUCCESS)
 	{
 		response->destroy(response);
@@ -107,12 +112,12 @@ static status_t execute(private_incoming_packet_job_t *this)
 	message = message_create_from_packet(this->packet->clone(this->packet));
 	src = message->get_source(message);
 	dst = message->get_destination(message);
-	DBG1(DBG_NET, "received packet: from %#H to %#H", src, dst);
 	
 	status = message->parse_header(message);
 	if (status != SUCCESS)
 	{
-		DBG1(DBG_NET, "received message with invalid IKE header, ignored");
+		DBG1(DBG_NET, "received message from %H with invalid IKE header, "
+			 "ignored", src);
 		message->destroy(message);
 		return DESTROY_ME;
 	}
@@ -120,11 +125,12 @@ static status_t execute(private_incoming_packet_job_t *this)
 	if ((message->get_major_version(message) != IKE_MAJOR_VERSION) ||
 		(message->get_minor_version(message) != IKE_MINOR_VERSION))
 	{
-		DBG1(DBG_NET,
-			 "received a packet with IKE version %d.%d, not supported",
-			  message->get_major_version(message),
-			  message->get_minor_version(message));
-		if ((message->get_exchange_type(message) == IKE_SA_INIT) && (message->get_request(message)))
+		DBG1(DBG_NET, "received message from %H with unsupported IKE "
+			"version %d.%d, ignored", src,  message->get_major_version(message),
+			message->get_minor_version(message));
+			
+		if (message->get_exchange_type(message) == IKE_SA_INIT && 
+			message->get_request(message))
 		{
 			send_notify_response(this, message, INVALID_MAJOR_VERSION);
 		}
@@ -138,18 +144,18 @@ static status_t execute(private_incoming_packet_job_t *this)
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id);
 	if (ike_sa == NULL)
 	{
-		DBG1(DBG_NET, "received packet for IKE_SA: %J, but no such IKE_SA",
-			 ike_sa_id);
+		DBG1(DBG_NET, "received packet from %#H for IKE_SA: %J, but no such "
+			 "IKE_SA", src, ike_sa_id);
 		if (message->get_request(message))
 		{
-			/* TODO: send notify if we have NULL crypters,
-			 * see todo in send_notify_response
-			send_notify_response(this, message, INVALID_IKE_SPI); */
+			send_notify_response(this, message, INVALID_IKE_SPI);
 		}
 		ike_sa_id->destroy(ike_sa_id);	
 		message->destroy(message);
 		return DESTROY_ME;
 	}
+	
+	DBG1(DBG_NET, "received packet: from %#H to %#H", src, dst);
 	
 	status = ike_sa->process_message(ike_sa, message);
 	if (status == DESTROY_ME)

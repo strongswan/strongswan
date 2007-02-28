@@ -24,6 +24,19 @@
 #ifndef ITERATOR_H_
 #define ITERATOR_H_
 
+#include <library.h>
+
+/**
+ * @brief Iterator hook function prototype.
+ *
+ * @param param		user supplied parameter
+ * @param in		the value the hook receives from the iterator
+ * @param out		the value supplied as a result to the iterator
+ * @return			TRUE to return "out", FALSE to skip this value
+ */
+typedef bool (iterator_hook_t)(void *param, void *in, void **out);
+
+
 typedef struct iterator_t iterator_t;
 
 /**
@@ -76,8 +89,10 @@ struct iterator_t {
 	 * 
 	 * @param this 			calling object
 	 * @param hook			iterator hook which manipulates the iterated value
+	 * @param param			user supplied parameter to pass back to the hook
 	 */
-	void (*set_iterator_hook) (iterator_t *this, void*(*hook)(void*));
+	void (*set_iterator_hook) (iterator_t *this, iterator_hook_t *hook,
+							   void *param);
 	
 	/**
 	 * @brief Inserts a new item before the given iterator position.

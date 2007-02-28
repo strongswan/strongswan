@@ -100,6 +100,8 @@ struct stroke_end_t {
 	char *ca;
 	char *updown;
 	char *address;
+	char *sourceip;
+	u_int8_t virtual_ip;
 	char *subnet;
 	int subnet_mask;
 	int sendcert;

@@ -180,7 +180,7 @@ static int get_thread_number(private_bus_t *this)
 static void add_listener(private_bus_t *this, bus_listener_t *listener)
 {
 	pthread_mutex_lock(&this->mutex);
-	this->listeners->insert_last(this->listeners, (void*)listener);
+	this->listeners->insert_last(this->listeners, listener);
 	pthread_mutex_unlock(&this->mutex);
 }
 
@@ -301,7 +301,12 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 		va_list args_copy;
 		
 		va_copy(args_copy, args);
-		listener->signal(listener, signal, level, thread, ike_sa, format, args_copy);
+		if (!listener->signal(listener, signal, level, thread, 
+							  ike_sa, format, args_copy))
+		{
+			/* unregister listener if requested */
+			iterator->remove(iterator);
+		}
 		va_end(args_copy);
 	}
 	iterator->destroy(iterator);

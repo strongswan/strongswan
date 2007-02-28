@@ -166,6 +166,9 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->hostaccess = conn_end->hostaccess;
 	msg_end->protocol = conn_end->protocol;
 	msg_end->port = conn_end->port;
+	msg_end->virtual_ip = conn_end->modecfg;
+	ip_address2string(&conn_end->srcip, buffer, sizeof(buffer));
+	msg_end->sourceip = push_string(msg, buffer);
 }
 
 int starter_stroke_add_conn(starter_conn_t *conn)

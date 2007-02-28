@@ -109,7 +109,7 @@ struct configuration_attribute_t {
 	 * @param this 	calling configuration_attribute_t object
 	 * @param type	type to set (most significant bit is set to zero)
 	 */
-	void (*set_attribute_type) (configuration_attribute_t *this, u_int16_t type);
+	void (*set_type) (configuration_attribute_t *this, u_int16_t type);
 	
 	/**
 	 * @brief get the type of the attribute.
@@ -117,7 +117,7 @@ struct configuration_attribute_t {
 	 * @param this 	calling configuration_attribute_t object
 	 * @return 		type of the value
 	 */
-	u_int16_t (*get_attribute_type) (configuration_attribute_t *this);
+	u_int16_t (*get_type) (configuration_attribute_t *this);
 	
 	/**
 	 * @brief get the length of an attribute.
@@ -125,7 +125,7 @@ struct configuration_attribute_t {
 	 * @param this 	calling configuration_attribute_t object
 	 * @return 		type of the value
 	 */
-	u_int16_t (*get_attribute_length) (configuration_attribute_t *this);
+	u_int16_t (*get_length) (configuration_attribute_t *this);
 	
 	/**
 	 * @brief Destroys an configuration_attribute_t object.

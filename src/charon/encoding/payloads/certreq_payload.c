@@ -306,7 +306,10 @@ certreq_payload_t *certreq_payload_create_from_cacerts(void)
 	int count = iterator->get_count(iterator);
 
 	if (count == 0)
+	{
+		iterator->destroy(iterator);
 		return NULL;
+	}
 
 	this = certreq_payload_create();
 	keyids = chunk_alloc(count * HASH_SIZE_SHA1);

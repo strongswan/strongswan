@@ -58,10 +58,7 @@ struct private_packet_t {
  */
 static void set_source(private_packet_t *this, host_t *source)
 {
-	if (this->source)
-	{
-		this->source->destroy(this->source);	
-	}
+	DESTROY_IF(this->source);
 	this->source = source;
 }
 
@@ -70,10 +67,7 @@ static void set_source(private_packet_t *this, host_t *source)
  */
 static void set_destination(private_packet_t *this, host_t *destination)
 {
-	if (this->destination)
-	{
-		this->destination->destroy(this->destination);	
-	}
+	DESTROY_IF(this->destination);
 	this->destination = destination;
 }
 

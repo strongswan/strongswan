@@ -132,7 +132,12 @@ struct private_iterator_t {
 	/**
 	 * iteration hook
 	 */
-	void* (*hook)(void*);
+	iterator_hook_t *hook;
+	
+	/**
+	 * user parameter for iterator hook
+	 */
+	void *hook_param;
 };
 
 /**
@@ -146,23 +151,27 @@ static int get_list_count(private_iterator_t *this)
 /**
  * default iterator hook which does nothing
  */
-static void *iterator_hook(void *value)
+static bool iterator_hook(void *param, void *in, void **out)
 {
-	return value;
+	*out = in;
+	return TRUE;
 }
 
 /**
  * Implementation of iterator_t.set_iterator_hook.
  */
-static void set_iterator_hook(private_iterator_t *this, void*(*hook)(void*))
+static void set_iterator_hook(private_iterator_t *this, iterator_hook_t *hook,
+							  void* param)
 {
 	if (hook == NULL)
 	{
 		this->hook = iterator_hook;
+		this->hook_param = NULL;
 	}
 	else
 	{
 		this->hook = hook;
+		this->hook_param = param;
 	}
 }
 
@@ -178,7 +187,10 @@ static bool iterate(private_iterator_t *this, void** value)
 	if (this->current == NULL)
 	{
 		this->current = (this->forward) ? this->list->first : this->list->last;
-		*value = this->hook(this->current->value);
+		if (!this->hook(this->hook_param, this->current->value, value))
+		{
+			return iterate(this, value);
+		}
 		return TRUE;
 	}
 	if (this->forward)
@@ -188,16 +200,21 @@ static bool iterate(private_iterator_t *this, void** value)
 			return FALSE;
 		}
 		this->current = this->current->next;
-		*value = this->hook(this->current->value);
+		if (!this->hook(this->hook_param, this->current->value, value))
+		{
+			return iterate(this, value);
+		}
 		return TRUE;
 	}
-	/* backward */
 	if (this->current->previous == NULL)
 	{
 		return FALSE;
 	}
 	this->current = this->current->previous;
-	*value = this->hook(this->current->value);
+	if (!this->hook(this->hook_param, this->current->value, value))
+	{
+		return iterate(this, value);
+	}
 	return TRUE;
 }
 
@@ -225,10 +242,14 @@ static status_t remove_(private_iterator_t *this)
 	{
 		return NOT_FOUND;
 	}
-	/* find out the new iterator position */
-	if (this->current->previous != NULL)
+	/* find out the new iterator position, depending on iterator direction */
+	if (this->forward && this->current->previous != NULL)
 	{
 		new_current = this->current->previous;
+	}
+	else if (!this->forward && this->current->next != NULL)
+	{
+		new_current = this->current->next;
 	}
 	else
 	{
@@ -679,7 +700,7 @@ static iterator_t *create_iterator(private_linked_list_t *linked_list, bool forw
 	
 	this->public.get_count = (int (*) (iterator_t*)) get_list_count;
 	this->public.iterate = (bool (*) (iterator_t*, void **value)) iterate;
-	this->public.set_iterator_hook = (void(*)(iterator_t*, void*(*)(void*)))set_iterator_hook;
+	this->public.set_iterator_hook = (void(*)(iterator_t*, iterator_hook_t*, void*))set_iterator_hook;
 	this->public.insert_before = (void (*) (iterator_t*, void *item)) insert_before;
 	this->public.insert_after = (void (*) (iterator_t*, void *item)) insert_after;
 	this->public.replace = (status_t (*) (iterator_t*, void **, void *)) replace;

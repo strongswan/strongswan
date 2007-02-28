@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -494,6 +495,26 @@ static void update_address_range(private_traffic_selector_t *this, host_t *host)
 }
 
 /**
+ * Implements traffic_selector_t.includes.
+ */
+static bool includes(private_traffic_selector_t *this, host_t *host)
+{
+	chunk_t addr;
+	int family = host->get_family(host);
+
+	if ((family == AF_INET && this->type == TS_IPV4_ADDR_RANGE) ||
+		(family == AF_INET6 && this->type == TS_IPV6_ADDR_RANGE))
+	{
+		addr = host->get_address(host);
+		
+		return memcmp(this->from, addr.ptr, addr.len) <= 0 &&
+				memcmp(this->to, addr.ptr, addr.len) >= 0;
+	}
+
+	return FALSE;	
+}
+
+/**
  * Implements traffic_selector_t.clone.
  */
 static traffic_selector_t *clone_(private_traffic_selector_t *this)
@@ -698,6 +719,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	this->public.get_type = (ts_type_t(*)(traffic_selector_t*))get_type;
 	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
 	this->public.is_host = (bool(*)(traffic_selector_t*,host_t*))is_host;
+	this->public.includes = (bool(*)(traffic_selector_t*,host_t*))includes;
 	this->public.update_address_range = (void(*)(traffic_selector_t*,host_t*))update_address_range;
 	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone_;
 	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
@@ -709,3 +731,6 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	
 	return this;
 }
+
+/* vim: set ts=4 sw=4 noet: */
+

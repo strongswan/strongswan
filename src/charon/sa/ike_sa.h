@@ -33,7 +33,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <encoding/payloads/proposal_substructure.h>
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
-#include <sa/transactions/transaction.h>
+#include <sa/tasks/task.h>
 #include <config/configuration.h>
 #include <utils/randomizer.h>
 #include <crypto/prfs/prf.h>
@@ -121,7 +121,7 @@ extern enum_name_t *ike_sa_state_names;
  * An IKE_SA contains crypto information related to a connection
  * with a peer. It contains multiple IPsec CHILD_SA, for which
  * it is responsible. All traffic is handled by an IKE_SA, using
- * transactions.
+ * the task manager and its tasks.
  *
  * @b Constructors:
  * - ike_sa_create()
@@ -139,6 +139,14 @@ struct ike_sa_t {
 	 * @return 				ike_sa's ike_sa_id_t
 	 */
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
+	
+	/**
+	 * @brief Get the numerical ID uniquely defining this IKE_SA.
+	 *
+	 * @param this 			calling object
+	 * @return 				unique ID
+	 */
+	u_int32_t (*get_unique_id) (ike_sa_t *this);
 	
 	/**
 	 * @brief Get the state of the IKE_SA.
@@ -163,14 +171,6 @@ struct ike_sa_t {
 	 * @return				name
 	 */
 	char* (*get_name) (ike_sa_t *this);
-	
-	/**
-	 * @brief Set the name of the connection this IKE_SA uses.
-	 *
-	 * @param this			calling object
-	 * @param name			name, gets cloned
-	 */
-	void (*set_name) (ike_sa_t *this, char* name);
 	
 	/**
 	 * @brief Get the own host address.
@@ -235,6 +235,38 @@ struct ike_sa_t {
 	 * @param other			identification
 	 */
 	void (*set_other_id) (ike_sa_t *this, identification_t *other);
+	
+	/**
+	 * @brief Get the connection used by this IKE_SA.
+	 * 
+	 * @param this 			calling object
+	 * @return				connection
+	 */
+	connection_t* (*get_connection) (ike_sa_t *this);
+	
+	/**
+	 * @brief Set the connection to use with this IKE_SA.
+	 * 
+	 * @param this 			calling object
+	 * @param connection	connection to use
+	 */
+	void (*set_connection) (ike_sa_t *this, connection_t* connection);
+
+	/**
+	 * @brief Get the policy used by this IKE_SA.
+	 * 
+	 * @param this 			calling object
+	 * @return				policy
+	 */
+	policy_t* (*get_policy) (ike_sa_t *this);
+	
+	/**
+	 * @brief Set the policy to use with this IKE_SA.
+	 * 
+	 * @param this 			calling object
+	 * @param policy		policy to use
+	 */
+	void (*set_policy) (ike_sa_t *this, policy_t *policy);
 
 	/**
 	 * @brief Initiate a new connection.
@@ -309,17 +341,6 @@ struct ike_sa_t {
 	status_t (*delete) (ike_sa_t *this);
 	
 	/**
-	 * @brief Retransmits a request.
-	 * 
-	 * @param this 			calling object
-	 * @param message_id	ID of the request to retransmit
-	 * @return
-	 * 						- SUCCESS
-	 * 						- NOT_FOUND if request doesn't have to be retransmited
-	 */
-	status_t (*retransmit_request) (ike_sa_t *this, u_int32_t message_id);
-	
-	/**
 	 * @brief Processes a incoming IKEv2-Message.
 	 *
 	 * Message processing may fail. If a critical failure occurs, 
@@ -327,7 +348,7 @@ struct ike_sa_t {
 	 * destroy the IKE_SA immediatly, as it is unusable.
 	 * 
 	 * @param this 			calling object
-	 * @param[in] message 	message to process
+	 * @param message 	message to process
 	 * @return 				
 	 * 						- SUCCESS
 	 * 						- FAILED
@@ -336,44 +357,33 @@ struct ike_sa_t {
 	status_t (*process_message) (ike_sa_t *this, message_t *message);
 	
 	/**
-	 * @brief Get the next message ID for a request.
-	 *
+	 * @brief Generate a IKE message to send it to the peer.
+	 * 
+	 * This method generates all payloads in the message and encrypts/signs
+	 * the packet.
+	 * 
 	 * @param this 			calling object
-	 * @return 				the next message id
+	 * @param message 		message to generate
+	 * @param packet		generated output packet
+	 * @return 				
+	 * 						- SUCCESS
+	 * 						- FAILED
+	 * 						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
-	u_int32_t (*get_next_message_id) (ike_sa_t *this);
+	status_t (*generate_message) (ike_sa_t *this, message_t *message,
+								  packet_t **packet);
 	
 	/**
-	 * @brief Check if NAT traversal is enabled for this IKE_SA.
-	 *
-	 * @param this 			calling object
-	 * @return 				TRUE if NAT traversal enabled
-	 */
-	bool (*is_natt_enabled) (ike_sa_t *this);
-
-	/**
-	 * @brief Enable NAT detection for this IKE_SA.
-	 *
-	 * If a Network address translation is detected with
-	 * NAT_DETECTION notifys, a SA must switch to ports
-	 * 4500. To enable this behavior, call enable_natt().
-	 * It is relevant which peer is NATted, this is specified
-	 * with the "local" parameter. Call it twice when both
-	 * are NATted.
-	 *
-	 * @param this 			calling object
-	 * @param local			TRUE, if we are NATted, FALSE if other
-	 */
-	void (*enable_natt) (ike_sa_t *this, bool local);
-
-	/**
-	 * @brief Apply connection parameters for this IKE_SA.
+	 * @brief Retransmits a request.
 	 * 
-	 * @param this			calling object
-	 * @param connection	connection definition
+	 * @param this 			calling object
+	 * @param message_id	ID of the request to retransmit
+	 * @return
+	 * 						- SUCCESS
+	 * 						- NOT_FOUND if request doesn't have to be retransmited
 	 */
-	void (*apply_connection) (ike_sa_t *this, connection_t *connection);
-
+	status_t (*retransmit) (ike_sa_t *this, u_int32_t message_id);
+	
 	/**
 	 * @brief Sends a DPD request to the peer.
 	 *
@@ -399,6 +409,29 @@ struct ike_sa_t {
 	 * @param this			calling object
 	 */
 	void (*send_keepalive) (ike_sa_t *this);
+	
+	/**
+	 * @brief Check if NAT traversal is enabled for this IKE_SA.
+	 *
+	 * @param this 			calling object
+	 * @return 				TRUE if NAT traversal enabled
+	 */
+	bool (*is_natt_enabled) (ike_sa_t *this);
+
+	/**
+	 * @brief Enable NAT detection for this IKE_SA.
+	 *
+	 * If a Network address translation is detected with
+	 * NAT_DETECTION notifys, a SA must switch to ports
+	 * 4500. To enable this behavior, call enable_natt().
+	 * It is relevant which peer is NATted, this is specified
+	 * with the "local" parameter. Call it twice when both
+	 * are NATted.
+	 *
+	 * @param this 			calling object
+	 * @param local			TRUE, if we are NATted, FALSE if other
+	 */
+	void (*enable_natt) (ike_sa_t *this, bool local);
 
 	/**
 	 * @brief Derive all keys and create the transforms for IKE communication.
@@ -411,15 +444,14 @@ struct ike_sa_t {
 	 *
 	 * @param this 			calling object
 	 * @param proposal		proposal which contains algorithms to use
-	 * @param dh			diffie hellman object with shared secret
+	 * @param secret		secret derived from DH exchange, gets freed
 	 * @param nonce_i		initiators nonce
 	 * @param nonce_r		responders nonce
 	 * @param initiator		TRUE if initiator, FALSE otherwise
 	 * @param child_prf		PRF with SK_d key when rekeying, NULL otherwise
 	 * @param old_prf		general purpose PRF of old SA when rekeying
 	 */
-	status_t (*derive_keys)(ike_sa_t *this, proposal_t* proposal,
-							diffie_hellman_t *dh,
+	status_t (*derive_keys)(ike_sa_t *this, proposal_t* proposal, chunk_t secret,
 							chunk_t nonce_i, chunk_t nonce_r,
 							bool initiator, prf_t *child_prf, prf_t *old_prf);
 	
@@ -462,15 +494,6 @@ struct ike_sa_t {
 	 * @param child_sa		child_sa to add
 	 */
 	void (*add_child_sa) (ike_sa_t *this, child_sa_t *child_sa);
-	
-	/**
-	 * @brief Check if an IKE_SA has one or more CHILD_SAs with a given reqid.
-	 * 
-	 * @param this 			calling object
-	 * @param reqid			reqid of the CHILD
-	 * @return				TRUE if it has such a CHILD, FALSE if not
-	 */
-	bool (*has_child_sa) (ike_sa_t *this, u_int32_t reqid);
 	
 	/**
 	 * @brief Get a CHILD_SA identified by protocol and SPI.
@@ -537,22 +560,6 @@ struct ike_sa_t {
 	status_t (*destroy_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
 
 	/**
-	 * @brief Set lifetimes of an IKE_SA.
-	 *
-	 * Two lifetimes are specified. The soft_lifetime says, when rekeying should
-	 * be initiated. The hard_lifetime says, when the IKE_SA has been expired
-	 * and must be deleted. Normally, hard_lifetime > soft_lifetime, and 
-	 * hard_lifetime is only reached when rekeying at soft_lifetime fails.
-	 *
-	 * @param this 			calling object
-	 * @param reauth		use full reauthentication instead of rekeying.
-	 * @param soft_lifetime	soft_lifetime
-	 * @param hard_lifetime	hard_lifetime
-	 */
-	void (*set_lifetimes) (ike_sa_t *this, bool reauth,
-						   u_int32_t soft_lifetime, u_int32_t hard_lifetime);
-
-	/**
 	 * @brief Rekey the IKE_SA.
 	 *
 	 * Sets up a new IKE_SA, moves all CHILDs to it and deletes this IKE_SA.
@@ -563,42 +570,60 @@ struct ike_sa_t {
 	status_t (*rekey) (ike_sa_t *this);
 
 	/**
-	 * @brief Reauthentication the IKE_SA.
+	 * @brief Restablish the IKE_SA.
 	 *
 	 * Create a completely new IKE_SA with authentication, recreates all children
-	 * within the IKE_SA and shuts the old SA down.
+	 * within the IKE_SA, but lets the old IKE_SA untouched.
 	 *
 	 * @param this 			calling object
-	 * @return				- SUCCESS, if IKE_SA rekeying initiated
 	 */
-	status_t (*reauth) (ike_sa_t *this);
-
+	void (*reestablish) (ike_sa_t *this);
+	
 	/**
-	 * @brief Get the transaction which rekeys this IKE_SA.
+	 * @brief Set the virtual IP to use for this IKE_SA and its children.
+	 *
+	 * The virtual IP is assigned per IKE_SA, not per CHILD_SA. It has the same
+	 * lifetime as the IKE_SA.
 	 *
 	 * @param this 			calling object
-	 * @return				rekey_ike_sa_t transaction or NULL
 	 */
-	transaction_t* (*get_rekeying_transaction) (ike_sa_t *this);
-
+	void (*set_virtual_ip) (ike_sa_t *this, bool local, host_t *ip);
+	
 	/**
-	 * @brief Set the transaction which rekeys this IKE_SA.
+	 * @brief Get the virtual IP configured.
 	 *
 	 * @param this 			calling object
-	 * @param rekey			rekey_ike_sa_t transaction or NULL
+	 * @param local			TRUE to get local virtual IP, FALSE for remote
 	 */
-	void (*set_rekeying_transaction) (ike_sa_t *this, transaction_t *rekey);
-
+	host_t* (*get_virtual_ip) (ike_sa_t *this, bool local);
+	
 	/**
-	 * @brief Move all children from other IKE_SA to this IKE_SA.
+	 * @brief Add a DNS server to the system.
 	 *
-	 * After rekeying completes, all children are switched over to the
-	 * newly created IKE_SA.
+	 * An IRAS may send a DNS server. To use it, it is installed on the
+	 * system. The DNS entry has a lifetime until the IKE_SA gets closed.
 	 *
-	 * @param this 			stepfather
-	 * @param other			deceased (rekeyed) IKE_SA
+	 * @param this 			calling object
+	 * @param dns			DNS server to install on the system
 	 */
-	void (*adopt_children) (ike_sa_t *this, ike_sa_t *other);
+	void (*add_dns_server) (ike_sa_t *this, host_t *dns);
+	
+	/**
+	 * @brief Inherit all attributes of other to this after rekeying.
+	 *
+	 * When rekeying is completed, all CHILD_SAs, the virtual IP and all
+	 * outstanding tasks are moved from other to this.
+	 *
+	 * @param this 			calling object
+	 */
+	void (*inherit) (ike_sa_t *this, ike_sa_t *other);
+		
+	/**
+	 * @brief Reset the IKE_SA, useable when initiating fails
+	 *
+	 * @param this 			calling object
+	 */
+	void (*reset) (ike_sa_t *this);
 	
 	/**
 	 * @brief Destroys a ike_sa_t object.
@@ -610,8 +635,6 @@ struct ike_sa_t {
 
 /**
  * @brief Creates an ike_sa_t object with a specific ID.
- *
- * The ID gets cloned internally.
  *
  * @param ike_sa_id 	ike_sa_id_t object to associate with new IKE_SA
  * @return 				ike_sa_t object

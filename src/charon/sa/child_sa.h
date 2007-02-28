@@ -6,8 +6,8 @@
  */
 
 /*
+ * Copyright (C) 2006-2007 Martin Willi
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
- * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ typedef struct child_sa_t child_sa_t;
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <config/proposal.h>
-#include <sa/transactions/transaction.h>
+#include <config/policies/policy.h>
 
 /**
  * Where we should start with reqid enumeration
@@ -109,18 +109,10 @@ struct child_sa_t {
 	char* (*get_name) (child_sa_t *this);
 	
 	/**
-	 * @brief Set the name of the policy this IKE_SA uses.
-	 *
-	 * @param this			calling object
-	 * @param name			name, gets cloned
-	 */
-	void (*set_name) (child_sa_t *this, char* name);
-	
-	/**
-	 * @brief Get the unique reqid of the CHILD SA.
+	 * @brief Get the reqid of the CHILD SA.
 	 * 
-	 * Every CHILD_SA has a unique reqid, which is also 
-	 * stored down in the kernel.
+	 * Every CHILD_SA has a reqid. The kernel uses this ID to
+	 * identify it.
 	 *
 	 * @param this 		calling object
 	 * @return 			reqid of the CHILD SA
@@ -259,23 +251,12 @@ struct child_sa_t {
 	void (*set_state) (child_sa_t *this, child_sa_state_t state);
 	
 	/**
-	 * @brief Set the transaction which rekeys this CHILD_SA.
-	 *
-	 * Since either end may initiate CHILD_SA rekeying, we must detect
-	 * such situations to handle them cleanly. A rekeying transaction
-	 * registers itself to the CHILD_SA, and checks later if another
-	 * transaction is in progress of a rekey.
+	 * @brief Get the policy used to set up this child sa.
 	 *
 	 * @param this 		calling object
-	 */	
-	void (*set_rekeying_transaction) (child_sa_t *this, transaction_t *transaction);
-	
-	/**
-	 * @brief Get the transaction which rekeys this CHILD_SA.
-	 *
-	 * @param this 		calling object
-	 */	
-	transaction_t* (*get_rekeying_transaction) (child_sa_t *this);
+	 * @return			policy
+	 */
+	policy_t* (*get_policy) (child_sa_t *this);
 	
 	/**
 	 * @brief Destroys a child_sa.
@@ -288,23 +269,19 @@ struct child_sa_t {
 /**
  * @brief Constructor to create a new child_sa_t.
  *
- * @param rekey_reqid	reqid of old CHILD_SA when rekeying, 0 otherwise
  * @param me			own address
  * @param other			remote address
  * @param my_id			id of own peer
  * @param other_id		id of remote peer
- * @param soft_lifetime	time before rekeying
- * @param hard_lifteime	time before delete
- * @param script		updown script to use when calling child_sa_t.script()
- * @param hostaccess	allow host access (needed by updown script)
+ * @param policy		policy this CHILD_SA instantiates
+ * @param reqid			reqid of old CHILD_SA when rekeying, 0 otherwise
  * @param use_natt		TRUE if NAT traversal is used
  * @return				child_sa_t object
  * 
  * @ingroup sa
  */
-child_sa_t * child_sa_create(u_int32_t rekey_reqid, host_t *me, host_t *other,
+child_sa_t * child_sa_create(host_t *me, host_t *other,
 							 identification_t *my_id, identification_t* other_id,
-							 u_int32_t soft_lifetime, u_int32_t hard_lifetime,
-							 char *script, bool hostaccess, bool use_natt);
+							 policy_t *policy, u_int32_t reqid, bool use_natt);
 
 #endif /*CHILD_SA_H_*/

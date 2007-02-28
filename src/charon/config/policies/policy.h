@@ -329,6 +329,25 @@ struct policy_t {
 	mode_t (*get_mode) (policy_t *this);
 	
 	/**
+	 * @brief Get a virtual IP for the local or the remote host.
+	 *
+	 * By supplying NULL as IP, an IP for the local host is requested. It
+	 * may be %any or specific. 
+	 * By supplying %any as host, an IP from the pool is selected to be
+	 * served to the peer.
+	 * If a specified host is supplied, it is checked if this address
+	 * is acceptable to serve to the peer. If so, it is returned. Otherwise,
+	 * an alternative IP is returned.
+	 * In any mode, this call may return NULL indicating virtual IP should
+	 * not be used.
+	 * 
+	 * @param this			policy
+	 * @param suggestion	NULL, %any or specific, see description
+	 * @return				clone of an IP to use, or NULL
+	 */
+	host_t* (*get_virtual_ip) (policy_t *this, host_t *suggestion);
+	
+	/**
 	 * @brief Get a new reference.
 	 *
 	 * Get a new reference to this policy by increasing
@@ -356,6 +375,8 @@ struct policy_t {
  * @brief Create a configuration object for IKE_AUTH and later.
  * 
  * name-string gets cloned, ID's not.
+ * Virtual IPs are used if they are != NULL. A %any host means the virtual
+ * IP should be obtained from the other peer.
  * Lifetimes are in seconds. To prevent to peers to start rekeying at the
  * same time, a jitter may be specified. Rekeying of an SA starts at
  * (soft_lifetime - random(0, jitter)). After a successful rekeying, 
@@ -366,6 +387,8 @@ struct policy_t {
  * @param name				name of the policy
  * @param my_id 			identification_t for ourselves
  * @param other_id 			identification_t for the remote guy
+ * @param my_virtual_ip		virtual IP for local host, or NULL
+ * @param other_virtual_ip	virtual IP for remote host, or NULL
  * @param auth_method		Authentication method to use for our(!) auth data
  * @param eap_type			EAP type to use for peer authentication
  * @param hard_lifetime		lifetime before deleting an SA
@@ -381,6 +404,7 @@ struct policy_t {
  */
 policy_t *policy_create(char *name, 
 						identification_t *my_id, identification_t *other_id,
+						host_t *my_virtual_ip, host_t *other_virtual_ip,
 						auth_method_t auth_method, eap_type_t eap_type,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime,
 						u_int32_t jitter, char *updown, bool hostaccess,

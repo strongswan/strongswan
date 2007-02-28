@@ -25,12 +25,14 @@
 #include <sys/time.h>
 #include <string.h>
 #include <printf.h>
+#include <sys/stat.h>
 
 #include "ike_sa.h"
 
 #include <library.h>
 #include <daemon.h>
 #include <utils/linked_list.h>
+#include <utils/lexparser.h>
 #include <crypto/diffie_hellman.h>
 #include <crypto/prf_plus.h>
 #include <crypto/crypters/crypter.h>
@@ -42,20 +44,30 @@
 #include <encoding/payloads/transform_substructure.h>
 #include <encoding/payloads/transform_attribute.h>
 #include <encoding/payloads/ts_payload.h>
-#include <sa/transactions/transaction.h>
-#include <sa/transactions/ike_sa_init.h>
-#include <sa/transactions/delete_ike_sa.h>
-#include <sa/transactions/create_child_sa.h>
-#include <sa/transactions/delete_child_sa.h>
-#include <sa/transactions/dead_peer_detection.h>
-#include <sa/transactions/rekey_ike_sa.h>
-#include <queues/jobs/retransmit_request_job.h>
+#include <sa/task_manager.h>
+#include <sa/tasks/ike_init.h>
+#include <sa/tasks/ike_natd.h>
+#include <sa/tasks/ike_auth.h>
+#include <sa/tasks/ike_config.h>
+#include <sa/tasks/ike_cert.h>
+#include <sa/tasks/ike_rekey.h>
+#include <sa/tasks/ike_delete.h>
+#include <sa/tasks/ike_dpd.h>
+#include <sa/tasks/child_create.h>
+#include <sa/tasks/child_delete.h>
+#include <sa/tasks/child_rekey.h>
+#include <queues/jobs/retransmit_job.h>
 #include <queues/jobs/delete_ike_sa_job.h>
 #include <queues/jobs/send_dpd_job.h>
 #include <queues/jobs/send_keepalive_job.h>
 #include <queues/jobs/rekey_ike_sa_job.h>
 #include <queues/jobs/route_job.h>
 #include <queues/jobs/initiate_job.h>
+
+
+#ifndef RESOLV_CONF
+#define RESOLV_CONF "/etc/resolv.conf"
+#endif
 
 ENUM(ike_sa_state_names, IKE_CREATED, IKE_DELETING,
 	"CREATED",
@@ -83,14 +95,29 @@ struct private_ike_sa_t {
 	ike_sa_id_t *ike_sa_id;
 	
 	/**
-	 * Current state of the IKE_SA
+	 * unique numerical ID for this IKE_SA.
 	 */
-	ike_sa_state_t state;
+	u_int32_t unique_id;
 	
 	/**
-	 * Name of the connection used by this IKE_SA
+	 * Current state of the IKE_SA
 	 */
-	char *name;
+	ike_sa_state_t state;	
+	
+	/**
+	 * connection used to establish this IKE_SA.
+	 */
+	connection_t *connection;
+	
+	/**
+	 * Peer and authentication information to establish IKE_SA.
+	 */
+	policy_t *policy;
+	
+	/**
+	 * Juggles tasks to process messages
+	 */
+	task_manager_t *task_manager;
 	
 	/**
 	 * Address of local host
@@ -158,11 +185,6 @@ struct private_ike_sa_t {
 	prf_t *auth_verify;
 	
 	/**
-	 * NAT hasher.
-	 */
-	hasher_t *nat_hasher;
-	
-	/**
 	 * NAT status of local host.
 	 */
 	bool nat_here;
@@ -173,14 +195,19 @@ struct private_ike_sa_t {
 	bool nat_there;
 	
 	/**
-	 * message ID for next outgoung request
+	 * Virtual IP on local host, if any
 	 */
-	u_int32_t message_id_out;
-
+	host_t *my_virtual_ip;
+	
 	/**
-	 * will the IKE_SA be fully reauthenticated or rekeyed only?
+	 * Virtual IP on remote host, if any
 	 */
-	bool reauth;
+	host_t *other_virtual_ip;
+	
+	/**
+	 * List of DNS servers installed by us
+	 */
+	linked_list_t *dns_servers;
 
 	/**
 	 * Timestamps for this IKE_SA
@@ -197,51 +224,12 @@ struct private_ike_sa_t {
 		/** when IKE_SA gets deleted */
 		u_int32_t delete;
 	} time;
-	
-	/**
-	 * interval to send DPD liveness check
-	 */
-	time_t dpd_delay;
-	
-	/**
-	 * number of retransmit sequences to go through before giving up (keyingtries)
-	 */
-	u_int32_t retrans_sequences;
-	
-	/**
-	 * List of queued transactions to process
-	 */
-	linked_list_t *transaction_queue;
-	
-	/**
-	 * Transaction currently initiated
-	 * (only one supported yet, window size = 1)
-	 */
-	transaction_t *transaction_out;
-	
-	/**
-	 * last transaction initiated by peer processed.
-	 * (only one supported yet, window size = 1)
-	 * Stored for retransmission.
-	 */
-	transaction_t *transaction_in;
-	
-	/**
-	 * Next incoming transaction expected. Used to
-	 * do multi transaction operations.
-	 */
-	transaction_t *transaction_in_next;
-	
-	/**
-	 * Transaction which rekeys this IKE_SA, used do detect simultaneus rekeying
-	 */
-	transaction_t *rekeying_transaction;
 };
 
 /**
  * get the time of the latest traffic processed by the kernel
  */
-static time_t get_kernel_time(private_ike_sa_t* this, bool inbound)
+static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
@@ -257,23 +245,22 @@ static time_t get_kernel_time(private_ike_sa_t* this, bool inbound)
 	}
 	iterator->destroy(iterator);
 	
-	return latest;
+	if (inbound)
+	{
+		return max(this->time.inbound, latest);
+	}
+	else
+	{
+		return max(this->time.outbound, latest);
+	}
 }
 
 /**
- * get the time of the latest received traffice
+ * Implementation of ike_sa_t.get_unique_id
  */
-static time_t get_time_inbound(private_ike_sa_t *this)
+static u_int32_t get_unique_id(private_ike_sa_t *this)
 {
-	return max(this->time.inbound, get_kernel_time(this, TRUE));
-}
-
-/**
- * get the time of the latest sent traffic
- */
-static time_t get_time_outbound(private_ike_sa_t *this)
-{
-	return max(this->time.outbound, get_kernel_time(this, FALSE));
+	return this->unique_id;
 }
 
 /**
@@ -281,25 +268,45 @@ static time_t get_time_outbound(private_ike_sa_t *this)
  */
 static char *get_name(private_ike_sa_t *this)
 {
-	return this->name;
+	if (this->connection)
+	{
+		return this->connection->get_name(this->connection);
+	}
+	return "(unnamed)";
 }
 
 /**
- * Implementation of ike_sa_t.set_name.
+ * Implementation of ike_sa_t.get_connection
  */
-static void set_name(private_ike_sa_t *this, char* name)
+static connection_t* get_connection(private_ike_sa_t *this)
 {
-	free(this->name);
-	this->name = strdup(name);
+	return this->connection;
 }
 
 /**
- * Implementation of ike_sa_t.apply_connection.
+ * Implementation of ike_sa_t.set_connection
  */
-static void apply_connection(private_ike_sa_t *this, connection_t *connection)
+static void set_connection(private_ike_sa_t *this, connection_t *connection)
 {
-	this->dpd_delay = connection->get_dpd_delay(connection);
-	this->retrans_sequences = connection->get_retrans_seq(connection);
+	this->connection = connection;
+	connection->get_ref(connection);
+}
+
+/**
+ * Implementation of ike_sa_t.get_policy
+ */
+static policy_t *get_policy(private_ike_sa_t *this)
+{
+	return this->policy;
+}
+
+/**
+ * Implementation of ike_sa_t.set_policy
+ */
+static void set_policy(private_ike_sa_t *this, policy_t *policy)
+{
+	policy->get_ref(policy);
+	this->policy = policy;
 }
 
 /**
@@ -341,35 +348,6 @@ static void set_other_host(private_ike_sa_t *this, host_t *other)
  */
 static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 {
-	/*
-	 * Quoting RFC 4306:
-	 *
-	 * 2.11.  Address and Port Agility
-	 * 
-	 *    IKE runs over UDP ports 500 and 4500, and implicitly sets up ESP and
-	 *    AH associations for the same IP addresses it runs over.  The IP
-	 *    addresses and ports in the outer header are, however, not themselves
-	 *    cryptographically protected, and IKE is designed to work even through
-	 *    Network Address Translation (NAT) boxes.  An implementation MUST
-	 *    accept incoming requests even if the source port is not 500 or 4500,
-	 *    and MUST respond to the address and port from which the request was
-	 *    received.  It MUST specify the address and port at which the request
-	 *    was received as the source address and port in the response.  IKE
-	 *    functions identically over IPv4 or IPv6.
-	 *
-	 *    [...]
-	 *
-	 *    There are cases where a NAT box decides to remove mappings that
-	 *    are still alive (for example, the keepalive interval is too long,
-	 *    or the NAT box is rebooted).  To recover in these cases, hosts
-	 *    that are not behind a NAT SHOULD send all packets (including
-	 *    retransmission packets) to the IP address and port from the last
-	 *    valid authenticated packet from the other end (i.e., dynamically
-	 *    update the address).  A host behind a NAT SHOULD NOT do this
-	 *    because it opens a DoS attack possibility.  Any authenticated IKE
-	 *    packet or any authenticated UDP-encapsulated ESP packet can be
-	 *    used to detect that the IP address or the port has changed.
-	 */
 	iterator_t *iterator = NULL;
 	child_sa_t *child_sa = NULL;
 	host_diff_t my_diff, other_diff;
@@ -425,398 +403,148 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 	{
 		child_sa->update_hosts(child_sa, this->my_host, this->other_host, 
 							   my_diff, other_diff);
-		/* TODO: what to do if update fails? Delete CHILD_SA? */
 	}
 	iterator->destroy(iterator);
 }
 
 /**
- * called when the peer is not responding anymore
+ * Implementation of ike_sa_t.retransmit.
  */
-static void dpd_detected(private_ike_sa_t *this)
+static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 {
-	connection_t *connection = NULL;
-	policy_t *policy;
-	linked_list_t *my_ts, *other_ts;
-	child_sa_t* child_sa;
-	dpd_action_t action;
-	job_t *job;
-	
-	DBG2(DBG_IKE, "dead peer detected, handling CHILD_SAs dpd action");
-	
-	/* check for childrens with dpdaction = hold */
-	while(this->child_sas->remove_first(this->child_sas,
-		  								(void**)&child_sa) == SUCCESS)
+	this->time.outbound = time(NULL);
+	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
 	{
-		/* get the policy which belongs to this CHILD */
-		my_ts = child_sa->get_my_traffic_selectors(child_sa);
-		other_ts = child_sa->get_other_traffic_selectors(child_sa);
-		policy = charon->policies->get_policy(charon->policies,
-											  this->my_id, this->other_id,
-											  my_ts, other_ts,
-											  this->my_host, this->other_host);
-		if (policy == NULL)
-		{
-			DBG1(DBG_IKE, "no policy for CHILD to handle DPD");
-			continue;
-		}
+		connection_t *connection = NULL;
+		policy_t *policy;
+		linked_list_t *my_ts, *other_ts;
+		child_sa_t* child_sa;
+		dpd_action_t action;
+		job_t *job;
 		
-		action = policy->get_dpd_action(policy);
-		/* get a connection for further actions */
-		if (connection == NULL &&
-			(action == DPD_ROUTE || action == DPD_RESTART))
+		DBG2(DBG_IKE, "dead peer detected, handling CHILD_SAs dpd action");
+		
+		/* check for childrens with dpdaction = hold */
+		while(this->child_sas->remove_first(this->child_sas,
+			  								(void**)&child_sa) == SUCCESS)
 		{
-			connection = charon->connections->get_connection_by_hosts(
-											charon->connections,
-											this->my_host, this->other_host);
-			if (connection == NULL)
+			/* get the policy which belongs to this CHILD */
+			my_ts = child_sa->get_my_traffic_selectors(child_sa);
+			other_ts = child_sa->get_other_traffic_selectors(child_sa);
+			policy = charon->policies->get_policy(charon->policies,
+												  this->my_id, this->other_id,
+												  my_ts, other_ts,
+												  this->my_host, this->other_host);
+			if (policy == NULL)
 			{
-				SIG(IKE_UP_FAILED, "no connection found to handle DPD");
-				break;
+				DBG1(DBG_IKE, "no policy for CHILD to handle DPD");
+				continue;
 			}
+			
+			action = policy->get_dpd_action(policy);
+			/* get a connection for further actions */
+			if (connection == NULL &&
+				(action == DPD_ROUTE || action == DPD_RESTART))
+			{
+				connection = charon->connections->get_connection_by_hosts(
+												charon->connections,
+												this->my_host, this->other_host);
+				if (connection == NULL)
+				{
+					SIG(IKE_UP_FAILED, "no connection found to handle DPD");
+					break;
+				}
+			}
+			
+			DBG1(DBG_IKE, "dpd action for %s is %N",
+				 policy->get_name(policy), dpd_action_names, action);
+			
+			switch (action)
+			{
+				case DPD_ROUTE:
+					connection->get_ref(connection);
+					job = (job_t*)route_job_create(connection, policy, TRUE);
+					charon->job_queue->add(charon->job_queue, job);
+					break;
+				case DPD_RESTART:
+					connection->get_ref(connection);
+					job = (job_t*)initiate_job_create(connection, policy);
+					charon->job_queue->add(charon->job_queue, job);
+					break;
+				default:
+					policy->destroy(policy);
+					break;
+			}
+			child_sa->destroy(child_sa);
 		}
 		
-		DBG1(DBG_IKE, "dpd action for %s is %N",
-			 policy->get_name(policy), dpd_action_names, action);
-		
-		switch (action)
+		/* send a proper signal to brief interested bus listeners */
+		switch (this->state)
 		{
-			case DPD_ROUTE:
-				connection->get_ref(connection);
-				job = (job_t*)route_job_create(connection, policy, TRUE);
-				charon->job_queue->add(charon->job_queue, job);
+			case IKE_CONNECTING:
+				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
 				break;
-			case DPD_RESTART:
-				connection->get_ref(connection);
-				job = (job_t*)initiate_job_create(connection, NULL, policy);
-				charon->job_queue->add(charon->job_queue, job);
+			case IKE_REKEYING:
+				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
+				break;
+			case IKE_DELETING:
+				SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
 				break;
 			default:
-				policy->destroy(policy);
 				break;
 		}
-		child_sa->destroy(child_sa);
-	}
-	
-	/* send a proper signal to brief interested bus listeners */
-	switch (this->state)
-	{
-		case IKE_CONNECTING:
-			SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
-			break;
-		case IKE_REKEYING:
-			SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
-			break;
-		case IKE_DELETING:
-			SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
-			break;
-		default:
-			break;
-	}
-	
-	DESTROY_IF(connection);
-}
-
-/**
- * send a request and schedule retransmission
- */
-static status_t transmit_request(private_ike_sa_t *this)
-{
-	message_t *request;
-	packet_t *packet;
-	status_t status;
-	retransmit_request_job_t *job;
-	u_int32_t transmitted;
-	u_int32_t timeout;
-	transaction_t *transaction = this->transaction_out;
-	u_int32_t message_id;
-	
-	transmitted = transaction->requested(transaction);
-	timeout = charon->configuration->get_retransmit_timeout(charon->configuration,
-															transmitted,
-															this->retrans_sequences);
-	if (timeout == 0)
-	{
-		DBG1(DBG_IKE, "giving up after %d retransmits, deleting IKE_SA",
-			 transmitted - 1);
-		dpd_detected(this);
+		
+		DESTROY_IF(connection);
 		return DESTROY_ME;
 	}
-	
-	status = transaction->get_request(transaction, &request);
-	if (status != SUCCESS)
-	{
-		/* generating request failed */
-		return status;
-	}
-	message_id = transaction->get_message_id(transaction);
-	/* if we retransmit, the request is already generated */
-	if (transmitted == 0)
-	{
-		status = request->generate(request, this->crypter_out, this->signer_out, &packet);
-		if (status != SUCCESS)
-		{
-			DBG1(DBG_IKE, "request generation failed. transaction discarded");
-			return FAILED;
-		}
-	}
-	else
-	{
-		DBG1(DBG_IKE, "sending retransmit %d for %N request with messageID %d",
-			transmitted, exchange_type_names, request->get_exchange_type(request),
-			message_id);
-		packet = request->get_packet(request);
-	}
-	/* finally send */
-	charon->send_queue->add(charon->send_queue, packet);
-	this->time.outbound = time(NULL);
-	
-	/* schedule retransmission job */
-	job = retransmit_request_job_create(message_id, this->ike_sa_id);
-	charon->event_queue->add_relative(charon->event_queue, (job_t*)job, timeout);
 	return SUCCESS;
 }
 
 /**
- * Implementation of ike_sa.retransmit_request.
+ * Implementation of ike_sa_t.generate
  */
-static status_t retransmit_request(private_ike_sa_t *this, u_int32_t message_id)
+static status_t generate_message(private_ike_sa_t *this, message_t *message,
+								 packet_t **packet)
 {
-	if (this->transaction_out == NULL ||
-		this->transaction_out->get_message_id(this->transaction_out) != message_id)
-	{
-		/* no retransmit necessary, transaction did already complete */
-		return SUCCESS;
-	}
-	return transmit_request(this);
-}
-
-/**
- * Check for transactions in the queue and initiate the first transaction found.
- */
-static status_t process_transaction_queue(private_ike_sa_t *this)
-{
-	if (this->transaction_out)
-	{
-		/* already a transaction in progress */
-		return SUCCESS;
-	}
-	
-	while (TRUE)
-	{
-		if (this->transaction_queue->remove_first(this->transaction_queue,
-			(void**)&this->transaction_out) != SUCCESS)
-		{
-			/* transaction queue empty */
-			return SUCCESS;
-		}
-		switch (transmit_request(this))
-		{
-			case SUCCESS:
-				return SUCCESS;
-			case DESTROY_ME:
-				/* critical, IKE_SA unusable, destroy immediately */
-				return DESTROY_ME;
-			default:
-				/* discard transaction, process next one */
-				this->transaction_out->destroy(this->transaction_out);
-				this->transaction_out = NULL;
-				/* handle next transaction */
-				continue;
-		}
-	}
-}
-
-/**
- * Queue a new transaction and execute the next outstanding transaction
- */
-static status_t queue_transaction(private_ike_sa_t *this, transaction_t *transaction, bool prefer)
-{
-	/* inject next transaction */
-	if (transaction)
-	{
-		if (prefer)
-		{
-			this->transaction_queue->insert_first(this->transaction_queue, transaction);
-		}
-		else
-		{
-			this->transaction_queue->insert_last(this->transaction_queue, transaction);
-		}
-	}
-	/* process a transaction */
-	return process_transaction_queue(this);
-}
-
-/**
- * process an incoming request.
- */
-static status_t process_request(private_ike_sa_t *this, message_t *request)
-{
-	transaction_t *last, *current = NULL;
-	message_t *response;
-	packet_t *packet;
-	u_int32_t request_mid;
-	status_t status;
-	
-	request_mid = request->get_message_id(request);
-	last = this->transaction_in;
-	
-	/* check if message ID is correct */
-	if (last)
-	{
-		u_int32_t last_mid = last->get_message_id(last);
-		
-		if (last_mid == request_mid)
-		{
-			/* retransmit detected */
-			DBG1(DBG_IKE, "received retransmitted request for message "
-				 "ID %d, retransmitting response", request_mid);
-			last->get_response(last, request, &response, &this->transaction_in_next);
-			packet = response->get_packet(response);
-			charon->send_queue->add(charon->send_queue, packet);
-			this->time.outbound = time(NULL);
-			return SUCCESS;
-		}
-		
-		if (last_mid > request_mid)
-		{
-			/* something seriously wrong here, message id may not decrease */
-			DBG1(DBG_IKE, "received request with message ID %d, "
-				 "excepted %d, ingored", request_mid, last_mid + 1);
-			return FAILED;
-		}
-		/* we allow jumps in message IDs, as long as they are incremental */
-		if (last_mid + 1 < request_mid)
-		{
-			DBG1(DBG_IKE, "received request with message ID %d, excepted %d",
-				 request_mid, last_mid + 1);
-		}
-	}
-	else
-	{
-		if (request_mid != 0)
-		{
-			/* warn, but allow it */
-			DBG1(DBG_IKE, "first received request has message ID %d, "
-				 "excepted 0", request_mid);
-		}
-	}
-	
-	/* check if we already have a pre-created transaction for this request */
-	if (this->transaction_in_next)
-	{
-		current = this->transaction_in_next;
-		this->transaction_in_next = NULL;
-	}
-	else
-	{
-		current = transaction_create(&this->public, request);
-		if (current == NULL)
-		{
-			DBG1(DBG_IKE, "no idea how to handle received message (exchange"
-				 " type %d), ignored", request->get_exchange_type(request));
-			return FAILED;
-		}
-	}
-	
-	/* send message. get_request() always gives a valid response */
-	status = current->get_response(current, request, &response, &this->transaction_in_next);
-	if (response->generate(response, this->crypter_out, this->signer_out, &packet) != SUCCESS)
-	{
-		DBG1(DBG_IKE, "response generation failed, discarding transaction");
-		current->destroy(current);
-		return FAILED;
-	}
-	
-	charon->send_queue->add(charon->send_queue, packet);
 	this->time.outbound = time(NULL);
-	/* act depending on transaction result */
-	switch (status)
-	{
-		case DESTROY_ME:
-			/* transactions says we should destroy the IKE_SA, so do it */
-			current->destroy(current);
-			return DESTROY_ME;
-		default:
-			/* store for retransmission, destroy old transaction */
-			this->transaction_in = current;
-			if (last)
-			{
-				last->destroy(last);
-			}
-			return SUCCESS;
-	}
-}
-
-/**
- * process an incoming response
- */
-static status_t process_response(private_ike_sa_t *this, message_t *response)
-{
-	transaction_t *current, *new = NULL;
-	
-	current = this->transaction_out;
-	/* check if message ID is that of our currently active transaction */
-	if (current == NULL ||
-		current->get_message_id(current) != response->get_message_id(response))
-	{
-		DBG1(DBG_IKE, "received response with message ID %d "
-			 "not requested, ignored", response->get_message_id(response));
-		return FAILED;
-	}
-	
-	switch (current->conclude(current, response, &new))
-	{
-		case DESTROY_ME:
-			/* state requested to destroy IKE_SA */
-			return DESTROY_ME;
-		default:
-			/* discard transaction, process next one */
-			break;
-	}
-	/* transaction comleted, remove */
-	current->destroy(current);
-	this->transaction_out = NULL;
-	
-	/* queue new transaction */
-	return queue_transaction(this, new, TRUE);
+	message->set_ike_sa_id(message, this->ike_sa_id);
+	message->set_destination(message, this->other_host->clone(this->other_host));
+	message->set_source(message, this->my_host->clone(this->my_host));
+	return message->generate(message, this->crypter_out, this->signer_out, packet);
 }
 
 /**
  * send a notify back to the sender
  */
-static void send_notify_response(private_ike_sa_t *this,
-								 message_t *request,
+static void send_notify_response(private_ike_sa_t *this, message_t *request,
 								 notify_type_t type)
 {
-	notify_payload_t *notify;
 	message_t *response;
-	host_t *src, *dst;
 	packet_t *packet;
 	
 	response = message_create();
-	dst = request->get_source(request);
-	src = request->get_destination(request);
-	response->set_source(response, src->clone(src));
-	response->set_destination(response, dst->clone(dst));
 	response->set_exchange_type(response, request->get_exchange_type(request));
 	response->set_request(response, FALSE);
 	response->set_message_id(response, request->get_message_id(request));
-	response->set_ike_sa_id(response, this->ike_sa_id);
-	notify = notify_payload_create_from_protocol_and_type(PROTO_NONE, type);
-	response->add_payload(response, (payload_t *)notify);
-	if (response->generate(response, this->crypter_out, this->signer_out, &packet) != SUCCESS)
+	response->add_notify(response, FALSE, type, chunk_empty);
+	if (this->my_host->is_anyaddr(this->my_host))
 	{
-		response->destroy(response);
-		return;
+		this->my_host->destroy(this->my_host);
+		this->my_host = request->get_destination(request);
+		this->my_host = this->my_host->clone(this->my_host);
 	}
-	charon->send_queue->add(charon->send_queue, packet);
-	this->time.outbound = time(NULL);
+	if (this->other_host->is_anyaddr(this->other_host))
+	{
+		this->other_host->destroy(this->other_host);
+		this->other_host = request->get_source(request);
+		this->other_host = this->other_host->clone(this->other_host);
+	}
+	if (generate_message(this, response, &packet) == SUCCESS)
+	{
+		charon->send_queue->add(charon->send_queue, packet);
+	}
 	response->destroy(response);
-	return;
 }
-
 
 /**
  * Implementation of ike_sa_t.process_message.
@@ -875,27 +603,66 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			 exchange_type_names, message->get_exchange_type(message),
 			 message->get_request(message) ? "request" : "response",
 			 message->get_message_id(message));
+		return status;
 	}
 	else
 	{
+		host_t *me, *other;
+		
+		me = message->get_destination(message);
+		other = message->get_source(message);
+	
+		/* if this IKE_SA is virgin, we check for a connection */
+		if (this->connection == NULL)
+		{
+			this->connection = charon->connections->get_connection_by_hosts(
+												charon->connections, me, other);
+			if (this->connection == NULL)
+			{
+				/* no connection found for these hosts, destroy */
+				send_notify_response(this, message, NO_PROPOSAL_CHOSEN);
+				return DESTROY_ME;
+			}
+		}
+	
 		/* check if message is trustworthy, and update connection information */
 		if (this->state == IKE_CREATED ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
 		{
-			update_hosts(this, message->get_destination(message),
-							   message->get_source(message));
+			update_hosts(this, me, other);
 			this->time.inbound = time(NULL);
 		}
-		if (is_request)
-		{
-			status = process_request(this, message);
-		}
-		else
-		{
-			status = process_response(this, message);
-		}
+		return this->task_manager->process_message(this->task_manager, message);
 	}
-	return status;
+}
+
+/**
+ * apply the connection/policy information to this IKE_SA
+ */
+static void apply_config(private_ike_sa_t *this,
+						 connection_t *connection, policy_t *policy)
+{
+	host_t *me, *other;
+	identification_t *my_id, *other_id;
+	
+	if (this->connection == NULL && this->policy == NULL)
+	{
+		this->connection = connection;
+		connection->get_ref(connection);
+		this->policy = policy;
+		policy->get_ref(policy);
+		
+		me = connection->get_my_host(connection);
+		other = connection->get_other_host(connection);
+		my_id = policy->get_my_id(policy);
+		other_id = policy->get_other_id(policy);
+		set_my_host(this, me->clone(me));
+		set_other_host(this, other->clone(other));
+		DESTROY_IF(this->my_id);
+		DESTROY_IF(this->other_id);
+		this->my_id = my_id->clone(my_id);
+		this->other_id = other_id->clone(other_id);
+	}
 }
 
 /**
@@ -904,77 +671,29 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 static status_t initiate(private_ike_sa_t *this,
 						 connection_t *connection, policy_t *policy)
 {
-	switch (this->state)
+	task_t *task;
+	
+	if (this->state == IKE_CREATED)
 	{
-		case IKE_CREATED:
-		{
-			/* in state CREATED, we must do the ike_sa_init
-			 * and ike_auth transactions. Along with these,
-			 * a CHILD_SA with the supplied policy is set up.
-			 */
-			ike_sa_init_t *ike_sa_init;
-			
-			DBG2(DBG_IKE, "initiating new IKE_SA for CHILD_SA");
-			if (this->my_host->is_anyaddr(this->my_host))
-			{
-				this->my_host->destroy(this->my_host);
-				this->my_host = connection->get_my_host(connection);
-				this->my_host = this->my_host->clone(this->my_host);
-			}
-			if (this->other_host->is_anyaddr(this->other_host))
-			{
-				this->other_host->destroy(this->other_host);
-				this->other_host = connection->get_other_host(connection);
-				this->other_host = this->other_host->clone(this->other_host);
-			}
-			if (this->other_host->is_anyaddr(this->other_host))
-			{
-				SIG(IKE_UP_START, "establishing new IKE_SA for CHILD_SA");
-				SIG(IKE_UP_FAILED, "can not initiate a connection to %%any, aborting");
-				policy->destroy(policy);
-				connection->destroy(connection);
-				return DESTROY_ME;
-			}
-			
-			this->retrans_sequences = connection->get_retrans_seq(connection);
-			this->dpd_delay = connection->get_dpd_delay(connection);
-			
-			this->message_id_out = 1;
-			ike_sa_init = ike_sa_init_create(&this->public);
-			ike_sa_init->set_config(ike_sa_init, connection, policy);
-			return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
-		}
-		case IKE_DELETING:
-		case IKE_REKEYING:
-		{
-			/* if we are in DELETING/REKEYING, we deny set up of a policy.
-			 * TODO: would it make sense to queue the transaction and adopt
-			 * all transactions to the new IKE_SA? */
-			SIG(IKE_UP_START, "creating CHILD_SA in existing IKE_SA");
-			SIG(IKE_UP_FAILED, "creating CHILD_SA discarded, as IKE_SA is in state %N",
-				ike_sa_state_names, this->state);
-			policy->destroy(policy);
-			connection->destroy(connection);
-			return FAILED;
-		}
-		case IKE_CONNECTING:
-		case IKE_ESTABLISHED:
-		{
-			/* if we are ESTABLISHED or CONNECTING, we queue the
-			 * transaction to create the CHILD_SA. It gets processed
-			 * when the IKE_SA is ready to do so. We don't need the
-			 * connection, as the IKE_SA is already established/establishing.
-			 */
-			create_child_sa_t *create_child;
-			
-			DBG1(DBG_IKE, "creating CHILD_SA in existing IKE_SA");
-			connection->destroy(connection);
-			create_child = create_child_sa_create(&this->public);
-			create_child->set_policy(create_child, policy);
-			return queue_transaction(this, (transaction_t*)create_child, FALSE);
-		}
+		/* if we aren't established/establishing, do so */
+		apply_config(this, connection, policy);
+		
+		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_natd_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_cert_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_config_create(&this->public, policy);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_auth_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
 	}
-	return FAILED;
+	
+	task = (task_t*)child_create_create(&this->public, policy);
+	this->task_manager->queue_task(this->task_manager, task);
+	
+	return this->task_manager->initiate(this->task_manager);
 }
 
 /**
@@ -982,11 +701,11 @@ static status_t initiate(private_ike_sa_t *this,
  */
 static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 {
-	connection_t *connection;
 	policy_t *policy;
 	iterator_t *iterator;
 	child_sa_t *current, *child_sa = NULL;
-	linked_list_t *my_ts, *other_ts;
+	task_t *task;
+	child_create_t *child_create;
 	
 	if (this->state == IKE_DELETING)
 	{
@@ -1014,66 +733,28 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 			"CHILD_SA not found", reqid);
 		return FAILED;
 	}
-	my_ts = child_sa->get_my_traffic_selectors(child_sa);
-	other_ts = child_sa->get_other_traffic_selectors(child_sa);
 	
-	policy = charon->policies->get_policy(charon->policies, 
-										  this->my_id, this->other_id, 
-										  my_ts, other_ts, 
-										  this->my_host, this->other_host);
-	if (policy == NULL)
+	policy = child_sa->get_policy(child_sa);
+	
+	if (this->state == IKE_CREATED)
 	{
-		SIG(CHILD_UP_START, "acquiring CHILD_SA with reqid %d", reqid);
-		SIG(CHILD_UP_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
-			"no policy found", reqid);
-		return FAILED;
+		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_natd_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_cert_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_config_create(&this->public, policy);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_auth_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
 	}
 	
-	switch (this->state)
-	{
-		case IKE_CREATED:
-		{
-			ike_sa_init_t *ike_sa_init;
-			
-			connection = charon->connections->get_connection_by_hosts(
-					charon->connections, this->my_host, this->other_host);
-			
-			if (connection == NULL)
-			{
-				SIG(CHILD_UP_START, "acquiring CHILD_SA with reqid %d", reqid);
-				SIG(CHILD_UP_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
-					"no connection found to establsih IKE_SA", reqid);
-				policy->destroy(policy);
-				return FAILED;
-			}
-			
-			DBG1(DBG_IKE, "establishing IKE_SA to acquire CHILD_SA "
-				 "with reqid %d", reqid);
-			
-			this->message_id_out = 1;
-			ike_sa_init = ike_sa_init_create(&this->public);
-			ike_sa_init->set_config(ike_sa_init, connection, policy);
-			/* reuse existing reqid */
-			ike_sa_init->set_reqid(ike_sa_init, reqid);
-			return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
-		}
-		case IKE_CONNECTING:
-		case IKE_ESTABLISHED:
-		{
-			create_child_sa_t *create_child;
-			
-			DBG1(DBG_CHD, "acquiring CHILD_SA with reqid %d", reqid);
-			
-			create_child = create_child_sa_create(&this->public);
-			create_child->set_policy(create_child, policy);
-			/* reuse existing reqid */
-			create_child->set_reqid(create_child, reqid);
-			return queue_transaction(this, (transaction_t*)create_child, FALSE);
-		}
-		default:
-			break;
-	}
-	return FAILED;
+	child_create = child_create_create(&this->public, policy);
+	child_create->use_reqid(child_create, reqid);
+	this->task_manager->queue_task(this->task_manager, (task_t*)child_create);
+	
+	return this->task_manager->initiate(this->task_manager);
 }
 
 /**
@@ -1148,55 +829,25 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	
 	switch (this->state)
 	{
-		case IKE_CREATED:
-		case IKE_CONNECTING:
-			/* we update IKE_SA information as good as possible,
-			 * this allows us to set up the SA later when an acquire comes in. */
-			if (this->my_id->get_type(this->my_id) == ID_ANY)
-			{
-				this->my_id->destroy(this->my_id);
-				this->my_id = policy->get_my_id(policy);
-				this->my_id = this->my_id->clone(this->my_id);
-			}
-			if (this->other_id->get_type(this->other_id) == ID_ANY)
-			{
-				this->other_id->destroy(this->other_id);
-				this->other_id = policy->get_other_id(policy);
-				this->other_id = this->other_id->clone(this->other_id);
-			}
-			if (this->my_host->is_anyaddr(this->my_host))
-			{
-				this->my_host->destroy(this->my_host);
-				this->my_host = connection->get_my_host(connection);
-				this->my_host = this->my_host->clone(this->my_host);
-			}
-			if (this->other_host->is_anyaddr(this->other_host))
-			{
-				this->other_host->destroy(this->other_host);
-				this->other_host = connection->get_other_host(connection);
-				this->other_host = this->other_host->clone(this->other_host);
-			}
-			set_name(this, connection->get_name(connection));
-			this->retrans_sequences = connection->get_retrans_seq(connection);
-			this->dpd_delay = connection->get_dpd_delay(connection);
-			break;
-		case IKE_ESTABLISHED:
-		case IKE_REKEYING:
-			/* nothing to do. We allow it for rekeying, as it will be
-			 * adopted by the new IKE_SA */
-			break;
 		case IKE_DELETING:
-			/* TODO: hanlde this case, create a new IKE_SA and route CHILD_SA */
-			SIG(CHILD_ROUTE_FAILED, "unable to route CHILD_SA, as its IKE_SA gets deleted");
+		case IKE_REKEYING:
+			SIG(CHILD_ROUTE_FAILED,
+				"unable to route CHILD_SA, as its IKE_SA gets deleted");
 			return FAILED;
+		case IKE_CREATED:
+			/* apply connection information, we need it to acquire */
+			apply_config(this, connection, policy);
+			break;
+		case IKE_CONNECTING:
+		case IKE_ESTABLISHED:
+		default:
+			break;
 	}
 
-	child_sa = child_sa_create(0, this->my_host, this->other_host,
-							   this->my_id, this->other_id,
-							   0, 0,
-							   NULL, policy->get_hostaccess(policy),
-							   FALSE);
-	child_sa->set_name(child_sa, policy->get_name(policy));
+	/* install kernel policies */
+	child_sa = child_sa_create(this->my_host, this->other_host,
+							   this->my_id, this->other_id, policy, FALSE, 0);
+	
 	my_ts = policy->get_my_traffic_selectors(policy, this->my_host);
 	other_ts = policy->get_other_traffic_selectors(policy, this->other_host);
 	status = child_sa->add_policies(child_sa, my_ts, other_ts,
@@ -1269,40 +920,45 @@ static status_t unroute(private_ike_sa_t *this, policy_t *policy)
 static status_t send_dpd(private_ike_sa_t *this)
 {
 	send_dpd_job_t *job;
-	time_t diff;
+	time_t diff, delay;
 	
-	if (this->dpd_delay == 0)
+	delay = this->connection->get_dpd_delay(this->connection);
+	
+	if (delay == 0)
 	{
 		/* DPD disabled */
 		return SUCCESS;
 	}
 	
-	if (this->transaction_out)
+	if (this->task_manager->busy(this->task_manager))
 	{
-		/* there is a transaction in progress. Come back later */
+		/* an exchange is in the air, no need to start a DPD check */
 		diff = 0;
 	}
 	else
 	{
 		/* check if there was any inbound traffic */
 		time_t last_in, now;
-		last_in = get_time_inbound(this);
+		last_in = get_use_time(this, TRUE);
 		now = time(NULL);
 		diff = now - last_in;
-		if (diff >= this->dpd_delay)
+		if (diff >= delay)
 		{
 			/* to long ago, initiate dead peer detection */
-			dead_peer_detection_t *dpd;
-			DBG1(DBG_IKE, "sending DPD request");
-			dpd = dead_peer_detection_create(&this->public);
-			queue_transaction(this, (transaction_t*)dpd, FALSE);
+			task_t *task;
+			
+			task = (task_t*)ike_dpd_create(TRUE);
 			diff = 0;
+			DBG1(DBG_IKE, "sending DPD request");
+			
+			this->task_manager->queue_task(this->task_manager, task);
+			this->task_manager->initiate(this->task_manager);
 		}
 	}
 	/* recheck in "interval" seconds */
 	job = send_dpd_job_create(this->ike_sa_id);
 	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
-									  (this->dpd_delay - diff) * 1000);
+									  (delay - diff) * 1000);
 	return SUCCESS;
 }
 
@@ -1314,7 +970,7 @@ static void send_keepalive(private_ike_sa_t *this)
 	send_keepalive_job_t *job;
 	time_t last_out, now, diff, interval;
 	
-	last_out = get_time_outbound(this);
+	last_out = get_use_time(this, FALSE);
 	now = time(NULL);
 	
 	diff = now - last_out;
@@ -1360,9 +1016,37 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 	
 	if (state == IKE_ESTABLISHED)
 	{
-		this->time.established = time(NULL);
+		job_t *job;
+		u_int32_t now = time(NULL);
+		u_int32_t soft, hard;
+		bool reauth;
+	
+		this->time.established = now;
 		/* start DPD checks */
 		send_dpd(this);
+		
+		/* schedule rekeying/reauthentication */
+		soft = this->connection->get_soft_lifetime(this->connection);
+		hard = this->connection->get_hard_lifetime(this->connection);
+		reauth = this->connection->get_reauth(this->connection);
+		DBG1(DBG_IKE, "scheduling %s in %ds, maximum lifetime %ds",
+			 reauth ? "reauthentication": "rekeying", soft, hard);
+			 
+		if (soft)
+		{
+			this->time.rekey = now + soft;
+			job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
+			charon->event_queue->add_relative(charon->event_queue, job,
+											  soft * 1000);
+		}
+		
+		if (hard)
+		{
+			this->time.delete = now + hard;
+			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
+			charon->event_queue->add_relative(charon->event_queue, job,
+											  hard * 1000);
+		}
 	}
 	
 	this->state = state;
@@ -1446,12 +1130,12 @@ static void set_other_id(private_ike_sa_t *this, identification_t *other)
  * Implementation of ike_sa_t.derive_keys.
  */
 static status_t derive_keys(private_ike_sa_t *this,
-							proposal_t *proposal, diffie_hellman_t *dh,
+							proposal_t *proposal, chunk_t secret,
 							chunk_t nonce_i, chunk_t nonce_r,
 							bool initiator, prf_t *child_prf, prf_t *old_prf)
 {
 	prf_plus_t *prf_plus;
-	chunk_t skeyseed, secret, key, nonces, prf_plus_seed;
+	chunk_t skeyseed, key, nonces, prf_plus_seed;
 	algorithm_t *algo;
 	size_t key_size;
 	crypter_t *crypter_i, *crypter_r;
@@ -1475,7 +1159,6 @@ static status_t derive_keys(private_ike_sa_t *this,
 		return FAILED;
 	}
 	
-	dh->get_shared_secret(dh, &secret);
 	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
 	nonces = chunk_cat("cc", nonce_i, nonce_r);
 	*((u_int64_t*)spi_i.ptr) = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
@@ -1640,28 +1323,6 @@ static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
 }
 
 /**
- * Implementation of ike_sa_t.has_child_sa.
- */
-static bool has_child_sa(private_ike_sa_t *this, u_int32_t reqid)
-{
-	iterator_t *iterator;
-	child_sa_t *current;
-	bool found = FALSE;
-	
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (current->get_reqid(current) == reqid)
-		{
-			found = TRUE;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	return found;
-}
-
-/**
  * Implementation of ike_sa_t.get_child_sa.
  */
 static child_sa_t* get_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
@@ -1672,7 +1333,7 @@ static child_sa_t* get_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 	
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&current))
-	{;
+	{
 		if (current->get_spi(current, inbound) == spi &&
 			current->get_protocol(current) == protocol)
 		{
@@ -1696,18 +1357,17 @@ static iterator_t* create_child_sa_iterator(private_ike_sa_t *this)
  */
 static status_t rekey_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
-	create_child_sa_t *rekey;
 	child_sa_t *child_sa;
+	child_rekey_t *child_rekey;
 	
 	child_sa = get_child_sa(this, protocol, spi, TRUE);
-	if (child_sa == NULL)
+	if (child_sa)
 	{
-		return NOT_FOUND;
+		child_rekey = child_rekey_create(&this->public, child_sa);
+		this->task_manager->queue_task(this->task_manager, &child_rekey->task);
+		return this->task_manager->initiate(this->task_manager);
 	}
-	
-	rekey = create_child_sa_create(&this->public);
-	rekey->rekeys_child(rekey, child_sa);
-	return queue_transaction(this, (transaction_t*)rekey, FALSE);
+	return FAILED;
 }
 
 /**
@@ -1715,24 +1375,24 @@ static status_t rekey_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u
  */
 static status_t delete_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
-	delete_child_sa_t *del;
 	child_sa_t *child_sa;
+	child_delete_t *child_delete;
 	
 	child_sa = get_child_sa(this, protocol, spi, TRUE);
-	if (child_sa == NULL)
+	if (child_sa)
 	{
-		return NOT_FOUND;
+		child_delete = child_delete_create(&this->public, child_sa);
+		this->task_manager->queue_task(this->task_manager, &child_delete->task);
+		return this->task_manager->initiate(this->task_manager);
 	}
-	
-	del = delete_child_sa_create(&this->public);
-	del->set_child_sa(del, child_sa);
-	return queue_transaction(this, (transaction_t*)del, FALSE);
+	return FAILED;
 }
 
 /**
  * Implementation of ike_sa_t.destroy_child_sa.
  */
-static status_t destroy_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
+static status_t destroy_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
+								 u_int32_t spi)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
@@ -1755,69 +1415,27 @@ static status_t destroy_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 }
 
 /**
- * Implementation of ike_sa_t.set_lifetimes.
- */
-static void set_lifetimes(private_ike_sa_t *this, bool reauth,
-						  u_int32_t soft_lifetime, u_int32_t hard_lifetime)
-{
-	job_t *job;
-	u_int32_t now = time(NULL);
-
-	this->reauth = reauth;
-
-	if (soft_lifetime)
-	{
-		this->time.rekey = now + soft_lifetime;
-		job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
-		charon->event_queue->add_relative(charon->event_queue, job,
-										  soft_lifetime * 1000);
-	}
-	
-	if (hard_lifetime)
-	{
-		this->time.delete = now + hard_lifetime;
-		job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-		charon->event_queue->add_relative(charon->event_queue, job,
-										  hard_lifetime * 1000);
-	}
-}
-
-/**
  * Implementation of public_ike_sa_t.delete.
  */
 static status_t delete_(private_ike_sa_t *this)
 {
+	ike_delete_t *ike_delete;
+
 	switch (this->state)
 	{
-		case IKE_CONNECTING:
-		{
-			/* this may happen if a half open IKE_SA gets closed after a
-			 * timeout. We signal here UP_FAILED to complete the SIG schema */
-			SIG(IKE_UP_FAILED, "half open IKE_SA deleted after timeout");
-			return DESTROY_ME;
-		}
 		case IKE_ESTABLISHED:
-		{
-			delete_ike_sa_t *delete_ike_sa;
-			if (this->transaction_out)
-			{
-				/* already a transaction in progress. As this may hang
-				* around a while, we don't inform the other peer. */
-				return DESTROY_ME;
-			}
-			delete_ike_sa = delete_ike_sa_create(&this->public);
-			return queue_transaction(this, (transaction_t*)delete_ike_sa, FALSE);
-		}
-		case IKE_CREATED:
-		case IKE_DELETING:
+			DBG1(DBG_IKE, "deleting IKE_SA");
+			/* do not log when rekeyed */
+		case IKE_REKEYING:
+			ike_delete = ike_delete_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, &ike_delete->task);
+			return this->task_manager->initiate(this->task_manager);
 		default:
-		{
-			SIG(IKE_DOWN_START, "closing IKE_SA");
-			SIG(IKE_DOWN_SUCCESS, "IKE_SA closed between %H[%D]...%H[%D]",
-				this->my_host, this->my_id, this->other_host, this->other_id);
-			return DESTROY_ME;
-		}
+			DBG1(DBG_IKE, "destroying IKE_SA in state %N without notification",
+				 ike_sa_state_names, this->state);
+			break;
 	}
+	return DESTROY_ME;
 }
 
 /**
@@ -1825,112 +1443,124 @@ static status_t delete_(private_ike_sa_t *this)
  */
 static status_t rekey(private_ike_sa_t *this)
 {
-	rekey_ike_sa_t *rekey_ike_sa;
+	ike_rekey_t *ike_rekey;
 	
-	DBG1(DBG_IKE, "rekeying IKE_SA between %H[%D]..%H[%D]",
-		 this->my_host, this->my_id, this->other_host, this->other_id);
+	ike_rekey = ike_rekey_create(&this->public, TRUE);
 	
-	if (this->state != IKE_ESTABLISHED)
-	{
-		SIG(IKE_REKEY_START, "rekeying IKE_SA");
-		SIG(IKE_REKEY_FAILED, "unable to rekey IKE_SA in state %N",
-			ike_sa_state_names, this->state);
-		return FAILED;
-	}
-	
-	rekey_ike_sa = rekey_ike_sa_create(&this->public);
-	return queue_transaction(this, (transaction_t*)rekey_ike_sa, FALSE);
+	this->task_manager->queue_task(this->task_manager, &ike_rekey->task);
+	return this->task_manager->initiate(this->task_manager);
 }
 
 /**
- * Implementation of ike_sa_t.reauth.
+ * Implementation of ike_sa_t.reestablish
  */
-static status_t reauth(private_ike_sa_t *this)
+static void reestablish(private_ike_sa_t *this)
 {
-	connection_t *connection;
-	child_sa_t *child_sa;
+	ike_sa_id_t *other_id;
+	private_ike_sa_t *other;
 	iterator_t *iterator;
+	child_sa_t *child_sa;
+	policy_t *policy;
+	task_t *task;
+	job_t *job;
 	
-	DBG1(DBG_IKE, "reauthenticating IKE_SA between %H[%D]..%H[%D]",
-		 this->my_host, this->my_id, this->other_host, this->other_id);	
+	other_id =  ike_sa_id_create(0, 0, TRUE);
+	other = (private_ike_sa_t*)charon->ike_sa_manager->checkout(
+											charon->ike_sa_manager, other_id);
+	other_id->destroy(other_id);
 	
-	/* get a connection to initiate */
-	connection = charon->connections->get_connection_by_hosts(charon->connections,
-												this->my_host, this->other_host);
-	if (connection == NULL)
+	apply_config(other, this->connection, this->policy);
+		
+	if (this->state == IKE_ESTABLISHED)
 	{
-		DBG1(DBG_IKE, "no connection found to reauthenticate");	
-		return FAILED;
+		task = (task_t*)ike_init_create(&other->public, TRUE, NULL);
+		other->task_manager->queue_task(other->task_manager, task);
+		task = (task_t*)ike_natd_create(&other->public, TRUE);
+		other->task_manager->queue_task(other->task_manager, task);
+		task = (task_t*)ike_cert_create(&other->public, TRUE);
+		other->task_manager->queue_task(other->task_manager, task);
+		task = (task_t*)ike_config_create(&other->public, other->policy);
+		other->task_manager->queue_task(other->task_manager, task);
+		task = (task_t*)ike_auth_create(&other->public, TRUE);
+		other->task_manager->queue_task(other->task_manager, task);
 	}
 	
-	/* queue CREATE_CHILD_SA transactions to set up all CHILD_SAs */
+	other->task_manager->adopt_tasks(other->task_manager, this->task_manager);
+	
+	/* Create task for established children, adopt routed children directly */
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	while(iterator->iterate(iterator, (void**)&child_sa))
 	{
-		job_t *job;
-		policy_t *policy;
-		linked_list_t *my_ts, *other_ts;
-		host_t *other;
-		
-		my_ts = child_sa->get_my_traffic_selectors(child_sa);
-		other_ts = child_sa->get_other_traffic_selectors(child_sa);
-		policy = charon->policies->get_policy(charon->policies,
-						this->my_id, this->other_id, my_ts, other_ts,
-						this->my_host, this->other_host);
-		if (policy == NULL)
+		switch (child_sa->get_state(child_sa))
 		{
-			DBG1(DBG_IKE, "policy not found to recreate CHILD_SA, skipped");
-			continue;
+			case CHILD_ROUTED:
+			{
+				iterator->remove(iterator);
+				other->child_sas->insert_first(other->child_sas, child_sa);
+				break;
+			}
+			default:
+			{
+				policy = child_sa->get_policy(child_sa);
+				task = (task_t*)child_create_create(&other->public, policy);
+				other->task_manager->queue_task(other->task_manager, task);
+				break;
+			}
 		}
-		connection->get_ref(connection);
-		other = this->other_host->clone(this->other_host);
-		job = (job_t*)initiate_job_create(connection, other, policy);
-		charon->job_queue->add(charon->job_queue, job);
 	}
 	iterator->destroy(iterator);
-	connection->destroy(connection);
 	
-	/* delete the old IKE_SA
-	 * TODO: we should delay the delete to avoid connectivity gaps?! */
-	return delete_(this);
+	other->task_manager->initiate(other->task_manager);
+	
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, &other->public);
+	
+	job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
+	charon->job_queue->add(charon->job_queue, job);
 }
 
 /**
- * Implementation of ike_sa_t.get_rekeying_transaction.
+ * Implementation of ike_sa_t.inherit.
  */
-static transaction_t* get_rekeying_transaction(private_ike_sa_t *this)
-{
-	return this->rekeying_transaction;
-}
-
-/**
- * Implementation of ike_sa_t.set_rekeying_transaction.
- */
-static void set_rekeying_transaction(private_ike_sa_t *this, transaction_t *rekey)
-{
-	this->rekeying_transaction = rekey;
-}
-
-/**
- * Implementation of ike_sa_t.adopt_children.
- */
-static void adopt_children(private_ike_sa_t *this, private_ike_sa_t *other)
+static void inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 {
 	child_sa_t *child_sa;
+	host_t *ip;
 	
+	/* apply hosts and ids */
+	this->my_host->destroy(this->my_host);
+	this->other_host->destroy(this->other_host);
+	this->my_id->destroy(this->my_id);
+	this->other_id->destroy(this->other_id);
+	this->my_host = other->my_host->clone(other->my_host);
+	this->other_host = other->other_host->clone(other->other_host);
+	this->my_id = other->my_id->clone(other->my_id);
+	this->other_id = other->other_id->clone(other->other_id);
+	
+	/* apply virtual assigned IPs... */
+	if (other->my_virtual_ip)
+	{
+		this->my_virtual_ip = other->my_virtual_ip;
+		other->my_virtual_ip = NULL;
+	}
+	if (other->other_virtual_ip)
+	{
+		this->other_virtual_ip = other->other_virtual_ip;
+		other->other_virtual_ip = NULL;
+	}
+	
+	/* ... and DNS servers */
+	while (other->dns_servers->remove_last(other->dns_servers, 
+										   (void**)&ip) == SUCCESS)
+	{
+		this->dns_servers->insert_first(this->dns_servers, ip);
+	}
+	
+	/* adopt all children */
 	while (other->child_sas->remove_last(other->child_sas,
 		   								 (void**)&child_sa) == SUCCESS)
 	{
 		this->child_sas->insert_first(this->child_sas, (void*)child_sa);
 	}
-}
-
-/**
- * Implementation of ike_sa_t.get_next_message_id.
- */
-static u_int32_t get_next_message_id (private_ike_sa_t *this)
-{
-	return this->message_id_out++;
 }
 
 /**
@@ -1948,16 +1578,209 @@ static void enable_natt(private_ike_sa_t *this, bool local)
 {
 	if (local)
 	{
-		DBG1(DBG_IKE, "local host is behind NAT, using NAT-T, "
-			"scheduled keep alives");
+		DBG1(DBG_IKE, "local host is behind NAT, scheduling keep alives");
 		this->nat_here = TRUE;
 		send_keepalive(this);
 	}
 	else
 	{
-		DBG1(DBG_IKE, "remote host is behind NAT, using NAT-T");
+		DBG1(DBG_IKE, "remote host is behind NAT");
 		this->nat_there = TRUE;
 	}
+}
+
+/**
+ * Implementation of ike_sa_t.reset
+ */
+static void reset(private_ike_sa_t *this)
+{
+	/*  the responder ID is reset, as peer may choose another one */
+	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
+	{
+		this->ike_sa_id->set_responder_spi(this->ike_sa_id, 0);
+	}
+	
+	set_state(this, IKE_CREATED);
+	
+	this->task_manager->reset(this->task_manager);
+}
+
+/**
+ * Implementation of ike_sa_t.set_virtual_ip
+ */
+static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
+{
+	if (local)
+	{
+		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
+		if (this->my_virtual_ip)
+		{
+			DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
+			charon->kernel_interface->del_ip(charon->kernel_interface,
+											 this->my_virtual_ip,
+											 this->other_host);
+			this->my_virtual_ip->destroy(this->my_virtual_ip);
+		}
+		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
+											 this->other_host) == SUCCESS)
+		{
+			this->my_virtual_ip = ip->clone(ip);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
+			this->my_virtual_ip = NULL;
+		}
+	}
+	else
+	{
+		DESTROY_IF(this->other_virtual_ip);
+		this->other_virtual_ip = ip->clone(ip);
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.get_virtual_ip
+ */
+static host_t* get_virtual_ip(private_ike_sa_t *this, bool local)
+{
+	if (local)
+	{
+		return this->my_virtual_ip;
+	}
+	else
+	{
+		return this->other_virtual_ip;
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.remove_dns_server
+ */
+static void remove_dns_servers(private_ike_sa_t *this)
+{
+	FILE *file;
+	struct stat stats;
+	chunk_t contents, line, orig_line, token;
+	char string[INET6_ADDRSTRLEN];
+	host_t *ip;
+	iterator_t *iterator;
+	
+	if (this->dns_servers->get_count(this->dns_servers) == 0)
+	{
+		/* don't touch anything if we have no nameservers installed */
+		return;
+	}
+	
+	file = fopen(RESOLV_CONF, "r");
+	if (file == NULL || stat(RESOLV_CONF, &stats) != 0)
+	{
+		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %m", RESOLV_CONF);
+		return;
+	}
+	
+	contents = chunk_alloca((size_t)stats.st_size);
+	
+	if (fread(contents.ptr, 1, contents.len, file) != contents.len)
+	{
+		DBG1(DBG_IKE, "unable to read DNS configuration file: %m");
+		fclose(file);
+		return;
+	}
+	
+	fclose(file);
+	file = fopen(RESOLV_CONF, "w");
+	if (file == NULL)
+	{
+		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %m", RESOLV_CONF);
+		return;
+	}
+	
+	iterator = this->dns_servers->create_iterator(this->dns_servers, TRUE);
+	while (fetchline(&contents, &line))
+	{
+		bool found = FALSE;
+		orig_line = line;
+		if (extract_token(&token, ' ', &line) &&
+			strncasecmp(token.ptr, "nameserver", token.len) == 0)
+		{
+			if (!extract_token(&token, ' ', &line))
+			{
+				token = line;
+			}
+			iterator->reset(iterator);
+			while (iterator->iterate(iterator, (void**)&ip))
+			{
+				snprintf(string, sizeof(string), "%H", ip);
+				if (strlen(string) == token.len &&
+					strncmp(token.ptr, string, token.len) == 0)
+				{
+					iterator->remove(iterator);
+					ip->destroy(ip);
+					found = TRUE;
+					break;
+				}
+			}
+		}		
+		
+		if (!found)
+		{	
+			/* write line untouched back to file */
+			fwrite(orig_line.ptr, orig_line.len, 1, file);
+			fprintf(file, "\n");
+		}
+	}
+	iterator->destroy(iterator);
+	fclose(file);
+}
+
+/**
+ * Implementation of ike_sa_t.add_dns_server
+ */
+static void add_dns_server(private_ike_sa_t *this, host_t *dns)
+{
+	FILE *file;
+	struct stat stats;
+	chunk_t contents;
+
+	DBG1(DBG_IKE, "installing DNS server %H", dns);
+	
+	file = fopen(RESOLV_CONF, "a+");
+	if (file == NULL || stat(RESOLV_CONF, &stats) != 0)
+	{
+		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %m", RESOLV_CONF);
+		return;
+	}
+
+	contents = chunk_alloca(stats.st_size);
+	
+	if (fread(contents.ptr, 1, contents.len, file) != contents.len)
+	{
+		DBG1(DBG_IKE, "unable to read DNS configuration file: %m");
+		fclose(file);
+		return;
+	}
+	
+	fclose(file);
+	file = fopen(RESOLV_CONF, "w");
+	if (file == NULL)
+	{
+		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %m", RESOLV_CONF);
+		return;
+	}
+	
+	if (fprintf(file, "nameserver %H   # added by strongSwan, assigned by %D\n",
+		dns, this->other_id) < 0)
+	{
+		DBG1(DBG_IKE, "unable to write DNS configuration: %m");
+	}
+	else
+	{
+		this->dns_servers->insert_last(this->dns_servers, dns->clone(dns));
+	}
+	fwrite(contents.ptr, contents.len, 1, file);
+	
+	fclose(file);	
 }
 
 /**
@@ -1967,19 +1790,26 @@ static int print(FILE *stream, const struct printf_info *info,
 				 const void *const *args)
 {
 	int written = 0;
+	bool reauth = FALSE;
 	private_ike_sa_t *this = *((private_ike_sa_t**)(args[0]));
+	
+	if (this->connection)
+	{
+		reauth = this->connection->get_reauth(this->connection);
+	}
 	
 	if (this == NULL)
 	{
 		return fprintf(stream, "(null)");
 	}
 	
-	written = fprintf(stream, "%12s: %N, %H[%D]...%H[%D]",
-					  this->name, ike_sa_state_names, this->state,
-					  this->my_host, this->my_id, this->other_host, this->other_id);
-	written += fprintf(stream, "\n%12s: IKE SPIs: %J, %s in %ds",
-					  this->name, this->ike_sa_id,
-					  this->reauth? "reauthentication":"rekeying",
+	written = fprintf(stream, "%12s[%d]: %N, %H[%D]...%H[%D]", get_name(this),
+					  this->unique_id, ike_sa_state_names, this->state,
+					  this->my_host, this->my_id, this->other_host,
+					  this->other_id);
+	written += fprintf(stream, "\n%12s[%d]: IKE SPIs: %J, %s in %ds",
+					  get_name(this), this->unique_id, this->ike_sa_id, 
+					  this->connection && reauth? "reauthentication":"rekeying",
 					  this->time.rekey - time(NULL));
 
 	if (info->alt)
@@ -2003,11 +1833,7 @@ static void __attribute__ ((constructor))print_register()
 static void destroy(private_ike_sa_t *this)
 {
 	this->child_sas->destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
-	this->transaction_queue->destroy_offset(this->transaction_queue, offsetof(transaction_t, destroy));
 	
-	DESTROY_IF(this->transaction_in);
-	DESTROY_IF(this->transaction_in_next);
-	DESTROY_IF(this->transaction_out);
 	DESTROY_IF(this->crypter_in);
 	DESTROY_IF(this->crypter_out);
 	DESTROY_IF(this->signer_in);
@@ -2017,13 +1843,27 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->auth_verify);
 	DESTROY_IF(this->auth_build);
 	
+	if (this->my_virtual_ip)
+	{
+		charon->kernel_interface->del_ip(charon->kernel_interface,
+										 this->my_virtual_ip, this->other_host);
+		this->my_virtual_ip->destroy(this->my_virtual_ip);
+	}
+	DESTROY_IF(this->other_virtual_ip);
+	
+	remove_dns_servers(this);
+	this->dns_servers->destroy_offset(this->dns_servers, offsetof(host_t, destroy));
+	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
 	DESTROY_IF(this->my_id);
 	DESTROY_IF(this->other_id);
 	
-	free(this->name);
+	DESTROY_IF(this->connection);
+	DESTROY_IF(this->policy);
+	
 	this->ike_sa_id->destroy(this->ike_sa_id);
+	this->task_manager->destroy(this->task_manager);
 	free(this);
 }
 
@@ -2033,17 +1873,21 @@ static void destroy(private_ike_sa_t *this)
 ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 {
 	private_ike_sa_t *this = malloc_thing(private_ike_sa_t);
+	static u_int32_t unique_id = 0;
 	
 	/* Public functions */
 	this->public.get_state = (ike_sa_state_t(*)(ike_sa_t*)) get_state;
 	this->public.set_state = (void(*)(ike_sa_t*,ike_sa_state_t)) set_state;
 	this->public.get_name = (char*(*)(ike_sa_t*))get_name;
-	this->public.set_name = (void(*)(ike_sa_t*,char*))set_name;
 	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
 	this->public.initiate = (status_t(*)(ike_sa_t*,connection_t*,policy_t*)) initiate;
 	this->public.route = (status_t(*)(ike_sa_t*,connection_t*,policy_t*)) route;
 	this->public.unroute = (status_t(*)(ike_sa_t*,policy_t*)) unroute;
 	this->public.acquire = (status_t(*)(ike_sa_t*,u_int32_t)) acquire;
+	this->public.get_connection = (connection_t*(*)(ike_sa_t*))get_connection;
+	this->public.set_connection = (void(*)(ike_sa_t*,connection_t*))set_connection;
+	this->public.get_policy = (policy_t*(*)(ike_sa_t*))get_policy;
+	this->public.set_policy = (void(*)(ike_sa_t*,policy_t*))set_policy;
 	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->public.get_my_host = (host_t*(*)(ike_sa_t*)) get_my_host;
 	this->public.set_my_host = (void(*)(ike_sa_t*,host_t*)) set_my_host;
@@ -2053,8 +1897,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_my_id = (void(*)(ike_sa_t*,identification_t*)) set_my_id;
 	this->public.get_other_id = (identification_t*(*)(ike_sa_t*)) get_other_id;
 	this->public.set_other_id = (void(*)(ike_sa_t*,identification_t*)) set_other_id;
-	this->public.get_next_message_id = (u_int32_t(*)(ike_sa_t*)) get_next_message_id;
-	this->public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
+	this->public.retransmit = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit;
 	this->public.delete = (status_t(*)(ike_sa_t*))delete_;
 	this->public.destroy = (void(*)(ike_sa_t*))destroy;
 	this->public.send_dpd = (status_t (*)(ike_sa_t*)) send_dpd;
@@ -2063,9 +1906,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_child_prf = (prf_t *(*) (ike_sa_t *)) get_child_prf;
 	this->public.get_auth_verify = (prf_t *(*) (ike_sa_t *)) get_auth_verify;
 	this->public.get_auth_build = (prf_t *(*) (ike_sa_t *)) get_auth_build;
-	this->public.derive_keys = (status_t (*) (ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t,bool,prf_t*,prf_t*)) derive_keys;
+	this->public.derive_keys = (status_t (*) (ike_sa_t *,proposal_t*,chunk_t,chunk_t,chunk_t,bool,prf_t*,prf_t*)) derive_keys;
 	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
-	this->public.has_child_sa = (bool(*)(ike_sa_t*,u_int32_t)) has_child_sa;
 	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
 	this->public.create_child_sa_iterator = (iterator_t* (*)(ike_sa_t*)) create_child_sa_iterator;
 	this->public.rekey_child_sa = (status_t(*)(ike_sa_t*,protocol_id_t,u_int32_t)) rekey_child_sa;
@@ -2073,20 +1915,21 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
 	this->public.enable_natt = (void(*)(ike_sa_t*, bool)) enable_natt;
 	this->public.is_natt_enabled = (bool(*)(ike_sa_t*)) is_natt_enabled;
-	this->public.set_lifetimes = (void(*)(ike_sa_t*,bool,u_int32_t,u_int32_t))set_lifetimes;
-	this->public.apply_connection = (void(*)(ike_sa_t*,connection_t*))apply_connection;
 	this->public.rekey = (status_t(*)(ike_sa_t*))rekey;
-	this->public.reauth = (status_t(*)(ike_sa_t*))reauth;
-	this->public.get_rekeying_transaction = (transaction_t*(*)(ike_sa_t*))get_rekeying_transaction;
-	this->public.set_rekeying_transaction = (void(*)(ike_sa_t*,transaction_t*))set_rekeying_transaction;
-	this->public.adopt_children = (void(*)(ike_sa_t*,ike_sa_t*))adopt_children;
+	this->public.reestablish = (void(*)(ike_sa_t*))reestablish;
+	this->public.inherit = (void(*)(ike_sa_t*,ike_sa_t*))inherit;
+	this->public.generate_message = (status_t(*)(ike_sa_t*,message_t*,packet_t**))generate_message;
+	this->public.reset = (void(*)(ike_sa_t*))reset;
+	this->public.get_unique_id = (u_int32_t(*)(ike_sa_t*))get_unique_id;
+	this->public.set_virtual_ip = (void(*)(ike_sa_t*,bool,host_t*))set_virtual_ip;
+	this->public.get_virtual_ip = (host_t*(*)(ike_sa_t*,bool))get_virtual_ip;
+	this->public.add_dns_server = (void(*)(ike_sa_t*,host_t*))add_dns_server;
 	
 	/* initialize private fields */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-	this->name = strdup("(uninitialized)");
 	this->child_sas = linked_list_create();
-	this->my_host = host_create_from_string("0.0.0.0", 0);
-	this->other_host = host_create_from_string("0.0.0.0", 0);
+	this->my_host = host_create_any(AF_INET);
+	this->other_host = host_create_any(AF_INET);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->crypter_in = NULL;
@@ -2099,21 +1942,18 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
  	this->child_prf = NULL;
 	this->nat_here = FALSE;
 	this->nat_there = FALSE;
-	this->transaction_queue = linked_list_create();
-	this->transaction_in = NULL;
-	this->transaction_in_next = NULL;
-	this->transaction_out = NULL;
-	this->rekeying_transaction = NULL;
 	this->state = IKE_CREATED;
-	this->message_id_out = 0;
-	/* set to NOW, as when we rekey an existing IKE_SA no message is exchanged
-	 * and inbound therefore uninitialized */
 	this->time.inbound = this->time.outbound = time(NULL);
 	this->time.established = 0;
 	this->time.rekey = 0;
 	this->time.delete = 0;
-	this->dpd_delay = 0;
-	this->retrans_sequences = 0;
+	this->connection = NULL;
+	this->policy = NULL;
+	this->task_manager = task_manager_create(&this->public);
+	this->unique_id = ++unique_id;
+	this->my_virtual_ip = NULL;
+	this->other_virtual_ip = NULL;
+	this->dns_servers = linked_list_create();
 	
 	return &this->public;
 }

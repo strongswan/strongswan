@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -215,5 +216,17 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
  * @ingroup network
  */
 host_t *host_create_from_sockaddr(sockaddr_t *sockaddr);
+
+/**
+ * @brief Create a host without an address, a "any" host.
+ *
+ * @param family		family of the any host
+ * @return 				
+ * 						- host_t object 
+ * 						- NULL, if family not supported.
+ * 
+ * @ingroup network
+ */
+host_t *host_create_any(int family);
 
 #endif /*HOST_H_*/

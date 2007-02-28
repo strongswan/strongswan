@@ -53,7 +53,7 @@ struct private_file_logger_t {
 /**
  * Implementation of bus_listener_t.signal.
  */
-static void signal_(private_file_logger_t *this, signal_t signal, level_t level,
+static bool signal_(private_file_logger_t *this, signal_t signal, level_t level,
 					int thread, ike_sa_t* ike_sa, char *format, va_list args)
 {
 	if (level <= this->levels[SIG_TYPE(signal)])
@@ -76,6 +76,8 @@ static void signal_(private_file_logger_t *this, signal_t signal, level_t level,
 			current = next;
 		}
 	}
+	/* always stay registered */
+	return TRUE;
 }
 
 /**
@@ -114,7 +116,7 @@ file_logger_t *file_logger_create(FILE *out)
 	private_file_logger_t *this = malloc_thing(private_file_logger_t);
 	
 	/* public functions */
-	this->public.listener.signal = (void(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,char*,va_list))signal_;
+	this->public.listener.signal = (bool(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,char*,va_list))signal_;
 	this->public.set_level = (void(*)(file_logger_t*,signal_t,level_t))set_level;
 	this->public.destroy = (void(*)(file_logger_t*))destroy;
 	

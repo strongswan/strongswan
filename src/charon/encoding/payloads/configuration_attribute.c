@@ -27,6 +27,7 @@
 
 #include <encoding/payloads/encodings.h>
 #include <library.h>
+#include <daemon.h>
 
 
 typedef struct private_configuration_attribute_t private_configuration_attribute_t;
@@ -50,7 +51,6 @@ struct private_configuration_attribute_t {
 	 * Length of the attribute.
 	 */
 	u_int16_t attribute_length;
-	
 
 	/**
 	 * Attribute value as chunk.
@@ -58,7 +58,7 @@ struct private_configuration_attribute_t {
 	chunk_t attribute_value;
 };
 
-ENUM_BEGIN(configuration_attribute_type_name, INTERNAL_IP4_ADDRESS, INTERNAL_IP6_ADDRESS,
+ENUM_BEGIN(configuration_attribute_type_names, INTERNAL_IP4_ADDRESS, INTERNAL_IP6_ADDRESS,
 	"INTERNAL_IP4_ADDRESS",
 	"INTERNAL_IP4_NETMASK",
 	"INTERNAL_IP4_DNS",
@@ -67,14 +67,14 @@ ENUM_BEGIN(configuration_attribute_type_name, INTERNAL_IP4_ADDRESS, INTERNAL_IP6
 	"INTERNAL_IP4_DHCP",
 	"APPLICATION_VERSION",
 	"INTERNAL_IP6_ADDRESS");
-ENUM_NEXT(configuration_attribute_type_name, INTERNAL_IP6_DNS, INTERNAL_IP6_SUBNET, INTERNAL_IP6_ADDRESS,
+ENUM_NEXT(configuration_attribute_type_names, INTERNAL_IP6_DNS, INTERNAL_IP6_SUBNET, INTERNAL_IP6_ADDRESS,
 	"INTERNAL_IP6_DNS",
 	"INTERNAL_IP6_NBNS",
 	"INTERNAL_IP6_DHCP",
 	"INTERNAL_IP4_SUBNET",
 	"SUPPORTED_ATTRIBUTES",
 	"INTERNAL_IP6_SUBNET");
-ENUM_END(configuration_attribute_type_name, INTERNAL_IP6_SUBNET);
+ENUM_END(configuration_attribute_type_names, INTERNAL_IP6_SUBNET);
 
 /**
  * Encoding rules to parse or generate a configuration attribute.
@@ -111,6 +111,14 @@ encoding_rule_t configuration_attribute_encodings[] = {
  */
 static status_t verify(private_configuration_attribute_t *this)
 {
+	bool failed = FALSE;
+
+	if (this->attribute_length != this->attribute_value.len)
+	{
+		DBG1(DBG_ENC, "invalid attribute length");
+		return FAILED;
+	}
+
 	switch (this->attribute_type)
 	{
          case INTERNAL_IP4_ADDRESS:
@@ -119,27 +127,54 @@ static status_t verify(private_configuration_attribute_t *this)
 		 case INTERNAL_IP4_NBNS:
 		 case INTERNAL_ADDRESS_EXPIRY:
 		 case INTERNAL_IP4_DHCP:
-		 case APPLICATION_VERSION:
+		 	if (this->attribute_length != 0 && this->attribute_length != 4)
+		 	{
+				failed = TRUE;
+		 	}
+			break;
+		 case INTERNAL_IP4_SUBNET:
+		 	if (this->attribute_length != 0 && this->attribute_length != 8)
+		 	{
+				failed = TRUE;
+		 	}
+			break;
 		 case INTERNAL_IP6_ADDRESS:
+		 case INTERNAL_IP6_SUBNET:
+		 	if (this->attribute_length != 0 && this->attribute_length != 17)
+		 	{
+				failed = TRUE;
+		 	}
+			break;
 		 case INTERNAL_IP6_DNS:
 		 case INTERNAL_IP6_NBNS:
 		 case INTERNAL_IP6_DHCP:
-		 case INTERNAL_IP4_SUBNET:
+		 	if (this->attribute_length != 0 && this->attribute_length != 16)
+		 	{
+				failed = TRUE;
+		 	}
+			break;
 		 case SUPPORTED_ATTRIBUTES:
-		 case INTERNAL_IP6_SUBNET:
-		 {
-		 	/* Attribute types are not checked in here */
+		 	if (this->attribute_length % 2)
+		 	{
+				failed = TRUE;
+		 	}
+			break;
+		 case APPLICATION_VERSION:
+		 	/* any length acceptable */
 		 	break;
-		 }
 		 default:
+			DBG1(DBG_ENC, "unknown attribute type %N", 
+				 configuration_attribute_type_names, this->attribute_type);
 		 	return FAILED;
 	}
 	
-	if (this->attribute_length != this->attribute_value.len)
+	if (failed)
 	{
+		DBG1(DBG_ENC, "invalid attribute length %d for %N",
+			 this->attribute_length, configuration_attribute_type_names,
+			 this->attribute_type);
 		return FAILED;
 	}
-	
 	return SUCCESS;
 }
 
@@ -208,9 +243,8 @@ static chunk_t get_value (private_configuration_attribute_t *this)
 	return this->attribute_value;
 }
 
-
 /**
- * Implementation of configuration_attribute_t.set_attribute_type.
+ * Implementation of configuration_attribute_t.set_type.
  */
 static void set_attribute_type (private_configuration_attribute_t *this, u_int16_t type)
 {
@@ -218,7 +252,7 @@ static void set_attribute_type (private_configuration_attribute_t *this, u_int16
 }
 
 /**
- * Implementation of configuration_attribute_t.get_attribute_type.
+ * Implementation of configuration_attribute_t.get_type.
  */
 static u_int16_t get_attribute_type (private_configuration_attribute_t *this)
 {
@@ -226,7 +260,7 @@ static u_int16_t get_attribute_type (private_configuration_attribute_t *this)
 }
 
 /**
- * Implementation of configuration_attribute_t.get_attribute_length.
+ * Implementation of configuration_attribute_t.get_length.
  */
 static u_int16_t get_attribute_length (private_configuration_attribute_t *this)
 {
@@ -265,9 +299,9 @@ configuration_attribute_t *configuration_attribute_create()
 	/* public functions */
 	this->public.set_value = (void (*) (configuration_attribute_t *,chunk_t)) set_value;
 	this->public.get_value = (chunk_t (*) (configuration_attribute_t *)) get_value;
-	this->public.set_attribute_type = (void (*) (configuration_attribute_t *,u_int16_t type)) set_attribute_type;
-	this->public.get_attribute_type = (u_int16_t (*) (configuration_attribute_t *)) get_attribute_type;
-	this->public.get_attribute_length = (u_int16_t (*) (configuration_attribute_t *)) get_attribute_length;
+	this->public.set_type = (void (*) (configuration_attribute_t *,u_int16_t type)) set_attribute_type;
+	this->public.get_type = (u_int16_t (*) (configuration_attribute_t *)) get_attribute_type;
+	this->public.get_length = (u_int16_t (*) (configuration_attribute_t *)) get_attribute_length;
 	this->public.destroy = (void (*) (configuration_attribute_t *)) destroy;
 	
 	/* set default values of the fields */

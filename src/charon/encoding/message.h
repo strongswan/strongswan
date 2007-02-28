@@ -184,6 +184,21 @@ struct message_t {
 	void (*add_payload) (message_t *this, payload_t *payload);
 
 	/**
+	 * @brief Build a notify payload and add it to the message.
+	 * 
+	 * This is a helper method to create notify messages or add
+	 * notify payload to messages. The flush parameter specifies if existing
+	 * payloads should get removed before appending the notify.
+	 *
+	 * @param this 			message_t object
+	 * @param flush			TRUE to remove existing payloads
+	 * @param type			type of the notify
+	 * @param data			a chunk of data to add to the notify, gets cloned
+	 */	
+	void (*add_notify) (message_t *this, bool flush, notify_type_t type, 
+						chunk_t data);
+
+	/**
 	 * @brief Parses header of message.
 	 * 
 	 * Begins parisng of a message created via message_create_from_packet().
@@ -302,6 +317,17 @@ struct message_t {
 	 * @return			iterator_t object which has to get destroyd by the caller
 	 */	
 	iterator_t * (*get_payload_iterator) (message_t *this);
+	
+	/**
+	 * @brief Find a payload of a spicific type.
+	 * 
+	 * Returns the first occurance. 
+	 *
+	 * @param this 		message_t object
+	 * @param type		type of the payload to find
+	 * @return			payload, or NULL if no such payload found
+	 */	
+	payload_t* (*get_payload) (message_t *this, payload_type_t type);
 	
 	/**
 	 * @brief Returns a clone of the internal stored packet_t object.

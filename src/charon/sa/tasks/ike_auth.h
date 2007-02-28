@@ -1,0 +1,60 @@
+/**
+ * @file ike_auth.h
+ * 
+ * @brief Interface ike_auth_t.
+ * 
+ */
+
+/*
+ * Copyright (C) 2007 Martin Willi
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+#ifndef IKE_AUTH_H_
+#define IKE_AUTH_H_
+
+typedef struct ike_auth_t ike_auth_t;
+
+#include <library.h>
+#include <sa/ike_sa.h>
+#include <sa/tasks/task.h>
+
+/**
+ * @brief Task of type ike_auth, authenticates an IKE_SA authenticators.
+ *
+ * The ike_auth task authenticates the IKE_SA using the IKE_AUTH
+ * exchange. 
+ *
+ * @b Constructors:
+ *  - ike_auth_create()
+ * 
+ * @ingroup tasks
+ */
+struct ike_auth_t {
+
+	/**
+	 * Implements the task_t interface
+	 */
+	task_t task;
+};
+
+/**
+ * @brief Create a new task of type IKE_AUTHENTICATE.
+ *
+ * @param ike_sa		IKE_SA this task works for
+ * @param initiator		TRUE if thask is the initator of an exchange
+ * @return			  ike_auth task to handle by the task_manager
+ */
+ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator);
+
+#endif /* IKE_AUTH_H_ */

@@ -40,19 +40,15 @@ struct configuration_t {
 	/**
 	 * @brief Returns the retransmit timeout.
 	 *
-	 * A return value of zero means the request should not be retransmitted again.
-	 * The retransmission algorithm uses sequences of retransmits, in which
-	 * every sequence contains exponential delayed retransmits. These
-	 * sequences are compareable to the keyingtries mechanism used in pluto.
+	 * A return value of zero means the request should not be
+	 * retransmitted again.
 	 *
 	 * @param this				calling object
 	 * @param retransmitted		number of times a message was retransmitted so far
-	 * @param max_sequences		maximum number of retransmission sequences to allow
-	 * @return					time in milliseconds, when to schedule next retransmit
+	 * @return					time in milliseconds, when to do next retransmit
 	 */
 	u_int32_t (*get_retransmit_timeout) (configuration_t *this, 
-										 u_int32_t retransmitted, 
-										 u_int32_t max_sequences);
+										 u_int32_t retransmitted);
 	
 	/**
 	 * @brief Returns the timeout for an half open IKE_SA in ms.

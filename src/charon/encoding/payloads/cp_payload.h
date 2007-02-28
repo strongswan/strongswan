@@ -77,23 +77,19 @@ struct cp_payload_t {
 	/**
 	 * @brief Creates an iterator of stored configuration_attribute_t objects.
 	 * 
-	 * @warning The created iterator has to get destroyed by the caller!
-	 * 
-	 * @warning When deleting an attribute using this iterator, 
-	 * 			the length of this configuration_attribute_t has to be refreshed 
-	 * 			by calling get_length()!
+	 * When deleting an attribute using this iterator, the length of this
+	 * configuration_attribute_t has to be refreshed by calling get_length()!
 	 *
 	 * @param this 			calling cp_payload_t object
-	 * @param[in] forward 	iterator direction (TRUE: front to end)
 	 * @return				created iterator_t object
 	 */
-	iterator_t *(*create_configuration_attribute_iterator) (cp_payload_t *this, bool forward);
+	iterator_t *(*create_attribute_iterator) (cp_payload_t *this);
 	
 	/**
 	 * @brief Adds a configuration_attribute_t object to this object.
 	 * 
-	 * @warning The added configuration_attribute_t object is 
-	 * 			getting destroyed in destroy function of cp_payload_t.
+	 * The added configuration_attribute_t object is getting destroyed in
+	 * destroy function of cp_payload_t.
 	 *
 	 * @param this 			calling cp_payload_t object
 	 * @param attribute		configuration_attribute_t object to add

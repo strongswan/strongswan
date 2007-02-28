@@ -197,6 +197,7 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	bool my_ca_same = FALSE;
 	bool other_ca_same =FALSE;
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
+	host_t *my_vip = NULL, *other_vip = NULL;
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
 	
@@ -205,6 +206,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	pop_string(msg, &msg->add_conn.other.address);
 	pop_string(msg, &msg->add_conn.me.subnet);
 	pop_string(msg, &msg->add_conn.other.subnet);
+	pop_string(msg, &msg->add_conn.me.sourceip);
+	pop_string(msg, &msg->add_conn.other.sourceip);
 	pop_string(msg, &msg->add_conn.me.id);
 	pop_string(msg, &msg->add_conn.other.id);
 	pop_string(msg, &msg->add_conn.me.cert);
@@ -223,6 +226,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	DBG2(DBG_CFG, "  right=%s", msg->add_conn.other.address);
 	DBG2(DBG_CFG, "  leftsubnet=%s", msg->add_conn.me.subnet);
 	DBG2(DBG_CFG, "  rightsubnet=%s", msg->add_conn.other.subnet);
+	DBG2(DBG_CFG, "  leftsourceip=%s", msg->add_conn.me.sourceip);
+	DBG2(DBG_CFG, "  rightsourceip=%s", msg->add_conn.other.sourceip);
 	DBG2(DBG_CFG, "  leftid=%s", msg->add_conn.me.id);
 	DBG2(DBG_CFG, "  rightid=%s", msg->add_conn.other.id);
 	DBG2(DBG_CFG, "  leftcert=%s", msg->add_conn.me.cert);
@@ -303,7 +308,13 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		my_subnet->destroy(my_subnet);
 		goto destroy_ids;
 	}
-				
+	
+	if (msg->add_conn.me.virtual_ip)
+	{
+		my_vip = host_create_from_string(msg->add_conn.me.sourceip, 0);
+	}
+	other_vip = host_create_from_string(msg->add_conn.other.sourceip, 0);
+		
 	my_ts = traffic_selector_create_from_subnet(my_subnet,
 				msg->add_conn.me.subnet ?  msg->add_conn.me.subnet_mask : 0,
 				msg->add_conn.me.protocol, msg->add_conn.me.port);
@@ -429,7 +440,7 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		connection->add_proposal(connection, proposal);
 	}
 	
-	policy = policy_create(msg->add_conn.name, my_id, other_id,
+	policy = policy_create(msg->add_conn.name, my_id, other_id, my_vip, other_vip,
 						   msg->add_conn.auth_method, msg->add_conn.eap_type,
 						   msg->add_conn.rekey.ipsec_lifetime,
 						   msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
@@ -559,16 +570,7 @@ static void stroke_initiate(stroke_msg_t *msg, FILE *out)
 		return;
 	}
 	
-	job = initiate_job_create(connection, NULL, policy);
-	/*
-	if (msg->output_verbosity < 0)
-	{
-	TODO: detach immediately if verbosity is SILENT. Local credential store
-	is not threadsave yet, so this would cause crashes!!
-		charon->job_queue->add(charon->job_queue, (job_t*)job);
-		return;
-}*/
-	
+	job = initiate_job_create(connection, policy);
 	charon->bus->set_listen_state(charon->bus, TRUE);
 	charon->job_queue->add(charon->job_queue, (job_t*)job);
 	while (TRUE)
@@ -664,10 +666,100 @@ static void stroke_route(stroke_msg_t *msg, FILE *out, bool route)
  */
 static void stroke_terminate(stroke_msg_t *msg, FILE *out)
 {
-	pop_string(msg, &(msg->terminate.name));
-	DBG1(DBG_CFG, "received stroke: terminate '%s'", msg->terminate.name);
+	char *string, *pos = NULL, *name = NULL;
+	u_int32_t id = 0;
+	bool child;
+	int len;
+	status_t status = SUCCESS;;
+	ike_sa_t *ike_sa;
 	
-	charon->ike_sa_manager->delete_by_name(charon->ike_sa_manager, msg->terminate.name);
+	pop_string(msg, &(msg->terminate.name));
+	string = msg->terminate.name;
+	DBG1(DBG_CFG, "received stroke: terminate '%s'", string);
+	
+	len = strlen(string);
+	if (len < 1)
+	{
+		DBG1(DBG_CFG, "error parsing string");
+		return;
+	}
+	switch (string[len-1])
+	{
+		case '}':
+			child = TRUE;
+			pos = strchr(string, '{');
+			break;
+		case ']':
+			child = FALSE;
+			pos = strchr(string, '[');
+			break;
+		default:
+			name = string;
+			child = FALSE;
+			break;
+	}
+	
+	if (name)
+	{	/* must be a single name */
+		DBG1(DBG_CFG, "check out by single name '%s'", name);
+		ike_sa = charon->ike_sa_manager->checkout_by_name(charon->ike_sa_manager,
+														  name, child);
+	}
+	else if (pos == string + len - 2)
+	{	/* must be name[] or name{} */
+		string[len-2] = '\0';
+		DBG1(DBG_CFG, "check out by name '%s'", string);
+		ike_sa = charon->ike_sa_manager->checkout_by_name(charon->ike_sa_manager,
+														  string, child);
+	}
+	else
+	{	/* must be name[123] or name{23} */
+		string[len-1] = '\0';
+		id = atoi(pos + 1);
+		if (id == 0)
+		{
+			DBG1(DBG_CFG, "error parsing string");
+			return;
+		}
+		DBG1(DBG_CFG, "check out by id '%d'", id);
+		ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+														id, child);
+	}
+	if (ike_sa == NULL)
+	{
+		DBG1(DBG_CFG, "no such IKE_SA found");
+		return;
+	}
+	
+	if (!child)
+	{
+		status = ike_sa->delete(ike_sa);
+	}
+	else
+	{
+		child_sa_t *child_sa;
+		iterator_t *iterator = ike_sa->create_child_sa_iterator(ike_sa);
+		while (iterator->iterate(iterator, (void**)&child_sa))
+		{
+			if ((id && id == child_sa->get_reqid(child_sa)) ||
+				(string && streq(string, child_sa->get_name(child_sa))))
+			{
+				u_int32_t spi = child_sa->get_spi(child_sa, TRUE);
+				protocol_id_t proto = child_sa->get_protocol(child_sa);
+				
+				status = ike_sa->delete_child_sa(ike_sa, proto, spi);
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+	}
+	if (status == DESTROY_ME)
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+													ike_sa);
+		return;
+	}
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 }
 
 /**

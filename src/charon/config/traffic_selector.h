@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -105,7 +106,7 @@ struct traffic_selector_t {
 	 *
 	 * Chunk is in network order gets allocated.
 	 *
-	 * @param this		calling object
+	 * @param this		called object
 	 * @return			chunk containing the address
 	 */
 	chunk_t (*get_from_address) (traffic_selector_t *this);
@@ -115,7 +116,7 @@ struct traffic_selector_t {
 	 *
 	 * Chunk is in network order gets allocated.
 	 *
-	 * @param this		calling object
+	 * @param this		called object
 	 * @return			chunk containing the address
 	 */
 	chunk_t (*get_to_address) (traffic_selector_t *this);
@@ -126,7 +127,7 @@ struct traffic_selector_t {
 	 * Port is in host order, since the parser converts it.
 	 * Size depends on protocol.
 	 *  
-	 * @param this		calling object
+	 * @param this		called object
 	 * @return			port
 	 */
 	u_int16_t (*get_from_port) (traffic_selector_t *this);
@@ -137,7 +138,7 @@ struct traffic_selector_t {
 	 * Port is in host order, since the parser converts it.
 	 * Size depends on protocol.
 	 *
-	 * @param this		calling object
+	 * @param this		called object
 	 * @return			port
 	 */
 	u_int16_t (*get_to_port) (traffic_selector_t *this);
@@ -145,7 +146,7 @@ struct traffic_selector_t {
 	/**
 	 * @brief Get the type of the traffic selector.
 	 *
-	 * @param this		calling obect
+	 * @param this		called object
 	 * @return			ts_type_t specifying the type
 	 */
 	ts_type_t (*get_type) (traffic_selector_t *this);
@@ -153,7 +154,7 @@ struct traffic_selector_t {
 	/**
 	 * @brief Get the protocol id of this ts.
 	 *
-	 * @param this		calling obect
+	 * @param this		called object
 	 * @return			protocol id
 	 */
 	u_int8_t (*get_protocol) (traffic_selector_t *this);
@@ -167,7 +168,7 @@ struct traffic_selector_t {
 	 * If host is NULL, the traffic selector is checked if it is a single host,
 	 * but not a specific one.
 	 *
-	 * @param this		calling obect
+	 * @param this		called object
 	 * @param host		host_t specifying the address range
 	 */
 	bool (*is_host) (traffic_selector_t *this, host_t* host);
@@ -180,7 +181,7 @@ struct traffic_selector_t {
 	 * starts from the supplied address and also ends there 
 	 * (which means it is a one-host-address-range ;-).
 	 *
-	 * @param this		calling obect
+	 * @param this		called object
 	 * @param host		host_t specifying the address range
 	 */
 	void (*update_address_range) (traffic_selector_t *this, host_t* host);
@@ -193,11 +194,19 @@ struct traffic_selector_t {
 	 * @return 			pointer to a string.
 	 */
 	bool (*equals) (traffic_selector_t *this, traffic_selector_t *other);
+
+	/**
+	 * @brief Check if a specific host is included in the address range of this traffic selector.
+	 *
+	 * @param this		called object
+	 * @param host		the host to check
+	 */
+	bool (*includes) (traffic_selector_t *this, host_t *host);
 	
 	/**
 	 * @brief Destroys the ts object
 	 *
-	 * @param this		calling object
+	 * @param this		called object
 	 */
 	void (*destroy) (traffic_selector_t *this);
 };
@@ -269,3 +278,6 @@ traffic_selector_t *traffic_selector_create_from_subnet(
 									u_int8_t protocol, u_int16_t port);
 
 #endif /* TRAFFIC_SELECTOR_H_ */
+
+/* vim: set ts=4 sw=4 noet: */
+

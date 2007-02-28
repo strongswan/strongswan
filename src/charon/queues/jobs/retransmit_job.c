@@ -1,12 +1,12 @@
 /**
- * @file retransmit_request_job.c
+ * @file retransmit_job.c
  * 
- * @brief Implementation of retransmit_request_job_t.
+ * @brief Implementation of retransmit_job_t.
  * 
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -21,20 +21,20 @@
  * for more details.
  */
  
-#include "retransmit_request_job.h"
+#include "retransmit_job.h"
 
 #include <daemon.h>
 
-typedef struct private_retransmit_request_job_t private_retransmit_request_job_t;
+typedef struct private_retransmit_job_t private_retransmit_job_t;
 
 /**
- * Private data of an retransmit_request_job_t Object.
+ * Private data of an retransmit_job_t Object.
  */
-struct private_retransmit_request_job_t {
+struct private_retransmit_job_t {
 	/**
-	 * Public retransmit_request_job_t interface.
+	 * Public retransmit_job_t interface.
 	 */
-	retransmit_request_job_t public;
+	retransmit_job_t public;
 	
 	/**
 	 * Message ID of the request to resend.
@@ -50,33 +50,32 @@ struct private_retransmit_request_job_t {
 /**
  * Implements job_t.get_type.
  */
-static job_type_t get_type(private_retransmit_request_job_t *this)
+static job_type_t get_type(private_retransmit_job_t *this)
 {
-	return RETRANSMIT_REQUEST;
+	return RETRANSMIT;
 }
 
 /**
  * Implementation of job_t.execute.
  */
-static status_t execute(private_retransmit_request_job_t *this)
+static status_t execute(private_retransmit_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
-	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id);
-	if (ike_sa == NULL)
+	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+											  this->ike_sa_id);
+	if (ike_sa)
 	{
-		DBG2(DBG_JOB, "IKE SA could not be checked out. Already deleted?");
-		return DESTROY_ME;
-	}
-	
-	if (ike_sa->retransmit_request(ike_sa, this->message_id) == DESTROY_ME)
-	{
-		/* retransmission hopeless, kill SA */
-		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
-	}
-	else
-	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		if (ike_sa->retransmit(ike_sa, this->message_id) == DESTROY_ME)
+		{
+			/* retransmitted to many times, giving up */
+			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+														ike_sa);
+		}
+		else
+		{
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		}
 	}
 	return DESTROY_ME;
 }
@@ -84,7 +83,7 @@ static status_t execute(private_retransmit_request_job_t *this)
 /**
  * Implements job_t.destroy.
  */
-static void destroy(private_retransmit_request_job_t *this)
+static void destroy(private_retransmit_job_t *this)
 {
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
@@ -93,9 +92,9 @@ static void destroy(private_retransmit_request_job_t *this)
 /*
  * Described in header.
  */
-retransmit_request_job_t *retransmit_request_job_create(u_int32_t message_id,ike_sa_id_t *ike_sa_id)
+retransmit_job_t *retransmit_job_create(u_int32_t message_id,ike_sa_id_t *ike_sa_id)
 {
-	private_retransmit_request_job_t *this = malloc_thing(private_retransmit_request_job_t);
+	private_retransmit_job_t *this = malloc_thing(private_retransmit_job_t);
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
@@ -106,5 +105,5 @@ retransmit_request_job_t *retransmit_request_job_create(u_int32_t message_id,ike
 	this->message_id = message_id;
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	
-	return &(this->public);
+	return &this->public;
 }

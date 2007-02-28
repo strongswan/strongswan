@@ -297,13 +297,134 @@ static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
 }
 
 /**
+ * Implementation of of ike_sa_manager.checkout.
+ */
+static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
+{
+	bool responder_spi_set;
+	bool initiator_spi_set;
+	bool original_initiator;
+	ike_sa_t *ike_sa = NULL;
+	
+	DBG2(DBG_MGR, "checkout IKE_SA: %J", ike_sa_id);
+	
+	DBG2(DBG_MGR,  "%d IKE_SAs in manager",
+		 this->ike_sa_list->get_count(this->ike_sa_list));
+	
+	/* each access is locked */
+	pthread_mutex_lock(&(this->mutex));
+	
+	responder_spi_set = ike_sa_id->get_responder_spi(ike_sa_id);
+	initiator_spi_set = ike_sa_id->get_initiator_spi(ike_sa_id);
+	original_initiator = ike_sa_id->is_initiator(ike_sa_id);
+	
+	if ((initiator_spi_set && responder_spi_set) ||
+		((initiator_spi_set && !responder_spi_set) && (original_initiator)))
+	{
+		/* we SHOULD have an IKE_SA for these SPIs in the list,
+		 * if not, we can't handle the request...
+		 */
+		entry_t *entry;
+		/* look for the entry */
+		if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
+		{
+			if (wait_for_entry(this, entry))
+			{
+				DBG2(DBG_MGR, "IKE_SA successfully checked out");
+				/* ok, this IKE_SA is finally ours */
+				entry->checked_out = TRUE;
+				ike_sa = entry->ike_sa;
+				/* update responder SPI when it's not set */
+				if (entry->ike_sa_id->get_responder_spi(entry->ike_sa_id) == 0)
+				{
+					ike_sa_id_t *ike_sa_ike_sa_id = ike_sa->get_id(ike_sa);
+					u_int64_t spi = ike_sa_id->get_responder_spi(ike_sa_id);
+					
+					ike_sa_ike_sa_id->set_responder_spi(ike_sa_ike_sa_id, spi);
+					entry->ike_sa_id->set_responder_spi(entry->ike_sa_id, spi);
+				}
+			}
+			else
+			{
+				DBG2(DBG_MGR, "IKE_SA found, but not allowed to check it out");
+			}
+		}
+		else
+		{
+			DBG2(DBG_MGR, "IKE_SA not stored in list");
+			/* looks like there is no such IKE_SA, better luck next time... */
+		}
+	}
+	else if ((initiator_spi_set && !responder_spi_set) && (!original_initiator))
+	{
+		/* an IKE_SA_INIT from an another endpoint,
+		 * he is the initiator.
+		 * For simplicity, we do NOT check for retransmitted
+		 * IKE_SA_INIT-Requests here, so EVERY single IKE_SA_INIT-
+		 * Request (even a retransmitted one) will result in a
+		 * IKE_SA. This could be improved...
+		 */
+		u_int64_t responder_spi;
+		entry_t *new_entry;
+		
+		/* set SPIs, we are the responder */
+		responder_spi = get_next_spi(this);
+		
+		/* we also set arguments spi, so its still valid */
+		ike_sa_id->set_responder_spi(ike_sa_id, responder_spi);
+		
+		/* create entry */
+		new_entry = entry_create(ike_sa_id);
+		
+		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
+		
+		/* check ike_sa out */
+		DBG2(DBG_MGR,  "IKE_SA added to list of known IKE_SAs");
+		new_entry->checked_out = TRUE;
+		ike_sa = new_entry->ike_sa;
+	}
+	else if (!initiator_spi_set && !responder_spi_set)
+	{
+		/* checkout of a new and unused IKE_SA, used for rekeying */
+		entry_t *new_entry;
+		
+		if (original_initiator)
+		{
+			ike_sa_id->set_initiator_spi(ike_sa_id, get_next_spi(this));
+		}
+		else
+		{
+			ike_sa_id->set_responder_spi(ike_sa_id, get_next_spi(this));
+		}
+		/* create entry */
+		new_entry = entry_create(ike_sa_id);
+		DBG2(DBG_MGR, "created IKE_SA: %J", ike_sa_id);
+			
+		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
+		
+		/* check ike_sa out */
+		new_entry->checked_out = TRUE;
+		ike_sa = new_entry->ike_sa;
+	}
+	else
+	{
+		/* responder set, initiator not: here is something seriously wrong! */
+		DBG2(DBG_MGR, "invalid IKE_SA SPIs");
+	}
+	
+	pthread_mutex_unlock(&(this->mutex));
+	
+	charon->bus->set_sa(charon->bus, ike_sa);
+	return ike_sa;
+}
+
+/**
  * Implementation of of ike_sa_manager.checkout_by_id.
  */
-static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
-								   host_t *my_host,
-								   host_t *other_host,
-								   identification_t *my_id,
-								   identification_t *other_id)
+static ike_sa_t* checkout_by_peer(private_ike_sa_manager_t *this,
+								  host_t *my_host, host_t *other_host,
+								  identification_t *my_id,
+								  identification_t *other_id)
 {
 	iterator_t *iterator;
 	entry_t *entry;
@@ -387,120 +508,15 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 }
 
 /**
- * Implementation of of ike_sa_manager.checkout.
+ * Implementation of of ike_sa_manager.checkout_by_id.
  */
-static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
+static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
+								bool child)
 {
-	bool responder_spi_set;
-	bool initiator_spi_set;
-	bool original_initiator;
-	ike_sa_t *ike_sa = NULL;
-	
-	DBG2(DBG_MGR, "checkout IKE_SA: %J", ike_sa_id);
-	
-	DBG2(DBG_MGR,  "%d IKE_SAs in manager",
-		 this->ike_sa_list->get_count(this->ike_sa_list));
-	
-	/* each access is locked */
-	pthread_mutex_lock(&(this->mutex));
-	
-	responder_spi_set = ike_sa_id->get_responder_spi(ike_sa_id);
-	initiator_spi_set = ike_sa_id->get_initiator_spi(ike_sa_id);
-	original_initiator = ike_sa_id->is_initiator(ike_sa_id);
-	
-	if ((initiator_spi_set && responder_spi_set) ||
-		((initiator_spi_set && !responder_spi_set) && (original_initiator)))
-	{
-		/* we SHOULD have an IKE_SA for these SPIs in the list,
-		 * if not, we can't handle the request...
-		 */
-		entry_t *entry;
-		/* look for the entry */
-		if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
-		{
-			if (wait_for_entry(this, entry))
-			{
-				DBG2(DBG_MGR, "IKE_SA successfully checked out");
-				/* ok, this IKE_SA is finally ours */
-				entry->checked_out = TRUE;
-				ike_sa = entry->ike_sa;
-			}
-			else
-			{
-				DBG2(DBG_MGR, "IKE_SA found, but not allowed to check it out");
-			}
-		}
-		else
-		{
-			DBG2(DBG_MGR, "IKE_SA not stored in list");
-			/* looks like there is no such IKE_SA, better luck next time... */
-		}
-	}
-	else if ((initiator_spi_set && !responder_spi_set) && (!original_initiator))
-	{
-		/* an IKE_SA_INIT from an another endpoint,
-		 * he is the initiator.
-		 * For simplicity, we do NOT check for retransmitted
-		 * IKE_SA_INIT-Requests here, so EVERY single IKE_SA_INIT-
-		 * Request (even a retransmitted one) will result in a
-		 * IKE_SA. This could be improved...
-		 */
-		u_int64_t responder_spi;
-		entry_t *new_entry;
-		
-		/* set SPIs, we are the responder */
-		responder_spi = get_next_spi(this);
-		
-		/* we also set arguments spi, so its still valid */
-		ike_sa_id->set_responder_spi(ike_sa_id, responder_spi);
-		
-		/* create entry */
-		new_entry = entry_create(ike_sa_id);
-		
-		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
-		
-		/* check ike_sa out */
-		DBG2(DBG_MGR,  "IKE_SA added to list of known IKE_SAs");
-		new_entry->checked_out = TRUE;
-		ike_sa = new_entry->ike_sa;
-	}
-	else if (!initiator_spi_set && !responder_spi_set && original_initiator)
-	{
-		/* checkout of a new and unused IKE_SA, used for rekeying */
-		entry_t *new_entry;
-		
-		ike_sa_id->set_initiator_spi(ike_sa_id, get_next_spi(this));
-		/* create entry */
-		new_entry = entry_create(ike_sa_id);
-		DBG2(DBG_MGR, "created IKE_SA: %J", ike_sa_id);
-			
-		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
-		
-		/* check ike_sa out */
-		new_entry->checked_out = TRUE;
-		ike_sa = new_entry->ike_sa;
-	}
-	else
-	{
-		/* responder set, initiator not: here is something seriously wrong! */
-		DBG2(DBG_MGR, "invalid IKE_SA SPIs");
-	}
-	
-	pthread_mutex_unlock(&(this->mutex));
-	
-	charon->bus->set_sa(charon->bus, ike_sa);
-	return ike_sa;
-}
-
-/**
- * Implementation of of ike_sa_manager.checkout_by_child.
- */
-static ike_sa_t* checkout_by_child(private_ike_sa_manager_t *this,
-								   u_int32_t reqid)
-{
-	iterator_t *iterator;
+	iterator_t *iterator, *children;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
+	child_sa_t *child_sa;
 	
 	pthread_mutex_lock(&(this->mutex));
 	
@@ -509,12 +525,85 @@ static ike_sa_t* checkout_by_child(private_ike_sa_manager_t *this,
 	{
 		if (wait_for_entry(this, entry))
 		{
-			/* ok, access is exclusive for us, check for child */
-			if (entry->ike_sa->has_child_sa(entry->ike_sa, reqid))
+			/* look for a child with such a reqid ... */
+			if (child)
 			{
-				/* match */
+				children = entry->ike_sa->create_child_sa_iterator(entry->ike_sa);
+				while (children->iterate(children, (void**)&child_sa))
+				{
+					if (child_sa->get_reqid(child_sa) == id)
+					{
+						ike_sa = entry->ike_sa;
+						break;
+					}		
+				}
+				children->destroy(children);
+			}
+			else /* ... or for a IKE_SA with such a unique id */
+			{
+				if (entry->ike_sa->get_unique_id(entry->ike_sa) == id)
+				{
+					ike_sa = entry->ike_sa;
+				}
+			}
+			/* got one, return */
+			if (ike_sa)
+			{
 				entry->checked_out = TRUE;
-				ike_sa = entry->ike_sa;
+				break;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	pthread_mutex_unlock(&(this->mutex));
+	
+	charon->bus->set_sa(charon->bus, ike_sa);
+	return ike_sa;
+}
+
+/**
+ * Implementation of of ike_sa_manager.checkout_by_name.
+ */
+static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
+								  bool child)
+{
+	iterator_t *iterator, *children;
+	entry_t *entry;
+	ike_sa_t *ike_sa = NULL;
+	child_sa_t *child_sa;
+	
+	pthread_mutex_lock(&(this->mutex));
+	
+	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
+	while (iterator->iterate(iterator, (void**)&entry))
+	{
+		if (wait_for_entry(this, entry))
+		{
+			/* look for a child with such a policy name ... */
+			if (child)
+			{
+				children = entry->ike_sa->create_child_sa_iterator(entry->ike_sa);
+				while (children->iterate(children, (void**)&child_sa))
+				{
+					if (streq(child_sa->get_name(child_sa), name))
+					{
+						ike_sa = entry->ike_sa;
+						break;
+					}		
+				}
+				children->destroy(children);
+			}
+			else /* ... or for a IKE_SA with such a connection name */
+			{
+				if (streq(entry->ike_sa->get_name(entry->ike_sa), name))
+				{
+					ike_sa = entry->ike_sa;
+				}
+			}
+			/* got one, return */
+			if (ike_sa)
+			{
+				entry->checked_out = TRUE;
 				break;
 			}
 		}
@@ -529,9 +618,16 @@ static ike_sa_t* checkout_by_child(private_ike_sa_manager_t *this,
 /**
  * Iterator hook for iterate, gets ike_sas instead of entries
  */
-static void* iterator_hook(void *value)
+static bool iterator_hook(private_ike_sa_manager_t* this, entry_t *in,
+						  ike_sa_t **out)
 {
-	return ((entry_t*)value)->ike_sa;
+	/* check out entry */
+	if (wait_for_entry(this, in))
+	{
+		*out = in->ike_sa;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -540,9 +636,9 @@ static void* iterator_hook(void *value)
 static iterator_t *create_iterator(private_ike_sa_manager_t* this)
 {
 	iterator_t *iterator = this->ike_sa_list->create_iterator_locked(
-								this->ike_sa_list, &this->mutex);
+											this->ike_sa_list, &this->mutex);
 	/* register hook to iterator over ike_sas, not entries */
-	iterator->set_iterator_hook(iterator, iterator_hook);
+	iterator->set_iterator_hook(iterator, (iterator_hook_t*)iterator_hook, this);
 	return iterator;
 }
 
@@ -634,170 +730,6 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 }
 
 /**
- * Implementation of ike_sa_manager_t.delete.
- */
-static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
-{
-	/* deletion is a bit complex, we must garant that no thread is waiting for
-	 * this SA.
-	 * We take this SA from the list, and start signaling while threads
-	 * are in the condvar.
-	 */
-	entry_t *entry;
-	status_t retval;
-	
-	DBG2(DBG_MGR, "delete IKE_SA: %J", ike_sa_id);
-	
-	pthread_mutex_lock(&(this->mutex));
-	
-	if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
-	{
-		/* we try a delete. If it succeeds, our job is done here. The
-		 * other peer will reply, and the IKE SA gets the finally deleted...
-		 */
-		if (entry->ike_sa->delete(entry->ike_sa) == SUCCESS)
-		{
-			DBG2(DBG_MGR, "initiated delete for IKE_SA");
-		}
-		/* but if the IKE SA is not in a state where the deletion is 
-		 * negotiated with the other peer, we can destroy the IKE SA on our own. 
-		 */
-		else
-		{
-			
-		}
-		retval = SUCCESS;
-	}
-	else
-	{
-		DBG2(DBG_MGR, "tried to delete nonexisting IKE_SA");
-		retval = NOT_FOUND;
-	}
-
-	pthread_mutex_unlock(&(this->mutex));
-	return retval;
-}
-
-/**
- * Implementation of ike_sa_manager_t.delete_by_name.
- */
-static status_t delete_by_name(private_ike_sa_manager_t *this, char *name)
-{
-	iterator_t *iterator;
-	iterator_t *child_iter;
-	entry_t *entry;
-	size_t name_len = strlen(name);
-	
-	pthread_mutex_lock(&(this->mutex));
-	
-	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->iterate(iterator, (void**)&entry))
-	{
-		if (wait_for_entry(this, entry))
-		{
-			/* delete ike_sa if:
-			 * name{x} matches completely
-			 * name{} matches by name
-			 * name matches by name
-			 */
-			bool del = FALSE;
-			char *ike_name;
-			char *child_name;
-			child_sa_t *child_sa;
-			
-			ike_name = entry->ike_sa->get_name(entry->ike_sa);
-			/* check if "name{x}" matches completely */
-			if (strcmp(name, ike_name) == 0)
-			{
-				del = TRUE;
-			}
-			/* check if name is in form of "name{}" and matches to ike_name */
-			else if (name_len > 1 &&
-					 name[name_len - 2] == '{' && name[name_len - 1] == '}' &&
-					 strlen(ike_name) > name_len &&
-					 ike_name[name_len - 2] == '{' &&
-					 strncmp(name, ike_name, name_len - 2) == 0)
-			{
-				del = TRUE;
-			}
-			/* finally, check if name is "name" and matches ike_name */
-			else if (name_len == strchr(ike_name, '{') - ike_name &&
-					 strncmp(name, ike_name, name_len) == 0)
-			{
-				del = TRUE;
-			}
-			
-			if (del)
-			{
-				if (entry->ike_sa->delete(entry->ike_sa) == DESTROY_ME)
-				{
-					delete_entry(this, entry);
-					iterator->reset(iterator);
-				}
-				/* no need to check children, as we delete all */
-				continue;
-			}
-			
-			/* and now the same game for all children. delete child_sa if:
-			 * name[x] matches completely
-			 * name[] matches by name
-			 * name matches by name
-			 */
-			child_iter = entry->ike_sa->create_child_sa_iterator(entry->ike_sa);
-			while (child_iter->iterate(child_iter, (void**)&child_sa))
-			{
-				/* skip ROUTED children, they have their "unroute" command */
-				if (child_sa->get_state(child_sa) == CHILD_ROUTED)
-				{
-					continue;
-				}
-				
-				child_name = child_sa->get_name(child_sa);
-				del = FALSE;
-				/* check if "name[x]" matches completely */
-				if (strcmp(name, child_name) == 0)
-				{
-					del = TRUE;
-				}
-				/* check if name is in form of "name[]" and matches to child_name */
-				else if (name_len > 1 &&
-						 name[name_len - 2] == '[' && name[name_len - 1] == ']' &&
-						 strlen(child_name) > name_len &&
-						 child_name[name_len - 2] == '[' &&
-						 strncmp(name, child_name, name_len - 2) == 0)
-				{
-					del = TRUE;
-				}
-				/* finally, check if name is "name" and matches child_name */
-				else if (name_len == strchr(child_name, '[') - child_name &&
-						 strncmp(name, child_name, name_len) == 0)
-				{
-					del = TRUE;
-				}
-				if (del)
-				{
-					if (entry->ike_sa->delete_child_sa(entry->ike_sa,
-						child_sa->get_protocol(child_sa),
-						child_sa->get_spi(child_sa, TRUE)) == DESTROY_ME)
-					{
-						/* when a fatal error occurs, we are responsible to
-						 * remove the IKE_SA */
-						delete_entry(this, entry);
-						iterator->reset(iterator);
-						break;
-					}
-				}
-			}
-			child_iter->destroy(child_iter);
-		}
-	}
-	iterator->destroy(iterator);
-	pthread_mutex_unlock(&(this->mutex));
-	
-	return SUCCESS;
-}
-
-/**
  * Implementation of ike_sa_manager_t.destroy.
  */
 static void destroy(private_ike_sa_manager_t *this)
@@ -859,19 +791,18 @@ ike_sa_manager_t *ike_sa_manager_create()
 
 	/* assign public functions */
 	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
-	this->public.checkout_by_id = (ike_sa_t*(*)(ike_sa_manager_t*,host_t*,host_t*,identification_t*,identification_t*))checkout_by_id;
 	this->public.checkout = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_id_t*))checkout;
-	this->public.checkout_by_child = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t))checkout_by_child;
+	this->public.checkout_by_peer = (ike_sa_t*(*)(ike_sa_manager_t*,host_t*,host_t*,identification_t*,identification_t*))checkout_by_peer;
+	this->public.checkout_by_id = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t,bool))checkout_by_id;
+	this->public.checkout_by_name = (ike_sa_t*(*)(ike_sa_manager_t*,char*,bool))checkout_by_name;
 	this->public.create_iterator = (iterator_t*(*)(ike_sa_manager_t*))create_iterator;
 	this->public.checkin = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
-	this->public.delete = (status_t(*)(ike_sa_manager_t*,ike_sa_id_t*))delete_;
-	this->public.delete_by_name = (status_t(*)(ike_sa_manager_t*,char*))delete_by_name;
 	this->public.checkin_and_destroy = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;
 	
 	/* initialize private variables */
 	this->ike_sa_list = linked_list_create();
-	pthread_mutex_init(&(this->mutex), NULL);
+	pthread_mutex_init(&this->mutex, NULL);
 	this->randomizer = randomizer_create();
 	
-	return (ike_sa_manager_t*)this;
+	return &this->public;
 }

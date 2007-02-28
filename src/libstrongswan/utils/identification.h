@@ -182,7 +182,7 @@ struct identification_t {
 	 * 
 	 * @param this		the ID without wildcard
 	 * @param other		the ID containing a wildcard
-	 * @param wildcards	returns the number of wildcards
+	 * @param wildcards	returns the number of wildcards, may be NULL
 	 * @return 			TRUE if match is found
 	 */
 	bool (*matches) (identification_t *this, identification_t *other, int *wildcards);

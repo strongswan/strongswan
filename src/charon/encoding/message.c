@@ -345,6 +345,7 @@ static status_t get_payload_rule(private_message_t *this, payload_type_t payload
  */
 static void set_ike_sa_id (private_message_t *this,ike_sa_id_t *ike_sa_id)
 {
+	DESTROY_IF(this->ike_sa_id);
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 }
 
@@ -490,6 +491,29 @@ static void add_payload(private_message_t *this, payload_t *payload)
 }
 
 /**
+ * Implementation of message_t.add_notify.
+ */
+static void add_notify(private_message_t *this, bool flush, notify_type_t type, 
+					   chunk_t data)
+{
+	notify_payload_t *notify;
+	payload_t *payload;
+	
+	if (flush)
+	{
+		while (this->payloads->remove_last(this->payloads, 
+												(void**)&payload) == SUCCESS)
+		{
+			payload->destroy(payload);
+		}
+	}
+	notify = notify_payload_create();
+	notify->set_notify_type(notify, type);
+	notify->set_notification_data(notify, data);
+	add_payload(this, (payload_t*)notify);
+}
+
+/**
  * Implementation of message_t.set_source.
  */
 static void set_source(private_message_t *this, host_t *host)
@@ -522,11 +546,32 @@ static host_t * get_destination(private_message_t *this)
 }
 
 /**
- * Implementation of message_t.get_destination.
+ * Implementation of message_t.get_payload_iterator.
  */
 static iterator_t *get_payload_iterator(private_message_t *this)
 {
 	return this->payloads->create_iterator(this->payloads, TRUE);
+}
+
+/**
+ * Implementation of message_t.get_payload.
+ */
+static payload_t *get_payload(private_message_t *this, payload_type_t type)
+{
+	payload_t *current, *found = NULL;
+	iterator_t *iterator;
+	
+	iterator = this->payloads->create_iterator(this->payloads, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		if (current->get_type(current) == type)
+		{
+			found = current;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	return found;
 }
 
 /**
@@ -786,6 +831,10 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
  */
 static packet_t *get_packet (private_message_t *this)
 {
+	if (this->packet == NULL)
+	{
+		return NULL;
+	}
 	return this->packet->clone(this->packet);
 }
 
@@ -794,6 +843,10 @@ static packet_t *get_packet (private_message_t *this)
  */
 static chunk_t get_packet_data (private_message_t *this)
 {
+	if (this->packet == NULL)
+	{
+		return chunk_empty;
+	}
 	return chunk_clone(this->packet->get_data(this->packet));
 }
 
@@ -1147,7 +1200,6 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	status = verify(this);
 	if (status != SUCCESS)
 	{
-		DBG1(DBG_ENC, "verification of message failed");
 		return status;
 	}
 	
@@ -1191,12 +1243,14 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.set_request = (void(*)(message_t*, bool))set_request;
 	this->public.get_request = (bool(*)(message_t*))get_request;
 	this->public.add_payload = (void(*)(message_t*,payload_t*))add_payload;
+	this->public.add_notify = (void(*)(message_t*,bool,notify_type_t,chunk_t))add_notify;
 	this->public.generate = (status_t (*) (message_t *,crypter_t*,signer_t*,packet_t**)) generate;
 	this->public.set_source = (void (*) (message_t*,host_t*)) set_source;
 	this->public.get_source = (host_t * (*) (message_t*)) get_source;
 	this->public.set_destination = (void (*) (message_t*,host_t*)) set_destination;
 	this->public.get_destination = (host_t * (*) (message_t*)) get_destination;
 	this->public.get_payload_iterator = (iterator_t * (*) (message_t *)) get_payload_iterator;
+	this->public.get_payload = (payload_t * (*) (message_t *, payload_type_t)) get_payload;
 	this->public.parse_header = (status_t (*) (message_t *)) parse_header;
 	this->public.parse_body = (status_t (*) (message_t *,crypter_t*,signer_t*)) parse_body;
 	this->public.get_packet = (packet_t * (*) (message_t*)) get_packet;

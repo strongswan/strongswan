@@ -252,7 +252,8 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			plog("# natip and sourceip cannot be defined at the same time");
 			goto err;
 		}
-		if (streq(value, "%modeconfig") || streq(value, "%modecfg"))
+		if (streq(value, "%modeconfig") || streq(value, "%modecfg") ||
+			streq(value, "%config") || streq(value, "%cfg"))
 		{
 			end->modecfg = TRUE;
 		}

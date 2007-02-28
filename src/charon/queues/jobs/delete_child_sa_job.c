@@ -68,8 +68,8 @@ static status_t execute(private_delete_child_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
-	ike_sa = charon->ike_sa_manager->checkout_by_child(charon->ike_sa_manager,
-													   this->reqid);
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+													this->reqid, TRUE);
 	if (ike_sa == NULL)
 	{
 		DBG1(DBG_JOB, "CHILD_SA with reqid %d not found for delete",

@@ -79,6 +79,16 @@ struct private_policy_t {
 	identification_t *other_id;
 	
 	/**
+	 * virtual IP to use locally
+	 */
+	host_t *my_virtual_ip;
+	
+	/**
+	 * virtual IP to use remotly
+	 */
+	host_t *other_virtual_ip;
+	
+	/**
 	 * Method to use for own authentication data
 	 */
 	auth_method_t auth_method;
@@ -209,7 +219,8 @@ static eap_type_t get_eap_type(private_policy_t *this)
 /**
  * Get traffic selectors, with wildcard-address update
  */
-static linked_list_t *get_traffic_selectors(private_policy_t *this, linked_list_t *list, host_t *host)
+static linked_list_t *get_traffic_selectors(private_policy_t *this,
+											linked_list_t *list, host_t *host)
 {
 	iterator_t *iterator;
 	traffic_selector_t *current;
@@ -222,7 +233,10 @@ static linked_list_t *get_traffic_selectors(private_policy_t *this, linked_list_
 		/* we make a copy of the TS, this allows us to update wildcard
 		 * addresses in it. We won't pollute the shared policy. */
 		current = current->clone(current);
-		current->update_address_range(current, host);
+		if (host)
+		{
+			current->update_address_range(current, host);
+		}
 		
 		result->insert_last(result, (void*)current);
 	}
@@ -269,7 +283,10 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 		/* we make a copy of the TS, this allows us to update wildcard
 		 * addresses in it. We won't pollute the shared policy. */
 		stored_ts = stored_ts->clone(stored_ts);
-		stored_ts->update_address_range(stored_ts, host);
+		if (host)
+		{
+			stored_ts->update_address_range(stored_ts, host);
+		}
 		
 		supplied_iter->reset(supplied_iter);
 		/* iterate over all supplied traffic selectors */
@@ -457,6 +474,30 @@ static mode_t get_mode(private_policy_t *this)
 }
 
 /**
+ * Implementation of policy_t.get_virtual_ip.
+ */
+static host_t* get_virtual_ip(private_policy_t *this, host_t *suggestion)
+{
+	if (suggestion == NULL)
+	{
+		if (this->my_virtual_ip)
+		{
+			return this->my_virtual_ip->clone(this->my_virtual_ip);
+		}
+		return NULL;
+	}
+	if (this->other_virtual_ip)
+	{
+		return this->other_virtual_ip->clone(this->other_virtual_ip);
+	}
+	if (suggestion->is_anyaddr(suggestion))
+	{
+		return NULL;
+	}
+	return suggestion->clone(suggestion);
+}
+
+/**
  * Implements policy_t.get_ref.
  */
 static void get_ref(private_policy_t *this)
@@ -477,14 +518,8 @@ static void destroy(private_policy_t *this)
 		this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
 		
 		/* delete certification authorities */
-		if (this->my_ca)
-		{
-			this->my_ca->destroy(this->my_ca);
-		}
-		if (this->other_ca)
-		{
-			this->other_ca->destroy(this->other_ca);
-		}
+		DESTROY_IF(this->my_ca);
+		DESTROY_IF(this->other_ca);
 		
 		/* delete updown script */
 		if (this->updown)
@@ -495,6 +530,8 @@ static void destroy(private_policy_t *this)
 		/* delete ids */
 		this->my_id->destroy(this->my_id);
 		this->other_id->destroy(this->other_id);
+		DESTROY_IF(this->my_virtual_ip);
+		DESTROY_IF(this->other_virtual_ip);
 		
 		free(this->name);
 		free(this);
@@ -505,6 +542,7 @@ static void destroy(private_policy_t *this)
  * Described in header-file
  */
 policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id,
+						host_t *my_virtual_ip, host_t *other_virtual_ip,
 						auth_method_t auth_method, eap_type_t eap_type,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
 						u_int32_t jitter, char *updown, bool hostaccess,
@@ -536,6 +574,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.get_soft_lifetime = (u_int32_t (*) (policy_t *))get_soft_lifetime;
 	this->public.get_hard_lifetime = (u_int32_t (*) (policy_t *))get_hard_lifetime;
 	this->public.get_mode = (mode_t (*) (policy_t *))get_mode;
+	this->public.get_virtual_ip = (host_t* (*)(policy_t*,host_t*))get_virtual_ip;
 	this->public.get_ref = (void (*) (policy_t*))get_ref;
 	this->public.destroy = (void (*) (policy_t*))destroy;
 	
@@ -543,6 +582,8 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->name = strdup(name);
 	this->my_id = my_id;
 	this->other_id = other_id;
+	this->my_virtual_ip = my_virtual_ip;
+	this->other_virtual_ip = other_virtual_ip;
 	this->auth_method = auth_method;
 	this->eap_type = eap_type;
 	this->hard_lifetime = hard_lifetime;

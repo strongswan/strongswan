@@ -59,7 +59,7 @@ struct ike_sa_manager_t {
 	 * result in a deadlock!
 	 * 
 	 * @param this 				the manager object
-	 * @param[in/out] ike_sa_id	the SA identifier, will be updated
+	 * @param ike_sa_id			the SA identifier, will be updated
 	 * @returns 					
 	 * 							- checked out IKE_SA if found
 	 * 							- NULL, if no such IKE_SA available
@@ -82,25 +82,44 @@ struct ike_sa_manager_t {
 	 * @param other_id			ID used by remote
 	 * @return					checked out/created IKE_SA
 	 */
-	ike_sa_t* (*checkout_by_id) (ike_sa_manager_t* this,
-								 host_t *my_host, host_t* other_host,
-								 identification_t *my_id, 
-								 identification_t *other_id);
+	ike_sa_t* (*checkout_by_peer) (ike_sa_manager_t* this,
+								   host_t *my_host, host_t* other_host,
+								   identification_t *my_id, 
+								   identification_t *other_id);
 	
 	/**
-	 * @brief Check out an IKE_SA by protocol and SPI of one of its CHILD_SA.
+	 * @brief Check out an IKE_SA a unique ID.
 	 *
-	 * The kernel sends us expire messages for IPsec SAs. To fullfill
-	 * this request, we must check out the IKE SA which contains the
-	 * CHILD_SA the kernel wants to modify.
+	 * Every IKE_SA and every CHILD_SA is uniquely identified by an ID. 
+	 * These checkout function uses, depending
+	 * on the child parameter, the unique ID of the IKE_SA or the reqid
+	 * of one of a IKE_SAs CHILD_SA.
 	 *
 	 * @param this				the manager object
-	 * @param reqid				reqid of the CHILD_SA
+	 * @param id				unique ID of the object
+	 * @param child				TRUE to use CHILD, FALSE to use IKE_SA
 	 * @return
 	 * 							- checked out IKE_SA, if found
 	 * 							- NULL, if not found
 	 */
-	ike_sa_t* (*checkout_by_child) (ike_sa_manager_t* this, u_int32_t reqid);
+	ike_sa_t* (*checkout_by_id) (ike_sa_manager_t* this, u_int32_t id,
+								 bool child);
+	
+	/**
+	 * @brief Check out an IKE_SA by the policy/connection name.
+	 *
+	 * Check out the IKE_SA by the connections name or by a CHILD_SAs policy
+	 * name.
+	 *
+	 * @param this				the manager object
+	 * @param name				name of the connection/policy
+	 * @param child				TRUE to use policy name, FALSE to use conn name
+	 * @return
+	 * 							- checked out IKE_SA, if found
+	 * 							- NULL, if not found
+	 */
+	ike_sa_t* (*checkout_by_name) (ike_sa_manager_t* this, char *name,
+								   bool child);
 	
 	/**
 	 * @brief Create an iterator over all stored IKE_SAs.
@@ -121,54 +140,13 @@ struct ike_sa_manager_t {
 	 * The SA must be checked out again!
 	 *  
 	 * @param this			 	the manager object
-	 * @param[in/out] ike_sa_id	the SA identifier, will be updated
-	 * @param[out] ike_sa		checked out SA
+	 * @param ike_sa_id			the SA identifier, will be updated
+	 * @param ike_sa			checked out SA
 	 * @returns 				
 	 * 							- SUCCESS if checked in
 	 * 							- NOT_FOUND when not found (shouldn't happen!)
 	 */
 	status_t (*checkin) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
-	
-	/**
-	 * @brief Delete a SA, which was not checked out.
-	 *
-	 * If the state allows it, the IKE SA is destroyed immediately. If it is
-	 * in the state ESTABLSIHED, a delete message
-	 * is sent to the remote peer, which has to be acknowledged.
-	 *
-	 * @warning do not use this when the SA is already checked out, this will
-	 * deadlock!
-	 *
-	 * @param this			 	the manager object
-	 * @param[in/out] ike_sa_id	the SA identifier
-	 * @returns 				
-	 * 							- SUCCESS if found
-	 * 							- NOT_FOUND when no such SA is available
-	 */
-	status_t (*delete) (ike_sa_manager_t* this, ike_sa_id_t *ike_sa_id);
-	
-	/**
-	 * @brief Delete a SA identified by its name, which was not checked out.
-	 *
-	 * Using delete_by_name allows the delete of IKE_SAs and CHILD_SAs.
-	 * The supplied name may have one of the following format:
-	 *
-	 * name{x}		=> delete IKE_SA with "name" and unique id "x"
-	 * name{}		=> delete all IKE_SAs with "name"
-	 * name[x]		=> delete CHILD_SA with "name" and unique id "x"
-	 * name[]		=> delete all CHILD_SAs with "name"
-	 * name			=> delete all CHILD_SAs or IKE_SAs with "name"
-	 *
-	 * @warning do not use this when the SA is already checked out, this will
-	 * deadlock!
-	 *
-	 * @param this			 	the manager object
-	 * @param name				name in one of the format described above
-	 * @returns 				
-	 * 							- SUCCESS if found
-	 * 							- NOT_FOUND when no such SA is available
-	 */
-	status_t (*delete_by_name) (ike_sa_manager_t* this, char *name);
 	
 	/**
 	 * @brief Destroy a checked out SA.

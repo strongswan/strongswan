@@ -127,6 +127,8 @@ static int add_connection(char *name,
 	msg.add_conn.me.address = push_string(&msg, my_addr);
 	msg.add_conn.me.subnet = push_string(&msg, my_net);
 	msg.add_conn.me.subnet_mask = my_netmask;
+	msg.add_conn.me.sourceip = NULL;
+	msg.add_conn.me.virtual_ip = 0;
 	msg.add_conn.me.cert = NULL;
 	msg.add_conn.me.ca = NULL;
 	msg.add_conn.me.sendcert = 1;
@@ -138,6 +140,8 @@ static int add_connection(char *name,
 	msg.add_conn.other.address = push_string(&msg, other_addr);
 	msg.add_conn.other.subnet = push_string(&msg, other_net);
 	msg.add_conn.other.subnet_mask = other_netmask;
+	msg.add_conn.other.sourceip = NULL;
+	msg.add_conn.other.virtual_ip = 0;
 	msg.add_conn.other.cert = NULL;
 	msg.add_conn.other.ca = NULL;
 	msg.add_conn.other.sendcert = 1;

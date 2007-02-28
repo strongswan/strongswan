@@ -61,7 +61,7 @@ static job_type_t get_type(private_rekey_ike_sa_job_t *this)
 static status_t execute(private_rekey_ike_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
-	status_t status;
+	status_t status = SUCCESS;
 	
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 											  this->ike_sa_id);
@@ -73,7 +73,7 @@ static status_t execute(private_rekey_ike_sa_job_t *this)
 	
 	if (this->reauth)
 	{
-		status = ike_sa->reauth(ike_sa);
+		ike_sa->reestablish(ike_sa);
 	}
 	else
 	{

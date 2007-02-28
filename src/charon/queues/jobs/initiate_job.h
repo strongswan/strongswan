@@ -51,13 +51,11 @@ struct initiate_job_t {
  * @brief Creates a job of type INITIATE_IKE_SA.
  * 
  * @param connection	connection_t to initialize
- * @param other			another host to initiate to, NULL to use connections one
  * @param policy		policy to set up
  * @return				initiate_job_t object
  * 
  * @ingroup jobs
  */
-initiate_job_t *initiate_job_create(connection_t *connection, host_t *other,
-								    policy_t *policy);
+initiate_job_t *initiate_job_create(connection_t *connection, policy_t *policy);
 
 #endif /*INITIATE_IKE_SA_JOB_H_*/

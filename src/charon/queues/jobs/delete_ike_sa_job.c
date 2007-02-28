@@ -62,41 +62,38 @@ static status_t execute(private_delete_ike_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
-	if (this->delete_if_established)
+	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+											  this->ike_sa_id);
+	if (ike_sa)
 	{
-		if (charon->ike_sa_manager->delete(charon->ike_sa_manager, 
-			this->ike_sa_id) != SUCCESS)
+		if (this->delete_if_established)
 		{
-			DBG2(DBG_JOB, "IKE SA didn't exist anymore");
-		}
-		return DESTROY_ME;
-	}
-	else
-	{
-		ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id);
-		if (ike_sa == NULL)
-		{
-			/* hm, somebody was faster ;-) */
-			return DESTROY_ME;
-		}
-		
-		switch (ike_sa->get_state(ike_sa))
-		{
-			case IKE_ESTABLISHED:
+			if (ike_sa->delete(ike_sa) == DESTROY_ME)
 			{
-				/* IKE_SA is established and so is not getting destroyed */
+				charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
+			}
+			else
+			{
 				charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-				return DESTROY_ME;
 			}
-			default:
+		}
+		else
+		{
+			/* destroy only if not ESTABLISHED */
+			if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 			{
-				/* IKE_SA is half open and gets destroyed */
+				charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+			}
+			else
+			{
 				DBG1(DBG_JOB, "deleting half open IKE_SA after timeout");
-				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
-				return DESTROY_ME;
+				charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
 			}
 		}
 	}
+	return DESTROY_ME;
 }
 
 /**

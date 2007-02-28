@@ -224,6 +224,8 @@ struct bus_listener_t {
 	 * an additional informational or error message with a printf() like
 	 * variable argument list. This is in the va_list form, as forwarding
 	 * a "..." parameters to functions is not (cleanly) possible.
+	 * The implementing signal function returns TRUE to stay registered
+	 * to the bus, or FALSE to unregister itself.
 	 *
 	 * @param this		listener
 	 * @param singal	kind of the signal (up, down, rekeyed, ...)
@@ -232,8 +234,9 @@ struct bus_listener_t {
 	 * @param ike_sa	IKE_SA associated to the event
 	 * @param format	printf() style format string
 	 * @param args		vprintf() style va_list argument list
+	 " @return			TRUE to stay registered, FALSE to unregister
 	 */
-	void (*signal) (bus_listener_t *this, signal_t signal, level_t level,
+	bool (*signal) (bus_listener_t *this, signal_t signal, level_t level,
 					int thread, ike_sa_t *ike_sa, char* format, va_list args);
 };
 

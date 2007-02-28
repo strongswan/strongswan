@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -45,7 +46,7 @@ struct private_host_t {
 	union {
 		/** generic type */
 		struct sockaddr address;
-		/** maximux sockaddr size */
+		/** maximum sockaddr size */
 		struct sockaddr_storage address_max;
 		/** IPv4 address */
 		struct sockaddr_in address4;
@@ -493,5 +494,33 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
 			break;
 	}
 	free(this);
+	return NULL;
+}
+
+/*
+ * Described in header.
+ */
+host_t *host_create_any(int family)
+{
+	private_host_t *this = host_create_empty();
+	
+	memset(&this->address_max, 0, sizeof(struct sockaddr_storage));
+	this->address.sa_family = family;
+	
+	switch (family)
+	{
+		case AF_INET:
+		{
+			this->socklen = sizeof(struct sockaddr_in);
+			return &(this->public);
+		}
+		case AF_INET6:
+		{
+			this->socklen = sizeof(struct sockaddr_in6);
+			return &this->public;
+		}
+		default:
+			break;
+	}
 	return NULL;
 }

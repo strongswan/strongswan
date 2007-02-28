@@ -204,9 +204,9 @@ static size_t get_length(private_cp_payload_t *this)
 /**
  * Implementation of cp_payload_t.create_configuration_attribute_iterator.
  */
-static iterator_t *create_configuration_attribute_iterator (private_cp_payload_t *this,bool forward)
+static iterator_t *create_attribute_iterator (private_cp_payload_t *this)
 {
-	return this->attributes->create_iterator(this->attributes,forward);
+	return this->attributes->create_iterator(this->attributes, TRUE);
 }
 
 /**
@@ -261,7 +261,7 @@ cp_payload_t *cp_payload_create()
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 	
 	/* public functions */
-	this->public.create_configuration_attribute_iterator = (iterator_t* (*) (cp_payload_t *,bool)) create_configuration_attribute_iterator;
+	this->public.create_attribute_iterator = (iterator_t* (*) (cp_payload_t *)) create_attribute_iterator;
 	this->public.add_configuration_attribute = (void (*) (cp_payload_t *,configuration_attribute_t *)) add_configuration_attribute;
 	this->public.set_config_type = (void (*) (cp_payload_t *, config_type_t)) set_config_type;
 	this->public.get_config_type = (config_type_t (*) (cp_payload_t *)) get_config_type;

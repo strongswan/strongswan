@@ -45,9 +45,9 @@ enum job_type_t {
 	/** 
 	 * Retransmit an IKEv2-Message.
 	 * 
-	 * Job is implemented in class retransmit_request_job_t
+	 * Job is implemented in class retransmit_job_t
 	 */
-	RETRANSMIT_REQUEST,
+	RETRANSMIT,
 	
 	/** 
 	 * Set up a CHILD_SA, optional with an IKE_SA.

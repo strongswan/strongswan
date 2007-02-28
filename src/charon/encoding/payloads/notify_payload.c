@@ -209,6 +209,9 @@ static status_t verify(private_notify_payload_t *this)
 			diffie_hellman_group_t dh_group;
 			if (this->notification_data.len != 2)
 			{
+				DBG1(DBG_ENC, "invalid notify data length for %N (%d)",
+					 notify_type_names, this->notify_type,
+					 this->notification_data.len);
 				return FAILED;
 			}
 			dh_group = ntohs(*((u_int16_t*)this->notification_data.ptr));
@@ -403,7 +406,10 @@ static chunk_t get_notification_data(private_notify_payload_t *this)
 static status_t set_notification_data(private_notify_payload_t *this, chunk_t notification_data)
 {
 	chunk_free(&this->notification_data);
-	this->notification_data = chunk_clone(notification_data);
+	if (notification_data.len > 0)
+	{
+		this->notification_data = chunk_clone(notification_data);
+	}
 	compute_length(this);
 	return SUCCESS;
 }

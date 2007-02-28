@@ -6,8 +6,8 @@
  */
 
 /*
+ * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -69,11 +69,6 @@ struct private_child_sa_t {
 	 */
 	child_sa_t public;
 	
-	/**
-	 * Name of the policy used by this CHILD_SA
-	 */
-	char *name;
-	
 	struct {
 		/** address of peer */
 		host_t *addr;
@@ -134,34 +129,9 @@ struct private_child_sa_t {
 	time_t install_time;
 	
 	/**
-	 * Lifetime before rekeying
-	 */
-	u_int32_t soft_lifetime;
-	
-	/**
-	 * Lifetime before delete
-	 */
-	u_int32_t hard_lifetime;
-	
-	/**
 	 * state of the CHILD_SA
 	 */
 	child_sa_state_t state;
-	
-	/**
-	 * transaction which is rekeying this CHILD_SA
-	 */
-	transaction_t *rekeying_transaction;
-
-	/**
-	 * Updown script
-	 */
-	char *script;
-
-	/**
-	 * Allow host access
-	 */
-	bool hostaccess;
 
 	/**
 	 * Specifies if NAT traversal is used
@@ -172,6 +142,11 @@ struct private_child_sa_t {
 	 * mode this SA uses, tunnel/transport
 	 */
 	mode_t mode;
+	
+	/**
+	 * policy used to create this child
+	 */
+	policy_t *policy;
 };
 
 /**
@@ -179,22 +154,7 @@ struct private_child_sa_t {
  */
 static char *get_name(private_child_sa_t *this)
 {
-	return this->name;
-}
-
-/**
- * Implementation of child_sa_t.set_name.
- */
-static void set_name(private_child_sa_t *this, char* name)
-{
-	char buffer[64];
-	
-	if (snprintf(buffer, sizeof(buffer), "%s[%d]",
-				 name, this->reqid - REQID_START) > 0)
-	{
-		free(this->name);
-		this->name = strdup(buffer);
-	}
+	return this->policy->get_name(this->policy);;
 }
 
 /**
@@ -234,14 +194,25 @@ static child_sa_state_t get_state(private_child_sa_t *this)
 }
 
 /**
+ * Implements child_sa_t.get_policy
+ */
+static policy_t* get_policy(private_child_sa_t *this)
+{
+	return this->policy;
+}
+
+/**
  * Run the up/down script
  */
 static void updown(private_child_sa_t *this, bool up)
 {
 	sa_policy_t *policy;
 	iterator_t *iterator;
+	char *script;
 	
-	if (this->script == NULL)
+	script = this->policy->get_updown(this->policy);
+	
+	if (script == NULL)
 	{
 		return;
 	}
@@ -307,7 +278,7 @@ static void updown(private_child_sa_t *this, bool up)
 				 policy->my_ts->is_host(policy->my_ts,
 							this->me.addr) ? "-host" : "-client",
 				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-ipv6",
-				 this->name,
+				 this->policy->get_name(this->policy),
 				 ifname,
 				 this->reqid,
 				 this->me.addr,
@@ -322,8 +293,8 @@ static void updown(private_child_sa_t *this, bool up)
 				 other_client, other_client_mask,
 				 policy->other_ts->get_from_port(policy->other_ts),
 				 policy->other_ts->get_protocol(policy->other_ts),
-				 this->hostaccess? "PLUTO_HOST_ACCESS='1' " : "",
-				 this->script);
+				 this->policy->get_hostaccess(this->policy) ?
+				 	"PLUTO_HOST_ACCESS='1' " : "", script);
 		free(ifname);
 		free(my_client);
 		free(other_client);
@@ -332,7 +303,7 @@ static void updown(private_child_sa_t *this, bool up)
 
 		if (shell == NULL)
 		{
-			DBG1(DBG_CHD, "could not execute updown script '%s'", this->script);
+			DBG1(DBG_CHD, "could not execute updown script '%s'", script);
 			return;
 		}
 		
@@ -447,7 +418,7 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 static status_t install(private_child_sa_t *this, proposal_t *proposal,
 						mode_t mode, prf_plus_t *prf_plus, bool mine)
 {
-	u_int32_t spi;
+	u_int32_t spi, soft, hard;;
 	algorithm_t *enc_algo, *int_algo;
 	algorithm_t enc_algo_none = {ENCR_UNDEFINED, 0};
 	algorithm_t int_algo_none = {AUTH_UNDEFINED, 0};
@@ -532,16 +503,15 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 		natt = NULL;
 	}
 	
+	soft = this->policy->get_soft_lifetime(this->policy);
+	hard = this->policy->get_hard_lifetime(this->policy);
 	
 	/* send SA down to the kernel */
 	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
-											  src, dst,
-											  spi, this->protocol,
-											  this->reqid,
-											  mine ? this->soft_lifetime : 0,
-											  this->hard_lifetime,
-											  enc_algo, int_algo,
+											  src, dst, spi, this->protocol,
+											  this->reqid, mine ? soft : 0,
+											  hard, enc_algo, int_algo,
 											  prf_plus, natt, mode, mine);
 	
 	this->encryption = *enc_algo;
@@ -705,22 +675,6 @@ static linked_list_t *get_other_traffic_selectors(private_child_sa_t *this)
 }
 
 /**
- * Implementation of child_sa_t.set_rekeying_transaction.
- */
-static void set_rekeying_transaction(private_child_sa_t *this, transaction_t *transaction)
-{
-	this->rekeying_transaction = transaction;
-}
-
-/**
- * Implementation of child_sa_t.get_rekeying_transaction.
- */
-static transaction_t* get_rekeying_transaction(private_child_sa_t *this)
-{
-	return this->rekeying_transaction;
-}
-
-/**
  * Implementation of child_sa_t.get_use_time
  */
 static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use_time)
@@ -769,7 +723,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	private_child_sa_t *this = *((private_child_sa_t**)(args[0]));
 	iterator_t *iterator;
 	sa_policy_t *policy;
-	u_int32_t now, rekeying;
+	u_int32_t now, rekeying, soft;
 	u_int32_t use, use_in, use_fwd;
 	status_t status;
 	size_t written = 0;
@@ -781,8 +735,9 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	now = (u_int32_t)time(NULL);
 	
-	written += fprintf(stream, "%12s:  %N, reqid: %d, %N", this->name,
-					   child_sa_state_names, this->state, this->reqid,
+	written += fprintf(stream, "%12s{%d}:  %N, %N", 
+					   this->policy->get_name(this->policy), this->reqid,
+					   child_sa_state_names, this->state,
 					   mode_names, this->mode);
 	
 	if (this->state == CHILD_INSTALLED)
@@ -793,7 +748,9 @@ static int print(FILE *stream, const struct printf_info *info,
 		
 		if (info->alt)
 		{
-			written += fprintf(stream, "\n%12s:  ", this->name);
+			written += fprintf(stream, "\n%12s{%d}:  ",
+							   this->policy->get_name(this->policy),
+							   this->reqid);
 			
 			if (this->protocol == PROTO_ESP)
 			{
@@ -815,10 +772,11 @@ static int print(FILE *stream, const struct printf_info *info,
 			}
 			written += fprintf(stream, ", rekeying ");
 			
+			soft = this->policy->get_soft_lifetime(this->policy);
 			/* calculate rekey times */
-			if (this->soft_lifetime)
+			if (soft)
 			{
-				rekeying = this->soft_lifetime - (now - this->install_time);
+				rekeying = soft - (now - this->install_time);
 				written += fprintf(stream, "in %ds", rekeying);
 			}
 			else
@@ -830,8 +788,9 @@ static int print(FILE *stream, const struct printf_info *info,
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->iterate(iterator, (void**)&policy))
 	{
-		written += fprintf(stream, "\n%12s:   %R===%R, last use: ",
-						   this->name, policy->my_ts, policy->other_ts);
+		written += fprintf(stream, "\n%12s{%d}:   %R===%R, last use: ",
+						   this->policy->get_name(this->policy), this->reqid,
+						   policy->my_ts, policy->other_ts);
 		
 		/* query time of last policy use */
 
@@ -1074,25 +1033,22 @@ static void destroy(private_child_sa_t *this)
 	this->other.addr->destroy(this->other.addr);
 	this->me.id->destroy(this->me.id);
 	this->other.id->destroy(this->other.id);
-	free(this->name);
-	free(this->script);
+	this->policy->destroy(this->policy);
 	free(this);
 }
 
 /*
  * Described in header.
  */
-child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
+child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 identification_t *my_id, identification_t *other_id,
-							 u_int32_t soft_lifetime, u_int32_t hard_lifetime,
-							 char *script, bool hostaccess, bool use_natt)
+							 policy_t *policy, u_int32_t rekey, bool use_natt)
 {
-	static u_int32_t reqid = REQID_START;
+	static u_int32_t reqid = 0;
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
 
 	/* public functions */
 	this->public.get_name = (char*(*)(child_sa_t*))get_name;
-	this->public.set_name = (void(*)(child_sa_t*,char*))set_name;
 	this->public.get_reqid = (u_int32_t(*)(child_sa_t*))get_reqid;
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
@@ -1104,14 +1060,12 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.get_my_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_my_traffic_selectors;
 	this->public.get_other_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_other_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
-	this->public.set_rekeying_transaction = (void (*)(child_sa_t*,transaction_t*))set_rekeying_transaction;
-	this->public.get_rekeying_transaction = (transaction_t* (*)(child_sa_t*))get_rekeying_transaction;
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
+	this->public.get_policy = (policy_t*(*)(child_sa_t*))get_policy;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
-	this->name = strdup("(uninitialized)");
 	this->me.addr = me->clone(me);
 	this->other.addr = other->clone(other);
 	this->me.id = my_id->clone(my_id);
@@ -1120,11 +1074,7 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->other.spi = 0;
 	this->alloc_ah_spi = 0;
 	this->alloc_esp_spi = 0;
-	this->script = script ? strdup(script) : NULL;
-	this->hostaccess = hostaccess;
 	this->use_natt = use_natt;
-	this->soft_lifetime = soft_lifetime;
-	this->hard_lifetime = hard_lifetime;
 	this->state = CHILD_CREATED;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;
@@ -1137,7 +1087,8 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->other_ts = linked_list_create();
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
-	this->rekeying_transaction = NULL;
+	this->policy = policy;
+	policy->get_ref(policy);
 	
 	return &this->public;
 }
