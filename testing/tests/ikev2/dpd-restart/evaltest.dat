@@ -2,10 +2,10 @@ carol::ipsec statusall::home.*INSTALLED::YES
 moon::ipsec statusall::rw.*INSTALLED::YES
 moon::iptables -A INPUT -i eth0 -s PH_IP_CAROL -j DROP::no output expected::NO
 carol::iptables -A INPUT -i eth0 -s PH_IP_MOON -j DROP::no output expected::NO
-carol::sleep 100::no output expected::NO
+carol::sleep 180::no output expected::NO
 carol::cat /var/log/daemon.log::sending DPD request::YES
-carol::cat /var/log/daemon.log::sending retransmit.*for INFORMATIONAL request::YES
-carol::cat /var/log/daemon.log::giving up after 4 retransmits, deleting IKE_SA::YES
+carol::cat /var/log/daemon.log::retransmit.*of request::YES
+carol::cat /var/log/daemon.log::giving up after 5 retransmits::YES
 carol::cat /var/log/daemon.log::dpd action for home is DPD_RESTART::YES
 carol::iptables -D INPUT -i eth0 -s PH_IP_MOON -j DROP::no output expected::NO
 moon::iptables -D INPUT -i eth0 -s PH_IP_CAROL -j DROP::no output expected::NO
