@@ -60,6 +60,12 @@ struct private_traffic_selector_t {
 	 */
 	u_int8_t protocol;
 	
+	/**
+	 * narrow this traffic selector to hosts external ip
+	 * if set, from and to have no meaning until set_address() is called
+	 */
+	bool dynamic;
+	
 	/** 
 	 * begin of address range, network order
 	 */
@@ -448,6 +454,11 @@ static u_int8_t get_protocol(private_traffic_selector_t *this)
  */
 static bool is_host(private_traffic_selector_t *this, host_t *host)
 {
+	if (this->dynamic)
+	{
+		return TRUE;
+	}
+
 	if (host)
 	{
 		chunk_t addr;
@@ -477,13 +488,11 @@ static bool is_host(private_traffic_selector_t *this, host_t *host)
 }
 
 /**
- * Implements traffic_selector_t.update_address_range.
+ * Implements traffic_selector_t.set_address.
  */
-static void update_address_range(private_traffic_selector_t *this, host_t *host)
+static void set_address(private_traffic_selector_t *this, host_t *host)
 {
-	if ((this->type == TS_IPV4_ADDR_RANGE && this->from4[0] == 0) ||
-			(this->type == TS_IPV6_ADDR_RANGE && this->from6[0] == 0 &&
-			this->from6[1] == 0 && this->from6[2] == 0 && this->from6[3] == 0))
+	if (this->dynamic)
 	{
 		this->type = host->get_family(host) == AF_INET ?
 				TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
@@ -523,6 +532,8 @@ static traffic_selector_t *clone_(private_traffic_selector_t *this)
 	
 	clone = traffic_selector_create(this->protocol, this->type, 
 									this->from_port, this->to_port);
+	
+	clone->dynamic = this->dynamic;
 	switch (clone->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
@@ -556,9 +567,13 @@ static void destroy(private_traffic_selector_t *this)
 /*
  * see header
  */
-traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_type_t type, chunk_t from, u_int16_t from_port, chunk_t to, u_int16_t to_port)
+traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol,
+												ts_type_t type, 
+												chunk_t from, u_int16_t from_port, 
+												chunk_t to, u_int16_t to_port)
 {
-	private_traffic_selector_t *this = traffic_selector_create(protocol, type, from_port, to_port);
+	private_traffic_selector_t *this = traffic_selector_create(protocol, type,
+															from_port, to_port);
 	
 	switch (type)
 	{
@@ -596,7 +611,8 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
 /*
  * see header
  */
-traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t netbits, u_int8_t protocol, u_int16_t port)
+traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, 
+							u_int8_t netbits, u_int8_t protocol, u_int16_t port)
 {
 	private_traffic_selector_t *this = traffic_selector_create(protocol, 0, 0, 65535);
 
@@ -659,13 +675,13 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t ne
 /*
  * see header
  */
-traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_type_t type, char *from_addr, u_int16_t from_port, char *to_addr, u_int16_t to_port)
+traffic_selector_t *traffic_selector_create_from_string(
+										u_int8_t protocol, ts_type_t type,
+										char *from_addr, u_int16_t from_port,
+										char *to_addr, u_int16_t to_port)
 {
-	private_traffic_selector_t *this = traffic_selector_create(protocol, type, from_port, to_port);
-
-	/* public functions */
-	this->public.get_subset = (traffic_selector_t*(*)(traffic_selector_t*,traffic_selector_t*))get_subset;
-	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
+	private_traffic_selector_t *this = traffic_selector_create(protocol, type,
+															from_port, to_port);
 
 	this->type = type;
 	switch (type)
@@ -703,9 +719,28 @@ traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_ty
 }
 
 /*
+ * see header
+ */
+traffic_selector_t *traffic_selector_create_dynamic(
+									u_int8_t protocol, ts_type_t type,
+									u_int16_t from_port, u_int16_t to_port)
+{
+	private_traffic_selector_t *this = traffic_selector_create(protocol, type,
+															from_port, to_port);
+	
+	memset(this->from6, 0, sizeof(this->from6));
+	memset(this->to6, 0xFF, sizeof(this->to6));
+	
+	this->dynamic = TRUE;
+	
+	return &this->public;
+}
+
+/*
  * see declaration
  */
-static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts_type_t type, u_int16_t from_port, u_int16_t to_port)
+static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
+						ts_type_t type, u_int16_t from_port, u_int16_t to_port)
 {
 	private_traffic_selector_t *this = malloc_thing(private_traffic_selector_t);
 
@@ -720,7 +755,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
 	this->public.is_host = (bool(*)(traffic_selector_t*,host_t*))is_host;
 	this->public.includes = (bool(*)(traffic_selector_t*,host_t*))includes;
-	this->public.update_address_range = (void(*)(traffic_selector_t*,host_t*))update_address_range;
+	this->public.set_address = (void(*)(traffic_selector_t*,host_t*))set_address;
 	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone_;
 	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
 	
@@ -728,9 +763,9 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	this->to_port = to_port;
 	this->protocol = protocol;
 	this->type = type;
+	this->dynamic = FALSE;
 	
 	return this;
 }
 
 /* vim: set ts=4 sw=4 noet: */
-

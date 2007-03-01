@@ -1085,7 +1085,29 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
  */
 static status_t find_addr_by_ts(traffic_selector_t *ts, host_t **ip)
 {
-	host_t *try = NULL;
+	host_t *try = NULL, *local;
+	int family;
+	
+	/* if we have a family which includes localhost, we do not
+	 * search for an IP, we use the default */
+	family = ts->get_type(ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
+	
+	if (family == AF_INET)
+	{
+		local = host_create_from_string("127.0.0.1", 0);
+	}
+	else
+	{
+		local = host_create_from_string("::1", 0);
+	}
+	
+	if (ts->includes(ts, local))
+	{
+		*ip = host_create_any(family);
+		local->destroy(local);
+		return SUCCESS;
+	}
+	local->destroy(local);
 
 #ifdef HAVE_GETIFADDRS
 	struct ifaddrs *list;
@@ -1660,6 +1682,26 @@ static status_t manage_srcroute(private_kernel_interface_t *this,
 	unsigned char request[BUFFER_SIZE];
 	chunk_t src;
 	
+	/* if route is 0.0.0.0/0, we can't install it, as it would
+	 * overwrite the default route. Instead, we add two routes:
+	 * 0.0.0.0/1 and 128.0.0.0/1 */
+	if (route->prefixlen == 0)
+	{
+		rt_refcount_t half;
+		status_t status;
+		
+		half.dst_net = chunk_alloca(route->dst_net.len);
+		memset(half.dst_net.ptr, 0, half.dst_net.len);
+		half.src_ip = route->src_ip;
+		half.if_index = route->if_index;
+		half.prefixlen = 1;
+		
+		status = manage_srcroute(this, nlmsg_type, flags, &half);
+		half.dst_net.ptr[0] |= 0x80;
+		status = manage_srcroute(this, nlmsg_type, flags, &half);
+		return status;
+	}
+	
 	memset(&request, 0, sizeof(request));
 
 	hdr = (struct nlmsghdr*)request;
@@ -1675,14 +1717,13 @@ static status_t manage_srcroute(private_kernel_interface_t *this,
 	msg->rtm_type = RTN_UNICAST;
 	msg->rtm_scope = RT_SCOPE_UNIVERSE;
 
-	src = route->src_ip->get_address(route->src_ip);
-
 	if (add_rtattr(hdr, sizeof(request), RTA_DST,
 				   route->dst_net.ptr, route->dst_net.len) != SUCCESS)
 	{
 		return FAILED;
 	}
 
+	src = route->src_ip->get_address(route->src_ip);
 	if (add_rtattr(hdr, sizeof(request), RTA_PREFSRC,
 				   src.ptr, src.len) != SUCCESS)
 	{

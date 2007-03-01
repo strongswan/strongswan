@@ -725,6 +725,8 @@ static status_t release_ca_info(private_local_credential_store_t *this, const ch
 		}
 	}
 	iterator->destroy(iterator);
+	
+	return status;
 }
 
 /**
@@ -774,7 +776,7 @@ static x509_t* add_end_certificate(private_local_credential_store_t *this, x509_
  */
 static x509_t* add_ca_certificate(private_local_credential_store_t *this, x509_t *cert)
 {
-	 add_certificate(this->ca_certs, cert);
+	 return add_certificate(this->ca_certs, cert);
 }
 
 /**

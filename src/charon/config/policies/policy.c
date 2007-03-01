@@ -235,7 +235,7 @@ static linked_list_t *get_traffic_selectors(private_policy_t *this,
 		current = current->clone(current);
 		if (host)
 		{
-			current->update_address_range(current, host);
+			current->set_address(current, host);
 		}
 		
 		result->insert_last(result, (void*)current);
@@ -285,7 +285,7 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 		stored_ts = stored_ts->clone(stored_ts);
 		if (host)
 		{
-			stored_ts->update_address_range(stored_ts, host);
+			stored_ts->set_address(stored_ts, host);
 		}
 		
 		supplied_iter->reset(supplied_iter);

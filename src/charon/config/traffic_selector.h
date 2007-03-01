@@ -176,15 +176,13 @@ struct traffic_selector_t {
 	/**
 	 * @brief Update the address of a traffic selector.
 	 *
-	 * Update the address range of a traffic selector, 
-	 * if the current address is 0.0.0.0. The new address range
-	 * starts from the supplied address and also ends there 
-	 * (which means it is a one-host-address-range ;-).
+	 * Update the address range of a traffic selector, if it is
+	 * constructed with the traffic_selector_create_dynamic().
 	 *
 	 * @param this		called object
-	 * @param host		host_t specifying the address range
+	 * @param host		host_t specifying the address
 	 */
-	void (*update_address_range) (traffic_selector_t *this, host_t* host);
+	void (*set_address) (traffic_selector_t *this, host_t* host);
 	
 	/**
 	 * @brief Compare two traffic selectors for equality.
@@ -196,7 +194,8 @@ struct traffic_selector_t {
 	bool (*equals) (traffic_selector_t *this, traffic_selector_t *other);
 
 	/**
-	 * @brief Check if a specific host is included in the address range of this traffic selector.
+	 * @brief Check if a specific host is included in the address range of 
+	 * this traffic selector.
 	 *
 	 * @param this		called object
 	 * @param host		the host to check
@@ -244,9 +243,7 @@ traffic_selector_t *traffic_selector_create_from_string(
  * @param from_port		port number, host order
  * @param to_address	end of address range as string, network
  * @param to_port		port number, host order
- * @return
- * 						- traffic_selector_t object
- * 						- NULL if invalid address input/protocol
+ * @return				traffic_selector_t object
  *
  * @ingroup config
  */
@@ -277,7 +274,28 @@ traffic_selector_t *traffic_selector_create_from_subnet(
 									host_t *net, u_int8_t netbits, 
 									u_int8_t protocol, u_int16_t port);
 
+/**
+ * @brief Create a traffic selector for host-to-host cases.
+ * 
+ * For host2host or virtual IP setups, the traffic selectors gets
+ * created at runtime using the external/virtual IP. Using this constructor,
+ * a call to set_address() sets this traffic selector to the supplied host.
+ * 
+ * 
+ * @param protocol		upper layer protocl to allow
+ * @param type			family type
+ * @param from_port		start of allowed port range
+ * @param to_port		end of range
+ * @return
+ * 						- traffic_selector_t object
+ * 						- NULL if type not supported
+ *
+ * @ingroup config
+ */
+traffic_selector_t *traffic_selector_create_dynamic(
+									u_int8_t protocol, ts_type_t type,
+									u_int16_t from_port, u_int16_t to_port);
+
 #endif /* TRAFFIC_SELECTOR_H_ */
 
 /* vim: set ts=4 sw=4 noet: */
-

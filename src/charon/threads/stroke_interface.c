@@ -314,15 +314,37 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		my_vip = host_create_from_string(msg->add_conn.me.sourceip, 0);
 	}
 	other_vip = host_create_from_string(msg->add_conn.other.sourceip, 0);
-		
-	my_ts = traffic_selector_create_from_subnet(my_subnet,
+	
+	if (msg->add_conn.me.tohost)
+	{
+		my_ts = traffic_selector_create_dynamic(msg->add_conn.me.protocol,
+					my_host->get_family(my_host) == AF_INET ?
+						TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE,
+					msg->add_conn.me.port ? msg->add_conn.me.port : 0,
+					msg->add_conn.me.port ? msg->add_conn.me.port : 65535);
+	}
+	else
+	{
+		my_ts = traffic_selector_create_from_subnet(my_subnet,
 				msg->add_conn.me.subnet ?  msg->add_conn.me.subnet_mask : 0,
 				msg->add_conn.me.protocol, msg->add_conn.me.port);
+	}
 	my_subnet->destroy(my_subnet);
-
-	other_ts = traffic_selector_create_from_subnet(other_subnet, 
-			msg->add_conn.other.subnet ?  msg->add_conn.other.subnet_mask : 0,
-			msg->add_conn.other.protocol, msg->add_conn.other.port);
+	
+	if (msg->add_conn.other.tohost)
+	{
+		other_ts = traffic_selector_create_dynamic(msg->add_conn.other.protocol,
+					other_host->get_family(other_host) == AF_INET ?
+						TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE,
+					msg->add_conn.other.port ? msg->add_conn.other.port : 0,
+					msg->add_conn.other.port ? msg->add_conn.other.port : 65535);
+	}
+	else
+	{
+		other_ts = traffic_selector_create_from_subnet(other_subnet, 
+				msg->add_conn.other.subnet ?  msg->add_conn.other.subnet_mask : 0,
+				msg->add_conn.other.protocol, msg->add_conn.other.port);
+	}
 	other_subnet->destroy(other_subnet);
 
 	if (msg->add_conn.me.ca)

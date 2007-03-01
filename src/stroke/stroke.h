@@ -106,6 +106,7 @@ struct stroke_end_t {
 	int subnet_mask;
 	int sendcert;
 	int hostaccess;
+	int tohost;
 	u_int8_t protocol;
 	u_int16_t port;
 };
