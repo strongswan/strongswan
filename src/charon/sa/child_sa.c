@@ -223,6 +223,7 @@ static void updown(private_child_sa_t *this, bool up)
 		char command[1024];
 		char *ifname = NULL;
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
+		char *virtual_ip;
 		char *pos;
 		FILE *shell;
 		
@@ -246,11 +247,25 @@ static void updown(private_child_sa_t *this, bool up)
 			*pos = '\0';
 		}
 		
+		/* do we have a local virtual IP? */
+		{
+			host_t *vip = NULL;
+
+			if (vip)
+			{
+				asprintf(&virtual_ip, "MY_SOURCEIP='%H' ", vip);
+			}
+			else
+			{
+				asprintf(&virtual_ip, "");
+			}
+		}
+
 		charon->socket->is_local_address(charon->socket, this->me.addr, &ifname);
 		
 		/* build the command with all env variables.
-		* TODO: PLUTO_MY_SRCIP, PLUTO_PEER_CA and PLUTO_NEXT_HOP 
-		* are currently missing */
+		 * TODO: PLUTO_PEER_CA and PLUTO_NEXT_HOP are currently missing
+		 */
 		snprintf(command, sizeof(command),
 				 "2>&1 "
 				"PLUTO_VERSION='1.1' "
@@ -273,6 +288,7 @@ static void updown(private_child_sa_t *this, bool up)
 				"PLUTO_PEER_PORT='%u' "
 				"PLUTO_PEER_PROTOCOL='%u' "
 				"%s"
+				"%s"
 				"%s",
 				 up ? "up" : "down",
 				 policy->my_ts->is_host(policy->my_ts,
@@ -293,11 +309,14 @@ static void updown(private_child_sa_t *this, bool up)
 				 other_client, other_client_mask,
 				 policy->other_ts->get_from_port(policy->other_ts),
 				 policy->other_ts->get_protocol(policy->other_ts),
+				 virtual_ip,
 				 this->policy->get_hostaccess(this->policy) ?
-				 	"PLUTO_HOST_ACCESS='1' " : "", script);
+				 	"PLUTO_HOST_ACCESS='1' " : "",
+				 script);
 		free(ifname);
 		free(my_client);
 		free(other_client);
+		free(virtual_ip);
 		
 		shell = popen(command, "r");
 
