@@ -1653,8 +1653,11 @@ static int get_iface(private_kernel_interface_t *this, host_t* ip)
 	}
 	rta = (struct rtattr*)(NLMSG_DATA(hdr) + NLMSG_LENGTH(sizeof(struct rtmsg)));
 
+	DBG1(DBG_KNL, "listing attributes:");
 	while(RTA_OK(rta, hdr->nlmsg_len))
 	{
+		DBG1(DBG_KNL, "  found rtattr: %d, data %b", rta->rta_type,
+			 RTA_DATA(rta), rta->rta_len - 4);
 		if(rta->rta_type == RTA_OIF)
 		{
 			ifindex = *((int*)RTA_DATA(rta));
