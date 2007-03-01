@@ -1145,7 +1145,7 @@ static status_t find_addr_by_ts(traffic_selector_t *ts, host_t **ip)
 #else /* !HAVE_GETIFADDRS */
 
 	/* only IPv4 supported yet */
-	if (ts->get_type != TS_IPV4_ADDR_RANGE)
+	if (ts->get_type(ts) != TS_IPV4_ADDR_RANGE)
 	{
 		return FAILED;
 	}
@@ -1173,7 +1173,7 @@ static status_t find_addr_by_ts(traffic_selector_t *ts, host_t **ip)
 			continue;
 		}
 
-		try = host_create_from_sockaddr(conf.ifc_req->ifr_addr);
+		try = host_create_from_sockaddr(&conf.ifc_req->ifr_addr);
 
 		if (try && ts->includes(ts, try))
 		{
