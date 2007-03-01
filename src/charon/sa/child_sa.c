@@ -144,6 +144,11 @@ struct private_child_sa_t {
 	mode_t mode;
 	
 	/**
+	 * virtual IP assinged to local host
+	 */
+	host_t *virtual_ip;
+	
+	/**
 	 * policy used to create this child
 	 */
 	policy_t *policy;
@@ -223,8 +228,7 @@ static void updown(private_child_sa_t *this, bool up)
 		char command[1024];
 		char *ifname = NULL;
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
-		char *virtual_ip;
-		char *pos;
+		char *pos, *virtual_ip;
 		FILE *shell;
 		
 		/* get subnet/bits from string */
@@ -246,20 +250,16 @@ static void updown(private_child_sa_t *this, bool up)
 		{
 			*pos = '\0';
 		}
-		
-		/* do we have a local virtual IP? */
-		{
-			host_t *vip = NULL;
 
-			if (vip)
-			{
-				asprintf(&virtual_ip, "MY_SOURCEIP='%H' ", vip);
-			}
-			else
-			{
-				asprintf(&virtual_ip, "");
-			}
-		}
+        if (this->virtual_ip)
+        {
+                asprintf(&virtual_ip, "PLUTO_MY_SOURCEIP='%H' ",
+                		 this->virtual_ip);
+        }
+        else
+        {
+                asprintf(&virtual_ip, "");
+        }
 
 		charon->socket->is_local_address(charon->socket, this->me.addr, &ifname);
 		
@@ -992,6 +992,14 @@ static status_t update_hosts(private_child_sa_t *this, host_t *new_me, host_t *n
 }
 
 /**
+ * Implementation of child_sa_t.set_virtual_ip.
+ */
+static void set_virtual_ip(private_child_sa_t *this, host_t *ip)
+{
+	this->virtual_ip = ip->clone(ip);
+}
+
+/**
  * Implementation of child_sa_t.destroy.
  */
 static void destroy(private_child_sa_t *this)
@@ -1053,6 +1061,7 @@ static void destroy(private_child_sa_t *this)
 	this->me.id->destroy(this->me.id);
 	this->other.id->destroy(this->other.id);
 	this->policy->destroy(this->policy);
+	DESTROY_IF(this->virtual_ip);
 	free(this);
 }
 
@@ -1082,6 +1091,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
 	this->public.get_policy = (policy_t*(*)(child_sa_t*))get_policy;
+	this->public.set_virtual_ip = (void(*)(child_sa_t*,host_t*))set_virtual_ip;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
@@ -1106,6 +1116,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->other_ts = linked_list_create();
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
+	this->virtual_ip = NULL;
 	this->policy = policy;
 	policy->get_ref(policy);
 	

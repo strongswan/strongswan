@@ -259,6 +259,17 @@ struct child_sa_t {
 	policy_t* (*get_policy) (child_sa_t *this);
 	
 	/**
+	 * @brief Set the virtual IP used received from IRAS.
+	 *
+	 * To allow proper setup of firewall rules, the virtual IP is required
+	 * for filtering.
+	 *
+	 * @param this 		calling object
+	 * @param ip		own virtual IP
+	 */
+	void (*set_virtual_ip) (child_sa_t *this, host_t *ip);
+	
+	/**
 	 * @brief Destroys a child_sa.
 	 *
 	 * @param this 		calling object

@@ -198,7 +198,9 @@ static status_t select_and_install(private_child_create_t *this)
 	if (this->initiator && my_vip)
 	{	/* if we have a virtual IP, shorten our TS to the minimum */
 		my_ts = this->policy->select_my_traffic_selectors(this->policy, my_ts,
-											 				my_vip);
+											 			  my_vip);
+		/* to setup firewall rules correctly, CHILD_SA needs the virtual IP */
+		this->child_sa->set_virtual_ip(this->child_sa, my_vip);
 	}
 	else
 	{	/* shorten in the host2host case only */
