@@ -724,7 +724,7 @@ static void destroy(private_task_manager_t *this)
 				SIG(IKE_UP_FAILED, "establishing IKE_SA failed");
 				break;
 			case IKE_DELETE:
-				SIG(IKE_DOWN_FAILED, "deleteing IKE_SA properly failed");
+				SIG(IKE_DOWN_FAILED, "deleting IKE_SA properly failed");
 				break;
 			case IKE_REKEY:
 				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed");
