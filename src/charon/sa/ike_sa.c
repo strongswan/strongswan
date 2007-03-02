@@ -1620,11 +1620,11 @@ static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
 			DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
 			charon->kernel_interface->del_ip(charon->kernel_interface,
 											 this->my_virtual_ip,
-											 this->other_host);
+											 this->my_host);
 			this->my_virtual_ip->destroy(this->my_virtual_ip);
 		}
 		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
-											 this->other_host) == SUCCESS)
+											 this->my_host) == SUCCESS)
 		{
 			this->my_virtual_ip = ip->clone(ip);
 		}
@@ -1848,7 +1848,7 @@ static void destroy(private_ike_sa_t *this)
 	if (this->my_virtual_ip)
 	{
 		charon->kernel_interface->del_ip(charon->kernel_interface,
-										 this->my_virtual_ip, this->other_host);
+										 this->my_virtual_ip, this->my_host);
 		this->my_virtual_ip->destroy(this->my_virtual_ip);
 	}
 	DESTROY_IF(this->other_virtual_ip);
