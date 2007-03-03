@@ -126,14 +126,14 @@ struct credential_store_t {
 	x509_t* (*get_ca_certificate_by_keyid) (credential_store_t *this, chunk_t keyid);
 	
 	/**
-	 * @brief Returns the issuer certificate of a given certificate.
+	 * @brief Returns the issuing ca of a given certificate.
 	 * 
 	 * @param this					calling object
-	 * @param id					certificate for which issuer cert is required
-	 * @return						certificate, or NULL if not found
+	 * @param cert					certificate for which issuer ca info is required
+	 * @return						ca info, or NULL if not found
 	 */
-	x509_t* (*get_issuer_certificate) (credential_store_t *this, const x509_t* cert);
-	
+	ca_info_t* (*get_issuer) (credential_store_t *this, const x509_t* cert);
+
 	/**
 	 * @brief Verify an X.509 certificate up to trust anchor including revocation checks
 	 *
@@ -206,12 +206,13 @@ struct credential_store_t {
 	iterator_t* (*create_cainfo_iterator) (credential_store_t *this);
 
 	/**
-	 * @brief Create an iterator over all CRLs.
+	 * @brief Check if there are any CRLs.
 	 *
 	 * @param this		calling object
-	 * @return 			iterator
+	 * @param out		output stream
+	 * @param utc		either utc or local time
 	 */
-	iterator_t* (*create_crl_iterator) (credential_store_t *this);
+	void (*list_crls) (credential_store_t *this, FILE *out, bool utc);
 
 	/**
 	 * @brief Loads trusted CA certificates from a default directory.

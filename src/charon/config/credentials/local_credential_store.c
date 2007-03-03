@@ -28,8 +28,8 @@
 #include <library.h>
 #include <utils/lexparser.h>
 #include <utils/linked_list.h>
-#include <crypto/certinfo.h>
 #include <crypto/rsa/rsa_public_key.h>
+#include <crypto/certinfo.h>
 #include <crypto/x509.h>
 #include <crypto/ca.h>
 #include <crypto/crl.h>
@@ -88,6 +88,47 @@ static shared_key_t *shared_key_create(chunk_t secret)
 	return (this);
 }
 
+/* ---------------------------------------------------------------------- *
+ * the ca_info_t object as a central control element
+
++------------------------------------------------------+
+| local_credential_store_t                             |
++------------------------------------------------------+
+  |                            |
++-------------------------+  +-------------------------+
+| linked_list_t *ca_certs |  | linked_list_t *ca_infos |
++-------------------------+  +-------------------------+
+  |                            |
+  |                 +------------------------- +
+  |                 | ca_info_t                |
+  |                 +--------------------------+
++---------------+   | char *name               |
+| x509_t        |<--| x509_t *cacert           |   +----------------------+
++---------------+   | linked_list_t *certinfos |-->| certinfo_t           |
+| chunk_t keyid |   | linked_list_t *ocspuris  |   +----------------------+
++---------------+   | bool ocsp_fetch_pending  |   | chunk_t serialNumber |
+  |                 | crl_t *crl               |   | cert_status_t status |
+  |                 | linked_list_t *crluris   |   | time_t thisUpdate    |
+  |                 | bool crl_fetch_pending   |   | time_t nextUpdate    |
+  |                 | pthread_mutex_t mutex    |   | bool once            |
+  |                 +--------------------------+   +----------------------+
+  |                            |                     |
+  |                 +------------------------- +   +----------------------+
+  |                 | ca_info_t                |   | certinfo_t           |
+  |                 +--------------------------+   +----------------------+
++---------------+   | char *name               |   | chunk_t serialNumber |
+| x509_t        |<--| x509_t *cacert           |   | cert_status_t status |
++---------------+   | linked_list_t *certinfos |   | time_t thisUpdate    |
+| chunk_t keyid |   | linked_list_t *ocspuris  |   | time_t nextUpdate    |
++---------------+   | bool ocsp_fetch_pending  |   | bool once            |
+  |                 | crl_t *crl               |   +----------------------+
+  |                 | linked_list_t *crluris   |     |
+  |                 | bool crl_fetch_pending   |
+  |                 | pthread_mutex_t mutex;   |
+  |                 +--------------------------+
+  |                            |
+
+ * ---------------------------------------------------------------------- */
 
 typedef struct private_local_credential_store_t private_local_credential_store_t;
 
@@ -125,21 +166,6 @@ struct private_local_credential_store_t {
 	 * list of X.509 CA information records
 	 */
 	linked_list_t *ca_infos;
-
-	/**
-	 * mutex controlling the access to the ca_infos linked list
-	 */
-	pthread_mutex_t ca_infos_mutex;
-
-	/**
-	 * list of X.509 CRLs
-	 */
-	linked_list_t *crls;
-
-	/**
-	 * mutex controlling the access to the crls linked list
-	 */
-	pthread_mutex_t crls_mutex;
 
 	/**
 	 * enforce strict crl policy
@@ -382,97 +408,26 @@ static x509_t* get_ca_certificate_by_keyid(private_local_credential_store_t *thi
 }
 
 /**
- * Implementation of credential_store_t.get_issuer_certificate.
+ * Implementation of credential_store_t.get_issuer.
  */
-static x509_t* get_issuer_certificate(private_local_credential_store_t *this,
-									  const x509_t *cert)
+static ca_info_t* get_issuer(private_local_credential_store_t *this, const x509_t *cert)
 {
-	x509_t *found = NULL;
-	x509_t *current_cert;
+	ca_info_t *found = NULL;
+	ca_info_t *ca_info;
 
-	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
+	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
 
-	while (iterator->iterate(iterator, (void**)&current_cert))
+	while (iterator->iterate(iterator, (void**)&ca_info))
 	{
-		if (cert->is_issuer(cert, current_cert))
+		if (ca_info->is_cert_issuer(ca_info, cert))
 		{
-			found = current_cert;
+			found = ca_info;
 			break;
 		}
 	}
 	iterator->destroy(iterator);
 
 	return found;
-}
-
-/**
- * Implementation of credential_store_t.get_crl.
- */
-static crl_t* get_crl(private_local_credential_store_t *this, const x509_t *issuer)
-{
-	crl_t *crl = NULL, *current_crl;
-
-	iterator_t *iterator = this->crls->create_iterator(this->crls, TRUE);
-
-	while (iterator->iterate(iterator, (void**)&current_crl))
-	{
-		if (current_crl->is_issuer(current_crl, issuer))
-		{
-			crl = current_crl;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-
-	return crl;
-}
-
-/**
- *  Verify the certificate status using CRLs
- */
-static cert_status_t verify_by_crl(private_local_credential_store_t* this, const x509_t *cert,
-	const x509_t *issuer_cert, certinfo_t *certinfo)
-{
-	crl_t *crl;
-	bool valid_signature;
-	rsa_public_key_t *issuer_public_key;
-
-
-	pthread_mutex_lock(&(this->crls_mutex));
-
-	crl = get_crl(this, issuer_cert);
-	if (crl == NULL)
-	{
-		DBG1(DBG_CFG, "crl not found");
-		goto err;
-	}
-	DBG2(DBG_CFG, "crl found");
-	
-	issuer_public_key = issuer_cert->get_public_key(issuer_cert);
-	valid_signature = crl->verify(crl, issuer_public_key);
-
-	if (!valid_signature)
-	{
-		DBG1(DBG_CFG, "crl signature is invalid");
-		goto err;
-	}
-	DBG2(DBG_CFG, "crl signature is valid");
-
-	crl->get_status(crl, certinfo);
-
-err:
-	pthread_mutex_unlock(&(this->crls_mutex));
-	return certinfo->get_status(certinfo);
-}
-
-/**
-  * Verify the certificate status using OCSP
-  */
-static cert_status_t verify_by_ocsp(private_local_credential_store_t* this,
-	 		const x509_t *cert, certinfo_t *certinfo)
-{
-	/* TODO implement function */
-	return CERT_UNDEFINED;
 }
 
 /**
@@ -518,6 +473,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
 	{
 		err_t ugh = NULL;
+		ca_info_t *issuer;
 		x509_t *issuer_cert;
 		rsa_public_key_t *issuer_public_key;
 		bool valid_signature;
@@ -533,14 +489,15 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 		}
 		DBG2(DBG_CFG, "certificate is valid");
 
-		issuer_cert = get_issuer_certificate(this, cert);
-		if (issuer_cert == NULL)
+		issuer = get_issuer(this, cert);
+		if (issuer == NULL)
 		{
-			DBG1(DBG_CFG, "issuer certificate not found");
+			DBG1(DBG_CFG, "issuer info not found");
 			return FALSE;
 		}
-		DBG2(DBG_CFG, "issuer certificate found");
+		DBG2(DBG_CFG, "issuer info found");
 
+		issuer_cert = issuer->get_certificate(issuer);
 		issuer_public_key = issuer_cert->get_public_key(issuer_cert);
 		valid_signature = cert->verify(cert, issuer_public_key);
 
@@ -574,12 +531,12 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			certinfo->set_nextUpdate(certinfo, until);
 
 			/* first check certificate revocation using ocsp */
-			status = verify_by_ocsp(this, cert, certinfo);
+			status = issuer->verify_by_ocsp(issuer, cert, certinfo);
 
 			/* if ocsp service is not available then fall back to crl */
 			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && this->strict))
 			{
-				status = verify_by_crl(this, cert, issuer_cert, certinfo);
+				status = issuer->verify_by_crl(issuer, cert, certinfo);
 			}
 			
 			nextUpdate = certinfo->get_nextUpdate(certinfo);
@@ -683,7 +640,7 @@ static void add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_in
 	ca_info_t *current_ca_info;
 	ca_info_t *found_ca_info = NULL;
 
-	iterator_t *iterator = this->ca_infos->create_iterator_locked(this->ca_infos, &(this->ca_infos_mutex));
+	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
 
 	while (iterator->iterate(iterator, (void**)&current_ca_info))
 	{
@@ -693,6 +650,8 @@ static void add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_in
 			break;
 		}
 	}
+	iterator->destroy(iterator);
+
 	if (found_ca_info)
 	{
 		current_ca_info->add_info(current_ca_info, ca_info);
@@ -702,7 +661,6 @@ static void add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_in
 	{
 		this->ca_infos->insert_last(this->ca_infos, (void*)ca_info);
 	}
-	iterator->destroy(iterator);
 }
 
 /**
@@ -713,13 +671,12 @@ static status_t release_ca_info(private_local_credential_store_t *this, const ch
 	status_t status = NOT_FOUND;
 	ca_info_t *ca_info;
 
-	iterator_t *iterator = this->ca_infos->create_iterator_locked(this->ca_infos, &(this->ca_infos_mutex));
+	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
 
 	while (iterator->iterate(iterator, (void**)&ca_info))
 	{
-		if (ca_info->equals_name(ca_info, name))
+		if (ca_info->equals_name_release_info(ca_info, name))
 		{
-			ca_info->release_info(ca_info);
 			status = SUCCESS;
 			break;
 		}
@@ -738,34 +695,32 @@ static x509_t* add_end_certificate(private_local_credential_store_t *this, x509_
 
 	if (ret_cert == cert)
 	{
-		x509_t *issuer_cert = get_issuer_certificate(this, cert);
+		ca_info_t *issuer = get_issuer(this, cert);
 
-		if (issuer_cert)
+		if (issuer)
 		{
-			ca_info_t *ca_info = ca_info_create(NULL, issuer_cert);
-
+			/* add any crl distribution points to the issuer ca info record */
 			{
 				iterator_t *iterator = cert->create_crluri_iterator(cert);
 				identification_t *uri;
 	
 				while (iterator->iterate(iterator, (void**)&uri))
 				{
-					ca_info->add_crluri(ca_info, uri->get_encoding(uri));
+					issuer->add_crluri(issuer, uri->get_encoding(uri));
 				}
 				iterator->destroy(iterator);
 			}
+			/* add any ocsp access points to the issuer ca info record */
 			{
 				iterator_t *iterator = cert->create_ocspuri_iterator(cert);
 				identification_t *uri;
 	
 				while (iterator->iterate(iterator, (void**)&uri))
 				{
-					ca_info->add_ocspuri(ca_info, uri->get_encoding(uri));
+					issuer->add_ocspuri(issuer, uri->get_encoding(uri));
 				}
 				iterator->destroy(iterator);
 			}
-
-			add_ca_info(this, ca_info);
 		}
 	}
 	return ret_cert;
@@ -800,15 +755,34 @@ static iterator_t* create_cacert_iterator(private_local_credential_store_t *this
  */
 static iterator_t* create_cainfo_iterator(private_local_credential_store_t *this)
 {
-	return this->ca_infos->create_iterator_locked(this->ca_infos, &(this->ca_infos_mutex));
+	return this->ca_infos->create_iterator(this->ca_infos, TRUE);
 }
 
 /**
- * Implements local_credential_store_t.create_crl_iterator
+ * Implements local_credential_store_t.list_crls
  */
-static iterator_t* create_crl_iterator(private_local_credential_store_t *this)
+static void list_crls(private_local_credential_store_t *this, FILE *out, bool utc)
 {
-	return this->crls->create_iterator_locked(this->crls, &(this->crls_mutex));
+	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
+	ca_info_t *ca_info;
+	bool first = TRUE;
+
+	while (iterator->iterate(iterator, (void **)&ca_info))
+	{
+		if (ca_info->has_crl(ca_info))
+		{
+			if (first)
+			{
+				fprintf(out, "\n");
+				fprintf(out, "List of X.509 CRLs:\n");
+				fprintf(out, "\n");
+				first = FALSE;
+			}
+			ca_info->list_crl(ca_info, out, utc);
+			break;
+		}
+	}
+	iterator->destroy(iterator);
 }
 
 /**
@@ -875,48 +849,30 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 }
 
 /**
- * Add the latest crl to a linked list
+ * Add the latest crl to the issuing ca
  */
-static crl_t* add_crl(linked_list_t *crls, crl_t *crl)
+static void add_crl(private_local_credential_store_t *this, crl_t *crl)
 {
+	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
+	ca_info_t *ca_info;
 	bool found = FALSE;
-	crl_t *current_crl;
 
-	iterator_t *iterator = crls->create_iterator(crls, TRUE);
-
-	while (iterator->iterate(iterator, (void**)&current_crl))
+	while (iterator->iterate(iterator, (void**)&ca_info))
 	{
-		if (crl->equals_issuer(crl, current_crl))
+		if (ca_info->is_crl_issuer(ca_info, crl))
 		{
 			found = TRUE;
-			if (crl->is_newer(crl, current_crl))
-			{
-				crl_t *old_crl = NULL;
-				
-				iterator->replace(iterator, (void**)&old_crl, (void*)crl);
-				if (old_crl != NULL)
-				{
-					old_crl->destroy(old_crl);
-				}
-				DBG2(DBG_CFG, "  thisUpdate is newer - existing crl replaced");
-			}
-			else
-			{
-				crl->destroy(crl);
-				crl = current_crl;
-				DBG2(DBG_CFG, "  thisUpdate is not newer - existing crl retained");
-			}
+			ca_info->add_crl(ca_info, crl);
 			break;
 		}
 	}
 	iterator->destroy(iterator);
-
+	
 	if (!found)
 	{
-		crls->insert_last(crls, (void*)crl);
-		DBG2(DBG_CFG, "  crl added");
+		crl->destroy(crl);
+		DBG2(DBG_CFG, "  no issuing ca found for this crl - discarded");
 	}
-	return crl;
 }
 
 /**
@@ -958,11 +914,9 @@ static void load_crls(private_local_credential_store_t *this)
 
 				if (ugh != NULL)	
 				{
-					DBG1(DBG_CFG, "warning: crl %s", ugh);
+					DBG1(DBG_CFG, "  warning: crl %s", ugh);
 				}
-				pthread_mutex_lock(&(this->crls_mutex));
-				crl = add_crl(this->crls, crl);
-				pthread_mutex_unlock(&(this->crls_mutex));
+				add_crl(this, crl);
 			}
 		}
 	}
@@ -1217,7 +1171,6 @@ static void destroy(private_local_credential_store_t *this)
 	this->certs->destroy_offset(this->certs, offsetof(x509_t, destroy));
 	this->ca_certs->destroy_offset(this->ca_certs, offsetof(x509_t, destroy));
 	this->ca_infos->destroy_offset(this->ca_infos, offsetof(ca_info_t, destroy));
-	this->crls->destroy_offset(this->crls, offsetof(crl_t, destroy));
 	this->private_keys->destroy_offset(this->private_keys, offsetof(rsa_private_key_t, destroy));
 	this->shared_keys->destroy_function(this->shared_keys, (void*)shared_key_destroy);
 	free(this);
@@ -1238,7 +1191,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
 	this->public.credential_store.get_ca_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_ca_certificate;
 	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,chunk_t))get_ca_certificate_by_keyid;
-	this->public.credential_store.get_issuer_certificate = (x509_t* (*) (credential_store_t*,const x509_t*))get_issuer_certificate;
+	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,const x509_t*))get_issuer;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
 	this->public.credential_store.add_ca_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_ca_certificate;
@@ -1247,23 +1200,18 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.create_cert_iterator = (iterator_t* (*) (credential_store_t*))create_cert_iterator;
 	this->public.credential_store.create_cacert_iterator = (iterator_t* (*) (credential_store_t*))create_cacert_iterator;
 	this->public.credential_store.create_cainfo_iterator = (iterator_t* (*) (credential_store_t*))create_cainfo_iterator;
-	this->public.credential_store.create_crl_iterator = (iterator_t* (*) (credential_store_t*))create_crl_iterator;
+	this->public.credential_store.list_crls = (void (*) (credential_store_t*,FILE*,bool))list_crls;
 	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
 	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;
 	this->public.credential_store.load_secrets = (void (*) (credential_store_t*))load_secrets;
 	this->public.credential_store.destroy = (void (*) (credential_store_t*))destroy;
 	
-	/* initialize mutexes */
-	pthread_mutex_init(&(this->crls_mutex), NULL);
-	pthread_mutex_init(&(this->ca_infos_mutex), NULL);
-
 	/* private variables */
 	this->shared_keys = linked_list_create();
 	this->private_keys = linked_list_create();
 	this->certs = linked_list_create();
 	this->ca_certs = linked_list_create();
 	this->ca_infos = linked_list_create();
-	this->crls = linked_list_create();
 	this->strict = strict;
 
 	return (&this->public);
