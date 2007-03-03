@@ -200,6 +200,7 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	host_t *my_vip = NULL, *other_vip = NULL;
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
+	char *interface;
 	
 	pop_string(msg, &msg->add_conn.name);
 	pop_string(msg, &msg->add_conn.me.address);
@@ -253,8 +254,10 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		my_host->destroy(my_host);
 		return;
 	}
-
-	if (charon->socket->is_local_address(charon->socket, other_host, NULL))
+	
+	interface = charon->kernel_interface->get_interface(charon->kernel_interface, 
+														other_host);
+	if (interface)
 	{
 		stroke_end_t tmp_end;
 		host_t *tmp_host;
@@ -268,11 +271,18 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		tmp_end = msg->add_conn.me;
 		msg->add_conn.me = msg->add_conn.other;
 		msg->add_conn.other = tmp_end;
+		free(interface);
 	}
-	else if (!charon->socket->is_local_address(charon->socket, my_host, NULL))
+	if (!interface)
 	{
-		DBG1(DBG_CFG, "left nor right host is our side, aborting\n");
-		goto destroy_hosts;
+		interface = charon->kernel_interface->get_interface(
+											charon->kernel_interface, my_host);
+		if (!interface)
+		{
+			DBG1(DBG_CFG, "left nor right host is our side, aborting\n");
+			goto destroy_hosts;
+		}
+		free(interface);
 	}
 
 	my_id = identification_create_from_string(msg->add_conn.me.id ?
@@ -897,7 +907,7 @@ static void stroke_statusall(stroke_msg_t *msg, FILE *out)
 			charon->job_queue->get_count(charon->job_queue));
 	fprintf(out, " scheduled events: %d\n",
 			charon->event_queue->get_count(charon->event_queue));
-	list = charon->socket->create_local_address_list(charon->socket);
+	list = charon->kernel_interface->create_address_list(charon->kernel_interface);
 
 	fprintf(out, "Listening on %d IP addresses:\n", list->get_count(list));
 	while (list->remove_first(list, (void**)&host) == SUCCESS)

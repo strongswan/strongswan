@@ -88,27 +88,6 @@ struct socket_t {
 	status_t (*send) (socket_t *this, packet_t *packet);
 	
 	/**
-	 * @brief Check if an address is an address of this host.
-	 *
-	 * If the name parameter is not NULL, a string is allocated which
-	 * holds the interfaces name. 
-	 *
-	 * @param this			socket_t object to work on
-	 * @param host			address to check
-	 * @param name[out]		interface name on which address is used
-	 * @return 				TRUE if local address, FALSE otherwise
-	 */
-	bool (*is_local_address) (socket_t *this, host_t *host, char **name);
-	
-	/**
-	 * @brief Create a list of hosts with all local addresses.
-	 *
-	 * @param this			socket_t object to work on
-	 * @return 				list with host_t objects
-	 */
-	linked_list_t *(*create_local_address_list) (socket_t *this);
-	
-	/**
 	 * @brief Destroy sockets.
 	 * 
 	 * close sockets and destroy socket_t object

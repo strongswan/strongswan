@@ -249,7 +249,7 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 	if (host->is_anyaddr(host))
 	{
 		/* TODO: we could get the src address from netlink!? */
-		list = charon->socket->create_local_address_list(charon->socket);
+		list = charon->kernel_interface->create_address_list(charon->kernel_interface);
 		while (list->remove_first(list, (void**)&host) == SUCCESS)
 		{
 			notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);

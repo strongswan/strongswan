@@ -6,15 +6,15 @@
  */
 
 /*
- * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
+ * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2003 Herbert Xu.
  * 
- * Contains modified parts from pluto.
+ * Based on xfrm code from pluto.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -235,6 +235,32 @@ static void vip_entry_destroy(vip_entry_t *this)
 	free(this);
 }
 
+typedef struct address_entry_t address_entry_t;
+
+/**
+ * an address found on the system, containg address and interface info 
+ */
+struct address_entry_t {
+
+	/** address of this entry */
+	host_t *host;
+	
+	/** interface index */
+	int ifindex;
+	
+	/** name of the index */
+	char ifname[IFNAMSIZ];
+};
+
+/**
+ * destroy an address entry
+ */
+static void address_entry_destroy(address_entry_t *this)
+{
+	this->host->destroy(this->host);
+	free(this);
+}
+
 typedef struct private_kernel_interface_t private_kernel_interface_t;
 
 /**
@@ -419,7 +445,7 @@ static void receive_events(private_kernel_interface_t *this)
 		unsigned char response[512];
 		struct nlmsghdr *hdr;
 		struct sockaddr_nl addr;
-		socklen_t addr_len;
+		socklen_t addr_len = sizeof(addr);
 		int len;
 		
 		hdr = (struct nlmsghdr*)response;
@@ -470,7 +496,7 @@ static void receive_events(private_kernel_interface_t *this)
 			{
 				DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
 				DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid %d",
-								  reqid);
+					 reqid);
 				job = (job_t*)acquire_job_create(reqid);
 				charon->job_queue->add(charon->job_queue, job);
 			}
@@ -491,7 +517,7 @@ static void receive_events(private_kernel_interface_t *this)
 			DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
 			DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
 				 expire->hard ? "delete" : "rekey",  protocol_id_names,
-				 protocol, ntohl(spi), reqid);
+				 protocol, spi, reqid);
 			if (expire->hard)
 			{
 				job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
@@ -555,6 +581,12 @@ static status_t netlink_send(int socket, struct nlmsghdr *in,
 		tmp.len = sizeof(buf);
 		tmp.ptr = buf;
 		msg = (struct nlmsghdr*)tmp.ptr;
+		
+		memset(&addr, 0, sizeof(addr));
+		addr.nl_family = AF_NETLINK;
+		addr.nl_pid = getpid();
+		addr.nl_groups = 0;
+		addr_len = sizeof(addr);
 		
 		len = recvfrom(socket, tmp.ptr, tmp.len, 0,
 					   (struct sockaddr*)&addr, &addr_len);
@@ -655,18 +687,16 @@ static status_t netlink_send_ack(int socket, struct nlmsghdr *in)
 	free(out);
 	return FAILED;
 }
+	
 /**
- * Implements kernel_interface_t.create_address_list.
  * Create a list of local addresses.
  */
 static linked_list_t *create_address_list(private_kernel_interface_t *this)
 {
-	char request[128];
+	char request[BUFFER_SIZE];
 	struct nlmsghdr *out, *hdr;
 	struct rtgenmsg *msg;
 	size_t len;
-	chunk_t chunk;
-	host_t *host;
 	linked_list_t *list;
 	
 	DBG2(DBG_IKE, "getting local address list");
@@ -694,23 +724,42 @@ static linked_list_t *create_address_list(private_kernel_interface_t *this)
 					struct ifaddrmsg* msg = (struct ifaddrmsg*)(NLMSG_DATA(hdr));
 	      			struct rtattr *rta = IFA_RTA(msg);
 	     			size_t rtasize = IFA_PAYLOAD (hdr);
+					host_t *host = NULL;
+					char *name = NULL;
+					chunk_t chunk;
 	     			
 					while(RTA_OK(rta, rtasize))
 					{
-						if (rta->rta_type == IFA_ADDRESS)
+						switch (rta->rta_type)
 						{
-							chunk.ptr = RTA_DATA(rta);
-							chunk.len = RTA_PAYLOAD(rta);
-							
-							/* we set the interface on the port of the host */
-							host = host_create_from_chunk(msg->ifa_family, chunk,
-														  msg->ifa_index);
-							if (host)
-							{
-								list->insert_last(list, host);
-							}
+							case IFA_ADDRESS:
+								chunk.ptr = RTA_DATA(rta);
+								chunk.len = RTA_PAYLOAD(rta);
+								host = host_create_from_chunk(msg->ifa_family,
+															  chunk, 0);
+								break;
+							case IFA_LABEL:
+								name = RTA_DATA(rta);
 						}
 						rta = RTA_NEXT(rta, rtasize);
+					}
+					
+					if (host)
+					{
+						address_entry_t *entry;
+						
+						entry = malloc_thing(address_entry_t);
+						entry->host = host;
+						entry->ifindex = msg->ifa_index;
+						if (name)
+						{
+							memcpy(entry->ifname, name, IFNAMSIZ);
+						}
+						else
+						{
+							strcpy(entry->ifname, "(unknown)");
+						}
+						list->insert_last(list, entry);
 					}
 					hdr = NLMSG_NEXT(hdr, len);
 					continue;
@@ -729,34 +778,61 @@ static linked_list_t *create_address_list(private_kernel_interface_t *this)
 	{
 		DBG1(DBG_IKE, "unable to get local address list");
 	}
+
 	return list;
 }
 
 /**
- * implementation of kernel_interface_t.is_local_address
+ * Implements kernel_interface_t.create_address_list.
  */
-static bool is_local_address(private_kernel_interface_t *this, host_t* ip)
+static linked_list_t *create_address_list_public(private_kernel_interface_t *this)
+{
+	linked_list_t *result, *list;
+	address_entry_t *entry;
+	
+	result = linked_list_create();
+	list = create_address_list(this);
+	while (list->remove_last(list, (void**)&entry) == SUCCESS)
+	{
+		result->insert_last(result, entry->host);
+		free(entry);
+	}
+	list->destroy(list);
+	
+	return result;
+}
+
+/**
+ * implementation of kernel_interface_t.get_interface_name
+ */
+static char *get_interface_name(private_kernel_interface_t *this, host_t* ip)
 {
 	linked_list_t *list;
-	host_t *host;
-	bool found = FALSE;
+	address_entry_t *entry;
+	char *name = NULL;
 	
-	DBG2(DBG_IKE, "checking if host %H is local", ip);
+	DBG2(DBG_IKE, "getting interface name for %H", ip);
 	
 	list = create_address_list(this);
-	while (!found && list->remove_last(list, (void**)&host) == SUCCESS)
+	while (!name && list->remove_last(list, (void**)&entry) == SUCCESS)
 	{
-		if (host->ip_equals(host, ip))
+		if (ip->ip_equals(ip, entry->host))
 		{
-			found = TRUE;
+			name = strdup(entry->ifname);
 		}
-		host->destroy(host);
+		address_entry_destroy(entry);
 	}
-	list->destroy_offset(list, offsetof(host_t, destroy));
+	list->destroy_function(list, (void*)address_entry_destroy);
 	
-	DBG2(DBG_IKE, "%H is %slocal", ip, found ? "" : "not ");
-	
-	return found;
+	if (name)
+	{
+		DBG2(DBG_IKE, "%H is on interface %s", ip, name);
+	}
+	else
+	{
+		DBG1(DBG_IKE, "%H is not a local address", ip);
+	}
+	return name;
 }
 
 /**
@@ -766,6 +842,7 @@ static bool is_local_address(private_kernel_interface_t *this, host_t* ip)
 static status_t get_address_by_ts(private_kernel_interface_t *this,
 								  traffic_selector_t *ts, host_t **ip)
 {
+	address_entry_t *entry;
 	host_t *host;
 	int family;
 	linked_list_t *list;
@@ -796,23 +873,20 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
 	host->destroy(host);
 	
 	list = create_address_list(this);
-	while (!found && list->remove_last(list, (void**)&host) == SUCCESS)
+	while (!found && list->remove_last(list, (void**)&entry) == SUCCESS)
 	{
-		if (ts->includes(ts, host))
+		if (ts->includes(ts, entry->host))
 		{
 			found = TRUE;
-			*ip = host;
+			*ip = entry->host->clone(entry->host);
 		}
-		else
-		{
-			host->destroy(host);
-		}
+		address_entry_destroy(entry);
 	}
-	list->destroy_offset(list, offsetof(host_t, destroy));
+	list->destroy_function(list, (void*)address_entry_destroy);
 	
 	if (!found)
 	{
-		DBG2(DBG_IKE, "no local address found in traffic selector %R", ts);
+		DBG1(DBG_IKE, "no local address found in traffic selector %R", ts);
 		return FAILED;
 	}
 	DBG2(DBG_IKE, "using host %H", *ip);
@@ -822,24 +896,24 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
 /**
  * get the interface of a local address
  */
-static int get_interface(private_kernel_interface_t *this, host_t* ip)
+static int get_interface_index(private_kernel_interface_t *this, host_t* ip)
 {
 	linked_list_t *list;
-	host_t *host;
+	address_entry_t *entry;
 	int ifindex = 0;
 	
 	DBG2(DBG_IKE, "getting iface for %H", ip);
 	
 	list = create_address_list(this);
-	while (!ifindex && list->remove_last(list, (void**)&host) == SUCCESS)
+	while (!ifindex && list->remove_last(list, (void**)&entry) == SUCCESS)
 	{
-		if (host->ip_equals(host, ip))
+		if (ip->ip_equals(ip, entry->host))
 		{
-			ifindex = host->get_port(host);
+			ifindex = entry->ifindex;
 		}
-		host->destroy(host);
+		address_entry_destroy(entry);
 	}
-	list->destroy_offset(list, offsetof(host_t, destroy));
+	list->destroy_function(list, (void*)address_entry_destroy);
 	
 	if (ifindex == 0)
 	{
@@ -888,14 +962,15 @@ static status_t manage_ipaddr(private_kernel_interface_t *this, int nlmsg_type,
 static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type,
 								int flags, route_entry_t *route)
 {
+	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *hdr;
 	struct rtmsg *msg;
-	unsigned char request[BUFFER_SIZE];
 	chunk_t chunk;
 	
 	/* if route is 0.0.0.0/0, we can't install it, as it would
 	 * overwrite the default route. Instead, we add two routes:
-	 * 0.0.0.0/1 and 128.0.0.0/1 */
+	 * 0.0.0.0/1 and 128.0.0.0/1 
+	 * TODO: use metrics instead */
 	if (route->prefixlen == 0)
 	{
 		route_entry_t half;
@@ -951,7 +1026,7 @@ static status_t add_ip(private_kernel_interface_t *this,
 
 	DBG2(DBG_KNL, "adding virtual IP %H", virtual_ip);
 
-	targetif = get_interface(this, iface_ip);
+	targetif = get_interface_index(this, iface_ip);
 	if (targetif == 0)
 	{
 		DBG1(DBG_KNL, "unable to add virtual IP %H, no iface found for %H",
@@ -1005,7 +1080,7 @@ static status_t del_ip(private_kernel_interface_t *this,
 
 	DBG2(DBG_KNL, "deleting virtual IP %H", virtual_ip);
 
-	targetif = get_interface(this, iface_ip);
+	targetif = get_interface_index(this, iface_ip);
 	if (targetif == 0)
 	{
 		DBG1(DBG_KNL, "unable to delete virtual IP %H, no iface found for %H",
@@ -1111,7 +1186,7 @@ static status_t get_spi(private_kernel_interface_t *this,
 		return FAILED;
 	}
 	
-	DBG2(DBG_KNL, "got SPI %x for reqid %d", received_spi, reqid);
+	DBG2(DBG_KNL, "got SPI 0x%x for reqid %d", received_spi, reqid);
 	
 	*spi = received_spi;
 	return SUCCESS;
@@ -1136,7 +1211,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "adding SAD entry with SPI %x", spi);
+	DBG2(DBG_KNL, "adding SAD entry with SPI 0x%x", spi);
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -1253,7 +1328,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	
 	if (netlink_send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unalbe to add SAD entry with SPI %x", spi);
+		DBG1(DBG_KNL, "unalbe to add SAD entry with SPI 0x%x", spi);
 		return FAILED;
 	}
 	return SUCCESS;
@@ -1276,7 +1351,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "querying SAD entry with SPI %x", spi);
+	DBG2(DBG_KNL, "querying SAD entry with SPI 0x%x", spi);
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -1319,12 +1394,12 @@ static status_t update_sa(private_kernel_interface_t *this,
 	}
 	if (sa == NULL)
 	{
-		DBG1(DBG_KNL, "unable to update SAD entry with SPI %x", spi);
+		DBG1(DBG_KNL, "unable to update SAD entry with SPI 0x%x", spi);
 		free(out);
 		return FAILED;
 	}
 	
-	DBG2(DBG_KNL, "updating SAD entry with SPI %x", spi);
+	DBG2(DBG_KNL, "updating SAD entry with SPI 0x%x", spi);
 	
 	hdr = out;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;	
@@ -1360,7 +1435,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 	}
 	if (netlink_send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unalbe to update SAD entry with SPI %x", spi);
+		DBG1(DBG_KNL, "unalbe to update SAD entry with SPI 0x%x", spi);
 		free(out);
 		return FAILED;
 	}
@@ -1386,7 +1461,7 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	struct xfrm_usersa_info *sa = NULL;
 	size_t len;
 	
-	DBG2(DBG_KNL, "querying SAD entry with SPI %x", spi);
+	DBG2(DBG_KNL, "querying SAD entry with SPI 0x%x", spi);
 	memset(&request, 0, sizeof(request));
 	
 	hdr = (struct nlmsghdr*)request;
@@ -1431,7 +1506,7 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	
 	if (sa == NULL)
 	{
-		DBG1(DBG_KNL, "unable to query SAD entry with SPI %x", spi);
+		DBG1(DBG_KNL, "unable to query SAD entry with SPI 0x%x", spi);
 		free(out);
 		return FAILED;
 	}
@@ -1453,7 +1528,7 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "deleting SAD entry with SPI %x", spi);
+	DBG2(DBG_KNL, "deleting SAD entry with SPI 0x%x", spi);
 	
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -1468,10 +1543,10 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	
 	if (netlink_send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unalbe to delete SAD entry with SPI %x", spi);
+		DBG1(DBG_KNL, "unalbe to delete SAD entry with SPI 0x%x", spi);
 		return FAILED;
 	}
-	DBG2(DBG_KNL, "deleted SAD entry with SPI %x", spi);
+	DBG2(DBG_KNL, "deleted SAD entry with SPI 0x%x", spi);
 	return SUCCESS;
 }
 
@@ -1598,7 +1673,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 		policy->route = malloc_thing(route_entry_t);
 		if (get_address_by_ts(this, dst_ts, &policy->route->src_ip) == SUCCESS)
 		{
-			policy->route->if_index = get_interface(this, dst);
+			policy->route->if_index = get_interface_index(this, dst);
 			policy->route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(policy->route->dst_net.ptr, &policy->sel.saddr, policy->route->dst_net.len);
 			policy->route->prefixlen = policy->sel.prefixlen_s;
@@ -1606,6 +1681,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 			if (manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
 								policy->route) != SUCCESS)
 			{
+				DBG1(DBG_KNL, "unable to install source route for %H",
+					 policy->route->src_ip);
 				route_entry_destroy(policy->route);
 				policy->route = NULL;
 			}
@@ -1804,6 +1881,9 @@ kernel_interface_t *kernel_interface_create()
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t,bool))add_policy;
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
+
+	this->public.get_interface = (char*(*)(kernel_interface_t*,host_t*))get_interface_name;
+	this->public.create_address_list = (linked_list_t*(*)(kernel_interface_t*))create_address_list_public;
 	this->public.add_ip = (status_t(*)(kernel_interface_t*,host_t*,host_t*)) add_ip;
 	this->public.del_ip = (status_t(*)(kernel_interface_t*,host_t*,host_t*)) del_ip;
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;

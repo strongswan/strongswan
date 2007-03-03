@@ -264,23 +264,39 @@ struct kernel_interface_t {
 							policy_dir_t direction);
 	
 	/**
+	 * @brief Get the interface name of a local address.
+	 *
+	 * @param this			calling object
+	 * @param host			address to get interface name from
+	 * @return 				allocated interface name, or NULL if not found
+	 */
+	char* (*get_interface) (kernel_interface_t *this, host_t *host);
+	
+	/**
+	 * @brief Creates a list of all local addresses.
+	 *
+	 * @param this			calling object
+	 * @return 				allocated list with host_t objects
+	 */
+	linked_list_t *(*create_address_list) (kernel_interface_t *this);
+	
+	/**
 	 * @brief Add a virtual IP to an interface.
 	 *
 	 * Virtual IPs are attached to an interface. If an IP is added multiple
 	 * times, the IP is refcounted and not removed until del_ip() was called
 	 * as many times as add_ip().
-	 * The virtual IP is attached to the interface used to reach a specified
-	 * destination host.
+	 * The virtual IP is attached to the interface where the iface_ip is found.
 	 *
 	 * @param this			calling object
 	 * @param virtual_ip	virtual ip address to assign
-	 * @param dst_ip		destination host to select outgoing interface
+	 * @param iface_ip		IP of an interface to attach virtual IP
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
 	 */
 	status_t (*add_ip) (kernel_interface_t *this, host_t *virtual_ip,
-						host_t *dst_ip);
+						host_t *iface_ip);
 	
 	/**
 	 * @brief Remove a virtual IP from an interface.
@@ -289,13 +305,13 @@ struct kernel_interface_t {
 	 *
 	 * @param this			calling object
 	 * @param virtual_ip	virtual ip address to assign
-	 * @param dst_ip		destination host to select outgoing interface
+	 * @param iface_ip		IP of an interface to remove virtual IP from
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
 	 */
 	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip,
-						host_t *dst_ip);
+						host_t *iface_ip);
 	
 	/**
 	 * @brief Destroys a kernel_interface object.

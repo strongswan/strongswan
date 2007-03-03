@@ -261,7 +261,8 @@ static void updown(private_child_sa_t *this, bool up)
                 asprintf(&virtual_ip, "");
         }
 
-		charon->socket->is_local_address(charon->socket, this->me.addr, &ifname);
+		ifname = charon->kernel_interface->get_interface(charon->kernel_interface, 
+														 this->me.addr);
 		
 		/* build the command with all env variables.
 		 * TODO: PLUTO_PEER_CA and PLUTO_NEXT_HOP are currently missing
@@ -295,7 +296,7 @@ static void updown(private_child_sa_t *this, bool up)
 							this->me.addr) ? "-host" : "-client",
 				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-ipv6",
 				 this->policy->get_name(this->policy),
-				 ifname,
+				 ifname ? ifname : "(unknown)",
 				 this->reqid,
 				 this->me.addr,
 				 this->me.id,

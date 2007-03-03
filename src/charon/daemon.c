@@ -487,7 +487,7 @@ int main(int argc, char *argv[])
 	}
 	
 	/* log socket info */
-	list = charon->socket->create_local_address_list(charon->socket);
+	list = charon->kernel_interface->create_address_list(charon->kernel_interface);
 	DBG1(DBG_NET, "listening on %d addresses:", list->get_count(list));
 	while (list->remove_first(list, (void**)&host) == SUCCESS)
 	{
