@@ -29,6 +29,7 @@ typedef struct ca_info_t ca_info_t;
 #include <chunk.h>
 
 #include "x509.h"
+#include "crl.h"
 
 /**
  * @brief X.509 certification authority information record
@@ -43,7 +44,7 @@ struct ca_info_t {
 	/**
 	 * @brief Compare two ca info records
 	 *
-	 * Comparison is doen via the keyid of the ca certificate
+	 * Comparison is done via the keyid of the ca certificate
      *
 	 * @param this			first ca info object
 	 * @param that			second ca info objct
@@ -52,12 +53,30 @@ struct ca_info_t {
 	bool (*equals) (const ca_info_t *this, const ca_info_t* that);
 
 	/**
-	 * @brief Checks if the ca info record has the same name
+	 * @brief If the ca info record has the same name then release the name and URIs
 	 * 
 	 * @param this			ca info object
 	 * @return				TRUE if a match is found
 	 */
-	bool (*equals_name) (const ca_info_t *this, const char *name);
+	bool (*equals_name_release_info) (ca_info_t *this, const char *name);
+
+	/**
+	 * @brief Checks if a certificate was issued by this ca
+	 * 
+	 * @param this			ca info object
+	 * @param cert			certificate to be checked
+	 * @return				TRUE if the issuing ca has been found
+	 */
+	bool (*is_cert_issuer) (ca_info_t *this, const x509_t *cert);
+
+	/**
+	 * @brief Checks if a crl was issued by this ca
+	 * 
+	 * @param this			ca info object
+	 * @param crl			crl to be checked
+	 * @return				TRUE if the issuing ca has been found
+	 */
+	bool (*is_crl_issuer) (ca_info_t *this, const crl_t *crl);
 
 	/**
 	 * @brief Merges info from a secondary ca info object
@@ -68,6 +87,31 @@ struct ca_info_t {
 	void (*add_info) (ca_info_t *this, const ca_info_t *that);
 
 	/**
+	 * @brief Adds a new or replaces an obsoleted CRL
+	 * 
+	 * @param this			ca info object
+	 * @param crl			crl to be added
+	 */
+	void (*add_crl) (ca_info_t *this, crl_t *crl);
+
+	/**
+	 * @brief Does the CA have a CRL?
+	 * 
+	 * @param this			ca info object
+	 * @return				TRUE if crl is available
+	 */
+	bool (*has_crl) (ca_info_t *this);
+
+	/**
+	 * @brief List the CRL onto the console
+	 * 
+	 * @param this			ca info object
+	 * @param utc			TRUE -  utc
+							FALSE - local time
+	 */
+	void (*list_crl) (ca_info_t *this, FILE *out, bool utc);
+
+	/**
 	 * @brief Adds a CRL URI to a list
 	 * 
 	 * @param this			ca info object
@@ -76,7 +120,7 @@ struct ca_info_t {
 	void (*add_crluri) (ca_info_t *this, chunk_t uri);
 
 	/**
-	 * @brief Adds a CRL URI to a list
+	 * @brief Adds a OCSP URI to a list
 	 * 
 	 * @param this			ca info object
 	 * @param uri			ocsp uri to be added
@@ -84,11 +128,32 @@ struct ca_info_t {
 	void (*add_ocspuri) (ca_info_t *this, chunk_t uri);
 
 	/**
-	 * @brief Releases the name and URIs of ca info record
+	 * @brief Get the ca certificate
 	 * 
-	 * @param this			ca info to release
+	 * @param this			ca info object
+	 * @return				ca certificate
 	 */
-	void (*release_info) (ca_info_t *this);
+	x509_t* (*get_certificate) (ca_info_t *this);
+
+	/**
+	 * @brief Verify the status of a certificate by CRL
+	 * 
+	 * @param this			ca info object
+	 * @param cert			certificate to be verified
+	 * @param certinfo		detailed certificate status information
+	 * @return				certificate status
+	 */
+	cert_status_t (*verify_by_crl) (ca_info_t* this, const x509_t* cert, certinfo_t* certinfo);
+
+	/**
+	 * @brief Verify the status of a certificate by OCSP
+	 * 
+	 * @param this			ca info object
+	 * @param cert			certificate to be verified
+	 * @param certinfo		detailed certificate status information
+	 * @return				certificate status
+	 */
+	cert_status_t (*verify_by_ocsp) (ca_info_t* this, const x509_t* cert, certinfo_t* certinfo);
 
 	/**
 	 * @brief Destroys a ca info record
@@ -107,6 +172,6 @@ struct ca_info_t {
  * 
  * @ingroup transforms
  */
-ca_info_t *ca_info_create(const char *name, const x509_t *cacert);
+ca_info_t *ca_info_create(const char *name, x509_t *cacert);
 
 #endif /* CA_H_ */
