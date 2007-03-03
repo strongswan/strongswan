@@ -1118,20 +1118,7 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
 	}
 	if (msg->list.flags & LIST_CRLS)
 	{
-		crl_t *crl;
-		
-		iterator = charon->credentials->create_crl_iterator(charon->credentials);
-		if (iterator->get_count(iterator))
-		{
-			fprintf(out, "\n");
-			fprintf(out, "List of X.509 CRLs:\n");
-			fprintf(out, "\n");
-		}
-		while (iterator->iterate(iterator, (void**)&crl))
-		{
-			fprintf(out, "%#U\n", crl, msg->list.utc);
-		}
-		iterator->destroy(iterator);
+		charon->credentials->list_crls(charon->credentials, out, msg->list.utc);
 	}
 }
 
