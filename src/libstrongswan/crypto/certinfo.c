@@ -94,6 +94,14 @@ ENUM(crl_reason_names, REASON_UNSPECIFIED, REASON_REMOVE_FROM_CRL,
 );
 
 /**
+ * Implements certinfo_t.equals_serialNumber
+ */
+static bool equals_serialNumber(const private_certinfo_t *this, const private_certinfo_t *that)
+{
+	return chunk_equals(this->serialNumber, that->serialNumber);
+}
+
+/**
  * Implements certinfo_t.get_serialNumber
  */
 static chunk_t get_serialNumber(const private_certinfo_t *this)
@@ -189,6 +197,7 @@ certinfo_t *certinfo_create(chunk_t serial)
 	this->revocationReason = REASON_UNSPECIFIED;
 
 	/* public functions */
+	this->public.equals_serialNumber = (bool (*) (const certinfo_t*,const certinfo_t*))equals_serialNumber;
 	this->public.get_serialNumber = (chunk_t (*) (const certinfo_t*))get_serialNumber;
 	this->public.set_status = (void (*) (certinfo_t*,cert_status_t))set_status;
 	this->public.get_status = (cert_status_t (*) (const certinfo_t*))get_status;

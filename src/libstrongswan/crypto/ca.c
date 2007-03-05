@@ -372,8 +372,32 @@ err:
 static cert_status_t verify_by_ocsp(private_ca_info_t* this, const x509_t *cert,
 									certinfo_t *certinfo)
 {
-	/* TODO implement function */
-	return CERT_UNDEFINED;
+	pthread_mutex_lock(&(this->mutex));
+
+	/* do we have a valid certinfo record for this serial number in our cache? */
+	{
+		iterator_t *iterator = this->certinfos->create_iterator(this->certinfos, TRUE);
+		certinfo_t *current_certinfo;
+		bool found = FALSE;
+
+		while(iterator->iterate(iterator, (void**)&current_certinfo))
+		{
+			if (certinfo->equals_serialNumber(certinfo, current_certinfo))
+			{
+				found = TRUE;
+				DBG2("ocsp status found");
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+		if (!found)
+		{
+			DBG2("ocsp status is not in cache");
+		}
+	}
+	
+	pthread_mutex_unlock(&(this->mutex));
+	return certinfo->get_status(certinfo);
 }
 
 /**

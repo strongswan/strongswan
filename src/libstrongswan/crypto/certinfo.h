@@ -66,6 +66,16 @@ extern enum_name_t *crl_reason_names;
 struct certinfo_t {
 
 	/**
+	 * @brief Check if both certinfo objects have the same serialNumber.
+	 * 
+	 * @param this				calling object
+	 * @param that				second certinfo_t object
+	 * @return					TRUE if the same serialNumber
+	 */
+	bool (*equals_serialNumber) (const certinfo_t *this, const certinfo_t *that);
+
+
+	/**
 	 * @brief Get serial number.
 	 *
 	 * @param this				calling object
