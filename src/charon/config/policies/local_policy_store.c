@@ -127,10 +127,11 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 			prio_t prio = PRIO_UNDEFINED;
 
 			/* wildcard match for other_id */
-			if (other_id->matches(other_id, candidate_other_id, &wildcards))
+			if (!other_id->matches(other_id, candidate_other_id, &wildcards))
 			{
-				prio = PRIO_ID_MATCH - wildcards;
+				continue;
 			}
+			prio = PRIO_ID_MATCH - wildcards;
 			
 			/* only accept if traffic selectors match */
 			if (!contains_traffic_selectors(candidate, TRUE, my_ts, my_host) ||

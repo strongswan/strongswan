@@ -268,8 +268,8 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 											   linked_list_t *supplied,
 											   host_t *host)
 {
-	iterator_t *supplied_iter, *stored_iter;
-	traffic_selector_t *supplied_ts, *stored_ts, *selected_ts;
+	iterator_t *supplied_iter, *stored_iter, *i1, *i2;
+	traffic_selector_t *supplied_ts, *stored_ts, *selected_ts, *ts1, *ts2;
 	linked_list_t *selected = linked_list_create();
 	
 	DBG2(DBG_CFG, "selecting traffic selectors");
@@ -309,6 +309,26 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 	}
 	stored_iter->destroy(stored_iter);
 	supplied_iter->destroy(supplied_iter);
+	
+	/* remove any redundant traffic selectors in the list */
+	i1 = selected->create_iterator(selected, TRUE);
+	i2 = selected->create_iterator(selected, TRUE);
+	while (i1->iterate(i1, (void**)&ts1))
+	{
+		while (i2->iterate(i2, (void**)&ts2))
+		{
+			if (ts1 != ts2 && ts2->is_contained_in(ts2, ts1))
+			{
+				i2->remove(i2);
+				ts2->destroy(ts2);
+				i1->reset(i1);
+				break;
+			}
+		}
+	}
+	i1->destroy(i1);
+	i2->destroy(i2);
+	
 	
 	return selected;
 }

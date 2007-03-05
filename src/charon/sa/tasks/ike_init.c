@@ -135,13 +135,12 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
 	
-	ke_payload = ke_payload_create_from_diffie_hellman(this->diffie_hellman);
-	message->add_payload(message, (payload_t*)ke_payload);
-	
 	nonce_payload = nonce_payload_create();
 	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
-	
 	message->add_payload(message, (payload_t*)nonce_payload);
+	
+	ke_payload = ke_payload_create_from_diffie_hellman(this->diffie_hellman);
+	message->add_payload(message, (payload_t*)ke_payload);
 }
 
 /**

@@ -300,12 +300,12 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
 			ip = this->policy->get_virtual_ip(this->policy, this->virtual_ip);
-			if (ip == NULL)
+			if (ip == NULL || ip->is_anyaddr(ip))
 			{
 				DBG1(DBG_IKE, "not assigning a virtual IP to peer");
 				return SUCCESS;
 			}
-				DBG1(DBG_IKE, "assigning virtual IP %H to peer", ip);
+			DBG1(DBG_IKE, "assigning virtual IP %H to peer", ip);
 			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, ip);
 			
 			this->virtual_ip->destroy(this->virtual_ip);

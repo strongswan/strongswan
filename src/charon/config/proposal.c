@@ -24,6 +24,7 @@
 
 #include "proposal.h"
 
+#include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 #include <utils/lexparser.h>
@@ -221,6 +222,9 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add, 
 		second_iter->reset(second_iter);
 		while (second_iter->iterate(second_iter, (void**)&second_alg))
 		{
+			DBG2(DBG_CFG, "comparing algo %d - %d, keylen %d - %d", 
+				 first_alg->algorithm, second_alg->algorithm,
+				 first_alg->key_size, second_alg->key_size);
 			if (first_alg->algorithm == second_alg->algorithm &&
 				first_alg->key_size == second_alg->key_size)
 			{
@@ -250,9 +254,12 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	size_t key_size;
 	bool add;
 	
+	DBG2(DBG_CFG, "selecting proposal:");
+	
 	/* check protocol */
 	if (this->protocol != other->protocol)
 	{
+		DBG2(DBG_CFG, "  protocol mismatch, skipping");
 		return NULL;
 	}
 	
@@ -269,6 +276,8 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	else
 	{
 		selected->destroy(selected);
+		DBG2(DBG_CFG, "  no acceptable ENCRYPTION_ALGORITHM found contained %d - %d, skipping",
+		this->encryption_algos->get_count(this->encryption_algos), other->encryption_algos->get_count(other->encryption_algos));
 		return NULL;
 	}
 	/* select integrity algorithm */
@@ -282,6 +291,7 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	else
 	{
 		selected->destroy(selected);
+		DBG2(DBG_CFG, "  no acceptable INTEGRITY_ALGORITHM found, skipping");
 		return NULL;
 	}
 	/* select prf algorithm */
@@ -295,6 +305,7 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	else
 	{
 		selected->destroy(selected);
+		DBG2(DBG_CFG, "  no acceptable PSEUDO_RANDOM_FUNCTION found, skipping");
 		return NULL;
 	}
 	/* select a DH-group */
@@ -308,6 +319,7 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	else
 	{
 		selected->destroy(selected);
+		DBG2(DBG_CFG, "  no acceptable DIFFIE_HELLMAN_GROUP found, skipping");
 		return NULL;
 	}
 	/* select if we use ESNs */
@@ -321,8 +333,10 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	else
 	{
 		selected->destroy(selected);
+		DBG2(DBG_CFG, "  no acceptable EXTENDED_SEQUENCE_NUMBERS found, skipping");
 		return NULL;
 	}
+	DBG2(DBG_CFG, "  proposal matches");
 	
 	/* apply SPI from "other" */
 	selected->set_spi(selected, other->spi);
@@ -442,6 +456,10 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 		{
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
 		}
+	}
+	else if (strncmp(alg.ptr, "modp768", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_768_BIT, 0);
 	}
 	else if (strncmp(alg.ptr, "modp1024", alg.len) == 0)
 	{

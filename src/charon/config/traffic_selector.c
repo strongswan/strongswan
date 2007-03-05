@@ -504,6 +504,28 @@ static void set_address(private_traffic_selector_t *this, host_t *host)
 }
 
 /**
+ * Implements traffic_selector_t.is_contained_in.
+ */
+static bool is_contained_in(private_traffic_selector_t *this,
+							private_traffic_selector_t *other)
+{
+	private_traffic_selector_t *subset;
+	bool contained_in = FALSE;
+	
+	subset = (private_traffic_selector_t*)get_subset(this, other);
+	
+	if (subset)
+	{
+		if (equals(subset, this))
+		{
+			contained_in = TRUE;
+		}
+		free(subset);
+	}
+	return contained_in;	
+}
+
+/**
  * Implements traffic_selector_t.includes.
  */
 static bool includes(private_traffic_selector_t *this, host_t *host)
@@ -754,6 +776,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 	this->public.get_type = (ts_type_t(*)(traffic_selector_t*))get_type;
 	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
 	this->public.is_host = (bool(*)(traffic_selector_t*,host_t*))is_host;
+	this->public.is_contained_in = (bool(*)(traffic_selector_t*,traffic_selector_t*))is_contained_in;
 	this->public.includes = (bool(*)(traffic_selector_t*,host_t*))includes;
 	this->public.set_address = (void(*)(traffic_selector_t*,host_t*))set_address;
 	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone_;

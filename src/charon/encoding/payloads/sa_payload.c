@@ -119,15 +119,8 @@ static status_t verify(private_sa_payload_t *this)
 	while(iterator->iterate(iterator, (void**)&current_proposal))
 	{
 		current_number = current_proposal->get_proposal_number(current_proposal);
-		if (current_number > expected_number)
-		{
-			if (first)
-			{
-				DBG1(DBG_ENC, "first proposal is not proposal #1");
-				status = FAILED;
-				break;
-			}
-			
+		if (current_number < expected_number)
+		{			
 			if (current_number != (expected_number + 1))
 			{
 				DBG1(DBG_ENC, "proposal number is %d, excepted %d or %d",

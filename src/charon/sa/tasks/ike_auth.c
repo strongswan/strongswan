@@ -108,7 +108,6 @@ static status_t build_payloads(private_ike_auth_t *this, message_t *message)
 	me = this->ike_sa->get_my_id(this->ike_sa);
 	other = this->ike_sa->get_other_id(this->ike_sa);
 	
-	
 	/* create own authenticator and add auth payload */
 	policy = this->ike_sa->get_policy(this->ike_sa);
 	if (!policy)
@@ -126,7 +125,7 @@ static status_t build_payloads(private_ike_auth_t *this, message_t *message)
 			SIG(IKE_UP_FAILED, "negotiation of own ID failed");
 			return FAILED;
 		}
-		this->ike_sa->set_my_id(this->ike_sa, me);
+		this->ike_sa->set_my_id(this->ike_sa, me->clone(me));
 	}
 		
 	id_payload = id_payload_create_from_identification(this->initiator, me);
@@ -214,6 +213,7 @@ static void process_payloads(private_ike_auth_t *this, message_t *message)
 	if (this->initiator)
 	{
 		this->ike_sa->set_other_id(this->ike_sa, idr);
+		DESTROY_IF(idi);
 	}
 	else
 	{

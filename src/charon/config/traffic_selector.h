@@ -192,6 +192,17 @@ struct traffic_selector_t {
 	 * @return 			pointer to a string.
 	 */
 	bool (*equals) (traffic_selector_t *this, traffic_selector_t *other);
+	
+	/**
+	 * @brief Check if a traffic selector is contained completly in another.
+	 *
+	 * contains() allows to check if multiple traffic selectors are redundant.
+	 *
+	 * @param this		ts that is contained in another
+	 * @param other		ts that contains this
+	 * @return			TRUE if other contains this completly, FALSE otherwise
+	 */
+	bool (*is_contained_in) (traffic_selector_t *this, traffic_selector_t *other);
 
 	/**
 	 * @brief Check if a specific host is included in the address range of 
