@@ -222,9 +222,6 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add, 
 		second_iter->reset(second_iter);
 		while (second_iter->iterate(second_iter, (void**)&second_alg))
 		{
-			DBG2(DBG_CFG, "comparing algo %d - %d, keylen %d - %d", 
-				 first_alg->algorithm, second_alg->algorithm,
-				 first_alg->key_size, second_alg->key_size);
 			if (first_alg->algorithm == second_alg->algorithm &&
 				first_alg->key_size == second_alg->key_size)
 			{
@@ -276,8 +273,7 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	else
 	{
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable ENCRYPTION_ALGORITHM found contained %d - %d, skipping",
-		this->encryption_algos->get_count(this->encryption_algos), other->encryption_algos->get_count(other->encryption_algos));
+		DBG2(DBG_CFG, "  no acceptable ENCRYPTION_ALGORITHM found, skipping");
 		return NULL;
 	}
 	/* select integrity algorithm */

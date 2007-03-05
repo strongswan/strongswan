@@ -193,9 +193,13 @@ static status_t select_and_install(private_child_create_t *this)
 	my_vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
 	other_vip = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
 
-	DBG1(DBG_IKE, "received %d proposals, selecting:", this->proposals->get_count(this->proposals));
 	this->proposal = this->policy->select_proposal(this->policy, this->proposals);
-	DBG1(DBG_IKE, "proposal is %p", this->proposal);
+	
+	if (this->proposal == NULL)
+	{
+		SIG(CHILD_UP_FAILED, "no acceptable proposal found");
+		return FAILED;
+	}
 	
 	if (this->initiator && my_vip)
 	{	/* if we have a virtual IP, shorten our TS to the minimum */
@@ -230,12 +234,6 @@ static status_t select_and_install(private_child_create_t *this)
 	{
 		this->tsr = my_ts;
 		this->tsi = other_ts;
-	}
-	
-	if (this->proposal == NULL)
-	{
-		SIG(CHILD_UP_FAILED, "no acceptable proposal found");
-		return FAILED;
 	}
 	
 	if (this->tsi->get_count(this->tsi) == 0 ||
