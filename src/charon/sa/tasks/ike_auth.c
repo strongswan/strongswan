@@ -108,6 +108,27 @@ static status_t build_payloads(private_ike_auth_t *this, message_t *message)
 	me = this->ike_sa->get_my_id(this->ike_sa);
 	other = this->ike_sa->get_other_id(this->ike_sa);
 	
+	
+	/* create own authenticator and add auth payload */
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	if (!policy)
+	{
+		SIG(IKE_UP_FAILED, "no acceptable policy found");
+		return FAILED;
+	}
+	
+	method = policy->get_auth_method(policy);
+	if (me->contains_wildcards(me))
+	{
+		me = policy->get_my_id(policy);
+		if (me->contains_wildcards(me))
+		{
+			SIG(IKE_UP_FAILED, "negotiation of own ID failed");
+			return FAILED;
+		}
+		this->ike_sa->set_my_id(this->ike_sa, me);
+	}
+		
 	id_payload = id_payload_create_from_identification(this->initiator, me);
 	message->add_payload(message, (payload_t*)id_payload);
 	
@@ -118,12 +139,6 @@ static status_t build_payloads(private_ike_auth_t *this, message_t *message)
 		message->add_payload(message, (payload_t*)id_payload);
 	}
 	
-	/* create own authenticator and add auth payload */
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	if (policy)
-	{
-		method = policy->get_auth_method(policy);
-	}
 	auth = authenticator_create(this->ike_sa, method);
 	if (auth == NULL)
 	{
@@ -198,39 +213,13 @@ static void process_payloads(private_ike_auth_t *this, message_t *message)
 	
 	if (this->initiator)
 	{
-		identification_t *other_id = this->ike_sa->get_other_id(this->ike_sa);
-		if (!idr->matches(idr, other_id, NULL))
-		{
-			SIG(IKE_UP_FAILED, "received inacceptable id %D, %D required", idr, 
-				this->ike_sa->get_other_id(this->ike_sa));
-			DESTROY_IF(idi); DESTROY_IF(idr);
-			return;
-		}
 		this->ike_sa->set_other_id(this->ike_sa, idr);
 	}
 	else
 	{
-		identification_t *my_id = this->ike_sa->get_other_id(this->ike_sa);
 		if (idr)
 		{
-			if (!idr->matches(idr, my_id, NULL))
-			{
-				SIG(IKE_UP_FAILED, "received inacceptable id %D, %D required",
-					idr, this->ike_sa->get_other_id(this->ike_sa));
-				DESTROY_IF(idi); DESTROY_IF(idr);
-				return;
-			}
 			this->ike_sa->set_my_id(this->ike_sa, idr);
-		}
-		else
-		{
-			if (my_id->contains_wildcards(my_id))
-			{
-				SIG(IKE_UP_FAILED, "own ID (%D) not defined after exchange",
-					my_id);
-				DESTROY_IF(idi);
-				return;
-			}
 		}
 		this->ike_sa->set_other_id(this->ike_sa, idi);
 	}
@@ -351,13 +340,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		return collect_my_init_data(this, message);
 	}
 	
-	if (!this->peer_authenticated)
-	{
-		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
-		return FAILED;
-	}
-
-	if (build_payloads(this, message) == SUCCESS)
+	if (this->peer_authenticated && build_payloads(this, message) == SUCCESS)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 		SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
@@ -367,6 +350,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 			this->ike_sa->get_other_id(this->ike_sa));
 		return SUCCESS;
 	}
+	message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
 	return FAILED;
 }
 

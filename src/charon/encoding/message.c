@@ -125,6 +125,7 @@ static payload_rule_t ike_sa_init_i_payload_rules[] = {
 	{SECURITY_ASSOCIATION,1,1,FALSE,FALSE},
 	{KEY_EXCHANGE,1,1,FALSE,FALSE},
 	{NONCE,1,1,FALSE,FALSE},
+	{VENDOR_ID,0,10,FALSE,FALSE},
 };
 
 /**
@@ -135,6 +136,7 @@ static payload_rule_t ike_sa_init_r_payload_rules[] = {
 	{SECURITY_ASSOCIATION,1,1,FALSE,FALSE},
 	{KEY_EXCHANGE,1,1,FALSE,FALSE},
 	{NONCE,1,1,FALSE,FALSE},
+	{VENDOR_ID,0,10,FALSE,FALSE},
 };
 
 /**
@@ -152,6 +154,7 @@ static payload_rule_t ike_auth_i_payload_rules[] = {
 	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE,FALSE},
 	{CONFIGURATION,0,1,TRUE,FALSE},
+	{VENDOR_ID,0,10,TRUE,FALSE},
 };
 
 /**
@@ -167,6 +170,7 @@ static payload_rule_t ike_auth_r_payload_rules[] = {
 	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
 	{CONFIGURATION,0,1,TRUE,FALSE},
+	{VENDOR_ID,0,10,TRUE,FALSE},
 };
 
 
@@ -177,6 +181,7 @@ static payload_rule_t informational_i_payload_rules[] = {
 	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
 	{CONFIGURATION,0,1,TRUE,FALSE},
 	{DELETE,0,1,TRUE,FALSE},
+	{VENDOR_ID,0,10,TRUE,FALSE},
 	
 };
 
@@ -187,6 +192,7 @@ static payload_rule_t informational_r_payload_rules[] = {
 	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
 	{CONFIGURATION,0,1,TRUE,FALSE},
 	{DELETE,0,1,TRUE,FALSE},
+	{VENDOR_ID,0,10,TRUE,FALSE},
 };
 
 /**
@@ -200,6 +206,7 @@ static payload_rule_t create_child_sa_i_payload_rules[] = {
 	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
 	{CONFIGURATION,0,1,TRUE,FALSE},
+	{VENDOR_ID,0,10,TRUE,FALSE},
 };
 
 /**
@@ -213,6 +220,7 @@ static payload_rule_t create_child_sa_r_payload_rules[] = {
 	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
 	{CONFIGURATION,0,1,TRUE,FALSE},
+	{VENDOR_ID,0,10,TRUE,FALSE},
 };
 
 

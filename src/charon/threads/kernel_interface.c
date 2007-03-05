@@ -830,7 +830,7 @@ static char *get_interface_name(private_kernel_interface_t *this, host_t* ip)
 	}
 	else
 	{
-		DBG1(DBG_IKE, "%H is not a local address", ip);
+		DBG2(DBG_IKE, "%H is not a local address", ip);
 	}
 	return name;
 }

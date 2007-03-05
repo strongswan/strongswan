@@ -25,6 +25,7 @@
 
 #include "id_payload.h"
 
+#include <daemon.h>
 #include <encoding/payloads/encodings.h>
 
 typedef struct private_id_payload_t private_id_payload_t;
@@ -127,6 +128,7 @@ static status_t verify(private_id_payload_t *this)
 		((this->id_type >= 12) && (this->id_type <= 200)))
 	{
 		/* reserved IDs */
+		DBG1(DBG_ENC, "received ID with reserved type %d", this->id_type);
 		return FAILED;
 	}
 		
