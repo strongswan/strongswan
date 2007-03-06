@@ -196,19 +196,19 @@ static status_t build_i(private_child_rekey_t *this, message_t *message)
 	notify_payload_t *notify;
 	protocol_id_t protocol;
 	u_int32_t spi, reqid;
-
-	/* our CHILD_CREATE task does the hard work for us... */
-	reqid = this->child_sa->get_reqid(this->child_sa);
-	this->child_create->use_reqid(this->child_create, reqid);
-	this->child_create->task.build(&this->child_create->task, message);
-	get_nonce(this, message);
 	
-	/* ... we just need the rekey notify */
+	/* we just need the rekey notify ... */
 	protocol = this->child_sa->get_protocol(this->child_sa);
 	spi = this->child_sa->get_spi(this->child_sa, TRUE);
 	notify = notify_payload_create_from_protocol_and_type(protocol, REKEY_SA);
 	notify->set_spi(notify, spi);
 	message->add_payload(message, (payload_t*)notify);
+
+	/* ... our CHILD_CREATE task does the hard work for us. */
+	reqid = this->child_sa->get_reqid(this->child_sa);
+	this->child_create->use_reqid(this->child_create, reqid);
+	this->child_create->task.build(&this->child_create->task, message);
+	get_nonce(this, message);
 	
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
 
