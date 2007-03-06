@@ -162,11 +162,10 @@ typedef struct daemon_t daemon_t;
  */
 
 /**
- * @defgroup transactions transactions
+ * @defgroup tasks tasks
  *
- * Transactions represent a request/response
- * message exchange to implement the IKEv2
- * protocol exchange scenarios.
+ * Tasks process and build message payloads. They are used to create
+ * and process multiple exchanges.
  *
  * @ingroup sa
  */
