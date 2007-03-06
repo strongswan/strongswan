@@ -30,6 +30,7 @@
 #include "crl.h"
 #include "ca.h"
 #include "certinfo.h"
+#include "ocsp.h"
 
 #include <library.h>
 #include <debug.h>
@@ -194,6 +195,18 @@ static void list_crl(private_ca_info_t *this, FILE *out, bool utc)
 	pthread_mutex_lock(&(this->mutex));
 
 	fprintf(out, "%#U\n", this->crl, utc);
+
+	pthread_mutex_unlock(&(this->mutex));
+}
+
+/**
+ * Implements ca_info_t.list_certinfos
+ */
+static void list_certinfos(private_ca_info_t *this, FILE *out, bool utc)
+{
+	pthread_mutex_lock(&(this->mutex));
+
+	/* fprintf(out, "%#X\n", this->certifnos, utc); */
 
 	pthread_mutex_unlock(&(this->mutex));
 }
@@ -372,13 +385,14 @@ err:
 static cert_status_t verify_by_ocsp(private_ca_info_t* this, const x509_t *cert,
 									certinfo_t *certinfo)
 {
+	bool found = FALSE;
+
 	pthread_mutex_lock(&(this->mutex));
 
 	/* do we have a valid certinfo record for this serial number in our cache? */
 	{
 		iterator_t *iterator = this->certinfos->create_iterator(this->certinfos, TRUE);
 		certinfo_t *current_certinfo;
-		bool found = FALSE;
 
 		while(iterator->iterate(iterator, (void**)&current_certinfo))
 		{
@@ -390,10 +404,16 @@ static cert_status_t verify_by_ocsp(private_ca_info_t* this, const x509_t *cert,
 			}
 		}
 		iterator->destroy(iterator);
-		if (!found)
-		{
-			DBG2("ocsp status is not in cache");
-		}
+	}
+	
+	if (!found)
+	{
+		ocsp_t *ocsp;
+
+		DBG2("ocsp status is not in cache");
+		ocsp = ocsp_create(this->cacert, this->ocspuris);
+		ocsp->fetch(ocsp, certinfo);
+		ocsp->destroy(ocsp);
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));

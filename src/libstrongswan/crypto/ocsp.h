@@ -1,7 +1,7 @@
 /**
  * @file ocsp.h
  * 
- * @brief Interface of ocsp_t.
+ * @brief Interface of ocsp_t
  * 
  */
 
@@ -22,22 +22,62 @@
  *
  */
 
-#include "chunk.h"
+#ifndef OCSP_H_
+#define OCSP_H_
+
+typedef struct ocsp_t ocsp_t;
+
+#include "utils/linked_list.h"
 #include "certinfo.h"
 
 /* constants */
-
 #define OCSP_BASIC_RESPONSE_VERSION	1
 #define OCSP_DEFAULT_VALID_TIME		120  /* validity of one-time response in seconds */
 #define OCSP_WARNING_INTERVAL		2    /* days */
 
 /* OCSP response status */
-
 typedef enum {
-    STATUS_SUCCESSFUL =			0,
-    STATUS_MALFORMEDREQUEST =	1,
-    STATUS_INTERNALERROR =		2,
-    STATUS_TRYLATER =			3,
-    STATUS_SIGREQUIRED =		5,
-    STATUS_UNAUTHORIZED=		6
+	STATUS_SUCCESSFUL =			0,
+	STATUS_MALFORMEDREQUEST =	1,
+	STATUS_INTERNALERROR =		2,
+	STATUS_TRYLATER =			3,
+	STATUS_SIGREQUIRED =		5,
+	STATUS_UNAUTHORIZED=		6
 } response_status;
+
+/**
+ * @brief Online Certficate Status Protocol (OCSP)
+ *
+ * @ingroup transforms
+ */
+struct ocsp_t {
+
+	/**
+	 * @brief Fetches the actual certificate status via OCSP
+	 * 
+	 * @param uris				linked list of ocsp uris
+	 * @param certinfo			certificate status info to be updated
+	 */
+	void (*fetch) (ocsp_t *this, certinfo_t *certinfo);
+
+	/**
+	 * @brief Destroys the ocsp_t object.
+	 * 
+	 * @param this			ocsp object to destroy
+	 */
+	void (*destroy) (ocsp_t *this);
+
+};
+
+/**
+ * @brief Create an ocsp_t object.
+ * 
+ * @param cacert 	ca certificate
+ * @param uris	 	linked list of ocsp uris
+ * @return 			created ocsp_t object
+ * 
+ * @ingroup transforms
+ */
+ocsp_t *ocsp_create(x509_t *cacert, linked_list_t *uris);
+
+#endif /* OCSP_H_ */

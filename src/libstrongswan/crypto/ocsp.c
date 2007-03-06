@@ -31,12 +31,47 @@
 
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
+#include <utils/identification.h>
+#include <utils/randomizer.h>
+#include <debug.h>
 
 #include "certinfo.h"
 #include "x509.h"
 #include "ocsp.h"
 
 #define NONCE_LENGTH		16
+
+typedef struct private_ocsp_t private_ocsp_t;
+
+/**
+ * Private data of a ocsp_t object.
+ */
+struct private_ocsp_t {
+	/**
+	 * Public interface for this ocsp object.
+	 */
+	ocsp_t public;
+
+	/**
+	 * CA certificate.
+	 */
+	x509_t *cacert;
+
+	/**
+	 * Requestor certificate
+	 */
+	x509_t *requestor_cert;
+
+	/**
+	 * Linked list of ocsp uris
+	 */
+	linked_list_t *uris;
+
+	/**
+	 * Nonce required for ocsp request and response
+	 */
+	chunk_t nonce;
+};
 
 static const char *const response_status_names[] = {
     "successful",
@@ -51,62 +86,62 @@ static const char *const response_status_names[] = {
 typedef struct response_t response_t;
 
 struct response_t {
-    chunk_t  tbs;
-    chunk_t  responder_id_name;
-    chunk_t  responder_id_key;
-    time_t   produced_at;
-    chunk_t  responses;
-    chunk_t  nonce;
-    int      algorithm;
-    chunk_t  signature;
+	chunk_t  tbs;
+	chunk_t  responder_id_name;
+	chunk_t  responder_id_key;
+	time_t   produced_at;
+	chunk_t  responses;
+	chunk_t  nonce;
+	int      algorithm;
+	chunk_t  signature;
 };
 
 const response_t empty_response = {
-    { NULL, 0 }   ,	/* tbs */
-    { NULL, 0 }   ,	/* responder_id_name */
-    { NULL, 0 }   ,	/* responder_id_key */
-    UNDEFINED_TIME,	/* produced_at */
-    { NULL, 0 }   ,	/* single_response */
-    { NULL, 0 }   ,	/* nonce */
-    OID_UNKNOWN   ,	/* signature_algorithm */
-    { NULL, 0 }		/* signature */
+	{ NULL, 0 }   ,	/* tbs */
+	{ NULL, 0 }   ,	/* responder_id_name */
+	{ NULL, 0 }   ,	/* responder_id_key */
+	UNDEFINED_TIME,	/* produced_at */
+	{ NULL, 0 }   ,	/* single_response */
+	{ NULL, 0 }   ,	/* nonce */
+	OID_UNKNOWN   ,	/* signature_algorithm */
+	{ NULL, 0 }		/* signature */
 };
 
 /* single response container */
 typedef struct single_response single_response_t;
 
 struct single_response {
-    single_response_t *next;
-    int               hash_algorithm;
-    chunk_t           issuer_name_hash;
-    chunk_t           issuer_key_hash;
-    chunk_t           serialNumber;
-    cert_status_t     status;
-    time_t            revocationTime;
-    crl_reason_t      revocationReason;
-    time_t            thisUpdate;
-    time_t            nextUpdate;
+	single_response_t *next;
+	int               hash_algorithm;
+	chunk_t           issuer_name_hash;
+	chunk_t           issuer_key_hash;
+	chunk_t           serialNumber;
+	cert_status_t     status;
+	time_t            revocationTime;
+	crl_reason_t      revocationReason;
+	time_t            thisUpdate;
+	time_t            nextUpdate;
 };
 
 const single_response_t empty_single_response = {
-      NULL            ,	/* *next */
-    OID_UNKNOWN       ,	/* hash_algorithm */
-    { NULL, 0 }       ,	/* issuer_name_hash */
-    { NULL, 0 }       ,	/* issuer_key_hash */
-    { NULL, 0 }       ,	/* serial_number */
-    CERT_UNDEFINED    ,	/* status */
-    UNDEFINED_TIME    ,	/* revocationTime */
-    REASON_UNSPECIFIED,	/* revocationReason */
-    UNDEFINED_TIME    ,	/* this_update */
-    UNDEFINED_TIME	/* next_update */
+	  NULL            ,	/* *next */
+	OID_UNKNOWN       ,	/* hash_algorithm */
+	{ NULL, 0 }       ,	/* issuer_name_hash */
+	{ NULL, 0 }       ,	/* issuer_key_hash */
+	{ NULL, 0 }       ,	/* serial_number */
+	CERT_UNDEFINED    ,	/* status */
+	UNDEFINED_TIME    ,	/* revocationTime */
+	REASON_UNSPECIFIED,	/* revocationReason */
+	UNDEFINED_TIME    ,	/* this_update */
+	UNDEFINED_TIME	/* next_update */
 };
-
 
 /* list of single requests */
 typedef struct request_list request_list_t;
+
 struct request_list {
-    chunk_t request;
-    request_list_t *next;
+	chunk_t request;
+	request_list_t *next;
 };
 
 /* some OCSP specific prefabricated ASN.1 constants */
@@ -255,4 +290,154 @@ static const asn1Object_t singleResponseObjects[] = {
 #define SINGLE_RESPONSE_EXT_VALUE					25
 #define SINGLE_RESPONSE_ROOF						28
 
+/**
+ * build requestorName (into TBSRequest)
+ */
+static chunk_t build_requestor_name(private_ocsp_t *this)
+{
+	identification_t *requestor_name = this->requestor_cert->get_subject(this->requestor_cert);
 
+	return asn1_wrap(ASN1_CONTEXT_C_1, "m",
+				asn1_simple_object(ASN1_CONTEXT_C_4,
+					requestor_name->get_encoding(requestor_name)));
+}
+
+/*
+ * build requestList (into TBSRequest)
+ */
+static chunk_t build_request_list(private_ocsp_t *this)
+{
+	return chunk_empty;
+}
+
+/**
+ * build nonce extension (into requestExtensions)
+ */
+static chunk_t build_nonce_extension(private_ocsp_t *this)
+{
+	randomizer_t *randomizer = randomizer_create();
+
+    /* generate a random nonce */
+	randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_LENGTH, &this->nonce);
+	randomizer->destroy(randomizer);
+
+    return asn1_wrap(ASN1_SEQUENCE, "cm",
+		ASN1_nonce_oid,
+		asn1_simple_object(ASN1_OCTET_STRING, this->nonce));
+}
+
+/**
+ * build requestExtensions (into TBSRequest)
+ */
+static chunk_t build_request_ext(private_ocsp_t *this)
+{
+    return asn1_wrap(ASN1_CONTEXT_C_2, "m",
+		asn1_wrap(ASN1_SEQUENCE, "mm",
+			build_nonce_extension(this),
+		    asn1_wrap(ASN1_SEQUENCE, "cc",
+				ASN1_response_oid,
+				ASN1_response_content
+			)
+		)
+	);
+}
+
+/**
+ * build TBSRequest (into OCSPRequest)
+ */
+static chunk_t build_tbs_request(private_ocsp_t *this, bool has_requestor_cert)
+{
+	/* version is skipped since the default is ok */
+	return asn1_wrap(ASN1_SEQUENCE, "mmm",
+		(has_requestor_cert)? build_requestor_name(this): chunk_empty,
+		build_request_list(this),
+		build_request_ext(this));
+}
+
+/**
+ * build signature into ocsp request
+ * gets built only if a request cert with a corresponding private key is found
+ */
+static chunk_t build_signature(private_ocsp_t *this, chunk_t tbsRequest)
+{
+	return chunk_empty;
+}
+
+/**
+ * assembles an ocsp request and sets the nonce field in private_ocsp_t to the sent nonce
+ */
+static chunk_t build_request(private_ocsp_t *this, certinfo_t * certinfo)
+{
+	bool has_requestor_cert;
+	chunk_t keyid = this->cacert->get_keyid(this->cacert);
+	chunk_t tbsRequest, signature;
+
+	DBG2("assembling ocsp request");
+	DBG2("issuer: '%D'", this->cacert->get_subject(this->cacert));
+	DBG2("keyid:   %#B", &keyid);
+
+	/* looks for requestor cert and matching private key */
+	has_requestor_cert = FALSE;
+
+    /* has_requestor_cert = get_ocsp_requestor_cert(location); */
+
+    /* build content */
+	tbsRequest = build_tbs_request(this, has_requestor_cert);
+
+    /* sign tbsReuqest */
+	signature = (has_requestor_cert)? build_signature(this, tbsRequest): chunk_empty;
+
+    return asn1_wrap(ASN1_SEQUENCE, "mm",
+		tbsRequest,
+		signature);
+
+	return signature;
+}
+
+/**
+ * Implements ocsp_t.fetch.
+ */
+static void fetch(private_ocsp_t *this, certinfo_t *certinfo)
+{
+	chunk_t request = build_request(this, certinfo);
+
+	DBG3("ocsp request: %B", &request);
+	{
+		iterator_t *iterator = this->uris->create_iterator(this->uris, TRUE);
+		identification_t *uri;
+
+		while (iterator->iterate(iterator, (void**)&uri))
+		{
+			DBG1("sending ocsp request to location '%D'", uri);
+		}
+		iterator->destroy(iterator);
+	}
+	free(request.ptr);
+}
+
+/**
+ * Implements ocsp_t.destroy.
+ */
+static void destroy(private_ocsp_t *this)
+{
+	free(this->nonce.ptr);
+	free(this);
+}
+
+/*
+ * Described in header.
+ */
+ocsp_t *ocsp_create(x509_t *cacert, linked_list_t *uris)
+{
+	private_ocsp_t *this = malloc_thing(private_ocsp_t);
+	
+	/* initialize */
+	this->cacert = cacert;
+	this->uris = uris;
+
+	/* public functions */
+	this->public.fetch = (void (*) (ocsp_t*,certinfo_t*))fetch;
+	this->public.destroy = (void (*) (ocsp_t*))destroy;
+
+	return &this->public;
+}
