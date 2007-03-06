@@ -386,10 +386,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				case INVALID_SELECTORS:
 					/* these are errors, but are not critical as only the
 					 * CHILD_SA won't get build, but IKE_SA establishes anyway */
-					DBG1(DBG_IKE, "received %N notify, no CHILD_SA built",
-						 notify_type_names, type);
-					iterator->destroy(iterator);
-					return SUCCESS;	
+					 break;
 				default:
 				{
 					if (type < 16383)

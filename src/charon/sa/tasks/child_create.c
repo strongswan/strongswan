@@ -330,12 +330,6 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
 	
-	/* add TSi/TSr payloads */
-	ts_payload = ts_payload_create_from_traffic_selectors(TRUE, this->tsi);
-	message->add_payload(message, (payload_t*)ts_payload);
-	ts_payload = ts_payload_create_from_traffic_selectors(FALSE, this->tsr);
-	message->add_payload(message, (payload_t*)ts_payload);
-	
 	/* add nonce payload if not in IKE_AUTH */
 	if (message->get_exchange_type(message) == CREATE_CHILD_SA)
 	{
@@ -344,6 +338,12 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 		message->add_payload(message, (payload_t*)nonce_payload);
 	}
 	
+	/* add TSi/TSr payloads */
+	ts_payload = ts_payload_create_from_traffic_selectors(TRUE, this->tsi);
+	message->add_payload(message, (payload_t*)ts_payload);
+	ts_payload = ts_payload_create_from_traffic_selectors(FALSE, this->tsr);
+	message->add_payload(message, (payload_t*)ts_payload);
+
 	/* add a notify if we are not in tunnel mode */
 	switch (this->mode)
 	{
@@ -590,13 +590,25 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 			notify_payload_t *notify = (notify_payload_t*)payload;
 			notify_type_t type = notify->get_notify_type(notify);
 			
-			if (type < 16383)
+			switch (type)
 			{
-				SIG(CHILD_UP_FAILED, "received %N notify error",
-					notify_type_names, type);
-				iterator->destroy(iterator);
-				/* an error in CHILD_SA creation is not critical */
-				return SUCCESS;	
+				/* handle notify errors related to CHILD_SA only */
+				case NO_PROPOSAL_CHOSEN:
+				case SINGLE_PAIR_REQUIRED:
+				case NO_ADDITIONAL_SAS:
+				case INTERNAL_ADDRESS_FAILURE:
+				case FAILED_CP_REQUIRED:
+				case TS_UNACCEPTABLE:
+				case INVALID_SELECTORS:
+				{
+					SIG(CHILD_UP_FAILED, "received %N notify, no CHILD_SA built",
+						notify_type_names, type);
+					iterator->destroy(iterator);
+					/* an error in CHILD_SA creation is not critical */
+					return SUCCESS;
+				}
+				default:
+					break;
 			}
 		}
 	}
