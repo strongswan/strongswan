@@ -425,6 +425,13 @@ static status_t build_response(private_task_manager_t *this,
 	    }
 	}
 	iterator->destroy(iterator);
+	
+	/* remove resonder SPI if IKE_SA_INIT failed */
+	if (delete && exchange == IKE_SA_INIT)
+	{
+		ike_sa_id_t *id = this->ike_sa->get_id(this->ike_sa);
+		id->set_responder_spi(id, 0);
+	}
 
 	/* message complete, send it */
 	DESTROY_IF(this->responding.packet);
