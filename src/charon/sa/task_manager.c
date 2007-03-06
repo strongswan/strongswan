@@ -207,6 +207,13 @@ static status_t build_request(private_task_manager_t *this)
 	status_t status;
 	exchange_type_t exchange = 0;
 	
+	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED)
+	{
+		DBG2(DBG_IKE, "delaying task initiation, exchange in progress");
+		/* do not initiate if we already have a message in the air */
+		return SUCCESS;
+	}
+	
 	if (this->active_tasks->get_count(this->active_tasks) == 0)
 	{
 		DBG2(DBG_IKE, "activating new tasks");
@@ -379,6 +386,7 @@ static status_t process_response(private_task_manager_t *this,
 	iterator->destroy(iterator);
 	
 	this->initiating.mid++;
+	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 
 	return build_request(this);
 }
@@ -778,6 +786,7 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	this->initiating.packet = NULL;
 	this->responding.mid = 0;
 	this->initiating.mid = 0;
+	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	this->queued_tasks = linked_list_create();
 	this->active_tasks = linked_list_create();
 	this->passive_tasks = linked_list_create();
