@@ -317,18 +317,27 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 	{
 		while (i2->iterate(i2, (void**)&ts2))
 		{
-			if (ts1 != ts2 && ts2->is_contained_in(ts2, ts1))
+			if (ts1 != ts2)
 			{
-				i2->remove(i2);
-				ts2->destroy(ts2);
-				i1->reset(i1);
-				break;
+				if (ts2->is_contained_in(ts2, ts1))
+				{
+					i2->remove(i2);
+					ts2->destroy(ts2);
+					i1->reset(i1);
+					break;
+				}
+				if (ts1->is_contained_in(ts1, ts2))
+				{
+					i1->remove(i1);
+					ts1->destroy(ts1);
+					i2->reset(i2);
+					break;
+				}
 			}
 		}
 	}
 	i1->destroy(i1);
 	i2->destroy(i2);
-	
 	
 	return selected;
 }

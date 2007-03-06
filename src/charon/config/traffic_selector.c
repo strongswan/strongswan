@@ -7,7 +7,7 @@
 
 /*
  * Copyright (C) 2007 Tobias Brunner
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -30,6 +30,7 @@
 
 #include "traffic_selector.h"
 
+#include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
