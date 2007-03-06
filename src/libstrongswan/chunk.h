@@ -1,7 +1,7 @@
 /**
  * @file chunk.h
  *
- * @brief Pointer/lenght abstraction and its functions.
+ * @brief Pointer/length abstraction and its functions.
  *
  */
 
