@@ -453,6 +453,33 @@ static x509_t* find_certificate(linked_list_t *certs, x509_t *cert)
 }
 
 /**
+ * Adds crl and ocsp uris to the corresponding issuer info record
+ */
+static void add_uris(ca_info_t *issuer, x509_t *cert)
+{
+	iterator_t *iterator;
+	identification_t *uri;
+
+	/* add any crl distribution points to the issuer ca info record */
+	iterator = cert->create_crluri_iterator(cert);
+	
+	while (iterator->iterate(iterator, (void**)&uri))
+	{
+		issuer->add_crluri(issuer, uri->get_encoding(uri));
+	}
+	iterator->destroy(iterator);
+
+	/* add any ocsp access points to the issuer ca info record */
+	iterator = cert->create_ocspuri_iterator(cert);
+	
+	while (iterator->iterate(iterator, (void**)&uri))
+	{
+		issuer->add_ocspuri(issuer, uri->get_encoding(uri));
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implementation of credential_store_t.verify.
  */
 static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *found)
@@ -529,6 +556,12 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			certinfo_t *certinfo = certinfo_create(cert->get_serialNumber(cert));
 
 			certinfo->set_nextUpdate(certinfo, until);
+
+			if (pathlen == 0)
+			{
+				/* add any crl and ocsp uris contained in the certificate under test */
+				add_uris(issuer, cert);
+			}
 
 			/* first check certificate revocation using ocsp */
 			status = issuer->verify_by_ocsp(issuer, cert, certinfo);
@@ -693,34 +726,14 @@ static x509_t* add_end_certificate(private_local_credential_store_t *this, x509_
 {
 	x509_t *ret_cert = add_certificate(this->certs, cert);
 
+	/* add crl and ocsp uris the first time the certificate is added */
 	if (ret_cert == cert)
 	{
 		ca_info_t *issuer = get_issuer(this, cert);
 
 		if (issuer)
 		{
-			/* add any crl distribution points to the issuer ca info record */
-			{
-				iterator_t *iterator = cert->create_crluri_iterator(cert);
-				identification_t *uri;
-	
-				while (iterator->iterate(iterator, (void**)&uri))
-				{
-					issuer->add_crluri(issuer, uri->get_encoding(uri));
-				}
-				iterator->destroy(iterator);
-			}
-			/* add any ocsp access points to the issuer ca info record */
-			{
-				iterator_t *iterator = cert->create_ocspuri_iterator(cert);
-				identification_t *uri;
-	
-				while (iterator->iterate(iterator, (void**)&uri))
-				{
-					issuer->add_ocspuri(issuer, uri->get_encoding(uri));
-				}
-				iterator->destroy(iterator);
-			}
+			add_uris(issuer, cert);
 		}
 	}
 	return ret_cert;
