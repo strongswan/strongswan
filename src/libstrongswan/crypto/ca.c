@@ -389,6 +389,12 @@ static cert_status_t verify_by_ocsp(private_ca_info_t* this, const x509_t *cert,
 
 	pthread_mutex_lock(&(this->mutex));
 
+	/* do we support OCSP at all? */
+	if (this->ocspuris->get_count(this->ocspuris) == 0)
+	{
+		goto ret;
+	}
+
 	/* do we have a valid certinfo record for this serial number in our cache? */
 	{
 		iterator_t *iterator = this->certinfos->create_iterator(this->certinfos, TRUE);
@@ -411,11 +417,13 @@ static cert_status_t verify_by_ocsp(private_ca_info_t* this, const x509_t *cert,
 		ocsp_t *ocsp;
 
 		DBG2("ocsp status is not in cache");
+
 		ocsp = ocsp_create(this->cacert, this->ocspuris);
 		ocsp->fetch(ocsp, certinfo);
 		ocsp->destroy(ocsp);
 	}
-	
+
+ret:
 	pthread_mutex_unlock(&(this->mutex));
 	return certinfo->get_status(certinfo);
 }
