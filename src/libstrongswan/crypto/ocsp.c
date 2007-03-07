@@ -35,6 +35,7 @@
 #include <utils/randomizer.h>
 #include <debug.h>
 
+#include "hashers/hasher.h"
 #include "certinfo.h"
 #include "x509.h"
 #include "ocsp.h"
@@ -68,9 +69,19 @@ struct private_ocsp_t {
 	linked_list_t *uris;
 
 	/**
+	 * Linked list of certinfos to be requested
+	 */
+	linked_list_t *certinfos;
+
+	/**
 	 * Nonce required for ocsp request and response
 	 */
 	chunk_t nonce;
+
+	/**
+	 * SHA-1 hash over issuer distinguished name
+	 */
+	chunk_t authNameID;
 };
 
 static const char *const response_status_names[] = {
@@ -134,14 +145,6 @@ const single_response_t empty_single_response = {
 	REASON_UNSPECIFIED,	/* revocationReason */
 	UNDEFINED_TIME    ,	/* this_update */
 	UNDEFINED_TIME	/* next_update */
-};
-
-/* list of single requests */
-typedef struct request_list request_list_t;
-
-struct request_list {
-	chunk_t request;
-	request_list_t *next;
 };
 
 /* some OCSP specific prefabricated ASN.1 constants */
@@ -302,12 +305,64 @@ static chunk_t build_requestor_name(private_ocsp_t *this)
 					requestor_name->get_encoding(requestor_name)));
 }
 
-/*
+/**
+ * build request (into requestList)
+ * no singleRequestExtensions used
+ */
+static chunk_t build_request(private_ocsp_t *this, certinfo_t *certinfo)
+{
+	chunk_t authKeyID = this->cacert->get_subjectKeyID(this->cacert);
+	chunk_t serialNumber = certinfo->get_serialNumber(certinfo);
+
+	chunk_t reqCert = asn1_wrap(ASN1_SEQUENCE, "cmmm",
+		ASN1_sha1_id,
+		asn1_simple_object(ASN1_OCTET_STRING, this->authNameID),
+		asn1_simple_object(ASN1_OCTET_STRING, authKeyID),
+		asn1_simple_object(ASN1_INTEGER, serialNumber));
+
+	return asn1_wrap(ASN1_SEQUENCE, "m", reqCert);
+}
+
+/**
  * build requestList (into TBSRequest)
  */
 static chunk_t build_request_list(private_ocsp_t *this)
 {
-	return chunk_empty;
+	chunk_t requestList;
+	size_t datalen = 0;
+	linked_list_t *request_list = linked_list_create();
+
+	{
+		iterator_t *iterator = this->certinfos->create_iterator(this->certinfos, TRUE);
+		certinfo_t *certinfo;
+
+		while (iterator->iterate(iterator, (void**)&certinfo))
+		{
+			chunk_t *request = malloc_thing(chunk_t);
+
+ 			*request = build_request(this, certinfo);
+			request_list->insert_last(request_list, (void*)request);
+			datalen += request->len;
+		}
+		iterator->destroy(iterator);
+	}
+	{
+		iterator_t *iterator = request_list->create_iterator(request_list, TRUE);
+		chunk_t *request;
+
+    	u_char *pos = build_asn1_object(&requestList, ASN1_SEQUENCE, datalen);
+
+		while (iterator->iterate(iterator, (void**)&request))
+		{
+			memcpy(pos, request->ptr, request->len); 
+			pos += request->len;
+			free(request->ptr);
+			free(request);
+		}
+		iterator->destroy(iterator);
+		request_list->destroy(request_list);
+	}
+	return requestList;
 }
 
 /**
@@ -366,7 +421,7 @@ static chunk_t build_signature(private_ocsp_t *this, chunk_t tbsRequest)
 /**
  * assembles an ocsp request and sets the nonce field in private_ocsp_t to the sent nonce
  */
-static chunk_t build_request(private_ocsp_t *this, certinfo_t * certinfo)
+static chunk_t ocsp_build_request(private_ocsp_t *this)
 {
 	bool has_requestor_cert;
 	chunk_t keyid = this->cacert->get_keyid(this->cacert);
@@ -399,8 +454,15 @@ static chunk_t build_request(private_ocsp_t *this, certinfo_t * certinfo)
  */
 static void fetch(private_ocsp_t *this, certinfo_t *certinfo)
 {
-	chunk_t request = build_request(this, certinfo);
+	chunk_t request;
 
+	if (this->uris->get_count(this->uris) == 0)
+	{
+		return;
+	}
+	this->certinfos->insert_last(this->certinfos, (void*)certinfo);
+
+	request = ocsp_build_request(this);
 	DBG3("ocsp request: %B", &request);
 	{
 		iterator_t *iterator = this->uris->create_iterator(this->uris, TRUE);
@@ -420,6 +482,8 @@ static void fetch(private_ocsp_t *this, certinfo_t *certinfo)
  */
 static void destroy(private_ocsp_t *this)
 {
+	this->certinfos->destroy(this->certinfos);
+	free(this->authNameID.ptr);
 	free(this->nonce.ptr);
 	free(this);
 }
@@ -434,6 +498,15 @@ ocsp_t *ocsp_create(x509_t *cacert, linked_list_t *uris)
 	/* initialize */
 	this->cacert = cacert;
 	this->uris = uris;
+	this->certinfos = linked_list_create();
+	{
+		hasher_t *hasher = hasher_create(HASH_SHA1);
+		identification_t *issuer = cacert->get_subject(cacert);
+
+		hasher->allocate_hash(hasher, issuer->get_encoding(issuer),
+									  &this->authNameID);
+		hasher->destroy(hasher);
+	}
 
 	/* public functions */
 	this->public.fetch = (void (*) (ocsp_t*,certinfo_t*))fetch;
