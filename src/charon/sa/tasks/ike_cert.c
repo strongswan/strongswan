@@ -124,7 +124,7 @@ static void process_certs(private_ike_cert_t *this, message_t *message)
 			}
 			
 			cert_data = cert_payload->get_data_clone(cert_payload);
-			cert = x509_create_from_chunk(cert_data);
+			cert = x509_create_from_chunk(cert_data, 0);
 			if (cert)
 			{
 				if (charon->credentials->verify(charon->credentials,
