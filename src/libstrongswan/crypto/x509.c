@@ -1257,6 +1257,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.is_valid = (err_t (*) (const x509_t*,time_t*))is_valid;
 	this->public.is_ca = (bool (*) (const x509_t*))is_ca;
 	this->public.is_self_signed = (bool (*) (const x509_t*))is_self_signed;
+	this->public.is_ocsp_signer = (bool (*) (const x509_t*))is_ocsp_signer;
 	this->public.get_certificate = (chunk_t (*) (const x509_t*))get_certificate;
 	this->public.get_public_key = (rsa_public_key_t* (*) (const x509_t*))get_public_key;
 	this->public.get_serialNumber = (chunk_t (*) (const x509_t*))get_serialNumber;
