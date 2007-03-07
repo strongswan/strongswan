@@ -82,6 +82,11 @@ struct private_x509_t {
 	cert_status_t status;
 
 	/**
+	 * Authority flags
+	 */
+	 u_char authority_flags;
+
+	/**
 	 * X.509 Certificate in DER format
 	 */
 	chunk_t certificate;
@@ -142,6 +147,11 @@ struct private_x509_t {
 	linked_list_t *ocspAccessLocations;
 
 	/**
+	 * Subject public key
+	 */
+	chunk_t subjectPublicKey;
+
+	/**
 	 * Subject RSA public key, if subjectPublicKeyAlgorithm == RSA
 	 */
 	rsa_public_key_t *public_key;
@@ -167,6 +177,11 @@ struct private_x509_t {
 	bool isCA;
 
 	/**
+	 * OCSPSigner extended key usage flag
+	 */
+	bool isOcspSigner;
+
+	/**
 	 * Signature algorithm (must be identical to sigAlg)
 	 */
 	int algorithm;
@@ -176,9 +191,6 @@ struct private_x509_t {
 	 */
 	chunk_t signature;
 
-	u_char authority_flags;
-	chunk_t subjectPublicKey;
-	bool isOcspSigner; /* ocsp */
 };
 
 /**
@@ -917,6 +929,14 @@ static bool is_ca(const private_x509_t *this)
 }
 
 /**
+ * Implements x509_t.is_ocsp_signer
+ */
+static bool is_ocsp_signer(const private_x509_t *this)
+{
+	return this->isOcspSigner;
+}
+
+/**
  * Implements x509_t.is_self_signed
  */
 static bool is_self_signed(const private_x509_t *this)
@@ -1214,7 +1234,7 @@ static void destroy(private_x509_t *this)
 /*
  * Described in header.
  */
-x509_t *x509_create_from_chunk(chunk_t chunk)
+x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 {
 	private_x509_t *this = malloc_thing(private_x509_t);
 	
@@ -1253,7 +1273,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	
-	if (!parse_x509cert(chunk, 0, this))
+	if (!parse_x509cert(chunk, level, this))
 	{
 		destroy(this);
 		return NULL;
@@ -1284,7 +1304,7 @@ x509_t *x509_create_from_file(const char *filename, const char *label)
 	if (!pem_asn1_load_file(filename, NULL, label, &chunk, &pgp))
 		return NULL;
 
-	cert = x509_create_from_chunk(chunk);
+	cert = x509_create_from_chunk(chunk, 0);
 
 	if (cert == NULL)
 		free(chunk.ptr);

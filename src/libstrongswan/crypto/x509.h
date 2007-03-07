@@ -31,6 +31,13 @@ typedef struct x509_t x509_t;
 #include <utils/identification.h>
 #include <utils/iterator.h>
 
+/* authority flags */
+
+#define AUTH_NONE	0x00	/* no authorities */
+#define AUTH_CA		0x01	/* certification authority */
+#define AUTH_AA		0x02	/* authorization authority */
+#define AUTH_OCSP	0x04	/* ocsp signing authority */
+
 /**
  * @brief X.509 certificate.
  * 
@@ -211,6 +218,14 @@ struct x509_t {
 	bool (*is_ca) (const x509_t *this);
 
 	/**
+	 * @brief Returns the OCSPSigner extended key usage flag
+	 * 
+	 * @param this			certificate being examined
+	 * @return				TRUE if the OCSPSigner flag is set
+	 */
+	bool (*is_ocsp_signer) (const x509_t *this);
+
+	/**
 	 * @brief Checks if the certificate is self-signed (subject equals issuer)
 	 * 
 	 * @param this			certificate being examined
@@ -234,7 +249,7 @@ struct x509_t {
  * 
  * @ingroup transforms
  */
-x509_t *x509_create_from_chunk(chunk_t chunk);
+x509_t *x509_create_from_chunk(chunk_t chunk, u_int level);
 
 /**
  * @brief Read a x509 certificate from a DER encoded file.
