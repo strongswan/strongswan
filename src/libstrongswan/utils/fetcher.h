@@ -27,6 +27,8 @@ typedef struct fetcher_t fetcher_t;
 
 #include <chunk.h>
 
+#define FETCHER_TIMEOUT	10	/* seconds */
+
 /**
  * @brief Fetches information from an URI (http, file, ftp, etc.)
  *
@@ -38,10 +40,21 @@ struct fetcher_t {
 	 * @brief Get information via a get request.
 	 * 
 	 * @param this				calling object
-	 * @param uri				uri specifying where to get information from
+	 * @param uri				uri specifying the information source
 	 * @return					chunk_t containing the information
 	 */
-	chunk_t (*get) (fetcher_t *this, chunk_t uri);
+	chunk_t (*get) (fetcher_t *this, const char *uri);
+
+	/**
+	 * @brief Get information via a get request.
+	 * 
+	 * @param this				calling object
+	 * @param uri				uri specifying the information source
+	 * @param type				content type of http post request
+	 * @param request			binary data for http post request
+	 * @return					chunk_t containing the information
+	 */
+	chunk_t (*post) (fetcher_t *this, const char *type, chunk_t request);
 
 	/**
 	 * @brief Destroys the fetcher_t object.
@@ -57,8 +70,17 @@ struct fetcher_t {
  * 
  * @return 			created fetcher_t object
  * 
- * @ingroup transforms
+ * @ingroup utils
  */
-fetcher_t *fetcher_create(void);
+fetcher_t* fetcher_create(const char *uri);
+
+/**
+ * @brief Initializes the fetcher_t class
+ *
+ * call this function only once in the main program
+ *
+ * @ingroup utils
+ */
+void fetcher_initialize(void);
 
 #endif /*FETCHER_H_*/

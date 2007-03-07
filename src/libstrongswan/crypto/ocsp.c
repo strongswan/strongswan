@@ -33,6 +33,7 @@
 #include <asn1/asn1.h>
 #include <utils/identification.h>
 #include <utils/randomizer.h>
+#include <utils/fetcher.h>
 #include <debug.h>
 
 #include "hashers/hasher.h"
@@ -455,6 +456,8 @@ static chunk_t ocsp_build_request(private_ocsp_t *this)
 static void fetch(private_ocsp_t *this, certinfo_t *certinfo)
 {
 	chunk_t request;
+	chunk_t reply;
+	bool fetched = FALSE;
 
 	if (this->uris->get_count(this->uris) == 0)
 	{
@@ -467,14 +470,33 @@ static void fetch(private_ocsp_t *this, certinfo_t *certinfo)
 	{
 		iterator_t *iterator = this->uris->create_iterator(this->uris, TRUE);
 		identification_t *uri;
-
+		
 		while (iterator->iterate(iterator, (void**)&uri))
 		{
-			DBG1("sending ocsp request to location '%D'", uri);
+			fetcher_t *fetcher;
+			char uri_string[BUF_LEN];
+			chunk_t uri_chunk = uri->get_encoding(uri);
+
+			snprintf(uri_string, BUF_LEN, "%.*s", uri_chunk.len, uri_chunk.ptr);
+			fetcher = fetcher_create(uri_string);
+			
+			reply = fetcher->post(fetcher, "application/ocsp-request", request);
+			fetcher->destroy(fetcher);
+			if (reply.ptr != NULL)
+			{
+				fetched = TRUE;
+				break;
+			}
 		}
 		iterator->destroy(iterator);
 	}
 	free(request.ptr);
+
+	if (!fetched)
+	{
+		return;
+	}
+	DBG3("ocsp reply: %B", &reply);
 }
 
 /**

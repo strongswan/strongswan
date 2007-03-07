@@ -39,6 +39,7 @@
 #include "daemon.h"
 
 #include <library.h>
+#include <utils/fetcher.h>
 #include <config/credentials/local_credential_store.h>
 #include <config/connections/local_connection_store.h>
 #include <config/policies/local_policy_store.h>
@@ -267,6 +268,9 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	this->public.connections = (connection_store_t*)local_connection_store_create();
 	this->public.policies = (policy_store_t*)local_policy_store_create();
 	this->public.credentials = (credential_store_t*)local_credential_store_create(strict);
+
+	/* initialize fetcher_t class */
+	fetcher_initialize();
 
 	/* load secrets, ca certificates and crls */
 	credentials = this->public.credentials;

@@ -71,3 +71,8 @@ threads/thread_pool.h threads/receiver.h threads/stroke_interface.h
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
 AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_EAPDIR=\"${eapdir}\"
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread -lm -ldl
+
+if USE_LIBCURL
+   charon_LDADD += -lcurl
+endif
+
