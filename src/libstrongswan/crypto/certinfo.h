@@ -150,7 +150,7 @@ struct certinfo_t {
 	/**
 	 * @brief Destroys the certinfo_t object.
 	 * 
-	 * @param this			crl to destroy
+	 * @param this			certinfo_t to destroy
 	 */
 	void (*destroy) (certinfo_t *this);
 
