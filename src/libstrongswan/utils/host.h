@@ -62,7 +62,7 @@ enum host_diff_t {
  * 
  * @todo Add IPv6 support
  * 
- * @ingroup network
+ * @ingroup utils
  */
 struct host_t {
 	
