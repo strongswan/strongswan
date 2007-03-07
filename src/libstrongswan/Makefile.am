@@ -32,6 +32,7 @@ crypto/rsa/rsa_public_key.h  crypto/rsa/rsa_public_key.c \
 crypto/signers/hmac_signer.c crypto/signers/hmac_signer.h \
 crypto/signers/signer.c crypto/signers/signer.h \
 crypto/x509.c crypto/x509.h \
+utils/fetcher.c utils/fetcher.h \
 utils/host.c utils/host.h \
 utils/identification.c utils/identification.h \
 utils/iterator.h \
