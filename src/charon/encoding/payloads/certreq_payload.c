@@ -26,6 +26,7 @@
 
 #include <daemon.h>
 #include <crypto/hashers/hasher.h>
+#include <crypto/ca.h>
 
 #include "certreq_payload.h"
 
@@ -300,9 +301,9 @@ certreq_payload_t *certreq_payload_create_from_cacerts(void)
 	certreq_payload_t *this;
 	chunk_t keyids;
 	u_char *pos;
-	x509_t *cacert;
+	ca_info_t *cainfo;
 
-	iterator_t *iterator = charon->credentials->create_cacert_iterator(charon->credentials);
+	iterator_t *iterator = charon->credentials->create_cainfo_iterator(charon->credentials);
 	int count = iterator->get_count(iterator);
 
 	if (count == 0)
@@ -315,10 +316,10 @@ certreq_payload_t *certreq_payload_create_from_cacerts(void)
 	keyids = chunk_alloc(count * HASH_SIZE_SHA1);
 	pos = keyids.ptr;
 
-	while (iterator->iterate(iterator, (void**)&cacert))
+	while (iterator->iterate(iterator, (void**)&cainfo))
 	{
-		rsa_public_key_t *pubkey = cacert->get_public_key(cacert);
-		chunk_t keyid = pubkey->get_keyid(pubkey);
+		x509_t *cacert = cainfo->get_certificate(cainfo);
+		chunk_t keyid = cacert->get_keyid(cacert);
 
 		DBG2(DBG_IKE, "requesting certificate issued by '%D'", cacert->get_subject(cacert));
 		DBG2(DBG_IKE, "  with keyid %#B", &keyid);

@@ -124,7 +124,7 @@ static x509_t* load_end_certificate(const char *filename, identification_t **idp
 		snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
 	}
 
-	cert = x509_create_from_file(path, "end entity certificate");
+	cert = x509_create_from_file(path, "end entity");
 
 	if (cert)
 	{
@@ -167,13 +167,13 @@ static x509_t* load_ca_certificate(const char *filename)
 		snprintf(path, sizeof(path), "%s/%s", CA_CERTIFICATE_DIR, filename);
 	}
 
-	cert = x509_create_from_file(path, "ca certificate");
+	cert = x509_create_from_file(path, "ca");
 
 	if (cert)
 	{
 		if (cert->is_ca(cert))
 		{
-			return charon->credentials->add_ca_certificate(charon->credentials, cert);
+			return charon->credentials->add_auth_certificate(charon->credentials, cert, AUTH_CA);
 		}
 		else
 		{
@@ -1052,6 +1052,33 @@ static void stroke_status(stroke_msg_t *msg, FILE *out)
 }
 
 /**
+ * list all authority certificates matching a specified flag 
+ */
+static void list_auth_certificates(u_int flag, const char *label, bool utc, FILE *out)
+{
+	bool first = TRUE;
+	x509_t *cert;
+	
+	iterator_t *iterator = charon->credentials->create_auth_cert_iterator(charon->credentials);
+
+	while (iterator->iterate(iterator, (void**)&cert))
+	{
+		if (cert->has_authority_flag(cert, flag))
+		{
+			if (first)
+			{
+				fprintf(out, "\n");
+				fprintf(out, "List of X.509 %s Certificates:\n", label);
+				fprintf(out, "\n");
+				first = FALSE;
+			}
+			fprintf(out, "%#Q\n", cert, utc);
+		}
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * list various information
  */
 static void stroke_list(stroke_msg_t *msg, FILE *out)
@@ -1084,20 +1111,7 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
 	}
 	if (msg->list.flags & LIST_CACERTS)
 	{
-		x509_t *cert;
-		
-		iterator = charon->credentials->create_cacert_iterator(charon->credentials);
-		if (iterator->get_count(iterator))
-		{
-			fprintf(out, "\n");
-			fprintf(out, "List of X.509 CA Certificates:\n");
-			fprintf(out, "\n");
-		}
-		while (iterator->iterate(iterator, (void**)&cert))
-		{
-			fprintf(out, "%#Q\n", cert, msg->list.utc);
-		}
-		iterator->destroy(iterator);
+		list_auth_certificates(AUTH_CA, "CA", msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_CAINFOS)
 	{
@@ -1120,6 +1134,10 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
 	{
 		charon->credentials->list_crls(charon->credentials, out, msg->list.utc);
 	}
+	if (msg->list.flags & LIST_OCSPCERTS)
+	{
+		list_auth_certificates(AUTH_OCSP, "OCSP", msg->list.utc, out);
+	}
 }
 
 /**
@@ -1130,6 +1148,10 @@ static void stroke_reread(stroke_msg_t *msg, FILE *out)
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
 		charon->credentials->load_ca_certificates(charon->credentials);
+	}
+	if (msg->reread.flags & REREAD_OCSPCERTS)
+	{
+		charon->credentials->load_ocsp_certificates(charon->credentials);
 	}
 	if (msg->reread.flags & REREAD_CRLS)
 	{
