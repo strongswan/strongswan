@@ -481,18 +481,38 @@ static bool is_encoded(private_message_t *this)
  */
 static void add_payload(private_message_t *this, payload_t *payload)
 {
-	payload_t *last_payload;
-	if (this->payloads->get_count(this->payloads) > 0)
+	payload_t *last_payload, *first_payload;
+	
+	if ((this->is_request && payload->get_type(payload) == ID_INITIATOR) ||
+		(!this->is_request && payload->get_type(payload) == ID_RESPONDER))
 	{
-		this->payloads->get_last(this->payloads,(void **) &last_payload);
-		last_payload->set_next_type(last_payload, payload->get_type(payload));
+		/* HOTD: insert ID payload in the beginning to respect RFC */
+		if (this->payloads->get_first(this->payloads,
+									  (void **)&first_payload) == SUCCESS)
+		{
+			payload->set_next_type(payload, first_payload->get_type(first_payload));
+		}
+		else
+		{
+			payload->set_next_type(payload, NO_PAYLOAD);
+		}
+		this->first_payload = payload->get_type(payload);
+		this->payloads->insert_first(this->payloads, payload);
 	}
 	else
 	{
-		this->first_payload = payload->get_type(payload);
+		if (this->payloads->get_count(this->payloads) > 0)
+		{
+			this->payloads->get_last(this->payloads,(void **) &last_payload);
+			last_payload->set_next_type(last_payload, payload->get_type(payload));
+		}
+		else
+		{
+			this->first_payload = payload->get_type(payload);
+		}
+		payload->set_next_type(payload, NO_PAYLOAD);
+		this->payloads->insert_last(this->payloads, payload);
 	}
-	payload->set_next_type(payload, NO_PAYLOAD);
-	this->payloads->insert_last(this->payloads, (void*)payload);
 
 	DBG2(DBG_ENC ,"added payload of type %N to message",
 		 payload_type_names, payload->get_type(payload));
