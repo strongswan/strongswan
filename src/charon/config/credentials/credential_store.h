@@ -154,13 +154,13 @@ struct credential_store_t {
 	x509_t* (*add_end_certificate) (credential_store_t *this, x509_t *cert);
 
 	/**
-	 * @brief If a ca certificate does not already exists in the credential store then add it.
+	 * @brief If an authority certificate does not already exists in the credential store then add it.
 	 *
 	 * @param this		calling object
-	 * @param cert		ca certificate to be added
+	 * @param cert		authority certificate to be added
 	 * @return			pointer to the added or already existing certificate
 	 */
-	x509_t* (*add_ca_certificate) (credential_store_t *this, x509_t *cert);
+	x509_t* (*add_auth_certificate) (credential_store_t *this, x509_t *cert, u_int authority_flag);
 
 	/**
 	 * @brief If a ca info record does not already exists in the credential store then add it.
@@ -190,12 +190,12 @@ struct credential_store_t {
 	iterator_t* (*create_cert_iterator) (credential_store_t *this);
 
 	/**
-	 * @brief Create an iterator over all CA certificates.
+	 * @brief Create an iterator over all authority certificates.
 	 *
 	 * @param this		calling object
 	 * @return 			iterator
 	 */
-	iterator_t* (*create_cacert_iterator) (credential_store_t *this);
+	iterator_t* (*create_auth_cert_iterator) (credential_store_t *this);
 
 	/**
 	 * @brief Create an iterator over all CA info records
@@ -215,14 +215,22 @@ struct credential_store_t {
 	void (*list_crls) (credential_store_t *this, FILE *out, bool utc);
 
 	/**
-	 * @brief Loads trusted CA certificates from a default directory.
+	 * @brief Loads ca certificates from a default directory.
 	 *
 	 * Certificates in both DER and PEM format are accepted
 	 *
 	 * @param this		calling object
-	 * @param path		directory to load certificates from
 	 */
 	void (*load_ca_certificates) (credential_store_t *this);
+	
+	/**
+	 * @brief Loads ocsp certificates from a default directory.
+	 *
+	 * Certificates in both DER and PEM format are accepted
+	 *
+	 * @param this		calling object
+	 */
+	void (*load_ocsp_certificates) (credential_store_t *this);
 	
 	/**
 	 * @brief Loads CRLs from a default directory.

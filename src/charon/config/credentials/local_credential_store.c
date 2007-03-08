@@ -88,17 +88,17 @@ static shared_key_t *shared_key_create(chunk_t secret)
 	return (this);
 }
 
-/* ---------------------------------------------------------------------- *
+/* ------------------------------------------------------------------------ *
  * the ca_info_t object as a central control element
 
-+------------------------------------------------------+
-| local_credential_store_t                             |
-+------------------------------------------------------+
-  |                            |
-+-------------------------+  +-------------------------+
-| linked_list_t *ca_certs |  | linked_list_t *ca_infos |
-+-------------------------+  +-------------------------+
-  |                            |
++--------------------------------------------------------+
+| local_credential_store_t                               |
++--------------------------------------------------------+
+  |                              |
++---------------------------+  +-------------------------+
+| linked_list_t *auth_certs |  | linked_list_t *ca_infos |
++---------------------------+  +-------------------------+
+  |                              |
   |                 +------------------------- +
   |                 | ca_info_t                |
   |                 +--------------------------+
@@ -106,29 +106,27 @@ static shared_key_t *shared_key_create(chunk_t secret)
 | x509_t        |<--| x509_t *cacert           |   +----------------------+
 +---------------+   | linked_list_t *certinfos |-->| certinfo_t           |
 | chunk_t keyid |   | linked_list_t *ocspuris  |   +----------------------+
-+---------------+   | bool ocsp_fetch_pending  |   | chunk_t serialNumber |
-  |                 | crl_t *crl               |   | cert_status_t status |
-  |                 | linked_list_t *crluris   |   | time_t thisUpdate    |
-  |                 | bool crl_fetch_pending   |   | time_t nextUpdate    |
-  |                 | pthread_mutex_t mutex    |   | bool once            |
-  |                 +--------------------------+   +----------------------+
-  |                            |                     |
-  |                 +------------------------- +   +----------------------+
++---------------+   | crl_t *crl               |   | chunk_t serialNumber |
+  |                 | linked_list_t *crluris   |   | cert_status_t status |
+  |                 | pthread_mutex_t mutex    |   | time_t thisUpdate    |
++---------------+   +--------------------------+   | time_t nextUpdate    |
+| x509_t        |                |                 | bool once            |
++---------------+                |                 +----------------------+
+| chunk_t keyid |                |                   |
++---------------+   +------------------------- +   +----------------------+
   |                 | ca_info_t                |   | certinfo_t           |
   |                 +--------------------------+   +----------------------+
 +---------------+   | char *name               |   | chunk_t serialNumber |
 | x509_t        |<--| x509_t *cacert           |   | cert_status_t status |
 +---------------+   | linked_list_t *certinfos |   | time_t thisUpdate    |
 | chunk_t keyid |   | linked_list_t *ocspuris  |   | time_t nextUpdate    |
-+---------------+   | bool ocsp_fetch_pending  |   | bool once            |
-  |                 | crl_t *crl               |   +----------------------+
-  |                 | linked_list_t *crluris   |     |
-  |                 | bool crl_fetch_pending   |
-  |                 | pthread_mutex_t mutex;   |
++---------------+   | crl_t *crl               |   | bool once            |
+  |                 | linked_list_t *crluris   |   +----------------------+
+  |                 | pthread_mutex_t mutex;   |     |
   |                 +--------------------------+
-  |                            |
+  |                              |
 
- * ---------------------------------------------------------------------- */
+ * ------------------------------------------------------------------------ */
 
 typedef struct private_local_credential_store_t private_local_credential_store_t;
 
@@ -158,9 +156,9 @@ struct private_local_credential_store_t {
 	linked_list_t *certs;
 
 	/**
-	 * list of X.509 CA certificates with public keys
+	 * list of X.509 authority certificates with public keys
 	 */
-	linked_list_t *ca_certs;
+	linked_list_t *auth_certs;
 
 	/**
 	 * list of X.509 CA information records
@@ -366,11 +364,12 @@ static x509_t* get_ca_certificate(private_local_credential_store_t *this,
 	x509_t *found = NULL;
 	x509_t *current_cert;
 
-	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
+	iterator_t *iterator = this->auth_certs->create_iterator(this->auth_certs, TRUE);
 
 	while (iterator->iterate(iterator, (void**)&current_cert))
 	{
-		if (id->equals(id, current_cert->get_subject(current_cert)))
+		if (current_cert->has_authority_flag(current_cert, AUTH_CA)
+		&&  id->equals(id, current_cert->get_subject(current_cert)))
 		{
 			found = current_cert;
 			break;
@@ -390,13 +389,14 @@ static x509_t* get_ca_certificate_by_keyid(private_local_credential_store_t *thi
 	x509_t *found = NULL;
 	x509_t *current_cert;
 
-	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
+	iterator_t *iterator = this->auth_certs->create_iterator(this->auth_certs, TRUE);
 
 	while (iterator->iterate(iterator, (void**)&current_cert))
 	{
 		rsa_public_key_t *pubkey = current_cert->get_public_key(current_cert);
 
-		if (chunk_equals(keyid, pubkey->get_keyid(pubkey)))
+		if (current_cert->has_authority_flag(current_cert, AUTH_CA)
+		&&  chunk_equals(keyid, pubkey->get_keyid(pubkey)))
 		{
 			found = current_cert;
 			break;
@@ -655,6 +655,9 @@ static x509_t* add_certificate(linked_list_t *certs, x509_t *cert)
 
 	if (found_cert)
 	{
+		/* add the authority flags */
+		found_cert->add_authority_flags(found_cert, cert->get_authority_flags(cert));
+
 		cert->destroy(cert);
 		return found_cert;
 	}
@@ -742,9 +745,9 @@ static x509_t* add_end_certificate(private_local_credential_store_t *this, x509_
 /**
  * Implements local_credential_store_t.add_ca_certificate
  */
-static x509_t* add_ca_certificate(private_local_credential_store_t *this, x509_t *cert)
+static x509_t* add_auth_certificate(private_local_credential_store_t *this, x509_t *cert)
 {
-	 return add_certificate(this->ca_certs, cert);
+	 return add_certificate(this->auth_certs, cert);
 }
 
 /**
@@ -758,9 +761,9 @@ static iterator_t* create_cert_iterator(private_local_credential_store_t *this)
 /**
  * Implements local_credential_store_t.create_cacert_iterator
  */
-static iterator_t* create_cacert_iterator(private_local_credential_store_t *this)
+static iterator_t* create_auth_cert_iterator(private_local_credential_store_t *this)
 {
-	return this->ca_certs->create_iterator(this->ca_certs, TRUE);
+	return this->auth_certs->create_iterator(this->auth_certs, TRUE);
 }
 
 /**
@@ -799,20 +802,23 @@ static void list_crls(private_local_credential_store_t *this, FILE *out, bool ut
 }
 
 /**
- * Implements local_credential_store_t.load_ca_certificates
+ * Implements local_credential_store_t.load_auth_certificates
  */
-static void load_ca_certificates(private_local_credential_store_t *this)
+static void load_auth_certificates(private_local_credential_store_t *this,
+								   u_int auth_flag,
+								   const char* label,
+								   const char* path)
 {
 	struct dirent* entry;
 	struct stat stb;
 	DIR* dir;
 	
-	DBG1(DBG_CFG, "loading ca certificates from '%s/'", CA_CERTIFICATE_DIR);
+	DBG1(DBG_CFG, "loading %s certificates from '%s/'", label, path);
 
-	dir = opendir(CA_CERTIFICATE_DIR);
+	dir = opendir(path);
 	if (dir == NULL)
 	{
-		DBG1(DBG_CFG, "error opening ca certs directory %s'", CA_CERTIFICATE_DIR);
+		DBG1(DBG_CFG, "error opening %s certs directory %s'", label, path);
 		return;
 	}
 
@@ -820,7 +826,7 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 	{
 		char file[PATH_BUF];
 
-		snprintf(file, sizeof(file), "%s/%s", CA_CERTIFICATE_DIR, entry->d_name);
+		snprintf(file, sizeof(file), "%s/%s", path, entry->d_name);
 		
 		if (stat(file, &stb) == -1)
 		{
@@ -829,7 +835,7 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 		/* try to parse all regular files */
 		if (stb.st_mode & S_IFREG)
 		{
-			x509_t *cert = x509_create_from_file(file, "ca certificate");
+			x509_t *cert = x509_create_from_file(file, label);
 
 			if (cert)
 			{
@@ -837,28 +843,49 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 
 				if (ugh != NULL)
 				{
-					DBG1(DBG_CFG, "warning: ca certificate %s", ugh);
+					DBG1(DBG_CFG, "warning: %s certificate %s", label, ugh);
 				}
-				if (cert->is_ca(cert))
-				{
-					x509_t *ret_cert = add_certificate(this->ca_certs, cert);
 
-					if (ret_cert == cert)
+				if (auth_flag == AUTH_CA && !cert->is_ca(cert))
+				{
+					DBG1(DBG_CFG, "  CA basic constraints flag not set, cert discarded");
+					cert->destroy(cert);
+				}
+				else
+				{
+					x509_t *ret_cert;
+
+					cert->add_authority_flags(cert, auth_flag);
+
+					ret_cert = add_certificate(this->auth_certs, cert);
+
+					if (auth_flag == AUTH_CA && ret_cert == cert)
 					{
 						ca_info_t *ca_info = ca_info_create(NULL, cert);
 
 						add_ca_info(this, ca_info);
 					}
 				}
-				else
-				{
-					DBG1(DBG_CFG, "  CA basic constraints flag not set, cert discarded");
-					cert->destroy(cert);
-				}
 			}
 		}
 	}
 	closedir(dir);
+}
+
+/**
+ * Implements local_credential_store_t.load_ca_certificates
+ */
+static void load_ca_certificates(private_local_credential_store_t *this)
+{
+	load_auth_certificates(this, AUTH_CA, "ca", CA_CERTIFICATE_DIR);
+}
+
+/**
+ * Implements local_credential_store_t.load_ca_certificates
+ */
+static void load_ocsp_certificates(private_local_credential_store_t *this)
+{
+	load_auth_certificates(this, AUTH_OCSP, "ocsp", OCSP_CERTIFICATE_DIR);
 }
 
 /**
@@ -1182,7 +1209,7 @@ error:
 static void destroy(private_local_credential_store_t *this)
 {
 	this->certs->destroy_offset(this->certs, offsetof(x509_t, destroy));
-	this->ca_certs->destroy_offset(this->ca_certs, offsetof(x509_t, destroy));
+	this->auth_certs->destroy_offset(this->auth_certs, offsetof(x509_t, destroy));
 	this->ca_infos->destroy_offset(this->ca_infos, offsetof(ca_info_t, destroy));
 	this->private_keys->destroy_offset(this->private_keys, offsetof(rsa_private_key_t, destroy));
 	this->shared_keys->destroy_function(this->shared_keys, (void*)shared_key_destroy);
@@ -1207,14 +1234,15 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,const x509_t*))get_issuer;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
-	this->public.credential_store.add_ca_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_ca_certificate;
+	this->public.credential_store.add_auth_certificate = (x509_t* (*) (credential_store_t*,x509_t*,u_int))add_auth_certificate;
 	this->public.credential_store.add_ca_info = (void (*) (credential_store_t*,ca_info_t*))add_ca_info;
 	this->public.credential_store.release_ca_info = (status_t (*) (credential_store_t*,const char*))release_ca_info;
 	this->public.credential_store.create_cert_iterator = (iterator_t* (*) (credential_store_t*))create_cert_iterator;
-	this->public.credential_store.create_cacert_iterator = (iterator_t* (*) (credential_store_t*))create_cacert_iterator;
+	this->public.credential_store.create_auth_cert_iterator = (iterator_t* (*) (credential_store_t*))create_auth_cert_iterator;
 	this->public.credential_store.create_cainfo_iterator = (iterator_t* (*) (credential_store_t*))create_cainfo_iterator;
 	this->public.credential_store.list_crls = (void (*) (credential_store_t*,FILE*,bool))list_crls;
 	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
+	this->public.credential_store.load_ocsp_certificates = (void (*) (credential_store_t*))load_ocsp_certificates;
 	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;
 	this->public.credential_store.load_secrets = (void (*) (credential_store_t*))load_secrets;
 	this->public.credential_store.destroy = (void (*) (credential_store_t*))destroy;
@@ -1223,7 +1251,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->shared_keys = linked_list_create();
 	this->private_keys = linked_list_create();
 	this->certs = linked_list_create();
-	this->ca_certs = linked_list_create();
+	this->auth_certs = linked_list_create();
 	this->ca_infos = linked_list_create();
 	this->strict = strict;
 
