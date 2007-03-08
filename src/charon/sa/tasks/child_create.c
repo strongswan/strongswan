@@ -511,7 +511,7 @@ static status_t process_r(private_child_create_t *this, message_t *message)
 		DBG1(DBG_IKE, "TS payload missing in message");
 		return NEED_MORE;
 	}
-
+		  
 	this->policy = charon->policies->get_policy(charon->policies,
 							this->ike_sa->get_my_id(this->ike_sa),
 							this->ike_sa->get_other_id(this->ike_sa), 
@@ -555,8 +555,8 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 	
 	if (this->policy == NULL)
 	{
-		SIG(CHILD_UP_FAILED, "received traffic selectors inacceptable");
-		message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);
+		SIG(CHILD_UP_FAILED, "no acceptable policy found");
+		message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return SUCCESS;
 	}
 	
@@ -569,7 +569,7 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 	
 	if (select_and_install(this) != SUCCESS)
 	{
-		message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);
 		return SUCCESS;
 	}
 	
