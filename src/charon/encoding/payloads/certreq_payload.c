@@ -274,7 +274,7 @@ certreq_payload_t *certreq_payload_create_from_cacert(identification_t *id)
 	chunk_t keyid;
 	certreq_payload_t *this;
 	
-	cacert = charon->credentials->get_ca_certificate(charon->credentials, id);
+	cacert = charon->credentials->get_auth_certificate(charon->credentials, AUTH_CA, id);
 	if (cacert == NULL)
 	{
 		/* no such CA cert */

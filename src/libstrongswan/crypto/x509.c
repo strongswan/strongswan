@@ -1084,9 +1084,9 @@ static u_int get_authority_flags(private_x509_t *this)
 /**
  * Implements x509_t.has_authority_flag
  */
-static bool has_authority_flag(private_x509_t *this, u_int flag)
+static bool has_authority_flag(private_x509_t *this, u_int flags)
 {
-	return (this->authority_flags & flag) != AUTH_NONE;
+	return (this->authority_flags & flags) != AUTH_NONE;
 }
 
 /**
@@ -1295,7 +1295,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.set_status = (void (*) (x509_t*,cert_status_t))set_status;
 	this->public.get_status = (cert_status_t (*) (const x509_t*))get_status;
 	this->public.add_authority_flags = (void (*) (x509_t*,u_int))add_authority_flags;
-	this->public.get_authority_flags = (u_int (*) (x509_t*,u_int))get_authority_flags;
+	this->public.get_authority_flags = (u_int (*) (x509_t*))get_authority_flags;
 	this->public.has_authority_flag = (bool (*) (x509_t*,u_int))has_authority_flag;
 	this->public.create_crluri_iterator = (iterator_t* (*) (const x509_t*))create_crluri_iterator;
 	this->public.create_ocspuri_iterator = (iterator_t* (*) (const x509_t*))create_ocspuri_iterator;

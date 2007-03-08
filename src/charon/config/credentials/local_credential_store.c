@@ -356,10 +356,11 @@ static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_publ
 }
 
 /**
- * Implementation of credential_store_t.get_ca_certificate.
+ * Implementation of credential_store_t.get_auth_certificate.
  */
-static x509_t* get_ca_certificate(private_local_credential_store_t *this,
-								  identification_t *id)
+static x509_t* get_auth_certificate(private_local_credential_store_t *this,
+									u_int auth_flags,
+									identification_t *id)
 {
 	x509_t *found = NULL;
 	x509_t *current_cert;
@@ -368,7 +369,7 @@ static x509_t* get_ca_certificate(private_local_credential_store_t *this,
 
 	while (iterator->iterate(iterator, (void**)&current_cert))
 	{
-		if (current_cert->has_authority_flag(current_cert, AUTH_CA)
+		if (current_cert->has_authority_flag(current_cert, auth_flags)
 		&&  id->equals(id, current_cert->get_subject(current_cert)))
 		{
 			found = current_cert;
@@ -1229,7 +1230,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.has_rsa_private_key = (bool (*) (credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
 	this->public.credential_store.get_trusted_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_trusted_public_key;
 	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
-	this->public.credential_store.get_ca_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_ca_certificate;
+	this->public.credential_store.get_auth_certificate = (x509_t* (*) (credential_store_t*,u_int,identification_t*))get_auth_certificate;
 	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,chunk_t))get_ca_certificate_by_keyid;
 	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,const x509_t*))get_issuer;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
