@@ -96,7 +96,8 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 {
 	typedef enum {
 		PRIO_UNDEFINED = 	0x00,
-		PRIO_ID_ANY = 		0x01,
+		PRIO_TS_MISMATCH =  0x01,
+		PRIO_ID_ANY = 		0x02,
 		PRIO_ID_MATCH =		PRIO_ID_ANY + MAX_WILDCARDS,
 	} prio_t;
 
@@ -105,8 +106,21 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 	iterator_t *iterator;
 	policy_t *candidate;
 	policy_t *found = NULL;
+	traffic_selector_t *ts;
 	
-	DBG2(DBG_CFG, "searching policy for ID pair '%D'...'%D'", my_id, other_id);
+	DBG1(DBG_CFG, "searching policy for '%D'...'%D'", my_id, other_id);
+	iterator = my_ts->create_iterator(my_ts, TRUE);
+	while (iterator->iterate(iterator, (void**)&ts))
+	{
+		DBG1(DBG_CFG, "  local TS:  %R", ts);
+	}
+	iterator->destroy(iterator);
+	iterator = other_ts->create_iterator(other_ts, TRUE);
+	while (iterator->iterate(iterator, (void**)&ts))
+	{
+		DBG1(DBG_CFG, "  remote TS: %R", ts);
+	}
+	iterator->destroy(iterator);
 
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
@@ -139,7 +153,7 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 			{
 				DBG2(DBG_CFG, "candidate '%s' inacceptable due traffic "
 					 "selector mismatch", candidate->get_name(candidate));
-				continue;
+				prio = PRIO_TS_MISMATCH;
 			}
 
 			DBG2(DBG_CFG, "candidate policy '%s': '%D'...'%D' (prio=%d)",
