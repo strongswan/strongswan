@@ -23,6 +23,7 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <sys/types.h>
@@ -85,32 +86,32 @@ struct private_ocsp_t {
 	chunk_t authNameID;
 };
 
-static const char *const response_status_names[] = {
-    "successful",
-    "malformed request",
-    "internal error",
-    "try later",
-    "signature required",
-    "unauthorized"
-};
+ENUM(response_status_names, STATUS_SUCCESSFUL, STATUS_UNAUTHORIZED,
+	"successful",
+	"malformed request",
+	"internal error",
+	"try later",
+	"signature required",
+	"unauthorized"
+);
 
 /* response container */
 typedef struct response_t response_t;
 
 struct response_t {
-	chunk_t  tbs;
-	chunk_t  responder_id_name;
-	chunk_t  responder_id_key;
-	time_t   produced_at;
-	chunk_t  responses;
-	chunk_t  nonce;
-	int      algorithm;
-	chunk_t  signature;
+	chunk_t           tbs;
+	identification_t *responder_id_name;
+	chunk_t           responder_id_key;
+	time_t            produced_at;
+	chunk_t           responses;
+	chunk_t           nonce;
+	int               algorithm;
+	chunk_t           signature;
 };
 
 const response_t empty_response = {
 	{ NULL, 0 }   ,	/* tbs */
-	{ NULL, 0 }   ,	/* responder_id_name */
+	  NULL        ,	/* responder_id_name */
 	{ NULL, 0 }   ,	/* responder_id_key */
 	UNDEFINED_TIME,	/* produced_at */
 	{ NULL, 0 }   ,	/* single_response */
@@ -218,7 +219,7 @@ static const asn1Object_t basicResponseObjects[] = {
 	{ 1,   "signature",						ASN1_BIT_STRING,		ASN1_BODY }, /* 21 */
 	{ 1,   "certsContext",					ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 22 */
 	{ 2,     "certs",						ASN1_SEQUENCE,			ASN1_LOOP }, /* 23 */
-	{ 3,       "certificate",				ASN1_SEQUENCE,			ASN1_OBJ  }, /* 24 */
+	{ 3,       "certificate",				ASN1_SEQUENCE,			ASN1_RAW  }, /* 24 */
 	{ 2,     "end loop",					ASN1_EOC,				ASN1_END  }, /* 25 */
 	{ 1,   "end opt",						ASN1_EOC,				ASN1_END  }  /* 26 */
 };
@@ -416,6 +417,7 @@ static chunk_t build_tbs_request(private_ocsp_t *this, bool has_requestor_cert)
  */
 static chunk_t build_signature(private_ocsp_t *this, chunk_t tbsRequest)
 {
+	/* TODO */
 	return chunk_empty;
 }
 
@@ -435,19 +437,258 @@ static chunk_t ocsp_build_request(private_ocsp_t *this)
 	/* looks for requestor cert and matching private key */
 	has_requestor_cert = FALSE;
 
-    /* has_requestor_cert = get_ocsp_requestor_cert(location); */
+    /* TODO has_requestor_cert = get_ocsp_requestor_cert(location); */
 
-    /* build content */
+	/* build content */
 	tbsRequest = build_tbs_request(this, has_requestor_cert);
 
-    /* sign tbsReuqest */
+	/* sign tbsReuqest */
 	signature = (has_requestor_cert)? build_signature(this, tbsRequest): chunk_empty;
 
-    return asn1_wrap(ASN1_SEQUENCE, "mm",
+	return asn1_wrap(ASN1_SEQUENCE, "mm",
 		tbsRequest,
 		signature);
 
 	return signature;
+}
+
+/**
+ * Check if the OCSP response has a valid signature
+ */
+static bool ocsp_valid_response(response_t *res)
+{
+	/* TODO */
+	return FALSE;
+}
+
+/**
+ * parse a basic OCSP response
+ */
+static bool ocsp_parse_basic_response(chunk_t blob, int level0, response_t *res)
+{
+	u_int level, version;
+	u_int extn_oid = OID_UNKNOWN;
+	u_char buf[BUF_LEN];
+	asn1_ctx_t ctx;
+	bool critical;
+	chunk_t object;
+	int objectID = 0;
+
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+
+	while (objectID < BASIC_RESPONSE_ROOF)
+	{
+		if (!extract_object(basicResponseObjects, &objectID, &object, &level, &ctx))
+		{
+			return FALSE;
+		}
+
+		switch (objectID)
+		{
+			case BASIC_RESPONSE_TBS_DATA:
+				res->tbs = object;
+				break;
+			case BASIC_RESPONSE_VERSION:
+				version = (object.len)? (1 + (u_int)*object.ptr) : 1;
+				if (version != OCSP_BASIC_RESPONSE_VERSION)
+				{
+					DBG1("wrong ocsp basic response version (version= %i)",  version);
+					return FALSE;
+				}
+				break;
+			case BASIC_RESPONSE_ID_BY_NAME:
+				res->responder_id_name = identification_create_from_encoding(ID_DER_ASN1_DN, object);
+				DBG2("  '%D'", res->responder_id_name);
+				break;
+			case BASIC_RESPONSE_ID_BY_KEY:
+				res->responder_id_key = object;
+				break;
+			case BASIC_RESPONSE_PRODUCED_AT:
+				res->produced_at = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				break;
+			case BASIC_RESPONSE_RESPONSES:
+				res->responses = object;
+				break;
+			case BASIC_RESPONSE_EXT_ID:
+				extn_oid = known_oid(object);
+				break;
+			case BASIC_RESPONSE_CRITICAL:
+				critical = object.len && *object.ptr;
+				DBG2("  %s", critical? "TRUE" : "FALSE");
+				break;
+			case BASIC_RESPONSE_EXT_VALUE:
+				if (extn_oid == OID_NONCE)
+					res->nonce = object;
+				break;
+			case BASIC_RESPONSE_ALGORITHM:
+				res->algorithm = parse_algorithmIdentifier(object, level+1, NULL);
+				break;
+			case BASIC_RESPONSE_SIGNATURE:
+				res->signature = object;
+				break;
+			case BASIC_RESPONSE_CERTIFICATE:
+				{
+					chunk_t blob = chunk_clone(object);
+					x509_t *cert = x509_create_from_chunk(blob, level+1);
+
+					if (cert == NULL)
+					{
+						break;
+					}
+					if (cert->is_ocsp_signer(cert))
+					{
+						DBG2("received OCSP signer certificate");
+						cert->destroy(cert);
+						/* TODO trust_authcert_candidate(cert, NULL))
+						 add_authcert(cert, AUTH_OCSP); */
+					}
+					else
+					{
+						DBG1("embedded ocsp certificate rejected");
+						cert->destroy(cert);
+					}
+				}
+				break;
+		}
+		objectID++;
+	}
+	return TRUE;
+}
+
+/**
+ * parse an ocsp response and return the result as a response_t struct
+ */
+static response_status ocsp_parse_response(chunk_t blob, response_t * res)
+{
+	asn1_ctx_t ctx;
+	chunk_t object;
+	u_int level;
+	int objectID = 0;
+
+	response_status rStatus = STATUS_INTERNALERROR;
+	u_int ocspResponseType = OID_UNKNOWN;
+
+	asn1_init(&ctx, blob, 0, FALSE, FALSE);
+
+	while (objectID < OCSP_RESPONSE_ROOF)
+	{
+		if (!extract_object(ocspResponseObjects, &objectID, &object, &level, &ctx))
+		{
+	    	return STATUS_INTERNALERROR;
+		}
+
+		switch (objectID)
+		{
+			case OCSP_RESPONSE_STATUS:
+				rStatus = (response_status) *object.ptr;
+				DBG2("  '%N'", response_status_names, rStatus);
+ 
+				switch (rStatus)
+	    		{
+	    			case STATUS_SUCCESSFUL:
+						break;
+					case STATUS_MALFORMEDREQUEST:
+					case STATUS_INTERNALERROR:
+					case STATUS_TRYLATER:
+					case STATUS_SIGREQUIRED:
+					case STATUS_UNAUTHORIZED:
+						DBG1("unsuccessful ocsp response: server said '%N'",
+							 response_status_names, rStatus);
+						return rStatus;
+					default:
+						return STATUS_INTERNALERROR;
+				}
+	    		break;
+			case OCSP_RESPONSE_TYPE:
+				ocspResponseType = known_oid(object);
+				break;
+			case OCSP_RESPONSE:
+				{
+					switch (ocspResponseType)
+					{
+						case OID_BASIC:
+							if (!ocsp_parse_basic_response(object, level+1, res))
+							{
+								return STATUS_INTERNALERROR;
+							}
+							break;
+						default:
+							DBG1("ocsp response is not of type BASIC");
+							DBG1("ocsp response OID: %#B", &object);
+							return STATUS_INTERNALERROR;
+					}
+				}
+				break;
+		}
+		objectID++;
+	}
+	return rStatus;
+}
+
+/**
+ *  verify and process ocsp response and update the ocsp cache
+ */
+void ocsp_process_response(private_ocsp_t *this, chunk_t reply)
+{
+	response_t res = empty_response;
+
+	/* parse the ocsp response without looking at the single responses yet */
+	response_status status = ocsp_parse_response(reply, &res);
+
+	if (status != STATUS_SUCCESSFUL)
+	{
+		DBG1("error in ocsp response");
+		return;
+	}
+
+	/* check if there was a nonce in the request */
+	if (this->nonce.ptr != NULL && res.nonce.ptr == NULL)
+	{
+		DBG1("ocsp response contains no nonce, replay attack possible");
+	}
+
+	/* check if the nonces are identical */
+	if (res.nonce.ptr != NULL && !chunk_equals(res.nonce, this->nonce))
+    {
+		DBG1("invalid nonce in ocsp response");
+		return;
+	}
+
+	/* check if the response is signed by a trusted key */
+	if (!ocsp_valid_response(&res))
+	{
+		DBG1("invalid ocsp response");
+		return;
+	}
+	DBG2("valid ocsp response");
+
+    /* now parse the single responses one at a time */
+    {
+		u_int level;
+		asn1_ctx_t ctx;
+		chunk_t object;
+		int objectID = 0;
+
+		asn1_init(&ctx, res.responses, 0, FALSE, FALSE);
+
+		while (objectID < RESPONSES_ROOF)
+		{
+			if (!extract_object(responsesObjects, &objectID, &object, &level, &ctx))
+			{
+				return;
+			}
+			if (objectID == RESPONSES_SINGLE_RESPONSE)
+			{
+				single_response_t sres = empty_single_response;
+
+				if (parse_ocsp_single_response(object, level+1, &sres))
+				{
+					process_single_response(this, &sres);
+				}
+			}
+			objectID++;
+		}
+	}
 }
 
 /**
@@ -456,7 +697,7 @@ static chunk_t ocsp_build_request(private_ocsp_t *this)
 static void fetch(private_ocsp_t *this, certinfo_t *certinfo)
 {
 	chunk_t request;
-	chunk_t reply;
+	chunk_t response;
 	bool fetched = FALSE;
 
 	if (this->uris->get_count(this->uris) == 0)
@@ -480,9 +721,9 @@ static void fetch(private_ocsp_t *this, certinfo_t *certinfo)
 			snprintf(uri_string, BUF_LEN, "%.*s", uri_chunk.len, uri_chunk.ptr);
 			fetcher = fetcher_create(uri_string);
 			
-			reply = fetcher->post(fetcher, "application/ocsp-request", request);
+			response = fetcher->post(fetcher, "application/ocsp-request", request);
 			fetcher->destroy(fetcher);
-			if (reply.ptr != NULL)
+			if (response.ptr != NULL)
 			{
 				fetched = TRUE;
 				break;
@@ -496,7 +737,9 @@ static void fetch(private_ocsp_t *this, certinfo_t *certinfo)
 	{
 		return;
 	}
-	DBG3("ocsp reply: %B", &reply);
+	DBG3("ocsp response: %B", &response);
+	ocsp_process_response(this, response);
+	free(response.ptr);
 }
 
 /**
