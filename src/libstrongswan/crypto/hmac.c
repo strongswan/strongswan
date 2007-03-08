@@ -189,7 +189,12 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 	{
 		case HASH_SHA1:
 		case HASH_MD5:
+		case HASH_SHA256:
 			this->b = 64;
+			break;
+		case HASH_SHA384:
+		case HASH_SHA512:
+			this->b = 128;
 			break;
 		default:
 			free(this);

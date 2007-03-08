@@ -45,6 +45,12 @@ enum pseudo_random_function_t {
 	PRF_HMAC_SHA1 = 2,
 	PRF_HMAC_TIGER = 3,
 	PRF_AES128_CBC = 4,
+	/** Implemented via hmac_prf_t. */
+	PRF_HMAC_SHA2_256 = 5,
+	/** Implemented via hmac_prf_t. */
+	PRF_HMAC_SHA2_384 = 6,
+	/** Implemented via hmac_prf_t. */
+	PRF_HMAC_SHA2_512 = 7,
 	/** Implemented via fips_prf_t, other output sizes would be possible */
 	PRF_FIPS_SHA1_160 = 1025,
 	/** Could be implemented via fips_prf_t, uses fixed output size of 160bit */

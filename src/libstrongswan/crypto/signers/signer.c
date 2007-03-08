@@ -34,7 +34,11 @@ ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_MD5_96, AUTH_AES_XCBC_96, AUTH_HM
 	"DES_MAC",
 	"KPDK_MD5",
 	"AES_XCBC_96");
-ENUM_END(integrity_algorithm_names, AUTH_AES_XCBC_96);
+ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_SHA2_256_128, AUTH_HMAC_SHA2_512_256, AUTH_AES_XCBC_96,
+	"AUTH_HMAC_SHA2_256_128",
+	"AUTH_HMAC_SHA2_384_192",
+	"AUTH_HMAC_SHA2_512_256");
+ENUM_END(integrity_algorithm_names, AUTH_HMAC_SHA2_512_256);
 
 /*
  * Described in header.
@@ -49,6 +53,12 @@ signer_t *signer_create(integrity_algorithm_t integrity_algorithm)
 			return (signer_t *)hmac_signer_create(HASH_SHA1, 16);
 		case AUTH_HMAC_MD5_96:
 			return (signer_t *)hmac_signer_create(HASH_MD5, 12);
+		case AUTH_HMAC_SHA2_256_128:
+			return (signer_t *)hmac_signer_create(HASH_SHA256, 16);
+		case AUTH_HMAC_SHA2_384_192:
+			return (signer_t *)hmac_signer_create(HASH_SHA384, 24);
+		case AUTH_HMAC_SHA2_512_256:
+			return (signer_t *)hmac_signer_create(HASH_SHA512, 32);
 		default:
 			return NULL;
 	}

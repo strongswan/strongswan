@@ -46,6 +46,12 @@ enum integrity_algorithm_t {
 	AUTH_KPDK_MD5 = 4,
 	AUTH_AES_XCBC_96 = 5,
 	/** Implemented via hmac_signer_t */
+	AUTH_HMAC_SHA2_256_128 = 12,
+	/** Implemented via hmac_signer_t */
+	AUTH_HMAC_SHA2_384_192 = 13,
+	/** Implemented via hmac_signer_t */
+	AUTH_HMAC_SHA2_512_256 = 14,
+	/** Implemented via hmac_signer_t */
 	AUTH_HMAC_SHA1_128 = 1025,
 };
 

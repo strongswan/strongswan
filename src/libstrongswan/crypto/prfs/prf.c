@@ -32,12 +32,15 @@ ENUM_BEGIN(pseudo_random_function_names, PRF_UNDEFINED, PRF_FIPS_DES,
 	"PRF_UNDEFINED",
 	"PRF_FIPS_SHA1_160",
 	"PRF_FIPS_DES");
-ENUM_NEXT(pseudo_random_function_names, PRF_HMAC_MD5, PRF_AES128_CBC, PRF_FIPS_DES,
+ENUM_NEXT(pseudo_random_function_names, PRF_HMAC_MD5, PRF_HMAC_SHA2_512, PRF_FIPS_DES,
 	"PRF_HMAC_MD5",
 	"PRF_HMAC_SHA1",
 	"PRF_HMAC_TIGER",
-	"PRF_AES128_CBC");
-ENUM_END(pseudo_random_function_names, PRF_AES128_CBC);
+	"PRF_AES128_CBC",
+	"PRF_HMAC_SHA2_256",
+	"PRF_HMAC_SHA2_384",
+	"PRF_HMAC_SHA2_512");
+ENUM_END(pseudo_random_function_names, PRF_HMAC_SHA2_512);
 
 /*
  * Described in header.
@@ -50,6 +53,12 @@ prf_t *prf_create(pseudo_random_function_t pseudo_random_function)
 			return (prf_t*)hmac_prf_create(HASH_SHA1);
 		case PRF_HMAC_MD5:
 			return (prf_t*)hmac_prf_create(HASH_MD5);
+		case PRF_HMAC_SHA2_256:
+			return (prf_t*)hmac_prf_create(HASH_SHA256);
+		case PRF_HMAC_SHA2_384:
+			return (prf_t*)hmac_prf_create(HASH_SHA384);
+		case PRF_HMAC_SHA2_512:
+			return (prf_t*)hmac_prf_create(HASH_SHA512);
 		case PRF_FIPS_SHA1_160:
 			return (prf_t*)fips_prf_create(20, g_sha1);
 		case PRF_FIPS_DES:
