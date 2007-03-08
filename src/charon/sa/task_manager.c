@@ -485,9 +485,9 @@ static status_t process_request(private_task_manager_t *this,
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_cert_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_config_create(this->ike_sa, NULL);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
+			task = (task_t*)ike_config_create(this->ike_sa, NULL);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)child_create_create(this->ike_sa, NULL);
 			this->passive_tasks->insert_last(this->passive_tasks, task);

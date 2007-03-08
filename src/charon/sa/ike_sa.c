@@ -686,9 +686,9 @@ static status_t initiate(private_ike_sa_t *this,
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_cert_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_config_create(&this->public, policy);
-		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_config_create(&this->public, policy);
 		this->task_manager->queue_task(this->task_manager, task);
 	}
 	
@@ -746,9 +746,9 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_cert_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_config_create(&this->public, policy);
-		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_config_create(&this->public, policy);
 		this->task_manager->queue_task(this->task_manager, task);
 	}
 	
