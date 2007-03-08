@@ -591,11 +591,14 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				{
 					if (type < 16383)
 					{
-						DBG1(DBG_IKE, "received %N notify error",
+						SIG(IKE_UP_FAILED, "received %N notify error",
 							 notify_type_names, type);
 						iterator->destroy(iterator);
 						return FAILED;	
 					}
+					DBG1(DBG_IKE, "received %N notify",
+						notify_type_names, type);
+					break;
 				}
 			}
 		}

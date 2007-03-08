@@ -88,6 +88,11 @@ struct private_ike_init_t {
 	 * Old IKE_SA which gets rekeyed
 	 */
 	ike_sa_t *old_sa;
+	
+	/**
+	 * cookie received from responder
+	 */
+	chunk_t cookie;
 };
 
 /**
@@ -241,17 +246,27 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 		}
 	}
 	
-	randomizer = randomizer_create();
-	status = randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE,
-													  &this->my_nonce);
-	randomizer->destroy(randomizer);
-	if (status != SUCCESS)
+	/* generate nonce only when we are trying the first time */
+	if (this->my_nonce.ptr == NULL)
 	{
-		SIG(IKE_UP_FAILED, "error generating random nonce value");
-		return FAILED;
+		randomizer = randomizer_create();
+		status = randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE,
+														  &this->my_nonce);
+		randomizer->destroy(randomizer);
+		if (status != SUCCESS)
+		{
+			SIG(IKE_UP_FAILED, "error generating random nonce value");
+			return FAILED;
+		}
+	}
+	
+	if (this->cookie.ptr)
+	{
+		message->add_notify(message, FALSE, COOKIE, this->cookie);
 	}
 	
 	build_payloads(this, message);
+	
 	
 	return NEED_MORE;
 }
@@ -401,6 +416,19 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					iterator->destroy(iterator);
 					return NEED_MORE;
 				}
+				case NAT_DETECTION_SOURCE_IP:
+				case NAT_DETECTION_DESTINATION_IP:
+					/* skip, handled in ike_natd_t */
+					break;
+				case COOKIE:
+				{
+					this->cookie = chunk_clone(notify->get_notification_data(notify));
+					this->ike_sa->reset(this->ike_sa);
+					iterator->destroy(iterator);
+					SIG(IKE_UP_FAILED, "received %N notify",
+						notify_type_names, type);
+					return NEED_MORE;
+				}
 				default:
 				{
 					if (type < 16383)
@@ -410,6 +438,9 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 						iterator->destroy(iterator);
 						return FAILED;	
 					}
+					DBG1(DBG_IKE, "received %N notify",
+						notify_type_names, type);
+					break;
 				}
 			}
 		}
@@ -480,7 +511,6 @@ static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
 {
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->diffie_hellman);
-	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
 	
 	this->ike_sa = ike_sa;
@@ -497,6 +527,7 @@ static void destroy(private_ike_init_t *this)
 	DESTROY_IF(this->diffie_hellman);
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
+	chunk_free(&this->cookie);
 	free(this);
 }
 
@@ -527,6 +558,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 	this->diffie_hellman = NULL;
 	this->my_nonce = chunk_empty;
 	this->other_nonce = chunk_empty;
+	this->cookie = chunk_empty;
 	this->proposal = NULL;
 	this->connection = NULL;
 	this->old_sa = old_sa;
