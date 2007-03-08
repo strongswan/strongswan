@@ -84,7 +84,7 @@ struct private_x509_t {
 	/**
 	 * Authority flags
 	 */
-	 u_char authority_flags;
+	 u_int authority_flags;
 
 	/**
 	 * X.509 Certificate in DER format
@@ -1066,6 +1066,30 @@ static cert_status_t get_status(const private_x509_t *this)
 }
 
 /**
+ * Implements x509_t.add_authority_flags
+ */
+static void add_authority_flags(private_x509_t *this, u_int flags)
+{
+	this->authority_flags |= flags;
+}
+
+/**
+ * Implements x509_t.add_authority_flags
+ */
+static u_int get_authority_flags(private_x509_t *this)
+{
+	return this->authority_flags;
+}
+
+/**
+ * Implements x509_t.has_authority_flag
+ */
+static bool has_authority_flag(private_x509_t *this, u_int flag)
+{
+	return (this->authority_flags & flag) != AUTH_NONE;
+}
+
+/**
  * Implements x509_t.create_crluri_iterator
  */
 static iterator_t *create_crluri_iterator(const private_x509_t *this)
@@ -1249,6 +1273,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->subjectKeyID = chunk_empty;
 	this->authKeyID = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
+	this->authority_flags = AUTH_NONE;
 	
 	/* public functions */
 	this->public.equals = (bool (*) (const x509_t*,const x509_t*))equals;
@@ -1269,6 +1294,9 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.get_until = (time_t (*) (const x509_t*))get_until;
 	this->public.set_status = (void (*) (x509_t*,cert_status_t))set_status;
 	this->public.get_status = (cert_status_t (*) (const x509_t*))get_status;
+	this->public.add_authority_flags = (void (*) (x509_t*,u_int))add_authority_flags;
+	this->public.get_authority_flags = (u_int (*) (x509_t*,u_int))get_authority_flags;
+	this->public.has_authority_flag = (bool (*) (x509_t*,u_int))has_authority_flag;
 	this->public.create_crluri_iterator = (iterator_t* (*) (const x509_t*))create_crluri_iterator;
 	this->public.create_ocspuri_iterator = (iterator_t* (*) (const x509_t*))create_ocspuri_iterator;
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
@@ -1301,8 +1329,11 @@ x509_t *x509_create_from_file(const char *filename, const char *label)
 	bool pgp = FALSE;
 	chunk_t chunk = chunk_empty;
 	x509_t *cert = NULL;
+	char cert_label[BUF_LEN];
 
-	if (!pem_asn1_load_file(filename, NULL, label, &chunk, &pgp))
+	snprintf(cert_label, BUF_LEN, "%s certificate", label);
+
+	if (!pem_asn1_load_file(filename, NULL, cert_label, &chunk, &pgp))
 		return NULL;
 
 	cert = x509_create_from_chunk(chunk, 0);

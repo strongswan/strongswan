@@ -86,6 +86,31 @@ struct x509_t {
 	cert_status_t (*get_status) (const x509_t *this);
 
 	/**
+	 * @brief Add authority flags
+	 * 
+	 * @param this				calling object
+	 * @param flag				flags to be added
+	 */
+	void (*add_authority_flags) (x509_t *this, u_int flags);
+
+	/**
+	 * @brief Get authority flags
+	 * 
+	 * @param this				calling object
+	 * @return					authority flags
+	 */
+	u_int (*get_authority_flags) (x509_t *this);
+
+	/**
+	 * @brief Check a specific authority flag
+	 * 
+	 * @param this				calling object
+	 * @param flag				flag to be checked
+	 * @return					TRUE if flag is present
+	 */
+	bool (*has_authority_flag) (x509_t *this, u_int flag);
+
+	/**
 	 * @brief Get the DER-encoded X.509 certificate body
 	 * 
 	 * @param this				calling object
