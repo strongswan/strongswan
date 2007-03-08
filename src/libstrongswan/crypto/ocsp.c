@@ -626,6 +626,84 @@ static response_status ocsp_parse_response(chunk_t blob, response_t * res)
 }
 
 /**
+ * parse a single OCSP response
+ */
+static bool ocsp_parse_single_response(chunk_t blob, int level0, single_response_t *sres)
+{
+	u_int level, extn_oid;
+	asn1_ctx_t ctx;
+	bool critical;
+	chunk_t object;
+	int objectID = 0;
+
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+
+	while (objectID < SINGLE_RESPONSE_ROOF)
+	{
+		if (!extract_object(singleResponseObjects, &objectID, &object, &level, &ctx))
+		{
+			return FALSE;
+		}
+
+		switch (objectID)
+		{
+			case SINGLE_RESPONSE_ALGORITHM:
+				sres->hash_algorithm = parse_algorithmIdentifier(object, level+1, NULL);
+				break;
+			case SINGLE_RESPONSE_ISSUER_NAME_HASH:
+				sres->issuer_name_hash = object;
+				break;
+			case SINGLE_RESPONSE_ISSUER_KEY_HASH:
+				sres->issuer_key_hash = object;
+				break;
+			case SINGLE_RESPONSE_SERIAL_NUMBER:
+				sres->serialNumber = object;
+				break;
+			case SINGLE_RESPONSE_CERT_STATUS_GOOD:
+				sres->status = CERT_GOOD;
+				break;
+			case SINGLE_RESPONSE_CERT_STATUS_REVOKED:
+				sres->status = CERT_REVOKED;
+				break;
+			case SINGLE_RESPONSE_CERT_STATUS_REVOCATION_TIME:
+				sres->revocationTime = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				break;
+			case SINGLE_RESPONSE_CERT_STATUS_CRL_REASON:
+				sres->revocationReason = (object.len == 1)
+					? *object.ptr : REASON_UNSPECIFIED;
+	    		break;
+			case SINGLE_RESPONSE_CERT_STATUS_UNKNOWN:
+				sres->status = CERT_UNKNOWN;
+				break;
+			case SINGLE_RESPONSE_THIS_UPDATE:
+				sres->thisUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				break;
+			case SINGLE_RESPONSE_NEXT_UPDATE:
+				sres->nextUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
+	    		break;
+			case SINGLE_RESPONSE_EXT_ID:
+				extn_oid = known_oid(object);
+				break;
+			case SINGLE_RESPONSE_CRITICAL:
+				critical = object.len && *object.ptr;
+				DBG2("  %s", critical ? "TRUE" : "FALSE");
+			case SINGLE_RESPONSE_EXT_VALUE:
+				break;
+		}
+		objectID++;
+	}
+	return TRUE;
+}
+
+/**
+ * process received ocsp single response and add it to ocsp cache
+ */
+static void process_single_response(private_ocsp_t *this, single_response_t *sres)
+{
+	/* TODO */
+}
+
+/**
  *  verify and process ocsp response and update the ocsp cache
  */
 void ocsp_process_response(private_ocsp_t *this, chunk_t reply)
@@ -681,7 +759,7 @@ void ocsp_process_response(private_ocsp_t *this, chunk_t reply)
 			{
 				single_response_t sres = empty_single_response;
 
-				if (parse_ocsp_single_response(object, level+1, &sres))
+				if (ocsp_parse_single_response(object, level+1, &sres))
 				{
 					process_single_response(this, &sres);
 				}
