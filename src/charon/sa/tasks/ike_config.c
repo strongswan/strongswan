@@ -263,7 +263,8 @@ static void process_payloads(private_ike_config_t *this, message_t *message)
  */
 static status_t build_i(private_ike_config_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) != IKE_SA_INIT)
+	if (message->get_exchange_type(message) == IKE_AUTH &&
+		message->get_payload(message, ID_INITIATOR))
 	{
 		this->virtual_ip = this->policy->get_virtual_ip(this->policy, NULL);
 		
@@ -278,7 +279,8 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
  */
 static status_t process_r(private_ike_config_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) != IKE_SA_INIT)
+	if (message->get_exchange_type(message) == IKE_AUTH &&
+		message->get_payload(message, ID_INITIATOR))
 	{
 		process_payloads(this, message);
 	}
@@ -290,7 +292,8 @@ static status_t process_r(private_ike_config_t *this, message_t *message)
  */
 static status_t build_r(private_ike_config_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) != IKE_SA_INIT)
+	if (message->get_exchange_type(message) == IKE_AUTH &&
+		message->get_payload(message, EXTENSIBLE_AUTHENTICATION) == NULL)
 	{
 		this->policy = this->ike_sa->get_policy(this->ike_sa);
 		
@@ -333,7 +336,8 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
  */
 static status_t process_i(private_ike_config_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) != IKE_SA_INIT)
+	if (message->get_exchange_type(message) == IKE_AUTH &&
+		!message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
 	{
 		host_t *ip;
 		

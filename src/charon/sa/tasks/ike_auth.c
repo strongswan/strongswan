@@ -359,70 +359,87 @@ static status_t process_auth_eap(private_ike_auth_t *this, message_t *message)
 /**
  * Implementation of task_t.process for EAP exchanges
  */
-static status_t process_eap(private_ike_auth_t *this, message_t *message)
+static status_t process_eap_i(private_ike_auth_t *this, message_t *message)
 {
 	eap_payload_t *eap;
 
 	eap = (eap_payload_t*)message->get_payload(message, EXTENSIBLE_AUTHENTICATION);
-	
-	if (this->initiator)
-	{
-		switch (this->eap_auth->process(this->eap_auth, eap, &eap))
-		{
-			case NEED_MORE:
-				break;
-			case SUCCESS:
-				/* EAP exchange completed, now create and process AUTH */
-				this->public.task.build = (status_t(*)(task_t*,message_t*))build_auth_eap;
-				this->public.task.process = (status_t(*)(task_t*,message_t*))process_auth_eap;
-				return NEED_MORE;
-			default:
-				SIG(IKE_UP_FAILED, "failed to authenticate against %D using EAP",
-					this->ike_sa->get_other_id(this->ike_sa));
-				return FAILED;
-		}
+	if (eap == NULL)
+	{	
+		SIG(IKE_UP_FAILED, "EAP payload missing");
+		return FAILED;
 	}
-	this->eap_payload = eap;
+	switch (this->eap_auth->process(this->eap_auth, eap, &eap))
+	{
+		case NEED_MORE:
+			this->eap_payload = eap;
+			return NEED_MORE;
+		case SUCCESS:
+			/* EAP exchange completed, now create and process AUTH */
+			this->eap_payload = NULL;
+			this->public.task.build = (status_t(*)(task_t*,message_t*))build_auth_eap;
+			this->public.task.process = (status_t(*)(task_t*,message_t*))process_auth_eap;
+			return NEED_MORE;
+		default:
+			this->eap_payload = NULL;
+			SIG(IKE_UP_FAILED, "failed to authenticate against %D using EAP",
+				this->ike_sa->get_other_id(this->ike_sa));
+			return FAILED;
+	}
+}
+
+/**
+ * Implementation of task_t.process for EAP exchanges
+ */
+static status_t process_eap_r(private_ike_auth_t *this, message_t *message)
+{
+	this->eap_payload = (eap_payload_t*)message->get_payload(message, 
+													EXTENSIBLE_AUTHENTICATION);
 	return NEED_MORE;
 }
 
 /**
  * Implementation of task_t.build for EAP exchanges
  */
-static status_t build_eap(private_ike_auth_t *this, message_t *message)
+static status_t build_eap_i(private_ike_auth_t *this, message_t *message)
 {
+	message->add_payload(message, (payload_t*)this->eap_payload);
+	return NEED_MORE;
+}
+
+/**
+ * Implementation of task_t.build for EAP exchanges
+ */
+static status_t build_eap_r(private_ike_auth_t *this, message_t *message)
+{
+	status_t status = NEED_MORE;
 	eap_payload_t *eap;
-	
+		
 	if (this->eap_payload == NULL)
 	{
-		SIG(IKE_UP_FAILED, "expected an EAP payload, but none found");
+		SIG(IKE_UP_FAILED, "EAP payload missing");
 		return FAILED;
 	}
 	
-	if (this->initiator)
-	{
-		chunk_t chunk = this->eap_payload->get_data(this->eap_payload);
-		eap = eap_payload_create_data(chunk);
-		message->add_payload(message, (payload_t*)eap);
-		return NEED_MORE;
-	}
-	switch (this->eap_auth->process(this->eap_auth, eap, &eap))
+	switch (this->eap_auth->process(this->eap_auth, this->eap_payload, &eap))
 	{
 		case NEED_MORE:
-			return NEED_MORE;
+			
+			break;
 		case SUCCESS:
-			message->add_payload(message, (payload_t*)eap);
 			/* EAP exchange completed, now create and process AUTH */
 			this->public.task.build = (status_t(*)(task_t*,message_t*))build_auth_eap;
 			this->public.task.process = (status_t(*)(task_t*,message_t*))process_auth_eap;
-			return NEED_MORE;
+			break;
 		default:
 			SIG(IKE_UP_FAILED, "authentication of %D using %N failed",
 				this->ike_sa->get_other_id(this->ike_sa),
 				auth_method_names, AUTH_EAP);
-				message->add_payload(message, (payload_t*)eap);
-			return FAILED;
+			status = FAILED;
+			break;
 	}
+	message->add_payload(message, (payload_t*)eap);
+	return status;
 }
 
 /**
@@ -549,8 +566,8 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	}
 	
 	/* switch to EAP methods */
-	this->public.task.build = (status_t(*)(task_t*,message_t*))build_eap;
-	this->public.task.process = (status_t(*)(task_t*,message_t*))process_eap;
+	this->public.task.build = (status_t(*)(task_t*,message_t*))build_eap_r;
+	this->public.task.process = (status_t(*)(task_t*,message_t*))process_eap_r;
 	return NEED_MORE;
 }
 
@@ -614,9 +631,9 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 	if (this->eap_auth)
 	{
 		/* switch to EAP authentication methods */
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_eap;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_eap;
-		return process_eap(this, message);
+		this->public.task.build = (status_t(*)(task_t*,message_t*))build_eap_i;
+		this->public.task.process = (status_t(*)(task_t*,message_t*))process_eap_i;
+		return process_eap_i(this, message);
 	}
 	
 	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
