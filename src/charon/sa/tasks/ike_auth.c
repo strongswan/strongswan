@@ -134,7 +134,7 @@ static status_t build_auth(private_ike_auth_t *this, message_t *message)
 }
 
 /**
- * build tID payload(s)
+ * build ID payload(s)
  */
 static status_t build_id(private_ike_auth_t *this, message_t *message)
 {
@@ -370,9 +370,11 @@ static status_t process_eap(private_ike_auth_t *this, message_t *message)
 		switch (this->eap_auth->process(this->eap_auth, eap, &eap))
 		{
 			case NEED_MORE:
+				DBG1(DBG_IKE, "eap processed, but more needed");
 				break;
 			case SUCCESS:
 				/* EAP exchange completed, now create and process AUTH */
+				DBG1(DBG_IKE, "eap processed, got EAP_SUCCESS");
 				this->public.task.build = (status_t(*)(task_t*,message_t*))build_auth_eap;
 				this->public.task.process = (status_t(*)(task_t*,message_t*))process_auth_eap;
 				return NEED_MORE;
@@ -393,18 +395,17 @@ static status_t build_eap(private_ike_auth_t *this, message_t *message)
 {
 	eap_payload_t *eap;
 	
-
 	if (this->eap_payload == NULL)
 	{
 		SIG(IKE_UP_FAILED, "expected an EAP payload, but none found");
 		return FAILED;
 	}
 	
-	/* set to NULL, as it should not get destroyed by destructor */
-	eap = this->eap_payload;
-	this->eap_payload = NULL;
 	if (this->initiator)
 	{
+		DBG1(DBG_IKE, "adding payload to message");
+		chunk_t chunk = this->eap_payload->get_data(this->eap_payload);
+		eap = eap_payload_create_data(chunk);
 		message->add_payload(message, (payload_t*)eap);
 		return NEED_MORE;
 	}
@@ -504,6 +505,14 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		return collect_my_init_data(this, message);
 	}
 	
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	if (policy == NULL)
+	{
+		SIG(IKE_UP_SUCCESS, "no acceptable policy found");
+		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
+		return FAILED;
+	}
+	
 	if (build_id(this, message) != SUCCESS ||
 		build_auth(this, message) != SUCCESS)
 	{
@@ -532,7 +541,6 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	}
 		
 	/* initiate EAP authenitcation */
-	policy = this->ike_sa->get_policy(this->ike_sa);
 	eap_type = policy->get_eap_type(policy);
 	status = this->eap_auth->initiate(this->eap_auth, eap_type, &eap_payload);
 	message->add_payload(message, (payload_t*)eap_payload);
@@ -636,7 +644,7 @@ static void migrate(private_ike_auth_t *this, ike_sa_t *ike_sa)
 	chunk_free(&this->other_nonce);
 	DESTROY_IF(this->my_packet);
 	DESTROY_IF(this->other_packet);
-	DESTROY_IF(this->eap_payload);
+	//DESTROY_IF(this->eap_payload);
 	if (this->eap_auth)
 	{
 		this->eap_auth->authenticator_interface.destroy(
@@ -670,7 +678,7 @@ static void destroy(private_ike_auth_t *this)
 	chunk_free(&this->other_nonce);
 	DESTROY_IF(this->my_packet);
 	DESTROY_IF(this->other_packet);
-	DESTROY_IF(this->eap_payload);
+	//DESTROY_IF(this->eap_payload);
 	if (this->eap_auth)
 	{
 		this->eap_auth->authenticator_interface.destroy(
