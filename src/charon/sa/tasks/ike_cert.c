@@ -55,6 +55,11 @@ struct private_ike_cert_t {
 	 * list of CA cert hashes requested, items point to 20 byte chunk
 	 */
 	linked_list_t *cas;
+	
+	/** 
+	 * have we seen a certificate request?
+	 */
+	bool certreq_seen;
 };
 
 /**
@@ -74,7 +79,9 @@ static void process_certreqs(private_ike_cert_t *this, message_t *message)
 			cert_encoding_t encoding;
 			chunk_t keyids, keyid;
 			
-			encoding =  certreq->get_cert_encoding(certreq);
+			this->certreq_seen = TRUE;
+			
+			encoding = certreq->get_cert_encoding(certreq);
 			if (encoding != CERT_X509_SIGNATURE)
 			{
 				DBG1(DBG_IKE, "certreq payload %N not supported, ignored",
@@ -220,7 +227,7 @@ static void build_certs(private_ike_cert_t *this, message_t *message)
 			case CERT_NEVER_SEND:
 				break;
 			case CERT_SEND_IF_ASKED:
-				if (this->cas->get_count(this->cas) == 0)
+				if (!this->certreq_seen)
 				{
 					break;
 				}
@@ -320,6 +327,7 @@ static void migrate(private_ike_cert_t *this, ike_sa_t *ike_sa)
 	
 	this->cas->destroy_function(this->cas, free);
 	this->cas = linked_list_create();
+	this->certreq_seen = FALSE;
 }
 
 /**
@@ -356,6 +364,7 @@ ike_cert_t *ike_cert_create(ike_sa_t *ike_sa, bool initiator)
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
 	this->cas = linked_list_create();
+	this->certreq_seen = FALSE;
 	
 	return &this->public;
 }
