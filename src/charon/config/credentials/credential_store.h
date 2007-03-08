@@ -157,11 +157,12 @@ struct credential_store_t {
 	/**
 	 * @brief If an authority certificate does not already exists in the credential store then add it.
 	 *
-	 * @param this		calling object
-	 * @param cert		authority certificate to be added
-	 * @return			pointer to the added or already existing certificate
+	 * @param this			calling object
+	 * @param cert			authority certificate to be added
+	 * @param auth_flag		authority flags to add to the certificate
+	 * @return				pointer to the added or already existing certificate
 	 */
-	x509_t* (*add_auth_certificate) (credential_store_t *this, x509_t *cert, u_int authority_flag);
+	x509_t* (*add_auth_certificate) (credential_store_t *this, x509_t *cert, u_int auth_flag);
 
 	/**
 	 * @brief If a ca info record does not already exists in the credential store then add it.

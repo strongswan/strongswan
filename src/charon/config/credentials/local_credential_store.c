@@ -744,11 +744,12 @@ static x509_t* add_end_certificate(private_local_credential_store_t *this, x509_
 }
 
 /**
- * Implements local_credential_store_t.add_ca_certificate
+ * Implements local_credential_store_t.add_auth_certificate
  */
-static x509_t* add_auth_certificate(private_local_credential_store_t *this, x509_t *cert)
+static x509_t* add_auth_certificate(private_local_credential_store_t *this, x509_t *cert, u_int auth_flags)
 {
-	 return add_certificate(this->auth_certs, cert);
+	cert->add_authority_flags(cert, auth_flags);
+	return add_certificate(this->auth_certs, cert);
 }
 
 /**
