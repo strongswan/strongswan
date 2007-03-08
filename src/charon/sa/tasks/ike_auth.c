@@ -29,7 +29,10 @@
 #include <crypto/diffie_hellman.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/eap_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <sa/authenticators/eap_authenticator.h>
+
 
 
 typedef struct private_ike_auth_t private_ike_auth_t;
@@ -75,14 +78,14 @@ struct private_ike_auth_t {
 	packet_t *other_packet;
 	
 	/**
-	 * authenticator to authenticate us
+	 * EAP authenticator when using EAP
 	 */
-	authenticator_t *my_auth;
+	eap_authenticator_t *eap_auth;
 	
 	/**
-	 * authenticator to authenticate peer
+	 * EAP payload received and ready to process
 	 */
-	authenticator_t *other_auth;
+	eap_payload_t *eap_payload;
 	
 	/**
 	 * has the peer been authenticated successfully?
@@ -91,32 +94,58 @@ struct private_ike_auth_t {
 };
 
 /**
- * build the payloads for the message
+ * build the AUTH payload
  */
-static status_t build_payloads(private_ike_auth_t *this, message_t *message)
+static status_t build_auth(private_ike_auth_t *this, message_t *message)
 {
 	authenticator_t *auth;
 	auth_payload_t *auth_payload;
-	id_payload_t *id_payload;
-	chunk_t ike_sa_init;
-	identification_t *me, *other;
 	policy_t *policy;
-	auth_method_t method = AUTH_RSA;
+	auth_method_t method;
 	status_t status;
-	
-	/* add own ID payload */
-	me = this->ike_sa->get_my_id(this->ike_sa);
-	other = this->ike_sa->get_other_id(this->ike_sa);
 	
 	/* create own authenticator and add auth payload */
 	policy = this->ike_sa->get_policy(this->ike_sa);
 	if (!policy)
 	{
-		SIG(IKE_UP_FAILED, "no acceptable policy found");
+		SIG(IKE_UP_FAILED, "unable to authenticate, no policy found");
+		return FAILED;
+	}
+	method = policy->get_auth_method(policy);
+	
+	auth = authenticator_create(this->ike_sa, method);
+	if (auth == NULL)
+	{
+		SIG(IKE_UP_FAILED, "configured authentication method %N not supported",
+			auth_method_names, method);
 		return FAILED;
 	}
 	
-	method = policy->get_auth_method(policy);
+	status = auth->build(auth, this->my_packet->get_data(this->my_packet),
+						 this->other_nonce, &auth_payload);
+	auth->destroy(auth);
+	if (status != SUCCESS)
+	{
+		SIG(IKE_UP_FAILED, "generating authentication data failed");
+		return FAILED;
+	}
+	message->add_payload(message, (payload_t*)auth_payload);
+	return SUCCESS;
+}
+
+/**
+ * build tID payload(s)
+ */
+static status_t build_id(private_ike_auth_t *this, message_t *message)
+{
+	identification_t *me, *other;
+	id_payload_t *id;
+	policy_t *policy;
+	
+	me = this->ike_sa->get_my_id(this->ike_sa);
+	other = this->ike_sa->get_other_id(this->ike_sa);
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	
 	if (me->contains_wildcards(me))
 	{
 		me = policy->get_my_id(policy);
@@ -127,118 +156,46 @@ static status_t build_payloads(private_ike_auth_t *this, message_t *message)
 		}
 		this->ike_sa->set_my_id(this->ike_sa, me->clone(me));
 	}
-		
-	id_payload = id_payload_create_from_identification(this->initiator, me);
-	message->add_payload(message, (payload_t*)id_payload);
+	
+	id = id_payload_create_from_identification(this->initiator, me);
+	message->add_payload(message, (payload_t*)id);
 	
 	/* as initiator, include other ID if it does not contain wildcards */
 	if (this->initiator && !other->contains_wildcards(other))
 	{
-		id_payload = id_payload_create_from_identification(FALSE, other);
-		message->add_payload(message, (payload_t*)id_payload);
+		id = id_payload_create_from_identification(FALSE, other);
+		message->add_payload(message, (payload_t*)id);
 	}
-	
-	auth = authenticator_create(this->ike_sa, method);
-	if (auth == NULL)
-	{
-		SIG(IKE_UP_FAILED, "configured authentication method %N not supported",
-			 auth_method_names, method);
-		return FAILED;
-	}
-	
-	ike_sa_init = this->my_packet->get_data(this->my_packet);
-	status = auth->build(auth, ike_sa_init, this->other_nonce, &auth_payload);
-	auth->destroy(auth);
-	if (status != SUCCESS)
-	{
-		SIG(IKE_UP_FAILED, "generating authentication data failed");
-		return FAILED;
-	}
-	message->add_payload(message, (payload_t*)auth_payload);
-	
 	return SUCCESS;
 }
 
 /**
- * process payloads from message
+ * process AUTH payload
  */
-static void process_payloads(private_ike_auth_t *this, message_t *message)
+static status_t process_auth(private_ike_auth_t *this, message_t *message)
 {
-	iterator_t *iterator;
-	payload_t *payload;
-	payload_type_t type;
-	identification_t *idi = NULL, *idr = NULL;
-	auth_payload_t *auth_payload = NULL;
+	auth_payload_t *auth_payload;
 	authenticator_t *auth;
 	auth_method_t auth_method;
 	status_t status;
-
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
-	{
-		type = payload->get_type(payload);
-		switch (type)
-		{
-			case ID_INITIATOR:
-			{
-				id_payload_t *id_payload = (id_payload_t*)payload;
-				idi = id_payload->get_identification(id_payload);
-				break;			
-			}
-			case ID_RESPONDER:
-			{
-				id_payload_t *id_payload = (id_payload_t*)payload;
-				idr = id_payload->get_identification(id_payload);
-				break;			
-			}
-			case AUTHENTICATION:
-			{
-				auth_payload = (auth_payload_t*)payload;
-				break;
-			}
-			default:
-				break;
-		}
-	}
-	iterator->destroy(iterator);
 	
-	/* apply IDs */
-	if ((this->initiator && idr == NULL) || (!this->initiator && idi == NULL))
-	{
-		SIG(IKE_UP_FAILED, "ID payload missing in message");
-		DESTROY_IF(idr); DESTROY_IF(idi);
-		return;
-	}
+	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
 	
-	if (this->initiator)
-	{
-		this->ike_sa->set_other_id(this->ike_sa, idr);
-		DESTROY_IF(idi);
-	}
-	else
-	{
-		if (idr)
-		{
-			this->ike_sa->set_my_id(this->ike_sa, idr);
-		}
-		this->ike_sa->set_other_id(this->ike_sa, idi);
-	}
-	
-	/* verify auth payload */
 	if (auth_payload == NULL)
 	{
-		SIG(IKE_UP_FAILED, "AUTH payload missing in message");
-		return;
+		/* AUTH payload is missing, client wants to use EAP authentication */
+		return NOT_FOUND;
 	}
-		
+
 	auth_method = auth_payload->get_auth_method(auth_payload);
 	auth = authenticator_create(this->ike_sa, auth_method);
+
 	if (auth == NULL)
 	{
 		SIG(IKE_UP_FAILED, "authentication method %N used by %D not "
 			"supported", auth_method_names, auth_method,
 			this->ike_sa->get_other_id(this->ike_sa));
-		return;
+		return NOT_SUPPORTED;
 	}
 	status = auth->verify(auth, this->other_packet->get_data(this->other_packet), 
 						  this->my_nonce, auth_payload);
@@ -248,9 +205,44 @@ static void process_payloads(private_ike_auth_t *this, message_t *message)
 		SIG(IKE_UP_FAILED, "authentication of %D using %N failed",
 			 this->ike_sa->get_other_id(this->ike_sa), 
 			 auth_method_names, auth_method);	
-		return;
+		return FAILED;
 	}
-	this->peer_authenticated = TRUE;
+	return SUCCESS;
+}
+
+/**
+ * process ID payload(s)
+ */
+static status_t process_id(private_ike_auth_t *this, message_t *message)
+{
+	identification_t *id;
+	id_payload_t *idr, *idi;
+
+	idi = (id_payload_t*)message->get_payload(message, ID_INITIATOR);
+	idr = (id_payload_t*)message->get_payload(message, ID_RESPONDER);
+
+	if ((this->initiator && idr == NULL) || (!this->initiator && idi == NULL))
+	{
+		SIG(IKE_UP_FAILED, "ID payload missing in message");
+		return FAILED;
+	}
+	
+	if (this->initiator)
+	{
+		id = idr->get_identification(idr);
+		this->ike_sa->set_other_id(this->ike_sa, id);
+	}
+	else
+	{
+		id = idi->get_identification(idi);
+		this->ike_sa->set_other_id(this->ike_sa, id);
+		if (idr)
+		{
+			id = idr->get_identification(idr);
+			this->ike_sa->set_my_id(this->ike_sa, id);
+		}
+	}
+	return SUCCESS;
 }
 
 /**
@@ -299,20 +291,172 @@ static status_t collect_other_init_data(private_ike_auth_t *this, message_t *mes
 }
 
 /**
+ * Implementation of task_t.build to create AUTH payload from EAP data
+ */
+static status_t build_auth_eap(private_ike_auth_t *this, message_t *message)
+{
+	authenticator_t *auth;
+	auth_payload_t *auth_payload;
+	
+	auth = (authenticator_t*)this->eap_auth;
+	if (auth->build(auth, this->my_packet->get_data(this->my_packet),
+		this->other_nonce, &auth_payload) != SUCCESS)
+	{
+		SIG(IKE_UP_FAILED, "generating authentication data failed");
+		if (!this->initiator)
+		{
+			message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
+		}
+		return FAILED;
+	}
+	message->add_payload(message, (payload_t*)auth_payload);
+	if (this->initiator)
+	{
+		return NEED_MORE;
+	}
+	return SUCCESS;
+}
+
+/**
+ * Implementation of task_t.process to verify AUTH payload after EAP
+ */
+static status_t process_auth_eap(private_ike_auth_t *this, message_t *message)
+{
+	auth_payload_t *auth_payload;
+	authenticator_t *auth;
+
+	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
+	this->peer_authenticated = FALSE;
+	
+	if (auth_payload)
+	{
+		auth = (authenticator_t*)this->eap_auth;
+		if (auth->verify(auth, this->other_packet->get_data(this->other_packet), 
+						this->my_nonce, auth_payload) == SUCCESS)
+		{
+			this->peer_authenticated = TRUE;
+		}
+	}
+
+	if (!this->peer_authenticated)
+	{
+		SIG(IKE_UP_FAILED, "authentication of %D using %N failed",
+			 this->ike_sa->get_other_id(this->ike_sa), 
+			 auth_method_names, AUTH_EAP);
+		if (this->initiator)
+		{
+			return FAILED;
+		}
+		return NEED_MORE;
+	}
+	if (this->initiator)
+	{
+		return SUCCESS;
+	}
+	return NEED_MORE;
+}
+
+/**
+ * Implementation of task_t.process for EAP exchanges
+ */
+static status_t process_eap(private_ike_auth_t *this, message_t *message)
+{
+	eap_payload_t *eap;
+
+	eap = (eap_payload_t*)message->get_payload(message, EXTENSIBLE_AUTHENTICATION);
+	
+	if (this->initiator)
+	{
+		switch (this->eap_auth->process(this->eap_auth, eap, &eap))
+		{
+			case NEED_MORE:
+				break;
+			case SUCCESS:
+				/* EAP exchange completed, now create and process AUTH */
+				this->public.task.build = (status_t(*)(task_t*,message_t*))build_auth_eap;
+				this->public.task.process = (status_t(*)(task_t*,message_t*))process_auth_eap;
+				return NEED_MORE;
+			default:
+				SIG(IKE_UP_FAILED, "failed to authenticate against %D using EAP",
+					this->ike_sa->get_other_id(this->ike_sa));
+				return FAILED;
+		}
+	}
+	this->eap_payload = eap;
+	return NEED_MORE;
+}
+
+/**
+ * Implementation of task_t.build for EAP exchanges
+ */
+static status_t build_eap(private_ike_auth_t *this, message_t *message)
+{
+	eap_payload_t *eap;
+	
+
+	if (this->eap_payload == NULL)
+	{
+		SIG(IKE_UP_FAILED, "expected an EAP payload, but none found");
+		return FAILED;
+	}
+	
+	/* set to NULL, as it should not get destroyed by destructor */
+	eap = this->eap_payload;
+	this->eap_payload = NULL;
+	if (this->initiator)
+	{
+		message->add_payload(message, (payload_t*)eap);
+		return NEED_MORE;
+	}
+	switch (this->eap_auth->process(this->eap_auth, eap, &eap))
+	{
+		case NEED_MORE:
+			return NEED_MORE;
+		case SUCCESS:
+			message->add_payload(message, (payload_t*)eap);
+			/* EAP exchange completed, now create and process AUTH */
+			this->public.task.build = (status_t(*)(task_t*,message_t*))build_auth_eap;
+			this->public.task.process = (status_t(*)(task_t*,message_t*))process_auth_eap;
+			return NEED_MORE;
+		default:
+			SIG(IKE_UP_FAILED, "authentication of %D using %N failed",
+				this->ike_sa->get_other_id(this->ike_sa),
+				auth_method_names, AUTH_EAP);
+				message->add_payload(message, (payload_t*)eap);
+			return FAILED;
+	}
+}
+
+/**
  * Implementation of task_t.build for initiator
  */
 static status_t build_i(private_ike_auth_t *this, message_t *message)
 {
+	policy_t *policy;
+
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		return collect_my_init_data(this, message);
 	}
 	
-	if (build_payloads(this, message) == SUCCESS)
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	if (policy->get_auth_method(policy) == AUTH_EAP)
 	{
-		return NEED_MORE;
+		this->eap_auth = eap_authenticator_create(this->ike_sa);
 	}
-	return FAILED;
+	else
+	{
+		if (build_auth(this, message) != SUCCESS)
+		{
+			return FAILED;
+		}
+	}
+	
+	if (build_id(this, message) != SUCCESS)
+	{
+		return FAILED;
+	}
+	return NEED_MORE;
 }
 
 /**
@@ -325,8 +469,23 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		return collect_other_init_data(this, message);
 	}
 	
-	process_payloads(this, message);
+	if (process_id(this, message) != SUCCESS)
+	{
+		return NEED_MORE;
+	}
 	
+	switch (process_auth(this, message))
+	{
+		case SUCCESS:
+			this->peer_authenticated = TRUE;
+			break;
+		case NOT_FOUND:
+			/* use EAP if no AUTH payload found */
+			this->eap_auth = eap_authenticator_create(this->ike_sa);
+			break;
+		default:
+			break;
+	}
 	return NEED_MORE;
 }
 
@@ -335,13 +494,27 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
  */
 static status_t build_r(private_ike_auth_t *this, message_t *message)
 {
+	policy_t *policy;
+	eap_type_t eap_type;
+	eap_payload_t *eap_payload;
+	status_t status;
+
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		return collect_my_init_data(this, message);
 	}
 	
-	if (this->peer_authenticated && build_payloads(this, message) == SUCCESS)
+	if (build_id(this, message) != SUCCESS ||
+		build_auth(this, message) != SUCCESS)
 	{
+		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
+		return FAILED;
+	}
+	
+	/* use "traditional" authentication if we could authenticate peer */
+	if (this->peer_authenticated)
+	{
+
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 		SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
 			this->ike_sa->get_my_id(this->ike_sa), 
@@ -350,8 +523,29 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 			this->ike_sa->get_other_id(this->ike_sa));
 		return SUCCESS;
 	}
-	message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
-	return FAILED;
+	
+	if (this->eap_auth == NULL)
+	{
+		/* peer not authenticated, nor does it want to use EAP */
+		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
+		return FAILED;
+	}
+		
+	/* initiate EAP authenitcation */
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	eap_type = policy->get_eap_type(policy);
+	status = this->eap_auth->initiate(this->eap_auth, eap_type, &eap_payload);
+	message->add_payload(message, (payload_t*)eap_payload);
+	if (status != NEED_MORE)
+	{
+		SIG(IKE_UP_FAILED, "unable to initiate EAP authentication");
+		return FAILED;
+	}
+	
+	/* switch to EAP methods */
+	this->public.task.build = (status_t(*)(task_t*,message_t*))build_eap;
+	this->public.task.process = (status_t(*)(task_t*,message_t*))process_eap;
+	return NEED_MORE;
 }
 
 /**
@@ -402,19 +596,27 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 	}
 	iterator->destroy(iterator);
 	
-	process_payloads(this, message);
-
-	if (this->peer_authenticated)
+	if (process_id(this, message) != SUCCESS ||
+		process_auth(this, message) != SUCCESS)
 	{
-		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
-			this->ike_sa->get_my_id(this->ike_sa), 
-			this->ike_sa->get_my_host(this->ike_sa),
-			this->ike_sa->get_other_host(this->ike_sa),
-			this->ike_sa->get_other_id(this->ike_sa));
-		return SUCCESS;
+		return FAILED;
 	}
-	return FAILED;
+	
+	if (this->eap_auth)
+	{
+		/* switch to EAP authentication methods */
+		this->public.task.build = (status_t(*)(task_t*,message_t*))build_eap;
+		this->public.task.process = (status_t(*)(task_t*,message_t*))process_eap;
+		return process_eap(this, message);
+	}
+	
+	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+	SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
+		this->ike_sa->get_my_id(this->ike_sa), 
+		this->ike_sa->get_my_host(this->ike_sa),
+		this->ike_sa->get_other_host(this->ike_sa),
+		this->ike_sa->get_other_id(this->ike_sa));
+	return SUCCESS;
 }
 
 /**
@@ -434,14 +636,29 @@ static void migrate(private_ike_auth_t *this, ike_sa_t *ike_sa)
 	chunk_free(&this->other_nonce);
 	DESTROY_IF(this->my_packet);
 	DESTROY_IF(this->other_packet);
-	DESTROY_IF(this->my_auth);
-	DESTROY_IF(this->other_auth);
+	DESTROY_IF(this->eap_payload);
+	if (this->eap_auth)
+	{
+		this->eap_auth->authenticator_interface.destroy(
+									&this->eap_auth->authenticator_interface);
+	}
+	
 	this->my_packet = NULL;
 	this->other_packet = NULL;
-	this->my_auth = NULL;
-	this->other_auth = NULL;
 	this->peer_authenticated = FALSE;
+	this->eap_auth = NULL;
+	this->eap_payload = NULL;
 	this->ike_sa = ike_sa;
+	if (this->initiator)
+	{
+		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
+		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
+	}
+	else
+	{
+		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
+		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
+	}
 }
 
 /**
@@ -453,8 +670,12 @@ static void destroy(private_ike_auth_t *this)
 	chunk_free(&this->other_nonce);
 	DESTROY_IF(this->my_packet);
 	DESTROY_IF(this->other_packet);
-	DESTROY_IF(this->my_auth);
-	DESTROY_IF(this->other_auth);
+	DESTROY_IF(this->eap_payload);
+	if (this->eap_auth)
+	{
+		this->eap_auth->authenticator_interface.destroy(
+									&this->eap_auth->authenticator_interface);
+	}
 	free(this);
 }
 
@@ -486,9 +707,9 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator)
 	this->other_nonce = chunk_empty;
 	this->my_packet = NULL;
 	this->other_packet = NULL;
-	this->my_auth = NULL;
-	this->other_auth = NULL;
 	this->peer_authenticated = FALSE;
+	this->eap_auth = NULL;
+	this->eap_payload = NULL;
 	
 	return &this->public;
 }

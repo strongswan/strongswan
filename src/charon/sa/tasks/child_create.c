@@ -427,6 +427,12 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
 				return SUCCESS;
 			}
+		case IKE_AUTH:
+			if (!message->get_payload(message, ID_INITIATOR))
+			{
+				/* send only in the first request, not in subsequent EAP  */
+				return NEED_MORE;
+			}
 			break;
 		default:
 			break;
@@ -487,6 +493,12 @@ static status_t process_r(private_child_create_t *this, message_t *message)
 		case CREATE_CHILD_SA:
 			get_nonce(message, &this->other_nonce);
 			break;
+		case IKE_AUTH:
+			if (message->get_payload(message, ID_INITIATOR) == NULL)
+			{
+				/* wait until extensible authentication completed, if used */
+				return NEED_MORE;
+			}
 		default:
 			break;
 	}
@@ -530,6 +542,12 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 				return SUCCESS;
 			}
 			break;
+		case IKE_AUTH:
+			if (message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
+			{
+				/* wait until extensible authentication completed, if used */
+				return NEED_MORE;
+			}
 		default:
 			break;
 	}
@@ -577,6 +595,12 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 		case CREATE_CHILD_SA:
 			get_nonce(message, &this->other_nonce);
 			break;
+		case IKE_AUTH:
+			if (message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
+			{
+				/* wait until extensible authentication completed, if used */
+				return NEED_MORE;
+			}
 		default:
 			break;
 	}
