@@ -505,6 +505,7 @@ int main(int argc, char *argv[])
 	run(private_charon);
 	
 	eap_method_unload();
+	fetcher_finalize();
 	/* normal termination, cleanup and exit */
 	destroy(private_charon);
 	unlink(PID_FILE);

@@ -173,7 +173,7 @@ void fetcher_initialize(void)
  #ifdef LIBCURL
 	CURLcode res;
 
-	/* init libcurl */
+	/* initialize libcurl */
 	DBG1("initializing libcurl");
 	res = curl_global_init(CURL_GLOBAL_NOTHING);
 	if (res != CURLE_OK)
@@ -182,3 +182,16 @@ void fetcher_initialize(void)
     }
 #endif /* LIBCURL */
 }
+
+/**
+ * Described in header.
+ */
+void fetcher_finalize(void)
+{
+ #ifdef LIBCURL
+	/* finalize libcurl */
+	DBG1("finalizing libcurl");
+	curl_global_cleanup();
+#endif /* LIBCURL */
+}
+

@@ -83,4 +83,13 @@ fetcher_t* fetcher_create(const char *uri);
  */
 void fetcher_initialize(void);
 
+/**
+ * @brief Finalizes the fetcher_t class
+ *
+ * call this function only once befor exiting the main program
+ *
+ * @ingroup utils
+ */
+void fetcher_finalize(void);
+
 #endif /*FETCHER_H_*/
