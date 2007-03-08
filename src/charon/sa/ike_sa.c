@@ -620,6 +620,8 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			if (this->connection == NULL)
 			{
 				/* no connection found for these hosts, destroy */
+				DBG1(DBG_IKE, "no connection found for %H...%H, sending %N",
+					 me, other, notify_type_names, NO_PROPOSAL_CHOSEN);
 				send_notify_response(this, message, NO_PROPOSAL_CHOSEN);
 				return DESTROY_ME;
 			}
