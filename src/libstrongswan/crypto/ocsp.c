@@ -38,6 +38,7 @@
 #include <debug.h>
 
 #include "hashers/hasher.h"
+#include "rsa/rsa_public_key.h"
 #include "certinfo.h"
 #include "x509.h"
 #include "ocsp.h"
@@ -107,18 +108,48 @@ struct response_t {
 	chunk_t           nonce;
 	int               algorithm;
 	chunk_t           signature;
+	x509_t           *responder_cert;
+
+	/**
+	 * @brief Destroys the response_t object
+	 * 
+	 * @param this		response_t to destroy
+	 */
+	void (*destroy) (response_t *this);
 };
 
-const response_t empty_response = {
-	{ NULL, 0 }   ,	/* tbs */
-	  NULL        ,	/* responder_id_name */
-	{ NULL, 0 }   ,	/* responder_id_key */
-	UNDEFINED_TIME,	/* produced_at */
-	{ NULL, 0 }   ,	/* single_response */
-	{ NULL, 0 }   ,	/* nonce */
-	OID_UNKNOWN   ,	/* signature_algorithm */
-	{ NULL, 0 }		/* signature */
-};
+/**
+ * Implements response_t.destroy.
+ */
+static void response_destroy(response_t *this)
+{
+	DESTROY_IF(this->responder_id_name);
+	DESTROY_IF(this->responder_cert);
+}
+
+/**
+ * Creates a response_t object
+ */
+static response_t* response_create(void)
+{
+	response_t *this = malloc_thing(response_t);
+
+	this->tbs               = chunk_empty;
+	this->responder_id_name = NULL;
+	this->responder_id_key  = chunk_empty;
+	this->produced_at       = UNDEFINED_TIME;
+	this->responses         = chunk_empty;
+	this->nonce             = chunk_empty;
+	this->algorithm         = OID_UNKNOWN;
+	this->signature         = chunk_empty;
+	this->responder_cert    = NULL;
+
+	this->destroy = (void (*) (response_t*))response_destroy;
+
+	return this;
+}
+
+
 
 /* single response container */
 typedef struct single_response single_response_t;
@@ -453,15 +484,6 @@ static chunk_t ocsp_build_request(private_ocsp_t *this)
 }
 
 /**
- * Check if the OCSP response has a valid signature
- */
-static bool ocsp_valid_response(response_t *res)
-{
-	/* TODO */
-	return FALSE;
-}
-
-/**
  * parse a basic OCSP response
  */
 static bool ocsp_parse_basic_response(chunk_t blob, int level0, response_t *res)
@@ -529,24 +551,8 @@ static bool ocsp_parse_basic_response(chunk_t blob, int level0, response_t *res)
 			case BASIC_RESPONSE_CERTIFICATE:
 				{
 					chunk_t blob = chunk_clone(object);
-					x509_t *cert = x509_create_from_chunk(blob, level+1);
 
-					if (cert == NULL)
-					{
-						break;
-					}
-					if (cert->is_ocsp_signer(cert))
-					{
-						DBG2("received OCSP signer certificate");
-						cert->destroy(cert);
-						/* TODO trust_authcert_candidate(cert, NULL))
-						 add_authcert(cert, AUTH_OCSP); */
-					}
-					else
-					{
-						DBG1("embedded ocsp certificate rejected");
-						cert->destroy(cert);
-					}
+					res->responder_cert = x509_create_from_chunk(blob, level+1);
 				}
 				break;
 		}
@@ -558,7 +564,7 @@ static bool ocsp_parse_basic_response(chunk_t blob, int level0, response_t *res)
 /**
  * parse an ocsp response and return the result as a response_t struct
  */
-static response_status ocsp_parse_response(chunk_t blob, response_t * res)
+static response_status ocsp_parse_response(chunk_t blob, response_t *res)
 {
 	asn1_ctx_t ctx;
 	chunk_t object;
@@ -623,6 +629,32 @@ static response_status ocsp_parse_response(chunk_t blob, response_t * res)
 		objectID++;
 	}
 	return rStatus;
+}
+
+/**
+ * Check if the OCSP response has a valid signature
+ */
+static bool ocsp_valid_response(response_t *res, x509_t *ocsp_cert)
+{
+	rsa_public_key_t *public_key;
+	time_t until = UNDEFINED_TIME;
+	err_t ugh;
+
+	DBG2("verifying ocsp response signature:");
+	DBG2("signer:  '%D'", ocsp_cert->get_subject(ocsp_cert));
+	DBG2("issuer:  '%D'", ocsp_cert->get_issuer(ocsp_cert));
+
+	ugh = ocsp_cert->is_valid(ocsp_cert, &until);
+	if (ugh != NULL)
+	{
+		DBG1("ocsp signer certificate %s", ugh);
+		return FALSE;
+	}
+	DBG2("ocsp signer certificate is valid");
+
+	public_key = ocsp_cert->get_public_key(ocsp_cert);
+
+	return public_key->verify_emsa_pkcs1_signature(public_key, res->tbs, res->signature) == SUCCESS;
 }
 
 /**
@@ -706,39 +738,76 @@ static void process_single_response(private_ocsp_t *this, single_response_t *sre
 /**
  *  verify and process ocsp response and update the ocsp cache
  */
-void ocsp_process_response(private_ocsp_t *this, chunk_t reply)
+void ocsp_process_response(private_ocsp_t *this, chunk_t blob, credential_store_t *credentials)
 {
-	response_t res = empty_response;
+	x509_t *ocsp_cert = NULL;
+	response_t *res = response_create();
 
 	/* parse the ocsp response without looking at the single responses yet */
-	response_status status = ocsp_parse_response(reply, &res);
+	response_status status = ocsp_parse_response(blob, res);
 
 	if (status != STATUS_SUCCESSFUL)
 	{
 		DBG1("error in ocsp response");
-		return;
+		goto err;
 	}
 
 	/* check if there was a nonce in the request */
-	if (this->nonce.ptr != NULL && res.nonce.ptr == NULL)
+	if (this->nonce.ptr != NULL && res->nonce.ptr == NULL)
 	{
 		DBG1("ocsp response contains no nonce, replay attack possible");
 	}
 
 	/* check if the nonces are identical */
-	if (res.nonce.ptr != NULL && !chunk_equals(res.nonce, this->nonce))
+	if (res->nonce.ptr != NULL && !chunk_equals(res->nonce, this->nonce))
     {
 		DBG1("invalid nonce in ocsp response");
-		return;
+		goto err;
 	}
 
-	/* check if the response is signed by a trusted key */
-	if (!ocsp_valid_response(&res))
+	/* check if we received a trusted responder certificate */
+	if (res->responder_cert)
 	{
-		DBG1("invalid ocsp response");
-		return;
+		if (res->responder_cert->is_ocsp_signer(res->responder_cert))
+		{
+			DBG2("received certificate is ocsp signer");
+			if (credentials->is_trusted(credentials, res->responder_cert))
+			{
+				DBG2("received ocsp signer certificate is trusted");
+				ocsp_cert = credentials->add_auth_certificate(credentials,
+									res->responder_cert, AUTH_OCSP);
+				res->responder_cert = NULL;
+			}
+			else
+			{
+				DBG1("received ocsp signer certificate is not trusted - rejected");
+			}
+		}
+		else
+		{
+			DBG1("received certificate is no ocsp signer - rejected");
+		}
 	}
-	DBG2("valid ocsp response");
+
+	/* if we didn't receive a trusted responder cert, search the credential store */
+	if (ocsp_cert == NULL)
+	{
+		ocsp_cert = credentials->get_auth_certificate(credentials,
+							AUTH_OCSP|AUTH_CA, res->responder_id_name);
+		if (ocsp_cert == NULL)
+		{
+			DBG1("no ocsp signer certificate found");
+			goto err;
+		}
+	}
+
+	/* check the response signature */
+	if (!ocsp_valid_response(res, ocsp_cert))
+	{
+		DBG1("ocsp response signature is invalid");
+		goto err;
+	}
+	DBG2("ocsp response signature is valid");
 
     /* now parse the single responses one at a time */
     {
@@ -747,13 +816,13 @@ void ocsp_process_response(private_ocsp_t *this, chunk_t reply)
 		chunk_t object;
 		int objectID = 0;
 
-		asn1_init(&ctx, res.responses, 0, FALSE, FALSE);
+		asn1_init(&ctx, res->responses, 0, FALSE, FALSE);
 
 		while (objectID < RESPONSES_ROOF)
 		{
 			if (!extract_object(responsesObjects, &objectID, &object, &level, &ctx))
 			{
-				return;
+				goto err;
 			}
 			if (objectID == RESPONSES_SINGLE_RESPONSE)
 			{
@@ -767,12 +836,14 @@ void ocsp_process_response(private_ocsp_t *this, chunk_t reply)
 			objectID++;
 		}
 	}
+err:
+	res->destroy(res);
 }
 
 /**
  * Implements ocsp_t.fetch.
  */
-static void fetch(private_ocsp_t *this, certinfo_t *certinfo)
+static void fetch(private_ocsp_t *this, certinfo_t *certinfo, credential_store_t *credentials)
 {
 	chunk_t request;
 	chunk_t response;
@@ -816,7 +887,7 @@ static void fetch(private_ocsp_t *this, certinfo_t *certinfo)
 		return;
 	}
 	DBG3("ocsp response: %B", &response);
-	ocsp_process_response(this, response);
+	ocsp_process_response(this, response, credentials);
 	free(response.ptr);
 }
 
@@ -853,7 +924,7 @@ ocsp_t *ocsp_create(x509_t *cacert, linked_list_t *uris)
 	}
 
 	/* public functions */
-	this->public.fetch = (void (*) (ocsp_t*,certinfo_t*))fetch;
+	this->public.fetch = (void (*) (ocsp_t*,certinfo_t*,credential_store_t*))fetch;
 	this->public.destroy = (void (*) (ocsp_t*))destroy;
 
 	return &this->public;

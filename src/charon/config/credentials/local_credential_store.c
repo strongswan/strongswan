@@ -481,6 +481,60 @@ static void add_uris(ca_info_t *issuer, x509_t *cert)
 }
 
 /**
+ * Implementation of credential_store_t.is_trusted
+ */
+static bool is_trusted(private_local_credential_store_t *this, x509_t *cert)
+{
+	int pathlen;
+
+	DBG2(DBG_CFG, "establishing trust in certificate:");
+
+	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
+	{
+		ca_info_t *issuer;
+		x509_t *issuer_cert;
+		rsa_public_key_t *issuer_public_key;
+		bool valid_signature;
+
+		DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
+		DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
+	
+		issuer = get_issuer(this, cert);
+		if (issuer == NULL)
+		{
+			DBG1(DBG_CFG, "issuer info not found");
+			return FALSE;
+		}
+		DBG2(DBG_CFG, "issuer info found");
+
+		issuer_cert = issuer->get_certificate(issuer);
+		issuer_public_key = issuer_cert->get_public_key(issuer_cert);
+		valid_signature = cert->verify(cert, issuer_public_key);
+
+		if (!valid_signature)
+		{
+			DBG1(DBG_CFG, "certificate signature is invalid");
+			return FALSE;
+		}
+		DBG2(DBG_CFG, "certificate signature is valid");
+
+		/* check if cert is a self-signed root ca */
+		if (pathlen > 0 && cert->is_self_signed(cert))
+		{
+			DBG2(DBG_CFG, "reached self-signed root ca");
+			return TRUE;
+		}
+		else
+		{
+			/* go up one step in the trust chain */
+			cert = issuer_cert;
+		}
+	}
+	DBG1(DBG_CFG, "maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	return FALSE;
+}
+
+/**
  * Implementation of credential_store_t.verify.
  */
 static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *found)
@@ -491,6 +545,8 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 	x509_t *end_cert = cert;
 	x509_t *cert_copy = find_certificate(this->certs, end_cert);
 	
+	DBG2(DBG_CFG, "verifying end entity certificate:");
+
 	*found = (cert_copy != NULL);
 	if (*found)
 	{
@@ -565,7 +621,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			}
 
 			/* first check certificate revocation using ocsp */
-			status = issuer->verify_by_ocsp(issuer, cert, certinfo);
+			status = issuer->verify_by_ocsp(issuer, cert, certinfo, &this->public);
 
 			/* if ocsp service is not available then fall back to crl */
 			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && this->strict))
@@ -1234,6 +1290,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.get_auth_certificate = (x509_t* (*) (credential_store_t*,u_int,identification_t*))get_auth_certificate;
 	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,chunk_t))get_ca_certificate_by_keyid;
 	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,const x509_t*))get_issuer;
+	this->public.credential_store.is_trusted = (bool (*) (credential_store_t*,x509_t*))is_trusted;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
 	this->public.credential_store.add_auth_certificate = (x509_t* (*) (credential_store_t*,x509_t*,u_int))add_auth_certificate;

@@ -1,6 +1,7 @@
 lib_LTLIBRARIES = libstrongswan.la
 
 libstrongswan_la_SOURCES = \
+credential_store.h \
 library.c library.h \
 chunk.c chunk.h \
 debug.c debug.h \

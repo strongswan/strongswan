@@ -28,6 +28,8 @@ typedef struct ca_info_t ca_info_t;
 #include <library.h>
 #include <chunk.h>
 
+#include <credential_store.h>
+
 #include "x509.h"
 #include "crl.h"
 
@@ -151,9 +153,10 @@ struct ca_info_t {
 	 * @param this			ca info object
 	 * @param cert			certificate to be verified
 	 * @param certinfo		detailed certificate status information
+	 * @param credentials	credential store needed for trust path verification
 	 * @return				certificate status
 	 */
-	cert_status_t (*verify_by_ocsp) (ca_info_t* this, const x509_t* cert, certinfo_t* certinfo);
+	cert_status_t (*verify_by_ocsp) (ca_info_t* this, const x509_t* cert, certinfo_t* certinfo, credential_store_t* credentials);
 
 	/**
 	 * @brief Destroys a ca info record

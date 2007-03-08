@@ -27,7 +27,9 @@
 
 typedef struct ocsp_t ocsp_t;
 
-#include "utils/linked_list.h"
+#include <credential_store.h>
+#include <utils/linked_list.h>
+
 #include "certinfo.h"
 
 /* constants */
@@ -57,8 +59,9 @@ struct ocsp_t {
 	 * 
 	 * @param uris				linked list of ocsp uris
 	 * @param certinfo			certificate status info to be updated
+	 * @param credentials		credential store needed for trust path verification
 	 */
-	void (*fetch) (ocsp_t *this, certinfo_t *certinfo);
+	void (*fetch) (ocsp_t *this, certinfo_t *certinfo, credential_store_t *credentials);
 
 	/**
 	 * @brief Destroys the ocsp_t object.

@@ -382,8 +382,10 @@ err:
 /**
   * Implements ca_info_t.verify_by_ocsp.
   */
-static cert_status_t verify_by_ocsp(private_ca_info_t* this, const x509_t *cert,
-									certinfo_t *certinfo)
+static cert_status_t verify_by_ocsp(private_ca_info_t* this,
+									const x509_t *cert,
+									certinfo_t *certinfo,
+									credential_store_t *credentials)
 {
 	bool found = FALSE;
 
@@ -419,7 +421,7 @@ static cert_status_t verify_by_ocsp(private_ca_info_t* this, const x509_t *cert,
 		DBG2("ocsp status is not in cache");
 
 		ocsp = ocsp_create(this->cacert, this->ocspuris);
-		ocsp->fetch(ocsp, certinfo);
+		ocsp->fetch(ocsp, certinfo, credentials);
 		ocsp->destroy(ocsp);
 	}
 
@@ -555,7 +557,7 @@ ca_info_t *ca_info_create(const char *name, x509_t *cacert)
 	this->public.add_ocspuri = (void (*) (ca_info_t*,chunk_t))add_ocspuri;
 	this->public.get_certificate = (x509_t* (*) (ca_info_t*))get_certificate;
 	this->public.verify_by_crl = (cert_status_t (*) (ca_info_t*,const x509_t*,certinfo_t*))verify_by_crl;
-	this->public.verify_by_ocsp = (cert_status_t (*) (ca_info_t*,const x509_t*,certinfo_t*))verify_by_ocsp;
+	this->public.verify_by_ocsp = (cert_status_t (*) (ca_info_t*,const x509_t*,certinfo_t*,credential_store_t*))verify_by_ocsp;
 	this->public.destroy = (void (*) (ca_info_t*))destroy;
 
 	return &this->public;
