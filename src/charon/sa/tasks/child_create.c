@@ -427,6 +427,7 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
 				return SUCCESS;
 			}
+			break;
 		case IKE_AUTH:
 			if (!message->get_payload(message, ID_INITIATOR))
 			{
