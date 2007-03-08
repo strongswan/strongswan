@@ -123,12 +123,15 @@ kernel_algorithm_t encryption_algs[] = {
  * Algorithms for integrity protection
  */
 kernel_algorithm_t integrity_algs[] = {
-	{AUTH_HMAC_MD5_96, 	"md5",			128},
-	{AUTH_HMAC_SHA1_96,	"sha1",			160},
-/*	{AUTH_DES_MAC,		"***",			0}, */
-/*	{AUTH_KPDK_MD5,		"***",			0}, */
-/*	{AUTH_AES_XCBC_96,	"***",			0}, */
-	{END_OF_LIST, 		NULL,			0},
+	{AUTH_HMAC_MD5_96, 			"md5",			128},
+	{AUTH_HMAC_SHA1_96,			"sha1",			160},
+	{AUTH_HMAC_SHA2_256_128,	"sha256",		256},
+	{AUTH_HMAC_SHA2_384_192,	"sha384",		384},
+	{AUTH_HMAC_SHA2_512_256,	"sha512",		512},
+/*	{AUTH_DES_MAC,				"***",			0}, */
+/*	{AUTH_KPDK_MD5,				"***",			0}, */
+/*	{AUTH_AES_XCBC_96,			"***",			0}, */
+	{END_OF_LIST, 				NULL,			0},
 };
 
 /**
@@ -1668,7 +1671,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 		return FAILED;
 	}
 	
-	if (direction == POLICY_FWD)
+	if (direction == POLICY_FWD && mode != MODE_TRANSPORT)
 	{
 		policy->route = malloc_thing(route_entry_t);
 		if (get_address_by_ts(this, dst_ts, &policy->route->src_ip) == SUCCESS)
