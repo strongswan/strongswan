@@ -370,11 +370,9 @@ static status_t process_eap(private_ike_auth_t *this, message_t *message)
 		switch (this->eap_auth->process(this->eap_auth, eap, &eap))
 		{
 			case NEED_MORE:
-				DBG1(DBG_IKE, "eap processed, but more needed");
 				break;
 			case SUCCESS:
 				/* EAP exchange completed, now create and process AUTH */
-				DBG1(DBG_IKE, "eap processed, got EAP_SUCCESS");
 				this->public.task.build = (status_t(*)(task_t*,message_t*))build_auth_eap;
 				this->public.task.process = (status_t(*)(task_t*,message_t*))process_auth_eap;
 				return NEED_MORE;
@@ -403,7 +401,6 @@ static status_t build_eap(private_ike_auth_t *this, message_t *message)
 	
 	if (this->initiator)
 	{
-		DBG1(DBG_IKE, "adding payload to message");
 		chunk_t chunk = this->eap_payload->get_data(this->eap_payload);
 		eap = eap_payload_create_data(chunk);
 		message->add_payload(message, (payload_t*)eap);
@@ -439,6 +436,11 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 	{
 		return collect_my_init_data(this, message);
 	}
+		
+	if (build_id(this, message) != SUCCESS)
+	{
+		return FAILED;
+	}
 	
 	policy = this->ike_sa->get_policy(this->ike_sa);
 	if (policy->get_auth_method(policy) == AUTH_EAP)
@@ -452,11 +454,7 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 			return FAILED;
 		}
 	}
-	
-	if (build_id(this, message) != SUCCESS)
-	{
-		return FAILED;
-	}
+
 	return NEED_MORE;
 }
 
@@ -644,7 +642,6 @@ static void migrate(private_ike_auth_t *this, ike_sa_t *ike_sa)
 	chunk_free(&this->other_nonce);
 	DESTROY_IF(this->my_packet);
 	DESTROY_IF(this->other_packet);
-	//DESTROY_IF(this->eap_payload);
 	if (this->eap_auth)
 	{
 		this->eap_auth->authenticator_interface.destroy(
@@ -678,7 +675,6 @@ static void destroy(private_ike_auth_t *this)
 	chunk_free(&this->other_nonce);
 	DESTROY_IF(this->my_packet);
 	DESTROY_IF(this->other_packet);
-	//DESTROY_IF(this->eap_payload);
 	if (this->eap_auth)
 	{
 		this->eap_auth->authenticator_interface.destroy(

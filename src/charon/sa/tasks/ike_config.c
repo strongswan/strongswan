@@ -348,7 +348,10 @@ static status_t process_i(private_ike_config_t *this, message_t *message)
 			
 			while (this->dns->remove_last(this->dns, (void**)&ip) == SUCCESS)
 			{
-				this->ike_sa->add_dns_server(this->ike_sa, ip);
+				if (!ip->is_anyaddr(ip))
+				{
+					this->ike_sa->add_dns_server(this->ike_sa, ip);
+				}
 				ip->destroy(ip);
 			}
 		}
