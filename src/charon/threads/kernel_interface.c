@@ -1671,7 +1671,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 		return FAILED;
 	}
 	
-	if (direction == POLICY_FWD && mode != MODE_TRANSPORT)
+	if (direction == POLICY_FWD && mode != MODE_TRANSPORT &&
+		src->get_family(src) != AF_INET6)
 	{
 		policy->route = malloc_thing(route_entry_t);
 		if (get_address_by_ts(this, dst_ts, &policy->route->src_ip) == SUCCESS)
