@@ -444,9 +444,32 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
 		}
 	}
+	else if (strncmp(alg.ptr, "sha256", alg.len) == 0)
+	{
+		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA2_256_128, 0);
+		if (this->protocol == PROTO_IKE)
+		{
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_256, 0);
+		}
+	}
+	else if (strncmp(alg.ptr, "sha384", alg.len) == 0)
+	{
+		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA2_384_192, 0);
+		if (this->protocol == PROTO_IKE)
+		{
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_384, 0);
+		}
+	}
+	else if (strncmp(alg.ptr, "sha512", alg.len) == 0)
+	{
+		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA2_512_256, 0);
+		if (this->protocol == PROTO_IKE)
+		{
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_512, 0);
+		}
+	}
 	else if (strncmp(alg.ptr, "md5", alg.len) == 0)
 	{
-		/* same for MD5 */
 		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
 		if (this->protocol == PROTO_IKE)
 		{
@@ -536,32 +559,44 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 	switch (protocol)
 	{
 		case PROTO_IKE:
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,    128);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,         0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96, 0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,  0);
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1,     0);
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5,      0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_2048_BIT,     0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1536_BIT,     0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1024_BIT,     0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_4096_BIT,     0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_8192_BIT,     0);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         128);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,              0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_256_128,	0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_384_192,	0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_512_256,	0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_256,      0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1,          0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5,           0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_384,      0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_512,      0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_2048_BIT, 		    0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1536_BIT,          0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1024_BIT,          0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_4096_BIT,          0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_8192_BIT,          0);
 			break;
 		case PROTO_ESP:
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,    128);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,    192);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,    256);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,         0);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_BLOWFISH,   256);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96, 0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,  0);
-			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         128);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         192);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         256);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,              0);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_BLOWFISH,        256);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_256_128, 0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_384_192, 0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_512_256, 0);
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,  0);
 			break;
 		case PROTO_AH:
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96, 0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,  0);
-			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_256_128, 0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_384_192, 0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_512_256, 0);
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,  0);
 			break;
 		default:
 			break;
