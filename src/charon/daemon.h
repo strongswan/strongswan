@@ -27,6 +27,8 @@
 
 typedef struct daemon_t daemon_t;
 
+#include <credential_store.h>
+
 #include <threads/sender.h>
 #include <threads/receiver.h>
 #include <threads/scheduler.h>
@@ -44,7 +46,6 @@ typedef struct daemon_t daemon_t;
 #include <config/configuration.h>
 #include <config/connections/connection_store.h>
 #include <config/policies/policy_store.h>
-#include <config/credentials/credential_store.h>
 
 /**
  * @defgroup charon charon

@@ -26,8 +26,8 @@
 typedef struct local_credential_store_t local_credential_store_t;
 
 #include <library.h>
+#include <credential_store.h>
 #include <daemon.h>
-#include <config/credentials/credential_store.h>
 
 
 /**

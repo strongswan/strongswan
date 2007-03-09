@@ -15,7 +15,7 @@ config/connections/local_connection_store.c config/connections/local_connection_
 config/policies/policy.c config/policies/policy.h \
 config/policies/local_policy_store.c config/policies/policy_store.h config/policies/local_policy_store.h \
 config/credentials/local_credential_store.c config/credentials/local_credential_store.h \
-config/credentials/credential_store.h config/traffic_selector.c config/traffic_selector.h \
+config/traffic_selector.c config/traffic_selector.h \
 config/proposal.c config/proposal.h config/configuration.c config/configuration.h \
 sa/authenticators/eap_authenticator.h sa/authenticators/eap_authenticator.c \
 sa/authenticators/eap/eap_method.h sa/authenticators/eap/eap_method.c \
