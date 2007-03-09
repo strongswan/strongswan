@@ -621,7 +621,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			}
 
 			/* first check certificate revocation using ocsp */
-			status = issuer->verify_by_ocsp(issuer, cert, certinfo, &this->public);
+			status = issuer->verify_by_ocsp(issuer, cert, certinfo, &this->public.credential_store);
 
 			/* if ocsp service is not available then fall back to crl */
 			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && this->strict))
@@ -642,6 +642,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 					if (this->strict && nextUpdate < time(NULL))
 					{
 						DBG2(DBG_CFG, "certificate is good but status is stale");
+						certinfo->destroy(certinfo);
 						return FALSE;
 					}
 					DBG2(DBG_CFG, "certificate is good");
@@ -677,6 +678,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 										certinfo->get_revocationTime(certinfo));
 							}
 						}
+						certinfo->destroy(certinfo);
 						return FALSE;
 					}
 				case CERT_UNKNOWN:
@@ -690,6 +692,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 						{
 							cert_copy->set_status(cert_copy, CERT_UNTRUSTED);
 						}
+						certinfo->destroy(certinfo);
 						return FALSE;
 					}
 					break;
