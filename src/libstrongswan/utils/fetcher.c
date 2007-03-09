@@ -123,6 +123,7 @@ static chunk_t post(private_fetcher_t *this, const char *request_type, chunk_t r
 	    	DBG1("http post request to '%s' using libcurl failed: %s",
 				  this->uri, curl_error_buffer);
 		}
+		curl_slist_free_all(headers);
 		curl_free(curl_response.ptr);
 	}
 #else
