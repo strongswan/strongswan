@@ -337,6 +337,7 @@ fetch_curl(char *url, chunk_t *blob)
 	{
 	    plog("fetching uri (%s) with libcurl failed: %s", url, errorbuffer);
 	}
+	curl_slist_free_all(headers);
 	curl_easy_cleanup(curl);
 	/* not using freeanychunk because of realloc (no leak detective) */
 	curl_free(response.ptr);
