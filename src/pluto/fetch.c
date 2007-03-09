@@ -337,7 +337,6 @@ fetch_curl(char *url, chunk_t *blob)
 	{
 	    plog("fetching uri (%s) with libcurl failed: %s", url, errorbuffer);
 	}
-	curl_slist_free_all(headers);
 	curl_easy_cleanup(curl);
 	/* not using freeanychunk because of realloc (no leak detective) */
 	curl_free(response.ptr);
@@ -702,7 +701,7 @@ fetch_ocsp_status(ocsp_location_t* location)
 
 	curl_easy_setopt(curl, CURLOPT_URL, uri);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_buffer);
-	curl_easy_setopt(curl, CURLOPT_FILE, (void *)&response);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.ptr);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request.len);
 	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, &errorbuffer);
