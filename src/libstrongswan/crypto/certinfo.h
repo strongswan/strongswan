@@ -100,10 +100,26 @@ struct certinfo_t {
 	cert_status_t (*get_status) (const certinfo_t *this);
 
 	/**
+	 * @brief Set thisUpdate.
+	 *
+	 * @param this				calling object
+	 * @param thisUpdate		thisUpdate
+	 */
+	void (*set_thisUpdate) (certinfo_t *this, time_t thisUpdate);
+
+	/**
+	 * @brief Get thisUpdate.
+	 *
+	 * @param this				calling object
+	 * @return					thisUpdate
+	 */
+	time_t (*get_thisUpdate) (const certinfo_t *this);
+
+	/**
 	 * @brief Set nextUpdate.
 	 *
 	 * @param this				calling object
-	 * @return					nextUpdate
+	 * @param					nextUpdate
 	 */
 	void (*set_nextUpdate) (certinfo_t *this, time_t nextUpdate);
 

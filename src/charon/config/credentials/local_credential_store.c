@@ -645,7 +645,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 						certinfo->destroy(certinfo);
 						return FALSE;
 					}
-					DBG2(DBG_CFG, "certificate is good");
+					DBG1(DBG_CFG, "certificate is good");
 
 					/* with strict crl policy the public key must have the same
 					 * lifetime as the validity of the ocsp status or crl lifetime
@@ -684,7 +684,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 				case CERT_UNKNOWN:
 				case CERT_UNDEFINED:
 				default:
-					DBG2(DBG_CFG, "certificate status unknown");
+					DBG1(DBG_CFG, "certificate status unknown");
 					if (this->strict)
 					{
 						/* update status of end certificate in the credential store */

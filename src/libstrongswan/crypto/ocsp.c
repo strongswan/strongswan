@@ -85,6 +85,11 @@ struct private_ocsp_t {
 	 * SHA-1 hash over issuer distinguished name
 	 */
 	chunk_t authNameID;
+
+	/**
+	 * SHA-1 hash over issuer public key
+	 */
+	chunk_t authKeyID;
 };
 
 ENUM(response_status_names, STATUS_SUCCESSFUL, STATUS_UNAUTHORIZED,
@@ -152,35 +157,6 @@ static response_t* response_create_from_chunk(chunk_t chunk)
 
 	return this;
 }
-
-/* single response container */
-typedef struct single_response single_response_t;
-
-struct single_response {
-	single_response_t *next;
-	int               hash_algorithm;
-	chunk_t           issuer_name_hash;
-	chunk_t           issuer_key_hash;
-	chunk_t           serialNumber;
-	cert_status_t     status;
-	time_t            revocationTime;
-	crl_reason_t      revocationReason;
-	time_t            thisUpdate;
-	time_t            nextUpdate;
-};
-
-const single_response_t empty_single_response = {
-	  NULL            ,	/* *next */
-	OID_UNKNOWN       ,	/* hash_algorithm */
-	{ NULL, 0 }       ,	/* issuer_name_hash */
-	{ NULL, 0 }       ,	/* issuer_key_hash */
-	{ NULL, 0 }       ,	/* serial_number */
-	CERT_UNDEFINED    ,	/* status */
-	UNDEFINED_TIME    ,	/* revocationTime */
-	REASON_UNSPECIFIED,	/* revocationReason */
-	UNDEFINED_TIME    ,	/* this_update */
-	UNDEFINED_TIME	/* next_update */
-};
 
 /* some OCSP specific prefabricated ASN.1 constants */
 
@@ -346,13 +322,12 @@ static chunk_t build_requestor_name(private_ocsp_t *this)
  */
 static chunk_t build_request(private_ocsp_t *this, certinfo_t *certinfo)
 {
-	chunk_t authKeyID = this->cacert->get_subjectKeyID(this->cacert);
 	chunk_t serialNumber = certinfo->get_serialNumber(certinfo);
 
 	chunk_t reqCert = asn1_wrap(ASN1_SEQUENCE, "cmmm",
 		ASN1_sha1_id,
 		asn1_simple_object(ASN1_OCTET_STRING, this->authNameID),
-		asn1_simple_object(ASN1_OCTET_STRING, authKeyID),
+		asn1_simple_object(ASN1_OCTET_STRING, this->authKeyID),
 		asn1_simple_object(ASN1_INTEGER, serialNumber));
 
 	return asn1_wrap(ASN1_SEQUENCE, "m", reqCert);
@@ -660,13 +635,15 @@ static bool ocsp_valid_response(response_t *res, x509_t *ocsp_cert)
 /**
  * parse a single OCSP response
  */
-static bool ocsp_parse_single_response(chunk_t blob, int level0, single_response_t *sres)
+static bool ocsp_parse_single_response(private_ocsp_t *this, chunk_t blob, int level0)
 {
 	u_int level, extn_oid;
 	asn1_ctx_t ctx;
 	bool critical;
 	chunk_t object;
 	int objectID = 0;
+
+	certinfo_t *certinfo = NULL;
 
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 
@@ -680,38 +657,70 @@ static bool ocsp_parse_single_response(chunk_t blob, int level0, single_response
 		switch (objectID)
 		{
 			case SINGLE_RESPONSE_ALGORITHM:
-				sres->hash_algorithm = parse_algorithmIdentifier(object, level+1, NULL);
+				if (parse_algorithmIdentifier(object, level+1, NULL) != OID_SHA1)
+				{
+					DBG1("only sha-1 hash supported in ocsp single response");
+					return FALSE;
+				}
 				break;
 			case SINGLE_RESPONSE_ISSUER_NAME_HASH:
-				sres->issuer_name_hash = object;
+    			if (!chunk_equals(object, this->authNameID))
+				{
+					DBG1("ocsp single response has wrong issuer name hash");
+					return FALSE;
+				}
 				break;
 			case SINGLE_RESPONSE_ISSUER_KEY_HASH:
-				sres->issuer_key_hash = object;
+    			if (!chunk_equals(object, this->authKeyID))
+				{
+					DBG1("ocsp single response has wrong issuer key hash");
+					return FALSE;
+				}
 				break;
 			case SINGLE_RESPONSE_SERIAL_NUMBER:
-				sres->serialNumber = object;
+				{
+					iterator_t *iterator = this->certinfos->create_iterator(this->certinfos, TRUE);
+					certinfo_t *current_certinfo;
+
+					while (iterator->iterate(iterator, (void**)&current_certinfo))
+					{
+						if (chunk_equals(object, current_certinfo->get_serialNumber(current_certinfo)))
+						{
+							certinfo = current_certinfo;
+						}
+					}
+					iterator->destroy(iterator);
+					if (certinfo == NULL)
+					{
+						DBG1("unrequested serial number in ocsp single response");
+						return FALSE;
+					}
+				}
 				break;
 			case SINGLE_RESPONSE_CERT_STATUS_GOOD:
-				sres->status = CERT_GOOD;
+				certinfo->set_status(certinfo, CERT_GOOD);
 				break;
 			case SINGLE_RESPONSE_CERT_STATUS_REVOKED:
-				sres->status = CERT_REVOKED;
+				certinfo->set_status(certinfo, CERT_REVOKED);
 				break;
 			case SINGLE_RESPONSE_CERT_STATUS_REVOCATION_TIME:
-				sres->revocationTime = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				certinfo->set_revocationTime(certinfo,
+								 asn1totime(&object, ASN1_GENERALIZEDTIME));
 				break;
 			case SINGLE_RESPONSE_CERT_STATUS_CRL_REASON:
-				sres->revocationReason = (object.len == 1)
-					? *object.ptr : REASON_UNSPECIFIED;
+				certinfo->set_revocationReason(certinfo,
+								(object.len == 1) ? *object.ptr : REASON_UNSPECIFIED);
 	    		break;
 			case SINGLE_RESPONSE_CERT_STATUS_UNKNOWN:
-				sres->status = CERT_UNKNOWN;
+				certinfo->set_status(certinfo, CERT_UNKNOWN);
 				break;
 			case SINGLE_RESPONSE_THIS_UPDATE:
-				sres->thisUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				certinfo->set_thisUpdate(certinfo,
+								asn1totime(&object, ASN1_GENERALIZEDTIME));
 				break;
 			case SINGLE_RESPONSE_NEXT_UPDATE:
-				sres->nextUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				certinfo->set_nextUpdate(certinfo,
+								asn1totime(&object, ASN1_GENERALIZEDTIME));
 	    		break;
 			case SINGLE_RESPONSE_EXT_ID:
 				extn_oid = known_oid(object);
@@ -725,14 +734,6 @@ static bool ocsp_parse_single_response(chunk_t blob, int level0, single_response
 		objectID++;
 	}
 	return TRUE;
-}
-
-/**
- * process received ocsp single response and add it to ocsp cache
- */
-static void process_single_response(private_ocsp_t *this, single_response_t *sres)
-{
-	/* TODO */
 }
 
 /**
@@ -825,12 +826,7 @@ static void ocsp_process_response(private_ocsp_t *this, response_t *res, credent
 			}
 			if (objectID == RESPONSES_SINGLE_RESPONSE)
 			{
-				single_response_t sres = empty_single_response;
-
-				if (ocsp_parse_single_response(object, level+1, &sres))
-				{
-					process_single_response(this, &sres);
-				}
+				ocsp_parse_single_response(this, object, level+1);
 			}
 			objectID++;
 		}
@@ -911,6 +907,8 @@ ocsp_t *ocsp_create(x509_t *cacert, linked_list_t *uris)
 	this->uris = uris;
 	this->certinfos = linked_list_create();
 	this->nonce = chunk_empty;
+	this->authKeyID = cacert->get_subjectKeyID(cacert);
+	/* TODO compute authKeyID in case subjectKeyID does not exist */
 	{
 		hasher_t *hasher = hasher_create(HASH_SHA1);
 		identification_t *issuer = cacert->get_subject(cacert);

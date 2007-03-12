@@ -126,6 +126,22 @@ static cert_status_t get_status(const private_certinfo_t *this)
 }
 
 /**
+ * Implements certinfo_t.set_thisUpdate
+ */
+static void set_thisUpdate(private_certinfo_t *this, time_t thisUpdate)
+{
+	this->thisUpdate = thisUpdate;
+}
+
+/**
+ * Implements certinfo_t.get_thisUpdate
+ */
+static time_t get_thisUpdate(const private_certinfo_t *this)
+{
+	return this->thisUpdate;
+}
+
+/**
  * Implements certinfo_t.set_nextUpdate
  */
 static void set_nextUpdate(private_certinfo_t *this, time_t nextUpdate)
@@ -192,6 +208,7 @@ certinfo_t *certinfo_create(chunk_t serial)
 	/* initialize */
 	this->serialNumber = chunk_clone(serial);
 	this->status = CERT_UNDEFINED;
+	this->thisUpdate = UNDEFINED_TIME;
 	this->nextUpdate = UNDEFINED_TIME;
 	this->revocationTime = UNDEFINED_TIME;
 	this->revocationReason = REASON_UNSPECIFIED;
@@ -201,6 +218,8 @@ certinfo_t *certinfo_create(chunk_t serial)
 	this->public.get_serialNumber = (chunk_t (*) (const certinfo_t*))get_serialNumber;
 	this->public.set_status = (void (*) (certinfo_t*,cert_status_t))set_status;
 	this->public.get_status = (cert_status_t (*) (const certinfo_t*))get_status;
+	this->public.set_thisUpdate = (void (*) (certinfo_t*,time_t))set_thisUpdate;
+	this->public.get_thisUpdate = (time_t (*) (const certinfo_t*))get_thisUpdate;
 	this->public.set_nextUpdate = (void (*) (certinfo_t*,time_t))set_nextUpdate;
 	this->public.get_nextUpdate = (time_t (*) (const certinfo_t*))get_nextUpdate;
 	this->public.set_revocationTime = (void (*) (certinfo_t*,time_t))set_revocationTime;
