@@ -163,6 +163,27 @@ static status_t process_peer(private_eap_authenticator_t *this,
 {
 	eap_type_t type = in->get_type(in);
 	
+	if (type == EAP_IDENTITY)
+	{
+		eap_method_t *method = eap_method_create(type, EAP_PEER,
+									   this->ike_sa->get_other_id(this->ike_sa),
+									   this->ike_sa->get_my_id(this->ike_sa));
+		
+		if (method == NULL || method->process(method, in, out) != SUCCESS)
+		{
+			DBG1(DBG_IKE, "EAP server requested %N, but unable to process",
+				 eap_type_names, type);
+			DESTROY_IF(method);
+			return FAILED;
+		}
+		
+		DBG1(DBG_IKE, "EAP server requested %N, sending IKE identity",
+			 eap_type_names, type);
+			 
+		method->destroy(method);
+		return NEED_MORE;
+	}
+	
 	/* create an eap_method for the first call */
 	if (this->method == NULL)
 	{
