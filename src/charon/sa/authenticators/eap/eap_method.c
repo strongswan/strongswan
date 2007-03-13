@@ -41,7 +41,9 @@ ENUM_BEGIN(eap_type_names, EAP_IDENTITY, EAP_TOKEN_CARD,
 	"EAP_MD5",
 	"EAP_ONE_TIME_PASSWORD",
 	"EAP_TOKEN_CARD");
-ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_TOKEN_CARD,
+ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_TOKEN_CARD,
+	"EAP_SIM");
+ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_SIM,
 	"EAP_AKA");
 ENUM_END(eap_type_names, EAP_AKA);
 

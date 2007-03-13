@@ -1,8 +1,17 @@
 # SUBDIRS = . testing
 
-eap_LTLIBRARIES =
+eap_LTLIBRARIES = libeapidentity.la
+
+# always build EAP Identity module
+libeapidentity_la_SOURCES = sa/authenticators/eap/eap_identity.h sa/authenticators/eap/eap_identity.c
+libeapidentity_la_LDFLAGS = -module
 
 # build optional EAP modules
+if BUILD_EAP_SIM
+  eap_LTLIBRARIES += libeapsim.la
+  libeapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
+  libeapsim_la_LDFLAGS = -module
+endif
 
 ipsec_PROGRAMS = charon
 

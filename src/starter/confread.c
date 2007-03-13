@@ -466,6 +466,11 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			/* TODO: a gperf function for all EAP types */
 			if (streq(kw->value, "aka"))
 				conn->eap = 23;
+			else if (streq(kw->value, "sim"))
+			{
+				conn->eap = 18;
+			
+			}
 			else
 			{
 				conn->eap = atoi(kw->value);

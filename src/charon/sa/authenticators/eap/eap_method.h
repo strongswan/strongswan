@@ -60,6 +60,7 @@ enum eap_type_t {
 	EAP_MD5 = 4,
 	EAP_ONE_TIME_PASSWORD = 5,
 	EAP_TOKEN_CARD = 6,
+	EAP_SIM = 18,
 	EAP_AKA = 23,
 };
 
