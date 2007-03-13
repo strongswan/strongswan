@@ -30,10 +30,14 @@ typedef struct ike_auth_t ike_auth_t;
 #include <sa/tasks/task.h>
 
 /**
- * @brief Task of type ike_auth, authenticates an IKE_SA authenticators.
+ * @brief Task of type ike_auth, authenticates an IKE_SA using authenticators.
  *
  * The ike_auth task authenticates the IKE_SA using the IKE_AUTH
- * exchange. 
+ * exchange. It processes and build IDi and IDr payloads and also
+ * handles AUTH payloads. The AUTH payloads are passed to authenticator_t's,
+ * which do the actual authentication process. If the ike_auth task is used
+ * with EAP authentication, it stays alive over multiple exchanges until
+ * EAP has completed.
  *
  * @b Constructors:
  *  - ike_auth_create()
@@ -53,7 +57,7 @@ struct ike_auth_t {
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if thask is the initator of an exchange
- * @return			  ike_auth task to handle by the task_manager
+ * @return				ike_auth task to handle by the task_manager
  */
 ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator);
 

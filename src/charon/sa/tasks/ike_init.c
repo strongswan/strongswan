@@ -404,8 +404,8 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					if (!this->connection->check_dh_group(this->connection,
 														  this->dh_group))
 					{
-						SIG(IKE_UP_FAILED, "requested DH group %N not "
-							"acceptable, giving up", diffie_hellman_group_names,
+						DBG1(DBG_IKE, "requested DH group %N not acceptable, "
+							"giving up", diffie_hellman_group_names,
 							this->dh_group);
 						iterator->destroy(iterator);
 						return FAILED;
@@ -425,8 +425,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					this->cookie = chunk_clone(notify->get_notification_data(notify));
 					this->ike_sa->reset(this->ike_sa);
 					iterator->destroy(iterator);
-					SIG(IKE_UP_FAILED, "received %N notify",
-						notify_type_names, type);
+					DBG1(DBG_IKE, "received %N notify", notify_type_names, type);
 					return NEED_MORE;
 				}
 				default:
