@@ -176,8 +176,9 @@ struct whitelist_t {
 };
 
 #ifdef LIBCURL
+/* dummy declaration for whitelisting */
 void *Curl_getaddrinfo(void);
-#endif
+#endif /* LIBCURL */
 
 whitelist_t whitelist[] = {
 	{pthread_create,			2542},
@@ -191,8 +192,10 @@ whitelist_t whitelist[] = {
 	{register_printf_function,	 159},
 	{syslog,					  45},
 	{dlopen,					 109},
+#	ifdef LIBCURL
 	/* from /usr/lib/libcurl.so.3 */
 	{Curl_getaddrinfo,			 480},
+#	endif /* LIBCURL */
 };
 
 /**

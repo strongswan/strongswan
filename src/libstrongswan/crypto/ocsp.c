@@ -467,7 +467,6 @@ static bool ocsp_parse_basic_response(chunk_t blob, int level0, response_t *res)
 {
 	u_int level, version;
 	u_int extn_oid = OID_UNKNOWN;
-	u_char buf[BUF_LEN];
 	asn1_ctx_t ctx;
 	bool critical;
 	chunk_t object;

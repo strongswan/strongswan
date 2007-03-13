@@ -54,6 +54,10 @@ if USE_LEAK_DETECTIVE
   AM_CFLAGS = -DLEAK_DETECTIVE
 endif
 
+if USE_LIBCURL
+  libstrongswan_la_LIBADD += -lcurl
+endif
+
 asn1/oid.c :	asn1/oid.txt asn1/oid.pl
 		cd asn1 && $(PERL) oid.pl
 

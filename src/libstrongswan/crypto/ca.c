@@ -456,7 +456,6 @@ static int print(FILE *stream, const struct printf_info *info,
 	bool utc = TRUE;
 	int written = 0;
 	const x509_t *cacert;
-	chunk_t keyid;
 	
 	if (info->alt)
 	{

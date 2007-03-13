@@ -137,7 +137,9 @@ static chunk_t post(private_fetcher_t *this, const char *request_type, chunk_t r
  */
 static void destroy(private_fetcher_t *this)
 {
+#ifdef LIBCURL
 	curl_easy_cleanup(this->curl);
+#endif /* LIBCURL */
 	free(this);
 }
 
