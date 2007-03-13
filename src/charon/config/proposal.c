@@ -560,6 +560,8 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 	{
 		case PROTO_IKE:
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         128);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         192);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         256);
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,              0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_256_128,	0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
