@@ -1,0 +1,7 @@
+moon::ipsec listocspcerts::altNames.*ocsp.strongswan.org::YES
+moon::cat /var/log/daemon.log::received valid http response::YES
+moon::cat /var/log/daemon.log::certificate was revoked::YES
+carol::cat /var/log/daemon.log::received AUTHENTICATION_FAILED notify error::YES
+moon::ipsec status::rw.*ESTABLISHED::NO
+carol::ipsec status::home.*ESTABLISHED::NO
+
