@@ -772,7 +772,7 @@ static void ocsp_process_response(private_ocsp_t *this, response_t *res, credent
 			DBG2("received certificate is ocsp signer");
 			if (credentials->is_trusted(credentials, res->responder_cert))
 			{
-				DBG2("received ocsp signer certificate is trusted");
+				DBG1("received ocsp signer certificate is trusted");
 				ocsp_cert = credentials->add_auth_certificate(credentials,
 									res->responder_cert, AUTH_OCSP);
 				res->responder_cert = NULL;
