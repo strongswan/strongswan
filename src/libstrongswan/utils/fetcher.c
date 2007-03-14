@@ -109,6 +109,7 @@ static chunk_t post(private_fetcher_t *this, const char *request_type, chunk_t r
 		curl_easy_setopt(this->curl, CURLOPT_ERRORBUFFER, &curl_error_buffer);
 		curl_easy_setopt(this->curl, CURLOPT_FAILONERROR, TRUE);
 		curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT, FETCHER_TIMEOUT);
+		curl_easy_setopt(this->curl, CURLOPT_NOSIGNAL, TRUE);
 
 		DBG1("sending http post request to '%s'...", this->uri);
 		res = curl_easy_perform(this->curl);
