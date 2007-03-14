@@ -80,6 +80,12 @@ AC_ARG_WITH(
     [AC_SUBST(eapdir, "${ipsecdir}/eap")]
 )
 
+AC_ARG_WITH(
+    [sim-reader],
+    AS_HELP_STRING([--with-sim-reader=library.so],[library containing the sim_run_alg() function for EAP-SIM]),
+    [AC_DEFINE_UNQUOTED(SIM_READER_LIB, "$withval")]
+)
+
 AC_ARG_ENABLE(
     [http],
     AS_HELP_STRING([--enable-http],[enable OCSP and fetching of Certificates and CRLs over HTTP (default is NO). Requires libcurl.]),

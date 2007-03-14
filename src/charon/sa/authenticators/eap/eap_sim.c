@@ -142,7 +142,7 @@ struct private_eap_sim_t {
 #define RAND_LEN 16
 /** length of the k_encr key */
 #define KENCR_LEN 16
-/** length of the k_Auth value */
+/** length of the k_auth key */
 #define KAUTH_LEN 16
 /** length of the MSK */
 #define MSK_LEN 64
@@ -257,6 +257,14 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 			}
 			case AT_IDENTITY:
 			{
+				/* align up to four byte */
+				if (data.len % 4)
+				{
+					chunk_t tmp = chunk_alloca((data.len/4)*4 + 4);
+					memset(tmp.ptr, 0, tmp.len);
+					memcpy(tmp.ptr, data.ptr, data.len);
+					data = tmp;
+				}
 				*pos.ptr = data.len/4 + 1;
 				pos = chunk_skip(pos, 1);
 				/* actual length in bytes */
@@ -315,10 +323,9 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 		signer_t *signer = signer_create(AUTH_HMAC_SHA1_128);
 		signer->set_key(signer, this->k_auth);
 		mac_data = chunk_cata("cc", message, mac_data);
-		DBG3(DBG_IKE, "AT_MAC signature of %B", &mac_data);
-		DBG3(DBG_IKE, "using k_auth %B", &this->k_auth);
 		signer->get_signature(signer, mac_data, mac_pos);
-		DBG3(DBG_IKE, "is %b", mac_pos, MAC_LEN);
+		DBG3(DBG_IKE, "AT_MAC signature of %B\n is %b",
+			 &mac_data, mac_pos, MAC_LEN);
 		signer->destroy(signer);
 	}
 	
@@ -350,7 +357,6 @@ static status_t process_start(private_eap_sim_t *this, eap_payload_t *in,
 			{
 				/* check if server supports our implementation */
 				bool found = FALSE;
-				
 				if (data.len > 2)
 				{
 					/* read actual length first */
@@ -409,7 +415,7 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 {
 	chunk_t message, data, tmp, kcs, kc, sreses, sres, mk;
 	sim_attribute_t attribute;
-	u_int8_t identifier;
+	u_int8_t identifier, i;
 	chunk_t mac = chunk_empty, rands = chunk_empty;
 	signer_t *signer;
 	hasher_t *hasher;
@@ -431,7 +437,8 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 			case AT_MAC:
 			{
 				/* backup MAC, zero it inline for later verification */
-				mac = chunk_clonea(chunk_skip(data, 2));
+				data = chunk_skip(data, 2);
+				mac = chunk_clonea(data);
 				memset(data.ptr, 0, data.len);
 				break;
 			}
@@ -443,7 +450,7 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 	}
 	
 	/* excepting two or three RAND, each 16 bytes. We require two valid
-	 * and different (!) RANDs */
+	 * and different RANDs */
 	if ((rands.len != 2 * RAND_LEN && rands.len != 3 * RAND_LEN) ||
 		memeq(rands.ptr, rands.ptr + RAND_LEN, RAND_LEN))
 	{
@@ -468,8 +475,8 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 	while (rands.len > 0)
 	{
 		int kc_len = kc.len, sres_len = sres.len;
-	
-		if (this->alg(rands.ptr, RAND_LEN, kc.ptr, &kc_len, sres.ptr, &sres_len))
+		
+		if (this->alg(rands.ptr, RAND_LEN, sres.ptr, &sres_len, kc.ptr, &kc_len))
 		{
 			DBG1(DBG_IKE, "unable to get triplets from SIM");
 			*out = build_payload(this, identifier, SIM_CLIENT_ERROR,
@@ -477,18 +484,21 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 								 AT_END);
 			return NEED_MORE;
 		}
+		DBG3(DBG_IKE, "got triplet for RAND %b\n  Kc %b\n  SRES %b",
+			 rands.ptr, RAND_LEN, sres.ptr, sres_len, kc.ptr, kc_len);
 		kc = chunk_skip(kc, kc_len);
 		sres = chunk_skip(sres, sres_len);
 		rands = chunk_skip(rands, RAND_LEN);
 	}
 	
-	/* build MK */
+	/* build MK = SHA1(Identity|n*Kc|NONCE_MT|Version List|Selected Version) */
 	tmp = chunk_cata("ccccc", this->peer->get_encoding(this->peer), kcs,
 					 this->nonce, this->version_list, this->version);
 	hasher = hasher_create(HASH_SHA1);
 	mk = chunk_alloca(hasher->get_hash_size(hasher));
 	hasher->get_hash(hasher, tmp, mk.ptr);
 	hasher->destroy(hasher);
+	DBG3(DBG_IKE, "MK = SHA1(%B\n) = %B", &tmp, &mk);
 	
 	/* K_encr | K_auth | MSK | EMSK = prf() | prf() | prf() | prf()
 	 * FIPS PRF has 320 bit block size, we need 160 byte for keys
@@ -496,10 +506,10 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 	prf = prf_create(PRF_FIPS_SHA1_160);
 	prf->set_key(prf, mk);
 	tmp = chunk_alloca(prf->get_block_size(prf) * 4);
-	prf->get_bytes(prf, chunk_empty, tmp.ptr);
-	prf->get_bytes(prf, chunk_empty, tmp.ptr + tmp.len / 4 * 1);
-	prf->get_bytes(prf, chunk_empty, tmp.ptr + tmp.len / 4 * 2);
-	prf->get_bytes(prf, chunk_empty, tmp.ptr + tmp.len / 4 * 3);
+	for (i = 0; i < 4; i++)
+	{
+		prf->get_bytes(prf, chunk_empty, tmp.ptr + tmp.len / 4 * i);
+	}
 	prf->destroy(prf);
 	chunk_free(&this->k_encr);
 	chunk_free(&this->k_auth);
@@ -507,23 +517,17 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 	chunk_free(&this->emsk);
 	chunk_split(tmp, "aaaa", KENCR_LEN, &this->k_encr, KAUTH_LEN, &this->k_auth,
 				MSK_LEN, &this->msk, EMSK_LEN, &this->emsk);
-	DBG3(DBG_IKE, "MK %B", &mk);
-	DBG3(DBG_IKE, "K_encr %B", &this->k_encr);
-	DBG3(DBG_IKE, "K_auth %B", &this->k_auth);
-	DBG3(DBG_IKE, "MSK %B", &this->msk);
-	DBG3(DBG_IKE, "EMSK %B", &this->emsk);
+	DBG3(DBG_IKE, "K_encr %B\nK_auth %B\nMSK %B\nEMSK %B",
+		 &this->k_encr, &this->k_auth, &this->msk, &this->emsk);
 	
 	/* verify AT_MAC attribute, signature is over "EAP packet | NONCE_MT"  */
 	signer = signer_create(AUTH_HMAC_SHA1_128);
 	signer->set_key(signer, this->k_auth);
-	tmp = chunk_cata("cc", message, this->nonce);
-	DBG3(DBG_IKE, "verifying AT_MAC signature of %B", &tmp);
-	DBG3(DBG_IKE, "using k_auth %B", &this->k_auth);
+	tmp = chunk_cata("cc", in->get_data(in), this->nonce);
 	if (!signer->verify_signature(signer, tmp, mac))
 	{
-		DBG1(DBG_IKE, "MAC in AT_MAC attribute verification failed");
+		DBG1(DBG_IKE, "AT_MAC verification failed");
 		signer->destroy(signer);
-		chunk_free(&this->msk);
 		*out = build_payload(this, identifier, SIM_CLIENT_ERROR,
 							 AT_CLIENT_ERROR_CODE, client_error_general,
 							 AT_END);
