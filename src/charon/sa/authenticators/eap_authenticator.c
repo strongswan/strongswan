@@ -206,16 +206,9 @@ static status_t process_peer(private_eap_authenticator_t *this,
 		case NEED_MORE:
 			return NEED_MORE;
 		case SUCCESS:
-			if (this->method->get_msk(this->method, &this->msk) == SUCCESS)	
-			{
-				DBG1(DBG_IKE, "EAP method %N succeded, MSK established",
-					 eap_type_names, this->method->get_type(this->method));
-				this->msk = chunk_clone(this->msk);
-				return SUCCESS;
-			}			
-			DBG1(DBG_IKE, "EAP method %N succeded, but no MSK established",
+			DBG1(DBG_IKE, "EAP method %N succeded",
 				 eap_type_names, this->method->get_type(this->method));
-			return FAILED;
+			return SUCCESS;
 		case FAILED:
 		default:
 			DBG1(DBG_IKE, "EAP method %N failed",
@@ -296,12 +289,10 @@ static status_t process(private_eap_authenticator_t *this, eap_payload_t *in,
 				{
 					if (this->method->get_msk(this->method, &this->msk) == SUCCESS)
 					{
-						DBG1(DBG_IKE, "EAP method %N succeded, MSK established",
-							 eap_type_names, this->method->get_type(this->method));
 						this->msk = chunk_clone(this->msk);
 						return SUCCESS;
 					}
-					DBG1(DBG_IKE, "EAP method %N succeded, but no MSK established",
+					DBG1(DBG_IKE, "EAP method %N has no MSK established",
 						 eap_type_names, this->method->get_type(this->method));
 					return FAILED;
 				}
