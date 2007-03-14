@@ -22,7 +22,7 @@
 
 #ifdef LIBCURL
 #include <curl/curl.h>
-#endif
+#endif /* LIBCURL */
 
 #include <library.h>
 #include <debug.h>
@@ -32,7 +32,7 @@
 typedef struct private_fetcher_t private_fetcher_t;
 
 /**
- * @brief Private Data of a h object.
+ * @brief Private Data of a fetcher_t object.
  */
 struct private_fetcher_t {
 	/**
