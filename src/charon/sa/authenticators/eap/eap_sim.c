@@ -350,11 +350,13 @@ static status_t process_start(private_eap_sim_t *this, eap_payload_t *in,
 			{
 				/* check if server supports our implementation */
 				bool found = FALSE;
+				
 				if (data.len > 2)
 				{
 					/* read actual length first */
-					data.len = ntohs(*(u_int16_t*)data.ptr);
+					data.len = min(data.len, ntohs(*(u_int16_t*)data.ptr) + 2);
 					data = chunk_skip(data, 2);
+					chunk_free(&this->version_list);
 					this->version_list = chunk_clone(data);
 					while (data.len >= this->version.len)
 					{
@@ -373,7 +375,7 @@ static status_t process_start(private_eap_sim_t *this, eap_payload_t *in,
 					*out = build_payload(this, identifier, SIM_CLIENT_ERROR,
 							AT_CLIENT_ERROR_CODE, client_error_unsupported,
 							AT_END);
-					return FAILED;
+					return NEED_MORE;
 				}
 				break;
 			}
@@ -457,24 +459,26 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 		*out = build_payload(this, identifier, SIM_CLIENT_ERROR,
 							 AT_CLIENT_ERROR_CODE, client_error_general,
 							 AT_END);
-		return FAILED;
+		return NEED_MORE;
 	}
 	
 	/* get two or three KCs/SRESes from SIM using RANDs */
 	kcs = kc = chunk_alloca(rands.len / 2);
-	sreses = sres = chunk_alloca(kcs.len / 2);
+	sreses = sres = chunk_alloca(rands.len / 4);
 	while (rands.len > 0)
 	{
-		if (this->alg(rands.ptr, RAND_LEN, kc.ptr, &kc.len, sres.ptr, &sres.len))
+		int kc_len = kc.len, sres_len = sres.len;
+	
+		if (this->alg(rands.ptr, RAND_LEN, kc.ptr, &kc_len, sres.ptr, &sres_len))
 		{
 			DBG1(DBG_IKE, "unable to get triplets from SIM");
 			*out = build_payload(this, identifier, SIM_CLIENT_ERROR,
 								 AT_CLIENT_ERROR_CODE, client_error_general,
 								 AT_END);
-			return FAILED;
+			return NEED_MORE;
 		}
-		kc = chunk_skip(kc, kc.len);
-		sres = chunk_skip(sres, sres.len);
+		kc = chunk_skip(kc, kc_len);
+		sres = chunk_skip(sres, sres_len);
 		rands = chunk_skip(rands, RAND_LEN);
 	}
 	
@@ -497,10 +501,13 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 	prf->get_bytes(prf, chunk_empty, tmp.ptr + tmp.len / 4 * 2);
 	prf->get_bytes(prf, chunk_empty, tmp.ptr + tmp.len / 4 * 3);
 	prf->destroy(prf);
+	chunk_free(&this->k_encr);
+	chunk_free(&this->k_auth);
+	chunk_free(&this->msk);
+	chunk_free(&this->emsk);
 	chunk_split(tmp, "aaaa", KENCR_LEN, &this->k_encr, KAUTH_LEN, &this->k_auth,
 				MSK_LEN, &this->msk, EMSK_LEN, &this->emsk);
 	DBG3(DBG_IKE, "MK %B", &mk);
-	DBG3(DBG_IKE, "PRF res %B", &tmp);
 	DBG3(DBG_IKE, "K_encr %B", &this->k_encr);
 	DBG3(DBG_IKE, "K_auth %B", &this->k_auth);
 	DBG3(DBG_IKE, "MSK %B", &this->msk);
@@ -520,7 +527,7 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 		*out = build_payload(this, identifier, SIM_CLIENT_ERROR,
 							 AT_CLIENT_ERROR_CODE, client_error_general,
 							 AT_END);
-		return FAILED;
+		return NEED_MORE;
 	}
 	signer->destroy(signer);
 	

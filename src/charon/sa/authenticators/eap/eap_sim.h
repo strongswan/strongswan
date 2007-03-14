@@ -95,7 +95,7 @@ typedef int (*sim_algo_t)(const unsigned char *rand, int rand_length,
 
 #ifndef SIM_READER_LIB
 /** the library containing the cardreader with the SIM function */
-#define SIM_READER_LIB "/home/martin/strongswan/trunk/src/charon/sa/authenticators/eap/sim_reader/sim_api.so"
+#define SIM_READER_LIB "/root/strongswan-shared/trunk/src/charon/sa/authenticators/eap/sim_reader/sim_api.so"
 #endif /* SIM_READER_LIB */
 
 #ifndef SIM_READER_ALG
