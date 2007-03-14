@@ -27,7 +27,7 @@
 #include <stdio.h>
 
 #include "x509.h"
-
+#include "hashers/hasher.h"
 #include <library.h>
 #include <debug.h>
 #include <asn1/oid.h>
@@ -763,7 +763,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0, linked_list_t 
 /**
  * Parses an X.509v3 certificate
  */
-bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
+static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 {
 	asn1_ctx_t ctx;
 	bool critical;
@@ -845,7 +845,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 			{
 				switch (extn_oid) {
 					case OID_SUBJECT_KEY_ID:
-						cert->subjectKeyID = parse_keyIdentifier(object, level, FALSE);
+						cert->subjectKeyID = chunk_clone(parse_keyIdentifier(object, level, FALSE));
 						break;
 					case OID_SUBJECT_ALT_NAME:
 						parse_generalNames(object, level, FALSE, cert->subjectAltNames);
@@ -888,6 +888,15 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 		}
 		objectID++;
 	}
+
+	if (cert->subjectKeyID.ptr == NULL)
+	{
+		hasher_t *hasher = hasher_create(HASH_SHA1);
+
+		hasher->allocate_hash(hasher, cert->subjectPublicKey, &cert->subjectKeyID);
+		hasher->destroy(hasher);
+	}
+
 	time(&cert->installed);
 	return TRUE;
 }
@@ -1251,6 +1260,7 @@ static void destroy(private_x509_t *this)
 	DESTROY_IF(this->issuer);
 	DESTROY_IF(this->subject);
 	DESTROY_IF(this->public_key);
+	free(this->subjectKeyID.ptr);
 	free(this->certificate.ptr);
 	free(this);
 }
@@ -1302,7 +1312,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	
-	if (!parse_x509cert(chunk, level, this))
+	if (!parse_certificate(chunk, level, this))
 	{
 		destroy(this);
 		return NULL;

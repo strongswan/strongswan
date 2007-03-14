@@ -900,14 +900,13 @@ static void destroy(private_ocsp_t *this)
 ocsp_t *ocsp_create(x509_t *cacert, linked_list_t *uris)
 {
 	private_ocsp_t *this = malloc_thing(private_ocsp_t);
-	
+
 	/* initialize */
 	this->cacert = cacert;
 	this->uris = uris;
 	this->certinfos = linked_list_create();
 	this->nonce = chunk_empty;
 	this->authKeyID = cacert->get_subjectKeyID(cacert);
-	/* TODO compute authKeyID in case subjectKeyID does not exist */
 	{
 		hasher_t *hasher = hasher_create(HASH_SHA1);
 		identification_t *issuer = cacert->get_subject(cacert);
