@@ -66,12 +66,11 @@ static u_int8_t t[] = {
  */
 static void add_mod(size_t length, u_int8_t a[], u_int8_t b[], u_int8_t sum[])
 {
-	int i;
+	int i, c = 0;
 	
 	for(i = length - 1; i >= 0; i--)
 	{
 		u_int32_t tmp;
-		int c = 0;
 		
 		tmp = a[i] + b[i] + c;
 		sum[i] = 0xff & tmp;
@@ -122,6 +121,7 @@ static void get_bytes(private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
 	int i;
 	u_int8_t xval[this->b];
 	u_int8_t xseed[this->b];
+	u_int8_t sum[this->b];
 	u_int8_t *xkey = this->key;
 	u_int8_t one[this->b];
 	chunk_t xval_chunk = chunk_from_buf(xval);
@@ -142,8 +142,8 @@ static void get_bytes(private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
 		this->g(t, xval_chunk, &w[i * this->b]);
 		DBG3("w[%d] %b", i, &w[i * this->b], this->b);
 		/* c. XKEY = (1 + XKEY + wi) mod 2b */
-		add_mod(this->b, xkey, one, xkey);
-		add_mod(this->b, xkey, &w[i * this->b], xkey);
+		add_mod(this->b, xkey, &w[i * this->b], sum);
+		add_mod(this->b, sum, one, xkey);
 		DBG3("XKEY %b", xkey, this->b);
 	}
 	
