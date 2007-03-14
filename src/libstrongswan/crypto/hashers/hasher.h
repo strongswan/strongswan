@@ -83,7 +83,7 @@ struct hasher_t {
 	 * 
 	 * If the parameter hash is NULL, no result is written back
 	 * an more data can be appended to already hashed data.
-	 * If not, the result is written back and the hasher is reseted.
+	 * If not, the result is written back and the hasher is reset.
 	 * 
 	 * The hash output parameter must hold at least
 	 * hash_t.get_block_size() bytes.
@@ -99,7 +99,7 @@ struct hasher_t {
 	 * 
 	 * If the parameter hash is NULL, no result is written back
 	 * an more data can be appended to already hashed data.
-	 * If not, the result is written back and the hasher is reseted.
+	 * If not, the result is written back and the hasher is reset.
 	 * 
 	 * @param this			calling object
 	 * @param data			chunk with data to hash
