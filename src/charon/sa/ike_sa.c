@@ -408,99 +408,6 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 }
 
 /**
- * Implementation of ike_sa_t.retransmit.
- */
-static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
-{
-	this->time.outbound = time(NULL);
-	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
-	{
-		connection_t *connection = NULL;
-		policy_t *policy;
-		linked_list_t *my_ts, *other_ts;
-		child_sa_t* child_sa;
-		dpd_action_t action;
-		job_t *job;
-		
-		DBG2(DBG_IKE, "dead peer detected, handling CHILD_SAs dpd action");
-		
-		/* check for childrens with dpdaction = hold */
-		while(this->child_sas->remove_first(this->child_sas,
-			  								(void**)&child_sa) == SUCCESS)
-		{
-			/* get the policy which belongs to this CHILD */
-			my_ts = child_sa->get_my_traffic_selectors(child_sa);
-			other_ts = child_sa->get_other_traffic_selectors(child_sa);
-			policy = charon->policies->get_policy(charon->policies,
-												  this->my_id, this->other_id,
-												  my_ts, other_ts,
-												  this->my_host, this->other_host);
-			if (policy == NULL)
-			{
-				DBG1(DBG_IKE, "no policy for CHILD to handle DPD");
-				continue;
-			}
-			
-			action = policy->get_dpd_action(policy);
-			/* get a connection for further actions */
-			if (connection == NULL &&
-				(action == DPD_ROUTE || action == DPD_RESTART))
-			{
-				connection = charon->connections->get_connection_by_hosts(
-												charon->connections,
-												this->my_host, this->other_host);
-				if (connection == NULL)
-				{
-					SIG(IKE_UP_FAILED, "no connection found to handle DPD");
-					break;
-				}
-			}
-			
-			DBG1(DBG_IKE, "dpd action for %s is %N",
-				 policy->get_name(policy), dpd_action_names, action);
-			
-			switch (action)
-			{
-				case DPD_ROUTE:
-					connection->get_ref(connection);
-					job = (job_t*)route_job_create(connection, policy, TRUE);
-					charon->job_queue->add(charon->job_queue, job);
-					break;
-				case DPD_RESTART:
-					connection->get_ref(connection);
-					job = (job_t*)initiate_job_create(connection, policy);
-					charon->job_queue->add(charon->job_queue, job);
-					break;
-				default:
-					policy->destroy(policy);
-					break;
-			}
-			child_sa->destroy(child_sa);
-		}
-		
-		/* send a proper signal to brief interested bus listeners */
-		switch (this->state)
-		{
-			case IKE_CONNECTING:
-				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
-				break;
-			case IKE_REKEYING:
-				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
-				break;
-			case IKE_DELETING:
-				SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
-				break;
-			default:
-				break;
-		}
-		
-		DESTROY_IF(connection);
-		return DESTROY_ME;
-	}
-	return SUCCESS;
-}
-
-/**
  * Implementation of ike_sa_t.generate
  */
 static status_t generate_message(private_ike_sa_t *this, message_t *message,
@@ -911,6 +818,119 @@ static status_t unroute(private_ike_sa_t *this, policy_t *policy)
 	if (this->state == IKE_CREATED &&
 		this->child_sas->get_count(this->child_sas) == 0)
 	{
+		return DESTROY_ME;
+	}
+	return SUCCESS;
+}
+
+/**
+ * Implementation of ike_sa_t.retransmit.
+ */
+static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
+{
+	this->time.outbound = time(NULL);
+	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
+	{
+		policy_t *policy;
+		child_sa_t* child_sa;
+		linked_list_t *to_route, *to_restart;
+		iterator_t *iterator;
+		
+		/* send a proper signal to brief interested bus listeners */
+		switch (this->state)
+		{
+			case IKE_CONNECTING:
+				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
+				break;
+			case IKE_REKEYING:
+				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
+				break;
+			case IKE_DELETING:
+				SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
+				break;
+			default:
+				break;
+		}
+		
+		/* summarize how we have to handle each child */
+		to_route = linked_list_create();
+		to_restart = linked_list_create();
+		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+		while (iterator->iterate(iterator, (void**)&child_sa))
+		{
+			policy = child_sa->get_policy(child_sa);
+			
+			if (child_sa->get_state(child_sa) == CHILD_ROUTED)
+			{
+				/* reroute routed CHILD_SAs */
+				to_route->insert_last(to_route, policy);
+			}
+			else
+			{
+				/* use DPD action for established CHILD_SAs */
+				switch (policy->get_dpd_action(policy))
+				{
+					case DPD_ROUTE:
+						to_route->insert_last(to_route, policy);
+						break;
+					case DPD_RESTART:
+						to_restart->insert_last(to_restart, policy);
+						break;
+					default:
+						break;
+				}
+			}
+		}
+		iterator->destroy(iterator);
+		
+		/* create a new IKE_SA if we have to route or to restart */
+		if (to_route->get_count(to_route) || to_restart->get_count(to_restart))
+		{
+			ike_sa_id_t *other_id;
+			private_ike_sa_t *new;
+			task_t *task;
+			
+			other_id =  ike_sa_id_create(0, 0, TRUE);
+			new = (private_ike_sa_t*)charon->ike_sa_manager->checkout(
+											charon->ike_sa_manager, other_id);
+			other_id->destroy(other_id);
+			
+			apply_config(new, this->connection, this->policy);
+			/* use actual used host, not the wildcarded one in connection */
+			new->other_host->destroy(new->other_host);
+			new->other_host = this->other_host->clone(this->other_host);
+			
+			/* install routes */
+			while (to_route->remove_last(to_route, (void**)&policy) == SUCCESS)
+			{
+				route(new, new->connection, policy);
+			}
+			
+			/* restart children */
+			if (to_restart->get_count(to_restart))
+			{
+				task = (task_t*)ike_init_create(&new->public, TRUE, NULL);
+				new->task_manager->queue_task(new->task_manager, task);
+				task = (task_t*)ike_natd_create(&new->public, TRUE);
+				new->task_manager->queue_task(new->task_manager, task);
+				task = (task_t*)ike_cert_create(&new->public, TRUE);
+				new->task_manager->queue_task(new->task_manager, task);
+				task = (task_t*)ike_config_create(&new->public, new->policy);
+				new->task_manager->queue_task(new->task_manager, task);
+				task = (task_t*)ike_auth_create(&new->public, TRUE);
+				new->task_manager->queue_task(new->task_manager, task);
+				
+				while (to_restart->remove_last(to_restart, (void**)&policy) == SUCCESS)
+				{
+					task = (task_t*)child_create_create(&new->public, policy);
+					new->task_manager->queue_task(new->task_manager, task);
+				}
+				new->task_manager->initiate(new->task_manager);
+			}
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, &new->public);
+		}
+		to_route->destroy(to_route);
+		to_restart->destroy(to_restart);
 		return DESTROY_ME;
 	}
 	return SUCCESS;
