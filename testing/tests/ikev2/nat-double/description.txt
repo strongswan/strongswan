@@ -1,6 +1,0 @@
-The roadwarrior <b>alice</b> sets up a connection to host <b>bob</b> using IKEv2. The hosts
-sit behind NAT router <b>moon</b> (SNAT) and <b>sun</b> (DNAT) respectively.
-UDP encapsulation is used to traverse the NAT router.
-The authentication is based on locally loaded <b>X.509 certificates</b>.
-In order to test the tunnel the NAT-ed host <b>alice</b> pings the host
-<b>bob</b>.
