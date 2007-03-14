@@ -110,12 +110,12 @@ static chunk_t post(private_fetcher_t *this, const char *request_type, chunk_t r
 		curl_easy_setopt(this->curl, CURLOPT_FAILONERROR, TRUE);
 		curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT, FETCHER_TIMEOUT);
 
-		DBG2("sending http post request to '%s'", this->uri);
+		DBG1("sending http post request to '%s'...", this->uri);
 		res = curl_easy_perform(this->curl);
 
 		if (res == CURLE_OK)
 		{
-	    	DBG2("received valid http response");
+	    	DBG1("received valid http response");
 			response = chunk_clone(curl_response);
 		}
 		else
