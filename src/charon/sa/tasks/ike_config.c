@@ -314,7 +314,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			this->virtual_ip->destroy(this->virtual_ip);
 			this->virtual_ip = ip;
 			
-			/* DNS is for testing only */
+			/* DNS testing values
 			if (this->dns->remove_last(this->dns, (void**)&ip) == SUCCESS)
 			{
 				ip->destroy(ip);
@@ -322,7 +322,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 				this->dns->insert_last(this->dns, ip);
 				ip = host_create_from_string("10.3.0.2", 0);
 				this->dns->insert_last(this->dns, ip);
-			}
+			} */
 			
 			build_payloads(this, message, CFG_REPLY);
 		}
