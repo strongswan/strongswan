@@ -1,4 +1,3 @@
-winnetou::/etc/openssl/start-ocsp
 moon::ipsec start
 carol::ipsec start
 carol::sleep 2

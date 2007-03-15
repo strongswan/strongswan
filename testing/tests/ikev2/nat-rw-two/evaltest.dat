@@ -1,8 +1,0 @@
-sun::ipsec statusall::rw-alice.*ESTABLISHED::YES
-sun::ipsec statusall::rw-venus.*ESTABLISHED::YES
-alice::ipsec statusall::home.*ESTABLISHED::YES
-venus::ipsec statusall::home.*ESTABLISHED::YES
-alice::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
-venus::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
-moon::tcpdumpcount::IP moon.strongswan.org.* > sun.strongswan.org.ipsec-nat-t: UDP::4
-moon::tcpdumpcount::IP sun.strongswan.org.ipsec-nat-t > moon.strongswan.org.*: UDP::4
