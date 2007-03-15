@@ -90,6 +90,12 @@ tar xjpf $ROOTFS -C $LOOPDIR     >> $LOGFILE 2>&1
 cecho "done"
 
 ######################################################
+# remove /etc/resolv.conf
+#
+cecho " * Removing /etc/resolv.conf"
+rm -f $LOOPDIR/etc/resolv.conf
+
+######################################################
 # copying default /etc/hosts to the root filesystem
 #
 cecho " * Copying '$HOSTCONFIGDIR/default/etc/hosts' to the root filesystem"
