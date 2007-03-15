@@ -68,6 +68,7 @@ do
     cp -rfp $BUILDDIR/hosts/${host}/etc $LOOPDIR
     if [ "$host" = "winnetou" ]
     then
+    	mkdir $LOOPDIR/var/log/apache2/ocsp
 	cp -rfp $UMLTESTDIR/testing/images $LOOPDIR/var/www/localhost/htdocs
         chroot $LOOPDIR /etc/openssl/generate-crl >> $LOGFILE 2>&1
     fi
