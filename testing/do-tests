@@ -45,6 +45,7 @@ TESTDATE=`date +%Y%m%d-%H%M`
 TODAYDIR=$TESTRESULTSDIR/$TESTDATE
 mkdir $TODAYDIR
 TESTRESULTSHTML=$TODAYDIR/index.html
+ALLHTML=$TODAYDIR/all.html
 DEFAULTTESTSDIR=$UMLTESTDIR/testing/tests
 
 testnumber="0"
@@ -403,6 +404,7 @@ do
       <li><a href="$host.statusall">ipsec statusall</a></li>
       <li><a href="$host.listall">ipsec listall</a></li>
       <li><a href="$host.auth.log">auth.log</a></li>
+      <li><a href="$host.daemon.log">daemon.log</a></li>
     </ul>
 @EOF
 
@@ -448,6 +450,21 @@ do
 	    echo >> $TESTRESULTDIR/${host}.auth.log
 	    ssh $HOSTLOGIN grep charon /var/log/auth.log \
 		>> $TESTRESULTDIR/${host}.auth.log
+	done
+
+
+	##########################################################################
+	# get a copy of /var/log/daemon.log
+	#
+
+	for host in $IPSECHOSTS
+	do
+	    eval HOSTLOGIN=root@\$ipv4_${host}
+	    ssh $HOSTLOGIN grep pluto /var/log/daemon.log \
+		> $TESTRESULTDIR/${host}.daemon.log
+	    echo >> $TESTRESULTDIR/${host}.daemon.log
+	    ssh $HOSTLOGIN grep charon /var/log/daemon.log \
+		>> $TESTRESULTDIR/${host}.daemon.log
 	done
 
 
