@@ -70,6 +70,7 @@ do
     then
 	cp -rfp $UMLTESTDIR/testing/images $LOOPDIR/var/www/localhost/htdocs
         chroot $LOOPDIR /etc/openssl/generate-crl >> $LOGFILE 2>&1
+	    mkdir $LOOPDIR/var/log/apache2/ocsp
     fi
     chroot $LOOPDIR /etc/init.d/depscan.sh --update >> $LOGFILE 2>&1
     umount $LOOPDIR
