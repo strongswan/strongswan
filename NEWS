@@ -1,4 +1,4 @@
-strongswan-4.0.8
+strongswan-4.1.0
 ----------------
 
 - Support of SHA2_384 hash function for protecting IKEv1
