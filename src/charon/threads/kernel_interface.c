@@ -1585,22 +1585,14 @@ static status_t add_policy(private_kernel_interface_t *this,
 		if (memcmp(&current->sel, &policy->sel, sizeof(struct xfrm_selector)) == 0 &&
 			policy->direction == current->direction)
 		{
-			free(policy);
 			/* use existing policy */
 			if (!update)
 			{
 				current->refcount++;
 				DBG2(DBG_KNL, "policy %R===%R already exists, increasing ",
 					 "refcount", src_ts, dst_ts);
-				if (!high_prio)
-				{
-					/* if added policy is for a ROUTED child_sa, do not
-					 * overwrite existing INSTALLED policy */
-					iterator->destroy(iterator);
-					pthread_mutex_unlock(&this->policies_mutex);
-					return SUCCESS;
-				}
 			}
+			free(policy);
 			policy = current;
 			found = TRUE;
 			break;
