@@ -102,7 +102,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 	iterator_t *payloads, *spis;
 	payload_t *payload;
 	delete_payload_t *delete_payload;
-	u_int32_t spi;
+	u_int32_t *spi;
 	protocol_id_t protocol;
 	child_sa_t *child_sa;
 	
@@ -121,11 +121,11 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 			while (spis->iterate(spis, (void**)&spi))
 			{
 				child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
-													  spi, FALSE);
+													  *spi, FALSE);
 				if (child_sa == NULL)
 				{
 					DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x, "
-						 "but no such SA", protocol_id_names, protocol, ntohl(spi));
+						 "but no such SA", protocol_id_names, protocol, ntohl(*spi));
 					break;
 				}
 				

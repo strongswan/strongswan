@@ -54,16 +54,6 @@ struct delete_payload_t {
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-
-	/**
-	 * @brief Set the protocol ID.
-	 *
-	 * @param this 			calling delete_payload_t object
-	 * @param protocol_id	protocol ID
-	 * 
-	 * @deprecated is set by constructor
-	 */
-	void (*set_protocol_id) (delete_payload_t *this, protocol_id_t protocol_id);
 	
 	/**
 	 * @brief Get the protocol ID.
@@ -72,66 +62,6 @@ struct delete_payload_t {
 	 * @return				protocol ID
 	 */
 	protocol_id_t (*get_protocol_id) (delete_payload_t *this);
-	
-	/**
-	 * @brief Set the SPI size.
-	 *
-	 * @param this 			calling delete_payload_t object
-	 * @param spi_size		SPI size
-	 * 
-	 * @deprecated is set by constructor
-	 */
-	void (*set_spi_size) (delete_payload_t *this, u_int8_t spi_size);
-	
-	/**
-	 * @brief Get the SPI size.
-	 *
-	 * @param this 			calling delete_payload_t object
-	 * @return				SPI size
-	 */
-	u_int8_t (*get_spi_size) (delete_payload_t *this);
-	
-	/**
-	 * @brief Set the SPI count.
-	 *
-	 * @param this 			calling delete_payload_t object
-	 * @param spi_count		SPI count
-	 * 
-	 * @deprecated is incremented via add_spi
-	 */
-	void (*set_spi_count) (delete_payload_t *this, u_int16_t spi_count);
-	
-	/**
-	 * @brief Get the SPI count.
-	 *
-	 * @param this 			calling delete_payload_t object
-	 * @return				Number of SPI's
-	 */
-	u_int16_t (*get_spi_count) (delete_payload_t *this);
-	
-	/**
-	 * @brief Set the SPI's.
-	 * 
-	 * Data are getting cloned.
-	 *
-	 * @param this 			calling delete_payload_t object
-	 * @param data			SPI's as chunk_t
-	 *
-	 * @deprecated use add_spi
-	 */
-	void (*set_spis) (delete_payload_t *this, chunk_t spis);
-	
-	/**
-	 * @brief Get the SPI's.
-	 * 
-	 * Returned data are NOT copied.
-	 *
-	 * @param this 			calling delete_payload_t object
-	 * @return				SPI's as chunk_t
-	 * 
-	 * @deprecated use create_spi_iterator
-	 */
-	chunk_t (*get_spis) (delete_payload_t *this);
 	
 	/**
 	 * @brief Add an SPI to the list of deleted SAs.
@@ -143,9 +73,8 @@ struct delete_payload_t {
 	
 	/**
 	 * @brief Get an iterator over the SPIs.
-	 * 
-	 * The resulting interators current() function returns
-	 * u_int32_t SPIs directly.
+	 *
+	 * The iterate() function returns a pointer to a u_int32_t SPI.
 	 *
 	 * @param this 			calling delete_payload_t object
 	 * @return				iterator over SPIs

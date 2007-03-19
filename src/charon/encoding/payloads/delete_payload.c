@@ -196,73 +196,11 @@ static size_t get_length(private_delete_payload_t *this)
 }
 
 /**
- * Implementation of delete_payload_t.set_protocol_id.
- */
-static void set_protocol_id (private_delete_payload_t *this, protocol_id_t protocol_id)
-{
-	this->protocol_id = protocol_id;
-}
-
-/**
  * Implementation of delete_payload_t.get_protocol_id.
  */
 static protocol_id_t get_protocol_id (private_delete_payload_t *this)
 {
 	return (this->protocol_id);
-}
-
-/**
- * Implementation of delete_payload_t.set_spi_size.
- */
-static void set_spi_size (private_delete_payload_t *this, u_int8_t spi_size)
-{
-	this->spi_size = spi_size;
-}
-
-/**
- * Implementation of delete_payload_t.get_spi_size.
- */
-static u_int8_t get_spi_size (private_delete_payload_t *this)
-{
-	return (this->spi_size);
-}
-
-/**
- * Implementation of delete_payload_t.set_spi_count.
- */
-static void set_spi_count (private_delete_payload_t *this, u_int16_t spi_count)
-{
-	this->spi_count = spi_count;
-}
-
-/**
- * Implementation of delete_payload_t.get_spi_count.
- */
-static u_int16_t get_spi_count(private_delete_payload_t *this)
-{
-	return (this->spi_count);
-}
-
-/**
- * Implementation of delete_payload_t.set_spis.
- */
-static void set_spis(private_delete_payload_t *this, chunk_t spis)
-{
-	if (this->spis.ptr != NULL)
-	{
-		chunk_free(&(this->spis));
-	}
-	this->spis.ptr = clalloc(spis.ptr,spis.len);
-	this->spis.len = spis.len;
-	this->payload_length = DELETE_PAYLOAD_HEADER_LENGTH + this->spis.len;
-}
-
-/**
- * Implementation of delete_payload_t.get_spis.
- */
-static chunk_t get_spis (private_delete_payload_t *this)
-{
-	return (this->spis);
 }
 
 /**
@@ -277,6 +215,12 @@ static void add_spi(private_delete_payload_t *this, u_int32_t spi)
 		this->spis.len += this->spi_size;
 		this->spis.ptr = realloc(this->spis.ptr, this->spis.len);
 		*(u_int32_t*)(this->spis.ptr + (this->spis.len / this->spi_size - 1)) = spi;
+		if (this->spi_list)
+		{
+			/* reset SPI iterator list */
+			this->spi_list->destroy(this->spi_list);
+			this->spi_list = NULL;
+		}
 	}
 }
 
@@ -295,8 +239,8 @@ static iterator_t* create_spi_iterator(private_delete_payload_t *this)
 		{
 			for (i = 0; i < this->spi_count; i++)
 			{
-				u_int32_t spi = *(u_int32_t*)(this->spis.ptr + i * this->spi_size);
-				this->spi_list->insert_last(this->spi_list, (void*)spi);
+				this->spi_list->insert_last(this->spi_list, this->spis.ptr + i *
+															this->spi_size);
 			}
 		}
 	}
@@ -337,14 +281,7 @@ delete_payload_t *delete_payload_create(protocol_id_t protocol_id)
 	
 	/* public functions */
 	this->public.destroy = (void (*) (delete_payload_t *)) destroy;
-	this->public.set_protocol_id = (void (*) (delete_payload_t *,protocol_id_t)) set_protocol_id;
 	this->public.get_protocol_id = (protocol_id_t (*) (delete_payload_t *)) get_protocol_id;
-	this->public.set_spi_size = (void (*) (delete_payload_t *,u_int8_t)) set_spi_size;
-	this->public.get_spi_size = (u_int8_t (*) (delete_payload_t *)) get_spi_size;
-	this->public.set_spi_count = (void (*) (delete_payload_t *,u_int16_t)) set_spi_count;
-	this->public.get_spi_count = (u_int16_t (*) (delete_payload_t *)) get_spi_count;
-	this->public.set_spis = (void (*) (delete_payload_t *,chunk_t)) set_spis;
-	this->public.get_spis = (chunk_t (*) (delete_payload_t *)) get_spis;
 	this->public.add_spi = (void (*) (delete_payload_t *,u_int32_t))add_spi;
 	this->public.create_spi_iterator = (iterator_t* (*) (delete_payload_t *)) create_spi_iterator;
 	
