@@ -95,7 +95,7 @@ typedef int (*sim_algo_t)(const unsigned char *rand, int rand_length,
 
 #ifndef SIM_READER_LIB
 /** the library containing the cardreader with the SIM function */
-#define SIM_READER_LIB "(unspecified)"
+#error SIM_READER_LIB not specified, use --with-sim-reader option
 #endif /* SIM_READER_LIB */
 
 #ifndef SIM_READER_ALG
@@ -113,7 +113,7 @@ typedef int (*sim_algo_t)(const unsigned char *rand, int rand_length,
  * is named as SIM_READER_ALG is defined.
  *
  * @b Constructors:
- *  - eap_sim_create()
+ *  - eap_create() of this module
  *  - eap_client_create() using eap_method EAP_SIM
  *
  * @ingroup eap
