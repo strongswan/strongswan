@@ -1663,8 +1663,14 @@ static status_t add_policy(private_kernel_interface_t *this,
 		return FAILED;
 	}
 	
-	if (direction == POLICY_FWD && mode != MODE_TRANSPORT &&
-		src->get_family(src) != AF_INET6)
+	/* install a route, if:
+	 * - we are NOT updating a policy
+	 * - this is a forward policy (to just get one for each child)
+	 * - we are in tunnel mode
+	 * - we are not using IPv6 (does not work correctly yet!)
+	 */
+	if (policy->route == NULL && direction == POLICY_FWD &&
+		mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6)
 	{
 		policy->route = malloc_thing(route_entry_t);
 		if (get_address_by_ts(this, dst_ts, &policy->route->src_ip) == SUCCESS)
