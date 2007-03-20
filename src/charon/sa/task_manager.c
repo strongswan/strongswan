@@ -128,11 +128,6 @@ struct private_task_manager_t {
 	 * List of tasks initiated by peer
 	 */
 	linked_list_t *passive_tasks;
-	
-	/**
-	 * ike_sa_init message we sent, stored here for later authentication
-	 */
-	packet_t *ike_sa_init;
 };
 
 /**
@@ -701,12 +696,11 @@ static void reset(private_task_manager_t *this)
 	/* reset message counters and retransmit packets */
 	DESTROY_IF(this->responding.packet);
 	DESTROY_IF(this->initiating.packet);
-	DESTROY_IF(this->ike_sa_init);
 	this->responding.packet = NULL;
 	this->initiating.packet = NULL;
-	this->ike_sa_init = NULL;
 	this->responding.mid = 0;
-	this->initiating.mid = -1;
+	this->initiating.mid = 0;
+	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	
 	/* reset active tasks */
 	while (this->active_tasks->remove_last(this->active_tasks,
@@ -761,7 +755,6 @@ static void destroy(private_task_manager_t *this)
 	this->active_tasks->destroy(this->active_tasks);
 	DESTROY_IF(this->responding.packet);
 	DESTROY_IF(this->initiating.packet);
-	DESTROY_IF(this->ike_sa_init);
 	free(this);
 }
 
@@ -790,7 +783,6 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	this->queued_tasks = linked_list_create();
 	this->active_tasks = linked_list_create();
 	this->passive_tasks = linked_list_create();
-	this->ike_sa_init = NULL;
 
 	return &this->public;
 }
