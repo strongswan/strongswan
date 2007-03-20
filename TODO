@@ -17,12 +17,12 @@ Roadmap for 2007
       !     exchanges
       !   - merge of EAP authentication code / plugin loader
       !   - merge of the virtual IP support currently in the pipeline
-      !   - merge of the experimental "mediated double-NAT" support
-      !   - write an IETF draft for this feature
       !
  Mar  !   - interface in charon for the new SMP management interface
       !   - full certificate support
       !   - Cookie support, other fixes to mature against DoS
+      !   - merge of the experimental "mediated double-NAT" support
+      !   - write an IETF draft for this feature
       !
  Apr  !   - start porting efforts of IKEv1 into charon
       !   - support of IKEv1 messages and payloads in charon
@@ -58,16 +58,14 @@ Build system
 
 Denail of service
 -----------------
-- Cookie support
+- Cookie support on server
 - thread exhaustion (multiple messages to a single IKE_SA)
 
 Certificate support
 -------------------
 - New trustchain mechanism?
-- proper CERTREQ support
 - proper handling of multiple certificate payloads (import order)
 - synchronized CRL fetcher
-- OCSP support
 - Smartcard interface
 - Attribute certificates
 
@@ -75,9 +73,10 @@ Stroke interface
 ----------------
 - add a Rekey-Counter for SAs in "statusall"
 - ipsec statusall bytecount
-- detach console after first keyingtry
 - proper handling of CTRL+C console detach (SIG_PIPE)
 
 Misc
 ----
 - retry transaction on failure while keyingtries > 1
+- PFS support for creating/rekeying CHILD_SAs
+- Address pool/backend for virtual IP assignement

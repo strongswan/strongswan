@@ -9,10 +9,35 @@ strongswan-4.1.0
   and hmac functions during pluto startup. Failure of a self-test
   currently issues a warning only but does not exit pluto [yet].
 
+- Support for SHA2-256/384/512 PRF and HMAC functions in IKEv2.
+
 - Full support of CA information sections. ipsec listcainfos
   now shows all collected crlDistributionPoints and OCSP 
   accessLocations.
 
+- Refactored core of the IKEv2 message processing code, allowing better
+  code reuse and separation.
+
+- Virtual IP support in IKEv2 using INTERNAL_IP4/6_ADDRESS configuration
+  payload. Additionally, the INTERNAL_IP4/6_DNS attribute is interpreted
+  by the requestor and installed in a resolv.conf file.
+
+- The IKEv2 daemon charon installs a route for each IPsec policy to use
+  the correct source address even if an application does not explicitly
+  specify it.
+
+- Integrated the EAP framework into charon which loads pluggable EAP library
+  modules. The ipsec.conf parameter authby=eap initiates EAP authentication
+  on the client side, while the "eap" parameter on the server side defines
+  the EAP method to use for client authentication.
+  A generic client side EAP-Identity module and an EAP-SIM authentication
+  module using a third party card reader implementation are included.
+
+- Added client side support for cookies.
+
+- Integrated the fixes done at the IKEv2 interoperability bakeoff, including
+  strict payload order, correct INVALID_KE_PAYLOAD rejection and other minor
+  fixes to enhance interoperability with other implementations.
 
 strongswan-4.0.7
 ----------------

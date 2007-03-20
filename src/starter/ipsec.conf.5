@@ -418,7 +418,11 @@ for either, and
 if negotiation is never to be attempted or accepted (useful for shunt-only conns).
 Digital signatures are superior in every way to shared secrets. In IKEv2, the
 two ends must not agree on this parameter, it is relevant for the own
-authentication method only.
+authentication method only. IKEv2 additionally supports the value
+.B eap,
+which indicates an initiator to request EAP authentication. The EAP method to 
+use is selected by the server (see
+.B eap).
 .TP
 .B compress
 whether IPComp compression of content is proposed on the connection
@@ -591,7 +595,12 @@ it is the IP address in \fB%defaultroute\fP (if that is supported by a TXT recor
 it is the system's hostname (if that is supported by a TXT record in its forward domain), or otherwise it is undefined.
 .TP
 .B leftsourceip
-Not supported in IKEv2 yet.
+The internal source IP to use in a tunnel, also known as virtual IP. If the
+value is
+.B %modeconfig
+or
+.B %config,
+an address is requested from the peer.
 .TP
 .B leftsubnetwithin
 Not relevant for IKEv2, as subnets are narrowed.
@@ -980,7 +989,7 @@ Written  for  the  FreeS/WAN project
 <http://www.freeswan.org>
 by Henry Spencer.  Extended for the strongSwan project
 <http://www.strongswan.org>
-by Andreas Steffen. Update to respect IKEv2 specific configuration
+by Andreas Steffen. Updated to respect IKEv2 specific configuration
 by Martin Willi.
 .SH BUGS
 .PP
