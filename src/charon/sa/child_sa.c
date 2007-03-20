@@ -129,6 +129,11 @@ struct private_child_sa_t {
 	time_t install_time;
 	
 	/**
+	 * absolute time when rekeying is sceduled
+	 */
+	time_t rekey_time;
+	
+	/**
 	 * state of the CHILD_SA
 	 */
 	child_sa_state_t state;
@@ -537,6 +542,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	this->encryption = *enc_algo;
 	this->integrity = *int_algo;
 	this->install_time = time(NULL);
+	this->rekey_time = soft;
 	
 	return status;
 }
@@ -743,7 +749,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	private_child_sa_t *this = *((private_child_sa_t**)(args[0]));
 	iterator_t *iterator;
 	sa_policy_t *policy;
-	u_int32_t now, rekeying, soft;
+	u_int32_t now, rekeying;
 	u_int32_t use, use_in, use_fwd;
 	status_t status;
 	size_t written = 0;
@@ -792,11 +798,10 @@ static int print(FILE *stream, const struct printf_info *info,
 			}
 			written += fprintf(stream, ", rekeying ");
 			
-			soft = this->policy->get_soft_lifetime(this->policy);
 			/* calculate rekey times */
-			if (soft)
+			if (this->rekey_time)
 			{
-				rekeying = this->install_time + soft - now;
+				rekeying = this->install_time + this->rekey_time - now;
 				written += fprintf(stream, "in %ds", rekeying);
 			}
 			else
