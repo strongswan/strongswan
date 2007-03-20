@@ -753,7 +753,7 @@ static int print(FILE *stream, const struct printf_info *info,
 		return fprintf(stream, "(null)");
 	}
 	
-	now = (u_int32_t)time(NULL);
+	now = time(NULL);
 	
 	written += fprintf(stream, "%12s{%d}:  %N, %N", 
 					   this->policy->get_name(this->policy), this->reqid,
@@ -796,7 +796,7 @@ static int print(FILE *stream, const struct printf_info *info,
 			/* calculate rekey times */
 			if (soft)
 			{
-				rekeying = soft - (now - this->install_time);
+				rekeying = this->install_time + soft - now;
 				written += fprintf(stream, "in %ds", rekeying);
 			}
 			else
