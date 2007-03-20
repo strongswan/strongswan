@@ -279,9 +279,9 @@ static status_t build_r(private_ike_natd_t *this, message_t *message)
 	host_t *me, *other;
 	
 	/* only add notifies on successfull responses. */
-	if (message->get_payload(message, SECURITY_ASSOCIATION))
+	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
 	{
-		return NEED_MORE;
+		return SUCCESS;
 	}
 
 	if (this->src_seen && this->dst_seen)
