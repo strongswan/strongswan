@@ -101,7 +101,6 @@ static chunk_t generate_natd_hash(private_ike_natd_t *this,
 	port_chunk.ptr = (void*)&port;
 	port_chunk.len = sizeof(port);
 	addr_chunk = host->get_address(host);
-	DBG2(DBG_IKE, "using SPI %J", ike_sa_id);
 		
 	/*  natd_hash = SHA1( spi_i | spi_r | address | port ) */
 	natd_chunk = chunk_cat("cccc", spi_i_chunk, spi_r_chunk, addr_chunk, port_chunk);
@@ -152,8 +151,8 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	dst_hash = generate_natd_hash(this, ike_sa_id, me);
 	src_hash = generate_natd_hash(this, ike_sa_id, other);
 	
-	DBG2(DBG_IKE, "precalculated src_hash %B", &src_hash);
-	DBG2(DBG_IKE, "precalculated dst_hash %B", &dst_hash);
+	DBG3(DBG_IKE, "precalculated src_hash %B", &src_hash);
+	DBG3(DBG_IKE, "precalculated dst_hash %B", &dst_hash);
 	
 	iterator = message->get_payload_iterator(message);
 	while (iterator->iterate(iterator, (void**)&payload))
@@ -171,7 +170,7 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 				if (!this->dst_matched)
 				{
 					hash = notify->get_notification_data(notify);
-					DBG2(DBG_IKE, "received dst_hash %B", &hash);
+					DBG3(DBG_IKE, "received dst_hash %B", &hash);
 					if (chunk_equals(hash, dst_hash))
 					{
 						this->dst_matched = TRUE;
@@ -185,7 +184,7 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 				if (!this->src_matched)
 				{
 					hash = notify->get_notification_data(notify);
-					DBG2(DBG_IKE, "received src_hash %B", &hash);
+					DBG3(DBG_IKE, "received src_hash %B", &hash);
 					if (chunk_equals(hash, src_hash))
 					{
 						this->src_matched = TRUE;
@@ -278,15 +277,9 @@ static status_t build_r(private_ike_natd_t *this, message_t *message)
 {
 	notify_payload_t *notify;
 	host_t *me, *other;
-	iterator_t *iterator;
-	u_int count;
 	
-	/* when only one payload is in the message, an error occured.
-	 * TODO: find a better hack */
-	iterator = message->get_payload_iterator(message);
-	count = iterator->get_count(iterator);
-	iterator->destroy(iterator);
-	if (count < 3)
+	/* only add notifies on successfull responses. */
+	if (message->get_payload(message, SECURITY_ASSOCIATION))
 	{
 		return NEED_MORE;
 	}
