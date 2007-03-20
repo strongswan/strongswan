@@ -92,7 +92,7 @@ struct private_connection_t {
 	/**
 	 * Number of retransmission sequences to send bevore giving up
 	 */
-	u_int32_t retrans_sequences;
+	u_int32_t keyingtries;
 	
 	/**
 	 * Supported proposals
@@ -241,11 +241,11 @@ static u_int32_t get_dpd_delay(private_connection_t *this)
 }
 
 /**
- * Implementation of connection_t.get_retrans_seq.
+ * Implementation of connection_t.get_keyingtries.
  */
-static u_int32_t get_retrans_seq(private_connection_t *this)
+static u_int32_t get_keyingtries(private_connection_t *this)
 {
-	return this->retrans_sequences;
+	return this->keyingtries;
 }
 
 /**
@@ -357,7 +357,7 @@ connection_t * connection_create(char *name, bool ikev2,
 								 cert_policy_t certreq_policy,
 								 host_t *my_host, host_t *other_host,
 								 u_int32_t dpd_delay, bool reauth,
-								 u_int32_t retrans_sequences,
+								 u_int32_t keyingtries,
 								 u_int32_t hard_lifetime,
 								 u_int32_t soft_lifetime, u_int32_t jitter)
 {
@@ -375,7 +375,7 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->public.add_proposal = (void(*)(connection_t*, proposal_t*)) add_proposal;
 	this->public.get_dpd_delay = (u_int32_t(*)(connection_t*)) get_dpd_delay;
 	this->public.get_reauth = (bool(*)(connection_t*)) get_reauth;
-	this->public.get_retrans_seq = (u_int32_t(*)(connection_t*)) get_retrans_seq;
+	this->public.get_keyingtries = (u_int32_t(*)(connection_t*)) get_keyingtries;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(connection_t*)) get_dh_group;
 	this->public.check_dh_group = (bool(*)(connection_t*,diffie_hellman_group_t)) check_dh_group;
 	this->public.get_soft_lifetime = (u_int32_t (*) (connection_t *))get_soft_lifetime;
@@ -393,7 +393,7 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->other_host = other_host;
 	this->dpd_delay = dpd_delay;
 	this->reauth = reauth;
-	this->retrans_sequences = retrans_sequences;
+	this->keyingtries = keyingtries;
 	this->hard_lifetime = hard_lifetime;
 	this->soft_lifetime = soft_lifetime;
 	this->jitter = jitter;

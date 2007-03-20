@@ -143,13 +143,10 @@ struct connection_t {
 	/**
 	 * @brief Get the max number of retransmission sequences.
 	 *
-	 * After this number of sequences, a not responding peer is considered
-	 * dead.
-	 *
 	 * @param this		calling object
 	 * @return			max number of retransmission sequences
 	 */
-	u_int32_t (*get_retrans_seq) (connection_t *this);
+	u_int32_t (*get_keyingtries) (connection_t *this);
 	
 	/**
 	 * @brief Get the connection name.
@@ -276,7 +273,7 @@ struct connection_t {
  * @param other_host		host_t representing remote address
  * @param dpd_delay			interval of DPD liveness checks
  * @param reauth			use full reauthentication instead of rekeying
- * @param retrans_sequences	number of retransmit sequences to use
+ * @param keyingtries		number of retransmit sequences to use
  * @param hard_lifetime		lifetime before deleting an IKE_SA
  * @param soft_lifetime		lifetime before rekeying an IKE_SA
  * @param jitter			range of randomization time
@@ -288,7 +285,7 @@ connection_t * connection_create(char *name, bool ikev2,
 								 cert_policy_t cert_pol, cert_policy_t req_pol,
 								 host_t *my_host, host_t *other_host,
 								 u_int32_t dpd_delay, bool reauth,
-								 u_int32_t retrans_sequences,
+								 u_int32_t keyingtries,
 								 u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
 								 u_int32_t jitter);
 
