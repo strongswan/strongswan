@@ -224,6 +224,11 @@ struct private_ike_sa_t {
 		/** when IKE_SA gets deleted */
 		u_int32_t delete;
 	} time;
+	
+	/**
+	 * how many times we have retried so far (keyingtries)
+	 */
+	u_int32_t keyingtry;
 };
 
 /**
@@ -341,6 +346,160 @@ static void set_other_host(private_ike_sa_t *this, host_t *other)
 {
 	DESTROY_IF(this->other_host);
 	this->other_host = other;
+}
+
+/**
+ * Implementation of ike_sa_t.send_dpd
+ */
+static status_t send_dpd(private_ike_sa_t *this)
+{
+	send_dpd_job_t *job;
+	time_t diff, delay;
+	
+	delay = this->connection->get_dpd_delay(this->connection);
+	
+	if (delay == 0)
+	{
+		/* DPD disabled */
+		return SUCCESS;
+	}
+	
+	if (this->task_manager->busy(this->task_manager))
+	{
+		/* an exchange is in the air, no need to start a DPD check */
+		diff = 0;
+	}
+	else
+	{
+		/* check if there was any inbound traffic */
+		time_t last_in, now;
+		last_in = get_use_time(this, TRUE);
+		now = time(NULL);
+		diff = now - last_in;
+		if (diff >= delay)
+		{
+			/* to long ago, initiate dead peer detection */
+			task_t *task;
+			
+			task = (task_t*)ike_dpd_create(TRUE);
+			diff = 0;
+			DBG1(DBG_IKE, "sending DPD request");
+			
+			this->task_manager->queue_task(this->task_manager, task);
+			this->task_manager->initiate(this->task_manager);
+		}
+	}
+	/* recheck in "interval" seconds */
+	job = send_dpd_job_create(this->ike_sa_id);
+	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
+									  (delay - diff) * 1000);
+	return SUCCESS;
+}
+
+/**
+ * Implementation of ike_sa_t.send_keepalive
+ */
+static void send_keepalive(private_ike_sa_t *this)
+{
+	send_keepalive_job_t *job;
+	time_t last_out, now, diff, interval;
+	
+	last_out = get_use_time(this, FALSE);
+	now = time(NULL);
+	
+	diff = now - last_out;
+	interval = charon->configuration->get_keepalive_interval(charon->configuration);
+	
+	if (diff >= interval)
+	{
+		packet_t *packet;
+		chunk_t data;
+		
+		packet = packet_create();
+		packet->set_source(packet, this->my_host->clone(this->my_host));
+		packet->set_destination(packet, this->other_host->clone(this->other_host));
+		data.ptr = malloc(1);
+		data.ptr[0] = 0xFF;
+		data.len = 1;
+		packet->set_data(packet, data);
+		charon->send_queue->add(charon->send_queue, packet);
+		DBG1(DBG_IKE, "sending keep alive");
+		diff = 0;
+	}
+	job = send_keepalive_job_create(this->ike_sa_id);
+	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
+									  (interval - diff) * 1000);
+}
+
+/**
+ * Implementation of ike_sa_t.get_state.
+ */
+static ike_sa_state_t get_state(private_ike_sa_t *this)
+{
+	return this->state;
+}
+
+/**
+ * Implementation of ike_sa_t.set_state.
+ */
+static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
+{
+	DBG1(DBG_IKE, "IKE_SA state change: %N => %N",
+		 ike_sa_state_names, this->state,
+		 ike_sa_state_names, state);
+	
+	if (state == IKE_ESTABLISHED)
+	{
+		job_t *job;
+		u_int32_t now = time(NULL);
+		u_int32_t soft, hard;
+		bool reauth;
+	
+		this->time.established = now;
+		/* start DPD checks */
+		send_dpd(this);
+		
+		/* schedule rekeying/reauthentication */
+		soft = this->connection->get_soft_lifetime(this->connection);
+		hard = this->connection->get_hard_lifetime(this->connection);
+		reauth = this->connection->get_reauth(this->connection);
+		DBG1(DBG_IKE, "scheduling %s in %ds, maximum lifetime %ds",
+			 reauth ? "reauthentication": "rekeying", soft, hard);
+			 
+		if (soft)
+		{
+			this->time.rekey = now + soft;
+			job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
+			charon->event_queue->add_relative(charon->event_queue, job,
+											  soft * 1000);
+		}
+		
+		if (hard)
+		{
+			this->time.delete = now + hard;
+			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
+			charon->event_queue->add_relative(charon->event_queue, job,
+											  hard * 1000);
+		}
+	}
+	
+	this->state = state;
+}
+
+/**
+ * Implementation of ike_sa_t.reset
+ */
+static void reset(private_ike_sa_t *this)
+{
+	/*  the responder ID is reset, as peer may choose another one */
+	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
+	{
+		this->ike_sa_id->set_responder_spi(this->ike_sa_id, 0);
+	}
+	
+	set_state(this, IKE_CREATED);
+	
+	this->task_manager->reset(this->task_manager);
 }
 
 /**
@@ -840,8 +999,20 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 		switch (this->state)
 		{
 			case IKE_CONNECTING:
+			{
+				/* retry IKE_SA_INIT if we have multiple keyingtries */
+				u_int32_t tries = this->connection->get_keyingtries(this->connection);
+				this->keyingtry++;
+				if (tries == 0 || tries > this->keyingtry)
+				{
+					SIG(IKE_UP_FAILED, "peer not responding, trying again "
+						"(%d/%d) in background ", this->keyingtry + 1, tries);
+					reset(this);
+					return this->task_manager->initiate(this->task_manager);
+				}
 				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
 				break;
+			}
 			case IKE_REKEYING:
 				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
 				break;
@@ -934,144 +1105,6 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 		return DESTROY_ME;
 	}
 	return SUCCESS;
-}
-
-/**
- * Implementation of ike_sa_t.send_dpd
- */
-static status_t send_dpd(private_ike_sa_t *this)
-{
-	send_dpd_job_t *job;
-	time_t diff, delay;
-	
-	delay = this->connection->get_dpd_delay(this->connection);
-	
-	if (delay == 0)
-	{
-		/* DPD disabled */
-		return SUCCESS;
-	}
-	
-	if (this->task_manager->busy(this->task_manager))
-	{
-		/* an exchange is in the air, no need to start a DPD check */
-		diff = 0;
-	}
-	else
-	{
-		/* check if there was any inbound traffic */
-		time_t last_in, now;
-		last_in = get_use_time(this, TRUE);
-		now = time(NULL);
-		diff = now - last_in;
-		if (diff >= delay)
-		{
-			/* to long ago, initiate dead peer detection */
-			task_t *task;
-			
-			task = (task_t*)ike_dpd_create(TRUE);
-			diff = 0;
-			DBG1(DBG_IKE, "sending DPD request");
-			
-			this->task_manager->queue_task(this->task_manager, task);
-			this->task_manager->initiate(this->task_manager);
-		}
-	}
-	/* recheck in "interval" seconds */
-	job = send_dpd_job_create(this->ike_sa_id);
-	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
-									  (delay - diff) * 1000);
-	return SUCCESS;
-}
-
-/**
- * Implementation of ike_sa_t.send_keepalive
- */
-static void send_keepalive(private_ike_sa_t *this)
-{
-	send_keepalive_job_t *job;
-	time_t last_out, now, diff, interval;
-	
-	last_out = get_use_time(this, FALSE);
-	now = time(NULL);
-	
-	diff = now - last_out;
-	interval = charon->configuration->get_keepalive_interval(charon->configuration);
-	
-	if (diff >= interval)
-	{
-		packet_t *packet;
-		chunk_t data;
-		
-		packet = packet_create();
-		packet->set_source(packet, this->my_host->clone(this->my_host));
-		packet->set_destination(packet, this->other_host->clone(this->other_host));
-		data.ptr = malloc(1);
-		data.ptr[0] = 0xFF;
-		data.len = 1;
-		packet->set_data(packet, data);
-		charon->send_queue->add(charon->send_queue, packet);
-		DBG1(DBG_IKE, "sending keep alive");
-		diff = 0;
-	}
-	job = send_keepalive_job_create(this->ike_sa_id);
-	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
-									  (interval - diff) * 1000);
-}
-
-/**
- * Implementation of ike_sa_t.get_state.
- */
-static ike_sa_state_t get_state(private_ike_sa_t *this)
-{
-	return this->state;
-}
-
-/**
- * Implementation of ike_sa_t.set_state.
- */
-static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
-{
-	DBG1(DBG_IKE, "IKE_SA state change: %N => %N",
-		 ike_sa_state_names, this->state,
-		 ike_sa_state_names, state);
-	
-	if (state == IKE_ESTABLISHED)
-	{
-		job_t *job;
-		u_int32_t now = time(NULL);
-		u_int32_t soft, hard;
-		bool reauth;
-	
-		this->time.established = now;
-		/* start DPD checks */
-		send_dpd(this);
-		
-		/* schedule rekeying/reauthentication */
-		soft = this->connection->get_soft_lifetime(this->connection);
-		hard = this->connection->get_hard_lifetime(this->connection);
-		reauth = this->connection->get_reauth(this->connection);
-		DBG1(DBG_IKE, "scheduling %s in %ds, maximum lifetime %ds",
-			 reauth ? "reauthentication": "rekeying", soft, hard);
-			 
-		if (soft)
-		{
-			this->time.rekey = now + soft;
-			job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
-			charon->event_queue->add_relative(charon->event_queue, job,
-											  soft * 1000);
-		}
-		
-		if (hard)
-		{
-			this->time.delete = now + hard;
-			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-			charon->event_queue->add_relative(charon->event_queue, job,
-											  hard * 1000);
-		}
-	}
-	
-	this->state = state;
 }
 
 /**
@@ -1614,22 +1647,6 @@ static void enable_natt(private_ike_sa_t *this, bool local)
 }
 
 /**
- * Implementation of ike_sa_t.reset
- */
-static void reset(private_ike_sa_t *this)
-{
-	/*  the responder ID is reset, as peer may choose another one */
-	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
-	{
-		this->ike_sa_id->set_responder_spi(this->ike_sa_id, 0);
-	}
-	
-	set_state(this, IKE_CREATED);
-	
-	this->task_manager->reset(this->task_manager);
-}
-
-/**
  * Implementation of ike_sa_t.set_virtual_ip
  */
 static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
@@ -1978,6 +1995,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->my_virtual_ip = NULL;
 	this->other_virtual_ip = NULL;
 	this->dns_servers = linked_list_create();
+	this->keyingtry = 0;
 	
 	return &this->public;
 }
