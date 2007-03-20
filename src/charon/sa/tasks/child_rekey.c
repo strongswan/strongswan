@@ -141,53 +141,6 @@ static void find_child(private_child_rekey_t *this, message_t *message)
 	iterator->destroy(iterator);
 }
 
-#if 0
-/**
- * handle a detected simultaneous rekeying situation as responder
- */
-static void simultaneous_r(private_child_rekey_t *this, message_t *message)
-{
-	private_child_rekey_t *other = NULL;
-	task_t *task;
-	iterator_t *iterator;
-	
-	this->ike_sa->create_task_iterator(this->ike_sa);
-	while (iterator->iterate(iterator, (void**)&task))
-	{
-		if (task->get_type(task) == CHILD_REKEY)
-		{
-			other = (private_child_rekey_t*)task;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	if (other)
-	{
-		other->simultaneous = this->child_create->get_child(this->child_create);
-	
-		if (!get_nonce(other, message))
-		{
-			/* this wins the race, other lost */
-			other->winner = FALSE;
-		}
-	}
-}
-
-/**
- * was there a simultaneous rekeying, did we win the nonce compare?
- */
-static bool simultaneous_i(private_child_rekey_t *this, message_t *message)
-{
-	if (this->winner || get_nonce(this, message))
-	{
-		/* we have the lower nonce and win */
-		return TRUE;
-	}
-	return FALSE;
-}
-#endif
-
 /**
  * Implementation of task_t.build for initiator
  */
@@ -247,11 +200,20 @@ static status_t build_r(private_child_rekey_t *this, message_t *message)
 	reqid = this->child_sa->get_reqid(this->child_sa);
 	this->child_create->use_reqid(this->child_create, reqid);
 	this->child_create->task.build(&this->child_create->task, message);
+	
+	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
+	{
+		/* rekeying failed, reuse old child */
+		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+		/* TODO: reschedule rekeying */
+		return SUCCESS;
+	}
+	
 	get_nonce(this, message);
 
 	if (this->child_sa->get_state(this->child_sa) == CHILD_REKEYING)
 	{
-		/* simultaneous_detected(this); */
+		/* TODO: handle simultaneous rekeying */
 	}
 	
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
@@ -268,16 +230,17 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 	u_int32_t spi;
 	
 	this->child_create->task.process(&this->child_create->task, message);
-	
-	/*if (!simultaneous_won(this, message))
+	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
 	{
-		* delete the redundant CHILD_SA, instead of the rekeyed *
-		this->child_sa = this->create_child->get_child(this->create_child);
-	}*/
+		/* establishing new child failed, fallback */
+		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+		/* TODO: rescedule rekeying */
+		return SUCCESS;
+	}
+	
+	/* TODO: delete the redundant CHILD_SA, instead of the rekeyed */
 	spi = this->child_sa->get_spi(this->child_sa, TRUE);
 	protocol = this->child_sa->get_protocol(this->child_sa);
-	
-	/* TODO: don't delete when rekeying failed */
 	if (this->ike_sa->delete_child_sa(this->ike_sa, protocol, spi) != SUCCESS)
 	{
 		return FAILED;

@@ -126,12 +126,21 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 				{
 					DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x, "
 						 "but no such SA", protocol_id_names, protocol, ntohl(*spi));
-					break;
+					continue;
 				}
 				
-				if (child_sa->get_state(child_sa) == CHILD_REKEYING)
+				switch (child_sa->get_state(child_sa))
 				{
-					/* TODO: handle rekeying */
+					case CHILD_REKEYING:
+						/* we reply as usual, rekeying will fail */
+						break;
+					case CHILD_DELETING:
+						/* we don't send back a delete */
+						this->ike_sa->destroy_child_sa(this->ike_sa,
+													   protocol, *spi);
+						continue;
+					default:
+						break;
 				}
 				
 				this->child_sas->insert_last(this->child_sas, child_sa);
@@ -155,7 +164,6 @@ static void destroy_children(private_child_delete_t *this)
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		/* TODO: can we do this more cleanly? */
 		spi = child_sa->get_spi(child_sa, TRUE);
 		protocol = child_sa->get_protocol(child_sa);
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
@@ -200,7 +208,11 @@ static status_t process_r(private_child_delete_t *this, message_t *message)
  */
 static status_t build_r(private_child_delete_t *this, message_t *message)
 {
-	build_payloads(this, message);
+	/* if we are rekeying, we send an empty informational */
+	if (this->ike_sa->get_state(this->ike_sa) != IKE_REKEYING)
+	{
+		build_payloads(this, message);	
+	}
 	destroy_children(this);
 	return SUCCESS;
 }

@@ -92,11 +92,14 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
 			break;
 		case IKE_ESTABLISHED:
 			DBG1(DBG_IKE, "deleting IKE_SA on request");
-			/* warn only if we are established */
+			break;
+		case IKE_REKEYING:
+			DBG1(DBG_IKE, "initiated rekeying, but received delete for IKE_SA");
+			break;
 		default:
-			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			break;
 	}
+	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 	return NEED_MORE;
 }
 
@@ -107,7 +110,7 @@ static status_t build_r(private_ike_delete_t *this, message_t *message)
 {
 	if (this->simultaneous)
 	{
-		/* wait for peers response for our delete request */
+		/* wait for peers response for our delete request, but set a timeout */
 		return SUCCESS;
 	}
 	/* completed, delete IKE_SA by returning FAILED */

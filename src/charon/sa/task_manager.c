@@ -131,6 +131,51 @@ struct private_task_manager_t {
 };
 
 /**
+ * flush all tasks in the task manager
+ */
+static void flush(private_task_manager_t *this)
+{
+	task_t *task;
+	
+	this->queued_tasks->destroy_offset(this->queued_tasks, 
+									   offsetof(task_t, destroy));
+	this->passive_tasks->destroy_offset(this->passive_tasks,
+										offsetof(task_t, destroy));
+	
+	/* emmit outstanding signals for tasks */
+	while (this->active_tasks->remove_last(this->active_tasks,
+										   (void**)&task) == SUCCESS)
+	{
+		switch (task->get_type(task))
+		{
+			case IKE_AUTH:
+				SIG(IKE_UP_FAILED, "establishing IKE_SA failed");
+				break;
+			case IKE_DELETE:
+				SIG(IKE_DOWN_FAILED, "IKE_SA deleted");
+				break;
+			case IKE_REKEY:
+				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed");
+				break;
+			case CHILD_CREATE:
+				SIG(CHILD_UP_FAILED, "establishing CHILD_SA failed");
+				break;
+			case CHILD_DELETE:
+				SIG(CHILD_DOWN_FAILED, "deleting CHILD_SA failed");
+				break;
+			case CHILD_REKEY:
+				SIG(IKE_REKEY_FAILED, "rekeying CHILD_SA failed");
+				break;
+			default:
+				break;
+		}
+		task->destroy(task);
+	}
+	this->queued_tasks = linked_list_create();
+	this->passive_tasks = linked_list_create();
+}
+
+/**
  * move a task of a specific type from the queue to the active list
  */
 static bool activate_task(private_task_manager_t *this, task_type_t type)
@@ -322,6 +367,7 @@ static status_t build_request(private_task_manager_t *this)
 	            /* critical failure, destroy IKE_SA */
 	            iterator->destroy(iterator);
 				message->destroy(message);
+				flush(this);
 	            return DESTROY_ME;
 	    }
 	}
@@ -335,6 +381,7 @@ static status_t build_request(private_task_manager_t *this)
 	{
 	    /* message generation failed. There is nothing more to do than to
 		 * close the SA */
+		flush(this);
 	    return DESTROY_ME;
 	}						
 	
@@ -608,6 +655,7 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 		{
 			if (process_request(this, msg) != SUCCESS)
 			{
+				flush(this);
 				return DESTROY_ME;
 			}
 			this->responding.mid++;
@@ -632,6 +680,7 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 		{
 			if (process_response(this, msg) != SUCCESS)
 			{
+				flush(this);
 				return DESTROY_ME;
 			}
 		}
@@ -716,43 +765,12 @@ static void reset(private_task_manager_t *this)
  */
 static void destroy(private_task_manager_t *this)
 {
-	task_t *task;
+	flush(this);
 	
-	this->queued_tasks->destroy_offset(this->queued_tasks, 
-									   offsetof(task_t, destroy));
-	this->passive_tasks->destroy_offset(this->passive_tasks,
-										offsetof(task_t, destroy));
-	
-	/* emmit outstanding signals for tasks */
-	while (this->active_tasks->remove_last(this->active_tasks,
-										   (void**)&task) == SUCCESS)
-	{
-		switch (task->get_type(task))
-		{
-			case IKE_AUTH:
-				SIG(IKE_UP_FAILED, "establishing IKE_SA failed");
-				break;
-			case IKE_DELETE:
-				SIG(IKE_DOWN_FAILED, "IKE_SA deleted");
-				break;
-			case IKE_REKEY:
-				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed");
-				break;
-			case CHILD_CREATE:
-				SIG(CHILD_UP_FAILED, "establishing CHILD_SA failed");
-				break;
-			case CHILD_DELETE:
-				SIG(CHILD_DOWN_FAILED, "deleting CHILD_SA failed");
-				break;
-			case CHILD_REKEY:
-				SIG(IKE_REKEY_FAILED, "rekeying CHILD_SA failed");
-				break;
-			default:
-				break;
-		}
-		task->destroy(task);
-	}
 	this->active_tasks->destroy(this->active_tasks);
+	this->queued_tasks->destroy(this->queued_tasks);
+	this->passive_tasks->destroy(this->passive_tasks);
+	
 	DESTROY_IF(this->responding.packet);
 	DESTROY_IF(this->initiating.packet);
 	free(this);

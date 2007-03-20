@@ -553,6 +553,13 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 			break;
 	}
 	
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING)
+	{
+		SIG(CHILD_UP_FAILED, "unable to create CHILD_SA while rekeying IKE_SA");
+		message->add_notify(message, TRUE, NO_ADDITIONAL_SAS, chunk_empty);
+		return SUCCESS;
+	}
+	
 	if (this->policy == NULL)
 	{
 		SIG(CHILD_UP_FAILED, "no acceptable policy found");

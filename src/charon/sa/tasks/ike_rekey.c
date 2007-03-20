@@ -98,6 +98,32 @@ static status_t process_r(private_ike_rekey_t *this, message_t *message)
 	connection_t *connection;
 	policy_t *policy;
 	ike_sa_id_t *id;
+	iterator_t *iterator;
+	child_sa_t *child_sa;
+	
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
+	{
+		DBG1(DBG_IKE, "peer initiated rekeying, but we are deleting");
+		return NEED_MORE;
+	}
+
+	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		switch (child_sa->get_state(child_sa))
+		{
+			case CHILD_CREATED:
+			case CHILD_REKEYING:
+			case CHILD_DELETING:
+				/* we do not allow rekeying while we have children in-progress */
+				DBG1(DBG_IKE, "peer initiated rekeying, but a child is half-open");
+				iterator->destroy(iterator);
+				return NEED_MORE;
+			default:
+				break;
+		}
+	}
+	iterator->destroy(iterator);
 	
 	id = ike_sa_id_create(0, 0, FALSE);
 	this->new_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
@@ -119,6 +145,13 @@ static status_t process_r(private_ike_rekey_t *this, message_t *message)
  */
 static status_t build_r(private_ike_rekey_t *this, message_t *message)
 {
+	if (this->new_sa == NULL)
+	{
+		/* IKE_SA/a CHILD_SA is in an inacceptable state, deny rekeying */
+		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		return SUCCESS;
+	}
+
 	if (this->ike_init->task.build(&this->ike_init->task, message) == FAILED)
 	{
 		return SUCCESS;
@@ -142,6 +175,9 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 
 	if (this->ike_init->task.process(&this->ike_init->task, message) == FAILED)
 	{
+		/* rekeying failed, fallback to old SA */
+		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+		/* TODO: reschedule rekeying */
 		return SUCCESS;
 	}
 	
@@ -152,7 +188,6 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 	
 	job = (job_t*)delete_ike_sa_job_create(this->ike_sa->get_id(this->ike_sa),
 										   TRUE);
-	
 	charon->job_queue->add(charon->job_queue, job);
 	return SUCCESS;
 }

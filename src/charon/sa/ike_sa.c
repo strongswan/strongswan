@@ -448,39 +448,57 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 		 ike_sa_state_names, this->state,
 		 ike_sa_state_names, state);
 	
-	if (state == IKE_ESTABLISHED)
+	switch (state)
 	{
-		job_t *job;
-		u_int32_t now = time(NULL);
-		u_int32_t soft, hard;
-		bool reauth;
-	
-		this->time.established = now;
-		/* start DPD checks */
-		send_dpd(this);
-		
-		/* schedule rekeying/reauthentication */
-		soft = this->connection->get_soft_lifetime(this->connection);
-		hard = this->connection->get_hard_lifetime(this->connection);
-		reauth = this->connection->get_reauth(this->connection);
-		DBG1(DBG_IKE, "scheduling %s in %ds, maximum lifetime %ds",
-			 reauth ? "reauthentication": "rekeying", soft, hard);
-			 
-		if (soft)
+		case IKE_ESTABLISHED:
 		{
-			this->time.rekey = now + soft;
-			job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
-			charon->event_queue->add_relative(charon->event_queue, job,
-											  soft * 1000);
+			if (this->state == IKE_CONNECTING)
+			{
+				job_t *job;
+				u_int32_t now = time(NULL);
+				u_int32_t soft, hard;
+				bool reauth;
+			
+				this->time.established = now;
+				/* start DPD checks */
+				send_dpd(this);
+				
+				/* schedule rekeying/reauthentication */
+				soft = this->connection->get_soft_lifetime(this->connection);
+				hard = this->connection->get_hard_lifetime(this->connection);
+				reauth = this->connection->get_reauth(this->connection);
+				DBG1(DBG_IKE, "scheduling %s in %ds, maximum lifetime %ds",
+					 reauth ? "reauthentication": "rekeying", soft, hard);
+					 
+				if (soft)
+				{
+					this->time.rekey = now + soft;
+					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
+					charon->event_queue->add_relative(charon->event_queue, job,
+													  soft * 1000);
+				}
+				
+				if (hard)
+				{
+					this->time.delete = now + hard;
+					job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
+					charon->event_queue->add_relative(charon->event_queue, job,
+													  hard * 1000);
+				}
+			}
+			break;
 		}
-		
-		if (hard)
+		case IKE_DELETING:
 		{
-			this->time.delete = now + hard;
-			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
+			/* delete may fail if a packet gets lost, so set a timeout */
+			job_t *job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
 			charon->event_queue->add_relative(charon->event_queue, job,
-											  hard * 1000);
+						  charon->configuration->get_half_open_ike_sa_timeout(
+					  									charon->configuration));
+			break;
 		}
+		default:
+			break;
 	}
 	
 	this->state = state;
@@ -681,6 +699,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		/* if this IKE_SA is virgin, we check for a connection */
 		if (this->connection == NULL)
 		{
+			job_t *job;
 			this->connection = charon->connections->get_connection_by_hosts(
 												charon->connections, me, other);
 			if (this->connection == NULL)
@@ -691,6 +710,11 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 				send_notify_response(this, message, NO_PROPOSAL_CHOSEN);
 				return DESTROY_ME;
 			}
+			/* add a timeout if peer does not establish it completely */
+			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, FALSE);
+			charon->event_queue->add_relative(charon->event_queue, job,
+						  charon->configuration->get_half_open_ike_sa_timeout(
+					  									charon->configuration));
 		}
 	
 		/* check if message is trustworthy, and update connection information */
