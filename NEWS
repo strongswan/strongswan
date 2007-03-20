@@ -15,6 +15,11 @@ strongswan-4.1.0
   now shows all collected crlDistributionPoints and OCSP 
   accessLocations.
 
+- Support of the Online Certificate Status Protocol (OCSP) for IKEv2.
+  This feature requires the HTTP fetching capabilities of the libcurl
+  library which must be enabled by setting the --enable-http configure
+  option.
+
 - Refactored core of the IKEv2 message processing code, allowing better
   code reuse and separation.
 
