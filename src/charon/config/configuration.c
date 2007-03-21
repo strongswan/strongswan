@@ -75,12 +75,12 @@
 /**
  * retry interval in seconds.
  */
-#define RETRY_INTERVAL 15
+#define RETRY_INTERVAL 30
 
 /**
  * jitter to user for retrying
  */
-#define RETRY_JITTER 5
+#define RETRY_JITTER 20
 
 
 typedef struct private_configuration_t private_configuration_t;
