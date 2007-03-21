@@ -72,6 +72,16 @@
  */
 #define KEEPALIVE_INTERVAL 20
 
+/**
+ * retry interval in seconds.
+ */
+#define RETRY_INTERVAL 15
+
+/**
+ * jitter to user for retrying
+ */
+#define RETRY_JITTER 5
+
 
 typedef struct private_configuration_t private_configuration_t;
 
@@ -119,6 +129,14 @@ static u_int32_t get_keepalive_interval (private_configuration_t *this)
 }
 
 /**
+ * Implementation of configuration_t.get_retry_interval.
+ */
+static u_int32_t get_retry_interval (private_configuration_t *this)
+{
+	return RETRY_INTERVAL - (random() % RETRY_JITTER);
+}
+
+/**
  * Implementation of configuration_t.destroy.
  */
 static void destroy(private_configuration_t *this)
@@ -138,6 +156,7 @@ configuration_t *configuration_create()
 	this->public.get_retransmit_timeout = (u_int32_t (*) (configuration_t*,u_int32_t))get_retransmit_timeout;
 	this->public.get_half_open_ike_sa_timeout = (u_int32_t (*) (configuration_t*)) get_half_open_ike_sa_timeout;
 	this->public.get_keepalive_interval = (u_int32_t (*) (configuration_t*)) get_keepalive_interval;
+	this->public.get_retry_interval = (u_int32_t (*) (configuration_t*)) get_retry_interval;
 	
 	return (&this->public);
 }

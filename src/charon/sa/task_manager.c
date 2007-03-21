@@ -444,43 +444,43 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 	
 	type = task->get_type(task);
 	
-	/* check if we have initiated rekeying ourself */
-	if (this->initiating.type != CREATE_CHILD_SA ||
-		(type != IKE_REKEY && type != CHILD_REKEY && type != CHILD_DELETE))
-	{		
-		task->destroy(task);
-		return;
+	/* do we have to check  */
+	if (type == IKE_REKEY || type == CHILD_REKEY ||
+		type == CHILD_DELETE || type == IKE_DELETE)
+	{
+	    /* find an exchange collision, and notify these tasks */
+	    iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
+	    while (iterator->iterate(iterator, (void**)&active))
+	    {
+	    	switch (active->get_type(active))
+	    	{
+	    		case IKE_REKEY:
+	    			if (type == IKE_REKEY || type == IKE_DELETE)
+	    			{
+	    				ike_rekey_t *rekey = (ike_rekey_t*)active;
+	    				rekey->collide(rekey, task);
+	    				break;
+	    			}
+	    			continue;
+	    		case CHILD_REKEY:
+	    			/* TODO: check if it is the SAME child we are talking about! */
+	    			if (type == CHILD_REKEY || type == CHILD_DELETE)
+	    			{
+	    				child_rekey_t *rekey = (child_rekey_t*)active;
+	    				rekey->collide(rekey, task);
+	    				break;
+	    			}
+	    			continue;
+	    		default:
+	    			continue;
+	    	}
+		    iterator->destroy(iterator);
+	    	return;
+		}
+		iterator->destroy(iterator);
 	}
-    
-    /* find an exchange collision, and notify these tasks */
-    iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
-    while (iterator->iterate(iterator, (void**)&active))
-    {
-    	switch (active->get_type(active))
-    	{
-    		case IKE_REKEY:
-    			if (type == IKE_REKEY || type == IKE_DELETE)
-    			{
-    				ike_rekey_t *rekey = (ike_rekey_t*)active;
-    				rekey->collide(rekey, task);
-    				break;
-    			}
-    			continue;
-    		case CHILD_REKEY:
-    			/* TODO: check if it is the SAME child we are talking about! */
-    			if (type == CHILD_REKEY || type == CHILD_DELETE)
-    			{
-    				child_rekey_t *rekey = (child_rekey_t*)active;
-    				rekey->collide(rekey, task);
-    				break;
-    			}
-    			continue;
-    		default:
-    			continue;
-    	}
-    	break;
-    }
-    iterator->destroy(iterator);
+	/* destroy task if not registered in any active task */
+	task->destroy(task);
 }
 
 /**
@@ -633,7 +633,6 @@ static status_t process_request(private_task_manager_t *this,
 				task = (task_t*)ike_rekey_create(this->ike_sa, FALSE);
 			}
 			this->passive_tasks->insert_last(this->passive_tasks, task);
-			
 			break;
 		}
 		case INFORMATIONAL:

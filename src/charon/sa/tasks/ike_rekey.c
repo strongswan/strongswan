@@ -27,6 +27,7 @@
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/ike_init.h>
 #include <queues/jobs/delete_ike_sa_job.h>
+#include <queues/jobs/rekey_ike_sa_job.h>
 
 
 typedef struct private_ike_rekey_t private_ike_rekey_t;
@@ -180,8 +181,15 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 		if (!(this->collision &&
 			this->collision->get_type(this->collision) == IKE_DELETE))
 		{
+			job_t *job;
+			u_int32_t retry = charon->configuration->get_retry_interval(
+									charon->configuration);
+			job = (job_t*)rekey_ike_sa_job_create(
+									this->ike_sa->get_id(this->ike_sa), FALSE);
+			DBG1(DBG_IKE, "IKE_SA rekeying failed, "
+				 					"trying again in %d seconds", retry);
 			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-			/* TODO: reschedule rekeying */
+			charon->event_queue->add_relative(charon->event_queue, job, retry * 1000);
 		}
 		return SUCCESS;
 	}

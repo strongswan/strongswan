@@ -26,6 +26,7 @@
 #include <daemon.h>
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/child_create.h>
+#include <queues/jobs/rekey_child_sa_job.h>
 
 
 typedef struct private_child_rekey_t private_child_rekey_t;
@@ -165,12 +166,10 @@ static status_t build_r(private_child_rekey_t *this, message_t *message)
 	{
 		/* rekeying failed, reuse old child */
 		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-		/* TODO: reschedule rekeying */
 		return SUCCESS;
 	}
 	
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
-	
 	return SUCCESS;
 }
 
@@ -191,8 +190,17 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 		if (!(this->collision && 
 			  this->collision->get_type(this->collision) == CHILD_DELETE))
 		{
+			job_t *job;
+			u_int32_t retry = charon->configuration->get_retry_interval(
+								charon->configuration);
+			job = (job_t*)rekey_child_sa_job_create(
+								this->child_sa->get_reqid(this->child_sa),
+								this->child_sa->get_protocol(this->child_sa),
+								this->child_sa->get_spi(this->child_sa, TRUE));
+			DBG1(DBG_IKE, "CHILD_SA rekeying failed, "
+				 				"trying again in %d seconds", retry);
 			this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-			/* TODO: rescedule rekeying */
+			charon->event_queue->add_relative(charon->event_queue, job, retry * 1000);
 		}
 		return SUCCESS;
 	}

@@ -61,15 +61,26 @@ struct configuration_t {
 	u_int32_t (*get_half_open_ike_sa_timeout) (configuration_t *this);
 
 	/**
-	 * @brief Returns the keepalive interval in ms.
+	 * @brief Returns the keepalive interval in s.
 	 * 
 	 * The keepalive interval defines the idle time after which a
 	 * NAT keepalive packet should be sent.
 	 * 
 	 * @param this				calling object
-	 * @return					interval in seconds
+	 * @return					interval in s
 	 */	
 	u_int32_t (*get_keepalive_interval) (configuration_t *this);
+
+	/**
+	 * @brief Returns the interval to retry a failed action again.
+	 *
+	 * In some situations, the protocol may be in a state where processing
+	 * is not possible and an action must be retried (e.g. rekeying).
+	 * 
+	 * @param this				calling object
+	 * @return					interval in s
+	 */	
+	u_int32_t (*get_retry_interval) (configuration_t *this);
 
 	/**
 	 * @brief Destroys a configuration_t object.
