@@ -770,6 +770,13 @@ static status_t initiate(private_ike_sa_t *this,
 		/* if we aren't established/establishing, do so */
 		apply_config(this, connection, policy);
 		
+		if (this->other_host->is_anyaddr(this->other_host))
+		{
+			SIG(IKE_UP_START, "initiating IKE_SA");
+			SIG(IKE_UP_FAILED, "unable to initiate to %%any");
+			return DESTROY_ME;
+		}
+		
 		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_natd_create(&this->public, TRUE);
