@@ -1,9 +1,0 @@
-moon::cat /var/log/daemon.log::http post request to.*using libcurl failed::YES
-carol::cat /var/log/daemon.log::http post request to.*using libcurl failed::YES
-moon::cat /var/log/daemon.log::received valid http response::YES
-carol::cat /var/log/daemon.log::received valid http response::YES
-moon::cat /var/log/daemon.log::certificate is good::YES
-carol::cat /var/log/daemon.log::certificate is good::YES
-moon::ipsec status::rw.*ESTABLISHED::YES
-carol::ipsec status::home.*ESTABLISHED::YES
-
