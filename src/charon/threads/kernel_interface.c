@@ -520,7 +520,7 @@ static void receive_events(private_kernel_interface_t *this)
 			DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
 			DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
 				 expire->hard ? "delete" : "rekey",  protocol_id_names,
-				 protocol, spi, reqid);
+				 protocol, ntohl(spi), reqid);
 			if (expire->hard)
 			{
 				job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
