@@ -128,6 +128,8 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 						 "but no such SA", protocol_id_names, protocol, ntohl(*spi));
 					continue;
 				}
+				DBG2(DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x", 
+						protocol_id_names, protocol, ntohl(*spi));
 				
 				switch (child_sa->get_state(child_sa))
 				{

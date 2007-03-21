@@ -44,6 +44,18 @@ struct child_rekey_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
+	
+	/**
+	 * @brief Register a rekeying task which collides with this one
+	 *
+	 * If two peers initiate rekeying at the same time, the collision must
+	 * be handled gracefully. The task manager is aware of what exchanges
+	 * are going on and notifies the outgoing task by passing the incoming.
+	 *
+	 * @param this		task initated by us
+	 * @param other		incoming task
+	 */
+	void (*collide)(child_rekey_t* this, task_t *other);
 };
 
 /**

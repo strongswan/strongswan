@@ -434,6 +434,56 @@ static status_t process_response(private_task_manager_t *this,
 }
 
 /**
+ * handle exchange collisions
+ */
+static void handle_collisions(private_task_manager_t *this, task_t *task)
+{
+	iterator_t *iterator;
+	task_t *active;
+	task_type_t type;
+	
+	type = task->get_type(task);
+	
+	/* check if we have initiated rekeying ourself */
+	if (this->initiating.type != CREATE_CHILD_SA ||
+		(type != IKE_REKEY && type != CHILD_REKEY && type != CHILD_DELETE))
+	{		
+		task->destroy(task);
+		return;
+	}
+    
+    /* find an exchange collision, and notify these tasks */
+    iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
+    while (iterator->iterate(iterator, (void**)&active))
+    {
+    	switch (active->get_type(active))
+    	{
+    		case IKE_REKEY:
+    			if (type == IKE_REKEY)
+    			{
+    				//ike_rekey_t *rekey = (ike_rekey_t*)active;
+    				//rekey->collide(rekey, (ike_rekey_t*)task);
+    				break;
+    			}
+    			continue;
+    		case CHILD_REKEY:
+    			/* TODO: check if it is the SAME child we are talking about! */
+    			if (type == CHILD_REKEY || type == CHILD_DELETE)
+    			{
+    				child_rekey_t *rekey = (child_rekey_t*)active;
+    				rekey->collide(rekey, task);
+    				break;
+    			}
+    			continue;
+    		default:
+    			continue;
+    	}
+    	break;
+    }
+    iterator->destroy(iterator);
+}
+
+/**
  * build a response depending on the "passive" task list
  */
 static status_t build_response(private_task_manager_t *this,
@@ -458,8 +508,7 @@ static status_t build_response(private_task_manager_t *this,
 	        case SUCCESS:
 	            /* task completed, remove it */
 	            iterator->remove(iterator);
-	            task->destroy(task);
-	            break;
+				handle_collisions(this, task);
 	        case NEED_MORE:
 	            /* processed, but task needs another exchange */
 	            break;

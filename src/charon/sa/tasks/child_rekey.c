@@ -63,46 +63,40 @@ struct private_child_rekey_t {
 	child_sa_t *child_sa;
 	
 	/**
-	 * redundandt CHILD_SA created simultaneously
+	 * colliding task, may be delete or rekey
 	 */
-	child_sa_t *simultaneous;
+	task_t *collision;
 	
 	/**
 	 * the lowest nonce compared so far
 	 */
 	chunk_t nonce;
-	
-	/**
-	 * TRUE if we have the lower nonce
-	 */
-	bool winner;
 };
 
 /**
- * get the nonce from a message, return TRUE if it was lower than this->nonce
+ * get the nonce from a message, IF it is lower than a previous one
  */
-static bool get_nonce(private_child_rekey_t *this, message_t *message)
+static void get_nonce(private_child_rekey_t *this, message_t *message)
 {
 	nonce_payload_t *payload;
 	chunk_t nonce;
 	
 	payload = (nonce_payload_t*)message->get_payload(message, NONCE);
-	if (payload == NULL)
-	{
-		return FALSE;
-	}
-	nonce = payload->get_nonce(payload);
+	if (payload)
+	{	
+		nonce = payload->get_nonce(payload);
 	
-	if (this->nonce.ptr && memcmp(nonce.ptr, this->nonce.ptr,
-								  min(nonce.len, this->nonce.len)) > 0)
-	{
-		chunk_free(&nonce);
-		return FALSE;
+		if (this->nonce.ptr && memcmp(nonce.ptr, this->nonce.ptr,
+									  min(nonce.len, this->nonce.len)) > 0)
+		{
+			chunk_free(&nonce);
+		}
+		else
+		{		
+			chunk_free(&this->nonce);
+			this->nonce = nonce;
+		}
 	}
-	
-	chunk_free(&this->nonce);
-	this->nonce = nonce;
-	return TRUE;
 }
 
 /**
@@ -192,6 +186,7 @@ static status_t build_r(private_child_rekey_t *this, message_t *message)
 	if (this->child_sa == NULL ||
 		this->child_sa->get_state(this->child_sa) == CHILD_DELETING)
 	{
+		DBG1(DBG_IKE, "unable to rekey, CHILD_SA not found");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return SUCCESS;
 	}
@@ -210,11 +205,6 @@ static status_t build_r(private_child_rekey_t *this, message_t *message)
 	}
 	
 	get_nonce(this, message);
-
-	if (this->child_sa->get_state(this->child_sa) == CHILD_REKEYING)
-	{
-		/* TODO: handle simultaneous rekeying */
-	}
 	
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
 	
@@ -228,19 +218,53 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 {
 	protocol_id_t protocol;
 	u_int32_t spi;
+	child_sa_t *to_delete;
 	
 	this->child_create->task.process(&this->child_create->task, message);
 	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
 	{
-		/* establishing new child failed, fallback */
-		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-		/* TODO: rescedule rekeying */
+		/* establishing new child failed, reuse old. but not when we
+		 * recieved a delete in the meantime */
+		if (!(this->collision && 
+			  this->collision->get_type(this->collision) == CHILD_DELETE))
+		{
+			this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+			/* TODO: rescedule rekeying */
+		}
 		return SUCCESS;
 	}
 	
-	/* TODO: delete the redundant CHILD_SA, instead of the rekeyed */
-	spi = this->child_sa->get_spi(this->child_sa, TRUE);
-	protocol = this->child_sa->get_protocol(this->child_sa);
+	get_nonce(this, message);
+	
+	to_delete = this->child_sa;
+	
+	/* check for rekey collisions */
+	if (this->collision &&
+		this->collision->get_type(this->collision) == CHILD_REKEY)
+	{
+		private_child_rekey_t *other = (private_child_rekey_t*)this->collision;
+		
+		/* if we have the lower nonce, delete rekeyed SA. If not, delete
+		 * the redundant. */
+		if (memcmp(this->nonce.ptr, other->nonce.ptr, 
+				   min(this->nonce.len, other->nonce.len)) < 0)
+		{
+			DBG1(DBG_IKE, "CHILD_SA rekey collision won, deleting rekeyed child");
+		}
+		else
+		{
+			DBG1(DBG_IKE, "CHILD_SA rekey collision lost, deleting redundant child");
+			to_delete = this->child_create->get_child(this->child_create);
+			if (to_delete == NULL)
+			{
+				/* ooops, should not happen, fallback */
+				to_delete = this->child_sa;
+			}
+		}
+	}
+	
+	spi = to_delete->get_spi(to_delete, TRUE);
+	protocol = to_delete->get_protocol(to_delete);
 	if (this->ike_sa->delete_child_sa(this->ike_sa, protocol, spi) != SUCCESS)
 	{
 		return FAILED;
@@ -257,6 +281,15 @@ static task_type_t get_type(private_child_rekey_t *this)
 }
 
 /**
+ * Implementation of child_rekey_t.collide
+ */
+static void collide(private_child_rekey_t *this, task_t *other)
+{
+	DESTROY_IF(this->collision);
+	this->collision = other;
+}
+
+/**
  * Implementation of task_t.migrate
  */
 static void migrate(private_child_rekey_t *this, ike_sa_t *ike_sa)
@@ -265,8 +298,7 @@ static void migrate(private_child_rekey_t *this, ike_sa_t *ike_sa)
 	chunk_free(&this->nonce);
 
 	this->ike_sa = ike_sa;
-	this->winner = TRUE;
-	this->simultaneous = NULL;
+	this->collision = NULL;
 }
 
 /**
@@ -276,6 +308,7 @@ static void destroy(private_child_rekey_t *this)
 {
 	this->child_create->task.destroy(&this->child_create->task);
 	chunk_free(&this->nonce);
+	DESTROY_IF(this->collision);
 	free(this);
 }
 
@@ -287,6 +320,7 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 	private_child_rekey_t *this = malloc_thing(private_child_rekey_t);
 	policy_t *policy;
 
+	this->public.collide = (void (*)(child_rekey_t*,task_t*))collide;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
@@ -309,8 +343,7 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 	this->ike_sa = ike_sa;
 	this->child_sa = child_sa;
 	this->nonce = chunk_empty;
-	this->winner = TRUE;
-	this->simultaneous = NULL;
+	this->collision = NULL;
 	
 	return &this->public;
 }

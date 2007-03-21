@@ -58,6 +58,16 @@ struct child_create_t {
 	 * @param reqid		reqid to use
 	 */
 	void (*use_reqid) (child_create_t *this, u_int32_t reqid);
+	
+	/**
+	 * @brief Get the CHILD_SA established by this task.
+	 *
+	 * This call returns a child only when it has been established successfully.
+	 *
+	 * @param this		calling object
+	 * @return			child_sa
+	 */
+	child_sa_t* (*get_child) (child_create_t *this);
 };
 
 /**

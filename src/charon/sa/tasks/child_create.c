@@ -102,6 +102,11 @@ struct private_child_create_t {
 	 * CHILD_SA which gets established
 	 */
 	child_sa_t *child_sa;
+	
+	/**
+	 * successfully established the CHILD?
+	 */
+	bool established;
 };
 
 /**
@@ -306,7 +311,7 @@ static status_t select_and_install(private_child_create_t *this)
 	/* add to IKE_SA, and remove from task */
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
-	this->child_sa = NULL;
+	this->established = TRUE;
 	return SUCCESS;
 }
 
@@ -594,7 +599,6 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 {
 	iterator_t *iterator;
 	payload_t *payload;
-	status_t status;
 
 	switch (message->get_exchange_type(message))
 	{
@@ -648,10 +652,10 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 	
 	process_payloads(this, message);
 	
-	status = select_and_install(this);
-	
-	SIG(CHILD_UP_SUCCESS, "established CHILD_SA successfully");
-	
+	if (select_and_install(this) == SUCCESS)
+	{
+		SIG(CHILD_UP_SUCCESS, "established CHILD_SA successfully");
+	}
 	return SUCCESS;
 }
 
@@ -669,6 +673,18 @@ static task_type_t get_type(private_child_create_t *this)
 static void use_reqid(private_child_create_t *this, u_int32_t reqid)
 {
 	this->reqid = reqid;
+}
+
+/**
+ * Implementation of child_create_t.get_child
+ */
+static child_sa_t* get_child(private_child_create_t *this)
+{
+	if (this->established)
+	{
+		return this->child_sa;
+	}
+	return NULL;
 }
 
 /**
@@ -700,6 +716,7 @@ static void migrate(private_child_create_t *this, ike_sa_t *ike_sa)
 	this->child_sa = NULL;
 	this->mode = MODE_TUNNEL;
 	this->reqid = 0;
+	this->established = FALSE;
 }
 
 /**
@@ -717,7 +734,10 @@ static void destroy(private_child_create_t *this)
 	{
 		this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
 	}
-	DESTROY_IF(this->child_sa);
+	if (!this->established)
+	{
+		DESTROY_IF(this->child_sa);
+	}
 	DESTROY_IF(this->proposal);
 	if (this->proposals)
 	{
@@ -735,6 +755,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, policy_t *policy)
 {
 	private_child_create_t *this = malloc_thing(private_child_create_t);
 
+	this->public.get_child = (child_sa_t*(*)(child_create_t*))get_child;
 	this->public.use_reqid = (void(*)(child_create_t*,u_int32_t))use_reqid;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
@@ -764,6 +785,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, policy_t *policy)
 	this->child_sa = NULL;
 	this->mode = MODE_TUNNEL;
 	this->reqid = 0;
+	this->established = FALSE;
 	
 	return &this->public;
 }
