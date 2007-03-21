@@ -60,6 +60,14 @@ struct child_create_t {
 	void (*use_reqid) (child_create_t *this, u_int32_t reqid);
 	
 	/**
+	 * @brief Get the lower of the two nonces, used for rekey collisions.
+	 *
+	 * @param this		calling object
+	 * @return			lower nonce
+	 */
+	chunk_t (*get_lower_nonce) (child_create_t *this);
+	
+	/**
 	 * @brief Get the CHILD_SA established by this task.
 	 *
 	 * This call returns a child only when it has been established successfully.

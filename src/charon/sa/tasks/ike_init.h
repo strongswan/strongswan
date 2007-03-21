@@ -32,7 +32,7 @@ typedef struct ike_init_t ike_init_t;
 /**
  * @brief Task of type IKE_INIT, creates an IKE_SA without authentication.
  *
- * The authentication of is handle in the ike_auth and/or ike_auth_eap task.
+ * The authentication of is handle in the ike_auth task.
  *
  * @b Constructors:
  *  - ike_init_create()
@@ -45,6 +45,14 @@ struct ike_init_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
+	
+	/**
+	 * @brief Get the lower of the two nonces, used for rekey collisions.
+	 *
+	 * @param this		calling object
+	 * @return			lower nonce
+	 */
+	chunk_t (*get_lower_nonce) (ike_init_t *this);
 };
 
 /**

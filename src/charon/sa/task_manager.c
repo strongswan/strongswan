@@ -459,10 +459,10 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
     	switch (active->get_type(active))
     	{
     		case IKE_REKEY:
-    			if (type == IKE_REKEY)
+    			if (type == IKE_REKEY || type == IKE_DELETE)
     			{
-    				//ike_rekey_t *rekey = (ike_rekey_t*)active;
-    				//rekey->collide(rekey, (ike_rekey_t*)task);
+    				ike_rekey_t *rekey = (ike_rekey_t*)active;
+    				rekey->collide(rekey, task);
     				break;
     			}
     			continue;

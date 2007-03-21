@@ -504,6 +504,22 @@ static task_type_t get_type(private_ike_init_t *this)
 }
 
 /**
+ * Implementation of task_t.get_type
+ */
+static chunk_t get_lower_nonce(private_ike_init_t *this)
+{
+	if (memcmp(this->my_nonce.ptr, this->other_nonce.ptr,
+			   min(this->my_nonce.len, this->other_nonce.len)) < 0)
+	{
+		return this->my_nonce;
+	}
+	else
+	{
+		return this->other_nonce;
+	}
+}
+
+/**
  * Implementation of task_t.migrate
  */
 static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
@@ -537,6 +553,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 {
 	private_ike_init_t *this = malloc_thing(private_ike_init_t);
 
+	this->public.get_lower_nonce = (chunk_t(*)(ike_init_t*))get_lower_nonce;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;

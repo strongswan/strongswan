@@ -688,6 +688,22 @@ static child_sa_t* get_child(private_child_create_t *this)
 }
 
 /**
+ * Implementation of child_create_t.get_lower_nonce
+ */
+static chunk_t get_lower_nonce(private_child_create_t *this)
+{	
+	if (memcmp(this->my_nonce.ptr, this->other_nonce.ptr,
+			   min(this->my_nonce.len, this->other_nonce.len)) < 0)
+	{
+		return this->my_nonce;
+	}
+	else
+	{
+		return this->other_nonce;
+	}
+}
+
+/**
  * Implementation of task_t.migrate
  */
 static void migrate(private_child_create_t *this, ike_sa_t *ike_sa)
@@ -756,6 +772,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, policy_t *policy)
 	private_child_create_t *this = malloc_thing(private_child_create_t);
 
 	this->public.get_child = (child_sa_t*(*)(child_create_t*))get_child;
+	this->public.get_lower_nonce = (chunk_t(*)(child_create_t*))get_lower_nonce;
 	this->public.use_reqid = (void(*)(child_create_t*,u_int32_t))use_reqid;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
