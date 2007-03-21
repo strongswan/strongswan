@@ -1,0 +1,6 @@
+moon::cat /var/log/daemon.log::http post request to.*using libcurl failed::YES
+moon::cat /var/log/daemon.log::certificate status unknown::YES
+carol::cat /var/log/daemon.log::received AUTHENTICATION_FAILED::YES
+moon::ipsec status::rw.*ESTABLISHED::NO
+carol::ipsec status::home.*ESTABLISHED::NO
+
