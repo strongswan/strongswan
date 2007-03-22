@@ -26,6 +26,7 @@
 #include <daemon.h>
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/child_create.h>
+#include <sa/tasks/child_delete.h>
 #include <queues/jobs/rekey_child_sa_job.h>
 
 
@@ -258,6 +259,31 @@ static task_type_t get_type(private_child_rekey_t *this)
  */
 static void collide(private_child_rekey_t *this, task_t *other)
 {
+	/* the task manager only detects exchange collision, but not if 
+	 * the collision is for the same child. we check it here. */
+	if (other->get_type(other) == CHILD_REKEY)
+	{
+		private_child_rekey_t *rekey = (private_child_rekey_t*)other;
+		if (rekey == NULL || rekey->child_sa != this->child_sa)
+		{
+			/* not the same child => no collision */
+			return;
+		}
+	}
+	else if (other->get_type(other) == CHILD_DELETE)
+	{
+		child_delete_t *del = (child_delete_t*)other;
+		if (del == NULL || del->get_child(del) != this->child_sa)
+		{
+			/* not the same child => no collision */ 
+			return;
+		}
+	}
+	else
+	{
+		/* any other task is not critical for collisisions, ignore */
+		return;
+	}
 	DESTROY_IF(this->collision);
 	this->collision = other;
 }

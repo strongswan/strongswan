@@ -231,6 +231,16 @@ static task_type_t get_type(private_child_delete_t *this)
 }
 
 /**
+ * Implementation of child_delete_t.get_child
+ */
+static child_sa_t* get_child(private_child_delete_t *this)
+{
+	child_sa_t *child_sa = NULL;
+	this->child_sas->get_first(this->child_sas, (void**)&child_sa);
+	return child_sa;
+}
+
+/**
  * Implementation of task_t.migrate
  */
 static void migrate(private_child_delete_t *this, ike_sa_t *ike_sa)
@@ -257,6 +267,7 @@ child_delete_t *child_delete_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
 	private_child_delete_t *this = malloc_thing(private_child_delete_t);
 
+	this->public.get_child = (child_sa_t*(*)(child_delete_t*))get_child;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;

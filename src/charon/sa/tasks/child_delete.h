@@ -44,6 +44,14 @@ struct child_delete_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
+	
+	/**
+	 * @brief Get the CHILD_SA to delete by this task.
+	 *
+	 * @param this		calling object
+	 * @return			child_sa
+	 */
+	child_sa_t* (*get_child) (child_delete_t *this);
 };
 
 /**

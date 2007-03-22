@@ -680,11 +680,7 @@ static void use_reqid(private_child_create_t *this, u_int32_t reqid)
  */
 static child_sa_t* get_child(private_child_create_t *this)
 {
-	if (this->established)
-	{
-		return this->child_sa;
-	}
-	return NULL;
+	return this->child_sa;
 }
 
 /**

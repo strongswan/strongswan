@@ -68,9 +68,7 @@ struct child_create_t {
 	chunk_t (*get_lower_nonce) (child_create_t *this);
 	
 	/**
-	 * @brief Get the CHILD_SA established by this task.
-	 *
-	 * This call returns a child only when it has been established successfully.
+	 * @brief Get the CHILD_SA established/establishing by this task.
 	 *
 	 * @param this		calling object
 	 * @return			child_sa

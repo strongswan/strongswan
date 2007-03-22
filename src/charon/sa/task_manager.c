@@ -463,7 +463,6 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 	    			}
 	    			continue;
 	    		case CHILD_REKEY:
-	    			/* TODO: check if it is the SAME child we are talking about! */
 	    			if (type == CHILD_REKEY || type == CHILD_DELETE)
 	    			{
 	    				child_rekey_t *rekey = (child_rekey_t*)active;
