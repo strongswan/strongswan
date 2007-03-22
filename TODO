@@ -7,33 +7,24 @@ migrate IKEv1 into charon. It's hard to say how much effort is needed to
 do that, and how much code we can reuse from pluto. But a port IS necessary to
 gain hassle-free confiugration, version negotiation and maintainability.
 
-Roadmap for 2007
-================
+Roadmap 2007
+============
 
- Jan  !   - first stable release of the strongSwan 4.x branch
+ Mar  !   - Cookie support, IP filter, other fixes to mature against DoS
+      !   - release IKEv2 p2p NATT draft 00
       !
- Feb  !   - refactoring of exchange handling for better code sharing,
-      !     we need to separate specific tasks to reuse them in multiple
-      !     exchanges
-      !   - merge of EAP authentication code / plugin loader
-      !   - merge of the virtual IP support currently in the pipeline
+ Apr  !   - PRF in CHILD_SA rekeying
+      !   - configuration managament refactoring
+      !   - interface in charon for the new SMP management interface
+      !   - reimplement IKEv2 p2p NATT support
       !
- Mar  !   - interface in charon for the new SMP management interface
-      !   - full certificate support
-      !   - Cookie support, other fixes to mature against DoS
-      !   - merge of the experimental "mediated double-NAT" support
-      !   - write an IETF draft for this feature
+ May  !   - XML configuration interface
       !
- Apr  !   - start porting efforts of IKEv1 into charon
-      !   - support of IKEv1 messages and payloads in charon
+ Jun  !   - start with IKEv1 migration strategy
       !
- May  !   - migration of plutos state machine into charon
+ Jul  !
       !
- Jun  !   - get a useable IKEv1 implementation for simple cases
-      !
- Jul  !   - first release of charon supporting IKEv2 and IKEv1
-      !
- Aug  !   - get IKEv1 support to the level of pluto
+ Aug  !
       !
  Sep  !
       !
@@ -41,7 +32,7 @@ Roadmap for 2007
       !
  Nov  !
       !
- Dec  !   - feature complete release
+ Dec  !
       !
 
 
@@ -77,6 +68,5 @@ Stroke interface
 
 Misc
 ----
-- retry transaction on failure while keyingtries > 1
 - PFS support for creating/rekeying CHILD_SAs
 - Address pool/backend for virtual IP assignement

@@ -1,3 +1,278 @@
+ strongswan-4.1.0 / R:2552 
+===========================
+
+fixed nat detection bug
+OCSP support
+updated NEWS, TODO and man page
+respecting "keyingtries" parameter on IKE_SA setup
+cleanups
+fixed reset()
+not installing a route when policy gets updated
+renamed keyingtries attribute
+adjusted loglevels
+delay OCSP response by 5 seconds
+always update reqid on policy install, fixes dpdaction=hold issue
+EAP-SIM cleanups
+fixed CHILD_SA rekeying/delete bug on 64bit machines
+removed obsolete methods in delete_payload
+Shortened distribution string
+Shortened distribution string
+shortened distribution string
+add daemon.log to web page
+remove /etc/resolv.conf
+version bump to 4.1.0
+added apache2/ocsp log directory to winnetou
+removed killall openssl
+removed killall openssl
+deleted
+deleted
+create apach2/ocsp/ logging directory on winnetou
+do not check for type of dpd action any more
+create /var/log/apache2/ocsp on winnetou
+added
+added
+added
+delete virtual IP addresses after use
+deleted
+added
+fixed case of missing subjectKeyID
+corrected typo
+version bump to 4.1.0
+added
+use CURLOPT_NOSIGNAL
+added --with-sim-reader option to configure script
+some cleanups in eap_sim
+removed dublicated code in eap_authenticator
+log reception of trusted signer certificate
+version bump to 4.1.0
+deleted
+added
+changed OCSPSigner to OCSPSigning
+fixed carry bug in FIPS prf
+user standard cert
+deleted
+deleted
+added
+added
+modified description.txt and evaltest.dat
+version number selection fix
+some cleanups
+cleaned up and fixed DPD handling code
+removed cfg-payload dns test code
+added
+added
+version bump to strongswan-4.1.0 and linux-2.6.20.3
+cosmetics
+increased control debugging output
+added EAP-SIM authentication
+  client side only
+  uses an external SIM reader library specified with SIM_READER_LIB
+  untested
+not detaching from bus when IKE_SA_INIT is retried
+added AES-192/256 proposals to IKE
+added generic EAP_IDENTITY client implementation using peers IKEv2 ID
+fixed compilation warnings and errors when not using curl
+results from the single responses is stored in the corresponding certinfo_t structs
+moved credential_store.h from charon/config/credentials to libstrongswan
+last patch removed, changed CURLOPT_FILE to CURLOPT_WRITEDATA
+fixed memory leak by calling curl_slist_free_all(headers)
+fixed memory leak by calling curl_slist_free_all(headers)
+whitelisting static Curl_getaddrinfo() memory leak
+fixed a certinfo_t memory leak in verify()
+fixed a memory leak in response_t
+ocsp signer certificate and ocsp response signature can be verified
+fixed memleaks when using EAP authentication
+fixed configuration payloads when using EAP
+fixed payload order (again)
+including peers certificate when his certreq is empty
+implemented cookies as initiator
+proper logging of notifies in IKE_SA setup
+disabling routing for IPv6, does not work correctly
+fixed call of add_auth_certificate()
+generalized get_ca_certificate() to get_auth_certificate(auth_flags)
+added fetcher_finalize() to clean up libcurl
+some cleanups
+not installing %any DNS servers
+support of setting and getting authority flags
+support if ocsp signing certificates
+support if ocsp signing certificates
+fixed payload order in IKE_AUTH
+removed SHA2 kernel proposals from default, the kernel doesn't support them yet
+allocation fixes, not complete
+handling "No policy found" properly
+added more debugging output for policy lookup
+returning a (dummy) policy even when TS does not match, so we can properly send a TS_UNACCEPTABLE 
+fixed CHILD_SA creation within existing IKE_SA
+added ocsp_parse_single_response
+ported changes from EAP branch, renabling EAP framework
+added (not yet supported) sha2 algorithms to kernel
+only adding a route if using tunnel mode
+added SHA2 MAC and PRF to default proposal
+added more debug output 
+experimental SHA2 HMAC and PRF implementations
+parsing basic ocsp response
+forgot to assign public.is_ocsp_signer() method
+added parsing level to x509_create_from_chunk()
+added parsing level to x509_create_from_chunk() and added is_ocsp_signer() method
+http post fetching using libcurl implemented
+added fetcher.h and fetcher.c
+added
+corrected @ingroup to utils
+corrected comment
+start ocsp checking only if there are any ocspuris present
+conntrack -F is used to flush the NAT states
+the hostaccess=yes parameters are not needed anymore
+use conntrack -F to flush NAT states
+replaced actual virtual IP addresses by symbolic ones
+removed unnecessary double quotes
+nonce in ocsp_t was not properly initialized
+ocsp request is now fully built but without requestor signature
+starting to build ocsp request
+prevent from initiating  multiple exchanges the same time
+updated apidoc documentation
+fixed notify handling in IKE_AUTH
+moved nonce payload before TS in CHILD_SA setup
+moved REKEY_SA notify to the beginning of the message
+fixed traffic selector redundancy removal code (not completely tested)
+add crl and ocsp uris to linked list after partial verification
+added print hook for certinfo_t printing
+fixed typo
+sending an SPI of 0 as responder when IKE_SA_INIT fails
+iterate certinfos linked list for matching serialNumber
+some cleanups
+not assigning %any virtual IPs to peer anymore
+fixed double free bug
+added
+fixed ID selection bug when peer doesn't include IDr payload
+allowing vendor ID in any messag
+moved listing of crls to local_credential_store and ca
+refactored ca_info_t
+refactored ca_info_t
+fixed netlink socket receiver code
+implemented interface enumeration code with netlink: no getifaddrs reqired anymore
+refactored kernel interface, works reliable again
+implemented get_iface() using RTM_GETADDR
+added support for multi-header netlink messages
+really ugly now, need a lot of refactoring
+added debuggin for interface lookup
+fixed address lookup when !using getifaddrs()
+added firewalling support when using virtual IPs
+added support for 0.0.0.0/0 traffic selectors
+fixed routing to make correct 0.0.0.0/0 routes
+config-payload scenario fixes
+preparations for PLUTO_MY_SOURCEIP
+corrected typo
+added cert with OCSP access info
+dpd now takes 180 s and 5 retransmits
+changed grep to creating aquire job for CHILD SA
+replaced actual virtual IPs by place holders
+virtual-ip scenario has been replaces by config-payload scenario
+added
+added
+added ocsp.h and ocsp.c
+added
+r2398 | tobias | 2007-02-28 16:20:10 +0100 (Wed, 28 Feb 2007) | 2 lines
+virtual ip uml test
+fixed reauthentication when connections other is %any
+merged tasking branch into trunk
+fixed big endian bug in md5 hasher
+cosmetics
+added once flag to certinfo_t
+cosmetics
+added certinfos linked list
+changed ca info to ca
+support of ca info sections
+added support of OCSP accessLocations
+correct interface definition
+added support of OCSP accessLocations
+full support of ca info records
+added the create_crluri_iterator method
+replace ca is realized as del_ca followed by add_ca
+last CA keyword is KW_OCSPURI2
+full support of ca info records
+full support of ca info records
+alphabetically sorting print commands
+listing ca_info items
+replace printf.h by stdio.h
+addin get_keyid() method
+support of ca info records
+support of ca info records
+version bump to 4.0.8
+support of ca info records
+support of ca info records
+typo
+SHA512-HMAC bug fix and hash function self-test support
+SHA512-HMAC bug fix and hash function self-test support
+handle strong SHA-2 signatures in X.509 certificates
+SHA-2 fixes and add-ons
+version bumps
+remove strong certs and keys after test
+added
+using "left" as my host per default, swapping to "right" when needed
+respecting source address when sending packets
+added PRINT_CAINFO hook
+stroke now recognizes the keywords listocspcerts|cainfos|ocsp, rereadocspcerts and purgeocsp
+enable IP forwarding
+prepared support of ca information records and ocsp functionality
+added support of ca information records and ocsp keywords
+enabled adding and deleting ca information records
+fixed starter crash due to freeing default IPSEC_EAPDIR string
+add --eapdir option only if defined in ipsec.conf
+removed eap aka module due nda
+merged EAP framework from branch into trunk
+includes a lot of other modifications
+%T requires time_t ptr
+removed my time_t printf handler patch, applied the one of andreas (64bit save)
+fixed printf() hooks for time
+added support for NULL encryption in ESP
+be more liberal in accepting notifies with a protocol id
+include NO_EXT_SEQUENCE_NUMBER in default proposal
+output peer id if RSA public key is not found
+fixed typo
+version bump to 4.0.8
+added address listing without getifaddrs for uclibc (only IPv4 yet)
+added threads to support multiple simultaneous stroke requests
+renamed all static clone() functions to avoid naming conflicts with uclibc
+sending proper signal to the bus when detecting a dead peer
+added configuration of XAUTH and ModeConfig push mode
+version bump
+version bump
+Cisco XAUTH interoperability
+XAUTH interoperability with Cisco
+removed IPSECPOLICY compile option
+unload xauth_module only if XAUTH_DEFAULT_LIB is defined
+loading the XAUTH module requires libdl
+added some more attributes, inst XAUTH_TYPE in reply
+Mode Config refactoring
+XAUTH fixes and Cisco Unity support
+log APPLICATION_VERSION and UNITY_DDNS_HOSTNAME strings
+added Cisco Unity ModeCfg attributes
+version bump to 4.0.7
+fixed 64 bit issue with print time
+fixed XAUTHResp bug
+included xauth.h
+use uml_mconsole to check end of booting process
+name the created CHILD_SA
+doubled PAYLIMIT to 40 payloads
+version bump
+show rekeying|reauthentication time
+show name of created CHILD_SA
+combined use_in and use_fwd
+corrected typo
+cosmetics
+cosmetics
+fixed an enumeration error, added CISCO_IOS VID
+fixed mismatch in interface definition of get_secret()
+forward declaration of struct state not needed
+cosmetics
+added firewall support to scenario
+updated changelog for 4.0.6
+fixed crash when CA for certrequest not found
+fixed build when !using smartcard
+removed unused debugging code
+updated NEWS for 4.0.6
+
+
  strongswan-4.0.6 / R:2131 
 ===========================
 
