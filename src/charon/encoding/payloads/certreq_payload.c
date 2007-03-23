@@ -116,7 +116,7 @@ encoding_rule_t certreq_payload_encodings[] = {
 static status_t verify(private_certreq_payload_t *this)
 {
 	if ((this->cert_encoding == 0) ||
-		((this->cert_encoding >= 14) && (this->cert_encoding <= 200)))
+		((this->cert_encoding >= CERT_ROOF) && (this->cert_encoding <= 200)))
 	{
 		/* reserved IDs */
 		return FAILED;
