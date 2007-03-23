@@ -26,7 +26,7 @@
 #include "cert_payload.h"
 
 
-ENUM(cert_encoding_names, CERT_NONE, CERT_X509_HASH_AND_URL_BUNDLE, 
+ENUM(cert_encoding_names, CERT_NONE, CERT_OCSP_CONTENT,
 	"CERT_NONE",
 	"CERT_PKCS7_WRAPPED_X509",
 	"CERT_PGP",
@@ -41,6 +41,7 @@ ENUM(cert_encoding_names, CERT_NONE, CERT_X509_HASH_AND_URL_BUNDLE,
 	"CERT_RAW_RSA_KEY",
 	"CERT_X509_HASH_AND_URL",
 	"CERT_X509_HASH_AND_URL_BUNDLE",
+	"CERT_OCSP_CONTENT",
 );
 
 typedef struct private_cert_payload_t private_cert_payload_t;
@@ -128,7 +129,7 @@ encoding_rule_t cert_payload_encodings[] = {
 static status_t verify(private_cert_payload_t *this)
 {
 	if ((this->cert_encoding == 0) ||
-		((this->cert_encoding >= 14) && (this->cert_encoding <= 200)))
+		((this->cert_encoding >= 15) && (this->cert_encoding <= 200)))
 	{
 		/* reserved IDs */
 		return FAILED;
