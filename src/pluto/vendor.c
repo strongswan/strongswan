@@ -195,10 +195,18 @@ static struct vid_struct _vid_tab[] = {
 	    "\xc6\xf5\x7a\xc3\x98\xf4\x93\x20\x81\x45\xb7\x58", 12},
 	{ VID_NCP_CLIENT, VID_KEEP | VID_SUBSTRING_MATCH, NULL, "NCP Client",
 	    "\xeb\x4c\x1b\x78\x8a\xfd\x4a\x9c\xb7\x73\x0a\x68", 12},
+
+	/*
+	 * Windows Vista (and Longhorn?)
+	 */
+	DEC_MD5_VID(VISTA_AUTHIP, "MS-Negotiation Discovery Capable")
+	DEC_MD5_VID(VISTA_AUTHIP2, "IKE CGA version 1")
+
 	/*
 	 * strongSwan
 	 */
-	DEC_MD5_VID(STRONGSWAN,       "strongSwan 4.1.0")
+	DEC_MD5_VID(STRONGSWAN,       "strongSwan 4.1.1")
+	DEC_MD5_VID(STRONGSWAN_4_1_0, "strongSwan 4.1.0")
 	DEC_MD5_VID(STRONGSWAN_4_0_7, "strongSwan 4.0.7")
 	DEC_MD5_VID(STRONGSWAN_4_0_6, "strongSwan 4.0.6")
 	DEC_MD5_VID(STRONGSWAN_4_0_5, "strongSwan 4.0.5")
