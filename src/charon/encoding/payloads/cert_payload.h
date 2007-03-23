@@ -57,7 +57,8 @@ enum cert_encoding_t {
 	CERT_RAW_RSA_KEY =				11,
 	CERT_X509_HASH_AND_URL =		12,
 	CERT_X509_HASH_AND_URL_BUNDLE =	13,
-	CERT_OCSP_CONTENT =				14  /* from RFC 4806 */
+	CERT_OCSP_CONTENT =				14,  /* from RFC 4806 */
+	CERT_ROOF =						15
 };
 
 /**
