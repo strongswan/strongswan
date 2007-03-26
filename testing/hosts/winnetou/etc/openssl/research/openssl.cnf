@@ -145,7 +145,7 @@ keyUsage 			= digitalSignature, keyEncipherment, keyAgreement
 subjectKeyIdentifier            = hash
 authorityKeyIdentifier          = keyid, issuer:always
 subjectAltName			= DNS:$ENV::COMMON_NAME
-#extendedKeyUsage		= OCSPSigner
+#extendedKeyUsage		= OCSPSigning
 crlDistributionPoints          	= URI:http://crl.strongswan.org/research.crl
 
 ####################################################################
