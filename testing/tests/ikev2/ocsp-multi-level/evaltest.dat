@@ -1,0 +1,10 @@
+moon::ipsec listocspcerts::altNames.*ocsp.*strongswan.org::YES
+carol::ipsec listocspcerts::altNames.*ocsp.strongswan.org::YES
+dave::ipsec listocspcerts::altNames.*ocsp.strongswan.org::YES
+moon::cat /var/log/daemon.log::certificate is good::YES
+carol::cat /var/log/daemon.log::certificate is good::YES
+dave::cat /var/log/daemon.log::certificate is good::YES
+moon::ipsec status::ESTABLISHED.*carol::YES
+moon::ipsec status::ESTABLISHED.*dave::YES
+carol::ipsec status::alice.*ESTABLISHED::YES
+dave::ipsec status::venus.*ESTABLISHED::YES
