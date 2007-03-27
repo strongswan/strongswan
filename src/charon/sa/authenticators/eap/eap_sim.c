@@ -27,6 +27,8 @@
 #include <daemon.h>
 #include <library.h>
 
+#define MAX_TRIES 3
+
 ENUM(sim_subtype_names, SIM_START, SIM_CLIENT_ERROR,
 	"SIM_START",
 	"SIM_CHALLENGE",
@@ -97,6 +99,11 @@ struct private_eap_sim_t {
 	 * handle of the loaded library
 	 */
 	void *handle;
+	
+	/**
+	 * how many times we try to authenticate
+	 */
+	int tries;
 	
 	/**
 	 * version this implementation uses
@@ -420,6 +427,13 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 	signer_t *signer;
 	hasher_t *hasher;
 	prf_t *prf;
+	
+	if (this->tries-- <= 0)
+	{
+		/* give up without notification. This hack is required as some buggy
+		 * server implementations won't respect our client-error. */
+		return FAILED;
+	}
 
 	identifier = in->get_identifier(in);
 	message = in->get_data(in);
@@ -676,6 +690,7 @@ eap_sim_t *eap_create(eap_role_t role,
 	
 	/* private data */
 	this->peer = peer;
+	this->tries = MAX_TRIES;
 	this->version.ptr = version;
 	this->version.len = sizeof(version);
 	this->version_list = chunk_empty;
