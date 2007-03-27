@@ -215,7 +215,7 @@ concatenate_paths(const char *a, const char *b)
 /*  compare two chunks, returns zero if a equals b
  *  negative/positive if a is earlier/later in the alphabet than b
  */
-bool
+int
 cmp_chunk(chunk_t a, chunk_t b)
 {
     int cmp_len, len, cmp_value;

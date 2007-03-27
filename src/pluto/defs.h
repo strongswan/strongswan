@@ -90,7 +90,7 @@ extern const char* concatenate_paths(const char *a, const char *b);
 extern const chunk_t empty_chunk;
 
 /* compare two chunks */
-extern bool cmp_chunk(chunk_t a, chunk_t b);
+extern int cmp_chunk(chunk_t a, chunk_t b);
 
 /* move a chunk to a memory position and free it after insertion */
 extern void mv_chunk(u_char **pos, chunk_t content);
