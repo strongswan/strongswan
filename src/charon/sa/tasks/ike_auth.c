@@ -310,11 +310,17 @@ static status_t build_auth_eap(private_ike_auth_t *this, message_t *message)
 		return FAILED;
 	}
 	message->add_payload(message, (payload_t*)auth_payload);
-	if (this->initiator)
+	if (!this->initiator)
 	{
-		return NEED_MORE;
+		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+		SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
+			this->ike_sa->get_my_id(this->ike_sa), 
+			this->ike_sa->get_my_host(this->ike_sa),
+			this->ike_sa->get_other_host(this->ike_sa),
+			this->ike_sa->get_other_id(this->ike_sa));
+		return SUCCESS;
 	}
-	return SUCCESS;
+	return NEED_MORE;
 }
 
 /**
@@ -351,6 +357,12 @@ static status_t process_auth_eap(private_ike_auth_t *this, message_t *message)
 	}
 	if (this->initiator)
 	{
+		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+		SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
+			this->ike_sa->get_my_id(this->ike_sa), 
+			this->ike_sa->get_my_host(this->ike_sa),
+			this->ike_sa->get_other_host(this->ike_sa),
+			this->ike_sa->get_other_id(this->ike_sa));
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -523,7 +535,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	policy = this->ike_sa->get_policy(this->ike_sa);
 	if (policy == NULL)
 	{
-		SIG(IKE_UP_SUCCESS, "no acceptable policy found");
+		SIG(IKE_UP_FAILED, "no acceptable policy found");
 		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
 		return FAILED;
 	}
@@ -538,7 +550,6 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	/* use "traditional" authentication if we could authenticate peer */
 	if (this->peer_authenticated)
 	{
-
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 		SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
 			this->ike_sa->get_my_id(this->ike_sa), 
