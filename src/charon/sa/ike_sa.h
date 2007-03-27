@@ -613,10 +613,13 @@ struct ike_sa_t {
 	 *
 	 * When rekeying is completed, all CHILD_SAs, the virtual IP and all
 	 * outstanding tasks are moved from other to this.
+	 * As this call may initiate inherited tasks, a status is returned.
 	 *
 	 * @param this 			calling object
+	 * @param other			other task to inherit from
+	 * @return				DESTROY_ME if initiation of inherited task failed
 	 */
-	void (*inherit) (ike_sa_t *this, ike_sa_t *other);
+	status_t (*inherit) (ike_sa_t *this, ike_sa_t *other);
 		
 	/**
 	 * @brief Reset the IKE_SA, useable when initiating fails

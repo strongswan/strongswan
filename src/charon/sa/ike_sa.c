@@ -1609,7 +1609,7 @@ static void reestablish(private_ike_sa_t *this)
 /**
  * Implementation of ike_sa_t.inherit.
  */
-static void inherit(private_ike_sa_t *this, private_ike_sa_t *other)
+static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 {
 	child_sa_t *child_sa;
 	host_t *ip;
@@ -1649,6 +1649,12 @@ static void inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	{
 		this->child_sas->insert_first(this->child_sas, (void*)child_sa);
 	}
+	
+	/* move pending tasks to the new IKE_SA */
+	this->task_manager->adopt_tasks(this->task_manager, other->task_manager);
+	
+	/* we have to initate here, there may be new tasks to handle */
+	return this->task_manager->initiate(this->task_manager);
 }
 
 /**
@@ -1989,7 +1995,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.is_natt_enabled = (bool(*)(ike_sa_t*)) is_natt_enabled;
 	this->public.rekey = (status_t(*)(ike_sa_t*))rekey;
 	this->public.reestablish = (void(*)(ike_sa_t*))reestablish;
-	this->public.inherit = (void(*)(ike_sa_t*,ike_sa_t*))inherit;
+	this->public.inherit = (status_t(*)(ike_sa_t*,ike_sa_t*))inherit;
 	this->public.generate_message = (status_t(*)(ike_sa_t*,message_t*,packet_t**))generate_message;
 	this->public.reset = (void(*)(ike_sa_t*))reset;
 	this->public.get_unique_id = (u_int32_t(*)(ike_sa_t*))get_unique_id;

@@ -761,6 +761,7 @@ static void adopt_tasks(private_task_manager_t *this, private_task_manager_t *ot
 	while (other->queued_tasks->remove_last(other->queued_tasks,
 												(void**)&task) == SUCCESS)
 	{
+		DBG2(DBG_IKE, "migrating %N task", task_type_names, task->get_type(task));
 		task->migrate(task, this->ike_sa);
 		this->queued_tasks->insert_first(this->queued_tasks, task);
 	}
@@ -769,6 +770,7 @@ static void adopt_tasks(private_task_manager_t *this, private_task_manager_t *ot
 	while (other->active_tasks->remove_last(other->active_tasks,
 												(void**)&task) == SUCCESS)
 	{
+		DBG2(DBG_IKE, "migrating %N task", task_type_names, task->get_type(task));
 		task->migrate(task, this->ike_sa);
 		this->queued_tasks->insert_first(this->queued_tasks, task);
 	}
