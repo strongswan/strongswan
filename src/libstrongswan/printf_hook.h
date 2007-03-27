@@ -61,7 +61,7 @@
 /** 1 argument: ca_info_t *ca_info; with #-modifier 2 arguments: ca_info_t *ca_info, bool utc */
 #define PRINTF_CAINFO			'W'
 /** 1 argument: certinfo_t *certinfo; with #-modifier 2 arguments: certinfo_t *certinfo, bool utc */
-#define PRINTF_CERTINFO			'X'
+#define PRINTF_CERTINFO			'Y'
 
 /**
  * Generic arginfo handlers for printf() hooks
