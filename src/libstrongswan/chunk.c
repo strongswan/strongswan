@@ -233,6 +233,21 @@ chunk_t chunk_skip(chunk_t chunk, size_t bytes)
 /**
  * Described in header.
  */
+int chunk_compare(chunk_t a, chunk_t b)
+{
+	int compare_len = a.len - b.len;
+	int len = (compare_len < 0)? a.len : b.len;
+
+	if (compare_len != 0 || len == 0)
+	{
+		return compare_len;
+	}
+	return memcmp(a.ptr, b.ptr, len);
+};
+
+/**
+ * Described in header.
+ */
 bool chunk_equals(chunk_t a, chunk_t b)
 {
 	return a.ptr != NULL  && b.ptr != NULL &&

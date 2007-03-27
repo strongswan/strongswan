@@ -124,6 +124,12 @@ void chunk_free(chunk_t *chunk);
 chunk_t chunk_skip(chunk_t chunk, size_t bytes);
 
 /**
+ *  Compare two chunks, returns zero if a equals b
+ *  or negative/positive if a is small/greater than b
+ */
+int chunk_compare(chunk_t a, chunk_t b);
+
+/**
  * Compare two chunks for equality,
  * NULL chunks are never equal.
  */
