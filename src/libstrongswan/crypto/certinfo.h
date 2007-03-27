@@ -74,6 +74,16 @@ struct certinfo_t {
 	 */
 	bool (*equals_serialNumber) (const certinfo_t *this, const certinfo_t *that);
 
+	/**
+	 * @brief Compares two serial numbers.
+	 * 
+	 * @param this				calling object
+	 * @param that				second certinfo_t object
+	 * @return					negative if this is smaller than that
+	 *							zero if this equals that
+	 *							positive if this is greater than that
+	 */
+	int (*compare_serialNumber) (const certinfo_t *this, const certinfo_t *that);
 
 	/**
 	 * @brief Get serial number.
@@ -162,6 +172,14 @@ struct certinfo_t {
 	 * @return					revocationReason
 	 */
 	crl_reason_t (*get_revocationReason) (const certinfo_t *this);
+
+	/**
+	 * @brief Set revocationReason.
+	 *
+	 * @param this				calling object to be updated
+	 * @param that				object containing updated information
+	 */
+	void (*update) (certinfo_t *this, const certinfo_t *that);
 
 	/**
 	 * @brief Destroys the certinfo_t object.

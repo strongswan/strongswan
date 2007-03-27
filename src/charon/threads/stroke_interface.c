@@ -1138,6 +1138,10 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
 	{
 		list_auth_certificates(AUTH_OCSP, "OCSP", msg->list.utc, out);
 	}
+	if (msg->list.flags & LIST_OCSP)
+	{
+		charon->credentials->list_ocsp(charon->credentials, out, msg->list.utc);
+	}
 }
 
 /**

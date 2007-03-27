@@ -158,6 +158,20 @@ static bool has_crl(private_ca_info_t *this)
 }
 
 /**
+ * Implements ca_info_t.has_certinfos
+ */
+static bool has_certinfos(private_ca_info_t *this)
+{
+	bool found;
+
+	pthread_mutex_lock(&(this->mutex));
+	found = this->certinfos->get_count(this->certinfos) > 0;
+	pthread_mutex_unlock(&(this->mutex));
+
+	return found;
+}
+
+/**
  * Implements ca_info_t.add_crl
  */
 static void add_crl(private_ca_info_t *this, crl_t *crl)
@@ -206,7 +220,22 @@ static void list_certinfos(private_ca_info_t *this, FILE *out, bool utc)
 {
 	pthread_mutex_lock(&(this->mutex));
 
-	/* fprintf(out, "%#X\n", this->certifnos, utc); */
+	fprintf(out,"    authname:  '%D'\n", this->cacert->get_subject(this->cacert));
+	{
+		chunk_t authkey = this->cacert->get_subjectKeyID(this->cacert);
+
+		fprintf(out,"    authkey:    %#B\n", &authkey);
+	}
+	{
+		iterator_t *iterator = this->certinfos->create_iterator(this->certinfos, TRUE);
+		certinfo_t *certinfo;
+
+		while (iterator->iterate(iterator, (void**)&certinfo))
+		{
+			fprintf(out, "%#Y\n", certinfo, utc);
+		}
+		iterator->destroy(iterator);
+	}
 
 	pthread_mutex_unlock(&(this->mutex));
 }
@@ -387,7 +416,10 @@ static cert_status_t verify_by_ocsp(private_ca_info_t* this,
 									certinfo_t *certinfo,
 									credential_store_t *credentials)
 {
-	bool found = FALSE;
+	bool stale;
+	iterator_t *iterator;
+	certinfo_t *cached_certinfo = NULL;
+	int comparison = 1;
 
 	pthread_mutex_lock(&(this->mutex));
 
@@ -397,33 +429,62 @@ static cert_status_t verify_by_ocsp(private_ca_info_t* this,
 		goto ret;
 	}
 
-	/* do we have a valid certinfo record for this serial number in our cache? */
-	{
-		iterator_t *iterator = this->certinfos->create_iterator(this->certinfos, TRUE);
-		certinfo_t *current_certinfo;
+	iterator = this->certinfos->create_iterator(this->certinfos, TRUE);
 
-		while(iterator->iterate(iterator, (void**)&current_certinfo))
+	/* find the list insertion point in alphabetical order */
+	while(iterator->iterate(iterator, (void**)&cached_certinfo))
+	{
+		comparison = certinfo->compare_serialNumber(certinfo, cached_certinfo);
+
+		if (comparison <= 0)
 		{
-			if (certinfo->equals_serialNumber(certinfo, current_certinfo))
-			{
-				found = TRUE;
-				DBG2("ocsp status found");
-				break;
-			}
+			break;
 		}
-		iterator->destroy(iterator);
 	}
-	
-	if (!found)
+
+	/* do we have a valid certinfo_t for this serial number in our cache? */
+	if (comparison == 0)
+	{	
+		stale = cached_certinfo->get_nextUpdate(cached_certinfo) < time(NULL);
+		DBG1("ocsp status in cache is %s", stale ? "stale":"fresh");
+	}
+	else
+	{
+		stale = TRUE;
+		DBG1("ocsp status is not in cache");
+	}
+
+	if (stale)
 	{
 		ocsp_t *ocsp;
 
-		DBG2("ocsp status is not in cache");
-
 		ocsp = ocsp_create(this->cacert, this->ocspuris);
 		ocsp->fetch(ocsp, certinfo, credentials);
+		if (certinfo->get_status(certinfo) != CERT_UNDEFINED)
+		{
+			if (comparison != 0)
+			{
+				cached_certinfo = certinfo_create(certinfo->get_serialNumber(certinfo));
+
+				if (comparison > 0)
+				{
+					iterator->insert_after(iterator, (void *)cached_certinfo);
+				}
+				else
+				{
+					iterator->insert_before(iterator, (void *)cached_certinfo);
+				}
+			}
+			cached_certinfo->update(cached_certinfo, certinfo);
+		}
 		ocsp->destroy(ocsp);
 	}
+	else
+	{
+		certinfo->update(certinfo, cached_certinfo);
+	}
+
+	iterator->destroy(iterator);
 
 ret:
 	pthread_mutex_unlock(&(this->mutex));
@@ -480,7 +541,11 @@ static int print(FILE *stream, const struct printf_info *info,
 
 	cacert = this->cacert;
 	written += fprintf(stream, "    authname:  '%D'\n", cacert->get_subject(cacert));
+	{
+		chunk_t authkey = cacert->get_subjectKeyID(cacert);
 
+		written += fprintf(stream, "    authkey:    %#B\n", &authkey);
+	}
 	{
 		chunk_t keyid = cacert->get_keyid(cacert);
 
@@ -551,7 +616,9 @@ ca_info_t *ca_info_create(const char *name, x509_t *cacert)
 	this->public.add_info = (void (*) (ca_info_t*,const ca_info_t*))add_info;
 	this->public.add_crl = (void (*) (ca_info_t*,crl_t*))add_crl;
 	this->public.has_crl = (bool (*) (ca_info_t*))has_crl;
+	this->public.has_certinfos = (bool (*) (ca_info_t*))has_certinfos;
 	this->public.list_crl = (void (*) (ca_info_t*,FILE*,bool))list_crl;
+	this->public.list_certinfos = (void (*) (ca_info_t*,FILE*,bool))list_certinfos;
 	this->public.add_crluri = (void (*) (ca_info_t*,chunk_t))add_crluri;
 	this->public.add_ocspuri = (void (*) (ca_info_t*,chunk_t))add_ocspuri;
 	this->public.get_certificate = (x509_t* (*) (ca_info_t*))get_certificate;

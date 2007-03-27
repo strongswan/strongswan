@@ -105,13 +105,32 @@ struct ca_info_t {
 	bool (*has_crl) (ca_info_t *this);
 
 	/**
+	 * @brief Does the CA have OCSP certinfos?
+	 * 
+	 * @param this			ca info object
+	 * @return				TRUE if there are any certinfos
+	 */
+	bool (*has_certinfos) (ca_info_t *this);
+
+	/**
 	 * @brief List the CRL onto the console
 	 * 
 	 * @param this			ca info object
+	 * @param out			output stream
 	 * @param utc			TRUE -  utc
 							FALSE - local time
 	 */
 	void (*list_crl) (ca_info_t *this, FILE *out, bool utc);
+
+	/**
+	 * @brief List the OCSP certinfos onto the console
+	 * 
+	 * @param this			ca info object
+	 * @param out			output stream
+	 * @param utc			TRUE -  utc
+							FALSE - local time
+	 */
+	void (*list_certinfos) (ca_info_t *this, FILE *out, bool utc);
 
 	/**
 	 * @brief Adds a CRL URI to a list

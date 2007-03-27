@@ -562,8 +562,8 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 		rsa_public_key_t *issuer_public_key;
 		bool valid_signature;
 
-		DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
-		DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
+		DBG1(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
+		DBG1(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
 
 		ugh = cert->is_valid(cert, &until);
 		if (ugh != NULL)
@@ -576,10 +576,10 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 		issuer = get_issuer(this, cert);
 		if (issuer == NULL)
 		{
-			DBG1(DBG_CFG, "issuer info not found");
+			DBG1(DBG_CFG, "issuer not found");
 			return FALSE;
 		}
-		DBG2(DBG_CFG, "issuer info found");
+		DBG2(DBG_CFG, "issuer found");
 
 		issuer_cert = issuer->get_certificate(issuer);
 		issuer_public_key = issuer_cert->get_public_key(issuer_cert);
@@ -595,7 +595,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 		/* check if cert is a self-signed root ca */
 		if (pathlen > 0 && cert->is_self_signed(cert))
 		{
-			DBG2(DBG_CFG, "reached self-signed root ca");
+			DBG1(DBG_CFG, "reached self-signed root ca");
 
 			/* set the definite status and trust interval of the end entity certificate */
 			end_cert->set_until(end_cert, until);
@@ -857,6 +857,32 @@ static void list_crls(private_local_credential_store_t *this, FILE *out, bool ut
 			}
 			ca_info->list_crl(ca_info, out, utc);
 			break;
+		}
+	}
+	iterator->destroy(iterator);
+}
+
+/**
+ * Implements local_credential_store_t.list_ocsp
+ */
+static void list_ocsp(private_local_credential_store_t *this, FILE *out, bool utc)
+{
+	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
+	ca_info_t *ca_info;
+	bool first = TRUE;
+
+	while (iterator->iterate(iterator, (void **)&ca_info))
+	{
+		if (ca_info->has_certinfos(ca_info))
+		{
+			if (first)
+			{
+				fprintf(out, "\n");
+				fprintf(out, "List of OCSP responses:\n");
+				first = FALSE;
+			}
+			fprintf(out, "\n");
+			ca_info->list_certinfos(ca_info, out, utc);
 		}
 	}
 	iterator->destroy(iterator);
@@ -1303,6 +1329,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.create_auth_cert_iterator = (iterator_t* (*) (credential_store_t*))create_auth_cert_iterator;
 	this->public.credential_store.create_cainfo_iterator = (iterator_t* (*) (credential_store_t*))create_cainfo_iterator;
 	this->public.credential_store.list_crls = (void (*) (credential_store_t*,FILE*,bool))list_crls;
+	this->public.credential_store.list_ocsp = (void (*) (credential_store_t*,FILE*,bool))list_ocsp;
 	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
 	this->public.credential_store.load_ocsp_certificates = (void (*) (credential_store_t*))load_ocsp_certificates;
 	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;

@@ -21,6 +21,7 @@
  */
 
 #include <time.h>
+#include <stdio.h>
 
 #include <library.h>
 
@@ -92,6 +93,14 @@ ENUM(crl_reason_names, REASON_UNSPECIFIED, REASON_REMOVE_FROM_CRL,
 	"reason #7",
 	"remove from crl",
 );
+
+/**
+ * Implements certinfo_t.compare_serialNumber
+ */
+static int compare_serialNumber(const private_certinfo_t *this, const private_certinfo_t *that)
+{
+	return chunk_compare(this->serialNumber, that->serialNumber);
+}
 
 /**
  * Implements certinfo_t.equals_serialNumber
@@ -190,12 +199,74 @@ static crl_reason_t get_revocationReason(const private_certinfo_t *this)
 }
 
 /**
+ * Implements certinfo_t.update
+ */
+static void update(private_certinfo_t *this, const private_certinfo_t *that)
+{
+	if (equals_serialNumber(this, that))
+	{
+		chunk_t this_serialNumber = this->serialNumber;
+
+		*this = *that;
+		this->serialNumber = this_serialNumber;
+	}
+}
+
+/**
  * Implements certinfo_t.destroy
  */
 static void destroy(private_certinfo_t *this)
 {
 	free(this->serialNumber.ptr);
 	free(this);
+}
+
+/**
+ * output handler in printf()
+ */
+static int print(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
+{
+	private_certinfo_t *this = *((private_certinfo_t**)(args[0]));
+	bool utc = TRUE;
+	int written = 0;
+	time_t now;
+	
+	if (info->alt)
+	{
+		utc = *((bool*)args[1]);
+	}
+	
+	if (this == NULL)
+	{
+		return fprintf(stream, "(null)");
+	}
+	
+	now = time(NULL);
+	
+	written += fprintf(stream, "%#T, until %#T, ",
+					   &this->thisUpdate, utc,
+					   &this->nextUpdate, utc);
+	if (now > this->nextUpdate)
+	{
+		written += fprintf(stream, "expired (since %V)\n", &now, &this->nextUpdate);
+	}
+	else
+	{
+		written += fprintf(stream, "ok (expires in %V)\n", &now, &this->nextUpdate);
+	}
+	written += fprintf(stream, "    serial:     %#B, %N",
+					   &this->serialNumber,
+					   cert_status_names, this->status);
+	return written;
+}
+
+/**
+ * register printf() handlers
+ */
+static void __attribute__ ((constructor))print_register()
+{
+	register_printf_function(PRINTF_CERTINFO, print, arginfo_ptr_alt_ptr_int);
 }
 
 /*
@@ -214,6 +285,7 @@ certinfo_t *certinfo_create(chunk_t serial)
 	this->revocationReason = REASON_UNSPECIFIED;
 
 	/* public functions */
+	this->public.compare_serialNumber = (int (*) (const certinfo_t*,const certinfo_t*))compare_serialNumber;
 	this->public.equals_serialNumber = (bool (*) (const certinfo_t*,const certinfo_t*))equals_serialNumber;
 	this->public.get_serialNumber = (chunk_t (*) (const certinfo_t*))get_serialNumber;
 	this->public.set_status = (void (*) (certinfo_t*,cert_status_t))set_status;
@@ -226,6 +298,7 @@ certinfo_t *certinfo_create(chunk_t serial)
 	this->public.get_revocationTime = (time_t (*) (const certinfo_t*))get_revocationTime;
 	this->public.set_revocationReason = (void (*) (certinfo_t*, crl_reason_t))set_revocationReason;
 	this->public.get_revocationReason = (crl_reason_t(*) (const certinfo_t*))get_revocationReason;
+	this->public.update = (void (*) (certinfo_t*, const certinfo_t*))update;
 	this->public.destroy = (void (*) (certinfo_t*))destroy;
 
 	return &this->public;
