@@ -486,11 +486,14 @@ static void add_uris(ca_info_t *issuer, x509_t *cert)
 static bool is_trusted(private_local_credential_store_t *this, x509_t *cert)
 {
 	int pathlen;
+	time_t until = UNDEFINED_TIME;
+	x509_t *cert_to_be_trusted = cert;
 
 	DBG2(DBG_CFG, "establishing trust in certificate:");
 
 	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
 	{
+		err_t ugh = NULL;
 		ca_info_t *issuer;
 		x509_t *issuer_cert;
 		rsa_public_key_t *issuer_public_key;
@@ -498,14 +501,22 @@ static bool is_trusted(private_local_credential_store_t *this, x509_t *cert)
 
 		DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
 		DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
+
+		ugh = cert->is_valid(cert, &until);
+		if (ugh != NULL)
+		{
+			DBG1(DBG_CFG, "certificate %s", ugh);
+			return FALSE;
+		}
+		DBG2(DBG_CFG, "certificate is valid");
 	
 		issuer = get_issuer(this, cert);
 		if (issuer == NULL)
 		{
-			DBG1(DBG_CFG, "issuer info not found");
+			DBG1(DBG_CFG, "issuer not found");
 			return FALSE;
 		}
-		DBG2(DBG_CFG, "issuer info found");
+		DBG2(DBG_CFG, "issuer found");
 
 		issuer_cert = issuer->get_certificate(issuer);
 		issuer_public_key = issuer_cert->get_public_key(issuer_cert);
@@ -522,6 +533,8 @@ static bool is_trusted(private_local_credential_store_t *this, x509_t *cert)
 		if (pathlen > 0 && cert->is_self_signed(cert))
 		{
 			DBG2(DBG_CFG, "reached self-signed root ca");
+			cert_to_be_trusted->set_until(cert_to_be_trusted, until);
+			cert_to_be_trusted->set_status(cert_to_be_trusted, CERT_GOOD);
 			return TRUE;
 		}
 		else
@@ -965,10 +978,31 @@ static void load_auth_certificates(private_local_credential_store_t *this,
 static void load_ca_certificates(private_local_credential_store_t *this)
 {
 	load_auth_certificates(this, AUTH_CA, "ca", CA_CERTIFICATE_DIR);
+
+	/* add any crl and ocsp uris found in the ca certificates to the
+     * corresponding issuer info record. We can do this only after all
+     * ca certificates have been loaded and the ca hierarchy is known.
+     */
+	{
+		iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
+		ca_info_t *ca_info;
+
+		while (iterator->iterate(iterator, (void **)&ca_info))
+		{
+			x509_t *cacert = ca_info->get_certificate(ca_info);
+			ca_info_t *issuer = get_issuer(this, cacert);
+
+			if (issuer)
+			{
+				add_uris(issuer, cacert);
+			}
+		}
+		iterator->destroy(iterator);
+	}
 }
 
 /**
- * Implements local_credential_store_t.load_ca_certificates
+ * Implements local_credential_store_t.load_ocsp_certificates
  */
 static void load_ocsp_certificates(private_local_credential_store_t *this)
 {
