@@ -178,6 +178,13 @@ struct ca_info_t {
 	cert_status_t (*verify_by_ocsp) (ca_info_t* this, const x509_t* cert, certinfo_t* certinfo, credential_store_t* credentials);
 
 	/**
+	 * @brief Purge the OCSP certinfos of a ca info record
+	 * 
+	 * @param this			ca info object
+	 */
+	void (*purge_ocsp) (ca_info_t *this);
+
+	/**
 	 * @brief Destroys a ca info record
 	 * 
 	 * @param this			ca info to destroy

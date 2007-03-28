@@ -492,6 +492,20 @@ ret:
 }
 
 /**
+ * Implements ca_info_t.purge_ocsp
+ */
+static void purge_ocsp(private_ca_info_t *this)
+{
+	pthread_mutex_lock(&(this->mutex));
+
+	this->certinfos->destroy_offset(this->certinfos,
+									offsetof(certinfo_t, destroy));
+	this->certinfos = linked_list_create();
+
+	pthread_mutex_unlock(&(this->mutex));
+}
+
+/**
  * Implements ca_info_t.destroy
  */
 static void destroy(private_ca_info_t *this)
@@ -624,6 +638,7 @@ ca_info_t *ca_info_create(const char *name, x509_t *cacert)
 	this->public.get_certificate = (x509_t* (*) (ca_info_t*))get_certificate;
 	this->public.verify_by_crl = (cert_status_t (*) (ca_info_t*,const x509_t*,certinfo_t*))verify_by_crl;
 	this->public.verify_by_ocsp = (cert_status_t (*) (ca_info_t*,const x509_t*,certinfo_t*,credential_store_t*))verify_by_ocsp;
+	this->public.purge_ocsp = (void (*) (ca_info_t*))purge_ocsp;
 	this->public.destroy = (void (*) (ca_info_t*))destroy;
 
 	return &this->public;
