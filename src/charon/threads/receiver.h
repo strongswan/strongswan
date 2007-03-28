@@ -27,12 +27,13 @@
 typedef struct receiver_t receiver_t;
 
 #include <library.h>
+#include <utils/host.h>
 
 /**
  * @brief Receives packets from the socket and adds them to the job queue.
  * 
  * The receiver starts a thread, wich reads on the blocking socket. If 
- * data is available, a packet_t object is created , wrapped
+ * data is available, a packet_t object is created, wrapped
  * in an incoming_packet_job_t and added to the job queue.
  * 
  * @b Constructors:
@@ -42,6 +43,15 @@ typedef struct receiver_t receiver_t;
  */
 struct receiver_t {
 
+	/**
+	 * @brief Block packets coming from a specific address.
+	 *
+	 * @param receiver 	receiver object
+	 * @param ip		IP address to block
+	 * @param seconds	for how long to block ip
+	 */
+	void (*block) (receiver_t *receiver, host_t *ip, u_int32_t seconds);
+	
 	/**
 	 * @brief Destroys a receiver_t object.
 	 *
