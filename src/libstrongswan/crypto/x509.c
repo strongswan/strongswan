@@ -1186,7 +1186,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	written += fprintf(stream, "                not after  %#T, ", &this->notAfter, utc);
 	if (now > this->notAfter)
 	{
-		written += fprintf(stream, "expired (since %V)\n", &now, &this->notAfter);
+		written += fprintf(stream, "expired (%V ago)\n", &now, &this->notAfter);
 	}
 	else
 	{

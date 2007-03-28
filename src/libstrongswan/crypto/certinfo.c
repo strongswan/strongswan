@@ -249,7 +249,7 @@ static int print(FILE *stream, const struct printf_info *info,
 					   &this->nextUpdate, utc);
 	if (now > this->nextUpdate)
 	{
-		written += fprintf(stream, "expired (since %V)\n", &now, &this->nextUpdate);
+		written += fprintf(stream, "expired (%V ago)\n", &now, &this->nextUpdate);
 	}
 	else
 	{

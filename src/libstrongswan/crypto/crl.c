@@ -451,7 +451,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	}
 	else if (now > this->nextUpdate)
 	{
-		written += fprintf(stream, "expired (since %V)", &now, &this->nextUpdate);
+		written += fprintf(stream, "expired (%V ago)", &now, &this->nextUpdate);
 	}
 	else if (now > this->nextUpdate - CRL_WARNING_INTERVAL * 60 * 60 * 24)
 	{
