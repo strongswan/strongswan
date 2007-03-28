@@ -286,14 +286,14 @@ struct credential_store_t {
 	 * Currently, all RSA private key files must be in unencrypted form
      * either in DER or PEM format.
 	 * 
-	 * @param this			calling object
+	 * @param this		calling object
 	 */
 	void (*load_secrets) (credential_store_t *this);
 
 	/**
 	 * @brief Destroys a credential_store_t object.
 	 * 
-	 * @param this 					calling object
+	 * @param this 		calling object
 	 */
 	void (*destroy) (credential_store_t *this);
 };
