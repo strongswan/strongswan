@@ -159,19 +159,19 @@ static int print_time_delta(FILE *stream, const struct printf_info *info,
 	if (delta > 2 * 60 * 60 * 24)
 	{
 		delta /= 60 * 60 * 24;
-		unit = "days";
+		unit = "day";
 	}
 	else if (delta > 2 * 60 * 60)
 	{
 		delta /= 60 * 60;
-		unit = "hours";
+		unit = "hour";
 	}
 	else if (delta > 2 * 60)
 	{
 		delta /= 60;
-		unit = "minutes";
+		unit = "minute";
 	}
-	return fprintf(stream, "%d %s", delta, unit);
+	return fprintf(stream, "%d %s%s", delta, unit, (delta == 1)? "":"s");
 }
 
 /**
