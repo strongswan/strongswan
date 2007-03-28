@@ -1170,7 +1170,14 @@ static void stroke_purge(stroke_msg_t *msg, FILE *out)
 {
 	if (msg->purge.flags & PURGE_OCSP)
 	{
-		/* TODO charon->credentials->purge_ocsp(charon->credentials); */
+		iterator_t *iterator = charon->credentials->create_cainfo_iterator(charon->credentials);
+		ca_info_t *ca_info;
+
+		while (iterator->iterate(iterator, (void**)&ca_info))
+		{
+			ca_info->purge_ocsp(ca_info);
+		}
+		iterator->destroy(iterator);
 	}
 }
 
