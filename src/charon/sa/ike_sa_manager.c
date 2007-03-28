@@ -730,6 +730,44 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 }
 
 /**
+ * Implementation of ike_sa_manager_t.get_half_open_count.
+ */
+static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
+{
+	iterator_t *iterator;
+	entry_t *entry;
+	int count = 0;
+
+	pthread_mutex_lock(&(this->mutex));
+	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
+	while (iterator->iterate(iterator, (void**)&entry))
+	{
+		/* we check if we have a responder CONNECTING IKE_SA without checkout */
+		if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
+			entry->ike_sa->get_state(entry->ike_sa) == IKE_CONNECTING)
+		{
+			/* if we have a host, we have wait until no other uses the IKE_SA */
+			if (ip)
+			{
+				if (wait_for_entry(this, entry) && ip->ip_equals(ip, 
+								entry->ike_sa->get_other_host(entry->ike_sa)))
+				{
+					count++;
+				}
+			}
+			else
+			{
+				count++;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	
+	pthread_mutex_unlock(&(this->mutex));
+	return count;
+}
+
+/**
  * Implementation of ike_sa_manager_t.destroy.
  */
 static void destroy(private_ike_sa_manager_t *this)
@@ -798,6 +836,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.create_iterator = (iterator_t*(*)(ike_sa_manager_t*))create_iterator;
 	this->public.checkin = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
 	this->public.checkin_and_destroy = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;
+	this->public.get_half_open_count = (int(*)(ike_sa_manager_t*,host_t*))get_half_open_count;
 	
 	/* initialize private variables */
 	this->ike_sa_list = linked_list_create();

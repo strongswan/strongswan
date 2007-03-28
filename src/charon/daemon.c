@@ -184,7 +184,6 @@ static void destroy(private_daemon_t *this)
 	/* we hope the sender could send the outstanding deletes, but 
 	 * we shut down here at any cost */
 	DESTROY_IF(this->public.sender);
-	DESTROY_IF(this->public.send_queue);
 	DESTROY_IF(this->public.socket);
 	/* before destroying bus with its listeners, rehook library logs */
 	dbg = dbg_stderr;
@@ -264,7 +263,6 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
-	this->public.send_queue = send_queue_create();
 	this->public.connections = (connection_store_t*)local_connection_store_create();
 	this->public.policies = (policy_store_t*)local_policy_store_create();
 	this->public.credentials = (credential_store_t*)local_credential_store_create(strict);
@@ -334,7 +332,6 @@ private_daemon_t *daemon_create(void)
 	this->public.ike_sa_manager = NULL;
 	this->public.job_queue = NULL;
 	this->public.event_queue = NULL;
-	this->public.send_queue = NULL;
 	this->public.configuration = NULL;
 	this->public.credentials = NULL;
 	this->public.connections = NULL;

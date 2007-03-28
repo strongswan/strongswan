@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -27,6 +27,7 @@
 typedef struct sender_t sender_t;
 
 #include <library.h>
+#include <network/packet.h>
 
 /**
  * @brief Thread responsible for sending packets over the socket.
@@ -37,25 +38,34 @@ typedef struct sender_t sender_t;
  * @ingroup threads
  */
 struct sender_t {
-
+	
+	/**
+	 * @brief Send a packet over the network.
+	 *
+	 * This function is non blocking and adds the packet to a queue.
+	 * Whenever the sender thread things it's good to send the packet,
+	 * it'll do so.
+	 *
+	 * @param this		calling object
+ 	 * @param packet	packet to send
+	 */
+	void (*send) (sender_t *this, packet_t *packet);
+	
 	/**
 	 * @brief Destroys a sender object.
 	 *
-	 * @param sender 	calling object
+	 * @param this	 	calling object
 	 */
-	void (*destroy) (sender_t *sender);
+	void (*destroy) (sender_t *this);
 };
-
 
 /**
  * @brief Create the sender thread.
  * 
  * The thread will start to work, getting packets
- * from the send queue and sends them out.
+ * from its queue and sends them out.
  * 
- * @return
- * 					- sender_t object
- * 					- NULL of thread could not be started
+ * @return		created sender object
  * 
  * @ingroup threads
  */

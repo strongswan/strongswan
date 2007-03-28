@@ -167,6 +167,22 @@ struct ike_sa_manager_t {
 	status_t (*checkin_and_destroy) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 	
 	/**
+	 * @brief Get the number of IKE_SAs which are in the connecting state.
+	 *
+	 * To prevent the server from resource exhaustion, cookies and other
+	 * mechanisms are used. The number of half open IKE_SAs is a good
+	 * indicator to see if a peer is flooding the server.
+	 * If a host is supplied, only the number of half open IKE_SAs initiated
+	 * from this IP are counted.
+	 * Only SAs for which we are the responder are counted.
+	 * 
+	 * @param this				the manager object
+	 * @param ip				NULL for all, IP for half open IKE_SAs with IP
+	 * @return					number of half open IKE_SAs
+	 */
+	int (*get_half_open_count) (ike_sa_manager_t *this, host_t *ip);
+	
+	/**
 	 * @brief Destroys the manager with all associated SAs.
 	 * 
 	 * Threads will be driven out, so all SAs can be deleted cleanly.

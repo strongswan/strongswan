@@ -40,7 +40,6 @@ typedef struct daemon_t daemon_t;
 #include <bus/listeners/file_logger.h>
 #include <bus/listeners/sys_logger.h>
 #include <sa/ike_sa_manager.h>
-#include <queues/send_queue.h>
 #include <queues/job_queue.h>
 #include <queues/event_queue.h>
 #include <config/configuration.h>
@@ -75,14 +74,8 @@ typedef struct daemon_t daemon_t;
             |            | -  u |      |   Pool     |   |      |
        +----+-------+    |    e |------|            |---|      |
        |   sender   |    +------+      +------------+   +------+
-       +----+-------+
-            |            +------+
-            |            | S  Q |
-            |            | e  u |
-            |            | n  e |
-            +------------| d  u |
-                         | -  e |
-                         +--+---+
+       +------------+
+
    @endverbatim
  * The thread-pool is the heart of the architecture. It processes jobs from a
  * (fully synchronized) job-queue. Mostly, a job is associated with a specific
@@ -94,7 +87,7 @@ typedef struct daemon_t daemon_t;
  * (fully synchronized) event-queue is ready for processing and pushes the event
  * down to the job-queue. A thread form the pool will pick it up as quick as
  * possible. Every thread can queue events or jobs. Furter, an event can place a
- * packet in the send-queue. The sender thread waits for those packets and sends
+ * packet in the sender. The sender thread waits for those packets and sends
  * them over the wire, via the socket. The receiver does exactly the opposite of
  * the sender. It waits on the socket, reads in packets an places them on the
  * job-queue for further processing by a thread from the pool.
@@ -307,11 +300,6 @@ struct daemon_t {
 	 * A socket_t instance.
 	 */
 	socket_t *socket;
-	
-	/**
-	 * A send_queue_t instance.
-	 */
-	send_queue_t *send_queue;
 	
 	/**
 	 * A job_queue_t instance.

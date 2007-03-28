@@ -422,7 +422,7 @@ static void send_keepalive(private_ike_sa_t *this)
 		data.ptr[0] = 0xFF;
 		data.len = 1;
 		packet->set_data(packet, data);
-		charon->send_queue->add(charon->send_queue, packet);
+		charon->sender->send(charon->sender, packet);
 		DBG1(DBG_IKE, "sending keep alive");
 		diff = 0;
 	}
@@ -625,7 +625,7 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 	}
 	if (generate_message(this, response, &packet) == SUCCESS)
 	{
-		charon->send_queue->add(charon->send_queue, packet);
+		charon->sender->send(charon->sender, packet);
 	}
 	response->destroy(response);
 }

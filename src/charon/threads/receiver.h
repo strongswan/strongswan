@@ -32,9 +32,8 @@ typedef struct receiver_t receiver_t;
 /**
  * @brief Receives packets from the socket and adds them to the job queue.
  * 
- * The receiver starts a thread, wich reads on the blocking socket. If 
- * data is available, a packet_t object is created, wrapped
- * in an incoming_packet_job_t and added to the job queue.
+ * The receiver starts a thread, wich reads on the blocking socket. A received
+ * packet is preparsed a process_message_job is queued in the job queue.
  * 
  * @b Constructors:
  *  - receiver_create()

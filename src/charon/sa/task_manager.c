@@ -226,7 +226,7 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 		}
 		this->initiating.retransmitted++;
 		
-		charon->send_queue->add(charon->send_queue,
+		charon->sender->send(charon->sender,
 					this->initiating.packet->clone(this->initiating.packet));
 		job = (job_t*)retransmit_job_create(this->initiating.mid,
 											this->ike_sa->get_id(this->ike_sa));
@@ -541,8 +541,8 @@ static status_t build_response(private_task_manager_t *this,
 	    return DESTROY_ME;
 	}
 	
-	charon->send_queue->add(charon->send_queue,
-							this->responding.packet->clone(this->responding.packet));
+	charon->sender->send(charon->sender,
+						 this->responding.packet->clone(this->responding.packet));
 	if (delete)
 	{
 		return DESTROY_ME;
@@ -711,9 +711,8 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 		{
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 			 	 "retransmitting response", mid);
-			charon->send_queue->add(charon->send_queue,
-									this->responding.packet->clone(
-													this->responding.packet));
+			charon->sender->send(charon->sender,
+					 this->responding.packet->clone(this->responding.packet));
 		}
 		else
 		{

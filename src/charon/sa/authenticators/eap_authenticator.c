@@ -100,7 +100,6 @@ static status_t build(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 {
 	chunk_t auth_data;
 	identification_t *my_id = this->ike_sa->get_my_id(this->ike_sa);
-	prf_t *prf = this->ike_sa->get_auth_build(this->ike_sa);
 	
 	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
 		 my_id, auth_method_names, AUTH_EAP);

@@ -28,8 +28,6 @@
 
 #include <daemon.h>
 #include <network/socket.h>
-#include <network/packet.h>
-#include <queues/send_queue.h>
 
 
 typedef struct private_sender_t private_sender_t;
@@ -47,33 +45,72 @@ struct private_sender_t {
 	  * Assigned thread.
 	  */
 	 pthread_t assigned_thread;
+	 
+	/**
+	 * The packets are stored in a linked list
+	 */
+	linked_list_t *list;
 
+	/**
+	 * mutex to synchronize access to list
+	 */
+	pthread_mutex_t mutex;
+
+	/**
+	 * condvar to signal for packets in list
+	 */
+	pthread_cond_t condvar;
 };
+
+/**
+ * implements sender_t.send
+ */
+static void send_(private_sender_t *this, packet_t *packet)
+{
+	host_t *src, *dst;
+	
+	src = packet->get_source(packet);
+	dst = packet->get_destination(packet);
+	DBG1(DBG_NET, "sending packet: from %#H to %#H", src, dst);
+	
+	pthread_mutex_lock(&this->mutex);
+	this->list->insert_last(this->list, packet);
+	pthread_mutex_unlock(&this->mutex);
+	pthread_cond_signal(&this->condvar);
+}
 
 /**
  * Implementation of private_sender_t.send_packets.
  */
 static void send_packets(private_sender_t * this)
 {
-	packet_t *current_packet;
-	status_t status;
 	
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-
-	DBG1(DBG_NET, "sender thread running, thread_ID: %06u",
-		 (int)pthread_self());
+	DBG1(DBG_NET, "sender thread running, thread_ID: %06u", (int)pthread_self());
 
 	while (TRUE)
 	{
-		current_packet = charon->send_queue->get(charon->send_queue);
-		DBG2(DBG_NET, "got a packet, sending it");
-		status = charon->socket->send(charon->socket, current_packet);
-		if (status != SUCCESS)
+		packet_t *packet;
+		int oldstate;
+	
+		pthread_mutex_lock(&this->mutex);
+		/* go to wait while no packets available */
+		while (this->list->get_count(this->list) == 0)
 		{
-			DBG1(DBG_NET, "sending packet failed");
+			/* add cleanup handler, wait for packet, remove cleanup handler */
+			pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&this->mutex);
+			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+			pthread_cond_wait(&this->condvar, &this->mutex);
+			
+			pthread_setcancelstate(oldstate, NULL);
+			pthread_cleanup_pop(0);
 		}
-		current_packet->destroy(current_packet);
+		this->list->remove_first(this->list, (void**)&packet);
+		pthread_mutex_unlock(&this->mutex);
+		
+		charon->socket->send(charon->socket, packet);
+		packet->destroy(packet);
 	}
 }
 
@@ -84,6 +121,7 @@ static void destroy(private_sender_t *this)
 {
 	pthread_cancel(this->assigned_thread);
 	pthread_join(this->assigned_thread, NULL);
+	this->list->destroy_offset(this->list, offsetof(packet_t, destroy));
 	free(this);
 }
 
@@ -94,11 +132,16 @@ sender_t * sender_create()
 {
 	private_sender_t *this = malloc_thing(private_sender_t);
 
+	this->public.send = (void(*)(sender_t*,packet_t*))send_;
 	this->public.destroy = (void(*)(sender_t*)) destroy;
 
-	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))send_packets, this) != 0)
+	this->list = linked_list_create();
+	pthread_mutex_init(&this->mutex, NULL);
+	pthread_cond_init(&this->condvar, NULL);
+
+	if (pthread_create(&this->assigned_thread, NULL,
+					   (void*)send_packets, this) != 0)
 	{
-		free(this);
 		charon->kill(charon, "unable to create sender thread");
 	}
 

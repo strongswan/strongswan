@@ -24,8 +24,8 @@
 
 #include "job.h"
 
-ENUM(job_type_names, INCOMING_PACKET, SEND_DPD,
-	"INCOMING_PACKET",
+ENUM(job_type_names, PROCESS_MESSAGE, SEND_DPD,
+	"PROCESS_MESSAGE",
 	"RETRANSMIT",
 	"INITIATE",
 	"ROUTE",

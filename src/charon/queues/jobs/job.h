@@ -38,9 +38,9 @@ enum job_type_t {
 	/** 
 	 * Process an incoming IKEv2-Message.
 	 * 
- 	 * Job is implemented in class incoming_packet_job_t
+ 	 * Job is implemented in class process_message_job_t
 	 */
-	INCOMING_PACKET,
+	PROCESS_MESSAGE,
 	
 	/** 
 	 * Retransmit an IKEv2-Message.

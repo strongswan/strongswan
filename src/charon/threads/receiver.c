@@ -31,7 +31,7 @@
 #include <network/packet.h>
 #include <queues/job_queue.h>
 #include <queues/jobs/job.h>
-#include <queues/jobs/incoming_packet_job.h>
+#include <queues/jobs/process_message_job.h>
 
 typedef struct block_t block_t;
 
@@ -88,75 +88,6 @@ struct private_receiver_t {
 };
 
 /**
- * Implementation of receiver_t.receive_packets.
- */
-static void receive_packets(private_receiver_t * this)
-{
-	packet_t *packet;
-	job_t *job;
-	
-	/* cancellation disabled by default */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-	DBG1(DBG_NET, "receiver thread running, thread_ID: %06u", 
-		 (int)pthread_self());
-	
-	while (TRUE)
-	{
-		if (charon->socket->receive(charon->socket, &packet) != SUCCESS)
-		{
-			DBG1(DBG_NET, "receiving from socket failed!");
-			continue;
-		}
-		
-		if (this->blocks->get_count(this->blocks))
-		{
-			iterator_t *iterator;
-			block_t *blocked;
-			bool found = FALSE;
-			u_int32_t now = time(NULL);
-			
-			pthread_mutex_lock(&this->mutex);
-			iterator = this->blocks->create_iterator(this->blocks, TRUE);
-			while (iterator->iterate(iterator, (void**)&blocked))
-			{
-				if (now > blocked->timeout)
-				{
-					/* block expired, remove */
-					iterator->remove(iterator);
-					block_destroy(blocked);
-					continue;
-				}
-			
-				if (!blocked->ip->ip_equals(blocked->ip, 
-											packet->get_source(packet)))
-				{
-					/* no match, get next */
-					continue;
-				}
-				
-				/* IP is blocked */
-				DBG2(DBG_NET, "received packets source address %H blocked", 
-					 blocked->ip);
-				packet->destroy(packet);
-				found = TRUE;
-				break;
-			}
-			iterator->destroy(iterator);
-			pthread_mutex_unlock(&this->mutex);
-			if (found)
-			{
-				/* get next packet */
-				continue;
-			}
-		}
-		
-		DBG2(DBG_NET, "creating job from packet");
-		job = (job_t *) incoming_packet_job_create(packet);
-		charon->job_queue->add(charon->job_queue, job);
-	}
-}
-
-/**
  * Implementation of receiver_t.block
  */
 static void block(private_receiver_t *this, host_t *ip, u_int32_t seconds)
@@ -171,6 +102,100 @@ static void block(private_receiver_t *this, host_t *ip, u_int32_t seconds)
 	this->blocks->insert_last(this->blocks, blocked);
 	pthread_mutex_unlock(&this->mutex);
 }
+
+/**
+ * check if an IP is blocked
+ */
+static bool is_blocked(private_receiver_t *this, host_t *ip)
+{
+	bool found = FALSE;
+	
+	if (this->blocks->get_count(this->blocks))
+	{
+		iterator_t *iterator;
+		block_t *blocked;
+		u_int32_t now = time(NULL);
+		
+		pthread_mutex_lock(&this->mutex);
+		iterator = this->blocks->create_iterator(this->blocks, TRUE);
+		while (iterator->iterate(iterator, (void**)&blocked))
+		{
+			if (now > blocked->timeout)
+			{
+				/* blocking expired, remove */
+				iterator->remove(iterator);
+				block_destroy(blocked);
+				continue;
+			}
+		
+			if (!ip->ip_equals(ip, blocked->ip))
+			{
+				/* no match, get next */
+				continue;
+			}
+			
+			/* blocked */
+			DBG2(DBG_NET, "received packet source address %H blocked", ip);
+			found = TRUE;
+			break;
+		}
+		iterator->destroy(iterator);
+		pthread_mutex_unlock(&this->mutex);
+	}
+	return found;
+}
+
+/**
+ * Implementation of receiver_t.receive_packets.
+ */
+static void receive_packets(private_receiver_t * this)
+{
+	packet_t *packet;
+	message_t *message;
+	job_t *job;
+	
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	DBG1(DBG_NET, "receiver thread running, thread_ID: %06u", 
+		 (int)pthread_self());
+	
+	while (TRUE)
+	{
+		if (charon->socket->receive(charon->socket, &packet) != SUCCESS)
+		{
+			DBG1(DBG_NET, "receiving from socket failed!");
+			continue;
+		}
+		
+		if (is_blocked(this, packet->get_source(packet)))
+		{
+			packet->destroy(packet);
+			continue;
+		}
+		
+		message = message_create_from_packet(packet);
+		if (message->parse_header(message) != SUCCESS)
+		{
+			DBG1(DBG_NET, "received invalid IKE header from %H, ignored",
+				 packet->get_source(packet));
+			message->destroy(message);
+			continue;
+		}
+		
+		if (message->get_major_version(message) != IKE_MAJOR_VERSION)
+		{
+			DBG1(DBG_NET, "received unsupported IKE version %d.%d from %H, "
+				 "ignored",	message->get_major_version(message), 
+				 message->get_minor_version(message), packet->get_source(packet));
+			message->destroy(message);
+			continue;
+		}
+			
+		
+		job = (job_t *)process_message_job_create(message);
+		charon->job_queue->add(charon->job_queue, job);
+	}
+}
+
 
 /**
  * Implementation of receiver_t.destroy.
