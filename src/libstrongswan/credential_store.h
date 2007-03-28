@@ -58,7 +58,25 @@ struct credential_store_t {
 	 * 								- SUCCESS
 	 *
 	 */	
-	status_t (*get_shared_key) (credential_store_t *this, identification_t *my_id, identification_t *other_id, chunk_t *shared_key);
+	status_t (*get_shared_key) (credential_store_t *this, identification_t *my_id,
+								identification_t *other_id, chunk_t *shared_key);
+	
+	/**
+	 * @brief Returns the EAP secret for two specified IDs.
+	 * 
+	 * The returned chunk must be destroyed by the caller after usage.
+	 * 
+	 * @param this					calling object
+	 * @param my_id					my ID identifiying the secret.
+	 * @param other_id				peer ID identifying the secret.
+	 * @param[out] eap_key			the EAP secret will be written here
+	 * @return
+	 * 								- NOT_FOUND	if no preshared secrets for specific ID could be found
+	 * 								- SUCCESS
+	 *
+	 */	
+	status_t (*get_eap_key) (credential_store_t *this, identification_t *my_id,
+							 identification_t *other_id, chunk_t *eap_key);
 	
 	/**
 	 * @brief Returns the RSA public key of a specific ID.

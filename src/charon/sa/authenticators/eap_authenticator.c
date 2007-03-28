@@ -62,8 +62,8 @@ struct private_eap_authenticator_t {
 };
 
 extern chunk_t build_shared_key_signature(chunk_t ike_sa_init, chunk_t nonce,
-										  chunk_t secret, identification_t *id,
-										  prf_t *prf);
+								 		  chunk_t secret, identification_t *id,
+										  prf_t *prf_skp, prf_t *prf);
 
 /**
  * Implementation of authenticator_t.verify.
@@ -73,10 +73,10 @@ static status_t verify(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 {
 	chunk_t auth_data, recv_auth_data;
 	identification_t *other_id = this->ike_sa->get_other_id(this->ike_sa);
-	prf_t *prf = this->ike_sa->get_auth_verify(this->ike_sa);
 	
 	auth_data = build_shared_key_signature(ike_sa_init, my_nonce, this->msk,
-										   other_id, prf);
+						other_id, this->ike_sa->get_auth_verify(this->ike_sa),
+						this->ike_sa->get_prf(this->ike_sa));
 	
 	recv_auth_data = auth_payload->get_data(auth_payload);
 	if (!chunk_equals(auth_data, recv_auth_data))
@@ -105,8 +105,9 @@ static status_t build(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
 		 my_id, auth_method_names, AUTH_EAP);
 	
-	auth_data = build_shared_key_signature(ike_sa_init, other_nonce,
-										   this->msk, my_id, prf);
+	auth_data = build_shared_key_signature(ike_sa_init, other_nonce, this->msk,
+							my_id, this->ike_sa->get_auth_build(this->ike_sa),
+							this->ike_sa->get_prf(this->ike_sa));
 	
 	*auth_payload = auth_payload_create();
 	(*auth_payload)->set_auth_method(*auth_payload, AUTH_PSK);

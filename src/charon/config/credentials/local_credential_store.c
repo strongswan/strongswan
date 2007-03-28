@@ -146,6 +146,11 @@ struct private_local_credential_store_t {
 	linked_list_t *shared_keys;
 	
 	/**
+	 * list of EAP keys
+	 */
+	linked_list_t *eap_keys;
+	
+	/**
 	 * list of key_entry_t's with private keys
 	 */
 	linked_list_t *private_keys;
@@ -173,9 +178,9 @@ struct private_local_credential_store_t {
 
 
 /**
- * Implementation of local_credential_store_t.get_shared_key.
+ * Get a key from a list with shared_key_t's
  */	
-static status_t get_shared_key(private_local_credential_store_t *this,
+static status_t get_key(linked_list_t *keys,
 							   identification_t *my_id,
 							   identification_t *other_id, chunk_t *secret)
 {
@@ -190,7 +195,7 @@ static status_t get_shared_key(private_local_credential_store_t *this,
 	chunk_t found = chunk_empty;
 	shared_key_t *shared_key;
 
-	iterator_t *iterator = this->shared_keys->create_iterator(this->shared_keys, TRUE);
+	iterator_t *iterator = keys->create_iterator(keys, TRUE);
 
 	while (iterator->iterate(iterator, (void**)&shared_key))
 	{
@@ -238,6 +243,27 @@ static status_t get_shared_key(private_local_credential_store_t *this,
 		*secret = chunk_clone(found);
 		return SUCCESS;
 	}
+}
+
+
+/**
+ * Implementation of local_credential_store_t.get_shared_key.
+ */	
+static status_t get_shared_key(private_local_credential_store_t *this,
+							   identification_t *my_id,
+							   identification_t *other_id, chunk_t *secret)
+{
+	return get_key(this->shared_keys, my_id, other_id, secret);
+}
+
+/**
+ * Implementation of local_credential_store_t.get_eap_key.
+ */	
+static status_t get_eap_key(private_local_credential_store_t *this,
+							identification_t *my_id,
+							identification_t *other_id, chunk_t *secret)
+{
+	return get_key(this->eap_keys, my_id, other_id, secret);
 }
 
 /**
@@ -1167,6 +1193,7 @@ static void load_secrets(private_local_credential_store_t *this)
 		while (fetchline(&src, &line))
 		{
 			chunk_t ids, token;
+			bool is_eap = FALSE;
 
 			line_nr++;
 
@@ -1240,7 +1267,8 @@ static void load_secrets(private_local_credential_store_t *this)
 					this->private_keys->insert_last(this->private_keys, (void*)key);
 				}
 			}
-			else if (match("PSK", &token))
+			else if ((match("PSK", &token)) || 
+					 (match("EAP", &token) && (is_eap = TRUE)))
 			{
 				shared_key_t *shared_key;
 
@@ -1253,22 +1281,24 @@ static void load_secrets(private_local_credential_store_t *this)
 					DBG1(DBG_CFG, "line %d: malformed secret: %s", line_nr, ugh);
 					goto error;
 				}
-
-				if (ids.len > 0)
-				{
-					DBG1(DBG_CFG, "  loading shared key for %s", ids.ptr);
-				}
-				else
-				{
-					DBG1(DBG_CFG, "  loading shared key for %%any");
-				}
+				
+				DBG1(DBG_CFG, "  loading %s key for %s", 
+					 is_eap ? "EAP" : "shared", 
+					 ids.len > 0 ? (char*)ids.ptr : "%any");
 
 				DBG4(DBG_CFG, "  secret:", secret);
 
 				shared_key = shared_key_create(secret);
 				if (shared_key)
 				{
-					this->shared_keys->insert_last(this->shared_keys, (void*)shared_key);
+					if (is_eap)
+					{
+						this->eap_keys->insert_last(this->eap_keys, (void*)shared_key);
+					}
+					else
+					{
+						this->shared_keys->insert_last(this->shared_keys, (void*)shared_key);
+					}
 				}
 				while (ids.len > 0)
 				{
@@ -1311,7 +1341,7 @@ static void load_secrets(private_local_credential_store_t *this)
 			else
 			{
 				DBG1(DBG_CFG, "line %d: token must be either "
-					 "RSA, PSK, or PIN", line_nr, token.len);
+					 "RSA, PSK, EAP, or PIN", line_nr, token.len);
 				goto error;
 			}
 		}
@@ -1334,6 +1364,7 @@ static void destroy(private_local_credential_store_t *this)
 	this->ca_infos->destroy_offset(this->ca_infos, offsetof(ca_info_t, destroy));
 	this->private_keys->destroy_offset(this->private_keys, offsetof(rsa_private_key_t, destroy));
 	this->shared_keys->destroy_function(this->shared_keys, (void*)shared_key_destroy);
+	this->eap_keys->destroy_function(this->eap_keys, (void*)shared_key_destroy);
 	free(this);
 }
 
@@ -1345,6 +1376,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
 	
 	this->public.credential_store.get_shared_key = (status_t (*) (credential_store_t*,identification_t*,identification_t*,chunk_t*))get_shared_key;
+	this->public.credential_store.get_eap_key = (status_t (*) (credential_store_t*,identification_t*,identification_t*,chunk_t*))get_eap_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
 	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t* (*) (credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
 	this->public.credential_store.has_rsa_private_key = (bool (*) (credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
@@ -1372,6 +1404,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	
 	/* private variables */
 	this->shared_keys = linked_list_create();
+	this->eap_keys = linked_list_create();
 	this->private_keys = linked_list_create();
 	this->certs = linked_list_create();
 	this->auth_certs = linked_list_create();
