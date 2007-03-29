@@ -796,7 +796,7 @@ static void reset(private_task_manager_t *this)
 	this->responding.packet = NULL;
 	this->initiating.packet = NULL;
 	this->responding.mid = 0;
-	this->initiating.mid = 0;
+	this->initiating.mid = -1;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	
 	/* reset active tasks */
