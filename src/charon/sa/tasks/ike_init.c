@@ -31,6 +31,8 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 
+/** maximum retries to do with cookies/other dh groups */
+#define MAX_RETRIES 5
 
 typedef struct private_ike_init_t private_ike_init_t;
 
@@ -93,6 +95,11 @@ struct private_ike_init_t {
 	 * cookie received from responder
 	 */
 	chunk_t cookie;
+	
+	/**
+	 * retries done so far after failure (cookie or bad dh group)
+	 */
+	u_int retry;
 };
 
 /**
@@ -232,6 +239,12 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	SIG(IKE_UP_START, "initiating IKE_SA to %H",
 		this->connection->get_other_host(this->connection));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
+	
+	if (this->retry++ >= MAX_RETRIES)
+	{
+		SIG(IKE_UP_FAILED, "giving up after %d retries", MAX_RETRIES);
+		return FAILED;
+	}
 
 	/* if the DH group is set via use_dh_group(), we already have a DH object */
 	if (!this->diffie_hellman)
@@ -422,6 +435,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					break;
 				case COOKIE:
 				{
+					chunk_free(&this->cookie);
 					this->cookie = chunk_clone(notify->get_notification_data(notify));
 					this->ike_sa->reset(this->ike_sa);
 					iterator->destroy(iterator);
@@ -578,6 +592,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 	this->proposal = NULL;
 	this->connection = NULL;
 	this->old_sa = old_sa;
+	this->retry = 0;
 	
 	return &this->public;
 }
