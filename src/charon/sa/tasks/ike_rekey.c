@@ -75,11 +75,9 @@ static status_t build_i(private_ike_rekey_t *this, message_t *message)
 {
 	connection_t *connection;
 	policy_t *policy;
-	ike_sa_id_t *id;
 	
-	id = ike_sa_id_create(0, 0, TRUE);
-	this->new_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
-	id->destroy(id);
+	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+														TRUE);
 	
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	policy = this->ike_sa->get_policy(this->ike_sa);
@@ -101,7 +99,6 @@ static status_t process_r(private_ike_rekey_t *this, message_t *message)
 {
 	connection_t *connection;
 	policy_t *policy;
-	ike_sa_id_t *id;
 	iterator_t *iterator;
 	child_sa_t *child_sa;
 	
@@ -129,9 +126,8 @@ static status_t process_r(private_ike_rekey_t *this, message_t *message)
 	}
 	iterator->destroy(iterator);
 	
-	id = ike_sa_id_create(0, 0, FALSE);
-	this->new_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
-	id->destroy(id);
+	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+														FALSE);
 	
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	policy = this->ike_sa->get_policy(this->ike_sa);

@@ -72,6 +72,16 @@ struct entry_t {
 	 * The contained ike_sa_t object.
 	 */
 	ike_sa_t *ike_sa;
+	
+	/**
+	 * hash of the IKE_SA_INIT message, used to detect retransmissions
+	 */
+	chunk_t init_hash;
+	
+	/**
+	 * message ID currently processing, if any
+	 */
+	u_int32_t message_id;
 };
 
 /**
@@ -82,6 +92,7 @@ static status_t entry_destroy(entry_t *this)
 	/* also destroy IKE SA */
 	this->ike_sa->destroy(this->ike_sa);
 	this->ike_sa_id->destroy(this->ike_sa_id);
+	chunk_free(&this->init_hash);
 	free(this);
 	return SUCCESS;
 }
@@ -94,12 +105,14 @@ static entry_t *entry_create(ike_sa_id_t *ike_sa_id)
 	entry_t *this = malloc_thing(entry_t);
 	
 	this->waiting_threads = 0;
-	pthread_cond_init(&(this->condvar), NULL);
+	pthread_cond_init(&this->condvar, NULL);
 	
 	/* we set checkout flag when we really give it out */
 	this->checked_out = FALSE;
 	this->driveout_new_threads = FALSE;
 	this->driveout_waiting_threads = FALSE;
+	this->message_id = -1;
+	this->init_hash = chunk_empty;
 	
 	/* ike_sa_id is always cloned */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
@@ -136,6 +149,11 @@ struct private_ike_sa_manager_t {
 	  * A randomizer, to get random SPIs for our side
 	  */
 	 randomizer_t *randomizer;
+	 
+	 /**
+	  * SHA1 hasher for IKE_SA_INIT retransmit detection
+	  */
+	 hasher_t *hasher;
 };
 
 /**
@@ -269,7 +287,7 @@ static bool wait_for_entry(private_ike_sa_manager_t *this, entry_t *entry)
 	while (entry->checked_out && !entry->driveout_waiting_threads)	
 	{
 		/* so wait until we can get it for us.
-		* we register us as waiting. */
+		 * we register us as waiting. */
 		entry->waiting_threads++;
 		pthread_cond_wait(&(entry->condvar), &(this->mutex));
 		entry->waiting_threads--;
@@ -291,8 +309,8 @@ static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
 {
 	u_int64_t spi;
 	
-	this->randomizer->get_pseudo_random_bytes(this->randomizer, 8, (u_int8_t*)&spi);
-	
+	this->randomizer->get_pseudo_random_bytes(this->randomizer, sizeof(spi),
+											  (u_int8_t*)&spi);
 	return spi;
 }
 
@@ -301,119 +319,156 @@ static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
  */
 static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 {
-	bool responder_spi_set;
-	bool initiator_spi_set;
-	bool original_initiator;
 	ike_sa_t *ike_sa = NULL;
+	entry_t *entry;
 	
-	DBG2(DBG_MGR, "checkout IKE_SA: %J", ike_sa_id);
+	DBG2(DBG_MGR, "checkout IKE_SA: %J, %d IKE_SAs in manager",
+		 ike_sa_id, this->ike_sa_list->get_count(this->ike_sa_list));
 	
-	DBG2(DBG_MGR,  "%d IKE_SAs in manager",
-		 this->ike_sa_list->get_count(this->ike_sa_list));
-	
-	/* each access is locked */
 	pthread_mutex_lock(&(this->mutex));
-	
-	responder_spi_set = ike_sa_id->get_responder_spi(ike_sa_id);
-	initiator_spi_set = ike_sa_id->get_initiator_spi(ike_sa_id);
-	original_initiator = ike_sa_id->is_initiator(ike_sa_id);
-	
-	if ((initiator_spi_set && responder_spi_set) ||
-		((initiator_spi_set && !responder_spi_set) && (original_initiator)))
+	if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
 	{
-		/* we SHOULD have an IKE_SA for these SPIs in the list,
-		 * if not, we can't handle the request...
-		 */
-		entry_t *entry;
-		/* look for the entry */
-		if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
+		if (wait_for_entry(this, entry))
 		{
-			if (wait_for_entry(this, entry))
-			{
-				DBG2(DBG_MGR, "IKE_SA successfully checked out");
-				/* ok, this IKE_SA is finally ours */
-				entry->checked_out = TRUE;
-				ike_sa = entry->ike_sa;
-				/* update responder SPI when it's not set */
-				if (entry->ike_sa_id->get_responder_spi(entry->ike_sa_id) == 0)
-				{
-					ike_sa_id_t *ike_sa_ike_sa_id = ike_sa->get_id(ike_sa);
-					u_int64_t spi = ike_sa_id->get_responder_spi(ike_sa_id);
-					
-					ike_sa_ike_sa_id->set_responder_spi(ike_sa_ike_sa_id, spi);
-					entry->ike_sa_id->set_responder_spi(entry->ike_sa_id, spi);
-				}
-			}
-			else
-			{
-				DBG2(DBG_MGR, "IKE_SA found, but not allowed to check it out");
-			}
-		}
-		else
-		{
-			DBG2(DBG_MGR, "IKE_SA not stored in list");
-			/* looks like there is no such IKE_SA, better luck next time... */
+			DBG2(DBG_MGR, "IKE_SA successfully checked out");
+			entry->checked_out = TRUE;
+			ike_sa = entry->ike_sa;
 		}
 	}
-	else if ((initiator_spi_set && !responder_spi_set) && (!original_initiator))
+	pthread_mutex_unlock(&this->mutex);
+	charon->bus->set_sa(charon->bus, ike_sa);
+	return ike_sa;
+}
+
+/**
+ * Implementation of of ike_sa_manager.checkout_new.
+ */
+static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
+{
+	entry_t *entry;
+	ike_sa_id_t *id;
+	
+	if (initiator)
 	{
-		/* an IKE_SA_INIT from an another endpoint,
-		 * he is the initiator.
-		 * For simplicity, we do NOT check for retransmitted
-		 * IKE_SA_INIT-Requests here, so EVERY single IKE_SA_INIT-
-		 * Request (even a retransmitted one) will result in a
-		 * IKE_SA. This could be improved...
-		 */
-		u_int64_t responder_spi;
-		entry_t *new_entry;
-		
-		/* set SPIs, we are the responder */
-		responder_spi = get_next_spi(this);
-		
-		/* we also set arguments spi, so its still valid */
-		ike_sa_id->set_responder_spi(ike_sa_id, responder_spi);
-		
-		/* create entry */
-		new_entry = entry_create(ike_sa_id);
-		
-		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
-		
-		/* check ike_sa out */
-		DBG2(DBG_MGR,  "IKE_SA added to list of known IKE_SAs");
-		new_entry->checked_out = TRUE;
-		ike_sa = new_entry->ike_sa;
-	}
-	else if (!initiator_spi_set && !responder_spi_set)
-	{
-		/* checkout of a new and unused IKE_SA, used for rekeying */
-		entry_t *new_entry;
-		
-		if (original_initiator)
-		{
-			ike_sa_id->set_initiator_spi(ike_sa_id, get_next_spi(this));
-		}
-		else
-		{
-			ike_sa_id->set_responder_spi(ike_sa_id, get_next_spi(this));
-		}
-		/* create entry */
-		new_entry = entry_create(ike_sa_id);
-		DBG2(DBG_MGR, "created IKE_SA: %J", ike_sa_id);
-			
-		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
-		
-		/* check ike_sa out */
-		new_entry->checked_out = TRUE;
-		ike_sa = new_entry->ike_sa;
+		id = ike_sa_id_create(get_next_spi(this), 0, TRUE);
 	}
 	else
 	{
-		/* responder set, initiator not: here is something seriously wrong! */
-		DBG2(DBG_MGR, "invalid IKE_SA SPIs");
+		id = ike_sa_id_create(0, get_next_spi(this), FALSE);
+	}
+	entry = entry_create(id);	
+	pthread_mutex_lock(&this->mutex);	
+	this->ike_sa_list->insert_last(this->ike_sa_list, entry);
+	entry->checked_out = TRUE;
+	pthread_mutex_unlock(&this->mutex);	
+	DBG2(DBG_MGR, "created IKE_SA: %J, %d IKE_SAs in manager",
+		 id, this->ike_sa_list->get_count(this->ike_sa_list));
+	return entry->ike_sa;
+}
+
+/**
+ * Implementation of of ike_sa_manager.checkout_by_id.
+ */
+static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
+									 message_t *message)
+{
+	entry_t *entry;
+	ike_sa_t *ike_sa = NULL;
+	ike_sa_id_t *id = message->get_ike_sa_id(message);
+	id = id->clone(id);
+	id->switch_initiator(id);
+	
+	DBG2(DBG_MGR, "checkout IKE_SA: %J by message, %d IKE_SAs in manager",
+		 id, this->ike_sa_list->get_count(this->ike_sa_list));
+	
+	if (message->get_request(message) &&
+		message->get_exchange_type(message) == IKE_SA_INIT)
+	{
+		/* IKE_SA_INIT request. Check for an IKE_SA with such a message hash. */
+		iterator_t *iterator;
+		chunk_t data, hash;
+		bool occupied = FALSE;
+		
+		data = message->get_packet_data(message);
+		this->hasher->allocate_hash(this->hasher, data, &hash);
+		chunk_free(&data);
+		
+		pthread_mutex_lock(&this->mutex);
+		iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
+		while (iterator->iterate(iterator, (void**)&entry))
+		{
+			if (chunk_equals(hash, entry->init_hash))
+			{
+				if (entry->message_id == 0)
+				{
+					occupied = TRUE;
+				}
+				else if (wait_for_entry(this, entry))
+				{
+					DBG2(DBG_MGR, "IKE_SA checked out by hash");
+					entry->checked_out = TRUE;
+					entry->message_id = message->get_message_id(message);
+					ike_sa = entry->ike_sa;
+				}
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+		pthread_mutex_unlock(&this->mutex);
+		if (occupied)
+		{
+			/* already processing this message ID, discard */
+			chunk_free(&hash);
+			id->destroy(id);
+			return NULL;
+		}
+		if (ike_sa == NULL)
+		{
+			/* no IKE_SA found, create a new one */
+			id->set_responder_spi(id, get_next_spi(this));
+			entry = entry_create(id);
+			
+			pthread_mutex_lock(&this->mutex);
+			this->ike_sa_list->insert_last(this->ike_sa_list, entry);
+			entry->checked_out = TRUE;
+			entry->message_id = message->get_message_id(message);
+			pthread_mutex_unlock(&this->mutex);
+			entry->init_hash = hash;
+			ike_sa = entry->ike_sa;
+		}
+		else
+		{
+			chunk_free(&hash);
+		}
+		id->destroy(id);
+		charon->bus->set_sa(charon->bus, ike_sa);
+		return ike_sa;
 	}
 	
-	pthread_mutex_unlock(&(this->mutex));
-	
+	pthread_mutex_lock(&(this->mutex));
+	if (get_entry_by_id(this, id, &entry) == SUCCESS)
+	{
+		/* only check out if we are not processing this request */
+		if (message->get_request(message) &&
+			message->get_message_id(message) == entry->message_id)
+		{
+			DBG2(DBG_MGR, "not checking out, message already processing");
+		}
+		else if (wait_for_entry(this, entry))
+		{
+			ike_sa_id_t *ike_id = entry->ike_sa->get_id(entry->ike_sa);
+			DBG2(DBG_MGR, "IKE_SA successfully checked out");
+			entry->checked_out = TRUE;
+			entry->message_id = message->get_message_id(message);
+			if (ike_id->get_responder_spi(ike_id) == 0)
+			{
+				ike_id->set_responder_spi(ike_id, id->get_responder_spi(id));
+			}
+			ike_sa = entry->ike_sa;
+		}
+	}
+	pthread_mutex_unlock(&this->mutex);
+	id->destroy(id);
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
@@ -669,6 +724,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa->get_id(ike_sa));
 		/* signal waiting threads */
 		entry->checked_out = FALSE;
+		entry->message_id = -1;
 		DBG2(DBG_MGR, "check-in of IKE_SA successful.");
 		pthread_cond_signal(&(entry->condvar));
 	 	retval = SUCCESS;
@@ -816,6 +872,7 @@ static void destroy(private_ike_sa_manager_t *this)
 	pthread_mutex_unlock(&(this->mutex));
 	
 	this->randomizer->destroy(this->randomizer);
+	this->hasher->destroy(this->hasher);
 	
 	free(this);
 }
@@ -830,6 +887,8 @@ ike_sa_manager_t *ike_sa_manager_create()
 	/* assign public functions */
 	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
 	this->public.checkout = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_id_t*))checkout;
+	this->public.checkout_new = (ike_sa_t*(*)(ike_sa_manager_t*,bool))checkout_new;
+	this->public.checkout_by_message = (ike_sa_t*(*)(ike_sa_manager_t*,message_t*))checkout_by_message;
 	this->public.checkout_by_peer = (ike_sa_t*(*)(ike_sa_manager_t*,host_t*,host_t*,identification_t*,identification_t*))checkout_by_peer;
 	this->public.checkout_by_id = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t,bool))checkout_by_id;
 	this->public.checkout_by_name = (ike_sa_t*(*)(ike_sa_manager_t*,char*,bool))checkout_by_name;
@@ -842,6 +901,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->ike_sa_list = linked_list_create();
 	pthread_mutex_init(&this->mutex, NULL);
 	this->randomizer = randomizer_create();
+	this->hasher = hasher_create(HASH_SHA1);
 	
 	return &this->public;
 }

@@ -57,12 +57,9 @@ static job_type_t get_type(private_process_message_job_t *this)
 static status_t execute(private_process_message_job_t *this)
 {
 	ike_sa_t *ike_sa;
-	ike_sa_id_t *ike_sa_id;
 	
-	ike_sa_id = this->message->get_ike_sa_id(this->message);
-	ike_sa_id = ike_sa_id->clone(ike_sa_id);
-	ike_sa_id->switch_initiator(ike_sa_id);
-	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id);
+	ike_sa = charon->ike_sa_manager->checkout_by_message(charon->ike_sa_manager,
+														 this->message);
 	if (ike_sa)
 	{
 		DBG1(DBG_NET, "received packet: from %#H to %#H",
@@ -80,10 +77,10 @@ static status_t execute(private_process_message_job_t *this)
 	}
 	else
 	{
-		DBG1(DBG_NET, "received packet from %#H for IKE_SA: %J, but no such "
-			 "IKE_SA", this->message->get_source(this->message), ike_sa_id);
+		DBG1(DBG_NET, "unable to handle message from %#H for IKE_SA: %J",
+			 this->message->get_source(this->message),
+			 this->message->get_ike_sa_id(this->message));
 	}
-	ike_sa_id->destroy(ike_sa_id);
 	return DESTROY_ME;
 }
 

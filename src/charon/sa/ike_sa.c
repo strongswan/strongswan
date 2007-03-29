@@ -1088,14 +1088,11 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 		/* create a new IKE_SA if we have to route or to restart */
 		if (to_route->get_count(to_route) || to_restart->get_count(to_restart))
 		{
-			ike_sa_id_t *other_id;
 			private_ike_sa_t *new;
 			task_t *task;
 			
-			other_id =  ike_sa_id_create(0, 0, TRUE);
-			new = (private_ike_sa_t*)charon->ike_sa_manager->checkout(
-											charon->ike_sa_manager, other_id);
-			other_id->destroy(other_id);
+			new = (private_ike_sa_t*)charon->ike_sa_manager->checkout_new(
+												charon->ike_sa_manager, TRUE);
 			
 			apply_config(new, this->connection, this->policy);
 			/* use actual used host, not the wildcarded one in connection */
@@ -1542,7 +1539,6 @@ static status_t rekey(private_ike_sa_t *this)
  */
 static void reestablish(private_ike_sa_t *this)
 {
-	ike_sa_id_t *other_id;
 	private_ike_sa_t *other;
 	iterator_t *iterator;
 	child_sa_t *child_sa;
@@ -1550,10 +1546,8 @@ static void reestablish(private_ike_sa_t *this)
 	task_t *task;
 	job_t *job;
 	
-	other_id =  ike_sa_id_create(0, 0, TRUE);
-	other = (private_ike_sa_t*)charon->ike_sa_manager->checkout(
-											charon->ike_sa_manager, other_id);
-	other_id->destroy(other_id);
+	other = (private_ike_sa_t*)charon->ike_sa_manager->checkout_new(
+											charon->ike_sa_manager, TRUE);
 	
 	apply_config(other, this->connection, this->policy);
 	other->other_host->destroy(other->other_host);

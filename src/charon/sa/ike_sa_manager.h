@@ -28,6 +28,7 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
 
 #include <library.h>
 #include <sa/ike_sa.h>
+#include <encoding/message.h>
 
 /**
  * @brief The IKE_SA-Manager is responsible for managing all initiated and responded IKE_SA's.
@@ -47,24 +48,50 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
  * @ingroup sa
  */
 struct ike_sa_manager_t {
+	
 	/**
-	 * @brief Checkout an IKE_SA, create it when necesarry.
-	 * 
-	 * Checks out a SA by its ID. An SA will be created, when the responder
-	 * SPI is not set (when received an IKE_SA_INIT from initiator).
-	 * Management of SPIs is the managers job, he will set it.
-	 * This function blocks until SA is available for checkout.
-	 * 
-	 * @warning checking out two times without checking in will
-	 * result in a deadlock!
+	 * @brief Checkout an existing IKE_SA.
 	 * 
 	 * @param this 				the manager object
 	 * @param ike_sa_id			the SA identifier, will be updated
 	 * @returns 					
 	 * 							- checked out IKE_SA if found
-	 * 							- NULL, if no such IKE_SA available
+	 * 							- NULL, if specified IKE_SA is not found.
 	 */
 	ike_sa_t* (*checkout) (ike_sa_manager_t* this, ike_sa_id_t *sa_id);
+	
+	/**
+	 * @brief Create and check out a new IKE_SA.
+	 * 
+	 * @param this 				the manager object
+	 * @param initiator			TRUE for initiator, FALSE otherwise
+	 * @returns 				created andchecked out IKE_SA
+	 */
+	ike_sa_t* (*checkout_new) (ike_sa_manager_t* this, bool initiator);
+	
+	/**
+	 * @brief Checkout an IKE_SA by a message.
+	 * 
+	 * In some situations, it is necessary that the manager knows the
+	 * message to use for the checkout. This has the folloing reasons:
+	 * 
+	 * 1. If the targeted IKE_SA is already processing a message, we do not
+	 *    check it out if the message ID is the same.
+	 * 2. If it is an IKE_SA_INIT request, we have to check if it is a 
+	 *    retransmission. If so, we have to drop the message, we would
+	 *    create another unneded IKE_SA for each retransmitted packet.
+	 *
+	 * A call to checkout_by_message() returns a (maybe new created) IKE_SA.
+	 * If processing the message does not make sense (for the reasons above),
+	 * NULL is returned.
+	 * 
+	 * @param this 				the manager object
+	 * @param ike_sa_id			the SA identifier, will be updated
+	 * @returns 					
+	 * 							- checked out/created IKE_SA
+	 * 							- NULL to not process message further
+	 */
+	ike_sa_t* (*checkout_by_message) (ike_sa_manager_t* this, message_t *message);
 	
 	/**
 	 * @brief Checkout an existing IKE_SA by hosts and identifications.
