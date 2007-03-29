@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -33,7 +33,23 @@ typedef struct receiver_t receiver_t;
  * @brief Receives packets from the socket and adds them to the job queue.
  * 
  * The receiver starts a thread, wich reads on the blocking socket. A received
- * packet is preparsed a process_message_job is queued in the job queue.
+ * packet is preparsed and a process_message_job is queued in the job queue.
+ *
+ * To endure DoS attacks, cookies are enabled when to many IKE_SAs are half
+ * open. The calculation of cookies is slightly different from the proposed
+ * method in RFC4306. We do not include a nonce, because we think the advantage
+ * we gain does not justify the overhead to parse the whole message.
+ * Instead of VersionIdOfSecret, we include a timestamp. This allows us to
+ * find out wich key was used for cookie creation. Further, we can set a
+ * lifetime for the cookie, which allows us to reuse the secret for a longer
+ * time.
+ *         COOKIE = time | sha1( IPi | SPIi | time | secret )
+ *
+ * The secret is changed after a certain amount of cookies sent. The old
+ * secret is stored to allow a clean migration between secret changes.
+ * 
+ * Further, the number of half-initiated IKE_SAs is limited per peer. This
+ * mades it impossible for a peer to flood the server with its real IP address.
  * 
  * @b Constructors:
  *  - receiver_create()
@@ -41,15 +57,6 @@ typedef struct receiver_t receiver_t;
  * @ingroup threads
  */
 struct receiver_t {
-
-	/**
-	 * @brief Block packets coming from a specific address.
-	 *
-	 * @param receiver 	receiver object
-	 * @param ip		IP address to block
-	 * @param seconds	for how long to block ip
-	 */
-	void (*block) (receiver_t *receiver, host_t *ip, u_int32_t seconds);
 	
 	/**
 	 * @brief Destroys a receiver_t object.
@@ -65,9 +72,7 @@ struct receiver_t {
  * The receiver thread will start working, get data
  * from the socket and add those packets to the job queue.
  * 
- * @return
- * 					- receiver_t object
- * 					- NULL of thread could not be started
+ * @return	receiver_t object
  * 
  * @ingroup threads
  */
