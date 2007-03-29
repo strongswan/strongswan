@@ -89,6 +89,11 @@ void chunk_free(chunk_t *chunk);
 #define chunk_from_buf(str) { str, sizeof(str) }
 
 /**
+ * Initialize a chunk to point to a thing
+ */
+#define chunk_from_thing(thing) chunk_create((char*)&(thing), sizeof(thing))
+
+/**
  * Allocate a chunk on the heap
  */
 #define chunk_alloc(bytes) chunk_create(malloc(bytes), bytes)
