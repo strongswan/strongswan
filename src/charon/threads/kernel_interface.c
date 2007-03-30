@@ -729,22 +729,37 @@ static linked_list_t *create_address_list(private_kernel_interface_t *this)
 	     			size_t rtasize = IFA_PAYLOAD (hdr);
 					host_t *host = NULL;
 					char *name = NULL;
-					chunk_t chunk;
+					chunk_t local = chunk_empty, address = chunk_empty;
 	     			
 					while(RTA_OK(rta, rtasize))
 					{
 						switch (rta->rta_type)
 						{
+							case IFA_LOCAL:
+								local.ptr = RTA_DATA(rta);
+								local.len = RTA_PAYLOAD(rta);
+								break;
 							case IFA_ADDRESS:
-								chunk.ptr = RTA_DATA(rta);
-								chunk.len = RTA_PAYLOAD(rta);
-								host = host_create_from_chunk(msg->ifa_family,
-															  chunk, 0);
+								address.ptr = RTA_DATA(rta);
+								address.len = RTA_PAYLOAD(rta);
 								break;
 							case IFA_LABEL:
 								name = RTA_DATA(rta);
+								break;
 						}
 						rta = RTA_NEXT(rta, rtasize);
+					}
+					
+					/* For PPP interfaces, we need the IFA_LOCAL address,
+					 * IFA_ADDRESS is the peers address. But IFA_LOCAL is
+					 * not included in all cases, so fallback to IFA_ADDRESS. */
+					if (local.ptr)
+					{
+						host = host_create_from_chunk(msg->ifa_family, local, 0);
+					}
+					else if (address.ptr)
+					{
+						host = host_create_from_chunk(msg->ifa_family, address, 0);
 					}
 					
 					if (host)
