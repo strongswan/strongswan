@@ -15,10 +15,11 @@ Roadmap 2007
       !
  Apr  !   - PRF in CHILD_SA rekeying
       !   - configuration managament refactoring
-      !   - interface in charon for the new SMP management interface
+      !   - credentials backend redesign
+      !   - interface in charon for the XML based SMP management interface
       !   - reimplement IKEv2 p2p NATT support
       !
- May  !   - XML configuration interface
+ May  !   - SMP configuration client
       !
  Jun  !   - start with IKEv1 migration strategy
       !
@@ -47,11 +48,6 @@ Build system
 - configure flag which allows to ommit vendor id in pluto
 - reduce printf handlers count to 10, as uClibc does not support more
 
-Denail of service
------------------
-- Cookie support on server
-- thread exhaustion (multiple messages to a single IKE_SA)
-
 Certificate support
 -------------------
 - New trustchain mechanism?
@@ -70,3 +66,4 @@ Misc
 ----
 - PFS support for creating/rekeying CHILD_SAs
 - Address pool/backend for virtual IP assignement
+- fix iterator->insert_before/after

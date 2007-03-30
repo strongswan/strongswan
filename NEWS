@@ -1,3 +1,13 @@
+strongswan-4.1.1
+----------------
+
+- Server side cookie support. If to may IKE_SAs are in CONNECTING state,
+  cookies are enabled and protect against DoS attacks with faked source
+  addresses. Number of IKE_SAs in CONNECTING state is also limited per
+  peer address to avoid resource exhaustion. IKE_SA_INIT messages are
+  compared to properly detect retransmissions and incoming retransmits are
+  detected even if the IKE_SA is blocked (e.g. doing OCSP fetches).
+
 strongswan-4.1.0
 ----------------
 
