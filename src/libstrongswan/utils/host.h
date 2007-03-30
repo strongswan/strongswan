@@ -35,7 +35,6 @@ typedef struct host_t host_t;
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <linux/xfrm.h>
 
 #include <library.h>
 

@@ -38,7 +38,6 @@
 #include <linux/ipsec.h>
 #include <linux/filter.h>
 #include <net/if.h>
-#include <ifaddrs.h>
 
 #include "socket.h"
 

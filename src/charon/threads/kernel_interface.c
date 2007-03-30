@@ -40,7 +40,6 @@
 #include <string.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
-#include <ifaddrs.h>
 
 #include "kernel_interface.h"
 
