@@ -453,9 +453,11 @@ send_notification_from_state(struct state *st, enum state_kind state,
     if (state == STATE_UNDEFINED)
 	state = st->st_state;
 
-    if (IS_QUICK(state)) {
+    if (IS_QUICK(state))
+    {
 	p1st = find_phase1_state(st->st_connection, ISAKMP_SA_ESTABLISHED_STATES);
-	if ((p1st == NULL) || (!IS_ISAKMP_SA_ESTABLISHED(p1st->st_state))) {
+	if ((p1st == NULL) || (!IS_ISAKMP_SA_ESTABLISHED(p1st->st_state)))
+	{
 	    loglog(RC_LOG_SERIOUS,
 		"no Phase1 state for Quick mode notification");
 	    return;
@@ -463,11 +465,13 @@ send_notification_from_state(struct state *st, enum state_kind state,
 	send_notification(st, type, p1st, generate_msgid(p1st),
 	    st->st_icookie, st->st_rcookie, NULL, 0, PROTO_ISAKMP);
     }
-    else if (IS_ISAKMP_ENCRYPTED(state)) {
+    else if (IS_ISAKMP_ENCRYPTED(state) && st->st_enc_key.ptr != NULL)
+    {
 	send_notification(st, type, st, generate_msgid(st),
 	    st->st_icookie, st->st_rcookie, NULL, 0, PROTO_ISAKMP);
     }
-    else {
+    else
+    {
 	/* no ISAKMP SA established - don't encrypt notification */
 	send_notification(st, type, NULL, 0,
 	    st->st_icookie, st->st_rcookie, NULL, 0, PROTO_ISAKMP);
@@ -3509,23 +3513,22 @@ main_inR2_outI3(struct msg_digest *md)
     send_cr = !no_cr_send && send_cert && !has_preloaded_public_key(st);
 
     /* done parsing; initialize crypto  */
-
     compute_dh_shared(st, st->st_gr, st->st_oakley.group);
     if (!generate_skeyids_iv(st))
 	return STF_FAIL + AUTHENTICATION_FAILED;
 
-	if (st->nat_traversal & NAT_T_WITH_NATD)
-	{
-	    nat_traversal_natd_lookup(md);
-	}
-	if (st->nat_traversal)
-	{
-	    nat_traversal_show_result(st->nat_traversal, md->sender_port);
-	}
-	if (st->nat_traversal & NAT_T_WITH_KA)
-	{
-	    nat_traversal_new_ka_event();
-	}
+    if (st->nat_traversal & NAT_T_WITH_NATD)
+    {
+	nat_traversal_natd_lookup(md);
+    }
+    if (st->nat_traversal)
+    {
+	nat_traversal_show_result(st->nat_traversal, md->sender_port);
+    }
+    if (st->nat_traversal & NAT_T_WITH_KA)
+    {
+	nat_traversal_new_ka_event();
+    }
 
     /*************** build output packet HDR*;IDii;HASH/SIG_I ***************/
     /* ??? NOTE: this is almost the same as main_inI3_outR3's code */
