@@ -1,6 +1,3 @@
-alice::iptables -v -n -L
-venus::iptables -v -n -L
-sun::iptables -v -n -L
 sun::ipsec stop
 alice::ipsec stop
 venus::ipsec stop

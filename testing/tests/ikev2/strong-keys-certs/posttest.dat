@@ -1,6 +1,3 @@
-moon::iptables -v -n -L
-carol::iptables -v -n -L
-dave::iptables -v -n -L
 moon::ipsec stop
 carol::ipsec stop
 dave::ipsec stop

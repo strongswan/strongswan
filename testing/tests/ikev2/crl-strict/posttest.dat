@@ -1,4 +1,2 @@
-moon::rm /etc/ipsec.d/crls/*
-carol::rm /etc/ipsec.d/crls/*
 moon::ipsec stop
 carol::ipsec stop

@@ -1,7 +1,4 @@
-alice::iptables -v -n -L
-venus::iptables -v -n -L
 moon::iptables -t nat -v -n -L POSTROUTING
-moon::iptables -v -n -L
 moon::ipsec stop
 alice::ipsec stop
 venus::ipsec stop

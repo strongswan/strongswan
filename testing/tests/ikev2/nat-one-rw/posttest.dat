@@ -1,5 +1,3 @@
-alice::iptables -v -n -L
-sun::iptables -v -n -L
 alice::ipsec stop
 sun::ipsec stop
 alice::/etc/init.d/iptables stop 2> /dev/null
