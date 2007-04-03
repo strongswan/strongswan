@@ -386,7 +386,7 @@ static cert_status_t verify_by_crl(private_ca_info_t* this,
 	if (this->crl == NULL)
 	{
 		stale = TRUE;
-		DBG1("crl not found");
+		DBG1("crl is not locally available");
 	}
 	else
 	{
@@ -449,6 +449,8 @@ static cert_status_t verify_by_crl(private_ca_info_t* this,
 		}
 		iterator->destroy(iterator);
 	}
+
+	if (this->crl)
 	{
 		rsa_public_key_t *issuer_public_key;
 		bool valid_signature;
@@ -461,8 +463,9 @@ static cert_status_t verify_by_crl(private_ca_info_t* this,
 			goto ret;
 		}
 		DBG2("crl signature is valid");
-	 }
-	this->crl->get_status(this->crl, certinfo);
+
+		this->crl->get_status(this->crl, certinfo);
+	}
 
 ret:
 	pthread_mutex_unlock(&(this->mutex));
