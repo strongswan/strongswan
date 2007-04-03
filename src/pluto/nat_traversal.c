@@ -173,7 +173,9 @@ bool nat_traversal_add_vid(u_int8_t np, pb_stream *outs)
 	if (r)
 	    r = out_vendorid(ISAKMP_NEXT_VID, outs, VID_NATT_IETF_03);
 	if (r)
-	    r = out_vendorid(last_np, outs, VID_NATT_IETF_02);
+	    r = out_vendorid(ISAKMP_NEXT_VID, outs, VID_NATT_IETF_02);
+	if (r)
+	    r = out_vendorid(last_np, outs, VID_NATT_IETF_02_N);
     }
     if (nat_traversal_support_non_ike)
     {
