@@ -660,12 +660,12 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			}
 
 			/* first check certificate revocation using ocsp */
-			status = issuer->verify_by_ocsp(issuer, cert, certinfo, &this->public.credential_store);
+			status = issuer->verify_by_ocsp(issuer, certinfo, &this->public.credential_store);
 
 			/* if ocsp service is not available then fall back to crl */
 			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && this->strict))
 			{
-				status = issuer->verify_by_crl(issuer, cert, certinfo);
+				status = issuer->verify_by_crl(issuer, certinfo);
 			}
 			
 			nextUpdate = certinfo->get_nextUpdate(certinfo);
@@ -1097,12 +1097,7 @@ static void load_crls(private_local_credential_store_t *this)
 			crl = crl_create_from_file(file);
 			if (crl)
 			{
-				err_t ugh = crl->is_valid(crl, NULL, this->strict);
-
-				if (ugh != NULL)	
-				{
-					DBG1(DBG_CFG, "  warning: crl %s", ugh);
-				}
+				DBG1(DBG_CFG, "crl is %s", crl->is_valid(crl)? "valid":"stale");
 				add_crl(this, crl);
 			}
 		}
