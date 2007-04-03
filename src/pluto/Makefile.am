@@ -80,8 +80,7 @@ AM_CFLAGS = \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
--DPLUTO -DKLIPS -DDEBUG \
--DVENDORID -DTHREADS
+-DPLUTO -DKLIPS -DDEBUG -DTHREADS
 
 pluto_LDADD = \
 $(top_srcdir)/src/libfreeswan/libfreeswan.a \
@@ -102,6 +101,21 @@ oid.c:	oid.txt oid.pl
 
 oid.h:	oid.txt oid.pl
 	$(PERL) oid.pl
+
+# This compile option activates the sending of a strongSwan VID
+if USE_VENDORID
+  AM_CFLAGS += -DVENDORID
+endif
+
+# This compile option activates the support of the Cisco VPN client
+if USE_CISCO_QUIRKS
+  AM_CFLAGS += -DCISCO_QUIRKS
+endif
+
+# This compile option activates NAT traversal with IPSec transport mode
+if USE_NAT_TRANSPORT
+  AM_CFLAGS += -DI_KNOW_TRANSPORT_MODE_HAS_SECURITY_CONCERN_BUT_I_WANT_IT
+endif
 
 # This compile option activates dynamic URL fetching using libcurl
 if USE_LIBCURL
