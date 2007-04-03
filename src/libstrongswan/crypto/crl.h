@@ -75,11 +75,9 @@ struct crl_t {
 	 * @brief Checks the validity interval of the crl
 	 * 
 	 * @param this			calling object
-	 * @param until			until = min(until, nextUpdate) if strict == TRUE
-	 * @param strict		nextUpdate restricts the validity
-	 * @return				NULL if the crl is valid
+	 * @return				TRUE if the crl is valid
 	 */
-	err_t (*is_valid) (const crl_t *this, time_t *until, bool strict);
+	bool (*is_valid) (const crl_t *this);
 	
 	/**
 	 * @brief Checks if this crl is newer (thisUpdate) than the other crl

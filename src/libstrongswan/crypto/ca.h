@@ -160,22 +160,20 @@ struct ca_info_t {
 	 * @brief Verify the status of a certificate by CRL
 	 * 
 	 * @param this			ca info object
-	 * @param cert			certificate to be verified
 	 * @param certinfo		detailed certificate status information
 	 * @return				certificate status
 	 */
-	cert_status_t (*verify_by_crl) (ca_info_t* this, const x509_t* cert, certinfo_t* certinfo);
+	cert_status_t (*verify_by_crl) (ca_info_t* this, certinfo_t* certinfo);
 
 	/**
 	 * @brief Verify the status of a certificate by OCSP
 	 * 
 	 * @param this			ca info object
-	 * @param cert			certificate to be verified
 	 * @param certinfo		detailed certificate status information
 	 * @param credentials	credential store needed for trust path verification
 	 * @return				certificate status
 	 */
-	cert_status_t (*verify_by_ocsp) (ca_info_t* this, const x509_t* cert, certinfo_t* certinfo, credential_store_t* credentials);
+	cert_status_t (*verify_by_ocsp) (ca_info_t* this, certinfo_t* certinfo, credential_store_t* credentials);
 
 	/**
 	 * @brief Purge the OCSP certinfos of a ca info record

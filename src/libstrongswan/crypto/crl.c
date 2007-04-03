@@ -311,7 +311,7 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 /**
  * Implements crl_t.is_valid
  */
-static err_t is_valid(const private_crl_t *this, time_t *until, bool strict)
+static bool is_valid(const private_crl_t *this)
 {
 	time_t current_time = time(NULL);
 	
@@ -319,17 +319,7 @@ static err_t is_valid(const private_crl_t *this, time_t *until, bool strict)
 	DBG2("  current time: %T", &current_time);
 	DBG2("  next update:  %T", &this->nextUpdate);
 
-	if (strict && until != NULL && 
-		(*until == UNDEFINED_TIME || this->nextUpdate < *until))
-	{
-		*until = this->nextUpdate;
-	}
-	if (current_time > this->nextUpdate)
-	{
-		return "has expired";
-	}
-	DBG2("  crl is valid");
-	return NULL;
+	return current_time < this->nextUpdate;
 }
 
 /**
@@ -499,7 +489,7 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 	this->public.get_issuer = (identification_t* (*) (const crl_t*))get_issuer;
 	this->public.equals_issuer = (bool (*) (const crl_t*,const crl_t*))equals_issuer;
 	this->public.is_issuer = (bool (*) (const crl_t*,const x509_t*))is_issuer;
-	this->public.is_valid = (err_t (*) (const crl_t*,time_t*,bool))is_valid;
+	this->public.is_valid = (bool (*) (const crl_t*))is_valid;
 	this->public.is_newer = (bool (*) (const crl_t*,const crl_t*))is_newer;
 	this->public.verify = (bool (*) (const crl_t*,const rsa_public_key_t*))verify;
 	this->public.get_status = (void (*) (const crl_t*,certinfo_t*))get_status;

@@ -36,6 +36,7 @@
 #include <debug.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
+#include <utils/fetcher.h>
 
 typedef struct private_ca_info_t private_ca_info_t;
 
@@ -375,35 +376,95 @@ static x509_t* get_certificate(private_ca_info_t* this)
 /**
  *  Implements ca_info_t.verify_by_crl.
  */
-static cert_status_t verify_by_crl(private_ca_info_t* this, const x509_t *cert,
+static cert_status_t verify_by_crl(private_ca_info_t* this,
 								   certinfo_t *certinfo)
 {
-	bool valid_signature;
-	rsa_public_key_t *issuer_public_key;
-
+	bool stale;
 
 	pthread_mutex_lock(&(this->mutex));
 
 	if (this->crl == NULL)
 	{
+		stale = TRUE;
 		DBG1("crl not found");
-		goto err;
 	}
-	DBG2("crl found");
-	
-	issuer_public_key = this->cacert->get_public_key(this->cacert);
-	valid_signature = this->crl->verify(this->crl, issuer_public_key);
-
-	if (!valid_signature)
+	else
 	{
-		DBG1("crl signature is invalid");
-		goto err;
+		stale = !this->crl->is_valid(this->crl);
+		DBG1("crl is %s", stale? "stale":"valid");
 	}
-	DBG2("crl signature is valid");
 
+	if (stale)
+	{
+		iterator_t *iterator = this->crluris->create_iterator(this->crluris, TRUE);
+		identification_t *uri;
+		
+		while (iterator->iterate(iterator, (void**)&uri))
+		{
+			fetcher_t *fetcher;
+			char uri_string[BUF_LEN];
+			chunk_t uri_chunk = uri->get_encoding(uri);
+			chunk_t response_chunk;
+
+			snprintf(uri_string, BUF_LEN, "%.*s", uri_chunk.len, uri_chunk.ptr);
+			fetcher = fetcher_create(uri_string);
+			
+			response_chunk = fetcher->get(fetcher);
+			fetcher->destroy(fetcher);
+			if (response_chunk.ptr != NULL)
+			{
+				crl_t *crl = crl_create_from_chunk(response_chunk);
+				
+				if (crl)
+				{
+					if (this->crl == NULL)
+					{
+						this->crl = crl;
+					}
+					else if (crl->is_newer(crl, this->crl))
+					{
+						this->crl->destroy(this->crl);
+						this->crl = crl;
+						DBG1("  thisUpdate is newer - existing crl replaced");
+						if (this->crl->is_valid(this->crl))
+						{
+							break;
+						}
+						else
+						{
+							DBG1("fetched crl is stale");
+						}
+					}
+					else
+					{
+						crl->destroy(crl);
+						DBG1("  thisUpdate is not newer - existing crl retained");
+					}
+				}
+				else
+				{
+					free(response_chunk.ptr);
+				};
+			}
+		}
+		iterator->destroy(iterator);
+	}
+	{
+		rsa_public_key_t *issuer_public_key;
+		bool valid_signature;
+
+		issuer_public_key = this->cacert->get_public_key(this->cacert);
+		valid_signature = this->crl->verify(this->crl, issuer_public_key);
+		if (!valid_signature)
+		{
+			DBG1("crl signature is invalid");
+			goto ret;
+		}
+		DBG2("crl signature is valid");
+	 }
 	this->crl->get_status(this->crl, certinfo);
 
-err:
+ret:
 	pthread_mutex_unlock(&(this->mutex));
 	return certinfo->get_status(certinfo);
 }
@@ -412,7 +473,6 @@ err:
   * Implements ca_info_t.verify_by_ocsp.
   */
 static cert_status_t verify_by_ocsp(private_ca_info_t* this,
-									const x509_t *cert,
 									certinfo_t *certinfo,
 									credential_store_t *credentials)
 {
@@ -636,8 +696,8 @@ ca_info_t *ca_info_create(const char *name, x509_t *cacert)
 	this->public.add_crluri = (void (*) (ca_info_t*,chunk_t))add_crluri;
 	this->public.add_ocspuri = (void (*) (ca_info_t*,chunk_t))add_ocspuri;
 	this->public.get_certificate = (x509_t* (*) (ca_info_t*))get_certificate;
-	this->public.verify_by_crl = (cert_status_t (*) (ca_info_t*,const x509_t*,certinfo_t*))verify_by_crl;
-	this->public.verify_by_ocsp = (cert_status_t (*) (ca_info_t*,const x509_t*,certinfo_t*,credential_store_t*))verify_by_ocsp;
+	this->public.verify_by_crl = (cert_status_t (*) (ca_info_t*,certinfo_t*))verify_by_crl;
+	this->public.verify_by_ocsp = (cert_status_t (*) (ca_info_t*,certinfo_t*,credential_store_t*))verify_by_ocsp;
 	this->public.purge_ocsp = (void (*) (ca_info_t*))purge_ocsp;
 	this->public.destroy = (void (*) (ca_info_t*))destroy;
 
