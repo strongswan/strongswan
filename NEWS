@@ -8,6 +8,17 @@ strongswan-4.1.1
   compared to properly detect retransmissions and incoming retransmits are
   detected even if the IKE_SA is blocked (e.g. doing OCSP fetches).
 
+- Added the configuration options --enable-nat-transport which enables
+  the potentially insecure NAT traversal for IPsec transport mode and
+  --disable-vendor-id which disables the sending of the strongSwan
+  vendor ID.
+
+- Fixed a long-standing bug in the pluto IKEv1 daemon which caused
+  a segmentation fault if a malformed payload was detected in the
+  IKE MR2 message and pluto tried to send an encrypted notification
+  message.
+
+
 strongswan-4.1.0
 ----------------
 
