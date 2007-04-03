@@ -43,7 +43,7 @@ struct fetcher_t {
 	 * @param uri				uri specifying the information source
 	 * @return					chunk_t containing the information
 	 */
-	chunk_t (*get) (fetcher_t *this, const char *uri);
+	chunk_t (*get) (fetcher_t *this);
 
 	/**
 	 * @brief Get information via a get request.

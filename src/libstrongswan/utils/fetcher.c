@@ -74,9 +74,44 @@ size_t curl_write_buffer(void *ptr, size_t size, size_t nmemb, void *data)
 /**
  * Implements fetcher_t.get
  */
-static chunk_t get(private_fetcher_t *this, const char *uri)
+static chunk_t get(private_fetcher_t *this)
 {
-	return chunk_empty;
+	chunk_t response = chunk_empty;
+
+#ifdef LIBCURL
+	if (this->curl)
+	{
+		CURLcode res;
+		chunk_t curl_response = chunk_empty;
+		char curl_error_buffer[CURL_ERROR_SIZE];
+
+		curl_easy_setopt(this->curl, CURLOPT_URL, this->uri);
+		curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, curl_write_buffer);
+		curl_easy_setopt(this->curl, CURLOPT_WRITEDATA, (void *)&curl_response);
+		curl_easy_setopt(this->curl, CURLOPT_ERRORBUFFER, &curl_error_buffer);
+		curl_easy_setopt(this->curl, CURLOPT_FAILONERROR, TRUE);
+		curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT, FETCHER_TIMEOUT);
+		curl_easy_setopt(this->curl, CURLOPT_NOSIGNAL, TRUE);
+
+		DBG1("sending http get request to '%s'...", this->uri);
+		res = curl_easy_perform(this->curl);
+
+		if (res == CURLE_OK)
+		{
+	    	DBG1("received valid http response");
+			response = chunk_clone(curl_response);
+		}
+		else
+		{
+	    	DBG1("http get request to '%s' using libcurl failed: %s",
+				  this->uri, curl_error_buffer);
+		}
+		curl_free(curl_response.ptr);
+	}
+#else
+	DBG1("warning: libcurl fetching not compiled in");
+#endif  /* LIBCURL */
+	return response;
 }
 
 /**
@@ -162,7 +197,7 @@ fetcher_t *fetcher_create(const char *uri)
 #endif /* LIBCURL */
 
 	/* public functions */
-	this->public.get = (chunk_t (*) (fetcher_t*,const char*))get;
+	this->public.get = (chunk_t (*) (fetcher_t*))get;
 	this->public.post = (chunk_t (*) (fetcher_t*,const char*,chunk_t))post;
 	this->public.destroy = (void (*) (fetcher_t*))destroy;
 
