@@ -18,6 +18,8 @@ strongswan-4.1.1
   IKE MR2 message and pluto tried to send an encrypted notification
   message.
 
+- The IKEv2 daemon charon now supports dynamic http-based CRL fetching.
+
 
 strongswan-4.1.0
 ----------------
