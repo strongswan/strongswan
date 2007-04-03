@@ -34,7 +34,7 @@ AC_ARG_WITH(
 )
 
 AC_ARG_WITH(
-    [default-xauth],
+    [xauth-module],
     AS_HELP_STRING([--with-xauth-module=lib],[set the path to the XAUTH module]),
     [AC_DEFINE_UNQUOTED(XAUTH_DEFAULT_LIB, "$withval")],
 )
@@ -89,48 +89,80 @@ AC_ARG_WITH(
 AC_ARG_ENABLE(
     [http],
     AS_HELP_STRING([--enable-http],[enable OCSP and fetching of Certificates and CRLs over HTTP (default is NO). Requires libcurl.]),
-    http=true
-    AC_DEFINE(LIBCURL)
+    [if test x$enableval = xyes; then
+        http=true
+        AC_DEFINE(LIBCURL)
+    fi]
 )
 AM_CONDITIONAL(USE_LIBCURL, test x$http = xtrue)
 
 AC_ARG_ENABLE(
     [ldap],
     AS_HELP_STRING([--enable-ldap],[enable fetching of CRLs from LDAP (default is NO). Requires openLDAP.]),
-    ldap=true
-    AC_DEFINE(LDAP_VER, 3)
+    [if test x$enableval = xyes; then
+        ldap=true
+        AC_DEFINE(LDAP_VER, 3)
+    fi]
 )
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 
 AC_ARG_ENABLE(
     [smartcard],
     AS_HELP_STRING([--enable-smartcard],[enable smartcard support (default is NO).]),
-    smartcard=true
-    AC_DEFINE(SMARTCARD)
+    [if test x$enableval = xyes; then
+        smartcard=true
+        AC_DEFINE(SMARTCARD)
+    fi]
 )
 AM_CONDITIONAL(USE_SMARTCARD, test x$smartcard = xtrue)
 
 AC_ARG_ENABLE(
-    [cisco_quirks],
+    [cisco-quirks],
     AS_HELP_STRING([--enable-cisco-quirks],[enable support of Cisco VPN client (default is NO).]),
-    cisco_quirks=true
-    AC_DEFINE(CISCO_QUIRKS)
+    [if test x$enableval = xyes; then
+        cisco_quirks=true
+    fi]
 )
 AM_CONDITIONAL(USE_CISCO_QUIRKS, test x$cisco_quirks = xtrue)
 
 AC_ARG_ENABLE(
     [leak-detective],
     AS_HELP_STRING([--enable-leak-detective],[enable malloc hooks to find memory leaks (default is NO).]),
-    leak_detective=true
+    [if test x$enableval = xyes; then
+        leak_detective=true
+    fi]
 )
 AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
 
 AC_ARG_ENABLE(
     [eap-sim],
     AS_HELP_STRING([--enable-eap-sim],[build SIM authenication module for EAP (default is NO).]),
-    eap_sim=true
+    [if test x$enableval = xyes; then
+        eap_sim=true
+    fi]
 )
 AM_CONDITIONAL(BUILD_EAP_SIM, test x$eap_sim = xtrue)
+
+AC_ARG_ENABLE(
+    [nat-transport],
+    AS_HELP_STRING([--enable-nat-transport],[enable NAT traversal with IPsec transport mode (default is NO).]),
+    [if test x$enableval = xyes; then
+        nat_transport=true
+    fi]
+)
+AM_CONDITIONAL(USE_NAT_TRANSPORT, test x$nat_transport = xtrue)
+
+AC_ARG_ENABLE(
+    [vendor-id],
+    AS_HELP_STRING([--disable-vendor-id],[disable the sending of the strongSwan vendor ID (default is NO).]),
+    [if test x$enableval = xyes; then
+        vendor_id=true
+     else
+        vendor_id=false
+    fi],
+    vendor_id=true
+)
+AM_CONDITIONAL(USE_VENDORID, test x$vendor_id = xtrue)
 
 dnl =========================
 dnl  check required programs
