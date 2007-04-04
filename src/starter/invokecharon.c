@@ -116,6 +116,14 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     {
 	arg[argc++] = "--strictcrlpolicy";
     }
+    if (cfg->setup.crlcheckinterval > 0)
+    {
+	char buffer[BUF_LEN];
+
+	snprintf(buffer, BUF_LEN, "%u", cfg->setup.crlcheckinterval);
+	arg[argc++] = "--crlcheckinterval";
+	arg[argc++] = buffer;
+    }
     if (cfg->setup.eapdir)
     {
 	arg[argc++] = "--eapdir";
@@ -123,7 +131,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     }
 
     {   /* parse debug string */
-    	char *pos, *level, *buf_pos, type[4], buffer[512];
+    	char *pos, *level, *buf_pos, type[4], buffer[BUF_LEN];
 	pos = cfg->setup.charondebug;
 	buf_pos = buffer;
 	while (pos && sscanf(pos, "%4s %d,", type, &level) == 2)

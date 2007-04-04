@@ -92,6 +92,11 @@ struct private_ca_info_t {
 };
 
 /**
+ * static value set by ca_info_set_crl()
+ */
+static crl_check_interval = 0;
+
+/**
  * Implements ca_info_t.equals
  */
 static bool equals(const private_ca_info_t *this, const private_ca_info_t *that)
@@ -379,14 +384,14 @@ static x509_t* get_certificate(private_ca_info_t* this)
 static cert_status_t verify_by_crl(private_ca_info_t* this,
 								   certinfo_t *certinfo)
 {
+	rsa_public_key_t *issuer_public_key = this->cacert->get_public_key(this->cacert);
 	bool stale;
 
 	pthread_mutex_lock(&(this->mutex));
-
 	if (this->crl == NULL)
 	{
 		stale = TRUE;
-		DBG1("crl is not locally available");
+		DBG1("no crl is locally available");
 	}
 	else
 	{
@@ -394,7 +399,7 @@ static cert_status_t verify_by_crl(private_ca_info_t* this,
 		DBG1("crl is %s", stale? "stale":"valid");
 	}
 
-	if (stale)
+	if (stale && crl_check_interval > 0)
 	{
 		iterator_t *iterator = this->crluris->create_iterator(this->crluris, TRUE);
 		identification_t *uri;
@@ -414,37 +419,50 @@ static cert_status_t verify_by_crl(private_ca_info_t* this,
 			if (response_chunk.ptr != NULL)
 			{
 				crl_t *crl = crl_create_from_chunk(response_chunk);
-				
-				if (crl)
+		
+				if (crl == NULL)
 				{
-					if (this->crl == NULL)
+					free(response_chunk.ptr);
+					continue;
+				}
+				if (!is_crl_issuer(this, crl))
+				{
+					DBG1("  fetched crl has wrong issuer");
+					crl->destroy(crl);
+					continue;
+				}
+				if (!crl->verify(crl, issuer_public_key))
+				{
+					DBG1("fetched crl signature is invalid");
+					crl->destroy(crl);
+					continue;
+				}
+				DBG2("fetched crl signature is valid");
+
+				if (this->crl == NULL)
+				{
+					this->crl = crl;
+				}
+				else if (crl->is_newer(crl, this->crl))
+				{
+					this->crl->destroy(this->crl);
+					this->crl = crl;
+					DBG1(" thisUpdate is newer - existing crl replaced");
+					if (this->crl->is_valid(this->crl))
 					{
-						this->crl = crl;
-					}
-					else if (crl->is_newer(crl, this->crl))
-					{
-						this->crl->destroy(this->crl);
-						this->crl = crl;
-						DBG1("  thisUpdate is newer - existing crl replaced");
-						if (this->crl->is_valid(this->crl))
-						{
-							break;
-						}
-						else
-						{
-							DBG1("fetched crl is stale");
-						}
+						/* we found a valid crl and exit the fetch loop */
+						break;
 					}
 					else
 					{
-						crl->destroy(crl);
-						DBG1("  thisUpdate is not newer - existing crl retained");
+						DBG1("fetched crl is stale");
 					}
 				}
 				else
 				{
-					free(response_chunk.ptr);
-				};
+					crl->destroy(crl);
+					DBG1("thisUpdate is not newer - existing crl retained");
+				}
 			}
 		}
 		iterator->destroy(iterator);
@@ -452,12 +470,7 @@ static cert_status_t verify_by_crl(private_ca_info_t* this,
 
 	if (this->crl)
 	{
-		rsa_public_key_t *issuer_public_key;
-		bool valid_signature;
-
-		issuer_public_key = this->cacert->get_public_key(this->cacert);
-		valid_signature = this->crl->verify(this->crl, issuer_public_key);
-		if (!valid_signature)
+		if (!this->crl->verify(this->crl, issuer_public_key))
 		{
 			DBG1("crl signature is invalid");
 			goto ret;
@@ -664,6 +677,14 @@ static int print(FILE *stream, const struct printf_info *info,
 static void __attribute__ ((constructor))print_register()
 {
 	register_printf_function(PRINTF_CAINFO, print, arginfo_ptr_alt_ptr_int);
+}
+
+/*
+ * Described in header.
+ */
+void ca_info_set_crlcheckinterval(u_int interval)
+{
+	crl_check_interval = interval;
 }
 
 /*

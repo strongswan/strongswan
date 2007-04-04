@@ -193,11 +193,20 @@ struct ca_info_t {
 /**
  * @brief Create a ca info record
  * 
+ * @param interval	crl_check_interval to be set in seconds
+ * 
+ * @ingroup crypto
+ */
+void ca_info_set_crlcheckinterval(u_int interval);
+
+/**
+ * @brief Create a ca info record
+ * 
  * @param name 		name of the ca info record
  * @param cacert	path to the ca certificate
  * @return 			created ca_info_t, or NULL if invalid.
  * 
- * @ingroup transforms
+ * @ingroup crypto
  */
 ca_info_t *ca_info_create(const char *name, x509_t *cacert);
 

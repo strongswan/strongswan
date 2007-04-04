@@ -81,7 +81,7 @@ usage(const char *mess)
 	    " [--nocrsend]"
 	    " \\\n\t"
 	    "[--strictcrlpolicy]"
-	    " [--crlcheckinterval]"
+	    " [--crlcheckinterval <interval>]"
 	    " [--cachecrls]"
 	    " [--uniqueids]"
 	    " \\\n\t"
