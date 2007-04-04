@@ -387,7 +387,6 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 		/* IKE_SA_INIT request. Check for an IKE_SA with such a message hash. */
 		iterator_t *iterator;
 		chunk_t data, hash;
-		bool occupied = FALSE;
 		
 		data = message->get_packet_data(message);
 		this->hasher->allocate_hash(this->hasher, data, &hash);
@@ -401,7 +400,12 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 			{
 				if (entry->message_id == 0)
 				{
-					occupied = TRUE;
+					iterator->destroy(iterator);
+					pthread_mutex_unlock(&this->mutex);
+					chunk_free(&hash);
+					id->destroy(id);
+					DBG1(DBG_MGR, "ignoring IKE_SA_INIT, already processing");
+					return NULL;
 				}
 				else if (wait_for_entry(this, entry))
 				{
@@ -415,26 +419,28 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 		}
 		iterator->destroy(iterator);
 		pthread_mutex_unlock(&this->mutex);
-		if (occupied)
-		{
-			/* already processing this message ID, discard */
-			chunk_free(&hash);
-			id->destroy(id);
-			return NULL;
-		}
+		
 		if (ike_sa == NULL)
 		{
-			/* no IKE_SA found, create a new one */
-			id->set_responder_spi(id, get_next_spi(this));
-			entry = entry_create(id);
-			
-			pthread_mutex_lock(&this->mutex);
-			this->ike_sa_list->insert_last(this->ike_sa_list, entry);
-			entry->checked_out = TRUE;
-			entry->message_id = message->get_message_id(message);
-			pthread_mutex_unlock(&this->mutex);
-			entry->init_hash = hash;
-			ike_sa = entry->ike_sa;
+			if (id->get_responder_spi(id) == 0 &&
+				message->get_exchange_type(message) == IKE_SA_INIT)
+			{
+				/* no IKE_SA found, create a new one */
+				id->set_responder_spi(id, get_next_spi(this));
+				entry = entry_create(id);
+				
+				pthread_mutex_lock(&this->mutex);
+				this->ike_sa_list->insert_last(this->ike_sa_list, entry);
+				entry->checked_out = TRUE;
+				entry->message_id = message->get_message_id(message);
+				pthread_mutex_unlock(&this->mutex);
+				entry->init_hash = hash;
+				ike_sa = entry->ike_sa;
+			}
+			else
+			{
+				DBG1(DBG_MGR, "ignoring message for %J, no such IKE_SA", id);
+			}
 		}
 		else
 		{
@@ -452,7 +458,8 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 		if (message->get_request(message) &&
 			message->get_message_id(message) == entry->message_id)
 		{
-			DBG2(DBG_MGR, "not checking out, message already processing");
+			DBG1(DBG_MGR, "ignoring request with ID %d, already processing",
+				 entry->message_id);
 		}
 		else if (wait_for_entry(this, entry))
 		{

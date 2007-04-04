@@ -75,12 +75,6 @@ static status_t execute(private_process_message_job_t *this)
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		}
 	}
-	else
-	{
-		DBG1(DBG_NET, "unable to handle message from %#H for IKE_SA: %J",
-			 this->message->get_source(this->message),
-			 this->message->get_ike_sa_id(this->message));
-	}
 	return DESTROY_ME;
 }
 
