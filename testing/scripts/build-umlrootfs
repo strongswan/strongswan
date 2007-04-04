@@ -108,16 +108,6 @@ cecho " * Extracting strongSwan into the root filesystem"
 tar xjf $STRONGSWAN -C $LOOPDIR/root >> $LOGFILE 2>&1
 
 ######################################################
-# setting up mountpoint for shared source tree
-#
-if [ "${SHAREDTREE+set}" = "set" ]; then
-    cecho " * setting up shared strongswan tree at '$SHAREDTREE'"
-    mkdir $LOOPDIR/root/strongswan-shared
-    echo "" >> $LOOPDIR/etc/fstab
-    echo "none /root/strongswan-shared hostfs $SHAREDTREE" >> $LOOPDIR/etc/fstab
-fi
-
-######################################################
 # installing strongSwan and setting the local timezone
 #
 
@@ -136,7 +126,7 @@ fi
 
 if [ "$USE_LDAP" = "yes" ]
 then
-    echo -n " --enable-ldap=3" >> $INSTALLSHELL
+    echo -n " --enable-ldap" >> $INSTALLSHELL
 fi
 
 if [ "$USE_LEAK_DETECTIVE" = "yes" ]
@@ -151,9 +141,6 @@ echo "ldconfig" >> $INSTALLSHELL
 cecho-n " * Compiling $STRONGSWANVERSION within the root file system as chroot.."
 chroot $LOOPDIR /bin/bash /install.sh >> $LOGFILE 2>&1
 cecho "done"
-
-rm -f $INSTALLSHELL
-
 
 ######################################################
 # copying the host's ssh public key
