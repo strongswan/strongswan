@@ -25,6 +25,7 @@
 
 #include "chunk.h"
 
+#include <debug.h>
 #include <printf_hook.h>
 
 /**
@@ -205,6 +206,45 @@ void chunk_split(chunk_t chunk, const char *mode, ...)
 	va_end(chunks);
 }
 
+/**
+ * Described in header.
+ */
+bool chunk_write(chunk_t chunk, const char *path, const char *label, mode_t mask, bool force)
+{
+	mode_t oldmask;
+	FILE *fd;
+
+	if (!force)
+	{
+		fd = fopen(path, "r");
+		if (fd)
+		{
+			fclose(fd);
+			DBG1("  %s file '%s' already exists", label, path);
+			return FALSE;
+		}
+	}
+
+	/* set umask */
+	oldmask = umask(mask);
+
+	fd = fopen(path, "w");
+
+	if (fd)
+	{
+		fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd);
+		fclose(fd);
+		DBG1("  written %s file '%s' (%u bytes)", label, path, chunk.len);
+		umask(oldmask);
+		return TRUE;
+	}
+	else
+	{
+		DBG1("  could not open %s file '%s' for writing", label, path);
+		umask(oldmask);
+		return FALSE;
+	}
+}
 
 /**
  * Described in header.

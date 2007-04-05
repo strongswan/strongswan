@@ -92,9 +92,10 @@ struct private_ca_info_t {
 };
 
 /**
- * static value set by ca_info_set_crl()
+ * static options set by ca_info_set_options()
  */
-static crl_check_interval = 0;
+static bool cache_crls = FALSE;
+static u_int crl_check_interval = 0;
 
 /**
  * Implements ca_info_t.equals
@@ -379,10 +380,62 @@ static x509_t* get_certificate(private_ca_info_t* this)
 }
 
 /**
+ * caches a crl by saving it to a given crl directory
+ */
+void cache_crl(private_ca_info_t* this, const char *crl_dir, crl_t *crl)
+{
+	char buffer[BUF_LEN];
+	char *path;
+	char *pos = buffer;
+	int len = BUF_LEN;
+	int n;
+
+	chunk_t authKeyID = this->cacert->get_subjectKeyID(this->cacert);
+	chunk_t uri;
+
+	uri.ptr = buffer;
+	uri.len = 7 + strlen(crl_dir) + 1 + 2*authKeyID.len + 4;
+
+	if (uri.len >= BUF_LEN)	
+	{
+		DBG1("file uri exceeds buffer length of %d bytes - crl not saved", BUF_LEN);
+		return;
+	}
+
+	/* print the file uri prefix */
+	n = snprintf(pos, len, "file://");
+	pos += n;  len -= n;
+
+	/* remember the start of the path string */
+	path = pos;
+
+	/* print the default crl directory path */
+	n = snprintf(pos, len, "%s/", crl_dir);
+	pos += n;  len -= n;
+
+	/* create and print a unique crl filename derived from the authKeyID */
+	while (authKeyID.len-- > 0)
+	{
+		n = snprintf(pos, len, "%02x", *authKeyID.ptr++);
+		pos += n; len -= n;
+	}
+
+	/* add the file suffix */
+	n = snprintf(pos, len, ".crl");
+
+	if (crl->write_to_file(crl, path, 0022, TRUE))
+	{
+		identification_t *crluri = identification_create_from_encoding(ID_DER_ASN1_GN_URI, uri);
+
+		add_identification(this->crluris, crluri);
+	}
+}
+
+/**
  *  Implements ca_info_t.verify_by_crl.
  */
-static cert_status_t verify_by_crl(private_ca_info_t* this,
-								   certinfo_t *certinfo)
+static cert_status_t verify_by_crl(private_ca_info_t* this, certinfo_t *certinfo,
+								   const char *crl_dir)
 {
 	rsa_public_key_t *issuer_public_key = this->cacert->get_public_key(this->cacert);
 	bool stale;
@@ -448,20 +501,25 @@ static cert_status_t verify_by_crl(private_ca_info_t* this,
 					this->crl->destroy(this->crl);
 					this->crl = crl;
 					DBG1(" thisUpdate is newer - existing crl replaced");
-					if (this->crl->is_valid(this->crl))
-					{
-						/* we found a valid crl and exit the fetch loop */
-						break;
-					}
-					else
-					{
-						DBG1("fetched crl is stale");
-					}
 				}
 				else
 				{
 					crl->destroy(crl);
 					DBG1("thisUpdate is not newer - existing crl retained");
+					continue;
+				}
+				if (crl->is_valid(crl))
+				{
+					if (cache_crls && strncasecmp(uri_string, "file", 4) != 0)
+					{
+						cache_crl(this, crl_dir, crl);
+					}
+					/* we found a valid crl and therefore exit the fetch loop */
+					break;
+				}
+				else
+				{
+					DBG1("fetched crl is stale");
 				}
 			}
 		}
@@ -682,8 +740,9 @@ static void __attribute__ ((constructor))print_register()
 /*
  * Described in header.
  */
-void ca_info_set_crlcheckinterval(u_int interval)
+void ca_info_set_options(bool cache, u_int interval)
 {
+	cache_crls = cache;
 	crl_check_interval = interval;
 }
 
@@ -720,7 +779,7 @@ ca_info_t *ca_info_create(const char *name, x509_t *cacert)
 	this->public.add_crluri = (void (*) (ca_info_t*,chunk_t))add_crluri;
 	this->public.add_ocspuri = (void (*) (ca_info_t*,chunk_t))add_ocspuri;
 	this->public.get_certificate = (x509_t* (*) (ca_info_t*))get_certificate;
-	this->public.verify_by_crl = (cert_status_t (*) (ca_info_t*,certinfo_t*))verify_by_crl;
+	this->public.verify_by_crl = (cert_status_t (*) (ca_info_t*,certinfo_t*, const char*))verify_by_crl;
 	this->public.verify_by_ocsp = (cert_status_t (*) (ca_info_t*,certinfo_t*,credential_store_t*))verify_by_ocsp;
 	this->public.purge_ocsp = (void (*) (ca_info_t*))purge_ocsp;
 	this->public.destroy = (void (*) (ca_info_t*))destroy;

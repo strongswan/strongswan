@@ -161,9 +161,10 @@ struct ca_info_t {
 	 * 
 	 * @param this			ca info object
 	 * @param certinfo		detailed certificate status information
+	 * @param crl_dir		directory where fetched crls should be stored
 	 * @return				certificate status
 	 */
-	cert_status_t (*verify_by_crl) (ca_info_t* this, certinfo_t* certinfo);
+	cert_status_t (*verify_by_crl) (ca_info_t *this, certinfo_t *certinfo, const char *crl_dir);
 
 	/**
 	 * @brief Verify the status of a certificate by OCSP
@@ -191,13 +192,14 @@ struct ca_info_t {
 };
 
 /**
- * @brief Create a ca info record
+ * @brief Set ca info options
  * 
+ * @param cache		TRUE if crls shall be cached by storing them
  * @param interval	crl_check_interval to be set in seconds
  * 
  * @ingroup crypto
  */
-void ca_info_set_crlcheckinterval(u_int interval);
+void ca_info_set_options(bool cache, u_int interval);
 
 /**
  * @brief Create a ca info record

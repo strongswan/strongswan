@@ -395,6 +395,14 @@ static void get_status(const private_crl_t *this, certinfo_t *certinfo)
 }
 
 /**
+ * Implements crl_t.write_to_file.
+ */
+static bool write_to_file(private_crl_t *this, const char *path, mode_t mask, bool force)
+{
+	return chunk_write(this->certificateList, path, "crl", mask, force);
+}
+
+/**
  * Implements crl_t.destroy
  */
 static void destroy(private_crl_t *this)
@@ -493,6 +501,7 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 	this->public.is_newer = (bool (*) (const crl_t*,const crl_t*))is_newer;
 	this->public.verify = (bool (*) (const crl_t*,const rsa_public_key_t*))verify;
 	this->public.get_status = (void (*) (const crl_t*,certinfo_t*))get_status;
+	this->public.write_to_file = (bool (*) (const crl_t*,const char*,mode_t,bool))write_to_file;
 	this->public.destroy = (void (*) (crl_t*))destroy;
 	
 	if (!parse_x509crl(chunk, 0, this))

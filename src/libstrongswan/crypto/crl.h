@@ -106,6 +106,17 @@ struct crl_t {
 	void (*get_status) (const crl_t *this, certinfo_t *certinfo);
 
 	/**
+	 * @brief Write a der-encoded crl to a file
+	 * 
+	 * @param this			calling object
+	 * @param path			path where the file is to be stored
+	 * @param mask			file access control rights
+	 * @param force			overwrite the file if it already exists
+	 * @return				TRUE if successfully written
+	 */
+	bool (*write_to_file) (const crl_t *this, const char *path, mode_t mask, bool force);
+
+	/**
 	 * @brief Destroys the crl.
 	 * 
 	 * @param this			crl to destroy

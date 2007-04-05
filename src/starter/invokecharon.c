@@ -116,6 +116,10 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     {
 	arg[argc++] = "--strictcrlpolicy";
     }
+    if (cfg->setup.cachecrls)
+    {
+	arg[argc++] = "--cachecrls";
+    }
     if (cfg->setup.crlcheckinterval > 0)
     {
 	char buffer[BUF_LEN];

@@ -665,7 +665,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			/* if ocsp service is not available then fall back to crl */
 			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && this->strict))
 			{
-				status = issuer->verify_by_crl(issuer, certinfo);
+				status = issuer->verify_by_crl(issuer, certinfo, CRL_DIR);
 			}
 			
 			nextUpdate = certinfo->get_nextUpdate(certinfo);
@@ -1038,7 +1038,7 @@ static void load_ocsp_certificates(private_local_credential_store_t *this)
 /**
  * Add the latest crl to the issuing ca
  */
-static void add_crl(private_local_credential_store_t *this, crl_t *crl)
+static void add_crl(private_local_credential_store_t *this, crl_t *crl, const char *path)
 {
 	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
 	ca_info_t *ca_info;
@@ -1048,8 +1048,16 @@ static void add_crl(private_local_credential_store_t *this, crl_t *crl)
 	{
 		if (ca_info->is_crl_issuer(ca_info, crl))
 		{
-			found = TRUE;
+			char buffer[BUF_LEN];
+			chunk_t uri = { buffer, 7 + strlen(path) };
+
 			ca_info->add_crl(ca_info, crl);
+			if (uri.len < BUF_LEN)
+			{
+				snprintf(buffer, BUF_LEN, "file://%s", path);
+				ca_info->add_crluri(ca_info, uri);
+			}
+			found = TRUE;
 			break;
 		}
 	}
@@ -1097,8 +1105,8 @@ static void load_crls(private_local_credential_store_t *this)
 			crl = crl_create_from_file(file);
 			if (crl)
 			{
-				DBG1(DBG_CFG, "crl is %s", crl->is_valid(crl)? "valid":"stale");
-				add_crl(this, crl);
+				DBG1(DBG_CFG, "  crl is %s", crl->is_valid(crl)? "valid":"stale");
+				add_crl(this, crl, file);
 			}
 		}
 	}

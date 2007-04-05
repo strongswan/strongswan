@@ -380,6 +380,7 @@ static void usage(const char *msg)
 					"         [--help]\n"
 					"         [--version]\n"
 					"         [--strictcrlpolicy]\n"
+					"         [--cachecrls]\n"
 					"         [--crlcheckinterval <interval>]\n"
 					"         [--eapdir <dir>]\n"
 					"         [--use-syslog]\n"
@@ -399,6 +400,7 @@ int main(int argc, char *argv[])
 {
 	u_int crl_check_interval = 0;
 	bool strict_crl_policy = FALSE;
+	bool cache_crls = FALSE;
 	bool use_syslog = FALSE;
 	char *eapdir = IPSEC_EAPDIR;
 
@@ -424,6 +426,7 @@ int main(int argc, char *argv[])
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
 			{ "strictcrlpolicy", no_argument, NULL, 'r' },
+			{ "cachecrls", no_argument, NULL, 'C' },
 			{ "crlcheckinterval", required_argument, NULL, 'x' },
 			{ "eapdir", required_argument, NULL, 'e' },
 			/* TODO: handle "debug-all" */
@@ -457,6 +460,9 @@ int main(int argc, char *argv[])
 			case 'r':
 				strict_crl_policy = TRUE;
 				continue;
+			case 'C':
+				cache_crls = TRUE;
+				continue;
 			case 'x':
 				crl_check_interval = atoi(optarg);
 				continue;
@@ -483,8 +489,8 @@ int main(int argc, char *argv[])
 	/* load pluggable EAP modules */
 	eap_method_load(eapdir);
 	
-	/* set crl_check_interval */
-	ca_info_set_crlcheckinterval(crl_check_interval);
+	/* set cache_crls and crl_check_interval options */
+	ca_info_set_options(cache_crls, crl_check_interval);
 
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)

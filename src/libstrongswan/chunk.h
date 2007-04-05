@@ -79,6 +79,11 @@ chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...);
 void chunk_split(chunk_t chunk, const char *mode, ...);
 
 /**
+  * Write the binary contents of a chunk_t to a file
+  */
+bool chunk_write(chunk_t chunk, const char *path, const char *label, mode_t mask, bool force);
+
+/**
  * Free contents of a chunk
  */
 void chunk_free(chunk_t *chunk);
