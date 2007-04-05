@@ -1,4 +1,2 @@
 moon::ipsec stop
 carol::ipsec stop
-moon::iptables -F OUTPUT
-carol::iptables -F OUTPUT

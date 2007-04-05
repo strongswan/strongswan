@@ -1,4 +1,3 @@
-moon::wget -q http://crl.strongswan.org/strongswan.crl -O /etc/ipsec.d/crls/strongswan.crl
 moon::ipsec start
 carol::ipsec start
 carol::sleep 1 
