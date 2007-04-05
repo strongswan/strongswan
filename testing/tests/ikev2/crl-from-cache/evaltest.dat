@@ -1,0 +1,8 @@
+moon::cat /var/log/daemon.log::loading crl file::YES
+carol::cat /var/log/daemon.log::loading crl file::YES
+moon::ipsec status::rw.*ESTABLISHED::YES
+carol::ipsec status::home.*ESTABLISHED::YES
+moon::cat /var/log/auth.log::written crl file::NO
+carol::cat /var/log/auth.log::written crl file::NO
+moon::ipsec listcrls:: ok::YES
+carol::ipsec listcrls:: ok::YES
