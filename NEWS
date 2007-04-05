@@ -18,7 +18,12 @@ strongswan-4.1.1
   IKE MR2 message and pluto tried to send an encrypted notification
   message.
 
-- The IKEv2 daemon charon now supports dynamic http-based CRL fetching.
+- Added the NATT_IETF_02_N Vendor ID in order to support IKEv1 connections
+  with Windows 2003 Server which uses a wrong VID hash.
+
+- The IKEv2 daemon charon now supports dynamic http-based CRL fetching
+  enabled by crlcheckinterval > 0 and caching fetched CRLs enabled by
+  cachecrls=yes.
 
 
 strongswan-4.1.0
