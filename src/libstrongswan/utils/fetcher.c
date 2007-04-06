@@ -83,7 +83,7 @@ static size_t curl_write_buffer(void *ptr, size_t size, size_t nmemb, void *data
 }
 
 /**
- * Implements fetcher_t.get for http[s] and file URIs
+ * Implements fetcher_t.get for curl methods
  */
 static chunk_t curl_get(private_fetcher_t *this)
 {
@@ -114,8 +114,7 @@ static chunk_t curl_get(private_fetcher_t *this)
 		}
 		else
 		{
-	    	DBG1("curl request to '%s' failed: %s",
-				  this->uri, curl_error_buffer);
+	    	DBG1("curl request failed: %s", curl_error_buffer);
 		}
 		curl_free(curl_response.ptr);
 	}
@@ -167,8 +166,7 @@ static chunk_t http_post(private_fetcher_t *this, const char *request_type, chun
 		}
 		else
 		{
-	    	DBG1("http post request to '%s' using libcurl failed: %s",
-				  this->uri, curl_error_buffer);
+	    	DBG1("http post request using libcurl failed: %s", curl_error_buffer);
 		}
 		curl_slist_free_all(headers);
 		curl_free(curl_response.ptr);
@@ -181,13 +179,15 @@ static chunk_t http_post(private_fetcher_t *this, const char *request_type, chun
 
 #ifdef LIBLDAP
 /**
- * parses the result returned by an ldap query
+ * Parses the result returned by an ldap query
  */
 static chunk_t ldap_parse(LDAP *ldap, LDAPMessage *result)
 {
 	chunk_t response = chunk_empty;
+	err_t ugh = NULL;
 
 	LDAPMessage *entry = ldap_first_entry(ldap, result);
+
 	if (entry != NULL)
 	{
 		BerElement *ber = NULL;
@@ -206,39 +206,44 @@ static chunk_t ldap_parse(LDAP *ldap, LDAPMessage *result)
 					response.len = values[0]->bv_len;
 					response.ptr = malloc(response.len);
 					memcpy(response.ptr, values[0]->bv_val, response.len);
+
 					if (values[1] != NULL)
 					{
-						DBG1("ldap: more than one value was fetched from LDAP URL");
+						ugh = "more than one value was fetched - first selected";
 					}
 				}
 				else
 				{
-					DBG1("ldap: no values in attribute");
+					ugh = "no values in attribute";
 				}
 				ldap_value_free_len(values);
 			}
 			else
 			{
-				DBG1("ldap: %s", ldap_err2string(ldap_result2error(ldap, entry, 0)));
+				ugh = ldap_err2string(ldap_result2error(ldap, entry, 0));
 			}
 			ldap_memfree(attr);
 		}
 		else
 		{
-			DBG1("ldap: %s", ldap_err2string(ldap_result2error(ldap, entry, 0)));
+			ugh = ldap_err2string(ldap_result2error(ldap, entry, 0));
 		}
 		ber_free(ber, 0);
 	}
 	else
 	{
-		DBG1("ldap: %s", ldap_err2string(ldap_result2error(ldap, result, 0)));
+		ugh = ldap_err2string(ldap_result2error(ldap, result, 0));
+	}
+	if (ugh)
+	{
+		DBG1("ldap request failed: %s", ugh); 
 	}
 	return response;
 }
 #endif  /* LIBLDAP */
 
 /**
- * fetches a binary blob from an ldap url
+ * Implements fetcher_t.get for curl methods
  */
 static chunk_t ldap_get(private_fetcher_t *this)
 {
@@ -247,6 +252,7 @@ static chunk_t ldap_get(private_fetcher_t *this)
 #ifdef LIBLDAP
 	if (this->ldap)
 	{
+		err_t ugh = NULL;
 		int rc;
 		int ldap_version = LDAP_VERSION3;
 
@@ -285,14 +291,19 @@ static chunk_t ldap_get(private_fetcher_t *this)
 			}
 			else
 			{
-				DBG1("ldap: %s", ldap_err2string(rc));
+				ugh = ldap_err2string(rc);
 			}
 		}
 		else
 		{
-			DBG1("ldap: %s", ldap_err2string(rc));
+			ugh = ldap_err2string(rc);
 		}
 		ldap_unbind_s(this->ldap);
+
+		if (ugh)
+		{
+			DBG1("ldap request failed: %s", ugh);
+		}
 	}
 #else   /* !LIBLDAP */
 	DBG1("warning: libldap fetching not compiled in");
