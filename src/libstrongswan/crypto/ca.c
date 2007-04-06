@@ -191,12 +191,12 @@ static void add_crl(private_ca_info_t *this, crl_t *crl)
 		{
 			this->crl->destroy(this->crl);
 			this->crl = crl;
-			DBG1("  thisUpdate is newer - existing crl replaced");
+			DBG1("  this crl is newer - existing crl replaced");
 		}
 		else
 		{
 			crl->destroy(crl);
-			DBG1("  thisUpdate is not newer - existing crl retained");
+			DBG1("  this crl is older - existing crl retained");
 		}
 	}
 	else
@@ -500,12 +500,12 @@ static cert_status_t verify_by_crl(private_ca_info_t* this, certinfo_t *certinfo
 				{
 					this->crl->destroy(this->crl);
 					this->crl = crl;
-					DBG1(" thisUpdate is newer - existing crl replaced");
+					DBG1("this crl is newer - existing crl replaced");
 				}
 				else
 				{
 					crl->destroy(crl);
-					DBG1("thisUpdate is not newer - existing crl retained");
+					DBG1("this crl is older - existing crl retained");
 					continue;
 				}
 				if (crl->is_valid(crl))

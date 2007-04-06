@@ -31,7 +31,7 @@
 
 #include <freeswan.h>
 
-#ifdef LDAP_VER
+#ifdef LIBLDAP
 #include <ldap.h>
 #endif
 
@@ -347,7 +347,7 @@ fetch_curl(char *url, chunk_t *blob)
 #endif  /* !LIBCURL */
 }
 
-#ifdef LDAP_VER
+#ifdef LIBLDAP
 /*
  * parses the result returned by an ldap query
  */
@@ -428,7 +428,7 @@ fetch_ldap_url(char *url, chunk_t *blob)
 
 	if (ldap != NULL)
 	{
-	    int ldap_version = (LDAP_VER == 2)? LDAP_VERSION2 : LDAP_VERSION3;
+	    int ldap_version = LDAP_VERSION3;
 	    struct timeval timeout;
 
 	    timeout.tv_sec  = FETCH_CMD_TIMEOUT;
@@ -479,13 +479,13 @@ fetch_ldap_url(char *url, chunk_t *blob)
     }
     return ugh;
 }
-#else   /* !LDAP_VER */
+#else   /* !LIBLDAP */
 static err_t
 fetch_ldap_url(char *url, chunk_t *blob)
 {
     return "LDAP URL fetching not activated in pluto source code";
 }
-#endif  /* !LDAP_VER */
+#endif  /* !LIBLDAP */
 
 /*
  * fetch an ASN.1 blob coded in PEM or DER format from a URL

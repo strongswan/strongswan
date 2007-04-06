@@ -41,12 +41,8 @@ const char compile_time_interop_options[] = ""
 #ifdef LIBCURL
 	" LIBCURL"
 #endif
-#ifdef LDAP_VER
-#if LDAP_VER == 2
-	" LDAP_V2"
-#else
-	" LDAP_V3"
-#endif
+#ifdef LIBLDAP
+	" LIBLDAP"
 #endif
 #ifdef SMARTCARD
 	" SMARTCARD"

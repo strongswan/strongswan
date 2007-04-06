@@ -58,6 +58,10 @@ if USE_LIBCURL
   libstrongswan_la_LIBADD += -lcurl
 endif
 
+if USE_LIBLDAP
+  libstrongswan_la_LIBADD += -lldap -llber
+endif
+
 asn1/oid.c :	asn1/oid.txt asn1/oid.pl
 		cd asn1 && $(PERL) oid.pl
 

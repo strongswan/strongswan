@@ -123,7 +123,7 @@ if USE_LIBCURL
 endif
 
 # This compile option activates dynamic LDAP CRL fetching
-if USE_LDAP
+if USE_LIBLDAP
   pluto_LDADD += -lldap -llber
 endif
 
