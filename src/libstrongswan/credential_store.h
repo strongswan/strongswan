@@ -235,24 +235,6 @@ struct credential_store_t {
 	iterator_t* (*create_cainfo_iterator) (credential_store_t *this);
 
 	/**
-	 * @brief Check if there are any CRLs.
-	 *
-	 * @param this		calling object
-	 * @param out		output stream
-	 * @param utc		either utc or local time
-	 */
-	void (*list_crls) (credential_store_t *this, FILE *out, bool utc);
-
-	/**
-	 * @brief Check if there are any OCSP cert infos
-	 *
-	 * @param this		calling object
-	 * @param out		output stream
-	 * @param utc		either utc or local time
-	 */
-	void (*list_ocsp) (credential_store_t *this, FILE *out, bool utc);
-
-	/**
 	 * @brief Loads ca certificates from a default directory.
 	 *
 	 * Certificates in both DER and PEM format are accepted
