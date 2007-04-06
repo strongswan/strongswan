@@ -8,6 +8,10 @@ strongswan-4.1.1
   compared to properly detect retransmissions and incoming retransmits are
   detected even if the IKE_SA is blocked (e.g. doing OCSP fetches).
 
+- The IKEv2 daemon charon now supports dynamic http- and ldap-based CRL
+  fetching enabled by crlcheckinterval > 0 and caching fetched CRLs
+  enabled by cachecrls=yes.
+
 - Added the configuration options --enable-nat-transport which enables
   the potentially insecure NAT traversal for IPsec transport mode and
   --disable-vendor-id which disables the sending of the strongSwan
@@ -20,10 +24,6 @@ strongswan-4.1.1
 
 - Added the NATT_IETF_02_N Vendor ID in order to support IKEv1 connections
   with Windows 2003 Server which uses a wrong VID hash.
-
-- The IKEv2 daemon charon now supports dynamic http-based CRL fetching
-  enabled by crlcheckinterval > 0 and caching fetched CRLs enabled by
-  cachecrls=yes.
 
 
 strongswan-4.1.0
