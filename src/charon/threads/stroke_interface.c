@@ -1132,7 +1132,26 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
 	}
 	if (msg->list.flags & LIST_CRLS)
 	{
-		charon->credentials->list_crls(charon->credentials, out, msg->list.utc);
+		ca_info_t *ca_info;
+		bool first = TRUE;
+
+		iterator = charon->credentials->create_cainfo_iterator(charon->credentials);
+
+		while (iterator->iterate(iterator, (void **)&ca_info))
+		{
+			if (ca_info->has_crl(ca_info))
+			{
+				if (first)
+				{
+					fprintf(out, "\n");
+					fprintf(out, "List of X.509 CRLs:\n");
+					fprintf(out, "\n");
+					first = FALSE;
+				}
+				ca_info->list_crl(ca_info, out, msg->list.utc);
+			}
+		}
+		iterator->destroy(iterator);
 	}
 	if (msg->list.flags & LIST_OCSPCERTS)
 	{
@@ -1140,7 +1159,26 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
 	}
 	if (msg->list.flags & LIST_OCSP)
 	{
-		charon->credentials->list_ocsp(charon->credentials, out, msg->list.utc);
+		ca_info_t *ca_info;
+		bool first = TRUE;
+
+		iterator = charon->credentials->create_cainfo_iterator(charon->credentials);
+
+		while (iterator->iterate(iterator, (void **)&ca_info))
+		{
+			if (ca_info->has_certinfos(ca_info))
+			{
+				if (first)
+				{
+					fprintf(out, "\n");
+					fprintf(out, "List of OCSP responses:\n");
+					first = FALSE;
+				}
+				fprintf(out, "\n");
+				ca_info->list_certinfos(ca_info, out, msg->list.utc);
+			}
+		}
+		iterator->destroy(iterator);
 	}
 }
 

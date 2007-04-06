@@ -875,59 +875,6 @@ static iterator_t* create_cainfo_iterator(private_local_credential_store_t *this
 }
 
 /**
- * Implements local_credential_store_t.list_crls
- */
-static void list_crls(private_local_credential_store_t *this, FILE *out, bool utc)
-{
-	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
-	ca_info_t *ca_info;
-	bool first = TRUE;
-
-	while (iterator->iterate(iterator, (void **)&ca_info))
-	{
-		if (ca_info->has_crl(ca_info))
-		{
-			if (first)
-			{
-				fprintf(out, "\n");
-				fprintf(out, "List of X.509 CRLs:\n");
-				fprintf(out, "\n");
-				first = FALSE;
-			}
-			ca_info->list_crl(ca_info, out, utc);
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-}
-
-/**
- * Implements local_credential_store_t.list_ocsp
- */
-static void list_ocsp(private_local_credential_store_t *this, FILE *out, bool utc)
-{
-	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
-	ca_info_t *ca_info;
-	bool first = TRUE;
-
-	while (iterator->iterate(iterator, (void **)&ca_info))
-	{
-		if (ca_info->has_certinfos(ca_info))
-		{
-			if (first)
-			{
-				fprintf(out, "\n");
-				fprintf(out, "List of OCSP responses:\n");
-				first = FALSE;
-			}
-			fprintf(out, "\n");
-			ca_info->list_certinfos(ca_info, out, utc);
-		}
-	}
-	iterator->destroy(iterator);
-}
-
-/**
  * Implements local_credential_store_t.load_auth_certificates
  */
 static void load_auth_certificates(private_local_credential_store_t *this,
@@ -1270,8 +1217,8 @@ static void load_secrets(private_local_credential_store_t *this)
 					this->private_keys->insert_last(this->private_keys, (void*)key);
 				}
 			}
-			else if ((match("PSK", &token)) || 
-					 (match("EAP", &token) && (is_eap = TRUE)))
+			else if ( match("PSK", &token) ||
+					((match("EAP", &token) || match("XAUTH", &token)) && (is_eap = TRUE)))
 			{
 				shared_key_t *shared_key;
 
@@ -1397,8 +1344,6 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.create_cert_iterator = (iterator_t* (*) (credential_store_t*))create_cert_iterator;
 	this->public.credential_store.create_auth_cert_iterator = (iterator_t* (*) (credential_store_t*))create_auth_cert_iterator;
 	this->public.credential_store.create_cainfo_iterator = (iterator_t* (*) (credential_store_t*))create_cainfo_iterator;
-	this->public.credential_store.list_crls = (void (*) (credential_store_t*,FILE*,bool))list_crls;
-	this->public.credential_store.list_ocsp = (void (*) (credential_store_t*,FILE*,bool))list_ocsp;
 	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
 	this->public.credential_store.load_ocsp_certificates = (void (*) (credential_store_t*))load_ocsp_certificates;
 	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;
