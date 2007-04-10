@@ -261,8 +261,20 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		message->get_payload(message, ID_INITIATOR))
 	{
-		peer_cfg_t *config = this->ike_sa->get_peer_cfg(this->ike_sa);
-		this->virtual_ip = config->get_virtual_ip(config, NULL);
+		peer_cfg_t *config;
+		host_t *vip;
+		
+		/* reuse virtual IP if we already have one */
+		vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
+		if (vip)
+		{
+			this->virtual_ip = vip->clone(vip);
+		}
+		else
+		{
+			config = this->ike_sa->get_peer_cfg(this->ike_sa);
+			this->virtual_ip = config->get_virtual_ip(config, NULL);
+		}
 		
 		build_payloads(this, message, CFG_REQUEST);
 	}

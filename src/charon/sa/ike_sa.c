@@ -1152,6 +1152,55 @@ static void set_other_id(private_ike_sa_t *this, identification_t *other)
 }
 
 /**
+ * Implementation of ike_sa_t.set_virtual_ip
+ */
+static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
+{
+	if (local)
+	{
+		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
+		if (this->my_virtual_ip)
+		{
+			DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
+			charon->kernel_interface->del_ip(charon->kernel_interface,
+											 this->my_virtual_ip,
+											 this->my_host);
+			this->my_virtual_ip->destroy(this->my_virtual_ip);
+		}
+		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
+											 this->my_host) == SUCCESS)
+		{
+			this->my_virtual_ip = ip->clone(ip);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
+			this->my_virtual_ip = NULL;
+		}
+	}
+	else
+	{
+		DESTROY_IF(this->other_virtual_ip);
+		this->other_virtual_ip = ip->clone(ip);
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.get_virtual_ip
+ */
+static host_t* get_virtual_ip(private_ike_sa_t *this, bool local)
+{
+	if (local)
+	{
+		return this->my_virtual_ip;
+	}
+	else
+	{
+		return this->other_virtual_ip;
+	}
+}
+
+/**
  * Implementation of ike_sa_t.derive_keys.
  */
 static status_t derive_keys(private_ike_sa_t *this,
@@ -1494,6 +1543,11 @@ static void reestablish(private_ike_sa_t *this)
 	set_peer_cfg(other, this->peer_cfg);
 	other->other_host->destroy(other->other_host);
 	other->other_host = this->other_host->clone(this->other_host);
+	if (this->my_virtual_ip)
+	{
+		/* if we already have a virtual IP, we reuse it */
+		set_virtual_ip(other, TRUE, this->my_virtual_ip);
+	}
 		
 	if (this->state == IKE_ESTABLISHED)
 	{
@@ -1616,55 +1670,6 @@ static void enable_natt(private_ike_sa_t *this, bool local)
 	{
 		DBG1(DBG_IKE, "remote host is behind NAT");
 		this->nat_there = TRUE;
-	}
-}
-
-/**
- * Implementation of ike_sa_t.set_virtual_ip
- */
-static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
-{
-	if (local)
-	{
-		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
-		if (this->my_virtual_ip)
-		{
-			DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
-			charon->kernel_interface->del_ip(charon->kernel_interface,
-											 this->my_virtual_ip,
-											 this->my_host);
-			this->my_virtual_ip->destroy(this->my_virtual_ip);
-		}
-		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
-											 this->my_host) == SUCCESS)
-		{
-			this->my_virtual_ip = ip->clone(ip);
-		}
-		else
-		{
-			DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
-			this->my_virtual_ip = NULL;
-		}
-	}
-	else
-	{
-		DESTROY_IF(this->other_virtual_ip);
-		this->other_virtual_ip = ip->clone(ip);
-	}
-}
-
-/**
- * Implementation of ike_sa_t.get_virtual_ip
- */
-static host_t* get_virtual_ip(private_ike_sa_t *this, bool local)
-{
-	if (local)
-	{
-		return this->my_virtual_ip;
-	}
-	else
-	{
-		return this->other_virtual_ip;
 	}
 }
 
