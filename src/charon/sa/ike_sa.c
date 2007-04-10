@@ -327,11 +327,9 @@ static peer_cfg_t* get_peer_cfg(private_ike_sa_t *this)
  */
 static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 {
-	host_t *me, *other;
-	identification_t *my_id, *other_id;
-	
 	peer_cfg->get_ref(peer_cfg);
 	this->peer_cfg = peer_cfg;
+
 	if (this->ike_cfg == NULL)
 	{
 		this->ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
@@ -341,20 +339,30 @@ static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 	/* apply values, so we are ready to initate/acquire */
 	if (this->my_host->is_anyaddr(this->my_host))
 	{
-		me = this->ike_cfg->get_my_host(this->ike_cfg);
+		host_t *me = this->ike_cfg->get_my_host(this->ike_cfg);
+
 		set_my_host(this, me->clone(me));
 	}
 	if (this->other_host->is_anyaddr(this->other_host))
 	{
-		other = this->ike_cfg->get_other_host(this->ike_cfg);
+		host_t *other = this->ike_cfg->get_other_host(this->ike_cfg);
+
 		set_other_host(this, other->clone(other));
 	}
-	my_id = this->peer_cfg->get_my_id(this->peer_cfg);
-	other_id = this->peer_cfg->get_other_id(this->peer_cfg);
-	DESTROY_IF(this->my_id);
-	DESTROY_IF(this->other_id);
-	this->my_id = my_id->clone(my_id);
-	this->other_id = other_id->clone(other_id);
+	if (this->my_id == NULL || this->my_id->contains_wildcards(this->my_id))
+	{
+		identification_t *my_id = this->peer_cfg->get_my_id(this->peer_cfg);
+
+		DESTROY_IF(this->my_id);
+		this->my_id = my_id->clone(my_id);
+	}
+	if (this->other_id == NULL || this->other_id->contains_wildcards(this->other_id))
+	{
+		identification_t *other_id = this->peer_cfg->get_other_id(this->peer_cfg);
+
+		DESTROY_IF(this->other_id);
+		this->other_id = other_id->clone(other_id);
+	}
 }
 
 /**
