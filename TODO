@@ -47,6 +47,7 @@ Build system
 ------------
 - configure flag which allows to ommit vendor id in pluto
 - reduce printf handlers count to 10, as uClibc does not support more
+- remove %m printf handlers, as error may have changed until it reaches fprintf()
 
 Certificate support
 -------------------

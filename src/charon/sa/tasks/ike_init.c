@@ -57,9 +57,9 @@ struct private_ike_init_t {
 	bool initiator;
 	
 	/**
-	 * Connection established by this IKE_SA
+	 * IKE config to establish
 	 */
-	connection_t *connection;
+	ike_cfg_t *config;
 	
 	/**
 	 * diffie hellman group to use
@@ -117,11 +117,11 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 	
 	id = this->ike_sa->get_id(this->ike_sa);
 	
-	this->connection = this->ike_sa->get_connection(this->ike_sa);
+	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 
 	if (this->initiator)
 	{
-		proposal_list = this->connection->get_proposals(this->connection);
+		proposal_list = this->config->get_proposals(this->config);
 		if (this->old_sa)
 		{	
 			/* include SPI of new IKE_SA when we are rekeying */
@@ -174,8 +174,8 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				linked_list_t *proposal_list;
 	
 				proposal_list = sa_payload->get_proposals(sa_payload);
-				this->proposal = this->connection->select_proposal(
-											  this->connection, proposal_list);
+				this->proposal = this->config->select_proposal(this->config,
+															   proposal_list);
 				proposal_list->destroy_offset(proposal_list, 
 											  offsetof(proposal_t, destroy));
 				break;
@@ -200,8 +200,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				else
 				{
 					this->dh_group = dh_group;
-					if (!this->connection->check_dh_group(this->connection, 
-														  dh_group))
+					if (!this->config->check_dh_group(this->config, dh_group))
 					{
 						break;
 					}
@@ -235,9 +234,9 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	randomizer_t *randomizer;
 	status_t status;
 	
-	this->connection = this->ike_sa->get_connection(this->ike_sa);
+	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	SIG(IKE_UP_START, "initiating IKE_SA to %H",
-		this->connection->get_other_host(this->connection));
+		this->config->get_other_host(this->config));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 	
 	if (this->retry++ >= MAX_RETRIES)
@@ -249,7 +248,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	/* if the DH group is set via use_dh_group(), we already have a DH object */
 	if (!this->diffie_hellman)
 	{
-		this->dh_group = this->connection->get_dh_group(this->connection);
+		this->dh_group = this->config->get_dh_group(this->config);
 		this->diffie_hellman = diffie_hellman_create(this->dh_group);
 		if (this->diffie_hellman == NULL)
 		{
@@ -291,7 +290,7 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 {	
 	randomizer_t *randomizer;
 	
-	this->connection = this->ike_sa->get_connection(this->ike_sa);
+	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	SIG(IKE_UP_FAILED, "%H is initiating an IKE_SA",
 		message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
@@ -335,7 +334,7 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		
 		SIG(IKE_UP_FAILED, "received inacceptable DH group (%N)",
 			 diffie_hellman_group_names, this->dh_group);
-		this->dh_group = this->connection->get_dh_group(this->connection);
+		this->dh_group = this->config->get_dh_group(this->config);
 		dh_enc = htons(this->dh_group);
 		chunk.ptr = (u_int8_t*)&dh_enc;
 		chunk.len = sizeof(dh_enc);
@@ -414,8 +413,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					DBG1(DBG_IKE, "peer didn't accept DH group %N, it requested"
 						 " %N", diffie_hellman_group_names, old_dh_group,
 						 diffie_hellman_group_names, this->dh_group);
-					if (!this->connection->check_dh_group(this->connection,
-														  this->dh_group))
+					if (!this->config->check_dh_group(this->config, this->dh_group))
 					{
 						DBG1(DBG_IKE, "requested DH group %N not acceptable, "
 							"giving up", diffie_hellman_group_names,
@@ -590,7 +588,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 	this->other_nonce = chunk_empty;
 	this->cookie = chunk_empty;
 	this->proposal = NULL;
-	this->connection = NULL;
+	this->config = NULL;
 	this->old_sa = old_sa;
 	this->retry = 0;
 	

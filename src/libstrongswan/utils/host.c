@@ -325,7 +325,7 @@ static bool equals(private_host_t *this, private_host_t *other)
 {
 	if (!ip_equals(this, other))
 	{
-		return FAILED;
+		return FALSE;
 	}
 	
 	switch (this->address.sa_family)

@@ -39,9 +39,8 @@ typedef struct ike_sa_t ike_sa_t;
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
-#include <config/connections/connection.h>
-#include <config/policies/policy.h>
-#include <config/proposal.h>
+#include <config/peer_cfg.h>
+#include <config/ike_cfg.h>
 
 /**
  * @brief State of an IKE_SA.
@@ -237,51 +236,49 @@ struct ike_sa_t {
 	void (*set_other_id) (ike_sa_t *this, identification_t *other);
 	
 	/**
-	 * @brief Get the connection used by this IKE_SA.
+	 * @brief Get the config used to setup this IKE_SA.
 	 * 
 	 * @param this 			calling object
-	 * @return				connection
+	 * @return				ike_config
 	 */
-	connection_t* (*get_connection) (ike_sa_t *this);
+	ike_cfg_t* (*get_ike_cfg) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the connection to use with this IKE_SA.
+	 * @brief Set the config to setup this IKE_SA.
 	 * 
 	 * @param this 			calling object
-	 * @param connection	connection to use
+	 * @param config		ike_config to use
 	 */
-	void (*set_connection) (ike_sa_t *this, connection_t* connection);
+	void (*set_ike_cfg) (ike_sa_t *this, ike_cfg_t* config);
 
 	/**
-	 * @brief Get the policy used by this IKE_SA.
+	 * @brief Get the peer config used by this IKE_SA.
 	 * 
 	 * @param this 			calling object
-	 * @return				policy
+	 * @return				peer_config
 	 */
-	policy_t* (*get_policy) (ike_sa_t *this);
+	peer_cfg_t* (*get_peer_cfg) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the policy to use with this IKE_SA.
+	 * @brief Set the peer config to use with this IKE_SA.
 	 * 
 	 * @param this 			calling object
-	 * @param policy		policy to use
+	 * @param config		peer_config to use
 	 */
-	void (*set_policy) (ike_sa_t *this, policy_t *policy);
+	void (*set_peer_cfg) (ike_sa_t *this, peer_cfg_t *config);
 
 	/**
 	 * @brief Initiate a new connection.
 	 *
-	 * The policy/connection is owned by the IKE_SA after the call, so
-	 * do not modify or destroy it.
+	 * The configs are owned by the IKE_SA after the call.
 	 * 
 	 * @param this 			calling object
-	 * @param connection	connection to initiate
-	 * @param policy		policy to set up
+	 * @param child_cfg		child config to create CHILD from
 	 * @return				
 	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed and IKE_SA MUST be deleted
+	 * 						- DESTROY_ME if initialization failed
 	 */
-	status_t (*initiate) (ike_sa_t *this, connection_t *connection, policy_t *policy);
+	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg);
 
 	/**
 	 * @brief Route a policy in the kernel.
@@ -290,28 +287,26 @@ struct ike_sa_t {
 	 * the kernel requests connection setup from the IKE_SA via acquire().
 	 * 
 	 * @param this 			calling object
-	 * @param connection	connection definition used for routing
-	 * @param policy		policy to route
+	 * @param child_cfg		child config to route
 	 * @return				
 	 * 						- SUCCESS if routed successfully
 	 * 						- FAILED if routing failed
 	 */
-	status_t (*route) (ike_sa_t *this, connection_t *connection, policy_t *policy);
+	status_t (*route) (ike_sa_t *this, child_cfg_t *child_cfg);
 
 	/**
 	 * @brief Unroute a policy in the kernel previously routed.
 	 *
 	 * @param this 			calling object
-	 * @param policy		policy to route
+	 * @param child_cfg		child config to unroute
 	 * @return				
 	 * 						- SUCCESS if route removed
-	 * 						- DESTROY_ME if last route was removed from
-	 * 						  an IKE_SA which was not established
+	 * 						- DESTROY_ME if last CHILD_SA was unrouted
 	 */
-	status_t (*unroute) (ike_sa_t *this, policy_t *policy);
+	status_t (*unroute) (ike_sa_t *this, child_cfg_t *child_cfg);
 	
 	/**
-	 * @brief Acquire connection setup for a policy.
+	 * @brief Acquire connection setup for an installed kernel policy.
 	 *
 	 * If an installed policy raises an acquire, the kernel calls
 	 * this function to establish the CHILD_SA (and maybe the IKE_SA).
@@ -320,7 +315,7 @@ struct ike_sa_t {
 	 * @param reqid			reqid of the CHILD_SA the policy belongs to.
 	 * @return				
 	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed and IKE_SA MUST be deleted
+	 * 						- DESTROY_ME if initialization failed
 	 */
 	status_t (*acquire) (ike_sa_t *this, u_int32_t reqid);
 	

@@ -64,9 +64,9 @@ struct private_child_create_t {
 	chunk_t other_nonce;
 	
 	/**
-	 * policy to create the CHILD_SA from
+	 * config to create the CHILD_SA from
 	 */
-	policy_t *policy;
+	child_cfg_t *config;
 	
 	/**
 	 * list of proposal candidates
@@ -198,7 +198,7 @@ static status_t select_and_install(private_child_create_t *this)
 	my_vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
 	other_vip = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
 
-	this->proposal = this->policy->select_proposal(this->policy, this->proposals);
+	this->proposal = this->config->select_proposal(this->config, this->proposals);
 	
 	if (this->proposal == NULL)
 	{
@@ -206,28 +206,31 @@ static status_t select_and_install(private_child_create_t *this)
 		return FAILED;
 	}
 	
-	if (this->initiator && my_vip)
-	{	/* if we have a virtual IP, shorten our TS to the minimum */
-		my_ts = this->policy->select_my_traffic_selectors(this->policy, my_ts,
-											 			  my_vip);
+	if (my_vip == NULL)
+	{
+		my_vip = me;
+	}
+	else if (this->initiator)
+	{
 		/* to setup firewall rules correctly, CHILD_SA needs the virtual IP */
 		this->child_sa->set_virtual_ip(this->child_sa, my_vip);
 	}
-	else
-	{	/* shorten in the host2host case only */
-		my_ts = this->policy->select_my_traffic_selectors(this->policy, 
-															my_ts, me);
+	if (other_vip == NULL)
+	{
+		other_vip = other;
 	}
-	if (other_vip)
-	{	/* if other has a virtual IP, shorten it's traffic selectors to it */
-		other_ts = this->policy->select_other_traffic_selectors(this->policy,
-															other_ts, other_vip);
+	
+	my_ts = this->config->get_traffic_selectors(this->config, TRUE, my_ts,
+												my_vip);
+	other_ts = this->config->get_traffic_selectors(this->config, FALSE, other_ts, 
+												   other_vip);
+	
+	if (my_ts->get_count(my_ts) == 0 || other_ts->get_count(other_ts) == 0)
+	{
+		SIG(CHILD_UP_FAILED, "no acceptable traffic selectors found");
+		return FAILED;
 	}
-	else
-	{	/* use his host for the host2host case */
-		other_ts = this->policy->select_other_traffic_selectors(this->policy,
-															other_ts, other);
-	}
+	
 	this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
 	this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
 	if (this->initiator)
@@ -239,13 +242,6 @@ static status_t select_and_install(private_child_create_t *this)
 	{
 		this->tsr = my_ts;
 		this->tsi = other_ts;
-	}
-	
-	if (this->tsi->get_count(this->tsi) == 0 ||
-		this->tsr->get_count(this->tsr) == 0)
-	{
-		SIG(CHILD_UP_FAILED, "no acceptable traffic selectors found");
-		return FAILED;
 	}
 	
 	if (!this->initiator)
@@ -421,6 +417,7 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 static status_t build_i(private_child_create_t *this, message_t *message)
 {
 	host_t *me, *other, *vip;
+	peer_cfg_t *peer_cfg;
 
 	switch (message->get_exchange_type(message))
 	{
@@ -448,25 +445,29 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
-	vip = this->policy->get_virtual_ip(this->policy, NULL);
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	vip = peer_cfg->get_virtual_ip(peer_cfg, NULL);
 	
 	if (vip)
 	{	/* propose a 0.0.0.0/0 subnet when we use virtual ip */
-		this->tsi = this->policy->get_my_traffic_selectors(this->policy, NULL);
+		this->tsi = this->config->get_traffic_selectors(this->config, TRUE,
+														NULL, NULL);
 		vip->destroy(vip);
 	}
 	else
 	{	/* but shorten a 0.0.0.0/0 subnet to the actual address if host2host */
-		this->tsi = this->policy->get_my_traffic_selectors(this->policy, me);
+		this->tsi = this->config->get_traffic_selectors(this->config, TRUE,
+														NULL, me);
 	}
-	this->tsr = this->policy->get_other_traffic_selectors(this->policy, other);
-	this->proposals = this->policy->get_proposals(this->policy);
-	this->mode = this->policy->get_mode(this->policy);
+	this->tsr = this->config->get_traffic_selectors(this->config, FALSE, 
+													NULL, other);
+	this->proposals = this->config->get_proposals(this->config);
+	this->mode = this->config->get_mode(this->config);
 	
 	this->child_sa = child_sa_create(me, other,
 									 this->ike_sa->get_my_id(this->ike_sa),
 									 this->ike_sa->get_other_id(this->ike_sa),
-									 this->policy, this->reqid,
+									 this->config, this->reqid,
 									 this->ike_sa->is_natt_enabled(this->ike_sa));
 	
 	if (this->child_sa->alloc(this->child_sa, this->proposals) != SUCCESS)
@@ -492,6 +493,8 @@ static status_t build_i(private_child_create_t *this, message_t *message)
  */
 static status_t process_r(private_child_create_t *this, message_t *message)
 {
+	peer_cfg_t *peer_cfg;
+
 	switch (message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
@@ -517,18 +520,13 @@ static status_t process_r(private_child_create_t *this, message_t *message)
 		return NEED_MORE;
 	}
 		  
-	this->policy = charon->policies->get_policy(charon->policies,
-							this->ike_sa->get_my_id(this->ike_sa),
-							this->ike_sa->get_other_id(this->ike_sa), 
-							this->tsr, this->tsi,
-							this->ike_sa->get_my_host(this->ike_sa),
-							this->ike_sa->get_other_host(this->ike_sa));
-	
-	if (this->policy && this->ike_sa->get_policy(this->ike_sa) == NULL)
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer_cfg)
 	{
-		this->ike_sa->set_policy(this->ike_sa, this->policy);
+		this->config = peer_cfg->select_child_cfg(peer_cfg, this->tsr, this->tsi,
+									this->ike_sa->get_my_host(this->ike_sa),
+									this->ike_sa->get_other_host(this->ike_sa));
 	}
-	
 	return NEED_MORE;
 }
 
@@ -565,10 +563,11 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 		return SUCCESS;
 	}
 	
-	if (this->policy == NULL)
+	if (this->config == NULL)
 	{
-		SIG(CHILD_UP_FAILED, "no acceptable policy found");
-		message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		SIG(CHILD_UP_FAILED, "traffic selectors %#R=== %#R inacceptable",
+			this->tsr, this->tsi);
+		message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);
 		return SUCCESS;
 	}
 	
@@ -576,12 +575,12 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 									 this->ike_sa->get_other_host(this->ike_sa),
 									 this->ike_sa->get_my_id(this->ike_sa),
 									 this->ike_sa->get_other_id(this->ike_sa),
-									 this->policy, this->reqid,
+									 this->config, this->reqid,
 									 this->ike_sa->is_natt_enabled(this->ike_sa));
 	
 	if (select_and_install(this) != SUCCESS)
 	{
-		message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);
+		message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return SUCCESS;
 	}
 	
@@ -756,14 +755,14 @@ static void destroy(private_child_create_t *this)
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 	}
 	
-	DESTROY_IF(this->policy);
+	DESTROY_IF(this->config);
 	free(this);
 }
 
 /*
  * Described in header.
  */
-child_create_t *child_create_create(ike_sa_t *ike_sa, policy_t *policy)
+child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config)
 {
 	private_child_create_t *this = malloc_thing(private_child_create_t);
 
@@ -773,12 +772,12 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, policy_t *policy)
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	if (policy)
+	if (config)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
 		this->initiator = TRUE;
-		policy->get_ref(policy);
+		config->get_ref(config);
 	}
 	else
 	{
@@ -788,7 +787,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, policy_t *policy)
 	}
 	
 	this->ike_sa = ike_sa;
-	this->policy = policy;
+	this->config = config;
 	this->my_nonce = chunk_empty;
 	this->other_nonce = chunk_empty;
 	this->proposals = NULL;

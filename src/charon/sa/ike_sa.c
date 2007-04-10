@@ -56,13 +56,13 @@
 #include <sa/tasks/child_create.h>
 #include <sa/tasks/child_delete.h>
 #include <sa/tasks/child_rekey.h>
-#include <queues/jobs/retransmit_job.h>
-#include <queues/jobs/delete_ike_sa_job.h>
-#include <queues/jobs/send_dpd_job.h>
-#include <queues/jobs/send_keepalive_job.h>
-#include <queues/jobs/rekey_ike_sa_job.h>
-#include <queues/jobs/route_job.h>
-#include <queues/jobs/initiate_job.h>
+#include <processing/jobs/retransmit_job.h>
+#include <processing/jobs/delete_ike_sa_job.h>
+#include <processing/jobs/send_dpd_job.h>
+#include <processing/jobs/send_keepalive_job.h>
+#include <processing/jobs/rekey_ike_sa_job.h>
+#include <processing/jobs/route_job.h>
+#include <processing/jobs/initiate_job.h>
 
 
 #ifndef RESOLV_CONF
@@ -105,14 +105,14 @@ struct private_ike_sa_t {
 	ike_sa_state_t state;	
 	
 	/**
-	 * connection used to establish this IKE_SA.
+	 * IKE configuration used to set up this IKE_SA
 	 */
-	connection_t *connection;
+	ike_cfg_t *ike_cfg;
 	
 	/**
 	 * Peer and authentication information to establish IKE_SA.
 	 */
-	policy_t *policy;
+	peer_cfg_t *peer_cfg;
 	
 	/**
 	 * Juggles tasks to process messages
@@ -273,45 +273,11 @@ static u_int32_t get_unique_id(private_ike_sa_t *this)
  */
 static char *get_name(private_ike_sa_t *this)
 {
-	if (this->connection)
+	if (this->peer_cfg)
 	{
-		return this->connection->get_name(this->connection);
+		return this->peer_cfg->get_name(this->peer_cfg);
 	}
 	return "(unnamed)";
-}
-
-/**
- * Implementation of ike_sa_t.get_connection
- */
-static connection_t* get_connection(private_ike_sa_t *this)
-{
-	return this->connection;
-}
-
-/**
- * Implementation of ike_sa_t.set_connection
- */
-static void set_connection(private_ike_sa_t *this, connection_t *connection)
-{
-	this->connection = connection;
-	connection->get_ref(connection);
-}
-
-/**
- * Implementation of ike_sa_t.get_policy
- */
-static policy_t *get_policy(private_ike_sa_t *this)
-{
-	return this->policy;
-}
-
-/**
- * Implementation of ike_sa_t.set_policy
- */
-static void set_policy(private_ike_sa_t *this, policy_t *policy)
-{
-	policy->get_ref(policy);
-	this->policy = policy;
 }
 
 /**
@@ -349,6 +315,66 @@ static void set_other_host(private_ike_sa_t *this, host_t *other)
 }
 
 /**
+ * Implementation of ike_sa_t.get_peer_cfg
+ */
+static peer_cfg_t* get_peer_cfg(private_ike_sa_t *this)
+{
+	return this->peer_cfg;
+}
+
+/**
+ * Implementation of ike_sa_t.set_peer_cfg
+ */
+static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
+{
+	host_t *me, *other;
+	identification_t *my_id, *other_id;
+	
+	peer_cfg->get_ref(peer_cfg);
+	this->peer_cfg = peer_cfg;
+	if (this->ike_cfg == NULL)
+	{
+		this->ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+		this->ike_cfg->get_ref(this->ike_cfg);
+	}
+	
+	/* apply values, so we are ready to initate/acquire */
+	if (this->my_host->is_anyaddr(this->my_host))
+	{
+		me = this->ike_cfg->get_my_host(this->ike_cfg);
+		set_my_host(this, me->clone(me));
+	}
+	if (this->other_host->is_anyaddr(this->other_host))
+	{
+		other = this->ike_cfg->get_other_host(this->ike_cfg);
+		set_other_host(this, other->clone(other));
+	}
+	my_id = this->peer_cfg->get_my_id(this->peer_cfg);
+	other_id = this->peer_cfg->get_other_id(this->peer_cfg);
+	DESTROY_IF(this->my_id);
+	DESTROY_IF(this->other_id);
+	this->my_id = my_id->clone(my_id);
+	this->other_id = other_id->clone(other_id);
+}
+
+/**
+ * Implementation of ike_sa_t.get_ike_cfg
+ */
+static ike_cfg_t *get_ike_cfg(private_ike_sa_t *this)
+{
+	return this->ike_cfg;
+}
+
+/**
+ * Implementation of ike_sa_t.set_ike_cfg
+ */
+static void set_ike_cfg(private_ike_sa_t *this, ike_cfg_t *ike_cfg)
+{
+	ike_cfg->get_ref(ike_cfg);
+	this->ike_cfg = ike_cfg;
+}
+
+/**
  * Implementation of ike_sa_t.send_dpd
  */
 static status_t send_dpd(private_ike_sa_t *this)
@@ -356,7 +382,7 @@ static status_t send_dpd(private_ike_sa_t *this)
 	send_dpd_job_t *job;
 	time_t diff, delay;
 	
-	delay = this->connection->get_dpd_delay(this->connection);
+	delay = this->peer_cfg->get_dpd_delay(this->peer_cfg);
 	
 	if (delay == 0)
 	{
@@ -464,9 +490,9 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 				send_dpd(this);
 				
 				/* schedule rekeying/reauthentication */
-				soft = this->connection->get_soft_lifetime(this->connection);
-				hard = this->connection->get_hard_lifetime(this->connection);
-				reauth = this->connection->get_reauth(this->connection);
+				soft = this->peer_cfg->get_lifetime(this->peer_cfg, TRUE);
+				hard = this->peer_cfg->get_lifetime(this->peer_cfg, FALSE);
+				reauth = this->peer_cfg->use_reauth(this->peer_cfg);
 				DBG1(DBG_IKE, "scheduling %s in %ds, maximum lifetime %ds",
 					 reauth ? "reauthentication": "rekeying", soft, hard);
 					 
@@ -521,7 +547,7 @@ static void reset(private_ike_sa_t *this)
 }
 
 /**
- * Update connection host, as addresses may change (NAT)
+ * Update hosts, as addresses may change (NAT)
  */
 static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 {
@@ -696,16 +722,16 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		me = message->get_destination(message);
 		other = message->get_source(message);
 	
-		/* if this IKE_SA is virgin, we check for a connection */
-		if (this->connection == NULL)
+		/* if this IKE_SA is virgin, we check for a config */
+		if (this->ike_cfg == NULL)
 		{
 			job_t *job;
-			this->connection = charon->connections->get_connection_by_hosts(
-												charon->connections, me, other);
-			if (this->connection == NULL)
+			this->ike_cfg = charon->cfg_store->get_ike_cfg(charon->cfg_store,
+														   me, other);
+			if (this->ike_cfg == NULL)
 			{
-				/* no connection found for these hosts, destroy */
-				DBG1(DBG_IKE, "no connection found for %H...%H, sending %N",
+				/* no config found for these hosts, destroy */
+				DBG1(DBG_IKE, "no IKE config found for %H...%H, sending %N",
 					 me, other, notify_type_names, NO_PROPOSAL_CHOSEN);
 				send_notify_response(this, message, NO_PROPOSAL_CHOSEN);
 				return DESTROY_ME;
@@ -717,7 +743,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 					  									charon->configuration));
 		}
 	
-		/* check if message is trustworthy, and update connection information */
+		/* check if message is trustworthy, and update host information */
 		if (this->state == IKE_CREATED ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
 		{
@@ -729,46 +755,14 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 }
 
 /**
- * apply the connection/policy information to this IKE_SA
- */
-static void apply_config(private_ike_sa_t *this,
-						 connection_t *connection, policy_t *policy)
-{
-	host_t *me, *other;
-	identification_t *my_id, *other_id;
-	
-	if (this->connection == NULL && this->policy == NULL)
-	{
-		this->connection = connection;
-		connection->get_ref(connection);
-		this->policy = policy;
-		policy->get_ref(policy);
-		
-		me = connection->get_my_host(connection);
-		other = connection->get_other_host(connection);
-		my_id = policy->get_my_id(policy);
-		other_id = policy->get_other_id(policy);
-		set_my_host(this, me->clone(me));
-		set_other_host(this, other->clone(other));
-		DESTROY_IF(this->my_id);
-		DESTROY_IF(this->other_id);
-		this->my_id = my_id->clone(my_id);
-		this->other_id = other_id->clone(other_id);
-	}
-}
-
-/**
  * Implementation of ike_sa_t.initiate.
  */
-static status_t initiate(private_ike_sa_t *this,
-						 connection_t *connection, policy_t *policy)
+static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 {
 	task_t *task;
 	
 	if (this->state == IKE_CREATED)
 	{
-		/* if we aren't established/establishing, do so */
-		apply_config(this, connection, policy);
 		
 		if (this->other_host->is_anyaddr(this->other_host))
 		{
@@ -785,11 +779,11 @@ static status_t initiate(private_ike_sa_t *this,
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_config_create(&this->public, policy);
+		task = (task_t*)ike_config_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 	}
 	
-	task = (task_t*)child_create_create(&this->public, policy);
+	task = (task_t*)child_create_create(&this->public, child_cfg);
 	this->task_manager->queue_task(this->task_manager, task);
 	
 	return this->task_manager->initiate(this->task_manager);
@@ -800,7 +794,7 @@ static status_t initiate(private_ike_sa_t *this,
  */
 static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 {
-	policy_t *policy;
+	child_cfg_t *child_cfg;
 	iterator_t *iterator;
 	child_sa_t *current, *child_sa = NULL;
 	task_t *task;
@@ -833,7 +827,6 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		return FAILED;
 	}
 	
-	policy = child_sa->get_policy(child_sa);
 	
 	if (this->state == IKE_CREATED)
 	{
@@ -845,11 +838,12 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_config_create(&this->public, policy);
+		task = (task_t*)ike_config_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 	}
 	
-	child_create = child_create_create(&this->public, policy);
+	child_cfg = child_sa->get_config(child_sa);
+	child_create = child_create_create(&this->public, child_cfg);
 	child_create->use_reqid(child_create, reqid);
 	this->task_manager->queue_task(this->task_manager, (task_t*)child_create);
 	
@@ -857,40 +851,11 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 }
 
 /**
- * compare two lists of traffic selectors for equality
- */
-static bool ts_list_equals(linked_list_t *l1, linked_list_t *l2)
-{
-	bool equals = TRUE;
-	iterator_t *i1, *i2;
-	traffic_selector_t *t1, *t2;
-	
-	if (l1->get_count(l1) != l2->get_count(l2))
-	{
-		return FALSE;
-	}
-	
-	i1 = l1->create_iterator(l1, TRUE);
-	i2 = l2->create_iterator(l2, TRUE);
-	while (i1->iterate(i1, (void**)&t1) && i2->iterate(i2, (void**)&t2))
-	{
-		if (!t1->equals(t1, t2))
-		{
-			equals = FALSE;
-			break;
-		}
-	}
-	i1->destroy(i1);
-	i2->destroy(i2);
-	return equals;
-}
-
-/**
  * Implementation of ike_sa_t.route.
  */
-static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t *policy)
+static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 {
-	child_sa_t *child_sa = NULL;
+	child_sa_t *child_sa;
 	iterator_t *iterator;
 	linked_list_t *my_ts, *other_ts;
 	status_t status;
@@ -901,27 +866,12 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		if (child_sa->get_state(child_sa) == CHILD_ROUTED)
+		if (child_sa->get_state(child_sa) == CHILD_ROUTED &&
+			streq(child_sa->get_name(child_sa), child_cfg->get_name(child_cfg)))
 		{
-			linked_list_t *my_ts_conf, *other_ts_conf;
-			
-			my_ts = child_sa->get_my_traffic_selectors(child_sa);
-			other_ts = child_sa->get_other_traffic_selectors(child_sa);
-			
-			my_ts_conf = policy->get_my_traffic_selectors(policy, this->my_host);
-			other_ts_conf = policy->get_other_traffic_selectors(policy, this->other_host);
-			
-			if (ts_list_equals(my_ts, my_ts_conf) &&
-				ts_list_equals(other_ts, other_ts_conf))
-			{
-				iterator->destroy(iterator);
-				my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
-				other_ts_conf->destroy_offset(other_ts_conf, offsetof(traffic_selector_t, destroy));
-				SIG(CHILD_ROUTE_FAILED, "CHILD_SA with such a policy already routed");
-				return FAILED;
-			}
-			my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
-			other_ts_conf->destroy_offset(other_ts_conf, offsetof(traffic_selector_t, destroy));
+			iterator->destroy(iterator);
+			SIG(CHILD_ROUTE_FAILED, "CHILD_SA with such a config already routed");
+			return FAILED;
 		}
 	}
 	iterator->destroy(iterator);
@@ -934,9 +884,6 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 				"unable to route CHILD_SA, as its IKE_SA gets deleted");
 			return FAILED;
 		case IKE_CREATED:
-			/* apply connection information, we need it to acquire */
-			apply_config(this, connection, policy);
-			break;
 		case IKE_CONNECTING:
 		case IKE_ESTABLISHED:
 		default:
@@ -944,29 +891,37 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	}
 
 	/* install kernel policies */
-	child_sa = child_sa_create(this->my_host, this->other_host,
-							   this->my_id, this->other_id, policy, FALSE, 0);
+	child_sa = child_sa_create(this->my_host, this->other_host, this->my_id,
+							   this->other_id, child_cfg, FALSE, 0);
 	
-	my_ts = policy->get_my_traffic_selectors(policy, this->my_host);
-	other_ts = policy->get_other_traffic_selectors(policy, this->other_host);
+	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL,
+											 this->my_host);
+	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL,
+												this->other_host);
 	status = child_sa->add_policies(child_sa, my_ts, other_ts,
-									policy->get_mode(policy));
+									child_cfg->get_mode(child_cfg));
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
-	this->child_sas->insert_last(this->child_sas, child_sa);
-	SIG(CHILD_ROUTE_SUCCESS, "CHILD_SA routed");
+	if (status == SUCCESS)
+	{
+		this->child_sas->insert_last(this->child_sas, child_sa);
+		SIG(CHILD_ROUTE_SUCCESS, "CHILD_SA routed");
+	}
+	else
+	{
+		SIG(CHILD_ROUTE_FAILED, "routing CHILD_SA failed");
+	}
 	return status;
 }
 
 /**
  * Implementation of ike_sa_t.unroute.
  */
-static status_t unroute(private_ike_sa_t *this, policy_t *policy)
+static status_t unroute(private_ike_sa_t *this, child_cfg_t *child_cfg)
 {
 	iterator_t *iterator;
-	child_sa_t *child_sa = NULL;
+	child_sa_t *child_sa;
 	bool found = FALSE;
-	linked_list_t *my_ts, *other_ts, *my_ts_conf, *other_ts_conf;
 	
 	SIG(CHILD_UNROUTE_START, "unrouting CHILD_SA");
 	
@@ -974,27 +929,14 @@ static status_t unroute(private_ike_sa_t *this, policy_t *policy)
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		if (child_sa->get_state(child_sa) == CHILD_ROUTED)
+		if (child_sa->get_state(child_sa) == CHILD_ROUTED &&
+			streq(child_sa->get_name(child_sa), child_cfg->get_name(child_cfg)))
 		{
-			my_ts = child_sa->get_my_traffic_selectors(child_sa);
-			other_ts = child_sa->get_other_traffic_selectors(child_sa);
-			
-			my_ts_conf = policy->get_my_traffic_selectors(policy, this->my_host);
-			other_ts_conf = policy->get_other_traffic_selectors(policy, this->other_host);
-			
-			if (ts_list_equals(my_ts, my_ts_conf) &&
-				ts_list_equals(other_ts, other_ts_conf))
-			{
-				iterator->remove(iterator);
-				SIG(CHILD_UNROUTE_SUCCESS, "CHILD_SA unrouted");
-				child_sa->destroy(child_sa);
-				my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
-				other_ts_conf->destroy_offset(other_ts_conf, offsetof(traffic_selector_t, destroy));
-				found = TRUE;
-				break;
-			}
-			my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
-			other_ts_conf->destroy_offset(other_ts_conf, offsetof(traffic_selector_t, destroy));
+			iterator->remove(iterator);
+			SIG(CHILD_UNROUTE_SUCCESS, "CHILD_SA unrouted");
+			child_sa->destroy(child_sa);
+			found = TRUE;
+			break;
 		}
 	}
 	iterator->destroy(iterator);
@@ -1021,7 +963,7 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 	this->time.outbound = time(NULL);
 	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
 	{
-		policy_t *policy;
+		child_cfg_t *child_cfg;
 		child_sa_t* child_sa;
 		linked_list_t *to_route, *to_restart;
 		iterator_t *iterator;
@@ -1032,7 +974,7 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 			case IKE_CONNECTING:
 			{
 				/* retry IKE_SA_INIT if we have multiple keyingtries */
-				u_int32_t tries = this->connection->get_keyingtries(this->connection);
+				u_int32_t tries = this->peer_cfg->get_keyingtries(this->peer_cfg);
 				this->keyingtry++;
 				if (tries == 0 || tries > this->keyingtry)
 				{
@@ -1060,23 +1002,23 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 		while (iterator->iterate(iterator, (void**)&child_sa))
 		{
-			policy = child_sa->get_policy(child_sa);
+			child_cfg = child_sa->get_config(child_sa);
 			
 			if (child_sa->get_state(child_sa) == CHILD_ROUTED)
 			{
 				/* reroute routed CHILD_SAs */
-				to_route->insert_last(to_route, policy);
+				to_route->insert_last(to_route, child_cfg);
 			}
 			else
 			{
 				/* use DPD action for established CHILD_SAs */
-				switch (policy->get_dpd_action(policy))
+				switch (this->peer_cfg->get_dpd_action(this->peer_cfg))
 				{
 					case DPD_ROUTE:
-						to_route->insert_last(to_route, policy);
+						to_route->insert_last(to_route, child_cfg);
 						break;
 					case DPD_RESTART:
-						to_restart->insert_last(to_restart, policy);
+						to_restart->insert_last(to_restart, child_cfg);
 						break;
 					default:
 						break;
@@ -1094,15 +1036,15 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 			new = (private_ike_sa_t*)charon->ike_sa_manager->checkout_new(
 												charon->ike_sa_manager, TRUE);
 			
-			apply_config(new, this->connection, this->policy);
-			/* use actual used host, not the wildcarded one in connection */
+			set_peer_cfg(new, this->peer_cfg);
+			/* use actual used host, not the wildcarded one in config */
 			new->other_host->destroy(new->other_host);
 			new->other_host = this->other_host->clone(this->other_host);
 			
 			/* install routes */
-			while (to_route->remove_last(to_route, (void**)&policy) == SUCCESS)
+			while (to_route->remove_last(to_route, (void**)&child_cfg) == SUCCESS)
 			{
-				route(new, new->connection, policy);
+				route(new, child_cfg);
 			}
 			
 			/* restart children */
@@ -1114,14 +1056,14 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 				new->task_manager->queue_task(new->task_manager, task);
 				task = (task_t*)ike_cert_create(&new->public, TRUE);
 				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_config_create(&new->public, new->policy);
+				task = (task_t*)ike_config_create(&new->public, TRUE);
 				new->task_manager->queue_task(new->task_manager, task);
 				task = (task_t*)ike_auth_create(&new->public, TRUE);
 				new->task_manager->queue_task(new->task_manager, task);
 				
-				while (to_restart->remove_last(to_restart, (void**)&policy) == SUCCESS)
+				while (to_restart->remove_last(to_restart, (void**)&child_cfg) == SUCCESS)
 				{
-					task = (task_t*)child_create_create(&new->public, policy);
+					task = (task_t*)child_create_create(&new->public, child_cfg);
 					new->task_manager->queue_task(new->task_manager, task);
 				}
 				new->task_manager->initiate(new->task_manager);
@@ -1542,14 +1484,14 @@ static void reestablish(private_ike_sa_t *this)
 	private_ike_sa_t *other;
 	iterator_t *iterator;
 	child_sa_t *child_sa;
-	policy_t *policy;
+	child_cfg_t *child_cfg;
 	task_t *task;
 	job_t *job;
 	
 	other = (private_ike_sa_t*)charon->ike_sa_manager->checkout_new(
 											charon->ike_sa_manager, TRUE);
 	
-	apply_config(other, this->connection, this->policy);
+	set_peer_cfg(other, this->peer_cfg);
 	other->other_host->destroy(other->other_host);
 	other->other_host = this->other_host->clone(this->other_host);
 		
@@ -1561,7 +1503,7 @@ static void reestablish(private_ike_sa_t *this)
 		other->task_manager->queue_task(other->task_manager, task);
 		task = (task_t*)ike_cert_create(&other->public, TRUE);
 		other->task_manager->queue_task(other->task_manager, task);
-		task = (task_t*)ike_config_create(&other->public, other->policy);
+		task = (task_t*)ike_config_create(&other->public, TRUE);
 		other->task_manager->queue_task(other->task_manager, task);
 		task = (task_t*)ike_auth_create(&other->public, TRUE);
 		other->task_manager->queue_task(other->task_manager, task);
@@ -1583,8 +1525,8 @@ static void reestablish(private_ike_sa_t *this)
 			}
 			default:
 			{
-				policy = child_sa->get_policy(child_sa);
-				task = (task_t*)child_create_create(&other->public, policy);
+				child_cfg = child_sa->get_config(child_sa);
+				task = (task_t*)child_create_create(&other->public, child_cfg);
 				other->task_manager->queue_task(other->task_manager, task);
 				break;
 			}
@@ -1865,9 +1807,9 @@ static int print(FILE *stream, const struct printf_info *info,
 	bool reauth = FALSE;
 	private_ike_sa_t *this = *((private_ike_sa_t**)(args[0]));
 	
-	if (this->connection)
+	if (this->peer_cfg)
 	{
-		reauth = this->connection->get_reauth(this->connection);
+		reauth = this->peer_cfg->use_reauth(this->peer_cfg);
 	}
 	
 	if (this == NULL)
@@ -1879,15 +1821,19 @@ static int print(FILE *stream, const struct printf_info *info,
 					  this->unique_id, ike_sa_state_names, this->state,
 					  this->my_host, this->my_id, this->other_host,
 					  this->other_id);
-	written += fprintf(stream, "\n%12s[%d]: IKE SPIs: %J, %s in %ds",
-					  get_name(this), this->unique_id, this->ike_sa_id, 
-					  this->connection && reauth? "reauthentication":"rekeying",
-					  this->time.rekey - time(NULL));
-
-	if (info->alt)
+	if (this->time.rekey)
 	{
-
+		written += fprintf(stream, "\n%12s[%d]: IKE SPIs: %J, %s in %ds",
+						  get_name(this), this->unique_id, this->ike_sa_id, 
+						  reauth ? "reauthentication" : "rekeying",
+						  this->time.rekey - time(NULL));
 	}
+	else
+	{
+		written += fprintf(stream, "\n%12s[%d]: IKE SPIs: %J, rekeying disabled",
+						  get_name(this), this->unique_id, this->ike_sa_id);
+	}
+
 	return written;
 }
 
@@ -1931,8 +1877,8 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->my_id);
 	DESTROY_IF(this->other_id);
 	
-	DESTROY_IF(this->connection);
-	DESTROY_IF(this->policy);
+	DESTROY_IF(this->ike_cfg);
+	DESTROY_IF(this->peer_cfg);
 	
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	this->task_manager->destroy(this->task_manager);
@@ -1952,14 +1898,14 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_state = (void(*)(ike_sa_t*,ike_sa_state_t)) set_state;
 	this->public.get_name = (char*(*)(ike_sa_t*))get_name;
 	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
-	this->public.initiate = (status_t(*)(ike_sa_t*,connection_t*,policy_t*)) initiate;
-	this->public.route = (status_t(*)(ike_sa_t*,connection_t*,policy_t*)) route;
-	this->public.unroute = (status_t(*)(ike_sa_t*,policy_t*)) unroute;
+	this->public.initiate = (status_t(*)(ike_sa_t*,child_cfg_t*)) initiate;
+	this->public.route = (status_t(*)(ike_sa_t*,child_cfg_t*)) route;
+	this->public.unroute = (status_t(*)(ike_sa_t*,child_cfg_t*)) unroute;
 	this->public.acquire = (status_t(*)(ike_sa_t*,u_int32_t)) acquire;
-	this->public.get_connection = (connection_t*(*)(ike_sa_t*))get_connection;
-	this->public.set_connection = (void(*)(ike_sa_t*,connection_t*))set_connection;
-	this->public.get_policy = (policy_t*(*)(ike_sa_t*))get_policy;
-	this->public.set_policy = (void(*)(ike_sa_t*,policy_t*))set_policy;
+	this->public.get_ike_cfg = (ike_cfg_t*(*)(ike_sa_t*))get_ike_cfg;
+	this->public.set_ike_cfg = (void(*)(ike_sa_t*,ike_cfg_t*))set_ike_cfg;
+	this->public.get_peer_cfg = (peer_cfg_t*(*)(ike_sa_t*))get_peer_cfg;
+	this->public.set_peer_cfg = (void(*)(ike_sa_t*,peer_cfg_t*))set_peer_cfg;
 	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->public.get_my_host = (host_t*(*)(ike_sa_t*)) get_my_host;
 	this->public.set_my_host = (void(*)(ike_sa_t*,host_t*)) set_my_host;
@@ -2019,8 +1965,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->time.established = 0;
 	this->time.rekey = 0;
 	this->time.delete = 0;
-	this->connection = NULL;
-	this->policy = NULL;
+	this->ike_cfg = NULL;
+	this->peer_cfg = NULL;
 	this->task_manager = task_manager_create(&this->public);
 	this->unique_id = ++unique_id;
 	this->my_virtual_ip = NULL;

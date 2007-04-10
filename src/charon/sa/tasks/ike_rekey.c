@@ -26,8 +26,8 @@
 #include <daemon.h>
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/ike_init.h>
-#include <queues/jobs/delete_ike_sa_job.h>
-#include <queues/jobs/rekey_ike_sa_job.h>
+#include <processing/jobs/delete_ike_sa_job.h>
+#include <processing/jobs/rekey_ike_sa_job.h>
 
 
 typedef struct private_ike_rekey_t private_ike_rekey_t;
@@ -73,20 +73,15 @@ struct private_ike_rekey_t {
  */
 static status_t build_i(private_ike_rekey_t *this, message_t *message)
 {
-	connection_t *connection;
-	policy_t *policy;
+	peer_cfg_t *peer_cfg;
 	
 	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 														TRUE);
 	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	this->new_sa->set_connection(this->new_sa, connection);
-	this->new_sa->set_policy(this->new_sa, policy);
-
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);
 	this->ike_init = ike_init_create(this->new_sa, TRUE, this->ike_sa);
 	this->ike_init->task.build(&this->ike_init->task, message);
-	
 	this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 
 	return NEED_MORE;
@@ -97,8 +92,7 @@ static status_t build_i(private_ike_rekey_t *this, message_t *message)
  */
 static status_t process_r(private_ike_rekey_t *this, message_t *message)
 {
-	connection_t *connection;
-	policy_t *policy;
+	peer_cfg_t *peer_cfg;
 	iterator_t *iterator;
 	child_sa_t *child_sa;
 	
@@ -129,11 +123,8 @@ static status_t process_r(private_ike_rekey_t *this, message_t *message)
 	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 														FALSE);
 	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	this->new_sa->set_connection(this->new_sa, connection);
-	this->new_sa->set_policy(this->new_sa, policy);
-	
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);
 	this->ike_init = ike_init_create(this->new_sa, FALSE, this->ike_sa);
 	this->ike_init->task.process(&this->ike_init->task, message);
 	

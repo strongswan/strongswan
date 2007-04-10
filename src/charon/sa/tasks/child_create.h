@@ -28,7 +28,7 @@ typedef struct child_create_t child_create_t;
 #include <library.h>
 #include <sa/ike_sa.h>
 #include <sa/tasks/task.h>
-#include <config/policies/policy.h>
+#include <config/child_cfg.h>
 
 /**
  * @brief Task of type CHILD_CREATE, established a new CHILD_SA.
@@ -80,9 +80,9 @@ struct child_create_t {
  * @brief Create a new child_create task.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param policy		policy if task initiator, NULL if responder
+ * @param config		child_cfg if task initiator, NULL if responder
  * @return			 	child_create task to handle by the task_manager
  */
-child_create_t *child_create_create(ike_sa_t *ike_sa, policy_t *policy);
+child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config);
 
 #endif /* CHILD_CREATE_H_ */

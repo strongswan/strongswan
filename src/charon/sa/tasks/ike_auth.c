@@ -100,18 +100,18 @@ static status_t build_auth(private_ike_auth_t *this, message_t *message)
 {
 	authenticator_t *auth;
 	auth_payload_t *auth_payload;
-	policy_t *policy;
+	peer_cfg_t *config;
 	auth_method_t method;
 	status_t status;
 	
 	/* create own authenticator and add auth payload */
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	if (!policy)
+	config = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (!config)
 	{
-		SIG(IKE_UP_FAILED, "unable to authenticate, no policy found");
+		SIG(IKE_UP_FAILED, "unable to authenticate, no peer config found");
 		return FAILED;
 	}
-	method = policy->get_auth_method(policy);
+	method = config->get_auth_method(config);
 	
 	auth = authenticator_create(this->ike_sa, method);
 	if (auth == NULL)
@@ -140,15 +140,15 @@ static status_t build_id(private_ike_auth_t *this, message_t *message)
 {
 	identification_t *me, *other;
 	id_payload_t *id;
-	policy_t *policy;
+	peer_cfg_t *config;
 	
 	me = this->ike_sa->get_my_id(this->ike_sa);
 	other = this->ike_sa->get_other_id(this->ike_sa);
-	policy = this->ike_sa->get_policy(this->ike_sa);
+	config = this->ike_sa->get_peer_cfg(this->ike_sa);
 	
 	if (me->contains_wildcards(me))
 	{
-		me = policy->get_my_id(policy);
+		me = config->get_my_id(config);
 		if (me->contains_wildcards(me))
 		{
 			SIG(IKE_UP_FAILED, "negotiation of own ID failed");
@@ -459,7 +459,7 @@ static status_t build_eap_r(private_ike_auth_t *this, message_t *message)
  */
 static status_t build_i(private_ike_auth_t *this, message_t *message)
 {
-	policy_t *policy;
+	peer_cfg_t *config;
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
@@ -471,8 +471,8 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 		return FAILED;
 	}
 	
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	if (policy->get_auth_method(policy) == AUTH_EAP)
+	config = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (config->get_auth_method(config) == AUTH_EAP)
 	{
 		this->eap_auth = eap_authenticator_create(this->ike_sa);
 	}
@@ -491,7 +491,9 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
  * Implementation of task_t.process for initiator
  */
 static status_t process_r(private_ike_auth_t *this, message_t *message)
-{	
+{
+	peer_cfg_t *config;
+	
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		return collect_other_init_data(this, message);
@@ -500,6 +502,15 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 	if (process_id(this, message) != SUCCESS)
 	{
 		return NEED_MORE;
+	}
+	
+	config = charon->cfg_store->get_peer_cfg(charon->cfg_store, 
+									this->ike_sa->get_my_id(this->ike_sa),
+									this->ike_sa->get_other_id(this->ike_sa));
+	if (config)
+	{
+		this->ike_sa->set_peer_cfg(this->ike_sa, config);
+		config->destroy(config);
 	}
 	
 	switch (process_auth(this, message))
@@ -522,7 +533,7 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
  */
 static status_t build_r(private_ike_auth_t *this, message_t *message)
 {
-	policy_t *policy;
+	peer_cfg_t *config;
 	eap_type_t eap_type;
 	eap_payload_t *eap_payload;
 	status_t status;
@@ -532,10 +543,12 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		return collect_my_init_data(this, message);
 	}
 	
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	if (policy == NULL)
+	config = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (config == NULL)
 	{
-		SIG(IKE_UP_FAILED, "no acceptable policy found");
+		SIG(IKE_UP_FAILED, "no acceptable peer config found for %D...%D",
+			this->ike_sa->get_my_id(this->ike_sa),
+			this->ike_sa->get_other_id(this->ike_sa));
 		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
 		return FAILED;
 	}
@@ -567,7 +580,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	}
 		
 	/* initiate EAP authenitcation */
-	eap_type = policy->get_eap_type(policy);
+	eap_type = config->get_eap_type(config);
 	status = this->eap_auth->initiate(this->eap_auth, eap_type, &eap_payload);
 	message->add_payload(message, (payload_t*)eap_payload);
 	if (status != NEED_MORE)

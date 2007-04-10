@@ -171,20 +171,20 @@ static void process_certs(private_ike_cert_t *this, message_t *message)
  */
 static void build_certreqs(private_ike_cert_t *this, message_t *message)
 {
-	connection_t *connection;
-	policy_t *policy;
+	ike_cfg_t *ike_cfg;
+	peer_cfg_t *peer_cfg;
 	identification_t *ca;
 	certreq_payload_t *certreq;
 	
-	connection = this->ike_sa->get_connection(this->ike_sa);
+	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 	
-	if (connection->get_certreq_policy(connection) != CERT_NEVER_SEND)
+	if (ike_cfg->send_certreq(ike_cfg) != CERT_NEVER_SEND)
 	{	
-		policy = this->ike_sa->get_policy(this->ike_sa);
+		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 		
-		if (policy)
+		if (peer_cfg)
 		{
-			ca = policy->get_other_ca(policy);
+			ca = peer_cfg->get_other_ca(peer_cfg);
 			
 			if (ca && ca->get_type(ca) != ID_ANY)
 			{
@@ -212,17 +212,15 @@ static void build_certreqs(private_ike_cert_t *this, message_t *message)
  */
 static void build_certs(private_ike_cert_t *this, message_t *message)
 {
-	policy_t *policy;
-	connection_t *connection;
+	peer_cfg_t *peer_cfg;
 	x509_t *cert;
 	cert_payload_t *payload;
 	
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	connection = this->ike_sa->get_connection(this->ike_sa);
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 
-	if (policy && policy->get_auth_method(policy) == AUTH_RSA)
+	if (peer_cfg && peer_cfg->get_auth_method(peer_cfg) == AUTH_RSA)
 	{
-		switch (connection->get_cert_policy(connection))
+		switch (peer_cfg->get_cert_policy(peer_cfg))
 		{
 			case CERT_NEVER_SEND:
 				break;
@@ -236,7 +234,7 @@ static void build_certs(private_ike_cert_t *this, message_t *message)
 			{
 				/* TODO: respect CA cert request */
 				cert = charon->credentials->get_certificate(charon->credentials,
-													policy->get_my_id(policy));
+												peer_cfg->get_my_id(peer_cfg));
 				if (cert)
 				{
 					payload = cert_payload_create_from_x509(cert);

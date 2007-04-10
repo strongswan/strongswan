@@ -28,7 +28,6 @@ typedef struct ike_config_t ike_config_t;
 #include <library.h>
 #include <sa/ike_sa.h>
 #include <sa/tasks/task.h>
-#include <config/policies/policy.h>
 
 /**
  * @brief Task of type IKE_CONFIG, sets up a virtual IP and other
@@ -51,9 +50,9 @@ struct ike_config_t {
  * @brief Create a new ike_config task.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param policy		policy for the initiator, NULL for the responder
+ * @param initiator		TRUE for initiator
  * @return			  	ike_config task to handle by the task_manager
  */
-ike_config_t *ike_config_create(ike_sa_t *ike_sa, policy_t *policy);
+ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator);
 
 #endif /* IKE_CONFIG_H_ */

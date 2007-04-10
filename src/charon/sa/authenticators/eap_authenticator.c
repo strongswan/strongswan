@@ -25,7 +25,7 @@
 #include "eap_authenticator.h"
 
 #include <daemon.h>
-#include <config/policies/policy.h>
+#include <config/peer_cfg.h>
 #include <sa/authenticators/eap/eap_method.h>
 
 typedef struct private_eap_authenticator_t private_eap_authenticator_t;

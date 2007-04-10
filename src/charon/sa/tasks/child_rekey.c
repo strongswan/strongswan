@@ -27,7 +27,7 @@
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/child_create.h>
 #include <sa/tasks/child_delete.h>
-#include <queues/jobs/rekey_child_sa_job.h>
+#include <processing/jobs/rekey_child_sa_job.h>
 
 
 typedef struct private_child_rekey_t private_child_rekey_t;
@@ -315,8 +315,8 @@ static void destroy(private_child_rekey_t *this)
  */
 child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
+	child_cfg_t *config;
 	private_child_rekey_t *this = malloc_thing(private_child_rekey_t);
-	policy_t *policy;
 
 	this->public.collide = (void (*)(child_rekey_t*,task_t*))collide;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
@@ -327,8 +327,8 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
 		this->initiator = TRUE;
-		policy = child_sa->get_policy(child_sa);
-		this->child_create = child_create_create(ike_sa, policy);
+		config = child_sa->get_config(child_sa);
+		this->child_create = child_create_create(ike_sa, config);
 	}
 	else
 	{

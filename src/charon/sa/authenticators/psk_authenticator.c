@@ -25,7 +25,6 @@
 
 #include "psk_authenticator.h"
 
-#include <config/policies/policy.h>
 #include <daemon.h>
 
 /**

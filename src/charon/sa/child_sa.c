@@ -154,9 +154,9 @@ struct private_child_sa_t {
 	host_t *virtual_ip;
 	
 	/**
-	 * policy used to create this child
+	 * config used to create this child
 	 */
-	policy_t *policy;
+	child_cfg_t *config;
 };
 
 /**
@@ -164,7 +164,7 @@ struct private_child_sa_t {
  */
 static char *get_name(private_child_sa_t *this)
 {
-	return this->policy->get_name(this->policy);;
+	return this->config->get_name(this->config);
 }
 
 /**
@@ -204,11 +204,11 @@ static child_sa_state_t get_state(private_child_sa_t *this)
 }
 
 /**
- * Implements child_sa_t.get_policy
+ * Implements child_sa_t.get_config
  */
-static policy_t* get_policy(private_child_sa_t *this)
+static child_cfg_t* get_config(private_child_sa_t *this)
 {
-	return this->policy;
+	return this->config;
 }
 
 /**
@@ -220,7 +220,7 @@ static void updown(private_child_sa_t *this, bool up)
 	iterator_t *iterator;
 	char *script;
 	
-	script = this->policy->get_updown(this->policy);
+	script = this->config->get_updown(this->config);
 	
 	if (script == NULL)
 	{
@@ -300,7 +300,7 @@ static void updown(private_child_sa_t *this, bool up)
 				 policy->my_ts->is_host(policy->my_ts,
 							this->me.addr) ? "-host" : "-client",
 				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-ipv6",
-				 this->policy->get_name(this->policy),
+				 this->config->get_name(this->config),
 				 ifname ? ifname : "(unknown)",
 				 this->reqid,
 				 this->me.addr,
@@ -316,7 +316,7 @@ static void updown(private_child_sa_t *this, bool up)
 				 policy->other_ts->get_from_port(policy->other_ts),
 				 policy->other_ts->get_protocol(policy->other_ts),
 				 virtual_ip,
-				 this->policy->get_hostaccess(this->policy) ?
+				 this->config->get_hostaccess(this->config) ?
 				 	"PLUTO_HOST_ACCESS='1' " : "",
 				 script);
 		free(ifname);
@@ -528,8 +528,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 		natt = NULL;
 	}
 	
-	soft = this->policy->get_soft_lifetime(this->policy);
-	hard = this->policy->get_hard_lifetime(this->policy);
+	soft = this->config->get_lifetime(this->config, TRUE);
+	hard = this->config->get_lifetime(this->config, FALSE);
 	
 	/* send SA down to the kernel */
 	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
@@ -665,10 +665,10 @@ static status_t add_policies(private_child_sa_t *this,
 			policy = malloc_thing(sa_policy_t);
 			policy->my_ts = my_ts->clone(my_ts);
 			policy->other_ts = other_ts->clone(other_ts);
-			this->policies->insert_last(this->policies, (void*)policy);
+			this->policies->insert_last(this->policies, policy);
 			/* add to separate list to query them via get_*_traffic_selectors() */
-			this->my_ts->insert_last(this->my_ts, (void*)policy->my_ts);
-			this->other_ts->insert_last(this->other_ts, (void*)policy->other_ts);
+			this->my_ts->insert_last(this->my_ts, policy->my_ts);
+			this->other_ts->insert_last(this->other_ts, policy->other_ts);
 		}
 	}
 	my_iter->destroy(my_iter);
@@ -685,18 +685,14 @@ static status_t add_policies(private_child_sa_t *this,
 }
 
 /**
- * Implementation of child_sa_t.get_my_traffic_selectors.
+ * Implementation of child_sa_t.get_traffic_selectors.
  */
-static linked_list_t *get_my_traffic_selectors(private_child_sa_t *this)
+static linked_list_t *get_traffic_selectors(private_child_sa_t *this, bool local)
 {
-	return this->my_ts;
-}
-
-/**
- * Implementation of child_sa_t.get_my_traffic_selectors.
- */
-static linked_list_t *get_other_traffic_selectors(private_child_sa_t *this)
-{
+	if (local)
+	{
+		return this->my_ts;
+	}
 	return this->other_ts;
 }
 
@@ -762,7 +758,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	now = time(NULL);
 	
 	written += fprintf(stream, "%12s{%d}:  %N, %N", 
-					   this->policy->get_name(this->policy), this->reqid,
+					   this->config->get_name(this->config), this->reqid,
 					   child_sa_state_names, this->state,
 					   mode_names, this->mode);
 	
@@ -775,7 +771,7 @@ static int print(FILE *stream, const struct printf_info *info,
 		if (info->alt)
 		{
 			written += fprintf(stream, "\n%12s{%d}:  ",
-							   this->policy->get_name(this->policy),
+							   this->config->get_name(this->config),
 							   this->reqid);
 			
 			if (this->protocol == PROTO_ESP)
@@ -814,7 +810,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	while (iterator->iterate(iterator, (void**)&policy))
 	{
 		written += fprintf(stream, "\n%12s{%d}:   %R===%R, last use: ",
-						   this->policy->get_name(this->policy), this->reqid,
+						   this->config->get_name(this->config), this->reqid,
 						   policy->my_ts, policy->other_ts);
 		
 		/* query time of last policy use */
@@ -1066,7 +1062,7 @@ static void destroy(private_child_sa_t *this)
 	this->other.addr->destroy(this->other.addr);
 	this->me.id->destroy(this->me.id);
 	this->other.id->destroy(this->other.id);
-	this->policy->destroy(this->policy);
+	this->config->destroy(this->config);
 	DESTROY_IF(this->virtual_ip);
 	free(this);
 }
@@ -1076,7 +1072,7 @@ static void destroy(private_child_sa_t *this)
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 identification_t *my_id, identification_t *other_id,
-							 policy_t *policy, u_int32_t rekey, bool use_natt)
+							 child_cfg_t *config, u_int32_t rekey, bool use_natt)
 {
 	static u_int32_t reqid = 0;
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
@@ -1091,12 +1087,11 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))update;
 	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,host_diff_t,host_diff_t))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,mode_t))add_policies;
-	this->public.get_my_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_my_traffic_selectors;
-	this->public.get_other_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_other_traffic_selectors;
+	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
-	this->public.get_policy = (policy_t*(*)(child_sa_t*))get_policy;
+	this->public.get_config = (child_cfg_t*(*)(child_sa_t*))get_config;
 	this->public.set_virtual_ip = (void(*)(child_sa_t*,host_t*))set_virtual_ip;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
@@ -1123,8 +1118,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
 	this->virtual_ip = NULL;
-	this->policy = policy;
-	policy->get_ref(policy);
+	this->config = config;
+	config->get_ref(config);
 	
 	return &this->public;
 }

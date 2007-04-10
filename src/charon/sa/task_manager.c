@@ -35,7 +35,7 @@
 #include <sa/tasks/child_rekey.h>
 #include <sa/tasks/child_delete.h>
 #include <encoding/payloads/delete_payload.h>
-#include <queues/jobs/retransmit_job.h>
+#include <processing/jobs/retransmit_job.h>
 
 typedef struct exchange_t exchange_t;
 
@@ -577,7 +577,7 @@ static status_t process_request(private_task_manager_t *this,
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_config_create(this->ike_sa, NULL);
+			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)child_create_create(this->ike_sa, NULL);
 			this->passive_tasks->insert_last(this->passive_tasks, task);

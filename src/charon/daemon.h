@@ -29,22 +29,21 @@ typedef struct daemon_t daemon_t;
 
 #include <credential_store.h>
 
-#include <threads/sender.h>
-#include <threads/receiver.h>
-#include <threads/scheduler.h>
-#include <threads/kernel_interface.h>
-#include <threads/thread_pool.h>
-#include <threads/stroke_interface.h>
+#include <network/sender.h>
+#include <network/receiver.h>
 #include <network/socket.h>
+#include <processing/scheduler.h>
+#include <processing/thread_pool.h>
+#include <processing/job_queue.h>
+#include <processing/event_queue.h>
+#include <kernel/kernel_interface.h>
+#include <control/stroke_interface.h>
 #include <bus/bus.h>
 #include <bus/listeners/file_logger.h>
 #include <bus/listeners/sys_logger.h>
 #include <sa/ike_sa_manager.h>
-#include <queues/job_queue.h>
-#include <queues/event_queue.h>
-#include <config/configuration.h>
-#include <config/connections/connection_store.h>
-#include <config/policies/policy_store.h>
+#include <config/cfg_store.h>
+#include <config/backends/local_backend.h>
 
 /**
  * @defgroup charon charon
@@ -324,12 +323,12 @@ struct daemon_t {
 	/**
 	 * A connection_store_t instance.
 	 */
-	connection_store_t *connections;
+	cfg_store_t *cfg_store;
 	
 	/**
-	 * A policy_store_t instance.
+	 * A backend for cfg_store using in-memory lists
 	 */
-	policy_store_t *policies;
+	local_backend_t *local_backend;
 	
 	/**
 	 * A credential_store_t instance.

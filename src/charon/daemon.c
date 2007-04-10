@@ -42,8 +42,7 @@
 #include <crypto/ca.h>
 #include <utils/fetcher.h>
 #include <config/credentials/local_credential_store.h>
-#include <config/connections/local_connection_store.h>
-#include <config/policies/local_policy_store.h>
+#include <config/backends/local_backend.h>
 #include <sa/authenticators/eap/eap_method.h>
 
 
@@ -179,8 +178,8 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.event_queue);
 	DESTROY_IF(this->public.configuration);
 	DESTROY_IF(this->public.credentials);
-	DESTROY_IF(this->public.connections);
-	DESTROY_IF(this->public.policies);
+	DESTROY_IF(this->public.cfg_store);
+	DESTROY_IF(this->public.local_backend);
 	sched_yield();
 	/* we hope the sender could send the outstanding deletes, but 
 	 * we shut down here at any cost */
@@ -264,9 +263,11 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
-	this->public.connections = (connection_store_t*)local_connection_store_create();
-	this->public.policies = (policy_store_t*)local_policy_store_create();
 	this->public.credentials = (credential_store_t*)local_credential_store_create(strict);
+	this->public.cfg_store = cfg_store_create();
+	this->public.local_backend = local_backend_create();
+	this->public.cfg_store->register_backend(this->public.cfg_store,
+											&this->public.local_backend->backend);
 
 	/* initialize fetcher_t class */
 	fetcher_initialize();
@@ -279,7 +280,7 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	credentials->load_secrets(credentials);
 	
 	/* start building threads, we are multi-threaded NOW */
-	this->public.stroke = stroke_create();
+	this->public.stroke = stroke_create(this->public.local_backend);
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	this->public.scheduler = scheduler_create();
@@ -335,8 +336,8 @@ private_daemon_t *daemon_create(void)
 	this->public.event_queue = NULL;
 	this->public.configuration = NULL;
 	this->public.credentials = NULL;
-	this->public.connections = NULL;
-	this->public.policies = NULL;
+	this->public.cfg_store = NULL;
+	this->public.local_backend = NULL;
 	this->public.sender= NULL;
 	this->public.receiver = NULL;
 	this->public.scheduler = NULL;

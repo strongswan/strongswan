@@ -167,6 +167,8 @@ static int print(FILE *stream, const struct printf_info *info,
 				 const void *const *args)
 {
 	private_traffic_selector_t *this = *((private_traffic_selector_t**)(args[0]));
+	linked_list_t *list = *((linked_list_t**)(args[0]));
+	iterator_t *iterator;
 	char addr_str[INET6_ADDRSTRLEN] = "";
 	char *serv_proto = NULL;
 	u_int8_t mask;
@@ -177,6 +179,24 @@ static int print(FILE *stream, const struct printf_info *info,
 	if (this == NULL)
 	{
 		return fprintf(stream, "(null)");
+	}
+	
+	if (info->alt)
+	{
+		iterator = list->create_iterator(list, TRUE);
+		while (iterator->iterate(iterator, (void**)&this))
+		{
+			/* call recursivly */
+			written += fprintf(stream, "%R ", this);
+		}
+		iterator->destroy(iterator);
+		return written;
+	}
+	
+	if (this->dynamic)
+	{
+		return fprintf(stream, "dynamic/%d",
+					   this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
 	}
 	
 	if (this->type == TS_IPV4_ADDR_RANGE)
