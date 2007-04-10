@@ -398,6 +398,30 @@ static status_t process_start(private_eap_sim_t *this, eap_payload_t *in,
 				/* only include AT_IDENTITY if requested */
 				include_id = AT_IDENTITY;
 				break;
+			case AT_NOTIFICATION:
+			{
+				u_int16_t code = 0;
+				if (data.len == 2)
+				{
+					code = ntohs(*(u_int16_t*)data.ptr);
+				}
+				if (code <= 32767) /* no success bit */
+				{
+					DBG1(DBG_IKE, "received %N error %d",
+				 		 sim_attribute_names, attribute, code);
+					*out = build_payload(this,
+									in->get_identifier(in), SIM_CLIENT_ERROR,
+						 			AT_CLIENT_ERROR_CODE, client_error_general,
+									AT_END);
+					return NEED_MORE;
+				}
+				else
+				{
+					DBG1(DBG_IKE, "received %N code %d",
+				 		 sim_attribute_names, attribute, code);
+				}
+				break;
+			}
 			default:
 				DBG1(DBG_IKE, "ignoring EAP_SIM attribute %N",
 					 sim_attribute_names, attribute);
@@ -456,6 +480,30 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 				memset(data.ptr, 0, data.len);
 				break;
 			}
+			case AT_NOTIFICATION:
+			{
+				u_int16_t code = 0;
+				if (data.len == 2)
+				{
+					code = ntohs(*(u_int16_t*)data.ptr);
+				}
+				if (code <= 32767) /* no success bit */
+				{
+					DBG1(DBG_IKE, "received %N error %d",
+				 		 sim_attribute_names, attribute, code);
+					*out = build_payload(this,
+									in->get_identifier(in), SIM_CLIENT_ERROR,
+						 			AT_CLIENT_ERROR_CODE, client_error_general,
+									AT_END);
+					return NEED_MORE;
+				}
+				else
+				{
+					DBG1(DBG_IKE, "received %N code %d",
+				 		 sim_attribute_names, attribute, code);
+				}
+				break;
+			}
 			default:
 				DBG1(DBG_IKE, "ignoring EAP_SIM attribute %N",
 					 sim_attribute_names, attribute);
@@ -472,7 +520,7 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 		*out = build_payload(this, identifier, SIM_CLIENT_ERROR,
 							 AT_CLIENT_ERROR_CODE, client_error_insufficient,
 							 AT_END);
-		return FAILED;
+		return NEED_MORE;
 	}
 	if (mac.len != MAC_LEN)
 	{
@@ -557,6 +605,58 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 }
 
 /**
+ * process an EAP-SIM/Request/Notification message
+ */
+static status_t process_notification(private_eap_sim_t *this, eap_payload_t *in,
+									 eap_payload_t **out)
+{
+	chunk_t message, data;
+	sim_attribute_t attribute;
+	
+	message = in->get_data(in);
+	read_header(&message);
+
+	while ((attribute = read_attribute(&message, &data)) != AT_END)
+	{
+		switch (attribute)
+		{
+			case AT_NOTIFICATION:
+			{
+				u_int16_t code = 0;
+				if (data.len == 2)
+				{
+					code = ntohs(*(u_int16_t*)data.ptr);
+				}
+				if (code <= 32767) /* no success bit */
+				{
+					DBG1(DBG_IKE, "received %N error %d",
+				 		 sim_attribute_names, attribute, code);
+					*out = build_payload(this,
+									in->get_identifier(in), SIM_CLIENT_ERROR,
+						 			AT_CLIENT_ERROR_CODE, client_error_general,
+									AT_END);
+					return NEED_MORE;
+				}
+				else
+				{
+					DBG1(DBG_IKE, "received %N code %d",
+				 		 sim_attribute_names, attribute, code);
+				}
+				break;
+			}
+			default:
+				DBG1(DBG_IKE, "ignoring EAP_SIM attribute %N",
+					 sim_attribute_names, attribute);
+				break;
+		}
+	}
+	/* reply with empty notification */
+	*out = build_payload(this, in->get_identifier(in), SIM_NOTIFICATION, AT_END);
+	return NEED_MORE;
+}
+
+
+/**
  * Implementation of eap_method_t.process for the peer
  */
 static status_t process(private_eap_sim_t *this,
@@ -574,6 +674,8 @@ static status_t process(private_eap_sim_t *this,
 			return process_start(this, in, out);
 		case SIM_CHALLENGE:
 			return process_challenge(this, in, out);
+		case SIM_NOTIFICATION:
+			return process_notification(this, in, out);
 		default:
 			DBG1(DBG_IKE, "unable to process EAP_SIM subtype %N",
 				 sim_subtype_names, type);
