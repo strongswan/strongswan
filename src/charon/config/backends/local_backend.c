@@ -125,34 +125,40 @@ static peer_cfg_t *get_peer_cfg(private_local_backend_t *this,
 	peer_cfg_t *current, *found = NULL;
 	iterator_t *iterator;
 	identification_t *my_candidate, *other_candidate;
-	int wc1, wc2, total, best = MAX_WILDCARDS;
+	int best = 2 * MAX_WILDCARDS + 1;
 	
 	DBG2(DBG_CFG, "looking for a config for %D...%D", my_id, other_id);
 	
 	iterator = this->cfgs->create_iterator_locked(this->cfgs, &this->mutex);
 	while (iterator->iterate(iterator, (void**)&current))
 	{
+		int wc1, wc2;
+
 		my_candidate = current->get_my_id(current);
 		other_candidate = current->get_other_id(current);
 		
 		if (my_candidate->matches(my_candidate, my_id, &wc1) &&
 			other_id->matches(other_id, other_candidate, &wc2))
 		{
-			total = wc1 + wc2;
+			int prio = wc1 + wc2;
 			
-			DBG2(DBG_CFG, "  candidate '%s': %D...%D, wildcards %d",
-				 current->get_name(current), my_candidate, other_candidate,
-				 total);
+			DBG2(DBG_CFG, "  candidate '%s': %D...%D, prio %d",
+				 current->get_name(current), my_candidate, other_candidate, prio);
 			
-			if (total < best)
+			if (prio < best)
 			{
 				found = current;
-				best = total;
+				best = prio;
 			}
 		}
 	}
 	if (found)
 	{
+		DBG1(DBG_CFG, "found matching config \"%s\": %D...%D, prio %d",
+				found->get_name(found),
+				found->get_my_id(found),
+				found->get_other_id(found),
+				best);
 		found->get_ref(found);
 	}
 	iterator->destroy(iterator);
