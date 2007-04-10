@@ -488,7 +488,7 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.process for initiator
+ * Implementation of task_t.process for responder
  */
 static status_t process_r(private_ike_auth_t *this, message_t *message)
 {
@@ -504,7 +504,7 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		return NEED_MORE;
 	}
 	
-	config = charon->cfg_store->get_peer_cfg(charon->cfg_store, 
+	config = charon->cfg_store->get_peer_cfg(charon->cfg_store,
 									this->ike_sa->get_my_id(this->ike_sa),
 									this->ike_sa->get_other_id(this->ike_sa));
 	if (config)
@@ -546,7 +546,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	config = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (config == NULL)
 	{
-		SIG(IKE_UP_FAILED, "no acceptable peer config found for %D...%D",
+		SIG(IKE_UP_FAILED, "no matching config found for %D...%D",
 			this->ike_sa->get_my_id(this->ike_sa),
 			this->ike_sa->get_other_id(this->ike_sa));
 		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
