@@ -43,8 +43,6 @@
 /** 1 argument: ike_sa_t *ike_sa */
 #define PRINTF_IKE_SA			'K'
 /** 1 argument: message_t *message */
-#define PRINTF_MESSAGE			'M'
-/** 2 arguments: enum_name_t *name, long value */
 #define PRINTF_ENUM				'N'
 /** 1 argument: child_sa_t *child_sa */
 #define PRINTF_CHILD_SA			'P'
