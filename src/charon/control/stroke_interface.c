@@ -967,8 +967,8 @@ static void stroke_del_ca(private_stroke_interface_t *this,
 /**
  * show status of daemon
  */
-static void stroke_statusall(private_stroke_interface_t *this,
-							 stroke_msg_t *msg, FILE *out)
+static void stroke_status(private_stroke_interface_t *this,
+						  stroke_msg_t *msg, FILE *out, bool all)
 {
 	iterator_t *iterator, *children;
 	linked_list_t *list;
@@ -978,26 +978,6 @@ static void stroke_statusall(private_stroke_interface_t *this,
 	child_cfg_t *child_cfg;
 	ike_sa_t *ike_sa;
 	char *name = NULL;
-
-	leak_detective_status(out);
-	
-	fprintf(out, "Performance:\n");
-	fprintf(out, "  worker threads: %d idle of %d,",
-			charon->thread_pool->get_idle_threads(charon->thread_pool),
-			charon->thread_pool->get_pool_size(charon->thread_pool));
-	fprintf(out, " job queue load: %d,",
-			charon->job_queue->get_count(charon->job_queue));
-	fprintf(out, " scheduled events: %d\n",
-			charon->event_queue->get_count(charon->event_queue));
-	list = charon->kernel_interface->create_address_list(charon->kernel_interface);
-
-	fprintf(out, "Listening on %d IP addresses:\n", list->get_count(list));
-	while (list->remove_first(list, (void**)&host) == SUCCESS)
-	{
-		fprintf(out, "  %H\n", host);
-		host->destroy(host);
-	}
-	list->destroy(list);
 	
 	if (msg->status.name)
 	{
@@ -1005,123 +985,200 @@ static void stroke_statusall(private_stroke_interface_t *this,
 		name = msg->status.name;
 	}
 	
-	fprintf(out, "Connections:\n");
-	iterator = this->backend->create_peer_cfg_iterator(this->backend);
-	while (iterator->iterate(iterator, (void**)&peer_cfg))
+	if (all)
 	{
-		if (peer_cfg->get_ike_version(peer_cfg) != 2 ||
-			(name && !streq(name, peer_cfg->get_name(peer_cfg))))
-		{
-			continue;
-		}
-		
-		ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-		fprintf(out, "%12s:  %H[%D]...%H[%D]\n", peer_cfg->get_name(peer_cfg),
-				ike_cfg->get_my_host(ike_cfg), peer_cfg->get_my_id(peer_cfg),
-				ike_cfg->get_other_host(ike_cfg), peer_cfg->get_other_id(peer_cfg));
-		children = peer_cfg->create_child_cfg_iterator(peer_cfg);
-		while (children->iterate(children, (void**)&child_cfg))
-		{
-			linked_list_t *my_ts, *other_ts;
-			my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
-			other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
-			fprintf(out, "%12s:    %#R=== %#R\n", child_cfg->get_name(child_cfg),
-					my_ts, other_ts);
-			my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
-			other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
-		}
-		children->destroy(children);
-	}
-	iterator->destroy(iterator);
+		leak_detective_status(out);
+	
+		fprintf(out, "Performance:\n");
+		fprintf(out, "  worker threads: %d idle of %d,",
+				charon->thread_pool->get_idle_threads(charon->thread_pool),
+				charon->thread_pool->get_pool_size(charon->thread_pool));
+		fprintf(out, " job queue load: %d,",
+				charon->job_queue->get_count(charon->job_queue));
+		fprintf(out, " scheduled events: %d\n",
+				charon->event_queue->get_count(charon->event_queue));
+		list = charon->kernel_interface->create_address_list(charon->kernel_interface);
 
+		fprintf(out, "Listening on %d IP addresses:\n", list->get_count(list));
+		while (list->remove_first(list, (void**)&host) == SUCCESS)
+		{
+			fprintf(out, "  %H\n", host);
+			host->destroy(host);
+		}
+		list->destroy(list);
+	
+		fprintf(out, "Connections:\n");
+		iterator = this->backend->create_peer_cfg_iterator(this->backend);
+		while (iterator->iterate(iterator, (void**)&peer_cfg))
+		{
+			if (peer_cfg->get_ike_version(peer_cfg) != 2 ||
+				(name && !streq(name, peer_cfg->get_name(peer_cfg))))
+			{
+				continue;
+			}
+			
+			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+			fprintf(out, "%12s:  %H[%D]...%H[%D]\n", peer_cfg->get_name(peer_cfg),
+					ike_cfg->get_my_host(ike_cfg), peer_cfg->get_my_id(peer_cfg),
+					ike_cfg->get_other_host(ike_cfg), peer_cfg->get_other_id(peer_cfg));
+			children = peer_cfg->create_child_cfg_iterator(peer_cfg);
+			while (children->iterate(children, (void**)&child_cfg))
+			{
+				linked_list_t *my_ts, *other_ts;
+				my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
+				other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
+				fprintf(out, "%12s:    %#R=== %#R\n", child_cfg->get_name(child_cfg),
+						my_ts, other_ts);
+				my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
+				other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
+			}
+			children->destroy(children);
+		}
+		iterator->destroy(iterator);
+	}
 	
 	iterator = charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
-	if (iterator->get_count(iterator) > 0)
+	if (all && iterator->get_count(iterator) > 0)
 	{
 		fprintf(out, "Security Associations:\n");
 	}
 	while (iterator->iterate(iterator, (void**)&ike_sa))
 	{
-		bool ike_sa_printed = FALSE;
+		bool ike_match = FALSE, ike_printed = FALSE;
 		child_sa_t *child_sa;
 		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
 
-		/* print IKE_SA */
-		if (name == NULL || strcmp(name, ike_sa->get_name(ike_sa)) == 0)
+		if (name == NULL || streq(name, ike_sa->get_name(ike_sa)))
 		{
-			fprintf(out, "%#K\n", ike_sa);
-			ike_sa_printed = TRUE;
+			ike_match = TRUE;
 		}
 
 		while (children->iterate(children, (void**)&child_sa))
 		{
-			bool child_sa_match = name == NULL ||
-								  strcmp(name, child_sa->get_name(child_sa)) == 0;
-
-			/* print IKE_SA if its name differs from the CHILD_SA's name */
-			if (!ike_sa_printed && child_sa_match)
+			bool child_match = FALSE;
+			
+			if (name == NULL || streq(name, child_sa->get_name(child_sa)))
 			{
-				fprintf(out, "%#K\n", ike_sa);
-				ike_sa_printed = TRUE;
+				child_match = TRUE;
 			}
 
-			/* print CHILD_SA */
-			if (child_sa_match)
+			if ((child_match || ike_match) && !ike_printed)
 			{
-				fprintf(out, "%#P\n", child_sa);
-			}
-		}
-		children->destroy(children);
-	}
-	iterator->destroy(iterator);
-}
+				peer_cfg_t *cfg = ike_sa->get_peer_cfg(ike_sa);
+				u_int32_t next;
 
-/**
- * show status of daemon
- */
-static void stroke_status(private_stroke_interface_t *this,
-						  stroke_msg_t *msg, FILE *out)
-{
-	iterator_t *iterator;
-	ike_sa_t *ike_sa;
-	char *name = NULL;
+				fprintf(out, "%12s[%d]: %N, %H[%D]...%H[%D]\n",
+						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
+						ike_sa_state_names, ike_sa->get_state(ike_sa),
+						ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
+						ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
+				
+				if (all)
+				{
+					fprintf(out, "%12s[%d]: IKE SPIs: %J, ",
+							ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
+							ike_sa->get_id(ike_sa));
+				
+					ike_sa->get_stats(ike_sa, &next);
+					if (next)
+					{
+						fprintf(out, "%s in %ds\n", cfg->use_reauth(cfg) ?
+								"reauthentication" : "rekeying", next - time(NULL));
+					}
+					else
+					{
+						fprintf(out, "rekeying disabled");
+					}
+				}
 	
-	if (msg->status.name)
-	{
-		pop_string(msg, &(msg->status.name));
-		name = msg->status.name;
-	}
-	
-	iterator = charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
-	while (iterator->iterate(iterator, (void**)&ike_sa))
-	{
-		bool ike_sa_printed = FALSE;
-		child_sa_t *child_sa;
-		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
 
-		/* print IKE_SA */
-		if (name == NULL || strcmp(name, ike_sa->get_name(ike_sa)) == 0)
-		{
-			fprintf(out, "%K\n", ike_sa);
-			ike_sa_printed = TRUE;
-		}
-
-		while (children->iterate(children, (void**)&child_sa))
-		{
-			bool child_sa_match = name == NULL ||
-								  strcmp(name, child_sa->get_name(child_sa)) == 0;
-
-			/* print IKE_SA if its name differs from the CHILD_SA's name */
-			if (!ike_sa_printed && child_sa_match)
-			{
-				fprintf(out, "%K\n", ike_sa);
-				ike_sa_printed = TRUE;
+				ike_printed = TRUE;
 			}
 
-			/* print CHILD_SA */
-			if (child_sa_match)
+			if (child_match)
 			{
-				fprintf(out, "%P\n", child_sa);
+				u_int32_t now, rekey;
+				u_int32_t use_in, use_out, use_fwd;
+				encryption_algorithm_t encr_alg;
+				integrity_algorithm_t int_alg;
+				size_t encr_len, int_len;
+				mode_t mode;
+				
+				now = time(NULL);
+				child_sa->get_stats(child_sa, &mode, &encr_alg, &encr_len,
+									&int_alg, &int_len, &rekey, &use_in, &use_out,
+									&use_fwd);
+				
+				fprintf(out, "%12s{%d}:  %N, %N", 
+						child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+						child_sa_state_names, child_sa->get_state(child_sa),
+						mode_names, mode);
+				
+				if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
+				{
+					fprintf(out, ", %N SPIs: 0x%0x_i 0x%0x_o",
+							protocol_id_names, child_sa->get_protocol(child_sa),
+							htonl(child_sa->get_spi(child_sa, TRUE)),
+							htonl(child_sa->get_spi(child_sa, FALSE)));
+					
+					if (all)
+					{
+						fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa), 
+								child_sa->get_reqid(child_sa));
+						
+						
+						if (child_sa->get_protocol(child_sa) == PROTO_ESP)
+						{
+							fprintf(out, "%N", encryption_algorithm_names, encr_alg);
+							
+							if (encr_len)
+							{
+								fprintf(out, "-%d", encr_len);
+							}
+							fprintf(out, "/");
+						}
+						
+						fprintf(out, "%N", integrity_algorithm_names, int_alg);
+						if (int_len)
+						{
+							fprintf(out, "-%d", int_len);
+						}
+						fprintf(out, ", rekeying ");
+						
+						if (rekey)
+						{
+							fprintf(out, "in %ds", rekey - now);
+						}
+						else
+						{
+							fprintf(out, "disabled");
+						}
+						
+						fprintf(out, ", last use: ");
+						use_in = max(use_in, use_fwd);
+						if (use_in)
+						{
+							fprintf(out, "%ds_i ", now - use_in);
+						}
+						else
+						{
+							fprintf(out, "no_i ");
+						}
+						if (use_out)
+						{
+							fprintf(out, "%ds_o ", now - use_out);
+						}
+						else
+						{
+							fprintf(out, "no_o ");
+						}
+					}
+				}
+				
+				fprintf(out, "\n%12s{%d}:   %#R=== %#R\n",
+						child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+						child_sa->get_traffic_selectors(child_sa, TRUE),
+						child_sa->get_traffic_selectors(child_sa, FALSE));
 			}
 		}
 		children->destroy(children);
@@ -1392,10 +1449,10 @@ static void stroke_process(private_stroke_interface_t *this, int strokefd)
 			stroke_terminate(this, msg, out);
 			break;
 		case STR_STATUS:
-			stroke_status(this, msg, out);
+			stroke_status(this, msg, out, FALSE);
 			break;
 		case STR_STATUS_ALL:
-			stroke_statusall(this, msg, out);
+			stroke_status(this, msg, out, TRUE);
 			break;
 		case STR_ADD_CONN:
 			stroke_add_conn(this, msg, out);

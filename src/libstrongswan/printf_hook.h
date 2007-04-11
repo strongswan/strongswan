@@ -41,12 +41,8 @@
 /** 1 argument: ike_sa_id_t *id */
 #define PRINTF_IKE_SA_ID		'J'
 /** 1 argument: ike_sa_t *ike_sa */
-#define PRINTF_IKE_SA			'K'
-/** 1 argument: message_t *message */
 #define PRINTF_ENUM				'N'
 /** 1 argument: child_sa_t *child_sa */
-#define PRINTF_CHILD_SA			'P'
-/** 1 argument: traffic_selector_t *ts */
 #define PRINTF_TRAFFIC_SELECTOR	'R'
 /** 1 argument: time_t *time; with #-modifier 2 arguments: time_t *time, bool utc */
 #define PRINTF_TIME				'T'

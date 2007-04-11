@@ -280,6 +280,18 @@ static char *get_name(private_ike_sa_t *this)
 	return "(unnamed)";
 }
 
+	
+/**
+ * Implementation of ike_sa_t.get_stats.
+ */
+static void get_stats(private_ike_sa_t *this, u_int32_t *next_rekeying)
+{
+	if (next_rekeying)
+	{
+		*next_rekeying = this->time.rekey;
+	}
+}
+
 /**
  * Implementation of ike_sa_t.get_my_host.
  */
@@ -1808,54 +1820,6 @@ static void add_dns_server(private_ike_sa_t *this, host_t *dns)
 }
 
 /**
- * output handler in printf()
- */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
-{
-	int written = 0;
-	bool reauth = FALSE;
-	private_ike_sa_t *this = *((private_ike_sa_t**)(args[0]));
-	
-	if (this->peer_cfg)
-	{
-		reauth = this->peer_cfg->use_reauth(this->peer_cfg);
-	}
-	
-	if (this == NULL)
-	{
-		return fprintf(stream, "(null)");
-	}
-	
-	written = fprintf(stream, "%12s[%d]: %N, %H[%D]...%H[%D]", get_name(this),
-					  this->unique_id, ike_sa_state_names, this->state,
-					  this->my_host, this->my_id, this->other_host,
-					  this->other_id);
-	if (this->time.rekey)
-	{
-		written += fprintf(stream, "\n%12s[%d]: IKE SPIs: %J, %s in %ds",
-						  get_name(this), this->unique_id, this->ike_sa_id, 
-						  reauth ? "reauthentication" : "rekeying",
-						  this->time.rekey - time(NULL));
-	}
-	else
-	{
-		written += fprintf(stream, "\n%12s[%d]: IKE SPIs: %J, rekeying disabled",
-						  get_name(this), this->unique_id, this->ike_sa_id);
-	}
-
-	return written;
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_IKE_SA, print, arginfo_ptr);
-}
-
-/**
  * Implementation of ike_sa_t.destroy.
  */
 static void destroy(private_ike_sa_t *this)
@@ -1906,6 +1870,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* Public functions */
 	this->public.get_state = (ike_sa_state_t(*)(ike_sa_t*)) get_state;
 	this->public.set_state = (void(*)(ike_sa_t*,ike_sa_state_t)) set_state;
+	this->public.get_stats = (void(*)(ike_sa_t*,u_int32_t*))get_stats;
 	this->public.get_name = (char*(*)(ike_sa_t*))get_name;
 	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
 	this->public.initiate = (status_t(*)(ike_sa_t*,child_cfg_t*)) initiate;

@@ -184,6 +184,13 @@ struct ike_sa_t {
 	ike_sa_state_t (*get_state) (ike_sa_t *this);
 	
 	/**
+	 * @brief Get some statistics about this IKE_SA.
+	 *
+	 * @param next_rekeying			when the next rekeying is scheduled
+	 */
+	void (*get_stats)(ike_sa_t *this, u_int32_t *next_rekeying);	
+	
+	/**
 	 * @brief Set the state of the IKE_SA.
 	 *
 	 * @param this			calling object

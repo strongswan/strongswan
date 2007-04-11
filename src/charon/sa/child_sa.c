@@ -27,7 +27,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <printf.h>
 
 #include <daemon.h>
 
@@ -209,6 +208,52 @@ static child_sa_state_t get_state(private_child_sa_t *this)
 static child_cfg_t* get_config(private_child_sa_t *this)
 {
 	return this->config;
+}
+
+/**
+ * Implementation of child_sa_t.get_stats.
+ */
+static void get_stats(private_child_sa_t *this, mode_t *mode,
+					  encryption_algorithm_t *encr_algo, size_t *encr_len,
+					  integrity_algorithm_t *int_algo, size_t *int_len,
+					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
+					  u_int32_t *use_fwd)
+{
+	sa_policy_t *policy;
+	iterator_t *iterator;
+	u_int32_t in = 0, out = 0, fwd = 0, time;
+	
+	iterator = this->policies->create_iterator(this->policies, TRUE);
+	while (iterator->iterate(iterator, (void**)&policy))
+	{
+
+		if (charon->kernel_interface->query_policy(charon->kernel_interface,
+				policy->other_ts, policy->my_ts, POLICY_IN, &time) == SUCCESS)
+		{
+			in = max(in, time);
+		}
+		if (charon->kernel_interface->query_policy(charon->kernel_interface,
+				policy->my_ts, policy->other_ts, POLICY_OUT, &time) == SUCCESS)
+		{
+			out = max(out, time);
+		}
+		if (charon->kernel_interface->query_policy(charon->kernel_interface,
+				policy->other_ts, policy->my_ts, POLICY_FWD, &time) == SUCCESS)
+		{
+			fwd = max(fwd, time);
+		}
+	}
+	iterator->destroy(iterator);
+
+	*mode = this->mode;
+	*encr_algo = this->encryption.algorithm;
+	*encr_len = this->encryption.key_size;
+	*int_algo = this->integrity.algorithm;
+	*int_len = this->integrity.key_size;
+	*rekey = this->rekey_time;
+	*use_in = in;
+	*use_out = out;
+	*use_fwd = fwd;
 }
 
 /**
@@ -542,7 +587,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	this->encryption = *enc_algo;
 	this->integrity = *int_algo;
 	this->install_time = time(NULL);
-	this->rekey_time = soft;
+	this->rekey_time = this->install_time + soft;
 	
 	return status;
 }
@@ -734,126 +779,6 @@ static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use
 	}
 	iterator->destroy(iterator);
 	return status;
-}
-
-/**
- * output handler in printf()
- */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
-{
-	private_child_sa_t *this = *((private_child_sa_t**)(args[0]));
-	iterator_t *iterator;
-	sa_policy_t *policy;
-	u_int32_t now, rekeying;
-	u_int32_t use, use_in, use_fwd;
-	status_t status;
-	size_t written = 0;
-	
-	if (this == NULL)
-	{
-		return fprintf(stream, "(null)");
-	}
-	
-	now = time(NULL);
-	
-	written += fprintf(stream, "%12s{%d}:  %N, %N", 
-					   this->config->get_name(this->config), this->reqid,
-					   child_sa_state_names, this->state,
-					   mode_names, this->mode);
-	
-	if (this->state == CHILD_INSTALLED)
-	{
-		written += fprintf(stream, ", %N SPIs: 0x%0x_i 0x%0x_o",
-						   protocol_id_names, this->protocol,
-						   htonl(this->me.spi), htonl(this->other.spi));
-		
-		if (info->alt)
-		{
-			written += fprintf(stream, "\n%12s{%d}:  ",
-							   this->config->get_name(this->config),
-							   this->reqid);
-			
-			if (this->protocol == PROTO_ESP)
-			{
-				written += fprintf(stream, "%N", encryption_algorithm_names,
-								   this->encryption.algorithm);
-				
-				if (this->encryption.key_size)
-				{
-					written += fprintf(stream, "-%d", this->encryption.key_size);
-				}
-				written += fprintf(stream, "/");
-			}
-			
-			written += fprintf(stream, "%N", integrity_algorithm_names,
-							   this->integrity.algorithm);
-			if (this->integrity.key_size)
-			{
-				written += fprintf(stream, "-%d", this->integrity.key_size);
-			}
-			written += fprintf(stream, ", rekeying ");
-			
-			/* calculate rekey times */
-			if (this->rekey_time)
-			{
-				rekeying = this->install_time + this->rekey_time - now;
-				written += fprintf(stream, "in %ds", rekeying);
-			}
-			else
-			{
-				written += fprintf(stream, "disabled");
-			}
-		}
-	}
-	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->iterate(iterator, (void**)&policy))
-	{
-		written += fprintf(stream, "\n%12s{%d}:   %R===%R, last use: ",
-						   this->config->get_name(this->config), this->reqid,
-						   policy->my_ts, policy->other_ts);
-		
-		/* query time of last policy use */
-
-		/* inbound: POLICY_IN or POLICY_FWD */
-		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-							policy->other_ts, policy->my_ts, POLICY_IN, &use_in);
-		use_in = (status == SUCCESS)? use_in : 0;
-		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-				policy->other_ts, policy->my_ts, POLICY_FWD, &use_fwd);
-		use_fwd = (status == SUCCESS)? use_fwd : 0;
-		use = max(use_in, use_fwd);
-		if (use)
-		{
-			written += fprintf(stream, "%ds_i ", now - use);
-		}
-		else
-		{
-			written += fprintf(stream, "no_i ");
-		}
-
-		/* outbound: POLICY_OUT */
-		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-							policy->my_ts, policy->other_ts, POLICY_OUT, &use);
-		if (status == SUCCESS && use)
-		{
-			written += fprintf(stream, "%ds_o ", now - use);
-		}
-		else
-		{
-			written += fprintf(stream, "no_o ");
-		}
-	}
-	iterator->destroy(iterator);
-	return written;
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_CHILD_SA, print, arginfo_ptr);
 }
 
 /**
@@ -1082,6 +1007,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_reqid = (u_int32_t(*)(child_sa_t*))get_reqid;
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
+	this->public.get_stats = (void(*)(child_sa_t*, mode_t*,encryption_algorithm_t*,size_t*,integrity_algorithm_t*,size_t*,u_int32_t*,u_int32_t*,u_int32_t*,u_int32_t*))get_stats;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))update;

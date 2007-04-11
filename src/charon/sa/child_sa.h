@@ -141,6 +141,25 @@ struct child_sa_t {
 	protocol_id_t (*get_protocol) (child_sa_t *this);
 	
 	/**
+	 * @brief Get info and statistics about this CHILD_SA.
+	 *
+	 * @param mode		mode this IKE_SA uses
+	 * @param encr_algo	encryption algorithm used by this CHILD_SA.
+	 * @param encr_len	key length of the algorithm, if any
+	 * @param int_algo	integrity algorithm used by this CHILD_SA
+	 * @param int_len	key length of the algorithm, if any
+	 * @param rekey		time when rekeying is scheduled
+	 * @param use_in	time when last traffic was seen coming in
+	 * @param use_out	time when last traffic was seen going out
+	 * @param use_fwd	time when last traffic was getting forwarded
+	 */
+	void (*get_stats)(child_sa_t *this, mode_t *mode,
+					  encryption_algorithm_t *encr, size_t *encr_len,
+					  integrity_algorithm_t *int_algo, size_t *int_len,
+					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
+					  u_int32_t *use_fwd);
+	
+	/**
 	 * @brief Allocate SPIs for given proposals.
 	 * 
 	 * Since the kernel manages SPIs for us, we need
