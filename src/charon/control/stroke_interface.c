@@ -327,10 +327,7 @@ static void stroke_add_conn(private_stroke_interface_t *this,
 	{
 		my_vip = host_create_from_string(msg->add_conn.me.sourceip, 0);
 	}
-	if (msg->add_conn.other.virtual_ip)
-	{
-		other_vip = host_create_from_string(msg->add_conn.other.sourceip, 0);
-	}
+	other_vip = host_create_from_string(msg->add_conn.other.sourceip, 0);
 	
 	if (msg->add_conn.me.tohost)
 	{
