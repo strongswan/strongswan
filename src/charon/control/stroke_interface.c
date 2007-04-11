@@ -978,6 +978,7 @@ static void stroke_status(private_stroke_interface_t *this,
 	child_cfg_t *child_cfg;
 	ike_sa_t *ike_sa;
 	char *name = NULL;
+	u_int32_t now = time(NULL);
 	
 	if (msg->status.name)
 	{
@@ -1082,12 +1083,12 @@ static void stroke_status(private_stroke_interface_t *this,
 					ike_sa->get_stats(ike_sa, &next);
 					if (next)
 					{
-						fprintf(out, "%s in %ds\n", cfg->use_reauth(cfg) ?
-								"reauthentication" : "rekeying", next - time(NULL));
+						fprintf(out, "%s in %V\n", cfg->use_reauth(cfg) ?
+								"reauthentication" : "rekeying", &now, &next);
 					}
 					else
 					{
-						fprintf(out, "rekeying disabled");
+						fprintf(out, "rekeying disabled\n");
 					}
 				}
 	
@@ -1097,14 +1098,13 @@ static void stroke_status(private_stroke_interface_t *this,
 
 			if (child_match)
 			{
-				u_int32_t now, rekey;
+				u_int32_t rekey;
 				u_int32_t use_in, use_out, use_fwd;
 				encryption_algorithm_t encr_alg;
 				integrity_algorithm_t int_alg;
 				size_t encr_len, int_len;
 				mode_t mode;
 				
-				now = time(NULL);
 				child_sa->get_stats(child_sa, &mode, &encr_alg, &encr_len,
 									&int_alg, &int_len, &rekey, &use_in, &use_out,
 									&use_fwd);
@@ -1147,7 +1147,7 @@ static void stroke_status(private_stroke_interface_t *this,
 						
 						if (rekey)
 						{
-							fprintf(out, "in %ds", rekey - now);
+							fprintf(out, "in %V", &now, &rekey);
 						}
 						else
 						{
