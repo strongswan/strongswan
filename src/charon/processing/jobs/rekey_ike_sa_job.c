@@ -67,7 +67,7 @@ static status_t execute(private_rekey_ike_sa_job_t *this)
 											  this->ike_sa_id);
 	if (ike_sa == NULL)
 	{
-		DBG2(DBG_JOB, "IKE_SA %J to rekey not found", this->ike_sa_id);
+		DBG2(DBG_JOB, "IKE_SA to rekey not found");
 		return DESTROY_ME;
 	}
 	

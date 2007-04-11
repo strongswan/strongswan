@@ -322,8 +322,8 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 	ike_sa_t *ike_sa = NULL;
 	entry_t *entry;
 	
-	DBG2(DBG_MGR, "checkout IKE_SA: %J, %d IKE_SAs in manager",
-		 ike_sa_id, this->ike_sa_list->get_count(this->ike_sa_list));
+	DBG2(DBG_MGR, "checkout IKE_SA, %d IKE_SAs in manager",
+		 this->ike_sa_list->get_count(this->ike_sa_list));
 	
 	pthread_mutex_lock(&(this->mutex));
 	if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
@@ -356,14 +356,14 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 	{
 		id = ike_sa_id_create(0, get_next_spi(this), FALSE);
 	}
-	entry = entry_create(id);	
+	entry = entry_create(id);
+	id->destroy(id);
 	pthread_mutex_lock(&this->mutex);	
 	this->ike_sa_list->insert_last(this->ike_sa_list, entry);
 	entry->checked_out = TRUE;
 	pthread_mutex_unlock(&this->mutex);	
-	DBG2(DBG_MGR, "created IKE_SA: %J, %d IKE_SAs in manager",
-		 id, this->ike_sa_list->get_count(this->ike_sa_list));
-	id->destroy(id);
+	DBG2(DBG_MGR, "created IKE_SA, %d IKE_SAs in manager",
+		 this->ike_sa_list->get_count(this->ike_sa_list));
 	return entry->ike_sa;
 }
 
@@ -379,8 +379,8 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 	id = id->clone(id);
 	id->switch_initiator(id);
 	
-	DBG2(DBG_MGR, "checkout IKE_SA: %J by message, %d IKE_SAs in manager",
-		 id, this->ike_sa_list->get_count(this->ike_sa_list));
+	DBG2(DBG_MGR, "checkout IKE_SA by message, %d IKE_SAs in manager",
+		 this->ike_sa_list->get_count(this->ike_sa_list));
 	
 	if (message->get_request(message) &&
 		message->get_exchange_type(message) == IKE_SA_INIT)
@@ -440,7 +440,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 			}
 			else
 			{
-				DBG1(DBG_MGR, "ignoring message for %J, no such IKE_SA", id);
+				DBG1(DBG_MGR, "ignoring message, no such IKE_SA");
 			}
 		}
 		else
@@ -555,7 +555,7 @@ static ike_sa_t* checkout_by_peer(private_ike_sa_manager_t *this,
 		
 		/* create entry */
 		new_entry = entry_create(new_ike_sa_id);
-		DBG2(DBG_MGR, "created IKE_SA: %J", new_ike_sa_id);
+		DBG2(DBG_MGR, "created IKE_SA");
 		new_ike_sa_id->destroy(new_ike_sa_id);
 		
 		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
@@ -721,7 +721,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	
-	DBG2(DBG_MGR, "checkin IKE_SA: %J", ike_sa_id);
+	DBG2(DBG_MGR, "checkin IKE_SA");
 	
 	pthread_mutex_lock(&(this->mutex));
 
@@ -768,7 +768,7 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 	ike_sa_id_t *ike_sa_id;
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
-	DBG2(DBG_MGR, "checkin and destroy IKE_SA: %J", ike_sa_id);
+	DBG2(DBG_MGR, "checkin and destroy IKE_SA");
 
 	pthread_mutex_lock(&(this->mutex));
 

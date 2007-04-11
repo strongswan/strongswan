@@ -38,20 +38,18 @@
 #define PRINTF_IDENTIFICATION	'D'
 /** 1 argumnet: host_t *host; use #-modifier to include port number */
 #define PRINTF_HOST				'H'
-/** 1 argument: ike_sa_id_t *id */
-#define PRINTF_IKE_SA_ID		'J'
 /** 1 argument: ike_sa_t *ike_sa */
 #define PRINTF_ENUM				'N'
 /** 1 argument: child_sa_t *child_sa */
 #define PRINTF_TRAFFIC_SELECTOR	'R'
 /** 1 argument: time_t *time; with #-modifier 2 arguments: time_t *time, bool utc */
 #define PRINTF_TIME				'T'
+/** 2 arguments: time_t *begin, time_t *end */
+#define PRINTF_TIME_DELTA		'V'
 /** 1 argument: x509_t *cert; with #-modifier 2 arguments: x509_t *cert, bool utc */
 #define PRINTF_X509				'Q'
 /** 1 argument: crl_t *crl; with #-modifier 2 arguments: crl_t *crl, bool utc */
 #define PRINTF_CRL				'U'
-/** 2 arguments: time_t *begin, time_t *end */
-#define PRINTF_TIME_DELTA		'V'
 /** 1 argument: ca_info_t *ca_info; with #-modifier 2 arguments: ca_info_t *ca_info, bool utc */
 #define PRINTF_CAINFO			'W'
 /** 1 argument: certinfo_t *certinfo; with #-modifier 2 arguments: certinfo_t *certinfo, bool utc */

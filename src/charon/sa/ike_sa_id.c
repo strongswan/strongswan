@@ -24,7 +24,6 @@
 
 #include "ike_sa_id.h"
 
-#include <printf.h>
 #include <stdio.h>
 
 
@@ -150,33 +149,6 @@ static bool switch_initiator(private_ike_sa_id_t *this)
 static ike_sa_id_t* clone_(private_ike_sa_id_t *this)
 {
 	return ike_sa_id_create(this->initiator_spi, this->responder_spi, this->is_initiator_flag);
-}
-
-/**
- * output handler in printf()
- */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
-{
-	private_ike_sa_id_t *this = *((private_ike_sa_id_t**)(args[0]));
-	
-	if (this == NULL)
-	{
-		return fprintf(stream, "(null)");
-	}
-	return fprintf(stream, "0x%0llx_i%s 0x%0llx_r%s",
-				   this->initiator_spi,
-				   this->is_initiator_flag ? "*" : "",
-				   this->responder_spi,
-				   this->is_initiator_flag ? "" : "*");
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_IKE_SA_ID, print, arginfo_ptr);
 }
 
 /**

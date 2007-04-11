@@ -970,6 +970,7 @@ static void stroke_del_ca(private_stroke_interface_t *this,
 static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 {
 	peer_cfg_t *cfg = ike_sa->get_peer_cfg(ike_sa);
+	ike_sa_id_t *id = ike_sa->get_id(ike_sa);
 	u_int32_t next, now = time(NULL);
 
 	fprintf(out, "%12s[%d]: %N, %H[%D]...%H[%D]\n",
@@ -980,9 +981,10 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (all)
 	{
-		fprintf(out, "%12s[%d]: IKE SPIs: %J, ",
+		fprintf(out, "%12s[%d]: IKE SPIs: 0x%0llx_i%s 0x%0llx_r%s, ",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
-				ike_sa->get_id(ike_sa));
+				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
+				id->get_responder_spi(id), id->is_initiator(id) ? "" : "");
 	
 		ike_sa->get_stats(ike_sa, &next);
 		if (next)
