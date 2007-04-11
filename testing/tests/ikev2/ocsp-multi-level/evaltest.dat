@@ -6,5 +6,5 @@ carol::cat /var/log/daemon.log::certificate is good::YES
 dave::cat /var/log/daemon.log::certificate is good::YES
 moon::ipsec status::ESTABLISHED.*carol::YES
 moon::ipsec status::ESTABLISHED.*dave::YES
-carol::ipsec status::alice.*ESTABLISHED::YES
-dave::ipsec status::venus.*ESTABLISHED::YES
+carol::ipsec status::ESTABLISHED::YES
+dave::ipsec status::ESTABLISHED::YES
