@@ -55,6 +55,15 @@ struct local_backend_t {
 	void (*add_peer_cfg)(local_backend_t *this, peer_cfg_t *config);
 	
 	/**
+	 * @brief Get a peer_config identified by name, or a name of its child_cfgs.
+	 *
+	 * @param this				calling object
+	 * @param name				name of the peer config
+	 * @return					matching peer_config, or NULL if none found
+	 */
+	peer_cfg_t *(*get_peer_cfg_by_name)(local_backend_t *this, char *name);
+	
+	/**
 	 * @brief Create an iterator over all peer configs.
 	 *
 	 * @param this		calling object

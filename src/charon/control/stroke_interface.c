@@ -617,7 +617,7 @@ static void stroke_del_conn(private_stroke_interface_t *this,
 /**
  * get the child_cfg with the same name as the peer cfg
  */
-static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg)
+static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 {
 	child_cfg_t *current, *found = NULL;
 	iterator_t *iterator;
@@ -625,7 +625,7 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg)
 	iterator = peer_cfg->create_child_cfg_iterator(peer_cfg);
 	while (iterator->iterate(iterator, (void**)&current))
 	{
-		if (streq(current->get_name(current), peer_cfg->get_name(peer_cfg)))
+		if (streq(current->get_name(current), name))
 		{
 			found = current;
 			found->get_ref(found);
@@ -651,8 +651,8 @@ static void stroke_initiate(private_stroke_interface_t *this,
 	pop_string(msg, &(msg->initiate.name));
 	DBG1(DBG_CFG, "received stroke: initiate '%s'", msg->initiate.name);
 	
-	peer_cfg = charon->cfg_store->get_peer_cfg_by_name(charon->cfg_store, 
-													   msg->initiate.name);
+	peer_cfg = this->backend->get_peer_cfg_by_name(this->backend,
+												   msg->initiate.name);
 	if (peer_cfg == NULL)
 	{
 		if (msg->output_verbosity >= 0)
@@ -669,7 +669,7 @@ static void stroke_initiate(private_stroke_interface_t *this,
 		return;
 	}
 	
-	child_cfg = get_child_from_peer(peer_cfg);
+	child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
 	if (child_cfg == NULL)
 	{
 		if (msg->output_verbosity >= 0)
@@ -743,8 +743,7 @@ static void stroke_route(private_stroke_interface_t *this,
 	DBG1(DBG_CFG, "received stroke: %s '%s'",
 		 route ? "route" : "unroute", msg->route.name);
 	
-	peer_cfg = charon->cfg_store->get_peer_cfg_by_name(charon->cfg_store, 
-													   msg->route.name);
+	peer_cfg = this->backend->get_peer_cfg_by_name(this->backend, msg->route.name);
 	if (peer_cfg == NULL)
 	{
 		fprintf(out, "no config named '%s'\n", msg->route.name);
@@ -756,7 +755,7 @@ static void stroke_route(private_stroke_interface_t *this,
 		return;
 	}
 	
-	child_cfg = get_child_from_peer(peer_cfg);
+	child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
 	if (child_cfg == NULL)
 	{
 		fprintf(out, "no child config named '%s'\n", msg->route.name);

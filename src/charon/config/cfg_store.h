@@ -91,15 +91,6 @@ struct cfg_store_t {
 								identification_t *other_id);
 	
 	/**
-	 * @brief Get a peer_config identified by its name.
-	 *
-	 * @param this				calling object
-	 * @param name				name of the peer config
-	 * @return					matching peer_config, or NULL if none found
-	 */
-	peer_cfg_t *(*get_peer_cfg_by_name)(cfg_store_t *this, char *name);
-	
-	/**
 	 * @brief Register a backend to be queried by the calls above.
 	 *
 	 * The backend first added is the most preferred.

@@ -89,23 +89,6 @@ static peer_cfg_t *get_peer_cfg(private_cfg_store_t *this,
 }
 
 /**
- * implements cfg_store_t.get_peer_by_name.
- */					
-static peer_cfg_t *get_peer_cfg_by_name(private_cfg_store_t *this, char *name)
-{
-	backend_t *backend;
-	peer_cfg_t *config = NULL;
-	iterator_t *iterator = this->backends->create_iterator_locked(
-												this->backends, &this->mutex);
-	while (config == NULL && iterator->iterate(iterator, (void**)&backend))
-	{
-		config = backend->get_peer_cfg_by_name(backend, name);
-	}
-	iterator->destroy(iterator);
-	return config;
-}
-
-/**
  * implements cfg_store_t.register_backend.
  */			
 static void register_backend(private_cfg_store_t *this, backend_t *backend)
@@ -152,7 +135,6 @@ cfg_store_t *cfg_store_create()
 	
 	this->public.get_ike_cfg = (ike_cfg_t*(*)(cfg_store_t*, host_t *, host_t *))get_ike_cfg;
 	this->public.get_peer_cfg = (peer_cfg_t*(*)(cfg_store_t*, identification_t *, identification_t *))get_peer_cfg;
-	this->public.get_peer_cfg_by_name = (peer_cfg_t*(*)(cfg_store_t*, char *name))get_peer_cfg_by_name;
 	this->public.register_backend = (void(*)(cfg_store_t*, backend_t *))register_backend;
 	this->public.unregister_backend = (void(*)(cfg_store_t*, backend_t *))unregister_backend;
 	this->public.destroy = (void(*)(cfg_store_t*))destroy;
