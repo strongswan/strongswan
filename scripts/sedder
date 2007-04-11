@@ -1,0 +1,13 @@
+#!/bin/bash
+
+files=`find -name '*.[ch]'`
+
+for file in $files
+do
+	sed -e $1 $file > $file.sedtmp
+	mv $file.sedtmp $file
+done
+
+
+
+
