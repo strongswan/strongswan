@@ -97,9 +97,41 @@ typedef struct daemon_t daemon_t;
  */
 
 /**
+ * @defgroup bus bus
+ *
+ * Signaling bus and its listeners.
+ *
+ * @ingroup charon
+ */
+
+/**
  * @defgroup config config
  *
  * Classes implementing configuration related things.
+ *
+ * @ingroup charon
+ */
+
+/**
+ * @defgroup backends backends
+ *
+ * Classes implementing configuration backends.
+ *
+ * @ingroup config
+ */
+
+/**
+ * @defgroup credentials credentials
+ *
+ * Trust chain verification and certificate store.
+ *
+ * @ingroup config
+ */
+
+/**
+ * @defgroup control control
+ *
+ * Classes which control the daemon using IPC mechanisms.
  *
  * @ingroup charon
  */
@@ -121,18 +153,25 @@ typedef struct daemon_t daemon_t;
  */
 
 /**
- * @defgroup network network
+ * @defgroup kernel kernel
  *
- * Classes for network relevant stuff.
+ * Classes to configure and query the kernel.
  *
  * @ingroup charon
  */
 
 /**
- * @defgroup queues queues
+ * @defgroup network network
  *
- * Different kind of queues
- * (thread save lists).
+ * Classes for sending and receiving UDP packets over the network.
+ *
+ * @ingroup charon
+ */
+
+/**
+ * @defgroup processing processing
+ *
+ * Queueing, scheduling and processing of jobs
  *
  * @ingroup charon
  */
@@ -140,33 +179,23 @@ typedef struct daemon_t daemon_t;
 /**
  * @defgroup jobs jobs
  *
- * Jobs used in job queue and event queue.
+ * Jobs to queue, schedule and process.
  *
- * @ingroup queues
+ * @ingroup processing
  */
 
 /**
  * @defgroup sa sa
  *
- * Security associations for IKE and IPSec,
- * and some helper classes.
+ * Security associations for IKE and IPSec, and its helper classes.
  *
  * @ingroup charon
  */
 
 /**
- * @defgroup tasks tasks
- *
- * Tasks process and build message payloads. They are used to create
- * and process multiple exchanges.
- *
- * @ingroup sa
- */
-
-/**
  * @defgroup authenticators authenticators
  *
- * Authenticator classes to prove identity of peer.
+ * Authenticator classes to prove identity of a peer.
  *
  * @ingroup sa
  */
@@ -174,25 +203,18 @@ typedef struct daemon_t daemon_t;
 /**
  * @defgroup eap eap
  *
- * EAP authentication module interface and it's implementations.
+ * EAP module loader, interface and it's implementations.
  *
  * @ingroup authenticators
  */
-
+ 
 /**
- * @defgroup threads threads
+ * @defgroup tasks tasks
  *
- * Threaded classes, which will do their job alone.
+ * Tasks process and build message payloads. They are used to create
+ * and process multiple exchanges.
  *
- * @ingroup charon
- */
-
-/**
- * @defgroup bus bus
- *
- * Signaling bus and its listeners.
- *
- * @ingroup charon
+ * @ingroup sa
  */
 
 /**
@@ -314,11 +336,6 @@ struct daemon_t {
 	 * A ike_sa_manager_t instance.
 	 */
 	ike_sa_manager_t *ike_sa_manager;
-	
-	/**
-	 * A configuration_t instance.
-	 */
-	configuration_t *configuration;
 	
 	/**
 	 * A connection_store_t instance.

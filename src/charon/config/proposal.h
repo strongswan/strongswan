@@ -102,6 +102,8 @@ extern enum_name_t *extended_sequence_numbers_names;
 /**
  * Struct used to store different kinds of algorithms. The internal
  * lists of algorithms contain such structures.
+ *
+ * @ingroup config
  */
 struct algorithm_t {
 	/**

@@ -69,7 +69,7 @@ extern enum_name_t *cert_policy_names;
  *
  * These values are the same as in pluto/starter, so do not modify them!
  *
- * @ingroup peer_cfg
+ * @ingroup config
  */
 enum dpd_action_t {
 	/** DPD disabled */
@@ -90,10 +90,26 @@ extern enum_name_t *dpd_action_names;
 /**
  * @brief Configuration of a peer, specified by IDs.
  *
+ * The peer config defines a connection between two given IDs. It contains
+ * exactly one ike_cfg_t, which is use for initiation. Additionally, it contains
+ * multiple child_cfg_t defining which CHILD_SAs are allowed for this peer.
+ * @verbatim
+
+                           +-------------------+           +---------------+
+   +---------------+       |     peer_cfg      |         +---------------+ |
+   |    ike_cfg    |       +-------------------+         |   child_cfg   | |
+   +---------------+       | - ids             |         +---------------+ |
+   | - hosts       | 1   1 | - cas             | 1     n | - proposals   | |
+   | - proposals   |<------| - auth info       |-------->| - traffic sel | |
+   | - ...         |       | - dpd config      |         | - ...         |-+
+   +---------------+       | - ...             |         +---------------+
+                           +-------------------+
+   @endverbatim
+ *
  * @b Constructors:
  *   - peer_cfg_create()
  *
- * @ingroup peer_cfg
+ * @ingroup config
  */
 struct peer_cfg_t {
 	

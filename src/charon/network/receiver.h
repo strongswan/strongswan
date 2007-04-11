@@ -54,7 +54,7 @@ typedef struct receiver_t receiver_t;
  * @b Constructors:
  *  - receiver_create()
  * 
- * @ingroup threads
+ * @ingroup network
  */
 struct receiver_t {
 	
@@ -74,7 +74,7 @@ struct receiver_t {
  * 
  * @return	receiver_t object
  * 
- * @ingroup threads
+ * @ingroup network
  */
 receiver_t * receiver_create(void);
 

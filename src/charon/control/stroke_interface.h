@@ -39,7 +39,7 @@ typedef struct stroke_t stroke_t;
  * @b Constructors:
  * - stroke_create()
  * 
- * @ingroup threads
+ * @ingroup control
  */
 struct stroke_t {
 	
@@ -58,7 +58,7 @@ struct stroke_t {
  * @param backend	backend to store received configurations
  * @return 			stroke_t object
  * 
- * @ingroup threads
+ * @ingroup control
  */
 stroke_t *stroke_create(local_backend_t *backend);
 

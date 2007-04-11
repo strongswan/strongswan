@@ -36,7 +36,7 @@ typedef struct child_cfg_t child_cfg_t;
  *
  * These are equal to those defined in XFRM, so don't change.
  *
- * @ingroup child_cfg
+ * @ingroup config
  */
 enum mode_t {
 	/** transport mode, no inner address */
@@ -57,14 +57,16 @@ extern enum_name_t *mode_names;
  *
  * After creation, proposals and traffic selectors may be added to the config.
  * A child_cfg object is referenced multiple times, and is not thread save.
- * Reading from the object is save, adding things is not allowed when other
+ * Reading from the object is save, adding things is not allowed while other
  * threads may access the object. 
  * A reference counter handles the number of references hold to this config.
+ *
+ * @see peer_cfg_t to get an overview over the configurations.
  * 
  * @b Constructors:
  *   - child_cfg_create()
  *
- * @ingroup child_cfg
+ * @ingroup config
  */
 struct child_cfg_t {
 	
@@ -229,11 +231,10 @@ struct child_cfg_t {
  * @param mode				mode to propose for CHILD_SA, transport, tunnel or BEET
  * @return 					child_cfg_t object
  * 
- * @ingroup child_cfg
+ * @ingroup config
  */
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
-									u_int32_t rekeytime, u_int32_t jitter,
-									char *updown, bool hostaccess,
-									mode_t mode);
+							  u_int32_t rekeytime, u_int32_t jitter,
+							  char *updown, bool hostaccess, mode_t mode);
 
 #endif /* CHILD_CFG_H_ */

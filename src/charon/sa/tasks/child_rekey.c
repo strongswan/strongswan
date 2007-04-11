@@ -192,8 +192,8 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 			  this->collision->get_type(this->collision) == CHILD_DELETE))
 		{
 			job_t *job;
-			u_int32_t retry = charon->configuration->get_retry_interval(
-								charon->configuration);
+			u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
+			
 			job = (job_t*)rekey_child_sa_job_create(
 								this->child_sa->get_reqid(this->child_sa),
 								this->child_sa->get_protocol(this->child_sa),

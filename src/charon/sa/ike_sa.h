@@ -34,13 +34,41 @@ typedef struct ike_sa_t ike_sa_t;
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
 #include <sa/tasks/task.h>
-#include <config/configuration.h>
 #include <utils/randomizer.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
 #include <config/peer_cfg.h>
 #include <config/ike_cfg.h>
+
+/**
+ * Timeout in milliseconds after that a half open IKE_SA gets deleted.
+ *
+ * @ingroup sa
+ */
+#define HALF_OPEN_IKE_SA_TIMEOUT 30000
+
+/**
+ * Interval to send keepalives when NATed, in seconds.
+ *
+ * @ingroup sa
+ */
+#define KEEPALIVE_INTERVAL 20
+
+/**
+ * After which time rekeying should be retried if it failed, in seconds.
+ *
+ * @ingroup sa
+ */
+#define RETRY_INTERVAL 30
+
+/**
+ * Jitter to subtract from RETRY_INTERVAL to randomize rekey retry.
+ *
+ * @ingroup sa
+ */
+#define RETRY_JITTER 20
+
 
 /**
  * @brief State of an IKE_SA.

@@ -23,7 +23,6 @@ config/backends/backend.h \
 config/backends/local_backend.c config/backends/local_backend.h \
 config/cfg_store.c config/cfg_store.h \
 config/child_cfg.c config/child_cfg.h \
-config/configuration.c config/configuration.h \
 config/credentials/local_credential_store.c config/credentials/local_credential_store.h \
 config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \

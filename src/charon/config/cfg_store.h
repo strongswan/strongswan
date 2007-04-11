@@ -40,29 +40,22 @@ typedef struct cfg_store_t cfg_store_t;
  * access all this backends by a single call, this class wraps multiple
  * backends behind a single object.
  * Backends may be registered and unregister at runtime dynamically.
- *
- * +---------+      +---------+           +--------------+     |
- * |         |      |         |         +--------------+ |     |
- * |         |----->| config  |       +--------------+ |-+  <==|==> IPC
- * |         |      |         |------>|   backends   |-+       |
- * | daemon  |----->|         |       +--------------+         |
- * |  core   |      +---------+                                |
- * |         |                                                 |
- * |         |      +---------+           +--------------+     |
- * |         |<-----|         |         +--------------+ |     |
- * |         |      | control-|       +--------------+ |-+  <==|==> IPC
- * |         |<-----| ler     |------>| controllers  |-+       |
- * |         |      |         |       +--------------+         |
- * +---------+      +---------+                                |
- *
- * The daemon core only knows the simple and single cfg_store interface.
- * The cfg_store wraps two kind of objects, backends and trustchains.
- * If the daemon needs something, it asks the cfg_store. cfg_store
- * asks all of its backends if they can fullfil the request. 
- *
+ * @verbatim
+
+   +---------+      +-----------+         +--------------+     |
+   |         |      |           |       +--------------+ |     |
+   | daemon  |----->| cfg_store |     +--------------+ |-+  <==|==> IPC
+   |  core   |      |           |---->|   backends   |-+       |
+   |         |----->|           |     +--------------+         |
+   |         |      |           |                              |
+   +---------+      +-----------+                              |
+   
+   @endverbatim
+ * Configuration lookup is done only when acting as responder. For initating
+ * the corresponding controller is responsible to get a config to initiate.
  *
  * @b Constructors:
- * - stroke_create()
+ * - cfg_store_create()
  * 
  * @ingroup config
  */

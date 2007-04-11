@@ -39,7 +39,7 @@ typedef struct scheduler_t scheduler_t;
  * @b Constructors:
  *  - scheduler_create()
  *
- * @ingroup threads
+ * @ingroup processing
  */
 struct scheduler_t { 	
 
@@ -61,7 +61,7 @@ struct scheduler_t {
  * 				- scheduler_t object
  * 				- NULL if thread could not be started
  * 
- * @ingroup threads
+ * @ingroup processing
  */
 scheduler_t * scheduler_create(void);
 

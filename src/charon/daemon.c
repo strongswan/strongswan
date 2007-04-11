@@ -176,7 +176,6 @@ static void destroy(private_daemon_t *this)
 	/* destroy other infrastructure */
 	DESTROY_IF(this->public.job_queue);
 	DESTROY_IF(this->public.event_queue);
-	DESTROY_IF(this->public.configuration);
 	DESTROY_IF(this->public.credentials);
 	DESTROY_IF(this->public.cfg_store);
 	DESTROY_IF(this->public.local_backend);
@@ -258,7 +257,6 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	
 	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
 	
-	this->public.configuration = configuration_create();
 	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.job_queue = job_queue_create();
@@ -334,7 +332,6 @@ private_daemon_t *daemon_create(void)
 	this->public.ike_sa_manager = NULL;
 	this->public.job_queue = NULL;
 	this->public.event_queue = NULL;
-	this->public.configuration = NULL;
 	this->public.credentials = NULL;
 	this->public.cfg_store = NULL;
 	this->public.local_backend = NULL;

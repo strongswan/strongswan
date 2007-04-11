@@ -31,6 +31,28 @@ typedef struct task_manager_t task_manager_t;
 #include <sa/tasks/task.h>
 
 /**
+ * First retransmit timeout in milliseconds.
+ *
+ * @ingroup sa
+ */
+#define RETRANSMIT_TIMEOUT 4000
+
+/**
+ * Base which is raised to the power of the retransmission try.
+ *
+ * @ingroup sa
+ */
+#define RETRANSMIT_BASE 1.8
+
+/**
+ * Number of retransmits done before giving up.
+ *
+ * @ingroup sa
+ */
+#define RETRANSMIT_TRIES 5
+
+
+/**
  * @brief The task manager, juggles task and handles message exchanges.
  *
  * On incoming requests, the task manager creates new tasks on demand and
@@ -43,6 +65,24 @@ typedef struct task_manager_t task_manager_t;
  * For the initial IKE_SA setup, several tasks are queued: One for the
  * unauthenticated IKE_SA setup, one for authentication, one for CHILD_SA setup
  * and maybe one for virtual IP assignement.
+ * The task manager is also responsible for retransmission. It uses a backoff 
+ * algorithm. The timeout is calculated using
+ * RETRANSMIT_TIMEOUT * (RETRANSMIT_BASE ** try).
+ * When try reaches RETRANSMIT_TRIES, retransmission is given up.
+ *
+ * Using an initial TIMEOUT of 4s, a BASE of 1.8, and 5 TRIES gives us:
+ * @verbatim
+                   | relative | absolute
+   ---------------------------------------------------------
+   4s * (1.8 ** 0) =    4s         4s
+   4s * (1.8 ** 1) =    7s        11s
+   4s * (1.8 ** 2) =   13s        24s
+   4s * (1.8 ** 3) =   23s        47s
+   4s * (1.8 ** 4) =   42s        89s
+   4s * (1.8 ** 5) =   76s       165s
+ 
+   @endberbatim
+ * The peer is considered dead after 2min 45s when no reply comes in.
  *
  * @b Constructors:
  *  - task_manager_create()

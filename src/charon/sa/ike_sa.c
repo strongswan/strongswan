@@ -436,15 +436,14 @@ static status_t send_dpd(private_ike_sa_t *this)
 static void send_keepalive(private_ike_sa_t *this)
 {
 	send_keepalive_job_t *job;
-	time_t last_out, now, diff, interval;
+	time_t last_out, now, diff;
 	
 	last_out = get_use_time(this, FALSE);
 	now = time(NULL);
 	
 	diff = now - last_out;
-	interval = charon->configuration->get_keepalive_interval(charon->configuration);
 	
-	if (diff >= interval)
+	if (diff >= KEEPALIVE_INTERVAL)
 	{
 		packet_t *packet;
 		chunk_t data;
@@ -462,7 +461,7 @@ static void send_keepalive(private_ike_sa_t *this)
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);
 	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
-									  (interval - diff) * 1000);
+									  (KEEPALIVE_INTERVAL - diff) * 1000);
 }
 
 /**
@@ -526,9 +525,8 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 		{
 			/* delete may fail if a packet gets lost, so set a timeout */
 			job_t *job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-			charon->event_queue->add_relative(charon->event_queue, job,
-						  charon->configuration->get_half_open_ike_sa_timeout(
-					  									charon->configuration));
+			charon->event_queue->add_relative(charon->event_queue, job, 
+											  HALF_OPEN_IKE_SA_TIMEOUT);
 			break;
 		}
 		default:
@@ -747,10 +745,9 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			/* add a timeout if peer does not establish it completely */
 			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, FALSE);
 			charon->event_queue->add_relative(charon->event_queue, job,
-						  charon->configuration->get_half_open_ike_sa_timeout(
-					  									charon->configuration));
+											  HALF_OPEN_IKE_SA_TIMEOUT);
 		}
-	
+		
 		/* check if message is trustworthy, and update host information */
 		if (this->state == IKE_CREATED ||
 			message->get_exchange_type(message) != IKE_SA_INIT)

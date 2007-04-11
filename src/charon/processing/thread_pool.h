@@ -41,7 +41,7 @@ typedef struct thread_pool_t thread_pool_t;
  *
  * @todo Add support for dynamic thread handling
  * 
- * @ingroup threads
+ * @ingroup processing
  */
 struct thread_pool_t {
 	
@@ -79,7 +79,7 @@ struct thread_pool_t {
  *							- thread_pool_t object if one ore more threads could be started, or
  *							- NULL if no threads could be created
  *
- * @ingroup threads
+ * @ingroup processing
  */
 thread_pool_t *thread_pool_create(size_t pool_size);
 

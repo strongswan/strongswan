@@ -36,10 +36,12 @@ typedef struct ike_cfg_t ike_cfg_t;
 /**
  * @brief An ike_cfg_t defines the rules to set up an IKE_SA.
  *
+ * @see peer_cfg_t to get an overview over the configurations.
+ *
  * @b Constructors:
  *  - ike_cfg_create()
  *
- * @ingroup ike_cfg
+ * @ingroup config
  */
 struct ike_cfg_t {
 	

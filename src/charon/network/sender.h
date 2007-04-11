@@ -35,7 +35,7 @@ typedef struct sender_t sender_t;
  * @b Constructors:
  *  - sender_create()
  * 
- * @ingroup threads
+ * @ingroup network
  */
 struct sender_t {
 	
@@ -67,7 +67,7 @@ struct sender_t {
  * 
  * @return		created sender object
  * 
- * @ingroup threads
+ * @ingroup network
  */
 sender_t * sender_create(void);
 

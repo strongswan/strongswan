@@ -169,8 +169,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 			this->collision->get_type(this->collision) == IKE_DELETE))
 		{
 			job_t *job;
-			u_int32_t retry = charon->configuration->get_retry_interval(
-									charon->configuration);
+			u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
 			job = (job_t*)rekey_ike_sa_job_create(
 									this->ike_sa->get_id(this->ike_sa), FALSE);
 			DBG1(DBG_IKE, "IKE_SA rekeying failed, "

@@ -327,7 +327,10 @@ static void stroke_add_conn(private_stroke_interface_t *this,
 	{
 		my_vip = host_create_from_string(msg->add_conn.me.sourceip, 0);
 	}
-	other_vip = host_create_from_string(msg->add_conn.other.sourceip, 0);
+	if (msg->add_conn.other.virtual_ip)
+	{
+		other_vip = host_create_from_string(msg->add_conn.other.sourceip, 0);
+	}
 	
 	if (msg->add_conn.me.tohost)
 	{
@@ -448,6 +451,8 @@ static void stroke_add_conn(private_stroke_interface_t *this,
 
 	if (use_existing)
 	{
+		DESTROY_IF(my_vip);
+		DESTROY_IF(other_vip);
 		my_host->destroy(my_host);
 		my_id->destroy(my_id);
 		my_ca->destroy(my_ca);

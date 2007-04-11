@@ -84,7 +84,7 @@ struct local_backend_t {
  *
  * @return local_backend instance.
  * 
- * @ingroup config
+ * @ingroup backends
  */
 local_backend_t *local_backend_create(void);
 

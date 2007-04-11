@@ -40,7 +40,7 @@ typedef struct job_queue_t job_queue_t;
  * @b Constructors:
  * - job_queue_create()
  * 
- * @ingroup queues
+ * @ingroup processing
  */
 struct job_queue_t {
 
@@ -93,7 +93,7 @@ struct job_queue_t {
  *
  * @return job_queue_t object
  * 
- * @ingroup queues
+ * @ingroup processing
  */
 job_queue_t *job_queue_create(void);
 

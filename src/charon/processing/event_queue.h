@@ -45,7 +45,7 @@ typedef struct event_queue_t event_queue_t;
  * @b Constructors:
  * - event_queue_create()
  * 
- * @ingroup queues
+ * @ingroup processing
  */
 struct event_queue_t {
 
@@ -111,7 +111,7 @@ struct event_queue_t {
  *
  * @returns event_queue_t object
  * 
- * @ingroup queues
+ * @ingroup processing
  */
 event_queue_t *event_queue_create(void);
 		  

@@ -35,6 +35,8 @@ typedef struct kernel_interface_t kernel_interface_t;
 
 /**
  * Configuration for NAT-T
+ *
+ * @ingroup kernel
  */
 struct natt_conf_t {
 	/** source port to use for UDP-encapsulated packets */
@@ -47,6 +49,8 @@ struct natt_conf_t {
  * Direction of a policy. These are equal to those
  * defined in xfrm.h, but we want to stay implementation
  * neutral here.
+ *
+ * @ingroup kernel
  */
 enum policy_dir_t {
 	/** Policy for inbound traffic */
@@ -71,7 +75,7 @@ enum policy_dir_t {
  * @b Constructors:
  *  - kernel_interface_create()
  *
- * @ingroup threads
+ * @ingroup kernel
  */
 struct kernel_interface_t {
 
@@ -324,7 +328,7 @@ struct kernel_interface_t {
 /**
  * @brief Creates an object of type kernel_interface_t.
  * 
- * @ingroup threads
+ * @ingroup kernel
  */
 kernel_interface_t *kernel_interface_create(void);
 

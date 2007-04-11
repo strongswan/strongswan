@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -34,8 +34,12 @@ typedef struct backend_t backend_t;
 /**
  * @brief The interface for a configuration backend.
  *
+ * A configuration backend is registered in the cfg_store. It does the actual
+ * configuration lookup for the method it implements. See cfg_store_t for
+ * more information.
+ *
  * @b Constructors:
- * - implementations constructor, such as local_backend_create()
+ * - none, use implementations of backend_t.
  * 
  * @ingroup backends
  */

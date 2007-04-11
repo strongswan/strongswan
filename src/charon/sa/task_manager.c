@@ -22,6 +22,8 @@
 
 #include "task_manager.h"
 
+#include <math.h>
+
 #include <daemon.h>
 #include <sa/tasks/ike_init.h>
 #include <sa/tasks/ike_natd.h>
@@ -210,9 +212,12 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 		u_int32_t timeout;
 		job_t *job;
 
-		timeout = charon->configuration->get_retransmit_timeout(
-						charon->configuration, this->initiating.retransmitted);
-		if (timeout == 0)
+		if (this->initiating.retransmitted <= RETRANSMIT_TRIES)
+		{
+			timeout = (u_int32_t)(RETRANSMIT_TIMEOUT *
+						pow(RETRANSMIT_BASE, this->initiating.retransmitted));
+		}
+		else
 		{
 			DBG1(DBG_IKE, "giving up after %d retransmits",
 				 this->initiating.retransmitted - 1);
