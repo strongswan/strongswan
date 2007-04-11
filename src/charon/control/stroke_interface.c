@@ -965,6 +965,127 @@ static void stroke_del_ca(private_stroke_interface_t *this,
 }
 
 /**
+ * log an IKE_SA to out
+ */
+static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
+{
+	peer_cfg_t *cfg = ike_sa->get_peer_cfg(ike_sa);
+	u_int32_t next, now = time(NULL);
+
+	fprintf(out, "%12s[%d]: %N, %H[%D]...%H[%D]\n",
+			ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
+			ike_sa_state_names, ike_sa->get_state(ike_sa),
+			ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
+			ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
+	
+	if (all)
+	{
+		fprintf(out, "%12s[%d]: IKE SPIs: %J, ",
+				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
+				ike_sa->get_id(ike_sa));
+	
+		ike_sa->get_stats(ike_sa, &next);
+		if (next)
+		{
+			fprintf(out, "%s in %V\n", cfg->use_reauth(cfg) ?
+					"reauthentication" : "rekeying", &now, &next);
+		}
+		else
+		{
+			fprintf(out, "rekeying disabled\n");
+		}
+	}
+}
+
+/**
+ * log an CHILD_SA to out
+ */
+static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
+{
+	u_int32_t rekey, now = time(NULL);
+	u_int32_t use_in, use_out, use_fwd;
+	encryption_algorithm_t encr_alg;
+	integrity_algorithm_t int_alg;
+	size_t encr_len, int_len;
+	mode_t mode;
+	
+	child_sa->get_stats(child_sa, &mode, &encr_alg, &encr_len,
+						&int_alg, &int_len, &rekey, &use_in, &use_out,
+						&use_fwd);
+	
+	fprintf(out, "%12s{%d}:  %N, %N", 
+			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+			child_sa_state_names, child_sa->get_state(child_sa),
+			mode_names, mode);
+	
+	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
+	{
+		fprintf(out, ", %N SPIs: 0x%0x_i 0x%0x_o",
+				protocol_id_names, child_sa->get_protocol(child_sa),
+				htonl(child_sa->get_spi(child_sa, TRUE)),
+				htonl(child_sa->get_spi(child_sa, FALSE)));
+		
+		if (all)
+		{
+			fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa), 
+					child_sa->get_reqid(child_sa));
+			
+			
+			if (child_sa->get_protocol(child_sa) == PROTO_ESP)
+			{
+				fprintf(out, "%N", encryption_algorithm_names, encr_alg);
+				
+				if (encr_len)
+				{
+					fprintf(out, "-%d", encr_len);
+				}
+				fprintf(out, "/");
+			}
+			
+			fprintf(out, "%N", integrity_algorithm_names, int_alg);
+			if (int_len)
+			{
+				fprintf(out, "-%d", int_len);
+			}
+			fprintf(out, ", rekeying ");
+			
+			if (rekey)
+			{
+				fprintf(out, "in %V", &now, &rekey);
+			}
+			else
+			{
+				fprintf(out, "disabled");
+			}
+			
+			fprintf(out, ", last use: ");
+			use_in = max(use_in, use_fwd);
+			if (use_in)
+			{
+				fprintf(out, "%ds_i ", now - use_in);
+			}
+			else
+			{
+				fprintf(out, "no_i ");
+			}
+			if (use_out)
+			{
+				fprintf(out, "%ds_o ", now - use_out);
+			}
+			else
+			{
+				fprintf(out, "no_o ");
+			}
+		}
+	}
+	
+	fprintf(out, "\n%12s{%d}:   %#R=== %#R\n",
+			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+			child_sa->get_traffic_selectors(child_sa, TRUE),
+			child_sa->get_traffic_selectors(child_sa, FALSE));
+}
+
+/**
  * show status of daemon
  */
 static void stroke_status(private_stroke_interface_t *this,
@@ -978,7 +1099,6 @@ static void stroke_status(private_stroke_interface_t *this,
 	child_cfg_t *child_cfg;
 	ike_sa_t *ike_sa;
 	char *name = NULL;
-	u_int32_t now = time(NULL);
 	
 	if (msg->status.name)
 	{
@@ -1045,141 +1165,27 @@ static void stroke_status(private_stroke_interface_t *this,
 	}
 	while (iterator->iterate(iterator, (void**)&ike_sa))
 	{
-		bool ike_match = FALSE, ike_printed = FALSE;
+		bool ike_printed = FALSE;
 		child_sa_t *child_sa;
 		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
 
 		if (name == NULL || streq(name, ike_sa->get_name(ike_sa)))
 		{
-			ike_match = TRUE;
+			log_ike_sa(out, ike_sa, all);
+			ike_printed = TRUE;
 		}
 
 		while (children->iterate(children, (void**)&child_sa))
 		{
-			bool child_match = FALSE;
-			
 			if (name == NULL || streq(name, child_sa->get_name(child_sa)))
 			{
-				child_match = TRUE;
-			}
-
-			if ((child_match || ike_match) && !ike_printed)
-			{
-				peer_cfg_t *cfg = ike_sa->get_peer_cfg(ike_sa);
-				u_int32_t next;
-
-				fprintf(out, "%12s[%d]: %N, %H[%D]...%H[%D]\n",
-						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
-						ike_sa_state_names, ike_sa->get_state(ike_sa),
-						ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
-						ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
-				
-				if (all)
+				if (!ike_printed)
 				{
-					fprintf(out, "%12s[%d]: IKE SPIs: %J, ",
-							ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
-							ike_sa->get_id(ike_sa));
-				
-					ike_sa->get_stats(ike_sa, &next);
-					if (next)
-					{
-						fprintf(out, "%s in %V\n", cfg->use_reauth(cfg) ?
-								"reauthentication" : "rekeying", &now, &next);
-					}
-					else
-					{
-						fprintf(out, "rekeying disabled\n");
-					}
+					log_ike_sa(out, ike_sa, all);
+					ike_printed = TRUE;
 				}
-	
-
-				ike_printed = TRUE;
-			}
-
-			if (child_match)
-			{
-				u_int32_t rekey;
-				u_int32_t use_in, use_out, use_fwd;
-				encryption_algorithm_t encr_alg;
-				integrity_algorithm_t int_alg;
-				size_t encr_len, int_len;
-				mode_t mode;
-				
-				child_sa->get_stats(child_sa, &mode, &encr_alg, &encr_len,
-									&int_alg, &int_len, &rekey, &use_in, &use_out,
-									&use_fwd);
-				
-				fprintf(out, "%12s{%d}:  %N, %N", 
-						child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
-						child_sa_state_names, child_sa->get_state(child_sa),
-						mode_names, mode);
-				
-				if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
-				{
-					fprintf(out, ", %N SPIs: 0x%0x_i 0x%0x_o",
-							protocol_id_names, child_sa->get_protocol(child_sa),
-							htonl(child_sa->get_spi(child_sa, TRUE)),
-							htonl(child_sa->get_spi(child_sa, FALSE)));
-					
-					if (all)
-					{
-						fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa), 
-								child_sa->get_reqid(child_sa));
-						
-						
-						if (child_sa->get_protocol(child_sa) == PROTO_ESP)
-						{
-							fprintf(out, "%N", encryption_algorithm_names, encr_alg);
-							
-							if (encr_len)
-							{
-								fprintf(out, "-%d", encr_len);
-							}
-							fprintf(out, "/");
-						}
-						
-						fprintf(out, "%N", integrity_algorithm_names, int_alg);
-						if (int_len)
-						{
-							fprintf(out, "-%d", int_len);
-						}
-						fprintf(out, ", rekeying ");
-						
-						if (rekey)
-						{
-							fprintf(out, "in %V", &now, &rekey);
-						}
-						else
-						{
-							fprintf(out, "disabled");
-						}
-						
-						fprintf(out, ", last use: ");
-						use_in = max(use_in, use_fwd);
-						if (use_in)
-						{
-							fprintf(out, "%ds_i ", now - use_in);
-						}
-						else
-						{
-							fprintf(out, "no_i ");
-						}
-						if (use_out)
-						{
-							fprintf(out, "%ds_o ", now - use_out);
-						}
-						else
-						{
-							fprintf(out, "no_o ");
-						}
-					}
-				}
-				
-				fprintf(out, "\n%12s{%d}:   %#R=== %#R\n",
-						child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
-						child_sa->get_traffic_selectors(child_sa, TRUE),
-						child_sa->get_traffic_selectors(child_sa, FALSE));
-			}
+				log_child_sa(out, child_sa, all);
+			}	
 		}
 		children->destroy(children);
 	}
