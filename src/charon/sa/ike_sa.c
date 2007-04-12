@@ -26,6 +26,7 @@
 #include <string.h>
 #include <printf.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #include "ike_sa.h"
 
@@ -1711,7 +1712,8 @@ static void remove_dns_servers(private_ike_sa_t *this)
 	file = fopen(RESOLV_CONF, "r");
 	if (file == NULL || stat(RESOLV_CONF, &stats) != 0)
 	{
-		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %m", RESOLV_CONF);
+		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %s",
+			 RESOLV_CONF, strerror(errno));
 		return;
 	}
 	
@@ -1719,7 +1721,7 @@ static void remove_dns_servers(private_ike_sa_t *this)
 	
 	if (fread(contents.ptr, 1, contents.len, file) != contents.len)
 	{
-		DBG1(DBG_IKE, "unable to read DNS configuration file: %m");
+		DBG1(DBG_IKE, "unable to read DNS configuration file: %s", strerror(errno));
 		fclose(file);
 		return;
 	}
@@ -1728,7 +1730,8 @@ static void remove_dns_servers(private_ike_sa_t *this)
 	file = fopen(RESOLV_CONF, "w");
 	if (file == NULL)
 	{
-		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %m", RESOLV_CONF);
+		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %s",
+			 RESOLV_CONF, strerror(errno));
 		return;
 	}
 	
@@ -1784,7 +1787,8 @@ static void add_dns_server(private_ike_sa_t *this, host_t *dns)
 	file = fopen(RESOLV_CONF, "a+");
 	if (file == NULL || stat(RESOLV_CONF, &stats) != 0)
 	{
-		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %m", RESOLV_CONF);
+		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %s",
+			 RESOLV_CONF, strerror(errno));
 		return;
 	}
 
@@ -1792,7 +1796,7 @@ static void add_dns_server(private_ike_sa_t *this, host_t *dns)
 	
 	if (fread(contents.ptr, 1, contents.len, file) != contents.len)
 	{
-		DBG1(DBG_IKE, "unable to read DNS configuration file: %m");
+		DBG1(DBG_IKE, "unable to read DNS configuration file: %s", strerror(errno));
 		fclose(file);
 		return;
 	}
@@ -1801,14 +1805,15 @@ static void add_dns_server(private_ike_sa_t *this, host_t *dns)
 	file = fopen(RESOLV_CONF, "w");
 	if (file == NULL)
 	{
-		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %m", RESOLV_CONF);
+		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %s",
+			 RESOLV_CONF, strerror(errno));
 		return;
 	}
 	
 	if (fprintf(file, "nameserver %H   # added by strongSwan, assigned by %D\n",
 		dns, this->other_id) < 0)
 	{
-		DBG1(DBG_IKE, "unable to write DNS configuration: %m");
+		DBG1(DBG_IKE, "unable to write DNS configuration: %s", strerror(errno));
 	}
 	else
 	{

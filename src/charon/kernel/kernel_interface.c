@@ -571,7 +571,7 @@ static status_t netlink_send(int socket, struct nlmsghdr *in,
 				continue;
 			}
 			pthread_mutex_unlock(&mutex);
-			DBG1(DBG_KNL, "error sending to netlink socket: %m");
+			DBG1(DBG_KNL, "error sending to netlink socket: %s", strerror(errno));
 			return FAILED;
 		}
 		break;
@@ -601,7 +601,7 @@ static status_t netlink_send(int socket, struct nlmsghdr *in,
 				/* interrupted, try again */
 				continue;
 			}
-			DBG1(DBG_IKE, "error reading from netlink socket: %m");
+			DBG1(DBG_IKE, "error reading from netlink socket: %s", strerror(errno));
 			pthread_mutex_unlock(&mutex);
 			return FAILED;
 		}

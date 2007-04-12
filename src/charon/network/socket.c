@@ -176,7 +176,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		bytes_read = recv(this->recv4, buffer, MAX_PACKET, 0);
 		if (bytes_read < 0)
 		{
-			DBG1(DBG_NET, "error reading from IPv4 socket: %m");
+			DBG1(DBG_NET, "error reading from IPv4 socket: %s", strerror(errno));
 			return FAILED;
 		}
 		DBG3(DBG_NET, "received IPv4 packet %b", buffer, bytes_read);
@@ -238,7 +238,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		bytes_read = recvmsg(this->recv6, &msg, 0);
 		if (bytes_read < 0)
 		{
-			DBG1(DBG_NET, "error reading from IPv6 socket: %m");
+			DBG1(DBG_NET, "error reading from IPv6 socket: %s", strerror(errno));
 			return FAILED;
 		}
 		DBG3(DBG_NET, "received IPv6 packet %b", buffer, bytes_read);
@@ -428,7 +428,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 
 	if (bytes_sent != data.len)
 	{
-		DBG1(DBG_NET, "error writing to socket: %m");
+		DBG1(DBG_NET, "error writing to socket: %s", strerror(errno));
 		return FAILED;
 	}
 	return SUCCESS;
@@ -477,13 +477,14 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	skt = socket(family, SOCK_DGRAM, IPPROTO_UDP);
 	if (skt < 0)
 	{
-		DBG1(DBG_NET, "could not open send socket: %m");
+		DBG1(DBG_NET, "could not open send socket: %s", strerror(errno));
 		return 0;
 	}
 	
 	if (setsockopt(skt, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
 	{
-		DBG1(DBG_NET, "unable to set SO_REUSEADDR on send socket: %m");
+		DBG1(DBG_NET, "unable to set SO_REUSEADDR on send socket: %s",
+			 strerror(errno));
 		close(skt);
 		return 0;
 	}
@@ -497,7 +498,8 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	
 	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
-		DBG1(DBG_NET, "unable to set IPSEC_POLICY on send socket: %m");
+		DBG1(DBG_NET, "unable to set IPSEC_POLICY on send socket: %s",
+			 strerror(errno));
 		close(skt);
 		return 0;
 	}
@@ -507,7 +509,8 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
 	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
-		DBG1(DBG_NET, "unable to set IPSEC_POLICY on send socket: %m");
+		DBG1(DBG_NET, "unable to set IPSEC_POLICY on send socket: %s", 
+			 strerror(errno));
 		close(skt);
 		return 0;
 	}
@@ -515,7 +518,8 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	/* bind the send socket */
 	if (bind(skt, (struct sockaddr *)&addr, sizeof(addr)) < 0)
 	{
-		DBG1(DBG_NET, "unable to bind send socket: %m");
+		DBG1(DBG_NET, "unable to bind send socket: %s",
+			 strerror(errno));
 		close(skt);
 		return 0;
 	}
@@ -525,7 +529,8 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 		/* enable UDP decapsulation globally, only for one socket needed */
 		if (setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
 		{
-			DBG1(DBG_NET, "unable to set UDP_ENCAP: %m; NAT-T may fail");
+			DBG1(DBG_NET, "unable to set UDP_ENCAP: %s; NAT-T may fail",
+				 strerror(errno));
 		}
 	}
 	
@@ -606,14 +611,15 @@ static int open_recv_socket(private_socket_t *this, int family)
 	skt = socket(family, SOCK_RAW, IPPROTO_UDP);
 	if (skt < 0)
 	{
-		DBG1(DBG_NET, "unable to create raw socket: %m");
+		DBG1(DBG_NET, "unable to create raw socket: %s", strerror(errno));
 		return 0;
 	}
 	
 	if (setsockopt(skt, SOL_SOCKET, SO_ATTACH_FILTER,
 				   &ikev2_filter, sizeof(ikev2_filter)) < 0)
 	{
-		DBG1(DBG_NET, "unable to attach IKEv2 filter to raw socket: %m");
+		DBG1(DBG_NET, "unable to attach IKEv2 filter to raw socket: %s",
+			 strerror(errno));
 		close(skt);
 		return 0;
 	}
@@ -623,7 +629,8 @@ static int open_recv_socket(private_socket_t *this, int family)
 		 * 2 or 50 depending on kernel header version */
 		setsockopt(skt, sol, IPV6_2292PKTINFO, &on, sizeof(on)) < 0)
 	{
-		DBG1(DBG_NET, "unable to set IPV6_PKTINFO on raw socket: %m");
+		DBG1(DBG_NET, "unable to set IPV6_PKTINFO on raw socket: %s",
+			 strerror(errno));
 		close(skt);
 		return 0;
 	}
@@ -637,7 +644,8 @@ static int open_recv_socket(private_socket_t *this, int family)
 	
 	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
-		DBG1(DBG_NET, "unable to set IPSEC_POLICY on raw socket: %m");
+		DBG1(DBG_NET, "unable to set IPSEC_POLICY on raw socket: %s",
+			 strerror(errno));
 		close(skt);
 		return 0;
 	}

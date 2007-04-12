@@ -1426,7 +1426,7 @@ static void stroke_process(private_stroke_interface_t *this, int strokefd)
 	bytes_read = recv(strokefd, msg, msg_length, 0);
 	if (bytes_read != msg_length)
 	{
-		DBG1(DBG_CFG, "reading stroke message failed: %m");
+		DBG1(DBG_CFG, "reading stroke message failed: %s", strerror(errno));
 		close(strokefd);
 		return;
 	}
@@ -1434,7 +1434,7 @@ static void stroke_process(private_stroke_interface_t *this, int strokefd)
 	out = fdopen(dup(strokefd), "w");
 	if (out == NULL)
 	{
-		DBG1(DBG_CFG, "opening stroke output channel failed: %m");
+		DBG1(DBG_CFG, "opening stroke output channel failed: %s", strerror(errno));
 		close(strokefd);
 		free(msg);
 		return;
@@ -1520,7 +1520,7 @@ static void stroke_receive(private_stroke_interface_t *this)
 		
 		if (strokefd < 0)
 		{
-			DBG1(DBG_CFG, "accepting stroke connection failed: %m");
+			DBG1(DBG_CFG, "accepting stroke connection failed: %s", strerror(errno));
 			continue;
 		}
 		stroke_process(this, strokefd);
@@ -1571,7 +1571,7 @@ stroke_t *stroke_create(local_backend_t *backend)
 	old = umask(~S_IRWXU);
 	if (bind(this->socket, (struct sockaddr *)&socket_addr, sizeof(socket_addr)) < 0)
 	{
-		DBG1(DBG_CFG, "could not bind stroke socket: %m");
+		DBG1(DBG_CFG, "could not bind stroke socket: %s", strerror(errno));
 		close(this->socket);
 		free(this);
 		return NULL;
@@ -1580,7 +1580,7 @@ stroke_t *stroke_create(local_backend_t *backend)
 	
 	if (listen(this->socket, 0) < 0)
 	{
-		DBG1(DBG_CFG, "could not listen on stroke socket: %m");
+		DBG1(DBG_CFG, "could not listen on stroke socket: %s", strerror(errno));
 		close(this->socket);
 		unlink(socket_addr.sun_path);
 		free(this);
