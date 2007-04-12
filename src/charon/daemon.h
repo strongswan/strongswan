@@ -284,11 +284,25 @@ typedef struct daemon_t daemon_t;
 #define CERTIFICATE_DIR IPSEC_D_DIR "/certs"
 
 /**
- * Default directory for trusted CA certificates
+ * Default directory for trusted Certification Authority certificates
  * 
  * @ingroup charon
  */
 #define CA_CERTIFICATE_DIR IPSEC_D_DIR "/cacerts"
+
+/**
+ * Default directory for Authorization Authority certificates
+ * 
+ * @ingroup charon
+ */
+#define AA_CERTIFICATE_DIR IPSEC_D_DIR "/aacerts"
+
+/**
+ * Default directory for Attribute certificates
+ * 
+ * @ingroup charon
+ */
+#define ATTR_CERTIFICATE_DIR IPSEC_D_DIR "/acerts"
 
 /**
  * Default directory for OCSP signing certificates
