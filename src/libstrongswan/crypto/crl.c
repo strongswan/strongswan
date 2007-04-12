@@ -39,10 +39,6 @@
 
 #define CRL_WARNING_INTERVAL	7	/* days */
 
-extern char* check_expiry(time_t expiration_date, int warning_interval, bool strict);
-extern time_t parse_time(chunk_t blob, int level0);
-extern void parse_authorityKeyIdentifier(chunk_t blob, int level0 , chunk_t *authKeyID, chunk_t *authKeySerialNumber);
-
 /* access structure for a revoked certificate */
 
 typedef struct revokedCert_t revokedCert_t;
