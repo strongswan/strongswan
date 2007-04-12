@@ -41,16 +41,13 @@ Then you're in, start the build as usual:
 uClibc support
 --------------
 
-Support for uClibc is still work in progress. To get startet with strongSwan
-on uClibc, yoou need version which supports getifaddrs ( > 0.9.28).
-Additionally, you need the at least the following options:
+Support for uClibc is still work in progress. To get started, make sure to
+include the following options:
 
 String and Stdio Support --->
   [*] Support glibc's register_printf_function()
-  [*] Support the '%m' specifier in printf format strings
 General Library Settings --->
   [*] Support global constructors and destructors
 
-We must reduce the number of printf handlers, as uClibc only supports 10 of
-them. It is fairly untested yet, so don't except to get it running without
+It is fairly untested yet, so don't except to get it running without
 further tweaks.
