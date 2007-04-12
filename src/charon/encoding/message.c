@@ -604,40 +604,48 @@ static payload_t *get_payload(private_message_t *this, payload_type_t type)
 /**
  * get a string representation of the message
  */
-static void get_string(private_message_t *this, char *buf, int len)
+static char* get_string(private_message_t *this, char *buf, int len)
 {
 	iterator_t *iterator;
 	payload_t *payload;
 	int written;
+	char *pos = buf;
 	
-	written = snprintf(buf, len, "%N %s [", 
+	written = snprintf(pos, len, "%N %s [", 
 					   exchange_type_names, this->exchange_type,
 					   this->is_request ? "request" : "response");
 	if (written >= len || written < 0)
 	{
-		return;
+		return "";
 	}
-	buf += written;
+	pos += written;
 	len -= written;
+	
+	if (this->payloads->get_count(this->payloads) == 0)
+	{
+		snprintf(pos, len, "]");
+		return buf;
+	}
 	
 	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 	while (iterator->iterate(iterator, (void**)&payload))
 	{
-		written = snprintf(buf, len, "%N ", payload_type_short_names,
+		written = snprintf(pos, len, "%N ", payload_type_short_names,
 				  		   payload->get_type(payload));
 		if (written >= len || written < 0)
 		{
-			return;
+			return buf;
 		}
-		buf += written;
+		pos += written;
 		len -= written;
 	}
 	iterator->destroy(iterator);
 	
 	/* remove last space */
+	pos--;
 	len++;
-	buf--;
-	snprintf(buf, len, "]");
+	snprintf(pos, len, "]");
+	return buf;
 }
 
 /**
@@ -735,8 +743,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 		return SUCCESS;
 	}
 	
-	get_string(this, str, sizeof(str));
-	DBG1(DBG_ENC, "generating %s", str);
+	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
@@ -1203,8 +1210,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		return status;
 	}
 	
-	get_string(this, str, sizeof(str));
-	DBG1(DBG_ENC, "parsed %s", str);
+	DBG1(DBG_ENC, "parsed %s", get_string(this, str, sizeof(str)));
 	
 	return SUCCESS;
 }
