@@ -253,7 +253,7 @@ static void list_certinfos(private_ca_info_t *this, FILE *out, bool utc)
 		{
 			fprintf(out, "ok (expires in %V)\n", &now, &nextUpdate);
 		}
-		fprintf(out, "    serial:     %#B, %N", &serial,
+		fprintf(out, "    serial:     %#B, %N\n", &serial,
 				cert_status_names, certinfo->get_status(certinfo));
 	}
 	iterator->destroy(iterator);
