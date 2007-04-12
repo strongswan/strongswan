@@ -427,27 +427,27 @@ static void list(private_crl_t *this, FILE* out, bool utc)
 	fprintf(out, "                next %#T ",  &this->nextUpdate, utc);
 	if (this->nextUpdate == UNDEFINED_TIME)
 	{
-		fprintf(out, "ok (expires never)");
+		fprintf(out, "ok (expires never)\n");
 	}
 	else if (now > this->nextUpdate)
 	{
-		fprintf(out, "expired (%V ago)", &now, &this->nextUpdate);
+		fprintf(out, "expired (%V ago)\n", &now, &this->nextUpdate);
 	}
 	else if (now > this->nextUpdate - CRL_WARNING_INTERVAL * 60 * 60 * 24)
 	{
-		fprintf(out, "ok (expires in %V)", &now, &this->nextUpdate);
+		fprintf(out, "ok (expires in %V)\n", &now, &this->nextUpdate);
 	}
 	else
 	{
-		fprintf(out, "ok");
+		fprintf(out, "ok\n");
 	}
 	if (this->authKeyID.ptr)
 	{
-		fprintf(out, "\n    authkey:    %#B", &this->authKeyID);
+		fprintf(out, "    authkey:    %#B\n", &this->authKeyID);
 	}
 	if (this->authKeySerialNumber.ptr)
 	{
-		fprintf(out, "\n    aserial:    %#B", &this->authKeySerialNumber);
+		fprintf(out, "    aserial:    %#B\n", &this->authKeySerialNumber);
 	}
 }
 
