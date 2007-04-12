@@ -11,6 +11,7 @@ asn1/asn1.c asn1/asn1.h \
 asn1/oid.c asn1/oid.h \
 asn1/pem.c asn1/pem.h \
 asn1/ttodata.c asn1/ttodata.h \
+crypto/ac.c crypto/ac.h \
 crypto/ca.c crypto/ca.h \
 crypto/certinfo.c crypto/certinfo.h \
 crypto/crl.c crypto/crl.h \

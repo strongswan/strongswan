@@ -244,6 +244,24 @@ struct credential_store_t {
 	void (*load_ca_certificates) (credential_store_t *this);
 	
 	/**
+	 * @brief Loads authorization authority certificates from a default directory.
+	 *
+	 * Certificates in both DER and PEM format are accepted
+	 *
+	 * @param this		calling object
+	 */
+	void (*load_aa_certificates) (credential_store_t *this);
+
+	/**
+	 * @brief Loads attribute certificates from a default directory.
+	 *
+	 * Certificates in both DER and PEM format are accepted
+	 *
+	 * @param this		calling object
+	 */
+	void (*load_attr_certificates) (credential_store_t *this);
+
+	/**
 	 * @brief Loads ocsp certificates from a default directory.
 	 *
 	 * Certificates in both DER and PEM format are accepted

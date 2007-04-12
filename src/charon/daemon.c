@@ -273,6 +273,8 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	/* load secrets, ca certificates and crls */
 	credentials = this->public.credentials;
 	credentials->load_ca_certificates(credentials);
+	credentials->load_aa_certificates(credentials);
+	credentials->load_attr_certificates(credentials);
 	credentials->load_ocsp_certificates(credentials);
 	credentials->load_crls(credentials);
 	credentials->load_secrets(credentials);

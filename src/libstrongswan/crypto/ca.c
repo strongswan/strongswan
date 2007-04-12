@@ -29,6 +29,7 @@
 #include "x509.h"
 #include "crl.h"
 #include "ca.h"
+#include "ac.h"
 #include "certinfo.h"
 #include "ocsp.h"
 
@@ -64,6 +65,11 @@ struct private_ca_info_t {
 	 */
 	x509_t *cacert;
 	
+	/**
+	 * List of attribute certificates
+	 */
+	linked_list_t *attrcerts;
+
 	/**
 	 * List of crl URIs
 	 */
@@ -658,6 +664,8 @@ static void purge_ocsp(private_ca_info_t *this)
  */
 static void destroy(private_ca_info_t *this)
 {
+	this->attrcerts->destroy_offset(this->attrcerts,
+								  offsetof(x509ac_t, destroy));
 	this->crluris->destroy_offset(this->crluris,
 								  offsetof(identification_t, destroy));
 	this->ocspuris->destroy_offset(this->ocspuris,
@@ -737,6 +745,7 @@ ca_info_t *ca_info_create(const char *name, x509_t *cacert)
 	this->installed = time(NULL);
 	this->name = (name == NULL)? NULL:strdup(name);
 	this->cacert = cacert;
+	this->attrcerts = linked_list_create();
 	this->crluris = linked_list_create();
 	this->ocspuris = linked_list_create();
 	this->certinfos = linked_list_create();

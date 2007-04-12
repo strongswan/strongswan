@@ -32,6 +32,7 @@
 #include <crypto/certinfo.h>
 #include <crypto/x509.h>
 #include <crypto/ca.h>
+#include <crypto/ac.h>
 #include <crypto/crl.h>
 #include <asn1/ttodata.h>
 
@@ -103,24 +104,25 @@ static shared_key_t *shared_key_create(chunk_t secret)
   |                 | ca_info_t                |
   |                 +--------------------------+
 +---------------+   | char *name               |
-| x509_t        |<--| x509_t *cacert           |   +----------------------+
-+---------------+   | linked_list_t *certinfos |-->| certinfo_t           |
-| chunk_t keyid |   | linked_list_t *ocspuris  |   +----------------------+
-+---------------+   | crl_t *crl               |   | chunk_t serialNumber |
+| x509_t        |<--| x509_t *cacert           |
++---------------+   | linked_list_t *attrcerts |   +----------------------+
+| chunk_t keyid |   | linked_list_t *certinfos |-->| certinfo_t           |
++---------------+   | linked_list_t *ocspuris  |   +----------------------+
+  |                 | crl_t *crl               |   | chunk_t serialNumber |
   |                 | linked_list_t *crluris   |   | cert_status_t status |
-  |                 | pthread_mutex_t mutex    |   | time_t thisUpdate    |
-+---------------+   +--------------------------+   | time_t nextUpdate    |
-| x509_t        |                |                 | bool once            |
-+---------------+                |                 +----------------------+
-| chunk_t keyid |                |                   |
-+---------------+   +------------------------- +   +----------------------+
-  |                 | ca_info_t                |   | certinfo_t           |
-  |                 +--------------------------+   +----------------------+
-+---------------+   | char *name               |   | chunk_t serialNumber |
-| x509_t        |<--| x509_t *cacert           |   | cert_status_t status |
-+---------------+   | linked_list_t *certinfos |   | time_t thisUpdate    |
-| chunk_t keyid |   | linked_list_t *ocspuris  |   | time_t nextUpdate    |
-+---------------+   | crl_t *crl               |   | bool once            |
++---------------+   | pthread_mutex_t mutex    |   | time_t thisUpdate    |
+| x509_t        |   +--------------------------+   | time_t nextUpdate    |
++---------------+                |                 | bool once            |
+| chunk_t keyid |                |                 +----------------------+
++---------------+   +------------------------- +     |
+  |                 | ca_info_t                |   +----------------------+
+  |                 +--------------------------+   | certinfo_t           |
++---------------+   | char *name               |   +----------------------+
+| x509_t        |<--| x509_t *cacert           |   | chunk_t serialNumber |
++---------------+   | linked_list_t *attrcerts |   | cert_status_t status |
+| chunk_t keyid |   | linked_list_t *certinfos |   | time_t thisUpdate    |
++---------------+   | linked_list_t *ocspuris  |   | time_t nextUpdate    |
+  |                 | crl_t *crl               |   | bool once            |
   |                 | linked_list_t *crluris   |   +----------------------+
   |                 | pthread_mutex_t mutex;   |     |
   |                 +--------------------------+
@@ -886,12 +888,12 @@ static void load_auth_certificates(private_local_credential_store_t *this,
 	struct stat stb;
 	DIR* dir;
 	
-	DBG1(DBG_CFG, "loading %s certificates from '%s/'", label, path);
+	DBG1(DBG_CFG, "loading %s certificates from '%s'", label, path);
 
 	dir = opendir(path);
 	if (dir == NULL)
 	{
-		DBG1(DBG_CFG, "error opening %s certs directory %s'", label, path);
+		DBG1(DBG_CFG, "error opening %s certs directory '%s'", label, path);
 		return;
 	}
 
@@ -975,6 +977,74 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 }
 
 /**
+ * Implements local_credential_store_t.load_aa_certificates
+ */
+static void load_aa_certificates(private_local_credential_store_t *this)
+{
+	load_auth_certificates(this, AUTH_AA, "aa", AA_CERTIFICATE_DIR);
+}
+
+/**
+ * Add a unique attribute certificate to a linked list
+ */
+static void add_attr_certificate(private_local_credential_store_t *this, x509ac_t *cert)
+{
+  /* TODO add a new attribute certificate to the linked list */
+}
+
+/**
+ * Implements local_credential_store_t.load_attr_certificates
+ */
+static void load_attr_certificates(private_local_credential_store_t *this)
+{
+	struct dirent* entry;
+	struct stat stb;
+	DIR* dir;
+
+	const char *path = ATTR_CERTIFICATE_DIR;
+	
+	DBG1(DBG_CFG, "loading attribute certificates from '%s'", path);
+
+	dir = opendir(ATTR_CERTIFICATE_DIR);
+	if (dir == NULL)
+	{
+		DBG1(DBG_CFG, "error opening attribute certs directory '%s'", path);
+		return;
+	}
+
+	while ((entry = readdir(dir)) != NULL)
+	{
+		char file[PATH_BUF];
+
+		snprintf(file, sizeof(file), "%s/%s", path, entry->d_name);
+		
+		if (stat(file, &stb) == -1)
+		{
+			continue;
+		}
+		/* try to parse all regular files */
+		if (stb.st_mode & S_IFREG)
+		{
+			x509ac_t *cert = x509ac_create_from_file(file);
+
+			if (cert)
+			{
+				err_t ugh = cert->is_valid(cert, NULL);
+
+				if (ugh != NULL)
+				{
+					DBG1(DBG_CFG, "warning: attribute certificate %s", ugh);
+				}
+				add_attr_certificate(this, cert);
+			}
+		}
+	}
+	closedir(dir);
+
+
+}
+
+/**
  * Implements local_credential_store_t.load_ocsp_certificates
  */
 static void load_ocsp_certificates(private_local_credential_store_t *this)
@@ -1027,12 +1097,12 @@ static void load_crls(private_local_credential_store_t *this)
 	DIR* dir;
 	crl_t *crl;
 	
-	DBG1(DBG_CFG, "loading crls from '%s/'", CRL_DIR);
+	DBG1(DBG_CFG, "loading crls from '%s'", CRL_DIR);
 
 	dir = opendir(CRL_DIR);
 	if (dir == NULL)
 	{
-		DBG1(DBG_CFG, "error opening crl directory %s'", CRL_DIR);
+		DBG1(DBG_CFG, "error opening crl directory '%s'", CRL_DIR);
 		return;
 	}
 
@@ -1345,6 +1415,8 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.create_auth_cert_iterator = (iterator_t* (*) (credential_store_t*))create_auth_cert_iterator;
 	this->public.credential_store.create_cainfo_iterator = (iterator_t* (*) (credential_store_t*))create_cainfo_iterator;
 	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
+	this->public.credential_store.load_aa_certificates = (void (*) (credential_store_t*))load_aa_certificates;
+	this->public.credential_store.load_attr_certificates = (void (*) (credential_store_t*))load_attr_certificates;
 	this->public.credential_store.load_ocsp_certificates = (void (*) (credential_store_t*))load_ocsp_certificates;
 	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;
 	this->public.credential_store.load_secrets = (void (*) (credential_store_t*))load_secrets;
