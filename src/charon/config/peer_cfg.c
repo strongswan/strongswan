@@ -340,7 +340,7 @@ static bool use_reauth(private_peer_cfg_t *this, bool rekey)
  */
 static u_int32_t get_dpd_delay(private_peer_cfg_t *this)
 {
-	return this->dpd_action;
+	return this->dpd_delay;
 }
 
 /**
