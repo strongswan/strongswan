@@ -731,3 +731,43 @@ chunk_t timetoasn1(const time_t *time, asn1_t type)
 	formatted_time.len = strlen(buf);
 	return asn1_simple_object(type, formatted_time);
 }
+
+/**
+ * ASN.1 definition of time
+ */
+static const asn1Object_t timeObjects[] = {
+	{ 0,   "utcTime",		ASN1_UTCTIME,			ASN1_OPT|ASN1_BODY 	}, /*  0 */
+	{ 0,   "end opt",		ASN1_EOC,				ASN1_END  			}, /*  1 */
+	{ 0,   "generalizeTime",ASN1_GENERALIZEDTIME,	ASN1_OPT|ASN1_BODY 	}, /*  2 */
+	{ 0,   "end opt",		ASN1_EOC,				ASN1_END  			}  /*  3 */
+};
+#define TIME_UTC			0
+#define TIME_GENERALIZED	2
+#define TIME_ROOF			4
+
+/**
+ * extracts and converts a UTCTIME or GENERALIZEDTIME object
+ */
+time_t parse_time(chunk_t blob, int level0)
+{
+	asn1_ctx_t ctx;
+	chunk_t object;
+	u_int level;
+	int objectID = 0;
+	
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+	
+	while (objectID < TIME_ROOF)
+	{
+		if (!extract_object(timeObjects, &objectID, &object, &level, &ctx))
+			return 0;
+		
+		if (objectID == TIME_UTC || objectID == TIME_GENERALIZED)
+		{
+			return asn1totime(&object, (objectID == TIME_UTC)
+					? ASN1_UTCTIME : ASN1_GENERALIZEDTIME);
+		}
+		objectID++;
+	}
+	return 0;
+}

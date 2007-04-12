@@ -124,6 +124,8 @@ extern void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0, bool implicit
 extern bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *object, u_int *level, asn1_ctx_t *ctx);
 extern bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const char* name);
 extern int parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters);
+extern time_t parse_time(chunk_t blob, int level0);
+
 extern bool is_asn1(chunk_t blob);
 
 extern void code_asn1_length(size_t length, chunk_t *code);
