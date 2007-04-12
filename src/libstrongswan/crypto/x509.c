@@ -254,19 +254,6 @@ static const asn1Object_t basicConstraintsObjects[] = {
 #define BASIC_CONSTRAINTS_CA	1
 #define BASIC_CONSTRAINTS_ROOF	4
 
-/**
- * ASN.1 definition of time
- */
-static const asn1Object_t timeObjects[] = {
-	{ 0,   "utcTime",		ASN1_UTCTIME,			ASN1_OPT|ASN1_BODY 	}, /*  0 */
-	{ 0,   "end opt",		ASN1_EOC,				ASN1_END  			}, /*  1 */
-	{ 0,   "generalizeTime",ASN1_GENERALIZEDTIME,	ASN1_OPT|ASN1_BODY 	}, /*  2 */
-	{ 0,   "end opt",		ASN1_EOC,				ASN1_END  			}  /*  3 */
-};
-#define TIME_UTC			0
-#define TIME_GENERALIZED	2
-#define TIME_ROOF			4
-
 /** 
  * ASN.1 definition of a keyIdentifier 
  */
@@ -577,33 +564,6 @@ static void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_l
 }
 
 /**
- * extracts and converts a UTCTIME or GENERALIZEDTIME object
- */
-time_t parse_time(chunk_t blob, int level0)
-{
-	asn1_ctx_t ctx;
-	chunk_t object;
-	u_int level;
-	int objectID = 0;
-	
-	asn1_init(&ctx, blob, level0, FALSE, FALSE);
-	
-	while (objectID < TIME_ROOF)
-	{
-		if (!extract_object(timeObjects, &objectID, &object, &level, &ctx))
-			return 0;
-		
-		if (objectID == TIME_UTC || objectID == TIME_GENERALIZED)
-		{
-			return asn1totime(&object, (objectID == TIME_UTC)
-					? ASN1_UTCTIME : ASN1_GENERALIZEDTIME);
-		}
-		objectID++;
-	}
-	return 0;
-}
-
-/**
  * extracts a keyIdentifier
  */
 static chunk_t parse_keyIdentifier(chunk_t blob, int level0, bool implicit)
@@ -629,7 +589,11 @@ void parse_authorityKeyIdentifier(chunk_t blob, int level0 , chunk_t *authKeyID,
 	u_int level;
 	int objectID = 0;
 	
+	*authKeyID = chunk_empty;
+	*authKeySerialNumber = chunk_empty;
+
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+
 	while (objectID < AUTH_KEY_ID_ROOF)
 	{
 		if (!extract_object(authorityKeyIdentifierObjects, &objectID, &object, &level, &ctx))
@@ -768,7 +732,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0, linked_list_t 
 /**
  * Parses an X.509v3 certificate
  */
-static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
+static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 {
 	asn1_ctx_t ctx;
 	bool critical;
@@ -778,44 +742,48 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 	int objectID = 0;
 	
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+
 	while (objectID < X509_OBJ_ROOF)
 	{
 		if (!extract_object(certObjects, &objectID, &object, &level, &ctx))
 		{
 			return FALSE;
 		}
+
 		/* those objects which will parsed further need the next higher level */
 		level++;
-		switch (objectID) {
+
+		switch (objectID)
+		{
 			case X509_OBJ_CERTIFICATE:
-				cert->certificate = object;
+				this->certificate = object;
 				break;
 			case X509_OBJ_TBS_CERTIFICATE:
-				cert->tbsCertificate = object;
+				this->tbsCertificate = object;
 				break;
 			case X509_OBJ_VERSION:
-				cert->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-				DBG2("  v%d", cert->version);
+				this->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
+				DBG2("  v%d", this->version);
 				break;
 			case X509_OBJ_SERIAL_NUMBER:
-				cert->serialNumber = object;
+				this->serialNumber = object;
 				break;
 			case X509_OBJ_SIG_ALG:
-				cert->sigAlg = parse_algorithmIdentifier(object, level, NULL);
+				this->sigAlg = parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case X509_OBJ_ISSUER:
-				cert->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", cert->issuer);
+				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
+				DBG2("  '%D'", this->issuer);
 				break;
 			case X509_OBJ_NOT_BEFORE:
-				cert->notBefore = parse_time(object, level);
+				this->notBefore = parse_time(object, level);
 				break;
 			case X509_OBJ_NOT_AFTER:
-				cert->notAfter = parse_time(object, level);
+				this->notAfter = parse_time(object, level);
 				break;
 			case X509_OBJ_SUBJECT:
-				cert->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", cert->subject);
+				this->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
+				DBG2("  '%D'", this->subject);
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM:
 				if (parse_algorithmIdentifier(object, level, NULL) != OID_RSA_ENCRYPTION)
@@ -837,7 +805,7 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 				}
 				break;
 			case X509_OBJ_RSA_PUBLIC_KEY:
-				cert->subjectPublicKey = object;
+				this->subjectPublicKey = object;
 				break;
 			case X509_OBJ_EXTN_ID:
 				extn_oid = known_oid(object);
@@ -848,27 +816,28 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_EXTN_VALUE:
 			{
-				switch (extn_oid) {
+				switch (extn_oid)
+				{
 					case OID_SUBJECT_KEY_ID:
-						cert->subjectKeyID = chunk_clone(parse_keyIdentifier(object, level, FALSE));
+						this->subjectKeyID = chunk_clone(parse_keyIdentifier(object, level, FALSE));
 						break;
 					case OID_SUBJECT_ALT_NAME:
-						parse_generalNames(object, level, FALSE, cert->subjectAltNames);
+						parse_generalNames(object, level, FALSE, this->subjectAltNames);
 						break;
 					case OID_BASIC_CONSTRAINTS:
-						cert->isCA = parse_basicConstraints(object, level);
+						this->isCA = parse_basicConstraints(object, level);
 						break;
 					case OID_CRL_DISTRIBUTION_POINTS:
-						parse_crlDistributionPoints(object, level, cert->crlDistributionPoints);
+						parse_crlDistributionPoints(object, level, this->crlDistributionPoints);
 						break;
 					case OID_AUTHORITY_KEY_ID:
-						parse_authorityKeyIdentifier(object, level , &cert->authKeyID, &cert->authKeySerialNumber);
+						parse_authorityKeyIdentifier(object, level , &this->authKeyID, &this->authKeySerialNumber);
 						break;
 					case OID_AUTHORITY_INFO_ACCESS:
-						parse_authorityInfoAccess(object, level, cert->ocspAccessLocations);
+						parse_authorityInfoAccess(object, level, this->ocspAccessLocations);
 						break;
 					case OID_EXTENDED_KEY_USAGE:
-						cert->isOcspSigner = parse_extendedKeyUsage(object, level);
+						this->isOcspSigner = parse_extendedKeyUsage(object, level);
 						break;
 					case OID_NS_REVOCATION_URL:
 					case OID_NS_CA_REVOCATION_URL:
@@ -883,10 +852,10 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			}
 			case X509_OBJ_ALGORITHM:
-				cert->algorithm = parse_algorithmIdentifier(object, level, NULL);
+				this->algorithm = parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case X509_OBJ_SIGNATURE:
-				cert->signature = object;
+				this->signature = object;
 				break;
 			default:
 				break;
@@ -894,15 +863,15 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 		objectID++;
 	}
 
-	if (cert->subjectKeyID.ptr == NULL)
+	if (this->subjectKeyID.ptr == NULL)
 	{
 		hasher_t *hasher = hasher_create(HASH_SHA1);
 
-		hasher->allocate_hash(hasher, cert->subjectPublicKey, &cert->subjectKeyID);
+		hasher->allocate_hash(hasher, this->subjectPublicKey, &this->subjectKeyID);
 		hasher->destroy(hasher);
 	}
 
-	time(&cert->installed);
+	this->installed = time(NULL);
 	return TRUE;
 }
 
