@@ -282,7 +282,7 @@ struct x509_t {
  * @param chunk 	chunk containing DER encoded data
  * @return 			created x509_t certificate, or NULL if invlid.
  * 
- * @ingroup transforms
+ * @ingroup crypto
  */
 x509_t *x509_create_from_chunk(chunk_t chunk, u_int level);
 
@@ -293,8 +293,20 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level);
  * @param label		label describing kind of certificate
  * @return 			created x509_t certificate, or NULL if invalid.
  * 
- * @ingroup transforms
+ * @ingroup crypto
  */
 x509_t *x509_create_from_file(const char *filename, const char *label);
+
+/**
+ * @brief Parses a DER encoded authorityKeyIdentifier
+ * 
+ * @param blob 					blob containing DER encoded data
+ * @param level0 				indicates the current parsing level
+ * @param authKeyID				assigns the authorityKeyIdentifier
+ * @param authKeySerialNumber	assigns the authKeySerialNumber
+ * 
+ * @ingroup crypto
+ */
+void parse_authorityKeyIdentifier(chunk_t blob, int level0, chunk_t *authKeyID, chunk_t *authKeySerialNumber);
 
 #endif /* X509_H_ */
