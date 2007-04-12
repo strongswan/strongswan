@@ -21,6 +21,8 @@
  * for more details.
  */
 
+#include <debug.h>
+
 #include <asn1/asn1.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
@@ -316,10 +318,203 @@ static err_t is_valid(const private_x509ac_t *this, time_t *until)
 }
 
 /**
+ * parses a directoryName
+ */
+static bool parse_directoryName(chunk_t blob, int level, bool implicit, identification_t **name)
+{
+	*name = NULL;
+	return FALSE;
+}
+
+/**
+ * parses ietfAttrSyntax
+ */
+static void parse_ietfAttrSyntax(chunk_t blob, int level0, linked_list_t *list)
+{
+	/* TODO */
+}
+
+/**
+ * parses roleSyntax
+ */
+static void parse_roleSyntax(chunk_t blob, int level0)
+{
+	asn1_ctx_t ctx;
+	chunk_t object;
+	u_int level;
+	int objectID = 0;
+
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+	while (objectID < ROLE_ROOF)
+	{
+		if (!extract_object(roleSyntaxObjects, &objectID, &object, &level, &ctx))
+		{
+			return;
+		}
+
+		switch (objectID)
+		{
+			default:
+				break;
+		}
+		objectID++;
+	}
+}
+
+/**
+ * Parses an X.509 attribute certificate
+ */
+static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
+{
+	asn1_ctx_t ctx;
+	bool critical;
+	chunk_t object;
+	u_int level;
+	u_int type = OID_UNKNOWN;
+	u_int extn_oid = OID_UNKNOWN;
+	int objectID = 0;
+
+	asn1_init(&ctx, blob, 0, FALSE, FALSE);
+	while (objectID < AC_OBJ_ROOF)
+	{
+		if (!extract_object(acObjects, &objectID, &object, &level, &ctx))
+		{
+			return FALSE;
+		}
+
+		/* those objects which will parsed further need the next higher level */
+		level++;
+
+		switch (objectID)
+		{
+			case AC_OBJ_CERTIFICATE:
+				this->certificate = object;
+				break;
+			case AC_OBJ_CERTIFICATE_INFO:
+				this->certificateInfo = object;
+				break;
+			case AC_OBJ_VERSION:
+				this->version = (object.len) ? (1 + (u_int)*object.ptr) : 1;
+				DBG2("  v%d", this->version);
+				if (this->version != 2)
+				{
+					DBG1("v%d attribute certificates are not supported", this->version);
+					return FALSE;
+				}
+				break;
+			case AC_OBJ_HOLDER_ISSUER:
+				if (!parse_directoryName(object, level, FALSE, &this->holderIssuer));
+				{
+					return FALSE;
+				}
+				break;
+			case AC_OBJ_HOLDER_SERIAL:
+				this->holderSerial = object;
+				break;
+			case AC_OBJ_ENTITY_NAME:
+				if (!parse_directoryName(object, level, FALSE, &this->entityName));
+				{
+					return FALSE;
+				}
+				break;
+			case AC_OBJ_ISSUER_NAME:
+				if (!parse_directoryName(object, level, FALSE, &this->issuerName));
+				{
+					return FALSE;
+				}
+				break;
+			case AC_OBJ_SIG_ALG:
+				this->sigAlg = parse_algorithmIdentifier(object, level, NULL);
+				break;
+			case AC_OBJ_SERIAL_NUMBER:
+				this->serialNumber = object;
+				break;
+			case AC_OBJ_NOT_BEFORE:
+				this->notBefore = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				break;
+			case AC_OBJ_NOT_AFTER:
+				this->notAfter = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				break;
+			case AC_OBJ_ATTRIBUTE_TYPE:
+				type = known_oid(object);
+				break;
+			case AC_OBJ_ATTRIBUTE_VALUE:
+				{
+					switch (type)
+					{
+						case OID_AUTHENTICATION_INFO:
+							DBG2("  need to parse authenticationInfo");
+							break;
+						case OID_ACCESS_IDENTITY:
+							DBG2("  need to parse accessIdentity");
+							break;
+						case OID_CHARGING_IDENTITY:
+							parse_ietfAttrSyntax(object, level, this->charging);
+							break;
+						case OID_GROUP:
+							parse_ietfAttrSyntax(object, level, this->groups);
+							break;
+						case OID_ROLE:
+							parse_roleSyntax(object, level);
+							break;
+						default:
+							break;
+					}
+				}
+				break;
+			case AC_OBJ_EXTN_ID:
+				extn_oid = known_oid(object);
+				break;
+			case AC_OBJ_CRITICAL:
+				critical = object.len && *object.ptr;
+				DBG2("  %s",(critical)?"TRUE":"FALSE");
+				break;
+			case AC_OBJ_EXTN_VALUE:
+				{
+					switch (extn_oid)
+					{
+						case OID_CRL_DISTRIBUTION_POINTS:
+							DBG2("  need to parse crlDistributionPoints");
+							break;
+						case OID_AUTHORITY_KEY_ID:
+							parse_authorityKeyIdentifier(object, level,
+									&this->authKeyID, &this->authKeySerialNumber);
+							break;
+						case OID_TARGET_INFORMATION:
+							DBG2("  need to parse targetInformation");
+							break;
+						case OID_NO_REV_AVAIL:
+							this->noRevAvail = TRUE;
+							break;
+						default:
+							break;
+					}
+				}
+				break;
+			case AC_OBJ_ALGORITHM:
+				this->algorithm = parse_algorithmIdentifier(object, level, NULL);
+				break;
+			case AC_OBJ_SIGNATURE:
+				this->signature = object;
+				break;
+			default:
+				break;
+		}
+		objectID++;
+	}
+	this->installed = time(NULL);
+	return FALSE;
+}
+
+/**
  * Implements x509ac_t.destroy
  */
 static void destroy(private_x509ac_t *this)
 {
+	DESTROY_IF(this->holderIssuer);
+	DESTROY_IF(this->entityName);
+	DESTROY_IF(this->issuerName);
+	free(this->certificate.ptr);
 	free(this);
 }
 
@@ -331,6 +526,20 @@ x509ac_t *x509ac_create_from_chunk(chunk_t chunk)
 	private_x509ac_t *this = malloc_thing(private_x509ac_t);
 	
 	/* initialize */
+	this->holderIssuer = NULL;
+	this->entityName = NULL;
+	this->issuerName = NULL;
+
+	/* public functions */
+	this->public.is_valid = (err_t (*) (const x509ac_t*,time_t*))is_valid;
+	this->public.destroy = (void (*) (x509ac_t*))destroy;
+
+	if (!parse_certificate(chunk, this))
+	{
+		destroy(this);
+		return NULL;
+	}
+	return &this->public;
 }
 
 /*
