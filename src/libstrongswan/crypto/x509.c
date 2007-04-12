@@ -6,7 +6,12 @@
  */
 
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2000 Andreas Hess, Patric Lichtsteiner, Roger Wegmann
+ * Copyright (C) 2001 Marco Bertossa, Andreas Schleiss
+ * Copyright (C) 2002 Mario Strasser
+ * Copyright (C) 2000-2004 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2006 Martin Willi, Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it

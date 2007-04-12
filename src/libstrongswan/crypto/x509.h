@@ -6,7 +6,12 @@
  */
 
 /*
+ * Copyright (C) 2000 Andreas Hess, Patric Lichtsteiner, Roger Wegmann
+ * Copyright (C) 2001 Marco Bertossa, Andreas Schleiss
+ * Copyright (C) 2002 Mario Strasser
+ * Copyright (C) 2000-2004 Andreas Steffen, Zuercher Hochschule Winterthur
  * Copyright (C) 2006 Martin Willi, Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -44,12 +49,8 @@ typedef struct x509_t x509_t;
  * @b Constructors:
  *  - x509_create_from_chunk()
  *  - x509_create_from_file()
- * 
- * @todo more code cleanup needed!
- * @todo fix unimplemented functions...
- * @todo handle memory management
  *
- * @ingroup transforms
+ * @ingroup crypto
  */
 struct x509_t {
 
