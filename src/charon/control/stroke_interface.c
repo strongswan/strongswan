@@ -1217,6 +1217,7 @@ static void list_auth_certificates(private_stroke_interface_t *this,  u_int flag
 				first = FALSE;
 			}
 			cert->list(cert, out, utc);
+			fprintf(out, "\n");
 		}
 	}
 	iterator->destroy(iterator);
