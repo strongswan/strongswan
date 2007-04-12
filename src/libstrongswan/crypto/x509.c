@@ -742,7 +742,6 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 	int objectID = 0;
 	
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
-
 	while (objectID < X509_OBJ_ROOF)
 	{
 		if (!extract_object(certObjects, &objectID, &object, &level, &ctx))
