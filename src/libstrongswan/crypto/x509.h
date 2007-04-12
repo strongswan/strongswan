@@ -257,7 +257,16 @@ struct x509_t {
 	 * @return				TRUE if self-signed
 	 */
 	bool (*is_self_signed) (const x509_t *this);
-
+	
+	/**
+	 * @brief Log the certificate info to out.
+	 *
+	 * @param this			calling object
+	 * @param out			stream to write to
+	 * @param utc			TRUE for UTC times, FALSE for local time
+	 */
+	void (*list)(x509_t *this, FILE *out, bool utc);
+	
 	/**
 	 * @brief Destroys the certificate.
 	 * 

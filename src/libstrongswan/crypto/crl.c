@@ -416,66 +416,43 @@ static void destroy(private_crl_t *this)
 }
 
 /**
- * output handler in printf()
+ * Implementation of crl_t.list.
  */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
+static void list(private_crl_t *this, FILE* out, bool utc)
 {
-	private_crl_t *this = *((private_crl_t**)(args[0]));
-	bool utc = TRUE;
-	int written = 0;
 	time_t now;
-	
-	if (info->alt)
-	{
-		utc = *((bool*)args[1]);
-	}
-	
-	if (this == NULL)
-	{
-		return fprintf(stream, "(null)");
-	}
 	
 	now = time(NULL);
 	
-	written += fprintf(stream, "%#T, revoked certs: %d\n", &this->installed, utc,
+	fprintf(out, "%#T, revoked certs: %d\n", &this->installed, utc,
 					   this->revokedCertificates->get_count(this->revokedCertificates));
-	written += fprintf(stream, "    issuer:    '%D'\n", this->issuer);
-	written += fprintf(stream, "    updates:    this %#T\n", &this->thisUpdate, utc);
-	written += fprintf(stream, "                next %#T ",  &this->nextUpdate, utc);
+	fprintf(out, "    issuer:    '%D'\n", this->issuer);
+	fprintf(out, "    updates:    this %#T\n", &this->thisUpdate, utc);
+	fprintf(out, "                next %#T ",  &this->nextUpdate, utc);
 	if (this->nextUpdate == UNDEFINED_TIME)
 	{
-		written += fprintf(stream, "ok (expires never)");
+		fprintf(out, "ok (expires never)");
 	}
 	else if (now > this->nextUpdate)
 	{
-		written += fprintf(stream, "expired (%V ago)", &now, &this->nextUpdate);
+		fprintf(out, "expired (%V ago)", &now, &this->nextUpdate);
 	}
 	else if (now > this->nextUpdate - CRL_WARNING_INTERVAL * 60 * 60 * 24)
 	{
-		written += fprintf(stream, "ok (expires in %V)", &now, &this->nextUpdate);
+		fprintf(out, "ok (expires in %V)", &now, &this->nextUpdate);
 	}
 	else
 	{
-		written += fprintf(stream, "ok");
+		fprintf(out, "ok");
 	}
 	if (this->authKeyID.ptr)
 	{
-		written += fprintf(stream, "\n    authkey:    %#B", &this->authKeyID);
+		fprintf(out, "\n    authkey:    %#B", &this->authKeyID);
 	}
 	if (this->authKeySerialNumber.ptr)
 	{
-		written += fprintf(stream, "\n    aserial:    %#B", &this->authKeySerialNumber);
+		fprintf(out, "\n    aserial:    %#B", &this->authKeySerialNumber);
 	}
-	return written;
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_CRL, print, arginfo_ptr_alt_ptr_int);
 }
 
 /*
@@ -502,6 +479,7 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 	this->public.verify = (bool (*) (const crl_t*,const rsa_public_key_t*))verify;
 	this->public.get_status = (void (*) (const crl_t*,certinfo_t*))get_status;
 	this->public.write_to_file = (bool (*) (const crl_t*,const char*,mode_t,bool))write_to_file;
+	this->public.list = (void(*)(crl_t*, FILE* out, bool utc))list;
 	this->public.destroy = (void (*) (crl_t*))destroy;
 	
 	if (!parse_x509crl(chunk, 0, this))

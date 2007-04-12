@@ -1121,39 +1121,23 @@ static bool verify(const private_x509_t *this, const rsa_public_key_t *signer)
 {
 	return signer->verify_emsa_pkcs1_signature(signer, this->tbsCertificate, this->signature) == SUCCESS;
 }
-
+	
 /**
- * output handler in printf()
+ * Implementation of x509_t.list.
  */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
+static void list(private_x509_t *this, FILE *out, bool utc)
 {
-	private_x509_t *this = *((private_x509_t**)(args[0]));
 	iterator_t *iterator;
-	bool utc = TRUE;
-	int written = 0;
-	
-	if (info->alt)
-	{
-		utc = *((bool*)(args[1]));
-	}
-	
-	if (this == NULL)
-	{
-		return fprintf(stream, "(null)");
-	}
-	
-	/* determine the current time */
 	time_t now = time(NULL);
 
-	written += fprintf(stream, "%#T\n", &this->installed, utc);
+	fprintf(out, "%#T\n", &this->installed, utc);
 
 	if (this->subjectAltNames->get_count(this->subjectAltNames))
 	{
 		identification_t *subjectAltName;
 		bool first = TRUE;
 
-		written += fprintf(stream, "    altNames:  ");
+		fprintf(out, "    altNames:  ");
 		iterator = this->subjectAltNames->create_iterator(this->subjectAltNames, TRUE);
 		while (iterator->iterate(iterator, (void**)&subjectAltName))
 		{
@@ -1163,71 +1147,71 @@ static int print(FILE *stream, const struct printf_info *info,
 			}
 			else
 			{
-				written += fprintf(stream, ", ");
+				fprintf(out, ", ");
 			}
-			written += fprintf(stream, "'%D'", subjectAltName);
+			fprintf(out, "'%D'", subjectAltName);
 		}
 		iterator->destroy(iterator);
-		written += fprintf(stream, "\n");
+		fprintf(out, "\n");
 	}
-	written += fprintf(stream, "    subject:   '%D'\n", this->subject);
-	written += fprintf(stream, "    issuer:    '%D'\n", this->issuer);
-	written += fprintf(stream, "    serial:     %#B\n", &this->serialNumber);
-	written += fprintf(stream, "    validity:   not before %#T, ", &this->notBefore, utc);
+	fprintf(out, "    subject:   '%D'\n", this->subject);
+	fprintf(out, "    issuer:    '%D'\n", this->issuer);
+	fprintf(out, "    serial:     %#B\n", &this->serialNumber);
+	fprintf(out, "    validity:   not before %#T, ", &this->notBefore, utc);
 	if (now < this->notBefore)
 	{
-		written += fprintf(stream, "not valid yet (valid in %V)\n", &now, &this->notBefore);
+		fprintf(out, "not valid yet (valid in %V)\n", &now, &this->notBefore);
 	}
 	else
 	{
-		written += fprintf(stream, "ok\n");
+		fprintf(out, "ok\n");
 	}
 	
-	written += fprintf(stream, "                not after  %#T, ", &this->notAfter, utc);
+	fprintf(out, "                not after  %#T, ", &this->notAfter, utc);
 	if (now > this->notAfter)
 	{
-		written += fprintf(stream, "expired (%V ago)\n", &now, &this->notAfter);
+		fprintf(out, "expired (%V ago)\n", &now, &this->notAfter);
 	}
 	else
 	{
-		written += fprintf(stream, "ok");
+		fprintf(out, "ok");
 		if (now > this->notAfter - CERT_WARNING_INTERVAL * 60 * 60 * 24)
 		{
-			written += fprintf(stream, " (expires in %V)", &now, &this->notAfter);
+			fprintf(out, " (expires in %V)", &now, &this->notAfter);
 		}
-		written += fprintf(stream, " \n");
+		fprintf(out, " \n");
 	}
 	
 	{
 		chunk_t keyid = this->public_key->get_keyid(this->public_key);
-		written += fprintf(stream, "    keyid:      %#B\n", &keyid);
+		fprintf(out, "    keyid:      %#B\n", &keyid);
 	}
 
 	if (this->subjectKeyID.ptr)
 	{
-		written += fprintf(stream, "    subjkey:    %#B\n", &this->subjectKeyID);
+		fprintf(out, "    subjkey:    %#B\n", &this->subjectKeyID);
 	}
 	if (this->authKeyID.ptr)
 	{
-		written += fprintf(stream, "    authkey:    %#B\n", &this->authKeyID);
+		fprintf(out, "    authkey:    %#B\n", &this->authKeyID);
 	}
 	if (this->authKeySerialNumber.ptr)
 	{
-		written += fprintf(stream, "    aserial:    %#B\n", &this->authKeySerialNumber);
+		fprintf(out, "    aserial:    %#B\n", &this->authKeySerialNumber);
 	}
 	
-	written += fprintf(stream, "    pubkey:     RSA %d bits", BITS_PER_BYTE *
-					   this->public_key->get_keysize(this->public_key));
-	written += fprintf(stream, ", status %N",
-					   cert_status_names, this->status);
+	fprintf(out, "    pubkey:     RSA %d bits", BITS_PER_BYTE *
+			this->public_key->get_keysize(this->public_key));
+	fprintf(out, ", status %N",
+		   cert_status_names, this->status);
 	
 	switch (this->status)
 	{
 		case CERT_GOOD:
-			written += fprintf(stream, " until %#T", &this->until, utc);
+			fprintf(out, " until %#T", &this->until, utc);
 			break;
 		case CERT_REVOKED:
-			written += fprintf(stream, " on %#T", &this->until, utc);
+			fprintf(out, " on %#T", &this->until, utc);
 			break;
 		case CERT_UNKNOWN:
 		case CERT_UNDEFINED:
@@ -1235,15 +1219,6 @@ static int print(FILE *stream, const struct printf_info *info,
 		default:
 			break;
 	}
-	return written;
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_X509, print, arginfo_ptr_alt_ptr_int);
 }
 
 /**
@@ -1310,6 +1285,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.create_crluri_iterator = (iterator_t* (*) (const x509_t*))create_crluri_iterator;
 	this->public.create_ocspuri_iterator = (iterator_t* (*) (const x509_t*))create_ocspuri_iterator;
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
+	this->public.list = (void(*)(x509_t*, FILE *out, bool utc))list;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	
 	if (!parse_certificate(chunk, level, this))

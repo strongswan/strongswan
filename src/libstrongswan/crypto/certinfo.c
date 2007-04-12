@@ -221,54 +221,6 @@ static void destroy(private_certinfo_t *this)
 	free(this);
 }
 
-/**
- * output handler in printf()
- */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
-{
-	private_certinfo_t *this = *((private_certinfo_t**)(args[0]));
-	bool utc = TRUE;
-	int written = 0;
-	time_t now;
-	
-	if (info->alt)
-	{
-		utc = *((bool*)args[1]);
-	}
-	
-	if (this == NULL)
-	{
-		return fprintf(stream, "(null)");
-	}
-	
-	now = time(NULL);
-	
-	written += fprintf(stream, "%#T, until %#T, ",
-					   &this->thisUpdate, utc,
-					   &this->nextUpdate, utc);
-	if (now > this->nextUpdate)
-	{
-		written += fprintf(stream, "expired (%V ago)\n", &now, &this->nextUpdate);
-	}
-	else
-	{
-		written += fprintf(stream, "ok (expires in %V)\n", &now, &this->nextUpdate);
-	}
-	written += fprintf(stream, "    serial:     %#B, %N",
-					   &this->serialNumber,
-					   cert_status_names, this->status);
-	return written;
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_CERTINFO, print, arginfo_ptr_alt_ptr_int);
-}
-
 /*
  * Described in header.
  */

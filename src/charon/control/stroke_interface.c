@@ -1216,7 +1216,7 @@ static void list_auth_certificates(private_stroke_interface_t *this,  u_int flag
 				fprintf(out, "\n");
 				first = FALSE;
 			}
-			fprintf(out, "%#Q\n", cert, utc);
+			cert->list(cert, out, utc);
 		}
 	}
 	iterator->destroy(iterator);
@@ -1243,7 +1243,7 @@ static void stroke_list(private_stroke_interface_t *this,
 		}
 		while (iterator->iterate(iterator, (void**)&cert))
 		{
-			fprintf(out, "%#Q", cert, msg->list.utc);
+			cert->list(cert, out, msg->list.utc);
 			if (charon->credentials->has_rsa_private_key(
 					charon->credentials, cert->get_public_key(cert)))
 			{
@@ -1271,7 +1271,7 @@ static void stroke_list(private_stroke_interface_t *this,
 		}
 		while (iterator->iterate(iterator, (void**)&ca_info))
 		{
-			fprintf(out, "%#W", ca_info, msg->list.utc);
+			ca_info->list(ca_info, out, msg->list.utc);
 		}
 		iterator->destroy(iterator);
 	}

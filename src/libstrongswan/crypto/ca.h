@@ -113,6 +113,16 @@ struct ca_info_t {
 	bool (*has_certinfos) (ca_info_t *this);
 
 	/**
+	 * @brief Print the CA info onto the console
+	 * 
+	 * @param this			ca info object
+	 * @param out			output stream
+	 * @param utc			TRUE -  utc
+							FALSE - local time
+	 */
+	void (*list) (ca_info_t *this, FILE *out, bool utc);
+
+	/**
 	 * @brief List the CRL onto the console
 	 * 
 	 * @param this			ca info object

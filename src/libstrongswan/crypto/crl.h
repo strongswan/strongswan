@@ -104,6 +104,15 @@ struct crl_t {
 	 * @param certinfo		certinfo is updated
 	 */
 	void (*get_status) (const crl_t *this, certinfo_t *certinfo);
+	
+	/**
+	 * @brief Log the info of this CRL to out.
+	 *
+	 * @param this			calling object
+	 * @param out			stream to write to
+	 * @param utc			TRUE for UTC, FALSE for local time
+	 */
+	void (*list)(crl_t *this, FILE* out, bool utc);
 
 	/**
 	 * @brief Write a der-encoded crl to a file
