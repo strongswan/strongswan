@@ -39,12 +39,17 @@ statusall,       STROKE_STATUSALL
 listcerts,       STROKE_LIST_CERTS
 listcacerts,     STROKE_LIST_CACERTS
 listocspcerts,   STROKE_LIST_OCSPCERTS
+listaacerts,     STROKE_LIST_AACERTS
+listacerts,      STROKE_LIST_ACERTS
+listgroups,      STROKE_LIST_GROUPS
 listcainfos,     STROKE_LIST_CAINFOS
 listcrls,        STROKE_LIST_CRLS
 listocsp,        STROKE_LIST_OCSP
 listall,         STROKE_LIST_ALL
 rereadcacerts,   STROKE_REREAD_CACERTS
 rereadocspcerts, STROKE_REREAD_OCSPCERTS
+rereadaacerts,   STROKE_REREAD_AACERTS,
+rereadacerts,    STROKE_REREAD_ACERTS,
 rereadcrls,      STROKE_REREAD_CRLS
 rereadall,       STROKE_REREAD_ALL
 purgeocsp,       STROKE_PURGE_OCSP

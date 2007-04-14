@@ -47,14 +47,20 @@ enum list_flag_t {
 	LIST_CACERTS =		0x0002,
 	/** list all ocsp signer certs */
 	LIST_OCSPCERTS =	0x0004,
+	/** list all aa certs */
+	LIST_AACERTS =		0x0008,
+	/** list all attribute certs */
+	LIST_ACERTS =		0x0010,
+	/** list all access control groups */
+	LIST_GROUPS =		0x0020,
 	/** list all ca information records */
-	LIST_CAINFOS =		0x0008,
+	LIST_CAINFOS =		0x0040,
 	/** list all crls */
-	LIST_CRLS =			0x0010,
+	LIST_CRLS =			0x0080,
 	/** list all ocsp cache entries */
-	LIST_OCSP =			0x0020,
+	LIST_OCSP =			0x0100,
 	/** all list options */
-	LIST_ALL =			0x003F,
+	LIST_ALL =			0x01FF,
 };
 
 typedef enum reread_flag_t reread_flag_t;
@@ -70,10 +76,14 @@ enum reread_flag_t {
 	REREAD_CACERTS =	0x0001,
 	/** reread all ocsp signer certs */
 	REREAD_OCSPCERTS =	0x0002,
+	/** reread all aa certs */
+	REREAD_AACERTS =	0x0004,
+	/** reread all attribute certs */
+	REREAD_ACERTS =		0x0008,
 	/** reread all crls */
-	REREAD_CRLS =		0x0004,
+	REREAD_CRLS =		0x0010,
 	/** all reread options */
-	REREAD_ALL =		0x0007,
+	REREAD_ALL =		0x001F,
 };
 
 typedef enum purge_flag_t purge_flag_t;

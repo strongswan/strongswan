@@ -218,6 +218,9 @@ static int list_flags[] = {
 	LIST_CERTS,
 	LIST_CACERTS,
 	LIST_OCSPCERTS,
+	LIST_AACERTS,
+	LIST_ACERTS,
+	LIST_GROUPS,
 	LIST_CAINFOS,
 	LIST_CRLS,
 	LIST_OCSP,
@@ -238,6 +241,8 @@ static int list(stroke_keyword_t kw, int utc)
 static int reread_flags[] = {
 	REREAD_CACERTS,
 	REREAD_OCSPCERTS,
+	REREAD_AACERTS,
+	REREAD_ACERTS,
 	REREAD_CRLS,
 	REREAD_ALL
 };
