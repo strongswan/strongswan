@@ -21,6 +21,7 @@
  * for more details.
  */
 
+#include <library.h>
 #include <debug.h>
 
 #include <asn1/asn1.h>
@@ -322,8 +323,40 @@ static err_t is_valid(const private_x509ac_t *this, time_t *until)
  */
 static bool parse_directoryName(chunk_t blob, int level, bool implicit, identification_t **name)
 {
-	*name = NULL;
-	return FALSE;
+	bool has_directoryName;
+	linked_list_t *list = linked_list_create();
+
+	parse_generalNames(blob, level, implicit, list);
+	has_directoryName = list->get_count(list) > 0;
+
+	if (has_directoryName)
+	{
+		iterator_t *iterator = list->create_iterator(list, TRUE);
+		identification_t *directoryName;
+		bool first = TRUE;
+
+		while (iterator->iterate(iterator, (void**)&directoryName))
+		{
+			if (first)
+			{
+				*name = directoryName;
+				first = FALSE;
+			}
+			else
+			{
+				DBG1("more than one directory name - first selected");
+				directoryName->destroy(directoryName);
+			}
+		}
+		iterator->destroy(iterator);
+	}
+	else
+	{
+		DBG1("no directoryName found");
+	}
+
+	list->destroy(list);
+	return has_directoryName;
 }
 
 /**
@@ -403,7 +436,7 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 				}
 				break;
 			case AC_OBJ_HOLDER_ISSUER:
-				if (!parse_directoryName(object, level, FALSE, &this->holderIssuer));
+				if (!parse_directoryName(object, level, FALSE, &this->holderIssuer))
 				{
 					return FALSE;
 				}
@@ -412,13 +445,13 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 				this->holderSerial = object;
 				break;
 			case AC_OBJ_ENTITY_NAME:
-				if (!parse_directoryName(object, level, FALSE, &this->entityName));
+				if (!parse_directoryName(object, level, TRUE, &this->entityName))
 				{
 					return FALSE;
 				}
 				break;
 			case AC_OBJ_ISSUER_NAME:
-				if (!parse_directoryName(object, level, FALSE, &this->issuerName));
+				if (!parse_directoryName(object, level, FALSE, &this->issuerName))
 				{
 					return FALSE;
 				}
@@ -549,18 +582,11 @@ x509ac_t *x509ac_create_from_file(const char *filename)
 {
 	bool pgp = FALSE;
 	chunk_t chunk = chunk_empty;
-	x509ac_t *cert = NULL;
 
 	if (!pem_asn1_load_file(filename, NULL, "attribute certificate", &chunk, &pgp))
 	{
 		return NULL;
 	}
-	cert = x509ac_create_from_chunk(chunk);
-
-	if (cert == NULL)
-	{
-		free(chunk.ptr);
-	}
-	return cert;
+	return x509ac_create_from_chunk(chunk);
 }
 

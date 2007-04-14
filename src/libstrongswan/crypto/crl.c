@@ -494,14 +494,10 @@ crl_t *crl_create_from_file(const char *filename)
 {
 	bool pgp = FALSE;
 	chunk_t chunk = chunk_empty;
-	crl_t *crl = NULL;
 
 	if (!pem_asn1_load_file(filename, NULL, "crl", &chunk, &pgp))
+	{
 		return NULL;
-
-	crl = crl_create_from_chunk(chunk);
-
-	if (crl == NULL)
-		free(chunk.ptr);
-	return crl;
+	}
+	return crl_create_from_chunk(chunk);
 }

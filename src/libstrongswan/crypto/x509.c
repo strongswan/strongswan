@@ -537,7 +537,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 /**
  * extracts one or several GNs and puts them into a chained list
  */
-static void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list)
+void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list)
 {
 	asn1_ctx_t ctx;
 	chunk_t object;
@@ -1287,17 +1287,13 @@ x509_t *x509_create_from_file(const char *filename, const char *label)
 {
 	bool pgp = FALSE;
 	chunk_t chunk = chunk_empty;
-	x509_t *cert = NULL;
 	char cert_label[BUF_LEN];
 
 	snprintf(cert_label, BUF_LEN, "%s certificate", label);
 
 	if (!pem_asn1_load_file(filename, NULL, cert_label, &chunk, &pgp))
+	{
 		return NULL;
-
-	cert = x509_create_from_chunk(chunk, 0);
-
-	if (cert == NULL)
-		free(chunk.ptr);
-	return cert;
+	}
+	return x509_create_from_chunk(chunk, 0);
 }
