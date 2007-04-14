@@ -35,6 +35,7 @@ typedef struct x509_t x509_t;
 #include <crypto/certinfo.h>
 #include <utils/identification.h>
 #include <utils/iterator.h>
+#include <utils/linked_list.h>
 
 /* authority flags */
 
@@ -308,5 +309,17 @@ x509_t *x509_create_from_file(const char *filename, const char *label);
  * @ingroup crypto
  */
 void parse_authorityKeyIdentifier(chunk_t blob, int level0, chunk_t *authKeyID, chunk_t *authKeySerialNumber);
+
+/**
+ * @brief Parses DER encoded generalNames
+ * 
+ * @param blob 			blob containing DER encoded data
+ * @param level0 		indicates the current parsing level
+ * @param implicit		implicit coding is used
+ * @param list			linked list of decoded generalNames
+ * 
+ * @ingroup crypto
+ */
+void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list);
 
 #endif /* X509_H_ */
