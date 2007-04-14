@@ -1259,6 +1259,14 @@ static void stroke_list(private_stroke_interface_t *this,
 	{
 		list_auth_certificates(this, AUTH_CA, "CA", msg->list.utc, out);
 	}
+	if (msg->list.flags & LIST_OCSPCERTS)
+	{
+		list_auth_certificates(this, AUTH_OCSP, "OCSP", msg->list.utc, out);
+	}
+	if (msg->list.flags & LIST_AACERTS)
+	{
+		list_auth_certificates(this, AUTH_AA, "AA", msg->list.utc, out);
+	}
 	if (msg->list.flags & LIST_CAINFOS)
 	{
 		ca_info_t *ca_info;
@@ -1297,10 +1305,6 @@ static void stroke_list(private_stroke_interface_t *this,
             }
         }
         iterator->destroy(iterator);
-	}
-	if (msg->list.flags & LIST_OCSPCERTS)
-	{
-		list_auth_certificates(this, AUTH_OCSP, "OCSP", msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_OCSP)
 	{
