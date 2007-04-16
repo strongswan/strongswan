@@ -963,7 +963,10 @@ static identification_t *clone_(private_identification_t *this)
 	private_identification_t *clone = identification_create();
 	
 	clone->type = this->type;
-	clone->encoded = chunk_clone(this->encoded);
+	if (this->encoded.len)
+	{
+		clone->encoded = chunk_clone(this->encoded);
+	}
 	clone->public.equals = this->public.equals;
 	clone->public.matches = this->public.matches;
 	
