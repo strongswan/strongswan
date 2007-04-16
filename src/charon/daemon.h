@@ -37,6 +37,7 @@ typedef struct daemon_t daemon_t;
 #include <processing/job_queue.h>
 #include <processing/event_queue.h>
 #include <kernel/kernel_interface.h>
+#include <control/controller.h>
 #include <control/stroke_interface.h>
 #include <bus/bus.h>
 #include <bus/listeners/file_logger.h>
@@ -410,6 +411,11 @@ struct daemon_t {
 	 * Kernel Interface to communicate with kernel
 	 */
 	kernel_interface_t *kernel_interface;
+	
+	/**
+	 * control the daemon
+	 */
+	controller_t *controller;;
 	
 	/**
 	 * IPC interface, as whack in pluto

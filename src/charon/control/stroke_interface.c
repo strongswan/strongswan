@@ -40,6 +40,7 @@
 #include <crypto/x509.h>
 #include <crypto/ca.h>
 #include <crypto/crl.h>
+#include <control/controller.h>
 #include <processing/jobs/initiate_job.h>
 #include <processing/jobs/route_job.h>
 #include <utils/leak_detective.h>
@@ -77,6 +78,24 @@ struct private_stroke_interface_t {
 	 * Thread which reads from the Socket
 	 */
 	pthread_t threads[STROKE_THREADS];
+};
+
+typedef struct stroke_log_info_t stroke_log_info_t;
+
+/**
+ * helper struct to say what and where to log when using controller callback
+ */
+struct stroke_log_info_t {
+
+	/**
+	 * level to log up to
+	 */
+	level_t level;
+	
+	/**
+	 * where to write log
+	 */
+	FILE* out;
 };
 
 /**
@@ -639,16 +658,29 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 }
 
 /**
+ * logging to the stroke interface
+ */
+static bool stroke_log(stroke_log_info_t *info, signal_t signal, level_t level,
+					   ike_sa_t *ike_sa, char *format, va_list args)
+{
+	if (level <= info->level)
+	{
+		vfprintf(info->out, format, args);
+		fprintf(info->out, "\n");
+		fflush(info->out);
+	}
+	return TRUE;
+}
+
+/**
  * initiate a connection by name
  */
 static void stroke_initiate(private_stroke_interface_t *this,
 							stroke_msg_t *msg, FILE *out)
 {
-	initiate_job_t *job;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
-	ike_sa_t *init_ike_sa = NULL;
-	signal_t signal;
+	stroke_log_info_t info;
 	
 	pop_string(msg, &(msg->initiate.name));
 	DBG1(DBG_CFG, "received stroke: initiate '%s'", msg->initiate.name);
@@ -657,10 +689,7 @@ static void stroke_initiate(private_stroke_interface_t *this,
 												   msg->initiate.name);
 	if (peer_cfg == NULL)
 	{
-		if (msg->output_verbosity >= 0)
-		{
-			fprintf(out, "no config named '%s'\n", msg->initiate.name);
-		}
+		fprintf(out, "no config named '%s'\n", msg->initiate.name);
 		return;
 	}
 	if (peer_cfg->get_ike_version(peer_cfg) != 2)
@@ -674,61 +703,16 @@ static void stroke_initiate(private_stroke_interface_t *this,
 	child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
 	if (child_cfg == NULL)
 	{
-		if (msg->output_verbosity >= 0)
-		{
-			fprintf(out, "no child config named '%s'\n", msg->initiate.name);
-		}
+		fprintf(out, "no child config named '%s'\n", msg->initiate.name);
 		peer_cfg->destroy(peer_cfg);
 		return;
 	}
 	
-	job = initiate_job_create(peer_cfg, child_cfg);
-	charon->bus->set_listen_state(charon->bus, TRUE);
-	charon->job_queue->add(charon->job_queue, (job_t*)job);
-	while (TRUE)
-	{
-		level_t level;
-		int thread;
-		ike_sa_t *ike_sa;
-		char* format;
-		va_list args;
-		
-		signal = charon->bus->listen(charon->bus, &level, &thread, &ike_sa, &format, &args);
-		
-		if ((init_ike_sa == NULL || ike_sa == init_ike_sa) &&
-			level <= msg->output_verbosity)
-		{
-			if (vfprintf(out, format, args) < 0 ||
-				fprintf(out, "\n") < 0 ||
-				fflush(out))
-			{
-				charon->bus->set_listen_state(charon->bus, FALSE);
-				break;
-			}
-		}
-		
-		switch (signal)
-		{
-			case CHILD_UP_SUCCESS:
-			case CHILD_UP_FAILED:
-			case IKE_UP_FAILED:
-				if (ike_sa == init_ike_sa)
-				{
-					charon->bus->set_listen_state(charon->bus, FALSE);
-					return;
-				}
-				continue;
-			case CHILD_UP_START:
-			case IKE_UP_START:
-				if (init_ike_sa == NULL)
-				{
-					init_ike_sa = ike_sa;
-				}
-				continue;
-			default:
-				continue;
-		}
-	}
+	info.out = out;
+	info.level = msg->output_verbosity;
+	
+	charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
+								 (controller_cb_t)stroke_log, &info);
 }
 
 /**

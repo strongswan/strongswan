@@ -165,6 +165,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.receiver);
 	/* ignore all incoming user requests */
 	DESTROY_IF(this->public.stroke);
+	DESTROY_IF(this->public.controller);
 	/* stop scheduing jobs */
 	DESTROY_IF(this->public.scheduler);
 	/* stop processing jobs */
@@ -280,6 +281,7 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	credentials->load_secrets(credentials);
 	
 	/* start building threads, we are multi-threaded NOW */
+	this->public.controller = controller_create();
 	this->public.stroke = stroke_create(this->public.local_backend);
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
@@ -342,6 +344,7 @@ private_daemon_t *daemon_create(void)
 	this->public.scheduler = NULL;
 	this->public.kernel_interface = NULL;
 	this->public.thread_pool = NULL;
+	this->public.controller = NULL;
 	this->public.stroke = NULL;
 	this->public.bus = NULL;
 	this->public.outlog = NULL;
