@@ -1,6 +1,6 @@
 #!/bin/sh
 libtoolize &&
-aclocal-1.9 &&
-automake-1.9 -a &&
+aclocal &&
+automake -a &&
 autoconf
 
