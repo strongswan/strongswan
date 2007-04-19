@@ -5,21 +5,17 @@
 These notes mostly belong to charon, the new IKEv2 daemon. The plan is to
 migrate IKEv1 into charon. It's hard to say how much effort is needed to
 do that, and how much code we can reuse from pluto. But a port IS necessary to
-gain hassle-free confiugration, version negotiation and maintainability.
+gain hassle-free configuration, version negotiation and maintainability.
 
 Roadmap 2007
 ============
 
- Mar  !   - Cookie support, IP filter, other fixes to mature against DoS
-      !   - release IKEv2 p2p NATT draft 00
-      !
- Apr  !   - PRF in CHILD_SA rekeying
-      !   - configuration managament refactoring
-      !   - credentials backend redesign
+ Apr  !   - credentials backend redesign
       !   - interface in charon for the XML based SMP management interface
-      !   - reimplement IKEv2 p2p NATT support
       !
  May  !   - SMP configuration client
+      !   - release IKEv2 p2p NATT draft 00
+      !   - reimplement IKEv2 p2p NATT support
       !
  Jun  !   - start with IKEv1 migration strategy
       !
@@ -42,12 +38,6 @@ TODO-List
 
 A set of TODOs. This is only a list of things I write down to not forget them.
 Watch out for TODOs in the code.
-  
-Build system
-------------
-- configure flag which allows to ommit vendor id in pluto
-- reduce printf handlers count to 10, as uClibc does not support more
-- remove %m printf handlers, as error may have changed until it reaches fprintf()
 
 Certificate support
 -------------------
@@ -65,6 +55,5 @@ Stroke interface
 
 Misc
 ----
-- PFS support for creating/rekeying CHILD_SAs
 - Address pool/backend for virtual IP assignement
 - fix iterator->insert_before/after
