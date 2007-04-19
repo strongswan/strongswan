@@ -440,6 +440,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 			}
 			else
 			{
+				chunk_free(&hash);
 				DBG1(DBG_MGR, "ignoring message, no such IKE_SA");
 			}
 		}
