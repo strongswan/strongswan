@@ -101,7 +101,8 @@ sa/tasks/ike_natd.c sa/tasks/ike_natd.h \
 sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/task.c sa/tasks/task.h
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
+
+INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
 AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_EAPDIR=\"${eapdir}\"
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread -lm -ldl
 

@@ -86,6 +86,13 @@ AC_ARG_WITH(
     [AC_DEFINE_UNQUOTED(SIM_READER_LIB, "$withval")]
 )
 
+AC_ARG_WITH(
+    [linux-headers],
+    AS_HELP_STRING([--with-linux-headers=dir],[use the linux header files in dir instead of the supplied ones in "src/include"]),
+    [AC_SUBST(linuxdir, "$withval")], [AC_SUBST(linuxdir, "../include")]
+)
+AC_SUBST(LINUX_HEADERS)
+
 AC_ARG_ENABLE(
     [http],
     AS_HELP_STRING([--enable-http],[enable OCSP and fetching of Certificates and CRLs over HTTP (default is NO). Requires libcurl.]),
@@ -222,6 +229,7 @@ dnl ==============================
 AC_OUTPUT(
 	Makefile
 	src/Makefile
+	src/include/Makefile
 	src/libstrongswan/Makefile
 	src/libcrypto/Makefile
 	src/libfreeswan/Makefile
