@@ -678,13 +678,16 @@ Relevant only locally, other end need not agree on it.
 .B ike
 IKE/ISAKMP SA encryption/authentication algorithm to be used, e.g.
 .B aes128-sha1-modp2048
-(encryption-integrity-dhgroup).
+(encryption-integrity-dhgroup). In IKEv2, multiple algorithms and proposals
+may be included, such as
+.B aes128-aes256-sha1-modp1536-modp2048,3des-sha1-md5-modp1024.
 .TP
 .B esp
 ESP encryption/authentication algorithm to be used
 for the connection, e.g.
 .B 3des-md5
-(encryption-integrity).
+(encryption-integrity-[dh-group]). If dh-group is specified, CHILD_SA setup
+and rekeying include a separate diffe hellman exchange (IKEv2 only).
 .TP
 .B ah
 AH authentication algorithm to be used
