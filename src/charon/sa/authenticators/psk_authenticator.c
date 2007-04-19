@@ -77,11 +77,12 @@ chunk_t build_tbs_octets(chunk_t ike_sa_init, chunk_t nonce,
  */
 chunk_t build_shared_key_signature(chunk_t ike_sa_init, chunk_t nonce,
 								   chunk_t secret, identification_t *id,
-								   prf_t *prf_skp, prf_t *prf)
+								   chunk_t skp, prf_t *prf)
 {
 	chunk_t key_pad, key, auth_data, octets;
 	
-	octets = build_tbs_octets(ike_sa_init, nonce, id, prf_skp);
+	prf->set_key(prf, skp);
+	octets = build_tbs_octets(ike_sa_init, nonce, id, prf);
 	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
 	key_pad.ptr = IKEV2_KEY_PAD;
 	key_pad.len = IKEV2_KEY_PAD_LENGTH;
@@ -121,7 +122,7 @@ static status_t verify(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 	}
 	
 	auth_data = build_shared_key_signature(ike_sa_init, my_nonce, shared_key,
-						other_id, this->ike_sa->get_auth_verify(this->ike_sa),
+						other_id, this->ike_sa->get_skp_verify(this->ike_sa),
 						this->ike_sa->get_prf(this->ike_sa));
 	chunk_free(&shared_key);
 	
@@ -164,7 +165,7 @@ static status_t build(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 	}
 			
 	auth_data = build_shared_key_signature(ike_sa_init, other_nonce, shared_key,
-							my_id, this->ike_sa->get_auth_build(this->ike_sa),
+							my_id, this->ike_sa->get_skp_build(this->ike_sa),
 							this->ike_sa->get_prf(this->ike_sa));
 	DBG2(DBG_IKE, "successfully created shared key MAC");
 	chunk_free(&shared_key);

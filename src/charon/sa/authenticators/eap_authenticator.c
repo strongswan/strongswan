@@ -61,21 +61,31 @@ struct private_eap_authenticator_t {
 	chunk_t msk;
 };
 
+/**
+ * reuse shared key signature function from PSK authenticator
+ */
 extern chunk_t build_shared_key_signature(chunk_t ike_sa_init, chunk_t nonce,
-								 		  chunk_t secret, identification_t *id,
-										  prf_t *prf_skp, prf_t *prf);
-
+										  chunk_t secret, identification_t *id,
+										  chunk_t skp, prf_t *prf);
 /**
  * Implementation of authenticator_t.verify.
  */
 static status_t verify(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 					   chunk_t my_nonce, auth_payload_t *auth_payload)
 {
-	chunk_t auth_data, recv_auth_data;
+	chunk_t auth_data, recv_auth_data, secret;
 	identification_t *other_id = this->ike_sa->get_other_id(this->ike_sa);
 	
-	auth_data = build_shared_key_signature(ike_sa_init, my_nonce, this->msk,
-						other_id, this->ike_sa->get_auth_verify(this->ike_sa),
+	if (this->msk.len)
+	{	/* use MSK if EAP method established one... */
+		secret = this->msk;
+	}
+	else
+	{	/* ... or use SKp if not */
+		secret = this->ike_sa->get_skp_verify(this->ike_sa);
+	}
+	auth_data = build_shared_key_signature(ike_sa_init, my_nonce, secret,
+						other_id, this->ike_sa->get_skp_verify(this->ike_sa),
 						this->ike_sa->get_prf(this->ike_sa));
 	
 	recv_auth_data = auth_payload->get_data(auth_payload);
@@ -98,14 +108,22 @@ static status_t verify(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 static status_t build(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 					  chunk_t other_nonce, auth_payload_t **auth_payload)
 {
-	chunk_t auth_data;
+	chunk_t auth_data, secret;
 	identification_t *my_id = this->ike_sa->get_my_id(this->ike_sa);
 	
 	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
 		 my_id, auth_method_names, AUTH_EAP);
-	
-	auth_data = build_shared_key_signature(ike_sa_init, other_nonce, this->msk,
-							my_id, this->ike_sa->get_auth_build(this->ike_sa),
+
+	if (this->msk.len)
+	{	/* use MSK if EAP method established one... */
+		secret = this->msk;
+	}
+	else
+	{	/* ... or use SKp if not */
+		secret = this->ike_sa->get_skp_build(this->ike_sa);
+	}
+	auth_data = build_shared_key_signature(ike_sa_init, other_nonce, secret,
+							my_id, this->ike_sa->get_skp_build(this->ike_sa),
 							this->ike_sa->get_prf(this->ike_sa));
 	
 	*auth_payload = auth_payload_create();
@@ -233,13 +251,14 @@ static status_t process_server(private_eap_authenticator_t *this,
 				DBG1(DBG_IKE, "EAP method %N succeded, MSK established",
 					 eap_type_names, this->method->get_type(this->method));
 				this->msk = chunk_clone(this->msk);
-				*out = eap_payload_create_code(EAP_SUCCESS);
-				return SUCCESS;
 			}
-			DBG1(DBG_IKE, "EAP method %N succeded, but no MSK established",
-				 eap_type_names, this->method->get_type(this->method));
-			*out = eap_payload_create_code(EAP_FAILURE);
-			return FAILED;
+			else
+			{
+				DBG1(DBG_IKE, "EAP method %N succeded, no MSK established",
+					 eap_type_names, this->method->get_type(this->method));
+			}
+			*out = eap_payload_create_code(EAP_SUCCESS);
+			return SUCCESS;
 		case FAILED:
 		default:
 			DBG1(DBG_IKE, "EAP method %N failed for peer %D",
@@ -290,11 +309,8 @@ static status_t process(private_eap_authenticator_t *this, eap_payload_t *in,
 					if (this->method->get_msk(this->method, &this->msk) == SUCCESS)
 					{
 						this->msk = chunk_clone(this->msk);
-						return SUCCESS;
 					}
-					DBG1(DBG_IKE, "EAP method %N has no MSK established",
-						 eap_type_names, this->method->get_type(this->method));
-					return FAILED;
+					return SUCCESS;
 				}
 				case EAP_FAILURE:
 				default:

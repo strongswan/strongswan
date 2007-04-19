@@ -486,7 +486,7 @@ struct ike_sa_t {
 							bool initiator, prf_t *child_prf, prf_t *old_prf);
 	
 	/**
-	 * @brief Get the multi purpose prf.
+	 * @brief Get a multi purpose prf for the negotiated PRF function.
 	 * 
 	 * @param this 			calling object
 	 * @return				pointer to prf_t object
@@ -502,20 +502,20 @@ struct ike_sa_t {
 	prf_t *(*get_child_prf) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the prf to build outgoing authentication data.
+	 * @brief Get the key to build outgoing authentication data.
 	 * 
 	 * @param this 			calling object
 	 * @return				pointer to prf_t object
 	 */
-	prf_t *(*get_auth_build) (ike_sa_t *this);
+	chunk_t (*get_skp_build) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the prf to verify incoming authentication data.
+	 * @brief Get the key to verify incoming authentication data.
 	 * 
 	 * @param this 			calling object
 	 * @return				pointer to prf_t object
 	 */
-	prf_t *(*get_auth_verify) (ike_sa_t *this);
+	chunk_t (*get_skp_verify) (ike_sa_t *this);
 	
 	/**
 	 * @brief Associates a child SA to this IKE SA

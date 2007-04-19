@@ -176,14 +176,14 @@ struct private_ike_sa_t {
 	prf_t *child_prf;
 	
 	/**
-	 * PRF to build outging authentication data
+	 * Key to build outging authentication data (SKp)
 	 */
-	prf_t *auth_build;
+	chunk_t skp_build;
 
 	/**
-	 * PRF to verify incoming authentication data
+	 * Key to verify incoming authentication data (SKp)
 	 */
-	prf_t *auth_verify;
+	chunk_t skp_verify;
 	
 	/**
 	 * NAT status of local host.
@@ -1112,19 +1112,19 @@ static prf_t *get_child_prf(private_ike_sa_t *this)
 }
 
 /**
- * Implementation of ike_sa_t.get_auth_bild
+ * Implementation of ike_sa_t.get_skp_bild
  */
-static prf_t *get_auth_build(private_ike_sa_t *this)
+static chunk_t get_skp_build(private_ike_sa_t *this)
 {
-	return this->auth_build;
+	return this->skp_build;
 }
 
 /**
- * Implementation of ike_sa_t.get_auth_verify
+ * Implementation of ike_sa_t.get_skp_verify
  */
-static prf_t *get_auth_verify(private_ike_sa_t *this)
+static chunk_t get_skp_verify(private_ike_sa_t *this)
 {
-	return this->auth_verify;
+	return this->skp_verify;
 }
 
 /**
@@ -1232,7 +1232,6 @@ static status_t derive_keys(private_ike_sa_t *this,
 	size_t key_size;
 	crypter_t *crypter_i, *crypter_r;
 	signer_t *signer_i, *signer_r;
-	prf_t *prf_i, *prf_r;
 	u_int8_t spi_i_buf[sizeof(u_int64_t)], spi_r_buf[sizeof(u_int64_t)];
 	chunk_t spi_i = chunk_from_buf(spi_i_buf);
 	chunk_t spi_r = chunk_from_buf(spi_r_buf);
@@ -1373,31 +1372,27 @@ static status_t derive_keys(private_ike_sa_t *this,
 		this->crypter_out = crypter_r;
 	}
 	
-	/* SK_pi/SK_pr used for authentication => prf_auth_i, prf_auth_r */	
-	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
-	prf_i = prf_create(algo->algorithm);
-	prf_r = prf_create(algo->algorithm);
-	
-	key_size = prf_i->get_key_size(prf_i);
+	/* SK_pi/SK_pr used for authentication => stored for later */	
+	key_size = this->prf->get_key_size(this->prf);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_pi secret %B", &key);
-	prf_i->set_key(prf_i, key);
-	chunk_free(&key);
-	
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_pr secret %B", &key);
-	prf_r->set_key(prf_r, key);
-	chunk_free(&key);
-	
 	if (initiator)
 	{
-		this->auth_verify = prf_r;
-		this->auth_build = prf_i;
+		this->skp_build = key;
 	}
 	else
 	{
-		this->auth_verify = prf_i;
-		this->auth_build = prf_r;
+		this->skp_verify = key;
+	}
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	DBG4(DBG_IKE, "Sk_pr secret %B", &key);
+	if (initiator)
+	{
+		this->skp_verify = key;
+	}
+	else
+	{
+		this->skp_build = key;
 	}
 	
 	/* all done, prf_plus not needed anymore */
@@ -1837,8 +1832,8 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->signer_out);
 	DESTROY_IF(this->prf);
 	DESTROY_IF(this->child_prf);
-	DESTROY_IF(this->auth_verify);
-	DESTROY_IF(this->auth_build);
+	chunk_free(&this->skp_verify);
+	chunk_free(&this->skp_build);
 	
 	if (this->my_virtual_ip)
 	{
@@ -1902,8 +1897,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.send_keepalive = (void (*)(ike_sa_t*)) send_keepalive;
 	this->public.get_prf = (prf_t *(*) (ike_sa_t *)) get_prf;
 	this->public.get_child_prf = (prf_t *(*) (ike_sa_t *)) get_child_prf;
-	this->public.get_auth_verify = (prf_t *(*) (ike_sa_t *)) get_auth_verify;
-	this->public.get_auth_build = (prf_t *(*) (ike_sa_t *)) get_auth_build;
+	this->public.get_skp_verify = (chunk_t(*) (ike_sa_t *)) get_skp_verify;
+	this->public.get_skp_build = (chunk_t(*) (ike_sa_t *)) get_skp_build;
 	this->public.derive_keys = (status_t (*) (ike_sa_t *,proposal_t*,chunk_t,chunk_t,chunk_t,bool,prf_t*,prf_t*)) derive_keys;
 	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
@@ -1935,8 +1930,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->signer_in = NULL;
 	this->signer_out = NULL;
 	this->prf = NULL;
-	this->auth_verify = NULL;
-	this->auth_build = NULL;
+	this->skp_verify = chunk_empty;
+	this->skp_build = chunk_empty;
  	this->child_prf = NULL;
 	this->nat_here = FALSE;
 	this->nat_there = FALSE;
