@@ -24,10 +24,10 @@
 #include <sys/types.h>
 #include <sys/queue.h>
 #include <unistd.h>
+#include <linux/xfrm.h>
 
 #include "kameipsec.h"
 #include "linux26/rtnetlink.h"
-#include "linux26/xfrm.h"
 
 #include <freeswan.h>
 #include <pfkeyv2.h>
