@@ -100,6 +100,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 {
     int pid, i;
     struct stat stb;
+    char buffer[BUF_LEN], buffer1[BUF_LEN];
     int argc = 1;
     char *arg[] = {
 	CHARON_CMD, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -122,11 +123,9 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     }
     if (cfg->setup.crlcheckinterval > 0)
     {
-	char buffer[BUF_LEN];
-
-	snprintf(buffer, BUF_LEN, "%u", cfg->setup.crlcheckinterval);
+	snprintf(buffer1, BUF_LEN, "%u", cfg->setup.crlcheckinterval);
 	arg[argc++] = "--crlcheckinterval";
-	arg[argc++] = buffer;
+	arg[argc++] = buffer1;
     }
     if (cfg->setup.eapdir)
     {
@@ -135,7 +134,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     }
 
     {   /* parse debug string */
-    	char *pos, *level, *buf_pos, type[4], buffer[BUF_LEN];
+    	char *pos, *level, *buf_pos, type[4];
 	pos = cfg->setup.charondebug;
 	buf_pos = buffer;
 	while (pos && sscanf(pos, "%4s %d,", type, &level) == 2)
