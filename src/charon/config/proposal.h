@@ -164,7 +164,6 @@ struct proposal_t {
 	 * @brief Get the algorithm for a type to use.
 	 * 
 	 * If there are multiple algorithms, only the first is returned.
-	 * Result is still owned by proposal, do not modify!
 	 * 
 	 * @param this					calling object
 	 * @param type					kind of algorithm
@@ -172,6 +171,15 @@ struct proposal_t {
 	 * @return						TRUE if algorithm of this kind available
 	 */
 	bool (*get_algorithm) (proposal_t *this, transform_type_t type, algorithm_t** algo);
+	
+	/**
+	 * @brief Check if the proposal has a specific DH group.
+	 * 
+	 * @param this					calling object
+	 * @param group					group to check for
+	 * @return						TRUE if algorithm included
+	 */
+	bool (*has_dh_group) (proposal_t *this, diffie_hellman_group_t group);
 
 	/**
 	 * @brief Compare two proposal, and select a matching subset.

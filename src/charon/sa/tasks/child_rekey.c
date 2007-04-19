@@ -183,7 +183,12 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 	u_int32_t spi;
 	child_sa_t *to_delete;
 	
-	this->child_create->task.process(&this->child_create->task, message);
+	if (this->child_create->task.process(&this->child_create->task, message) == NEED_MORE)
+	{
+		/* bad DH group while rekeying, try again */
+		this->child_create->task.migrate(&this->child_create->task, this->ike_sa);
+		return NEED_MORE;
+	}
 	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
 	{
 		/* establishing new child failed, reuse old. but not when we

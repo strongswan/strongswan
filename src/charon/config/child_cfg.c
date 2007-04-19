@@ -120,9 +120,26 @@ static void add_proposal(private_child_cfg_t *this, proposal_t *proposal)
 }
 
 /**
+ * strip out DH groups from a proposal
+ */
+static void strip_dh_from_proposal(proposal_t *proposal)
+{
+	iterator_t *iterator;
+	algorithm_t *algo;
+	
+	iterator = proposal->create_algorithm_iterator(proposal, DIFFIE_HELLMAN_GROUP);
+	while (iterator->iterate(iterator, (void**)&algo))
+	{
+		iterator->remove(iterator);
+		free(algo);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implementation of child_cfg_t.get_proposals
  */
-static linked_list_t* get_proposals(private_child_cfg_t *this)
+static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 {
 	iterator_t *iterator;
 	proposal_t *current;
@@ -132,6 +149,10 @@ static linked_list_t* get_proposals(private_child_cfg_t *this)
 	while (iterator->iterate(iterator, (void**)&current))
 	{
 		current = current->clone(current);
+		if (strip_dh)
+		{
+			strip_dh_from_proposal(current);
+		}
 		proposals->insert_last(proposals, current);
 	}
 	iterator->destroy(iterator);
@@ -142,7 +163,8 @@ static linked_list_t* get_proposals(private_child_cfg_t *this)
 /**
  * Implementation of child_cfg_t.get_name
  */
-static proposal_t* select_proposal(private_child_cfg_t*this, linked_list_t *proposals)
+static proposal_t* select_proposal(private_child_cfg_t*this,
+								   linked_list_t *proposals, bool strip_dh)
 {
 	iterator_t *stored_iter, *supplied_iter;
 	proposal_t *stored, *supplied, *selected = NULL;
@@ -156,7 +178,18 @@ static proposal_t* select_proposal(private_child_cfg_t*this, linked_list_t *prop
 		supplied_iter->reset(supplied_iter);
 		while (supplied_iter->iterate(supplied_iter, (void**)&supplied))
 		{
-			selected = stored->select(stored, supplied);
+			if (strip_dh)
+			{
+				/* remove DH groups on a copy */
+				stored = stored->clone(stored);
+				strip_dh_from_proposal(stored);
+				selected = stored->select(stored, supplied);
+				stored->destroy(stored);
+			}
+			else
+			{
+				selected = stored->select(stored, supplied);
+			}
 			if (selected)
 			{
 				break;
@@ -329,6 +362,29 @@ static mode_t get_mode(private_child_cfg_t *this)
 }
 
 /**
+ * Implementation of child_cfg_t.get_dh_group.
+ */
+static diffie_hellman_group_t get_dh_group(private_child_cfg_t *this)
+{
+	iterator_t *iterator;
+	proposal_t *proposal;
+	algorithm_t *algo;
+	diffie_hellman_group_t dh_group = MODP_NONE;
+	
+	iterator = this->proposals->create_iterator(this->proposals, TRUE);
+	while (iterator->iterate(iterator, (void**)&proposal))
+	{
+		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &algo))
+		{
+			dh_group = algo->algorithm;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	return dh_group;
+}
+
+/**
  * Implementation of child_cfg_t.get_name
  */
 static void get_ref(private_child_cfg_t *this)
@@ -369,12 +425,13 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.add_traffic_selector = (void (*)(child_cfg_t*,bool,traffic_selector_t*))add_traffic_selector;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_cfg_t*,bool,linked_list_t*,host_t*))get_traffic_selectors;
 	this->public.add_proposal = (void (*) (child_cfg_t*,proposal_t*))add_proposal;
-	this->public.get_proposals = (linked_list_t* (*) (child_cfg_t*))get_proposals;
-	this->public.select_proposal = (proposal_t* (*) (child_cfg_t*,linked_list_t*))select_proposal;
+	this->public.get_proposals = (linked_list_t* (*) (child_cfg_t*,bool))get_proposals;
+	this->public.select_proposal = (proposal_t* (*) (child_cfg_t*,linked_list_t*,bool))select_proposal;
 	this->public.get_updown = (char* (*) (child_cfg_t*))get_updown;
 	this->public.get_hostaccess = (bool (*) (child_cfg_t*))get_hostaccess;
 	this->public.get_mode = (mode_t (*) (child_cfg_t *))get_mode;
 	this->public.get_lifetime = (u_int32_t (*) (child_cfg_t *,bool))get_lifetime;
+	this->public.get_dh_group = (diffie_hellman_group_t(*)(child_cfg_t*)) get_dh_group;
 	this->public.get_ref = (void (*) (child_cfg_t*))get_ref;
 	this->public.destroy = (void (*) (child_cfg_t*))destroy;
 	

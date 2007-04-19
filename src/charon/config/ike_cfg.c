@@ -176,36 +176,6 @@ static diffie_hellman_group_t get_dh_group(private_ike_cfg_t *this)
 }
 
 /**
- * Implementation of ike_cfg_t.check_dh_group.
- */
-static bool check_dh_group(private_ike_cfg_t *this,
-						   diffie_hellman_group_t dh_group)
-{
-	iterator_t *prop_iter, *alg_iter;
-	proposal_t *proposal;
-	algorithm_t *algo;
-	
-	prop_iter = this->proposals->create_iterator(this->proposals, TRUE);
-	while (prop_iter->iterate(prop_iter, (void**)&proposal))
-	{
-		alg_iter = proposal->create_algorithm_iterator(proposal,
-													   DIFFIE_HELLMAN_GROUP);
-		while (alg_iter->iterate(alg_iter, (void**)&algo))
-		{
-			if (algo->algorithm == dh_group)
-			{
-				prop_iter->destroy(prop_iter);
-				alg_iter->destroy(alg_iter);
-				return TRUE;
-			}
-		}
-		alg_iter->destroy(alg_iter);
-	}
-	prop_iter->destroy(prop_iter);
-	return FALSE;
-}
-
-/**
  * Implementation of ike_cfg_t.get_ref.
  */
 static void get_ref(private_ike_cfg_t *this)
@@ -243,7 +213,6 @@ ike_cfg_t *ike_cfg_create(bool certreq, host_t *my_host, host_t *other_host)
 	this->public.get_proposals = (linked_list_t*(*)(ike_cfg_t*))get_proposals;
 	this->public.select_proposal = (proposal_t*(*)(ike_cfg_t*,linked_list_t*))select_proposal;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(ike_cfg_t*)) get_dh_group;
-	this->public.check_dh_group = (bool(*)(ike_cfg_t*,diffie_hellman_group_t)) check_dh_group;
 	this->public.get_ref = (void(*)(ike_cfg_t*))get_ref;
 	this->public.destroy = (void(*)(ike_cfg_t*))destroy;
 	

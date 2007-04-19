@@ -96,9 +96,10 @@ struct child_cfg_t {
 	 * Resulting list and all of its proposals must be freed after use.
 	 * 
 	 * @param this			calling object
+	 * @param strip_dh		TRUE strip out diffie hellman groups
 	 * @return				list of proposals
 	 */
-	linked_list_t* (*get_proposals)(child_cfg_t *this);
+	linked_list_t* (*get_proposals)(child_cfg_t *this, bool strip_dh);
 	
 	/**
 	 * @brief Select a proposal from a supplied list.
@@ -107,9 +108,11 @@ struct child_cfg_t {
 	 * 
 	 * @param this			calling object
 	 * @param proposals		list from from wich proposals are selected
+	 * @param strip_dh		TRUE strip out diffie hellman groups
 	 * @return				selected proposal, or NULL if nothing matches
 	 */
-	proposal_t* (*select_proposal)(child_cfg_t*this, linked_list_t *proposals);
+	proposal_t* (*select_proposal)(child_cfg_t*this, linked_list_t *proposals,
+								   bool strip_dh);
 	
 	/**
 	 * @brief Add a traffic selector to the config.
@@ -187,6 +190,14 @@ struct child_cfg_t {
 	 * @return				lifetime in seconds
 	 */
 	mode_t (*get_mode) (child_cfg_t *this);
+	
+	/**
+	 * @brief Get the DH group to use for CHILD_SA setup.
+	 * 
+	 * @param this		calling object
+	 * @return			dh group to use
+	 */
+	diffie_hellman_group_t (*get_dh_group)(child_cfg_t *this);
 	
 	/**
 	 * @brief Get a new reference.

@@ -144,39 +144,6 @@ static void add_algorithm(private_proposal_t *this, transform_type_t type, u_int
 }
 
 /**
- * Implements proposal_t.get_algorithm.
- */
-static bool get_algorithm(private_proposal_t *this, transform_type_t type, algorithm_t** algo)
-{
-	linked_list_t *list;
-	switch (type)
-	{
-		case ENCRYPTION_ALGORITHM:
-			list = this->encryption_algos;
-			break;
-		case INTEGRITY_ALGORITHM:
-			list = this->integrity_algos;
-			break;
-		case PSEUDO_RANDOM_FUNCTION:
-			list = this->prf_algos;
-			break;
-		case DIFFIE_HELLMAN_GROUP:
-			list = this->dh_groups;
-			break;
-		case EXTENDED_SEQUENCE_NUMBERS:
-			list = this->esns;
-			break;
-		default:
-			return FALSE;
-	}
-	if (list->get_first(list, (void**)algo) != SUCCESS)
-	{
-		return FALSE;
-	}
-	return TRUE;
-}
-
-/**
  * Implements proposal_t.create_algorithm_iterator.
  */
 static iterator_t *create_algorithm_iterator(private_proposal_t *this, transform_type_t type)
@@ -197,6 +164,50 @@ static iterator_t *create_algorithm_iterator(private_proposal_t *this, transform
 			break;
 	}
 	return NULL;
+}
+
+/**
+ * Implements proposal_t.get_algorithm.
+ */
+static bool get_algorithm(private_proposal_t *this, transform_type_t type, algorithm_t** algo)
+{
+	iterator_t *iterator = create_algorithm_iterator(this, type);
+	if (iterator->iterate(iterator, (void**)algo))
+	{
+		iterator->destroy(iterator);
+		return TRUE;
+	}
+	iterator->destroy(iterator);
+	return FALSE;
+}
+
+/**
+ * Implements proposal_t.has_dh_group
+ */
+static bool has_dh_group(private_proposal_t *this, diffie_hellman_group_t group)
+{
+	algorithm_t *current;
+	iterator_t *iterator;
+	bool result = FALSE;
+	
+	iterator = this->dh_groups->create_iterator(this->dh_groups, TRUE);
+	if (iterator->get_count(iterator))
+	{
+		while (iterator->iterate(iterator, (void**)&current))
+		{
+			if (current->algorithm == group)
+			{
+				result = TRUE;
+				break;
+			}
+		}
+	}
+	else if (group == MODP_NONE)
+	{
+		result = TRUE;
+	}
+	iterator->destroy(iterator);
+	return result;
 }
 
 /**
@@ -530,6 +541,7 @@ proposal_t *proposal_create(protocol_id_t protocol)
 	this->public.add_algorithm = (void (*)(proposal_t*,transform_type_t,u_int16_t,size_t))add_algorithm;
 	this->public.create_algorithm_iterator = (iterator_t* (*)(proposal_t*,transform_type_t))create_algorithm_iterator;
 	this->public.get_algorithm = (bool (*)(proposal_t*,transform_type_t,algorithm_t**))get_algorithm;
+	this->public.has_dh_group = (bool (*)(proposal_t*,diffie_hellman_group_t))has_dh_group;
 	this->public.select = (proposal_t* (*)(proposal_t*,proposal_t*))select_proposal;
 	this->public.get_protocol = (protocol_id_t(*)(proposal_t*))get_protocol;
 	this->public.set_spi = (void(*)(proposal_t*,u_int64_t))set_spi;

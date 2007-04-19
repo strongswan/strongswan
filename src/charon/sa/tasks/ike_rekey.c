@@ -75,14 +75,18 @@ static status_t build_i(private_ike_rekey_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
 	
-	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-														TRUE);
-	
-	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);
-	this->ike_init = ike_init_create(this->new_sa, TRUE, this->ike_sa);
+	/* create new SA only on first try */
+	if (this->new_sa == NULL)
+	{
+		this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+															TRUE);
+		
+		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);
+		this->ike_init = ike_init_create(this->new_sa, TRUE, this->ike_sa);
+		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
+	}
 	this->ike_init->task.build(&this->ike_init->task, message);
-	this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 
 	return NEED_MORE;
 }
@@ -162,22 +166,29 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 	job_t *job;
 	ike_sa_id_t *to_delete;
 
-	if (this->ike_init->task.process(&this->ike_init->task, message) == FAILED)
+	switch (this->ike_init->task.process(&this->ike_init->task, message))
 	{
-		/* rekeying failed, fallback to old SA */
-		if (!(this->collision &&
-			this->collision->get_type(this->collision) == IKE_DELETE))
-		{
-			job_t *job;
-			u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
-			job = (job_t*)rekey_ike_sa_job_create(
-									this->ike_sa->get_id(this->ike_sa), FALSE);
-			DBG1(DBG_IKE, "IKE_SA rekeying failed, "
-				 					"trying again in %d seconds", retry);
-			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-			charon->event_queue->add_relative(charon->event_queue, job, retry * 1000);
-		}
-		return SUCCESS;
+		case FAILED:
+			/* rekeying failed, fallback to old SA */
+			if (!(this->collision &&
+				this->collision->get_type(this->collision) == IKE_DELETE))
+			{
+				job_t *job;
+				u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
+				job = (job_t*)rekey_ike_sa_job_create(
+										this->ike_sa->get_id(this->ike_sa), FALSE);
+				DBG1(DBG_IKE, "IKE_SA rekeying failed, "
+					 					"trying again in %d seconds", retry);
+				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+				charon->event_queue->add_relative(charon->event_queue, job, retry * 1000);
+			}
+			return SUCCESS;
+		case NEED_MORE:
+			/* bad dh group, try again */
+			this->ike_init->task.migrate(&this->ike_init->task, this->new_sa);
+			return NEED_MORE;
+		default:
+			break;
 	}
 
 	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);

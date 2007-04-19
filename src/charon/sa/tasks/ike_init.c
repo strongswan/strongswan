@@ -69,7 +69,7 @@ struct private_ike_init_t {
 	/**
 	 * Diffie hellman object used to generate public DH value.
 	 */
-	diffie_hellman_t *diffie_hellman;
+	diffie_hellman_t *dh;
 	
 	/**
 	 * nonce chosen by us
@@ -151,7 +151,7 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 	message->add_payload(message, (payload_t*)nonce_payload);
 	
-	ke_payload = ke_payload_create_from_diffie_hellman(this->diffie_hellman);
+	ke_payload = ke_payload_create_from_diffie_hellman(this->dh);
 	message->add_payload(message, (payload_t*)ke_payload);
 }
 
@@ -183,33 +183,16 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			case KEY_EXCHANGE:
 			{
 				ke_payload_t *ke_payload = (ke_payload_t*)payload;
-				diffie_hellman_group_t dh_group;
-				chunk_t key_data;
 				
-				dh_group = ke_payload->get_dh_group_number(ke_payload);
-				
-				if (this->initiator)
+				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
+				if (!this->initiator)
 				{
-					if (dh_group != this->dh_group)
-					{
-						DBG1(DBG_IKE, "received a DH group not requested (%N)",
-							 diffie_hellman_group_names, dh_group);
-						break;
-					}
+					this->dh = diffie_hellman_create(this->dh_group);
 				}
-				else
+				if (this->dh)
 				{
-					this->dh_group = dh_group;
-					if (!this->config->check_dh_group(this->config, dh_group))
-					{
-						break;
-					}
-					this->diffie_hellman = diffie_hellman_create(dh_group);
-				}
-				if (this->diffie_hellman)
-				{
-					key_data = ke_payload->get_key_exchange_data(ke_payload);
-					this->diffie_hellman->set_other_public_value(this->diffie_hellman, key_data);
+					this->dh->set_other_public_value(this->dh,
+								ke_payload->get_key_exchange_data(ke_payload));
 				}
 				break;
 			}
@@ -246,11 +229,11 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	}
 
 	/* if the DH group is set via use_dh_group(), we already have a DH object */
-	if (!this->diffie_hellman)
+	if (!this->dh)
 	{
 		this->dh_group = this->config->get_dh_group(this->config);
-		this->diffie_hellman = diffie_hellman_create(this->dh_group);
-		if (this->diffie_hellman == NULL)
+		this->dh = diffie_hellman_create(this->dh_group);
+		if (this->dh == NULL)
 		{
 			SIG(IKE_UP_FAILED, "configured DH group %N not supported",
 				diffie_hellman_group_names, this->dh_group);
@@ -325,25 +308,29 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		return FAILED;
 	}
 	
-	if (this->diffie_hellman == NULL ||
-		this->diffie_hellman->get_shared_secret(this->diffie_hellman,
-												&secret) != SUCCESS)
+	if (this->dh == NULL ||
+		!this->proposal->has_dh_group(this->proposal, this->dh_group) ||
+		this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
 	{
-		chunk_t chunk;
-		u_int16_t dh_enc;
-		
-		SIG(IKE_UP_FAILED, "received inacceptable DH group (%N)",
-			 diffie_hellman_group_names, this->dh_group);
-		this->dh_group = this->config->get_dh_group(this->config);
-		dh_enc = htons(this->dh_group);
-		chunk.ptr = (u_int8_t*)&dh_enc;
-		chunk.len = sizeof(dh_enc);
-		message->add_notify(message, TRUE, INVALID_KE_PAYLOAD, chunk);
-		DBG1(DBG_IKE, "requesting DH group %N",
-			 diffie_hellman_group_names, this->dh_group);
+		algorithm_t *algo;
+		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
+										  &algo))
+		{
+			u_int16_t group = algo->algorithm;
+			SIG(CHILD_UP_FAILED, "DH group %N inacceptable, requesting %N",
+				diffie_hellman_group_names, this->dh_group,
+				diffie_hellman_group_names, group);
+			this->dh_group = group;
+			group = htons(group);
+			message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
+								chunk_from_thing(group));
+		}
+		else
+		{
+			SIG(IKE_UP_FAILED, "no acceptable proposal found");
+		}
 		return FAILED;
 	}
-
 	
 	if (this->old_sa)
 	{
@@ -404,25 +391,19 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 				case INVALID_KE_PAYLOAD:
 				{
 					chunk_t data;
-					diffie_hellman_group_t old_dh_group;
+					diffie_hellman_group_t bad_group;
 					
-					old_dh_group = this->dh_group;
+					bad_group = this->dh_group;
 					data = notify->get_notification_data(notify);
 					this->dh_group = ntohs(*((u_int16_t*)data.ptr));
-					
-					DBG1(DBG_IKE, "peer didn't accept DH group %N, it requested"
-						 " %N", diffie_hellman_group_names, old_dh_group,
-						 diffie_hellman_group_names, this->dh_group);
-					if (!this->config->check_dh_group(this->config, this->dh_group))
-					{
-						DBG1(DBG_IKE, "requested DH group %N not acceptable, "
-							"giving up", diffie_hellman_group_names,
-							this->dh_group);
-						iterator->destroy(iterator);
-						return FAILED;
+					DBG1(DBG_IKE, "peer didn't accept DH group %N, "
+						 "it requested %N", diffie_hellman_group_names,
+						 bad_group, diffie_hellman_group_names, this->dh_group);
+						 
+					if (this->old_sa == NULL)
+					{	/* reset the IKE_SA if we are not rekeying */
+						this->ike_sa->reset(this->ike_sa);
 					}
-					
-					this->ike_sa->reset(this->ike_sa);
 					
 					iterator->destroy(iterator);
 					return NEED_MORE;
@@ -468,9 +449,9 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		return FAILED;
 	}
 	
-	if (this->diffie_hellman == NULL ||
-		this->diffie_hellman->get_shared_secret(this->diffie_hellman,
-												&secret) != SUCCESS)
+	if (this->dh == NULL ||
+		!this->proposal->has_dh_group(this->proposal, this->dh_group) ||
+		this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
 	{
 		SIG(IKE_UP_FAILED, "peers DH group selection invalid");
 		return FAILED;
@@ -537,12 +518,12 @@ static chunk_t get_lower_nonce(private_ike_init_t *this)
 static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
 {
 	DESTROY_IF(this->proposal);
-	DESTROY_IF(this->diffie_hellman);
+	DESTROY_IF(this->dh);
 	chunk_free(&this->other_nonce);
 	
 	this->ike_sa = ike_sa;
 	this->proposal = NULL;
-	this->diffie_hellman = diffie_hellman_create(this->dh_group);
+	this->dh = diffie_hellman_create(this->dh_group);
 }
 
 /**
@@ -551,7 +532,7 @@ static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
 static void destroy(private_ike_init_t *this)
 {
 	DESTROY_IF(this->proposal);
-	DESTROY_IF(this->diffie_hellman);
+	DESTROY_IF(this->dh);
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
 	chunk_free(&this->cookie);
@@ -583,7 +564,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
 	this->dh_group = MODP_NONE;
-	this->diffie_hellman = NULL;
+	this->dh = NULL;
 	this->my_nonce = chunk_empty;
 	this->other_nonce = chunk_empty;
 	this->cookie = chunk_empty;

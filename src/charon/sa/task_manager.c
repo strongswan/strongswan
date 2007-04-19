@@ -279,7 +279,6 @@ static status_t build_request(private_task_manager_t *this)
 				if (activate_task(this, CHILD_CREATE))
 				{
 					exchange = CREATE_CHILD_SA;
-					activate_task(this, IKE_CONFIG);
 					break;
 				}
 				if (activate_task(this, CHILD_DELETE))
@@ -332,6 +331,11 @@ static status_t build_request(private_task_manager_t *this)
 					break;
 				case IKE_AUTHENTICATE:
 					exchange = IKE_AUTH;
+					break;
+				case CHILD_CREATE:
+				case CHILD_REKEY:
+				case IKE_REKEY:
+					exchange = CREATE_CHILD_SA;
 					break;
 				default:
 					continue;

@@ -110,17 +110,6 @@ struct ike_cfg_t {
 	diffie_hellman_group_t (*get_dh_group)(ike_cfg_t *this);
 	
 	/**
-	 * @brief Check if a suggested DH group is acceptable.
-	 * 
-	 * If we guess a wrong DH group for IKE_SA_INIT, the other
-	 * peer will send us a offer. But is this acceptable for us?
-	 * 
-	 * @param this		calling object
-	 * @return			TRUE if group acceptable
-	 */
-	bool (*check_dh_group) (ike_cfg_t *this, diffie_hellman_group_t dh_group);
-	
-	/**
 	 * @brief Get a new reference to this ike_cfg.
 	 *
 	 * Get a new reference to this ike_cfg by increasing
