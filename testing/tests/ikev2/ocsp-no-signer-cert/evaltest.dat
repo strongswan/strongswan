@@ -1,0 +1,5 @@
+moon::cat /var/log/daemon.log::received valid http response::YES
+moon::cat /var/log/daemon.log::received certificate is no ocsp signer - rejected::YES
+moon::cat /var/log/daemon.log::certificate status unknown::YES
+moon::ipsec status::rw.*ESTABLISHED::NO
+carol::ipsec status::home.*ESTABLISHED::NO
