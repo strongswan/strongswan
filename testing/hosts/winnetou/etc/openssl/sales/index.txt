@@ -1,3 +1,4 @@
 V	100322071017Z		01	unknown	/C=CH/O=Linux strongSwan/OU=Sales/CN=dave@strongswan.org
 V	100615195536Z		02	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=Research CA
 V	120323211811Z		03	unknown	/C=CH/O=Linux strongSwan/OU=Sales OCSP Signing Authority/CN=ocsp.sales.strongswan.org
+V	120418093600Z		04	unknown	/C=CH/O=Linux strongSwan/OU=Sales/CN=dave@strongswan.org
