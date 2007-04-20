@@ -1232,6 +1232,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->authKeyID = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
 	this->authority_flags = AUTH_NONE;
+	this->isCA = FALSE;
 	this->isOcspSigner = FALSE;
 	
 	/* public functions */
