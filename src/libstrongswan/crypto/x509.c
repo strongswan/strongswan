@@ -1232,6 +1232,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->authKeyID = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
 	this->authority_flags = AUTH_NONE;
+	this->isOcspSigner = FALSE;
 	
 	/* public functions */
 	this->public.equals = (bool (*) (const x509_t*,const x509_t*))equals;
