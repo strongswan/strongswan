@@ -171,11 +171,6 @@ struct private_local_credential_store_t {
 	 * list of X.509 CA information records
 	 */
 	linked_list_t *ca_infos;
-
-	/**
-	 * enforce strict crl policy
-	 */
-	bool strict;
 };
 
 
@@ -304,6 +299,29 @@ static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *th
 }
 
 /**
+ * Implementation of credential_store_t.get_issuer.
+ */
+static ca_info_t* get_issuer(private_local_credential_store_t *this, const x509_t *cert)
+{
+	ca_info_t *found = NULL;
+	ca_info_t *ca_info;
+
+	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
+
+	while (iterator->iterate(iterator, (void**)&ca_info))
+	{
+		if (ca_info->is_cert_issuer(ca_info, cert))
+		{
+			found = ca_info;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	return found;
+}
+
+/**
  * Implementation of local_credential_store_t.get_trusted_public_key.
  */
 static rsa_public_key_t *get_trusted_public_key(private_local_credential_store_t *this,
@@ -324,18 +342,30 @@ static rsa_public_key_t *get_trusted_public_key(private_local_credential_store_t
 		return NULL;
 	}
 
-	status = cert->get_status(cert);
-	if (status == CERT_REVOKED || status == CERT_UNTRUSTED || (this->strict && status != CERT_GOOD))
+	if (!cert->is_self_signed(cert))
 	{
-		DBG1(DBG_CFG, "certificate status: %N", cert_status_names, status);
-		return NULL;
-	}
-	if (status == CERT_GOOD && cert->get_until(cert) < time(NULL))
-	{
-		DBG1(DBG_CFG, "certificate is good but crl is stale");
-		return NULL;
-	}
+		ca_info_t *issuer = get_issuer(this, cert);
 
+		if (issuer == NULL)
+		{
+			DBG1(DBG_CFG, "issuer of public key not found");
+			return NULL;
+		}
+		status = cert->get_status(cert);
+
+		if (status == CERT_REVOKED
+		||  status == CERT_UNTRUSTED
+		|| (issuer->is_strict(issuer) && status != CERT_GOOD))
+		{
+			DBG1(DBG_CFG, "certificate status: %N", cert_status_names, status);
+			return NULL;
+		}
+		if (status == CERT_GOOD && cert->get_until(cert) < time(NULL))
+		{
+			DBG1(DBG_CFG, "certificate is good but crl is stale");
+			return NULL;
+		}
+	}
 	return cert->get_public_key(cert);
 }
 
@@ -428,29 +458,6 @@ static x509_t* get_ca_certificate_by_keyid(private_local_credential_store_t *thi
 		&&  chunk_equals(keyid, pubkey->get_keyid(pubkey)))
 		{
 			found = current_cert;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-
-	return found;
-}
-
-/**
- * Implementation of credential_store_t.get_issuer.
- */
-static ca_info_t* get_issuer(private_local_credential_store_t *this, const x509_t *cert)
-{
-	ca_info_t *found = NULL;
-	ca_info_t *ca_info;
-
-	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
-
-	while (iterator->iterate(iterator, (void**)&ca_info))
-	{
-		if (ca_info->is_cert_issuer(ca_info, cert))
-		{
-			found = ca_info;
 			break;
 		}
 	}
@@ -649,6 +656,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 		}
 		else
 		{
+			bool strict;
 			time_t nextUpdate;
 			cert_status_t status;
 			certinfo_t *certinfo = certinfo_create(cert->get_serialNumber(cert));
@@ -661,11 +669,15 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 				add_uris(issuer, cert);
 			}
 
+			strict = issuer->is_strict(issuer);
+			DBG1(DBG_CFG, "issuer %s a strict crl policy",
+				 strict ? "enforces":"does not enforce");
+
 			/* first check certificate revocation using ocsp */
 			status = issuer->verify_by_ocsp(issuer, certinfo, &this->public.credential_store);
 
 			/* if ocsp service is not available then fall back to crl */
-			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && this->strict))
+			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && strict))
 			{
 				status = issuer->verify_by_crl(issuer, certinfo, CRL_DIR);
 			}
@@ -680,7 +692,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 					cert->set_until(cert, nextUpdate);
 
 					/* if status information is stale */
-					if (this->strict && nextUpdate < time(NULL))
+					if (strict && nextUpdate < time(NULL))
 					{
 						DBG2(DBG_CFG, "certificate is good but status is stale");
 						certinfo->destroy(certinfo);
@@ -691,7 +703,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 					/* with strict crl policy the public key must have the same
 					 * lifetime as the validity of the ocsp status or crl lifetime
 					 */
-					if (this->strict && nextUpdate < until)
+					if (strict && nextUpdate < until)
 		    			until = nextUpdate;
 					break;
 				case CERT_REVOKED:
@@ -726,7 +738,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 				case CERT_UNDEFINED:
 				default:
 					DBG1(DBG_CFG, "certificate status unknown");
-					if (this->strict)
+					if (strict)
 					{
 						/* update status of end certificate in the credential store */
 						if (cert_copy)
@@ -1391,7 +1403,7 @@ static void destroy(private_local_credential_store_t *this)
 /**
  * Described in header.
  */
-local_credential_store_t * local_credential_store_create(bool strict)
+local_credential_store_t * local_credential_store_create(void)
 {
 	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
 	
@@ -1429,7 +1441,6 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->certs = linked_list_create();
 	this->auth_certs = linked_list_create();
 	this->ca_infos = linked_list_create();
-	this->strict = strict;
 
 	return (&this->public);
 }

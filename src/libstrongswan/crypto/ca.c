@@ -100,6 +100,7 @@ struct private_ca_info_t {
 /**
  * static options set by ca_info_set_options()
  */
+static strict_t strict_crl_policy = STRICT_NO;
 static bool cache_crls = FALSE;
 static u_int crl_check_interval = 0;
 
@@ -154,6 +155,23 @@ static bool is_cert_issuer(private_ca_info_t *this, const x509_t *cert)
 static bool is_crl_issuer(private_ca_info_t *this, const crl_t *crl)
 {
 	return crl->is_issuer(crl, this->cacert);
+}
+
+/**
+ * Implements ca_info_t.is_strict
+ */
+static bool is_strict(private_ca_info_t *this)
+{
+	bool strict = strict_crl_policy != STRICT_NO;
+
+	if (strict_crl_policy == STRICT_IFURI)
+	{
+		pthread_mutex_lock(&(this->mutex));
+		strict = this->crluris->get_count(this->crluris)   > 0 ||
+				 this->ocspuris->get_count(this->ocspuris) > 0;
+		pthread_mutex_unlock(&(this->mutex));
+	}
+	return strict;
 }
 
 /**
@@ -728,8 +746,9 @@ static void list(private_ca_info_t* this, FILE* out, bool utc)
 /*
  * Described in header.
  */
-void ca_info_set_options(bool cache, u_int interval)
+void ca_info_set_options(strict_t strict, bool cache, u_int interval)
 {
+	strict_crl_policy = strict;
 	cache_crls = cache;
 	crl_check_interval = interval;
 }
@@ -759,6 +778,7 @@ ca_info_t *ca_info_create(const char *name, x509_t *cacert)
 	this->public.equals_name_release_info = (bool (*) (ca_info_t*,const char*))equals_name_release_info;
 	this->public.is_cert_issuer = (bool (*) (ca_info_t*,const x509_t*))is_cert_issuer;
 	this->public.is_crl_issuer = (bool (*) (ca_info_t*,const crl_t*))is_crl_issuer;
+	this->public.is_strict = (bool (*) (ca_info_t*))is_strict;
 	this->public.add_info = (void (*) (ca_info_t*,const ca_info_t*))add_info;
 	this->public.add_crl = (void (*) (ca_info_t*,crl_t*))add_crl;
 	this->public.has_crl = (bool (*) (ca_info_t*))has_crl;

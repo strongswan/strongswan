@@ -61,6 +61,12 @@ static const char *LST_sendcert[] = {
      NULL
 };
 
+static const char *LST_strict[] = {
+    "no",
+    "yes",
+    "ifuri",
+     NULL
+};
 static const char *LST_dpd_action[] = {
     "none",
     "clear",
@@ -160,7 +166,7 @@ static const token_info_t token_info[] =
     { ARG_UINT, offsetof(starter_config_t, setup.overridemtu), NULL                },
     { ARG_TIME, offsetof(starter_config_t, setup.crlcheckinterval), NULL           },
     { ARG_ENUM, offsetof(starter_config_t, setup.cachecrls), LST_bool              },
-    { ARG_ENUM, offsetof(starter_config_t, setup.strictcrlpolicy), LST_bool        },
+    { ARG_ENUM, offsetof(starter_config_t, setup.strictcrlpolicy), LST_strict      },
     { ARG_ENUM, offsetof(starter_config_t, setup.nocrsend), LST_bool               },
     { ARG_ENUM, offsetof(starter_config_t, setup.nat_traversal), LST_bool          },
     { ARG_TIME, offsetof(starter_config_t, setup.keep_alive), NULL                 },

@@ -234,6 +234,15 @@ enum status_t {
 };
 
 /**
+ * used by strict_crl_policy
+ */
+typedef enum {
+	STRICT_NO,
+	STRICT_YES,
+	STRICT_IFURI
+} strict_t;
+
+/**
  * enum_names for type status_t.
  */
 extern enum_name_t *status_names;

@@ -54,11 +54,10 @@ struct local_credential_store_t {
 /**
  * @brief Creates a local_credential_store_t instance.
  *
- * @param  strict		enforce a strict crl policy
  * @return 				credential store instance.
  *
  * @ingroup config
  */
-local_credential_store_t *local_credential_store_create(bool strict);
+local_credential_store_t *local_credential_store_create(void);
 
 #endif /* LOCAL_CREDENTIAL_H_ */

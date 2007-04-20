@@ -46,6 +46,12 @@ typedef enum {
 	KEY_EXCHANGE_IKEV2
 } keyexchange_t;
 
+typedef enum {
+	STRICT_NO,
+	STRICT_YES,
+	STRICT_IFURI
+} strict_t;
+
 typedef struct starter_end starter_end_t;
 
 struct starter_end {
@@ -156,23 +162,23 @@ struct starter_config {
 		bool	plutostart;
 
 		/* pluto/charon keywords */
-		char	**plutodebug;
-		char	*charondebug;
-		char	*prepluto;
-		char	*postpluto;
-		bool	uniqueids;
-		u_int	overridemtu;
-		u_int	crlcheckinterval;
-		bool	cachecrls;
-		bool	strictcrlpolicy;
-		bool	nocrsend;
-		bool	nat_traversal;
-		u_int	keep_alive;
-		char	*virtual_private;
-		char	*eapdir;
-		char	*pkcs11module;
-		bool	pkcs11keepstate;
-		bool	pkcs11proxy;
+		char	 **plutodebug;
+		char	 *charondebug;
+		char	 *prepluto;
+		char	 *postpluto;
+		bool	 uniqueids;
+		u_int	 overridemtu;
+		u_int	 crlcheckinterval;
+		bool	 cachecrls;
+		strict_t strictcrlpolicy;
+		bool	 nocrsend;
+		bool	 nat_traversal;
+		u_int	 keep_alive;
+		char	 *virtual_private;
+		char	 *eapdir;
+		char	 *pkcs11module;
+		bool	 pkcs11keepstate;
+		bool	 pkcs11proxy;
 
 		/* KLIPS keywords */
 		char	**klipsdebug;

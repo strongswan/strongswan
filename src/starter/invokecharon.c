@@ -116,6 +116,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     if (cfg->setup.strictcrlpolicy)
     {
 	arg[argc++] = "--strictcrlpolicy";
+	arg[argc++] = cfg->setup.strictcrlpolicy == STRICT_IFURI ? "2":"1";
     }
     if (cfg->setup.cachecrls)
     {

@@ -220,8 +220,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 /**
  * Initialize the daemon, optional with a strict crl policy
  */
-static void initialize(private_daemon_t *this, bool strict, bool syslog,
-					   level_t levels[])
+static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 {
 	credential_store_t* credentials;
 	signal_t signal;
@@ -262,7 +261,7 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
-	this->public.credentials = (credential_store_t*)local_credential_store_create(strict);
+	this->public.credentials = (credential_store_t*)local_credential_store_create();
 	this->public.cfg_store = cfg_store_create();
 	this->public.local_backend = local_backend_create();
 	this->public.cfg_store->register_backend(this->public.cfg_store,
@@ -402,7 +401,7 @@ static void usage(const char *msg)
 int main(int argc, char *argv[])
 {
 	u_int crl_check_interval = 0;
-	bool strict_crl_policy = FALSE;
+	strict_t strict_crl_policy = STRICT_NO;
 	bool cache_crls = FALSE;
 	bool use_syslog = FALSE;
 	char *eapdir = IPSEC_EAPDIR;
@@ -428,7 +427,7 @@ int main(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
-			{ "strictcrlpolicy", no_argument, NULL, 'r' },
+			{ "strictcrlpolicy", required_argument, NULL, 'r' },
 			{ "cachecrls", no_argument, NULL, 'C' },
 			{ "crlcheckinterval", required_argument, NULL, 'x' },
 			{ "eapdir", required_argument, NULL, 'e' },
@@ -461,7 +460,7 @@ int main(int argc, char *argv[])
 				use_syslog = TRUE;
 				continue;
 			case 'r':
-				strict_crl_policy = TRUE;
+				strict_crl_policy = atoi(optarg);
 				continue;
 			case 'C':
 				cache_crls = TRUE;
@@ -487,13 +486,13 @@ int main(int argc, char *argv[])
 	charon = (daemon_t*)private_charon;
 	
 	/* initialize daemon */
-	initialize(private_charon, strict_crl_policy, use_syslog, levels);
+	initialize(private_charon, use_syslog, levels);
 
 	/* load pluggable EAP modules */
 	eap_method_load(eapdir);
 	
-	/* set cache_crls and crl_check_interval options */
-	ca_info_set_options(cache_crls, crl_check_interval);
+	/* set strict_crl_policy, cache_crls and crl_check_interval options */
+	ca_info_set_options(strict_crl_policy, cache_crls, crl_check_interval);
 
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)

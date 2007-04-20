@@ -26,7 +26,6 @@
 typedef struct ca_info_t ca_info_t;
 
 #include <library.h>
-#include <chunk.h>
 
 #include <credential_store.h>
 
@@ -79,6 +78,14 @@ struct ca_info_t {
 	 * @return				TRUE if the issuing ca has been found
 	 */
 	bool (*is_crl_issuer) (ca_info_t *this, const crl_t *crl);
+
+	/**
+	 * @brief Checks if the ca enforces a strict crl policy
+	 * 
+	 * @param this			ca info object
+	 * @return				TRUE if the crl policy is strict
+	 */
+	bool (*is_strict) (ca_info_t *this);
 
 	/**
 	 * @brief Merges info from a secondary ca info object
@@ -209,7 +216,7 @@ struct ca_info_t {
  * 
  * @ingroup crypto
  */
-void ca_info_set_options(bool cache, u_int interval);
+void ca_info_set_options(strict_t strict, bool cache, u_int interval);
 
 /**
  * @brief Create a ca info record
