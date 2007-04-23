@@ -267,6 +267,7 @@ static status_t build_request(private_task_manager_t *this)
 			case IKE_CREATED:
 				if (activate_task(this, IKE_INIT))
 				{
+					this->initiating.mid = 0;
 					exchange = IKE_SA_INIT;
 					activate_task(this, IKE_NATD);
 					activate_task(this, IKE_CERT);
