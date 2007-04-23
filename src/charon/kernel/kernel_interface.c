@@ -129,7 +129,7 @@ kernel_algorithm_t integrity_algs[] = {
 	{AUTH_HMAC_SHA2_512_256,	"sha512",		512},
 /*	{AUTH_DES_MAC,				"***",			0}, */
 /*	{AUTH_KPDK_MD5,				"***",			0}, */
-/*	{AUTH_AES_XCBC_96,			"***",			0}, */
+	{AUTH_AES_XCBC_96,			"xcbc(aes)",	128},
 	{END_OF_LIST, 				NULL,			0},
 };
 

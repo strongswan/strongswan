@@ -487,6 +487,14 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
 		}
 	}
+	else if (strncmp(alg.ptr, "aesxcbc", alg.len) == 0)
+	{
+		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_AES_XCBC_96, 0);
+		if (this->protocol == PROTO_IKE)
+		{
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, AUTH_AES_XCBC_96, 0);
+		}
+	}
 	else if (strncmp(alg.ptr, "modp768", alg.len) == 0)
 	{
 		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_768_BIT, 0);
@@ -598,11 +606,13 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,              0);
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_BLOWFISH,        256);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_AES_XCBC_96,       0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
 			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,  0);
 			break;
 		case PROTO_AH:
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_AES_XCBC_96,       0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
 			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,  0);
 			break;
