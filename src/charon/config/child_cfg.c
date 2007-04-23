@@ -175,26 +175,21 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 	/* compare all stored proposals with all supplied. Stored ones are preferred. */
 	while (stored_iter->iterate(stored_iter, (void**)&stored))
 	{
+		stored = stored->clone(stored);
 		supplied_iter->reset(supplied_iter);
 		while (supplied_iter->iterate(supplied_iter, (void**)&supplied))
 		{
 			if (strip_dh)
 			{
-				/* remove DH groups on a copy */
-				stored = stored->clone(stored);
 				strip_dh_from_proposal(stored);
-				selected = stored->select(stored, supplied);
-				stored->destroy(stored);
 			}
-			else
-			{
-				selected = stored->select(stored, supplied);
-			}
+			selected = stored->select(stored, supplied);
 			if (selected)
 			{
 				break;
 			}
 		}
+		stored->destroy(stored);
 		if (selected)
 		{
 			break;
