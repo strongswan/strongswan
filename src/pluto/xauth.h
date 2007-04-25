@@ -30,7 +30,7 @@ typedef struct {
 typedef struct {
     void *handle;
     bool (*get_secret) (xauth_t *xauth_secret);
-    bool (*verify_secret) (const xauth_t *xauth_secret);
+    bool (*verify_secret) (const char *conn_name, const xauth_t *xauth_secret);
 } xauth_module_t;
 
 extern xauth_module_t xauth_module;

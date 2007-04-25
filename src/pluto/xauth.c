@@ -44,7 +44,7 @@ xauth_init(void)
 		DBG_log("xauth module: found get_secret() function");
 	    }
 	)
-	xauth_module.verify_secret = (bool (*) (const xauth_t*))
+	xauth_module.verify_secret = (bool (*) (const char*, const xauth_t*))
 			dlsym(xauth_module.handle, "verify_secret");
 	DBG(DBG_CONTROL,
 	    if (xauth_module.verify_secret != NULL)

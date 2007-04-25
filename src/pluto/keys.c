@@ -647,7 +647,7 @@ xauth_get_secret(xauth_t *xauth_secret)
  * find a matching secret
  */
 static bool
-xauth_verify_secret(const xauth_t *xauth_secret)
+xauth_verify_secret(const char *conn_name, const xauth_t *xauth_secret)
 {
     bool found = FALSE;
     secret_t *s;

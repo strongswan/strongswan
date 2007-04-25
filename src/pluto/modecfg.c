@@ -978,7 +978,8 @@ xauth_inR1(struct msg_digest *md)
 		   , ia.xauth_secret.user_password.ptr)
 	)
 	/* verify the user credentials using a plugn function */
-	st->st_xauth.status = xauth_module.verify_secret(&ia.xauth_secret);
+	st->st_xauth.status = xauth_module.verify_secret(st->st_connection->name
+						       , &ia.xauth_secret);
 	plog("extended authentication %s", st->st_xauth.status? "was successful":"failed");
     }
 
