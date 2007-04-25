@@ -1,3 +1,10 @@
+strongswan-4.1.2
+----------------
+
+- The xauth_modules.verify_secret() function now passes the
+  connection name.
+
+
 strongswan-4.1.1
 ----------------
 
