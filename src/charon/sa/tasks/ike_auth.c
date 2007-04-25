@@ -215,7 +215,7 @@ static status_t process_auth(private_ike_auth_t *this, message_t *message)
  */
 static status_t process_id(private_ike_auth_t *this, message_t *message)
 {
-	identification_t *id;
+	identification_t *id, *req;
 	id_payload_t *idr, *idi;
 
 	idi = (id_payload_t*)message->get_payload(message, ID_INITIATOR);
@@ -230,6 +230,13 @@ static status_t process_id(private_ike_auth_t *this, message_t *message)
 	if (this->initiator)
 	{
 		id = idr->get_identification(idr);
+		req = this->ike_sa->get_other_id(this->ike_sa);
+		if (!id->matches(id, req, NULL))
+		{
+			SIG(IKE_UP_FAILED, "peer ID %D unacceptable, %D required", id, req);
+			id->destroy(id);
+			return FAILED;
+		}
 		this->ike_sa->set_other_id(this->ike_sa, id);
 	}
 	else

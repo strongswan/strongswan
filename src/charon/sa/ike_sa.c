@@ -362,14 +362,15 @@ static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 
 		set_other_host(this, other->clone(other));
 	}
-	if (this->my_id == NULL || this->my_id->contains_wildcards(this->my_id))
+	/* apply IDs if they are not already set */
+	if (this->my_id->contains_wildcards(this->my_id))
 	{
 		identification_t *my_id = this->peer_cfg->get_my_id(this->peer_cfg);
-
+		
 		DESTROY_IF(this->my_id);
 		this->my_id = my_id->clone(my_id);
 	}
-	if (this->other_id == NULL || this->other_id->contains_wildcards(this->other_id))
+	if (this->other_id->contains_wildcards(this->other_id))
 	{
 		identification_t *other_id = this->peer_cfg->get_other_id(this->peer_cfg);
 
