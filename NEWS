@@ -1,9 +1,18 @@
 strongswan-4.1.2
 ----------------
 
+- Support for an additional diffie hellman exchange when creating/rekeying
+  a CHILD_SA in IKEv2 (PFS). PFS is enabled when the proposal contains a
+  DH group (e.g. "esp=aes128-sha1-modp1536"). Further, DH group negotiation
+  is implemented properly for rekeying.
+
+- Support for the AES-XCBC-96 MAC algorithm for IPsec SAs when using IKEv2
+  (requires linux >= 2.6.20). It is enabled using e.g. "esp=aes256-aesxcbc".
+
+- Added support for EAP modules which do not establish an MSK.
+
 - The xauth_modules.verify_secret() function now passes the
   connection name.
-
 
 strongswan-4.1.1
 ----------------
