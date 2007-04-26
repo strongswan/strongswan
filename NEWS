@@ -9,6 +9,8 @@ strongswan-4.1.2
 - Support for the AES-XCBC-96 MAC algorithm for IPsec SAs when using IKEv2
   (requires linux >= 2.6.20). It is enabled using e.g. "esp=aes256-aesxcbc".
 
+- Working IPv4-in-IPv6 and IPv6-in-IPv4 tunnels for linux >= 2.6.21.
+
 - Added support for EAP modules which do not establish an MSK.
 
 - The xauth_modules.verify_secret() function now passes the
