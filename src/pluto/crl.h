@@ -52,6 +52,7 @@ struct x509crl {
                 /*       extnValue */
   chunk_t		 authKeyID;
   chunk_t		 authKeySerialNumber;
+  chunk_t		 crlNumber;
 
                 /* signatureAlgorithm */
   int                algorithm;

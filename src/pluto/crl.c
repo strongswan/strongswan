@@ -121,6 +121,7 @@ const x509crl_t empty_x509crl = {
                     /*         extnValue */
     { NULL, 0 }   , /*           authKeyID */
     { NULL, 0 }   , /*           authKeySerialNumber */
+    { NULL, 0 }   , /*           crlNumber */
     OID_UNKNOWN   , /*   algorithm */
     { NULL, 0 }     /*   signature */
 };
@@ -491,6 +492,12 @@ parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
 		    parse_authorityKeyIdentifier(object, level
 			, &crl->authKeyID, &crl->authKeySerialNumber);
 		}
+		else if (extn_oid == OID_CRL_NUMBER)
+		{
+		    if (!parse_asn1_simple_object(&object, ASN1_INTEGER, level, "crlNumber"))
+			return FALSE;
+		    crl->crlNumber = object;
+		}
 	    }
 	    break;
 	case CRL_OBJ_ALGORITHM:
@@ -735,7 +742,12 @@ list_crls(bool utc, bool strict)
 		timetoa(&crl->installed, utc), revoked);
 	dntoa(buf, BUF_LEN, crl->issuer);
 	whack_log(RC_COMMENT, "       issuer:   '%s'", buf);
-
+	if (crl->crlNumber.ptr != NULL)
+	{
+	    datatot(crl->crlNumber.ptr, crl->crlNumber.len, ':'
+		, buf, BUF_LEN);
+	    whack_log(RC_COMMENT, "       crlnumber: %s", buf);
+	}
 	list_distribution_points(crl->distributionPoints);
 
 	whack_log(RC_COMMENT, "       updates:   this %s",
