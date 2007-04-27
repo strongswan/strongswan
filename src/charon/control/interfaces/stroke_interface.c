@@ -1579,7 +1579,7 @@ interface_t *interface_create()
 	int i;
 
 	/* public functions */
-	this->public.interface.destroy = (void (*)(stroke_interface_t*))destroy;
+	this->public.interface.destroy = (void (*)(interface_t*))destroy;
 	
 	/* set up unix socket */
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -1618,5 +1618,5 @@ interface_t *interface_create()
 		}
 	}
 	
-	return (&this->public);
+	return (interface_t*)(&this->public);
 }
