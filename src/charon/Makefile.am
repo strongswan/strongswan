@@ -7,7 +7,7 @@ bus/bus.c bus/bus.h \
 bus/listeners/file_logger.c bus/listeners/file_logger.h \
 bus/listeners/sys_logger.c bus/listeners/sys_logger.h \
 config/backends/backend.h \
-config/backend_manager.c config/backend_maanger.h \
+config/backend_manager.c config/backend_manager.h \
 config/child_cfg.c config/child_cfg.h \
 config/credentials/local_credential_store.c config/credentials/local_credential_store.h \
 config/ike_cfg.c config/ike_cfg.h \
