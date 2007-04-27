@@ -96,6 +96,11 @@ struct private_crl_t {
 	identification_t *issuer;
 	
 	/**
+	 * CRL number
+	 */
+	chunk_t crlNumber;
+
+	/**
 	 * Time when the crl was generated
 	 */
 	time_t thisUpdate;
@@ -287,6 +292,14 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 					{
 						parse_authorityKeyIdentifier(object, level, &crl->authKeyID, &crl->authKeySerialNumber);
 					}
+					else if (extn_oid == OID_CRL_NUMBER)
+					{
+						if (!parse_asn1_simple_object(&object, ASN1_INTEGER, level, "crlNumber"))
+						{
+							return FALSE;
+						}
+						crl->crlNumber = object;
+					}
 				}
 				break;
 			case CRL_OBJ_ALGORITHM:
@@ -423,6 +436,10 @@ static void list(private_crl_t *this, FILE* out, bool utc)
 	fprintf(out, "%#T, revoked certs: %d\n", &this->installed, utc,
 					   this->revokedCertificates->get_count(this->revokedCertificates));
 	fprintf(out, "    issuer:    '%D'\n", this->issuer);
+	if (this->crlNumber.ptr)
+	{
+		fprintf(out, "    crlnumber:  %#B\n", &this->crlNumber);
+	}
 	fprintf(out, "    updates:    this %#T\n", &this->thisUpdate, utc);
 	fprintf(out, "                next %#T ",  &this->nextUpdate, utc);
 	if (this->nextUpdate == UNDEFINED_TIME)
@@ -462,6 +479,7 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 	this->crlDistributionPoints = linked_list_create();
 	this->tbsCertList = chunk_empty;
 	this->issuer = NULL;
+	this->crlNumber = chunk_empty;
 	this->revokedCertificates = linked_list_create();
 	this->authKeyID = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
