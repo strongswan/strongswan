@@ -690,6 +690,7 @@ static void destroy(private_socket_t *this)
  */
 socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 {
+	int key;
 	private_socket_t *this = malloc_thing(private_socket_t);
 
 	/* public functions */
@@ -705,6 +706,15 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 	this->send6 = 0;
 	this->send4_natt = 0;
 	this->send6_natt = 0;
+	
+	/* we open a AF_KEY socket to autoload the af_key module. Otherwise
+	 * setsockopt(IPSEC_POLICY) won't work. */
+	key = socket(AF_KEY, SOCK_RAW, PF_KEY_V2);
+	if (key == 0)
+	{
+		charon->kill(charon, "could not open AF_KEY socket");
+	}
+	close(key);
 	
 	this->recv4 = open_recv_socket(this, AF_INET);
 	if (this->recv4 == 0)
