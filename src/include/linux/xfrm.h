@@ -1,7 +1,7 @@
 #ifndef _LINUX_XFRM_H
 #define _LINUX_XFRM_H
 
-#include <linux/types.h>
+#include <stdint.h>
 
 /* All of the structures in this file may not change size as they are
  * passed into the kernel from userspace via netlink sockets.
@@ -12,8 +12,8 @@
  */
 typedef union
 {
-	__u32		a4;
-	__u32		a6[4];
+	uint32_t	a4;
+	uint32_t	a6[4];
 } xfrm_address_t;
 
 /* Ident of a specific xfrm_state. It is used on input to lookup
@@ -23,16 +23,16 @@ typedef union
 struct xfrm_id
 {
 	xfrm_address_t	daddr;
-	__u32		spi;
-	__u8		proto;
+	uint32_t	spi;
+	uint8_t		proto;
 };
 
 struct xfrm_sec_ctx {
-	__u8	ctx_doi;
-	__u8	ctx_alg;
-	__u16	ctx_len;
-	__u32	ctx_sid;
-	char	ctx_str[0];
+	uint8_t		ctx_doi;
+	uint8_t		ctx_alg;
+	uint16_t	ctx_len;
+	uint32_t	ctx_sid;
+	char		ctx_str[0];
 };
 
 /* Security Context Domains of Interpretation */
@@ -49,57 +49,57 @@ struct xfrm_selector
 {
 	xfrm_address_t	daddr;
 	xfrm_address_t	saddr;
-	__u16	dport;
-	__u16	dport_mask;
-	__u16	sport;
-	__u16	sport_mask;
-	__u16	family;
-	__u8	prefixlen_d;
-	__u8	prefixlen_s;
-	__u8	proto;
+	uint16_t	dport;
+	uint16_t	dport_mask;
+	uint16_t	sport;
+	uint16_t	sport_mask;
+	uint16_t	family;
+	uint8_t	prefixlen_d;
+	uint8_t	prefixlen_s;
+	uint8_t	proto;
 	int	ifindex;
 	uid_t	user;
 };
 
-#define XFRM_INF (~(__u64)0)
+#define XFRM_INF (~(uint64_t)0)
 
 struct xfrm_lifetime_cfg
 {
-	__u64	soft_byte_limit;
-	__u64	hard_byte_limit;
-	__u64	soft_packet_limit;
-	__u64	hard_packet_limit;
-	__u64	soft_add_expires_seconds;
-	__u64	hard_add_expires_seconds;
-	__u64	soft_use_expires_seconds;
-	__u64	hard_use_expires_seconds;
+	uint64_t	soft_byte_limit;
+	uint64_t	hard_byte_limit;
+	uint64_t	soft_packet_limit;
+	uint64_t	hard_packet_limit;
+	uint64_t	soft_add_expires_seconds;
+	uint64_t	hard_add_expires_seconds;
+	uint64_t	soft_use_expires_seconds;
+	uint64_t	hard_use_expires_seconds;
 };
 
 struct xfrm_lifetime_cur
 {
-	__u64	bytes;
-	__u64	packets;
-	__u64	add_time;
-	__u64	use_time;
+	uint64_t	bytes;
+	uint64_t	packets;
+	uint64_t	add_time;
+	uint64_t	use_time;
 };
 
 struct xfrm_replay_state
 {
-	__u32	oseq;
-	__u32	seq;
-	__u32	bitmap;
+	uint32_t	oseq;
+	uint32_t	seq;
+	uint32_t	bitmap;
 };
 
 struct xfrm_algo {
 	char	alg_name[64];
-	int	alg_key_len;    /* in bits */
+	int		alg_key_len;    /* in bits */
 	char	alg_key[0];
 };
 
 struct xfrm_stats {
-	__u32	replay_window;
-	__u32	replay;
-	__u32	integrity_failed;
+	uint32_t	replay_window;
+	uint32_t	replay;
+	uint32_t	integrity_failed;
 };
 
 enum
@@ -171,30 +171,30 @@ enum {
  * NOTE: Same format as sadb_x_sec_ctx
  */
 struct xfrm_user_sec_ctx {
-	__u16			len;
-	__u16			exttype;
-	__u8			ctx_alg;  /* LSMs: e.g., selinux == 1 */
-	__u8			ctx_doi;
-	__u16			ctx_len;
+	uint16_t		len;
+	uint16_t		exttype;
+	uint8_t			ctx_alg;  /* LSMs: e.g., selinux == 1 */
+	uint8_t			ctx_doi;
+	uint16_t		ctx_len;
 };
 
 struct xfrm_user_tmpl {
-	struct xfrm_id		id;
-	__u16			family;
-	xfrm_address_t		saddr;
-	__u32			reqid;
-	__u8			mode;
-	__u8			share;
-	__u8			optional;
-	__u32			aalgos;
-	__u32			ealgos;
-	__u32			calgos;
+	struct xfrm_id	id;
+	uint16_t		family;
+	xfrm_address_t	saddr;
+	uint32_t		reqid;
+	uint8_t			mode;
+	uint8_t			share;
+	uint8_t			optional;
+	uint32_t		aalgos;
+	uint32_t		ealgos;
+	uint32_t		calgos;
 };
 
 struct xfrm_encap_tmpl {
-	__u16		encap_type;
-	__u16		encap_sport;
-	__u16		encap_dport;
+	uint16_t		encap_type;
+	uint16_t		encap_sport;
+	uint16_t		encap_dport;
 	xfrm_address_t	encap_oa;
 };
 
@@ -235,90 +235,90 @@ enum xfrm_attr_type_t {
 
 struct xfrm_usersa_info {
 	struct xfrm_selector		sel;
-	struct xfrm_id			id;
-	xfrm_address_t			saddr;
+	struct xfrm_id				id;
+	xfrm_address_t				saddr;
 	struct xfrm_lifetime_cfg	lft;
 	struct xfrm_lifetime_cur	curlft;
-	struct xfrm_stats		stats;
-	__u32				seq;
-	__u32				reqid;
-	__u16				family;
-	__u8				mode; /* 0=transport,1=tunnel */
-	__u8				replay_window;
-	__u8				flags;
+	struct xfrm_stats			stats;
+	uint32_t					seq;
+	uint32_t					reqid;
+	uint16_t					family;
+	uint8_t						mode; /* 0=transport,1=tunnel */
+	uint8_t						replay_window;
+	uint8_t						flags;
 #define XFRM_STATE_NOECN	1
 #define XFRM_STATE_DECAP_DSCP	2
 #define XFRM_STATE_NOPMTUDISC	4
 };
 
 struct xfrm_usersa_id {
-	xfrm_address_t			daddr;
-	__u32				spi;
-	__u16				family;
-	__u8				proto;
+	xfrm_address_t	daddr;
+	uint32_t		spi;
+	uint16_t		family;
+	uint8_t			proto;
 };
 
 struct xfrm_aevent_id {
-	struct xfrm_usersa_id		sa_id;
-	__u32				flags;
+	struct xfrm_usersa_id	sa_id;
+	uint32_t				flags;
 };
 
 struct xfrm_userspi_info {
-	struct xfrm_usersa_info		info;
-	__u32				min;
-	__u32				max;
+	struct xfrm_usersa_info	info;
+	uint32_t				min;
+	uint32_t				max;
 };
 
 struct xfrm_userpolicy_info {
 	struct xfrm_selector		sel;
 	struct xfrm_lifetime_cfg	lft;
 	struct xfrm_lifetime_cur	curlft;
-	__u32				priority;
-	__u32				index;
-	__u8				dir;
-	__u8				action;
+	uint32_t					priority;
+	uint32_t					index;
+	uint8_t						dir;
+	uint8_t						action;
 #define XFRM_POLICY_ALLOW	0
 #define XFRM_POLICY_BLOCK	1
-	__u8				flags;
+	uint8_t						flags;
 #define XFRM_POLICY_LOCALOK	1	/* Allow user to override global policy */
-	__u8				share;
+	uint8_t						share;
 };
 
 struct xfrm_userpolicy_id {
-	struct xfrm_selector		sel;
-	__u32				index;
-	__u8				dir;
+	struct xfrm_selector	sel;
+	uint32_t				index;
+	uint8_t					dir;
 };
 
 struct xfrm_user_acquire {
-	struct xfrm_id			id;
-	xfrm_address_t			saddr;
+	struct xfrm_id				id;
+	xfrm_address_t				saddr;
 	struct xfrm_selector		sel;
 	struct xfrm_userpolicy_info	policy;
-	__u32				aalgos;
-	__u32				ealgos;
-	__u32				calgos;
-	__u32				seq;
+	uint32_t					aalgos;
+	uint32_t					ealgos;
+	uint32_t					calgos;
+	uint32_t					seq;
 };
 
 struct xfrm_user_expire {
 	struct xfrm_usersa_info		state;
-	__u8				hard;
+	uint8_t						hard;
 };
 
 struct xfrm_user_polexpire {
 	struct xfrm_userpolicy_info	pol;
-	__u8				hard;
+	uint8_t				hard;
 };
 
 struct xfrm_usersa_flush {
-	__u8				proto;
+	uint8_t				proto;
 };
 
 /* backwards compatibility for userspace */
 #define XFRMGRP_ACQUIRE		1
 #define XFRMGRP_EXPIRE		2
-#define XFRMGRP_SA		4
+#define XFRMGRP_SA			4
 #define XFRMGRP_POLICY		8
 
 enum xfrm_nlgroups {
