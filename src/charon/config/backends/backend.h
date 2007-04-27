@@ -30,7 +30,6 @@ typedef struct backend_t backend_t;
 #include <config/peer_cfg.h>
 #include <utils/linked_list.h>
 
-
 /**
  * @brief The interface for a configuration backend.
  *
@@ -54,28 +53,48 @@ struct backend_t {
 	 * @return					matching ike_config, or NULL if none found
 	 */
 	ike_cfg_t *(*get_ike_cfg)(backend_t *this, 
-								 host_t *my_host, host_t *other_host);
+							  host_t *my_host, host_t *other_host);
 	
 	/**
 	 * @brief Get a peer_cfg identified by two IDs.
+	 * 
+	 * Select a config for two IDs, the others certificate issuer, and
+	 * a AC certificate group. The hosts are just a hint to select the
+	 * correct config if multiple configs match.
 	 *
 	 * @param this				calling object
 	 * @param my_id				own ID
 	 * @param other_id			peers ID
+	 * @param my_host			address of own host
+	 * @param other_host		address of remote host
 	 * @return					matching peer_config, or NULL if none found
 	 */
 	peer_cfg_t *(*get_peer_cfg)(backend_t *this,
-								   identification_t *my_id,
-								   identification_t *other_id);
+								identification_t *my_id, identification_t *other_id,
+								identification_t *other_ca, char *other_group,
+							    host_t *my_host, host_t *other_host);
 	
 	/**
-	 * @brief Get a peer_cfg identified by its name.
+	 * @brief Check if a backend is writable and implements writable_backend_t.
 	 *
-	 * @param this				calling object
-	 * @param name				configs name
-	 * @return					matching peer_config, or NULL if none found
+	 * @param this		calling object
+	 * @return			TRUE if backend implements writable_backend_t.
 	 */
-	peer_cfg_t *(*get_peer_cfg_by_name)(backend_t *this, char *name);
+	bool (*is_writeable)(backend_t *this);
+	
+	/**
+	 * @brief Destroy a backend.
+	 *
+	 * @param this		calling object
+	 */
+	void (*destroy)(backend_t *this);
 };
 
+
+/**
+ * Construction to create a backend.
+ */
+typedef backend_t*(*backend_constructor_t)(void);
+
 #endif /* BACKEND_H_ */
+

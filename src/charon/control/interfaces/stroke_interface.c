@@ -40,7 +40,8 @@
 #include <crypto/x509.h>
 #include <crypto/ca.h>
 #include <crypto/crl.h>
-#include <control/controller.h>
+#include <control/interface_manager.h>
+#include <control/interfaces/interface.h>
 #include <processing/jobs/initiate_job.h>
 #include <processing/jobs/route_job.h>
 #include <utils/leak_detective.h>
@@ -55,19 +56,14 @@ struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
 typedef struct private_stroke_interface_t private_stroke_interface_t;
 
 /**
- * Private data of an stroke_t object.
+ * Private data of an stroke_interfacet object.
  */
 struct private_stroke_interface_t {
 
 	/**
-	 * Public part of stroke_t object.
+	 * Public part of stroke_interfacet object.
 	 */
-	stroke_t public;
-	
-	/**
-	 * backend to store configurations
-	 */
-	local_backend_t *backend;
+	stroke_interface_t public;
 		
 	/**
 	 * Unix socket to listen for strokes
@@ -445,7 +441,7 @@ static void stroke_add_conn(private_stroke_interface_t *this,
 	DBG2(DBG_CFG, "  updown: '%s'", msg->add_conn.me.updown);
 
 	/* have a look for an (almost) identical peer config to reuse */
-	iterator = this->backend->create_peer_cfg_iterator(this->backend);
+	iterator = charon->backends->create_iterator(charon->backends);
 	while (iterator->iterate(iterator, (void**)&peer_cfg))
 	{
 		ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
@@ -579,7 +575,7 @@ static void stroke_add_conn(private_stroke_interface_t *this,
 	if (!use_existing)
 	{
 		/* add config to backend */
-		this->backend->add_peer_cfg(this->backend, peer_cfg);
+		charon->backends->add_peer_cfg(charon->backends, peer_cfg);
 		DBG1(DBG_CFG, "added configuration '%s': %H[%D]...%H[%D]",
 			 msg->add_conn.name, my_host, my_id, other_host, other_id);
 	}
@@ -608,7 +604,7 @@ static void stroke_del_conn(private_stroke_interface_t *this,
 	pop_string(msg, &(msg->del_conn.name));
 	DBG1(DBG_CFG, "received stroke: delete connection '%s'", msg->del_conn.name);
 	
-	peer_iter = this->backend->create_peer_cfg_iterator(this->backend);
+	peer_iter = charon->backends->create_iterator(charon->backends);
 	while (peer_iter->iterate(peer_iter, (void**)&peer))
 	{
 		/* remove peer config with such a name */
@@ -673,6 +669,46 @@ static bool stroke_log(stroke_log_info_t *info, signal_t signal, level_t level,
 }
 
 /**
+ * get a peer configuration by its name, or a name of its children
+ */
+static peer_cfg_t *get_peer_cfg_by_name(char *name)
+{
+	iterator_t *i1, *i2;
+	peer_cfg_t *current, *found = NULL;
+	child_cfg_t *child;
+
+	i1 = charon->backends->create_iterator(charon->backends);
+	while (i1->iterate(i1, (void**)&current))
+	{
+	        /* compare peer_cfgs name first */
+	        if (streq(current->get_name(current), name))
+	        {
+	                found = current;
+	                found->get_ref(found);
+	                break;
+	        }
+	        /* compare all child_cfg names otherwise */
+	        i2 = current->create_child_cfg_iterator(current);
+	        while (i2->iterate(i2, (void**)&child))
+	        {
+	                if (streq(child->get_name(child), name))
+	                {
+	                        found = current;
+	                        found->get_ref(found);
+	                        break;
+	                }
+	        }
+	        i2->destroy(i2);
+	        if (found)
+	        {
+	                break;
+	        }
+	}
+	i1->destroy(i1);
+	return found;
+}
+
+/**
  * initiate a connection by name
  */
 static void stroke_initiate(private_stroke_interface_t *this,
@@ -685,8 +721,7 @@ static void stroke_initiate(private_stroke_interface_t *this,
 	pop_string(msg, &(msg->initiate.name));
 	DBG1(DBG_CFG, "received stroke: initiate '%s'", msg->initiate.name);
 	
-	peer_cfg = this->backend->get_peer_cfg_by_name(this->backend,
-												   msg->initiate.name);
+	peer_cfg = get_peer_cfg_by_name(msg->initiate.name);
 	if (peer_cfg == NULL)
 	{
 		fprintf(out, "no config named '%s'\n", msg->initiate.name);
@@ -711,8 +746,8 @@ static void stroke_initiate(private_stroke_interface_t *this,
 	info.out = out;
 	info.level = msg->output_verbosity;
 	
-	charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-								 (controller_cb_t)stroke_log, &info);
+	charon->interfaces->initiate(charon->interfaces, peer_cfg, child_cfg,
+								 (interface_manager_cb_t)stroke_log, &info);
 }
 
 /**
@@ -729,7 +764,7 @@ static void stroke_route(private_stroke_interface_t *this,
 	DBG1(DBG_CFG, "received stroke: %s '%s'",
 		 route ? "route" : "unroute", msg->route.name);
 	
-	peer_cfg = this->backend->get_peer_cfg_by_name(this->backend, msg->route.name);
+	peer_cfg = get_peer_cfg_by_name(msg->route.name);
 	if (peer_cfg == NULL)
 	{
 		fprintf(out, "no config named '%s'\n", msg->route.name);
@@ -1115,7 +1150,7 @@ static void stroke_status(private_stroke_interface_t *this,
 		list->destroy(list);
 	
 		fprintf(out, "Connections:\n");
-		iterator = this->backend->create_peer_cfg_iterator(this->backend);
+		iterator = charon->backends->create_iterator(charon->backends);
 		while (iterator->iterate(iterator, (void**)&peer_cfg))
 		{
 			if (peer_cfg->get_ike_version(peer_cfg) != 2 ||
@@ -1517,7 +1552,7 @@ static void stroke_receive(private_stroke_interface_t *this)
 }
 
 /**
- * Implementation of stroke_t.destroy.
+ * Implementation of interface_t.destroy.
  */
 static void destroy(private_stroke_interface_t *this)
 {
@@ -1537,16 +1572,14 @@ static void destroy(private_stroke_interface_t *this)
 /*
  * Described in header-file
  */
-stroke_t *stroke_create(local_backend_t *backend)
+interface_t *interface_create()
 {
 	private_stroke_interface_t *this = malloc_thing(private_stroke_interface_t);
 	mode_t old;
 	int i;
 
 	/* public functions */
-	this->public.destroy = (void (*)(stroke_t*))destroy;
-	
-	this->backend = backend;
+	this->public.interface.destroy = (void (*)(stroke_interface_t*))destroy;
 	
 	/* set up unix socket */
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);

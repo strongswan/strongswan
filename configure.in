@@ -75,9 +75,23 @@ AC_ARG_WITH(
 
 AC_ARG_WITH(
     [eapdir],
-    AS_HELP_STRING([--with-eapdir=dir],[path for pluggable EAP modules other than "ipsecdir/eap"]),
+    AS_HELP_STRING([--with-eapdir=dir],[path for pluggable EAP modules other than "ipsecdir/plugins/eap"]),
     [AC_SUBST(eapdir, "$withval")],
-    [AC_SUBST(eapdir, "${ipsecdir}/eap")]
+    [AC_SUBST(eapdir, "${ipsecdir}/plugins/eap")]
+)
+
+AC_ARG_WITH(
+    [backenddir],
+    AS_HELP_STRING([--with-backenddir=dir],[path for pluggable configuration backend modules other than "ipsecdir/plugins/backends"]),
+    [AC_SUBST(backenddir, "$withval")],
+    [AC_SUBST(backenddir, "${ipsecdir}/plugins/backends")]
+)
+
+AC_ARG_WITH(
+    [interfacedir],
+    AS_HELP_STRING([--with-interfacedir=dir],[path for pluggable control interface modules other than "ipsecdir/plugins/interfaces"]),
+    [AC_SUBST(interfacedir, "$withval")],
+    [AC_SUBST(interfacedir, "${ipsecdir}/plugins/interfaces")]
 )
 
 AC_ARG_WITH(
@@ -112,6 +126,26 @@ AC_ARG_ENABLE(
     fi]
 )
 AM_CONDITIONAL(USE_LIBLDAP, test x$ldap = xtrue)
+
+AC_ARG_ENABLE(
+    [dbus],
+    AS_HELP_STRING([--enable-dbus],[enable DBUS configuration and control interface (default is NO). Requires libdbus.]),
+    [if test x$enableval = xyes; then
+        dbus=true
+        AC_DEFINE(LIBDBUS)
+    fi]
+)
+AM_CONDITIONAL(USE_LIBDBUS, test x$dbus = xtrue)
+
+AC_ARG_ENABLE(
+    [xml],
+    AS_HELP_STRING([--enable-xml],[enable XML configuration and control interface (default is NO). Requires libxml.]),
+    [if test x$enableval = xyes; then
+        xml=true
+        AC_DEFINE(LIBXML)
+    fi]
+)
+AM_CONDITIONAL(USE_LIBXML, test x$xml = xtrue)
 
 AC_ARG_ENABLE(
     [smartcard],
@@ -199,6 +233,17 @@ if test "$http" = "true"; then
     AC_HAVE_LIBRARY([curl],[LIBS="$LIBS"],[AC_MSG_ERROR([HTTP enabled, but library curl not found])])
 fi
 
+if test "$dbus" = "true"; then
+	PKG_CHECK_MODULES(dbus, dbus-1,, AC_MSG_ERROR([No libdbus package information found]))
+	AC_SUBST(dbus_CFLAGS)
+	AC_SUBST(dbus_LIBS)
+fi
+
+if test "$xml" = "true"; then
+	PKG_CHECK_MODULES(xml, libxml-2.0,, AC_MSG_ERROR([No libxml2 package information found]))
+	AC_SUBST(xml_CFLAGS)
+	AC_SUBST(xml_LIBS)
+fi
 
 dnl =============================
 dnl  check required header files
@@ -236,7 +281,6 @@ AC_OUTPUT(
 	src/pluto/Makefile
 	src/whack/Makefile
 	src/charon/Makefile
-dnl	src/charon/testing/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile

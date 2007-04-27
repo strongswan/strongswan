@@ -511,7 +511,7 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		return NEED_MORE;
 	}
 	
-	config = charon->cfg_store->get_peer_cfg(charon->cfg_store,
+	config = charon->backends->get_peer_cfg(charon->backends,
 									this->ike_sa->get_my_id(this->ike_sa),
 									this->ike_sa->get_other_id(this->ike_sa));
 	if (config)

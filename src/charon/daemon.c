@@ -164,8 +164,7 @@ static void destroy(private_daemon_t *this)
 	/* we don't want to receive anything anymore... */
 	DESTROY_IF(this->public.receiver);
 	/* ignore all incoming user requests */
-	DESTROY_IF(this->public.stroke);
-	DESTROY_IF(this->public.controller);
+	DESTROY_IF(this->public.interfaces);
 	/* stop scheduing jobs */
 	DESTROY_IF(this->public.scheduler);
 	/* stop processing jobs */
@@ -178,8 +177,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.job_queue);
 	DESTROY_IF(this->public.event_queue);
 	DESTROY_IF(this->public.credentials);
-	DESTROY_IF(this->public.cfg_store);
-	DESTROY_IF(this->public.local_backend);
+	DESTROY_IF(this->public.backends);
 	sched_yield();
 	/* we hope the sender could send the outstanding deletes, but 
 	 * we shut down here at any cost */
@@ -262,10 +260,7 @@ static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
 	this->public.credentials = (credential_store_t*)local_credential_store_create();
-	this->public.cfg_store = cfg_store_create();
-	this->public.local_backend = local_backend_create();
-	this->public.cfg_store->register_backend(this->public.cfg_store,
-											&this->public.local_backend->backend);
+	this->public.backends = backend_manager_create();
 
 	/* initialize fetcher_t class */
 	fetcher_initialize();
@@ -280,8 +275,7 @@ static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	credentials->load_secrets(credentials);
 	
 	/* start building threads, we are multi-threaded NOW */
-	this->public.controller = controller_create();
-	this->public.stroke = stroke_create(this->public.local_backend);
+	this->public.interfaces = interface_manager_create();
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	this->public.scheduler = scheduler_create();
@@ -336,15 +330,13 @@ private_daemon_t *daemon_create(void)
 	this->public.job_queue = NULL;
 	this->public.event_queue = NULL;
 	this->public.credentials = NULL;
-	this->public.cfg_store = NULL;
-	this->public.local_backend = NULL;
+	this->public.backends = NULL;
 	this->public.sender= NULL;
 	this->public.receiver = NULL;
 	this->public.scheduler = NULL;
 	this->public.kernel_interface = NULL;
 	this->public.thread_pool = NULL;
-	this->public.controller = NULL;
-	this->public.stroke = NULL;
+	this->public.interfaces = NULL;
 	this->public.bus = NULL;
 	this->public.outlog = NULL;
 	this->public.syslog = NULL;

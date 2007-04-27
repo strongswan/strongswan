@@ -26,13 +26,13 @@
 typedef struct local_backend_t local_backend_t;
 
 #include <library.h>
-#include <config/backends/backend.h>
+#include <config/backends/writeable_backend.h>
 
 /**
  * @brief An in-memory backend to store configuration information.
  *
- * The local_backend_t stores the configuration in a simple list. Additional
- * to the backend_t functionality, it adds the modification (add/remove).
+ * The local_backend_t stores the configuration in a simple list. It
+ * implements both, backend_t and writeable_backend_t.
  *
  * @b Constructors:
  *  - local_backend_create()
@@ -42,50 +42,19 @@ typedef struct local_backend_t local_backend_t;
 struct local_backend_t {
 	
 	/**
-	 * Implements backend_t interface
+	 * Implements writable_backend_t interface
 	 */
-	backend_t backend;
-	
-	/**
-	 * @brief Add a peer_config to the backend.
-	 *
-	 * @param this		calling object
-	 * @param config	peer_config to add to the backend
-	 */
-	void (*add_peer_cfg)(local_backend_t *this, peer_cfg_t *config);
-	
-	/**
-	 * @brief Get a peer_config identified by name, or a name of its child_cfgs.
-	 *
-	 * @param this				calling object
-	 * @param name				name of the peer config
-	 * @return					matching peer_config, or NULL if none found
-	 */
-	peer_cfg_t *(*get_peer_cfg_by_name)(local_backend_t *this, char *name);
-	
-	/**
-	 * @brief Create an iterator over all peer configs.
-	 *
-	 * @param this		calling object
-	 * @return 			iterator over peer configs
-	 */
-	iterator_t* (*create_peer_cfg_iterator)(local_backend_t *this);
-	
-	/**
-	 * @brief Destroy a local backend.
-	 *
-	 * @param this		calling object
-	 */
-	void (*destroy)(local_backend_t *this);
+	writeable_backend_t backend;
 };
 
 /**
- * @brief Creates a local_backend_t instance.
+ * @brief Create a backend_t instance implemented as local backend.
  *
- * @return local_backend instance.
+ * @return backend instance.
  * 
  * @ingroup backends
  */
-local_backend_t *local_backend_create(void);
+backend_t *backend_create(void);
 
 #endif /* LOCAL_BACKEND_H_ */
+

@@ -1,17 +1,4 @@
-# SUBDIRS = . testing
 
-eap_LTLIBRARIES = libeapidentity.la
-
-# always build EAP Identity module
-libeapidentity_la_SOURCES = sa/authenticators/eap/eap_identity.h sa/authenticators/eap/eap_identity.c
-libeapidentity_la_LDFLAGS = -module
-
-# build optional EAP modules
-if BUILD_EAP_SIM
-  eap_LTLIBRARIES += libeapsim.la
-  libeapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
-  libeapsim_la_LDFLAGS = -module
-endif
 
 ipsec_PROGRAMS = charon
 
@@ -20,16 +7,14 @@ bus/bus.c bus/bus.h \
 bus/listeners/file_logger.c bus/listeners/file_logger.h \
 bus/listeners/sys_logger.c bus/listeners/sys_logger.h \
 config/backends/backend.h \
-config/backends/local_backend.c config/backends/local_backend.h \
-config/cfg_store.c config/cfg_store.h \
+config/backend_manager.c config/backend_maanger.h \
 config/child_cfg.c config/child_cfg.h \
 config/credentials/local_credential_store.c config/credentials/local_credential_store.h \
 config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
 config/proposal.c config/proposal.h \
 config/traffic_selector.c config/traffic_selector.h \
-control/controller.c control/controller.h \
-control/stroke_interface.c control/stroke_interface.h \
+control/interface_manager.c control/interface_manager.h \
 daemon.c daemon.h \
 encoding/generator.c encoding/generator.h \
 encoding/message.c encoding/message.h \
@@ -103,10 +88,58 @@ sa/tasks/task.c sa/tasks/task.h
 
 
 INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
-AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_EAPDIR=\"${eapdir}\"
+AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
+	-DIPSEC_EAPDIR=\"${eapdir}\" -DIPSEC_BACKENDDIR=\"${backenddir}\" -DIPSEC_INTERFACEDIR=\"${interfacedir}\"
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread -lm -ldl
 
 if USE_LIBCURL
-   charon_LDADD += -lcurl
+  charon_LDADD += -lcurl
+endif
+
+
+# build EAP plugins, EAP-Identity is always built
+#################################################
+eap_LTLIBRARIES =
+
+eap_LTLIBRARIES += libeapidentity.la
+libeapidentity_la_SOURCES = sa/authenticators/eap/eap_identity.h sa/authenticators/eap/eap_identity.c
+libeapidentity_la_LDFLAGS = -module
+
+if BUILD_EAP_SIM
+  eap_LTLIBRARIES += libeapsim.la
+  libeapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
+  libeapsim_la_LDFLAGS = -module
+endif
+
+# build backends, local backend is always built
+###############################################
+backend_LTLIBRARIES =
+
+backend_LTLIBRARIES += liblocal.la
+liblocal_la_SOURCES = config/backends/local_backend.h config/backends/local_backend.c
+liblocal_la_LDFLAGS = -module
+
+# build control interfaces, stroke interface is always built
+############################################################
+interface_LTLIBRARIES =
+
+interface_LTLIBRARIES += libstroke.la
+libstroke_la_SOURCES = control/interfaces/stroke_interface.h control/interfaces/stroke_interface.c
+libstroke_la_LDFLAGS = -module
+
+if USE_LIBDBUS
+  interface_LTLIBRARIES += libdbus.la
+  libdbus_la_SOURCES = control/interfaces/dbus_interface.h control/interfaces/dbus_interface.c
+  libdbus_la_LDFLAGS = -module
+  libdbus_la_LIBADD = ${dbus_LIBS}
+  INCLUDES += ${dbus_CFLAGS}
+endif
+
+if USE_LIBXML
+  interface_LTLIBRARIES += libxml.la
+  libxml_la_SOURCES = control/interfaces/xml_interface.h control/interfaces/xml_interface.c
+  libxml_la_LDFLAGS = -module
+  libxml_la_LIBADD = ${xml_LIBS}
+  INCLUDES += ${xml_CFLAGS}
 endif
 

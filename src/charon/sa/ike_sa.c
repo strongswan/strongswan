@@ -746,8 +746,8 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		if (this->ike_cfg == NULL)
 		{
 			job_t *job;
-			this->ike_cfg = charon->cfg_store->get_ike_cfg(charon->cfg_store,
-														   me, other);
+			this->ike_cfg = charon->backends->get_ike_cfg(charon->backends,
+														  me, other);
 			if (this->ike_cfg == NULL)
 			{
 				/* no config found for these hosts, destroy */

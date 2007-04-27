@@ -1,7 +1,7 @@
 /**
- * @file cfg_store.h
+ * @file backend_manager.h
  * 
- * @brief Interface cfg_store_t.
+ * @brief Interface backend_manager_t.
  *  
  */
 
@@ -20,10 +20,10 @@
  * for more details.
  */
 
-#ifndef CFG_STORE_H_
-#define CFG_STORE_H_
+#ifndef BACKEND_MANAGER_H_
+#define BACKEND_MANAGER_H_
 
-typedef struct cfg_store_t cfg_store_t;
+typedef struct backend_manager_t backend_manager_t;
 
 #include <library.h>
 #include <utils/host.h>
@@ -34,9 +34,9 @@ typedef struct cfg_store_t cfg_store_t;
 
 
 /**
- * @brief A multiplexer to use multiple cfg_store backends.
+ * @brief A multiplexer to use multiple backends.
  *
- * Charon allows the use of multiple cfg_store backends simultaneously. To
+ * Charon allows the use of multiple backend_manager backends simultaneously. To
  * access all this backends by a single call, this class wraps multiple
  * backends behind a single object.
  * Backends may be registered and unregister at runtime dynamically.
@@ -44,22 +44,20 @@ typedef struct cfg_store_t cfg_store_t;
 
    +---------+      +-----------+         +--------------+     |
    |         |      |           |       +--------------+ |     |
-   | daemon  |----->| cfg_store |     +--------------+ |-+  <==|==> IPC
-   |  core   |      |           |---->|   backends   |-+       |
+   | daemon  |----->| backend_- |     +--------------+ |-+  <==|==> IPC
+   |  core   |      | manager   |---->|   backends   |-+       |
    |         |----->|           |     +--------------+         |
    |         |      |           |                              |
    +---------+      +-----------+                              |
    
    @endverbatim
- * Configuration lookup is done only when acting as responder. For initating
- * the corresponding controller is responsible to get a config to initiate.
  *
  * @b Constructors:
- * - cfg_store_create()
+ * - backend_manager_create()
  * 
  * @ingroup config
  */
-struct cfg_store_t {
+struct backend_manager_t {
 	
 	/**
 	 * @brief Get an ike_config identified by two hosts.
@@ -69,7 +67,7 @@ struct cfg_store_t {
 	 * @param other_host		address of remote host
 	 * @return					matching ike_config, or NULL if none found
 	 */
-	ike_cfg_t *(*get_ike_cfg)(cfg_store_t *this, 
+	ike_cfg_t *(*get_ike_cfg)(backend_manager_t *this, 
 							  host_t *my_host, host_t *other_host);
 	
 	/**
@@ -80,40 +78,41 @@ struct cfg_store_t {
 	 * @param other_id			peers ID
 	 * @return					matching peer_config, or NULL if none found
 	 */
-	peer_cfg_t *(*get_peer_cfg)(cfg_store_t *this, identification_t *my_id,
+	peer_cfg_t *(*get_peer_cfg)(backend_manager_t *this, identification_t *my_id,
 								identification_t *other_id);
 	
 	/**
-	 * @brief Register a backend to be queried by the calls above.
+	 * @brief Add a peer_config to the first found writable backend.
 	 *
-	 * The backend first added is the most preferred.
-	 *
-	 * @param this 					calling object
+	 * @param this		calling object
+	 * @param config	peer_config to add to the backend
 	 */
-	void (*register_backend) (cfg_store_t *this, backend_t *backend);
+	void (*add_peer_cfg)(backend_manager_t *this, peer_cfg_t *config);
 	
 	/**
-	 * @brief Unregister a backend.
+	 * @brief Create an iterator over all peer configs of the writable backend.
 	 *
-	 * @param this 					calling object
+	 * @param this		calling object
+	 * @return 			iterator over peer configs
 	 */
-	void (*unregister_backend) (cfg_store_t *this, backend_t *backend);
+	iterator_t* (*create_iterator)(backend_manager_t *this);
 	
 	/**
-	 * @brief Destroys a cfg_store_t object.
+	 * @brief Destroys a backend_manager_t object.
 	 *
 	 * @param this 					calling object
 	 */
-	void (*destroy) (cfg_store_t *this);
+	void (*destroy) (backend_manager_t *this);
 };
 
 /**
- * @brief Create a new instance of the store.
+ * @brief Create a new instance of the manager and loads all backends.
  *
- * @return		cfg_store instance
+ * @return		backend_manager instance
  *
  * @ingroup config
  */
-cfg_store_t *cfg_store_create(void);
+backend_manager_t *backend_manager_create(void);
 
-#endif /*CFG_STORE_H_*/
+#endif /*BACKEND_MANAGER_H_*/
+

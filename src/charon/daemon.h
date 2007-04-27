@@ -37,14 +37,12 @@ typedef struct daemon_t daemon_t;
 #include <processing/job_queue.h>
 #include <processing/event_queue.h>
 #include <kernel/kernel_interface.h>
-#include <control/controller.h>
-#include <control/stroke_interface.h>
+#include <control/interface_manager.h>
 #include <bus/bus.h>
 #include <bus/listeners/file_logger.h>
 #include <bus/listeners/sys_logger.h>
 #include <sa/ike_sa_manager.h>
-#include <config/cfg_store.h>
-#include <config/backends/local_backend.h>
+#include <config/backend_manager.h>
 
 /**
  * @defgroup charon charon
@@ -132,9 +130,17 @@ typedef struct daemon_t daemon_t;
 /**
  * @defgroup control control
  *
- * Classes which control the daemon using IPC mechanisms.
+ * Handling of loadable control interface modules.
  *
  * @ingroup charon
+ */
+
+/**
+ * @defgroup interfaces interfaces
+ *
+ * Classes which control the daemon using IPC mechanisms.
+ *
+ * @ingroup control
  */
 
 /**
@@ -353,14 +359,9 @@ struct daemon_t {
 	ike_sa_manager_t *ike_sa_manager;
 	
 	/**
-	 * A connection_store_t instance.
+	 * Manager for the different configuration backends.
 	 */
-	cfg_store_t *cfg_store;
-	
-	/**
-	 * A backend for cfg_store using in-memory lists
-	 */
-	local_backend_t *local_backend;
+	backend_manager_t *backends;
 	
 	/**
 	 * A credential_store_t instance.
@@ -413,14 +414,9 @@ struct daemon_t {
 	kernel_interface_t *kernel_interface;
 	
 	/**
-	 * control the daemon
+	 * Interfaces for IPC
 	 */
-	controller_t *controller;;
-	
-	/**
-	 * IPC interface, as whack in pluto
-	 */
-	stroke_t *stroke;
+	interface_manager_t *interfaces;
 	
 	/**
 	 * @brief Shut down the daemon.

@@ -1,5 +1,5 @@
 /**
- * @file stroke.h
+ * @file stroke_interface.h
  *
  * @brief Interface of stroke_t.
  *
@@ -23,9 +23,9 @@
 #ifndef STROKE_INTERFACE_H_
 #define STROKE_INTERFACE_H_
 
-typedef struct stroke_t stroke_t;
+typedef struct stroke_interface_t stroke_interface_t;
 
-#include <config/backends/local_backend.h>
+#include <control/interfaces/interface.h>
 
 /**
  * @brief Stroke is a configuration and control interface which
@@ -39,27 +39,25 @@ typedef struct stroke_t stroke_t;
  * @b Constructors:
  * - stroke_create()
  * 
- * @ingroup control
+ * @ingroup interfaces
  */
-struct stroke_t {
+struct stroke_interface_t {
 	
 	/**
-	 * @brief Destroy a stroke_t instance.
-	 * 
-	 * @param this		stroke_t objec to destroy
+	 * implements interface_t.
 	 */
-	void (*destroy) (stroke_t *this);
+	interface_t interface;
 };
 
 
 /**
  * @brief Create the stroke interface and listen on the socket.
  * 
- * @param backend	backend to store received configurations
  * @return 			stroke_t object
  * 
- * @ingroup control
+ * @ingroup interfaces
  */
-stroke_t *stroke_create(local_backend_t *backend);
+interface_t *interface_create(void);
 
 #endif /* STROKE_INTERFACE_H_ */
+

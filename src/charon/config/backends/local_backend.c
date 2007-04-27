@@ -52,7 +52,7 @@ struct private_local_backend_t {
 };
 
 /**
- * implements cfg_store_t.get_ike_cfg.
+ * implements backen_t.get_ike_cfg.
  */
 static ike_cfg_t *get_ike_cfg(private_local_backend_t *this, 
 							  host_t *my_host, host_t *other_host)
@@ -116,11 +116,12 @@ static ike_cfg_t *get_ike_cfg(private_local_backend_t *this,
 }
 
 /**
- * implements cfg_store_t.get_peer.
+ * implements backend_t.get_peer.
  */			
-static peer_cfg_t *get_peer_cfg(private_local_backend_t *this, 
-								   identification_t *my_id,
-								   identification_t *other_id)
+static peer_cfg_t *get_peer_cfg(private_local_backend_t *this,
+								identification_t *my_id, identification_t *other_id,
+								identification_t *other_ca, char *other_group,
+							    host_t *my_host, host_t *other_host)
 {
 	peer_cfg_t *current, *found = NULL;
 	iterator_t *iterator;
@@ -166,58 +167,25 @@ static peer_cfg_t *get_peer_cfg(private_local_backend_t *this,
 }
 
 /**
- * implements cfg_store_t.get_peer_by_name.
- */					
-static peer_cfg_t *get_peer_cfg_by_name(private_local_backend_t *this,
-										char *name)
+ * Implementation of backend_t.is_writable.
+ */
+static bool is_writeable(private_local_backend_t *this)
 {
-	iterator_t *i1, *i2;
-	peer_cfg_t *current, *found = NULL;
-	child_cfg_t *child;
-	
-	i1 = this->cfgs->create_iterator(this->cfgs, TRUE);
-	while (i1->iterate(i1, (void**)&current))
-	{
-		/* compare peer_cfgs name first */
-		if (streq(current->get_name(current), name))
-		{
-			found = current;
-			found->get_ref(found);
-			break;
-		}
-		/* compare all child_cfg names otherwise */
-		i2 = current->create_child_cfg_iterator(current);
-		while (i2->iterate(i2, (void**)&child))
-		{
-			if (streq(child->get_name(child), name))
-			{
-				found = current;
-				found->get_ref(found);
-				break;
-			}
-		}
-		i2->destroy(i2);
-		if (found)
-		{
-			break;
-		}
-	}
-	i1->destroy(i1);
-	return found;
+    return TRUE;
 }
 
 /**
- * Implementation of local_backend_t.create_peer_cfg_iterator.
+ * Implementation of writable_backend_t.create_iterator.
  */
-static iterator_t* create_peer_cfg_iterator(private_local_backend_t *this)
+static iterator_t* create_iterator(private_local_backend_t *this)
 {
 	return this->cfgs->create_iterator_locked(this->cfgs, &this->mutex);
 }
 
 /**
- * Implementation of local_backend_t.add_peer_cfg.
+ * Implementation of writable_backend_t.add_peer_cfg.
  */
-static void add_peer_cfg(private_local_backend_t *this, peer_cfg_t *config)
+static void add_cfg(private_local_backend_t *this, peer_cfg_t *config)
 {
     pthread_mutex_lock(&this->mutex);
     this->cfgs->insert_last(this->cfgs, config);
@@ -225,7 +193,7 @@ static void add_peer_cfg(private_local_backend_t *this, peer_cfg_t *config)
 }
 
 /**
- * Implementation of local_backend_t.destroy.
+ * Implementation of backend_t.destroy.
  */
 static void destroy(private_local_backend_t *this)
 {
@@ -236,20 +204,20 @@ static void destroy(private_local_backend_t *this)
 /**
  * Described in header.
  */
-local_backend_t *local_backend_create(void)
+backend_t *backend_create(void)
 {
 	private_local_backend_t *this = malloc_thing(private_local_backend_t);
 	
-	this->public.backend.get_ike_cfg = (ike_cfg_t*(*)(backend_t*, host_t *, host_t *))get_ike_cfg;
-	this->public.backend.get_peer_cfg = (peer_cfg_t*(*)(backend_t*, identification_t *, identification_t *))get_peer_cfg;
-	this->public.create_peer_cfg_iterator = (iterator_t*(*)(local_backend_t*))create_peer_cfg_iterator;
-	this->public.get_peer_cfg_by_name = (peer_cfg_t*(*)(local_backend_t*, char *))get_peer_cfg_by_name;
-    this->public.add_peer_cfg = (void(*)(local_backend_t*, peer_cfg_t *))add_peer_cfg;
-    this->public.destroy = (void(*)(local_backend_t*))destroy;
+	this->public.backend.backend.get_ike_cfg = (ike_cfg_t*(*)(backend_t*, host_t *, host_t *))get_ike_cfg;
+	this->public.backend.backend.get_peer_cfg = (peer_cfg_t*(*)(backend_t*,identification_t*,identification_t*,identification_t*,char*,host_t*,host_t*))get_peer_cfg;
+    this->public.backend.backend.is_writeable = (bool(*)(backend_t*))is_writeable;
+    this->public.backend.backend.destroy = (void(*)(backend_t*))destroy;
+	this->public.backend.create_iterator = (iterator_t*(*)(writeable_backend_t*))create_iterator;
+    this->public.backend.add_cfg = (void(*)(writeable_backend_t*, peer_cfg_t *))add_cfg;
     
 	/* private variables */
 	this->cfgs = linked_list_create();
 	pthread_mutex_init(&this->mutex, NULL);
 	
-	return (&this->public);
+	return (&this->public.backend.backend);
 }

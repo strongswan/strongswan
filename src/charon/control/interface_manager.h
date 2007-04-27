@@ -1,7 +1,7 @@
 /**
- * @file controller.h
+ * @file interface_manager.h
  *
- * @brief Interface of controller_t.
+ * @brief Interface of interface_manager_t.
  *
  */
 
@@ -20,13 +20,13 @@
  * for more details.
  */
 
-#ifndef CONTROLLER_H_
-#define CONTROLLER_H_
+#ifndef INTERFACE_MANAGER_H_
+#define INTERFACE_MANAGER_H_
 
 #include <bus/bus.h>
 
 /**
- * callback to log things triggered by controller
+ * callback to log things triggered by interface_manager
  *
  * @param param			echoed parameter supplied when function invoked
  * @param signal		type of signal
@@ -37,23 +37,23 @@
  * @return				FALSE to return from invoked function
  * @ingroup control
  */
-typedef bool(*controller_cb_t)(void* param, signal_t signal, level_t level,
+typedef bool(*interface_manager_cb_t)(void* param, signal_t signal, level_t level,
 							   ike_sa_t* ike_sa, char* format, va_list args);
 
-typedef struct controller_t controller_t;
+typedef struct interface_manager_t interface_manager_t;
 
 /**
- * @brief The controller controls the daemon.
+ * @brief The interface_manager controls the daemon.
  *
- * The controller starts actions by creating jobs. It then tries to
+ * The interface_manager starts actions by creating jobs. It then tries to
  * evaluate the result of the operation by listening on the bus.
  * 
  * @b Constructors:
- * - controller_create()
+ * - interface_manager_create()
  * 
  * @ingroup control
  */
-struct controller_t {
+struct interface_manager_t {
 
 	/**
 	 * @brief Initiate a CHILD_SA, and if required, an IKE_SA.
@@ -68,26 +68,27 @@ struct controller_t {
 	 *						- FAILED, if setup failed
 	 *						- NEED_MORE, if callback returned FALSE
 	 */
-	status_t (*initiate)(controller_t *this,
+	status_t (*initiate)(interface_manager_t *this,
 						 peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-						 controller_cb_t callback, void *param);
+						 interface_manager_cb_t callback, void *param);
 	
 	/**
-	 * @brief Destroy a controller_t instance.
+	 * @brief Destroy a interface_manager_t instance.
 	 * 
-	 * @param this		controller_t objec to destroy
+	 * @param this		interface_manager_t objec to destroy
 	 */
-	void (*destroy) (controller_t *this);
+	void (*destroy) (interface_manager_t *this);
 };
 
 
 /**
- * @brief Create a controller instance.
+ * @brief Create a interface_manager instance and loads all interface modules.
  * 
- * @return 			controller_t object
+ * @return 			interface_manager_t object
  * 
  * @ingroup control
  */
-controller_t *controller_create();
+interface_manager_t *interface_manager_create(void);
 
-#endif /* CONTROLLER_H_ */
+#endif /* INTERFACE_MANAGER_H_ */
+
