@@ -13,6 +13,9 @@ strongswan-4.1.2
 
 - Added support for EAP modules which do not establish an MSK.
 
+- Removed the dependencies from the /usr/include/linux/ headers by
+  including xfrm.h, ipsec.h, and pfkeyv2.h.
+  
 - The xauth_modules.verify_secret() function now passes the
   connection name.
 
