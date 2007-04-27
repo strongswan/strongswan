@@ -42,6 +42,7 @@
     0x11                     "subjectAltName"		OID_SUBJECT_ALT_NAME
     0x12                     "issuerAltName"
     0x13                     "basicConstraints"		OID_BASIC_CONSTRAINTS
+    0x14                     "crlNumber"		OID_CRL_NUMBER
     0x15                     "reasonCode"		OID_CRL_REASON_CODE
     0x1F                     "crlDistributionPoints"	OID_CRL_DISTRIBUTION_POINTS
     0x20                     "certificatePolicies"
