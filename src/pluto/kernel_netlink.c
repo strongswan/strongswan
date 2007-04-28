@@ -25,9 +25,9 @@
 #include <sys/queue.h>
 #include <unistd.h>
 #include <linux/xfrm.h>
+#include "linux/rtnetlink.h"
 
 #include "kameipsec.h"
-#include "linux26/rtnetlink.h"
 
 #include <freeswan.h>
 #include <pfkeyv2.h>
