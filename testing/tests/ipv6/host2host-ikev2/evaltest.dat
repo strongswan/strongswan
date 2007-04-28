@@ -1,5 +1,5 @@
-moon::ipsec status::host-host.*ESTABLISHED::YES
-sun::ipsec status::ESTABLISHED::YES
+moon::ipsec status::host-host.*INSTALLED::YES
+sun::ipsec status::host-host.*INSTALLED::YES
 moon::ping6 -c 1 -p deadbeef ip6-sun.strongswan.org::64 bytes from ip6-sun.strongswan.org: icmp_seq=1::YES
 sun::tcpdump::IP6 ip6-moon.strongswan.org > ip6-sun.strongswan.org: ESP::YES
 sun::tcpdump::IP6 ip6-sun.strongswan.org > ip6-moon.strongswan.org: ESP::YES
