@@ -1,8 +1,7 @@
 #ifndef __LINUX_RTNETLINK_H
 #define __LINUX_RTNETLINK_H
 
-#include "netlink.h"
-#include <stdint.h>
+#include <linux/netlink.h>
 
 /****
  *		Routing/neighbour discovery messages.
@@ -310,16 +309,16 @@ struct rtnexthop
 
 struct rta_cacheinfo
 {
-	uint32_t	rta_clntref;
-	uint32_t	rta_lastuse;
-	int32_t		rta_expires;
-	uint32_t	rta_error;
-	uint32_t	rta_used;
+	__u32	rta_clntref;
+	__u32	rta_lastuse;
+	__s32	rta_expires;
+	__u32	rta_error;
+	__u32	rta_used;
 
 #define RTNETLINK_HAVE_PEERINFO 1
-	uint32_t	rta_id;
-	uint32_t	rta_ts;
-	uint32_t	rta_tsage;
+	__u32	rta_id;
+	__u32	rta_ts;
+	__u32	rta_tsage;
 };
 
 /* RTM_METRICS --- array of struct rtattr with types of RTAX_* */
@@ -364,23 +363,23 @@ enum
 
 struct rta_session
 {
-	uint8_t	proto;
-	uint8_t	pad1;
-	uint16_t	pad2;
+	__u8	proto;
+	__u8	pad1;
+	__u16	pad2;
 
 	union {
 		struct {
-			uint16_t	sport;
-			uint16_t	dport;
+			__u16	sport;
+			__u16	dport;
 		} ports;
 
 		struct {
-			uint8_t	type;
-			uint8_t	code;
-			uint16_t	ident;
+			__u8	type;
+			__u8	code;
+			__u16	ident;
 		} icmpt;
 
-		uint32_t		spi;
+		__u32		spi;
 	} u;
 };
 
@@ -424,10 +423,10 @@ enum
 
 struct ifa_cacheinfo
 {
-	uint32_t	ifa_prefered;
-	uint32_t	ifa_valid;
-	uint32_t	cstamp; /* created timestamp, hundredths of seconds */
-	uint32_t	tstamp; /* updated timestamp, hundredths of seconds */
+	__u32	ifa_prefered;
+	__u32	ifa_valid;
+	__u32	cstamp; /* created timestamp, hundredths of seconds */
+	__u32	tstamp; /* updated timestamp, hundredths of seconds */
 };
 
 
@@ -452,9 +451,9 @@ struct ndmsg
 	unsigned char	ndm_pad1;
 	unsigned short	ndm_pad2;
 	int		ndm_ifindex;	/* Link index			*/
-	uint16_t		ndm_state;
-	uint8_t		ndm_flags;
-	uint8_t		ndm_type;
+	__u16		ndm_state;
+	__u8		ndm_flags;
+	__u8		ndm_type;
 };
 
 enum
@@ -498,10 +497,10 @@ enum
 
 struct nda_cacheinfo
 {
-	uint32_t		ndm_confirmed;
-	uint32_t		ndm_used;
-	uint32_t		ndm_updated;
-	uint32_t		ndm_refcnt;
+	__u32		ndm_confirmed;
+	__u32		ndm_used;
+	__u32		ndm_updated;
+	__u32		ndm_refcnt;
 };
 
 
@@ -532,69 +531,69 @@ struct nda_cacheinfo
 
 struct ndt_stats
 {
-	uint64_t		ndts_allocs;
-	uint64_t		ndts_destroys;
-	uint64_t		ndts_hash_grows;
-	uint64_t		ndts_res_failed;
-	uint64_t		ndts_lookups;
-	uint64_t		ndts_hits;
-	uint64_t		ndts_rcv_probes_mcast;
-	uint64_t		ndts_rcv_probes_ucast;
-	uint64_t		ndts_periodic_gc_runs;
-	uint64_t		ndts_forced_gc_runs;
+	__u64		ndts_allocs;
+	__u64		ndts_destroys;
+	__u64		ndts_hash_grows;
+	__u64		ndts_res_failed;
+	__u64		ndts_lookups;
+	__u64		ndts_hits;
+	__u64		ndts_rcv_probes_mcast;
+	__u64		ndts_rcv_probes_ucast;
+	__u64		ndts_periodic_gc_runs;
+	__u64		ndts_forced_gc_runs;
 };
 
 enum {
 	NDTPA_UNSPEC,
-	NDTPA_IFINDEX,			/* uint32_t, unchangeable */
-	NDTPA_REFCNT,			/* uint32_t, read-only */
-	NDTPA_REACHABLE_TIME,		/* uint64_t, read-only, msecs */
-	NDTPA_BASE_REACHABLE_TIME,	/* uint64_t, msecs */
-	NDTPA_RETRANS_TIME,		/* uint64_t, msecs */
-	NDTPA_GC_STALETIME,		/* uint64_t, msecs */
-	NDTPA_DELAY_PROBE_TIME,		/* uint64_t, msecs */
-	NDTPA_QUEUE_LEN,		/* uint32_t */
-	NDTPA_APP_PROBES,		/* uint32_t */
-	NDTPA_UCAST_PROBES,		/* uint32_t */
-	NDTPA_MCAST_PROBES,		/* uint32_t */
-	NDTPA_ANYCAST_DELAY,		/* uint64_t, msecs */
-	NDTPA_PROXY_DELAY,		/* uint64_t, msecs */
-	NDTPA_PROXY_QLEN,		/* uint32_t */
-	NDTPA_LOCKTIME,			/* uint64_t, msecs */
+	NDTPA_IFINDEX,			/* __u32, unchangeable */
+	NDTPA_REFCNT,			/* __u32, read-only */
+	NDTPA_REACHABLE_TIME,		/* __u64, read-only, msecs */
+	NDTPA_BASE_REACHABLE_TIME,	/* __u64, msecs */
+	NDTPA_RETRANS_TIME,		/* __u64, msecs */
+	NDTPA_GC_STALETIME,		/* __u64, msecs */
+	NDTPA_DELAY_PROBE_TIME,		/* __u64, msecs */
+	NDTPA_QUEUE_LEN,		/* __u32 */
+	NDTPA_APP_PROBES,		/* __u32 */
+	NDTPA_UCAST_PROBES,		/* __u32 */
+	NDTPA_MCAST_PROBES,		/* __u32 */
+	NDTPA_ANYCAST_DELAY,		/* __u64, msecs */
+	NDTPA_PROXY_DELAY,		/* __u64, msecs */
+	NDTPA_PROXY_QLEN,		/* __u32 */
+	NDTPA_LOCKTIME,			/* __u64, msecs */
 	__NDTPA_MAX
 };
 #define NDTPA_MAX (__NDTPA_MAX - 1)
 
 struct ndtmsg
 {
-	uint8_t		ndtm_family;
-	uint8_t		ndtm_pad1;
-	uint16_t		ndtm_pad2;
+	__u8		ndtm_family;
+	__u8		ndtm_pad1;
+	__u16		ndtm_pad2;
 };
 
 struct ndt_config
 {
-	uint16_t		ndtc_key_len;
-	uint16_t		ndtc_entry_size;
-	uint32_t		ndtc_entries;
-	uint32_t		ndtc_last_flush;	/* delta to now in msecs */
-	uint32_t		ndtc_last_rand;		/* delta to now in msecs */
-	uint32_t		ndtc_hash_rnd;
-	uint32_t		ndtc_hash_mask;
-	uint32_t		ndtc_hash_chain_gc;
-	uint32_t		ndtc_proxy_qlen;
+	__u16		ndtc_key_len;
+	__u16		ndtc_entry_size;
+	__u32		ndtc_entries;
+	__u32		ndtc_last_flush;	/* delta to now in msecs */
+	__u32		ndtc_last_rand;		/* delta to now in msecs */
+	__u32		ndtc_hash_rnd;
+	__u32		ndtc_hash_mask;
+	__u32		ndtc_hash_chain_gc;
+	__u32		ndtc_proxy_qlen;
 };
 
 enum {
 	NDTA_UNSPEC,
 	NDTA_NAME,			/* char *, unchangeable */
-	NDTA_THRESH1,			/* uint32_t */
-	NDTA_THRESH2,			/* uint32_t */
-	NDTA_THRESH3,			/* uint32_t */
+	NDTA_THRESH1,			/* __u32 */
+	NDTA_THRESH2,			/* __u32 */
+	NDTA_THRESH3,			/* __u32 */
 	NDTA_CONFIG,			/* struct ndt_config, read-only */
 	NDTA_PARMS,			/* nested TLV NDTPA_* */
 	NDTA_STATS,			/* struct ndt_stats, read-only */
-	NDTA_GC_INTERVAL,		/* uint64_t, msecs */
+	NDTA_GC_INTERVAL,		/* __u64, msecs */
 	__NDTA_MAX
 };
 #define NDTA_MAX (__NDTA_MAX - 1)
@@ -660,53 +659,53 @@ enum
 
 struct prefix_cacheinfo
 {
-	uint32_t	preferred_time;
-	uint32_t	valid_time;
+	__u32	preferred_time;
+	__u32	valid_time;
 };
 
 /* The struct should be in sync with struct net_device_stats */
 struct rtnl_link_stats
 {
-	uint32_t	rx_packets;		/* total packets received	*/
-	uint32_t	tx_packets;		/* total packets transmitted	*/
-	uint32_t	rx_bytes;		/* total bytes received 	*/
-	uint32_t	tx_bytes;		/* total bytes transmitted	*/
-	uint32_t	rx_errors;		/* bad packets received		*/
-	uint32_t	tx_errors;		/* packet transmit problems	*/
-	uint32_t	rx_dropped;		/* no space in linux buffers	*/
-	uint32_t	tx_dropped;		/* no space available in linux	*/
-	uint32_t	multicast;		/* multicast packets received	*/
-	uint32_t	collisions;
+	__u32	rx_packets;		/* total packets received	*/
+	__u32	tx_packets;		/* total packets transmitted	*/
+	__u32	rx_bytes;		/* total bytes received 	*/
+	__u32	tx_bytes;		/* total bytes transmitted	*/
+	__u32	rx_errors;		/* bad packets received		*/
+	__u32	tx_errors;		/* packet transmit problems	*/
+	__u32	rx_dropped;		/* no space in linux buffers	*/
+	__u32	tx_dropped;		/* no space available in linux	*/
+	__u32	multicast;		/* multicast packets received	*/
+	__u32	collisions;
 
 	/* detailed rx_errors: */
-	uint32_t	rx_length_errors;
-	uint32_t	rx_over_errors;		/* receiver ring buff overflow	*/
-	uint32_t	rx_crc_errors;		/* recved pkt with crc error	*/
-	uint32_t	rx_frame_errors;	/* recv'd frame alignment error */
-	uint32_t	rx_fifo_errors;		/* recv'r fifo overrun		*/
-	uint32_t	rx_missed_errors;	/* receiver missed packet	*/
+	__u32	rx_length_errors;
+	__u32	rx_over_errors;		/* receiver ring buff overflow	*/
+	__u32	rx_crc_errors;		/* recved pkt with crc error	*/
+	__u32	rx_frame_errors;	/* recv'd frame alignment error */
+	__u32	rx_fifo_errors;		/* recv'r fifo overrun		*/
+	__u32	rx_missed_errors;	/* receiver missed packet	*/
 
 	/* detailed tx_errors */
-	uint32_t	tx_aborted_errors;
-	uint32_t	tx_carrier_errors;
-	uint32_t	tx_fifo_errors;
-	uint32_t	tx_heartbeat_errors;
-	uint32_t	tx_window_errors;
+	__u32	tx_aborted_errors;
+	__u32	tx_carrier_errors;
+	__u32	tx_fifo_errors;
+	__u32	tx_heartbeat_errors;
+	__u32	tx_window_errors;
 	
 	/* for cslip etc */
-	uint32_t	rx_compressed;
-	uint32_t	tx_compressed;
+	__u32	rx_compressed;
+	__u32	tx_compressed;
 };
 
 /* The struct should be in sync with struct ifmap */
 struct rtnl_link_ifmap
 {
-	uint64_t	mem_start;
-	uint64_t	mem_end;
-	uint64_t	base_addr;
-	uint16_t	irq;
-	uint8_t	dma;
-	uint8_t	port;
+	__u64	mem_start;
+	__u64	mem_end;
+	__u64	base_addr;
+	__u16	irq;
+	__u8	dma;
+	__u8	port;
 };
 
 enum
@@ -791,10 +790,10 @@ enum
 
 struct ifla_cacheinfo
 {
-	uint32_t	max_reasm_len;
-	uint32_t	tstamp;		/* ipv6InterfaceTable updated timestamp */
-	uint32_t	reachable_time;
-	uint32_t	retrans_time;
+	__u32	max_reasm_len;
+	__u32	tstamp;		/* ipv6InterfaceTable updated timestamp */
+	__u32	reachable_time;
+	__u32	retrans_time;
 };
 
 /*****************************************************************
@@ -807,9 +806,9 @@ struct tcmsg
 	unsigned char	tcm__pad1;
 	unsigned short	tcm__pad2;
 	int		tcm_ifindex;
-	uint32_t		tcm_handle;
-	uint32_t		tcm_parent;
-	uint32_t		tcm_info;
+	__u32		tcm_handle;
+	__u32		tcm_parent;
+	__u32		tcm_info;
 };
 
 enum
@@ -910,6 +909,9 @@ struct tcamsg
 
 #ifdef __KERNEL__
 
+#include <linux/config.h>
+#include <linux/mutex.h>
+
 extern size_t rtattr_strlcpy(char *dest, const struct rtattr *rta, size_t size);
 static __inline__ int rtattr_strcmp(const struct rtattr *rta, const char *str)
 {
@@ -931,8 +933,8 @@ struct rtnetlink_link
 };
 
 extern struct rtnetlink_link * rtnetlink_links[NPROTO];
-extern int rtnetlink_send(struct sk_buff *skb, uint32_t pid, uint32_t group, int echo);
-extern int rtnetlink_put_metrics(struct sk_buff *skb, uint32_t *metrics);
+extern int rtnetlink_send(struct sk_buff *skb, __u32 pid, __u32 group, int echo);
+extern int rtnetlink_put_metrics(struct sk_buff *skb, __u32 *metrics);
 
 extern void __rta_fill(struct sk_buff *skb, int attrtype, int attrlen, const void *data);
 
@@ -952,20 +954,20 @@ extern void __rta_fill(struct sk_buff *skb, int attrtype, int attrlen, const voi
 	       RTA_ALIGN(attrlen) - attrlen); })
 
 #define RTA_PUT_U8(skb, attrtype, value) \
-({	uint8_t _tmp = (value); \
-	RTA_PUT(skb, attrtype, sizeof(uint8_t), &_tmp); })
+({	__u8 _tmp = (value); \
+	RTA_PUT(skb, attrtype, sizeof(__u8), &_tmp); })
 
 #define RTA_PUT_U16(skb, attrtype, value) \
-({	uint16_t _tmp = (value); \
-	RTA_PUT(skb, attrtype, sizeof(uint16_t), &_tmp); })
+({	__u16 _tmp = (value); \
+	RTA_PUT(skb, attrtype, sizeof(__u16), &_tmp); })
 
 #define RTA_PUT_U32(skb, attrtype, value) \
-({	uint32_t _tmp = (value); \
-	RTA_PUT(skb, attrtype, sizeof(uint32_t), &_tmp); })
+({	__u32 _tmp = (value); \
+	RTA_PUT(skb, attrtype, sizeof(__u32), &_tmp); })
 
 #define RTA_PUT_U64(skb, attrtype, value) \
-({	uint64_t _tmp = (value); \
-	RTA_PUT(skb, attrtype, sizeof(uint64_t), &_tmp); })
+({	__u64 _tmp = (value); \
+	RTA_PUT(skb, attrtype, sizeof(__u64), &_tmp); })
 
 #define RTA_PUT_SECS(skb, attrtype, value) \
 	RTA_PUT_U64(skb, attrtype, (value) / HZ)
@@ -994,23 +996,23 @@ extern void __rta_fill(struct sk_buff *skb, int attrtype, int attrlen, const voi
 	-1; })
 
 #define RTA_GET_U8(rta) \
-({	if (!rta || RTA_PAYLOAD(rta) < sizeof(uint8_t)) \
+({	if (!rta || RTA_PAYLOAD(rta) < sizeof(__u8)) \
 		goto rtattr_failure; \
-	*(uint8_t *) RTA_DATA(rta); })
+	*(__u8 *) RTA_DATA(rta); })
 
 #define RTA_GET_U16(rta) \
-({	if (!rta || RTA_PAYLOAD(rta) < sizeof(uint16_t)) \
+({	if (!rta || RTA_PAYLOAD(rta) < sizeof(__u16)) \
 		goto rtattr_failure; \
-	*(uint16_t *) RTA_DATA(rta); })
+	*(__u16 *) RTA_DATA(rta); })
 
 #define RTA_GET_U32(rta) \
-({	if (!rta || RTA_PAYLOAD(rta) < sizeof(uint32_t)) \
+({	if (!rta || RTA_PAYLOAD(rta) < sizeof(__u32)) \
 		goto rtattr_failure; \
-	*(uint32_t *) RTA_DATA(rta); })
+	*(__u32 *) RTA_DATA(rta); })
 
 #define RTA_GET_U64(rta) \
-({	uint64_t _tmp; \
-	if (!rta || RTA_PAYLOAD(rta) < sizeof(uint64_t)) \
+({	__u64 _tmp; \
+	if (!rta || RTA_PAYLOAD(rta) < sizeof(__u64)) \
 		goto rtattr_failure; \
 	memcpy(&_tmp, RTA_DATA(rta), sizeof(_tmp)); \
 	_tmp; })

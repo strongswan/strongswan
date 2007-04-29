@@ -3,7 +3,7 @@
 
 /* The definitions, required to talk to KAME racoon IKE. */
 
-#include "pfkeyv2.h"
+#include <linux/pfkeyv2.h>
 
 #define IPSEC_PORT_ANY		0
 #define IPSEC_ULPROTO_ANY	255

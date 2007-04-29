@@ -6,7 +6,7 @@
 #ifndef _LINUX_PFKEY2_H
 #define _LINUX_PFKEY2_H
 
-#include <stdint.h>
+#include <linux/types.h>
 
 #define PF_KEY_V2		2
 #define PFKEYV2_REVISION	199806L
@@ -159,7 +159,7 @@ struct sadb_spirange {
 struct sadb_x_kmprivate {
 	uint16_t	sadb_x_kmprivate_len;
 	uint16_t	sadb_x_kmprivate_exttype;
-	uint32_t	sadb_x_kmprivate_reserved;
+	u_int32_t	sadb_x_kmprivate_reserved;
 } __attribute__((packed));
 /* sizeof(struct sadb_x_kmprivate) == 8 */
 
