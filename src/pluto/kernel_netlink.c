@@ -25,7 +25,7 @@
 #include <sys/queue.h>
 #include <unistd.h>
 #include <linux/xfrm.h>
-#include "linux/rtnetlink.h"
+#include <linux/rtnetlink.h>
 
 #include "kameipsec.h"
 
