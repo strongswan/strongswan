@@ -29,7 +29,7 @@ typedef struct writeable_backend_t writeable_backend_t;
 #include <config/backends/backend.h>
 
 /**
- * @brief A writeable backend extends the backend by modification functions.
+ * @brief A writeable backend extends backend_t by modification functions.
  *
  * @b Constructors:
  *  - writeable_backend_create()

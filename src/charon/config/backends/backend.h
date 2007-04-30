@@ -33,12 +33,12 @@ typedef struct backend_t backend_t;
 /**
  * @brief The interface for a configuration backend.
  *
- * A configuration backend is registered in the cfg_store. It does the actual
- * configuration lookup for the method it implements. See cfg_store_t for
+ * A configuration backend is loaded by the backend_manager. It does the actual
+ * configuration lookup for the method it implements. See backend_manager_t for
  * more information.
  *
  * @b Constructors:
- * - none, use implementations of backend_t.
+ * - implementations constructors
  * 
  * @ingroup backends
  */

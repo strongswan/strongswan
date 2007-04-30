@@ -29,7 +29,7 @@ typedef struct local_backend_t local_backend_t;
 #include <config/backends/writeable_backend.h>
 
 /**
- * @brief An in-memory backend to store configuration information.
+ * @brief An in-memory backend to store configurations.
  *
  * The local_backend_t stores the configuration in a simple list. It
  * implements both, backend_t and writeable_backend_t.
@@ -50,7 +50,7 @@ struct local_backend_t {
 /**
  * @brief Create a backend_t instance implemented as local backend.
  *
- * @return backend instance.
+ * @return backend instance
  * 
  * @ingroup backends
  */

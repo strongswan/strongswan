@@ -34,12 +34,16 @@ typedef struct backend_manager_t backend_manager_t;
 
 
 /**
- * @brief A multiplexer to use multiple backends.
+ * @brief A loader and multiplexer to use multiple backends.
  *
- * Charon allows the use of multiple backend_manager backends simultaneously. To
+ * Charon allows the use of multiple configuration backends simultaneously. To
  * access all this backends by a single call, this class wraps multiple
- * backends behind a single object.
- * Backends may be registered and unregister at runtime dynamically.
+ * backends behind a single object. It is also responsible for loading
+ * the backend modules and cleaning them up.
+ * A backend may be writeable or not. All backends implement the backend_t
+ * interface, those who are writeable additionally implement the
+ * writeable_backend_t interface. Adding configs to the backend_manager will
+ * be redirected to the first writeable backend.
  * @verbatim
 
    +---------+      +-----------+         +--------------+     |
@@ -106,7 +110,7 @@ struct backend_manager_t {
 };
 
 /**
- * @brief Create a new instance of the manager and loads all backends.
+ * @brief Creates a new instance of the manager and loads all backends.
  *
  * @return		backend_manager instance
  *

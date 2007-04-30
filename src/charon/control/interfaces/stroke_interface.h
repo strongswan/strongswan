@@ -28,13 +28,10 @@ typedef struct stroke_interface_t stroke_interface_t;
 #include <control/interfaces/interface.h>
 
 /**
- * @brief Stroke is a configuration and control interface which
- * allows other processes to modify charons behavior.
+ * @brief Simple configuration interface using unix-sockets.
  * 
- * stroke_t allows config manipulation (as whack in pluto). Configurations
- * are stored in a special backend, the in-memory local_backend_t.
- * Messages of type stroke_msg_t's are sent over a unix socket
- * (/var/run/charon.ctl).
+ * Stroke is a home-brewed communication interface inspired by whack. It
+ * uses a unix socket (/var/run/charon.ctl).
  * 
  * @b Constructors:
  * - stroke_create()

@@ -27,6 +27,10 @@ typedef struct interface_t interface_t;
 
 /**
  * @brief Interface for a controller.
+ *
+ * An interface controls the daemon by calling functions on the
+ * interface_manager. All interfaces are manager by the interface_manager
+ * in a generic way, so they need their own class.
  * 
  * @b Constructors:
  * - interface_create() of one of the modules

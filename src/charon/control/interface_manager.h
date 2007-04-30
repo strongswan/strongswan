@@ -26,7 +26,7 @@
 #include <bus/bus.h>
 
 /**
- * callback to log things triggered by interface_manager
+ * callback to log things triggered by interface_manager.
  *
  * @param param			echoed parameter supplied when function invoked
  * @param signal		type of signal
@@ -43,8 +43,23 @@ typedef bool(*interface_manager_cb_t)(void* param, signal_t signal, level_t leve
 typedef struct interface_manager_t interface_manager_t;
 
 /**
- * @brief The interface_manager controls the daemon.
+ * @brief The interface_manager loads control interfaces and has helper methods.
  *
+ * One job of the interface manager is to load pluggable control interface
+ * modules, implemented as interface_t.
+ * @verbatim
+
+   +---------+      +------------+         +--------------+     |
+   |         |      |            |<----- +--------------+ |     |
+   | daemon  |<-----| interface- |     +--------------+ |-+  <==|==> IPC
+   |  core   |      | manager    |<----|  interfaces  |-+       |
+   |         |<-----|            |     +--------------+         |
+   |         |      |            |                              |
+   +---------+      +------------+                              |
+
+   @endverbatim
+ * The manager does not really use the interfaces, instead, the interface
+ * use the manager to fullfill their tasks (initiating, terminating, ...). 
  * The interface_manager starts actions by creating jobs. It then tries to
  * evaluate the result of the operation by listening on the bus.
  * 
@@ -82,7 +97,7 @@ struct interface_manager_t {
 
 
 /**
- * @brief Create a interface_manager instance and loads all interface modules.
+ * @brief Creates a interface_manager instance and loads all interface modules.
  * 
  * @return 			interface_manager_t object
  * 
