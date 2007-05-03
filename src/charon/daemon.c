@@ -23,6 +23,8 @@
  */
 
 #include <stdio.h>
+#include <linux/types.h>
+#include <linux/capability.h>
 #include <signal.h>
 #include <pthread.h>
 #include <sys/stat.h>
@@ -178,7 +180,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.event_queue);
 	DESTROY_IF(this->public.credentials);
 	DESTROY_IF(this->public.backends);
-	sched_yield();
 	/* we hope the sender could send the outstanding deletes, but 
 	 * we shut down here at any cost */
 	DESTROY_IF(this->public.sender);
@@ -191,6 +192,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.authlog);
 	free(this);
 }
+
 
 /**
  * Enforce daemon shutdown, with a given reason to do so.
@@ -212,6 +214,39 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 		raise(SIGTERM);
 		/* thread must die, since he produced a ciritcal failure and can't continue */
 		pthread_exit(NULL);
+	}
+}
+
+/**
+ * drop daemon capabilities
+ */
+static void drop_capabilities(private_daemon_t *this, bool netlink, bool bind)
+{
+	struct __user_cap_header_struct hdr;
+	struct __user_cap_data_struct data;
+	u_int32_t keep = 0;
+	
+	if (netlink)
+	{
+		/* CAP_NET_ADMIN is needed to use netlink */
+		keep |= (1<<CAP_NET_ADMIN);
+	}
+	if (bind)
+	{
+		/* CAP_NET_BIND_SERVICE to bind services below port 1024, 
+		 * CAP_NET_RAW to create RAW sockets. */
+		keep |= (1<<CAP_NET_BIND_SERVICE);
+		keep |= (1<<CAP_NET_RAW);
+	}
+	
+	hdr.version = _LINUX_CAPABILITY_VERSION;
+	hdr.pid = 0;
+	data.effective = data.permitted = keep;
+	data.inheritable = 0;
+	
+	if (capset(&hdr, &data))
+	{
+		kill_daemon(this, "unable to drop threads capabilities");
 	}
 }
 
@@ -241,12 +276,9 @@ static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	/* apply loglevels */
 	for (signal = 0; signal < DBG_MAX; signal++)
 	{
-		if (syslog)
-		{
-			this->public.syslog->set_level(this->public.syslog,
-										   signal, levels[signal]);
-		}
-		else
+		this->public.syslog->set_level(this->public.syslog,
+									   signal, levels[signal]);
+		if (!syslog)
 		{
 			this->public.outlog->set_level(this->public.outlog,
 										   signal, levels[signal]);
@@ -323,6 +355,7 @@ private_daemon_t *daemon_create(void)
 		
 	/* assign methods */
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
+	this->public.drop_capabilities = (void(*)(daemon_t*,bool,bool))drop_capabilities;
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
@@ -406,6 +439,9 @@ int main(int argc, char *argv[])
 	level_t levels[DBG_MAX];
 	int signal;
 	
+	/* keep bind() and netlink capabilities */
+	drop_capabilities(NULL, TRUE, TRUE);
+	
 	/* use CTRL loglevel for default */
 	for (signal = 0; signal < DBG_MAX; signal++)
 	{
@@ -479,6 +515,9 @@ int main(int argc, char *argv[])
 	
 	/* initialize daemon */
 	initialize(private_charon, use_syslog, levels);
+	
+	/* drop bind() capability, netlink is needed for cleanup */
+	drop_capabilities(private_charon, TRUE, FALSE);
 
 	/* load pluggable EAP modules */
 	eap_method_load(eapdir);

@@ -171,6 +171,9 @@ struct route_entry_t {
 
 	/** Source ip of the route */
 	host_t *src_ip;
+	
+	/** gateway for this route */
+	host_t *gateway;
 
 	/** Destination net */
 	chunk_t dst_net;
@@ -185,6 +188,7 @@ struct route_entry_t {
 static void route_entry_destroy(route_entry_t *this)
 {
 	this->src_ip->destroy(this->src_ip);
+	this->gateway->destroy(this->gateway);
 	chunk_free(&this->dst_net);
 	free(this);
 }
@@ -442,6 +446,9 @@ static void add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
  */
 static void receive_events(private_kernel_interface_t *this)
 {
+	/* keep netlink capabilities only */
+	charon->drop_capabilities(charon, TRUE, FALSE);
+
 	while(TRUE) 
 	{
 		unsigned char response[512];
@@ -1023,6 +1030,8 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 	add_attribute(hdr, RTA_DST, route->dst_net, sizeof(request));
 	chunk = route->src_ip->get_address(route->src_ip);
 	add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
+	chunk = route->gateway->get_address(route->gateway);
+	add_attribute(hdr, RTA_GATEWAY, chunk, sizeof(request));
 	chunk.ptr = (char*)&route->if_index;
 	chunk.len = sizeof(route->if_index);
 	add_attribute(hdr, RTA_OIF, chunk, sizeof(request));
@@ -1689,6 +1698,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 		policy->route = malloc_thing(route_entry_t);
 		if (get_address_by_ts(this, dst_ts, &policy->route->src_ip) == SUCCESS)
 		{
+			policy->route->gateway = (direction == POLICY_IN) ? 
+										dst->clone(dst) : src->clone(src);
 			policy->route->if_index = get_interface_index(this, dst);
 			policy->route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(policy->route->dst_net.ptr, &policy->sel.saddr, policy->route->dst_net.len);

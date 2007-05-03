@@ -59,5 +59,5 @@ interface_t *interface_create()
 
 	this->public.interface.destroy = (void (*)(xml_interface_t*))destroy;
 	
-	return &this->public;
+	return &this->public.interface;
 }

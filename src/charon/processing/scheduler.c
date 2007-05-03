@@ -60,6 +60,9 @@ static void get_events(private_scheduler_t * this)
 	DBG1(DBG_JOB, "scheduler thread running, thread_ID: %06u", 
 		 (int)pthread_self());
 
+	/* drop threads capabilities */
+	charon->drop_capabilities(charon, FALSE, FALSE);
+
 	while (TRUE)
 	{
 		DBG2(DBG_JOB, "waiting for next event...");

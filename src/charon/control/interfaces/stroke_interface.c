@@ -1528,6 +1528,9 @@ static void stroke_receive(private_stroke_interface_t *this)
 	int oldstate;
 	int strokefd;
 	
+	/* drop threads capabilities */
+	charon->drop_capabilities(charon, FALSE, FALSE);
+	
 	/* ignore sigpipe. writing over the pipe back to the console
 	 * only fails if SIGPIPE is ignored. */
 	signal(SIGPIPE, SIG_IGN);
@@ -1585,7 +1588,7 @@ interface_t *interface_create()
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (this->socket == -1)
 	{
-		DBG1(DBG_CFG, "could not create whack socket");
+		DBG1(DBG_CFG, "could not create stroke socket");
 		free(this);
 		return NULL;
 	}
@@ -1618,5 +1621,5 @@ interface_t *interface_create()
 		}
 	}
 	
-	return (interface_t*)(&this->public);
+	return &this->public.interface;
 }

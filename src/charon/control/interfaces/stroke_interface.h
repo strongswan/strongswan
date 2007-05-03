@@ -50,7 +50,7 @@ struct stroke_interface_t {
 /**
  * @brief Create the stroke interface and listen on the socket.
  * 
- * @return 			stroke_t object
+ * @return 			interface_t for the stroke interface
  * 
  * @ingroup interfaces
  */

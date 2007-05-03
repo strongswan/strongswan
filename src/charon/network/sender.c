@@ -84,10 +84,12 @@ static void send_(private_sender_t *this, packet_t *packet)
  */
 static void send_packets(private_sender_t * this)
 {
-	
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	DBG1(DBG_NET, "sender thread running, thread_ID: %06u", (int)pthread_self());
+	
+	/* drop threads capabilities */
+	charon->drop_capabilities(charon, FALSE, FALSE);
 
 	while (TRUE)
 	{
@@ -119,9 +121,14 @@ static void send_packets(private_sender_t * this)
  */
 static void destroy(private_sender_t *this)
 {
+	/* send all packets in the queue */
+	while (this->list->get_count(this->list))
+	{
+		sched_yield();
+	}
 	pthread_cancel(this->assigned_thread);
 	pthread_join(this->assigned_thread, NULL);
-	this->list->destroy_offset(this->list, offsetof(packet_t, destroy));
+	this->list->destroy(this->list);
 	free(this);
 }
 

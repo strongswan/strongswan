@@ -57,7 +57,7 @@ struct private_thread_pool_t {
 	 * Array of thread ids.
 	 */
 	pthread_t *threads;
-} ;
+};
 
 /**
  * Implementation of private_thread_pool_t.process_jobs.
@@ -72,6 +72,9 @@ static void process_jobs(private_thread_pool_t *this)
 	
 	DBG1(DBG_JOB, "worker thread running, thread_ID: %06u",
 		 (int)pthread_self());
+	
+	/* drop threads capabilities, except CAP_NET_ADMIN */
+	charon->drop_capabilities(charon, TRUE, FALSE);
 	
 	while (TRUE)
 	{

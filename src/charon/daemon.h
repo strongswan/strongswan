@@ -332,6 +332,8 @@ typedef struct daemon_t daemon_t;
  */
 #define SECRETS_FILE CONFIG_DIR "/ipsec.secrets"
 
+#define IPSEC_USER "nobody"
+
 /**
  * @brief Main class of daemon, contains some globals.
  *
@@ -417,6 +419,15 @@ struct daemon_t {
 	 * Interfaces for IPC
 	 */
 	interface_manager_t *interfaces;
+	
+	/**
+	 * @brief Let the calling thread drop its capabilities.
+	 * 
+	 * @param this		calling daemon
+	 * @param netlink	TRUE to keep CAP_NET_ADMIN (using netlink)
+	 * @param bind		TRUE to keep CAP_NET_BIND_SERVICE and CAP_NET_RAW
+	 */
+	void (*drop_capabilities) (daemon_t *this, bool netlink, bool bind);
 	
 	/**
 	 * @brief Shut down the daemon.
