@@ -315,6 +315,13 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 	iterator = this->active_listeners->create_iterator(this->active_listeners, TRUE);
 	while (iterator->iterate(iterator, (void**)&active_listener))
 	{
+		/* if the thread raising the signal is the same as the one that
+		 * listens, we skip it. Otherwise we have a deadlock */
+		if (active_listener->id == pthread_self())
+		{
+			continue;
+		}
+	
 		/* wait until it is back */
 		while (active_listener->state == REGISTERED)
 		{
