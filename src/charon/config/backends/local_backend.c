@@ -219,5 +219,5 @@ backend_t *backend_create(void)
 	this->cfgs = linked_list_create();
 	pthread_mutex_init(&this->mutex, NULL);
 	
-	return (&this->public.backend.backend);
+	return &this->public.backend.backend;
 }

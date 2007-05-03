@@ -35,6 +35,7 @@
 
 
 typedef struct private_interface_manager_t private_interface_manager_t;
+typedef struct interface_bus_listener_t interface_bus_listener_t;
 
 /**
  * Private data of an stroke_t object.
@@ -56,14 +57,47 @@ struct private_interface_manager_t {
 	 */
 	linked_list_t *handles;
 };
+
+/**
+ * helper struct to map bus listener callbacks to interface callbacks
+ */
+struct interface_bus_listener_t {
+
+	/**
+	 * bus listener callback function (called)
+	 */
+	bus_listener_t listener;
 	
+	/**
+	 * IKE_SA to use for message filtering
+	 */
+	ike_sa_t *ike_sa;
+	
+	/**
+	 *  interface callback (listener gets redirected to here)
+	 */
+	interface_manager_cb_t callback;
+	
+	/**
+	 * user parameter to pass to callback
+	 */
+	void *param;
+};
+
+/**
+ * Implementation of interface_manager_t.create_ike_sa_iterator.
+ */
+static iterator_t* create_ike_sa_iterator(interface_manager_t *this)
+{
+	return charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
+}
+
 /**
  * Implementation of interface_manager_t.initiate.
  */
 static status_t initiate(private_interface_manager_t *this,
 						 peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-						 bool(*cb)(void*,signal_t,level_t,ike_sa_t*,char*,va_list),
-						 void *param)
+						 interface_manager_cb_t cb, void *param)
 {
 	ike_sa_t *ours = NULL;
 	job_t *job;
@@ -126,6 +160,132 @@ static status_t initiate(private_interface_manager_t *this,
 	}
 	charon->bus->set_listen_state(charon->bus, FALSE);
 	return retval;
+}
+
+/**
+ * listener function for terminate_ike
+ */
+static bool terminate_listener(interface_bus_listener_t *this, signal_t signal,
+							   level_t level, int thread, ike_sa_t *ike_sa,
+							   char* format, va_list args)
+{
+	if (this->ike_sa == ike_sa)
+	{
+		if (!this->callback(this->param, signal, level, ike_sa, format, args))
+		{
+			return FALSE;
+		}
+		switch (signal)
+		{
+			case IKE_DOWN_FAILED:
+			case IKE_DOWN_SUCCESS:
+			{
+				return FALSE;
+			}
+			default:
+				break;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * Implementation of interface_manager_t.terminate_ike.
+ */
+static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id, 
+							  interface_manager_cb_t callback, void *param)
+{
+	ike_sa_t *ike_sa;
+	status_t status;
+	
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+													unique_id, FALSE);							
+	if (ike_sa == NULL)
+	{
+		return NOT_FOUND;
+	}
+	
+	/* we listen passively first, to catch the signals we are raising */
+	if (callback)
+	{
+		interface_bus_listener_t listener;
+	
+		listener.listener.signal = (void*)terminate_listener;
+		listener.callback = callback;
+		listener.ike_sa = ike_sa;
+		listener.param = param;
+		charon->bus->add_listener(charon->bus, &listener.listener);
+	}
+	charon->bus->set_listen_state(charon->bus, TRUE);
+	status = ike_sa->delete(ike_sa);
+	if (status == DESTROY_ME)
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+	}
+	else
+	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		
+		/* wait until IKE_SA is cleanly deleted using a delete message */
+		while (TRUE)
+		{
+			level_t level;
+			signal_t signal;
+			int thread;
+			ike_sa_t *current;
+			char* format;
+			va_list args;
+			
+			signal = charon->bus->listen(charon->bus, &level, &thread, 
+										 &current, &format, &args);
+			
+			if (ike_sa == current)
+			{
+				switch (signal)
+				{
+					case IKE_DOWN_FAILED:
+					case IKE_DOWN_SUCCESS:
+					{
+						 break;
+					}
+					default:
+						continue;
+				}
+				break;
+			}
+		}
+	}
+	charon->bus->set_listen_state(charon->bus, FALSE);
+
+	return SUCCESS;
+}
+
+/**
+ * Implementation of interface_manager_t.terminate_child.
+ */
+static status_t terminate_child(interface_manager_t *this, u_int32_t reqid, 
+								interface_manager_cb_t callback, void *param)
+{
+	return FAILED;
+}
+
+/**
+ * Implementation of interface_manager_t.route.
+ */
+static status_t route(interface_manager_t *this,
+					  peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+					  interface_manager_cb_t callback, void *param)
+{
+	return FAILED;
+}
+
+/**
+ * Implementation of interface_manager_t.unroute.
+ */
+static status_t unroute(interface_manager_t *this, u_int32_t reqid, 
+						interface_manager_cb_t callback, void *param)
+{
+	return FAILED;
 }
 
 /**
@@ -226,7 +386,12 @@ interface_manager_t *interface_manager_create(void)
 {
 	private_interface_manager_t *this = malloc_thing(private_interface_manager_t);
 	
+	this->public.create_ike_sa_iterator = (iterator_t*(*)(interface_manager_t*))create_ike_sa_iterator;
 	this->public.initiate = (status_t(*)(interface_manager_t*,peer_cfg_t*,child_cfg_t*,bool(*)(void*,signal_t,level_t,ike_sa_t*,char*,va_list),void*))initiate;
+	this->public.terminate_ike = (status_t(*)(interface_manager_t*,u_int32_t,interface_manager_cb_t, void*))terminate_ike;
+	this->public.terminate_child = (status_t(*)(interface_manager_t*,u_int32_t,interface_manager_cb_t, void *param))terminate_child;
+	this->public.route = (status_t(*)(interface_manager_t*,peer_cfg_t*, child_cfg_t*,interface_manager_cb_t,void*))route;
+	this->public.unroute = (status_t(*)(interface_manager_t*,u_int32_t,interface_manager_cb_t,void*))unroute;
 	this->public.destroy = (void (*)(interface_manager_t*))destroy;
 	
 	this->interfaces = linked_list_create();

@@ -71,6 +71,17 @@ typedef struct interface_manager_t interface_manager_t;
 struct interface_manager_t {
 
 	/**
+	 * @brief Create an iterator for all IKE_SAs.
+	 *
+	 * The iterator blocks the IKE_SA manager until it gets destroyed. Do
+	 * not call another interface/manager method while the iterator is alive.
+	 *
+	 * @param this			calling object
+	 * @return				iterator, locks IKE_SA manager until destroyed
+	 */
+	iterator_t* (*create_ike_sa_iterator)(interface_manager_t *this);
+
+	/**
 	 * @brief Initiate a CHILD_SA, and if required, an IKE_SA.
 	 *
 	 * @param this			calling object
@@ -86,6 +97,70 @@ struct interface_manager_t {
 	status_t (*initiate)(interface_manager_t *this,
 						 peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 						 interface_manager_cb_t callback, void *param);
+
+	/**
+	 * @brief Terminate an IKE_SA and all of its CHILD_SAs.
+	 *
+	 * @param this			calling object
+	 * @param unique_id		unique id of the IKE_SA to terminate.
+	 * @param cb			logging callback
+	 * @param param			parameter to include in each call of cb
+	 * @return
+	 *						- SUCCESS, if CHILD_SA terminated
+	 *						- NOT_FOUND, if no such CHILD_SA found
+	 *						- NEED_MORE, if callback returned FALSE
+	 */
+	status_t (*terminate_ike)(interface_manager_t *this, u_int32_t unique_id, 
+							  interface_manager_cb_t callback, void *param);
+	
+	/**
+	 * @brief Terminate a CHILD_SA.
+	 *
+	 * @param this			calling object
+	 * @param reqid			reqid of the CHILD_SA to terminate
+	 * @param cb			logging callback
+	 * @param param			parameter to include in each call of cb
+	 * @return
+	 *						- SUCCESS, if CHILD_SA terminated
+	 *						- NOT_FOUND, if no such CHILD_SA found
+	 *						- NEED_MORE, if callback returned FALSE
+	 */
+	status_t (*terminate_child)(interface_manager_t *this, u_int32_t reqid, 
+								interface_manager_cb_t callback, void *param);
+	
+	/**
+	 * @brief Route a CHILD_SA (install triggering policies).
+	 *
+	 * @param this			calling object
+	 * @param peer_cfg		peer_cfg to use for IKE_SA setup, if triggered
+	 * @param child_cfg		child_cfg to route
+	 * @param cb			logging callback
+	 * @param param			parameter to include in each call of cb
+	 * @return
+	 *						- SUCCESS, if CHILD_SA routed
+	 *						- FAILED, if routing failed
+	 *						- NEED_MORE, if callback returned FALSE
+	 */
+	status_t (*route)(interface_manager_t *this,
+					  peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+					  interface_manager_cb_t callback, void *param);
+	
+	/**
+	 * @brief Unroute a routed CHILD_SA (uninstall triggering policies).
+	 *
+	 * Only the route is removed, not the CHILD_SAs the route triggered.
+	 *
+	 * @param this			calling object
+	 * @param reqid			reqid of the CHILD_SA to unroute
+	 * @param cb			logging callback
+	 * @param param			parameter to include in each call of cb
+	 * @return
+	 *						- SUCCESS, if CHILD_SA terminated
+	 *						- NOT_FOUND, if no such CHILD_SA routed
+	 *						- NEED_MORE, if callback returned FALSE
+	 */
+	status_t (*unroute)(interface_manager_t *this, u_int32_t reqid, 
+						interface_manager_cb_t callback, void *param);
 	
 	/**
 	 * @brief Destroy a interface_manager_t instance.
