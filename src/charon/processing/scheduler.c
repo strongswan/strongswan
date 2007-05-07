@@ -61,7 +61,7 @@ static void get_events(private_scheduler_t * this)
 		 (int)pthread_self());
 
 	/* drop threads capabilities */
-	charon->drop_capabilities(charon, FALSE, FALSE);
+	charon->drop_capabilities(charon, TRUE, FALSE, FALSE);
 
 	while (TRUE)
 	{

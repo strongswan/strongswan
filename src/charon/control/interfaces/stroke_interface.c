@@ -1529,7 +1529,7 @@ static void stroke_receive(private_stroke_interface_t *this)
 	int strokefd;
 	
 	/* drop threads capabilities */
-	charon->drop_capabilities(charon, FALSE, FALSE);
+	charon->drop_capabilities(charon, TRUE, FALSE, FALSE);
 	
 	/* ignore sigpipe. writing over the pipe back to the console
 	 * only fails if SIGPIPE is ignored. */

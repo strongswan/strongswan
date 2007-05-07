@@ -332,8 +332,6 @@ typedef struct daemon_t daemon_t;
  */
 #define SECRETS_FILE CONFIG_DIR "/ipsec.secrets"
 
-#define IPSEC_USER "nobody"
-
 /**
  * @brief Main class of daemon, contains some globals.
  *
@@ -423,17 +421,19 @@ struct daemon_t {
 	/**
 	 * @brief Let the calling thread drop its capabilities.
 	 * 
-	 * @param this		calling daemon
-	 * @param netlink	TRUE to keep CAP_NET_ADMIN (using netlink)
-	 * @param bind		TRUE to keep CAP_NET_BIND_SERVICE and CAP_NET_RAW
+	 * @param this			calling daemon
+	 * @param change_uid	TRUE to change UID/GID to IPSEC_UID/IPSEC_GID
+	 * @param netlink		TRUE to keep CAP_NET_ADMIN (using netlink)
+	 * @param bind			TRUE to keep CAP_NET_BIND_SERVICE and CAP_NET_RAW
 	 */
-	void (*drop_capabilities) (daemon_t *this, bool netlink, bool bind);
+	void (*drop_capabilities) (daemon_t *this, bool change_uid,
+							   bool netlink, bool bind);
 	
 	/**
 	 * @brief Shut down the daemon.
 	 * 
-	 * @param this		the daemon to kill
-	 * @param reason	describtion why it will be killed
+	 * @param this			the daemon to kill
+	 * @param reason		describtion why it will be killed
 	 */
 	void (*kill) (daemon_t *this, char *reason);
 };

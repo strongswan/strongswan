@@ -339,7 +339,7 @@ static DBusHandlerResult signal_handler(DBusConnection *con, DBusMessage *msg,
 static void dispatch(private_dbus_interface_t *this)
 {
 	/* drop threads capabilities */
-	charon->drop_capabilities(charon, FALSE, FALSE);
+	charon->drop_capabilities(charon, TRUE, FALSE, FALSE);
 
 	while (dbus_connection_read_write_dispatch(this->conn, -1))
 	{

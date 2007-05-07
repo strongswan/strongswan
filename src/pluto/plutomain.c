@@ -29,6 +29,8 @@
 #include <resolv.h>
 #include <arpa/nameser.h>	/* missing from <resolv.h> on old systems */
 #include <sys/queue.h>
+#include <linux/capability.h>
+#include <sys/prctl.h>
 
 #include <freeswan.h>
 
@@ -63,6 +65,11 @@
 #include "crypto.h"	/* requires sha1.h and md5.h */
 #include "nat_traversal.h"
 #include "virtual.h"
+
+/* on some distros, a capset() definition is missing */
+#ifdef NO_CAPSET_DEFINED
+extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
+#endif /* NO_CAPSET_DEFINED */
 
 static void
 usage(const char *mess)
@@ -221,6 +228,8 @@ main(int argc, char **argv)
     bool force_keepalive = FALSE;
     char *virtual_private = NULL;
     int lockfd;
+    struct __user_cap_header_struct hdr;
+    struct __user_cap_data_struct data;
 
     /* handle arguments */
     for (;;)
@@ -595,6 +604,26 @@ main(int argc, char **argv)
     init_adns();
     init_id();
     init_fetch();
+
+    /* drop unneeded capabilities and change UID/GID */
+    hdr.version = _LINUX_CAPABILITY_VERSION;
+    hdr.pid = 0;
+    data.effective = data.permitted = 1<<CAP_NET_ADMIN | 1<<CAP_NET_BIND_SERVICE;
+    data.inheritable = 0;
+
+    prctl(PR_SET_KEEPCAPS, 1);
+
+#   if IPSEC_GID
+	setgid(IPSEC_GID);
+#   endif
+#   if IPSEC_UID
+	setuid(IPSEC_UID);
+#   endif
+    if (capset(&hdr, &data))
+    {
+	plog("unable to drop root privileges");
+	abort();
+    }
 
     /* loading X.509 CA certificates */
     load_authcerts("CA cert", CA_CERT_PATH, AUTH_CA);

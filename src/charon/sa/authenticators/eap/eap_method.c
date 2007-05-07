@@ -100,27 +100,10 @@ void eap_method_unload()
 void eap_method_load(char *directory)
 {
 	struct dirent* entry;
-	struct stat stb;
 	DIR* dir;
 	
 	eap_method_unload();	
 	modules = linked_list_create();
-	
-	if (stat(directory, &stb) == -1 || !(stb.st_mode & S_IFDIR))
-	{
-		DBG1(DBG_CFG, "error opening EAP modules directory %s", directory);
-		return;
-	}
-	if (stb.st_uid != 0)
-	{
-		DBG1(DBG_CFG, "EAP modules directory %s not owned by root, skipped", directory);
-		return;
-	}
-	if (stb.st_mode & S_IWOTH || stb.st_mode & S_IWGRP)
-	{
-		DBG1(DBG_CFG, "EAP modules directory %s writable by others, skipped", directory);
-		return;
-	}
 
 	dir = opendir(directory);
 	if (dir == NULL)
@@ -141,28 +124,12 @@ void eap_method_load(char *directory)
 		
 		snprintf(file, sizeof(file), "%s/%s", directory, entry->d_name);
 		
-		if (stat(file, &stb) == -1 || !(stb.st_mode & S_IFREG))
-		{
-			DBG2(DBG_CFG, "  skipping %s, doesn't look like a file",
-				 entry->d_name);
-			continue;
-		}
 		ending = entry->d_name + strlen(entry->d_name) - 3;
 		if (ending <= entry->d_name || !streq(ending, ".so"))
 		{
 			/* skip anything which does not look like a library */
 			DBG2(DBG_CFG, "  skipping %s, doesn't look like a library",
 				 entry->d_name);
-			continue;
-		}
-		if (stb.st_uid != 0)
-		{
-			DBG1(DBG_CFG, "  skipping %s, file is not owned by root", entry->d_name);
-			return;
-		}
-		if (stb.st_mode & S_IWOTH || stb.st_mode & S_IWGRP)
-		{
-			DBG1(DBG_CFG, "  skipping %s, file is writeable by others", entry->d_name);
 			continue;
 		}
 		

@@ -181,7 +181,11 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 	    FILE *f;
 
 	    plog("no %s file, generating RSA key", SECRETS_FILE);
+	    seteuid(IPSEC_UID);
+	    setegid(IPSEC_GID);
 	    system("ipsec scepclient --out pkcs1 --out cert-self --quiet");
+	    seteuid(0);
+	    setegid(0);
 
 	    /* ipsec.secrets is root readable only */
 	    oldmask = umask(0066);
@@ -194,6 +198,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 		fprintf(f, ": RSA myKey.der\n");
 		fclose(f);
 	    }
+	    chown(SECRETS_FILE, IPSEC_UID, IPSEC_GID);
 	    umask(oldmask);
 	}
 

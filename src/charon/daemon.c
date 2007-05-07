@@ -23,8 +23,8 @@
  */
 
 #include <stdio.h>
-#include <linux/types.h>
 #include <linux/capability.h>
+#include <sys/prctl.h>
 #include <signal.h>
 #include <pthread.h>
 #include <sys/stat.h>
@@ -47,6 +47,10 @@
 #include <config/backends/local_backend.h>
 #include <sa/authenticators/eap/eap_method.h>
 
+/* on some distros, a capset definition is missing */
+#ifdef NO_CAPSET_DEFINED
+extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
+#endif /* NO_CAPSET_DEFINED */
 
 typedef struct private_daemon_t private_daemon_t;
 
@@ -220,7 +224,8 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 /**
  * drop daemon capabilities
  */
-static void drop_capabilities(private_daemon_t *this, bool netlink, bool bind)
+static void drop_capabilities(private_daemon_t *this, bool change_uid,
+							  bool netlink, bool bind)
 {
 	struct __user_cap_header_struct hdr;
 	struct __user_cap_data_struct data;
@@ -234,15 +239,27 @@ static void drop_capabilities(private_daemon_t *this, bool netlink, bool bind)
 	if (bind)
 	{
 		/* CAP_NET_BIND_SERVICE to bind services below port 1024, 
-		 * CAP_NET_RAW to create RAW sockets. */
+		 * CAP_NET_RAW to create RAW sockets.
+		 * CAP_DAC_READ_SEARCH is needed to read ipsec.secrets */
 		keep |= (1<<CAP_NET_BIND_SERVICE);
 		keep |= (1<<CAP_NET_RAW);
+		keep |= (1<<CAP_DAC_READ_SEARCH);
 	}
 	
 	hdr.version = _LINUX_CAPABILITY_VERSION;
 	hdr.pid = 0;
 	data.effective = data.permitted = keep;
 	data.inheritable = 0;
+	
+	if (change_uid)
+	{
+#		if IPSEC_GID
+			setgid(IPSEC_GID);
+#		endif
+#		if IPSEC_UID
+			setuid(IPSEC_UID);
+#		endif
+	}
 	
 	if (capset(&hdr, &data))
 	{
@@ -355,7 +372,7 @@ private_daemon_t *daemon_create(void)
 		
 	/* assign methods */
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
-	this->public.drop_capabilities = (void(*)(daemon_t*,bool,bool))drop_capabilities;
+	this->public.drop_capabilities = (void(*)(daemon_t*,bool,bool,bool))drop_capabilities;
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
@@ -439,8 +456,10 @@ int main(int argc, char *argv[])
 	level_t levels[DBG_MAX];
 	int signal;
 	
-	/* keep bind() and netlink capabilities */
-	drop_capabilities(NULL, TRUE, TRUE);
+	prctl(PR_SET_KEEPCAPS, 1);
+	
+	/* keep bind() and netlink capabilities, stay as root until all files loaded */
+	drop_capabilities(NULL, FALSE, TRUE, TRUE);
 	
 	/* use CTRL loglevel for default */
 	for (signal = 0; signal < DBG_MAX; signal++)
@@ -517,7 +536,7 @@ int main(int argc, char *argv[])
 	initialize(private_charon, use_syslog, levels);
 	
 	/* drop bind() capability, netlink is needed for cleanup */
-	drop_capabilities(private_charon, TRUE, FALSE);
+	drop_capabilities(private_charon, FALSE, TRUE, FALSE);
 
 	/* load pluggable EAP modules */
 	eap_method_load(eapdir);
@@ -549,6 +568,9 @@ int main(int argc, char *argv[])
 	}
 	list->destroy(list);
 	
+	/* change UID */
+	drop_capabilities(private_charon, TRUE, FALSE, FALSE);
+	
 	/* run daemon */
 	run(private_charon);
 	
@@ -560,3 +582,4 @@ int main(int argc, char *argv[])
 	
 	return 0;
 }
+

@@ -137,4 +137,5 @@ install-exec-local :
 	mkdir -p -m 755 $(confdir)/ipsec.d/crls
 	mkdir -p -m 755 $(confdir)/ipsec.d/reqs
 	mkdir -p -m 700 $(confdir)/ipsec.d/private
+	chown -R $(ipsecuid):$(ipsecgid) $(confdir)/ipsec.d
 

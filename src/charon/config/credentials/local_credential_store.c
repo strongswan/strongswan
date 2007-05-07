@@ -24,6 +24,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include <library.h>
 #include <utils/lexparser.h>
@@ -1382,7 +1383,8 @@ error:
 	}
 	else
 	{
-		DBG1(DBG_CFG, "could not open file '%s'", SECRETS_FILE);
+		DBG1(DBG_CFG, "could not open file '%s': %s", SECRETS_FILE,
+			 strerror(errno));
 	}
 }
 

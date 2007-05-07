@@ -107,6 +107,20 @@ AC_ARG_WITH(
 )
 AC_SUBST(LINUX_HEADERS)
 
+AC_ARG_WITH(
+    [uid],
+    AS_HELP_STRING([--with-uid=uid],[change user of the daemons to UID after startup (default is 0).]),
+    [AC_DEFINE_UNQUOTED(IPSEC_UID, $withval) AC_SUBST(ipsecuid, "$withval")],
+    [AC_DEFINE_UNQUOTED(IPSEC_UID, 0) AC_SUBST(ipsecuid, "0")]
+)
+
+AC_ARG_WITH(
+    [gid],
+    AS_HELP_STRING([--with-gid=gid],[change group of the daemons to GID after startup (default is 0).]),
+    [AC_DEFINE_UNQUOTED(IPSEC_GID, $withval) AC_SUBST(ipsecgid, "$withval")],
+    [AC_DEFINE_UNQUOTED(IPSEC_GID, 0) AC_SUBST(ipsecgid, "0")]
+)
+
 AC_ARG_ENABLE(
     [http],
     AS_HELP_STRING([--enable-http],[enable OCSP and fetching of Certificates and CRLs over HTTP (default is NO). Requires libcurl.]),
@@ -259,6 +273,14 @@ AC_TRY_COMPILE(
         #endif
     ], 
     [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([No usable gmp.h found!])]
+)
+AC_MSG_CHECKING([capset() definition])
+AC_TRY_COMPILE(
+    [#include <linux/capset.h>],
+    [
+    	void *test = capset;
+    ], 
+    [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_DEFINE_UNQUOTED(NO_CAPSET_DEFINED, 1)]
 )
 if test "$ldap" = "true"; then
     AC_CHECK_HEADER([ldap.h],,[AC_MSG_ERROR([LDAP enabled, but ldap.h not found!])])

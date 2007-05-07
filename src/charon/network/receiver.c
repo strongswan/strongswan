@@ -255,14 +255,16 @@ static void receive_packets(private_receiver_t *this)
 		 (int)pthread_self());
 	
 	/* drop threads capabilities */
-	charon->drop_capabilities(charon, FALSE, FALSE);
+	charon->drop_capabilities(charon, TRUE, FALSE, FALSE);
 	
 	while (TRUE)
 	{
 		/* read in a packet */
 		if (charon->socket->receive(charon->socket, &packet) != SUCCESS)
 		{
-			DBG1(DBG_NET, "receiving from socket failed!");
+			DBG2(DBG_NET, "receiving from socket failed!");
+			/* try again after a delay */
+			sleep(1);
 			continue;
 		}
 		

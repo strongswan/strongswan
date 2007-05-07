@@ -74,7 +74,7 @@ static void process_jobs(private_thread_pool_t *this)
 		 (int)pthread_self());
 	
 	/* drop threads capabilities, except CAP_NET_ADMIN */
-	charon->drop_capabilities(charon, TRUE, FALSE);
+	charon->drop_capabilities(charon, TRUE, TRUE, FALSE);
 	
 	while (TRUE)
 	{

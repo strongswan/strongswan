@@ -447,7 +447,7 @@ static void add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 static void receive_events(private_kernel_interface_t *this)
 {
 	/* keep netlink capabilities only */
-	charon->drop_capabilities(charon, TRUE, FALSE);
+	charon->drop_capabilities(charon, TRUE, TRUE, FALSE);
 
 	while(TRUE) 
 	{
