@@ -299,7 +299,6 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 	while (iterator->iterate(iterator, (void**)&listener))
 	{
 		va_list args_copy;
-		
 		va_copy(args_copy, args);
 		if (!listener->signal(listener, signal, level, thread, 
 							  ike_sa, format, args_copy))
@@ -315,15 +314,11 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 	iterator = this->active_listeners->create_iterator(this->active_listeners, TRUE);
 	while (iterator->iterate(iterator, (void**)&active_listener))
 	{
-		/* if the thread raising the signal is the same as the one that
-		 * listens, we skip it. Otherwise we have a deadlock */
-		if (active_listener->id == pthread_self())
-		{
-			continue;
-		}
-	
-		/* wait until it is back */
-		while (active_listener->state == REGISTERED)
+		/* wait until all threads are registered. But if the thread raising
+		 * the signal is the same as the one that listens, we skip it.
+		 * Otherwise we would deadlock. */
+		while (active_listener->id != pthread_self() &&
+			   active_listener->state == REGISTERED)
 		{
 			pthread_cond_wait(&active_listener->cond, &this->mutex);
 		}
@@ -346,7 +341,9 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 	iterator->reset(iterator);
 	while (iterator->iterate(iterator, (void**)&active_listener))
 	{
-		while (active_listener->state == REGISTERED)
+		/* do not wait for ourself, it won't happen (see above) */
+		while (active_listener->id != pthread_self() &&
+			   active_listener->state == REGISTERED)
 		{
 			pthread_cond_wait(&active_listener->cond, &this->mutex);
 		}
