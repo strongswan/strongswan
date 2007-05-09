@@ -88,8 +88,7 @@ static void send_packets(private_sender_t * this)
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	DBG1(DBG_NET, "sender thread running, thread_ID: %06u", (int)pthread_self());
 	
-	/* drop threads capabilities */
-	charon->drop_capabilities(charon, TRUE, FALSE, FALSE);
+	charon->drop_capabilities(charon, TRUE);
 
 	while (TRUE)
 	{

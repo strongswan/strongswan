@@ -60,8 +60,7 @@ static void get_events(private_scheduler_t * this)
 	DBG1(DBG_JOB, "scheduler thread running, thread_ID: %06u", 
 		 (int)pthread_self());
 
-	/* drop threads capabilities */
-	charon->drop_capabilities(charon, TRUE, FALSE, FALSE);
+	charon->drop_capabilities(charon, TRUE);
 
 	while (TRUE)
 	{

@@ -422,12 +422,9 @@ struct daemon_t {
 	 * @brief Let the calling thread drop its capabilities.
 	 * 
 	 * @param this			calling daemon
-	 * @param change_uid	TRUE to change UID/GID to IPSEC_UID/IPSEC_GID
-	 * @param netlink		TRUE to keep CAP_NET_ADMIN (using netlink)
-	 * @param bind			TRUE to keep CAP_NET_BIND_SERVICE and CAP_NET_RAW
+	 * @param full			TRUE to drop as many as possible
 	 */
-	void (*drop_capabilities) (daemon_t *this, bool change_uid,
-							   bool netlink, bool bind);
+	void (*drop_capabilities) (daemon_t *this, bool full);
 	
 	/**
 	 * @brief Shut down the daemon.

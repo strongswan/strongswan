@@ -254,8 +254,7 @@ static void receive_packets(private_receiver_t *this)
 	DBG1(DBG_NET, "receiver thread running, thread_ID: %06u", 
 		 (int)pthread_self());
 	
-	/* drop threads capabilities */
-	charon->drop_capabilities(charon, TRUE, FALSE, FALSE);
+	charon->drop_capabilities(charon, TRUE);
 	
 	while (TRUE)
 	{

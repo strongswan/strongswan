@@ -1535,8 +1535,7 @@ static void stroke_receive(private_stroke_interface_t *this)
 	int oldstate;
 	int strokefd;
 	
-	/* drop threads capabilities, keep NET_ADMIN to query use times for status */
-	charon->drop_capabilities(charon, TRUE, TRUE, FALSE);
+	charon->drop_capabilities(charon, TRUE);
 	
 	/* ignore sigpipe. writing over the pipe back to the console
 	 * only fails if SIGPIPE is ignored. */

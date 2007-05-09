@@ -73,8 +73,7 @@ static void process_jobs(private_thread_pool_t *this)
 	DBG1(DBG_JOB, "worker thread running, thread_ID: %06u",
 		 (int)pthread_self());
 	
-	/* drop threads capabilities, except CAP_NET_ADMIN */
-	charon->drop_capabilities(charon, TRUE, TRUE, FALSE);
+	charon->drop_capabilities(charon, TRUE);
 	
 	while (TRUE)
 	{

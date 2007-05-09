@@ -224,34 +224,14 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 /**
  * drop daemon capabilities
  */
-static void drop_capabilities(private_daemon_t *this, bool change_uid,
-							  bool netlink, bool bind)
+static void drop_capabilities(private_daemon_t *this, bool full)
 {
 	struct __user_cap_header_struct hdr;
 	struct __user_cap_data_struct data;
-	u_int32_t keep = 0;
+	/* CAP_NET_ADMIN is needed to use netlink */
+	u_int32_t keep = (1<<CAP_NET_ADMIN);
 	
-	if (netlink)
-	{
-		/* CAP_NET_ADMIN is needed to use netlink */
-		keep |= (1<<CAP_NET_ADMIN);
-	}
-	if (bind)
-	{
-		/* CAP_NET_BIND_SERVICE to bind services below port 1024, 
-		 * CAP_NET_RAW to create RAW sockets.
-		 * CAP_DAC_READ_SEARCH is needed to read ipsec.secrets */
-		keep |= (1<<CAP_NET_BIND_SERVICE);
-		keep |= (1<<CAP_NET_RAW);
-		keep |= (1<<CAP_DAC_READ_SEARCH);
-	}
-	
-	hdr.version = _LINUX_CAPABILITY_VERSION;
-	hdr.pid = 0;
-	data.effective = data.permitted = keep;
-	data.inheritable = 0;
-	
-	if (change_uid)
+	if (full)
 	{
 #		if IPSEC_GID
 			setgid(IPSEC_GID);
@@ -260,6 +240,20 @@ static void drop_capabilities(private_daemon_t *this, bool change_uid,
 			setuid(IPSEC_UID);
 #		endif
 	}
+	else
+	{
+		/* CAP_NET_BIND_SERVICE to bind services below port 1024, 
+		 * CAP_NET_RAW to create RAW sockets.
+		 * CAP_DAC_READ_SEARCH is needed to read ipsec.secrets */
+		keep |= (1<<CAP_NET_BIND_SERVICE);
+		keep |= (1<<CAP_NET_RAW);
+		keep |= (1<<CAP_DAC_READ_SEARCH);
+	}
+
+	hdr.version = _LINUX_CAPABILITY_VERSION;
+	hdr.pid = 0;
+	data.effective = data.permitted = keep;
+	data.inheritable = 0;
 	
 	if (capset(&hdr, &data))
 	{
@@ -372,7 +366,7 @@ private_daemon_t *daemon_create(void)
 		
 	/* assign methods */
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
-	this->public.drop_capabilities = (void(*)(daemon_t*,bool,bool,bool))drop_capabilities;
+	this->public.drop_capabilities = (void(*)(daemon_t*,bool))drop_capabilities;
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
@@ -458,8 +452,8 @@ int main(int argc, char *argv[])
 	
 	prctl(PR_SET_KEEPCAPS, 1);
 	
-	/* keep bind() and netlink capabilities, stay as root until all files loaded */
-	drop_capabilities(NULL, FALSE, TRUE, TRUE);
+	/* drop the capabilities we won't need at all */
+	drop_capabilities(NULL, FALSE);
 	
 	/* use CTRL loglevel for default */
 	for (signal = 0; signal < DBG_MAX; signal++)
@@ -534,9 +528,6 @@ int main(int argc, char *argv[])
 	
 	/* initialize daemon */
 	initialize(private_charon, use_syslog, levels);
-	
-	/* drop bind() capability, netlink is needed for cleanup */
-	drop_capabilities(private_charon, FALSE, TRUE, FALSE);
 
 	/* load pluggable EAP modules */
 	eap_method_load(eapdir);
@@ -568,8 +559,8 @@ int main(int argc, char *argv[])
 	}
 	list->destroy(list);
 	
-	/* change UID */
-	drop_capabilities(private_charon, TRUE, TRUE, FALSE);
+	/* drop additional capabilites (bind & root) */
+	drop_capabilities(private_charon, TRUE);
 	
 	/* run daemon */
 	run(private_charon);
