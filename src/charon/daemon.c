@@ -569,7 +569,7 @@ int main(int argc, char *argv[])
 	list->destroy(list);
 	
 	/* change UID */
-	drop_capabilities(private_charon, TRUE, FALSE, FALSE);
+	drop_capabilities(private_charon, TRUE, TRUE, FALSE);
 	
 	/* run daemon */
 	run(private_charon);

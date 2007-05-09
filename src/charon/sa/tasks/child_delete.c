@@ -177,10 +177,29 @@ static void destroy_children(private_child_delete_t *this)
 }
 
 /**
+ * send closing signals for all CHILD_SAs over the bus
+ */
+static void log_children(private_child_delete_t *this)
+{
+	iterator_t *iterator;
+	child_sa_t *child_sa;
+	
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		SIG(CHILD_DOWN_START, "closing CHILD_SA %#R=== %#R",
+			child_sa->get_traffic_selectors(child_sa, TRUE),
+			child_sa->get_traffic_selectors(child_sa, FALSE));
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implementation of task_t.build for initiator
  */
 static status_t build_i(private_child_delete_t *this, message_t *message)
 {
+	log_children(this);
 	build_payloads(this, message);
 	return NEED_MORE;
 }
@@ -196,6 +215,7 @@ static status_t process_i(private_child_delete_t *this, message_t *message)
 	
 	process_payloads(this, message);
 	destroy_children(this);
+	SIG(CHILD_DOWN_SUCCESS, "CHILD_SA closed");
 	return SUCCESS;
 }
 
@@ -205,6 +225,7 @@ static status_t process_i(private_child_delete_t *this, message_t *message)
 static status_t process_r(private_child_delete_t *this, message_t *message)
 {
 	process_payloads(this, message);
+	log_children(this);
 	return NEED_MORE;
 }
 
@@ -219,6 +240,7 @@ static status_t build_r(private_child_delete_t *this, message_t *message)
 		build_payloads(this, message);	
 	}
 	destroy_children(this);
+	SIG(CHILD_DOWN_SUCCESS, "CHILD_SA closed");
 	return SUCCESS;
 }
 

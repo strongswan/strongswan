@@ -42,7 +42,6 @@
 #include <crypto/crl.h>
 #include <control/interface_manager.h>
 #include <control/interfaces/interface.h>
-#include <processing/jobs/initiate_job.h>
 #include <processing/jobs/route_job.h>
 #include <utils/leak_detective.h>
 
@@ -661,9 +660,12 @@ static bool stroke_log(stroke_log_info_t *info, signal_t signal, level_t level,
 {
 	if (level <= info->level)
 	{
-		vfprintf(info->out, format, args);
-		fprintf(info->out, "\n");
-		fflush(info->out);
+		if (vfprintf(info->out, format, args) < 0 ||
+			fprintf(info->out, "\n") < 0 ||
+			fflush(info->out) != 0)
+		{
+			return FALSE;
+		}
 	}
 	return TRUE;
 }
@@ -748,6 +750,8 @@ static void stroke_initiate(private_stroke_interface_t *this,
 	
 	charon->interfaces->initiate(charon->interfaces, peer_cfg, child_cfg,
 								 (interface_manager_cb_t)stroke_log, &info);
+	peer_cfg->destroy(peer_cfg);
+	child_cfg->destroy(child_cfg);
 }
 
 /**
@@ -799,8 +803,9 @@ static void stroke_terminate(private_stroke_interface_t *this,
 	u_int32_t id = 0;
 	bool child;
 	int len;
-	status_t status = SUCCESS;;
 	ike_sa_t *ike_sa;
+	iterator_t *iterator;
+	stroke_log_info_t info;
 	
 	pop_string(msg, &(msg->terminate.name));
 	string = msg->terminate.name;
@@ -829,20 +834,16 @@ static void stroke_terminate(private_stroke_interface_t *this,
 	}
 	
 	if (name)
-	{	/* must be a single name */
-		DBG1(DBG_CFG, "check out by single name '%s'", name);
-		ike_sa = charon->ike_sa_manager->checkout_by_name(charon->ike_sa_manager,
-														  name, child);
+	{
+		/* is a single name */
 	}
 	else if (pos == string + len - 2)
-	{	/* must be name[] or name{} */
+	{	/* is name[] or name{} */
 		string[len-2] = '\0';
-		DBG1(DBG_CFG, "check out by name '%s'", string);
-		ike_sa = charon->ike_sa_manager->checkout_by_name(charon->ike_sa_manager,
-														  string, child);
+		name = string;
 	}
 	else
-	{	/* must be name[123] or name{23} */
+	{	/* is name[123] or name{23} */
 		string[len-1] = '\0';
 		id = atoi(pos + 1);
 		if (id == 0)
@@ -850,45 +851,51 @@ static void stroke_terminate(private_stroke_interface_t *this,
 			DBG1(DBG_CFG, "error parsing string");
 			return;
 		}
-		DBG1(DBG_CFG, "check out by id '%d'", id);
-		ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-														id, child);
-	}
-	if (ike_sa == NULL)
-	{
-		DBG1(DBG_CFG, "no such IKE_SA found");
-		return;
 	}
 	
-	if (!child)
-	{
-		status = ike_sa->delete(ike_sa);
-	}
-	else
+	info.out = out;
+	info.level = msg->output_verbosity;
+	
+	iterator = charon->interfaces->create_ike_sa_iterator(charon->interfaces);
+	while (iterator->iterate(iterator, (void**)&ike_sa))
 	{
 		child_sa_t *child_sa;
-		iterator_t *iterator = ike_sa->create_child_sa_iterator(ike_sa);
-		while (iterator->iterate(iterator, (void**)&child_sa))
+		iterator_t *children;
+		
+		if (child)
 		{
-			if ((id && id == child_sa->get_reqid(child_sa)) ||
-				(string && streq(string, child_sa->get_name(child_sa))))
+			children = ike_sa->create_child_sa_iterator(ike_sa);
+			while (children->iterate(children, (void**)&child_sa))
 			{
-				u_int32_t spi = child_sa->get_spi(child_sa, TRUE);
-				protocol_id_t proto = child_sa->get_protocol(child_sa);
-				
-				status = ike_sa->delete_child_sa(ike_sa, proto, spi);
-				break;
+				if ((name && streq(name, child_sa->get_name(child_sa))) ||
+					(id && id == child_sa->get_reqid(child_sa)))
+				{
+					id = child_sa->get_reqid(child_sa);
+					children->destroy(children);
+					iterator->destroy(iterator);
+					
+					charon->interfaces->terminate_child(charon->interfaces, id,
+									(interface_manager_cb_t)stroke_log, &info);
+					return;
+				}
 			}
+			children->destroy(children);
 		}
-		iterator->destroy(iterator);
+		else if ((name && streq(name, ike_sa->get_name(ike_sa))) ||
+				 (id && id == ike_sa->get_unique_id(ike_sa)))
+		{
+			id = ike_sa->get_unique_id(ike_sa);
+			/* unlock manager first */
+			iterator->destroy(iterator);
+			
+			charon->interfaces->terminate_ike(charon->interfaces, id,
+								 	(interface_manager_cb_t)stroke_log, &info);
+			return;
+		}
+		
 	}
-	if (status == DESTROY_ME)
-	{
-		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
-													ike_sa);
-		return;
-	}
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	iterator->destroy(iterator);
+	DBG1(DBG_CFG, "no such SA found");
 }
 
 /**
@@ -1528,8 +1535,8 @@ static void stroke_receive(private_stroke_interface_t *this)
 	int oldstate;
 	int strokefd;
 	
-	/* drop threads capabilities */
-	charon->drop_capabilities(charon, TRUE, FALSE, FALSE);
+	/* drop threads capabilities, keep NET_ADMIN to query use times for status */
+	charon->drop_capabilities(charon, TRUE, TRUE, FALSE);
 	
 	/* ignore sigpipe. writing over the pipe back to the console
 	 * only fails if SIGPIPE is ignored. */

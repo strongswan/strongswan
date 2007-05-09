@@ -30,8 +30,6 @@
 #include <daemon.h>
 #include <library.h>
 #include <control/interfaces/interface.h>
-#include <processing/job_queue.h>
-#include <processing/jobs/initiate_job.h>
 
 
 typedef struct private_interface_manager_t private_interface_manager_t;
@@ -82,6 +80,11 @@ struct interface_bus_listener_t {
 	 * user parameter to pass to callback
 	 */
 	void *param;
+	
+	/**
+	 * caller has cancelled its listening subscription
+	 */
+	bool cancelled;
 };
 
 /**
@@ -93,86 +96,46 @@ static iterator_t* create_ike_sa_iterator(interface_manager_t *this)
 }
 
 /**
- * Implementation of interface_manager_t.initiate.
+ * listener function for initiate
  */
-static status_t initiate(private_interface_manager_t *this,
-						 peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-						 interface_manager_cb_t cb, void *param)
-{
-	ike_sa_t *ours = NULL;
-	job_t *job;
-	status_t retval;
-	
-	charon->bus->set_listen_state(charon->bus, TRUE);
-	
-	job = (job_t*)initiate_job_create(peer_cfg, child_cfg);
-	charon->job_queue->add(charon->job_queue, job);
-	
-	while (TRUE)
-	{
-		level_t level;
-		signal_t signal;
-		int thread;
-		ike_sa_t *ike_sa;
-		char* format;
-		va_list args;
-		
-		signal = charon->bus->listen(charon->bus, &level, &thread, 
-									 &ike_sa, &format, &args);
-		
-		if (cb && (ike_sa == ours || ours == NULL))
-		{
-			if (!cb(param, signal, level, ike_sa, format, args))
-			{
-				charon->bus->set_listen_state(charon->bus, FALSE);
-				return NEED_MORE;
-			}
-		}
-		
-		switch (signal)
-		{
-			case CHILD_UP_SUCCESS:
-				if (ike_sa == ours)
-				{
-					retval = SUCCESS;
-					break;
-				}
-				continue;
-			case CHILD_UP_FAILED:
-			case IKE_UP_FAILED:
-				if (ike_sa == ours)
-				{
-					retval = FAILED;
-					break;
-				}
-				continue;
-			case CHILD_UP_START:
-			case IKE_UP_START:
-				if (ours == NULL)
-				{
-					ours = ike_sa;
-				}
-				continue;
-			default:
-				continue;
-		}
-		break;
-	}
-	charon->bus->set_listen_state(charon->bus, FALSE);
-	return retval;
-}
-
-/**
- * listener function for terminate_ike
- */
-static bool terminate_listener(interface_bus_listener_t *this, signal_t signal,
-							   level_t level, int thread, ike_sa_t *ike_sa,
-							   char* format, va_list args)
+static bool initiate_listener(interface_bus_listener_t *this, signal_t signal,
+							  level_t level, int thread, ike_sa_t *ike_sa,
+							  char* format, va_list args)
 {
 	if (this->ike_sa == ike_sa)
 	{
 		if (!this->callback(this->param, signal, level, ike_sa, format, args))
 		{
+			this->cancelled = TRUE;
+			return FALSE;
+		}
+		switch (signal)
+		{
+			case IKE_UP_FAILED:
+			case CHILD_UP_FAILED:
+			case CHILD_UP_SUCCESS:
+			{
+				return FALSE;
+			}
+			default:
+				break;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * listener function for terminate_ike
+ */
+static bool terminate_ike_listener(interface_bus_listener_t *this, signal_t signal,
+								   level_t level, int thread, ike_sa_t *ike_sa,
+								   char* format, va_list args)
+{
+	if (this->ike_sa == ike_sa)
+	{
+		if (!this->callback(this->param, signal, level, ike_sa, format, args))
+		{
+			this->cancelled = TRUE;
 			return FALSE;
 		}
 		switch (signal)
@@ -190,13 +153,125 @@ static bool terminate_listener(interface_bus_listener_t *this, signal_t signal,
 }
 
 /**
+ * listener function for terminate_child
+ */
+static bool terminate_child_listener(interface_bus_listener_t *this, signal_t signal,
+									 level_t level, int thread, ike_sa_t *ike_sa,
+									 char* format, va_list args)
+{
+	if (this->ike_sa == ike_sa)
+	{
+		if (!this->callback(this->param, signal, level, ike_sa, format, args))
+		{
+			this->cancelled = TRUE;
+			return FALSE;
+		}
+		switch (signal)
+		{
+			case IKE_DOWN_FAILED:
+			case IKE_DOWN_SUCCESS:
+			case CHILD_DOWN_FAILED:
+			case CHILD_DOWN_SUCCESS:
+			{
+				return FALSE;
+			}
+			default:
+				break;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * Implementation of interface_manager_t.initiate.
+ */
+static status_t initiate(private_interface_manager_t *this,
+						 peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+						 interface_manager_cb_t callback, void *param)
+{
+	ike_sa_t *ike_sa;
+	ike_cfg_t *ike_cfg;
+	status_t retval = FAILED;
+	interface_bus_listener_t listener;
+	
+	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+	ike_sa = charon->ike_sa_manager->checkout_by_peer(charon->ike_sa_manager,
+				ike_cfg->get_my_host(ike_cfg), ike_cfg->get_other_host(ike_cfg),
+				peer_cfg->get_my_id(peer_cfg), peer_cfg->get_other_id(peer_cfg));
+
+	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
+	{
+		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
+	}
+
+	listener.listener.signal = (void*)initiate_listener;
+	listener.callback = callback;
+	listener.ike_sa = ike_sa;
+	listener.param = param;
+	listener.cancelled = FALSE;
+
+	/* we listen passively to catch the signals we are raising in 
+	 * ike_sa->delete(). */
+	if (callback)
+	{
+		charon->bus->add_listener(charon->bus, &listener.listener);
+	}
+	charon->bus->set_listen_state(charon->bus, TRUE);
+	if (ike_sa->initiate(ike_sa, child_cfg) != SUCCESS)
+	{
+		charon->bus->set_listen_state(charon->bus, FALSE);
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+		return FAILED;
+	}
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	
+	/* wait until we get a result */
+	while (TRUE)
+	{
+		level_t level;
+		signal_t signal;
+		int thread;
+		ike_sa_t *current;
+		char* format;
+		va_list args;
+		
+		/* stop listening if the passive listener returned FALSE */
+		if (listener.cancelled)
+		{
+			retval = NEED_MORE;
+			break;
+		}
+		signal = charon->bus->listen(charon->bus, &level, &thread, 
+									 &current, &format, &args);
+		/* ike_sa is a valid pointer until we get one of the signals */
+		if (ike_sa == current)
+		{
+			switch (signal)
+			{
+				case CHILD_UP_SUCCESS:
+					retval = SUCCESS;
+				case CHILD_UP_FAILED:
+				case IKE_UP_FAILED:
+					break;
+				default:
+					continue;
+			}
+			break;
+		}
+	}
+	charon->bus->set_listen_state(charon->bus, FALSE);
+	return retval;
+}
+
+/**
  * Implementation of interface_manager_t.terminate_ike.
  */
 static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id, 
 							  interface_manager_cb_t callback, void *param)
 {
 	ike_sa_t *ike_sa;
-	status_t status;
+	status_t status = FAILED;;
+	interface_bus_listener_t listener;
 	
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
 													unique_id, FALSE);							
@@ -205,15 +280,15 @@ static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id,
 		return NOT_FOUND;
 	}
 	
-	/* we listen passively first, to catch the signals we are raising */
+	/* we listen passively to catch the signals we are raising in 
+	 * ike_sa->delete(). */
+	listener.listener.signal = (void*)terminate_ike_listener;
+	listener.callback = callback;
+	listener.ike_sa = ike_sa;
+	listener.param = param;
+	listener.cancelled = FALSE;
 	if (callback)
 	{
-		interface_bus_listener_t listener;
-	
-		listener.listener.signal = (void*)terminate_listener;
-		listener.callback = callback;
-		listener.ike_sa = ike_sa;
-		listener.param = param;
 		charon->bus->add_listener(charon->bus, &listener.listener);
 	}
 	charon->bus->set_listen_state(charon->bus, TRUE);
@@ -236,9 +311,17 @@ static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id,
 			char* format;
 			va_list args;
 			
+			/* stop listening if the passive listener returned FALSE */
+			if (listener.cancelled)
+			{
+				status = NEED_MORE;
+				break;
+			}
 			signal = charon->bus->listen(charon->bus, &level, &thread, 
 										 &current, &format, &args);
-			
+
+			/* even if we checked in the IKE_SA, the pointer is valid until
+			 * we get an IKE_DOWN_... */
 			if (ike_sa == current)
 			{
 				switch (signal)
@@ -246,7 +329,8 @@ static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id,
 					case IKE_DOWN_FAILED:
 					case IKE_DOWN_SUCCESS:
 					{
-						 break;
+						status = SUCCESS;
+						break;
 					}
 					default:
 						continue;
@@ -257,7 +341,7 @@ static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id,
 	}
 	charon->bus->set_listen_state(charon->bus, FALSE);
 
-	return SUCCESS;
+	return status;
 }
 
 /**
@@ -266,7 +350,100 @@ static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id,
 static status_t terminate_child(interface_manager_t *this, u_int32_t reqid, 
 								interface_manager_cb_t callback, void *param)
 {
-	return FAILED;
+	ike_sa_t *ike_sa;
+	child_sa_t *child_sa;
+	iterator_t *iterator;
+	status_t status = FAILED;
+	interface_bus_listener_t listener;
+	
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+													reqid, TRUE);							
+	if (ike_sa == NULL)
+	{
+		return NOT_FOUND;
+	}
+	
+	iterator = ike_sa->create_child_sa_iterator(ike_sa);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		if (child_sa->get_state(child_sa) != CHILD_ROUTED &&
+			child_sa->get_reqid(child_sa) == reqid)
+		{
+			break;
+		}
+		child_sa = NULL;
+	}
+	iterator->destroy(iterator);
+	
+	if (child_sa == NULL)
+	{
+		return NOT_FOUND;
+	}
+	
+	listener.listener.signal = (void*)terminate_child_listener;
+	listener.callback = callback;
+	listener.ike_sa = ike_sa;
+	listener.param = param;
+	listener.cancelled = FALSE;
+		
+	/* we listen passively to catch the signals we are raising */
+	if (callback)
+	{
+		charon->bus->add_listener(charon->bus, &listener.listener);
+	}
+	charon->bus->set_listen_state(charon->bus, TRUE);
+	status = ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
+									 child_sa->get_spi(child_sa, TRUE));
+	if (status == DESTROY_ME)
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+	}
+	else
+	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		
+		/* wait until CHILD_SA is cleanly deleted using a delete message */
+		while (TRUE)
+		{
+			level_t level;
+			signal_t signal;
+			int thread;
+			ike_sa_t *current;
+			char* format;
+			va_list args;
+			
+			/* stop listening if the passive listener returned FALSE */
+			if (listener.cancelled)
+			{
+				status = NEED_MORE;
+				break;
+			}
+			signal = charon->bus->listen(charon->bus, &level, &thread, 
+										 &current, &format, &args);
+			/* even if we checked in the IKE_SA, the pointer is valid until
+			 * we get an IKE_DOWN_... */
+			if (ike_sa == current)
+			{
+				switch (signal)
+				{
+					case IKE_DOWN_FAILED:
+					case IKE_DOWN_SUCCESS:
+					case CHILD_DOWN_FAILED:
+					case CHILD_DOWN_SUCCESS:
+					{
+						status = SUCCESS;
+						break;
+					}
+					default:
+						continue;
+				}
+				break;
+			}
+		}
+	}
+	charon->bus->set_listen_state(charon->bus, FALSE);
+
+	return status;
 }
 
 /**

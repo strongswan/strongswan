@@ -53,7 +53,6 @@ processing/job_queue.c processing/job_queue.h \
 processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 processing/jobs/delete_child_sa_job.c processing/jobs/delete_child_sa_job.h \
 processing/jobs/delete_ike_sa_job.c processing/jobs/delete_ike_sa_job.h \
-processing/jobs/initiate_job.c processing/jobs/initiate_job.h \
 processing/jobs/job.c processing/jobs/job.h \
 processing/jobs/process_message_job.c processing/jobs/process_message_job.h \
 processing/jobs/rekey_child_sa_job.c processing/jobs/rekey_child_sa_job.h \

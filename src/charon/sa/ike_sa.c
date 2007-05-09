@@ -63,7 +63,6 @@
 #include <processing/jobs/send_keepalive_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
 #include <processing/jobs/route_job.h>
-#include <processing/jobs/initiate_job.h>
 
 
 #ifndef RESOLV_CONF
@@ -1512,8 +1511,6 @@ static status_t delete_(private_ike_sa_t *this)
 	switch (this->state)
 	{
 		case IKE_ESTABLISHED:
-			DBG1(DBG_IKE, "deleting IKE_SA");
-			/* do not log when rekeyed */
 		case IKE_REKEYING:
 			ike_delete = ike_delete_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, &ike_delete->task);
