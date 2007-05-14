@@ -67,6 +67,11 @@ struct private_dbus_interface_t {
 	 * dispatcher thread for DBUS messages
 	 */
 	pthread_t thread;
+	
+	/**
+	 * name of the currently active connection
+	 */
+	char *name;
 };
 
 /**
@@ -177,7 +182,9 @@ static bool start_connection(private_dbus_interface_t *this, DBusMessage* msg)
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 	status_t status = FAILED;
-
+	
+	dbus_error_free(&this->err);
+	
 	if (!dbus_message_get_args(msg, &this->err,
   			 DBUS_TYPE_STRING, &name, DBUS_TYPE_STRING, &user,
 			 DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &passwords, &passwords_count,
@@ -192,16 +199,25 @@ static bool start_connection(private_dbus_interface_t *this, DBusMessage* msg)
 	peer_cfg = get_peer_cfg_by_name(name);
 	if (peer_cfg)
 	{
+		free(this->name);
+		this->name = strdup(peer_cfg->get_name(peer_cfg));
 		child_cfg = get_child_from_peer(peer_cfg, name);
 		if (child_cfg)
 		{
 			status = charon->interfaces->initiate(charon->interfaces, peer_cfg,
 												  child_cfg, dbus_log, NULL);
+		peer_cfg->destroy(peer_cfg);
 		}
-	}	
+		child_cfg->destroy(child_cfg);
+	}
+	reply = dbus_message_new_method_return(msg);
+	dbus_connection_send(this->conn, reply, NULL);
+	dbus_message_unref(reply);
 	
 	if (status == SUCCESS)
 	{
+	
+		set_state(this, NM_VPN_STATE_STARTED);
 		signal = dbus_message_new_signal(NM_DBUS_PATH_STRONG,
 										 NM_DBUS_INTERFACE_STRONG,
 										 NM_DBUS_VPN_SIGNAL_IP4_CONFIG);
@@ -222,17 +238,13 @@ static bool start_connection(private_dbus_interface_t *this, DBusMessage* msg)
 			dbus_connection_send(this->conn, signal, NULL);
 		}						 
 		dbus_message_unref(signal);
-		set_state(this, NM_VPN_STATE_STARTED);
 	}
 	else
 	{
 		set_state(this, NM_VPN_STATE_STOPPED);
 	}
 	
-	reply = dbus_message_new_method_return(msg);
-	dbus_connection_send(this->conn, reply, NULL);
 	dbus_connection_flush(this->conn);
-	dbus_message_unref(reply);
 	return TRUE;
 }
 
@@ -241,9 +253,51 @@ static bool start_connection(private_dbus_interface_t *this, DBusMessage* msg)
  */
 static bool stop_connection(private_dbus_interface_t *this, DBusMessage* msg)
 {
+	u_int32_t id;
+	iterator_t *iterator;
+	ike_sa_t *ike_sa;
+	
+	if (this->name == NULL)
+	{
+		return FALSE;
+	}
+	
+	dbus_error_free(&this->err);
+	
 	set_state(this, NM_VPN_STATE_STOPPING);
+	
+	iterator = charon->interfaces->create_ike_sa_iterator(charon->interfaces);
+	while (iterator->iterate(iterator, (void**)&ike_sa))
+	{
+		child_sa_t *child_sa;
+		iterator_t *children;
+		
+		if (this->name && streq(this->name, ike_sa->get_name(ike_sa)))
+		{
+			id = ike_sa->get_unique_id(ike_sa);
+			iterator->destroy(iterator);
+			charon->interfaces->terminate_ike(charon->interfaces, id, NULL, NULL);
+			set_state(this, NM_VPN_STATE_STOPPED);
+			return TRUE;;
+		}
+		children = ike_sa->create_child_sa_iterator(ike_sa);
+		while (children->iterate(children, (void**)&child_sa))
+		{
+			if (this->name && streq(this->name, child_sa->get_name(child_sa)))
+			{
+				id = child_sa->get_reqid(child_sa);
+				children->destroy(children);
+				iterator->destroy(iterator);
+				charon->interfaces->terminate_child(charon->interfaces, id, NULL, NULL);
+				set_state(this, NM_VPN_STATE_STOPPED);
+				return TRUE;
+			}
+		}
+		children->destroy(children);
+	}
+	iterator->destroy(iterator);
 	set_state(this, NM_VPN_STATE_STOPPED);
-	return FALSE;
+	return TRUE;
 }
 
 /**
@@ -353,7 +407,10 @@ static void destroy(private_dbus_interface_t *this)
 {
 	pthread_cancel(this->thread);
 	pthread_join(this->thread, NULL);
-	dbus_error_free(&this->err); 
+	dbus_connection_close(this->conn);
+	dbus_error_free(&this->err);
+	dbus_shutdown();
+	free(this->name);
 	free(this);
 }
 
@@ -375,6 +432,7 @@ interface_t *interface_create()
 		DBG1(DBG_CFG, "unable to open DBUS connection: %s", this->err.message); 
 		charon->kill(charon, "DBUS initialization failed");
 	}
+	dbus_connection_set_exit_on_disconnect(this->conn, FALSE);
 	
 	ret = dbus_bus_request_name(this->conn, NM_DBUS_SERVICE_STRONG,
 							    DBUS_NAME_FLAG_REPLACE_EXISTING , &this->err);
@@ -405,6 +463,7 @@ interface_t *interface_create()
 		charon->kill(charon, "unable to add DBUS signal match");
 	}*/
 
+	this->name = NULL;
 	this->state = NM_VPN_STATE_INIT;
 	set_state(this, NM_VPN_STATE_STOPPED);
 
@@ -415,3 +474,4 @@ interface_t *interface_create()
 
 	return &this->public.interface;
 }
+
