@@ -323,92 +323,6 @@ static ca_info_t* get_issuer(private_local_credential_store_t *this, const x509_
 }
 
 /**
- * Implementation of local_credential_store_t.verify.
- */
-static status_t verify_signature(private_local_credential_store_t *this,
-								 chunk_t hash, chunk_t sig,
-								 identification_t *id, ca_info_t **issuer_p)
-{
-	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
-	status_t sig_status;
-	x509_t *cert;
-
-	/* default return values in case of failure */
-	sig_status = NOT_FOUND;
-	*issuer_p = NULL;
-
-	while (iterator->iterate(iterator, (void**)&cert))
-	{
-		if (id->equals(id, cert->get_subject(cert))
-		||	cert->equals_subjectAltName(cert, id))
-		{
-			err_t ugh;
-			rsa_public_key_t *public_key = cert->get_public_key(cert);
-			chunk_t keyid = public_key->get_keyid(public_key);
-
-			DBG2(DBG_CFG, "found candidate peer certificate");
-			DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
-			DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
-			DBG2(DBG_CFG, "keyid:    %#B", &keyid);
-
-			ugh = cert->is_valid(cert, NULL);
-			if (ugh != NULL)
-			{
-				DBG1(DBG_CFG, "candidate peer certificate %s", ugh);
-				sig_status = INVALID_STATE;
-				continue;
-			}
-			if (!cert->is_self_signed(cert))
-			{
-				cert_status_t cert_status;
-				ca_info_t *issuer = get_issuer(this, cert);
-
-				if (issuer == NULL)
-				{
-					DBG1(DBG_CFG, "issuer of candidate peer certificate not found");
-					sig_status = NOT_FOUND;
-					continue;
-				}
-				cert_status = cert->get_status(cert);
-
-				if (cert_status == CERT_REVOKED
-				||  cert_status == CERT_UNTRUSTED
-				|| ((issuer)->is_strict(issuer) && cert_status != CERT_GOOD))
-				{
-					DBG1(DBG_CFG, "candidate peer certificate has a non-acceptable status: %N", cert_status_names, cert_status);
-					sig_status = INVALID_STATE;
-					continue;
-				}
-				if (cert_status == CERT_GOOD && cert->get_until(cert) < time(NULL))
-				{
-					DBG1(DBG_CFG, "candidate peer certificate is good but crl is stale");
-					sig_status = INVALID_STATE;
-					continue;
-				}
-				*issuer_p = issuer;
-			}
-			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, hash, sig);
-			if (sig_status == SUCCESS)
-			{
-				DBG2(DBG_CFG, "candidate peer certificate has a matching RSA public key");
-				break;
-			}
-			else
-			{
-				DBG1(DBG_CFG, "candidate peer certificate has a non-matching RSA public key");
-				*issuer_p = NULL;
-			}
-		}
-	}
-	iterator->destroy(iterator);
-	if (sig_status == NOT_FOUND)
-	{
-		DBG1(DBG_CFG, "no candidate peer certificate found");
-	}
-	return sig_status;
-}
-
-/**
  * Implementation of local_credential_store_t.get_rsa_private_key.
  */
 static rsa_private_key_t *get_rsa_private_key(private_local_credential_store_t *this,
@@ -643,14 +557,16 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 
 	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
 	{
+		bool valid_signature;
 		err_t ugh = NULL;
 		ca_info_t *issuer;
 		x509_t *issuer_cert;
 		rsa_public_key_t *issuer_public_key;
-		bool valid_signature;
+		chunk_t keyid = cert->get_keyid(cert);
 
 		DBG1(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
 		DBG1(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
+		DBG1(DBG_CFG, "keyid:    %#B", &keyid);
 
 		ugh = cert->is_valid(cert, &until);
 		if (ugh != NULL)
@@ -796,6 +712,95 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 	}
 	DBG1(DBG_CFG, "maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
 	return FALSE;
+}
+
+/**
+ * Implementation of local_credential_store_t.verify_signature.
+ */
+static status_t verify_signature(private_local_credential_store_t *this,
+								 chunk_t hash, chunk_t sig,
+								 identification_t *id, ca_info_t **issuer_p)
+{
+	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
+	status_t sig_status;
+	x509_t *cert;
+
+	/* default return values in case of failure */
+	sig_status = NOT_FOUND;
+	*issuer_p = NULL;
+
+	while (iterator->iterate(iterator, (void**)&cert))
+	{
+		if (id->equals(id, cert->get_subject(cert))
+		||	cert->equals_subjectAltName(cert, id))
+		{
+			rsa_public_key_t *public_key = cert->get_public_key(cert);
+			cert_status_t cert_status = cert->get_status(cert);
+			
+			DBG2(DBG_CFG, "found candidate peer certificate");
+
+			if (cert_status == CERT_UNDEFINED || cert->get_until(cert) < time(NULL))
+			{
+				bool found;
+
+				if (!verify(this, cert, &found))
+				{
+					sig_status = VERIFY_ERROR;
+					DBG1(DBG_CFG, "candidate peer certificate was not successfully verified");
+					continue;
+				}
+				if (!cert->is_self_signed(cert))
+				{
+					*issuer_p = get_issuer(this, cert);
+				}
+			}
+			else
+			{
+				chunk_t keyid = public_key->get_keyid(public_key);
+
+				DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
+				DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
+				DBG2(DBG_CFG, "keyid:    %#B", &keyid);
+
+				if (!cert->is_self_signed(cert))
+				{
+					ca_info_t *issuer = get_issuer(this, cert);
+
+					if (issuer == NULL)
+					{
+						DBG1(DBG_CFG, "candidate peer certificate has no retrievable issuer");
+						sig_status = NOT_FOUND;
+						continue;
+					}
+					if (cert_status == CERT_REVOKED	|| cert_status == CERT_UNTRUSTED
+					|| ((issuer)->is_strict(issuer) && cert_status != CERT_GOOD))
+					{
+						DBG1(DBG_CFG, "candidate peer certificate has an inacceptable status: %N", cert_status_names, cert_status);
+						sig_status = VERIFY_ERROR;
+						continue;
+					}
+					*issuer_p = issuer;
+				}
+			}
+			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, hash, sig);
+			if (sig_status == SUCCESS)
+			{
+				DBG2(DBG_CFG, "candidate peer certificate has a matching RSA public key");
+				break;
+			}
+			else
+			{
+				DBG1(DBG_CFG, "candidate peer certificate has a non-matching RSA public key");
+				*issuer_p = NULL;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	if (sig_status == NOT_FOUND)
+	{
+		DBG1(DBG_CFG, "no candidate peer certificate found");
+	}
+	return sig_status;
 }
 
 /**
