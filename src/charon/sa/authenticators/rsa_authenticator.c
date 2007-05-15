@@ -78,9 +78,11 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 								  octets, auth_data, other_id, &issuer);
 	chunk_free(&octets);
 	
-	DBG1(DBG_IKE, "authentication of '%D' with %N %s",
-				  other_id, auth_method_names, AUTH_RSA,
-		 		  (status == SUCCESS)? "successful":"failed");
+	if (status == SUCCESS)
+	{
+		DBG1(DBG_IKE, "authentication of '%D' with %N successful",
+					   other_id, auth_method_names, AUTH_RSA);
+	}
 	return status;
 }
 
