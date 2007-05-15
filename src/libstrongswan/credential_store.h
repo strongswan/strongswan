@@ -88,15 +88,6 @@ struct credential_store_t {
 	rsa_public_key_t* (*get_rsa_public_key) (credential_store_t *this, identification_t *id);
 	
 	/**
-	 * @brief Returns the RSA public key of a specific ID if is trusted
-	 * 
-	 * @param this					calling object
-	 * @param id					identification_t object identifiying the key.
-	 * @return						public key, or NULL if not found or not trusted
-	 */
-	rsa_public_key_t* (*get_trusted_public_key) (credential_store_t *this, identification_t *id);
-	
-	/**
 	 * @brief Returns the RSA private key belonging to an RSA public key
 	 * 
 	 * The returned rsa_private_key_t must be destroyed by the caller after usage.
@@ -153,6 +144,18 @@ struct credential_store_t {
 	 */
 	ca_info_t* (*get_issuer) (credential_store_t *this, const x509_t* cert);
 
+	/**
+	 * @brief Verify an RSA signature given the ID of the signer
+	 * 
+	 * @param this					calling object
+	 * @param hash					hash value to be verified.
+	 * @param sig					signature to be verified.
+	 * @param id					identification_t object identifiying the signer.
+	 * @param issuer_p				issuer of the signer's certificate (if not self-signed).
+	 * @return						status of the verification - SUCCESS if successful
+	 */
+	status_t (*verify_signature) (credential_store_t *this, chunk_t hash, chunk_t sig, identification_t *id, ca_info_t **issuer_p);
+	
 	/**
 	 * @brief Verify an X.509 certificate up to trust anchor without any status checks
 	 *

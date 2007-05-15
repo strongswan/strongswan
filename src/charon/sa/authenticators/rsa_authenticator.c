@@ -60,8 +60,8 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 {
 	status_t status;
 	chunk_t auth_data, octets;
-	rsa_public_key_t *public_key;
 	identification_t *other_id;
+	ca_info_t *issuer;
 	prf_t *prf;
 	
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
@@ -71,28 +71,17 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 		return INVALID_ARG;
 	}
 	auth_data = auth_payload->get_data(auth_payload);
-	public_key = charon->credentials->get_trusted_public_key(charon->credentials,
-															 other_id);
-	if (public_key == NULL)
-	{
-		DBG1(DBG_IKE, "no RSA public key found for '%D'", other_id);
-		return NOT_FOUND;
-	}
 	prf = this->ike_sa->get_prf(this->ike_sa);
 	prf->set_key(prf, this->ike_sa->get_skp_verify(this->ike_sa));
 	octets = build_tbs_octets(ike_sa_init, my_nonce, other_id, prf);
-	status = public_key->verify_emsa_pkcs1_signature(public_key, octets, auth_data);
+	status = charon->credentials->verify_signature(charon->credentials,
+								  octets, auth_data, other_id, &issuer);
 	chunk_free(&octets);
 	
-	if (status != SUCCESS)
-	{
-		DBG1(DBG_IKE, "RSA signature verification failed");
-		return status;
-	}
-	
-	DBG1(DBG_IKE, "authentication of '%D' with %N successful",
-		 other_id, auth_method_names, AUTH_RSA);
-	return SUCCESS;
+	DBG1(DBG_IKE, "authentication of '%D' with %N %s",
+				  other_id, auth_method_names, AUTH_RSA,
+		 		  (status == SUCCESS)? "successful":"failed");
+	return status;
 }
 
 /**

@@ -323,51 +323,89 @@ static ca_info_t* get_issuer(private_local_credential_store_t *this, const x509_
 }
 
 /**
- * Implementation of local_credential_store_t.get_trusted_public_key.
+ * Implementation of local_credential_store_t.verify.
  */
-static rsa_public_key_t *get_trusted_public_key(private_local_credential_store_t *this,
-												identification_t *id)
+static status_t verify_signature(private_local_credential_store_t *this,
+								 chunk_t hash, chunk_t sig,
+								 identification_t *id, ca_info_t **issuer_p)
 {
-	cert_status_t status;
-	err_t ugh;
+	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
+	status_t sig_status;
+	x509_t *cert;
 
-	x509_t *cert = get_certificate(this, id);
+	/* default return values in case of failure */
+	sig_status = NOT_FOUND;
+	*issuer_p = NULL;
 
-	if (cert == NULL)
-		return NULL;
-
-	ugh = cert->is_valid(cert, NULL);
-	if (ugh != NULL)
+	while (iterator->iterate(iterator, (void**)&cert))
 	{
-		DBG1(DBG_CFG, "certificate %s", ugh);
-		return NULL;
-	}
+		if (id->equals(id, cert->get_subject(cert))
+		||	cert->equals_subjectAltName(cert, id))
+		{
+			err_t ugh;
+			rsa_public_key_t *public_key = cert->get_public_key(cert);
+			chunk_t keyid = public_key->get_keyid(public_key);
 
-	if (!cert->is_self_signed(cert))
+			DBG2(DBG_CFG, "found candidate peer certificate");
+			DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
+			DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
+			DBG2(DBG_CFG, "keyid:    %#B", &keyid);
+
+			ugh = cert->is_valid(cert, NULL);
+			if (ugh != NULL)
+			{
+				DBG1(DBG_CFG, "candidate peer certificate %s", ugh);
+				sig_status = INVALID_STATE;
+				continue;
+			}
+			if (!cert->is_self_signed(cert))
+			{
+				cert_status_t cert_status;
+				ca_info_t *issuer = get_issuer(this, cert);
+
+				if (issuer == NULL)
+				{
+					DBG1(DBG_CFG, "issuer of candidate peer certificate not found");
+					sig_status = NOT_FOUND;
+					continue;
+				}
+				cert_status = cert->get_status(cert);
+
+				if (cert_status == CERT_REVOKED
+				||  cert_status == CERT_UNTRUSTED
+				|| ((issuer)->is_strict(issuer) && cert_status != CERT_GOOD))
+				{
+					DBG1(DBG_CFG, "candidate peer certificate has a non-acceptable status: %N", cert_status_names, cert_status);
+					sig_status = INVALID_STATE;
+					continue;
+				}
+				if (cert_status == CERT_GOOD && cert->get_until(cert) < time(NULL))
+				{
+					DBG1(DBG_CFG, "candidate peer certificate is good but crl is stale");
+					sig_status = INVALID_STATE;
+					continue;
+				}
+				*issuer_p = issuer;
+			}
+			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, hash, sig);
+			if (sig_status == SUCCESS)
+			{
+				DBG2(DBG_CFG, "candidate peer certificate has a matching RSA public key");
+				break;
+			}
+			else
+			{
+				DBG1(DBG_CFG, "candidate peer certificate has a non-matching RSA public key");
+				*issuer_p = NULL;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	if (sig_status == NOT_FOUND)
 	{
-		ca_info_t *issuer = get_issuer(this, cert);
-
-		if (issuer == NULL)
-		{
-			DBG1(DBG_CFG, "issuer of public key not found");
-			return NULL;
-		}
-		status = cert->get_status(cert);
-
-		if (status == CERT_REVOKED
-		||  status == CERT_UNTRUSTED
-		|| (issuer->is_strict(issuer) && status != CERT_GOOD))
-		{
-			DBG1(DBG_CFG, "certificate status: %N", cert_status_names, status);
-			return NULL;
-		}
-		if (status == CERT_GOOD && cert->get_until(cert) < time(NULL))
-		{
-			DBG1(DBG_CFG, "certificate is good but crl is stale");
-			return NULL;
-		}
+		DBG1(DBG_CFG, "no candidate peer certificate found");
 	}
-	return cert->get_public_key(cert);
+	return sig_status;
 }
 
 /**
@@ -1414,12 +1452,12 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
 	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t* (*) (credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
 	this->public.credential_store.has_rsa_private_key = (bool (*) (credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
-	this->public.credential_store.get_trusted_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_trusted_public_key;
 	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
 	this->public.credential_store.get_auth_certificate = (x509_t* (*) (credential_store_t*,u_int,identification_t*))get_auth_certificate;
 	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,chunk_t))get_ca_certificate_by_keyid;
 	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,const x509_t*))get_issuer;
 	this->public.credential_store.is_trusted = (bool (*) (credential_store_t*,x509_t*))is_trusted;
+	this->public.credential_store.verify_signature = (status_t (*) (credential_store_t*,chunk_t,chunk_t,identification_t*,ca_info_t**))verify_signature;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
 	this->public.credential_store.add_auth_certificate = (x509_t* (*) (credential_store_t*,x509_t*,u_int))add_auth_certificate;
