@@ -1,0 +1,6 @@
+The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each 
+to gateway <b>moon</b>. The authentication is based on <b>X.509 certificates</b>.
+Gateway <b>moon</b> has already loaded a revoked certificate for <b>carol</b>
+and a self-signed certificate for <b>dave</b> locally but gets actual certificates
+as CERT payloads from both peers. The RSA signature verification process tries all
+candidate peer certificates until it finds a valid one with a matching public key.
