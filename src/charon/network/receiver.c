@@ -271,7 +271,7 @@ static void receive_packets(private_receiver_t *this)
 		message = message_create_from_packet(packet);
 		if (message->parse_header(message) != SUCCESS)
 		{
-			DBG1(DBG_NET, "received invalid IKE header from %H, ignored",
+			DBG1(DBG_NET, "received invalid IKE header from %H - ignored",
 				 packet->get_source(packet));
 			message->destroy(message);
 			continue;

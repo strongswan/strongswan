@@ -673,7 +673,7 @@ static status_t add_policies(private_child_sa_t *this,
 			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
 			{
 				DBG2(DBG_CHD,
-					 "CHILD_SA policy uses two different IP families, ignored");
+					 "CHILD_SA policy uses two different IP families - ignored");
 				continue;
 			}
 			
@@ -682,7 +682,7 @@ static status_t add_policies(private_child_sa_t *this,
 				my_ts->get_protocol(my_ts) && other_ts->get_protocol(other_ts))
 			{
 				DBG2(DBG_CHD,
-					 "CHILD_SA policy uses two different protocols, ignored");
+					 "CHILD_SA policy uses two different protocols - ignored");
 				continue;
 			}
 			
