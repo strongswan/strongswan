@@ -44,8 +44,8 @@ TESTDATE=`date +%Y%m%d-%H%M`
 
 TODAYDIR=$TESTRESULTSDIR/$TESTDATE
 mkdir $TODAYDIR
-TESTRESULTSHTML=$TODAYDIR/index.html
-ALLHTML=$TODAYDIR/all.html
+TESTRESULTSHTML=$TODAYDIR/all.html
+INDEX=$TODAYDIR/index.html
 DEFAULTTESTSDIR=$UMLTESTDIR/testing/tests
 
 testnumber="0"
@@ -105,37 +105,45 @@ done
 KERNEL_VERSION=`basename $KERNEL .tar.bz2`
 IPSEC_VERSION=`basename $STRONGSWAN .tar.bz2`
 
-cat > $TESTRESULTSHTML <<@EOF
+cat > $INDEX <<@EOF
 <html>
 <head>
-  <title>strongSwan UML Testing</title>
+  <title>strongSwan UML Tests</title>
 </head>
 <body>
-  <h2>strongSwan UML Testing</h2>
+  <h2>strongSwan UML Tests</h2>
   <table border="0" cellspacing="2">
-    <tr><td><b>Host:</b></td><td>`uname -a`</td></tr>
-    <tr><td><b>UML kernel: &nbsp;</b></td><td>$KERNEL_VERSION</td></tr>
-    <tr><td><b>IPsec:</b></td><td>$IPSEC_VERSION</td></tr>
-    <tr><td><b>Date:</b></td><td>$TESTDATE</td></tr>
-  </table>
-  <p>
-  <table border="0" width="500">
-    <thead align="left"><th>Number</th><th>Test</th><th>Result</th></thead>
+    <tr valign="top">
+      <td><b>Host:</b></td>
+      <td colspan="3">`uname -a`</td>
+    </tr>
+    <tr valign="top">
+      <td><b>UML kernel: &nbsp;</b></td>
+      <td colspan="3">$KERNEL_VERSION</td>
+    </tr>
+    <tr valign="top">
+      <td><b>IPsec:</b></td>
+      <td colspan="3">$IPSEC_VERSION</td>
+    </tr>
+    <tr valign="top">
+      <td><b>Date:</b></td>
+      <td colspan="3">$TESTDATE</td>
+    </tr>
+    <tr>
+      <td width="100">&nbsp;</td>
+      <td width="200">&nbsp;</td>
+      <td width=" 50">&nbsp;</td>
+      <td >&nbsp;</td>
+    </tr>
 @EOF
 
-cat > $ALLHTML <<@EOF
-<html>
-<head>
-  <title>strongSwan UML Testing</title>
-</head>
-<body>
-  <h2>strongSwan UML Testing</h2>
-  <table border="0" cellspacing="2">
-    <tr><td><b>Host:</b></td><td>`uname -a`</td></tr>
-    <tr><td><b>UML kernel: &nbsp;</b></td><td>$KERNEL_VERSION</td></tr>
-    <tr><td><b>IPsec:</b></td><td>$IPSEC_VERSION</td></tr>
-    <tr><td><b>Date:</b></td><td>$TESTDATE</td></tr>
-    <tr><td colspan="2">&nbsp;</td></tr>
+cat $INDEX > $TESTRESULTSHTML
+cat >> $TESTRESULTSHTML <<@EOF
+    <tr align="left">
+      <th>Number</th>
+      <th>Test</th>
+      <th colspan="2">Result</th>
+    </tr>
 @EOF
 
 cecho "UML kernel: $KERNEL_VERSION"
@@ -174,7 +182,46 @@ do
     if [ ! -d $TODAYDIR/$SUBDIR ]
     then
 	mkdir $TODAYDIR/$SUBDIR
-	echo "<tr><td>&nbsp;</td><td><a href=\"$SUBDIR\">$SUBDIR</a></td>" >> $ALLHTML
+	if [ $testnumber == 0 ]
+	then
+	    FIRST="<b>Category:</b"
+	else
+	    FIRST="&nbsp;"
+	fi
+	echo "    <tr><td>$FIRST</td><td><a href=\"$SUBDIR/index.html\">$SUBDIR</a></td></tr>" >> $INDEX
+	SUBTESTSINDEX=$TODAYDIR/$SUBDIR/index.html
+	cat > $SUBTESTSINDEX <<@EOF
+<html>
+<head>
+  <title>strongSwan $SUBDIR Tests</title>
+</head>
+<body>
+  <h2>strongSwan $SUBDIR Tests</h2>
+  <table border="0" cellspacing="2">
+    <tr valign="top">
+      <td><b>UML kernel: &nbsp;</b></td>
+      <td colspan="3">$KERNEL_VERSION</td>
+    </tr>
+    <tr valign="top">
+      <td><b>IPsec:</b></td>
+      <td colspan="3">$IPSEC_VERSION</td>
+    </tr>
+    <tr valign="top">
+      <td><b>Date:</b></td>
+      <td colspan="3">$TESTDATE</td>
+    </tr>
+    <tr>
+      <td width="100">&nbsp;</td>
+      <td width="200">&nbsp;</td>
+      <td width=" 50">&nbsp;</td>
+      <td >&nbsp;</td>
+    </tr>
+    <tr align="left">
+       <th>Number</th>
+       <th>Test</th>
+       <th colspan="2">Result</th>
+    </tr>
+@EOF
     fi
 
     for name in $SUBTESTS
@@ -531,10 +578,20 @@ do
     <td>$testnumber</td>
     <td><a href="$testname/">$testname</a></td>
     <td><a href="$testname/console.log"><font color="$COLOR">$STATUS</font></a></td>
+    <td>&nbsp;</td>
+  </tr>
+@EOF
+	cat >> $SUBTESTSINDEX << @EOF
+  <tr>
+    <td>$testnumber</td>
+    <td><a href="$name/">$name</a></td>
+    <td><a href="$name/console.log"><font color="$COLOR">$STATUS</font></a></td>
+    <td>&nbsp;</td>
   </tr>
 @EOF
 
     done
+
 done
 
 
@@ -545,14 +602,28 @@ done
 cat >> $TESTRESULTSHTML << @EOF
   </table>
   <p>
-  <b>Passed: &nbsp; $passed_cnt</b><br>
-  <b>Failed: &nbsp; $failed_cnt</b><br>
+  <b>Passed: &nbsp; <font color="green">$passed_cnt</font></b><br>
+  <b>Failed: &nbsp; <font color="red">$failed_cnt</font></b><br>
   <p>
 </body>
 </html>
 @EOF
 
-cat >> $ALLHTML << @EOF
+let "all_cnt = $passed_cnt + $failed_cnt"
+
+cat >> $INDEX << @EOF
+    <tr>
+      <td>&nbsp;</td>
+      <td><a href="all.html"><b>all</b></a></td>
+	  <td><b>$all_cnt</td>
+	  <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><b>Failed:</b></td>
+      <td>&nbsp;</td>
+	  <td><b><font color="red">$failed_cnt</font></b></td>
+	  <td>&nbsp;</td>
+    </tr>
   </table>
 </body>
 </html>
