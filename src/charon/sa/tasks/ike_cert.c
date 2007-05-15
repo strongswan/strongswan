@@ -134,25 +134,23 @@ static void process_certs(private_ike_cert_t *this, message_t *message)
 			cert = x509_create_from_chunk(cert_data, 0);
 			if (cert)
 			{
-				if (charon->credentials->verify(charon->credentials,
-												cert, &found))
+				if (charon->credentials->verify(charon->credentials, cert, &found))
 				{
 					DBG2(DBG_IKE, "received end entity certificate is trusted, "
-						 "added to store");
-					if (!found)
+								  "added to store");
+					if (found)
 					{
-						charon->credentials->add_end_certificate(
-													charon->credentials, cert);
+						cert->destroy(cert);
 					}
 					else
 					{
-						cert->destroy(cert);
+						charon->credentials->add_end_certificate(charon->credentials, cert);
 					}
 				}
 				else
 				{
-					DBG1(DBG_IKE, "received end entity certificate is not "
-						 "trusted, discarded");
+					DBG1(DBG_IKE, "received end entity certificate is not trusted,"
+								  "discarded");
 					cert->destroy(cert);
 				}
 			}
