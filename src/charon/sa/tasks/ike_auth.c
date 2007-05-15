@@ -202,7 +202,7 @@ static status_t process_auth(private_ike_auth_t *this, message_t *message)
 	auth->destroy(auth);
 	if (status != SUCCESS)
 	{
-		SIG(IKE_UP_FAILED, "authentication of %D using %N failed",
+		SIG(IKE_UP_FAILED, "authentication of '%D' with %N failed",
 			 this->ike_sa->get_other_id(this->ike_sa), 
 			 auth_method_names, auth_method);	
 		return FAILED;
@@ -353,7 +353,7 @@ static status_t process_auth_eap(private_ike_auth_t *this, message_t *message)
 
 	if (!this->peer_authenticated)
 	{
-		SIG(IKE_UP_FAILED, "authentication of %D using %N failed",
+		SIG(IKE_UP_FAILED, "authentication of '%D' with %N failed",
 			 this->ike_sa->get_other_id(this->ike_sa), 
 			 auth_method_names, AUTH_EAP);
 		if (this->initiator)
@@ -451,7 +451,7 @@ static status_t build_eap_r(private_ike_auth_t *this, message_t *message)
 			this->public.task.process = (status_t(*)(task_t*,message_t*))process_auth_eap;
 			break;
 		default:
-			SIG(IKE_UP_FAILED, "authentication of %D using %N failed",
+			SIG(IKE_UP_FAILED, "authentication of '%D' with %N failed",
 				this->ike_sa->get_other_id(this->ike_sa),
 				auth_method_names, AUTH_EAP);
 			status = FAILED;
