@@ -84,7 +84,7 @@ static void process_certreqs(private_ike_cert_t *this, message_t *message)
 			encoding = certreq->get_cert_encoding(certreq);
 			if (encoding != CERT_X509_SIGNATURE)
 			{
-				DBG1(DBG_IKE, "certreq payload %N not supported, ignored",
+				DBG1(DBG_IKE, "certreq payload %N not supported - ignored",
 					 cert_encoding_names, encoding);
 				continue;
 			}
@@ -125,7 +125,7 @@ static void process_certs(private_ike_cert_t *this, message_t *message)
 			encoding = cert_payload->get_cert_encoding(cert_payload);
 			if (encoding != CERT_X509_SIGNATURE)
 			{
-				DBG1(DBG_IKE, "certificate payload %N not supported, ignored",
+				DBG1(DBG_IKE, "certificate payload %N not supported - ignored",
 					 cert_encoding_names, encoding);
 				continue;
 			}
@@ -136,7 +136,7 @@ static void process_certs(private_ike_cert_t *this, message_t *message)
 			{
 				if (charon->credentials->verify(charon->credentials, cert, &found))
 				{
-					DBG2(DBG_IKE, "received end entity certificate is trusted, "
+					DBG2(DBG_IKE, "received end entity certificate is trusted - "
 								  "added to store");
 					if (found)
 					{
@@ -149,14 +149,14 @@ static void process_certs(private_ike_cert_t *this, message_t *message)
 				}
 				else
 				{
-					DBG1(DBG_IKE, "received end entity certificate is not trusted,"
+					DBG1(DBG_IKE, "received end entity certificate is not trusted - "
 								  "discarded");
 					cert->destroy(cert);
 				}
 			}
 			else
 			{
-				DBG1(DBG_IKE, "parsing of received certificate failed, discarded");
+				DBG1(DBG_IKE, "parsing of received certificate failed - discarded");
 				chunk_free(&cert_data);
 			}
 		}
