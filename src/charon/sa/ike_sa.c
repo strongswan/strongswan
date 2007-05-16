@@ -62,7 +62,6 @@
 #include <processing/jobs/send_dpd_job.h>
 #include <processing/jobs/send_keepalive_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
-#include <processing/jobs/route_job.h>
 
 
 #ifndef RESOLV_CONF

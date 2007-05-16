@@ -42,7 +42,6 @@
 #include <crypto/crl.h>
 #include <control/interface_manager.h>
 #include <control/interfaces/interface.h>
-#include <processing/jobs/route_job.h>
 #include <utils/leak_detective.h>
 
 #define IKE_PORT	500
