@@ -755,18 +755,17 @@ static void stroke_initiate(private_stroke_interface_t *this,
 }
 
 /**
- * route/unroute a policy (install SPD entries)
+ * route a policy (install SPD entries)
  */
 static void stroke_route(private_stroke_interface_t *this,
-						 stroke_msg_t *msg, FILE *out, bool route)
+						 stroke_msg_t *msg, FILE *out)
 {
-	route_job_t *job;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
+	stroke_log_info_t info;
 	
 	pop_string(msg, &(msg->route.name));
-	DBG1(DBG_CFG, "received stroke: %s '%s'",
-		 route ? "route" : "unroute", msg->route.name);
+	DBG1(DBG_CFG, "received stroke: route '%s'", msg->route.name);
 	
 	peer_cfg = get_peer_cfg_by_name(msg->route.name);
 	if (peer_cfg == NULL)
@@ -787,10 +786,57 @@ static void stroke_route(private_stroke_interface_t *this,
 		peer_cfg->destroy(peer_cfg);
 		return;
 	}
-	fprintf(out, "%s policy '%s'\n",
-			route ? "routing" : "unrouting", msg->route.name);
-	job = route_job_create(peer_cfg, child_cfg, route);
-	charon->job_queue->add(charon->job_queue, (job_t*)job);
+	
+	info.out = out;
+	info.level = msg->output_verbosity;
+	charon->interfaces->route(charon->interfaces, peer_cfg, child_cfg,
+							  (interface_manager_cb_t)stroke_log, &info);
+	peer_cfg->destroy(peer_cfg);
+	child_cfg->destroy(child_cfg);
+}
+
+/**
+ * unroute a policy
+ */
+static void stroke_unroute(private_stroke_interface_t *this,
+						   stroke_msg_t *msg, FILE *out)
+{
+	char *name;
+	ike_sa_t *ike_sa;
+	iterator_t *iterator;
+	stroke_log_info_t info;
+	
+	pop_string(msg, &(msg->terminate.name));
+	name = msg->terminate.name;
+	
+	info.out = out;
+	info.level = msg->output_verbosity;
+	
+	iterator = charon->interfaces->create_ike_sa_iterator(charon->interfaces);
+	while (iterator->iterate(iterator, (void**)&ike_sa))
+	{
+		child_sa_t *child_sa;
+		iterator_t *children;
+		u_int32_t id;
+
+		children = ike_sa->create_child_sa_iterator(ike_sa);
+		while (children->iterate(children, (void**)&child_sa))
+		{
+			if (child_sa->get_state(child_sa) == CHILD_ROUTED &&
+				streq(name, child_sa->get_name(child_sa)))
+			{
+				id = child_sa->get_reqid(child_sa);
+				children->destroy(children);
+				iterator->destroy(iterator);
+				charon->interfaces->unroute(charon->interfaces, id,
+								(interface_manager_cb_t)stroke_log, &info);
+				return;
+			}
+		}
+		children->destroy(children);
+	}
+	iterator->destroy(iterator);
+	DBG1(DBG_CFG, "no such SA found");
 }
 
 /**
@@ -1479,10 +1525,10 @@ static void stroke_process(private_stroke_interface_t *this, int strokefd)
 			stroke_initiate(this, msg, out);
 			break;
 		case STR_ROUTE:
-			stroke_route(this, msg, out, TRUE);
+			stroke_route(this, msg, out);
 			break;
 		case STR_UNROUTE:
-			stroke_route(this, msg, out, FALSE);
+			stroke_unroute(this, msg, out);
 			break;
 		case STR_TERMINATE:
 			stroke_terminate(this, msg, out);

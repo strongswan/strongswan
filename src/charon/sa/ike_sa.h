@@ -333,12 +333,13 @@ struct ike_sa_t {
 	 * @brief Unroute a policy in the kernel previously routed.
 	 *
 	 * @param this 			calling object
-	 * @param child_cfg		child config to unroute
+	 * @param reqid			reqid of CHILD_SA to unroute
 	 * @return				
 	 * 						- SUCCESS if route removed
+	 *						- NOT_FOUND if CHILD_SA not found
 	 * 						- DESTROY_ME if last CHILD_SA was unrouted
 	 */
-	status_t (*unroute) (ike_sa_t *this, child_cfg_t *child_cfg);
+	status_t (*unroute) (ike_sa_t *this, u_int32_t reqid);
 	
 	/**
 	 * @brief Acquire connection setup for an installed kernel policy.

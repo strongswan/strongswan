@@ -935,7 +935,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 /**
  * Implementation of ike_sa_t.unroute.
  */
-static status_t unroute(private_ike_sa_t *this, child_cfg_t *child_cfg)
+static status_t unroute(private_ike_sa_t *this, u_int32_t reqid)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
@@ -948,7 +948,7 @@ static status_t unroute(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
 		if (child_sa->get_state(child_sa) == CHILD_ROUTED &&
-			streq(child_sa->get_name(child_sa), child_cfg->get_name(child_cfg)))
+			child_sa->get_reqid(child_sa) == reqid)
 		{
 			iterator->remove(iterator);
 			SIG(CHILD_UNROUTE_SUCCESS, "CHILD_SA unrouted");
@@ -1873,7 +1873,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
 	this->public.initiate = (status_t(*)(ike_sa_t*,child_cfg_t*)) initiate;
 	this->public.route = (status_t(*)(ike_sa_t*,child_cfg_t*)) route;
-	this->public.unroute = (status_t(*)(ike_sa_t*,child_cfg_t*)) unroute;
+	this->public.unroute = (status_t(*)(ike_sa_t*,u_int32_t)) unroute;
 	this->public.acquire = (status_t(*)(ike_sa_t*,u_int32_t)) acquire;
 	this->public.get_ike_cfg = (ike_cfg_t*(*)(ike_sa_t*))get_ike_cfg;
 	this->public.set_ike_cfg = (void(*)(ike_sa_t*,ike_cfg_t*))set_ike_cfg;

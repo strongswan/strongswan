@@ -183,6 +183,62 @@ static bool terminate_child_listener(interface_bus_listener_t *this, signal_t si
 }
 
 /**
+ * listener function for route
+ */
+static bool route_listener(interface_bus_listener_t *this, signal_t signal,
+						   level_t level, int thread, ike_sa_t *ike_sa,
+						   char* format, va_list args)
+{
+	if (this->ike_sa == ike_sa)
+	{
+		if (!this->callback(this->param, signal, level, ike_sa, format, args))
+		{
+			this->cancelled = TRUE;
+			return FALSE;
+		}
+		switch (signal)
+		{
+			case CHILD_ROUTE_SUCCESS:
+			case CHILD_ROUTE_FAILED:
+			{
+				return FALSE;
+			}
+			default:
+				break;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * listener function for unroute
+ */
+static bool unroute_listener(interface_bus_listener_t *this, signal_t signal,
+						     level_t level, int thread, ike_sa_t *ike_sa,
+						     char* format, va_list args)
+{
+	if (this->ike_sa == ike_sa)
+	{
+		if (!this->callback(this->param, signal, level, ike_sa, format, args))
+		{
+			this->cancelled = TRUE;
+			return FALSE;
+		}
+		switch (signal)
+		{
+			case CHILD_UNROUTE_SUCCESS:
+			case CHILD_UNROUTE_FAILED:
+			{
+				return FALSE;
+			}
+			default:
+				break;
+		}
+	}
+	return TRUE;
+}
+
+/**
  * Implementation of interface_manager_t.initiate.
  */
 static status_t initiate(private_interface_manager_t *this,
@@ -377,6 +433,7 @@ static status_t terminate_child(interface_manager_t *this, u_int32_t reqid,
 	
 	if (child_sa == NULL)
 	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		return NOT_FOUND;
 	}
 	
@@ -453,7 +510,40 @@ static status_t route(interface_manager_t *this,
 					  peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 					  interface_manager_cb_t callback, void *param)
 {
-	return FAILED;
+	ike_sa_t *ike_sa;
+	ike_cfg_t *ike_cfg;
+	status_t status = SUCCESS;
+	
+	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+	
+	ike_sa = charon->ike_sa_manager->checkout_by_peer(charon->ike_sa_manager,
+				ike_cfg->get_my_host(ike_cfg), ike_cfg->get_other_host(ike_cfg),
+				peer_cfg->get_my_id(peer_cfg), peer_cfg->get_other_id(peer_cfg));
+	
+	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
+	{
+		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
+	}
+		
+	/* we listen passively only, as routing is done by one thread only */
+	if (callback)
+	{
+		interface_bus_listener_t listener;
+	
+		listener.listener.signal = (void*)route_listener;
+		listener.callback = callback;
+		listener.ike_sa = ike_sa;
+		listener.param = param;
+		listener.cancelled = FALSE;
+		charon->bus->add_listener(charon->bus, &listener.listener);
+	}
+	
+	if (ike_sa->route(ike_sa, child_cfg) != SUCCESS)
+	{
+		status = FAILED;
+	}
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	return status;
 }
 
 /**
@@ -462,7 +552,39 @@ static status_t route(interface_manager_t *this,
 static status_t unroute(interface_manager_t *this, u_int32_t reqid, 
 						interface_manager_cb_t callback, void *param)
 {
-	return FAILED;
+	ike_sa_t *ike_sa;
+	status_t status;
+	
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+													reqid, TRUE);							
+	if (ike_sa == NULL)
+	{
+		return NOT_FOUND;
+	}
+	
+	/* we listen passively only, as routing is done by one thread only */
+	if (callback)
+	{
+		interface_bus_listener_t listener;
+	
+		listener.listener.signal = (void*)unroute_listener;
+		listener.callback = callback;
+		listener.ike_sa = ike_sa;
+		listener.param = param;
+		listener.cancelled = FALSE;
+		charon->bus->add_listener(charon->bus, &listener.listener);
+	}
+	status = ike_sa->unroute(ike_sa, reqid);
+	if (status == DESTROY_ME)
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+		status = SUCCESS;
+	}
+	else
+	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	}
+	return status;
 }
 
 /**
