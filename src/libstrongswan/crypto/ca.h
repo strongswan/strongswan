@@ -26,11 +26,12 @@
 typedef struct ca_info_t ca_info_t;
 
 #include <library.h>
-
 #include <credential_store.h>
 
 #include "x509.h"
 #include "crl.h"
+
+#define MAX_CA_PATH_LEN		7
 
 /**
  * @brief X.509 certification authority information record
