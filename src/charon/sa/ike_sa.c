@@ -139,6 +139,11 @@ struct private_ike_sa_t {
 	identification_t *other_id;
 	
 	/**
+	 * CA that issued the certificate of other
+	 */
+	ca_info_t *other_ca;
+
+	/**
 	 * Linked List containing the child sa's of the current IKE_SA.
 	 */
 	linked_list_t *child_sas;
@@ -1169,6 +1174,22 @@ static void set_other_id(private_ike_sa_t *this, identification_t *other)
 }
 
 /**
+ * Implementation of ike_sa_t.get_other_ca.
+ */
+static ca_info_t* get_other_ca(private_ike_sa_t *this)
+{
+	return this->other_ca;
+}
+
+/**
+ * Implementation of ike_sa_t.set_other_ca.
+ */
+static void set_other_ca(private_ike_sa_t *this, ca_info_t *other_ca)
+{
+	this->other_ca = other_ca;
+}
+
+/**
  * Implementation of ike_sa_t.set_virtual_ip
  */
 static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
@@ -1865,55 +1886,57 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	static u_int32_t unique_id = 0;
 	
 	/* Public functions */
-	this->public.get_state = (ike_sa_state_t(*)(ike_sa_t*)) get_state;
-	this->public.set_state = (void(*)(ike_sa_t*,ike_sa_state_t)) set_state;
-	this->public.get_stats = (void(*)(ike_sa_t*,u_int32_t*))get_stats;
-	this->public.get_name = (char*(*)(ike_sa_t*))get_name;
-	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
-	this->public.initiate = (status_t(*)(ike_sa_t*,child_cfg_t*)) initiate;
-	this->public.route = (status_t(*)(ike_sa_t*,child_cfg_t*)) route;
-	this->public.unroute = (status_t(*)(ike_sa_t*,u_int32_t)) unroute;
-	this->public.acquire = (status_t(*)(ike_sa_t*,u_int32_t)) acquire;
-	this->public.get_ike_cfg = (ike_cfg_t*(*)(ike_sa_t*))get_ike_cfg;
-	this->public.set_ike_cfg = (void(*)(ike_sa_t*,ike_cfg_t*))set_ike_cfg;
-	this->public.get_peer_cfg = (peer_cfg_t*(*)(ike_sa_t*))get_peer_cfg;
-	this->public.set_peer_cfg = (void(*)(ike_sa_t*,peer_cfg_t*))set_peer_cfg;
-	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
-	this->public.get_my_host = (host_t*(*)(ike_sa_t*)) get_my_host;
-	this->public.set_my_host = (void(*)(ike_sa_t*,host_t*)) set_my_host;
-	this->public.get_other_host = (host_t*(*)(ike_sa_t*)) get_other_host;
-	this->public.set_other_host = (void(*)(ike_sa_t*,host_t*)) set_other_host;
-	this->public.get_my_id = (identification_t*(*)(ike_sa_t*)) get_my_id;
-	this->public.set_my_id = (void(*)(ike_sa_t*,identification_t*)) set_my_id;
-	this->public.get_other_id = (identification_t*(*)(ike_sa_t*)) get_other_id;
-	this->public.set_other_id = (void(*)(ike_sa_t*,identification_t*)) set_other_id;
-	this->public.retransmit = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit;
-	this->public.delete = (status_t(*)(ike_sa_t*))delete_;
-	this->public.destroy = (void(*)(ike_sa_t*))destroy;
+	this->public.get_state = (ike_sa_state_t (*)(ike_sa_t*)) get_state;
+	this->public.set_state = (void (*)(ike_sa_t*,ike_sa_state_t)) set_state;
+	this->public.get_stats = (void (*)(ike_sa_t*,u_int32_t*))get_stats;
+	this->public.get_name = (char* (*)(ike_sa_t*))get_name;
+	this->public.process_message = (status_t (*)(ike_sa_t*, message_t*)) process_message;
+	this->public.initiate = (status_t (*)(ike_sa_t*,child_cfg_t*)) initiate;
+	this->public.route = (status_t (*)(ike_sa_t*,child_cfg_t*)) route;
+	this->public.unroute = (status_t (*)(ike_sa_t*,u_int32_t)) unroute;
+	this->public.acquire = (status_t (*)(ike_sa_t*,u_int32_t)) acquire;
+	this->public.get_ike_cfg = (ike_cfg_t* (*)(ike_sa_t*))get_ike_cfg;
+	this->public.set_ike_cfg = (void (*)(ike_sa_t*,ike_cfg_t*))set_ike_cfg;
+	this->public.get_peer_cfg = (peer_cfg_t* (*)(ike_sa_t*))get_peer_cfg;
+	this->public.set_peer_cfg = (void (*)(ike_sa_t*,peer_cfg_t*))set_peer_cfg;
+	this->public.get_id = (ike_sa_id_t* (*)(ike_sa_t*)) get_id;
+	this->public.get_my_host = (host_t* (*)(ike_sa_t*)) get_my_host;
+	this->public.set_my_host = (void (*)(ike_sa_t*,host_t*)) set_my_host;
+	this->public.get_other_host = (host_t* (*)(ike_sa_t*)) get_other_host;
+	this->public.set_other_host = (void (*)(ike_sa_t*,host_t*)) set_other_host;
+	this->public.get_my_id = (identification_t* (*)(ike_sa_t*)) get_my_id;
+	this->public.set_my_id = (void (*)(ike_sa_t*,identification_t*)) set_my_id;
+	this->public.get_other_id = (identification_t* (*)(ike_sa_t*)) get_other_id;
+	this->public.set_other_id = (void (*)(ike_sa_t*,identification_t*)) set_other_id;
+	this->public.get_other_ca = (ca_info_t* (*)(ike_sa_t*)) get_other_ca;
+	this->public.set_other_ca = (void (*)(ike_sa_t*,ca_info_t*)) set_other_ca;
+	this->public.retransmit = (status_t (*)(ike_sa_t *, u_int32_t)) retransmit;
+	this->public.delete = (status_t (*)(ike_sa_t*))delete_;
+	this->public.destroy = (void (*)(ike_sa_t*))destroy;
 	this->public.send_dpd = (status_t (*)(ike_sa_t*)) send_dpd;
 	this->public.send_keepalive = (void (*)(ike_sa_t*)) send_keepalive;
-	this->public.get_prf = (prf_t *(*) (ike_sa_t *)) get_prf;
-	this->public.get_child_prf = (prf_t *(*) (ike_sa_t *)) get_child_prf;
-	this->public.get_skp_verify = (chunk_t(*) (ike_sa_t *)) get_skp_verify;
-	this->public.get_skp_build = (chunk_t(*) (ike_sa_t *)) get_skp_build;
-	this->public.derive_keys = (status_t (*) (ike_sa_t *,proposal_t*,chunk_t,chunk_t,chunk_t,bool,prf_t*,prf_t*)) derive_keys;
-	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
+	this->public.get_prf = (prf_t* (*)(ike_sa_t*)) get_prf;
+	this->public.get_child_prf = (prf_t* (*)(ike_sa_t *)) get_child_prf;
+	this->public.get_skp_verify = (chunk_t (*)(ike_sa_t *)) get_skp_verify;
+	this->public.get_skp_build = (chunk_t (*)(ike_sa_t *)) get_skp_build;
+	this->public.derive_keys = (status_t (*)(ike_sa_t *,proposal_t*,chunk_t,chunk_t,chunk_t,bool,prf_t*,prf_t*)) derive_keys;
+	this->public.add_child_sa = (void (*)(ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
 	this->public.create_child_sa_iterator = (iterator_t* (*)(ike_sa_t*)) create_child_sa_iterator;
-	this->public.rekey_child_sa = (status_t(*)(ike_sa_t*,protocol_id_t,u_int32_t)) rekey_child_sa;
-	this->public.delete_child_sa = (status_t(*)(ike_sa_t*,protocol_id_t,u_int32_t)) delete_child_sa;
+	this->public.rekey_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t)) rekey_child_sa;
+	this->public.delete_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t)) delete_child_sa;
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
-	this->public.enable_natt = (void(*)(ike_sa_t*, bool)) enable_natt;
-	this->public.is_natt_enabled = (bool(*)(ike_sa_t*)) is_natt_enabled;
-	this->public.rekey = (status_t(*)(ike_sa_t*))rekey;
-	this->public.reestablish = (void(*)(ike_sa_t*))reestablish;
-	this->public.inherit = (status_t(*)(ike_sa_t*,ike_sa_t*))inherit;
-	this->public.generate_message = (status_t(*)(ike_sa_t*,message_t*,packet_t**))generate_message;
-	this->public.reset = (void(*)(ike_sa_t*))reset;
-	this->public.get_unique_id = (u_int32_t(*)(ike_sa_t*))get_unique_id;
-	this->public.set_virtual_ip = (void(*)(ike_sa_t*,bool,host_t*))set_virtual_ip;
-	this->public.get_virtual_ip = (host_t*(*)(ike_sa_t*,bool))get_virtual_ip;
-	this->public.add_dns_server = (void(*)(ike_sa_t*,host_t*))add_dns_server;
+	this->public.enable_natt = (void (*)(ike_sa_t*, bool)) enable_natt;
+	this->public.is_natt_enabled = (bool (*)(ike_sa_t*)) is_natt_enabled;
+	this->public.rekey = (status_t (*)(ike_sa_t*))rekey;
+	this->public.reestablish = (void (*)(ike_sa_t*))reestablish;
+	this->public.inherit = (status_t (*)(ike_sa_t*,ike_sa_t*))inherit;
+	this->public.generate_message = (status_t (*)(ike_sa_t*,message_t*,packet_t**))generate_message;
+	this->public.reset = (void (*)(ike_sa_t*))reset;
+	this->public.get_unique_id = (u_int32_t (*)(ike_sa_t*))get_unique_id;
+	this->public.set_virtual_ip = (void (*)(ike_sa_t*,bool,host_t*))set_virtual_ip;
+	this->public.get_virtual_ip = (host_t* (*)(ike_sa_t*,bool))get_virtual_ip;
+	this->public.add_dns_server = (void (*)(ike_sa_t*,host_t*))add_dns_server;
 	
 	/* initialize private fields */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
@@ -1922,6 +1945,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->other_host = host_create_any(AF_INET);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
+	this->other_ca = NULL;
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->signer_in = NULL;
