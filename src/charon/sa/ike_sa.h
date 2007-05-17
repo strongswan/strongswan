@@ -38,6 +38,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
+#include <crypto/ca.h>
 #include <config/peer_cfg.h>
 #include <config/ike_cfg.h>
 
@@ -255,7 +256,7 @@ struct ike_sa_t {
 	void (*set_my_id) (ike_sa_t *this, identification_t *me);
 	
 	/**
-	 * @brief Get the other peers identification.
+	 * @brief Get the other peer's identification.
 	 * 
 	 * @param this 			calling object
 	 * @return				identification
@@ -263,12 +264,28 @@ struct ike_sa_t {
 	identification_t* (*get_other_id) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the other peers identification.
+	 * @brief Set the other peer's identification.
 	 * 
 	 * @param this 			calling object
 	 * @param other			identification
 	 */
 	void (*set_other_id) (ike_sa_t *this, identification_t *other);
+	
+	/**
+	 * @brief Get the other peer's certification authority
+	 * 
+	 * @param this 			calling object
+	 * @return			ca_info_t record of other ca
+	 */
+	ca_info_t* (*get_other_ca) (ike_sa_t *this);
+	
+	/**
+	 * @brief Set the other peer's certification authority
+	 * 
+	 * @param this 			calling object
+	 * @param other_ca		ca_info_t record of other ca
+	 */
+	void (*set_other_ca) (ike_sa_t *this, ca_info_t *other_ca);
 	
 	/**
 	 * @brief Get the config used to setup this IKE_SA.
