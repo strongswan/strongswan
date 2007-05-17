@@ -177,6 +177,11 @@ struct private_x509_t {
 	chunk_t authKeySerialNumber;
 	
 	/**
+	 * Indicates if the certificate is self-signed
+	 */
+	bool isSelfSigned;
+
+	/**
 	 * CA basic constraints flag
 	 */
 	bool isCA;
@@ -862,6 +867,7 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 		objectID++;
 	}
 
+	/* generate the subjectKeyID if it is missing in the certificate */
 	if (this->subjectKeyID.ptr == NULL)
 	{
 		hasher_t *hasher = hasher_create(HASH_SHA1);
@@ -923,7 +929,7 @@ static bool is_ocsp_signer(const private_x509_t *this)
  */
 static bool is_self_signed(const private_x509_t *this)
 {
-	return this->subject->equals(this->subject, this->issuer);
+	return this->isSelfSigned;
 }
 
 /**
@@ -1276,9 +1282,27 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 		destroy(this);
 		return NULL;
 	}
+
 	/* set trusted lifetime of public key to notAfter */
-	this->status = is_self_signed(this)? CERT_GOOD:CERT_UNDEFINED;
 	this->until = this->notAfter;
+
+	/* check if the certificate is self-signed */
+	this->isSelfSigned = FALSE;
+	if (this->subject->equals(this->subject, this->issuer))
+	{
+		this->isSelfSigned = this->public_key->verify_emsa_pkcs1_signature(this->public_key,
+							 this->tbsCertificate, this->signature) == SUCCESS;
+	}
+	if (this->isSelfSigned)
+	{
+		DBG2("  certificate is self-signed");
+		this->status = CERT_GOOD;
+	}
+	else
+	{
+		this->status = CERT_UNDEFINED;
+	}
+
 	return &this->public;
 }
 
