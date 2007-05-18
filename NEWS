@@ -1,7 +1,10 @@
 strongswan-4.1.3
 ----------------
 
-- IKEv1 authentication based on RSA signatures now can handle multiple
+- IKEv2 peer configuration selection can now be based on a required
+  certification authority using the rightca= statement.
+
+- IKEv2 authentication based on RSA signatures now can handle multiple
   certificates issued for a given peer ID.
 
 
