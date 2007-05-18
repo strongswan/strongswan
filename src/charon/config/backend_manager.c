@@ -82,16 +82,14 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
  */			
 static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this,
 								identification_t *my_id, identification_t *other_id,
-								identification_t *other_ca, char *other_group,
-							    host_t *my_host, host_t *other_host)
+								ca_info_t *other_ca_info)
 {
 	backend_t *backend;
 	peer_cfg_t *config = NULL;
 	iterator_t *iterator = this->backends->create_iterator(this->backends, TRUE);
 	while (config == NULL && iterator->iterate(iterator, (void**)&backend))
 	{
-		config = backend->get_peer_cfg(backend, my_id, other_id, other_ca,
-									   other_group, my_host, other_host);
+		config = backend->get_peer_cfg(backend, my_id, other_id, other_ca_info);
 	}
 	iterator->destroy(iterator);
 	return config;
@@ -227,11 +225,11 @@ backend_manager_t *backend_manager_create()
 {
 	private_backend_manager_t *this = malloc_thing(private_backend_manager_t);
 	
-	this->public.get_ike_cfg = (ike_cfg_t*(*)(backend_manager_t*, host_t *, host_t *))get_ike_cfg;
-	this->public.get_peer_cfg = (peer_cfg_t*(*)(backend_manager_t*, identification_t *, identification_t *))get_peer_cfg;
-	this->public.add_peer_cfg = (void(*)(backend_manager_t*, peer_cfg_t*))add_peer_cfg;
-	this->public.create_iterator = (iterator_t*(*)(backend_manager_t*))create_iterator;
-	this->public.destroy = (void(*)(backend_manager_t*))destroy;
+	this->public.get_ike_cfg = (ike_cfg_t* (*)(backend_manager_t*, host_t*, host_t*))get_ike_cfg;
+	this->public.get_peer_cfg = (peer_cfg_t* (*)(backend_manager_t*,identification_t*,identification_t*,ca_info_t*))get_peer_cfg;
+	this->public.add_peer_cfg = (void (*)(backend_manager_t*,peer_cfg_t*))add_peer_cfg;
+	this->public.create_iterator = (iterator_t* (*)(backend_manager_t*))create_iterator;
+	this->public.destroy = (void (*)(backend_manager_t*))destroy;
 	
 	this->backends = linked_list_create();
 	this->writeable = linked_list_create();

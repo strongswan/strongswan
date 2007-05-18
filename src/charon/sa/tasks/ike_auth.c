@@ -511,15 +511,6 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		return NEED_MORE;
 	}
 	
-	config = charon->backends->get_peer_cfg(charon->backends,
-									this->ike_sa->get_my_id(this->ike_sa),
-									this->ike_sa->get_other_id(this->ike_sa));
-	if (config)
-	{
-		this->ike_sa->set_peer_cfg(this->ike_sa, config);
-		config->destroy(config);
-	}
-	
 	switch (process_auth(this, message))
 	{
 		case SUCCESS:
@@ -532,6 +523,17 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		default:
 			break;
 	}
+
+	config = charon->backends->get_peer_cfg(charon->backends,
+									this->ike_sa->get_my_id(this->ike_sa),
+									this->ike_sa->get_other_id(this->ike_sa),
+									this->ike_sa->get_other_ca(this->ike_sa));
+	if (config)
+	{
+		this->ike_sa->set_peer_cfg(this->ike_sa, config);
+		config->destroy(config);
+	}
+	
 	return NEED_MORE;
 }
 

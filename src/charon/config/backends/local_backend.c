@@ -26,6 +26,7 @@
 
 #include <daemon.h>
 #include <utils/linked_list.h>
+#include <crypto/ca.h>
 
 
 typedef struct private_local_backend_t private_local_backend_t;
@@ -115,18 +116,19 @@ static ike_cfg_t *get_ike_cfg(private_local_backend_t *this,
 	return found;
 }
 
+#define PRIO_NO_MATCH_FOUND		256
+
 /**
  * implements backend_t.get_peer.
  */			
 static peer_cfg_t *get_peer_cfg(private_local_backend_t *this,
 								identification_t *my_id, identification_t *other_id,
-								identification_t *other_ca, char *other_group,
-							    host_t *my_host, host_t *other_host)
+								ca_info_t *other_ca_info)
 {
 	peer_cfg_t *current, *found = NULL;
 	iterator_t *iterator;
 	identification_t *my_candidate, *other_candidate;
-	int best = 2 * MAX_WILDCARDS + 1;
+	int best = PRIO_NO_MATCH_FOUND;
 	
 	DBG2(DBG_CFG, "looking for a config for %D...%D", my_id, other_id);
 	
@@ -137,19 +139,68 @@ static peer_cfg_t *get_peer_cfg(private_local_backend_t *this,
 
 		my_candidate = current->get_my_id(current);
 		other_candidate = current->get_other_id(current);
-		
-		if (my_candidate->matches(my_candidate, my_id, &wc1) &&
-			other_id->matches(other_id, other_candidate, &wc2))
+
+		if (my_candidate->matches(my_candidate, my_id, &wc1)
+		&&	other_id->matches(other_id, other_candidate, &wc2))
 		{
-			int prio = wc1 + wc2;
-			
-			DBG2(DBG_CFG, "  candidate '%s': %D...%D, prio %d",
-				 current->get_name(current), my_candidate, other_candidate, prio);
-			
-			if (prio < best)
+			int prio = (wc1 + wc2) * (MAX_CA_PATH_LEN + 1);
+			int pathlen = 0;
+			identification_t *other_candidate_ca = current->get_other_ca(current);
+
+			/* are there any ca constraints? */
+			if (other_candidate_ca->get_type(other_candidate_ca) != ID_ANY)
 			{
-				found = current;
-				best = prio;
+				ca_info_t *ca_info = other_ca_info;
+
+				for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
+				{
+					if (ca_info == NULL)
+					{
+						prio = PRIO_NO_MATCH_FOUND;
+						break;
+					}
+					else
+					{
+						x509_t *cacert = ca_info->get_certificate(ca_info);
+						identification_t *other_ca = cacert->get_subject(cacert);
+
+						if (other_candidate_ca->equals(other_candidate_ca, other_ca))
+						{
+							/* found a ca match */
+							break;
+						}
+						if (cacert->is_self_signed(cacert))
+						{
+							/* reached the root ca without a match */
+							prio = PRIO_NO_MATCH_FOUND;
+							break;
+						}
+						/* move a level upward in the trust path hierarchy */
+						ca_info = charon->credentials->get_issuer(charon->credentials, cacert); 
+					}
+				}
+				if (pathlen == MAX_CA_PATH_LEN)
+				{
+					DBG1(DBG_CFG, "maximum ca path length of %d levels reached", MAX_CA_PATH_LEN);
+					prio = PRIO_NO_MATCH_FOUND;
+				}
+			}
+			if (prio == PRIO_NO_MATCH_FOUND)
+			{
+				DBG2(DBG_CFG, "  candidate '%s': %D...%D, no ca match",
+				 	current->get_name(current), my_candidate, other_candidate);
+			}
+			else
+			{
+				prio += pathlen;
+				DBG2(DBG_CFG, "  candidate '%s': %D...%D, prio %d",
+				 	current->get_name(current), my_candidate, other_candidate, prio);
+			
+				if (prio < best)
+				{
+					found = current;
+					best = prio;
+				}
 			}
 		}
 	}
@@ -208,12 +259,12 @@ backend_t *backend_create(void)
 {
 	private_local_backend_t *this = malloc_thing(private_local_backend_t);
 	
-	this->public.backend.backend.get_ike_cfg = (ike_cfg_t*(*)(backend_t*, host_t *, host_t *))get_ike_cfg;
-	this->public.backend.backend.get_peer_cfg = (peer_cfg_t*(*)(backend_t*,identification_t*,identification_t*,identification_t*,char*,host_t*,host_t*))get_peer_cfg;
-    this->public.backend.backend.is_writeable = (bool(*)(backend_t*))is_writeable;
-    this->public.backend.backend.destroy = (void(*)(backend_t*))destroy;
-	this->public.backend.create_iterator = (iterator_t*(*)(writeable_backend_t*))create_iterator;
-    this->public.backend.add_cfg = (void(*)(writeable_backend_t*, peer_cfg_t *))add_cfg;
+	this->public.backend.backend.get_ike_cfg = (ike_cfg_t* (*)(backend_t*, host_t*, host_t*))get_ike_cfg;
+	this->public.backend.backend.get_peer_cfg = (peer_cfg_t* (*)(backend_t*,identification_t*,identification_t*,ca_info_t*))get_peer_cfg;
+    this->public.backend.backend.is_writeable = (bool(*) (backend_t*))is_writeable;
+    this->public.backend.backend.destroy = (void (*)(backend_t*))destroy;
+	this->public.backend.create_iterator = (iterator_t* (*)(writeable_backend_t*))create_iterator;
+    this->public.backend.add_cfg = (void (*)(writeable_backend_t*,peer_cfg_t*))add_cfg;
     
 	/* private variables */
 	this->cfgs = linked_list_create();

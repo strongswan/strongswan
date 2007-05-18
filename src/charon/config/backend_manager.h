@@ -71,19 +71,21 @@ struct backend_manager_t {
 	 * @param other_host		address of remote host
 	 * @return					matching ike_config, or NULL if none found
 	 */
-	ike_cfg_t *(*get_ike_cfg)(backend_manager_t *this, 
+	ike_cfg_t* (*get_ike_cfg)(backend_manager_t *this, 
 							  host_t *my_host, host_t *other_host);
 	
 	/**
-	 * @brief Get a peer_config identified by two IDs.
+	 * @brief Get a peer_config identified by two IDs and the peer's certificate issuer
 	 *
 	 * @param this				calling object
 	 * @param my_id				own ID
-	 * @param other_id			peers ID
+	 * @param other_id			peer ID
+	 * @param other_ca_info		info record on issuer of peer certificate
 	 * @return					matching peer_config, or NULL if none found
 	 */
-	peer_cfg_t *(*get_peer_cfg)(backend_manager_t *this, identification_t *my_id,
-								identification_t *other_id);
+	peer_cfg_t* (*get_peer_cfg)(backend_manager_t *this,
+								identification_t *my_id, identification_t *other_id,
+								ca_info_t *other_ca_info);
 	
 	/**
 	 * @brief Add a peer_config to the first found writable backend.
@@ -116,7 +118,7 @@ struct backend_manager_t {
  *
  * @ingroup config
  */
-backend_manager_t *backend_manager_create(void);
+backend_manager_t* backend_manager_create(void);
 
 #endif /*BACKEND_MANAGER_H_*/
 

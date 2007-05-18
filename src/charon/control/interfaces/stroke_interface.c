@@ -400,22 +400,56 @@ static void stroke_add_conn(private_stroke_interface_t *this,
 	{
 		x509_t *cert = load_end_certificate(msg->add_conn.me.cert, &my_id);
 
-		if (my_ca == NULL && !my_ca_same && cert)
+		if (cert)
 		{
-			identification_t *issuer = cert->get_issuer(cert);
+			ca_info_t *ca_info;
 
-			my_ca = issuer->clone(issuer);
+			if (cert->is_self_signed(cert))
+			{
+				/* a self-signed certificate is its own ca */
+				ca_info = ca_info_create(NULL, cert);
+				ca_info = charon->credentials->add_ca_info(charon->credentials, ca_info);
+				cert->set_ca_info(cert, ca_info);
+			}
+			else
+			{
+				/* get_issuer() automatically sets cert->ca_info */
+				ca_info = charon->credentials->get_issuer(charon->credentials, cert);
+			}
+			if (my_ca == NULL && !my_ca_same)
+			{
+				identification_t *issuer = cert->get_issuer(cert);
+
+				my_ca = issuer->clone(issuer);
+			}
 		}
 	}
 	if (msg->add_conn.other.cert)
 	{
 		x509_t *cert = load_end_certificate(msg->add_conn.other.cert, &other_id);
 
-		if (other_ca == NULL && !other_ca_same && cert)
+		if (cert)
 		{
-			identification_t *issuer = cert->get_issuer(cert);
+			ca_info_t *ca_info;
 
-			other_ca = issuer->clone(issuer);
+			if (cert->is_self_signed(cert))
+			{
+				/* a self-signed certificate is its own ca */
+				ca_info = ca_info_create(NULL, cert);
+				ca_info = charon->credentials->add_ca_info(charon->credentials, ca_info);
+				cert->set_ca_info(cert, ca_info);
+			}
+			else
+			{
+				/* get_issuer() automatically sets cert->ca_info */
+				ca_info = charon->credentials->get_issuer(charon->credentials, cert);
+			}
+			if (other_ca == NULL && !other_ca_same)
+			{
+				identification_t *issuer = cert->get_issuer(cert);
+
+				other_ca = issuer->clone(issuer);
+			}
 		}
 	}
 	if (other_ca_same && my_ca)
@@ -443,13 +477,14 @@ static void stroke_add_conn(private_stroke_interface_t *this,
 	while (iterator->iterate(iterator, (void**)&peer_cfg))
 	{
 		ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-		if (my_id->equals(my_id, peer_cfg->get_my_id(peer_cfg)) &&
-			other_id->equals(other_id, peer_cfg->get_other_id(peer_cfg)) &&
-			my_host->equals(my_host, ike_cfg->get_my_host(ike_cfg)) &&
-			other_host->equals(other_host, ike_cfg->get_other_host(ike_cfg)) &&
-			peer_cfg->get_ike_version(peer_cfg) == (msg->add_conn.ikev2 ? 2 : 1) &&
-			peer_cfg->get_auth_method(peer_cfg) == msg->add_conn.auth_method &&
-			peer_cfg->get_eap_type(peer_cfg) == msg->add_conn.eap_type)
+		if (my_id->equals(my_id, peer_cfg->get_my_id(peer_cfg))
+		&&	other_id->equals(other_id, peer_cfg->get_other_id(peer_cfg))
+		&&	my_host->equals(my_host, ike_cfg->get_my_host(ike_cfg))
+		&&	other_host->equals(other_host, ike_cfg->get_other_host(ike_cfg))
+		&&	other_ca->equals(other_ca, peer_cfg->get_other_ca(peer_cfg))
+		&&	peer_cfg->get_ike_version(peer_cfg) == (msg->add_conn.ikev2 ? 2 : 1)
+		&&	peer_cfg->get_auth_method(peer_cfg) == msg->add_conn.auth_method
+		&&	peer_cfg->get_eap_type(peer_cfg) == msg->add_conn.eap_type)
 		{
 			DBG1(DBG_CFG, "reusing existing configuration '%s'",
 				 peer_cfg->get_name(peer_cfg));
@@ -1215,6 +1250,17 @@ static void stroke_status(private_stroke_interface_t *this,
 			fprintf(out, "%12s:  %H[%D]...%H[%D]\n", peer_cfg->get_name(peer_cfg),
 					ike_cfg->get_my_host(ike_cfg), peer_cfg->get_my_id(peer_cfg),
 					ike_cfg->get_other_host(ike_cfg), peer_cfg->get_other_id(peer_cfg));
+			{
+				identification_t *my_ca = peer_cfg->get_my_ca(peer_cfg);
+				identification_t *other_ca = peer_cfg->get_other_ca(peer_cfg);
+
+				if (my_ca->get_type(my_ca) != ID_ANY
+				||  other_ca->get_type(other_ca) != ID_ANY)
+				{
+					fprintf(out, "%12s:    CAs: '%D'...'%D'\n", peer_cfg->get_name(peer_cfg),
+							my_ca, other_ca);
+				}
+			}
 			children = peer_cfg->create_child_cfg_iterator(peer_cfg);
 			while (children->iterate(children, (void**)&child_cfg))
 			{
@@ -1341,17 +1387,22 @@ static void stroke_list(private_stroke_interface_t *this,
 	if (msg->list.flags & LIST_CAINFOS)
 	{
 		ca_info_t *ca_info;
+		bool first = TRUE;
 
 		iterator = charon->credentials->create_cainfo_iterator(charon->credentials);
-		if (iterator->get_count(iterator))
-		{
-			fprintf(out, "\n");
-			fprintf(out, "List of X.509 CA Information Records:\n");
-			fprintf(out, "\n");
-		}
 		while (iterator->iterate(iterator, (void**)&ca_info))
 		{
-			ca_info->list(ca_info, out, msg->list.utc);
+			if (ca_info->is_ca(ca_info))
+			{
+				if (first)
+				{
+					fprintf(out, "\n");
+					fprintf(out, "List of X.509 CA Information Records:\n");
+					fprintf(out, "\n");
+					first = FALSE;
+				}
+				ca_info->list(ca_info, out, msg->list.utc);
+			}
 		}
 		iterator->destroy(iterator);
 	}
@@ -1359,11 +1410,11 @@ static void stroke_list(private_stroke_interface_t *this,
 	{
         ca_info_t *ca_info;
         bool first = TRUE;
-        
+
         iterator = charon->credentials->create_cainfo_iterator(charon->credentials);
         while (iterator->iterate(iterator, (void **)&ca_info))
         {
-            if (ca_info->has_crl(ca_info))
+            if (ca_info->is_ca(ca_info) && ca_info->has_crl(ca_info))
             {
                 if (first)
                 {
@@ -1385,7 +1436,7 @@ static void stroke_list(private_stroke_interface_t *this,
         iterator = charon->credentials->create_cainfo_iterator(charon->credentials);
         while (iterator->iterate(iterator, (void **)&ca_info))
         {
-            if (ca_info->has_certinfos(ca_info))
+            if (ca_info->is_ca(ca_info) && ca_info->has_certinfos(ca_info))
             {
                 if (first)
                 {
@@ -1434,7 +1485,10 @@ static void stroke_purge(private_stroke_interface_t *this,
 
 		while (iterator->iterate(iterator, (void**)&ca_info))
 		{
-			ca_info->purge_ocsp(ca_info);
+			if (ca_info->is_ca(ca_info))
+			{
+				ca_info->purge_ocsp(ca_info);
+			}
 		}
 		iterator->destroy(iterator);
 	}

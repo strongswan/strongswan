@@ -199,8 +199,9 @@ struct credential_store_t {
 	 *
 	 * @param this		calling object
 	 * @param ca_info	ca info record to be added
+	 * @return			pointer to the added or already existing ca_info_t record
 	 */
-	void (*add_ca_info) (credential_store_t *this, ca_info_t *ca_info);
+	ca_info_t* (*add_ca_info) (credential_store_t *this, ca_info_t *ca_info);
 
 	/**
 	 * @brief Release a ca info record with a given name.

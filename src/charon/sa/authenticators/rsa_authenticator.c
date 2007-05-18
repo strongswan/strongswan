@@ -80,6 +80,7 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	
 	if (status == SUCCESS)
 	{
+		this->ike_sa->set_other_ca(this->ike_sa, issuer);
 		DBG1(DBG_IKE, "authentication of '%D' with %N successful",
 					   other_id, auth_method_names, AUTH_RSA);
 	}

@@ -40,7 +40,6 @@
 #include "local_credential_store.h"
 
 #define PATH_BUF			256
-#define MAX_CA_PATH_LEN		7
 
 typedef struct shared_key_t shared_key_t;
 
@@ -304,21 +303,24 @@ static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *th
  */
 static ca_info_t* get_issuer(private_local_credential_store_t *this, const x509_t *cert)
 {
-	ca_info_t *found = NULL;
-	ca_info_t *ca_info;
+	ca_info_t *found = cert->get_ca_info(cert);
 
-	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
-
-	while (iterator->iterate(iterator, (void**)&ca_info))
+	if (found == NULL)
 	{
-		if (ca_info->is_cert_issuer(ca_info, cert))
-		{
-			found = ca_info;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
+		iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
+		ca_info_t *ca_info;
 
+		while (iterator->iterate(iterator, (void**)&ca_info))
+		{
+			if (ca_info->is_cert_issuer(ca_info, cert))
+			{
+				found = ca_info;
+				cert->set_ca_info(cert, found);
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+	}
 	return found;
 }
 
@@ -749,38 +751,31 @@ static status_t verify_signature(private_local_credential_store_t *this,
 					DBG1(DBG_CFG, "candidate peer certificate was not successfully verified");
 					continue;
 				}
-				if (!cert->is_self_signed(cert))
-				{
-					*issuer_p = get_issuer(this, cert);
-				}
+				*issuer_p = get_issuer(this, cert);
 			}
 			else
 			{
+				ca_info_t *issuer = get_issuer(this, cert);
 				chunk_t keyid = public_key->get_keyid(public_key);
 
 				DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
 				DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
 				DBG2(DBG_CFG, "keyid:    %#B", &keyid);
 
-				if (!cert->is_self_signed(cert))
+				if (issuer == NULL)
 				{
-					ca_info_t *issuer = get_issuer(this, cert);
-
-					if (issuer == NULL)
-					{
-						DBG1(DBG_CFG, "candidate peer certificate has no retrievable issuer");
-						sig_status = NOT_FOUND;
-						continue;
-					}
-					if (cert_status == CERT_REVOKED	|| cert_status == CERT_UNTRUSTED
-					|| ((issuer)->is_strict(issuer) && cert_status != CERT_GOOD))
-					{
-						DBG1(DBG_CFG, "candidate peer certificate has an inacceptable status: %N", cert_status_names, cert_status);
-						sig_status = VERIFY_ERROR;
-						continue;
-					}
-					*issuer_p = issuer;
+					DBG1(DBG_CFG, "candidate peer certificate has no retrievable issuer");
+					sig_status = NOT_FOUND;
+					continue;
 				}
+				if (cert_status == CERT_REVOKED	|| cert_status == CERT_UNTRUSTED
+				|| ((issuer)->is_strict(issuer) && cert_status != CERT_GOOD))
+				{
+					DBG1(DBG_CFG, "candidate peer certificate has an inacceptable status: %N", cert_status_names, cert_status);
+					sig_status = VERIFY_ERROR;
+					continue;
+				}
+				*issuer_p = issuer;
 			}
 			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, hash, sig);
 			if (sig_status == SUCCESS)
@@ -828,7 +823,7 @@ static x509_t* add_certificate(linked_list_t *certs, x509_t *cert)
 /**
  * Add a unique ca info record to a linked list
  */
-static void add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_info)
+static ca_info_t* add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_info)
 {
 	ca_info_t *current_ca_info;
 	ca_info_t *found_ca_info = NULL;
@@ -849,11 +844,13 @@ static void add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_in
 	{
 		current_ca_info->add_info(current_ca_info, ca_info);
 		ca_info->destroy(ca_info);
+		ca_info = found_ca_info;
 	}
 	else
 	{
 		this->ca_infos->insert_last(this->ca_infos, (void*)ca_info);
 	}
+	return ca_info;
 }
 
 /**
@@ -1020,12 +1017,15 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 
 		while (iterator->iterate(iterator, (void **)&ca_info))
 		{
-			x509_t *cacert = ca_info->get_certificate(ca_info);
-			ca_info_t *issuer = get_issuer(this, cacert);
-
-			if (issuer)
+			if (ca_info->is_ca(ca_info))
 			{
-				add_uris(issuer, cacert);
+				x509_t *cacert = ca_info->get_certificate(ca_info);
+				ca_info_t *issuer = get_issuer(this, cacert);
+
+				if (issuer)
+				{
+					add_uris(issuer, cacert);
+				}
 			}
 		}
 		iterator->destroy(iterator);
@@ -1119,7 +1119,7 @@ static void add_crl(private_local_credential_store_t *this, crl_t *crl, const ch
 
 	while (iterator->iterate(iterator, (void**)&ca_info))
 	{
-		if (ca_info->is_crl_issuer(ca_info, crl))
+		if (ca_info->is_ca(ca_info) && ca_info->is_crl_issuer(ca_info, crl))
 		{
 			char buffer[BUF_LEN];
 			chunk_t uri = { buffer, 7 + strlen(path) };
@@ -1466,7 +1466,7 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
 	this->public.credential_store.add_auth_certificate = (x509_t* (*) (credential_store_t*,x509_t*,u_int))add_auth_certificate;
-	this->public.credential_store.add_ca_info = (void (*) (credential_store_t*,ca_info_t*))add_ca_info;
+	this->public.credential_store.add_ca_info = (ca_info_t* (*) (credential_store_t*,ca_info_t*))add_ca_info;
 	this->public.credential_store.release_ca_info = (status_t (*) (credential_store_t*,const char*))release_ca_info;
 	this->public.credential_store.create_cert_iterator = (iterator_t* (*) (credential_store_t*))create_cert_iterator;
 	this->public.credential_store.create_auth_cert_iterator = (iterator_t* (*) (credential_store_t*))create_auth_cert_iterator;

@@ -58,21 +58,17 @@ struct backend_t {
 	/**
 	 * @brief Get a peer_cfg identified by two IDs.
 	 * 
-	 * Select a config for two IDs, the others certificate issuer, and
-	 * a AC certificate group. The hosts are just a hint to select the
-	 * correct config if multiple configs match.
+	 * Select a config based on the two IDs and the other's certificate issuer
 	 *
 	 * @param this				calling object
 	 * @param my_id				own ID
-	 * @param other_id			peers ID
-	 * @param my_host			address of own host
-	 * @param other_host		address of remote host
+	 * @param other_id			peer ID
+	 * @param other_ca_info		info record on issuer of peer certificate
 	 * @return					matching peer_config, or NULL if none found
 	 */
 	peer_cfg_t *(*get_peer_cfg)(backend_t *this,
 								identification_t *my_id, identification_t *other_id,
-								identification_t *other_ca, char *other_group,
-							    host_t *my_host, host_t *other_host);
+								ca_info_t *other_ca_info);
 	
 	/**
 	 * @brief Check if a backend is writable and implements writable_backend_t.
