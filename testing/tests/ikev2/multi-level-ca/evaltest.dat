@@ -1,0 +1,12 @@
+carol::ipsec status::alice.*INSTALLED::YES
+moon::ipsec status::alice.*ESTABLISHED.*carol@strongswan.org::YES
+carol::cat /var/log/daemon.log::received TS_UNACCEPTABLE notify, no CHILD_SA built::YES
+carol::ipsec status::venus.*INSTALLED::NO
+moon::cat /var/log/daemon.log::traffic selectors PH_IP_VENUS/32 === PH_IP_CAROL/32.*inacceptable::YES
+moon::ipsec status::venus.*ESTABLISHED.*carol@strongswan.org::NO
+dave::ipsec status::venus.*INSTALLED::YES
+moon::ipsec status::venus.*ESTABLISHED.*dave@strongswan.org::YES
+dave::cat /var/log/daemon.log::received TS_UNACCEPTABLE notify, no CHILD_SA built::YES
+dave::ipsec status::alice.*INSTALLED::NO
+moon::cat /var/log/daemon.log::traffic selectors PH_IP_ALICE/32 === PH_IP_DAVE/32.*inacceptable::YES
+moon::ipsec status::alice.*ESTABLISHED.*dave@strongswan.org::NO
