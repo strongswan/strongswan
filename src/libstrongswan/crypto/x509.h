@@ -33,6 +33,7 @@ typedef struct x509_t x509_t;
 #include <library.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <crypto/certinfo.h>
+#include <crypto/ca.h>
 #include <utils/identification.h>
 #include <utils/iterator.h>
 #include <utils/linked_list.h>
@@ -153,7 +154,7 @@ struct x509_t {
 	chunk_t (*get_keyid) (const x509_t *this);
 
 	/**
-	 * @brief Get the certificate issuer's ID.
+	 * @brief Get the issuerDistinguishedName
 	 * 
 	 * The resulting ID is always a identification_t
 	 * of type ID_DER_ASN1_DN.
@@ -164,7 +165,7 @@ struct x509_t {
 	identification_t *(*get_issuer) (const x509_t *this);
 
 	/**
-	 * @brief Get the subjectDistinguisheName.
+	 * @brief Get the subjectDistinguishedName.
 	 * 
 	 * The resulting ID is always a identification_t
 	 * of type ID_DER_ASN1_DN. 
@@ -173,6 +174,26 @@ struct x509_t {
 	 * @return					subjects ID
 	 */
 	identification_t *(*get_subject) (const x509_t *this);
+
+	/**
+	 * @brief Set a link  ca info
+	 * 
+	 * @param this				calling object
+	 * @param ca_info			link to the info record of the issuing ca
+	 */
+	void (*set_ca_info) (x509_t *this, ca_info_t *ca_info);
+
+	/**
+	 * @brief Get the .
+	 * 
+	 * The resulting ID is always a identification_t
+	 * of type ID_DER_ASN1_DN. 
+	 * 
+	 * @param this				calling object
+	 * @return					link to the info record of the issuing ca
+	 *							or NULL if it does not [yet] exist
+	 */
+	ca_info_t *(*get_ca_info) (const x509_t *this);
 
 	/**
 	 * @brief Create an iterator for the crlDistributionPoints.

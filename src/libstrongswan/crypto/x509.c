@@ -122,6 +122,11 @@ struct private_x509_t {
 	identification_t *issuer;
 	
 	/**
+	 * link to the info recored of the certificate issuer
+	 */
+	ca_info_t *ca_info;
+
+	/**
 	 * Start time of certificate validity
 	 */
 	time_t notBefore;
@@ -1022,6 +1027,22 @@ static identification_t *get_subject(const private_x509_t *this)
 }
 
 /**
+ * Implements x509_t.set_ca_info
+ */
+static void set_ca_info(private_x509_t *this, ca_info_t *ca_info)
+{
+	this->ca_info = ca_info;
+}
+
+/**
+ * Implements x509_t.get_ca_info
+ */
+static ca_info_t *get_ca_info(const private_x509_t *this)
+{
+	return this->ca_info;
+}
+
+/**
  * Implements x509_t.set_until
  */
 static void set_until(private_x509_t *this, time_t until)
@@ -1231,6 +1252,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public_key = NULL;
 	this->subject = NULL;
 	this->issuer = NULL;
+	this->ca_info = NULL;
 	this->subjectAltNames = linked_list_create();
 	this->crlDistributionPoints = linked_list_create();
 	this->ocspAccessLocations = linked_list_create();
@@ -1256,6 +1278,8 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.get_keyid = (chunk_t (*) (const x509_t*))get_keyid;
 	this->public.get_issuer = (identification_t* (*) (const x509_t*))get_issuer;
 	this->public.get_subject = (identification_t* (*) (const x509_t*))get_subject;
+	this->public.set_ca_info = (void (*) (x509_t*,ca_info_t*))set_ca_info;
+	this->public.get_ca_info = (ca_info_t* (*) (const x509_t*))get_ca_info;
 	this->public.set_until = (void (*) (x509_t*,time_t))set_until;
 	this->public.get_until = (time_t (*) (const x509_t*))get_until;
 	this->public.set_status = (void (*) (x509_t*,cert_status_t))set_status;
