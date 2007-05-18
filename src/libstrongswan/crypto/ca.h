@@ -26,12 +26,14 @@
 typedef struct ca_info_t ca_info_t;
 
 #include <library.h>
-#include <credential_store.h>
 
 #include "x509.h"
 #include "crl.h"
 
 #define MAX_CA_PATH_LEN		7
+
+/*forward declaration */
+struct credential_store_t;
 
 /**
  * @brief X.509 certification authority information record
@@ -79,6 +81,14 @@ struct ca_info_t {
 	 * @return				TRUE if the issuing ca has been found
 	 */
 	bool (*is_crl_issuer) (ca_info_t *this, const crl_t *crl);
+
+	/**
+	 * @brief Checks if the ca certificate has the isCA flag set
+	 *
+	 * @param this			ca info object
+	 * @return				TRUE if the isCA flag is set
+	 */
+	bool (*is_ca) (ca_info_t *this);
 
 	/**
 	 * @brief Checks if the ca enforces a strict crl policy
@@ -192,7 +202,7 @@ struct ca_info_t {
 	 * @param credentials	credential store needed for trust path verification
 	 * @return				certificate status
 	 */
-	cert_status_t (*verify_by_ocsp) (ca_info_t* this, certinfo_t* certinfo, credential_store_t* credentials);
+	cert_status_t (*verify_by_ocsp) (ca_info_t* this, certinfo_t* certinfo, struct credential_store_t* credentials);
 
 	/**
 	 * @brief Purge the OCSP certinfos of a ca info record

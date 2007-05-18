@@ -158,6 +158,14 @@ static bool is_crl_issuer(private_ca_info_t *this, const crl_t *crl)
 }
 
 /**
+ * Implements ca_info_t.is_ca
+ */
+static bool is_ca(private_ca_info_t *this)
+{
+	return this->cacert->is_ca(this->cacert);
+}
+
+/**
  * Implements ca_info_t.is_strict
  */
 static bool is_strict(private_ca_info_t *this)
@@ -778,6 +786,7 @@ ca_info_t *ca_info_create(const char *name, x509_t *cacert)
 	this->public.equals_name_release_info = (bool (*) (ca_info_t*,const char*))equals_name_release_info;
 	this->public.is_cert_issuer = (bool (*) (ca_info_t*,const x509_t*))is_cert_issuer;
 	this->public.is_crl_issuer = (bool (*) (ca_info_t*,const crl_t*))is_crl_issuer;
+	this->public.is_ca = (bool (*) (ca_info_t*))is_ca;
 	this->public.is_strict = (bool (*) (ca_info_t*))is_strict;
 	this->public.add_info = (void (*) (ca_info_t*,const ca_info_t*))add_info;
 	this->public.add_crl = (void (*) (ca_info_t*,crl_t*))add_crl;
