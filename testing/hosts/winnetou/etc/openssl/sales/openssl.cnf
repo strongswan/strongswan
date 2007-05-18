@@ -34,6 +34,7 @@ new_certs_dir   = $dir/newcerts           # default place for new certs.
 certificate     = $dir/salesCert.pem      # The CA certificate
 serial          = $dir/serial             # The current serial number
 crl             = $dir/crl.pem            # The current CRL
+crlnumber       = $dir/crlnumber          # The current CRL serial number
 private_key     = $dir/salesKey.pem       # The private key
 RANDFILE        = $dir/.rand              # private random number file
 
