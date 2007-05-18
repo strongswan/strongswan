@@ -85,7 +85,7 @@ void eap_method_unload()
 		
 		while (modules->remove_last(modules, (void**)&entry) == SUCCESS)
 		{
-			DBG2(DBG_CFG, "unloaded module for %s", eap_type_names, entry->type);
+			DBG2(DBG_CFG, "unloaded module for %N", eap_type_names, entry->type);
 			dlclose(entry->handle);
 			free(entry);
 		}
