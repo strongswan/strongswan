@@ -19,17 +19,17 @@
 export COMMON_NAME=strongSwan
 
 cd /etc/openssl
-openssl ca -config /etc/openssl/openssl.cnf -gencrl -out crl.pem
+openssl ca -gencrl -crldays 30 -config /etc/openssl/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out strongswan.crl
 cp strongswan.crl     /var/www/localhost/htdocs/
 cp strongswanCert.pem /var/www/localhost/htdocs/
 cp index.html         /var/www/localhost/htdocs/
 cd /etc/openssl/research
-openssl ca -config /etc/openssl/research/openssl.cnf -gencrl -out crl.pem
+openssl ca -gencrl -crldays 15 -config /etc/openssl/research/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out research.crl
 cp research.crl       /var/www/localhost/htdocs/
 cd /etc/openssl/sales
-openssl ca -config /etc/openssl/sales/openssl.cnf -gencrl -out crl.pem
+openssl ca -gencrl -crldays 15 -config /etc/openssl/sales/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out sales.crl
 cp sales.crl         /var/www/localhost/htdocs/
 
