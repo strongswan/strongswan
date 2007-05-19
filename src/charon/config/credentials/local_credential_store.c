@@ -618,8 +618,6 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			cert_status_t status;
 			certinfo_t *certinfo = certinfo_create(cert->get_serialNumber(cert));
 
-			certinfo->set_nextUpdate(certinfo, until);
-
 			if (pathlen == 0)
 			{
 				/* add any crl and ocsp uris contained in the certificate under test */
@@ -645,8 +643,14 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			switch (status)
 			{
 				case CERT_GOOD:
-					/* set nextUpdate */
-					cert->set_until(cert, nextUpdate);
+					/* with strict crl policy the public key must have the same
+					 * lifetime as the validity of the ocsp status or crl lifetime
+					 */
+					if (strict)
+					{
+						cert->set_until(cert, nextUpdate);
+						until = (nextUpdate < until)? nextUpdate : until;
+					}
 
 					/* if status information is stale */
 					if (strict && nextUpdate < time(NULL))
@@ -656,12 +660,6 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 						return FALSE;
 					}
 					DBG1(DBG_CFG, "certificate is good");
-
-					/* with strict crl policy the public key must have the same
-					 * lifetime as the validity of the ocsp status or crl lifetime
-					 */
-					if (strict && nextUpdate < until)
-		    			until = nextUpdate;
 					break;
 				case CERT_REVOKED:
 					{
