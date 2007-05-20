@@ -108,6 +108,7 @@ struct stroke_end_t {
 	char *id;
 	char *cert;
 	char *ca;
+	char *groups;
 	char *updown;
 	char *address;
 	char *sourceip;

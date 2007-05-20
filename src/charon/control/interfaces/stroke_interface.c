@@ -198,6 +198,30 @@ static x509_t* load_ca_certificate(const char *filename)
 }
 
 /**
+ * Pop the strings of a stroke_end_t struct and log them for debugging purposes
+ */
+static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
+{
+	pop_string(msg, &end->address);
+	pop_string(msg, &end->subnet);
+	pop_string(msg, &end->sourceip);
+	pop_string(msg, &end->id);
+	pop_string(msg, &end->cert);
+	pop_string(msg, &end->ca);
+	pop_string(msg, &end->groups);
+	pop_string(msg, &end->updown);
+	
+	DBG2(DBG_CFG, "  %s=%s", label, end->address);
+	DBG2(DBG_CFG, "  %ssubnet=%s", label, end->subnet);
+	DBG2(DBG_CFG, "  %ssourceip=%s", label, end->sourceip);
+	DBG2(DBG_CFG, "  %sid=%s", label, end->id);
+	DBG2(DBG_CFG, "  %scert=%s", label, end->cert);
+	DBG2(DBG_CFG, "  %sca=%s", label, end->ca);
+	DBG2(DBG_CFG, "  %sgroups=%s", label, end->groups);
+	DBG2(DBG_CFG, "  %supdown=%s", label, end->updown);
+}
+
+/**
  * Add a connection to the configuration list
  */
 static void stroke_add_conn(private_stroke_interface_t *this,
@@ -220,38 +244,12 @@ static void stroke_add_conn(private_stroke_interface_t *this,
 	iterator_t *iterator;
 	
 	pop_string(msg, &msg->add_conn.name);
-	pop_string(msg, &msg->add_conn.me.address);
-	pop_string(msg, &msg->add_conn.other.address);
-	pop_string(msg, &msg->add_conn.me.subnet);
-	pop_string(msg, &msg->add_conn.other.subnet);
-	pop_string(msg, &msg->add_conn.me.sourceip);
-	pop_string(msg, &msg->add_conn.other.sourceip);
-	pop_string(msg, &msg->add_conn.me.id);
-	pop_string(msg, &msg->add_conn.other.id);
-	pop_string(msg, &msg->add_conn.me.cert);
-	pop_string(msg, &msg->add_conn.other.cert);
-	pop_string(msg, &msg->add_conn.me.ca);
-	pop_string(msg, &msg->add_conn.other.ca);
-	pop_string(msg, &msg->add_conn.me.updown);
-	pop_string(msg, &msg->add_conn.other.updown);
+	DBG1(DBG_CFG, "received stroke: add connection '%s'", msg->add_conn.name);
+	DBG2(DBG_CFG, "conn %s", msg->add_conn.name);
+	pop_end(msg, "left", &msg->add_conn.me);
+	pop_end(msg, "right", &msg->add_conn.other);
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
-	
-	DBG1(DBG_CFG, "received stroke: add connection '%s'", msg->add_conn.name);
-	
-	DBG2(DBG_CFG, "conn %s", msg->add_conn.name);
-	DBG2(DBG_CFG, "  left=%s", msg->add_conn.me.address);
-	DBG2(DBG_CFG, "  right=%s", msg->add_conn.other.address);
-	DBG2(DBG_CFG, "  leftsubnet=%s", msg->add_conn.me.subnet);
-	DBG2(DBG_CFG, "  rightsubnet=%s", msg->add_conn.other.subnet);
-	DBG2(DBG_CFG, "  leftsourceip=%s", msg->add_conn.me.sourceip);
-	DBG2(DBG_CFG, "  rightsourceip=%s", msg->add_conn.other.sourceip);
-	DBG2(DBG_CFG, "  leftid=%s", msg->add_conn.me.id);
-	DBG2(DBG_CFG, "  rightid=%s", msg->add_conn.other.id);
-	DBG2(DBG_CFG, "  leftcert=%s", msg->add_conn.me.cert);
-	DBG2(DBG_CFG, "  rightcert=%s", msg->add_conn.other.cert);
-	DBG2(DBG_CFG, "  leftca=%s", msg->add_conn.me.ca);
-	DBG2(DBG_CFG, "  rightca=%s", msg->add_conn.other.ca);
 	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	
@@ -470,7 +468,6 @@ static void stroke_add_conn(private_stroke_interface_t *this,
 	}
 	DBG2(DBG_CFG, "  my ca:   '%D'", my_ca);
 	DBG2(DBG_CFG, "  other ca:'%D'", other_ca);
-	DBG2(DBG_CFG, "  updown: '%s'", msg->add_conn.me.updown);
 
 	/* have a look for an (almost) identical peer config to reuse */
 	iterator = charon->backends->create_iterator(charon->backends);

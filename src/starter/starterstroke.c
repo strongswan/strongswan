@@ -156,6 +156,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->id = push_string(msg, conn_end->id);
 	msg_end->cert = push_string(msg, conn_end->cert);
 	msg_end->ca = push_string(msg, conn_end->ca);
+	msg_end->groups = push_string(msg, conn_end->groups);
 	msg_end->updown = push_string(msg, conn_end->updown);
 	ip_address2string(&conn_end->addr, buffer, sizeof(buffer));
 	msg_end->address = push_string(msg, buffer);
