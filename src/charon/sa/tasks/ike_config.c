@@ -273,7 +273,7 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 		else
 		{
 			config = this->ike_sa->get_peer_cfg(this->ike_sa);
-			this->virtual_ip = config->get_virtual_ip(config, NULL);
+			this->virtual_ip = config->get_my_virtual_ip(config);
 		}
 		
 		build_payloads(this, message, CFG_REQUEST);
@@ -310,7 +310,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			host_t *ip;
 			
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
-			ip = config->get_virtual_ip(config, this->virtual_ip);
+			ip = config->get_other_virtual_ip(config, this->virtual_ip);
 			if (ip == NULL || ip->is_anyaddr(ip))
 			{
 				DBG1(DBG_IKE, "not assigning a virtual IP to peer");
@@ -349,13 +349,20 @@ static status_t process_i(private_ike_config_t *this, message_t *message)
 		!message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
 	{
 		host_t *ip;
+		peer_cfg_t *config;
 		
 		DESTROY_IF(this->virtual_ip);
 		this->virtual_ip = NULL;
 
 		process_payloads(this, message);
+		
+		if (this->virtual_ip == NULL)
+		{	/* force a configured virtual IP, even server didn't return one */
+			config = this->ike_sa->get_peer_cfg(this->ike_sa);
+			this->virtual_ip = config->get_my_virtual_ip(config);
+		}
 
-		if (this->virtual_ip)
+		if (this->virtual_ip && !this->virtual_ip->is_anyaddr(this->virtual_ip))
 		{
 			this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, this->virtual_ip);
 			

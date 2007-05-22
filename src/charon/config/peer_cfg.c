@@ -352,23 +352,31 @@ static dpd_action_t get_dpd_action(private_peer_cfg_t *this)
 }
 
 /**
- * Implementation of peer_cfg_t.get_virtual_ip.
+ * Implementation of peer_cfg_t.get_my_virtual_ip.
  */
-static host_t* get_virtual_ip(private_peer_cfg_t *this, host_t *suggestion)
+static host_t* get_my_virtual_ip(private_peer_cfg_t *this)
 {
-	if (suggestion == NULL)
+	if (this->my_virtual_ip == NULL)
 	{
-		if (this->my_virtual_ip)
-		{
-			return this->my_virtual_ip->clone(this->my_virtual_ip);
-		}
 		return NULL;
 	}
-	if (this->other_virtual_ip)
-	{
+	return this->my_virtual_ip->clone(this->my_virtual_ip);
+}
+
+/**
+ * Implementation of peer_cfg_t.get_other_virtual_ip.
+ */
+static host_t* get_other_virtual_ip(private_peer_cfg_t *this, host_t *suggestion)
+{
+	if (this->other_virtual_ip == NULL)
+	{	/* disallow */
+		return NULL;
+	}
+	if (!this->other_virtual_ip->is_anyaddr(this->other_virtual_ip))
+	{	/* force own configuration */
 		return this->other_virtual_ip->clone(this->other_virtual_ip);
 	}
-	if (suggestion->is_anyaddr(suggestion))
+	if (suggestion == NULL || suggestion->is_anyaddr(suggestion))
 	{
 		return NULL;
 	}
@@ -438,7 +446,8 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.use_reauth = (bool (*) (peer_cfg_t *))use_reauth;
 	this->public.get_dpd_delay = (u_int32_t (*) (peer_cfg_t *))get_dpd_delay;
 	this->public.get_dpd_action = (dpd_action_t (*) (peer_cfg_t *))get_dpd_action;
-	this->public.get_virtual_ip = (host_t* (*) (peer_cfg_t *, host_t *))get_virtual_ip;
+	this->public.get_my_virtual_ip = (host_t* (*) (peer_cfg_t *))get_my_virtual_ip;
+	this->public.get_other_virtual_ip = (host_t* (*) (peer_cfg_t *, host_t *))get_other_virtual_ip;
 	this->public.get_ref = (void(*)(peer_cfg_t *))get_ref;
 	this->public.destroy = (void(*)(peer_cfg_t *))destroy;
 	

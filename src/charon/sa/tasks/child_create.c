@@ -266,6 +266,8 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	
 	if (my_ts->get_count(my_ts) == 0 || other_ts->get_count(other_ts) == 0)
 	{
+		my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
+		other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 		SIG(CHILD_UP_FAILED, "no acceptable traffic selectors found");
 		return NOT_FOUND;
 	}
@@ -524,7 +526,7 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	vip = peer_cfg->get_virtual_ip(peer_cfg, NULL);
+	vip = peer_cfg->get_my_virtual_ip(peer_cfg);
 	
 	if (vip)
 	{	/* propose a 0.0.0.0/0 subnet when we use virtual ip */

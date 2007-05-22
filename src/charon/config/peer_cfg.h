@@ -273,23 +273,30 @@ struct peer_cfg_t {
 	dpd_action_t (*get_dpd_action) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Get a virtual IP for the local or the remote host.
+	 * @brief Get a virtual IP for the local peer.
 	 *
-	 * By supplying NULL as IP, an IP for the local host is requested. It
-	 * may be %any or specific. 
-	 * By supplying %any as host, an IP from the pool is selected to be
-	 * served to the peer.
-	 * If a specified host is supplied, it is checked if this address
-	 * is acceptable to serve to the peer. If so, it is returned. Otherwise,
-	 * an alternative IP is returned.
-	 * In any mode, this call may return NULL indicating virtual IP should
-	 * not be used.
-	 * 
+	 * If no virtual IP should be used, NULL is returned. %any means to request
+	 * a virtual IP using configuration payloads. A specific address is also
+	 * used for a request and may be changed by the server.
+	 *
 	 * @param this			peer_cfg
-	 * @param suggestion	NULL, %any or specific, see description
-	 * @return				clone of an IP to use, or NULL
+	 * @param suggestion	NULL, %any or specific
+	 * @return				clone of an IP, %any or NULL
 	 */
-	host_t* (*get_virtual_ip) (peer_cfg_t *this, host_t *suggestion);
+	host_t* (*get_my_virtual_ip) (peer_cfg_t *this);
+	
+	/**
+	 * @brief Get a virtual IP for the remote peer.
+	 *
+	 * An IP may be supplied, if one was requested by the initiator. However,
+	 * the suggestion is not more as it says, any address may be returned, even
+	 * NULL to not use virtual IPs.
+	 *
+	 * @param this			peer_cfg
+	 * @param suggestion	NULL, %any or specific
+	 * @return				clone of an IP to use
+	 */
+	host_t* (*get_other_virtual_ip) (peer_cfg_t *this, host_t *suggestion);
 	
 	/**
 	 * @brief Get a new reference.
