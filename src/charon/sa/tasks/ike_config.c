@@ -314,6 +314,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			if (ip == NULL || ip->is_anyaddr(ip))
 			{
 				DBG1(DBG_IKE, "not assigning a virtual IP to peer");
+				DESTROY_IF(ip);
 				return SUCCESS;
 			}
 			DBG1(DBG_IKE, "assigning virtual IP %H to peer", ip);
