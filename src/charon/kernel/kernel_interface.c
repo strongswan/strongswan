@@ -1697,8 +1697,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 		policy->route = malloc_thing(route_entry_t);
 		if (get_address_by_ts(this, dst_ts, &policy->route->src_ip) == SUCCESS)
 		{
-			policy->route->gateway = (direction == POLICY_IN) ? 
-										dst->clone(dst) : src->clone(src);
+			policy->route->gateway = dst->clone(dst);
 			policy->route->if_index = get_interface_index(this, dst);
 			policy->route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(policy->route->dst_net.ptr, &policy->sel.saddr, policy->route->dst_net.len);
