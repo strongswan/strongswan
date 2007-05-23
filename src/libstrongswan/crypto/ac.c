@@ -149,14 +149,38 @@ typedef enum {
 /**
  * access structure for an ietfAttribute
  */
-typedef struct ietfAttr ietfAttr_t;
+typedef struct ietfAttr_t ietfAttr_t;
 
-struct ietfAttr {
+struct ietfAttr_t {
+	/**
+	 * Time when attribute was first installed
+	 */
 	time_t installed;
+
+	/**
+	 * Reference count
+	 */
 	int count;
+
+	/**
+	 * IETF attribute kind
+	 */
 	ietfAttribute_t kind;
+
+	/**
+	 * IETF attribute valuse
+	 */
 	chunk_t value;
 };
+
+/**
+ * Destroys an ietfAttribute_t object
+ */
+static void ietfAttr_destroy(ietfAttr_t *this)
+{
+	free(this->value.ptr);
+	free(this);
+}
 
 /**
  * ASN.1 definition of ietfAttrSyntax
