@@ -94,7 +94,6 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
 			DBG1(DBG_IKE, "deleting IKE_SA on request");
 			break;
 		case IKE_REKEYING:
-			DBG1(DBG_IKE, "initiated rekeying, but received delete for IKE_SA");
 			break;
 		default:
 			break;
