@@ -1002,6 +1002,7 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 		half.dst_net = chunk_alloca(route->dst_net.len);
 		memset(half.dst_net.ptr, 0, half.dst_net.len);
 		half.src_ip = route->src_ip;
+		half.gateway = route->gateway;
 		half.if_index = route->if_index;
 		half.prefixlen = 1;
 		
