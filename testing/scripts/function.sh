@@ -22,11 +22,11 @@
 #
 
 function cecho {
-    echo -e "\033\13301;31m$1\033\1330m"
+    echo -e "\033[1;31m$1\033[0m"
 }
 
 function cecho-n {
-    echo -en "\033\13301;31m$1\033\1330m"
+    echo -en "\033[1;31m$1\033[0m"
 }
 
 

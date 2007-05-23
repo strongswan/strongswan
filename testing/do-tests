@@ -565,12 +565,13 @@ do
 	# write test status to html file
 	#
 
-	cecho "$STATUS"
 	if [ $STATUS = "passed" ]
 	then
 	    COLOR="green"
+	    cecho "\033[1;32m$STATUS"
 	else
 	    COLOR="red"
+	    cecho "$STATUS"
 	fi
 
 	cat >> $TESTRESULTSHTML << @EOF
@@ -630,7 +631,7 @@ cat >> $INDEX << @EOF
 @EOF
 
 cecho ""
-cecho "Passed:   $passed_cnt"
+cecho "\033[1;32mPassed:   $passed_cnt"
 cecho "Failed:   $failed_cnt"
 cecho ""
 
