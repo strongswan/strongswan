@@ -784,8 +784,6 @@ static void stroke_initiate(private_stroke_interface_t *this,
 	
 	charon->interfaces->initiate(charon->interfaces, peer_cfg, child_cfg,
 								 (interface_manager_cb_t)stroke_log, &info);
-	peer_cfg->destroy(peer_cfg);
-	child_cfg->destroy(child_cfg);
 }
 
 /**

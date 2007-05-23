@@ -266,6 +266,14 @@ struct bus_t {
 	void (*add_listener) (bus_t *this, bus_listener_t *listener);
 	
 	/**
+	 * @brief Unregister a listener from the bus.
+	 *
+	 * @param this		bus
+	 * @param listener	listener to unregister.
+	 */
+	void (*remove_listener) (bus_t *this, bus_listener_t *listener);
+	
+	/**
 	 * @brief Listen actively on the bus.
 	 *
 	 * As we are fully multithreaded, we must provide a mechanism
@@ -274,6 +282,9 @@ struct bus_t {
 	 * To prevent the listen() calling thread to miss signals emitted while
 	 * it processes a signal, registration is required. This is done through
 	 * the set_listen_state() method, see below.
+	 *
+	 * The listen() function is (has) a thread cancellation point, so might
+	 * want to register cleanup handlers.
 	 *
 	 * @param this		bus
 	 * @param level		verbosity level of the signal

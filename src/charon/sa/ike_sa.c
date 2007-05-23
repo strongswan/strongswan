@@ -806,6 +806,7 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	}
 	
 	task = (task_t*)child_create_create(&this->public, child_cfg);
+	child_cfg->destroy(child_cfg);
 	this->task_manager->queue_task(this->task_manager, task);
 	
 	return this->task_manager->initiate(this->task_manager);

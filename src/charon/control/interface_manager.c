@@ -239,6 +239,14 @@ static bool unroute_listener(interface_bus_listener_t *this, signal_t signal,
 }
 
 /**
+ * remove a previously registered listener from the bus
+ */
+static void remove_listener(interface_bus_listener_t *listener)
+{
+	charon->bus->remove_listener(charon->bus, &listener->listener);
+}
+
+/**
  * Implementation of interface_manager_t.initiate.
  */
 static status_t initiate(private_interface_manager_t *this,
@@ -259,6 +267,7 @@ static status_t initiate(private_interface_manager_t *this,
 	{
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
 	}
+	peer_cfg->destroy(peer_cfg);
 
 	listener.listener.signal = (void*)initiate_listener;
 	listener.callback = callback;
@@ -297,8 +306,10 @@ static status_t initiate(private_interface_manager_t *this,
 			retval = NEED_MORE;
 			break;
 		}
+		pthread_cleanup_push((void*)remove_listener, &listener);
 		signal = charon->bus->listen(charon->bus, &level, &thread, 
 									 &current, &format, &args);
+		pthread_cleanup_pop(0);
 		/* ike_sa is a valid pointer until we get one of the signals */
 		if (ike_sa == current)
 		{
@@ -373,8 +384,10 @@ static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id,
 				status = NEED_MORE;
 				break;
 			}
+			pthread_cleanup_push((void*)remove_listener, &listener);
 			signal = charon->bus->listen(charon->bus, &level, &thread, 
 										 &current, &format, &args);
+			pthread_cleanup_pop(0);
 
 			/* even if we checked in the IKE_SA, the pointer is valid until
 			 * we get an IKE_DOWN_... */
@@ -475,8 +488,10 @@ static status_t terminate_child(interface_manager_t *this, u_int32_t reqid,
 				status = NEED_MORE;
 				break;
 			}
+			pthread_cleanup_push((void*)remove_listener, &listener);
 			signal = charon->bus->listen(charon->bus, &level, &thread, 
 										 &current, &format, &args);
+			pthread_cleanup_pop(0);
 			/* even if we checked in the IKE_SA, the pointer is valid until
 			 * we get an IKE_DOWN_... */
 			if (ike_sa == current)

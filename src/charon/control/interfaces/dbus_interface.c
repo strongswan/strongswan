@@ -206,9 +206,11 @@ static bool start_connection(private_dbus_interface_t *this, DBusMessage* msg)
 		{
 			status = charon->interfaces->initiate(charon->interfaces, peer_cfg,
 												  child_cfg, dbus_log, NULL);
-		peer_cfg->destroy(peer_cfg);
 		}
-		child_cfg->destroy(child_cfg);
+		else
+		{
+			peer_cfg->destroy(peer_cfg);
+		}
 	}
 	reply = dbus_message_new_method_return(msg);
 	dbus_connection_send(this->conn, reply, NULL);

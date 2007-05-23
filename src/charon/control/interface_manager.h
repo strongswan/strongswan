@@ -84,6 +84,10 @@ struct interface_manager_t {
 	/**
 	 * @brief Initiate a CHILD_SA, and if required, an IKE_SA.
 	 *
+	 * The inititate() function is synchronous and thus blocks until the
+	 * IKE_SA is established or failed. Because of this, the initiate() function
+	 * contains a thread cancellation point.
+	 *
 	 * @param this			calling object
 	 * @param peer_cfg		peer_cfg to use for IKE_SA setup
 	 * @param child_cfg		child_cfg to set up CHILD_SA from
@@ -100,6 +104,10 @@ struct interface_manager_t {
 
 	/**
 	 * @brief Terminate an IKE_SA and all of its CHILD_SAs.
+	 *
+	 * The terminate() function is synchronous and thus blocks until the
+	 * IKE_SA is properly deleted, or the delete timed out. 
+	 * The terminate() function contains a thread cancellation point.
 	 *
 	 * @param this			calling object
 	 * @param unique_id		unique id of the IKE_SA to terminate.
