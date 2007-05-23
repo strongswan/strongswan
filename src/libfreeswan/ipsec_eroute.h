@@ -80,24 +80,3 @@ struct eroute
 
 #define _IPSEC_EROUTE_H_
 #endif /* _IPSEC_EROUTE_H_ */
-
-/*
- * $Log: ipsec_eroute.h,v $
- * Revision 1.1  2004/03/15 20:35:25  as
- * added files from freeswan-2.04-x509-1.5.3
- *
- * Revision 1.3  2002/04/24 07:36:46  mcr
- * Moved from ./klips/net/ipsec/ipsec_eroute.h,v
- *
- * Revision 1.2  2001/11/26 09:16:13  rgb
- * Merge MCR's ipsec_sa, eroute, proc and struct lifetime changes.
- *
- * Revision 1.1.2.1  2001/09/25 02:18:54  mcr
- * 	struct eroute moved to ipsec_eroute.h
- *
- *
- * Local variables:
- * c-file-style: "linux"
- * End:
- *
- */

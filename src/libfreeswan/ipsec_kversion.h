@@ -189,39 +189,3 @@
 #endif /* !SPINLOCK_23 */
 
 #endif /* _FREESWAN_KVERSIONS_H */
-
-/*
- * $Log: ipsec_kversion.h,v $
- * Revision 1.1  2004/03/15 20:35:25  as
- * added files from freeswan-2.04-x509-1.5.3
- *
- * Revision 1.7  2003/07/31 22:48:08  mcr
- * 	derive NET25-ness from presence of NETLINK_XFRM macro.
- *
- * Revision 1.6  2003/06/24 20:22:32  mcr
- * 	added new global: ipsecdevices[] so that we can keep track of
- * 	the ipsecX devices. They will be referenced with dev_hold(),
- * 	so 2.2 may need this as well.
- *
- * Revision 1.5  2003/04/03 17:38:09  rgb
- * Centralised ipsec_kfree_skb and ipsec_dev_{get,put}.
- *
- * Revision 1.4  2002/04/24 07:36:46  mcr
- * Moved from ./klips/net/ipsec/ipsec_kversion.h,v
- *
- * Revision 1.3  2002/04/12 03:21:17  mcr
- * 	three parameter version of ip_select_ident appears first
- * 	in 2.4.2 (RH7.1) not 2.4.4.
- *
- * Revision 1.2  2002/03/08 21:35:22  rgb
- * Defined LINUX_KERNEL_HAS_SNPRINTF to shut up compiler warnings after
- * 2.4.9.  (Andreas Piesk).
- *
- * Revision 1.1  2002/01/29 02:11:42  mcr
- * 	removal of kversions.h - sources that needed it now use ipsec_param.h.
- * 	updating of IPv6 structures to match latest in6.h version.
- * 	removed dead code from freeswan.h that also duplicated kversions.h
- * 	code.
- *
- *
- */

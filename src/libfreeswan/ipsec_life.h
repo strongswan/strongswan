@@ -88,25 +88,3 @@ enum ipsec_life_type {
 
 #define _IPSEC_LIFE_H_
 #endif /* _IPSEC_LIFE_H_ */
-
-
-/*
- * $Log: ipsec_life.h,v $
- * Revision 1.1  2004/03/15 20:35:25  as
- * added files from freeswan-2.04-x509-1.5.3
- *
- * Revision 1.3  2002/04/24 07:36:46  mcr
- * Moved from ./klips/net/ipsec/ipsec_life.h,v
- *
- * Revision 1.2  2001/11/26 09:16:14  rgb
- * Merge MCR's ipsec_sa, eroute, proc and struct lifetime changes.
- *
- * Revision 1.1.2.1  2001/09/25 02:25:58  mcr
- * 	lifetime structure created and common functions created.
- *
- *
- * Local variables:
- * c-file-style: "linux"
- * End:
- *
- */
