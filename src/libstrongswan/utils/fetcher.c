@@ -25,6 +25,9 @@
 #endif /* LIBCURL */
 
 #ifdef LIBLDAP
+#ifndef LDAP_DEPRECATED
+#define LDAP_DEPRECATED		1
+#endif
 #include <ldap.h>
 #endif /* LIBLDAP */
 
