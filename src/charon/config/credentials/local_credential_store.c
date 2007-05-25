@@ -619,8 +619,6 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			cert_status_t status;
 			certinfo_t *certinfo = certinfo_create(cert->get_serialNumber(cert));
 
-			certinfo->set_status(certinfo, CERT_UNKNOWN);
-
 			if (pathlen == 0)
 			{
 				/* add any crl and ocsp uris contained in the certificate under test */
@@ -637,6 +635,8 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			/* if ocsp service is not available then fall back to crl */
 			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && strict))
 			{
+
+				certinfo->set_status(certinfo, CERT_UNKNOWN);
 				status = issuer->verify_by_crl(issuer, certinfo, CRL_DIR);
 			}
 			
