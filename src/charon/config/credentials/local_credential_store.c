@@ -301,7 +301,7 @@ static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *th
 /**
  * Implementation of credential_store_t.get_issuer.
  */
-static ca_info_t* get_issuer(private_local_credential_store_t *this, const x509_t *cert)
+static ca_info_t* get_issuer(private_local_credential_store_t *this, x509_t *cert)
 {
 	ca_info_t *found = cert->get_ca_info(cert);
 
@@ -548,7 +548,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 	x509_t *end_cert = cert;
 	x509_t *cert_copy = find_certificate(this->certs, end_cert);
 	
-	DBG2(DBG_CFG, "verifying end entity certificate:");
+	DBG1(DBG_CFG, "verifying end entity certificate up to trust anchor:");
 
 	*found = (cert_copy != NULL);
 	if (*found)
@@ -617,6 +617,8 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			time_t nextUpdate;
 			cert_status_t status;
 			certinfo_t *certinfo = certinfo_create(cert->get_serialNumber(cert));
+
+			certinfo->set_status(certinfo, CERT_UNKNOWN);
 
 			if (pathlen == 0)
 			{
@@ -724,6 +726,8 @@ static status_t verify_signature(private_local_credential_store_t *this,
 	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
 	status_t sig_status;
 	x509_t *cert;
+
+	DBG1(DBG_CFG, "verifying RSA signature:");
 
 	/* default return values in case of failure */
 	sig_status = NOT_FOUND;
@@ -1458,7 +1462,7 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
 	this->public.credential_store.get_auth_certificate = (x509_t* (*) (credential_store_t*,u_int,identification_t*))get_auth_certificate;
 	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,chunk_t))get_ca_certificate_by_keyid;
-	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,const x509_t*))get_issuer;
+	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,x509_t*))get_issuer;
 	this->public.credential_store.is_trusted = (bool (*) (credential_store_t*,x509_t*))is_trusted;
 	this->public.credential_store.verify_signature = (status_t (*) (credential_store_t*,chunk_t,chunk_t,identification_t*,ca_info_t**))verify_signature;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
