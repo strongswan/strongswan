@@ -7,6 +7,22 @@ strongswan-4.1.3
 - IKEv2 authentication based on RSA signatures now can handle multiple
   certificates issued for a given peer ID.
 
+- IKEv2: Support for requesting a specific virtual IP using leftsourceip on the
+  client and returning requested virtual IPs using rightsourceip=%config
+  on the server. If the server does not support configuration payloads, the
+  client enforces its leftsourceip parameter.
+
+- The ./configure options --with-uid/--with-gid allow pluto and charon
+  to drop their privileges to a minimum and change to an other UID/GID. This
+  improves the systems security, as a possible intruder may only get the
+  CAP_NET_ADMIN capability.
+
+- Further modularization of charon: Pluggable control interface and 
+  configuration backend modules provide extensibility. The control interface
+  for stroke is included, and further interfaces using DBUS (NetworkManager)
+  or XML are on the way. A backend for storing configurations in the daemon
+  is provided and more advanced backends (using e.g. a database) are trivial 
+  to implement.
 
 strongswan-4.1.2
 ----------------
