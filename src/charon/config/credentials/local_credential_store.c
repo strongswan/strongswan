@@ -529,11 +529,12 @@ static bool is_trusted(private_local_credential_store_t *this, const char *label
 		}
 		else
 		{
-			DBG1(DBG_CFG, "going up one step in the certificate trust chain");
+			DBG1(DBG_CFG, "going up one step in the certificate trust chain (%d)",
+						   pathlen + 1);
 			cert = issuer_cert;
 		}
 	}
-	DBG1(DBG_CFG, "maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	DBG1(DBG_CFG, "maximum ca path length of %d levels reached", MAX_CA_PATH_LEN);
 	return FALSE;
 }
 
@@ -709,10 +710,11 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			}
 			certinfo->destroy(certinfo);
 		}
-		DBG1(DBG_CFG, "going up one step in the certificate trust chain");
+		DBG1(DBG_CFG, "going up one step in the certificate trust chain (%d)",
+					   pathlen + 1);
 		cert = issuer_cert;
 	}
-	DBG1(DBG_CFG, "maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	DBG1(DBG_CFG, "maximum ca path length of %d levels reached", MAX_CA_PATH_LEN);
 	return FALSE;
 }
 
