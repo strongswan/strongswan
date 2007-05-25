@@ -205,7 +205,9 @@ static struct vid_struct _vid_tab[] = {
 	/*
 	 * strongSwan
 	 */
-	DEC_MD5_VID(STRONGSWAN,       "strongSwan 4.1.1")
+	DEC_MD5_VID(STRONGSWAN,       "strongSwan 4.1.3")
+	DEC_MD5_VID(STRONGSWAN_4_1_2, "strongSwan 4.1.2")
+	DEC_MD5_VID(STRONGSWAN_4_1_1, "strongSwan 4.1.1")
 	DEC_MD5_VID(STRONGSWAN_4_1_0, "strongSwan 4.1.0")
 	DEC_MD5_VID(STRONGSWAN_4_0_7, "strongSwan 4.0.7")
 	DEC_MD5_VID(STRONGSWAN_4_0_6, "strongSwan 4.0.6")
