@@ -473,13 +473,13 @@ static void add_uris(ca_info_t *issuer, x509_t *cert)
 /**
  * Implementation of credential_store_t.is_trusted
  */
-static bool is_trusted(private_local_credential_store_t *this, x509_t *cert)
+static bool is_trusted(private_local_credential_store_t *this, const char *label, x509_t *cert)
 {
 	int pathlen;
 	time_t until = UNDEFINED_TIME;
 	x509_t *cert_to_be_trusted = cert;
 
-	DBG2(DBG_CFG, "establishing trust in certificate:");
+	DBG1(DBG_CFG, "establishing trust in %s certificate:", label);
 
 	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
 	{
@@ -489,8 +489,8 @@ static bool is_trusted(private_local_credential_store_t *this, x509_t *cert)
 		rsa_public_key_t *issuer_public_key;
 		bool valid_signature;
 
-		DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
-		DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
+		DBG1(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
+		DBG1(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
 
 		ugh = cert->is_valid(cert, &until);
 		if (ugh != NULL)
@@ -709,7 +709,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			}
 			certinfo->destroy(certinfo);
 		}
-		/* go up one step in the trust chain */
+		DBG1(DBG_CFG, "going up one step in the certificate trust chain");
 		cert = issuer_cert;
 	}
 	DBG1(DBG_CFG, "maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
@@ -726,8 +726,6 @@ static status_t verify_signature(private_local_credential_store_t *this,
 	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
 	status_t sig_status;
 	x509_t *cert;
-
-	DBG1(DBG_CFG, "verifying RSA signature:");
 
 	/* default return values in case of failure */
 	sig_status = NOT_FOUND;
@@ -1463,7 +1461,7 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.get_auth_certificate = (x509_t* (*) (credential_store_t*,u_int,identification_t*))get_auth_certificate;
 	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,chunk_t))get_ca_certificate_by_keyid;
 	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,x509_t*))get_issuer;
-	this->public.credential_store.is_trusted = (bool (*) (credential_store_t*,x509_t*))is_trusted;
+	this->public.credential_store.is_trusted = (bool (*) (credential_store_t*,const char*,x509_t*))is_trusted;
 	this->public.credential_store.verify_signature = (status_t (*) (credential_store_t*,chunk_t,chunk_t,identification_t*,ca_info_t**))verify_signature;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;

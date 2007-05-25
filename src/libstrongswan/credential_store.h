@@ -160,10 +160,11 @@ struct credential_store_t {
 	 * @brief Verify an X.509 certificate up to trust anchor without any status checks
 	 *
 	 * @param this		calling object
+	 * @param label		label characterizing the certificate to be verified
 	 * @param cert		certificate to be verified
 	 * @return			TRUE if trusted
 	 */
-	bool (*is_trusted) (credential_store_t *this, x509_t *cert);
+	bool (*is_trusted) (credential_store_t *this, const char *label, x509_t *cert);
 
 	/**
 	 * @brief Verify an X.509 certificate up to trust anchor including status checks
