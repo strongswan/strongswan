@@ -1,11 +1,12 @@
 strongswan-4.1.3
 ----------------
 
-- IKEv2 peer configuration selection can now be based on a required
+- IKEv2 peer configuration selection now can be based on a given 
   certification authority using the rightca= statement.
 
 - IKEv2 authentication based on RSA signatures now can handle multiple
-  certificates issued for a given peer ID.
+  certificates issued for a given peer ID. This allows a smooth transition
+  in the case of a peer certificate renewal.
 
 - IKEv2: Support for requesting a specific virtual IP using leftsourceip on the
   client and returning requested virtual IPs using rightsourceip=%config
@@ -23,6 +24,10 @@ strongswan-4.1.3
   or XML are on the way. A backend for storing configurations in the daemon
   is provided and more advanced backends (using e.g. a database) are trivial 
   to implement.
+
+ - Fixed a compilation failure in libfreeswan occuring with Linux kernel
+   headers > 2.6.17.
+
 
 strongswan-4.1.2
 ----------------
