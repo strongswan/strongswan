@@ -142,7 +142,7 @@ struct credential_store_t {
 	 * @param cert					certificate for which issuer ca info is required
 	 * @return						ca info, or NULL if not found
 	 */
-	ca_info_t* (*get_issuer) (credential_store_t *this, const x509_t* cert);
+	ca_info_t* (*get_issuer) (credential_store_t *this, x509_t* cert);
 
 	/**
 	 * @brief Verify an RSA signature given the ID of the signer
