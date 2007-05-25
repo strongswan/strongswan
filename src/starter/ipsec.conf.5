@@ -600,7 +600,16 @@ value is
 .B %modeconfig
 or
 .B %config,
-an address is requested from the peer.
+an address is requested from the peer. In IKEv2, a defined address is requested,
+but the server may change it. If the server does not support it, the address
+is enforced. 
+.TP
+.B leftsourceip
+The internal source IP to use in a tunnel for the remote peer. If the
+value is
+.B %config
+on the responder side, the initiator must propose a address which is then echoed
+back.
 .TP
 .B leftsubnetwithin
 Not relevant for IKEv2, as subnets are narrowed.
