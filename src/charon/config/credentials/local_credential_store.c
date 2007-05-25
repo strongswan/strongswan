@@ -522,14 +522,14 @@ static bool is_trusted(private_local_credential_store_t *this, x509_t *cert)
 		/* check if cert is a self-signed root ca */
 		if (pathlen > 0 && cert->is_self_signed(cert))
 		{
-			DBG2(DBG_CFG, "reached self-signed root ca");
+			DBG1(DBG_CFG, "reached self-signed root ca");
 			cert_to_be_trusted->set_until(cert_to_be_trusted, until);
 			cert_to_be_trusted->set_status(cert_to_be_trusted, CERT_GOOD);
 			return TRUE;
 		}
 		else
 		{
-			/* go up one step in the trust chain */
+			DBG1(DBG_CFG, "going up one step in the certificate trust chain");
 			cert = issuer_cert;
 		}
 	}
