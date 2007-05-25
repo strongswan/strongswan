@@ -410,6 +410,10 @@ static proposal_t *clone_(private_proposal_t *this)
 	return &clone->public;
 }
 
+/**
+ * add a algorithm identified by a string to the proposal.
+ * TODO: we could use gperf here.
+ */
 static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 {
 	if (strncmp(alg.ptr, "null", alg.len) == 0)
@@ -454,8 +458,9 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 		{
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
 		}
-	}
-	else if (strncmp(alg.ptr, "sha256", alg.len) == 0)
+	}  
+	else if (strncmp(alg.ptr, "sha256", alg.len) == 0 ||
+			 strncmp(alg.ptr, "sha2_256", alg.len) == 0)
 	{
 		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA2_256_128, 0);
 		if (this->protocol == PROTO_IKE)
@@ -463,7 +468,8 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_256, 0);
 		}
 	}
-	else if (strncmp(alg.ptr, "sha384", alg.len) == 0)
+	else if (strncmp(alg.ptr, "sha384", alg.len) == 0 ||
+			 strncmp(alg.ptr, "sha2_384", alg.len) == 0)
 	{
 		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA2_384_192, 0);
 		if (this->protocol == PROTO_IKE)
@@ -471,7 +477,8 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_384, 0);
 		}
 	}
-	else if (strncmp(alg.ptr, "sha512", alg.len) == 0)
+	else if (strncmp(alg.ptr, "sha512", alg.len) == 0 ||
+			 strncmp(alg.ptr, "sha2_512", alg.len) == 0)
 	{
 		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA2_512_256, 0);
 		if (this->protocol == PROTO_IKE)
