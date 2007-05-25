@@ -129,14 +129,7 @@ static iterator_t* create_iterator(private_backend_manager_t *this)
 static void load_backends(private_backend_manager_t *this)
 {
 	struct dirent* entry;
-	struct stat stb;
 	DIR* dir;
-	
-	if (stat(IPSEC_BACKENDDIR, &stb) == -1 || !(stb.st_mode & S_IFDIR))
-	{
-		DBG1(DBG_CFG, "error opening backend modules directory "IPSEC_BACKENDDIR);
-		return;
-	}
 
 	dir = opendir(IPSEC_BACKENDDIR);
 	if (dir == NULL)
@@ -157,12 +150,6 @@ static void load_backends(private_backend_manager_t *this)
 		
 		snprintf(file, sizeof(file), IPSEC_BACKENDDIR"/%s", entry->d_name);
 		
-		if (stat(file, &stb) == -1 || !(stb.st_mode & S_IFREG))
-		{
-			DBG2(DBG_CFG, "  skipping %s, doesn't look like a file",
-				 entry->d_name);
-			continue;
-		}
 		ending = entry->d_name + strlen(entry->d_name) - 3;
 		if (ending <= entry->d_name || !streq(ending, ".so"))
 		{

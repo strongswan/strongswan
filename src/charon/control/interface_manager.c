@@ -608,14 +608,7 @@ static status_t unroute(interface_manager_t *this, u_int32_t reqid,
 static void load_interfaces(private_interface_manager_t *this)
 {
 	struct dirent* entry;
-	struct stat stb;
 	DIR* dir;
-	
-	if (stat(IPSEC_INTERFACEDIR, &stb) == -1 || !(stb.st_mode & S_IFDIR))
-	{
-		DBG1(DBG_CFG, "error opening interface modules directory "IPSEC_INTERFACEDIR);
-		return;
-	}
 
 	dir = opendir(IPSEC_INTERFACEDIR);
 	if (dir == NULL)
@@ -636,12 +629,6 @@ static void load_interfaces(private_interface_manager_t *this)
 		
 		snprintf(file, sizeof(file), IPSEC_INTERFACEDIR"/%s", entry->d_name);
 		
-		if (stat(file, &stb) == -1 || !(stb.st_mode & S_IFREG))
-		{
-			DBG2(DBG_CFG, "  skipping %s, doesn't look like a file",
-				 entry->d_name);
-			continue;
-		}
 		ending = entry->d_name + strlen(entry->d_name) - 3;
 		if (ending <= entry->d_name || !streq(ending, ".so"))
 		{
