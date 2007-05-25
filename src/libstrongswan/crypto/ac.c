@@ -153,16 +153,6 @@ typedef struct ietfAttr_t ietfAttr_t;
 
 struct ietfAttr_t {
 	/**
-	 * Time when attribute was first installed
-	 */
-	time_t installed;
-
-	/**
-	 * Reference count
-	 */
-	int count;
-
-	/**
 	 * IETF attribute kind
 	 */
 	ietfAttribute_t kind;
@@ -171,15 +161,39 @@ struct ietfAttr_t {
 	 * IETF attribute valuse
 	 */
 	chunk_t value;
+
+	/**
+	 * Destroys the ietfAttr_t object.
+	 * 
+	 * @param this			ietfAttr_t to destroy
+	 */
+	void (*destroy) (ietfAttr_t *this);
 };
 
 /**
- * Destroys an ietfAttribute_t object
+ * Destroys an ietfAttr_t object
  */
 static void ietfAttr_destroy(ietfAttr_t *this)
 {
 	free(this->value.ptr);
 	free(this);
+}
+
+/**
+ * Creates an ietfAttr_t object.
+ */
+ietfAttr_t *ietfAttr_create(ietfAttribute_t kind, chunk_t value)
+{
+	ietfAttr_t *this = malloc_thing(ietfAttr_t);
+
+	/* initialize */
+	this->kind = kind;
+	this->value = chunk_clone(value);
+
+	/* function */
+	this->destroy = ietfAttr_destroy;
+	
+	return this;
 }
 
 /**
@@ -388,7 +402,36 @@ static bool parse_directoryName(chunk_t blob, int level, bool implicit, identifi
  */
 static void parse_ietfAttrSyntax(chunk_t blob, int level0, linked_list_t *list)
 {
-	/* TODO */
+	asn1_ctx_t ctx;
+	chunk_t object;
+	u_int level;
+	int objectID = 0;
+
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+
+	while (objectID < IETF_ATTR_ROOF)
+	{
+		if (!extract_object(ietfAttrSyntaxObjects, &objectID, &object, &level, &ctx))
+		{
+			return;
+		}
+
+		switch (objectID)
+		{
+			case IETF_ATTR_OCTETS:
+			case IETF_ATTR_OID:
+			case IETF_ATTR_STRING:
+				{
+					ietfAttribute_t kind = (objectID - IETF_ATTR_OCTETS) / 2;
+					ietfAttr_t *attr   = ietfAttr_create(kind, object);
+					list->insert_last(list, (void *)attr);
+				}
+				break;
+			default:
+				break;
+		}
+		objectID++;
+	}
 }
 
 /**
@@ -571,11 +614,15 @@ static void destroy(private_x509ac_t *this)
 	DESTROY_IF(this->holderIssuer);
 	DESTROY_IF(this->entityName);
 	DESTROY_IF(this->issuerName);
+	this->charging->destroy_offset(this->charging, 
+							offsetof(ietfAttr_t, destroy));
+	this->groups->destroy_offset(this->groups,
+						  offsetof(ietfAttr_t, destroy));
 	free(this->certificate.ptr);
 	free(this);
 }
 
-/*
+/**
  * Described in header.
  */
 x509ac_t *x509ac_create_from_chunk(chunk_t chunk)
@@ -586,6 +633,8 @@ x509ac_t *x509ac_create_from_chunk(chunk_t chunk)
 	this->holderIssuer = NULL;
 	this->entityName = NULL;
 	this->issuerName = NULL;
+	this->charging = linked_list_create();
+	this->groups = linked_list_create();
 
 	/* public functions */
 	this->public.is_valid = (err_t (*) (const x509ac_t*,time_t*))is_valid;
@@ -599,7 +648,7 @@ x509ac_t *x509ac_create_from_chunk(chunk_t chunk)
 	return &this->public;
 }
 
-/*
+/**
  * Described in header.
  */
 x509ac_t *x509ac_create_from_file(const char *filename)
