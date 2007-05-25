@@ -188,7 +188,12 @@ do
 	else
 	    FIRST="&nbsp;"
 	fi
-	echo "    <tr><td>$FIRST</td><td><a href=\"$SUBDIR/index.html\">$SUBDIR</a></td></tr>" >> $INDEX
+	echo "    <tr>" >> $INDEX
+    echo "      <td>$FIRST</td>">> $INDEX
+    echo "      <td><a href=\"$SUBDIR/index.html\">$SUBDIR</a></td>" >> $INDEX
+    echo "      <td align=\"right\"></td>" >> $INDEX
+    echo "      <td>&nbsp;</td>" >> $INDEX
+    echo "    </tr>" >> $INDEX
 	SUBTESTSINDEX=$TODAYDIR/$SUBDIR/index.html
 	cat > $SUBTESTSINDEX <<@EOF
 <html>
@@ -616,14 +621,14 @@ cat >> $INDEX << @EOF
     <tr>
       <td>&nbsp;</td>
       <td><a href="all.html"><b>all</b></a></td>
-	  <td><b>$all_cnt</td>
-	  <td>&nbsp;</td>
+      <td align="right"><b>$all_cnt</b></td>
+      <td>&nbsp;</td>
     </tr>
     <tr>
       <td><b>Failed:</b></td>
       <td>&nbsp;</td>
-	  <td><b><font color="red">$failed_cnt</font></b></td>
-	  <td>&nbsp;</td>
+      <td align="right"><b><font color="red">$failed_cnt</font></b></td>
+      <td>&nbsp;</td>
     </tr>
   </table>
 </body>
