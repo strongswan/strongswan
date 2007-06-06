@@ -4,7 +4,7 @@
 # Copyright (C) 2003-2004 Nigel Meteringham
 # Copyright (C) 2003-2004 Tuomo Soini
 # Copyright (C) 2002-2004 Michael Richardson
-# Copyright (C) 2005-2006 Andreas Steffen <andreas.steffen@strongswan.org>
+# Copyright (C) 2005-2007 Andreas Steffen <andreas.steffen@strongswan.org>
 # 
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -191,14 +191,6 @@ addsource() {
 
 doroute() {
 	st=0
-	parms="$PLUTO_PEER_CLIENT"
-
-	parms2=
-	if [ -n "$PLUTO_NEXT_HOP" ]
-	then
-	   parms2="via $PLUTO_NEXT_HOP"
-	fi
-	parms2="$parms2 dev $PLUTO_INTERFACE"
 
 	if [ -z "$PLUTO_MY_SOURCEIP" ]
 	then
@@ -218,6 +210,26 @@ doroute() {
 	    fi
         fi
 
+	if [ -z "$KLIPS" -a -z "$PLUTO_MY_SOURCEIP" ]
+	then
+	    # leave because no route entry is required
+	    return $st
+	fi
+
+	parms1="$PLUTO_PEER_CLIENT"
+
+	parms2=
+	if [ -n "$KLIPS" ]
+	then
+	    if [ -n "$PLUTO_NEXT_HOP" ]
+	    then
+		parms2="via $PLUTO_NEXT_HOP"
+	    fi
+	else
+	    parms2="via $PLUTO_ME"
+	fi	
+	parms2="$parms2 dev $PLUTO_INTERFACE"
+
 	parms3=
 	if test "$1" = "add" -a -n "$PLUTO_MY_SOURCEIP"
 	then
@@ -233,7 +245,7 @@ doroute() {
 		it="ip route $1 0.0.0.0/1 $parms2 $parms3 &&
 			ip route $1 128.0.0.0/1 $parms2 $parms3"
 		;;
-	*)	it="ip route $1 $parms $parms2 $parms3"
+	*)	it="ip route $1 $parms1 $parms2 $parms3"
 		;;
 	esac
 	oops="`eval $it 2>&1`"
@@ -252,9 +264,11 @@ doroute() {
 # in the presence of KLIPS and ipsecN interfaces do not use IPSEC_POLICY 
 if [ `echo "$PLUTO_INTERFACE" | grep "ipsec"` ]
 then
+	KLIPS=1
 	IPSEC_POLICY_IN=""
 	IPSEC_POLICY_OUT=""
 else
+	KLIPS=
 	IPSEC_POLICY="-m policy --pol ipsec --proto esp --reqid $PLUTO_REQID"
 	IPSEC_POLICY_IN="$IPSEC_POLICY --dir in"
 	IPSEC_POLICY_OUT="$IPSEC_POLICY --dir out"
