@@ -632,24 +632,13 @@ format_end(char *buf
 	strcpy(&host_id[len < 0? (ptrdiff_t)sizeof(host_id)-2 : 1 + len], "]");
     }
 
-    /* [---hop] */
-    hop[0] = '\0';
-    hop_sep = "";
-    if (that != NULL && !sameaddr(&this->host_nexthop, &that->host_addr))
-    {
-	addrtot(&this->host_nexthop, 0, hop, sizeof(hop));
-	hop_sep = "---";
-    }
-
     if (is_left)
-	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s%s"
-	    , open_brackets, client, close_brackets
-	    , client_sep, host, host_port, host_id
-	    , protoport, hop_sep, hop);
+	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s"
+	    , open_brackets, client, close_brackets, client_sep
+	    , host, host_port, host_id, protoport);
     else
-	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s%s"
-	    , hop, hop_sep, host, host_port, host_id
-	    , protoport, client_sep
+	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s"
+	    , host, host_port, host_id, protoport, client_sep
 	    , open_brackets, client, close_brackets);
     return strlen(buf);
 }
@@ -2974,51 +2963,6 @@ terminate_connection(const char *nm)
 	c = n;
     } while (c != NULL);
 }
-
-/* check nexthop safety
- * Our nexthop must not be within a routed client subnet, and vice versa.
- * Note: we don't think this is true.  We think that KLIPS will
- * not process a packet output by an eroute.
- */
-#ifdef NEVER
-//bool
-//check_nexthop(const struct connection *c)
-//{
-//    struct connection *d;
-//
-//    if (addrinsubnet(&c->spd.this.host_nexthop, &c->spd.that.client))
-//    {
-//	loglog(RC_LOG_SERIOUS, "cannot perform routing for connection \"%s\""
-//	    " because nexthop is within peer's client network",
-//	    c->name);
-//	return FALSE;
-//    }
-//
-//    for (d = connections; d != NULL; d = d->next)
-//    {
-//	if (d->routing != RT_UNROUTED)
-//	{
-//	    if (addrinsubnet(&c->spd.this.host_nexthop, &d->spd.that.client))
-//	    {
-//		loglog(RC_LOG_SERIOUS, "cannot do routing for connection \"%s\"
-//		    " because nexthop is contained in"
-//		    " existing routing for connection \"%s\"",
-//		    c->name, d->name);
-//		return FALSE;
-//	    }
-//	    if (addrinsubnet(&d->spd.this.host_nexthop, &c->spd.that.client))
-//	    {
-//		loglog(RC_LOG_SERIOUS, "cannot do routing for connection \"%s\"
-//		    " because it contains nexthop of"
-//		    " existing routing for connection \"%s\"",
-//		    c->name, d->name);
-//		return FALSE;
-//	    }
-//	}
-//    }
-//    return TRUE;
-//}
-#endif /* NEVER */
 
 /* an ISAKMP SA has been established.
  * Note the serial number, and release any connections with
