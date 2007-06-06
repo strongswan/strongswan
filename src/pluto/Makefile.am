@@ -128,14 +128,14 @@ if USE_LIBLDAP
 endif
 
 install-exec-local :
-	mkdir -p -m 755 $(confdir)/ipsec.d
-	mkdir -p -m 755 $(confdir)/ipsec.d/cacerts
-	mkdir -p -m 755 $(confdir)/ipsec.d/ocspcerts
-	mkdir -p -m 755 $(confdir)/ipsec.d/certs
-	mkdir -p -m 755 $(confdir)/ipsec.d/acerts
-	mkdir -p -m 755 $(confdir)/ipsec.d/aacerts
-	mkdir -p -m 755 $(confdir)/ipsec.d/crls
-	mkdir -p -m 755 $(confdir)/ipsec.d/reqs
-	mkdir -p -m 700 $(confdir)/ipsec.d/private
-	chown -R $(ipsecuid):$(ipsecgid) $(confdir)/ipsec.d
+	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d
+	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/cacerts
+	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/ocspcerts
+	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/certs
+	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/acerts
+	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/aacerts
+	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/crls
+	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/reqs
+	mkdir -p -m 700 $(DESTDIR)$(confdir)/ipsec.d/private
+	chown -R $(ipsecuid):$(ipsecgid) $(DESTDIR)$(confdir)/ipsec.d
 
