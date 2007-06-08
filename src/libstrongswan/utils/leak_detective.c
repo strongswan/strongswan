@@ -410,7 +410,10 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
  */
 void __attribute__ ((constructor)) leak_detective_init()
 {
-	install_hooks();
+	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
+	{
+		install_hooks();
+	}
 }
 
 /**
@@ -418,8 +421,11 @@ void __attribute__ ((constructor)) leak_detective_init()
  */
 void __attribute__ ((destructor)) leak_detective_cleanup()
 {
-	uninstall_hooks();
-	report_leaks();
+	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
+	{
+		uninstall_hooks();
+		report_leaks();
+	}
 }
 
 /**
@@ -430,6 +436,11 @@ void leak_detective_status(FILE *stream)
 	u_int blocks = 0;
 	size_t bytes = 0;
 	memory_header_t *hdr = &first_header;
+	
+	if (getenv("LEAK_DETECTIVE_DISABLE"))
+	{
+		return;
+	}
 	
 	pthread_mutex_lock(&mutex);
 	while ((hdr = hdr->next))
