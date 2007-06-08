@@ -191,7 +191,7 @@ do
 	echo "    <tr>" >> $INDEX
     echo "      <td>$FIRST</td>">> $INDEX
     echo "      <td><a href=\"$SUBDIR/index.html\">$SUBDIR</a></td>" >> $INDEX
-    echo "      <td align=\"right\"></td>" >> $INDEX
+    echo "      <td align=\"right\">x</td>" >> $INDEX
     echo "      <td>&nbsp;</td>" >> $INDEX
     echo "    </tr>" >> $INDEX
 	SUBTESTSINDEX=$TODAYDIR/$SUBDIR/index.html
