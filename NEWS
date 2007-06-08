@@ -5,7 +5,8 @@ strongswan-4.1.4
   IKEv2 companion charon by inserting an explicit route via the
   _updown script only if a sourceip exists. This is admissible
   since routing through the IPsec tunnel is handled automatically
-  by NETKEY's IPsec policies..
+  by NETKEY's IPsec policies. As a consequence the left|rightnexthop
+  parameter is not required any more.
   
 
 strongswan-4.1.3
