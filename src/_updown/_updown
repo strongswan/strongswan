@@ -289,6 +289,13 @@ fi
 # the big choice
 case "$PLUTO_VERB:$1" in
 prepare-host:*|prepare-client:*)
+	if [ -z "$KLIPS" -a -z "$PLUTO_MY_SOURCEIP" ]
+	then
+	    # exit because no route will be added,
+	    # so that existing routes can stay
+	    exit 0
+	fi
+
 	# delete possibly-existing route (preliminary to adding a route)
 	case "$PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK" in
 	"0.0.0.0/0.0.0.0")
