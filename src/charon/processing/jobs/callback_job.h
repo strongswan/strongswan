@@ -33,6 +33,11 @@ typedef enum job_requeue_t job_requeue_t;
 
 /**
  * @brief Job requeueing policy
+ *
+ * The job requeueing policy defines how a job is handled when the callback
+ * function returns.
+ *
+ * @ingroup jobs
  */
 enum job_requeue_t {
 
@@ -42,12 +47,12 @@ enum job_requeue_t {
 	JOB_REQUEUE_NONE,
 	
 	/**
-	 * Reque the job farly, meaning it has to queue as any other job
+	 * Reque the job fairly, meaning it has to requeue as any other job
 	 */
 	JOB_REQUEUE_FAIR,
 	
 	/**
-	 * Reexecute the job directly, without the need of requeing it
+	 * Reexecute the job directly, without the need of requeueing it
 	 */
 	JOB_REQUEUE_DIRECT,
 };
@@ -60,6 +65,8 @@ enum job_requeue_t {
  *
  * @param data			param supplied to job
  * @return				requeing policy how to requeue the job
+ *
+ * @ingroup jobs
  */
 typedef job_requeue_t (*callback_job_cb_t)(void *data);
 
@@ -72,6 +79,8 @@ typedef job_requeue_t (*callback_job_cb_t)(void *data);
  *
  * @param data			param supplied to job
  * @return				requeing policy how to requeue the job
+ *
+ * @ingroup jobs
  */
 typedef void (*callback_job_cleanup_t)(void *data);
 

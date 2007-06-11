@@ -98,7 +98,9 @@ struct processor_t {
 
 /**
  * @brief Create the thread pool without any threads.
- * 
+ *
+ * Use the set_threads method to start processing jobs.
+ *
  * @return					processor_t object
  *
  * @ingroup processing

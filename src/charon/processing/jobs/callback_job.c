@@ -56,7 +56,7 @@ struct private_callback_job_t {
 	pthread_t thread;
 
 	/**
-	 * mutex to synchronize thread startup/cancellation
+	 * mutex to access jobs interna
 	 */
 	pthread_mutex_t mutex;
 

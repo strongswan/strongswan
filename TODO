@@ -10,18 +10,15 @@ gain hassle-free configuration, version negotiation and maintainability.
 Roadmap 2007
 ============
 
- Apr  !   - credentials backend redesign
+ Jun  !   - distribution packages
       !   - interface in charon for the XML based SMP management interface
-      !
- May  !   - SMP configuration client
+      !   - SMP configuration client
       !   - release IKEv2 p2p NATT draft 00
+      !
+ Jul  !   - modular credential backends
       !   - reimplement IKEv2 p2p NATT support
       !
- Jun  !   - start with IKEv1 migration strategy
-      !
- Jul  !
-      !
- Aug  !
+ Aug  !   - Start IKEv1 implementation in charon
       !
  Sep  !
       !
@@ -51,7 +48,6 @@ Stroke interface
 ----------------
 - add a Rekey-Counter for SAs in "statusall"
 - ipsec statusall bytecount
-- proper handling of CTRL+C console detach (SIG_PIPE)
 
 Misc
 ----

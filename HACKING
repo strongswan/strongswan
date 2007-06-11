@@ -38,11 +38,17 @@ Then you're in, start the build as usual:
     make install
 
 
+API documentation
+-----------------
+Charon and libstrongswan contain inline code documentation. These comments can be
+extracted using doxygen. It is built using 'make apidoc', which creates an 'apidoc'
+folder containing the HTML files.
+
+
 uClibc support
 --------------
 
-Support for uClibc is still work in progress. To get started, make sure to
-include the following options:
+To run strongSwan on uClibc, you need at least:
 
 String and Stdio Support --->
   [*] Support glibc's register_printf_function()

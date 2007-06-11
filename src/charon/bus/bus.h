@@ -39,14 +39,18 @@ typedef struct bus_t bus_t;
  *
  * Signaling is for different purporses. First, it allows debugging via
  * "debugging signal messages", sencondly, it allows to follow certain
- * mechanisms currently going on in the daemon. As we are multithreaded, 
- * and of multiple transactions are involved, it's not possible to follow
+ * mechanisms currently going on in the daemon. As we are multithreaded,
+ * and multiple transactions are involved, it's not possible to follow
  * one connection setup without further infrastructure. These infrastructure
  * is provided by the bus and the signals the daemon emits to the bus.
  *
  * There are different scenarios to follow these signals, but all have
  * the same scheme. First, a START signal is emitted to indicate the daemon
- * has started to 
+ * has started to do something. After a start signal, a SUCCESS or a FAILED
+ * signal of the same type follows. This allows to track the operation. Any
+ * Debug signal betwee a START and a SUCCESS/FAILED belongs to that operation
+ * if the IKE_SA is the same. The thread may change, as multiple threads
+ * may be involved in a complex scenario.
  *
  * @ingroup bus
  */
@@ -247,7 +251,9 @@ struct bus_listener_t {
  * in receiving event signals registers at the bus. Any signals sent to
  * are delivered to all registered listeners.
  * To deliver signals to threads, the blocking listen() call may be used
- * to wait for a signal.
+ * to wait for a signal. However, passive listeners should be preferred,
+ * as listening actively requires some synchronization overhead as data
+ * must be passed from the raising thread to the listening thread.
  *
  * @ingroup bus
  */
@@ -283,7 +289,7 @@ struct bus_t {
 	 * it processes a signal, registration is required. This is done through
 	 * the set_listen_state() method, see below.
 	 *
-	 * The listen() function is (has) a thread cancellation point, so might
+	 * The listen() function is (has) a thread cancellation point, so you might
 	 * want to register cleanup handlers.
 	 *
 	 * @param this		bus

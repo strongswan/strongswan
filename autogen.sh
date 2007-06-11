@@ -1,5 +1,5 @@
 #!/bin/sh
-libtoolize &&
+libtoolize --force &&
 aclocal &&
 automake -a &&
 autoconf
