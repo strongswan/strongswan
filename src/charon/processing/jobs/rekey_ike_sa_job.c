@@ -48,17 +48,18 @@ struct private_rekey_ike_sa_job_t {
 };
 
 /**
- * Implementation of job_t.get_type.
+ * Implementation of job_t.destroy.
  */
-static job_type_t get_type(private_rekey_ike_sa_job_t *this)
+static void destroy(private_rekey_ike_sa_job_t *this)
 {
-	return REKEY_IKE_SA;
+	this->ike_sa_id->destroy(this->ike_sa_id);
+	free(this);
 }
 
 /**
  * Implementation of job_t.execute.
  */
-static status_t execute(private_rekey_ike_sa_job_t *this)
+static void execute(private_rekey_ike_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	status_t status = SUCCESS;
@@ -68,36 +69,28 @@ static status_t execute(private_rekey_ike_sa_job_t *this)
 	if (ike_sa == NULL)
 	{
 		DBG2(DBG_JOB, "IKE_SA to rekey not found");
-		return DESTROY_ME;
-	}
-	
-	if (this->reauth)
-	{
-		ike_sa->reestablish(ike_sa);
 	}
 	else
 	{
-		status = ike_sa->rekey(ike_sa);
+		if (this->reauth)
+		{
+			ike_sa->reestablish(ike_sa);
+		}
+		else
+		{
+			status = ike_sa->rekey(ike_sa);
+		}
+		
+		if (status == DESTROY_ME)
+		{
+			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+		}
+		else
+		{
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		}
 	}
-	
-	if (status == DESTROY_ME)
-	{
-		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
-	}
-	else
-	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	}
-	return DESTROY_ME;
-}
-
-/**
- * Implementation of job_t.destroy.
- */
-static void destroy(private_rekey_ike_sa_job_t *this)
-{
-	this->ike_sa_id->destroy(this->ike_sa_id);
-	free(this);
+	destroy(this);
 }
 
 /*
@@ -108,8 +101,7 @@ rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id, bool reauth)
 	private_rekey_ike_sa_job_t *this = malloc_thing(private_rekey_ike_sa_job_t);
 	
 	/* interface functions */
-	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
-	this->public.job_interface.execute = (status_t (*) (job_t *)) execute;
+	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
 		
 	/* private variables */

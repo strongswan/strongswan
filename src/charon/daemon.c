@@ -115,25 +115,26 @@ static void dbg_stderr(int level, char *fmt, ...)
  */
 static void run(private_daemon_t *this)
 {
-	/* reselect signals for this thread */
-	sigemptyset(&(this->signal_set));
-	sigaddset(&(this->signal_set), SIGINT); 
-	sigaddset(&(this->signal_set), SIGHUP); 
-	sigaddset(&(this->signal_set), SIGTERM); 
-	pthread_sigmask(SIG_BLOCK, &(this->signal_set), 0);
+	sigset_t set;
 	
-	while(TRUE)
+	/* handle SIGINT, SIGHUP ans SIGTERM in this handler */
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT); 
+	sigaddset(&set, SIGHUP); 
+	sigaddset(&set, SIGTERM);
+	
+	while (TRUE)
 	{
-		int signal_number;
+		int sig;
 		int error;
 		
-		error = sigwait(&(this->signal_set), &signal_number);
-		if(error)
+		error = sigwait(&set, &sig);
+		if (error)
 		{
 			DBG1(DBG_DMN, "error %d while waiting for a signal", error);
 			return;
 		}
-		switch (signal_number)
+		switch (sig)
 		{
 			case SIGHUP:
 			{
@@ -146,11 +147,13 @@ static void run(private_daemon_t *this)
 				return;
 			}
 			case SIGTERM:
+			{
 				DBG1(DBG_DMN, "signal of type SIGTERM received. Shutting down");
 				return;
+			}
 			default:
 			{
-				DBG1(DBG_DMN, "unknown signal %d received. Ignored", signal_number);
+				DBG1(DBG_DMN, "unknown signal %d received. Ignored", sig);
 				break;
 			}
 		}
@@ -162,33 +165,22 @@ static void run(private_daemon_t *this)
  */
 static void destroy(private_daemon_t *this)
 {
-	/* destruction is a non trivial task, we need to follow 
-	* a strict order to prevent threading issues! 
-	* Kill active threads first, except the sender, as
-	* the killed IKE_SA want to send delete messages.
-	*/
-	/* we don't want to receive anything anymore... */
-	DESTROY_IF(this->public.receiver);
-	/* ignore all incoming user requests */
-	DESTROY_IF(this->public.interfaces);
-	/* stop scheduing jobs */
-	DESTROY_IF(this->public.scheduler);
-	/* stop processing jobs */
-	DESTROY_IF(this->public.thread_pool);
-	/* shut down manager with all IKE SAs */
+	/* terminate all idle threads */
+	this->public.processor->set_threads(this->public.processor, 0);
+	/* close all IKE_SAs */
 	DESTROY_IF(this->public.ike_sa_manager);
-	/* all child SAs should be down now, so kill kernel interface */
-	DESTROY_IF(this->public.kernel_interface);
-	/* destroy other infrastructure */
-	DESTROY_IF(this->public.job_queue);
-	DESTROY_IF(this->public.event_queue);
-	DESTROY_IF(this->public.credentials);
+	DESTROY_IF(this->public.scheduler);
+	DESTROY_IF(this->public.interfaces);
 	DESTROY_IF(this->public.backends);
-	/* we hope the sender could send the outstanding deletes, but 
-	 * we shut down here at any cost */
+	DESTROY_IF(this->public.credentials);
+	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.sender);
+	DESTROY_IF(this->public.receiver);
 	DESTROY_IF(this->public.socket);
-	/* before destroying bus with its listeners, rehook library logs */
+	/* wait until all threads are gone */
+	DESTROY_IF(this->public.processor);
+	
+	/* rehook library logging, shutdown logging */
 	dbg = dbg_stderr;
 	DESTROY_IF(this->public.bus);
 	DESTROY_IF(this->public.outlog);
@@ -196,7 +188,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.authlog);
 	free(this);
 }
-
 
 /**
  * Enforce daemon shutdown, with a given reason to do so.
@@ -228,6 +219,7 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 {
 	struct __user_cap_header_struct hdr;
 	struct __user_cap_data_struct data;
+	
 	/* CAP_NET_ADMIN is needed to use netlink */
 	u_int32_t keep = (1<<CAP_NET_ADMIN);
 	
@@ -242,11 +234,11 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	}
 	else
 	{
-		/* CAP_NET_BIND_SERVICE to bind services below port 1024, 
-		 * CAP_NET_RAW to create RAW sockets.
-		 * CAP_DAC_READ_SEARCH is needed to read ipsec.secrets */
+		/* CAP_NET_BIND_SERVICE to bind services below port 1024 */
 		keep |= (1<<CAP_NET_BIND_SERVICE);
+		/* CAP_NET_RAW to create RAW sockets */
 		keep |= (1<<CAP_NET_RAW);
+		/* CAP_DAC_READ_SEARCH to read ipsec.secrets */
 		keep |= (1<<CAP_DAC_READ_SEARCH);
 	}
 
@@ -257,7 +249,7 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	
 	if (capset(&hdr, &data))
 	{
-		kill_daemon(this, "unable to drop threads capabilities");
+		kill_daemon(this, "unable to drop daemon capabilities");
 	}
 }
 
@@ -266,7 +258,6 @@ static void drop_capabilities(private_daemon_t *this, bool full)
  */
 static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 {
-	credential_store_t* credentials;
 	signal_t signal;
 	
 	/* for uncritical pseudo random numbers */
@@ -298,38 +289,32 @@ static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	
 	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
 	
-	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
 	this->public.ike_sa_manager = ike_sa_manager_create();
-	this->public.job_queue = job_queue_create();
-	this->public.event_queue = event_queue_create();
-	this->public.credentials = (credential_store_t*)local_credential_store_create();
-	this->public.backends = backend_manager_create();
-
-	/* initialize fetcher_t class */
-	fetcher_initialize();
+	this->public.processor = processor_create();
+	this->public.scheduler = scheduler_create();
 
 	/* load secrets, ca certificates and crls */
-	credentials = this->public.credentials;
-	credentials->load_ca_certificates(credentials);
-	credentials->load_aa_certificates(credentials);
-	credentials->load_attr_certificates(credentials);
-	credentials->load_ocsp_certificates(credentials);
-	credentials->load_crls(credentials);
-	credentials->load_secrets(credentials);
+	this->public.credentials = (credential_store_t*)local_credential_store_create();
+	this->public.credentials->load_ca_certificates(this->public.credentials);
+	this->public.credentials->load_aa_certificates(this->public.credentials);
+	this->public.credentials->load_attr_certificates(this->public.credentials);
+	this->public.credentials->load_ocsp_certificates(this->public.credentials);
+	this->public.credentials->load_crls(this->public.credentials);
+	this->public.credentials->load_secrets(this->public.credentials);
 	
-	/* start building threads, we are multi-threaded NOW */
 	this->public.interfaces = interface_manager_create();
+	this->public.backends = backend_manager_create();
+	this->public.kernel_interface = kernel_interface_create();
+	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
-	this->public.scheduler = scheduler_create();
-	this->public.kernel_interface = kernel_interface_create();
-	this->public.thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);
+	
 }
 
 /**
  * Handle SIGSEGV/SIGILL signals raised by threads
  */
-void signal_handler(int signal)
+static void segv_handler(int signal)
 {
 #ifdef HAVE_BACKTRACE
 	void *array[20];
@@ -340,7 +325,7 @@ void signal_handler(int signal)
 	size = backtrace(array, 20);
 	strings = backtrace_symbols(array, size);
 
-	DBG1(DBG_DMN, "thread %u received %s. Dumping %d frames from stack:",
+	DBG1(DBG_JOB, "thread %u received %s. Dumping %d frames from stack:",
 		 pthread_self(), signal == SIGSEGV ? "SIGSEGV" : "SIGILL", size);
 
 	for (i = 0; i < size; i++)
@@ -352,7 +337,7 @@ void signal_handler(int signal)
 	DBG1(DBG_DMN, "thread %u received %s",
 		 pthread_self(), signal == SIGSEGV ? "SIGSEGV" : "SIGILL");
 #endif /* HAVE_BACKTRACE */
-	DBG1(DBG_DMN, "killing ourself hard after SIGSEGV");
+	DBG1(DBG_DMN, "killing ourself, received critical signal");
 	raise(SIGKILL);
 }
 
@@ -361,25 +346,22 @@ void signal_handler(int signal)
  */
 private_daemon_t *daemon_create(void)
 {	
-	private_daemon_t *this = malloc_thing(private_daemon_t);
 	struct sigaction action;
+	private_daemon_t *this = malloc_thing(private_daemon_t);
 		
 	/* assign methods */
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
-	this->public.drop_capabilities = (void(*)(daemon_t*,bool))drop_capabilities;
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
 	this->public.ike_sa_manager = NULL;
-	this->public.job_queue = NULL;
-	this->public.event_queue = NULL;
 	this->public.credentials = NULL;
 	this->public.backends = NULL;
 	this->public.sender= NULL;
 	this->public.receiver = NULL;
 	this->public.scheduler = NULL;
 	this->public.kernel_interface = NULL;
-	this->public.thread_pool = NULL;
+	this->public.processor = NULL;
 	this->public.interfaces = NULL;
 	this->public.bus = NULL;
 	this->public.outlog = NULL;
@@ -388,20 +370,19 @@ private_daemon_t *daemon_create(void)
 	
 	this->main_thread_id = pthread_self();
 	
-	/* setup signal handling for all threads */
-	sigemptyset(&(this->signal_set));
-	sigaddset(&(this->signal_set), SIGSEGV);
-	sigaddset(&(this->signal_set), SIGINT); 
-	sigaddset(&(this->signal_set), SIGHUP); 
-	sigaddset(&(this->signal_set), SIGTERM); 
-	pthread_sigmask(SIG_BLOCK, &(this->signal_set), 0);
-	
-	/* setup SIGSEGV handler for all threads */
-	action.sa_handler = signal_handler;
-	action.sa_mask = this->signal_set;
+	/* add handler for SEGV and ILL,
+	 * add handler for USR1 (cancellation).
+	 * INT, TERM and HUP are handled by sigwait() in run() */
+	action.sa_handler = segv_handler;
 	action.sa_flags = 0;
+	sigemptyset(&action.sa_mask);
+	sigaddset(&action.sa_mask, SIGINT);
+	sigaddset(&action.sa_mask, SIGTERM);
+	sigaddset(&action.sa_mask, SIGHUP);
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
+	pthread_sigmask(SIG_SETMASK, &action.sa_mask, 0);
+	
 	return this;
 }
 
@@ -450,10 +431,12 @@ int main(int argc, char *argv[])
 	level_t levels[DBG_MAX];
 	int signal;
 	
-	prctl(PR_SET_KEEPCAPS, 1);
+	private_charon = daemon_create();
+	charon = (daemon_t*)private_charon;
 	
-	/* drop the capabilities we won't need at all */
-	drop_capabilities(NULL, FALSE);
+	/* drop the capabilities we won't need for initialization */
+	prctl(PR_SET_KEEPCAPS, 1);
+	drop_capabilities(private_charon, FALSE);
 	
 	/* use CTRL loglevel for default */
 	for (signal = 0; signal < DBG_MAX; signal++)
@@ -522,13 +505,11 @@ int main(int argc, char *argv[])
 		}
 		break;
 	}
-
-	private_charon = daemon_create();
-	charon = (daemon_t*)private_charon;
 	
 	/* initialize daemon */
 	initialize(private_charon, use_syslog, levels);
-
+	/* initialize fetcher_t class */
+	fetcher_initialize();
 	/* load pluggable EAP modules */
 	eap_method_load(eapdir);
 	
@@ -561,6 +542,9 @@ int main(int argc, char *argv[])
 	
 	/* drop additional capabilites (bind & root) */
 	drop_capabilities(private_charon, TRUE);
+	
+	/* start the engine, go multithreaded */
+	charon->processor->set_threads(charon->processor, WORKER_THREADS);
 	
 	/* run daemon */
 	run(private_charon);

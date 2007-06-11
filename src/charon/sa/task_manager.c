@@ -235,7 +235,7 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 					this->initiating.packet->clone(this->initiating.packet));
 		job = (job_t*)retransmit_job_create(this->initiating.mid,
 											this->ike_sa->get_id(this->ike_sa));
-		charon->event_queue->add_relative(charon->event_queue, job, timeout);
+		charon->scheduler->schedule_job(charon->scheduler, job, timeout);
 	}
 	return SUCCESS;
 }

@@ -33,9 +33,7 @@ typedef struct daemon_t daemon_t;
 #include <network/receiver.h>
 #include <network/socket.h>
 #include <processing/scheduler.h>
-#include <processing/thread_pool.h>
-#include <processing/job_queue.h>
-#include <processing/event_queue.h>
+#include <processing/processor.h>
 #include <kernel/kernel_interface.h>
 #include <control/interface_manager.h>
 #include <bus/bus.h>
@@ -234,12 +232,9 @@ typedef struct daemon_t daemon_t;
 /**
  * @brief Number of threads in the thread pool.
  * 
- * There are several other threads, this defines
- * only the number of threads in thread_pool_t.
- * 
  * @ingroup charon
  */
-#define NUMBER_OF_WORKING_THREADS 4
+#define WORKER_THREADS 16
 
 /**
  * UDP Port on which the daemon will listen for incoming traffic.
@@ -338,20 +333,11 @@ typedef struct daemon_t daemon_t;
  * @ingroup charon
  */
 struct daemon_t {
+	
 	/**
 	 * A socket_t instance.
 	 */
 	socket_t *socket;
-	
-	/**
-	 * A job_queue_t instance.
-	 */
-	job_queue_t *job_queue;
-	
-	/**
-	 * A event_queue_t instance.
-	 */
-	event_queue_t *event_queue;
 
 	/**
 	 * A ike_sa_manager_t instance.
@@ -384,9 +370,9 @@ struct daemon_t {
 	scheduler_t *scheduler;
 	
 	/**
-	 * The Thread pool managing the worker threads.
+	 * Job processing using a thread pool.
 	 */
-	thread_pool_t *thread_pool;
+	processor_t *processor;
 	
 	/**
 	 * The signaling bus.
@@ -417,14 +403,6 @@ struct daemon_t {
 	 * Interfaces for IPC
 	 */
 	interface_manager_t *interfaces;
-	
-	/**
-	 * @brief Let the calling thread drop its capabilities.
-	 * 
-	 * @param this			calling daemon
-	 * @param full			TRUE to drop as many as possible
-	 */
-	void (*drop_capabilities) (daemon_t *this, bool full);
 	
 	/**
 	 * @brief Shut down the daemon.

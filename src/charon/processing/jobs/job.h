@@ -24,107 +24,13 @@
 #ifndef JOB_H_
 #define JOB_H_
 
-typedef enum job_type_t job_type_t;
 typedef struct job_t job_t;
 
 #include <library.h>
 
-/**
- * @brief Definition of the various job types.
- *
- * @ingroup jobs
- */
-enum job_type_t {
-	/** 
-	 * Process an incoming IKEv2-Message.
-	 * 
- 	 * Job is implemented in class process_message_job_t
-	 */
-	PROCESS_MESSAGE,
-	
-	/** 
-	 * Retransmit an IKEv2-Message.
-	 * 
-	 * Job is implemented in class retransmit_job_t
-	 */
-	RETRANSMIT,
-	
-	/** 
-	 * Set up a CHILD_SA, optional with an IKE_SA.
-	 * 
-	 * Job is implemented in class initiate_job_t
-	 */
-	INITIATE,
-	
-	/** 
-	 * Install SPD entries.
-	 * 
-	 * Job is implemented in class route_job_t
-	 */
-	ROUTE,
-	
-	/** 
-	 * React on a acquire message from the kernel (e.g. setup CHILD_SA)
-	 * 
-	 * Job is implemented in class acquire_job_t
-	 */
-	ACQUIRE,
-	
-	/** 
-	 * Delete an IKE_SA.
-	 * 
-	 * Job is implemented in class delete_ike_sa_job_t
-	 */
-	DELETE_IKE_SA,
-	
-	/**
-	 * Delete a CHILD_SA.
-	 * 
-	 * Job is implemented in class delete_child_sa_job_t
-	 */
-	DELETE_CHILD_SA,
-	
-	/**
-	 * Rekey a CHILD_SA.
-	 * 
-	 * Job is implemented in class rekey_child_sa_job_t
-	 */
-	REKEY_CHILD_SA,
-	
-	/**
-	 * Rekey an IKE_SA.
-	 * 
-	 * Job is implemented in class rekey_ike_sa_job_t
-	 */
-	REKEY_IKE_SA,
-	
-	/**
-	 * Send a keepalive packet.
-	 * 
-	 * Job is implemented in class type send_keepalive_job_t
-	 */
-	SEND_KEEPALIVE,
-	
-	/**
-	 * Send a DPD packet.
-	 * 
-	 * Job is implemented in class type send_dpd_job_t
-	 */
-	SEND_DPD
-};
-
-/**
- * enum name  for job_type_t
- * 
- * @ingroup jobs
- */
-extern enum_name_t *job_type_names;
-
 
 /**
  * @brief Job-Interface as it is stored in the job queue.
- * 
- * A job consists of a job-type and one or more assigned values.
  * 
  * @b Constructors:
  * - None, use specific implementation of the interface.
@@ -134,32 +40,26 @@ extern enum_name_t *job_type_names;
 struct job_t {
 
 	/**
-	 * @brief get type of job.
-	 *
-	 * @param this 				calling object
-	 * @return 					type of this job
-	 */
-	job_type_t (*get_type) (job_t *this);
-
-	/**
 	 * @brief Execute a job.
 	 * 
-	 * Call the internall job routine to process the
-	 * job. If this method returns DESTROY_ME, the job
-	 * must be destroyed by the caller.
+	 * The processing facility executes a job using this method. Jobs are
+	 * one-shot, they destroy themself after execution, so don't use a job
+	 * once it has been executed.
 	 *
 	 * @param this 				calling object
-	 * @return 					status of job execution
 	 */
-	status_t (*execute) (job_t *this);
+	void (*execute) (job_t *this);
 
 	/**
-	 * @brief Destroys a job_t object
+	 * @brief Destroy a job.
+	 *
+	 * Is only called whenever a job was not executed (e.g. due daemon shutdown).
+	 * After execution, jobs destroy themself.
 	 * 
 	 * @param job_t calling object
 	 */
 	void (*destroy) (job_t *job);
 };
 
-
 #endif /* JOB_H_ */
+

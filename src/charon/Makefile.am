@@ -48,12 +48,11 @@ network/packet.c network/packet.h \
 network/receiver.c network/receiver.h \
 network/sender.c network/sender.h \
 network/socket.c network/socket.h \
-processing/event_queue.c processing/event_queue.h \
-processing/job_queue.c processing/job_queue.h \
+processing/jobs/job.h \
 processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
+processing/jobs/callback_job.c processing/jobs/callback_job.h \
 processing/jobs/delete_child_sa_job.c processing/jobs/delete_child_sa_job.h \
 processing/jobs/delete_ike_sa_job.c processing/jobs/delete_ike_sa_job.h \
-processing/jobs/job.c processing/jobs/job.h \
 processing/jobs/process_message_job.c processing/jobs/process_message_job.h \
 processing/jobs/rekey_child_sa_job.c processing/jobs/rekey_child_sa_job.h \
 processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \
@@ -61,7 +60,7 @@ processing/jobs/retransmit_job.c processing/jobs/retransmit_job.h \
 processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
 processing/scheduler.c processing/scheduler.h \
-processing/thread_pool.c processing/thread_pool.h  \
+processing/processor.c processing/processor.h  \
 sa/authenticators/authenticator.c sa/authenticators/authenticator.h \
 sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \

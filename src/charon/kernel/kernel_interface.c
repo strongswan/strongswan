@@ -48,6 +48,7 @@
 #include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/acquire_job.h>
+#include <processing/jobs/callback_job.h>
 
 /** kernel level protocol identifiers */
 #define KERNEL_ESP 50
@@ -156,7 +157,7 @@ char* lookup_algorithm(kernel_algorithm_t *kernel_algo,
 		}
 		kernel_algo++;
 	}
-	return NULL;	
+	return NULL;
 }
 
 typedef struct route_entry_t route_entry_t;
@@ -297,6 +298,11 @@ struct private_kernel_interface_t {
 	 * Mutex to lock access to vips.
 	 */
 	pthread_mutex_t vips_mutex;
+	 
+	/**
+	 * job receiving xfrm events
+	 */
+	callback_job_t *job;
 	
 	/**
 	 * netlink xfrm socket to receive acquire and expire events
@@ -312,11 +318,6 @@ struct private_kernel_interface_t {
 	 * Netlink rt socket (routing)
 	 */
 	int socket_rt;
-	
-	/**
-	 * Thread receiving events from kernel
-	 */
-	pthread_t event_thread;
 };
 
 /**
@@ -444,99 +445,98 @@ static void add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 /**
  * Receives events from kernel
  */
-static void receive_events(private_kernel_interface_t *this)
+static job_requeue_t receive_events(private_kernel_interface_t *this)
 {
-	charon->drop_capabilities(charon, TRUE);
-
-	while(TRUE) 
+	unsigned char response[512];
+	struct nlmsghdr *hdr;
+	struct sockaddr_nl addr;
+	socklen_t addr_len = sizeof(addr);
+	int len, oldstate;
+	
+	hdr = (struct nlmsghdr*)response;
+	
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	len = recvfrom(this->socket_xfrm_events, response, sizeof(response), 0,
+				   (struct sockaddr*)&addr, &addr_len);
+	pthread_setcancelstate(oldstate, NULL);
+	
+	if (len < 0)
 	{
-		unsigned char response[512];
-		struct nlmsghdr *hdr;
-		struct sockaddr_nl addr;
-		socklen_t addr_len = sizeof(addr);
-		int len;
-		
-		hdr = (struct nlmsghdr*)response;
-		len = recvfrom(this->socket_xfrm_events, response, sizeof(response),
-					   0, (struct sockaddr*)&addr, &addr_len);
-		if (len < 0)
-		{
-			if (errno == EINTR)
-			{
-				/* interrupted, try again */
-				continue;
-			}
-			charon->kill(charon, "unable to receive netlink events");
+		if (errno == EINTR)
+		{	/* interrupted, try again */
+			return JOB_REQUEUE_DIRECT;
 		}
-		
-		if (!NLMSG_OK(hdr, len))
-		{
-			/* bad netlink message */
-			continue;
-		}
+		charon->kill(charon, "unable to receive netlink events");
+	}
+	
+	if (!NLMSG_OK(hdr, len))
+	{
+		/* bad netlink message */
+		return JOB_REQUEUE_DIRECT;
+	}
 
-		if (addr.nl_pid != 0)
+	if (addr.nl_pid != 0)
+	{
+		/* not from kernel. not interested, try another one */
+		return JOB_REQUEUE_DIRECT;
+	}
+	
+	/* we handle ACQUIRE and EXPIRE messages directly */
+	if (hdr->nlmsg_type == XFRM_MSG_ACQUIRE)
+	{
+		u_int32_t reqid = 0;
+		job_t *job;
+		struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_user_acquire);
+		size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
+		if (RTA_OK(rtattr, rtsize))
 		{
-			/* not from kernel. not interested, try another one */
-			continue;
-		}
-		
-		/* we handle ACQUIRE and EXPIRE messages directly */
-		if (hdr->nlmsg_type == XFRM_MSG_ACQUIRE)
-		{
-			u_int32_t reqid = 0;
-			job_t *job;
-			struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_user_acquire);
-			size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
-			if (RTA_OK(rtattr, rtsize))
+			if (rtattr->rta_type == XFRMA_TMPL)
 			{
-				if (rtattr->rta_type == XFRMA_TMPL)
-				{
-					struct xfrm_user_tmpl* tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rtattr);
-					reqid = tmpl->reqid;
-				}
-			}
-			if (reqid == 0)
-			{
-				DBG1(DBG_KNL, "received a XFRM_MSG_ACQUIRE, but no reqid found");
-			}
-			else
-			{
-				DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
-				DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid %d",
-					 reqid);
-				job = (job_t*)acquire_job_create(reqid);
-				charon->job_queue->add(charon->job_queue, job);
+				struct xfrm_user_tmpl* tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rtattr);
+				reqid = tmpl->reqid;
 			}
 		}
-		else if (hdr->nlmsg_type == XFRM_MSG_EXPIRE)
+		if (reqid == 0)
 		{
-			job_t *job;
-			protocol_id_t protocol;
-			u_int32_t spi, reqid;
-			struct xfrm_user_expire *expire;
-			
-			expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
-			protocol = expire->state.id.proto == KERNEL_ESP ?
-														PROTO_ESP : PROTO_AH;
-			spi = expire->state.id.spi;
-			reqid = expire->state.reqid;
-			
-			DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
-			DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
-				 expire->hard ? "delete" : "rekey",  protocol_id_names,
-				 protocol, ntohl(spi), reqid);
-			if (expire->hard)
-			{
-				job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
-			}
-			else
-			{
-				job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
-			}
-			charon->job_queue->add(charon->job_queue, job);
+			DBG1(DBG_KNL, "received a XFRM_MSG_ACQUIRE, but no reqid found");
+		}
+		else
+		{
+			DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
+			DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid %d",
+				 reqid);
+			job = (job_t*)acquire_job_create(reqid);
+			charon->processor->queue_job(charon->processor, job);
 		}
 	}
+	else if (hdr->nlmsg_type == XFRM_MSG_EXPIRE)
+	{
+		job_t *job;
+		protocol_id_t protocol;
+		u_int32_t spi, reqid;
+		struct xfrm_user_expire *expire;
+		
+		expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
+		protocol = expire->state.id.proto == KERNEL_ESP ?
+													PROTO_ESP : PROTO_AH;
+		spi = expire->state.id.spi;
+		reqid = expire->state.reqid;
+		
+		DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
+		DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
+			 expire->hard ? "delete" : "rekey",  protocol_id_names,
+			 protocol, ntohl(spi), reqid);
+		if (expire->hard)
+		{
+			job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
+		}
+		else
+		{
+			job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
+		}
+		charon->processor->queue_job(charon->processor, job);
+	}
+	return JOB_REQUEUE_DIRECT;
 }
 
 /**
@@ -1880,8 +1880,7 @@ static status_t del_policy(private_kernel_interface_t *this,
  */
 static void destroy(private_kernel_interface_t *this)
 {
-	pthread_cancel(this->event_thread);
-	pthread_join(this->event_thread, NULL);
+	this->job->cancel(this->job);
 	close(this->socket_xfrm_events);
 	close(this->socket_xfrm);
 	close(this->socket_rt);
@@ -1961,14 +1960,10 @@ kernel_interface_t *kernel_interface_create()
 		charon->kill(charon, "unable to bind XFRM event socket");
 	}
 	
-	/* create a thread receiving ACQUIRE & EXPIRE events */
-	if (pthread_create(&this->event_thread, NULL,
-					   (void*(*)(void*))receive_events, this))
-	{
-		charon->kill(charon, "unable to create xfrm event dispatcher thread");
-	}
+	this->job = callback_job_create((callback_job_cb_t)receive_events,
+									this, NULL, NULL);
+	charon->processor->queue_job(charon->processor, (job_t*)this->job);
 	
 	return &this->public;
 }
 
-/* vim: set ts=4 sw=4 noet: */

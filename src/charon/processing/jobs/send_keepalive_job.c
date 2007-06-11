@@ -47,38 +47,29 @@ struct private_send_keepalive_job_t {
 };
 
 /**
- * Implements send_keepalive_job_t.get_type.
- */
-static job_type_t get_type(private_send_keepalive_job_t *this)
-{
-	return SEND_KEEPALIVE;
-}
-
-/**
- * Implementation of job_t.execute.
- */ 
-static status_t execute(private_send_keepalive_job_t *this)
-{
-	ike_sa_t *ike_sa;
-	
-	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
-											  this->ike_sa_id);
-	if (ike_sa == NULL)
-	{
-		return DESTROY_ME;
-	}
-	ike_sa->send_keepalive(ike_sa);
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	return DESTROY_ME;
-}
-
-/**
  * Implements job_t.destroy.
  */
 static void destroy(private_send_keepalive_job_t *this)
 {
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
+}
+
+/**
+ * Implementation of job_t.execute.
+ */ 
+static void execute(private_send_keepalive_job_t *this)
+{
+	ike_sa_t *ike_sa;
+	
+	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+											  this->ike_sa_id);
+	if (ike_sa)
+	{
+		ike_sa->send_keepalive(ike_sa);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	}
+	destroy(this);
 }
 
 /*
@@ -89,9 +80,8 @@ send_keepalive_job_t *send_keepalive_job_create(ike_sa_id_t *ike_sa_id)
 	private_send_keepalive_job_t *this = malloc_thing(private_send_keepalive_job_t);
 	
 	/* interface functions */
-	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-	this->public.job_interface.execute = (status_t (*) (job_t *)) execute;
+	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	
 	/* public functions */
 	this->public.destroy = (void (*)(send_keepalive_job_t *)) destroy;
@@ -99,5 +89,5 @@ send_keepalive_job_t *send_keepalive_job_create(ike_sa_id_t *ike_sa_id)
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 
-	return &(this->public);
+	return &this->public;
 }

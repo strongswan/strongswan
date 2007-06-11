@@ -180,7 +180,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 				DBG1(DBG_IKE, "IKE_SA rekeying failed, "
 					 					"trying again in %d seconds", retry);
 				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-				charon->event_queue->add_relative(charon->event_queue, job, retry * 1000);
+				charon->scheduler->schedule_job(charon->scheduler, job, retry * 1000);
 			}
 			return SUCCESS;
 		case NEED_MORE:
@@ -231,7 +231,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 	}
 	
 	job = (job_t*)delete_ike_sa_job_create(to_delete, TRUE);
-	charon->job_queue->add(charon->job_queue, job);	
+	charon->processor->queue_job(charon->processor, job);	
 	
 	return SUCCESS;
 }

@@ -48,17 +48,18 @@ struct private_retransmit_job_t {
 };
 
 /**
- * Implements job_t.get_type.
+ * Implements job_t.destroy.
  */
-static job_type_t get_type(private_retransmit_job_t *this)
+static void destroy(private_retransmit_job_t *this)
 {
-	return RETRANSMIT;
+	this->ike_sa_id->destroy(this->ike_sa_id);
+	free(this);
 }
 
 /**
  * Implementation of job_t.execute.
  */
-static status_t execute(private_retransmit_job_t *this)
+static void execute(private_retransmit_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
@@ -77,16 +78,7 @@ static status_t execute(private_retransmit_job_t *this)
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		}
 	}
-	return DESTROY_ME;
-}
-
-/**
- * Implements job_t.destroy.
- */
-static void destroy(private_retransmit_job_t *this)
-{
-	this->ike_sa_id->destroy(this->ike_sa_id);
-	free(this);
+	destroy(this);
 }
 
 /*
@@ -97,8 +89,7 @@ retransmit_job_t *retransmit_job_create(u_int32_t message_id,ike_sa_id_t *ike_sa
 	private_retransmit_job_t *this = malloc_thing(private_retransmit_job_t);
 	
 	/* interface functions */
-	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
-	this->public.job_interface.execute = (status_t (*) (job_t *)) execute;
+	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 
 	/* private variables */

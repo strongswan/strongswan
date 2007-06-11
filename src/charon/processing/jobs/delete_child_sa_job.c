@@ -54,17 +54,17 @@ struct private_delete_child_sa_job_t {
 };
 
 /**
- * Implementation of job_t.get_type.
+ * Implementation of job_t.destroy.
  */
-static job_type_t get_type(private_delete_child_sa_job_t *this)
+static void destroy(private_delete_child_sa_job_t *this)
 {
-	return DELETE_CHILD_SA;
+	free(this);
 }
 
 /**
  * Implementation of job_t.execute.
  */
-static status_t execute(private_delete_child_sa_job_t *this)
+static void execute(private_delete_child_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
@@ -74,20 +74,14 @@ static status_t execute(private_delete_child_sa_job_t *this)
 	{
 		DBG1(DBG_JOB, "CHILD_SA with reqid %d not found for delete",
 			 this->reqid);
-		return DESTROY_ME;
 	}
-	ike_sa->delete_child_sa(ike_sa, this->protocol, this->spi);
-	
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	return DESTROY_ME;
-}
-
-/**
- * Implementation of job_t.destroy.
- */
-static void destroy(private_delete_child_sa_job_t *this)
-{
-	free(this);
+	else
+	{
+		ike_sa->delete_child_sa(ike_sa, this->protocol, this->spi);
+		
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	}
+	destroy(this);
 }
 
 /*
@@ -100,8 +94,7 @@ delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
 	private_delete_child_sa_job_t *this = malloc_thing(private_delete_child_sa_job_t);
 	
 	/* interface functions */
-	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
-	this->public.job_interface.execute = (status_t (*) (job_t *)) execute;
+	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
 	
 	/* private variables */
@@ -109,5 +102,6 @@ delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
 	this->protocol = protocol;
 	this->spi = spi;
 	
-	return &(this->public);
+	return &this->public;
 }
+

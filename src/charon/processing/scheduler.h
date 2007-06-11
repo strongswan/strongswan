@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -27,14 +27,12 @@
 typedef struct scheduler_t scheduler_t;
 
 #include <library.h>
+#include <processing/jobs/job.h>
 
 /**
- * @brief The scheduler thread is responsible for timed events.
+ * @brief The scheduler queues and executes timed events.
  *
- * The scheduler thread takes out jobs from the event-queue and adds them
- * to the job-queue.
- *
- * Starts a thread which does the work, since event-queue is blocking.
+ * The scheduler stores timed events and passes them to the processor.
  *
  * @b Constructors:
  *  - scheduler_create()
@@ -44,25 +42,40 @@ typedef struct scheduler_t scheduler_t;
 struct scheduler_t { 	
 
 	/**
+	 * @brief Adds a event to the queue, using a relative time offset.
+	 *
+	 * Schedules a job for execution using a relative time offset.
+	 *
+	 * @param this			calling object
+ 	 * @param job 			job to schedule
+  	 * @param time 			relative to to schedule job (in ms)
+	 */
+	void (*schedule_job) (scheduler_t *this, job_t *job, u_int32_t time);
+	
+	/**
+	 * @brief Returns number of jobs scheduled.
+	 *
+	 * @param this			calling object
+	 * @return 				number of scheduled jobs
+	 */
+	u_int (*get_job_load) (scheduler_t *this);
+	
+	/**
 	 * @brief Destroys a scheduler object.
 	 * 
-	 * @param scheduler 	calling object
+	 * @param this		 	calling object
 	 */
-	void (*destroy) (scheduler_t *scheduler);
+	void (*destroy) (scheduler_t *this);
 };
 
 /**
- * @brief Create a scheduler with its associated thread.
+ * @brief Create a scheduler.
  * 
- * The thread will start to get jobs form the event queue 
- * and adds them to the job queue.
- * 
- * @return 
- * 				- scheduler_t object
- * 				- NULL if thread could not be started
+ * @return 		scheduler_t object
  * 
  * @ingroup processing
  */
-scheduler_t * scheduler_create(void);
+scheduler_t *scheduler_create(void);
 
 #endif /*SCHEDULER_H_*/
+

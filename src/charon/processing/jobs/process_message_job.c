@@ -44,17 +44,18 @@ struct private_process_message_job_t {
 };
 
 /**
- * Implements job_t.get_type.
+ * Implements job_t.destroy.
  */
-static job_type_t get_type(private_process_message_job_t *this)
+static void destroy(private_process_message_job_t *this)
 {
-	return PROCESS_MESSAGE;
+	this->message->destroy(this->message);
+	free(this);
 }
 
 /**
  * Implementation of job_t.execute.
  */
-static status_t execute(private_process_message_job_t *this)
+static void execute(private_process_message_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
@@ -75,16 +76,7 @@ static status_t execute(private_process_message_job_t *this)
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		}
 	}
-	return DESTROY_ME;
-}
-
-/**
- * Implements job_t.destroy.
- */
-static void destroy(private_process_message_job_t *this)
-{
-	this->message->destroy(this->message);
-	free(this);
+	destroy(this);
 }
 
 /*
@@ -95,8 +87,7 @@ process_message_job_t *process_message_job_create(message_t *message)
 	private_process_message_job_t *this = malloc_thing(private_process_message_job_t);
 
 	/* interface functions */
-	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
-	this->public.job_interface.execute = (status_t (*) (job_t *)) execute;
+	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void(*)(job_t*))destroy;
 	
 	/* private variables */

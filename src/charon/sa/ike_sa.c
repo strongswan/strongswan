@@ -442,8 +442,8 @@ static status_t send_dpd(private_ike_sa_t *this)
 	}
 	/* recheck in "interval" seconds */
 	job = send_dpd_job_create(this->ike_sa_id);
-	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
-									  (delay - diff) * 1000);
+	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job,
+									(delay - diff) * 1000);
 	return SUCCESS;
 }
 
@@ -477,8 +477,8 @@ static void send_keepalive(private_ike_sa_t *this)
 		diff = 0;
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);
-	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
-									  (KEEPALIVE_INTERVAL - diff) * 1000);
+	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job,
+									(KEEPALIVE_INTERVAL - diff) * 1000);
 }
 
 /**
@@ -524,16 +524,16 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 				{
 					this->time.rekey = now + soft;
 					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
-					charon->event_queue->add_relative(charon->event_queue, job,
-													  soft * 1000);
+					charon->scheduler->schedule_job(charon->scheduler, job,
+													soft * 1000);
 				}
 				
 				if (hard)
 				{
 					this->time.delete = now + hard;
 					job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-					charon->event_queue->add_relative(charon->event_queue, job,
-													  hard * 1000);
+					charon->scheduler->schedule_job(charon->scheduler, job,
+													hard * 1000);
 				}
 			}
 			break;
@@ -542,8 +542,8 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 		{
 			/* delete may fail if a packet gets lost, so set a timeout */
 			job_t *job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-			charon->event_queue->add_relative(charon->event_queue, job, 
-											  HALF_OPEN_IKE_SA_TIMEOUT);
+			charon->scheduler->schedule_job(charon->scheduler, job, 
+											HALF_OPEN_IKE_SA_TIMEOUT);
 			break;
 		}
 		default:
@@ -761,8 +761,8 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			}
 			/* add a timeout if peer does not establish it completely */
 			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, FALSE);
-			charon->event_queue->add_relative(charon->event_queue, job,
-											  HALF_OPEN_IKE_SA_TIMEOUT);
+			charon->scheduler->schedule_job(charon->scheduler, job,
+											HALF_OPEN_IKE_SA_TIMEOUT);
 		}
 		
 		/* check if message is trustworthy, and update host information */
@@ -1625,7 +1625,7 @@ static void reestablish(private_ike_sa_t *this)
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, &other->public);
 	
 	job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-	charon->job_queue->add(charon->job_queue, job);
+	charon->processor->queue_job(charon->processor, job);
 }
 
 /**

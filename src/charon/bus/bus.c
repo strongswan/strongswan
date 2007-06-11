@@ -238,30 +238,13 @@ static active_listener_t *get_active_listener(private_bus_t *this)
 	return found;
 }
 
-typedef struct cancel_info_t cancel_info_t;
-
-/**
- * cancellation info to cancel a listening operation cleanly
- */
-struct cancel_info_t {
-	/**
-	 * mutex to unlock on cancellation
-	 */
-	pthread_mutex_t *mutex;
-	
-	/**
-	 * listener to unregister
-	 */
-	active_listener_t *listener;
-};
-
 /**
  * disable a listener to cleanly clean up
  */
-static void unregister(cancel_info_t *info)
+static void unregister(active_listener_t *listener)
 {
-	info->listener->state = UNREGISTERED;
-	pthread_mutex_unlock(info->mutex);
+	listener->state = UNREGISTERED;
+	pthread_cond_broadcast(&listener->cond);
 }
 
 /**
@@ -272,7 +255,6 @@ static signal_t listen_(private_bus_t *this, level_t *level, int *thread,
 {
 	active_listener_t *listener;
 	int oldstate;
-	cancel_info_t info;
 	
 	pthread_mutex_lock(&this->mutex);
 	listener = get_active_listener(this);
@@ -281,12 +263,12 @@ static signal_t listen_(private_bus_t *this, level_t *level, int *thread,
 	pthread_cond_broadcast(&listener->cond);
 	/* wait until it has us delivered a signal, and go back to "registered".
 	 * we allow cancellation here, but must cleanly disable the listener. */
-	info.mutex = &this->mutex;
-	info.listener = listener;
-	pthread_cleanup_push((void*)unregister, &info);
+	pthread_cleanup_push((void*)pthread_mutex_unlock, &this->mutex);
+	pthread_cleanup_push((void*)unregister, listener);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	pthread_cond_wait(&listener->cond, &this->mutex);
 	pthread_setcancelstate(oldstate, NULL);
+	pthread_cleanup_pop(0);
 	pthread_cleanup_pop(0);
 	
 	pthread_mutex_unlock(&this->mutex);
@@ -320,7 +302,7 @@ static void set_listen_state(private_bus_t *this, bool active)
 	{
 		listener->state = UNREGISTERED;
 		/* say hello to signal emitter; we are finished processing the signal */
-		pthread_cond_signal(&listener->cond);
+		pthread_cond_broadcast(&listener->cond);
 	}
 	
 	pthread_mutex_unlock(&this->mutex);
