@@ -276,6 +276,7 @@ int main (int argc, char **argv)
 		    dup2(fnull, STDERR_FILENO);
 		    close(fnull);
 		}
+		setsid(); 
 	    }
 	    break;
 	    case -1:
