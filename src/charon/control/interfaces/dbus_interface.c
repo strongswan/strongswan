@@ -30,6 +30,7 @@
 
 #include <library.h>
 #include <daemon.h>
+#include <processing/jobs/callback_job.h>
 
 
 #define NM_DBUS_SERVICE_STRONG "org.freedesktop.NetworkManager.strongswan"
@@ -64,9 +65,9 @@ struct private_dbus_interface_t {
 	NMVPNState state;
 	
 	/**
-	 * dispatcher thread for DBUS messages
+	 * job accepting stroke messages
 	 */
-	pthread_t thread;
+	callback_job_t *job;
 	
 	/**
 	 * name of the currently active connection
@@ -392,14 +393,13 @@ static DBusHandlerResult signal_handler(DBusConnection *con, DBusMessage *msg,
 /**
  * dispatcher function processed by a seperate thread
  */
-static void dispatch(private_dbus_interface_t *this)
+static job_requeue_t dispatch(private_dbus_interface_t *this)
 {
-	charon->drop_capabilities(charon, TRUE);
-
-	while (dbus_connection_read_write_dispatch(this->conn, -1))
+	if (dbus_connection_read_write_dispatch(this->conn, -1))
 	{
-		/* nothing */
+		return JOB_REQUEUE_DIRECT;
 	}
+	return JOB_REQUEUE_NONE;
 }
 
 /**
@@ -407,8 +407,7 @@ static void dispatch(private_dbus_interface_t *this)
  */
 static void destroy(private_dbus_interface_t *this)
 {
-	pthread_cancel(this->thread);
-	pthread_join(this->thread, NULL);
+	this->job->cancel(this->job);
 	dbus_connection_close(this->conn);
 	dbus_error_free(&this->err);
 	dbus_shutdown();
@@ -469,10 +468,8 @@ interface_t *interface_create()
 	this->state = NM_VPN_STATE_INIT;
 	set_state(this, NM_VPN_STATE_STOPPED);
 
-	if (pthread_create(&this->thread, NULL, (void*(*)(void*))dispatch, this) != 0)
-	{
-		charon->kill(charon, "unable to create stroke thread");
-	}
+	this->job = callback_job_create((callback_job_cb_t)dispatch, this, NULL, NULL);
+	charon->processor->queue_job(charon->processor, (job_t*)this->job);
 
 	return &this->public.interface;
 }
