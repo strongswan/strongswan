@@ -759,6 +759,24 @@ static bool equals_dn(private_identification_t *this,
 }
 
 /**
+ * Special implementation of identification_t.equals for RFC822 and FQDN.
+ */
+static bool equals_strcasecmp(private_identification_t *this,
+							  private_identification_t *other)
+{
+	/* we do some extra sanity checks to check for invalid IDs with a 
+	 * terminating null in it. */
+	if (this->encoded.len == other->encoded.len &&
+		memchr(this->encoded.ptr, 0, this->encoded.len) == NULL &&
+		memchr(other->encoded.ptr, 0, other->encoded.len) == NULL &&
+		strncasecmp(this->encoded.ptr, other->encoded.ptr, this->encoded.len) == 0)
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Default implementation of identification_t.matches.
  */
 static bool matches_binary(private_identification_t *this, 
@@ -1094,6 +1112,8 @@ identification_t *identification_create_from_string(char *string)
 				this->encoded.len = strlen(string + 1);
 				this->public.matches = (bool (*) 
 						(identification_t*,identification_t*,int*))matches_string;
+				this->public.equals = (bool (*)
+							(identification_t*,identification_t*))equals_strcasecmp;
 				return &(this->public);
 			}
 		}
@@ -1104,6 +1124,8 @@ identification_t *identification_create_from_string(char *string)
 			this->encoded.len = strlen(string);
 			this->public.matches = (bool (*) 
 					(identification_t*,identification_t*,int*))matches_string;
+			this->public.equals = (bool (*)
+						(identification_t*,identification_t*))equals_strcasecmp;
 			return &(this->public);
 		}
 	}
@@ -1123,12 +1145,11 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 					(identification_t*,identification_t*,int*))matches_any;
 			break;
 		case ID_FQDN:
-			this->public.matches = (bool (*)
-					(identification_t*,identification_t*,int*))matches_string;
-			break;
 		case ID_RFC822_ADDR:
 			this->public.matches = (bool (*)
 					(identification_t*,identification_t*,int*))matches_string;
+			this->public.equals = (bool (*)
+						(identification_t*,identification_t*))equals_strcasecmp;
 			break;
 		case ID_DER_ASN1_DN:
 			this->public.equals = (bool (*)
@@ -1152,3 +1173,4 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 	}
 	return &(this->public);
 }
+
