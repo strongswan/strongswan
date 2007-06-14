@@ -302,6 +302,11 @@ static status_t build_request(private_task_manager_t *this)
 					exchange = CREATE_CHILD_SA;
 					break;
 				}
+				if (activate_task(this, IKE_REAUTH))
+				{
+					exchange = INFORMATIONAL;
+					break;
+				}
 				if (activate_task(this, IKE_DEADPEER))
 				{
 					exchange = INFORMATIONAL;
@@ -456,7 +461,7 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 	
 	/* do we have to check  */
 	if (type == IKE_REKEY || type == CHILD_REKEY ||
-		type == CHILD_DELETE || type == IKE_DELETE)
+		type == CHILD_DELETE || type == IKE_DELETE || type == IKE_REAUTH)
 	{
 	    /* find an exchange collision, and notify these tasks */
 	    iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
@@ -465,7 +470,8 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 	    	switch (active->get_type(active))
 	    	{
 	    		case IKE_REKEY:
-	    			if (type == IKE_REKEY || type == IKE_DELETE)
+	    			if (type == IKE_REKEY || type == IKE_DELETE ||
+	    				type == IKE_REAUTH)
 	    			{
 	    				ike_rekey_t *rekey = (ike_rekey_t*)active;
 	    				rekey->collide(rekey, task);

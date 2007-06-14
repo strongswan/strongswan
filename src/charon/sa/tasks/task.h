@@ -50,6 +50,8 @@ enum task_type_t {
 	IKE_DEADPEER,
 	/** rekey an IKE_SA */
 	IKE_REKEY,
+	/** reestablish a complete IKE_SA */
+	IKE_REAUTH,
 	/** delete an IKE_SA */
 	IKE_DELETE,
 	/** liveness check */

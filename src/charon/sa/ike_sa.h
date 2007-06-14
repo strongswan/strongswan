@@ -621,11 +621,12 @@ struct ike_sa_t {
 	 * @brief Restablish the IKE_SA.
 	 *
 	 * Create a completely new IKE_SA with authentication, recreates all children
-	 * within the IKE_SA, but lets the old IKE_SA untouched.
+	 * within the IKE_SA, closes this IKE_SA.
 	 *
 	 * @param this 			calling object
+	 * @return				DESTROY_ME to destroy the IKE_SA
 	 */
-	void (*reestablish) (ike_sa_t *this);
+	status_t (*reestablish) (ike_sa_t *this);
 	
 	/**
 	 * @brief Set the virtual IP to use for this IKE_SA and its children.

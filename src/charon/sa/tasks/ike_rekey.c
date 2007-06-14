@@ -170,8 +170,9 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 	{
 		case FAILED:
 			/* rekeying failed, fallback to old SA */
-			if (!(this->collision &&
-				this->collision->get_type(this->collision) == IKE_DELETE))
+			if (!(this->collision && (
+				this->collision->get_type(this->collision) == IKE_DELETE ||
+				this->collision->get_type(this->collision) == IKE_REAUTH)))
 			{
 				job_t *job;
 				u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);

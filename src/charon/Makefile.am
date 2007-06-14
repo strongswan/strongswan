@@ -82,6 +82,7 @@ sa/tasks/ike_dpd.c sa/tasks/ike_dpd.h \
 sa/tasks/ike_init.c sa/tasks/ike_init.h \
 sa/tasks/ike_natd.c sa/tasks/ike_natd.h \
 sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
+sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/task.c sa/tasks/task.h
 
 

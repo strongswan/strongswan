@@ -52,6 +52,7 @@
 #include <sa/tasks/ike_config.h>
 #include <sa/tasks/ike_cert.h>
 #include <sa/tasks/ike_rekey.h>
+#include <sa/tasks/ike_reauth.h>
 #include <sa/tasks/ike_delete.h>
 #include <sa/tasks/ike_dpd.h>
 #include <sa/tasks/child_create.h>
@@ -356,29 +357,25 @@ static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 	if (this->my_host->is_anyaddr(this->my_host))
 	{
 		host_t *me = this->ike_cfg->get_my_host(this->ike_cfg);
-
 		set_my_host(this, me->clone(me));
 	}
 	if (this->other_host->is_anyaddr(this->other_host))
 	{
 		host_t *other = this->ike_cfg->get_other_host(this->ike_cfg);
-
 		set_other_host(this, other->clone(other));
 	}
 	/* apply IDs if they are not already set */
 	if (this->my_id->contains_wildcards(this->my_id))
 	{
-		identification_t *my_id = this->peer_cfg->get_my_id(this->peer_cfg);
-		
 		DESTROY_IF(this->my_id);
-		this->my_id = my_id->clone(my_id);
+		this->my_id = this->peer_cfg->get_my_id(this->peer_cfg);
+		this->my_id = this->my_id->clone(this->my_id);
 	}
 	if (this->other_id->contains_wildcards(this->other_id))
 	{
-		identification_t *other_id = this->peer_cfg->get_other_id(this->peer_cfg);
-
 		DESTROY_IF(this->other_id);
-		this->other_id = other_id->clone(other_id);
+		this->other_id = this->peer_cfg->get_other_id(this->peer_cfg);
+		this->other_id = this->other_id->clone(this->other_id);
 	}
 }
 
@@ -1560,72 +1557,14 @@ static status_t rekey(private_ike_sa_t *this)
 /**
  * Implementation of ike_sa_t.reestablish
  */
-static void reestablish(private_ike_sa_t *this)
+static status_t reestablish(private_ike_sa_t *this)
 {
-	private_ike_sa_t *other;
-	iterator_t *iterator;
-	child_sa_t *child_sa;
-	child_cfg_t *child_cfg;
 	task_t *task;
-	job_t *job;
 	
-	other = (private_ike_sa_t*)charon->ike_sa_manager->checkout_new(
-											charon->ike_sa_manager, TRUE);
+	task = (task_t*)ike_reauth_create(&this->public);
+	this->task_manager->queue_task(this->task_manager, task);
 	
-	set_peer_cfg(other, this->peer_cfg);
-	other->other_host->destroy(other->other_host);
-	other->other_host = this->other_host->clone(this->other_host);
-	if (this->my_virtual_ip)
-	{
-		/* if we already have a virtual IP, we reuse it */
-		set_virtual_ip(other, TRUE, this->my_virtual_ip);
-	}
-		
-	if (this->state == IKE_ESTABLISHED)
-	{
-		task = (task_t*)ike_init_create(&other->public, TRUE, NULL);
-		other->task_manager->queue_task(other->task_manager, task);
-		task = (task_t*)ike_natd_create(&other->public, TRUE);
-		other->task_manager->queue_task(other->task_manager, task);
-		task = (task_t*)ike_cert_create(&other->public, TRUE);
-		other->task_manager->queue_task(other->task_manager, task);
-		task = (task_t*)ike_config_create(&other->public, TRUE);
-		other->task_manager->queue_task(other->task_manager, task);
-		task = (task_t*)ike_auth_create(&other->public, TRUE);
-		other->task_manager->queue_task(other->task_manager, task);
-	}
-	
-	other->task_manager->adopt_tasks(other->task_manager, this->task_manager);
-	
-	/* Create task for established children, adopt routed children directly */
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while(iterator->iterate(iterator, (void**)&child_sa))
-	{
-		switch (child_sa->get_state(child_sa))
-		{
-			case CHILD_ROUTED:
-			{
-				iterator->remove(iterator);
-				other->child_sas->insert_first(other->child_sas, child_sa);
-				break;
-			}
-			default:
-			{
-				child_cfg = child_sa->get_config(child_sa);
-				task = (task_t*)child_create_create(&other->public, child_cfg);
-				other->task_manager->queue_task(other->task_manager, task);
-				break;
-			}
-		}
-	}
-	iterator->destroy(iterator);
-	
-	other->task_manager->initiate(other->task_manager);
-	
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, &other->public);
-	
-	job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-	charon->processor->queue_job(charon->processor, job);
+	return this->task_manager->initiate(this->task_manager);
 }
 
 /**
@@ -1930,7 +1869,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.enable_natt = (void (*)(ike_sa_t*, bool)) enable_natt;
 	this->public.is_natt_enabled = (bool (*)(ike_sa_t*)) is_natt_enabled;
 	this->public.rekey = (status_t (*)(ike_sa_t*))rekey;
-	this->public.reestablish = (void (*)(ike_sa_t*))reestablish;
+	this->public.reestablish = (status_t (*)(ike_sa_t*))reestablish;
 	this->public.inherit = (status_t (*)(ike_sa_t*,ike_sa_t*))inherit;
 	this->public.generate_message = (status_t (*)(ike_sa_t*,message_t*,packet_t**))generate_message;
 	this->public.reset = (void (*)(ike_sa_t*))reset;
