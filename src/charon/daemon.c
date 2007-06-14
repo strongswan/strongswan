@@ -426,8 +426,6 @@ int main(int argc, char *argv[])
 	private_daemon_t *private_charon;
 	FILE *pid_file;
 	struct stat stb;
-	linked_list_t *list;
-	host_t *host;
 	level_t levels[DBG_MAX];
 	int signal;
 	
@@ -529,16 +527,6 @@ int main(int argc, char *argv[])
 		fprintf(pid_file, "%d\n", getpid());
 		fclose(pid_file);
 	}
-	
-	/* log socket info */
-	list = charon->kernel_interface->create_address_list(charon->kernel_interface);
-	DBG1(DBG_NET, "listening on %d addresses:", list->get_count(list));
-	while (list->remove_first(list, (void**)&host) == SUCCESS)
-	{
-		DBG1(DBG_NET, "  %H", host);
-		host->destroy(host);
-	}
-	list->destroy(list);
 	
 	/* drop additional capabilites (bind & root) */
 	drop_capabilities(private_charon, TRUE);

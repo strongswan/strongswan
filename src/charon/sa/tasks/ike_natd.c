@@ -240,22 +240,21 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 static status_t build_i(private_ike_natd_t *this, message_t *message)
 {
 	notify_payload_t *notify;
-	linked_list_t *list;
+	iterator_t *iterator;
 	host_t *host;
 	
 	/* include one notify if our address is defined, all addresses otherwise */
 	host = this->ike_sa->get_my_host(this->ike_sa);
 	if (host->is_anyaddr(host))
 	{
-		/* TODO: we could get the src address from netlink!? */
-		list = charon->kernel_interface->create_address_list(charon->kernel_interface);
-		while (list->remove_first(list, (void**)&host) == SUCCESS)
+		iterator = charon->kernel_interface->create_address_iterator(
+													charon->kernel_interface);
+		while (iterator->iterate(iterator, (void**)&host))
 		{
 			notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
-			host->destroy(host);
 			message->add_payload(message, (payload_t*)notify);
 		}
-		list->destroy(list);
+		iterator->destroy(iterator);
 	}
 	else
 	{

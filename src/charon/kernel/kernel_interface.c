@@ -298,6 +298,16 @@ struct private_kernel_interface_t {
 	 * Mutex to lock access to vips.
 	 */
 	pthread_mutex_t vips_mutex;
+	
+	/**
+	 * Cached list of IP adresses (address_entry_t)
+	 */
+	linked_list_t *addrs;
+	
+	/**
+	 * Mutex to lock access to addr.
+	 */
+	pthread_mutex_t addrs_mutex;
 	 
 	/**
 	 * job receiving xfrm events
@@ -305,19 +315,24 @@ struct private_kernel_interface_t {
 	callback_job_t *job;
 	
 	/**
-	 * netlink xfrm socket to receive acquire and expire events
-	 */
-	int socket_xfrm_events;
-	
-	/**
 	 * Netlink xfrm socket (IPsec)
 	 */
 	int socket_xfrm;
 	
 	/**
+	 * netlink xfrm socket to receive acquire and expire events
+	 */
+	int socket_xfrm_events;
+	
+	/**
 	 * Netlink rt socket (routing)
 	 */
 	int socket_rt;
+	
+	/**
+	 * Netlink rt socket to receive address change events
+	 */
+	int socket_rt_events;
 };
 
 /**
@@ -443,98 +458,293 @@ static void add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 }
 
 /**
+ * process a XFRM_MSG_ACQUIRE from kernel
+ */
+static void process_acquire(private_kernel_interface_t *this, struct nlmsghdr *hdr)
+{
+	u_int32_t reqid = 0;
+	job_t *job;
+	struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_user_acquire);
+	size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
+	
+	if (RTA_OK(rtattr, rtsize))
+	{
+		if (rtattr->rta_type == XFRMA_TMPL)
+		{
+			struct xfrm_user_tmpl* tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rtattr);
+			reqid = tmpl->reqid;
+		}
+	}
+	if (reqid == 0)
+	{
+		DBG1(DBG_KNL, "received a XFRM_MSG_ACQUIRE, but no reqid found");
+		return;
+	}
+	DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
+	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid %d", reqid);
+	job = (job_t*)acquire_job_create(reqid);
+	charon->processor->queue_job(charon->processor, job);
+}
+
+/**
+ * process a XFRM_MSG_EXPIRE from kernel
+ */
+static void process_expire(private_kernel_interface_t *this, struct nlmsghdr *hdr)
+{
+	job_t *job;
+	protocol_id_t protocol;
+	u_int32_t spi, reqid;
+	struct xfrm_user_expire *expire;
+	
+	expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
+	protocol = expire->state.id.proto == KERNEL_ESP ? PROTO_ESP : PROTO_AH;
+	spi = expire->state.id.spi;
+	reqid = expire->state.reqid;
+	
+	DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
+	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
+		 expire->hard ? "delete" : "rekey",  protocol_id_names,
+		 protocol, ntohl(spi), reqid);
+	if (expire->hard)
+	{
+		job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
+	}
+	else
+	{
+		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
+	}
+	charon->processor->queue_job(charon->processor, job);
+}
+
+/**
+ * process a RTM_NEWADDR from kernel
+ */
+static void process_newaddr(private_kernel_interface_t *this,
+							struct nlmsghdr *hdr, bool initial)
+{
+	struct ifaddrmsg* msg = (struct ifaddrmsg*)(NLMSG_DATA(hdr));
+	struct rtattr *rta = IFA_RTA(msg);
+	size_t rtasize = IFA_PAYLOAD (hdr);
+	host_t *host = NULL;
+	char *name = NULL;
+	chunk_t local = chunk_empty, address = chunk_empty;
+		
+	while(RTA_OK(rta, rtasize))
+	{
+		switch (rta->rta_type)
+		{
+			case IFA_LOCAL:
+				local.ptr = RTA_DATA(rta);
+				local.len = RTA_PAYLOAD(rta);
+				break;
+			case IFA_ADDRESS:
+				address.ptr = RTA_DATA(rta);
+				address.len = RTA_PAYLOAD(rta);
+				break;
+			case IFA_LABEL:
+				name = RTA_DATA(rta);
+				break;
+		}
+		rta = RTA_NEXT(rta, rtasize);
+	}
+	
+	/* For PPP interfaces, we need the IFA_LOCAL address,
+	 * IFA_ADDRESS is the peers address. But IFA_LOCAL is
+	 * not included in all cases, so fallback to IFA_ADDRESS. */
+	if (local.ptr)
+	{
+		host = host_create_from_chunk(msg->ifa_family, local, 0);
+	}
+	else if (address.ptr)
+	{
+		host = host_create_from_chunk(msg->ifa_family, address, 0);
+	}
+	
+	if (host)
+	{
+		address_entry_t *entry;
+		
+		entry = malloc_thing(address_entry_t);
+		entry->host = host;
+		entry->ifindex = msg->ifa_index;
+		if (name)
+		{
+			memcpy(entry->ifname, name, IFNAMSIZ);
+		}
+		else
+		{
+			strcpy(entry->ifname, "(unknown)");
+		}
+		
+		if (initial)
+		{
+			DBG1(DBG_KNL, "  %H on %s", host, entry->ifname);
+		}
+		else
+		{
+			DBG1(DBG_KNL, "%H appeared on %s", host, entry->ifname);
+		}
+		
+		pthread_mutex_lock(&this->addrs_mutex);
+		this->addrs->insert_last(this->addrs, entry);
+		pthread_mutex_unlock(&this->addrs_mutex);
+	}
+}
+
+
+/**
+ * process a RTM_DELADDR from kernel
+ */
+static void process_deladdr(private_kernel_interface_t *this, struct nlmsghdr *hdr)
+{
+	struct ifaddrmsg* msg = (struct ifaddrmsg*)(NLMSG_DATA(hdr));
+	struct rtattr *rta = IFA_RTA(msg);
+	size_t rtasize = IFA_PAYLOAD (hdr);
+	host_t *host = NULL;
+	chunk_t local = chunk_empty, address = chunk_empty;
+		
+	while(RTA_OK(rta, rtasize))
+	{
+		switch (rta->rta_type)
+		{
+			case IFA_LOCAL:
+				local.ptr = RTA_DATA(rta);
+				local.len = RTA_PAYLOAD(rta);
+				break;
+			case IFA_ADDRESS:
+				address.ptr = RTA_DATA(rta);
+				address.len = RTA_PAYLOAD(rta);
+				break;
+		}
+		rta = RTA_NEXT(rta, rtasize);
+	}
+	
+	/* same stuff as in newaddr */
+	if (local.ptr)
+	{
+		host = host_create_from_chunk(msg->ifa_family, local, 0);
+	}
+	else if (address.ptr)
+	{
+		host = host_create_from_chunk(msg->ifa_family, address, 0);
+	}
+	
+	if (host)
+	{
+		address_entry_t *entry;
+		iterator_t *iterator;
+		
+		iterator = this->addrs->create_iterator_locked(this->addrs,
+													   &this->addrs_mutex);
+		while (iterator->iterate(iterator, (void**)&entry))
+		{
+			if (entry->ifindex == msg->ifa_index &&
+				host->equals(host, entry->host))
+			{
+				iterator->remove(iterator);
+				DBG1(DBG_KNL, "%H disappeared from %s", host, entry->ifname);
+				address_entry_destroy(entry);
+			}
+		}
+		iterator->destroy(iterator);
+		host->destroy(host);
+	}
+}
+
+/**
  * Receives events from kernel
  */
 static job_requeue_t receive_events(private_kernel_interface_t *this)
 {
-	unsigned char response[512];
-	struct nlmsghdr *hdr;
+	char response[512];
+	struct nlmsghdr *hdr = (struct nlmsghdr*)response;
 	struct sockaddr_nl addr;
 	socklen_t addr_len = sizeof(addr);
-	int len, oldstate;
-	
-	hdr = (struct nlmsghdr*)response;
+	int len, oldstate, maxfd, selected;
+	fd_set rfds;
+
+	FD_ZERO(&rfds);
+	FD_SET(this->socket_xfrm_events, &rfds);
+	FD_SET(this->socket_rt_events, &rfds);
+	maxfd = max(this->socket_xfrm_events, this->socket_rt_events);
 	
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-	len = recvfrom(this->socket_xfrm_events, response, sizeof(response), 0,
-				   (struct sockaddr*)&addr, &addr_len);
+	selected = select(maxfd + 1, &rfds, NULL, NULL, NULL);
 	pthread_setcancelstate(oldstate, NULL);
+	if (selected <= 0)
+	{
+		DBG1(DBG_KNL, "selecting on sockets failed: %s", strerror(errno));
+		return JOB_REQUEUE_FAIR;
+	}
+	if (FD_ISSET(this->socket_xfrm_events, &rfds))
+	{
+		selected = this->socket_xfrm_events;
+	}
+	else if (FD_ISSET(this->socket_rt_events, &rfds))
+	{
+		selected = this->socket_rt_events;
+	}
+	else
+	{
+		return JOB_REQUEUE_DIRECT;
+	}
 	
+	len = recvfrom(selected, response, sizeof(response), MSG_DONTWAIT,
+				   (struct sockaddr*)&addr, &addr_len);
 	if (len < 0)
 	{
-		if (errno == EINTR)
-		{	/* interrupted, try again */
-			return JOB_REQUEUE_DIRECT;
-		}
-		charon->kill(charon, "unable to receive netlink events");
-	}
-	
-	if (!NLMSG_OK(hdr, len))
-	{
-		/* bad netlink message */
-		return JOB_REQUEUE_DIRECT;
-	}
-
-	if (addr.nl_pid != 0)
-	{
-		/* not from kernel. not interested, try another one */
-		return JOB_REQUEUE_DIRECT;
-	}
-	
-	/* we handle ACQUIRE and EXPIRE messages directly */
-	if (hdr->nlmsg_type == XFRM_MSG_ACQUIRE)
-	{
-		u_int32_t reqid = 0;
-		job_t *job;
-		struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_user_acquire);
-		size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
-		if (RTA_OK(rtattr, rtsize))
+		switch (errno)
 		{
-			if (rtattr->rta_type == XFRMA_TMPL)
+			case EINTR:
+				/* interrupted, try again */
+				return JOB_REQUEUE_DIRECT;
+			case EAGAIN:
+				/* no data ready, select again */
+				return JOB_REQUEUE_DIRECT;
+			default:
+				DBG1(DBG_KNL, "unable to receive from xfrm event socket");
+				sleep(1);
+				return JOB_REQUEUE_FAIR;
+		}
+	}
+	if (addr.nl_pid != 0)
+	{	/* not from kernel. not interested, try another one */
+		return JOB_REQUEUE_DIRECT;
+	}
+	
+	while (NLMSG_OK(hdr, len))
+	{
+		/* looks good so far, dispatch netlink message */
+		if (selected == this->socket_xfrm_events)
+		{
+			switch (hdr->nlmsg_type)
 			{
-				struct xfrm_user_tmpl* tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rtattr);
-				reqid = tmpl->reqid;
+				case XFRM_MSG_ACQUIRE:
+					process_acquire(this, hdr);
+					break;
+				case XFRM_MSG_EXPIRE:
+					process_expire(this, hdr);
+					break;
+				default:
+					break;
 			}
 		}
-		if (reqid == 0)
+		else if (selected == this->socket_rt_events)
 		{
-			DBG1(DBG_KNL, "received a XFRM_MSG_ACQUIRE, but no reqid found");
+			switch (hdr->nlmsg_type)
+			{
+				case RTM_NEWADDR:
+					process_newaddr(this, hdr, FALSE);
+					break;
+				case RTM_DELADDR:
+					process_deladdr(this, hdr);
+					break;
+				default:
+					break;
+			}
 		}
-		else
-		{
-			DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
-			DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid %d",
-				 reqid);
-			job = (job_t*)acquire_job_create(reqid);
-			charon->processor->queue_job(charon->processor, job);
-		}
-	}
-	else if (hdr->nlmsg_type == XFRM_MSG_EXPIRE)
-	{
-		job_t *job;
-		protocol_id_t protocol;
-		u_int32_t spi, reqid;
-		struct xfrm_user_expire *expire;
+		hdr = NLMSG_NEXT(hdr, len);
 		
-		expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
-		protocol = expire->state.id.proto == KERNEL_ESP ?
-													PROTO_ESP : PROTO_AH;
-		spi = expire->state.id.spi;
-		reqid = expire->state.reqid;
-		
-		DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
-		DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
-			 expire->hard ? "delete" : "rekey",  protocol_id_names,
-			 protocol, ntohl(spi), reqid);
-		if (expire->hard)
-		{
-			job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
-		}
-		else
-		{
-			job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
-		}
-		charon->processor->queue_job(charon->processor, job);
 	}
 	return JOB_REQUEUE_DIRECT;
 }
@@ -697,19 +907,16 @@ static status_t netlink_send_ack(int socket, struct nlmsghdr *in)
 }
 	
 /**
- * Create a list of local addresses.
+ * Initialize a list of local addresses.
  */
-static linked_list_t *create_address_list(private_kernel_interface_t *this)
+static void init_address_list(private_kernel_interface_t *this)
 {
 	char request[BUFFER_SIZE];
 	struct nlmsghdr *out, *hdr;
 	struct rtgenmsg *msg;
 	size_t len;
-	linked_list_t *list;
 	
-	DBG2(DBG_IKE, "getting local address list");
-	
-	list = linked_list_create();
+	DBG1(DBG_IKE, "listening on interfaces:");
 	
 	memset(&request, 0, sizeof(request));
 
@@ -729,61 +936,7 @@ static linked_list_t *create_address_list(private_kernel_interface_t *this)
 			{
 				case RTM_NEWADDR:
 				{
-					struct ifaddrmsg* msg = (struct ifaddrmsg*)(NLMSG_DATA(hdr));
-	      			struct rtattr *rta = IFA_RTA(msg);
-	     			size_t rtasize = IFA_PAYLOAD (hdr);
-					host_t *host = NULL;
-					char *name = NULL;
-					chunk_t local = chunk_empty, address = chunk_empty;
-	     			
-					while(RTA_OK(rta, rtasize))
-					{
-						switch (rta->rta_type)
-						{
-							case IFA_LOCAL:
-								local.ptr = RTA_DATA(rta);
-								local.len = RTA_PAYLOAD(rta);
-								break;
-							case IFA_ADDRESS:
-								address.ptr = RTA_DATA(rta);
-								address.len = RTA_PAYLOAD(rta);
-								break;
-							case IFA_LABEL:
-								name = RTA_DATA(rta);
-								break;
-						}
-						rta = RTA_NEXT(rta, rtasize);
-					}
-					
-					/* For PPP interfaces, we need the IFA_LOCAL address,
-					 * IFA_ADDRESS is the peers address. But IFA_LOCAL is
-					 * not included in all cases, so fallback to IFA_ADDRESS. */
-					if (local.ptr)
-					{
-						host = host_create_from_chunk(msg->ifa_family, local, 0);
-					}
-					else if (address.ptr)
-					{
-						host = host_create_from_chunk(msg->ifa_family, address, 0);
-					}
-					
-					if (host)
-					{
-						address_entry_t *entry;
-						
-						entry = malloc_thing(address_entry_t);
-						entry->host = host;
-						entry->ifindex = msg->ifa_index;
-						if (name)
-						{
-							memcpy(entry->ifname, name, IFNAMSIZ);
-						}
-						else
-						{
-							strcpy(entry->ifname, "(unknown)");
-						}
-						list->insert_last(list, entry);
-					}
+					process_newaddr(this, hdr, TRUE);
 					hdr = NLMSG_NEXT(hdr, len);
 					continue;
 				}
@@ -801,28 +954,29 @@ static linked_list_t *create_address_list(private_kernel_interface_t *this)
 	{
 		DBG1(DBG_IKE, "unable to get local address list");
 	}
-
-	return list;
 }
 
 /**
- * Implements kernel_interface_t.create_address_list.
+ * iterator hook to return address, not address_entry_t
  */
-static linked_list_t *create_address_list_public(private_kernel_interface_t *this)
+bool address_iterator_hook(private_kernel_interface_t *this,
+						   address_entry_t *in, host_t **out)
 {
-	linked_list_t *result, *list;
-	address_entry_t *entry;
+	*out = in->host;
+	return TRUE;
+}
+
+/**
+ * Implements kernel_interface_t.create_address_iterator.
+ */
+static iterator_t *create_address_iterator(private_kernel_interface_t *this)
+{
+	iterator_t *iterator;
 	
-	result = linked_list_create();
-	list = create_address_list(this);
-	while (list->remove_last(list, (void**)&entry) == SUCCESS)
-	{
-		result->insert_last(result, entry->host);
-		free(entry);
-	}
-	list->destroy(list);
-	
-	return result;
+	iterator = this->addrs->create_iterator_locked(this->addrs, &this->addrs_mutex);
+	iterator->set_iterator_hook(iterator,
+								(iterator_hook_t*)address_iterator_hook, this);
+	return iterator;
 }
 
 /**
@@ -830,22 +984,22 @@ static linked_list_t *create_address_list_public(private_kernel_interface_t *thi
  */
 static char *get_interface_name(private_kernel_interface_t *this, host_t* ip)
 {
-	linked_list_t *list;
+	iterator_t *iterator;
 	address_entry_t *entry;
 	char *name = NULL;
 	
 	DBG2(DBG_IKE, "getting interface name for %H", ip);
 	
-	list = create_address_list(this);
-	while (!name && list->remove_last(list, (void**)&entry) == SUCCESS)
+	iterator = this->addrs->create_iterator_locked(this->addrs, &this->addrs_mutex);
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
 		if (ip->ip_equals(ip, entry->host))
 		{
 			name = strdup(entry->ifname);
+			break;
 		}
-		address_entry_destroy(entry);
 	}
-	list->destroy_function(list, (void*)address_entry_destroy);
+	iterator->destroy(iterator);
 	
 	if (name)
 	{
@@ -865,10 +1019,10 @@ static char *get_interface_name(private_kernel_interface_t *this, host_t* ip)
 static status_t get_address_by_ts(private_kernel_interface_t *this,
 								  traffic_selector_t *ts, host_t **ip)
 {
+	iterator_t *iterator;
 	address_entry_t *entry;
 	host_t *host;
 	int family;
-	linked_list_t *list;
 	bool found = FALSE;
 	
 	DBG2(DBG_IKE, "getting a local address in traffic selector %R", ts);
@@ -895,17 +1049,17 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
 	}
 	host->destroy(host);
 	
-	list = create_address_list(this);
-	while (!found && list->remove_last(list, (void**)&entry) == SUCCESS)
+	iterator = this->addrs->create_iterator_locked(this->addrs, &this->addrs_mutex);
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
 		if (ts->includes(ts, entry->host))
 		{
 			found = TRUE;
 			*ip = entry->host->clone(entry->host);
+			break;
 		}
-		address_entry_destroy(entry);
 	}
-	list->destroy_function(list, (void*)address_entry_destroy);
+	iterator->destroy(iterator);
 	
 	if (!found)
 	{
@@ -921,22 +1075,22 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
  */
 static int get_interface_index(private_kernel_interface_t *this, host_t* ip)
 {
-	linked_list_t *list;
+	iterator_t *iterator;
 	address_entry_t *entry;
 	int ifindex = 0;
 	
 	DBG2(DBG_IKE, "getting iface for %H", ip);
 	
-	list = create_address_list(this);
-	while (!ifindex && list->remove_last(list, (void**)&entry) == SUCCESS)
+	iterator = this->addrs->create_iterator_locked(this->addrs, &this->addrs_mutex);
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
 		if (ip->ip_equals(ip, entry->host))
 		{
 			ifindex = entry->ifindex;
+			break;
 		}
-		address_entry_destroy(entry);
 	}
-	list->destroy_function(list, (void*)address_entry_destroy);
+	iterator->destroy(iterator);
 	
 	if (ifindex == 0)
 	{
@@ -1883,9 +2037,11 @@ static void destroy(private_kernel_interface_t *this)
 	this->job->cancel(this->job);
 	close(this->socket_xfrm_events);
 	close(this->socket_xfrm);
+	close(this->socket_rt_events);
 	close(this->socket_rt);
 	this->vips->destroy(this->vips);
 	this->policies->destroy(this->policies);
+	this->addrs->destroy_function(this->addrs, (void*)address_entry_destroy);
 	free(this);
 }
 
@@ -1908,7 +2064,7 @@ kernel_interface_t *kernel_interface_create()
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
 
 	this->public.get_interface = (char*(*)(kernel_interface_t*,host_t*))get_interface_name;
-	this->public.create_address_list = (linked_list_t*(*)(kernel_interface_t*))create_address_list_public;
+	this->public.create_address_iterator = (iterator_t*(*)(kernel_interface_t*))create_address_iterator;
 	this->public.add_ip = (status_t(*)(kernel_interface_t*,host_t*,host_t*)) add_ip;
 	this->public.del_ip = (status_t(*)(kernel_interface_t*,host_t*,host_t*)) del_ip;
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;
@@ -1916,24 +2072,13 @@ kernel_interface_t *kernel_interface_create()
 	/* private members */
 	this->vips = linked_list_create();
 	this->policies = linked_list_create();
+	this->addrs = linked_list_create();
 	pthread_mutex_init(&this->policies_mutex,NULL);
 	pthread_mutex_init(&this->vips_mutex,NULL);
+	pthread_mutex_init(&this->addrs_mutex,NULL);
 	
+	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
-	addr.nl_pid = 0;
-	addr.nl_groups = 0;
-	
-	/* create and bind XFRM socket */
-	this->socket_xfrm = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
-	if (this->socket_xfrm <= 0)
-	{
-		charon->kill(charon, "unable to create XFRM netlink socket");
-	}
-	
-	if (bind(this->socket_xfrm, (struct sockaddr*)&addr, sizeof(addr)))
-	{
-		charon->kill(charon, "unable to bind XFRM netlink socket");
-	}
 	
 	/* create and bind RT socket */
 	this->socket_rt = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
@@ -1941,20 +2086,43 @@ kernel_interface_t *kernel_interface_create()
 	{
 		charon->kill(charon, "unable to create RT netlink socket");
 	}
-	
+	addr.nl_groups = 0;
 	if (bind(this->socket_rt, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		charon->kill(charon, "unable to bind RT netlink socket");
 	}
 	
+	/* create and bind RT socket for events (address changes) */
+	this->socket_rt_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (this->socket_rt_events <= 0)
+	{
+		charon->kill(charon, "unable to create RT event socket");
+	}
+	addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR;
+	if (bind(this->socket_rt_events, (struct sockaddr*)&addr, sizeof(addr)))
+	{
+		charon->kill(charon, "unable to bind RT event socket");
+	}
+	
+	/* create and bind XFRM socket */ 
+	this->socket_xfrm = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
+	if (this->socket_xfrm <= 0)
+	{
+		charon->kill(charon, "unable to create XFRM netlink socket");
+	}
+	addr.nl_groups = 0;
+	if (bind(this->socket_xfrm, (struct sockaddr*)&addr, sizeof(addr)))
+	{
+		charon->kill(charon, "unable to bind XFRM netlink socket");
+	}
+	
 	/* create and bind XFRM socket for ACQUIRE & EXPIRE */
-	addr.nl_groups = XFRMGRP_ACQUIRE | XFRMGRP_EXPIRE;
 	this->socket_xfrm_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
 	if (this->socket_xfrm_events <= 0)
 	{
 		charon->kill(charon, "unable to create XFRM event socket");
 	}
-	
+	addr.nl_groups = XFRMGRP_ACQUIRE | XFRMGRP_EXPIRE;
 	if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		charon->kill(charon, "unable to bind XFRM event socket");
@@ -1963,6 +2131,8 @@ kernel_interface_t *kernel_interface_create()
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	
+	init_address_list(this);
 	
 	return &this->public;
 }

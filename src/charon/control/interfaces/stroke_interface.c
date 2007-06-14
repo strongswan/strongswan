@@ -1189,7 +1189,6 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 static void stroke_status(stroke_msg_t *msg, FILE *out, bool all)
 {
 	iterator_t *iterator, *children;
-	linked_list_t *list;
 	host_t *host;
 	peer_cfg_t *peer_cfg;
 	ike_cfg_t *ike_cfg;
@@ -1215,15 +1214,15 @@ static void stroke_status(stroke_msg_t *msg, FILE *out, bool all)
 				charon->processor->get_job_load(charon->processor));
 		fprintf(out, " scheduled events: %d\n",
 				charon->scheduler->get_job_load(charon->scheduler));
-		list = charon->kernel_interface->create_address_list(charon->kernel_interface);
-
-		fprintf(out, "Listening on %d IP addresses:\n", list->get_count(list));
-		while (list->remove_first(list, (void**)&host) == SUCCESS)
+		iterator = charon->kernel_interface->create_address_iterator(
+													charon->kernel_interface);
+		fprintf(out, "Listening on %d IP addresses:\n",
+				iterator->get_count(iterator));
+		while (iterator->iterate(iterator, (void**)&host))
 		{
 			fprintf(out, "  %H\n", host);
-			host->destroy(host);
 		}
-		list->destroy(list);
+		iterator->destroy(iterator);
 	
 		fprintf(out, "Connections:\n");
 		iterator = charon->backends->create_iterator(charon->backends);

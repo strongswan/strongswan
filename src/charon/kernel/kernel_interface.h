@@ -277,12 +277,16 @@ struct kernel_interface_t {
 	char* (*get_interface) (kernel_interface_t *this, host_t *host);
 	
 	/**
-	 * @brief Creates a list of all local addresses.
+	 * @brief Creates an iterator over all local addresses.
+	 *
+	 * This function blocks an internal cached address list until the
+	 * iterator gets destroyed.
+	 * These hosts are read-only, do not modify or free.
 	 *
 	 * @param this			calling object
-	 * @return 				allocated list with host_t objects
+	 * @return 				iterator over host_t's
 	 */
-	linked_list_t *(*create_address_list) (kernel_interface_t *this);
+	iterator_t *(*create_address_iterator) (kernel_interface_t *this);
 	
 	/**
 	 * @brief Add a virtual IP to an interface.
