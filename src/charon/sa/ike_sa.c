@@ -785,6 +785,7 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		
 		if (this->other_host->is_anyaddr(this->other_host))
 		{
+			child_cfg->destroy(child_cfg);
 			SIG(IKE_UP_START, "initiating IKE_SA");
 			SIG(IKE_UP_FAILED, "unable to initiate to %%any");
 			return DESTROY_ME;
