@@ -1216,8 +1216,7 @@ static void stroke_status(stroke_msg_t *msg, FILE *out, bool all)
 				charon->scheduler->get_job_load(charon->scheduler));
 		iterator = charon->kernel_interface->create_address_iterator(
 													charon->kernel_interface);
-		fprintf(out, "Listening on %d IP addresses:\n",
-				iterator->get_count(iterator));
+		fprintf(out, "Listening IP addresses:\n");
 		while (iterator->iterate(iterator, (void**)&host))
 		{
 			fprintf(out, "  %H\n", host);

@@ -682,16 +682,16 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 /**
  * Iterator hook for iterate, gets ike_sas instead of entries
  */
-static bool iterator_hook(private_ike_sa_manager_t* this, entry_t *in,
-						  ike_sa_t **out)
+static hook_result_t iterator_hook(private_ike_sa_manager_t* this, entry_t *in,
+								   ike_sa_t **out)
 {
 	/* check out entry */
 	if (wait_for_entry(this, in))
 	{
 		*out = in->ike_sa;
-		return TRUE;
+		return HOOK_NEXT;
 	}
-	return FALSE;
+	return HOOK_SKIP;
 }
 
 /**

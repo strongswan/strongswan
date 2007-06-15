@@ -151,10 +151,10 @@ static int get_list_count(private_iterator_t *this)
 /**
  * default iterator hook which does nothing
  */
-static bool iterator_hook(void *param, void *in, void **out)
+static hook_result_t iterator_hook(void *param, void *in, void **out)
 {
 	*out = in;
-	return TRUE;
+	return HOOK_NEXT;
 }
 
 /**
@@ -180,40 +180,43 @@ static void set_iterator_hook(private_iterator_t *this, iterator_hook_t *hook,
  */
 static bool iterate(private_iterator_t *this, void** value)
 {
-	if (this->list->count == 0)
+	while (TRUE)
 	{
-		return FALSE;
-	}
-	if (this->current == NULL)
-	{
-		this->current = (this->forward) ? this->list->first : this->list->last;
-		if (!this->hook(this->hook_param, this->current->value, value))
+		if (this->forward)
 		{
-			return iterate(this, value);
+			this->current = this->current ? this->current->next : this->list->first;
 		}
-		return TRUE;
-	}
-	if (this->forward)
-	{
-		if (this->current->next == NULL)
+		else
+		{
+			this->current = this->current ? this->current->previous : this->list->last;
+		}
+
+		if (this->current == NULL)
 		{
 			return FALSE;
 		}
-		this->current = this->current->next;
-		if (!this->hook(this->hook_param, this->current->value, value))
+	
+		switch (this->hook(this->hook_param, this->current->value, value))
 		{
-			return iterate(this, value);
+			case HOOK_AGAIN:
+				/* rewind */
+				if (this->forward)
+				{
+					this->current = this->current->previous;
+				}
+				else
+				{
+					this->current = this->current->next;
+				}
+				break;
+			case HOOK_NEXT:
+				/* normal iteration */
+				break;
+			case HOOK_SKIP:
+				/* advance */
+				continue;
 		}
-		return TRUE;
-	}
-	if (this->current->previous == NULL)
-	{
-		return FALSE;
-	}
-	this->current = this->current->previous;
-	if (!this->hook(this->hook_param, this->current->value, value))
-	{
-		return iterate(this, value);
+		break;
 	}
 	return TRUE;
 }
