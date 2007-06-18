@@ -288,16 +288,18 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		msg->add_conn.other = tmp_end;
 		free(interface);
 	}
-	if (!interface)
+	else
 	{
 		interface = charon->kernel_interface->get_interface(
 											charon->kernel_interface, my_host);
 		if (!interface)
 		{
-			DBG1(DBG_CFG, "left nor right host is our side, aborting\n");
-			goto destroy_hosts;
+			DBG1(DBG_CFG, "left nor right host is our side, assuming left=local");
 		}
-		free(interface);
+		else
+		{
+			free(interface);
+		}
 	}
 
 	my_id = identification_create_from_string(msg->add_conn.me.id ?
