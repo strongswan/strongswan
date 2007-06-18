@@ -268,6 +268,18 @@ struct kernel_interface_t {
 							policy_dir_t direction);
 	
 	/**
+	 * @brief Get our outgoing source address for a destination.
+	 *
+	 * Does a route lookup to get the source address used to reach dest.
+	 * The returned host is allocated and must be destroyed.
+	 *
+	 * @param this			calling object
+	 * @param dest			target destination address
+	 * @return				outgoing source address, NULL if unreachable
+	 */
+	host_t* (*get_source_addr)(kernel_interface_t *this, host_t *dest);
+	
+	/**
 	 * @brief Get the interface name of a local address.
 	 *
 	 * @param this			calling object

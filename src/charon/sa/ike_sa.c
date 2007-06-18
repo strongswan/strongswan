@@ -763,7 +763,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		}
 		
 		/* check if message is trustworthy, and update host information */
-		if (this->state == IKE_CREATED ||
+		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
 		{
 			update_hosts(this, me, other);

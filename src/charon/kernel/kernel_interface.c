@@ -1342,6 +1342,84 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 	return netlink_send_ack(this, this->socket_rt, hdr);
 }
 
+/**
+ * Implementation of kernel_interface_t.get_source_addr.
+ */
+static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
+{
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *hdr, *out, *current;
+	struct rtmsg *msg;
+	chunk_t chunk;
+	size_t len;
+	host_t *source = NULL;
+	
+	memset(&request, 0, sizeof(request));
+
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = RTM_GETROUTE;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+
+	msg = (struct rtmsg*)NLMSG_DATA(hdr);
+	msg->rtm_family = dest->get_family(dest);
+	msg->rtm_dst_len = msg->rtm_family == AF_INET ? 32 : 128;
+	msg->rtm_table = RT_TABLE_MAIN;
+	msg->rtm_protocol = RTPROT_STATIC;
+	msg->rtm_type = RTN_UNICAST;
+	msg->rtm_scope = RT_SCOPE_UNIVERSE;
+	
+	chunk = dest->get_address(dest);
+	add_attribute(hdr, RTA_DST, chunk, sizeof(request));
+			
+	if (netlink_send(this, this->socket_rt, hdr, &out, &len) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "getting source address to %H failed", dest);
+		return NULL;
+	}
+	current = out;
+	while (NLMSG_OK(current, len))
+	{
+		switch (current->nlmsg_type)
+		{
+			case NLMSG_DONE:
+				break;
+			case RTM_NEWROUTE:
+			{
+				struct rtattr *rta;
+				size_t rtasize;
+				
+				msg = (struct rtmsg*)(NLMSG_DATA(current));
+				rta = RTM_RTA(msg);
+				rtasize = RTM_PAYLOAD(current);
+				while(RTA_OK(rta, rtasize))
+				{
+					switch (rta->rta_type)
+					{
+						case RTA_PREFSRC:
+							chunk.ptr = RTA_DATA(rta);
+							chunk.len = RTA_PAYLOAD(rta);
+							source = host_create_from_chunk(msg->rtm_family, 
+															chunk, 0);
+							break;
+					}
+					rta = RTA_NEXT(rta, rtasize);
+				}
+				break;
+			}
+			default:
+				current = NLMSG_NEXT(current, len);
+				continue;
+		}
+		break;
+	}
+	if (source == NULL)
+	{
+		DBG1(DBG_KNL, "no route found to %H", dest);
+	}
+	free(out);
+	return source;
+}
 
 /**
  * Implementation of kernel_interface_t.add_ip.
@@ -2209,9 +2287,9 @@ kernel_interface_t *kernel_interface_create()
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t,bool))add_policy;
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
-
 	this->public.get_interface = (char*(*)(kernel_interface_t*,host_t*))get_interface_name;
 	this->public.create_address_iterator = (iterator_t*(*)(kernel_interface_t*))create_address_iterator;
+	this->public.get_source_addr = (host_t*(*)(kernel_interface_t*, host_t *dest))get_source_addr;
 	this->public.add_ip = (status_t(*)(kernel_interface_t*,host_t*,host_t*)) add_ip;
 	this->public.del_ip = (status_t(*)(kernel_interface_t*,host_t*,host_t*)) del_ip;
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;

@@ -243,29 +243,45 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 	iterator_t *iterator;
 	host_t *host;
 	
-	/* include one notify if our address is defined, all addresses otherwise */
-	host = this->ike_sa->get_my_host(this->ike_sa);
-	if (host->is_anyaddr(host))
-	{
-		iterator = charon->kernel_interface->create_address_iterator(
-													charon->kernel_interface);
-		while (iterator->iterate(iterator, (void**)&host))
-		{
-			notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
-			message->add_payload(message, (payload_t*)notify);
-		}
-		iterator->destroy(iterator);
-	}
-	else
-	{
-		notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
-		message->add_payload(message, (payload_t*)notify);
-	}
-	
+	/* destination is always set */
 	host = this->ike_sa->get_other_host(this->ike_sa);
 	notify = build_natd_payload(this, NAT_DETECTION_DESTINATION_IP, host);
 	message->add_payload(message, (payload_t*)notify);
 	
+	/* source may be any, we have 3 possibilities to get our source address:
+	 * 1. It is defined in the config => use the one of the IKE_SA
+	 * 2. We do a routing lookup in the kernel interface
+	 * 3. Include all possbile addresses
+	 */
+	host = this->ike_sa->get_my_host(this->ike_sa);
+	if (!host->is_anyaddr(host))
+	{	/* 1. */
+		notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
+		message->add_payload(message, (payload_t*)notify);
+	}
+	else
+	{
+		host = charon->kernel_interface->get_source_addr(
+									charon->kernel_interface,
+									this->ike_sa->get_other_host(this->ike_sa));
+		if (host)
+		{	/* 2. */
+			notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
+			message->add_payload(message, (payload_t*)notify);
+			host->destroy(host);
+		}
+		else
+		{	/* 3. */
+			iterator = charon->kernel_interface->create_address_iterator(
+													charon->kernel_interface);
+			while (iterator->iterate(iterator, (void**)&host))
+			{
+				notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
+				message->add_payload(message, (payload_t*)notify);
+			}
+			iterator->destroy(iterator);
+		}
+	}
 	return NEED_MORE;
 }
 
