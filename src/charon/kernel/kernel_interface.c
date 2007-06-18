@@ -856,7 +856,7 @@ static status_t netlink_send(private_kernel_interface_t *this,
 	
 	while (TRUE)
 	{	
-		char buf[1024];
+		char buf[4096];
 		tmp.len = sizeof(buf);
 		tmp.ptr = buf;
 		msg = (struct nlmsghdr*)tmp.ptr;
