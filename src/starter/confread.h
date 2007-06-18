@@ -75,6 +75,7 @@ struct starter_end {
 	certpolicy_t	sendcert;
 	bool		firewall;
 	bool		hostaccess;
+	bool		allow_any;
 	char 		*updown;
 	u_int16_t	port;
 	u_int8_t	protocol;

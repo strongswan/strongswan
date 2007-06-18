@@ -229,6 +229,7 @@ static const token_info_t token_info[] =
     { ARG_MISC, 0, NULL  /* KW_NATIP */                                            },
     { ARG_ENUM, offsetof(starter_end_t, firewall), LST_bool                        },
     { ARG_ENUM, offsetof(starter_end_t, hostaccess), LST_bool                      },
+    { ARG_ENUM, offsetof(starter_end_t, allow_any), LST_bool                       },
     { ARG_STR,  offsetof(starter_end_t, updown), NULL                              },
     { ARG_STR,  offsetof(starter_end_t, id), NULL                                  },
     { ARG_STR,  offsetof(starter_end_t, rsakey), NULL                              },

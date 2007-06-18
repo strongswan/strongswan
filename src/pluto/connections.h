@@ -155,6 +155,7 @@ struct end {
 				/* that end: give local addresses to clients */
     bool hostaccess;		/* allow access to host via iptables INPUT/OUTPUT */
 				/* rules if client behind host is a subnet */
+    bool allow_any;		/* IP address is subject to change */
     certpolicy_t sendcert;	/* whether or not to send the certificate */
 };
 

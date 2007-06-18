@@ -170,6 +170,7 @@ set_whack_end(whack_end_t *w, starter_end_t *end)
     w->has_natip           = end->has_natip;
     w->modecfg             = end->modecfg;
     w->hostaccess          = end->hostaccess;
+    w->allow_any           = end->allow_any;
     w->sendcert            = end->sendcert;
     w->updown              = end->updown;
     w->host_port           = IKE_UDP_PORT;

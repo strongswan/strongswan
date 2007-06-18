@@ -91,6 +91,7 @@ leftsourceip,      KW_LEFTSOURCEIP
 leftnatip,         KW_LEFTNATIP
 leftfirewall,      KW_LEFTFIREWALL
 lefthostaccess,    KW_LEFTHOSTACCESS
+leftallowany,      KW_LEFTALLOWANY
 leftupdown,        KW_LEFTUPDOWN
 leftid,            KW_LEFTID
 leftrsasigkey,     KW_LEFTRSASIGKEY
@@ -107,6 +108,7 @@ rightsourceip,     KW_RIGHTSOURCEIP
 rightnatip,        KW_RIGHTNATIP
 rightfirewall,     KW_RIGHTFIREWALL
 righthostaccess,   KW_RIGHTHOSTACCESS
+rightallowany,     KW_RIGHTALLOWANY
 rightupdown,       KW_RIGHTUPDOWN
 rightid,           KW_RIGHTID
 rightrsasigkey,    KW_RIGHTRSASIGKEY

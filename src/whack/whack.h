@@ -65,6 +65,7 @@ struct whack_end {
     bool has_natip;
     bool modecfg;
     bool hostaccess;
+    bool allow_any;
     certpolicy_t sendcert;
     char *updown;		/* string */
     u_int16_t host_port;	/* host order */
