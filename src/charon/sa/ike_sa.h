@@ -25,6 +25,7 @@
 #ifndef IKE_SA_H_
 #define IKE_SA_H_
 
+typedef enum ike_extension_t ike_extension_t;
 typedef enum ike_sa_state_t ike_sa_state_t;
 typedef struct ike_sa_t ike_sa_t;
 
@@ -70,6 +71,21 @@ typedef struct ike_sa_t ike_sa_t;
  */
 #define RETRY_JITTER 20
 
+/**
+ * @brief Extensions (or optional features) the peer supports
+ */
+enum ike_extension_t {
+	
+	/**
+	 * peer supports NAT traversal as specified in RFC4306
+	 */
+	EXT_NATT,
+
+	/**
+	 * peer supports MOBIKE (RFC4555)
+	 */
+	EXT_MOBIKE,
+};
 
 /**
  * @brief State of an IKE_SA.
@@ -318,7 +334,27 @@ struct ike_sa_t {
 	 * @param config		peer_config to use
 	 */
 	void (*set_peer_cfg) (ike_sa_t *this, peer_cfg_t *config);
-
+	
+	/**
+	 * @brief Check if the peer supports an extension.
+	 *
+	 * @param this			calling object
+	 * @param extension		extension to check for support
+	 * @return				TRUE if peer supports it, FALSE otherwise
+	 */
+	bool (*supports_extension)(ike_sa_t *this, ike_extension_t extension);
+	
+	/**
+	 * @brief Enable an extension the peer supports.
+	 *
+	 * If support for an IKE extension is detected, this method is called
+	 * to enable that extension and behave accordingly.
+	 *
+	 * @param this			calling object
+	 * @param extension		extension to enable
+	 */
+	void (*enable_extension)(ike_sa_t *this, ike_extension_t extension);
+	
 	/**
 	 * @brief Initiate a new connection.
 	 *

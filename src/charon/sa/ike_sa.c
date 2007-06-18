@@ -143,6 +143,11 @@ struct private_ike_sa_t {
 	 * CA that issued the certificate of other
 	 */
 	ca_info_t *other_ca;
+	
+	/**
+	 * set of extensions the peer supports
+	 */
+	ike_extension_t extensions;
 
 	/**
 	 * Linked List containing the child sa's of the current IKE_SA.
@@ -1238,6 +1243,22 @@ static host_t* get_virtual_ip(private_ike_sa_t *this, bool local)
 }
 
 /**
+ * Implementation of ike_sa_t.enable_extension.
+ */
+static void enable_extension(private_ike_sa_t *this, ike_extension_t extension)
+{
+	this->extensions |= extension;
+}
+
+/**
+ * Implementation of ike_sa_t.has_extension.
+ */
+static bool supports_extension(private_ike_sa_t *this, ike_extension_t extension)
+{
+	return this->extensions & extension;
+}
+
+/**
  * Implementation of ike_sa_t.derive_keys.
  */
 static status_t derive_keys(private_ike_sa_t *this,
@@ -1851,6 +1872,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_other_id = (void (*)(ike_sa_t*,identification_t*)) set_other_id;
 	this->public.get_other_ca = (ca_info_t* (*)(ike_sa_t*)) get_other_ca;
 	this->public.set_other_ca = (void (*)(ike_sa_t*,ca_info_t*)) set_other_ca;
+	this->public.enable_extension = (void(*)(ike_sa_t*, ike_extension_t extension))enable_extension;
+	this->public.supports_extension = (bool(*)(ike_sa_t*, ike_extension_t extension))supports_extension;
 	this->public.retransmit = (status_t (*)(ike_sa_t *, u_int32_t)) retransmit;
 	this->public.delete = (status_t (*)(ike_sa_t*))delete_;
 	this->public.destroy = (void (*)(ike_sa_t*))destroy;
@@ -1887,6 +1910,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_ca = NULL;
+	this->extensions = 0;
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->signer_in = NULL;

@@ -203,6 +203,8 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	
 	if (this->src_seen && this->dst_seen)
 	{
+		this->ike_sa->enable_extension(this->ike_sa, EXT_NATT);
+	
 		if (!this->dst_matched)
 		{
 			this->ike_sa->enable_natt(this->ike_sa, TRUE);
@@ -266,6 +268,7 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 									this->ike_sa->get_other_host(this->ike_sa));
 		if (host)
 		{	/* 2. */
+			host->set_port(host, IKEV2_UDP_PORT);
 			notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
 			message->add_payload(message, (payload_t*)notify);
 			host->destroy(host);
