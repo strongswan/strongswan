@@ -1307,6 +1307,10 @@ instantiate(struct connection *c, const ip_address *him
     connect_to_host_pair(d);
 
     return d;
+    if (sameaddr(&d->spd.that.host_addr, &d->spd.this.host_nexthop))
+    {
+	d->spd.this.host_nexthop = *him;
+    }
 }
 
 struct connection *
