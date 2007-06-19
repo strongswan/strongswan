@@ -874,23 +874,23 @@ static status_t netlink_send(private_kernel_interface_t *this,
 		{
 			if (errno == EINTR)
 			{
-				DBG1(DBG_IKE, "got interrupted");
+				DBG1(DBG_KNL, "got interrupted");
 				/* interrupted, try again */
 				continue;
 			}
-			DBG1(DBG_IKE, "error reading from netlink socket: %s", strerror(errno));
+			DBG1(DBG_KNL, "error reading from netlink socket: %s", strerror(errno));
 			pthread_mutex_unlock(&this->mutex);
 			return FAILED;
 		}
 		if (!NLMSG_OK(msg, len))
 		{
-			DBG1(DBG_IKE, "received corrupted netlink message");
+			DBG1(DBG_KNL, "received corrupted netlink message");
 			pthread_mutex_unlock(&this->mutex);
 			return FAILED;
 		}
 		if (msg->nlmsg_seq != this->seq)
 		{
-			DBG1(DBG_IKE, "received invalid netlink sequence number");
+			DBG1(DBG_KNL, "received invalid netlink sequence number");
 			if (msg->nlmsg_seq < this->seq)
 			{
 				continue;
@@ -981,7 +981,7 @@ static status_t init_address_list(private_kernel_interface_t *this)
 	host_t *address;
 	interface_entry_t *entry;
 	
-	DBG1(DBG_IKE, "listening on interfaces:");
+	DBG1(DBG_KNL, "listening on interfaces:");
 	
 	memset(&request, 0, sizeof(request));
 
@@ -1106,7 +1106,7 @@ static char *get_interface_name(private_kernel_interface_t *this, host_t* ip)
 	host_t *host;
 	char *name = NULL;
 	
-	DBG2(DBG_IKE, "getting interface name for %H", ip);
+	DBG2(DBG_KNL, "getting interface name for %H", ip);
 	
 	iterator = this->interfaces->create_iterator_locked(this->interfaces,	
 														&this->mutex);
@@ -1131,11 +1131,11 @@ static char *get_interface_name(private_kernel_interface_t *this, host_t* ip)
 	
 	if (name)
 	{
-		DBG2(DBG_IKE, "%H is on interface %s", ip, name);
+		DBG2(DBG_KNL, "%H is on interface %s", ip, name);
 	}
 	else
 	{
-		DBG2(DBG_IKE, "%H is not a local address", ip);
+		DBG2(DBG_KNL, "%H is not a local address", ip);
 	}
 	return name;
 }
@@ -1153,7 +1153,7 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
 	int family;
 	bool found = FALSE;
 	
-	DBG2(DBG_IKE, "getting a local address in traffic selector %R", ts);
+	DBG2(DBG_KNL, "getting a local address in traffic selector %R", ts);
 	
 	/* if we have a family which includes localhost, we do not
 	 * search for an IP, we use the default */
@@ -1172,7 +1172,7 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
 	{
 		*ip = host_create_any(family);
 		host->destroy(host);
-		DBG2(DBG_IKE, "using host %H", *ip);
+		DBG2(DBG_KNL, "using host %H", *ip);
 		return SUCCESS;
 	}
 	host->destroy(host);
@@ -1201,10 +1201,10 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
 	
 	if (!found)
 	{
-		DBG1(DBG_IKE, "no local address found in traffic selector %R", ts);
+		DBG1(DBG_KNL, "no local address found in traffic selector %R", ts);
 		return FAILED;
 	}
-	DBG2(DBG_IKE, "using host %H", *ip);
+	DBG2(DBG_KNL, "using host %H", *ip);
 	return SUCCESS;
 }
 
@@ -1218,7 +1218,7 @@ static int get_interface_index(private_kernel_interface_t *this, host_t* ip)
 	host_t *host;
 	int ifindex = 0;
 	
-	DBG2(DBG_IKE, "getting iface for %H", ip);
+	DBG2(DBG_KNL, "getting iface for %H", ip);
 	
 	iterator = this->interfaces->create_iterator_locked(this->interfaces,	
 														&this->mutex);
@@ -1243,7 +1243,7 @@ static int get_interface_index(private_kernel_interface_t *this, host_t* ip)
 
 	if (ifindex == 0)
 	{
-		DBG1(DBG_IKE, "unable to get interface for %H", ip);
+		DBG1(DBG_KNL, "unable to get interface for %H", ip);
 	}
 	return ifindex;
 }
@@ -1429,6 +1429,7 @@ static status_t add_ip(private_kernel_interface_t *this,
 {
 	int targetif;
 	vip_entry_t *listed;
+	interface_entry_t *entry;
 	iterator_t *iterator;
 
 	DBG2(DBG_KNL, "adding virtual IP %H", virtual_ip);
@@ -1464,9 +1465,22 @@ static status_t add_ip(private_kernel_interface_t *this,
 		listed->ip = virtual_ip->clone(virtual_ip);
 		listed->if_index = targetif;
 		listed->refcount = 1;
+		DBG2(DBG_KNL, "virtual IP %H added to iface %d", virtual_ip, targetif);
+		iterator = this->interfaces->create_iterator_locked(this->interfaces,
+															&this->mutex);
 		this->vips->insert_last(this->vips, listed);
-		DBG2(DBG_KNL, "virtual IP %H added to iface %d",
-				 virtual_ip, targetif);
+		/* we add the VIP also to the cached interface list; the netlink
+		 * event comes in asynchronous and may be to late */
+		while (iterator->iterate(iterator, (void**)&entry))
+		{
+			if (entry->ifindex == targetif)
+			{
+				entry->addresses->insert_last(entry->addresses,
+											  virtual_ip->clone(virtual_ip));
+				break;
+			}
+		}
+		iterator->destroy(iterator);
 		return SUCCESS;
 	}
 	
