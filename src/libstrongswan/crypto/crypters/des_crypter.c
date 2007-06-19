@@ -871,14 +871,15 @@ static int des_set_key(des_cblock *key, des_key_schedule *schedule)
 	register unsigned char *in;
 	register DES_LONG *k;
 	register int i;
+	des_cblock odd;
 
 	for (i = 0; i < sizeof(des_cblock); i++)
 	{
-		(*key)[i] = odd_parity[(*key)[i]];
+		odd[i] = odd_parity[(*key)[i]];
 	}
 
 	k=(DES_LONG *)schedule;
-	in=(unsigned char *)key;
+	in=(unsigned char *)&odd;
 
 	c2l(in,c);
 	c2l(in,d);
