@@ -7,7 +7,24 @@ strongswan-4.1.4
   since routing through the IPsec tunnel is handled automatically
   by NETKEY's IPsec policies. As a consequence the left|rightnexthop
   parameter is not required any more.
-  
+
+- The new IKEv1 parameter right|leftallowany parameters helps to handle
+  the case where both peers possess dynamic IP addresses that are
+  usually resolved using DynDNS or a similar service. The configuration
+
+    right=peer.foo.bar
+    rightallowany=yes
+
+  can be used by the initiator to start up a connection to a peer
+  by resolving peer.foo.bar into the currently allocated IP address.
+  Thanks to the rightallowany flag the connection behaves later on
+  as
+
+   right=%any
+
+  so that the peer can rekey the connection as an initiator when his
+  IP address changes.
+
 
 strongswan-4.1.3
 ----------------
