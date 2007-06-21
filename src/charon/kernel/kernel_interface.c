@@ -49,6 +49,7 @@
 #include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/acquire_job.h>
 #include <processing/jobs/callback_job.h>
+#include <processing/jobs/roam_job.h>
 
 /** kernel level protocol identifiers */
 #define KERNEL_ESP 50
@@ -217,37 +218,35 @@ struct policy_entry_t {
 	u_int refcount;
 };
 
-typedef struct vip_entry_t vip_entry_t;
+typedef struct addr_entry_t addr_entry_t;
 
 /**
- * Installed virtual ip
+ * IP address in an inface_entry_t
  */
-struct vip_entry_t {
-	/** Index of the interface the ip is bound to */
-	u_int8_t if_index;
+struct addr_entry_t {
 	
 	/** The ip address */
 	host_t *ip;
 	
-	/** Number of times this IP is used */
+	/** Number of times this IP is used, if virtual */
 	u_int refcount;
 };
 
 /**
- * destroy a vip_entry_t object
+ * destroy a addr_entry_t object
  */
-static void vip_entry_destroy(vip_entry_t *this)
+static void addr_entry_destroy(addr_entry_t *this)
 {
 	this->ip->destroy(this->ip);
 	free(this);
 }
 
-typedef struct interface_entry_t interface_entry_t;
+typedef struct iface_entry_t iface_entry_t;
 
 /**
- * A network interface on this system, containing addresses
+ * A network interface on this system, containing addr_entry_t's
  */
-struct interface_entry_t {
+struct iface_entry_t {
 	
 	/** interface index */
 	int ifindex;
@@ -259,15 +258,15 @@ struct interface_entry_t {
 	u_int flags;
 	
 	/** list of addresses as host_t */
-	linked_list_t *addresses;
+	linked_list_t *addrs;
 };
 
 /**
  * destroy an interface entry
  */
-static void interface_entry_destroy(interface_entry_t *this)
+static void iface_entry_destroy(iface_entry_t *this)
 {
-	this->addresses->destroy_offset(this->addresses, offsetof(host_t, destroy));
+	this->addrs->destroy_function(this->addrs, (void*)addr_entry_destroy);
 	free(this);
 }
 
@@ -288,19 +287,14 @@ struct private_kernel_interface_t {
 	pthread_mutex_t mutex;
 	
 	/**
-	 * List of installed policies (kernel_entry_t)
+	 * List of installed policies (policy_entry_t)
 	 */
 	linked_list_t *policies;
 	
 	/**
-	 * List of installed virtual IPs. (vip_entry_t)
+	 * Cached list of interfaces and its adresses (iface_entry_t)
 	 */
-	linked_list_t *vips;
-	
-	/**
-	 * Cached list of interfaces and its adresses (interface_entry_t)
-	 */
-	linked_list_t *interfaces;
+	linked_list_t *ifaces;
 	
 	/**
 	 * iterator used in hook()
@@ -529,8 +523,9 @@ static void process_link(private_kernel_interface_t *this,
 	struct rtattr *rta = IFLA_RTA(msg);
 	size_t rtasize = IFLA_PAYLOAD (hdr);
 	iterator_t *iterator;
-	interface_entry_t *current, *entry = NULL;
+	iface_entry_t *current, *entry = NULL;
 	char *name = NULL;
+	bool update = FALSE;
 	
 	while(RTA_OK(rta, rtasize))
 	{
@@ -555,8 +550,8 @@ static void process_link(private_kernel_interface_t *this,
 			{	/* ignore loopback interfaces */
 				break;
 			}
-			iterator = this->interfaces->create_iterator_locked(this->interfaces,
-																&this->mutex);
+			iterator = this->ifaces->create_iterator_locked(this->ifaces,
+															&this->mutex);
 			while (iterator->iterate(iterator, (void**)&current))
 			{
 				if (current->ifindex == msg->ifi_index)
@@ -567,11 +562,11 @@ static void process_link(private_kernel_interface_t *this,
 			}
 			if (!entry)
 			{
-				entry = malloc_thing(interface_entry_t);
+				entry = malloc_thing(iface_entry_t);
 				entry->ifindex = msg->ifi_index;
 				entry->flags = 0;
-				entry->addresses = linked_list_create();
-				this->interfaces->insert_last(this->interfaces, entry);
+				entry->addrs = linked_list_create();
+				this->ifaces->insert_last(this->ifaces, entry);
 			}
 			memcpy(entry->ifname, name, IFNAMSIZ);
 			entry->ifname[IFNAMSIZ-1] = '\0';
@@ -579,10 +574,12 @@ static void process_link(private_kernel_interface_t *this,
 			{
 				if (!(entry->flags & IFF_UP) && (msg->ifi_flags & IFF_UP))
 				{
+					update = TRUE;
 					DBG1(DBG_KNL, "interface %s activated", name);
 				}
 				if ((entry->flags & IFF_UP) && !(msg->ifi_flags & IFF_UP))
 				{
+					update = TRUE;
 					DBG1(DBG_KNL, "interface %s deactivated", name);
 				}
 			}
@@ -592,8 +589,8 @@ static void process_link(private_kernel_interface_t *this,
 		}
 		case RTM_DELLINK:
 		{
-			iterator = this->interfaces->create_iterator_locked(this->interfaces,
-																&this->mutex);
+			iterator = this->ifaces->create_iterator_locked(this->ifaces,
+															&this->mutex);
 			while (iterator->iterate(iterator, (void**)&current))
 			{
 				if (current->ifindex == msg->ifi_index)
@@ -608,6 +605,12 @@ static void process_link(private_kernel_interface_t *this,
 			break;
 		}
 	}
+	
+	/* send an update to all IKE_SAs */
+	if (update && event)
+	{
+		charon->processor->queue_job(charon->processor, (job_t*)roam_job_create());
+	}
 }
 
 /**
@@ -620,9 +623,11 @@ static void process_addr(private_kernel_interface_t *this,
 	struct rtattr *rta = IFA_RTA(msg);
 	size_t rtasize = IFA_PAYLOAD (hdr);
 	host_t *host = NULL;
-	iterator_t *iterator;
-	interface_entry_t *entry;
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
 	chunk_t local = chunk_empty, address = chunk_empty;
+	bool update = FALSE, found = FALSE;
 	
 	while(RTA_OK(rta, rtasize))
 	{
@@ -642,7 +647,7 @@ static void process_addr(private_kernel_interface_t *this,
 	
 	/* For PPP interfaces, we need the IFA_LOCAL address,
 	 * IFA_ADDRESS is the peers address. But IFA_LOCAL is
-	 * not included in all cases, so fallback to IFA_ADDRESS. */
+	 * not included in all cases (IPv6?), so fallback to IFA_ADDRESS. */
 	if (local.ptr)
 	{
 		host = host_create_from_chunk(msg->ifa_family, local, 0);
@@ -657,61 +662,58 @@ static void process_addr(private_kernel_interface_t *this,
 		return;
 	}
 	
-	switch (hdr->nlmsg_type)
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		case RTM_NEWADDR:
+		if (iface->ifindex == msg->ifa_index)
 		{
-			iterator = this->interfaces->create_iterator_locked(this->interfaces,
-																&this->mutex);
-			while (iterator->iterate(iterator, (void**)&entry))
+			addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+			while (addrs->iterate(addrs, (void**)&addr))
 			{
-				if (entry->ifindex == msg->ifa_index)
+				if (host->ip_equals(host, addr->ip))
 				{
-					entry->addresses->insert_last(entry->addresses,
-												  host->clone(host));
+					found = TRUE;
+					if (hdr->nlmsg_type == RTM_DELADDR)
+					{
+						addrs->remove(addrs);
+						addr_entry_destroy(addr);
+						DBG1(DBG_KNL, "%H disappeared from %s", host, iface->ifname);
+					}
+				}
+			}
+			addrs->destroy(addrs);
+		
+			if (hdr->nlmsg_type == RTM_NEWADDR)
+			{
+				if (!found)
+				{
+					found = TRUE;
+					addr = malloc_thing(addr_entry_t);
+					addr->ip = host->clone(host);
+					addr->refcount = 1;
+					
+					iface->addrs->insert_last(iface->addrs, addr);
 					if (event)
 					{
-						DBG1(DBG_KNL, "%H appeared on %s", host, entry->ifname);
+						DBG1(DBG_KNL, "%H appeared on %s", host, iface->ifname);
 					}
-					break;
 				}
 			}
-			iterator->destroy(iterator);
-			break;
-		}
-		case RTM_DELADDR:
-		{
-			iterator = this->interfaces->create_iterator_locked(this->interfaces,
-														&this->mutex);
-			while (iterator->iterate(iterator, (void**)&entry))
+			if (found && (iface->flags & IFF_UP))
 			{
-				if (entry->ifindex == msg->ifa_index)
-				{
-					iterator_t *addresses;
-					host_t *current;
-					
-					addresses = entry->addresses->create_iterator(
-													entry->addresses, TRUE);
-					while (addresses->iterate(addresses, (void**)&current))
-					{
-						if (current->equals(current, host))
-						{
-							addresses->remove(addresses);
-							current->destroy(current);
-							DBG1(DBG_KNL, "%H disappeared from %s", 
-								 host, entry->ifname);
-						}
-					}
-					addresses->destroy(addresses);
-				}
+				update = TRUE;
 			}
-			iterator->destroy(iterator);
 			break;
 		}
-		default:
-			break;
 	}
+	ifaces->destroy(ifaces);
 	host->destroy(host);
+	
+	/* send an update to all IKE_SAs */
+	if (update && event)
+	{
+		charon->processor->queue_job(charon->processor, (job_t*)roam_job_create());
+	}
 }
 
 /**
@@ -803,6 +805,11 @@ static job_requeue_t receive_events(private_kernel_interface_t *this)
 				case RTM_NEWLINK:
 				case RTM_DELLINK:
 					process_link(this, hdr, TRUE);
+					break;
+				case RTM_NEWROUTE:
+				case RTM_DELROUTE:
+					charon->processor->queue_job(charon->processor,
+												 (job_t*)roam_job_create());
 					break;
 				default:
 					break;
@@ -977,9 +984,9 @@ static status_t init_address_list(private_kernel_interface_t *this)
 	struct nlmsghdr *out, *current, *in;
 	struct rtgenmsg *msg;
 	size_t len;
-	iterator_t *i_iface, *i_addr;
-	host_t *address;
-	interface_entry_t *entry;
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
 	
 	DBG1(DBG_KNL, "listening on interfaces:");
 	
@@ -1039,31 +1046,39 @@ static status_t init_address_list(private_kernel_interface_t *this)
 	}
 	free(out);
 	
-	i_iface = this->interfaces->create_iterator_locked(this->interfaces,
-													   &this->mutex);
-	while (i_iface->iterate(i_iface, (void**)&entry))
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		if (entry->flags & IFF_UP)
+		if (iface->flags & IFF_UP)
 		{
-			DBG1(DBG_KNL, "  %s", entry->ifname);
-			i_addr = entry->addresses->create_iterator(entry->addresses, TRUE);
-			while (i_addr->iterate(i_addr, (void**)&address))
+			DBG1(DBG_KNL, "  %s", iface->ifname);
+			addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+			while (addrs->iterate(addrs, (void**)&addr))
 			{
-				DBG1(DBG_KNL, "    %H", address);
+				DBG1(DBG_KNL, "    %H", addr->ip);
 			}
-			i_addr->destroy(i_addr);
+			addrs->destroy(addrs);
 		}
 	}
-	i_iface->destroy(i_iface);
-	
+	ifaces->destroy(ifaces);
 	return SUCCESS;
 }
 
 /**
- * iterator hook to return address, not address_entry_t
+ * iterator hook to iterate over addrs
  */
-static hook_result_t hook(private_kernel_interface_t *this,
-						  interface_entry_t *in, host_t **out)
+static hook_result_t addr_hook(private_kernel_interface_t *this,
+							   addr_entry_t *in, host_t **out)
+{
+	*out = in->ip;
+	return HOOK_NEXT;
+}
+								
+/**
+ * iterator hook to iterate over ifaces
+ */
+static hook_result_t iface_hook(private_kernel_interface_t *this,
+								iface_entry_t *in, host_t **out)
 {
 	if (!(in->flags & IFF_UP))
 	{	/* skip interfaces not up */
@@ -1072,7 +1087,9 @@ static hook_result_t hook(private_kernel_interface_t *this,
 
 	if (this->hiter == NULL)
 	{
-		this->hiter = in->addresses->create_iterator(in->addresses, TRUE);
+		this->hiter = in->addrs->create_iterator(in->addrs, TRUE);
+		this->hiter->set_iterator_hook(this->hiter,
+									   (iterator_hook_t*)addr_hook, this);
 	}
 	while (this->hiter->iterate(this->hiter, (void**)out))
 	{
@@ -1090,9 +1107,8 @@ static iterator_t *create_address_iterator(private_kernel_interface_t *this)
 {
 	iterator_t *iterator;
 	
-	iterator = this->interfaces->create_iterator_locked(this->interfaces,
-														&this->mutex);
-	iterator->set_iterator_hook(iterator, (iterator_hook_t*)hook, this);
+	iterator = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	iterator->set_iterator_hook(iterator, (iterator_hook_t*)iface_hook, this);
 	return iterator;
 }
 
@@ -1101,33 +1117,32 @@ static iterator_t *create_address_iterator(private_kernel_interface_t *this)
  */
 static char *get_interface_name(private_kernel_interface_t *this, host_t* ip)
 {
-	iterator_t *iterator, *addresses;
-	interface_entry_t *entry;
-	host_t *host;
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
 	char *name = NULL;
 	
 	DBG2(DBG_KNL, "getting interface name for %H", ip);
 	
-	iterator = this->interfaces->create_iterator_locked(this->interfaces,	
-														&this->mutex);
-	while (iterator->iterate(iterator, (void**)&entry))
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		addresses = entry->addresses->create_iterator(entry->addresses, TRUE);
-		while (addresses->iterate(addresses, (void**)&host))
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
 		{
-			if (ip->ip_equals(ip, host))
+			if (ip->ip_equals(ip, addr->ip))
 			{
-				name = strdup(entry->ifname);
+				name = strdup(iface->ifname);
 				break;
 			}
 		}
-		addresses->destroy(addresses);
+		addrs->destroy(addrs);
 		if (name)
 		{
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	ifaces->destroy(ifaces);
 	
 	if (name)
 	{
@@ -1147,8 +1162,9 @@ static char *get_interface_name(private_kernel_interface_t *this, host_t* ip)
 static status_t get_address_by_ts(private_kernel_interface_t *this,
 								  traffic_selector_t *ts, host_t **ip)
 {
-	iterator_t *iterator, *addresses;
-	interface_entry_t *entry;
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
 	host_t *host;
 	int family;
 	bool found = FALSE;
@@ -1177,27 +1193,26 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
 	}
 	host->destroy(host);
 	
-	iterator = this->interfaces->create_iterator_locked(this->interfaces,	
-														&this->mutex);
-	while (iterator->iterate(iterator, (void**)&entry))
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces,	&this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		addresses = entry->addresses->create_iterator(entry->addresses, TRUE);
-		while (addresses->iterate(addresses, (void**)&host))
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
 		{
-			if (ts->includes(ts, host))
+			if (ts->includes(ts, addr->ip))
 			{
 				found = TRUE;
-				*ip = host->clone(host);
+				*ip = addr->ip->clone(addr->ip);
 				break;
 			}
 		}
-		addresses->destroy(addresses);
+		addrs->destroy(addrs);
 		if (found)
 		{
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	ifaces->destroy(ifaces);
 	
 	if (!found)
 	{
@@ -1213,33 +1228,32 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
  */
 static int get_interface_index(private_kernel_interface_t *this, host_t* ip)
 {
-	iterator_t *iterator, *addresses;
-	interface_entry_t *entry;
-	host_t *host;
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
 	int ifindex = 0;
 	
 	DBG2(DBG_KNL, "getting iface for %H", ip);
 	
-	iterator = this->interfaces->create_iterator_locked(this->interfaces,	
-														&this->mutex);
-	while (iterator->iterate(iterator, (void**)&entry))
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces,	&this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		addresses = entry->addresses->create_iterator(entry->addresses, TRUE);
-		while (addresses->iterate(addresses, (void**)&host))
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
 		{
-			if (ip->ip_equals(ip, host))
+			if (ip->ip_equals(ip, addr->ip))
 			{
-				ifindex = entry->ifindex;
+				ifindex = iface->ifindex;
 				break;
 			}
 		}
-		addresses->destroy(addresses);
+		addrs->destroy(addrs);
 		if (ifindex)
 		{
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	ifaces->destroy(ifaces);
 
 	if (ifindex == 0)
 	{
@@ -1415,7 +1429,7 @@ static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 	}
 	if (source == NULL)
 	{
-		DBG1(DBG_KNL, "no route found to %H", dest);
+		DBG2(DBG_KNL, "no route found to %H", dest);
 	}
 	free(out);
 	return source;
@@ -1427,111 +1441,105 @@ static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 static status_t add_ip(private_kernel_interface_t *this, 
 						host_t *virtual_ip, host_t *iface_ip)
 {
-	int targetif;
-	vip_entry_t *listed;
-	interface_entry_t *entry;
-	iterator_t *iterator;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
+	iterator_t *addrs, *ifaces;
 
 	DBG2(DBG_KNL, "adding virtual IP %H", virtual_ip);
-
-	targetif = get_interface_index(this, iface_ip);
-	if (targetif == 0)
+	
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		DBG1(DBG_KNL, "unable to add virtual IP %H, no iface found for %H",
-			 virtual_ip, iface_ip);
-		return FAILED;
-	}
-
-	/* beware of deadlocks (e.g. send/receive packets while holding the lock) */
-	iterator = this->vips->create_iterator_locked(this->vips, &this->mutex);
-	while (iterator->iterate(iterator, (void**)&listed))
-	{
-		if (listed->if_index == targetif &&
-			virtual_ip->ip_equals(virtual_ip, listed->ip))
+		bool iface_found = FALSE;
+	
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
 		{
-			listed->refcount++;
-			iterator->destroy(iterator);
-			DBG2(DBG_KNL, "virtual IP %H already added to iface %d reusing it",
-				 virtual_ip, targetif);
-			return SUCCESS;
-		}
-	}
-	iterator->destroy(iterator);
-
-	if (manage_ipaddr(this, RTM_NEWADDR, NLM_F_CREATE | NLM_F_EXCL,
-					  targetif, virtual_ip) == SUCCESS)
-	{
-		listed = malloc_thing(vip_entry_t);
-		listed->ip = virtual_ip->clone(virtual_ip);
-		listed->if_index = targetif;
-		listed->refcount = 1;
-		DBG2(DBG_KNL, "virtual IP %H added to iface %d", virtual_ip, targetif);
-		iterator = this->interfaces->create_iterator_locked(this->interfaces,
-															&this->mutex);
-		this->vips->insert_last(this->vips, listed);
-		/* we add the VIP also to the cached interface list; the netlink
-		 * event comes in asynchronous and may be to late */
-		while (iterator->iterate(iterator, (void**)&entry))
-		{
-			if (entry->ifindex == targetif)
+			if (iface_ip->ip_equals(iface_ip, addr->ip))
 			{
-				entry->addresses->insert_last(entry->addresses,
-											  virtual_ip->clone(virtual_ip));
-				break;
+				iface_found = TRUE;
+			}
+			else if (virtual_ip->ip_equals(virtual_ip, addr->ip))
+			{
+				addr->refcount++;
+				DBG2(DBG_KNL, "virtual IP %H already installed on %s",
+					 virtual_ip, iface->ifname);
+				addrs->destroy(addrs);
+				ifaces->destroy(ifaces);
+				return SUCCESS;
 			}
 		}
-		iterator->destroy(iterator);
-		return SUCCESS;
+		addrs->destroy(addrs);
+		
+		if (iface_found)
+		{
+			int ifindex = iface->ifindex;
+			ifaces->destroy(ifaces);
+			if (manage_ipaddr(this, RTM_NEWADDR, NLM_F_CREATE | NLM_F_EXCL,
+							  ifindex, virtual_ip) == SUCCESS)
+			{
+				addr = malloc_thing(addr_entry_t);
+				addr->ip = virtual_ip->clone(virtual_ip);
+				addr->refcount = 1;
+				pthread_mutex_lock(&this->mutex);
+				iface->addrs->insert_last(iface->addrs, addr);
+				pthread_mutex_unlock(&this->mutex);
+				return SUCCESS;
+			}
+			DBG2(DBG_KNL, "adding virtual IP %H failed", virtual_ip);
+			return FAILED;
+			
+		}
+		
 	}
+	ifaces->destroy(ifaces);
 	
-	DBG2(DBG_KNL, "unable to add virtual IP %H to iface %d",
-		 virtual_ip, targetif);
+	DBG2(DBG_KNL, "interface address %H not found, unable to install"
+		 "virtual IP %H", iface_ip, virtual_ip);
 	return FAILED;
 }
 
 /**
  * Implementation of kernel_interface_t.del_ip.
  */
-static status_t del_ip(private_kernel_interface_t *this,
-						host_t *virtual_ip, host_t *iface_ip)
+static status_t del_ip(private_kernel_interface_t *this, host_t *virtual_ip)
 {
-	int targetif;
-	vip_entry_t *listed;
-	iterator_t *iterator;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
+	iterator_t *addrs, *ifaces;
 
 	DBG2(DBG_KNL, "deleting virtual IP %H", virtual_ip);
-
-	targetif = get_interface_index(this, iface_ip);
-	if (targetif == 0)
+	
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		DBG1(DBG_KNL, "unable to delete virtual IP %H, no iface found for %H",
-			 virtual_ip, iface_ip);
-		return FAILED;
-	}
-
-	/* beware of deadlocks (e.g. send/receive packets while holding the lock) */
-	iterator = this->vips->create_iterator_locked(this->vips, &this->mutex);
-	while (iterator->iterate(iterator, (void**)&listed))
-	{
-		if (listed->if_index == targetif &&
-			virtual_ip->ip_equals(virtual_ip, listed->ip))
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
 		{
-			listed->refcount--;
-			if (listed->refcount == 0)
+			if (virtual_ip->ip_equals(virtual_ip, addr->ip))
 			{
-				iterator->remove(iterator);
-				vip_entry_destroy(listed);
-				iterator->destroy(iterator);
-				return manage_ipaddr(this, RTM_DELADDR, 0, targetif, virtual_ip);
+				int ifindex = iface->ifindex;
+				addr->refcount--;
+				if (addr->refcount == 0)
+				{
+					addrs->remove(addrs);
+					addrs->destroy(addrs);
+					ifaces->destroy(ifaces);
+					addr_entry_destroy(addr);
+					return manage_ipaddr(this, RTM_DELADDR, 0,
+										 ifindex, virtual_ip);
+				}
+				DBG2(DBG_KNL, "virtual IP %H used by other SAs, not deleting",
+					 virtual_ip);
+				addrs->destroy(addrs);
+				ifaces->destroy(ifaces);
+				return SUCCESS;
 			}
-			iterator->destroy(iterator);
-			DBG2(DBG_KNL, "virtual IP %H used by other SAs, not deleting",
-		 		 virtual_ip);
-			return SUCCESS;
 		}
+		addrs->destroy(addrs);
 	}
-	iterator->destroy(iterator);
- 
+	ifaces->destroy(ifaces);
+	
 	DBG2(DBG_KNL, "virtual IP %H not cached, unable to delete", virtual_ip);
 	return FAILED;
 }
@@ -1759,10 +1767,10 @@ static status_t add_sa(private_kernel_interface_t *this,
  * Implementation of kernel_interface_t.update_sa.
  */
 static status_t update_sa(private_kernel_interface_t *this,
-						  host_t *src, host_t *dst, 
-						  host_t *new_src, host_t *new_dst, 
-						  host_diff_t src_changes, host_diff_t dst_changes,
-						  u_int32_t spi, protocol_id_t protocol)
+						  host_t *dst, u_int32_t spi,
+						  protocol_id_t protocol,
+						  host_t *new_src, host_t *new_dst,
+						  host_diff_t src_changes, host_diff_t dst_changes)
 {
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *hdr, *out = NULL;
@@ -2277,9 +2285,8 @@ static void destroy(private_kernel_interface_t *this)
 	close(this->socket_xfrm);
 	close(this->socket_rt_events);
 	close(this->socket_rt);
-	this->vips->destroy(this->vips);
 	this->policies->destroy(this->policies);
-	this->interfaces->destroy_function(this->interfaces, (void*)interface_entry_destroy);
+	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
 	free(this);
 }
 
@@ -2305,13 +2312,12 @@ kernel_interface_t *kernel_interface_create()
 	this->public.create_address_iterator = (iterator_t*(*)(kernel_interface_t*))create_address_iterator;
 	this->public.get_source_addr = (host_t*(*)(kernel_interface_t*, host_t *dest))get_source_addr;
 	this->public.add_ip = (status_t(*)(kernel_interface_t*,host_t*,host_t*)) add_ip;
-	this->public.del_ip = (status_t(*)(kernel_interface_t*,host_t*,host_t*)) del_ip;
+	this->public.del_ip = (status_t(*)(kernel_interface_t*,host_t*)) del_ip;
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;
 
 	/* private members */
-	this->vips = linked_list_create();
 	this->policies = linked_list_create();
-	this->interfaces = linked_list_create();
+	this->ifaces = linked_list_create();
 	this->hiter = NULL;
 	this->seq = 200;
 	pthread_mutex_init(&this->mutex,NULL);
@@ -2331,13 +2337,14 @@ kernel_interface_t *kernel_interface_create()
 		charon->kill(charon, "unable to bind RT netlink socket");
 	}
 	
-	/* create and bind RT socket for events (address/interface changes) */
+	/* create and bind RT socket for events (address/interface/route changes) */
 	this->socket_rt_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (this->socket_rt_events <= 0)
 	{
 		charon->kill(charon, "unable to create RT event socket");
 	}
-	addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_LINK;
+	addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | 
+					 RTMGRP_IPV4_ROUTE | RTMGRP_IPV4_ROUTE | RTMGRP_LINK;
 	if (bind(this->socket_rt_events, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		charon->kill(charon, "unable to bind RT event socket");

@@ -297,7 +297,7 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 					this->mode = MODE_TUNNEL;
 					DBG1(DBG_IKE, "not using tranport mode, not host-to-host");
 				}
-				else if (this->ike_sa->is_natt_enabled(this->ike_sa))
+				else if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
 				{
 					this->mode = MODE_TUNNEL;
 					DBG1(DBG_IKE, "not using tranport mode, connection NATed");
@@ -545,11 +545,10 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 												  this->dh_group == MODP_NONE);
 	this->mode = this->config->get_mode(this->config);
 	
-	this->child_sa = child_sa_create(me, other,
-									 this->ike_sa->get_my_id(this->ike_sa),
-									 this->ike_sa->get_other_id(this->ike_sa),
-									 this->config, this->reqid,
-									 this->ike_sa->is_natt_enabled(this->ike_sa));
+	this->child_sa = child_sa_create(
+			me, other, this->ike_sa->get_my_id(this->ike_sa), 
+			this->ike_sa->get_other_id(this->ike_sa), this->config, this->reqid,
+			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
 	
 	if (this->child_sa->alloc(this->child_sa, this->proposals) != SUCCESS)
 	{
@@ -660,12 +659,12 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 		return SUCCESS;
 	}
 	
-	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
-									 this->ike_sa->get_other_host(this->ike_sa),
-									 this->ike_sa->get_my_id(this->ike_sa),
-									 this->ike_sa->get_other_id(this->ike_sa),
-									 this->config, this->reqid,
-									 this->ike_sa->is_natt_enabled(this->ike_sa));
+	this->child_sa = child_sa_create(
+			this->ike_sa->get_my_host(this->ike_sa),
+			this->ike_sa->get_other_host(this->ike_sa),
+			this->ike_sa->get_my_id(this->ike_sa),
+			this->ike_sa->get_other_id(this->ike_sa), this->config, this->reqid,
+			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
 	
 	switch (select_and_install(this, no_dh))
 	{

@@ -61,7 +61,7 @@ static status_t return_success(private_ike_dpd_t *this, message_t *message)
  */
 static task_type_t get_type(private_ike_dpd_t *this)
 {
-	return IKE_DEADPEER;
+	return IKE_DPD;
 }
 
 /**

@@ -325,13 +325,11 @@ struct kernel_interface_t {
 	 *
 	 * @param this			calling object
 	 * @param virtual_ip	virtual ip address to assign
-	 * @param iface_ip		IP of an interface to remove virtual IP from
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
 	 */
-	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip,
-						host_t *iface_ip);
+	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip);
 	
 	/**
 	 * @brief Destroys a kernel_interface object.

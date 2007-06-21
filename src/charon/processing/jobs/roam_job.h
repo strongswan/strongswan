@@ -1,11 +1,11 @@
 /**
- * @file send_dpd_job.h
+ * @file roam_job.h
  * 
- * @brief Interface of send_dpd_job_t.
+ * @brief Interface of roam_job_t.
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -19,28 +19,28 @@
  * for more details.
  */
 
-#ifndef SEND_DPD_JOB_H_
-#define SEND_DPD_JOB_H_
+#ifndef ROAM_JOB_H_
+#define ROAM_JOB_H_
 
-typedef struct send_dpd_job_t send_dpd_job_t;
+typedef struct roam_job_t roam_job_t;
 
 #include <library.h>
-#include <processing/jobs/job.h>
 #include <sa/ike_sa_id.h>
+#include <processing/jobs/job.h>
 
 /**
- * @brief Class representing a SEND_DPD Job.
+ * @brief A job to inform IKE_SAs about changed local address setup.
  * 
- * Job to periodically send a Dead Peer Detection (DPD) request,
- * ie. an IKE request with no payloads other than the encrypted payload
- * required by the syntax.
+ * If a local address appears or disappears, the kernel fires this job to
+ * update all IKE_SAs.
  * 
  * @b Constructors:
- * - send_dpd_job_create()
+ * - roam_job_create()
  * 
  * @ingroup jobs
  */
-struct send_dpd_job_t {
+struct roam_job_t {
+
 	/**
 	 * implements job_t interface
 	 */
@@ -48,13 +48,13 @@ struct send_dpd_job_t {
 };
 
 /**
- * @brief Creates a job of type SEND_DPD.
+ * @brief Creates a job to inform IKE_SAs about an updated address list.
  * 
- * @param ike_sa_id		identification of the ike_sa as ike_sa_id_t object (gets cloned)
  * @return				initiate_ike_sa_job_t object
  * 
  * @ingroup jobs
  */
-send_dpd_job_t *send_dpd_job_create(ike_sa_id_t *ike_sa_id);
+roam_job_t *roam_job_create();
 
-#endif /*SEND_DPD_JOB_H_*/
+#endif /*ROAM_JOB_H_*/
+

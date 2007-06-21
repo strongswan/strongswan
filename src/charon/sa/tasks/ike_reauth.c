@@ -84,6 +84,8 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	new->set_peer_cfg(new, this->ike_sa->get_peer_cfg(this->ike_sa));
 	host = this->ike_sa->get_other_host(this->ike_sa);
 	new->set_other_host(new, host->clone(host));
+	host = this->ike_sa->get_my_host(this->ike_sa);
+	new->set_my_host(new, host->clone(host));
 	/* if we already have a virtual IP, we reuse it */
 	host = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
 	if (host)

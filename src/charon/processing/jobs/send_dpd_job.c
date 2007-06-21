@@ -88,9 +88,7 @@ send_dpd_job_t *send_dpd_job_create(ike_sa_id_t *ike_sa_id)
 	/* interface functions */
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	
-	/* public functions */
-	this->public.destroy = (void (*)(send_dpd_job_t *)) destroy;
+	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 	
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);

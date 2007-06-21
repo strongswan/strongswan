@@ -27,6 +27,7 @@
 #include <daemon.h>
 #include <sa/tasks/ike_init.h>
 #include <sa/tasks/ike_natd.h>
+#include <sa/tasks/ike_mobike.h>
 #include <sa/tasks/ike_auth.h>
 #include <sa/tasks/ike_cert.h>
 #include <sa/tasks/ike_rekey.h>
@@ -130,6 +131,11 @@ struct private_task_manager_t {
 	 * List of tasks initiated by peer
 	 */
 	linked_list_t *passive_tasks;
+	
+	/**
+	 * the task manager has been reset 
+	 */
+	bool reset;
 };
 
 /**
@@ -140,7 +146,7 @@ static void flush(private_task_manager_t *this)
 	task_t *task;
 	
 	this->queued_tasks->destroy_offset(this->queued_tasks, 
-									   offsetof(task_t, destroy));
+										offsetof(task_t, destroy));
 	this->passive_tasks->destroy_offset(this->passive_tasks,
 										offsetof(task_t, destroy));
 	
@@ -274,6 +280,7 @@ static status_t build_request(private_task_manager_t *this)
 					activate_task(this, IKE_AUTHENTICATE);
 					activate_task(this, IKE_CONFIG);
 					activate_task(this, CHILD_CREATE);
+					activate_task(this, IKE_MOBIKE);
 				}
 				break;
 			case IKE_ESTABLISHED:
@@ -307,7 +314,7 @@ static status_t build_request(private_task_manager_t *this)
 					exchange = INFORMATIONAL;
 					break;
 				}
-				if (activate_task(this, IKE_DEADPEER))
+				if (activate_task(this, IKE_DPD))
 				{
 					exchange = INFORMATIONAL;
 					break;
@@ -420,6 +427,8 @@ static status_t process_response(private_task_manager_t *this,
 		return DESTROY_ME;
 	}
 
+	/* catch if we get resetted while processing */
+	this->reset = FALSE;
 	iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
 	while (iterator->iterate(iterator, (void*)&task))
 	{
@@ -439,6 +448,12 @@ static status_t process_response(private_task_manager_t *this,
 	            iterator->destroy(iterator);
 	            return DESTROY_ME;
 	    }
+	    if (this->reset)
+	    {	/* start all over again if we were reset */
+	    	this->reset = FALSE;
+	    	iterator->destroy(iterator);
+			return build_request(this);
+		}	
 	}
 	iterator->destroy(iterator);
 	
@@ -596,6 +611,8 @@ static status_t process_request(private_task_manager_t *this,
 			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)child_create_create(this->ike_sa, NULL);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
+			task = (task_t*)ike_mobike_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			break;
 		}
@@ -812,7 +829,7 @@ static void reset(private_task_manager_t *this)
 	this->responding.packet = NULL;
 	this->initiating.packet = NULL;
 	this->responding.mid = 0;
-	this->initiating.mid = -1;
+	this->initiating.mid = 0;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	
 	/* reset active tasks */
@@ -822,6 +839,8 @@ static void reset(private_task_manager_t *this)
 		task->migrate(task, this->ike_sa);
 		this->queued_tasks->insert_first(this->queued_tasks, task);
 	}
+	
+	this->reset = TRUE;
 }
 
 /**
@@ -865,6 +884,7 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	this->queued_tasks = linked_list_create();
 	this->active_tasks = linked_list_create();
 	this->passive_tasks = linked_list_create();
+	this->reset = FALSE;
 
 	return &this->public;
 }

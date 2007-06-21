@@ -40,14 +40,14 @@ enum task_type_t {
 	IKE_INIT,
 	/** detect NAT situation */
 	IKE_NATD,
+	/** handle MOBIKE stuff */
+	IKE_MOBIKE,
 	/** authenticate the initiated IKE_SA */
 	IKE_AUTHENTICATE,
 	/** exchange certificates and requests */
 	IKE_CERT,
 	/** Configuration payloads, virtual IP and such */
 	IKE_CONFIG,
-	/** DPD detection */
-	IKE_DEADPEER,
 	/** rekey an IKE_SA */
 	IKE_REKEY,
 	/** reestablish a complete IKE_SA */

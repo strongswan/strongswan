@@ -189,6 +189,8 @@ encoding_rule_t notify_payload_encodings[] = {
  */
 static status_t verify(private_notify_payload_t *this)
 {
+	bool bad_length = FALSE;
+
 	switch (this->protocol_id)
 	{
 		case PROTO_NONE:
@@ -205,30 +207,9 @@ static status_t verify(private_notify_payload_t *this)
 	{
 		case INVALID_KE_PAYLOAD:
 		{
-			/* check notification data */
-			diffie_hellman_group_t dh_group;
 			if (this->notification_data.len != 2)
 			{
-				DBG1(DBG_ENC, "invalid notify data length for %N (%d)",
-					 notify_type_names, this->notify_type,
-					 this->notification_data.len);
-				return FAILED;
-			}
-			dh_group = ntohs(*((u_int16_t*)this->notification_data.ptr));
-			switch (dh_group)
-			{
-				case MODP_768_BIT:
-				case MODP_1024_BIT:
-				case MODP_1536_BIT:
-				case MODP_2048_BIT:
-				case MODP_3072_BIT:
-				case MODP_4096_BIT:
-				case MODP_6144_BIT:
-				case MODP_8192_BIT:
-					break;
-				default:
-					DBG1(DBG_ENC, "Bad DH group (%d)", dh_group);
-					return FAILED;
+				bad_length = TRUE;
 			}
 			break;
 		}
@@ -237,9 +218,7 @@ static status_t verify(private_notify_payload_t *this)
 		{
 			if (this->notification_data.len != HASH_SIZE_SHA1)
 			{
-				DBG1(DBG_ENC, "invalid %N notify length",
-					 notify_type_names, this->notify_type);
-				return FAILED;
+				bad_length = TRUE;
 			}
 			break;
 		}
@@ -249,15 +228,36 @@ static status_t verify(private_notify_payload_t *this)
 		{
 			if (this->notification_data.len != 0)
 			{
-				DBG1(DBG_ENC, "invalid %N notify",
-					 notify_type_names, this->notify_type);
-				return FAILED;
+				bad_length = TRUE;
+			}
+			break;
+		}
+		case ADDITIONAL_IP4_ADDRESS:
+		{
+			if (this->notification_data.len != 4)
+			{
+				bad_length = TRUE;
+			}
+			break;
+		}
+		case ADDITIONAL_IP6_ADDRESS:
+		{
+			if (this->notification_data.len != 16)
+			{
+				bad_length = TRUE;
 			}
 			break;
 		}
 		default:
 			/* TODO: verify */
 			break;
+	}
+	if (bad_length)
+	{
+		DBG1(DBG_ENC, "invalid notify data length for %N (%d)",
+			 notify_type_names, this->notify_type,
+			 this->notification_data.len);
+		return FAILED;
 	}
 	return SUCCESS;
 }

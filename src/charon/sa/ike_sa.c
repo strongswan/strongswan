@@ -48,6 +48,7 @@
 #include <sa/task_manager.h>
 #include <sa/tasks/ike_init.h>
 #include <sa/tasks/ike_natd.h>
+#include <sa/tasks/ike_mobike.h>
 #include <sa/tasks/ike_auth.h>
 #include <sa/tasks/ike_config.h>
 #include <sa/tasks/ike_cert.h>
@@ -148,6 +149,11 @@ struct private_ike_sa_t {
 	 * set of extensions the peer supports
 	 */
 	ike_extension_t extensions;
+	
+	/**
+	 * set of condition flags currently enabled for this IKE_SA
+	 */
+	ike_condition_t conditions;
 
 	/**
 	 * Linked List containing the child sa's of the current IKE_SA.
@@ -195,16 +201,6 @@ struct private_ike_sa_t {
 	chunk_t skp_verify;
 	
 	/**
-	 * NAT status of local host.
-	 */
-	bool nat_here;
-	
-	/**
-	 * NAT status of remote host.
-	 */
-	bool nat_there;
-	
-	/**
 	 * Virtual IP on local host, if any
 	 */
 	host_t *my_virtual_ip;
@@ -218,6 +214,11 @@ struct private_ike_sa_t {
 	 * List of DNS servers installed by us
 	 */
 	linked_list_t *dns_servers;
+	
+	/**
+	 * list of peers additional addresses, transmitted via MOBIKE
+	 */
+	linked_list_t *additional_addresses;
 
 	/**
 	 * Timestamps for this IKE_SA
@@ -605,7 +606,7 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 		this->my_host = me->clone(me);
 	}
 	
-	if (!this->nat_here)
+	if (!(this->conditions & COND_NAT_THERE))
 	{
 		/* update without restrictions if we are not NATted */
 		if (other_diff)
@@ -806,6 +807,8 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_mobike_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
 	}
 	
 	task = (task_t*)child_create_create(&this->public, child_cfg);
@@ -865,6 +868,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_mobike_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 	}
 	
@@ -1092,6 +1097,8 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 					task = (task_t*)child_create_create(&new->public, child_cfg);
 					new->task_manager->queue_task(new->task_manager, task);
 				}
+				task = (task_t*)ike_mobike_create(&new->public, TRUE);
+				new->task_manager->queue_task(new->task_manager, task);
 				new->task_manager->initiate(new->task_manager);
 			}
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, &new->public);
@@ -1205,8 +1212,7 @@ static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
 		{
 			DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
 			charon->kernel_interface->del_ip(charon->kernel_interface,
-											 this->my_virtual_ip,
-											 this->my_host);
+											 this->my_virtual_ip);
 			this->my_virtual_ip->destroy(this->my_virtual_ip);
 		}
 		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
@@ -1255,7 +1261,77 @@ static void enable_extension(private_ike_sa_t *this, ike_extension_t extension)
  */
 static bool supports_extension(private_ike_sa_t *this, ike_extension_t extension)
 {
-	return this->extensions & extension;
+	return (this->extensions & extension) != FALSE;
+}
+
+/**
+ * Implementation of ike_sa_t.has_condition.
+ */
+static bool has_condition(private_ike_sa_t *this, ike_condition_t condition)
+{
+	return (this->conditions & condition) != FALSE;
+}
+
+/**
+ * Implementation of ike_sa_t.enable_condition.
+ */
+static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
+						  bool enable)
+{
+	if (has_condition(this, condition) != enable)
+	{
+		if (enable)
+		{
+			switch (condition)
+			{
+				case COND_STALE:
+					DBG1(DBG_IKE, "no route to %H, setting IKE_SA to stale",
+						 this->other_host);
+					break;
+				case COND_NAT_HERE:
+					DBG1(DBG_IKE, "local host is behind NAT, sending keep alives");
+					this->conditions |= COND_NAT_ANY;
+					send_keepalive(this);
+					break;
+				case COND_NAT_THERE:
+					DBG1(DBG_IKE, "remote host is behind NAT");
+					this->conditions |= COND_NAT_ANY;
+					break;
+				default:
+					break;
+			}
+			this->conditions |= condition;
+		}
+		else
+		{
+			switch (condition)
+			{
+				case COND_STALE:
+					DBG1(DBG_IKE, "new route to %H found", this->other_host);
+					break;
+				default:
+					break;
+			}
+			this->conditions &= ~condition;
+		}
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.add_additional_address.
+ */
+static void add_additional_address(private_ike_sa_t *this, host_t *host)
+{
+	this->additional_addresses->insert_last(this->additional_addresses, host);
+}
+	
+/**
+ * Implementation of ike_sa_t.create_additional_address_iterator.
+ */
+static iterator_t* create_additional_address_iterator(private_ike_sa_t *this)
+{
+	return this->additional_addresses->create_iterator(
+											this->additional_addresses, TRUE);
 }
 
 /**
@@ -1588,6 +1664,84 @@ static status_t reestablish(private_ike_sa_t *this)
 	
 	return this->task_manager->initiate(this->task_manager);
 }
+	
+/**
+ * Implementation of ike_sa_t.roam.
+ */
+static status_t roam(private_ike_sa_t *this)
+{
+	iterator_t *iterator;
+	host_t *me, *other;
+	ike_mobike_t *mobike;
+	
+	/* only initiator handles address updated actively */
+	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
+	{
+		return SUCCESS;
+	}
+	
+	me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+												   this->other_host);
+	if (me)
+	{
+		set_condition(this, COND_STALE, FALSE);
+		/* attachment still the same? */
+		if (me->ip_equals(me, this->my_host))
+		{
+			DBG2(DBG_IKE, "%H still reached through %H, no update needed",
+				 this->other_host, me);
+			me->destroy(me);
+			return SUCCESS;
+		}
+		me->set_port(me, this->my_host->get_port(this->my_host));
+		
+#ifndef MOBIKE
+		set_my_host(this, me);
+		return reestablish(this);
+#endif	
+		/* our attachement changed, update if we have mobike */
+		if (this->extensions & EXT_MOBIKE)
+		{
+			mobike = ike_mobike_create(&this->public, TRUE);
+			mobike->roam(mobike, me, NULL);
+			this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
+			return this->task_manager->initiate(this->task_manager);
+		}
+		/* reestablish if not */
+		set_my_host(this, me);
+		return reestablish(this);
+	}
+	
+	/* there is nothing we can do without mobike */
+	if (!(this->extensions & EXT_MOBIKE))
+	{
+		set_condition(this, COND_STALE, TRUE);
+		return FAILED;
+	}
+#ifndef MOBIKE
+	set_condition(this, COND_STALE, TRUE);
+	return FAILED;
+#endif	
+
+	/* we are unable to reach the peer. Try an alternative address */
+	iterator = create_additional_address_iterator(this);
+	while (iterator->iterate(iterator, (void**)&other))
+	{
+		me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+													   other);
+		if (me)
+		{
+			/* good, we have a new route. Use MOBIKE to update */
+			iterator->destroy(iterator);
+			mobike = ike_mobike_create(&this->public, TRUE);
+			mobike->roam(mobike, me, other);
+			this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
+			return this->task_manager->initiate(this->task_manager);
+		}
+	}
+	iterator->destroy(iterator);
+	return SUCCESS;
+}
 
 /**
  * Implementation of ike_sa_t.inherit.
@@ -1638,32 +1792,6 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	
 	/* we have to initate here, there may be new tasks to handle */
 	return this->task_manager->initiate(this->task_manager);
-}
-
-/**
- * Implementation of ike_sa_t.is_natt_enabled.
- */
-static bool is_natt_enabled(private_ike_sa_t *this)
-{
-	return this->nat_here || this->nat_there;
-}
-
-/**
- * Implementation of ike_sa_t.enable_natt.
- */
-static void enable_natt(private_ike_sa_t *this, bool local)
-{
-	if (local)
-	{
-		DBG1(DBG_IKE, "local host is behind NAT, scheduling keep alives");
-		this->nat_here = TRUE;
-		send_keepalive(this);
-	}
-	else
-	{
-		DBG1(DBG_IKE, "remote host is behind NAT");
-		this->nat_there = TRUE;
-	}
 }
 
 /**
@@ -1818,13 +1946,16 @@ static void destroy(private_ike_sa_t *this)
 	if (this->my_virtual_ip)
 	{
 		charon->kernel_interface->del_ip(charon->kernel_interface,
-										 this->my_virtual_ip, this->my_host);
+										 this->my_virtual_ip);
 		this->my_virtual_ip->destroy(this->my_virtual_ip);
 	}
 	DESTROY_IF(this->other_virtual_ip);
 	
 	remove_dns_servers(this);
-	this->dns_servers->destroy_offset(this->dns_servers, offsetof(host_t, destroy));
+	this->dns_servers->destroy_offset(this->dns_servers,
+													offsetof(host_t, destroy));
+	this->additional_addresses->destroy_offset(this->additional_addresses,
+													offsetof(host_t, destroy));
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
@@ -1874,6 +2005,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_other_ca = (void (*)(ike_sa_t*,ca_info_t*)) set_other_ca;
 	this->public.enable_extension = (void(*)(ike_sa_t*, ike_extension_t extension))enable_extension;
 	this->public.supports_extension = (bool(*)(ike_sa_t*, ike_extension_t extension))supports_extension;
+	this->public.set_condition = (void (*)(ike_sa_t*, ike_condition_t,bool)) set_condition;
+	this->public.has_condition = (bool (*)(ike_sa_t*,ike_condition_t)) has_condition;
+	this->public.create_additional_address_iterator = (iterator_t*(*)(ike_sa_t*))create_additional_address_iterator;
+	this->public.add_additional_address = (void(*)(ike_sa_t*, host_t *host))add_additional_address;
 	this->public.retransmit = (status_t (*)(ike_sa_t *, u_int32_t)) retransmit;
 	this->public.delete = (status_t (*)(ike_sa_t*))delete_;
 	this->public.destroy = (void (*)(ike_sa_t*))destroy;
@@ -1890,10 +2025,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.rekey_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t)) rekey_child_sa;
 	this->public.delete_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t)) delete_child_sa;
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
-	this->public.enable_natt = (void (*)(ike_sa_t*, bool)) enable_natt;
-	this->public.is_natt_enabled = (bool (*)(ike_sa_t*)) is_natt_enabled;
 	this->public.rekey = (status_t (*)(ike_sa_t*))rekey;
 	this->public.reestablish = (status_t (*)(ike_sa_t*))reestablish;
+	this->public.roam = (status_t(*)(ike_sa_t*))roam;
 	this->public.inherit = (status_t (*)(ike_sa_t*,ike_sa_t*))inherit;
 	this->public.generate_message = (status_t (*)(ike_sa_t*,message_t*,packet_t**))generate_message;
 	this->public.reset = (void (*)(ike_sa_t*))reset;
@@ -1911,6 +2045,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_ca = NULL;
 	this->extensions = 0;
+	this->conditions = 0;
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->signer_in = NULL;
@@ -1919,8 +2054,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->skp_verify = chunk_empty;
 	this->skp_build = chunk_empty;
  	this->child_prf = NULL;
-	this->nat_here = FALSE;
-	this->nat_there = FALSE;
 	this->state = IKE_CREATED;
 	this->time.inbound = this->time.outbound = time(NULL);
 	this->time.established = 0;
@@ -1933,6 +2066,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->my_virtual_ip = NULL;
 	this->other_virtual_ip = NULL;
 	this->dns_servers = linked_list_create();
+	this->additional_addresses = linked_list_create();
 	this->keyingtry = 0;
 	
 	return &this->public;

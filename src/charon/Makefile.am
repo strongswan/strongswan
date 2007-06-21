@@ -59,6 +59,7 @@ processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \
 processing/jobs/retransmit_job.c processing/jobs/retransmit_job.h \
 processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
+processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/scheduler.c processing/scheduler.h \
 processing/processor.c processing/processor.h  \
 sa/authenticators/authenticator.c sa/authenticators/authenticator.h \
@@ -81,6 +82,7 @@ sa/tasks/ike_delete.c sa/tasks/ike_delete.h \
 sa/tasks/ike_dpd.c sa/tasks/ike_dpd.h \
 sa/tasks/ike_init.c sa/tasks/ike_init.h \
 sa/tasks/ike_natd.c sa/tasks/ike_natd.h \
+sa/tasks/ike_mobike.c sa/tasks/ike_mobike.h \
 sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/task.c sa/tasks/task.h

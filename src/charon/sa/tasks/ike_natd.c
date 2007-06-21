@@ -207,11 +207,11 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	
 		if (!this->dst_matched)
 		{
-			this->ike_sa->enable_natt(this->ike_sa, TRUE);
+			this->ike_sa->set_condition(this->ike_sa, COND_NAT_HERE, TRUE);
 		}
 		if (!this->src_matched)
 		{
-			this->ike_sa->enable_natt(this->ike_sa, FALSE);
+			this->ike_sa->set_condition(this->ike_sa, COND_NAT_THERE, TRUE);
 		}
 	}
 }
@@ -223,7 +223,7 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 {
 	process_payloads(this, message);
 
-	if (this->ike_sa->is_natt_enabled(this->ike_sa))
+	if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
 	{
 		host_t *me, *other;
 	
