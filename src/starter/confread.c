@@ -183,12 +183,30 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		}
 		else
 		{
+			bool fallback_to_any = FALSE;
+
+			if (value[0] == '%')
+			{
+				fallback_to_any = TRUE;
+				end->allow_any = TRUE;
+				value++;
+			}
 			conn->addr_family = ip_version(value);
 			ugh = ttoaddr(value, 0, conn->addr_family, &end->addr);
 			if (ugh != NULL)
 			{
 				plog("# bad addr: %s=%s [%s]", name, value, ugh);
-				goto err;
+				if (fallback_to_any)
+				{
+					plog("# fallback to %s=%%any due to '%%' prefix");
+					anyaddr(conn->addr_family, &end->addr);
+					end->allow_any = FALSE;
+					cfg->non_fatal_err++;
+				}
+				else
+				{
+					goto err;
+				}
 			}
 		}
 		break;
