@@ -28,12 +28,6 @@ typedef struct {
     ip_address nexthop;
 } defaultroute_t;
 
-extern void starter_ifaces_init (void);
-extern int starter_iface_find(char *iface, int af, ip_address *dst
-    , ip_address *nh);
-extern int starter_ifaces_load (char **ifaces, unsigned int omtu, bool nat_t
-    , defaultroute_t *defaultroute);
-extern void starter_ifaces_clear (void);
 extern void get_defaultroute(defaultroute_t *defaultroute);
 
 
