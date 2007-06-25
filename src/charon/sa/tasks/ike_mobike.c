@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include <daemon.h>
+#include <sa/tasks/ike_natd.h>
 #include <encoding/payloads/notify_payload.h>
 
 
@@ -59,6 +60,16 @@ struct private_ike_mobike_t {
 	 * remote host to roam to
 	 */
 	host_t *other;
+	
+	/**
+	 * cookie2 value to verify new addresses
+	 */
+	chunk_t cookie2;
+	
+	/**
+	 * NAT discovery reusing the IKE_NATD task
+	 */
+	ike_natd_t *natd;
 };
 
 /**
@@ -119,6 +130,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 				if (first)
 				{	/* an ADDITIONAL_*_ADDRESS means replace, so flush once */
 					flush_additional_addresses(this);
+					first = FALSE;
 				}
 				data = notify->get_notification_data(notify);
 				host = host_create_from_chunk(family, data, 0);
@@ -185,9 +197,25 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		message->get_payload(message, SECURITY_ASSOCIATION))
-	{		
+	{
 		message->add_notify(message, FALSE, MOBIKE_SUPPORTED, chunk_empty);
 		build_address_list(this, message);
+	}
+	else if (this->me || this->other)
+	{	/* address change */
+		message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES, chunk_empty);
+		build_address_list(this, message);
+		/* TODO: NAT discovery */
+		
+		/* set new addresses */
+		if (this->me)
+		{
+			this->ike_sa->set_my_host(this->ike_sa, this->me->clone(this->me));
+		}
+		if (this->other)
+		{
+			this->ike_sa->set_other_host(this->ike_sa, this->other->clone(this->other));
+		}
 	}
 	
 	return NEED_MORE;
@@ -197,8 +225,13 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
  * Implementation of task_t.process for responder
  */
 static status_t process_r(private_ike_mobike_t *this, message_t *message)
-{	
-	process_payloads(this, message);
+{
+	if ((message->get_exchange_type(message) == IKE_AUTH &&
+		 message->get_payload(message, SECURITY_ASSOCIATION)) ||
+		message->get_exchange_type(message) == INFORMATIONAL)
+	{
+		process_payloads(this, message);
+	}
 	
 	return NEED_MORE;
 }
@@ -259,9 +292,14 @@ static void migrate(private_ike_mobike_t *this, ike_sa_t *ike_sa)
 {
 	DESTROY_IF(this->me);
 	DESTROY_IF(this->other);
+	chunk_free(&this->cookie2);
 	this->ike_sa = ike_sa;
 	this->me = NULL;
 	this->other = NULL;
+	if (this->natd)
+	{
+		this->natd->task.migrate(&this->natd->task, ike_sa);
+	}
 }
 
 /**
@@ -271,6 +309,11 @@ static void destroy(private_ike_mobike_t *this)
 {
 	DESTROY_IF(this->me);
 	DESTROY_IF(this->other);
+	chunk_free(&this->cookie2);
+	if (this->natd)
+	{
+		this->natd->task.destroy(&this->natd->task);
+	}
 	free(this);
 }
 
@@ -301,6 +344,8 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 	this->initiator = initiator;
 	this->me = NULL;
 	this->other = NULL;
+	this->cookie2 = chunk_empty;
+	this->natd = NULL;
 	
 	return &this->public;
 }

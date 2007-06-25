@@ -228,6 +228,9 @@ struct addr_entry_t {
 	/** The ip address */
 	host_t *ip;
 	
+	/** virtual IP managed by us */
+	bool virtual;
+	
 	/** Number of times this IP is used, if virtual */
 	u_int refcount;
 };
@@ -690,6 +693,7 @@ static void process_addr(private_kernel_interface_t *this,
 					found = TRUE;
 					addr = malloc_thing(addr_entry_t);
 					addr->ip = host->clone(host);
+					addr->virtual = FALSE;
 					addr->refcount = 1;
 					
 					iface->addrs->insert_last(iface->addrs, addr);
@@ -1070,6 +1074,10 @@ static status_t init_address_list(private_kernel_interface_t *this)
 static hook_result_t addr_hook(private_kernel_interface_t *this,
 							   addr_entry_t *in, host_t **out)
 {
+	if (in->virtual)
+	{	/* skip virtual interfaces added by us */
+		return HOOK_SKIP;
+	}
 	*out = in->ip;
 	return HOOK_NEXT;
 }
@@ -1106,6 +1114,11 @@ static hook_result_t iface_hook(private_kernel_interface_t *this,
 static iterator_t *create_address_iterator(private_kernel_interface_t *this)
 {
 	iterator_t *iterator;
+	
+	/* This iterator is not only hooked, is is double-hooked. As we have stored
+	 * our addresses in iface_entry->addr_entry->ip, we need to iterate the
+	 * entries in each interface we iterate. This does the iface_hook. The
+	 * addr_hook returns the ip instead of the addr_entry. */
 	
 	iterator = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
 	iterator->set_iterator_hook(iterator, (iterator_hook_t*)iface_hook, this);
@@ -1368,6 +1381,8 @@ static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 	size_t len;
 	host_t *source = NULL;
 	
+	DBG2(DBG_KNL, "getting source address to reach %H", dest);
+	
 	memset(&request, 0, sizeof(request));
 
 	hdr = (struct nlmsghdr*)request;
@@ -1378,10 +1393,10 @@ static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 	msg = (struct rtmsg*)NLMSG_DATA(hdr);
 	msg->rtm_family = dest->get_family(dest);
 	msg->rtm_dst_len = msg->rtm_family == AF_INET ? 32 : 128;
-	msg->rtm_table = RT_TABLE_MAIN;
-	msg->rtm_protocol = RTPROT_STATIC;
+	msg->rtm_table = RT_TABLE_UNSPEC;
+	msg->rtm_protocol = RTPROT_UNSPEC;
 	msg->rtm_type = RTN_UNICAST;
-	msg->rtm_scope = RT_SCOPE_UNIVERSE;
+	msg->rtm_scope = RT_SCOPE_HOST;
 	
 	chunk = dest->get_address(dest);
 	add_attribute(hdr, RTA_DST, chunk, sizeof(request));
@@ -1427,12 +1442,13 @@ static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 		}
 		break;
 	}
-	if (source == NULL)
-	{
-		DBG2(DBG_KNL, "no route found to %H", dest);
-	}
 	free(out);
-	return source;
+	if (source)
+	{
+		return source;
+	}
+	DBG2(DBG_KNL, "no route found to %H", dest);
+	return NULL;
 }
 
 /**
@@ -1481,6 +1497,7 @@ static status_t add_ip(private_kernel_interface_t *this,
 				addr = malloc_thing(addr_entry_t);
 				addr->ip = virtual_ip->clone(virtual_ip);
 				addr->refcount = 1;
+				addr->virtual = TRUE;
 				pthread_mutex_lock(&this->mutex);
 				iface->addrs->insert_last(iface->addrs, addr);
 				pthread_mutex_unlock(&this->mutex);
@@ -2297,7 +2314,6 @@ kernel_interface_t *kernel_interface_create()
 {
 	private_kernel_interface_t *this = malloc_thing(private_kernel_interface_t);
 	struct sockaddr_nl addr;
-	
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;

@@ -314,6 +314,11 @@ static status_t build_request(private_task_manager_t *this)
 					exchange = INFORMATIONAL;
 					break;
 				}
+				if (activate_task(this, IKE_MOBIKE))
+				{
+					exchange = INFORMATIONAL;
+					break;
+				}
 				if (activate_task(this, IKE_DPD))
 				{
 					exchange = INFORMATIONAL;
@@ -592,6 +597,7 @@ static status_t process_request(private_task_manager_t *this,
 	exchange_type_t exchange;
 	payload_t *payload;
 	notify_payload_t *notify;
+	delete_payload_t *delete;
 
 	exchange = message->get_exchange_type(message);
 
@@ -669,27 +675,56 @@ static status_t process_request(private_task_manager_t *this,
 		}
 		case INFORMATIONAL:
 		{
-			delete_payload_t *delete;
-			
-			delete = (delete_payload_t*)message->get_payload(message, DELETE);
-			if (delete)
+			iterator = message->get_payload_iterator(message);
+			while (iterator->iterate(iterator, (void**)&payload))
 			{
-				if (delete->get_protocol_id(delete) == PROTO_IKE)
+				switch (payload->get_type(payload))
 				{
-					task = (task_t*)ike_delete_create(this->ike_sa, FALSE);
-					this->passive_tasks->insert_last(this->passive_tasks, task);
-				}
-				else
-				{
-					task = (task_t*)child_delete_create(this->ike_sa, NULL);
-					this->passive_tasks->insert_last(this->passive_tasks, task);
+					case NOTIFY:
+					{
+						notify = (notify_payload_t*)payload;
+						switch (notify->get_notify_type(notify))
+						{
+							case ADDITIONAL_IP4_ADDRESS:
+							case ADDITIONAL_IP6_ADDRESS:
+							case NO_ADDITIONAL_ADDRESSES:
+							case UPDATE_SA_ADDRESSES:
+							case NO_NATS_ALLOWED:
+							case UNACCEPTABLE_ADDRESSES:
+							case UNEXPECTED_NAT_DETECTED:
+							case COOKIE2:
+								task = (task_t*)ike_mobike_create(this->ike_sa,
+																  FALSE);
+								break;
+							default:
+								break;
+						}
+						break;
+					}
+					case DELETE:
+					{
+						delete = (delete_payload_t*)payload;
+						if (delete->get_protocol_id(delete) == PROTO_IKE)
+						{
+							task = (task_t*)ike_delete_create(this->ike_sa, FALSE);
+						}
+						else
+						{
+							task = (task_t*)child_delete_create(this->ike_sa, NULL);
+						}
+						break;
+					}
+					default:
+						break;
 				}
 			}
-			else
+			iterator->destroy(iterator);
+			
+			if (task == NULL)
 			{
 				task = (task_t*)ike_dpd_create(FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
 			}
+			this->passive_tasks->insert_last(this->passive_tasks, task);
 			break;
 		}
 		default:

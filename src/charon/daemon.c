@@ -381,6 +381,9 @@ private_daemon_t *daemon_create(void)
 	sigaddset(&action.sa_mask, SIGHUP);
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
+	action.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &action, NULL);
+	
 	pthread_sigmask(SIG_SETMASK, &action.sa_mask, 0);
 	
 	return this;

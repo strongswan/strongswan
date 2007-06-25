@@ -701,6 +701,7 @@ static iterator_t *create_iterator(private_ike_sa_manager_t* this)
 {
 	iterator_t *iterator = this->ike_sa_list->create_iterator_locked(
 											this->ike_sa_list, &this->mutex);
+	
 	/* register hook to iterator over ike_sas, not entries */
 	iterator->set_iterator_hook(iterator, (iterator_hook_t*)iterator_hook, this);
 	return iterator;

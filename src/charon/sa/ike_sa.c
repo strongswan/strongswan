@@ -1681,7 +1681,13 @@ static status_t roam(private_ike_sa_t *this)
 	}
 	
 	me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
-												   this->other_host);
+												   this->other_host);	
+	if (me && me->ip_equals(me, this->my_virtual_ip))
+	{	/* do not roam to the virtual IP of this IKE_SA */
+		me->destroy(me);
+		me = NULL;
+	}
+	
 	if (me)
 	{
 		set_condition(this, COND_STALE, FALSE);
@@ -1695,12 +1701,8 @@ static status_t roam(private_ike_sa_t *this)
 		}
 		me->set_port(me, this->my_host->get_port(this->my_host));
 		
-#ifndef MOBIKE
-		set_my_host(this, me);
-		return reestablish(this);
-#endif	
 		/* our attachement changed, update if we have mobike */
-		if (this->extensions & EXT_MOBIKE)
+		if (supports_extension(this, EXT_MOBIKE))
 		{
 			mobike = ike_mobike_create(&this->public, TRUE);
 			mobike->roam(mobike, me, NULL);
@@ -1713,15 +1715,11 @@ static status_t roam(private_ike_sa_t *this)
 	}
 	
 	/* there is nothing we can do without mobike */
-	if (!(this->extensions & EXT_MOBIKE))
+	if (!supports_extension(this, EXT_MOBIKE))
 	{
 		set_condition(this, COND_STALE, TRUE);
 		return FAILED;
 	}
-#ifndef MOBIKE
-	set_condition(this, COND_STALE, TRUE);
-	return FAILED;
-#endif	
 
 	/* we are unable to reach the peer. Try an alternative address */
 	iterator = create_additional_address_iterator(this);
@@ -1729,10 +1727,18 @@ static status_t roam(private_ike_sa_t *this)
 	{
 		me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
 													   other);
+		if (me && me->ip_equals(me, this->my_virtual_ip))
+		{	/* do not roam to the virtual IP of this IKE_SA */
+			me->destroy(me);
+			me = NULL;
+		}
+		
 		if (me)
 		{
 			/* good, we have a new route. Use MOBIKE to update */
 			iterator->destroy(iterator);
+			me->set_port(me, this->my_host->get_port(this->my_host));
+			other->set_port(other, this->other_host->get_port(this->other_host));
 			mobike = ike_mobike_create(&this->public, TRUE);
 			mobike->roam(mobike, me, other);
 			this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
@@ -1740,7 +1746,10 @@ static status_t roam(private_ike_sa_t *this)
 		}
 	}
 	iterator->destroy(iterator);
-	return SUCCESS;
+
+	/* no route found to host, give up (temporary) */
+	set_condition(this, COND_STALE, TRUE);
+	return FAILED;
 }
 
 /**
