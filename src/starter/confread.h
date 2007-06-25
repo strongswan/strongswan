@@ -192,7 +192,8 @@ struct starter_config {
 	defaultroute_t defaultroute;
 
 	/* number of encountered parsing errors */
-	u_int err;	
+	u_int err;
+	u_int non_fatal_err;
 
 	/* do we parse also statements */
 	bool parse_also;

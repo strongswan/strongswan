@@ -237,9 +237,10 @@ int main (int argc, char **argv)
     }
 
     cfg = confread_load(CONFIG_FILE);
-    if (!cfg)
+    if (cfg->err > 0)
     {
-	plog("unable to start strongSwan -- errors in config");
+	plog("unable to start strongSwan -- fatal errors in config");
+	confread_free(cfg);
 	exit(1);
     }
 
@@ -373,7 +374,7 @@ int main (int argc, char **argv)
 	       );
 	    new_cfg = confread_load(CONFIG_FILE);
 
-	    if (new_cfg)
+	    if (new_cfg->err + new_cfg->non_fatal_err == 0)
 	    {
 		/* Switch to new config. New conn will be loaded below */
 		if (!starter_cmp_defaultroute(&new_cfg->defaultroute
@@ -466,7 +467,8 @@ int main (int argc, char **argv)
 	    }
 	    else
 	    {
-		plog("can't reload config file: %s -- keeping old one");
+		plog("can't reload config file due to errors -- keeping old one");
+		confread_free(new_cfg);
 	    }
 	    _action_ &= ~FLAG_ACTION_UPDATE;
 	    last_reload = time(NULL);

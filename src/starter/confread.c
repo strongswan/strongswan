@@ -695,172 +695,6 @@ find_also_ca(const char* name, starter_ca_t *ca, starter_config_t *cfg)
 	return NULL;
 }
 
-
-
-/*
- * load and parse an IPsec configuration file
- */
-starter_config_t *
-confread_load(const char *file)
-{
-	starter_config_t *cfg = NULL;
-	config_parsed_t  *cfgp;
-	section_list_t   *sconn, *sca;
-	starter_conn_t   *conn;
-	starter_ca_t     *ca;
-
-	u_int visit	= 0;
-
-	/* load IPSec configuration file  */
-	cfgp = parser_load_conf(file);
-	if (!cfgp)
-		return NULL;
-
-	cfg = (starter_config_t *)alloc_thing(starter_config_t, "starter_config_t");
-
-	/* set default values */
-	default_values(cfg);
-
-	/* determine default route */
-	get_defaultroute(&cfg->defaultroute);
-
-	/* load config setup section */
-	load_setup(cfg, cfgp);
-
-	/* in the first round parse also statements */
-	cfg->parse_also = TRUE;
-
-	/* find %default ca section */
-	for (sca = cfgp->ca_first; sca; sca = sca->next)
-	{
-		if (streq(sca->name, "%default"))
-		{
-			DBG(DBG_CONTROL,
-				DBG_log("Loading ca %%default")
-			)
-			load_ca(&cfg->ca_default, sca->kw, cfg);
-		}
-	}
-
-	/* parameters defined in ca %default sections can be overloads */
-	cfg->ca_default.seen = LEMPTY;
-
-	/* load other ca sections */
-	for (sca = cfgp->ca_first; sca; sca = sca->next)
-	{
-		/* skip %default ca section */
-		if (streq(sca->name, "%default"))
-			continue;
-
-		DBG(DBG_CONTROL,
-			DBG_log("Loading ca '%s'", sca->name)
-		)
-		ca = (starter_ca_t *)alloc_thing(starter_ca_t, "starter_ca_t");
-
-		ca_default(sca->name, ca, &cfg->ca_default);
-		ca->kw =  sca->kw;
-		ca->next = NULL;
-
-		if (cfg->ca_last)
-			cfg->ca_last->next = ca;
-		cfg->ca_last = ca;
-		if (!cfg->ca_first)
-			cfg->ca_first = ca;
-
-		load_ca(ca, ca->kw, cfg);
-	}
-
-	for (ca = cfg->ca_first; ca; ca = ca->next)
-	{
-		also_t *also = ca->also;
-	
-		while (also != NULL)
-		{
-			kw_list_t *kw = find_also_ca(also->name, cfg->ca_first, cfg);
-
-			load_ca(ca, kw, cfg);
-			also = also->next;
-		}
-
-		if (ca->startup != STARTUP_NO)
-			ca->state = STATE_TO_ADD;
-	}
-
-	/* find %default conn sections */
-	for (sconn = cfgp->conn_first; sconn; sconn = sconn->next)
-	{
-		if (streq(sconn->name, "%default"))
-		{
-			DBG(DBG_CONTROL,
-				DBG_log("Loading conn %%default")
-			)
-			load_conn(&cfg->conn_default, sconn->kw, cfg);
-		}
-	}
-
-	/* parameter defined in conn %default sections can be overloaded */
-	cfg->conn_default.seen       = LEMPTY;
-	cfg->conn_default.right.seen = LEMPTY;
-	cfg->conn_default.left.seen  = LEMPTY;
-
-	/* load other conn sections */
-	for (sconn = cfgp->conn_first; sconn; sconn = sconn->next)
-	{
-		/* skip %default conn section */
-		if (streq(sconn->name, "%default"))
-			continue;
-
-		DBG(DBG_CONTROL,
-			DBG_log("Loading conn '%s'", sconn->name)
-		)
-		conn = (starter_conn_t *)alloc_thing(starter_conn_t, "starter_conn_t");
-
-		conn_default(sconn->name, conn, &cfg->conn_default);
-		conn->kw =  sconn->kw;
-		conn->next = NULL;
-
-		if (cfg->conn_last)
-			cfg->conn_last->next = conn;
-		cfg->conn_last = conn;
-		if (!cfg->conn_first)
-			cfg->conn_first = conn;
-
-		load_conn(conn, conn->kw, cfg);
-	}
-
-	/* in the second round do not parse also statements */
-	cfg->parse_also = FALSE;
-
-	for (ca = cfg->ca_first; ca; ca = ca->next)
-	{
-		ca->visit = ++visit;
-		load_also_cas(ca, ca->also, cfg);
-
-		if (ca->startup != STARTUP_NO)
-			ca->state = STATE_TO_ADD;
-	}
-
-	for (conn = cfg->conn_first; conn; conn = conn->next)
-	{
-		conn->visit = ++visit;
-		load_also_conns(conn, conn->also, cfg);
-
-		if (conn->startup != STARTUP_NO)
-			conn->state = STATE_TO_ADD;
-	}
-
-	parser_free_conf(cfgp);
-
-	if (cfg->err)
-	{
-		plog("### %d parsing error%s ###", cfg->err, (cfg->err > 1)?"s":"");
-		confread_free(cfg);
-		cfg = NULL;
-	}
-
-	return cfg;
-}
-
 /*
  * free the memory used by also_t objects
  */
@@ -933,4 +767,195 @@ confread_free(starter_config_t *cfg)
 	}
 
 	pfree(cfg);
+}
+
+/*
+ * load and parse an IPsec configuration file
+ */
+starter_config_t *
+confread_load(const char *file)
+{
+	starter_config_t *cfg = NULL;
+	config_parsed_t  *cfgp;
+	section_list_t   *sconn, *sca;
+	starter_conn_t   *conn;
+	starter_ca_t     *ca;
+
+	u_int total_err;
+	u_int visit	= 0;
+
+	/* load IPSec configuration file  */
+	cfgp = parser_load_conf(file);
+	if (!cfgp)
+		return NULL;
+
+	cfg = (starter_config_t *)alloc_thing(starter_config_t, "starter_config_t");
+
+	/* set default values */
+	default_values(cfg);
+
+	/* determine default route */
+	get_defaultroute(&cfg->defaultroute);
+
+	/* load config setup section */
+	load_setup(cfg, cfgp);
+
+	/* in the first round parse also statements */
+	cfg->parse_also = TRUE;
+
+	/* find %default ca section */
+	for (sca = cfgp->ca_first; sca; sca = sca->next)
+	{
+		if (streq(sca->name, "%default"))
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("Loading ca %%default")
+			)
+			load_ca(&cfg->ca_default, sca->kw, cfg);
+		}
+	}
+
+	/* parameters defined in ca %default sections can be overloads */
+	cfg->ca_default.seen = LEMPTY;
+
+	/* load other ca sections */
+	for (sca = cfgp->ca_first; sca; sca = sca->next)
+	{
+		u_int previous_err;
+
+		/* skip %default ca section */
+		if (streq(sca->name, "%default"))
+			continue;
+
+		DBG(DBG_CONTROL,
+			DBG_log("Loading ca '%s'", sca->name)
+		)
+		ca = (starter_ca_t *)alloc_thing(starter_ca_t, "starter_ca_t");
+
+		ca_default(sca->name, ca, &cfg->ca_default);
+		ca->kw =  sca->kw;
+		ca->next = NULL;
+
+		previous_err = cfg->err;
+		load_ca(ca, ca->kw, cfg);
+		if (cfg->err > previous_err)
+		{
+			/* errors occurred - free the ca */
+			confread_free_ca(ca);
+			cfg->non_fatal_err += cfg->err - previous_err;
+			cfg->err = previous_err;
+		}
+		else
+		{
+			/* success - insert the ca into the chained list */
+			if (cfg->ca_last)
+				cfg->ca_last->next = ca;
+			cfg->ca_last = ca;
+			if (!cfg->ca_first)
+				cfg->ca_first = ca;
+		}
+	}
+
+	for (ca = cfg->ca_first; ca; ca = ca->next)
+	{
+		also_t *also = ca->also;
+	
+		while (also != NULL)
+		{
+			kw_list_t *kw = find_also_ca(also->name, cfg->ca_first, cfg);
+
+			load_ca(ca, kw, cfg);
+			also = also->next;
+		}
+
+		if (ca->startup != STARTUP_NO)
+			ca->state = STATE_TO_ADD;
+	}
+
+	/* find %default conn sections */
+	for (sconn = cfgp->conn_first; sconn; sconn = sconn->next)
+	{
+		if (streq(sconn->name, "%default"))
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("Loading conn %%default")
+			)
+			load_conn(&cfg->conn_default, sconn->kw, cfg);
+		}
+	}
+
+	/* parameter defined in conn %default sections can be overloaded */
+	cfg->conn_default.seen       = LEMPTY;
+	cfg->conn_default.right.seen = LEMPTY;
+	cfg->conn_default.left.seen  = LEMPTY;
+
+	/* load other conn sections */
+	for (sconn = cfgp->conn_first; sconn; sconn = sconn->next)
+	{
+		u_int previous_err;
+		
+		/* skip %default conn section */
+		if (streq(sconn->name, "%default"))
+			continue;
+
+		DBG(DBG_CONTROL,
+			DBG_log("Loading conn '%s'", sconn->name)
+		)
+		conn = (starter_conn_t *)alloc_thing(starter_conn_t, "starter_conn_t");
+
+		conn_default(sconn->name, conn, &cfg->conn_default);
+		conn->kw =  sconn->kw;
+		conn->next = NULL;
+		
+		previous_err = cfg->err;
+		load_conn(conn, conn->kw, cfg);
+		if (cfg->err > previous_err)
+		{
+			/* error occurred - free the conn */
+			confread_free_conn(conn);
+			cfg->non_fatal_err += cfg->err - previous_err;
+			cfg->err = previous_err;
+		}
+		else
+		{
+			/* success - insert the conn into the chained list */
+			if (cfg->conn_last)
+				cfg->conn_last->next = conn;
+			cfg->conn_last = conn;
+			if (!cfg->conn_first)
+				cfg->conn_first = conn;
+		}
+	}
+
+	/* in the second round do not parse also statements */
+	cfg->parse_also = FALSE;
+
+	for (ca = cfg->ca_first; ca; ca = ca->next)
+	{
+		ca->visit = ++visit;
+		load_also_cas(ca, ca->also, cfg);
+
+		if (ca->startup != STARTUP_NO)
+			ca->state = STATE_TO_ADD;
+	}
+
+	for (conn = cfg->conn_first; conn; conn = conn->next)
+	{
+		conn->visit = ++visit;
+		load_also_conns(conn, conn->also, cfg);
+
+		if (conn->startup != STARTUP_NO)
+			conn->state = STATE_TO_ADD;
+	}
+
+	parser_free_conf(cfgp);
+
+	total_err = cfg->err + cfg->non_fatal_err;
+	if (total_err > 0)
+	{
+		plog("### %d parsing error%s (%d fatal) ###"
+			, total_err, (total_err > 1)?"s":"", cfg->err);
+	}
+
+	return cfg;
 }
