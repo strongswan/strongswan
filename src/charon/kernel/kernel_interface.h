@@ -145,21 +145,20 @@ struct kernel_interface_t {
 	 * create a new SA and delete the old one.
 	 *
 	 * @param this			calling object
-	 * @param dst			destination address for this SA
 	 * @param spi			SPI of the SA
 	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @param new_src		new source address for this SA
-	 * @param new_dst		new destination address for this SA
-	 * @param src_changes	changes in src
-	 * @param dst_changes	changes in dst
+	 * @param src			current source address
+	 * @param dst			current destination address
+	 * @param new_src		new source address
+	 * @param new_dst		new destination address
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
 	 */
-	status_t (*update_sa)(kernel_interface_t *this, host_t *dst, u_int32_t spi,
-						  protocol_id_t protocol,
-						  host_t *new_src, host_t *new_dst,
-						  host_diff_t src_changes, host_diff_t dst_changes);
+	status_t (*update_sa)(kernel_interface_t *this,
+						  u_int32_t spi, protocol_id_t protocol,
+						  host_t *src, host_t *dst, 
+						  host_t *new_src, host_t *new_dst);
 	
 	/**
 	 * @brief Query the use time of an SA.

@@ -355,6 +355,8 @@ static status_t build_request(private_task_manager_t *this)
 				case IKE_REKEY:
 					exchange = CREATE_CHILD_SA;
 					break;
+				case IKE_MOBIKE:
+					exchange = INFORMATIONAL;
 				default:
 					continue;
 			}

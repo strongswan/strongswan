@@ -200,19 +200,16 @@ struct child_sa_t {
 					   prf_plus_t *prf_plus);
 
 	/**
-	 * @brief Update the hosts in the kernel SAs and policies
+	 * @brief Update the hosts in the kernel SAs and policies.
 	 *
-	 * @warning only call this after update() has been called.
+	 * The CHILD must be INSTALLED to do this update.
 	 *
-	 * @param this			calling object
-	 * @param new_me		the new local host
-	 * @param new_other		the new remote host
-	 * @param my_diff		differences to apply for me
-	 * @param other_diff	differences to apply for other
-	 * @return				SUCCESS or FAILED
+	 * @param this		calling object
+	 * @param me		the new local host
+	 * @param other		the new remote host
+	 * @return			SUCCESS or FAILED
 	 */
-	status_t (*update_hosts)(child_sa_t *this, host_t *new_me, host_t *new_other,
-							 host_diff_t my_diff, host_diff_t other_diff);
+	status_t (*update_hosts)(child_sa_t *this, host_t *me, host_t *other);
 	
 	/**
 	 * @brief Install the policies using some traffic selectors.

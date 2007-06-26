@@ -283,6 +283,17 @@ struct ike_sa_t {
 	void (*set_other_host) (ike_sa_t *this, host_t *other);
 	
 	/**
+	 * @brief Update the IKE_SAs host.
+	 *
+	 * Hosts may be NULL to use current host.
+	 *
+	 * @param this			calling object
+	 * @param me			new local host address, or NULL
+	 * @param other			new remote host address, or NULL
+	 */
+	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other);
+	
+	/**
 	 * @brief Get the own identification.
 	 * 
 	 * @param this 			calling object

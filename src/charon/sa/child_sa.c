@@ -782,139 +782,79 @@ static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use
 }
 
 /**
- * Update the host adress/port of a SA
- */
-static status_t update_sa_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other, 
-								int my_changes, int other_changes, bool mine)
-{
-	host_t *src, *dst, *new_src, *new_dst;
-	int src_changes, dst_changes;
-	status_t status;
-	u_int32_t spi;
-	
-	if (mine)
-	{
-		src = this->other.addr;
-		dst = this->me.addr;
-		new_src = new_other;
-		new_dst = new_me;
-		src_changes = other_changes;
-		dst_changes = my_changes;
-		spi = this->other.spi;
-	}
-	else
-	{
-		src = this->me.addr;
-		dst = this->other.addr;
-		new_src = new_me;
-		new_dst = new_other;
-		src_changes = my_changes;
-		dst_changes = other_changes;
-		spi = this->me.spi;
-	}
-	
-	DBG2(DBG_CHD, "updating %N SA 0x%x, from %#H..#H to %#H..%#H",
-		 protocol_id_names, this->protocol, ntohl(spi), src, dst, new_src, new_dst);
-	
-	status = charon->kernel_interface->update_sa(charon->kernel_interface,
-												 dst, spi, this->protocol, 
-												 new_src, new_dst, 
-												 src_changes, dst_changes);
-	
-	if (status != SUCCESS)
-	{
-		return FAILED;
-	}
-	return SUCCESS;
-}
-
-/**
- * Update the host adress/port of a policy
- */
-static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other)
-{
-	iterator_t *iterator;
-	sa_policy_t *policy;
-	status_t status;
-	/* we always use high priorities, as hosts getting updated are INSTALLED */
-	
-	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->iterate(iterator, (void**)&policy))
-	{
-		status = charon->kernel_interface->add_policy(
-				charon->kernel_interface,
-				new_me, new_other,
-				policy->my_ts, policy->other_ts,
-				POLICY_OUT, this->protocol, this->reqid, TRUE, this->mode, TRUE);
-		
-		status |= charon->kernel_interface->add_policy(
-				charon->kernel_interface,
-				new_other, new_me,
-				policy->other_ts, policy->my_ts,
-				POLICY_IN, this->protocol, this->reqid, TRUE, this->mode, TRUE);
-		
-		status |= charon->kernel_interface->add_policy(
-				charon->kernel_interface,
-				new_other, new_me,
-				policy->other_ts, policy->my_ts,
-				POLICY_FWD, this->protocol, this->reqid, TRUE, this->mode, TRUE);
-		
-		if (status != SUCCESS)
-		{
-			iterator->destroy(iterator);
-			return FAILED;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	return SUCCESS;
-}
-
-/**
  * Implementation of child_sa_t.update_hosts.
  */
-static status_t update_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other, 
-							 host_diff_t my_changes, host_diff_t other_changes) 
+static status_t update_hosts(private_child_sa_t *this, host_t *me, host_t *other) 
 {
-	if (!my_changes && !other_changes)
+	/* anything changed at all? */
+	if (me->equals(me, this->me.addr) && other->equals(other, this->other.addr))
 	{
 		return SUCCESS;
 	}
-
+	
 	/* update our (initator) SAs */
-	if (update_sa_hosts(this, new_me, new_other, my_changes, other_changes, TRUE) != SUCCESS)
+	if (charon->kernel_interface->update_sa(
+				charon->kernel_interface, this->me.spi, this->protocol,
+				this->other.addr, this->me.addr, other, me) != SUCCESS)
 	{
 		return FAILED;
 	}
 
 	/* update his (responder) SAs */
-	if (update_sa_hosts(this, new_me, new_other, my_changes, other_changes, FALSE) != SUCCESS)
+	if (charon->kernel_interface->update_sa(
+				charon->kernel_interface, this->other.spi, this->protocol, 
+				this->me.addr, this->other.addr, me, other) != SUCCESS)
 	{
 		return FAILED;
 	}
 	
 	/* update policies */
-	if (my_changes & HOST_DIFF_ADDR || other_changes & HOST_DIFF_ADDR)
+	if (!me->ip_equals(me, this->me.addr) ||
+		!other->ip_equals(other, this->other.addr))
 	{
-		if (update_policy_hosts(this, new_me, new_other) != SUCCESS)
+		iterator_t *iterator;
+		sa_policy_t *policy;
+		status_t status;
+		
+		/* always use high priorities, as hosts getting updated are INSTALLED */
+		iterator = this->policies->create_iterator(this->policies, TRUE);
+		while (iterator->iterate(iterator, (void**)&policy))
 		{
-			return FAILED;
+			status = charon->kernel_interface->add_policy(
+						charon->kernel_interface, me, other, 
+						policy->my_ts, policy->other_ts, POLICY_OUT,
+						this->protocol,	this->reqid, TRUE, this->mode, TRUE);
+			
+			status |= charon->kernel_interface->add_policy(
+						charon->kernel_interface, other, me,
+						policy->other_ts, policy->my_ts, POLICY_IN,
+						this->protocol, this->reqid, TRUE, this->mode, TRUE);
+			
+			status |= charon->kernel_interface->add_policy(
+						charon->kernel_interface, other, me,
+						policy->other_ts, policy->my_ts, POLICY_FWD,
+						this->protocol, this->reqid, TRUE, this->mode, TRUE);
+			
+			if (status != SUCCESS)
+			{
+				iterator->destroy(iterator);
+				return FAILED;
+			}
 		}
+		iterator->destroy(iterator);
 	}
 
-	/* update hosts */
-	if (my_changes)
+	/* finally apply hosts */
+	if (!me->equals(me, this->me.addr))
 	{
 		this->me.addr->destroy(this->me.addr);
-		this->me.addr = new_me->clone(new_me);
+		this->me.addr = me->clone(me);
 	}
-
-	if (other_changes)
+	if (other->equals(other, this->other.addr))
 	{
 		this->other.addr->destroy(this->other.addr);
-		this->other.addr = new_other->clone(new_other);
-	}	
-
+		this->other.addr = other->clone(other);
+	}
 	return SUCCESS;
 }
 
@@ -1011,7 +951,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))update;
-	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,host_diff_t,host_diff_t))update_hosts;
+	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,mode_t))add_policies;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;

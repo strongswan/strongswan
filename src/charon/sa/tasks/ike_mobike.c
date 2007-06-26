@@ -208,14 +208,7 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 		/* TODO: NAT discovery */
 		
 		/* set new addresses */
-		if (this->me)
-		{
-			this->ike_sa->set_my_host(this->ike_sa, this->me->clone(this->me));
-		}
-		if (this->other)
-		{
-			this->ike_sa->set_other_host(this->ike_sa, this->other->clone(this->other));
-		}
+		this->ike_sa->update_hosts(this->ike_sa, this->me, this->other);
 	}
 	
 	return NEED_MORE;
@@ -251,6 +244,10 @@ static status_t build_r(private_ike_mobike_t *this, message_t *message)
 		}
 		return SUCCESS;
 	}
+	else if (message->get_exchange_type(message) == INFORMATIONAL)
+	{
+		return SUCCESS;
+	}
 	return NEED_MORE;
 }
 
@@ -263,6 +260,10 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 		message->get_payload(message, SECURITY_ASSOCIATION))
 	{
 		process_payloads(this, message);
+		return SUCCESS;
+	}
+	else if (message->get_exchange_type(message) == INFORMATIONAL)
+	{
 		return SUCCESS;
 	}
 	return NEED_MORE;

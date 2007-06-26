@@ -1393,10 +1393,10 @@ static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 	msg = (struct rtmsg*)NLMSG_DATA(hdr);
 	msg->rtm_family = dest->get_family(dest);
 	msg->rtm_dst_len = msg->rtm_family == AF_INET ? 32 : 128;
-	msg->rtm_table = RT_TABLE_UNSPEC;
-	msg->rtm_protocol = RTPROT_UNSPEC;
+	msg->rtm_table = RT_TABLE_MAIN;
+	msg->rtm_protocol = RTPROT_STATIC;
 	msg->rtm_type = RTN_UNICAST;
-	msg->rtm_scope = RT_SCOPE_HOST;
+	msg->rtm_scope = RT_SCOPE_UNIVERSE;
 	
 	chunk = dest->get_address(dest);
 	add_attribute(hdr, RTA_DST, chunk, sizeof(request));
@@ -1443,12 +1443,11 @@ static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 		break;
 	}
 	free(out);
-	if (source)
+	if (source == NULL)
 	{
-		return source;
+		DBG2(DBG_KNL, "no route found to %H", dest);
 	}
-	DBG2(DBG_KNL, "no route found to %H", dest);
-	return NULL;
+	return source;
 }
 
 /**
@@ -1784,10 +1783,9 @@ static status_t add_sa(private_kernel_interface_t *this,
  * Implementation of kernel_interface_t.update_sa.
  */
 static status_t update_sa(private_kernel_interface_t *this,
-						  host_t *dst, u_int32_t spi,
-						  protocol_id_t protocol,
-						  host_t *new_src, host_t *new_dst,
-						  host_diff_t src_changes, host_diff_t dst_changes)
+						  u_int32_t spi, protocol_id_t protocol,
+						  host_t *src, host_t *dst,
+						  host_t *new_src, host_t *new_dst)
 {
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *hdr, *out = NULL;
@@ -1797,8 +1795,9 @@ static status_t update_sa(private_kernel_interface_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "querying SAD entry with SPI 0x%x", spi);
+	DBG2(DBG_KNL, "querying SAD entry with SPI 0x%x for update", spi);
 
+	/* query the exisiting SA first */
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
@@ -1838,31 +1837,33 @@ static status_t update_sa(private_kernel_interface_t *this,
 			break;
 		}
 	}
-	if (sa == NULL)
+	if (sa == NULL ||
+		this->public.del_sa(&this->public, dst, spi, protocol) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI 0x%x", spi);
 		free(out);
 		return FAILED;
 	}
 	
-	DBG2(DBG_KNL, "updating SAD entry with SPI 0x%x", spi);
+	DBG2(DBG_KNL, "updating SAD entry with SPI 0x%x from %#H..%#H to %#H..%#H",
+		 spi, src, dst, new_src, new_dst);
 	
+	/* update the values in the queried SA */
 	hdr = out;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;	
-	hdr->nlmsg_type = XFRM_MSG_UPDSA;
+	hdr->nlmsg_type = XFRM_MSG_NEWSA;
 	
-	if (src_changes & HOST_DIFF_ADDR)
+	if (!src->ip_equals(src, new_src))
 	{
 		host2xfrm(new_src, &sa->saddr);
 	}
-
-	if (dst_changes & HOST_DIFF_ADDR)
+	if (!dst->ip_equals(dst, new_dst))
 	{
-		hdr->nlmsg_type = XFRM_MSG_NEWSA;
 		host2xfrm(new_dst, &sa->id.daddr);
 	}
 	
-	if (src_changes & HOST_DIFF_PORT || dst_changes & HOST_DIFF_PORT)
+	if (src->get_port(src) != new_src->get_port(new_src) ||
+		dst->get_port(dst) != new_dst->get_port(new_dst))
 	{
 		struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_usersa_info);
 		size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_usersa_info);
@@ -1887,10 +1888,6 @@ static status_t update_sa(private_kernel_interface_t *this,
 	}
 	free(out);
 	
-	if (dst_changes & HOST_DIFF_ADDR)
-	{
-		return this->public.del_sa(&this->public, dst, spi, protocol);
-	}
 	return SUCCESS;
 }
 
@@ -2318,7 +2315,7 @@ kernel_interface_t *kernel_interface_create()
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,natt_conf_t*,mode_t,bool))add_sa;
-	this->public.update_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_diff_t,host_diff_t))update_sa;
+	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*))update_sa;
 	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t,bool))add_policy;
