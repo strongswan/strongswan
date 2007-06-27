@@ -181,6 +181,16 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			conn->addr_family = AF_INET6;
 			anyaddr(conn->addr_family, &end->addr);
 		}
+		else if (streq(value, "%group"))
+		{
+			ip_address any;
+
+			conn->policy |= POLICY_GROUP | POLICY_TUNNEL;
+			anyaddr(conn->addr_family, &end->addr);
+			anyaddr(conn->tunnel_addr_family, &any);
+			initsubnet(&any, 0, '0', &end->subnet);
+			end->has_client = TRUE;
+		}
 		else
 		{
 			bool fallback_to_any = FALSE;
@@ -496,6 +506,23 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 				{
 					plog("# unknown EAP type: %s=%s", kw->entry->name, kw->value);
 					cfg->err++;
+				}
+			}
+			break;
+		case KW_KEYINGTRIES:
+			if (streq(kw->value, "%forever"))
+			{
+				conn->sa_keying_tries = 0;
+			}
+			else
+			{
+				char *endptr;
+
+				conn->sa_keying_tries = strtoul(kw->value, &endptr, 10);
+				if (*endptr != '\0')
+				{
+					plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+		    		cfg->err++;
 				}
 			}
 			break;
