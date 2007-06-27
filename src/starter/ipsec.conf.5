@@ -219,188 +219,10 @@ Unless otherwise noted, for a connection to work,
 in general it is necessary for the two ends to agree exactly
 on the values of these parameters.
 .TP 14
-.B type
-the type of the connection; currently the accepted values
-are
-.B tunnel
-(the default)
-signifying a host-to-host, host-to-subnet, or subnet-to-subnet tunnel;
-.BR transport ,
-signifying host-to-host transport mode;
-.BR passthrough ,
-signifying that no IPsec processing should be done at all;
-.BR drop ,
-signifying that packets should be discarded; and
-.BR reject ,
-signifying that packets should be discarded and a diagnostic ICMP returned.
-Charon currently supports only 
-.BR tunnel
-and
-.BR transport
-connection types.
-.TP
-.B left
-(required)
-the IP address of the left participant's public-network interface,
-in any form accepted by
-.IR ttoaddr (3)
-or one of several magic values.
-If it is
-.BR %defaultroute ,
-.B left
-will be filled in automatically with the local address
-of the default-route interface (as determined at IPsec startup time).
-(Either
-.B left
-or
-.B right
-may be
-.BR %defaultroute ,
-but not both.)
-The value
-.B %any
-signifies an address to be filled in (by automatic keying) during
-negotiation. The prefix
-.B  %
-in front of a fully-qualified domain name or an IP address will implicitly set
-.B leftallowany=yes.
-If the domain name cannot be resolved into an IP address at IPsec startup or update time
-then
-.B left=%any
-and
-.B leftallowany=no
-will be assumed.
-.TP
-.B leftallowany
-a modifier for
-.B left
-, making it behave as
-.B %any
-although a concrete IP address has been assigned.
-Recommended for dynamic IP addresses that can be resolved by DynDNS at IPsec startup or
-update time.
-Acceptable values are
-.B yes
-and
-.B no
-(the default).
-.TP
-.B leftsubnet
-private subnet behind the left participant, expressed as
-\fInetwork\fB/\fInetmask\fR
-(actually, any form acceptable to
-.IR ttosubnet (3));
-if omitted, essentially assumed to be \fIleft\fB/32\fR,
-signifying that the left end of the connection goes to the left participant
-only. When using IKEv2, the configured subnet of the peers may differ, the
-protocol narrows it to the greates common subnet.
-.TP
-.B leftsubnetwithin
-the peer can propose any subnet or single IP address that fits within the
-range defined by
-.BR leftsubnetwithin.
-Not relevant for IKEv2, as subnets are narrowed.
-.TP
-.B leftprotoport
-restrict the traffic selector to a single protocol and/or port.
-Examples:
-.B leftprotoport=tcp/http
-or
-.B leftprotoport=6/80
-or
-.B leftprotoport=udp
-.TP
-.B leftnexthop
-this parameter is not needed any more because the NETKEY IPsec stack does
-not require explicit routing entries for the traffic to be tunneled.
-.TP
-.B leftfirewall
-whether the left participant is doing forwarding-firewalling
-(including masquerading) using iptables for traffic from \fIleftsubnet\fR,
-which should be turned off (for traffic to the other subnet)
-once the connection is established;
-acceptable values are
-.B yes
-and
-.B no
-(the default).
-May not be used in the same connection description with
-.BR leftupdown .
-Implemented as a parameter to the default \fBipsec _updown\fR script.
-See notes below.
-Relevant only locally, other end need not agree on it.
-
-If one or both security gateways are doing forwarding firewalling
-(possibly including masquerading),
-and this is specified using the firewall parameters,
-tunnels established with IPsec are exempted from it
-so that packets can flow unchanged through the tunnels.
-(This means that all subnets connected in this manner must have
-distinct, non-overlapping subnet address blocks.)
-This is done by the default \fBipsec _updown\fR script (see
-.IR pluto (8)).
-
-In situations calling for more control,
-it may be preferable for the user to supply his own
-.I updown
-script,
-which makes the appropriate adjustments for his system.
-.TP
-.B lefthostaccess
-inserts a pair of INPUT and OUTPUT iptables rules using the default
-\fBipsec _updown\fR script, thus allowing access to the host itself
-in the case where the host's internal interface is part of the
-negotiated client subnet.
-Acceptable values are
-.B yes
-and
-.B no
-(the default).
-.TP
-.B leftupdown
-what ``updown'' script to run to adjust routing and/or firewalling
-when the status of the connection
-changes (default
-.BR "ipsec _updown" ).
-May include positional parameters separated by white space
-(although this requires enclosing the whole string in quotes);
-including shell metacharacters is unwise.
-See
-.IR pluto (8)
-for details.
-Relevant only locally, other end need not agree on it. IKEv2 uses the updown
-script to insert firewall rules only. Routing is not support and will be
-implemented directly into Charon.
-.TP
-.B auto
-what operation, if any, should be done automatically at IPsec startup;
-currently-accepted values are
-.B add
-,
-.B route
-,
-.B start
-and
-.B ignore
-.
-.B add
-loads a connection without starting it.
-.B route
-loads a connection and installs kernel traps. If traffic is detected between
-.B leftsubnet
-and
-.B rightsubnet
-, a connection is established.
-.B start
-loads a connection and brings it up immediatly.
-.B ignore
-ignores the connection. This is equal to delete a connection from the config
-file. 
-Relevant only locally, other end need not agree on it
-(but in general, for an intended-to-be-permanent connection,
-both ends should use
-.B auto=start
-to ensure that any reboot causes immediate renegotiation).
+.B ah
+AH authentication algorithm to be used
+for the connection, e.g.
+.B hmac-md5.
 .TP
 .B auth
 whether authentication should be done as part of
@@ -439,16 +261,34 @@ which indicates an initiator to request EAP authentication. The EAP method to
 use is selected by the server (see
 .B eap).
 .TP
-.B xauth
-specifies the role in the XAUTH protocol if activated by
-.B authby=xauthpsk
-or
-.B authby=xauthrsasig.
-Accepted values are
-.B server
+.B auto
+what operation, if any, should be done automatically at IPsec startup;
+currently-accepted values are
+.B add
+,
+.B route
+,
+.B start
 and
-.B client
-(the default).
+.BR ignore .
+.B add
+loads a connection without starting it.
+.B route
+loads a connection and installs kernel traps. If traffic is detected between
+.B leftsubnet
+and
+.B rightsubnet
+, a connection is established.
+.B start
+loads a connection and brings it up immediatly.
+.B ignore
+ignores the connection. This is equal to delete a connection from the config
+file. 
+Relevant only locally, other end need not agree on it
+(but in general, for an intended-to-be-permanent connection,
+both ends should use
+.B auto=start
+to ensure that any reboot causes immediate renegotiation).
 .TP
 .B compress
 whether IPComp compression of content is proposed on the connection
@@ -509,6 +349,20 @@ defines the timeout interval, after which all connections to a peer are deleted
 in case of inactivity. This only applies to IKEv1, in IKEv2 the default
 retransmission timeout applies, as every exchange is used to detect dead peers.
 .TP
+.B esp
+ESP encryption/authentication algorithm to be used
+for the connection, e.g.
+.B 3des-md5
+(encryption-integrity-[dh-group]). If dh-group is specified, CHILD_SA setup
+and rekeying include a separate diffe hellman exchange (IKEv2 only).
+.TP
+.B ike
+IKE/ISAKMP SA encryption/authentication algorithm to be used, e.g.
+.B aes128-sha1-modp2048
+(encryption-integrity-dhgroup). In IKEv2, multiple algorithms and proposals
+may be included, such as
+.B aes128-aes256-sha1-modp1536-modp2048,3des-sha1-md5-modp1024.
+.TP
 .B ikelifetime
 how long the keying channel of a connection ('ISAKMP/IKE SA')
 should last before being renegotiated.
@@ -562,6 +416,52 @@ although if they do not,
 there will be some clutter of superseded connections on the end
 which thinks the lifetime is longer.
 .TP
+.B left
+(required)
+the IP address of the left participant's public-network interface,
+in any form accepted by
+.IR ttoaddr (3)
+or one of several magic values.
+If it is
+.BR %defaultroute ,
+.B left
+will be filled in automatically with the local address
+of the default-route interface (as determined at IPsec startup time).
+(Either
+.B left
+or
+.B right
+may be
+.BR %defaultroute ,
+but not both.)
+The value
+.B %any
+signifies an address to be filled in (by automatic keying) during
+negotiation. The prefix
+.B  %
+in front of a fully-qualified domain name or an IP address will implicitly set
+.B leftallowany=yes.
+If the domain name cannot be resolved into an IP address at IPsec startup or update time
+then
+.B left=%any
+and
+.B leftallowany=no
+will be assumed.
+.TP
+.B leftallowany
+a modifier for
+.B left
+, making it behave as
+.B %any
+although a concrete IP address has been assigned.
+Recommended for dynamic IP addresses that can be resolved by DynDNS at IPsec startup or
+update time.
+Acceptable values are
+.B yes
+and
+.B no
+(the default).
+.TP
 .B leftca
 the distinguished name of a certificate authority which is required to
 lie in the trust path going from the left participant's certificate up
@@ -582,16 +482,83 @@ The left participant's ID can be overriden by specifying a
 .B leftid
 value which must be certified by the certificate, though.
 .TP
-.B leftsendcert
-Accepted values are
-.B never
-or
-.BR no ,
-.B always
-or
-.BR yes ,
+.B leftfirewall
+whether the left participant is doing forwarding-firewalling
+(including masquerading) using iptables for traffic from \fIleftsubnet\fR,
+which should be turned off (for traffic to the other subnet)
+once the connection is established;
+acceptable values are
+.B yes
 and
-.BR ifasked .
+.B no
+(the default).
+May not be used in the same connection description with
+.BR leftupdown .
+Implemented as a parameter to the default \fBipsec _updown\fR script.
+See notes below.
+Relevant only locally, other end need not agree on it.
+
+If one or both security gateways are doing forwarding firewalling
+(possibly including masquerading),
+and this is specified using the firewall parameters,
+tunnels established with IPsec are exempted from it
+so that packets can flow unchanged through the tunnels.
+(This means that all subnets connected in this manner must have
+distinct, non-overlapping subnet address blocks.)
+This is done by the default \fBipsec _updown\fR script (see
+.IR pluto (8)).
+
+In situations calling for more control,
+it may be preferable for the user to supply his own
+.I updown
+script,
+which makes the appropriate adjustments for his system.
+.TP
+.B leftgroups
+a comma separated list of group names. If the
+.B leftgroups
+parameter is present then the peer must be a member of at least one
+of the groups defined by the parameter. Group membership must be certified
+by a valid attribute certificate stored in \fI/etc/ipsec.d/acerts/\fP thas has been
+issued to the peer by a trusted Authorization Authority stored in
+\fI/etc/ipsec.d/aacerts/\fP. Attribute certificates are not supported in IKEv2 yet.
+.TP
+.B lefthostaccess
+inserts a pair of INPUT and OUTPUT iptables rules using the default
+\fBipsec _updown\fR script, thus allowing access to the host itself
+in the case where the host's internal interface is part of the
+negotiated client subnet.
+Acceptable values are
+.B yes
+and
+.B no
+(the default).
+.TP
+.B leftid
+how
+the left participant
+should be identified for authentication;
+defaults to
+.BR left .
+Can be an IP address (in any
+.IR ttoaddr (3)
+syntax)
+or a fully-qualified domain name preceded by
+.B @
+(which is used as a literal string and not resolved).
+.TP
+.B leftnexthop
+this parameter is not needed any more because the NETKEY IPsec stack does
+not require explicit routing entries for the traffic to be tunneled.
+.TP
+.B leftprotoport
+restrict the traffic selector to a single protocol and/or port.
+Examples:
+.B leftprotoport=tcp/http
+or
+.B leftprotoport=6/80
+or
+.B leftprotoport=udp
 .TP
 .B leftrsasigkey
 the left participant's
@@ -616,27 +583,16 @@ specify different public keys for the same
 .BR leftid ,
 confusion and madness will ensue.
 .TP
-.B leftgroups
-a comma separated list of group names. If the
-.B leftgroups
-parameter is present then the peer must be a member of at least one
-of the groups defined by the parameter. Group membership must be certified
-by a valid attribute certificate stored in \fI/etc/ipsec.d/acerts\fP thas has been
-issued to the peer by a trusted Authorization Authority stored in
-\fI/etc/ipsec.d/aacerts\fP. Attribute certificates are not supported in IKEv2 yet.
-.TP
-.B leftid
-how
-the left participant
-should be identified for authentication;
-defaults to
-.BR left .
-Can be an IP address (in any
-.IR ttoaddr (3)
-syntax)
-or a fully-qualified domain name preceded by
-.B @
-(which is used as a literal string and not resolved).
+.B leftsendcert
+Accepted values are
+.B never
+or
+.BR no ,
+.B always
+or
+.BR yes ,
+and
+.BR ifasked .
 .TP
 .B leftsourceip
 The internal source IP to use in a tunnel, also known as virtual IP. If the
@@ -656,6 +612,37 @@ value is
 .B %config
 on the responder side, the initiator must propose a address which is then echoed
 back.
+.TP
+.B leftsubnet
+private subnet behind the left participant, expressed as
+\fInetwork\fB/\fInetmask\fR
+(actually, any form acceptable to
+.IR ttosubnet (3));
+if omitted, essentially assumed to be \fIleft\fB/32\fR,
+signifying that the left end of the connection goes to the left participant
+only. When using IKEv2, the configured subnet of the peers may differ, the
+protocol narrows it to the greates common subnet.
+.TP
+.B leftsubnetwithin
+the peer can propose any subnet or single IP address that fits within the
+range defined by
+.BR leftsubnetwithin.
+Not relevant for IKEv2, as subnets are narrowed.
+.TP
+.B leftupdown
+what ``updown'' script to run to adjust routing and/or firewalling
+when the status of the connection
+changes (default
+.BR "ipsec _updown" ).
+May include positional parameters separated by white space
+(although this requires enclosing the whole string in quotes);
+including shell metacharacters is unwise.
+See
+.IR pluto (8)
+for details.
+Relevant only locally, other end need not agree on it. IKEv2 uses the updown
+script to insert firewall rules only. Routing is not support and will be
+implemented directly into Charon.
 .TP
 .B modeconfig
 defines which mode is used to assign a virtual IP.
@@ -682,6 +669,15 @@ PFS is enforced by defining a Diffie-Hellman modp group in the
 .B esp
 parameter.
 .TP
+.B reauth
+whether rekeying of an IKE_SA should also reauthenticate the peer. In IKEv1,
+reauthentication is always done. In IKEv2, a value of
+.B no
+rekeys without uninstalling the IPsec SAs, a value of
+.B yes
+(the default) creates a new IKE_SA from scratch and tries to recreate
+all IPsec SAs.
+.TP
 .B rekey
 whether a connection should be renegotiated when it is about to expire;
 acceptable values are
@@ -696,15 +692,6 @@ it does not prevent responding to renegotiation requested from the other end,
 so
 .B no
 will be largely ineffective unless both ends agree on it.
-.TP
-.B reauth
-whether rekeying of an IKE_SA should also reauthenticate the peer. In IKEv1,
-reauthentication is always done. In IKEv2, a value of
-.B no
-rekeys without uninstalling the IPsec SAs, a value of
-.B yes
-(the default) creates a new IKE_SA from scratch and tries to recreate
-all IPsec SAs.
 .TP
 .B rekeyfuzz
 maximum percentage by which
@@ -738,24 +725,36 @@ begin; acceptable values as for
 .BR 9m ).
 Relevant only locally, other end need not agree on it.
 .TP
-.B ike
-IKE/ISAKMP SA encryption/authentication algorithm to be used, e.g.
-.B aes128-sha1-modp2048
-(encryption-integrity-dhgroup). In IKEv2, multiple algorithms and proposals
-may be included, such as
-.B aes128-aes256-sha1-modp1536-modp2048,3des-sha1-md5-modp1024.
+.B type
+the type of the connection; currently the accepted values
+are
+.B tunnel
+(the default)
+signifying a host-to-host, host-to-subnet, or subnet-to-subnet tunnel;
+.BR transport ,
+signifying host-to-host transport mode;
+.BR passthrough ,
+signifying that no IPsec processing should be done at all;
+.BR drop ,
+signifying that packets should be discarded; and
+.BR reject ,
+signifying that packets should be discarded and a diagnostic ICMP returned.
+Charon currently supports only 
+.BR tunnel
+and
+.BR transport
+connection types.
 .TP
-.B esp
-ESP encryption/authentication algorithm to be used
-for the connection, e.g.
-.B 3des-md5
-(encryption-integrity-[dh-group]). If dh-group is specified, CHILD_SA setup
-and rekeying include a separate diffe hellman exchange (IKEv2 only).
-.TP
-.B ah
-AH authentication algorithm to be used
-for the connection, e.g.
-.B hmac-md5.
+.B xauth
+specifies the role in the XAUTH protocol if activated by
+.B authby=xauthpsk
+or
+.B authby=xauthrsasig.
+Accepted values are
+.B server
+and
+.B client
+(the default).
 .SH "CA SECTIONS"
 This are optional sections that can be used to assign special
 parameters to a Certification Authority (CA). These parameters are not 
