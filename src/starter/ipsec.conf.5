@@ -823,170 +823,43 @@ names in a
 .B setup
 section are:
 .TP 14
-.B interfaces
-virtual and physical interfaces for IPsec to use:
-a single
-\fIvirtual\fB=\fIphysical\fR pair, a (quoted!) list of pairs separated
-by white space, or
-.BR %none .
-One of the pairs may be written as
-.BR %defaultroute ,
-which means: find the interface \fId\fR that the default route points to,
-and then act as if the value was ``\fBipsec0=\fId\fR''.
-.B %defaultroute
-is the default;
-.B %none
-must be used to denote no interfaces.
-(This parameter is used with the KLIPS IPsec stack only.)
-.TP
-.B dumpdir
-in what directory should things started by
-.I setup
-(notably the Pluto daemon) be allowed to
-dump core?
-The empty value (the default) means they are not
-allowed to.
-This feature is currently not supported by the ipsec starter.
-.TP
-.B charonstart
-whether to start the IKEv2 daemon Charon or not.
-Accepted values are
-.B yes
-(the default)
-or
-.BR no .
-.TP
-.B charondebug
-how much Charon debugging output should be logged.
-A comma separated list containing type level/pairs may
-be specified, e.g:
-.B dmn 3, ike 1, net -1.
-Acceptable values for types are
-.B dmn, mgr, ike, chd, job, cfg, knl, net, enc, lib
-and the level is one of
-.B -1, 0, 1, 2, 3, 4
-(for silent, audit, control, controlmore, raw, private).
-.TP
-.B plutostart
-whether to start the IKEv1 daemon Pluto or not.
-Accepted values are
-.B yes
-(the default)
-or
-.BR no .
-.TP
-.B plutodebug
-how much Pluto debugging output should be logged.
-An empty value,
-or the magic value
-.BR none ,
-means no debugging output (the default).
-The magic value
-.B all
-means full output.
-Otherwise only the specified types of output
-(a quoted list, names without the
-.B \-\-debug\-
-prefix,
-separated by white space) are enabled;
-for details on available debugging types, see
-.IR pluto (8).
-.TP
-.B prepluto
-shell command to run before starting Pluto
-(e.g., to decrypt an encrypted copy of the
-.I ipsec.secrets
-file).
-It's run in a very simple way;
-complexities like I/O redirection are best hidden within a script.
-Any output is redirected for logging,
-so running interactive commands is difficult unless they use
-.I /dev/tty
-or equivalent for their interaction.
-Default is none.
-.TP
-.B postpluto
-shell command to run after starting Pluto
-(e.g., to remove a decrypted copy of the
-.I ipsec.secrets
-file).
-It's run in a very simple way;
-complexities like I/O redirection are best hidden within a script.
-Any output is redirected for logging,
-so running interactive commands is difficult unless they use
-.I /dev/tty
-or equivalent for their interaction.
-Default is none.
-.TP
-.B fragicmp
-whether a tunnel's need to fragment a packet should be reported
-back with an ICMP message,
-in an attempt to make the sender lower his PMTU estimate;
-acceptable values are
-.B yes
-(the default)
-and
-.BR no .
-(This parameter is used with the KLIPS IPsec stack only.)
-.TP
-.B hidetos
-whether a tunnel packet's TOS field should be set to
-.B 0
-rather than copied from the user packet inside;
-acceptable values are
-.B yes
-(the default)
-and
-.BR no .
-(This parameter is used with the KLIPS IPsec stack only.)
-.TP
-.B uniqueids
-whether a particular participant ID should be kept unique,
-with any new (automatically keyed)
-connection using an ID from a different IP address
-deemed to replace all old ones using that ID;
-acceptable values are
-.B yes
-(the default)
-and
-.BR no .
-Participant IDs normally \fIare\fR unique,
-so a new (automatically-keyed) connection using the same ID is
-almost invariably intended to replace an old one.
-.TP
-.B overridemtu
-value that the MTU of the ipsec\fIn\fR interface(s) should be set to,
-overriding IPsec's (large) default.
-(This parameter is used in special situations with the KLIPS IPsec stack only.)
-.TP
-.B nat_traversal
-activates NAT traversal by accepting source ISAKMP different from udp/500 and
-floating to udp/4500 if a NAT situation is detected. Used by IKEv1 only since
-NAT traversal is always activated with IKEv2.
+.B cachecrls
+certificate revocation lists (CRLs) fetched via http or ldap will be cached in
+\fI/etc/ipsec.d/crls/\fR under a unique file name derived from the certification
+authority's public key.
 Accepted values are
 .B yes
 and
 .B no
 (the default).
 .TP
-.B keep_alive
-interval in seconds between NAT keep alive packets.
-.TP
-.B virtual_private
+.B charonstart
+whether to start the IKEv2 Charon daemon or not.
+Accepted values are
+.B yes
+(the default)
+or
+.BR no .
 .TP
 .B crlcheckinterval
 interval in seconds. CRL fetching is enabled if the value is greater than zero.
-Asynchronous periodic checking for fresh CRLs is done by IKEv1 only.
+Asynchronous, periodic checking for fresh CRLs is currently done by the
+IKEv1 Pluto daemon only.
 .TP
-.B cachecrls
-certificate revocation lists (CRLs) fetched via http or ldap will be cached in
-/etc/ipsec.d/crls under a unique file name derived from the certification
-authority's public key 
+.B dumpdir
+in what directory should things started by \fBipsec starter\fR
+(notably the Pluto and Charon daemons) be allowed to dump core?
+The empty value (the default) means they are not
+allowed to.
+This feature is currently not yet supported by \fBipsec starter\fR.
+.TP
+.B plutostart
+whether to start the IKEv1 Pluto daemon or not.
 Accepted values are
 .B yes
-and
-.B no
-(the default).
+(the default)
+or
+.BR no .
 .TP
 .B strictcrlpolicy
 defines if a fresh CRL must be available in order for the peer authentication based
@@ -1003,7 +876,22 @@ which reverts to
 if at least one CRL URI is defined and to
 .B no
 if no URI is known.
+.PP
+The following
+.B config section
+parameters are used by the IKEv1 Pluto daemon only:
 .TP
+.B keep_alive
+interval in seconds between NAT keep alive packets, the default being 20 seconds.
+.TP
+.B nat_traversal
+activates NAT traversal by accepting source ISAKMP ports different from udp/500 and
+being able of floating to udp/4500 if a NAT situation is detected.
+Accepted values are
+.B yes
+and
+.B no
+(the default).
 .B nocrsend
 no certificate request payloads will be sent.
 Accepted values are
@@ -1011,7 +899,7 @@ Accepted values are
 and
 .B no
 (the default).
-Used by IKEv1 only.
+Used by IKEv1 only, NAT traversal always being active in IKEv2.
 .TP
 .B pkcs11module
 defines the path to a dynamically loadable PKCS #11 library.
@@ -1032,6 +920,125 @@ Accepted values are
 and
 .B no
 (the default).
+.TP
+.B plutodebug
+how much Pluto debugging output should be logged.
+An empty value,
+or the magic value
+.BR none ,
+means no debugging output (the default).
+The magic value
+.B all
+means full output.
+Otherwise only the specified types of output
+(a quoted list, names without the
+.B \-\-debug\-
+prefix,
+separated by white space) are enabled;
+for details on available debugging types, see
+.IR pluto (8).
+.TP
+.B postpluto
+shell command to run after starting Pluto
+(e.g., to remove a decrypted copy of the
+.I ipsec.secrets
+file).
+It's run in a very simple way;
+complexities like I/O redirection are best hidden within a script.
+Any output is redirected for logging,
+so running interactive commands is difficult unless they use
+.I /dev/tty
+or equivalent for their interaction.
+Default is none.
+.TP
+.B prepluto
+shell command to run before starting Pluto
+(e.g., to decrypt an encrypted copy of the
+.I ipsec.secrets
+file).
+It's run in a very simple way;
+complexities like I/O redirection are best hidden within a script.
+Any output is redirected for logging,
+so running interactive commands is difficult unless they use
+.I /dev/tty
+or equivalent for their interaction.
+Default is none.
+.TP
+.B virtual_private
+defines private networks using a wildcard notation.
+.TP
+.B uniqueids
+whether a particular participant ID should be kept unique,
+with any new (automatically keyed)
+connection using an ID from a different IP address
+deemed to replace all old ones using that ID;
+acceptable values are
+.B yes
+(the default)
+and
+.BR no .
+Participant IDs normally \fIare\fR unique,
+so a new (automatically-keyed) connection using the same ID is
+almost invariably intended to replace an old one.
+.PP
+The following
+.B config section
+parameters are used by the IKEv2 Charon daemon only:
+.TP
+.B charondebug
+how much Charon debugging output should be logged.
+A comma separated list containing type level/pairs may
+be specified, e.g:
+.B dmn 3, ike 1, net -1.
+Acceptable values for types are
+.B dmn, mgr, ike, chd, job, cfg, knl, net, enc, lib
+and the level is one of
+.B -1, 0, 1, 2, 3, 4
+(for silent, audit, control, controlmore, raw, private).
+.PP
+The following
+.B config section
+parameters only make sense if the KLIPS IPsec stack
+is used instead of the default NETKEY stack of the Linux 2.6 kernel:
+.TP
+.B fragicmp
+whether a tunnel's need to fragment a packet should be reported
+back with an ICMP message,
+in an attempt to make the sender lower his PMTU estimate;
+acceptable values are
+.B yes
+(the default)
+and
+.BR no .
+.TP
+.B hidetos
+whether a tunnel packet's TOS field should be set to
+.B 0
+rather than copied from the user packet inside;
+acceptable values are
+.B yes
+(the default)
+and
+.BR no
+.TP
+.B interfaces
+virtual and physical interfaces for IPsec to use:
+a single
+\fIvirtual\fB=\fIphysical\fR pair, a (quoted!) list of pairs separated
+by white space, or
+.BR %none .
+One of the pairs may be written as
+.BR %defaultroute ,
+which means: find the interface \fId\fR that the default route points to,
+and then act as if the value was ``\fBipsec0=\fId\fR''.
+.B %defaultroute
+is the default;
+.B %none
+must be used to denote no interfaces.
+.TP
+.B overridemtu
+value that the MTU of the ipsec\fIn\fR interface(s) should be set to,
+overriding IPsec's (large) default.
 .SH CHOOSING A CONNECTION
 .PP
 When choosing a connection to apply to an outbound packet caught with a 
@@ -1059,9 +1066,8 @@ information about the client subnets to complete the instantiation.
 .SH SEE ALSO
 ipsec(8), pluto(8), starter(8), ttoaddr(3), ttodata(3)
 .SH HISTORY
-Written  for  the  FreeS/WAN project
-<http://www.freeswan.org>
-by Henry Spencer.  Extended for the strongSwan project
+Written  for  the  FreeS/WAN project by Henry Spencer.
+Extended for the strongSwan project
 <http://www.strongswan.org>
 by Andreas Steffen. IKEv2-specific features by Martin Willi.
 .SH BUGS
