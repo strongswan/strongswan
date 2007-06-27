@@ -18,12 +18,12 @@
 #include "freeswan.h"
 
 static const char *co[] = {
- "Copyright (C) 1999-2005  Henry Spencer, Richard Guy Briggs,",
+ "Copyright (C) 1999-2007  Henry Spencer, Richard Guy Briggs,",
  "    D. Hugh Redelmeier, Sandy Harris, Claudia Schmeing,",
  "    Michael Richardson, Angelos D. Keromytis, John Ioannidis,",
  "",
  "    Ken Bantoft, Stephen J. Bevan, JuanJo Ciarlante, Mathieu Lafon,",
- "    Stephane Laroche, Kai Martius, Tuomo Soini, Herbert Xu,",
+ "    Stephane Laroche, Kai Martius, Stephan Scholz, Tuomo Soini, Herbert Xu,",
  "",
  "    Andreas Steffen, Martin Berner, Marco Bertossa, David Buechi,",
  "    Ueli Galizzi, Christoph Gysin, Andreas Hess, Patric Lichtsteiner,",
@@ -31,7 +31,8 @@ static const char *co[] = {
  "    Mario Strasser, Lukas Suter, Roger Wegmann, Simon Zwahlen,",
  "    Zuercher Hochschule Winterthur (Switzerland).",
  "",
- "    Jan Hutter, Martin Willi, Andreas Steffen,",
+ "    Tobias Brunner, Fabian Hartmann, Noah Heusser, Jan Hutter,",
+ "    Daniel Röthlisberger, Martin Willi, Andreas Steffen,",
  "    Hochschule fuer Technik Rapperswil (Switzerland).",
  "",
  "This program is free software; you can redistribute it and/or modify it",
