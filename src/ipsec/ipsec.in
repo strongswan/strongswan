@@ -36,8 +36,7 @@ IPSEC_STARTER="${IPSEC_DIR}/starter"
 
 export IPSEC_DIR IPSEC_SBINDIR IPSEC_CONFDIR IPSEC_PIDDIR IPSEC_VERSION IPSEC_NAME IPSEC_STARTER_PID IPSEC_PLUTO_PID IPSEC_CHARON_PID
 
-IPSEC_DISTRO="Institute for Internet Technologies and Applications\n
-              University of Applied Sciences Rapperswil, Switzerland"
+IPSEC_DISTRO="Institute for Internet Technologies and Applications\nUniversity of Applied Sciences Rapperswil, Switzerland"
 
 case "$1" in
 '')
@@ -82,10 +81,6 @@ case "$1" in
 	echo "$IPSEC_VERSION"
 	exit 0
 	;;
---copyright)
-	set _copyright
-	# and fall through, invoking "ipsec _copyright"
-	;;
 --directory)
 	echo "$IPSEC_DIR"
 	exit 0
@@ -93,6 +88,10 @@ case "$1" in
 --confdir)
 	echo "$IPSEC_CONFDIR"
 	exit 0
+	;;
+copyright|--copyright)
+	set _copyright
+	# and fall through, invoking "ipsec _copyright"
 	;;
 down)
 	shift
@@ -266,8 +265,8 @@ update)
 	;;
 version|--version)
 	echo "Linux $IPSEC_NAME $IPSEC_VERSION"
+	echo -e $IPSEC_DISTRO
 	echo "See \`ipsec --copyright' for copyright information."
-	echo $IPSEC_DISTRO
 	exit 0
 	;;
 --*)
