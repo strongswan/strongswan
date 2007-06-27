@@ -25,9 +25,9 @@ typedef enum {
     KW_CHARONSTART,
     KW_PLUTOSTART,
 
-	/* pluto/charon keywords */
+    /* pluto/charon keywords */
     KW_PLUTODEBUG,
-	KW_CHARONDEBUG,
+    KW_CHARONDEBUG,
     KW_PREPLUTO,
     KW_POSTPLUTO,
     KW_UNIQUEIDS,
