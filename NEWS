@@ -23,7 +23,17 @@ strongswan-4.1.4
    right=%any
 
   so that the peer can rekey the connection as an initiator when his
-  IP address changes.
+  IP address changes. An alternative notation is
+
+    right=%peer.foo.bar
+
+  which will implicitly set rightallowany=yes.
+
+- ipsec starter now fails more gracefully in the presence of parsing
+  errors. Flawed ca and conn section are discarded and pluto is started
+  if non-fatal errors only were encountered. If right=%peer.foo.bar
+  cannot be resolved by DNS then right=%any will be used so that passive
+  connections as a responder are still possible.
 
 
 strongswan-4.1.3
