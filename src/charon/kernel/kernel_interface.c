@@ -1645,7 +1645,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 					   protocol_id_t protocol, u_int32_t reqid,
 					   u_int64_t expire_soft, u_int64_t expire_hard,
 					   algorithm_t *enc_alg, algorithm_t *int_alg,
-					   prf_plus_t *prf_plus, natt_conf_t *natt, mode_t mode,
+					   prf_plus_t *prf_plus, mode_t mode, bool encap,
 					   bool replace)
 {
 	unsigned char request[BUFFER_SIZE];
@@ -1743,7 +1743,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	
 	/* TODO: add IPComp here */
 	
-	if (natt)
+	if (encap)
 	{
 		rthdr->rta_type = XFRMA_ENCAP;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
@@ -1756,8 +1756,8 @@ static status_t add_sa(private_kernel_interface_t *this,
 
 		struct xfrm_encap_tmpl* encap = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
 		encap->encap_type = UDP_ENCAP_ESPINUDP;
-		encap->encap_sport = htons(natt->sport);
-		encap->encap_dport = htons(natt->dport);
+		encap->encap_sport = htons(src->get_port(src));
+		encap->encap_dport = htons(dst->get_port(dst));
 		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));
 		/* encap_oa could probably be derived from the 
 		 * traffic selectors [rfc4306, p39]. In the netlink kernel implementation 
@@ -2314,7 +2314,7 @@ kernel_interface_t *kernel_interface_create()
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,natt_conf_t*,mode_t,bool))add_sa;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,mode_t,bool,bool))add_sa;
 	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*))update_sa;
 	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;

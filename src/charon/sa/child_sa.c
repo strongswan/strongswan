@@ -138,9 +138,9 @@ struct private_child_sa_t {
 	child_sa_state_t state;
 
 	/**
-	 * Specifies if NAT traversal is used
+	 * Specifies if UDP encapsulation is enabled (NAT traversal)
 	 */
-	bool use_natt;
+	bool encap;
 	
 	/**
 	 * mode this SA uses, tunnel/transport
@@ -494,7 +494,6 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	algorithm_t int_algo_none = {AUTH_UNDEFINED, 0};
 	host_t *src;
 	host_t *dst;
-	natt_conf_t *natt;
 	status_t status;
 	
 	this->protocol = proposal->get_protocol(proposal);
@@ -561,18 +560,6 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 		int_algo = &int_algo_none;
 	}
 	
-	/* setup nat-t */
-	if (this->use_natt)
-	{
-		natt = alloca(sizeof(natt_conf_t));
-		natt->sport = src->get_port(src);
-		natt->dport = dst->get_port(dst);
-	}
-	else
-	{
-		natt = NULL;
-	}
-	
 	soft = this->config->get_lifetime(this->config, TRUE);
 	hard = this->config->get_lifetime(this->config, FALSE);
 	
@@ -582,7 +569,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 											  src, dst, spi, this->protocol,
 											  this->reqid, mine ? soft : 0,
 											  hard, enc_algo, int_algo,
-											  prf_plus, natt, mode, mine);
+											  prf_plus, mode, this->encap, mine);
 	
 	this->encryption = *enc_algo;
 	this->integrity = *int_algo;
@@ -784,7 +771,8 @@ static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use
 /**
  * Implementation of child_sa_t.update_hosts.
  */
-static status_t update_hosts(private_child_sa_t *this, host_t *me, host_t *other) 
+static status_t update_hosts(private_child_sa_t *this, 
+							 host_t *me, host_t *other, bool encap) 
 {
 	/* anything changed at all? */
 	if (me->equals(me, this->me.addr) && other->equals(other, this->other.addr))
@@ -937,7 +925,7 @@ static void destroy(private_child_sa_t *this)
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 identification_t *my_id, identification_t *other_id,
-							 child_cfg_t *config, u_int32_t rekey, bool use_natt)
+							 child_cfg_t *config, u_int32_t rekey, bool encap)
 {
 	static u_int32_t reqid = 0;
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
@@ -951,7 +939,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))update;
-	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*))update_hosts;
+	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,bool))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,mode_t))add_policies;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
@@ -970,7 +958,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->other.spi = 0;
 	this->alloc_ah_spi = 0;
 	this->alloc_esp_spi = 0;
-	this->use_natt = use_natt;
+	this->encap = encap;
 	this->state = CHILD_CREATED;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;

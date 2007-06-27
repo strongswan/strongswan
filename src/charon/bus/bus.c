@@ -372,7 +372,7 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 			active_listener->format = format;
 			va_copy(active_listener->args, args);
 			active_listener->state = REGISTERED;
-			pthread_cond_signal(&active_listener->cond);
+			pthread_cond_broadcast(&active_listener->cond);
 		}
 	}
 	

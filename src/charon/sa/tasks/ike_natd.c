@@ -204,15 +204,11 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	if (this->src_seen && this->dst_seen)
 	{
 		this->ike_sa->enable_extension(this->ike_sa, EXT_NATT);
-	
-		if (!this->dst_matched)
-		{
-			this->ike_sa->set_condition(this->ike_sa, COND_NAT_HERE, TRUE);
-		}
-		if (!this->src_matched)
-		{
-			this->ike_sa->set_condition(this->ike_sa, COND_NAT_THERE, TRUE);
-		}
+
+		this->ike_sa->set_condition(this->ike_sa, COND_NAT_HERE,
+									!this->dst_matched);
+		this->ike_sa->set_condition(this->ike_sa, COND_NAT_THERE,
+									!this->src_matched);
 	}
 }
 
@@ -222,8 +218,11 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 static status_t process_i(private_ike_natd_t *this, message_t *message)
 {
 	process_payloads(this, message);
-
-	if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
+			
+	/* if peer supports NAT-T, we switch to port 4500 even
+	 * if no NAT is detected. MOBIKE requires this. */
+	if (message->get_exchange_type(message) == IKE_SA_INIT &&
+		this->ike_sa->supports_extension(this->ike_sa, EXT_NATT))
 	{
 		host_t *me, *other;
 	
@@ -297,7 +296,8 @@ static status_t build_r(private_ike_natd_t *this, message_t *message)
 	host_t *me, *other;
 	
 	/* only add notifies on successfull responses. */
-	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
+	if (message->get_exchange_type(message) == IKE_SA_INIT &&
+		message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
 	{
 		return SUCCESS;
 	}

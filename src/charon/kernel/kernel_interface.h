@@ -25,7 +25,6 @@
 #ifndef KERNEL_INTERFACE_H_
 #define KERNEL_INTERFACE_H_
 
-typedef struct natt_conf_t natt_conf_t;
 typedef enum policy_dir_t policy_dir_t;
 typedef struct kernel_interface_t kernel_interface_t;
 
@@ -33,17 +32,6 @@ typedef struct kernel_interface_t kernel_interface_t;
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 
-/**
- * Configuration for NAT-T
- *
- * @ingroup kernel
- */
-struct natt_conf_t {
-	/** source port to use for UDP-encapsulated packets */
-	u_int16_t sport;
-	/** dest port to use for UDP-encapsulated packets */
-	u_int16_t dport;
-};
 
 /**
  * Direction of a policy. These are equal to those
@@ -121,8 +109,8 @@ struct kernel_interface_t {
 	 * @param enc_alg		Algorithm to use for encryption (ESP only)
 	 * @param int_alg		Algorithm to use for integrity protection
 	 * @param prf_plus		PRF to derive keys from
-	 * @param natt			NAT-T Configuration, or NULL of no NAT-T used
 	 * @param mode			mode of the SA (tunnel, transport)
+	 * @param encap			enable UDP encapsulation for NAT traversal
 	 * @param replace		Should an already installed SA be updated?
 	 * @return
 	 * 						- SUCCESS
@@ -133,8 +121,8 @@ struct kernel_interface_t {
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int64_t expire_soft, u_int64_t expire_hard,
 						algorithm_t *enc_alg, algorithm_t *int_alg,
-						prf_plus_t *prf_plus, natt_conf_t *natt,
-						mode_t mode, bool update);
+						prf_plus_t *prf_plus, mode_t mode, bool encap,
+						bool update);
 	
 	/**
 	 * @brief Update the hosts on an installed SA.

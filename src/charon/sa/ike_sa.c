@@ -469,6 +469,7 @@ static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
 	{
 		if (enable)
 		{
+			this->conditions |= condition;
 			switch (condition)
 			{
 				case COND_STALE:
@@ -487,19 +488,24 @@ static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
 				default:
 					break;
 			}
-			this->conditions |= condition;
 		}
 		else
 		{
+			this->conditions &= ~condition;
 			switch (condition)
 			{
 				case COND_STALE:
 					DBG1(DBG_IKE, "new route to %H found", this->other_host);
 					break;
+				case COND_NAT_HERE:
+				case COND_NAT_THERE:
+					set_condition(this, COND_NAT_ANY,
+								  has_condition(this, COND_NAT_HERE) ||
+								  has_condition(this, COND_NAT_THERE));
+					break;
 				default:
 					break;
 			}
-			this->conditions &= ~condition;
 		}
 	}
 }
@@ -695,7 +701,8 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 		while (iterator->iterate(iterator, (void**)&child_sa))
 		{
-			child_sa->update_hosts(child_sa, this->my_host, this->other_host);
+			child_sa->update_hosts(child_sa, this->my_host, this->other_host,
+								   has_condition(this, COND_NAT_ANY));
 		}
 		iterator->destroy(iterator);
 	}

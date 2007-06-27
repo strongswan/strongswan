@@ -143,6 +143,16 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 				flush_additional_addresses(this);
 				break;
 			}
+			case NAT_DETECTION_SOURCE_IP:
+			case NAT_DETECTION_DESTINATION_IP:
+			{
+				/* NAT check in this MOBIKE exchange, create subtask for it */
+				if (this->natd == NULL)
+				{
+					this->natd = ike_natd_create(this->ike_sa, this->initiator);
+				}
+				break;
+			}
 			default:
 				break;
 		}
@@ -205,10 +215,12 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 	{	/* address change */
 		message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES, chunk_empty);
 		build_address_list(this, message);
-		/* TODO: NAT discovery */
-		
 		/* set new addresses */
 		this->ike_sa->update_hosts(this->ike_sa, this->me, this->other);
+		if (this->natd)
+		{
+			this->natd->task.build(&this->natd->task, message);
+		}
 	}
 	
 	return NEED_MORE;
@@ -219,13 +231,19 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
  */
 static status_t process_r(private_ike_mobike_t *this, message_t *message)
 {
-	if ((message->get_exchange_type(message) == IKE_AUTH &&
-		 message->get_payload(message, SECURITY_ASSOCIATION)) ||
-		message->get_exchange_type(message) == INFORMATIONAL)
+	if (message->get_exchange_type(message) == IKE_AUTH &&
+		message->get_payload(message, SECURITY_ASSOCIATION))
 	{
 		process_payloads(this, message);
 	}
-	
+	else if (message->get_exchange_type(message) == INFORMATIONAL)
+	{
+		process_payloads(this, message);
+		if (this->natd)
+		{
+			this->natd->task.process(&this->natd->task, message);
+		}
+	}
 	return NEED_MORE;
 }
 
@@ -246,6 +264,10 @@ static status_t build_r(private_ike_mobike_t *this, message_t *message)
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
+		if (this->natd)
+		{
+			this->natd->task.build(&this->natd->task, message);
+		}
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -260,10 +282,16 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 		message->get_payload(message, SECURITY_ASSOCIATION))
 	{
 		process_payloads(this, message);
+
 		return SUCCESS;
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
+		process_payloads(this, message);
+		if (this->natd)
+		{
+			this->natd->task.process(&this->natd->task, message);
+		}
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -276,6 +304,9 @@ static void roam(private_ike_mobike_t *this, host_t *me, host_t *other)
 {
 	this->me = me;
 	this->other = other;
+	
+	/* include NAT detection when roaming */
+	this->natd = ike_natd_create(this->ike_sa, this->initiator);
 }
 
 /**
