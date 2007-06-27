@@ -195,7 +195,7 @@ static const token_info_t token_info[] =
     { ARG_TIME, offsetof(starter_conn_t, sa_ike_life_seconds), NULL                },
     { ARG_TIME, offsetof(starter_conn_t, sa_ipsec_life_seconds), NULL              },
     { ARG_TIME, offsetof(starter_conn_t, sa_rekey_margin), NULL                    },
-    { ARG_ULNG, offsetof(starter_conn_t, sa_keying_tries), NULL                    },
+    { ARG_MISC, 0, NULL  /* KW_KEYINGTRIES */                                      },
     { ARG_PCNT, offsetof(starter_conn_t, sa_rekey_fuzz), NULL                      },
     { ARG_MISC, 0, NULL  /* KW_REKEY */                                            },
     { ARG_MISC, 0, NULL  /* KW_REAUTH */                                           },
