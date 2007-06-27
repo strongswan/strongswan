@@ -1,4 +1,4 @@
-.TH IPSEC.CONF 5 "20 Jan 2006"
+.TH IPSEC.CONF 5 "27 Jun 2007"
 .\" RCSID $Id: ipsec.conf.5,v 1.2 2006/01/22 15:33:46 as Exp $
 .SH NAME
 ipsec.conf \- IPsec configuration and connections
@@ -143,7 +143,7 @@ section specifies general configuration information for IPsec, a
 .B conn
 section specifies an IPsec connection, while a
 .B ca
-section specifies special properties a certification authority.
+section specifies special properties of a certification authority.
 .SH "CONN SECTIONS"
 A
 .B conn
@@ -158,13 +158,12 @@ Here's a simple example:
 .ft B
 .ta 1c
 conn snt
-	left=10.11.11.1
-	leftsubnet=10.0.1.0/24
-	leftnexthop=172.16.55.66
-	right=192.168.22.1
-	rightsubnet=10.0.2.0/24
-	rightnexthop=172.16.88.99
+	left=192.168.0.1
+	leftsubnet=10.1.0.0/16
+	right=192.168.0.2
+	rightsubnet=10.1.0.0/16
 	keyingtries=%forever
+	auto=add
 .ft
 .fi
 .PP
@@ -172,7 +171,7 @@ A note on terminology: There are two kinds of communications going on:
 transmission of user IP packets, and gateway-to-gateway negotiations for
 keying, rekeying, and general control.
 The path to control the connection is called 'ISAKMP SA' in IKEv1 and
-'IKE SA' in the IKEv2 protocol. That what is beeing negotiated, the kernel
+'IKE SA' in the IKEv2 protocol. That what is being negotiated, the kernel
 level data path, is called 'IPsec SA'.
 strongSwan currently uses two separate keying daemons. Pluto handles
 all IKEv1 connections, Charon is the new daemon supporting the IKEv2 protocol.
@@ -244,23 +243,13 @@ connection types.
 (required)
 the IP address of the left participant's public-network interface,
 in any form accepted by
-.IR ipsec_ttoaddr (3)
+.IR ttoaddr (3)
 or one of several magic values.
 If it is
 .BR %defaultroute ,
-and
-the
-.B config
-.B setup
-section's,
-.B interfaces
-specification contains
-.BR %defaultroute,
 .B left
 will be filled in automatically with the local address
-of the default-route interface (as determined at IPsec startup time);
-this also overrides any value supplied for
-.BR leftnexthop .
+of the default-route interface (as determined at IPsec startup time).
 (Either
 .B left
 or
@@ -271,50 +260,44 @@ but not both.)
 The value
 .B %any
 signifies an address to be filled in (by automatic keying) during
-negotiation.
+negotiation. The prefix
+.B  %
+in front of a fully-qualified domain name or an IP address will implicitly set
+.B leftallowany=yes.
+If the domain name cannot be resolved into an IP address at IPsec startup or update time
+then
+.B left=%any
+and
+.B leftallowany=no
+will be assumed.
+.TP
+.B leftallowany
+a modifier for
+.B left
+, making it behave as
+.B %any
+although a concrete IP address has been assigned.
+Recommended for dynamic IP addresses that can be resolved by DynDNS at IPsec startup or
+update time.
+Acceptable values are
+.B yes
+and
+.B no
+(the default).
 .TP
 .B leftsubnet
 private subnet behind the left participant, expressed as
 \fInetwork\fB/\fInetmask\fR
 (actually, any form acceptable to
-.IR ipsec_ttosubnet (3));
+.IR ttosubnet (3));
 if omitted, essentially assumed to be \fIleft\fB/32\fR,
 signifying that the left end of the connection goes to the left participant
 only. When using IKEv2, the configured subnet of the peers may differ, the
 protocol narrows it to the greates common subnet.
 .TP
 .B leftnexthop
-next-hop gateway IP address for the left participant's connection
-to the public network;
-defaults to
-.B %direct
-(meaning
-.IR right ).
-If the value is to be overridden by the
-.B left=%defaultroute
-method (see above),
-an explicit value must
-.I not
-be given.
-If that method is not being used,
-but
-.B leftnexthop
-is
-.BR %defaultroute ,
-and
-.B interfaces=%defaultroute
-is used in the
-.B config
-.B setup
-section,
-the next-hop gateway address of the default-route interface
-will be used.
-The magic value
-.B %direct
-signifies a value to be filled in (by automatic keying)
-with the peer's address.
-Relevant only locally, other end need not agree on it. Currently not supported
-in IKEv2.
+this parameter is not needed any more because the NETKEY IPsec stack does
+not require explicit routing entries for the traffic to be tunneled.
 .TP
 .B leftupdown
 what ``updown'' script to run to adjust routing and/or firewalling
@@ -325,7 +308,7 @@ May include positional parameters separated by white space
 (although this requires enclosing the whole string in quotes);
 including shell metacharacters is unwise.
 See
-.IR ipsec_pluto (8)
+.IR pluto (8)
 for details.
 Relevant only locally, other end need not agree on it. IKEv2 uses the updown
 script to insert firewall rules only. Routing is not support and will be
@@ -333,13 +316,14 @@ implemented directly into Charon.
 .TP
 .B leftfirewall
 whether the left participant is doing forwarding-firewalling
-(including masquerading) for traffic from \fIleftsubnet\fR,
+(including masquerading) using iptables for traffic from \fIleftsubnet\fR,
 which should be turned off (for traffic to the other subnet)
 once the connection is established;
 acceptable values are
 .B yes
-and (the default)
-.BR no .
+and
+.B no
+(the default).
 May not be used in the same connection description with
 .BR leftupdown .
 Implemented as a parameter to the default
@@ -358,7 +342,7 @@ distinct, non-overlapping subnet address blocks.)
 This is done by the default
 .I updown
 script (see
-.IR ipsec_pluto (8)).
+.IR pluto (8)).
 
 In situations calling for more control,
 it may be preferable for the user to supply his own
@@ -409,6 +393,8 @@ The IKEv2 daemon currently supports only ESP.
 how the two security gateways should authenticate each other;
 acceptable values are
 .B secret
+or
+.B psk
 for shared secrets,
 .B rsasig
 for RSA digital signatures (the default),
@@ -417,12 +403,30 @@ for either, and
 .B never
 if negotiation is never to be attempted or accepted (useful for shunt-only conns).
 Digital signatures are superior in every way to shared secrets. In IKEv2, the
-two ends must not agree on this parameter, it is relevant for the own
-authentication method only. IKEv2 additionally supports the value
+two ends must not agree on this parameter, it is relevant for the
+outbound authentication method only.
+IKEv1 additionally supports the values
+.B xauthpsk
+and
+.B xauthrsasig
+that will enable eXtended AUTHentication (XAUTH) in addition to IKEv1 main mode
+based on shared secrets  or digital RSA signatures, respectively.
+IKEv2 additionally supports the value
 .B eap,
 which indicates an initiator to request EAP authentication. The EAP method to 
 use is selected by the server (see
 .B eap).
+.TP
+.B xauth
+specifies the role in the XAUTH protocol if activated by
+.B authby=xauthpsk
+or
+.B authby=xauthrsasig.
+Accepted values are
+.B server
+and
+.B client
+(the default).
 .TP
 .B compress
 whether IPComp compression of content is proposed on the connection
@@ -447,24 +451,26 @@ controls the use of the Dead Peer Detection protocol (DPD, RFC 3706) where
 R_U_THERE notification messages (IKEv1) or empty INFORMATIONAL messages (IKEv2)
 are periodically sent in order to check the
 liveliness of the IPsec peer. The values
-.B clear
-and
-.B hold
-both activate DPD. If no activity is detected, all connections with a dead peer
+.BR clear ,
+.BR hold ,
+and 
+.B restart
+all activate DPD. If no activity is detected, all connections with a dead peer
 are stopped and unrouted (
 .B clear
-) or put in the hold state (
+), put in the hold state (
 .B hold
-). For
-.B IKEv1
-, the default is
+) or restarted (
+.B restart
+).
+For IKEv1, the default is
 .B none
 which disables the active sending of R_U_THERE notifications.
 Nevertheless pluto will always send the DPD Vendor ID during connection set up
 in order to signal the readiness to act passively as a responder if the peer
-wants to use DPD. For
-.B IKEv2, none
-does't make sense, as all messages are used to detect dead peers. If specified,
+wants to use DPD. For IKEv2,
+.B none
+does't make sense, since all messages are used to detect dead peers. If specified,
 it has the same meaning as the default (
 .B clear
 ).
@@ -480,17 +486,6 @@ dead peers.
 defines the timeout interval, after which all connections to a peer are deleted
 in case of inactivity. This only applies to IKEv1, in IKEv2 the default
 retransmission timeout applies, as every exchange is used to detect dead peers.
-.TP
-.B failureshunt
-what to do with packets when negotiation fails.
-The default is
-.BR none :
-no shunt;
-.BR passthrough ,
-.BR drop ,
-and
-.B reject
-have the obvious meanings. Has no effect in IKEv2 yet.
 .TP
 .B ikelifetime
 how long the keying channel of a connection ('ISAKMP/IKE SA')
@@ -553,8 +548,7 @@ to the root certification authority.
 .B leftcert
 the path to the left participant's X.509 certificate. The file can be coded either in
 PEM or DER format. OpenPGP certificates are supported as well.
-Both absolute paths or paths relative to
-.B /etc/ipsec.d/certs
+Both absolute paths or paths relative to \fI/etc/ipsec.d/certs\fP
 are accepted. By default
 .B leftcert
 sets 
@@ -565,6 +559,40 @@ to the distinguished name of the certificate's issuer.
 The left participant's ID can be overriden by specifying a
 .B leftid
 value which must be certified by the certificate, though.
+.TP
+.B leftsendcert
+Accepted values are
+.B never
+or
+.BR no ,
+.B always
+or
+.BR yes ,
+and
+.BR ifasked .
+.TP
+.B leftrsasigkey
+the left participant's
+public key for RSA signature authentication,
+in RFC 2537 format using
+.IR ttodata (3)
+encoding.
+The magic value
+.B %none
+means the same as not specifying a value (useful to override a default).
+The value
+.B %cert
+(the default)
+means that the key is extracted from a certificate.
+The identity used for the left participant
+must be a specific host, not
+.B %any
+or another magic value.
+.B Caution:
+if two connection descriptions
+specify different public keys for the same
+.BR leftid ,
+confusion and madness will ensue.
 .TP
 .B leftgroups
 a comma separated list of group names. If the
@@ -582,24 +610,20 @@ should be identified for authentication;
 defaults to
 .BR left .
 Can be an IP address (in any
-.IR ipsec_ttoaddr (3)
+.IR ttoaddr (3)
 syntax)
 or a fully-qualified domain name preceded by
 .B @
 (which is used as a literal string and not resolved).
-The magic value
-.B %myid
-stands for the current setting of \fImyid\fP.
-This is set in \fBconfig setup\fP or by \fIipsec_whack\fP(8)), or, if not set,
-it is the IP address in \fB%defaultroute\fP (if that is supported by a TXT record in its reverse domain), or otherwise
-it is the system's hostname (if that is supported by a TXT record in its forward domain), or otherwise it is undefined.
 .TP
 .B leftsourceip
 The internal source IP to use in a tunnel, also known as virtual IP. If the
 value is
-.B %modeconfig
+.BR %modeconfig ,
+.BR %modecfg ,
+.BR %config ,
 or
-.B %config,
+.B %cfg,
 an address is requested from the peer. In IKEv2, a defined address is requested,
 but the server may change it. If the server does not support it, the address
 is enforced. 
@@ -611,7 +635,20 @@ value is
 on the responder side, the initiator must propose a address which is then echoed
 back.
 .TP
+.B modeconfig
+defines which mode is used to assign a virtual IP.
+Accepted values are
+.B push
+and
+.B pull
+(the default).
+Currently relevant for IKEv1 only since IKEv2 always uses the configuration
+payload in pull mode.
+.TP
 .B leftsubnetwithin
+the peer can propose any subnet or single IP address that fits within the
+range defined by
+.BR leftsubnetwithin .
 Not relevant for IKEv2, as subnets are narrowed.
 .TP
 .B pfs
@@ -623,9 +660,11 @@ acceptable values are
 .B yes
 (the default)
 and
-.BR no
-. IKEv2 always uses PFS for IKE_SA rekeying. PFS for rekeying IPsec SAs is
-currently not supported.
+.BR no.
+IKEv2 always uses PFS for IKE_SA rekeying whereas for CHILD_SA rekeying
+PFS is enforced by defining a Diffie-Hellman modp group in the
+.B esp
+parameter.
 .TP
 .B rekey
 whether a connection should be renegotiated when it is about to expire;
@@ -634,8 +673,7 @@ acceptable values are
 (the default)
 and
 .BR no .
-The two ends need not agree,
-but while a value of
+The two ends need not agree, but while a value of
 .B no
 prevents Pluto/Charon from requesting renegotiation,
 it does not prevent responding to renegotiation requested from the other end,
@@ -661,7 +699,7 @@ acceptable values are an integer,
 which may exceed 100,
 followed by a `%'
 (default set by
-.IR ipsec_pluto (8),
+.IR pluto (8),
 currently
 .BR 100% ).
 The value of
@@ -721,14 +759,25 @@ defines a path to the CA certificate either relative to
 .B crluri
 defines a CRL distribution point (ldap, http, or file URI)
 .TP
+.B crluri1
+synonym for
+.B crluri.
+.TP
 .B crluri2
 defines an alternative CRL distribution point (ldap, http, or file URI)
 .TP
 .B ldaphost
-defines an ldap host.
+defines an ldap host. Currently used by IKEv1 only.
 .TP
 .B ocspuri
 defines an OCSP URI.
+.TP
+.B ocspuri1
+synonym for
+.B ocspuri.
+.TP
+.B ocspuri2
+defines an alternative OCSP URI. Currently used by IKEv2 only.
 .SH "CONFIG SECTIONS"
 At present, the only
 .B config
@@ -736,7 +785,7 @@ section known to the IPsec software is the one named
 .BR setup ,
 which contains information used when the software is being started
 (see
-.IR ipsec_setup (8)).
+.IR starter (8)).
 Here's an example:
 .PP
 .ne 8
@@ -744,10 +793,9 @@ Here's an example:
 .ft B
 .ta 1c
 config setup
-	interfaces="ipsec0=eth1 ipsec1=ppp0"
-	klipsdebug=none
 	plutodebug=all
-	manualstart=
+	crlcheckinterval=10m
+	strictcrlpolicy=yes
 .ft
 .fi
 .PP
@@ -759,18 +807,6 @@ names in a
 .B setup
 section are:
 .TP 14
-.B myid
-the identity to be used for
-.BR %myid .
-.B %myid
-is used in the implicit policy group conns and can be used as
-an identity in explicit conns.
-If unspecified,
-.B %myid
-is set to the IP address in \fB%defaultroute\fP (if that is supported by a TXT record in its reverse domain), or otherwise
-the system's hostname (if that is supported by a TXT record in its forward domain), or otherwise it is undefined.
-An explicit value generally starts with ``\fB@\fP''.
-.TP
 .B interfaces
 virtual and physical interfaces for IPsec to use:
 a single
@@ -785,52 +821,43 @@ and then act as if the value was ``\fBipsec0=\fId\fR''.
 is the default;
 .B %none
 must be used to denote no interfaces.
-If
-.B %defaultroute
-is used (implicitly or explicitly)
-information about the default route and its interface is noted for
-use by
-.IR ipsec_manual (8)
-and
-.IR ipsec_auto (8).)
+(This parameter is used with the KLIPS IPsec stack only.)
 .TP
-.B forwardcontrol
-whether
+.B dumpdir
+in what directory should things started by
 .I setup
-should turn IP forwarding on
-(if it's not already on) as IPsec is started,
-and turn it off again (if it was off) as IPsec is stopped;
-acceptable values are
+(notably the Pluto daemon) be allowed to
+dump core?
+The empty value (the default) means they are not
+allowed to.
+This feature is currently not supported by the ipsec starter.
+.TP
+.B charonstart
+whether to start the IKEv2 daemon Charon or not.
+Accepted values are
 .B yes
-and (the default)
+(the default)
+or
 .BR no .
-For this to have full effect, forwarding must be
-disabled before the hardware interfaces are brought
-up (e.g.,
-.B "net.ipv4.ip_forward\ =\ 0"
-in Red Hat 6.x
-.IR /etc/sysctl.conf ),
-because IPsec doesn't get control early enough to do that.
 .TP
-.B rp_filter
-whether and how
-.I setup
-should adjust the reverse path filtering mechanism for the
-physical devices to be used.
-Values are \fB%unchanged\fP (to leave it alone)
-or \fB0\fP, \fB1\fP, \fB2\fP (values to set it to).
-\fI/proc/sys/net/ipv4/conf/PHYS/rp_filter\fP
-is badly documented; it must be \fB0\fP in many cases
-for ipsec to function.
-The default value for the parameter is \fB0\fP.
+.B charondebug
+how much Charon debugging output should be logged.
+A comma separated list containing type level/pairs may
+be specified, e.g:
+.B dmn 3, ike 1, net -1.
+Acceptable values for types are
+.B dmn, mgr, ike, chd, job, cfg, knl, net, enc, lib
+and the level is one of
+.B -1, 0, 1, 2, 3, 4
+(for silent, audit, control, controlmore, raw, private).
 .TP
-.B syslog
-the
-.IR syslog (2)
-``facility'' name and priority to use for
-startup/shutdown log messages,
-default
-.BR daemon.error .
+.B plutostart
+whether to start the IKEv1 daemon Pluto or not.
+Accepted values are
+.B yes
+(the default)
+or
+.BR no .
 .TP
 .B plutodebug
 how much Pluto debugging output should be logged.
@@ -847,53 +874,7 @@ Otherwise only the specified types of output
 prefix,
 separated by white space) are enabled;
 for details on available debugging types, see
-.IR ipsec_pluto (8).
-.TP
-.B charondebug
-how much Charon debugging output should be logged.
-A comma separated list containing type level/pairs may
-be specified, e.g:
-.B dmn 3, ike 1, net -1.
-Acceptable values for types are
-.B dmn, mgr, ike, chd, job, cfg, knl, net, enc, lib
-and the level is one of
-.B -1, 0, 1, 2, 3, 4
-(for silent, audit, control, controlmore, raw, private)
-.TP
-.B plutoopts
-additional options to pass to pluto upon startup. See
-.IR ipsec_pluto (8).
-.TP
-.B plutostderrlog
-do not use syslog, but rather log to stderr, and direct stderr to the
-argument file.
-.TP
-.B dumpdir
-in what directory should things started by
-.I setup
-(notably the Pluto daemon) be allowed to
-dump core?
-The empty value (the default) means they are not
-allowed to.
-.TP
-.B pluto
-whether to start Pluto or not;
-Values are
-.B yes
-(the default)
-or
-.B no
-(useful only in special circumstances).
-.TP
-.B plutowait
-should Pluto wait for each
-negotiation attempt that is part of startup to
-finish before proceeding with the next?
-Values are
-.B yes
-or
-.BR no
-(the default).
+.IR pluto (8).
 .TP
 .B prepluto
 shell command to run before starting Pluto
@@ -930,6 +911,7 @@ acceptable values are
 (the default)
 and
 .BR no .
+(This parameter is used with the KLIPS IPsec stack only.)
 .TP
 .B hidetos
 whether a tunnel packet's TOS field should be set to
@@ -940,6 +922,7 @@ acceptable values are
 (the default)
 and
 .BR no .
+(This parameter is used with the KLIPS IPsec stack only.)
 .TP
 .B uniqueids
 whether a particular participant ID should be kept unique,
@@ -958,18 +941,81 @@ almost invariably intended to replace an old one.
 .B overridemtu
 value that the MTU of the ipsec\fIn\fR interface(s) should be set to,
 overriding IPsec's (large) default.
-This parameter is needed only in special situations.
+(This parameter is used in special situations with the KLIPS IPsec stack only.)
 .TP
 .B nat_traversal
+activates NAT traversal by accepting source ISAKMP different from udp/500 and
+floating to udp/4500 if a NAT situation is detected. Used by IKEv1 only since
+NAT traversal is always activated with IKEv2.
+Accepted values are
+.B yes
+and
+.B no
+(the default).
+.TP
+.B keep_alive
+interval in seconds between NAT keep alive packets.
+.TP
+.B virtual_private
 .TP
 .B crlcheckinterval
+interval in seconds. CRL fetching is enabled if the value is greater than zero.
+Asynchronous periodic checking for fresh CRLs is done by IKEv1 only.
+.TP
+.B cachecrls
+certificate revocation lists (CRLs) fetched via http or ldap will be cached in
+/etc/ipsec.d/crls under a unique file name derived from the certification
+authority's public key 
+Accepted values are
+.B yes
+and
+.B no
+(the default).
 .TP
 .B strictcrlpolicy
+defines if a fresh CRL must be available in order for the peer authentication based
+on RSA signatures to succeed.
+Accepted values are
+.B yes
+and
+.B no
+(the default).
+IKEv2 additionally recognizes
+.B ifuri
+which reverts to
+.B yes
+if at least one CRL URI is defined and to
+.B no
+if no URI is known.
+.TP
+.B nocrsend
+no certificate request payloads will be sent.
+Accepted values are
+.B yes
+and
+.B no
+(the default).
+Used by IKEv1 only.
 .TP
 .B pkcs11module
+defines the path to a dynamically loadable PKCS #11 library.
 .TP
 .B pkcs11keepstate
-
+PKCS #11 login sessions will be kept during the whole lifetime of the keying
+daemon. Useful with pin-pad smart card readers.
+Accepted values are
+.B yes
+and
+.B no
+(the default).
+.TP
+.B pkcs11proxy
+Pluto will act as a PKCS #11 proxy accessible via the whack interface.
+Accepted values are
+.B yes
+and
+.B no
+(the default).
 .SH CHOOSING A CONNECTION
 .PP
 When choosing a connection to apply to an outbound packet caught with a 
@@ -988,87 +1034,21 @@ information about the client subnets to complete the instantiation.
 .SH FILES
 .nf
 /etc/ipsec.conf
+/etc/ipsec.d/aacerts
+/etc/ipsec.d/acerts
 /etc/ipsec.d/cacerts
 /etc/ipsec.d/certs
 /etc/ipsec.d/crls
-/etc/ipsec.d/aacerts
-/etc/ipsec.d/acerts
 
 .SH SEE ALSO
-ipsec(8), ipsec_ttoaddr(8), ipsec_auto(8), ipsec_manual(8), ipsec_rsasigkey(8)
+ipsec(8), pluto(8), starter(8), ttoaddr(3), ttodata(3)
 .SH HISTORY
 Written  for  the  FreeS/WAN project
 <http://www.freeswan.org>
 by Henry Spencer.  Extended for the strongSwan project
 <http://www.strongswan.org>
-by Andreas Steffen. Updated to respect IKEv2 specific configuration
-by Martin Willi.
+by Andreas Steffen. IKEv2-specific features by Martin Willi.
 .SH BUGS
 .PP
-When
-.B type
-or 
-.B failureshunt
-is set to
-.B drop
-or
-.BR reject,
-strongSwan blocks outbound packets using eroutes, but assumes inbound
-blocking is handled by the firewall. strongSwan offers firewall hooks 
-via an ``updown'' script.  However, the default 
-.B ipsec _updown
-provides no help in controlling a modern firewall.
-.PP
-Including attributes of the keying channel
-(authentication methods,
-.BR ikelifetime ,
-etc.)
-as an attribute of a connection,
-rather than of a participant pair, is dubious and incurs limitations.
-.PP
-.IR Ipsec_manual
-is not nearly as generous about the syntax of subnets,
-addresses, etc. as the usual strongSwan user interfaces.
-Four-component dotted-decimal must be used for all addresses.
-It
-.I is
-smart enough to translate bit-count netmasks to dotted-decimal form.
-.PP
-It would be good to have a line-continuation syntax,
-especially for the very long lines involved in
-RSA signature keys.
-.PP
-The ability to specify different identities,
-.BR authby ,
-and public keys for different automatic-keyed connections
-between the same participants is misleading;
-this doesn't work dependably because the identity of the participants
-is not known early enough.
-This is especially awkward for the ``Road Warrior'' case,
-where the remote IP address is specified as
-.BR 0.0.0.0 ,
-and that is considered to be the ``participant'' for such connections.
-.PP
-In principle it might be necessary to control MTU on an
-interface-by-interface basis,
-rather than with the single global override that
-.B overridemtu
-provides.
-.PP
-A number of features which \fIcould\fR be implemented in
-both manual and automatic keying
-actually are not yet implemented for manual keying.
-This is unlikely to be fixed any time soon.
-.PP
-If conns are to be added before DNS is available,
-\fBleft=\fP\fIFQDN\fP,
-\fBleftnextop=\fP\fIFQDN\fP,
-and
-.B leftrsasigkey=%dnsonload
+If conns are to be added before DNS is available, \fBleft=\fP\fIFQDN\fP
 will fail.
-.IR ipsec_pluto (8)
-does not actually use the public key for our side of a conn but it
-isn't generally known at a add-time which side is ours (Road Warrior
-and Opportunistic conns are currently exceptions).
-.PP
-The \fBmyid\fP option does not affect explicit \fB ipsec auto \-\-add\fP or \fBipsec auto \-\-replace\fP commands for implicit conns.
