@@ -295,9 +295,67 @@ signifying that the left end of the connection goes to the left participant
 only. When using IKEv2, the configured subnet of the peers may differ, the
 protocol narrows it to the greates common subnet.
 .TP
+.B leftsubnetwithin
+the peer can propose any subnet or single IP address that fits within the
+range defined by
+.BR leftsubnetwithin.
+Not relevant for IKEv2, as subnets are narrowed.
+.TP
+.B leftprotoport
+restrict the traffic selector to a single protocol and/or port.
+Examples:
+.B leftprotoport=tcp/http
+or
+.B leftprotoport=6/80
+or
+.B leftprotoport=udp
+.TP
 .B leftnexthop
 this parameter is not needed any more because the NETKEY IPsec stack does
 not require explicit routing entries for the traffic to be tunneled.
+.TP
+.B leftfirewall
+whether the left participant is doing forwarding-firewalling
+(including masquerading) using iptables for traffic from \fIleftsubnet\fR,
+which should be turned off (for traffic to the other subnet)
+once the connection is established;
+acceptable values are
+.B yes
+and
+.B no
+(the default).
+May not be used in the same connection description with
+.BR leftupdown .
+Implemented as a parameter to the default \fBipsec _updown\fR script.
+See notes below.
+Relevant only locally, other end need not agree on it.
+
+If one or both security gateways are doing forwarding firewalling
+(possibly including masquerading),
+and this is specified using the firewall parameters,
+tunnels established with IPsec are exempted from it
+so that packets can flow unchanged through the tunnels.
+(This means that all subnets connected in this manner must have
+distinct, non-overlapping subnet address blocks.)
+This is done by the default \fBipsec _updown\fR script (see
+.IR pluto (8)).
+
+In situations calling for more control,
+it may be preferable for the user to supply his own
+.I updown
+script,
+which makes the appropriate adjustments for his system.
+.TP
+.B lefthostaccess
+inserts a pair of INPUT and OUTPUT iptables rules using the default
+\fBipsec _updown\fR script, thus allowing access to the host itself
+in the case where the host's internal interface is part of the
+negotiated client subnet.
+Acceptable values are
+.B yes
+and
+.B no
+(the default).
 .TP
 .B leftupdown
 what ``updown'' script to run to adjust routing and/or firewalling
@@ -313,42 +371,6 @@ for details.
 Relevant only locally, other end need not agree on it. IKEv2 uses the updown
 script to insert firewall rules only. Routing is not support and will be
 implemented directly into Charon.
-.TP
-.B leftfirewall
-whether the left participant is doing forwarding-firewalling
-(including masquerading) using iptables for traffic from \fIleftsubnet\fR,
-which should be turned off (for traffic to the other subnet)
-once the connection is established;
-acceptable values are
-.B yes
-and
-.B no
-(the default).
-May not be used in the same connection description with
-.BR leftupdown .
-Implemented as a parameter to the default
-.I updown
-script.
-See notes below.
-Relevant only locally, other end need not agree on it.
-
-If one or both security gateways are doing forwarding firewalling
-(possibly including masquerading),
-and this is specified using the firewall parameters,
-tunnels established with IPsec are exempted from it
-so that packets can flow unchanged through the tunnels.
-(This means that all subnets connected in this manner must have
-distinct, non-overlapping subnet address blocks.)
-This is done by the default
-.I updown
-script (see
-.IR pluto (8)).
-
-In situations calling for more control,
-it may be preferable for the user to supply his own
-.I updown
-script,
-which makes the appropriate adjustments for his system.
 .TP
 .B auto
 what operation, if any, should be done automatically at IPsec startup;
@@ -644,12 +666,6 @@ and
 (the default).
 Currently relevant for IKEv1 only since IKEv2 always uses the configuration
 payload in pull mode.
-.TP
-.B leftsubnetwithin
-the peer can propose any subnet or single IP address that fits within the
-range defined by
-.BR leftsubnetwithin .
-Not relevant for IKEv2, as subnets are narrowed.
 .TP
 .B pfs
 whether Perfect Forward Secrecy of keys is desired on the connection's
