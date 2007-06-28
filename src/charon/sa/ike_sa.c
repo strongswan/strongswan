@@ -647,6 +647,71 @@ static void reset(private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of ike_sa_t.set_virtual_ip
+ */
+static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
+{
+	if (local)
+	{
+		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
+		if (this->my_virtual_ip)
+		{
+			DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
+			charon->kernel_interface->del_ip(charon->kernel_interface,
+											 this->my_virtual_ip);
+			this->my_virtual_ip->destroy(this->my_virtual_ip);
+		}
+		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
+											 this->my_host) == SUCCESS)
+		{
+			this->my_virtual_ip = ip->clone(ip);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
+			this->my_virtual_ip = NULL;
+		}
+	}
+	else
+	{
+		DESTROY_IF(this->other_virtual_ip);
+		this->other_virtual_ip = ip->clone(ip);
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.get_virtual_ip
+ */
+static host_t* get_virtual_ip(private_ike_sa_t *this, bool local)
+{
+	if (local)
+	{
+		return this->my_virtual_ip;
+	}
+	else
+	{
+		return this->other_virtual_ip;
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.add_additional_address.
+ */
+static void add_additional_address(private_ike_sa_t *this, host_t *host)
+{
+	this->additional_addresses->insert_last(this->additional_addresses, host);
+}
+	
+/**
+ * Implementation of ike_sa_t.create_additional_address_iterator.
+ */
+static iterator_t* create_additional_address_iterator(private_ike_sa_t *this)
+{
+	return this->additional_addresses->create_iterator(
+											this->additional_addresses, TRUE);
+}
+
+/**
  * Update hosts, as addresses may change (NAT)
  */
 static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
@@ -1143,6 +1208,12 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 			/* use actual used host, not the wildcarded one in config */
 			new->other_host->destroy(new->other_host);
 			new->other_host = this->other_host->clone(this->other_host);
+			new->other_host->set_port(new->other_host, IKEV2_UDP_PORT);
+			
+			if (this->my_virtual_ip)
+			{
+				set_virtual_ip(new, TRUE, this->my_virtual_ip);
+			}
 			
 			/* install routes */
 			while (to_route->remove_last(to_route, (void**)&child_cfg) == SUCCESS)
@@ -1270,71 +1341,6 @@ static ca_info_t* get_other_ca(private_ike_sa_t *this)
 static void set_other_ca(private_ike_sa_t *this, ca_info_t *other_ca)
 {
 	this->other_ca = other_ca;
-}
-
-/**
- * Implementation of ike_sa_t.set_virtual_ip
- */
-static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
-{
-	if (local)
-	{
-		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
-		if (this->my_virtual_ip)
-		{
-			DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
-			charon->kernel_interface->del_ip(charon->kernel_interface,
-											 this->my_virtual_ip);
-			this->my_virtual_ip->destroy(this->my_virtual_ip);
-		}
-		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
-											 this->my_host) == SUCCESS)
-		{
-			this->my_virtual_ip = ip->clone(ip);
-		}
-		else
-		{
-			DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
-			this->my_virtual_ip = NULL;
-		}
-	}
-	else
-	{
-		DESTROY_IF(this->other_virtual_ip);
-		this->other_virtual_ip = ip->clone(ip);
-	}
-}
-
-/**
- * Implementation of ike_sa_t.get_virtual_ip
- */
-static host_t* get_virtual_ip(private_ike_sa_t *this, bool local)
-{
-	if (local)
-	{
-		return this->my_virtual_ip;
-	}
-	else
-	{
-		return this->other_virtual_ip;
-	}
-}
-
-/**
- * Implementation of ike_sa_t.add_additional_address.
- */
-static void add_additional_address(private_ike_sa_t *this, host_t *host)
-{
-	this->additional_addresses->insert_last(this->additional_addresses, host);
-}
-	
-/**
- * Implementation of ike_sa_t.create_additional_address_iterator.
- */
-static iterator_t* create_additional_address_iterator(private_ike_sa_t *this)
-{
-	return this->additional_addresses->create_iterator(
-											this->additional_addresses, TRUE);
 }
 
 /**
