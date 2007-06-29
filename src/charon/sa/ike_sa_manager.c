@@ -525,19 +525,21 @@ static ike_sa_t* checkout_by_peer(private_ike_sa_manager_t *this,
 			/* IKE_SA has no IDs yet, so we can't use it */
 			continue;
 		}
-		
+		DBG2(DBG_MGR, "candidate IKE_SA for \n\t%H[%D]...%H[%D]\n\t%H[%D]...%H[%D]",
+			 my_host, my_id, other_host, other_id,
+			 found_my_host, found_my_id, found_other_host, found_other_id);
 		/* compare ID and hosts. Supplied ID may contain wildcards, and IP
 		 * may be %any. */
-		if ((found_my_host->is_anyaddr(found_my_host) ||
+		if ((my_host->is_anyaddr(my_host) ||
 			 my_host->ip_equals(my_host, found_my_host)) &&
-			(found_other_host->is_anyaddr(found_other_host) ||
+			(other_host->is_anyaddr(other_host) ||
 			 other_host->ip_equals(other_host, found_other_host)) &&
 			found_my_id->matches(found_my_id, my_id, &wc) &&
 			found_other_id->matches(found_other_id, other_id, &wc))
 		{
 			/* looks good, we take this one */
 			DBG2(DBG_MGR, "found an existing IKE_SA for %H[%D]...%H[%D]",
-				 my_host, other_host, my_id, other_id);
+				 my_host, my_id, other_host, other_id);
 			entry->checked_out = TRUE;
 			ike_sa = entry->ike_sa;
 		}

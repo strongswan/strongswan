@@ -1026,6 +1026,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	child_sa_t *child_sa;
 	iterator_t *iterator;
 	linked_list_t *my_ts, *other_ts;
+	host_t *me, *other;
 	status_t status;
 	
 	SIG(CHILD_ROUTE_START, "routing CHILD_SA");
@@ -1061,11 +1062,19 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	/* install kernel policies */
 	child_sa = child_sa_create(this->my_host, this->other_host, this->my_id,
 							   this->other_id, child_cfg, FALSE, 0);
+	me = this->my_host;
+	if (this->my_virtual_ip)
+	{
+		me = this->my_virtual_ip;
+	}
+	other = this->other_host;
+	if (this->other_virtual_ip)
+	{
+		other = this->other_virtual_ip;
+	}
 	
-	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL,
-											 this->my_host);
-	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL,
-												this->other_host);
+	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, me);
+	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, other);
 	status = child_sa->add_policies(child_sa, my_ts, other_ts,
 									child_cfg->get_mode(child_cfg));
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
@@ -1208,8 +1217,12 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 			/* use actual used host, not the wildcarded one in config */
 			new->other_host->destroy(new->other_host);
 			new->other_host = this->other_host->clone(this->other_host);
-			new->other_host->set_port(new->other_host, IKEV2_UDP_PORT);
-			
+			/* reset port to 500, but only if peer is not NATed */
+			if (!has_condition(this, COND_NAT_THERE))
+			{
+				new->other_host->set_port(new->other_host, IKEV2_UDP_PORT);
+			}
+			/* take over virtual ip, as we need it for a proper route */
 			if (this->my_virtual_ip)
 			{
 				set_virtual_ip(new, TRUE, this->my_virtual_ip);
