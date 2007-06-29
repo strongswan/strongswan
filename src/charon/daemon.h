@@ -47,50 +47,73 @@ typedef struct daemon_t daemon_t;
  *
  * @brief IKEv2 keying daemon.
  *
- * @section Architecture
- *
  * All IKEv2 stuff is handled in charon. It uses a newer and more flexible
- * architecture than pluto. Charon uses a thread-pool, which allows parallel
- * execution SA-management. Beside the thread-pool, there are some special purpose
- * threads which do their job for the common health of the daemon.
-   @verbatim 
-                         +------+
-                         | E  Q |
-                         | v  u |---+                   +------+  +------+
-                         | e  e |   |                   |      |  | IKE- |
-                         | n  u |  +-----------+        |      |--| SA   |
-                         | t  e |  |           |        | I  M |  +------+
-       +------------+    | -    |  | Scheduler |        | K  a |
-       |  receiver  |    +------+  |           |        | E  n |  +------+
-       +----+-------+              +-----------+        | -  a |  | IKE- |
-            |      |     +------+   |                   | S  g |--| SA   |
-    +-------+--+   +-----| J  Q |---+  +------------+   | A  e |  +------+
-   -|  socket  |         | o  u |      |            |   | -  r |
-    +-------+--+         | b  e |      |   Thread-  |   |      |
-            |            | -  u |      |   Pool     |   |      |
-       +----+-------+    |    e |------|            |---|      |
-       |   sender   |    +------+      +------------+   +------+
-       +------------+
+ * architecture than pluto. Charon uses a thread-pool (called processor),
+ * which allows parallel execution SA-management. All threads originate
+ * from the processor. Work is delegated to the processor by queueing jobs
+ * to it.
+   @verbatim                                             
+                          
+      +--------+   +-------+   +--------+       +-----------+    +-----------+
+      | Stroke |   |  XML  |   |  DBUS  |       |   Local   |    |   SQLite  |
+      +--------+   +-------+   +--------+       +-----------+    +-----------+
+          |            |           |                  |                |
+      +---------------------------------+       +----------------------------+
+      |             Interfaces          |       |          Backends          |
+      +---------------------------------+       +----------------------------+  
+                                                                              
+                                                                                
+       +------------+    +-----------+        +------+            +----------+
+       |  receiver  |    |           |        |      |  +------+  | CHILD_SA |
+       +----+-------+    | Scheduler |        | IKE- |  | IKE- |--+----------+
+            |            |           |        | SA   |--| SA   |  | CHILD_SA |
+    +-------+--+         +-----------+        |      |  +------+  +----------+
+ <->|  socket  |               |              | Man- |
+    +-------+--+         +-----------+        | ager |  +------+  +----------+
+            |            |           |        |      |  | IKE- |--| CHILD_SA |
+       +----+-------+    | Processor |--------|      |--| SA   |  +----------+
+       |   sender   |    |           |        |      |  +------+                  
+       +------------+    +-----------+        +------+                   
+                                                                                 
+                                                                                
+      +---------------------------------+       +----------------------------+
+      |               Bus               |       |      Kernel Interface      |
+      +---------------------------------+       +----------------------------+                                                                 
+             |                    |                           |
+      +-------------+     +-------------+                     V
+      | File-Logger |     |  Sys-Logger |                  //////
+      +-------------+     +-------------+                       
+
 
    @endverbatim
- * The thread-pool is the heart of the architecture. It processes jobs from a
- * (fully synchronized) job-queue. Mostly, a job is associated with a specific
- * IKE SA. These IKE SAs are synchronized, only one thread can work one an IKE SA.
- * This makes it unnecesary to use further synchronisation methods once a IKE SA
- * is checked out. The (rather complex) synchronization of IKE SAs is completely
- * done in the IKE SA manager.
- * The sceduler is responsible for event firing. It waits until a event in the
- * (fully synchronized) event-queue is ready for processing and pushes the event
- * down to the job-queue. A thread form the pool will pick it up as quick as
- * possible. Every thread can queue events or jobs. Furter, an event can place a
- * packet in the sender. The sender thread waits for those packets and sends
- * them over the wire, via the socket. The receiver does exactly the opposite of
- * the sender. It waits on the socket, reads in packets an places them on the
- * job-queue for further processing by a thread from the pool.
- * There are even more threads, not drawn in the upper scheme. The stroke thread
- * is responsible for reading and processessing commands from another process. The
- * kernel interface thread handles communication from and to the kernel via a
- * netlink socket. It waits for kernel events and processes them appropriately.
+ * The scheduler is responsible to execute timed events. Jobs may be queued to 
+ * the scheduler to get executed at a defined time (e.g. rekeying). The scheduler
+ * does not execute the jobs itself, it queues them to the processor.
+ * 
+ * The IKE_SA manager managers all IKE_SA. It further handles the synchronization:
+ * Each IKE_SA must be checked out strictly and checked in again after use. The 
+ * manager guarantees that only one thread may check out a single IKE_SA. This allows
+ * us to write the (complex) IKE_SAs routines non-threadsave.
+ * The IKE_SA contain the state and the logic of each IKE_SA and handle the messages.
+ * 
+ * The CHILD_SA contains state about a IPsec security association and manages them. 
+ * An IKE_SA may have multiple CHILD_SAs. Communication to the kernel takes place
+ * here through the kernel interface.
+ * 
+ * The kernel interface installs IPsec security associations, policies routes and 
+ * virtual addresses. It further provides methods to enumerate interfaces and may notify
+ * the daemon about state changes at lower layers.
+ * 
+ * The bus receives signals from the different threads and relais them to interested 
+ * listeners. Debugging signals, but also important state changes or error messages are
+ * sent over the bus. 
+ * It's listeners are not only for logging, but also to track the state of an IKE_SA.
+ * 
+ * The interface manager loads pluggable controlling interfaces. These are written to control
+ * the daemon from external inputs (e.g. initiate IKE_SA, close IKE_SA, ...). The interface
+ * manager further provides a simple API to establish these tasks.
+ * Backends are pluggable modules which provide configuration. They have to implement an API
+ * which the daemon core uses to get configuration.
  */
 
 /**
