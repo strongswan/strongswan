@@ -503,8 +503,6 @@ static ike_sa_t* checkout_by_peer(private_ike_sa_manager_t *this,
 		host_t *found_my_host, *found_other_host;
 		int wc;
 		
-		break;
-		
 		if (!wait_for_entry(this, entry))
 		{
 			continue;
