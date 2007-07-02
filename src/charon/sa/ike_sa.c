@@ -1686,15 +1686,48 @@ static status_t reestablish(private_ike_sa_t *this)
 	
 	return this->task_manager->initiate(this->task_manager);
 }
+
+/**
+ * get a priority for a src/dst connection path
+ */
+static int get_path_prio(host_t *me, host_t *other)
+{
+	chunk_t a, b;
+	int prio = 1;
 	
+	a = me->get_address(me);
+	b = other->get_address(other);
+	
+	while (a.len > 0 && b.len > 0)
+	{
+		if (a.ptr[0] == b.ptr[0])
+		{
+			prio++;
+		}
+		else
+		{
+			break;
+		}
+		a = chunk_skip(a, 1);
+		b = chunk_skip(b, 1);
+	}
+	if (me->get_family(me) == AF_INET)
+	{
+		prio *= 4;
+	}
+	return prio;
+}
+
+
 /**
  * Implementation of ike_sa_t.roam.
  */
 static status_t roam(private_ike_sa_t *this)
 {
 	iterator_t *iterator;
-	host_t *me, *other;
+	host_t *me, *other, *cand_me, *cand_other;
 	ike_mobike_t *mobike;
+	int prio, best = 0;
 	
 	/* only initiator handles address updated actively */
 	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
@@ -1702,79 +1735,77 @@ static status_t roam(private_ike_sa_t *this)
 		return SUCCESS;
 	}
 	
+	/* get best address pair to use */
+	other = this->other_host;
 	me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
-												   this->other_host);	
-	if (me && this->my_virtual_ip && me->ip_equals(me, this->my_virtual_ip))
-	{	/* do not roam to the virtual IP of this IKE_SA */
-		me->destroy(me);
-		me = NULL;
-	}
-	
+												   other);
 	if (me)
 	{
-		set_condition(this, COND_STALE, FALSE);
-		/* attachment still the same? */
-		if (me->ip_equals(me, this->my_host))
-		{
-			DBG2(DBG_IKE, "%H still reached through %H, no update needed",
-				 this->other_host, me);
-			me->destroy(me);
-			return SUCCESS;
-		}
-		me->set_port(me, this->my_host->get_port(this->my_host));
-		
-		/* our attachement changed, update if we have mobike */
-		if (supports_extension(this, EXT_MOBIKE))
-		{
-			DBG1(DBG_IKE, "requesting address change using MOBIKE");
-			mobike = ike_mobike_create(&this->public, TRUE);
-			mobike->roam(mobike, me, NULL);
-			this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
-			return this->task_manager->initiate(this->task_manager);
-		}
-		DBG1(DBG_IKE, "reestablishing IKE_SA due address change");
-		/* reestablish if not */
-		set_my_host(this, me);
-		return reestablish(this);
+		best = get_path_prio(me, other);
 	}
-	
-	/* there is nothing we can do without mobike */
-	if (!supports_extension(this, EXT_MOBIKE))
-	{
-		set_condition(this, COND_STALE, TRUE);
-		return FAILED;
-	}
-
-	/* we are unable to reach the peer. Try an alternative address */
 	iterator = create_additional_address_iterator(this);
-	while (iterator->iterate(iterator, (void**)&other))
+	while (iterator->iterate(iterator, (void**)&cand_other))
 	{
-		me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
-													   other);
-		if (me && me->ip_equals(me, this->my_virtual_ip))
-		{	/* do not roam to the virtual IP of this IKE_SA */
-			me->destroy(me);
-			me = NULL;
-		}
-		
-		if (me)
+		cand_me = charon->kernel_interface->get_source_addr(
+										charon->kernel_interface, cand_other);
+		if (!cand_me)
 		{
-			/* good, we have a new route. Use MOBIKE to update */
-			set_condition(this, COND_STALE, FALSE);
-			iterator->destroy(iterator);
-			me->set_port(me, this->my_host->get_port(this->my_host));
-			other->set_port(other, this->other_host->get_port(this->other_host));
-			mobike = ike_mobike_create(&this->public, TRUE);
-			mobike->roam(mobike, me, other);
-			this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
-			return this->task_manager->initiate(this->task_manager);
+			continue;
+		}
+		if (this->my_virtual_ip && 
+			cand_me->ip_equals(cand_me, this->my_virtual_ip))
+		{	/* never roam IKE_SA to our virtual IP! */
+			cand_me->destroy(cand_me);
+			continue;
+		}
+		prio = get_path_prio(cand_me, cand_other);
+		if (prio > best)
+		{
+			best = prio;
+			DESTROY_IF(me);
+			me = cand_me;
+			other = cand_other;
+		}
+		else
+		{
+			cand_me->destroy(cand_me);
 		}
 	}
 	iterator->destroy(iterator);
-
-	/* no route found to host, give up (temporary) */
-	set_condition(this, COND_STALE, TRUE);
-	return FAILED;
+	
+	if (!me)
+	{
+		/* no route found to host, set to stale, wait for a new route */
+		set_condition(this, COND_STALE, TRUE);
+		return FAILED;
+	}
+	
+	set_condition(this, COND_STALE, FALSE);
+	if (me->ip_equals(me, this->my_host) &&
+		other->ip_equals(other, this->other_host))
+	{
+		DBG2(DBG_IKE, "%H still reached through %H, no update needed",
+			 this->other_host, me);
+		me->destroy(me);
+		return SUCCESS;
+	}
+	me->set_port(me, this->my_host->get_port(this->my_host));
+	other = other->clone(other);
+	other->set_port(other, this->other_host->get_port(this->other_host));
+	
+	/* update addresses with mobike, if supported ... */
+	if (supports_extension(this, EXT_MOBIKE))
+	{
+		DBG1(DBG_IKE, "requesting address change using MOBIKE");
+		mobike = ike_mobike_create(&this->public, TRUE);
+		mobike->roam(mobike, me, other);
+		this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
+		return this->task_manager->initiate(this->task_manager);
+	}
+	DBG1(DBG_IKE, "reestablishing IKE_SA due address change");
+	/* ... reestablish if not */
+	set_my_host(this, me);
+	return reestablish(this);
 }
 
 /**

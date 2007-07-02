@@ -231,6 +231,9 @@ struct addr_entry_t {
 	/** virtual IP managed by us */
 	bool virtual;
 	
+	/** scope of the address */
+	u_char scope;
+	
 	/** Number of times this IP is used, if virtual */
 	u_int refcount;
 };
@@ -695,6 +698,7 @@ static void process_addr(private_kernel_interface_t *this,
 					addr->ip = host->clone(host);
 					addr->virtual = FALSE;
 					addr->refcount = 1;
+					addr->scope = msg->ifa_scope;
 					
 					iface->addrs->insert_last(iface->addrs, addr);
 					if (event)
@@ -1076,6 +1080,10 @@ static hook_result_t addr_hook(private_kernel_interface_t *this,
 {
 	if (in->virtual)
 	{	/* skip virtual interfaces added by us */
+		return HOOK_SKIP;
+	}
+	if (in->scope >= RT_SCOPE_LINK)
+	{	/* skip addresses with a unusable scope */
 		return HOOK_SKIP;
 	}
 	*out = in->ip;
@@ -1497,6 +1505,7 @@ static status_t add_ip(private_kernel_interface_t *this,
 				addr->ip = virtual_ip->clone(virtual_ip);
 				addr->refcount = 1;
 				addr->virtual = TRUE;
+				addr->scope = RT_SCOPE_UNIVERSE;
 				pthread_mutex_lock(&this->mutex);
 				iface->addrs->insert_last(iface->addrs, addr);
 				pthread_mutex_unlock(&this->mutex);
@@ -2001,8 +2010,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
 						   policy_dir_t direction, protocol_id_t protocol,
-						   u_int32_t reqid, bool high_prio, mode_t mode,
-						   bool update)
+						   u_int32_t reqid, bool high_prio, mode_t mode)
 {
 	iterator_t *iterator;
 	policy_entry_t *current, *policy;
@@ -2026,12 +2034,9 @@ static status_t add_policy(private_kernel_interface_t *this,
 			policy->direction == current->direction)
 		{
 			/* use existing policy */
-			if (!update)
-			{
-				current->refcount++;
-				DBG2(DBG_KNL, "policy %R===%R already exists, increasing ",
-					 "refcount", src_ts, dst_ts);
-			}
+			current->refcount++;
+			DBG2(DBG_KNL, "policy %R===%R already exists, increasing ",
+				 "refcount", src_ts, dst_ts);
 			free(policy);
 			policy = current;
 			found = TRUE;
@@ -2318,7 +2323,7 @@ kernel_interface_t *kernel_interface_create()
 	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*))update_sa;
 	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
-	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t,bool))add_policy;
+	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t))add_policy;
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
 	this->public.get_interface = (char*(*)(kernel_interface_t*,host_t*))get_interface_name;

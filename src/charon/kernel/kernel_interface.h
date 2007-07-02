@@ -185,10 +185,6 @@ struct kernel_interface_t {
 	 * 
 	 * A policy is always associated to an SA. Traffic which matches a
 	 * policy is handled by the SA with the same reqid.
-	 * If the update flag is set, the policy is updated with the new
-	 * src/dst addresses.
-	 * If the update flag is not set, but a such policy is already in the
-	 * kernel, the reference count to this policy is increased.
 	 * 
 	 * @param this			calling object
 	 * @param src			source address of SA
@@ -200,7 +196,6 @@ struct kernel_interface_t {
 	 * @param reqid			uniqe ID of an SA to use to enforce policy
 	 * @param high_prio		if TRUE, uses a higher priority than any with FALSE
 	 * @param mode			mode of SA (tunnel, transport)
-	 * @param update		update an existing policy, if TRUE
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
@@ -210,8 +205,7 @@ struct kernel_interface_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, protocol_id_t protocol,
-							u_int32_t reqid, bool high_prio, 
-							mode_t mode, bool update);
+							u_int32_t reqid, bool high_prio, mode_t mode);
 	
 	/**
 	 * @brief Query the use time of a policy.

@@ -175,6 +175,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	bool has_proto;
 	bool has_ports;
 	size_t written = 0;
+	u_int32_t from[4], to[4];
 	
 	if (this == NULL)
 	{
@@ -193,7 +194,11 @@ static int print(FILE *stream, const struct printf_info *info,
 		return written;
 	}
 	
-	if (this->dynamic)
+	memset(from, 0, sizeof(from));
+	memset(to, 0xFF, sizeof(to));
+	if (this->dynamic &&
+		memeq(this->from, from, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16) && 
+		memeq(this->to, to, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16))
 	{
 		return fprintf(stream, "dynamic/%d",
 					   this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
@@ -341,6 +346,7 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 		/* we have a match in protocol, port, and address: return it... */
 		new_ts = traffic_selector_create(protocol, this->type, from_port, to_port);
 		new_ts->type = this->type;
+		new_ts->dynamic = this->dynamic || other->dynamic;
 		memcpy(new_ts->from, from, size);
 		memcpy(new_ts->to, to, size);
 		
@@ -475,11 +481,6 @@ static u_int8_t get_protocol(private_traffic_selector_t *this)
  */
 static bool is_host(private_traffic_selector_t *this, host_t *host)
 {
-	if (this->dynamic)
-	{
-		return TRUE;
-	}
-
 	if (host)
 	{
 		chunk_t addr;
@@ -498,7 +499,12 @@ static bool is_host(private_traffic_selector_t *this, host_t *host)
 	}
 	else
 	{
-		size_t length =  (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+		size_t length = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+		
+		if (this->dynamic)
+		{
+			return TRUE;
+		}
 		
 		if (memeq(this->from, this->to, length))
 		{

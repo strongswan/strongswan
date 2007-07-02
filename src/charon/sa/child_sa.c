@@ -369,6 +369,7 @@ static void updown(private_child_sa_t *this, bool up)
 		free(other_client);
 		free(virtual_ip);
 		
+		DBG3(DBG_CHD, "running updown script: %s", command);
 		shell = popen(command, "r");
 
 		if (shell == NULL)
@@ -676,15 +677,15 @@ static status_t add_policies(private_child_sa_t *this,
 			/* install 3 policies: out, in and forward */
 			status = charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->me.addr, this->other.addr, my_ts, other_ts, POLICY_OUT,
-					this->protocol, this->reqid, high_prio, mode, FALSE);
+					this->protocol, this->reqid, high_prio, mode);
 			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr, other_ts, my_ts, POLICY_IN,
-					this->protocol, this->reqid, high_prio, mode, FALSE);
+					this->protocol, this->reqid, high_prio, mode);
 			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr, other_ts, my_ts, POLICY_FWD,
-					this->protocol, this->reqid, high_prio, mode, FALSE);
+					this->protocol, this->reqid, high_prio, mode);
 			
 			if (status != SUCCESS)
 			{
@@ -780,6 +781,9 @@ static status_t update_hosts(private_child_sa_t *this,
 		return SUCCESS;
 	}
 	
+	/* run updown script to remove iptables rules */
+	updown(this, FALSE);
+	
 	/* update our (initator) SAs */
 	if (charon->kernel_interface->update_sa(
 				charon->kernel_interface, this->me.spi, this->protocol,
@@ -808,20 +812,39 @@ static status_t update_hosts(private_child_sa_t *this,
 		iterator = this->policies->create_iterator(this->policies, TRUE);
 		while (iterator->iterate(iterator, (void**)&policy))
 		{
+			/* remove old policies first */
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+								policy->my_ts, policy->other_ts, POLICY_OUT);
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+								policy->other_ts, policy->my_ts,  POLICY_IN);
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+								policy->other_ts, policy->my_ts, POLICY_FWD);
+		
+			/* check wether we have to update a "dynamic" traffic selector */
+			if (!me->ip_equals(me, this->me.addr) &&
+				policy->my_ts->is_host(policy->my_ts, this->me.addr))
+			{
+				policy->my_ts->set_address(policy->my_ts, me);
+			}
+			if (!other->ip_equals(other, this->other.addr) &&
+				policy->other_ts->is_host(policy->other_ts, this->other.addr))
+			{
+				policy->other_ts->set_address(policy->other_ts, other);
+			}
+		
+			/* reinstall updated policies */
 			status = charon->kernel_interface->add_policy(
 						charon->kernel_interface, me, other, 
 						policy->my_ts, policy->other_ts, POLICY_OUT,
-						this->protocol,	this->reqid, TRUE, this->mode, TRUE);
-			
+						this->protocol,	this->reqid, TRUE, this->mode);
 			status |= charon->kernel_interface->add_policy(
 						charon->kernel_interface, other, me,
 						policy->other_ts, policy->my_ts, POLICY_IN,
-						this->protocol, this->reqid, TRUE, this->mode, TRUE);
-			
+						this->protocol, this->reqid, TRUE, this->mode);
 			status |= charon->kernel_interface->add_policy(
 						charon->kernel_interface, other, me,
 						policy->other_ts, policy->my_ts, POLICY_FWD,
-						this->protocol, this->reqid, TRUE, this->mode, TRUE);
+						this->protocol, this->reqid, TRUE, this->mode);
 			
 			if (status != SUCCESS)
 			{
@@ -832,7 +855,7 @@ static status_t update_hosts(private_child_sa_t *this,
 		iterator->destroy(iterator);
 	}
 
-	/* finally apply hosts */
+	/* apply hosts */
 	if (!me->equals(me, this->me.addr))
 	{
 		this->me.addr->destroy(this->me.addr);
@@ -843,6 +866,10 @@ static status_t update_hosts(private_child_sa_t *this,
 		this->other.addr->destroy(this->other.addr);
 		this->other.addr = other->clone(other);
 	}
+	
+	/* install new iptables rules */
+	updown(this, TRUE);
+	
 	return SUCCESS;
 }
 
