@@ -38,6 +38,7 @@ strongswan-4.1.4
 - Partial support for MOBIKE in IKEv2. The initiator acts on interface/
   address configuration changes and updates IKE and IPsec SAs dynamically.
 
+
 strongswan-4.1.3
 ----------------
 
