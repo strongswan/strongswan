@@ -1782,7 +1782,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unalbe to add SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to add SAD entry with SPI 0x%x", spi);
 		return FAILED;
 	}
 	return SUCCESS;
@@ -1891,7 +1891,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 	}
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unalbe to update SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to update SAD entry with SPI 0x%x", spi);
 		free(out);
 		return FAILED;
 	}
@@ -1995,7 +1995,7 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unalbe to delete SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to delete SAD entry with SPI 0x%x", spi);
 		return FAILED;
 	}
 	DBG2(DBG_KNL, "deleted SAD entry with SPI 0x%x", spi);
