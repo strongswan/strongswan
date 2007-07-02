@@ -83,8 +83,12 @@ do
         searchandreplace PH_IP6_SUN  $ipv6_sun  $HOSTCONFIGDIR
         ;;
     alice)
-        searchandreplace PH_IP_ALICE  $ipv4_alice $HOSTCONFIGDIR
-        searchandreplace PH_IP6_ALICE $ipv6_alice $HOSTCONFIGDIR
+        eval ipv4_alice1="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_ALICE1 $ipv4_alice1 $HOSTCONFIGDIR
+        searchandreplace PH_IP_ALICE  $ipv4_alice  $HOSTCONFIGDIR
+        eval ipv6_alice1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP6_ALICE1 $ipv6_alice1 $HOSTCONFIGDIR
+        searchandreplace PH_IP6_ALICE  $ipv6_alice  $HOSTCONFIGDIR
         ;;
     venus)
         searchandreplace PH_IP_VENUS  $ipv4_venus $HOSTCONFIGDIR

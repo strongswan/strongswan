@@ -16,6 +16,7 @@
 10.1.0.20	venus.strongswan.org	venus
 10.1.0.1	moon1.strongswan.org	moon1
 192.168.0.1	moon.strongswan.org	moon
+192.168.0.50	alice1.strongswan.org	alice1
 192.168.0.100	carol.strongswan.org	carol
 10.3.0.1	carol1.strongswan.org	carol1
 192.168.0.150	winnetou.strongswan.org	winnetou crl.strongswan.org ocsp.strongswan.org ldap.strongswan.org
@@ -41,6 +42,7 @@ ff02::1:ff00:15	ip6-mcast-15
 ff02::1:ff00:20	ip6-mcast-20
 
 # IPv6 site-local addresses
+fec0::5		ip6-alice1.strongswan.org   ip6-alice1
 fec1::10	ip6-alice.strongswan.org    ip6-alice
 fec1::20	ip6-venus.strongswan.org    ip6-venus
 fec1::1 	ip6-moon1.strongswan.org    ip6-moon1
