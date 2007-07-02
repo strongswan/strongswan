@@ -393,6 +393,11 @@ static void send_keepalive(private_ike_sa_t *this)
 	send_keepalive_job_t *job;
 	time_t last_out, now, diff;
 	
+	if (!(this->conditions & COND_NAT_HERE))
+	{	/* disable keep alives if we are not NATed anymore */
+		return;
+	}
+	
 	last_out = get_use_time(this, FALSE);
 	now = time(NULL);
 	
@@ -410,8 +415,8 @@ static void send_keepalive(private_ike_sa_t *this)
 		data.ptr[0] = 0xFF;
 		data.len = 1;
 		packet->set_data(packet, data);
-		charon->sender->send(charon->sender, packet);
 		DBG1(DBG_IKE, "sending keep alive");
+		charon->sender->send(charon->sender, packet);
 		diff = 0;
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);

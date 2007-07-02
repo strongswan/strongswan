@@ -785,20 +785,11 @@ static status_t update_hosts(private_child_sa_t *this,
 	updown(this, FALSE);
 	
 	/* update our (initator) SAs */
-	if (charon->kernel_interface->update_sa(
-				charon->kernel_interface, this->me.spi, this->protocol,
-				this->other.addr, this->me.addr, other, me) != SUCCESS)
-	{
-		return FAILED;
-	}
-
+	charon->kernel_interface->update_sa(charon->kernel_interface, this->me.spi,
+				this->protocol, this->other.addr, this->me.addr, other, me);
 	/* update his (responder) SAs */
-	if (charon->kernel_interface->update_sa(
-				charon->kernel_interface, this->other.spi, this->protocol, 
-				this->me.addr, this->other.addr, me, other) != SUCCESS)
-	{
-		return FAILED;
-	}
+	charon->kernel_interface->update_sa(charon->kernel_interface, this->other.spi, 
+				this->protocol, this->me.addr, this->other.addr, me, other);
 	
 	/* update policies */
 	if (!me->ip_equals(me, this->me.addr) ||
@@ -806,7 +797,6 @@ static status_t update_hosts(private_child_sa_t *this,
 	{
 		iterator_t *iterator;
 		sa_policy_t *policy;
-		status_t status;
 		
 		/* always use high priorities, as hosts getting updated are INSTALLED */
 		iterator = this->policies->create_iterator(this->policies, TRUE);
@@ -833,24 +823,15 @@ static status_t update_hosts(private_child_sa_t *this,
 			}
 		
 			/* reinstall updated policies */
-			status = charon->kernel_interface->add_policy(
-						charon->kernel_interface, me, other, 
-						policy->my_ts, policy->other_ts, POLICY_OUT,
-						this->protocol,	this->reqid, TRUE, this->mode);
-			status |= charon->kernel_interface->add_policy(
-						charon->kernel_interface, other, me,
-						policy->other_ts, policy->my_ts, POLICY_IN,
-						this->protocol, this->reqid, TRUE, this->mode);
-			status |= charon->kernel_interface->add_policy(
-						charon->kernel_interface, other, me,
-						policy->other_ts, policy->my_ts, POLICY_FWD,
-						this->protocol, this->reqid, TRUE, this->mode);
-			
-			if (status != SUCCESS)
-			{
-				iterator->destroy(iterator);
-				return FAILED;
-			}
+			charon->kernel_interface->add_policy(charon->kernel_interface,
+					me, other, policy->my_ts, policy->other_ts, POLICY_OUT,
+					this->protocol,	this->reqid, TRUE, this->mode);
+			charon->kernel_interface->add_policy(charon->kernel_interface, 
+					other, me, policy->other_ts, policy->my_ts, POLICY_IN,
+					this->protocol, this->reqid, TRUE, this->mode);
+			charon->kernel_interface->add_policy(charon->kernel_interface,
+					other, me, policy->other_ts, policy->my_ts, POLICY_FWD,
+					this->protocol, this->reqid, TRUE, this->mode);
 		}
 		iterator->destroy(iterator);
 	}
@@ -861,7 +842,7 @@ static status_t update_hosts(private_child_sa_t *this,
 		this->me.addr->destroy(this->me.addr);
 		this->me.addr = me->clone(me);
 	}
-	if (other->equals(other, this->other.addr))
+	if (!other->equals(other, this->other.addr))
 	{
 		this->other.addr->destroy(this->other.addr);
 		this->other.addr = other->clone(other);
