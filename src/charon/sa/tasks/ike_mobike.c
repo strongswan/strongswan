@@ -116,7 +116,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 		{
 			case MOBIKE_SUPPORTED:
 			{
-				DBG2(DBG_IKE, "peer supports MOBIKE");
+				DBG1(DBG_IKE, "peer supports MOBIKE");
 				this->ike_sa->enable_extension(this->ike_sa, EXT_MOBIKE);
 				break;
 			}
