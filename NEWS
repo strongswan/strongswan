@@ -35,6 +35,8 @@ strongswan-4.1.4
   cannot be resolved by DNS then right=%any will be used so that passive
   connections as a responder are still possible.
 
+- Partial support for MOBIKE in IKEv2. The initiator acts on interface/
+  address configuration changes and updates IKE and IPsec SAs dynamically.
 
 strongswan-4.1.3
 ----------------

@@ -10,17 +10,14 @@ gain hassle-free configuration, version negotiation and maintainability.
 Roadmap 2007
 ============
 
- Jun  !   - distribution packages
+ Jul  !   - reimplement IKEv2 p2p NATT support
+      !   - release IKEv2 p2p NATT draft 00
       !   - interface in charon for the XML based SMP management interface
       !   - SMP configuration client
-      !   - release IKEv2 p2p NATT draft 00
       !
- Jul  !   - modular credential backends
-      !   - reimplement IKEv2 p2p NATT support
+ Aug  !   - modular cerendtial backends
       !
- Aug  !   - Start IKEv1 implementation in charon
-      !
- Sep  !
+ Sep  !   - Start IKEv1 implementation in charon
       !
  Oct  !
       !
@@ -35,6 +32,10 @@ TODO-List
 
 A set of TODOs. This is only a list of things I write down to not forget them.
 Watch out for TODOs in the code.
+
+Build options
+-------------
+- Allow static build using libtool dlopen wrapper
 
 Certificate support
 -------------------
@@ -53,3 +54,4 @@ Misc
 ----
 - Address pool/backend for virtual IP assignement
 - fix iterator->insert_before/after
+- split up kernel interface into:  ipsec, routing, interfaces

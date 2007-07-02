@@ -40,9 +40,9 @@ Then you're in, start the build as usual:
 
 API documentation
 -----------------
-Charon and libstrongswan contain inline code documentation. These comments can be
-extracted using doxygen. It is built using 'make apidoc', which creates an 'apidoc'
-folder containing the HTML files.
+Charon and libstrongswan contain inline code documentation. These comments can 
+be extracted using doxygen. It is built using 'make apidoc', which creates an
+'apidoc' folder containing the HTML files.
 
 
 uClibc support
