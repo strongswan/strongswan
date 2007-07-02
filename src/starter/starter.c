@@ -237,7 +237,7 @@ int main (int argc, char **argv)
     }
 
     cfg = confread_load(CONFIG_FILE);
-    if (cfg->err > 0)
+    if (cfg == NULL || cfg->err > 0)
     {
 	plog("unable to start strongSwan -- fatal errors in config");
 	confread_free(cfg);
