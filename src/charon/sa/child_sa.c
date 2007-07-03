@@ -60,7 +60,7 @@ struct sa_policy_t {
 typedef struct private_child_sa_t private_child_sa_t;
 
 /**
- * Private data of a child_sa_t bject.
+ * Private data of a child_sa_t object.
  */
 struct private_child_sa_t {
 	/**
@@ -156,6 +156,11 @@ struct private_child_sa_t {
 	 * config used to create this child
 	 */
 	child_cfg_t *config;
+	
+	/**
+	 * cached interface name for iptables
+	 */
+	char *iface;
 };
 
 /**
@@ -276,11 +281,10 @@ static void updown(private_child_sa_t *this, bool up)
 	while (iterator->iterate(iterator, (void**)&policy))
 	{
 		char command[1024];
-		char *ifname = NULL;
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
 		char *pos, *virtual_ip;
 		FILE *shell;
-		
+
 		/* get subnet/bits from string */
 		asprintf(&my_client, "%R", policy->my_ts);
 		pos = strchr(my_client, '/');
@@ -301,18 +305,24 @@ static void updown(private_child_sa_t *this, bool up)
 			*pos = '\0';
 		}
 
-        if (this->virtual_ip)
-        {
-                asprintf(&virtual_ip, "PLUTO_MY_SOURCEIP='%H' ",
-                		 this->virtual_ip);
-        }
-        else
-        {
-                asprintf(&virtual_ip, "");
-        }
+		if (this->virtual_ip)
+		{
+			asprintf(&virtual_ip, "PLUTO_MY_SOURCEIP='%H' ",
+		        		 this->virtual_ip);
+		}
+		else
+		{
+			asprintf(&virtual_ip, "");
+		}
 
-		ifname = charon->kernel_interface->get_interface(charon->kernel_interface, 
-														 this->me.addr);
+		/* we cache the iface name, as it may not be available when
+		 * the SA gets deleted */
+		if (up)
+		{
+			free(this->iface); 
+			this->iface = charon->kernel_interface->get_interface(
+								charon->kernel_interface, this->me.addr);
+		}
 		
 		/* build the command with all env variables.
 		 * TODO: PLUTO_PEER_CA and PLUTO_NEXT_HOP are currently missing
@@ -346,7 +356,7 @@ static void updown(private_child_sa_t *this, bool up)
 							this->me.addr) ? "-host" : "-client",
 				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-ipv6",
 				 this->config->get_name(this->config),
-				 ifname ? ifname : "(unknown)",
+				 this->iface ? this->iface : "unknown",
 				 this->reqid,
 				 this->me.addr,
 				 this->me.id,
@@ -364,7 +374,6 @@ static void updown(private_child_sa_t *this, bool up)
 				 this->config->get_hostaccess(this->config) ?
 				 	"PLUTO_HOST_ACCESS='1' " : "",
 				 script);
-		free(ifname);
 		free(my_client);
 		free(other_client);
 		free(virtual_ip);
@@ -926,6 +935,7 @@ static void destroy(private_child_sa_t *this)
 	this->me.id->destroy(this->me.id);
 	this->other.id->destroy(this->other.id);
 	this->config->destroy(this->config);
+	free(this->iface);
 	DESTROY_IF(this->virtual_ip);
 	free(this);
 }
@@ -982,6 +992,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
 	this->virtual_ip = NULL;
+	this->iface = NULL;
 	this->config = config;
 	config->get_ref(config);
 	
