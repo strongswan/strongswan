@@ -35,6 +35,17 @@ strongswan-4.1.4
   cannot be resolved by DNS then right=%any will be used so that passive
   connections as a responder are still possible.
 
+- The new pkcs11initargs parameter that can be placed in the
+  setup config section of /etc/ipsec.conf allows the definition
+  of an argument string that is used with the PKCS#11 C_Initialize()
+  function. This non-standard feature is required by the NSS softoken
+  library. This patch was contributed by Robert Varga.
+	
+- Fixed a bug in ipsec starter introduced by strongswan-2.8.5
+  which caused a segmentation fault in the presence of unknown
+  or misspelt keywords in ipsec.conf. This bug fix was contributed
+  by Robert Varga.
+
 - Partial support for MOBIKE in IKEv2. The initiator acts on interface/
   address configuration changes and updates IKE and IPsec SAs dynamically.
 
