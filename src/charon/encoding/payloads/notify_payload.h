@@ -104,6 +104,13 @@ enum notify_type_t {
 extern enum_name_t *notify_type_names;
 
 /**
+ * enum name for notify_type_t (shorter strings).
+ *
+ * @ingroup payloads
+ */
+extern enum_name_t *notify_type_short_names;
+
+/**
  * @brief Class representing an IKEv2-Notify Payload.
  * 
  * The Notify Payload format is described in Draft section 3.10.

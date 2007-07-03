@@ -621,16 +621,10 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	pos += written;
 	len -= written;
 	
-	if (this->payloads->get_count(this->payloads) == 0)
-	{
-		snprintf(pos, len, "]");
-		return buf;
-	}
-	
 	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 	while (iterator->iterate(iterator, (void**)&payload))
 	{
-		written = snprintf(pos, len, "%N ", payload_type_short_names,
+		written = snprintf(pos, len, " %N", payload_type_short_names,
 				  		   payload->get_type(payload));
 		if (written >= len || written < 0)
 		{
@@ -638,13 +632,23 @@ static char* get_string(private_message_t *this, char *buf, int len)
 		}
 		pos += written;
 		len -= written;
+		if (payload->get_type(payload) == NOTIFY)
+		{
+			notify_payload_t *notify = (notify_payload_t*)payload;
+			written = snprintf(pos, len, "(%N)", notify_type_short_names,
+					  		   notify->get_notify_type(notify));
+			if (written >= len || written < 0)
+			{
+				return buf;
+			}
+			pos += written;
+			len -= written;
+		}
 	}
 	iterator->destroy(iterator);
 	
 	/* remove last space */
-	pos--;
-	len++;
-	snprintf(pos, len, "]");
+	snprintf(pos, len, " ]");
 	return buf;
 }
 
@@ -734,7 +738,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	iterator_t *iterator;
 	status_t status;
 	chunk_t packet_data;
-	char str[128];
+	char str[256];
 	
 	if (is_encoded(this))
 	{
@@ -1140,7 +1144,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 {
 	status_t status = SUCCESS;
 	payload_type_t current_payload_type;
-	char str[128];
+	char str[256];
 		
 	current_payload_type = this->first_payload;	
 		
