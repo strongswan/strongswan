@@ -50,11 +50,12 @@ struct roam_job_t {
 /**
  * @brief Creates a job to inform IKE_SAs about an updated address list.
  * 
+ * @param address		TRUE if address list changed, FALSE if routing changed
  * @return				initiate_ike_sa_job_t object
  * 
  * @ingroup jobs
  */
-roam_job_t *roam_job_create();
+roam_job_t *roam_job_create(bool address);
 
 #endif /*ROAM_JOB_H_*/
 

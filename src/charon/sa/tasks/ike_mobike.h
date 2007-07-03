@@ -54,13 +54,10 @@ struct ike_mobike_t {
 	/**
 	 * @brief Use the task to roam to other addresses.
 	 *
-	 * Supplied hosts may be NULL to reuse existing IKE_SA hosts.
-	 *
 	 * @param this			calling object
-	 * @param me			local host to roam to, or NULL
-	 * @param other			remote host to roam to, or NULL
+	 * @param address		TRUE to include address list update
 	 */
-	void (*roam)(ike_mobike_t *this, host_t *me, host_t *other);
+	void (*roam)(ike_mobike_t *this, bool address);
 };
 
 /**

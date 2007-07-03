@@ -139,6 +139,7 @@ struct kernel_interface_t {
 	 * @param dst			current destination address
 	 * @param new_src		new source address
 	 * @param new_dst		new destination address
+	 * @param encap			use UDP encapsulation
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
@@ -146,7 +147,7 @@ struct kernel_interface_t {
 	status_t (*update_sa)(kernel_interface_t *this,
 						  u_int32_t spi, protocol_id_t protocol,
 						  host_t *src, host_t *dst, 
-						  host_t *new_src, host_t *new_dst);
+						  host_t *new_src, host_t *new_dst, bool encap);
 	
 	/**
 	 * @brief Query the use time of an SA.

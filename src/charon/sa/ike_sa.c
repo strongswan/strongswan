@@ -219,6 +219,11 @@ struct private_ike_sa_t {
 	 * list of peers additional addresses, transmitted via MOBIKE
 	 */
 	linked_list_t *additional_addresses;
+	
+	/**
+	 * number pending UPDATE_SA_ADDRESS (MOBIKE)
+	 */
+	u_int32_t pending_updates;
 
 	/**
 	 * Timestamps for this IKE_SA
@@ -715,6 +720,22 @@ static iterator_t* create_additional_address_iterator(private_ike_sa_t *this)
 	return this->additional_addresses->create_iterator(
 											this->additional_addresses, TRUE);
 }
+	
+/**
+ * Implementation of ike_sa_t.set_pending_updates.
+ */
+static void set_pending_updates(private_ike_sa_t *this, u_int32_t updates)
+{
+	this->pending_updates = updates;
+}
+
+/**
+ * Implementation of ike_sa_t.get_pending_updates.
+ */
+static u_int32_t get_pending_updates(private_ike_sa_t *this)
+{
+	return this->pending_updates;
+}
 
 /**
  * Update hosts, as addresses may change (NAT)
@@ -722,6 +743,11 @@ static iterator_t* create_additional_address_iterator(private_ike_sa_t *this)
 static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 {
 	bool update = FALSE;
+	
+	if (supports_extension(this, EXT_MOBIKE))
+	{	/* if peer speaks mobike, address updates are explicit only */
+		return;
+	}
 	
 	if (me == NULL)
 	{
@@ -1727,16 +1753,23 @@ static int get_path_prio(host_t *me, host_t *other)
 /**
  * Implementation of ike_sa_t.roam.
  */
-static status_t roam(private_ike_sa_t *this)
+static status_t roam(private_ike_sa_t *this, bool address)
 {
 	iterator_t *iterator;
 	host_t *me, *other, *cand_me, *cand_other;
 	ike_mobike_t *mobike;
-	int prio, best = 0;
+	int prio, best4 = 0, best6 = 0;
 	
-	/* only initiator handles address updated actively */
+	/* responder just updates the peer about changed address config */
 	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
 	{
+		if (supports_extension(this, EXT_MOBIKE) && address)
+		{
+			DBG1(DBG_IKE, "sending address list update using MOBIKE");
+			mobike = ike_mobike_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
+			return this->task_manager->initiate(this->task_manager);
+		}
 		return SUCCESS;
 	}
 	
@@ -1746,11 +1779,20 @@ static status_t roam(private_ike_sa_t *this)
 												   other);
 	if (me)
 	{
-		best = get_path_prio(me, other);
+		if (me->get_family(me) == AF_INET)
+		{
+			best4 = get_path_prio(me, other);
+		}
+		else
+		{
+			best6 = get_path_prio(me, other);
+		}
 	}
 	iterator = create_additional_address_iterator(this);
 	while (iterator->iterate(iterator, (void**)&cand_other))
 	{
+		bool better = FALSE;
+	
 		cand_me = charon->kernel_interface->get_source_addr(
 										charon->kernel_interface, cand_other);
 		if (!cand_me)
@@ -1763,10 +1805,28 @@ static status_t roam(private_ike_sa_t *this)
 			cand_me->destroy(cand_me);
 			continue;
 		}
+		
 		prio = get_path_prio(cand_me, cand_other);
-		if (prio > best)
+		if (cand_me->get_family(cand_me) == AF_INET)
 		{
-			best = prio;
+			if (prio > best4 && (best6 == 0 ||
+						this->my_host->get_family(this->my_host) == AF_INET))
+			{
+				best4 = prio;
+				better = TRUE;
+			}
+		}
+		else
+		{
+			if (prio > best6 && (best4 == 0 ||
+						this->my_host->get_family(this->my_host) == AF_INET6))
+			{
+				best6 = prio;
+				better = TRUE;
+			}
+		}
+		if (better)
+		{
 			DESTROY_IF(me);
 			me = cand_me;
 			other = cand_other;
@@ -1797,19 +1857,20 @@ static status_t roam(private_ike_sa_t *this)
 	me->set_port(me, this->my_host->get_port(this->my_host));
 	other = other->clone(other);
 	other->set_port(other, this->other_host->get_port(this->other_host));
+	set_my_host(this, me);
+	set_other_host(this, other);
 	
 	/* update addresses with mobike, if supported ... */
 	if (supports_extension(this, EXT_MOBIKE))
 	{
 		DBG1(DBG_IKE, "requesting address change using MOBIKE");
 		mobike = ike_mobike_create(&this->public, TRUE);
-		mobike->roam(mobike, me, other);
+		mobike->roam(mobike, address);
 		this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
 		return this->task_manager->initiate(this->task_manager);
 	}
 	DBG1(DBG_IKE, "reestablishing IKE_SA due address change");
 	/* ... reestablish if not */
-	set_my_host(this, me);
 	return reestablish(this);
 }
 
@@ -2078,6 +2139,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.supports_extension = (bool(*)(ike_sa_t*, ike_extension_t extension))supports_extension;
 	this->public.set_condition = (void (*)(ike_sa_t*, ike_condition_t,bool)) set_condition;
 	this->public.has_condition = (bool (*)(ike_sa_t*,ike_condition_t)) has_condition;
+	this->public.set_pending_updates = (void(*)(ike_sa_t*, u_int32_t updates))set_pending_updates;
+	this->public.get_pending_updates = (u_int32_t(*)(ike_sa_t*))get_pending_updates;
 	this->public.create_additional_address_iterator = (iterator_t*(*)(ike_sa_t*))create_additional_address_iterator;
 	this->public.add_additional_address = (void(*)(ike_sa_t*, host_t *host))add_additional_address;
 	this->public.retransmit = (status_t (*)(ike_sa_t *, u_int32_t)) retransmit;
@@ -2098,7 +2161,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
 	this->public.rekey = (status_t (*)(ike_sa_t*))rekey;
 	this->public.reestablish = (status_t (*)(ike_sa_t*))reestablish;
-	this->public.roam = (status_t(*)(ike_sa_t*))roam;
+	this->public.roam = (status_t(*)(ike_sa_t*,bool))roam;
 	this->public.inherit = (status_t (*)(ike_sa_t*,ike_sa_t*))inherit;
 	this->public.generate_message = (status_t (*)(ike_sa_t*,message_t*,packet_t**))generate_message;
 	this->public.reset = (void (*)(ike_sa_t*))reset;
@@ -2138,6 +2201,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->other_virtual_ip = NULL;
 	this->dns_servers = linked_list_create();
 	this->additional_addresses = linked_list_create();
+	this->pending_updates = 0;
 	this->keyingtry = 0;
 	
 	return &this->public;

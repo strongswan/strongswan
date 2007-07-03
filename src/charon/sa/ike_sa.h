@@ -433,6 +433,22 @@ struct ike_sa_t {
 	bool (*has_condition) (ike_sa_t *this, ike_condition_t condition);
 	
 	/**
+	 * @brief Get the number of queued MOBIKE address updates.
+	 *
+	 * @param this			calling object
+	 * @return				number of pending updates
+	 */
+	u_int32_t (*get_pending_updates)(ike_sa_t *this);
+	
+	/**
+	 * @brief Set the number of queued MOBIKE address updates.
+	 *
+	 * @param this			calling object
+	 * @param updates		number of pending updates
+	 */
+	void (*set_pending_updates)(ike_sa_t *this, u_int32_t updates);
+	
+	/**
 	 * @brief Initiate a new connection.
 	 *
 	 * The configs are owned by the IKE_SA after the call.
@@ -510,10 +526,11 @@ struct ike_sa_t {
 	 * If MOBIKE is supported, addresses are updated; If not, the tunnel is
 	 * restarted.
 	 *
-	 * @param 
-	 * @return
+	 * @param this			calling object
+	 * @param address		TRUE if address list changed, FALSE otherwise
+	 * @return				SUCCESS, FAILED, DESTROY_ME
 	 */
-	status_t (*roam)(ike_sa_t *this);
+	status_t (*roam)(ike_sa_t *this, bool address);
 	
 	/**
 	 * @brief Processes a incoming IKEv2-Message.

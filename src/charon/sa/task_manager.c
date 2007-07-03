@@ -719,6 +719,10 @@ static status_t process_request(private_task_manager_t *this,
 					default:
 						break;
 				}
+				if (task)
+				{
+					break;
+				}
 			}
 			iterator->destroy(iterator);
 			

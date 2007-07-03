@@ -615,7 +615,8 @@ static void process_link(private_kernel_interface_t *this,
 	/* send an update to all IKE_SAs */
 	if (update && event)
 	{
-		charon->processor->queue_job(charon->processor, (job_t*)roam_job_create());
+		charon->processor->queue_job(charon->processor,
+									 (job_t*)roam_job_create(TRUE));
 	}
 }
 
@@ -633,7 +634,7 @@ static void process_addr(private_kernel_interface_t *this,
 	iface_entry_t *iface;
 	addr_entry_t *addr;
 	chunk_t local = chunk_empty, address = chunk_empty;
-	bool update = FALSE, found = FALSE;
+	bool update = FALSE, found = FALSE, changed = FALSE;
 	
 	while(RTA_OK(rta, rtasize))
 	{
@@ -681,6 +682,7 @@ static void process_addr(private_kernel_interface_t *this,
 					found = TRUE;
 					if (hdr->nlmsg_type == RTM_DELADDR)
 					{
+						changed = TRUE;
 						addrs->remove(addrs);
 						addr_entry_destroy(addr);
 						DBG1(DBG_KNL, "%H disappeared from %s", host, iface->ifname);
@@ -694,6 +696,7 @@ static void process_addr(private_kernel_interface_t *this,
 				if (!found)
 				{
 					found = TRUE;
+					changed = TRUE;
 					addr = malloc_thing(addr_entry_t);
 					addr->ip = host->clone(host);
 					addr->virtual = FALSE;
@@ -718,9 +721,10 @@ static void process_addr(private_kernel_interface_t *this,
 	host->destroy(host);
 	
 	/* send an update to all IKE_SAs */
-	if (update && event)
+	if (update && event && changed)
 	{
-		charon->processor->queue_job(charon->processor, (job_t*)roam_job_create());
+		charon->processor->queue_job(charon->processor,
+									 (job_t*)roam_job_create(TRUE));
 	}
 }
 
@@ -817,7 +821,7 @@ static job_requeue_t receive_events(private_kernel_interface_t *this)
 				case RTM_NEWROUTE:
 				case RTM_DELROUTE:
 					charon->processor->queue_job(charon->processor,
-												 (job_t*)roam_job_create());
+												 (job_t*)roam_job_create(FALSE));
 					break;
 				default:
 					break;
@@ -1763,11 +1767,11 @@ static status_t add_sa(private_kernel_interface_t *this,
 			return FAILED;
 		}
 
-		struct xfrm_encap_tmpl* encap = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
-		encap->encap_type = UDP_ENCAP_ESPINUDP;
-		encap->encap_sport = htons(src->get_port(src));
-		encap->encap_dport = htons(dst->get_port(dst));
-		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));
+		struct xfrm_encap_tmpl* tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
+		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
+		tmpl->encap_sport = htons(src->get_port(src));
+		tmpl->encap_dport = htons(dst->get_port(dst));
+		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
 		/* encap_oa could probably be derived from the 
 		 * traffic selectors [rfc4306, p39]. In the netlink kernel implementation 
 		 * pluto does the same as we do here but it uses encap_oa in the 
@@ -1794,13 +1798,16 @@ static status_t add_sa(private_kernel_interface_t *this,
 static status_t update_sa(private_kernel_interface_t *this,
 						  u_int32_t spi, protocol_id_t protocol,
 						  host_t *src, host_t *dst,
-						  host_t *new_src, host_t *new_dst)
+						  host_t *new_src, host_t *new_dst, bool encap)
 {
-	unsigned char request[BUFFER_SIZE];
+	unsigned char request[BUFFER_SIZE], *pos;
 	struct nlmsghdr *hdr, *out = NULL;
 	struct xfrm_usersa_id *sa_id;
-	struct xfrm_usersa_info *sa = NULL;
+	struct xfrm_usersa_info *out_sa = NULL, *sa;
 	size_t len;
+	struct rtattr *rta;
+	size_t rtasize;
+	struct xfrm_encap_tmpl* tmpl = NULL;
 	
 	memset(&request, 0, sizeof(request));
 	
@@ -1827,7 +1834,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 			{
 				case XFRM_MSG_NEWSA:
 				{
-					sa = NLMSG_DATA(hdr);
+					out_sa = NLMSG_DATA(hdr);
 					break;
 				}
 				case NLMSG_ERROR:
@@ -1846,7 +1853,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 			break;
 		}
 	}
-	if (sa == NULL ||
+	if (out_sa == NULL ||
 		this->public.del_sa(&this->public, dst, spi, protocol) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI 0x%x", spi);
@@ -1857,10 +1864,14 @@ static status_t update_sa(private_kernel_interface_t *this,
 	DBG2(DBG_KNL, "updating SAD entry with SPI 0x%x from %#H..%#H to %#H..%#H",
 		 spi, src, dst, new_src, new_dst);
 	
-	/* update the values in the queried SA */
-	hdr = out;
+	/* copy over the SA from out to request */
+	hdr = (struct nlmsghdr*)request;
+	memcpy(hdr, out, min(out->nlmsg_len, sizeof(request)));
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;	
 	hdr->nlmsg_type = XFRM_MSG_NEWSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
+	sa = NLMSG_DATA(hdr);
+	sa->family = new_dst->get_family(new_dst);
 	
 	if (!src->ip_equals(src, new_src))
 	{
@@ -1871,24 +1882,39 @@ static status_t update_sa(private_kernel_interface_t *this,
 		host2xfrm(new_dst, &sa->id.daddr);
 	}
 	
-	if (src->get_port(src) != new_src->get_port(new_src) ||
-		dst->get_port(dst) != new_dst->get_port(new_dst))
+	rta = XFRM_RTA(out, struct xfrm_usersa_info);
+	rtasize = XFRM_PAYLOAD(out, struct xfrm_usersa_info);
+	pos = (u_char*)XFRM_RTA(hdr, struct xfrm_usersa_info);
+	while(RTA_OK(rta, rtasize))
 	{
-		struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_usersa_info);
-		size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_usersa_info);
-		while (RTA_OK(rtattr, rtsize))
+		/* copy all attributes, but not XFRMA_ENCAP if we are disabling it */
+		if (rta->rta_type != XFRMA_ENCAP || encap)
 		{
-			if (rtattr->rta_type == XFRMA_ENCAP)
-			{
-				struct xfrm_encap_tmpl* encap;
-				encap = (struct xfrm_encap_tmpl*)RTA_DATA(rtattr);
-				encap->encap_sport = ntohs(new_src->get_port(new_src));
-				encap->encap_dport = ntohs(new_dst->get_port(new_dst));
-				break;
-			}
-			rtattr = RTA_NEXT(rtattr, rtsize);
+			if (rta->rta_type == XFRMA_ENCAP)
+			{	/* update encap tmpl */
+				tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rta);
+				tmpl->encap_sport = ntohs(new_src->get_port(new_src));
+				tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
+			}	
+			memcpy(pos, rta, rta->rta_len);
+			pos += rta->rta_len;
+			hdr->nlmsg_len += rta->rta_len;
 		}
+		rta = RTA_NEXT(rta, rtasize);
 	}
+	if (tmpl == NULL && encap)
+	{	/* add tmpl if we are enabling it */
+		rta = (struct rtattr*)pos;
+		rta->rta_type = XFRMA_ENCAP;
+		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
+		hdr->nlmsg_len += rta->rta_len;
+		tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rta);
+		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
+		tmpl->encap_sport = ntohs(new_src->get_port(new_src));
+		tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
+		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
+	}
+	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI 0x%x", spi);
@@ -2320,7 +2346,7 @@ kernel_interface_t *kernel_interface_create()
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,mode_t,bool,bool))add_sa;
-	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*))update_sa;
+	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
 	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t))add_policy;

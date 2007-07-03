@@ -52,16 +52,6 @@ struct private_ike_mobike_t {
 	bool initiator;
 	
 	/**
-	 * local host to roam to
-	 */
-	host_t *me;
-	
-	/**
-	 * remote host to roam to
-	 */
-	host_t *other;
-	
-	/**
 	 * cookie2 value to verify new addresses
 	 */
 	chunk_t cookie2;
@@ -70,6 +60,16 @@ struct private_ike_mobike_t {
 	 * NAT discovery reusing the IKE_NATD task
 	 */
 	ike_natd_t *natd;
+	
+	/**
+	 * use task to update addresses
+	 */
+	bool roam;
+	
+	/**
+	 * include address list update
+	 */
+	bool address;
 };
 
 /**
@@ -138,6 +138,11 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 				this->ike_sa->add_additional_address(this->ike_sa, host);
 				break;
 			}
+			case UPDATE_SA_ADDRESSES:
+			{
+				this->roam = TRUE;
+				break;
+			}
 			case NO_ADDITIONAL_ADDRESSES:
 			{
 				flush_additional_addresses(this);
@@ -201,6 +206,25 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 }
 
 /**
+ * update addresses of associated CHILD_SAs
+ */
+static void update_children(private_ike_mobike_t *this)
+{
+	iterator_t *iterator;
+	child_sa_t *child_sa;
+	
+	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		child_sa->update_hosts(child_sa,
+						this->ike_sa->get_my_host(this->ike_sa), 
+						this->ike_sa->get_other_host(this->ike_sa),
+						this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implementation of task_t.process for initiator
  */
 static status_t build_i(private_ike_mobike_t *this, message_t *message)
@@ -211,16 +235,20 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 		message->add_notify(message, FALSE, MOBIKE_SUPPORTED, chunk_empty);
 		build_address_list(this, message);
 	}
-	else if (this->me || this->other)
-	{	/* address change */
-		message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES, chunk_empty);
-		build_address_list(this, message);
-		/* set new addresses */
-		this->ike_sa->update_hosts(this->ike_sa, this->me, this->other);
-		if (this->natd)
+	else 
+	{
+		if (this->roam)
 		{
-			this->natd->task.build(&this->natd->task, message);
+			message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES, chunk_empty);
 		}
+		if (this->address)
+		{
+			build_address_list(this, message);
+		}
+		
+		this->natd = ike_natd_create(this->ike_sa, this->initiator);
+		this->natd->task.build(&this->natd->task, message);
+		update_children(this);
 	}
 	
 	return NEED_MORE;
@@ -239,6 +267,16 @@ static status_t process_r(private_ike_mobike_t *this, message_t *message)
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
 		process_payloads(this, message);
+		if (this->roam)
+		{
+			host_t *me, *other;
+			
+			me = message->get_destination(message);
+			other = message->get_source(message);
+			this->ike_sa->set_my_host(this->ike_sa, me->clone(me));
+			this->ike_sa->set_other_host(this->ike_sa, other->clone(other));
+		}
+		
 		if (this->natd)
 		{
 			this->natd->task.process(&this->natd->task, message);
@@ -268,6 +306,10 @@ static status_t build_r(private_ike_mobike_t *this, message_t *message)
 		{
 			this->natd->task.build(&this->natd->task, message);
 		}
+		if (this->roam)
+		{
+			update_children(this);
+		}
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -287,10 +329,22 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
+		u_int32_t updates = this->ike_sa->get_pending_updates(this->ike_sa) - 1;
+		this->ike_sa->set_pending_updates(this->ike_sa, updates);
+		if (updates > 0)
+		{
+			/* newer update queued, ignore this one */
+			return SUCCESS;
+		}
 		process_payloads(this, message);
 		if (this->natd)
 		{
 			this->natd->task.process(&this->natd->task, message);
+		}
+		if (this->roam)
+		{
+			/* update again, as NAT state may have changed */
+			update_children(this);
 		}
 		return SUCCESS;
 	}
@@ -300,13 +354,12 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 /**
  * Implementation of ike_mobike_t.roam.
  */
-static void roam(private_ike_mobike_t *this, host_t *me, host_t *other)
+static void roam(private_ike_mobike_t *this, bool address)
 {
-	this->me = me;
-	this->other = other;
-	
-	/* include NAT detection when roaming */
-	this->natd = ike_natd_create(this->ike_sa, this->initiator);
+	this->roam = TRUE;
+	this->address = address;
+	this->ike_sa->set_pending_updates(this->ike_sa, 
+							this->ike_sa->get_pending_updates(this->ike_sa) + 1);
 }
 
 /**
@@ -322,12 +375,8 @@ static task_type_t get_type(private_ike_mobike_t *this)
  */
 static void migrate(private_ike_mobike_t *this, ike_sa_t *ike_sa)
 {
-	DESTROY_IF(this->me);
-	DESTROY_IF(this->other);
 	chunk_free(&this->cookie2);
 	this->ike_sa = ike_sa;
-	this->me = NULL;
-	this->other = NULL;
 	if (this->natd)
 	{
 		this->natd->task.migrate(&this->natd->task, ike_sa);
@@ -339,8 +388,6 @@ static void migrate(private_ike_mobike_t *this, ike_sa_t *ike_sa)
  */
 static void destroy(private_ike_mobike_t *this)
 {
-	DESTROY_IF(this->me);
-	DESTROY_IF(this->other);
 	chunk_free(&this->cookie2);
 	if (this->natd)
 	{
@@ -356,7 +403,7 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 {
 	private_ike_mobike_t *this = malloc_thing(private_ike_mobike_t);
 
-	this->public.roam = (void(*)(ike_mobike_t*, host_t *, host_t *))roam;
+	this->public.roam = (void(*)(ike_mobike_t*,bool))roam;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
@@ -374,8 +421,8 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 	
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
-	this->me = NULL;
-	this->other = NULL;
+	this->roam = FALSE;
+	this->address = TRUE;
 	this->cookie2 = chunk_empty;
 	this->natd = NULL;
 	

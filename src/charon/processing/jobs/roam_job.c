@@ -39,6 +39,11 @@ struct private_roam_job_t {
 	 * public roam_job_t interface
 	 */
 	roam_job_t public;
+	
+	/**
+	 * has the address list changed, or the routing only?
+	 */
+	bool address;
 };
 
 /**
@@ -75,7 +80,7 @@ static void execute(private_roam_job_t *this)
 		ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
 		if (ike_sa)
 		{
-			if (ike_sa->roam(ike_sa) == DESTROY_ME)
+			if (ike_sa->roam(ike_sa, this->address) == DESTROY_ME)
 			{
 				charon->ike_sa_manager->checkin_and_destroy(
 											charon->ike_sa_manager, ike_sa);
@@ -95,13 +100,15 @@ static void execute(private_roam_job_t *this)
 /*
  * Described in header
  */
-roam_job_t *roam_job_create()
+roam_job_t *roam_job_create(bool address)
 {
 	private_roam_job_t *this = malloc_thing(private_roam_job_t);
 	
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
+	
+	this->address = address;
 
 	return &this->public;
 }

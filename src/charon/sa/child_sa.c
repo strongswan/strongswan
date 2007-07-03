@@ -776,20 +776,22 @@ static status_t update_hosts(private_child_sa_t *this,
 							 host_t *me, host_t *other, bool encap) 
 {
 	/* anything changed at all? */
-	if (me->equals(me, this->me.addr) && other->equals(other, this->other.addr))
+	if (me->equals(me, this->me.addr) && 
+		other->equals(other, this->other.addr) && this->encap == encap)
 	{
 		return SUCCESS;
 	}
-	
 	/* run updown script to remove iptables rules */
 	updown(this, FALSE);
 	
+	this->encap = encap;
+	
 	/* update our (initator) SAs */
 	charon->kernel_interface->update_sa(charon->kernel_interface, this->me.spi,
-				this->protocol, this->other.addr, this->me.addr, other, me);
+			this->protocol, this->other.addr, this->me.addr, other, me, encap);
 	/* update his (responder) SAs */
 	charon->kernel_interface->update_sa(charon->kernel_interface, this->other.spi, 
-				this->protocol, this->me.addr, this->other.addr, me, other);
+			this->protocol, this->me.addr, this->other.addr, me, other, encap);
 	
 	/* update policies */
 	if (!me->ip_equals(me, this->me.addr) ||
