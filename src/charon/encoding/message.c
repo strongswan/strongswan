@@ -611,9 +611,13 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	int written;
 	char *pos = buf;
 	
-	written = snprintf(pos, len, "%N %s [", 
-					   exchange_type_names, this->exchange_type,
-					   this->is_request ? "request" : "response");
+	memset(buf, 0, len);
+	len--;
+	
+	written = snprintf(pos, len, "%N %s %d [",
+					   exchange_type_names, this->exchange_type, 
+					   this->is_request ? "request" : "response",
+					   this->message_id);
 	if (written >= len || written < 0)
 	{
 		return "";
