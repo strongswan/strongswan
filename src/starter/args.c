@@ -173,6 +173,7 @@ static const token_info_t token_info[] =
     { ARG_STR,  offsetof(starter_config_t, setup.virtual_private), NULL            },
     { ARG_STR,  offsetof(starter_config_t, setup.eapdir), NULL                     },
     { ARG_STR,  offsetof(starter_config_t, setup.pkcs11module), NULL               },
+    { ARG_STR,  offsetof(starter_config_t, setup.pkcs11initargs), NULL             },
     { ARG_ENUM, offsetof(starter_config_t, setup.pkcs11keepstate), LST_bool        },
     { ARG_ENUM, offsetof(starter_config_t, setup.pkcs11proxy), LST_bool            },
 

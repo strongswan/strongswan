@@ -69,7 +69,7 @@ extern bool pkcs11_keep_state;
 extern bool pkcs11_proxy;
 
 extern smartcard_t* scx_parse_number_slot_id(const char *number_slot_id);
-extern void scx_init(const char *module);
+extern void scx_init(const char *module, const char *init_args);
 extern void scx_finalize(void);
 extern bool scx_establish_context(smartcard_t *sc);
 extern bool scx_login(smartcard_t *sc);

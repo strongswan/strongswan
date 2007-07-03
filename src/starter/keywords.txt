@@ -50,6 +50,7 @@ virtual_private,   KW_VIRTUAL_PRIVATE
 eap,               KW_EAP
 eapdir,            KW_EAPDIR
 pkcs11module,      KW_PKCS11MODULE
+pkcs11initargs,    KW_PKCS11INITARGS
 pkcs11keepstate,   KW_PKCS11KEEPSTATE
 pkcs11proxy,       KW_PKCS11PROXY
 keyexchange,       KW_KEYEXCHANGE

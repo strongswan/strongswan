@@ -178,6 +178,7 @@ struct starter_config {
 		char	 *virtual_private;
 		char	 *eapdir;
 		char	 *pkcs11module;
+		char	 *pkcs11initargs;
 		bool	 pkcs11keepstate;
 		bool	 pkcs11proxy;
 

@@ -104,7 +104,8 @@ usage(const char *mess)
 	    " \\\n\t"
 	    "[--adns <pathname>]"
 	    "[--pkcs11module <path>]"
-	    "[--pkcs11keepstate"
+	    "[--pkcs11keepstate]"
+	    "[--pkcs11initargs <string>]"
 #ifdef DEBUG
 	    " \\\n\t"
 	    "[--debug-none]"
@@ -217,6 +218,11 @@ bool pkcs11_keep_state = FALSE;
 /* by default pluto does not allow pkcs11 proxy access via whack */
 bool pkcs11_proxy = FALSE;
 
+/* argument string to pass to PKCS#11 module.
+ * Not used for compliant modules, just for NSS softoken
+ */
+static const char *pkcs11_init_args = NULL;
+
 int
 main(int argc, char **argv)
 {
@@ -263,6 +269,7 @@ main(int argc, char **argv)
 #endif /* !USE_LWRES */
 	    { "pkcs11module", required_argument, NULL, 'm' },
 	    { "pkcs11keepstate", no_argument, NULL, 'k' },
+	    { "pkcs11initargs", required_argument, NULL, 'z' },
 	    { "pkcs11proxy", no_argument, NULL, 'y' },
 	    { "nat_traversal", no_argument, NULL, '1' },
 	    { "keep_alive", required_argument, NULL, '2' },
@@ -432,6 +439,10 @@ main(int argc, char **argv)
 	    pkcs11_proxy = TRUE;
 	    continue;
 
+	case 'z':	/* --pkcs11initargs */
+	    pkcs11_init_args = optarg;
+	    continue;
+
 #ifdef DEBUG
 	case 'N':	/* --debug-none */
 	    base_debugging = DBG_NONE;
@@ -593,7 +604,7 @@ main(int argc, char **argv)
 
     init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
     init_virtual_ip(virtual_private);
-    scx_init(pkcs11_module_path);   /* load and initialize PKCS #11 module */
+    scx_init(pkcs11_module_path, pkcs11_init_args);   /* load and initialize PKCS #11 module */
     xauth_init();		    /* load and initialize XAUTH module */
     init_rnd_pool();
     init_secret();

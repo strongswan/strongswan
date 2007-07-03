@@ -187,6 +187,11 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
 	arg[argc++] = "--pkcs11module";
 	arg[argc++] = cfg->setup.pkcs11module;
     }
+    if (cfg->setup.pkcs11initargs)
+    {
+	arg[argc++] = "--pkcs11initargs";
+	arg[argc++] = cfg->setup.pkcs11initargs;
+    }
     if (cfg->setup.pkcs11keepstate)
     {
 	arg[argc++] = "--pkcs11keepstate";

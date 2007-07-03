@@ -690,12 +690,16 @@ scx_find_all_cert_objects(void)
 #endif
 
 /*
- * load and initialize PKCS#11 cryptoki module 
+ * load and initialize PKCS#11 cryptoki module
+ *
+ * init_args should be unused when we have a PKCS#11 compliant module,
+ * but NSS softoken breaks that API.
  */
 void
-scx_init(const char* module)
+scx_init(const char* module, const char *init_args)
 {
 #ifdef SMARTCARD
+    CK_C_INITIALIZE_ARGS args = { .pReserved = init_args, };
     CK_RV rv;
 
     if (scx_initialized)
@@ -726,8 +730,8 @@ scx_init(const char* module)
 
     DBG(DBG_CONTROL | DBG_CRYPT,
 	DBG_log("pkcs11 module initializing...")
-    )   
-    rv = pkcs11_functions->C_Initialize(NULL);
+    )
+    rv = pkcs11_functions->C_Initialize(init_args ? &args : NULL);
     if (rv != CKR_OK)
     {
 	plog("failed to initialize pkcs11 module: %s"
