@@ -1382,18 +1382,19 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 }
 
 /**
- * Implementation of kernel_interface_t.get_source_addr.
+ * Get the nexthop gateway for dest; or the source addr if gateway = FALSE
  */
-static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
+static host_t* get_addr(private_kernel_interface_t *this,
+						host_t *dest, bool gateway)
 {
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *hdr, *out, *current;
 	struct rtmsg *msg;
 	chunk_t chunk;
 	size_t len;
-	host_t *source = NULL;
+	host_t *addr = NULL;
 	
-	DBG2(DBG_KNL, "getting source address to reach %H", dest);
+	DBG2(DBG_KNL, "getting address to reach %H", dest);
 	
 	memset(&request, 0, sizeof(request));
 
@@ -1415,7 +1416,7 @@ static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 			
 	if (netlink_send(this, this->socket_rt, hdr, &out, &len) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "getting source address to %H failed", dest);
+		DBG1(DBG_KNL, "getting address to %H failed", dest);
 		return NULL;
 	}
 	current = out;
@@ -1435,14 +1436,14 @@ static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 				rtasize = RTM_PAYLOAD(current);
 				while(RTA_OK(rta, rtasize))
 				{
-					switch (rta->rta_type)
+					if ((rta->rta_type == RTA_PREFSRC && !gateway) ||
+						(rta->rta_type == RTA_GATEWAY && gateway))
 					{
-						case RTA_PREFSRC:
-							chunk.ptr = RTA_DATA(rta);
-							chunk.len = RTA_PAYLOAD(rta);
-							source = host_create_from_chunk(msg->rtm_family, 
-															chunk, 0);
-							break;
+						chunk.ptr = RTA_DATA(rta);
+						chunk.len = RTA_PAYLOAD(rta);
+						addr = host_create_from_chunk(msg->rtm_family, 
+													  chunk, 0);
+						break;
 					}
 					rta = RTA_NEXT(rta, rtasize);
 				}
@@ -1455,11 +1456,19 @@ static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 		break;
 	}
 	free(out);
-	if (source == NULL)
+	if (addr == NULL)
 	{
 		DBG2(DBG_KNL, "no route found to %H", dest);
 	}
-	return source;
+	return addr;
+}
+
+/**
+ * Implementation of kernel_interface_t.get_source_addr.
+ */
+static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
+{
+	return get_addr(this, dest, FALSE);
 }
 
 /**
@@ -2146,7 +2155,13 @@ static status_t add_policy(private_kernel_interface_t *this,
 		policy->route = malloc_thing(route_entry_t);
 		if (get_address_by_ts(this, dst_ts, &policy->route->src_ip) == SUCCESS)
 		{
-			policy->route->gateway = dst->clone(dst);
+			/* if we have a gateway (via), we use it. If it's direct, we 
+			 * use the peers address (which is src, as we are in POLICY_FWD).*/
+			policy->route->gateway = get_addr(this, src, TRUE);
+			if (policy->route->gateway == NULL)
+			{
+				policy->route->gateway = src->clone(src);
+			}
 			policy->route->if_index = get_interface_index(this, dst);
 			policy->route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(policy->route->dst_net.ptr, &policy->sel.saddr, policy->route->dst_net.len);
