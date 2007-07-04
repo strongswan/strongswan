@@ -1719,46 +1719,12 @@ static status_t reestablish(private_ike_sa_t *this)
 }
 
 /**
- * get a priority for a src/dst connection path
- */
-static int get_path_prio(host_t *me, host_t *other)
-{
-	chunk_t a, b;
-	int prio = 1;
-	
-	a = me->get_address(me);
-	b = other->get_address(other);
-	
-	while (a.len > 0 && b.len > 0)
-	{
-		if (a.ptr[0] == b.ptr[0])
-		{
-			prio++;
-		}
-		else
-		{
-			break;
-		}
-		a = chunk_skip(a, 1);
-		b = chunk_skip(b, 1);
-	}
-	if (me->get_family(me) == AF_INET)
-	{
-		prio *= 4;
-	}
-	return prio;
-}
-
-
-/**
  * Implementation of ike_sa_t.roam.
  */
 static status_t roam(private_ike_sa_t *this, bool address)
 {
-	iterator_t *iterator;
-	host_t *me, *other, *cand_me, *cand_other;
+	host_t *me, *other;
 	ike_mobike_t *mobike;
-	int prio, best4 = 0, best6 = 0;
 	
 	/* responder just updates the peer about changed address config */
 	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
@@ -1777,66 +1743,8 @@ static status_t roam(private_ike_sa_t *this, bool address)
 	other = this->other_host;
 	me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
 												   other);
-	if (me)
-	{
-		if (me->get_family(me) == AF_INET)
-		{
-			best4 = get_path_prio(me, other);
-		}
-		else
-		{
-			best6 = get_path_prio(me, other);
-		}
-	}
-	iterator = create_additional_address_iterator(this);
-	while (iterator->iterate(iterator, (void**)&cand_other))
-	{
-		bool better = FALSE;
-	
-		cand_me = charon->kernel_interface->get_source_addr(
-										charon->kernel_interface, cand_other);
-		if (!cand_me)
-		{
-			continue;
-		}
-		if (this->my_virtual_ip && 
-			cand_me->ip_equals(cand_me, this->my_virtual_ip))
-		{	/* never roam IKE_SA to our virtual IP! */
-			cand_me->destroy(cand_me);
-			continue;
-		}
-		
-		prio = get_path_prio(cand_me, cand_other);
-		if (cand_me->get_family(cand_me) == AF_INET)
-		{
-			if (prio > best4 && (best6 == 0 ||
-						this->my_host->get_family(this->my_host) == AF_INET))
-			{
-				best4 = prio;
-				better = TRUE;
-			}
-		}
-		else
-		{
-			if (prio > best6 && (best4 == 0 ||
-						this->my_host->get_family(this->my_host) == AF_INET6))
-			{
-				best6 = prio;
-				better = TRUE;
-			}
-		}
-		if (better)
-		{
-			DESTROY_IF(me);
-			me = cand_me;
-			other = cand_other;
-		}
-		else
-		{
-			cand_me->destroy(cand_me);
-		}
-	}
-	iterator->destroy(iterator);
+												   
+	/* TODO: find a better path using additional addresses of peer */
 	
 	if (!me)
 	{
