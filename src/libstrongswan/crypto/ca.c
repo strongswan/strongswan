@@ -345,7 +345,7 @@ static void add_crluri(private_ca_info_t *this, chunk_t uri)
 		strncasecmp(uri.ptr, "file", 4) != 0  &&
 		strncasecmp(uri.ptr, "ftp",  3) != 0))
 	{
-		DBG1("  invalid crl uri '%#B'", &uri);
+		DBG1("  invalid crl uri '%.*s'", uri.len, uri.ptr);
 		return;
 	}
 	else
