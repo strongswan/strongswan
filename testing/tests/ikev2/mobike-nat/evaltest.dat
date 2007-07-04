@@ -1,0 +1,16 @@
+alice::ipsec statusall::ESTABLISHED.*PH_IP_ALICE1.*PH_IP_SUN::YES
+sun::ipsec statusall::ESTABLISHED.*PH_IP_SUN.*PH_IP_ALICE1::YES
+alice::ipsec statusall::PH_IP_ALICE/32 === 10.2.0.0/16::YES
+sun::ipsec statusall::10.2.0.0/16 === PH_IP_ALICE/32::YES
+alice::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
+alice::/etc/init.d/net.eth1 stop::No output expected::NO
+alice::sleep 1::No output expected::NO
+alice::ipsec statusall::ESTABLISHED.*PH_IP_ALICE.*PH_IP_SUN::YES
+sun::ipsec statusall::ESTABLISHED.*PH_IP_SUN.*PH_IP_MOON::YES
+alice::ipsec statusall::PH_IP_ALICE/32 === 10.2.0.0/16::YES
+sun::ipsec statusall::10.2.0.0/16 === PH_IP_ALICE/32::YES
+alice::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
+moon::tcpdump::moon.strongswan.org.*sun.strongswan.org.*: UDP-encap: ESP::YES
+moon::tcpdump::sun.strongswan.org.*moon.strongswan.org.*: UDP-encap: ESP::YES
+bob::tcpdump::alice.strongswan.org.*bob.strongswan.org.*ICMP echo request::YES
+bob::tcpdump::bob.strongswan.org.*alice.strongswan.org.*ICMP echo reply::YES
