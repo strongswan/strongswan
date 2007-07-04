@@ -349,6 +349,15 @@ defines the timeout interval, after which all connections to a peer are deleted
 in case of inactivity. This only applies to IKEv1, in IKEv2 the default
 retransmission timeout applies, as every exchange is used to detect dead peers.
 .TP
+.B eap
+defines the EAP type to be used if 
+.B authby=eap
+is selected. Acceptable values are
+.B aka
+for EAP-AKA and
+.B sim
+for EAP-SIM.
+.TP
 .B esp
 ESP encryption/authentication algorithm to be used
 for the connection, e.g.
