@@ -493,6 +493,7 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 static status_t build_i(private_child_create_t *this, message_t *message)
 {
 	host_t *me, *other, *vip;
+	bool propose_all = FALSE;
 	peer_cfg_t *peer_cfg;
 
 	switch (message->get_exchange_type(message))
@@ -523,30 +524,51 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	
 	SIG(CHILD_UP_START, "establishing CHILD_SA");
 	
-	me = this->ike_sa->get_my_host(this->ike_sa);
-	other = this->ike_sa->get_other_host(this->ike_sa);
-	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	vip = peer_cfg->get_my_virtual_ip(peer_cfg);
+	/* reuse virtual IP if we already have one */
+	me = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
+	if (me == NULL)
+	{
+		me = this->ike_sa->get_my_host(this->ike_sa);
+	}
+	other = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
+	if (other == NULL)
+	{
+		other = this->ike_sa->get_other_host(this->ike_sa);
+	}
 	
-	if (vip)
+	/* check if we want a virtual IP, but don't have one */
+	if (!this->reqid)
+	{
+		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		vip = peer_cfg->get_my_virtual_ip(peer_cfg);
+		if (vip)
+		{
+			propose_all = TRUE;
+			vip->destroy(vip);
+		}
+	}
+	
+	if (propose_all)
 	{	/* propose a 0.0.0.0/0 subnet when we use virtual ip */
 		this->tsi = this->config->get_traffic_selectors(this->config, TRUE,
 														NULL, NULL);
-		vip->destroy(vip);
 	}
 	else
-	{	/* but shorten a 0.0.0.0/0 subnet to the actual address if host2host */
+	{	/* but shorten a 0.0.0.0/0 subnet for host2host/we already have a vip */
 		this->tsi = this->config->get_traffic_selectors(this->config, TRUE,
 														NULL, me);
 	}
 	this->tsr = this->config->get_traffic_selectors(this->config, FALSE, 
 													NULL, other);
+
 	this->proposals = this->config->get_proposals(this->config,
 												  this->dh_group == MODP_NONE);
 	this->mode = this->config->get_mode(this->config);
 	
 	this->child_sa = child_sa_create(
-			me, other, this->ike_sa->get_my_id(this->ike_sa), 
+			this->ike_sa->get_my_host(this->ike_sa),
+			this->ike_sa->get_other_host(this->ike_sa),
+			this->ike_sa->get_my_id(this->ike_sa), 
 			this->ike_sa->get_other_id(this->ike_sa), this->config, this->reqid,
 			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
 	
@@ -608,9 +630,21 @@ static status_t process_r(private_child_create_t *this, message_t *message)
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (peer_cfg)
 	{
-		this->config = peer_cfg->select_child_cfg(peer_cfg, this->tsr, this->tsi,
-									this->ike_sa->get_my_host(this->ike_sa),
-									this->ike_sa->get_other_host(this->ike_sa));
+		host_t *me, *other;
+		
+		me = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
+		if (me == NULL)
+		{
+			me = this->ike_sa->get_my_host(this->ike_sa);
+		}
+		other = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
+		if (other == NULL)
+		{
+			other = this->ike_sa->get_other_host(this->ike_sa);
+		}
+		
+		this->config = peer_cfg->select_child_cfg(peer_cfg, this->tsr,
+												  this->tsi, me, other);
 	}
 	return NEED_MORE;
 }
