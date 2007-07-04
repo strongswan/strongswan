@@ -456,7 +456,10 @@ static void add_uris(ca_info_t *issuer, x509_t *cert)
 	
 	while (iterator->iterate(iterator, (void**)&uri))
 	{
-		issuer->add_crluri(issuer, uri->get_encoding(uri));
+		if (uri->get_type(uri) == ID_DER_ASN1_GN_URI)
+		{
+			issuer->add_crluri(issuer, uri->get_encoding(uri));
+		}
 	}
 	iterator->destroy(iterator);
 
@@ -465,7 +468,10 @@ static void add_uris(ca_info_t *issuer, x509_t *cert)
 	
 	while (iterator->iterate(iterator, (void**)&uri))
 	{
-		issuer->add_ocspuri(issuer, uri->get_encoding(uri));
+		if (uri->get_type(uri) == ID_DER_ASN1_GN_URI)
+		{
+			issuer->add_ocspuri(issuer, uri->get_encoding(uri));
+		}
 	}
 	iterator->destroy(iterator);
 }

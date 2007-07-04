@@ -345,7 +345,7 @@ static void add_crluri(private_ca_info_t *this, chunk_t uri)
 		strncasecmp(uri.ptr, "file", 4) != 0  &&
 		strncasecmp(uri.ptr, "ftp",  3) != 0))
 	{
-		DBG1("  invalid crl uri '%#B'", uri);
+		DBG1("  invalid crl uri '%#B'", &uri);
 		return;
 	}
 	else
@@ -399,7 +399,10 @@ void add_info (private_ca_info_t *this, const private_ca_info_t *that)
 
 		while (iterator->iterate(iterator, (void**)&uri))
 		{
-			add_crluri(this, uri->get_encoding(uri));
+			if (uri->get_type(uri) == ID_DER_ASN1_GN_URI)
+			{
+				add_crluri(this, uri->get_encoding(uri));
+			}
 		}
 		iterator->destroy(iterator);
 	}
@@ -411,7 +414,10 @@ void add_info (private_ca_info_t *this, const private_ca_info_t *that)
 
 		while (iterator->iterate(iterator, (void**)&uri))
 		{
-			add_ocspuri(this, uri->get_encoding(uri));
+			if (uri->get_type(uri) == ID_DER_ASN1_GN_URI)
+			{
+				add_ocspuri(this, uri->get_encoding(uri));
+			}
 		}
 		iterator->destroy(iterator);
 	}
