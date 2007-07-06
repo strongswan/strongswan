@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- strongSwan Managment Protocol (SMP) V1.0 -->
+
+<!--
+  Copyright (C) 2007 Martin Willi
+  Copyright (C) 2006 Andreas Eigenmann, Joël Stillhart
+  Hochschule fuer Technik Rapperswil
+  
+  This program is free software; you can redistribute it and/or modify it
+  under the terms of the GNU General Public License as published by the
+  Free Software Foundation; either version 2 of the License, or (at your
+  option) any later version. See <http://www.fsf.org/copyleft/gpl.txt>.
+  
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+  for more details.
+-->
+
+<grammar xmlns="http://relaxng.org/ns/structure/1.0"
+		 datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes"
+		 ns="http://www.strongswan.org/smp/1.0">
+	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!--                        Message                                      -->
+	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<start>
+		<element name="message">
+			<choice>
+				<group>
+					<attribute name="type">
+						<value>request</value>
+					</attribute>
+					<optional>
+						<element name="query">
+							<optional>
+								<ref name="QueryRequestIkesa"/>
+							</optional>
+							<!-- others -->
+						</element>
+					</optional>
+					<!-- others -->
+				</group>
+				<group> 
+					<attribute name="type">
+						<value>response</value>
+					</attribute>
+					<choice>
+						<element name="error">
+							<attribute name="code">
+								<data type="string"/>
+							</attribute>
+						</element>
+						<group>
+							<optional>
+								<element name="query">
+									<optional>
+										<ref name="QueryResponseIkesa"/>
+									</optional>
+									<!-- others -->
+								</element>
+							</optional>
+							<!-- others -->
+						</group>
+					</choice>
+				</group>
+			</choice>
+		</element>
+	</start>
+	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!--                          IKE SA query                               -->
+	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<define name="QueryRequestIkesa">
+		<element name="ikesalist">
+			<empty/>
+		</element>
+	</define>
+	<define name="QueryResponseIkesa">
+		<element name="ikesalist">
+			<zeroOrMore>
+				<element name="ikesa">
+					<element name="id">
+						<data type="positiveInteger"/>
+					</element>
+					<element name="status">
+						<choice>
+							<value type="string">created</value>
+							<value type="string">connecting</value>
+							<value type="string">established</value>
+							<value type="string">rekeying</value>
+							<value type="string">deleting</value>
+						</choice>
+					</element>
+					<element name="role">
+						<choice>
+							<value type="string">initiator</value>
+							<value type="string">responder</value>
+						</choice>
+					</element>
+					<element name="peerconfig">
+						<data type="string"/>
+					</element>
+					<element name="local">
+						<ref name="endPoint"/>
+					</element>
+					<element name="remote">
+						<ref name="endPoint"/>
+					</element>
+				</element>
+			</zeroOrMore>
+		</element>
+	</define>
+	<define name="endPoint">
+		<element name="spi">
+			<data type="hexBinary" />
+		</element>
+		<element name="identification">
+			<ref name="identification"/>
+		</element>
+		<element name="address">
+			<ref name="address"/>
+		</element>
+		<element name="port">
+		    <data type="nonNegativeInteger">
+				<param name="maxInclusive">65535</param>
+   			</data>
+   		</element>
+   		<optional>
+	   		<element name="nat">
+				<data type="boolean"/>
+			</element>
+		</optional>
+	</define>
+	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!--                    identification and address                       -->
+	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<define name="identification">
+		<choice>
+			<group>
+				<attribute name="type">
+					<value>any</value>
+				</attribute>
+				<empty/>
+			</group>
+			<group>
+				<attribute name="type">
+					<value>ipv4</value>
+				</attribute>
+				<ref name="ipv4"/>
+			</group>
+			<group>
+				<attribute name="type">
+					<value>ipv6</value>
+				</attribute>
+				<ref name="ipv6"/>
+			</group>
+			<group>
+				<attribute name="type">
+					<value>fqdn</value>
+				</attribute>
+				<ref name="fqdn"/>
+			</group>
+			<group>
+				<attribute name="type">
+					<value>email</value>
+				</attribute>
+				<ref name="email"/>
+			</group>
+			<group>
+				<attribute name="type">
+					<value>asn1gn</value>
+				</attribute>
+				<data type="string"/>
+			</group>
+			<group>
+				<attribute name="type">
+					<value>asn1dn</value>
+				</attribute>
+				<data type="string"/>
+			</group>
+			<group>
+				<attribute name="type">
+					<value>keyid</value>
+				</attribute>
+				<data type="base64Binary"/>
+			</group>
+		</choice>
+	</define>
+	<define name="address">
+		<choice>
+			<group>
+				<attribute name="type">
+					<value>ipv4</value>
+				</attribute>
+				<ref name="ipv4"/>
+			</group>
+			<group>
+				<attribute name="type">
+					<value>ipv6</value>
+				</attribute>
+				<ref name="ipv6"/>
+			</group>
+		</choice>
+	</define>
+	<define name="ipv4">
+		<data type="string">
+			<param name="pattern">(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(/([0-9]|[1-2][0-9]|3[0-2]))?</param>
+		</data>
+	</define>
+	<define name="ipv6">
+		<data type="string">
+			<param name="pattern">([0-9a-fA-F]{1,4}:|:){1,7}([0-9a-fA-F]{1,4}|:)(/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?</param>
+		</data>
+	</define>
+	<define name="fqdn">
+		<data type="string">
+			<param name="pattern">[a-z0-9\-](\.[a-z0-9\-]+)*</param>
+		</data>
+	</define>
+	<define name="email">
+		<data type="string">
+			<param name="pattern">[a-zA-Z0-9_\-\.]+@(([a-z0-9\-](\.[a-z0-9\-]+)*)|(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))</param>
+		</data>
+	</define>
+</grammar>
