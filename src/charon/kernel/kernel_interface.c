@@ -1424,34 +1424,60 @@ static status_t manage_rule(private_kernel_interface_t *this, int nlmsg_type,
 }
 
 /**
- * Get the nexthop gateway for dest; or the source addr if gateway = FALSE
+ * check if an address (chunk) addr is in subnet (net with net_len net bits)
  */
-static host_t* get_addr(private_kernel_interface_t *this,
-						host_t *dest, bool gateway)
+static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
+{
+	int bit, byte;
+
+	if (addr.len != net.len)
+	{
+		return FALSE;
+	}
+	/* scan through all bits, beginning in the front */
+	for (byte = 0; byte < addr.len; byte++)
+	{
+		for (bit = 7; bit >= 0; bit--)
+		{
+			/* check if bits are equal (or we reached the end of the net) */
+			if (bit + byte * 8 > net_len)
+			{
+				return TRUE;
+			}
+			if (((1<<bit) & addr.ptr[byte]) != ((1<<bit) & net.ptr[byte]))
+			{
+				return FALSE;
+			}
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * Get a route: If "nexthop", the nexthop is returned. source addr otherwise.
+ */
+static host_t *get_route(private_kernel_interface_t *this, host_t *dest,
+						 bool nexthop)
 {
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *hdr, *out, *current;
 	struct rtmsg *msg;
 	chunk_t chunk;
 	size_t len;
-	host_t *addr = NULL;
+	int best = -1;
+	host_t *src = NULL, *gtw = NULL;
 	
 	DBG2(DBG_KNL, "getting address to reach %H", dest);
 	
 	memset(&request, 0, sizeof(request));
 
 	hdr = (struct nlmsghdr*)request;
-	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP | NLM_F_ROOT;
 	hdr->nlmsg_type = RTM_GETROUTE;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
 
 	msg = (struct rtmsg*)NLMSG_DATA(hdr);
 	msg->rtm_family = dest->get_family(dest);
-	msg->rtm_dst_len = msg->rtm_family == AF_INET ? 32 : 128;
-	msg->rtm_table = RT_TABLE_MAIN;
-	msg->rtm_protocol = RTPROT_STATIC;
-	msg->rtm_type = RTN_UNICAST;
-	msg->rtm_scope = RT_SCOPE_UNIVERSE;
 	
 	chunk = dest->get_address(dest);
 	add_attribute(hdr, RTA_DST, chunk, sizeof(request));
@@ -1472,24 +1498,90 @@ static host_t* get_addr(private_kernel_interface_t *this,
 			{
 				struct rtattr *rta;
 				size_t rtasize;
+				chunk_t rta_gtw, rta_src, rta_dst;
+				u_int32_t rta_oif = 0;
 				
+				rta_gtw = rta_src = rta_dst = chunk_empty;
 				msg = (struct rtmsg*)(NLMSG_DATA(current));
 				rta = RTM_RTA(msg);
 				rtasize = RTM_PAYLOAD(current);
 				while(RTA_OK(rta, rtasize))
 				{
-					if ((rta->rta_type == RTA_PREFSRC && !gateway) ||
-						(rta->rta_type == RTA_GATEWAY && gateway))
+					switch (rta->rta_type)
 					{
-						chunk.ptr = RTA_DATA(rta);
-						chunk.len = RTA_PAYLOAD(rta);
-						addr = host_create_from_chunk(msg->rtm_family, 
-													  chunk, 0);
-						break;
+						case RTA_PREFSRC:
+							rta_src = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
+							break;
+						case RTA_GATEWAY:
+							rta_gtw = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
+							break;
+						case RTA_DST:
+							rta_dst = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
+							break;
+						case RTA_OIF:
+							if (RTA_PAYLOAD(rta) == sizeof(rta_oif))
+							{
+								rta_oif = *(u_int32_t*)RTA_DATA(rta);
+							}
+							break;
 					}
 					rta = RTA_NEXT(rta, rtasize);
 				}
-				break;
+				
+				/* apply the route if:
+				 * - it is not from our own ipsec routing table
+				 * - its destination net contains our destination
+				 * - is better than a previous one
+				 */
+				if (msg->rtm_table != IPSEC_ROUTING_TABLE && rta_dst.ptr &&
+					addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len) &&
+					msg->rtm_dst_len > best)
+				{
+					iterator_t *ifaces, *addrs;
+					iface_entry_t *iface;
+					addr_entry_t *addr;
+					
+					best = msg->rtm_dst_len;
+					if (nexthop)
+					{
+						DESTROY_IF(gtw);
+						gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
+					}
+					else if (rta_src.ptr)
+					{
+						DESTROY_IF(src);
+						src = host_create_from_chunk(msg->rtm_family, rta_src, 0);
+					}
+					else
+					{
+						/* no source addr, get one from the interfaces */
+						ifaces = this->ifaces->create_iterator_locked(
+													this->ifaces, &this->mutex);
+						while (ifaces->iterate(ifaces, (void**)&iface))
+						{
+							if (iface->ifindex == rta_oif)
+							{
+								addrs = iface->addrs->create_iterator(
+															iface->addrs, TRUE);
+								while (addrs->iterate(addrs, (void**)&addr))
+								{
+									chunk_t ip = addr->ip->get_address(addr->ip);
+									if (addr_in_subnet(ip, rta_dst,
+													   msg->rtm_dst_len))
+									{
+										DESTROY_IF(src);
+										src = addr->ip->clone(addr->ip);
+										best = msg->rtm_dst_len;
+										break;
+									}
+								}
+								addrs->destroy(addrs);
+							}
+						}
+						ifaces->destroy(ifaces);
+					}
+				}
+				/* FALL through */
 			}
 			default:
 				current = NLMSG_NEXT(current, len);
@@ -1498,11 +1590,16 @@ static host_t* get_addr(private_kernel_interface_t *this,
 		break;
 	}
 	free(out);
-	if (addr == NULL)
+	
+	if (nexthop)
 	{
-		DBG2(DBG_KNL, "no route found to %H", dest);
+		if (gtw)
+		{
+			return gtw;
+		}
+		return dest->clone(dest);
 	}
-	return addr;
+	return src;
 }
 
 /**
@@ -1510,7 +1607,7 @@ static host_t* get_addr(private_kernel_interface_t *this,
  */
 static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
 {
-	return get_addr(this, dest, FALSE);
+	return get_route(this, dest, FALSE);
 }
 
 /**
@@ -2197,13 +2294,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 		policy->route = malloc_thing(route_entry_t);
 		if (get_address_by_ts(this, dst_ts, &policy->route->src_ip) == SUCCESS)
 		{
-			/* if we have a gateway (via), we use it. If it's direct, we 
-			 * use the peers address (which is src, as we are in POLICY_FWD).*/
-			policy->route->gateway = get_addr(this, src, TRUE);
-			if (policy->route->gateway == NULL)
-			{
-				policy->route->gateway = src->clone(src);
-			}
+			/* get the nexthop to src (src as we are in POLICY_FWD).*/
+			policy->route->gateway = get_route(this, src, TRUE);
 			policy->route->if_index = get_interface_index(this, dst);
 			policy->route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(policy->route->dst_net.ptr, &policy->sel.saddr, policy->route->dst_net.len);
