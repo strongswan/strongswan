@@ -34,4 +34,4 @@ defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 		$(COMPILE) -c -o $@ $<
 
 install-exec-local :
-		test -e "$(sysconfdir)/ipsec.conf" || $(INSTALL) ipsec.conf $(sysconfdir)/ipsec.conf
+		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf
