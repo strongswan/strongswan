@@ -51,6 +51,14 @@
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/roam_job.h>
 
+/** routing table for routes installed by us */
+#ifndef IPSEC_ROUTING_TABLE
+#define IPSEC_ROUTING_TABLE 100
+#endif
+#ifndef IPSEC_ROUTING_TABLE_PRIO
+#define IPSEC_ROUTING_TABLE_PRIO 100
+#endif
+
 /** kernel level protocol identifiers */
 #define KERNEL_ESP 50
 #define KERNEL_AH 51
@@ -1364,7 +1372,7 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 	msg = (struct rtmsg*)NLMSG_DATA(hdr);
 	msg->rtm_family = route->src_ip->get_family(route->src_ip);
 	msg->rtm_dst_len = route->prefixlen;
-	msg->rtm_table = RT_TABLE_MAIN;
+	msg->rtm_table = IPSEC_ROUTING_TABLE;
 	msg->rtm_protocol = RTPROT_STATIC;
 	msg->rtm_type = RTN_UNICAST;
 	msg->rtm_scope = RT_SCOPE_UNIVERSE;
@@ -1377,6 +1385,40 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 	chunk.ptr = (char*)&route->if_index;
 	chunk.len = sizeof(route->if_index);
 	add_attribute(hdr, RTA_OIF, chunk, sizeof(request));
+
+	return netlink_send_ack(this, this->socket_rt, hdr);
+}
+
+/**
+ * create or delete an rule to use our routing table
+ */
+static status_t manage_rule(private_kernel_interface_t *this, int nlmsg_type,
+							u_int32_t table, u_int32_t prio)
+{
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *hdr;
+	struct rtmsg *msg;
+	chunk_t chunk;
+
+	memset(&request, 0, sizeof(request));    
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = nlmsg_type; 
+	if (nlmsg_type == RTM_NEWRULE)
+	{
+		hdr->nlmsg_flags |= NLM_F_CREATE | NLM_F_EXCL;
+	}
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+
+	msg = (struct rtmsg*)NLMSG_DATA(hdr);
+	msg->rtm_table = table;
+	msg->rtm_family = AF_INET;
+	msg->rtm_protocol = RTPROT_BOOT;
+	msg->rtm_scope = RT_SCOPE_UNIVERSE;
+	msg->rtm_type = RTN_UNICAST;
+
+	chunk = chunk_from_thing(prio);
+	add_attribute(hdr, RTA_PRIORITY, chunk, sizeof(request));
 
 	return netlink_send_ack(this, this->socket_rt, hdr);
 }
@@ -2340,6 +2382,8 @@ static status_t del_policy(private_kernel_interface_t *this,
  */
 static void destroy(private_kernel_interface_t *this)
 {
+	manage_rule(this, RTM_DELRULE, IPSEC_ROUTING_TABLE, IPSEC_ROUTING_TABLE_PRIO);
+
 	this->job->cancel(this->job);
 	close(this->socket_xfrm_events);
 	close(this->socket_xfrm);
@@ -2440,6 +2484,12 @@ kernel_interface_t *kernel_interface_create()
 	if (init_address_list(this) != SUCCESS)
 	{
 		charon->kill(charon, "unable to get interface list");
+	}
+	
+	if (manage_rule(this, RTM_NEWRULE, IPSEC_ROUTING_TABLE,
+					IPSEC_ROUTING_TABLE_PRIO) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to create routing table rule");
 	}
 	
 	return &this->public;
