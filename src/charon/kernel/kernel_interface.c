@@ -1505,7 +1505,7 @@ static host_t *get_route(private_kernel_interface_t *this, host_t *dest,
 				msg = (struct rtmsg*)(NLMSG_DATA(current));
 				rta = RTM_RTA(msg);
 				rtasize = RTM_PAYLOAD(current);
-				while(RTA_OK(rta, rtasize))
+				while (RTA_OK(rta, rtasize))
 				{
 					switch (rta->rta_type)
 					{
@@ -1533,9 +1533,10 @@ static host_t *get_route(private_kernel_interface_t *this, host_t *dest,
 				 * - its destination net contains our destination
 				 * - is better than a previous one
 				 */
-				if (msg->rtm_table != IPSEC_ROUTING_TABLE && rta_dst.ptr &&
-					addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len) &&
-					msg->rtm_dst_len > best)
+				if (msg->rtm_table != IPSEC_ROUTING_TABLE
+				&&  msg->rtm_dst_len > best
+				&& (msg->rtm_dst_len == 0 || /* default route */
+					rta_dst.ptr && addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len)))
 				{
 					iterator_t *ifaces, *addrs;
 					iface_entry_t *iface;
@@ -1566,8 +1567,8 @@ static host_t *get_route(private_kernel_interface_t *this, host_t *dest,
 								while (addrs->iterate(addrs, (void**)&addr))
 								{
 									chunk_t ip = addr->ip->get_address(addr->ip);
-									if (addr_in_subnet(ip, rta_dst,
-													   msg->rtm_dst_len))
+									if (rta_dst.ptr
+									&&  addr_in_subnet(ip, rta_dst, msg->rtm_dst_len))
 									{
 										DESTROY_IF(src);
 										src = addr->ip->clone(addr->ip);
