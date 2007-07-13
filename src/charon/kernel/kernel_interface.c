@@ -1530,8 +1530,9 @@ static host_t *get_route(private_kernel_interface_t *this, host_t *dest,
 				
 				/* apply the route if:
 				 * - it is not from our own ipsec routing table
-				 * - its destination net contains our destination
 				 * - is better than a previous one
+				 * - is the default route or
+				 * - its destination net contains our destination
 				 */
 				if (msg->rtm_table != IPSEC_ROUTING_TABLE
 				&&  msg->rtm_dst_len > best
@@ -1567,12 +1568,11 @@ static host_t *get_route(private_kernel_interface_t *this, host_t *dest,
 								while (addrs->iterate(addrs, (void**)&addr))
 								{
 									chunk_t ip = addr->ip->get_address(addr->ip);
-									if (rta_dst.ptr
-									&&  addr_in_subnet(ip, rta_dst, msg->rtm_dst_len))
+									if (msg->rtm_dst_len == 0
+									||	addr_in_subnet(ip, rta_dst, msg->rtm_dst_len))
 									{
 										DESTROY_IF(src);
 										src = addr->ip->clone(addr->ip);
-										best = msg->rtm_dst_len;
 										break;
 									}
 								}
