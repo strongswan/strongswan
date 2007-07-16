@@ -1535,9 +1535,9 @@ static host_t *get_route(private_kernel_interface_t *this, host_t *dest,
 				 * - its destination net contains our destination
 				 */
 				if (msg->rtm_table != IPSEC_ROUTING_TABLE
-				&&  msg->rtm_dst_len > best
-				&& (msg->rtm_dst_len == 0 || /* default route */
-					rta_dst.ptr && addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len)))
+					&&  msg->rtm_dst_len > best
+					&& (msg->rtm_dst_len == 0 || /* default route */
+					(rta_dst.ptr && addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len))))
 				{
 					iterator_t *ifaces, *addrs;
 					iface_entry_t *iface;
