@@ -235,7 +235,7 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 		message->add_notify(message, FALSE, MOBIKE_SUPPORTED, chunk_empty);
 		build_address_list(this, message);
 	}
-	else 
+	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
 		if (this->roam)
 		{
