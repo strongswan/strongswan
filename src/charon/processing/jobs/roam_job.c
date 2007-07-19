@@ -104,7 +104,6 @@ roam_job_t *roam_job_create(bool address)
 {
 	private_roam_job_t *this = malloc_thing(private_roam_job_t);
 	
-	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 	

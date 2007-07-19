@@ -129,7 +129,7 @@ enum payload_type_t{
 	/**
 	 * Header has a value of PRIVATE USE space.
 	 * 
-	 * This payload type is not send over wire and just 
+	 * This payload type is not sent over wire and just 
 	 * used internally to handle IKEv2-Header like a payload.
 	 */
 	HEADER = 140,
@@ -137,7 +137,7 @@ enum payload_type_t{
 	/**
 	 * PROPOSAL_SUBSTRUCTURE has a value of PRIVATE USE space.
 	 * 
-	 * This payload type is not send over wire and just 
+	 * This payload type is not sent over wire and just 
 	 * used internally to handle a proposal substructure like a payload.
 	 */
 	PROPOSAL_SUBSTRUCTURE = 141,
@@ -145,7 +145,7 @@ enum payload_type_t{
 	/**
 	 * TRANSFORM_SUBSTRUCTURE has a value of PRIVATE USE space.
 	 * 
-	 * This payload type is not send over wire and just 
+	 * This payload type is not sent over wire and just 
 	 * used internally to handle a transform substructure like a payload.
 	 */
 	TRANSFORM_SUBSTRUCTURE = 142,
@@ -153,7 +153,7 @@ enum payload_type_t{
 	/**
 	 * TRANSFORM_ATTRIBUTE has a value of PRIVATE USE space.
 	 * 
-	 * This payload type is not send over wire and just 
+	 * This payload type is not sent over wire and just 
 	 * used internally to handle a transform attribute like a payload.
 	 */
 	TRANSFORM_ATTRIBUTE = 143,
@@ -161,7 +161,7 @@ enum payload_type_t{
 	/**
 	 * TRAFFIC_SELECTOR_SUBSTRUCTURE has a value of PRIVATE USE space.
 	 * 
-	 * This payload type is not send over wire and just 
+	 * This payload type is not sent over wire and just 
 	 * used internally to handle a transform selector like a payload.
 	 */	
 	TRAFFIC_SELECTOR_SUBSTRUCTURE = 144,
@@ -169,7 +169,7 @@ enum payload_type_t{
 	/**
 	 * CONFIGURATION_ATTRIBUTE has a value of PRIVATE USE space.
 	 * 
-	 * This payload type is not send over wire and just 
+	 * This payload type is not sent over wire and just 
 	 * used internally to handle a transform attribute like a payload.
 	 */
 	CONFIGURATION_ATTRIBUTE = 145,
@@ -177,7 +177,7 @@ enum payload_type_t{
 	/**
 	 * A unknown payload has a value of PRIVATE USE space.
 	 * 
-	 * This payload type is not send over wire and just 
+	 * This payload type is not sent over wire and just 
 	 * used internally to handle a unknown payload.
 	 */
 	UNKNOWN_PAYLOAD = 146,

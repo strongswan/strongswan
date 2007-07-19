@@ -319,7 +319,7 @@ struct message_t {
 	iterator_t * (*get_payload_iterator) (message_t *this);
 	
 	/**
-	 * @brief Find a payload of a spicific type.
+	 * @brief Find a payload of a specific type.
 	 * 
 	 * Returns the first occurance. 
 	 *

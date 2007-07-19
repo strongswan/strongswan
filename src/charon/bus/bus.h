@@ -310,7 +310,7 @@ struct bus_t {
 	 * must register themself to the bus before starting to listen(). When
 	 * a signal occurs, the emitter waits until all threads with listen_state
 	 * TRUE are waiting in the listen() method to process the signal.
-	 * It is important that a thread with liste_state TRUE calls listen()
+	 * It is important that a thread with listen_state TRUE calls listen()
 	 * periodically, or sets it's listening state to FALSE; otherwise
 	 * all signal emitting threads get blocked on the bus.
 	 *

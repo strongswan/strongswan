@@ -72,7 +72,7 @@ case "$1" in
 	echo "	starter"
 	echo "	version"
 	echo "	whack"
-	echo "	stoke"
+	echo "	stroke"
 	echo
 	echo "Some of these functions have their own manual pages, e.g. ipsec_scepclient(8)."
 	exit 0

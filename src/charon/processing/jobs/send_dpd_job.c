@@ -86,7 +86,6 @@ send_dpd_job_t *send_dpd_job_create(ike_sa_id_t *ike_sa_id)
 	private_send_dpd_job_t *this = malloc_thing(private_send_dpd_job_t);
 	
 	/* interface functions */
-	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 	
