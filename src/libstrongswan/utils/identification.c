@@ -931,7 +931,7 @@ static int print(FILE *stream, const struct printf_info *info,
 		case ID_FQDN:
 		{
 			proper = sanitize_chunk(this->encoded);
-			written = fprintf(stream, "@%.*s", proper.len, proper.ptr);
+			written = fprintf(stream, "%.*s", proper.len, proper.ptr);
 			chunk_free(&proper);
 			return written;
 		}
