@@ -154,7 +154,7 @@ mconsole_t *mconsole_create(char *sock)
 	}
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	sprintf(&addr.sun_path[1], "%5d", getpid());
+	sprintf(&addr.sun_path[1], "%5d-%s", getpid(), sock);
 	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
 		DBG1("binding mconsole socket failed: %m");

@@ -89,7 +89,8 @@ static char* create_tap(private_iface_t *this)
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
 	
 	if (ioctl(this->tap, TUNSETIFF, &ifr) < 0 ||
-		ioctl(this->tap, TUNSETPERSIST, 1) < 0)
+		ioctl(this->tap, TUNSETPERSIST, 1) < 0 ||
+		ioctl(this->tap, TUNSETOWNER, 0))
     {
 		DBG1("creating new tap device failed: %m");
 		return NULL;

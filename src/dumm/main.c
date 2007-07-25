@@ -225,6 +225,7 @@ static void guest(dumm_t *dumm, char *name)
 		if (streq(name, guest->get_name(guest)))
 		{
 			found = TRUE;
+			break;
 		}
 	}
 	iterator->destroy(iterator);
