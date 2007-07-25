@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2007 Martin Willi
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
 #define _GNU_SOURCE
 
 #include <stdio.h>
@@ -20,7 +35,7 @@ static void usage()
 }
 
 /**
- * show usage information (commandline arguments)
+ * help for dumm root shell
  */
 static void help()
 {
@@ -29,15 +44,29 @@ static void help()
 	printf("                                kernel=<uml-kernel>\n");
 	printf("                                master=<read-only root files>\n");
 	printf("                                memory=<guest memory in MB>\n");
-	printf("guests                        list running guests\n");
+	printf("list                          list running guests\n");
+	printf("guest <name>                  open guest menu for <name>\n");
 	printf("help                          show this help\n");
 	printf("quit                          kill quests and exit\n");
+}
+
+
+/**
+ * help for guest shell
+ */
+static void help_guest()
+{
+	printf("addif <name>                  add an interface to the guest\n");
+	printf("delif <name>                  remove the interface\n");
+	printf("listif                        list guests interfaces\n");
+	printf("help                          show this help\n");
+	printf("quit                          quit the guest menu\n");
 }
 
 /**
  * start an UML guest
  */
-static void start(umli_t *umli, char *line)
+static void start(dumm_t *dumm, char *line)
 {
 	enum {
 		NAME = 0,
@@ -101,7 +130,7 @@ static void start(umli_t *umli, char *line)
 		mem = 128;
 	}
 	
-	if (umli->start_guest(umli, name, kernel, master, mem))
+	if (dumm->start_guest(dumm, name, kernel, master, mem))
 	{
 		printf("starting guest '%s'\n", name);
 	}
@@ -112,19 +141,187 @@ static void start(umli_t *umli, char *line)
 }
 
 /**
- * list running UML guests
+ * add an iface to a guest
  */
-static void guests(umli_t *umli)
+static void add_if(guest_t *guest, char *name)
 {
-	iterator_t *iterator;
-	guest_t *guest;
+	iface_t *iface;
 	
-	iterator = umli->create_guest_iterator(umli);
-	while (iterator->iterate(iterator, (void**)&guest))
+	iface = guest->create_iface(guest, name);
+	if (iface)
 	{
-		printf("%s\n", guest->get_name(guest));
+		printf("created guest interface '%s' connected to '%s'\n",
+			   iface->get_guest(iface), iface->get_host(iface));
+	}
+	else
+	{
+		printf("failed to create guest interface\n");
+	}
+}
+
+/**
+ * delete an iface from a guest
+ */
+static void del_if(guest_t *guest, char *name)
+{
+	iface_t *iface;
+	iterator_t *iterator;
+	bool found = FALSE;
+	
+	iterator = guest->create_iface_iterator(guest);
+	while (iterator->iterate(iterator, (void**)&iface))
+	{
+		if (streq(name, iface->get_guest(iface)))
+		{
+			iterator->remove(iterator);
+			printf("removing interface '%s' ('%s') from %s\n",
+				   iface->get_guest(iface), iface->get_host(iface),
+				   guest->get_name(guest));
+			iface->destroy(iface);
+			found = TRUE;
+			break;
+		}
 	}
 	iterator->destroy(iterator);
+	if (!found)
+	{
+		printf("guest '%s' has no interface named '%s'\n",
+			   guest->get_name(guest), name);
+	}
+}
+
+/**
+ * list interfaces on a guest
+ */
+static void list_if(guest_t *guest)
+{
+	iface_t *iface;
+	iterator_t *iterator;
+	
+	iterator = guest->create_iface_iterator(guest);
+	while (iterator->iterate(iterator, (void**)&iface))
+	{
+		printf("'%s' => '%s'\n", iface->get_guest(iface), iface->get_host(iface));
+
+	}
+	iterator->destroy(iterator);
+}
+
+/**
+ * subshell for guests
+ */
+static void guest(dumm_t *dumm, char *name)
+{
+	char *line = NULL;
+	char prompt[32];
+	int len;
+	iterator_t *iterator;
+	guest_t *guest;
+	bool found = FALSE;
+	
+	iterator = dumm->create_guest_iterator(dumm);
+	while (iterator->iterate(iterator, (void**)&guest))
+	{
+		if (streq(name, guest->get_name(guest)))
+		{
+			found = TRUE;
+		}
+	}
+	iterator->destroy(iterator);
+	if (!found)
+	{
+		printf("guest '%s' not found\n", name);
+		return;
+	}
+	
+	len = snprintf(prompt, sizeof(prompt), "dumm@%s# ", name);
+	if (len < 0 || len >= sizeof(prompt))
+	{
+		return;
+	}
+
+	while (TRUE)
+	{
+		enum {
+			QUIT = 0,
+			HELP,
+			ADDIF,
+			DELIF,
+			LISTIF,
+		};
+		char *const opts[] = {
+			[QUIT] = "quit",
+			[HELP] = "help",
+			[ADDIF] = "addif",
+			[DELIF] = "delif",
+			[LISTIF] = "listif",
+			NULL
+		};
+		char *pos, *value;
+		
+		free(line);
+		line = readline(prompt);
+		if (line == NULL || *line == '\0')
+		{
+			continue;
+		}
+		add_history(line);
+		pos = line;
+		while (*pos != '\0')
+		{
+			if (*pos == ' ')
+			{
+				*pos = ',';
+			}
+			pos++;
+		}
+		pos = line;
+		switch (getsubopt(&pos, opts, &value))
+		{
+			case QUIT:
+				free(line);
+				break;
+			case HELP:
+				help_guest();
+				continue;
+			case ADDIF:
+				add_if(guest, pos);
+				continue;
+			case DELIF:
+				del_if(guest, pos);
+				continue;
+			case LISTIF:
+				list_if(guest);
+				continue;
+			default:
+				printf("command unknown: '%s'\n", line);
+				continue;
+		}
+		break;
+	}
+}
+
+/**
+ * list running UML guests
+ */
+static void list(dumm_t *dumm)
+{
+	iterator_t *guests, *ifaces;
+	guest_t *guest;
+	iface_t *iface;
+	
+	guests = dumm->create_guest_iterator(dumm);
+	while (guests->iterate(guests, (void**)&guest))
+	{
+		printf("%s\n", guest->get_name(guest));
+		ifaces = guest->create_iface_iterator(guest);
+		while (ifaces->iterate(ifaces, (void**)&iface))
+		{
+			printf("  '%s' => '%s'\n", iface->get_guest(iface), iface->get_host(iface));
+		}
+		ifaces->destroy(ifaces);
+	}
+	guests->destroy(guests);
 }
 
 /**
@@ -132,7 +329,7 @@ static void guests(umli_t *umli)
  */
 int main(int argc, char *argv[])
 {
-	umli_t *umli;
+	dumm_t *dumm;
 	char *line = NULL;
 
 	while (TRUE)
@@ -164,7 +361,7 @@ int main(int argc, char *argv[])
 		break;
 	}
 	
-	umli = umli_create();
+	dumm = dumm_create();
 
 	while (TRUE)
 	{
@@ -172,13 +369,15 @@ int main(int argc, char *argv[])
 			QUIT = 0,
 			HELP,
 			START,
-			GUESTS,
+			LIST,
+			GUEST,
 		};
 		char *const opts[] = {
 			[QUIT] = "quit",
 			[HELP] = "help",
 			[START] = "start",
-			[GUESTS] = "guests",
+			[LIST] = "list",
+			[GUEST] = "guest",
 			NULL
 		};
 		char *pos, *value;
@@ -210,10 +409,13 @@ int main(int argc, char *argv[])
 				help();
 				continue;
 			case START:
-				start(umli, pos);
+				start(dumm, pos);
 				continue;
-			case GUESTS:
-				guests(umli);
+			case LIST:
+				list(dumm);
+				continue;
+			case GUEST:
+				guest(dumm, pos);
 				continue;
 			default:
 				printf("command unknown: '%s'\n", line);
@@ -221,7 +423,7 @@ int main(int argc, char *argv[])
 		}
 		break;
 	}
-	umli->destroy(umli);
+	dumm->destroy(dumm);
 	clear_history();
 	return 0;
 }
