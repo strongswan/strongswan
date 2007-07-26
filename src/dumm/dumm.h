@@ -39,13 +39,11 @@ struct dumm_t {
 	 * @brief Starts a new UML guest
 	 *
 	 * @param name		name of the guest
-	 * @param kernel	kernel to boot
 	 * @param master	mounted read only master filesystem
 	 * @param mem		amount of memory for guest, in MB
 	 * @return			guest if started, NULL if failed
 	 */
-	guest_t* (*start_guest) (dumm_t *this, char *name, char *kernel,
-							 char *master, int mem);
+	guest_t* (*create_guest) (dumm_t *this, char *name, char *master, int mem);
 	
 	/**
 	 * @brief Create an iterator over all guests.

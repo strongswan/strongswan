@@ -26,22 +26,16 @@ struct private_dumm_t {
 	linked_list_t *guests;
 };
 
-static guest_t* start_guest(private_dumm_t *this, char *name, char *kernel,
-							char *master, int mem)
+static guest_t* create_guest(private_dumm_t *this, char *name, char *master, int mem)
 {
 	guest_t *guest;
 	
-	guest = guest_create(name, kernel, master, mem);
+	guest = guest_create(name, master, mem);
 	if (guest)
 	{
-		if (guest->start(guest))
-		{
-			this->guests->insert_last(this->guests, guest);		
-			return guest;
-		}
-		guest->destroy(guest);
+		this->guests->insert_last(this->guests, guest);
 	}
-	return NULL;
+	return guest;
 }
 
 static iterator_t* create_guest_iterator(private_dumm_t *this)
@@ -73,7 +67,7 @@ dumm_t *dumm_create()
 {
 	private_dumm_t *this = malloc_thing(private_dumm_t);
 	
-	this->public.start_guest = (void*)start_guest;
+	this->public.create_guest = (void*)create_guest;
 	this->public.create_guest_iterator = (void*)create_guest_iterator;
 	this->public.destroy = (void*)destroy;
 	

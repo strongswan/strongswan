@@ -3,7 +3,7 @@
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2001-2004 Jeff Dike
  *
- * Based on the "uml_mconsole" utilty from Jeff Dike.
+ * Based on the "uml_mconsole" utility from Jeff Dike.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,9 +36,48 @@ struct private_mconsole_t {
 	/** public interface */
 	mconsole_t public;
 	/** mconsole socket */
-	int socket;
+	int console;
+	/** notify socket */
+	int notify;
 	/** address of uml socket */
 	struct sockaddr_un uml;
+};
+
+/**
+ * mconsole message format from "arch/um/include/mconsole.h"
+ */
+typedef struct mconsole_request mconsole_request;
+/** mconsole request message */
+struct mconsole_request {
+	u_int32_t magic;
+	u_int32_t version;
+	u_int32_t len;
+	char data[MCONSOLE_MAX_DATA];
+};
+
+
+typedef struct mconsole_reply mconsole_reply;
+/** mconsole reply message */
+struct mconsole_reply {
+	u_int32_t err;
+	u_int32_t more;
+	u_int32_t len;
+	char data[MCONSOLE_MAX_DATA];
+};
+
+typedef struct mconsole_notify mconsole_notify;
+/** mconsole notify message */
+struct mconsole_notify {
+    u_int32_t magic;
+    u_int32_t version;
+    enum {
+		MCONSOLE_SOCKET,
+		MCONSOLE_PANIC,
+		MCONSOLE_HANG,
+		MCONSOLE_USER_NOTIFY,
+    } type;
+    u_int32_t len;
+    char data[MCONSOLE_MAX_DATA];
 };
 
 /**
@@ -46,18 +85,8 @@ struct private_mconsole_t {
  */
 static bool request(private_mconsole_t *this, char *command)
 {
-	struct {
-		u_int32_t magic;
-		u_int32_t version;
-		u_int32_t len;
-		char data[MCONSOLE_MAX_DATA];
-	} request;
-	struct {
-		u_int32_t err;
-		u_int32_t more;
-		u_int32_t len;
-		char data[MCONSOLE_MAX_DATA];
-	} reply;
+	mconsole_request request;
+	mconsole_reply reply;
 	bool first = TRUE, good = TRUE;
 	int len;
 	
@@ -67,7 +96,7 @@ static bool request(private_mconsole_t *this, char *command)
 	request.len = min(strlen(command), sizeof(reply.data) - 1);
 	strncpy(request.data, command, request.len);
 
-	if (sendto(this->socket, &request, sizeof(request), 0,
+	if (sendto(this->console, &request, sizeof(request), 0,
 		(struct sockaddr*)&this->uml, sizeof(this->uml)) < 0)
 	{
 		DBG1("sending mconsole command to UML failed: %m");
@@ -75,7 +104,7 @@ static bool request(private_mconsole_t *this, char *command)
 	}
 	do 
 	{
-		len = recvfrom(this->socket, &reply, sizeof(reply), 0, NULL, 0);
+		len = recvfrom(this->console, &reply, sizeof(reply), 0, NULL, 0);
 		if (len < 0)
 		{
 			DBG1("receiving from mconsole failed: %m");
@@ -129,41 +158,110 @@ static bool del_iface(private_mconsole_t *this, char *guest)
  */
 static void destroy(private_mconsole_t *this)
 {
-	close(this->socket);
+	close(this->console);
+	close(this->notify);
 	free(this);
+}
+
+/**
+ * setup the mconsole notify connection and wait for its readyness
+ */
+static bool wait_for_notify(private_mconsole_t *this, char *nsock)
+{
+	struct sockaddr_un addr;
+	mconsole_notify notify;
+	int len;
+
+	this->notify = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if (this->notify < 0)
+	{
+		DBG1("opening mconsole notify socket failed: %m");
+		return FALSE;
+	}
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, nsock, sizeof(addr));
+	if (bind(this->notify, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+	{
+		DBG1("binding mconsole notify socket to '%s' failed: %m", nsock);
+		close(this->notify);
+		return FALSE;
+	}
+	len = recvfrom(this->notify, &notify, sizeof(notify), 0, NULL, 0);
+	if (len < 0 || len >= sizeof(notify))
+	{
+		DBG1("reading from mconsole notify socket failed: %m");
+		close(this->notify);
+		unlink(nsock);
+		return FALSE;
+	}
+	if (notify.magic != MCONSOLE_MAGIC ||
+		notify.version != MCONSOLE_VERSION ||
+		notify.type != MCONSOLE_SOCKET)
+	{
+		DBG1("received unexpected message from mconsole notify socket: %b",
+			 &notify, sizeof(notify));
+		close(this->notify);
+		unlink(nsock);
+		return FALSE;
+	}
+	memset(&this->uml, 0, sizeof(this->uml));
+	this->uml.sun_family = AF_UNIX;
+	strncpy(this->uml.sun_path, (char*)&notify.data, sizeof(this->uml.sun_path));
+	return TRUE;
+}
+
+/**
+ * setup the mconsole console connection
+ */
+static bool setup_console(private_mconsole_t *this)
+{
+	struct sockaddr_un addr;
+	
+	this->console = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if (this->console < 0)
+	{
+		DBG1("opening mconsole socket failed: %m");
+		return FALSE;
+	}
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	snprintf(&addr.sun_path[1], sizeof(addr.sun_path), "%5d-%d",
+			 getpid(), this->console);
+	if (bind(this->console, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+	{
+		DBG1("binding mconsole socket to '%s' failed: %m", &addr.sun_path[1]);
+		close(this->console);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 /**
  * create the mconsole instance
  */
-mconsole_t *mconsole_create(char *sock)
+mconsole_t *mconsole_create(char *notify)
 {
-	struct sockaddr_un addr;
 	private_mconsole_t *this = malloc_thing(private_mconsole_t);
 	
 	this->public.add_iface = (bool(*)(mconsole_t*, char *guest, char *host))add_iface;
 	this->public.del_iface = (bool(*)(mconsole_t*, char *guest))del_iface;
 	this->public.destroy = (void*)destroy;
 	
-	this->socket = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if (this->socket < 0)
+	if (!wait_for_notify(this, notify))
 	{
-		DBG1("opening mconsole socket failed: %m");
 		free(this);
 		return NULL;
 	}
-	memset(&addr, 0, sizeof(addr));
-	addr.sun_family = AF_UNIX;
-	snprintf(&addr.sun_path[1], sizeof(addr.sun_path), "%5d-%s", getpid(), sock);
-	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+	
+	if (!setup_console(this))
 	{
-		DBG1("binding mconsole socket failed: %m");
-		destroy(this);
+		close(this->notify);
+		unlink(notify);
+		free(this);
 		return NULL;
 	}
-	memset(&this->uml, 0, sizeof(this->uml));
-	this->uml.sun_family = AF_UNIX;
-	strncpy(this->uml.sun_path, sock, sizeof(this->uml.sun_path));
+	unlink(notify);
 	
 	return &this->public;
 }

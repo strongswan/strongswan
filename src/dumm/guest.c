@@ -38,14 +38,14 @@ struct private_guest_t {
 	guest_t public;
 	/** name of the guest */
 	char *name;
-	/** kernel to boot for guest */
-	char *kernel;
 	/** read only master filesystem guest uses */
 	char *master;
 	/** amount of memory for guest, in MB */
 	int mem;
 	/** pid of guest child process */
 	int pid;
+	/** state of guest */
+	guest_state_t state;
 	/** log file for console 0 */
 	int bootlog;
 	/** mconsole to control running UML */
@@ -53,6 +53,14 @@ struct private_guest_t {
 	/** list of interfaces attached to the guest */
 	linked_list_t *ifaces;
 };
+
+ENUM(guest_state_names, GUEST_STOPPED, GUEST_STOPPING,
+	"STOPPED",
+	"STARTING",
+	"RUNNING",
+	"PAUSED",
+	"STOPPING",
+);
 
 /**
  * Implementation of guest_t.get_name.
@@ -103,6 +111,22 @@ static iterator_t* create_iface_iterator(private_guest_t *this)
 {
 	return this->ifaces->create_iterator(this->ifaces, TRUE);
 }
+	
+/**
+ * Implementation of guest_t.get_state.
+ */
+static guest_state_t get_state(private_guest_t *this)
+{
+	return this->state;
+}
+
+/**
+ * Implementation of guest_t.get_pid.
+ */
+static pid_t get_pid(private_guest_t *this)
+{
+	return this->pid;
+}
 
 /**
  * write format string to a buffer, and advance buffer position
@@ -129,16 +153,26 @@ static char* write_arg(char **pos, size_t *left, char *format, ...)
 /**
  * Implementation of guest_t.start.
  */
-static bool start(private_guest_t *this)
+static bool start(private_guest_t *this, char *kernel)
 {
 	char buf[1024];
 	char cwd[512];
+	char *notify;
 	char *pos = buf;
 	char *args[16];
 	int i = 0;
 	size_t left = sizeof(buf);
-
-	args[i++] = this->kernel;
+	
+	if (this->state != GUEST_STOPPED)
+	{
+		DBG1("unable to start guest in state %N", guest_state_names, this->state);
+		return FALSE;
+	}
+	this->state = GUEST_STARTING;
+	
+	notify = write_arg(&pos, &left, "%s/%s/notify", RUN_DIR, this->name);
+	
+	args[i++] = kernel;
 	args[i++] = write_arg(&pos, &left, "root=/dev/root");
 	args[i++] = write_arg(&pos, &left, "rootfstype=hostfs");
 	args[i++] = write_arg(&pos, &left, "rootflags=%s/%s/%s",
@@ -146,9 +180,11 @@ static bool start(private_guest_t *this)
 	args[i++] = write_arg(&pos, &left, "uml_dir=%s/%s", RUN_DIR, this->name);
 	args[i++] = write_arg(&pos, &left, "umid=%s", this->name);
 	args[i++] = write_arg(&pos, &left, "mem=%dM", this->mem);
+	args[i++] = write_arg(&pos, &left, "mconsole=notify:%s", notify);
 	/*args[i++] = write_arg(&pos, &left, "con=pts");*/
 	args[i++] = write_arg(&pos, &left, "con0=null,fd:%d", this->bootlog);
-	args[i++] = write_arg(&pos, &left, "con1=fd:0,fd:1");
+	/*args[i++] = write_arg(&pos, &left, "con1=fd:0,fd:1");*/
+	args[i++] = write_arg(&pos, &left, "con2=null,null");
 	args[i++] = write_arg(&pos, &left, "con3=null,null");
 	args[i++] = write_arg(&pos, &left, "con4=null,null");
 	args[i++] = write_arg(&pos, &left, "con5=null,null");
@@ -172,8 +208,7 @@ static bool start(private_guest_t *this)
 			break;
 	}
 	/* open mconsole */
-	snprintf(buf, sizeof(buf), "%s/%s/%s/mconsole", RUN_DIR, this->name, this->name);
-	this->mconsole = mconsole_create(buf);
+	this->mconsole = mconsole_create(notify);
 	if (this->mconsole == NULL)
 	{
 		DBG1("opening mconsole at '%s' failed, stopping guest", buf);
@@ -181,6 +216,7 @@ static bool start(private_guest_t *this)
 		this->pid = 0;
 		return FALSE;
 	}
+	this->state = GUEST_RUNNING;
 	return TRUE;
 }
 
@@ -293,7 +329,6 @@ static void destroy(private_guest_t *this)
 	this->ifaces->destroy_offset(this->ifaces, offsetof(iface_t, destroy));
 	DESTROY_IF(this->mconsole);
 	free(this->name);
-	free(this->kernel);
 	free(this->master);
 	free(this);
 }
@@ -301,11 +336,13 @@ static void destroy(private_guest_t *this)
 /**
  * create the guest instance, including required dirs and mounts 
  */
-guest_t *guest_create(char *name, char *kernel, char *master, int mem)
+guest_t *guest_create(char *name, char *master, int mem)
 {
 	private_guest_t *this = malloc_thing(private_guest_t);
 	
 	this->public.get_name = (void*)get_name;
+	this->public.get_pid = (pid_t(*)(guest_t*))get_pid;
+	this->public.get_state = (guest_state_t(*)(guest_t*))get_state;
 	this->public.create_iface = (iface_t*(*)(guest_t*,char*))create_iface;
 	this->public.create_iface_iterator = (iterator_t*(*)(guest_t*))create_iface_iterator;
 	this->public.start = (void*)start;
@@ -320,10 +357,10 @@ guest_t *guest_create(char *name, char *kernel, char *master, int mem)
 	}
 	
 	this->name = strdup(name);
-	this->kernel = strdup(kernel);
 	this->master = strdup(master);
 	this->mem = mem;
 	this->pid = 0;
+	this->state = GUEST_STOPPED;
 	this->bootlog = open_bootlog(name);
 	this->mconsole = NULL;
 	this->ifaces = linked_list_create();

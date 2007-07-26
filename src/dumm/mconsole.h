@@ -51,10 +51,13 @@ struct mconsole_t {
 /**
  * @brief Create a new mconsole connection to a guest.
  *
- * @param socket			guests mconsole socket
+ * Waits for a notification from the guest through the notify socket and tries
+ * to connect to the mconsole socket supplied in the received notification.
+ *
+ * @param notify			unix notify socket path
  * @return					mconsole instance, or NULL if failed
  */
-mconsole_t *mconsole_create(char *socket);
+mconsole_t *mconsole_create(char *notify);
 
 #endif /* MCONSOLE_H */
 

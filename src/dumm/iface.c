@@ -3,7 +3,7 @@
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2002 Jeff Dike
  *
- * Based on the "tunctl" utlity from Jeff Dike.
+ * Based on the "tunctl" utility from Jeff Dike.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

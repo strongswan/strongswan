@@ -39,105 +39,26 @@ static void usage()
  */
 static void help()
 {
-	printf("start name=<name> [options]   start a guest named <name>\n");
-	printf("                              additional options:\n");
-	printf("                                kernel=<uml-kernel>\n");
-	printf("                                master=<read-only root files>\n");
-	printf("                                memory=<guest memory in MB>\n");
+	printf("create name=<name>            start a guest named <name>\n");
+	printf("       [master=<dir>]         read only master root filesystem\n");
+	printf("       [memory=<MB>]          guest main memory in megabyte\n");
 	printf("list                          list running guests\n");
 	printf("guest <name>                  open guest menu for <name>\n");
 	printf("help                          show this help\n");
 	printf("quit                          kill quests and exit\n");
 }
 
-
 /**
  * help for guest shell
  */
 static void help_guest()
 {
+	printf("start [kernel=<uml-kernel>]   start the guest\n");
 	printf("addif <name>                  add an interface to the guest\n");
 	printf("delif <name>                  remove the interface\n");
 	printf("listif                        list guests interfaces\n");
 	printf("help                          show this help\n");
 	printf("quit                          quit the guest menu\n");
-}
-
-/**
- * start an UML guest
- */
-static void start(dumm_t *dumm, char *line)
-{
-	enum {
-		NAME = 0,
-		MASTER,
-		KERNEL,
-		MEMORY,
-	};
-	char *const opts[] = {
-		[NAME] = "name",
-		[MASTER] = "master",
-		[KERNEL] = "kernel",
-		[MEMORY] = "memory",
-		NULL
-	};
-	char *value;
-	char *name = NULL;
-	char *kernel = NULL;
-	char *master = NULL;
-	int mem = 0;
-	
-	while (TRUE)
-	{
-		switch (getsubopt(&line, opts, &value))
-		{
-			case NAME:
-				name = value;
-				continue;
-			case MASTER:
-				master = value;
-				continue;
-			case KERNEL:
-				kernel = value;
-				continue;
-			case MEMORY:
-				if (value)
-				{
-					mem = atoi(value);
-				}
-				continue;
-			default:
-				break;
-		}
-		break;
-	}
-	if (name == NULL)
-	{
-		printf("option 'name' is required.\n");
-		help();
-		return;
-	}
-	if (kernel == NULL)
-	{
-		kernel = "./linux";
-	}
-	if (master == NULL)
-	{
-		master = "master";
-	}
-	if (mem == 0)
-	{
-		mem = 128;
-	}
-	
-	if (dumm->start_guest(dumm, name, kernel, master, mem))
-	{
-		printf("starting guest '%s'\n", name);
-	}
-	else
-	{
-		printf("starting guest '%s' failed\n", name);
-	}
 }
 
 /**
@@ -208,6 +129,49 @@ static void list_if(guest_t *guest)
 }
 
 /**
+ * start an UML guest
+ */
+static void start_guest(guest_t *guest, char *line)
+{
+	enum {
+		KERNEL = 0,
+	};
+	char *const opts[] = {
+		[KERNEL] = "kernel",
+		NULL
+	};
+	char *value;
+	char *kernel = NULL;
+	
+	while (TRUE)
+	{
+		switch (getsubopt(&line, opts, &value))
+		{
+			case KERNEL:
+				kernel = value;
+				continue;
+			default:
+				break;
+		}
+		break;
+	}
+	if (kernel == NULL)
+	{
+		kernel = "./linux";
+	}
+	
+	printf("starting guest '%s'... \n", guest->get_name(guest));
+	if (guest->start(guest, kernel))
+	{
+		printf("guest '%s' is up\n", guest->get_name(guest));
+	}
+	else
+	{
+		printf("failed to start guest '%s'!\n", guest->get_name(guest));
+	}
+}
+
+/**
  * subshell for guests
  */
 static void guest(dumm_t *dumm, char *name)
@@ -246,6 +210,7 @@ static void guest(dumm_t *dumm, char *name)
 		enum {
 			QUIT = 0,
 			HELP,
+			START,
 			ADDIF,
 			DELIF,
 			LISTIF,
@@ -253,6 +218,7 @@ static void guest(dumm_t *dumm, char *name)
 		char *const opts[] = {
 			[QUIT] = "quit",
 			[HELP] = "help",
+			[START] = "start",
 			[ADDIF] = "addif",
 			[DELIF] = "delif",
 			[LISTIF] = "listif",
@@ -285,6 +251,9 @@ static void guest(dumm_t *dumm, char *name)
 			case HELP:
 				help_guest();
 				continue;
+			case START:
+				start_guest(guest, pos);
+				continue;
 			case ADDIF:
 				add_if(guest, pos);
 				continue;
@@ -299,6 +268,73 @@ static void guest(dumm_t *dumm, char *name)
 				continue;
 		}
 		break;
+	}
+}
+
+/**
+ * create an UML guest
+ */
+static void create_guest(dumm_t *dumm, char *line)
+{
+	enum {
+		NAME = 0,
+		MASTER,
+		MEMORY,
+	};
+	char *const opts[] = {
+		[NAME] = "name",
+		[MASTER] = "master",
+		[MEMORY] = "memory",
+		NULL
+	};
+	char *value;
+	char *name = NULL;
+	char *master = NULL;
+	int mem = 0;
+	
+	while (TRUE)
+	{
+		switch (getsubopt(&line, opts, &value))
+		{
+			case NAME:
+				name = value;
+				continue;
+			case MASTER:
+				master = value;
+				continue;
+			case MEMORY:
+				if (value)
+				{
+					mem = atoi(value);
+				}
+				continue;
+			default:
+				break;
+		}
+		break;
+	}
+	if (name == NULL)
+	{
+		printf("option 'name' is required.\n");
+		help();
+		return;
+	}
+	if (master == NULL)
+	{
+		master = "master";
+	}
+	if (mem == 0)
+	{
+		mem = 128;
+	}
+	if (dumm->create_guest(dumm, name, master, mem))
+	{
+		printf("guest '%s' created\n", name);
+		guest(dumm, name);
+	}
+	else
+	{
+		printf("failed to create guest '%s'!\n", name);
 	}
 }
 
@@ -370,14 +406,14 @@ int main(int argc, char *argv[])
 		enum {
 			QUIT = 0,
 			HELP,
-			START,
+			CREATE,
 			LIST,
 			GUEST,
 		};
 		char *const opts[] = {
 			[QUIT] = "quit",
 			[HELP] = "help",
-			[START] = "start",
+			[CREATE] = "create",
 			[LIST] = "list",
 			[GUEST] = "guest",
 			NULL
@@ -410,8 +446,8 @@ int main(int argc, char *argv[])
 			case HELP:
 				help();
 				continue;
-			case START:
-				start(dumm, pos);
+			case CREATE:
+				create_guest(dumm, pos);
 				continue;
 			case LIST:
 				list(dumm);
