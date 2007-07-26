@@ -35,14 +35,14 @@ struct iface_t {
 	 *
 	 * @return		guest interface name
 	 */
-	char* (*get_guest)(iface_t *this);
+	char* (*get_guestif)(iface_t *this);
 	
 	/**
 	 * @brief Get the interface name at the host (e.g. tap0).
 	 *
 	 * @return		host interface (tap device) name
 	 */
-	char* (*get_host)(iface_t *this);
+	char* (*get_hostif)(iface_t *this);
 	
 	/*
 	bool (*up) (iface_t *this);
@@ -61,10 +61,11 @@ struct iface_t {
 /**
  * @brief Create a new interface for a guest
  *
- * @param guest		name of the interface in the guest
+ * @param guest		name of the guest for this interface
+ * @param guestif	name of the interface in the guest
  * @param mconsole	mconsole of guest
  * @return			interface descriptor, or NULL if failed
  */
-iface_t *iface_create(char *guest, mconsole_t *mconsole);
+iface_t *iface_create(char *guest, char *guestif, mconsole_t *mconsole);
 
 #endif /* IFACE_H */

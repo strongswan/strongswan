@@ -151,7 +151,7 @@ static void add_if(guest_t *guest, char *name)
 	if (iface)
 	{
 		printf("created guest interface '%s' connected to '%s'\n",
-			   iface->get_guest(iface), iface->get_host(iface));
+			   iface->get_guestif(iface), iface->get_hostif(iface));
 	}
 	else
 	{
@@ -171,11 +171,11 @@ static void del_if(guest_t *guest, char *name)
 	iterator = guest->create_iface_iterator(guest);
 	while (iterator->iterate(iterator, (void**)&iface))
 	{
-		if (streq(name, iface->get_guest(iface)))
+		if (streq(name, iface->get_guestif(iface)))
 		{
 			iterator->remove(iterator);
 			printf("removing interface '%s' ('%s') from %s\n",
-				   iface->get_guest(iface), iface->get_host(iface),
+				   iface->get_guestif(iface), iface->get_hostif(iface),
 				   guest->get_name(guest));
 			iface->destroy(iface);
 			found = TRUE;
@@ -201,7 +201,7 @@ static void list_if(guest_t *guest)
 	iterator = guest->create_iface_iterator(guest);
 	while (iterator->iterate(iterator, (void**)&iface))
 	{
-		printf("'%s' => '%s'\n", iface->get_guest(iface), iface->get_host(iface));
+		printf("'%s' => '%s'\n", iface->get_guestif(iface), iface->get_hostif(iface));
 
 	}
 	iterator->destroy(iterator);
@@ -318,7 +318,8 @@ static void list(dumm_t *dumm)
 		ifaces = guest->create_iface_iterator(guest);
 		while (ifaces->iterate(ifaces, (void**)&iface))
 		{
-			printf("  '%s' => '%s'\n", iface->get_guest(iface), iface->get_host(iface));
+			printf("  '%s' => '%s'\n",
+				   iface->get_guestif(iface), iface->get_hostif(iface));
 		}
 		ifaces->destroy(ifaces);
 	}

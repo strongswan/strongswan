@@ -79,7 +79,7 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 	iterator = this->ifaces->create_iterator(this->ifaces, TRUE);
 	while (iterator->iterate(iterator, (void**)&iface))
 	{
-		if (streq(name, iface->get_guest(iface)))
+		if (streq(name, iface->get_guestif(iface)))
 		{
 			DBG1("guest '%s' already has an interface '%s'", this->name, name);
 			iterator->destroy(iterator);
@@ -88,7 +88,7 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 	}
 	iterator->destroy(iterator);
 
-	iface = iface_create(name, this->mconsole);
+	iface = iface_create(this->name, name, this->mconsole);
 	if (iface)
 	{
 		this->ifaces->insert_last(this->ifaces, iface);

@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <linux/if_tun.h>
@@ -33,29 +34,27 @@ struct private_iface_t {
 	/** public interface */
 	iface_t public;
 	/** device name in guest (eth0) */
-	char *guest;
+	char *guestif;
 	/** device name at host (tap0) */
-	char *host;
-	/** tap device handle to manage taps */
-	int tap;
+	char *hostif;
 	/** mconsole for guest */
 	mconsole_t *mconsole;
 };
 
 /**
- * Implementation of iface_t.get_guest.
+ * Implementation of iface_t.get_guestif.
  */
-static char* get_guest(private_iface_t *this)
+static char* get_guestif(private_iface_t *this)
 {
-	return this->guest;
+	return this->guestif;
 }
 
 /**
- * Implementation of iface_t.get_host.
+ * Implementation of iface_t.get_hostif.
  */
-static char* get_host(private_iface_t *this)
+static char* get_hostif(private_iface_t *this)
 {
-	return this->host;
+	return this->hostif;
 }
 
 /**
@@ -64,37 +63,56 @@ static char* get_host(private_iface_t *this)
 static bool destroy_tap(private_iface_t *this)
 {
 	struct ifreq ifr;
+	int tap;
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-	strncpy(ifr.ifr_name, this->host, sizeof(ifr.ifr_name) - 1);
+	strncpy(ifr.ifr_name, this->hostif, sizeof(ifr.ifr_name) - 1);
 	
-	if (ioctl(this->tap, TUNSETIFF, &ifr) < 0 ||
-		ioctl(this->tap, TUNSETPERSIST, 0) < 0)
+	tap = open(TAP_DEVICE, O_RDWR);
+	if (tap < 0)
 	{
-		DBG1("removing %s failed: %m", this->host);
+		DBG1("unable to open tap device %s: %m", TAP_DEVICE);
 		return FALSE;
 	}
+	if (ioctl(tap, TUNSETIFF, &ifr) < 0 ||
+		ioctl(tap, TUNSETPERSIST, 0) < 0)
+	{
+		DBG1("removing %s failed: %m", this->hostif);
+		close(tap);
+		return FALSE;
+	}
+	close(tap);
 	return TRUE;
 }
 
 /**
  * create the tap device
  */
-static char* create_tap(private_iface_t *this)
+static char* create_tap(private_iface_t *this, char *guest)
 {
 	struct ifreq ifr;
+	int tap;
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-	
-	if (ioctl(this->tap, TUNSETIFF, &ifr) < 0 ||
-		ioctl(this->tap, TUNSETPERSIST, 1) < 0 ||
-		ioctl(this->tap, TUNSETOWNER, 0))
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s-%s", guest, this->guestif);
+
+	tap = open(TAP_DEVICE, O_RDWR);
+	if (tap < 0)
+	{
+		DBG1("unable to open tap device %s: %m", TAP_DEVICE);
+		return NULL;
+	}
+	if (ioctl(tap, TUNSETIFF, &ifr) < 0 ||
+		ioctl(tap, TUNSETPERSIST, 1) < 0 ||
+		ioctl(tap, TUNSETOWNER, 0))
     {
 		DBG1("creating new tap device failed: %m");
+		close(tap);
 		return NULL;
     } 
+	close(tap);
 	return strdup(ifr.ifr_name);
 }
 
@@ -103,50 +121,40 @@ static char* create_tap(private_iface_t *this)
  */
 static void destroy(private_iface_t *this)
 {
-	this->mconsole->del_iface(this->mconsole, this->guest);
+	this->mconsole->del_iface(this->mconsole, this->guestif);
 	destroy_tap(this);
-	close(this->tap);
-	free(this->guest);
-	free(this->host);
+	free(this->guestif);
+	free(this->hostif);
 	free(this);
 }
 
 /**
  * create the iface instance
  */
-iface_t *iface_create(char *guest, mconsole_t *mconsole)
+iface_t *iface_create(char *guest, char *guestif, mconsole_t *mconsole)
 {
 	private_iface_t *this = malloc_thing(private_iface_t);
 	
-	this->public.get_host = (char*(*)(iface_t*))get_host;
-	this->public.get_guest = (char*(*)(iface_t*))get_guest;
+	this->public.get_hostif = (char*(*)(iface_t*))get_hostif;
+	this->public.get_guestif = (char*(*)(iface_t*))get_guestif;
 	this->public.destroy = (void*)destroy;
 
 	this->mconsole = mconsole;
-	this->tap = open(TAP_DEVICE, O_RDWR);
-	if (this->tap < 0)
+	this->guestif = strdup(guestif);
+	this->hostif = create_tap(this, guest);
+	if (this->hostif == NULL)
 	{
-		DBG1("unable to open tap device %s: %m", TAP_DEVICE);
+		destroy_tap(this);
+		free(this->guestif);
 		free(this);
 		return NULL;
 	}
-	this->guest = strdup(guest);
-	this->host = create_tap(this);
-	if (this->host == NULL)
+	if (!this->mconsole->add_iface(this->mconsole, this->guestif, this->hostif))
 	{
+		DBG1("creating interface '%s' in guest failed", this->guestif);
 		destroy_tap(this);
-		close(this->tap);
-		free(this->guest);
-		free(this);
-		return NULL;
-	}
-	if (!this->mconsole->add_iface(this->mconsole, this->guest, this->host))
-	{
-		DBG1("creating interface '%s' in guest failed", this->guest);
-		destroy_tap(this);
-		close(this->tap);
-		free(this->guest);
-		free(this->host);
+		free(this->guestif);
+		free(this->hostif);
 		free(this);
 		return NULL;
 	}
