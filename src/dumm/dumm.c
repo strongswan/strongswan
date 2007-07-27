@@ -24,6 +24,7 @@ typedef struct private_dumm_t private_dumm_t;
 struct private_dumm_t {
 	dumm_t public;
 	linked_list_t *guests;
+	bool destroying;
 };
 
 static guest_t* create_guest(private_dumm_t *this, char *name, char *master, int mem)
@@ -48,6 +49,11 @@ static iterator_t* create_guest_iterator(private_dumm_t *this)
  */
 static void sigchild_handler(private_dumm_t *this, siginfo_t *info)
 {
+	if (this->destroying)
+	{
+		return;
+	}
+
 	switch (info->si_code)
 	{
 		case CLD_EXITED:
@@ -77,6 +83,17 @@ static void sigchild_handler(private_dumm_t *this, siginfo_t *info)
 
 static void destroy(private_dumm_t *this)
 {
+	iterator_t *iterator;
+	guest_t *guest;
+
+	iterator = this->guests->create_iterator(this->guests, TRUE);
+	while (iterator->iterate(iterator, (void**)&guest))
+	{
+		guest->stop(guest);
+	}
+	iterator->destroy(iterator);
+	
+	this->destroying = TRUE;
 	this->guests->destroy_offset(this->guests, offsetof(guest_t, destroy));
 	free(this);
 }
@@ -110,6 +127,7 @@ dumm_t *dumm_create()
 		return NULL;
 	}
 	
+	this->destroying = FALSE;
 	this->guests = linked_list_create();
 	return &this->public;
 }

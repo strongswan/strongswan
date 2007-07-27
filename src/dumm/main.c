@@ -395,10 +395,7 @@ void signal_action(int sig, siginfo_t *info, void *ucontext)
 	}
 	else
 	{
-		dumm->destroy(dumm);
-		clear_history();
-		printf("\n");
-		exit(0);
+		printf("\nuse 'quit'\ndumm# ");
 	}
 }
 

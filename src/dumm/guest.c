@@ -227,10 +227,10 @@ static void stop(private_guest_t *this)
 {
 	if (this->state != GUEST_STOPPED)
 	{
+		this->state = GUEST_STOPPING;
 		this->ifaces->destroy_offset(this->ifaces, offsetof(iface_t, destroy));
 		this->ifaces = linked_list_create();
 		kill(this->pid, SIGINT);
-		this->state = GUEST_STOPPING;
 		while (this->state == GUEST_STOPPING)
 		{
 			sched_yield();
@@ -243,6 +243,8 @@ static void stop(private_guest_t *this)
  */
 static void sigchild(private_guest_t *this)
 {
+	DESTROY_IF(this->mconsole);
+	this->mconsole = NULL;
 	this->state = GUEST_STOPPED;
 	this->pid = 0;
 }
@@ -341,7 +343,6 @@ static void destroy(private_guest_t *this)
 {
 	stop(this);
 	umount_unionfs(this->name);
-	DESTROY_IF(this->mconsole);
 	free(this->name);
 	free(this->master);
 	free(this);
