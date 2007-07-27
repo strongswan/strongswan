@@ -25,6 +25,11 @@
 #include "dumm.h"
 
 /**
+ * global set of UMLs guests
+ */
+dumm_t *dumm;
+
+/**
  * show usage information (program arguments)
  */
 static void usage()
@@ -53,7 +58,8 @@ static void help()
  */
 static void help_guest()
 {
-	printf("start [kernel=<uml-kernel>]   start the guest\n");
+	printf("start [kernel=<uml-kernel>]   start a stopped guest\n");
+	printf("stop                          stop a started guest\n");
 	printf("addif <name>                  add an interface to the guest\n");
 	printf("delif <name>                  remove the interface\n");
 	printf("listif                        list guests interfaces\n");
@@ -172,9 +178,19 @@ static void start_guest(guest_t *guest, char *line)
 }
 
 /**
+ * stop (kill) an UML guest
+ */
+static void stop_guest(guest_t *guest, char *line)
+{	
+	printf("stopping guest '%s'...\n", guest->get_name(guest));
+	guest->stop(guest);
+	printf("guest '%s' is down\n", guest->get_name(guest));
+}
+
+/**
  * subshell for guests
  */
-static void guest(dumm_t *dumm, char *name)
+static void guest(char *name)
 {
 	char *line = NULL;
 	char prompt[32];
@@ -211,6 +227,7 @@ static void guest(dumm_t *dumm, char *name)
 			QUIT = 0,
 			HELP,
 			START,
+			STOP,
 			ADDIF,
 			DELIF,
 			LISTIF,
@@ -219,6 +236,7 @@ static void guest(dumm_t *dumm, char *name)
 			[QUIT] = "quit",
 			[HELP] = "help",
 			[START] = "start",
+			[STOP] = "stop",
 			[ADDIF] = "addif",
 			[DELIF] = "delif",
 			[LISTIF] = "listif",
@@ -254,6 +272,9 @@ static void guest(dumm_t *dumm, char *name)
 			case START:
 				start_guest(guest, pos);
 				continue;
+			case STOP:
+				stop_guest(guest, pos);
+				continue;
 			case ADDIF:
 				add_if(guest, pos);
 				continue;
@@ -274,7 +295,7 @@ static void guest(dumm_t *dumm, char *name)
 /**
  * create an UML guest
  */
-static void create_guest(dumm_t *dumm, char *line)
+static void create_guest(char *line)
 {
 	enum {
 		NAME = 0,
@@ -330,7 +351,7 @@ static void create_guest(dumm_t *dumm, char *line)
 	if (dumm->create_guest(dumm, name, master, mem))
 	{
 		printf("guest '%s' created\n", name);
-		guest(dumm, name);
+		guest(name);
 	}
 	else
 	{
@@ -341,7 +362,7 @@ static void create_guest(dumm_t *dumm, char *line)
 /**
  * list running UML guests
  */
-static void list(dumm_t *dumm)
+static void list()
 {
 	iterator_t *guests, *ifaces;
 	guest_t *guest;
@@ -350,7 +371,8 @@ static void list(dumm_t *dumm)
 	guests = dumm->create_guest_iterator(dumm);
 	while (guests->iterate(guests, (void**)&guest))
 	{
-		printf("%s\n", guest->get_name(guest));
+		printf("%s (%N)\n", guest->get_name(guest),
+			   guest_state_names, guest->get_state(guest));
 		ifaces = guest->create_iface_iterator(guest);
 		while (ifaces->iterate(ifaces, (void**)&iface))
 		{
@@ -363,12 +385,30 @@ static void list(dumm_t *dumm)
 }
 
 /**
+ * Signal handler 
+ */
+void signal_action(int sig, siginfo_t *info, void *ucontext)
+{
+	if (sig == SIGCHLD)
+	{
+		dumm->sigchild_handler(dumm, info);
+	}
+	else
+	{
+		dumm->destroy(dumm);
+		clear_history();
+		printf("\n");
+		exit(0);
+	}
+}
+
+/**
  * main routine, parses args and reads from console
  */
 int main(int argc, char *argv[])
 {
-	dumm_t *dumm;
 	char *line = NULL;
+	struct sigaction action;
 
 	while (TRUE)
 	{
@@ -400,6 +440,18 @@ int main(int argc, char *argv[])
 	}
 	
 	dumm = dumm_create();
+	
+	memset(&action, 0, sizeof(action));
+	action.sa_sigaction = signal_action;
+	action.sa_flags = SA_SIGINFO;
+	if (sigaction(SIGCHLD, &action, NULL) != 0 ||
+		sigaction(SIGINT, &action, NULL) != 0 ||
+		sigaction(SIGQUIT, &action, NULL) != 0 ||
+		sigaction(SIGTERM, &action, NULL) != 0)
+	{
+		printf("signal handler setup failed: %m.\n");
+		return 1;
+	}
 
 	while (TRUE)
 	{
@@ -447,13 +499,13 @@ int main(int argc, char *argv[])
 				help();
 				continue;
 			case CREATE:
-				create_guest(dumm, pos);
+				create_guest(pos);
 				continue;
 			case LIST:
-				list(dumm);
+				list();
 				continue;
 			case GUEST:
-				guest(dumm, pos);
+				guest(pos);
 				continue;
 			default:
 				printf("command unknown: '%s'\n", line);

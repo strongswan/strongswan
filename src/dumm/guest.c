@@ -78,7 +78,7 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 	iterator_t *iterator;
 	iface_t *iface;
 	
-	if (this->pid == 0)
+	if (this->state != GUEST_RUNNING)
 	{
 		DBG1("guest '%s' not running, unable to add interface", this->name);
 		return NULL;
@@ -225,11 +225,26 @@ static bool start(private_guest_t *this, char *kernel)
  */
 static void stop(private_guest_t *this)
 {
-	if (this->pid)
+	if (this->state != GUEST_STOPPED)
 	{
+		this->ifaces->destroy_offset(this->ifaces, offsetof(iface_t, destroy));
+		this->ifaces = linked_list_create();
 		kill(this->pid, SIGINT);
-		this->pid = 0;
+		this->state = GUEST_STOPPING;
+		while (this->state == GUEST_STOPPING)
+		{
+			sched_yield();
+		}
 	}
+}
+
+/**
+ * Implementation of guest_t.sigchild.
+ */
+static void sigchild(private_guest_t *this)
+{
+	this->state = GUEST_STOPPED;
+	this->pid = 0;
 }
 
 /**
@@ -326,7 +341,6 @@ static void destroy(private_guest_t *this)
 {
 	stop(this);
 	umount_unionfs(this->name);
-	this->ifaces->destroy_offset(this->ifaces, offsetof(iface_t, destroy));
 	DESTROY_IF(this->mconsole);
 	free(this->name);
 	free(this->master);
@@ -347,6 +361,7 @@ guest_t *guest_create(char *name, char *master, int mem)
 	this->public.create_iface_iterator = (iterator_t*(*)(guest_t*))create_iface_iterator;
 	this->public.start = (void*)start;
 	this->public.stop = (void*)stop;
+	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
 	
 	if (!makedir(HOST_DIR, name) || !makedir(MOUNT_DIR, name) ||

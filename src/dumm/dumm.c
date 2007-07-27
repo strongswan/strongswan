@@ -41,6 +41,38 @@ static guest_t* create_guest(private_dumm_t *this, char *name, char *master, int
 static iterator_t* create_guest_iterator(private_dumm_t *this)
 {
 	return this->guests->create_iterator(this->guests, TRUE);
+}	
+	
+/**
+ * Implementation of dumm_t.sigchild_handler.
+ */
+static void sigchild_handler(private_dumm_t *this, siginfo_t *info)
+{
+	switch (info->si_code)
+	{
+		case CLD_EXITED:
+		case CLD_KILLED:
+		case CLD_DUMPED:
+		case CLD_STOPPED:
+		{
+			iterator_t *iterator;
+			guest_t *guest;
+			
+			iterator = this->guests->create_iterator(this->guests, TRUE);
+			while (iterator->iterate(iterator, (void**)&guest))
+			{
+				if (guest->get_pid(guest) == info->si_pid)
+				{
+					guest->sigchild(guest);
+					break;
+				}
+			}
+			iterator->destroy(iterator);
+			break;
+		}
+		default:
+			break;
+	}
 }
 
 static void destroy(private_dumm_t *this)
@@ -67,6 +99,7 @@ dumm_t *dumm_create()
 {
 	private_dumm_t *this = malloc_thing(private_dumm_t);
 	
+	this->public.sigchild_handler = (void(*)(dumm_t*, siginfo_t *info))sigchild_handler;
 	this->public.create_guest = (void*)create_guest;
 	this->public.create_guest_iterator = (void*)create_guest_iterator;
 	this->public.destroy = (void*)destroy;

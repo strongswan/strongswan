@@ -16,6 +16,8 @@
 #ifndef DUMM_H
 #define DUMM_H
 
+#include <signal.h>
+
 #include <library.h>
 #include <utils/linked_list.h>
 
@@ -51,6 +53,18 @@ struct dumm_t {
 	 * @return			iteraotor over guest_t's
 	 */
 	iterator_t* (*create_guest_iterator) (dumm_t *this);
+	
+	/**
+	 * @brief Handler for received SIG_CHILD signals.
+	 *
+	 * Dumm spans children, UML kernels. To track and cleanup these kernel
+	 * processes, it is required that this method is called whenever a SIG_CHILD
+	 * is received. The user is responsible to call sigchild_handler on each
+	 * dumm_t instance with the signals siginfo_t. 
+	 *
+	 * @param info		siginfo associated to the SIG_CHILD signal
+	 */
+	void (*sigchild_handler)(dumm_t *this, siginfo_t *info);
 	
 	/**
 	 * @brief stop all guests and destroy the modeler

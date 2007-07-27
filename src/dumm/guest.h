@@ -100,7 +100,12 @@ struct guest_t {
 	 * @return		iterator over iface_t's
 	 */
 	iterator_t* (*create_iface_iterator)(guest_t *this);
-
+	
+	/**
+	 * @brief Called whenever a SIGCHILD is received.
+	 */
+	void (*sigchild)(guest_t *this);
+	
 	/**
 	 * @brief Close and destroy a guest with all interfaces
 	 */	
