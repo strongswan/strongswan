@@ -292,6 +292,16 @@ static void guest(char *name)
 	}
 }
 
+
+/**
+ * create an bridge
+ */
+static void create_bridge(char *name)
+{
+	dumm->create_bridge(dumm, name);
+
+}
+
 /**
  * create an UML guest
  */
@@ -299,11 +309,13 @@ static void create_guest(char *line)
 {
 	enum {
 		NAME = 0,
+		KERNEL,
 		MASTER,
 		MEMORY,
 	};
 	char *const opts[] = {
 		[NAME] = "name",
+		[KERNEL] = "kernel",
 		[MASTER] = "master",
 		[MEMORY] = "memory",
 		NULL
@@ -311,7 +323,8 @@ static void create_guest(char *line)
 	char *value;
 	char *name = NULL;
 	char *master = NULL;
-	int mem = 0;
+	char *kernel = NULL;
+	int mem = 128;
 	
 	while (TRUE)
 	{
@@ -319,6 +332,9 @@ static void create_guest(char *line)
 		{
 			case NAME:
 				name = value;
+				continue;
+			case KERNEL:
+				kernel = value;
 				continue;
 			case MASTER:
 				master = value;
@@ -334,21 +350,17 @@ static void create_guest(char *line)
 		}
 		break;
 	}
-	if (name == NULL)
+	if (name == NULL || master == NULL || kernel == NULL)
 	{
-		printf("option 'name' is required.\n");
+		printf("too few arguments!\n");
 		help();
 		return;
-	}
-	if (master == NULL)
-	{
-		master = "master";
 	}
 	if (mem == 0)
 	{
 		mem = 128;
 	}
-	if (dumm->create_guest(dumm, name, master, mem))
+	if (dumm->create_guest(dumm, name, kernel, master, mem))
 	{
 		printf("guest '%s' created\n", name);
 		guest(name);
@@ -406,6 +418,7 @@ int main(int argc, char *argv[])
 {
 	char *line = NULL;
 	struct sigaction action;
+	char *dir = ".";
 
 	while (TRUE)
 	{
@@ -420,11 +433,7 @@ int main(int argc, char *argv[])
 			case -1:
 				break;
 			case 'd':
-				if (chdir(optarg))
-				{
-					printf("changing to directory '%s' failed.\n", optarg);
-					return 1;
-				}
+				dir = optarg;
 				continue;
 			case 'h':
 				usage();
@@ -436,7 +445,7 @@ int main(int argc, char *argv[])
 		break;
 	}
 	
-	dumm = dumm_create();
+	dumm = dumm_create(dir);
 	
 	memset(&action, 0, sizeof(action));
 	action.sa_sigaction = signal_action;
@@ -456,6 +465,7 @@ int main(int argc, char *argv[])
 			QUIT = 0,
 			HELP,
 			CREATE,
+			BRIDGE,
 			LIST,
 			GUEST,
 		};
@@ -463,6 +473,7 @@ int main(int argc, char *argv[])
 			[QUIT] = "quit",
 			[HELP] = "help",
 			[CREATE] = "create",
+			[BRIDGE] = "bridge",
 			[LIST] = "list",
 			[GUEST] = "guest",
 			NULL
@@ -497,6 +508,9 @@ int main(int argc, char *argv[])
 				continue;
 			case CREATE:
 				create_guest(pos);
+				continue;
+			case BRIDGE:
+				create_bridge(pos);
 				continue;
 			case LIST:
 				list();

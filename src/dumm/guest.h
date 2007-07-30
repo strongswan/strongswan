@@ -21,6 +21,14 @@
 
 #include "iface.h"
 
+#define MASTER_DIR "master"
+#define DIFF_DIR "diff"
+#define UNION_DIR "union"
+#define MEMORY_FILE "mem"
+#define KERNEL_FILE "linux"
+#define LOG_FILE "boot.log"
+#define NOTIFY_FILE "notify"
+
 typedef enum guest_state_t guest_state_t;
 
 /**
@@ -115,11 +123,22 @@ struct guest_t {
 /**
  * @brief Create a new, unstarted guest.
  *
- * @param name		name of the guest
+ * @param parent	parent directory to create the guest in
+ * @param name		name of the guest to create
+ * @param kernel	kernel this guest uses
  * @param master	read-only master filesystem for guest
  * @param mem		amount of memory to give the guest
  */
-guest_t *guest_create(char *name, char *master, int mem);
+guest_t *guest_create(char *parent, char *name, char *kernel,
+					  char *master, int mem);
+
+/**
+ * @brief Load a guest created with guest_create().
+ *
+ * @param parent	parent directory to look for a guest
+ * @param name		name of the guest directory
+ */
+guest_t *guest_load(char *parent, char *name);
 
 #endif /* GUEST_H */
 

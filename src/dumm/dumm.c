@@ -13,7 +13,12 @@
  * for more details.
  */
 
-#include <sys/stat.h>
+#define _GNU_SOURCE
+
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <dirent.h>
 
 #include <debug.h>
 
@@ -22,16 +27,27 @@
 typedef struct private_dumm_t private_dumm_t;
 
 struct private_dumm_t {
+	/** public dumm interface */
 	dumm_t public;
+	/** working dir */
+	char *dir;
+	/** list of managed guests */
 	linked_list_t *guests;
+	/** list of managed bridges */
+	linked_list_t *bridges;
+	/** do not catch signals if we are destroying */
 	bool destroying;
 };
 
-static guest_t* create_guest(private_dumm_t *this, char *name, char *master, int mem)
+/**
+ * Implementation of dumm_t.create_guest.
+ */
+static guest_t* create_guest(private_dumm_t *this, char *name, char *kernel, 
+							 char *master, int mem)
 {
 	guest_t *guest;
 	
-	guest = guest_create(name, master, mem);
+	guest = guest_create(this->dir, name, kernel, master, mem);
 	if (guest)
 	{
 		this->guests->insert_last(this->guests, guest);
@@ -39,11 +55,37 @@ static guest_t* create_guest(private_dumm_t *this, char *name, char *master, int
 	return guest;
 }
 
+/**
+ * Implementation of dumm_t.create_guest_iterator.
+ */
 static iterator_t* create_guest_iterator(private_dumm_t *this)
 {
 	return this->guests->create_iterator(this->guests, TRUE);
-}	
+}
+
+/**
+ * Implementation of dumm_t.create_bridge.
+ */
+static bridge_t* create_bridge(private_dumm_t *this, char *name)
+{
+	bridge_t *bridge;
 	
+	bridge = bridge_create(name);
+	if (bridge)
+	{
+		this->bridges->insert_last(this->bridges, bridge);
+	}
+	return bridge;
+}
+
+/**
+ * Implementation of dumm_t.create_bridge_iterator.
+ */
+static iterator_t* create_bridge_iterator(private_dumm_t *this)
+{
+	return this->bridges->create_iterator(this->bridges, TRUE);
+}
+
 /**
  * Implementation of dumm_t.sigchild_handler.
  */
@@ -53,13 +95,11 @@ static void sigchild_handler(private_dumm_t *this, siginfo_t *info)
 	{
 		return;
 	}
-
 	switch (info->si_code)
 	{
 		case CLD_EXITED:
 		case CLD_KILLED:
 		case CLD_DUMPED:
-		case CLD_STOPPED:
 		{
 			iterator_t *iterator;
 			guest_t *guest;
@@ -81,11 +121,16 @@ static void sigchild_handler(private_dumm_t *this, siginfo_t *info)
 	}
 }
 
+/**
+ * Implementation of dumm_t.destroy
+ */
 static void destroy(private_dumm_t *this)
 {
 	iterator_t *iterator;
 	guest_t *guest;
 
+	this->bridges->destroy_offset(this->bridges, offsetof(bridge_t, destroy));
+	
 	iterator = this->guests->create_iterator(this->guests, TRUE);
 	while (iterator->iterate(iterator, (void**)&guest))
 	{
@@ -95,40 +140,72 @@ static void destroy(private_dumm_t *this)
 	
 	this->destroying = TRUE;
 	this->guests->destroy_offset(this->guests, offsetof(guest_t, destroy));
+	free(this->dir);
 	free(this);
 }
 
 /**
- * check for a directory, create if it does not exist
+ * load all guests in our working dir
  */
-static bool makedir(char *dir)
+static void load_guests(private_dumm_t *this)
 {
-	struct stat st;
+	DIR *dir;
+	struct dirent *ent;
+	guest_t *guest;
 	
-	if (stat(dir, &st) != 0)
+	dir = opendir(this->dir);
+	if (dir == NULL)
 	{
-		return mkdir(dir, S_IRWXU) == 0;
+		return;
 	}
-	return S_ISDIR(st.st_mode);
+	
+	while ((ent = readdir(dir)))
+	{
+		if (streq(ent->d_name, ".") ||  streq(ent->d_name, ".."))
+		{
+			continue;
+		}
+		guest = guest_load(this->dir, ent->d_name);
+		if (guest)
+		{
+			this->guests->insert_last(this->guests, guest);
+		}
+		else
+		{
+			DBG1("loading guest in directory '%s' failed, skipped", ent->d_name);
+		}
+	}
+	closedir(dir);
 }
 
-dumm_t *dumm_create()
+/**
+ * create a dumm instance
+ */
+dumm_t *dumm_create(char *dir)
 {
+	char cwd[PATH_MAX];
 	private_dumm_t *this = malloc_thing(private_dumm_t);
 	
+	this->public.create_guest = (guest_t*(*)(dumm_t*,char*,char*,char*,int))create_guest;
+	this->public.create_guest_iterator = (iterator_t*(*)(dumm_t*))create_guest_iterator;
+	this->public.create_bridge = (bridge_t*(*)(dumm_t*, char *name))create_bridge;
+	this->public.create_bridge_iterator = (iterator_t*(*)(dumm_t*))create_bridge_iterator;
 	this->public.sigchild_handler = (void(*)(dumm_t*, siginfo_t *info))sigchild_handler;
-	this->public.create_guest = (void*)create_guest;
-	this->public.create_guest_iterator = (void*)create_guest_iterator;
-	this->public.destroy = (void*)destroy;
-	
-	if (!makedir(HOST_DIR) || !makedir(MOUNT_DIR) || !makedir(RUN_DIR))
-	{
-		free(this);
-		return NULL;
-	}
+	this->public.destroy = (void(*)(dumm_t*))destroy;
 	
 	this->destroying = FALSE;
+	if (*dir == '/' || getcwd(cwd, sizeof(cwd)) == 0)
+	{
+		this->dir = strdup(dir);
+	}
+	else
+	{
+		asprintf(&this->dir, "%s/%s", cwd, dir);
+	}
 	this->guests = linked_list_create();
+	this->bridges = linked_list_create();
+	
+	load_guests(this);
 	return &this->public;
 }
 

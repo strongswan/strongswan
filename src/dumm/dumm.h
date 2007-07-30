@@ -22,11 +22,7 @@
 #include <utils/linked_list.h>
 
 #include "guest.h"
-
-#define HOST_DIR "host"
-#define MOUNT_DIR "mount"
-#define RUN_DIR "run"
-
+#include "bridge.h"
 
 typedef struct dumm_t dumm_t;
 
@@ -41,11 +37,13 @@ struct dumm_t {
 	 * @brief Starts a new UML guest
 	 *
 	 * @param name		name of the guest
+	 * @param kernel	UML kernel to use for guest
 	 * @param master	mounted read only master filesystem
 	 * @param mem		amount of memory for guest, in MB
 	 * @return			guest if started, NULL if failed
 	 */
-	guest_t* (*create_guest) (dumm_t *this, char *name, char *master, int mem);
+	guest_t* (*create_guest) (dumm_t *this, char *name, char *kernel, 
+							  char *master, int mem);
 	
 	/**
 	 * @brief Create an iterator over all guests.
@@ -53,6 +51,21 @@ struct dumm_t {
 	 * @return			iteraotor over guest_t's
 	 */
 	iterator_t* (*create_guest_iterator) (dumm_t *this);
+	
+	/**
+	 * @brief Create a new bridge.
+	 *
+	 * @param name		name of the bridge to create
+	 * @return			created bridge
+	 */
+	bridge_t* (*create_bridge)(dumm_t *this, char *name);
+	
+	/**
+	 * @brief Create an iterator over all bridges.
+	 *
+	 * @return			iterator over bridge_t's
+	 */
+	iterator_t* (*create_bridge_iterator)(dumm_t *this);
 	
 	/**
 	 * @brief Handler for received SIG_CHILD signals.
@@ -73,13 +86,12 @@ struct dumm_t {
 };
 
 /**
- * @brief Create a new group of UML hosts and networks.
+ * @brief Create a group of UML hosts and networks.
  *
- * Dumm uses its working dir to create folders and files it works with.
- *
+ * @param dir			directory to create guests/load from
  * @return				created UML group, or NULL if failed.
  */
-dumm_t *dumm_create();
+dumm_t *dumm_create(char *dir);
 
 #endif /* DUMM_H */
 

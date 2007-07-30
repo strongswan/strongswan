@@ -17,12 +17,13 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/uio.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <sys/uio.h>
-#include <sys/types.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <dirent.h>
 
 #include <debug.h>
 #include <utils/linked_list.h>
@@ -31,6 +32,9 @@
 #include "guest.h"
 #include "mconsole.h"
 
+#define PERME (S_IRWXU | S_IRWXG)
+#define PERM (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
+
 typedef struct private_guest_t private_guest_t;
 
 struct private_guest_t {
@@ -38,8 +42,10 @@ struct private_guest_t {
 	guest_t public;
 	/** name of the guest */
 	char *name;
-	/** read only master filesystem guest uses */
-	char *master;
+	/** directory of guest */
+	int dir;
+	/** directory name of guest */
+	char *dirname;
 	/** amount of memory for guest, in MB */
 	int mem;
 	/** pid of guest child process */
@@ -48,6 +54,8 @@ struct private_guest_t {
 	guest_state_t state;
 	/** log file for console 0 */
 	int bootlog;
+	/** has the unionfs been mounted */
+	bool mounted;
 	/** mconsole to control running UML */
 	mconsole_t *mconsole;
 	/** list of interfaces attached to the guest */
@@ -151,12 +159,29 @@ static char* write_arg(char **pos, size_t *left, char *format, ...)
 }
 
 /**
+ * Implementation of guest_t.stop.
+ */
+static void stop(private_guest_t *this)
+{
+	if (this->state != GUEST_STOPPED)
+	{
+		this->state = GUEST_STOPPING;
+		this->ifaces->destroy_offset(this->ifaces, offsetof(iface_t, destroy));
+		this->ifaces = linked_list_create();
+		kill(this->pid, SIGINT);
+		while (this->state == GUEST_STOPPING)
+		{
+			sched_yield();
+		}
+	}
+}
+
+/**
  * Implementation of guest_t.start.
  */
 static bool start(private_guest_t *this, char *kernel)
 {
-	char buf[1024];
-	char cwd[512];
+	char buf[2048];
 	char *notify;
 	char *pos = buf;
 	char *args[16];
@@ -170,14 +195,13 @@ static bool start(private_guest_t *this, char *kernel)
 	}
 	this->state = GUEST_STARTING;
 	
-	notify = write_arg(&pos, &left, "%s/%s/notify", RUN_DIR, this->name);
+	notify = write_arg(&pos, &left, "%s/%s", this->dirname, NOTIFY_FILE);
 	
-	args[i++] = kernel;
+	args[i++] = write_arg(&pos, &left, "%s/%s", this->dirname, KERNEL_FILE);
 	args[i++] = write_arg(&pos, &left, "root=/dev/root");
 	args[i++] = write_arg(&pos, &left, "rootfstype=hostfs");
-	args[i++] = write_arg(&pos, &left, "rootflags=%s/%s/%s",
-						  getcwd(cwd, sizeof(cwd)), MOUNT_DIR, this->name);
-	args[i++] = write_arg(&pos, &left, "uml_dir=%s/%s", RUN_DIR, this->name);
+	args[i++] = write_arg(&pos, &left, "rootflags=%s/%s", this->dirname, UNION_DIR);
+	args[i++] = write_arg(&pos, &left, "uml_dir=%s", this->dirname);
 	args[i++] = write_arg(&pos, &left, "umid=%s", this->name);
 	args[i++] = write_arg(&pos, &left, "mem=%dM", this->mem);
 	args[i++] = write_arg(&pos, &left, "mconsole=notify:%s", notify);
@@ -199,10 +223,10 @@ static bool start(private_guest_t *this, char *kernel)
 			dup2(open("/dev/null", 0), 1);
 			dup2(open("/dev/null", 0), 2);
 			execvp(args[0], args);
-			DBG1("starting UML kernel '%s' failed", args[0]);
+			DBG1("starting UML kernel '%s' failed: %m", args[0]);
 			exit(1);
 		case -1:
-			this->pid = 0;
+			this->state = GUEST_STOPPED;
 			return FALSE;
 		default:
 			break;
@@ -212,8 +236,7 @@ static bool start(private_guest_t *this, char *kernel)
 	if (this->mconsole == NULL)
 	{
 		DBG1("opening mconsole at '%s' failed, stopping guest", buf);
-		kill(this->pid, SIGINT);
-		this->pid = 0;
+		stop(this);
 		return FALSE;
 	}
 	this->state = GUEST_RUNNING;
@@ -221,72 +244,34 @@ static bool start(private_guest_t *this, char *kernel)
 }
 
 /**
- * Implementation of guest_t.stop.
- */
-static void stop(private_guest_t *this)
-{
-	if (this->state != GUEST_STOPPED)
-	{
-		this->state = GUEST_STOPPING;
-		this->ifaces->destroy_offset(this->ifaces, offsetof(iface_t, destroy));
-		this->ifaces = linked_list_create();
-		kill(this->pid, SIGINT);
-		while (this->state == GUEST_STOPPING)
-		{
-			sched_yield();
-		}
-	}
-}
-
-/**
  * Implementation of guest_t.sigchild.
  */
 static void sigchild(private_guest_t *this)
 {
+	waitpid(this->pid, NULL, WNOHANG);
 	DESTROY_IF(this->mconsole);
 	this->mconsole = NULL;
 	this->state = GUEST_STOPPED;
-	this->pid = 0;
-}
-
-/**
- * Check if directory exists, create otherwise
- */
-static bool makedir(char *dir, char *name)
-{
-	struct stat st;
-	char buf[256];
-	size_t len;
-	
-	len = snprintf(buf, sizeof(buf), "%s/%s", dir, name);
-	if (len < 0 || len >= sizeof(buf))
-	{
-		return FALSE;
-	}
-	if (stat(buf, &st) != 0)
-	{
-		return mkdir(buf, S_IRWXU) == 0;
-	}
-	return S_ISDIR(st.st_mode);
 }
 
 /**
  * umount the union filesystem
  */
-static bool umount_unionfs(char *name)
+static bool umount_unionfs(private_guest_t *this)
 {
 	char cmd[128];
 	size_t len;
 	
-	len = snprintf(cmd, sizeof(cmd), "fusermount -u %s/%s", MOUNT_DIR, name);
-	if (len < 0 || len >= sizeof(cmd))
+	if (this->mounted)
 	{
-		return FALSE;
-	}
-	if (system(cmd) != 0)
-	{
-		DBG1("unmounting guest unionfs for %s failed", name);
-		return FALSE;
+		len = snprintf(cmd, sizeof(cmd), "fusermount -u %s/%s",
+					   this->dirname, UNION_DIR);
+		if (len < 0 || len >= sizeof(cmd) || system(cmd) != 0)
+		{
+			DBG1("unmounting guest unionfs failed");
+			return FALSE;
+		}
+		this->mounted = FALSE;
 	}
 	return TRUE;
 }
@@ -294,21 +279,22 @@ static bool umount_unionfs(char *name)
 /**
  * mount the union filesystem
  */
-static bool mount_unionfs(char *name, char *master)
+static bool mount_unionfs(private_guest_t *this)
 {
 	char cmd[256];
 	size_t len;
 	
-	len = snprintf(cmd, sizeof(cmd), "unionfs %s/%s:%s %s/%s",
-				   HOST_DIR, name, master, MOUNT_DIR, name);
-	if (len < 0 || len >= sizeof(cmd))
+	if (!this->mounted)
 	{
-		return FALSE;
-	}
-	if (system(cmd) != 0)
-	{
-		DBG1("mounting guest unionfs for %s using '%s' failed", name, cmd);
-		return FALSE;
+		len = snprintf(cmd, sizeof(cmd), "unionfs %s/%s:%s/%s %s/%s",
+					   this->dirname, MASTER_DIR, this->dirname, DIFF_DIR,
+					   this->dirname, UNION_DIR);
+		if (len < 0 || len >= sizeof(cmd) || system(cmd) != 0)
+		{
+			DBG1("mounting guest unionfs failed");
+			return FALSE;
+		}
+		this->mounted = TRUE;
 	}
 	return TRUE;
 }
@@ -316,24 +302,58 @@ static bool mount_unionfs(char *name, char *master)
 /**
  * open logfile for boot messages
  */
-static int open_bootlog(char *name)
+static int open_bootlog(private_guest_t *this)
 {
-	char blg[256];
-	size_t len;
 	int fd;
 	
-	len = snprintf(blg, sizeof(blg), "%s/%s/boot.log", RUN_DIR, name);
-	if (len < 0 || len >= sizeof(blg))
-	{
-		return 1;
-	}
-	fd = open(blg, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+	fd = openat(this->dir, LOG_FILE, O_WRONLY | O_CREAT, PERM);
 	if (fd == -1)
 	{
-		DBG1("opening bootlog '%s' for %s failed, using stdout", blg, name);
+		DBG1("opening bootlog failed, using stdout");
 		return 1;
 	}
 	return fd;
+}
+
+/**
+ * load memory configuration from file
+ */
+int loadmem(private_guest_t *this)
+{
+	FILE *file;
+	int mem = 0;
+	
+	file = fdopen(openat(this->dir, MEMORY_FILE, O_RDONLY, PERM), "r");
+	if (file)
+	{
+		if (fscanf(file, "%d", &mem) <= 0)
+		{
+			mem = 0;
+		}
+		fclose(file);
+	}
+	return mem;
+}
+
+/**
+ * save memory configuration to file
+ */
+bool savemem(private_guest_t *this, int mem)
+{
+	FILE *file;
+	bool retval = FALSE;
+	
+	file = fdopen(openat(this->dir, MEMORY_FILE, O_RDWR | O_CREAT | O_TRUNC,
+						 PERM), "w");
+	if (file)
+	{
+		if (fprintf(file, "%d", mem) > 0)
+		{
+			retval = TRUE;
+		}
+		fclose(file);
+	}
+	return retval;
 }
 
 /**
@@ -342,17 +362,27 @@ static int open_bootlog(char *name)
 static void destroy(private_guest_t *this)
 {
 	stop(this);
-	umount_unionfs(this->name);
+	umount_unionfs(this);
+	if (this->bootlog > 1)
+	{
+		close(this->bootlog);
+	}
+	if (this->dir > 0)
+	{
+		close(this->dir);
+	}
+	free(this->dirname);
 	free(this->name);
-	free(this->master);
 	free(this);
 }
 
 /**
- * create the guest instance, including required dirs and mounts 
+ * generic guest constructor
  */
-guest_t *guest_create(char *name, char *master, int mem)
+static private_guest_t *guest_create_generic(char *parent, char *name,
+											 bool create)
 {
+	char cwd[PATH_MAX];
 	private_guest_t *this = malloc_thing(private_guest_t);
 	
 	this->public.get_name = (void*)get_name;
@@ -365,22 +395,130 @@ guest_t *guest_create(char *name, char *master, int mem)
 	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
 	
-	if (!makedir(HOST_DIR, name) || !makedir(MOUNT_DIR, name) ||
-		!makedir(RUN_DIR, name) || !mount_unionfs(name, master))
+	if (*parent == '/' || getcwd(cwd, sizeof(cwd)) == NULL)
 	{
+		asprintf(&this->dirname, "%s/%s", parent, name);
+	}
+	else
+	{
+		asprintf(&this->dirname, "%s/%s/%s", cwd, parent, name);
+	}
+	if (create)
+	{
+		mkdir(this->dirname, PERME);
+	}
+	this->dir = open(this->dirname, O_DIRECTORY, PERME);
+	if (this->dir < 0)
+	{
+		DBG1("opening guest directory '%s' failed: %m", this->dirname);
+		free(this->dirname);
 		free(this);
 		return NULL;
 	}
 	
-	this->name = strdup(name);
-	this->master = strdup(master);
-	this->mem = mem;
 	this->pid = 0;
 	this->state = GUEST_STOPPED;
-	this->bootlog = open_bootlog(name);
 	this->mconsole = NULL;
 	this->ifaces = linked_list_create();
+	this->mem = 0;
+	this->bootlog = open_bootlog(this);
+	this->name = strdup(name);
+	this->mounted = FALSE;
+	
+	return this;
+}
 
+/**
+ * create a symlink to old called new in our working dir
+ */
+static bool make_symlink(private_guest_t *this, char *old, char *new)
+{
+	char cwd[PATH_MAX];
+	char buf[PATH_MAX];
+	
+	if (*old == '/' || getcwd(cwd, sizeof(cwd)) == NULL)
+	{
+		snprintf(buf, sizeof(buf), "%s", old);
+	}
+	else
+	{
+		snprintf(buf, sizeof(buf), "%s/%s", cwd, old);
+	}
+	return symlinkat(buf, this->dir, new) == 0;
+}
+
+
+/**
+ * create the guest instance, including required dirs and mounts 
+ */
+guest_t *guest_create(char *parent, char *name, char *kernel,
+					  char *master, int mem)
+{
+	private_guest_t *this = guest_create_generic(parent, name, TRUE);
+	
+	if (this == NULL)
+	{
+		return NULL;
+	}
+	
+	if (!make_symlink(this, master, MASTER_DIR) ||
+		!make_symlink(this, kernel, KERNEL_FILE))
+	{
+		DBG1("creating master/kernel symlink failed: %m");
+		destroy(this);
+		return NULL;
+	}
+	
+	if (mkdirat(this->dir, UNION_DIR, PERME) != 0 || 
+		mkdirat(this->dir, DIFF_DIR, PERME) != 0)
+	{
+		DBG1("unable to create directories for '%s': %m", name);
+		destroy(this);
+		return NULL;
+	}
+	
+	this->mem = mem;
+	if (!savemem(this, mem))
+	{
+		destroy(this);
+		return NULL;
+	}
+	
+	if (!mount_unionfs(this))
+	{
+		destroy(this);
+		return NULL;
+	}
+
+	return &this->public;
+}
+
+/**
+ * load an already created guest
+ */
+guest_t *guest_load(char *parent, char *name)
+{
+	private_guest_t *this = guest_create_generic(parent, name, FALSE);
+	
+	if (this == NULL)
+	{
+		return NULL;
+	}
+	
+	this->mem = loadmem(this);
+	if (this->mem == 0)
+	{
+		DBG1("unable to open memory configuration file: %m", name);
+		destroy(this);
+		return NULL;
+	}
+	
+	if (!mount_unionfs(this))
+	{
+		destroy(this);
+		return NULL;
+	}
+	
 	return &this->public;
 }
 
