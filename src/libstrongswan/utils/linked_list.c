@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -645,6 +646,41 @@ static void invoke(private_linked_list_t *this, size_t offset)
 }
 
 /**
+ * Implementation of linked_list_t.clone_offset
+ */
+static linked_list_t *clone_offset(private_linked_list_t *this, size_t offset)
+{
+	linked_list_t *clone = linked_list_create();
+	element_t *current = this->first;
+	
+	while (current)
+	{
+		void* (**method)(void*) = current->value + offset;
+		clone->insert_last(clone, (*method)(current->value));
+		current = current->next;
+	}
+	
+	return clone;
+}
+
+/**
+ * Implementation of linked_list_t.clone_function
+ */
+static linked_list_t *clone_function(private_linked_list_t *this, void* (*fn)(void*))
+{
+	linked_list_t *clone = linked_list_create();
+	element_t *current = this->first;
+	
+	while (current)
+	{
+		clone->insert_last(clone, fn(current->value));
+		current = current->next;
+	}
+	
+	return clone;
+}
+
+/**
  * Implementation of linked_list_t.destroy.
  */
 static void destroy(private_linked_list_t *this)
@@ -754,6 +790,8 @@ linked_list_t *linked_list_create()
 	this->public.remove_at_position = (status_t (*) (linked_list_t *,size_t, void **))remove_at_position;
 	this->public.get_at_position = (status_t (*) (linked_list_t *,size_t, void **))get_at_position;
 	this->public.invoke = (void (*)(linked_list_t*,size_t))invoke;
+	this->public.clone_offset = (linked_list_t * (*)(linked_list_t*,size_t))clone_offset;
+	this->public.clone_function = (linked_list_t * (*)(linked_list_t*,void*(*)(void*)))clone_function;
 	this->public.destroy = (void (*) (linked_list_t *))destroy;
 	this->public.destroy_offset = (void (*) (linked_list_t *,size_t))destroy_offset;
 	this->public.destroy_function = (void (*)(linked_list_t*,void(*)(void*)))destroy_function;

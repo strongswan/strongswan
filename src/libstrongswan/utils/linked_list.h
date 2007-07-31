@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -184,6 +185,24 @@ struct linked_list_t {
 	 * @param offset	offset of the method to invoke on objects
 	 */
 	void (*invoke) (linked_list_t *this, size_t offset);
+	
+	/**
+	 * @brief Clones a list and its objects using the objects' clone method.
+	 * 
+	 * @param this		calling object
+	 * @param offset	offset ot the objects clone function
+	 * @return			cloned list
+	 */
+	linked_list_t *(*clone_offset) (linked_list_t *this, size_t offset);
+	
+	/**
+	 * @brief Clones a list and its objects using a given function.
+	 * 
+	 * @param this		calling object
+	 * @param function	function that clones an object
+	 * @return			cloned list
+	 */
+	linked_list_t *(*clone_function) (linked_list_t *this, void*(*)(void*));
 	
 	/**
 	 * @brief Destroys a linked_list object.
