@@ -31,6 +31,7 @@
 #include "dumm.h"
 #include "guest.h"
 #include "mconsole.h"
+#include "cowfs.h"
 
 #define PERME (S_IRWXU | S_IRWXG)
 #define PERM (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
@@ -54,8 +55,8 @@ struct private_guest_t {
 	guest_state_t state;
 	/** log file for console 0 */
 	int bootlog;
-	/** has the unionfs been mounted */
-	bool mounted;
+	/** FUSE cowfs instance */
+	cowfs_t *cowfs;
 	/** mconsole to control running UML */
 	mconsole_t *mconsole;
 	/** list of interfaces attached to the guest */
@@ -259,21 +260,13 @@ static void sigchild(private_guest_t *this)
  */
 static bool umount_unionfs(private_guest_t *this)
 {
-	char cmd[128];
-	size_t len;
-	
-	if (this->mounted)
+	if (this->cowfs)
 	{
-		len = snprintf(cmd, sizeof(cmd), "fusermount -u %s/%s",
-					   this->dirname, UNION_DIR);
-		if (len < 0 || len >= sizeof(cmd) || system(cmd) != 0)
-		{
-			DBG1("unmounting guest unionfs failed");
-			return FALSE;
-		}
-		this->mounted = FALSE;
+		this->cowfs->destroy(this->cowfs);
+		this->cowfs = NULL;
+		return TRUE;
 	}
-	return TRUE;
+	return FALSE;
 }
 
 /**
@@ -281,22 +274,23 @@ static bool umount_unionfs(private_guest_t *this)
  */
 static bool mount_unionfs(private_guest_t *this)
 {
-	char cmd[256];
-	size_t len;
+	char master[PATH_MAX];
+	char diff[PATH_MAX];
+	char mount[PATH_MAX];
 	
-	if (!this->mounted)
+	snprintf(master, sizeof(master), "%s/%s", this->dirname, MASTER_DIR);
+	snprintf(diff, sizeof(diff), "%s/%s", this->dirname, DIFF_DIR);
+	snprintf(mount, sizeof(mount), "%s/%s", this->dirname, UNION_DIR);
+
+	if (this->cowfs == NULL)
 	{
-		len = snprintf(cmd, sizeof(cmd), "unionfs %s/%s:%s/%s %s/%s",
-					   this->dirname, MASTER_DIR, this->dirname, DIFF_DIR,
-					   this->dirname, UNION_DIR);
-		if (len < 0 || len >= sizeof(cmd) || system(cmd) != 0)
+		this->cowfs = cowfs_create(master, diff, mount);
+		if (this->cowfs)
 		{
-			DBG1("mounting guest unionfs failed");
-			return FALSE;
+			return TRUE;
 		}
-		this->mounted = TRUE;
 	}
-	return TRUE;
+	return FALSE;
 }
 
 /**
@@ -423,7 +417,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->mem = 0;
 	this->bootlog = open_bootlog(this);
 	this->name = strdup(name);
-	this->mounted = FALSE;
+	this->cowfs = NULL;
 	
 	return this;
 }
