@@ -36,7 +36,14 @@ starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
     if ((c1 == NULL) || (c2 == NULL))
 	return FALSE;
 
-    ADDCMP(addr);
+    if (c2->dns_failed)
+    {
+	c2->addr = c1->addr;
+    }
+    else
+    {
+	ADDCMP(addr);
+    }
     ADDCMP(nexthop);
     ADDCMP(srcip);
     SUBCMP(subnet);

@@ -76,6 +76,7 @@ struct starter_end {
 	bool		firewall;
 	bool		hostaccess;
 	bool		allow_any;
+	bool		dns_failed;
 	char 		*updown;
 	u_int16_t	port;
 	u_int8_t	protocol;

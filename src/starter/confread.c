@@ -193,11 +193,9 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		}
 		else
 		{
-			bool fallback_to_any = FALSE;
-
+			/* check for allow_any prefix */
 			if (value[0] == '%')
 			{
-				fallback_to_any = TRUE;
 				end->allow_any = TRUE;
 				value++;
 			}
@@ -206,12 +204,10 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			if (ugh != NULL)
 			{
 				plog("# bad addr: %s=%s [%s]", name, value, ugh);
-				if (fallback_to_any)
+				if (streq(ugh, "does not look numeric and name lookup failed"))
 				{
-					plog("# fallback to %s=%%any due to '%%' prefix");
+					end->dns_failed = TRUE;
 					anyaddr(conn->addr_family, &end->addr);
-					end->allow_any = FALSE;
-					cfg->non_fatal_err++;
 				}
 				else
 				{
@@ -337,6 +333,27 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 err:
 	plog("  bad argument value in conn '%s'", conn_name);
 	cfg->err++;
+}
+
+/*
+ * handles left|right=<FQDN> DNS resolution failure
+ */
+static void
+handle_dns_failure( const char *label, starter_end_t *end, starter_config_t *cfg)
+{
+	if (end->dns_failed)
+	{
+		if (end->allow_any)
+		{
+			plog("# fallback to %s=%%any due to '%%' prefix or %sallowany=yes",
+				label, label);
+		}
+		else
+		{
+			/* declare an error */
+			cfg->err++;
+		}
+	}
 }
 
 /*
@@ -543,6 +560,9 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			break;
 		}
 	}
+
+	handle_dns_failure("left", &conn->left, cfg);
+	handle_dns_failure("right", &conn->right, cfg);
 	handle_firewall("left", &conn->left, cfg);
 	handle_firewall("right", &conn->right, cfg);
 }
