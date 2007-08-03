@@ -18,6 +18,7 @@
 
 
 #define FUSE_USE_VERSION 26
+#define _GNU_SOURCE
 
 #include <fuse.h>
 #include <stdlib.h>
@@ -35,6 +36,10 @@
 #include <library.h>
 #include <debug.h>
 
+/** define _XOPEN_SOURCE 500 fails when using libstrongswan, define popen */
+extern ssize_t pread(int fd, void *buf, size_t count, off_t offset);
+extern ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
+
 typedef struct private_cowfs_t private_cowfs_t;
 
 struct private_cowfs_t {
@@ -46,266 +51,676 @@ struct private_cowfs_t {
 	struct fuse *fuse;
 	/** mountpoint of cowfs FUSE */
 	char *mount;
-	/** read only master filesystem */
+	/** master filesystem path */
 	char *master;
-	/** copy on write overlay to master */
+	/** host filesystem path */
 	char *host;
+	/** scenario filesystem path */
+	char *scen;
+	/** fd of read only master filesystem */
+	int master_fd;
+	/** copy on write overlay to master */
+	int host_fd;
 	/** optional scenario COW overlay */
-	char *scenario;
+	int scen_fd;
 	/** thread processing FUSE */
 	pthread_t thread;
 };
 
+static private_cowfs_t *get_this()
+{
+	return (fuse_get_context())->private_data;
+}
 
+static void rel(const char **path)
+{
+	if (**path == '/')
+	{
+		(*path)++;
+	}
+	if (**path == '\0')
+	{
+		*path = ".";
+	}
+}
+
+/**
+ * get the filesystem to read something from
+ */
+static int get_rd(const char *path)
+{
+	private_cowfs_t *this = get_this();
+
+	if (this->scen_fd > 0 && faccessat(this->scen_fd, path, F_OK, 0) == 0)
+	{
+		return this->scen_fd;
+	}
+	if (faccessat(this->host_fd, path, F_OK, 0) == 0)
+	{
+		return this->host_fd;
+	}
+	return this->master_fd;
+}
+
+/**
+ * get the filesystem to write something to
+ */
+static int get_wr(const char *path)
+{
+	private_cowfs_t *this = get_this();
+	if (this->scen_fd > 0)
+	{
+		return this->scen_fd;
+	}
+	return this->host_fd;
+}
+
+/**
+ * create all directories need to create the file "path"
+ */
+static bool clone_path(int rd, int wr, const char *path)
+{
+	char *pos, *full;
+	struct stat st;
+	full = strdupa(path);
+	pos = full;
+	
+	while ((pos = strchr(pos, '/')))
+	{
+		*pos = '\0';
+		if (fstatat(wr, full, &st, 0) < 0)
+		{
+			/* TODO: handle symlinks! */
+			if (fstatat(rd, full, &st, 0) < 0)
+			{
+				return FALSE;
+			}
+			if (mkdirat(wr, full, st.st_mode) < 0)
+			{
+				return FALSE;
+			}
+		}
+		*pos = '/';
+		pos++;
+	}
+	return TRUE;
+}
+
+/**
+ * copy a file from a readonly to a read-write overlay
+ */
+static int copy(const char *path)
+{
+	char *buf[4096];
+	int len;
+	int rd, wr;
+	int from, to;
+	struct stat st;
+	
+	rd = get_rd(path);
+	wr = get_wr(path);
+	
+	if (rd == wr)
+	{
+		/* already writeable */
+		return wr;
+	}
+	if (fstatat(rd, path, &st, 0) < 0)
+	{
+		return -1;
+	}
+	from = openat(rd, path, O_RDONLY, st.st_mode);
+	if (from < 0)
+	{
+		return -1;
+	}
+	if (!clone_path(rd, wr, path))
+	{
+		return -1;
+	}
+	to = openat(wr, path, O_WRONLY | O_CREAT, st.st_mode);
+	if (to < 0)
+	{
+		close(from);
+		return -1;
+	}
+	while ((len = read(from, buf, sizeof(buf))) > 0)
+	{
+		if (write(to, buf, len) < len)
+		{
+			close(from);
+			close(to);
+			return -1;
+		}
+	}
+	close(from);
+	close(to);
+	if (len < 0)
+	{
+		return -1;
+	}
+	return wr;
+}
+
+/**
+ * FUSE getattr method
+ */
 static int cowfs_getattr(const char *path, struct stat *stbuf)
 {
-    int res;
+	rel(&path);
 
-    res = lstat(path, stbuf);
-    if (res == -1)
-        return -errno;
-
-    return 0;
+	if (fstatat(get_rd(path), path, stbuf, AT_SYMLINK_NOFOLLOW) < 0)
+	{
+		return -errno;
+	}
+	return 0;
 }
 
+/**
+ * FUSE access method
+ */
 static int cowfs_access(const char *path, int mask)
 {
-    int res;
-
-    res = access(path, mask);
-    if (res == -1)
-        return -errno;
-
+	rel(&path);
+	
+	if (faccessat(get_rd(path), path, mask, 0) < 0)
+	{
+		return -errno;
+	}
     return 0;
 }
 
+/**
+ * FUSE readlink method
+ */
 static int cowfs_readlink(const char *path, char *buf, size_t size)
 {
-    int res;
+	int res;
 
-    res = readlink(path, buf, size - 1);
-    if (res == -1)
+	rel(&path);
+	
+	res = readlinkat(get_rd(path), path, buf, size - 1);
+    if (res < 0)
+    {
         return -errno;
-
+	}
     buf[res] = '\0';
     return 0;
 }
 
-
-static int cowfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-                       off_t offset, struct fuse_file_info *fi)
+/**
+ * get a directory stream of two concatenated paths
+ */
+static DIR* get_dir(char *dir, const char *subdir)
 {
-    DIR *dp;
-    struct dirent *de;
+	char *full;
+	
+	if (dir == NULL)
+	{
+		return NULL;
+	}
+	
+	full = alloca(strlen(dir) + strlen(subdir) + 1);
+	strcpy(full, dir);
+	strcat(full, subdir);
+	
+	return opendir(full);
+}
 
-    (void) offset;
-    (void) fi;
+/**
+ * check if a directory stream contains a directory
+ */
+static bool contains_dir(DIR *d, char *dirname)
+{
+	if (d)
+	{
+		struct dirent *ent;
+		
+		rewinddir(d);
+		while ((ent = readdir(d)))
+		{
+			if (streq(ent->d_name, dirname))
+			{
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
 
-    dp = opendir(path);
-    if (dp == NULL)
-        return -errno;
-
-    while ((de = readdir(dp)) != NULL) {
-        struct stat st;
-        memset(&st, 0, sizeof(st));
-        st.st_ino = de->d_ino;
-        st.st_mode = de->d_type << 12;
-        if (filler(buf, de->d_name, &st, 0))
-            break;
-    }
-
-    closedir(dp);
+/**
+ * FUSE readdir method
+ */
+static int cowfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
+						 off_t offset, struct fuse_file_info *fi)
+{
+	private_cowfs_t *this = get_this();
+	DIR *d1, *d2, *d3;
+	struct stat st;
+	struct dirent *ent;
+	
+	memset(&st, 0, sizeof(st));
+	
+	d1 = get_dir(this->master, path);
+	d2 = get_dir(this->host, path);
+	d3 = get_dir(this->scen, path);
+	
+	if (d1)
+	{
+		while ((ent = readdir(d1)))
+		{
+			if (!contains_dir(d2, ent->d_name) &&
+				!contains_dir(d3, ent->d_name))
+			{
+				st.st_ino = ent->d_ino;
+				st.st_mode = ent->d_type << 12;
+	        	filler(buf, ent->d_name, &st, 0);
+			}
+		}
+		closedir(d1);
+	}
+	if (d2)
+	{
+		rewinddir(d2);
+		while ((ent = readdir(d2)))
+		{
+			if (!contains_dir(d3, ent->d_name))
+			{
+				st.st_ino = ent->d_ino;
+				st.st_mode = ent->d_type << 12;
+	        	filler(buf, ent->d_name, &st, 0);
+			}
+		}
+		closedir(d2);
+	}
+	if (d3)
+	{
+		rewinddir(d3);
+		while ((ent = readdir(d3)))
+		{
+			st.st_ino = ent->d_ino;
+			st.st_mode = ent->d_type << 12;
+        	filler(buf, ent->d_name, &st, 0);
+		}
+		closedir(d3);
+	}
     return 0;
 }
 
+/**
+ * FUSE mknod method
+ */
 static int cowfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
-    int res;
+	int fd;
+	rel(&path);
 
-    res = mknod(path, mode, rdev);
-    if (res == -1)
-        return -errno;
+	fd = get_wr(path);
+	if (!clone_path(get_rd(path), fd, path))
+	{
+		return -errno;
+	}
 
-    return 0;
+	if (mknodat(fd, path, mode, rdev) < 0)
+	{
+		return -errno;
+	}
+	return 0;
 }
 
+/**
+ * FUSE mkdir method
+ */
 static int cowfs_mkdir(const char *path, mode_t mode)
 {
-    int res;
+	int fd;
+	rel(&path);
 
-    res = mkdir(path, mode);
-    if (res == -1)
-        return -errno;
-
-    return 0;
+	fd = get_wr(path);
+	if (!clone_path(get_rd(path), fd, path))
+	{
+		return -errno;
+	}
+	if (mkdirat(fd, path, mode) < 0)
+	{
+		return -errno;
+	}
+	return 0;
 }
 
+/**
+ * FUSE unlink method
+ */
 static int cowfs_unlink(const char *path)
 {
-    int res;
-
-    res = unlink(path);
-    if (res == -1)
-        return -errno;
-
+	rel(&path);
+	
+	/* TODO: whiteout master */
+	if (unlinkat(get_wr(path), path, 0) < 0)
+	{
+		return -errno;
+	}
     return 0;
 }
 
+/**
+ * FUSE rmdir method
+ */
 static int cowfs_rmdir(const char *path)
 {
-    int res;
-
-    res = rmdir(path);
-    if (res == -1)
-        return -errno;
-
+	rel(&path);
+	
+	/* TODO: whiteout master */
+	if (unlinkat(get_wr(path), path, AT_REMOVEDIR) < 0)
+	{
+		return -errno;
+	}
     return 0;
 }
 
+/**
+ * FUSE symlink method
+ */
 static int cowfs_symlink(const char *from, const char *to)
 {
-    int res;
+	rel(&to);
 
-    res = symlink(from, to);
-    if (res == -1)
-        return -errno;
-
-    return 0;
+	/* TODO: relative from? */
+	if (symlinkat(from, get_wr(to), to) < 0)
+	{
+		return -errno;
+	}
+	return 0;
 }
 
+/**
+ * FUSE rename method
+ */
 static int cowfs_rename(const char *from, const char *to)
 {
-    int res;
+	int fd;
+	private_cowfs_t *this = get_this();
 
-    res = rename(from, to);
-    if (res == -1)
-        return -errno;
+	rel(&from);
+	rel(&to);
 
-    return 0;
+	fd = get_rd(from);
+	if (fd == this->master_fd)
+	{
+		fd = copy(from);
+		if (fd < 0)
+		{
+			return -errno;
+		}
+	}
+	
+	if (renameat(fd, from, get_wr(to), to) < 0)
+	{
+	    return -errno;
+	}
+	return 0;
 }
 
+/**
+ * FUSE link method
+ */
 static int cowfs_link(const char *from, const char *to)
 {
-    int res;
+	rel(&from);
+	rel(&to);
 
-    res = link(from, to);
-    if (res == -1)
-        return -errno;
-
+    if (linkat(get_rd(from), from, get_wr(to), to, 0) < 0)
+    {
+    	return -errno;
+	}
     return 0;
 }
 
+/**
+ * FUSE chmod method
+ */
 static int cowfs_chmod(const char *path, mode_t mode)
 {
-    int res;
-
-    res = chmod(path, mode);
-    if (res == -1)
-        return -errno;
-
-    return 0;
+	int fd;
+	struct stat st;
+	private_cowfs_t *this = get_this();
+	
+	rel(&path);
+	fd = get_rd(path);
+	if (fd == this->master_fd)
+	{
+		if (fstatat(fd, path, &st, 0) < 0)
+		{
+			return -errno;
+		}
+		if (st.st_mode == mode)
+		{
+			return 0;
+		}
+		fd = copy(path);
+		if (fd < 0)
+		{
+			return -errno;
+		}
+	}
+	if (fchmodat(fd, path, mode, 0) < 0)
+	{
+		return -errno;
+	}
+	return 0;
 }
 
+/**
+ * FUSE chown method
+ */
 static int cowfs_chown(const char *path, uid_t uid, gid_t gid)
 {
-    int res;
-
-    res = lchown(path, uid, gid);
-    if (res == -1)
-        return -errno;
-
-    return 0;
+	int fd;
+	struct stat st;
+	private_cowfs_t *this = get_this();
+	
+	rel(&path);
+	fd = get_rd(path);
+	if (fd == this->master_fd)
+	{
+		if (fstatat(fd, path, &st, 0) < 0)
+		{
+			return -errno;
+		}
+		if (st.st_uid == uid && st.st_gid == gid)
+		{
+			return 0;
+		}
+		fd = copy(path);
+		if (fd < 0)
+		{
+			return -errno;
+		}
+	}
+	if (fchownat(fd, path, uid, gid, AT_SYMLINK_NOFOLLOW) < 0)
+	{
+		return -errno;
+	}
+	return 0;
 }
 
+/**
+ * FUSE truncate method
+ */
 static int cowfs_truncate(const char *path, off_t size)
 {
-    int res;
+	int fd;
+	struct stat st;
+	private_cowfs_t *this = get_this();
 
-    res = truncate(path, size);
-    if (res == -1)
-        return -errno;
-
-    return 0;
+	rel(&path);
+	fd = get_rd(path);
+	if (fd == this->master_fd)
+	{
+		if (fstatat(fd, path, &st, 0) < 0)
+		{
+			return -errno;
+		}
+		if (st.st_size == size)
+		{
+			return 0;
+		}
+		fd = copy(path);
+		if (fd < 0)
+		{
+			return -errno;
+		}
+	}
+	fd = openat(fd, path, O_WRONLY);
+	if (fd < 0)
+	{
+		return -errno;
+	}
+	if (ftruncate(fd, size) < 0)
+	{
+		close(fd);
+		return -errno;
+	}
+	close(fd);
+	return 0;
 }
 
+/**
+ * FUSE utimens method
+ */
 static int cowfs_utimens(const char *path, const struct timespec ts[2])
 {
-    int res;
-    struct timeval tv[2];
+	struct timeval tv[2];
+	int fd;
+	private_cowfs_t *this = get_this();
 
-    tv[0].tv_sec = ts[0].tv_sec;
-    tv[0].tv_usec = ts[0].tv_nsec / 1000;
-    tv[1].tv_sec = ts[1].tv_sec;
-    tv[1].tv_usec = ts[1].tv_nsec / 1000;
+	rel(&path);
+	fd = get_rd(path);
+	if (fd == this->master_fd)
+	{
+		fd = copy(path);
+		if (fd < 0)
+		{
+			return -errno;
+		}
+	}
 
-    res = utimes(path, tv);
-    if (res == -1)
-        return -errno;
+	tv[0].tv_sec = ts[0].tv_sec;
+	tv[0].tv_usec = ts[0].tv_nsec / 1000;
+	tv[1].tv_sec = ts[1].tv_sec;
+	tv[1].tv_usec = ts[1].tv_nsec / 1000;
 
-    return 0;
+	if (futimesat(fd, path, tv) < 0)
+	{
+		return -errno;
+	}
+	return 0;
 }
 
+/**
+ * FUSE open method
+ */
 static int cowfs_open(const char *path, struct fuse_file_info *fi)
 {
-    int res;
+	int fd;
 
-    res = open(path, fi->flags);
-    if (res == -1)
-        return -errno;
+	rel(&path);
+	fd = get_rd(path);
 
-    close(res);
-    return 0;
+	fd = openat(fd, path, fi->flags);
+	if (fd < 0)
+	{
+		return -errno;
+	}
+	close(fd);
+	return 0;
 }
 
+/**
+ * FUSE read method
+ */
 static int cowfs_read(const char *path, char *buf, size_t size, off_t offset,
-                    struct fuse_file_info *fi)
+					  struct fuse_file_info *fi)
 {
-    int fd;
-    int res;
+	int file, fd, res;
 
-    (void) fi;
-    fd = open(path, O_RDONLY);
-    if (fd == -1)
-        return -errno;
+	rel(&path);
 
-    res = pread(fd, buf, size, offset);
-    if (res == -1)
-        res = -errno;
+	fd = get_rd(path);
 
-    close(fd);
-    return res;
+	file = openat(fd, path, O_RDONLY);
+	if (file < 0)
+	{
+		return -errno;
+	}
+	res = pread(file, buf, size, offset);
+	if (res < 0)
+	{
+		res = -errno;
+	}
+	close(file);
+	return res;
 }
 
+/**
+ * FUSE write method
+ */
 static int cowfs_write(const char *path, const char *buf, size_t size,
-                     off_t offset, struct fuse_file_info *fi)
+					   off_t offset, struct fuse_file_info *fi)
 {
-    int fd;
-    int res;
+	private_cowfs_t *this = get_this();
+	int file, fd, res;
 
-    (void) fi;
-    fd = open(path, O_WRONLY);
-    if (fd == -1)
-        return -errno;
+	rel(&path);
 
-    res = pwrite(fd, buf, size, offset);
-    if (res == -1)
-        res = -errno;
-
-    close(fd);
-    return res;
+	fd = get_rd(path);
+	if (fd == this->master_fd)
+	{
+		fd = copy(path);
+		if (fd < 0)
+		{
+			return -errno;
+		}
+	}
+	file = openat(fd, path, O_WRONLY);
+	if (file < 0)
+	{
+		return -errno;
+	}
+	res = pwrite(file, buf, size, offset);
+	if (res < 0)
+	{
+		res = -errno;
+	}
+	close(file);
+	return res;
 }
 
+/**
+ * FUSE statfs method
+ */
 static int cowfs_statfs(const char *path, struct statvfs *stbuf)
 {
-    int res;
+	private_cowfs_t *this = get_this();
+	int fd;
+	
+	fd = this->host_fd;
+	if (this->scen_fd > 0)
+	{
+		fd = this->scen_fd;
+	}
 
-    res = statvfs(path, stbuf);
-    if (res == -1)
-        return -errno;
-
+	if (fstatvfs(fd, stbuf) < 0)
+	{
+		return -errno;
+	}
+	
     return 0;
 }
 
+/** 
+ * FUSE init method
+ */
 static void *cowfs_init(struct fuse_conn_info *conn)
 {
 	struct fuse_context *ctx;
@@ -315,6 +730,9 @@ static void *cowfs_init(struct fuse_conn_info *conn)
 	return ctx->private_data;
 }
 
+/**
+ * FUSE method vectors
+ */
 static struct fuse_operations cowfs_operations = {
     .getattr	= cowfs_getattr,
     .access		= cowfs_access,
@@ -343,8 +761,16 @@ static struct fuse_operations cowfs_operations = {
  */
 static void set_scenario(private_cowfs_t *this, char *path)
 {
-	free(this->scenario);
-	this->scenario = path ? strdup(path) : NULL;
+	if (this->scen)
+	{
+		free(this->scen);
+	}
+	if (this->scen_fd > 0)
+	{
+		close(this->scen_fd);
+	}
+	this->scen = strdup(path);
+	this->scen_fd = open(path, O_RDONLY | O_DIRECTORY);
 }
 
 /**
@@ -359,7 +785,13 @@ static void destroy(private_cowfs_t *this)
 	free(this->mount);
 	free(this->master);
 	free(this->host);
-	free(this->scenario);
+	free(this->scen);
+	close(this->master_fd);
+	close(this->host_fd);
+	if (this->scen_fd > 0)
+	{
+		close(this->scen_fd);
+	}
 	free(this);
 }
 
@@ -374,10 +806,27 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 	this->public.set_scenario = (void(*)(cowfs_t*, char *path))set_scenario;
 	this->public.destroy = (void(*)(cowfs_t*))destroy;
 	
+    this->master_fd = open(master, O_RDONLY | O_DIRECTORY);
+    if (this->master_fd < 0)
+    {
+    	DBG1("failed to open master filesystem '%s'", master);
+    	free(this);
+    }
+    this->host_fd = open(host, O_RDONLY | O_DIRECTORY);
+	if (this->master_fd < 0)
+    {
+    	DBG1("failed to open host filesystem '%s'", host);
+    	close(this->master_fd);
+    	free(this);
+    }
+	this->scen_fd = -1;
+	
     this->chan = fuse_mount(mount, &args);
     if (this->chan == NULL)
     {
     	DBG1("mounting cowfs FUSE on '%s' failed", mount);
+    	close(this->master_fd);
+    	close(this->host_fd);
     	free(this);
     	return NULL;
     }
@@ -387,6 +836,8 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
     if (this->fuse == NULL)
     {
     	DBG1("creating cowfs FUSE handle failed");
+    	close(this->master_fd);
+    	close(this->host_fd);
     	fuse_unmount(mount, this->chan);
     	free(this);
     	return NULL;
@@ -395,7 +846,7 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
     this->mount = strdup(mount);
     this->master = strdup(master);
     this->host = strdup(host);
-	this->scenario = NULL;
+    this->scen = NULL;
 	
 	if (pthread_create(&this->thread, NULL, (void*)fuse_loop_mt, this->fuse) != 0)
 	{
@@ -404,6 +855,8 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
     	free(this->mount);
     	free(this->master);
     	free(this->host);
+    	close(this->master_fd);
+    	close(this->host_fd);
     	free(this);
     	return NULL;
 	}
