@@ -241,12 +241,12 @@ doroute() {
 	    if test "$1" = "add"
 	    then
 		addsource
-		if [ `ip rule list | grep "lookup ${SOURCEIP_ROUTING_TABLE}" | wc -l` -eq 0 ]
+		if ! ip rule list | grep -q "lookup $SOURCEIP_ROUTING_TABLE"
 		then
-		    ip rule add pref ${SOURCEIP_ROUTING_TABLE_PRIO} table ${SOURCEIP_ROUTING_TABLE}
+		    ip rule add pref $SOURCEIP_ROUTING_TABLE_PRIO table $SOURCEIP_ROUTING_TABLE
 		fi
 	    fi
-	    parms3="$parms3 src ${PLUTO_MY_SOURCEIP%/*} table ${SOURCEIP_ROUTING_TABLE}"
+	    parms3="$parms3 src ${PLUTO_MY_SOURCEIP%/*} table $SOURCEIP_ROUTING_TABLE"
 	fi
 
 	case "$PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK" in
