@@ -39,7 +39,7 @@ for host in $HOSTS
 do
     uml_mconsole $host halt &> /dev/null
 done
-cecho "\033[1;32mdone"
+cgecho "done"
 
 #####################################################
 # Shutting down the uml switches
@@ -47,5 +47,5 @@ cecho "\033[1;32mdone"
 cecho-n " * Stopping the UML switches.."
 killall uml_switch &> /dev/null
 rm -f /tmp/umlswitch[012] &> /dev/null 2>&1
-cecho "\033[1;32mdone"
+cgecho "done"
 

@@ -48,6 +48,8 @@ TESTRESULTSHTML=$TODAYDIR/all.html
 INDEX=$TODAYDIR/index.html
 DEFAULTTESTSDIR=$UMLTESTDIR/testing/tests
 
+SOURCEIP_ROUTING_TABLE=100
+
 testnumber="0"
 failed_cnt="0"
 passed_cnt="0"
@@ -460,7 +462,7 @@ do
 		    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
 	    done
 
-	    ssh $HOSTLOGIN ip route list \
+	    ssh $HOSTLOGIN ip route list table $SOURCEIP_ROUTING_TABLE \
 		    > $TESTRESULTDIR/${host}.iproute 2>/dev/null
 	    ssh $HOSTLOGIN iptables -v -n -L \
 		    > $TESTRESULTDIR/${host}.iptables 2>/dev/null
@@ -480,7 +482,7 @@ do
 	  <ul>
 	    <li><a href="$host.auth.log">auth.log</a></li>
 	    <li><a href="$host.daemon.log">daemon.log</a></li>
-	    <li><a href="$host.iproute">ip route list</a></li>
+	    <li><a href="$host.iproute">ip route list table $SOURCEIP_ROUTING_TABLE</a></li>
 	    <li><a href="$host.iptables">iptables -L</a></li>
 	</ul>
       </td>
@@ -655,7 +657,7 @@ cecho-n "Copying test results to winnetou.."
 ssh root@${ipv4_winnetou} mkdir -p $HTDOCS/testresults > /dev/null 2>&1
 scp -r $TODAYDIR root@${ipv4_winnetou}:$HTDOCS/testresults > /dev/null 2>&1
 ssh root@${ipv4_winnetou} ln -s $HTDOCS/images $HTDOCS/testresults/$TESTDATE/images > /dev/null 2>&1
-cecho "done"
+cgecho "done"
 cecho ""
 cecho "The results are available in $TODAYDIR"
 cecho "or via the link http://$ipv4_winnetou/testresults/$TESTDATE"

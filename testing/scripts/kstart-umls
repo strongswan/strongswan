@@ -68,7 +68,7 @@ do
 	    ubda=$UMLHOSTFS \
 	    \$SWITCH_${host} \
 	    mem=${MEM}M con=pty con0=fd:0,fd:1" &
-        cecho "\033[1;32mdone"
+        cgecho "done"
     fi
     let "x0+=dx"
     let "y0+=dy"
@@ -114,7 +114,7 @@ do
 	cecho "exit"
 	exit 1
     else
-	cecho "\033[1;32mup"
+	cgecho "up"
     fi
 done
 

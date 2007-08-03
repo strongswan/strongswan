@@ -32,7 +32,7 @@ if [ ! -d $BUILDDIR ]
 then
     cecho-n " * Directory '$BUILDDIR' does not exist..creating.."
     mkdir $BUILDDIR
-    cecho "done"
+    cgecho "done"
 fi
 
 LOGFILE=${BUILDDIR}/testing.log
@@ -41,7 +41,7 @@ if [ ! -f $LOGFILE ]
 then
     cecho-n " * Logfile '$LOGFILE' does not exist..creating.."
     touch $LOGFILE
-    cecho "done"
+    cgecho "done"
 fi
 
 LOOPDIR=loop
@@ -76,4 +76,4 @@ do
     umount $LOOPDIR
 done
 
-cecho "done"
+cgecho "done"

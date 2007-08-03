@@ -37,25 +37,25 @@ if [ ! -f $LOGFILE ]
 then
     cecho-n " * Logfile '$LOGFILE' does not exist..creating.."
     touch $LOGFILE
-    cecho "done"
+    cgecho "done"
 fi
 
 if [ ! -d ~/.ssh ]
 then
     cecho-n " * Creating directory '~/.ssh'.."
     mkdir ~/.ssh
-    cecho "done"
+    cgecho "done"
 fi
 
 if [ -f ~/.ssh/known_hosts ]
 then
     cecho-n " * Backing up ~/.ssh/known_hosts to '~/.ssh/known_hosts.before_uml'.."
     cp -fp ~/.ssh/known_hosts ~/.ssh/known_hosts.before_uml
-    cecho "done"
+    cgecho "done"
 else
     cecho-n " * Creating '~/.ssh/known_hosts'"
     touch ~/.ssh/known_hosts
-    cecho "done"
+    cgecho "done"
 fi
 
 for host in $HOSTNAMEIPV4
@@ -68,7 +68,7 @@ do
     else
 	cecho-n " * Adding uml host $HOSTNAME ($IP) to '~/.ssh/known_hosts'.."
 	echo "$HOSTNAME,$IP `cat $DIR/../hosts/ssh_host_rsa_key.pub`" >> ~/.ssh/known_hosts
-	cecho "done"
+	cgecho "done"
     fi
 done
 
@@ -84,5 +84,5 @@ else
     cecho "not found"
     cecho-n " * Generating ssh rsa key pair.."
     echo "" | ssh-keygen -N "" -t rsa -f ~/.ssh/id_rsa >> $LOGFILE 2>&1
-    cecho "done"
+    cgecho "done"
 fi

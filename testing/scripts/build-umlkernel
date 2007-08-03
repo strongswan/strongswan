@@ -75,12 +75,12 @@ if [ ! -f $LOGFILE ]
 then
     cecho-n " * Logfile '$LOGFILE' does not exist..creating.."
     touch $LOGFILE
-    cecho "done"
+    cgecho "done"
 fi
 
 cecho-n " * Unpacking kernel.."
 tar xjf $KERNEL >> $LOGFILE 2>&1
-cecho "done"
+cgecho "done"
 
 KERNELDIR=${BUILDDIR}/linux-${KERNELVERSION}
 
@@ -109,7 +109,7 @@ if [ $UMLPATCH ]
 then
     cecho-n " * Applying uml patch.."
     bzcat $UMLPATCH | patch -p1 >> $LOGFILE 2>&1
-    cecho  "done"
+    cgecho  "done"
 fi
 
 #######################################################
@@ -125,10 +125,8 @@ make oldconfig ARCH=um >> $LOGFILE 2>&1
 
 cecho-n " * Now compiling uml kernel.."
 make linux ARCH=um  >> $LOGFILE 2>&1
-cecho "done"
+cgecho "done"
 
 cecho-n " * Copying uml kernel to '${BUILDDIR}/linux-uml-${KERNELVERSION}'.."
 mv linux ${BUILDDIR}/linux-uml-${KERNELVERSION}
-cecho "done"
-
-
+cgecho "done"

@@ -57,7 +57,7 @@ if [ ! -f $LOGFILE ]
 then
     cecho-n " * Logfile '$LOGFILE' does not exist..creating.."
     touch $LOGFILE
-    cecho "done"
+    cgecho "done"
 fi
 
 ROOTFSDIR=$BUILDDIR/root-fs
@@ -66,7 +66,7 @@ if [ ! -d $ROOTFSDIR ]
 then
     cecho-n " * Root file system directory '$ROOTFSDIR' does not exist..creating.."
     mkdir $ROOTFSDIR
-    cecho "done"
+    cgecho "done"
 fi
 
 cd $ROOTFSDIR
@@ -87,7 +87,7 @@ dd if=/dev/zero of=gentoo-fs count=$ROOTFSSIZE bs=1M >> $LOGFILE 2>&1
 mkreiserfs -q -f gentoo-fs       >> $LOGFILE 2>&1
 mount -o loop gentoo-fs $LOOPDIR >> $LOGFILE 2>&1
 tar xjpf $ROOTFS -C $LOOPDIR     >> $LOGFILE 2>&1
-cecho "done"
+cgecho "done"
 
 ######################################################
 # remove /etc/resolv.conf
@@ -150,10 +150,8 @@ echo "ldconfig" >> $INSTALLSHELL
 
 cecho-n " * Compiling $STRONGSWANVERSION within the root file system as chroot.."
 chroot $LOOPDIR /bin/bash /install.sh >> $LOGFILE 2>&1
-cecho "done"
-
 rm -f $INSTALLSHELL
-
+cgecho "done"
 
 ######################################################
 # copying the host's ssh public key
