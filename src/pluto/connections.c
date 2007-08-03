@@ -638,13 +638,24 @@ format_end(char *buf
 	strcpy(&host_id[len < 0? (ptrdiff_t)sizeof(host_id)-2 : 1 + len], "]");
     }
 
+    /* [---hop] */
+    hop[0] = '\0';
+    hop_sep = "";
+    if (that != NULL && !sameaddr(&this->host_nexthop, &that->host_addr))
+    {
+	addrtot(&this->host_nexthop, 0, hop, sizeof(hop));
+	hop_sep = "---";
+    }
+
     if (is_left)
-	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s"
+	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s%s%s"
 	    , open_brackets, client, close_brackets, client_sep
 	    , this->allow_any? "%":""
-	    , host, host_port, host_id, protoport);
+	    , host, host_port, host_id, protoport
+	    , hop_sep, hop);
     else
-	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s"
+	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s%s%s"
+	    , hop, hop_sep
 	    , this->allow_any? "%":""
 	    , host, host_port, host_id, protoport, client_sep
 	    , open_brackets, client, close_brackets);
