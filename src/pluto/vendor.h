@@ -91,6 +91,7 @@ enum known_vendorid {
   VID_STRONGSWAN_2_8_4		= 69,
   VID_STRONGSWAN_2_8_5		= 70,
   VID_STRONGSWAN_2_8_6		= 71,
+  VID_STRONGSWAN_2_8_7		= 72,
 
   VID_STRONGSWAN_4_0_0		= 80,
   VID_STRONGSWAN_4_0_1		= 81,
