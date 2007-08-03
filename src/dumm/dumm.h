@@ -30,6 +30,8 @@ typedef struct dumm_t dumm_t;
  * @brief dumm - Dynamic Uml Mesh Modeler
  *
  * Controls a group of UML guests and their networks.
+ * Dumm catches SIGCHD and SIGHUP to trace UML child processes and the FUSE
+ * filesystem. Do not overwrite these signal handlers!
  */
 struct dumm_t {
 
@@ -66,18 +68,6 @@ struct dumm_t {
 	 * @return			iterator over bridge_t's
 	 */
 	iterator_t* (*create_bridge_iterator)(dumm_t *this);
-	
-	/**
-	 * @brief Handler for received SIG_CHILD signals.
-	 *
-	 * Dumm spans children, UML kernels. To track and cleanup these kernel
-	 * processes, it is required that this method is called whenever a SIG_CHILD
-	 * is received. The user is responsible to call sigchild_handler on each
-	 * dumm_t instance with the signals siginfo_t. 
-	 *
-	 * @param info		siginfo associated to the SIG_CHILD signal
-	 */
-	void (*sigchild_handler)(dumm_t *this, siginfo_t *info);
 	
 	/**
 	 * @brief stop all guests and destroy the modeler

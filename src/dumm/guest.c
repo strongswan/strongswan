@@ -277,13 +277,13 @@ static bool mount_unionfs(private_guest_t *this)
 	char master[PATH_MAX];
 	char diff[PATH_MAX];
 	char mount[PATH_MAX];
-	
-	snprintf(master, sizeof(master), "%s/%s", this->dirname, MASTER_DIR);
-	snprintf(diff, sizeof(diff), "%s/%s", this->dirname, DIFF_DIR);
-	snprintf(mount, sizeof(mount), "%s/%s", this->dirname, UNION_DIR);
 
 	if (this->cowfs == NULL)
 	{
+		snprintf(master, sizeof(master), "%s/%s", this->dirname, MASTER_DIR);
+		snprintf(diff, sizeof(diff), "%s/%s", this->dirname, DIFF_DIR);
+		snprintf(mount, sizeof(mount), "%s/%s", this->dirname, UNION_DIR);
+		
 		this->cowfs = cowfs_create(master, diff, mount);
 		if (this->cowfs)
 		{

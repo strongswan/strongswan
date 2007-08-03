@@ -779,8 +779,8 @@ static void set_scenario(private_cowfs_t *this, char *path)
 static void destroy(private_cowfs_t *this)
 {
 	fuse_exit(this->fuse);
-	pthread_join(this->thread, NULL);
 	fuse_unmount(this->mount, this->chan);
+	pthread_join(this->thread, NULL);
 	fuse_destroy(this->fuse);
 	free(this->mount);
 	free(this->master);

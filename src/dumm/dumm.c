@@ -24,6 +24,11 @@
 
 #include "dumm.h"
 
+/**
+ * instances of dumm, used to deliver signals
+ */
+static linked_list_t *instances = NULL;
+
 typedef struct private_dumm_t private_dumm_t;
 
 struct private_dumm_t {
@@ -87,37 +92,96 @@ static iterator_t* create_bridge_iterator(private_dumm_t *this)
 }
 
 /**
- * Implementation of dumm_t.sigchild_handler.
+ * signal handler 
  */
-static void sigchild_handler(private_dumm_t *this, siginfo_t *info)
+void signal_handler(int sig, siginfo_t *info, void *ucontext)
 {
-	if (this->destroying)
+	private_dumm_t *this;
+	guest_t *guest;
+	iterator_t *iterator, *guests;
+
+	if (sig == SIGCHLD)
 	{
-		return;
-	}
-	switch (info->si_code)
-	{
-		case CLD_EXITED:
-		case CLD_KILLED:
-		case CLD_DUMPED:
+		iterator = instances->create_iterator(instances, TRUE);
+		while (iterator->iterate(iterator, (void**)&this))
 		{
-			iterator_t *iterator;
-			guest_t *guest;
-			
-			iterator = this->guests->create_iterator(this->guests, TRUE);
-			while (iterator->iterate(iterator, (void**)&guest))
+			if (this->destroying)
 			{
-				if (guest->get_pid(guest) == info->si_pid)
+				continue;
+			}
+			switch (info->si_code)
+			{
+				case CLD_EXITED:
+				case CLD_KILLED:
+				case CLD_DUMPED:
 				{
-					guest->sigchild(guest);
+					guests = this->guests->create_iterator(this->guests, TRUE);
+					while (guests->iterate(guests, (void**)&guest))
+					{
+						if (guest->get_pid(guest) == info->si_pid)
+						{
+							guest->sigchild(guest);
+							break;
+						}
+					}
+					guests->destroy(guests);
 					break;
 				}
+				default:
+					break;
 			}
-			iterator->destroy(iterator);
+		}
+		iterator->destroy(iterator);
+	}
+	/* SIGHUP is currently just ignored */
+}
+
+/**
+ * add a dumm instance
+ */
+static void add_instance(private_dumm_t *this)
+{
+	if (instances == NULL)
+	{
+		struct sigaction action;
+		
+		instances = linked_list_create();
+		
+		memset(&action, 0, sizeof(action));
+		action.sa_sigaction = signal_handler;
+		action.sa_flags = SA_SIGINFO;
+		
+		if (sigaction(SIGCHLD, &action, NULL) != 0 ||
+			sigaction(SIGHUP, &action, NULL) != 0)
+		{
+			DBG1("installing signal handler failed!");
+		}
+	}
+	instances->insert_last(instances, this);
+}
+
+/**
+ * remove a dumm instance
+ */
+static void remove_instance(private_dumm_t *this)
+{
+	iterator_t *iterator;
+	private_dumm_t *current;
+	
+	iterator = instances->create_iterator(instances, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		if (current == this)
+		{
+			iterator->remove(iterator);
 			break;
 		}
-		default:
-			break;
+	}
+	iterator->destroy(iterator);
+	if (instances->get_count(instances) == 0)
+	{
+		instances->destroy(instances);
+		instances = NULL;
 	}
 }
 
@@ -141,6 +205,7 @@ static void destroy(private_dumm_t *this)
 	this->destroying = TRUE;
 	this->guests->destroy_offset(this->guests, offsetof(guest_t, destroy));
 	free(this->dir);
+	remove_instance(this);
 	free(this);
 }
 
@@ -190,7 +255,6 @@ dumm_t *dumm_create(char *dir)
 	this->public.create_guest_iterator = (iterator_t*(*)(dumm_t*))create_guest_iterator;
 	this->public.create_bridge = (bridge_t*(*)(dumm_t*, char *name))create_bridge;
 	this->public.create_bridge_iterator = (iterator_t*(*)(dumm_t*))create_bridge_iterator;
-	this->public.sigchild_handler = (void(*)(dumm_t*, siginfo_t *info))sigchild_handler;
 	this->public.destroy = (void(*)(dumm_t*))destroy;
 	
 	this->destroying = FALSE;
@@ -204,6 +268,8 @@ dumm_t *dumm_create(char *dir)
 	}
 	this->guests = linked_list_create();
 	this->bridges = linked_list_create();
+	
+	add_instance(this);
 	
 	load_guests(this);
 	return &this->public;

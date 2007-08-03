@@ -401,14 +401,7 @@ static void list()
  */
 void signal_action(int sig, siginfo_t *info, void *ucontext)
 {
-	if (sig == SIGCHLD)
-	{
-		dumm->sigchild_handler(dumm, info);
-	}
-	else
-	{
-		printf("\nuse 'quit'\ndumm# ");
-	}
+	printf("\nuse 'quit'\ndumm# ");
 }
 
 /**
@@ -450,8 +443,7 @@ int main(int argc, char *argv[])
 	memset(&action, 0, sizeof(action));
 	action.sa_sigaction = signal_action;
 	action.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGCHLD, &action, NULL) != 0 ||
-		sigaction(SIGINT, &action, NULL) != 0 ||
+	if (sigaction(SIGINT, &action, NULL) != 0 ||
 		sigaction(SIGQUIT, &action, NULL) != 0 ||
 		sigaction(SIGTERM, &action, NULL) != 0)
 	{
