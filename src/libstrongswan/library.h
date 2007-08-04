@@ -26,13 +26,14 @@
 /**
  * @defgroup libstrongswan libstrongswan
  *
- * libstrongswan: library with various crypto related things.
+ * libstrongswan: library with various cryptographic, X.509 trust chain and
+ * identity management functions.
  */
 
 /**
  * @defgroup asn1 asn1
  *
- * ASN1 definitions, parser and generator functions.
+ * ASN.1 definitions, parser and generator functions.
  *
  * @ingroup libstrongswan
  */
@@ -40,7 +41,7 @@
 /**
  * @defgroup crypto crypto
  *
- * Crypto algorithms of different kind.
+ * Various cryptographic algorithms.
  *
  * @ingroup libstrongswan
  */
