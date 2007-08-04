@@ -23,7 +23,11 @@
 #include <asn1/oid.h>
 
 
-/* Defines some primitive ASN1 types */
+/**
+ * @brief Definition of some primitive ASN1 types
+ *
+ * @ingroup asn1
+ */
 typedef enum {
     ASN1_EOC =				0x00,
     ASN1_BOOLEAN =			0x01,

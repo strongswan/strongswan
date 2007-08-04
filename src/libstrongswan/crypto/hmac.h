@@ -42,7 +42,7 @@ typedef struct hmac_t hmac_t;
  * @b Constructors:
  *  - hmac_create()
  *
- * @ingroup transforms
+ * @ingroup crypto
  */
 struct hmac_t {
 	/**
