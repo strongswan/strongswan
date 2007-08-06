@@ -779,10 +779,18 @@ static void stroke_initiate(stroke_msg_t *msg, FILE *out)
 		return;
 	}
 	
-	info.out = out;
-	info.level = msg->output_verbosity;
-	charon->interfaces->initiate(charon->interfaces, peer_cfg, child_cfg,
-								 (interface_manager_cb_t)stroke_log, &info);
+	if (msg->output_verbosity < 0)
+	{
+		charon->interfaces->initiate(charon->interfaces, peer_cfg, child_cfg,
+									 NULL, NULL);
+	}
+	else
+	{
+		info.out = out;
+		info.level = msg->output_verbosity;
+		charon->interfaces->initiate(charon->interfaces, peer_cfg, child_cfg,
+									 (interface_manager_cb_t)stroke_log, &info);
+	}
 }
 
 /**
