@@ -792,6 +792,10 @@ log_psk(secret_t *s)
 		n = BUF_LEN - 1;
 		break;
 	    }
+	    else if (n < BUF_LEN - 1)
+	    {
+		n += snprintf(buf + n, BUF_LEN - n, " ");
+	    }
 	    id_list = id_list->next;
 	}
 	while (id_list);
