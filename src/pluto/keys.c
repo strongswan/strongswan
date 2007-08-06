@@ -772,6 +772,34 @@ process_pin(secret_t *s, int whackfd)
 }
 
 static void
+log_psk(secret_t *s)
+{
+    int n = 0;
+    char buf[BUF_LEN];
+    id_list_t *id_list = s->ids;
+
+    if (id_list == NULL)
+    {
+	n = snprintf(buf, BUF_LEN, "%%any");
+    }
+    else
+    {
+	do
+	{
+	    n += idtoa(&id_list->id, buf + n, BUF_LEN - n);
+	    if (n >= BUF_LEN)
+	    {
+		n = BUF_LEN - 1;
+		break;
+	    }
+	    id_list = id_list->next;
+	}
+	while (id_list);
+    }
+    plog("  loaded shared key for %.*s", n, buf);
+}
+
+static void
 process_secret(secret_t *s, int whackfd)
 {
     err_t ugh = NULL;
@@ -780,11 +808,13 @@ process_secret(secret_t *s, int whackfd)
     if (*tok == '"' || *tok == '\'')
     {
 	/* old PSK format: just a string */
+	log_psk(s);
 	ugh = process_psk_secret(&s->u.preshared_secret);
     }
     else if (tokeqword("psk"))
     {
 	/* preshared key: quoted string or ttodata format */
+	log_psk(s);
 	ugh = !shift()? "unexpected end of record in PSK"
 	    : process_psk_secret(&s->u.preshared_secret);
     }
