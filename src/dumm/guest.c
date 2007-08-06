@@ -170,10 +170,8 @@ static void stop(private_guest_t *this)
 		this->ifaces->destroy_offset(this->ifaces, offsetof(iface_t, destroy));
 		this->ifaces = linked_list_create();
 		kill(this->pid, SIGINT);
-		while (this->state == GUEST_STOPPING)
-		{
-			sched_yield();
-		}
+		waitpid(this->pid, NULL, 0);
+		this->state = GUEST_STOPPED;
 	}
 }
 
@@ -208,7 +206,8 @@ static bool start(private_guest_t *this, char *kernel)
 	args[i++] = write_arg(&pos, &left, "mconsole=notify:%s", notify);
 	/*args[i++] = write_arg(&pos, &left, "con=pts");*/
 	args[i++] = write_arg(&pos, &left, "con0=null,fd:%d", this->bootlog);
-	/*args[i++] = write_arg(&pos, &left, "con1=fd:0,fd:1");*/
+	//args[i++] = write_arg(&pos, &left, "con0=fd:0,fd:1");
+	//args[i++] = write_arg(&pos, &left, "con1=null,null");
 	args[i++] = write_arg(&pos, &left, "con2=null,null");
 	args[i++] = write_arg(&pos, &left, "con3=null,null");
 	args[i++] = write_arg(&pos, &left, "con4=null,null");
@@ -221,8 +220,8 @@ static bool start(private_guest_t *this, char *kernel)
 	{
 		case 0: /* child,  */
 			dup2(open("/dev/null", 0), 0);
-			dup2(open("/dev/null", 0), 1);
-			dup2(open("/dev/null", 0), 2);
+			dup2(this->bootlog, 1);
+			dup2(this->bootlog, 2);
 			execvp(args[0], args);
 			DBG1("starting UML kernel '%s' failed: %m", args[0]);
 			exit(1);
@@ -249,7 +248,10 @@ static bool start(private_guest_t *this, char *kernel)
  */
 static void sigchild(private_guest_t *this)
 {
-	waitpid(this->pid, NULL, WNOHANG);
+	if (this->state != GUEST_STOPPING)
+	{	/* collect zombie if uml crashed */
+		waitpid(this->pid, NULL, WNOHANG);
+	}
 	DESTROY_IF(this->mconsole);
 	this->mconsole = NULL;
 	this->state = GUEST_STOPPED;

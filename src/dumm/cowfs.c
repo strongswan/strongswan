@@ -67,11 +67,17 @@ struct private_cowfs_t {
 	pthread_t thread;
 };
 
+/**
+ * get this pointer stored in fuse context
+ */
 static private_cowfs_t *get_this()
 {
 	return (fuse_get_context())->private_data;
 }
 
+/**
+ * make a path relative
+ */
 static void rel(const char **path)
 {
 	if (**path == '/')
@@ -85,7 +91,7 @@ static void rel(const char **path)
 }
 
 /**
- * get the filesystem to read something from
+ * get the highest overlay in which path exists
  */
 static int get_rd(const char *path)
 {
@@ -103,7 +109,7 @@ static int get_rd(const char *path)
 }
 
 /**
- * get the filesystem to write something to
+ * get the highest overlay available, to write something
  */
 static int get_wr(const char *path)
 {
@@ -116,7 +122,7 @@ static int get_wr(const char *path)
 }
 
 /**
- * create all directories need to create the file "path"
+ * create full "path" at "wr" the same way they exist at "rd"
  */
 static bool clone_path(int rd, int wr, const char *path)
 {
@@ -130,7 +136,7 @@ static bool clone_path(int rd, int wr, const char *path)
 		*pos = '\0';
 		if (fstatat(wr, full, &st, 0) < 0)
 		{
-			/* TODO: handle symlinks! */
+			/* TODO: handle symlinks!? */
 			if (fstatat(rd, full, &st, 0) < 0)
 			{
 				return FALSE;
@@ -147,7 +153,7 @@ static bool clone_path(int rd, int wr, const char *path)
 }
 
 /**
- * copy a file from a readonly to a read-write overlay
+ * copy a (special) file from a readonly to a read-write overlay
  */
 static int copy(const char *path)
 {
@@ -169,35 +175,44 @@ static int copy(const char *path)
 	{
 		return -1;
 	}
-	from = openat(rd, path, O_RDONLY, st.st_mode);
-	if (from < 0)
-	{
-		return -1;
-	}
 	if (!clone_path(rd, wr, path))
 	{
 		return -1;
 	}
-	to = openat(wr, path, O_WRONLY | O_CREAT, st.st_mode);
-	if (to < 0)
+	if (mknodat(wr, path, st.st_mode, st.st_rdev) < 0)
 	{
-		close(from);
 		return -1;
 	}
-	while ((len = read(from, buf, sizeof(buf))) > 0)
+	/* copy if no special file */
+	if (st.st_size)
 	{
-		if (write(to, buf, len) < len)
+		from = openat(rd, path, O_RDONLY, st.st_mode);
+		if (from < 0)
 		{
-			close(from);
-			close(to);
 			return -1;
 		}
-	}
-	close(from);
-	close(to);
-	if (len < 0)
-	{
-		return -1;
+		to = openat(wr, path, O_WRONLY , st.st_mode);
+		if (to < 0)
+		{
+			close(from);
+			return -1;
+		}
+		while ((len = read(from, buf, sizeof(buf))) > 0)
+		{
+			if (write(to, buf, len) < len)
+			{
+				/* TODO: only on len < 0 ? */
+				close(from);
+				close(to);
+				return -1;
+			}
+		}
+		close(from);
+		close(to);
+		if (len < 0)
+		{
+			return -1;
+		}
 	}
 	return wr;
 }
@@ -423,10 +438,18 @@ static int cowfs_rmdir(const char *path)
  */
 static int cowfs_symlink(const char *from, const char *to)
 {
-	rel(&to);
+	int fd;
+	const char *fromrel = from;
 
-	/* TODO: relative from? */
-	if (symlinkat(from, get_wr(to), to) < 0)
+	rel(&to);
+	rel(&fromrel);
+
+	fd = get_wr(to);
+	if (!clone_path(get_rd(fromrel), fd, fromrel))
+	{
+		return -errno;
+	}
+	if (symlinkat(from, fd, to) < 0)
 	{
 		return -errno;
 	}
@@ -466,11 +489,22 @@ static int cowfs_rename(const char *from, const char *to)
  */
 static int cowfs_link(const char *from, const char *to)
 {
+	int rd, wr;
+
 	rel(&from);
 	rel(&to);
-
-    if (linkat(get_rd(from), from, get_wr(to), to, 0) < 0)
+	
+	rd = get_rd(from);
+	wr = get_wr(to);
+	
+	if (!clone_path(rd, wr, to))
+	{
+		DBG1("cloning path '%s' failed", to);
+		return -errno;
+	}
+    if (linkat(rd, from, wr, to, 0) < 0)
     {
+		DBG1("linking '%s' to '%s' failed", from, to);
     	return -errno;
 	}
     return 0;
@@ -551,6 +585,7 @@ static int cowfs_truncate(const char *path, off_t size)
 {
 	int fd;
 	struct stat st;
+	
 	private_cowfs_t *this = get_this();
 
 	rel(&path);
@@ -653,6 +688,7 @@ static int cowfs_read(const char *path, char *buf, size_t size, off_t offset,
 	{
 		return -errno;
 	}
+	
 	res = pread(file, buf, size, offset);
 	if (res < 0)
 	{
@@ -848,7 +884,7 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
     this->host = strdup(host);
     this->scen = NULL;
 	
-	if (pthread_create(&this->thread, NULL, (void*)fuse_loop_mt, this->fuse) != 0)
+	if (pthread_create(&this->thread, NULL, (void*)fuse_loop, this->fuse) != 0)
 	{
     	DBG1("creating thread to handle FUSE failed");
     	fuse_unmount(mount, this->chan);

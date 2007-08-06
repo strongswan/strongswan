@@ -96,25 +96,25 @@ static iterator_t* create_bridge_iterator(private_dumm_t *this)
  */
 void signal_handler(int sig, siginfo_t *info, void *ucontext)
 {
-	private_dumm_t *this;
-	guest_t *guest;
-	iterator_t *iterator, *guests;
-
 	if (sig == SIGCHLD)
 	{
-		iterator = instances->create_iterator(instances, TRUE);
-		while (iterator->iterate(iterator, (void**)&this))
+		switch (info->si_code)
 		{
-			if (this->destroying)
+			case CLD_EXITED:
+			case CLD_KILLED:
+			case CLD_DUMPED:
 			{
-				continue;
-			}
-			switch (info->si_code)
-			{
-				case CLD_EXITED:
-				case CLD_KILLED:
-				case CLD_DUMPED:
+				private_dumm_t *this;
+				guest_t *guest;
+				iterator_t *iterator, *guests;
+				
+				iterator = instances->create_iterator(instances, TRUE);
+				while (iterator->iterate(iterator, (void**)&this))
 				{
+					if (this->destroying)
+					{
+						continue;
+					}
 					guests = this->guests->create_iterator(this->guests, TRUE);
 					while (guests->iterate(guests, (void**)&guest))
 					{
@@ -125,13 +125,14 @@ void signal_handler(int sig, siginfo_t *info, void *ucontext)
 						}
 					}
 					guests->destroy(guests);
-					break;
 				}
-				default:
-					break;
+				iterator->destroy(iterator);
+				break;
 			}
+			default:
+				break;
 		}
-		iterator->destroy(iterator);
+
 	}
 	/* SIGHUP is currently just ignored */
 }
