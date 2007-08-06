@@ -336,11 +336,11 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		goto destroy_ids;
 	}
 	
-	if (msg->add_conn.me.virtual_ip)
+	if (msg->add_conn.me.virtual_ip && msg->add_conn.me.sourceip)
 	{
 		my_vip = host_create_from_string(msg->add_conn.me.sourceip, 0);
 	}
-	if (msg->add_conn.other.virtual_ip)
+	if (msg->add_conn.other.virtual_ip && msg->add_conn.other.sourceip)
 	{
 		other_vip = host_create_from_string(msg->add_conn.other.sourceip, 0);
 	}
