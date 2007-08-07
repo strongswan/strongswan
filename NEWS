@@ -8,6 +8,11 @@ strongswan-4.1.5
   lookup successfully returns with a changed IP address the
   corresponding connection definition is updated.
 
+- Routes installed by the keying daemons are now in a separate
+  routing table with the ID 100 to avoid conflicts with the main
+  table. Route lookup for IKEv2 traffic is done in userspace to ignore
+  routes installed for IPsec, as IKE traffic shouldn't get encapsulated.
+
 
 strongswan-4.1.4
 ----------------
