@@ -171,6 +171,16 @@ struct private_local_credential_store_t {
 	 * list of X.509 CA information records
 	 */
 	linked_list_t *ca_infos;
+
+	/**
+	 * list of X.509 attribute certificates
+	 */
+	linked_list_t *acerts;
+
+	/**
+	 * mutex controls access to the linked list of attribute certificates
+	 */
+	pthread_mutex_t acerts_mutex;
 };
 
 
@@ -938,6 +948,14 @@ static iterator_t* create_cainfo_iterator(private_local_credential_store_t *this
 }
 
 /**
+ * Implements local_credential_store_t.create_acert_iterator
+ */
+static iterator_t* create_acert_iterator(private_local_credential_store_t *this)
+{
+	return this->acerts->create_iterator_locked(this->acerts, &this->acerts_mutex);
+}
+
+/**
  * Implements local_credential_store_t.load_auth_certificates
  */
 static void load_auth_certificates(private_local_credential_store_t *this,
@@ -1053,7 +1071,10 @@ static void load_aa_certificates(private_local_credential_store_t *this)
  */
 static void add_attr_certificate(private_local_credential_store_t *this, x509ac_t *cert)
 {
-  /* TODO add a new attribute certificate to the linked list */
+	/* TODO replace stale attribute certificates by fresh ones */
+	pthread_mutex_lock(&(this->acerts_mutex));
+	this->acerts->insert_last(this->acerts, (void*)cert);
+	pthread_mutex_unlock(&(this->acerts_mutex));
 }
 
 /**
@@ -1447,6 +1468,7 @@ static void destroy(private_local_credential_store_t *this)
 	this->certs->destroy_offset(this->certs, offsetof(x509_t, destroy));
 	this->auth_certs->destroy_offset(this->auth_certs, offsetof(x509_t, destroy));
 	this->ca_infos->destroy_offset(this->ca_infos, offsetof(ca_info_t, destroy));
+	this->acerts->destroy_offset(this->certs, offsetof(x509ac_t, destroy));
 	this->private_keys->destroy_offset(this->private_keys, offsetof(rsa_private_key_t, destroy));
 	this->shared_keys->destroy_function(this->shared_keys, (void*)shared_key_destroy);
 	this->eap_keys->destroy_function(this->eap_keys, (void*)shared_key_destroy);
@@ -1459,7 +1481,8 @@ static void destroy(private_local_credential_store_t *this)
 local_credential_store_t * local_credential_store_create(void)
 {
 	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
-	
+
+	/* public functions */
 	this->public.credential_store.get_shared_key = (status_t (*) (credential_store_t*,identification_t*,identification_t*,chunk_t*))get_shared_key;
 	this->public.credential_store.get_eap_key = (status_t (*) (credential_store_t*,identification_t*,identification_t*,chunk_t*))get_eap_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
@@ -1479,6 +1502,7 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.create_cert_iterator = (iterator_t* (*) (credential_store_t*))create_cert_iterator;
 	this->public.credential_store.create_auth_cert_iterator = (iterator_t* (*) (credential_store_t*))create_auth_cert_iterator;
 	this->public.credential_store.create_cainfo_iterator = (iterator_t* (*) (credential_store_t*))create_cainfo_iterator;
+	this->public.credential_store.create_acert_iterator = (iterator_t* (*) (credential_store_t*))create_acert_iterator;
 	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
 	this->public.credential_store.load_aa_certificates = (void (*) (credential_store_t*))load_aa_certificates;
 	this->public.credential_store.load_attr_certificates = (void (*) (credential_store_t*))load_attr_certificates;
@@ -1486,7 +1510,10 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;
 	this->public.credential_store.load_secrets = (void (*) (credential_store_t*))load_secrets;
 	this->public.credential_store.destroy = (void (*) (credential_store_t*))destroy;
-	
+
+	/* initialize the mutex */
+	pthread_mutex_init(&(this->acerts_mutex), NULL);
+
 	/* private variables */
 	this->shared_keys = linked_list_create();
 	this->eap_keys = linked_list_create();
@@ -1494,6 +1521,7 @@ local_credential_store_t * local_credential_store_create(void)
 	this->certs = linked_list_create();
 	this->auth_certs = linked_list_create();
 	this->ca_infos = linked_list_create();
+	this->acerts = linked_list_create();
 
 	return (&this->public);
 }

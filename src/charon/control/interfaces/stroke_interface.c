@@ -38,6 +38,7 @@
 #include <stroke.h>
 #include <daemon.h>
 #include <crypto/x509.h>
+#include <crypto/ac.h>
 #include <crypto/ca.h>
 #include <crypto/crl.h>
 #include <control/interface_manager.h>
@@ -1379,6 +1380,23 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
 	if (msg->list.flags & LIST_AACERTS)
 	{
 		list_auth_certificates(AUTH_AA, "AA", msg->list.utc, out);
+	}
+	if (msg->list.flags & LIST_ACERTS)
+	{
+		x509ac_t *cert;
+		
+		iterator = charon->credentials->create_acert_iterator(charon->credentials);
+		if (iterator->get_count(iterator))
+		{
+			fprintf(out, "\n");
+			fprintf(out, "List of X.509 Attribute Certificates:\n");
+			fprintf(out, "\n");
+		}
+		while (iterator->iterate(iterator, (void**)&cert))
+		{
+			cert->list(cert, out, msg->list.utc);
+		}
+		iterator->destroy(iterator);
 	}
 	if (msg->list.flags & LIST_CAINFOS)
 	{

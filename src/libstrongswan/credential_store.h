@@ -240,6 +240,14 @@ struct credential_store_t {
 	iterator_t* (*create_cainfo_iterator) (credential_store_t *this);
 
 	/**
+	 * @brief Create an iterator over all attribute certificates.
+	 *
+	 * @param this		calling object
+	 * @return 			iterator
+	 */
+	iterator_t* (*create_acert_iterator) (credential_store_t *this);
+
+	/**
 	 * @brief Loads ca certificates from a default directory.
 	 *
 	 * Certificates in both DER and PEM format are accepted

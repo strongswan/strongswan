@@ -21,14 +21,18 @@
  * for more details.
  */
 
+#include <string.h>
+#include <stdio.h>
+
 #include <library.h>
 #include <debug.h>
 
 #include <asn1/asn1.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
-
 #include "ac.h"
+
+#define ACERT_WARNING_INTERVAL	1	/* day */
 
 typedef struct private_x509ac_t private_x509ac_t;
 
@@ -603,7 +607,72 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 		objectID++;
 	}
 	this->installed = time(NULL);
-	return FALSE;
+	return TRUE;
+}
+
+/**
+ * Implementation of x509ac_t.list.
+ */
+static void list(private_x509ac_t *this, FILE *out, bool utc)
+{
+	time_t now = time(NULL);
+
+	fprintf(out, "%#T\n", &this->installed, utc);
+
+	if (this->entityName)
+	{
+		fprintf(out, "    holder:    '%D'\n", this->entityName);
+	}
+	if (this->holderIssuer)
+	{
+		fprintf(out, "    hissuer:   '%D'\n", this->holderIssuer);
+	}
+	if (this->holderSerial.ptr)
+	{
+		fprintf(out, "    hserial:    %#B\n", &this->holderSerial);
+	}
+/*	if (ac->groups != NULL)
+	{
+	    format_groups(ac->groups, buf, BUF_LEN);
+	    whack_log(RC_COMMENT, "       groups:    %s", buf);
+	} 
+*/
+	fprintf(out, "    issuer:    '%D'\n", this->issuerName);
+	fprintf(out, "    serial:     %#B\n", &this->serialNumber);
+
+	fprintf(out, "    validity:   not before %#T, ", &this->notBefore, utc);
+	if (now < this->notBefore)
+	{
+		fprintf(out, "not valid yet (valid in %V)\n", &now, &this->notBefore);
+	}
+	else
+	{
+		fprintf(out, "ok\n");
+	}
+	
+	fprintf(out, "                not after  %#T, ", &this->notAfter, utc);
+	if (now > this->notAfter)
+	{
+		fprintf(out, "expired (%V ago)\n", &now, &this->notAfter);
+	}
+	else
+	{
+		fprintf(out, "ok");
+		if (now > this->notAfter - ACERT_WARNING_INTERVAL * 60 * 60 * 24)
+		{
+			fprintf(out, " (expires in %V)", &now, &this->notAfter);
+		}
+		fprintf(out, " \n");
+	}
+
+	if (this->authKeyID.ptr)
+	{
+		fprintf(out, "    authkey:    %#B\n", &this->authKeyID);
+	}
+	if (this->authKeySerialNumber.ptr)
+	{
+		fprintf(out, "    aserial:    %#B\n", &this->authKeySerialNumber);
+	}
 }
 
 /**
@@ -638,6 +707,7 @@ x509ac_t *x509ac_create_from_chunk(chunk_t chunk)
 
 	/* public functions */
 	this->public.is_valid = (err_t (*) (const x509ac_t*,time_t*))is_valid;
+	this->public.list = (void(*)(x509ac_t*, FILE *out, bool utc))list;
 	this->public.destroy = (void (*) (x509ac_t*))destroy;
 
 	if (!parse_certificate(chunk, this))

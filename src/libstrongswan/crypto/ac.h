@@ -49,6 +49,15 @@ struct x509ac_t {
 	err_t (*is_valid) (const x509ac_t *this, time_t *until);
 
 	/**
+	 * @brief Log the attribute certificate info to out.
+	 *
+	 * @param this			calling object
+	 * @param out			stream to write to
+	 * @param utc			TRUE for UTC times, FALSE for local time
+	 */
+	void (*list)(x509ac_t *this, FILE *out, bool utc);
+
+	/**
 	 * @brief Destroys the attribute certificate.
 	 * 
 	 * @param this			certificate to destroy
