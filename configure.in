@@ -219,6 +219,18 @@ AC_ARG_ENABLE(
 )
 AM_CONDITIONAL(USE_VENDORID, test x$vendor_id = xtrue)
 
+AC_ARG_ENABLE(
+    [uml],
+    AS_HELP_STRING([--enable-uml],[build the UML test framework (default is NO).]),
+    [if test x$enableval = xyes; then
+        uml=true
+     else
+        uml=false
+    fi],
+    uml=true
+)
+AM_CONDITIONAL(USE_UML, test x$uml = xtrue)
+
 dnl =========================
 dnl  check required programs
 dnl =========================
