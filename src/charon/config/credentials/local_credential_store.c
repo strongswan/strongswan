@@ -1468,7 +1468,7 @@ static void destroy(private_local_credential_store_t *this)
 	this->certs->destroy_offset(this->certs, offsetof(x509_t, destroy));
 	this->auth_certs->destroy_offset(this->auth_certs, offsetof(x509_t, destroy));
 	this->ca_infos->destroy_offset(this->ca_infos, offsetof(ca_info_t, destroy));
-	this->acerts->destroy_offset(this->certs, offsetof(x509ac_t, destroy));
+	this->acerts->destroy_offset(this->acerts, offsetof(x509ac_t, destroy));
 	this->private_keys->destroy_offset(this->private_keys, offsetof(rsa_private_key_t, destroy));
 	this->shared_keys->destroy_function(this->shared_keys, (void*)shared_key_destroy);
 	this->eap_keys->destroy_function(this->eap_keys, (void*)shared_key_destroy);
