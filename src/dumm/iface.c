@@ -37,6 +37,8 @@ struct private_iface_t {
 	char *guestif;
 	/** device name at host (tap0) */
 	char *hostif;
+	/** bridge this interface is attached to */
+	bridge_t *bridge;
 	/** mconsole for guest */
 	mconsole_t *mconsole;
 };
@@ -55,6 +57,14 @@ static char* get_guestif(private_iface_t *this)
 static char* get_hostif(private_iface_t *this)
 {
 	return this->hostif;
+}
+
+/**
+ * Implementation of iface_t.set_bridge.
+ */
+static void set_bridge(private_iface_t *this, bridge_t *bridge)
+{
+	this->bridge = bridge;
 }
 
 /**
@@ -121,6 +131,10 @@ static char* create_tap(private_iface_t *this, char *guest)
  */
 static void destroy(private_iface_t *this)
 {
+	if (this->bridge)
+	{
+		this->bridge->disconnect_iface(this->bridge, &this->public);
+	}
 	this->mconsole->del_iface(this->mconsole, this->guestif);
 	destroy_tap(this);
 	free(this->guestif);
@@ -137,11 +151,13 @@ iface_t *iface_create(char *guest, char *guestif, mconsole_t *mconsole)
 	
 	this->public.get_hostif = (char*(*)(iface_t*))get_hostif;
 	this->public.get_guestif = (char*(*)(iface_t*))get_guestif;
+	this->public.set_bridge = (void(*)(iface_t*, bridge_t*))set_bridge;
 	this->public.destroy = (void*)destroy;
 
 	this->mconsole = mconsole;
 	this->guestif = strdup(guestif);
 	this->hostif = create_tap(this, guest);
+	this->bridge = NULL;
 	if (this->hostif == NULL)
 	{
 		destroy_tap(this);

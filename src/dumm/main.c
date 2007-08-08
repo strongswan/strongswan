@@ -39,34 +39,7 @@ static void usage()
 	printf("  --help|-h                  show this help\n");
 }
 
-/**
- * help for dumm root shell
- */
-static void help()
-{
-	printf("create name=<name>            start a guest named <name>\n");
-	printf("       [master=<dir>]         read only master root filesystem\n");
-	printf("       [memory=<MB>]          guest main memory in megabyte\n");
-	printf("list                          list running guests\n");
-	printf("guest <name>                  open guest menu for <name>\n");
-	printf("help                          show this help\n");
-	printf("quit                          kill quests and exit\n");
-}
-
-/**
- * help for guest shell
- */
-static void help_guest()
-{
-	printf("start [kernel=<uml-kernel>]   start a stopped guest\n");
-	printf("stop                          stop a started guest\n");
-	printf("addif <name>                  add an interface to the guest\n");
-	printf("delif <name>                  remove the interface\n");
-	printf("listif                        list guests interfaces\n");
-	printf("help                          show this help\n");
-	printf("quit                          quit the guest menu\n");
-}
-
+#if 0
 /**
  * add an iface to a guest
  */
@@ -133,248 +106,86 @@ static void list_if(guest_t *guest)
 	}
 	iterator->destroy(iterator);
 }
+#endif
 
 /**
- * start an UML guest
+ * readline() wrapper
  */
-static void start_guest(guest_t *guest, char *line)
+static char* get_line(char *format, ...)
 {
-	enum {
-		KERNEL = 0,
-	};
-	char *const opts[] = {
-		[KERNEL] = "kernel",
-		NULL
-	};
-	char *value;
-	char *kernel = NULL;
+	char *line = NULL;
+	char *prompt = "";
+	va_list args;
+	
+	va_start(args, format);
+	vasprintf(&prompt, format, args);
+	va_end(args);
 	
 	while (TRUE)
 	{
-		switch (getsubopt(&line, opts, &value))
+		line = readline(prompt);
+		if (line == NULL)
 		{
-			case KERNEL:
-				kernel = value;
-				continue;
-			default:
-				break;
+			continue;
 		}
+		if (*line == '\0')
+		{
+			free(line);
+			continue;
+		}
+		add_history(line);
 		break;
 	}
-	if (kernel == NULL)
-	{
-		kernel = "./linux";
-	}
-	
-	printf("starting guest '%s'... \n", guest->get_name(guest));
-	if (guest->start(guest, kernel))
-	{
-		printf("guest '%s' is up\n", guest->get_name(guest));
-	}
-	else
-	{
-		printf("failed to start guest '%s'!\n", guest->get_name(guest));
-	}
+	free(prompt);
+	return line;
 }
 
 /**
- * stop (kill) an UML guest
+ * get a guest by name
  */
-static void stop_guest(guest_t *guest, char *line)
-{	
-	printf("stopping guest '%s'...\n", guest->get_name(guest));
-	guest->stop(guest);
-	printf("guest '%s' is down\n", guest->get_name(guest));
-}
-
-/**
- * subshell for guests
- */
-static void guest(char *name)
+static guest_t* get_guest(char *name)
 {
-	char *line = NULL;
-	char prompt[32];
-	int len;
 	iterator_t *iterator;
-	guest_t *guest;
-	bool found = FALSE;
+	guest_t *guest = NULL;
 	
 	iterator = dumm->create_guest_iterator(dumm);
 	while (iterator->iterate(iterator, (void**)&guest))
 	{
-		if (streq(name, guest->get_name(guest)))
+		if (streq(guest->get_name(guest), name))
 		{
-			found = TRUE;
 			break;
 		}
+		guest = NULL;
 	}
 	iterator->destroy(iterator);
-	if (!found)
-	{
-		printf("guest '%s' not found\n", name);
-		return;
-	}
-	
-	len = snprintf(prompt, sizeof(prompt), "dumm@%s# ", name);
-	if (len < 0 || len >= sizeof(prompt))
-	{
-		return;
-	}
-
-	while (TRUE)
-	{
-		enum {
-			QUIT = 0,
-			HELP,
-			START,
-			STOP,
-			ADDIF,
-			DELIF,
-			LISTIF,
-		};
-		char *const opts[] = {
-			[QUIT] = "quit",
-			[HELP] = "help",
-			[START] = "start",
-			[STOP] = "stop",
-			[ADDIF] = "addif",
-			[DELIF] = "delif",
-			[LISTIF] = "listif",
-			NULL
-		};
-		char *pos, *value;
-		
-		free(line);
-		line = readline(prompt);
-		if (line == NULL || *line == '\0')
-		{
-			continue;
-		}
-		add_history(line);
-		pos = line;
-		while (*pos != '\0')
-		{
-			if (*pos == ' ')
-			{
-				*pos = ',';
-			}
-			pos++;
-		}
-		pos = line;
-		switch (getsubopt(&pos, opts, &value))
-		{
-			case QUIT:
-				free(line);
-				break;
-			case HELP:
-				help_guest();
-				continue;
-			case START:
-				start_guest(guest, pos);
-				continue;
-			case STOP:
-				stop_guest(guest, pos);
-				continue;
-			case ADDIF:
-				add_if(guest, pos);
-				continue;
-			case DELIF:
-				del_if(guest, pos);
-				continue;
-			case LISTIF:
-				list_if(guest);
-				continue;
-			default:
-				printf("command unknown: '%s'\n", line);
-				continue;
-		}
-		break;
-	}
+	return guest;
 }
 
-
 /**
- * create an bridge
+ * get a bridge by name
  */
-static void create_bridge(char *name)
+static bridge_t* get_bridge(char *name)
 {
-	dumm->create_bridge(dumm, name);
-
-}
-
-/**
- * create an UML guest
- */
-static void create_guest(char *line)
-{
-	enum {
-		NAME = 0,
-		KERNEL,
-		MASTER,
-		MEMORY,
-	};
-	char *const opts[] = {
-		[NAME] = "name",
-		[KERNEL] = "kernel",
-		[MASTER] = "master",
-		[MEMORY] = "memory",
-		NULL
-	};
-	char *value;
-	char *name = NULL;
-	char *master = NULL;
-	char *kernel = NULL;
-	int mem = 128;
+	iterator_t *iterator;
+	bridge_t *bridge = NULL;
 	
-	while (TRUE)
+	iterator = dumm->create_bridge_iterator(dumm);
+	while (iterator->iterate(iterator, (void**)&bridge))
 	{
-		switch (getsubopt(&line, opts, &value))
+		if (streq(bridge->get_name(bridge), name))
 		{
-			case NAME:
-				name = value;
-				continue;
-			case KERNEL:
-				kernel = value;
-				continue;
-			case MASTER:
-				master = value;
-				continue;
-			case MEMORY:
-				if (value)
-				{
-					mem = atoi(value);
-				}
-				continue;
-			default:
-				break;
+			break;
 		}
-		break;
+		bridge = NULL;
 	}
-	if (name == NULL || master == NULL || kernel == NULL)
-	{
-		printf("too few arguments!\n");
-		help();
-		return;
-	}
-	if (mem == 0)
-	{
-		mem = 128;
-	}
-	if (dumm->create_guest(dumm, name, kernel, master, mem))
-	{
-		printf("guest '%s' created\n", name);
-		guest(name);
-	}
-	else
-	{
-		printf("failed to create guest '%s'!\n", name);
-	}
+	iterator->destroy(iterator);
+	return bridge;
 }
 
 /**
- * list running UML guests
+ * get an interface by guest name
  */
-static void list()
+static iface_t* get_iface(char *name, char *ifname)
 {
 	iterator_t *guests, *ifaces;
 	guest_t *guest;
@@ -383,17 +194,315 @@ static void list()
 	guests = dumm->create_guest_iterator(dumm);
 	while (guests->iterate(guests, (void**)&guest))
 	{
-		printf("%s (%N)\n", guest->get_name(guest),
-			   guest_state_names, guest->get_state(guest));
-		ifaces = guest->create_iface_iterator(guest);
-		while (ifaces->iterate(ifaces, (void**)&iface))
+		if (streq(guest->get_name(guest), name))
 		{
-			printf("  '%s' => '%s'\n",
-				   iface->get_guestif(iface), iface->get_hostif(iface));
+			iface = NULL;
+			ifaces = guest->create_iface_iterator(guest);
+			while (ifaces->iterate(ifaces, (void**)&iface))
+			{
+				if (streq(iface->get_guestif(iface), ifname))
+				{
+					break;
+				}
+				iface = NULL;
+			}
+			ifaces->destroy(ifaces);
+			if (iface)
+			{
+				break;
+			}
 		}
-		ifaces->destroy(ifaces);
 	}
 	guests->destroy(guests);
+	return iface;
+}
+
+static void guest_addif_menu(guest_t *guest)
+{
+	char *name;
+	
+	name = get_line("interface name: ");
+	
+	if (!guest->create_iface(guest, name))
+	{
+		printf("creating interface failed\n");
+	}
+}
+
+static void guest_delif_menu(guest_t *guest)
+{
+	char *name;
+	iface_t *iface;
+	iterator_t *iterator;
+	bool found = FALSE;
+	
+	name = get_line("interface name: ");
+	
+	iterator = guest->create_iface_iterator(guest);
+	while (iterator->iterate(iterator, (void**)&iface))
+	{
+		if (streq(iface->get_guestif(iface), name))
+		{
+			iterator->remove(iterator);
+			iface->destroy(iface);
+			found = TRUE;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	
+	if (!found)
+	{
+		printf("interface '%s' not found\n");
+	}
+}
+
+static void guest_menu(guest_t *guest)
+{
+	while (TRUE)
+	{
+		char *line = get_line("guest/%s# ", guest->get_name(guest));
+		
+		if (streq(line, "back"))
+		{
+			free(line);
+			break;
+		}
+		else if (streq(line, "start"))
+		{
+			if (guest->start(guest))
+			{
+				printf("guest '%s' is booting\n", guest->get_name(guest));
+			}
+			else
+			{
+				printf("failed to start guest '%s'\n", guest->get_name(guest));
+			}
+		}
+		else if (streq(line, "stop"))
+		{
+			printf("stopping guest '%s'...\n", guest->get_name(guest));
+			guest->stop(guest);
+			printf("guest '%s' is down\n", guest->get_name(guest));
+		}
+		else if (streq(line, "addif"))
+		{
+			guest_addif_menu(guest);
+		}
+		else if (streq(line, "delif"))
+		{
+			guest_delif_menu(guest);
+		}
+		else
+		{
+			printf("back|start|stop|addif|delif\n");
+		}
+		free(line);
+	}
+}
+
+static void guest_create_menu()
+{
+	char *name, *kernel, *master, *mem;
+	guest_t *guest;
+	
+	name = get_line("guest name: ");
+	kernel = get_line("kernel image: ");
+	master = get_line("master filesystem: ");
+	mem = get_line("amount of memory in MB: ");
+	
+	guest = dumm->create_guest(dumm, name, kernel, master, atoi(mem));
+	if (guest)
+	{
+		printf("guest '%s' created\n", guest->get_name(guest));
+		guest_menu(guest);
+	}
+	else
+	{
+		printf("failed to create guest '%s'\n", name);
+	}
+}
+
+static void guest_list_menu()
+{
+	while (TRUE)
+	{
+		iterator_t *iterator;
+		guest_t *guest;
+		char *line = get_line("guest# ");
+		
+		if (streq(line, "back"))
+		{
+			free(line);
+			break;
+		}
+		else if (streq(line, "list"))
+		{
+			iterator = dumm->create_guest_iterator(dumm);
+			while (iterator->iterate(iterator, (void**)&guest))
+			{
+				printf("%s\n", guest->get_name(guest));
+			}
+			iterator->destroy(iterator);
+		}
+		else if (streq(line, "create"))
+		{
+			guest_create_menu();
+		}
+		else
+		{
+			guest = get_guest(line);
+			if (guest)
+			{
+				guest_menu(guest);
+			}
+			else
+			{
+				printf("back|list|create|<guest>\n");
+			}
+		}
+		free(line);
+	}
+}
+
+static void bridge_addif_menu(bridge_t *bridge)
+{
+	char *name, *ifname;
+	iface_t *iface;
+	
+	name = get_line("guest name: ");
+	ifname = get_line("interface name: ");
+	
+	iface = get_iface(name, ifname);
+	if (!iface)
+	{
+		printf("guest '%s' has no interface named '%s'\n", name, ifname);
+	}
+	else if (!bridge->connect_iface(bridge, iface))
+	{
+		printf("failed to add interface '%s' to bridge '%s'\n", ifname,
+			   bridge->get_name(bridge));
+	}
+}
+
+static void bridge_delif_menu(bridge_t *bridge)
+{
+	char *name, *ifname;
+	iface_t *iface;
+	
+	name = get_line("guest name: ");
+	ifname = get_line("interface name: ");
+	
+	iface = get_iface(name, ifname);
+	if (!iface)
+	{
+		printf("guest '%s' has no interface named '%s'\n", name, ifname);
+	}
+	else if (!bridge->disconnect_iface(bridge, iface))
+	{
+		printf("failed to remove interface '%s' from bridge '%s'\n", ifname,
+			   bridge->get_name(bridge));
+	}
+}
+
+static void bridge_menu(bridge_t *bridge)
+{
+	while (TRUE)
+	{
+		char *line = get_line("bridge/%s# ", bridge->get_name(bridge));
+		
+		if (streq(line, "back"))
+		{
+			free(line);
+			break;
+		}
+		else if (streq(line, "list"))
+		{
+			iterator_t *iterator;
+			iface_t *iface;
+
+			iterator = bridge->create_iface_iterator(bridge);
+			while (iterator->iterate(iterator, (void**)&iface))
+			{
+				printf("%s (%s)\n", iface->get_guestif(iface), iface->get_hostif(iface));
+			}
+			iterator->destroy(iterator);
+		}
+		else if (streq(line, "addif"))
+		{
+			bridge_addif_menu(bridge);
+		}
+		else if (streq(line, "delif"))
+		{
+			bridge_delif_menu(bridge);
+		}
+		else
+		{
+			printf("back|list|addif|delif\n");
+		}
+		free(line);
+	}
+}
+
+static void bridge_create_menu()
+{
+	char *name;
+	bridge_t *bridge;
+	
+	name = get_line("bridge name: ");
+	
+	bridge = dumm->create_bridge(dumm, name);
+	if (bridge)
+	{
+		printf("bridge '%s' created\n", bridge->get_name(bridge));
+		bridge_menu(bridge);
+	}
+	else
+	{
+		printf("failed to create bridge '%s'\n", name);
+	}
+}
+
+static void bridge_list_menu()
+{
+	while (TRUE)
+	{
+		iterator_t *iterator;
+		bridge_t *bridge;
+		char *line = get_line("bridge# ");
+		
+		if (streq(line, "back"))
+		{
+			free(line);
+			break;
+		}
+		else if (streq(line, "list"))
+		{
+			iterator = dumm->create_bridge_iterator(dumm);
+			while (iterator->iterate(iterator, (void**)&bridge))
+			{
+				printf("%s\n", bridge->get_name(bridge));
+			}
+			iterator->destroy(iterator);
+		}
+		else if (streq(line, "create"))
+		{
+			bridge_create_menu();
+		}
+		else
+		{
+			bridge = get_bridge(line);
+			if (bridge)
+			{
+				bridge_menu(bridge);
+			}
+			else
+			{
+				printf("back|list|create|<bridge>\n");
+			}
+		}
+		free(line);
+	}
 }
 
 /**
@@ -401,7 +510,9 @@ static void list()
  */
 void signal_action(int sig, siginfo_t *info, void *ucontext)
 {
-	printf("\nuse 'quit'\ndumm# ");
+	dumm->destroy(dumm);
+	clear_history();
+	exit(0);
 }
 
 /**
@@ -409,7 +520,6 @@ void signal_action(int sig, siginfo_t *info, void *ucontext)
  */
 int main(int argc, char *argv[])
 {
-	char *line = NULL;
 	struct sigaction action;
 	char *dir = ".";
 
@@ -438,8 +548,6 @@ int main(int argc, char *argv[])
 		break;
 	}
 	
-	dumm = dumm_create(dir);
-	
 	memset(&action, 0, sizeof(action));
 	action.sa_sigaction = signal_action;
 	action.sa_flags = SA_SIGINFO;
@@ -450,71 +558,30 @@ int main(int argc, char *argv[])
 		printf("signal handler setup failed: %m.\n");
 		return 1;
 	}
-
+	
+	dumm = dumm_create(dir);
 	while (TRUE)
 	{
-		enum {
-			QUIT = 0,
-			HELP,
-			CREATE,
-			BRIDGE,
-			LIST,
-			GUEST,
-		};
-		char *const opts[] = {
-			[QUIT] = "quit",
-			[HELP] = "help",
-			[CREATE] = "create",
-			[BRIDGE] = "bridge",
-			[LIST] = "list",
-			[GUEST] = "guest",
-			NULL
-		};
-		char *pos, *value;
+		char *line = get_line("# ");
 		
+		if (streq(line, "quit"))
+		{
+			free(line);
+			break;
+		}
+		else if (streq(line, "guest"))
+		{
+			guest_list_menu();
+		}
+		else if (streq(line, "bridge"))
+		{
+			bridge_list_menu();
+		}
+		else
+		{
+			printf("quit|guest|bridge\n");
+		}
 		free(line);
-		line = readline("dumm# ");
-		if (line == NULL || *line == '\0')
-		{
-			continue;
-		}
-		
-		add_history(line);
-		pos = line;
-		while (*pos != '\0')
-		{
-			if (*pos == ' ')
-			{
-				*pos = ',';
-			}
-			pos++;
-		}
-		pos = line;
-		switch (getsubopt(&pos, opts, &value))
-		{
-			case QUIT:
-				free(line);
-				break;
-			case HELP:
-				help();
-				continue;
-			case CREATE:
-				create_guest(pos);
-				continue;
-			case BRIDGE:
-				create_bridge(pos);
-				continue;
-			case LIST:
-				list();
-				continue;
-			case GUEST:
-				guest(pos);
-				continue;
-			default:
-				printf("command unknown: '%s'\n", line);
-				continue;
-		}
-		break;
 	}
 	dumm->destroy(dumm);
 	clear_history();

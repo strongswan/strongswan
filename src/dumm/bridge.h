@@ -19,9 +19,9 @@
 #include <library.h>
 #include <utils/iterator.h>
 
-#include "iface.h"
-
 typedef struct bridge_t bridge_t;
+
+#include "iface.h"
 
 /**
  * @brief Interface in a guest, connected to a tap device on the host.
@@ -41,15 +41,15 @@ struct bridge_t {
 	 * @param iface			interface to add
 	 * @return				TRUE if interface added
 	 */
-	bool (*add_iface)(bridge_t *this, iface_t *iface);
+	bool (*connect_iface)(bridge_t *this, iface_t *iface);
 	
 	/**
 	 * @brief Remove an interface from a bridge.
 	 *
 	 * @param iface			interface to remove
-	 * @return				TRUE ifinterface removed
+	 * @return				TRUE if interface removed
 	 */
-	bool (*del_iface)(bridge_t *this, iface_t *iface);
+	bool (*disconnect_iface)(bridge_t *this, iface_t *iface);
 	
 	/**
 	 * @brief Create an iterator over all interfaces.

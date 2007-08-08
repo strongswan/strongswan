@@ -70,6 +70,21 @@ struct dumm_t {
 	iterator_t* (*create_bridge_iterator)(dumm_t *this);
 	
 	/**
+	 * @brief Loads a scenario, create a new one if it does not exist.
+	 *
+	 * @param name		name of the scenario to load/create
+	 * @return			FALSE if load/crate failed
+	 */
+	bool (*load_scenario)(dumm_t *this, char *name);
+	
+	/**
+	 * @brief Saves the current loaded scenario.
+	 *
+	 * @return			FALSE if saving scenario failed
+	 */
+	bool (*save_scenario)(dumm_t *this);
+	
+	/**
 	 * @brief stop all guests and destroy the modeler
 	 */
 	void (*destroy) (dumm_t *this);

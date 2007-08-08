@@ -21,14 +21,6 @@
 
 #include "iface.h"
 
-#define MASTER_DIR "master"
-#define DIFF_DIR "diff"
-#define UNION_DIR "union"
-#define MEMORY_FILE "mem"
-#define KERNEL_FILE "linux"
-#define LOG_FILE "boot.log"
-#define NOTIFY_FILE "notify"
-
 typedef enum guest_state_t guest_state_t;
 
 /**
@@ -72,6 +64,7 @@ struct guest_t {
 	 * @return		name of the guest
 	 */
 	pid_t (*get_pid) (guest_t *this);
+	
 	/**
 	 * @brief Get the state of the guest (stopped, started, etc.).
 	 *
@@ -82,10 +75,9 @@ struct guest_t {
 	/**
 	 * @brief Start the guest.
 	 *
-	 * @param kernel	kernel to boot for this guest
 	 * @return		TRUE if guest successfully started
 	 */
-	bool (*start) (guest_t *this, char *kernel);
+	bool (*start) (guest_t *this);
 	
 	/**
 	 * @brief Kill the guest.
@@ -95,7 +87,7 @@ struct guest_t {
 	bool (*stop) (guest_t *this);
 	
 	/**
-	 * @brief Create a new interface for that host.
+	 * @brief Create a new interface in the current scenario.
 	 *
 	 * @param name	name of the interface in the guest
 	 * @return		created interface, or NULL if failed
@@ -110,7 +102,15 @@ struct guest_t {
 	iterator_t* (*create_iface_iterator)(guest_t *this);
 	
 	/**
-	 * @brief Called whenever a SIGCHILD is received.
+	 * @brief Set the scenario COWFS overlay to use.
+	 *
+	 * @param parent	parent directory where scenario diff should point to
+	 * @return			FALSE if failed
+	 */
+	bool (*set_scenario)(guest_t *this, char *parent);
+
+	/**
+	 * @brief Called whenever a SIGCHILD for the guests PID is received.
 	 */
 	void (*sigchild)(guest_t *this);
 	

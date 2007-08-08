@@ -49,9 +49,9 @@ static iterator_t* create_iface_iterator(private_bridge_t *this)
 }
 
 /**
- * Implementation of bridge_t.del_iface.
+ * Implementation of bridge_t.disconnect_iface.
  */
-static bool del_iface(private_bridge_t *this, iface_t *iface)
+static bool disconnect_iface(private_bridge_t *this, iface_t *iface)
 {
 	iterator_t *iterator;
 	iface_t *current;
@@ -69,6 +69,7 @@ static bool del_iface(private_bridge_t *this, iface_t *iface)
 			}
 			else
 			{
+				iface->set_bridge(iface, NULL);
 				good = TRUE;
 			}
 			break;
@@ -84,9 +85,9 @@ static bool del_iface(private_bridge_t *this, iface_t *iface)
 }
 
 /**
- * Implementation of bridge_t.add_iface.
+ * Implementation of bridge_t.connect_iface.
  */
-static bool add_iface(private_bridge_t *this, iface_t *iface)
+static bool connect_iface(private_bridge_t *this, iface_t *iface)
 {
 	if (br_add_interface(this->name, iface->get_hostif(iface)) != 0)
 	{
@@ -94,6 +95,7 @@ static bool add_iface(private_bridge_t *this, iface_t *iface)
 			 iface->get_hostif(iface), this->name);
 		return FALSE;
 	}
+	iface->set_bridge(iface, &this->public);
 	this->ifaces->insert_last(this->ifaces, iface);
 	return TRUE;
 }
@@ -104,10 +106,19 @@ static bool add_iface(private_bridge_t *this, iface_t *iface)
 static int instances = 0;
 
 /**
+ * unregister an interface from bridge
+ */
+static void unregister(iface_t *iface)
+{
+	iface->set_bridge(iface, NULL);
+}
+
+/**
  * Implementation of bridge_t.destroy.
  */
 static void destroy(private_bridge_t *this)
 {
+	this->ifaces->invoke_function(this->ifaces, (void(*)(void*))unregister);
 	this->ifaces->destroy(this->ifaces);
 	if (br_del_bridge(this->name) != 0)
 	{
@@ -140,8 +151,8 @@ bridge_t *bridge_create(char *name)
 	this = malloc_thing(private_bridge_t);
 	this->public.get_name = (char*(*)(bridge_t*))get_name;
 	this->public.create_iface_iterator = (iterator_t*(*)(bridge_t*))create_iface_iterator;
-	this->public.del_iface = (bool(*)(bridge_t*, iface_t *iface))del_iface;
-	this->public.add_iface = (bool(*)(bridge_t*, iface_t *iface))add_iface;
+	this->public.disconnect_iface = (bool(*)(bridge_t*, iface_t *iface))disconnect_iface;
+	this->public.connect_iface = (bool(*)(bridge_t*, iface_t *iface))connect_iface;
 	this->public.destroy = (void*)destroy;
 
 	if (br_add_bridge(name) != 0)

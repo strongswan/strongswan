@@ -36,6 +36,14 @@
 #define PERME (S_IRWXU | S_IRWXG)
 #define PERM (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
 
+#define MASTER_DIR "master"
+#define DIFF_DIR "diff"
+#define UNION_DIR "union"
+#define MEMORY_FILE "mem"
+#define KERNEL_FILE "linux"
+#define LOG_FILE "boot.log"
+#define NOTIFY_FILE "notify"
+
 typedef struct private_guest_t private_guest_t;
 
 struct private_guest_t {
@@ -178,7 +186,7 @@ static void stop(private_guest_t *this)
 /**
  * Implementation of guest_t.start.
  */
-static bool start(private_guest_t *this, char *kernel)
+static bool start(private_guest_t *this)
 {
 	char buf[2048];
 	char *notify;
@@ -240,6 +248,31 @@ static bool start(private_guest_t *this, char *kernel)
 		return FALSE;
 	}
 	this->state = GUEST_RUNNING;
+	return TRUE;
+}	
+	
+/**
+ * Implementation of guest_t.set_scenario.
+ */
+static bool set_scenario(private_guest_t *this, char *path)
+{
+	char dir[PATH_MAX];
+	size_t len;
+	
+	len = snprintf(dir, sizeof(dir), "%s/%s", path, this->name);
+	if (len < 0 || len >= sizeof(dir))
+	{
+		return FALSE;
+	}
+	if (access(dir, F_OK) != 0)
+	{
+		if (mkdir(dir, PERME) != 0)
+		{
+			DBG1("creating scenario overlay for guest '%s' failed: %m", this->name);
+			return FALSE;
+		}
+	}
+	this->cowfs->set_scenario(this->cowfs, dir);
 	return TRUE;
 }
 
@@ -388,6 +421,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->public.create_iface_iterator = (iterator_t*(*)(guest_t*))create_iface_iterator;
 	this->public.start = (void*)start;
 	this->public.stop = (void*)stop;
+	this->public.set_scenario = (bool(*)(guest_t*, char *path))set_scenario;
 	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
 	

@@ -19,11 +19,12 @@
 #include <library.h>
 #include <utils/iterator.h>
 
-#include "mconsole.h"
-
 #define TAP_DEVICE "/dev/net/tun"
 
 typedef struct iface_t iface_t;
+
+#include "mconsole.h"
+#include "bridge.h"
 
 /**
  * @brief Interface in a guest, connected to a tap device on the host.
@@ -33,22 +34,28 @@ struct iface_t {
 	/**
 	 * @brief Get the interface name in the guest (e.g. eth0).
 	 *
-	 * @return		guest interface name
+	 * @return			guest interface name
 	 */
 	char* (*get_guestif)(iface_t *this);
 	
 	/**
 	 * @brief Get the interface name at the host (e.g. tap0).
 	 *
-	 * @return		host interface (tap device) name
+	 * @return			host interface (tap device) name
 	 */
 	char* (*get_hostif)(iface_t *this);
+	
+	/**
+	 * @brief Set the bridge this interface is attached to.
+	 *
+	 * @param bridge	assigned bridge, or NULL for none
+	 */
+	void (*set_bridge)(iface_t *this, bridge_t *bridge);
 	
 	/*
 	bool (*up) (iface_t *this);
 	bool (*down) (iface_t *this);
 	bool (*add_addr) (iface_t *this, host_t *addr);
-	bool (*del_addr) (iface_t *this, host_t *addr);
 	iterator_t* (*create_addr_iterator) (iface_t *this);
 	*/
 	
@@ -69,3 +76,4 @@ struct iface_t {
 iface_t *iface_create(char *guest, char *guestif, mconsole_t *mconsole);
 
 #endif /* IFACE_H */
+
