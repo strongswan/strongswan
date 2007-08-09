@@ -795,18 +795,29 @@ static struct fuse_operations cowfs_operations = {
 /**
  * Implementation of cowfs_t.set_scenario.
  */
-static void set_scenario(private_cowfs_t *this, char *path)
+static bool set_scenario(private_cowfs_t *this, char *path)
 {
 	if (this->scen)
 	{
 		free(this->scen);
+		this->scen = NULL;
 	}
 	if (this->scen_fd > 0)
 	{
 		close(this->scen_fd);
+		this->scen_fd = -1;
 	}
-	this->scen = strdup(path);
-	this->scen_fd = open(path, O_RDONLY | O_DIRECTORY);
+	if (path)
+	{
+		this->scen_fd = open(path, O_RDONLY | O_DIRECTORY);
+		if (this->scen_fd < 0)
+		{
+			DBG1("failed to open scenario overlay directory '%s': %m", path);
+			return FALSE;
+		}
+		this->scen = strdup(path);
+	}
+	return TRUE;
 }
 
 /**
@@ -839,7 +850,7 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 	struct fuse_args args = {0, NULL, 0};
 	private_cowfs_t *this = malloc_thing(private_cowfs_t);
 	
-	this->public.set_scenario = (void(*)(cowfs_t*, char *path))set_scenario;
+	this->public.set_scenario = (bool(*)(cowfs_t*, char *path))set_scenario;
 	this->public.destroy = (void(*)(cowfs_t*))destroy;
 	
     this->master_fd = open(master, O_RDONLY | O_DIRECTORY);

@@ -158,6 +158,7 @@ static void guest_addif_menu(guest_t *guest)
 	{
 		printf("creating interface failed\n");
 	}
+	free(name);
 }
 
 static void guest_delif_menu(guest_t *guest)
@@ -186,6 +187,7 @@ static void guest_delif_menu(guest_t *guest)
 	{
 		printf("interface '%s' not found\n");
 	}
+	free(name);
 }
 
 static void guest_menu(guest_t *guest)
@@ -252,6 +254,10 @@ static void guest_create_menu()
 	{
 		printf("failed to create guest '%s'\n", name);
 	}
+	free(name);
+	free(kernel);
+	free(master);
+	free(mem);
 }
 
 static void guest_list_menu()
@@ -314,6 +320,8 @@ static void bridge_addif_menu(bridge_t *bridge)
 		printf("failed to add interface '%s' to bridge '%s'\n", ifname,
 			   bridge->get_name(bridge));
 	}
+	free(name);
+	free(ifname);
 }
 
 static void bridge_delif_menu(bridge_t *bridge)
@@ -334,6 +342,8 @@ static void bridge_delif_menu(bridge_t *bridge)
 		printf("failed to remove interface '%s' from bridge '%s'\n", ifname,
 			   bridge->get_name(bridge));
 	}
+	free(name);
+	free(ifname);
 }
 
 static void bridge_menu(bridge_t *bridge)
@@ -392,6 +402,7 @@ static void bridge_create_menu()
 	{
 		printf("failed to create bridge '%s'\n", name);
 	}
+	free(name);
 }
 
 static void bridge_list_menu()
@@ -434,6 +445,17 @@ static void bridge_list_menu()
 		}
 		free(line);
 	}
+}
+
+static void scenario_menu()
+{
+	char *name;
+	
+	name = get_line("scenario name (or 'none'): ");
+	
+	dumm->load_scenario(dumm, streq(name, "none") ? NULL : name);
+	
+	free(name);
 }
 
 /**
@@ -508,9 +530,13 @@ int main(int argc, char *argv[])
 		{
 			bridge_list_menu();
 		}
+		else if (streq(line, "scenario"))
+		{
+			scenario_menu();
+		}
 		else
 		{
-			printf("quit|guest|bridge\n");
+			printf("quit|guest|bridge|scenario\n");
 		}
 		free(line);
 	}

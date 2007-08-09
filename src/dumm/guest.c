@@ -259,6 +259,11 @@ static bool set_scenario(private_guest_t *this, char *path)
 	char dir[PATH_MAX];
 	size_t len;
 	
+	if (path == NULL)
+	{
+		return this->cowfs->set_scenario(this->cowfs, NULL);	
+	}
+	
 	len = snprintf(dir, sizeof(dir), "%s/%s", path, this->name);
 	if (len < 0 || len >= sizeof(dir))
 	{
@@ -272,8 +277,7 @@ static bool set_scenario(private_guest_t *this, char *path)
 			return FALSE;
 		}
 	}
-	this->cowfs->set_scenario(this->cowfs, dir);
-	return TRUE;
+	return this->cowfs->set_scenario(this->cowfs, dir);
 }
 
 /**

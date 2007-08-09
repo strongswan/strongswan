@@ -104,7 +104,9 @@ static iterator_t* create_bridge_iterator(private_dumm_t *this)
 	return this->bridges->create_iterator(this->bridges, TRUE);
 }
 
-
+/**
+ * disable the currently enabled scenario 
+ */
 static void clear_scenario(private_dumm_t *this)
 {
 	iterator_t *iterator;
@@ -130,42 +132,50 @@ static bool load_scenario(private_dumm_t *this, char *name)
 	guest_t *guest;
 	char dir[PATH_MAX];
 	size_t len;
+	
+	if (name == NULL)
+	{
+		clear_scenario(this);
+		return TRUE;
+	}
 
 	free(this->scenario);
 	asprintf(&this->scenario, "%s/%s", this->scenario_dir, name);
+	mkdir(this->scenario_dir, PERME);
 	
-	if (access(this->scenario, F_OK) == 0)
-	{	/* exists, load scenario */
-		DBG1("scenario loading unimplemented.");
+	len = snprintf(dir, sizeof(dir), "%s/%s", this->scenario, SCENARIO_DIFF_DIR);
+	if (len < 0 || len >= sizeof(dir))
+	{
+		clear_scenario(this);
 		return FALSE;
 	}
-	else
+	
+	if (access(this->scenario, F_OK) != 0)
 	{	/* does not exist, create scenario */
 		if (mkdir(this->scenario, PERME) != 0)
 		{
 			DBG1("creating scenario directory '%s' failed: %m", this->scenario);
 			clear_scenario(this);
 			return FALSE;
-		}			
-		len = snprintf(dir, sizeof(dir), "%s/%s/%s", this->scenario,
-					   SCENARIO_DIR, SCENARIO_DIFF_DIR);
-		if (len < 0 || len >= sizeof(dir))
+		}
+		if (mkdir(dir, PERME) != 0)
 		{
+			DBG1("creating scenario overlay directory '%s' failed: %m", dir);
 			clear_scenario(this);
 			return FALSE;
 		}
-		iterator = this->guests->create_iterator(this->guests, TRUE);
-		while (iterator->iterate(iterator, (void**)&guest))
-		{
-			if (!guest->set_scenario(guest, dir))
-			{
-				iterator->destroy(iterator);
-				clear_scenario(this);
-				return FALSE;
-			}
-		}
-		iterator->destroy(iterator);
 	}
+	iterator = this->guests->create_iterator(this->guests, TRUE);
+	while (iterator->iterate(iterator, (void**)&guest))
+	{
+		if (!guest->set_scenario(guest, dir))
+		{
+			iterator->destroy(iterator);
+			clear_scenario(this);
+			return FALSE;
+		}
+	}
+	iterator->destroy(iterator);
 	return TRUE;
 }
 
