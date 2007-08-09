@@ -184,7 +184,15 @@ struct linked_list_t {
 	 * @param this 		calling object
 	 * @param offset	offset of the method to invoke on objects
 	 */
-	void (*invoke) (linked_list_t *this, size_t offset);
+	void (*invoke_offset) (linked_list_t *this, size_t offset);
+	
+	/**
+	 * @brief Invoke a function on all of the contained objects.
+	 * 
+	 * @param this 		calling object
+	 * @param offset	offset of the method to invoke on objects
+	 */
+	void (*invoke_function) (linked_list_t *this, void (*)(void*));
 	
 	/**
 	 * @brief Clones a list and its objects using the objects' clone method.

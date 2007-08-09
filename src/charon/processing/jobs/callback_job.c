@@ -130,7 +130,7 @@ static void cancel(private_callback_job_t *this)
 	thread = this->thread;
 	
 	/* terminate its children */
-	this->children->invoke(this->children, offsetof(callback_job_t, cancel));
+	this->children->invoke_offset(this->children, offsetof(callback_job_t, cancel));
 	pthread_mutex_unlock(&this->mutex);
 	
 	/* terminate thread */

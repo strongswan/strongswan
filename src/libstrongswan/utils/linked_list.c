@@ -631,9 +631,9 @@ static status_t get_last(private_linked_list_t *this, void **item)
 }
 
 /**
- * Implementation of linked_list_t.invoke.
+ * Implementation of linked_list_t.invoke_offset.
  */
-static void invoke(private_linked_list_t *this, size_t offset)
+static void invoke_offset(private_linked_list_t *this, size_t offset)
 {
 	element_t *current = this->first;
 	
@@ -641,6 +641,20 @@ static void invoke(private_linked_list_t *this, size_t offset)
 	{
 		void (**method)(void*) = current->value + offset;
 		(*method)(current->value);
+		current = current->next;
+	}
+}
+
+/**
+ * Implementation of linked_list_t.invoke_function.
+ */
+static void invoke_function(private_linked_list_t *this, void(*fn)(void*))
+{
+	element_t *current = this->first;
+	
+	while (current)
+	{
+		fn(current->value);
 		current = current->next;
 	}
 }
@@ -687,7 +701,7 @@ static void destroy(private_linked_list_t *this)
 {
 	void *value;
 	/* Remove all list items before destroying list */
-	while (this->public.remove_first(&(this->public), &value) == SUCCESS)
+	while (remove_first(this, &value) == SUCCESS)
 	{
 		/* values are not destroyed so memory leaks are possible
 		 * if list is not empty when deleting */
@@ -789,7 +803,8 @@ linked_list_t *linked_list_create()
 	this->public.insert_at_position = (status_t (*) (linked_list_t *,size_t, void *))insert_at_position;
 	this->public.remove_at_position = (status_t (*) (linked_list_t *,size_t, void **))remove_at_position;
 	this->public.get_at_position = (status_t (*) (linked_list_t *,size_t, void **))get_at_position;
-	this->public.invoke = (void (*)(linked_list_t*,size_t))invoke;
+	this->public.invoke_offset = (void (*)(linked_list_t*,size_t))invoke_offset;
+	this->public.invoke_function = (void (*)(linked_list_t*,void(*)(void*)))invoke_function;
 	this->public.clone_offset = (linked_list_t * (*)(linked_list_t*,size_t))clone_offset;
 	this->public.clone_function = (linked_list_t * (*)(linked_list_t*,void*(*)(void*)))clone_function;
 	this->public.destroy = (void (*) (linked_list_t *))destroy;
