@@ -239,6 +239,7 @@ static int list(stroke_keyword_t kw, int utc)
 }
 
 static int reread_flags[] = {
+	REREAD_SECRETS,
 	REREAD_CACERTS,
 	REREAD_OCSPCERTS,
 	REREAD_AACERTS,
@@ -316,10 +317,14 @@ static void exit_usage(char *error)
 	printf("           LEVEL is -1|0|1|2|3|4\n");
 	printf("  Show connection status:\n");
 	printf("    stroke status\n");
-	printf("  Show list of locally loaded certificates and crls:\n");
-	printf("    stroke listcerts|listcacerts|listocspcerts|listcainfos|listcrls|listocsp|listall\n");
-	printf("  Reload ca certificates and crls:\n");
-	printf("    stroke rereadcacerts|rereadcrls|rereadall\n");
+	printf("  Show list of authority and attribute certificates:\n");
+	printf("    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
+	printf("  Show list of end entity certificates, ca info records  and crls:\n");
+	printf("    stroke listcerts|listcainfos|listcrls|listall\n");
+	printf("  Reload authority and attribute certificates:\n");
+	printf("    stroke rereadcacerts|rereadocspcerts|rereadaacerts|rereadacerts\n");
+	printf("  Reload secrets and crls:\n");
+	printf("    stroke rereadsecrets|rereadcrls|rereadall\n");
 	printf("  Purge ocsp cache entries:\n");
 	printf("    stroke purgeocsp\n");
 	exit_error(error);
