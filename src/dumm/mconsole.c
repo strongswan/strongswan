@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <errno.h>
 #include <sys/un.h>
 
 #include <debug.h>
@@ -187,7 +188,10 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 		close(this->notify);
 		return FALSE;
 	}
-	len = recvfrom(this->notify, &notify, sizeof(notify), 0, NULL, 0);
+	do
+	{
+		len = recvfrom(this->notify, &notify, sizeof(notify), 0, NULL, 0);
+	} while (len < 0 && errno == EINTR);
 	if (len < 0 || len >= sizeof(notify))
 	{
 		DBG1("reading from mconsole notify socket failed: %m");
