@@ -382,8 +382,10 @@ static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_publ
 {
 	bool found = FALSE;
 	rsa_private_key_t *current;
+	iterator_t *iterator;
 
-	iterator_t *iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
+	pthread_mutex_lock(&(this->keys_mutex));
+	iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
 
 	while (iterator->iterate(iterator, (void**)&current))
 	{
@@ -394,6 +396,7 @@ static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_publ
 		}
 	}
 	iterator->destroy(iterator);
+	pthread_mutex_unlock(&(this->keys_mutex));
 	return found;
 }
 
