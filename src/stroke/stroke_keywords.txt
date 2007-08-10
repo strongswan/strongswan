@@ -46,7 +46,7 @@ listcainfos,     STROKE_LIST_CAINFOS
 listcrls,        STROKE_LIST_CRLS
 listocsp,        STROKE_LIST_OCSP
 listall,         STROKE_LIST_ALL
-rereadsecrets,   STROKE_REREAD_CACERTS
+rereadsecrets,   STROKE_REREAD_SECRETS
 rereadcacerts,   STROKE_REREAD_CACERTS
 rereadocspcerts, STROKE_REREAD_OCSPCERTS
 rereadaacerts,   STROKE_REREAD_AACERTS,
