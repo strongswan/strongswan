@@ -1483,6 +1483,14 @@ static void stroke_reread(stroke_msg_t *msg, FILE *out)
 	{
 		charon->credentials->load_ocsp_certificates(charon->credentials);
 	}
+	if (msg->reread.flags & REREAD_AACERTS)
+	{
+		charon->credentials->load_aa_certificates(charon->credentials);
+	}
+	if (msg->reread.flags & REREAD_ACERTS)
+	{
+		charon->credentials->load_attr_certificates(charon->credentials);
+	}
 	if (msg->reread.flags & REREAD_CRLS)
 	{
 		charon->credentials->load_crls(charon->credentials);
