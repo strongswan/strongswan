@@ -300,7 +300,7 @@ static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.credentials->load_attr_certificates(this->public.credentials);
 	this->public.credentials->load_ocsp_certificates(this->public.credentials);
 	this->public.credentials->load_crls(this->public.credentials);
-	this->public.credentials->load_secrets(this->public.credentials);
+	this->public.credentials->load_secrets(this->public.credentials, FALSE);
 	
 	this->public.interfaces = interface_manager_create();
 	this->public.backends = backend_manager_create();

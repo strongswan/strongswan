@@ -296,12 +296,13 @@ struct credential_store_t {
 	/**
 	 * @brief Loads secrets in ipsec.secrets
 	 * 
-	 * Currently, all RSA private key files must be in unencrypted form
-     * either in DER or PEM format.
+	 * RSA private key files can be either in DER or PEM format
+     * Optional encryption with a passphrase supported
 	 * 
 	 * @param this		calling object
+	 * @param reload	are the secrets to be reloaded
 	 */
-	void (*load_secrets) (credential_store_t *this);
+	void (*load_secrets) (credential_store_t *this, bool reload);
 
 	/**
 	 * @brief Destroys a credential_store_t object.

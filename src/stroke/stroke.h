@@ -72,18 +72,20 @@ typedef enum reread_flag_t reread_flag_t;
 enum reread_flag_t {
 	/** don't reread anything */
 	REREAD_NONE =		0x0000,
+	/** reread all secret keys */
+	REREAD_SECRETS =	0x0001,
 	/** reread all ca certs */
-	REREAD_CACERTS =	0x0001,
+	REREAD_CACERTS =	0x0002,
 	/** reread all ocsp signer certs */
-	REREAD_OCSPCERTS =	0x0002,
+	REREAD_OCSPCERTS =	0x0004,
 	/** reread all aa certs */
-	REREAD_AACERTS =	0x0004,
+	REREAD_AACERTS =	0x0008,
 	/** reread all attribute certs */
-	REREAD_ACERTS =		0x0008,
+	REREAD_ACERTS =		0x0010,
 	/** reread all crls */
-	REREAD_CRLS =		0x0010,
+	REREAD_CRLS =		0x0020,
 	/** all reread options */
-	REREAD_ALL =		0x001F,
+	REREAD_ALL =		0x003F,
 };
 
 typedef enum purge_flag_t purge_flag_t;

@@ -1471,6 +1471,10 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
  */
 static void stroke_reread(stroke_msg_t *msg, FILE *out)
 {
+	if (msg->reread.flags & REREAD_SECRETS)
+	{
+		charon->credentials->load_secrets(charon->credentials, TRUE);
+	}
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
 		charon->credentials->load_ca_certificates(charon->credentials);
