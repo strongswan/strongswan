@@ -119,7 +119,7 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	my_key = charon->credentials->get_rsa_private_key(charon->credentials, my_pubkey);
 	if (my_key == NULL)
 	{
-		DBG1(DBG_IKE, "no RSA private key found with for %D with keyid %#B",
+		DBG1(DBG_IKE, "no RSA private key found for %D with keyid %#B",
 			 my_id, &chunk);
 		return NOT_FOUND;
 	}
