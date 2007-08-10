@@ -410,13 +410,19 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_CERTS:
 		case STROKE_LIST_CACERTS:
 		case STROKE_LIST_OCSPCERTS:
+		case STROKE_LIST_AACERTS:
+		case STROKE_LIST_ACERTS:
 		case STROKE_LIST_CAINFOS:
 		case STROKE_LIST_CRLS:
 		case STROKE_LIST_OCSP:
 		case STROKE_LIST_ALL:
 			res = list(token->kw, argc > 2 && strcmp(argv[2], "--utc") == 0);
 			break;
+		case STROKE_REREAD_SECRETS:
 		case STROKE_REREAD_CACERTS:
+		case STROKE_REREAD_OCSPCERTS:
+		case STROKE_REREAD_AACERTS:
+		case STROKE_REREAD_ACERTS:
 		case STROKE_REREAD_CRLS:
 		case STROKE_REREAD_ALL:
 			res = reread(token->kw);
