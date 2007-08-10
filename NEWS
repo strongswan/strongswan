@@ -1,7 +1,8 @@
 strongswan-4.1.6
 ----------------
 
--
+- ipsec stroke now supports the rereadsecrets, rereadaacerts,
+  rereadacerts, and listacerts options.
 
 
 strongswan-4.1.5
