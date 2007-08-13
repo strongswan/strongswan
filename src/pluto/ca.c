@@ -197,7 +197,7 @@ get_authcert(chunk_t subject, chunk_t serial, chunk_t keyid, u_char auth_flags)
 /*
  * add an authority certificate to the chained list
  */
-bool
+x509cert_t*
 add_authcert(x509cert_t *cert, u_char auth_flags)
 {
     x509cert_t *old_cert;
@@ -222,7 +222,7 @@ add_authcert(x509cert_t *cert, u_char auth_flags)
 	    unlock_authcert_list("add_authcert");
 
 	    free_x509cert(cert);
-	    return FALSE;
+	    return old_cert;
 	}
 	else
 	{
@@ -242,7 +242,7 @@ add_authcert(x509cert_t *cert, u_char auth_flags)
 	DBG_log("  authcert inserted")
     )
     unlock_authcert_list("add_authcert");
-    return TRUE;
+    return cert;
 }
 
 /*
@@ -623,15 +623,12 @@ add_ca_info(const whack_message_t *msg)
 	unlock_ca_info_list("add_ca_info");
 
 	/* add cacert to list of authcerts */
-	if (!cached_cert)
+	if (!cached_cert && sc != NULL)
 	{
-	    if (add_authcert(cacert, AUTH_CA) && sc != NULL)
-	    {
-		if (sc->last_cert.type == CERT_X509_SIGNATURE)
-		    sc->last_cert.u.x509->count--;
-		sc->last_cert = cert;
-		share_cert(sc->last_cert);
-	    }
+	    if (sc->last_cert.type == CERT_X509_SIGNATURE)
+		sc->last_cert.u.x509->count--;
+	    sc->last_cert.u.x509 = add_authcert(cacert, AUTH_CA);
+	    share_cert(sc->last_cert);
 	}
 	if (sc != NULL)
 	    time(&sc->last_load);

@@ -54,7 +54,7 @@ extern x509cert_t* get_authcert(chunk_t subject, chunk_t serial, chunk_t keyid
     , u_char auth_flags);
 extern void load_authcerts(const char *type, const char *path
     , u_char auth_flags);
-extern bool add_authcert(x509cert_t *cert, u_char auth_flags);
+extern x509cert_t* add_authcert(x509cert_t *cert, u_char auth_flags);
 extern void free_authcerts(void);
 extern void list_authcerts(const char *caption, u_char auth_flags, bool utc);
 extern bool trust_authcert_candidate(const x509cert_t *cert
