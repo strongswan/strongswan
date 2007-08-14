@@ -199,19 +199,6 @@ static void update_chunk(chunk_t *ch, int n)
 }
 
 /**
- * Prints a binary string in hexadecimal form
- */
-void hex_str(chunk_t bin, chunk_t *str)
-{
-	u_int i;
-	update_chunk(str, snprintf(str->ptr,str->len,"0x"));
-	for (i = 0; i < bin.len; i++)
-	{
-		update_chunk(str, snprintf(str->ptr,str->len,"%02X",*bin.ptr++));
-	}
-}
-
-/**
  * Remove any malicious characters from a chunk. We are very restrictive, but
  * whe use these strings only to present it to the user.
  */
@@ -402,9 +389,9 @@ static status_t dntoa(chunk_t dn, chunk_t *str)
 
 		/* print OID */
 		oid_code = known_oid(oid);
-		if (oid_code == OID_UNKNOWN) 
-		{ /* OID not found in list */
-			hex_str(oid, str);
+		if (oid_code == OID_UNKNOWN)
+		{
+			update_chunk(str, snprintf(str->ptr,str->len,"0x#B", &oid));
 		}
 		else
 		{
