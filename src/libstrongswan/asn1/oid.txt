@@ -102,6 +102,7 @@
               0x0A           ""
                 0x03         ""
                   0x03       "msSGC"
+                  0x04       "msEncryptingFileSystem"
               0x14           "msEnrollmentInfrastructure"
                 0x02         "msCertificateTypeExtension"
                   0x02       "msSmartcardLogon"
