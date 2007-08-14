@@ -3268,7 +3268,7 @@ find_host_connection(const ip_address *me, u_int16_t my_port
  * less important than the disadvantages, so after FreeS/WAN 1.9, we
  * don't do this.
  */
-#define PRIO_NO_MATCH_FOUND	4096
+#define PRIO_NO_MATCH_FOUND	2048
 
 struct connection *
 refine_host_connection(const struct state *st, const struct id *peer_id
@@ -3352,20 +3352,20 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 					, d->spd.this.ca, &our_pathlen);
 	    bool match = matching_id && matching_auth && matching_trust;
 
-	    int prio = (MAX_WILDCARDS + 1) * matching_trust + wildcards;
+	    int prio = (MAX_WILDCARDS + 1) * !matching_trust + wildcards;
 
 	    prio = (MAX_CA_PATH_LEN + 1) * prio + peer_pathlen;
 	    prio = (MAX_CA_PATH_LEN + 1) * prio + our_pathlen;
 
 	    DBG(DBG_CONTROLMORE,
-		DBG_log("%s: %s match (id: %s, auth: %s, trust: %s, request: %s, prio: %d)"
+		DBG_log("%s: %s match (id: %s, auth: %s, trust: %s, request: %s, prio: %4d)"
 		    , d->name
 		    , match ? "full":" no"
 		    , match_name[matching_id]
 		    , match_name[matching_auth]
 		    , match_name[matching_trust]
 		    , match_name[matching_request]
-		    , prio)
+		    , match ? prio:PRIO_NO_MATCH_FOUND)
 	    )
 
 	    /* do we have a match? */
