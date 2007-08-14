@@ -1094,6 +1094,7 @@ static void add_attr_certificate(private_local_credential_store_t *this, x509ac_
 {
 	iterator_t *iterator;
 	x509ac_t *current_cert;
+	bool found = FALSE;
 
 	pthread_mutex_lock(&(this->acerts_mutex));
 	iterator = this->acerts->create_iterator(this->acerts, TRUE);
@@ -1113,11 +1114,16 @@ static void add_attr_certificate(private_local_credential_store_t *this, x509ac_
 				cert->destroy(cert);
 				DBG1(DBG_CFG, "  this attr cert is not newer - existing attr cert retained");
 			}
+			found = TRUE;
 			break;
 		}
 	}
-
 	iterator->destroy(iterator);
+
+	if (!found)
+	{
+		this->acerts->insert_last(this->acerts, (void *)cert);
+	}
 	pthread_mutex_unlock(&(this->acerts_mutex));
 }
 
