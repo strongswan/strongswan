@@ -175,6 +175,42 @@ struct ietfAttr_t {
 };
 
 /**
+ * Lists a linked_list of ietfAttr_t objects
+ */
+static void ietfAttr_list(linked_list_t *list, FILE *out)
+{
+	iterator_t *iterator = list->create_iterator(list, TRUE);
+	ietfAttr_t *attr;
+	bool first = TRUE;
+
+	while (iterator->iterate(iterator, (void **)&attr))
+	{
+		if (first)
+		{
+			first = FALSE;
+		}
+		else
+		{
+			fprintf(out, ", ");
+		}
+
+		switch (attr->kind)
+		{
+			case IETF_ATTRIBUTE_OCTETS:
+			case IETF_ATTRIBUTE_STRING:
+				fprintf(out, "%.*s", (int)attr->value.len, attr->value.ptr);
+				break;
+			case IETF_ATTRIBUTE_OID:
+				fprintf(out, "0x#B", &attr->value);
+	    		break;
+			default:
+	    		break;
+  		}
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Destroys an ietfAttr_t object
  */
 static void ietfAttr_destroy(ietfAttr_t *this)
@@ -358,6 +394,23 @@ static err_t is_valid(const private_x509ac_t *this, time_t *until)
 	}
 	DBG2("  attribute certificate is valid");
 	return NULL;
+}
+
+/**
+ * Implements x509ac_t.is_newer
+ */
+static bool is_newer(const private_x509ac_t *this, const private_x509ac_t *other)
+{
+	return this->notBefore > other->notBefore;
+}
+
+/**
+ * Implements x509ac_t.equals_holder.
+ */
+static bool equals_holder(const private_x509ac_t *this, const private_x509ac_t *other)
+{
+	return this->holderIssuer->equals(this->holderIssuer, other->holderIssuer)
+		   && chunk_equals(this->holderSerial, other->holderSerial);
 }
 
 /**
@@ -613,7 +666,7 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 /**
  * Implementation of x509ac_t.list.
  */
-static void list(private_x509ac_t *this, FILE *out, bool utc)
+static void list(const private_x509ac_t *this, FILE *out, bool utc)
 {
 	time_t now = time(NULL);
 
@@ -631,12 +684,12 @@ static void list(private_x509ac_t *this, FILE *out, bool utc)
 	{
 		fprintf(out, "    hserial:    %#B\n", &this->holderSerial);
 	}
-/*	if (ac->groups != NULL)
-	{
-	    format_groups(ac->groups, buf, BUF_LEN);
-	    whack_log(RC_COMMENT, "       groups:    %s", buf);
-	} 
-*/
+	
+	/* list all group attributes on a single line */
+	fprintf(out, "    groups:     ");
+	ietfAttr_list(this->groups, out);
+	fprintf(out, "\n");
+
 	fprintf(out, "    issuer:    '%D'\n", this->issuerName);
 	fprintf(out, "    serial:     %#B\n", &this->serialNumber);
 
@@ -707,7 +760,9 @@ x509ac_t *x509ac_create_from_chunk(chunk_t chunk)
 
 	/* public functions */
 	this->public.is_valid = (err_t (*) (const x509ac_t*,time_t*))is_valid;
-	this->public.list = (void(*)(x509ac_t*, FILE *out, bool utc))list;
+	this->public.is_newer = (bool (*) (const x509ac_t*,const x509ac_t*))is_newer;
+	this->public.equals_holder = (bool (*) (const x509ac_t*,const x509ac_t*))equals_holder;
+	this->public.list = (void (*) (const x509ac_t*,FILE*,bool))list;
 	this->public.destroy = (void (*) (x509ac_t*))destroy;
 
 	if (!parse_certificate(chunk, this))

@@ -258,7 +258,6 @@ static status_t get_key(linked_list_t *keys,
 	}
 }
 
-
 /**
  * Implementation of local_credential_store_t.get_shared_key.
  */	
@@ -1093,9 +1092,32 @@ static void load_aa_certificates(private_local_credential_store_t *this)
  */
 static void add_attr_certificate(private_local_credential_store_t *this, x509ac_t *cert)
 {
-	/* TODO replace stale attribute certificates by fresh ones */
+	iterator_t *iterator;
+	x509ac_t *current_cert;
+
 	pthread_mutex_lock(&(this->acerts_mutex));
-	this->acerts->insert_last(this->acerts, (void*)cert);
+	iterator = this->acerts->create_iterator(this->acerts, TRUE);
+
+	while (iterator->iterate(iterator, (void **)&current_cert))
+	{
+		if (cert->equals_holder(cert, current_cert))
+		{
+			if (cert->is_newer(cert, current_cert))
+			{
+				iterator->replace(iterator, NULL, (void *)cert);
+				current_cert->destroy(current_cert);
+				DBG1(DBG_CFG, "  this attr cert is newer - existing attr cert replaced");
+			}
+			else
+			{
+				cert->destroy(cert);
+				DBG1(DBG_CFG, "  this attr cert is not newer - existing attr cert retained");
+			}
+			break;
+		}
+	}
+
+	iterator->destroy(iterator);
 	pthread_mutex_unlock(&(this->acerts_mutex));
 }
 

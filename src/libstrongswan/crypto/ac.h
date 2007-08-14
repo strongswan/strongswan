@@ -48,6 +48,23 @@ struct x509ac_t {
 	 */
 	err_t (*is_valid) (const x509ac_t *this, time_t *until);
 
+	/** @brief Checks if this attr cert is newer than the other attr cert
+	 * 
+	 * @param this			calling object
+	 * @param other			other attr cert object
+	 * @return				TRUE if this was issued more recently than other
+	 */
+	bool (*is_newer) (const x509ac_t *this, const x509ac_t *other);
+
+	/**
+	 * @brief Checks if two attribute certificates belong to the same holder
+	 *
+	 * @param this			calling attribute certificate
+	 * @param that			other attribute certificate
+	 * @return				TRUE if same holder
+	 */
+	bool (*equals_holder) (const x509ac_t *this, const x509ac_t *other);
+
 	/**
 	 * @brief Log the attribute certificate info to out.
 	 *
@@ -55,7 +72,7 @@ struct x509ac_t {
 	 * @param out			stream to write to
 	 * @param utc			TRUE for UTC times, FALSE for local time
 	 */
-	void (*list)(x509ac_t *this, FILE *out, bool utc);
+	void (*list)(const x509ac_t *this, FILE *out, bool utc);
 
 	/**
 	 * @brief Destroys the attribute certificate.
