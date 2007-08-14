@@ -3268,22 +3268,21 @@ find_host_connection(const ip_address *me, u_int16_t my_port
  * less important than the disadvantages, so after FreeS/WAN 1.9, we
  * don't do this.
  */
+#define PRIO_NO_MATCH_FOUND	4096
+
 struct connection *
 refine_host_connection(const struct state *st, const struct id *peer_id
 , chunk_t peer_ca)
 {
     struct connection *c = st->st_connection;
-    u_int16_t auth = st->st_oakley.auth;
     struct connection *d;
     struct connection *best_found = NULL;
+    u_int16_t auth = st->st_oakley.auth;
     lset_t auth_policy;
     const chunk_t *psk = NULL;
     bool wcpip;	/* wildcard Peer IP? */
-
+    int best_prio = PRIO_NO_MATCH_FOUND;
     int wildcards, our_pathlen, peer_pathlen;
-    int best_wildcards    = MAX_WILDCARDS;
-    int best_our_pathlen  = MAX_CA_PATH_LEN;
-    int best_peer_pathlen = MAX_CA_PATH_LEN;
 
     if (same_id(&c->spd.that.id, peer_id)
     && trusted_ca(peer_ca, c->spd.that.ca, &peer_pathlen)
@@ -3351,17 +3350,22 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 					, d->spd.that.ca, &peer_pathlen);
 	    bool matching_request = match_requested_ca(c->requested_ca
 					, d->spd.this.ca, &our_pathlen);
-	    bool match = matching_id && matching_auth &&
-			 matching_trust && matching_request;
+	    bool match = matching_id && matching_auth && matching_trust;
+
+	    int prio = (MAX_WILDCARDS + 1) * matching_trust + wildcards;
+
+	    prio = (MAX_CA_PATH_LEN + 1) * prio + peer_pathlen;
+	    prio = (MAX_CA_PATH_LEN + 1) * prio + our_pathlen;
 
 	    DBG(DBG_CONTROLMORE,
-		DBG_log("%s: %s match (id: %s, auth: %s, trust: %s, request: %s)"
+		DBG_log("%s: %s match (id: %s, auth: %s, trust: %s, request: %s, prio: %d)"
 		    , d->name
 		    , match ? "full":" no"
 		    , match_name[matching_id]
 		    , match_name[matching_auth]
 		    , match_name[matching_trust]
-		    , match_name[matching_request])
+		    , match_name[matching_request]
+		    , prio)
 	    )
 
 	    /* do we have a match? */
@@ -3415,20 +3419,18 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 	    /* d has passed all the tests.
 	     * We'll go with it if the Peer ID was an exact match.
 	     */
-	    if (match && wildcards == 0 && peer_pathlen == 0 && our_pathlen == 0)
+	    if (prio == 0)
+	    {
 		return d;
+	    }
 
 	    /* We'll remember it as best_found in case an exact
 	     * match doesn't come along.
 	     */
-	    if (best_found == NULL || wildcards < best_wildcards
-	    || ((wildcards == best_wildcards && peer_pathlen < best_peer_pathlen)
-		|| (peer_pathlen == best_peer_pathlen && our_pathlen < best_our_pathlen)))
+	    if (prio < best_prio)
 	    {
 		best_found = d;
-		best_wildcards = wildcards;
-		best_peer_pathlen = peer_pathlen;
-		best_our_pathlen = our_pathlen;
+		best_prio = prio;
 	    }
 	}
 	if (wcpip)
