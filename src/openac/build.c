@@ -21,9 +21,10 @@
 
 #include <freeswan.h>
 
+#include <asn1/oid.h>
+
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
-#include "../pluto/oid.h"
 #include "../pluto/asn1.h"
 #include "../pluto/x509.h"
 #include "../pluto/log.h"

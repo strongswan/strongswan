@@ -1,9 +1,13 @@
 ipsec_PROGRAMS = openac
 openac_SOURCES = openac.c build.c build.h loglite.c
 
+PLUTODIR=$(top_srcdir)/src/pluto
+LIBSTRONGSWANDIR=$(top_srcdir)/src/libstrongswan
+
 INCLUDES = \
 -I$(top_srcdir)/src/libfreeswan \
--I$(top_srcdir)/src/pluto \
+-I$(LIBSTRONGSWANDIR)\
+-I$(PLUTODIR) \
 -I$(top_srcdir)/src/libcrypto \
 -I$(top_srcdir)/src/whack
 
@@ -24,8 +28,6 @@ if USE_SMARTCARD
 endif
 
 dist_man_MANS = openac.8
-
-PLUTODIR=$(top_srcdir)/src/pluto
 
 ac.o :		$(PLUTODIR)/ac.c $(PLUTODIR)/ac.h
 		$(COMPILE) -c -o $@ $<
@@ -72,7 +74,7 @@ md5.o :		$(PLUTODIR)/md5.c $(PLUTODIR)/md5.h
 ocsp.o :	$(PLUTODIR)/ocsp.c $(PLUTODIR)/ocsp.h
 		$(COMPILE) -c -o $@ $<
 
-oid.o :		$(PLUTODIR)/oid.c $(PLUTODIR)/oid.h
+oid.o :		$(LIBSTRONGSWANDIR)/asn1/oid.c $(LIBSTRONGSWANDIR)/asn1/oid.h
 		$(COMPILE) -c -o $@ $<
 
 pem.o :		$(PLUTODIR)/pem.c $(PLUTODIR)/pem.h

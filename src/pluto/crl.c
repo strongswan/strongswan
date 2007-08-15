@@ -29,7 +29,7 @@
 #include "defs.h"
 #include "log.h"
 #include "asn1.h"
-#include "oid.h"
+#include <asn1/oid.h>
 #include "x509.h"
 #include "crl.h"
 #include "ca.h"

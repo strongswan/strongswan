@@ -35,7 +35,7 @@
 #include "asn1.h"
 #include "certs.h"
 #include "smartcard.h"
-#include "oid.h"
+#include <asn1/oid.h>
 #include "whack.h"
 #include "pkcs1.h"
 #include "keys.h"

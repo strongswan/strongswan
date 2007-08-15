@@ -35,11 +35,11 @@
 #include <gmp.h>
 
 #include <freeswan.h>
+#include <asn1/oid.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/log.h"
-#include "../pluto/oid.h"
 #include "../pluto/asn1.h"
 #include "../pluto/pkcs1.h"
 #include "../pluto/pkcs7.h"

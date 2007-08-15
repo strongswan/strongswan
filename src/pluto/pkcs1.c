@@ -27,7 +27,7 @@
 #include "defs.h"
 #include "mp_defs.h"
 #include "asn1.h"
-#include "oid.h"
+#include <asn1/oid.h>
 #include "log.h"
 #include "pkcs1.h"
 #include "md2.h"

@@ -1,17 +1,26 @@
 ipsec_PROGRAMS = scepclient
 scepclient_SOURCES = rsakey.c rsakey.h pkcs10.c pkcs10.h scep.c scep.h scepclient.c
 
+PLUTODIR=$(top_srcdir)/src/pluto
+OPENACDIR=$(top_srcdir)/src/openac
+WHACKDIR=$(top_srcdir)/src/whack
+LIBFREESWANDIR=$(top_srcdir)/src/libfreeswan
+LIBSTRONGSWANDIR=$(top_srcdir)/src/libstrongswan
+LIBCRYPTODIR=$(top_srcdir)/src/libcrypto
+
 INCLUDES = \
--I$(top_srcdir)/src/libfreeswan \
--I$(top_srcdir)/src/pluto \
--I$(top_srcdir)/src/whack \
--I$(top_srcdir)/src/libcrypto
+-I$(LIBFREESWANDIR) \
+-I$(LIBSTRONGSWANDIR) \
+-I$(PLUTODIR) \
+-I$(LIBCRYPTODIR) \
+-I$(WHACKDIR)
 
 AM_CFLAGS = -DDEBUG -DNO_PLUTO -DIPSEC_CONFDIR=\"${confdir}\"
+
 scepclient_LDADD = asn1.o ca.o crl.o certs.o constants.o defs.o fetch.o id.o \
                    keys.o lex.o md2.o md5.o mp_defs.o ocsp.o oid.o pem.o pgp.o \
                    pkcs1.o pkcs7.o rnd.o sha1.o smartcard.o x509.o loglite.o \
-                   $(top_srcdir)/src/libfreeswan/libfreeswan.a $(top_srcdir)/src/libcrypto/libcrypto.a \
+                   $(LIBFREESWANDIR)/libfreeswan.a $(LIBCRYPTODIR)/libcrypto.a \
                    -lgmp
 
 # This compile option activates dynamic URL fetching using libcurl
@@ -25,10 +34,6 @@ if USE_SMARTCARD
 endif
 
 dist_man_MANS = scepclient.8
-
-PLUTODIR=$(top_srcdir)/src/pluto
-OPENACDIR=$(top_srcdir)/src/openac
-
 
 loglite.o:	$(OPENACDIR)/loglite.c $(PLUTODIR)/log.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
@@ -75,8 +80,8 @@ md5.o :		$(PLUTODIR)/md5.c $(PLUTODIR)/md5.h
 ocsp.o :	$(PLUTODIR)/ocsp.c $(PLUTODIR)/ocsp.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
-oid.o :		$(PLUTODIR)/oid.c $(PLUTODIR)/oid.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
+oid.o :		$(LIBSTRONGSWANDIR)/asn1/oid.c $(LIBSTRONGSWANDIR)/asn1/oid.h
+		$(COMPILE) -c -o $@ $<
 
 pem.o :		$(PLUTODIR)/pem.c $(PLUTODIR)/pem.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<

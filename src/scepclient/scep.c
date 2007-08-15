@@ -24,6 +24,7 @@
 #include <stdlib.h>
 
 #include <freeswan.h>
+#include <asn1/oid.h>
 
 #ifdef LIBCURL
 #include <curl/curl.h>
@@ -32,7 +33,6 @@
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/rnd.h"
-#include "../pluto/oid.h"
 #include "../pluto/asn1.h"
 #include "../pluto/pkcs1.h"
 #include "../pluto/fetch.h"

@@ -28,7 +28,7 @@
 #include "constants.h"
 #include "defs.h"
 #include "asn1.h"
-#include "oid.h"
+#include <asn1/oid.h>
 #include "ac.h"
 #include "x509.h"
 #include "crl.h"

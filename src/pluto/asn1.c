@@ -24,7 +24,7 @@
 #include "defs.h"
 #include "mp_defs.h"
 #include "asn1.h"
-#include "oid.h"
+#include <asn1/oid.h>
 #include "log.h"
 
 /* some common prefabricated ASN.1 constants */

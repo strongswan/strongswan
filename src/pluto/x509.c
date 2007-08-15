@@ -34,7 +34,7 @@
 #include "log.h"
 #include "id.h"
 #include "asn1.h"
-#include "oid.h"
+#include <asn1/oid.h>
 #include "pkcs1.h"
 #include "x509.h"
 #include "crl.h"
