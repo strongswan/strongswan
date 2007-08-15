@@ -144,6 +144,7 @@
                 0x05         "noCheck"			OID_NO_CHECK
                 0x06         "archiveCutoff"		OID_ARCHIVE_CUTOFF
                 0x07         "serviceLocator"		OID_SERVICE_LOCATOR
+              0x02           "caIssuers"		OID_CA_ISSUERS
   0x0E                       "oiw"
     0x03                     "secsig"
       0x02                   "algorithms"
