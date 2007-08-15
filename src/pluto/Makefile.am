@@ -68,6 +68,9 @@ rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 _pluto_adns_SOURCES = adns.c adns.h
 
 LIBSTRONGSWANDIR=$(top_srcdir)/src/libstrongswan
+LIBFREESWANDIR=$(top_srcdir)/src/libfreeswan
+LIBCRYPTODIR=$(top_srcdir)/src/libcrypto
+
 
 INCLUDES = \
 -I${linuxdir} \
@@ -86,12 +89,12 @@ AM_CFLAGS = \
 
 pluto_LDADD = \
 oid.o \
-$(top_srcdir)/src/libfreeswan/libfreeswan.a \
-$(top_srcdir)/src/libcrypto/libcrypto.a \
+$(LIBFREESWANDIR)/libfreeswan.a \
+$(LIBCRYPTODIR)/libcrypto.a \
 -lgmp -lresolv -lpthread -ldl
 
 _pluto_adns_LDADD = \
-$(top_srcdir)/src/libfreeswan/libfreeswan.a \
+$(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv -ldl
 
 dist_man_MANS = pluto.8 ipsec.secrets.5

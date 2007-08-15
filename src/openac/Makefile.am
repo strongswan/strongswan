@@ -2,19 +2,22 @@ ipsec_PROGRAMS = openac
 openac_SOURCES = openac.c build.c build.h loglite.c
 
 PLUTODIR=$(top_srcdir)/src/pluto
+WHACKDIR=$(top_srcdir)/src/whack
 LIBSTRONGSWANDIR=$(top_srcdir)/src/libstrongswan
+LIBFREESWANDIR=$(top_srcdir)/src/libfreeswan
+LIBCRYPTODIR=$(top_srcdir)/src/libcrypto
 
 INCLUDES = \
--I$(top_srcdir)/src/libfreeswan \
+-I$(LIBFREESWAN) \
 -I$(LIBSTRONGSWANDIR)\
 -I$(PLUTODIR) \
--I$(top_srcdir)/src/libcrypto \
--I$(top_srcdir)/src/whack
+-I$(LIBCRYPTODIR) \
+-I$(WHACKDIR)
 
 AM_CFLAGS = -DDEBUG -DNO_PLUTO -DIPSEC_CONFDIR=\"${confdir}\"
 openac_LDADD = ac.o asn1.o ca.o certs.o constants.o crl.o defs.o mp_defs.o fetch.o id.o keys.o lex.o \
                md2.o md5.o ocsp.o oid.o pem.o pgp.o pkcs1.o rnd.o sha1.o smartcard.o x509.o \
-               $(top_srcdir)/src/libfreeswan/libfreeswan.a $(top_srcdir)/src/libcrypto/libcrypto.a \
+               $(LIBFREESWANDIR)/libfreeswan.a $(LIBCRYPTODIR)/libcrypto.a \
                -lgmp
 
 # This compile option activates dynamic URL fetching using libcurl
