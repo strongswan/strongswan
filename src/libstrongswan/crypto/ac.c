@@ -167,6 +167,18 @@ struct ietfAttr_t {
 	chunk_t value;
 
 	/**
+	 * Compares two ietfAttributes
+	 *	
+	 * return -1 if this is earlier in the alphabet than other
+	 * return  0 if this equals other
+	 * return +1 if this is later in the alphabet than other
+	 *
+	 * @param this		calling object
+	 * @param other		other object
+	 */
+	int (*compare) (const ietfAttr_t *this ,const ietfAttr_t *other);
+
+	/**
 	 * Destroys the ietfAttr_t object.
 	 * 
 	 * @param this			ietfAttr_t to destroy
@@ -175,7 +187,66 @@ struct ietfAttr_t {
 };
 
 /**
- * Lists a linked_list of ietfAttr_t objects
+ * Implements ietfAttr_t.compare.
+ */
+static int ietfAttr_compare(const ietfAttr_t *this ,const ietfAttr_t *other)
+{
+	int cmp_len, len, cmp_value;
+
+	/* OID attributes are appended after STRING and OCTETS attributes */
+	if (this->kind != IETF_ATTRIBUTE_OID && other->kind == IETF_ATTRIBUTE_OID)
+	{
+		return -1;
+	}
+	if (this->kind == IETF_ATTRIBUTE_OID && other->kind != IETF_ATTRIBUTE_OID)
+	{
+		return 1;
+	}
+	
+    cmp_len = this->value.len - other->value.len;
+    len = (cmp_len < 0)? this->value.len : other->value.len;
+    cmp_value = memcmp(this->value.ptr, other->value.ptr, len);
+
+    return (cmp_value == 0)? cmp_len : cmp_value;
+}
+
+/**
+ * Adds an ietfAttr_t object to a sorted linked list
+ */
+static void ietfAttr_add(linked_list_t *list, ietfAttr_t *attr)
+{
+	iterator_t *iterator = list->create_iterator(list, TRUE);
+	ietfAttr_t *current_attr;
+	bool found = FALSE;
+
+	while (iterator->iterate(iterator, (void **)&current_attr))
+	{
+		int cmp = attr->compare(attr, current_attr);
+
+		if (cmp > 0)
+		{
+			 continue;
+		}
+		if (cmp == 0)
+		{
+			attr->destroy(attr);
+		}
+		else
+		{
+			iterator->insert_before(iterator, attr);
+		}
+		found = TRUE;
+		break;
+	}
+	iterator->destroy(iterator);
+	if (!found)
+	{
+		list->insert_last(list, attr);
+	}
+}
+
+/**
+ * Lists a linked list of ietfAttr_t objects
  */
 static void ietfAttr_list(linked_list_t *list, FILE *out)
 {
@@ -201,7 +272,18 @@ static void ietfAttr_list(linked_list_t *list, FILE *out)
 				fprintf(out, "%.*s", (int)attr->value.len, attr->value.ptr);
 				break;
 			case IETF_ATTRIBUTE_OID:
-				fprintf(out, "0x#B", &attr->value);
+				{
+					int oid = known_oid(attr->value);
+
+					if (oid = OID_UNKNOWN)
+					{
+						fprintf(out, "0x#B", &attr->value);
+					}
+					else
+					{
+						fprintf(out, "%s", oid_names[oid]);
+					}
+				}
 	    		break;
 			default:
 	    		break;
@@ -231,8 +313,9 @@ ietfAttr_t *ietfAttr_create(ietfAttribute_t kind, chunk_t value)
 	this->value = chunk_clone(value);
 
 	/* function */
+	this->compare = ietfAttr_compare;
 	this->destroy = ietfAttr_destroy;
-	
+
 	return this;
 }
 
@@ -481,7 +564,7 @@ static void parse_ietfAttrSyntax(chunk_t blob, int level0, linked_list_t *list)
 				{
 					ietfAttribute_t kind = (objectID - IETF_ATTR_OCTETS) / 2;
 					ietfAttr_t *attr   = ietfAttr_create(kind, object);
-					list->insert_last(list, (void *)attr);
+					ietfAttr_add(list, attr);
 				}
 				break;
 			default:
