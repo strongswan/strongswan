@@ -8,7 +8,7 @@ LIBFREESWANDIR=$(top_srcdir)/src/libfreeswan
 LIBCRYPTODIR=$(top_srcdir)/src/libcrypto
 
 INCLUDES = \
--I$(LIBFREESWAN) \
+-I$(LIBFREESWANDIR) \
 -I$(LIBSTRONGSWANDIR)\
 -I$(PLUTODIR) \
 -I$(LIBCRYPTODIR) \
