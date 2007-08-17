@@ -659,15 +659,26 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0, linked_list_t *l
 				switch (accessMethod)
 				{
 					case OID_OCSP:
-						if (*object.ptr == ASN1_CONTEXT_S_6)
+					case OID_CA_ISSUERS:
 						{
 							identification_t *accessLocation;
 
-							if (asn1_length(&object) == ASN1_INVALID_LENGTH)
+							accessLocation = parse_generalName(object, level+1);
+							if (accessLocation == NULL)
+							{
+								/* parsing went wrong - abort */
 								return;
-							DBG2("  '%.*s'",(int)object.len, object.ptr);
-							accessLocation = identification_create_from_encoding(ID_DER_ASN1_GN_URI, object);
-							list->insert_last(list, (void *)accessLocation);
+							}
+							DBG2("  '%D'", accessLocation);
+							if (accessMethod == OID_OCSP)
+							{
+								list->insert_last(list, (void *)accessLocation);
+							}
+							else
+							{
+								/* caIsssuer accessLocation is not used yet */
+								accessLocation->destroy(accessLocation);
+							}
 						}
 						break;
 					default:
