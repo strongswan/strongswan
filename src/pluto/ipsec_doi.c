@@ -2479,7 +2479,7 @@ switch_connection(struct msg_digest *md, struct id *peer, bool initiator)
 	DBG(DBG_CONTROL,
 	    char buf[BUF_LEN];
 
-	    dntoa_or_null(buf, BUF_LEN, c->spd.this.ca, "%none");
+	    dntoa_or_null(buf, BUF_LEN, c->spd.that.ca, "%none");
 	    DBG_log("required CA:  '%s'", buf);
         )
 
