@@ -131,11 +131,21 @@ match_requested_ca(generalName_t *requested_ca, chunk_t our_ca, int *our_pathlen
 
 	if (trusted_ca(our_ca, requested_ca->name, &pathlen)
 	&& pathlen < *our_pathlen)
+	{
 	    *our_pathlen = pathlen;
+	}
 	requested_ca = requested_ca->next;
     }
 
-    return *our_pathlen <= MAX_CA_PATH_LEN;
+    if (*our_pathlen > MAX_CA_PATH_LEN)
+    {
+	*our_pathlen = MAX_CA_PATH_LEN;
+	return FALSE;
+    }
+    else
+    {
+	return TRUE;
+    }
 }
 
 /*
