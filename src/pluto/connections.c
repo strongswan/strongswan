@@ -3352,7 +3352,7 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 					, d->spd.this.ca, &our_pathlen);
 	    bool match = matching_id && matching_auth && matching_trust;
 
-	    int prio = (MAX_WILDCARDS + 1) * !matching_trust + wildcards;
+	    int prio = (MAX_WILDCARDS + 1) * !matching_request + wildcards;
 
 	    prio = (MAX_CA_PATH_LEN + 1) * prio + peer_pathlen;
 	    prio = (MAX_CA_PATH_LEN + 1) * prio + our_pathlen;
