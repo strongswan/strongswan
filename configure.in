@@ -109,9 +109,9 @@ AC_SUBST(LINUX_HEADERS)
 
 AC_ARG_WITH(
     [routing-table],
-    AS_HELP_STRING([--with-routing-table=num],[use routing table for IPsec routes (default: 100)]),
+    AS_HELP_STRING([--with-routing-table=num],[use routing table for IPsec routes (default: 19530)]),
     [AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE, $withval) AC_SUBST(IPSEC_ROUTING_TABLE, "$withval")], 
-    [AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE, 100) AC_SUBST(IPSEC_ROUTING_TABLE, "100")]
+    [AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE, 19530) AC_SUBST(IPSEC_ROUTING_TABLE, "19530")]
 )
 
 AC_ARG_WITH(
