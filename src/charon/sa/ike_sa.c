@@ -851,103 +851,6 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 }
 
 /**
- * Implementation of ike_sa_t.process_message.
- */
-static status_t process_message(private_ike_sa_t *this, message_t *message)
-{
-	status_t status;
-	bool is_request;
-	
-	is_request = message->get_request(message);
-	
-	status = message->parse_body(message, this->crypter_in, this->signer_in);
-	if (status != SUCCESS)
-	{
-		
-		if (is_request)
-		{
-			switch (status)
-			{
-				case NOT_SUPPORTED:
-					DBG1(DBG_IKE, "ciritcal unknown payloads found");
-					if (is_request)
-					{
-						send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
-					}
-					break;
-				case PARSE_ERROR:
-					DBG1(DBG_IKE, "message parsing failed");
-					if (is_request)
-					{
-						send_notify_response(this, message, INVALID_SYNTAX);
-					}
-					break;
-				case VERIFY_ERROR:
-					DBG1(DBG_IKE, "message verification failed");
-					if (is_request)
-					{
-						send_notify_response(this, message, INVALID_SYNTAX);
-					}
-					break;
-				case FAILED:
-					DBG1(DBG_IKE, "integrity check failed");
-					/* ignored */
-					break;
-				case INVALID_STATE:
-					DBG1(DBG_IKE, "found encrypted message, but no keys available");
-					if (is_request)
-					{
-						send_notify_response(this, message, INVALID_SYNTAX);
-					}
-				default:
-					break;
-			}
-		}
-		DBG1(DBG_IKE, "%N %s with message ID %d processing failed",
-			 exchange_type_names, message->get_exchange_type(message),
-			 message->get_request(message) ? "request" : "response",
-			 message->get_message_id(message));
-		return status;
-	}
-	else
-	{
-		host_t *me, *other;
-		
-		me = message->get_destination(message);
-		other = message->get_source(message);
-	
-		/* if this IKE_SA is virgin, we check for a config */
-		if (this->ike_cfg == NULL)
-		{
-			job_t *job;
-			this->ike_cfg = charon->backends->get_ike_cfg(charon->backends,
-														  me, other);
-			if (this->ike_cfg == NULL)
-			{
-				/* no config found for these hosts, destroy */
-				DBG1(DBG_IKE, "no IKE config found for %H...%H, sending %N",
-					 me, other, notify_type_names, NO_PROPOSAL_CHOSEN);
-				send_notify_response(this, message, NO_PROPOSAL_CHOSEN);
-				return DESTROY_ME;
-			}
-			/* add a timeout if peer does not establish it completely */
-			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, FALSE);
-			charon->scheduler->schedule_job(charon->scheduler, job,
-											HALF_OPEN_IKE_SA_TIMEOUT);
-		}
-		
-		/* check if message is trustworthy, and update host information */
-		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
-			message->get_exchange_type(message) != IKE_SA_INIT)
-		{
-			update_hosts(this, me, other);
-			this->time.inbound = time(NULL);
-		}
-		return this->task_manager->process_message(this->task_manager, message);
-	}
-}
-
-/**
  * Implementation of ike_sa_t.initiate.
  */
 static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
@@ -1161,6 +1064,150 @@ static status_t unroute(private_ike_sa_t *this, u_int32_t reqid)
 		return DESTROY_ME;
 	}
 	return SUCCESS;
+}
+/**
+ * Implementation of ike_sa_t.process_message.
+ */
+static status_t process_message(private_ike_sa_t *this, message_t *message)
+{
+	status_t status;
+	bool is_request;
+	
+	is_request = message->get_request(message);
+	
+	status = message->parse_body(message, this->crypter_in, this->signer_in);
+	if (status != SUCCESS)
+	{
+		
+		if (is_request)
+		{
+			switch (status)
+			{
+				case NOT_SUPPORTED:
+					DBG1(DBG_IKE, "ciritcal unknown payloads found");
+					if (is_request)
+					{
+						send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
+					}
+					break;
+				case PARSE_ERROR:
+					DBG1(DBG_IKE, "message parsing failed");
+					if (is_request)
+					{
+						send_notify_response(this, message, INVALID_SYNTAX);
+					}
+					break;
+				case VERIFY_ERROR:
+					DBG1(DBG_IKE, "message verification failed");
+					if (is_request)
+					{
+						send_notify_response(this, message, INVALID_SYNTAX);
+					}
+					break;
+				case FAILED:
+					DBG1(DBG_IKE, "integrity check failed");
+					/* ignored */
+					break;
+				case INVALID_STATE:
+					DBG1(DBG_IKE, "found encrypted message, but no keys available");
+					if (is_request)
+					{
+						send_notify_response(this, message, INVALID_SYNTAX);
+					}
+				default:
+					break;
+			}
+		}
+		DBG1(DBG_IKE, "%N %s with message ID %d processing failed",
+			 exchange_type_names, message->get_exchange_type(message),
+			 message->get_request(message) ? "request" : "response",
+			 message->get_message_id(message));
+		return status;
+	}
+	else
+	{
+		host_t *me, *other;
+		private_ike_sa_t *new;
+		iterator_t *iterator;
+		child_sa_t *child;
+		bool has_routed = FALSE;
+		
+		me = message->get_destination(message);
+		other = message->get_source(message);
+	
+		/* if this IKE_SA is virgin, we check for a config */
+		if (this->ike_cfg == NULL)
+		{
+			job_t *job;
+			this->ike_cfg = charon->backends->get_ike_cfg(charon->backends,
+														  me, other);
+			if (this->ike_cfg == NULL)
+			{
+				/* no config found for these hosts, destroy */
+				DBG1(DBG_IKE, "no IKE config found for %H...%H, sending %N",
+					 me, other, notify_type_names, NO_PROPOSAL_CHOSEN);
+				send_notify_response(this, message, NO_PROPOSAL_CHOSEN);
+				return DESTROY_ME;
+			}
+			/* add a timeout if peer does not establish it completely */
+			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, FALSE);
+			charon->scheduler->schedule_job(charon->scheduler, job,
+											HALF_OPEN_IKE_SA_TIMEOUT);
+		}
+		
+		/* check if message is trustworthy, and update host information */
+		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
+			message->get_exchange_type(message) != IKE_SA_INIT)
+		{
+			update_hosts(this, me, other);
+			this->time.inbound = time(NULL);
+		}
+		status = this->task_manager->process_message(this->task_manager, message);
+		if (status != DESTROY_ME)
+		{
+			return status;
+		}
+		/* if IKE_SA gets closed for any reasons, reroute routed children */
+		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+		while (iterator->iterate(iterator, (void**)&child))
+		{
+			if (child->get_state(child) == CHILD_ROUTED)
+			{
+				has_routed = TRUE;
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+		if (!has_routed)
+		{
+			return status;
+		}
+		/* move routed children to a new IKE_SA, apply connection info */
+		new = (private_ike_sa_t*)charon->ike_sa_manager->checkout_new(
+											charon->ike_sa_manager, TRUE);
+		set_peer_cfg(new, this->peer_cfg);
+		new->other_host->destroy(new->other_host);
+		new->other_host = this->other_host->clone(this->other_host);
+		if (!has_condition(this, COND_NAT_THERE))
+		{
+			new->other_host->set_port(new->other_host, IKEV2_UDP_PORT);
+		}
+		if (this->my_virtual_ip)
+		{
+			set_virtual_ip(new, TRUE, this->my_virtual_ip);
+		}
+		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+		while (iterator->iterate(iterator, (void**)&child))
+		{
+			if (child->get_state(child) == CHILD_ROUTED)
+			{
+				route(new, child->get_config(child));
+			}
+		}
+		iterator->destroy(iterator);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, &new->public);
+		return status;
+	}
 }
 
 /**
@@ -1684,9 +1731,12 @@ static status_t delete_(private_ike_sa_t *this)
 			ike_delete = ike_delete_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, &ike_delete->task);
 			return this->task_manager->initiate(this->task_manager);
+		case IKE_CREATED:
+			SIG(IKE_DOWN_SUCCESS, "deleting unestablished IKE_SA");
+			break;
 		default:
-			DBG1(DBG_IKE, "destroying IKE_SA in state %N without notification",
-				 ike_sa_state_names, this->state);
+			SIG(IKE_DOWN_SUCCESS, "destroying IKE_SA in state %N "
+				"without notification", ike_sa_state_names, this->state);
 			break;
 	}
 	return DESTROY_ME;
