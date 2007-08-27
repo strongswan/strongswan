@@ -108,6 +108,13 @@ AC_ARG_WITH(
 AC_SUBST(LINUX_HEADERS)
 
 AC_ARG_WITH(
+    [routing-table],
+    AS_HELP_STRING([--with-routing-table=num],[use routing table for IPsec routes (default: 100)]),
+    [AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE, $withval) AC_SUBST(IPSEC_ROUTING_TABLE, "$withval")], 
+    [AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE, 100) AC_SUBST(IPSEC_ROUTING_TABLE, "100")]
+)
+
+AC_ARG_WITH(
     [uid],
     AS_HELP_STRING([--with-uid=uid],[change user of the daemons to UID after startup (default is 0).]),
     [AC_DEFINE_UNQUOTED(IPSEC_UID, $withval) AC_SUBST(ipsecuid, "$withval")],

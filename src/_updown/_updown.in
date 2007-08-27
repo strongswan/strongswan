@@ -137,7 +137,7 @@ FAC_PRIO=local0.notice
 # must be enabled
 #
 # special routing table for sourceip routes
-SOURCEIP_ROUTING_TABLE=100
+SOURCEIP_ROUTING_TABLE=@IPSEC_ROUTING_TABLE@
 #
 # priority of the sourceip routing table
 SOURCEIP_ROUTING_TABLE_PRIO=100
