@@ -87,6 +87,17 @@ struct guest_t {
 	bool (*stop) (guest_t *this);
 	
 	/**
+	 * @brief Get a console pts device.
+	 *
+	 * Every guest has 6 consoles, numbered from 1 to 6. These are associated
+	 * to a unique pts device on the host. 
+	 *
+	 * @param console	console number to get (1-6)
+	 * @return			pts device file name, NULL if failed
+	 */
+	char* (*get_console) (guest_t *this, int console);
+	
+	/**
 	 * @brief Create a new interface in the current scenario.
 	 *
 	 * @param name	name of the interface in the guest

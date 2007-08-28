@@ -16,6 +16,8 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
+
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -84,42 +86,45 @@ struct mconsole_notify {
 /**
  * send a request to UML using mconsole
  */
-static bool request(private_mconsole_t *this, char *command)
+static int request(private_mconsole_t *this, char *command,
+				   char buf[], size_t *size)
 {
 	mconsole_request request;
 	mconsole_reply reply;
-	bool first = TRUE, good = TRUE;
-	int len;
+	int len, total = 0;
 	
 	memset(&request, 0, sizeof(request));
 	request.magic = MCONSOLE_MAGIC;
 	request.version = MCONSOLE_VERSION;
 	request.len = min(strlen(command), sizeof(reply.data) - 1);
 	strncpy(request.data, command, request.len);
+	*buf = '\0';
+	(*size)--;
 
 	if (sendto(this->console, &request, sizeof(request), 0,
 		(struct sockaddr*)&this->uml, sizeof(this->uml)) < 0)
 	{
-		DBG1("sending mconsole command to UML failed: %m");
-		return FALSE;
+		snprintf(buf, *size, "sending mconsole command to UML failed: %m");
+		return -1;
 	}
 	do 
 	{
-		len = recvfrom(this->console, &reply, sizeof(reply), 0, NULL, 0);
+		len = recv(this->console, &reply, sizeof(reply), 0);
 		if (len < 0)
 		{
-			DBG1("receiving from mconsole failed: %m");
-	    	return FALSE;
+			snprintf(buf, *size, "receiving from mconsole failed: %m");
+	    	return -1;
 		}
-		if (first && reply.err)
+		if (len > 0)
 		{
-			good = FALSE;
-			DBG1("received error from UML mconsole: %s", reply.data);
+			strncat(buf, reply.data, min(reply.len, *size - total));
+			total += reply.len;
 		}
-		first = FALSE;
 	}
 	while (reply.more);
-	return good;
+	
+	*size = total;
+	return reply.err;
 }
 
 /**
@@ -135,7 +140,13 @@ static bool add_iface(private_mconsole_t *this, char *guest, char *host)
 	{
 		return FALSE;
 	}
-	return request(this, buf);
+	len = sizeof(buf);
+	if (request(this, buf, buf, &len) != 0)
+	{
+		DBG1("adding interface failed: %.*s", len, buf);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 /**
@@ -151,7 +162,41 @@ static bool del_iface(private_mconsole_t *this, char *guest)
 	{
 		return FALSE;
 	}
-	return request(this, buf);
+	if (request(this, buf, buf, &len) != 0)
+	{
+		DBG1("removing interface failed: %.*s", len, buf);
+		return FALSE;
+	}
+	return TRUE;
+}
+	
+/**
+ * Implementation of mconsole_t.get_console_pts.
+ */
+static char* get_console_pts(private_mconsole_t *this, int con)
+{
+	char buf[128];
+	char *pos;
+	int len;
+	
+	len = snprintf(buf, sizeof(buf), "config con%d", con);
+	if (len < 0 || len >= sizeof(buf))
+	{
+		return NULL;
+	}
+	len = sizeof(buf);
+	if (request(this, buf, buf, &len) != 0)
+	{
+		DBG1("getting console pts failed: %.*s", len, buf);
+		return NULL;
+	}
+	pos = memchr(buf, ':', len);
+	if (pos == NULL)
+	{
+		return NULL;
+	}
+	pos++;
+	return strndup(pos, len - (pos - buf));
 }
 
 /**
@@ -250,6 +295,7 @@ mconsole_t *mconsole_create(char *notify)
 	
 	this->public.add_iface = (bool(*)(mconsole_t*, char *guest, char *host))add_iface;
 	this->public.del_iface = (bool(*)(mconsole_t*, char *guest))del_iface;
+	this->public.get_console_pts = (char*(*)(mconsole_t*, int con))get_console_pts;
 	this->public.destroy = (void*)destroy;
 	
 	if (!wait_for_notify(this, notify))

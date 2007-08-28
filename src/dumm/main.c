@@ -57,7 +57,10 @@ static char* get_line(char *format, ...)
 		line = readline(prompt);
 		if (line == NULL)
 		{
-			continue;
+			printf("quit\n");
+			dumm->destroy(dumm);
+			clear_history();
+			exit(0);
 		}
 		if (*line == '\0')
 		{
@@ -190,6 +193,21 @@ static void guest_delif_menu(guest_t *guest)
 	free(name);
 }
 
+static void guest_console(guest_t *guest)
+{
+	int con;
+	
+	for (con = 1; con <= 6; con++)
+	{
+		char *pts = guest->get_console(guest, con);
+		if (pts)
+		{
+			printf("%d: %s\n", con, pts);
+			free(pts);
+		}
+	}
+}
+
 static void guest_menu(guest_t *guest)
 {
 	while (TRUE)
@@ -205,7 +223,7 @@ static void guest_menu(guest_t *guest)
 		{
 			if (guest->start(guest))
 			{
-				printf("guest '%s' is booting\n", guest->get_name(guest));
+				printf("guest '%s' is running\n", guest->get_name(guest));
 			}
 			else
 			{
@@ -226,9 +244,13 @@ static void guest_menu(guest_t *guest)
 		{
 			guest_delif_menu(guest);
 		}
+		else if (streq(line, "console"))
+		{
+			guest_console(guest);
+		}
 		else
 		{
-			printf("back|start|stop|addif|delif\n");
+			printf("back|start|stop|addif|delif|console\n");
 		}
 		free(line);
 	}

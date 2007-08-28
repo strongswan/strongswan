@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <dirent.h>
+#include <termios.h>
 
 #include <debug.h>
 #include <utils/linked_list.h>
@@ -43,6 +44,7 @@
 #define KERNEL_FILE "linux"
 #define LOG_FILE "boot.log"
 #define NOTIFY_FILE "notify"
+#define PTYS 0
 
 typedef struct private_guest_t private_guest_t;
 
@@ -67,6 +69,19 @@ struct private_guest_t {
 	cowfs_t *cowfs;
 	/** mconsole to control running UML */
 	mconsole_t *mconsole;
+	/** pty consoles */
+	struct {
+		/** pty master fd */
+		int master;
+		/** pty slave fd */
+		int slave;
+		/** name of the pty */
+		char name[16];
+		/** currently in use */
+		bool occupied;
+		/** is valid */
+		bool valid;
+	} pty[PTYS];
 	/** list of interfaces attached to the guest */
 	linked_list_t *ifaces;
 };
@@ -168,6 +183,18 @@ static char* write_arg(char **pos, size_t *left, char *format, ...)
 }
 
 /**
+ * Implementation of get_t.close_console.
+ */
+static char* get_console(private_guest_t *this, int console)
+{
+	if (this->state == GUEST_RUNNING)
+	{
+		return this->mconsole->get_console_pts(this->mconsole, console);
+	}
+	return NULL;
+}
+
+/**
  * Implementation of guest_t.stop.
  */
 static void stop(private_guest_t *this)
@@ -212,15 +239,8 @@ static bool start(private_guest_t *this)
 	args[i++] = write_arg(&pos, &left, "umid=%s", this->name);
 	args[i++] = write_arg(&pos, &left, "mem=%dM", this->mem);
 	args[i++] = write_arg(&pos, &left, "mconsole=notify:%s", notify);
-	/*args[i++] = write_arg(&pos, &left, "con=pts");*/
-	args[i++] = write_arg(&pos, &left, "con0=null,fd:%d", this->bootlog);
-	//args[i++] = write_arg(&pos, &left, "con0=fd:0,fd:1");
-	//args[i++] = write_arg(&pos, &left, "con1=null,null");
-	args[i++] = write_arg(&pos, &left, "con2=null,null");
-	args[i++] = write_arg(&pos, &left, "con3=null,null");
-	args[i++] = write_arg(&pos, &left, "con4=null,null");
-	args[i++] = write_arg(&pos, &left, "con5=null,null");
-	args[i++] = write_arg(&pos, &left, "con6=null,null");
+	args[i++] = write_arg(&pos, &left, "con=pts");
+	args[i++] = write_arg(&pos, &left, "con0=none,fd:%d", this->bootlog);
 	args[i++] = NULL;
 	  
 	this->pid = fork();
@@ -247,6 +267,7 @@ static bool start(private_guest_t *this)
 		stop(this);
 		return FALSE;
 	}
+	
 	this->state = GUEST_RUNNING;
 	return TRUE;
 }	
@@ -285,12 +306,22 @@ static bool set_scenario(private_guest_t *this, char *path)
  */
 static void sigchild(private_guest_t *this)
 {
+	int i;
+
 	if (this->state != GUEST_STOPPING)
 	{	/* collect zombie if uml crashed */
 		waitpid(this->pid, NULL, WNOHANG);
 	}
 	DESTROY_IF(this->mconsole);
 	this->mconsole = NULL;
+	for (i = 0; i < PTYS; i++)
+	{
+		if (this->pty[i].valid)
+		{
+			close(this->pty[i].master);
+			close(this->pty[i].slave);
+		}
+	}
 	this->state = GUEST_STOPPED;
 }
 
@@ -425,10 +456,11 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->public.create_iface_iterator = (iterator_t*(*)(guest_t*))create_iface_iterator;
 	this->public.start = (void*)start;
 	this->public.stop = (void*)stop;
+	this->public.get_console = (char*(*)(guest_t*,int))get_console;
 	this->public.set_scenario = (bool(*)(guest_t*, char *path))set_scenario;
 	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
-	
+		
 	if (*parent == '/' || getcwd(cwd, sizeof(cwd)) == NULL)
 	{
 		asprintf(&this->dirname, "%s/%s", parent, name);

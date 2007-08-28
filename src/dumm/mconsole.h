@@ -43,6 +43,14 @@ struct mconsole_t {
 	bool (*del_iface)(mconsole_t *this, char *guest);
 	
 	/**
+	 * @brief Get the pts device file assigned to a console.
+	 *
+	 * @param con			console number in guest
+	 * @return				allocated device string
+	 */
+	char* (*get_console_pts)(mconsole_t *this, int con);
+	
+	/**
 	 * @brief Destroy the mconsole instance
 	 */
 	void (*destroy) (mconsole_t *this);
