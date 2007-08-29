@@ -74,8 +74,8 @@ bool fips_compute_hmac_signature(const char *key, char *signature)
 		chunk_t signature_chunk = chunk_empty;
 
 		signer->set_key(signer, hmac_key);
-		/* TODO include rodata_chunk in HMAC */
-		signer->allocate_signature(signer, text_chunk, &signature_chunk);
+		signer->allocate_signature(signer, text_chunk, NULL);
+		signer->allocate_signature(signer, rodata_chunk, &signature_chunk);
 		signer->destroy(signer);
 
 		sprintf(signature, "%#B", &signature_chunk);
