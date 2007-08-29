@@ -74,6 +74,9 @@ extern enum_name_t *integrity_algorithm_names;
 struct signer_t {
 	/**
 	 * @brief Generate a signature.
+	 *
+	 * If buffer is NULL, data is processed and prepended to a next call until
+	 * buffer is a valid pointer.
 	 * 
 	 * @param this			calling object
 	 * @param data			a chunk containing the data to sign
@@ -83,6 +86,9 @@ struct signer_t {
 	
 	/**
 	 * @brief Generate a signature and allocate space for it.
+	 *
+	 * If chunk is NULL, data is processed and prepended to a next call until
+	 * chunk is a valid chunk pointer.
 	 * 
 	 * @param this			calling object
 	 * @param data			a chunk containing the data to sign

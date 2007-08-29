@@ -52,14 +52,19 @@ struct private_hmac_signer_t {
 /**
  * Implementation of signer_t.get_signature.
  */
-static void get_signature (private_hmac_signer_t *this, chunk_t data, u_int8_t *buffer)
+static void get_signature(private_hmac_signer_t *this, chunk_t data, u_int8_t *buffer)
 {
-	u_int8_t full_mac[this->hmac_prf->get_block_size(this->hmac_prf)];
-	
-	this->hmac_prf->get_bytes(this->hmac_prf, data, full_mac);
-
-	/* copy MAC depending on truncation */
-	memcpy(buffer, full_mac, this->block_size);
+	if (buffer == NULL)
+	{	/* append mode */
+		this->hmac_prf->get_bytes(this->hmac_prf, data, NULL);
+	}
+	else
+	{
+		u_int8_t full_mac[this->hmac_prf->get_block_size(this->hmac_prf)];
+		
+		this->hmac_prf->get_bytes(this->hmac_prf, data, full_mac);
+		memcpy(buffer, full_mac, this->block_size);
+	}
 }
 
 /**
@@ -67,18 +72,24 @@ static void get_signature (private_hmac_signer_t *this, chunk_t data, u_int8_t *
  */
 static void allocate_signature (private_hmac_signer_t *this, chunk_t data, chunk_t *chunk)
 {
-	chunk_t signature;
-	u_int8_t full_mac[this->hmac_prf->get_block_size(this->hmac_prf)];
-	
-	this->hmac_prf->get_bytes(this->hmac_prf,data,full_mac);
+	if (chunk == NULL)
+	{	/* append mode */
+		this->hmac_prf->get_bytes(this->hmac_prf, data, NULL);
+	}
+	else
+	{
+		chunk_t signature;
+		u_int8_t full_mac[this->hmac_prf->get_block_size(this->hmac_prf)];
+		
+		this->hmac_prf->get_bytes(this->hmac_prf, data, full_mac);
 
-	signature.ptr = malloc(this->block_size);
-	signature.len = this->block_size;
-	
-	/* copy signature */
-	memcpy(signature.ptr, full_mac, this->block_size);
+		signature.ptr = malloc(this->block_size);
+		signature.len = this->block_size;
+		
+		memcpy(signature.ptr, full_mac, this->block_size);
 
-	*chunk = signature;
+		*chunk = signature;
+	}
 }
 
 /**
