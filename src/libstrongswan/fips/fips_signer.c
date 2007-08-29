@@ -21,19 +21,21 @@
  */
 
 #include <stdio.h>
+
+#include <crypto/hashers/hasher.h>
 #include "fips.h"
 
 int main(int argc, char* argv[])
 {
 	FILE *f;
 	char *hmac_key = "strongSwan Version " VERSION;
-	char *hmac_signature = fips_compute_hmac_signature(hmac_key);
+	char  hmac_signature[BUF_LEN];
 
-	if (hmac_signature == NULL)
+	if (!fips_compute_hmac_signature(hmac_key, hmac_signature))
 	{
 		exit(1);
 	}
-
+	
 	/**
      * write computed HMAC signature to fips_signature.h
 	 */
@@ -57,6 +59,5 @@ int main(int argc, char* argv[])
 	fprintf(f, "\n");
 	fprintf(f, "#endif /* FIPS_SIGNATURE_H_ */\n");
 	fclose(f);
-	free(hmac_signature);
 	exit(0);
 }

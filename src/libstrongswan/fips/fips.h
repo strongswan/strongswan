@@ -30,17 +30,18 @@
  * @brief compute HMAC signature over RODATA and TEXT sections of libstrongswan
  *
  * @param  key		key used for HMAC signature in ASCII string format
- * @return 		HMAC signature in HEX string format
+ * @param  signature	HMAC signature in HEX string format
+ * @return 		TRUE if HMAC signature computation was successful
  */
-char* fips_compute_hmac_signature(const char *key);
+bool fips_compute_hmac_signature(const char *key, char *signature);
 
 /**
  * @brief verify HMAC signature over RODATA and TEXT sections of libstrongswan
  *
  * @param  key		key used for HMAC signature in ASCII string format
  * @param  signature	signature value from fips_signature.h in HEX string format
- * @return		SUCCESS if signatures agree
+ * @return		TRUE if signatures agree
  */
-status_t fips_verify_hmac_signature(const char *key, const char *signature);
+bool fips_verify_hmac_signature(const char *key, const char *signature);
 
 #endif /*FIPS_H_*/

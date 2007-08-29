@@ -24,58 +24,79 @@
 #include <debug.h>
 #include <crypto/signers/hmac_signer.h>
 
-extern const unsigned char FIPS_rodata_start[];
-extern const unsigned char FIPS_rodata_end[];
+extern const u_char FIPS_rodata_start[];
+extern const u_char FIPS_rodata_end[];
 extern const void *FIPS_text_start();
 extern const void *FIPS_text_end();
 
 /**
  * Described in header
  */
-char* fips_compute_hmac_signature(const char *key)
+bool fips_compute_hmac_signature(const char *key, char *signature)
 {
-	chunk_t hmac_key = { key, strlen(key) };
+	u_char *text_start = (u_char *)FIPS_text_start();
+	u_char *text_end   = (u_char *)FIPS_text_end();
+	size_t text_len;
+	size_t rodata_len;
+	signer_t *signer;
 
-    hmac_signer_t *signer = hmac_signer_create(HASH_SHA1, HASH_SIZE_SHA1);
-
+	if (text_start > text_end)
+	{
+		DBG1("  TEXT start (%p) > TEXT end (%p",
+				text_start, text_end);
+		return FALSE;
+	}
+	text_len = (size_t)text_end - (size_t)text_start;
     DBG1("  TEXT:   %p + %6d = %p",
-		 FIPS_text_start(),
-		 (int)( (size_t)FIPS_text_end() - (size_t)FIPS_text_start() ),
-		 FIPS_text_end());
-    DBG1("  RODATA: %p + %6d = %p",
-		 FIPS_rodata_start,
-		 (int)( (size_t)FIPS_rodata_end - (size_t)FIPS_rodata_start ),
-		 FIPS_rodata_end);
+			text_start, (int)text_len, text_end);
 
+	if (FIPS_rodata_start > FIPS_rodata_end)
+	{
+		DBG1("  RODATA start (%p) > RODATA end (%p",
+				FIPS_rodata_start, FIPS_rodata_end);
+		return FALSE;
+	}
+	rodata_len = (size_t)FIPS_rodata_end - (size_t)FIPS_rodata_start;
+    DBG1("  RODATA: %p + %6d = %p",
+			FIPS_rodata_start, (int)rodata_len, FIPS_rodata_end);
+
+    signer = (signer_t *)hmac_signer_create(HASH_SHA1, HASH_SIZE_SHA1);
 	if (signer == NULL)
 	{
-	    DBG1("  sha-1 hmac_signer could not be created");
-		return NULL;
+	    DBG1("  SHA-1 HMAC signer could not be created");
+		return FALSE;
 	}
-	signer->signer_interface.set_key((signer_t *)signer, hmac_key);
-	signer->signer_interface.destroy((signer_t *)signer);
+	else
+	{
+		chunk_t hmac_key = { key, strlen(key) };
+		chunk_t text_chunk = { text_start, text_len };
+		chunk_t rodata_chunk = { (u_char *)FIPS_rodata_start, rodata_len };
+		chunk_t signature_chunk = chunk_empty;
 
-	/* TODO compute a HMAC over two separate chunks */
-	return strdup("01020304050607080901011121314151617181920");
+		signer->set_key(signer, hmac_key);
+		/* TODO include rodata_chunk in HMAC */
+		signer->allocate_signature(signer, text_chunk, &signature_chunk);
+		signer->destroy(signer);
+
+		sprintf(signature, "%#B", &signature_chunk);
+		DBG1("  SHA-1 HMAC key: %s", key);
+		DBG1("  SHA-1 HMAC sig: %s", signature);
+		free(signature_chunk.ptr);
+		return TRUE;
+	}
 }
 
 /**
  * Described in header
  */
-status_t fips_verify_hmac_signature(const char *key,
-									const char *signature)
+bool fips_verify_hmac_signature(const char *key,
+								const char *signature)
 {
-	status_t status;
-	char *current_signature = fips_compute_hmac_signature(key);
+	char current_signature[BUF_LEN];
 
-	if (current_signature == NULL)
+	if (!fips_compute_hmac_signature(key, current_signature))
 	{
-		status = FAILED;
+		return FALSE;
 	}
-	else
-	{
-		status = streq(signature, current_signature)? SUCCESS:VERIFY_ERROR;
-		free(current_signature);
-	}
-	return status;
+	return streq(signature, current_signature);
 }
