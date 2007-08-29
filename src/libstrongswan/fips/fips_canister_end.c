@@ -1,3 +1,10 @@
+/**
+ * @file fips_canister_end.c
+ * 
+ * @brief Marks the end of TEXT and RODATA.
+ * 
+ */
+
 /* ====================================================================
  * Copyright (c) 2005 The OpenSSL Project. Rights for redistribution
  * and usage in source and binary forms are granted according to the
@@ -37,7 +44,9 @@ const unsigned int FIPS_rodata_end[]=
  * pitfalls in -dynamic linker behaviour...
  */
 static void *instruction_pointer(void)
-{ void *ret=NULL;
+{
+  void *ret = NULL;
+
 /* These are ABI-neutral CPU-specific snippets. ABI-neutrality means
  * that they are designed to work under any OS running on particular
  * CPU, which is why you don't find any #ifdef THIS_OR_THAT_OS in
