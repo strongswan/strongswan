@@ -83,6 +83,7 @@ asn1/oid.c :	asn1/oid.txt asn1/oid.pl
 asn1/oid.h :	asn1/oid.txt asn1/oid.pl
 		cd asn1 && $(PERL) oid.pl
 
+if USE_INTEGRITY_TEST
 # build fips_signer which in turn builds fips_signature.h
 #########################################################
 noinst_PROGRAMS = fips_signer
@@ -94,4 +95,4 @@ CLEANFILES = fips_signature.h fips_signer
 
 fips_signature.h : fips_signer
 		   ./fips_signer
-
+endif
