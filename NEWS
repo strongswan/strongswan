@@ -1,6 +1,10 @@
 strongswan-4.1.6
 ----------------
 
+- the --enable-integrity-test configure option tests the
+  integrity of the libstrongswan crypto code during the charon
+  startup.
+  
 - ipsec stroke now supports the rereadsecrets, rereadaacerts,
   rereadacerts, and listacerts options.
 

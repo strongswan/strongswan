@@ -10,9 +10,8 @@ Peter Onion has collaborated extensively with RGB on PFKEY2 stuff.  The
 original version of our IPComp code came from Svenning Soerensen, who has
 also contributed various bug fixes and improvements. 
 
-The first versions of KLIPS were done by John Ioannidis <ji@hol.gr>.  The
-first versions of Pluto (and further work on KLIPS) were done by Angelos
-D. Keromytis <angelos@dsl.cis.upenn.edu>.
+The first versions of Pluto were done by Angelos D. Keromytis
+<angelos@dsl.cis.upenn.edu>.
 
 The MD2 implementation is from RSA Data Security Inc., so this package must
 include the following phrase: "RSA Data Security, Inc. MD2 Message Digest
@@ -36,9 +35,6 @@ The SHA-1 code is derived from Steve Reid's; it is public domain.
 
 Some bits of Linux code, notably drivers/net/new_tunnel.c and net/ipv4/ipip.c,
 are used in heavily modified forms.
-
-The radix-tree code from 4.4BSD is used in a modified form.  It is not
-under the GPL; see details in klips/net/ipsec/radij.c.
 
 The lib/pfkeyv2.h header file contains public-domain material published in
 RFC 2367.
@@ -107,7 +103,8 @@ The ipsec starter is based on Mathieu Lafon's original work.
 Jan Hutter and Martin Willi developed the scepclient which fully
 supports Cisco's Simple Certificate Enrollment Protocol (SCEP).
 
-Tobias Brunner and Daniel Roethlisberger implemented NAT traversal and dead
-peer detection for the IKEv2 keying daemon.
+Tobias Brunner and Daniel Roethlisberger implemented NAT traversal and
+dead peer detection for the IKEv2 keying daemon.
 
-This file is RCSID $Id: CREDITS,v 1.6 2006/01/22 21:28:27 as Exp $
+Daniel Wydler implemented the integrity test of the libstrongswan code
+using the FIPS_canister code from the OpenSSL-FIPS project.

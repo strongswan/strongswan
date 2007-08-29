@@ -1,5 +1,5 @@
 Except for the DES library, MD2 and MD5 code, the PKCS#11 headers, and
-linux/net/ipsec/radij.c this software is under the GNU Public License,
+the FIPS_canister code this software is under the GNU Public License,
 see the file COPYING.
 
 See the file CREDITS for details on origins of more of the code. 
@@ -17,10 +17,15 @@ include the following phrase: "derived from the RSA Data Security, Inc.
 MD5 Message-Digest Algorithm".  It is not under the GPL; see details in
 src/pluto/md5.c
 
-The PKCS#11 header files in programs/pluto/rsaref/ are from RSA Security Inc.,
+The PKCS#11 header files in src/pluto/rsaref/ are from RSA Security Inc.,
 so they must include the following phrase: "RSA Security Inc. PKCS#11
 Cryptographic Token Interface (Cryptoki)". The headers are not under the GPL;
 see details in src/pluto/rsaref/pkcs11.h.
+
+The FIPS_canister code in src/libstrongswan/fips that is used to determine
+the start (fips_canister_start.c) and end (fips_canister_end.c) of the
+libstrongswan TEXT and RODATA segments is under the OpenSSL licence. It is
+not under the GPL; see www.openssl.org. 
 
 In addition to the terms set out under the GPL, permission is granted to
 link the software against the libdes, MD2, and MD5 libraries just mentioned.  
