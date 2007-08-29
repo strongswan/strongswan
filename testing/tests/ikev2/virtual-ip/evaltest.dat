@@ -7,9 +7,9 @@ moon::cat /var/log/daemon.log::peer requested virtual IP PH_IP_DAVE1::YES
 moon::cat /var/log/daemon.log::assigning virtual IP PH_IP_CAROL1 to peer::YES
 moon::cat /var/log/daemon.log::assigning virtual IP PH_IP_DAVE1 to peer::YES
 carol::ip addr list dev eth0::PH_IP_CAROL1::YES
-carol::ip route list table 100::src PH_IP_CAROL1::YES
+carol::ip route list table 220::src PH_IP_CAROL1::YES
 dave::ip addr list dev eth0::PH_IP_DAVE1::YES
-dave::ip route list table 100::src PH_IP_DAVE1::YES
+dave::ip route list table 220::src PH_IP_DAVE1::YES
 carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
 carol::ping -c 1 PH_IP_MOON1::64 bytes from PH_IP_MOON1: icmp_seq=1::YES
 dave::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
