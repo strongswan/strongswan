@@ -67,7 +67,8 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.seen    = LEMPTY;
 	cfg->conn_default.startup = STARTUP_NO;
 	cfg->conn_default.state   = STATE_IGNORE;
-	cfg->conn_default.policy  = POLICY_ENCRYPT | POLICY_TUNNEL | POLICY_RSASIG | POLICY_PFS ;
+	cfg->conn_default.policy  = POLICY_ENCRYPT | POLICY_TUNNEL | POLICY_RSASIG |
+								POLICY_PFS | POLICY_MOBIKE;
 
 	cfg->conn_default.ike                   = clone_str(ike_defaults, "ike_defaults");
 	cfg->conn_default.esp                   = clone_str(esp_defaults, "esp_defaults");
@@ -549,6 +550,9 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			break;
 		case KW_REAUTH:
 			KW_POLICY_FLAG("no", "yes", POLICY_DONT_REAUTH)
+			break;
+		case KW_MOBIKE:
+			KW_POLICY_FLAG("yes", "no", POLICY_MOBIKE)
 			break;
 		case KW_MODECONFIG:
 			KW_POLICY_FLAG("push", "pull", POLICY_MODECFG_PUSH)

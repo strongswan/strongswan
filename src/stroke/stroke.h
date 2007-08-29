@@ -182,6 +182,7 @@ struct stroke_msg_t {
 			int auth_method;
 			int eap_type;
 			int mode;
+			int mobike;
 			struct {
 				char *ike;
 				char *esp;

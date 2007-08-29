@@ -130,6 +130,11 @@ struct private_peer_cfg_t {
 	bool use_reauth;
 	
 	/**
+	 * enable support for MOBIKE
+	 */
+	bool use_mobike;
+	
+	/**
 	 * Time before an SA gets invalid
 	 */
 	u_int32_t lifetime;
@@ -330,9 +335,17 @@ static u_int32_t get_lifetime(private_peer_cfg_t *this, bool rekey)
 /**
  * Implementation of peer_cfg_t.use_reauth.
  */
-static bool use_reauth(private_peer_cfg_t *this, bool rekey)
+static bool use_reauth(private_peer_cfg_t *this)
 {
 	return this->use_reauth;
+}
+	
+/**
+ * Implementation of peer_cfg_t.use_mobike.
+ */
+static bool use_mobike(private_peer_cfg_t *this)
+{
+	return this->use_mobike;
 }
 
 /**
@@ -421,7 +434,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							cert_policy_t cert_policy, auth_method_t auth_method,
 							eap_type_t eap_type, u_int32_t keyingtries,
 							u_int32_t lifetime, u_int32_t rekeytime,
-							u_int32_t jitter, bool reauth,
+							u_int32_t jitter, bool reauth, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
 							host_t *my_virtual_ip, host_t *other_virtual_ip)
 {
@@ -444,6 +457,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_keyingtries = (u_int32_t (*) (peer_cfg_t *))get_keyingtries;
 	this->public.get_lifetime = (u_int32_t (*) (peer_cfg_t *, bool rekey))get_lifetime;
 	this->public.use_reauth = (bool (*) (peer_cfg_t *))use_reauth;
+	this->public.use_mobike = (bool (*) (peer_cfg_t *))use_mobike;
 	this->public.get_dpd_delay = (u_int32_t (*) (peer_cfg_t *))get_dpd_delay;
 	this->public.get_dpd_action = (dpd_action_t (*) (peer_cfg_t *))get_dpd_action;
 	this->public.get_my_virtual_ip = (host_t* (*) (peer_cfg_t *))get_my_virtual_ip;
@@ -469,6 +483,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->rekeytime = rekeytime;
 	this->jitter = jitter;
 	this->use_reauth = reauth;
+	this->use_mobike = mobike;
 	this->dpd_delay = dpd_delay;
 	this->dpd_action = dpd_action;
 	this->my_virtual_ip = my_virtual_ip;

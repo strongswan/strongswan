@@ -878,8 +878,11 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_mobike_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
+		if (this->peer_cfg->use_mobike(this->peer_cfg))
+		{
+			task = (task_t*)ike_mobike_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
+		}
 	}
 	
 	task = (task_t*)child_create_create(&this->public, child_cfg);
@@ -940,8 +943,11 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_mobike_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
+		if (this->peer_cfg->use_mobike(this->peer_cfg))
+		{
+			task = (task_t*)ike_mobike_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
+		}
 	}
 	
 	child_cfg = child_sa->get_config(child_sa);
@@ -1330,9 +1336,12 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 				{
 					task = (task_t*)child_create_create(&new->public, child_cfg);
 					new->task_manager->queue_task(new->task_manager, task);
+				}		
+				if (this->peer_cfg->use_mobike(this->peer_cfg))
+				{
+					task = (task_t*)ike_mobike_create(&new->public, TRUE);
+					new->task_manager->queue_task(new->task_manager, task);
 				}
-				task = (task_t*)ike_mobike_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
 				new->task_manager->initiate(new->task_manager);
 			}
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, &new->public);

@@ -70,6 +70,7 @@ typedef enum {
     KW_AUTH,
     KW_AUTHBY,
     KW_EAP,
+    KW_MOBIKE,
     KW_IKELIFETIME,
     KW_KEYLIFE,
     KW_REKEYMARGIN,

@@ -227,6 +227,7 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 		msg.add_conn.rekey.tries = conn->sa_keying_tries;
 		msg.add_conn.rekey.fuzz = conn->sa_rekey_fuzz;
 	}
+	msg.add_conn.mobike = conn->policy & POLICY_MOBIKE;
 	msg.add_conn.algorithms.ike = push_string(&msg, conn->ike);
 	msg.add_conn.algorithms.esp = push_string(&msg, conn->esp);
 	msg.add_conn.dpd.delay = conn->dpd_delay;

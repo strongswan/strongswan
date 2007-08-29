@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include <daemon.h>
+#include <config/peer_cfg.h>
 #include <crypto/hashers/hasher.h>
 #include <encoding/payloads/notify_payload.h>
 
@@ -218,18 +219,24 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 static status_t process_i(private_ike_natd_t *this, message_t *message)
 {
 	process_payloads(this, message);
-			
-	/* if peer supports NAT-T, we switch to port 4500 even
-	 * if no NAT is detected. MOBIKE requires this. */
-	if (message->get_exchange_type(message) == IKE_SA_INIT &&
-		this->ike_sa->supports_extension(this->ike_sa, EXT_NATT))
-	{
-		host_t *me, *other;
 	
-		me = this->ike_sa->get_my_host(this->ike_sa);
-		me->set_port(me, IKEV2_NATT_PORT);
-		other = this->ike_sa->get_other_host(this->ike_sa);
-		other->set_port(other, IKEV2_NATT_PORT);
+	if (message->get_exchange_type(message) == IKE_SA_INIT)
+	{
+		peer_cfg_t *peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+				
+		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY) ||
+			/* if peer supports NAT-T, we switch to port 4500 even
+			 * if no NAT is detected. MOBIKE requires this. */
+			(peer_cfg->use_mobike(peer_cfg) &&
+			 this->ike_sa->supports_extension(this->ike_sa, EXT_NATT)))
+		{
+			host_t *me, *other;
+		
+			me = this->ike_sa->get_my_host(this->ike_sa);
+			me->set_port(me, IKEV2_NATT_PORT);
+			other = this->ike_sa->get_other_host(this->ike_sa);
+			other->set_port(other, IKEV2_NATT_PORT);
+		}
 	}
 	
 	return SUCCESS;

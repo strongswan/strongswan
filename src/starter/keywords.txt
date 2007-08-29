@@ -49,6 +49,7 @@ keep_alive,        KW_KEEP_ALIVE
 virtual_private,   KW_VIRTUAL_PRIVATE
 eap,               KW_EAP
 eapdir,            KW_EAPDIR
+mobike,	           KW_MOBIKE
 pkcs11module,      KW_PKCS11MODULE
 pkcs11initargs,    KW_PKCS11INITARGS
 pkcs11keepstate,   KW_PKCS11KEEPSTATE
