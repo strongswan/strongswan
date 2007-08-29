@@ -54,8 +54,8 @@ int main(int argc, char* argv[])
 	fprintf(f, "#ifndef FIPS_SIGNATURE_H_\n");
 	fprintf(f, "#define FIPS_SIGNATURE_H_\n");
 	fprintf(f, "\n");
-	fprintf(f, "const char *hmac_key =\"%s\";\n", hmac_key);
-	fprintf(f, "const char *hmac_signature =\"%s\";\n", hmac_signature);
+	fprintf(f, "const char *hmac_key = \"%s\";\n", hmac_key);
+	fprintf(f, "const char *hmac_signature = \"%s\";\n", hmac_signature);
 	fprintf(f, "\n");
 	fprintf(f, "#endif /* FIPS_SIGNATURE_H_ */\n");
 	fclose(f);
