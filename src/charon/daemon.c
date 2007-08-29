@@ -295,15 +295,15 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
 
 #ifdef INTEGRITY_TEST
-	DBG1(DBG_DMN, "integrity check of libstrongswan code");
+	DBG1(DBG_DMN, "integrity test of libstrongswan code");
 	if (!fips_verify_hmac_signature(hmac_key, hmac_signature))
 	{
-		DBG1(DBG_DMN, "  integrity check failed");
+		DBG1(DBG_DMN, "  integrity test passed");
 		return FALSE;
 	}
 	else
 	{
-		DBG1(DBG_DMN, "  integrity check succeeded");
+		DBG1(DBG_DMN, "  integrity test passed");
 	}
 #endif /* INTEGRITY_TEST */
 	
