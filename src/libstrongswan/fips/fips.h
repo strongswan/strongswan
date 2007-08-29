@@ -27,20 +27,20 @@
 #include <library.h>
 
 /**
- * @brief compute SHA-1 HMAC signature over RODATA and TEXT sections of libstrongswan
+ * @brief compute HMAC signature over RODATA and TEXT sections of libstrongswan
  *
- * @param  key		key used for SHA-1 HMAC signature in string format
- * @return 		SHA-1 HMAC signature in HEX format
+ * @param  key		key used for HMAC signature in ASCII string format
+ * @return 		HMAC signature in HEX string format
  */
 char* fips_compute_hmac_signature(const char *key);
 
 /**
  * @brief verify HMAC signature over RODATA and TEXT sections of libstrongswan
  *
- * @param  signature	signature value from fips_hmac.h in HEX format
- * @param  key		key used for SHA-1 HMAC signature in string format
+ * @param  key		key used for HMAC signature in ASCII string format
+ * @param  signature	signature value from fips_signature.h in HEX string format
  * @return		SUCCESS if signatures agree
  */
-status_t fips_verify_hmac_signature(const char *signature, const char *key);
+status_t fips_verify_hmac_signature(const char *key, const char *signature);
 
 #endif /*FIPS_H_*/

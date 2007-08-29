@@ -40,28 +40,30 @@ char* fips_compute_hmac_signature(const char *key)
 
     DBG1("  TEXT:   %p + %6d = %p",
 		 FIPS_text_start(),
-		(int)( (size_t)FIPS_text_end() - (size_t)FIPS_text_start() ),
-		FIPS_text_end());
+		 (int)( (size_t)FIPS_text_end() - (size_t)FIPS_text_start() ),
+		 FIPS_text_end());
     DBG1("  RODATA: %p + %6d = %p",
-		FIPS_rodata_start,
-        (int)( (size_t)FIPS_rodata_end - (size_t)FIPS_rodata_start ),
-        FIPS_rodata_end);
+		 FIPS_rodata_start,
+		 (int)( (size_t)FIPS_rodata_end - (size_t)FIPS_rodata_start ),
+		 FIPS_rodata_end);
 
 	if (signer == NULL)
 	{
-	    DBG1("  fips hmac signer could not be created");
+	    DBG1("  sha-1 hmac_signer could not be created");
 		return NULL;
 	}
 	signer->signer_interface.set_key((signer_t *)signer, hmac_key);
 	signer->signer_interface.destroy((signer_t *)signer);
+
+	/* TODO compute a HMAC over two separate chunks */
 	return strdup("01020304050607080901011121314151617181920");
 }
 
 /**
  * Described in header
  */
-status_t fips_verify_hmac_signature(const char *signature,
-									const char *key)
+status_t fips_verify_hmac_signature(const char *key,
+									const char *signature)
 {
 	status_t status;
 	char *current_signature = fips_compute_hmac_signature(key);

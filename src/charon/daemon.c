@@ -296,7 +296,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 
 #ifdef INTEGRITY_TEST
 	DBG1(DBG_DMN, "integrity check of libstrongswan code");
-	if (fips_verify_hmac_signature(hmac_signature, hmac_key) != SUCCESS)
+	if (fips_verify_hmac_signature(hmac_key, hmac_signature) != SUCCESS)
 	{
 		DBG1(DBG_DMN, "  integrity check failed");
 		return FALSE;
