@@ -246,6 +246,14 @@ static void ietfAttr_add(linked_list_t *list, ietfAttr_t *attr)
 }
 
 /**
+ * Create a linked list of ietfAttr_t objects from a string
+ */
+static void ietfAttr_create_from_string(linked_list_t *list, const char *msg)
+{
+
+}
+
+/**
  * Lists a linked list of ietfAttr_t objects
  */
 static void ietfAttr_list(linked_list_t *list, FILE *out)
