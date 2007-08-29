@@ -20,9 +20,11 @@
  * for more details.
  */
 
-#include "fips.h"
+#include <stdio.h>
+
 #include <debug.h>
 #include <crypto/signers/hmac_signer.h>
+#include "fips.h"
 
 extern const u_char FIPS_rodata_start[];
 extern const u_char FIPS_rodata_end[];
@@ -36,8 +38,7 @@ bool fips_compute_hmac_signature(const char *key, char *signature)
 {
 	u_char *text_start = (u_char *)FIPS_text_start();
 	u_char *text_end   = (u_char *)FIPS_text_end();
-	size_t text_len;
-	size_t rodata_len;
+	size_t text_len, rodata_len;
 	signer_t *signer;
 
 	if (text_start > text_end)
@@ -46,7 +47,7 @@ bool fips_compute_hmac_signature(const char *key, char *signature)
 				text_start, text_end);
 		return FALSE;
 	}
-	text_len = (size_t)text_end - (size_t)text_start;
+	text_len = text_end - text_start;
     DBG1("  TEXT:   %p + %6d = %p",
 			text_start, (int)text_len, text_end);
 
@@ -56,7 +57,7 @@ bool fips_compute_hmac_signature(const char *key, char *signature)
 				FIPS_rodata_start, FIPS_rodata_end);
 		return FALSE;
 	}
-	rodata_len = (size_t)FIPS_rodata_end - (size_t)FIPS_rodata_start;
+	rodata_len = FIPS_rodata_end - FIPS_rodata_start;
     DBG1("  RODATA: %p + %6d = %p",
 			FIPS_rodata_start, (int)rodata_len, FIPS_rodata_end);
 
