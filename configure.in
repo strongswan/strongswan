@@ -253,7 +253,7 @@ AC_ARG_ENABLE(
 AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
 
 AC_ARG_ENABLE(
-    [self_test],
+    [self-test],
     AS_HELP_STRING([--disable-self-test],[disable the self-test of the crypto library (default is NO).]),
     [if test x$enableval = xyes; then
         self_test=true
