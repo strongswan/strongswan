@@ -1,6 +1,14 @@
 lib_LTLIBRARIES = libstrongswan.la
 
-libstrongswan_la_SOURCES = \
+if USE_INTEGRITY_TEST
+  libstrongswan_la_SOURCES = \
+  fips/fips_canister_start.c \
+  fips/fips.c fips/fips.h
+else
+  libstrongswan_la_SOURCES =
+endif
+
+libstrongswan_la_SOURCES += \
 credential_store.h \
 library.c library.h \
 chunk.c chunk.h \
@@ -16,8 +24,8 @@ crypto/ca.c crypto/ca.h \
 crypto/certinfo.c crypto/certinfo.h \
 crypto/crl.c crypto/crl.h \
 crypto/crypters/crypter.c crypto/crypters/crypter.h \
-crypto/crypters/aes_cbc_crypter.c  crypto/crypters/aes_cbc_crypter.h\
-crypto/crypters/des_crypter.c  crypto/crypters/des_crypter.h\
+crypto/crypters/aes_cbc_crypter.c crypto/crypters/aes_cbc_crypter.h \
+crypto/crypters/des_crypter.c crypto/crypters/des_crypter.h \
 crypto/diffie_hellman.c crypto/diffie_hellman.h \
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
 crypto/hashers/sha1_hasher.c crypto/hashers/sha1_hasher.h \
@@ -43,12 +51,14 @@ utils/lexparser.c utils/lexparser.h \
 utils/linked_list.c utils/linked_list.h \
 utils/randomizer.c utils/randomizer.h
 
+if USE_INTEGRITY_TEST
+  libstrongswan_la_SOURCES += \
+  fips/fips_canister_end.c
+endif
+
 libstrongswan_la_LIBADD = -lgmp -lpthread
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
-EXTRA_DIST = asn1/oid.txt asn1/oid.pl
-BUILT_SOURCES = asn1/oid.c asn1/oid.h
-MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h
 
 if USE_LEAK_DETECTIVE
   libstrongswan_la_LIBADD += -ldl
@@ -63,8 +73,25 @@ if USE_LIBLDAP
   libstrongswan_la_LIBADD += -lldap -llber
 endif
 
+EXTRA_DIST = asn1/oid.txt asn1/oid.pl
+BUILT_SOURCES = asn1/oid.c asn1/oid.h
+MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h
+
 asn1/oid.c :	asn1/oid.txt asn1/oid.pl
 		cd asn1 && $(PERL) oid.pl
 
 asn1/oid.h :	asn1/oid.txt asn1/oid.pl
 		cd asn1 && $(PERL) oid.pl
+
+# build fips_signer which in turn builds fips_signature.h
+#########################################################
+noinst_PROGRAMS = fips_signer
+fips_signer_SOURCES = fips/fips_signer.c
+fips_signer_LDADD = libstrongswan.la
+
+BUILT_SOURCES += fips_signature.h
+CLEANFILES = fips_signature.h fips_signer
+
+fips_signature.h : fips_signer
+		   ./fips_signer
+

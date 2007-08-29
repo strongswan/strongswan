@@ -52,6 +52,11 @@
 extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
 #endif /* NO_CAPSET_DEFINED */
 
+#ifdef INTEGRITY_TEST
+#include <fips/fips.h>
+#include <fips_signature.h>
+#endif /* INTEGRITY_TEST */
+
 typedef struct private_daemon_t private_daemon_t;
 
 /**
@@ -254,9 +259,9 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 }
 
 /**
- * Initialize the daemon, optional with a strict crl policy
+ * Initialize the daemon
  */
-static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
+static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 {
 	signal_t signal;
 	
@@ -288,6 +293,19 @@ static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	}
 	
 	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
+
+#ifdef INTEGRITY_TEST
+	DBG1(DBG_DMN, "integrity check of libstrongswan code");
+	if (fips_verify_hmac_signature(hmac_signature, hmac_key) != SUCCESS)
+	{
+		DBG1(DBG_DMN, "  integrity check failed");
+		return FALSE;
+	}
+	else
+	{
+		DBG1(DBG_DMN, "  integrity check succeeded");
+	}
+#endif /* INTEGRITY_TEST */
 	
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.processor = processor_create();
@@ -308,7 +326,7 @@ static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
-	
+	return TRUE;
 }
 
 /**
@@ -508,7 +526,13 @@ int main(int argc, char *argv[])
 	}
 	
 	/* initialize daemon */
-	initialize(private_charon, use_syslog, levels);
+	if (!initialize(private_charon, use_syslog, levels))
+	{
+		DBG1(DBG_DMN, "initialization failed - aborting charon");
+		destroy(private_charon);
+		exit(-1);
+	}
+
 	/* initialize fetcher_t class */
 	fetcher_initialize();
 	/* load pluggable EAP modules */

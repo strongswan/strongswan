@@ -90,6 +90,14 @@
  */
 
 /**
+ * @defgroup fips fips
+ *
+ * Code integrity check of libstrongswan
+ *
+ * @ingroup libstrongswan
+ */
+
+/**
  * @defgroup utils utils
  *
  * Generic helper classes.
