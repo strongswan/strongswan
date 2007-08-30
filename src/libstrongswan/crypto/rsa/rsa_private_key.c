@@ -575,6 +575,8 @@ static private_rsa_private_key_t *rsa_private_key_create_empty(void)
 	this->rsasp1 = rsadp; /* same algorithm */
 	this->compute_prime = compute_prime;
 	
+	this->keyid = chunk_empty;
+	
 	return this;
 }
 
