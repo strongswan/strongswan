@@ -653,6 +653,16 @@ Relevant only locally, other end need not agree on it. IKEv2 uses the updown
 script to insert firewall rules only. Routing is not support and will be
 implemented directly into Charon.
 .TP
+.B mobike
+enables the IKEv2 MOBIKE protocol defined by RFC 4555. Accepted values are
+.B yes
+(the default) and
+.BR no .
+If set to
+.BR no ,
+the IKEv2 charon daemon will not actively propose MOBIKE but will still
+accept and support the protocol as a responder.
+.TP
 .B modeconfig
 defines which mode is used to assign a virtual IP.
 Accepted values are
@@ -900,6 +910,7 @@ Accepted values are
 and
 .B no
 (the default).
+.TP
 .B nocrsend
 no certificate request payloads will be sent.
 Accepted values are
