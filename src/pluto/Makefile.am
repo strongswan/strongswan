@@ -107,6 +107,11 @@ if USE_VENDORID
   AM_CFLAGS += -DVENDORID
 endif
 
+# This compile option activates the sending of the XAUTH VID
+if USE_XAUTH_VID
+  AM_CFLAGS += -DXAUTH_VID
+endif
+
 # This compile option activates the support of the Cisco VPN client
 if USE_CISCO_QUIRKS
   AM_CFLAGS += -DCISCO_QUIRKS

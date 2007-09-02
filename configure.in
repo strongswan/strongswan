@@ -234,6 +234,18 @@ AC_ARG_ENABLE(
 AM_CONDITIONAL(USE_VENDORID, test x$vendor_id = xtrue)
 
 AC_ARG_ENABLE(
+    [xauth-vid],
+    AS_HELP_STRING([--disable-xauth-vid],[disable the sending of the XAUTH vendor ID (default is NO).]),
+    [if test x$enableval = xyes; then
+        xauth_vid=true
+     else
+        xauth_vid=false
+    fi],
+    xauth_vid=true
+)
+AM_CONDITIONAL(USE_XAUTH_VID, test x$xauth_vid = xtrue)
+
+AC_ARG_ENABLE(
     [uml],
     AS_HELP_STRING([--enable-uml],[build the UML test framework (default is NO).]),
     [if test x$enableval = xyes; then

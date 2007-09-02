@@ -80,6 +80,15 @@
 #endif /* !VENDORID */
 
 /*
+ * are we sending an XAUTH VID?
+ */
+#ifdef XAUTH_VID
+#define SEND_XAUTH_VID	1
+#else /* !XAUTH_VID */
+#define SEND_XAUTH_VID	0
+#endif /* !XAUTH_VID */
+
+/*
  * are we sending a Cisco Unity VID?
  */
 #ifdef CISCO_QUIRKS
@@ -899,7 +908,7 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	vids_to_send++;
     if (c->spd.this.cert.type == CERT_PGP)
 	vids_to_send++;
-    /* always send XAUTH Vendor ID */
+    if (SEND_XAUTH_VID)
 	vids_to_send++;
     /* always send DPD Vendor ID */
 	vids_to_send++;
@@ -993,11 +1002,14 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
     }
 
     /* Announce our ability to do eXtended AUTHentication to the peer */
-    if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
-    , &rbody, VID_MISC_XAUTH))
+    if (SEND_XAUTH_VID)
     {
-	reset_cur_state();
-	return STF_INTERNAL_ERROR;
+	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
+	, &rbody, VID_MISC_XAUTH))
+	{
+	    reset_cur_state();
+	    return STF_INTERNAL_ERROR;
+	}
     }
 
     /* Announce our ability to do Dead Peer Detection to the peer */
@@ -3114,7 +3126,7 @@ main_inI1_outR1(struct msg_digest *md)
 	vids_to_send++;
     if (md->openpgp)
 	vids_to_send++;
-    /* always send XAUTH Vendor ID */
+    if (SEND_XAUTH_VID)
 	vids_to_send++;
     /* always send DPD Vendor ID */
 	vids_to_send++;
@@ -3182,10 +3194,13 @@ main_inI1_outR1(struct msg_digest *md)
     }
 
     /* Announce our ability to do eXtended AUTHentication to the peer */
-    if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
-    , &md->rbody, VID_MISC_XAUTH))
+    if (SEND_XAUTH_VID)
     {
-	return STF_INTERNAL_ERROR;
+	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
+	, &md->rbody, VID_MISC_XAUTH))
+	{
+	    return STF_INTERNAL_ERROR;
+	}
     }
 
     /* Announce our ability to do Dead Peer Detection to the peer */
