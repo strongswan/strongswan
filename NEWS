@@ -1,9 +1,29 @@
 strongswan-4.1.6
 ----------------
 
+- Since some third party IKEv2 implementations run into
+  problems with strongSwan announcing MOBIKE capability per
+  default, MOBIKE can be disabled on a per-connection-basis
+  using the mobike=no option. Whereas mobike=no disables the
+  sending of the MOBIKE_SUPPORTED notification and the floating
+  to UDP port 4500 with the IKE_AUTH request even if no NAT
+  situation has been detected, strongSwan will still support
+  MOBIKE acting as a responder.
+
+- the default ipsec routing table plus its corresponding priority
+  used for inserting source routes has been changed from 100 to 220.
+  It can be configured using the --with-ipsec-routing-table and
+  --with-ipsec-routing-table-prio options. 
+  
 - the --enable-integrity-test configure option tests the
   integrity of the libstrongswan crypto code during the charon
   startup.
+  
+- the --disable-xauth-vid configure option disables the sending
+  of the XAUTH vendor ID. This can be used as a workaround when
+  interoperating with some Windows VPN clients that get into
+  trouble upon reception of an XAUTH VID without eXtended
+  AUTHentication having been configured.
   
 - ipsec stroke now supports the rereadsecrets, rereadaacerts,
   rereadacerts, and listacerts options.
