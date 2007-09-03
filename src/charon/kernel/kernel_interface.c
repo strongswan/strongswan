@@ -29,6 +29,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <linux/xfrm.h>
@@ -66,6 +67,9 @@
 /** default priority of installed policies */
 #define PRIO_LOW 3000
 #define PRIO_HIGH 2000
+
+/** delay before firing roam jobs (ms) */
+#define ROAM_DELAY 100
 
 #define BUFFER_SIZE 1024
 
@@ -344,6 +348,11 @@ struct private_kernel_interface_t {
 	 * Netlink rt socket to receive address change events
 	 */
 	int socket_rt_events;
+	
+	/**
+	 * time of the last roam_job
+	 */
+	struct timeval last_roam;
 };
 
 /**
@@ -528,6 +537,31 @@ static void process_expire(private_kernel_interface_t *this, struct nlmsghdr *hd
 }
 
 /**
+ * start a roaming job. We delay it for a second and fire only one job
+ * for multiple events. Otherwise we would create two many jobs.
+ */
+static void fire_roam_job(private_kernel_interface_t *this, bool address)
+{
+	struct timeval now;
+		
+	if (gettimeofday(&now, NULL) == 0)
+	{
+		if (timercmp(&now, &this->last_roam, >))
+		{
+			now.tv_usec += ROAM_DELAY * 1000;
+			while (now.tv_usec > 1000000)
+			{
+				now.tv_sec++;
+				now.tv_usec -= 1000000;
+			}
+			this->last_roam = now;
+			charon->scheduler->schedule_job(charon->scheduler,
+					(job_t*)roam_job_create(address), ROAM_DELAY);
+		}
+	}
+}
+
+/**
  * process RTM_NEWLINK/RTM_DELLINK from kernel
  */
 static void process_link(private_kernel_interface_t *this,
@@ -623,8 +657,7 @@ static void process_link(private_kernel_interface_t *this,
 	/* send an update to all IKE_SAs */
 	if (update && event)
 	{
-		charon->processor->queue_job(charon->processor,
-									 (job_t*)roam_job_create(TRUE));
+		fire_roam_job(this, TRUE);
 	}
 }
 
@@ -731,8 +764,7 @@ static void process_addr(private_kernel_interface_t *this,
 	/* send an update to all IKE_SAs */
 	if (update && event && changed)
 	{
-		charon->processor->queue_job(charon->processor,
-									 (job_t*)roam_job_create(TRUE));
+		fire_roam_job(this, TRUE);
 	}
 }
 
@@ -828,8 +860,7 @@ static job_requeue_t receive_events(private_kernel_interface_t *this)
 					break;
 				case RTM_NEWROUTE:
 				case RTM_DELROUTE:
-					charon->processor->queue_job(charon->processor,
-												 (job_t*)roam_job_create(FALSE));
+					fire_roam_job(this, FALSE);
 					break;
 				default:
 					break;
@@ -2517,6 +2548,7 @@ kernel_interface_t *kernel_interface_create()
 	this->hiter = NULL;
 	this->seq = 200;
 	pthread_mutex_init(&this->mutex,NULL);
+	timerclear(&this->last_roam);
 	
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;

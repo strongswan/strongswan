@@ -28,6 +28,7 @@ typedef struct ike_mobike_t ike_mobike_t;
 #include <library.h>
 #include <sa/ike_sa.h>
 #include <sa/tasks/task.h>
+#include <network/packet.h>
 
 /**
  * @brief Task of type ike_mobike, detects and handles MOBIKE extension.
@@ -58,6 +59,18 @@ struct ike_mobike_t {
 	 * @param address		TRUE to include address list update
 	 */
 	void (*roam)(ike_mobike_t *this, bool address);
+	
+	/**
+	 * @brief Transmision hook, called by task manager.
+	 *
+	 * The task manager calls this hook whenever it transmits a packet. It 
+	 * allows the mobike task to send the packet on multiple paths to do path
+	 * probing.
+	 *
+	 * @param this			calling object
+	 * @param packet		the packet to transmit
+	 */
+	void (*transmit)(ike_mobike_t *this, packet_t *packet);
 };
 
 /**

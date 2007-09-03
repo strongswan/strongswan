@@ -812,8 +812,6 @@ static status_t generate_message(private_ike_sa_t *this, message_t *message,
 {
 	this->time.outbound = time(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
-	message->set_destination(message, this->other_host->clone(this->other_host));
-	message->set_source(message, this->my_host->clone(this->my_host));
 	return message->generate(message, this->crypter_out, this->signer_out, packet);
 }
 
@@ -859,7 +857,6 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	
 	if (this->state == IKE_CREATED)
 	{
-		
 		if (this->other_host->is_anyaddr(this->other_host))
 		{
 			child_cfg->destroy(child_cfg);
@@ -1802,30 +1799,19 @@ static status_t roam(private_ike_sa_t *this, bool address)
 	other = this->other_host;
 	me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
 												   other);
-												   
-	/* TODO: find a better path using additional addresses of peer */
-	
-	if (!me)
-	{
-		/* no route found to host, set to stale, wait for a new route */
-		set_condition(this, COND_STALE, TRUE);
-		return FAILED;
-	}
 	
 	set_condition(this, COND_STALE, FALSE);
-	if (me->ip_equals(me, this->my_host) &&
-		other->ip_equals(other, this->other_host))
+	if (me)
 	{
-		DBG2(DBG_IKE, "%H still reached through %H, no update needed",
-			 this->other_host, me);
+		if (me->ip_equals(me, this->my_host) &&
+			other->ip_equals(other, this->other_host))
+		{
+			DBG2(DBG_IKE, "keeping connection path %H - %H", this->other_host, me);
+			me->destroy(me);
+			return SUCCESS;
+		}
 		me->destroy(me);
-		return SUCCESS;
 	}
-	me->set_port(me, this->my_host->get_port(this->my_host));
-	other = other->clone(other);
-	other->set_port(other, this->other_host->get_port(this->other_host));
-	set_my_host(this, me);
-	set_other_host(this, other);
 	
 	/* update addresses with mobike, if supported ... */
 	if (supports_extension(this, EXT_MOBIKE))

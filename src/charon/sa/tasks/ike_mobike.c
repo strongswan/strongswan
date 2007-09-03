@@ -64,7 +64,12 @@ struct private_ike_mobike_t {
 	/**
 	 * use task to update addresses
 	 */
-	bool roam;
+	bool update;
+	
+	/**
+	 * do routability check
+	 */
+	bool check;
 	
 	/**
 	 * include address list update
@@ -140,7 +145,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 			}
 			case UPDATE_SA_ADDRESSES:
 			{
-				this->roam = TRUE;
+				this->update = TRUE;
 				break;
 			}
 			case NO_ADDITIONAL_ADDRESSES:
@@ -225,6 +230,54 @@ static void update_children(private_ike_mobike_t *this)
 }
 
 /**
+ * Implementation of ike_mobike_t.transmit
+ */
+static void transmit(private_ike_mobike_t *this, packet_t *packet)
+{
+	host_t *me, *other, *me_old, *other_old;
+	iterator_t *iterator;
+	packet_t *copy;
+	
+	if (!this->check)
+	{
+		return;
+	}
+
+	me_old = this->ike_sa->get_my_host(this->ike_sa);
+	other_old = this->ike_sa->get_other_host(this->ike_sa);
+	
+	me = charon->kernel_interface->get_source_addr(
+										charon->kernel_interface, other_old);
+	if (me)
+	{
+		me->set_port(me, me->ip_equals(me, me_old) ?
+					 me_old->get_port(me_old) : IKEV2_NATT_PORT);
+		packet->set_source(packet, me);
+	}
+	
+	iterator = this->ike_sa->create_additional_address_iterator(this->ike_sa);
+	while (iterator->iterate(iterator, (void**)&other))
+	{
+		me = charon->kernel_interface->get_source_addr(
+											charon->kernel_interface, other);
+		if (me)
+		{
+			/* reuse port for an active address, 4500 otherwise */
+			me->set_port(me, me->ip_equals(me, me_old) ?
+						 me_old->get_port(me_old) : IKEV2_NATT_PORT);
+			other = other->clone(other);
+			other->set_port(other, other->ip_equals(other, other_old) ?
+							other_old->get_port(other_old) : IKEV2_NATT_PORT);
+			copy = packet->clone(packet);
+			copy->set_source(copy, me);
+			copy->set_destination(copy, other);
+			charon->sender->send(charon->sender, copy);
+		}
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implementation of task_t.process for initiator
  */
 static status_t build_i(private_ike_mobike_t *this, message_t *message)
@@ -237,20 +290,20 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
-		if (this->roam)
+		if (this->update)
 		{
 			message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES, chunk_empty);
+			update_children(this);
 		}
 		if (this->address)
 		{
 			build_address_list(this, message);
 		}
-		
-		this->natd = ike_natd_create(this->ike_sa, this->initiator);
-		this->natd->task.build(&this->natd->task, message);
-		update_children(this);
+		if (this->natd)
+		{
+			this->natd->task.build(&this->natd->task, message);
+		}
 	}
-	
 	return NEED_MORE;
 }
 
@@ -267,7 +320,7 @@ static status_t process_r(private_ike_mobike_t *this, message_t *message)
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
 		process_payloads(this, message);
-		if (this->roam)
+		if (this->update)
 		{
 			host_t *me, *other;
 			
@@ -306,7 +359,7 @@ static status_t build_r(private_ike_mobike_t *this, message_t *message)
 		{
 			this->natd->task.build(&this->natd->task, message);
 		}
-		if (this->roam)
+		if (this->update)
 		{
 			update_children(this);
 		}
@@ -324,7 +377,6 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 		message->get_payload(message, SECURITY_ASSOCIATION))
 	{
 		process_payloads(this, message);
-
 		return SUCCESS;
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
@@ -341,10 +393,38 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 		{
 			this->natd->task.process(&this->natd->task, message);
 		}
-		if (this->roam)
+		if (this->update)
 		{
 			/* update again, as NAT state may have changed */
 			update_children(this);
+		}
+		if (this->check)
+		{
+			host_t *me_new, *me_old, *other_new, *other_old;
+			
+			me_new = message->get_destination(message);
+			other_new = message->get_source(message);
+			me_old = this->ike_sa->get_my_host(this->ike_sa);
+			other_old = this->ike_sa->get_other_host(this->ike_sa);
+			
+			if (!me_new->equals(me_new, me_old))
+			{
+				this->update = TRUE;
+				this->ike_sa->set_my_host(this->ike_sa, me_new->clone(me_new));
+			}			
+			if (!other_new->equals(other_new, other_old))
+			{
+				this->update = TRUE;
+				this->ike_sa->set_other_host(this->ike_sa, other_new->clone(other_new));
+			}
+			if (this->update)
+			{
+				/* start the update with the same task */
+				this->check = FALSE;
+				this->address = FALSE;
+				this->ike_sa->set_pending_updates(this->ike_sa, 1);
+				return NEED_MORE;
+			}
 		}
 		return SUCCESS;
 	}
@@ -356,8 +436,9 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
  */
 static void roam(private_ike_mobike_t *this, bool address)
 {
-	this->roam = TRUE;
+	this->check = TRUE;
 	this->address = address;
+	this->natd = ike_natd_create(this->ike_sa, this->initiator);
 	this->ike_sa->set_pending_updates(this->ike_sa, 
 							this->ike_sa->get_pending_updates(this->ike_sa) + 1);
 }
@@ -404,6 +485,7 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 	private_ike_mobike_t *this = malloc_thing(private_ike_mobike_t);
 
 	this->public.roam = (void(*)(ike_mobike_t*,bool))roam;
+	this->public.transmit = (void(*)(ike_mobike_t*,packet_t*))transmit;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
@@ -421,7 +503,8 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 	
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
-	this->roam = FALSE;
+	this->update = FALSE;
+	this->check = FALSE;
 	this->address = TRUE;
 	this->cookie2 = chunk_empty;
 	this->natd = NULL;

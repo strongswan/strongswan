@@ -217,6 +217,9 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 	{
 		u_int32_t timeout;
 		job_t *job;
+		iterator_t *iterator;
+		packet_t *packet;
+		task_t *task;
 
 		if (this->initiating.retransmitted <= RETRANSMIT_TRIES)
 		{
@@ -237,8 +240,22 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 		}
 		this->initiating.retransmitted++;
 		
-		charon->sender->send(charon->sender,
-					this->initiating.packet->clone(this->initiating.packet));
+		packet = this->initiating.packet->clone(this->initiating.packet);
+		
+		/* mobike needs to now when we retransmit, so we call it here */
+		iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
+		while (iterator->iterate(iterator, (void*)&task))
+		{
+			if (task->get_type(task) == IKE_MOBIKE)
+			{
+				ike_mobike_t *mobike = (ike_mobike_t*)task;
+				mobike->transmit(mobike, packet);
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+		
+		charon->sender->send(charon->sender, packet);
 		job = (job_t*)retransmit_job_create(this->initiating.mid,
 											this->ike_sa->get_id(this->ike_sa));
 		charon->scheduler->schedule_job(charon->scheduler, job, timeout);
@@ -255,6 +272,7 @@ static status_t build_request(private_task_manager_t *this)
 	iterator_t *iterator;
 	task_t *task;
 	message_t *message;
+	host_t *me, *other;
 	status_t status;
 	exchange_type_t exchange = 0;
 	
@@ -372,8 +390,13 @@ static status_t build_request(private_task_manager_t *this)
 		return SUCCESS;
 	}
 	
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
+	
 	message = message_create();
 	message->set_message_id(message, this->initiating.mid);
+	message->set_source(message, me->clone(me));
+	message->set_destination(message, other->clone(other));
 	message->set_exchange_type(message, exchange);
 	this->initiating.type = exchange;
 	this->initiating.retransmitted = 0;
@@ -412,7 +435,7 @@ static status_t build_request(private_task_manager_t *this)
 		 * close the SA */
 		flush(this);
 	    return DESTROY_ME;
-	}						
+	}
 	
 	return retransmit(this, this->initiating.mid);
 }
@@ -523,17 +546,23 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 /**
  * build a response depending on the "passive" task list
  */
-static status_t build_response(private_task_manager_t *this,
-							   exchange_type_t exchange)
+static status_t build_response(private_task_manager_t *this, message_t *request)
 {
 	iterator_t *iterator;
 	task_t *task;
 	message_t *message;
+	host_t *me, *other;
 	bool delete = FALSE;
 	status_t status;
 
+	me = request->get_destination(request);
+	other = request->get_source(request);
+
 	message = message_create();
-	message->set_exchange_type(message, exchange);
+	message->set_exchange_type(message, request->get_exchange_type(request));
+	/* send response along the path the request came in */
+	message->set_source(message, me->clone(me));
+	message->set_destination(message, other->clone(other));
 	message->set_message_id(message, this->responding.mid);
 	message->set_request(message, FALSE);
 
@@ -563,7 +592,7 @@ static status_t build_response(private_task_manager_t *this,
 	iterator->destroy(iterator);
 	
 	/* remove resonder SPI if IKE_SA_INIT failed */
-	if (delete && exchange == IKE_SA_INIT)
+	if (delete && request->get_exchange_type(request) == IKE_SA_INIT)
 	{
 		ike_sa_id_t *id = this->ike_sa->get_id(this->ike_sa);
 		id->set_responder_spi(id, 0);
@@ -596,15 +625,12 @@ static status_t process_request(private_task_manager_t *this,
 {
 	iterator_t *iterator;
 	task_t *task = NULL;
-	exchange_type_t exchange;
 	payload_t *payload;
 	notify_payload_t *notify;
 	delete_payload_t *delete;
 
-	exchange = message->get_exchange_type(message);
-
 	/* create tasks depending on request type */
-	switch (exchange)
+	switch (message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
 		{
@@ -760,7 +786,7 @@ static status_t process_request(private_task_manager_t *this,
 	}
 	iterator->destroy(iterator);
 
-	return build_response(this, exchange);
+	return build_response(this, message);
 }
 
 /**
