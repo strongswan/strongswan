@@ -89,6 +89,11 @@ bool chunk_write(chunk_t chunk, const char *path, const char *label, mode_t mask
 void chunk_free(chunk_t *chunk);
 
 /**
+ * Overwrite the contents of a chunk with pseudo-random bytes and free them
+ */
+void chunk_free_randomized(chunk_t *chunk);
+
+/**
  * Initialize a chunk to point to buffer inspectable by sizeof()
  */
 #define chunk_from_buf(str) { str, sizeof(str) }
