@@ -197,10 +197,11 @@ static struct vid_struct _vid_tab[] = {
 	    "\xeb\x4c\x1b\x78\x8a\xfd\x4a\x9c\xb7\x73\x0a\x68", 12},
 
 	/*
-	 * Windows Vista (and Longhorn?)
+	 * Windows Vista (and Windows Server 2008?)
 	 */
 	DEC_MD5_VID(VISTA_AUTHIP, "MS-Negotiation Discovery Capable")
 	DEC_MD5_VID(VISTA_AUTHIP2, "IKE CGA version 1")
+	DEC_MD5_VID(VISTA_AUTHIP3, "MS-MamieExists")
 
 	/*
 	 * strongSwan
