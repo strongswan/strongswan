@@ -66,7 +66,7 @@ struct shared_key_t {
 static void shared_key_destroy(shared_key_t *this)
 {
 	this->peers->destroy_offset(this->peers, offsetof(identification_t, destroy));
-	chunk_free(&this->secret);
+	chunk_free_randomized(&this->secret);
 	free(this);
 }
 
@@ -83,7 +83,7 @@ static shared_key_t *shared_key_create(chunk_t secret)
 	shared_key_t *this = malloc_thing(shared_key_t);
 
 	/* private data */
-	this->secret = chunk_clone(secret);
+	this->secret = secret;
 	this->peers = linked_list_create();
 
 	return (this);
@@ -1301,21 +1301,26 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 	}
 
 	if (quotes)
-	{	/* treat as an ASCII string */
-		if (raw_secret.len > secret->len)
-			return "secret larger than buffer";
-		memcpy(secret->ptr, raw_secret.ptr, raw_secret.len);
-		secret->len = raw_secret.len;
+	{	
+		/* treat as an ASCII string */
+		*secret = chunk_clone(raw_secret);
 	}
 	else
-	{	/* convert from HEX or Base64 to binary */
+	{
 		size_t len;
-		err_t ugh = ttodata(raw_secret.ptr, raw_secret.len, 0, secret->ptr, secret->len, &len);
+		err_t ugh;
+
+		/* secret converted to binary form doesn't use more space than the raw_secret */
+		*secret = chunk_alloc(raw_secret.len);
+
+		/* convert from HEX or Base64 to binary */
+		ugh = ttodata(raw_secret.ptr, raw_secret.len, 0, secret->ptr, secret->len, &len);
 
 	    if (ugh != NULL)
+		{
+			chunk_free_randomized(secret);
 			return ugh;
-		if (len > secret->len)
-			return "secret larger than buffer";
+		}
 		secret->len = len;
 	}
 	return NULL;
@@ -1390,9 +1395,7 @@ static void load_secrets(private_local_credential_store_t *this, bool reload)
 			{
 				char path[PATH_BUF];
 				chunk_t filename;
-
-				char buf[BUF_LEN];
-				chunk_t secret = { buf, BUF_LEN };
+				chunk_t secret = chunk_empty;
 				chunk_t *passphrase = NULL;
 
 				rsa_private_key_t *key;
@@ -1438,14 +1441,13 @@ static void load_secrets(private_local_credential_store_t *this, bool reload)
 				{
 					this->private_keys->insert_last(this->private_keys, (void*)key);
 				}
+				chunk_free_randomized(&secret);
 			}
 			else if ( match("PSK", &token) ||
 					((match("EAP", &token) || match("XAUTH", &token)) && (is_eap = TRUE)))
 			{
 				shared_key_t *shared_key;
-
-				char buf[BUF_LEN];
-				chunk_t secret = { buf, BUF_LEN };
+				chunk_t secret = chunk_empty;
 
 				err_t ugh = extract_secret(&secret, &line);
 				if (ugh != NULL)
@@ -1461,16 +1463,13 @@ static void load_secrets(private_local_credential_store_t *this, bool reload)
 				DBG4(DBG_CFG, "  secret:", secret);
 
 				shared_key = shared_key_create(secret);
-				if (shared_key)
+				if (is_eap)
 				{
-					if (is_eap)
-					{
-						this->eap_keys->insert_last(this->eap_keys, (void*)shared_key);
-					}
-					else
-					{
-						this->shared_keys->insert_last(this->shared_keys, (void*)shared_key);
-					}
+					this->eap_keys->insert_last(this->eap_keys, (void*)shared_key);
+				}
+				else
+				{
+					this->shared_keys->insert_last(this->shared_keys, (void*)shared_key);
 				}
 				while (ids.len > 0)
 				{
@@ -1518,7 +1517,7 @@ static void load_secrets(private_local_credential_store_t *this, bool reload)
 			}
 		}
 error:
-		free(chunk.ptr);
+		chunk_free_randomized(&chunk);
 		pthread_mutex_unlock(&(this->keys_mutex));
 	}
 	else
