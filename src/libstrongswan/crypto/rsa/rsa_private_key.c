@@ -186,6 +186,26 @@ static const asn1Object_t privkey_objects[] = {
 static private_rsa_private_key_t *rsa_private_key_create_empty(void);
 
 /**
+ * Auxiliary function overwriting private key material with
+ * pseudo-random bytes before releasing it
+ */
+static mpz_clear_randomized(mpz_t z)
+{
+	size_t len = mpz_size(z) * GMP_LIMB_BITS / BITS_PER_BYTE;
+	u_int8_t *random_bytes = alloca(len);
+
+	randomizer_t *randomizer = randomizer_create();
+	
+	randomizer->get_pseudo_random_bytes(randomizer, len, random_bytes);
+
+	/* overwrite mpz_t with pseudo-random bytes before clearing it */
+	mpz_import(z, len, 1, 1, 1, 0, random_bytes);
+	mpz_clear(z);
+
+	randomizer->destroy(randomizer);
+}
+
+/**
  * Implementation of private_rsa_private_key_t.compute_prime.
  */
 static status_t compute_prime(private_rsa_private_key_t *this, size_t prime_size, mpz_t *prime)
@@ -216,7 +236,8 @@ static status_t compute_prime(private_rsa_private_key_t *this, size_t prime_size
 		/* get next prime */
 		mpz_nextprime (*prime, *prime);
 		
-		free(random_bytes.ptr);
+		/* free the random_bytes after overwriting them with a pseudo-random sequence */
+		chunk_free_randomized(&random_bytes);
 	}
 	/* check if it isnt too large */
 	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_size);
@@ -251,8 +272,8 @@ static chunk_t rsadp(private_rsa_private_key_t *this, chunk_t data)
 	decrypted.len = this->k;
 	decrypted.ptr = mpz_export(NULL, NULL, 1, decrypted.len, 1, 0, t1);
 	
-	mpz_clear(t1);
-	mpz_clear(t2);
+	mpz_clear_randomized(t1);
+	mpz_clear_randomized(t2);
 	
 	return decrypted;
 }
@@ -510,9 +531,9 @@ static status_t check(private_rsa_private_key_t *this)
 		status = FAILED;
 	}
 	
-	mpz_clear(t);
-	mpz_clear(u);
-	mpz_clear(q1);
+	mpz_clear_randomized(t);
+	mpz_clear_randomized(u);
+	mpz_clear_randomized(q1);
 	return status;
 }
 
@@ -542,15 +563,15 @@ static rsa_private_key_t* _clone(private_rsa_private_key_t *this)
  */
 static void destroy(private_rsa_private_key_t *this)
 {
-	mpz_clear(this->n);
-	mpz_clear(this->e);
-	mpz_clear(this->p);
-	mpz_clear(this->q);
-	mpz_clear(this->d);
-	mpz_clear(this->exp1);
-	mpz_clear(this->exp2);
-	mpz_clear(this->coeff);
-	free(this->keyid.ptr);
+	mpz_clear_randomized(this->n);
+	mpz_clear_randomized(this->e);
+	mpz_clear_randomized(this->p);
+	mpz_clear_randomized(this->q);
+	mpz_clear_randomized(this->d);
+	mpz_clear_randomized(this->exp1);
+	mpz_clear_randomized(this->exp2);
+	mpz_clear_randomized(this->coeff);
+	chunk_free_randomized(&this->keyid);
 	free(this);
 }
 
@@ -615,9 +636,7 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 	/* Swapping Primes so p is larger then q */
 	if (mpz_cmp(p, q) < 0)
 	{
-		mpz_set(t, p);
-		mpz_set(p, q);
-		mpz_set(q, t);
+		mpz_swap(p, q);
 	}
 	
 	mpz_mul(n, p, q);						/* n = p*q */
@@ -647,9 +666,9 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 		mpz_add(coeff, coeff, p);
 	}
 
-	mpz_clear(q1);
-	mpz_clear(m);
-	mpz_clear(t);
+	mpz_clear_randomized(q1);
+	mpz_clear_randomized(m);
+	mpz_clear_randomized(t);
 
 	/* apply values */
 	*(this->p) = *p;
@@ -771,6 +790,6 @@ rsa_private_key_t *rsa_private_key_create_from_file(char *filename, chunk_t *pas
 		return NULL;
 
 	key = rsa_private_key_create_from_chunk(chunk);
-	free(chunk.ptr);
+	chunk_free_randomized(&chunk);
 	return key;
 }
