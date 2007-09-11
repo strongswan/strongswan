@@ -29,6 +29,7 @@ typedef struct rsa_public_key_t rsa_public_key_t;
 #include <gmp.h>
 
 #include <library.h>
+#include <crypto/hashers/hasher.h>
 
 /**
  * @brief RSA public key with associated functions.
@@ -58,6 +59,7 @@ struct rsa_public_key_t {
 	 * 
 	 * @param this				rsa_public_key to use
 	 * @param data				data to sign
+	 # @param algorithm			hash algorithm the signature is based on
 	 * @param signature			signature to verify
 	 * @return
 	 * 							- SUCCESS, if signature ok
@@ -66,7 +68,9 @@ struct rsa_public_key_t {
 	 * 							- INVALID_ARG, if signature is not a signature
 	 * 							- FAILED if signature invalid or unable to verify
 	 */
-	status_t (*verify_emsa_pkcs1_signature) (const rsa_public_key_t *this, chunk_t data, chunk_t signature);
+	status_t (*verify_emsa_pkcs1_signature) (const rsa_public_key_t *this,
+											 hash_algorithm_t algorithm,
+											 chunk_t data, chunk_t signature);
 	
 	/**
 	 * @brief Gets the key.

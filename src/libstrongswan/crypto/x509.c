@@ -807,7 +807,7 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM:
 				if (parse_algorithmIdentifier(object, level, NULL) != OID_RSA_ENCRYPTION)
 				{
-					DBG2("  unsupported public key algorithm");
+					DBG1("  unsupported public key algorithm");
 					return FALSE;
 				}
 				break;
@@ -819,7 +819,7 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 				}
 				else
 				{
-					DBG2("  invalid RSA public key format");
+					DBG1("  invalid RSA public key format");
 					return FALSE;
 				}
 				break;
@@ -872,6 +872,11 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 			}
 			case X509_OBJ_ALGORITHM:
 				this->algorithm = parse_algorithmIdentifier(object, level, NULL);
+				if (this->algorithm != this->sigAlg)
+				{
+					DBG1("  signature algorithms do not agree");
+					return FALSE;
+				}
 				break;
 			case X509_OBJ_SIGNATURE:
 				this->signature = object;
@@ -1129,7 +1134,14 @@ static iterator_t *create_ocspuri_iterator(const private_x509_t *this)
  */
 static bool verify(const private_x509_t *this, const rsa_public_key_t *signer)
 {
-	return signer->verify_emsa_pkcs1_signature(signer, this->tbsCertificate, this->signature) == SUCCESS;
+	hash_algorithm_t algorithm = hasher_algorithm_from_oid(this->algorithm);
+
+	if (algorithm == HASH_UNKNOWN)
+	{
+		DBG1("  unknown signature algorithm");
+		return FALSE;
+	}
+	return signer->verify_emsa_pkcs1_signature(signer, algorithm, this->tbsCertificate, this->signature) == SUCCESS;
 }
 	
 /**
@@ -1324,8 +1336,15 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->isSelfSigned = FALSE;
 	if (this->subject->equals(this->subject, this->issuer))
 	{
+		hash_algorithm_t algorithm = hasher_algorithm_from_oid(this->algorithm);
+
+		if (algorithm == HASH_UNKNOWN)
+		{
+			destroy(this);
+			return NULL;
+		}
 		this->isSelfSigned = this->public_key->verify_emsa_pkcs1_signature(this->public_key,
-							 this->tbsCertificate, this->signature) == SUCCESS;
+							 algorithm, this->tbsCertificate, this->signature) == SUCCESS;
 	}
 	if (this->isSelfSigned)
 	{

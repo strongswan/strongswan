@@ -24,12 +24,14 @@
 
 #include "hasher.h"
 
+#include <asn1/oid.h>
 #include <crypto/hashers/sha1_hasher.h>
 #include <crypto/hashers/sha2_hasher.h>
 #include <crypto/hashers/md5_hasher.h>
 
 
-ENUM(hash_algorithm_names, HASH_MD2, HASH_SHA512,
+ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
+	"HASH_UNKNOWN",
 	"HASH_MD2",
 	"HASH_MD5",
 	"HASH_SHA1",
@@ -62,4 +64,43 @@ hasher_t *hasher_create(hash_algorithm_t hash_algorithm)
 		default:
 			return NULL;
 	}
+}
+
+/*
+ * Described in header.
+ */
+hash_algorithm_t hasher_algorithm_from_oid(int oid)
+{
+	hash_algorithm_t algorithm;
+
+	switch (oid)
+	{
+		case OID_MD2:
+		case OID_MD2_WITH_RSA:
+			algorithm = HASH_MD2;
+			break;
+		case OID_MD5:
+		case OID_MD5_WITH_RSA:
+			algorithm = HASH_MD5;
+			break;
+		case OID_SHA1:
+		case OID_SHA1_WITH_RSA:
+			algorithm = HASH_SHA1;
+			break;
+		case OID_SHA256:
+		case OID_SHA256_WITH_RSA:
+			algorithm = HASH_SHA256;
+			break;
+		case OID_SHA384:
+		case OID_SHA384_WITH_RSA:
+			algorithm = HASH_SHA384;
+			break;
+		case OID_SHA512:
+		case OID_SHA512_WITH_RSA:
+			algorithm = HASH_SHA512;
+			break;
+		default:
+			algorithm = HASH_UNKNOWN;
+	}
+	return algorithm;
 }

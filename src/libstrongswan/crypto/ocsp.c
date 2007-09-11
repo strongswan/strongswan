@@ -614,6 +614,13 @@ static bool ocsp_valid_response(response_t *res, x509_t *ocsp_cert)
 	rsa_public_key_t *public_key;
 	time_t until = UNDEFINED_TIME;
 	err_t ugh;
+	hash_algorithm_t algorithm = hasher_algorithm_from_oid(res->algorithm);
+
+	if (algorithm == HASH_UNKNOWN)
+	{
+		DBG1("unknown signature algorithm");
+		return FALSE;
+	}
 
 	DBG2("verifying ocsp response signature:");
 	DBG2("signer:  '%D'", ocsp_cert->get_subject(ocsp_cert));
@@ -626,8 +633,8 @@ static bool ocsp_valid_response(response_t *res, x509_t *ocsp_cert)
 		return FALSE;
 	}
 	public_key = ocsp_cert->get_public_key(ocsp_cert);
-
-	return public_key->verify_emsa_pkcs1_signature(public_key, res->tbs, res->signature) == SUCCESS;
+	
+	return public_key->verify_emsa_pkcs1_signature(public_key, algorithm, res->tbs, res->signature) == SUCCESS;
 }
 
 /**

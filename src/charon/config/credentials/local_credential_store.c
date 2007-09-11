@@ -832,7 +832,7 @@ static status_t verify_signature(private_local_credential_store_t *this,
 				}
 				*issuer_p = issuer;
 			}
-			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, hash, signature);
+			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, HASH_UNKNOWN, hash, signature);
 			if (sig_status == SUCCESS)
 			{
 				DBG2(DBG_CFG, "candidate peer certificate has a matching RSA public key");

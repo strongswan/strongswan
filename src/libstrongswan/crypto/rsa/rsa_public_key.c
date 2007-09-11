@@ -33,70 +33,10 @@
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
 
-/* 
- * For simplicity, we use these predefined values for hash algorithm OIDs 
- * These also contain the length of the appended hash  
- * These values are also  used in rsa_private_key.c.
- */
-
-const u_int8_t md2_oid[] = {
-	0x30,0x20,
-		 0x30,0x0c,
-			  0x06,0x08,
-				   0x2a,0x86,0x48,0x86,0xf7,0x0d,0x02,0x02,
-			  0x05,0x00,
-		 0x04,0x10
-};
-
-const u_int8_t md5_oid[] = {
-	0x30,0x20,
-		 0x30,0x0c,
-			  0x06,0x08,
-				   0x2a,0x86,0x48,0x86,0xf7,0x0d,0x02,0x05,
-			  0x05,0x00,
-		 0x04,0x10
-};
-
-const u_int8_t sha1_oid[] = {
-	0x30,0x21,
-		 0x30,0x09,
-			  0x06,0x05,
-				   0x2b,0x0e,0x03,0x02,0x1a,
-			  0x05,0x00,
-		 0x04,0x14
-};
-
-const u_int8_t sha256_oid[] = {
-	0x30,0x31,
-		 0x30,0x0d,
-			  0x06,0x09,
-				   0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x01,
-			  0x05,0x00,
-		 0x04,0x20
-};
-
-const u_int8_t sha384_oid[] = {
-	0x30,0x41,
-		 0x30,0x0d,
-			  0x06,0x09,
-				   0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x02,
-			  0x05,0x00,
-		 0x04,0x30
-};
-
-const u_int8_t sha512_oid[] = {
-	0x30,0x51,
-		 0x30,0x0d,
-			  0x06,0x09,
-				   0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x03,
-			  0x05,0x00,
-		 0x04,0x40
-};
-
 #define LARGEST_HASH_OID_SIZE sizeof(sha512_oid)
 
-/* ASN.1 definition public key */
-static const asn1Object_t pubkey_objects[] = {
+/* ASN.1 definition of RSApublicKey */
+static const asn1Object_t pubkeyObjects[] = {
 	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
 	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
 	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  2 */
@@ -106,6 +46,17 @@ static const asn1Object_t pubkey_objects[] = {
 #define PUB_KEY_MODULUS				1
 #define PUB_KEY_EXPONENT			2
 #define PUB_KEY_ROOF				3
+
+/* ASN.1 definition of digestInfo */
+static const asn1Object_t digestInfoObjects[] = {
+	{ 0, "digestInfo",			ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
+	{ 1,   "digestAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /*  1 */
+	{ 1,   "digest",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  2 */
+};
+
+#define DIGEST_INFO_ALGORITHM		1
+#define DIGEST_INFO_DIGEST			2
+#define DIGEST_INFO_ROOF			3
 
 typedef struct private_rsa_public_key_t private_rsa_public_key_t;
 
@@ -186,12 +137,11 @@ static chunk_t rsaep(const private_rsa_public_key_t *this, chunk_t data)
 /**
  * Implementation of rsa_public_key.verify_emsa_pkcs1_signature.
  */
-static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this, chunk_t data, chunk_t signature)
+static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this,
+											hash_algorithm_t algorithm,
+											chunk_t data, chunk_t signature)
 {
-	hasher_t *hasher = NULL;
-	chunk_t hash;
-	chunk_t em;
-	u_int8_t *pos;
+	chunk_t em_ori, em;
 	status_t res = FAILED;
 	
 	/* remove any preceding 0-bytes from signature */
@@ -207,7 +157,7 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 	}
 	
 	/* unpack signature */
-	em = this->rsavp1(this, signature);
+	em_ori = em = this->rsavp1(this, signature);
 	
 	/* result should look like this:
 	 * EM = 0x00 || 0x01 || PS || 0x00 || T. 
@@ -216,98 +166,99 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 	 */
 	
 	/* check magic bytes */
-	if ((*(em.ptr) != 0x00) || (*(em.ptr+1) != 0x01))
+	if (*(em.ptr) != 0x00 || *(em.ptr+1) != 0x01)
 	{
 		goto end;
 	}
+	em.ptr += 2;
+	em.len -= 2;
 	
 	/* find magic 0x00 */
-	pos = em.ptr + 2;
-	while (pos <= em.ptr + em.len)
+	while (em.len > 0)
 	{
-		if (*pos == 0x00)
+		if (*em.ptr == 0x00)
 		{
 			/* found magic byte, stop */
-			pos++;
+			em.ptr++;
+			em.len--;
 			break;
 		}
-		else if (*pos != 0xFF)
+		else if (*em.ptr != 0xFF)
 		{
 			/* bad padding, decryption failed ?!*/
 			goto end;
 		}
-		pos++;
+		em.ptr++;
+		em.len--;
 	}
 
-	if (pos + LARGEST_HASH_OID_SIZE > em.ptr + em.len)
+	if (em.len == 0)
 	{
-		/* not enought room for oid compare */
+		/* no digestInfo found */
 		goto end;
 	}
 	
-	if (memeq(md2_oid, pos, sizeof(md2_oid)))
+	/* parse ASN.1-based digestInfo */
 	{
-		hasher = hasher_create(HASH_MD2);
-		pos += sizeof(md2_oid);
-	}
-	else if (memeq(md5_oid, pos, sizeof(md5_oid)))
-	{
-		hasher = hasher_create(HASH_MD5);
-		pos += sizeof(md5_oid);
-	}
-	else if (memeq(sha1_oid, pos, sizeof(sha1_oid)))
-	{
-		hasher = hasher_create(HASH_SHA1);
-		pos += sizeof(sha1_oid);
-	}
-	else if (memeq(sha256_oid, pos, sizeof(sha256_oid)))
-	{
-		hasher = hasher_create(HASH_SHA256);
-		pos += sizeof(sha256_oid);
-	}
-	else if (memeq(sha384_oid, pos, sizeof(sha384_oid)))
-	{
-		hasher = hasher_create(HASH_SHA384);
-		pos += sizeof(sha384_oid);
-	}
-	else if (memeq(sha512_oid, pos, sizeof(sha512_oid)))
-	{
-		hasher = hasher_create(HASH_SHA512);
-		pos += sizeof(sha512_oid);
-	}
+		asn1_ctx_t ctx;
+		chunk_t object;
+		u_int level;
+		int objectID = 0;
+		hash_algorithm_t hash_algorithm;
+
+		asn1_init(&ctx, em, 0, FALSE, FALSE);
+
+		while (objectID < DIGEST_INFO_ROOF)
+		{
+			if (!extract_object(digestInfoObjects, &objectID, &object, &level, &ctx))
+			{
+				goto end;
+			}
+			if (objectID == DIGEST_INFO_ALGORITHM)
+			{
+				int hash_oid = parse_algorithmIdentifier(object, level+1, NULL);
+
+				hash_algorithm = hasher_algorithm_from_oid(hash_oid);
+				if (hash_algorithm == HASH_UNKNOWN
+				|| (algorithm != HASH_UNKNOWN && hash_algorithm != algorithm))
+				{
+					goto end;
+				}
+			}
+			else if (objectID == DIGEST_INFO_DIGEST)
+			{
+				chunk_t hash;
+				hasher_t *hasher = hasher_create(hash_algorithm);
+
+				if (object.len != hasher->get_hash_size(hasher))
+				{
+					/* wrong hash size */
+					hasher->destroy(hasher);
+					goto end;
+				}
+
+				/* build our own hash */
+				hasher->allocate_hash(hasher, data, &hash);
+				hasher->destroy(hasher);
 	
-	if (hasher == NULL)
-	{
-		/* unsupported hash algorithm */
-		res = NOT_SUPPORTED;;
-		goto end;
+				/* compare the hashes */
+				res = memeq(object.ptr, hash.ptr, hash.len) ? SUCCESS : FAILED;
+				free(hash.ptr);
+			}
+			objectID++;
+		}
 	}
-	
-	if (pos + hasher->get_hash_size(hasher) != em.ptr + em.len)
-	{
-		/* bad length */
-		hasher->destroy(hasher);
-		goto end;
-	}
-	
-	/* build our own hash */
-	hasher->allocate_hash(hasher, data, &hash);
-	hasher->destroy(hasher);
-	
-	/* compare the hashes */
-	res = memeq(hash.ptr, pos, hash.len) ? SUCCESS : FAILED;
-	free(hash.ptr);
 
 end:
-	free(em.ptr);
+	free(em_ori.ptr);
 	return res;
 }
-	
+
 /**
  * Implementation of rsa_public_key.get_key.
  */
 static status_t get_key(const private_rsa_public_key_t *this, chunk_t *key)
-{	
+{
 	chunk_t n, e;
 
 	n.len = this->k;
@@ -391,7 +342,7 @@ private_rsa_public_key_t *rsa_public_key_create_empty(void)
 	private_rsa_public_key_t *this = malloc_thing(private_rsa_public_key_t);
 	
 	/* public functions */
-	this->public.verify_emsa_pkcs1_signature = (status_t (*) (const rsa_public_key_t*,chunk_t,chunk_t))verify_emsa_pkcs1_signature;
+	this->public.verify_emsa_pkcs1_signature = (status_t (*) (const rsa_public_key_t*,hash_algorithm_t,chunk_t,chunk_t))verify_emsa_pkcs1_signature;
 	this->public.get_key = (status_t (*) (const rsa_public_key_t*,chunk_t*))get_key;
 	this->public.save_key = (status_t (*) (const rsa_public_key_t*,char*))save_key;
 	this->public.get_modulus = (mpz_t *(*) (const rsa_public_key_t*))get_modulus;
@@ -447,7 +398,7 @@ rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t blob)
 	
 	while (objectID < PUB_KEY_ROOF) 
 	{
-		if (!extract_object(pubkey_objects, &objectID, &object, &level, &ctx))
+		if (!extract_object(pubkeyObjects, &objectID, &object, &level, &ctx))
 		{
 			destroy(this);
 			return FALSE;

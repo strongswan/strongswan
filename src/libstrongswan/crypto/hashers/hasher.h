@@ -42,17 +42,18 @@ typedef struct hasher_t hasher_t;
  * @ingroup hashers
  */
 enum hash_algorithm_t {
-	HASH_MD2 = 0,
+	HASH_UNKNOWN = 0,
+	HASH_MD2 =     1,
 	/** Implemented in class md5_hasher_t */
-	HASH_MD5 = 1,
+	HASH_MD5 =     2,
 	/** Implemented in class sha1_hasher_t */
-	HASH_SHA1 = 2,
+	HASH_SHA1 =    3,
 	/** Implemented in class sha2_hasher_t */
-	HASH_SHA256 = 3,
+	HASH_SHA256 =  4,
 	/** Implemented in class sha2_hasher_t */
-	HASH_SHA384 = 4,
+	HASH_SHA384 =  5,
 	/** Implemented in class sha2_hasher_t */
-	HASH_SHA512 = 5,
+	HASH_SHA512 =  6,
 };
 
 #define HASH_SIZE_MD2		16
@@ -67,7 +68,6 @@ enum hash_algorithm_t {
  * enum names for hash_algorithm_t.
  */
 extern enum_name_t *hash_algorithm_names;
-
 
 /**
  * @brief Generic interface for all hash functions.
@@ -155,5 +155,17 @@ struct hasher_t {
  * @ingroup hashers
  */
 hasher_t *hasher_create(hash_algorithm_t hash_algorithm);
+
+/**
+ * @brief Conversion of ASN.1 OID to hash algorithm.
+ * 
+ * @param oid				ASN.1 OID
+ * @return
+ * 							- hash algorithm
+ * 							- HASH_UNKNOWN if OID unsuported
+ * 
+ * @ingroup hashers
+ */
+hash_algorithm_t hasher_algorithm_from_oid(int oid);
 
 #endif /* HASHER_H_ */

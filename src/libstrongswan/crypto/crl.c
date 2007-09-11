@@ -304,6 +304,11 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 				break;
 			case CRL_OBJ_ALGORITHM:
 				crl->algorithm = parse_algorithmIdentifier(object, level, NULL);
+				if (crl->algorithm != crl->sigAlg)
+				{
+					DBG1("  signature algorithms do not agree");
+					return FALSE;
+				}
 				break;
 			case CRL_OBJ_SIGNATURE:
 				crl->signature = object;
@@ -374,7 +379,14 @@ static bool is_newer(const private_crl_t *this, const private_crl_t *other)
  */
 static bool verify(const private_crl_t *this, const rsa_public_key_t *signer)
 {
-	return signer->verify_emsa_pkcs1_signature(signer, this->tbsCertList, this->signature) == SUCCESS;
+	hash_algorithm_t algorithm = hasher_algorithm_from_oid(this->algorithm);
+
+	if (algorithm == HASH_UNKNOWN)
+	{
+		DBG1("  unknown signature algorithm");
+		return FALSE;
+	}
+	return signer->verify_emsa_pkcs1_signature(signer, algorithm, this->tbsCertList, this->signature) == SUCCESS;
 }
 
 /**
