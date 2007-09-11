@@ -98,14 +98,13 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	chunk_t auth_data;
 	status_t status;
 	rsa_public_key_t *my_pubkey;
-	rsa_private_key_t *my_key;
 	identification_t *my_id;
 	prf_t *prf;
 
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
 		 my_id, auth_method_names, AUTH_RSA);
-	DBG2(DBG_IKE, "looking for RSA public key belonging to '%D'", my_id);
+	DBG2(DBG_IKE, "looking for RSA public key belonging to '%D'...", my_id);
 
 	my_pubkey = charon->credentials->get_rsa_public_key(charon->credentials, my_id);
 	if (my_pubkey == NULL)
@@ -113,28 +112,18 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 		DBG1(DBG_IKE, "no RSA public key found for '%D'", my_id);
 		return NOT_FOUND;
 	}
-	DBG2(DBG_IKE, "matching RSA public key found");
-	chunk = my_pubkey->get_keyid(my_pubkey);
-	DBG2(DBG_IKE, "looking for RSA private key with keyid %#B", &chunk);
-	my_key = charon->credentials->get_rsa_private_key(charon->credentials, my_pubkey);
-	if (my_key == NULL)
-	{
-		DBG1(DBG_IKE, "no RSA private key found for %D with keyid %#B",
-			 my_id, &chunk);
-		return NOT_FOUND;
-	}
-	DBG2(DBG_IKE, "matching RSA private key found");
+	DBG2(DBG_IKE, "  matching RSA public key found");
 
 	prf = this->ike_sa->get_prf(this->ike_sa);
 	prf->set_key(prf, this->ike_sa->get_skp_build(this->ike_sa));
 	octets = build_tbs_octets(ike_sa_init, other_nonce, my_id, prf);
-	status = my_key->build_emsa_pkcs1_signature(my_key, HASH_SHA1, octets, &auth_data);
+	status = charon->credentials->rsa_signature(charon->credentials,
+										my_pubkey, HASH_SHA1, octets, &auth_data);
 	chunk_free(&octets);
 
 	if (status != SUCCESS)
 	{
-		my_key->destroy(my_key);
-		DBG1(DBG_IKE, "build signature of SHA1 hash failed");
+		DBG1(DBG_IKE, "building RSA signature with SHA-1 hash failed");
 		return status;
 	}
 	DBG2(DBG_IKE, "successfully signed with RSA private key");
@@ -142,8 +131,6 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	*auth_payload = auth_payload_create();
 	(*auth_payload)->set_auth_method(*auth_payload, AUTH_RSA);
 	(*auth_payload)->set_data(*auth_payload, auth_data);
-	
-	my_key->destroy(my_key);
 	chunk_free(&auth_data);
 	return SUCCESS;
 }

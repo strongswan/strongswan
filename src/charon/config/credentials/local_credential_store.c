@@ -350,31 +350,6 @@ static ca_info_t* get_issuer(private_local_credential_store_t *this, x509_t *cer
 }
 
 /**
- * Implementation of local_credential_store_t.get_rsa_private_key.
- */
-static rsa_private_key_t *get_rsa_private_key(private_local_credential_store_t *this,
-											  rsa_public_key_t *pubkey)
-{
-	rsa_private_key_t *found = NULL, *current;
-	iterator_t *iterator;
-
-	pthread_mutex_lock(&(this->keys_mutex));
-	iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
-
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (current->belongs_to(current, pubkey))
-		{
-			found = current->clone(current);
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	pthread_mutex_unlock(&(this->keys_mutex));
-	return found;
-}
-
-/**
  * Implementation of local_credential_store_t.has_rsa_private_key.
  */
 static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_public_key_t *pubkey)
@@ -756,10 +731,51 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 }
 
 /**
+ * Implementation of local_credential_store_t.rsa_signature.
+ */
+static status_t rsa_signature(private_local_credential_store_t *this,
+							  rsa_public_key_t *pubkey,
+							  hash_algorithm_t hash_algorithm,
+							  chunk_t data, chunk_t *signature)
+{
+	rsa_private_key_t *current, *key = NULL;
+	iterator_t *iterator;
+	status_t status;
+	chunk_t keyid = pubkey->get_keyid(pubkey);
+
+	DBG2(DBG_IKE, "looking for RSA private key with keyid %#B...", &keyid);
+	pthread_mutex_lock(&(this->keys_mutex));
+
+	iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		if (current->belongs_to(current, pubkey))
+		{
+			key = current->clone(current);
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	if (key)
+	{
+		DBG2(DBG_IKE, "  matching RSA private key found");
+		status = key->build_emsa_pkcs1_signature(key, hash_algorithm, data, signature);
+	}
+	else
+	{
+		DBG1(DBG_IKE, "no RSA private key found with keyid %#B", &keyid);
+		status = NOT_FOUND;
+	}
+	pthread_mutex_unlock(&(this->keys_mutex));
+	return status;
+}
+
+/**
  * Implementation of local_credential_store_t.verify_signature.
  */
 static status_t verify_signature(private_local_credential_store_t *this,
-								 chunk_t hash, chunk_t sig,
+								 chunk_t hash, chunk_t signature,
 								 identification_t *id, ca_info_t **issuer_p)
 {
 	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
@@ -816,7 +832,7 @@ static status_t verify_signature(private_local_credential_store_t *this,
 				}
 				*issuer_p = issuer;
 			}
-			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, hash, sig);
+			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, hash, signature);
 			if (sig_status == SUCCESS)
 			{
 				DBG2(DBG_CFG, "candidate peer certificate has a matching RSA public key");
@@ -1560,13 +1576,13 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.get_shared_key = (status_t (*) (credential_store_t*,identification_t*,identification_t*,chunk_t*))get_shared_key;
 	this->public.credential_store.get_eap_key = (status_t (*) (credential_store_t*,identification_t*,identification_t*,chunk_t*))get_eap_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
-	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t* (*) (credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
 	this->public.credential_store.has_rsa_private_key = (bool (*) (credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
 	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
 	this->public.credential_store.get_auth_certificate = (x509_t* (*) (credential_store_t*,u_int,identification_t*))get_auth_certificate;
 	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,chunk_t))get_ca_certificate_by_keyid;
 	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,x509_t*))get_issuer;
 	this->public.credential_store.is_trusted = (bool (*) (credential_store_t*,const char*,x509_t*))is_trusted;
+	this->public.credential_store.rsa_signature = (status_t (*) (credential_store_t*,rsa_public_key_t*,hash_algorithm_t,chunk_t,chunk_t*))rsa_signature;
 	this->public.credential_store.verify_signature = (status_t (*) (credential_store_t*,chunk_t,chunk_t,identification_t*,ca_info_t**))verify_signature;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;

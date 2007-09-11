@@ -88,17 +88,6 @@ struct credential_store_t {
 	rsa_public_key_t* (*get_rsa_public_key) (credential_store_t *this, identification_t *id);
 	
 	/**
-	 * @brief Returns the RSA private key belonging to an RSA public key
-	 * 
-	 * The returned rsa_private_key_t must be destroyed by the caller after usage.
-	 * 
-	 * @param this					calling object
-	 * @param pubkey				public key 
-	 * @return						private key, or NULL if not found
-	 */	
-	rsa_private_key_t* (*get_rsa_private_key) (credential_store_t *this, rsa_public_key_t *pubkey);
-
-	/**
 	 * @brief Is there a matching RSA private key belonging to an RSA public key?
 	 * 
 	 * @param this					calling object
@@ -145,6 +134,20 @@ struct credential_store_t {
 	ca_info_t* (*get_issuer) (credential_store_t *this, x509_t* cert);
 
 	/**
+	 * @brief  RSA private key belonging to an RSA public key
+	 * 
+	 * 
+	 * @param this					calling object
+	 * @param pubkey				public key used to find the matching private key
+	 * @param hash_algorithm		hash algorithm to be used for signature
+	 * @param data					data block to be signed
+	 * @param signature				signature to be returned
+	 * @return						status of the signature process - SUCCESS if successful
+	 */	
+	status_t (*rsa_signature) (credential_store_t *this, rsa_public_key_t *pubkey, hash_algorithm_t hash_algorithm,
+							   chunk_t data, chunk_t *signature);
+
+	/**
 	 * @brief Verify an RSA signature given the ID of the signer
 	 * 
 	 * @param this					calling object
@@ -154,7 +157,8 @@ struct credential_store_t {
 	 * @param issuer_p				issuer of the signer's certificate (if not self-signed).
 	 * @return						status of the verification - SUCCESS if successful
 	 */
-	status_t (*verify_signature) (credential_store_t *this, chunk_t hash, chunk_t sig, identification_t *id, ca_info_t **issuer_p);
+	status_t (*verify_signature) (credential_store_t *this, chunk_t hash, chunk_t sig, identification_t *id,
+								  ca_info_t **issuer_p);
 	
 	/**
 	 * @brief Verify an X.509 certificate up to trust anchor without any status checks
