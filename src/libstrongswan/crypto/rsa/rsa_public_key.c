@@ -49,11 +49,12 @@ static const asn1Object_t pubkeyObjects[] = {
 
 /* ASN.1 definition of digestInfo */
 static const asn1Object_t digestInfoObjects[] = {
-	{ 0, "digestInfo",			ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
+	{ 0, "digestInfo",			ASN1_SEQUENCE,		ASN1_OBJ },  /*  0 */
 	{ 1,   "digestAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /*  1 */
 	{ 1,   "digest",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  2 */
 };
 
+#define DIGEST_INFO					0
 #define DIGEST_INFO_ALGORITHM		1
 #define DIGEST_INFO_DIGEST			2
 #define DIGEST_INFO_ROOF			3
@@ -214,36 +215,50 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 			{
 				goto end;
 			}
-			if (objectID == DIGEST_INFO_ALGORITHM)
+			switch (objectID)
 			{
-				int hash_oid = parse_algorithmIdentifier(object, level+1, NULL);
+				case DIGEST_INFO:
+					if (object.len != em.len)
+					{
+						/* surplus bytes after the digestInfo object */
+						goto end;
+					}
+					break;
+				case DIGEST_INFO_ALGORITHM:
+					{
+						int hash_oid = parse_algorithmIdentifier(object, level+1, NULL);
 
-				hash_algorithm = hasher_algorithm_from_oid(hash_oid);
-				if (hash_algorithm == HASH_UNKNOWN
-				|| (algorithm != HASH_UNKNOWN && hash_algorithm != algorithm))
-				{
-					goto end;
-				}
-			}
-			else if (objectID == DIGEST_INFO_DIGEST)
-			{
-				chunk_t hash;
-				hasher_t *hasher = hasher_create(hash_algorithm);
+						hash_algorithm = hasher_algorithm_from_oid(hash_oid);
+						if (hash_algorithm == HASH_UNKNOWN
+						|| (algorithm != HASH_UNKNOWN && hash_algorithm != algorithm))
+						{
+							goto end;
+						}
+					}
+					break;
+				case DIGEST_INFO_DIGEST:
+					{
+						chunk_t hash;
+						hasher_t *hasher = hasher_create(hash_algorithm);
 
-				if (object.len != hasher->get_hash_size(hasher))
-				{
-					/* wrong hash size */
-					hasher->destroy(hasher);
-					goto end;
-				}
+						if (object.len != hasher->get_hash_size(hasher))
+						{
+							/* wrong hash size */
+							hasher->destroy(hasher);
+							goto end;
+						}
 
-				/* build our own hash */
-				hasher->allocate_hash(hasher, data, &hash);
-				hasher->destroy(hasher);
+						/* build our own hash */
+						hasher->allocate_hash(hasher, data, &hash);
+						hasher->destroy(hasher);
 	
-				/* compare the hashes */
-				res = memeq(object.ptr, hash.ptr, hash.len) ? SUCCESS : FAILED;
-				free(hash.ptr);
+						/* compare the hashes */
+						res = memeq(object.ptr, hash.ptr, hash.len) ? SUCCESS : FAILED;
+						free(hash.ptr);
+					}
+					break;
+				default:
+					break;
 			}
 			objectID++;
 		}
