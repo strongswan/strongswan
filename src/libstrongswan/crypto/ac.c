@@ -618,9 +618,9 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 	bool critical;
 	chunk_t object;
 	u_int level;
-	u_int type = OID_UNKNOWN;
-	u_int extn_oid = OID_UNKNOWN;
 	int objectID = 0;
+	int type = OID_UNKNOWN;
+	int extn_oid = OID_UNKNOWN;
 
 	asn1_init(&ctx, blob, 0, FALSE, FALSE);
 	while (objectID < AC_OBJ_ROOF)

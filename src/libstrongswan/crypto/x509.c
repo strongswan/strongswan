@@ -453,8 +453,8 @@ parse_otherName(chunk_t blob, int level0)
 {
 	asn1_ctx_t ctx;
 	chunk_t object;
-	int objectID = 0;
 	u_int level;
+	int objectID = 0;
 	int oid = OID_UNKNOWN;
 
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
@@ -639,8 +639,7 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0, linked_list_t *l
 	chunk_t object;
 	u_int level;
 	int objectID = 0;
-	
-	u_int accessMethod = OID_UNKNOWN;
+	int accessMethod = OID_UNKNOWN;
 	
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	while (objectID < AUTH_INFO_ACCESS_ROOF)
@@ -759,8 +758,8 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 	bool critical;
 	chunk_t object;
 	u_int level;
-	u_int extn_oid = OID_UNKNOWN;
 	int objectID = 0;
+	int extn_oid = OID_UNKNOWN;
 	
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	while (objectID < X509_OBJ_ROOF)

@@ -1701,8 +1701,7 @@ parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessLocation)
     chunk_t object;
     u_int level;
     int objectID = 0;
-
-    u_int accessMethod = OID_UNKNOWN;
+    int accessMethod = OID_UNKNOWN;
 
     asn1_init(&ctx, blob, level0, FALSE, DBG_RAW);
 
@@ -1829,8 +1828,8 @@ parse_x509cert(chunk_t blob, u_int level0, x509cert_t *cert)
     bool critical;
     chunk_t object;
     u_int level;
-    u_int extn_oid = OID_UNKNOWN;
     int objectID = 0;
+    int extn_oid = OID_UNKNOWN;
 
     asn1_init(&ctx, blob, level0, FALSE, DBG_RAW);
 

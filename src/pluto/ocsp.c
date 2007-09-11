@@ -1087,13 +1087,13 @@ valid_ocsp_response(response_t *res)
 static bool
 parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 {
-    u_int level, version;
-    u_int extn_oid = OID_UNKNOWN;
-    u_char buf[BUF_LEN];
     asn1_ctx_t ctx;
     bool critical;
     chunk_t object;
+    u_int level, version;
+    u_char buf[BUF_LEN];
     int objectID = 0;
+    int extn_oid = OID_UNKNOWN;
 
     asn1_init(&ctx, blob, level0, FALSE, DBG_RAW);
 
@@ -1190,9 +1190,8 @@ parse_ocsp_response(chunk_t blob, response_t * res)
     chunk_t object;
     u_int level;
     int objectID = 0;
-
+    int ocspResponseType = OID_UNKNOWN;
     response_status rStatus = STATUS_INTERNALERROR;
-    u_int ocspResponseType = OID_UNKNOWN;
 
     asn1_init(&ctx, blob, 0, FALSE, DBG_RAW);
 

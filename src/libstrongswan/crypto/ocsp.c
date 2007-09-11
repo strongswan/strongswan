@@ -466,11 +466,11 @@ static chunk_t ocsp_build_request(private_ocsp_t *this)
 static bool ocsp_parse_basic_response(chunk_t blob, int level0, response_t *res)
 {
 	u_int level, version;
-	u_int extn_oid = OID_UNKNOWN;
 	asn1_ctx_t ctx;
 	bool critical;
 	chunk_t object;
 	int objectID = 0;
+	int extn_oid = OID_UNKNOWN;
 
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 
@@ -546,9 +546,8 @@ static response_status ocsp_parse_response(response_t *res)
 	chunk_t object;
 	u_int level;
 	int objectID = 0;
-
+	int ocspResponseType = OID_UNKNOWN;
 	response_status rStatus = STATUS_INTERNALERROR;
-	u_int ocspResponseType = OID_UNKNOWN;
 
 	asn1_init(&ctx, res->chunk, 0, FALSE, FALSE);
 

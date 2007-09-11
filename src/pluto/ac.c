@@ -460,9 +460,9 @@ parse_ac(chunk_t blob, x509acert_t *ac)
     bool critical;
     chunk_t object;
     u_int level;
-    u_int type = OID_UNKNOWN;
-    u_int extn_oid = OID_UNKNOWN;
     int objectID = 0;
+    int type = OID_UNKNOWN;
+    int extn_oid = OID_UNKNOWN;
 
     asn1_init(&ctx, blob, 0, FALSE, DBG_RAW);
 
