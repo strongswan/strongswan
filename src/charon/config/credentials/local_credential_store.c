@@ -751,7 +751,7 @@ static status_t rsa_signature(private_local_credential_store_t *this,
 	{
 		if (current->belongs_to(current, pubkey))
 		{
-			key = current->clone(current);
+			key = current;
 			break;
 		}
 	}

@@ -34,27 +34,14 @@
 #include <utils/randomizer.h>
 
 /**
- * OIDs for hash algorithms are defined in rsa_public_key.c.
- */
-extern u_int8_t md2_oid[18];
-extern u_int8_t md5_oid[18];
-extern u_int8_t sha1_oid[15];
-extern u_int8_t sha256_oid[19];
-extern u_int8_t sha384_oid[19];
-extern u_int8_t sha512_oid[19];
-
-
-/**
  * defined in rsa_public_key.c
  */
 extern chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e);
-
 
 /**
  *  Public exponent to use for key generation.
  */
 #define PUBLIC_EXPONENT 0x10001
-
 
 typedef struct private_rsa_private_key_t private_rsa_private_key_t;
 
@@ -281,50 +268,44 @@ static chunk_t rsadp(private_rsa_private_key_t *this, chunk_t data)
 /**
  * Implementation of rsa_private_key.build_emsa_signature.
  */
-static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash_algorithm_t hash_algorithm, chunk_t data, chunk_t *signature)
+static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
+										   hash_algorithm_t hash_algorithm,
+										   chunk_t data, chunk_t *signature)
 {
 	hasher_t *hasher;
-	chunk_t hash;
-	chunk_t em;
-	chunk_t oid;
+	chunk_t em, encoded_hash, hash_id, hash;
 	
 	/* get oid string prepended to hash */
 	switch (hash_algorithm)
 	{	
 		case HASH_MD2:
 		{
-			oid.ptr = md2_oid;
-			oid.len = sizeof(md2_oid);
+			hash_id =ASN1_md2_id;
 			break;
 		}
 		case HASH_MD5:
 		{
-			oid.ptr = md5_oid;
-			oid.len = sizeof(md5_oid);
+			hash_id = ASN1_md5_id;
 			break;
 		}
 		case HASH_SHA1:
 		{
-			oid.ptr = sha1_oid;
-			oid.len = sizeof(sha1_oid);
+			hash_id = ASN1_sha1_id;
 			break;
 		}
 		case HASH_SHA256:
 		{
-			oid.ptr = sha256_oid;
-			oid.len = sizeof(sha256_oid);
+			hash_id = ASN1_sha256_id;
 			break;
 		}
 		case HASH_SHA384:
 		{
-			oid.ptr = sha384_oid;
-			oid.len = sizeof(sha384_oid);
+			hash_id = ASN1_sha384_id;
 			break;
 		}
 		case HASH_SHA512:
 		{
-			oid.ptr = sha512_oid;
-			oid.len = sizeof(sha512_oid);
+			hash_id = ASN1_sha512_id;
 			break;
 		}
 		default:
@@ -344,10 +325,16 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 	hasher->allocate_hash(hasher, data, &hash);
 	hasher->destroy(hasher);
 	
+	/* build DER-encoded hash */
+	encoded_hash = asn1_wrap(ASN1_SEQUENCE, "cm",
+					hash_id,
+					asn1_simple_object(ASN1_OCTET_STRING, hash)
+				  );
+
 	/* build chunk to rsa-decrypt:
 	 * EM = 0x00 || 0x01 || PS || 0x00 || T. 
 	 * PS = 0xFF padding, with length to fill em
-	 * T = oid || hash
+	 * T = encoded_hash
 	 */
 	em.len = this->k;
 	em.ptr = malloc(em.len);
@@ -357,66 +344,17 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 	/* set magic bytes */
 	*(em.ptr) = 0x00;
 	*(em.ptr+1) = 0x01;
-	*(em.ptr + em.len - hash.len - oid.len - 1) = 0x00;
-	/* set hash */
-	memcpy(em.ptr + em.len - hash.len, hash.ptr, hash.len);
-	/* set oid */
-	memcpy(em.ptr + em.len - hash.len - oid.len, oid.ptr, oid.len);
-	
+	*(em.ptr + em.len - encoded_hash.len - 1) = 0x00;
+	/* set DER-encoded hash */
+	memcpy(em.ptr + em.len - encoded_hash.len, encoded_hash.ptr, encoded_hash.len);
+
 	/* build signature */
 	*signature = this->rsasp1(this, em);
 	
-	free(hash.ptr);
+	free(encoded_hash.ptr);
 	free(em.ptr);
 	
 	return SUCCESS;	
-}
-
-/**
- * Implementation of rsa_private_key.get_key.
- */
-static status_t get_key(private_rsa_private_key_t *this, chunk_t *key)
-{	
-	chunk_t n, e, p, q, d, exp1, exp2, coeff;
-
-	n.len = this->k;
-	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, this->n);
-	e.len = this->k;
-	e.ptr = mpz_export(NULL, NULL, 1, e.len, 1, 0, this->e);
-	p.len = this->k;
-	p.ptr = mpz_export(NULL, NULL, 1, p.len, 1, 0, this->p);
-	q.len = this->k;
-	q.ptr = mpz_export(NULL, NULL, 1, q.len, 1, 0, this->q);
-	d.len = this->k;
-	d.ptr = mpz_export(NULL, NULL, 1, d.len, 1, 0, this->d);
-	exp1.len = this->k;
-	exp1.ptr = mpz_export(NULL, NULL, 1, exp1.len, 1, 0, this->exp1);
-	exp2.len = this->k;
-	exp2.ptr = mpz_export(NULL, NULL, 1, exp2.len, 1, 0, this->exp2);
-	coeff.len = this->k;
-	coeff.ptr = mpz_export(NULL, NULL, 1, coeff.len, 1, 0, this->coeff);
-	
-	key->len = this->k * 8;
-	key->ptr = malloc(key->len);
-	memcpy(key->ptr + this->k * 0, n.ptr , n.len);
-	memcpy(key->ptr + this->k * 1, e.ptr, e.len);
-	memcpy(key->ptr + this->k * 2, p.ptr, p.len);
-	memcpy(key->ptr + this->k * 3, q.ptr, q.len);
-	memcpy(key->ptr + this->k * 4, d.ptr, d.len);
-	memcpy(key->ptr + this->k * 5, exp1.ptr, exp1.len);
-	memcpy(key->ptr + this->k * 6, exp2.ptr, exp2.len);
-	memcpy(key->ptr + this->k * 7, coeff.ptr, coeff.len);
-	
-	free(n.ptr);
-	free(e.ptr);
-	free(p.ptr);
-	free(q.ptr);
-	free(d.ptr);
-	free(exp1.ptr);
-	free(exp2.ptr);
-	free(coeff.ptr);
-	
-	return SUCCESS;
 }
 
 /**
@@ -538,27 +476,6 @@ static status_t check(private_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of rsa_private_key.clone.
- */
-static rsa_private_key_t* _clone(private_rsa_private_key_t *this)
-{
-	private_rsa_private_key_t *clone = rsa_private_key_create_empty();
-	
-	mpz_init_set(clone->n, this->n);
-	mpz_init_set(clone->e, this->e);
-	mpz_init_set(clone->p, this->p);
-	mpz_init_set(clone->q, this->q);
-	mpz_init_set(clone->d, this->d);
-	mpz_init_set(clone->exp1, this->exp1);
-	mpz_init_set(clone->exp2, this->exp2);
-	mpz_init_set(clone->coeff, this->coeff);
-	clone->keyid = chunk_clone(this->keyid);
-	clone->k = this->k;
-	
-	return &clone->public;
-}
-
-/**
  * Implementation of rsa_private_key.destroy.
  */
 static void destroy(private_rsa_private_key_t *this)
@@ -584,11 +501,9 @@ static private_rsa_private_key_t *rsa_private_key_create_empty(void)
 	
 	/* public functions */
 	this->public.build_emsa_pkcs1_signature = (status_t (*) (rsa_private_key_t*,hash_algorithm_t,chunk_t,chunk_t*))build_emsa_pkcs1_signature;
-	this->public.get_key = (status_t (*) (rsa_private_key_t*,chunk_t*))get_key;
 	this->public.save_key = (status_t (*) (rsa_private_key_t*,char*))save_key;
 	this->public.get_public_key = (rsa_public_key_t *(*) (rsa_private_key_t*))get_public_key;
 	this->public.belongs_to = (bool (*) (rsa_private_key_t*,rsa_public_key_t*))belongs_to;
-	this->public.clone = (rsa_private_key_t*(*)(rsa_private_key_t*))_clone;
 	this->public.destroy = (void (*) (rsa_private_key_t*))destroy;
 	
 	/* private functions */

@@ -67,19 +67,6 @@ struct rsa_private_key_t {
 	status_t (*build_emsa_pkcs1_signature) (rsa_private_key_t *this, hash_algorithm_t hash_algorithm, chunk_t data, chunk_t *signature);
 	
 	/**
-	 * @brief Gets the key.
-	 * 
-	 * UNIMPLEMENTED!
-	 * 
-	 * @param this				calling object
-	 * @param key				key (in a propriarity format)
-	 * @return					
-	 * 							- SUCCESS
-	 * 							- INVALID_STATE, if key not set
-	 */
-	status_t (*get_key) (rsa_private_key_t *this, chunk_t *key);
-	
-	/**
 	 * @brief Saves a key to a file.
 	 * 
 	 * Not implemented!
@@ -91,21 +78,7 @@ struct rsa_private_key_t {
 	status_t (*save_key) (rsa_private_key_t *this, char *file);
 	
 	/**
-	 * @brief Generate a new key.
-	 * 
-	 * Generates a new private_key with specified key size
-	 * 
-	 * @param this				calling object
-	 * @param key_size			size of the key in bits
-	 * @return					
-	 * 							- SUCCESS
-	 * 							- INVALID_ARG if key_size invalid
-	 */
-	status_t (*generate_key) (rsa_private_key_t *this, size_t key_size);
-	
-	/**
-	 * @brief Create a rsa_public_key_t with the public
-	 * parts of the key.
+	 * @brief Create a rsa_public_key_t with the public parts of the key.
 	 * 
 	 * @param this				calling object
 	 * @return					public_key
@@ -123,14 +96,6 @@ struct rsa_private_key_t {
 	 * @return					TRUE, if keys belong together
 	 */
 	bool (*belongs_to) (rsa_private_key_t *this, rsa_public_key_t *public);
-	
-	/**
-	 * @brief Clone the private key.
-	 * 
-	 * @param this				private key to clone
-	 * @return					clone of this
-	 */
-	rsa_private_key_t *(*clone) (rsa_private_key_t *this);
 	
 	/**
 	 * @brief Destroys the private key.
