@@ -1,0 +1,188 @@
+html {
+    height:100%;
+    width: auto;
+    margin:0;
+    padding:0;
+}
+
+
+body {
+	font-family: Verdana, Helvetica, sans-serif;
+	font-size: 12px;
+	width: 100%;
+	height:100%;
+    margin:0;
+    padding:0;
+    background-color: #EEEEEE;
+}
+
+h1 {
+	color: #203781;
+	font-size: 18px;
+	font-weight: bold;
+}
+
+h2 {
+	color: #203781;
+	font-size: 17px;
+	font-weight: bold;
+}
+
+h3 {
+	color: #203781;
+	font-size: 16px;
+	font-weight: bold;
+}
+
+h4 {
+	color: #203781;
+	font-size: 15px;
+	font-weight: bold;
+}
+
+p {
+	line-height: 1.2;
+	font-size: 11px;
+}
+
+a {
+    color: black;
+    font-size: 12px;	
+}
+
+#headermain {
+	min-height: 100%;
+	background-color: white;
+	margin-left: 188px;
+}
+
+/* ##### Header ##### */
+
+#header {
+	width: 100%;
+	height: 30px;
+	background-color: #EEEEEE;
+}
+
+.gatewayname{
+	padding-top: 5px;
+    padding-left: 30px;
+    font-size: 12px;
+}
+
+/* ##### Left Side Bar ##### */
+
+.leftSideBar {
+	padding-top: 30px;
+	padding-left: 8px;
+	padding-right: 8px;
+	width: 170px;
+	float: left;
+}
+
+.leftSideBar .sideBarTitle {
+	color: black;
+	font-weight: bold;
+	font-size: 12px;
+	margin: 0.1ex 0 0.1ex 0;
+}
+
+.leftSideBar a {
+	color: #203781;
+	text-decoration: none;
+	display: block;
+	margin: 0;
+	padding: 0.8ex 1ex;
+}
+
+.leftSideBar a:hover {
+	color: black;
+	background-color: lightgrey;
+	text-decoration: none;
+}
+
+/* ##### Main ##### */
+
+#main {
+	padding-top: 10px;
+	padding-left: 30px;
+    color: black;
+    text-align: justify;
+    line-height: 1.5em;
+}
+
+/* ##### From Selection ##### */
+
+.formbody {
+    background-color: white;
+    height: auto;
+}
+
+.formbox {
+	width: 492px;
+	margin-top: 100px;
+	margin-left: auto;
+	margin-right: auto;
+	border-color: #333;
+	border-width: 1px;
+	border-style: solid;
+	padding: 10px;
+}
+
+.formselection {
+	background-color: #EEEEEE;
+	border-color: #333;
+	border-width: 1px;
+	border-style: solid;
+}
+
+.selection {
+	background-color: white;
+	border-color: #333;
+	border-style: solid;
+	margin-left: 12px;
+	margin-right: 4px;
+	border-width: 1px;
+	width: 400px;
+}
+
+.button {
+	font-size: 12px;
+	font-weight: bold;
+	width: 50px;
+	border-color: #333;
+	border-width: 1px;
+	border-style: solid;
+	background-color: lightgrey;
+}
+
+.message {
+    color: red;
+}
+
+/* ##### Tables ##### */
+
+th {
+    padding-right: 15px;	
+}
+
+td {
+	padding-right: 15px;
+}
+
+/* ##### Lists ##### */
+
+ul {
+    list-style: None;
+    padding-left: 0;
+}
+
+li {
+    padding-bottom: 5px;	
+}
+
+/* ##### Labels ##### */
+
+label {
+    font-weight: bold;
+}
