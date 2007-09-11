@@ -113,8 +113,13 @@ extern const chunk_t ASN1_INTEGER_1;
 extern const chunk_t ASN1_INTEGER_2;
 
 /* some popular algorithmIdentifiers */
+extern const chunk_t ASN1_md2_id;
 extern const chunk_t ASN1_md5_id;
 extern const chunk_t ASN1_sha1_id;
+extern const chunk_t ASN1_sha256_id;
+extern const chunk_t ASN1_sha384_id;
+extern const chunk_t ASN1_sha512_id;
+
 extern const chunk_t ASN1_rsaEncryption_id;
 extern const chunk_t ASN1_md5WithRSA_id;
 extern const chunk_t ASN1_sha1WithRSA_id;
