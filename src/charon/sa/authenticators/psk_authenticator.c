@@ -124,7 +124,7 @@ static status_t verify(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 	auth_data = build_shared_key_signature(ike_sa_init, my_nonce, shared_key,
 						other_id, this->ike_sa->get_skp_verify(this->ike_sa),
 						this->ike_sa->get_prf(this->ike_sa));
-	chunk_free(&shared_key);
+	chunk_free_randomized(&shared_key);
 	
 	recv_auth_data = auth_payload->get_data(auth_payload);
 	if (auth_data.len != recv_auth_data.len ||
@@ -168,7 +168,7 @@ static status_t build(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 							my_id, this->ike_sa->get_skp_build(this->ike_sa),
 							this->ike_sa->get_prf(this->ike_sa));
 	DBG2(DBG_IKE, "successfully created shared key MAC");
-	chunk_free(&shared_key);
+	chunk_free_randomized(&shared_key);
 	*auth_payload = auth_payload_create();
 	(*auth_payload)->set_auth_method(*auth_payload, AUTH_PSK);
 	(*auth_payload)->set_data(*auth_payload, auth_data);
