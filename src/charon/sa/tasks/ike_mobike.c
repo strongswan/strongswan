@@ -422,6 +422,7 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 				/* start the update with the same task */
 				this->check = FALSE;
 				this->address = FALSE;
+				this->natd = ike_natd_create(this->ike_sa, this->initiator);
 				this->ike_sa->set_pending_updates(this->ike_sa, 1);
 				return NEED_MORE;
 			}
@@ -438,7 +439,6 @@ static void roam(private_ike_mobike_t *this, bool address)
 {
 	this->check = TRUE;
 	this->address = address;
-	this->natd = ike_natd_create(this->ike_sa, this->initiator);
 	this->ike_sa->set_pending_updates(this->ike_sa, 
 							this->ike_sa->get_pending_updates(this->ike_sa) + 1);
 }

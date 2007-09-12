@@ -147,8 +147,8 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	
 	/* Precompute NAT-D hashes for incoming NAT notify comparison */
 	ike_sa_id = message->get_ike_sa_id(message);
-	me = this->ike_sa->get_my_host(this->ike_sa);
-	other = this->ike_sa->get_other_host(this->ike_sa);
+	me = message->get_destination(message);
+	other = message->get_source(message);
 	dst_hash = generate_natd_hash(this, ike_sa_id, me);
 	src_hash = generate_natd_hash(this, ike_sa_id, other);
 	
@@ -252,7 +252,7 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 	host_t *host;
 	
 	/* destination is always set */
-	host = this->ike_sa->get_other_host(this->ike_sa);
+	host = message->get_destination(message);
 	notify = build_natd_payload(this, NAT_DETECTION_DESTINATION_IP, host);
 	message->add_payload(message, (payload_t*)notify);
 	
@@ -261,7 +261,7 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 	 * 2. We do a routing lookup in the kernel interface
 	 * 3. Include all possbile addresses
 	 */
-	host = this->ike_sa->get_my_host(this->ike_sa);
+	host = message->get_source(message);
 	if (!host->is_anyaddr(host))
 	{	/* 1. */
 		notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
@@ -312,11 +312,11 @@ static status_t build_r(private_ike_natd_t *this, message_t *message)
 	if (this->src_seen && this->dst_seen)
 	{
 		/* initiator seems to support NAT detection, add response */
-		me = this->ike_sa->get_my_host(this->ike_sa);
+		me = message->get_source(message);
 		notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, me);
 		message->add_payload(message, (payload_t*)notify);
 		
-		other = this->ike_sa->get_other_host(this->ike_sa);
+		other = message->get_destination(message);
 		notify = build_natd_payload(this, NAT_DETECTION_DESTINATION_IP, other);
 		message->add_payload(message, (payload_t*)notify);
 	}
