@@ -28,8 +28,11 @@
 #include <debug.h>
 
 #include <asn1/asn1.h>
+#include <asn1/pem.h>
+#include <crypto/x509.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
+
 #include "ac.h"
 
 #define ACERT_WARNING_INTERVAL	1	/* day */
@@ -283,7 +286,7 @@ static void ietfAttr_list(linked_list_t *list, FILE *out)
 				{
 					int oid = known_oid(attr->value);
 
-					if (oid = OID_UNKNOWN)
+					if (oid == OID_UNKNOWN)
 					{
 						fprintf(out, "0x#B", &attr->value);
 					}
