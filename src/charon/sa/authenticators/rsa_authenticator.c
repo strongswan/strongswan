@@ -93,9 +93,7 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 					  chunk_t other_nonce, auth_payload_t **auth_payload)
 {
-	chunk_t chunk;
-	chunk_t octets;
-	chunk_t auth_data;
+	chunk_t octets, auth_data;
 	status_t status;
 	rsa_public_key_t *my_pubkey;
 	identification_t *my_id;
