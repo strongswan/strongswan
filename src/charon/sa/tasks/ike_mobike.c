@@ -217,6 +217,17 @@ static void update_children(private_ike_mobike_t *this)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
+	host_t *ip;
+	
+	/* additionally, we reinstall the virtual IP as we may have changed
+	 * our interface */
+	ip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
+	if (ip)
+	{
+		ip = ip->clone(ip);
+		this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, ip);
+		ip->destroy(ip);
+	}
 	
 	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
 	while (iterator->iterate(iterator, (void**)&child_sa))
