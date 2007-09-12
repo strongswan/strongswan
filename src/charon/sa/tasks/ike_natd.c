@@ -232,10 +232,17 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 		{
 			host_t *me, *other;
 		
+			/* do not switch if we have a custom port from mobike/NAT */
 			me = this->ike_sa->get_my_host(this->ike_sa);
-			me->set_port(me, IKEV2_NATT_PORT);
+			if (me->get_port(me) == IKEV2_UDP_PORT)
+			{
+				me->set_port(me, IKEV2_NATT_PORT);
+			}
 			other = this->ike_sa->get_other_host(this->ike_sa);
-			other->set_port(other, IKEV2_NATT_PORT);
+			if (other->get_port(other) == IKEV2_UDP_PORT)
+			{
+				other->set_port(other, IKEV2_NATT_PORT);
+			}
 		}
 	}
 	
