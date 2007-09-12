@@ -58,6 +58,7 @@
 #include "whack.h"
 #include "alg_info.h"
 #include "ike_alg.h"
+#include "kernel_alg.h"
 #include "nat_traversal.h"
 #include "virtual.h"
 
