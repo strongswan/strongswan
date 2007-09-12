@@ -174,11 +174,11 @@ static void destroy(private_daemon_t *this)
 	this->public.processor->set_threads(this->public.processor, 0);
 	/* close all IKE_SAs */
 	DESTROY_IF(this->public.ike_sa_manager);
+	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
 	DESTROY_IF(this->public.interfaces);
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.credentials);
-	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.sender);
 	DESTROY_IF(this->public.receiver);
 	DESTROY_IF(this->public.socket);
