@@ -206,7 +206,7 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 		chunk_t object;
 		u_int level;
 		int objectID = 0;
-		hash_algorithm_t hash_algorithm;
+		hash_algorithm_t hash_algorithm = HASH_UNKNOWN;
 
 		asn1_init(&ctx, em, 0, FALSE, FALSE);
 
@@ -246,7 +246,8 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 
 						if (object.len != hasher->get_hash_size(hasher))
 						{
-							DBG1("wrong hash size in signature");
+							DBG1("hash size in signature is %u bytes instead of %u bytes",
+								 object.len, hasher->get_hash_size(hasher));
 							hasher->destroy(hasher);
 							goto end;
 						}
