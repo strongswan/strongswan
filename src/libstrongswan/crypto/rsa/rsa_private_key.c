@@ -273,7 +273,7 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
 										   chunk_t data, chunk_t *signature)
 {
 	hasher_t *hasher;
-	chunk_t em, encoded_hash, hash_id, hash;
+	chunk_t em, digestInfo, hash_id, hash;
 	
 	/* get oid string prepended to hash */
 	switch (hash_algorithm)
@@ -325,8 +325,8 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
 	hasher->allocate_hash(hasher, data, &hash);
 	hasher->destroy(hasher);
 	
-	/* build DER-encoded hash */
-	encoded_hash = asn1_wrap(ASN1_SEQUENCE, "cm",
+	/* build DER-encoded digestInfo */
+	digestInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
 					hash_id,
 					asn1_simple_object(ASN1_OCTET_STRING, hash)
 				  );
@@ -345,14 +345,14 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
 	/* set magic bytes */
 	*(em.ptr) = 0x00;
 	*(em.ptr+1) = 0x01;
-	*(em.ptr + em.len - encoded_hash.len - 1) = 0x00;
+	*(em.ptr + em.len - digestInfo.len - 1) = 0x00;
 	/* set DER-encoded hash */
-	memcpy(em.ptr + em.len - encoded_hash.len, encoded_hash.ptr, encoded_hash.len);
+	memcpy(em.ptr + em.len - digestInfo.len, digestInfo.ptr, digestInfo.len);
 
 	/* build signature */
 	*signature = this->rsasp1(this, em);
 	
-	free(encoded_hash.ptr);
+	free(digestInfo.ptr);
 	free(em.ptr);
 	
 	return SUCCESS;	
