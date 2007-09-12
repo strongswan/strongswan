@@ -428,7 +428,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	
 	if (blob->len < 2)
 	{
-		DBG2("L%d - %s:  ASN.1 object smaller than 2 octets", 
+		DBG1("L%d - %s:  ASN.1 object smaller than 2 octets", 
 					*level, obj.name);
 		return FALSE;
 	}
@@ -437,7 +437,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	
 	if (blob1->len == ASN1_INVALID_LENGTH || blob->len < blob1->len)
 	{
-		DBG2("L%d - %s:  length of ASN.1 object invalid or too large", 
+		DBG1("L%d - %s:  length of ASN.1 object invalid or too large", 
 					*level, obj.name);
 		return FALSE;
 	}
