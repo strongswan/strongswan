@@ -29,6 +29,7 @@
 
 #include "rsa_public_key.h"
 
+#include <debug.h>
 #include <crypto/hashers/hasher.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
@@ -198,7 +199,7 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 		/* no digestInfo found */
 		goto end;
 	}
-	
+
 	/* parse ASN.1-based digestInfo */
 	{
 		asn1_ctx_t ctx;
@@ -218,9 +219,10 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 			switch (objectID)
 			{
 				case DIGEST_INFO:
-					if (object.len != em.len)
+					if (em.len > object.len)
 					{
-						/* surplus bytes after the digestInfo object */
+						DBG1("digestInfo field in signature is followed by %u surplus bytes",
+							 em.len - object.len);
 						goto end;
 					}
 					break;
@@ -232,6 +234,7 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 						if (hash_algorithm == HASH_UNKNOWN
 						|| (algorithm != HASH_UNKNOWN && hash_algorithm != algorithm))
 						{
+							DBG1("wrong hash algorithm used in signature");
 							goto end;
 						}
 					}
@@ -243,7 +246,7 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 
 						if (object.len != hasher->get_hash_size(hasher))
 						{
-							/* wrong hash size */
+							DBG1("wrong hash size in signature");
 							hasher->destroy(hasher);
 							goto end;
 						}
