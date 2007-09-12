@@ -670,7 +670,7 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 		objectID++;
 	}
 	
-	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
+	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
 
 	/* form the keyid as a SHA-1 hash of a publicKeyInfo object */
 	{
