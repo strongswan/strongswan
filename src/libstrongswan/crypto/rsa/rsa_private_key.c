@@ -176,7 +176,7 @@ static private_rsa_private_key_t *rsa_private_key_create_empty(void);
  * Auxiliary function overwriting private key material with
  * pseudo-random bytes before releasing it
  */
-static mpz_clear_randomized(mpz_t z)
+static void mpz_clear_randomized(mpz_t z)
 {
 	size_t len = mpz_size(z) * GMP_LIMB_BITS / BITS_PER_BYTE;
 	u_int8_t *random_bytes = alloca(len);
@@ -330,6 +330,7 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
 					hash_id,
 					asn1_simple_object(ASN1_OCTET_STRING, hash)
 				  );
+	chunk_free(&hash);
 
 	/* build chunk to rsa-decrypt:
 	 * EM = 0x00 || 0x01 || PS || 0x00 || T. 
