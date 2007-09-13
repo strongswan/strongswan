@@ -30,6 +30,7 @@ typedef struct peer_cfg_t peer_cfg_t;
 
 #include <library.h>
 #include <utils/identification.h>
+#include <utils/linked_list.h>
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
 #include <config/ike_cfg.h>
@@ -194,13 +195,21 @@ struct peer_cfg_t {
 	identification_t* (*get_my_ca)(peer_cfg_t *this);
 
 	/**
-	 * @brief Get peers CA.
+	 * @brief Get peer CA.
 	 * 
 	 * @param this			calling object
 	 * @return				other ca
 	 */
 	identification_t* (*get_other_ca)(peer_cfg_t *this);
 	
+	/**
+	 * @brief Get list of group attributes.
+	 * 
+	 * @param this			calling object
+	 * @return				linked list of group attributes
+	 */
+	linked_list_t* (*get_groups)(peer_cfg_t *this);
+
 	/**
 	 * @brief Should be sent a certificate for this connection?
 	 *
@@ -347,6 +356,7 @@ struct peer_cfg_t {
  * @param other_id 			identification_t for the remote guy
  * @param my_ca				CA to use for us
  * @param other_ca			CA to use for other
+ * @param groups			list of group memberships
  * @param cert_policy		should we send a certificate payload?
  * @param auth_method		auth method to use to authenticate us
  * @param eap_type			EAP type to use for peer authentication
@@ -367,10 +377,11 @@ struct peer_cfg_t {
 peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
 							identification_t *my_ca, identification_t *other_ca,
-							cert_policy_t cert_policy, auth_method_t auth_method,
-							eap_type_t eap_type, u_int32_t keyingtries,
-							u_int32_t lifetime, u_int32_t rekeytime,
-							u_int32_t jitter, bool use_reauth, bool use_mobike,
+							linked_list_t *groups, cert_policy_t cert_policy,
+							auth_method_t auth_method, eap_type_t eap_type,
+							u_int32_t keyingtries, u_int32_t lifetime,
+							u_int32_t rekeytime, u_int32_t jitter,
+							bool reauth, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
 							host_t *my_virtual_ip, host_t *other_virtual_ip);
 

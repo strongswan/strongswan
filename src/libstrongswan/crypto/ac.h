@@ -26,6 +26,8 @@
 #ifndef AC_H_
 #define AC_H_
 
+#include <library.h>
+
 typedef struct x509ac_t x509ac_t;
 
 /**
@@ -94,14 +96,13 @@ x509ac_t *x509ac_create_from_chunk(chunk_t chunk);
 
 /**
  * @brief Read a x509 attribute certificate from a DER encoded file.
- * 
+ *
  * @param filename 	file containing DER encoded data
- * @return 			created x509ac_t certificate, or NULL if invalid.
- * 
+ * @return 		created x509ac_t certificate, or NULL if invalid.
+ *
  * @ingroup crypto
  */
 x509ac_t *x509ac_create_from_file(const char *filename);
-
 
 #endif /* AC_H_ */
 

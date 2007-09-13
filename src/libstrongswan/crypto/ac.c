@@ -30,8 +30,10 @@
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
 #include <crypto/x509.h>
+#include <crypto/ietf_attr_list.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
+#include <utils/lexparser.h>
 
 #include "ac.h"
 
@@ -143,219 +145,6 @@ struct private_x509ac_t {
 	 */
 	chunk_t signature;
 };
-
-/**
- * definition of ietfAttribute kinds
- */
-typedef enum {
-	IETF_ATTRIBUTE_OCTETS =	0,
-	IETF_ATTRIBUTE_OID =	1,
-	IETF_ATTRIBUTE_STRING =	2
-} ietfAttribute_t;
-
-/**
- * access structure for an ietfAttribute
- */
-typedef struct ietfAttr_t ietfAttr_t;
-
-struct ietfAttr_t {
-	/**
-	 * IETF attribute kind
-	 */
-	ietfAttribute_t kind;
-
-	/**
-	 * IETF attribute valuse
-	 */
-	chunk_t value;
-
-	/**
-	 * Compares two ietfAttributes
-	 *	
-	 * return -1 if this is earlier in the alphabet than other
-	 * return  0 if this equals other
-	 * return +1 if this is later in the alphabet than other
-	 *
-	 * @param this		calling object
-	 * @param other		other object
-	 */
-	int (*compare) (const ietfAttr_t *this ,const ietfAttr_t *other);
-
-	/**
-	 * Destroys the ietfAttr_t object.
-	 * 
-	 * @param this			ietfAttr_t to destroy
-	 */
-	void (*destroy) (ietfAttr_t *this);
-};
-
-/**
- * Implements ietfAttr_t.compare.
- */
-static int ietfAttr_compare(const ietfAttr_t *this ,const ietfAttr_t *other)
-{
-	int cmp_len, len, cmp_value;
-
-	/* OID attributes are appended after STRING and OCTETS attributes */
-	if (this->kind != IETF_ATTRIBUTE_OID && other->kind == IETF_ATTRIBUTE_OID)
-	{
-		return -1;
-	}
-	if (this->kind == IETF_ATTRIBUTE_OID && other->kind != IETF_ATTRIBUTE_OID)
-	{
-		return 1;
-	}
-	
-    cmp_len = this->value.len - other->value.len;
-    len = (cmp_len < 0)? this->value.len : other->value.len;
-    cmp_value = memcmp(this->value.ptr, other->value.ptr, len);
-
-    return (cmp_value == 0)? cmp_len : cmp_value;
-}
-
-/**
- * Adds an ietfAttr_t object to a sorted linked list
- */
-static void ietfAttr_add(linked_list_t *list, ietfAttr_t *attr)
-{
-	iterator_t *iterator = list->create_iterator(list, TRUE);
-	ietfAttr_t *current_attr;
-	bool found = FALSE;
-
-	while (iterator->iterate(iterator, (void **)&current_attr))
-	{
-		int cmp = attr->compare(attr, current_attr);
-
-		if (cmp > 0)
-		{
-			 continue;
-		}
-		if (cmp == 0)
-		{
-			attr->destroy(attr);
-		}
-		else
-		{
-			iterator->insert_before(iterator, attr);
-		}
-		found = TRUE;
-		break;
-	}
-	iterator->destroy(iterator);
-	if (!found)
-	{
-		list->insert_last(list, attr);
-	}
-}
-
-/**
- * Create a linked list of ietfAttr_t objects from a string
- */
-static void ietfAttr_create_from_string(linked_list_t *list, const char *msg)
-{
-
-}
-
-/**
- * Lists a linked list of ietfAttr_t objects
- */
-static void ietfAttr_list(linked_list_t *list, FILE *out)
-{
-	iterator_t *iterator = list->create_iterator(list, TRUE);
-	ietfAttr_t *attr;
-	bool first = TRUE;
-
-	while (iterator->iterate(iterator, (void **)&attr))
-	{
-		if (first)
-		{
-			first = FALSE;
-		}
-		else
-		{
-			fprintf(out, ", ");
-		}
-
-		switch (attr->kind)
-		{
-			case IETF_ATTRIBUTE_OCTETS:
-			case IETF_ATTRIBUTE_STRING:
-				fprintf(out, "%.*s", (int)attr->value.len, attr->value.ptr);
-				break;
-			case IETF_ATTRIBUTE_OID:
-				{
-					int oid = known_oid(attr->value);
-
-					if (oid == OID_UNKNOWN)
-					{
-						fprintf(out, "0x#B", &attr->value);
-					}
-					else
-					{
-						fprintf(out, "%s", oid_names[oid]);
-					}
-				}
-	    		break;
-			default:
-	    		break;
-  		}
-	}
-	iterator->destroy(iterator);
-}
-
-/**
- * Destroys an ietfAttr_t object
- */
-static void ietfAttr_destroy(ietfAttr_t *this)
-{
-	free(this->value.ptr);
-	free(this);
-}
-
-/**
- * Creates an ietfAttr_t object.
- */
-ietfAttr_t *ietfAttr_create(ietfAttribute_t kind, chunk_t value)
-{
-	ietfAttr_t *this = malloc_thing(ietfAttr_t);
-
-	/* initialize */
-	this->kind = kind;
-	this->value = chunk_clone(value);
-
-	/* function */
-	this->compare = ietfAttr_compare;
-	this->destroy = ietfAttr_destroy;
-
-	return this;
-}
-
-/**
- * ASN.1 definition of ietfAttrSyntax
- */
-static const asn1Object_t ietfAttrSyntaxObjects[] =
-{
-	{ 0, "ietfAttrSyntax",		ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
-	{ 1,   "policyAuthority",	ASN1_CONTEXT_C_0,	ASN1_OPT |
-													ASN1_BODY }, /*  1 */
-	{ 1,   "end opt",			ASN1_EOC,			ASN1_END  }, /*  2 */
-	{ 1,   "values",			ASN1_SEQUENCE,		ASN1_LOOP }, /*  3 */
-	{ 2,     "octets",			ASN1_OCTET_STRING,	ASN1_OPT |
-													ASN1_BODY }, /*  4 */
-	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  5 */
-	{ 2,     "oid",				ASN1_OID,			ASN1_OPT |
-													ASN1_BODY }, /*  6 */
-	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  7 */
-	{ 2,     "string",			ASN1_UTF8STRING,	ASN1_OPT |
-													ASN1_BODY }, /*  8 */
-	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  9 */
-	{ 1,   "end loop",			ASN1_EOC,			ASN1_END  }  /* 10 */
-};
-
-#define IETF_ATTR_OCTETS	 4
-#define IETF_ATTR_OID		 6
-#define IETF_ATTR_STRING	 8
-#define IETF_ATTR_ROOF		11
 
 /**
  * ASN.1 definition of roleSyntax
@@ -549,43 +338,6 @@ static bool parse_directoryName(chunk_t blob, int level, bool implicit, identifi
 }
 
 /**
- * parses ietfAttrSyntax
- */
-static void parse_ietfAttrSyntax(chunk_t blob, int level0, linked_list_t *list)
-{
-	asn1_ctx_t ctx;
-	chunk_t object;
-	u_int level;
-	int objectID = 0;
-
-	asn1_init(&ctx, blob, level0, FALSE, FALSE);
-
-	while (objectID < IETF_ATTR_ROOF)
-	{
-		if (!extract_object(ietfAttrSyntaxObjects, &objectID, &object, &level, &ctx))
-		{
-			return;
-		}
-
-		switch (objectID)
-		{
-			case IETF_ATTR_OCTETS:
-			case IETF_ATTR_OID:
-			case IETF_ATTR_STRING:
-				{
-					ietfAttribute_t kind = (objectID - IETF_ATTR_OCTETS) / 2;
-					ietfAttr_t *attr   = ietfAttr_create(kind, object);
-					ietfAttr_add(list, attr);
-				}
-				break;
-			default:
-				break;
-		}
-		objectID++;
-	}
-}
-
-/**
  * parses roleSyntax
  */
 static void parse_roleSyntax(chunk_t blob, int level0)
@@ -700,10 +452,10 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 							DBG2("  need to parse accessIdentity");
 							break;
 						case OID_CHARGING_IDENTITY:
-							parse_ietfAttrSyntax(object, level, this->charging);
+							ietfAttr_list_create_from_chunk(object, this->charging, level);
 							break;
 						case OID_GROUP:
-							parse_ietfAttrSyntax(object, level, this->groups);
+							ietfAttr_list_create_from_chunk(object, this->groups, level);
 							break;
 						case OID_ROLE:
 							parse_roleSyntax(object, level);
@@ -781,7 +533,7 @@ static void list(const private_x509ac_t *this, FILE *out, bool utc)
 	
 	/* list all group attributes on a single line */
 	fprintf(out, "    groups:     ");
-	ietfAttr_list(this->groups, out);
+	ietfAttr_list_list(this->groups, out);
 	fprintf(out, "\n");
 
 	fprintf(out, "    issuer:    '%D'\n", this->issuerName);
@@ -830,10 +582,8 @@ static void destroy(private_x509ac_t *this)
 	DESTROY_IF(this->holderIssuer);
 	DESTROY_IF(this->entityName);
 	DESTROY_IF(this->issuerName);
-	this->charging->destroy_offset(this->charging, 
-							offsetof(ietfAttr_t, destroy));
-	this->groups->destroy_offset(this->groups,
-						  offsetof(ietfAttr_t, destroy));
+	ietfAttr_list_destroy(this->charging);
+	ietfAttr_list_destroy(this->groups);
 	free(this->certificate.ptr);
 	free(this);
 }

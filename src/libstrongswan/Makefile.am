@@ -32,6 +32,7 @@ crypto/hashers/sha1_hasher.c crypto/hashers/sha1_hasher.h \
 crypto/hashers/sha2_hasher.c crypto/hashers/sha2_hasher.h \
 crypto/hashers/md5_hasher.c  crypto/hashers/md5_hasher.h \
 crypto/hmac.c crypto/hmac.h \
+crypto/ietf_attr_list.c crypto/ietf_attr_list.h \
 crypto/ocsp.c crypto/ocsp.h \
 crypto/prfs/fips_prf.c crypto/prfs/fips_prf.h \
 crypto/prfs/hmac_prf.c crypto/prfs/hmac_prf.h \

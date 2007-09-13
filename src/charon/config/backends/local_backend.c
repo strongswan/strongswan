@@ -146,6 +146,13 @@ static peer_cfg_t *get_peer_cfg(private_local_backend_t *this,
 			int prio = (wc1 + wc2) * (MAX_CA_PATH_LEN + 1);
 			int pathlen = 0;
 			identification_t *other_candidate_ca = current->get_other_ca(current);
+			linked_list_t *groups = current->get_groups(current);
+
+			/* is a group membership required? */
+			if (groups->get_count(groups) > 0)
+			{
+				DBG1(DBG_CFG, "  group membership required");
+			}
 
 			/* are there any ca constraints? */
 			if (other_candidate_ca->get_type(other_candidate_ca) != ID_ANY)

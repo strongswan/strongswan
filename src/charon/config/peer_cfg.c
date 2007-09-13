@@ -28,6 +28,7 @@
 
 #include <utils/linked_list.h>
 #include <utils/identification.h>
+#include <crypto/ietf_attr_list.h>
 
 ENUM(cert_policy_names, CERT_ALWAYS_SEND, CERT_NEVER_SEND,
 	"CERT_ALWAYS_SEND",
@@ -103,6 +104,11 @@ struct private_peer_cfg_t {
 	 * we require the other end to have a cert issued by this CA
 	 */
 	identification_t *other_ca;
+	
+	/**
+	 * we require the other end to belong to at least one group
+	 */
+	linked_list_t *groups;
 	
 	/**
 	 * should we send a certificate
@@ -279,10 +285,21 @@ static identification_t *get_my_ca(private_peer_cfg_t *this)
 	return this->my_ca;
 }
 
+/**
+ * Implementation of peer_cfg_t.get_other_ca
+ */
 static identification_t *get_other_ca(private_peer_cfg_t *this)
 {
 	return this->other_ca;
-}	
+}
+
+/**
+ * Implementation of peer_cfg_t.get_groups
+ */
+static linked_list_t *get_groups(private_peer_cfg_t *this)
+{
+	return this->groups;
+}
 
 /**
  * Implementation of peer_cfg_t.get_cert_policy.
@@ -417,9 +434,9 @@ static void destroy(private_peer_cfg_t *this)
 		this->other_id->destroy(this->other_id);
 		DESTROY_IF(this->my_ca);
 		DESTROY_IF(this->other_ca);
-		
 		DESTROY_IF(this->my_virtual_ip);
 		DESTROY_IF(this->other_virtual_ip);
+		ietfAttr_list_destroy(this->groups);
 		free(this->name);
 		free(this);
 	}
@@ -431,10 +448,11 @@ static void destroy(private_peer_cfg_t *this)
 peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
 							identification_t *my_ca, identification_t *other_ca,
-							cert_policy_t cert_policy, auth_method_t auth_method,
-							eap_type_t eap_type, u_int32_t keyingtries,
-							u_int32_t lifetime, u_int32_t rekeytime,
-							u_int32_t jitter, bool reauth, bool mobike,
+							linked_list_t *groups, cert_policy_t cert_policy,
+							auth_method_t auth_method, eap_type_t eap_type,
+							u_int32_t keyingtries, u_int32_t lifetime,
+							u_int32_t rekeytime, u_int32_t jitter,
+							bool reauth, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
 							host_t *my_virtual_ip, host_t *other_virtual_ip)
 {
@@ -451,6 +469,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_other_id = (identification_t* (*)(peer_cfg_t *))get_other_id;
 	this->public.get_my_ca = (identification_t* (*)(peer_cfg_t *))get_my_ca;
 	this->public.get_other_ca = (identification_t* (*)(peer_cfg_t *))get_other_ca;
+	this->public.get_groups = (linked_list_t* (*)(peer_cfg_t *))get_groups;
 	this->public.get_cert_policy = (cert_policy_t (*) (peer_cfg_t *))get_cert_policy;
 	this->public.get_auth_method = (auth_method_t (*) (peer_cfg_t *))get_auth_method;
 	this->public.get_eap_type = (eap_type_t (*) (peer_cfg_t *))get_eap_type;
@@ -475,6 +494,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->other_id = other_id;
 	this->my_ca = my_ca;
 	this->other_ca = other_ca;
+	this->groups = groups;
 	this->cert_policy = cert_policy;
 	this->auth_method = auth_method;
 	this->eap_type = eap_type;

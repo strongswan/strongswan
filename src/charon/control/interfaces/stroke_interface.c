@@ -38,6 +38,7 @@
 #include <stroke.h>
 #include <daemon.h>
 #include <crypto/x509.h>
+#include <crypto/ietf_attr_list.h>
 #include <crypto/ac.h>
 #include <crypto/ca.h>
 #include <crypto/crl.h>
@@ -238,6 +239,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	bool other_ca_same =FALSE;
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	host_t *my_vip = NULL, *other_vip = NULL;
+	linked_list_t *my_groups = linked_list_create();
+	linked_list_t *other_groups = linked_list_create();
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
 	char *interface;
@@ -475,6 +478,11 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	DBG2(DBG_CFG, "  my ca:   '%D'", my_ca);
 	DBG2(DBG_CFG, "  other ca:'%D'", other_ca);
 
+	if (msg->add_conn.other.groups)
+	{
+		ietfAttr_list_create_from_string(msg->add_conn.other.groups, other_groups);
+	}
+
 	/* have a look for an (almost) identical peer config to reuse */
 	iterator = charon->backends->create_iterator(charon->backends);
 	while (iterator->iterate(iterator, (void**)&peer_cfg))
@@ -485,6 +493,7 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		&&	my_host->equals(my_host, ike_cfg->get_my_host(ike_cfg))
 		&&	other_host->equals(other_host, ike_cfg->get_other_host(ike_cfg))
 		&&	other_ca->equals(other_ca, peer_cfg->get_other_ca(peer_cfg))
+		&&  ietfAttr_list_equals(other_groups, peer_cfg->get_groups(peer_cfg))
 		&&	peer_cfg->get_ike_version(peer_cfg) == (msg->add_conn.ikev2 ? 2 : 1)
 		&&	peer_cfg->get_auth_method(peer_cfg) == msg->add_conn.auth_method
 		&&	peer_cfg->get_eap_type(peer_cfg) == msg->add_conn.eap_type)
@@ -507,6 +516,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		other_host->destroy(other_host);
 		other_id->destroy(other_id);
 		other_ca->destroy(other_ca);
+		ietfAttr_list_destroy(my_groups);
+		ietfAttr_list_destroy(other_groups);
 	}
 	else
 	{
@@ -554,7 +565,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		
 		
 		peer_cfg = peer_cfg_create(msg->add_conn.name, msg->add_conn.ikev2 ? 2 : 1,
-					ike_cfg, my_id, other_id, my_ca, other_ca, msg->add_conn.me.sendcert, 
+					ike_cfg, my_id, other_id, my_ca, other_ca, other_groups,
+					msg->add_conn.me.sendcert,
 					msg->add_conn.auth_method, msg->add_conn.eap_type,
 					msg->add_conn.rekey.tries, msg->add_conn.rekey.ike_lifetime,
 					msg->add_conn.rekey.ike_lifetime - msg->add_conn.rekey.margin,
@@ -1251,6 +1263,7 @@ static void stroke_status(stroke_msg_t *msg, FILE *out, bool all)
 			{
 				identification_t *my_ca = peer_cfg->get_my_ca(peer_cfg);
 				identification_t *other_ca = peer_cfg->get_other_ca(peer_cfg);
+				linked_list_t *groups = peer_cfg->get_groups(peer_cfg);
 
 				if (my_ca->get_type(my_ca) != ID_ANY
 				||  other_ca->get_type(other_ca) != ID_ANY)
@@ -1258,6 +1271,13 @@ static void stroke_status(stroke_msg_t *msg, FILE *out, bool all)
 					fprintf(out, "%12s:    CAs: '%D'...'%D'\n", peer_cfg->get_name(peer_cfg),
 							my_ca, other_ca);
 				}
+				if (groups->get_count(groups) > 0)
+				{
+					fprintf(out, "%12s:    groups: ", peer_cfg->get_name(peer_cfg));
+					ietfAttr_list_list(groups, out);
+					fprintf(out, "\n");
+				}
+				
 			}
 			children = peer_cfg->create_child_cfg_iterator(peer_cfg);
 			while (children->iterate(children, (void**)&child_cfg))
