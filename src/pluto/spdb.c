@@ -975,8 +975,8 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 		    lset_t iap = st->st_policy & POLICY_ID_AUTH_MASK;
 
 		    /* is the initiator the XAUTH client? */
-		    bool xauth_init = initiator && (st->st_policy & POLICY_XAUTH_SERVER) == LEMPTY
-				  || !initiator && (st->st_policy & POLICY_XAUTH_SERVER) != LEMPTY;
+		    bool xauth_init = ( initiator && (st->st_policy & POLICY_XAUTH_SERVER) == LEMPTY)
+				   || (!initiator && (st->st_policy & POLICY_XAUTH_SERVER) != LEMPTY);
 
 		    switch (val)
 		    {
