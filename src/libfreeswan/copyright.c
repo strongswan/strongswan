@@ -32,7 +32,7 @@ static const char *co[] = {
  "    Zuercher Hochschule Winterthur (Switzerland).",
  "",
  "    Tobias Brunner, Fabian Hartmann, Noah Heusser, Jan Hutter,",
- "    Daniel Röthlisberger, Martin Willi, Andreas Steffen,",
+ "    Daniel Roethlisberger, Martin Willi, Daniel Wydler, Andreas Steffen,",
  "    Hochschule fuer Technik Rapperswil (Switzerland).",
  "",
  "This program is free software; you can redistribute it and/or modify it",
