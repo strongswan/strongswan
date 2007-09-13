@@ -1,16 +1,16 @@
 <?cs include:"templates/header.cs" ?>
 <h1>List of IKE SA's</h1>
-<table>
+<table border="1">
+  <tr>
+    <td colspan="4"></td>
+    <td colspan="3">Local</td>
+    <td colspan="3">Remote</td>
+  <tr>
   <tr>
     <td>ID</td>
     <td>Status</td>
     <td>Role</td>
     <td>Config</td>
-    <td colspan="3">Local</td>
-    <td colspan="3">Remote</td>
-  <tr>
-  <tr>
-    <td colspan="4"></td>
     <td>ID</td>
     <td>Address</td>
     <td>SPI</td>
