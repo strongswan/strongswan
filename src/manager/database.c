@@ -65,7 +65,7 @@ static void db_enumerator_destroy(db_enumerator_t* this)
 /**
  * create a database enumerator
  */
-static enumerator_t *db_enumerator_create(bool(*enumerate)(db_enumerator_t*,...),
+static enumerator_t *db_enumerator_create(bool(*enumerate)(db_enumerator_t*,void*,...),
 										 	 sqlite3_stmt *stmt)
 {
 	db_enumerator_t *this = malloc_thing(db_enumerator_t);
@@ -78,7 +78,7 @@ static enumerator_t *db_enumerator_create(bool(*enumerate)(db_enumerator_t*,...)
 /**
  * enumerator function for empty enumerator
  */
-static bool empty_enumerate(enumerator_t *enumerator, ...)
+static bool empty_enumerate(enumerator_t *enumerator, void *item, ...)
 {
 	return FALSE;
 }
@@ -120,19 +120,9 @@ static int login(private_database_t *this, char *username, char *password)
 /**
  * enumerate function for gateway enumrator
  */
-static bool gateway_enumerate(db_enumerator_t* e, ...)
+static bool gateway_enumerate(db_enumerator_t* e, int *id, const char **name,
+							  int *port, const char **address)
 {
-	va_list args;
-	int *id, *port;
-	const char **name, **address;
-	
-	va_start(args, e);
-	id = va_arg(args, typeof(id));
-	name = va_arg(args, typeof(name));
-	port = va_arg(args, typeof(port));
-	address = va_arg(args, typeof(address));
-	va_end(args);
-	
 	if (sqlite3_step(e->stmt) == SQLITE_ROW)
 	{
 		*id = sqlite3_column_int(e->stmt, 0);

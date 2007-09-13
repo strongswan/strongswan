@@ -66,8 +66,6 @@ static void render(private_template_t *this, response_t *response)
 	NEOERR* err;
 	CSPARSE *parse;
 	
-	hdf_remove_tree(this->hdf, "");
-	
 	err = cs_init(&parse, this->hdf);
 	if (!err)
 	{

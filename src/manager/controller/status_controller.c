@@ -25,6 +25,7 @@
 #include "../gateway.h"
 
 #include <template.h>
+#include <xml.h>
 
 #include <library.h>
 
@@ -45,9 +46,6 @@ struct private_status_controller_t {
 	 * manager instance
 	 */
 	manager_t *manager;
-	
-	int count;
-	
 };
 
 static void ikesalist(private_status_controller_t *this,
@@ -55,6 +53,9 @@ static void ikesalist(private_status_controller_t *this,
 {
 	char *str;
 	gateway_t *gateway;
+	xml_t *doc, *node;
+	enumerator_t *e1, *e2, *e3, *e4, *e5, *e6;
+	char *name, *value, *id, *section;
 
 	gateway = this->manager->select_gateway(this->manager, 0);
 	str = gateway->request(gateway,	"<message type=\"request\" id=\"1\">"
@@ -62,13 +63,80 @@ static void ikesalist(private_status_controller_t *this,
 											"<ikesalist/>"
 										"</query>"
 									"</message>");
-
-	response->set_content_type(response, "text/xml");
-	template_t *t = template_create("templates/status/ikesalist.cs");
-	t->set(t, "xml", str);
-	t->render(t, response);
-	t->destroy(t);
+	if (str == NULL)
+	{
+		response->printf(response, "gateway did not respond");
+		return;
+	}
 	
+	doc = xml_create(str);
+	if (doc == NULL)
+	{
+		response->printf(response, "parsing XML failed");
+		return;
+	}
+	
+	template_t *t = template_create("templates/status/ikesalist.cs");
+
+	e1 = doc->children(doc);
+	while (e1->enumerate(e1, &node, &name, &value))
+	{
+		if (streq(name, "message"))
+		{
+			e2 = node->children(node);
+			while (e2->enumerate(e2, &node, &name, &value))
+			{
+				if (streq(name, "query"))
+				{
+					e3 = node->children(node);
+					while (e3->enumerate(e3, &node, &name, &value))
+					{
+						if (streq(name, "ikesalist"))
+						{
+							e4 = node->children(node);
+							while (e4->enumerate(e4, &node, &name, &value))
+							{
+								if (streq(name, "ikesa"))
+								{
+									e5 = node->children(node);
+									while (e5->enumerate(e5, &node, &name, &value))
+									{
+										if (streq(name, "id"))
+										{
+											id = value;	
+										}
+										else if(streq(name, "local") ||
+												streq(name, "remote"))
+										{
+											section = name;
+											e6 = node->children(node);
+											while (e6->enumerate(e6, &node, &name, &value))
+											{
+												t->setf(t, "ikesas.%s.%s.%s=%s", id, section, name, value);
+											}
+											e6->destroy(e6);
+										}
+										else
+										{
+											t->setf(t, "ikesas.%s.%s=%s", id, name, value);
+										}
+									}
+									e5->destroy(e5);
+								}
+							}
+							e4->destroy(e4);
+						}
+					}
+					e3->destroy(e3);
+				}
+			}
+			e2->destroy(e2);
+		}
+	}
+	e1->destroy(e1);
+
+	t->render(t, response);
+	t->destroy(t); 
 	free(str);
 }
 
@@ -128,7 +196,6 @@ controller_t *status_controller_create(context_t *context, void *param)
 	this->public.controller.get_handler = (controller_handler_t(*)(controller_t*,char*))get_handler;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
 	
-	this->count = 0;
 	this->manager = (manager_t*)context;
 	
 	return &this->public.controller;

@@ -26,22 +26,7 @@
 
 #include <stdlib.h>
 
-#include <utils/linked_list.h>
-
-typedef struct {
-	char *name;
-	char *value;
-} name_value_t;
-
-/**
- * destroy a name value pair
- */
-static void name_value_destroy(name_value_t *this)
-{
-	free(this->name);
-	free(this->value);
-	free(this);
-}
+#include <dict.h>
 
 typedef struct private_request_t private_request_t;
 
@@ -61,14 +46,14 @@ struct private_request_t {
 	FCGX_Request *req;
 	
 	/**
-	 * list of cookies (name_value_t)
+	 * list of cookies
 	 */
-	linked_list_t *cookies;
+	dict_t *cookies;
 	
 	/**
-	 * list of post data (name_value_t)
+	 * list of post data
 	 */
-	linked_list_t *posts;
+	dict_t *posts;
 };
 	
 /**
@@ -76,21 +61,7 @@ struct private_request_t {
  */
 static char* get_cookie(private_request_t *this, char *name)
 {
-	char *value = NULL;
-	name_value_t *cookie;
-	iterator_t *iterator;
-	
-	iterator = this->cookies->create_iterator(this->cookies, TRUE);
-	while (iterator->iterate(iterator, (void**)&cookie))
-	{
-		if (streq(cookie->name, name))
-		{
-			value = cookie->value;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	return value;
+	return this->cookies->get(this->cookies, name);
 }
 	
 /**
@@ -107,21 +78,7 @@ static char* get_path(private_request_t *this)
  */
 static char* get_post_data(private_request_t *this, char *name)
 {
-	char *value = NULL;
-	name_value_t *data;
-	iterator_t *iterator;
-	
-	iterator = this->posts->create_iterator(this->posts, TRUE);
-	while (iterator->iterate(iterator, (void**)&data))
-	{
-		if (streq(data->name, name))
-		{
-			value = data->value;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	return value;
+	return this->posts->get(this->posts, name);
 }
 
 /**
@@ -185,7 +142,6 @@ static char *unescape(char **pos, char delimiter)
 static void parse_post(private_request_t *this)
 {
 	char buf[4096], *pos, *name, *value;
-	name_value_t *data;
 	int len;
 
 	if (!streq(FCGX_GetParam("REQUEST_METHOD", this->req->envp), "POST") ||
@@ -211,10 +167,7 @@ static void parse_post(private_request_t *this)
 			value = unescape(&pos, '&');
 			if (value)
 			{
-				data = malloc_thing(name_value_t);
-				data->name = name;
-				data->value = value;
-				this->posts->insert_last(this->posts, data);
+				this->posts->set(this->posts, name, value);
 				continue;
 			}
 			else
@@ -232,7 +185,7 @@ static void parse_post(private_request_t *this)
 static void parse_cookies(private_request_t *this)
 {
 	char *str, *pos;
-	name_value_t *cookie;
+	char *name, *value;
 	
 	str = FCGX_GetParam("HTTP_COOKIE", this->req->envp);
 	while (str)
@@ -247,23 +200,22 @@ static void parse_cookies(private_request_t *this)
 		{
 			break;
 		}
-		cookie = malloc_thing(name_value_t);
-		cookie->name = strndup(str, pos - str);
-		cookie->value = NULL;
+		name = strndup(str, pos - str);
+		value = NULL;
 		str = pos + 1;
 		if (str)
 		{
 			pos = strchr(str, ';');
 			if (pos)
 			{
-				cookie->value = strndup(str, pos - str);
+				value = strndup(str, pos - str);
 			}
 			else
 			{
-				cookie->value = strdup(str);
+				value = strdup(str);
 			}
 		}
-		this->cookies->insert_last(this->cookies, cookie);
+		this->cookies->set(this->cookies, name, value);
 		if (pos == NULL)
 		{
 			break;
@@ -277,8 +229,8 @@ static void parse_cookies(private_request_t *this)
  */
 static void destroy(private_request_t *this)
 {
-	this->cookies->destroy_function(this->cookies, (void*)name_value_destroy);
-	this->posts->destroy_function(this->posts, (void*)name_value_destroy);
+	this->cookies->destroy(this->cookies);
+	this->posts->destroy(this->posts);
 	free(this);
 }
 
@@ -295,8 +247,8 @@ request_t *request_create(FCGX_Request *request)
 	this->public.destroy = (void(*)(request_t*))destroy;
 	
 	this->req = request;
-	this->cookies = linked_list_create();
-	this->posts = linked_list_create();
+	this->cookies = dict_create(dict_streq, free, free);
+	this->posts = dict_create(dict_streq, free, free);
 	
 	parse_cookies(this);
 	parse_post(this);

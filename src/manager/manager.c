@@ -123,9 +123,12 @@ static bool login(private_manager_t *this, char *username, char *password)
  */
 static void logout(private_manager_t *this)
 {
+	if (this->gateway)
+	{
+		this->gateway->destroy(this->gateway);
+		this->gateway = NULL;
+	}
 	this->user = 0;
-	this->gateway->destroy(this->gateway);
-	this->gateway = NULL;
 }
 
 /**

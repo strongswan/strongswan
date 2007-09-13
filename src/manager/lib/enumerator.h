@@ -35,10 +35,11 @@ struct enumerator_t {
 	/**
 	 * @brief Enumerate collection.
 	 *
-	 * @param ...		variable argument list of pointers, NULL terminated
+	 * @param item		first enumerated item
+	 * @param ...		additional items enumerated, depending in implementation
 	 * @return			TRUE if pointers returned
 	 */
-	bool (*enumerate)(enumerator_t *this, ...);
+	bool (*enumerate)(enumerator_t *this, void *item, ...);
 		
 	/**
      * @brief Destroy a enumerator instance.

@@ -255,6 +255,15 @@ AC_ARG_ENABLE(
 AM_CONDITIONAL(USE_UML, test x$uml = xtrue)
 
 AC_ARG_ENABLE(
+    [manager],
+    AS_HELP_STRING([--enable-manager],[build web management console (default is NO).]),
+    [if test x$enableval = xyes; then
+        manager=true
+    fi]
+)
+AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
+
+AC_ARG_ENABLE(
     [integrity-test],
     AS_HELP_STRING([--enable-integrity-test],[enable the integrity test of the crypto library (default is NO).]),
     [if test x$enableval = xyes; then
@@ -371,5 +380,6 @@ AC_OUTPUT(
 	src/openac/Makefile
 	src/scepclient/Makefile
 	src/dumm/Makefile
+	src/manager/Makefile
 	testing/Makefile
 )

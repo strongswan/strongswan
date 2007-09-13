@@ -189,6 +189,7 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 		{
 			write_bool(writer, "nat", ike_sa->has_condition(ike_sa, COND_NAT_HERE));
 		}
+		xmlTextWriterEndElement(writer);
 		/* </local> */
 		
 		/* <remote> */
@@ -205,6 +206,7 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 		{
 			write_bool(writer, "nat", ike_sa->has_condition(ike_sa, COND_NAT_THERE));
 		}
+		xmlTextWriterEndElement(writer);
 		/* </remote> */		
 		
 		/* <childsalist> */
@@ -286,8 +288,6 @@ static void request(xmlTextReaderPtr reader, char *id, int fd)
 	/*   </message> and close document */
 	xmlTextWriterEndDocument(writer);
 	xmlFreeTextWriter(writer);
-	/* write a newline to indicate end of xml */
-	write(fd, "\n", 1);
 }
 
 /**
@@ -312,6 +312,7 @@ static job_requeue_t process(int *fdp)
 		DBG2(DBG_CFG, "SMP XML connection closed");
 		return JOB_REQUEUE_NONE;
 	}
+	DBG1(DBG_CFG, "got XML request: %b", buffer, len);
 	
 	reader = xmlReaderForMemory(buffer, len, NULL, NULL, 0);
 	if (reader == NULL)
