@@ -542,6 +542,7 @@ static ike_sa_t* checkout_by_peer(private_ike_sa_manager_t *this,
 				 my_host, my_id, other_host, other_id);
 			entry->checked_out = TRUE;
 			ike_sa = entry->ike_sa;
+			break;
 		}
 	}
 	iterator->destroy(iterator);
