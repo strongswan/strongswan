@@ -16,7 +16,7 @@ lib_LTLIBRARIES = libappserv.la
 libappserv_la_SOURCES = \
 lib/context.h lib/dispatcher.c lib/request.h lib/response.h lib/session.h \
 lib/controller.h lib/dispatcher.h lib/request.c lib/response.c lib/session.c \
-lib/template.h lib/template.c lib/dict.h lib/dict.c lib/xml.h lib/xml.c
+lib/template.h lib/template.c lib/dict.h lib/dict.c lib/xml.h lib/xml.c lib/enumerator.h
 
 libappserv_la_LDFLAGS = -lstrongswan -lfcgi -lpthread -lneo_cs -lneo_utl ${xml_LIBS}
 
