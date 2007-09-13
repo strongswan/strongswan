@@ -34,8 +34,6 @@
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
 
-#define LARGEST_HASH_OID_SIZE sizeof(sha512_oid)
-
 /* ASN.1 definition of RSApublicKey */
 static const asn1Object_t pubkeyObjects[] = {
 	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
@@ -50,7 +48,7 @@ static const asn1Object_t pubkeyObjects[] = {
 
 /* ASN.1 definition of digestInfo */
 static const asn1Object_t digestInfoObjects[] = {
-	{ 0, "digestInfo",			ASN1_SEQUENCE,		ASN1_OBJ },  /*  0 */
+	{ 0, "digestInfo",			ASN1_SEQUENCE,		ASN1_OBJ  }, /*  0 */
 	{ 1,   "digestAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /*  1 */
 	{ 1,   "digest",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  2 */
 };
