@@ -291,6 +291,14 @@ static void request(xmlTextReaderPtr reader, char *id, int fd)
 }
 
 /**
+ * cleanup helper function for open file descriptors
+ */
+static void closefdp(int *fd)
+{
+	close(*fd);
+}
+
+/**
  * read from a opened connection and process it
  */
 static job_requeue_t process(int *fdp)
@@ -301,7 +309,7 @@ static job_requeue_t process(int *fdp)
 	xmlTextReaderPtr reader;
 	char *id = NULL, *type = NULL;
 	
-	pthread_cleanup_push((void*)close, (void*)fd);
+	pthread_cleanup_push((void*)closefdp, (void*)&fd);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	len = read(fd, buffer, sizeof(buffer));
 	pthread_setcancelstate(oldstate, NULL);
