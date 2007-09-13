@@ -22,9 +22,9 @@ libappserv_la_LDFLAGS = -lstrongswan -lfcgi -lpthread -lneo_cs -lneo_utl ${xml_L
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/manager/lib -I/usr/include/ClearSilver ${xml_CFLAGS}
 
-
 ipsec_DATA = sqlite.db
 
+# Don't forget to add templates to EXTRA_DIST !!! How to automate?
 ipsec_templatesdir = ${ipsecdir}/templates
 ipsec_templates_DATA = templates/header.cs templates/footer.cs
 
@@ -36,3 +36,7 @@ ipsec_templates_gateway_DATA = templates/gateway/list.cs
 
 ipsec_templates_statusdir = ${ipsec_templatesdir}/status
 ipsec_templates_status_DATA = templates/status/ikesalist.cs
+
+EXTRA_DIST = sqlite.db templates/header.cs templates/footer.cs \
+templates/auth/login.cs templates/auth/logout.cs \
+templates/gateway/list.cs templates/status/ikesalist.cs
