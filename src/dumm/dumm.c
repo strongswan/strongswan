@@ -21,6 +21,8 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <errno.h>
+#include <libxml/xmlreader.h>
+#include <libxml/xmlwriter.h>
 
 #include <debug.h>
 
@@ -28,8 +30,8 @@
 
 #define PERME (S_IRWXU | S_IRWXG)
 #define GUEST_DIR "guests"
-#define SCENARIO_DIR "scenarios"
-#define SCENARIO_DIFF_DIR "diff"
+#define TEMPLATE_DIR "templates"
+#define TEMPLATE_DIR_DIR "diff"
 
 /**
  * instances of dumm, used to deliver signals
@@ -45,10 +47,10 @@ struct private_dumm_t {
 	char *dir;
 	/** directory of guests */
 	char *guest_dir;
-	/** directory of scenarios */
-	char *scenario_dir;
-	/** directory of loaded scenario */
-	char *scenario;
+	/** directory of templates */
+	char *template_dir;
+	/** directory of loaded template */
+	char *template;
 	/** list of managed guests */
 	linked_list_t *guests;
 	/** list of managed bridges */
@@ -105,87 +107,82 @@ static iterator_t* create_bridge_iterator(private_dumm_t *this)
 }
 
 /**
- * disable the currently enabled scenario 
+ * disable the currently enabled template 
  */
-static void clear_scenario(private_dumm_t *this)
+static void clear_template(private_dumm_t *this)
 {
-	iterator_t *iterator;
+	iterator_t *iterator, *ifaces;
 	guest_t *guest;
+	iface_t *iface;
 
-	free(this->scenario);
-	this->scenario = NULL;
+	free(this->template);
+	this->template = NULL;
 
 	iterator = this->guests->create_iterator(this->guests, TRUE);
 	while (iterator->iterate(iterator, (void**)&guest))
 	{
-		guest->set_scenario(guest, NULL);
+		guest->load_template(guest, NULL);
+		ifaces = guest->create_iface_iterator(guest);
+		while (ifaces->iterate(ifaces, (void**)&iface))
+		{
+			ifaces->remove(ifaces);
+			iface->destroy(iface);
+		}
+		ifaces->destroy(ifaces);
 	}
 	iterator->destroy(iterator);
 }
 
 /**
- * Implementation of dumm_t.load_scenario.
+ * Implementation of dumm_t.load_template.
  */
-static bool load_scenario(private_dumm_t *this, char *name)
+static bool load_template(private_dumm_t *this, char *name)
 {
 	iterator_t *iterator;
 	guest_t *guest;
 	char dir[PATH_MAX];
 	size_t len;
 	
+	clear_template(this);
+	
 	if (name == NULL)
 	{
-		clear_scenario(this);
 		return TRUE;
 	}
 
-	free(this->scenario);
-	asprintf(&this->scenario, "%s/%s", this->scenario_dir, name);
-	mkdir(this->scenario_dir, PERME);
-	
-	len = snprintf(dir, sizeof(dir), "%s/%s", this->scenario, SCENARIO_DIFF_DIR);
+	free(this->template);
+	asprintf(&this->template, "%s/%s", this->template_dir, name);
+	len = snprintf(dir, sizeof(dir), "%s/%s", this->template, TEMPLATE_DIR_DIR);
 	if (len < 0 || len >= sizeof(dir))
 	{
-		clear_scenario(this);
 		return FALSE;
 	}
 	
-	if (access(this->scenario, F_OK) != 0)
-	{	/* does not exist, create scenario */
-		if (mkdir(this->scenario, PERME) != 0)
+	if (access(this->template, F_OK) != 0)
+	{	/* does not exist, create template */
+		if (mkdir(this->template, PERME) != 0)
 		{
-			DBG1("creating scenario directory '%s' failed: %m", this->scenario);
-			clear_scenario(this);
+			DBG1("creating template directory '%s' failed: %m", this->template);
 			return FALSE;
 		}
 		if (mkdir(dir, PERME) != 0)
 		{
-			DBG1("creating scenario overlay directory '%s' failed: %m", dir);
-			clear_scenario(this);
+			DBG1("creating template overlay directory '%s' failed: %m", dir);
 			return FALSE;
 		}
 	}
 	iterator = this->guests->create_iterator(this->guests, TRUE);
 	while (iterator->iterate(iterator, (void**)&guest))
 	{
-		if (!guest->set_scenario(guest, dir))
+		if (!guest->load_template(guest, dir))
 		{
 			iterator->destroy(iterator);
-			clear_scenario(this);
+			clear_template(this);
 			return FALSE;
 		}
 	}
 	iterator->destroy(iterator);
 	return TRUE;
-}
-
-/**
- * Implementation of dumm_t.save_scenario.
- */
-static bool save_scenario(private_dumm_t *this)
-{
-	DBG1("scenario loading unimplemented.");
-	return FALSE;
 }
 
 /**
@@ -303,8 +300,8 @@ static void destroy(private_dumm_t *this)
 	this->destroying = TRUE;
 	this->guests->destroy_offset(this->guests, offsetof(guest_t, destroy));
 	free(this->guest_dir);
-	free(this->scenario_dir);
-	free(this->scenario);
+	free(this->template_dir);
+	free(this->template);
 	free(this->dir);
 	remove_instance(this);
 	free(this);
@@ -357,8 +354,7 @@ dumm_t *dumm_create(char *dir)
 	this->public.create_guest_iterator = (iterator_t*(*)(dumm_t*))create_guest_iterator;
 	this->public.create_bridge = (bridge_t*(*)(dumm_t*, char *name))create_bridge;
 	this->public.create_bridge_iterator = (iterator_t*(*)(dumm_t*))create_bridge_iterator;
-	this->public.load_scenario = (bool(*)(dumm_t*, char *name))load_scenario;
-	this->public.save_scenario = (bool(*)(dumm_t*))save_scenario;
+	this->public.load_template = (bool(*)(dumm_t*, char *name))load_template;
 	this->public.destroy = (void(*)(dumm_t*))destroy;
 	
 	this->destroying = FALSE;
@@ -370,9 +366,9 @@ dumm_t *dumm_create(char *dir)
 	{
 		asprintf(&this->dir, "%s/%s", cwd, dir);
 	}
-	this->scenario = NULL;
+	this->template = NULL;
 	asprintf(&this->guest_dir, "%s/%s", this->dir, GUEST_DIR);
-	asprintf(&this->scenario_dir, "%s/%s", this->dir, SCENARIO_DIR);
+	asprintf(&this->template_dir, "%s/%s", this->dir, TEMPLATE_DIR);
 	this->guests = linked_list_create();
 	this->bridges = linked_list_create();
 	
@@ -381,6 +377,12 @@ dumm_t *dumm_create(char *dir)
 	if (mkdir(this->guest_dir, PERME) < 0 && errno != EEXIST)
 	{
 		DBG1("creating guest directory '%s' failed: %m", this->guest_dir);
+		destroy(this);
+		return NULL;
+	}
+	if (mkdir(this->template_dir, PERME) < 0 && errno != EEXIST)
+	{
+		DBG1("creating template directory '%s' failed: %m", this->template_dir);
 		destroy(this);
 		return NULL;
 	}

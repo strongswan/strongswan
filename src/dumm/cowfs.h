@@ -27,12 +27,12 @@ typedef struct cowfs_t cowfs_t;
 struct cowfs_t {
 	
 	/**
-	 * @brief Set the scenario copy on write overlay.
+	 * @brief Set an additional copy on write overlay.
 	 *
 	 * @param path		path of the overlay
 	 * @return 			FALSE if failed
 	 */
-	bool (*set_scenario)(cowfs_t *this, char *path);
+	bool (*set_overlay)(cowfs_t *this, char *path);
 	
 	/**
 	 * @brief Stop, umount and destroy a cowfs FUSE filesystem.

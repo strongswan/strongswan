@@ -200,6 +200,31 @@ static char* get_console_pts(private_mconsole_t *this, int con)
 }
 
 /**
+ * Poll until guest is ready
+ */
+static bool wait_bootup(private_mconsole_t *this)
+{
+	char *cmd, buf[128];
+	int len, res;
+	
+	cmd = "config con0";
+	while (TRUE)
+	{
+		len = sizeof(buf);
+		res = request(this, cmd, buf, &len);
+		if (res < 0)
+		{
+			return FALSE;
+		}
+		if (res == 0)
+		{
+			return TRUE;
+		}
+		usleep(50000);
+	}
+}
+
+/**
  * Implementation of mconsole_t.destroy.
  */
 static void destroy(private_mconsole_t *this)
@@ -312,6 +337,12 @@ mconsole_t *mconsole_create(char *notify)
 		return NULL;
 	}
 	unlink(notify);
+	
+	if (!wait_bootup(this))
+	{
+		destroy(this);
+		return NULL;
+	}
 	
 	return &this->public;
 }

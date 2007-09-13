@@ -69,19 +69,6 @@ struct private_guest_t {
 	cowfs_t *cowfs;
 	/** mconsole to control running UML */
 	mconsole_t *mconsole;
-	/** pty consoles */
-	struct {
-		/** pty master fd */
-		int master;
-		/** pty slave fd */
-		int slave;
-		/** name of the pty */
-		char name[16];
-		/** currently in use */
-		bool occupied;
-		/** is valid */
-		bool valid;
-	} pty[PTYS];
 	/** list of interfaces attached to the guest */
 	linked_list_t *ifaces;
 };
@@ -273,16 +260,16 @@ static bool start(private_guest_t *this)
 }	
 	
 /**
- * Implementation of guest_t.set_scenario.
+ * Implementation of guest_t.load_template.
  */
-static bool set_scenario(private_guest_t *this, char *path)
+static bool load_template(private_guest_t *this, char *path)
 {
 	char dir[PATH_MAX];
 	size_t len;
 	
 	if (path == NULL)
 	{
-		return this->cowfs->set_scenario(this->cowfs, NULL);	
+		return this->cowfs->set_overlay(this->cowfs, NULL);	
 	}
 	
 	len = snprintf(dir, sizeof(dir), "%s/%s", path, this->name);
@@ -294,11 +281,11 @@ static bool set_scenario(private_guest_t *this, char *path)
 	{
 		if (mkdir(dir, PERME) != 0)
 		{
-			DBG1("creating scenario overlay for guest '%s' failed: %m", this->name);
+			DBG1("creating overlay for guest '%s' failed: %m", this->name);
 			return FALSE;
 		}
 	}
-	return this->cowfs->set_scenario(this->cowfs, dir);
+	return this->cowfs->set_overlay(this->cowfs, dir);
 }
 
 /**
@@ -306,22 +293,12 @@ static bool set_scenario(private_guest_t *this, char *path)
  */
 static void sigchild(private_guest_t *this)
 {
-	int i;
-
 	if (this->state != GUEST_STOPPING)
 	{	/* collect zombie if uml crashed */
 		waitpid(this->pid, NULL, WNOHANG);
 	}
 	DESTROY_IF(this->mconsole);
 	this->mconsole = NULL;
-	for (i = 0; i < PTYS; i++)
-	{
-		if (this->pty[i].valid)
-		{
-			close(this->pty[i].master);
-			close(this->pty[i].slave);
-		}
-	}
 	this->state = GUEST_STOPPED;
 }
 
@@ -457,7 +434,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->public.start = (void*)start;
 	this->public.stop = (void*)stop;
 	this->public.get_console = (char*(*)(guest_t*,int))get_console;
-	this->public.set_scenario = (bool(*)(guest_t*, char *path))set_scenario;
+	this->public.load_template = (bool(*)(guest_t*, char *path))load_template;
 	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
 		

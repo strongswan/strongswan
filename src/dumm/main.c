@@ -21,6 +21,8 @@
 #include <library.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <dlfcn.h>
+#include <dirent.h>
 
 #include "dumm.h"
 
@@ -469,14 +471,70 @@ static void bridge_list_menu()
 	}
 }
 
-static void scenario_menu()
+static void template_menu()
 {
 	char *name;
 	
-	name = get_line("scenario name (or 'none'): ");
+	name = get_line("template name (or 'none'): ");
 	
-	dumm->load_scenario(dumm, streq(name, "none") ? NULL : name);
+	dumm->load_template(dumm, streq(name, "none") ? NULL : name);
 	
+	free(name);
+}
+
+typedef bool (*uml_test_t)(dumm_t *dumm);
+
+static void test_menu()
+{
+	char *name;
+	void *handle;
+	struct dirent *ent;
+	DIR *dir;
+	uml_test_t test;
+	
+	name = get_line("test name: ");
+	
+	dir = opendir("tests");
+	if (dir)
+	{
+		while ((ent = readdir(dir)))
+		{
+			char buf[PATH_MAX];
+			size_t len;
+			
+			len = strlen(ent->d_name);
+			if (strlen(ent->d_name) < 4 || !streq(ent->d_name + len - 3, ".so"))
+			{
+				continue;
+			}
+			
+			snprintf(buf, sizeof(buf), "%s/%s", "tests", ent->d_name);
+			handle = dlopen(buf, RTLD_LAZY);
+			if (!handle)
+			{
+				printf("failed to open test %s\n", ent->d_name);
+				continue;
+			}
+			test = dlsym(handle, "test");
+			if (test && dumm->load_template(dumm, ent->d_name))
+			{
+				printf("running test %s: ", ent->d_name);
+				if (test(dumm))
+				{
+					printf("success\n");
+				}
+				else
+				{
+					printf("failed\n");
+				}
+			}
+			else
+			{
+				printf("failed to open test %s\n", ent->d_name);
+			}
+			dlclose(handle);
+		}
+	}
 	free(name);
 }
 
@@ -552,16 +610,21 @@ int main(int argc, char *argv[])
 		{
 			bridge_list_menu();
 		}
-		else if (streq(line, "scenario"))
+		else if (streq(line, "template"))
 		{
-			scenario_menu();
+			template_menu();
+		}
+		else if (streq(line, "test"))
+		{
+			test_menu();
 		}
 		else
 		{
-			printf("quit|guest|bridge|scenario\n");
+			printf("quit|guest|bridge|template|test\n");
 		}
 		free(line);
 	}
+	dumm->load_template(dumm, NULL);
 	dumm->destroy(dumm);
 	clear_history();
 	return 0;

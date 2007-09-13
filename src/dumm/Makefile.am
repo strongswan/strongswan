@@ -4,9 +4,9 @@ ipsec_PROGRAMS = dumm
 libdumm_la_SOURCES = dumm.c dumm.h guest.c guest.h iface.c iface.h bridge.c bridge.h mconsole.c mconsole.h cowfs.h cowfs.c
 dumm_SOURCES = main.c
 
-libdumm_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lbridge -lfuse -lutil
+libdumm_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lbridge -lfuse -lutil ${xml_LIBS}
 dumm_LDADD = -ldumm -lreadline
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
+INCLUDES = -I$(top_srcdir)/src/libstrongswan ${xml_CFLAGS}
 
 AM_CFLAGS = -D_FILE_OFFSET_BITS=64

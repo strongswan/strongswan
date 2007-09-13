@@ -55,14 +55,14 @@ struct private_cowfs_t {
 	char *master;
 	/** host filesystem path */
 	char *host;
-	/** scenario filesystem path */
-	char *scen;
+	/** overlay filesystem path */
+	char *over;
 	/** fd of read only master filesystem */
 	int master_fd;
 	/** copy on write overlay to master */
 	int host_fd;
-	/** optional scenario COW overlay */
-	int scen_fd;
+	/** optional COW overlay */
+	int over_fd;
 	/** thread processing FUSE */
 	pthread_t thread;
 };
@@ -97,9 +97,9 @@ static int get_rd(const char *path)
 {
 	private_cowfs_t *this = get_this();
 
-	if (this->scen_fd > 0 && faccessat(this->scen_fd, path, F_OK, 0) == 0)
+	if (this->over_fd > 0 && faccessat(this->over_fd, path, F_OK, 0) == 0)
 	{
-		return this->scen_fd;
+		return this->over_fd;
 	}
 	if (faccessat(this->host_fd, path, F_OK, 0) == 0)
 	{
@@ -114,9 +114,9 @@ static int get_rd(const char *path)
 static int get_wr(const char *path)
 {
 	private_cowfs_t *this = get_this();
-	if (this->scen_fd > 0)
+	if (this->over_fd > 0)
 	{
-		return this->scen_fd;
+		return this->over_fd;
 	}
 	return this->host_fd;
 }
@@ -318,7 +318,7 @@ static int cowfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	
 	d1 = get_dir(this->master, path);
 	d2 = get_dir(this->host, path);
-	d3 = get_dir(this->scen, path);
+	d3 = get_dir(this->over, path);
 	
 	if (d1)
 	{
@@ -741,9 +741,9 @@ static int cowfs_statfs(const char *path, struct statvfs *stbuf)
 	int fd;
 	
 	fd = this->host_fd;
-	if (this->scen_fd > 0)
+	if (this->over_fd > 0)
 	{
-		fd = this->scen_fd;
+		fd = this->over_fd;
 	}
 
 	if (fstatvfs(fd, stbuf) < 0)
@@ -793,29 +793,29 @@ static struct fuse_operations cowfs_operations = {
 };
 
 /**
- * Implementation of cowfs_t.set_scenario.
+ * Implementation of cowfs_t.set_overlay.
  */
-static bool set_scenario(private_cowfs_t *this, char *path)
+static bool set_overlay(private_cowfs_t *this, char *path)
 {
-	if (this->scen)
+	if (this->over)
 	{
-		free(this->scen);
-		this->scen = NULL;
+		free(this->over);
+		this->over = NULL;
 	}
-	if (this->scen_fd > 0)
+	if (this->over_fd > 0)
 	{
-		close(this->scen_fd);
-		this->scen_fd = -1;
+		close(this->over_fd);
+		this->over_fd = -1;
 	}
 	if (path)
 	{
-		this->scen_fd = open(path, O_RDONLY | O_DIRECTORY);
-		if (this->scen_fd < 0)
+		this->over_fd = open(path, O_RDONLY | O_DIRECTORY);
+		if (this->over_fd < 0)
 		{
-			DBG1("failed to open scenario overlay directory '%s': %m", path);
+			DBG1("failed to open overlay directory '%s': %m", path);
 			return FALSE;
 		}
-		this->scen = strdup(path);
+		this->over = strdup(path);
 	}
 	return TRUE;
 }
@@ -832,12 +832,12 @@ static void destroy(private_cowfs_t *this)
 	free(this->mount);
 	free(this->master);
 	free(this->host);
-	free(this->scen);
+	free(this->over);
 	close(this->master_fd);
 	close(this->host_fd);
-	if (this->scen_fd > 0)
+	if (this->over_fd > 0)
 	{
-		close(this->scen_fd);
+		close(this->over_fd);
 	}
 	free(this);
 }
@@ -850,7 +850,7 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 	struct fuse_args args = {0, NULL, 0};
 	private_cowfs_t *this = malloc_thing(private_cowfs_t);
 	
-	this->public.set_scenario = (bool(*)(cowfs_t*, char *path))set_scenario;
+	this->public.set_overlay = (bool(*)(cowfs_t*, char *path))set_overlay;
 	this->public.destroy = (void(*)(cowfs_t*))destroy;
 	
     this->master_fd = open(master, O_RDONLY | O_DIRECTORY);
@@ -866,7 +866,7 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
     	close(this->master_fd);
     	free(this);
     }
-	this->scen_fd = -1;
+	this->over_fd = -1;
 	
     this->chan = fuse_mount(mount, &args);
     if (this->chan == NULL)
@@ -893,7 +893,7 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
     this->mount = strdup(mount);
     this->master = strdup(master);
     this->host = strdup(host);
-    this->scen = NULL;
+    this->over = NULL;
 	
 	if (pthread_create(&this->thread, NULL, (void*)fuse_loop, this->fuse) != 0)
 	{

@@ -89,10 +89,10 @@ struct guest_t {
 	/**
 	 * @brief Get a console pts device.
 	 *
-	 * Every guest has 6 consoles, numbered from 1 to 6. These are associated
+	 * Every guest has 5 consoles, numbered from 1 to 5. These are associated
 	 * to a unique pts device on the host. 
 	 *
-	 * @param console	console number to get (1-6)
+	 * @param console	console number to get (1-5)
 	 * @return			pts device file name, NULL if failed
 	 */
 	char* (*get_console) (guest_t *this, int console);
@@ -113,12 +113,12 @@ struct guest_t {
 	iterator_t* (*create_iface_iterator)(guest_t *this);
 	
 	/**
-	 * @brief Set the scenario COWFS overlay to use.
+	 * @brief Set the template COWFS overlay to use.
 	 *
-	 * @param parent	parent directory where scenario diff should point to
+	 * @param parent	parent directory where template diff should point to
 	 * @return			FALSE if failed
 	 */
-	bool (*set_scenario)(guest_t *this, char *parent);
+	bool (*load_template)(guest_t *this, char *parent);
 
 	/**
 	 * @brief Called whenever a SIGCHILD for the guests PID is received.
