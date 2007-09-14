@@ -38,8 +38,17 @@ ipsec_templates_statusdir = ${ipsec_templatesdir}/status
 ipsec_templates_status_DATA = templates/status/ikesalist.cs
 
 ipsec_templates_staticdir = ${ipsec_templatesdir}/static
-ipsec_templates_static_DATA = templates/static/style.css templates/static/script.js
+ipsec_templates_static_DATA = templates/static/style.css templates/static/script.js \
+templates/static/pipe.png templates/static/pipe-bad.png templates/static/jquery.js \
+templates/static/gateway-left.png templates/static/client-left.png templates/static/strongswan.png \
+templates/static/router.png templates/static/pipe-good.png templates/static/nat.png \
+templates/static/gateway-right.png templates/static/client-right.png
 
 EXTRA_DIST = sqlite.db templates/header.cs templates/footer.cs \
 templates/auth/login.cs templates/auth/logout.cs \
-templates/gateway/list.cs templates/status/ikesalist.cs
+templates/gateway/list.cs templates/status/ikesalist.cs \
+templates/static/style.css templates/static/script.js \
+templates/static/pipe.png templates/static/pipe-bad.png templates/static/jquery.js \
+templates/static/gateway-left.png templates/static/client-left.png templates/static/strongswan.png \
+templates/static/router.png templates/static/pipe-good.png templates/static/nat.png \
+templates/static/gateway-right.png templates/static/client-right.png
