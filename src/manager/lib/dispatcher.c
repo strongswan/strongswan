@@ -146,6 +146,7 @@ static session_entry_t *session_entry_create(private_dispatcher_t *this)
 	entry->waiting = 1;
 	pthread_cond_init(&entry->cond, NULL);
 	entry->session = load_session(this);
+	entry->used = time(NULL);
 	
 	return entry;
 }
@@ -208,16 +209,19 @@ static void dispatch(private_dispatcher_t *this)
 			iterator = this->sessions->create_iterator_locked(this->sessions, &this->mutex);
 			while (iterator->iterate(iterator, (void**)&current))
 			{
-				if (sid && streq(current->session->get_sid(current->session), sid))
-				{
-					found = current;
-					found->waiting++;
-				}
-				else if (current->waiting == 0 &&
-						 current->used + this->timeout > now)
+				/* check all sessions for timeout */
+				if (current->waiting == 0 &&
+					current->used < now - this->timeout)
 				{
 					iterator->remove(iterator);
 					session_entry_destroy(current);
+					continue;
+				}
+				if (!found && sid &&
+					streq(current->session->get_sid(current->session), sid))
+				{
+					found = current;
+					found->waiting++;
 				}
 			}
 			iterator->destroy(iterator);
@@ -319,7 +323,8 @@ static void destroy(private_dispatcher_t *this)
 /*
  * see header file
  */
-dispatcher_t *dispatcher_create(context_constructor_t constructor, void *param)
+dispatcher_t *dispatcher_create(int timeout, context_constructor_t constructor,
+								void *param)
 {
 	private_dispatcher_t *this = malloc_thing(private_dispatcher_t);
 
@@ -334,7 +339,7 @@ dispatcher_t *dispatcher_create(context_constructor_t constructor, void *param)
 	pthread_mutex_init(&this->mutex, NULL);
 	this->param = param;
     this->fd = 0;
-    this->timeout = 180;
+    this->timeout = timeout;
 	
     FCGX_Init();
     

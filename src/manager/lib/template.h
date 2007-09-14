@@ -55,6 +55,10 @@ struct template_t {
 	/**
 	 * @brief Render a template to a response object.
 	 *
+	 * The render() function additionally sets a clearsilver variable "base"
+	 * which points to the root of the web application and allows to point to
+	 * other targets without to worry about path location.
+	 *
 	 * @param response	response to render to
 	 * @return			rendered template string
 	 */

@@ -91,7 +91,6 @@ static void process(private_session_t *this,
 	char *pos, *path, *controller, *action;
 	iterator_t *iterator;
 	bool handled = FALSE;
-	controller_handler_t handler;
 	controller_t *current;
 	
 	if (this->sid == NULL)
@@ -126,12 +125,8 @@ static void process(private_session_t *this,
 	{
 		if (streq(current->get_name(current), controller))
 		{	
-			handler = current->get_handler(current, action);
-			if (handler)
-			{
-				handler(current, request, response);
-				handled = TRUE;
-			}
+			current->handle(current, request, response, action, NULL, NULL, NULL, NULL);
+			handled = TRUE;
 			break;
 		}
 	}
@@ -140,8 +135,15 @@ static void process(private_session_t *this,
 	free(action);
 	if (!handled)
 	{
-		response->add_header(response, "Status", "400 Not Found");
-		response->printf(response, "<html><body><h1>Not Found</h1></body></html>\n");
+		if (this->controllers->get_first(this->controllers,
+										 (void**)&current) == SUCCESS)
+		{
+			response->redirect(response, current->get_name(current));
+		}
+		else
+		{
+			response->printf(response, "No controllers loaded!\n");
+		}
 	}
 }
 

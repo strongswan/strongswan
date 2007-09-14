@@ -78,6 +78,13 @@ struct response_t {
 	 * @param location		location to redirect to
 	 */
 	void (*redirect)(response_t *this, char *location);
+	
+	/**
+	 * @brief Get the base path of the application.
+	 *
+	 * @return			base path
+	 */
+	char* (*get_base)(response_t *this);
 		
 	/**
 	 * @brief Destroy a response_t.

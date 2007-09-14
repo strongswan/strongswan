@@ -68,7 +68,7 @@ struct session_t {
 /**
  * @brief Create a session.
  *
- * @param context			user defined session context instance
+ * @param context				user defined session context instance
  */
 session_t *session_create(context_t *context);
 

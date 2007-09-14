@@ -1,4 +1,5 @@
 <?cs include:"templates/header.cs" ?>
+<div class="dialog">
 <form method="post" action="<?cs var:action ?>">
   <p>
     <select name="gateway" size="1">
@@ -10,4 +11,5 @@
     <input type="submit" value="Select"/>
   <p>
 </form>
+</div>
 <?cs include:"templates/footer.cs" ?>

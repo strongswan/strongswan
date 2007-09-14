@@ -40,6 +40,9 @@ struct dispatcher_t {
 	/**
 	 * @brief Register a controller to the dispatcher.
 	 *
+	 * The first controller added serves as default controller. Client's
+	 * get redirected to it if no other controller matches.
+	 *
 	 * @param constructor	constructor function to the conntroller
 	 * @param param			param to pass to constructor
 	 */
@@ -70,9 +73,11 @@ struct dispatcher_t {
  * The context constructor is invoked to create a session context for
  * each session.
  *
+ * @param timeout		session timeout
  * @param constructor	construction function for session context
  * @param param			parameter to supply to context constructor
  */
-dispatcher_t *dispatcher_create(context_constructor_t constructor, void *param);
+dispatcher_t *dispatcher_create(int timeout,
+								context_constructor_t constructor, void *param);
 
 #endif /* DISPATCHER_H_ */

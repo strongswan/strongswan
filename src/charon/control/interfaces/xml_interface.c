@@ -146,6 +146,41 @@ static void write_address(xmlTextWriterPtr writer, char *element, host_t *host)
 }
 
 /**
+ * write a list of traffic_selector_t
+ */
+static void write_ts(xmlTextWriterPtr writer, linked_list_t *list)
+{
+	iterator_t *iterator;
+	traffic_selector_t *ts;
+	
+	iterator = list->create_iterator(list, TRUE);
+	while (iterator->iterate(iterator, (void**)&ts))
+	{
+		xmlTextWriterStartElement(writer, "net");
+		xmlTextWriterWriteAttribute(writer, "type",
+						ts->get_type(ts) == TS_IPV4_ADDR_RANGE ? "ipv4" : "ipv6");
+		xmlTextWriterWriteFormatString(writer, "%R", ts);
+		xmlTextWriterEndElement(writer);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
+ * write a child_sa_t 
+ */
+static void write_child(xmlTextWriterPtr writer, child_sa_t *child)
+{
+	xmlTextWriterStartElement(writer, "childsa");
+	xmlTextWriterStartElement(writer, "local");
+	write_ts(writer, child->get_traffic_selectors(child, TRUE));
+	xmlTextWriterEndElement(writer);
+	xmlTextWriterStartElement(writer, "remote");
+	write_ts(writer, child->get_traffic_selectors(child, FALSE));
+	xmlTextWriterEndElement(writer);
+	xmlTextWriterEndElement(writer);
+}
+
+/**
  * process a ikesalist query request message
  */
 static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
@@ -214,7 +249,7 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 		children = ike_sa->create_child_sa_iterator(ike_sa);
 		while (children->iterate(children, (void**)&child_sa))
 		{
-			/* TODO: Children */
+			write_child(writer, child_sa);
 		}
 		children->destroy(children);
 		/* </childsalist> */

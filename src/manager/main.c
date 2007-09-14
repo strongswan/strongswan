@@ -25,12 +25,13 @@
 
 #include "manager.h"
 #include "database.h"
-#include "controller/static_controller.h"
 #include "controller/auth_controller.h"
 #include "controller/status_controller.h"
 #include "controller/gateway_controller.h"
 
-#define DBFILE "/usr/local/libexec/ipsec/sqlite.db"
+#define DBFILE IPSECDIR "/sqlite.db"
+#define SESSION_TIMEOUT 180
+#define THREADS 10
 
 int main (int arc, char *argv[])
 {
@@ -44,14 +45,13 @@ int main (int arc, char *argv[])
 		return 1;
 	}
 	
-	dispatcher = dispatcher_create((context_constructor_t)manager_create, database);
-	
-	dispatcher->add_controller(dispatcher, static_controller_create, NULL);
-	dispatcher->add_controller(dispatcher, auth_controller_create, NULL);
+	dispatcher = dispatcher_create(SESSION_TIMEOUT,
+							(context_constructor_t)manager_create, database);
 	dispatcher->add_controller(dispatcher, status_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, gateway_controller_create, NULL);
+	dispatcher->add_controller(dispatcher, auth_controller_create, NULL);
 	
-	dispatcher->run(dispatcher, 10);
+	dispatcher->run(dispatcher, THREADS);
 	
 	dispatcher->waitsignal(dispatcher);
 	
@@ -60,3 +60,4 @@ int main (int arc, char *argv[])
 
     return 0;
 }
+

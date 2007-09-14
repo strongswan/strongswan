@@ -51,6 +51,7 @@ static void login(private_auth_controller_t *this,
 {
 	template_t *t = template_create("templates/auth/login.cs");
 	t->set(t, "action", "check");
+	t->set(t, "title", "Login");
 	t->render(t, response);
 	t->destroy(t);
 }
@@ -65,7 +66,7 @@ static void check(private_auth_controller_t *this,
 	if (username && password &&
 		this->manager->login(this->manager, username, password))
 	{
-		response->redirect(response, "status/test");
+		response->redirect(response, "status/ikesalist");
 	}
 	else
 	{
@@ -89,14 +90,27 @@ static char* get_name(private_auth_controller_t *this)
 }
 
 /**
- * Implementation of controller_t.get_handler
+ * Implementation of controller_t.handle
  */
-static controller_handler_t get_handler(private_auth_controller_t *this, char *name)
+static void handle(private_auth_controller_t *this,
+				   request_t *request, response_t *response, char *action)
 {
-	if (streq(name, "login")) return (controller_handler_t)login;
-	if (streq(name, "check")) return (controller_handler_t)check;
-	if (streq(name, "logout")) return (controller_handler_t)logout;
-	return NULL;
+	if (action)
+	{
+		if (streq(action, "login"))
+		{
+			return login(this, request, response);
+		}
+		else if (streq(action, "check")) 
+		{
+			return check(this, request, response);
+		}
+		else if (streq(action, "logout")) 
+		{
+			return logout(this, request, response);
+		}
+	}
+	response->redirect(response, "auth/login");
 }
 
 /**
@@ -115,7 +129,7 @@ controller_t *auth_controller_create(context_t *context, void *param)
 	private_auth_controller_t *this = malloc_thing(private_auth_controller_t);
 
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
-	this->public.controller.get_handler = (controller_handler_t(*)(controller_t*,char*))get_handler;
+	this->public.controller.handle = (void(*)(controller_t*,request_t*,response_t*,char*,char*,char*,char*,char*))handle;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
 	
 	this->manager = (manager_t*)context;

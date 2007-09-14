@@ -66,6 +66,8 @@ static void render(private_template_t *this, response_t *response)
 	NEOERR* err;
 	CSPARSE *parse;
 	
+	hdf_set_value(this->hdf, "base", response->get_base(response));
+	
 	err = cs_init(&parse, this->hdf);
 	if (!err)
 	{

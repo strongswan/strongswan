@@ -53,9 +53,9 @@ static void ikesalist(private_status_controller_t *this,
 {
 	char *str;
 	gateway_t *gateway;
-	xml_t *doc, *node;
-	enumerator_t *e1, *e2, *e3, *e4, *e5, *e6;
-	char *name, *value, *id, *section;
+	xml_t *node;
+	enumerator_t *e1, *e2, *e3, *e4, *e5, *e6, *e7, *e8;
+	char *name, *value, *id = "", *section;
 
 	gateway = this->manager->select_gateway(this->manager, 0);
 	str = gateway->request(gateway,	"<message type=\"request\" id=\"1\">"
@@ -69,8 +69,8 @@ static void ikesalist(private_status_controller_t *this,
 		return;
 	}
 	
-	doc = xml_create(str);
-	if (doc == NULL)
+	node = xml_create(str);
+	if (node == NULL)
 	{
 		response->printf(response, "parsing XML failed");
 		return;
@@ -78,7 +78,7 @@ static void ikesalist(private_status_controller_t *this,
 	
 	template_t *t = template_create("templates/status/ikesalist.cs");
 
-	e1 = doc->children(doc);
+	e1 = node->children(node);
 	while (e1->enumerate(e1, &node, &name, &value))
 	{
 		if (streq(name, "message"))
@@ -116,6 +116,33 @@ static void ikesalist(private_status_controller_t *this,
 											}
 											e6->destroy(e6);
 										}
+										else if (streq(name, "childsalist"))
+										{
+											e6 = node->children(node);
+											while (e6->enumerate(e6, &node, &name, &value))
+											{
+												if (streq(name, "childsa"))
+												{
+													e7 = node->children(node);
+													while (e7->enumerate(e7, &node, &name, &value))
+													{
+														if (streq(name, "local") ||
+															streq(name, "remote"))
+														{
+															section = name;
+															e8 = node->children(node);
+															while (e8->enumerate(e8, &node, &name, &value))
+															{
+																t->setf(t, "ikesas.%s.childsas.%s.%s=%s", id, section, name, value);
+															}
+															e8->destroy(e8);
+														}
+													}
+													e7->destroy(e7);
+												}
+											}
+											e6->destroy(e6);
+										}
 										else
 										{
 											t->setf(t, "ikesas.%s.%s=%s", id, name, value);
@@ -135,27 +162,10 @@ static void ikesalist(private_status_controller_t *this,
 	}
 	e1->destroy(e1);
 
+	t->set(t, "title", "IKE SA overview");
 	t->render(t, response);
 	t->destroy(t); 
 	free(str);
-}
-
-/**
- * redirect to authentication login
- */
-static void login(private_status_controller_t *this,
-				  request_t *request, response_t *response)
-{
-	response->redirect(response, "auth/login");
-}
-
-/**
- * redirect to gateway selection
- */
-static void selection(private_status_controller_t *this,
-				  	  request_t *request, response_t *response)
-{
-	response->redirect(response, "gateway/list");
 }
 
 /**
@@ -167,14 +177,27 @@ static char* get_name(private_status_controller_t *this)
 }
 
 /**
- * Implementation of controller_t.get_handler
+ * Implementation of controller_t.handle
  */
-static controller_handler_t get_handler(private_status_controller_t *this, char *name)
+static void handle(private_status_controller_t *this,
+				   request_t *request, response_t *response, char *action)
 {
-	if (!this->manager->logged_in(this->manager)) return (controller_handler_t)login;
-	if (this->manager->select_gateway(this->manager, 0) == NULL) return (controller_handler_t)selection;
-	if (streq(name, "ikesalist")) return (controller_handler_t)ikesalist;
-	return NULL;
+	if (!this->manager->logged_in(this->manager))
+	{
+		return response->redirect(response, "auth/login");
+	}
+	if (this->manager->select_gateway(this->manager, 0) == NULL)
+	{
+		return response->redirect(response, "gateway/list");
+	}
+	if (action)
+	{
+		if (streq(action, "ikesalist"))
+		{
+			return ikesalist(this, request, response);
+		}
+	}
+	return response->redirect(response, "status/ikesalist");
 }
 
 /**
@@ -193,7 +216,7 @@ controller_t *status_controller_create(context_t *context, void *param)
 	private_status_controller_t *this = malloc_thing(private_status_controller_t);
 
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
-	this->public.controller.get_handler = (controller_handler_t(*)(controller_t*,char*))get_handler;
+	this->public.controller.handle = (void(*)(controller_t*,request_t*,response_t*,char*,char*,char*,char*,char*))handle;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
 	
 	this->manager = (manager_t*)context;

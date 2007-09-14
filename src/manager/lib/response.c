@@ -186,6 +186,15 @@ static void redirect(private_response_t *this, char *location)
 				 *location == '/' ? "" : "/", location);
 }
 
+
+/**
+ * Implementation of response_t.get_base.
+ */
+static char* get_base(private_response_t *this)
+{
+	return FCGX_GetParam("SCRIPT_NAME", this->req->envp);
+}
+
 /**
  * Implementation of response_t.destroy
  */
@@ -210,6 +219,7 @@ response_t *response_create(FCGX_Request *request)
 	this->public.set_content_type = (void(*)(response_t*, char *type))set_content_type;
 	this->public.add_cookie = (void(*)(response_t*, char *name, char *value))add_cookie;
 	this->public.redirect = (void(*)(response_t*, char *location))redirect;
+	this->public.get_base = (char*(*)(response_t*))get_base;
 	this->public.destroy = (void(*)(response_t*))destroy;
 	
 	this->req = request;

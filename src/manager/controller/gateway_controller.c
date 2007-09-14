@@ -72,6 +72,7 @@ static void list(private_gateway_controller_t *this,
 	}
 	enumerator->destroy(enumerator);
 	t->set(t, "action", "select");
+	t->set(t, "title", "Choose gateway");
 	t->render(t, response);
 	t->destroy(t);
 }
@@ -90,16 +91,7 @@ static void _select(private_gateway_controller_t *this,
 			return;
 		}
 	}
-	response->printf(response, "selecting dings failed: %s", id);
-}
-
-/**
- * redirect to authentication login
- */
-static void login(private_gateway_controller_t *this,
-				  request_t *request, response_t *response)
-{
-	response->redirect(response, "auth/login");
+	response->printf(response, "selecting gateway failed: %s", id);
 }
 
 /**
@@ -111,15 +103,29 @@ static char* get_name(private_gateway_controller_t *this)
 }
 
 /**
- * Implementation of controller_t.get_handler
+ * Implementation of controller_t.handle
  */
-static controller_handler_t get_handler(private_gateway_controller_t *this, char *name)
+static void handle(private_gateway_controller_t *this,
+				   request_t *request, response_t *response, char *action)
 {
-	if (!this->manager->logged_in(this->manager)) return (controller_handler_t)login;
-	if (streq(name, "list")) return (controller_handler_t)list;
-	if (streq(name, "select")) return (controller_handler_t)_select;
-	return NULL;
+	if (!this->manager->logged_in(this->manager))
+	{
+		return response->redirect(response, "auth/login");
+	}
+	if (action)
+	{
+		if (streq(action, "list"))
+		{
+			return list(this, request, response);
+		}
+		else if (streq(action, "select")) 
+		{
+			return _select(this, request, response);
+		}
+	}
+	response->redirect(response, "gateway/list");
 }
+
 
 /**
  * Implementation of controller_t.destroy
@@ -137,7 +143,7 @@ controller_t *gateway_controller_create(context_t *context, void *param)
 	private_gateway_controller_t *this = malloc_thing(private_gateway_controller_t);
 
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
-	this->public.controller.get_handler = (controller_handler_t(*)(controller_t*,char*))get_handler;
+	this->public.controller.handle = (void(*)(controller_t*,request_t*,response_t*,char*,char*,char*,char*,char*))handle;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
 	
 	this->manager = (manager_t*)context;

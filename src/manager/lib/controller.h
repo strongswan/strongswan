@@ -59,13 +59,24 @@ struct controller_t {
 	char* (*get_name)(controller_t *this);
 	
 	/**
-	 * @brief Get the controllers handler function for an action name.
+	 * @brief Handle a HTTP request for that controller.
 	 *
-	 * @param name			name of the action 
-	 * @return				controllers handler
+	 * Request URLs are parsed in the form
+	 * controller_name/p1/p2/p3/p4/p5 with a maximum of 5 parameters. Each
+	 * parameter not found in the request URL is set to NULL.
+	 *
+	 * @param request		HTTP request
+	 * @param response		HTTP response
+	 * @param p1			first parameter
+	 * @param p2			second parameter
+	 * @param p3			third parameter
+	 * @param p4			forth parameter
+	 * @param p5			fifth parameter
+	 * @return
 	 */
-	controller_handler_t (*get_handler)(controller_t *this, char *name);
-	
+	void (*handle)(controller_t *this, request_t *request, response_t *response,
+				   char *a1, char *a2, char *a3, char *a4, char *a5);
+		
 	/**
 	 * @brief Destroy the controller instance.
 	 */
