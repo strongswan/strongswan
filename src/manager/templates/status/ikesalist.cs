@@ -2,7 +2,7 @@
 <?cs each:ikesa = ikesas ?>
   <div class="expand" id="ikesa-<?cs name:ikesa ?>">
   <h1>
-  	<?cs name:ikesa ?>:
+  	<?cs name:ikesa ?> [<?cs var:ikesa.peerconfig ?>]:
   	<span><?cs var:ikesa.local.identification ?></span> &lt;-&gt; 
   	<span><?cs var:ikesa.remote.identification ?></span>
   </h1> 
