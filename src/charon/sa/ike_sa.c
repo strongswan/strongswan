@@ -581,7 +581,8 @@ static ike_sa_state_t get_state(private_ike_sa_t *this)
  */
 static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 {
-	DBG1(DBG_IKE, "IKE_SA state change: %N => %N",
+	DBG1(DBG_IKE, "IKE_SA state %s change: %N => %N",
+		 get_name(this),
 		 ike_sa_state_names, this->state,
 		 ike_sa_state_names, state);
 	
