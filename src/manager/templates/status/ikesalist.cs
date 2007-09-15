@@ -29,7 +29,7 @@
         <td>
         </td>
         <td class="center" colspan="3">
-          <?cs var:ikesa.local.spi ?>:<?cs var:ikesa.remote.spi ?>
+          <?cs var:ikesa.local.spi ?> : <?cs var:ikesa.remote.spi ?>
         </td>
         <td>
         </td>
@@ -67,7 +67,7 @@
           <?cs if:ikesa.remote.nat == "true" ?>
           <img title="Remote host is behind a NAT router" src="<?cs var:base ?>/static/router.png"></img>
           <?cs else ?>
-          <img title="Remote host is the responder" src="<?cs var:base ?>/static/pipe.png"></img>
+          <img title="Remote host is not NATed" src="<?cs var:base ?>/static/pipe.png"></img>
           <?cs /if ?>
         </td>
         <td>
