@@ -722,7 +722,8 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 	
 	build_payloads(this, message);
 	
-	SIG(CHILD_UP_SUCCESS, "established CHILD_SA successfully");
+	SIG(CHILD_UP_SUCCESS, "CHILD_SA %s established successfully",
+						   this->child_sa->get_name(this->child_sa));
 
 	return SUCCESS;
 }
@@ -807,7 +808,8 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 	
 	if (select_and_install(this, no_dh) == SUCCESS)
 	{
-		SIG(CHILD_UP_SUCCESS, "established CHILD_SA successfully");
+		SIG(CHILD_UP_SUCCESS, "CHILD_SA %s successfully",
+							   this->child_sa->get_name(this->child_sa));
 	}
 	return SUCCESS;
 }
