@@ -1100,10 +1100,10 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (all)
 	{
-		fprintf(out, "%12s[%d]: IKE SPIs: 0x%0llx_i%s 0x%0llx_r%s, ",
+		fprintf(out, "%12s[%d]: IKE SPIs: %0llx_i%s %0llx_r%s, ",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
-				id->get_responder_spi(id), id->is_initiator(id) ? "" : "");
+				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
 	
 		ike_sa->get_stats(ike_sa, &next);
 		if (next)
