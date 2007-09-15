@@ -320,7 +320,8 @@ static status_t build_auth_eap(private_ike_auth_t *this, message_t *message)
 	if (!this->initiator)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
+		SIG(IKE_UP_SUCCESS, "IKE_SA %s established between %D[%H]...[%H]%D",
+			this->ike_sa->get_name(this->ike_sa),
 			this->ike_sa->get_my_id(this->ike_sa), 
 			this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa),
@@ -365,7 +366,8 @@ static status_t process_auth_eap(private_ike_auth_t *this, message_t *message)
 	if (this->initiator)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
+		SIG(IKE_UP_SUCCESS, "IKE_SA %s established between %D[%H]...[%H]%D",
+			this->ike_sa->get_name(this->ike_sa),
 			this->ike_sa->get_my_id(this->ike_sa), 
 			this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa),
@@ -573,7 +575,8 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	if (this->peer_authenticated)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
+		SIG(IKE_UP_SUCCESS, "IKE_SA %s established between %D[%H]...[%H]%D",
+			this->ike_sa->get_name(this->ike_sa),
 			this->ike_sa->get_my_id(this->ike_sa), 
 			this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa),
@@ -675,7 +678,8 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 	}
 	
 	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-	SIG(IKE_UP_SUCCESS, "IKE_SA established between %D[%H]...[%H]%D",
+	SIG(IKE_UP_SUCCESS, "IKE_SA %s established between %D[%H]...[%H]%D",
+		this->ike_sa->get_name(this->ike_sa),
 		this->ike_sa->get_my_id(this->ike_sa), 
 		this->ike_sa->get_my_host(this->ike_sa),
 		this->ike_sa->get_other_host(this->ike_sa),
