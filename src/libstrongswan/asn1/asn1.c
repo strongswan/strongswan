@@ -311,16 +311,31 @@ time_t asn1totime(const chunk_t *utctime, asn1_t type)
 }
 
 /**
- * Initializes the internal context of the ASN.1 parser
+ *  Convert a date into ASN.1 UTCTIME or GENERALIZEDTIME format
  */
-void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0,
-			   bool implicit, bool private)
+chunk_t timetoasn1(const time_t *time, asn1_t type)
 {
-	ctx->blobs[0] = blob;
-	ctx->level0   = level0;
-	ctx->implicit = implicit;
-    ctx->private  = private;
-	memset(ctx->loopAddr, '\0', sizeof(ctx->loopAddr));
+	int offset;
+	const char *format;
+	char buf[BUF_LEN];
+	chunk_t formatted_time;
+	struct tm *t = gmtime(time);
+	
+	if (type == ASN1_GENERALIZEDTIME)
+	{
+		format = "%04d%02d%02d%02d%02d%02dZ";
+		offset = 1900;
+	}
+	else /* ASN1_UTCTIME */
+	{
+		format = "%02d%02d%02d%02d%02d%02dZ";
+		offset = (t->tm_year < 100)? 0 : -100;
+	}
+	snprintf(buf, sizeof(buf), format, t->tm_year + offset, 
+			 t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	formatted_time.ptr = buf;
+	formatted_time.len = strlen(buf);
+	return asn1_simple_object(type, formatted_time);
 }
 
 /**
@@ -734,34 +749,6 @@ chunk_t asn1_integer_from_mpz(const mpz_t value)
 	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
 	
 	return asn1_wrap(ASN1_INTEGER, "m", n);
-}
-
-/**
- *  convert a date into ASN.1 UTCTIME or GENERALIZEDTIME format
- */
-chunk_t timetoasn1(const time_t *time, asn1_t type)
-{
-	int offset;
-	const char *format;
-	char buf[32];
-	chunk_t formatted_time;
-	struct tm *t = gmtime(time);
-	
-	if (type == ASN1_GENERALIZEDTIME)
-	{
-		format = "%04d%02d%02d%02d%02d%02dZ";
-		offset = 1900;
-	}
-	else /* ASN1_UTCTIME */
-	{
-		format = "%02d%02d%02d%02d%02d%02dZ";
-		offset = (t->tm_year < 100)? 0 : -100;
-	}
-	snprintf(buf, sizeof(buf), format, t->tm_year + offset, 
-			 t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
-	formatted_time.ptr = buf;
-	formatted_time.len = strlen(buf);
-	return asn1_simple_object(type, formatted_time);
 }
 
 /**
