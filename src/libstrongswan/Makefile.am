@@ -50,6 +50,7 @@ utils/iterator.h \
 utils/leak_detective.c utils/leak_detective.h \
 utils/lexparser.c utils/lexparser.h \
 utils/linked_list.c utils/linked_list.h \
+utils/optionsfrom.c utils/optionsfrom.h \
 utils/randomizer.c utils/randomizer.h
 
 if USE_INTEGRITY_TEST

@@ -69,6 +69,14 @@ void ietfAttr_list_create_from_string(char *msg, linked_list_t *list);
 void ietfAttr_list_create_from_chunk(chunk_t chunk, linked_list_t *list, int level0);
 
 /**
+ * @brief Encode a linked list of ietfAttr_t objects into an ASN.1-coded chunk
+ *
+ * @param list		alphabetically-sorted linked list of attributes
+ * @return			chunk containing ASN.1-coded attributes
+ */
+chunk_t ietfAttr_list_encode(linked_list_t *list);
+
+/**
  * @brief Destroys a linked list of ietfAttr_t objects
  *
  * @param list		list to be destroyed

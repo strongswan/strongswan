@@ -21,22 +21,20 @@
 
 #include <time.h>
 
-#include "../pluto/x509.h"
-#include "../pluto/keys.h"
-#include "../pluto/ac.h"
+#include <library.h>
+#include <crypto/x509.h>
+#include <crypto/rsa/rsa_private_key.h>
+#include <utils/linked_list.h>
 
 /*
  * global variables accessible by both main() and build.c
  */
-extern x509cert_t *user;
-extern x509cert_t *signer;
-
-extern ietfAttrList_t *groups;
-extern struct RSA_private_key *signerkey;
-
+extern x509_t *usercert;
+extern x509_t *signercert;
+extern rsa_private_key_t *signerkey;
+extern linked_list_t *groups;
 extern time_t notBefore;
 extern time_t notAfter;
-
 extern chunk_t serial;
 
 /*

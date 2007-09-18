@@ -19,15 +19,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <freeswan.h>
-
 #include <asn1/oid.h>
-
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-#include "../pluto/asn1.h"
-#include "../pluto/x509.h"
-#include "../pluto/log.h"
+#include <asn1/asn1.h>
+#include <crypto/ietf_attr_list.h>
+#include <utils/identification.h>
 
 #include "build.h"
 
@@ -36,15 +31,15 @@ static u_char ASN1_group_oid_str[] = {
 		  0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x0a ,0x04
 };
 
-static const chunk_t ASN1_group_oid = strchunk(ASN1_group_oid_str);
+static const chunk_t ASN1_group_oid = chunk_from_buf(ASN1_group_oid_str);
 
 static u_char ASN1_authorityKeyIdentifier_oid_str[] = {
 	0x06, 0x03,
 		  0x55, 0x1d, 0x23
 };
 
-static const chunk_t ASN1_authorityKeyIdentifier_oid
-	  = strchunk(ASN1_authorityKeyIdentifier_oid_str);
+static const chunk_t ASN1_authorityKeyIdentifier_oid =
+	 			 	 	chunk_from_buf(ASN1_authorityKeyIdentifier_oid_str);
 
 static u_char ASN1_noRevAvail_ext_str[] = {
 	0x30, 0x09,
@@ -54,7 +49,7 @@ static u_char ASN1_noRevAvail_ext_str[] = {
 				0x05, 0x00
 };
 
-static const chunk_t ASN1_noRevAvail_ext = strchunk(ASN1_noRevAvail_ext_str);
+static const chunk_t ASN1_noRevAvail_ext = chunk_from_buf(ASN1_noRevAvail_ext_str);
 
 /**
  * build directoryName
@@ -62,7 +57,7 @@ static const chunk_t ASN1_noRevAvail_ext = strchunk(ASN1_noRevAvail_ext_str);
 static chunk_t build_directoryName(asn1_t tag, chunk_t name)
 {
 	return asn1_wrap(tag, "m",
-				asn1_simple_object(ASN1_CONTEXT_C_4, name));
+		asn1_simple_object(ASN1_CONTEXT_C_4, name));
 }
 
 /**
@@ -70,12 +65,15 @@ static chunk_t build_directoryName(asn1_t tag, chunk_t name)
  */
 static chunk_t build_holder(void)
 {
+	identification_t *issuer = usercert->get_issuer(usercert);
+	identification_t *subject = usercert->get_subject(usercert);
+
 	return asn1_wrap(ASN1_SEQUENCE, "mm",
-				asn1_wrap(ASN1_CONTEXT_C_0, "mm",
-					build_directoryName(ASN1_SEQUENCE, user->issuer),
-					asn1_simple_object(ASN1_INTEGER, user->serialNumber)
-				),
-				build_directoryName(ASN1_CONTEXT_C_1, user->subject));
+		asn1_wrap(ASN1_CONTEXT_C_0, "mm",
+			build_directoryName(ASN1_SEQUENCE, issuer->get_encoding(issuer)),
+			asn1_simple_object(ASN1_INTEGER, usercert->get_serialNumber(usercert))
+		),
+		build_directoryName(ASN1_CONTEXT_C_1, subject->get_encoding(subject)));
 }
 
 /**
@@ -83,8 +81,10 @@ static chunk_t build_holder(void)
  */
 static chunk_t build_v2_form(void)
 {
+	identification_t *subject = signercert->get_subject(signercert);
+
 	return asn1_wrap(ASN1_CONTEXT_C_0, "m",
-				build_directoryName(ASN1_SEQUENCE, signer->subject));
+		build_directoryName(ASN1_SEQUENCE, subject->get_encoding(subject)));
 }
 
 /**
@@ -97,50 +97,6 @@ static chunk_t build_attr_cert_validity(void)
 				timetoasn1(&notAfter,  ASN1_GENERALIZEDTIME));
 }
 
-/**
- * build attributes
- */
-static chunk_t build_ietfAttributes(ietfAttrList_t *list)
-{
-	chunk_t ietfAttributes;
-	ietfAttrList_t *item = list;
-	size_t size = 0;
-	u_char *pos;
-
-	/* precalculate the total size of all values */
-	while (item != NULL)
-	{
-		size_t len = item->attr->value.len;
-
-		size += 1 + (len > 0) + (len >= 128) + (len >= 256) + (len >= 65536) + len;
-		item = item->next;
-	}
-	pos = build_asn1_object(&ietfAttributes, ASN1_SEQUENCE, size);
-
-	while (list != NULL)
-	{
-		ietfAttr_t *attr = list->attr;
-		asn1_t type = ASN1_NULL;
-
-		switch (attr->kind)
-		{
-			case IETF_ATTRIBUTE_OCTETS:
-				type = ASN1_OCTET_STRING;
-				break;
-			case IETF_ATTRIBUTE_STRING:
-				type = ASN1_UTF8STRING;
-				break;
-			case IETF_ATTRIBUTE_OID:
-				type = ASN1_OID;
-				break;
-		}
-		mv_chunk(&pos, asn1_simple_object(type, attr->value));
-
-		list = list->next;
-	}
-
-	return asn1_wrap(ASN1_SEQUENCE, "m", ietfAttributes);
-}
 
 /**
  * build attribute type
@@ -158,25 +114,26 @@ static chunk_t build_attribute_type(const chunk_t type, chunk_t content)
 static chunk_t build_attributes(void)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "m",
-				build_attribute_type(ASN1_group_oid,
-					build_ietfAttributes(groups)));
+		build_attribute_type(ASN1_group_oid, ietfAttr_list_encode(groups)));
 }
 
 /**
  * build authorityKeyIdentifier
  */
-static chunk_t build_authorityKeyID(x509cert_t *signer)
+static chunk_t build_authorityKeyID(x509_t *signer)
 {
-	chunk_t keyIdentifier = (signer->subjectKeyID.ptr == NULL)
-				? empty_chunk
-				: asn1_simple_object(ASN1_CONTEXT_S_0,
-						signer->subjectKeyID);
+	identification_t *issuer = signer->get_issuer(signer);
+	chunk_t subjectKeyID = signer->get_subjectKeyID(signer);
+
+	chunk_t keyIdentifier = (subjectKeyID.ptr == NULL)
+				? chunk_empty
+				: asn1_simple_object(ASN1_CONTEXT_S_0, subjectKeyID);
 
 	chunk_t authorityCertIssuer = build_directoryName(ASN1_CONTEXT_C_1,
-						signer->issuer);
+				issuer->get_encoding(issuer));
 
 	chunk_t authorityCertSerialNumber = asn1_simple_object(ASN1_CONTEXT_S_2,
-						signer->serialNumber);
+				signer->get_serialNumber(signer));
 
 	return asn1_wrap(ASN1_SEQUENCE, "cm",
 				ASN1_authorityKeyIdentifier_oid,
@@ -196,7 +153,7 @@ static chunk_t build_authorityKeyID(x509cert_t *signer)
 static chunk_t build_extensions(void)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "mc",
-				build_authorityKeyID(signer),
+				build_authorityKeyID(signercert),
 				ASN1_noRevAvail_ext);
 }
 
@@ -221,9 +178,11 @@ static chunk_t build_attr_cert_info(void)
  */
 chunk_t build_attr_cert(void)
 {
+	chunk_t signatureValue;
 	chunk_t attributeCertificateInfo = build_attr_cert_info();
-	chunk_t signatureValue = pkcs1_build_signature(attributeCertificateInfo,
-								OID_SHA1, signerkey, TRUE);
+
+	signerkey->build_emsa_pkcs1_signature(signerkey, HASH_SHA1,
+					 attributeCertificateInfo, &signatureValue);
 
 	return asn1_wrap(ASN1_SEQUENCE, "mcm",
 				attributeCertificateInfo,

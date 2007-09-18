@@ -347,6 +347,59 @@ void ietfAttr_list_create_from_chunk(chunk_t chunk, linked_list_t *list, int lev
 /*
  * Described in header.
  */
+chunk_t ietfAttr_list_encode(linked_list_t *list)
+{
+	chunk_t ietfAttributes;
+	size_t size = 0;
+	u_char *pos;
+	iterator_t *iterator = list->create_iterator(list, TRUE);
+	ietfAttr_t *attr;
+	bool first = TRUE;
+
+	/* precalculate the total size of all values */
+	while (iterator->iterate(iterator, (void **)&attr))
+	{
+		size_t len = attr->value.len;
+
+		size += 1 + (len > 0) + (len >= 128) + (len >= 256) + (len >= 65536) + len;
+	}
+	iterator->destroy(iterator);
+
+	pos = build_asn1_object(&ietfAttributes, ASN1_SEQUENCE, size);
+
+	iterator = list->create_iterator(list, TRUE);
+	while (iterator->iterate(iterator, (void **)&attr))
+	{
+		chunk_t ietfAttribute;
+		asn1_t type = ASN1_NULL;
+
+		switch (attr->kind)
+		{
+			case IETF_ATTRIBUTE_OCTETS:
+				type = ASN1_OCTET_STRING;
+				break;
+			case IETF_ATTRIBUTE_STRING:
+				type = ASN1_UTF8STRING;
+				break;
+			case IETF_ATTRIBUTE_OID:
+				type = ASN1_OID;
+				break;
+		}
+		ietfAttribute = asn1_simple_object(type, attr->value);
+
+		/* copy ietfAttribute into ietfAttributes chunk */
+		memcpy(pos, ietfAttribute.ptr, ietfAttribute.len); 
+		pos += ietfAttribute.len;
+		free(ietfAttribute.ptr);
+	}
+	iterator->destroy(iterator);
+
+	return asn1_wrap(ASN1_SEQUENCE, "m", ietfAttributes);
+}
+
+/*
+ * Described in header.
+ */
 void ietfAttr_list_destroy(linked_list_t *list)
 {
 	list->destroy_offset(list, offsetof(ietfAttr_t, destroy));
