@@ -70,6 +70,9 @@ static err_t parse_options_file(const char *filename, int *argcp, char **argvp[]
 	next = optind;
 	newargv[next] = NULL;
 
+	/* we keep the chunk pointer so that we can still free it */
+	src = chunk;
+
 	while (fetchline(&src, &line) && ugh == NULL)
 	{
 		while (eat_whitespace(&line))
@@ -92,6 +95,7 @@ static err_t parse_options_file(const char *filename, int *argcp, char **argvp[]
 				{
 					/* last token in a line */
 					token = line;
+					line.len = 0;
 				}
 			}
 
