@@ -1351,7 +1351,7 @@ static void load_secrets(private_local_credential_store_t *this, bool reload)
 
 	if (fd)
 	{
-		int bytes;
+		size_t bytes;
 		int line_nr = 0;
     	chunk_t chunk, src, line;
 
