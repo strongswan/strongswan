@@ -331,7 +331,7 @@ chunk_t timetoasn1(const time_t *time, asn1_t type)
 		format = "%02d%02d%02d%02d%02d%02dZ";
 		offset = (t->tm_year < 100)? 0 : -100;
 	}
-	snprintf(buf, sizeof(buf), format, t->tm_year + offset, 
+	snprintf(buf, BUF_LEN, format, t->tm_year + offset, 
 			 t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 	formatted_time.ptr = buf;
 	formatted_time.len = strlen(buf);
