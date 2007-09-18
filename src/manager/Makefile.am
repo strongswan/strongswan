@@ -45,8 +45,7 @@ templates/static/router.png templates/static/pipe-good.png templates/static/nat.
 templates/static/gateway-right.png templates/static/client-right.png
 
 EXTRA_DIST = sqlite.db templates/header.cs templates/footer.cs \
-templates/auth/login.cs templates/auth/logout.cs \
-templates/gateway/list.cs templates/status/ikesalist.cs \
+templates/auth/login.cs templates/gateway/list.cs templates/status/ikesalist.cs \
 templates/static/style.css templates/static/script.js \
 templates/static/pipe.png templates/static/pipe-bad.png templates/static/jquery.js \
 templates/static/gateway-left.png templates/static/client-left.png templates/static/strongswan.png \
