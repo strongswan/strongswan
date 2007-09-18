@@ -21,8 +21,6 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <errno.h>
-#include <libxml/xmlreader.h>
-#include <libxml/xmlwriter.h>
 
 #include <debug.h>
 

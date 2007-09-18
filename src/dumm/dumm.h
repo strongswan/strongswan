@@ -72,7 +72,7 @@ struct dumm_t {
 	/**
 	 * @brief Loads a template, create a new one if it does not exist.
 	 *
-	 * @param name		name of the template, NULL to clonse
+	 * @param name		name of the template, NULL to close
 	 * @return			FALSE if load/create failed
 	 */
 	bool (*load_template)(dumm_t *this, char *name);
