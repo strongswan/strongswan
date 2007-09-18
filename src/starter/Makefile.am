@@ -13,7 +13,7 @@ dist_man_MANS = ipsec.conf.5 starter.8
 MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
 
 PLUTODIR=$(top_srcdir)/src/pluto
-OPENACDIR=$(top_srcdir)/src/openac
+SCEPCLIENTDIR=$(top_srcdir)/src/scepclient
 
 lex.yy.c:	y.tab.c parser.l parser.y parser.h
 		$(LEX) parser.l
@@ -27,7 +27,7 @@ y.tab.h:	parser.l parser.y parser.h
 keywords.c:	keywords.txt keywords.h
 		$(GPERF) -C -G -t < keywords.txt > keywords.c
 
-loglite.o:	$(OPENACDIR)/loglite.c $(PLUTODIR)/log.h
+loglite.o:	$(SCEPCLIENTDIR)/loglite.c $(PLUTODIR)/log.h
 		$(COMPILE) -c -o $@ $<
 
 defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
