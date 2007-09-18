@@ -29,6 +29,7 @@
 #include <asn1/asn1.h>
 #include <asn1/ttodata.h>
 #include <crypto/ac.h>
+#include <crypto/ietf_attr_list.h>
 #include <utils/optionsfrom.h>
 
 #include "build.h"
@@ -128,8 +129,7 @@ static chunk_t read_serial(void)
 	}
 	else
 	{
-		DBG1("  file '%s' does not exist yet - serial number set to 01",
-			 OPENAC_SERIAL);
+		DBG1("  file '%s' does not exist yet - serial number set to 01", OPENAC_SERIAL);
 	}
 
 	/**
@@ -137,10 +137,12 @@ static chunk_t read_serial(void)
 	 * and incrementing it by one
 	 * and representing it as a two's complement octet string
 	 */
+	printf("last_serial: '%#B'\n", &last_serial);
 	mpz_init(number);
 	chunk_to_mpz(last_serial, number);
 	mpz_add_ui(number, number, 0x01);
 	serial = mpz_to_chunk(number);
+	printf("serial: '%#B'\n", &serial);
 	mpz_clear(number);
 
 	return serial;
@@ -151,8 +153,6 @@ static chunk_t read_serial(void)
  */
 static void write_serial(chunk_t serial)
 {
-	char buf[BUF_LEN];
-
 	FILE *fd = fopen(OPENAC_SERIAL, "w");
 
 	if (fd)
@@ -384,8 +384,6 @@ int main(int argc, char **argv)
 	/* load the signer's RSA private key */
 	if (keyfile != NULL)
 	{
-		err_t ugh = NULL;
-
 		signerkey = rsa_private_key_create_from_file(keyfile, &passphrase);
 
 		if (signerkey == NULL)

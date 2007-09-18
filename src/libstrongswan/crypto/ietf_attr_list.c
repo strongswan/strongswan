@@ -354,7 +354,6 @@ chunk_t ietfAttr_list_encode(linked_list_t *list)
 	u_char *pos;
 	iterator_t *iterator = list->create_iterator(list, TRUE);
 	ietfAttr_t *attr;
-	bool first = TRUE;
 
 	/* precalculate the total size of all values */
 	while (iterator->iterate(iterator, (void **)&attr))

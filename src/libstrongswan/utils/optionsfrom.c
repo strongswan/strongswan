@@ -23,6 +23,7 @@
 #include <stdio.h>
 
 #include <library.h>
+#include <utils/lexparser.h>
 
 #include "optionsfrom.h"
 
