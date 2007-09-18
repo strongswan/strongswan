@@ -719,46 +719,6 @@ static bool stroke_log(stroke_log_info_t *info, signal_t signal, level_t level,
 }
 
 /**
- * get a peer configuration by its name, or a name of its children
- */
-static peer_cfg_t *get_peer_cfg_by_name(char *name)
-{
-	iterator_t *i1, *i2;
-	peer_cfg_t *current, *found = NULL;
-	child_cfg_t *child;
-
-	i1 = charon->backends->create_iterator(charon->backends);
-	while (i1->iterate(i1, (void**)&current))
-	{
-	        /* compare peer_cfgs name first */
-	        if (streq(current->get_name(current), name))
-	        {
-	                found = current;
-	                found->get_ref(found);
-	                break;
-	        }
-	        /* compare all child_cfg names otherwise */
-	        i2 = current->create_child_cfg_iterator(current);
-	        while (i2->iterate(i2, (void**)&child))
-	        {
-	                if (streq(child->get_name(child), name))
-	                {
-	                        found = current;
-	                        found->get_ref(found);
-	                        break;
-	                }
-	        }
-	        i2->destroy(i2);
-	        if (found)
-	        {
-	                break;
-	        }
-	}
-	i1->destroy(i1);
-	return found;
-}
-
-/**
  * initiate a connection by name
  */
 static void stroke_initiate(stroke_msg_t *msg, FILE *out)
@@ -770,7 +730,8 @@ static void stroke_initiate(stroke_msg_t *msg, FILE *out)
 	pop_string(msg, &(msg->initiate.name));
 	DBG1(DBG_CFG, "received stroke: initiate '%s'", msg->initiate.name);
 	
-	peer_cfg = get_peer_cfg_by_name(msg->initiate.name);
+	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+													  msg->initiate.name);
 	if (peer_cfg == NULL)
 	{
 		fprintf(out, "no config named '%s'\n", msg->initiate.name);
@@ -818,7 +779,8 @@ static void stroke_route(stroke_msg_t *msg, FILE *out)
 	pop_string(msg, &(msg->route.name));
 	DBG1(DBG_CFG, "received stroke: route '%s'", msg->route.name);
 	
-	peer_cfg = get_peer_cfg_by_name(msg->route.name);
+	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+													  msg->route.name);
 	if (peer_cfg == NULL)
 	{
 		fprintf(out, "no config named '%s'\n", msg->route.name);

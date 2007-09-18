@@ -88,6 +88,15 @@ struct backend_manager_t {
 								ca_info_t *other_ca_info);
 	
 	/**
+	 * @brief Get a peer_config identified by it's name.
+	 *
+	 * @param this				calling object
+	 * @param name				name of the peer_config
+	 * @return					matching peer_config, or NULL if none found
+	 */
+	peer_cfg_t* (*get_peer_cfg_by_name)(backend_manager_t *this, char *name);
+	
+	/**
 	 * @brief Add a peer_config to the first found writable backend.
 	 *
 	 * @param this		calling object

@@ -96,6 +96,22 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this,
 }
 
 /**
+ * implements backend_manager_t.get_peer_cfg_by_name.
+ */			
+static peer_cfg_t *get_peer_cfg_by_name(private_backend_manager_t *this, char *name)
+{
+	backend_t *backend;
+	peer_cfg_t *config = NULL;
+	iterator_t *iterator = this->backends->create_iterator(this->backends, TRUE);
+	while (config == NULL && iterator->iterate(iterator, (void**)&backend))
+	{
+		config = backend->get_peer_cfg_by_name(backend, name);
+	}
+	iterator->destroy(iterator);
+	return config;
+}
+
+/**
  * implements backend_manager_t.add_peer_cfg.
  */	
 static void add_peer_cfg(private_backend_manager_t *this, peer_cfg_t *config)
@@ -214,6 +230,7 @@ backend_manager_t *backend_manager_create()
 	
 	this->public.get_ike_cfg = (ike_cfg_t* (*)(backend_manager_t*, host_t*, host_t*))get_ike_cfg;
 	this->public.get_peer_cfg = (peer_cfg_t* (*)(backend_manager_t*,identification_t*,identification_t*,ca_info_t*))get_peer_cfg;
+	this->public.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_manager_t*,char*))get_peer_cfg_by_name;
 	this->public.add_peer_cfg = (void (*)(backend_manager_t*,peer_cfg_t*))add_peer_cfg;
 	this->public.create_iterator = (iterator_t* (*)(backend_manager_t*))create_iterator;
 	this->public.destroy = (void (*)(backend_manager_t*))destroy;

@@ -71,6 +71,15 @@ struct backend_t {
 								ca_info_t *other_ca_info);
 	
 	/**
+	 * @brief Get a peer_cfg identified by it's name, or a name of its child.
+	 *
+	 * @param this				calling object
+	 * @param name				
+	 * @return					matching peer_config, or NULL if none found
+	 */
+	peer_cfg_t *(*get_peer_cfg_by_name)(backend_t *this, char *name);
+	
+	/**
 	 * @brief Check if a backend is writable and implements writable_backend_t.
 	 *
 	 * @param this		calling object

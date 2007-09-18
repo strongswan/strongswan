@@ -225,6 +225,46 @@ static peer_cfg_t *get_peer_cfg(private_local_backend_t *this,
 }
 
 /**
+ * implements backend_t.get_peer_cfg_by_name.
+ */			
+static peer_cfg_t *get_peer_cfg_by_name(private_local_backend_t *this, char *name)
+{
+	iterator_t *i1, *i2;
+	peer_cfg_t *current, *found = NULL;
+	child_cfg_t *child;
+
+	i1 = this->cfgs->create_iterator(this->cfgs, TRUE);
+	while (i1->iterate(i1, (void**)&current))
+	{
+        /* compare peer_cfgs name first */
+        if (streq(current->get_name(current), name))
+        {
+            found = current;
+            found->get_ref(found);
+            break;
+        }
+        /* compare all child_cfg names otherwise */
+        i2 = current->create_child_cfg_iterator(current);
+        while (i2->iterate(i2, (void**)&child))
+        {
+            if (streq(child->get_name(child), name))
+            {
+                found = current;
+                found->get_ref(found);
+                break;
+            }
+        }
+        i2->destroy(i2);
+        if (found)
+        {
+            break;
+        }
+	}
+	i1->destroy(i1);
+	return found;
+}
+
+/**
  * Implementation of backend_t.is_writable.
  */
 static bool is_writeable(private_local_backend_t *this)
@@ -268,6 +308,7 @@ backend_t *backend_create(void)
 	
 	this->public.backend.backend.get_ike_cfg = (ike_cfg_t* (*)(backend_t*, host_t*, host_t*))get_ike_cfg;
 	this->public.backend.backend.get_peer_cfg = (peer_cfg_t* (*)(backend_t*,identification_t*,identification_t*,ca_info_t*))get_peer_cfg;
+	this->public.backend.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
     this->public.backend.backend.is_writeable = (bool(*) (backend_t*))is_writeable;
     this->public.backend.backend.destroy = (void (*)(backend_t*))destroy;
 	this->public.backend.create_iterator = (iterator_t* (*)(writeable_backend_t*))create_iterator;

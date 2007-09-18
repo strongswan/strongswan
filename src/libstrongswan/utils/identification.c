@@ -1058,8 +1058,15 @@ identification_t *identification_create_from_string(char *string)
 				
 				if (inet_pton(AF_INET, string, &address) <= 0)
 				{
-					free(this);
-					return NULL;
+					/* not IPv4, mostly FQDN */
+					this->type = ID_FQDN;
+					this->encoded.ptr = strdup(string);
+					this->encoded.len = strlen(string);
+					this->public.matches = (bool (*) 
+						(identification_t*,identification_t*,int*))matches_string;
+					this->public.equals = (bool (*)
+						(identification_t*,identification_t*))equals_strcasecmp;
+					return &(this->public);
 				}
 				this->encoded = chunk_clone(chunk);
 				this->type = ID_IPV4_ADDR;

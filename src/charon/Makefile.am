@@ -89,7 +89,7 @@ sa/tasks/task.c sa/tasks/task.h
 
 
 INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
-AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
+AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
 	-DIPSEC_EAPDIR=\"${eapdir}\" -DIPSEC_BACKENDDIR=\"${backenddir}\" -DIPSEC_INTERFACEDIR=\"${interfacedir}\"
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread -lm -ldl
 
@@ -119,6 +119,13 @@ backend_LTLIBRARIES =
 backend_LTLIBRARIES += liblocal.la
 liblocal_la_SOURCES = config/backends/local_backend.h config/backends/local_backend.c
 liblocal_la_LDFLAGS = -module
+
+if USE_LIBSQLITE
+  backend_LTLIBRARIES += libsqlite.la
+  libsqlite_la_SOURCES = config/backends/sqlite_backend.h config/backends/sqlite_backend.c
+  libsqlite_la_LIBADD = -lsqlite3
+  libsqlite_la_LDFLAGS = -module
+endif
 
 # build control interfaces, stroke interface is always built
 ############################################################
