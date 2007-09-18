@@ -338,6 +338,20 @@ chunk_t timetoasn1(const time_t *time, asn1_t type)
 	return asn1_simple_object(type, formatted_time);
 }
 
+
+/**
+ * Initializes the internal context of the ASN.1 parser
+ */
+void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0,
+			   bool implicit, bool private)
+{
+	ctx->blobs[0] = blob;
+	ctx->level0   = level0;
+	ctx->implicit = implicit;
+    ctx->private  = private;
+	memset(ctx->loopAddr, '\0', sizeof(ctx->loopAddr));
+}
+
 /**
  * print the value of an ASN.1 simple object
  */
