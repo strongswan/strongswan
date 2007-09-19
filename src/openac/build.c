@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
@@ -173,16 +174,24 @@ static chunk_t build_attr_cert_info(void)
 				build_extensions());
 }
 
+
 /**
  * build an X.509 attribute certificate
  */
 chunk_t build_attr_cert(void)
 {
-	chunk_t signatureValue;
+	u_char *pos;
+	chunk_t rawSignature, signatureValue;
 	chunk_t attributeCertificateInfo = build_attr_cert_info();
 
+	/* build the signature */
 	signerkey->build_emsa_pkcs1_signature(signerkey, HASH_SHA1,
-					 attributeCertificateInfo, &signatureValue);
+					 attributeCertificateInfo, &rawSignature);
+	pos = build_asn1_object(&signatureValue, ASN1_BIT_STRING,
+							1 + rawSignature.len);
+	*pos++ = 0x00;
+	memcpy(pos, rawSignature.ptr, rawSignature.len);
+	free(rawSignature.ptr);
 
 	return asn1_wrap(ASN1_SEQUENCE, "mcm",
 				attributeCertificateInfo,
