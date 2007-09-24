@@ -832,6 +832,16 @@ static status_t update_hosts(private_child_sa_t *this,
 			{
 				policy->other_ts->set_address(policy->other_ts, other);
 			}
+			
+			/* we reinstall the virtual IP to handle interface romaing
+			 * correctly */
+			if (this->virtual_ip)
+			{
+				charon->kernel_interface->del_ip(charon->kernel_interface,
+												 this->virtual_ip);
+				charon->kernel_interface->add_ip(charon->kernel_interface,
+												 this->virtual_ip, me);
+			}
 		
 			/* reinstall updated policies */
 			charon->kernel_interface->add_policy(charon->kernel_interface,

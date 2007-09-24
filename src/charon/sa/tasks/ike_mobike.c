@@ -217,17 +217,6 @@ static void update_children(private_ike_mobike_t *this)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
-	host_t *ip;
-	
-	/* additionally, we reinstall the virtual IP as we may have changed
-	 * our interface */
-	ip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
-	if (ip)
-	{
-		ip = ip->clone(ip);
-		this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, ip);
-		ip->destroy(ip);
-	}
 	
 	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
 	while (iterator->iterate(iterator, (void**)&child_sa))
@@ -279,6 +268,7 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 			other = other->clone(other);
 			other->set_port(other, other->ip_equals(other, other_old) ?
 							other_old->get_port(other_old) : IKEV2_NATT_PORT);
+			DBG1(DBG_IKE, "checking path %#H - %#H", me, other);
 			copy = packet->clone(packet);
 			copy->set_source(copy, me);
 			copy->set_destination(copy, other);
@@ -286,6 +276,9 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 		}
 	}
 	iterator->destroy(iterator);
+	me = packet->get_source(packet);
+	other = packet->get_destination(packet);
+	DBG1(DBG_IKE, "checking path %#H - %#H", me, other);
 }
 
 /**

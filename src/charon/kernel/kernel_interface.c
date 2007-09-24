@@ -1370,11 +1370,11 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 	struct nlmsghdr *hdr;
 	struct rtmsg *msg;
 	chunk_t chunk;
-	
+
+#if IPSEC_ROUTING_TABLE == 0
 	/* if route is 0.0.0.0/0, we can't install it, as it would
 	 * overwrite the default route. Instead, we add two routes:
-	 * 0.0.0.0/1 and 128.0.0.0/1 
-	 * TODO: use metrics instead */
+	 * 0.0.0.0/1 and 128.0.0.0/1 */
 	if (route->prefixlen == 0)
 	{
 		route_entry_t half;
@@ -1392,6 +1392,7 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 		status = manage_srcroute(this, nlmsg_type, flags, &half);
 		return status;
 	}
+#endif
 	
 	memset(&request, 0, sizeof(request));
 
@@ -1695,7 +1696,7 @@ static status_t add_ip(private_kernel_interface_t *this,
 				pthread_mutex_unlock(&this->mutex);
 				return SUCCESS;
 			}
-			DBG2(DBG_KNL, "adding virtual IP %H failed", virtual_ip);
+			DBG1(DBG_KNL, "adding virtual IP %H failed", virtual_ip);
 			return FAILED;
 			
 		}
@@ -1703,7 +1704,7 @@ static status_t add_ip(private_kernel_interface_t *this,
 	}
 	ifaces->destroy(ifaces);
 	
-	DBG2(DBG_KNL, "interface address %H not found, unable to install"
+	DBG1(DBG_KNL, "interface address %H not found, unable to install"
 		 "virtual IP %H", iface_ip, virtual_ip);
 	return FAILED;
 }

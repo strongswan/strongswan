@@ -809,10 +809,17 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 		}
 		else if ((mid == this->responding.mid - 1) && this->responding.packet)
 		{
+			packet_t *clone;
+			host_t *me, *other;
+			
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 			 	 "retransmitting response", mid);
-			charon->sender->send(charon->sender,
-					 this->responding.packet->clone(this->responding.packet));
+			clone = this->responding.packet->clone(this->responding.packet);
+			me = msg->get_destination(msg);
+			other = msg->get_source(msg);
+			clone->set_source(clone, me->clone(me));
+			clone->set_destination(clone, other->clone(other));
+			charon->sender->send(charon->sender, clone);
 		}
 		else
 		{
