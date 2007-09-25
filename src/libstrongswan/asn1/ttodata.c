@@ -62,98 +62,123 @@ const char *ttodatav(const char *src, size_t srclen, int base, char *dst, size_t
 	int skipSpace = 0;
 
 	if (srclen == 0)
+	{
 		srclen = strlen(src);
+	}
 	if (dstlen == 0)
+	{
 		dst = buf;	/* point it somewhere valid */
+	}
 	stop = dst + dstlen;
 
-	if (base == 0) {
+	if (base == 0)
+	{
 		if (srclen < 2)
+		{
 			return "input too short to be valid";
+		}
 		if (*src++ != '0')
+		{
 			return "input does not begin with format prefix";
-		switch (*src++) {
-		case 'x':
-		case 'X':
-			base = 16;
-			break;
-		case 's':
-		case 'S':
-			base = 64;
-			break;
-		case 't':
-		case 'T':
-			base = 256;
-			break;
-		default:
-			return "unknown format prefix";
+		}
+		switch (*src++)
+		{
+			case 'x':
+			case 'X':
+				base = 16;
+				break;
+			case 's':
+			case 'S':
+				base = 64;
+				break;
+			case 't':
+			case 'T':
+				base = 256;
+				break;
+			default:
+				return "unknown format prefix";
 		}
 		srclen -= 2;
 	}
-	switch (base) {
-	case 16:
-		decode = unhex;
-		underscoreok = 1;
-		ingroup = 2;
-		break;
-	case 64:
-		decode = unb64;
-		underscoreok = 0;
-		ingroup = 4;
-		if(flags & TTODATAV_IGNORESPACE) {
-			skipSpace = 1;
-		}
-		break;
-
-	case 256:
-		decode = untext;
-		ingroup = 1;
-		underscoreok = 0;
-		break;
-	default:
-		return "unknown base";
+	switch (base)
+	{
+		case 16:
+			decode = unhex;
+			underscoreok = 1;
+			ingroup = 2;
+			break;
+		case 64:
+			decode = unb64;
+			underscoreok = 0;
+			ingroup = 4;
+			if(flags & TTODATAV_IGNORESPACE)
+			{
+				skipSpace = 1;
+			}
+			break;
+		case 256:
+			decode = untext;
+			ingroup = 1;
+			underscoreok = 0;
+			break;
+		default:
+			return "unknown base";
 	}
 
 	/* proceed */
 	ndone = 0;
-	while (srclen > 0) {
+	while (srclen > 0)
+	{
 		char stage[4];	/* staging area for group */
 		size_t sl = 0;
 
 		/* Grab ingroup characters into stage,
 		 * squeezing out blanks if we are supposed to ignore them.
 		 */
-		for (sl = 0; sl < ingroup; src++, srclen--) {
+		for (sl = 0; sl < ingroup; src++, srclen--)
+		{
 			if (srclen == 0)
+			{
 				return "input ends in mid-byte, perhaps truncated";
+			}
 			else if (!(skipSpace && (*src == ' ' || *src == '\t')))
+			{
 				stage[sl++] = *src;
+			}
 		}
 		
 		nbytes = (*decode)(stage, buf, sizeof(buf));
-		switch (nbytes) {
-		case BADCH0:
-		case BADCH1:
-		case BADCH2:
-		case BADCH3:
-			return badch(stage, nbytes, errp, errlen);
-		case SHORT:
-			return "internal buffer too short (\"can't happen\")";
-		case BADPAD:
-			return "bad (non-zero) padding at end of base64 input";
+		switch (nbytes)
+		{
+			case BADCH0:
+			case BADCH1:
+			case BADCH2:
+			case BADCH3:
+				return badch(stage, nbytes, errp, errlen);
+			case SHORT:
+				return "internal buffer too short (\"can't happen\")";
+			case BADPAD:
+				return "bad (non-zero) padding at end of base64 input";
 		}
 		if (nbytes <= 0)
+		{
 			return "unknown internal error";
-		for (i = 0; i < nbytes; i++) {
+		}
+		for (i = 0; i < nbytes; i++)
+		{
 			if (dst < stop)
+			{
 				*dst++ = buf[i];
+			}
 			ndone++;
 		}
-		while (srclen >= 1 && skipSpace && (*src == ' ' || *src == '\t')){
+		while (srclen >= 1 && skipSpace && (*src == ' ' || *src == '\t'))
+		{
 			src++;
 			srclen--;
 		}
-		if (underscoreok && srclen > 1 && *src == '_') {
+		if (underscoreok && srclen > 1 && (*src == '_' || *src == ':'))
+		{
 			/* srclen > 1 means not last character */
 			src++;
 			srclen--;
@@ -161,9 +186,13 @@ const char *ttodatav(const char *src, size_t srclen, int base, char *dst, size_t
 	}
 
 	if (ndone == 0)
+	{
 		return "no data bytes specified by input";
+	}
 	if (lenp != NULL)
+	{
 		*lenp = ndone;
+	}
 	return NULL;
 }
 
@@ -201,9 +230,7 @@ size_t atodata(const char *src, size_t srclen, char *dst, size_t dstlen)
 	const char *err;
 
 	err = ttodata(src, srclen, 0, dst, dstlen, &len);
-	if (err != NULL)
-		return 0;
-	return len;
+	return (err)? 0:len;
 }
 
 /**
@@ -231,21 +258,31 @@ static int unhex(const char *src, char *dst, size_t dstlen)
 	static char hex[] = "0123456789abcdef";
 
 	if (dstlen < 1)
+	{
 		return SHORT;
-	
+	}
+
 	p = strchr(hex, *src);
 	if (p == NULL)
+	{
 		p = strchr(hex, tolower(*src));
+	}
 	if (p == NULL)
+	{
 		return BADCH0;
+	}
 	byte = (p - hex) << 4;
 	src++;
 
 	p = strchr(hex, *src);
 	if (p == NULL)
+	{
 		p = strchr(hex, tolower(*src));
+	}
 	if (p == NULL)
+	{
 		return BADCH1;
+	}
 	byte |= (p - hex);
 
 	*dst = byte;
@@ -272,16 +309,20 @@ static int unb64(const char *src, char *dst, size_t dstlen)
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 	if (dstlen < 3)
+	{
 		return SHORT;
-
+	}
 	p = strchr(base64, *src++);
 
 	if (p == NULL)
+	{
 		return BADCH0;
+	}
 	byte1 = (p - base64) << 2;	/* first six bits */
 
 	p = strchr(base64, *src++);
-	if (p == NULL) {
+	if (p == NULL)
+	{
 		return BADCH1;
 	}
 
@@ -290,10 +331,14 @@ static int unb64(const char *src, char *dst, size_t dstlen)
 	byte1 = (byte2 & 0xf) << 4;
 
 	p = strchr(base64, *src++);
-	if (p == NULL) {
-		if (*(src-1) == '=' && *src == '=') {
+	if (p == NULL)
+	{
+		if (*(src-1) == '=' && *src == '=')
+		{
 			if (byte1 != 0)		/* bad padding */
+			{
 				return BADPAD;
+			}
 			return 1;
 		}
 		return BADCH2;
@@ -304,10 +349,14 @@ static int unb64(const char *src, char *dst, size_t dstlen)
 	byte1 = (byte2 & 0x3) << 6;
 
 	p = strchr(base64, *src++);
-	if (p == NULL) {
-		if (*(src-1) == '=') {
+	if (p == NULL)
+	{
+		if (*(src-1) == '=')
+		{
 			if (byte1 != 0)		/* bad padding */
+			{
 				return BADPAD;
+			}
 			return 2;
 		}
 		return BADCH3;
@@ -329,8 +378,9 @@ static int unb64(const char *src, char *dst, size_t dstlen)
 static int untext(const char *src, char *dst, size_t dstlen)
 {
 	if (dstlen < 1)
+	{
 		return SHORT;
-
+	}
 	*dst = *src;
 	return 1;
 }
@@ -359,13 +409,18 @@ static const char *badch(const char *src, int errcode, char *errp, size_t errlen
 	char ch;
 
 	if (errp == NULL || errlen < REQD)
+	{
 		return "unknown character in input";
+	}
 	strcpy(errp, pre);
 	ch = *(src + BADOFF(errcode));
-	if (isprint(ch)) {
+	if (isprint(ch))
+	{
 		buf[0] = ch;
 		buf[1] = '\0';
-	} else {
+	}
+	else
+	{
 		buf[0] = '\\';
 		buf[1] = ((ch & 0700) >> 6) + '0';
 		buf[2] = ((ch & 0070) >> 3) + '0';
