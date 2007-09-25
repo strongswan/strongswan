@@ -3028,11 +3028,10 @@ ISAKMP_SA_established(struct connection *c, so_serial_t serial)
 	{
 	    struct connection *next = d->ac_next;	/* might move underneath us */
 
-	    if (d->kind >= CK_PERMANENT 
+	    if (d->kind >= CK_PERMANENT
 	    && same_id(&c->spd.this.id, &d->spd.this.id)
 	    && same_id(&c->spd.that.id, &d->spd.that.id)
-	    && (!sameaddr(&c->spd.that.host_addr, &d->spd.that.host_addr) ||
-	       (c->spd.that.host_port != d->spd.that.host_port)))
+	    && !sameaddr(&c->spd.that.host_addr, &d->spd.that.host_addr))
 	    {
 		release_connection(d, FALSE);
 	    }
