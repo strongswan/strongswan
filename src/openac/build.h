@@ -1,7 +1,7 @@
 /* Build a X.509 attribute certificate
  * Copyright (C) 2002  Ueli Galizzi, Ariane Seiler
- * Copyright (C) 2004  Andreas Steffen
- * Zuercher Hochschule Winterthur, Switzerland
+ * Copyright (C) 2004,2007  Andreas Steffen
+ * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: build.h,v 1.4 2004/11/03 14:28:52 as Exp $
  */
 
 #ifndef _BUILD_H
