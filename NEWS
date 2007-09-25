@@ -1,3 +1,11 @@
+strongswan-4.1.7
+----------------
+
+- In NAT traversal situations and multiple queued Quick Modes,
+  those pending connections inserted by auto=start after the
+  port floating from 500 to 4500 were erronously deleted.
+
+
 strongswan-4.1.6
 ----------------
 
