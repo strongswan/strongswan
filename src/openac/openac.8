@@ -1,4 +1,4 @@
-.TH IPSEC_OPENAC 8 "29 September 2005"
+.TH IPSEC_OPENAC 8 "22 September 2007"
 .SH NAME
 ipsec openac \- Generation of X.509 attribute certificates
 .SH SYNOPSIS
@@ -11,18 +11,13 @@ ipsec openac \- Generation of X.509 attribute certificates
 ] [
 .B \-\-optionsfrom
 \fIfilename\fP
-] [
-.B \-\-quiet
 ]
 .br
 \ \ \ [
-.B \-\-debug\(hyall
+.B \-\-quiet
 ] [
-.B \-\-debug\(hyparsing
-] [
-.B \-\-debug\(hyraw
-] [
-.B \-\-debug\(hyprivate
+.B \-\-debug
+\fIlevel\fP
 ]
 .br
 \ \ \ [
@@ -135,19 +130,9 @@ debugging output are prefixed with ``|\ '' to distinguish them from error messag
 When \fBopenac\fP is invoked, it may be given arguments to specify
 which classes to output.  The current options are:
 .TP
-\fB\-\-debug-raw\fP
-show the raw bytes of the parsed user and authorization authority certificates
-as well as of the generated X.509 attribute certificate.
-.TP
-\fB\-\-debug-parsing\fP
-show the parsed structure of user and authorization authority certificats
-as well as of the generated X.509 attribute certificate.
-.TP
-\fB\-\-debug-all\fP
-all of the above.
-.TP
-\fB\-\-debug-private\fP
-enables debugging output of the authorization authority's private key.
+\fB\-\-debug\fP\ \fIlevel\fP
+sets the debug level to 0 (none), 1 (normal), 2 (more), 3 (raw), and 4 (private),
+the default level being 1.
 .SH EXIT STATUS
 .LP
 The execution of \fBopenac\fP terminates with one of the following two exit codes:
