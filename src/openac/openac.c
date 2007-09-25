@@ -1,7 +1,14 @@
-/* Generation of X.509 attribute certificates
+/**
+ * @file openac.c
+ * 
+ * @brief Generation of X.509 attribute certificates.
+ * 
+ */
+
+/*
  * Copyright (C) 2002  Ueli Galizzi, Ariane Seiler
- * Copyright (C) 2004  Andreas Steffen
- * Zuercher Hochschule Winterthur, Switzerland
+ * Copyright (C) 2004,2007  Andreas Steffen
+ * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -12,13 +19,12 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: openac.c,v 1.18 2006/01/04 21:12:33 as Exp $
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <ctype.h>
@@ -32,12 +38,15 @@
 #include <crypto/ietf_attr_list.h>
 #include <utils/optionsfrom.h>
 
+#ifdef INTEGRITY_TEST
+#include <fips/fips.h>
+#include <fips_signature.h>
+#endif /* INTEGRITY_TEST */
+
 #include "build.h"
 
 #define OPENAC_PATH   IPSEC_CONFDIR "/openac"
 #define OPENAC_SERIAL IPSEC_CONFDIR "/openac/serial"
-
-const char openac_version[] = "openac 0.4";
 
 static void usage(const char *mess)
 {
@@ -50,13 +59,8 @@ static void usage(const char *mess)
 		" [--version]"
 		" [--optionsfrom <filename>]"
 		" [--quiet]"
-#ifdef DEBUG
 		" \\\n\t"
-		"      [--debug-all]"
-		" [--debug-parsing]"
-		" [--debug-raw]"
-		" [--debug-private]"
-#endif
+		"      [--debug <level 0..4>]"
 		" \\\n\t"
 		"      [--days <days>]"
 		" [--hours <hours>]"
@@ -73,8 +77,8 @@ static void usage(const char *mess)
 		" --out <filename>"
 		"\n"
 	);
-	exit(mess == NULL? 0 : 1);
 }
+
 
 /**
  * convert a chunk into a multi-precision integer
@@ -137,12 +141,10 @@ static chunk_t read_serial(void)
 	 * and incrementing it by one
 	 * and representing it as a two's complement octet string
 	 */
-	printf("last_serial: '%#B'\n", &last_serial);
 	mpz_init(number);
 	chunk_to_mpz(last_serial, number);
 	mpz_add_ui(number, number, 0x01);
 	serial = mpz_to_chunk(number);
-	printf("serial: '%#B'\n", &serial);
 	mpz_clear(number);
 
 	return serial;
@@ -181,6 +183,34 @@ time_t notAfter = UNDEFINED_TIME;
 
 chunk_t serial;
 
+static int debug_level = 1;
+static bool stderr_quiet = FALSE;
+/**
+ * openac dbg function
+ */
+static void openac_dbg(int level, char *fmt, ...)
+{
+	int priority = LOG_INFO;
+	va_list args;
+	
+	if (level <= debug_level)
+	{
+		va_start(args, fmt);
+		if (!stderr_quiet)
+		{
+			vfprintf(stderr, fmt, args);
+			fprintf(stderr, "\n");
+		}
+		vsyslog(priority, fmt, args);
+		va_end(args);
+	}
+}
+
+void (*dbg) (int level, char *fmt, ...) = openac_dbg;
+
+/**
+ * openac main program
+ */
 int main(int argc, char **argv)
 {
 	char *keyfile = NULL;
@@ -195,15 +225,16 @@ int main(int argc, char **argv)
 
 	const time_t default_validity = 24*3600; 	/* 24 hours */
 	time_t validity = 0;
+	int status = 1;
 
 	passphrase.ptr[0] = '\0';
-
 	groups = linked_list_create();
+
+	openlog("openac", 0, LOG_AUTHPRIV);
 
 	/* handle arguments */
 	for (;;)
 	{
-#	define DBG_OFFSET 256
 		static const struct option long_opts[] = {
 			/* name, has_arg, flag, val */
 			{ "help", no_argument, NULL, 'h' },
@@ -211,7 +242,7 @@ int main(int argc, char **argv)
 			{ "optionsfrom", required_argument, NULL, '+' },
 			{ "quiet", no_argument, NULL, 'q' },
 			{ "cert", required_argument, NULL, 'c' },
-				{ "key", required_argument, NULL, 'k' },
+			{ "key", required_argument, NULL, 'k' },
 			{ "password", required_argument, NULL, 'p' },
 			{ "usercert", required_argument, NULL, 'u' },
 			{ "groups", required_argument, NULL, 'g' },
@@ -220,16 +251,11 @@ int main(int argc, char **argv)
 			{ "startdate", required_argument, NULL, 'S' },
 			{ "enddate", required_argument, NULL, 'E' },
 			{ "out", required_argument, NULL, 'o' },
-#ifdef DEBUG
-			{ "debug-all", no_argument, NULL, 'A' },
-			{ "debug-raw", no_argument, NULL, DBG_RAW + DBG_OFFSET },
-			{ "debug-parsing", no_argument, NULL, DBG_PARSING + DBG_OFFSET },
-			{ "debug-private", no_argument, NULL, DBG_PRIVATE + DBG_OFFSET },
-#endif
+			{ "debug", required_argument, NULL, 'd' },
 			{ 0,0,0,0 }
 		};
 	
-		int c = getopt_long(argc, argv, "hv+:qc:k:p;u:g:D:H:S:E:o:", long_opts, NULL);
+		int c = getopt_long(argc, argv, "hv+:qc:k:p;u:g:D:H:S:E:o:d:", long_opts, NULL);
 
 		/* Note: "breaking" from case terminates loop */
 		switch (c)
@@ -242,17 +268,15 @@ int main(int argc, char **argv)
 
 			case ':':	/* diagnostic already printed by getopt_long */
 			case '?':	/* diagnostic already printed by getopt_long */
-				usage(NULL);
-				break;   /* not actually reached */
-
 			case 'h':	/* --help */
 				usage(NULL);
-				break;	/* not actually reached */
+				status = 1;
+				goto end;
 
 			case 'v':	/* --version */
-				printf("%s\n", openac_version);
-				exit(0);
-				break;	/* not actually reached */
+				printf("openac (strongSwan %s)\n", VERSION);
+				status = 0;
+				goto end;
 
 			case '+':	/* --optionsfrom <filename> */
 				{
@@ -272,7 +296,7 @@ int main(int argc, char **argv)
 				continue;
 
 			case 'q':	/* --quiet */
-				/* TODO log to syslog only */
+				stderr_quiet = TRUE;
 				continue;
 
 			case 'c':	/* --cert */
@@ -287,6 +311,7 @@ int main(int argc, char **argv)
 				if (strlen(optarg) > BUF_LEN)
 				{
 					usage("passphrase too long");
+					goto end;
 				}
 				strncpy(passphrase.ptr, optarg, BUF_LEN);
 				passphrase.len = min(strlen(optarg), BUF_LEN);
@@ -304,6 +329,7 @@ int main(int argc, char **argv)
 				if (optarg == NULL || !isdigit(optarg[0]))
 				{
 					usage("missing number of days");
+					goto end;
 				}
 				else
 				{
@@ -313,6 +339,7 @@ int main(int argc, char **argv)
 					if (*endptr != '\0' || endptr == optarg || days <= 0)
 					{
 						usage("<days> must be a positive number");
+						goto end;
 					}
 					validity += 24*3600*days;
 				}
@@ -322,6 +349,7 @@ int main(int argc, char **argv)
 				if (optarg == NULL || !isdigit(optarg[0]))
 				{
 					usage("missing number of hours");
+					goto end;
 				}
 				else
 				{
@@ -331,6 +359,7 @@ int main(int argc, char **argv)
 					if (*endptr != '\0' || endptr == optarg || hours <= 0)
 					{
 						usage("<hours> must be a positive number");
+						goto end;
 					}
 					validity += 3600*hours;
 				}
@@ -340,6 +369,7 @@ int main(int argc, char **argv)
 				if (optarg == NULL || strlen(optarg) != 15 || optarg[14] != 'Z')
 				{
 					usage("date format must be YYYYMMDDHHMMSSZ");
+					goto end;
 				}
 				else
 				{
@@ -353,6 +383,7 @@ int main(int argc, char **argv)
 				if (optarg == NULL || strlen(optarg) != 15 || optarg[14] != 'Z')
 				{
 					usage("date format must be YYYYMMDDHHMMSSZ");
+					goto end;
 				}
 				else
 				{
@@ -361,17 +392,18 @@ int main(int argc, char **argv)
 				}
 				continue;
 
-			case 'o':	/* --outt */
+			case 'o':	/* --out */
 				outfile = optarg;
 				continue;
 
-#ifdef DEBUG
-			case 'A':	/* --debug-all */
-				base_debugging = DBG_ALL;
+			case 'd':	/* --debug */
+				debug_level = atoi(optarg);
 				continue;
-#endif
+
 			default:
 				usage("");
+				status = 0;
+				goto end;
 		}
 		break;
 	}
@@ -379,7 +411,23 @@ int main(int argc, char **argv)
 	if (optind != argc)
 	{
 		usage("unexpected argument");
+		goto end;
 	}
+
+	DBG1("starting openac (strongSwan Version %s)", VERSION);
+
+#ifdef INTEGRITY_TEST
+	DBG1("integrity test of libstrongswan code");
+	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
+	{
+		DBG1("  integrity test passed");
+	}
+	else
+	{
+		DBG1("  integrity test failed");
+		exit(3);
+	}
+#endif /* INTEGRITY_TEST */
 
 	/* load the signer's RSA private key */
 	if (keyfile != NULL)
@@ -388,7 +436,7 @@ int main(int argc, char **argv)
 
 		if (signerkey == NULL)
 		{
-			exit(1);
+			goto end;
 		}
 	}
 
@@ -399,24 +447,25 @@ int main(int argc, char **argv)
 
 		if (signercert == NULL)
 		{
-			exit(1);
+			goto end;
 		}
 	}
 
 	/* load the users's X.509 certificate */
 	if (usercertfile != NULL)
 	{
-		usercert = x509_create_from_file(usercertfile, "signer cert");
+		usercert = x509_create_from_file(usercertfile, "user cert");
+
 		if (usercert == NULL)
 		{
-			exit(1);
+			goto end;
 		}
 	}
 
 	/* compute validity interval */
 	validity = (validity)? validity : default_validity;
-	notBefore = (notBefore) ? notBefore : time(NULL);
-	notAfter = (notAfter) ? notAfter : notBefore + validity;
+	notBefore = (notBefore == UNDEFINED_TIME) ? time(NULL) : notBefore;
+	notAfter =  (notAfter  == UNDEFINED_TIME) ? time(NULL) + validity : notAfter;
 
 	/* build and parse attribute certificate */
 	if (usercert != NULL && signercert != NULL && signerkey != NULL)
@@ -431,9 +480,11 @@ int main(int argc, char **argv)
 		if (chunk_write(attr_cert, outfile, "attribute cert", 0022, TRUE))
 		{
 			write_serial(serial);
+			status = 0;
 		}
 	}
 
+end:
 	/* delete all dynamically allocated objects */
 	DESTROY_IF(signerkey);
 	DESTROY_IF(signercert);
@@ -441,6 +492,6 @@ int main(int argc, char **argv)
 	DESTROY_IF(ac);
 	ietfAttr_list_destroy(groups);
 	free(serial.ptr);
-
-	exit(0);
+	closelog();
+	exit(status);
 }
