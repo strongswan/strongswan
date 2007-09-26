@@ -10,22 +10,13 @@ gain hassle-free configuration, version negotiation and maintainability.
 Roadmap 2007
 ============
 
- Jul  !   - reimplement IKEv2 p2p NATT support
-      !   - release IKEv2 p2p NATT draft 00
-      !   - interface in charon for the XML based SMP management interface
-      !   - SMP configuration client
+ Oct  ! - modular credential backends
+      ! - enhance manager/XML interface
       !
- Aug  !   - modular cerendtial backends
-      !
- Sep  !   - Start IKEv1 implementation in charon
-      !
- Oct  !
-      !
- Nov  !
+ Nov  ! - Start IKEv1 implementation in charon
       !
  Dec  !
       !
-
 
 TODO-List
 =========
@@ -39,7 +30,6 @@ Build options
 
 Certificate support
 -------------------
-- New trustchain mechanism?
 - proper handling of multiple certificate payloads (import order)
 - synchronized CRL fetcher
 - Smartcard interface
@@ -53,5 +43,4 @@ Stroke interface
 Misc
 ----
 - Address pool/backend for virtual IP assignement
-- fix iterator->insert_before/after
-- split up kernel interface into:  ipsec, routing, interfaces
+- replace iterator by enumerator
