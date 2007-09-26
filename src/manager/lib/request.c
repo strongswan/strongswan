@@ -121,7 +121,7 @@ static int iterenv_cb(void *null, int num, char **key, char **value)
 	*key = NULL;
 	*value = NULL;
 
-	if (num > req_env_len)
+	if (num < req_env_len)
 	{
 		char *eq;
 
