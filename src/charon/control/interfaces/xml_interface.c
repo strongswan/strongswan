@@ -146,23 +146,28 @@ static void write_address(xmlTextWriterPtr writer, char *element, host_t *host)
 }
 
 /**
- * write a list of traffic_selector_t
+ * write a childEnd
  */
-static void write_ts(xmlTextWriterPtr writer, linked_list_t *list)
+static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool local)
 {
 	iterator_t *iterator;
+	linked_list_t *list;
 	traffic_selector_t *ts;
-	
+	xmlTextWriterWriteFormatElement(writer, "spi", "%lx", 
+									child->get_spi(child, local));
+	xmlTextWriterStartElement(writer, "networks");
+	list = child->get_traffic_selectors(child, local);
 	iterator = list->create_iterator(list, TRUE);
 	while (iterator->iterate(iterator, (void**)&ts))
 	{
-		xmlTextWriterStartElement(writer, "net");
+		xmlTextWriterStartElement(writer, "network");
 		xmlTextWriterWriteAttribute(writer, "type",
 						ts->get_type(ts) == TS_IPV4_ADDR_RANGE ? "ipv4" : "ipv6");
 		xmlTextWriterWriteFormatString(writer, "%R", ts);
 		xmlTextWriterEndElement(writer);
 	}
 	iterator->destroy(iterator);
+	xmlTextWriterEndElement(writer);
 }
 
 /**
@@ -170,12 +175,26 @@ static void write_ts(xmlTextWriterPtr writer, linked_list_t *list)
  */
 static void write_child(xmlTextWriterPtr writer, child_sa_t *child)
 {
+	mode_t mode;
+	encryption_algorithm_t encr;
+	integrity_algorithm_t int_algo;
+	size_t encr_len, int_len;
+	u_int32_t rekey, use_in, use_out, use_fwd;
+	child_cfg_t *config;
+	
+	config = child->get_config(child);
+	child->get_stats(child, &mode, &encr, &encr_len, &int_algo, &int_len,
+					 &rekey, &use_in, &use_out, &use_fwd);
+
 	xmlTextWriterStartElement(writer, "childsa");
+	xmlTextWriterWriteFormatElement(writer, "reqid", "%d", child->get_reqid(child));
+	xmlTextWriterWriteFormatElement(writer, "childconfig", "%s", 
+									config->get_name(config));
 	xmlTextWriterStartElement(writer, "local");
-	write_ts(writer, child->get_traffic_selectors(child, TRUE));
+	write_childend(writer, child, TRUE);
 	xmlTextWriterEndElement(writer);
 	xmlTextWriterStartElement(writer, "remote");
-	write_ts(writer, child->get_traffic_selectors(child, FALSE));
+	write_childend(writer, child, FALSE);
 	xmlTextWriterEndElement(writer);
 	xmlTextWriterEndElement(writer);
 }
@@ -421,7 +440,8 @@ static job_requeue_t dispatch(private_xml_interface_t *this)
 	return JOB_REQUEUE_DIRECT;
 }
 
-struct sockaddr_un unix_addr = { AF_UNIX, "/var/run/charon.xml"};
+/** XML unix socket */
+struct sockaddr_un unix_addr = { AF_UNIX, IPSEC_PIDDIR "/charon.xml"};
 
 /**
  * Implementation of itnerface_t.destroy.
@@ -430,7 +450,7 @@ static void destroy(private_xml_interface_t *this)
 {
 	this->job->cancel(this->job);
 	close(this->socket);
-	//unlink(unix_addr.sun_path);
+	unlink(unix_addr.sun_path);
 	free(this);
 }
 
@@ -440,42 +460,32 @@ static void destroy(private_xml_interface_t *this)
 interface_t *interface_create()
 {
 	private_xml_interface_t *this = malloc_thing(private_xml_interface_t);
-	//mode_t old;
-	struct sockaddr_in tcp_addr;
+	mode_t old;
 
 	this->public.interface.destroy = (void (*)(interface_t*))destroy;
 	
 	/* set up unix socket */
-	this->socket = socket(AF_INET, SOCK_STREAM, 0);//socket(AF_UNIX, SOCK_STREAM, 0);
+	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (this->socket == -1)
 	{
 		DBG1(DBG_CFG, "could not create XML socket");
 		free(this);
 		return NULL;
 	}
-	
-	memset(&tcp_addr, 0, sizeof(tcp_addr));
-	tcp_addr.sin_family = AF_INET;
-	tcp_addr.sin_addr.s_addr = INADDR_ANY;
-	tcp_addr.sin_port = htons(4502);
-	if (bind(this->socket, (struct sockaddr*)&tcp_addr, sizeof(tcp_addr)) < 0)
+		
+	old = umask(~(S_IRWXU | S_IRWXG));
+	if (bind(this->socket, (struct sockaddr *)&unix_addr, sizeof(unix_addr)) < 0)
 	{
 		DBG1(DBG_CFG, "could not bind XML socket: %s", strerror(errno));
 		close(this->socket);
 		free(this);
 		return NULL;
 	}
-	
-	/*
-	old = umask(~S_IRWXU);
-	if (bind(this->socket, (struct sockaddr *)&socket_addr, sizeof(socket_addr)) < 0)
+	umask(old);
+	if (chown(unix_addr.sun_path, IPSEC_UID, IPSEC_GID) != 0)
 	{
-		DBG1(DBG_CFG, "could not bind XML socket: %s", strerror(errno));
-		close(this->socket);
-		free(this);
-		return NULL;
+		DBG1(DBG_CFG, "changing XML socket permissions failed: %s", strerror(errno));
 	}
-	umask(old);*/
 	
 	if (listen(this->socket, 5) < 0)
 	{

@@ -245,6 +245,8 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 		keep |= (1<<CAP_NET_RAW);
 		/* CAP_DAC_READ_SEARCH to read ipsec.secrets */
 		keep |= (1<<CAP_DAC_READ_SEARCH);
+		/* CAP_CHOWN to change file permissions (socket permissions) */
+		keep |= (1<<CAP_CHOWN);
 	}
 
 	hdr.version = _LINUX_CAPABILITY_VERSION;
@@ -552,6 +554,7 @@ int main(int argc, char *argv[])
 	if (pid_file)
 	{
 		fprintf(pid_file, "%d\n", getpid());
+		fchown(fileno(pid_file), IPSEC_UID, IPSEC_GID);
 		fclose(pid_file);
 	}
 	

@@ -24,7 +24,6 @@
 #include "../manager.h"
 #include "../gateway.h"
 
-#include <template.h>
 #include <xml.h>
 
 #include <library.h>
@@ -48,124 +47,137 @@ struct private_status_controller_t {
 	manager_t *manager;
 };
 
-static void ikesalist(private_status_controller_t *this,
-					  request_t *request, response_t *response)
+/**
+ * read XML of a childsa element and fill template
+ */
+static void process_childsa(private_status_controller_t *this, char *id,
+							enumerator_t *e, request_t *r)
 {
-	char *str;
-	gateway_t *gateway;
-	xml_t *node;
-	enumerator_t *e1, *e2, *e3, *e4, *e5, *e6, *e7, *e8;
-	char *name, *value, *id = "", *section;
-
-	gateway = this->manager->select_gateway(this->manager, 0);
-	str = gateway->request(gateway,	"<message type=\"request\" id=\"1\">"
-										"<query>"
-											"<ikesalist/>"
-										"</query>"
-									"</message>");
-	if (str == NULL)
-	{
-		response->printf(response, "gateway did not respond");
-		return;
-	}
+	xml_t *xml;
+	enumerator_t *e1, *e2;
+	char *name, *value, *reqid = "", *section = "";
+	int num = 0;
 	
-	node = xml_create(str);
-	if (node == NULL)
+	while (e->enumerate(e, &xml, &name, &value))
 	{
-		response->printf(response, "parsing XML failed");
-		return;
-	}
-	
-	template_t *t = template_create("templates/status/ikesalist.cs");
-
-	e1 = node->children(node);
-	while (e1->enumerate(e1, &node, &name, &value))
-	{
-		if (streq(name, "message"))
+		if (streq(name, "reqid"))
 		{
-			e2 = node->children(node);
-			while (e2->enumerate(e2, &node, &name, &value))
+			reqid = value;
+		}
+		else if (streq(name, "local") || streq(name, "remote"))
+		{
+			section = name;
+			e1 = xml->children(xml);
+			while (e1->enumerate(e1, &xml, &name, &value))
 			{
-				if (streq(name, "query"))
+				if (streq(name, "networks"))
 				{
-					e3 = node->children(node);
-					while (e3->enumerate(e3, &node, &name, &value))
+					e2 = xml->children(xml);
+					while (e2->enumerate(e2, &xml, &name, &value))
 					{
-						if (streq(name, "ikesalist"))
+						if (streq(name, "network"))
 						{
-							e4 = node->children(node);
-							while (e4->enumerate(e4, &node, &name, &value))
-							{
-								if (streq(name, "ikesa"))
-								{
-									e5 = node->children(node);
-									while (e5->enumerate(e5, &node, &name, &value))
-									{
-										if (streq(name, "id"))
-										{
-											id = value;	
-										}
-										else if(streq(name, "local") ||
-												streq(name, "remote"))
-										{
-											section = name;
-											e6 = node->children(node);
-											while (e6->enumerate(e6, &node, &name, &value))
-											{
-												t->setf(t, "ikesas.%s.%s.%s=%s", id, section, name, value);
-											}
-											e6->destroy(e6);
-										}
-										else if (streq(name, "childsalist"))
-										{
-											e6 = node->children(node);
-											while (e6->enumerate(e6, &node, &name, &value))
-											{
-												if (streq(name, "childsa"))
-												{
-													e7 = node->children(node);
-													while (e7->enumerate(e7, &node, &name, &value))
-													{
-														if (streq(name, "local") ||
-															streq(name, "remote"))
-														{
-															section = name;
-															e8 = node->children(node);
-															while (e8->enumerate(e8, &node, &name, &value))
-															{
-																t->setf(t, "ikesas.%s.childsas.%s.%s=%s", id, section, name, value);
-															}
-															e8->destroy(e8);
-														}
-													}
-													e7->destroy(e7);
-												}
-											}
-											e6->destroy(e6);
-										}
-										else
-										{
-											t->setf(t, "ikesas.%s.%s=%s", id, name, value);
-										}
-									}
-									e5->destroy(e5);
-								}
-							}
-							e4->destroy(e4);
+							r->setf(r, "ikesas.%s.childsas.%s.%s.networks.%d=%s",
+									id, reqid, section, ++num, value);
 						}
 					}
-					e3->destroy(e3);
+					e2->destroy(e2);
+				}
+				else
+				{
+					r->setf(r, "ikesas.%s.childsas.%s.%s.%s=%s",
+							id, reqid, section, name, value);
 				}
 			}
-			e2->destroy(e2);
+			e1->destroy(e1);
+		}
+		else
+		{
+			r->setf(r, "ikesas.%s.childsas.%s.%s=%s",
+					id, reqid, name, value);
 		}
 	}
-	e1->destroy(e1);
+}
 
-	t->set(t, "title", "IKE SA overview");
-	t->render(t, response);
-	t->destroy(t); 
-	free(str);
+/**
+ * read XML of a ikesa element and fill template
+ */
+static void process_ikesa(private_status_controller_t *this,
+						  enumerator_t *e, request_t *r)
+{
+	xml_t *xml;
+	enumerator_t *e1, *e2;
+	char *name, *value, *id = "", *section = "";
+
+	while (e->enumerate(e, &xml, &name, &value))
+	{
+		if (streq(name, "id"))
+		{
+			id = value;	
+		}
+		else if (streq(name, "local") || streq(name, "remote"))
+		{
+			section = name;
+			e1 = xml->children(xml);
+			while (e1->enumerate(e1, &xml, &name, &value))
+			{
+				r->setf(r, "ikesas.%s.%s.%s=%s", id, section, name, value);
+			}
+			e1->destroy(e1);
+		}
+		else if (streq(name, "childsalist"))
+		{
+			e1 = xml->children(xml);
+			while (e1->enumerate(e1, &xml, &name, &value))
+			{
+				if (streq(name, "childsa"))
+				{
+					e2 = xml->children(xml);
+					process_childsa(this, id, e2, r);
+					e2->destroy(e2);
+				}
+			}
+			e1->destroy(e1);
+		}
+		else
+		{
+			r->setf(r, "ikesas.%s.%s=%s", id, name, value);
+		}
+	}
+}
+
+static void ikesalist(private_status_controller_t *this, request_t *r)
+{
+	gateway_t *gateway;
+	xml_t *xml;
+	enumerator_t *e1, *e2;
+	char *name, *value;
+
+	gateway = this->manager->select_gateway(this->manager, 0);
+	e1 = gateway->query_ikesalist(gateway);
+	if (e1 == NULL)
+	{
+		r->set(r, "title", "Error");
+		r->set(r, "error", "querying the gateway failed");
+		r->render(r, "templates/error.cs");
+	}
+	else
+	{
+		r->set(r, "title", "IKE SA overview");
+
+		while (e1->enumerate(e1, &xml, &name, &value))
+		{
+			if (streq(name, "ikesa"))
+			{
+				e2 = xml->children(xml);
+				process_ikesa(this, e2, r);
+				e2->destroy(e2);
+			}
+		}
+		e1->destroy(e1);
+
+		r->render(r, "templates/status/ikesalist.cs");
+	}
 }
 
 /**
@@ -180,24 +192,24 @@ static char* get_name(private_status_controller_t *this)
  * Implementation of controller_t.handle
  */
 static void handle(private_status_controller_t *this,
-				   request_t *request, response_t *response, char *action)
+				   request_t *request, char *action)
 {
 	if (!this->manager->logged_in(this->manager))
 	{
-		return response->redirect(response, "auth/login");
+		return request->redirect(request, "auth/login");
 	}
 	if (this->manager->select_gateway(this->manager, 0) == NULL)
 	{
-		return response->redirect(response, "gateway/list");
+		return request->redirect(request, "gateway/list");
 	}
 	if (action)
 	{
 		if (streq(action, "ikesalist"))
 		{
-			return ikesalist(this, request, response);
+			return ikesalist(this, request);
 		}
 	}
-	return response->redirect(response, "status/ikesalist");
+	return request->redirect(request, "status/ikesalist");
 }
 
 /**
@@ -216,7 +228,7 @@ controller_t *status_controller_create(context_t *context, void *param)
 	private_status_controller_t *this = malloc_thing(private_status_controller_t);
 
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
-	this->public.controller.handle = (void(*)(controller_t*,request_t*,response_t*,char*,char*,char*,char*,char*))handle;
+	this->public.controller.handle = (void(*)(controller_t*,request_t*,char*,char*,char*,char*,char*))handle;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
 	
 	this->manager = (manager_t*)context;

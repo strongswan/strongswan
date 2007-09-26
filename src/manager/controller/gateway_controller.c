@@ -24,8 +24,6 @@
 #include "../manager.h"
 #include "../gateway.h"
 
-#include <template.h>
-
 #include <library.h>
 
 
@@ -48,50 +46,47 @@ struct private_gateway_controller_t {
 	
 };
 
-static void list(private_gateway_controller_t *this,
-				 request_t *request, response_t *response)
+static void list(private_gateway_controller_t *this, request_t *request)
 {
-	template_t *t;
 	enumerator_t *enumerator;
 	char *name, *address;
 	int id, port;
 	
-	t = template_create("templates/gateway/list.cs");
 	enumerator = this->manager->create_gateway_enumerator(this->manager);
 	while (enumerator->enumerate(enumerator, &id, &name, &port, &address))
 	{
-		t->setf(t, "gateways.%d.name=%s", id, name);
+		request->setf(request, "gateways.%d.name=%s", id, name);
 		if (port)
 		{
-			t->setf(t, "gateways.%d.address=tcp://%s:%d", id, address, port);
+			request->setf(request, "gateways.%d.address=tcp://%s:%d",
+						  id, address, port);
 		}
 		else
 		{
-			t->setf(t, "gateways.%d.address=unix://%s", id, address);
+			request->setf(request, "gateways.%d.address=unix://%s",
+						  id, IPSEC_PIDDIR"/charon.xml");
 		}
 	}
 	enumerator->destroy(enumerator);
-	t->set(t, "action", "select");
-	t->set(t, "title", "Choose gateway");
-	t->render(t, response);
-	t->destroy(t);
+	request->set(request, "action", "select");
+	request->set(request, "title", "Choose gateway");
+	request->render(request, "templates/gateway/list.cs");
 }
 
-static void _select(private_gateway_controller_t *this,
-					request_t *request, response_t *response)
+static void _select(private_gateway_controller_t *this, request_t *request)
 {
 	char *id;
 	
-	id = request->get_post_data(request, "gateway");
+	id = request->get_query_data(request, "gateway");
 	if (id)
 	{
 		if (this->manager->select_gateway(this->manager, atoi(id)))
 		{
-			response->redirect(response, "status/ikesalist");
+			request->redirect(request, "status/ikesalist");
 			return;
 		}
 	}
-	response->printf(response, "selecting gateway failed: %s", id);
+	request->redirect(request, "gateway/list");
 }
 
 /**
@@ -106,24 +101,24 @@ static char* get_name(private_gateway_controller_t *this)
  * Implementation of controller_t.handle
  */
 static void handle(private_gateway_controller_t *this,
-				   request_t *request, response_t *response, char *action)
+				   request_t *request, char *action)
 {
 	if (!this->manager->logged_in(this->manager))
 	{
-		return response->redirect(response, "auth/login");
+		return request->redirect(request, "auth/login");
 	}
 	if (action)
 	{
 		if (streq(action, "list"))
 		{
-			return list(this, request, response);
+			return list(this, request);
 		}
 		else if (streq(action, "select")) 
 		{
-			return _select(this, request, response);
+			return _select(this, request);
 		}
 	}
-	response->redirect(response, "gateway/list");
+	request->redirect(request, "gateway/list");
 }
 
 
@@ -143,7 +138,7 @@ controller_t *gateway_controller_create(context_t *context, void *param)
 	private_gateway_controller_t *this = malloc_thing(private_gateway_controller_t);
 
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
-	this->public.controller.handle = (void(*)(controller_t*,request_t*,response_t*,char*,char*,char*,char*,char*))handle;
+	this->public.controller.handle = (void(*)(controller_t*,request_t*,char*,char*,char*,char*,char*))handle;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
 	
 	this->manager = (manager_t*)context;

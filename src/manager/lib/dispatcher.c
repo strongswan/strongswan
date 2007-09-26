@@ -28,6 +28,7 @@
 #include <fcgiapp.h>
 #include <pthread.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include <utils/linked_list.h>
 
@@ -183,7 +184,6 @@ static void dispatch(private_dispatcher_t *this)
 		while (TRUE)
 		{
 			request_t *request;
-			response_t *response;
 			session_entry_t *current, *found = NULL;
 			iterator_t *iterator;
 			time_t now;
@@ -200,8 +200,11 @@ static void dispatch(private_dispatcher_t *this)
 			}
 			
 			/* prepare */
-			response = response_create(&fcgi_req);
-			request = request_create(&fcgi_req);
+			request = request_create(&fcgi_req, TRUE);
+			if (request == NULL)
+			{
+				continue;
+			}
 			sid = request->get_cookie(request, "SID");
 			now = time(NULL);
 			
@@ -244,7 +247,7 @@ static void dispatch(private_dispatcher_t *this)
 			}
 		
 			/* start processing */
-			found->session->process(found->session, request, response);
+			found->session->process(found->session, request);
 			found->used = time(NULL);
 			
 			/* release session */
@@ -255,7 +258,6 @@ static void dispatch(private_dispatcher_t *this)
 			
 			/* cleanup */
 			request->destroy(request);
-			response->destroy(response);
 			
 			/*
 		    FCGX_FPrintF(fcgi_req.out, "<ul>");
@@ -323,8 +325,8 @@ static void destroy(private_dispatcher_t *this)
 /*
  * see header file
  */
-dispatcher_t *dispatcher_create(int timeout, context_constructor_t constructor,
-								void *param)
+dispatcher_t *dispatcher_create(char *socket, int timeout,
+								context_constructor_t constructor, void *param)
 {
 	private_dispatcher_t *this = malloc_thing(private_dispatcher_t);
 
@@ -343,11 +345,11 @@ dispatcher_t *dispatcher_create(int timeout, context_constructor_t constructor,
 	
     FCGX_Init();
     
-#ifdef FCGI_SOCKET
-	unlink(FCGI_SOCKET);
-	this->fd = FCGX_OpenSocket(FCGI_SOCKET, 10);
-#endif /* FCGI_SOCKET */
-    
+    if (socket)
+    {
+		unlink(socket);
+		this->fd = FCGX_OpenSocket(socket, 10);
+	}
 	return &this->public;
 }
 

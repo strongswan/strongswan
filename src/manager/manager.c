@@ -82,12 +82,16 @@ static gateway_t* select_gateway(private_manager_t *this, int select_id)
 		{
 			if (select_id == id)
 			{
-				if (port != 0)
+				if (port == 0)
+				{
+					this->gateway = gateway_create_unix(name);
+				}
+				else
 				{
 					host = host_create_from_string(address, port);
 					if (host)
 					{
-						this->gateway = gateway_create(name, host);
+						this->gateway = gateway_create_tcp(name, host);
 					}
 				}
 				break;

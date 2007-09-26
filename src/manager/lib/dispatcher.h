@@ -73,11 +73,12 @@ struct dispatcher_t {
  * The context constructor is invoked to create a session context for
  * each session.
  *
+ * @param socket		FastCGI socket path, NULL for dynamic
  * @param timeout		session timeout
  * @param constructor	construction function for session context
  * @param param			parameter to supply to context constructor
  */
-dispatcher_t *dispatcher_create(int timeout,
+dispatcher_t *dispatcher_create(char *socket, int timeout,
 								context_constructor_t constructor, void *param);
 
 #endif /* DISPATCHER_H_ */

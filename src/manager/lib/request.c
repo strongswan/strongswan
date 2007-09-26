@@ -24,9 +24,10 @@
 
 #include "request.h"
 
+#include <library.h>
 #include <stdlib.h>
-
-#include <dict.h>
+#include <string.h>
+#include <ClearSilver/ClearSilver.h>
 
 typedef struct private_request_t private_request_t;
 
@@ -41,27 +42,111 @@ struct private_request_t {
 	request_t public;
 	
 	/**
-	 * the associated fcgi request
+	 * FastCGI request object
 	 */
 	FCGX_Request *req;
 	
 	/**
-	 * list of cookies
+	 * ClearSilver CGI Kit context
 	 */
-	dict_t *cookies;
+	CGI *cgi;
 	
 	/**
-	 * list of post data
+	 * ClearSilver HDF dataset for this request
 	 */
-	dict_t *posts;
+	HDF *hdf;
 };
+
+/**
+ * thread specific FCGX_Request, used for ClearSilver cgiwrap callbacks.
+ * ClearSilver cgiwrap is not threadsave, so we use a private 
+ * context for each thread.
+ */
+__thread FCGX_Request *req;
+
+/**
+ * length of param list in req->envp
+ */
+__thread int req_env_len;
+
+/**
+ * fcgiwrap read callback
+ */
+static int read_cb(void *null, char *buf, int size)
+{
+	return FCGX_GetStr(buf, size, req->in);
+}
+
+/**
+ * fcgiwrap writef callback
+ */
+static int writef_cb(void *null, const char *format, va_list args)
+{
+	FCGX_VFPrintF(req->out, format, args);
+	return 0;
+}
+/**
+ * fcgiwrap write callback
+ */
+static int write_cb(void *null, const char *buf, int size)
+{
+	return FCGX_PutStr(buf, size, req->out);
+}
+
+/**
+ * fcgiwrap getenv callback
+ */
+static char *getenv_cb(void *null, const char *key)
+{
+	char *value;
+	
+	value = FCGX_GetParam(key, req->envp);
+	return value ? strdup(value) : NULL;
+}
+
+/**
+ * fcgiwrap getenv callback
+ */
+static int putenv_cb(void *null, const char *key, const char *value)
+{
+	/* not supported */
+	return 1;
+}
+
+/**
+ * fcgiwrap iterenv callback
+ */
+static int iterenv_cb(void *null, int num, char **key, char **value)
+{
+	*key = NULL;
+	*value = NULL;
+
+	if (num > req_env_len)
+	{
+		char *eq;
+
+		eq = strchr(req->envp[num], '=');
+		if (eq)
+		{
+			*key = strndup(req->envp[num], eq - req->envp[num]);
+			*value = strdup(eq + 1);
+		}
+		if (*key == NULL || *value == NULL)
+		{
+			free(*key);
+			free(*value);
+			return 1;
+		}
+	}
+	return 0;
+}
 	
 /**
  * Implementation of request_t.get_cookie.
  */
 static char* get_cookie(private_request_t *this, char *name)
 {
-	return this->cookies->get(this->cookies, name);
+	return hdf_get_valuef(this->hdf, "Cookie.%s", name);
 }
 	
 /**
@@ -76,152 +161,74 @@ static char* get_path(private_request_t *this)
 /**
  * Implementation of request_t.get_post_data.
  */
-static char* get_post_data(private_request_t *this, char *name)
+static char* get_query_data(private_request_t *this, char *name)
 {
-	return this->posts->get(this->posts, name);
+	return hdf_get_valuef(this->hdf, "Query.%s", name);
 }
 
 /**
- * convert 2 digit hex string to a integer
+ * Implementation of request_t.add_cookie.
  */
-static char hex2char(char *hex)
+static void add_cookie(private_request_t *this, char *name, char *value)
 {
-	static char hexdig[] = "00112233445566778899AaBbCcDdEeFf";
+	cgi_cookie_set (this->cgi, name, value,
+					FCGX_GetParam("SCRIPT_NAME", this->req->envp),
+					NULL, NULL, 0, 0);
+}
 	
-	return (strchr(hexdig, hex[1]) - hexdig)/2 +
-		   ((strchr(hexdig, hex[0]) - hexdig)/2 * 16);
+/**
+ * Implementation of request_t.redirect.
+ */
+static void redirect(private_request_t *this, char *location)
+{
+	FCGX_FPrintF(this->req->out, "Status: 303 See Other\n");
+	FCGX_FPrintF(this->req->out, "Location: %s%s%s\n\n",
+				 FCGX_GetParam("SCRIPT_NAME", this->req->envp),
+				 *location == '/' ? "" : "/", location);
 }
 
 /**
- * unescape a string up to the delimiter, and return a clone
+ * Implementation of request_t.get_base.
  */
-static char *unescape(char **pos, char delimiter)
+static char* get_base(private_request_t *this)
 {
-	char *ptr, *res, *end, code[3] = {'\0','\0','\0'};
-
-	if (**pos == '\0')
-	{
-		return NULL;
-	}
-	ptr = strchr(*pos, delimiter);
-	if (ptr)
-	{
-		res = strndup(*pos, ptr - *pos);
-		*pos = ptr + 1;
-	}
-	else
-	{
-		res = strdup(*pos);
-		*pos = "";
-	}
-	end = res + strlen(res) + 1;
-	/* replace '+' with ' ' */
-	ptr = res;
-	while ((ptr = strchr(ptr, '+')))
-	{
-		*ptr = ' ';
-	}
-	/* replace %HH with its ascii value */
-	ptr = res;
-	while ((ptr = strchr(ptr, '%')))
-	{
-		if (ptr > end - 2)
-		{
-			break;
-		}
-		strncpy(code, ptr + 1, 2);
-		*ptr = hex2char(code);
-		memmove(ptr + 1, ptr + 3, end - (ptr + 3));
-	}
-	return res;
+	return FCGX_GetParam("SCRIPT_NAME", this->req->envp);
 }
 
 /**
- * parse the http POST data
+ * Implementation of request_t.render.
  */
-static void parse_post(private_request_t *this)
+static void render(private_request_t *this, char *template)
 {
-	char buf[4096], *pos, *name, *value;
-	int len;
-
-	if (!streq(FCGX_GetParam("REQUEST_METHOD", this->req->envp), "POST") ||
-		!streq(FCGX_GetParam("CONTENT_TYPE", this->req->envp),
-			   "application/x-www-form-urlencoded"))
-	{
-		return;
-	}
+	NEOERR* err;
 	
-	len = FCGX_GetStr(buf, sizeof(buf) - 1, this->req->in);
-	if (len != atoi(FCGX_GetParam("CONTENT_LENGTH", this->req->envp)))
+	err = cgi_display(this->cgi, template);
+	if (err)
 	{
-		return;
+		cgi_neo_error(this->cgi, err);
+		nerr_log_error(err);
 	}
-	buf[len] = 0;
-	
-	pos = buf;
-	while (TRUE)
-	{
-		name = unescape(&pos, '=');
-		if (name)
-		{
-			value = unescape(&pos, '&');
-			if (value)
-			{
-				this->posts->set(this->posts, name, value);
-				continue;
-			}
-			else
-			{
-				free(name);
-			}
-		}
-		break;
-	}
+	return;
 }
 
 /**
- * parse the requests cookies
+ * Implementation of request_t.set.
  */
-static void parse_cookies(private_request_t *this)
+static void set(private_request_t *this, char *key, char *value)
 {
-	char *str, *pos;
-	char *name, *value;
-	
-	str = FCGX_GetParam("HTTP_COOKIE", this->req->envp);
-	while (str)
-	{
-		if (*str == ' ')
-		{
-			str++;
-			continue;
-		}
-		pos = strchr(str, '=');
-		if (pos == NULL)
-		{
-			break;
-		}
-		name = strndup(str, pos - str);
-		value = NULL;
-		str = pos + 1;
-		if (str)
-		{
-			pos = strchr(str, ';');
-			if (pos)
-			{
-				value = strndup(str, pos - str);
-			}
-			else
-			{
-				value = strdup(str);
-			}
-		}
-		this->cookies->set(this->cookies, name, value);
-		if (pos == NULL)
-		{
-			break;
-		}
-		str = pos + 1;
-	}
+	hdf_set_value(this->hdf, key, value);
+}
+
+/**
+ * Implementation of request_t.setf.
+ */
+static void setf(private_request_t *this, char *format, ...)
+{
+	va_list args;
+
+	va_start(args, format);
+	hdf_set_valuevf(this->hdf, format, args);
+	va_end(args);
 }
 
 /**
@@ -229,30 +236,70 @@ static void parse_cookies(private_request_t *this)
  */
 static void destroy(private_request_t *this)
 {
-	this->cookies->destroy(this->cookies);
-	this->posts->destroy(this->posts);
+	cgi_destroy(&this->cgi);
 	free(this);
 }
 
 /*
  * see header file
  */
-request_t *request_create(FCGX_Request *request)
+request_t *request_create(FCGX_Request *request, bool debug)
 {
+	NEOERR* err;
+	static bool initialized = FALSE;
 	private_request_t *this = malloc_thing(private_request_t);
 
 	this->public.get_path = (char*(*)(request_t*))get_path;
+	this->public.get_base = (char*(*)(request_t*))get_base;
+	this->public.add_cookie = (void(*)(request_t*, char *name, char *value))add_cookie;
 	this->public.get_cookie = (char*(*)(request_t*,char*))get_cookie;
-	this->public.get_post_data = (char*(*)(request_t*, char *name))get_post_data;
+	this->public.get_query_data = (char*(*)(request_t*, char *name))get_query_data;
+	this->public.redirect = (void(*)(request_t*, char *location))redirect;
+	this->public.render = (void(*)(request_t*,char*))render;
+	this->public.set = (void(*)(request_t*, char *, char*))set;
+	this->public.setf = (void(*)(request_t*, char *format, ...))setf;
 	this->public.destroy = (void(*)(request_t*))destroy;
 	
+	if (!initialized)
+	{
+		cgiwrap_init_emu(NULL, read_cb, writef_cb, write_cb,
+						 getenv_cb, putenv_cb, iterenv_cb);
+		initialized = TRUE;
+	}
+	
 	this->req = request;
-	this->cookies = dict_create(dict_streq, free, free);
-	this->posts = dict_create(dict_streq, free, free);
+	req = request;
+	req_env_len = 0;
+	while (req->envp[req_env_len] != NULL)
+	{
+		req_env_len++;
+	}
 	
-	parse_cookies(this);
-	parse_post(this);
+	err = hdf_init(&this->hdf);
+	if (!err)
+	{
+		hdf_set_value(this->hdf, "base", get_base(this));
+		hdf_set_value(this->hdf, "Config.NoCache", "true");
+		if (!debug)
+		{
+			hdf_set_value(this->hdf, "Config.TimeFooter", "0");
+			hdf_set_value(this->hdf, "Config.CompressionEnabled", "1");
+			hdf_set_value(this->hdf, "Config.WhiteSpaceStrip", "2");
+		}
 	
-	return &this->public;
+		err = cgi_init(&this->cgi, this->hdf);
+		if (!err)
+		{
+			err = cgi_parse(this->cgi);
+			if (!err)
+			{
+				return &this->public;
+			}
+			cgi_destroy(&this->cgi);
+		}
+	}
+	nerr_log_error(err);
+	free(this);
+	return NULL;
 }
 

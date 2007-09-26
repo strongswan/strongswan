@@ -1698,7 +1698,7 @@ interface_t *interface_create()
 		return NULL;
 	}
 	
-	old = umask(~S_IRWXU);
+	old = umask(~(S_IRWXU | S_IRWXG));
 	if (bind(this->socket, (struct sockaddr *)&socket_addr, sizeof(socket_addr)) < 0)
 	{
 		DBG1(DBG_CFG, "could not bind stroke socket: %s", strerror(errno));
@@ -1707,6 +1707,11 @@ interface_t *interface_create()
 		return NULL;
 	}
 	umask(old);
+	if (chown(socket_addr.sun_path, IPSEC_UID, IPSEC_GID) != 0)
+	{
+		DBG1(DBG_CFG, "changing stroke socket permissions failed: %s",
+			 strerror(errno));
+	}
 	
 	if (listen(this->socket, 0) < 0)
 	{

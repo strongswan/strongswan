@@ -100,17 +100,30 @@
 					<element name="peerconfig">
 						<data type="string"/>
 					</element>
+					<element name="lifetime">
+						<data type="integer"/>
+					</element>
+					<element name="rekeytime">
+						<data type="integer"/>
+					</element>
 					<element name="local">
-						<ref name="endPoint"/>
+						<ref name="ikeEnd"/>
 					</element>
 					<element name="remote">
-						<ref name="endPoint"/>
+						<ref name="ikeEnd"/>
+					</element>
+					<element name="childsalist">
+						<zeroOrMore>
+							<element name="childsa">
+								<ref name="childsa"/>
+							</element>
+						</zeroOrMore>
 					</element>
 				</element>
 			</zeroOrMore>
 		</element>
 	</define>
-	<define name="endPoint">
+	<define name="ikeEnd">
 		<element name="spi">
 			<data type="hexBinary" />
 		</element>
@@ -130,6 +143,38 @@
 				<data type="boolean"/>
 			</element>
 		</optional>
+	</define>
+	<define name="childsa">
+		<element name="reqid">
+			<data type="nonNegativeInteger"/>
+		</element>
+		<element name="lifetime">
+			<data type="integer"/>
+		</element>
+		<element name="rekeytime">
+			<data type="integer"/>
+		</element>
+		<element name="local">
+			<ref name="childEnd"/>
+		</element>
+		<element name="remote">
+			<ref name="childEnd"/>
+		</element>
+	</define>
+	<define name="childEnd">
+		<element name="spi">
+		<element name="networks">
+			<zeroOrMore>
+				<element name="network">
+					<optional>
+						<attribute name="protocol"/>
+					</optional>
+					<optional>
+						<attribute name="port"/>
+					</optional>
+				</element>
+			</zeroOrMore>
+		</element>
 	</define>
 	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 	<!--                    identification and address                       -->

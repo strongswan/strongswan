@@ -2,7 +2,7 @@
 <?cs each:ikesa = ikesas ?>
   <div class="expand" id="ikesa-<?cs name:ikesa ?>">
   <h1>
-  	<?cs name:ikesa ?> [<?cs var:ikesa.peerconfig ?>]:
+  	IKE #<?cs name:ikesa ?> [<?cs var:ikesa.peerconfig ?>]:
   	<span><?cs var:ikesa.local.identification ?></span> &lt;-&gt; 
   	<span><?cs var:ikesa.remote.identification ?></span>
   </h1> 
@@ -10,38 +10,16 @@
     <hr/>
     <table class="drawing">
       <tr>
-        <td>
-        </td>
-        <td class="left" colspan="2">
+        <td class="left" colspan="3">
           <?cs var:ikesa.local.identification ?>
         </td>
         <td>
         </td>
-        <td class="right" colspan="2">
+        <td class="right" colspan="3">
           <?cs var:ikesa.remote.identification ?>
-        </td>
-        <td>
-        </td>
-      </tr>
-      <tr>
-        <td>
-        </td>
-        <td>
-        </td>
-        <td class="center" colspan="3">
-          <?cs var:ikesa.local.spi ?> : <?cs var:ikesa.remote.spi ?>
-        </td>
-        <td>
-        </td>
-        <td>
         </td>
       </tr>
       <tr class="images">
-        <td>
-		<?cs each:net = ikesa.childsas.local ?>
-		  <p><?cs var:net ?></p>
-		<?cs /each ?>
-        </td>
         <td>
           <?cs if:ikesa.role == "initiator" ?>
           <img title="Local host is the initiator" src="<?cs var:base ?>/static/client-left.png"></img>
@@ -49,9 +27,13 @@
           <img title="Local host is the responder" src="<?cs var:base ?>/static/gateway-left.png"></img>
           <?cs /if ?>
         </td>
+        <td style="background-image:url(<?cs var:base ?>/static/pipe.png)">
+	      <?cs var:ikesa.local.spi ?><br/><br/><br/> 
+	      <?cs var:ikesa.local.address ?>
+        </td>
         <td>
           <?cs if:ikesa.local.nat == "true" ?>
-          <img title="Local host is behind a NAT router" src="<?cs var:base ?>/static/router.png"></img>
+          <img title="Local host is behind NAT" src="<?cs var:base ?>/static/router.png"></img>
           <?cs else ?>
           <img title="Local host is not NATed" src="<?cs var:base ?>/static/pipe.png"></img>
           <?cs /if ?>
@@ -65,10 +47,14 @@
         </td>
         <td>
           <?cs if:ikesa.remote.nat == "true" ?>
-          <img title="Remote host is behind a NAT router" src="<?cs var:base ?>/static/router.png"></img>
+          <img title="Remote host is behind NAT" src="<?cs var:base ?>/static/router.png"></img>
           <?cs else ?>
           <img title="Remote host is not NATed" src="<?cs var:base ?>/static/pipe.png"></img>
           <?cs /if ?>
+        </td>
+        <td class="right" style="background-image:url(<?cs var:base ?>/static/pipe.png)">
+	      <?cs var:ikesa.remote.spi ?><br/><br/><br/> 
+	      <?cs var:ikesa.remote.address ?>
         </td>
         <td>
           <?cs if:ikesa.role == "responder" ?>
@@ -77,26 +63,37 @@
           <img title="Remote host is the responder" src="<?cs var:base ?>/static/gateway-right.png"></img>
           <?cs /if ?>
         </td>
-        <td>
-		<?cs each:net = ikesa.childsas.remote ?>
-		  <p><?cs var:net ?></p>
-		<?cs /each ?>
+      </tr>
+      <?cs each:childsa = ikesa.childsas ?>
+      <tr>
+      	<td colspan="7" class="expand">
+      	  <h1>IPsec #<?cs name:childsa ?> [<?cs var:childsa.childconfig ?>]:</h1>
         </td>
       </tr>
       <tr>
-        <td>
-        </td>
-        <td class="left" colspan="2">
-          <?cs var:ikesa.local.address ?>:<?cs var:ikesa.local.port ?>
-        </td>
-        <td>
-        </td>
-        <td class="right" colspan="2">
-          <?cs var:ikesa.remote.address ?>:<?cs var:ikesa.remote.port ?>
-        </td>
-        <td>
-        </td>
+        <td colspan="7"><hr/></td>
       </tr>
+      <tr class="images">
+      	<td colspan="2">
+          <?cs each:net = childsa.local.networks ?>
+      	    <p><?cs var:net ?></p>
+          <?cs /each ?>
+      	</td>
+      	<td style="background-image:url(<?cs var:base ?>/static/pipe-thin-left.png)">
+          <?cs var:childsa.local.spi ?><br/><br/><br/>
+      	</td>
+      	<td style="background-image:url(<?cs var:base ?>/static/pipe-thin.png)">
+      	</td>
+      	<td class="right" style="background-image:url(<?cs var:base ?>/static/pipe-thin-right.png)">
+          <?cs var:childsa.remote.spi ?><br/><br/><br/>
+      	</td>
+      	<td class="right" colspan="2">
+          <?cs each:net = childsa.remote.networks ?>
+      	    <p><?cs var:net ?></p>
+          <?cs /each ?>
+      	</td>
+      </tr>
+      <?cs /each ?>
     </table>
   </div>
   </div>

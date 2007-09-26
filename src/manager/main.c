@@ -29,7 +29,7 @@
 #include "controller/status_controller.h"
 #include "controller/gateway_controller.h"
 
-#define DBFILE IPSECDIR "/sqlite.db"
+#define DBFILE IPSECDIR "/manager.db"
 #define SESSION_TIMEOUT 180
 #define THREADS 10
 
@@ -37,6 +37,11 @@ int main (int arc, char *argv[])
 {
 	dispatcher_t *dispatcher;
 	database_t *database;
+	char *socket = NULL;
+	
+#ifdef FCGI_SOCKET
+	socket = FCGI_SOCKET;
+#endif /* FCGI_SOCKET */
 	
 	database = database_create(DBFILE);
 	if (database == NULL)
@@ -45,8 +50,8 @@ int main (int arc, char *argv[])
 		return 1;
 	}
 	
-	dispatcher = dispatcher_create(SESSION_TIMEOUT,
-							(context_constructor_t)manager_create, database);
+	dispatcher = dispatcher_create(socket, SESSION_TIMEOUT,
+						(context_constructor_t)manager_create, database);
 	dispatcher->add_controller(dispatcher, status_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, gateway_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, auth_controller_create, NULL);

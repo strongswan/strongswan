@@ -24,7 +24,6 @@
 #define CONTROLLER_H_
 
 #include "request.h"
-#include "response.h"
 #include "context.h"
 
 typedef struct controller_t controller_t;
@@ -35,7 +34,7 @@ typedef struct controller_t controller_t;
  * @param request		http request
  * @param response		http response
  */
-typedef void *(*controller_handler_t)(controller_t *this, request_t *request, response_t *response);
+typedef void *(*controller_handler_t)(controller_t *this, request_t *request);
 
 /**
  * @brief Constructor function for a controller
@@ -66,7 +65,6 @@ struct controller_t {
 	 * parameter not found in the request URL is set to NULL.
 	 *
 	 * @param request		HTTP request
-	 * @param response		HTTP response
 	 * @param p1			first parameter
 	 * @param p2			second parameter
 	 * @param p3			third parameter
@@ -74,7 +72,7 @@ struct controller_t {
 	 * @param p5			fifth parameter
 	 * @return
 	 */
-	void (*handle)(controller_t *this, request_t *request, response_t *response,
+	void (*handle)(controller_t *this, request_t *request,
 				   char *a1, char *a2, char *a3, char *a4, char *a5);
 		
 	/**

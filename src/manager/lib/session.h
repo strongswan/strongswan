@@ -24,7 +24,6 @@
 #define SESSION_H_
 
 #include "request.h"
-#include "response.h"
 #include "controller.h"
 
 typedef struct session_t session_t;
@@ -53,9 +52,8 @@ struct session_t {
 	 * @brief Process a request in this session.
 	 *
 	 * @param request		request to process
-	 * @param response		response to send
 	 */
-	void (*process)(session_t *this, request_t *request, response_t *response);
+	void (*process)(session_t *this, request_t *request);
 	
 	/**
 	 * @brief Destroy the session_t.

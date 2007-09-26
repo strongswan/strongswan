@@ -70,7 +70,7 @@ static void add_controller(private_session_t *this, controller_t *controller)
 /**
  * Create a session ID and a cookie
  */
-static void create_sid(private_session_t *this, response_t *response)
+static void create_sid(private_session_t *this, request_t *request)
 {
 	char buf[16];
 	chunk_t chunk = chunk_from_buf(buf);
@@ -78,15 +78,14 @@ static void create_sid(private_session_t *this, response_t *response)
 	
 	randomizer->get_pseudo_random_bytes(randomizer, sizeof(buf), buf);
 	asprintf(&this->sid, "%#B", &chunk);
-	response->add_cookie(response, "SID", this->sid);
+	request->add_cookie(request, "SID", this->sid);
 	randomizer->destroy(randomizer);
 }
 
 /**
  * Implementation of session_t.process.
  */
-static void process(private_session_t *this,
-					request_t *request, response_t *response)
+static void process(private_session_t *this, request_t *request)
 {
 	char *pos, *path, *controller, *action;
 	iterator_t *iterator;
@@ -95,7 +94,7 @@ static void process(private_session_t *this,
 	
 	if (this->sid == NULL)
 	{
-		create_sid(this, response);
+		create_sid(this, request);
 	}
 	
 	path = request->get_path(request);
@@ -125,7 +124,7 @@ static void process(private_session_t *this,
 	{
 		if (streq(current->get_name(current), controller))
 		{	
-			current->handle(current, request, response, action, NULL, NULL, NULL, NULL);
+			current->handle(current, request, action, NULL, NULL, NULL, NULL);
 			handled = TRUE;
 			break;
 		}
@@ -138,11 +137,7 @@ static void process(private_session_t *this,
 		if (this->controllers->get_first(this->controllers,
 										 (void**)&current) == SUCCESS)
 		{
-			response->redirect(response, current->get_name(current));
-		}
-		else
-		{
-			response->printf(response, "No controllers loaded!\n");
+			request->redirect(request, current->get_name(current));
 		}
 	}
 }
@@ -174,7 +169,7 @@ session_t *session_create(context_t *context)
 	private_session_t *this = malloc_thing(private_session_t);
 
 	this->public.add_controller = (void(*)(session_t*, controller_t*))add_controller;
-	this->public.process = (void(*)(session_t*, request_t*,response_t*))process;
+	this->public.process = (void(*)(session_t*,request_t*))process;
 	this->public.get_sid = (char*(*)(session_t*))get_sid;
 	this->public.destroy = (void(*)(session_t*))destroy;
 
