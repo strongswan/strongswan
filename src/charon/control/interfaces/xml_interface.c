@@ -374,7 +374,7 @@ static job_requeue_t process(int *fdp)
 		DBG2(DBG_CFG, "SMP XML connection closed");
 		return JOB_REQUEUE_NONE;
 	}
-	DBG1(DBG_CFG, "got XML request: %b", buffer, len);
+	DBG3(DBG_CFG, "got XML request: %b", buffer, len);
 	
 	reader = xmlReaderForMemory(buffer, len, NULL, NULL, 0);
 	if (reader == NULL)
