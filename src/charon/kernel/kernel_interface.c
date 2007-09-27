@@ -34,6 +34,7 @@
 #include <linux/rtnetlink.h>
 #include <linux/xfrm.h>
 #include <linux/udp.h>
+#define __USE_UNIX98
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -303,6 +304,11 @@ struct private_kernel_interface_t {
 	 * mutex to lock access to the various lists
 	 */
 	pthread_mutex_t mutex;
+	
+	/**
+	 * condition variable to signal virtual IP add/removal
+	 */
+	pthread_cond_t cond;
 	
 	/**
 	 * List of installed policies (policy_entry_t)
@@ -725,8 +731,16 @@ static void process_addr(private_kernel_interface_t *this,
 					{
 						changed = TRUE;
 						addrs->remove(addrs);
+						if (!addr->virtual)
+						{
+							DBG1(DBG_KNL, "%H disappeared from %s",
+								 host, iface->ifname);
+						}
 						addr_entry_destroy(addr);
-						DBG1(DBG_KNL, "%H disappeared from %s", host, iface->ifname);
+					}
+					else if (hdr->nlmsg_type == RTM_NEWADDR && addr->virtual)
+					{
+						addr->refcount = 1;
 					}
 				}
 			}
@@ -853,10 +867,12 @@ static job_requeue_t receive_events(private_kernel_interface_t *this)
 				case RTM_NEWADDR:
 				case RTM_DELADDR:
 					process_addr(this, hdr, TRUE);
+					pthread_cond_signal(&this->cond);
 					break;
 				case RTM_NEWLINK:
 				case RTM_DELLINK:
 					process_link(this, hdr, TRUE);
+					pthread_cond_signal(&this->cond);
 					break;
 				case RTM_NEWROUTE:
 				case RTM_DELROUTE:
@@ -1327,6 +1343,40 @@ static int get_interface_index(private_kernel_interface_t *this, host_t* ip)
 }
 
 /**
+ * get the refcount of a virtual ip
+ */
+static int get_vip_refcount(private_kernel_interface_t *this, host_t* ip)
+{
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
+	int refcount = 0;
+	
+	ifaces = this->ifaces->create_iterator(this->ifaces, TRUE);
+	while (ifaces->iterate(ifaces, (void**)&iface))
+	{
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
+		{
+			if (addr->virtual && (iface->flags & IFF_UP) &&
+				ip->ip_equals(ip, addr->ip))
+			{
+				refcount = addr->refcount;
+				break;
+			}
+		}
+		addrs->destroy(addrs);
+		if (refcount)
+		{
+			break;
+		}
+	}
+	ifaces->destroy(ifaces);
+	
+	return refcount;
+}
+
+/**
  * Manages the creation and deletion of ip addresses on an interface.
  * By setting the appropriate nlmsg_type, the ip will be set or unset.
  */
@@ -1652,6 +1702,7 @@ static status_t add_ip(private_kernel_interface_t *this,
 	iface_entry_t *iface;
 	addr_entry_t *addr;
 	iterator_t *addrs, *ifaces;
+	int ifindex;
 
 	DBG2(DBG_KNL, "adding virtual IP %H", virtual_ip);
 	
@@ -1681,26 +1732,28 @@ static status_t add_ip(private_kernel_interface_t *this,
 		
 		if (iface_found)
 		{
-			int ifindex = iface->ifindex;
-			ifaces->destroy(ifaces);
+			ifindex = iface->ifindex;
+			addr = malloc_thing(addr_entry_t);
+			addr->ip = virtual_ip->clone(virtual_ip);
+			addr->refcount = 0;
+			addr->virtual = TRUE;
+			addr->scope = RT_SCOPE_UNIVERSE;
+			iface->addrs->insert_last(iface->addrs, addr);
+			
 			if (manage_ipaddr(this, RTM_NEWADDR, NLM_F_CREATE | NLM_F_EXCL,
 							  ifindex, virtual_ip) == SUCCESS)
 			{
-				addr = malloc_thing(addr_entry_t);
-				addr->ip = virtual_ip->clone(virtual_ip);
-				addr->refcount = 1;
-				addr->virtual = TRUE;
-				addr->scope = RT_SCOPE_UNIVERSE;
-				pthread_mutex_lock(&this->mutex);
-				iface->addrs->insert_last(iface->addrs, addr);
-				pthread_mutex_unlock(&this->mutex);
+				while (get_vip_refcount(this, virtual_ip) == 0)
+				{	/* wait until address appears */
+					pthread_cond_wait(&this->cond, &this->mutex);
+				}
+				ifaces->destroy(ifaces);
 				return SUCCESS;
 			}
+			ifaces->destroy(ifaces);
 			DBG1(DBG_KNL, "adding virtual IP %H failed", virtual_ip);
 			return FAILED;
-			
 		}
-		
 	}
 	ifaces->destroy(ifaces);
 	
@@ -1717,6 +1770,8 @@ static status_t del_ip(private_kernel_interface_t *this, host_t *virtual_ip)
 	iface_entry_t *iface;
 	addr_entry_t *addr;
 	iterator_t *addrs, *ifaces;
+	status_t status;
+	int ifindex;
 
 	DBG2(DBG_KNL, "deleting virtual IP %H", virtual_ip);
 	
@@ -1728,16 +1783,25 @@ static status_t del_ip(private_kernel_interface_t *this, host_t *virtual_ip)
 		{
 			if (virtual_ip->ip_equals(virtual_ip, addr->ip))
 			{
-				int ifindex = iface->ifindex;
-				addr->refcount--;
-				if (addr->refcount == 0)
+				ifindex = iface->ifindex;
+				if (addr->refcount == 1)
 				{
-					addrs->remove(addrs);
+					status = manage_ipaddr(this, RTM_DELADDR, 0,
+									  	   ifindex, virtual_ip);
+					if (status == SUCCESS)
+					{	/* wait until the address is really gone */
+						while (get_vip_refcount(this, virtual_ip) > 0)
+						{
+							pthread_cond_wait(&this->cond, &this->mutex);
+						}
+					}
 					addrs->destroy(addrs);
 					ifaces->destroy(ifaces);
-					addr_entry_destroy(addr);
-					return manage_ipaddr(this, RTM_DELADDR, 0,
-										 ifindex, virtual_ip);
+					return status;
+				}
+				else
+				{
+					addr->refcount--;
 				}
 				DBG2(DBG_KNL, "virtual IP %H used by other SAs, not deleting",
 					 virtual_ip);
@@ -2526,6 +2590,7 @@ kernel_interface_t *kernel_interface_create()
 {
 	private_kernel_interface_t *this = malloc_thing(private_kernel_interface_t);
 	struct sockaddr_nl addr;
+	pthread_mutexattr_t attr;
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
@@ -2548,7 +2613,11 @@ kernel_interface_t *kernel_interface_create()
 	this->ifaces = linked_list_create();
 	this->hiter = NULL;
 	this->seq = 200;
-	pthread_mutex_init(&this->mutex,NULL);
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&this->mutex, &attr);
+	pthread_mutexattr_destroy(&attr);
+	pthread_cond_init(&this->cond, NULL);
 	timerclear(&this->last_roam);
 	
 	memset(&addr, 0, sizeof(addr));
