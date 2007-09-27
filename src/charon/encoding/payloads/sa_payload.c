@@ -123,7 +123,7 @@ static status_t verify(private_sa_payload_t *this)
 		{			
 			if (current_number != (expected_number + 1))
 			{
-				DBG1(DBG_ENC, "proposal number is %d, excepted %d or %d",
+				DBG1(DBG_ENC, "proposal number is %d, expected %d or %d",
 					 current_number, expected_number, expected_number + 1);
 				status = FAILED;
 				break;

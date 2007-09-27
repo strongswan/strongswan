@@ -823,7 +823,7 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 		}
 		else
 		{
-			DBG1(DBG_IKE, "received message ID %d, excepted %d. Ignored",
+			DBG1(DBG_IKE, "received message ID %d, expected %d. Ignored",
 				 mid, this->responding.mid);
 		}
 	}
@@ -839,7 +839,7 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 		}
 		else
 		{
-			DBG1(DBG_IKE, "received message ID %d, excepted %d. Ignored",
+			DBG1(DBG_IKE, "received message ID %d, expected %d. Ignored",
 				 mid, this->initiating.mid);
 			return SUCCESS;
 		}

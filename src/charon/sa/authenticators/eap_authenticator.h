@@ -121,7 +121,7 @@ struct eap_authenticator_t {
 	 * After receiving an EAP message "in", the peer/server processes
 	 * the payload and creates a reply/subsequent request.
 	 * The server side always returns NEED_MORE if another EAP message
-	 * is excepted from the client, SUCCESS if EAP exchange completed and
+	 * is expected from the client, SUCCESS if EAP exchange completed and
 	 * "out" is EAP_SUCCES, or FAILED if the EAP exchange failed with
 	 * a EAP_FAILURE payload in "out". Anyway, a payload in "out" is always
 	 * created.
