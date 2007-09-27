@@ -248,6 +248,35 @@ bool chunk_write(chunk_t chunk, const char *path, const char *label, mode_t mask
 	}
 }
 
+/** hex conversion digits */
+static char hexdig_upper[] = "0123456789ABCDEF";
+static char hexdig_lower[] = "0123456789abcdef";
+
+/**
+ * Described in header.
+ */
+char *chunk_to_hex(chunk_t chunk, bool uppercase)
+{
+	int i;
+	char *str;
+	char *hexdig = hexdig_lower;
+	
+	if (uppercase)
+	{
+		hexdig = hexdig_upper;
+	}
+	
+	str = malloc(chunk.len * 2 + 1);
+	str[chunk.len * 2] = '\0';
+	
+	for (i = 0; i < chunk.len; i ++)
+	{
+		str[i*2]   = hexdig[(chunk.ptr[i] >> 4) & 0xF];
+		str[i*2+1] = hexdig[(chunk.ptr[i]     ) & 0xF];
+	}
+	return str;
+}
+
 /**
  * Described in header.
  */
@@ -354,10 +383,8 @@ static int print_bytes(FILE *stream, const struct printf_info *info,
 	
 	while (bytes_pos < bytes_roof)
 	{
-		static char hexdig[] = "0123456789ABCDEF";
-		
-		*buffer_pos++ = hexdig[(*bytes_pos >> 4) & 0xF];
-		*buffer_pos++ = hexdig[ *bytes_pos       & 0xF];
+		*buffer_pos++ = hexdig_upper[(*bytes_pos >> 4) & 0xF];
+		*buffer_pos++ = hexdig_upper[ *bytes_pos       & 0xF];
 
 		ascii_buffer[i++] =
 				(*bytes_pos > 31 && *bytes_pos < 127) ? *bytes_pos : '.';

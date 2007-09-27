@@ -25,6 +25,7 @@
 #include <sqlite3.h>
 #include <library.h>
 #include <enumerator.h>
+#include <crypto/hashers/hasher.h>
 
 
 typedef struct private_database_t private_database_t;
@@ -100,20 +101,37 @@ static enumerator_t* empty_enumerator_create()
 static int login(private_database_t *this, char *username, char *password)
 {
 	sqlite3_stmt *stmt;
+	hasher_t *hasher;
+	chunk_t hash, data;
+	size_t username_len, password_len;
 	int uid = 0;
+	char *str;
+	
+	/* hash = SHA1( username | password ) */
+	hasher = hasher_create(HASH_SHA1);
+	hash = chunk_alloca(hasher->get_hash_size(hasher));
+	username_len = strlen(username);
+	password_len = strlen(password);
+	data = chunk_alloca(username_len + password_len);
+	memcpy(data.ptr, username, username_len);
+	memcpy(data.ptr + username_len, password, password_len);
+	hasher->get_hash(hasher, data, hash.ptr);
+	hasher->destroy(hasher);
+	str = chunk_to_hex(hash, FALSE);
 	
 	if (sqlite3_prepare_v2(this->db,
 			"SELECT oid FROM users WHERE username = ? AND password = ?;",
 			-1, &stmt, NULL) == SQLITE_OK)
 	{
 		if (sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC) == SQLITE_OK &&
-			sqlite3_bind_text(stmt, 2, password, -1, SQLITE_STATIC) == SQLITE_OK &&
+			sqlite3_bind_text(stmt, 2, str, -1, SQLITE_STATIC) == SQLITE_OK &&
 			sqlite3_step(stmt) == SQLITE_ROW)
 		{
 			uid = sqlite3_column_int(stmt, 0);
 		}
 		sqlite3_finalize(stmt);
 	}
+	free(str);
 	return uid;
 }
 

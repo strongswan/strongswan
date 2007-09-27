@@ -62,12 +62,12 @@ struct private_request_t {
  * ClearSilver cgiwrap is not threadsave, so we use a private 
  * context for each thread.
  */
-__thread FCGX_Request *req;
+static __thread FCGX_Request *req;
 
 /**
  * length of param list in req->envp
  */
-__thread int req_env_len;
+static __thread int req_env_len;
 
 /**
  * fcgiwrap read callback
