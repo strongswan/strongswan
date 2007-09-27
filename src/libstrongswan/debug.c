@@ -28,7 +28,7 @@
 /**
  * default dbg function which printf all to stderr
  */
-static void dbg_stderr(int level, char *fmt, ...)
+void dbg_default(int level, char *fmt, ...)
 {
 	va_list args;
 	
@@ -38,4 +38,4 @@ static void dbg_stderr(int level, char *fmt, ...)
 	va_end(args);
 }
 
-void (*dbg) (int level, char *fmt, ...) = dbg_stderr;
+void (*dbg) (int level, char *fmt, ...) = dbg_default;

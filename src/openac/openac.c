@@ -206,8 +206,6 @@ static void openac_dbg(int level, char *fmt, ...)
 	}
 }
 
-void (*dbg) (int level, char *fmt, ...) = openac_dbg;
-
 /**
  * openac main program
  */
@@ -226,6 +224,9 @@ int main(int argc, char **argv)
 	const time_t default_validity = 24*3600; 	/* 24 hours */
 	time_t validity = 0;
 	int status = 1;
+	
+	/* enable openac debugging hook */
+	dbg = openac_dbg;
 
 	passphrase.ptr[0] = '\0';
 	groups = linked_list_create();
@@ -493,5 +494,6 @@ end:
 	ietfAttr_list_destroy(groups);
 	free(serial.ptr);
 	closelog();
+	dbg = dbg_default;
 	exit(status);
 }

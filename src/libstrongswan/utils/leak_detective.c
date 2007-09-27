@@ -190,7 +190,8 @@ whitelist_t whitelist[] = {
 	{getprotobynumber,			 291},
 	{getservbyport,				 311},
 	{register_printf_function,	 159},
-	{syslog,					  45},
+	{syslog,					  44},
+	{vsyslog,					  41},
 	{dlopen,					 109},
 #	ifdef LIBCURL
 	/* from /usr/lib/libcurl.so.3 */

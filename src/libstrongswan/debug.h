@@ -57,4 +57,7 @@
 /** dbg function hook, uses stderr logger by default */
 extern void (*dbg) (int level, char *fmt, ...);
 
+/** default logging function, prints to stderr */
+void dbg_default(int level, char *fmt, ...);
+
 #endif /* DEBUG_H_ */
