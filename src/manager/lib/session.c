@@ -77,7 +77,7 @@ static void create_sid(private_session_t *this, request_t *request)
 	randomizer_t *randomizer = randomizer_create();
 	
 	randomizer->get_pseudo_random_bytes(randomizer, sizeof(buf), buf);
-	asprintf(&this->sid, "%#B", &chunk);
+	this->sid = chunk_to_hex(chunk, FALSE);
 	request->add_cookie(request, "SID", this->sid);
 	randomizer->destroy(randomizer);
 }
