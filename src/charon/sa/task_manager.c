@@ -220,42 +220,70 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 		iterator_t *iterator;
 		packet_t *packet;
 		task_t *task;
-
-		if (this->initiating.retransmitted <= RETRANSMIT_TRIES)
-		{
-			timeout = (u_int32_t)(RETRANSMIT_TIMEOUT *
-						pow(RETRANSMIT_BASE, this->initiating.retransmitted));
-		}
-		else
-		{
-			DBG1(DBG_IKE, "giving up after %d retransmits",
-				 this->initiating.retransmitted - 1);
-			return DESTROY_ME;
-		}
+		ike_mobike_t *mobike = NULL;
 		
-		if (this->initiating.retransmitted)
-		{
-			DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
-				 this->initiating.retransmitted, message_id);
-		}
-		this->initiating.retransmitted++;
-		
-		packet = this->initiating.packet->clone(this->initiating.packet);
-		
-		/* mobike needs to now when we retransmit, so we call it here */
+		/* check if we are retransmitting a MOBIKE routability check */
 		iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
 		while (iterator->iterate(iterator, (void*)&task))
 		{
 			if (task->get_type(task) == IKE_MOBIKE)
 			{
-				ike_mobike_t *mobike = (ike_mobike_t*)task;
-				mobike->transmit(mobike, packet);
+				mobike = (ike_mobike_t*)task;
+				if (!mobike->is_probing(mobike))
+				{
+					mobike = NULL;
+				}
 				break;
 			}
 		}
 		iterator->destroy(iterator);
+
+		if (mobike == NULL)
+		{
+			if (this->initiating.retransmitted <= RETRANSMIT_TRIES)
+			{
+				timeout = (u_int32_t)(RETRANSMIT_TIMEOUT *
+							pow(RETRANSMIT_BASE, this->initiating.retransmitted));
+			}
+			else
+			{
+				DBG1(DBG_IKE, "giving up after %d retransmits",
+					 this->initiating.retransmitted - 1);
+				return DESTROY_ME;
+			}
+			
+			if (this->initiating.retransmitted)
+			{
+				DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
+					 this->initiating.retransmitted, message_id);
+			}
+			packet = this->initiating.packet->clone(this->initiating.packet);
+		}
+		else
+		{	/* for routeability checks, we use a more aggressive behavior */
+			if (this->initiating.retransmitted <= ROUTEABILITY_CHECK_TRIES)
+			{
+				timeout = ROUTEABILITY_CHECK_INTERVAL;
+			}
+			else
+			{
+				DBG1(DBG_IKE, "giving up after %d path probings",
+					 this->initiating.retransmitted - 1);
+				return DESTROY_ME;
+			}
+			
+			if (this->initiating.retransmitted)
+			{
+				DBG1(DBG_IKE, "path probing attempt %d",
+					 this->initiating.retransmitted);
+			}
+			packet = this->initiating.packet->clone(this->initiating.packet);
+			mobike->transmit(mobike, packet);
+		}
 		
 		charon->sender->send(charon->sender, packet);
+		
+		this->initiating.retransmitted++;
 		job = (job_t*)retransmit_job_create(this->initiating.mid,
 											this->ike_sa->get_id(this->ike_sa));
 		charon->scheduler->schedule_job(charon->scheduler, job, timeout);
@@ -852,6 +880,23 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
  */
 static void queue_task(private_task_manager_t *this, task_t *task)
 {
+	if (task->get_type(task) == IKE_MOBIKE)
+	{	/*  there is no need to queue more than one mobike task */
+		iterator_t *iterator;
+		task_t *current;
+		
+		iterator = this->queued_tasks->create_iterator(this->queued_tasks, TRUE);
+		while (iterator->iterate(iterator, (void**)&current))
+		{
+			if (current->get_type(current) == IKE_MOBIKE)
+			{
+				iterator->destroy(iterator);
+				task->destroy(task);
+				return;
+			}
+		}
+		iterator->destroy(iterator);
+	}
 	DBG2(DBG_IKE, "queueing %N task", task_type_names, task->get_type(task));
 	this->queued_tasks->insert_last(this->queued_tasks, task);
 }

@@ -448,6 +448,14 @@ static void roam(private_ike_mobike_t *this, bool address)
 }
 
 /**
+ * Implementation of ike_mobike_t.is_probing.
+ */
+static bool is_probing(private_ike_mobike_t *this)
+{
+	return this->check;
+}
+
+/**
  * Implementation of task_t.get_type
  */
 static task_type_t get_type(private_ike_mobike_t *this)
@@ -490,6 +498,7 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 
 	this->public.roam = (void(*)(ike_mobike_t*,bool))roam;
 	this->public.transmit = (void(*)(ike_mobike_t*,packet_t*))transmit;
+	this->public.is_probing = (bool(*)(ike_mobike_t*))is_probing;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;

@@ -71,6 +71,14 @@ struct ike_mobike_t {
 	 * @param packet		the packet to transmit
 	 */
 	void (*transmit)(ike_mobike_t *this, packet_t *packet);
+	
+	/**
+	 * @brief Check if this task is probing for routability.
+	 *
+	 * @param this			calling object
+	 * @return				TRUE if task is probing
+	 */
+	bool (*is_probing)(ike_mobike_t *this);	
 };
 
 /**

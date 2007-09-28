@@ -51,6 +51,20 @@ typedef struct task_manager_t task_manager_t;
  */
 #define RETRANSMIT_TRIES 5
 
+/**
+ * Interval for mobike routability checks in ms.
+ *
+ * @ingroup sa
+ */
+#define ROUTEABILITY_CHECK_INTERVAL 2500
+
+/**
+ * Number of routability checks before giving up
+ * 
+ * @ingroup sa
+ */
+#define ROUTEABILITY_CHECK_TRIES 10
+
 
 /**
  * @brief The task manager, juggles task and handles message exchanges.
