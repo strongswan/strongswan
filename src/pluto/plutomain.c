@@ -619,8 +619,8 @@ main(int argc, char **argv)
     /* drop unneeded capabilities and change UID/GID */
     hdr.version = _LINUX_CAPABILITY_VERSION;
     hdr.pid = 0;
-    data.effective = data.permitted = 1<<CAP_NET_ADMIN | 1<<CAP_NET_BIND_SERVICE;
-    data.inheritable = 0;
+    data.inheritable = data.effective = data.permitted = 
+				1<<CAP_NET_ADMIN | 1<<CAP_NET_BIND_SERVICE;
 
     prctl(PR_SET_KEEPCAPS, 1);
 
