@@ -154,7 +154,7 @@ static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool loca
 	linked_list_t *list;
 	traffic_selector_t *ts;
 	xmlTextWriterWriteFormatElement(writer, "spi", "%lx", 
-									child->get_spi(child, local));
+									htonl(child->get_spi(child, local)));
 	xmlTextWriterStartElement(writer, "networks");
 	list = child->get_traffic_selectors(child, local);
 	iterator = list->create_iterator(list, TRUE);
