@@ -87,51 +87,44 @@ static void create_sid(private_session_t *this, request_t *request)
  */
 static void process(private_session_t *this, request_t *request)
 {
-	char *pos, *path, *controller, *action;
+	char *pos, *start, *param[6] = {NULL, NULL, NULL, NULL, NULL, NULL};
 	iterator_t *iterator;
 	bool handled = FALSE;
 	controller_t *current;
+	int i = 0;
 	
 	if (this->sid == NULL)
 	{
 		create_sid(this, request);
 	}
 	
-	path = request->get_path(request);
-	if (*path == '/') path++;
-	pos = strchr(path, '/');
-	if (pos == NULL)
+	start = request->get_path(request);
+	if (start)
 	{
-		controller = strdup(path);
-		action = strdup("");
-	}
-	else
-	{
-		controller = strndup(path, pos - path);
-		path = pos + 1;
-		pos = strchr(path, '/');
-		if (pos == NULL)
+		if (*start == '/') start++;
+		while ((pos = strchr(start, '/')) != NULL && i < 5)
 		{
-			action = strdup(path);
+			param[i++] = strndup(start, pos - start);
+			start = pos + 1;
 		}
-		else
+		param[i] = strdup(start);
+		iterator = this->controllers->create_iterator(this->controllers, TRUE);
+		while (iterator->iterate(iterator, (void**)&current))
 		{
-			action = strndup(path, pos - path);
+			if (streq(current->get_name(current), param[0]))
+			{	
+				current->handle(current, request, param[1], param[2], param[3],
+								param[4], param[5]);
+				handled = TRUE;
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+		for (i = 0; i < 6; i++)
+		{
+			free(param[i]);
 		}
 	}
-	iterator = this->controllers->create_iterator(this->controllers, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (streq(current->get_name(current), controller))
-		{	
-			current->handle(current, request, action, NULL, NULL, NULL, NULL);
-			handled = TRUE;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	free(controller);
-	free(action);
 	if (!handled)
 	{
 		if (this->controllers->get_first(this->controllers,
