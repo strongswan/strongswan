@@ -251,8 +251,7 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 
 	hdr.version = _LINUX_CAPABILITY_VERSION;
 	hdr.pid = 0;
-	data.effective = data.permitted = keep;
-	data.inheritable = 0;
+	data.inheritable = data.effective = data.permitted = keep;
 	
 	if (capset(&hdr, &data))
 	{
