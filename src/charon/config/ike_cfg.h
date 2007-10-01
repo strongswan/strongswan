@@ -102,6 +102,14 @@ struct ike_cfg_t {
 	bool (*send_certreq) (ike_cfg_t *this);
 	
 	/**
+	 * @brief Enforce UDP encapsulation by faking NATD notifies?
+	 * 
+	 * @param this		calling object
+	 * @return			TRUE to enfoce UDP encapsulation
+	 */
+	bool (*force_encap) (ike_cfg_t *this);
+	
+	/**
 	 * @brief Get the DH group to use for IKE_SA setup.
 	 * 
 	 * @param this		calling object
@@ -140,12 +148,14 @@ struct ike_cfg_t {
  *
  * @param name			ike_cfg identifier
  * @param certreq		TRUE to send a certificate request
+ * @param force_encap	enforce UDP encapsulation by faking NATD notify
  * @param my_host		host_t representing local address
  * @param other_host	host_t representing remote address
  * @return 				ike_cfg_t object.
  * 
  * @ingroup config
  */
-ike_cfg_t *ike_cfg_create(bool certreq, host_t *my_host, host_t *other_host);
+ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap, 
+						  host_t *my_host, host_t *other_host);
 
 #endif /* IKE_CFG_H_ */

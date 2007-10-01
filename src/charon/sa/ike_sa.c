@@ -496,7 +496,7 @@ static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
 					this->conditions |= COND_NAT_ANY;
 					break;
 				case COND_NAT_FAKE:
-					DBG1(DBG_IKE, "faked NAT situation to enforce UDP encapsulation");
+					DBG1(DBG_IKE, "faking NAT situation to enforce UDP encapsulation");
 					this->conditions |= COND_NAT_ANY;
 					break;
 				default:

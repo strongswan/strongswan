@@ -274,14 +274,6 @@ struct peer_cfg_t {
 	bool (*use_mobike) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Enforce UDP encapsulation by faking NATD notifies?
-	 * 
-	 * @param this		calling object
-	 * @return			TRUE to enfoce UDP encapsulation
-	 */
-	bool (*force_encap) (peer_cfg_t *this);
-	
-	/**
 	 * @brief Get the DPD check interval.
 	 * 
 	 * @param this		calling object
@@ -374,7 +366,6 @@ struct peer_cfg_t {
  * @param jitter			range of random to substract from rekeytime
  * @param reauth			sould be done reauthentication instead of rekeying?
  * @param mobike			use MOBIKE (RFC4555) if peer supports it
- * @param force_encap		enforce UDP encapsulation by faking NATD notify
  * @param dpd_delay			after how many seconds of inactivity to check DPD
  * @param dpd_action		what to do with CHILD_SAs when detected a dead peer
  * @param my_virtual_ip		virtual IP for local host, or NULL
@@ -390,7 +381,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							auth_method_t auth_method, eap_type_t eap_type,
 							u_int32_t keyingtries, u_int32_t lifetime,
 							u_int32_t rekeytime, u_int32_t jitter,
-							bool reauth, bool mobike, bool force_encap,
+							bool reauth, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
 							host_t *my_virtual_ip, host_t *other_virtual_ip);
 

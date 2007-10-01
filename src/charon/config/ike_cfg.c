@@ -59,6 +59,11 @@ struct private_ike_cfg_t {
 	bool certreq;
 	
 	/**
+	 * enforce UDP encapsulation
+	 */
+	bool force_encap;
+	
+	/**
 	 * List of proposals to use
 	 */
 	linked_list_t *proposals;
@@ -70,6 +75,14 @@ struct private_ike_cfg_t {
 static bool send_certreq(private_ike_cfg_t *this)
 {
 	return this->certreq;
+}
+	
+/**
+ * Implementation of ike_cfg_t.force_encap.
+ */
+static bool force_encap_meth(private_ike_cfg_t *this)
+{
+	return this->force_encap;
 }
 
 /**
@@ -201,12 +214,14 @@ static void destroy(private_ike_cfg_t *this)
 /**
  * Described in header.
  */
-ike_cfg_t *ike_cfg_create(bool certreq, host_t *my_host, host_t *other_host)
+ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
+						  host_t *my_host, host_t *other_host)
 {
 	private_ike_cfg_t *this = malloc_thing(private_ike_cfg_t);
 	
 	/* public functions */
 	this->public.send_certreq = (bool(*)(ike_cfg_t*))send_certreq;
+	this->public.force_encap = (bool (*) (ike_cfg_t *))force_encap_meth;
 	this->public.get_my_host = (host_t*(*)(ike_cfg_t*))get_my_host;
 	this->public.get_other_host = (host_t*(*)(ike_cfg_t*))get_other_host;
 	this->public.add_proposal = (void(*)(ike_cfg_t*, proposal_t*)) add_proposal;
@@ -219,6 +234,7 @@ ike_cfg_t *ike_cfg_create(bool certreq, host_t *my_host, host_t *other_host)
 	/* private variables */
 	this->refcount = 1;
 	this->certreq = certreq;
+	this->force_encap = force_encap;
 	this->my_host = my_host;
 	this->other_host = other_host;
 	

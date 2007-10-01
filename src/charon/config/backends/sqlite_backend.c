@@ -178,7 +178,8 @@ static peer_cfg_t *process_peer_cfg_row(private_sqlite_backend_t *this,
 	remote_id = identification_create_from_string((char*)sqlite3_column_text(stmt, 3));
 	if (local_host && remote_host && local_id && remote_id)
 	{
-		ike_cfg = ike_cfg_create(sqlite3_column_int(stmt, 19),  local_host, remote_host);		
+		ike_cfg = ike_cfg_create(sqlite3_column_int(stmt, 19),  FALSE,
+								 local_host, remote_host);		
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 		peer_cfg = peer_cfg_create(
 			(char*)sqlite3_column_text(stmt, 1),		/* name */
@@ -192,7 +193,6 @@ static peer_cfg_t *process_peer_cfg_row(private_sqlite_backend_t *this,
 			sqlite3_column_int(stmt, 10),				/* jitter */
 			sqlite3_column_int(stmt, 13),				/* reauth */
 			sqlite3_column_int(stmt, 14),				/* mobike */
-			FALSE,										/* force_encap */
 			sqlite3_column_int(stmt, 11),				/* dpd_delay */
 			sqlite3_column_int(stmt, 12),				/* dpd_action */
 			local_vip, remote_vip);

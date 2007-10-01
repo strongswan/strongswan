@@ -141,12 +141,10 @@ static notify_payload_t *build_natd_payload(private_ike_natd_t *this,
 	chunk_t hash;
 	notify_payload_t *notify;	
 	ike_sa_id_t *ike_sa_id;
-	peer_cfg_t *config;
+	ike_cfg_t *config;
 	
 	ike_sa_id = this->ike_sa->get_id(this->ike_sa);
-	config = this->ike_sa->get_peer_cfg(this->ike_sa);
-	notify = notify_payload_create();
-	notify->set_notify_type(notify, type);
+	config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	if (config->force_encap(config) && type == NAT_DETECTION_SOURCE_IP)
 	{
 		hash = generate_natd_hash_faked(this);
@@ -155,6 +153,8 @@ static notify_payload_t *build_natd_payload(private_ike_natd_t *this,
 	{
 		hash = generate_natd_hash(this, ike_sa_id, host);
 	}
+	notify = notify_payload_create();
+	notify->set_notify_type(notify, type);
 	notify->set_notification_data(notify, hash);
 	chunk_free(&hash);
 	
@@ -172,7 +172,7 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	chunk_t hash, src_hash, dst_hash;
 	ike_sa_id_t *ike_sa_id;
 	host_t *me, *other;
-	peer_cfg_t *config;
+	ike_cfg_t *config;
 	
 	/* Precompute NAT-D hashes for incoming NAT notify comparison */
 	ike_sa_id = message->get_ike_sa_id(message);
@@ -238,9 +238,10 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 		this->ike_sa->set_condition(this->ike_sa, COND_NAT_HERE,
 									!this->dst_matched);
 		this->ike_sa->set_condition(this->ike_sa, COND_NAT_THERE,
-									!this->src_matched);		
-		config = this->ike_sa->get_peer_cfg(this->ike_sa);
-		if (config->force_encap(config))
+									!this->src_matched);	
+		config = this->ike_sa->get_ike_cfg(this->ike_sa);
+		if (this->dst_matched && this->src_matched &&
+			config->force_encap(config))
 		{
 			this->ike_sa->set_condition(this->ike_sa, COND_NAT_FAKE, TRUE);	
 		}
