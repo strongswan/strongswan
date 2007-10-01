@@ -571,8 +571,9 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 					msg->add_conn.rekey.tries, msg->add_conn.rekey.ike_lifetime,
 					msg->add_conn.rekey.ike_lifetime - msg->add_conn.rekey.margin,
 					msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
-					msg->add_conn.rekey.reauth, msg->add_conn.mobike,
-					msg->add_conn.dpd.delay, msg->add_conn.dpd.action, my_vip, other_vip);
+					msg->add_conn.rekey.reauth, msg->add_conn.mobike, 
+					msg->add_conn.force_encap, msg->add_conn.dpd.delay,
+					msg->add_conn.dpd.action, my_vip, other_vip);
 	}
 	
 	child_cfg = child_cfg_create(

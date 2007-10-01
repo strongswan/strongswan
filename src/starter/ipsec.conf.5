@@ -365,6 +365,11 @@ for the connection, e.g.
 (encryption-integrity-[dh-group]). If dh-group is specified, CHILD_SA setup
 and rekeying include a separate diffe hellman exchange (IKEv2 only).
 .TP
+.B force_encap
+Force UDP encapsulation for ESP packets even if no NAT situation is detected.
+This may help to hurdle restrictive firewalls. To enforce the peer to 
+encapsulate packets, NAT detection payloads are faked (IKEv2 only).
+.TP
 .B ike
 IKE/ISAKMP SA encryption/authentication algorithm to be used, e.g.
 .B aes128-sha1-modp2048

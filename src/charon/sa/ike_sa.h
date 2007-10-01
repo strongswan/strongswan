@@ -94,7 +94,7 @@ enum ike_extension_t {
 enum ike_condition_t {
 	
 	/**
-	 * Connection is natted somewhere
+	 * Connection is natted (or faked) somewhere
 	 */
 	COND_NAT_ANY = (1<<0),
 	
@@ -107,11 +107,16 @@ enum ike_condition_t {
 	 * other is behind NAT
 	 */
 	COND_NAT_THERE = (1<<2),
+	
+	/**
+	 * Faking NAT to enforce UDP encapsulation
+	 */
+	COND_NAT_FAKE = (1<<3),
 
 	/**
 	 * peer is currently not reachable (due missing route, ...)
 	 */
-	COND_STALE = (1<<3),
+	COND_STALE = (1<<4),
 };
 
 /**

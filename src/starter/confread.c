@@ -554,6 +554,9 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 		case KW_MOBIKE:
 			KW_POLICY_FLAG("yes", "no", POLICY_MOBIKE)
 			break;
+		case KW_FORCE_ENCAP:
+			KW_POLICY_FLAG("yes", "no", POLICY_FORCE_ENCAP)
+			break;
 		case KW_MODECONFIG:
 			KW_POLICY_FLAG("push", "pull", POLICY_MODECFG_PUSH)
 			break;

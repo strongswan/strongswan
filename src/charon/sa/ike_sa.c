@@ -495,6 +495,10 @@ static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
 					DBG1(DBG_IKE, "remote host is behind NAT");
 					this->conditions |= COND_NAT_ANY;
 					break;
+				case COND_NAT_FAKE:
+					DBG1(DBG_IKE, "faked NAT situation to enforce UDP encapsulation");
+					this->conditions |= COND_NAT_ANY;
+					break;
 				default:
 					break;
 			}
@@ -508,10 +512,12 @@ static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
 					DBG1(DBG_IKE, "new route to %H found", this->other_host);
 					break;
 				case COND_NAT_HERE:
+				case COND_NAT_FAKE:
 				case COND_NAT_THERE:
 					set_condition(this, COND_NAT_ANY,
 								  has_condition(this, COND_NAT_HERE) ||
-								  has_condition(this, COND_NAT_THERE));
+								  has_condition(this, COND_NAT_THERE) ||
+								  has_condition(this, COND_NAT_FAKE));
 					break;
 				default:
 					break;

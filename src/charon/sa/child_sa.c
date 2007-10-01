@@ -822,6 +822,8 @@ static status_t update_hosts(private_child_sa_t *this,
 								policy->other_ts, policy->my_ts, POLICY_FWD);
 		
 			/* check wether we have to update a "dynamic" traffic selector */
+			DBG1(DBG_IKE, "--- my: %H, %H, %R", me, this->me.addr, policy->my_ts);
+			DBG1(DBG_IKE, "--- ot: %H, %H, %R", other, this->other.addr, policy->other_ts);
 			if (!me->ip_equals(me, this->me.addr) &&
 				policy->my_ts->is_host(policy->my_ts, this->me.addr))
 			{
@@ -832,6 +834,8 @@ static status_t update_hosts(private_child_sa_t *this,
 			{
 				policy->other_ts->set_address(policy->other_ts, other);
 			}
+			DBG1(DBG_IKE, "--- my: %H, %H, %R", me, this->me.addr, policy->my_ts);
+			DBG1(DBG_IKE, "--- ot: %H, %H, %R", other, this->other.addr, policy->other_ts);
 			
 			/* we reinstall the virtual IP to handle interface romaing
 			 * correctly */

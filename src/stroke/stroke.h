@@ -183,6 +183,7 @@ struct stroke_msg_t {
 			int eap_type;
 			int mode;
 			int mobike;
+			int force_encap;
 			struct {
 				char *ike;
 				char *esp;
