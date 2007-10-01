@@ -17,7 +17,7 @@ lib/context.h lib/dispatcher.c lib/request.h lib/session.h \
 lib/controller.h lib/dispatcher.h lib/request.c lib/session.c \
 lib/xml.h lib/xml.c lib/enumerator.h
 
-libappserv_la_LDFLAGS = -lstrongswan -lfcgi -lpthread -lneo_cgi -lneo_cs -lneo_utl ${xml_LIBS}
+libappserv_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lfcgi -lpthread -lneo_cgi -lneo_cs -lneo_utl ${xml_LIBS}
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/manager/lib -I/usr/include/ClearSilver ${xml_CFLAGS}
 AM_CFLAGS = -rdynamic -DIPSECDIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\"
