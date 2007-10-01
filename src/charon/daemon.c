@@ -231,10 +231,16 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	if (full)
 	{
 #		if IPSEC_GID
-			setgid(IPSEC_GID);
+		if (setgid(IPSEC_GID) != 0)
+		{
+			kill_daemon(this, "changing GID to unprivileged group failed");
+		}
 #		endif
 #		if IPSEC_UID
-			setuid(IPSEC_UID);
+		if (setuid(IPSEC_UID) != 0)
+		{
+			kill_daemon(this, "changing UID to unprivileged user failed");
+		}
 #		endif
 	}
 	else
@@ -247,6 +253,10 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 		keep |= (1<<CAP_DAC_READ_SEARCH);
 		/* CAP_CHOWN to change file permissions (socket permissions) */
 		keep |= (1<<CAP_CHOWN);
+		/* CAP_SETUID to call setuid()  */
+		keep |= (1<<CAP_SETUID);
+		/* CAP_SETGID to call setgid() */
+		keep |= (1<<CAP_SETGID);
 	}
 
 	hdr.version = _LINUX_CAPABILITY_VERSION;
