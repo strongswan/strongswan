@@ -681,6 +681,13 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 		return SUCCESS;
 	}
 	
+	if (!crypter || !signer)
+	{
+		DBG2(DBG_ENC, "no crypter or signer specified, do not encrypt message");
+		/* message contains no content to encrypt */
+		return SUCCESS;
+	}
+	
 	DBG2(DBG_ENC, "copy all payloads to a temporary list");
 	all_payloads = linked_list_create();
 	
