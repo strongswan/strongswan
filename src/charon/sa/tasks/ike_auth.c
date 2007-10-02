@@ -157,13 +157,13 @@ static status_t build_id(private_ike_auth_t *this, message_t *message)
 		this->ike_sa->set_my_id(this->ike_sa, me->clone(me));
 	}
 	
-	id = id_payload_create_from_identification(this->initiator, me);
+	id = id_payload_create_from_identification(this->initiator ? ID_INITIATOR : ID_RESPONDER, me);
 	message->add_payload(message, (payload_t*)id);
 	
 	/* as initiator, include other ID if it does not contain wildcards */
 	if (this->initiator && !other->contains_wildcards(other))
 	{
-		id = id_payload_create_from_identification(FALSE, other);
+		id = id_payload_create_from_identification(ID_RESPONDER, other);
 		message->add_payload(message, (payload_t*)id);
 	}
 	return SUCCESS;

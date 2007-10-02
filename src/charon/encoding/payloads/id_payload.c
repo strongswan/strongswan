@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -41,14 +42,14 @@ struct private_id_payload_t {
 	id_payload_t public;
 	
 	/**
-	 * TRUE if this ID payload is of type IDi, FALSE for IDr.
+	 * one of ID_INITIATOR, ID_RESPONDER
 	 */
-	bool is_initiator;
+	payload_type_t payload_type;
 	
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	payload_type_t next_payload;
 
 	/**
 	 * Critical flag.
@@ -149,14 +150,7 @@ static void get_encoding_rules(private_id_payload_t *this, encoding_rule_t **rul
  */
 static payload_type_t get_payload_type(private_id_payload_t *this)
 {
-	if (this->is_initiator)
-	{
-		return ID_INITIATOR;
-	}
-	else
-	{
-		return ID_RESPONDER;
-	}
+	return this->payload_type;
 }
 
 /**
@@ -164,7 +158,7 @@ static payload_type_t get_payload_type(private_id_payload_t *this)
  */
 static payload_type_t get_next_type(private_id_payload_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
 /**
@@ -238,22 +232,6 @@ static chunk_t get_data_clone (private_id_payload_t *this)
 }
 
 /**
- * Implementation of id_payload_t.get_initiator.
- */
-static bool get_initiator (private_id_payload_t *this)
-{
-	return (this->is_initiator);
-}
-
-/**
- * Implementation of id_payload_t.set_initiator.
- */
-static void set_initiator (private_id_payload_t *this,bool is_initiator)
-{
-	this->is_initiator = is_initiator;
-}
-
-/**
  * Implementation of id_payload_t.get_identification.
  */
 static identification_t *get_identification (private_id_payload_t *this)
@@ -276,7 +254,7 @@ static void destroy(private_id_payload_t *this)
 /*
  * Described in header.
  */
-id_payload_t *id_payload_create(bool is_initiator)
+id_payload_t *id_payload_create(payload_type_t payload_type)
 {
 	private_id_payload_t *this = malloc_thing(private_id_payload_t);
 
@@ -297,8 +275,6 @@ id_payload_t *id_payload_create(bool is_initiator)
 	this->public.get_data = (chunk_t (*) (id_payload_t *)) get_data;
 	this->public.get_data_clone = (chunk_t (*) (id_payload_t *)) get_data_clone;
 	
-	this->public.get_initiator = (bool (*) (id_payload_t *)) get_initiator;
-	this->public.set_initiator = (void (*) (id_payload_t *,bool)) set_initiator;
 	this->public.get_identification = (identification_t * (*) (id_payload_t *this)) get_identification;
 
 	/* private variables */
@@ -306,7 +282,7 @@ id_payload_t *id_payload_create(bool is_initiator)
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length =ID_PAYLOAD_HEADER_LENGTH;
 	this->id_data = chunk_empty;
-	this->is_initiator = is_initiator;
+	this->payload_type = payload_type;
 
 	return (&(this->public));
 }
@@ -314,9 +290,9 @@ id_payload_t *id_payload_create(bool is_initiator)
 /*
  * Described in header.
  */
-id_payload_t *id_payload_create_from_identification(bool is_initiator,identification_t *identification)
+id_payload_t *id_payload_create_from_identification(payload_type_t payload_type, identification_t *identification)
 {
-	id_payload_t *this= id_payload_create(is_initiator);
+	id_payload_t *this= id_payload_create(payload_type);
 	this->set_data(this,identification->get_encoding(identification));
 	this->set_id_type(this,identification->get_type(identification));
 	return this;

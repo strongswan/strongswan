@@ -7,6 +7,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -123,9 +124,9 @@ payload_t *payload_create(payload_type_t type)
 		case NONCE:
 			return (payload_t*)nonce_payload_create();
 		case ID_INITIATOR:
-			return (payload_t*)id_payload_create(TRUE);
+			return (payload_t*)id_payload_create(ID_INITIATOR);
 		case ID_RESPONDER:
-			return (payload_t*)id_payload_create(FALSE);
+			return (payload_t*)id_payload_create(ID_RESPONDER);
 		case AUTHENTICATION:
 			return (payload_t*)auth_payload_create();
 		case CERTIFICATE:

@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -112,28 +113,6 @@ struct id_payload_t {
 	identification_t *(*get_identification) (id_payload_t *this);
 	
 	/**
-	 * @brief Get the type of ID payload (IDi or IDr).
-	 *
-	 * @param this 			calling id_payload_t object
-	 * @return
-	 * 						- TRUE if this payload is of type IDi
-	 * 						- FALSE if this payload is of type IDr
-	 * 
-	 */
-	bool (*get_initiator) (id_payload_t *this);
-	
-	/**
-	 * @brief Set the type of ID payload (IDi or IDr).
-	 *
-	 * @param this 			calling id_payload_t object
-	 * @param is_initiator	
-	 * 						- TRUE if this payload is of type IDi
-	 * 						- FALSE if this payload is of type IDr
-	 * 
-	 */
-	void (*set_initiator) (id_payload_t *this,bool is_initiator);
-	
-	/**
 	 * @brief Destroys an id_payload_t object.
 	 *
 	 * @param this 	id_payload_t object to destroy
@@ -144,28 +123,23 @@ struct id_payload_t {
 /**
  * @brief Creates an empty id_payload_t object.
  * 
- * @param is_initiator	
- * 						- TRUE if this payload is of type IDi
- * 						- FALSE if this payload is of type IDr
- * 
+ * @param payload_type	one of ID_INITIATOR, ID_RESPONDER
  * @return				id_payload_t object
  * 
  * @ingroup payloads
  */
-id_payload_t *id_payload_create(bool is_initiator);
+id_payload_t *id_payload_create(payload_type_t payload_type);
 
 /**
  * @brief Creates an id_payload_t from an existing identification_t object.
  * 
- * @param is_initiator	
- * 							- TRUE if this payload is of type IDi
- * 							- FALSE if this payload is of type IDr
+ * @param payload_type		one of ID_INITIATOR, ID_RESPONDER
  * @param identification	identification_t object
  * @return					id_payload_t object
  * 
  * @ingroup payloads
  */
-id_payload_t *id_payload_create_from_identification(bool is_initiator,identification_t *identification);
+id_payload_t *id_payload_create_from_identification(payload_type_t payload_type, identification_t *identification);
 
 
 
