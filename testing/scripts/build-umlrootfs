@@ -129,6 +129,8 @@ echo "ln -sf /usr/share/zoneinfo/${TZUML} /etc/localtime" >> $INSTALLSHELL
 echo "cd /root/${STRONGSWANVERSION}" >> $INSTALLSHELL
 echo -n "./configure --sysconfdir=/etc" >> $INSTALLSHELL
 echo -n " --with-random-device=/dev/urandom" >> $INSTALLSHELL
+echo -n " --enable-integrity-test" >> $INSTALLSHELL
+
 if [ "$USE_LIBCURL" = "yes" ]
 then
     echo -n " --enable-http" >> $INSTALLSHELL
