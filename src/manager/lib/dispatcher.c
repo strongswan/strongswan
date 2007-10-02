@@ -88,6 +88,26 @@ struct private_dispatcher_t {
 	 * user param to context constructor
 	 */
 	void *param;
+	
+	/**
+	 * thread specific initialization handler
+	 */
+	void (*init)(void *param);
+	
+	/**
+	 * argument to pass to thread intiializer
+	 */
+	void *init_param;
+	
+	/**
+	 * thread specific deinitialization handler
+	 */
+	void (*deinit)(void *param);
+	
+	/**
+	 * param tho thread specific deinitialization handler
+	 */
+	void *deinit_param;
 };
 
 typedef struct {
@@ -172,13 +192,12 @@ static void add_controller(private_dispatcher_t *this,
 }
 
 /**
- * Dispatch 
+ * Actual dispatching code 
  */
 static void dispatch(private_dispatcher_t *this)
 {
 	FCGX_Request fcgi_req;
 	
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	if (FCGX_InitRequest(&fcgi_req, this->fd, 0) == 0)
 	{
 		while (TRUE)
@@ -274,16 +293,44 @@ static void dispatch(private_dispatcher_t *this)
 }
 
 /**
+ * Setup thread and start dispatching 
+ */
+static void start_dispatching(private_dispatcher_t *this)
+{
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	if (this->init)
+	{
+		this->init(this->init_param);
+	}
+	if (this->deinit)
+	{
+		pthread_cleanup_push(this->deinit, this->deinit_param);
+		dispatch(this);
+		pthread_cleanup_pop(1);
+	}
+	else
+	{
+		dispatch(this);
+	}
+}
+
+/**
  * Implementation of dispatcher_t.run.
  */
-static void run(private_dispatcher_t *this, int threads)
+static void run(private_dispatcher_t *this, int threads,
+				void(*init)(void *param), void *init_param,
+				void(*deinit)(void *param), void *deinit_param)
 {
+	this->init = init;
+	this->init_param = init_param;
+	this->deinit = deinit;
+	this->deinit_param = deinit_param;
 	this->thread_count = threads;
 	this->threads = malloc(sizeof(pthread_t) * threads);
 	while (threads)
 	{
 		if (pthread_create(&this->threads[threads - 1],
-						   NULL, (void*)dispatch, this) == 0)
+						   NULL, (void*)start_dispatching, this) == 0)
 		{
 			threads--;
 		}
@@ -331,7 +378,7 @@ dispatcher_t *dispatcher_create(char *socket, int timeout,
 	private_dispatcher_t *this = malloc_thing(private_dispatcher_t);
 
 	this->public.add_controller = (void(*)(dispatcher_t*, controller_constructor_t, void*))add_controller;
-	this->public.run = (void(*)(dispatcher_t*, int threads))run;
+	this->public.run = (void(*)(dispatcher_t*, int threads,void(*)(void *),void *,void(*)(void *),void *))run;
 	this->public.waitsignal = (void(*)(dispatcher_t*))waitsignal;
 	this->public.destroy = (void(*)(dispatcher_t*))destroy;
 	

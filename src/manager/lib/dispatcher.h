@@ -52,9 +52,20 @@ struct dispatcher_t {
 	/**
 	 * @brief Start with dispatching.
 	 *
+	 * It may be necessary to call per-thread initialization functions. 
+	 * If init is not NULL, the handler is called right after thread
+	 * creation (by the created thread) and the deinit function is called
+	 * before the thread gets destroyed (again by the thread itself).
+	 *
 	 * @param thread		number of dispatching threads
+	 * @param init			thread specific initialization function, or NULL
+	 * @param init_param	param to pass to init function
+	 * @param deinit		thread dpecific deinitialization function, or NULL
+	 * @param deinit_param	param to pass to deinit function
 	 */
-	void (*run)(dispatcher_t *this, int threads);
+	void (*run)(dispatcher_t *this, int threads,
+				void(*init)(void *param), void *init_param,
+				void(*deinit)(void *param), void *deinit_param);
 	
 	/**
 	 * @brief Wait for a relevant signal action.

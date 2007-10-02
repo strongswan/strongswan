@@ -77,25 +77,6 @@ static enumerator_t *db_enumerator_create(bool(*enumerate)(db_enumerator_t*,void
 }
 
 /**
- * enumerator function for empty enumerator
- */
-static bool empty_enumerate(enumerator_t *enumerator, void *item, ...)
-{
-	return FALSE;
-}
-
-/**
- * create an empty enumerator
- */
-static enumerator_t* empty_enumerator_create()
-{
-	enumerator_t *this = malloc_thing(enumerator_t);
-	this->enumerate = empty_enumerate;
-	this->destroy = (void*)free;
-	return this;
-}
-
-/**
  * Implementation of database_t.login.
  */
 static int login(private_database_t *this, char *username, char *password)
@@ -170,7 +151,7 @@ static enumerator_t* create_gateway_enumerator(private_database_t *this, int use
 		}
 		sqlite3_finalize(stmt);
 	}
-	return empty_enumerator_create();
+	return enumerator_create_empty();
 }
 
 /**

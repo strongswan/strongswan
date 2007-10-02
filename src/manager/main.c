@@ -56,7 +56,7 @@ int main (int arc, char *argv[])
 	dispatcher->add_controller(dispatcher, gateway_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, auth_controller_create, NULL);
 	
-	dispatcher->run(dispatcher, THREADS);
+	dispatcher->run(dispatcher, THREADS, NULL, NULL, NULL, NULL);
 	
 	dispatcher->waitsignal(dispatcher);
 	

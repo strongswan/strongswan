@@ -35,16 +35,23 @@ struct enumerator_t {
 	/**
 	 * @brief Enumerate collection.
 	 *
-	 * @param item		first enumerated item
-	 * @param ...		additional items enumerated, depending in implementation
-	 * @return			TRUE if pointers returned
+	 * The enumerate function takes a variable argument list containing 
+	 * pointers where the enumerated values get written.
+	 *
+	 * @param ...	variable list of enumerated items, implementation dependant
+	 * @return		TRUE if pointers returned
 	 */
-	bool (*enumerate)(enumerator_t *this, void *item, ...);
+	bool (*enumerate)(enumerator_t *this, ...);
 		
 	/**
      * @brief Destroy a enumerator instance.
      */
     void (*destroy)(enumerator_t *this);
 };
+
+/**
+ * @brief Create an enumerator which enumerates over nothing
+ */
+enumerator_t* enumerator_create_empty();
 
 #endif /* ENUMERATOR_H_ */
