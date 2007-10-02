@@ -71,7 +71,7 @@ are required for the strongSwan testing environment:
 
     * The latest strongSwan distribution
 
-      http://download.strongswan.org/strongswan-4.1.6.tar.gz
+      http://download.strongswan.org/strongswan-4.1.7.tar.gz
 
 
 3. Creating the environment
