@@ -440,9 +440,6 @@ static job_requeue_t dispatch(private_xml_interface_t *this)
 	return JOB_REQUEUE_DIRECT;
 }
 
-/** XML unix socket */
-struct sockaddr_un unix_addr = { AF_UNIX, IPSEC_PIDDIR "/charon.xml"};
-
 /**
  * Implementation of itnerface_t.destroy.
  */
@@ -450,7 +447,6 @@ static void destroy(private_xml_interface_t *this)
 {
 	this->job->cancel(this->job);
 	close(this->socket);
-	unlink(unix_addr.sun_path);
 	free(this);
 }
 
@@ -459,6 +455,7 @@ static void destroy(private_xml_interface_t *this)
  */
 interface_t *interface_create()
 {
+	struct sockaddr_un unix_addr = { AF_UNIX, IPSEC_PIDDIR "/charon.xml"};
 	private_xml_interface_t *this = malloc_thing(private_xml_interface_t);
 	mode_t old;
 
@@ -472,7 +469,8 @@ interface_t *interface_create()
 		free(this);
 		return NULL;
 	}
-		
+	
+	unlink(unix_addr.sun_path);
 	old = umask(~(S_IRWXU | S_IRWXG));
 	if (bind(this->socket, (struct sockaddr *)&unix_addr, sizeof(unix_addr)) < 0)
 	{

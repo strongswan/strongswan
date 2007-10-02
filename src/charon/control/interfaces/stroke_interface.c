@@ -51,9 +51,6 @@
 #define PATH_BUF	256
 #define STROKE_THREADS 3
 
-struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
-
-
 typedef struct private_stroke_interface_t private_stroke_interface_t;
 
 /**
@@ -1676,7 +1673,6 @@ static void destroy(private_stroke_interface_t *this)
 {
 	this->job->cancel(this->job);
 	free(this);
-	unlink(socket_addr.sun_path);
 }
 
 /*
@@ -1684,6 +1680,7 @@ static void destroy(private_stroke_interface_t *this)
  */
 interface_t *interface_create()
 {
+	struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
 	private_stroke_interface_t *this = malloc_thing(private_stroke_interface_t);
 	mode_t old;
 
@@ -1699,6 +1696,7 @@ interface_t *interface_create()
 		return NULL;
 	}
 	
+	unlink(socket_addr.sun_path);
 	old = umask(~(S_IRWXU | S_IRWXG));
 	if (bind(this->socket, (struct sockaddr *)&socket_addr, sizeof(socket_addr)) < 0)
 	{
