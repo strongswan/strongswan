@@ -239,21 +239,25 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 	/* no list supplied, just fetch the stored traffic selectors */
 	if (supplied == NULL)
 	{
+		DBG2(DBG_CFG, "proposing traffic selectors for %s:", 
+			 local ? "us" : "other");
 		while (i1->iterate(i1, (void**)&ts1))
 		{
 			/* we make a copy of the TS, this allows us to update dynamic TS' */
-			ts1 = ts1->clone(ts1);
+			selected = ts1->clone(ts1);
 			if (host)
 			{
-				ts1->set_address(ts1, host);
+				selected->set_address(selected, host);
 			}
-			result->insert_last(result, ts1);
+			DBG2(DBG_CFG, " %R (derived from %R)", selected, ts1);
+			result->insert_last(result, selected);
 		}
 		i1->destroy(i1);
 	}
 	else
 	{
-		DBG2(DBG_CFG, "selecting traffic selectors");
+		DBG2(DBG_CFG, "selecting traffic selectors for %s:", 
+			 local ? "us" : "other");
 		i2 = supplied->create_iterator(supplied, TRUE);
 		/* iterate over all stored selectors */
 		while (i1->iterate(i1, (void**)&ts1))
@@ -269,13 +273,17 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 			/* iterate over all supplied traffic selectors */
 			while (i2->iterate(i2, (void**)&ts2))
 			{
-				DBG2(DBG_CFG, "stored %R <=> %R received", ts1, ts2);
 				selected = ts1->get_subset(ts1, ts2);
 				if (selected)
 				{
+					DBG2(DBG_CFG, " config: %R, received: %R => match: %R",
+						 ts1, ts2, selected);
 					result->insert_last(result, selected);
-					DBG2(DBG_CFG, "found traffic selector for %s: %R", 
-						 local ? "us" : "other", selected);
+				}
+				else
+				{
+					DBG2(DBG_CFG, " config: %R, received: %R => no match",
+						 ts1, ts2, selected);
 				}
 			}
 			ts1->destroy(ts1);
