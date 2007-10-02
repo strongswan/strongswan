@@ -296,9 +296,9 @@ backend_t *backend_create(void)
 	this->public.backend.is_writeable = (bool(*) (backend_t*))is_writeable;
 	this->public.backend.destroy = (void (*)(backend_t*))destroy;
 	
-	if (sqlite3_open(IPSEC_DIR "/sqlite.db", &this->db) != SQLITE_OK)
+	if (sqlite3_open(IPSEC_DIR "/manager.db", &this->db) != SQLITE_OK)
 	{
-		DBG1(DBG_CFG, "opening SQLite database '" IPSEC_DIR "/sqlite.db' failed.");
+		DBG1(DBG_CFG, "opening SQLite database '" IPSEC_DIR "/manager.db' failed.");
 		destroy(this);
 		return NULL;
 	}
