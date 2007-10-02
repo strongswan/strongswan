@@ -1060,7 +1060,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (all)
 	{
-		fprintf(out, "%12s[%d]: IKE SPIs: %0llx_i%s %0llx_r%s, ",
+		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s, ",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
 				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
@@ -1101,7 +1101,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	
 	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
-		fprintf(out, ", %N SPIs: 0x%0x_i 0x%0x_o",
+		fprintf(out, ", %N SPIs: %.8x_i %.8x_o",
 				protocol_id_names, child_sa->get_protocol(child_sa),
 				htonl(child_sa->get_spi(child_sa, TRUE)),
 				htonl(child_sa->get_spi(child_sa, FALSE)));
