@@ -144,9 +144,19 @@
 #define min(x,y) ((x) < (y) ? (x):(y))
 
 /**
- * Call destructor of a object if object != NULL
+ * Call destructor of an object, if object != NULL
  */
 #define DESTROY_IF(obj) if (obj) obj->destroy(obj)
+
+/**
+ * Call offset destructor of an object, if object != NULL
+ */
+#define DESTROY_OFFSET_IF(obj, offset) if (obj) obj->destroy_offset(obj, offset);
+
+/**
+ * Call function destructor of an object, if object != NULL
+ */
+#define DESTROY_FUNCTION_IF(obj, fn) if (obj) obj->destroy_function(obj, fn);
 
 /**
  * Debug macro to follow control flow
