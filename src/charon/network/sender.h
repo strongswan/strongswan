@@ -43,7 +43,7 @@ struct sender_t {
 	 * @brief Send a packet over the network.
 	 *
 	 * This function is non blocking and adds the packet to a queue.
-	 * Whenever the sender thread things it's good to send the packet,
+	 * Whenever the sender thread thinks it's good to send the packet,
 	 * it'll do so.
 	 *
 	 * @param this		calling object
