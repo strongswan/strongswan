@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -443,6 +444,14 @@ static void set_exchange_type (private_message_t *this,exchange_type_t exchange_
 static exchange_type_t get_exchange_type (private_message_t *this)
 {
 	return this->exchange_type;
+}
+
+/**
+ * Implementation of message_t.get_first_payload_type.
+ */
+static payload_type_t get_first_payload_type (private_message_t *this)
+{
+	return this->first_payload;
 }
 
 /**
@@ -1255,6 +1264,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_ike_sa_id = (ike_sa_id_t*(*)(message_t*))get_ike_sa_id;
 	this->public.set_exchange_type = (void(*)(message_t*, exchange_type_t))set_exchange_type;
 	this->public.get_exchange_type = (exchange_type_t(*)(message_t*))get_exchange_type;
+	this->public.get_first_payload_type = (payload_type_t(*)(message_t*))get_first_payload_type;
 	this->public.set_request = (void(*)(message_t*, bool))set_request;
 	this->public.get_request = (bool(*)(message_t*))get_request;
 	this->public.add_payload = (void(*)(message_t*,payload_t*))add_payload;

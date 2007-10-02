@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -152,6 +153,14 @@ struct message_t {
 	 * @return				exchange type of the message
 	 */
 	exchange_type_t (*get_exchange_type) (message_t *this);
+	
+	/**
+	 * @brief Gets the payload type of the first payload.
+	 * 
+	 * @param this			message_t object
+	 * @return				payload type of the first payload
+	 */
+	payload_type_t (*get_first_payload_type) (message_t *this);
 
 	/**
 	 * @brief Sets the request flag.
