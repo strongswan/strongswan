@@ -239,15 +239,6 @@ static bool unroute_listener(interface_bus_listener_t *this, signal_t signal,
 }
 
 /**
- * dummy callback
- */
-static bool dummy_callback(void *param, signal_t signal, level_t level,
-					 ike_sa_t *ike_sa, char *format, va_list args)
-{
-	return TRUE;
-}
-
-/**
  * remove a previously registered listener from the bus
  */
 static void remove_listener(interface_bus_listener_t *listener)
@@ -279,14 +270,17 @@ static status_t initiate(private_interface_manager_t *this,
 	peer_cfg->destroy(peer_cfg);
 
 	listener.listener.signal = (void*)initiate_listener;
-	listener.callback = callback ? callback : (interface_manager_cb_t)dummy_callback;
+	listener.callback = callback;
 	listener.ike_sa = ike_sa;
 	listener.param = param;
 	listener.cancelled = FALSE;
 
 	/* we listen passively to catch the signals we are raising in 
-	 * ike_sa->initiate(). */
-	charon->bus->add_listener(charon->bus, &listener.listener);
+	 * ike_sa->delete(). */
+	if (callback)
+	{
+		charon->bus->add_listener(charon->bus, &listener.listener);
+	}
 	charon->bus->set_listen_state(charon->bus, TRUE);
 	if (ike_sa->initiate(ike_sa, child_cfg) != SUCCESS)
 	{
@@ -350,7 +344,7 @@ static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id,
 							  interface_manager_cb_t callback, void *param)
 {
 	ike_sa_t *ike_sa;
-	status_t status = FAILED;
+	status_t status = FAILED;;
 	interface_bus_listener_t listener;
 	
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
@@ -363,12 +357,14 @@ static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id,
 	/* we listen passively to catch the signals we are raising in 
 	 * ike_sa->delete(). */
 	listener.listener.signal = (void*)terminate_ike_listener;
-	listener.callback = callback ? callback : (interface_manager_cb_t)dummy_callback;
+	listener.callback = callback;
 	listener.ike_sa = ike_sa;
 	listener.param = param;
 	listener.cancelled = FALSE;
-	
-	charon->bus->add_listener(charon->bus, &listener.listener);
+	if (callback)
+	{
+		charon->bus->add_listener(charon->bus, &listener.listener);
+	}
 	charon->bus->set_listen_state(charon->bus, TRUE);
 	status = ike_sa->delete(ike_sa);
 	if (status == DESTROY_ME)
@@ -462,13 +458,16 @@ static status_t terminate_child(interface_manager_t *this, u_int32_t reqid,
 	}
 	
 	listener.listener.signal = (void*)terminate_child_listener;
-	listener.callback = callback ? callback : (interface_manager_cb_t)dummy_callback;
+	listener.callback = callback;
 	listener.ike_sa = ike_sa;
 	listener.param = param;
 	listener.cancelled = FALSE;
 		
 	/* we listen passively to catch the signals we are raising */
-	charon->bus->add_listener(charon->bus, &listener.listener);
+	if (callback)
+	{
+		charon->bus->add_listener(charon->bus, &listener.listener);
+	}
 	charon->bus->set_listen_state(charon->bus, TRUE);
 	status = ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
 									 child_sa->get_spi(child_sa, TRUE));
@@ -549,14 +548,17 @@ static status_t route(interface_manager_t *this,
 	}
 		
 	/* we listen passively only, as routing is done by one thread only */
-	interface_bus_listener_t listener;
+	if (callback)
+	{
+		interface_bus_listener_t listener;
 	
-	listener.listener.signal = (void*)route_listener;
-	listener.callback = callback ? callback : (interface_manager_cb_t)dummy_callback;
-	listener.ike_sa = ike_sa;
-	listener.param = param;
-	listener.cancelled = FALSE;
-	charon->bus->add_listener(charon->bus, &listener.listener);
+		listener.listener.signal = (void*)route_listener;
+		listener.callback = callback;
+		listener.ike_sa = ike_sa;
+		listener.param = param;
+		listener.cancelled = FALSE;
+		charon->bus->add_listener(charon->bus, &listener.listener);
+	}
 	
 	if (ike_sa->route(ike_sa, child_cfg) != SUCCESS)
 	{
@@ -583,15 +585,17 @@ static status_t unroute(interface_manager_t *this, u_int32_t reqid,
 	}
 	
 	/* we listen passively only, as routing is done by one thread only */
-	interface_bus_listener_t listener;
+	if (callback)
+	{
+		interface_bus_listener_t listener;
 	
-	listener.listener.signal = (void*)unroute_listener;
-	listener.callback = callback ? callback : (interface_manager_cb_t)dummy_callback;
-	listener.ike_sa = ike_sa;
-	listener.param = param;
-	listener.cancelled = FALSE;
-	charon->bus->add_listener(charon->bus, &listener.listener);
-	
+		listener.listener.signal = (void*)unroute_listener;
+		listener.callback = callback;
+		listener.ike_sa = ike_sa;
+		listener.param = param;
+		listener.cancelled = FALSE;
+		charon->bus->add_listener(charon->bus, &listener.listener);
+	}
 	status = ike_sa->unroute(ike_sa, reqid);
 	if (status == DESTROY_ME)
 	{
@@ -672,6 +676,14 @@ static void load_interfaces(private_interface_manager_t *this)
 	closedir(dir);
 }
 
+/**
+ * See header
+ */
+bool interface_manager_cb_empty(void *param, signal_t signal, level_t level,
+								ike_sa_t *ike_sa, char *format, va_list args)
+{
+	return TRUE;
+}
 
 /**
  * Implementation of stroke_t.destroy.

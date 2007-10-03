@@ -118,6 +118,7 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 	return found;
 }
 
+
 /**
  * process NetworkManagers startConnection method call
  */
@@ -155,8 +156,8 @@ static bool start_connection(private_dbus_interface_t *this, DBusMessage* msg)
 		child_cfg = get_child_from_peer(peer_cfg, name);
 		if (child_cfg)
 		{
-			status = charon->interfaces->initiate(charon->interfaces, peer_cfg,
-												  child_cfg, NULL, NULL);
+			status = charon->interfaces->initiate(charon->interfaces,
+						peer_cfg, child_cfg, interface_manager_cb_empty, NULL);
 		}
 		else
 		{

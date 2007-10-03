@@ -40,6 +40,15 @@
 typedef bool(*interface_manager_cb_t)(void* param, signal_t signal, level_t level,
 							   ike_sa_t* ike_sa, char* format, va_list args);
 
+/**
+ * @brief Empty callback function for interface_manager_t functions.
+ *
+ * If you wan't to do a syncrhonous call, but don't need a callback, pass
+ * this function to the interface_managers methods.
+ */
+bool interface_manager_cb_empty(void *param, signal_t signal, level_t level,
+								ike_sa_t *ike_sa, char *format, va_list args);
+
 typedef struct interface_manager_t interface_manager_t;
 
 /**
@@ -62,6 +71,11 @@ typedef struct interface_manager_t interface_manager_t;
  * use the manager to fullfill their tasks (initiating, terminating, ...). 
  * The interface_manager starts actions by creating jobs. It then tries to
  * evaluate the result of the operation by listening on the bus.
+ *
+ * Passing NULL as callback to the managers function calls them asynchronously.
+ * If a callback is specified, they are called synchronoulsy. There is a default
+ * callback "interface_manager_cb_empty" if you wan't to call a function
+ * synchronously, but don't need a callback.
  * 
  * @b Constructors:
  * - interface_manager_create()
