@@ -6,7 +6,7 @@ strongswan-4.1.7
   port floating from 500 to 4500 were erronously deleted.
 
 - Added a "forceencaps" connection parameter to enforce UDP encapsulation
-  to hurdle restrictive firewalls. NAT detection payloads are faked to
+  to surmount restrictive firewalls. NAT detection payloads are faked to
   simulate a NAT situation and trick the other peer into NAT mode (IKEv2 only).
 
 - Preview of strongSwan Manager, a web based configuration and monitoring
