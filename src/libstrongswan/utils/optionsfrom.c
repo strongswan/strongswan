@@ -21,35 +21,47 @@
  */
 
 #include <stdio.h>
+#include <errno.h>
 
 #include <library.h>
+#include <debug.h>
 #include <utils/lexparser.h>
 
 #include "optionsfrom.h"
 
-#define	MAX_USES	100		/* loop-detection limit */
+#define	MAX_USES	 20		/* loop-detection limit */
 #define	SOME_ARGS	 10		/* first guess at how many arguments we'll need */
 
-/**
- * parse the options from a file
- * does not alter the existing arguments, but does relocate and alter
- * the argv pointer vector.
+/*
+ * Defined in header.
  */
-static err_t parse_options_file(const char *filename, int *argcp, char **argvp[], int optind)
+bool optionsfrom(const char *filename, int *argcp, char **argvp[], int optind)
 {
+	static int nuses = 0;
 	char **newargv;
 	int newargc;
 	int next;			/* place for next argument */
 	int room;			/* how many more new arguments we can hold */
 	size_t bytes;
 	chunk_t chunk, src, line, token;
-	err_t ugh = NULL;
+	bool good = TRUE;
+	int linepos = 0;
+	FILE *fd;
 
-	FILE *fd = fopen(filename, "r");
-
+	/* avoid endless loops with recursive --optionsfrom arguments */
+	nuses++;
+	if (nuses >= MAX_USES)
+	{
+		DBG1("optionsfrom called %d times - looping?", (*argvp)[0], nuses);
+		return FALSE;
+	}
+	
+	fd = fopen(filename, "r");
 	if (fd == NULL)
 	{
-		return "unable to open file";
+		DBG1("optionsfrom: unable to open file '%s': %s",
+			 filename, strerror(errno));
+		return FALSE;
 	}
 
 	/* determine the file size */
@@ -74,8 +86,9 @@ static err_t parse_options_file(const char *filename, int *argcp, char **argvp[]
 	/* we keep the chunk pointer so that we can still free it */
 	src = chunk;
 
-	while (fetchline(&src, &line) && ugh == NULL)
+	while (fetchline(&src, &line) && good)
 	{
+		linepos++;
 		while (eat_whitespace(&line))
 		{
 			if (*line.ptr == '"'|| *line.ptr == '\'')
@@ -86,7 +99,9 @@ static err_t parse_options_file(const char *filename, int *argcp, char **argvp[]
 				line.len--;
 				if (!extract_token(&token, delimiter, &line))
 				{
-					ugh = "missing terminating delimiter";
+					DBG1("optionsfrom: missing terminator at %s:%d",
+						 filename, linepos);
+					good = FALSE;
 					break;
 				}
 			}
@@ -118,49 +133,16 @@ static err_t parse_options_file(const char *filename, int *argcp, char **argvp[]
 		}
 	}
 
-	if (ugh)		/* error of some kind */
+	if (!good)		/* error of some kind */
 	{
 		free(chunk.ptr);
 		free(newargv);
-		return ugh;
+		return FALSE;
 	}
 
 	memcpy(newargv + next, *argvp + optind, (*argcp + 1 - optind) * sizeof(char *));
 	*argcp += next - optind;
 	*argvp = newargv;
-	return NULL;
+	return TRUE;
 }
 
-/*
- * Defined in header.
- */
-err_t optionsfrom(const char *filename, int *argcp, char **argvp[], int optind, FILE *errfile)
-{
-	static int nuses = 0;
-	err_t ugh = NULL;
-
-	/* avoid endless loops with recursive --optionsfrom arguments */
-	if (errfile != NULL)
-	{
-		nuses++;
-		if (nuses >= MAX_USES)
-		{
-			fprintf(errfile, "%s: optionsfrom called %d times - looping?\n",
-							 (*argvp)[0], nuses);
-			exit(2);
-		}
-	}
-	else
-	{
-		nuses = 0;
-	}
-
-	ugh = parse_options_file(filename, argcp, argvp, optind);
-
-	if (ugh != NULL && errfile != NULL)
-	{
-		fprintf(errfile, "%s: optionsfrom failed: %s\n", (*argvp)[0], ugh);
-		exit(2);
-	}
-	return ugh;
-}

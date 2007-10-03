@@ -30,9 +30,8 @@
  * @param argcp					pointer to argc
  * @param argvp					pointer to argv[]
  * @param optind				current optind, number of next argument
- * @param errfile				where to report errors (NULL means return)
- * @return						NULL if successful, error string otherwise
+ * @return						TRUE if optionsfrom parsing successful
  */
-err_t optionsfrom(const char *filename, int *argcp, char **argvp[], int optind, FILE *errfile);
+bool optionsfrom(const char *filename, int *argcp, char **argvp[], int optind);
 
 #endif /*OPTIONSFROM_H_*/

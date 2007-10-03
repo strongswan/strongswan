@@ -291,8 +291,10 @@ int main(int argc, char **argv)
 					{
 		    			snprintf(path, BUF_LEN, "%s/%s", OPENAC_PATH, optarg);
 					}
-					optionsfrom(path, &argc, &argv, optind, stderr);
-					/* does not return on error */
+					if (!optionsfrom(path, &argc, &argv, optind))
+					{
+						exit(1);
+					}
 		 		}
 				continue;
 
