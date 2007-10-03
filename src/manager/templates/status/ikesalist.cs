@@ -80,12 +80,12 @@
           <?cs /each ?>
       	</td>
       	<td style="background-image:url(<?cs var:base ?>/static/pipe-thin-left.png)">
-          <?cs var:childsa.local.spi ?><br/><br/><br/>
+          <?cs var:childsa.local.spi ?> &lt;-<br/><br/><br/>
       	</td>
       	<td style="background-image:url(<?cs var:base ?>/static/pipe-thin.png)">
       	</td>
       	<td class="right" style="background-image:url(<?cs var:base ?>/static/pipe-thin-right.png)">
-          <?cs var:childsa.remote.spi ?><br/><br/><br/>
+          -&gt; <?cs var:childsa.remote.spi ?><br/><br/><br/>
       	</td>
       	<td class="right" colspan="2">
           <?cs each:net = childsa.remote.networks ?>
