@@ -293,7 +293,8 @@ int main(int argc, char **argv)
 					}
 					if (!optionsfrom(path, &argc, &argv, optind))
 					{
-						exit(1);
+						status = 1;
+						goto end;
 					}
 		 		}
 				continue;
@@ -428,7 +429,8 @@ int main(int argc, char **argv)
 	else
 	{
 		DBG1("  integrity test failed");
-		exit(3);
+		status = 3;
+		goto end;
 	}
 #endif /* INTEGRITY_TEST */
 
