@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -67,6 +68,10 @@ enum notify_type_t {
 	INVALID_SELECTORS = 39,
 	UNACCEPTABLE_ADDRESSES = 40,
 	UNEXPECTED_NAT_DETECTED = 41,
+#ifdef P2P
+	/* P2P-NAT-T, private use */
+	P2P_CONNECT_FAILED = 8192,
+#endif /* P2P */
 	/* notify status messages */
 	INITIAL_CONTACT = 16384,
 	SET_WINDOW_SIZE = 16385,
@@ -94,6 +99,15 @@ enum notify_type_t {
 	EAP_ONLY_AUTHENTICATION = 40960,
 	/* BEET mode, not even a draft yet. private use */
 	USE_BEET_MODE = 40961,
+#ifdef P2P
+	/* P2P-NAT-T, private use */
+	P2P_MEDIATION = 40962,
+	P2P_ENDPOINT = 40963,
+	P2P_CALLBACK = 40964,
+	P2P_SESSIONID = 40965,
+	P2P_SESSIONKEY = 40966,
+	P2P_RESPONSE = 40967
+#endif /* P2P */
 };
 
 /**

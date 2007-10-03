@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -65,6 +66,9 @@
 #include <processing/jobs/send_keepalive_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
 
+#ifdef P2P
+#include <sa/tasks/ike_p2p.h>
+#endif
 
 #ifndef RESOLV_CONF
 #define RESOLV_CONF "/etc/resolv.conf"
@@ -130,6 +134,13 @@ struct private_ike_sa_t {
 	 */
 	host_t *other_host;
 	
+#ifdef P2P	
+	/**
+	 * Server reflexive host
+	 */
+	host_t *server_reflexive_host;
+#endif /* P2P */
+		
 	/**
 	 * Identification used for us
 	 */
@@ -855,6 +866,92 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 	response->destroy(response);
 }
 
+#ifdef P2P
+/**
+ * Implementation of ike_sa_t.get_server_reflexive_host.
+ */
+static host_t *get_server_reflexive_host(private_ike_sa_t *this)
+{
+	return this->server_reflexive_host;
+}
+
+/**
+ * Implementation of ike_sa_t.set_server_reflexive_host.
+ */
+static void set_server_reflexive_host(private_ike_sa_t *this, host_t *host)
+{
+	DESTROY_IF(this->server_reflexive_host);
+	this->server_reflexive_host = host;
+}
+
+/**
+ * Implementation of ike_sa_t.respond
+ */
+static status_t respond(private_ike_sa_t *this, identification_t *peer_id,
+		chunk_t session_id)
+{
+	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
+	task->respond(task, peer_id, session_id);
+	this->task_manager->queue_task(this->task_manager, (task_t*)task);
+	return this->task_manager->initiate(this->task_manager);
+}
+
+/**
+ * Implementation of ike_sa_t.callback
+ */
+static status_t callback(private_ike_sa_t *this, identification_t *peer_id)
+{
+	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
+	task->callback(task, peer_id);
+	this->task_manager->queue_task(this->task_manager, (task_t*)task);
+	return this->task_manager->initiate(this->task_manager);
+}
+
+/**
+ * Implementation of ike_sa_t.relay
+ */
+static status_t relay(private_ike_sa_t *this, identification_t *requester,
+			chunk_t session_id, chunk_t session_key, linked_list_t *endpoints, bool response)
+{
+	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
+	task->relay(task, requester, session_id, session_key, endpoints, response);
+	this->task_manager->queue_task(this->task_manager, (task_t*)task);
+	return this->task_manager->initiate(this->task_manager);
+}
+
+/**
+ * Implementation of ike_sa_t.initiate_mediation
+ */
+static status_t initiate_mediation(private_ike_sa_t *this, peer_cfg_t *mediated_cfg)
+{
+	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
+	task->connect(task, mediated_cfg->get_peer_id(mediated_cfg));
+	this->task_manager->queue_task(this->task_manager, (task_t*)task);
+	return this->task_manager->initiate(this->task_manager);
+}
+
+/**
+ * Implementation of ike_sa_t.initiate_mediated
+ */
+static status_t initiate_mediated(private_ike_sa_t *this, host_t *me, host_t *other,
+		linked_list_t *childs)
+{
+	this->my_host = me->clone(me);
+	this->other_host = other->clone(other);
+	
+	task_t *task;
+	child_cfg_t *child_cfg;	
+	iterator_t *iterator = childs->create_iterator(childs, TRUE);
+	while (iterator->iterate(iterator, (void**)&child_cfg))
+	{
+		task = (task_t*)child_create_create(&this->public, child_cfg);
+		this->task_manager->queue_task(this->task_manager, task);
+	}
+	iterator->destroy(iterator);
+	return this->task_manager->initiate(this->task_manager);
+}
+#endif /* P2P */
+
 /**
  * Implementation of ike_sa_t.initiate.
  */
@@ -864,7 +961,11 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	
 	if (this->state == IKE_CREATED)
 	{
-		if (this->other_host->is_anyaddr(this->other_host))
+		if (this->other_host->is_anyaddr(this->other_host)
+#ifdef P2P
+			&& !this->peer_cfg->get_mediated_by(this->peer_cfg)
+#endif /* P2P */
+			)
 		{
 			child_cfg->destroy(child_cfg);
 			SIG(IKE_UP_START, "initiating IKE_SA");
@@ -887,11 +988,36 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 			task = (task_t*)ike_mobike_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);
 		}
+#ifdef P2P
+		task = (task_t*)ike_p2p_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+#endif /* P2P */
 	}
-	
-	task = (task_t*)child_create_create(&this->public, child_cfg);
-	child_cfg->destroy(child_cfg);
-	this->task_manager->queue_task(this->task_manager, task);
+
+#ifdef P2P
+	if (this->peer_cfg->get_mediated_by(this->peer_cfg))
+	{
+		// mediated connection, initiate mediation process
+		job_t *job = (job_t*)initiate_mediation_job_create(this->ike_sa_id, child_cfg);
+		child_cfg->destroy(child_cfg);
+		charon->processor->queue_job(charon->processor, job);
+		return SUCCESS;
+	}
+	else if (this->peer_cfg->is_mediation(this->peer_cfg))
+	{
+		if (this->state == IKE_ESTABLISHED)
+		{// FIXME: we should try to find a better solution to this
+			SIG(CHILD_UP_SUCCESS, "mediation connection is already up and running");
+		}
+	}
+	else
+#endif /* P2P */
+	{
+		// normal IKE_SA with CHILD_SA
+		task = (task_t*)child_create_create(&this->public, child_cfg);
+		child_cfg->destroy(child_cfg);
+		this->task_manager->queue_task(this->task_manager, task);
+	}
 	
 	return this->task_manager->initiate(this->task_manager);
 }
@@ -900,7 +1026,7 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
  * Implementation of ike_sa_t.acquire.
  */
 static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
-{
+{// FIXME: P2P-NAT-T
 	child_cfg_t *child_cfg;
 	iterator_t *iterator;
 	child_sa_t *current, *child_sa = NULL;
@@ -1224,7 +1350,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
  * Implementation of ike_sa_t.retransmit.
  */
 static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
-{
+{// FIXME: P2P-NAT-T
 	this->time.outbound = time(NULL);
 	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
 	{
@@ -2047,6 +2173,15 @@ static void destroy(private_ike_sa_t *this)
 													offsetof(host_t, destroy));
 	this->additional_addresses->destroy_offset(this->additional_addresses,
 													offsetof(host_t, destroy));
+#ifdef P2P	
+	if (this->peer_cfg && this->peer_cfg->is_mediation(this->peer_cfg) &&
+			!this->ike_sa_id->is_initiator(this->ike_sa_id))
+	{
+		// mediation server
+		charon->mediation_manager->remove(charon->mediation_manager, this->ike_sa_id);
+	}
+	DESTROY_IF(this->server_reflexive_host);
+#endif /* P2P */
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
@@ -2129,6 +2264,15 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_virtual_ip = (void (*)(ike_sa_t*,bool,host_t*))set_virtual_ip;
 	this->public.get_virtual_ip = (host_t* (*)(ike_sa_t*,bool))get_virtual_ip;
 	this->public.add_dns_server = (void (*)(ike_sa_t*,host_t*))add_dns_server;
+#ifdef P2P
+	this->public.get_server_reflexive_host = (host_t* (*)(ike_sa_t*)) get_server_reflexive_host;
+	this->public.set_server_reflexive_host = (void (*)(ike_sa_t*,host_t*)) set_server_reflexive_host;
+	this->public.initiate_mediation = (status_t (*)(ike_sa_t*,peer_cfg_t*)) initiate_mediation;
+	this->public.initiate_mediated = (status_t (*)(ike_sa_t*,host_t*,host_t*,linked_list_t*)) initiate_mediated;
+	this->public.relay = (status_t (*)(ike_sa_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool)) relay;
+	this->public.callback = (status_t (*)(ike_sa_t*,identification_t*)) callback;
+	this->public.respond = (status_t (*)(ike_sa_t*,identification_t*,chunk_t)) respond;
+#endif /* P2P */
 	
 	/* initialize private fields */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
@@ -2163,6 +2307,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->additional_addresses = linked_list_create();
 	this->pending_updates = 0;
 	this->keyingtry = 0;
+#ifdef P2P
+	this->server_reflexive_host = NULL;
+#endif /* P2P */
 	
 	return &this->public;
 }

@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -70,7 +71,7 @@ enum exchange_type_t{
 	/**
 	 * EXCHANGE_TYPE_UNDEFINED. In private space, since not a official message type.
 	 */
-	EXCHANGE_TYPE_UNDEFINED = 240,
+	EXCHANGE_TYPE_UNDEFINED = 255,
 	
 	/**
 	 * IKE_SA_INIT.
@@ -90,7 +91,13 @@ enum exchange_type_t{
 	/**
 	 * INFORMATIONAL.
 	 */
-	INFORMATIONAL = 37 
+	INFORMATIONAL = 37,
+#ifdef P2P
+	/**
+	 * P2P_CONNECT
+	 */
+	P2P_CONNECT = 240
+#endif /* P2P */
 };
 
 /**

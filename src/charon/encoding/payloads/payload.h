@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -125,6 +126,14 @@ enum payload_type_t{
 	 * Extensible authentication payload (EAP).
 	 */
 	EXTENSIBLE_AUTHENTICATION = 48,
+	
+#ifdef P2P	
+	/**
+	 * Identification payload for peers in P2P-NAT-T has a value from
+	 * the PRIVATE USE space. 
+	 */
+	ID_PEER = 128,
+#endif /* P2P */
 	
 	/**
 	 * Header has a value of PRIVATE USE space.

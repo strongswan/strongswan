@@ -85,6 +85,14 @@ sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/task.c sa/tasks/task.h
 
+if USE_P2P
+  charon_SOURCES += encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
+    processing/jobs/initiate_mediation_job.c processing/jobs/initiate_mediation_job.h \
+    processing/jobs/mediation_job.c processing/jobs/mediation_job.h \
+    sa/connect_manager.c sa/connect_manager.h \
+    sa/mediation_manager.c sa/mediation_manager.h \
+    sa/tasks/ike_p2p.c sa/tasks/ike_p2p.h
+endif
 
 INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
 AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \

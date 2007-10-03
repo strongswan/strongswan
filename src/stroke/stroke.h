@@ -200,6 +200,11 @@ struct stroke_msg_t {
 				time_t delay;
 				int action;
 			} dpd;
+			struct {
+				int mediation;
+				char *mediated_by;
+				char *peerid;
+			} p2p;
 			stroke_end_t me, other;
 		} add_conn;
 

@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2006-2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -228,10 +229,12 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 {
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
+	peer_cfg_t *mediated_by_cfg = NULL;
 	child_cfg_t *child_cfg;
 	identification_t *my_id, *other_id;
 	identification_t *my_ca = NULL;
 	identification_t *other_ca = NULL;
+	identification_t *peer_id = NULL;
 	bool my_ca_same = FALSE;
 	bool other_ca_same =FALSE;
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
@@ -253,7 +256,12 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	pop_string(msg, &msg->add_conn.algorithms.esp);
 	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
-	
+	pop_string(msg, &msg->add_conn.p2p.mediated_by);
+	pop_string(msg, &msg->add_conn.p2p.peerid);
+	DBG2(DBG_CFG, "  p2p_mediation=%s", msg->add_conn.p2p.mediation ? "yes" : "no");
+	DBG2(DBG_CFG, "  p2p_mediated_by=%s", msg->add_conn.p2p.mediated_by);
+	DBG2(DBG_CFG, "  p2p_peerid=%s", msg->add_conn.p2p.peerid);
+
 	my_host = msg->add_conn.me.address?
 			  host_create_from_string(msg->add_conn.me.address, IKE_PORT) : NULL;
 	if (my_host == NULL)
@@ -318,6 +326,49 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		DBG1(DBG_CFG, "invalid ID: %s\n", msg->add_conn.other.id);
 		my_id->destroy(my_id);
 		goto destroy_hosts;
+	}
+	
+#ifdef P2P
+	if (msg->add_conn.p2p.mediation && msg->add_conn.p2p.mediated_by)
+	{
+		DBG1(DBG_CFG, "a mediation connection cannot be a"
+				" mediated connection at the same time, aborting");
+		goto destroy_ids;
+	}
+	
+	if (msg->add_conn.p2p.mediated_by)
+	{
+		mediated_by_cfg = charon->backends->get_peer_cfg_by_name(charon->backends, msg->add_conn.p2p.mediated_by);
+		if (!mediated_by_cfg)
+		{
+			DBG1(DBG_CFG, "mediation connection '%s' not found, aborting",
+					msg->add_conn.p2p.mediated_by);
+			goto destroy_ids;
+		}
+		
+		if (!mediated_by_cfg->is_mediation(mediated_by_cfg))
+		{
+			DBG1(DBG_CFG, "connection '%s' as referred to by '%s' is"
+					"no mediation connection, aborting", 
+					msg->add_conn.p2p.mediated_by, msg->add_conn.name);
+			goto destroy_ids;
+		}
+	}
+	
+	if (msg->add_conn.p2p.peerid)
+	{
+		peer_id = identification_create_from_string(msg->add_conn.p2p.peerid);
+		if (!peer_id)
+		{
+			DBG1(DBG_CFG, "invalid peer ID: %s\n", msg->add_conn.p2p.peerid);
+			goto destroy_ids;
+		}
+	}
+	else
+#endif /* P2P */
+	{
+		// no peer ID supplied, assume right ID
+		peer_id = other_id->clone(other_id);
 	}
 	
 	my_subnet = host_create_from_string(msg->add_conn.me.subnet ?
@@ -513,6 +564,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		other_host->destroy(other_host);
 		other_id->destroy(other_id);
 		other_ca->destroy(other_ca);
+		peer_id->destroy(peer_id);
+		DESTROY_IF(mediated_by_cfg);
 		ietfAttr_list_destroy(my_groups);
 		ietfAttr_list_destroy(other_groups);
 	}
@@ -568,9 +621,9 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 					msg->add_conn.rekey.tries, msg->add_conn.rekey.ike_lifetime,
 					msg->add_conn.rekey.ike_lifetime - msg->add_conn.rekey.margin,
 					msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
-					msg->add_conn.rekey.reauth, msg->add_conn.mobike, 
-					msg->add_conn.dpd.delay, msg->add_conn.dpd.action,
-					my_vip, other_vip);
+					msg->add_conn.rekey.reauth, msg->add_conn.mobike,
+					msg->add_conn.dpd.delay, msg->add_conn.dpd.action, my_vip, other_vip,
+					msg->add_conn.p2p.mediation, mediated_by_cfg, peer_id);
 	}
 	
 	child_cfg = child_cfg_create(
@@ -632,6 +685,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 destroy_ids:
 	my_id->destroy(my_id);
 	other_id->destroy(other_id);
+	DESTROY_IF(mediated_by_cfg);
+	DESTROY_IF(peer_id);
 
 destroy_hosts:
 	my_host->destroy(my_host);

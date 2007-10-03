@@ -91,7 +91,7 @@ static chunk_t generate_natd_hash(private_ike_natd_t *this,
 	u_int64_t spi_i, spi_r;
 	u_int16_t port;
 	
-	/* prepare all requred chunks */
+	/* prepare all required chunks */
 	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
 	spi_r = ike_sa_id->get_responder_spi(ike_sa_id);
 	spi_i_chunk.ptr = (void*)&spi_i;
@@ -258,8 +258,23 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		peer_cfg_t *peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-				
+
+#ifdef P2P		
+		/* if we are on a mediated connection we have already switched to
+		 * port 4500 and the correct destination port is already configured,
+		 * therefore we must not switch again */
+		if (peer_cfg->get_mediated_by(peer_cfg))
+		{
+			return SUCCESS;
+		}
+#endif /* P2P */
+		
 		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY) ||
+#ifdef P2P
+			/* if we are on a mediation connection we swith to port 4500 even
+			 * if no NAT is detected. */
+			peer_cfg->is_mediation(peer_cfg) ||
+#endif /* P2P */
 			/* if peer supports NAT-T, we switch to port 4500 even
 			 * if no NAT is detected. MOBIKE requires this. */
 			(peer_cfg->use_mobike(peer_cfg) &&

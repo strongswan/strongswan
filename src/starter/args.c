@@ -1,4 +1,5 @@
 /* automatic handling of confread struct arguments
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2006 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -210,6 +211,9 @@ static const token_info_t token_info[] =
     { ARG_ENUM, offsetof(starter_conn_t, dpd_action), LST_dpd_action               },
     { ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
     { ARG_MISC, 0, NULL  /* KW_XAUTH */                                            },
+    { ARG_ENUM, offsetof(starter_conn_t, p2p_mediation), LST_bool                  },
+    { ARG_STR,  offsetof(starter_conn_t, p2p_mediated_by), NULL                    },
+    { ARG_STR,  offsetof(starter_conn_t, p2p_peerid), NULL                         },
 
     /* ca section keywords */
     { ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },

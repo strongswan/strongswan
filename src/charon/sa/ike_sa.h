@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -452,6 +453,96 @@ struct ike_sa_t {
 	 * @param updates		number of pending updates
 	 */
 	void (*set_pending_updates)(ike_sa_t *this, u_int32_t updates);
+
+#ifdef P2P
+	/**
+	 * @brief Get the server reflexive host.
+	 * 
+	 * @param this 			calling object
+	 * @return				server reflexive host
+	 */
+	host_t* (*get_server_reflexive_host) (ike_sa_t *this);
+	
+	/**
+	 * @brief Set the server reflexive host.
+	 * 
+	 * @param this 			calling object
+	 * @param host			server reflexive host
+	 */
+	void (*set_server_reflexive_host) (ike_sa_t *this, host_t *host);
+	
+	/**
+	 * @brief Initiate the mediation of a mediated connection (i.e. initiate a
+	 * P2P_CONNECT exchange).
+	 * 
+	 * @param this 				calling object
+	 * @param mediated_cfg		peer_cfg of the mediated connection
+	 * @return				
+	 * 						- SUCCESS if initialization started
+	 * 						- DESTROY_ME if initialization failed
+	 */
+	status_t (*initiate_mediation) (ike_sa_t *this, peer_cfg_t *mediated_cfg);
+	
+	/**
+	 * @brief Initiate the mediated connection
+	 * 
+	 * @param this 				calling object
+	 * @param me				local endpoint (gets cloned)
+	 * @param other				remote endpoint (gets cloned)
+	 * @param childs			linked list of child_cfg_t of CHILD_SAs (gets cloned)
+	 * @return				
+	 * 						- SUCCESS if initialization started
+	 * 						- DESTROY_ME if initialization failed
+	 */
+	status_t (*initiate_mediated) (ike_sa_t *this, host_t *me, host_t *other,
+			linked_list_t *childs);
+	
+	/**
+	 * @brief Relay data from one peer to another (i.e. initiate a
+	 * P2P_CONNECT exchange).
+	 *
+	 * Data is cloned.
+	 * 
+	 * @param this 				calling object
+	 * @param requester			ID of the requesting peer
+	 * @param session_id		data of the P2P_SESSIONID payload
+	 * @param session_key		data of the P2P_SESSIONKEY payload
+	 * @param endpoints			endpoints
+	 * @param response			TRUE if this is a response
+	 * @return				
+	 * 						- SUCCESS if relay started
+	 * 						- DESTROY_ME if relay failed
+	 */
+	status_t (*relay) (ike_sa_t *this, identification_t *requester, chunk_t session_id,
+			chunk_t session_key, linked_list_t *endpoints, bool response);
+	
+	/**
+	 * @brief Send a callback to a peer.
+	 * 
+	 * Data is cloned.
+	 * 
+	 * @param this				calling object
+	 * @param peer_id			ID of the other peer
+	 * @return
+	 * 						- SUCCESS if response started
+	 * 						- DESTROY_ME if response failed
+	 */
+	status_t (*callback) (ike_sa_t *this, identification_t *peer_id);
+	
+	/**
+	 * @brief Respond to a P2P_CONNECT request.
+	 * 
+	 * Data is cloned.
+	 * 
+	 * @param this				calling object
+	 * @param peer_id			ID of the other peer
+	 * @param session_id		the session ID supplied by the initiator
+	 * @return
+	 * 						- SUCCESS if response started
+	 * 						- DESTROY_ME if response failed
+	 */
+	status_t (*respond) (ike_sa_t *this, identification_t *peer_id, chunk_t session_id);
+#endif /* P2P */
 	
 	/**
 	 * @brief Initiate a new connection.

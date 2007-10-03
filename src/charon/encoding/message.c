@@ -150,9 +150,15 @@ static payload_rule_t ike_auth_i_payload_rules[] = {
 	{CERTIFICATE,0,1,TRUE,FALSE},
 	{CERTIFICATE_REQUEST,0,1,TRUE,FALSE},
 	{ID_RESPONDER,0,1,TRUE,FALSE},
+#ifdef P2P
+	{SECURITY_ASSOCIATION,0,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
+#else
 	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE,FALSE},
+#endif /* P2P */
 	{CONFIGURATION,0,1,TRUE,FALSE},
 	{VENDOR_ID,0,10,TRUE,FALSE},
 };
@@ -223,6 +229,24 @@ static payload_rule_t create_child_sa_r_payload_rules[] = {
 	{VENDOR_ID,0,10,TRUE,FALSE},
 };
 
+#ifdef P2P
+/**
+ * Message rule for P2P_CONNECT from initiator.
+ */
+static payload_rule_t p2p_connect_i_payload_rules[] = {
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
+	{ID_PEER,1,1,TRUE,FALSE},
+	{VENDOR_ID,0,10,TRUE,FALSE}
+};
+
+/**
+ * Message rule for P2P_CONNECT from responder.
+ */
+static payload_rule_t p2p_connect_r_payload_rules[] = {
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
+	{VENDOR_ID,0,10,TRUE,FALSE}
+};
+#endif /* P2P */
 
 /**
  * Message rules, defines allowed payloads.
@@ -236,6 +260,10 @@ static message_rule_t message_rules[] = {
 	{INFORMATIONAL,FALSE,TRUE,(sizeof(informational_r_payload_rules)/sizeof(payload_rule_t)),informational_r_payload_rules},
 	{CREATE_CHILD_SA,TRUE,TRUE,(sizeof(create_child_sa_i_payload_rules)/sizeof(payload_rule_t)),create_child_sa_i_payload_rules},
 	{CREATE_CHILD_SA,FALSE,TRUE,(sizeof(create_child_sa_r_payload_rules)/sizeof(payload_rule_t)),create_child_sa_r_payload_rules},
+#ifdef P2P
+	{P2P_CONNECT,TRUE,TRUE,(sizeof(p2p_connect_i_payload_rules)/sizeof(payload_rule_t)),p2p_connect_i_payload_rules},
+	{P2P_CONNECT,FALSE,TRUE,(sizeof(p2p_connect_r_payload_rules)/sizeof(payload_rule_t)),p2p_connect_r_payload_rules},
+#endif /* P2P */	
 };
 
 

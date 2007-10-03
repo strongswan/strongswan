@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -109,7 +110,13 @@ ENUM_NEXT(exchange_type_names, IKE_SA_INIT, INFORMATIONAL, EXCHANGE_TYPE_UNDEFIN
 	"IKE_AUTH",
 	"CREATE_CHILD_SA",
 	"INFORMATIONAL");
+#ifdef P2P
+ENUM_NEXT(exchange_type_names, P2P_CONNECT, P2P_CONNECT, INFORMATIONAL,
+	"P2P_CONNECT");
+ENUM_END(exchange_type_names, P2P_CONNECT);
+#else
 ENUM_END(exchange_type_names, INFORMATIONAL);
+#endif /* P2P */
 
 /**
  * Encoding rules to parse or generate a IKEv2-Header.
@@ -172,12 +179,23 @@ encoding_rule_t ike_header_encodings[] = {
  */
 static status_t verify(private_ike_header_t *this)
 {
-	if ((this->exchange_type < IKE_SA_INIT) || (this->exchange_type > INFORMATIONAL))
+	if ((this->exchange_type < IKE_SA_INIT) ||
+		((this->exchange_type > INFORMATIONAL)
+#ifdef P2P
+			&& (this->exchange_type != P2P_CONNECT)
+#endif /* P2P */
+		))
 	{
 		/* unsupported exchange type */
 		return FAILED;
 	}
-	if (this->initiator_spi == 0)
+
+	if (this->initiator_spi == 0
+#ifdef P2P
+		// we allow zero spi for INFORMATIONAL exchanges, to allow P2P connectivity checks
+		&& this->exchange_type != INFORMATIONAL
+#endif /* P2P */
+		)
 	{
 		/* initiator spi not set */
 		return FAILED;

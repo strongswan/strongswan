@@ -1,4 +1,5 @@
 /* strongSwan keywords
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -87,9 +88,12 @@ typedef enum {
     KW_DPDACTION,
     KW_MODECONFIG,
     KW_XAUTH,
+    KW_P2P_MEDIATION,
+    KW_P2P_MEDIATED_BY,
+    KW_P2P_PEERID,
 
 #define KW_CONN_FIRST	KW_CONN_SETUP
-#define KW_CONN_LAST	KW_XAUTH
+#define KW_CONN_LAST	KW_P2P_PEERID
 
    /* ca section keywords */
     KW_CA_NAME,

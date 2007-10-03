@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -39,6 +40,10 @@
 #include <sa/tasks/child_delete.h>
 #include <encoding/payloads/delete_payload.h>
 #include <processing/jobs/retransmit_job.h>
+
+#ifdef P2P
+#include <sa/tasks/ike_p2p.h>
+#endif
 
 typedef struct exchange_t exchange_t;
 
@@ -323,6 +328,13 @@ static status_t build_request(private_task_manager_t *this)
 					exchange = IKE_SA_INIT;
 					activate_task(this, IKE_NATD);
 					activate_task(this, IKE_CERT);
+#ifdef P2P
+					/* this task has to be activated before the IKE_AUTHENTICATE
+					 * task, because that task pregenerates the packet after
+					 * which no payloads can be added to the message anymore.
+					 */
+					activate_task(this, IKE_P2P);
+#endif /* P2P */
 					activate_task(this, IKE_AUTHENTICATE);
 					activate_task(this, IKE_CONFIG);
 					activate_task(this, CHILD_CREATE);
@@ -370,6 +382,13 @@ static status_t build_request(private_task_manager_t *this)
 					exchange = INFORMATIONAL;
 					break;
 				}
+#ifdef P2P
+				if (activate_task(this, IKE_P2P))
+				{
+					exchange = P2P_CONNECT;
+					break;
+				}
+#endif /* P2P */
 			case IKE_REKEYING:
 				if (activate_task(this, IKE_DELETE))
 				{
@@ -668,6 +687,10 @@ static status_t process_request(private_task_manager_t *this,
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_cert_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
+#ifdef P2P			
+			task = (task_t*)ike_p2p_create(this->ike_sa, FALSE);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
+#endif /* P2P */			
 			task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
@@ -679,7 +702,7 @@ static status_t process_request(private_task_manager_t *this,
 			break;
 		}
 		case CREATE_CHILD_SA:
-		{
+		{//FIXME: we should prevent this on mediation connections
 			bool notify_found = FALSE, ts_found = FALSE;
 			iterator = message->get_payload_iterator(message);
 			while (iterator->iterate(iterator, (void**)&payload))
@@ -787,6 +810,13 @@ static status_t process_request(private_task_manager_t *this,
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			break;
 		}
+#ifdef P2P
+		case P2P_CONNECT:
+		{
+			task = (task_t*)ike_p2p_create(this->ike_sa, FALSE);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
+		}
+#endif /* P2P */
 		default:
 			break;
 	}

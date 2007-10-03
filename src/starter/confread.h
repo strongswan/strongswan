@@ -1,5 +1,8 @@
 /* strongSwan IPsec config file parser
- * Copyright (C) 2001-2002 Mathieu Lafon - Arkoon Network Security
+ * Copyright (C) 2007 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2001-2002 Mathieu Lafon
+ * Arkoon Network Security
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -125,6 +128,10 @@ struct starter_conn {
 	time_t		dpd_timeout;
 	dpd_action_t	dpd_action;
 	int		dpd_count;
+	
+	bool		p2p_mediation;
+	char		*p2p_mediated_by;
+	char		*p2p_peerid;
 
 	starter_conn_t *next;
 };

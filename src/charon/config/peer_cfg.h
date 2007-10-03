@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -314,6 +315,37 @@ struct peer_cfg_t {
 	 * @return				clone of an IP to use
 	 */
 	host_t* (*get_other_virtual_ip) (peer_cfg_t *this, host_t *suggestion);
+
+#ifdef P2P	
+	/**
+	 * @brief Is this a mediation connection?
+	 * 
+	 * @param this			peer_cfg
+	 * @return				TRUE, if this is a mediation connection
+	 */
+	bool (*is_mediation) (peer_cfg_t *this);
+	
+	/**
+	 * @brief Get peer_cfg of the connection this one is mediated through.
+	 * 
+	 * @param this			peer_cfg
+	 * @return				reference to peer_cfg of the mediation connection
+	 */
+	peer_cfg_t* (*get_mediated_by) (peer_cfg_t *this);
+	
+	/**
+	 * @brief Get the id of the other peer at the mediation server.
+	 * 
+	 * This is the leftid of the peer's connection with the mediation server.
+	 * 
+	 * If it is not configured, it is assumed to be the same as the right id
+	 * of this connection. 
+	 * 
+	 * @param this			peer_cfg
+	 * @return				the id of the other peer
+	 */
+	identification_t* (*get_peer_id) (peer_cfg_t *this);
+#endif /* P2P */
 	
 	/**
 	 * @brief Get a new reference.
@@ -370,6 +402,9 @@ struct peer_cfg_t {
  * @param dpd_action		what to do with CHILD_SAs when detected a dead peer
  * @param my_virtual_ip		virtual IP for local host, or NULL
  * @param other_virtual_ip	virtual IP for remote host, or NULL
+ * @param p2p_mediation		TRUE if this is a mediation connection
+ * @param p2p_mediated_by	name of the mediation connection to mediate through
+ * @param peer_id			ID that identifies our peer at the mediation server
  * @return 					peer_cfg_t object
  * 
  * @ingroup config
@@ -383,6 +418,8 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							u_int32_t rekeytime, u_int32_t jitter,
 							bool reauth, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
-							host_t *my_virtual_ip, host_t *other_virtual_ip);
+							host_t *my_virtual_ip, host_t *other_virtual_ip,
+							bool p2p_mediation, peer_cfg_t *p2p_mediated_by,
+							identification_t *peer_id);
 
 #endif /* PEER_CFG_H_ */

@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -41,6 +42,11 @@ typedef struct daemon_t daemon_t;
 #include <bus/listeners/sys_logger.h>
 #include <sa/ike_sa_manager.h>
 #include <config/backend_manager.h>
+
+#ifdef P2P
+#include <sa/connect_manager.h>
+#include <sa/mediation_manager.h>
+#endif /* P2P */
 
 /**
  * @defgroup charon charon
@@ -426,6 +432,18 @@ struct daemon_t {
 	 * Interfaces for IPC
 	 */
 	interface_manager_t *interfaces;
+	
+#ifdef P2P
+	/**
+	 * Connect manager
+	 */
+	connect_manager_t *connect_manager;
+	
+	/**
+	 * Mediation manager
+	 */
+	mediation_manager_t *mediation_manager;
+#endif /* P2P */
 	
 	/**
 	 * @brief Shut down the daemon.

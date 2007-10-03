@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -175,6 +176,24 @@ struct private_peer_cfg_t {
 	 * virtual IP to use remotly
 	 */
 	host_t *other_virtual_ip;
+
+#ifdef P2P	
+	/**
+	 * Is this a mediation connection?
+	 */
+	bool p2p_mediation;
+	
+	/**
+	 * Name of the mediation connection to mediate through
+	 */
+	peer_cfg_t *p2p_mediated_by;
+	
+	/**
+	 * ID of our peer at the mediation server (= leftid of the peer's conn with
+	 * the mediation server)
+	 */
+	identification_t *peer_id;
+#endif /* P2P */
 };
 
 /**
@@ -413,6 +432,36 @@ static host_t* get_other_virtual_ip(private_peer_cfg_t *this, host_t *suggestion
 	return suggestion->clone(suggestion);
 }
 
+#ifdef P2P
+/**
+ * Implementation of peer_cfg_t.is_mediation.
+ */
+static bool is_mediation(private_peer_cfg_t *this)
+{
+	return this->p2p_mediation;
+}
+
+/**
+ * Implementation of peer_cfg_t.get_mediated_by.
+ */
+static peer_cfg_t* get_mediated_by(private_peer_cfg_t *this)
+{
+	if (this->p2p_mediated_by) {
+		this->p2p_mediated_by->get_ref(this->p2p_mediated_by);
+		return this->p2p_mediated_by;
+	}
+	return NULL;
+}
+
+/**
+ * Implementation of peer_cfg_t.get_peer_id.
+ */
+static identification_t* get_peer_id(private_peer_cfg_t *this)
+{
+	return this->peer_id;
+}
+#endif /* P2P */
+
 /**
  * Implements peer_cfg_t.get_ref.
  */
@@ -436,6 +485,10 @@ static void destroy(private_peer_cfg_t *this)
 		DESTROY_IF(this->other_ca);
 		DESTROY_IF(this->my_virtual_ip);
 		DESTROY_IF(this->other_virtual_ip);
+#ifdef P2P
+		DESTROY_IF(this->p2p_mediated_by);
+		DESTROY_IF(this->peer_id);
+#endif /* P2P */
 		ietfAttr_list_destroy(this->groups);
 		free(this->name);
 		free(this);
@@ -454,7 +507,9 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							u_int32_t rekeytime, u_int32_t jitter,
 							bool reauth, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
-							host_t *my_virtual_ip, host_t *other_virtual_ip)
+							host_t *my_virtual_ip, host_t *other_virtual_ip,
+							bool p2p_mediation, peer_cfg_t *p2p_mediated_by,
+							identification_t *peer_id)
 {
 	private_peer_cfg_t *this = malloc_thing(private_peer_cfg_t);
 
@@ -483,6 +538,11 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_other_virtual_ip = (host_t* (*) (peer_cfg_t *, host_t *))get_other_virtual_ip;
 	this->public.get_ref = (void(*)(peer_cfg_t *))get_ref;
 	this->public.destroy = (void(*)(peer_cfg_t *))destroy;
+#ifdef P2P	
+	this->public.is_mediation = (bool (*) (peer_cfg_t *))is_mediation;
+	this->public.get_mediated_by = (peer_cfg_t* (*) (peer_cfg_t *))get_mediated_by;
+	this->public.get_peer_id = (identification_t* (*) (peer_cfg_t *))get_peer_id;
+#endif /* P2P */
 	
 	/* apply init values */
 	this->name = strdup(name);
@@ -509,6 +569,11 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->my_virtual_ip = my_virtual_ip;
 	this->other_virtual_ip = other_virtual_ip;
 	this->refcount = 1;
+#ifdef P2P
+	this->p2p_mediation = p2p_mediation;
+	this->p2p_mediated_by = p2p_mediated_by;
+	this->peer_id = peer_id;
+#endif /* P2P */
 
 	return &this->public;
 }

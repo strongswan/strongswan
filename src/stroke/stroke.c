@@ -1,5 +1,7 @@
 /* Stroke for charon is the counterpart to whack from pluto
- * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2006 Martin Willi
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -124,6 +126,10 @@ static int add_connection(char *name,
 	
 	msg.add_conn.dpd.delay = 0;
 	msg.add_conn.dpd.action = 1;
+	
+	msg.add_conn.p2p.mediation = 0;
+	msg.add_conn.p2p.mediated_by = NULL;
+	msg.add_conn.p2p.peerid = NULL;
 	
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);

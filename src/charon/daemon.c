@@ -5,8 +5,8 @@
  * 
  */
 
-/*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+/* Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -177,6 +177,10 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
 	DESTROY_IF(this->public.interfaces);
+#ifdef P2P	
+	DESTROY_IF(this->public.connect_manager);
+	DESTROY_IF(this->public.mediation_manager);
+#endif /* P2P */
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.credentials);
 	DESTROY_IF(this->public.sender);
@@ -337,6 +341,12 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
+	
+#ifdef P2P
+	this->public.connect_manager = connect_manager_create();
+	this->public.mediation_manager = mediation_manager_create();
+#endif /* P2P */
+	
 	return TRUE;
 }
 

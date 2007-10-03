@@ -64,7 +64,13 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, N
 	"ENCRYPTED",
 	"CONFIGURATION",
 	"EXTENSIBLE_AUTHENTICATION");
+#ifdef P2P
+ENUM_NEXT(payload_type_names, ID_PEER, ID_PEER, EXTENSIBLE_AUTHENTICATION,
+	"ID_PEER");
+ENUM_NEXT(payload_type_names, HEADER, UNKNOWN_PAYLOAD, ID_PEER,
+#else
 ENUM_NEXT(payload_type_names, HEADER, UNKNOWN_PAYLOAD, EXTENSIBLE_AUTHENTICATION,
+#endif /* P2P */
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
 	"TRANSFORM_SUBSTRUCTURE",
@@ -94,7 +100,13 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICAT
 	"E",
 	"CP",
 	"EAP");
+#ifdef P2P
+ENUM_NEXT(payload_type_short_names, ID_PEER, ID_PEER, EXTENSIBLE_AUTHENTICATION,
+	"IDp");
+ENUM_NEXT(payload_type_short_names, HEADER, UNKNOWN_PAYLOAD, ID_PEER,
+#else
 ENUM_NEXT(payload_type_short_names, HEADER, UNKNOWN_PAYLOAD, EXTENSIBLE_AUTHENTICATION,
+#endif /* P2P */
 	"HDR",
 	"PROP",
 	"TRANS",
@@ -127,6 +139,10 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)id_payload_create(ID_INITIATOR);
 		case ID_RESPONDER:
 			return (payload_t*)id_payload_create(ID_RESPONDER);
+#ifdef P2P
+		case ID_PEER:
+			return (payload_t*)id_payload_create(ID_PEER);
+#endif /* P2P */
 		case AUTHENTICATION:
 			return (payload_t*)auth_payload_create();
 		case CERTIFICATE:
