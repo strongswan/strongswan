@@ -195,7 +195,7 @@ static peer_cfg_t *process_peer_cfg_row(private_sqlite_backend_t *this,
 			sqlite3_column_int(stmt, 14),				/* mobike */
 			sqlite3_column_int(stmt, 11),				/* dpd_delay */
 			sqlite3_column_int(stmt, 12),				/* dpd_action */
-			local_vip, remote_vip);
+			local_vip, remote_vip, FALSE, NULL, NULL);
 		add_children(this, peer_cfg, sqlite3_column_int(stmt, 0));
 		return peer_cfg;
 	}
