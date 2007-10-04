@@ -141,6 +141,52 @@ struct private_iterator_t {
 	void *hook_param;
 };
 
+typedef struct private_enumerator_t private_enumerator_t;
+
+/**
+ * linked lists enumerator implementation
+ */
+struct private_enumerator_t {
+
+	/**
+	 * implements enumerator interface
+	 */
+	enumerator_t enumerator;
+	
+	/**
+	 * next item to enumerate
+	 */
+	element_t *next;
+};
+
+/**
+ * Implementation of private_enumerator_t.enumerator.enumerate.
+ */
+static bool enumerate(private_enumerator_t *this, void **item)
+{
+	if (this->next == NULL)
+	{
+		return FALSE;
+	}
+	*item = this->next->value;
+	this->next = this->next->next;
+	return TRUE;
+}
+
+/**
+ * Implementation of linked_list_t.create_enumerator.
+ */
+static enumerator_t* create_enumerator(private_linked_list_t *this)
+{
+	private_enumerator_t *enumerator = malloc_thing(private_enumerator_t);
+	
+	enumerator->enumerator.enumerate = (void*)enumerate;
+	enumerator->enumerator.destroy = (void*)free;
+	enumerator->next = this->first;
+	
+	return &enumerator->enumerator;
+}
+
 /**
  * Implementation of iterator_t.get_count.
  */
@@ -794,6 +840,7 @@ linked_list_t *linked_list_create()
 	this->public.get_count = (int (*) (linked_list_t *)) get_count;
 	this->public.create_iterator = (iterator_t * (*) (linked_list_t *,bool))create_iterator;
 	this->public.create_iterator_locked = (iterator_t * (*) (linked_list_t *,pthread_mutex_t*))create_iterator_locked;
+	this->public.create_enumerator = (enumerator_t*(*)(linked_list_t*))create_enumerator;
 	this->public.get_first = (status_t (*) (linked_list_t *, void **item))get_first;
 	this->public.get_last = (status_t (*) (linked_list_t *, void **item))get_last;
 	this->public.insert_first = (void (*) (linked_list_t *, void *item))insert_first;
