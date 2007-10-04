@@ -24,7 +24,6 @@
 
 #include <sqlite3.h>
 #include <library.h>
-#include <enumerator.h>
 #include <crypto/hashers/hasher.h>
 
 

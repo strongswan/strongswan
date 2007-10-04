@@ -15,7 +15,7 @@ lib_LTLIBRARIES = libappserv.la
 libappserv_la_SOURCES = \
 lib/context.h lib/dispatcher.c lib/request.h lib/session.h \
 lib/controller.h lib/dispatcher.h lib/request.c lib/session.c \
-lib/xml.h lib/xml.c lib/enumerator.h lib/enumerator.c
+lib/xml.h lib/xml.c 
 
 libappserv_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lfcgi -lpthread -lneo_cgi -lneo_cs -lneo_utl ${xml_LIBS}
 

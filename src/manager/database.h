@@ -23,7 +23,7 @@
 #ifndef DATABASE_H_
 #define DATABASE_H_
 
-#include <enumerator.h>
+#include <utils/enumerator.h>
 
 
 typedef struct database_t database_t;
