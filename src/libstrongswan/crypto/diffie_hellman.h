@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -36,7 +36,7 @@ typedef struct diffie_hellman_t diffie_hellman_t;
  *
  * See IKEv2 RFC 3.3.2 and RFC 3526.
  *
- * @ingroup transforms
+ * @ingroup crypto
  */
 enum diffie_hellman_group_t {
 	MODP_NONE = 0,
@@ -56,76 +56,74 @@ enum diffie_hellman_group_t {
 extern enum_name_t *diffie_hellman_group_names;
 
 /**
- * @brief Implementation of the widely used Diffie-Hellman algorithm.
+ * @brief Implementation of the Diffie-Hellman algorithm, as in RFC2631.
  * 
  * @b Constructors:
  *  - diffie_hellman_create()
  * 
- * @ingroup transforms
+ * @ingroup crypto
  */
 struct diffie_hellman_t {
 		
 	/**
 	 * @brief Returns the shared secret of this diffie hellman exchange.
 	 * 	
-	 * @warning Space for returned secret is allocated and must be 
+	 * Space for returned secret is allocated and must be 
 	 * freed by the caller.
 	 * 
-	 * @param this 			calling diffie_hellman_t object
-	 * @param[out] secret 	shared secret will be written into this chunk
+	 * @param this 		calling object
+	 * @param secret 	shared secret will be written into this chunk
 	 * @return 				
-	 * 						- SUCCESS
-	 * 						- FAILED if not both DH values are set
+	 * 					- SUCCESS
+	 * 					- FAILED if not both DH values are set
 	 */
 	status_t (*get_shared_secret) (diffie_hellman_t *this, chunk_t *secret);
 	
 	/**
 	 * @brief Sets the public value of partner.
 	 * 	
-	 * chunk gets cloned and can be destroyed afterwards.
+	 * Chunk gets cloned and can be destroyed afterwards.
 	 * 
-	 * @param this 			calling diffie_hellman_t object
-	 * @param public_value 	public value of partner
+	 * @param this 		calling object
+	 * @param value 	public value of partner
 	 */
-	void (*set_other_public_value) (diffie_hellman_t *this, chunk_t public_value);
+	void (*set_other_public_value) (diffie_hellman_t *this, chunk_t value);
 	
 	/**
 	 * @brief Gets the public value of partner.
 	 * 	
-	 * @warning Space for returned chunk is allocated and must be 
-	 * freed by the caller.
+	 * Space for returned chunk is allocated and must be freed by the caller.
 	 * 
-	 * @param this 				calling diffie_hellman_t object
-	 * @param[out] public_value public value of partner is stored at this location
+	 * @param this 		calling object
+	 * @param value 	public value of partner is stored at this location
 	 * @return 				
-	 * 							- SUCCESS
-	 * 							- FAILED if other public value not set
+	 * 					- SUCCESS
+	 * 					- FAILED if other public value not set
 	 */
-	status_t (*get_other_public_value) (diffie_hellman_t *this, chunk_t *public_value);
+	status_t (*get_other_public_value) (diffie_hellman_t *this, chunk_t *value);
 	
 	/**
-	 * @brief Gets the public value of caller
+	 * @brief Gets the own public value to transmit.
 	 * 	
-	 * @warning Space for returned chunk is allocated and must be 
-	 * freed by the caller.
+	 * Space for returned chunk is allocated and must be freed by the caller.
 	 * 
-	 * @param this 				calling diffie_hellman_t object
-	 * @param[out] 				public_value public value of caller is stored at this location
+	 * @param this 		calling object
+	 * @param value		public value of caller is stored at this location
 	 */
-	void (*get_my_public_value) (diffie_hellman_t *this, chunk_t *public_value);
+	void (*get_my_public_value) (diffie_hellman_t *this, chunk_t *value);
 	
 	/**
 	 * @brief Get the DH group used.
 	 * 
-	 * @param this 				calling diffie_hellman_t object
-	 * @return					DH group set in construction
+	 * @param this 		calling object
+	 * @return			DH group set in construction
 	 */
 	diffie_hellman_group_t (*get_dh_group) (diffie_hellman_t *this);
 
 	/**
 	 * @brief Destroys an diffie_hellman_t object.
 	 *
-	 * @param this 				diffie_hellman_t object to destroy
+	 * @param this 		diffie_hellman_t object to destroy
 	 */
 	void (*destroy) (diffie_hellman_t *this);
 };
@@ -133,15 +131,14 @@ struct diffie_hellman_t {
 /**
  * @brief Creates a new diffie_hellman_t object.
  * 
- * The first diffie hellman public value gets automatically created.
- * 
- * @param dh_group_number	Diffie Hellman group number to use
+ * @param group			Diffie Hellman group number to use
  * @return
- * 							- diffie_hellman_t object
- * 							- NULL if dh group not supported
+ * 						- diffie_hellman_t object
+ * 						- NULL if dh group not supported
  * 
- * @ingroup transforms
+ * @ingroup crypto
  */
-diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number);
+diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t group);
 
 #endif /*DIFFIE_HELLMAN_H_*/
+

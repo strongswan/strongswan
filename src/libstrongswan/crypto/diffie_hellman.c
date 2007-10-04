@@ -8,7 +8,7 @@
 /*
  * Copyright (C) 1998-2002  D. Hugh Redelmeier.
  * Copyright (C) 1999, 2000, 2001  Henry Spencer.
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -24,7 +24,6 @@
  */
 
 #include <gmp.h>
-#include <stdio.h>
 
 #include "diffie_hellman.h"
 
@@ -322,7 +321,7 @@ struct modulus_entry_t {
 	/* 
 	 * Length of modulus in bytes.
 	 */	
-	size_t modulus_length;
+	size_t modulus_len;
 	
 	/* 
 	 * Generator value.
@@ -359,42 +358,42 @@ struct private_diffie_hellman_t {
 	/**
 	 * Diffie Hellman group number.
 	 */
-	u_int16_t dh_group_number;
-
-	/**
-	 * Modulus.
-	 */
-	mpz_t modulus;
-	
-	/**
-	 * Modulus length.
-	 */
-	size_t modulus_length;
+	u_int16_t group;
 	
 	/* 
 	 * Generator value.
 	 */	
-	u_int16_t generator;
+	mpz_t g;
 
 	/**
-	 * My private value .
+	 * My private value.
 	 */
-	mpz_t private;
+	mpz_t xa;
 	
 	/**
 	 * My public value.
 	 */
-	mpz_t my_public;
+	mpz_t ya;
 
 	/**
 	 * Other public value.
 	 */	
-	mpz_t other_public;
+	mpz_t yb;
 	
 	/**
 	 * Shared secret.
 	 */	
-	mpz_t secret;
+	mpz_t zz;
+
+	/**
+	 * Modulus.
+	 */
+	mpz_t p;
+	
+	/**
+	 * Modulus length.
+	 */
+	size_t p_len;
 
 	/**
 	 * True if shared secret is computed and stored in my_public_value.
@@ -403,31 +402,52 @@ struct private_diffie_hellman_t {
 };
 
 /**
- * Compute the shared secret
- */
-static void compute_shared_secret(private_diffie_hellman_t *this)
-{
-	mpz_powm(this->secret, this->other_public, this->private, this->modulus);
-	this->computed = TRUE;
-}
-
-/**
  * Implementation of diffie_hellman_t.set_other_public_value.
  */
 static void set_other_public_value(private_diffie_hellman_t *this, chunk_t value)
 {
-	mpz_import(this->other_public, value.len, 1, 1, 1, 0, value.ptr);
+	mpz_t p_min_1;
 	
-	/* check public value: */
-	/* 1. 0 or 1 wouldn't include your generated value */
-	/* 2. a public value larger or equal the modulus is invalid anyway */
-	if (mpz_cmp_ui(this->other_public, 1) <= 0 ||
-		mpz_cmp(this->other_public, this->modulus) >= 0)
+	mpz_init(p_min_1);
+	mpz_sub_ui(p_min_1, this->p, 1);
+	
+	mpz_import(this->yb, value.len, 1, 1, 1, 0, value.ptr);
+	
+	/* check public value: 
+	 * 1. 0 or 1 is invalid as 0^a = 0 and 1^a = 1
+	 * 2. a public value larger or equal the modulus is invalid */
+	if (mpz_cmp_ui(this->yb, 1) > 0 ||
+		mpz_cmp(this->yb, p_min_1) < 0)
 	{
-		DBG1("public DH value verification failed: 0/1");
-		return;
+#ifdef EXTENDED_DH_TEST
+		/* 3. test if y ^ q mod p = 1, where q = (p - 1)/2. */
+		mpz_t q, one;
+		
+		mpz_init(q);
+		mpz_init(one);
+		mpz_fdiv_q_2exp(q, p_min_1, 1);
+		mpz_powm(one, this->yb, q, this->p);
+		mpz_clear(q);
+		if (mpz_cmp_ui(one, 1) == 0)
+		{
+			mpz_powm(this->zz, this->yb, this->xa, this->p);
+			this->computed = TRUE;
+		}
+		else
+		{
+			DBG1("public DH value verification failed: y ^ q mod p != 1");
+		}
+		mpz_clear(one);
+#else
+		mpz_powm(this->zz, this->yb, this->xa, this->p);
+		this->computed = TRUE;
+#endif
 	}
-	compute_shared_secret(this);
+	else
+	{
+		DBG1("public DH value verification failed: y < 2 || y > p - 1 ");
+	}
+	mpz_clear(p_min_1);
 }
 
 /**
@@ -440,23 +460,9 @@ static status_t get_other_public_value(private_diffie_hellman_t *this,
 	{
 		return FAILED;
 	}
-	value->len = this->modulus_length;
-    value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->other_public);
+	value->len = this->p_len;
+    value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->yb);
 	return SUCCESS;
-}
-
-
-/**
- * Implementation of private_diffie_hellman_t.compute_public_value.
- */
-static void compute_public_value(private_diffie_hellman_t *this)
-{
-	mpz_t generator;
-	
-	mpz_init_set_ui(generator, this->generator);
-	mpz_powm(this->my_public, generator, this->private, this->modulus);
-	
-	mpz_clear(generator);
 }
 
 /**
@@ -464,8 +470,8 @@ static void compute_public_value(private_diffie_hellman_t *this)
  */
 static void get_my_public_value(private_diffie_hellman_t *this,chunk_t *value)
 {
-	value->len = this->modulus_length;
-    value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->my_public);
+	value->len = this->p_len;
+    value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->ya);
 }
 
 /**
@@ -477,8 +483,8 @@ static status_t get_shared_secret(private_diffie_hellman_t *this, chunk_t *secre
 	{
 		return FAILED;
 	}
-	secret->len = this->modulus_length;
-    secret->ptr = mpz_export(NULL, NULL, 1, secret->len, 1, 0, this->secret);
+	secret->len = this->p_len;
+    secret->ptr = mpz_export(NULL, NULL, 1, secret->len, 1, 0, this->zz);
 	return SUCCESS;
 }
 
@@ -487,7 +493,7 @@ static status_t get_shared_secret(private_diffie_hellman_t *this, chunk_t *secre
  */
 static diffie_hellman_group_t get_dh_group(private_diffie_hellman_t *this)
 {
-	return this->dh_group_number;
+	return this->group;
 }
 
 /**
@@ -500,14 +506,14 @@ static status_t set_modulus(private_diffie_hellman_t *this)
 	
 	for (i = 0; i < (sizeof(modulus_entries) / sizeof(modulus_entry_t)); i++)
 	{
-		if (modulus_entries[i].group == this->dh_group_number)
+		if (modulus_entries[i].group == this->group)
 		{
 			chunk_t chunk;
 			chunk.ptr = modulus_entries[i].modulus;
-			chunk.len = modulus_entries[i].modulus_length;
-			mpz_import(this->modulus, chunk.len, 1, 1, 1, 0, chunk.ptr);
-			this->modulus_length = chunk.len;
-			this->generator = modulus_entries[i].generator;
+			chunk.len = modulus_entries[i].modulus_len;
+			mpz_import(this->p, chunk.len, 1, 1, 1, 0, chunk.ptr);
+			this->p_len = chunk.len;
+			mpz_set_ui(this->g, modulus_entries[i].generator);
 			status = SUCCESS;
 			break;
 		}
@@ -520,22 +526,23 @@ static status_t set_modulus(private_diffie_hellman_t *this)
  */
 static void destroy(private_diffie_hellman_t *this)
 {
-	mpz_clear(this->modulus);
-	mpz_clear(this->private);
-	mpz_clear(this->my_public);
-	mpz_clear(this->other_public);
-	mpz_clear(this->secret);
+	mpz_clear(this->p);
+	mpz_clear(this->xa);
+	mpz_clear(this->ya);
+	mpz_clear(this->yb);
+	mpz_clear(this->zz);
 	free(this);
 }
 
 /*
  * Described in header.
  */
-diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
+diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t group)
 {
 	private_diffie_hellman_t *this = malloc_thing(private_diffie_hellman_t);
 	randomizer_t *randomizer;
 	chunk_t random;
+	status_t status;
 
 	/* public functions */
 	this->public.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
@@ -546,39 +553,35 @@ diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 	this->public.destroy = (void (*)(diffie_hellman_t *)) destroy;
 	
 	/* private variables */
-	this->dh_group_number = dh_group_number;
-	mpz_init(this->modulus);
-	mpz_init(this->other_public);
-	mpz_init(this->my_public);
-	mpz_init(this->private);
-	mpz_init(this->secret);
+	this->group = group;
+	mpz_init(this->p);
+	mpz_init(this->yb);
+	mpz_init(this->ya);
+	mpz_init(this->xa);
+	mpz_init(this->zz);
+	mpz_init(this->g);
+	
 	this->computed = FALSE;
 		
-	/* set this->modulus */	
+	/* find a modulus according to group */	
 	if (set_modulus(this) != SUCCESS)
 	{
 		destroy(this);
 		return NULL;
 	}
 	randomizer = randomizer_create();
-	if (randomizer == NULL)
-	{
-		destroy(this);
-		return NULL;
-	}
-	if (randomizer->allocate_pseudo_random_bytes(randomizer, 
-								this->modulus_length, &random) != SUCCESS)
-	{
-		randomizer->destroy(randomizer);
-		destroy(this);
-		return NULL;
-	}
-	
-	mpz_import(this->private, random.len, 1, 1, 1, 0, random.ptr);
-	chunk_free(&random);
+	status = randomizer->allocate_pseudo_random_bytes(
+											randomizer, this->p_len, &random);
 	randomizer->destroy(randomizer);
+	if (status != SUCCESS)
+	{
+		destroy(this);
+		return NULL;
+	}
+	mpz_import(this->xa, random.len, 1, 1, 1, 0, random.ptr);
+	chunk_free(&random);
 	
-	compute_public_value(this);
+	mpz_powm(this->ya, this->g, this->xa, this->p);
 	
 	return &this->public;
 }
