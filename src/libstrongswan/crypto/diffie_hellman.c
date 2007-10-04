@@ -531,6 +531,7 @@ static void destroy(private_diffie_hellman_t *this)
 	mpz_clear(this->ya);
 	mpz_clear(this->yb);
 	mpz_clear(this->zz);
+	mpz_clear(this->g);
 	free(this);
 }
 
