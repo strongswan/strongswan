@@ -699,7 +699,8 @@ destroy_hosts:
 static void stroke_del_conn(stroke_msg_t *msg, FILE *out)
 {
 	iterator_t *peer_iter, *child_iter;
-	peer_cfg_t *peer, *child;
+	peer_cfg_t *peer;
+	child_cfg_t *child;
 	
 	pop_string(msg, &(msg->del_conn.name));
 	DBG1(DBG_CFG, "received stroke: delete connection '%s'", msg->del_conn.name);
