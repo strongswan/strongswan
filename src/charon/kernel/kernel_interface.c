@@ -300,12 +300,12 @@ struct private_kernel_interface_t {
 	kernel_interface_t public;
 	
 	/**
-	 * mutex to lock access to the various lists
+	 * mutex to lock access to netlink socket
 	 */
 	pthread_mutex_t nl_mutex;
 	
 	/**
-	 * mutex to locak access to various lists
+	 * mutex to lock access to various lists
 	 */
 	pthread_mutex_t mutex;
 	
