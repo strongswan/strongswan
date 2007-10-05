@@ -34,7 +34,6 @@
 #include <linux/rtnetlink.h>
 #include <linux/xfrm.h>
 #include <linux/udp.h>
-#define __USE_UNIX98
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -302,6 +301,11 @@ struct private_kernel_interface_t {
 	
 	/**
 	 * mutex to lock access to the various lists
+	 */
+	pthread_mutex_t nl_mutex;
+	
+	/**
+	 * mutex to locak access to various lists
 	 */
 	pthread_mutex_t mutex;
 	
@@ -899,7 +903,7 @@ static status_t netlink_send(private_kernel_interface_t *this,
 	chunk_t result = chunk_empty, tmp;
 	struct nlmsghdr *msg, peek;
 	
-	pthread_mutex_lock(&this->mutex);
+	pthread_mutex_lock(&this->nl_mutex);
 	
 	in->nlmsg_seq = ++this->seq;
 	in->nlmsg_pid = getpid();
@@ -921,7 +925,7 @@ static status_t netlink_send(private_kernel_interface_t *this,
 				/* interrupted, try again */
 				continue;
 			}
-			pthread_mutex_unlock(&this->mutex);
+			pthread_mutex_unlock(&this->nl_mutex);
 			DBG1(DBG_KNL, "error sending to netlink socket: %s", strerror(errno));
 			return FAILED;
 		}
@@ -953,13 +957,13 @@ static status_t netlink_send(private_kernel_interface_t *this,
 				continue;
 			}
 			DBG1(DBG_KNL, "error reading from netlink socket: %s", strerror(errno));
-			pthread_mutex_unlock(&this->mutex);
+			pthread_mutex_unlock(&this->nl_mutex);
 			return FAILED;
 		}
 		if (!NLMSG_OK(msg, len))
 		{
 			DBG1(DBG_KNL, "received corrupted netlink message");
-			pthread_mutex_unlock(&this->mutex);
+			pthread_mutex_unlock(&this->nl_mutex);
 			return FAILED;
 		}
 		if (msg->nlmsg_seq != this->seq)
@@ -969,7 +973,7 @@ static status_t netlink_send(private_kernel_interface_t *this,
 			{
 				continue;
 			}
-			pthread_mutex_unlock(&this->mutex);
+			pthread_mutex_unlock(&this->nl_mutex);
 			return FAILED;
 		}
 		
@@ -992,7 +996,7 @@ static status_t netlink_send(private_kernel_interface_t *this,
 	*out_len = result.len;
 	*out = (struct nlmsghdr*)clalloc(result.ptr, result.len);
 	
-	pthread_mutex_unlock(&this->mutex);
+	pthread_mutex_unlock(&this->nl_mutex);
 	
 	return SUCCESS;
 }
@@ -2590,7 +2594,6 @@ kernel_interface_t *kernel_interface_create()
 {
 	private_kernel_interface_t *this = malloc_thing(private_kernel_interface_t);
 	struct sockaddr_nl addr;
-	pthread_mutexattr_t attr;
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
@@ -2613,10 +2616,8 @@ kernel_interface_t *kernel_interface_create()
 	this->ifaces = linked_list_create();
 	this->hiter = NULL;
 	this->seq = 200;
-	pthread_mutexattr_init(&attr);
-	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&this->mutex, &attr);
-	pthread_mutexattr_destroy(&attr);
+	pthread_mutex_init(&this->mutex, NULL);
+	pthread_mutex_init(&this->nl_mutex, NULL);
 	pthread_cond_init(&this->cond, NULL);
 	timerclear(&this->last_roam);
 	
