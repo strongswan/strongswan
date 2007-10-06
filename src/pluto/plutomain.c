@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: plutomain.c,v 1.16 2005/09/25 21:30:52 as Exp $
+ * RCSID $Id$
  */
 
 #include <stdio.h>
