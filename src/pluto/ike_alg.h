@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ike_alg.h,v 1.3 2004/09/16 23:22:22 as Exp $
+ * RCSID $Id$
  */
  
 #ifndef _IKE_ALG_H

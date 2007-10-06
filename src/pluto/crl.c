@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: crl.c,v 1.12 2005/12/06 22:49:57 as Exp $
+ * RCSID $Id$
  */
 
 #include <stdlib.h>

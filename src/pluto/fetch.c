@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: fetch.c,v 1.12 2006/05/16 14:19:27 as Exp $
+ * RCSID $Id$
  */
 
 #include <stdlib.h>

@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: certs.c,v 1.8 2005/11/06 22:55:41 as Exp $
+ * RCSID $Id$
  */
 
 #include <stdlib.h>

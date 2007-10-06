@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: smartcard.h,v 1.14 2005/11/06 22:55:41 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _SMARTCARD_H

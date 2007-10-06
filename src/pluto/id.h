@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: id.h,v 1.5 2005/08/15 20:07:08 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _ID_H

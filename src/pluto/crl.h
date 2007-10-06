@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: crl.h,v 1.4 2005/07/18 19:36:22 as Exp $
+ * RCSID $Id$
  */
 
 #include "constants.h"

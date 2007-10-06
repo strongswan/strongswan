@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ac.h,v 1.8 2005/02/17 20:56:04 as Exp $
+ * $Id$
  */
 
 #ifndef _AC_H

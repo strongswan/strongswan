@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: db_ops.c,v 1.4 2005/04/07 20:13:44 as Exp $
+ * RCSID $Id$
  */
 
 /* 

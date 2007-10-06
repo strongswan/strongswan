@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: kernel_alg.h,v 1.5 2005/08/17 16:31:24 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _KERNEL_ALG_H

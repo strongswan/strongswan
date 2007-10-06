@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: mp_defs.c,v 1.1 2006/01/05 12:37:11 as Exp $
+ * RCSID $Id$
  */
 
 #include <freeswan.h>

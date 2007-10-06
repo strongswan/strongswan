@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: spdb.c,v 1.9 2006/04/22 21:59:20 as Exp $
+ * RCSID $Id$
  */
 
 #include <stdio.h>

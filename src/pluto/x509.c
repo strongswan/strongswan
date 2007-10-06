@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: x509.c,v 1.36 2006/04/10 16:08:33 as Exp $
+ * RCSID $Id$
  */
 
 #include <stdlib.h>

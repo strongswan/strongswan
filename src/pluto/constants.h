@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: constants.h,v 1.20 2006/02/28 19:13:33 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _CONSTANTS_H

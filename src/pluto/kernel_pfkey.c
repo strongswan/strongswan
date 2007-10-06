@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: kernel_pfkey.c,v 1.8 2006/02/04 00:01:22 as Exp $
+ * RCSID $Id$
  */
 
 #ifdef KLIPS

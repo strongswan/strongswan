@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: cookie.c,v 1.2 2005/08/17 16:38:20 as Exp $
+ * RCSID $Id$
  */
 
 #include <stdio.h>

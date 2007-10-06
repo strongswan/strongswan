@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: foodgroups.c,v 1.2 2004/04/01 18:28:32 as Exp $
+ * RCSID $Id$
  */
 
 #include <string.h>

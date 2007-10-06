@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: kernel_netlink.c,v 1.24 2006/03/10 14:49:43 as Exp $
+ * RCSID $Id$
  */
 
 #if defined(linux) && defined(KERNEL26_SUPPORT)

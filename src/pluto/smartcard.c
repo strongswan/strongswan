@@ -18,7 +18,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: smartcard.c,v 1.41 2006/01/04 21:03:52 as Exp $
+ * RCSID $Id$
  */
 
 #include <stdio.h>

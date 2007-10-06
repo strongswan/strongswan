@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: kernel.h,v 1.10 2006/03/08 22:12:37 as Exp $
+ * RCSID $Id$
  */
 
 #include "connections.h"

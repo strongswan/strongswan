@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: modecfg.c,v 1.6 2006/04/24 20:44:57 as Exp $
+ * RCSID $Id$
  *
  * This code originally written by Colubris Networks, Inc.
  * Extraction of patch and porting to 1.99 codebases by Xelerance Corporation

@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ike_alg.c,v 1.6 2004/09/17 21:29:50 as Exp $
+ * RCSID $Id$
  */
 
 #include <stdio.h>

@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: rnd.h,v 1.1 2004/03/15 20:35:29 as Exp $
+ * RCSID $Id$
  */
 
 extern u_char    secret_of_the_day[SHA1_DIGEST_SIZE];

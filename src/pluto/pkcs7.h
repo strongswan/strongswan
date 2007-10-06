@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: pkcs7.h,v 1.10 2005/12/22 22:11:24 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _PKCS7_H

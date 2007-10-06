@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: mp_defs.h,v 1.2 2006/01/06 11:40:45 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _MP_DEFS_H
