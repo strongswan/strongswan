@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #define _GNU_SOURCE
@@ -1131,6 +1133,7 @@ identification_t *identification_create_from_string(char *string)
 identification_t *identification_create_from_encoding(id_type_t type, chunk_t encoded)
 {
 	private_identification_t *this = identification_create();
+
 	this->type = type;
 	switch (type)
 	{
