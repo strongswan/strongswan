@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
  
 #include <gmp.h>
@@ -168,6 +170,7 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 	/* check magic bytes */
 	if (*(em.ptr) != 0x00 || *(em.ptr+1) != 0x01)
 	{
+		DBG1("incorrect padding - probably wrong RSA key");
 		goto end;
 	}
 	em.ptr += 2;
