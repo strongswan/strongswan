@@ -34,6 +34,7 @@ crypto/hashers/md5_hasher.c  crypto/hashers/md5_hasher.h \
 crypto/hmac.c crypto/hmac.h \
 crypto/ietf_attr_list.c crypto/ietf_attr_list.h \
 crypto/ocsp.c crypto/ocsp.h \
+crypto/pkcs7.c crypto/pkcs7.h \
 crypto/prfs/fips_prf.c crypto/prfs/fips_prf.h \
 crypto/prfs/hmac_prf.c crypto/prfs/hmac_prf.h \
 crypto/prfs/prf.c crypto/prfs/prf.h \

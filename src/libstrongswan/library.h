@@ -18,6 +18,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #ifndef LIBRARY_H_
@@ -127,6 +129,11 @@
  * Macro compares two strings for equality
  */
 #define streq(x,y) (strcmp(x, y) == 0)
+
+/**
+ * Macro compares two strings for equality
+ */
+#define strneq(x,y,len) (strncmp(x, y, len) == 0)
 
 /**
  * Macro compares two binary blobs for equality
