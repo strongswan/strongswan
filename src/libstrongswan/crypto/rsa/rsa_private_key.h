@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #ifndef RSA_PRIVATE_KEY_H_
@@ -47,6 +49,19 @@ typedef struct rsa_private_key_t rsa_private_key_t;
  * @ingroup rsa
  */
 struct rsa_private_key_t {
+
+	/**
+	 * @brief Decrypt a data block based on EME-PKCS1 encoding.
+	 * 
+	 * 
+	 * @param this				calling object
+	 * @param data				encrypted input data
+	 * @param out				decrypted output data
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED if padding is not correct
+	 */
+	status_t (*eme_pkcs1_decrypt) (rsa_private_key_t *this, chunk_t in, chunk_t *out);
 
 	/**
 	 * @brief Build a signature over a chunk using EMSA-PKCS1 encoding.

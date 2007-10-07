@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #include <gmp.h>
@@ -29,6 +31,7 @@
 #include "rsa_public_key.h"
 #include "rsa_private_key.h"
 
+#include <debug.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
 #include <utils/randomizer.h>
@@ -140,23 +143,23 @@ struct private_rsa_private_key_t {
 
 /* ASN.1 definition of a PKCS#1 RSA private key */
 static const asn1Object_t privkey_objects[] = {
-	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
-	{ 1,   "version",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
-	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  2 */
-	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  3 */
-	{ 1,   "privateExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  4 */
-	{ 1,   "prime1",			ASN1_INTEGER,      ASN1_BODY }, /*  5 */
-	{ 1,   "prime2",			ASN1_INTEGER,      ASN1_BODY }, /*  6 */
-	{ 1,   "exponent1",			ASN1_INTEGER,      ASN1_BODY }, /*  7 */
-	{ 1,   "exponent2",			ASN1_INTEGER,      ASN1_BODY }, /*  8 */
-	{ 1,   "coefficient",		ASN1_INTEGER,      ASN1_BODY }, /*  9 */
-	{ 1,   "otherPrimeInfos",	ASN1_SEQUENCE,     ASN1_OPT |
-												   ASN1_LOOP }, /* 10 */
-	{ 2,     "otherPrimeInfo",	ASN1_SEQUENCE,     ASN1_NONE }, /* 11 */
-	{ 3,       "prime",			ASN1_INTEGER,      ASN1_BODY }, /* 12 */
-	{ 3,       "exponent",		ASN1_INTEGER,      ASN1_BODY }, /* 13 */
-	{ 3,       "coefficient",	ASN1_INTEGER,      ASN1_BODY }, /* 14 */
-	{ 1,   "end opt or loop",	ASN1_EOC,          ASN1_END  }  /* 15 */
+	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,	ASN1_NONE }, /*  0 */
+	{ 1,   "version",			ASN1_INTEGER,	ASN1_BODY }, /*  1 */
+	{ 1,   "modulus",			ASN1_INTEGER,	ASN1_BODY }, /*  2 */
+	{ 1,   "publicExponent",	ASN1_INTEGER,	ASN1_BODY }, /*  3 */
+	{ 1,   "privateExponent",	ASN1_INTEGER,	ASN1_BODY }, /*  4 */
+	{ 1,   "prime1",			ASN1_INTEGER,	ASN1_BODY }, /*  5 */
+	{ 1,   "prime2",			ASN1_INTEGER,	ASN1_BODY }, /*  6 */
+	{ 1,   "exponent1",			ASN1_INTEGER,	ASN1_BODY }, /*  7 */
+	{ 1,   "exponent2",			ASN1_INTEGER,	ASN1_BODY }, /*  8 */
+	{ 1,   "coefficient",		ASN1_INTEGER,	ASN1_BODY }, /*  9 */
+	{ 1,   "otherPrimeInfos",	ASN1_SEQUENCE,	ASN1_OPT |
+												ASN1_LOOP }, /* 10 */
+	{ 2,     "otherPrimeInfo",	ASN1_SEQUENCE,	ASN1_NONE }, /* 11 */
+	{ 3,       "prime",			ASN1_INTEGER,	ASN1_BODY }, /* 12 */
+	{ 3,       "exponent",		ASN1_INTEGER,	ASN1_BODY }, /* 13 */
+	{ 3,       "coefficient",	ASN1_INTEGER,	ASN1_BODY }, /* 14 */
+	{ 1,   "end opt or loop",	ASN1_EOC,		ASN1_END  }  /* 15 */
 };
 
 #define PRIV_KEY_VERSION		 1
@@ -266,7 +269,50 @@ static chunk_t rsadp(private_rsa_private_key_t *this, chunk_t data)
 }
 
 /**
- * Implementation of rsa_private_key.build_emsa_signature.
+ * Implementation of rsa_private_key_t.eme_pkcs1_decrypt.
+ */
+static status_t eme_pkcs1_decrypt(private_rsa_private_key_t *this,
+								  chunk_t in, chunk_t *out)
+{
+	status_t status = FAILED;
+	chunk_t em, em_ori;
+
+	/* decrypt the input data */
+	em = em_ori = this->rsadp(this, in);
+
+	/* PKCS#1 v1.5 EME encryption formatting
+	 * EM = 00 || 02 || PS || 00 || M
+	 * PS = pseudo-random nonzero octets
+	 */
+
+	/* check for magic bytes */
+	if (*(em.ptr) != 0x00 || *(em.ptr+1) != 0x02)
+	{
+		DBG1("incorrect padding - probably wrong RSA key");
+		goto end;
+	}
+	em.ptr += 2;
+	em.len -= 2;
+
+	/* the plaintext data starts after first 0x00 byte */
+	while (em.len-- > 0 && *em.ptr++ != 0x00);
+
+	if (em.len == 0)
+	{
+		DBG1("no plaintext data found");
+		goto end;
+	}
+
+    *out = chunk_clone(em);
+    status = SUCCESS;
+
+end:
+	free(em_ori.ptr);
+	return status;
+}
+
+/**
+ * Implementation of rsa_private_key_t.build_emsa_pkcs1_signature.
  */
 static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
 										   hash_algorithm_t hash_algorithm,
@@ -501,6 +547,7 @@ static private_rsa_private_key_t *rsa_private_key_create_empty(void)
 	private_rsa_private_key_t *this = malloc_thing(private_rsa_private_key_t);
 	
 	/* public functions */
+	this->public.eme_pkcs1_decrypt = (status_t (*) (rsa_private_key_t*,chunk_t,chunk_t*))eme_pkcs1_decrypt;
 	this->public.build_emsa_pkcs1_signature = (status_t (*) (rsa_private_key_t*,hash_algorithm_t,chunk_t,chunk_t*))build_emsa_pkcs1_signature;
 	this->public.save_key = (status_t (*) (rsa_private_key_t*,char*))save_key;
 	this->public.get_public_key = (rsa_public_key_t *(*) (rsa_private_key_t*))get_public_key;
