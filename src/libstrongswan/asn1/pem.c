@@ -10,6 +10,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #include <stdio.h>
@@ -40,7 +42,7 @@ static bool present(const char* pattern, chunk_t* ch)
 {
 	u_int pattern_len = strlen(pattern);
 
-	if (ch->len >= pattern_len && strncmp(ch->ptr, pattern, pattern_len) == 0)
+	if (ch->len >= pattern_len && strneq(ch->ptr, pattern, pattern_len))
 	{
 		ch->ptr += pattern_len;
 		ch->len -= pattern_len;

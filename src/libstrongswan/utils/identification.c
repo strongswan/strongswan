@@ -456,12 +456,16 @@ static bool same_dn(chunk_t a, chunk_t b)
 		|| (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
+			{
 				return FALSE;
+			}
 		}
 		else
 		{
-			if (strncmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
-				return FALSE;
+			if (!strneq(value_a.ptr, value_b.ptr, value_b.len))
+			{
+				return FALSE;	
+			}
 		}
 	}
 	/* both DNs must have same number of RDNs */
@@ -529,12 +533,16 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 		|| (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
+			{
 				return FALSE;
+			}
 		}
 		else
 		{
-			if (strncmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
+			if (!strneq(value_a.ptr, value_b.ptr, value_b.len))
+			{
 				return FALSE;
+			}
 		}
 	}
 	/* both DNs must have same number of RDNs */
