@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ipsec_radij.h,v 1.3 2004/04/28 05:44:29 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _IPSEC_RADIJ_H

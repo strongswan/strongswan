@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  *
- * RCSID $Id: ipsec_kversion.h,v 1.1 2004/03/15 20:35:25 as Exp $
+ * RCSID $Id$
  */
 #define	_FREESWAN_KVERSIONS_H	/* seen it, no need to see it again */
 

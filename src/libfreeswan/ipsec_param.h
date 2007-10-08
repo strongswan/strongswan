@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ipsec_param.h,v 1.2 2004/04/28 08:07:11 as Exp $
+ * RCSID $Id$
  *
  */
 

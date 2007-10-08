@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ipsec_eroute.h,v 1.1 2004/03/15 20:35:25 as Exp $
+ * RCSID $Id$
  *
  * derived from ipsec_encap.h 1.15 on 2001/9/18 by mcr.
  *

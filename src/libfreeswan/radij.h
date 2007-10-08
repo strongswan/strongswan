@@ -1,5 +1,5 @@
 /*
- * RCSID $Id: radij.h,v 1.1 2004/03/15 20:35:25 as Exp $
+ * RCSID $Id$
  */
 
 /*

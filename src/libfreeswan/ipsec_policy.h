@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  *
- * RCSID $Id: ipsec_policy.h,v 1.4 2004/10/04 22:43:56 as Exp $
+ * RCSID $Id$
  */
 #define	_IPSEC_POLICY_H 	/* seen it, no need to see it again */
 

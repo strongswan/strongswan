@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ipsec_xmit.h,v 1.3 2004/06/13 19:37:07 as Exp $
+ * RCSID $Id$
  */
 
 #include "freeswan/ipsec_sa.h"

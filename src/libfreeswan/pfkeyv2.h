@@ -1,5 +1,5 @@
 /*
- * RCSID $Id: pfkeyv2.h,v 1.5 2004/10/04 22:43:56 as Exp $
+ * RCSID $Id$
  */
 
 /*

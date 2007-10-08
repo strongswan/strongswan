@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ipsec_rcv.h,v 1.1 2004/03/15 20:35:25 as Exp $
+ * RCSID $Id$
  */
 
 #define DB_RX_PKTRX	0x0001

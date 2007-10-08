@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ipsec_ah.h,v 1.2 2004/03/22 21:53:18 as Exp $
+ * RCSID $Id$
  */
 
 #include "ipsec_md5h.h"
