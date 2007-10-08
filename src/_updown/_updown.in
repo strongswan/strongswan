@@ -16,7 +16,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: _updown.in,v 1.2 2006/04/17 15:06:29 as Exp $
+# RCSID $Id$
 
 # CAUTION:  Installing a new version of strongSwan will install a new
 # copy of this script, wiping out any custom changes you make.  If

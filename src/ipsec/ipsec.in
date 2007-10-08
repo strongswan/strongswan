@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: ipsec.in,v 1.13 2006/03/09 20:09:33 as Exp $
+# RCSID $Id$
 
 # name and version of the ipsec implementation
 IPSEC_NAME="@IPSEC_NAME@"
