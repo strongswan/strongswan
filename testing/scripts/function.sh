@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: function.sh,v 1.3 2005/02/16 22:20:52 as Exp $
+# RCSID $Id$
 
 
 ############################################
