@@ -1,7 +1,7 @@
 Notes on Pluto Conventions
 ==========================
 
-RCSID $Id: PLUTO-CONVENTIONS,v 1.1 2004/03/15 20:35:28 as Exp $
+RCSID $Id$
 
 Pluto has its own stylistic conventions.  They are fairly easily
 inferred by reading the code.
