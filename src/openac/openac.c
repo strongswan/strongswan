@@ -187,6 +187,7 @@ chunk_t serial;
 
 static int debug_level = 1;
 static bool stderr_quiet = FALSE;
+
 /**
  * openac dbg function
  */
