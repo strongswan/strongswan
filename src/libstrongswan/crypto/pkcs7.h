@@ -1,7 +1,7 @@
 /**
  * @file pkcs7.h
  * 
- * @brief Interface of pkcs7_contentInfo_t.
+ * @brief Interface of pkcs7_t.
  * 
  */
 
