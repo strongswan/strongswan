@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: cmp.c,v 1.12 2006/01/13 18:03:25 as Exp $
+ * RCSID $Id$
  */
 
 #include <string.h>

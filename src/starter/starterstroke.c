@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterstroke.c $
+ * RCSID $Id$
  */
 
 #include <sys/types.h>

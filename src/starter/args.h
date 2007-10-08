@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: args.h,v 1.3 2006/01/13 18:02:02 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _ARGS_H_

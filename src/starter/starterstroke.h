@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterstroke.h $
+ * RCSID $Id$
  */
 
 #ifndef _STARTER_STROKE_H_

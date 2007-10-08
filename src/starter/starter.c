@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starter.c,v 1.23 2006/02/15 18:37:46 as Exp $
+ * RCSID $Id$
  */
 
 #include <sys/types.h>

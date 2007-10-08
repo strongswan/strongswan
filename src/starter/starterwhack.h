@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterwhack.h,v 1.6 2006/01/03 18:37:03 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _STARTER_WHACK_H_

@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokepluto.h,v 1.3 2006/01/04 23:30:24 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _STARTER_PLUTO_H_

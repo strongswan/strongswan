@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: exec.h,v 1.2 2005/12/28 10:20:32 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _STARTER_EXEC_H_

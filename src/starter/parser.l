@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: parser.l,v 1.5 2006/03/28 22:32:33 as Exp $
+ * RCSID $Id$
  */
 
 #include <string.h>

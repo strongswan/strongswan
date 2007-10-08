@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: interfaces.h,v 1.6 2006/01/06 20:24:07 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _STARTER_INTERFACES_H_

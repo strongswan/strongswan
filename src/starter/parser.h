@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: parser.h,v 1.5 2006/01/17 23:43:36 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _IPSEC_PARSER_H_

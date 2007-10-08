@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.txt,v 1.6 2006/04/17 10:30:27 as Exp $
+ * RCSID $Id$
  */
 
 #include <string.h>

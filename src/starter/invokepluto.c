@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokepluto.c,v 1.12 2006/02/17 21:41:50 as Exp $
+ * RCSID $Id$
  */
 
 #include <sys/types.h>
