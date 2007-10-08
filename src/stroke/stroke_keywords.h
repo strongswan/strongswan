@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.h,v 1.8 2006/04/17 10:30:27 as Exp $
+ * RCSID $Id$
  */
 
 #ifndef _STROKE_KEYWORDS_H_
