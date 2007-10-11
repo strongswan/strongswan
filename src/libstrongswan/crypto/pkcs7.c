@@ -611,6 +611,14 @@ failed:
 }
 
 /**
+ * Implements pkcs7_t.get_data
+ */
+static chunk_t get_data(private_pkcs7_t *this)
+{
+	return this->data;
+}
+
+/**
  * Implements pkcs7_t.destroy
  */
 static void destroy(private_pkcs7_t *this)
@@ -681,6 +689,7 @@ pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.parse_data = (bool (*) (pkcs7_t*))parse_data;
 	this->public.parse_signedData = (bool (*) (pkcs7_t*,x509_t*))parse_signedData;
 	this->public.parse_envelopedData = (bool (*) (pkcs7_t*,chunk_t,rsa_private_key_t*))parse_envelopedData;
+	this->public.get_data = (chunk_t (*) (pkcs7_t*))get_data;
 	this->public.destroy = (void (*) (pkcs7_t*))destroy;
 
 	if (!parse_contentInfo(chunk, level, this))

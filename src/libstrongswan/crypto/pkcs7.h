@@ -97,8 +97,16 @@ struct pkcs7_t {
 	bool (*parse_envelopedData) (pkcs7_t *this, chunk_t serialNumber, rsa_private_key_t *key);
 
 	/**
+	 * @brief Returns the parsed data object
+	 *
+	 * @param this			calling object
+	 * @return				chunk containing the data object
+	 */
+	chunk_t (*get_data) (pkcs7_t *this);
+
+	/**
 	 * @brief Destroys the contentInfo object.
-	 * 
+	 *
 	 * @param this			PKCS#7 contentInfo object to destroy
 	 */
 	void (*destroy) (pkcs7_t *this);
