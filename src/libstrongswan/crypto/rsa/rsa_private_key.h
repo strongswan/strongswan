@@ -98,7 +98,7 @@ struct rsa_private_key_t {
 	 * @param this				calling object
 	 * @return					size of the modulus (n) in bytes
 	 */
-	size_t (*get_keysize) (rsa_private_key_t *this);
+	size_t (*get_keysize) (const rsa_private_key_t *this);
 
 	
 	/**
