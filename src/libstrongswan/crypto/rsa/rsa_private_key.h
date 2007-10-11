@@ -61,7 +61,7 @@ struct rsa_private_key_t {
 	 * 							- SUCCESS
 	 * 							- FAILED if padding is not correct
 	 */
-	status_t (*eme_pkcs1_decrypt) (rsa_private_key_t *this, chunk_t in, chunk_t *out);
+	status_t (*pkcs1_decrypt) (rsa_private_key_t *this, chunk_t in, chunk_t *out);
 
 	/**
 	 * @brief Build a signature over a chunk using EMSA-PKCS1 encoding.
@@ -93,12 +93,13 @@ struct rsa_private_key_t {
 	status_t (*save_key) (rsa_private_key_t *this, char *file);
 	
 	/**
-	 * @brief Create a rsa_public_key_t with the public parts of the key.
+	 * @brief Get the size of the modulus in bytes.
 	 * 
 	 * @param this				calling object
-	 * @return					public_key
+	 * @return					size of the modulus (n) in bytes
 	 */
-	rsa_public_key_t *(*get_public_key) (rsa_private_key_t *this);
+	size_t (*get_keysize) (rsa_private_key_t *this);
+
 	
 	/**
 	 * @brief Check if a private key belongs to a public key.

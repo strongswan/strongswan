@@ -519,7 +519,7 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 				}
 				break;
 			case PKCS7_ENCRYPTED_KEY:
-				if (key->eme_pkcs1_decrypt(key, object, &symmetric_key) != SUCCESS)
+				if (key->pkcs1_decrypt(key, object, &symmetric_key) != SUCCESS)
 				{
 					DBG1("symmetric key could not be decrypted with rsa");
 					goto failed;

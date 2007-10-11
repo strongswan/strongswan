@@ -271,8 +271,8 @@ static chunk_t rsadp(private_rsa_private_key_t *this, chunk_t data)
 /**
  * Implementation of rsa_private_key_t.eme_pkcs1_decrypt.
  */
-static status_t eme_pkcs1_decrypt(private_rsa_private_key_t *this,
-								  chunk_t in, chunk_t *out)
+static status_t pkcs1_decrypt(private_rsa_private_key_t *this,
+							  chunk_t in, chunk_t *out)
 {
 	status_t status = FAILED;
 	chunk_t em, em_ori;
@@ -413,11 +413,11 @@ static status_t save_key(private_rsa_private_key_t *this, char *file)
 }
 
 /**
- * Implementation of rsa_private_key.get_public_key.
+ * Implementation of rsa_public_key.get_keysize.
  */
-rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
+static size_t get_keysize(const private_rsa_private_key_t *this)
 {
-	return NULL;
+	return this->k;
 }
 
 /**
@@ -547,10 +547,10 @@ static private_rsa_private_key_t *rsa_private_key_create_empty(void)
 	private_rsa_private_key_t *this = malloc_thing(private_rsa_private_key_t);
 	
 	/* public functions */
-	this->public.eme_pkcs1_decrypt = (status_t (*) (rsa_private_key_t*,chunk_t,chunk_t*))eme_pkcs1_decrypt;
+	this->public.pkcs1_decrypt = (status_t (*) (rsa_private_key_t*,chunk_t,chunk_t*))pkcs1_decrypt;
 	this->public.build_emsa_pkcs1_signature = (status_t (*) (rsa_private_key_t*,hash_algorithm_t,chunk_t,chunk_t*))build_emsa_pkcs1_signature;
 	this->public.save_key = (status_t (*) (rsa_private_key_t*,char*))save_key;
-	this->public.get_public_key = (rsa_public_key_t *(*) (rsa_private_key_t*))get_public_key;
+	this->public.get_keysize = (size_t (*) (const rsa_private_key_t*))get_keysize;
 	this->public.belongs_to = (bool (*) (rsa_private_key_t*,rsa_public_key_t*))belongs_to;
 	this->public.destroy = (void (*) (rsa_private_key_t*))destroy;
 	
