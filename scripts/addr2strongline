@@ -1,0 +1,35 @@
+#!/bin/bash
+#
+# Wrapper to addr2line.
+#
+# $0 gets a code line for a shared library. It checks where the
+# library is linked to the binary and subtracts that from
+# supplied list of addresses in the binary.
+#
+# This requires stack randomization to be disabled.
+
+LIBNAME=libstrongswan
+
+if [ ! -e $1 ];
+then
+	echo "Error: file $1 not found"
+	exit 1
+fi
+
+if [ `cat /proc/sys/kernel/randomize_va_space` != 0 ];
+then
+	echo "Error: stack randomization enabled: use echo 0 > /proc/sys/kernel/randomize_va_space"
+	exit 1
+fi
+
+LINK=`ldd $1 | grep $LIBNAME | awk '{print toupper($4) }' | sed -e "s/0X//g"`
+LIB=`ldd $1 | grep $LIBNAME | awk '{print $3 }'`
+
+until [ -z "$2" ]
+do
+  shift
+  LEAK=`echo "$1" | sed -e "s/0x//g" | awk '{print toupper($1)}'`
+  RES=`echo "ibase=16; obase=10; $LEAK - $LINK;" | bc | sed -e "s/ //g" | awk '{print tolower($1) }'`
+  RES="0x$RES"
+  addr2line -e $LIB $RES
+done
