@@ -23,6 +23,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #ifndef X509_H_
@@ -299,17 +301,34 @@ struct x509_t {
 };
 
 /**
- * @brief Read a x509 certificate from a DER encoded blob.
- * 
+ * @brief Create a X.509 certificate from its components
+ *
+ * @param serialNumber	chunk containing the serialNumber
+ * @param issuer		issuer distinguished name
+ * @param notBefore		start date of validity
+ * @param notAfter		end date of validity
+ * @param subject		subject distinguished name
+ *
+ * @return				created x509_t certificate, or NULL if invalid.
+ *
+ * @ingroup crypto
+ */
+x509_t *x509_create(chunk_t serialNumber, identification_t *issuer,
+					time_t notBefore, time_t notAfter,
+					identification_t *subject);
+
+/**
+ * @brief Read a X.509 certificate from a DER encoded blob.
+ *
  * @param chunk 	chunk containing DER encoded data
- * @return 			created x509_t certificate, or NULL if invlid.
+ * @return 			created x509_t certificate, or NULL if invalid.
  * 
  * @ingroup crypto
  */
 x509_t *x509_create_from_chunk(chunk_t chunk, u_int level);
 
 /**
- * @brief Read a x509 certificate from a DER encoded file.
+ * @brief Read a X.509 certificate from a DER encoded file.
  * 
  * @param filename 	file containing DER encoded data
  * @param label		label describing kind of certificate

@@ -23,6 +23,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #include <gmp.h>
@@ -1262,10 +1264,10 @@ static void destroy(private_x509_t *this)
 	free(this);
 }
 
-/*
- * Described in header.
+/**
+ * Internal generic constructor
  */
-x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
+static private_x509_t *x509_create_empty(void)
 {
 	private_x509_t *this = malloc_thing(private_x509_t);
 	
@@ -1315,6 +1317,30 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.list = (void(*)(x509_t*, FILE *out, bool utc))list;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	
+	return this;
+}
+
+/*
+ * Described in header.
+ */
+x509_t *x509_create_(chunk_t serialNumber, identification_t *issuer, identification_t *subject)
+{
+	private_x509_t *this = x509_create_empty();
+
+	this->serialNumber = serialNumber;
+	this->issuer = issuer->clone(issuer);
+	this->subject = subject->clone(subject);
+
+	return &this->public;
+}
+
+/*
+ * Described in header.
+ */
+x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
+{
+	private_x509_t *this = x509_create_empty();
+
 	if (!parse_certificate(chunk, level, this))
 	{
 		destroy(this);
