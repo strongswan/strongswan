@@ -44,8 +44,6 @@ typedef struct rsa_private_key_t rsa_private_key_t;
  * 
  * @see rsa_public_key_t
  *
- * @todo Implement get_key(), save_key(), get_public_key()
- *
  * @ingroup rsa
  */
 struct rsa_private_key_t {
@@ -82,24 +80,22 @@ struct rsa_private_key_t {
 	status_t (*build_emsa_pkcs1_signature) (rsa_private_key_t *this, hash_algorithm_t hash_algorithm, chunk_t data, chunk_t *signature);
 	
 	/**
-	 * @brief Saves a key to a file.
-	 * 
-	 * Not implemented!
-	 * 
+	 * @brief Writes an RSA private key to a file in PKCS#1 format.
+	 *
 	 * @param this				calling object
-	 * @param file				file to which the key should be written.
-	 * @return					NOT_SUPPORTED
+	 * @param filename			file to which the key should be written.
+	 * @param force				if TRUE overwrite existing file
+	 * @return					TRUE if successful - FALSE otherwise
 	 */
-	status_t (*save_key) (rsa_private_key_t *this, char *file);
+	bool (*pkcs1_write) (rsa_private_key_t *this, const char *filename, bool force);
 	
 	/**
-	 * @brief Get the size of the modulus in bytes.
+	 * @brief Create a rsa_public_key_t with the public part of the key.
 	 * 
 	 * @param this				calling object
-	 * @return					size of the modulus (n) in bytes
+	 * @return					public_key
 	 */
-	size_t (*get_keysize) (const rsa_private_key_t *this);
-
+	rsa_public_key_t *(*get_public_key) (rsa_private_key_t *this);
 	
 	/**
 	 * @brief Check if a private key belongs to a public key.

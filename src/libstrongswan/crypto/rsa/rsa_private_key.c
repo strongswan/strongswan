@@ -405,19 +405,34 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
 }
 
 /**
- * Implementation of rsa_private_key.save_key.
+ * Implementation of rsa_private_key_t.write.
  */
-static status_t save_key(private_rsa_private_key_t *this, char *file)
+static bool pkcs1_write(private_rsa_private_key_t *this, const char *filename, bool force)
 {
-	return NOT_SUPPORTED;
+	bool status;
+
+    chunk_t pkcs1 = asn1_wrap(ASN1_SEQUENCE, "cmmmmmmmm",
+						ASN1_INTEGER_0,
+						asn1_integer_from_mpz(this->n),
+						asn1_integer_from_mpz(this->e),
+						asn1_integer_from_mpz(this->d),
+						asn1_integer_from_mpz(this->p),
+						asn1_integer_from_mpz(this->q),
+						asn1_integer_from_mpz(this->exp1),
+						asn1_integer_from_mpz(this->exp2),
+						asn1_integer_from_mpz(this->coeff));
+
+	status = chunk_write(pkcs1, filename, "pkcs1", 0066, force);
+	chunk_free_randomized(&pkcs1);
+	return status;
 }
 
 /**
- * Implementation of rsa_public_key.get_keysize.
+ * Implementation of rsa_private_key_t.get_public_key.
  */
-static size_t get_keysize(const private_rsa_private_key_t *this)
+rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
 {
-	return this->k;
+	return NULL;
 }
 
 /**
@@ -549,8 +564,8 @@ static private_rsa_private_key_t *rsa_private_key_create_empty(void)
 	/* public functions */
 	this->public.pkcs1_decrypt = (status_t (*) (rsa_private_key_t*,chunk_t,chunk_t*))pkcs1_decrypt;
 	this->public.build_emsa_pkcs1_signature = (status_t (*) (rsa_private_key_t*,hash_algorithm_t,chunk_t,chunk_t*))build_emsa_pkcs1_signature;
-	this->public.save_key = (status_t (*) (rsa_private_key_t*,char*))save_key;
-	this->public.get_keysize = (size_t (*) (const rsa_private_key_t*))get_keysize;
+	this->public.pkcs1_write = (bool (*) (rsa_private_key_t*,const char*,bool))pkcs1_write;
+	this->public.get_public_key = (rsa_public_key_t* (*) (rsa_private_key_t*))get_public_key;
 	this->public.belongs_to = (bool (*) (rsa_private_key_t*,rsa_public_key_t*))belongs_to;
 	this->public.destroy = (void (*) (rsa_private_key_t*))destroy;
 	
