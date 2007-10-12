@@ -33,7 +33,8 @@
 typedef struct x509_t x509_t;
 
 #include <library.h>
-#include <crypto/rsa/rsa_public_key.h>
+#include <crypto/rsa/rsa_private_key.h>
+#include <crypto/hashers/hasher.h>
 #include <crypto/certinfo.h>
 #include <crypto/ca.h>
 #include <utils/identification.h>
@@ -51,6 +52,7 @@ typedef struct x509_t x509_t;
  * @brief X.509 certificate.
  * 
  * @b Constructors:
+ *  - x509_create()
  *  - x509_create_from_chunk()
  *  - x509_create_from_file()
  *
@@ -290,8 +292,25 @@ struct x509_t {
 	 * @param out			stream to write to
 	 * @param utc			TRUE for UTC times, FALSE for local time
 	 */
-	void (*list)(x509_t *this, FILE *out, bool utc);
+	void (*list) (x509_t *this, FILE *out, bool utc);
 	
+	/**
+	 * @brief Adds a list of subjectAltNames
+	 * 
+	 * @param this				calling object
+	 * @param subjectAltNames	list of subjectAltNames to be added
+	 */
+	void (*add_subjectAltNames) (x509_t *this, linked_list_t *subjectAltNames);
+
+	/**
+	 * @brief Builds a DER-encoded signed X.509 certificate
+	 * 
+	 * @param this			calling object
+	 * @param alg			hash algorithm used to compute the certificate digest
+	 * @param private_key	RSA private key used to sign the certificate digest
+	 */
+	void (*build_encoding) (x509_t *this, hash_algorithm_t alg, rsa_private_key_t *private_key);
+
 	/**
 	 * @brief Destroys the certificate.
 	 * 
@@ -348,7 +367,7 @@ x509_t *x509_create_from_file(const char *filename, const char *label);
  * 
  * @ingroup crypto
  */
-void parse_authorityKeyIdentifier(chunk_t blob, int level0, chunk_t *authKeyID, chunk_t *authKeySerialNumber);
+void x509_parse_authorityKeyIdentifier(chunk_t blob, int level0, chunk_t *authKeyID, chunk_t *authKeySerialNumber);
 
 /**
  * @brief Parses DER encoded generalNames
@@ -356,10 +375,30 @@ void parse_authorityKeyIdentifier(chunk_t blob, int level0, chunk_t *authKeyID, 
  * @param blob 			blob containing DER encoded data
  * @param level0 		indicates the current parsing level
  * @param implicit		implicit coding is used
- * @param list			linked list of decoded generalNames
+ * @param list			list of decoded generalNames
  * 
  * @ingroup crypto
  */
-void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list);
+void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list);
+
+/**
+ * @brief Builds a DER encoded list of generalNames
+ * 
+ * @param list			list of generalNames to be encoded
+ * @return				DER encoded list of generalNames
+ * 
+ * @ingroup crypto
+ */
+chunk_t x509_build_generalNames(linked_list_t *list);
+
+/**
+ * @brief Builds a DER encoded list of subjectAltNames
+ * 
+ * @param list			list of subjectAltNames to be encoded
+ * @return				DER encoded list of subjectAltNames
+ * 
+ * @ingroup crypto
+ */
+chunk_t x509_build_subjectAltNames(linked_list_t *list);
 
 #endif /* X509_H_ */
