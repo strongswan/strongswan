@@ -759,9 +759,10 @@ chunk_t asn1_integer_from_mpz(const mpz_t value)
 {
 	size_t bits = mpz_sizeinbase(value, 2);  /* size in bits */
 	chunk_t n;
+
 	n.len = 1 + bits / 8;  /* size in bytes */	
 	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
-	
+
 	return asn1_wrap(ASN1_INTEGER, "m", n);
 }
 
