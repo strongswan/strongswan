@@ -274,38 +274,9 @@ end:
 	return res;
 }
 
-/**
- * Implementation of rsa_public_key.get_key.
- */
-static status_t get_key(const private_rsa_public_key_t *this, chunk_t *key)
-{
-	chunk_t n, e;
-
-	n.len = this->k;
-	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, this->n);
-	e.len = this->k;
-	e.ptr = mpz_export(NULL, NULL, 1, e.len, 1, 0, this->e);
-	
-	key->len = this->k * 2;
-	key->ptr = malloc(key->len);
-	memcpy(key->ptr, n.ptr, n.len);
-	memcpy(key->ptr + n.len, e.ptr, e.len);
-	free(n.ptr);
-	free(e.ptr);
-	
-	return SUCCESS;
-}
 
 /**
- * Implementation of rsa_public_key.save_key.
- */
-static status_t save_key(const private_rsa_public_key_t *this, char *file)
-{
-	return NOT_SUPPORTED;
-}
-
-/**
- * Implementation of rsa_public_key.get_modulus.
+ * Implementation of rsa_public_key_t.get_modulus.
  */
 static mpz_t *get_modulus(const private_rsa_public_key_t *this)
 {
@@ -313,69 +284,11 @@ static mpz_t *get_modulus(const private_rsa_public_key_t *this)
 }
 
 /**
- * Implementation of rsa_public_key.get_keysize.
+ * Implementation of rsa_public_key_t.get_keysize.
  */
 static size_t get_keysize(const private_rsa_public_key_t *this)
 {
 	return this->k;
-}
-
-/**
- * Implementation of rsa_public_key.get_keyid.
- */
-static chunk_t get_keyid(const private_rsa_public_key_t *this)
-{
-	return this->keyid;
-}
-
-/**
- * Implementation of rsa_public_key.clone.
- */
-static rsa_public_key_t* _clone(const private_rsa_public_key_t *this)
-{
-	private_rsa_public_key_t *clone = rsa_public_key_create_empty();
-	
-	mpz_init_set(clone->n, this->n);
-	mpz_init_set(clone->e, this->e);
-	clone->keyid = chunk_clone(this->keyid);
-	clone->k = this->k;
-	
-	return &clone->public;
-}
-
-/**
- * Implementation of rsa_public_key.destroy.
- */
-static void destroy(private_rsa_public_key_t *this)
-{
-	mpz_clear(this->n);
-	mpz_clear(this->e);
-	free(this->keyid.ptr);
-	free(this);
-}
-
-/**
- * Generic private constructor
- */
-private_rsa_public_key_t *rsa_public_key_create_empty(void)
-{
-	private_rsa_public_key_t *this = malloc_thing(private_rsa_public_key_t);
-	
-	/* public functions */
-	this->public.verify_emsa_pkcs1_signature = (status_t (*) (const rsa_public_key_t*,hash_algorithm_t,chunk_t,chunk_t))verify_emsa_pkcs1_signature;
-	this->public.get_key = (status_t (*) (const rsa_public_key_t*,chunk_t*))get_key;
-	this->public.save_key = (status_t (*) (const rsa_public_key_t*,char*))save_key;
-	this->public.get_modulus = (mpz_t *(*) (const rsa_public_key_t*))get_modulus;
-	this->public.get_keysize = (size_t (*) (const rsa_public_key_t*))get_keysize;
-	this->public.get_keyid = (chunk_t (*) (const rsa_public_key_t*))get_keyid;
-	this->public.clone = (rsa_public_key_t* (*) (const rsa_public_key_t*))_clone;
-	this->public.destroy = (void (*) (rsa_public_key_t*))destroy;
-	
-	/* private functions */
-	this->rsaep = rsaep;
-	this->rsavp1 = rsaep; /* same algorithm */
-	
-	return this;
 }
 
 /**
@@ -397,6 +310,71 @@ chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e)
 
 	return asn1_wrap(ASN1_SEQUENCE, "cm", ASN1_rsaEncryption_id,
 										  publicKey);
+}
+
+/**
+ * Implementation of rsa_public_key_t.get_publicKeyInfo.
+ */
+static chunk_t get_publicKeyInfo(const private_rsa_public_key_t *this)
+{
+	return rsa_public_key_info_to_asn1(this->n, this->e);
+}
+
+/**
+ * Implementation of rsa_public_key_t.get_keyid.
+ */
+static chunk_t get_keyid(const private_rsa_public_key_t *this)
+{
+	return this->keyid;
+}
+
+/**
+ * Implementation of rsa_public_key_t.clone.
+ */
+static rsa_public_key_t* _clone(const private_rsa_public_key_t *this)
+{
+	private_rsa_public_key_t *clone = rsa_public_key_create_empty();
+	
+	mpz_init_set(clone->n, this->n);
+	mpz_init_set(clone->e, this->e);
+	clone->keyid = chunk_clone(this->keyid);
+	clone->k = this->k;
+	
+	return &clone->public;
+}
+
+/**
+ * Implementation of rsa_public_key_t.destroy.
+ */
+static void destroy(private_rsa_public_key_t *this)
+{
+	mpz_clear(this->n);
+	mpz_clear(this->e);
+	free(this->keyid.ptr);
+	free(this);
+}
+
+/**
+ * Generic private constructor
+ */
+private_rsa_public_key_t *rsa_public_key_create_empty(void)
+{
+	private_rsa_public_key_t *this = malloc_thing(private_rsa_public_key_t);
+	
+	/* public functions */
+	this->public.verify_emsa_pkcs1_signature = (status_t (*) (const rsa_public_key_t*,hash_algorithm_t,chunk_t,chunk_t))verify_emsa_pkcs1_signature;
+	this->public.get_modulus = (mpz_t *(*) (const rsa_public_key_t*))get_modulus;
+	this->public.get_keysize = (size_t (*) (const rsa_public_key_t*))get_keysize;
+	this->public.get_publicKeyInfo = (chunk_t (*) (const rsa_public_key_t*))get_publicKeyInfo;
+	this->public.get_keyid = (chunk_t (*) (const rsa_public_key_t*))get_keyid;
+	this->public.clone = (rsa_public_key_t* (*) (const rsa_public_key_t*))_clone;
+	this->public.destroy = (void (*) (rsa_public_key_t*))destroy;
+	
+	/* private functions */
+	this->rsaep = rsaep;
+	this->rsavp1 = rsaep; /* same algorithm */
+	
+	return this;
 }
 
 /*

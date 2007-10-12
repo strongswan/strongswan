@@ -75,33 +75,6 @@ struct rsa_public_key_t {
 											 chunk_t data, chunk_t signature);
 	
 	/**
-	 * @brief Gets the key.
-	 * 
-	 * Currently uses a proprietary format which is only inteded
-	 * for testing. This should be replaced with a proper
-	 * ASN1 encoded key format, when charon gets the ASN1 
-	 * capabilities.
-	 * 
-	 * @param this				calling object
-	 * @param key				key (in a propriarity format)
-	 * @return					
-	 * 							- SUCCESS
-	 * 							- INVALID_STATE, if key not set
-	 */
-	status_t (*get_key) (const rsa_public_key_t *this, chunk_t *key);
-	
-	/**
-	 * @brief Saves a key to a file.
-	 * 
-	 * Not implemented!
-	 * 
-	 * @param this				calling object
-	 * @param file				file to which the key should be written.
-	 * @return					NOT_SUPPORTED
-	 */
-	status_t (*save_key) (const rsa_public_key_t *this, char *file);
-	
-	/**
 	 * @brief Get the modulus of the key.
 	 * 
 	 * @param this				calling object
@@ -116,6 +89,14 @@ struct rsa_public_key_t {
 	 * @return					size of the modulus (n) in bytes
 	 */
 	size_t (*get_keysize) (const rsa_public_key_t *this);
+
+	/**
+	 * @brief Get the DER encoded publicKeyInfo object.
+	 * 
+	 * @param this				calling object
+	 * @return					DER encoded publicKeyInfo object
+	 */
+	chunk_t (*get_publicKeyInfo) (const rsa_public_key_t *this);
 
 	/**
 	 * @brief Get the keyid formed as the SHA-1 hash of a publicKeyInfo object.
