@@ -50,11 +50,14 @@
 #define OPENAC_PATH   IPSEC_CONFDIR "/openac"
 #define OPENAC_SERIAL IPSEC_CONFDIR "/openac/serial"
 
-static void usage(const char *mess)
+/**
+ * @brief prints the usage of the program to the stderr
+ */
+static void usage(const char *message)
 {
-	if (mess != NULL && *mess != '\0')
+	if (message != NULL && *message != '\0')
 	{
-		fprintf(stderr, "%s\n", mess);
+		fprintf(stderr, "%s\n", message);
 	}
 	fprintf(stderr, "Usage: openac"
 		" [--help]"
@@ -210,7 +213,10 @@ static void openac_dbg(int level, char *fmt, ...)
 }
 
 /**
- * openac main program
+ * @brief scepclient main program
+ *
+ * @param argc number of arguments
+ * @param argv pointer to the argument values
  */
 int main(int argc, char **argv)
 {
@@ -412,6 +418,7 @@ int main(int argc, char **argv)
 				status = 0;
 				goto end;
 		}
+		/* break from loop */
 		break;
 	}
 
