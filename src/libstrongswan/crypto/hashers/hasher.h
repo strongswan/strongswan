@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #ifndef HASHER_H_
@@ -167,5 +169,17 @@ hasher_t *hasher_create(hash_algorithm_t hash_algorithm);
  * @ingroup hashers
  */
 hash_algorithm_t hasher_algorithm_from_oid(int oid);
+
+/**
+ * @brief Conversion of hash signature algorithm ASN.1 OID.
+ * 
+ * @param alg				hash algorithm
+ * @return
+ * 							- ASN.1 OID if known hash algorithm
+ * 							- OID_UNKNOW
+ * 
+ * @ingroup hashers
+ */
+int hasher_signature_algorithm_to_oid(hash_algorithm_t alg);
 
 #endif /* HASHER_H_ */

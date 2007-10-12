@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 
@@ -104,3 +106,37 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 	}
 	return algorithm;
 }
+
+/*
+ * Described in header.
+ */
+int hasher_signature_algorithm_to_oid(hash_algorithm_t alg)
+{
+	int oid;
+
+	switch (alg)
+	{
+		case HASH_MD2:
+			oid = OID_MD2_WITH_RSA;
+			break;
+		case HASH_MD5:
+			oid = OID_MD5_WITH_RSA;
+			break;
+		case HASH_SHA1:
+			oid = OID_SHA1_WITH_RSA;
+			break;
+		case HASH_SHA256:
+			oid = OID_SHA256_WITH_RSA;
+			break;
+		case HASH_SHA384:
+			oid = OID_SHA384_WITH_RSA;
+			break;
+		case HASH_SHA512:
+			oid = OID_SHA512_WITH_RSA;
+			break;
+		default:
+			oid = OID_UNKNOWN;
+	}
+	return oid;
+}
+
