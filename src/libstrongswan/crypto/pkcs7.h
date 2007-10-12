@@ -32,12 +32,10 @@ typedef struct pkcs7_t pkcs7_t;
 #include <library.h>
 #include <crypto/x509.h>
 #include <crypto/rsa/rsa_private_key.h>
-
-/* Access structure for a PKCS#7 ContentInfo object */
-
+#include <utils/iterator.h>
 
 /**
- * @brief PKCS#7 ContentInfo object.
+ * @brief PKCS#7 contentInfo object.
  * 
  * @b Constructors:
  *  -pkcs7_create_from_chunk()
@@ -103,6 +101,14 @@ struct pkcs7_t {
 	 * @return				chunk containing the data object
 	 */
 	chunk_t (*get_data) (pkcs7_t *this);
+
+	/**
+	 * @brief Create an iterator for the certificates.
+	 * 
+	 * @param this				calling object
+	 * @return					iterator for the certificates
+	 */
+	iterator_t *(*create_certificate_iterator) (pkcs7_t *this);
 
 	/**
 	 * @brief Destroys the contentInfo object.
