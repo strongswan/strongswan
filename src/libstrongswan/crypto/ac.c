@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #include <string.h>
@@ -304,7 +306,7 @@ static bool parse_directoryName(chunk_t blob, int level, bool implicit, identifi
 	bool has_directoryName;
 	linked_list_t *list = linked_list_create();
 
-	parse_generalNames(blob, level, implicit, list);
+	x509_parse_generalNames(blob, level, implicit, list);
 	has_directoryName = list->get_count(list) > 0;
 
 	if (has_directoryName)
@@ -480,7 +482,7 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 							DBG2("  need to parse crlDistributionPoints");
 							break;
 						case OID_AUTHORITY_KEY_ID:
-							parse_authorityKeyIdentifier(object, level,
+							x509_parse_authorityKeyIdentifier(object, level,
 									&this->authKeyID, &this->authKeySerialNumber);
 							break;
 						case OID_TARGET_INFORMATION:

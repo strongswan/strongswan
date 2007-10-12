@@ -18,6 +18,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #include <sys/stat.h>
@@ -290,7 +292,8 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 					}
 					else if (extn_oid == OID_AUTHORITY_KEY_ID)
 					{
-						parse_authorityKeyIdentifier(object, level, &crl->authKeyID, &crl->authKeySerialNumber);
+						x509_parse_authorityKeyIdentifier(object, level,
+								&crl->authKeyID, &crl->authKeySerialNumber);
 					}
 					else if (extn_oid == OID_CRL_NUMBER)
 					{
