@@ -405,7 +405,7 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
 }
 
 /**
- * Implementation of rsa_private_key_t.write.
+ * Implementation of rsa_private_key_t.pkcs1_write.
  */
 static bool pkcs1_write(private_rsa_private_key_t *this, const char *filename, bool force)
 {
