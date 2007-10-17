@@ -213,7 +213,7 @@ static void openac_dbg(int level, char *fmt, ...)
 }
 
 /**
- * @brief scepclient main program
+ * @brief openac main program
  *
  * @param argc number of arguments
  * @param argv pointer to the argument values
