@@ -84,7 +84,7 @@ struct hasher_t {
 	 * @brief Hash data and write it in the buffer.
 	 * 
 	 * If the parameter hash is NULL, no result is written back
-	 * an more data can be appended to already hashed data.
+	 * and more data can be appended to already hashed data.
 	 * If not, the result is written back and the hasher is reset.
 	 * 
 	 * The hash output parameter must hold at least
@@ -100,7 +100,7 @@ struct hasher_t {
 	 * @brief Hash data and allocate space for the hash.
 	 * 
 	 * If the parameter hash is NULL, no result is written back
-	 * an more data can be appended to already hashed data.
+	 * and more data can be appended to already hashed data.
 	 * If not, the result is written back and the hasher is reset.
 	 * 
 	 * @param this			calling object
