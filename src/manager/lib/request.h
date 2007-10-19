@@ -75,9 +75,10 @@ struct request_t {
 	/**
 	 * @brief Redirect the client to another location.
 	 *
-	 * @param location		location to redirect to
+	 * @param fmt		location format string
+	 * @param ...		variable argument for fmt
 	 */
-	void (*redirect)(request_t *this, char *location);
+	void (*redirect)(request_t *this, char *fmt, ...);
 	
 	/**
 	 * @brief Set a template value.
@@ -106,9 +107,16 @@ struct request_t {
 	 * other targets without to worry about path location.
 	 *
 	 * @param template	clearsilver template file location
-	 * @return			rendered template string
 	 */
 	void (*render)(request_t *this, char *template);
+	
+	/**
+	 * @brief Serve a request with headers and a body.
+	 *
+	 * @param headers	HTTP headers, \n separated
+	 * @param chunk		body to write to output
+	 */
+	void (*serve)(request_t *this, char *headers, chunk_t chunk);
 	
 	/**
 	 * @brief Destroy the request_t.

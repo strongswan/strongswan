@@ -30,6 +30,7 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <debug.h>
 #include <utils/linked_list.h>
 
 typedef struct private_dispatcher_t private_dispatcher_t;
@@ -122,8 +123,8 @@ typedef struct {
 	session_t *session;
 	/** condvar to wait for session */
 	pthread_cond_t cond;
-	/** number of threads waiting for session */
-	int waiting;
+	/** TRUE if session is in use */
+	bool in_use;
 	/** last use of the session */
 	time_t used;
 } session_entry_t;
@@ -164,7 +165,7 @@ static session_entry_t *session_entry_create(private_dispatcher_t *this)
 	session_entry_t *entry;
 	
 	entry = malloc_thing(session_entry_t);
-	entry->waiting = 1;
+	entry->in_use = FALSE;
 	pthread_cond_init(&entry->cond, NULL);
 	entry->session = load_session(this);
 	entry->used = time(NULL);
@@ -228,11 +229,12 @@ static void dispatch(private_dispatcher_t *this)
 			now = time(NULL);
 			
 			/* find session */
-			iterator = this->sessions->create_iterator_locked(this->sessions, &this->mutex);
+			pthread_mutex_lock(&this->mutex);
+			iterator = this->sessions->create_iterator(this->sessions, TRUE);
 			while (iterator->iterate(iterator, (void**)&current))
 			{
 				/* check all sessions for timeout */
-				if (current->waiting == 0 &&
+				if (!current->in_use &&
 					current->used < now - this->timeout)
 				{
 					iterator->remove(iterator);
@@ -243,27 +245,24 @@ static void dispatch(private_dispatcher_t *this)
 					streq(current->session->get_sid(current->session), sid))
 				{
 					found = current;
-					found->waiting++;
 				}
 			}
 			iterator->destroy(iterator);
 			
 			if (found)
 			{	/* wait until session is unused */
-				pthread_mutex_lock(&this->mutex);
-				while (found->waiting > 1)
+				while (found->in_use)
 				{
 					pthread_cond_wait(&found->cond, &this->mutex);
 				}
-				pthread_mutex_unlock(&this->mutex);
 			}
 			else
 			{	/* create a new session if not found */
 				found = session_entry_create(this);
-				pthread_mutex_lock(&this->mutex);
 				this->sessions->insert_first(this->sessions, found);
-				pthread_mutex_unlock(&this->mutex);
 			}
+			found->in_use = TRUE;
+			pthread_mutex_unlock(&this->mutex);
 		
 			/* start processing */
 			found->session->process(found->session, request);
@@ -271,7 +270,7 @@ static void dispatch(private_dispatcher_t *this)
 			
 			/* release session */
 			pthread_mutex_lock(&this->mutex);
-			found->waiting--;
+			found->in_use = FALSE;
 			pthread_cond_signal(&found->cond);
 			pthread_mutex_unlock(&this->mutex);
 			

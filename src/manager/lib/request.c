@@ -179,12 +179,18 @@ static void add_cookie(private_request_t *this, char *name, char *value)
 /**
  * Implementation of request_t.redirect.
  */
-static void redirect(private_request_t *this, char *location)
+static void redirect(private_request_t *this, char *fmt, ...)
 {
+	va_list args;
+
 	FCGX_FPrintF(this->req->out, "Status: 303 See Other\n");
-	FCGX_FPrintF(this->req->out, "Location: %s%s%s\n\n",
+	FCGX_FPrintF(this->req->out, "Location: %s%s",
 				 FCGX_GetParam("SCRIPT_NAME", this->req->envp),
-				 *location == '/' ? "" : "/", location);
+				 *fmt == '/' ? "" : "/");
+	va_start(args, fmt);
+	FCGX_VFPrintF(this->req->out, fmt, args);
+	va_end(args);
+	FCGX_FPrintF(this->req->out, "\n\n");
 }
 
 /**
@@ -193,6 +199,16 @@ static void redirect(private_request_t *this, char *location)
 static char* get_base(private_request_t *this)
 {
 	return FCGX_GetParam("SCRIPT_NAME", this->req->envp);
+}
+
+/**
+ * Implementation of request_t.serve.
+ */
+static void serve(private_request_t *this, char *headers, chunk_t chunk)
+{
+	FCGX_FPrintF(this->req->out, "%s\n\n", headers);
+
+	FCGX_PutStr(chunk.ptr, chunk.len, this->req->out);
 }
 
 /**
@@ -254,8 +270,9 @@ request_t *request_create(FCGX_Request *request, bool debug)
 	this->public.add_cookie = (void(*)(request_t*, char *name, char *value))add_cookie;
 	this->public.get_cookie = (char*(*)(request_t*,char*))get_cookie;
 	this->public.get_query_data = (char*(*)(request_t*, char *name))get_query_data;
-	this->public.redirect = (void(*)(request_t*, char *location))redirect;
+	this->public.redirect = (void(*)(request_t*, char *fmt,...))redirect;
 	this->public.render = (void(*)(request_t*,char*))render;
+	this->public.serve = (void(*)(request_t*,char*,chunk_t))serve;
 	this->public.set = (void(*)(request_t*, char *, char*))set;
 	this->public.setf = (void(*)(request_t*, char *format, ...))setf;
 	this->public.destroy = (void(*)(request_t*))destroy;
