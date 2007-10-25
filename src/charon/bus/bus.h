@@ -355,6 +355,10 @@ struct bus_t {
 	 *
 	 * Same as bus_t.signal(), but uses va_list argument list.
 	 *
+	 * @todo Improve performace of vsignal implementation. This method is
+	 * called extensively and therefore shouldn't allocate heap memory or
+	 * do other expensive tasks!
+	 *
 	 * @param this		bus
 	 * @param singal	kind of the signal (up, down, rekeyed, ...)
 	 * @param level		verbosity level of the signal
