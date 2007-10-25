@@ -681,17 +681,17 @@ static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
 {
 	if (local)
 	{
-		if (this->my_virtual_ip)
-		{		
-			DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
-			charon->kernel_interface->del_ip(charon->kernel_interface,
-											 this->my_virtual_ip);
-			this->my_virtual_ip->destroy(this->my_virtual_ip);
-		}
 		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
 		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
 											 this->my_host) == SUCCESS)
 		{
+			if (this->my_virtual_ip)
+			{
+				DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
+				charon->kernel_interface->del_ip(charon->kernel_interface,
+												 this->my_virtual_ip);
+			}
+			DESTROY_IF(this->my_virtual_ip);
 			this->my_virtual_ip = ip->clone(ip);
 		}
 		else
