@@ -354,7 +354,7 @@ static void updown(private_child_sa_t *this, bool up)
 				 up ? "up" : "down",
 				 policy->my_ts->is_host(policy->my_ts,
 							this->me.addr) ? "-host" : "-client",
-				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-ipv6",
+				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-v6",
 				 this->config->get_name(this->config),
 				 this->iface ? this->iface : "unknown",
 				 this->reqid,
