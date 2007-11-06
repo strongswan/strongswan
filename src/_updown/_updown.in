@@ -522,11 +522,11 @@ down-host-v6:*)
 	# connection to me going down
 	# If you are doing a custom version, firewall commands go here.
 	;;
-up-client-v6:)
+up-client-v6:*)
 	# connection to my client subnet coming up
 	# If you are doing a custom version, firewall commands go here.
 	;;
-down-client-v6:)
+down-client-v6:*)
 	# connection to my client subnet going down
 	# If you are doing a custom version, firewall commands go here.
 	;;
