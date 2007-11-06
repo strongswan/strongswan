@@ -1,0 +1,3 @@
+moon::ipsec stop
+carol::ipsec stop
+alice::"ip route del fec0:\:/16 via fec1:\:1"

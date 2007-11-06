@@ -1,0 +1,6 @@
+moon::echo "1" >/proc/sys/net/ipv6/conf/all/forwarding
+alice::"ip route add fec0:\:/16 via fec1:\:1"
+carol::ipsec start
+moon::ipsec start
+carol::sleep 2
+carol::ipsec up home
