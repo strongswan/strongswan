@@ -1,3 +1,6 @@
 moon::ipsec stop
 carol::ipsec stop
 alice::"ip route del fec0:\:/16 via fec1:\:1"
+carol::"ip route del fec1:\:/16 via fec0:\:1"
+moon::/etc/init.d/iptables stop 2> /dev/null
+carol::/etc/init.d/iptables stop 2> /dev/null
