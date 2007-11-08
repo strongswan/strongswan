@@ -1,7 +1,14 @@
+strongswan-4.1.9
+----------------
+
+- Default _updown scripts now dynamically inserts and removes ip6tables
+  firewall rules if leftfirewall=yes is set in IPv6 connections.
+
+
 strongswan-4.1.8
 ----------------
 
-- Removed recursive pthread mutexes since uClib doesn't support them.
+- Removed recursive pthread mutexes since uClibc doesn't support them.
 
 
 strongswan-4.1.7
