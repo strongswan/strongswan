@@ -1,78 +1,121 @@
 #!/sbin/runscript
-# Copyright 1999-2004 Gentoo Foundation
+# Copyright 1999-2007 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-opts="${opts} reload"
-
-[ "x${SERVERROOT}" != "x" ] && APACHE2_OPTS="${APACHE2_OPTS} -d ${SERVERROOT}"
-[ "x${CONFIGFILE}" != "x" ] && APACHE2_OPTS="${APACHE2_OPTS} -f ${CONFIGFILE}"
-[ "x${STARTUPERRORLOG}" != "x" ] && APACHE2_OPTS="${APACHE2_OPTS} -E ${STARTUPERRORLOG}"
-# set a default for PIDFILE/RESTARTSTYLE for those that FAILED to follow
-# instructiosn and update the conf.d/apache2 file.
-# (bug #38787)
-[ -z "${PIDFILE}" ] && PIDFILE=/var/run/apache2.pid
-[ -z "${RESTARTSTYLE}" ] && RESTARTSTYLE="graceful"
-
-checkconfig() {
-	local myconf="/etc/apache2/conf/apache2.conf"
-	if [ "x${CONFIGFILE}" != "x" ]; then
-		if [ ${CONFIGFILE:0:1} = "/" ]; then
-			myconf="${CONFIGFILE}"
-		else
-			myconf="${SERVERROOT:-/usr/lib/apache2}/${CONFIGFILE}"
-		fi
-	fi
-	if [ ! -r "${myconf}" ]; then
-		eerror "Unable to read configuration file: ${myconf}"
-		return 1
-	fi
-    if [ -z "${PIDFILE}" ]; then
-        eerror "\$PIDFILE is not set!"
-        eerror "Did you etc-update /etc/conf.d/apache2?"
-        return 1
-    fi
-    if [ -z "${RESTARTSTYLE}" ]; then
-        eerror "\$RESTARTSTYLE is not set!"
-        eerror "Did you etc-update /etc/conf.d/apache2?"
-        return 1
-    fi
-	/usr/sbin/apache2 -t ${APACHE2_OPTS} 1>/dev/null 2>&1
-	ret=$?
-	if [ $ret -ne 0 ]; then
-		eerror "Apache2 has detected a syntax error in your configuration files:"
-		/usr/sbin/apache2 -t ${APACHE2_OPTS}
-	fi
-	return $ret
-}
+opts="configtest fullstatus graceful gracefulstop modules reload"
 
 depend() {
 	need net
-	use mysql dns logger netmount postgres
+	use mysql dns logger netmount postgresql
 	after sshd
+}
+
+configtest() {
+	ebegin "Checking Apache Configuration"
+	checkconfig
+	eend $?
+}
+
+checkconfig() {
+	SERVERROOT="${SERVERROOT:-/usr/lib/apache2}"
+	if [ ! -d ${SERVERROOT} ]; then
+		eerror "SERVERROOT does not exist: ${SERVERROOT}"
+		return 1
+	fi
+
+	CONFIGFILE="${CONFIGFILE:-/etc/apache2/httpd.conf}"
+	[ "${CONFIGFILE#/}" = "${CONFIGFILE}" ] && CONFIGFILE="${SERVERROOT}/${CONFIGFILE}"
+	if [ ! -r "${CONFIGFILE}" ]; then
+		eerror "Unable to read configuration file: ${CONFIGFILE}"
+		return 1
+	fi
+
+	APACHE2_OPTS="${APACHE2_OPTS} -d ${SERVERROOT}"
+	APACHE2_OPTS="${APACHE2_OPTS} -f ${CONFIGFILE}"
+	[ -n "${STARTUPERRORLOG}" ] && APACHE2_OPTS="${APACHE2_OPTS} -E ${STARTUPERRORLOG}"
+
+	APACHE2="/usr/sbin/apache2"
+
+	${APACHE2} ${APACHE2_OPTS} -t 1>/dev/null 2>&1
+	ret=$?
+	if [ $ret -ne 0 ]; then
+		eerror "Apache2 has detected a syntax error in your configuration files:"
+		${APACHE2} ${APACHE2_OPTS} -t
+	fi
+
+	return $ret
 }
 
 start() {
 	checkconfig || return 1
 	ebegin "Starting apache2"
 	[ -f /var/log/apache2/ssl_scache ] && rm /var/log/apache2/ssl_scache
-	[ -f /usr/lib/apache2/build/envvars ] && . /usr/lib/apache2/build/envvars
-	env -i PATH=$PATH /sbin/start-stop-daemon --quiet \
-		--start --startas /usr/sbin/apache2 \
-		--pidfile ${PIDFILE} -- -k start ${APACHE2_OPTS}
+
+	start-stop-daemon --start --exec ${APACHE2} -- ${APACHE2_OPTS} -k start
 	eend $?
 }
 
 stop() {
+	checkconfig || return 1
 	ebegin "Stopping apache2"
-	/usr/sbin/apache2ctl stop >/dev/null
-	start-stop-daemon -o --quiet --stop --pidfile ${PIDFILE}
+	start-stop-daemon --stop --retry -TERM/5/-KILL/5 --exec ${APACHE2} --pidfile /var/run/apache2.pid
 	eend $?
 }
 
 reload() {
-	# restarting apache2 is much easier than apache1. The server handles most of the work for us. 
-	# see http://httpd.apache.org/docs-2.0/stopping.html for more details
-	ebegin "Restarting apache2"
-	/usr/sbin/apache2 ${APACHE2_OPTS} -k ${RESTARTSTYLE}
+	RELOAD_TYPE="${RELOAD_TYPE:-graceful}"
+
+	checkconfig || return 1
+	if [ "${RELOAD_TYPE}" = "restart" ]; then
+		ebegin "Restarting apache2"
+		start-stop-daemon --stop --oknodo --signal HUP --exec ${APACHE2} --pidfile /var/run/apache2.pid
+		eend $?
+	elif [ "${RELOAD_TYPE}" = "graceful" ]; then
+		ebegin "Gracefully restarting apache2"
+		start-stop-daemon --stop --oknodo --signal USR1 --exec ${APACHE2} --pidfile /var/run/apache2.pid
+		eend $?
+	else
+		eerror "${RELOAD_TYPE} is not a valid RELOAD_TYPE. Please edit /etc/conf.d/apache2"
+	fi
+}
+
+graceful() {
+	checkconfig || return 1
+	ebegin "Gracefully restarting apache2"
+	start-stop-daemon --stop --signal USR1 --exec ${APACHE2} --pidfile /var/run/apache2.pid
 	eend $?
+}
+
+gracefulstop() {
+	checkconfig || return 1
+	
+	# zap!
+	if service_started "${myservice}"; then
+		mark_service_stopped "${myservice}"
+	fi
+
+	ebegin "Gracefully stopping apache2"
+	# 28 is SIGWINCH
+	start-stop-daemon --stop --signal 28 --exec ${APACHE2} --pidfile /var/run/apache2.pid
+	eend $?
+}
+
+modules() {
+	checkconfig || return 1
+
+	${APACHE2} ${APACHE2_OPTS} -M 2>&1
+}
+
+status() {
+	LYNX="${LYNX:-lynx -dump}"
+	STATUSURL="${STATUSURL:-http://localhost/server-status}"
+	
+	${LYNX} ${STATUSURL} | awk ' /process$/ { print; exit } { print } '
+}
+
+fullstatus() {
+	LYNX="${LYNX:-lynx -dump}"
+	STATUSURL="${STATUSURL:-http://localhost/server-status}"
+	
+	${LYNX} ${STATUSURL}
 }
