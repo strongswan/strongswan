@@ -204,13 +204,71 @@ static enumerator_t* query_ikesalist(private_gateway_t *this)
 	return NULL;
 }
 
+	
+/**
+ * Implementation of gateway_t.query_configlist.
+ */
+static enumerator_t* query_configlist(private_gateway_t *this)
+{
+	char *str, *name, *value;
+	xml_t *xml;
+	enumerator_t *e1, *e2, *e3, *e4 = NULL;
+	
+	str = request(this,	"<message type=\"request\" id=\"1\">"
+							"<query>"
+								"<configlist/>"
+							"</query>"
+						"</message>");
+	if (str == NULL)
+	{
+		return NULL;
+	}
+	xml = xml_create(str);
+	if (xml == NULL)
+	{
+		return NULL;
+	}
+	
+	e1 = xml->children(xml);
+	free(str);
+	while (e1->enumerate(e1, &xml, &name, &value))
+	{
+		if (streq(name, "message"))
+		{
+			e2 = xml->children(xml);
+			while (e2->enumerate(e2, &xml, &name, &value))
+			{
+				if (streq(name, "query"))
+				{
+					e3 = xml->children(xml);
+					while (e3->enumerate(e3, &xml, &name, &value))
+					{
+						if (streq(name, "configlist"))
+						{
+							e4 = xml->children(xml);
+							e1->destroy(e1);
+							e2->destroy(e2);
+							e3->destroy(e3);
+							return e4;
+						}
+					}
+					e3->destroy(e3);
+				}
+			}
+			e2->destroy(e2);
+		}
+	}
+	e1->destroy(e1);
+	return NULL;
+}
+
+
 /**
  * Implementation of gateway_t.terminate.
  */
 static bool terminate(private_gateway_t *this, bool ike, u_int32_t id)
 {
 	char *str, *kind;
-	xml_t *xml;
 	
 	if (ike)
 	{
@@ -257,6 +315,7 @@ static private_gateway_t *gateway_create(char *name)
 	
 	this->public.request = (char*(*)(gateway_t*, char *xml))request;
 	this->public.query_ikesalist = (enumerator_t*(*)(gateway_t*))query_ikesalist;
+	this->public.query_configlist = (enumerator_t*(*)(gateway_t*))query_configlist;
 	this->public.terminate = (bool(*)(gateway_t*, bool ike, u_int32_t id))terminate;
 	this->public.destroy = (void(*)(gateway_t*))destroy;
 	

@@ -49,6 +49,13 @@ struct gateway_t {
 	enumerator_t* (*query_ikesalist)(gateway_t *this);
 	
 	/**
+	 * @brief Query the list of peer configs and its subconfigs.
+	 *
+	 * @return			enumerator over peerconfig XML elements
+	 */
+	enumerator_t* (*query_configlist)(gateway_t *this);
+	
+	/**
 	 * @brief Terminate an IKE or a CHILD SA.
 	 *
 	 * @param ike		TRUE for IKE-, FALSE for a CHILD-SA
