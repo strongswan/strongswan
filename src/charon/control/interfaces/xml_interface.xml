@@ -39,6 +39,17 @@
 							<!-- others -->
 						</element>
 					</optional>
+					<optional>
+						<element name="control">
+							<optional>
+								<ref name="ControlRequestIkeTerminate"/>
+							</optional>
+							<optional>
+								<ref name="ControlRequestChildTerminate"/>
+							</optional>
+							<!-- others -->
+						</element>
+					</optional>
 					<!-- others -->
 				</group>
 				<group> 
@@ -55,7 +66,7 @@
 							<optional>
 								<element name="query">
 									<optional>
-										<ref name="QueryResponseIkesa"/>
+										<ref name="ikesalist"/>
 									</optional>
 									<!-- others -->
 								</element>
@@ -174,6 +185,20 @@
 					</optional>
 				</element>
 			</zeroOrMore>
+		</element>
+	</define>
+	<define name="ControlRequestIkeTerminate">
+		<element name="ikesaterminate">
+			<element name="id">
+				<data type="positiveInteger"/>
+	   		</element>
+		</element>
+	</define>
+	<define name="ControlRequestChildTerminate">
+		<element name="childsaterminate">
+			<element name="id">
+				<data type="positiveInteger"/>
+	   		</element>
 		</element>
 	</define>
 	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->

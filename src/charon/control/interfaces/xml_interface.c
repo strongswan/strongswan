@@ -283,6 +283,49 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 	xmlTextWriterEndElement(writer);
 }
 
+
+/**
+ * process a *terminate control request message
+ */
+static void request_control_terminate(xmlTextReaderPtr reader,
+									  xmlTextWriterPtr writer, bool ike)
+{
+    while (xmlTextReaderRead(reader))
+    {
+		if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT)
+		{
+			if (streq(xmlTextReaderConstName(reader), "id"))
+			{
+    			if (xmlTextReaderRead(reader) &&
+    				xmlTextReaderNodeType(reader) == XML_READER_TYPE_TEXT)
+    			{
+					const char *str;
+					u_int32_t id;
+				
+					str = xmlTextReaderConstValue(reader);
+					if (str == NULL || !(id = atoi(str)))
+					{
+						DBG1(DBG_CFG, "error parsing XML id string");
+						break;
+					}
+					DBG1(DBG_CFG, "terminating %s_SA %d", ike ? "IKE" : "CHILD", id);
+					if (ike)
+					{
+						charon->interfaces->terminate_ike(charon->interfaces,
+											id, interface_manager_cb_empty, NULL);
+					}
+					else
+					{
+						charon->interfaces->terminate_child(charon->interfaces,
+											id, interface_manager_cb_empty, NULL);
+					}
+					break;
+				}
+			}
+		}
+	}
+}
+
 /**
  * process a query request
  */
@@ -302,6 +345,33 @@ static void request_query(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
 		}
 	}
 	/* </query> */
+	xmlTextWriterEndElement(writer);
+}
+
+/**
+ * process a control request
+ */
+static void request_control(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
+{
+	/* <control> */
+	xmlTextWriterStartElement(writer, "control");
+    while (xmlTextReaderRead(reader))
+    {
+		if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT)
+		{
+			if (streq(xmlTextReaderConstName(reader), "ikesaterminate"))
+			{
+				request_control_terminate(reader, writer, TRUE);
+				break;
+			}
+			if (streq(xmlTextReaderConstName(reader), "childsaterminate"))
+			{
+				request_control_terminate(reader, writer, FALSE);
+				break;
+			}
+		}
+	}
+	/* </control> */
 	xmlTextWriterEndElement(writer);
 }
 
@@ -335,6 +405,11 @@ static void request(xmlTextReaderPtr reader, char *id, int fd)
 			if (streq(xmlTextReaderConstName(reader), "query"))
 			{
 				request_query(reader, writer);
+				break;
+			}
+			if (streq(xmlTextReaderConstName(reader), "control"))
+			{
+				request_control(reader, writer);
 				break;
 			}
 		}
