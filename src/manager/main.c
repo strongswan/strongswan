@@ -28,6 +28,7 @@
 #include "controller/auth_controller.h"
 #include "controller/status_controller.h"
 #include "controller/gateway_controller.h"
+#include "controller/control_controller.h"
 
 #define DBFILE IPSECDIR "/manager.db"
 #define SESSION_TIMEOUT 180
@@ -55,6 +56,7 @@ int main (int arc, char *argv[])
 	dispatcher->add_controller(dispatcher, status_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, gateway_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, auth_controller_create, NULL);
+	dispatcher->add_controller(dispatcher, control_controller_create, NULL);
 	
 	dispatcher->run(dispatcher, THREADS, NULL, NULL, NULL, NULL);
 	

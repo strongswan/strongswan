@@ -5,8 +5,13 @@
   	IKE #<?cs name:ikesa ?> [<?cs var:ikesa.peerconfig ?>]:
   	<span><?cs var:ikesa.local.identification ?></span> &lt;-&gt; 
   	<span><?cs var:ikesa.remote.identification ?></span>
-  </h1> 
-  <div>
+  </h1>
+  <div class="controls">
+    <a title="close IKE_SA" href="<?cs var:base ?>/control/terminateike/<?cs name:ikesa ?>">
+      <img src="<?cs var:base ?>/static/close.png"/>
+    </a>
+  </div>
+  <div class="expander">
     <hr/>
     <table class="drawing">
       <tr>
@@ -66,8 +71,13 @@
       </tr>
       <?cs each:childsa = ikesa.childsas ?>
       <tr>
-      	<td colspan="7" class="expand">
+      	<td colspan="6" class="expand">
       	  <h1>IPsec #<?cs name:childsa ?> [<?cs var:childsa.childconfig ?>]:</h1>
+        </td>
+      	<td class="controls">
+  		  <a title="close CHILD_SA" href="<?cs var:base ?>/control/terminatechild/<?cs name:childsa ?>">  
+            <img src="<?cs var:base ?>/static/close.png"/>
+          </a>
         </td>
       </tr>
       <tr>

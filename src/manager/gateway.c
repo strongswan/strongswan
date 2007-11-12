@@ -103,7 +103,7 @@ static bool connect_(private_gateway_t *this)
 /**
  * Implementation of gateway_t.request.
  */
-static char* request(private_gateway_t *this, char *xml)
+static char* request(private_gateway_t *this, char *xml, ...)
 {
 	if (this->fd < 0)
 	{
@@ -116,9 +116,16 @@ static char* request(private_gateway_t *this, char *xml)
 	{
 		char buf[8096];
 		ssize_t len;
+		va_list args;
 		
-		len = strlen(xml);
-		if (send(this->fd, xml, len, 0) != len)
+		va_start(args, xml);
+		len = vsnprintf(buf, sizeof(buf), xml, args);
+		va_end(args);
+		if (len < 0 || len >= sizeof(buf))
+		{
+			return NULL;
+		}
+		if (send(this->fd, buf, len, 0) != len)
 		{
 			return NULL;
 		}
@@ -198,6 +205,36 @@ static enumerator_t* query_ikesalist(private_gateway_t *this)
 }
 
 /**
+ * Implementation of gateway_t.terminate.
+ */
+static bool terminate(private_gateway_t *this, bool ike, u_int32_t id)
+{
+	char *str, *kind;
+	xml_t *xml;
+	
+	if (ike)
+	{
+		kind = "ike";
+	}
+	else
+	{
+		kind = "child";
+	}
+	
+	str = request(this,	"<message type=\"request\" id=\"1\">"
+							"<control>"
+								"<%ssaterminate><id>%d</id></%ssaterminate>"
+							"</control>"
+						"</message>", kind, id, kind);
+	if (str == NULL)
+	{
+		return FALSE;
+	}
+	free(str);
+	return TRUE;
+}
+
+/**
  * Implementation of gateway_t.destroy
  */
 static void destroy(private_gateway_t *this)
@@ -220,6 +257,7 @@ static private_gateway_t *gateway_create(char *name)
 	
 	this->public.request = (char*(*)(gateway_t*, char *xml))request;
 	this->public.query_ikesalist = (enumerator_t*(*)(gateway_t*))query_ikesalist;
+	this->public.terminate = (bool(*)(gateway_t*, bool ike, u_int32_t id))terminate;
 	this->public.destroy = (void(*)(gateway_t*))destroy;
 	
 	this->name = strdup(name);

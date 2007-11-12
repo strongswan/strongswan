@@ -4,6 +4,7 @@ manager_fcgi_SOURCES = \
 main.c manager.c manager.h gateway.h gateway.c database.h database.c \
 controller/auth_controller.c controller/auth_controller.h \
 controller/status_controller.c controller/status_controller.h \
+controller/control_controller.c controller/control_controller.h \
 controller/gateway_controller.c controller/gateway_controller.h
 
 manager_fcgi_LDADD = $(top_builddir)/src/manager/libappserv.la -lsqlite3
@@ -42,7 +43,8 @@ ipsec_templates_static_DATA = templates/static/style.css templates/static/script
 templates/static/pipe.png templates/static/pipe-good.png templates/static/pipe-bad.png \
 templates/static/pipe-thin.png templates/static/pipe-thin-left.png templates/static/pipe-thin-right.png \
 templates/static/gateway-left.png templates/static/client-left.png templates/static/strongswan.png \
-templates/static/router.png templates/static/gateway-right.png templates/static/client-right.png
+templates/static/router.png templates/static/gateway-right.png templates/static/client-right.png \
+templates/static/close.png
 
 EXTRA_DIST = manager.db templates/header.cs templates/footer.cs templates/error.cs \
 templates/auth/login.cs templates/gateway/list.cs templates/status/ikesalist.cs \
@@ -50,4 +52,5 @@ templates/static/style.css templates/static/script.js templates/static/jquery.js
 templates/static/pipe.png templates/static/pipe-good.png templates/static/pipe-bad.png \
 templates/static/pipe-thin.png templates/static/pipe-thin-left.png templates/static/pipe-thin-right.png \
 templates/static/gateway-left.png templates/static/client-left.png templates/static/strongswan.png \
-templates/static/router.png templates/static/gateway-right.png templates/static/client-right.png
+templates/static/router.png templates/static/gateway-right.png templates/static/client-right.png \
+templates/static/close.png

@@ -49,6 +49,14 @@ struct gateway_t {
 	enumerator_t* (*query_ikesalist)(gateway_t *this);
 	
 	/**
+	 * @brief Terminate an IKE or a CHILD SA.
+	 *
+	 * @param ike		TRUE for IKE-, FALSE for a CHILD-SA
+	 * @return			TRUE if successful
+	 */
+	bool (*terminate)(gateway_t *this, bool ike, u_int32_t id);
+	
+	/**
      * @brief Destroy a gateway instance.
      */
     void (*destroy)(gateway_t *this);

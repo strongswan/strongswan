@@ -57,11 +57,21 @@ a img {
     font-size: 1em;
     cursor: pointer;
     margin: 0;
+    float: left;
 }
 
 .expand h1 span {
 	margin-left: 2em;
 	margin-right: 2em;
+}
+
+.expander {
+	clear:left;
+}
+
+.controls {
+	margin-top: 3px;
+	text-align: right;
 }
 
 .center {
