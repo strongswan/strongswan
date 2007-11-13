@@ -36,6 +36,9 @@
 							<optional>
 								<ref name="QueryRequestIkesa"/>
 							</optional>
+							<optional>
+								<ref name="QueryRequestConfig"/>
+							</optional>
 							<!-- others -->
 						</element>
 					</optional>
@@ -46,6 +49,12 @@
 							</optional>
 							<optional>
 								<ref name="ControlRequestChildTerminate"/>
+							</optional>
+							<optional>
+								<ref name="ControlRequestIkeInitiate"/>
+							</optional>
+							<optional>
+								<ref name="ControlRequestChildInitiate"/>
 							</optional>
 							<!-- others -->
 						</element>
@@ -59,14 +68,26 @@
 					<choice>
 						<element name="error">
 							<attribute name="code">
-								<data type="string"/>
+								<data type="nonNegativeInteger"/>
 							</attribute>
+							<data type="string"/>
 						</element>
 						<group>
 							<optional>
 								<element name="query">
 									<optional>
-										<ref name="ikesalist"/>
+										<ref name="QueryResponseIkesa"/>
+									</optional>
+									<optional>
+										<ref name="QueryResponseConfig"/>
+									</optional>
+									<!-- others -->
+								</element>
+							</optional>
+							<optional>
+								<element name="control">
+									<optional>
+										<ref name="ControlResponse"/>
 									</optional>
 									<!-- others -->
 								</element>
@@ -79,7 +100,7 @@
 		</element>
 	</start>
 	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-	<!--                          IKE SA query                               -->
+	<!--                               Query                                 -->
 	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 	<define name="QueryRequestIkesa">
 		<element name="ikesalist">
@@ -175,30 +196,102 @@
 	<define name="childEnd">
 		<element name="spi">
 		<element name="networks">
+			<ref name="networks">
+		</element>
+	</define>
+	<define name="QueryRequestConfig">
+		<element name="configlist">
+			<empty/>
+		</element>
+	</define>
+	<define name="QueryResponseConfig">
+		<element name="configlist">
 			<zeroOrMore>
-				<element name="network">
-					<optional>
-						<attribute name="protocol"/>
-					</optional>
-					<optional>
-						<attribute name="port"/>
-					</optional>
+				<element name="peerconfig">
+					<element name="name">
+						<data type="string"/>
+					</element>
+					<element name="local">
+						<ref name="identification"/>
+					</element>
+					<element name="remote">
+						<ref name="identification"/>
+					</element>
+					<element name="ikeconfig">
+						<ref name="ikeconfig"/>
+					</element>
+					<element name="childconfiglist">
+						<zeroOrMore>
+							<element name="childconfig">
+								<ref name="childconfig"/>
+							</element>
+						</zeroOrMore>
+					</element>
 				</element>
 			</zeroOrMore>
 		</element>
 	</define>
+	<define name="ikeconfig">
+		<element name="local">
+			<ref name="address"/>
+		</element>
+		<element name="remote">
+			<ref name="address"/>
+		</element>
+	</define>
+	<define name="childconfig">
+		<element name="name">
+			<data type="string"/>
+		</element>
+		<element name="local">
+			<ref name="networks">
+		</element>
+		<element name="remote">
+			<ref name="networks">
+		</element>
+	</define>
+	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!--                             Control                                 -->
+	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 	<define name="ControlRequestIkeTerminate">
 		<element name="ikesaterminate">
-			<element name="id">
 				<data type="positiveInteger"/>
-	   		</element>
 		</element>
 	</define>
 	<define name="ControlRequestChildTerminate">
 		<element name="childsaterminate">
-			<element name="id">
 				<data type="positiveInteger"/>
-	   		</element>
+		</element>
+	</define>
+	<define name="ControlRequestIkeInitiate">
+		<element name="ikesainitiate">
+				<data type="string"/>
+		</element>
+	</define>
+	<define name="ControlRequestChildInitiate">
+		<element name="childsainitiate">
+				<data type="string"/>
+		</element>
+	</define>
+	<define name="QueryResponse">
+		<element name="status">
+			<data type="nonNegativeInteger"/>
+		</element>
+		<element name="log">
+			<zeroOrMore>
+				<element name="item">
+					<attribute name="level">
+						<data type="nonNegativeInteger">
+					</attribute>
+					<attribute name="thread">
+						<data type="nonNegativeInteger">
+					</attribute>
+					<attribute name="source">
+						<data type="string">
+					</attribute>
+					<data type="string"/>
+				<element>
+			</zeroOrMore>
 		</element>
 	</define>
 	<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -291,5 +384,17 @@
 		<data type="string">
 			<param name="pattern">[a-zA-Z0-9_\-\.]+@(([a-z0-9\-](\.[a-z0-9\-]+)*)|(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))</param>
 		</data>
+	</define>
+	<define name="networks">
+		<zeroOrMore>
+			<element name="network">
+				<optional>
+					<attribute name="protocol"/>
+				</optional>
+				<optional>
+					<attribute name="port"/>
+				</optional>
+			</element>
+		</zeroOrMore>
 	</define>
 </grammar>

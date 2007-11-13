@@ -146,17 +146,15 @@ static void write_address(xmlTextWriterPtr writer, char *element, host_t *host)
 }
 
 /**
- * write a childEnd
+ * write networks element
  */
-static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool local)
+static void write_networks(xmlTextWriterPtr writer, char *element,
+						   linked_list_t *list)
 {
 	iterator_t *iterator;
-	linked_list_t *list;
 	traffic_selector_t *ts;
-	xmlTextWriterWriteFormatElement(writer, "spi", "%lx", 
-									htonl(child->get_spi(child, local)));
-	xmlTextWriterStartElement(writer, "networks");
-	list = child->get_traffic_selectors(child, local);
+	
+	xmlTextWriterStartElement(writer, element);
 	iterator = list->create_iterator(list, TRUE);
 	while (iterator->iterate(iterator, (void**)&ts))
 	{
@@ -168,6 +166,19 @@ static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool loca
 	}
 	iterator->destroy(iterator);
 	xmlTextWriterEndElement(writer);
+}
+
+/**
+ * write a childEnd
+ */
+static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool local)
+{
+	linked_list_t *list;
+	
+	xmlTextWriterWriteFormatElement(writer, "spi", "%lx", 
+									htonl(child->get_spi(child, local)));
+	list = child->get_traffic_selectors(child, local);
+	write_networks(writer, "networks", list);
 }
 
 /**
@@ -283,6 +294,87 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 	xmlTextWriterEndElement(writer);
 }
 
+/**
+ * process a configlist query request message
+ */
+static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
+{
+	iterator_t *iterator;
+	peer_cfg_t *peer_cfg;
+
+	/* <configlist> */
+	xmlTextWriterStartElement(writer, "configlist");
+	
+	iterator = charon->backends->create_iterator(charon->backends);
+	while (iterator->iterate(iterator, (void**)&peer_cfg))
+	{
+		iterator_t *children;
+		child_cfg_t *child_cfg;
+		ike_cfg_t *ike_cfg;
+		linked_list_t *list;
+		
+		/* <peerconfig> */
+		xmlTextWriterStartElement(writer, "peerconfig");
+		xmlTextWriterWriteElement(writer, "name", peer_cfg->get_name(peer_cfg));
+		write_id(writer, "local", peer_cfg->get_my_id(peer_cfg));
+		write_id(writer, "remote", peer_cfg->get_other_id(peer_cfg));
+		
+		/* <ikeconfig> */
+		ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+		xmlTextWriterStartElement(writer, "ikeconfig");
+		write_address(writer, "local", ike_cfg->get_my_host(ike_cfg));
+		write_address(writer, "remote", ike_cfg->get_other_host(ike_cfg));
+		xmlTextWriterEndElement(writer);
+		/* </ikeconfig> */
+		
+		/* <childconfiglist> */
+		xmlTextWriterStartElement(writer, "childconfiglist");
+		children = peer_cfg->create_child_cfg_iterator(peer_cfg);
+		while (children->iterate(children, (void**)&child_cfg))
+		{
+			/* <childconfig> */
+			xmlTextWriterStartElement(writer, "childconfig");		
+			xmlTextWriterWriteElement(writer, "name",
+									  child_cfg->get_name(child_cfg));
+			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
+			write_networks(writer, "local", list);
+			list->destroy_offset(list, offsetof(traffic_selector_t, destroy));
+			list = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
+			write_networks(writer, "remote", list);
+			list->destroy_offset(list, offsetof(traffic_selector_t, destroy));		
+			xmlTextWriterEndElement(writer);
+			/* </childconfig> */
+		}
+		children->destroy(children);
+		/* </childconfiglist> */
+		xmlTextWriterEndElement(writer);
+		/* </peerconfig> */
+		xmlTextWriterEndElement(writer);	
+	}
+	iterator->destroy(iterator);
+	/* </configlist> */
+	xmlTextWriterEndElement(writer);
+}
+
+/**
+ * callback which logs to a XML writer
+ */
+static bool xml_callback(xmlTextWriterPtr writer, signal_t signal, level_t level,
+						 ike_sa_t* ike_sa, char* format, va_list args)
+{
+	if (level <= 1)
+	{
+		/* <item> */
+		xmlTextWriterStartElement(writer, "item");
+		xmlTextWriterWriteFormatAttribute(writer, "level", "%d", level);
+		xmlTextWriterWriteFormatAttribute(writer, "source", "%N", signal_names, signal);
+		xmlTextWriterWriteFormatAttribute(writer, "thread", "%u", pthread_self());
+		xmlTextWriterWriteVFormatString(writer, format, args);
+		xmlTextWriterEndElement(writer);
+		/* </item> */
+	}
+	return TRUE;
+}
 
 /**
  * process a *terminate control request message
@@ -290,39 +382,105 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 static void request_control_terminate(xmlTextReaderPtr reader,
 									  xmlTextWriterPtr writer, bool ike)
 {
-    while (xmlTextReaderRead(reader))
-    {
-		if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT)
+	if (xmlTextReaderRead(reader) &&
+		xmlTextReaderNodeType(reader) == XML_READER_TYPE_TEXT)
+	{
+		const char *str;
+		u_int32_t id;
+		status_t status;
+	
+		str = xmlTextReaderConstValue(reader);
+		if (str == NULL || !(id = atoi(str)))
 		{
-			if (streq(xmlTextReaderConstName(reader), "id"))
+			DBG1(DBG_CFG, "error parsing XML id string");
+			return;
+		}
+		DBG1(DBG_CFG, "terminating %s_SA %d", ike ? "IKE" : "CHILD", id);
+		
+		/* <log> */
+		xmlTextWriterStartElement(writer, "log");
+		if (ike)
+		{
+			status = charon->interfaces->terminate_ike(
+					charon->interfaces,	id, 
+					(interface_manager_cb_t)xml_callback, writer);
+		}
+		else
+		{
+			status = charon->interfaces->terminate_child(
+					charon->interfaces,	id, 
+					(interface_manager_cb_t)xml_callback, writer);
+		}
+		/* </log> */
+		xmlTextWriterEndElement(writer);
+		xmlTextWriterWriteFormatElement(writer, "status", "%d", status);
+	}
+}
+
+/**
+ * process a *initiate control request message
+ */
+static void request_control_initiate(xmlTextReaderPtr reader,
+									  xmlTextWriterPtr writer, bool ike)
+{
+	if (xmlTextReaderRead(reader) &&
+		xmlTextReaderNodeType(reader) == XML_READER_TYPE_TEXT)
+	{
+		const char *str;
+		status_t status = FAILED;
+		peer_cfg_t *peer;
+		child_cfg_t *child = NULL;
+		iterator_t *iterator;
+			
+		str = xmlTextReaderConstValue(reader);
+		if (str == NULL)
+		{
+			DBG1(DBG_CFG, "error parsing XML config name string");
+			return;
+		}
+		DBG1(DBG_CFG, "initiating %s_SA %s", ike ? "IKE" : "CHILD", str);
+		
+		/* <log> */
+		xmlTextWriterStartElement(writer, "log");
+		peer = charon->backends->get_peer_cfg_by_name(charon->backends, (char*)str);
+		if (peer)
+		{
+			iterator = peer->create_child_cfg_iterator(peer);
+			if (ike)
 			{
-    			if (xmlTextReaderRead(reader) &&
-    				xmlTextReaderNodeType(reader) == XML_READER_TYPE_TEXT)
-    			{
-					const char *str;
-					u_int32_t id;
-				
-					str = xmlTextReaderConstValue(reader);
-					if (str == NULL || !(id = atoi(str)))
+				if (!iterator->iterate(iterator, (void**)&child))
+				{
+					child = NULL;
+				}
+				child->get_ref(child);
+			}
+			else
+			{
+				while (iterator->iterate(iterator, (void**)&child))
+				{
+					if (streq(child->get_name(child), str))
 					{
-						DBG1(DBG_CFG, "error parsing XML id string");
+						child->get_ref(child);
 						break;
 					}
-					DBG1(DBG_CFG, "terminating %s_SA %d", ike ? "IKE" : "CHILD", id);
-					if (ike)
-					{
-						charon->interfaces->terminate_ike(charon->interfaces,
-											id, interface_manager_cb_empty, NULL);
-					}
-					else
-					{
-						charon->interfaces->terminate_child(charon->interfaces,
-											id, interface_manager_cb_empty, NULL);
-					}
-					break;
+					child = NULL;
 				}
 			}
+			iterator->destroy(iterator);
+			if (child)
+			{
+				status = charon->interfaces->initiate(charon->interfaces,
+							peer, child, (interface_manager_cb_t)xml_callback,
+							writer);
+			}
+			else
+			{
+				peer->destroy(peer);
+			}
 		}
+		/* </log> */
+		xmlTextWriterEndElement(writer);
+		xmlTextWriterWriteFormatElement(writer, "status", "%d", status);
 	}
 }
 
@@ -340,6 +498,11 @@ static void request_query(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
 			if (streq(xmlTextReaderConstName(reader), "ikesalist"))
 			{
 				request_query_ikesa(reader, writer);
+				break;
+			}
+			if (streq(xmlTextReaderConstName(reader), "configlist"))
+			{
+				request_query_config(reader, writer);
 				break;
 			}
 		}
@@ -367,6 +530,16 @@ static void request_control(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
 			if (streq(xmlTextReaderConstName(reader), "childsaterminate"))
 			{
 				request_control_terminate(reader, writer, FALSE);
+				break;
+			}
+			if (streq(xmlTextReaderConstName(reader), "ikesainitiate"))
+			{
+				request_control_initiate(reader, writer, TRUE);
+				break;
+			}
+			if (streq(xmlTextReaderConstName(reader), "childsainitiate"))
+			{
+				request_control_initiate(reader, writer, FALSE);
 				break;
 			}
 		}
