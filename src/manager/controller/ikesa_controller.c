@@ -1,7 +1,7 @@
 /**
- * @file status_controller.c
+ * @file ikesa_controller.c
  *
- * @brief Implementation of status_controller_t.
+ * @brief Implementation of ikesa_controller_t.
  *
  */
 
@@ -20,7 +20,7 @@
  * for more details.
  */
 
-#include "status_controller.h"
+#include "ikesa_controller.h"
 #include "../manager.h"
 #include "../gateway.h"
 
@@ -29,17 +29,17 @@
 #include <library.h>
 
 
-typedef struct private_status_controller_t private_status_controller_t;
+typedef struct private_ikesa_controller_t private_ikesa_controller_t;
 
 /**
  * private data of the task manager
  */
-struct private_status_controller_t {
+struct private_ikesa_controller_t {
 
 	/**
 	 * public functions
 	 */
-	status_controller_t public;
+	ikesa_controller_t public;
 	
 	/**
 	 * manager instance
@@ -50,7 +50,7 @@ struct private_status_controller_t {
 /**
  * read XML of a childsa element and fill template
  */
-static void process_childsa(private_status_controller_t *this, char *id,
+static void process_childsa(private_ikesa_controller_t *this, char *id,
 							enumerator_t *e, request_t *r)
 {
 	xml_t *xml;
@@ -102,7 +102,7 @@ static void process_childsa(private_status_controller_t *this, char *id,
 /**
  * read XML of a ikesa element and fill template
  */
-static void process_ikesa(private_status_controller_t *this,
+static void process_ikesa(private_ikesa_controller_t *this,
 						  enumerator_t *e, request_t *r)
 {
 	xml_t *xml;
@@ -146,7 +146,7 @@ static void process_ikesa(private_status_controller_t *this,
 	}
 }
 
-static void ikesalist(private_status_controller_t *this, request_t *r)
+static void list(private_ikesa_controller_t *this, request_t *r)
 {
 	gateway_t *gateway;
 	xml_t *xml;
@@ -176,22 +176,22 @@ static void ikesalist(private_status_controller_t *this, request_t *r)
 		}
 		e1->destroy(e1);
 
-		r->render(r, "templates/status/ikesalist.cs");
+		r->render(r, "templates/ikesa/list.cs");
 	}
 }
 
 /**
  * Implementation of controller_t.get_name
  */
-static char* get_name(private_status_controller_t *this)
+static char* get_name(private_ikesa_controller_t *this)
 {
-	return "status";
+	return "ikesa";
 }
 
 /**
  * Implementation of controller_t.handle
  */
-static void handle(private_status_controller_t *this,
+static void handle(private_ikesa_controller_t *this,
 				   request_t *request, char *action)
 {
 	if (!this->manager->logged_in(this->manager))
@@ -204,18 +204,18 @@ static void handle(private_status_controller_t *this,
 	}
 	if (action)
 	{
-		if (streq(action, "ikesalist"))
+		if (streq(action, "list"))
 		{
-			return ikesalist(this, request);
+			return list(this, request);
 		}
 	}
-	return request->redirect(request, "status/ikesalist");
+	return request->redirect(request, "ikesa/list");
 }
 
 /**
  * Implementation of controller_t.destroy
  */
-static void destroy(private_status_controller_t *this)
+static void destroy(private_ikesa_controller_t *this)
 {
 	free(this);
 }
@@ -223,9 +223,9 @@ static void destroy(private_status_controller_t *this)
 /*
  * see header file
  */
-controller_t *status_controller_create(context_t *context, void *param)
+controller_t *ikesa_controller_create(context_t *context, void *param)
 {
-	private_status_controller_t *this = malloc_thing(private_status_controller_t);
+	private_ikesa_controller_t *this = malloc_thing(private_ikesa_controller_t);
 
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
 	this->public.controller.handle = (void(*)(controller_t*,request_t*,char*,char*,char*,char*,char*))handle;

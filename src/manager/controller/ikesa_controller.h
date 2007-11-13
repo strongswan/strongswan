@@ -1,7 +1,7 @@
 /**
- * @file status_controller.h
+ * @file ikesa_controller.h
  * 
- * @brief Interface of status_controller_t.
+ * @brief Interface of ikesa_controller_t.
  * 
  */
 
@@ -20,18 +20,18 @@
  * for more details.
  */
 
-#ifndef STATUS_CONTROLLER_H_
-#define STATUS_CONTROLLER_H_
+#ifndef IKESA_CONTROLLER_H_
+#define IKESA_CONTROLLER_H_
 
 
 #include <controller.h>
 
-typedef struct status_controller_t status_controller_t;
+typedef struct ikesa_controller_t ikesa_controller_t;
 
 /**
  * @brief Status controller.
  */
-struct status_controller_t {
+struct ikesa_controller_t {
 
 	/**
 	 * Implements controller_t interface.
@@ -40,8 +40,8 @@ struct status_controller_t {
 };
 
 /**
- * @brief Create a status_controller controller instance.
+ * @brief Create a ikesa_controller controller instance.
  */
-controller_t *status_controller_create(context_t *context, void *param);
+controller_t *ikesa_controller_create(context_t *context, void *param);
 
-#endif /* STATUS_CONTROLLER_H_ */
+#endif /* IKESA_CONTROLLER_H_ */

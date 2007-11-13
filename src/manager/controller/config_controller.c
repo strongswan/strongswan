@@ -55,7 +55,7 @@ static void process_peerconfig(private_config_controller_t *this,
 {
 	xml_t *xml;
 	enumerator_t *e1, *e2, *e3;
-	char *name, *value, *config = "", *child = "";
+	char *name, *value, *config = "", *child = "", *section = "";
 
 	while (e->enumerate(e, &xml, &name, &value))
 	{
@@ -80,7 +80,7 @@ static void process_peerconfig(private_config_controller_t *this,
 			e1 = xml->children(xml);
 			while (e1->enumerate(e1, &xml, &name, &value))
 			{
-				if (streq(name, "childcfg"))
+				if (streq(name, "childconfig"))
 				{
 					int num = 0;
 					
@@ -93,13 +93,14 @@ static void process_peerconfig(private_config_controller_t *this,
 						}
 						else if (streq(name, "local") || streq(name, "remote"))
 						{
+							section = name;
 							e3 = xml->children(xml);
 							while (e3->enumerate(e3, &xml, &name, &value))
 							{
 								if (streq(name, "network"))
 								{
-									r->setf(r, "peercfgs.%s.childcfgs.%s.%s.%d=%s",
-											config, child, name, ++num, value);
+									r->setf(r, "peercfgs.%s.childcfgs.%s.%s.networks.%d=%s",
+											config, child, section, ++num, value);
 								}
 							}
 							e3->destroy(e3);

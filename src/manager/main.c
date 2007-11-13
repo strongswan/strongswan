@@ -26,7 +26,7 @@
 #include "manager.h"
 #include "database.h"
 #include "controller/auth_controller.h"
-#include "controller/status_controller.h"
+#include "controller/ikesa_controller.h"
 #include "controller/gateway_controller.h"
 #include "controller/control_controller.h"
 #include "controller/config_controller.h"
@@ -54,7 +54,7 @@ int main (int arc, char *argv[])
 	
 	dispatcher = dispatcher_create(socket, SESSION_TIMEOUT,
 						(context_constructor_t)manager_create, database);
-	dispatcher->add_controller(dispatcher, status_controller_create, NULL);
+	dispatcher->add_controller(dispatcher, ikesa_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, gateway_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, auth_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, control_controller_create, NULL);

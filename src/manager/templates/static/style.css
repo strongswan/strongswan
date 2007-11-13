@@ -58,6 +58,7 @@ a img {
     cursor: pointer;
     margin: 0;
     float: left;
+    padding-top: 3px;
 }
 
 .expand h1 span {

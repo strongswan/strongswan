@@ -82,7 +82,7 @@ static void _select(private_gateway_controller_t *this, request_t *request)
 	{
 		if (this->manager->select_gateway(this->manager, atoi(id)))
 		{
-			request->redirect(request, "status/ikesalist");
+			request->redirect(request, "ikesa/list");
 			return;
 		}
 	}

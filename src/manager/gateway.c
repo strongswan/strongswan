@@ -57,6 +57,11 @@ struct private_gateway_t {
 	 * socket file descriptor, > 0 if connected
 	 */
 	int fd;
+	
+	/**
+	 * unique id assigned to each xml message
+	 */
+	int xmlid;
 };
 
 struct sockaddr_un unix_addr = { AF_UNIX, IPSEC_PIDDIR "/charon.xml"};
@@ -127,14 +132,14 @@ static char* request(private_gateway_t *this, char *xml, ...)
 		}
 		if (send(this->fd, buf, len, 0) != len)
 		{
-			return NULL;
+			if (!connect_(this))
+			{
+				return NULL;
+			}
+			continue;
 		}
 		len = recv(this->fd, buf, sizeof(buf) - 1, 0);
-		if (len < 0)
-		{
-			return NULL;
-		}
-		if (len == 0)
+		if (len <= 0)
 		{
 			if (!connect_(this))
 			{
@@ -156,11 +161,11 @@ static enumerator_t* query_ikesalist(private_gateway_t *this)
 	xml_t *xml;
 	enumerator_t *e1, *e2, *e3, *e4 = NULL;
 	
-	str = request(this,	"<message type=\"request\" id=\"1\">"
+	str = request(this,	"<message type=\"request\" id=\"%d\">"
 							"<query>"
 								"<ikesalist/>"
 							"</query>"
-						"</message>");
+						"</message>", this->xmlid++);
 	if (str == NULL)
 	{
 		return NULL;
@@ -214,11 +219,11 @@ static enumerator_t* query_configlist(private_gateway_t *this)
 	xml_t *xml;
 	enumerator_t *e1, *e2, *e3, *e4 = NULL;
 	
-	str = request(this,	"<message type=\"request\" id=\"1\">"
+	str = request(this,	"<message type=\"request\" id=\"%d\">"
 							"<query>"
 								"<configlist/>"
 							"</query>"
-						"</message>");
+						"</message>", this->xmlid++);
 	if (str == NULL)
 	{
 		return NULL;
@@ -262,11 +267,52 @@ static enumerator_t* query_configlist(private_gateway_t *this)
 	return NULL;
 }
 
+/**
+ * create enumerator over control elements children of a control response
+ */
+static enumerator_t* read_result(private_gateway_t *this, char *res)
+{
+	char *name, *value;
+	xml_t *xml;
+	enumerator_t *e1, *e2, *e3;
+
+	if (res == NULL)
+	{
+		return NULL;
+	}
+	xml = xml_create(res);
+	if (xml == NULL)
+	{
+		return NULL;
+	}
+	e1 = xml->children(xml);
+	free(res);
+	while (e1->enumerate(e1, &xml, &name, &value))
+	{
+		if (streq(name, "message"))
+		{
+			e2 = xml->children(xml);
+			while (e2->enumerate(e2, &xml, &name, &value))
+			{
+				if (streq(name, "control"))
+				{
+					e3 = xml->children(xml);
+					e1->destroy(e1);
+					e2->destroy(e2);
+					return e3;
+				}
+			}
+			e2->destroy(e2);
+		}
+	}
+	e1->destroy(e1);
+	return NULL;
+}
 
 /**
- * Implementation of gateway_t.terminate.
+ * Implementation of gateway_t.initiate.
  */
-static bool terminate(private_gateway_t *this, bool ike, u_int32_t id)
+static enumerator_t* initiate(private_gateway_t *this, bool ike, char *name)
 {
 	char *str, *kind;
 	
@@ -278,18 +324,35 @@ static bool terminate(private_gateway_t *this, bool ike, u_int32_t id)
 	{
 		kind = "child";
 	}
-	
-	str = request(this,	"<message type=\"request\" id=\"1\">"
+	str = request(this,	"<message type=\"request\" id=\"%d\">"
 							"<control>"
-								"<%ssaterminate><id>%d</id></%ssaterminate>"
+								"<%ssainitiate>%s</%ssainitiate>"
 							"</control>"
-						"</message>", kind, id, kind);
-	if (str == NULL)
+						"</message>", this->xmlid++, kind, name, kind);
+	return read_result(this, str);
+}
+
+/**
+ * Implementation of gateway_t.terminate.
+ */
+static enumerator_t* terminate(private_gateway_t *this, bool ike, u_int32_t id)
+{
+	char *str, *kind;
+	
+	if (ike)
 	{
-		return FALSE;
+		kind = "ike";
 	}
-	free(str);
-	return TRUE;
+	else
+	{
+		kind = "child";
+	}
+	str = request(this,	"<message type=\"request\" id=\"%d\">"
+							"<control>"
+								"<%ssaterminate>%d</%ssaterminate>"
+							"</control>"
+						"</message>", this->xmlid++, kind, id, kind);
+	return read_result(this, str);
 }
 
 /**
@@ -316,12 +379,14 @@ static private_gateway_t *gateway_create(char *name)
 	this->public.request = (char*(*)(gateway_t*, char *xml))request;
 	this->public.query_ikesalist = (enumerator_t*(*)(gateway_t*))query_ikesalist;
 	this->public.query_configlist = (enumerator_t*(*)(gateway_t*))query_configlist;
-	this->public.terminate = (bool(*)(gateway_t*, bool ike, u_int32_t id))terminate;
+	this->public.initiate = (enumerator_t*(*)(gateway_t*, bool ike, char *name))initiate;
+	this->public.terminate = (enumerator_t*(*)(gateway_t*, bool ike, u_int32_t id))terminate;
 	this->public.destroy = (void(*)(gateway_t*))destroy;
 	
 	this->name = strdup(name);
 	this->host = NULL;
 	this->fd = -1;
+	this->xmlid = 1;
 	
 	return this;
 }

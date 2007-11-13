@@ -9,14 +9,14 @@
   </head>
   <body>
   	<div class="fleft">
-      <a href="<?cs var:base ?>/status/ikesalist">
+      <a href="<?cs var:base ?>/ikesa/list">
         <img class="fleft" src="<?cs var:base ?>/static/strongswan.png"/>
       </a>
       <h1>strongSwan Manager</h1>
   	  <h2><?cs var:title ?></h2>
     </div>
     <div class="menu">
-      | <a href="<?cs var:base ?>/status/ikesalist">IKE SAs</a>
+      | <a href="<?cs var:base ?>/ikesa/list">IKE SAs</a>
       | <a href="<?cs var:base ?>/config/list">Config</a>
       | <a href="<?cs var:base ?>/gateway/list">Select Gateway</a>
       | <a href="<?cs var:base ?>/auth/logout">Logout</a>

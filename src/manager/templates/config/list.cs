@@ -1,39 +1,43 @@
 <?cs include:"templates/header.cs" ?>
 <?cs each:peercfg = peercfgs ?>
   <div class="expand" id="peercfg-<?cs name:peercfg ?>">
-  <h1><?cs name:peercfg ?></h1>
+  <h1><?cs name:peercfg ?>:
+  	<span><?cs var:peercfg.local ?></span> &lt;-&gt; 
+  	<span><?cs var:peercfg.remote ?></span>
+  </h1>
   <div class="controls">
-    <a title="initiate SA" href="<?cs var:base ?>/control/initiate/<?cs name:peercfg ?>">
+    <a title="initiate SA" href="<?cs var:base ?>/control/initiateike/<?cs name:peercfg ?>">
       <img src="<?cs var:base ?>/static/initiate.png"/>
     </a>
   </div>
   <div class="expander">
     <hr/>
-    <?cs var:peercfg.local ?> - <?cs var:peercfg.remote ?>
-    <hr/>
     <?cs each:childcfg = peercfg.childcfgs ?>
-    helo
+    <div class="expand">
+    <h1><?cs name:childcfg ?>:</h1>
+  <div class="controls">
+    <a title="initiate SA" href="<?cs var:base ?>/control/initiatechild/<?cs name:childcfg ?>">
+      <img src="<?cs var:base ?>/static/initiate.png"/>
+    </a>
+  </div>
+    <div class="expander">
     <table>
-      <tr>
-        <td colspan="2"><?cs name:childcfg ?></td>
+      <tr class="images">
+      	<td>
+          <?cs each:net = childcfg.local.networks ?>
+      	    <p><?cs var:net ?></p>
+          <?cs /each ?>
+      	</td>
+      	<td>&lt;-&gt;</td>
+      	<td class="right">
+          <?cs each:net = childcfg.remote.networks ?>
+      	    <p><?cs var:net ?></p>
+          <?cs /each ?>
+      	</td>
       </tr>
-      <tr>
-      	<td>Local</td>
-      	<td>Remote</td>
-      </tr>
-      <tr>
-        <td>
-		  <?cs each:net = childcfg.local.networks ?>
-	  	    <p><?cs var:net ?></p>
-		  <?cs /each ?>
-		</td>
-        <td>
-		  <?cs each:net = childcfg.remote.networks ?>
-	  	    <p><?cs var:net ?></p>
-		  <?cs /each ?>
-		</td>
-	  </tr>
-	</table>
+    </table>
+	</div>
+	</div>
     <?cs /each ?>
   </div>
   </div>

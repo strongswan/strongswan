@@ -60,7 +60,7 @@ static void check(private_auth_controller_t *this, request_t *request)
 	if (username && password &&
 		this->manager->login(this->manager, username, password))
 	{
-		request->redirect(request, "status/ikesalist");
+		request->redirect(request, "ikesa/list");
 	}
 	else
 	{

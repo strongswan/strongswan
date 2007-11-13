@@ -48,17 +48,46 @@ struct private_control_controller_t {
 };
 
 /**
- * terminate a IKE or CHILD SA
+ * handle the result of a control operation
  */
-static void terminate(private_control_controller_t *this, request_t *r,
-					  bool ike, u_int32_t id)
+static void handle_result(private_control_controller_t *this, request_t *r,
+						  enumerator_t *e)
 {
-	gateway_t *gateway;
-
-	gateway = this->manager->select_gateway(this->manager, 0);
-	if (gateway->terminate(gateway, ike, id))
+	enumerator_t *e1;
+	xml_t *xml;
+	char *name, *value;
+	int num = 0;
+	
+	if (e)
 	{
-		r->redirect(r, "status/ikesalist");
+		while (e->enumerate(e, &xml, &name, &value))
+		{
+			if (streq(name, "status"))
+			{
+				if (value && atoi(value) == 0)
+				{
+					r->set(r, "result", "Operation executed successfully:");
+				}
+				else
+				{
+					r->set(r, "result", "Operation failed:");
+				}
+			}
+			else if (streq(name, "log"))
+			{
+				e1 = xml->children(xml);
+				while (e1->enumerate(e1, &xml, &name, &value))
+				{
+					if (streq(name, "item"))
+					{
+						r->setf(r, "log.%d=%s", ++num, value);
+					}
+				}
+				e1->destroy(e1);
+			}
+		}
+		e->destroy(e);
+		r->render(r, "templates/control/result.cs");
 	}
 	else
 	{
@@ -66,6 +95,36 @@ static void terminate(private_control_controller_t *this, request_t *r,
 		r->set(r, "error", "controlling the gateway failed");
 		r->render(r, "templates/error.cs");
 	}
+}
+
+/**
+ * initiate an IKE or CHILD SA
+ */
+static void initiate(private_control_controller_t *this, request_t *r,
+					 bool ike, char *config)
+{
+	gateway_t *gateway;
+	enumerator_t *e;
+
+	r->setf(r, "title=Establishing %s SA %s", ike ? "IKE" : "CHILD", config);
+	gateway = this->manager->select_gateway(this->manager, 0);
+	e = gateway->initiate(gateway, ike, config);
+	handle_result(this, r, e);
+}
+
+/**
+ * terminate an IKE or CHILD SA
+ */
+static void terminate(private_control_controller_t *this, request_t *r,
+					  bool ike, u_int32_t id)
+{
+	gateway_t *gateway;
+	enumerator_t *e;
+	
+	r->setf(r, "title=Terminate %s SA %d", ike ? "IKE" : "CHILD", id);
+	gateway = this->manager->select_gateway(this->manager, 0);
+	e = gateway->terminate(gateway, ike, id);
+	handle_result(this, r, e);
 }
 
 /**
@@ -80,7 +139,7 @@ static char* get_name(private_control_controller_t *this)
  * Implementation of controller_t.handle
  */
 static void handle(private_control_controller_t *this,
-				   request_t *request, char *action, char *strid)
+				   request_t *request, char *action, char *str)
 {
 	if (!this->manager->logged_in(this->manager))
 	{
@@ -96,20 +155,34 @@ static void handle(private_control_controller_t *this,
 	
 		if (streq(action, "terminateike"))
 		{
-			if (strid && (id = atoi(strid)))
+			if (str && (id = atoi(str)))
 			{
 				return terminate(this, request, TRUE, id);
 			}
 		}
 		if (streq(action, "terminatechild"))
 		{
-			if (strid && (id = atoi(strid)))
+			if (str && (id = atoi(str)))
 			{
 				return terminate(this, request, FALSE, id);
 			}
 		}
+		if (streq(action, "initiateike"))
+		{
+			if (str)
+			{
+				return initiate(this, request, TRUE, str);
+			}
+		}
+		if (streq(action, "initiatechild"))
+		{
+			if (str)
+			{
+				return initiate(this, request, FALSE, str);
+			}
+		}
 	}
-	return request->redirect(request, "status/ikesalist");
+	return request->redirect(request, "ikesa/list");
 }
 
 /**
