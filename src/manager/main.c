@@ -32,7 +32,7 @@
 #include "controller/config_controller.h"
 
 #define DBFILE IPSECDIR "/manager.db"
-#define SESSION_TIMEOUT 180
+#define SESSION_TIMEOUT 900
 #define THREADS 10
 
 int main (int arc, char *argv[])
