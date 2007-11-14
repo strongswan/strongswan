@@ -859,6 +859,8 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 		this->other_host = request->get_source(request);
 		this->other_host = this->other_host->clone(this->other_host);
 	}
+	response->set_source(response, this->my_host->clone(this->my_host));
+	response->set_destination(response, this->other_host->clone(this->other_host));
 	if (generate_message(this, response, &packet) == SUCCESS)
 	{
 		charon->sender->send(charon->sender, packet);
