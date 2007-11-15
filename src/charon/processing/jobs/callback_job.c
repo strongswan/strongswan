@@ -170,6 +170,7 @@ static void execute(private_callback_job_t *this)
 		}
 		break;
 	}
+	this->thread = 0;
 	unregister(this);
 	pthread_cleanup_pop(cleanup);
 }

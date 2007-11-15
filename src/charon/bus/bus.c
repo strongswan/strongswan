@@ -24,6 +24,8 @@
 
 #include <pthread.h>
 
+#include <daemon.h>
+
 ENUM(signal_names, SIG_ANY, SIG_MAX,
 	/** should not get printed */
 	"SIG_ANY",
@@ -53,67 +55,6 @@ ENUM(signal_names, SIG_ANY, SIG_MAX,
 	"SIG_MAX",
 );
 
-typedef struct active_listener_t active_listener_t;
-
-/**
- * information for a active listener
- */
-struct active_listener_t {
-	
-	/**
-	 * associated thread
-	 */
-	pthread_t id;
-	
-	/**
-	 * condvar to wait for a signal
-	 */
-	pthread_cond_t cond;
-	
-	/**
-	 * state of the thread
-	 */
-	enum {
-		/** not registered, do not wait for thread */
-		UNREGISTERED,
-		/** registered, if a signal occurs, wait until it is LISTENING */
-		REGISTERED,
-		/** listening, deliver signal */
-		LISTENING,
-	} state;
-	
-	/**
-	 * currently processed signals type
-	 */
-	signal_t signal;
-	
-	/**
-	 * verbosity level of the signal
-	 */
-	level_t level;
-	
-	/**
-	 * current processed signals thread number
-	 */
-	int thread;
-	
-	/**
-	 * currently processed signals ike_sa
-	 */
-	ike_sa_t *ike_sa;
-	
-	/**
-	 * currently processed signals format string
-	 */
-	char *format;
-	
-	/**
-	 * currently processed signals format varargs
-	 */
-	va_list args;
-	
-};
-
 typedef struct private_bus_t private_bus_t;
 
 /**
@@ -126,14 +67,9 @@ struct private_bus_t {
 	bus_t public;
 	
 	/**
-	 * List of registered listeners implementing the bus_t interface
+	 * List of registered listeners as entry_t's
 	 */
 	linked_list_t *listeners;
-	
-	/**
-	 * List of active listeners with listener_state TRUE
-	 */
-	linked_list_t *active_listeners;
 	
 	/**
 	 * mutex to synchronize active listeners
@@ -149,8 +85,44 @@ struct private_bus_t {
 	 * Thread local storage the threads IKE_SA
 	 */
 	pthread_key_t thread_sa;
-	
 };
+
+typedef struct entry_t entry_t;
+
+/**
+ * a listener entry, either active or passive
+ */
+struct entry_t {
+
+	/**
+	 * registered listener interface
+	 */
+	bus_listener_t *listener;
+	
+	/**
+	 * is this a active listen() call with a blocking thread
+	 */
+	bool blocker;
+	
+	/**
+	 * condvar where active listeners wait
+	 */
+	pthread_cond_t cond;
+};
+
+/**
+ * create a listener entry
+ */
+static entry_t *entry_create(bus_listener_t *listener, bool blocker)
+{
+	entry_t *this = malloc_thing(entry_t);
+	
+	this->listener = listener;
+	this->blocker = blocker;
+	pthread_cond_init(&this->cond, NULL);
+	
+	return this;
+}
 
 /**
  * Get a unique thread number for a calling thread. Since
@@ -160,7 +132,7 @@ struct private_bus_t {
 static int get_thread_number(private_bus_t *this)
 {
 	static long current_num = 0;
-	static long stored_num;
+	long stored_num;
 	
 	stored_num = (long)pthread_getspecific(this->thread_id);
 	if (stored_num == 0)
@@ -180,7 +152,7 @@ static int get_thread_number(private_bus_t *this)
 static void add_listener(private_bus_t *this, bus_listener_t *listener)
 {
 	pthread_mutex_lock(&this->mutex);
-	this->listeners->insert_last(this->listeners, listener);
+	this->listeners->insert_last(this->listeners, entry_create(listener, FALSE));
 	pthread_mutex_unlock(&this->mutex);
 }
 
@@ -190,124 +162,46 @@ static void add_listener(private_bus_t *this, bus_listener_t *listener)
 static void remove_listener(private_bus_t *this, bus_listener_t *listener)
 {
 	iterator_t *iterator;
-	bus_listener_t *current;
+	entry_t *entry;
 
 	pthread_mutex_lock(&this->mutex);
 	iterator = this->listeners->create_iterator(this->listeners, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
-		if (current == listener)
+		if (entry->listener == listener)
 		{
 			iterator->remove(iterator);
+			free(entry);
 			break;
 		}
 	}
 	iterator->destroy(iterator);
 	pthread_mutex_unlock(&this->mutex);
-}
-
-/**
- * Get the listener object for the calling thread
- */
-static active_listener_t *get_active_listener(private_bus_t *this)
-{
-	active_listener_t *current, *found = NULL;
-	iterator_t *iterator;
-	
-	/* if the thread was here once before, we have a active_listener record */
-	iterator = this->active_listeners->create_iterator(this->active_listeners, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (current->id == pthread_self())
-		{
-			found = current;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	if (found == NULL)
-	{
-		/* create a new object for a never-seen thread */
-		found = malloc_thing(active_listener_t);
-		found->id = pthread_self();
-		pthread_cond_init(&found->cond, NULL);
-		this->active_listeners->insert_last(this->active_listeners, found);
-	}
-	
-	return found;
-}
-
-/**
- * disable a listener to cleanly clean up
- */
-static void unregister(active_listener_t *listener)
-{
-	listener->state = UNREGISTERED;
-	pthread_cond_broadcast(&listener->cond);
 }
 
 /**
  * Implementation of bus_t.listen.
  */
-static signal_t listen_(private_bus_t *this, level_t *level, int *thread,
-						ike_sa_t **ike_sa, char** format, va_list* args)
+static void listen_(private_bus_t *this, bus_listener_t *listener, job_t *job)
 {
-	active_listener_t *listener;
-	int oldstate;
+	entry_t *entry;
+	int old;
 	
+	entry = entry_create(listener, TRUE);
+
 	pthread_mutex_lock(&this->mutex);
-	listener = get_active_listener(this);
-	/* go "listening", say hello to a thread which have a signal for us */
-	listener->state = LISTENING;
-	pthread_cond_broadcast(&listener->cond);
-	/* wait until it has us delivered a signal, and go back to "registered".
-	 * we allow cancellation here, but must cleanly disable the listener. */
+	this->listeners->insert_last(this->listeners, entry);
+	charon->processor->queue_job(charon->processor, job);
 	pthread_cleanup_push((void*)pthread_mutex_unlock, &this->mutex);
-	pthread_cleanup_push((void*)unregister, listener);
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-	pthread_cond_wait(&listener->cond, &this->mutex);
-	pthread_setcancelstate(oldstate, NULL);
-	pthread_cleanup_pop(0);
-	pthread_cleanup_pop(0);
-	
-	pthread_mutex_unlock(&this->mutex);
-	
-	/* return signal values */
-	*level  = listener->level;
-	*thread = listener->thread;
-	*ike_sa = listener->ike_sa;
-	*format = listener->format;
-	va_copy(*args, listener->args);
-	va_end(listener->args);
-	
-	return listener->signal;
-}
-
-/**
- * Implementation of bus_t.set_listen_state.
- */
-static void set_listen_state(private_bus_t *this, bool active)
-{
-	active_listener_t *listener;
-	
-	pthread_mutex_lock(&this->mutex);
-	
-	listener = get_active_listener(this);
-	if (active)
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old);
+	while (entry->blocker)
 	{
-		listener->state = REGISTERED;
+		pthread_cond_wait(&entry->cond, &this->mutex);
 	}
-	else
-	{
-		listener->state = UNREGISTERED;
-		/* say hello to signal emitter; we are finished processing the signal */
-		pthread_cond_broadcast(&listener->cond);
-	}
-	
-	pthread_mutex_unlock(&this->mutex);
+	pthread_setcancelstate(old, NULL);
+	pthread_cleanup_pop(TRUE);
+	free(entry);
 }
-
 
 /**
  * Implementation of bus_t.set_sa.
@@ -324,69 +218,34 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 					char* format, va_list args)
 {
 	iterator_t *iterator;
-	bus_listener_t *listener;
-	active_listener_t *active_listener;
+	entry_t *entry;
 	ike_sa_t *ike_sa;
 	long thread;
 	
+	pthread_mutex_lock(&this->mutex);
 	ike_sa = pthread_getspecific(this->thread_sa);
 	thread = get_thread_number(this);
 	
-	pthread_mutex_lock(&this->mutex);
-	
-	/* do the job for all passive bus_listeners */
 	iterator = this->listeners->create_iterator(this->listeners, TRUE);
-	while (iterator->iterate(iterator, (void**)&listener))
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
 		va_list args_copy;
 		va_copy(args_copy, args);
-		if (!listener->signal(listener, signal, level, thread, 
-							  ike_sa, format, args_copy))
+		if (!entry->listener->signal(entry->listener, signal, level, thread, 
+									 ike_sa, format, args_copy))
 		{
-			/* unregister listener if requested */
 			iterator->remove(iterator);
+			if (entry->blocker)
+			{
+				entry->blocker = FALSE;
+				pthread_cond_signal(&entry->cond);
+			}
+			else
+			{
+				free(entry);
+			}
 		}
 		va_end(args_copy);
-	}
-	iterator->destroy(iterator);
-	
-	/* wake up all active listeners */
-	iterator = this->active_listeners->create_iterator(this->active_listeners, TRUE);
-	while (iterator->iterate(iterator, (void**)&active_listener))
-	{
-		/* wait until all threads are registered. But if the thread raising
-		 * the signal is the same as the one that listens, we skip it.
-		 * Otherwise we would deadlock. */
-		while (active_listener->id != pthread_self() &&
-			   active_listener->state == REGISTERED)
-		{
-			pthread_cond_wait(&active_listener->cond, &this->mutex);
-		}
-		/* if thread is listening now, give it the signal to process */
-		if (active_listener->state == LISTENING)
-		{
-			active_listener->level = level;
-			active_listener->thread = thread;
-			active_listener->ike_sa = ike_sa;
-			active_listener->signal = signal;
-			active_listener->format = format;
-			va_copy(active_listener->args, args);
-			active_listener->state = REGISTERED;
-			pthread_cond_broadcast(&active_listener->cond);
-		}
-	}
-	
-	/* we must wait now until all are not in state REGISTERED,
-	 * as they may still use our arguments */
-	iterator->reset(iterator);
-	while (iterator->iterate(iterator, (void**)&active_listener))
-	{
-		/* do not wait for ourself, it won't happen (see above) */
-		while (active_listener->id != pthread_self() &&
-			   active_listener->state == REGISTERED)
-		{
-			pthread_cond_wait(&active_listener->cond, &this->mutex);
-		}
 	}
 	iterator->destroy(iterator);
 	
@@ -411,8 +270,7 @@ static void signal_(private_bus_t *this, signal_t signal, level_t level,
  */
 static void destroy(private_bus_t *this)
 {
-	this->active_listeners->destroy_function(this->active_listeners, free);
-	this->listeners->destroy(this->listeners);
+	this->listeners->destroy_function(this->listeners, free);
 	free(this);
 }
 
@@ -425,18 +283,17 @@ bus_t *bus_create()
 	
 	this->public.add_listener = (void(*)(bus_t*,bus_listener_t*))add_listener;
 	this->public.remove_listener = (void(*)(bus_t*,bus_listener_t*))remove_listener;
-	this->public.listen = (signal_t(*)(bus_t*,level_t*,int*,ike_sa_t**,char**,va_list*))listen_;
-	this->public.set_listen_state = (void(*)(bus_t*,bool))set_listen_state;
+	this->public.listen = (void(*)(bus_t*, bus_listener_t *listener, job_t *job))listen_;
 	this->public.set_sa = (void(*)(bus_t*,ike_sa_t*))set_sa;
 	this->public.signal = (void(*)(bus_t*,signal_t,level_t,char*,...))signal_;
 	this->public.vsignal = (void(*)(bus_t*,signal_t,level_t,char*,va_list))vsignal;
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();
-	this->active_listeners = linked_list_create();
 	pthread_mutex_init(&this->mutex, NULL);
 	pthread_key_create(&this->thread_id, NULL);
 	pthread_key_create(&this->thread_sa, NULL);
 	
-	return &(this->public);
+	return &this->public;
 }
+

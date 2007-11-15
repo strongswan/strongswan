@@ -1692,7 +1692,6 @@ static job_requeue_t stroke_process(int *fdp)
 	return JOB_REQUEUE_NONE;
 }
 
-
 /**
  * Implementation of private_stroke_interface_t.stroke_receive.
  */

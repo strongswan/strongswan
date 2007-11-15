@@ -56,18 +56,24 @@ struct private_interface_manager_t {
 	linked_list_t *handles;
 };
 
+
 /**
  * helper struct to map bus listener callbacks to interface callbacks
  */
 struct interface_bus_listener_t {
 
 	/**
-	 * bus listener callback function (called)
+	 * public bus listener interface
 	 */
-	bus_listener_t listener;
+	bus_listener_t public;
 	
 	/**
-	 * IKE_SA to use for message filtering
+	 * status of the operation, return to method callers
+	 */
+	status_t status;
+	
+	/**
+	 * IKE SA to filter log output
 	 */
 	ike_sa_t *ike_sa;
 	
@@ -82,10 +88,46 @@ struct interface_bus_listener_t {
 	void *param;
 	
 	/**
-	 * caller has cancelled its listening subscription
+	 * child configuration, used for initiate
 	 */
-	bool cancelled;
+	child_cfg_t *child_cfg;
+	
+	/**
+	 * peer configuration, used for initiate
+	 */
+	peer_cfg_t *peer_cfg;
+	
+	/**
+	 * unique ID, used for various methods
+	 */
+	u_int32_t id;
 };
+
+
+typedef struct interface_job_t interface_job_t;
+
+/** 
+ * job for asynchronous listen operations
+ */
+struct interface_job_t {
+	/** 
+	 * job interface 
+	 */
+	job_t public;
+	
+	/** 
+	 * associated listener 
+	 */
+	interface_bus_listener_t listener;
+};
+
+/**
+ * Implements the famous nop operation
+ */
+static void nop(job_t *job)
+{
+	/* NOP */
+}
 
 /**
  * Implementation of interface_manager_t.create_ike_sa_iterator.
@@ -106,22 +148,78 @@ static bool initiate_listener(interface_bus_listener_t *this, signal_t signal,
 	{
 		if (!this->callback(this->param, signal, level, ike_sa, format, args))
 		{
-			this->cancelled = TRUE;
 			return FALSE;
 		}
 		switch (signal)
 		{
+			case CHILD_UP_SUCCESS:
+				this->status = SUCCESS;
+				return FALSE;
 			case IKE_UP_FAILED:
 			case CHILD_UP_FAILED:
-			case CHILD_UP_SUCCESS:
-			{
 				return FALSE;
-			}
 			default:
 				break;
 		}
 	}
 	return TRUE;
+}
+
+/**
+ * execute function for initiate
+ */
+static status_t initiate_execute(interface_job_t *job)
+{
+	ike_sa_t *ike_sa;
+	ike_cfg_t *ike_cfg;
+	interface_bus_listener_t *listener = &job->listener;
+	peer_cfg_t *peer_cfg = listener->peer_cfg;
+
+	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+	ike_sa = charon->ike_sa_manager->checkout_by_peer(charon->ike_sa_manager,
+				ike_cfg->get_my_host(ike_cfg), ike_cfg->get_other_host(ike_cfg),
+				peer_cfg->get_my_id(peer_cfg), peer_cfg->get_other_id(peer_cfg));
+	listener->ike_sa = ike_sa;
+
+	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
+	{
+		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
+	}
+	peer_cfg->destroy(peer_cfg);
+	
+	if (ike_sa->initiate(ike_sa, listener->child_cfg) != SUCCESS)
+	{
+		return charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
+	}
+	return charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+}
+
+/**
+ * Implementation of interface_manager_t.initiate.
+ */
+static status_t initiate(private_interface_manager_t *this,
+						 peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+						 interface_manager_cb_t callback, void *param)
+{
+	interface_job_t job;
+
+	job.listener.public.signal = (void*)initiate_listener;
+	job.listener.ike_sa = NULL;
+	job.listener.callback = callback;
+	job.listener.param = param;
+	job.listener.status = FAILED;
+	job.listener.child_cfg = child_cfg;
+	job.listener.peer_cfg = peer_cfg;
+	job.public.execute = (void*)initiate_execute;
+	job.public.destroy = nop;
+
+	if (callback == NULL)
+	{
+		return initiate_execute(&job);
+	}
+	charon->bus->listen(charon->bus, (bus_listener_t*)&job.listener, (job_t*)&job);
+	return job.listener.status;
 }
 
 /**
@@ -135,16 +233,15 @@ static bool terminate_ike_listener(interface_bus_listener_t *this, signal_t sign
 	{
 		if (!this->callback(this->param, signal, level, ike_sa, format, args))
 		{
-			this->cancelled = TRUE;
 			return FALSE;
 		}
 		switch (signal)
 		{
-			case IKE_DOWN_FAILED:
 			case IKE_DOWN_SUCCESS:
-			{
+				this->status = SUCCESS;
 				return FALSE;
-			}
+			case IKE_DOWN_FAILED:
+				return FALSE;
 			default:
 				break;
 		}
@@ -152,6 +249,56 @@ static bool terminate_ike_listener(interface_bus_listener_t *this, signal_t sign
 	return TRUE;
 }
 
+/**
+ * execute function for terminate_ike
+ */
+static status_t terminate_ike_execute(interface_job_t *job)
+{
+	ike_sa_t *ike_sa;
+	interface_bus_listener_t *listener = &job->listener;
+	
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+													listener->id, FALSE);
+	if (ike_sa == NULL)
+	{
+		SIG(IKE_DOWN_FAILED, "unable to terminate, IKE_SA with "
+			"ID %d not found", listener->id);
+		return NOT_FOUND;
+	}	
+	listener->ike_sa = ike_sa;						
+	
+	if (ike_sa->delete(ike_sa) == DESTROY_ME)
+	{
+		return charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
+	}
+	return charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+}
+
+/**
+ * Implementation of interface_manager_t.terminate_ike.
+ */
+static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id, 
+							  interface_manager_cb_t callback, void *param)
+{
+	interface_job_t job;
+	
+	job.listener.public.signal = (void*)terminate_ike_listener;
+	job.listener.ike_sa = NULL;
+	job.listener.callback = callback;
+	job.listener.param = param;
+	job.listener.status = FAILED;
+	job.listener.id = unique_id;
+	job.public.execute = (void*)terminate_ike_execute;
+	job.public.destroy = nop;
+
+	if (callback == NULL)
+	{
+		return terminate_ike_execute(&job);
+	}
+	charon->bus->listen(charon->bus, (bus_listener_t*)&job.listener, (job_t*)&job);
+	return job.listener.status;
+}
 /**
  * listener function for terminate_child
  */
@@ -163,23 +310,96 @@ static bool terminate_child_listener(interface_bus_listener_t *this, signal_t si
 	{
 		if (!this->callback(this->param, signal, level, ike_sa, format, args))
 		{
-			this->cancelled = TRUE;
 			return FALSE;
 		}
 		switch (signal)
 		{
-			case IKE_DOWN_FAILED:
-			case IKE_DOWN_SUCCESS:
-			case CHILD_DOWN_FAILED:
 			case CHILD_DOWN_SUCCESS:
-			{
+			case IKE_DOWN_SUCCESS:
+				this->status = SUCCESS;
 				return FALSE;
-			}
+			case IKE_DOWN_FAILED:
+			case CHILD_DOWN_FAILED:
+				return FALSE;
 			default:
 				break;
 		}
 	}
 	return TRUE;
+}
+
+/**
+ * execute function for terminate_child
+ */
+static status_t terminate_child_execute(interface_job_t *job)
+{
+	ike_sa_t *ike_sa;
+	child_sa_t *child_sa;
+	iterator_t *iterator;
+	interface_bus_listener_t *listener = &job->listener;
+	
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+													listener->id, TRUE);							
+	if (ike_sa == NULL)
+	{
+		SIG(CHILD_DOWN_FAILED, "unable to terminate, CHILD_SA with "
+			"ID %d not found", listener->id);
+		return NOT_FOUND;
+	}
+	listener->ike_sa = ike_sa;
+	
+	iterator = ike_sa->create_child_sa_iterator(ike_sa);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		if (child_sa->get_state(child_sa) != CHILD_ROUTED &&
+			child_sa->get_reqid(child_sa) == listener->id)
+		{
+			break;
+		}
+		child_sa = NULL;
+	}
+	iterator->destroy(iterator);
+	
+	if (child_sa == NULL)
+	{
+		SIG(CHILD_DOWN_FAILED, "unable to terminate, established CHILD_SA with "
+			"ID %d not found", listener->id);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		return NOT_FOUND;
+	}
+	
+	if (ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
+								child_sa->get_spi(child_sa, TRUE)) == DESTROY_ME)
+	{
+		return charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
+	}
+	return charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+}
+
+/**
+ * Implementation of interface_manager_t.terminate_child.
+ */
+static status_t terminate_child(interface_manager_t *this, u_int32_t reqid, 
+								interface_manager_cb_t callback, void *param)
+{
+	interface_job_t job;
+	
+	job.listener.public.signal = (void*)terminate_child_listener;
+	job.listener.ike_sa = NULL;
+	job.listener.callback = callback;
+	job.listener.param = param;
+	job.listener.status = FAILED;
+	job.listener.id = reqid;
+	job.public.execute = (void*)terminate_child_execute;
+	job.public.destroy = nop;
+
+	if (callback == NULL)
+	{
+		return terminate_child_execute(&job);
+	}
+	charon->bus->listen(charon->bus, (bus_listener_t*)&job.listener, (job_t*)&job);	
+	return job.listener.status;
 }
 
 /**
@@ -193,21 +413,76 @@ static bool route_listener(interface_bus_listener_t *this, signal_t signal,
 	{
 		if (!this->callback(this->param, signal, level, ike_sa, format, args))
 		{
-			this->cancelled = TRUE;
 			return FALSE;
 		}
 		switch (signal)
 		{
 			case CHILD_ROUTE_SUCCESS:
-			case CHILD_ROUTE_FAILED:
-			{
+				this->status = SUCCESS;
 				return FALSE;
-			}
+			case CHILD_ROUTE_FAILED:
+				return FALSE;
 			default:
 				break;
 		}
 	}
 	return TRUE;
+}
+
+/**
+ * execute function for route
+ */
+static status_t route_execute(interface_job_t *job)
+{
+	ike_sa_t *ike_sa;
+	ike_cfg_t *ike_cfg;
+	interface_bus_listener_t *listener = &job->listener;
+	peer_cfg_t *peer_cfg = listener->peer_cfg;
+	
+	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+	
+	ike_sa = charon->ike_sa_manager->checkout_by_peer(charon->ike_sa_manager,
+				ike_cfg->get_my_host(ike_cfg), ike_cfg->get_other_host(ike_cfg),
+				peer_cfg->get_my_id(peer_cfg), peer_cfg->get_other_id(peer_cfg));
+	listener->ike_sa = ike_sa;
+	
+	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
+	{
+		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
+	}
+	if (ike_sa->route(ike_sa, listener->child_cfg) == DESTROY_ME)
+	{
+		return charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
+	}
+	return charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+}
+
+/**
+ * Implementation of interface_manager_t.route.
+ */
+static status_t route(interface_manager_t *this,
+					  peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+					  interface_manager_cb_t callback, void *param)
+{
+	interface_job_t job;
+	
+	job.listener.public.signal = (void*)route_listener;
+	job.listener.ike_sa = NULL;
+	job.listener.callback = callback;
+	job.listener.param = param;
+	job.listener.status = FAILED;
+	job.listener.peer_cfg = peer_cfg;
+	job.listener.child_cfg = child_cfg;
+	job.public.execute = (void*)route_execute;
+	job.public.destroy = nop;
+
+	if (callback == NULL)
+	{
+		return route_execute(&job);
+	}
+	charon->bus->listen(charon->bus, (bus_listener_t*)&job.listener, (job_t*)&job);
+	return job.listener.status;
 }
 
 /**
@@ -221,351 +496,44 @@ static bool unroute_listener(interface_bus_listener_t *this, signal_t signal,
 	{
 		if (!this->callback(this->param, signal, level, ike_sa, format, args))
 		{
-			this->cancelled = TRUE;
 			return FALSE;
 		}
 		switch (signal)
 		{
 			case CHILD_UNROUTE_SUCCESS:
-			case CHILD_UNROUTE_FAILED:
-			{
+				this->status = SUCCESS;
 				return FALSE;
-			}
+			case CHILD_UNROUTE_FAILED:
+				return FALSE;
 			default:
 				break;
 		}
 	}
 	return TRUE;
 }
-
 /**
- * remove a previously registered listener from the bus
+ * execute function for unroute
  */
-static void remove_listener(interface_bus_listener_t *listener)
-{
-	charon->bus->remove_listener(charon->bus, &listener->listener);
-}
-
-/**
- * Implementation of interface_manager_t.initiate.
- */
-static status_t initiate(private_interface_manager_t *this,
-						 peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-						 interface_manager_cb_t callback, void *param)
+static status_t unroute_execute(interface_job_t *job)
 {
 	ike_sa_t *ike_sa;
-	ike_cfg_t *ike_cfg;
-	status_t retval = FAILED;
-	interface_bus_listener_t listener;
-	
-	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-	ike_sa = charon->ike_sa_manager->checkout_by_peer(charon->ike_sa_manager,
-				ike_cfg->get_my_host(ike_cfg), ike_cfg->get_other_host(ike_cfg),
-				peer_cfg->get_my_id(peer_cfg), peer_cfg->get_other_id(peer_cfg));
-
-	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
-	{
-		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-	}
-	peer_cfg->destroy(peer_cfg);
-
-	listener.listener.signal = (void*)initiate_listener;
-	listener.callback = callback;
-	listener.ike_sa = ike_sa;
-	listener.param = param;
-	listener.cancelled = FALSE;
-
-	/* we listen passively to catch the signals we are raising in 
-	 * ike_sa->delete(). */
-	if (callback)
-	{
-		charon->bus->add_listener(charon->bus, &listener.listener);
-	}
-	charon->bus->set_listen_state(charon->bus, TRUE);
-	if (ike_sa->initiate(ike_sa, child_cfg) != SUCCESS)
-	{
-		charon->bus->set_listen_state(charon->bus, FALSE);
-		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
-		return FAILED;
-	}
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	
-	if (callback == NULL)
-	{
-		/* don't wait for a result if no callback is specified */
-		charon->bus->set_listen_state(charon->bus, FALSE);
-		return NEED_MORE;
-	}
-	
-	/* wait until we get a result */
-	while (TRUE)
-	{
-		level_t level;
-		signal_t signal;
-		int thread;
-		ike_sa_t *current;
-		char* format;
-		va_list args;
-		
-		/* stop listening if the passive listener returned FALSE */
-		if (listener.cancelled)
-		{
-			retval = NEED_MORE;
-			break;
-		}
-		pthread_cleanup_push((void*)remove_listener, &listener);
-		signal = charon->bus->listen(charon->bus, &level, &thread, 
-									 &current, &format, &args);
-		pthread_cleanup_pop(0);
-		/* ike_sa is a valid pointer until we get one of the signals */
-		if (ike_sa == current)
-		{
-			switch (signal)
-			{
-				case CHILD_UP_SUCCESS:
-					retval = SUCCESS;
-				case CHILD_UP_FAILED:
-				case IKE_UP_FAILED:
-					break;
-				default:
-					continue;
-			}
-			break;
-		}
-	}
-	charon->bus->set_listen_state(charon->bus, FALSE);
-	return retval;
-}
-
-/**
- * Implementation of interface_manager_t.terminate_ike.
- */
-static status_t terminate_ike(interface_manager_t *this, u_int32_t unique_id, 
-							  interface_manager_cb_t callback, void *param)
-{
-	ike_sa_t *ike_sa;
-	status_t status = FAILED;;
-	interface_bus_listener_t listener;
+	interface_bus_listener_t *listener = &job->listener;
 	
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													unique_id, FALSE);							
+													listener->id, TRUE);
 	if (ike_sa == NULL)
 	{
+		SIG(CHILD_DOWN_FAILED, "unable to unroute, CHILD_SA with "
+			"ID %d not found", listener->id);
 		return NOT_FOUND;
 	}
-	
-	/* we listen passively to catch the signals we are raising in 
-	 * ike_sa->delete(). */
-	listener.listener.signal = (void*)terminate_ike_listener;
-	listener.callback = callback;
-	listener.ike_sa = ike_sa;
-	listener.param = param;
-	listener.cancelled = FALSE;
-	if (callback)
+	listener->ike_sa = ike_sa;
+	if (ike_sa->unroute(ike_sa, listener->id) == DESTROY_ME)
 	{
-		charon->bus->add_listener(charon->bus, &listener.listener);
+		return charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
 	}
-	charon->bus->set_listen_state(charon->bus, TRUE);
-	status = ike_sa->delete(ike_sa);
-	if (status == DESTROY_ME)
-	{
-		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
-	}
-	else
-	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		
-		/* wait until IKE_SA is cleanly deleted using a delete message */
-		while (TRUE)
-		{
-			level_t level;
-			signal_t signal;
-			int thread;
-			ike_sa_t *current;
-			char* format;
-			va_list args;
-			
-			/* stop listening if the passive listener returned FALSE */
-			if (listener.cancelled)
-			{
-				status = NEED_MORE;
-				break;
-			}
-			pthread_cleanup_push((void*)remove_listener, &listener);
-			signal = charon->bus->listen(charon->bus, &level, &thread, 
-										 &current, &format, &args);
-			pthread_cleanup_pop(0);
-
-			/* even if we checked in the IKE_SA, the pointer is valid until
-			 * we get an IKE_DOWN_... */
-			if (ike_sa == current)
-			{
-				switch (signal)
-				{
-					case IKE_DOWN_FAILED:
-					case IKE_DOWN_SUCCESS:
-					{
-						status = SUCCESS;
-						break;
-					}
-					default:
-						continue;
-				}
-				break;
-			}
-		}
-	}
-	charon->bus->set_listen_state(charon->bus, FALSE);
-
-	return status;
-}
-
-/**
- * Implementation of interface_manager_t.terminate_child.
- */
-static status_t terminate_child(interface_manager_t *this, u_int32_t reqid, 
-								interface_manager_cb_t callback, void *param)
-{
-	ike_sa_t *ike_sa;
-	child_sa_t *child_sa;
-	iterator_t *iterator;
-	status_t status = FAILED;
-	interface_bus_listener_t listener;
-	
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													reqid, TRUE);							
-	if (ike_sa == NULL)
-	{
-		return NOT_FOUND;
-	}
-	
-	iterator = ike_sa->create_child_sa_iterator(ike_sa);
-	while (iterator->iterate(iterator, (void**)&child_sa))
-	{
-		if (child_sa->get_state(child_sa) != CHILD_ROUTED &&
-			child_sa->get_reqid(child_sa) == reqid)
-		{
-			break;
-		}
-		child_sa = NULL;
-	}
-	iterator->destroy(iterator);
-	
-	if (child_sa == NULL)
-	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		return NOT_FOUND;
-	}
-	
-	listener.listener.signal = (void*)terminate_child_listener;
-	listener.callback = callback;
-	listener.ike_sa = ike_sa;
-	listener.param = param;
-	listener.cancelled = FALSE;
-		
-	/* we listen passively to catch the signals we are raising */
-	if (callback)
-	{
-		charon->bus->add_listener(charon->bus, &listener.listener);
-	}
-	charon->bus->set_listen_state(charon->bus, TRUE);
-	status = ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
-									 child_sa->get_spi(child_sa, TRUE));
-	if (status == DESTROY_ME)
-	{
-		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
-	}
-	else
-	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		
-		/* wait until CHILD_SA is cleanly deleted using a delete message */
-		while (TRUE)
-		{
-			level_t level;
-			signal_t signal;
-			int thread;
-			ike_sa_t *current;
-			char* format;
-			va_list args;
-			
-			/* stop listening if the passive listener returned FALSE */
-			if (listener.cancelled)
-			{
-				status = NEED_MORE;
-				break;
-			}
-			pthread_cleanup_push((void*)remove_listener, &listener);
-			signal = charon->bus->listen(charon->bus, &level, &thread, 
-										 &current, &format, &args);
-			pthread_cleanup_pop(0);
-			/* even if we checked in the IKE_SA, the pointer is valid until
-			 * we get an IKE_DOWN_... */
-			if (ike_sa == current)
-			{
-				switch (signal)
-				{
-					case IKE_DOWN_FAILED:
-					case IKE_DOWN_SUCCESS:
-					case CHILD_DOWN_FAILED:
-					case CHILD_DOWN_SUCCESS:
-					{
-						status = SUCCESS;
-						break;
-					}
-					default:
-						continue;
-				}
-				break;
-			}
-		}
-	}
-	charon->bus->set_listen_state(charon->bus, FALSE);
-
-	return status;
-}
-
-/**
- * Implementation of interface_manager_t.route.
- */
-static status_t route(interface_manager_t *this,
-					  peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-					  interface_manager_cb_t callback, void *param)
-{
-	ike_sa_t *ike_sa;
-	ike_cfg_t *ike_cfg;
-	status_t status = SUCCESS;
-	
-	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-	
-	ike_sa = charon->ike_sa_manager->checkout_by_peer(charon->ike_sa_manager,
-				ike_cfg->get_my_host(ike_cfg), ike_cfg->get_other_host(ike_cfg),
-				peer_cfg->get_my_id(peer_cfg), peer_cfg->get_other_id(peer_cfg));
-	
-	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
-	{
-		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-	}
-		
-	/* we listen passively only, as routing is done by one thread only */
-	if (callback)
-	{
-		interface_bus_listener_t listener;
-	
-		listener.listener.signal = (void*)route_listener;
-		listener.callback = callback;
-		listener.ike_sa = ike_sa;
-		listener.param = param;
-		listener.cancelled = FALSE;
-		charon->bus->add_listener(charon->bus, &listener.listener);
-	}
-	
-	if (ike_sa->route(ike_sa, child_cfg) != SUCCESS)
-	{
-		status = FAILED;
-	}
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	return status;
+	return charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 }
 
 /**
@@ -574,39 +542,23 @@ static status_t route(interface_manager_t *this,
 static status_t unroute(interface_manager_t *this, u_int32_t reqid, 
 						interface_manager_cb_t callback, void *param)
 {
-	ike_sa_t *ike_sa;
-	status_t status;
+	interface_job_t job;
 	
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													reqid, TRUE);							
-	if (ike_sa == NULL)
+	job.listener.public.signal = (void*)unroute_listener;
+	job.listener.ike_sa = NULL;
+	job.listener.callback = callback;
+	job.listener.param = param;
+	job.listener.status = FAILED;
+	job.listener.id = reqid;
+	job.public.execute = (void*)unroute_execute;
+	job.public.destroy = nop;
+
+	if (callback == NULL)
 	{
-		return NOT_FOUND;
+		return unroute_execute(&job);
 	}
-	
-	/* we listen passively only, as routing is done by one thread only */
-	if (callback)
-	{
-		interface_bus_listener_t listener;
-	
-		listener.listener.signal = (void*)unroute_listener;
-		listener.callback = callback;
-		listener.ike_sa = ike_sa;
-		listener.param = param;
-		listener.cancelled = FALSE;
-		charon->bus->add_listener(charon->bus, &listener.listener);
-	}
-	status = ike_sa->unroute(ike_sa, reqid);
-	if (status == DESTROY_ME)
-	{
-		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
-		status = SUCCESS;
-	}
-	else
-	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	}
-	return status;
+	charon->bus->listen(charon->bus, (bus_listener_t*)&job.listener, (job_t*)&job);	
+	return job.listener.status;
 }
 
 /**

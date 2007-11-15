@@ -32,6 +32,7 @@ typedef struct bus_t bus_t;
 
 #include <sa/ike_sa.h>
 #include <sa/child_sa.h>
+#include <processing/jobs/job.h>
 
 
 /**
@@ -251,9 +252,7 @@ struct bus_listener_t {
  * in receiving event signals registers at the bus. Any signals sent to
  * are delivered to all registered listeners.
  * To deliver signals to threads, the blocking listen() call may be used
- * to wait for a signal. However, passive listeners should be preferred,
- * as listening actively requires some synchronization overhead as data
- * must be passed from the raising thread to the listening thread.
+ * to wait for a signal.
  *
  * @ingroup bus
  */
@@ -280,44 +279,19 @@ struct bus_t {
 	void (*remove_listener) (bus_t *this, bus_listener_t *listener);
 	
 	/**
-	 * @brief Listen actively on the bus.
+	 * @brief Register a listener and block the calling thread.
 	 *
-	 * As we are fully multithreaded, we must provide a mechanism
-	 * for active threads to listen to the bus. With the listen() method,
-	 * a thread waits until a signal occurs, and then processes it.
-	 * To prevent the listen() calling thread to miss signals emitted while
-	 * it processes a signal, registration is required. This is done through
-	 * the set_listen_state() method, see below.
-	 *
-	 * The listen() function is (has) a thread cancellation point, so you might
-	 * want to register cleanup handlers.
+	 * This call registers a listener and blocks the calling thread until
+	 * its listeners function returns FALSE. This allows to wait for certain
+	 * events. The associated job is executed after the listener has been
+	 * registered, this allows to listen on events we initiate with the job
+	 * without missing any signals.
 	 *
 	 * @param this		bus
-	 * @param level		verbosity level of the signal
-	 * @param thread	receives thread number emitted the signal
-	 * @param ike_sa	receives the IKE_SA involved in the signal, or NULL
-	 * @param format	receives the format string supplied with the signal
-	 * @param va_list	receives the variable argument list for format
-	 * @return			the emitted signal type
+	 * @param listener	listener to register
+	 * @param job		job to execute asynchronously when registered, or NULL
 	 */
-	signal_t (*listen) (bus_t *this, level_t* level, int *thread,
-						ike_sa_t **ike_sa, char** format, va_list* args);
-	
-	/**
-	 * @brief Set the listening state of the calling thread.
-	 *
-	 * To prevent message loss for active listeners using listen(), threads
-	 * must register themself to the bus before starting to listen(). When
-	 * a signal occurs, the emitter waits until all threads with listen_state
-	 * TRUE are waiting in the listen() method to process the signal.
-	 * It is important that a thread with listen_state TRUE calls listen()
-	 * periodically, or sets it's listening state to FALSE; otherwise
-	 * all signal emitting threads get blocked on the bus.
-	 *
-	 * @param this		bus
-	 * @param active	TRUE to set to listening
-	 */
-	void (*set_listen_state) (bus_t *this, bool active);
+	void (*listen)(bus_t *this, bus_listener_t *listener, job_t *job);
 	
 	/**
 	 * @brief Set the IKE_SA the calling thread is using.
