@@ -78,9 +78,14 @@ starter_stop_charon (void)
 			kill(pid, SIGINT);
 	    else if (i < 10)
 			kill(pid, SIGTERM);
+	    else if (i == 10)
+	    {
+			kill(pid, SIGKILL);
+			plog("starter_stop_charon(): charon does not respond, sending KILL");
+	    }
 	    else
 			kill(pid, SIGKILL);
-	    usleep(20000);
+	    usleep(200000);
 	}
 	if (_charon_pid == 0)
 	    return 0;
