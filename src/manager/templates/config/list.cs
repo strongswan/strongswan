@@ -12,14 +12,15 @@
   </div>
   <div class="expander">
     <hr/>
+    <p><?cs var:peercfg.ikecfg.local ?> - <?cs var:peercfg.ikecfg.remote ?></p>
     <?cs each:childcfg = peercfg.childcfgs ?>
     <div class="expand">
     <h1><?cs name:childcfg ?>:</h1>
-  <div class="controls">
-    <a title="initiate SA" href="<?cs var:base ?>/control/initiatechild/<?cs name:childcfg ?>">
-      <img src="<?cs var:base ?>/static/initiate.png"/>
-    </a>
-  </div>
+	  <div class="controls">
+		<a title="initiate SA" href="<?cs var:base ?>/control/initiatechild/<?cs name:childcfg ?>">
+		  <img src="<?cs var:base ?>/static/initiate.png"/>
+		</a>
+	  </div>
     <div class="expander">
     <table>
       <tr class="images">
