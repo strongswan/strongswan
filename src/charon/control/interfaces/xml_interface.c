@@ -313,6 +313,11 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
 		ike_cfg_t *ike_cfg;
 		linked_list_t *list;
 		
+		if (peer_cfg->get_ike_version(peer_cfg) != 2)
+		{	/* only IKEv2 connections yet */
+			continue;
+		}
+		
 		/* <peerconfig> */
 		xmlTextWriterStartElement(writer, "peerconfig");
 		xmlTextWriterWriteElement(writer, "name", peer_cfg->get_name(peer_cfg));
