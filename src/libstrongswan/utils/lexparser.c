@@ -17,6 +17,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #include <string.h>
@@ -45,11 +47,37 @@ bool match(const char *pattern, const chunk_t *ch)
 }
 
 /**
- * extracts a token ending with a given termination symbol
+ * extracts a token ending with the first occurrence of a given termination symbol
  */
 bool extract_token(chunk_t *token, const char termination, chunk_t *src)
 {
 	u_char *eot = memchr(src->ptr, termination, src->len);
+	
+	/* initialize empty token */
+	*token = chunk_empty;
+	
+	if (eot == NULL) /* termination symbol not found */
+	{
+		return FALSE;
+	}
+	
+	/* extract token */
+	token->ptr = src->ptr;
+	token->len = (u_int)(eot - src->ptr);
+	
+	/* advance src pointer after termination symbol */
+	src->ptr = eot + 1;
+	src->len -= (token->len + 1);
+	
+	return TRUE;
+}
+
+/**
+ * extracts a token ending with the last occurrence of a given termination symbol
+ */
+bool extract_last_token(chunk_t *token, const char termination, chunk_t *src)
+{
+	u_char *eot = memrchr(src->ptr, termination, src->len);
 	
 	/* initialize empty token */
 	*token = chunk_empty;

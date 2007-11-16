@@ -18,6 +18,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #include <sys/stat.h>
@@ -1394,7 +1396,7 @@ static void load_secrets(private_local_credential_store_t *this, bool reload)
 			{
 				continue;
 			}
-			if (!extract_token(&ids, ':', &line))
+			if (!extract_last_token(&ids, ':', &line))
 			{
 				DBG1(DBG_CFG, "line %d: missing ':' separator", line_nr);
 				goto error;

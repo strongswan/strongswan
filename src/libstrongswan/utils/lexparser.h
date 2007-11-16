@@ -17,6 +17,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id$
  */
 
 #include <library.h>
@@ -32,9 +34,14 @@ bool eat_whitespace(chunk_t *src);
 bool match(const char *pattern, const chunk_t *ch);
 
 /**
- * @brief Extracts a token ending with a given termination symbol
+ * @brief Extracts a token ending with the first occurence a given termination symbol
  */
 bool extract_token(chunk_t *token, const char termination, chunk_t *src);
+
+/**
+ * @brief Extracts a token ending with the last occurence a given termination symbol
+ */
+bool extract_last_token(chunk_t *token, const char termination, chunk_t *src);
 
 /**
  *  @brief Fetches a new text line terminated by \n or \r\n
