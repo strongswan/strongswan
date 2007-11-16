@@ -62,7 +62,7 @@ stop() {
 			/sbin/ip6tables -F -t $a
 			/sbin/ip6tables -X -t $a
 
-			/sbin/ipables -F -t $a
+			/sbin/iptables -F -t $a
 			/sbin/iptables -X -t $a
 	
 			if [ $a == nat ]; then
