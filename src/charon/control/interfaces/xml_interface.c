@@ -91,6 +91,9 @@ static void write_id(xmlTextWriterPtr writer, char *element, identification_t *i
 			char *type = "";
 			while (TRUE)
 			{
+				case ID_ANY:
+					type = "any";
+					break;
 				case ID_IPV4_ADDR:
 					type = "ipv4";
 					break;
@@ -114,9 +117,6 @@ static void write_id(xmlTextWriterPtr writer, char *element, identification_t *i
 			xmlTextWriterWriteFormatString(writer, "%D", id);
 			break;
 		}
-		case ID_ANY:
-			xmlTextWriterWriteAttribute(writer, "type", "any");
-			break;
 		default:
 			/* TODO: base64 keyid */
 			xmlTextWriterWriteAttribute(writer, "type", "keyid");

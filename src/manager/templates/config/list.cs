@@ -6,9 +6,13 @@
   	<span><?cs var:peercfg.remote ?></span>
   </h1>
   <div class="controls">
-    <a title="initiate SA" href="<?cs var:base ?>/control/initiateike/<?cs name:peercfg ?>">
-      <img src="<?cs var:base ?>/static/initiate.png"/>
-    </a>
+    <?cs if:peercfg.remote != "%any" ?>
+      <a title="initiate SA" href="<?cs var:base ?>/control/initiateike/<?cs name:peercfg ?>">
+        <img src="<?cs var:base ?>/static/initiate.png"/>
+      </a>
+	<?cs else ?>
+      &nbsp;    
+    <?cs /if ?>
   </div>
   <div class="expander">
     <hr/>
@@ -17,9 +21,11 @@
     <div class="expand">
     <h1><?cs name:childcfg ?>:</h1>
 	  <div class="controls">
-		<a title="initiate SA" href="<?cs var:base ?>/control/initiatechild/<?cs name:childcfg ?>">
-		  <img src="<?cs var:base ?>/static/initiate.png"/>
-		</a>
+        <?cs if:peercfg.remote != "%any" ?>
+		  <a title="initiate SA" href="<?cs var:base ?>/control/initiatechild/<?cs name:childcfg ?>">
+		    <img src="<?cs var:base ?>/static/initiate.png"/>
+		  </a>
+        <?cs /if ?>
 	  </div>
     <div class="expander">
     <table>

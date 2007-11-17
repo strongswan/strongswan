@@ -70,6 +70,10 @@ static void process_peerconfig(private_config_controller_t *this,
 			{
 				if (streq(name, "local") || streq(name, "remote"))
 				{
+					if (streq(value, "0.0.0.0") || streq(value, "::"))
+					{
+						value = "%any";
+					}
 					r->setf(r, "peercfgs.%s.ikecfg.%s=%s", config, name, value);
 				}
 			}
