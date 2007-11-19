@@ -87,6 +87,8 @@ struct private_scheduler_t {
 	 * Condvar to wait for next job.
 	 */
 	pthread_cond_t condvar;
+	
+	bool cancelled;
 };
 
 /**
@@ -148,9 +150,7 @@ static job_requeue_t schedule(private_scheduler_t * this)
 		pthread_cond_wait(&this->condvar, &this->mutex);
 	}
 	pthread_setcancelstate(oldstate, NULL);
-	pthread_cleanup_pop(0);
-		
-	pthread_mutex_unlock(&this->mutex);
+	pthread_cleanup_pop(TRUE);
 	return JOB_REQUEUE_DIRECT;
 }
 
@@ -234,6 +234,7 @@ static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t time)
  */
 static void destroy(private_scheduler_t *this)
 {
+	this->cancelled = TRUE;
 	this->job->cancel(this->job);
 	this->list->destroy_function(this->list, (void*)event_destroy);
 	free(this);
@@ -251,6 +252,7 @@ scheduler_t * scheduler_create()
 	this->public.destroy = (void(*)(scheduler_t*)) destroy;
 	
 	this->list = linked_list_create();
+	this->cancelled = FALSE;
 	pthread_mutex_init(&this->mutex, NULL);
 	pthread_cond_init(&this->condvar, NULL);
 	

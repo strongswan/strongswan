@@ -157,6 +157,7 @@ static void execute(private_callback_job_t *this)
 				continue;
 			case JOB_REQUEUE_FAIR:
 			{
+				this->thread = 0;
 				charon->processor->queue_job(charon->processor,
 											 &this->public.job_interface);
 				break;
@@ -164,13 +165,13 @@ static void execute(private_callback_job_t *this)
 			case JOB_REQUEUE_NONE:
 			default:
 			{
+				this->thread = 0;
 				cleanup = TRUE;
 				break;
 			}
 		}
 		break;
 	}
-	this->thread = 0;
 	unregister(this);
 	pthread_cleanup_pop(cleanup);
 }

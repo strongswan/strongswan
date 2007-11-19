@@ -179,28 +179,65 @@ static void remove_listener(private_bus_t *this, bus_listener_t *listener)
 	pthread_mutex_unlock(&this->mutex);
 }
 
+typedef struct cleanup_data_t cleanup_data_t;
+
+/**
+ * data to remove a listener using pthread_cleanup handler
+ */
+struct cleanup_data_t {
+	/** bus instance */
+	private_bus_t *this;
+	/** listener entry */
+	entry_t *entry;
+};
+
+/**
+ * pthread_cleanup handler to remove a listener
+ */
+static void listener_cleanup(cleanup_data_t *data)
+{
+	iterator_t *iterator;
+	entry_t *entry;
+
+	iterator = data->this->listeners->create_iterator(data->this->listeners, TRUE);
+	while (iterator->iterate(iterator, (void**)&entry))
+	{
+		if (entry == data->entry)
+		{
+			iterator->remove(iterator);
+			free(entry);
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+}
+
 /**
  * Implementation of bus_t.listen.
  */
 static void listen_(private_bus_t *this, bus_listener_t *listener, job_t *job)
 {
-	entry_t *entry;
 	int old;
+	cleanup_data_t data;
 	
-	entry = entry_create(listener, TRUE);
+	data.this = this;
+	data.entry = entry_create(listener, TRUE);
 
 	pthread_mutex_lock(&this->mutex);
-	this->listeners->insert_last(this->listeners, entry);
+	this->listeners->insert_last(this->listeners, data.entry);
 	charon->processor->queue_job(charon->processor, job);
 	pthread_cleanup_push((void*)pthread_mutex_unlock, &this->mutex);
+	pthread_cleanup_push((void*)listener_cleanup, &data);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old);
-	while (entry->blocker)
+	while (data.entry->blocker)
 	{
-		pthread_cond_wait(&entry->cond, &this->mutex);
+		pthread_cond_wait(&data.entry->cond, &this->mutex);
 	}
 	pthread_setcancelstate(old, NULL);
+	pthread_cleanup_pop(FALSE);
+	/* unlock mutex */
 	pthread_cleanup_pop(TRUE);
-	free(entry);
+	free(data.entry);
 }
 
 /**
