@@ -239,7 +239,6 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	bool other_ca_same =FALSE;
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	host_t *my_vip = NULL, *other_vip = NULL;
-	linked_list_t *my_groups = linked_list_create();
 	linked_list_t *other_groups = linked_list_create();
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
@@ -262,7 +261,7 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	DBG2(DBG_CFG, "  p2p_mediated_by=%s", msg->add_conn.p2p.mediated_by);
 	DBG2(DBG_CFG, "  p2p_peerid=%s", msg->add_conn.p2p.peerid);
 
-	my_host = msg->add_conn.me.address?
+	my_host = msg->add_conn.me.address ?
 			  host_create_from_string(msg->add_conn.me.address, IKE_PORT) : NULL;
 	if (my_host == NULL)
 	{
@@ -365,11 +364,11 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		}
 	}
 	else
-#endif /* P2P */
 	{
-		// no peer ID supplied, assume right ID
+		/* no peer ID supplied, assume right ID */
 		peer_id = other_id->clone(other_id);
 	}
+#endif /* P2P */
 	
 	my_subnet = host_create_from_string(msg->add_conn.me.subnet ?
 					msg->add_conn.me.subnet : msg->add_conn.me.address, IKE_PORT);
@@ -564,9 +563,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		other_host->destroy(other_host);
 		other_id->destroy(other_id);
 		other_ca->destroy(other_ca);
-		peer_id->destroy(peer_id);
+		DESTROY_IF(peer_id);
 		DESTROY_IF(mediated_by_cfg);
-		ietfAttr_list_destroy(my_groups);
 		ietfAttr_list_destroy(other_groups);
 	}
 	else
