@@ -21,6 +21,8 @@
  * RCSID $Id$
  */
 
+/* memrchr is a GNU extension */
+#define _GNU_SOURCE
 #include <string.h>
 
 #include "lexparser.h"
