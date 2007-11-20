@@ -4,6 +4,14 @@ strongswan-4.1.9
 - Default _updown scripts now dynamically inserts and removes ip6tables
   firewall rules if leftfirewall=yes is set in IPv6 connections.
 
+- Implemented RFC4478 repeated authentication to force EAP/Virtual-IP clients
+  to reestablish an IKE_SA within a given timeframe.
+
+- strongSwan Manager supports configuration listing, initiation and termination
+  of IKE and CHILD_SAs.
+
+- Fixes and improvements to multithreading code.
+
 
 strongswan-4.1.8
 ----------------
