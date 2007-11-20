@@ -7,15 +7,10 @@ migrate IKEv1 into charon. It's hard to say how much effort is needed to
 do that, and how much code we can reuse from pluto. But a port IS necessary to
 gain hassle-free configuration, version negotiation and maintainability.
 
-Roadmap 2007
-============
+Roadmap
+=======
 
- Oct  ! - modular credential backends
-      ! - enhance manager/XML interface
-      !
- Nov  ! - Start IKEv1 implementation in charon
-      !
- Dec  !
+ Dec  ! - complete modular credential framework
       !
 
 TODO-List
@@ -44,3 +39,13 @@ Misc
 ----
 - Address pool/backend for virtual IP assignement
 - replace iterator by enumerator
+
+libstrongswan stuff
+-------------------
+- Header installation support (#include <strongswan/strongswan.h>?)
+- move __constructor__/__destructor__ to a library init function
+- object style for leak detective, include an API
+- Cleanup/Refactor PEM/ASN1 stuff
+- replace file reads through chunk_read
+- rewrite lexparser in object-oriented style
+
