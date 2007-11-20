@@ -57,13 +57,9 @@ ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, UNEXPECTED_NAT_DETECTED, AUTH
 	"INVALID_SELECTORS",
 	"UNACCEPTABLE_ADDRESSES",
 	"UNEXPECTED_NAT_DETECTED");
-#ifdef P2P
 ENUM_NEXT(notify_type_names, P2P_CONNECT_FAILED, P2P_CONNECT_FAILED, UNEXPECTED_NAT_DETECTED,
 	"P2P_CONNECT_FAILED");
 ENUM_NEXT(notify_type_names, INITIAL_CONTACT, AUTH_LIFETIME, P2P_CONNECT_FAILED,
-#else
-ENUM_NEXT(notify_type_names, INITIAL_CONTACT, AUTH_LIFETIME, UNEXPECTED_NAT_DETECTED,
-#endif /* P2P */
 	"INITIAL_CONTACT",
 	"SET_WINDOW_SIZE",
 	"ADDITIONAL_TS_POSSIBLE",
@@ -86,7 +82,6 @@ ENUM_NEXT(notify_type_names, INITIAL_CONTACT, AUTH_LIFETIME, UNEXPECTED_NAT_DETE
 	"AUTH_LIFETIME");
 ENUM_NEXT(notify_type_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, AUTH_LIFETIME,
 	"EAP_ONLY_AUTHENTICATION");
-#ifdef P2P
 ENUM_NEXT(notify_type_names, USE_BEET_MODE, USE_BEET_MODE, EAP_ONLY_AUTHENTICATION,
 	"USE_BEET_MODE");
 ENUM_NEXT(notify_type_names, P2P_MEDIATION, P2P_RESPONSE, USE_BEET_MODE,
@@ -97,9 +92,6 @@ ENUM_NEXT(notify_type_names, P2P_MEDIATION, P2P_RESPONSE, USE_BEET_MODE,
 	"P2P_SESSIONKEY",
 	"P2P_RESPONSE");
 ENUM_END(notify_type_names, P2P_RESPONSE);
-#else
-ENUM_END(notify_type_names, EAP_ONLY_AUTHENTICATION);
-#endif /* P2P */
 
 
 ENUM_BEGIN(notify_type_short_names, UNSUPPORTED_CRITICAL_PAYLOAD, UNSUPPORTED_CRITICAL_PAYLOAD,
@@ -128,13 +120,9 @@ ENUM_NEXT(notify_type_short_names, SINGLE_PAIR_REQUIRED, UNEXPECTED_NAT_DETECTED
 	"INVAL_SEL",
 	"UNACCEPT_ADDR",
 	"UNEXPECT_NAT");
-#ifdef P2P
 ENUM_NEXT(notify_type_short_names, P2P_CONNECT_FAILED, P2P_CONNECT_FAILED, UNEXPECTED_NAT_DETECTED,
 	"P2P_CONN_FAIL");
 ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, AUTH_LIFETIME, P2P_CONNECT_FAILED,
-#else
-ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, AUTH_LIFETIME, UNEXPECTED_NAT_DETECTED,
-#endif /* P2P */
 	"INIT_CONTACT",
 	"SET_WINSIZE",
 	"ADD_TS_POSS",
@@ -157,7 +145,6 @@ ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, AUTH_LIFETIME, UNEXPECTED_NA
 	"AUTH_LFT");
 ENUM_NEXT(notify_type_short_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, AUTH_LIFETIME,
 	"EAP_ONLY");
-#ifdef P2P
 ENUM_NEXT(notify_type_short_names, USE_BEET_MODE, USE_BEET_MODE, EAP_ONLY_AUTHENTICATION,
 	"BEET_MODE");
 ENUM_NEXT(notify_type_short_names, P2P_MEDIATION, P2P_RESPONSE, USE_BEET_MODE,
@@ -168,9 +155,6 @@ ENUM_NEXT(notify_type_short_names, P2P_MEDIATION, P2P_RESPONSE, USE_BEET_MODE,
 	"P2P_SKEY",
 	"P2P_R");
 ENUM_END(notify_type_short_names, P2P_RESPONSE);
-#else
-ENUM_END(notify_type_short_names, EAP_ONLY_AUTHENTICATION);
-#endif /* P2P */
 
 
 typedef struct private_notify_payload_t private_notify_payload_t;
@@ -342,7 +326,15 @@ static status_t verify(private_notify_payload_t *this)
 			}
 			break;
 		}
-		// FIXME: check size of P2P-NAT-T payloads
+		case AUTH_LIFETIME:
+		{
+			if (this->notification_data.len != 4)
+			{
+				bad_length = TRUE;
+			}
+			break;
+		}
+		/* FIXME: check size of P2P-NAT-T payloads */
 		default:
 			/* TODO: verify */
 			break;

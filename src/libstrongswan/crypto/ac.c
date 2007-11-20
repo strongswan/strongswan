@@ -544,7 +544,7 @@ static void list(const private_x509ac_t *this, FILE *out, bool utc)
 	fprintf(out, "    validity:   not before %#T, ", &this->notBefore, utc);
 	if (now < this->notBefore)
 	{
-		fprintf(out, "not valid yet (valid in %V)\n", &now, &this->notBefore);
+		fprintf(out, "not valid yet (valid in %#V)\n", &now, &this->notBefore);
 	}
 	else
 	{
@@ -554,14 +554,14 @@ static void list(const private_x509ac_t *this, FILE *out, bool utc)
 	fprintf(out, "                not after  %#T, ", &this->notAfter, utc);
 	if (now > this->notAfter)
 	{
-		fprintf(out, "expired (%V ago)\n", &now, &this->notAfter);
+		fprintf(out, "expired (%#V ago)\n", &now, &this->notAfter);
 	}
 	else
 	{
 		fprintf(out, "ok");
 		if (now > this->notAfter - ACERT_WARNING_INTERVAL * 60 * 60 * 24)
 		{
-			fprintf(out, " (expires in %V)", &now, &this->notAfter);
+			fprintf(out, " (expires in %#V)", &now, &this->notAfter);
 		}
 		fprintf(out, " \n");
 	}

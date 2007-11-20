@@ -463,11 +463,11 @@ static void list(private_crl_t *this, FILE* out, bool utc)
 	}
 	else if (now > this->nextUpdate)
 	{
-		fprintf(out, "expired (%V ago)\n", &now, &this->nextUpdate);
+		fprintf(out, "expired (%#V ago)\n", &now, &this->nextUpdate);
 	}
 	else if (now > this->nextUpdate - CRL_WARNING_INTERVAL * 60 * 60 * 24)
 	{
-		fprintf(out, "ok (expires in %V)\n", &now, &this->nextUpdate);
+		fprintf(out, "ok (expires in %#V)\n", &now, &this->nextUpdate);
 	}
 	else
 	{

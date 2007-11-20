@@ -777,6 +777,13 @@ static status_t process_request(private_task_manager_t *this,
 								break;
 							default:
 								break;
+							case AUTH_LIFETIME:
+							{	/* hackish: a separate task would be overkill here */
+								chunk_t data = notify->get_notification_data(notify);
+								u_int32_t lifetime = ntohl(*(u_int32_t*)data.ptr);
+								this->ike_sa->set_auth_lifetime(this->ike_sa, lifetime);
+								break;
+							}
 						}
 						break;
 					}

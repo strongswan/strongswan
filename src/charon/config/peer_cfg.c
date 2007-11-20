@@ -132,30 +132,29 @@ struct private_peer_cfg_t {
 	u_int32_t keyingtries;
 	
 	/**
-	 * user reauthentication instead of rekeying
-	 */
-	bool use_reauth;
-	
-	/**
 	 * enable support for MOBIKE
 	 */
 	bool use_mobike;
 	
 	/**
-	 * Time before an SA gets invalid
+	 * Time before starting rekeying
 	 */
-	u_int32_t lifetime;
+	u_int32_t rekey_time;
 	
 	/**
-	 * Time before an SA gets rekeyed
+	 * Time before starting reauthentication
 	 */
-	u_int32_t rekeytime;
+	u_int32_t reauth_time;
 	
 	/**
-	 * Time, which specifies the range of a random value
-	 * substracted from lifetime.
+	 * Time, which specifies the range of a random value substracted from above.
 	 */
-	u_int32_t jitter;
+	u_int32_t jitter_time;
+	
+	/**
+	 * Delay before deleting a rekeying/reauthenticating SA
+	 */
+	u_int32_t over_time;
 	
 	/**
 	 * What to do with an SA when other peer seams to be dead?
@@ -353,29 +352,45 @@ static u_int32_t get_keyingtries(private_peer_cfg_t *this)
 }
 
 /**
- * Implementation of peer_cfg_t.get_soft_lifetime
+ * Implementation of peer_cfg_t.get_rekey_time.
  */
-static u_int32_t get_lifetime(private_peer_cfg_t *this, bool rekey)
+static u_int32_t get_rekey_time(private_peer_cfg_t *this)
 {
-	if (rekey)
+	if (this->rekey_time == 0)
 	{
-		if (this->jitter == 0)
-		{
-			return this->rekeytime;
-		}
-		return this->rekeytime - (random() % this->jitter);
+		return 0;
 	}
-	return this->lifetime;
+	if (this->jitter_time == 0)
+	{
+		return this->rekey_time;
+	}
+	return this->rekey_time - (random() % this->jitter_time);
 }
-	
+
 /**
- * Implementation of peer_cfg_t.use_reauth.
+ * Implementation of peer_cfg_t.get_reauth_time.
  */
-static bool use_reauth(private_peer_cfg_t *this)
+static u_int32_t get_reauth_time(private_peer_cfg_t *this)
 {
-	return this->use_reauth;
+	if (this->reauth_time == 0)
+	{
+		return 0;
+	}
+	if (this->jitter_time == 0)
+	{
+		return this->reauth_time;
+	}
+	return this->reauth_time - (random() % this->jitter_time);
 }
-	
+
+/**
+ * Implementation of peer_cfg_t.get_over_time.
+ */
+static u_int32_t get_over_time(private_peer_cfg_t *this)
+{
+	return this->over_time;
+}
+
 /**
  * Implementation of peer_cfg_t.use_mobike.
  */
@@ -503,9 +518,9 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							identification_t *my_ca, identification_t *other_ca,
 							linked_list_t *groups, cert_policy_t cert_policy,
 							auth_method_t auth_method, eap_type_t eap_type,
-							u_int32_t keyingtries, u_int32_t lifetime,
-							u_int32_t rekeytime, u_int32_t jitter,
-							bool reauth, bool mobike,
+							u_int32_t keyingtries, u_int32_t rekey_time,
+							u_int32_t reauth_time, u_int32_t jitter_time,
+							u_int32_t over_time, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
 							host_t *my_virtual_ip, host_t *other_virtual_ip,
 							bool p2p_mediation, peer_cfg_t *p2p_mediated_by,
@@ -529,8 +544,9 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_auth_method = (auth_method_t (*) (peer_cfg_t *))get_auth_method;
 	this->public.get_eap_type = (eap_type_t (*) (peer_cfg_t *))get_eap_type;
 	this->public.get_keyingtries = (u_int32_t (*) (peer_cfg_t *))get_keyingtries;
-	this->public.get_lifetime = (u_int32_t (*) (peer_cfg_t *, bool rekey))get_lifetime;
-	this->public.use_reauth = (bool (*) (peer_cfg_t *))use_reauth;
+	this->public.get_rekey_time = (u_int32_t(*)(peer_cfg_t*))get_rekey_time;
+	this->public.get_reauth_time = (u_int32_t(*)(peer_cfg_t*))get_reauth_time;
+	this->public.get_over_time = (u_int32_t(*)(peer_cfg_t*))get_over_time;
 	this->public.use_mobike = (bool (*) (peer_cfg_t *))use_mobike;
 	this->public.get_dpd_delay = (u_int32_t (*) (peer_cfg_t *))get_dpd_delay;
 	this->public.get_dpd_action = (dpd_action_t (*) (peer_cfg_t *))get_dpd_action;
@@ -559,10 +575,18 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->auth_method = auth_method;
 	this->eap_type = eap_type;
 	this->keyingtries = keyingtries;
-	this->lifetime = lifetime;
-	this->rekeytime = rekeytime;
-	this->jitter = jitter;
-	this->use_reauth = reauth;
+	this->rekey_time = rekey_time;
+	this->reauth_time = reauth_time;
+	if (rekey_time && jitter_time > rekey_time)
+	{
+		jitter_time = rekey_time;
+	}
+	if (reauth_time && jitter_time > reauth_time)
+	{
+		jitter_time = reauth_time;
+	}
+	this->jitter_time = jitter_time;
+	this->over_time = over_time;
 	this->use_mobike = mobike;
 	this->dpd_delay = dpd_delay;
 	this->dpd_action = dpd_action;

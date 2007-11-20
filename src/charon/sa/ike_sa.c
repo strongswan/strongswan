@@ -248,6 +248,8 @@ struct private_ike_sa_t {
 		u_int32_t established;
 		/** when IKE_SA gets rekeyed */
 		u_int32_t rekey;
+		/** when IKE_SA gets reauthenticated */
+		u_int32_t reauth;
 		/** when IKE_SA gets deleted */
 		u_int32_t delete;
 	} time;
@@ -307,16 +309,31 @@ static char *get_name(private_ike_sa_t *this)
 	return "(unnamed)";
 }
 
-	
 /**
- * Implementation of ike_sa_t.get_stats.
+ * Implementation of ike_sa_t.get_statistic.
  */
-static void get_stats(private_ike_sa_t *this, u_int32_t *next_rekeying)
+static u_int32_t get_statistic(private_ike_sa_t *this, statistic_t kind)
 {
-	if (next_rekeying)
+	time_t now = time(NULL);
+	
+	switch (kind)
 	{
-		*next_rekeying = this->time.rekey;
+		case STAT_REKEY_TIME:
+			if (this->time.rekey > now)
+			{
+				return this->time.rekey - now;
+			}
+			break;
+		case STAT_REAUTH_TIME:
+			if (this->time.reauth > now)
+			{
+				return this->time.reauth - now;
+			}
+			break;
+		default:
+			break;
 	}
+	return 0;
 }
 
 /**
@@ -493,10 +510,6 @@ static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
 			this->conditions |= condition;
 			switch (condition)
 			{
-				case COND_STALE:
-					DBG1(DBG_IKE, "no route to %H, setting IKE_SA to stale",
-						 this->other_host);
-					break;
 				case COND_NAT_HERE:
 					DBG1(DBG_IKE, "local host is behind NAT, sending keep alives");
 					this->conditions |= COND_NAT_ANY;
@@ -519,9 +532,6 @@ static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
 			this->conditions &= ~condition;
 			switch (condition)
 			{
-				case COND_STALE:
-					DBG1(DBG_IKE, "new route to %H found", this->other_host);
-					break;
 				case COND_NAT_HERE:
 				case COND_NAT_FAKE:
 				case COND_NAT_THERE:
@@ -610,36 +620,58 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 			if (this->state == IKE_CONNECTING)
 			{
 				job_t *job;
-				u_int32_t now = time(NULL);
-				u_int32_t soft, hard;
-				bool reauth;
+				u_int32_t t;
 			
-				this->time.established = now;
-				/* start DPD checks */
-				send_dpd(this);
+				/* calculate rekey, reauth and lifetime */
+				this->time.established = time(NULL);
 				
-				/* schedule rekeying/reauthentication */
-				soft = this->peer_cfg->get_lifetime(this->peer_cfg, TRUE);
-				hard = this->peer_cfg->get_lifetime(this->peer_cfg, FALSE);
-				reauth = this->peer_cfg->use_reauth(this->peer_cfg);
-				DBG1(DBG_IKE, "scheduling %s in %ds, maximum lifetime %ds",
-					 reauth ? "reauthentication": "rekeying", soft, hard);
-					 
-				if (soft)
+				/* schedule rekeying if we have a time which is smaller than
+				 * an already scheduled rekeying */
+				t = this->peer_cfg->get_rekey_time(this->peer_cfg);
+				if (t && (this->time.rekey == 0 || 
+					(this->time.rekey > t + this->time.established)))
 				{
-					this->time.rekey = now + soft;
-					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
-					charon->scheduler->schedule_job(charon->scheduler, job,
-													soft * 1000);
+					this->time.rekey = t + this->time.established;
+					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, FALSE);
+					charon->scheduler->schedule_job(charon->scheduler,
+													job, t * 1000);
+					DBG1(DBG_IKE, "scheduling rekeying in %ds", t);
 				}
-				
-				if (hard)
+				t = this->peer_cfg->get_reauth_time(this->peer_cfg);
+				if (t && (this->time.reauth == 0 || 
+					(this->time.reauth > t + this->time.established)))
 				{
-					this->time.delete = now + hard;
+					this->time.reauth = t + this->time.established;
+					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE);
+					charon->scheduler->schedule_job(charon->scheduler,
+													job, t * 1000);
+					DBG1(DBG_IKE, "scheduling reauthentication in %ds", t);
+				}
+				t = this->peer_cfg->get_over_time(this->peer_cfg);
+				if (this->time.rekey || this->time.reauth)
+				{
+					if (this->time.reauth == 0)
+					{
+						this->time.delete = this->time.rekey;
+					}
+					else if (this->time.rekey == 0)
+					{
+						this->time.delete = this->time.reauth;
+					}
+					else
+					{
+						this->time.delete = min(this->time.rekey, this->time.reauth);
+					}
+					this->time.delete += t;
+					t = this->time.delete - this->time.established;
 					job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
 					charon->scheduler->schedule_job(charon->scheduler, job,
-													hard * 1000);
+													t * 1000);
+					DBG1(DBG_IKE, "maximum IKE_SA lifetime %ds", t);
 				}
+				
+				/* start DPD checks */
+				send_dpd(this);
 			}
 			break;
 		}
@@ -1902,11 +1934,56 @@ static status_t rekey(private_ike_sa_t *this)
 static status_t reestablish(private_ike_sa_t *this)
 {
 	task_t *task;
-	
+
+	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
+	 * If the peer does not support RFC4478, there is no way to keep the
+	 * IKE_SA up. */
+	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
+	{
+		DBG1(DBG_IKE, "initiator did not reauthenticate as requested");
+		if (this->other_virtual_ip != NULL ||
+			has_condition(this, COND_EAP_AUTHENTICATED))
+		{
+			time_t now = time(NULL);
+			
+			DBG1(DBG_IKE, "IKE_SA will timeout in %#V", &now, &this->time.delete);
+			return FAILED;
+		}
+		else
+		{
+			DBG1(DBG_IKE, "reauthenticating actively");
+		}
+	}
 	task = (task_t*)ike_reauth_create(&this->public);
 	this->task_manager->queue_task(this->task_manager, task);
-	
+
 	return this->task_manager->initiate(this->task_manager);
+}
+
+/**
+ * Implementation of ike_sa_t.set_auth_lifetime.
+ */
+static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
+{
+	job_t *job;
+	u_int32_t reduction = this->peer_cfg->get_over_time(this->peer_cfg);
+
+	this->time.reauth = time(NULL) + lifetime - reduction;
+	job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE);
+	
+	if (lifetime < reduction)
+	{
+		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, starting reauthentication",
+			 lifetime);
+		charon->processor->queue_job(charon->processor, job);
+	}
+	else
+	{
+		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
+			 " in %ds", lifetime, lifetime - reduction);
+		charon->scheduler->schedule_job(charon->scheduler, job,
+								(lifetime - reduction) * 1000);
+	}
 }
 
 /**
@@ -1935,7 +2012,6 @@ static status_t roam(private_ike_sa_t *this, bool address)
 	me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
 												   other);
 	
-	set_condition(this, COND_STALE, FALSE);
 	if (me)
 	{
 		if (me->ip_equals(me, this->my_host) &&
@@ -2009,6 +2085,24 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	/* move pending tasks to the new IKE_SA */
 	this->task_manager->adopt_tasks(this->task_manager, other->task_manager);
 	
+	/* reauthentication timeout survives a rekeying */
+	if (other->time.reauth)
+	{
+		time_t reauth, delete, now = time(NULL);
+	
+		this->time.reauth = other->time.reauth;
+		reauth = this->time.reauth - now;
+		delete = reauth + this->peer_cfg->get_over_time(this->peer_cfg);
+		this->time.delete = this->time.reauth + delete;
+		DBG1(DBG_IKE, "rescheduling reauthentication in %ds after rekeying, "
+			 "lifetime reduced to %ds", reauth, delete);
+		charon->scheduler->schedule_job(charon->scheduler, 
+						(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE),
+						reauth * 1000);
+		charon->scheduler->schedule_job(charon->scheduler, 
+						(job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE),
+						delete * 1000);
+	}
 	/* we have to initate here, there may be new tasks to handle */
 	return this->task_manager->initiate(this->task_manager);
 }
@@ -2209,8 +2303,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* Public functions */
 	this->public.get_state = (ike_sa_state_t (*)(ike_sa_t*)) get_state;
 	this->public.set_state = (void (*)(ike_sa_t*,ike_sa_state_t)) set_state;
-	this->public.get_stats = (void (*)(ike_sa_t*,u_int32_t*))get_stats;
 	this->public.get_name = (char* (*)(ike_sa_t*))get_name;
+	this->public.get_statistic = (u_int32_t(*)(ike_sa_t*, statistic_t kind))get_statistic;
 	this->public.process_message = (status_t (*)(ike_sa_t*, message_t*)) process_message;
 	this->public.initiate = (status_t (*)(ike_sa_t*,child_cfg_t*)) initiate;
 	this->public.route = (status_t (*)(ike_sa_t*,child_cfg_t*)) route;
@@ -2258,6 +2352,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
 	this->public.rekey = (status_t (*)(ike_sa_t*))rekey;
 	this->public.reestablish = (status_t (*)(ike_sa_t*))reestablish;
+	this->public.set_auth_lifetime = (void(*)(ike_sa_t*, u_int32_t lifetime))set_auth_lifetime;
 	this->public.roam = (status_t(*)(ike_sa_t*,bool))roam;
 	this->public.inherit = (status_t (*)(ike_sa_t*,ike_sa_t*))inherit;
 	this->public.generate_message = (status_t (*)(ike_sa_t*,message_t*,packet_t**))generate_message;
@@ -2298,6 +2393,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->time.inbound = this->time.outbound = time(NULL);
 	this->time.established = 0;
 	this->time.rekey = 0;
+	this->time.reauth = 0;
 	this->time.delete = 0;
 	this->ike_cfg = NULL;
 	this->peer_cfg = NULL;

@@ -29,6 +29,7 @@
 typedef enum ike_extension_t ike_extension_t;
 typedef enum ike_condition_t ike_condition_t;
 typedef enum ike_sa_state_t ike_sa_state_t;
+typedef enum statistic_t statistic_t;
 typedef struct ike_sa_t ike_sa_t;
 
 #include <library.h>
@@ -115,9 +116,25 @@ enum ike_condition_t {
 	COND_NAT_FAKE = (1<<3),
 
 	/**
-	 * peer is currently not reachable (due missing route, ...)
+	 * peer has ben authenticated using EAP
 	 */
-	COND_STALE = (1<<4),
+	COND_EAP_AUTHENTICATED = (1<<4),
+};
+
+/**
+ * Information and statistics to query from an SA
+ */
+enum statistic_t {
+	
+	/**
+	 * Relative time for scheduled rekeying
+	 */
+	STAT_REKEY_TIME,
+	
+	/**
+	 * Relative time for scheduled reauthentication
+	 */
+	STAT_REAUTH_TIME,
 };
 
 /**
@@ -234,13 +251,6 @@ struct ike_sa_t {
 	ike_sa_state_t (*get_state) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get some statistics about this IKE_SA.
-	 *
-	 * @param next_rekeying			when the next rekeying is scheduled
-	 */
-	void (*get_stats)(ike_sa_t *this, u_int32_t *next_rekeying);	
-	
-	/**
 	 * @brief Set the state of the IKE_SA.
 	 *
 	 * @param this			calling object
@@ -255,6 +265,15 @@ struct ike_sa_t {
 	 * @return				name
 	 */
 	char* (*get_name) (ike_sa_t *this);
+	
+	/**
+	 * @brief Get statistic values from the IKE_SA.
+	 *
+	 * @param this			calling object
+	 * @param kind			kind of requested value
+	 * @return				value as integer
+	 */
+	u_int32_t (*get_statistic)(ike_sa_t *this, statistic_t kind);
 	
 	/**
 	 * @brief Get the own host address.
@@ -844,6 +863,14 @@ struct ike_sa_t {
 	 * @return				DESTROY_ME to destroy the IKE_SA
 	 */
 	status_t (*reestablish) (ike_sa_t *this);
+	
+	/**
+	 * @brief Set the lifetime limit received from a AUTH_LIFETIME notify.
+	 *
+	 * @param this			calling object
+	 * @param lifetime		lifetime in seconds
+	 */
+	void (*set_auth_lifetime)(ike_sa_t *this, u_int32_t lifetime);
 	
 	/**
 	 * @brief Set the virtual IP to use for this IKE_SA and its children.

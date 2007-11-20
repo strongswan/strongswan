@@ -44,7 +44,7 @@
 #define PRINTF_TRAFFIC_SELECTOR	'R'
 /** 1 argument: time_t *time; with #-modifier 2 arguments: time_t *time, bool utc */
 #define PRINTF_TIME				'T'
-/** 2 arguments: time_t *begin, time_t *end */
+/** 1 argument: time_t *delta; with #-modifier 2 arguments: time_t *begin, time_t *end */
 #define PRINTF_TIME_DELTA		'V'
 
 /**
@@ -55,6 +55,7 @@ int arginfo_ptr_ptr(const struct printf_info *info, size_t n, int *argtypes);
 int arginfo_ptr_int(const struct printf_info *info, size_t n, int *argtypes);
 int arginfo_int_int(const struct printf_info *info, size_t n, int *argtypes);
 int arginfo_ptr_alt_ptr_int(const struct printf_info *info, size_t n, int *argtypes);
+int arginfo_ptr_alt_ptr_ptr(const struct printf_info *info, size_t n, int *argtypes);
 int arginfo_int_alt_int_int(const struct printf_info *info, size_t n, int *argtypes);
 
 #endif /* PRINTF_HOOK_H_ */

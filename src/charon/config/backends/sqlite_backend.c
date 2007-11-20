@@ -188,13 +188,13 @@ static peer_cfg_t *process_peer_cfg_row(private_sqlite_backend_t *this,
 			sqlite3_column_int(stmt, 5),				/* auth_method */
 			sqlite3_column_int(stmt, 6),				/* eap_type */
 			sqlite3_column_int(stmt, 7),				/* keyingtries */
-			sqlite3_column_int(stmt, 8),				/* lifetime */
-			sqlite3_column_int(stmt, 9),				/* rekeytime */
-			sqlite3_column_int(stmt, 10),				/* jitter */
-			sqlite3_column_int(stmt, 13),				/* reauth */
+			sqlite3_column_int(stmt, 8),				/* rekey_time */
+			sqlite3_column_int(stmt, 9),				/* reauth_time */
+			sqlite3_column_int(stmt, 10),				/* jitter_time */
+			sqlite3_column_int(stmt, 11),				/* over_time */
 			sqlite3_column_int(stmt, 14),				/* mobike */
-			sqlite3_column_int(stmt, 11),				/* dpd_delay */
-			sqlite3_column_int(stmt, 12),				/* dpd_action */
+			sqlite3_column_int(stmt, 12),				/* dpd_delay */
+			sqlite3_column_int(stmt, 13),				/* dpd_action */
 			local_vip, remote_vip, FALSE, NULL, NULL);
 		add_children(this, peer_cfg, sqlite3_column_int(stmt, 0));
 		return peer_cfg;
@@ -225,8 +225,9 @@ static peer_cfg_t *get_peer_cfg(private_sqlite_backend_t *this,
 	
 	if (sqlite3_prepare_v2(this->db,
 			"SELECT peer_configs.oid, name, local_id, remote_id, cert_policy, "
-				   "auth_method, eap_type, keyingtries, lifetime, rekeytime, jitter, "
-				   "dpd_delay, dpd_action, reauth, mobike, local_vip, remote_vip, "
+				   "auth_method, eap_type, keyingtries, "
+				   "rekey_time, reauth_time, jitter_time, over_time, "
+				   "dpd_delay, dpd_action, mobike, local_vip, remote_vip, "
 				   "local, remote, certreq "
 			"FROM peer_configs, ike_configs "
 				"ON peer_configs.ike_cfg = ike_configs.oid "

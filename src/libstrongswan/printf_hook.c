@@ -116,3 +116,26 @@ int arginfo_ptr_alt_ptr_int(const struct printf_info *info, size_t n, int *argty
 	}
 	return 1;
 }
+
+/**
+ * special arginfo handler respecting alt flag
+ */
+int arginfo_ptr_alt_ptr_ptr(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (info->alt)
+	{
+		if (n > 1)
+		{
+			argtypes[0] = PA_POINTER;
+			argtypes[1] = PA_POINTER;
+		}
+		return 2;
+	}
+	
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+

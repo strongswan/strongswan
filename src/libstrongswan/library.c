@@ -150,11 +150,20 @@ static int print_time(FILE *stream, const struct printf_info *info,
 static int print_time_delta(FILE *stream, const struct printf_info *info,
 							const void *const *args)
 {
-	time_t *start = *((time_t**)(args[0]));
-	time_t *end   = *((time_t**)(args[1]));
-	u_int delta   = abs(*end - *start);
-
 	char* unit = "second";
+	time_t *arg1, *arg2;
+	time_t delta;
+	
+	arg1 = *((time_t**)(args[0]));
+	if (info->alt)
+	{
+		arg2 = *((time_t**)(args[1]));
+		delta = abs(*arg1 - *arg2);
+	}
+	else
+	{
+		delta = *arg1;
+	}
 
 	if (delta > 2 * 60 * 60 * 24)
 	{
@@ -180,5 +189,5 @@ static int print_time_delta(FILE *stream, const struct printf_info *info,
 static void __attribute__ ((constructor))print_register()
 {
 	register_printf_function(PRINTF_TIME, print_time, arginfo_ptr_alt_ptr_int);
-	register_printf_function(PRINTF_TIME_DELTA, print_time_delta, arginfo_ptr_ptr);
+	register_printf_function(PRINTF_TIME_DELTA, print_time_delta, arginfo_ptr_alt_ptr_ptr);
 }

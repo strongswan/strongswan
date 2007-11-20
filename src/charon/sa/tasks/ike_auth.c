@@ -298,6 +298,23 @@ static status_t collect_other_init_data(private_ike_auth_t *this, message_t *mes
 }
 
 /**
+ * add the AUTH_LIFETIME notify to the message
+ */
+static void add_auth_lifetime(private_ike_auth_t *this, message_t *message)
+{
+	chunk_t chunk;
+	u_int32_t lifetime;
+	
+	lifetime = this->ike_sa->get_statistic(this->ike_sa, STAT_REAUTH_TIME);
+	if (lifetime)
+	{
+		chunk = chunk_from_thing(lifetime);
+		*(u_int32_t*)chunk.ptr = htonl(lifetime);
+		message->add_notify(message, FALSE, AUTH_LIFETIME, chunk);
+	}
+}
+
+/**
  * Implementation of task_t.build to create AUTH payload from EAP data
  */
 static status_t build_auth_eap(private_ike_auth_t *this, message_t *message)
@@ -326,6 +343,7 @@ static status_t build_auth_eap(private_ike_auth_t *this, message_t *message)
 			this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa),
 			this->ike_sa->get_other_id(this->ike_sa));
+		add_auth_lifetime(this, message);
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -520,6 +538,7 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 			break;
 		case NOT_FOUND:
 			/* use EAP if no AUTH payload found */
+			this->ike_sa->set_condition(this->ike_sa, COND_EAP_AUTHENTICATED, TRUE);
 			this->eap_auth = eap_authenticator_create(this->ike_sa);
 			break;
 		default:
@@ -581,6 +600,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 			this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa),
 			this->ike_sa->get_other_id(this->ike_sa));
+		add_auth_lifetime(this, message);
 		return SUCCESS;
 	}
 	
@@ -645,6 +665,13 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				case ADDITIONAL_IP6_ADDRESS:
 					/* handled in ike_mobike task */
 					break;
+				case AUTH_LIFETIME:
+				{
+					chunk_t data = notify->get_notification_data(notify);
+					u_int32_t lifetime = ntohl(*(u_int32_t*)data.ptr);
+					this->ike_sa->set_auth_lifetime(this->ike_sa, lifetime);
+					break;
+				}
 				default:
 				{
 					if (type < 16383)

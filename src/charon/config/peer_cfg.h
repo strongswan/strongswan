@@ -244,27 +244,28 @@ struct peer_cfg_t {
 	u_int32_t (*get_keyingtries) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Get the lifetime of a IKE_SA.
+	 * @brief Get a time to start rekeying (is randomized with jitter).
 	 *
-	 * If "rekey" is set to TRUE, a lifetime is returned before the first
-	 * rekeying should be started. If it is FALSE, the actual lifetime is
-	 * returned when the IKE_SA must be deleted.
-	 * The rekey time automatically contains a jitter to avoid simlutaneous
-	 * rekeying.
-	 * 
-	 * @param this			child_config 
-	 * @param rekey			TRUE to get rekey time
-	 * @return				lifetime in seconds
+	 * @param this		calling object
+	 * @return			time in s when to start rekeying, 0 disables rekeying
 	 */
-	u_int32_t (*get_lifetime) (peer_cfg_t *this, bool rekey);
+	u_int32_t (*get_rekey_time)(peer_cfg_t *this);
 	
 	/**
-	 * @brief Should a full reauthentication be done instead of rekeying?
-	 * 
+	 * @brief Get a time to start reauthentication (is randomized with jitter).
+	 *
 	 * @param this		calling object
-	 * @return			TRUE to use full reauthentication
+	 * @return			time in s when to start reauthentication, 0 disables it
 	 */
-	bool (*use_reauth) (peer_cfg_t *this);
+	u_int32_t (*get_reauth_time)(peer_cfg_t *this);
+	
+	/**
+	 * @brief Get the timeout of a rekeying/reauthenticating SA.
+	 *
+	 * @param thsi		calling object
+	 * @return			timeout in s
+	 */
+	u_int32_t (*get_over_time)(peer_cfg_t *this);
 	
 	/**
 	 * @brief Use MOBIKE (RFC4555) if peer supports it?
@@ -393,9 +394,10 @@ struct peer_cfg_t {
  * @param auth_method		auth method to use to authenticate us
  * @param eap_type			EAP type to use for peer authentication
  * @param keyingtries		how many keying tries should be done before giving up
- * @param lifetime			lifetime before deleting an SA
- * @param rekeytime			lifetime before rekeying an SA
- * @param jitter			range of random to substract from rekeytime
+ * @param rekey_time		timeout before starting rekeying
+ * @param reauth_time		timeout before starting reauthentication
+ * @param jitter_time		timerange to randomly substract from rekey/reauth time
+ * @param over_time			maximum overtime before closing a rekeying/reauth SA
  * @param reauth			sould be done reauthentication instead of rekeying?
  * @param mobike			use MOBIKE (RFC4555) if peer supports it
  * @param dpd_delay			after how many seconds of inactivity to check DPD
@@ -414,9 +416,9 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							identification_t *my_ca, identification_t *other_ca,
 							linked_list_t *groups, cert_policy_t cert_policy,
 							auth_method_t auth_method, eap_type_t eap_type,
-							u_int32_t keyingtries, u_int32_t lifetime,
-							u_int32_t rekeytime, u_int32_t jitter,
-							bool reauth, bool mobike,
+							u_int32_t keyingtries, u_int32_t rekey_time,
+							u_int32_t reauth_time, u_int32_t jitter_time,
+							u_int32_t over_time, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
 							host_t *my_virtual_ip, host_t *other_virtual_ip,
 							bool p2p_mediation, peer_cfg_t *p2p_mediated_by,

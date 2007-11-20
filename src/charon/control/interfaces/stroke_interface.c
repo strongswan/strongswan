@@ -611,15 +611,25 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 			ike_cfg->add_proposal(ike_cfg, proposal);
 		}
 		
+		u_int32_t rekey = 0, reauth = 0, over, jitter;
+		
+		jitter = msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100;
+		over = msg->add_conn.rekey.margin;
+		if (msg->add_conn.rekey.reauth)
+		{
+			reauth = msg->add_conn.rekey.ike_lifetime - over;
+		}
+		else
+		{
+			rekey = msg->add_conn.rekey.ike_lifetime - over;
+		}
 		
 		peer_cfg = peer_cfg_create(msg->add_conn.name, msg->add_conn.ikev2 ? 2 : 1,
 					ike_cfg, my_id, other_id, my_ca, other_ca, other_groups,
 					msg->add_conn.me.sendcert,
 					msg->add_conn.auth_method, msg->add_conn.eap_type,
-					msg->add_conn.rekey.tries, msg->add_conn.rekey.ike_lifetime,
-					msg->add_conn.rekey.ike_lifetime - msg->add_conn.rekey.margin,
-					msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
-					msg->add_conn.rekey.reauth, msg->add_conn.mobike,
+					msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
+					msg->add_conn.mobike,
 					msg->add_conn.dpd.delay, msg->add_conn.dpd.action, my_vip, other_vip,
 					msg->add_conn.p2p.mediation, mediated_by_cfg, peer_id);
 	}
@@ -1102,9 +1112,8 @@ static void stroke_del_ca(stroke_msg_t *msg, FILE *out)
  */
 static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 {
-	peer_cfg_t *cfg = ike_sa->get_peer_cfg(ike_sa);
 	ike_sa_id_t *id = ike_sa->get_id(ike_sa);
-	u_int32_t next, now = time(NULL);
+	u_int32_t rekey, reauth;
 
 	fprintf(out, "%12s[%d]: %N, %H[%D]...%H[%D]\n",
 			ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
@@ -1114,21 +1123,26 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (all)
 	{
-		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s, ",
+		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
 				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
 	
-		ike_sa->get_stats(ike_sa, &next);
-		if (next)
+		rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY_TIME);
+		reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH_TIME);
+		if (rekey)
 		{
-			fprintf(out, "%s in %V\n", cfg->use_reauth(cfg) ?
-					"reauthentication" : "rekeying", &now, &next);
+			fprintf(out, ", rekeying in %V", &rekey);
 		}
-		else
+		if (reauth)
 		{
-			fprintf(out, "rekeying disabled\n");
+			fprintf(out, ", reauthentication in %V", &reauth);
 		}
+		if (!rekey && !reauth)
+		{
+			fprintf(out, ", rekeying disabled");
+		}
+		fprintf(out, "\n");
 	}
 }
 
@@ -1186,7 +1200,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			
 			if (rekey)
 			{
-				fprintf(out, "in %V", &now, &rekey);
+				fprintf(out, "in %#V", &now, &rekey);
 			}
 			else
 			{
