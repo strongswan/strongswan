@@ -53,7 +53,7 @@ are required for the strongSwan testing environment:
     * A vanilla Linux kernel on which the UML kernel will be based on.
       We recommend the use of
 
-      http://www.kernel.org/pub/linux/kernel/v2.6/linux-2.6.23.1.tar.bz2
+      http://www.kernel.org/pub/linux/kernel/v2.6/linux-2.6.23.8.tar.bz2
 
     * Starting with Linux kernel 2.6.9 no patch must be applied any more in order
       to make the vanilla kernel UML-capable. For older kernels you'll find
