@@ -1,8 +1,10 @@
 strongswan-4.1.9
 ----------------
 
-- Default _updown scripts now dynamically inserts and removes ip6tables
-  firewall rules if leftfirewall=yes is set in IPv6 connections.
+- The default _updown script now dynamically inserts and removes ip6tables
+  firewall rules if leftfirewall=yes is set in IPv6 connections. New IPv6
+  net-net and roadwarrior (PSK/RSA) scenarios for both IKEv1 and IKEV2 were
+  added.
 
 - Implemented RFC4478 repeated authentication to force EAP/Virtual-IP clients
   to reestablish an IKE_SA within a given timeframe.
