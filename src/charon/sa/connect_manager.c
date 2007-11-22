@@ -1241,8 +1241,9 @@ static job_requeue_t initiate_mediated(initiate_data_t *data)
 	else
 	{
 		/* this should (can?) not happen */
-		return JOB_REQUEUE_NONE;
 	}
+	
+	return JOB_REQUEUE_NONE;
 }
 
 /**
