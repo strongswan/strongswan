@@ -45,7 +45,7 @@ kernel/kernel_interface.c kernel/kernel_interface.h \
 network/packet.c network/packet.h \
 network/receiver.c network/receiver.h \
 network/sender.c network/sender.h \
-network/socket.c network/socket.h \
+network/socket.h \
 processing/jobs/job.h \
 processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 processing/jobs/callback_job.c processing/jobs/callback_job.h \
@@ -84,6 +84,12 @@ sa/tasks/ike_mobike.c sa/tasks/ike_mobike.h \
 sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/task.c sa/tasks/task.h
+
+if USE_RAW_SOCKET
+  charon_SOURCES += network/socket-raw.c
+else
+  charon_SOURCES += network/socket.c
+endif
 
 if USE_P2P
   charon_SOURCES += encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \

@@ -338,7 +338,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.interfaces = interface_manager_create();
 	this->public.backends = backend_manager_create();
 	this->public.kernel_interface = kernel_interface_create();
-	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
+	this->public.socket = socket_create();
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	

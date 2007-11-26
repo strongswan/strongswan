@@ -100,13 +100,11 @@ struct socket_t {
 /**
  * @brief Create a socket_t, wich binds multiple sockets.
  *
- * @param port				port to bind socket to
- * @param natt_port			port to float to in NAT-T
  * @return  				socket_t object
  *
  * @ingroup network
  */
-socket_t *socket_create(u_int16_t port, u_int16_t natt_port);
+socket_t *socket_create();
 
 
 #endif /*SOCKET_H_*/
