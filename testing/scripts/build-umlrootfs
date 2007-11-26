@@ -141,10 +141,16 @@ then
     echo -n " --enable-ldap" >> $INSTALLSHELL
 fi
 
+if [ "$USE_P2P" = "yes" ]
+then
+    echo -n " --enable-p2p" >> $INSTALLSHELL
+fi
+    
 if [ "$USE_LEAK_DETECTIVE" = "yes" ]
 then
     echo -n " --enable-leak-detective" >> $INSTALLSHELL
 fi
+
 echo "" >> $INSTALLSHELL
 echo "make" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
