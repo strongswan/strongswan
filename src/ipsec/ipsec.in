@@ -97,26 +97,36 @@ down)
 	if [ "$#" -ne 1 ]
 	then
 	    echo "Usage: ipsec down <connection name>"
-	    exit 1
+	    exit 2
 	fi
-	if test -e $IPSEC_PLUTO_PID
+	rc=7
+	if [ -e $IPSEC_PLUTO_PID ]
 	then
 		$IPSEC_WHACK --name "$1" --terminate
+		rc="$?"
 	fi
-	if test -e $IPSEC_CHARON_PID
+	if [ -e $IPSEC_CHARON_PID ]
 	then
 		$IPSEC_STROKE down "$1"
+		rc="$?"
 	fi
-	exit 0
+	exit "$rc"
 	;;
 listalgs|listpubkeys|\listcards|\rereadgroups)
 	op="$1"
 	shift
-	if test -e $IPSEC_PLUTO_PID
+	if [ -e $IPSEC_PLUTO_PID ]
 	then
 		$IPSEC_WHACK "$@" "--$op"
+		exit "$?"
+	else
+		if [ -e $IPSEC_CHARON_PID ]
+		then
+			exit 3
+		else
+			exit 7
+		fi
 	fi
-	exit 0
 	;;
 listcerts|listcacerts|listaacerts|\
 listacerts|listgroups|listocspcerts|\
@@ -125,32 +135,39 @@ rereadsecrets|rereadcacerts|rereadaacerts|\
 rereadacerts|rereadocspcerts|rereadcrls|\
 rereadall|purgeocsp)
 	op="$1"
+	rc=7
 	shift
-	if test -e $IPSEC_PLUTO_PID
+	if [ -e $IPSEC_PLUTO_PID ]
 	then
 		$IPSEC_WHACK "$@" "--$op"
+		rc="$?"
 	fi
-	if test -e $IPSEC_CHARON_PID
+	if [ -e $IPSEC_CHARON_PID ]
 	then
 		$IPSEC_STROKE "$op" "$@"
+		rc="$?"
 	fi
-	exit 0
+	exit "$rc"
 	;;
 ready)
 	shift
-	if test -e $IPSEC_PLUTO_PID
+	if [ -e $IPSEC_PLUTO_PID ]
 	then
 		$IPSEC_WHACK --listen
+		exit 0
+	else
+		exit 7
 	fi
-	exit 0
 	;;
 reload)
-	if test -e $IPSEC_STARTER_PID 
+	if [ -e $IPSEC_STARTER_PID ]
 	then
-	    echo "Reloading strongSwan IPsec configuration..." >&2
-	    kill -s USR1 `cat $IPSEC_STARTER_PID`
+		echo "Reloading strongSwan IPsec configuration..." >&2
+		kill -s USR1 `cat $IPSEC_STARTER_PID`
+		exit 0
 	else
-	    echo "ipsec starter is not running" >&2
+		echo "ipsec starter is not running" >&2
+		exit 7
 	fi
 	exit 0
 	;;
@@ -163,37 +180,49 @@ restart)
 	;;
 route|unroute)
 	op="$1"
+	rc=7
 	shift
 	if [ "$#" -ne 1 ]
 	then
-	    echo "Usage: ipsec $op <connection name>"
-	    exit 1
+		echo "Usage: ipsec $op <connection name>"
+		exit 2
 	fi
-	if test -e $IPSEC_PLUTO_PID
+	if [ -e $IPSEC_PLUTO_PID ]
 	then
 		$IPSEC_WHACK --name "$1" "--$op"
+		rc="$?"
 	fi
-	if test -e $IPSEC_CHARON_PID
+	if [ -e $IPSEC_CHARON_PID ]
 	then
 		$IPSEC_STROKE "$op" "$1"
+		rc="$?"
 	fi
-	exit 0
+	exit "$rc"
 	;;
 scencrypt|scdecrypt)
 	op="$1"
 	shift
-	if test -e $IPSEC_PLUTO_PID
+	if [ -e $IPSEC_PLUTO_PID ]
 	then
 		$IPSEC_WHACK "--$op" "$@"
+		exit "$?"
+	else
+		exit 7
 	fi
-	exit 0
 	;;
 secrets)
-	if test -e $IPSEC_PLUTO_PID
+	rc=7
+	if [ -e $IPSEC_PLUTO_PID ]
 	then
 		$IPSEC_WHACK --rereadsecrets
+		rc="$?"
 	fi
-	exit 0
+	if [ -e $IPSEC_CHARON_PID ]
+	then
+		$IPSEC_STROKE rereadsecrets
+		rc="$?"
+	fi
+	exit "$rc"
 	;;
 start)
 	shift
@@ -201,65 +230,75 @@ start)
 	;;
 status|statusall)
 	op="$1"
+	rc=7
 	shift
-	if test $# -eq 0
+	if [ $# -eq 0 ]
 	then
-		if test -e $IPSEC_PLUTO_PID
+		if [ -e $IPSEC_PLUTO_PID ]
 		then
 			$IPSEC_WHACK "--$op"
+			rc="$?"
 		fi
-		if test -e $IPSEC_CHARON_PID
+		if [ -e $IPSEC_CHARON_PID ]
 		then
 			$IPSEC_STROKE "$op"
+			rc="$?"
 		fi
 	else
-		if test -e $IPSEC_PLUTO_PID
+		if [ -e $IPSEC_PLUTO_PID ]
 		then
 			$IPSEC_WHACK --name "$1" "--$op"
+			rc="$?"
 		fi
-		if test -e $IPSEC_CHARON_PID
+		if [ -e $IPSEC_CHARON_PID ]
 		then
 			$IPSEC_STROKE "$op" "$1"
+			rc="$?"
 		fi
 	fi
-	exit 0
+	exit "$rc"
 	;;
 stop)
-	if test -e $IPSEC_STARTER_PID 
+	if [ -e $IPSEC_STARTER_PID ]
 	then
-	    echo "Stopping strongSwan IPsec..." >&2
-	    kill `cat $IPSEC_STARTER_PID`
+		echo "Stopping strongSwan IPsec..." >&2
+		kill `cat $IPSEC_STARTER_PID`
+		exit 0
 	else
-	    echo "ipsec starter is not running" >&2
+	    	echo "ipsec starter is not running" >&2
+		exit 7
 	fi
-	exit 0
 	;;
 up)
 	shift
 	if [ "$#" -ne 1 ]
 	then
 	    echo "Usage: ipsec up <connection name>"
-	    exit 1
+	    exit 2
 	fi
-	if test -e $IPSEC_PLUTO_PID
+	rc=7
+	if [ -e $IPSEC_PLUTO_PID ]
 	then
 		$IPSEC_WHACK --name "$1" --initiate
+		rc="$?"
 	fi
-	if test -e $IPSEC_CHARON_PID
+	if [ -e $IPSEC_CHARON_PID ]
 	then
-	    $IPSEC_STROKE up "$1"
+		$IPSEC_STROKE up "$1"
+		rc="$?"
 	fi
-	exit 0
+	exit "$rc"
 	;;
 update)
-	if test -e $IPSEC_STARTER_PID 
+	if [ -e $IPSEC_STARTER_PID ]
 	then
 		echo "Updating strongSwan IPsec configuration..." >&2
 		kill -s HUP `cat $IPSEC_STARTER_PID`
+		exit 0
 	else
 		echo "ipsec starter is not running" >&2
+		exit 7
 	fi
-	exit 0
 	;;
 version|--version)
 	echo "Linux $IPSEC_NAME $IPSEC_VERSION"
@@ -269,7 +308,7 @@ version|--version)
 	;;
 --*)
 	echo "$0: unknown option \`$1' (perhaps command name was omitted?)" >&2
-	exit 1
+	exit 2
 	;;
 esac
 
@@ -278,13 +317,13 @@ shift
 
 path="$IPSEC_DIR/$cmd"
 
-if test ! -x "$path" 
+if [ ! -x "$path" ]
 then
     path="$IPSEC_DIR/$cmd"
-    if test ! -x "$path"
+    if [ ! -x "$path" ]
     then
 	echo "$0: unknown IPsec command \`$cmd' (\`ipsec --help' for list)" >&2
-	exit 1
+	exit 2
     fi
 fi
 

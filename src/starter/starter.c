@@ -43,6 +43,19 @@
 #include "cmp.h"
 #include "interfaces.h"
 
+/**
+ * Return codes defined by Linux Standard Base Core Specification 3.1
+ * in section 20.2. Init Script Actions
+ */
+#define LSB_RC_SUCCESS               0   /* success                          */
+#define LSB_RC_FAILURE               1   /* generic or unspecified error     */
+#define LSB_RC_INVALID_ARGUMENT      2   /* invalid or excess argument(s)    */
+#define LSB_RC_NOT_IMPLEMENTED       3   /* unimplemented feature (reload)   */
+#define LSB_RC_NOT_ALLOWED           4   /* user had insufficient privilege  */
+#define LSB_RC_NOT_INSTALLED         5   /* program is not installed         */
+#define LSB_RC_NOT_CONFIGURED        6   /* program is not configured        */
+#define LSB_RC_NOT_RUNNING           7   /* program is not running           */
+
 #define FLAG_ACTION_START_PLUTO   0x01
 #define FLAG_ACTION_UPDATE        0x02
 #define FLAG_ACTION_RELOAD        0x04
@@ -131,7 +144,7 @@ usage(char *name)
 {
     fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>] "
 	    "[--debug|--debug-more|--debug-all]\n");
-    exit(1);
+    exit(LSB_RC_INVALID_ARGUMENT);
 }
 
 int main (int argc, char **argv)
@@ -205,7 +218,7 @@ int main (int argc, char **argv)
     if (getuid() != 0)
     {
 	plog("permission denied (must be superuser)");
-	exit(1);
+	exit(LSB_RC_NOT_ALLOWED);
     }
 
     if (stat(PLUTO_PID_FILE, &stb) == 0)
@@ -227,13 +240,13 @@ int main (int argc, char **argv)
     if (stat(DEV_RANDOM, &stb) != 0)
     {
 	plog("unable to start strongSwan IPsec -- no %s!", DEV_RANDOM);
-	exit(1);
+	exit(LSB_RC_FAILURE);
     }
 
     if (stat(DEV_URANDOM, &stb)!= 0)
     {
 	plog("unable to start strongSwan IPsec -- no %s!", DEV_URANDOM);
-	exit(1);
+	exit(LSB_RC_FAILURE);
     }
 
     cfg = confread_load(CONFIG_FILE);
@@ -244,14 +257,14 @@ int main (int argc, char **argv)
 	{
 	    confread_free(cfg);
 	}
-	exit(1);
+	exit(LSB_RC_INVALID_ARGUMENT);
     }
 
     /* determine if we have a native netkey IPsec stack */
     if (!starter_netkey_init())
     {
 	plog("no netkey IPSec stack detected");
-	exit(1);
+	exit(LSB_RC_FAILURE);
     }
 
     last_reload = time(NULL);
@@ -259,7 +272,7 @@ int main (int argc, char **argv)
     if (stat(STARTER_PID_FILE, &stb) == 0)
     {
 	plog("starter is already running (%s exists) -- no fork done", STARTER_PID_FILE);
-	exit(0);
+	exit(LSB_RC_SUCCESS);
     }
 
     /* fork if we're not debugging stuff */
@@ -287,7 +300,7 @@ int main (int argc, char **argv)
 		plog("can't fork: %s", strerror(errno));
 		break;
 	    default:
-		exit(0);
+		exit(LSB_RC_SUCCESS);
 	}
     }
 
@@ -322,7 +335,7 @@ int main (int argc, char **argv)
 #endif /* LEAK_DETECTIVE */
 	    close_log();
 	    plog("ipsec starter stopped");
-	    exit(0);
+	    exit(LSB_RC_SUCCESS);
 	}
 
 	/*
@@ -643,7 +656,6 @@ int main (int argc, char **argv)
 	    _action_ |= FLAG_ACTION_UPDATE;
 	}
     }
-
-    return 0;
+    exit(LSB_RC_SUCCESS);
 }
 
