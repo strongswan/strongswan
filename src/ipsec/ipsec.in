@@ -160,23 +160,21 @@ ready)
 	fi
 	;;
 reload)
+	rc=7
 	if [ -e $IPSEC_STARTER_PID ]
 	then
 		echo "Reloading strongSwan IPsec configuration..." >&2
-		kill -s USR1 `cat $IPSEC_STARTER_PID`
-		exit 0
+		kill -s USR1 `cat $IPSEC_STARTER_PID` 2>/dev/null && rc=0
 	else
 		echo "ipsec starter is not running" >&2
-		exit 7
 	fi
-	exit 0
+	exit "$rc"
 	;;
 restart)
 	$IPSEC_SBINDIR/ipsec stop
 	sleep 2
 	shift
-	$IPSEC_SBINDIR/ipsec start "$@"
-	exit 0
+	exec $IPSEC_SBINDIR/ipsec start "$@"
 	;;
 route|unroute)
 	op="$1"
@@ -230,44 +228,66 @@ start)
 	;;
 status|statusall)
 	op="$1"
-	rc=7
+	# Return value is slightly different for the status command:
+	# 0 - service up and running
+	# 1 - service dead, but /var/run/  pid  file exists
+	# 2 - service dead, but /var/lock/ lock file exists
+	# 3 - service not running (unused)
+	# 4 - service status unknown :-(
+	# 5--199 reserved (5--99 LSB, 100--149 distro, 150--199 appl.)
 	shift
 	if [ $# -eq 0 ]
 	then
 		if [ -e $IPSEC_PLUTO_PID ]
 		then
 			$IPSEC_WHACK "--$op"
-			rc="$?"
 		fi
 		if [ -e $IPSEC_CHARON_PID ]
 		then
 			$IPSEC_STROKE "$op"
-			rc="$?"
 		fi
 	else
 		if [ -e $IPSEC_PLUTO_PID ]
 		then
 			$IPSEC_WHACK --name "$1" "--$op"
-			rc="$?"
 		fi
 		if [ -e $IPSEC_CHARON_PID ]
 		then
 			$IPSEC_STROKE "$op" "$1"
-			rc="$?"
 		fi
 	fi
-	exit "$rc"
+	if [ -e $IPSEC_STARTER_PID ]
+	then
+		kill -0 `cat $IPSEC_STARTER_PID` 2>/dev/null
+		exit $?
+	fi
+	exit 3
 	;;
 stop)
+	# stopping a not-running service is considered as success
 	if [ -e $IPSEC_STARTER_PID ]
 	then
 		echo "Stopping strongSwan IPsec..." >&2
-		kill `cat $IPSEC_STARTER_PID`
-		exit 0
+		spid=`cat $IPSEC_STARTER_PID`
+		if [ -n "$spid" ]
+		then
+			kill $spid 2>/dev/null
+			loop=5
+			while [ $loop -gt 0 ] ; do
+				kill -s 0 $spid 2>/dev/null || break
+				sleep 1
+				loop=$(($loop - 1))
+			done
+			if [ $loop -eq 0 ]
+			then
+				kill -s KILL $spid 2>/dev/null
+				rm -f $IPSEC_STARTER_PID
+			fi
+		fi
 	else
 	    	echo "ipsec starter is not running" >&2
-		exit 7
 	fi
+	exit 0
 	;;
 up)
 	shift
