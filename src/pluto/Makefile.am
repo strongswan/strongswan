@@ -132,15 +132,3 @@ if USE_LIBLDAP
   pluto_LDADD += -lldap -llber
 endif
 
-install-exec-local :
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/cacerts
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/ocspcerts
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/certs
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/acerts
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/aacerts
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/crls
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/reqs
-	mkdir -p -m 700 $(DESTDIR)$(confdir)/ipsec.d/private
-	chown -R $(ipsecuid):$(ipsecgid) $(DESTDIR)$(confdir)/ipsec.d
-

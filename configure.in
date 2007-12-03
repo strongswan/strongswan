@@ -156,6 +156,18 @@ AC_ARG_ENABLE(
 AM_CONDITIONAL(USE_LIBLDAP, test x$ldap = xtrue)
 
 AC_ARG_ENABLE(
+    [stroke],
+    AS_HELP_STRING([--disable-stroke],[disable charons stroke (pluto compatibility) configuration backend. (default is NO).]),
+    [if test x$enableval = xyes; then
+        stroke=true
+     else
+        stroke=false
+    fi],
+    stroke=true
+)
+AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
+
+AC_ARG_ENABLE(
     [dbus],
     AS_HELP_STRING([--enable-dbus],[enable DBUS configuration and control interface (default is NO). Requires libdbus.]),
     [if test x$enableval = xyes; then
@@ -220,7 +232,16 @@ AC_ARG_ENABLE(
         eap_sim=true
     fi]
 )
-AM_CONDITIONAL(BUILD_EAP_SIM, test x$eap_sim = xtrue)
+AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
+
+AC_ARG_ENABLE(
+    [eap-identity],
+    AS_HELP_STRING([--enable-eap-identity],[build EAP module providing EAP-Identity helper (default is NO).]),
+    [if test x$enableval = xyes; then
+        eap_identity=true
+    fi]
+)
+AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
 
 AC_ARG_ENABLE(
     [nat-transport],
@@ -307,16 +328,44 @@ AC_ARG_ENABLE(
 AM_CONDITIONAL(USE_SELF_TEST, test x$self_test = xtrue)
 
 AC_ARG_ENABLE(
-    [raw-socket],
-    AS_HELP_STRING([--disable-raw-socket],[disable charons RAW socket and use a normal socket instead. Prevents charon and pluto to run in parallel. (default is NO).]),
+    [pluto],
+    AS_HELP_STRING([--disable-pluto],[disable the IKEv1 keying daemon pluto. (default is NO).]),
     [if test x$enableval = xyes; then
-        raw_socket=true
+        pluto=true
      else
-        raw_socket=false
+        pluto=false
     fi],
-    raw_socket=true
+    pluto=true
 )
-AM_CONDITIONAL(USE_RAW_SOCKET, test x$raw_socket = xtrue)
+AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
+
+AC_ARG_ENABLE(
+    [charon],
+    AS_HELP_STRING([--disable-charon],[disable the IKEv2 keying daemon charon. (default is NO).]),
+    [if test x$enableval = xyes; then
+        charon=true
+     else
+        charon=false
+    fi],
+    charon=true
+)
+AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
+
+AC_ARG_ENABLE(
+    [tools],
+    AS_HELP_STRING([--disable-tools],[disable additional utilities (openac and scepclient). (default is NO).]),
+    [if test x$enableval = xyes; then
+        tools=true
+     else
+        tools=false
+    fi],
+    tools=true
+)
+AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
+
+AM_CONDITIONAL(USE_PLUTO_OR_CHARON, test x$pluto = xtrue -o x$charon = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue)
+AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 
 dnl =========================
 dnl  check required programs

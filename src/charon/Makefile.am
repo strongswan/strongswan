@@ -86,7 +86,8 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/task.c sa/tasks/task.h
 
-if USE_RAW_SOCKET
+# Use RAW socket if pluto gets built
+if USE_PLUTO
   charon_SOURCES += network/socket-raw.c
 else
   charon_SOURCES += network/socket.c
@@ -111,27 +112,31 @@ if USE_LIBCURL
 endif
 
 
-# build EAP plugins, EAP-Identity is always built
-#################################################
+# build EAP plugins
+###################
 eap_LTLIBRARIES =
 
-eap_LTLIBRARIES += libcharon-eapidentity.la
-libcharon_eapidentity_la_SOURCES = sa/authenticators/eap/eap_identity.h sa/authenticators/eap/eap_identity.c
-libcharon_eapidentity_la_LDFLAGS = -module
+if USE_EAP_IDENTITY
+  eap_LTLIBRARIES += libcharon-eapidentity.la
+  libcharon_eapidentity_la_SOURCES = sa/authenticators/eap/eap_identity.h sa/authenticators/eap/eap_identity.c
+  libcharon_eapidentity_la_LDFLAGS = -module
+endif
 
-if BUILD_EAP_SIM
+if USE_EAP_SIM
   eap_LTLIBRARIES += libcharon-eapsim.la
   libcharon_eapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
   libcharon_eapsim_la_LDFLAGS = -module
 endif
 
-# build backends, local backend is always built
-###############################################
+# build backends
+################
 backend_LTLIBRARIES =
 
-backend_LTLIBRARIES += libcharon-local.la
-libcharon_local_la_SOURCES = config/backends/local_backend.h config/backends/local_backend.c
-libcharon_local_la_LDFLAGS = -module
+if USE_STROKE
+  backend_LTLIBRARIES += libcharon-local.la
+  libcharon_local_la_SOURCES = config/backends/local_backend.h config/backends/local_backend.c
+  libcharon_local_la_LDFLAGS = -module
+endif
 
 if USE_LIBSQLITE
   backend_LTLIBRARIES += libcharon-sqlite.la
@@ -140,13 +145,15 @@ if USE_LIBSQLITE
   libcharon_sqlite_la_LDFLAGS = -module
 endif
 
-# build control interfaces, stroke interface is always built
-############################################################
+# build control interfaces
+##########################
 interface_LTLIBRARIES =
 
-interface_LTLIBRARIES += libcharon-stroke.la
-libcharon_stroke_la_SOURCES = control/interfaces/stroke_interface.h control/interfaces/stroke_interface.c
-libcharon_stroke_la_LDFLAGS = -module
+if USE_STROKE
+  interface_LTLIBRARIES += libcharon-stroke.la
+  libcharon_stroke_la_SOURCES = control/interfaces/stroke_interface.h control/interfaces/stroke_interface.c
+  libcharon_stroke_la_LDFLAGS = -module
+endif
 
 if USE_LIBDBUS
   interface_LTLIBRARIES += libcharon-dbus.la
