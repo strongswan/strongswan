@@ -396,13 +396,13 @@ if test "$http" = "true"; then
 fi
 
 if test "$xml" = "true"; then
-	PKG_CHECK_MODULES(xml, libxml-2.0,, AC_MSG_ERROR([No libxml2 package information found]))
+	PKG_CHECK_MODULES(xml, [libxml-2.0],, AC_MSG_ERROR([No libxml2 package information found]))
 	AC_SUBST(xml_CFLAGS)
 	AC_SUBST(xml_LIBS)
 fi
 
 if test "$dbus" = "true"; then
-	PKG_CHECK_MODULES(dbus, dbus-1,, AC_MSG_ERROR([No libdbus package information found]))
+	PKG_CHECK_MODULES(dbus, [dbus-1],, AC_MSG_ERROR([No libdbus package information found]))
 	AC_SUBST(dbus_CFLAGS)
 	AC_SUBST(dbus_LIBS)
 fi
