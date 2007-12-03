@@ -14,6 +14,9 @@ strongswan-4.1.9
 
 - Fixes and improvements to multithreading code.
 
+- IKEv2 plugins have been renamed to libcharon-* to avoid naming conflicts.
+  Make sure to remove the old plugins in $libexecdir/ipsec, otherwise they get 
+  loaded twice.
 
 strongswan-4.1.8
 ----------------
