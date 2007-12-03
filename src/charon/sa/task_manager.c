@@ -30,6 +30,7 @@
 #include <sa/tasks/ike_natd.h>
 #include <sa/tasks/ike_mobike.h>
 #include <sa/tasks/ike_auth.h>
+#include <sa/tasks/ike_auth_lifetime.h>
 #include <sa/tasks/ike_cert.h>
 #include <sa/tasks/ike_rekey.h>
 #include <sa/tasks/ike_delete.h>
@@ -338,6 +339,7 @@ static status_t build_request(private_task_manager_t *this)
 					activate_task(this, IKE_AUTHENTICATE);
 					activate_task(this, IKE_CONFIG);
 					activate_task(this, CHILD_CREATE);
+					activate_task(this, IKE_AUTH_LIFETIME);
 					activate_task(this, IKE_MOBIKE);
 				}
 				break;
@@ -690,12 +692,14 @@ static status_t process_request(private_task_manager_t *this,
 #ifdef P2P			
 			task = (task_t*)ike_p2p_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
-#endif /* P2P */			
+#endif /* P2P */
 			task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)child_create_create(this->ike_sa, NULL);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
+			task = (task_t*)ike_auth_lifetime_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_mobike_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
@@ -772,18 +776,15 @@ static status_t process_request(private_task_manager_t *this,
 							case UNACCEPTABLE_ADDRESSES:
 							case UNEXPECTED_NAT_DETECTED:
 							case COOKIE2:
-								task = (task_t*)ike_mobike_create(this->ike_sa,
-																  FALSE);
+								task = (task_t*)ike_mobike_create(
+														this->ike_sa, FALSE);
+								break;
+							case AUTH_LIFETIME:
+								task = (task_t*)ike_auth_lifetime_create(
+														this->ike_sa, FALSE);
 								break;
 							default:
 								break;
-							case AUTH_LIFETIME:
-							{	/* hackish: a separate task would be overkill here */
-								chunk_t data = notify->get_notification_data(notify);
-								u_int32_t lifetime = ntohl(*(u_int32_t*)data.ptr);
-								this->ike_sa->set_auth_lifetime(this->ike_sa, lifetime);
-								break;
-							}
 						}
 						break;
 					}

@@ -51,6 +51,7 @@
 #include <sa/tasks/ike_natd.h>
 #include <sa/tasks/ike_mobike.h>
 #include <sa/tasks/ike_auth.h>
+#include <sa/tasks/ike_auth_lifetime.h>
 #include <sa/tasks/ike_config.h>
 #include <sa/tasks/ike_cert.h>
 #include <sa/tasks/ike_rekey.h>
@@ -258,6 +259,11 @@ struct private_ike_sa_t {
 	 * how many times we have retried so far (keyingtries)
 	 */
 	u_int32_t keyingtry;
+	
+	/**
+	 * are we the initiator of this IKE_SA (rekeying does not affect this flag)
+	 */
+	bool ike_initiator;
 };
 
 /**
@@ -1007,6 +1013,8 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 			return DESTROY_ME;
 		}
 		
+		this->ike_initiator = TRUE;
+		
 		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_natd_create(&this->public, TRUE);
@@ -1016,6 +1024,8 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_auth_lifetime_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		if (this->peer_cfg->use_mobike(this->peer_cfg))
 		{
@@ -1106,6 +1116,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_auth_lifetime_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		if (this->peer_cfg->use_mobike(this->peer_cfg))
 		{
@@ -1501,6 +1513,8 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 					task = (task_t*)child_create_create(&new->public, child_cfg);
 					new->task_manager->queue_task(new->task_manager, task);
 				}		
+				task = (task_t*)ike_auth_lifetime_create(&new->public, TRUE);
+				new->task_manager->queue_task(new->task_manager, task);
 				if (this->peer_cfg->use_mobike(this->peer_cfg))
 				{
 					task = (task_t*)ike_mobike_create(&new->public, TRUE);
@@ -1938,7 +1952,7 @@ static status_t reestablish(private_ike_sa_t *this)
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
 	 * If the peer does not support RFC4478, there is no way to keep the
 	 * IKE_SA up. */
-	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
+	if (!this->ike_initiator)
 	{
 		DBG1(DBG_IKE, "initiator did not reauthenticate as requested");
 		if (this->other_virtual_ip != NULL ||
@@ -2055,6 +2069,7 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	this->other_host = other->other_host->clone(other->other_host);
 	this->my_id = other->my_id->clone(other->my_id);
 	this->other_id = other->other_id->clone(other->other_id);
+	this->ike_initiator = other->ike_initiator;
 	
 	/* apply virtual assigned IPs... */
 	if (other->my_virtual_ip)
@@ -2405,6 +2420,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->additional_addresses = linked_list_create();
 	this->pending_updates = 0;
 	this->keyingtry = 0;
+	this->ike_initiator = FALSE;
 #ifdef P2P
 	this->server_reflexive_host = NULL;
 #endif /* P2P */

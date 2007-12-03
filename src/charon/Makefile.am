@@ -83,6 +83,7 @@ sa/tasks/ike_natd.c sa/tasks/ike_natd.h \
 sa/tasks/ike_mobike.c sa/tasks/ike_mobike.h \
 sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
+sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/task.c sa/tasks/task.h
 
 if USE_RAW_SOCKET

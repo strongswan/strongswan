@@ -45,6 +45,8 @@ enum task_type_t {
 	IKE_MOBIKE,
 	/** authenticate the initiated IKE_SA */
 	IKE_AUTHENTICATE,
+	/** AUTH_LIFETIME negotiation, RFC4478 */
+	IKE_AUTH_LIFETIME,
 	/** exchange certificates and requests */
 	IKE_CERT,
 	/** Configuration payloads, virtual IP and such */
