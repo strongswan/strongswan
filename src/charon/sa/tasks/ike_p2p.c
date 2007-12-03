@@ -215,7 +215,8 @@ static void process_payloads(private_ike_p2p_t *this, message_t *message)
 					DBG1(DBG_IKE, "received invalid P2P_ENDPOINT notify");
 					break;
 				}
-				DBG2(DBG_IKE, "received P2P_ENDPOINT notify");
+				DBG1(DBG_IKE, "received %N P2P_ENDPOINT %#H", p2p_endpoint_type_names,
+					endpoint->get_type(endpoint), endpoint->get_host(endpoint));
 				
 				this->remote_endpoints->insert_last(this->remote_endpoints, endpoint);
 				break;

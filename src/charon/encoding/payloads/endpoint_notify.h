@@ -35,6 +35,11 @@ typedef struct endpoint_notify_t endpoint_notify_t;
 
 #include <encoding/payloads/notify_payload.h>
 
+/**
+ * @brief P2P endpoint families.
+ *
+ * @ingroup payloads
+ */
 enum p2p_endpoint_family_t {
 	
 	NO_FAMILY = 0,
@@ -47,6 +52,11 @@ enum p2p_endpoint_family_t {
 	
 };
 
+/**
+ * @brief P2P endpoint types.
+ *
+  * @ingroup payloads
+ */
 enum p2p_endpoint_type_t {
 	
 	NO_TYPE = 0,
@@ -62,6 +72,13 @@ enum p2p_endpoint_type_t {
 	MAX_TYPE = 5
 	
 };
+
+/**
+ * enum name for p2p_endpoint_type_t.
+ *
+ * @ingroup payloads
+ */
+extern enum_name_t *p2p_endpoint_type_names;
 
 /**
  * @brief Class representing a P2P_ENDPOINT notify. In fact it's not

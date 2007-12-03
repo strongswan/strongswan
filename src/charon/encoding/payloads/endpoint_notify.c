@@ -76,6 +76,13 @@ struct private_endpoint_notify_t {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+ENUM(p2p_endpoint_type_names, HOST, RELAYED,
+	"HOST",
+	"SERVER_REFLEXIVE",
+	"PEER_REFLEXIVE",
+	"RELAYED"
+);
+
 /**
  * Helper functions to parse integer values
  */
@@ -251,7 +258,7 @@ static u_int32_t get_priority(private_endpoint_notify_t *this)
  */
 static void set_priority(private_endpoint_notify_t *this, u_int32_t priority)
 {
-	return this->priority = priority;
+	this->priority = priority;
 }
 
 /**

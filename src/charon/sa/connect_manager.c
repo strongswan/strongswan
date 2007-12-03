@@ -936,7 +936,7 @@ static status_t process_payloads(message_t *message, check_t *check)
 				}
 				check->endpoint = endpoint;
 				check->endpoint_raw = chunk_clone(notify->get_notification_data(notify));
-				DBG3(DBG_IKE, "received P2P_ENDPOINT notify");
+				DBG2(DBG_IKE, "received P2P_ENDPOINT notify");
 				break;
 			}
 			case P2P_SESSIONID:
