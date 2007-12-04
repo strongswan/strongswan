@@ -32,13 +32,13 @@
 #include <processing/jobs/initiate_mediation_job.h>
 #include <encoding/payloads/endpoint_notify.h>
 
-// base timeout
-// the sending interval is P2P_INTERVAL * active checklists (N)
-// retransmission timeout is P2P_INTERVAL * N * checks in waiting state (NW)
-#define P2P_INTERVAL 20 // 20 ms
-// min retransmission timeout (RTO is P2P_INTERVAL * N * checks in waiting state)
-#define P2P_RTO_MIN 100 // 100 ms
-// max number of retransmissions (+ the initial check)
+/* base timeout
+ * the sending interval is P2P_INTERVAL * active checklists (N)
+ * retransmission timeout is P2P_INTERVAL * N * checks in waiting state (NW) */
+#define P2P_INTERVAL 20 /* ms */
+/* min retransmission timeout (RTO is P2P_INTERVAL * N * checks in waiting state) */
+#define P2P_RTO_MIN 100 /* ms */
+/* max number of retransmissions (+ the initial check) */
 #define P2P_MAX_RETRANS 2
 
 
@@ -212,7 +212,8 @@ static void check_list_destroy(check_list_t *this)
 	DESTROY_OFFSET_IF(this->responder.endpoints, offsetof(endpoint_notify_t, destroy));
 	
 	DESTROY_FUNCTION_IF(this->pairs, (void*)endpoint_pair_destroy);
-	DESTROY_IF(this->triggered); // this list contains some of the same elements as contained in this->pairs
+	/* this list contains some of the same elements as contained in this->pairs */
+	DESTROY_IF(this->triggered); 
 	
 	free(this);
 }
@@ -489,8 +490,6 @@ static initiate_data_t *initiate_data_create(check_list_t *checklist, initiated_
 	return this;
 }
 
-// -----------------------------------------------------------------------------
-
 /**
  * Find an initiated connection by the peers' ids
  */
@@ -641,9 +640,6 @@ static status_t endpoints_contain(linked_list_t *endpoints, host_t *host, endpoi
 	return status;
 }
 
-// -----------------------------------------------------------------------------
-
-
 /**
  * Updates the state of the whole checklist
  */
@@ -659,7 +655,8 @@ static void update_checklist_state(check_list_t *checklist)
 		switch(current->state)
 		{
 			case CHECK_WAITING:
-				// at least one is still waiting -> checklist remains in waiting state
+				/* at least one is still waiting -> checklist remains
+				 * in waiting state */
 				iterator->destroy(iterator);
 				return;
 			case CHECK_IN_PROGRESS:
@@ -667,6 +664,8 @@ static void update_checklist_state(check_list_t *checklist)
 				break;
 			case CHECK_SUCCEEDED:
 				succeeded = TRUE;
+				break;
+			default:
 				break;
 		}
 	}
@@ -832,7 +831,6 @@ static void prune_pairs(linked_list_t *pairs)
 {
 	iterator_t *iterator, *search;
 	endpoint_pair_t *current, *other;
-	bool inserted = FALSE;
 	u_int32_t id = 0;
 	
 	iterator = pairs->create_iterator(pairs, TRUE);
@@ -851,10 +849,10 @@ static void prune_pairs(linked_list_t *pairs)
 			if (current->local->equals(current->local, other->local) &&
 					current->remote->equals(current->remote, other->remote))
 			{
-				// since the list of pairs is sorted by priority in descending
-				// order, and we iterate the list from the beginning, we are
-				// sure that the priority of 'other' is lower than that of
-				// 'current', remove it
+				/* since the list of pairs is sorted by priority in descending
+				 * order, and we iterate the list from the beginning, we are
+				 * sure that the priority of 'other' is lower than that of
+				 * 'current', remove it */
 				DBG1(DBG_IKE, "pruning endpoint pair %H - %H with priority %d",
 						other->local, other->remote, other->priority);
 				search->remove(search);
@@ -895,8 +893,6 @@ static void build_pairs(check_list_t *checklist)
 
 	prune_pairs(checklist->pairs);
 }
-
-// -----------------------------------------------------------------------------
 
 /**
  * Processes the payloads of a connectivity check and returns the extracted data
@@ -1000,9 +996,6 @@ static chunk_t build_signature(private_connect_manager_t *this,
 	return sig_hash;
 }
 
-// -----------------------------------------------------------------------------
-
-// forward declarations
 static void queue_retransmission(private_connect_manager_t *this, chunk_t session_id, u_int32_t mid);
 static void schedule_checks(private_connect_manager_t *this, check_list_t *checklist, u_int32_t time);
 static void finish_checks(private_connect_manager_t *this, check_list_t *checklist);
@@ -1061,11 +1054,13 @@ retransmit_end:
 		case CHECK_FAILED:
 			finish_checks(this, checklist);
 			break;
+		default:
+			break;
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));
 	
-	// we reschedule it manually
+	/* we reschedule it manually */
 	return JOB_REQUEUE_NONE;
 }
 
@@ -1192,13 +1187,13 @@ static job_requeue_t sender(sender_data_t *data)
 	
 	check_destroy(check);
 	
-	// schedule this job again
+	/* schedule this job again */
 	u_int32_t N = this->checklists->get_count(this->checklists);
 	schedule_checks(this, checklist, P2P_INTERVAL * N);
 	
 	pthread_mutex_unlock(&(this->mutex));
 	
-	// we reschedule it manually
+	/* we reschedule it manually */
 	return JOB_REQUEUE_NONE;
 }
 
@@ -1272,9 +1267,10 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
 		}
 	}
 	
-	//remove_checklist(this, checklist);
-	//check_list_destroy(checklist);
-	// FIXME: we should do this ^^^ after a specific timeout on the responder side
+	/* remove_checklist(this, checklist);
+	 * check_list_destroy(checklist);
+	 * FIXME: we should do this ^^^ after a specific timeout on the 
+	 * responder side */
 }
 
 /**
@@ -1315,6 +1311,8 @@ static void process_response(private_connect_manager_t *this, check_t *check,
 			case CHECK_FAILED:
 				finish_checks(this, checklist);
 				break;
+			default:
+				break;
 		}
 	}
 	else
@@ -1345,16 +1343,16 @@ static void process_request(private_connect_manager_t *this, check_t *check,
 		switch(pair->state)
 		{
 			case CHECK_IN_PROGRESS:
-				pair->retransmitted = P2P_MAX_RETRANS; // prevent retransmissions
-				// FIXME: we should wait to the next rto to send the triggered check
-				// fall-through
+				/* prevent retransmissions */
+				pair->retransmitted = P2P_MAX_RETRANS; 
+				/* FIXME: we should wait to the next rto to send the triggered check
+				 * fall-through */
 			case CHECK_WAITING:
 			case CHECK_FAILED:
 				queue_triggered_check(checklist, pair);
 				break;
 			case CHECK_SUCCEEDED:
 			default:
-				// do nothing
 				break;
 		}
 	}
@@ -1452,8 +1450,6 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 	
 	check_destroy(check);
 }
-
-// -----------------------------------------------------------------------------
 
 /**
  * Implementation of connect_manager_t.check_and_register.
@@ -1570,7 +1566,8 @@ static status_t set_responder_data(private_connect_manager_t *this,
 	
 	build_pairs(checklist);
 	
-	schedule_checks(this, checklist, 0); // send the first check immediately
+	/* send the first check immediately */
+	schedule_checks(this, checklist, 0);
 	
 	pthread_mutex_unlock(&(this->mutex));
 	

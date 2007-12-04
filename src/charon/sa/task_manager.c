@@ -706,7 +706,7 @@ static status_t process_request(private_task_manager_t *this,
 			break;
 		}
 		case CREATE_CHILD_SA:
-		{//FIXME: we should prevent this on mediation connections
+		{	/* FIXME: we should prevent this on mediation connections */
 			bool notify_found = FALSE, ts_found = FALSE;
 			iterator = message->get_payload_iterator(message);
 			while (iterator->iterate(iterator, (void**)&payload))

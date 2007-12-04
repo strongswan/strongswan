@@ -73,7 +73,7 @@ static bool initiate_callback(private_initiate_mediation_job_t *this, signal_t s
 {
 	if (signal == CHILD_UP_SUCCESS)
 	{
-		// mediation connection is up
+		/* mediation connection is up */
 		this->mediation_sa_id = ike_sa->get_id(ike_sa);
 		this->mediation_sa_id = this->mediation_sa_id->clone(this->mediation_sa_id);
 		return FALSE;
@@ -85,7 +85,7 @@ static bool initiate_callback(private_initiate_mediation_job_t *this, signal_t s
  * Implementation of job_t.execute.
  */ 
 static void initiate(private_initiate_mediation_job_t *this)
-{//FIXME: check the logging 
+{	/* FIXME: check the logging */
 	ike_sa_t *mediated_sa, *mediation_sa;
 	peer_cfg_t *mediated_cfg, *mediation_cfg;
 	
@@ -94,7 +94,8 @@ static void initiate(private_initiate_mediation_job_t *this)
 	if (mediated_sa)
 	{
 		mediated_cfg = mediated_sa->get_peer_cfg(mediated_sa);
-		mediated_cfg->get_ref(mediated_cfg); // get_peer_cfg returns an internal object
+		/* get_peer_cfg returns an internal object */
+		mediated_cfg->get_ref(mediated_cfg); 
 		
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediated_sa);
 		
@@ -107,18 +108,19 @@ static void initiate(private_initiate_mediation_job_t *this)
 		{
 			mediated_cfg->destroy(mediated_cfg);
 			mediation_cfg->destroy(mediation_cfg);
-			charon->bus->set_sa(charon->bus, mediated_sa); // this pointer should still be valid
+			/* this pointer should still be valid */
+			charon->bus->set_sa(charon->bus, mediated_sa);
 			DBG1(DBG_IKE, "mediation with the same peer is already in progress, queued");
 			destroy(this);
 			return;
 		}
-		
-		mediation_cfg->get_ref(mediation_cfg); // we need an additional reference because initiate consumes one
+		/* we need an additional reference because initiate consumes one */
+		mediation_cfg->get_ref(mediation_cfg); 
 
-		// this function call blocks until the connection is up or failed
-		// we do not check the status, but NEED_MORE would be returned on success
-		// because the registered callback returns FALSE then
-		// this->mediation_sa_id is set in the callback
+		/* this function call blocks until the connection is up or failed
+		 * we do not check the status, but NEED_MORE would be returned on success
+		 * because the registered callback returns FALSE then
+		 * this->mediation_sa_id is set in the callback */
 		charon->interfaces->initiate(charon->interfaces,
 				mediation_cfg, NULL, (interface_manager_cb_t)initiate_callback, this);
 		if (!this->mediation_sa_id)
@@ -127,7 +129,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 					mediation_cfg->get_name(mediation_cfg));
 			mediation_cfg->destroy(mediation_cfg);
 			mediated_cfg->destroy(mediated_cfg);
-			charon->bus->set_sa(charon->bus, mediated_sa); // this pointer should still be valid
+			charon->bus->set_sa(charon->bus, mediated_sa);
 			SIG(IKE_UP_FAILED, "mediation failed");
 			destroy(this);
 			return;
@@ -146,7 +148,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 				mediated_cfg->destroy(mediated_cfg);
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, mediation_sa);
 				
-				charon->bus->set_sa(charon->bus, mediated_sa); // this pointer should still be valid
+				charon->bus->set_sa(charon->bus, mediated_sa);
 				SIG(IKE_UP_FAILED, "mediation failed");
 				destroy(this);
 				return;
@@ -164,7 +166,7 @@ static void initiate(private_initiate_mediation_job_t *this)
  * Implementation of job_t.execute.
  */ 
 static void reinitiate(private_initiate_mediation_job_t *this)
-{//FIXME: check the logging 
+{	/* FIXME: check the logging */
 	ike_sa_t *mediated_sa, *mediation_sa;
 	peer_cfg_t *mediated_cfg;
 	
@@ -173,7 +175,7 @@ static void reinitiate(private_initiate_mediation_job_t *this)
 	if (mediated_sa)
 	{
 		mediated_cfg = mediated_sa->get_peer_cfg(mediated_sa);
-		mediated_cfg->get_ref(mediated_cfg); // get_peer_cfg returns an internal object
+		mediated_cfg->get_ref(mediated_cfg);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediated_sa);
 		
 		mediation_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
@@ -187,7 +189,7 @@ static void reinitiate(private_initiate_mediation_job_t *this)
 				mediated_cfg->destroy(mediated_cfg);
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, mediation_sa);
 				
-				charon->bus->set_sa(charon->bus, mediated_sa); // this pointer should still be valid
+				charon->bus->set_sa(charon->bus, mediated_sa);
 				SIG(IKE_UP_FAILED, "mediation failed");
 				destroy(this);
 				return;

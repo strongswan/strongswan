@@ -240,7 +240,7 @@ static void update_sa_id(private_mediation_manager_t *this, identification_t *pe
 	DBG2(DBG_IKE, "changing registered IKE_SA ID of peer '%D'", peer_id);			
 	peer->ike_sa_id = ike_sa_id ? ike_sa_id->clone(ike_sa_id) : NULL;
 	
-	// send callbacks to registered peers
+	/* send callbacks to registered peers */
 	identification_t *requester;
 	while(peer->requested_by->remove_last(peer->requested_by, (void**)&requester) == SUCCESS)
 	{
@@ -295,7 +295,7 @@ static ike_sa_id_t *check_and_register(private_mediation_manager_t *this,
 	
 	if (!peer->ike_sa_id)
 	{
-		// the peer is not online
+		/* the peer is not online */
 		DBG2(DBG_IKE, "requested peer '%D' is offline, registering peer '%D'", peer_id, requester);
 		register_peer(peer, requester);
 		pthread_mutex_unlock(&(this->mutex));

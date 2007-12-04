@@ -192,7 +192,8 @@ static status_t verify(private_ike_header_t *this)
 
 	if (this->initiator_spi == 0
 #ifdef P2P
-		// we allow zero spi for INFORMATIONAL exchanges, to allow P2P connectivity checks
+		/* we allow zero spi for INFORMATIONAL exchanges,
+		 * to allow P2P connectivity checks */
 		&& this->exchange_type != INFORMATIONAL
 #endif /* P2P */
 		)

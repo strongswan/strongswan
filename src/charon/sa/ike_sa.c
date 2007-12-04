@@ -69,6 +69,7 @@
 
 #ifdef P2P
 #include <sa/tasks/ike_p2p.h>
+#include <processing/jobs/initiate_mediation_job.h>
 #endif
 
 #ifndef RESOLV_CONF
@@ -1041,7 +1042,7 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 #ifdef P2P
 	if (this->peer_cfg->get_mediated_by(this->peer_cfg))
 	{
-		// mediated connection, initiate mediation process
+		/* mediated connection, initiate mediation process */
 		job_t *job = (job_t*)initiate_mediation_job_create(this->ike_sa_id, child_cfg);
 		child_cfg->destroy(child_cfg);
 		charon->processor->queue_job(charon->processor, job);
@@ -1050,14 +1051,14 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	else if (this->peer_cfg->is_mediation(this->peer_cfg))
 	{
 		if (this->state == IKE_ESTABLISHED)
-		{// FIXME: we should try to find a better solution to this
+		{	/* FIXME: we should try to find a better solution to this */
 			SIG(CHILD_UP_SUCCESS, "mediation connection is already up and running");
 		}
 	}
 	else
 #endif /* P2P */
 	{
-		// normal IKE_SA with CHILD_SA
+		/* normal IKE_SA with CHILD_SA */
 		task = (task_t*)child_create_create(&this->public, child_cfg);
 		child_cfg->destroy(child_cfg);
 		this->task_manager->queue_task(this->task_manager, task);
@@ -1070,7 +1071,7 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
  * Implementation of ike_sa_t.acquire.
  */
 static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
-{// FIXME: P2P-NAT-T
+{	/* FIXME: P2P-NAT-T */
 	child_cfg_t *child_cfg;
 	iterator_t *iterator;
 	child_sa_t *current, *child_sa = NULL;
@@ -1396,7 +1397,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
  * Implementation of ike_sa_t.retransmit.
  */
 static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
-{// FIXME: P2P-NAT-T
+{	/* FIXME: P2P-NAT-T */
 	this->time.outbound = time(NULL);
 	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
 	{
@@ -2288,7 +2289,7 @@ static void destroy(private_ike_sa_t *this)
 	if (this->peer_cfg && this->peer_cfg->is_mediation(this->peer_cfg) &&
 			!this->ike_sa_id->is_initiator(this->ike_sa_id))
 	{
-		// mediation server
+		/* mediation server */
 		charon->mediation_manager->remove(charon->mediation_manager, this->ike_sa_id);
 	}
 	DESTROY_IF(this->server_reflexive_host);

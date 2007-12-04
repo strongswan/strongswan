@@ -159,14 +159,10 @@ static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t
 	
 	switch(this->family)
 	{
-		case NO_FAMILY:
-			this->endpoint = NULL;
-			break;
-	
 		case IPv6:
 			addr_family = AF_INET6;
 			addr.len = 16;
-			// fall-through
+			/* fall-through */
 		case IPv4:
 			if (parse_uint16(&cur, top, &port) != SUCCESS)
 			{
@@ -184,8 +180,11 @@ static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t
 			
 			this->endpoint = host_create_from_chunk(addr_family, addr, port);
 			break;
+		case NO_FAMILY:
+		default:
+			this->endpoint = NULL;
+			break;
 	}	
-	
 	return SUCCESS;
 }
 
@@ -220,7 +219,7 @@ static chunk_t build_notification_data(private_endpoint_notify_t *this)
 	}
 	port_chunk = chunk_from_thing(port);
 	
-	// data = prio | family | type | port | addr
+	/* data = prio | family | type | port | addr */
 	data = chunk_cat("ccccc", prio_chunk, family_chunk, type_chunk,
 			port_chunk, addr_chunk);
 	DBG3(DBG_IKE, "p2p_endpoint_data %B", &data);
@@ -375,13 +374,15 @@ endpoint_notify_t *endpoint_notify_create_from_host(p2p_endpoint_type_t type, ho
 			this->priority = pow(2, 16) * P2P_PRIO_PEER; 
 			break;
 		case RELAYED:
+		default:
 			this->priority = pow(2, 16) * P2P_PRIO_RELAY; 
 			break;
 	}
 	
 	this->priority += 65535;
 	
-	if (!host) {
+	if (!host)
+	{
 		return &this->public;
 	}
 	
@@ -394,7 +395,8 @@ endpoint_notify_t *endpoint_notify_create_from_host(p2p_endpoint_type_t type, ho
 			this->family = IPv6;
 			break;
 		default:
-			// unsupported family type, we do not set the hsot (family is set to NO_FAMILY) 
+			/* unsupported family type, we do not set the hsot
+			 * (family is set to NO_FAMILY) */
 			return &this->public;
 	}
 	

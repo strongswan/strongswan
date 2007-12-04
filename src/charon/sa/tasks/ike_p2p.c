@@ -34,7 +34,7 @@
 #define P2P_SESSIONID_LEN 8
 #define P2P_SESSIONKEY_LEN 16
 
-// FIXME: proposed values
+/* FIXME: proposed values */
 #define P2P_SESSIONID_MIN_LEN 4
 #define P2P_SESSIONID_MAX_LEN 16
 #define P2P_SESSIONKEY_MIN_LEN 8
@@ -119,8 +119,6 @@ struct private_ike_p2p_t {
 
 };
 
-// -----------------------------------------------------------------------------
-
 /**
  * Adds a list of endpoints as notifies to a given message
  */
@@ -146,7 +144,7 @@ static void gather_and_add_endpoints(private_ike_p2p_t *this, message_t *message
 	host_t *addr, *host;
 	u_int16_t port;
 	
-	// get the port that is used to communicate with the ms
+	/* get the port that is used to communicate with the ms */
 	host = this->ike_sa->get_my_host(this->ike_sa);
 	port = host->get_port(host);
 	
@@ -254,8 +252,6 @@ static void process_payloads(private_ike_p2p_t *this, message_t *message)
 	iterator->destroy(iterator);
 }
 
-// -----------------------------------------------------------------------------
-
 /**
  * Implementation of task_t.process for initiator
  */
@@ -297,8 +293,8 @@ static status_t build_i(private_ike_p2p_t *this, message_t *message)
 			
 			if (!this->response)
 			{
-				// only the initiator creates a session ID. the responder returns
-				// the session ID that it received from the initiator
+				/* only the initiator creates a session ID. the responder returns
+				 * the session ID that it received from the initiator */
 				if (rand->allocate_pseudo_random_bytes(rand,
 						P2P_SESSIONID_LEN, &this->session_id) != SUCCESS)
 				{
@@ -327,7 +323,7 @@ static status_t build_i(private_ike_p2p_t *this, message_t *message)
 			}
 			else
 			{
-				// FIXME: should we make that configurable
+				/* FIXME: should we make that configurable */
 				message->add_notify(message, FALSE, P2P_CALLBACK, chunk_empty);
 			}
 			
@@ -335,8 +331,9 @@ static status_t build_i(private_ike_p2p_t *this, message_t *message)
 			
 			break;
 		}
+		default:
+			break;
 	}
-	
 	return NEED_MORE;
 }
 
@@ -388,11 +385,11 @@ static status_t process_r(private_ike_p2p_t *this, message_t *message)
 			}
 			
 			DBG1(DBG_IKE, "received P2P_CONNECT");
-			
 			break;
 		}
+		default:
+			break;
 	}
-	
 	return NEED_MORE;
 }
 
@@ -421,16 +418,16 @@ static status_t build_r(private_ike_p2p_t *this, message_t *message)
 			
 			if (this->response)
 			{
-				// FIXME: handle result of set_responder_data
-				// as initiator, upon receiving a response from another peer,
-				// update the checklist and start sending checks
+				/* FIXME: handle result of set_responder_data
+				 * as initiator, upon receiving a response from another peer,
+				 * update the checklist and start sending checks */
 				charon->connect_manager->set_responder_data(charon->connect_manager,
 						this->session_id, this->session_key, this->remote_endpoints);
 			}
 			else
 			{
-				// FIXME: handle result of set_initiator_data
-				// as responder, create a checklist with the initiator's data
+				/* FIXME: handle result of set_initiator_data
+				 * as responder, create a checklist with the initiator's data */
 				charon->connect_manager->set_initiator_data(charon->connect_manager,
 						this->peer_id, this->ike_sa->get_my_id(this->ike_sa),
 						this->session_id, this->session_key, this->remote_endpoints,
@@ -441,9 +438,10 @@ static status_t build_r(private_ike_p2p_t *this, message_t *message)
 					return FAILED;
 				}
 			}
-			
 			break;
 		}
+		default:
+			break;
 	}
 	return SUCCESS;
 }
@@ -470,19 +468,19 @@ static status_t process_i(private_ike_p2p_t *this, message_t *message)
 		case IKE_AUTH:
 		{
 			process_payloads(this, message);
-			
-			//FIXME: we should update the server reflexive endpoint somehow, if mobike notices a change 
-			
+			/* FIXME: we should update the server reflexive endpoint somehow,
+			 * if mobike notices a change */
 			endpoint_notify_t *reflexive;
-			if (this->remote_endpoints->get_first(this->remote_endpoints, (void**)&reflexive) == SUCCESS &&
-					reflexive->get_type(reflexive) == SERVER_REFLEXIVE)
-			{//FIXME: should we accept this endpoint even if we did not send a request?
+			if (this->remote_endpoints->get_first(this->remote_endpoints, 
+											(void**)&reflexive) == SUCCESS &&
+				reflexive->get_type(reflexive) == SERVER_REFLEXIVE)
+			{	/* FIXME: should we accept this endpoint even if we did not send 
+				 * a request? */
 				host_t *endpoint = reflexive->get_host(reflexive);
 				
 				this->ike_sa->set_server_reflexive_host(this->ike_sa, endpoint->clone(endpoint));
 			}
-			
-			// FIXME: what if it failed? e.g. AUTH failure
+			/* FIXME: what if it failed? e.g. AUTH failure */
 			SIG(CHILD_UP_SUCCESS, "established mediation connection without CHILD_SA successfully");
 			
 			break;
@@ -494,22 +492,23 @@ static status_t process_i(private_ike_p2p_t *this, message_t *message)
 			if (this->failed)
 			{
 				DBG1(DBG_IKE, "peer '%D' is not online", this->peer_id);
-				// FIXME: notify the mediated connection (job?)
-				// FIXME: probably delete the created checklist, at least as responder
+				/* FIXME: notify the mediated connection (job?)
+				 * FIXME: probably delete the created checklist, at least as 
+				 * responder */
 			}
 			else
 			{
 				if (this->response)
 				{
-					// FIXME: handle result of set_responder_data
-					// as responder, we update the checklist and start sending checks
+					/* FIXME: handle result of set_responder_data.
+					 * as responder, we update the checklist and start sending checks */
 					charon->connect_manager->set_responder_data(charon->connect_manager,
 							this->session_id, this->session_key, this->local_endpoints);
 				}
 				else
 				{
-					// FIXME: handle result of set_initiator_data
-					// as initiator, we create a checklist and set the initiator's data
+					/* FIXME: handle result of set_initiator_data
+					 * as initiator, we create a checklist and set the initiator's data */
 					charon->connect_manager->set_initiator_data(charon->connect_manager,
 						this->ike_sa->get_my_id(this->ike_sa), this->peer_id,
 						this->session_id, this->session_key, this->local_endpoints,
@@ -518,11 +517,11 @@ static status_t process_i(private_ike_p2p_t *this, message_t *message)
 			}
 			break;
 		}
+		default:
+			break;
 	}
 	return SUCCESS;
 }
-
-// -----------------------------------------------------------------------------
 
 /**
  * Implementation of task_t.process for initiator (mediation server)
@@ -542,21 +541,19 @@ static status_t build_i_ms(private_ike_p2p_t *this, message_t *message)
 			}
 			else
 			{
-				notify_payload_t *notify;
-				
 				if (this->response)
 				{
 					message->add_notify(message, FALSE, P2P_RESPONSE, chunk_empty);
-				}
-				
+				}	
 				message->add_notify(message, FALSE, P2P_SESSIONID, this->session_id);
 				message->add_notify(message, FALSE, P2P_SESSIONKEY, this->session_key);
 				
 				add_endpoints_to_message(message, this->remote_endpoints);
 			}
-			
 			break;
 		}
+		default:
+			break;
 	}
 	
 	return NEED_MORE;
@@ -614,9 +611,10 @@ static status_t process_r_ms(private_ike_p2p_t *this, message_t *message)
 				this->invalid_syntax = TRUE;
 				break;
 			}
-			
 			break;
 		}
+		default:
+			break;
 	}
 	
 	return NEED_MORE;
@@ -679,7 +677,7 @@ static status_t build_r_ms(private_ike_p2p_t *this, message_t *message)
 			
 			if (!peer_sa)
 			{
-				// the peer is not online
+				/* the peer is not online */
 				message->add_notify(message, TRUE, P2P_CONNECT_FAILED, chunk_empty);
 				break;
 			}
@@ -691,6 +689,8 @@ static status_t build_r_ms(private_ike_p2p_t *this, message_t *message)
 			
 			break;
 		}
+		default:
+			break;
 	}
 	return SUCCESS;
 }
@@ -700,17 +700,8 @@ static status_t build_r_ms(private_ike_p2p_t *this, message_t *message)
  */
 static status_t process_i_ms(private_ike_p2p_t *this, message_t *message)
 {
-	switch(message->get_exchange_type(message))
-	{
-		case P2P_CONNECT:
-		{
-			break;
-		}
-	}
 	return SUCCESS;
 }
-
-// -----------------------------------------------------------------------------
 
 /**
  * Implementation of ike_p2p.connect
@@ -813,7 +804,7 @@ ike_p2p_t *ike_p2p_create(ike_sa_t *ike_sa, bool initiator)
 	}
 	else
 	{
-		// mediation server
+		/* mediation server */
 		if (initiator)
 		{
 			this->public.task.build = (status_t(*)(task_t*,message_t*))build_i_ms;

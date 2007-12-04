@@ -60,12 +60,13 @@ static void execute(private_process_message_job_t *this)
 	ike_sa_t *ike_sa;
 	
 #ifdef P2P
-	// if this is an unencrypted INFORMATIONAL exchange it is likely a 
-	// connectivity check
+	/* if this is an unencrypted INFORMATIONAL exchange it is likely a 
+	 * connectivity check. */
 	if (this->message->get_exchange_type(this->message) == INFORMATIONAL &&
 		this->message->get_first_payload_type(this->message) != ENCRYPTED)
 	{
-		// theoretically this could also be an error message see RFC 4306, section 1.5.
+		/* theoretically this could also be an error message
+		 * see RFC 4306, section 1.5. */
 		DBG1(DBG_NET, "received unencrypted informational: from %#H to %#H",
 			 this->message->get_source(this->message),
 			 this->message->get_destination(this->message));
