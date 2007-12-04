@@ -287,7 +287,7 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 static status_t build_i(private_ike_mobike_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_payload(message, SECURITY_ASSOCIATION))
+		message->get_payload(message, ID_INITIATOR))
 	{
 		message->add_notify(message, FALSE, MOBIKE_SUPPORTED, chunk_empty);
 		build_address_list(this, message);
@@ -317,7 +317,7 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 static status_t process_r(private_ike_mobike_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_payload(message, SECURITY_ASSOCIATION))
+		message->get_payload(message, ID_INITIATOR))
 	{
 		process_payloads(this, message);
 	}
@@ -348,7 +348,7 @@ static status_t process_r(private_ike_mobike_t *this, message_t *message)
 static status_t build_r(private_ike_mobike_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_payload(message, SECURITY_ASSOCIATION))
+		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{
 		if (this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 		{
@@ -378,7 +378,7 @@ static status_t build_r(private_ike_mobike_t *this, message_t *message)
 static status_t process_i(private_ike_mobike_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_payload(message, SECURITY_ASSOCIATION))
+		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{
 		process_payloads(this, message);
 		return SUCCESS;
