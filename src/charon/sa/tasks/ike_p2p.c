@@ -478,7 +478,6 @@ static status_t process_i(private_ike_p2p_t *this, message_t *message)
 					reflexive->get_type(reflexive) == SERVER_REFLEXIVE)
 			{//FIXME: should we accept this endpoint even if we did not send a request?
 				host_t *endpoint = reflexive->get_host(reflexive);
-				DBG2(DBG_IKE, "received server reflexive endpoint %#H", endpoint);
 				
 				this->ike_sa->set_server_reflexive_host(this->ike_sa, endpoint->clone(endpoint));
 			}
