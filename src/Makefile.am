@@ -1,7 +1,11 @@
 SUBDIRS = include
 
+if USE_FILE_CONFIG
+  SUBDIRS += libfreeswan starter ipsec _copyright
+endif
+
 if USE_PLUTO
-  SUBDIRS += libfreeswan libcrypto pluto whack
+  SUBDIRS += libcrypto pluto whack
 endif
 
 if USE_LIBSTRONGSWAN
@@ -14,10 +18,6 @@ endif
 
 if USE_STROKE
   SUBDIRS += stroke
-endif
-
-if USE_FILE_CONFIG
-  SUBDIRS += starter ipsec _copyright
 endif
 
 if USE_PLUTO_OR_CHARON
