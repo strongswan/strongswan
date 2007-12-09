@@ -165,7 +165,7 @@ static status_t verify(private_configuration_attribute_t *this)
 		 default:
 			DBG1(DBG_ENC, "unknown attribute type %N", 
 				 configuration_attribute_type_names, this->attribute_type);
-		 	return FAILED;
+		 	break;
 	}
 	
 	if (failed)
