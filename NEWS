@@ -1,3 +1,10 @@
+strongswan-4.1.10
+-----------------
+
+- Fixed error in the ordering of the certinfo_t records in the ocsp cache that
+  caused multiple entries of the same serial number to be created. 
+
+
 strongswan-4.1.9
 ----------------
 
@@ -17,6 +24,7 @@ strongswan-4.1.9
 - IKEv2 plugins have been renamed to libcharon-* to avoid naming conflicts.
   Make sure to remove the old plugins in $libexecdir/ipsec, otherwise they get 
   loaded twice.
+
 
 strongswan-4.1.8
 ----------------
