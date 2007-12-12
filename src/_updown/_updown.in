@@ -118,6 +118,10 @@
 #              restricted on the peer side.
 #
 
+# define a minimum PATH environment in case it is not set
+PATH="/sbin:/bin:/usr/sbin:/usr/bin"
+export PATH
+
 # uncomment to log VPN connections
 VPN_LOGGING=1
 #
