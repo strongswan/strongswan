@@ -17,7 +17,7 @@
 # RCSID $Id$
 
 # define a minimum PATH environment in case it is not set
-PATH="/sbin:/bin:/usr/sbin:/usr/bin"
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:@IPSEC_SBINDIR@"
 export PATH
 
 # name and version of the ipsec implementation
