@@ -16,6 +16,10 @@
 #
 # RCSID $Id$
 
+# define a minimum PATH environment in case it is not set
+PATH="/sbin:/bin:/usr/sbin:/usr/bin"
+export PATH
+
 # name and version of the ipsec implementation
 IPSEC_NAME="@IPSEC_NAME@"
 IPSEC_VERSION="U@IPSEC_VERSION@/K`uname -r`"
@@ -166,7 +170,7 @@ reload)
 		echo "Reloading strongSwan IPsec configuration..." >&2
 		kill -s USR1 `cat $IPSEC_STARTER_PID` 2>/dev/null && rc=0
 	else
-		echo "ipsec starter is not running" >&2
+		echo "Reloading strongSwan IPsec failed: starter is not running" >&2
 	fi
 	exit "$rc"
 	;;
@@ -285,7 +289,7 @@ stop)
 			fi
 		fi
 	else
-	    	echo "ipsec starter is not running" >&2
+	    	echo "Stopping strongSwan IPsec failed: starter is not running" >&2
 	fi
 	exit 0
 	;;
@@ -316,7 +320,7 @@ update)
 		kill -s HUP `cat $IPSEC_STARTER_PID`
 		exit 0
 	else
-		echo "ipsec starter is not running" >&2
+		echo "Updating strongSwan IPsec failed: starter is not running" >&2
 		exit 7
 	fi
 	;;
