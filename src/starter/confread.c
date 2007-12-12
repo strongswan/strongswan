@@ -518,6 +518,10 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			{
 				conn->eap = 18;
 			}
+			else if (streq(kw->value, "md5"))
+			{
+				conn->eap = 4;
+			}
 			else
 			{
 				conn->eap = atoi(kw->value);
