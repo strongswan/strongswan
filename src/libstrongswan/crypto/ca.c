@@ -654,7 +654,7 @@ static cert_status_t verify_by_ocsp(private_ca_info_t* this,
 
 				if (comparison > 0)
 				{
-					iterator->insert_after(iterator, (void *)cached_certinfo);
+					this->certinfos->insert_last(this->certinfos, (void *)cached_certinfo);
 				}
 				else
 				{
