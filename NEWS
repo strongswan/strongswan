@@ -4,6 +4,19 @@ strongswan-4.1.10
 - Fixed error in the ordering of the certinfo_t records in the ocsp cache that
   caused multiple entries of the same serial number to be created. 
 
+- Implementation of a simple EAP-MD5 module which provides CHAP
+  authentication. This may be interesting in conjunction with certificate
+  based server authentication, as weak passwords can't be brute forced
+  (in contradiction to traditional IKEv2 PSK).
+
+- A complete software based implementation of EAP-AKA, using algorithms
+  specified in 3GPP2 (S.S0055). This implementation does not use an USIM,
+  but reads the secrets from ipsec.secrets. Make sure to read eap_aka.h
+  before using it.
+
+- Support for vendor specific EAP methods using Expanded EAP types. The
+  interface to EAP modules has been slightly changed, so make sure to 
+  check the changes if you're already rolling your own modules.
 
 strongswan-4.1.9
 ----------------
