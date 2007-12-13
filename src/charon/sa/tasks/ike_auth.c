@@ -548,6 +548,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 {
 	peer_cfg_t *config;
 	eap_type_t eap_type;
+	u_int32_t eap_vendor;
 	eap_payload_t *eap_payload;
 	status_t status;
 
@@ -592,10 +593,11 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
 		return FAILED;
 	}
-		
+	
 	/* initiate EAP authenitcation */
-	eap_type = config->get_eap_type(config);
-	status = this->eap_auth->initiate(this->eap_auth, eap_type, &eap_payload);
+	eap_type = config->get_eap_type(config, &eap_vendor);
+	status = this->eap_auth->initiate(this->eap_auth, eap_type,
+									  eap_vendor, &eap_payload);
 	message->add_payload(message, (payload_t*)eap_payload);
 	if (status != NEED_MORE)
 	{

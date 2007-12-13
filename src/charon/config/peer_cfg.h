@@ -229,11 +229,16 @@ struct peer_cfg_t {
 	
 	/**
 	 * @brief Get the EAP type to use for peer authentication.
+	 *
+	 * If vendor specific types are used, a vendor ID != 0 is returned to
+	 * to vendor argument. Then the returned type is specific for that 
+	 * vendor ID.
 	 * 
 	 * @param this		calling object
+	 * @param vendor	receives vendor specifier, 0 for predefined EAP types
 	 * @return			authentication method
 	 */
-	eap_type_t (*get_eap_type) (peer_cfg_t *this);
+	eap_type_t (*get_eap_type) (peer_cfg_t *this, u_int32_t *vendor);
 	
 	/**
 	 * @brief Get the max number of retries after timeout.
@@ -393,6 +398,7 @@ struct peer_cfg_t {
  * @param cert_policy		should we send a certificate payload?
  * @param auth_method		auth method to use to authenticate us
  * @param eap_type			EAP type to use for peer authentication
+ * @param eap_vendor		EAP vendor identifier, if vendor specific type is used
  * @param keyingtries		how many keying tries should be done before giving up
  * @param rekey_time		timeout before starting rekeying
  * @param reauth_time		timeout before starting reauthentication
@@ -416,6 +422,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							identification_t *my_ca, identification_t *other_ca,
 							linked_list_t *groups, cert_policy_t cert_policy,
 							auth_method_t auth_method, eap_type_t eap_type,
+							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,
 							u_int32_t reauth_time, u_int32_t jitter_time,
 							u_int32_t over_time, bool mobike,

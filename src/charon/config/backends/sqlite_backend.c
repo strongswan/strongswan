@@ -186,7 +186,7 @@ static peer_cfg_t *process_peer_cfg_row(private_sqlite_backend_t *this,
 			2, ike_cfg,	local_id, remote_id, NULL, NULL, linked_list_create(),
 			sqlite3_column_int(stmt, 4),				/* cert_policy */
 			sqlite3_column_int(stmt, 5),				/* auth_method */
-			sqlite3_column_int(stmt, 6),				/* eap_type */
+			sqlite3_column_int(stmt, 6), 0				/* eap_type, vendor */
 			sqlite3_column_int(stmt, 7),				/* keyingtries */
 			sqlite3_column_int(stmt, 8),				/* rekey_time */
 			sqlite3_column_int(stmt, 9),				/* reauth_time */

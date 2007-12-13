@@ -197,7 +197,8 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	{
 		msg.add_conn.auth_method = AUTH_EAP;
 	}
-	msg.add_conn.eap_type = conn->eap;
+	msg.add_conn.eap_type = conn->eap_type;
+	msg.add_conn.eap_vendor = conn->eap_vendor;
 	
 	if (conn->policy & POLICY_TUNNEL)
 	{

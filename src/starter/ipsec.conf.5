@@ -350,13 +350,21 @@ in case of inactivity. This only applies to IKEv1, in IKEv2 the default
 retransmission timeout applies, as every exchange is used to detect dead peers.
 .TP
 .B eap
-defines the EAP type to be used if 
+defines the EAP type to propose as server if the client has 
 .B authby=eap
-is selected. Acceptable values are
+selected. Acceptable values are
 .B aka
-for EAP-AKA and
+for EAP-AKA,
 .B sim
-for EAP-SIM.
+for EAP-SIM and
+.B md5
+for EAP-MD5.
+Additionally, IANA assigned EAP method numbers are accepted, or a definition
+in the form
+.B eap=type-vendor
+(e.g.
+.B eap=7-12345
+) can be used to specify vendor specific EAP types.
 .TP
 .B esp
 ESP encryption/authentication algorithm to be used

@@ -42,6 +42,8 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "eap_aka.h"
 
@@ -582,8 +584,8 @@ static status_t load_key(identification_t *me, identification_t *other, chunk_t 
 {
 	chunk_t shared_key;
 
-	if (charon->credentials->get_shared_key(charon->credentials, me,
-											other, &shared_key) != SUCCESS)
+	if (charon->credentials->get_eap_key(charon->credentials, me,
+										 other, &shared_key) != SUCCESS)
 	{
 		return NOT_FOUND;
 	}
@@ -1353,8 +1355,9 @@ static status_t peer_initiate(private_eap_aka_t *this, eap_payload_t **out)
 /**
  * Implementation of eap_method_t.get_type.
  */
-static eap_type_t get_type(private_eap_aka_t *this)
+static eap_type_t get_type(private_eap_aka_t *this, u_int32_t *vendor)
 {
+	*vendor = 0;
 	return EAP_AKA;
 }
 
@@ -1417,7 +1420,7 @@ eap_aka_t *eap_create(eap_role_t role,
 			free(this);
 			return NULL;
 	}
-	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*))get_type;
+	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
 	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
 	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
 	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;

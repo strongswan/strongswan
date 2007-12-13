@@ -138,7 +138,7 @@ static status_t build(private_eap_authenticator_t *this, chunk_t ike_sa_init,
  * Implementation of eap_authenticator_t.initiate
  */
 static status_t initiate(private_eap_authenticator_t *this, eap_type_t type,
-						 eap_payload_t **out)
+						 u_int32_t vendor, eap_payload_t **out)
 {
 	/* if initiate() is called, role is always server */
 	this->role = EAP_SERVER;
@@ -151,21 +151,30 @@ static status_t initiate(private_eap_authenticator_t *this, eap_type_t type,
 		return FAILED;
 	}
 	
-	DBG1(DBG_IKE, "requesting %N authentication", eap_type_names, type);
-	this->method = eap_method_create(type, this->role,
+	if (vendor)
+	{
+		DBG1(DBG_IKE, "requesting vendor specific EAP authentication %d-%d",
+			 type, vendor);
+	}
+	else
+	{
+		DBG1(DBG_IKE, "requesting %N authentication", eap_type_names, type);
+	}
+	this->method = eap_method_create(type, vendor, this->role,
 									 this->ike_sa->get_my_id(this->ike_sa),
 									 this->ike_sa->get_other_id(this->ike_sa));
 	
 	if (this->method == NULL)
 	{
-		DBG1(DBG_IKE, "configured EAP server method %N not supported, sending %N",
-			 eap_type_names, type, eap_code_names, EAP_FAILURE);
+
+		DBG1(DBG_IKE, "configured EAP server method not supported, sending %N",
+			 eap_code_names, EAP_FAILURE);
 		*out = eap_payload_create_code(EAP_FAILURE);
 		return FAILED;
 	}
 	if (this->method->initiate(this->method, out) != NEED_MORE)
 	{
-		DBG1(DBG_IKE, "failed to initiate %N, sending %N",
+		DBG1(DBG_IKE, "failed to initiate EAP exchange, sending %N",
 			 eap_type_names, type, eap_code_names, EAP_FAILURE);
 		*out = eap_payload_create_code(EAP_FAILURE);
 		return FAILED;	
@@ -179,11 +188,14 @@ static status_t initiate(private_eap_authenticator_t *this, eap_type_t type,
 static status_t process_peer(private_eap_authenticator_t *this,
 							 eap_payload_t *in, eap_payload_t **out)
 {
-	eap_type_t type = in->get_type(in);
+	eap_type_t type;
+	u_int32_t vendor;
 	
-	if (type == EAP_IDENTITY)
+	type = in->get_type(in, &vendor);
+	
+	if (!vendor && type == EAP_IDENTITY)
 	{
-		eap_method_t *method = eap_method_create(type, EAP_PEER,
+		eap_method_t *method = eap_method_create(type, 0, EAP_PEER,
 									   this->ike_sa->get_other_id(this->ike_sa),
 									   this->ike_sa->get_my_id(this->ike_sa));
 		
@@ -205,32 +217,57 @@ static status_t process_peer(private_eap_authenticator_t *this,
 	/* create an eap_method for the first call */
 	if (this->method == NULL)
 	{
-		DBG1(DBG_IKE, "EAP server requested %N authentication",
-			 eap_type_names, type);
-		this->method = eap_method_create(type, EAP_PEER,
+		if (vendor)
+		{
+			DBG1(DBG_IKE, "EAP server requested vendor specific EAP method %d-%d",
+				 type, vendor);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "EAP server requested %N authentication",
+				 eap_type_names, type);
+		}
+		this->method = eap_method_create(type, vendor, EAP_PEER,
 							this->ike_sa->get_other_id(this->ike_sa),
 							this->ike_sa->get_my_id(this->ike_sa));
 		if (this->method == NULL)
 		{
 			DBG1(DBG_IKE, "EAP server requested unsupported "
-				 "EAP method %N, sending EAP_NAK", eap_type_names, type);
+				 "EAP method, sending EAP_NAK");
 			*out = eap_payload_create_nak();
 			return NEED_MORE;
 		}
 	}
+	
+	type = this->method->get_type(this->method, &vendor);
 	
 	switch (this->method->process(this->method, in, out))
 	{
 		case NEED_MORE:
 			return NEED_MORE;
 		case SUCCESS:
-			DBG1(DBG_IKE, "EAP method %N succeded",
-				 eap_type_names, this->method->get_type(this->method));
+			if (vendor)
+			{
+				DBG1(DBG_IKE, "EAP vendor specific method %d-%d succeded",
+					 type, vendor);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "EAP method %N succeded", eap_type_names, type);
+			}
 			return SUCCESS;
 		case FAILED:
 		default:
-			DBG1(DBG_IKE, "EAP method %N failed",
-				 eap_type_names, this->method->get_type(this->method));
+			if (vendor)
+			{
+				DBG1(DBG_IKE, "EAP vendor specific method %d-%d failed",
+					 type, vendor);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "EAP method %N failed",
+					 eap_type_names, type);
+			}
 			return FAILED;
 	}
 }
@@ -241,6 +278,11 @@ static status_t process_peer(private_eap_authenticator_t *this,
 static status_t process_server(private_eap_authenticator_t *this,
 							   eap_payload_t *in, eap_payload_t **out)
 {
+	eap_type_t type;
+	u_int32_t vendor;
+	
+	type = this->method->get_type(this->method, &vendor);
+	
 	switch (this->method->process(this->method, in, out))
 	{
 		case NEED_MORE:
@@ -248,22 +290,35 @@ static status_t process_server(private_eap_authenticator_t *this,
 		case SUCCESS:
 			if (this->method->get_msk(this->method, &this->msk) == SUCCESS)
 			{
-				DBG1(DBG_IKE, "EAP method %N succeded, MSK established",
-					 eap_type_names, this->method->get_type(this->method));
 				this->msk = chunk_clone(this->msk);
+			}
+			if (vendor)
+			{
+				DBG1(DBG_IKE, "EAP vendor specific method %d-%d succeded, "
+					 "%sMSK established", type, vendor,
+					 this->msk.ptr ? "" : "no ");
 			}
 			else
 			{
-				DBG1(DBG_IKE, "EAP method %N succeded, no MSK established",
-					 eap_type_names, this->method->get_type(this->method));
+				DBG1(DBG_IKE, "EAP method %N succeded, %sMSK established",
+					 eap_type_names, type, this->msk.ptr ? "" : "no ");
 			}
 			*out = eap_payload_create_code(EAP_SUCCESS);
 			return SUCCESS;
 		case FAILED:
 		default:
-			DBG1(DBG_IKE, "EAP method %N failed for peer %D",
-				 eap_type_names, this->method->get_type(this->method),
-				 this->ike_sa->get_other_id(this->ike_sa));
+			if (vendor)
+			{
+				DBG1(DBG_IKE, "EAP vendor specific method %d-%d failed for "
+					 "peer %D", type, vendor, 
+					 this->ike_sa->get_other_id(this->ike_sa));
+			}
+			else
+			{
+				DBG1(DBG_IKE, "EAP method %N failed for peer %D",
+					 eap_type_names, type,
+					 this->ike_sa->get_other_id(this->ike_sa));
+			}
 			*out = eap_payload_create_code(EAP_FAILURE);
 			return FAILED;
 	}
@@ -363,7 +418,7 @@ eap_authenticator_t *eap_authenticator_create(ike_sa_t *ike_sa)
 	this->public.authenticator_interface.destroy = (void(*)(authenticator_t*))destroy;
 	
 	this->public.is_mutual = (bool(*)(eap_authenticator_t*))is_mutual;
-	this->public.initiate = (status_t(*)(eap_authenticator_t*,eap_type_t,eap_payload_t**))initiate;
+	this->public.initiate = (status_t(*)(eap_authenticator_t*,eap_type_t,u_int32_t,eap_payload_t**))initiate;
 	this->public.process = (status_t(*)(eap_authenticator_t*,eap_payload_t*,eap_payload_t**))process;
 	
 	/* private data */

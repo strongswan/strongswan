@@ -212,8 +212,9 @@ static status_t process_server(private_eap_md5_t *this,
 /**
  * Implementation of eap_method_t.get_type.
  */
-static eap_type_t get_type(private_eap_md5_t *this)
+static eap_type_t get_type(private_eap_md5_t *this, u_int32_t *vendor)
 {
+	*vendor = 0;
 	return EAP_MD5;
 }
 
@@ -265,7 +266,7 @@ eap_md5_t *eap_create(eap_role_t role,
 			free(this);
 			return NULL;
 	}
-	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*))get_type;
+	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
 	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
 	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
 	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;

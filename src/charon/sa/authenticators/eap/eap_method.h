@@ -62,6 +62,8 @@ enum eap_type_t {
 	EAP_TOKEN_CARD = 6,
 	EAP_SIM = 18,
 	EAP_AKA = 23,
+	EAP_EXPANDED = 254,
+	EAP_EXPERIMENTAL = 255,
 };
 
 /**
@@ -148,9 +150,10 @@ struct eap_method_t {
 	 * @brief Get the EAP type implemented in this method.
 	 *
 	 * @param this 		calling object
+	 * @param vendor	pointer receiving vendor identifier for type, 0 for none
 	 * @return			type of the EAP method
 	 */
-	eap_type_t (*get_type) (eap_method_t *this);
+	eap_type_t (*get_type) (eap_method_t *this, u_int32_t *vendor);
 	
 	/**
 	 * @brief Check if this EAP method authenticates the server.
@@ -188,6 +191,7 @@ struct eap_method_t {
  * @brief Creates an EAP method for a specific type and role.
  *
  * @param eap_type		EAP type to use
+ * @param eap_vendor	vendor identifier if a vendor specifc EAP type is used
  * @param role			role of the eap_method, server or peer
  * @param server		ID of acting server
  * @param peer			ID of involved peer (client)
@@ -195,8 +199,9 @@ struct eap_method_t {
  *
  * @ingroup eap
  */
-eap_method_t *eap_method_create(eap_type_t eap_type, eap_role_t role,
-								identification_t *server, identification_t *peer);
+eap_method_t *eap_method_create(eap_type_t eap_type, u_int32_t eap_vendor,
+								eap_role_t role, identification_t *server,
+								identification_t *peer);
 
 /**
  * @brief (Re-)Load all EAP modules in the EAP modules directory.

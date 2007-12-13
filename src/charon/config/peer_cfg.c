@@ -127,6 +127,11 @@ struct private_peer_cfg_t {
 	eap_type_t eap_type;
 	
 	/**
+	 * EAP vendor ID if vendor specific type is used
+	 */
+	u_int32_t eap_vendor;
+	
+	/**
 	 * number of tries after giving up if peer does not respond
 	 */
 	u_int32_t keyingtries;
@@ -338,8 +343,9 @@ static auth_method_t get_auth_method(private_peer_cfg_t *this)
 /**
  * Implementation of connection_t.get_eap_type.
  */
-static eap_type_t get_eap_type(private_peer_cfg_t *this)
+static eap_type_t get_eap_type(private_peer_cfg_t *this, u_int32_t *vendor)
 {
+	*vendor = this->eap_vendor;
 	return this->eap_type;
 }
 
@@ -518,6 +524,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							identification_t *my_ca, identification_t *other_ca,
 							linked_list_t *groups, cert_policy_t cert_policy,
 							auth_method_t auth_method, eap_type_t eap_type,
+							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,
 							u_int32_t reauth_time, u_int32_t jitter_time,
 							u_int32_t over_time, bool mobike,
@@ -542,7 +549,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_groups = (linked_list_t* (*)(peer_cfg_t *))get_groups;
 	this->public.get_cert_policy = (cert_policy_t (*) (peer_cfg_t *))get_cert_policy;
 	this->public.get_auth_method = (auth_method_t (*) (peer_cfg_t *))get_auth_method;
-	this->public.get_eap_type = (eap_type_t (*) (peer_cfg_t *))get_eap_type;
+	this->public.get_eap_type = (eap_type_t (*) (peer_cfg_t *,u_int32_t*))get_eap_type;
 	this->public.get_keyingtries = (u_int32_t (*) (peer_cfg_t *))get_keyingtries;
 	this->public.get_rekey_time = (u_int32_t(*)(peer_cfg_t*))get_rekey_time;
 	this->public.get_reauth_time = (u_int32_t(*)(peer_cfg_t*))get_reauth_time;
@@ -574,6 +581,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->cert_policy = cert_policy;
 	this->auth_method = auth_method;
 	this->eap_type = eap_type;
+	this->eap_vendor = eap_vendor;
 	this->keyingtries = keyingtries;
 	this->rekey_time = rekey_time;
 	this->reauth_time = reauth_time;

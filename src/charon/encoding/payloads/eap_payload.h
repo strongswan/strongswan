@@ -95,9 +95,10 @@ struct eap_payload_t {
 	 * @brief Get the EAP method type.
 	 *
 	 * @param this 		calling eap_payload_t object
-	 * @return			EAP method type
+	 * @param vendor	pointer receiving vendor identifier
+	 * @return			EAP method type, vendor specific if vendor != 0
 	 */
-	eap_type_t (*get_type) (eap_payload_t *this);
+	eap_type_t (*get_type) (eap_payload_t *this, u_int32_t *vendor);
 	
 	/**
 	 * @brief Destroys an eap_payload_t object.

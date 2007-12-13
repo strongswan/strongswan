@@ -45,7 +45,10 @@ ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_TOKEN_CARD,
 	"EAP_SIM");
 ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_SIM,
 	"EAP_AKA");
-ENUM_END(eap_type_names, EAP_AKA);
+ENUM_NEXT(eap_type_names, EAP_EXPANDED, EAP_EXPERIMENTAL, EAP_AKA,
+	"EAP_EXPANDED",
+	"EAP_EXPERIMENTAL");
+ENUM_END(eap_type_names, EAP_EXPERIMENTAL);
 
 ENUM(eap_code_names, EAP_REQUEST, EAP_FAILURE,
 	"EAP_REQUEST",
@@ -67,6 +70,7 @@ typedef struct module_entry_t module_entry_t;
  */
 struct module_entry_t {
 	eap_type_t type;
+	u_int32_t vendor;
 	void *handle;
 	eap_constructor_t constructor;
 };
@@ -85,7 +89,8 @@ void eap_method_unload()
 		
 		while (modules->remove_last(modules, (void**)&entry) == SUCCESS)
 		{
-			DBG2(DBG_CFG, "unloaded module for %N", eap_type_names, entry->type);
+			DBG2(DBG_CFG, "unloaded module EAP module %d-%d",
+				 entry->type, entry->vendor);
 			dlclose(entry->handle);
 			free(entry);
 		}
@@ -165,11 +170,19 @@ void eap_method_load(char *directory)
 			dlclose(module.handle);
 			continue;
 		}
-		module.type = method->get_type(method);
+		module.type = method->get_type(method, &module.vendor);
 		method->destroy(method);
 		
-		DBG1(DBG_CFG, "  loaded EAP method %N successfully from %s",
-			 eap_type_names, module.type, entry->d_name);
+		if (module.vendor)
+		{	
+			DBG1(DBG_CFG, "  loaded EAP method %d, vendor %d successfully from %s",
+				 module.type, module.vendor, entry->d_name);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "  loaded EAP method %N successfully from %s",
+				 eap_type_names, module.type, entry->d_name);
+		}
 			 
 		loaded_module = malloc_thing(module_entry_t);
 		memcpy(loaded_module, &module, sizeof(module));
@@ -181,9 +194,8 @@ void eap_method_load(char *directory)
 /*
  * Described in header.
  */
-eap_method_t *eap_method_create(eap_type_t type, eap_role_t role,
-								identification_t *server,
-								identification_t *peer)
+eap_method_t *eap_method_create(eap_type_t type, u_int32_t vendor, eap_role_t role,
+								identification_t *server, identification_t *peer)
 {
 	eap_method_t *method = NULL;
 	iterator_t *iterator;
@@ -192,7 +204,7 @@ eap_method_t *eap_method_create(eap_type_t type, eap_role_t role,
 	iterator = modules->create_iterator(modules, TRUE);
 	while (iterator->iterate(iterator, (void**)&entry))
 	{
-		if (entry->type == type)
+		if (entry->type == type && entry->vendor == vendor)
 		{
 			method = entry->constructor(role, server, peer);
 			if (method)
@@ -205,8 +217,16 @@ eap_method_t *eap_method_create(eap_type_t type, eap_role_t role,
 	
 	if (method == NULL)
 	{
-		DBG1(DBG_CFG, "no EAP module found for %N %N",
-			 eap_type_names, type, eap_role_names, role);
+		if (vendor)
+		{
+			DBG1(DBG_CFG, "no vendor %d specific EAP module found for method "
+				 "%d %N", vendor, type, eap_role_names, role);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "no EAP module found for %N %N",
+				 eap_type_names, type, eap_role_names, role);
+		}
 	}
 	return method;
 }

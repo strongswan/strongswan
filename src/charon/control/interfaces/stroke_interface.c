@@ -245,6 +245,7 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	char *interface;
 	bool use_existing = FALSE;
 	iterator_t *iterator;
+	u_int32_t vendor;
 	
 	pop_string(msg, &msg->add_conn.name);
 	DBG1(DBG_CFG, "received stroke: add connection '%s'", msg->add_conn.name);
@@ -543,7 +544,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		&&  ietfAttr_list_equals(other_groups, peer_cfg->get_groups(peer_cfg))
 		&&	peer_cfg->get_ike_version(peer_cfg) == (msg->add_conn.ikev2 ? 2 : 1)
 		&&	peer_cfg->get_auth_method(peer_cfg) == msg->add_conn.auth_method
-		&&	peer_cfg->get_eap_type(peer_cfg) == msg->add_conn.eap_type)
+		&&	peer_cfg->get_eap_type(peer_cfg, &vendor) == msg->add_conn.eap_type
+		&&	vendor == msg->add_conn.eap_vendor)
 		{
 			DBG1(DBG_CFG, "reusing existing configuration '%s'",
 				 peer_cfg->get_name(peer_cfg));
@@ -626,8 +628,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		
 		peer_cfg = peer_cfg_create(msg->add_conn.name, msg->add_conn.ikev2 ? 2 : 1,
 					ike_cfg, my_id, other_id, my_ca, other_ca, other_groups,
-					msg->add_conn.me.sendcert,
-					msg->add_conn.auth_method, msg->add_conn.eap_type,
+					msg->add_conn.me.sendcert, msg->add_conn.auth_method,
+					msg->add_conn.eap_type,	msg->add_conn.eap_vendor,
 					msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 					msg->add_conn.mobike,
 					msg->add_conn.dpd.delay, msg->add_conn.dpd.action, my_vip, other_vip,

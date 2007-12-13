@@ -105,15 +105,16 @@ struct eap_authenticator_t {
 	 * this method. If initiate() returns NEED_MORE, the EAP authentication
 	 * process started. In any case, a payload is created in "out".
 	 *
-	 * @param this	calling object
-	 * @param type	EAP method to use to authenticate client
-	 * @param out	created initiaal EAP message to send
+	 * @param this		calling object
+	 * @param type		EAP method to use to authenticate client
+	 * @param vendor	EAP vendor identifier, if type is vendor specific, or 0
+	 * @param out		created initiaal EAP message to send
 	 * @return
 	 *				- FAILED, if initiation failed
 	 *				- NEED_MORE, if more EAP exchanges reqired
 	 */
 	status_t (*initiate) (eap_authenticator_t* this, eap_type_t type,
-						  eap_payload_t **out);
+						  u_int32_t vendor, eap_payload_t **out);
 	
 	/**
 	 * @brief Process an EAP message.

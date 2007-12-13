@@ -235,11 +235,23 @@ static u_int8_t get_identifier(private_eap_payload_t *this)
 /**
  * Implementation of eap_payload_t.get_type.
  */
-static eap_type_t get_type(private_eap_payload_t *this)
+static eap_type_t get_type(private_eap_payload_t *this, u_int32_t *vendor)
 {
+	eap_type_t type;
+
+	*vendor = 0;
 	if (this->data.len > 4)
 	{
-		return *(this->data.ptr + 4);
+		type = *(this->data.ptr + 4);
+		if (type != EAP_EXPANDED)
+		{
+			return type;
+		}
+		if (this->data.len >= 12)
+		{
+			*vendor = ntohl(*(u_int32_t*)(this->data.ptr + 4)) & 0x00FFFFFF;
+			return ntohl(*(u_int32_t*)(this->data.ptr + 8));
+		}
 	}
 	return 0;
 }
@@ -275,7 +287,7 @@ eap_payload_t *eap_payload_create()
 	this->public.set_data = (void (*) (eap_payload_t *,chunk_t))set_data;
 	this->public.get_code = (eap_code_t (*) (eap_payload_t*))get_code;
 	this->public.get_identifier = (u_int8_t (*) (eap_payload_t*))get_identifier;
-	this->public.get_type = (eap_type_t (*) (eap_payload_t*))get_type;
+	this->public.get_type = (eap_type_t (*) (eap_payload_t*,u_int32_t*))get_type;
 	
 	/* private variables */
 	this->critical = FALSE;
@@ -329,3 +341,4 @@ eap_payload_t *eap_payload_create_nak()
 	this->set_data(this, data);
 	return this;
 }
+
