@@ -4,14 +4,13 @@ if USE_FILE_CONFIG
   SUBDIRS += libfreeswan starter ipsec _copyright
 endif
 
-if USE_PLUTO
-  SUBDIRS += libcrypto pluto whack
-endif
-
 if USE_LIBSTRONGSWAN
   SUBDIRS += libstrongswan
 endif
 
+if USE_PLUTO
+  SUBDIRS += libcrypto pluto whack
+endif
 if USE_CHARON
   SUBDIRS += charon
 endif

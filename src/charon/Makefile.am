@@ -128,10 +128,16 @@ if USE_EAP_SIM
   libcharon_eapsim_la_LDFLAGS = -module
 endif
 
-if BUILD_EAP_MD5
-  eap_LTLIBRARIES += libeapmd5.la
-  libeapmd5_la_SOURCES = sa/authenticators/eap/eap_md5.h sa/authenticators/eap/eap_md5.c
-  libeapmd5_la_LDFLAGS = -module
+if USE_EAP_MD5
+  eap_LTLIBRARIES += libcharon-eapmd5.la
+  libcharon_eapmd5_la_SOURCES = sa/authenticators/eap/eap_md5.h sa/authenticators/eap/eap_md5.c
+  libcharon_eapmd5_la_LDFLAGS = -module
+endif
+
+if USE_EAP_AKA
+  eap_LTLIBRARIES += libcharon-eapaka.la
+  libcharon_eapaka_la_SOURCES = sa/authenticators/eap/eap_aka.h sa/authenticators/eap/eap_aka.c
+  libcharon_eapaka_la_LDFLAGS = -module
 endif
 
 # build backends

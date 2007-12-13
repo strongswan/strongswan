@@ -250,7 +250,16 @@ AC_ARG_ENABLE(
         eap_md5=true
     fi]
 )
-AM_CONDITIONAL(BUILD_EAP_MD5, test x$eap_md5 = xtrue)
+AM_CONDITIONAL(USE_EAP_MD5, test x$eap_md5 = xtrue)
+
+AC_ARG_ENABLE(
+    [eap-aka],
+    AS_HELP_STRING([--enable-eap-aka],[build AKA authentication module for EAP (default is NO).]),
+    [if test x$enableval = xyes; then
+        eap_aka=true
+    fi]
+)
+AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
 
 AC_ARG_ENABLE(
     [nat-transport],
