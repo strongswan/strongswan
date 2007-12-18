@@ -199,7 +199,8 @@ static status_t process_server(private_eap_md5_t *this,
 	data = in->get_data(in);
 	response = chunk_skip(data, 6);
 	
-	if (!chunk_equals(response, expected))
+	if (response.len < expected.len ||
+		!memeq(response.ptr, expected.ptr, expected.len))
 	{
 		chunk_free(&expected);
 		DBG1(DBG_IKE, "EAP-MD5 verification failed");
