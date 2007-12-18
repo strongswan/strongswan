@@ -49,6 +49,7 @@ ipsec_templates_staticdir = ${ipsec_templatesdir}/static
 ipsec_templates_static_DATA = templates/static/style.css templates/static/script.js templates/static/jquery.js \
 templates/static/pipe.png templates/static/pipe-good.png templates/static/pipe-bad.png \
 templates/static/pipe-thin.png templates/static/pipe-thin-left.png templates/static/pipe-thin-right.png \
+templates/static/pipe-thin-green.png templates/static/pipe-thin-left-green.png templates/static/pipe-thin-right-green.png \
 templates/static/gateway-left.png templates/static/client-left.png templates/static/strongswan.png \
 templates/static/router.png templates/static/gateway-right.png templates/static/client-right.png \
 templates/static/close.png templates/static/initiate.png

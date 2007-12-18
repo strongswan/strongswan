@@ -2,7 +2,7 @@
 <?cs each:ikesa = ikesas ?>
   <div class="expand" id="ikesa-<?cs name:ikesa ?>">
   <h1>
-  	IKE #<?cs name:ikesa ?> [<?cs var:ikesa.peerconfig ?>]:
+  	<?cs var:ikesa.peerconfig ?> [IKE #<?cs name:ikesa ?>]:
   	<span><?cs var:ikesa.local.identification ?></span> &lt;-&gt; 
   	<span><?cs var:ikesa.remote.identification ?></span>
   </h1>
@@ -72,7 +72,7 @@
       <?cs each:childsa = ikesa.childsas ?>
       <tr>
       	<td colspan="6" class="expand">
-      	  <h1>IPsec #<?cs name:childsa ?> [<?cs var:childsa.childconfig ?>]:</h1>
+      	  <h1><?cs var:childsa.childconfig ?> [IPsec #<?cs name:childsa ?>]:</h1>
         </td>
       	<td class="controls">
   		  <a title="close CHILD_SA" href="<?cs var:base ?>/control/terminatechild/<?cs name:childsa ?>">  
@@ -89,12 +89,12 @@
       	    <p><?cs var:net ?></p>
           <?cs /each ?>
       	</td>
-      	<td style="background-image:url(<?cs var:base ?>/static/pipe-thin-left.png)">
+      	<td style="background-image:url(<?cs var:base ?>/static/pipe-thin-left-green.png)">
           <?cs var:childsa.local.spi ?> &lt;-<br/><br/><br/>
       	</td>
-      	<td style="background-image:url(<?cs var:base ?>/static/pipe-thin.png)">
+      	<td style="background-image:url(<?cs var:base ?>/static/pipe-thin-green.png)">
       	</td>
-      	<td class="right" style="background-image:url(<?cs var:base ?>/static/pipe-thin-right.png)">
+      	<td class="right" style="background-image:url(<?cs var:base ?>/static/pipe-thin-right-green.png)">
           -&gt; <?cs var:childsa.remote.spi ?><br/><br/><br/>
       	</td>
       	<td class="right" colspan="2">
