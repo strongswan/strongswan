@@ -141,6 +141,11 @@ then
     echo -n " --enable-ldap" >> $INSTALLSHELL
 fi
 
+if [ "$USE_EAP_AKA" = "yes" ]
+then
+    echo -n " --enable-eap-aka" >> $INSTALLSHELL
+fi
+
 if [ "$USE_P2P" = "yes" ]
 then
     echo -n " --enable-p2p" >> $INSTALLSHELL
