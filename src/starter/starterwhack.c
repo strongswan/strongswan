@@ -148,16 +148,21 @@ connection_name(starter_conn_t *conn)
 }
 
 static void
-set_whack_end(whack_end_t *w, starter_end_t *end)
+set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
 {
     w->id                  = end->id;
     w->cert                = end->cert;
     w->ca                  = end->ca;
     w->groups              = end->groups;
     w->host_addr           = end->addr;
-    w->host_nexthop        = end->nexthop;
     w->host_srcip          = end->srcip;
     w->has_client          = end->has_client;
+
+    if (family == AF_INET6 && isanyaddr(&end->nexthop))
+    {
+	anyaddr(AF_INET6, &end->nexthop);
+    }
+    w->host_nexthop        = end->nexthop;
 
     if (w->has_client)
 	w->client          = end->subnet;
@@ -246,8 +251,8 @@ starter_whack_add_conn(starter_conn_t *conn)
     msg.sa_keying_tries       = conn->sa_keying_tries;
     msg.policy                = conn->policy;
 
-    set_whack_end(&msg.left, &conn->left);
-    set_whack_end(&msg.right, &conn->right);
+    set_whack_end(&msg.left, &conn->left, conn->addr_family);
+    set_whack_end(&msg.right, &conn->right, conn->addr_family);
 
     msg.esp = conn->esp;
     msg.ike = conn->ike;

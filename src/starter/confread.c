@@ -173,7 +173,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 				goto err;
 			}
 		}
-		else if (streq(value, "%any"))
+		else if (streq(value, "%any") || streq(value, "%any4"))
 		{
 			anyaddr(conn->addr_family, &end->addr);
 		}
