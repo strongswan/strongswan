@@ -1,3 +1,9 @@
+strongswan-4.2.0
+----------------
+
+-
+
+
 strongswan-4.1.10
 -----------------
 
@@ -17,6 +23,7 @@ strongswan-4.1.10
 - Support for vendor specific EAP methods using Expanded EAP types. The
   interface to EAP modules has been slightly changed, so make sure to 
   check the changes if you're already rolling your own modules.
+
 
 strongswan-4.1.9
 ----------------
