@@ -27,6 +27,7 @@
 
 #include <daemon.h>
 #include <utils/linked_list.h>
+#include <crypto/hashers/hasher.h>
 
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/initiate_mediation_job.h>
