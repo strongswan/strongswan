@@ -60,13 +60,6 @@ AC_ARG_WITH(
 )
 
 AC_ARG_WITH(
-    [ipsecdir],
-    AS_HELP_STRING([--with-ipsecdir=dir],[installation path for ipsec tools other than "libexecdir/ipsec"]),
-    [AC_SUBST(ipsecdir, "$withval")],
-    [AC_SUBST(ipsecdir, "${libexecdir}/ipsec")]
-)
-
-AC_ARG_WITH(
     [piddir],
     AS_HELP_STRING([--with-piddir=dir],[path for PID and UNIX socket files other than "/var/run"]),
     [AC_SUBST(piddir, "$withval")],
@@ -74,30 +67,45 @@ AC_ARG_WITH(
 )
 
 AC_ARG_WITH(
+    [ipsecdir],
+    AS_HELP_STRING([--with-ipsecdir=dir],[installation path for ipsec tools other than "libexecdir/ipsec"]),
+    [AC_SUBST(ipsecdir, "$withval")],
+    [AC_SUBST(ipsecdir, "${libexecdir}/ipsec")]
+)
+
+AC_ARG_WITH(
+    [plugindir],
+    AS_HELP_STRING([--with-plugindir=dir],[installation path for plugins other than "ipsecdir/plugins"]),
+    [AC_SUBST(plugindir, "$withval")],
+    [AC_SUBST(plugindir, "${ipsecdir}/plugins")]
+)
+
+AC_ARG_WITH(
     [eapdir],
-    AS_HELP_STRING([--with-eapdir=dir],[path for pluggable EAP modules other than "ipsecdir/plugins/eap"]),
+    AS_HELP_STRING([--with-eapdir=dir],[path for pluggable EAP modules other than "plugindir/eap"]),
     [AC_SUBST(eapdir, "$withval")],
-    [AC_SUBST(eapdir, "${ipsecdir}/plugins/eap")]
+    [AC_SUBST(eapdir, "${plugindir}/eap")]
 )
 
 AC_ARG_WITH(
     [backenddir],
-    AS_HELP_STRING([--with-backenddir=dir],[path for pluggable configuration backend modules other than "ipsecdir/plugins/backends"]),
+    AS_HELP_STRING([--with-backenddir=dir],[path for pluggable configuration backend modules other than "plugindir/backends"]),
     [AC_SUBST(backenddir, "$withval")],
-    [AC_SUBST(backenddir, "${ipsecdir}/plugins/backends")]
+    [AC_SUBST(backenddir, "${plugindir}/backends")]
 )
 
 AC_ARG_WITH(
     [interfacedir],
-    AS_HELP_STRING([--with-interfacedir=dir],[path for pluggable control interface modules other than "ipsecdir/plugins/interfaces"]),
+    AS_HELP_STRING([--with-interfacedir=dir],[path for pluggable control interface modules other than "plugindir/interfaces"]),
     [AC_SUBST(interfacedir, "$withval")],
-    [AC_SUBST(interfacedir, "${ipsecdir}/plugins/interfaces")]
+    [AC_SUBST(interfacedir, "${plugindir}/interfaces")]
 )
 
 AC_ARG_WITH(
     [sim-reader],
-    AS_HELP_STRING([--with-sim-reader=library.so],[library containing the sim_run_alg() function for EAP-SIM]),
-    [AC_DEFINE_UNQUOTED(SIM_READER_LIB, "$withval")]
+    AS_HELP_STRING([--with-sim-reader=library.so],[library containing the sim_run_alg()/sim_get_triplet() function for EAP-SIM]),
+    [AC_SUBST(simreader, "$withval")],
+    [AC_SUBST(simreader, "${plugindir}/libcharon-eapsim-file.so")]
 )
 
 AC_ARG_WITH(
