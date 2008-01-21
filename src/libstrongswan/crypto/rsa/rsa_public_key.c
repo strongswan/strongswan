@@ -110,8 +110,6 @@ struct private_rsa_public_key_t {
 	chunk_t (*rsavp1) (const private_rsa_public_key_t *this, chunk_t data);
 };
 
-private_rsa_public_key_t *rsa_public_key_create_empty(void);
-
 /**
  * Implementation of private_rsa_public_key_t.rsaep and private_rsa_public_key_t.rsavp1
  */
@@ -313,6 +311,23 @@ chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e)
 }
 
 /**
+ * Form the RSA keyid as a SHA-1 hash of a publicKeyInfo object
+ * Also used in rsa_private_key.c.
+ */
+chunk_t rsa_public_key_id_create(mpz_t n, mpz_t e)
+{
+	chunk_t keyid;
+	chunk_t publicKeyInfo = rsa_public_key_info_to_asn1(n, e);
+	hasher_t *hasher = hasher_create(HASH_SHA1);
+
+	hasher->allocate_hash(hasher, publicKeyInfo, &keyid);
+	hasher->destroy(hasher);
+	free(publicKeyInfo.ptr);
+
+	return keyid;
+}
+
+/**
  * Implementation of rsa_public_key_t.get_publicKeyInfo.
  */
 static chunk_t get_publicKeyInfo(const private_rsa_public_key_t *this)
@@ -327,6 +342,9 @@ static chunk_t get_keyid(const private_rsa_public_key_t *this)
 {
 	return this->keyid;
 }
+
+/* forward declaration used by rsa_public_key_t.clone */
+private_rsa_public_key_t *rsa_public_key_create_empty(void);
 
 /**
  * Implementation of rsa_public_key_t.clone.
@@ -380,6 +398,20 @@ private_rsa_public_key_t *rsa_public_key_create_empty(void)
 /*
  * See header
  */
+rsa_public_key_t *rsa_public_key_create(mpz_t n, mpz_t e)
+{
+	private_rsa_public_key_t *this = rsa_public_key_create_empty();
+
+	mpz_init_set(this->n, n);
+	mpz_init_set(this->e, e);
+
+	this->k = (mpz_sizeinbase(n, 2) + 7) / BITS_PER_BYTE;
+	this->keyid = rsa_public_key_id_create(n, e);
+	return &this->public;
+}
+/*
+ * See header
+ */
 rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t blob)
 {
 	asn1_ctx_t ctx;
@@ -412,19 +444,9 @@ rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t blob)
 		}
 		objectID++;
 	}
-	
-	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
-	
-	/* form the keyid as a SHA-1 hash of a publicKeyInfo object */
-	{
-		chunk_t publicKeyInfo = rsa_public_key_info_to_asn1(this->n, this->e);
-		hasher_t *hasher = hasher_create(HASH_SHA1);
 
-		hasher->allocate_hash(hasher, publicKeyInfo, &this->keyid);
-		hasher->destroy(hasher);
-		free(publicKeyInfo.ptr);
-	}
-
+	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
+	this->keyid = rsa_public_key_id_create(this->n, this->e);
 	return &this->public;
 }
 

@@ -40,20 +40,29 @@ typedef struct rsa_public_key_t rsa_public_key_t;
  * the EMSA encoding (see PKCS1)
  * 
  * @b Constructors:
+ * - rsa_public_key_create()
  * - rsa_public_key_create_from_chunk()
  * - rsa_public_key_create_from_file()
- * - rsa_private_key_t.get_public_key()
- * 
- * @see rsa_private_key_t
- * 
- * @todo Implement getkey() and savekey()
- * 
+ *
  * @ingroup rsa
  */
 struct rsa_public_key_t {
 
 	/**
-	 * @brief Verify a EMSA-PKCS1 encodined signature.
+	 * @brief Encrypt a data block using EME-PKCS1 encoding.
+	 * 
+	 * 
+	 * @param this				calling object
+	 * @param data				plaintext input data
+	 * @param out				encrypted output data
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED if data block is too large
+	 */
+	status_t (*pkcs1_encrypt) (rsa_public_key_t *this, chunk_t in, chunk_t *out);
+
+	/**
+	 * @brief Verify an EMSA-PKCS1 encoded signature.
 	 * 
 	 * Processes the supplied signature with the RSAVP1 function,
 	 * selects the hash algorithm form the resultign ASN1-OID and
@@ -121,6 +130,17 @@ struct rsa_public_key_t {
 	 */
 	void (*destroy) (rsa_public_key_t *this);
 };
+
+/**
+ * @brief Create a RSA public key from modulus and public exponent.
+ *
+ * @param n					modulus
+ * @param e					public exponent
+ * @return 					created rsa_public_key_t
+ * 
+ * @ingroup rsa
+ */
+rsa_public_key_t *rsa_public_key_create(mpz_t n, mpz_t e);
 
 /**
  * @brief Load an RSA public key from a chunk.
