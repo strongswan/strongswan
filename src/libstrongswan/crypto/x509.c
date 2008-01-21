@@ -1417,12 +1417,16 @@ static private_x509_t *x509_create_empty(void)
 /*
  * Described in header.
  */
-x509_t *x509_create_(chunk_t serialNumber, identification_t *issuer, identification_t *subject)
+x509_t *x509_create(chunk_t serialNumber, identification_t *issuer,
+					time_t notBefore, time_t notAfter,
+					identification_t *subject)
 {
 	private_x509_t *this = x509_create_empty();
 
 	this->serialNumber = serialNumber;
 	this->issuer = issuer->clone(issuer);
+	this->notBefore = notBefore;
+	this->notAfter = notAfter;
 	this->subject = subject->clone(subject);
 
 	return &this->public;
