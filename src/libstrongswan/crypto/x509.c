@@ -514,7 +514,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 				id_type = ID_DER_ASN1_DN;
 	    		break;
 			case GN_OBJ_IP_ADDRESS:
-				id_type = ID_IPV4_ADDR;
+				id_type = (object.len == 4)? ID_IPV4_ADDR : ID_IPV6_ADDR;
 				break;
 			case GN_OBJ_OTHER_NAME:
 				if (!parse_otherName(object, level + 1))
@@ -1251,12 +1251,13 @@ chunk_t x509_build_generalNames(linked_list_t *list)
 	linked_list_t *generalNames = linked_list_create();
 	iterator_t *iterator = list->create_iterator(list, TRUE);
 	identification_t *name;
+	chunk_t names = chunk_empty;
 	size_t len = 0;
 
 	while (iterator->iterate(iterator, (void**)&name))
 	{
 		asn1_t asn1_type = ASN1_EOC;
-		chunk_t *generalName = malloc_thing(chunk_t);
+		chunk_t *generalName;
 
 		switch (name->get_type(name))
 		{
@@ -1273,22 +1274,24 @@ chunk_t x509_build_generalNames(linked_list_t *list)
 				asn1_type = ASN1_CONTEXT_S_6;
 				break;
 			case ID_IPV4_ADDR:
+			case ID_IPV6_ADDR:
 				asn1_type = ASN1_CONTEXT_S_7;
 				break;
 			default:
 				continue;
 		}
 
+		generalName = malloc_thing(chunk_t);
 		*generalName = asn1_simple_object(asn1_type, name->get_encoding(name));
 		len += generalName->len;
-		generalNames->insert_last(generalNames, generalName);
+		generalNames->insert_last(generalNames, (void*)generalName);
 	}
 	iterator->destroy(iterator);
 
 	if (len > 0)
 	{
 		iterator_t *iterator = generalNames->create_iterator(generalNames, TRUE);
-		chunk_t names, *generalName;
+		chunk_t *generalName;
 		u_char *pos = build_asn1_object(&names, ASN1_SEQUENCE, len);
 
 		while (iterator->iterate(iterator, (void**)&generalName))
@@ -1300,13 +1303,8 @@ chunk_t x509_build_generalNames(linked_list_t *list)
 		}
 		iterator->destroy(iterator);
 		generalNames->destroy(generalNames);
-
-		return asn1_wrap(ASN1_OCTET_STRING, "m", names);
 	}
-	else
-	{
-		return chunk_empty;
-	}
+	return names;
 }
 
 /*
