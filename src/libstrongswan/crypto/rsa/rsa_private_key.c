@@ -40,6 +40,7 @@
  * defined in rsa_public_key.c
  */
 extern chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e);
+extern chunk_t rsa_public_key_id_create(const mpz_t n, const mpz_t e);
 
 /**
  *  Public exponent to use for key generation.
@@ -111,7 +112,6 @@ struct private_rsa_private_key_t {
 	 * Keyid formed as a SHA-1 hash of a publicKeyInfo object
 	 */
 	chunk_t keyid;
-
 	
 	/**
 	 * @brief Implements the RSADP algorithm specified in PKCS#1.
@@ -129,16 +129,6 @@ struct private_rsa_private_key_t {
 	 * @return			processed data
 	 */
 	chunk_t (*rsasp1) (private_rsa_private_key_t *this, chunk_t data);
-	
-	/**
-	 * @brief Generate a prime value.
-	 * 
-	 * @param this		calling object
-	 * @param prime_size size of the prime, in bytes
-	 * @param[out] prime uninitialized mpz
-	 */
-	status_t (*compute_prime) (private_rsa_private_key_t *this, size_t prime_size, mpz_t *prime);
-	
 };
 
 /* ASN.1 definition of a PKCS#1 RSA private key */
@@ -173,8 +163,6 @@ static const asn1Object_t privkey_objects[] = {
 #define PRIV_KEY_COEFF			 9
 #define PRIV_KEY_ROOF			16
 
-static private_rsa_private_key_t *rsa_private_key_create_empty(void);
-
 /**
  * Auxiliary function overwriting private key material with
  * pseudo-random bytes before releasing it
@@ -196,9 +184,9 @@ static void mpz_clear_randomized(mpz_t z)
 }
 
 /**
- * Implementation of private_rsa_private_key_t.compute_prime.
+ * Generate a random prime number with prime_len bytes
  */
-static status_t compute_prime(private_rsa_private_key_t *this, size_t prime_size, mpz_t *prime)
+static status_t compute_prime(private_rsa_private_key_t *this, size_t prime_len, mpz_t *prime)
 {
 	randomizer_t *randomizer;
 	chunk_t random_bytes;
@@ -209,11 +197,12 @@ static status_t compute_prime(private_rsa_private_key_t *this, size_t prime_size
 	
 	do
 	{
-		status = randomizer->allocate_random_bytes(randomizer, prime_size, &random_bytes);
+		DBG1("  generating %d bit prime from %s ...", BITS_PER_BYTE * prime_len, DEV_RANDOM);
+		status = randomizer->allocate_random_bytes(randomizer, prime_len, &random_bytes);
 		if (status != SUCCESS)
 		{
 			randomizer->destroy(randomizer);
-			mpz_clear(*prime);
+			mpz_clear_randomized(*prime);
 			return FAILED;
 		}
 		
@@ -230,7 +219,7 @@ static status_t compute_prime(private_rsa_private_key_t *this, size_t prime_size
 		chunk_free_randomized(&random_bytes);
 	}
 	/* check if it isnt too large */
-	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_size);
+	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_len);
 	
 	randomizer->destroy(randomizer);
 	return SUCCESS;
@@ -432,7 +421,7 @@ static bool pkcs1_write(private_rsa_private_key_t *this, const char *filename, b
  */
 rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
 {
-	return NULL;
+	return rsa_public_key_create(this->n, this->e);
 }
 
 /**
@@ -455,13 +444,13 @@ static status_t check(private_rsa_private_key_t *this)
 	/* PKCS#1 1.5 section 6 requires modulus to have at least 12 octets.
 	* We actually require more (for security).
 	*/
-	if (this->k < 512/8)
+	if (this->k < 512 / BITS_PER_BYTE)
 	{
 		return FAILED;
 	}
 	
 	/* we picked a max modulus size to simplify buffer allocation */
-	if (this->k > 8192/8)
+	if (this->k > 8192 / BITS_PER_BYTE)
 	{
 		return FAILED;
 	}
@@ -572,7 +561,6 @@ static private_rsa_private_key_t *rsa_private_key_create_empty(void)
 	/* private functions */
 	this->rsadp = rsadp;
 	this->rsasp1 = rsadp; /* same algorithm */
-	this->compute_prime = compute_prime;
 	
 	this->keyid = chunk_empty;
 	
@@ -587,20 +575,17 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 	mpz_t p, q, n, e, d, exp1, exp2, coeff;
 	mpz_t m, q1, t;
 	private_rsa_private_key_t *this;
-	
-	this = rsa_private_key_create_empty();
-	key_size = key_size / 8;
+	size_t key_len = key_size / BITS_PER_BYTE;
+	size_t prime_len = key_len / 2;
 	
 	/* Get values of primes p and q  */
-	if (this->compute_prime(this, key_size/2, &p) != SUCCESS)
+	if (compute_prime(this, prime_len, &p) != SUCCESS)
 	{
-		free(this);
 		return NULL;
 	}	
-	if (this->compute_prime(this, key_size/2, &q) != SUCCESS)
+	if (compute_prime(this, prime_len, &q) != SUCCESS)
 	{
 		mpz_clear(p);
-		free(this);
 		return NULL;
 	}
 	
@@ -648,7 +633,13 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 	mpz_clear_randomized(m);
 	mpz_clear_randomized(t);
 
-	/* apply values */
+	/* determine exact the modulus size in bits */
+	key_size = mpz_sizeinbase(n, 2);
+
+	/* create and fill in rsa_private_key_t object */
+	this = rsa_private_key_create_empty();
+	this->k = (key_size + 7) / BITS_PER_BYTE;
+	this->keyid = rsa_public_key_id_create(n, e);
 	*(this->p) = *p;
 	*(this->q) = *q;
 	*(this->n) = *n;
@@ -657,10 +648,8 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 	*(this->exp1) = *exp1;
 	*(this->exp2) = *exp2;
 	*(this->coeff) = *coeff;
-	
-	/* set key size in bytes */
-	this->k = key_size;
-	
+	DBG1("generated %d bit RSA key with keyid: %#B", key_size, &this->keyid);
+
 	return &this->public;
 }
 
@@ -733,17 +722,8 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 	}
 	
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
+	this->keyid = rsa_public_key_id_create(this->n, this->e);
 
-	/* form the keyid as a SHA-1 hash of a publicKeyInfo object */
-	{
-		chunk_t publicKeyInfo = rsa_public_key_info_to_asn1(this->n, this->e);
-		hasher_t *hasher = hasher_create(HASH_SHA1);
-
-		hasher->allocate_hash(hasher, publicKeyInfo, &this->keyid);
-		hasher->destroy(hasher);
-		free(publicKeyInfo.ptr);
-	}
-	
 	if (check(this) != SUCCESS)
 	{
 		destroy(this);
