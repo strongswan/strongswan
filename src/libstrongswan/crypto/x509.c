@@ -1302,8 +1302,8 @@ chunk_t x509_build_generalNames(linked_list_t *list)
 			free(generalName);
 		}
 		iterator->destroy(iterator);
-		generalNames->destroy(generalNames);
 	}
+	generalNames->destroy(generalNames);
 	return names;
 }
 
