@@ -167,7 +167,7 @@ static chunk_t build_attr_cert_info(void)
 				ASN1_INTEGER_1,
 				build_holder(),
 				build_v2_form(),
-				ASN1_sha1WithRSA_id,
+				asn1_algorithmIdentifier(OID_SHA1_WITH_RSA),
 				asn1_simple_object(ASN1_INTEGER, serial),
 				build_attr_cert_validity(),
 				build_attributes(),
@@ -180,21 +180,14 @@ static chunk_t build_attr_cert_info(void)
  */
 chunk_t build_attr_cert(void)
 {
-	u_char *pos;
-	chunk_t rawSignature, signatureValue;
+	chunk_t signatureValue;
 	chunk_t attributeCertificateInfo = build_attr_cert_info();
 
-	/* build the signature */
 	signerkey->build_emsa_pkcs1_signature(signerkey, HASH_SHA1,
-					 attributeCertificateInfo, &rawSignature);
-	pos = build_asn1_object(&signatureValue, ASN1_BIT_STRING,
-							1 + rawSignature.len);
-	*pos++ = 0x00;
-	memcpy(pos, rawSignature.ptr, rawSignature.len);
-	free(rawSignature.ptr);
+					 attributeCertificateInfo, &signatureValue);
 
 	return asn1_wrap(ASN1_SEQUENCE, "mcm",
 				attributeCertificateInfo,
-				ASN1_sha1WithRSA_id,
-				signatureValue);
+				asn1_algorithmIdentifier(OID_SHA1_WITH_RSA),
+				asn1_bitstring("m", signatureValue));
 }
