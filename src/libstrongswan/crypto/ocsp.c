@@ -6,8 +6,11 @@
  */
 
 /* Support of the Online Certificate Status Protocol (OCSP)
+ *
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
- * Zuercher Hochschule Winterthur
+ * Copyright (C) 2007 Andreas Steffen
+ *
+ * Hochschule für Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -325,7 +328,7 @@ static chunk_t build_request(private_ocsp_t *this, certinfo_t *certinfo)
 	chunk_t serialNumber = certinfo->get_serialNumber(certinfo);
 
 	chunk_t reqCert = asn1_wrap(ASN1_SEQUENCE, "cmmm",
-		ASN1_sha1_id,
+		asn1_algorithmIdentifier(OID_SHA1),
 		asn1_simple_object(ASN1_OCTET_STRING, this->authNameID),
 		asn1_simple_object(ASN1_OCTET_STRING, this->authKeyID),
 		asn1_simple_object(ASN1_INTEGER, serialNumber));

@@ -7,7 +7,7 @@
 
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
- * Copyright (C) 2002-2007 Andreas Steffen
+ * Copyright (C) 2002-2008 Andreas Steffen
  *
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -32,6 +32,7 @@ typedef struct pkcs7_t pkcs7_t;
 #include <library.h>
 #include <crypto/x509.h>
 #include <crypto/rsa/rsa_private_key.h>
+#include <crypto/crypters/crypter.h>
 #include <utils/iterator.h>
 
 /**
@@ -39,6 +40,7 @@ typedef struct pkcs7_t pkcs7_t;
  * 
  * @b Constructors:
  *  -pkcs7_create_from_chunk()
+ *  -pkcs7_create()
  *
  * @ingroup crypto
  */
@@ -103,12 +105,40 @@ struct pkcs7_t {
 	chunk_t (*get_data) (pkcs7_t *this);
 
 	/**
+	 * @brief Returns the a DER-encoded contentInfo object
+	 *
+	 * @param this			calling object
+	 * @return				chunk containing the contentInfo object
+	 */
+	chunk_t (*get_contentInfo) (pkcs7_t *this);
+
+	/**
 	 * @brief Create an iterator for the certificates.
 	 * 
 	 * @param this				calling object
 	 * @return					iterator for the certificates
 	 */
 	iterator_t *(*create_certificate_iterator) (pkcs7_t *this);
+
+	/**
+	 * @brief Build an envelopedData object
+	 *
+	 * @param this			PKCS#7 data object to envelop
+	 * @param cert			receivers's certificate
+	 * @param alg			encryption algorithm
+	 * @return				TRUE if build was successful
+	 */
+	bool (*build_envelopedData) (pkcs7_t *this, x509_t *cert, encryption_algorithm_t alg);
+
+	/**
+	 * @brief Build an signedData object
+	 *
+	 * @param this			PKCS#7 data object to sign
+	 * @param key			signer's RSA private key
+	 * @param alg			digest algorithm used for signature
+	 * @return				TRUE if build was successful
+	 */
+	bool (*build_signedData) (pkcs7_t *this, rsa_private_key_t *key, hash_algorithm_t alg);
 
 	/**
 	 * @brief Destroys the contentInfo object.
@@ -128,5 +158,17 @@ struct pkcs7_t {
  * @ingroup crypto
  */
 pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level);
+
+/**
+ * @brief Create a PKCS#7 contentInfo object
+ * 
+ * @param chunk			chunk containing data
+ * @param attributes	chunk containing attributes
+ * @param cert			certificate to be included in the pkcs7_contentInfo object
+ * @return 				created pkcs7_contentInfo object.
+ * 
+ * @ingroup crypto
+ */
+pkcs7_t *pkcs7_create_from_data(chunk_t data, chunk_t attributes, x509_t *cert);
 
 #endif /* _PKCS7_H */

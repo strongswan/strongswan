@@ -1381,39 +1381,14 @@ static chunk_t x509_build_tbs(private_x509_t *this)
 static void build_encoding(private_x509_t *this, hash_algorithm_t alg,
 						   rsa_private_key_t *private_key)
 {
-	switch (alg)
-	{
-		case HASH_MD5:
-			this->signatureAlgorithm = OID_MD5_WITH_RSA;
-			break;
-		case HASH_SHA1:
-		default:
-			this->signatureAlgorithm = OID_SHA1_WITH_RSA;
-			break;
-		case HASH_SHA256:
-			this->signatureAlgorithm = OID_SHA256_WITH_RSA;
-			break;
-		case HASH_SHA384:
-			this->signatureAlgorithm = OID_SHA384_WITH_RSA;
-			break;
-		case HASH_SHA512:
- 			this->signatureAlgorithm = OID_SHA512_WITH_RSA;
-	}
+	chunk_t signature;
+
+	this->signatureAlgorithm = hasher_signature_algorithm_to_oid(alg);
 	this->tbsCertificate = x509_build_tbs(this);
-	{
-		chunk_t rawSignature;
-		u_char *pos;
-
-		private_key->build_emsa_pkcs1_signature(private_key, alg,
-						this->tbsCertificate,	&rawSignature);
-
-		pos = build_asn1_object(&this->signature, ASN1_BIT_STRING,
-						 1 + rawSignature.len);
-		*pos++ = 0x00;
-		memcpy(pos, rawSignature.ptr, rawSignature.len);
-		free(rawSignature.ptr);
-	}
-    this->certificate = asn1_wrap(ASN1_SEQUENCE, "mcm",
+	private_key->build_emsa_pkcs1_signature(private_key, alg,
+						this->tbsCertificate, &signature);
+	this->signature = asn1_bitstring("m", signature);
+	this->certificate = asn1_wrap(ASN1_SEQUENCE, "mcm",
 				this->tbsCertificate,
 				asn1_algorithmIdentifier(this->signatureAlgorithm),
 				this->signature);

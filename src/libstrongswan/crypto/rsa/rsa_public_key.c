@@ -6,8 +6,10 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2007-2008 Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -295,19 +297,13 @@ static size_t get_keysize(const private_rsa_public_key_t *this)
  */
 chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e)
 {
-	chunk_t rawKey = asn1_wrap(ASN1_SEQUENCE, "mm",
+	chunk_t publicKey = asn1_wrap(ASN1_SEQUENCE, "mm",
 								 asn1_integer_from_mpz(n),
 								 asn1_integer_from_mpz(e));
-	chunk_t publicKey;
 
-	u_char *pos = build_asn1_object(&publicKey, ASN1_BIT_STRING, 1 + rawKey.len);
-
-	*pos++ = 0x00;
-	memcpy(pos, rawKey.ptr, rawKey.len);
-	free(rawKey.ptr);
-
-	return asn1_wrap(ASN1_SEQUENCE, "cm", ASN1_rsaEncryption_id,
-										  publicKey);
+	return asn1_wrap(ASN1_SEQUENCE, "cm",
+				asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
+				asn1_bitstring("m", publicKey));
 }
 
 /**

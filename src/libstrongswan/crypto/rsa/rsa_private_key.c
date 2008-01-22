@@ -6,8 +6,10 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2007-2008 Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -202,7 +204,7 @@ static status_t compute_prime(private_rsa_private_key_t *this, size_t prime_len,
 		if (status != SUCCESS)
 		{
 			randomizer->destroy(randomizer);
-			mpz_clear_randomized(*prime);
+			mpz_clear(*prime);
 			return FAILED;
 		}
 		
@@ -219,7 +221,7 @@ static status_t compute_prime(private_rsa_private_key_t *this, size_t prime_len,
 		chunk_free_randomized(&random_bytes);
 	}
 	/* check if it isnt too large */
-	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_len);
+	while (((mpz_sizeinbase(*prime, 2) + 7) / BITS_PER_BYTE) > prime_len);
 	
 	randomizer->destroy(randomizer);
 	return SUCCESS;
@@ -308,47 +310,14 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
 										   chunk_t data, chunk_t *signature)
 {
 	hasher_t *hasher;
-	chunk_t em, digestInfo, hash_id, hash;
-	
-	/* get oid string prepended to hash */
-	switch (hash_algorithm)
-	{	
-		case HASH_MD2:
-		{
-			hash_id =ASN1_md2_id;
-			break;
-		}
-		case HASH_MD5:
-		{
-			hash_id = ASN1_md5_id;
-			break;
-		}
-		case HASH_SHA1:
-		{
-			hash_id = ASN1_sha1_id;
-			break;
-		}
-		case HASH_SHA256:
-		{
-			hash_id = ASN1_sha256_id;
-			break;
-		}
-		case HASH_SHA384:
-		{
-			hash_id = ASN1_sha384_id;
-			break;
-		}
-		case HASH_SHA512:
-		{
-			hash_id = ASN1_sha512_id;
-			break;
-		}
-		default:
-		{
-			return NOT_SUPPORTED;	
-		}
+	chunk_t em, digestInfo, hash;
+	int hash_oid = hasher_algorithm_to_oid(hash_algorithm);
+
+	if (hash_oid == OID_UNKNOWN)
+	{
+		return NOT_SUPPORTED;
 	}
-	
+
 	/* get hasher */
 	hasher = hasher_create(hash_algorithm);
 	if (hasher == NULL)
@@ -362,7 +331,7 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
 	
 	/* build DER-encoded digestInfo */
 	digestInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
-					hash_id,
+					asn1_algorithmIdentifier(hash_oid),
 					asn1_simple_object(ASN1_OCTET_STRING, hash)
 				  );
 	chunk_free(&hash);

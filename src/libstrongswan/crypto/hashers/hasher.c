@@ -6,8 +6,9 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2005-2006 Martin Willi
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -105,6 +106,39 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 			algorithm = HASH_UNKNOWN;
 	}
 	return algorithm;
+}
+
+/*
+ * Described in header.
+ */
+int hasher_algorithm_to_oid(hash_algorithm_t alg)
+{
+	int oid;
+
+	switch (alg)
+	{
+		case HASH_MD2:
+			oid = OID_MD2;
+			break;
+		case HASH_MD5:
+			oid = OID_MD5;
+			break;
+		case HASH_SHA1:
+			oid = OID_SHA1;
+			break;
+		case HASH_SHA256:
+			oid = OID_SHA256;
+			break;
+		case HASH_SHA384:
+			oid = OID_SHA384;
+			break;
+		case HASH_SHA512:
+			oid = OID_SHA512;
+			break;
+		default:
+			oid = OID_UNKNOWN;
+	}
+	return oid;
 }
 
 /*

@@ -6,8 +6,10 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2007-2008 Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it

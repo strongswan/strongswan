@@ -1,6 +1,15 @@
-/* Simple ASN.1 parser
- * Copyright (C) 2000-2004 Andreas Steffen, Zuercher Hochschule Winterthur
- * Copyright (C) 2006 Martin Will, Hochschule fuer Technik Rapperswil
+/**
+ * @file asn1.h
+ *
+ * @brief Simple ASN.1 parser
+ *
+ */
+
+/*
+ * Copyright (C) 2006 Martin Will
+ * Copyright (C) 2000-2008 Andreas Steffen
+ *
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -114,19 +123,9 @@ extern const chunk_t ASN1_INTEGER_0;
 extern const chunk_t ASN1_INTEGER_1;
 extern const chunk_t ASN1_INTEGER_2;
 
-/* some popular algorithmIdentifiers */
-extern const chunk_t ASN1_md2_id;
-extern const chunk_t ASN1_md5_id;
-extern const chunk_t ASN1_sha1_id;
-extern const chunk_t ASN1_sha256_id;
-extern const chunk_t ASN1_sha384_id;
-extern const chunk_t ASN1_sha512_id;
-
-extern const chunk_t ASN1_rsaEncryption_id;
-extern const chunk_t ASN1_md5WithRSA_id;
-extern const chunk_t ASN1_sha1WithRSA_id;
-
+/* returns some popular algorithmIdentifiers */
 extern chunk_t asn1_algorithmIdentifier(int oid);
+
 extern int known_oid(chunk_t object);
 extern u_int asn1_length(chunk_t *blob);
 extern bool is_printablestring(chunk_t str);
@@ -144,6 +143,7 @@ extern void code_asn1_length(size_t length, chunk_t *code);
 extern u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen);
 extern chunk_t asn1_integer_from_mpz(const mpz_t value);
 extern chunk_t asn1_simple_object(asn1_t tag, chunk_t content);
+extern chunk_t asn1_bitstring(const char *mode, chunk_t content);
 extern chunk_t asn1_wrap(asn1_t type, const char *mode, ...);
 
 #endif /* _ASN1_H */
