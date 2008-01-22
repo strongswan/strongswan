@@ -86,6 +86,13 @@ static u_char ASN1_sha512_id_str[] = {
 		  0x05,0x00
 };
 
+static u_char ASN1_md2WithRSA_id_str[] = {
+	0x30, 0x0D,
+		  0x06, 0x09,
+				0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x02,
+		  0x05, 0x00
+};
+
 static u_char ASN1_md5WithRSA_id_str[] = {
 	0x30, 0x0D,
 		  0x06, 0x09,
@@ -135,6 +142,7 @@ static const chunk_t ASN1_sha256_id = chunk_from_buf(ASN1_sha256_id_str);
 static const chunk_t ASN1_sha384_id = chunk_from_buf(ASN1_sha384_id_str);
 static const chunk_t ASN1_sha512_id = chunk_from_buf(ASN1_sha512_id_str);
 static const chunk_t ASN1_rsaEncryption_id = chunk_from_buf(ASN1_rsaEncryption_id_str);
+static const chunk_t ASN1_md2WithRSA_id = chunk_from_buf(ASN1_md2WithRSA_id_str);
 static const chunk_t ASN1_md5WithRSA_id = chunk_from_buf(ASN1_md5WithRSA_id_str);
 static const chunk_t ASN1_sha1WithRSA_id = chunk_from_buf(ASN1_sha1WithRSA_id_str);
 static const chunk_t ASN1_sha256WithRSA_id = chunk_from_buf(ASN1_sha256WithRSA_id_str);
@@ -161,6 +169,8 @@ chunk_t asn1_algorithmIdentifier(int oid)
 	{
 		case OID_RSA_ENCRYPTION:
 			return ASN1_rsaEncryption_id;
+		case OID_MD2_WITH_RSA:
+			return ASN1_md2WithRSA_id;
 		case OID_MD5_WITH_RSA:
 			return ASN1_md5WithRSA_id;
 		case OID_SHA1_WITH_RSA:
