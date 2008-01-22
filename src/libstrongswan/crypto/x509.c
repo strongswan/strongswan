@@ -9,8 +9,8 @@
  * Copyright (C) 2000 Andreas Hess, Patric Lichtsteiner, Roger Wegmann
  * Copyright (C) 2001 Marco Bertossa, Andreas Schleiss
  * Copyright (C) 2002 Mario Strasser
- * Copyright (C) 2000-2004 Andreas Steffen, Zuercher Hochschule Winterthur
- * Copyright (C) 2006 Martin Willi, Andreas Steffen
+ * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2000-2008 Andreas Steffen
  *
  * Hochschule fuer Technik Rapperswil
  *
@@ -1243,6 +1243,22 @@ static void list(private_x509_t *this, FILE *out, bool utc)
 	}
 }
 
+/**
+ * Implements x509_t.add_subjectAltNames.
+ */
+static void add_subjectAltNames(private_x509_t *this, linked_list_t *subjectAltNames)
+{
+	iterator_t *iterator = subjectAltNames->create_iterator(subjectAltNames, TRUE);
+	identification_t *name = NULL;
+
+	while (iterator->iterate(iterator, (void**)&name))
+	{
+		name = name->clone(name);
+		this->subjectAltNames->insert_last(this->subjectAltNames, (void*)name);
+	}
+	iterator->destroy(iterator);
+}
+
 /*
  * Defined in header.
  */
@@ -1328,11 +1344,60 @@ chunk_t x509_build_subjectAltNames(linked_list_t *list)
 }
 
 /**
+ * Build a to-be-signed X.509 certificate body
+ */
+static chunk_t x509_build_tbs(private_x509_t *this)
+{
+    /* version is always X.509v3 */
+    chunk_t version = asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2);
+
+    chunk_t extensions = chunk_empty;
+
+    if (this->subjectAltNames->get_count(this->subjectAltNames))
+    {
+		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
+			asn1_wrap(ASN1_SEQUENCE, "m",
+			x509_build_subjectAltNames(this->subjectAltNames)));
+    }
+
+    return asn1_wrap(ASN1_SEQUENCE, "mmccmcmm",
+			version,
+			asn1_simple_object(ASN1_INTEGER, this->serialNumber),
+			asn1_algorithmIdentifier(this->signatureAlgorithm),
+			this->issuer->get_encoding(this->issuer),
+			asn1_wrap(ASN1_SEQUENCE, "mm",
+				timetoasn1(&this->notBefore, ASN1_UTCTIME),
+				timetoasn1(&this->notAfter,  ASN1_UTCTIME)
+			),
+			this->subject->get_encoding(this->subject),
+			this->public_key->get_publicKeyInfo(this->public_key),
+			extensions
+	   );
+}
+
+/**
  * Implementation of x509_t.build_encoding.
  */
 static void build_encoding(private_x509_t *this, hash_algorithm_t alg,
 						   rsa_private_key_t *private_key)
 {
+	chunk_t tbs_cert, rawSignature, signature;
+	u_char *pos;
+
+	this->signatureAlgorithm = OID_SHA1_WITH_RSA;
+	tbs_cert = x509_build_tbs(this);
+	private_key->build_emsa_pkcs1_signature(private_key, alg, tbs_cert,
+											&rawSignature);
+
+	pos = build_asn1_object(&signature, ASN1_BIT_STRING, 1 + rawSignature.len);
+	*pos++ = 0x00;
+	memcpy(pos, rawSignature.ptr, rawSignature.len);
+	free(rawSignature.ptr);
+
+    this->certificate = asn1_wrap(ASN1_SEQUENCE, "mcm",
+				tbs_cert,
+				asn1_algorithmIdentifier(this->signatureAlgorithm),
+				signature);
 
 }
 
@@ -1406,6 +1471,7 @@ static private_x509_t *x509_create_empty(void)
 	this->public.create_ocspuri_iterator = (iterator_t* (*) (const x509_t*))create_ocspuri_iterator;
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
 	this->public.list = (void (*) (x509_t*, FILE *out, bool utc))list;
+	this->public.add_subjectAltNames = (void (*) (x509_t*,linked_list_t*))add_subjectAltNames;
 	this->public.build_encoding = (void (*) (x509_t*,hash_algorithm_t,rsa_private_key_t*))build_encoding;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	
@@ -1417,7 +1483,8 @@ static private_x509_t *x509_create_empty(void)
  */
 x509_t *x509_create(chunk_t serialNumber, identification_t *issuer,
 					time_t notBefore, time_t notAfter,
-					identification_t *subject)
+					identification_t *subject,
+					rsa_public_key_t *public_key)
 {
 	private_x509_t *this = x509_create_empty();
 
@@ -1426,6 +1493,7 @@ x509_t *x509_create(chunk_t serialNumber, identification_t *issuer,
 	this->notBefore = notBefore;
 	this->notAfter = notAfter;
 	this->subject = subject->clone(subject);
+	this->public_key = public_key->clone(public_key);
 
 	return &this->public;
 }
