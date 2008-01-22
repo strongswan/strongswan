@@ -6,9 +6,11 @@
  */
 
 /* Support of the Online Certificate Status Protocol (OCSP) Support
+ *
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
  * Copyright (C) 2007 Andreas Steffen
- *                    Hochschule fuer Technik Rapperswil, Switzerland
+ *
+ * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -20,6 +22,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
+ * RCSID $Id$
  */
 
 #ifndef OCSP_H_
