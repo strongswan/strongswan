@@ -34,6 +34,7 @@
 #include "rsa_public_key.h"
 
 #include <debug.h>
+#include <utils/randomizer.h>
 #include <crypto/hashers/hasher.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
@@ -134,6 +135,55 @@ static chunk_t rsaep(const private_rsa_public_key_t *this, chunk_t data)
 	mpz_clear(m);	
 	
 	return encrypted;
+}
+
+/**
+ * Implementation of rsa_public_key_t.eme_pkcs1_encrypt.
+ */
+static status_t pkcs1_encrypt(private_rsa_public_key_t *this,
+							  chunk_t in, chunk_t *out)
+{
+	chunk_t em;
+	u_char *pos;
+	int padding = this->k - in.len - 3;
+
+	if (padding < 8)
+	{
+		DBG1("rsa padding of %d bytes is too small", padding);
+		return FAILED;
+	}
+	em.len = this->k;
+	em.ptr = pos = malloc(em.len);
+	
+	/* add padding according to PKCS#1 7.2.1 1.+2. */
+	*pos++ = 0x00;
+    *pos++ = 0x02;
+
+    /* pad with pseudo random bytes unequal to zero */
+	{
+		randomizer_t *randomizer = randomizer_create();
+
+	    /* pad with pseudo random bytes unequal to zero */
+		while (padding--)
+		{
+			randomizer->get_pseudo_random_bytes(randomizer, 1, pos);
+			while (!*pos)
+			{
+				randomizer->get_pseudo_random_bytes(randomizer, 1, pos);
+			}
+			pos++;
+		}
+		randomizer->destroy(randomizer);
+	}
+
+	/* append the padding terminator */
+	*pos++ = 0x00;
+
+	/* now add the data */
+	memcpy(pos, in.ptr, in.len);
+	*out = this->rsaep(this, em);
+	free(em.ptr);
+	return SUCCESS;
 }
 
 /**
@@ -376,6 +426,7 @@ private_rsa_public_key_t *rsa_public_key_create_empty(void)
 	private_rsa_public_key_t *this = malloc_thing(private_rsa_public_key_t);
 	
 	/* public functions */
+	this->public.pkcs1_encrypt = (status_t (*) (rsa_public_key_t*,chunk_t,chunk_t*))pkcs1_encrypt;
 	this->public.verify_emsa_pkcs1_signature = (status_t (*) (const rsa_public_key_t*,hash_algorithm_t,chunk_t,chunk_t))verify_emsa_pkcs1_signature;
 	this->public.get_modulus = (mpz_t *(*) (const rsa_public_key_t*))get_modulus;
 	this->public.get_keysize = (size_t (*) (const rsa_public_key_t*))get_keysize;
