@@ -260,7 +260,7 @@ static chunk_t rsadp(private_rsa_private_key_t *this, chunk_t data)
 }
 
 /**
- * Implementation of rsa_private_key_t.eme_pkcs1_decrypt.
+ * Implementation of rsa_private_key_t.pkcs1_decrypt.
  */
 static status_t pkcs1_decrypt(private_rsa_private_key_t *this,
 							  chunk_t in, chunk_t *out)
