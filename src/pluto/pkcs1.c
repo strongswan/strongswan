@@ -442,11 +442,13 @@ RSA_encrypt(const RSA_public_key_t *key, chunk_t in)
     *pos++ = 0x02;
 
     /* pad with pseudo random bytes unequal to zero */
-    get_rnd_bytes(pos, padding);
     for (i = 0; i < padding; i++)
     {
+	get_rnd_bytes(pos, padding);
 	while (!*pos)
- 	  get_rnd_bytes(pos, 1);
+	{
+	    get_rnd_bytes(pos, 1);
+	}
 	pos++;
     }
 
