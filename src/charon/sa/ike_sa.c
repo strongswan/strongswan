@@ -2090,7 +2090,14 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	{
 		this->dns_servers->insert_first(this->dns_servers, ip);
 	}
-	
+
+	/* inherit NAT-T conditions */
+	this->conditions = other->conditions;
+	if (this->conditions & COND_NAT_HERE)
+	{
+		send_keepalive(this);
+	}
+
 	/* adopt all children */
 	while (other->child_sas->remove_last(other->child_sas,
 		   								 (void**)&child_sa) == SUCCESS)
