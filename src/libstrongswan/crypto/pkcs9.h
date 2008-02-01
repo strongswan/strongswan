@@ -74,6 +74,22 @@ struct pkcs9_t {
 	void (*set_attribute) (pkcs9_t *this, int oid, chunk_t value);
 
 	/**
+	 * @brief gets a PKCS#9 messageDigest attribute
+	 *
+	 * @param this			calling object
+	 * @return				messageDigest
+	 */
+	chunk_t (*get_messageDigest) (pkcs9_t *this);
+
+	/**
+	 * @brief add a PKCS#9 messageDigest attribute
+	 *
+	 * @param this			calling object
+	 * @param value			messageDigest 
+	 */
+	void (*set_messageDigest) (pkcs9_t *this, chunk_t value);
+
+	/**
 	 * @brief Destroys the PKCS#9 attribute list.
 	 *
 	 * @param this			PKCS#9 attribute list to destroy

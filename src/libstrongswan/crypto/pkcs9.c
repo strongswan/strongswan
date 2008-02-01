@@ -297,7 +297,20 @@ static chunk_t get_encoding(private_pkcs9_t *this)
  */
 static chunk_t get_attribute(private_pkcs9_t *this, int oid)
 {
-	return chunk_empty;
+	iterator_t *iterator = this->attributes->create_iterator(this->attributes, TRUE);
+	chunk_t value = chunk_empty;
+	attribute_t *attribute;
+
+	while (iterator->iterate(iterator, (void**)&attribute))
+	{
+		if (attribute->oid == oid)
+		{
+			value = attribute->value;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	return value;
 }
 
 /**
@@ -308,6 +321,37 @@ static void set_attribute(private_pkcs9_t *this, int oid, chunk_t value)
 	attribute_t *attribute = attribute_create(oid, value);
 
 	this->attributes->insert_last(this->attributes, (void*)attribute);
+}
+
+/**
+ * Implements pkcs9_t.get_messageDigest
+ */
+static chunk_t get_messageDigest(private_pkcs9_t *this)
+{
+	const int oid = OID_PKCS9_MESSAGE_DIGEST;
+	chunk_t value = get_attribute(this, oid);
+
+	if (value.ptr == NULL)
+	{
+		return chunk_empty;
+	}
+	if (!parse_asn1_simple_object(&value, asn1_attributeType(oid), 0, oid_names[oid].name))
+	{
+		return chunk_empty;
+	}
+	return chunk_clone(value);
+}
+
+/**
+ * Implements pkcs9_t.set_attribute
+ */
+static void set_messageDigest(private_pkcs9_t *this, chunk_t value)
+{
+	const int oid = OID_PKCS9_MESSAGE_DIGEST;
+	chunk_t messageDigest = asn1_simple_object(asn1_attributeType(oid), value);
+
+	set_attribute(this, oid, messageDigest);
+	free(messageDigest.ptr);
 }
 
 /**
@@ -336,6 +380,8 @@ static private_pkcs9_t *pkcs9_create_empty(void)
 	this->public.get_encoding = (chunk_t (*) (pkcs9_t*))get_encoding;
 	this->public.get_attribute = (chunk_t (*) (pkcs9_t*,int))get_attribute;
 	this->public.set_attribute = (void (*) (pkcs9_t*,int,chunk_t))set_attribute;
+	this->public.get_messageDigest = (chunk_t (*) (pkcs9_t*))get_messageDigest;
+	this->public.set_messageDigest = (void (*) (pkcs9_t*,chunk_t))set_messageDigest;
 	this->public.destroy = (void (*) (pkcs9_t*))destroy;
 
 	return this;
