@@ -87,6 +87,7 @@
                 0x07         "challengePassword"
                 0x08         "unstructuredAddress"
                 0x0E         "extensionRequest"
+                0x0F         "S/MIME Capabilities"
             0x02             "digestAlgorithm"
               0x02           "md2"						OID_MD2
               0x05           "md5"						OID_MD5
