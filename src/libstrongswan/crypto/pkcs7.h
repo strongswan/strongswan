@@ -31,16 +31,19 @@ typedef struct pkcs7_t pkcs7_t;
 
 #include <library.h>
 #include <crypto/x509.h>
+#include <crypto/pkcs9.h>
 #include <crypto/rsa/rsa_private_key.h>
 #include <crypto/crypters/crypter.h>
 #include <utils/iterator.h>
+
+extern const chunk_t ASN1_pkcs7_data_oid;
 
 /**
  * @brief PKCS#7 contentInfo object.
  * 
  * @b Constructors:
  *  -pkcs7_create_from_chunk()
- *  -pkcs7_create()
+ *  -pkcs7_create_from_data()
  *
  * @ingroup crypto
  */
@@ -115,10 +118,34 @@ struct pkcs7_t {
 	/**
 	 * @brief Create an iterator for the certificates.
 	 * 
-	 * @param this				calling object
-	 * @return					iterator for the certificates
+	 * @param this			calling object
+	 * @return				iterator for the certificates
 	 */
 	iterator_t *(*create_certificate_iterator) (pkcs7_t *this);
+
+	/**
+	 * @brief Add a certificate.
+	 * 
+	 * @param this			calling object
+	 * @param cert			certificate to be included
+	 */
+	void (*set_certificate) (pkcs7_t *this, x509_t *cert);
+
+	/**
+	 * @brief Add authenticated attributes.
+	 * 
+	 * @param this			calling object
+	 * @param attributes	attributes to be included
+	 */
+	void (*set_attributes) (pkcs7_t *this, pkcs9_t *attributes);
+
+	/**
+	 * @brief Build a data object
+	 *
+	 * @param this			PKCS#7 data to be built
+	 * @return				TRUE if build was successful
+	 */
+	bool (*build_data) (pkcs7_t *this);
 
 	/**
 	 * @brief Build an envelopedData object
@@ -163,12 +190,22 @@ pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level);
  * @brief Create a PKCS#7 contentInfo object
  * 
  * @param chunk			chunk containing data
- * @param attributes	chunk containing attributes
- * @param cert			certificate to be included in the pkcs7_contentInfo object
  * @return 				created pkcs7_contentInfo object.
  * 
  * @ingroup crypto
  */
-pkcs7_t *pkcs7_create_from_data(chunk_t data, chunk_t attributes, x509_t *cert);
+pkcs7_t *pkcs7_create_from_data(chunk_t data);
+
+/**
+ * @brief Read a X.509 certificate from a DER encoded file.
+ * 
+ * @param filename 	file containing DER encoded data
+ * @param label		label describing kind of PKCS#7 file
+ * @return 			created pkcs7_t object, or NULL if invalid.
+ * 
+ * @ingroup crypto
+ */
+pkcs7_t *pkcs7_create_from_file(const char *filename, const char *label);
+
 
 #endif /* _PKCS7_H */

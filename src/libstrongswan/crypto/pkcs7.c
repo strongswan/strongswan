@@ -32,6 +32,7 @@
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
 #include <crypto/x509.h>
+#include <crypto/pkcs9.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/rsa/rsa_public_key.h>
@@ -79,7 +80,7 @@ struct private_pkcs7_t {
 	/**
 	 * ASN.1 encoded attributes
 	 */
-	chunk_t attributes;
+	pkcs9_t *attributes;
 
 	/**
 	 * Linked list of X.509 certificates
@@ -214,7 +215,7 @@ static char ASN1_pkcs7_encrypted_data_oid_str[] = {
 		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x06
 };
 
-static const chunk_t ASN1_pkcs7_data_oid = 
+const chunk_t ASN1_pkcs7_data_oid = 
 						chunk_from_buf(ASN1_pkcs7_data_oid_str);
 static const chunk_t ASN1_pkcs7_signed_data_oid =
 						chunk_from_buf(ASN1_pkcs7_signed_data_oid_str);
@@ -244,24 +245,6 @@ static const chunk_t ASN1_3des_ede_cbc_oid =
 						chunk_from_buf(ASN1_3des_ede_cbc_oid_str);
 static const chunk_t ASN1_des_cbc_oid =
 						chunk_from_buf(ASN1_des_cbc_oid_str);
-
-/**
- * PKCS#7 attribute type OIDs
- */
-static u_char ASN1_contentType_oid_str[] = {
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x03
-};
-
-static u_char ASN1_messageDigest_oid_str[] = {
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x04
-};
-
-static const chunk_t ASN1_contentType_oid =
-						chunk_from_buf(ASN1_contentType_oid_str);
-static const chunk_t ASN1_messageDigest_oid =
-						chunk_from_buf(ASN1_messageDigest_oid_str);
 
 /**
  * Implements pkcs7_t.is_data.
@@ -369,7 +352,7 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 				break;
 			case PKCS7_SIGNED_CERT:
 				{
-					x509_t *cert = x509_create_from_chunk(object, level+1);
+					x509_t *cert = x509_create_from_chunk(chunk_clone(object), level+1);
 
 					if (cert)
 					{
@@ -391,8 +374,8 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 				}
 				break;
 			case PKCS7_AUTH_ATTRIBUTES:
-				this->attributes = object;
-				*this->attributes.ptr = ASN1_SET;
+				*object.ptr = ASN1_SET;
+				this->attributes = pkcs9_create_from_chunk(object, level+1);
 				break;
 			case PKCS7_DIGEST_ALGORITHM:
 				digest_alg = parse_algorithmIdentifier(object, level, NULL);
@@ -409,8 +392,8 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 	/* check the signature only if a cacert is available */
 	if (cacert != NULL)
 	{
-		rsa_public_key_t *signer = cacert->get_public_key(cacert);
 		hash_algorithm_t algorithm = hasher_algorithm_from_oid(digest_alg);
+		rsa_public_key_t *signer = cacert->get_public_key(cacert);
 
 		if (signerInfos == 0)
 		{
@@ -422,7 +405,7 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 			DBG1("more than one signerInfo object found");
 			return FALSE;
 		}
-		if (this->attributes.ptr == NULL)
+		if (this->attributes == NULL)
 		{
 			DBG1("no authenticatedAttributes object found");
 			return FALSE;
@@ -433,7 +416,7 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 			return FALSE;
 		}
 		if (signer->verify_emsa_pkcs1_signature(signer, algorithm,
-			this->attributes, encrypted_digest) != SUCCESS)
+				this->attributes->get_encoding(this->attributes), encrypted_digest) != SUCCESS)
 		{
 			DBG1("invalid digest signature");
 			return FALSE;
@@ -657,7 +640,7 @@ static chunk_t get_contentInfo(private_pkcs7_t *this)
 
 	return (this->content.ptr == NULL)
 			? asn1_simple_object(ASN1_SEQUENCE, content_type)
-			: asn1_wrap(ASN1_SEQUENCE, "cc",
+			: asn1_wrap(ASN1_SEQUENCE, "cm",
 					content_type,
 					asn1_simple_object(ASN1_CONTEXT_C_0, this->content)
 			  );
@@ -672,12 +655,34 @@ static iterator_t *create_certificate_iterator(const private_pkcs7_t *this)
 }
 
 /**
+ * Implements pkcs7_t.set_certificate
+ */
+static void set_certificate(private_pkcs7_t *this, x509_t *cert)
+{
+	if (cert)
+	{
+		/* TODO the certificate is currently not cloned */
+		this->certs->insert_last(this->certs, cert);
+	}
+}
+
+/**
+ * Implements pkcs7_t.set_attributes
+ */
+static void set_attributes(private_pkcs7_t *this, pkcs9_t *attributes)
+{
+	this->attributes = attributes;
+}
+
+/**
  * build a DER-encoded issuerAndSerialNumber object
  */
 chunk_t pkcs7_build_issuerAndSerialNumber(x509_t *cert)
 {
+	identification_t *issuer = cert->get_issuer(cert);
+
     return asn1_wrap(ASN1_SEQUENCE, "cm",
-			cert->get_issuer(cert),
+			issuer->get_encoding(issuer),
 			asn1_simple_object(ASN1_INTEGER, cert->get_serialNumber(cert)));
 }
 
@@ -687,7 +692,7 @@ chunk_t pkcs7_build_issuerAndSerialNumber(x509_t *cert)
 bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 						 encryption_algorithm_t alg)
 {
-	chunk_t iv, symmetricKey, out, alg_oid;
+	chunk_t iv, symmetricKey, in, out, alg_oid;
 	crypter_t *crypter;
 
 	/* select OID of symmetric encryption algorithm */
@@ -700,13 +705,15 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 			alg_oid = ASN1_3des_ede_cbc_oid;
 			break;
 		default:
+			DBG1("  encryption algorithm %N not supported",
+				  encryption_algorithm_names, alg);
 			return FALSE;
 	}
 
 	crypter = crypter_create(alg, 0);
 	if (crypter == NULL)
 	{
-		DBG1("could not create crypter for algorithm %N",
+		DBG1("  could not create crypter for algorithm %N",
 			 encryption_algorithm_names, alg);
 		return FALSE;
 	}
@@ -719,11 +726,11 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 
 		randomizer->allocate_random_bytes(randomizer,
 			 crypter->get_key_size(crypter), &symmetricKey);
-		DBG4("symmetric encryption key: %B", &symmetricKey);
+		DBG4("  symmetric encryption key: %B", &symmetricKey);
 
 		randomizer->allocate_pseudo_random_bytes(randomizer,
 			crypter->get_block_size(crypter), &iv);
-		DBG4("initialization vector: %B", &iv);
+		DBG4("  initialization vector: %B", &iv);
 
 		randomizer->destroy(randomizer);
 	}
@@ -733,31 +740,27 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 	 */
 	{
 		size_t block_size = crypter->get_block_size(crypter);
-		size_t padding = this->data.len % block_size;
+		size_t padding = block_size - this->data.len % block_size;
 
-		if (padding == 0)
-		{
-			padding += block_size;
-		}
+		in.len = this->data.len + padding;
+		in.ptr = malloc(in.len);
 
-		out.len = this->data.len + padding;
-		out.ptr = malloc(out.len);
-
-		DBG2("padding %d bytes of data to multiple block size of %d bytes",
-		 	(int)this->data.len, (int)out.len);
+		DBG2("  padding %d bytes of data to multiple block size of %d bytes",
+		 	(int)this->data.len, (int)in.len);
 
 		/* copy data */
-		memcpy(out.ptr, this->data.ptr, this->data.len);
+		memcpy(in.ptr, this->data.ptr, this->data.len);
 		/* append padding */
-		memset(out.ptr + this->data.len, padding, padding);
+		memset(in.ptr + this->data.len, padding, padding);
 	}
-	DBG3("padded unencrypted data: %B", &out);
+	DBG3("  padded unencrypted data: %B", &in);
 
 	/* symmetric encryption of data object */
 	crypter->set_key(crypter, symmetricKey);
-	crypter->encrypt(crypter, this->data, iv, &out);
+	crypter->encrypt(crypter, in, iv, &out);
 	crypter->destroy(crypter);
-    DBG3("encrypted data: %B", &out);
+	chunk_free_randomized(&in);
+    DBG3("  encrypted data: %B", &out);
 
 	/* build pkcs7 enveloped data object */ 
 	{
@@ -797,10 +800,70 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 /**
  * Implements pkcs7_t.build_signedData.
  */
-bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *key,
+bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 					  hash_algorithm_t alg)
 {
-	return FALSE;
+	int signature_oid = hasher_signature_algorithm_to_oid(alg);
+	chunk_t authenticatedAttributes = chunk_empty;
+	chunk_t encryptedDigest = chunk_empty;
+	chunk_t signerInfo;
+	x509_t *cert;
+
+	if (this->certs->get_first(this->certs, (void**)&cert) != SUCCESS)
+	{
+		DBG1("  no pkcs7 signer certificate found");
+		return FALSE;
+	}
+
+	if (this->attributes != NULL)
+	{
+		chunk_t attributes = this->attributes->get_encoding(this->attributes);
+
+		if (attributes.ptr)
+		{
+			private_key->build_emsa_pkcs1_signature(private_key, alg,
+							attributes, &encryptedDigest);
+			authenticatedAttributes = chunk_clone(attributes);
+			*authenticatedAttributes.ptr = ASN1_CONTEXT_C_0;
+		}
+	}
+	else if (this->data.ptr != NULL)
+	{
+		private_key->build_emsa_pkcs1_signature(private_key, alg,
+						this->data, &encryptedDigest);
+	}
+	if (encryptedDigest.ptr)
+	{
+		encryptedDigest = asn1_wrap(ASN1_OCTET_STRING, "m", encryptedDigest);
+	}
+
+	signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmcmcm",
+					ASN1_INTEGER_1,
+					pkcs7_build_issuerAndSerialNumber(cert),
+					asn1_algorithmIdentifier(signature_oid),
+					authenticatedAttributes,
+					asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
+					encryptedDigest);
+
+	if (this->data.ptr != NULL)
+	{
+		this->content = asn1_simple_object(ASN1_OCTET_STRING, this->data);
+		chunk_free(&this->data);
+	}
+	this->type = OID_PKCS7_DATA;
+	this->data = get_contentInfo(this);
+	chunk_free(&this->content);
+
+	this->type = OID_PKCS7_SIGNED_DATA;
+
+	this->content = asn1_wrap(ASN1_SEQUENCE, "cmcmm",
+			ASN1_INTEGER_1,
+			asn1_simple_object(ASN1_SET, asn1_algorithmIdentifier(signature_oid)),
+			this->data,
+			asn1_simple_object(ASN1_CONTEXT_C_0, cert->get_certificate(cert)),
+			asn1_wrap(ASN1_SET, "m", signerInfo));
+
+	return TRUE;
 }
 
 /**
@@ -808,7 +871,9 @@ bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *key,
  */
 static void destroy(private_pkcs7_t *this)
 {
+	DESTROY_IF(this->attributes);
 	this->certs->destroy_offset(this->certs, offsetof(x509_t, destroy));
+	free(this->content.ptr);
 	free(this->data.ptr);
 	free(this);
 }
@@ -844,7 +909,7 @@ static bool parse_contentInfo(chunk_t blob, u_int level0, private_pkcs7_t *cInfo
 		}
 		else if (objectID == PKCS7_INFO_CONTENT)
 		{
-			cInfo->content = object;
+			cInfo->content = chunk_clone(object);
 		}
 		objectID++;
 	}
@@ -864,7 +929,7 @@ static private_pkcs7_t *pkcs7_create_empty(void)
 	this->parsed = FALSE;
 	this->level = 0;
 	this->data = chunk_empty;
-	this->attributes = chunk_empty;
+	this->attributes = NULL;
 	this->certs = linked_list_create();
 
 	/*public functions */
@@ -877,6 +942,8 @@ static private_pkcs7_t *pkcs7_create_empty(void)
 	this->public.get_data = (chunk_t (*) (pkcs7_t*))get_data;
 	this->public.get_contentInfo = (chunk_t (*) (pkcs7_t*))get_contentInfo;
 	this->public.create_certificate_iterator = (iterator_t* (*) (pkcs7_t*))create_certificate_iterator;
+	this->public.set_certificate = (void (*) (pkcs7_t*,x509_t*))set_certificate;
+	this->public.set_attributes = (void (*) (pkcs7_t*,pkcs9_t*))set_attributes;
 	this->public.build_envelopedData = (bool (*) (pkcs7_t*,x509_t*,encryption_algorithm_t))build_envelopedData;
 	this->public.build_signedData = (bool (*) (pkcs7_t*,rsa_private_key_t*,hash_algorithm_t))build_signedData;
 	this->public.destroy = (void (*) (pkcs7_t*))destroy;
@@ -903,14 +970,34 @@ pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level)
 /*
  * Described in header.
  */
-pkcs7_t *pkcs7_create_from_data(chunk_t data, chunk_t attributes, x509_t *cert)
+pkcs7_t *pkcs7_create_from_data(chunk_t data)
 {
 	private_pkcs7_t *this = pkcs7_create_empty();
 
 	this->data = chunk_clone(data);
-	this->attributes = attributes;
-	this->certs->insert_last(this->certs, cert);
 	this->parsed = TRUE;
 
 	return &this->public;
+}
+
+/*
+ * Described in header.
+ */
+pkcs7_t *pkcs7_create_from_file(const char *filename, const char *label)
+{
+	bool pgp = FALSE;
+	chunk_t chunk = chunk_empty;
+	char cert_label[BUF_LEN];
+	pkcs7_t *pkcs7;
+
+	snprintf(cert_label, BUF_LEN, "%s pkcs7", label);
+
+	if (!pem_asn1_load_file(filename, NULL, cert_label, &chunk, &pgp))
+	{
+		return NULL;
+	}
+
+	pkcs7 = pkcs7_create_from_chunk(chunk, 0);
+	free(chunk.ptr);
+	return pkcs7;
 }
