@@ -9,6 +9,7 @@
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -49,7 +50,7 @@ struct private_id_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	payload_type_t next_payload;
+	u_int8_t next_payload;
 
 	/**
 	 * Critical flag.
