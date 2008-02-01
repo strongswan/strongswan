@@ -1,7 +1,12 @@
 strongswan-4.2.0
 ----------------
 
--
+- IKE rekeying in NAT situations did not inherit the NAT conditions
+  to the rekeyed IKE_SA so that the UDP encapsulation was lost with
+  the next CHILD_SA rekeying.
+
+- Wrong type definition of the next_payload variable in id_payload.c
+  caused an INVALID_SYNTAX error on PowerPC platforms. 
 
 
 strongswan-4.1.10
