@@ -215,7 +215,7 @@ static char ASN1_pkcs7_encrypted_data_oid_str[] = {
 		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x06
 };
 
-const chunk_t ASN1_pkcs7_data_oid = 
+static const chunk_t ASN1_pkcs7_data_oid = 
 						chunk_from_buf(ASN1_pkcs7_data_oid_str);
 static const chunk_t ASN1_pkcs7_signed_data_oid =
 						chunk_from_buf(ASN1_pkcs7_signed_data_oid_str);
@@ -348,7 +348,21 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 				digest_alg = parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case PKCS7_SIGNED_CONTENT_INFO:
-				this->data = chunk_clone(object);
+				{
+					pkcs7_t *data = pkcs7_create_from_chunk(object, level+1);
+
+					if (data == NULL)
+					{
+						return FALSE;
+					}
+					if (!data->parse_data(data))
+					{
+						data->destroy(data);
+						return FALSE;
+					}
+					this->data = chunk_clone(data->get_data(data));
+					data->destroy(data);
+				}
 				break;
 			case PKCS7_SIGNED_CERT:
 				{
@@ -376,6 +390,7 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 			case PKCS7_AUTH_ATTRIBUTES:
 				*object.ptr = ASN1_SET;
 				this->attributes = pkcs9_create_from_chunk(object, level+1);
+				*object.ptr = ASN1_CONTEXT_C_0;
 				break;
 			case PKCS7_DIGEST_ALGORITHM:
 				digest_alg = parse_algorithmIdentifier(object, level, NULL);
@@ -424,6 +439,39 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 		else
 		{
 			DBG2("digest signature is valid");
+		}
+		if (this->data.ptr != NULL)
+		{
+			chunk_t messageDigest = this->attributes->get_messageDigest(this->attributes);
+
+			if (messageDigest.ptr == NULL)
+			{
+				DBG1("messageDigest attribute not found");
+				return FALSE;
+			}
+			else
+			{
+				hasher_t *hasher = hasher_create(algorithm);
+				chunk_t hash;
+				bool valid;
+
+				hasher->allocate_hash(hasher, this->data, &hash);
+				hasher->destroy(hasher);
+				DBG3("hash: %B", &hash);
+
+				valid = chunk_equals(messageDigest, hash);
+				free(messageDigest.ptr);
+				free(hash.ptr);
+				if (valid)
+				{
+					DBG2("messageDigest is valid");
+				}
+				else
+				{
+					DBG1("invalid messageDigest");
+					return FALSE;
+				}
+			}
 		}
 	}
 	return TRUE;
@@ -817,10 +865,28 @@ bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 
 	if (this->attributes != NULL)
 	{
-		chunk_t attributes = this->attributes->get_encoding(this->attributes);
-
-		if (attributes.ptr)
+		if (this->data.ptr != NULL)
 		{
+			/* take the current time as signingTime */
+			time_t now = time(NULL);
+			chunk_t	signingTime = timetoasn1(&now, ASN1_UTCTIME);
+
+			chunk_t messageDigest, attributes;
+			hasher_t *hasher = hasher_create(alg);
+		
+			hasher->allocate_hash(hasher, this->data, &messageDigest);
+			hasher->destroy(hasher);
+			this->attributes->set_attribute(this->attributes,
+								OID_PKCS9_CONTENT_TYPE, ASN1_pkcs7_data_oid);
+			this->attributes->set_messageDigest(this->attributes,
+								messageDigest);
+			this->attributes->set_attribute(this->attributes,
+					 			OID_PKCS9_SIGNING_TIME, signingTime);
+			attributes = this->attributes->get_encoding(this->attributes);
+
+			free(messageDigest.ptr);
+			free(signingTime.ptr);
+
 			private_key->build_emsa_pkcs1_signature(private_key, alg,
 							attributes, &encryptedDigest);
 			authenticatedAttributes = chunk_clone(attributes);

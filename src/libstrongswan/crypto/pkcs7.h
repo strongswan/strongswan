@@ -36,8 +36,6 @@ typedef struct pkcs7_t pkcs7_t;
 #include <crypto/crypters/crypter.h>
 #include <utils/iterator.h>
 
-extern const chunk_t ASN1_pkcs7_data_oid;
-
 /**
  * @brief PKCS#7 contentInfo object.
  * 
