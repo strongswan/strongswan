@@ -8,6 +8,7 @@
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Copyright (C) 2002-2008 Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -301,6 +302,11 @@ static bool parse_data(private_pkcs7_t *this)
 	{
 		return FALSE;
 	}
+	if (data.len == 0)
+	{
+		this->data = chunk_empty;
+		return TRUE;
+	}
 	if (parse_asn1_simple_object(&data, ASN1_OCTET_STRING, this->level, "data"))
 	{
 		this->data = chunk_clone(data);
@@ -313,7 +319,7 @@ static bool parse_data(private_pkcs7_t *this)
 }
 
 /**
- * Parse PKCS#7 signedData content
+ * Implements pkcs7_t.parse_signedData.
  */
 static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 {
@@ -349,6 +355,7 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 				break;
 			case PKCS7_SIGNED_CONTENT_INFO:
 				{
+					chunk_t pureData;
 					pkcs7_t *data = pkcs7_create_from_chunk(object, level+1);
 
 					if (data == NULL)
@@ -360,7 +367,8 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 						data->destroy(data);
 						return FALSE;
 					}
-					this->data = chunk_clone(data->get_data(data));
+					pureData = data->get_data(data);
+					this->data = (pureData.len)? chunk_clone(pureData) : chunk_empty;
 					data->destroy(data);
 				}
 				break;
@@ -973,7 +981,7 @@ static bool parse_contentInfo(chunk_t blob, u_int level0, private_pkcs7_t *cInfo
 				return FALSE;
 			}
 		}
-		else if (objectID == PKCS7_INFO_CONTENT)
+		else if (objectID == PKCS7_INFO_CONTENT && object.len > 0)
 		{
 			cInfo->content = chunk_clone(object);
 		}
