@@ -1,0 +1,9 @@
+moon::/etc/init.d/iptables start 2> /dev/null
+carol::/etc/init.d/iptables start 2> /dev/null
+moon::cat /etc/ipsec.d/triplets.dat
+carol::cat /etc/ipsec.d/triplets.dat
+moon::ipsec start
+carol::ipsec start
+carol::sleep 1
+carol::ipsec up home
+carol::sleep 1

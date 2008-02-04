@@ -29,6 +29,21 @@
 
 #define MAX_TRIES 3
 
+/* number of triplets for one authentication */
+#define TRIPLET_COUNT 3
+
+typedef enum sim_subtype_t sim_subtype_t;
+
+/**
+ * Subtypes of SIM messages
+ */
+enum sim_subtype_t {
+	SIM_START = 10,
+	SIM_CHALLENGE = 11,
+	SIM_NOTIFICATION = 12,
+	SIM_CLIENT_ERROR = 14,
+};
+
 ENUM(sim_subtype_names, SIM_START, SIM_CLIENT_ERROR,
 	"SIM_START",
 	"SIM_CHALLENGE",
@@ -36,6 +51,40 @@ ENUM(sim_subtype_names, SIM_START, SIM_CLIENT_ERROR,
 	"SIM_13",
 	"SIM_CLIENT_ERROR",
 );
+
+typedef enum sim_attribute_t sim_attribute_t;
+
+/**
+ * Attributes in SIM messages
+ */
+enum sim_attribute_t {
+	/** defines the end of attribute list */
+	AT_END = -1,
+	AT_RAND = 1,
+	AT_AUTN = 2,
+	AT_RES = 3,
+	AT_AUTS = 4,
+	AT_PADDING = 6,
+	AT_NONCE_MT = 7,
+	AT_PERMANENT_ID_REQ = 10,
+	AT_MAC = 11,
+	AT_NOTIFICATION = 12,
+	AT_ANY_ID_REQ = 13,
+	AT_IDENTITY = 14,
+	AT_VERSION_LIST = 15,
+	AT_SELECTED_VERSION = 16,
+	AT_FULLAUTH_ID_REQ = 17,
+	AT_COUNTER = 19,
+	AT_COUNTER_TOO_SMALL = 20,
+	AT_NONCE_S = 21,
+	AT_CLIENT_ERROR_CODE = 22,
+	AT_IV = 129,
+	AT_ENCR_DATA = 130,
+	AT_NEXT_PSEUDONYM = 132,
+	AT_NEXT_REAUTH_ID = 133,
+	AT_CHECKCODE = 134,
+	AT_RESULT_IND = 135,
+};
 
 ENUM_BEGIN(sim_attribute_names, AT_END, AT_CLIENT_ERROR_CODE,
 	"AT_END",
@@ -96,6 +145,11 @@ struct private_eap_sim_t {
 	sim_algo_t alg;
 	
 	/**
+	 * libraries get_triplet() function returning a triplet
+	 */
+	sim_get_triplet_t get_triplet;
+	
+	/**
 	 * handle of the loaded library
 	 */
 	void *handle;
@@ -104,6 +158,16 @@ struct private_eap_sim_t {
 	 * how many times we try to authenticate
 	 */
 	int tries;
+	
+	/**
+	 * unique EAP identifier
+	 */
+	u_int8_t identifier;
+	
+	/**
+	 * EAP message type this role sends
+	 */
+	u_int8_t type;
 	
 	/**
 	 * version this implementation uses
@@ -119,6 +183,11 @@ struct private_eap_sim_t {
 	 * Nonce value used in AT_NONCE_MT
 	 */
 	chunk_t nonce;
+	
+	/**
+	 * concatenated SRES values
+	 */
+	chunk_t sreses;
 	
 	/**
 	 * k_encr key derived from MK
@@ -147,6 +216,10 @@ struct private_eap_sim_t {
 #define MAC_LEN 16
 /** length of the AT_RAND value */
 #define RAND_LEN 16
+/** length of Kc */
+#define KC_LEN 8
+/** length of SRES */
+#define SRES_LEN 4
 /** length of the k_encr key */
 #define KENCR_LEN 16
 /** length of the k_auth key */
@@ -156,6 +229,7 @@ struct private_eap_sim_t {
 /** length of the EMSK */
 #define EMSK_LEN 64
 
+static char version[] = {0x00,0x01};
 /* client error codes used in AT_CLIENT_ERROR_CODE */
 char client_error_general_buf[] = {0x00, 0x01};
 char client_error_unsupported_buf[] = {0x00, 0x02};
@@ -229,7 +303,7 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 	chunk_t mac_data = chunk_empty;
 	
 	/* write EAP header, skip length bytes */
-	*pos.ptr++ = EAP_RESPONSE;
+	*pos.ptr++ = this->type;
 	*pos.ptr++ = identifier;
 	pos.ptr += 2;
 	pos.len -= 4;
@@ -263,6 +337,7 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 				break;
 			}
 			case AT_IDENTITY:
+			case AT_VERSION_LIST:
 			{
 				u_int16_t act_len = data.len;
 				/* align up to four byte */
@@ -346,8 +421,8 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 /**
  * process an EAP-SIM/Request/Start message
  */
-static status_t process_start(private_eap_sim_t *this, eap_payload_t *in,
-							  eap_payload_t **out)
+static status_t peer_process_start(private_eap_sim_t *this, eap_payload_t *in,
+								   eap_payload_t **out)
 {
 	chunk_t message, data;
 	sim_attribute_t attribute, include_id = AT_END;
@@ -440,18 +515,56 @@ static status_t process_start(private_eap_sim_t *this, eap_payload_t *in,
 }
 
 /**
- * process an EAP-SIM/Request/Challenge message
+ * derive EAP keys from kc
  */
-static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
-								  eap_payload_t **out)
+static void derive_keys(private_eap_sim_t *this, chunk_t kcs)
 {
-	chunk_t message, data, tmp, kcs, kc, sreses, sres, mk;
-	sim_attribute_t attribute;
-	u_int8_t identifier, i;
-	chunk_t mac = chunk_empty, rands = chunk_empty;
-	signer_t *signer;
+	chunk_t tmp, mk;
 	hasher_t *hasher;
 	prf_t *prf;
+	int i;
+
+	/* build MK = SHA1(Identity|n*Kc|NONCE_MT|Version List|Selected Version) */
+	tmp = chunk_cata("ccccc", this->peer->get_encoding(this->peer), kcs,
+					 this->nonce, this->version_list, this->version);
+	hasher = hasher_create(HASH_SHA1);
+	mk = chunk_alloca(hasher->get_hash_size(hasher));
+	hasher->get_hash(hasher, tmp, mk.ptr);
+	hasher->destroy(hasher);
+	DBG3(DBG_IKE, "MK = SHA1(%B\n) = %B", &tmp, &mk);
+	
+	/* K_encr | K_auth | MSK | EMSK = prf() | prf() | prf() | prf()
+	 * FIPS PRF has 320 bit block size, we need 160 byte for keys
+	 *  => run prf four times */
+	prf = prf_create(PRF_FIPS_SHA1_160);
+	prf->set_key(prf, mk);
+	tmp = chunk_alloca(prf->get_block_size(prf) * 4);
+	for (i = 0; i < 4; i++)
+	{
+		prf->get_bytes(prf, chunk_empty, tmp.ptr + tmp.len / 4 * i);
+	}
+	prf->destroy(prf);
+	chunk_free(&this->k_encr);
+	chunk_free(&this->k_auth);
+	chunk_free(&this->msk);
+	chunk_free(&this->emsk);
+	chunk_split(tmp, "aaaa", KENCR_LEN, &this->k_encr, KAUTH_LEN, &this->k_auth,
+				MSK_LEN, &this->msk, EMSK_LEN, &this->emsk);
+	DBG3(DBG_IKE, "K_encr %B\nK_auth %B\nMSK %B\nEMSK %B",
+		 &this->k_encr, &this->k_auth, &this->msk, &this->emsk);
+}
+
+/**
+ * process an EAP-SIM/Request/Challenge message
+ */
+static status_t peer_process_challenge(private_eap_sim_t *this,
+									   eap_payload_t *in, eap_payload_t **out)
+{
+	chunk_t message, data, tmp, kcs, kc, sreses, sres;
+	sim_attribute_t attribute;
+	u_int8_t identifier;
+	chunk_t mac = chunk_empty, rands = chunk_empty;
+	signer_t *signer;
 	
 	if (this->tries-- <= 0)
 	{
@@ -541,7 +654,7 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 		
 		if (this->alg(rands.ptr, RAND_LEN, sres.ptr, &sres_len, kc.ptr, &kc_len))
 		{
-			DBG1(DBG_IKE, "unable to get triplets from SIM");
+			DBG1(DBG_IKE, "unable to get EAP-SIM triplet");
 			*out = build_payload(this, identifier, SIM_CLIENT_ERROR,
 								 AT_CLIENT_ERROR_CODE, client_error_general,
 								 AT_END);
@@ -554,34 +667,7 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 		rands = chunk_skip(rands, RAND_LEN);
 	}
 	
-	/* build MK = SHA1(Identity|n*Kc|NONCE_MT|Version List|Selected Version) */
-	tmp = chunk_cata("ccccc", this->peer->get_encoding(this->peer), kcs,
-					 this->nonce, this->version_list, this->version);
-	hasher = hasher_create(HASH_SHA1);
-	mk = chunk_alloca(hasher->get_hash_size(hasher));
-	hasher->get_hash(hasher, tmp, mk.ptr);
-	hasher->destroy(hasher);
-	DBG3(DBG_IKE, "MK = SHA1(%B\n) = %B", &tmp, &mk);
-	
-	/* K_encr | K_auth | MSK | EMSK = prf() | prf() | prf() | prf()
-	 * FIPS PRF has 320 bit block size, we need 160 byte for keys
-	 *  => run prf four times */
-	prf = prf_create(PRF_FIPS_SHA1_160);
-	prf->set_key(prf, mk);
-	tmp = chunk_alloca(prf->get_block_size(prf) * 4);
-	for (i = 0; i < 4; i++)
-	{
-		prf->get_bytes(prf, chunk_empty, tmp.ptr + tmp.len / 4 * i);
-	}
-	prf->destroy(prf);
-	chunk_free(&this->k_encr);
-	chunk_free(&this->k_auth);
-	chunk_free(&this->msk);
-	chunk_free(&this->emsk);
-	chunk_split(tmp, "aaaa", KENCR_LEN, &this->k_encr, KAUTH_LEN, &this->k_auth,
-				MSK_LEN, &this->msk, EMSK_LEN, &this->emsk);
-	DBG3(DBG_IKE, "K_encr %B\nK_auth %B\nMSK %B\nEMSK %B",
-		 &this->k_encr, &this->k_auth, &this->msk, &this->emsk);
+	derive_keys(this, kcs);
 	
 	/* verify AT_MAC attribute, signature is over "EAP packet | NONCE_MT"  */
 	signer = signer_create(AUTH_HMAC_SHA1_128);
@@ -606,10 +692,144 @@ static status_t process_challenge(private_eap_sim_t *this, eap_payload_t *in,
 }
 
 /**
+ * process an EAP-SIM/Response/Challenge message
+ */
+static status_t server_process_challenge(private_eap_sim_t *this,
+									     eap_payload_t *in, eap_payload_t **out)
+{
+	chunk_t message, data;
+	sim_attribute_t attribute;
+	chunk_t mac = chunk_empty, tmp;
+	signer_t *signer;
+	
+	message = in->get_data(in);
+	read_header(&message);
+
+	while ((attribute = read_attribute(&message, &data)) != AT_END)
+	{
+		switch (attribute)
+		{
+			case AT_MAC:
+				/* MAC has two reserved bytes */
+				if (data.len == MAC_LEN + 2)
+				{	/* clone and zero MAC for verification */
+					mac = chunk_clonea(chunk_skip(data, 2));
+					memset(data.ptr, 0, data.len);
+				}
+				break;
+			default:
+				DBG1(DBG_IKE, "ignoring EAP_SIM attribute %N",
+					 sim_attribute_names, attribute);
+				break;
+		}
+	}
+	if (!mac.ptr)
+	{
+		DBG1(DBG_IKE, "no valid AT_MAC attribute received");
+		return FAILED;
+	}
+	/* verify AT_MAC attribute, signature is over "EAP packet | n*SRES"  */
+	signer = signer_create(AUTH_HMAC_SHA1_128);
+	signer->set_key(signer, this->k_auth);
+	tmp = chunk_cata("cc", in->get_data(in), this->sreses);
+	if (!signer->verify_signature(signer, tmp, mac))
+	{
+		DBG1(DBG_IKE, "AT_MAC verification failed");
+		signer->destroy(signer);
+		return FAILED;
+	}
+	signer->destroy(signer);
+	return SUCCESS;
+}
+
+/**
+ * process an EAP-SIM/Response/Start message
+ */
+static status_t server_process_start(private_eap_sim_t *this,
+									 eap_payload_t *in, eap_payload_t **out)
+{
+	chunk_t message, data;
+	sim_attribute_t attribute;
+	bool supported = FALSE;
+	chunk_t rands, rand, kcs, kc, sreses, sres;
+	char id[64];
+	int len, i, rand_len, kc_len, sres_len;
+	
+	message = in->get_data(in);
+	read_header(&message);
+
+	while ((attribute = read_attribute(&message, &data)) != AT_END)
+	{
+		switch (attribute)
+		{
+			case AT_NONCE_MT:
+				if (data.len == NONCE_LEN + 2)
+				{
+					this->nonce = chunk_clone(chunk_skip(data, 2));
+				}
+				break;
+			case AT_SELECTED_VERSION:
+				if (chunk_equals(data, this->version))
+				{
+					supported = TRUE;
+				}
+				break;
+			default:
+				DBG1(DBG_IKE, "ignoring EAP_SIM attribute %N",
+					 sim_attribute_names, attribute);
+				break;
+		}
+	}
+	if (!supported || !this->nonce.ptr)
+	{
+		DBG1(DBG_IKE, "received incomplete EAP-SIM/Response/Start");
+		return FAILED;
+	}
+	len = snprintf(id, sizeof(id), "%D", this->peer);
+	if (len > sizeof(id) || len < 0)
+	{
+		return FAILED;
+	}
+	
+	/* read triplets from provider */
+	rand = rands = chunk_alloca(RAND_LEN * TRIPLET_COUNT);
+	kc = kcs = chunk_alloca(KC_LEN * TRIPLET_COUNT);
+	sres = sreses = chunk_alloca(SRES_LEN * TRIPLET_COUNT);
+	rands.len = 0;
+	kcs.len = 0;
+	sreses.len = 0;
+	for (i = 0; i < TRIPLET_COUNT; i++)
+	{
+		rand_len = RAND_LEN;
+		kc_len = KC_LEN;
+		sres_len = SRES_LEN;
+		if (this->get_triplet(id, rand.ptr, &rand_len, sres.ptr, &sres_len,
+							  kc.ptr, &kc_len))
+		{
+			DBG1(DBG_IKE, "getting EAP-SIM triplet %d failed", i);
+			return FAILED;
+		}
+		rands.len += rand_len;
+		kcs.len += kc_len;
+		sreses.len += sres_len;
+		rand = chunk_skip(rand, rand_len);
+		kc = chunk_skip(kc, kc_len);
+		sres = chunk_skip(sres, sres_len);
+	}
+	derive_keys(this, kcs);
+	
+	/* build MAC over "EAP packet | NONCE_MT" */
+	*out = build_payload(this, this->identifier++, SIM_CHALLENGE, AT_RAND,
+						 rands, AT_MAC, this->nonce, AT_END);
+	this->sreses = chunk_clone(sreses);
+	return NEED_MORE;
+}
+
+/**
  * process an EAP-SIM/Request/Notification message
  */
-static status_t process_notification(private_eap_sim_t *this, eap_payload_t *in,
-									 eap_payload_t **out)
+static status_t peer_process_notification(private_eap_sim_t *this,
+										  eap_payload_t *in, eap_payload_t **out)
 {
 	chunk_t message, data;
 	sim_attribute_t attribute;
@@ -656,12 +876,44 @@ static status_t process_notification(private_eap_sim_t *this, eap_payload_t *in,
 	return NEED_MORE;
 }
 
+/**
+ * Process a client error
+ */
+static status_t server_process_client_error(private_eap_sim_t *this,
+											eap_payload_t *in, eap_payload_t **out)
+{
+	chunk_t message, data;
+	sim_attribute_t attribute;
+	
+	message = in->get_data(in);
+	read_header(&message);
+
+	while ((attribute = read_attribute(&message, &data)) != AT_END)
+	{
+		if (attribute == AT_CLIENT_ERROR_CODE)
+		{
+			u_int16_t code = 0;
+			if (data.len == 2)
+			{
+				code = ntohs(*(u_int16_t*)data.ptr);
+			}
+			DBG1(DBG_IKE, "received %N error %d",
+		 		 sim_attribute_names, attribute, code);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "ignoring EAP_SIM attribute %N",
+				 sim_attribute_names, attribute);
+		}
+	}
+	return FAILED;
+}
 
 /**
  * Implementation of eap_method_t.process for the peer
  */
-static status_t process(private_eap_sim_t *this,
-						eap_payload_t *in, eap_payload_t **out)
+static status_t peer_process(private_eap_sim_t *this,
+							 eap_payload_t *in, eap_payload_t **out)
 {
 	sim_subtype_t type;
 	chunk_t message;
@@ -672,11 +924,11 @@ static status_t process(private_eap_sim_t *this,
 	switch (type)
 	{
 		case SIM_START:
-			return process_start(this, in, out);
+			return peer_process_start(this, in, out);
 		case SIM_CHALLENGE:
-			return process_challenge(this, in, out);
+			return peer_process_challenge(this, in, out);
 		case SIM_NOTIFICATION:
-			return process_notification(this, in, out);
+			return peer_process_notification(this, in, out);
 		default:
 			DBG1(DBG_IKE, "unable to process EAP_SIM subtype %N",
 				 sim_subtype_names, type);
@@ -687,12 +939,52 @@ static status_t process(private_eap_sim_t *this,
 }
 
 /**
+ * Implementation of eap_method_t.process for the server
+ */
+static status_t server_process(private_eap_sim_t *this,
+							 eap_payload_t *in, eap_payload_t **out)
+{
+	sim_subtype_t type;
+	chunk_t message;
+	
+	message = in->get_data(in);
+	type = read_header(&message);
+	
+	switch (type)
+	{
+		case SIM_START:
+			return server_process_start(this, in, out);
+		case SIM_CHALLENGE:
+			return server_process_challenge(this, in, out);
+		case SIM_CLIENT_ERROR:
+			return server_process_client_error(this, in, out);
+		default:
+			DBG1(DBG_IKE, "unable to process EAP_SIM subtype %N",
+				 sim_subtype_names, type);
+			return FAILED;
+	}
+}
+
+/**
  * Implementation of eap_method_t.initiate for the peer
  */
-static status_t initiate(private_eap_sim_t *this, eap_payload_t **out)
+static status_t peer_initiate(private_eap_sim_t *this, eap_payload_t **out)
 {
 	/* peer never initiates */
 	return FAILED;
+}
+
+/**
+ * Implementation of eap_method_t.initiate for the server
+ */
+static status_t server_initiate(private_eap_sim_t *this, eap_payload_t **out)
+{
+	/* version_list to derive MK, no padding */
+	this->version_list = chunk_clone(this->version);
+	/* build_payloads adds padding itself */
+	*out = build_payload(this, this->identifier++, SIM_START,
+						 AT_VERSION_LIST, this->version, AT_END);
+	return NEED_MORE;
 }
 
 /**
@@ -732,6 +1024,7 @@ static void destroy(private_eap_sim_t *this)
 {
 	dlclose(this->handle);
 	chunk_free(&this->nonce);
+	chunk_free(&this->sreses);
 	chunk_free(&this->version_list);
 	chunk_free(&this->k_auth);
 	chunk_free(&this->k_encr);
@@ -748,51 +1041,14 @@ eap_sim_t *eap_create(eap_role_t role,
 {
 	private_eap_sim_t *this;
 	randomizer_t *randomizer;
-	static char version[] = {0x00,0x01};
-	
-	if (role != EAP_PEER)
-	{
-		return NULL;
-	}	
-	this = malloc_thing(private_eap_sim_t);
-	
-	this->handle = dlopen(SIM_READER_LIB, RTLD_LAZY);
-	if (this->handle == NULL)
-	{
-		DBG1(DBG_IKE, "unable to open SIM reader '%s'", SIM_READER_LIB);		
-		free(this);
-		return NULL;
-	}
-	this->alg = dlsym(this->handle, SIM_READER_ALG);
-	if (this->alg == NULL)
-	{
-		DBG1(DBG_IKE, "unable to open SIM reader function '%s' in '%s'",
-			 SIM_READER_ALG, SIM_READER_LIB);
-		dlclose(this->handle);
-		free(this);
-		return NULL;
-	}
-	
-	randomizer = randomizer_create();
-	if (randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_LEN,
-												 &this->nonce))
-	{
-		DBG1(DBG_IKE, "unable to generate NONCE for EAP_SIM");		
-		randomizer->destroy(randomizer);
-		free(this);
-		return NULL;
-	}
-	randomizer->destroy(randomizer);
-	
-	/* public functions */
-	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate;
-	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process;
-	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
-	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
-	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
-	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
-	
-	/* private data */
+	void *symbol;
+	char *name;
+  	
+  	this = malloc_thing(private_eap_sim_t);
+	this->alg = NULL;
+	this->get_triplet = NULL;
+	this->nonce = chunk_empty;
+	this->sreses = chunk_empty;
 	this->peer = peer;
 	this->tries = MAX_TRIES;
 	this->version.ptr = version;
@@ -802,6 +1058,68 @@ eap_sim_t *eap_create(eap_role_t role,
 	this->k_encr = chunk_empty;
 	this->msk = chunk_empty;
 	this->emsk = chunk_empty;
+	this->identifier = random();
+	
+	this->handle = dlopen(SIM_READER_LIB, RTLD_LAZY);
+	if (this->handle == NULL)
+	{
+		DBG1(DBG_IKE, "unable to open SIM reader '%s'", SIM_READER_LIB);
+		free(this);
+		return NULL;
+	}
+	switch (role)
+	{
+		case EAP_PEER:
+			name = SIM_READER_ALG;
+			break;
+		case EAP_SERVER:
+			name = SIM_READER_GET_TRIPLET;
+			break;
+		default:	
+			free(this);
+			return NULL;
+	}
+	symbol = dlsym(this->handle, name);
+	if (symbol == NULL)
+	{
+		DBG1(DBG_IKE, "unable to open SIM function '%s' in '%s'",
+			 name, SIM_READER_LIB);
+		dlclose(this->handle);
+		free(this);
+		return NULL;
+	}
+	switch (role)
+	{
+		case EAP_SERVER:
+			this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))server_initiate;
+			this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))server_process;
+			this->get_triplet = symbol;
+			this->type = EAP_REQUEST;
+			break;
+		case EAP_PEER:
+			this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))peer_initiate;
+			this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))peer_process;
+			this->alg = symbol;
+			this->type = EAP_RESPONSE;
+			randomizer = randomizer_create();
+			if (randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_LEN,
+														 &this->nonce))
+			{
+				DBG1(DBG_IKE, "unable to generate NONCE for EAP_SIM");		
+				randomizer->destroy(randomizer);
+				free(this);
+				return NULL;
+			}
+			randomizer->destroy(randomizer);
+ 			break;
+		default:
+			free(this);
+			return NULL;
+	}
+	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
+	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
+	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
+	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
 	
 	return &this->public;
 }

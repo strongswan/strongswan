@@ -104,7 +104,8 @@ endif
 
 INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
 AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
-	-DIPSEC_EAPDIR=\"${eapdir}\" -DIPSEC_BACKENDDIR=\"${backenddir}\" -DIPSEC_INTERFACEDIR=\"${interfacedir}\"
+	-DIPSEC_EAPDIR=\"${eapdir}\" -DIPSEC_BACKENDDIR=\"${backenddir}\" -DIPSEC_INTERFACEDIR=\"${interfacedir}\" \
+	-DSIM_READER_LIB=\"${simreader}\"
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread -lm -ldl
 
 if USE_LIBCURL
@@ -126,6 +127,10 @@ if USE_EAP_SIM
   eap_LTLIBRARIES += libcharon-eapsim.la
   libcharon_eapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
   libcharon_eapsim_la_LDFLAGS = -module
+
+  plugin_LTLIBRARIES = libcharon-eapsim-file.la
+  libcharon_eapsim_file_la_SOURCES = sa/authenticators/eap/sim/eap_sim_file.c
+  libcharon_eapsim_file_la_LDFLAGS = -module
 endif
 
 if USE_EAP_MD5
