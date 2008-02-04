@@ -6,8 +6,10 @@
  */
 
 /*
- * Copyright (C) 1998, 1999  Henry Spencer.
- * 
+ * Copyright (C) 2007-2008 Andreas Steffen
+ *
+ * Hochschule fuer Technik Rapperswil
+ *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Library General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at your
@@ -18,6 +20,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  *
+ * RCSID $Id$
  */
 
 #include <stdio.h>
@@ -30,29 +33,64 @@
 #include "optionsfrom.h"
 
 #define	MAX_USES	 20		/* loop-detection limit */
-#define	SOME_ARGS	 10		/* first guess at how many arguments we'll need */
+#define	MORE_ARGS	 10		/* first guess at how many arguments we'll need */
 
 /*
  * Defined in header.
  */
-bool optionsfrom(const char *filename, int *argcp, char **argvp[], int optind)
-{
-	static int nuses = 0;
+
+typedef struct private_options_t private_options_t;
+
+/**
+ * Private data of a options_t object.
+ */
+struct private_options_t {
+	/**
+	 * Public interface
+	 */
+	options_t public;
+
+	/**
+	 * reallocated argv array
+	 */
 	char **newargv;
+
+	/**
+	 * number of free arguments in newargv
+	 */
+	int room;
+
+	/**
+	 * number of included option files
+	*/
+	int nuses;
+
+	/**
+	 * allocated space for option files
+	 */
+	char *buffers[MAX_USES];
+};
+
+/**
+ * Defined in header
+ */
+bool from(private_options_t *this, char *filename, int *argcp, char **argvp[],
+		  int optind)
+{
 	int newargc;
 	int next;			/* place for next argument */
-	int room;			/* how many more new arguments we can hold */
+	char **newargv;
 	size_t bytes;
-	chunk_t chunk, src, line, token;
+	chunk_t src, line, token;
 	bool good = TRUE;
 	int linepos = 0;
 	FILE *fd;
 
 	/* avoid endless loops with recursive --optionsfrom arguments */
-	nuses++;
-	if (nuses >= MAX_USES)
+	this->nuses++;
+	if (this->nuses >= MAX_USES)
 	{
-		DBG1("optionsfrom called %d times - looping?", (*argvp)[0], nuses);
+		DBG1("optionsfrom called %d times by \"%s\" - looping?", this->nuses + 1, (*argvp)[0]);
 		return FALSE;
 	}
 	
@@ -66,25 +104,30 @@ bool optionsfrom(const char *filename, int *argcp, char **argvp[], int optind)
 
 	/* determine the file size */
 	fseek(fd, 0, SEEK_END);
-	chunk.len = ftell(fd);
+	src.len = ftell(fd);
 	rewind(fd);
 
 	/* allocate one byte more just in case of a missing final newline */
-	chunk.ptr = malloc(chunk.len + 1);
+	src.ptr = this->buffers[this->nuses] = malloc(src.len + 1);
 
 	/* read the whole file into a chunk */
-	bytes = fread(chunk.ptr, 1, chunk.len, fd);
+	bytes = fread(src.ptr, 1, src.len, fd);
 	fclose(fd);
 
-	newargc = *argcp + SOME_ARGS;
-	newargv = malloc((newargc + 1) * sizeof(char *));
+	if (this->room)
+	{
+		newargc = *argcp;
+		newargv = malloc((newargc + 1 + this->room) * sizeof(char *));
+	}
+	else
+	{
+		newargc = *argcp + MORE_ARGS;
+		this->room = MORE_ARGS;
+		newargv = malloc((newargc + 1) * sizeof(char *));
+	}
 	memcpy(newargv, *argvp, optind * sizeof(char *));
-	room = SOME_ARGS;
 	next = optind;
 	newargv[next] = NULL;
-
-	/* we keep the chunk pointer so that we can still free it */
-	src = chunk;
 
 	while (fetchline(&src, &line) && good)
 	{
@@ -116,11 +159,11 @@ bool optionsfrom(const char *filename, int *argcp, char **argvp[], int optind)
 			}
 
 			/* do we have to allocate more memory for additional arguments? */
-			if (room == 0)
+			if (this->room == 0)
 			{
-				newargc += SOME_ARGS;
-				newargv = realloc(newargv, (newargc+1) * sizeof(char *));
-				room = SOME_ARGS;
+				newargc += MORE_ARGS;
+				newargv = realloc(newargv, (newargc + 1) * sizeof(char *));
+				this->room = MORE_ARGS;
 			}
 
 			/* terminate the token by replacing the delimiter with a null character */
@@ -129,20 +172,54 @@ bool optionsfrom(const char *filename, int *argcp, char **argvp[], int optind)
 			/* assign the token to the next argument */
 			newargv[next] = token.ptr;
 			next++;
-			room--;
+			this->room--;
 		}
 	}
 
-	if (!good)		/* error of some kind */
+	/* assign newargv to argv */
+	if (good)
 	{
-		free(chunk.ptr);
-		free(newargv);
-		return FALSE;
+		memcpy(newargv + next, *argvp + optind, (*argcp + 1 - optind) * sizeof(char *));
+		*argcp += next - optind;
+		*argvp = newargv;
 	}
 
-	memcpy(newargv + next, *argvp + optind, (*argcp + 1 - optind) * sizeof(char *));
-	*argcp += next - optind;
-	*argvp = newargv;
-	return TRUE;
+	/* keep a pointer to the latest newargv and free any earlier version */
+	free(this->newargv);
+	this->newargv = newargv;
+
+	return good;
 }
 
+/**
+ * Defined in header
+ */
+void destroy(private_options_t *this)
+{
+	while (this->nuses >= 0)
+	{
+		free(this->buffers[this->nuses--]);
+	}
+	free(this->newargv);
+	free(this);
+}
+
+/*
+ * Defined in header
+ */
+options_t *options_create(void)
+{
+	private_options_t *this = malloc_thing(private_options_t);
+
+	/* initialize */
+	this->newargv = NULL;
+	this->room = 0;
+	this->nuses = -1;
+	memset(this->buffers, '\0', MAX_USES);
+
+	/* public functions */
+	this->public.from = (bool (*) (options_t*,char*,int*,char***,int))from;
+	this->public.destroy = (void (*) (options_t*))destroy;
+
+	return &this->public;
+}
