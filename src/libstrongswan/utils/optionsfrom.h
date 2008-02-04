@@ -41,11 +41,11 @@ struct options_t {
 	 * @brief Check if the PKCS#7 contentType is data
 	 *
 	 * @param this			calling object
-	 * @param filename			file containing the options
-	 * @param argcp				pointer to argc
-	 * @param argvp				pointer to argv[]
-	 * @param optind				current optind, number of next argument
-	 * @return						TRUE if optionsfrom parsing successful
+	 * @param filename		file containing the options
+	 * @param argcp			pointer to argc
+	 * @param argvp			pointer to argv[]
+	 * @param optind		current optind, number of next argument
+	 * @return				TRUE if optionsfrom parsing successful
 	 */
 	bool (*from) (options_t * this, char *filename, int *argcp, char **argvp[], int optind);
 
@@ -60,7 +60,7 @@ struct options_t {
 /**
  * @brief Create an options object.
  *
- * @return						created options_t object
+ * @return					created options_t object
  *
  * @ingroup utils
  */
