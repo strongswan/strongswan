@@ -147,7 +147,7 @@ static status_t initiate(private_eap_authenticator_t *this, eap_type_t type,
 	{
 		DBG1(DBG_IKE,
 			 "client requested EAP authentication, but configuration forbids it");
-		*out = eap_payload_create_code(EAP_FAILURE);
+		*out = eap_payload_create_code(EAP_FAILURE, 0);
 		return FAILED;
 	}
 	
@@ -169,14 +169,14 @@ static status_t initiate(private_eap_authenticator_t *this, eap_type_t type,
 
 		DBG1(DBG_IKE, "configured EAP server method not supported, sending %N",
 			 eap_code_names, EAP_FAILURE);
-		*out = eap_payload_create_code(EAP_FAILURE);
+		*out = eap_payload_create_code(EAP_FAILURE, 0);
 		return FAILED;
 	}
 	if (this->method->initiate(this->method, out) != NEED_MORE)
 	{
 		DBG1(DBG_IKE, "failed to initiate EAP exchange, sending %N",
 			 eap_type_names, type, eap_code_names, EAP_FAILURE);
-		*out = eap_payload_create_code(EAP_FAILURE);
+		*out = eap_payload_create_code(EAP_FAILURE, 0);
 		return FAILED;	
 	}
 	return NEED_MORE;
@@ -234,7 +234,7 @@ static status_t process_peer(private_eap_authenticator_t *this,
 		{
 			DBG1(DBG_IKE, "EAP server requested unsupported "
 				 "EAP method, sending EAP_NAK");
-			*out = eap_payload_create_nak();
+			*out = eap_payload_create_nak(in->get_identifier(in));
 			return NEED_MORE;
 		}
 	}
@@ -303,7 +303,7 @@ static status_t process_server(private_eap_authenticator_t *this,
 				DBG1(DBG_IKE, "EAP method %N succeded, %sMSK established",
 					 eap_type_names, type, this->msk.ptr ? "" : "no ");
 			}
-			*out = eap_payload_create_code(EAP_SUCCESS);
+			*out = eap_payload_create_code(EAP_SUCCESS, in->get_identifier(in));
 			return SUCCESS;
 		case FAILED:
 		default:
@@ -319,7 +319,7 @@ static status_t process_server(private_eap_authenticator_t *this,
 					 eap_type_names, type,
 					 this->ike_sa->get_other_id(this->ike_sa));
 			}
-			*out = eap_payload_create_code(EAP_FAILURE);
+			*out = eap_payload_create_code(EAP_FAILURE, in->get_identifier(in));
 			return FAILED;
 	}
 }
@@ -346,7 +346,8 @@ static status_t process(private_eap_authenticator_t *this, eap_payload_t *in,
 				{
 					DBG1(DBG_IKE, "received %N, sending %N",
 						 eap_code_names, code, eap_code_names, EAP_FAILURE);
-					*out = eap_payload_create_code(EAP_FAILURE);
+					*out = eap_payload_create_code(EAP_FAILURE,
+												   in->get_identifier(in));
 					return FAILED;
 				}
 			}

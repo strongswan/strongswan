@@ -312,13 +312,13 @@ eap_payload_t *eap_payload_create_data(chunk_t data)
 /*
  * Described in header
  */
-eap_payload_t *eap_payload_create_code(eap_code_t code)
+eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier)
 {
 	eap_payload_t *this = eap_payload_create();
 	chunk_t data = chunk_alloca(4);
 	
 	*(data.ptr + 0) = code;
-	*(data.ptr + 1) = 0;
+	*(data.ptr + 1) = identifier;
 	*(u_int16_t*)(data.ptr + 2) = htons(data.len);
 	
 	this->set_data(this, data);
@@ -328,13 +328,13 @@ eap_payload_t *eap_payload_create_code(eap_code_t code)
 /*
  * Described in header
  */
-eap_payload_t *eap_payload_create_nak()
+eap_payload_t *eap_payload_create_nak(u_int8_t identifier)
 {
 	eap_payload_t *this = eap_payload_create();
 	chunk_t data = chunk_alloca(5);
 	
 	*(data.ptr + 0) = EAP_RESPONSE;
-	*(data.ptr + 1) = 0;
+	*(data.ptr + 1) = identifier;
 	*(u_int16_t*)(data.ptr + 2) = htons(data.len);
 	*(data.ptr + 4) = EAP_NAK;
 	

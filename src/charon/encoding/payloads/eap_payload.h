@@ -132,19 +132,22 @@ eap_payload_t *eap_payload_create_data(chunk_t data);
  * Could should be either EAP_SUCCESS/EAP_FAILURE, use 
  * constructor above otherwise.
  *
- * @return eap_payload_t object
+ * @param code			EAP status code
+ * @param identifier	EAP identifier to use in payload
+ * @return 				eap_payload_t object
  *
  * @ingroup payloads
  */
-eap_payload_t *eap_payload_create_code(eap_code_t code);
+eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier);
 
 /**
  * @brief Creates an eap_payload_t EAP_RESPONSE containing an EAP_NAK.
  *
- * @return eap_payload_t object
+ * @param identifier	EAP identifier to use in payload
+ * @return 				eap_payload_t object
  *
  * @ingroup payloads
  */
-eap_payload_t *eap_payload_create_nak();
+eap_payload_t *eap_payload_create_nak(u_int8_t identifier);
 
 #endif /* EAP_PAYLOAD_H_ */
