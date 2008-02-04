@@ -8,6 +8,10 @@ strongswan-4.2.0
 - Wrong type definition of the next_payload variable in id_payload.c
   caused an INVALID_SYNTAX error on PowerPC platforms. 
 
+- Implemented IKEv2 EAP-SIM server and client test modules that use
+  triplets stored in a file. For details on the configuration see
+  the scenario 'ikev2/rw-eap-sim-rsa'.
+
 
 strongswan-4.1.10
 -----------------
