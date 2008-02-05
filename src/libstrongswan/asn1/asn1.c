@@ -677,13 +677,23 @@ bool is_asn1(chunk_t blob)
 		DBG2("  file content is not binary ASN.1");
 		return FALSE;
 	}
+
 	len = asn1_length(&blob);
-	if (len != blob.len)
+
+	/* exact match */
+	if (len == blob.len)
 	{
-		DBG2("  file size does not match ASN.1 coded length");
-		return FALSE;
+		return TRUE;
 	}
-	return TRUE;
+
+	/* some websites append a surplus newline character to the blob */
+	if (len + 1 == blob.len && *(blob.ptr + len) == '\n')
+	{
+		return TRUE;
+	}
+
+	DBG2("  file size does not match ASN.1 coded length");
+	return FALSE;
 }
 
 /**
