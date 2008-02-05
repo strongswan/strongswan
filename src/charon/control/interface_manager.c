@@ -171,14 +171,11 @@ static bool initiate_listener(interface_bus_listener_t *this, signal_t signal,
 static status_t initiate_execute(interface_job_t *job)
 {
 	ike_sa_t *ike_sa;
-	ike_cfg_t *ike_cfg;
 	interface_bus_listener_t *listener = &job->listener;
 	peer_cfg_t *peer_cfg = listener->peer_cfg;
 
-	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-	ike_sa = charon->ike_sa_manager->checkout_by_peer(charon->ike_sa_manager,
-				ike_cfg->get_my_host(ike_cfg), ike_cfg->get_other_host(ike_cfg),
-				peer_cfg->get_my_id(peer_cfg), peer_cfg->get_other_id(peer_cfg));
+	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
+														peer_cfg);
 	listener->ike_sa = ike_sa;
 
 	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
@@ -435,15 +432,11 @@ static bool route_listener(interface_bus_listener_t *this, signal_t signal,
 static status_t route_execute(interface_job_t *job)
 {
 	ike_sa_t *ike_sa;
-	ike_cfg_t *ike_cfg;
 	interface_bus_listener_t *listener = &job->listener;
 	peer_cfg_t *peer_cfg = listener->peer_cfg;
 	
-	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-	
-	ike_sa = charon->ike_sa_manager->checkout_by_peer(charon->ike_sa_manager,
-				ike_cfg->get_my_host(ike_cfg), ike_cfg->get_other_host(ike_cfg),
-				peer_cfg->get_my_id(peer_cfg), peer_cfg->get_other_id(peer_cfg));
+	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
+														peer_cfg);
 	listener->ike_sa = ike_sa;
 	
 	if (ike_sa->get_peer_cfg(ike_sa) == NULL)

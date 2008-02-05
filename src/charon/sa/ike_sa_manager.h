@@ -29,6 +29,7 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
 #include <library.h>
 #include <sa/ike_sa.h>
 #include <encoding/message.h>
+#include <config/peer_cfg.h>
 
 /**
  * @brief The IKE_SA-Manager is responsible for managing all initiated and responded IKE_SA's.
@@ -94,25 +95,21 @@ struct ike_sa_manager_t {
 	ike_sa_t* (*checkout_by_message) (ike_sa_manager_t* this, message_t *message);
 	
 	/**
-	 * @brief Checkout an existing IKE_SA by hosts and identifications.
+	 * @brief Checkout an IKE_SA for initiation by a peer_config.
 	 *
-	 * Allows the lookup of an IKE_SA by user IDs and hosts. It returns the
-	 * first found occurence, if there are multiple candidates. Supplied IDs
-	 * may contain wildcards, hosts may be %any. 
+	 * To initiate, a CHILD_SA may be established within an existing IKE_SA.
+	 * This call checks for an existing IKE_SA by comparing the configuration.
+	 * If the CHILD_SA can be created in an existing IKE_SA, the matching SA
+	 * is returned.
 	 * If no IKE_SA is found, a new one is created. This is also the case when
 	 * the found IKE_SA is in the DELETING state.
 	 *
 	 * @param this			 	the manager object
-	 * @param my_host			address of our host
-	 * @param other_id			address of remote host
-	 * @param my_id				ID used by us
-	 * @param other_id			ID used by remote
+	 * @param peer_cfg			configuration used to find an existing IKE_SA
 	 * @return					checked out/created IKE_SA
 	 */
-	ike_sa_t* (*checkout_by_peer) (ike_sa_manager_t* this,
-								   host_t *my_host, host_t* other_host,
-								   identification_t *my_id, 
-								   identification_t *other_id);
+	ike_sa_t* (*checkout_by_config) (ike_sa_manager_t* this,
+								 	 peer_cfg_t *peer_cfg);
 	
 	/**
 	 * @brief Check out an IKE_SA a unique ID.

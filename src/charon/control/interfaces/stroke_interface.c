@@ -535,6 +535,24 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	iterator = charon->backends->create_iterator(charon->backends);
 	while (iterator->iterate(iterator, (void**)&peer_cfg))
 	{
+		host_t *my_vip_conf, *other_vip_conf;
+		bool my_vip_equals = FALSE, other_vip_equals = FALSE;
+		
+		my_vip_conf = peer_cfg->get_my_virtual_ip(peer_cfg);
+		if ((my_vip && my_vip_conf && my_vip->equals(my_vip, my_vip_conf)) ||
+			(!my_vip_conf && !my_vip))
+		{
+			my_vip_equals = TRUE;
+		}
+		DESTROY_IF(my_vip_conf);
+		other_vip_conf = peer_cfg->get_other_virtual_ip(peer_cfg, NULL);
+		if ((other_vip && other_vip_conf && other_vip->equals(other_vip, other_vip_conf)) ||
+			(!other_vip_conf && !other_vip))
+		{
+			other_vip_equals = TRUE;
+		}
+		DESTROY_IF(other_vip_conf);
+		
 		ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 		if (my_id->equals(my_id, peer_cfg->get_my_id(peer_cfg))
 		&&	other_id->equals(other_id, peer_cfg->get_other_id(peer_cfg))
@@ -545,7 +563,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		&&	peer_cfg->get_ike_version(peer_cfg) == (msg->add_conn.ikev2 ? 2 : 1)
 		&&	peer_cfg->get_auth_method(peer_cfg) == msg->add_conn.auth_method
 		&&	peer_cfg->get_eap_type(peer_cfg, &vendor) == msg->add_conn.eap_type
-		&&	vendor == msg->add_conn.eap_vendor)
+		&&	vendor == msg->add_conn.eap_vendor
+		&&  my_vip_equals && other_vip_equals)
 		{
 			DBG1(DBG_CFG, "reusing existing configuration '%s'",
 				 peer_cfg->get_name(peer_cfg));

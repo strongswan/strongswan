@@ -483,16 +483,23 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 }
 
 /**
- * Implementation of of ike_sa_manager.checkout_by_peer.
+ * Implementation of of ike_sa_manager.checkout_by_config.
  */
-static ike_sa_t* checkout_by_peer(private_ike_sa_manager_t *this,
-								  host_t *my_host, host_t *other_host,
-								  identification_t *my_id,
-								  identification_t *other_id)
+static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
+									peer_cfg_t *peer_cfg)
 {
 	iterator_t *iterator;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
+	identification_t *my_id, *other_id;
+	host_t *my_host, *other_host;
+	ike_cfg_t *ike_cfg;
+	
+	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+	my_host = ike_cfg->get_my_host(ike_cfg);
+	other_host =  ike_cfg->get_other_host(ike_cfg);
+	my_id = peer_cfg->get_my_id(peer_cfg);
+	other_id = peer_cfg->get_other_id(peer_cfg);
 	
 	pthread_mutex_lock(&(this->mutex));
 	
@@ -535,7 +542,9 @@ static ike_sa_t* checkout_by_peer(private_ike_sa_manager_t *this,
 			(other_host->is_anyaddr(other_host) ||
 			 other_host->ip_equals(other_host, found_other_host)) &&
 			found_my_id->matches(found_my_id, my_id, &wc) &&
-			found_other_id->matches(found_other_id, other_id, &wc))
+			found_other_id->matches(found_other_id, other_id, &wc) &&
+			streq(peer_cfg->get_name(peer_cfg),
+				  entry->ike_sa->get_name(entry->ike_sa)))
 		{
 			/* looks good, we take this one */
 			DBG2(DBG_MGR, "found an existing IKE_SA for %H[%D]...%H[%D]",
@@ -902,7 +911,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.checkout = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_id_t*))checkout;
 	this->public.checkout_new = (ike_sa_t*(*)(ike_sa_manager_t*,bool))checkout_new;
 	this->public.checkout_by_message = (ike_sa_t*(*)(ike_sa_manager_t*,message_t*))checkout_by_message;
-	this->public.checkout_by_peer = (ike_sa_t*(*)(ike_sa_manager_t*,host_t*,host_t*,identification_t*,identification_t*))checkout_by_peer;
+	this->public.checkout_by_config = (ike_sa_t*(*)(ike_sa_manager_t*,peer_cfg_t*))checkout_by_config;
 	this->public.checkout_by_id = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t,bool))checkout_by_id;
 	this->public.checkout_by_name = (ike_sa_t*(*)(ike_sa_manager_t*,char*,bool))checkout_by_name;
 	this->public.create_iterator = (iterator_t*(*)(ike_sa_manager_t*))create_iterator;
