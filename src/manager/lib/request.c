@@ -27,6 +27,7 @@
 #include <library.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include <ClearSilver/ClearSilver.h>
 
 typedef struct private_request_t private_request_t;
@@ -58,22 +59,28 @@ struct private_request_t {
 };
 
 /**
- * thread specific FCGX_Request, used for ClearSilver cgiwrap callbacks.
- * ClearSilver cgiwrap is not threadsave, so we use a private 
+ * key to a thread specific FCGX_Request, used for ClearSilver cgiwrap callbacks.
+ * ClearSilver cgiwrap is not threadsave, so we use a private
  * context for each thread.
  */
-static __thread FCGX_Request *req;
+static pthread_key_t req_key;
 
 /**
  * length of param list in req->envp
  */
-static __thread int req_env_len;
+static pthread_key_t req_env_len_key;
+
+/**
+ * control variable for pthread_once
+ */
+pthread_once_t once = PTHREAD_ONCE_INIT;
 
 /**
  * fcgiwrap read callback
  */
 static int read_cb(void *null, char *buf, int size)
 {
+	FCGX_Request *req = (FCGX_Request*)pthread_getspecific(req_key);
 	return FCGX_GetStr(buf, size, req->in);
 }
 
@@ -82,6 +89,7 @@ static int read_cb(void *null, char *buf, int size)
  */
 static int writef_cb(void *null, const char *format, va_list args)
 {
+	FCGX_Request *req = (FCGX_Request*)pthread_getspecific(req_key);
 	FCGX_VFPrintF(req->out, format, args);
 	return 0;
 }
@@ -90,6 +98,7 @@ static int writef_cb(void *null, const char *format, va_list args)
  */
 static int write_cb(void *null, const char *buf, int size)
 {
+	FCGX_Request *req = (FCGX_Request*)pthread_getspecific(req_key);
 	return FCGX_PutStr(buf, size, req->out);
 }
 
@@ -99,7 +108,7 @@ static int write_cb(void *null, const char *buf, int size)
 static char *getenv_cb(void *null, const char *key)
 {
 	char *value;
-	
+	FCGX_Request *req = (FCGX_Request*)pthread_getspecific(req_key);
 	value = FCGX_GetParam(key, req->envp);
 	return value ? strdup(value) : NULL;
 }
@@ -120,7 +129,8 @@ static int iterenv_cb(void *null, int num, char **key, char **value)
 {
 	*key = NULL;
 	*value = NULL;
-
+	FCGX_Request *req = (FCGX_Request*)pthread_getspecific(req_key);
+	int req_env_len = (int)pthread_getspecific(req_env_len_key);
 	if (num < req_env_len)
 	{
 		char *eq;
@@ -256,13 +266,24 @@ static void destroy(private_request_t *this)
 	free(this);
 }
 
+/**
+ * This initialization method is guaranteed to run only once
+ * for all threads.
+ */
+static void init(void)
+{
+	cgiwrap_init_emu(NULL, read_cb, writef_cb, write_cb,
+	                 getenv_cb, putenv_cb, iterenv_cb);
+	pthread_key_create(&req_key, NULL);
+	pthread_key_create(&req_env_len_key, NULL);
+}
+
 /*
  * see header file
  */
 request_t *request_create(FCGX_Request *request, bool debug)
 {
 	NEOERR* err;
-	static bool initialized = FALSE;
 	private_request_t *this = malloc_thing(private_request_t);
 
 	this->public.get_path = (char*(*)(request_t*))get_path;
@@ -277,20 +298,18 @@ request_t *request_create(FCGX_Request *request, bool debug)
 	this->public.setf = (void(*)(request_t*, char *format, ...))setf;
 	this->public.destroy = (void(*)(request_t*))destroy;
 	
-	if (!initialized)
-	{
-		cgiwrap_init_emu(NULL, read_cb, writef_cb, write_cb,
-						 getenv_cb, putenv_cb, iterenv_cb);
-		initialized = TRUE;
-	}
+	pthread_once(&once, init);
 	
 	this->req = request;
-	req = request;
-	req_env_len = 0;
-	while (req->envp[req_env_len] != NULL)
+	pthread_setspecific(req_key, (void*)request);
+	
+	int req_env_len = 0;
+	while (request->envp[req_env_len] != NULL)
 	{
 		req_env_len++;
 	}
+	
+	pthread_setspecific(req_env_len_key, (void*)req_env_len);
 	
 	err = hdf_init(&this->hdf);
 	if (!err)
