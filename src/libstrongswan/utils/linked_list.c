@@ -677,6 +677,52 @@ static status_t get_last(private_linked_list_t *this, void **item)
 }
 
 /**
+ * Implementation of linked_list_t.find_first.
+ */
+static status_t find_first(private_linked_list_t *this, linked_list_match_t match,
+		void **item, void *d1, void *d2, void *d3, void *d4, void *d5)
+{
+	element_t *current = this->first;
+	
+	while (current)
+	{
+		if (match(current->value, d1, d2, d3, d4, d5))
+		{
+			if (item != NULL)
+			{
+				*item = current->value;
+			}
+			return SUCCESS;
+		}
+		current = current->next;
+	}
+	return NOT_FOUND;
+}
+
+/**
+ * Implementation of linked_list_t.find_last.
+ */
+static status_t find_last(private_linked_list_t *this, linked_list_match_t match,
+		void **item, void *d1, void *d2, void *d3, void *d4, void *d5)
+{
+	element_t *current = this->last;
+	
+	while (current)
+	{
+		if (match(current->value, d1, d2, d3, d4, d5))
+		{
+			if (item != NULL)
+			{
+				*item = current->value;
+			}
+			return SUCCESS;
+		}
+		current = current->previous;
+	}
+	return NOT_FOUND;
+}
+
+/**
  * Implementation of linked_list_t.invoke_offset.
  */
 static void invoke_offset(private_linked_list_t *this, size_t offset)
@@ -843,6 +889,8 @@ linked_list_t *linked_list_create()
 	this->public.create_enumerator = (enumerator_t*(*)(linked_list_t*))create_enumerator;
 	this->public.get_first = (status_t (*) (linked_list_t *, void **item))get_first;
 	this->public.get_last = (status_t (*) (linked_list_t *, void **item))get_last;
+	this->public.find_first = (status_t (*) (linked_list_t *, linked_list_match_t,void**,...))find_first;
+	this->public.find_last = (status_t (*) (linked_list_t *, linked_list_match_t,void**,...))find_last;
 	this->public.insert_first = (void (*) (linked_list_t *, void *item))insert_first;
 	this->public.insert_last = (void (*) (linked_list_t *, void *item))insert_last;
 	this->public.remove_first = (status_t (*) (linked_list_t *, void **item))remove_first;

@@ -33,6 +33,19 @@ typedef struct linked_list_t linked_list_t;
 #include <utils/iterator.h>
 #include <utils/enumerator.h>
 
+
+/**
+ * Method to match elements in a linked list (used in find_* functions)
+ *
+ * @param item			current list item
+ * @param ...			user supplied data (only pointers, at most 5)
+ * @return
+ * 						- TRUE, if the item matched
+ * 						- FALSE, otherwise
+ * @ingroup utils
+ */
+typedef bool (*linked_list_match_t)(void *item, ...);
+
 /**
  * @brief Class implementing a double linked list.
  *
@@ -186,6 +199,50 @@ struct linked_list_t {
 	 * 					- NOT_FOUND if list is empty
 	 */
 	status_t (*get_last) (linked_list_t *this, void **item);
+	
+	/** @brief Find the first matching element in the list.
+	 * 
+	 * The first object passed to the match function is the current list item,
+	 * followed by the user supplied data.
+	 * If the supplied function returns TRUE this function returns SUCCESS, and
+	 * the current object is returned in the third parameter, otherwise,
+	 * the next item is checked.
+	 * 
+	 * @warning Only use pointers as user supplied data.
+	 *
+	 * @param this			calling object
+	 * @param match			comparison function to call on each object
+	 * @param[out] item		
+	 * 						- the list item, if found
+	 * 						- NULL, otherwise
+	 * @param ...			user data to supply to match function (limited to 5 arguments)
+	 * @return				
+	 * 						- SUCCESS, if found
+	 * 						- NOT_FOUND, otherwise
+	 */
+	status_t (*find_first) (linked_list_t *this, linked_list_match_t match, void **item, ...);
+	
+	/** @brief Find the last matching element in the list.
+	 * 
+	 * The first object passed to the match function is the current list item,
+	 * followed by the user supplied data.
+	 * If the supplied function returns TRUE this function returns SUCCESS, and
+	 * the current object is returned in the third parameter, otherwise,
+	 * the next item is checked.
+	 * 
+	 * @warning Only use pointers as user supplied data.
+	 *
+	 * @param this			calling object
+	 * @param match			comparison function to call on each object
+	 * @param[out] item		
+	 * 						- the list item, if found
+	 * 						- NULL, otherwise
+	 * @param ...			user data to supply to match function (limited to 5 arguments)
+	 * @return				
+	 * 						- SUCCESS, if found
+	 * 						- NOT_FOUND, otherwise
+	 */
+	status_t (*find_last) (linked_list_t *this, linked_list_match_t match, void **item, ...);
 	
 	/**
 	 * @brief Invoke a method on all of the contained objects.
