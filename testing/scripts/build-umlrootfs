@@ -146,6 +146,11 @@ then
     echo -n " --enable-eap-aka" >> $INSTALLSHELL
 fi
 
+if [ "$USE_EAP_SIM" = "yes" ]
+then
+    echo -n " --enable-eap-sim" >> $INSTALLSHELL
+    fi
+
 if [ "$USE_P2P" = "yes" ]
 then
     echo -n " --enable-p2p" >> $INSTALLSHELL
