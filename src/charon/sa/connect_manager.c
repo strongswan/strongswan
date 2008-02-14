@@ -494,29 +494,18 @@ static initiate_data_t *initiate_data_create(check_list_t *checklist, initiated_
 /**
  * Find an initiated connection by the peers' ids
  */
+static bool match_initiated_by_ids(initiated_t *current, identification_t *id,
+		identification_t *peer_id)
+{
+	return id->equals(id, current->id) && peer_id->equals(peer_id, current->peer_id);
+}
+
 static status_t get_initiated_by_ids(private_connect_manager_t *this,
 		identification_t *id, identification_t *peer_id, initiated_t **initiated)
 {
-	iterator_t *iterator;
-	initiated_t *current;
-	status_t status = NOT_FOUND;
-	
-	iterator = this->initiated->create_iterator(this->initiated, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (id->equals(id, current->id) && peer_id->equals(peer_id, current->peer_id))
-		{
-			if (initiated)
-			{
-				*initiated = current;
-			}
-			status = SUCCESS;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-
-	return status;
+	return this->initiated->find_first(this->initiated,
+				(linked_list_match_t)match_initiated_by_ids,
+				(void**)initiated, id, peer_id);
 }
 
 /**
@@ -542,56 +531,32 @@ static void remove_initiated(private_connect_manager_t *this, initiated_t *initi
 /**
  * Finds a waiting sa
  */
+static bool match_waiting_sa(waiting_sa_t *current, ike_sa_id_t *ike_sa_id)
+{
+	return ike_sa_id->equals(ike_sa_id, current->ike_sa_id);
+}
+
 static status_t get_waiting_sa(initiated_t *initiated, ike_sa_id_t *ike_sa_id, waiting_sa_t **waiting_sa)
 {
-	iterator_t *iterator;
-	waiting_sa_t *current;
-	status_t status = NOT_FOUND;
-	
-	iterator = initiated->mediated->create_iterator(initiated->mediated, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (ike_sa_id->equals(ike_sa_id, current->ike_sa_id))
-		{
-			if (waiting_sa)
-			{
-				*waiting_sa = current;
-			}
-			status = SUCCESS;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-
-	return status;
+	return initiated->mediated->find_first(initiated->mediated,
+				(linked_list_match_t)match_waiting_sa,
+				(void**)waiting_sa, ike_sa_id);
 }
 
 /**
  * Find the checklist with a specific session ID
  */
+static bool match_checklist_by_id(check_list_t *current, chunk_t *session_id)
+{
+	return chunk_equals(*session_id, current->session_id);
+}
+
 static status_t get_checklist_by_id(private_connect_manager_t *this,
 		chunk_t session_id, check_list_t **check_list)
 {
-	iterator_t *iterator;
-	check_list_t *current;
-	status_t status = NOT_FOUND;
-	
-	iterator = this->checklists->create_iterator(this->checklists, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (chunk_equals(session_id, current->session_id))
-		{
-			if (check_list)
-			{
-				*check_list = current;
-			}
-			status = SUCCESS;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-
-	return status;
+	return this->checklists->find_first(this->checklists,
+				(linked_list_match_t)match_checklist_by_id,
+				(void**)check_list, &session_id);
 }
 
 /**
@@ -617,28 +582,16 @@ static void remove_checklist(private_connect_manager_t *this, check_list_t *chec
 /**
  * Checks if a list of endpoint_notify_t contains a certain host_t
  */
+static bool match_endpoint_by_host(endpoint_notify_t *current, host_t *host)
+{
+	return host->equals(host, current->get_host(current));
+}
+
 static status_t endpoints_contain(linked_list_t *endpoints, host_t *host, endpoint_notify_t **endpoint)
 {
-	iterator_t *iterator;
-	endpoint_notify_t *current;
-	status_t status = NOT_FOUND;
-	
-	iterator = endpoints->create_iterator(endpoints, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (host->equals(host, current->get_host(current)))
-		{
-			if (endpoint)
-			{
-				*endpoint = current;
-			}
-			status = SUCCESS;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	return status;
+	return endpoints->find_first(endpoints,
+				(linked_list_match_t)match_endpoint_by_host,
+				(void**)endpoint, host);
 }
 
 /**
@@ -716,88 +669,56 @@ static void insert_pair_by_priority(linked_list_t *pairs, endpoint_pair_t *pair)
 /**
  * Searches a list of endpoint_pair_t for a pair with specific host_ts
  */
+static bool match_pair_by_hosts(endpoint_pair_t *current, host_t *local, host_t *remote)
+{
+	return local->equals(local, current->local) && remote->equals(remote, current->remote);
+}
+
 static status_t get_pair_by_hosts(linked_list_t *pairs, host_t *local, host_t *remote, endpoint_pair_t **pair)
 {
-	iterator_t *iterator;
-	endpoint_pair_t *current;
-	status_t status = NOT_FOUND;
-	
-	iterator = pairs->create_iterator(pairs, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (local->equals(local, current->local) &&
-				remote->equals(remote, current->remote))
-		{
-			if (pair)
-			{
-				*pair = current;
-			}
-			status = SUCCESS;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	return status;
+	return pairs->find_first(pairs,
+				(linked_list_match_t)match_pair_by_hosts,
+				(void**)pair, local, remote);
 }
 
 /**
  * Searches for a pair with a specific id
  */
+static bool match_pair_by_id(endpoint_pair_t *current, u_int32_t *id)
+{
+	return current->id == *id;
+}
+
 static status_t get_pair_by_id(check_list_t *checklist, u_int32_t id, endpoint_pair_t **pair)
 {
-	iterator_t *iterator;
-	endpoint_pair_t *current;
-	status_t status = NOT_FOUND;
-	
-	iterator = checklist->pairs->create_iterator(checklist->pairs, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (current->id == id)
-		{
-			if (pair)
-			{
-				*pair = current;
-			}
-			status = SUCCESS;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	return status;
+	return checklist->pairs->find_first(checklist->pairs,
+				(linked_list_match_t)match_pair_by_id,
+				(void**)pair, &id);
 }
 
 /**
  * Returns the best pair of state CHECK_SUCCEEDED from a checklist. 
  */
+static bool match_succeeded_pair(endpoint_pair_t *current)
+{
+	return current->state == CHECK_SUCCEEDED;
+}
+
 static status_t get_best_valid_pair(check_list_t *checklist, endpoint_pair_t **pair)
 {
-	iterator_t *iterator;
-	endpoint_pair_t *current;
-	status_t status = NOT_FOUND;
-	
-	iterator = checklist->pairs->create_iterator(checklist->pairs, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (current->state == CHECK_SUCCEEDED)
-		{
-			if (pair)
-			{
-				*pair = current;
-			}
-			status = SUCCESS;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	return status;
+	return checklist->pairs->find_first(checklist->pairs,
+				(linked_list_match_t)match_succeeded_pair,
+				(void**)pair);
 }
 
 /**
- * Returns and removes the first triggered pair in state CHECK_WAITING. 
+ * Returns and *removes* the first triggered pair in state CHECK_WAITING. 
  */
+static bool match_waiting_pair(endpoint_pair_t *current)
+{
+	return current->state == CHECK_WAITING;
+}
+
 static status_t get_triggered_pair(check_list_t *checklist, endpoint_pair_t **pair)
 {
 	iterator_t *iterator;
@@ -1149,21 +1070,8 @@ static job_requeue_t sender(sender_data_t *data)
 	{
 		DBG1(DBG_IKE, "no triggered check queued, sending an ordinary check");
 		
-		iterator_t *iterator;
-		bool found_one = FALSE;
-	
-		iterator = checklist->pairs->create_iterator(checklist->pairs, TRUE);
-		while (iterator->iterate(iterator, (void**)&pair))
-		{
-			if (pair->state == CHECK_WAITING)
-			{
-				found_one = TRUE;
-				break;
-			}
-		}
-		iterator->destroy(iterator);
-	
-		if (!found_one)
+		if (checklist->pairs->find_first(checklist->pairs,
+				(linked_list_match_t)match_waiting_pair, (void**)&pair) != SUCCESS)
 		{
 			pthread_mutex_unlock(&(this->mutex));
 			DBG1(DBG_IKE, "no pairs in waiting state, aborting");
