@@ -30,5 +30,16 @@ keywords.c:	keywords.txt keywords.h
 defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 		$(COMPILE) -c -o $@ $<
 
-install-exec-local :
-		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf
+install-exec-local :	
+		test -e "$(DESTDIR)${sysconfdir}" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)"
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d"
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/cacerts" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d/cacerts"
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/ocspcerts" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d/ocspcerts"
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/certs" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d/certs"
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/acerts" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d/acerts"
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/aacerts" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d/aacerts"
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/crls" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d/crls"
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/reqs" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d/reqs"
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/private" || $(MKDIR_P) -m 700 "$(DESTDIR)$(sysconfdir)/ipsec.d/private"
+		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -m 644 ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf
+
