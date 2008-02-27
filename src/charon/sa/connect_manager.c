@@ -865,7 +865,7 @@ static status_t process_payloads(message_t *message, check_t *check)
 					break;
 				}
 				check->session_id = chunk_clone(notify->get_notification_data(notify));
-				DBG3(DBG_IKE, "received p2p_sessionid %B", &check->session_id);
+				DBG2(DBG_IKE, "received P2P_SESSIONID %#B", &check->session_id);
 				break;
 			}
 			case COOKIE:
@@ -876,7 +876,7 @@ static status_t process_payloads(message_t *message, check_t *check)
 					break;
 				}
 				check->cookie = chunk_clone(notify->get_notification_data(notify));
-				DBG3(DBG_IKE, "received cookie %B", &check->cookie);
+				DBG2(DBG_IKE, "received COOKIE %#B", &check->cookie);
 				break;
 			}
 			default:
@@ -1012,13 +1012,16 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 	message->set_ike_sa_id(message, ike_sa_id_create(0, 0, request));
 
 	message->add_notify(message, FALSE, P2P_SESSIONID, check->session_id);
+	DBG2(DBG_IKE, "send P2P_SESSIONID %#B", &check->session_id);
 	
 	notify_payload_t *endpoint = check->endpoint->build_notify(check->endpoint);
 	check->endpoint_raw = chunk_clone(endpoint->get_notification_data(endpoint));
 	message->add_payload(message, (payload_t*)endpoint);
+	DBG2(DBG_IKE, "send P2P_ENDPOINT notify");
 	
 	check->cookie = build_signature(this, checklist, check, TRUE);
 	message->add_notify(message, FALSE, COOKIE, check->cookie);
+	DBG2(DBG_IKE, "send COOKIE %#B", &check->cookie);
 	
 	packet_t *packet;
 	if (message->generate(message, NULL, NULL, &packet) == SUCCESS)

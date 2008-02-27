@@ -229,14 +229,14 @@ static void process_payloads(private_ike_p2p_t *this, message_t *message)
 			{
 				chunk_free(&this->session_id);
 				this->session_id = chunk_clone(notify->get_notification_data(notify));
-				DBG3(DBG_IKE, "received p2p_sessionid %B", &this->session_id);
+				DBG2(DBG_IKE, "received P2P_SESSIONID %#B", &this->session_id);
 				break;
 			}
 			case P2P_SESSIONKEY:
 			{
 				chunk_free(&this->session_key);
 				this->session_key = chunk_clone(notify->get_notification_data(notify));
-				DBG4(DBG_IKE, "received p2p_sessionkey %B", &this->session_key);
+				DBG4(DBG_IKE, "received P2P_SESSIONKEY %#B", &this->session_key);
 				break;
 			}
 			case P2P_RESPONSE:
