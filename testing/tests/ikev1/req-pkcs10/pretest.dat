@@ -16,6 +16,7 @@ winnetou::scp moon:/etc/ipsec.d/reqs/moonReq.der /etc/openssl/
 winnetou::openssl req -inform der -in /etc/openssl/moonReq.der -out /etc/openssl/moonReq.pem
 winnetou::cd /etc/openssl; COMMON_NAME="moon.strongswan.org" openssl ca -in moonReq.pem -out moonCert.pem -notext -config openssl.cnf -extensions host_ext < yy.txt
 winnetou::scp /etc/openssl/moonCert.pem moon:/etc/ipsec.d/certs/
+carol::sleep 2
 carol::ipsec start
 moon::ipsec start
 carol::sleep 2
