@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: xstart-umls 3273 2007-10-08 20:18:34Z andreas $
+# RCSID $Id$
 
 DIR=`dirname $0`
 
