@@ -63,7 +63,6 @@ do
 	[ -f  $UMLHOSTFS ] || die "!! uml root file system '$UMLHOSTFS' not found"
 
 	cecho-n " * Starting ${host}.."
-	#eval xterm -title ${host} -geometry "+${x0}+${y0}" -rightbar -sb -sl 500 -e "gdb --args $UMLKERNEL \
 	eval xterm -title ${host} -geometry "+${x0}+${y0}" -rightbar -sb -sl 500 -e "$UMLKERNEL \
 	    umid=${host} \
 	    ubda=$UMLHOSTFS \
