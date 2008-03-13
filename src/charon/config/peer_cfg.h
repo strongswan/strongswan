@@ -1,10 +1,3 @@
-/**
- * @file peer_cfg.h
- * 
- * @brief Interface of peer_cfg_t.
- *
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
@@ -20,6 +13,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup peer_cfg peer_cfg
+ * @{ @ingroup config
  */
 
 #ifndef PEER_CFG_H_
@@ -31,21 +31,20 @@ typedef struct peer_cfg_t peer_cfg_t;
 
 #include <library.h>
 #include <utils/identification.h>
-#include <utils/linked_list.h>
+#include <utils/enumerator.h>
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
 #include <config/ike_cfg.h>
 #include <config/child_cfg.h>
 #include <sa/authenticators/authenticator.h>
 #include <sa/authenticators/eap/eap_method.h>
+#include <credentials/auth_info.h>
 
 /**
  * Certificate sending policy. This is also used for certificate
  * requests when using this definition for the other peer. If
  * it is CERT_NEVER_SEND, a certreq is omitted, otherwise its
  * included.
- *
- * @ingroup config
  * 
  * @warning These definitions must be the same as in pluto/starter,
  * as they are sent over the stroke socket.
@@ -61,17 +60,13 @@ enum cert_policy_t {
 
 /**
  * enum strings for cert_policy_t
- * 
- * @ingroup config
  */
 extern enum_name_t *cert_policy_names;
 
 /**
- * @brief Actions to take when a peer does not respond (dead peer detected).
+ * Actions to take when a peer does not respond (dead peer detected).
  *
  * These values are the same as in pluto/starter, so do not modify them!
- *
- * @ingroup config
  */
 enum dpd_action_t {
 	/** DPD disabled */
@@ -90,7 +85,7 @@ enum dpd_action_t {
 extern enum_name_t *dpd_action_names;
 
 /**
- * @brief Configuration of a peer, specified by IDs.
+ * Configuration of a peer, specified by IDs.
  *
  * The peer config defines a connection between two given IDs. It contains
  * exactly one ike_cfg_t, which is use for initiation. Additionally, it contains
@@ -106,61 +101,67 @@ extern enum_name_t *dpd_action_names;
    | - ...         |       | - dpd config      |         | - ...         |-+
    +---------------+       | - ...             |         +---------------+
                            +-------------------+
+                                     ^
+                                     |
+                           +-------------------+
+                           |     auth_info     |
+                           +-------------------+
+                           |     auth_items    |
+                           +-------------------+
    @endverbatim
- *
- * @b Constructors:
- *   - peer_cfg_create()
- *
- * @ingroup config
+ * The auth_info_t object associated to the peer_cfg holds additional
+ * authorization constraints. A peer who wants to use a config needs to fullfil
+ * the requirements defined in auth_info.
  */
 struct peer_cfg_t {
 	
 	/**
-	 * @brief Get the name of the peer_cfg.
+	 * Get the name of the peer_cfg.
 	 * 
 	 * Returned object is not getting cloned.
 	 * 
-	 * @param this			calling object
 	 * @return				peer_cfg's name
 	 */
 	char* (*get_name) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Get the IKE version to use for initiating.
+	 * Get the IKE version to use for initiating.
 	 *
-	 * @param this			calling object
 	 * @return 				IKE major version
 	 */
 	u_int (*get_ike_version)(peer_cfg_t *this);
 	
 	/**
-	 * @brief Get the IKE config to use for initiaton.
+	 * Get the IKE config to use for initiaton.
 	 * 
-	 * @param this			calling object
 	 * @return				the IKE config to use
 	 */
 	ike_cfg_t* (*get_ike_cfg) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Attach a CHILD config.
+	 * Attach a CHILD config.
 	 * 
-	 * @param this			calling object
 	 * @param child_cfg		CHILD config to add
 	 */
 	void (*add_child_cfg) (peer_cfg_t *this, child_cfg_t *child_cfg);
 	
 	/**
-	 * @brief Create an iterator for all attached CHILD configs.
-	 * 
-	 * @param this			calling object
-	 * @return				an iterator over all CHILD configs.
+	 * Detach a CHILD config, pointed to by an enumerator.
+	 *
+	 * @param enumerator	enumerator indicating element position
 	 */
-	iterator_t* (*create_child_cfg_iterator) (peer_cfg_t *this);
+	void (*remove_child_cfg)(peer_cfg_t *this, enumerator_t *enumerator);
 	
 	/**
-	 * @brief Select a CHILD config from traffic selectors.
+	 * Create an enumerator for all attached CHILD configs.
 	 * 
-	 * @param this			calling object
+	 * @return				an enumerator over all CHILD configs.
+	 */
+	enumerator_t* (*create_child_cfg_enumerator) (peer_cfg_t *this);
+	
+	/**
+	 * Select a CHILD config from traffic selectors.
+	 * 
 	 * @param my_ts			TS for local side
 	 * @param other_ts		TS for remote side
 	 * @param my_host		host to narrow down dynamic TS for local side
@@ -172,213 +173,175 @@ struct peer_cfg_t {
 									  host_t *other_host);
 	
 	/**
-	 * @brief Get own ID.
+	 * Get the authentication constraint items.
+	 *
+	 * @return				auth_info object to manipulate requirements
+	 */
+	auth_info_t* (*get_auth)(peer_cfg_t *this);
+		
+	/**
+	 * Get own ID.
 	 * 
-	 * @param this			calling object
 	 * @return				own id
 	 */
 	identification_t* (*get_my_id)(peer_cfg_t *this);
 	
 	/**
-	 * @brief Get peers ID.
+	 * Get peers ID.
 	 * 
-	 * @param this			calling object
 	 * @return				other id
 	 */
 	identification_t* (*get_other_id)(peer_cfg_t *this);
-	
-	/**
-	 * @brief Get own CA.
-	 * 
-	 * @param this			calling object
-	 * @return				own ca
-	 */
-	identification_t* (*get_my_ca)(peer_cfg_t *this);
 
 	/**
-	 * @brief Get peer CA.
-	 * 
-	 * @param this			calling object
-	 * @return				other ca
-	 */
-	identification_t* (*get_other_ca)(peer_cfg_t *this);
-	
-	/**
-	 * @brief Get list of group attributes.
-	 * 
-	 * @param this			calling object
-	 * @return				linked list of group attributes
-	 */
-	linked_list_t* (*get_groups)(peer_cfg_t *this);
-
-	/**
-	 * @brief Should be sent a certificate for this connection?
+	 * Should be sent a certificate for this connection?
 	 *
-	 * @param this		calling object
 	 * @return			certificate sending policy
 	 */
 	cert_policy_t (*get_cert_policy) (peer_cfg_t *this);
 
 	/**
-	 * @brief Get the authentication method to use to authenticate us.
+	 * Get the authentication method to use to authenticate us.
 	 * 
-	 * @param this		calling object
 	 * @return			authentication method
 	 */
 	auth_method_t (*get_auth_method) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Get the EAP type to use for peer authentication.
+	 * Get the EAP type to use for peer authentication.
 	 *
 	 * If vendor specific types are used, a vendor ID != 0 is returned to
 	 * to vendor argument. Then the returned type is specific for that 
 	 * vendor ID.
 	 * 
-	 * @param this		calling object
 	 * @param vendor	receives vendor specifier, 0 for predefined EAP types
 	 * @return			authentication method
 	 */
 	eap_type_t (*get_eap_type) (peer_cfg_t *this, u_int32_t *vendor);
 	
 	/**
-	 * @brief Get the max number of retries after timeout.
+	 * Get the max number of retries after timeout.
 	 *
-	 * @param this		calling object
 	 * @return			max number retries
 	 */
 	u_int32_t (*get_keyingtries) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Get a time to start rekeying (is randomized with jitter).
+	 * Get a time to start rekeying (is randomized with jitter).
 	 *
-	 * @param this		calling object
 	 * @return			time in s when to start rekeying, 0 disables rekeying
 	 */
 	u_int32_t (*get_rekey_time)(peer_cfg_t *this);
 	
 	/**
-	 * @brief Get a time to start reauthentication (is randomized with jitter).
+	 * Get a time to start reauthentication (is randomized with jitter).
 	 *
-	 * @param this		calling object
 	 * @return			time in s when to start reauthentication, 0 disables it
 	 */
 	u_int32_t (*get_reauth_time)(peer_cfg_t *this);
 	
 	/**
-	 * @brief Get the timeout of a rekeying/reauthenticating SA.
+	 * Get the timeout of a rekeying/reauthenticating SA.
 	 *
-	 * @param thsi		calling object
 	 * @return			timeout in s
 	 */
 	u_int32_t (*get_over_time)(peer_cfg_t *this);
 	
 	/**
-	 * @brief Use MOBIKE (RFC4555) if peer supports it?
+	 * Use MOBIKE (RFC4555) if peer supports it?
 	 * 
-	 * @param this		calling object
 	 * @return			TRUE to enable MOBIKE support
 	 */
 	bool (*use_mobike) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Get the DPD check interval.
+	 * Get the DPD check interval.
 	 * 
-	 * @param this		calling object
 	 * @return			dpd_delay in seconds
 	 */
 	u_int32_t (*get_dpd_delay) (peer_cfg_t *this);
 	
 	/**
-	 * @brief What should be done with a CHILD_SA, when other peer does not respond.
+	 * What should be done with a CHILD_SA, when other peer does not respond.
 	 *
-	 * @param this 		calling object
 	 * @return			dpd action
 	 */	
 	dpd_action_t (*get_dpd_action) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Get a virtual IP for the local peer.
+	 * Get a virtual IP for the local peer.
 	 *
 	 * If no virtual IP should be used, NULL is returned. %any means to request
 	 * a virtual IP using configuration payloads. A specific address is also
 	 * used for a request and may be changed by the server.
 	 *
-	 * @param this			peer_cfg
 	 * @param suggestion	NULL, %any or specific
 	 * @return				clone of an IP, %any or NULL
 	 */
 	host_t* (*get_my_virtual_ip) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Get a virtual IP for the remote peer.
+	 * Get a virtual IP for the remote peer.
 	 *
 	 * An IP may be supplied, if one was requested by the initiator. However,
 	 * the suggestion is not more as it says, any address may be returned, even
 	 * NULL to not use virtual IPs.
 	 *
-	 * @param this			peer_cfg
 	 * @param suggestion	NULL, %any or specific
 	 * @return				clone of an IP to use
 	 */
 	host_t* (*get_other_virtual_ip) (peer_cfg_t *this, host_t *suggestion);
-
+	
 #ifdef P2P	
 	/**
-	 * @brief Is this a mediation connection?
+	 * Is this a mediation connection?
 	 * 
-	 * @param this			peer_cfg
 	 * @return				TRUE, if this is a mediation connection
 	 */
 	bool (*is_mediation) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Get peer_cfg of the connection this one is mediated through.
+	 * Get peer_cfg of the connection this one is mediated through.
 	 * 
-	 * @param this			peer_cfg
 	 * @return				reference to peer_cfg of the mediation connection
 	 */
 	peer_cfg_t* (*get_mediated_by) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Get the id of the other peer at the mediation server.
+	 * Get the id of the other peer at the mediation server.
 	 * 
 	 * This is the leftid of the peer's connection with the mediation server.
 	 * 
 	 * If it is not configured, it is assumed to be the same as the right id
 	 * of this connection. 
 	 * 
-	 * @param this			peer_cfg
 	 * @return				the id of the other peer
 	 */
 	identification_t* (*get_peer_id) (peer_cfg_t *this);
 #endif /* P2P */
 	
 	/**
-	 * @brief Get a new reference.
+	 * Get a new reference.
 	 *
 	 * Get a new reference to this peer_cfg by increasing
 	 * it's internal reference counter.
 	 * Do not call get_ref or any other function until you
 	 * already have a reference. Otherwise the object may get
 	 * destroyed while calling get_ref(),
-	 * 
-	 * @param this				calling object
 	 */
 	void (*get_ref) (peer_cfg_t *this);
 	
 	/**
-	 * @brief Destroys the peer_cfg object.
+	 * Destroys the peer_cfg object.
 	 *
 	 * Decrements the internal reference counter and
 	 * destroys the peer_cfg when it reaches zero.
-	 * 
-	 * @param this				calling object
 	 */
 	void (*destroy) (peer_cfg_t *this);
 };
 
 /**
- * @brief Create a configuration object for IKE_AUTH and later.
+ * Create a configuration object for IKE_AUTH and later.
  * 
  * name-string gets cloned, ID's not.
  * Virtual IPs are used if they are != NULL. A %any host means the virtual
@@ -392,9 +355,6 @@ struct peer_cfg_t {
  * @param ike_cfg			IKE config to use when acting as initiator
  * @param my_id 			identification_t for ourselves
  * @param other_id 			identification_t for the remote guy
- * @param my_ca				CA to use for us
- * @param other_ca			CA to use for other
- * @param groups			list of group memberships
  * @param cert_policy		should we send a certificate payload?
  * @param auth_method		auth method to use to authenticate us
  * @param eap_type			EAP type to use for peer authentication
@@ -414,13 +374,10 @@ struct peer_cfg_t {
  * @param p2p_mediated_by	name of the mediation connection to mediate through
  * @param peer_id			ID that identifies our peer at the mediation server
  * @return 					peer_cfg_t object
- * 
- * @ingroup config
  */
 peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
-							identification_t *my_ca, identification_t *other_ca,
-							linked_list_t *groups, cert_policy_t cert_policy,
+							cert_policy_t cert_policy,
 							auth_method_t auth_method, eap_type_t eap_type,
 							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,
@@ -431,4 +388,4 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							bool p2p_mediation, peer_cfg_t *p2p_mediated_by,
 							identification_t *peer_id);
 
-#endif /* PEER_CFG_H_ */
+#endif /* PEER_CFG_H_ @} */

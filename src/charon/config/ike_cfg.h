@@ -1,10 +1,3 @@
-/**
- * @file ike_cfg.h
- *
- * @brief Interface of ike_cfg_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_cfg ike_cfg
+ * @{ @ingroup config
  */
 
 #ifndef IKE_CFG_H_
@@ -34,115 +34,98 @@ typedef struct ike_cfg_t ike_cfg_t;
 #include <crypto/diffie_hellman.h>
 
 /**
- * @brief An ike_cfg_t defines the rules to set up an IKE_SA.
+ * An ike_cfg_t defines the rules to set up an IKE_SA.
  *
  * @see peer_cfg_t to get an overview over the configurations.
- *
- * @b Constructors:
- *  - ike_cfg_create()
- *
- * @ingroup config
  */
 struct ike_cfg_t {
 	
 	/**
-	 * @brief Get own address.
+	 * Get own address.
 	 * 
-	 * @param this	calling object
 	 * @return		host information as host_t object
 	 */
 	host_t* (*get_my_host) (ike_cfg_t *this);
 
 	/**
-	 * @brief Get peers address.
+	 * Get peers address.
 	 * 
-	 * @param this	calling object
 	 * @return		host information as host_t object
 	 */
 	host_t* (*get_other_host) (ike_cfg_t *this);
 	
 	/**
-	 * @brief Adds a proposal to the list.
+	 * Adds a proposal to the list.
 	 * 
 	 * The first added proposal has the highest priority, the last
 	 * added the lowest.
 	 * 
-	 * @param this		calling object
 	 * @param proposal	proposal to add
 	 */
 	void (*add_proposal) (ike_cfg_t *this, proposal_t *proposal);
 	
 	/**
-	 * @brief Returns a list of all supported proposals.
+	 * Returns a list of all supported proposals.
 	 * 
 	 * Returned list and its proposals must be destroyed after use.
 	 * 
-	 * @param this		calling object
 	 * @return 			list containing all the proposals
 	 */
 	linked_list_t* (*get_proposals) (ike_cfg_t *this);
 	
 	/**
-	 * @brief Select a proposed from suggested proposals.
+	 * Select a proposed from suggested proposals.
 	 * 
 	 * Returned proposal must be destroyed after use.
 	 * 
-	 * @param this		calling object
 	 * @param proposals	list of proposals to select from
 	 * @return			selected proposal, or NULL if none matches.
 	 */
 	proposal_t *(*select_proposal) (ike_cfg_t *this, linked_list_t *proposals);
 	
 	/**
-	 * @brief Should we send a certificate request in IKE_SA_INIT?
+	 * Should we send a certificate request in IKE_SA_INIT?
 	 *
-	 * @param this		calling object
 	 * @return			certificate request sending policy
 	 */
 	bool (*send_certreq) (ike_cfg_t *this);
 	
 	/**
-	 * @brief Enforce UDP encapsulation by faking NATD notifies?
+	 * Enforce UDP encapsulation by faking NATD notifies?
 	 * 
-	 * @param this		calling object
 	 * @return			TRUE to enfoce UDP encapsulation
 	 */
 	bool (*force_encap) (ike_cfg_t *this);
 	
 	/**
-	 * @brief Get the DH group to use for IKE_SA setup.
+	 * Get the DH group to use for IKE_SA setup.
 	 * 
-	 * @param this		calling object
 	 * @return			dh group to use for initialization
 	 */
 	diffie_hellman_group_t (*get_dh_group)(ike_cfg_t *this);
 	
 	/**
-	 * @brief Get a new reference to this ike_cfg.
+	 * Get a new reference to this ike_cfg.
 	 *
 	 * Get a new reference to this ike_cfg by increasing
 	 * it's internal reference counter.
 	 * Do not call get_ref or any other function until you
 	 * already have a reference. Otherwise the object may get
 	 * destroyed while calling get_ref(),
-	 *
-	 * @param this		calling object
 	 */
 	void (*get_ref) (ike_cfg_t *this);
 	
 	/**
-	 * @brief Destroys a ike_cfg_t object.
+	 * Destroys a ike_cfg_t object.
 	 * 
 	 * Decrements the internal reference counter and
 	 * destroys the ike_cfg when it reaches zero.
-	 * 
-	 * @param this		calling object
 	 */
 	void (*destroy) (ike_cfg_t *this);
 };
 
 /**
- * @brief Creates a ike_cfg_t object.
+ * Creates a ike_cfg_t object.
  *
  * Supplied hosts become owned by ike_cfg, the name gets cloned.
  *
@@ -152,10 +135,8 @@ struct ike_cfg_t {
  * @param my_host		host_t representing local address
  * @param other_host	host_t representing remote address
  * @return 				ike_cfg_t object.
- * 
- * @ingroup config
  */
 ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap, 
 						  host_t *my_host, host_t *other_host);
 
-#endif /* IKE_CFG_H_ */
+#endif /* IKE_CFG_H_ @} */

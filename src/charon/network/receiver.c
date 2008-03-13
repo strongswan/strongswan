@@ -1,10 +1,3 @@
-/**
- * @file receiver.c
- *
- * @brief Implementation of receiver_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stdlib.h>
@@ -33,9 +28,8 @@
 #include <processing/jobs/job.h>
 #include <processing/jobs/process_message_job.h>
 #include <processing/jobs/callback_job.h>
+#include <crypto/hashers/hasher.h>
 
-/** length of the full cookie, including time (u_int32_t + SHA1()) */
-#define COOKIE_LENGTH 24
 /** lifetime of a cookie, in seconds */
 #define COOKIE_LIFETIME 10
 /** how many times to reuse the secret */
@@ -145,11 +139,12 @@ static chunk_t cookie_build(private_receiver_t *this, message_t *message,
 {
 	u_int64_t spi = message->get_initiator_spi(message);
 	host_t *ip = message->get_source(message);
-	chunk_t input, hash = chunk_alloca(this->hasher->get_hash_size(this->hasher));
+	chunk_t input, hash;
 	
 	/* COOKIE = t | sha1( IPi | SPIi | t | secret ) */
 	input = chunk_cata("cccc", ip->get_address(ip), chunk_from_thing(spi),
 					  chunk_from_thing(t), secret);
+	hash = chunk_alloca(this->hasher->get_hash_size(this->hasher));
 	this->hasher->get_hash(this->hasher, input, hash.ptr);
 	return chunk_cat("cc", chunk_from_thing(t), hash);
 }
@@ -167,7 +162,8 @@ static bool cookie_verify(private_receiver_t *this, message_t *message,
 	now = time(NULL);
 	t = *(u_int32_t*)cookie.ptr;
 
-	if (cookie.len != COOKIE_LENGTH || 
+	if (cookie.len != sizeof(u_int32_t) +
+			this->hasher->get_hash_size(this->hasher) || 
 		t < now - this->secret_offset - COOKIE_LIFETIME)
 	{
 		DBG2(DBG_NET, "received cookie lifetime expired, rejecting");
@@ -212,7 +208,8 @@ static bool cookie_required(private_receiver_t *this, message_t *message)
 		packet_t *packet = message->get_packet(message);
 		chunk_t data = packet->get_data(packet);
 		if (data.len < 
-			 IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH + COOKIE_LENGTH ||
+			 IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH +
+			 sizeof(u_int32_t) + this->hasher->get_hash_size(this->hasher) ||
 			*(data.ptr + 16) != NOTIFY || 
 			*(u_int16_t*)(data.ptr + IKE_HEADER_LENGTH + 6) != htons(COOKIE))
 		{
@@ -222,7 +219,7 @@ static bool cookie_required(private_receiver_t *this, message_t *message)
 		else
 		{
 			data.ptr += IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH;
-			data.len = COOKIE_LENGTH;
+			data.len = sizeof(u_int32_t) + this->hasher->get_hash_size(this->hasher);
 			if (!cookie_verify(this, message, data))
 			{
 				DBG2(DBG_NET, "found cookie, but content invalid");
@@ -351,8 +348,14 @@ receiver_t *receiver_create()
 
 	this->public.destroy = (void(*)(receiver_t*)) destroy;
 	
+	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
+	if (this->hasher == NULL)
+	{
+		DBG1(DBG_NET, "creating cookie hasher failed, no hashers supported");
+		free(this);
+		return NULL;
+	}
 	this->randomizer = randomizer_create();
-	this->hasher = hasher_create(HASH_SHA1);
 	this->secret_switch = now;
 	this->secret_offset = random() % now;
 	this->secret_used = 0;

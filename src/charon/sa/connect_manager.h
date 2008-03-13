@@ -1,10 +1,3 @@
-/**
- * @file connect_manager.h
- * 
- * @brief Interface of connect_manager_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup connect_manager connect_manager
+ * @{ @ingroup sa
  */
 
 #ifndef CONNECT_MANAGER_H_
@@ -31,21 +31,15 @@ typedef struct connect_manager_t connect_manager_t;
 #include <utils/identification.h>
 
 /**
- * @brief The connection manager is responsible for establishing a direct
+ * The connection manager is responsible for establishing a direct
  * connection with another peer.
- * 
- * @b Constructors:
- * - connect_manager_create()
- * 
- * @ingroup sa
  */
 struct connect_manager_t {
 	
 	/**
-	 * @brief Checks if a there is already a mediated connection registered
+	 * Checks if a there is already a mediated connection registered
 	 * between two peers.
 	 * 
-	 * @param this 				the manager object
 	 * @param id				my id
 	 * @param peer_id			the other peer's id
 	 * @param mediated_sa		the IKE_SA ID of the mediated connection
@@ -59,10 +53,9 @@ struct connect_manager_t {
 			ike_sa_id_t *mediated_sa, child_cfg_t *child);
 	
 	/**
-	 * @brief Checks if there are waiting connections with a specific peer.
+	 * Checks if there are waiting connections with a specific peer.
 	 * If so, reinitiate them.
 	 * 
-	 * @param this 				the manager object
 	 * @param id				my id
 	 * @param peer_id			the other peer's id
 	 */
@@ -70,9 +63,8 @@ struct connect_manager_t {
 			identification_t *id, identification_t *peer_id);
 	
 	/**
-	 * @brief Creates a checklist and sets the initiator's data.
+	 * Creates a checklist and sets the initiator's data.
 	 * 
-	 * @param this 				the manager object
 	 * @param initiator			ID of the initiator
 	 * @param responder			ID of the responder
 	 * @param session_id		the session ID provided by the initiator
@@ -80,18 +72,16 @@ struct connect_manager_t {
 	 * @param endpoints			the initiator's endpoints
 	 * @param is_initiator		TRUE, if the caller of this method is the initiator
 	 * 							FALSE, otherwise
-	 * @returns
-	 * 							SUCCESS
+	 * @returns					SUCCESS
 	 */
 	status_t (*set_initiator_data) (connect_manager_t *this,
 		identification_t *initiator, identification_t *responder,
 		chunk_t session_id, chunk_t key, linked_list_t *endpoints, bool is_initiator);
 	
 	/**
-	 * @brief Updates a checklist and sets the responder's data. The checklist's
+	 * Updates a checklist and sets the responder's data. The checklist's
 	 * state is advanced to WAITING which means that checks will be sent.
 	 * 
-	 * @param this 				the manager object
 	 * @param session_id		the session ID
 	 * @param chunk_t			the responder's key
 	 * @param endpoints			the responder's endpoints 
@@ -104,28 +94,23 @@ struct connect_manager_t {
 	
 	
 	/**
-	 * @brief Processes a connectivity check
+	 * Processes a connectivity check
 	 * 
-	 * @param this				the manager object
 	 * @param message			the received message
 	 */
 	void (*process_check) (connect_manager_t *this, message_t *message);
 	
 	/**
-	 * @brief Destroys the manager with all data.
-	 * 
-	 * @param this				 the manager object
+	 * Destroys the manager with all data.
 	 */
 	void (*destroy) (connect_manager_t *this);
 };
 
 /**
- * @brief Create a manager.
+ * Create a manager.
  * 
  * @returns 	connect_manager_t object
- * 
- * @ingroup sa
  */
 connect_manager_t *connect_manager_create(void);
 
-#endif /*CONNECT_MANAGER_H_*/
+#endif /*CONNECT_MANAGER_H_ @} */

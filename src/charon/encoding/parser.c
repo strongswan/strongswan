@@ -1,10 +1,3 @@
-/**
- * @file parser.c
- *
- * @brief Implementation of parser_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stdlib.h>
@@ -67,7 +62,7 @@ struct private_parser_t {
 	parser_t public;
 	
 	/**
-	 * @brief Parse a 4-Bit unsigned integer from the current parsing position.
+	 * Parse a 4-Bit unsigned integer from the current parsing position.
 	 * 
 	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
@@ -79,7 +74,7 @@ struct private_parser_t {
 	status_t (*parse_uint4)  (private_parser_t *this, int rule_number, u_int8_t *output_pos);
 	
 	/**
-	 * @brief Parse a 8-Bit unsigned integer from the current parsing position.
+	 * Parse a 8-Bit unsigned integer from the current parsing position.
 	 * 
 	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
@@ -91,7 +86,7 @@ struct private_parser_t {
 	status_t (*parse_uint8)  (private_parser_t *this, int rule_number, u_int8_t *output_pos);
 	
 	/**
-	 * @brief Parse a 15-Bit unsigned integer from the current parsing position.
+	 * Parse a 15-Bit unsigned integer from the current parsing position.
 	 * 
 	 * This is a special case used for ATTRIBUTE_TYPE.
 	 * Big-/Little-endian conversion is done here.
@@ -106,7 +101,7 @@ struct private_parser_t {
 	status_t (*parse_uint15) (private_parser_t *this, int rule_number, u_int16_t *output_pos);
 	
 	/**
-	 * @brief Parse a 16-Bit unsigned integer from the current parsing position.
+	 * Parse a 16-Bit unsigned integer from the current parsing position.
 	 * 
 	 * Big-/Little-endian conversion is done here.
 	 * 
@@ -120,7 +115,7 @@ struct private_parser_t {
 	status_t (*parse_uint16) (private_parser_t *this, int rule_number, u_int16_t *output_pos);
 	
 	/**
-	 * @brief Parse a 32-Bit unsigned integer from the current parsing position.
+	 * Parse a 32-Bit unsigned integer from the current parsing position.
 	 * 
 	 * Big-/Little-endian conversion is done here.
 	 * 
@@ -134,7 +129,7 @@ struct private_parser_t {
 	status_t (*parse_uint32) (private_parser_t *this, int rule_number, u_int32_t *output_pos);
 	
 	/**
-	 * @brief Parse a 64-Bit unsigned integer from the current parsing position.
+	 * Parse a 64-Bit unsigned integer from the current parsing position.
 	 * 
 	 * @todo add support for big-endian machines.
 	 * 
@@ -148,7 +143,7 @@ struct private_parser_t {
 	status_t (*parse_uint64) (private_parser_t *this, int rule_number, u_int64_t *output_pos);
 	
 	/**
-	 * @brief Parse a given amount of bytes and writes them to a specific location
+	 * Parse a given amount of bytes and writes them to a specific location
 	 * 
 	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
@@ -161,7 +156,7 @@ struct private_parser_t {
 	status_t (*parse_bytes) (private_parser_t *this, int rule_number, u_int8_t *output_pos,size_t bytes);
 	
 	/**
-	 * @brief Parse a single Bit from the current parsing position
+	 * Parse a single Bit from the current parsing position
 	 * 
 	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
@@ -173,7 +168,7 @@ struct private_parser_t {
 	status_t (*parse_bit)    (private_parser_t *this, int rule_number, bool *output_pos);
 	
 	/**
-	 * @brief Parse substructures in a list
+	 * Parse substructures in a list
 	 * 
 	 * This function calls the parser recursively to parse contained substructures
 	 * in a linked_list_t. The list must already be created. Payload defines
@@ -192,7 +187,7 @@ struct private_parser_t {
 	status_t (*parse_list)   (private_parser_t *this, int rule_number, linked_list_t **output_pos, payload_type_t payload_ype, size_t length);
 	
 	/**
-	 * @brief Parse data from current parsing position in a chunk.
+	 * Parse data from current parsing position in a chunk.
 	 * 
 	 * This function clones length number of bytes to output_pos, without 
 	 * modifiyng them. Space will be allocated and must be freed by caller.

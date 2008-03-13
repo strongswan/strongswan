@@ -1,11 +1,3 @@
-/**
- * @file fips.h
- * 
- * @brief Interface of the libstrongswan integrity test
- *
- * @ingroup fips
- */
-
 /*
  * Copyright (C) 2007 Bruno Krieg, Daniel Wydler
  * Hochschule fuer Technik Rapperswil
@@ -19,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+ 
+/**
+ * @defgroup fips fips
+ * @{ @ingroup fips
  */
 
 #ifndef FIPS_H_
@@ -27,21 +26,21 @@
 #include <library.h>
 
 /**
- * @brief compute HMAC signature over RODATA and TEXT sections of libstrongswan
+ * compute HMAC signature over RODATA and TEXT sections of libstrongswan
  *
- * @param  key		key used for HMAC signature in ASCII string format
- * @param  signature	HMAC signature in HEX string format
- * @return 		TRUE if HMAC signature computation was successful
+ * @param key		key used for HMAC signature in ASCII string format
+ * @param signature	HMAC signature in HEX string format
+ * @return 			TRUE if HMAC signature computation was successful
  */
 bool fips_compute_hmac_signature(const char *key, char *signature);
 
 /**
- * @brief verify HMAC signature over RODATA and TEXT sections of libstrongswan
+ * verify HMAC signature over RODATA and TEXT sections of libstrongswan
  *
- * @param  key		key used for HMAC signature in ASCII string format
- * @param  signature	signature value from fips_signature.h in HEX string format
- * @return		TRUE if signatures agree
+ * @param key		key used for HMAC signature in ASCII string format
+ * @param signature	signature value from fips_signature.h in HEX string format
+ * @return			TRUE if signatures agree
  */
 bool fips_verify_hmac_signature(const char *key, const char *signature);
 
-#endif /*FIPS_H_*/
+#endif /*FIPS_H_ @} */

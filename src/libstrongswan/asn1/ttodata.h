@@ -25,4 +25,4 @@
 err_t ttodata(const char *src, size_t srclen, int base, char *buf, size_t buflen, size_t *needed);
 
 
-#endif /* TTODATA_H_ */
+#endif /* TTODATA_H_ @} */

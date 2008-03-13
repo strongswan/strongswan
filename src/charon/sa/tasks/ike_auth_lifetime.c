@@ -1,10 +1,3 @@
-/**
- * @file ike_auth_lifetime.c
- *
- * @brief Implementation of the ike_auth_lifetime task.
- *
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "ike_auth_lifetime.h"

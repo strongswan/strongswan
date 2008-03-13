@@ -1,10 +1,3 @@
-/**
- * @file ike_auth.h
- * 
- * @brief Interface ike_auth_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_auth ike_auth
+ * @{ @ingroup tasks
  */
 
 #ifndef IKE_AUTH_H_
@@ -30,7 +30,7 @@ typedef struct ike_auth_t ike_auth_t;
 #include <sa/tasks/task.h>
 
 /**
- * @brief Task of type ike_auth, authenticates an IKE_SA using authenticators.
+ * Task of type ike_auth, authenticates an IKE_SA using authenticators.
  *
  * The ike_auth task authenticates the IKE_SA using the IKE_AUTH
  * exchange. It processes and build IDi and IDr payloads and also
@@ -38,11 +38,6 @@ typedef struct ike_auth_t ike_auth_t;
  * which do the actual authentication process. If the ike_auth task is used
  * with EAP authentication, it stays alive over multiple exchanges until
  * EAP has completed.
- *
- * @b Constructors:
- *  - ike_auth_create()
- * 
- * @ingroup tasks
  */
 struct ike_auth_t {
 
@@ -53,7 +48,7 @@ struct ike_auth_t {
 };
 
 /**
- * @brief Create a new task of type IKE_AUTHENTICATE.
+ * Create a new task of type IKE_AUTHENTICATE.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if thask is the initator of an exchange
@@ -61,4 +56,4 @@ struct ike_auth_t {
  */
 ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_AUTH_H_ */
+#endif /* IKE_AUTH_H_ @} */

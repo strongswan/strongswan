@@ -1,10 +1,3 @@
-/**
- * @file ike_reauth.h
- * 
- * @brief Interface ike_reauth_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_reauth ike_reauth
+ * @{ @ingroup tasks
  */
 
 #ifndef IKE_REAUTH_H_
@@ -30,12 +30,7 @@ typedef struct ike_reauth_t ike_reauth_t;
 #include <sa/tasks/task.h>
 
 /**
- * @brief Task of type ike_reauth, reestablishes an IKE_SA.
- *
- * @b Constructors:
- *  - ike_reauth_create()
- * 
- * @ingroup tasks
+ * Task of type ike_reauth, reestablishes an IKE_SA.
  */
 struct ike_reauth_t {
 
@@ -46,7 +41,7 @@ struct ike_reauth_t {
 };
 
 /**
- * @brief Create a new ike_reauth task.
+ * Create a new ike_reauth task.
  *
  * This task is initiator only.
  *
@@ -55,5 +50,4 @@ struct ike_reauth_t {
  */
 ike_reauth_t *ike_reauth_create(ike_sa_t *ike_sa);
 
-#endif /* IKE_REAUTH_H_ */
-
+#endif /* IKE_REAUTH_H_ @} */

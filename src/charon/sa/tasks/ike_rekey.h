@@ -1,10 +1,3 @@
-/**
- * @file ike_rekey.h
- * 
- * @brief Interface ike_rekey_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_rekey ike_rekey
+ * @{ @ingroup tasks
  */
 
 #ifndef IKE_REKEY_H_
@@ -30,12 +30,7 @@ typedef struct ike_rekey_t ike_rekey_t;
 #include <sa/tasks/task.h>
 
 /**
- * @brief Task of type IKE_REKEY, rekey an established IKE_SA.
- *
- * @b Constructors:
- *  - ike_rekey_create()
- * 
- * @ingroup tasks
+ * Task of type IKE_REKEY, rekey an established IKE_SA.
  */
 struct ike_rekey_t {
 
@@ -45,20 +40,19 @@ struct ike_rekey_t {
 	task_t task;
 	
 	/**
-	 * @brief Register a rekeying task which collides with this one.
+	 * Register a rekeying task which collides with this one.
 	 *
 	 * If two peers initiate rekeying at the same time, the collision must
 	 * be handled gracefully. The task manager is aware of what exchanges
 	 * are going on and notifies the outgoing task by passing the incoming.
 	 *
-	 * @param this		task initated by us
 	 * @param other		incoming task
 	 */
 	void (*collide)(ike_rekey_t* this, task_t *other);
 };
 
 /**
- * @brief Create a new IKE_REKEY task.
+ * Create a new IKE_REKEY task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE for initiator, FALSE for responder
@@ -66,4 +60,4 @@ struct ike_rekey_t {
  */
 ike_rekey_t *ike_rekey_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_REKEY_H_ */
+#endif /* IKE_REKEY_H_ @} */

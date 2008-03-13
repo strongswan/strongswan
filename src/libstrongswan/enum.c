@@ -1,10 +1,3 @@
-/**
- * @file library.c
- *
- * @brief enum value to string conversion functions.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stddef.h>
@@ -46,7 +41,7 @@ static char *enum_name(enum_name_t *e, int val)
 /**
  * output handler in printf() for enum names
  */
-static int print_enum(FILE *stream, const struct printf_info *info,
+static int print(FILE *stream, const struct printf_info *info,
 					  const void *const *args)
 {
 	enum_name_t *ed = *((enum_name_t**)(args[0]));
@@ -65,9 +60,25 @@ static int print_enum(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * register printf() handlers
+ * arginfo handler for printf() hook
  */
-static void __attribute__ ((constructor))print_register()
+static int arginfo(const struct printf_info *info, size_t n, int *argtypes)
 {
-	register_printf_function(PRINTF_ENUM, print_enum, arginfo_ptr_int);
+	if (n > 1)
+	{
+		argtypes[0] = PA_POINTER;
+		argtypes[1] = PA_INT;
+	}
+	return 2;
 }
+
+/**
+ * return printf hook functions
+ */
+printf_hook_functions_t enum_get_printf_hooks()
+{
+	printf_hook_functions_t hooks = {print, arginfo};
+	
+	return hooks;
+}
+

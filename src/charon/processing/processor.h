@@ -1,10 +1,3 @@
-/**
- * @file processor.h
- * 
- * @brief Interface of processor_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup processor processor
+ * @{ @ingroup processing
  */
 
 #ifndef PROCESSOR_H_
@@ -32,80 +32,65 @@ typedef struct processor_t processor_t;
 #include <processing/jobs/job.h>
 
 /**
- * @brief The processor uses threads to process queued jobs.
- *
- * @b Constructors:
- *  - processor_create()
- * 
- * @ingroup processing
+ * The processor uses threads to process queued jobs.
  */
 struct processor_t {
 	
 	/**
-	 * @brief Get the total number of threads used by the processor.
-	 *
-	 * @param this			calling object		
+	 * Get the total number of threads used by the processor.
+	 *	
 	 * @return				size of thread pool
 	 */
 	u_int (*get_total_threads) (processor_t *this);
 	
 	/**
-	 * @brief Get the number of threads currently waiting.
-	 *
-	 * @param this			calling object		
+	 * Get the number of threads currently waiting.
+	 *	
 	 * @return				number of idle threads
 	 */
 	u_int (*get_idle_threads) (processor_t *this);
 	
 	/**
-	 * @brief Get the number of queued jobs.
+	 * Get the number of queued jobs.
 	 *
-	 * @param this			calling object
 	 * @returns 			number of items in queue
 	 */
 	u_int (*get_job_load) (processor_t *this);
 
 	/**
-	 * @brief Adds a job to the queue.
+	 * Adds a job to the queue.
 	 *
 	 * This function is non blocking and adds a job_t to the queue.
 	 *
-	 * @param this		 	calling object
  	 * @param job 			job to add to the queue
 	 */
 	void (*queue_job) (processor_t *this, job_t *job);
 	
 	/**
-	 * @brief Set the number of threads to use in the processor.
+	 * Set the number of threads to use in the processor.
 	 *
 	 * If the number of threads is smaller than number of currently running
 	 * threads, thread count is decreased. Use 0 to disable the processor.
 	 * This call blocks if it decreases thread count until threads have
 	 * terminated, so make sure there are not too many blocking jobs.
 	 *
-	 * @param this			calling object
 	 * @param count			number of threads to allocate
 	 */
 	void (*set_threads)(processor_t *this, u_int count);
 	
 	/**
-	 * @brief Destroy a processor object.
-	 * 
-	 * @param processor	calling object
+	 * Destroy a processor object.
 	 */
 	void (*destroy) (processor_t *processor);
 };
 
 /**
- * @brief Create the thread pool without any threads.
+ * Create the thread pool without any threads.
  *
  * Use the set_threads method to start processing jobs.
  *
  * @return					processor_t object
- *
- * @ingroup processing
  */
 processor_t *processor_create();
 
-#endif /*PROCESSOR_H_*/
-
+#endif /*PROCESSOR_H_ @} */

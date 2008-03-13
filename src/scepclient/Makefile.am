@@ -23,11 +23,6 @@ scepclient_LDADD = asn1.o ca.o crl.o certs.o constants.o defs.o fetch.o id.o \
                    $(LIBFREESWANDIR)/libfreeswan.a $(LIBCRYPTODIR)/libcrypto.a \
                    -lgmp
 
-# This compile option activates dynamic URL fetching using libcurl
-if USE_LIBCURL
-  scepclient_LDADD += -lcurl
-endif
-
 # This compile option activates smartcard support
 if USE_SMARTCARD
   scepclient_LDADD += -ldl

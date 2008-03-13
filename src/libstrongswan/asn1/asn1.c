@@ -1,14 +1,6 @@
-/**
- * @file asn1.c
- *
- * @brief Simple ASN.1 parser
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Will
  * Copyright (C) 2000-2008 Andreas Steffen
- *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -21,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id$
+ * $Id$
  */
 
 #include <stdio.h>
@@ -831,20 +823,6 @@ chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
 	va_end(chunks);
 	
 	return construct;
-}
-
-/**
- * convert a MP integer into a DER coded ASN.1 object
- */
-chunk_t asn1_integer_from_mpz(const mpz_t value)
-{
-	size_t bits = mpz_sizeinbase(value, 2);  /* size in bits */
-	chunk_t n;
-
-	n.len = 1 + bits / 8;  /* size in bytes */	
-	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
-
-	return asn1_wrap(ASN1_INTEGER, "m", n);
 }
 
 /**

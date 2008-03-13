@@ -1,10 +1,3 @@
-/**
- * @file rsa_authenticator.c
- *
- * @brief Implementation of rsa_authenticator_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <string.h>
@@ -26,6 +21,7 @@
 #include "rsa_authenticator.h"
 
 #include <daemon.h>
+#include <credentials/auth_info.h>
 
 
 typedef struct private_rsa_authenticator_t private_rsa_authenticator_t;
@@ -58,11 +54,12 @@ extern chunk_t build_tbs_octets(chunk_t ike_sa_init, chunk_t nonce,
 static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
  					   chunk_t my_nonce, auth_payload_t *auth_payload)
 {
-	status_t status;
+	public_key_t *public;
 	chunk_t auth_data, octets;
 	identification_t *other_id;
-	ca_info_t *issuer;
 	prf_t *prf;
+	auth_info_t *auth;
+	status_t status = FAILED;
 	
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	
@@ -74,16 +71,27 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	prf = this->ike_sa->get_prf(this->ike_sa);
 	prf->set_key(prf, this->ike_sa->get_skp_verify(this->ike_sa));
 	octets = build_tbs_octets(ike_sa_init, my_nonce, other_id, prf);
-	status = charon->credentials->verify_signature(charon->credentials,
-								  octets, auth_data, other_id, &issuer);
-	chunk_free(&octets);
 	
-	if (status == SUCCESS)
+	auth = this->ike_sa->get_other_auth(this->ike_sa);
+	public = charon->credentials->get_public(charon->credentials, KEY_RSA,
+											 other_id, auth);
+	if (public)
 	{
-		this->ike_sa->set_other_ca(this->ike_sa, issuer);
-		DBG1(DBG_IKE, "authentication of '%D' with %N successful",
-					   other_id, auth_method_names, AUTH_RSA);
+		/* We are currently fixed to SHA1 hashes.
+		 * TODO: allow other hash algorithms and note it in "auth" */
+		if (public->verify(public, SIGN_RSA_EMSA_PKCS1_SHA1, octets, auth_data))
+		{
+			DBG1(DBG_IKE, "authentication of %D with %N successful",
+						   other_id, auth_method_names, AUTH_RSA);
+			status = SUCCESS;
+		}
+		public->destroy(public);
 	}
+	else
+	{
+		DBG1(DBG_IKE, "no trusted public key found for %D", other_id);
+	}
+	chunk_free(&octets);
 	return status;
 }
 
@@ -94,43 +102,47 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 					  chunk_t other_nonce, auth_payload_t **auth_payload)
 {
 	chunk_t octets, auth_data;
-	status_t status;
-	rsa_public_key_t *my_pubkey;
+	status_t status = FAILED;
+	private_key_t *private;
 	identification_t *my_id;
 	prf_t *prf;
+	auth_info_t *auth;
 
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
-	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
+	DBG1(DBG_IKE, "authentication of %D (myself) with %N",
 		 my_id, auth_method_names, AUTH_RSA);
-	DBG2(DBG_IKE, "looking for RSA public key belonging to '%D'...", my_id);
-
-	my_pubkey = charon->credentials->get_rsa_public_key(charon->credentials, my_id);
-	if (my_pubkey == NULL)
+	
+	auth = this->ike_sa->get_my_auth(this->ike_sa);
+	private = charon->credentials->get_private(charon->credentials, KEY_RSA,
+											   my_id, auth);
+	if (private == NULL)
 	{
-		DBG1(DBG_IKE, "no RSA public key found for '%D'", my_id);
+		DBG1(DBG_IKE, "no RSA private key found for %D", my_id);
 		return NOT_FOUND;
 	}
-	DBG2(DBG_IKE, "  matching RSA public key found");
-
 	prf = this->ike_sa->get_prf(this->ike_sa);
 	prf->set_key(prf, this->ike_sa->get_skp_build(this->ike_sa));
 	octets = build_tbs_octets(ike_sa_init, other_nonce, my_id, prf);
-	status = charon->credentials->rsa_signature(charon->credentials,
-										my_pubkey, HASH_SHA1, octets, &auth_data);
-	chunk_free(&octets);
-
-	if (status != SUCCESS)
+	/* we currently use always SHA1 for signatures, 
+	 * TODO: support other hashes depending on configuration/auth */
+	if (private->sign(private, SIGN_RSA_EMSA_PKCS1_SHA1, octets, &auth_data))
 	{
-		DBG1(DBG_IKE, "building RSA signature with SHA-1 hash failed");
-		return status;
+		auth_payload_t *payload = auth_payload_create();
+		payload->set_auth_method(payload, AUTH_RSA);
+		payload->set_data(payload, auth_data);
+		*auth_payload = payload;
+		chunk_free(&auth_data);
+		status = SUCCESS;
+		DBG2(DBG_IKE, "successfully signed with RSA private key");
 	}
-	DBG2(DBG_IKE, "successfully signed with RSA private key");
+	else
+	{
+		DBG1(DBG_IKE, "building RSA signature failed");
+	}
+	chunk_free(&octets);
+	private->destroy(private);
 	
-	*auth_payload = auth_payload_create();
-	(*auth_payload)->set_auth_method(*auth_payload, AUTH_RSA);
-	(*auth_payload)->set_data(*auth_payload, auth_data);
-	chunk_free(&auth_data);
-	return SUCCESS;
+	return status;
 }
 
 /**

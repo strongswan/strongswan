@@ -1,10 +1,3 @@
-/**
- * @file ike_config.h
- * 
- * @brief Interface ike_config_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_config ike_config
+ * @{ @ingroup tasks
  */
 
 #ifndef IKE_CONFIG_H_
@@ -30,13 +30,8 @@ typedef struct ike_config_t ike_config_t;
 #include <sa/tasks/task.h>
 
 /**
- * @brief Task of type IKE_CONFIG, sets up a virtual IP and other
+ * Task of type IKE_CONFIG, sets up a virtual IP and other
  * configurations for an IKE_SA.
- *
- * @b Constructors:
- *  - ike_config_create()
- * 
- * @ingroup tasks
  */
 struct ike_config_t {
 
@@ -47,7 +42,7 @@ struct ike_config_t {
 };
 
 /**
- * @brief Create a new ike_config task.
+ * Create a new ike_config task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE for initiator
@@ -55,4 +50,4 @@ struct ike_config_t {
  */
 ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_CONFIG_H_ */
+#endif /* IKE_CONFIG_H_ @} */

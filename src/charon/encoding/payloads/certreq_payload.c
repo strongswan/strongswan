@@ -1,10 +1,3 @@
-/**
- * @file certreq_payload.c
- * 
- * @brief Implementation of certreq_payload_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,14 +12,15 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stddef.h>
-#include <string.h>
 
 #include <daemon.h>
 #include <crypto/hashers/hasher.h>
-#include <crypto/ca.h>
+#include <encoding/payloads/cert_payload.h>
 
 #include "certreq_payload.h"
 
@@ -61,12 +55,12 @@ struct private_certreq_payload_t {
 	/**
 	 * Encoding of the CERT Data.
 	 */
-	u_int8_t cert_encoding;
+	u_int8_t encoding;
 	
 	/**
 	 * The contained certreq data value.
 	 */
-	chunk_t certreq_data;
+	chunk_t data;
 };
 
 /**
@@ -90,11 +84,11 @@ encoding_rule_t certreq_payload_encodings[] = {
 	{ RESERVED_BIT,	0 														},
 	{ RESERVED_BIT,	0 														},
 	/* Length of the whole payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_certreq_payload_t, payload_length)},
+	{ PAYLOAD_LENGTH,	offsetof(private_certreq_payload_t, payload_length)	},
 	/* 1 Byte CERTREQ type*/
-	{ U_INT_8,			offsetof(private_certreq_payload_t, cert_encoding)},
+	{ U_INT_8,			offsetof(private_certreq_payload_t, encoding)		},
 	/* some certreq data bytes, length is defined in PAYLOAD_LENGTH */
-	{ CERTREQ_DATA,			offsetof(private_certreq_payload_t, certreq_data)}
+	{ CERTREQ_DATA,		offsetof(private_certreq_payload_t, data)			}
 };
 
 /*
@@ -115,11 +109,15 @@ encoding_rule_t certreq_payload_encodings[] = {
  */
 static status_t verify(private_certreq_payload_t *this)
 {
-	if ((this->cert_encoding == 0) ||
-		((this->cert_encoding >= CERT_ROOF) && (this->cert_encoding <= 200)))
+	if (this->encoding == ENC_X509_SIGNATURE)
 	{
-		/* reserved IDs */
-		return FAILED;
+		if (this->data.len < HASH_SIZE_SHA1 ||
+			this->data.len % HASH_SIZE_SHA1)
+		{
+			DBG1(DBG_ENC, "invalid X509 hash length (%d) in certreq",
+				 this->data.len);
+			return FAILED;
+		}
 	}
 	return SUCCESS;
 }
@@ -164,58 +162,78 @@ static size_t get_length(private_certreq_payload_t *this)
 {
 	return this->payload_length;
 }
-
+	
 /**
- * Implementation of certreq_payload_t.set_cert_encoding.
+ * Implementation of certreq_payload_t.add_keyid.
  */
-static void set_cert_encoding (private_certreq_payload_t *this, cert_encoding_t encoding)
+static void add_keyid(private_certreq_payload_t *this, chunk_t keyid)
 {
-	this->cert_encoding = encoding;
+	this->data = chunk_cat("mc", this->data, keyid);
+	this->payload_length += keyid.len;
 }
 
-/**
- * Implementation of certreq_payload_t.get_cert_encoding.
- */
-static cert_encoding_t get_cert_encoding (private_certreq_payload_t *this)
-{
-	return (this->cert_encoding);
-}
+typedef struct keyid_enumerator_t keyid_enumerator_t;
 
 /**
- * Implementation of certreq_payload_t.set_data.
+ * enumerator to enumerate keyids
  */
-static void set_data (private_certreq_payload_t *this, chunk_t data)
+struct keyid_enumerator_t  {
+	enumerator_t public;
+	chunk_t full;
+	u_char *pos;
+};
+
+/**
+ * enumerate function for keyid_enumerator
+ */
+static bool keyid_enumerate(keyid_enumerator_t *this, chunk_t *chunk)
 {
-	if (this->certreq_data.ptr != NULL)
+	if (this->pos == NULL)
 	{
-		chunk_free(&(this->certreq_data));
+		this->pos = this->full.ptr;
 	}
-	this->certreq_data.ptr = clalloc(data.ptr,data.len);
-	this->certreq_data.len = data.len;
-	this->payload_length = CERTREQ_PAYLOAD_HEADER_LENGTH + this->certreq_data.len;
-}
-
-/**
- * Implementation of certreq_payload_t.get_data.
- */
-static chunk_t get_data (private_certreq_payload_t *this)
-{
-	return (this->certreq_data);
-}
-
-/**
- * Implementation of certreq_payload_t.get_data_clone.
- */
-static chunk_t get_data_clone (private_certreq_payload_t *this)
-{
-	chunk_t cloned_data;
-	if (this->certreq_data.ptr == NULL)
+	else
 	{
-		return (this->certreq_data);
+		this->pos += HASH_SIZE_SHA1;
+		if (this->pos > (this->full.ptr + this->full.len - HASH_SIZE_SHA1))
+		{
+			this->pos = NULL;
+		}
 	}
-	cloned_data.ptr = clalloc(this->certreq_data.ptr,this->certreq_data.len);
-	cloned_data.len = this->certreq_data.len;
-	return cloned_data;
+	if (this->pos)
+	{
+		chunk->ptr = this->pos;
+		chunk->len = HASH_SIZE_SHA1;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Implementation of certreq_payload_t.create_keyid_enumerator.
+ */
+static enumerator_t* create_keyid_enumerator(private_certreq_payload_t *this)
+{
+	keyid_enumerator_t *enumerator = malloc_thing(keyid_enumerator_t);
+	enumerator->public.enumerate = (void*)keyid_enumerate;
+	enumerator->public.destroy = (void*)free;
+	enumerator->full = this->data;
+	enumerator->pos = NULL;
+	return &enumerator->public;
+}
+
+/**
+ * Implementation of certreq_payload_t.get_cert_type.
+ */
+static certificate_type_t get_cert_type(private_certreq_payload_t *this)
+{
+	switch (this->encoding)
+	{
+		case ENC_X509_SIGNATURE:
+			return CERT_X509;
+		default:
+			return CERT_ANY;
+	}
 }
 
 /**
@@ -223,11 +241,7 @@ static chunk_t get_data_clone (private_certreq_payload_t *this)
  */
 static void destroy(private_certreq_payload_t *this)
 {
-	if (this->certreq_data.ptr != NULL)
-	{
-		chunk_free(&(this->certreq_data));
-	}
-	
+	chunk_free(&this->data);
 	free(this);	
 }
 
@@ -249,87 +263,38 @@ certreq_payload_t *certreq_payload_create()
 	
 	/* public functions */
 	this->public.destroy = (void (*) (certreq_payload_t*)) destroy;
-	this->public.set_cert_encoding = (void (*) (certreq_payload_t*,cert_encoding_t))set_cert_encoding;
-	this->public.get_cert_encoding = (cert_encoding_t (*) (certreq_payload_t*))get_cert_encoding;
-	this->public.set_data = (void (*) (certreq_payload_t*,chunk_t))set_data;
-	this->public.get_data_clone = (chunk_t (*) (certreq_payload_t*))get_data_clone;
-	this->public.get_data = (chunk_t (*) (certreq_payload_t*))get_data;
+	this->public.create_keyid_enumerator = (enumerator_t*(*)(certreq_payload_t*))create_keyid_enumerator;
+		this->public.get_cert_type = (certificate_type_t(*)(certreq_payload_t*))get_cert_type;
+	this->public.add_keyid = (void(*)(certreq_payload_t*, chunk_t keyid))add_keyid;
 	
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
-	this->payload_length =CERTREQ_PAYLOAD_HEADER_LENGTH;
-	this->certreq_data = chunk_empty;
+	this->payload_length = CERTREQ_PAYLOAD_HEADER_LENGTH;
+	this->data = chunk_empty;
+	this->encoding = 0;
 
-	return (&(this->public));
+	return &this->public;
 }
 
 /*
  * Described in header
  */
-certreq_payload_t *certreq_payload_create_from_cacert(identification_t *id)
+certreq_payload_t *certreq_payload_create_type(certificate_type_t type)
 {
-	x509_t *cacert;
-	rsa_public_key_t *pubkey;
-	chunk_t keyid;
-	certreq_payload_t *this;
+	private_certreq_payload_t *this = (private_certreq_payload_t*)certreq_payload_create();
 	
-	cacert = charon->credentials->get_auth_certificate(charon->credentials, AUTH_CA, id);
-	if (cacert == NULL)
+	switch (type)
 	{
-		/* no such CA cert */
-		return NULL;
+		case CERT_X509:
+			this->encoding = ENC_X509_SIGNATURE;
+			break;
+		default:
+			DBG1(DBG_ENC, "certificate type %N not supported in requests",
+				 certificate_type_names, type);
+			free(this);
+			return NULL;
 	}
-
-	this = certreq_payload_create();
-	pubkey = cacert->get_public_key(cacert);
-	keyid = pubkey->get_keyid(pubkey);
-
-	DBG2(DBG_IKE, "requesting certificate issued by '%D'", id);
-	DBG2(DBG_IKE, "  with keyid %#B", &keyid);
-
-	this->set_cert_encoding(this, CERT_X509_SIGNATURE);
-	this->set_data(this, keyid);
-	return this;
+	return &this->public;
 }
 
-/*
- * Described in header
- */
-certreq_payload_t *certreq_payload_create_from_cacerts(void)
-{
-	certreq_payload_t *this;
-	chunk_t keyids;
-	u_char *pos;
-	ca_info_t *cainfo;
-
-	iterator_t *iterator = charon->credentials->create_cainfo_iterator(charon->credentials);
-	int count = iterator->get_count(iterator);
-
-	if (count == 0)
-	{
-		iterator->destroy(iterator);
-		return NULL;
-	}
-
-	this = certreq_payload_create();
-	keyids = chunk_alloc(count * HASH_SIZE_SHA1);
-	pos = keyids.ptr;
-
-	while (iterator->iterate(iterator, (void**)&cainfo))
-	{
-		x509_t *cacert = cainfo->get_certificate(cainfo);
-		chunk_t keyid = cacert->get_keyid(cacert);
-
-		DBG2(DBG_IKE, "requesting certificate issued by '%D'", cacert->get_subject(cacert));
-		DBG2(DBG_IKE, "  with keyid %#B", &keyid);
-		memcpy(pos, keyid.ptr, keyid.len);
-		pos += HASH_SIZE_SHA1;
-	}
-	iterator->destroy(iterator);
-
-	this->set_cert_encoding(this, CERT_X509_SIGNATURE);
-	this->set_data(this, keyids);
-	free(keyids.ptr);
-	return this;
-}

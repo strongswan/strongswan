@@ -1,10 +1,3 @@
-/**
- * @file ike_natd.c
- *
- * @brief Implementation of the ike_natd task.
- *
- */
-
 /*
  * Copyright (C) 2006-2007 Martin Willi
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "ike_natd.h"
@@ -308,6 +303,12 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 	iterator_t *iterator;
 	host_t *host;
 	
+	if (this->hasher == NULL)
+	{
+		DBG1(DBG_IKE, "unable to build NATD payloads, SHA1 not supported");
+		return NEED_MORE;
+	}
+	
 	/* destination is always set */
 	host = message->get_destination(message);
 	notify = build_natd_payload(this, NAT_DETECTION_DESTINATION_IP, host);
@@ -368,6 +369,12 @@ static status_t build_r(private_ike_natd_t *this, message_t *message)
 
 	if (this->src_seen && this->dst_seen)
 	{
+		if (this->hasher == NULL)
+		{
+			DBG1(DBG_IKE, "unable to build NATD payloads, SHA1 not supported");
+			return SUCCESS;
+		}
+	
 		/* initiator seems to support NAT detection, add response */
 		me = message->get_source(message);
 		notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, me);
@@ -415,7 +422,7 @@ static void migrate(private_ike_natd_t *this, ike_sa_t *ike_sa)
  */
 static void destroy(private_ike_natd_t *this)
 {
-	this->hasher->destroy(this->hasher);
+	DESTROY_IF(this->hasher);
 	free(this);
 }
 
@@ -443,7 +450,7 @@ ike_natd_t *ike_natd_create(ike_sa_t *ike_sa, bool initiator)
 	
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
-	this->hasher = hasher_create(HASH_SHA1);
+	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	this->src_seen = FALSE;
 	this->dst_seen = FALSE;
 	this->src_matched = FALSE;

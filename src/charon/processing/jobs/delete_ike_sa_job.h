@@ -1,10 +1,3 @@
-/**
- * @file delete_ike_sa_job.h
- * 
- * @brief Interface of delete_ike_sa_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup delete_child_sa_job delete_child_sa_job
+ * @{ @ingroup jobs
  */
  
 #ifndef DELETE_IKE_SA_JOB_H_
@@ -32,16 +32,11 @@ typedef struct delete_ike_sa_job_t delete_ike_sa_job_t;
 
 
 /**
- * @brief Class representing an DELETE_IKE_SA Job.
+ * Class representing an DELETE_IKE_SA Job.
  *
  * This job is responsible for deleting established or half open IKE_SAs. 
  * A half open IKE_SA is every IKE_SA which hasn't reache the SA_ESTABLISHED
  * state.
- *
- * @b Constructors:
- *  - delete_ike_sa_job_create()
- *
- * @ingroup jobs
  */
 struct delete_ike_sa_job_t {
 	
@@ -52,15 +47,13 @@ struct delete_ike_sa_job_t {
 };
 
 /**
- * @brief Creates a job of type DELETE_IKE_SA.
+ * Creates a job of type DELETE_IKE_SA.
  * 
  * @param ike_sa_id				id of the IKE_SA to delete
  * @param delete_if_established	should the IKE_SA be deleted if it is established?
  * @return						created delete_ike_sa_job_t object
- * 
- * @ingroup jobs
  */
 delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id,
 											  bool delete_if_established);
 
-#endif /* DELETE_IKE_SA_JOB_H_ */
+#endif /* DELETE_IKE_SA_JOB_H_ @} */

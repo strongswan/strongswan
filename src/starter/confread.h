@@ -185,7 +185,6 @@ struct starter_config {
 		bool	 nat_traversal;
 		u_int	 keep_alive;
 		char	 *virtual_private;
-		char	 *eapdir;
 		char	 *pkcs11module;
 		char	 *pkcs11initargs;
 		bool	 pkcs11keepstate;

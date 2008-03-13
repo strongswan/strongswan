@@ -1,10 +1,3 @@
-/**
- * @file hasher.c
- * 
- * @brief Generic constructor for hasher_t.
- * 
- */
-
 /*
  * Copyright (C) 2005 Jan Hutter
  * Copyright (C) 2005-2006 Martin Willi
@@ -21,23 +14,20 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id$
+ * $Id$
  */
-
 
 #include "hasher.h"
 
 #include <asn1/oid.h>
-#include <crypto/hashers/sha1_hasher.h>
-#include <crypto/hashers/sha2_hasher.h>
-#include <crypto/hashers/md5_hasher.h>
-
 
 ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
 	"HASH_UNKNOWN",
+	"HASH_PREFERRED",
 	"HASH_MD2",
 	"HASH_MD5",
 	"HASH_SHA1",
+	"HASH_SHA1_NOFINAL",
 	"HASH_SHA256",
 	"HASH_SHA384",
 	"HASH_SHA512"
@@ -46,66 +36,31 @@ ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
 /*
  * Described in header.
  */
-hasher_t *hasher_create(hash_algorithm_t hash_algorithm)
-{
-	switch (hash_algorithm)
-	{
-		case HASH_SHA1:
-		{
-			return (hasher_t*)sha1_hasher_create();
-		}
-		case HASH_SHA256:
-		case HASH_SHA384:
-		case HASH_SHA512:
-		{
-			return (hasher_t*)sha2_hasher_create(hash_algorithm);
-		}
-		case HASH_MD5:
-		{
-			return (hasher_t*)md5_hasher_create();
-		}
-		default:
-			return NULL;
-	}
-}
-
-/*
- * Described in header.
- */
 hash_algorithm_t hasher_algorithm_from_oid(int oid)
 {
-	hash_algorithm_t algorithm;
-
 	switch (oid)
 	{
 		case OID_MD2:
 		case OID_MD2_WITH_RSA:
-			algorithm = HASH_MD2;
-			break;
+			return HASH_MD2;
 		case OID_MD5:
 		case OID_MD5_WITH_RSA:
-			algorithm = HASH_MD5;
-			break;
+			return HASH_MD5;
 		case OID_SHA1:
 		case OID_SHA1_WITH_RSA:
-			algorithm = HASH_SHA1;
-			break;
+			return HASH_SHA1;
 		case OID_SHA256:
 		case OID_SHA256_WITH_RSA:
-			algorithm = HASH_SHA256;
-			break;
+			return HASH_SHA256;
 		case OID_SHA384:
 		case OID_SHA384_WITH_RSA:
-			algorithm = HASH_SHA384;
-			break;
+			return HASH_SHA384;
 		case OID_SHA512:
 		case OID_SHA512_WITH_RSA:
-			algorithm = HASH_SHA512;
-			break;
+			return HASH_SHA512;
 		default:
-			algorithm = HASH_UNKNOWN;
+			return HASH_UNKNOWN;
 	}
-	return algorithm;
 }
 
 /*

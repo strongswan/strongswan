@@ -1,10 +1,3 @@
-/**
- * @file ike_mobike.h
- * 
- * @brief Interface ike_mobike_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_mobike ike_mobike
+ * @{ @ingroup tasks
  */
 
 #ifndef IKE_MOBIKE_H_
@@ -31,7 +31,7 @@ typedef struct ike_mobike_t ike_mobike_t;
 #include <network/packet.h>
 
 /**
- * @brief Task of type ike_mobike, detects and handles MOBIKE extension.
+ * Task of type ike_mobike, detects and handles MOBIKE extension.
  *
  * The MOBIKE extension is defined in RFC4555. It allows to update IKE
  * and IPsec tunnel addresses.
@@ -39,11 +39,6 @@ typedef struct ike_mobike_t ike_mobike_t;
  * support, allows the exchange of ADDITIONAL_*_ADDRESS to exchange additional
  * endpoints and handles the UPDATE_SA_ADDRESS notify to finally update 
  * endpoints.
- *
- * @b Constructors:
- *  - ike_mobike_create()
- * 
- * @ingroup tasks
  */
 struct ike_mobike_t {
 
@@ -53,36 +48,33 @@ struct ike_mobike_t {
 	task_t task;
 	
 	/**
-	 * @brief Use the task to roam to other addresses.
+	 * Use the task to roam to other addresses.
 	 *
-	 * @param this			calling object
 	 * @param address		TRUE to include address list update
 	 */
 	void (*roam)(ike_mobike_t *this, bool address);
 	
 	/**
-	 * @brief Transmision hook, called by task manager.
+	 * Transmision hook, called by task manager.
 	 *
 	 * The task manager calls this hook whenever it transmits a packet. It 
 	 * allows the mobike task to send the packet on multiple paths to do path
 	 * probing.
 	 *
-	 * @param this			calling object
 	 * @param packet		the packet to transmit
 	 */
 	void (*transmit)(ike_mobike_t *this, packet_t *packet);
 	
 	/**
-	 * @brief Check if this task is probing for routability.
+	 * Check if this task is probing for routability.
 	 *
-	 * @param this			calling object
 	 * @return				TRUE if task is probing
 	 */
 	bool (*is_probing)(ike_mobike_t *this);	
 };
 
 /**
- * @brief Create a new ike_mobike task.
+ * Create a new ike_mobike task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if taks is initiated by us
@@ -90,5 +82,4 @@ struct ike_mobike_t {
  */
 ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_MOBIKE_H_ */
-
+#endif /* IKE_MOBIKE_H_ @} */

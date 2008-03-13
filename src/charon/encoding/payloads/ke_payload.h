@@ -1,10 +1,3 @@
-/**
- * @file ke_payload.h
- * 
- * @brief Interface of ke_payload_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ke_payload ke_payload
+ * @{ @ingroup payloads
  */
 
 #ifndef KE_PAYLOAD_H_
@@ -34,20 +34,13 @@ typedef struct ke_payload_t ke_payload_t;
 
 /**
  * KE payload length in bytes without any key exchange data.
- * 
- * @ingroup payloads
  */
 #define KE_PAYLOAD_HEADER_LENGTH 8
 
 /**
- * @brief Class representing an IKEv2-KE Payload.
+ * Class representing an IKEv2-KE Payload.
  *
  * The KE Payload format is described in RFC section 3.4.
- *
- * @b Constructors:
- * - ke_payload_create()
- *
- * @ingroup payloads
  */
 struct ke_payload_t {
 	/**
@@ -56,66 +49,58 @@ struct ke_payload_t {
 	payload_t payload_interface;
 	
 	/**
-	 * @brief Returns the currently set key exchange data of this KE payload.
+	 * Returns the currently set key exchange data of this KE payload.
 	 * 	
 	 * @warning Returned data are not copied.
 	 * 
-	 * @param this 	calling ke_payload_t object
 	 * @return 		chunk_t pointing to the value
 	 */
 	chunk_t (*get_key_exchange_data) (ke_payload_t *this);
 	
 	/**
-	 * @brief Sets the key exchange data of this KE payload.
+	 * Sets the key exchange data of this KE payload.
 	 * 	
-	 * @warning Value is getting copied.
+	 * Value is getting copied.
 	 * 
-	 * @param this 				calling ke_payload_t object
-	 * @param key_exchange_data 	chunk_t pointing to the value to set
+	 * @param key_exchange_data chunk_t pointing to the value to set
 	 */
 	void (*set_key_exchange_data) (ke_payload_t *this, chunk_t key_exchange_data);
 
 	/**
-	 * @brief Gets the Diffie-Hellman Group Number of this KE payload.
+	 * Gets the Diffie-Hellman Group Number of this KE payload.
 	 * 	
-	 * @param this 		calling ke_payload_t object
-	 * @return 			DH Group Number of this payload
+	 * @return 					DH Group Number of this payload
 	 */
 	diffie_hellman_group_t (*get_dh_group_number) (ke_payload_t *this);
 
 	/**
-	 * @brief Sets the Diffie-Hellman Group Number of this KE payload.
+	 * Sets the Diffie-Hellman Group Number of this KE payload.
 	 * 	
-	 * @param this 				calling ke_payload_t object
 	 * @param dh_group_number	DH Group to set
 	 */
-	void (*set_dh_group_number) (ke_payload_t *this, diffie_hellman_group_t dh_group_number);
+	void (*set_dh_group_number) (ke_payload_t *this, 
+								 diffie_hellman_group_t dh_group_number);
 
 	/**
-	 * @brief Destroys an ke_payload_t object.
-	 *
-	 * @param this 	ke_payload_t object to destroy
+	 * Destroys an ke_payload_t object.
 	 */
 	void (*destroy) (ke_payload_t *this);
 };
 
 /**
- * @brief Creates an empty ke_payload_t object
+ * Creates an empty ke_payload_t object
  * 
  * @return ke_payload_t object
- * 
- * @ingroup payloads
  */
 ke_payload_t *ke_payload_create(void);
 
 /**
- * @brief Creates a ke_payload_t from a diffie_hellman_t
+ * Creates a ke_payload_t from a diffie_hellman_t
  * 
  * @param diffie_hellman	diffie hellman object containing group and key
  * @return 					ke_payload_t object
- * 
- * @ingroup payloads
  */
-ke_payload_t *ke_payload_create_from_diffie_hellman(diffie_hellman_t *diffie_hellman);
+ke_payload_t *ke_payload_create_from_diffie_hellman(
+											diffie_hellman_t *diffie_hellman);
 
-#endif /* KE_PAYLOAD_H_ */
+#endif /* KE_PAYLOAD_H_ @} */

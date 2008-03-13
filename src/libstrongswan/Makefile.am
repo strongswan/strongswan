@@ -9,43 +9,37 @@ else
 endif
 
 libstrongswan_la_SOURCES += \
-credential_store.h \
 library.c library.h \
 chunk.c chunk.h \
 debug.c debug.h \
 enum.c enum.h \
+settings.h settings.c \
 printf_hook.c printf_hook.h \
 asn1/asn1.c asn1/asn1.h \
 asn1/oid.c asn1/oid.h \
 asn1/pem.c asn1/pem.h \
 asn1/ttodata.c asn1/ttodata.h \
-crypto/ac.c crypto/ac.h \
-crypto/ca.c crypto/ca.h \
-crypto/certinfo.c crypto/certinfo.h \
-crypto/crl.c crypto/crl.h \
 crypto/crypters/crypter.c crypto/crypters/crypter.h \
-crypto/crypters/aes_cbc_crypter.c crypto/crypters/aes_cbc_crypter.h \
-crypto/crypters/des_crypter.c crypto/crypters/des_crypter.h \
-crypto/diffie_hellman.c crypto/diffie_hellman.h \
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
-crypto/hashers/sha1_hasher.c crypto/hashers/sha1_hasher.h \
-crypto/hashers/sha2_hasher.c crypto/hashers/sha2_hasher.h \
-crypto/hashers/md5_hasher.c  crypto/hashers/md5_hasher.h \
-crypto/hmac.c crypto/hmac.h \
-crypto/ietf_attr_list.c crypto/ietf_attr_list.h \
-crypto/ocsp.c crypto/ocsp.h \
-crypto/pkcs7.c crypto/pkcs7.h \
 crypto/pkcs9.c crypto/pkcs9.h \
-crypto/prfs/fips_prf.c crypto/prfs/fips_prf.h \
-crypto/prfs/hmac_prf.c crypto/prfs/hmac_prf.h \
 crypto/prfs/prf.c crypto/prfs/prf.h \
 crypto/prf_plus.h crypto/prf_plus.c \
-crypto/rsa/rsa_private_key.c crypto/rsa/rsa_private_key.h \
-crypto/rsa/rsa_public_key.h  crypto/rsa/rsa_public_key.c \
-crypto/signers/hmac_signer.c crypto/signers/hmac_signer.h \
 crypto/signers/signer.c crypto/signers/signer.h \
-crypto/x509.c crypto/x509.h \
-utils/fetcher.c utils/fetcher.h \
+crypto/diffie_hellman.c crypto/diffie_hellman.h \
+crypto/crypto_factory.c crypto/crypto_factory.h \
+credentials/credential_factory.c credentials/credential_factory.h \
+credentials/builder.c credentials/builder.h \
+credentials/keys/private_key.c credentials/keys/private_key.h \
+credentials/keys/public_key.c credentials/keys/public_key.h \
+credentials/keys/shared_key.c credentials/keys/shared_key.h \
+credentials/certificates/certificate.c credentials/certificates/certificate.h \
+credentials/certificates/x509.h credentials/certificates/x509.c \
+credentials/certificates/crl.h credentials/certificates/crl.c \
+credentials/certificates/ocsp_request.h credentials/certificates/ocsp_request.c \
+credentials/certificates/ocsp_response.h credentials/certificates/ocsp_response.c \
+fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
+database/database.h database/database_factory.h database/database_factory.c \
+utils.h utils.c \
 utils/host.c utils/host.h \
 utils/identification.c utils/identification.h \
 utils/iterator.h \
@@ -54,28 +48,22 @@ utils/lexparser.c utils/lexparser.h \
 utils/linked_list.c utils/linked_list.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
-utils/randomizer.c utils/randomizer.h
+utils/randomizer.c utils/randomizer.h \
+utils/mutex.c utils/mutex.h \
+plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
 if USE_INTEGRITY_TEST
   libstrongswan_la_SOURCES += \
   fips/fips_canister_end.c
 endif
 
-libstrongswan_la_LIBADD = -lgmp -lpthread
+libstrongswan_la_LIBADD = -lpthread -ldl
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
+AM_CFLAGS =
 
 if USE_LEAK_DETECTIVE
-  libstrongswan_la_LIBADD += -ldl
-  AM_CFLAGS = -DLEAK_DETECTIVE
-endif
-
-if USE_LIBCURL
-  libstrongswan_la_LIBADD += -lcurl
-endif
-
-if USE_LIBLDAP
-  libstrongswan_la_LIBADD += -lldap -llber
+  AM_CFLAGS += -DLEAK_DETECTIVE
 endif
 
 EXTRA_DIST = asn1/oid.txt asn1/oid.pl
@@ -87,6 +75,65 @@ asn1/oid.c :	asn1/oid.txt asn1/oid.pl
 
 asn1/oid.h :	asn1/oid.txt asn1/oid.pl
 		cd asn1 && $(PERL) oid.pl
+
+
+# build plugins with their own Makefile
+#######################################
+
+SUBDIRS = 
+
+if USE_AES
+  SUBDIRS += plugins/aes
+endif
+
+if USE_DES
+  SUBDIRS += plugins/des
+endif
+
+if USE_MD5
+  SUBDIRS += plugins/md5
+endif
+
+if USE_SHA1
+  SUBDIRS += plugins/sha1
+endif
+
+if USE_SHA2
+  SUBDIRS += plugins/sha2
+endif
+
+if USE_FIPS_PRF
+  SUBDIRS += plugins/fips_prf
+endif
+
+if USE_GMP
+  SUBDIRS += plugins/gmp
+endif
+
+if USE_HMAC
+  SUBDIRS += plugins/hmac
+endif
+
+if USE_X509
+  SUBDIRS += plugins/x509
+endif
+
+if USE_CURL
+  SUBDIRS += plugins/curl
+endif
+
+if USE_LDAP
+  SUBDIRS += plugins/ldap
+endif
+
+if USE_MYSQL
+  SUBDIRS += plugins/mysql
+endif
+
+if USE_SQLITE
+  SUBDIRS += plugins/sqlite
+endif
+
 
 if USE_INTEGRITY_TEST
 # build fips_signer which in turn builds fips_signature.h

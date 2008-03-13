@@ -1,10 +1,3 @@
-/**
- * @file child_delete.h
- * 
- * @brief Interface child_delete_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup child_delete child_delete
+ * @{ @ingroup tasks
  */
 
 #ifndef CHILD_DELETE_H_
@@ -31,12 +31,7 @@ typedef struct child_delete_t child_delete_t;
 #include <sa/child_sa.h>
 
 /**
- * @brief Task of type child_delete, delete a CHILD_SA.
- *
- * @b Constructors:
- *  - child_delete_create()
- * 
- * @ingroup tasks
+ * Task of type child_delete, delete a CHILD_SA.
  */
 struct child_delete_t {
 
@@ -46,16 +41,15 @@ struct child_delete_t {
 	task_t task;
 	
 	/**
-	 * @brief Get the CHILD_SA to delete by this task.
+	 * Get the CHILD_SA to delete by this task.
 	 *
-	 * @param this		calling object
 	 * @return			child_sa
 	 */
 	child_sa_t* (*get_child) (child_delete_t *this);
 };
 
 /**
- * @brief Create a new child_delete task.
+ * Create a new child_delete task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param child_sa		CHILD_SA to delete, or NULL as responder
@@ -63,4 +57,4 @@ struct child_delete_t {
  */
 child_delete_t *child_delete_create(ike_sa_t *ike_sa, child_sa_t *child_sa);
 
-#endif /* CHILD_DELETE_H_ */
+#endif /* CHILD_DELETE_H_ @} */

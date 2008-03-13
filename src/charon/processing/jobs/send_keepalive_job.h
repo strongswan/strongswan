@@ -1,9 +1,3 @@
-/**
- * @file send_keepalive_job.h
- * 
- * @brief Interface of send_keepalive_job_t.
- */
-
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Hochschule fuer Technik Rapperswil
@@ -17,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup send_keepalive_job send_keepalive_job
+ * @{ @ingroup jobs
  */
 
 #ifndef SEND_KEEPALIVE_JOB_H_
@@ -29,15 +30,10 @@ typedef struct send_keepalive_job_t send_keepalive_job_t;
 #include <sa/ike_sa_id.h>
 
 /**
- * @brief Class representing a SEND_KEEPALIVE Job.
+ * Class representing a SEND_KEEPALIVE Job.
  * 
  * This job will send a NAT keepalive packet if the IKE SA is still alive,
  * and reinsert itself into the event queue.
- * 
- * @b Constructors:
- * - send_keepalive_job_create()
- * 
- * @ingroup jobs
  */
 struct send_keepalive_job_t {
 	/**
@@ -47,13 +43,11 @@ struct send_keepalive_job_t {
 };
 
 /**
- * @brief Creates a job of type SEND_KEEPALIVE.
+ * Creates a job of type SEND_KEEPALIVE.
  * 
  * @param ike_sa_id		identification of the ike_sa as ike_sa_id_t object (gets cloned)
  * @return				initiate_ike_sa_job_t object
- * 
- * @ingroup jobs
  */
 send_keepalive_job_t *send_keepalive_job_create(ike_sa_id_t *ike_sa_id);
 
-#endif /*SEND_KEEPALIVE_JOB_H_*/
+#endif /*SEND_KEEPALIVE_JOB_H_ @} */

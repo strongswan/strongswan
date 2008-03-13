@@ -1,10 +1,3 @@
-/**
- * @file ike_init.h
- * 
- * @brief Interface ike_init_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_init ike_init
+ * @{ @ingroup tasks
  */
 
 #ifndef IKE_INIT_H_
@@ -30,14 +30,9 @@ typedef struct ike_init_t ike_init_t;
 #include <sa/tasks/task.h>
 
 /**
- * @brief Task of type IKE_INIT, creates an IKE_SA without authentication.
+ * Task of type IKE_INIT, creates an IKE_SA without authentication.
  *
  * The authentication of is handle in the ike_auth task.
- *
- * @b Constructors:
- *  - ike_init_create()
- * 
- * @ingroup tasks
  */
 struct ike_init_t {
 
@@ -47,16 +42,15 @@ struct ike_init_t {
 	task_t task;
 	
 	/**
-	 * @brief Get the lower of the two nonces, used for rekey collisions.
+	 * Get the lower of the two nonces, used for rekey collisions.
 	 *
-	 * @param this		calling object
 	 * @return			lower nonce
 	 */
 	chunk_t (*get_lower_nonce) (ike_init_t *this);
 };
 
 /**
- * @brief Create a new IKE_INIT task.
+ * Create a new IKE_INIT task.
  *
  * @param ike_sa		IKE_SA this task works for (new one when rekeying)
  * @param initiator		TRUE if thask is the original initator
@@ -65,4 +59,4 @@ struct ike_init_t {
  */
 ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa);
 
-#endif /* IKE_INIT_H_ */
+#endif /* IKE_INIT_H_ @} */

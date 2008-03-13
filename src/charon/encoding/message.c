@@ -1,10 +1,3 @@
-/**
- * @file message.c
- *
- * @brief Implementation of message_t.
- *
- */
-
 /*
  * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -21,6 +14,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stdlib.h>
@@ -82,13 +77,31 @@ struct payload_rule_t {
 	 bool sufficient;
 };
 
+typedef struct payload_order_t payload_order_t;
+
+/**
+ * payload ordering structure allows us to reorder payloads according to RFC.
+ */
+struct payload_order_t {
+
+	/**
+	 * payload type 
+	 */
+	payload_type_t type;
+	
+	/** 
+	 * notify type, if payload == NOTIFY
+	 */
+	notify_type_t notify;
+};
+
+
 typedef struct message_rule_t message_rule_t;
 
 /**
  * A message rule defines the kind of a message,
  * if it has encrypted contents and a list
- * of payload rules.
- * 
+ * of payload ordering rules and payload parsing rules.
  */
 struct message_rule_t {
 	/**
@@ -109,124 +122,276 @@ struct message_rule_t {
 	/**
 	 * Number of payload rules which will follow
 	 */
-	size_t payload_rule_count;
+	int payload_rule_count;
 	 
 	/**
 	 * Pointer to first payload rule
 	 */
 	payload_rule_t *payload_rules;
+	
+	/**
+	 * Number of payload order rules
+	 */
+	int payload_order_count;
+	
+	/**
+	 * payload ordering rules
+	 */
+	payload_order_t *payload_order;
 };
 
 /**
  * Message rule for IKE_SA_INIT from initiator.
  */
 static payload_rule_t ike_sa_init_i_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,FALSE,FALSE},
-	{SECURITY_ASSOCIATION,1,1,FALSE,FALSE},
-	{KEY_EXCHANGE,1,1,FALSE,FALSE},
-	{NONCE,1,1,FALSE,FALSE},
-	{VENDOR_ID,0,10,FALSE,FALSE},
+/*	payload type					min	max						encr	suff */
+	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{SECURITY_ASSOCIATION,			1,	1,						FALSE,	FALSE},
+	{KEY_EXCHANGE,					1,	1,						FALSE,	FALSE},
+	{NONCE,							1,	1,						FALSE,	FALSE},
+	{VENDOR_ID,						0,	10,						FALSE,	FALSE},
+};
+
+/**
+ * payload order for IKE_SA_INIT initiator
+ */
+static payload_order_t ike_sa_init_i_payload_order[] = {
+/*	payload type					notify type */
+	{NOTIFY,						COOKIE},
+	{SECURITY_ASSOCIATION, 			0},
+	{KEY_EXCHANGE, 					0},
+	{NONCE, 						0},
+	{NOTIFY,						NAT_DETECTION_SOURCE_IP},
+	{NOTIFY,						NAT_DETECTION_DESTINATION_IP},
+	{VENDOR_ID,						0},
 };
 
 /**
  * Message rule for IKE_SA_INIT from responder.
  */
 static payload_rule_t ike_sa_init_r_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,FALSE,TRUE},
-	{SECURITY_ASSOCIATION,1,1,FALSE,FALSE},
-	{KEY_EXCHANGE,1,1,FALSE,FALSE},
-	{NONCE,1,1,FALSE,FALSE},
-	{VENDOR_ID,0,10,FALSE,FALSE},
+/*	payload type					min	max						encr	suff */
+	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	FALSE,	TRUE},
+	{SECURITY_ASSOCIATION,			1,	1,						FALSE,	FALSE},
+	{KEY_EXCHANGE,					1,	1,						FALSE,	FALSE},
+	{NONCE,							1,	1,						FALSE,	FALSE},
+	{VENDOR_ID,						0,	10,						FALSE,	FALSE},
+};
+
+/**
+ * payload order for IKE_SA_INIT responder
+ */
+static payload_order_t ike_sa_init_r_payload_order[] = {
+/*	payload type					notify type */
+	{SECURITY_ASSOCIATION, 			0},
+	{KEY_EXCHANGE, 					0},
+	{NONCE, 						0},
+	{NOTIFY,						NAT_DETECTION_SOURCE_IP},
+	{NOTIFY,						NAT_DETECTION_DESTINATION_IP},
+	{NOTIFY,						HTTP_CERT_LOOKUP_SUPPORTED},
+	{CERTIFICATE_REQUEST,			0},
+	{VENDOR_ID,						0},
 };
 
 /**
  * Message rule for IKE_AUTH from initiator.
  */
 static payload_rule_t ike_auth_i_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
-	{EXTENSIBLE_AUTHENTICATION,0,1,TRUE,TRUE},
-	{AUTHENTICATION,0,1,TRUE,TRUE},
-	{ID_INITIATOR,1,1,TRUE,FALSE},
-	{CERTIFICATE,0,1,TRUE,FALSE},
-	{CERTIFICATE_REQUEST,0,1,TRUE,FALSE},
-	{ID_RESPONDER,0,1,TRUE,FALSE},
+/*	payload type					min	max						encr	suff */
+	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
+	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
+	{ID_INITIATOR,					1,	1,						TRUE,	FALSE},
+	{CERTIFICATE,					0,	4,						TRUE,	FALSE},
+	{CERTIFICATE_REQUEST,			0,	1,						TRUE,	FALSE},
+	{ID_RESPONDER,					0,	1,						TRUE,	FALSE},
 #ifdef P2P
-	{SECURITY_ASSOCIATION,0,1,TRUE,FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
+	{SECURITY_ASSOCIATION,			0,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
 #else
-	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE,FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE,FALSE},
+	{SECURITY_ASSOCIATION,			1,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,	1,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,	1,	1,						TRUE,	FALSE},
 #endif /* P2P */
-	{CONFIGURATION,0,1,TRUE,FALSE},
-	{VENDOR_ID,0,10,TRUE,FALSE},
+	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for IKE_AUTH initiator
+ */
+static payload_order_t ike_auth_i_payload_order[] = {
+/*	payload type					notify type */
+	{ID_INITIATOR,					0},
+	{CERTIFICATE,					0},
+	{NOTIFY,						INITIAL_CONTACT},
+	{NOTIFY,						HTTP_CERT_LOOKUP_SUPPORTED},
+	{CERTIFICATE_REQUEST,			0},
+	{ID_RESPONDER,					0},
+	{AUTHENTICATION,				0},
+	{EXTENSIBLE_AUTHENTICATION,		0},
+	{CONFIGURATION,					0},
+	{NOTIFY,						IPCOMP_SUPPORTED},
+	{NOTIFY,						USE_TRANSPORT_MODE},
+	{NOTIFY,						ESP_TFC_PADDING_NOT_SUPPORTED},
+	{NOTIFY,						NON_FIRST_FRAGMENTS_ALSO},
+	{SECURITY_ASSOCIATION, 			0},
+	{TRAFFIC_SELECTOR_INITIATOR,	0},
+	{TRAFFIC_SELECTOR_RESPONDER,	0},
+	{NOTIFY,						MOBIKE_SUPPORTED},
+	{NOTIFY,						ADDITIONAL_IP4_ADDRESS},
+	{NOTIFY,						ADDITIONAL_IP6_ADDRESS},
+	{NOTIFY,						NO_ADDITIONAL_ADDRESSES},
+	{VENDOR_ID,						0},
 };
 
 /**
  * Message rule for IKE_AUTH from responder.
  */
 static payload_rule_t ike_auth_r_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
-	{EXTENSIBLE_AUTHENTICATION,0,1,TRUE,TRUE},
-	{CERTIFICATE,0,1,TRUE,FALSE},
-	{ID_RESPONDER,0,1,TRUE,FALSE},
-	{AUTHENTICATION,0,1,TRUE,FALSE},
-	{SECURITY_ASSOCIATION,0,1,TRUE,FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
-	{CONFIGURATION,0,1,TRUE,FALSE},
-	{VENDOR_ID,0,10,TRUE,FALSE},
+/*	payload type					min	max						encr	suff */
+	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
+	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
+	{CERTIFICATE,					0,	4,						TRUE,	FALSE},
+	{ID_RESPONDER,					0,	1,						TRUE,	FALSE},
+	{AUTHENTICATION,				0,	1,						TRUE,	FALSE},
+	{SECURITY_ASSOCIATION,			0,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
+	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
 };
 
+/**
+ * payload order for IKE_AUTH responder
+ */
+static payload_order_t ike_auth_r_payload_order[] = {
+/*	payload type					notify type */
+	{ID_RESPONDER,					0},
+	{CERTIFICATE,					0},
+	{AUTHENTICATION,				0},
+	{EXTENSIBLE_AUTHENTICATION,		0},
+	{CONFIGURATION,					0},
+	{NOTIFY,						IPCOMP_SUPPORTED},
+	{NOTIFY,						USE_TRANSPORT_MODE},
+	{NOTIFY,						ESP_TFC_PADDING_NOT_SUPPORTED},
+	{NOTIFY,						NON_FIRST_FRAGMENTS_ALSO},
+	{SECURITY_ASSOCIATION, 			0},
+	{TRAFFIC_SELECTOR_INITIATOR,	0},
+	{TRAFFIC_SELECTOR_RESPONDER,	0},
+	{NOTIFY,						AUTH_LIFETIME},
+	{NOTIFY,						MOBIKE_SUPPORTED},
+	{NOTIFY,						ADDITIONAL_IP4_ADDRESS},
+	{NOTIFY,						ADDITIONAL_IP6_ADDRESS},
+	{NOTIFY,						NO_ADDITIONAL_ADDRESSES},
+	{VENDOR_ID,						0},
+};
 
 /**
  * Message rule for INFORMATIONAL from initiator.
  */
 static payload_rule_t informational_i_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
-	{CONFIGURATION,0,1,TRUE,FALSE},
-	{DELETE,0,1,TRUE,FALSE},
-	{VENDOR_ID,0,10,TRUE,FALSE},
-	
+/*	payload type					min	max						encr	suff */
+	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
+	{DELETE,						0,	1,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for INFORMATIONAL initiator
+ */
+static payload_order_t informational_i_payload_order[] = {
+/*	payload type					notify type */
+	{NOTIFY,						0},
+	{DELETE,						0},
+	{CONFIGURATION,					0},
 };
 
 /**
  * Message rule for INFORMATIONAL from responder.
  */
 static payload_rule_t informational_r_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
-	{CONFIGURATION,0,1,TRUE,FALSE},
-	{DELETE,0,1,TRUE,FALSE},
-	{VENDOR_ID,0,10,TRUE,FALSE},
+/*	payload type					min	max						encr	suff */
+	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
+	{DELETE,						0,	1,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for INFORMATIONAL responder
+ */
+static payload_order_t informational_r_payload_order[] = {
+/*	payload type					notify type */
+	{NOTIFY,						0},
+	{DELETE,						0},
+	{CONFIGURATION,					0},
 };
 
 /**
  * Message rule for CREATE_CHILD_SA from initiator.
  */
 static payload_rule_t create_child_sa_i_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
-	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
-	{NONCE,1,1,TRUE,FALSE},
-	{KEY_EXCHANGE,0,1,TRUE,FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
-	{CONFIGURATION,0,1,TRUE,FALSE},
-	{VENDOR_ID,0,10,TRUE,FALSE},
+/*	payload type					min	max						encr	suff */
+	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{SECURITY_ASSOCIATION,			1,	1,						TRUE,	FALSE},
+	{NONCE,							1,	1,						TRUE,	FALSE},
+	{KEY_EXCHANGE,					0,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
+	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for CREATE_CHILD_SA from initiator.
+ */
+static payload_order_t create_child_sa_i_payload_order[] = {
+/*	payload type					notify type */
+	{NOTIFY,						REKEY_SA},
+	{NOTIFY,						IPCOMP_SUPPORTED},
+	{NOTIFY,						USE_TRANSPORT_MODE},
+	{NOTIFY,						ESP_TFC_PADDING_NOT_SUPPORTED},
+	{NOTIFY,						NON_FIRST_FRAGMENTS_ALSO},
+	{SECURITY_ASSOCIATION, 			0},
+	{NONCE,							0},
+	{KEY_EXCHANGE, 					0},
+	{TRAFFIC_SELECTOR_INITIATOR,	0},
+	{TRAFFIC_SELECTOR_RESPONDER,	0},
 };
 
 /**
  * Message rule for CREATE_CHILD_SA from responder.
  */
 static payload_rule_t create_child_sa_r_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
-	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
-	{NONCE,1,1,TRUE,FALSE},
-	{KEY_EXCHANGE,0,1,TRUE,FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
-	{CONFIGURATION,0,1,TRUE,FALSE},
-	{VENDOR_ID,0,10,TRUE,FALSE},
+/*	payload type					min	max						encr	suff */
+	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
+	{SECURITY_ASSOCIATION,			1,	1,						TRUE,	FALSE},
+	{NONCE,							1,	1,						TRUE,	FALSE},
+	{KEY_EXCHANGE,					0,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
+	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for CREATE_CHILD_SA from responder.
+ */
+static payload_order_t create_child_sa_r_payload_order[] = {
+/*	payload type					notify type */
+	{NOTIFY,						IPCOMP_SUPPORTED},
+	{NOTIFY,						USE_TRANSPORT_MODE},
+	{NOTIFY,						ESP_TFC_PADDING_NOT_SUPPORTED},
+	{NOTIFY,						NON_FIRST_FRAGMENTS_ALSO},
+	{SECURITY_ASSOCIATION, 			0},
+	{NONCE,							0},
+	{KEY_EXCHANGE, 					0},
+	{TRAFFIC_SELECTOR_INITIATOR,	0},
+	{TRAFFIC_SELECTOR_RESPONDER,	0},
+	{NOTIFY,						ADDITIONAL_TS_POSSIBLE},
 };
 
 #ifdef P2P
@@ -234,17 +399,38 @@ static payload_rule_t create_child_sa_r_payload_rules[] = {
  * Message rule for P2P_CONNECT from initiator.
  */
 static payload_rule_t p2p_connect_i_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
-	{ID_PEER,1,1,TRUE,FALSE},
-	{VENDOR_ID,0,10,TRUE,FALSE}
+/*	payload type					min	max						encr	suff */
+	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
+	{ID_PEER,						1,	1,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	10,						TRUE,	FALSE}
+};
+
+/**
+ * payload order for P2P_CONNECT from initiator.
+ */
+static payload_order_t p2p_connect_i_payload_order[] = {
+/*	payload type					notify type */
+	{NOTIFY,						0},
+	{ID_PEER,						0},
+	{VENDOR_ID,						0},
 };
 
 /**
  * Message rule for P2P_CONNECT from responder.
  */
 static payload_rule_t p2p_connect_r_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
-	{VENDOR_ID,0,10,TRUE,FALSE}
+/*	payload type					min	max						encr	suff */
+	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
+	{VENDOR_ID,						0,	10,						TRUE,	FALSE}
+};
+
+/**
+ * payload order for P2P_CONNECT from responder.
+ */
+static payload_order_t p2p_connect_r_payload_order[] = {
+/*	payload type					notify type */
+	{NOTIFY,						0},
+	{VENDOR_ID,						0},
 };
 #endif /* P2P */
 
@@ -252,17 +438,67 @@ static payload_rule_t p2p_connect_r_payload_rules[] = {
  * Message rules, defines allowed payloads.
  */
 static message_rule_t message_rules[] = {
-	{IKE_SA_INIT,TRUE,FALSE,(sizeof(ike_sa_init_i_payload_rules)/sizeof(payload_rule_t)),ike_sa_init_i_payload_rules},
-	{IKE_SA_INIT,FALSE,FALSE,(sizeof(ike_sa_init_r_payload_rules)/sizeof(payload_rule_t)),ike_sa_init_r_payload_rules},
-	{IKE_AUTH,TRUE,TRUE,(sizeof(ike_auth_i_payload_rules)/sizeof(payload_rule_t)),ike_auth_i_payload_rules},
-	{IKE_AUTH,FALSE,TRUE,(sizeof(ike_auth_r_payload_rules)/sizeof(payload_rule_t)),ike_auth_r_payload_rules},
-	{INFORMATIONAL,TRUE,TRUE,(sizeof(informational_i_payload_rules)/sizeof(payload_rule_t)),informational_i_payload_rules},
-	{INFORMATIONAL,FALSE,TRUE,(sizeof(informational_r_payload_rules)/sizeof(payload_rule_t)),informational_r_payload_rules},
-	{CREATE_CHILD_SA,TRUE,TRUE,(sizeof(create_child_sa_i_payload_rules)/sizeof(payload_rule_t)),create_child_sa_i_payload_rules},
-	{CREATE_CHILD_SA,FALSE,TRUE,(sizeof(create_child_sa_r_payload_rules)/sizeof(payload_rule_t)),create_child_sa_r_payload_rules},
+	{IKE_SA_INIT,		TRUE,	FALSE,
+		(sizeof(ike_sa_init_i_payload_rules)/sizeof(payload_rule_t)),
+		ike_sa_init_i_payload_rules,
+		(sizeof(ike_sa_init_i_payload_order)/sizeof(payload_order_t)),
+		ike_sa_init_i_payload_order,
+	},
+	{IKE_SA_INIT,		FALSE,	FALSE,
+		(sizeof(ike_sa_init_r_payload_rules)/sizeof(payload_rule_t)),
+		ike_sa_init_r_payload_rules,
+		(sizeof(ike_sa_init_r_payload_order)/sizeof(payload_order_t)),
+		ike_sa_init_r_payload_order,
+	},
+	{IKE_AUTH,			TRUE,	TRUE,
+		(sizeof(ike_auth_i_payload_rules)/sizeof(payload_rule_t)),
+		ike_auth_i_payload_rules,
+		(sizeof(ike_auth_i_payload_order)/sizeof(payload_order_t)),
+		ike_auth_i_payload_order,
+	},
+	{IKE_AUTH,			FALSE,	TRUE,
+		(sizeof(ike_auth_r_payload_rules)/sizeof(payload_rule_t)),
+		ike_auth_r_payload_rules,
+		(sizeof(ike_auth_r_payload_order)/sizeof(payload_order_t)),
+		ike_auth_r_payload_order,
+	},
+	{INFORMATIONAL,		TRUE,	TRUE,
+		(sizeof(informational_i_payload_rules)/sizeof(payload_rule_t)),
+		informational_i_payload_rules,
+		(sizeof(informational_i_payload_order)/sizeof(payload_order_t)),
+		informational_i_payload_order,
+	},
+	{INFORMATIONAL,		FALSE,	TRUE,
+		(sizeof(informational_r_payload_rules)/sizeof(payload_rule_t)),
+		informational_r_payload_rules,
+		(sizeof(informational_r_payload_order)/sizeof(payload_order_t)),
+		informational_r_payload_order,
+	},
+	{CREATE_CHILD_SA,	TRUE,	TRUE,
+		(sizeof(create_child_sa_i_payload_rules)/sizeof(payload_rule_t)),
+		create_child_sa_i_payload_rules,
+		(sizeof(create_child_sa_i_payload_order)/sizeof(payload_order_t)),
+		create_child_sa_i_payload_order,
+	},
+	{CREATE_CHILD_SA,	FALSE,	TRUE,
+		(sizeof(create_child_sa_r_payload_rules)/sizeof(payload_rule_t)),
+		create_child_sa_r_payload_rules,
+		(sizeof(create_child_sa_r_payload_order)/sizeof(payload_order_t)),
+		create_child_sa_r_payload_order,
+	},
 #ifdef P2P
-	{P2P_CONNECT,TRUE,TRUE,(sizeof(p2p_connect_i_payload_rules)/sizeof(payload_rule_t)),p2p_connect_i_payload_rules},
-	{P2P_CONNECT,FALSE,TRUE,(sizeof(p2p_connect_r_payload_rules)/sizeof(payload_rule_t)),p2p_connect_r_payload_rules},
+	{P2P_CONNECT,		TRUE,	TRUE,
+		(sizeof(p2p_connect_i_payload_rules)/sizeof(payload_rule_t)),
+		p2p_connect_i_payload_rules,
+		(sizeof(p2p_connect_i_payload_order)/sizeof(payload_order_t)),
+		p2p_connect_i_payload_order,
+	},
+	{P2P_CONNECT,		FALSE,	TRUE,
+		(sizeof(p2p_connect_r_payload_rules)/sizeof(payload_rule_t)),
+		p2p_connect_r_payload_rules,
+		(sizeof(p2p_connect_r_payload_order)/sizeof(payload_order_t)),
+		p2p_connect_r_payload_order,
+	},
 #endif /* P2P */	
 };
 
@@ -517,38 +753,19 @@ static bool is_encoded(private_message_t *this)
  */
 static void add_payload(private_message_t *this, payload_t *payload)
 {
-	payload_t *last_payload, *first_payload;
-	
-	if ((this->is_request && payload->get_type(payload) == ID_INITIATOR) ||
-		(!this->is_request && payload->get_type(payload) == ID_RESPONDER))
+	payload_t *last_payload;
+
+	if (this->payloads->get_count(this->payloads) > 0)
 	{
-		/* HOTD: insert ID payload in the beginning to respect RFC */
-		if (this->payloads->get_first(this->payloads,
-									  (void **)&first_payload) == SUCCESS)
-		{
-			payload->set_next_type(payload, first_payload->get_type(first_payload));
-		}
-		else
-		{
-			payload->set_next_type(payload, NO_PAYLOAD);
-		}
-		this->first_payload = payload->get_type(payload);
-		this->payloads->insert_first(this->payloads, payload);
+		this->payloads->get_last(this->payloads, (void **)&last_payload);
+		last_payload->set_next_type(last_payload, payload->get_type(payload));
 	}
 	else
 	{
-		if (this->payloads->get_count(this->payloads) > 0)
-		{
-			this->payloads->get_last(this->payloads,(void **) &last_payload);
-			last_payload->set_next_type(last_payload, payload->get_type(payload));
-		}
-		else
-		{
-			this->first_payload = payload->get_type(payload);
-		}
-		payload->set_next_type(payload, NO_PAYLOAD);
-		this->payloads->insert_last(this->payloads, payload);
+		this->first_payload = payload->get_type(payload);
 	}
+	payload->set_next_type(payload, NO_PAYLOAD);
+	this->payloads->insert_last(this->payloads, payload);
 
 	DBG2(DBG_ENC ,"added payload of type %N to message",
 		 payload_type_names, payload->get_type(payload));
@@ -694,9 +911,65 @@ static char* get_string(private_message_t *this, char *buf, int len)
 }
 
 /**
+ * reorder payloads depending on reordering rules
+ */
+static void order_payloads(private_message_t *this)
+{
+	linked_list_t *list;
+	payload_t *payload;
+	int i;
+	
+	/* move to temp list */
+	list = linked_list_create();
+	while (this->payloads->remove_last(this->payloads,
+									   (void**)&payload) == SUCCESS)
+	{
+		list->insert_first(list, payload);
+	}
+	/* for each rule, ... */
+	for (i = 0; i < this->message_rule->payload_order_count; i++)
+	{
+		enumerator_t *enumerator;
+		notify_payload_t *notify;
+		payload_order_t order = this->message_rule->payload_order[i];
+		
+		/* ... find all payload ... */
+		enumerator = list->create_enumerator(list);
+		while (enumerator->enumerate(enumerator, &payload))
+		{
+			/* ... with that type ... */
+			if (payload->get_type(payload) == order.type)
+			{
+				notify = (notify_payload_t*)payload;
+			
+				/**... and check notify for type. */
+				if (order.type != NOTIFY || order.notify == 0 ||
+					order.notify == notify->get_notify_type(notify))
+				{
+					list->remove_at(list, enumerator);
+					add_payload(this, payload);
+				}
+			} 
+		}
+		enumerator->destroy(enumerator);
+	}
+	/* append all payloads without a rule to the end */
+	while (list->remove_last(list, (void**)&payload) == SUCCESS)
+	{
+		DBG1(DBG_ENC, "payload %N has no ordering rule in %N %s",
+			 payload_type_names, payload->get_type(payload),
+			 exchange_type_names, this->message_rule->exchange_type,
+			 this->message_rule->is_request ? "request" : "response");
+		add_payload(this, payload);
+	}
+	list->destroy(list);
+}
+
+/**
  * Implementation of private_message_t.encrypt_payloads.
  */
-static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, signer_t* signer)
+static status_t encrypt_payloads(private_message_t *this,
+								 crypter_t *crypter, signer_t* signer)
 {
 	encryption_payload_t *encryption_payload = NULL;
 	status_t status;
@@ -778,7 +1051,8 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 /**
  * Implementation of message_t.generate.
  */
-static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* signer, packet_t **packet)
+static status_t generate(private_message_t *this, crypter_t *crypter,
+						 signer_t* signer, packet_t **packet)
 {
 	generator_t *generator;
 	ike_header_t *ike_header;
@@ -794,8 +1068,6 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 		*packet = this->packet->clone(this->packet);
 		return SUCCESS;
 	}
-	
-	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
@@ -818,6 +1090,10 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 		DBG1(DBG_ENC, "no message rules specified for this message type");
 		return NOT_SUPPORTED;
 	}
+	
+	order_payloads(this);
+	
+	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 	
 	/* going to encrypt all content which have to be encrypted */
 	status = encrypt_payloads(this, crypter, signer);
@@ -842,7 +1118,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	payload = (payload_t*)ike_header;
 
 	
-	/* generate every payload expect last one, this is doen later*/
+	/* generate every payload expect last one, this is done later*/
 	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 	while(iterator->iterate(iterator, (void**)&next_payload))
 	{
@@ -1346,3 +1622,4 @@ message_t *message_create()
 {
 	return message_create_from_packet(NULL);
 }
+

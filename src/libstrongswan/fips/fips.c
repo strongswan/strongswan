@@ -1,10 +1,3 @@
-/**
- * @file fips.c
- * 
- * @brief Implementation of the libstrongswan integrity test.
- * 
- */
-
 /*
  * Copyright (C) 2007 Bruno Krieg, Daniel Wydler
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stdio.h>

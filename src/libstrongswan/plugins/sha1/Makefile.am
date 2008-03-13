@@ -1,0 +1,10 @@
+
+INCLUDES = -I$(top_srcdir)/src/libstrongswan
+
+AM_CFLAGS = -rdynamic
+
+plugin_LTLIBRARIES = libstrongswan-sha1.la
+
+libstrongswan_sha1_la_SOURCES = sha1_plugin.h sha1_plugin.c sha1_hasher.c sha1_hasher.h
+libstrongswan_sha1_la_LDFLAGS = -module
+

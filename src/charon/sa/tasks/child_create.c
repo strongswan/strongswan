@@ -1,10 +1,3 @@
-/**
- * @file child_create.c
- *
- * @brief Implementation of the child_create task.
- *
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "child_create.h"
@@ -450,7 +445,7 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 				if (!this->initiator)
 				{
 					this->dh_group = ke_payload->get_dh_group_number(ke_payload);
-					this->dh = diffie_hellman_create(this->dh_group);
+					this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
 				}
 				if (this->dh)
 				{
@@ -580,7 +575,7 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	
 	if (this->dh_group != MODP_NONE)
 	{
-		this->dh = diffie_hellman_create(this->dh_group);
+		this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
 	}
 	
 	build_payloads(this, message);

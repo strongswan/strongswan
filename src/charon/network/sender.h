@@ -1,10 +1,3 @@
-/**
- * @file sender.h
- *
- * @brief Interface of sender_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup sender sender
+ * @{ @ingroup network
  */
 
 #ifndef SENDER_H_
@@ -30,45 +30,35 @@ typedef struct sender_t sender_t;
 #include <network/packet.h>
 
 /**
- * @brief Thread responsible for sending packets over the socket.
- * 
- * @b Constructors:
- *  - sender_create()
- * 
- * @ingroup network
+ * Thread responsible for sending packets over the socket.
  */
 struct sender_t {
 	
 	/**
-	 * @brief Send a packet over the network.
+	 * Send a packet over the network.
 	 *
 	 * This function is non blocking and adds the packet to a queue.
 	 * Whenever the sender thread thinks it's good to send the packet,
 	 * it'll do so.
 	 *
-	 * @param this		calling object
  	 * @param packet	packet to send
 	 */
 	void (*send) (sender_t *this, packet_t *packet);
 	
 	/**
-	 * @brief Destroys a sender object.
-	 *
-	 * @param this	 	calling object
+	 * Destroys a sender object.
 	 */
 	void (*destroy) (sender_t *this);
 };
 
 /**
- * @brief Create the sender thread.
+ * Create the sender thread.
  * 
  * The thread will start to work, getting packets
  * from its queue and sends them out.
  * 
  * @return		created sender object
- * 
- * @ingroup network
  */
 sender_t * sender_create(void);
 
-#endif /*SENDER_H_*/
+#endif /*SENDER_H_ @} */

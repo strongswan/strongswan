@@ -1,14 +1,7 @@
-/**
- * @file host.h
- *
- * @brief Interface of host_t.
- *
- */
-
 /*
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -21,6 +14,11 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ */
+
+/**
+ * @defgroup host host
+ * @{ @ingroup utils
  */
 
 #ifndef HOST_H_
@@ -49,42 +47,31 @@ enum host_diff_t {
 };
 
 /**
- * @brief Representates a Host
+ * Representates a Host
  * 
  * Host object, identifies a address:port pair and defines some 
  * useful functions on it.
- * 
- * @b Constructors:
- * - host_create()
- * - host_create_from_chunk()
- * - host_create_from_sockaddr()
- * 
- * @todo Add IPv6 support
- * 
- * @ingroup utils
  */
 struct host_t {
 	
 	/** 
-	 * @brief Build a clone of this host object.
+	 * Build a clone of this host object.
 	 * 
-	 * @param this			object to clone
-	 * @return				cloned host
+	 * @return		cloned host
 	 */
 	host_t *(*clone) (host_t *this);
 	
 	/** 
-	 * @brief Get a pointer to the internal sockaddr struct.
+	 * Get a pointer to the internal sockaddr struct.
 	 * 
 	 * This is used for sending and receiving via sockets.
 	 * 
-	 * @param this			object to clone
-	 * @return				pointer to the internal sockaddr structure
+	 * @return		pointer to the internal sockaddr structure
 	 */
 	sockaddr_t  *(*get_sockaddr) (host_t *this);
 	
 	/** 
-	 * @brief Get the length of the sockaddr struct.
+	 * Get the length of the sockaddr struct.
 	 * 
 	 * Depending on the family, the length of the sockaddr struct
 	 * is different. Use this function to get the length of the sockaddr
@@ -92,140 +79,119 @@ struct host_t {
 	 * 
 	 * This is used for sending and receiving via sockets.
 	 * 
-	 * @param this			object to clone
-	 * @return				length of the sockaddr struct
+	 * @return		length of the sockaddr struct
 	 */
 	socklen_t *(*get_sockaddr_len) (host_t *this);
 	
 	/**
-	 * @brief Gets the family of the address
+	 * Gets the family of the address
 	 * 
-	 * @param this			calling object
-	 * @return				family
+	 * @return		family
 	 */
 	int (*get_family) (host_t *this);
 	
 	/** 
-	 * @brief Checks if the ip address of host is set to default route.
+	 * Checks if the ip address of host is set to default route.
 	 * 
-	 * @param this			calling object
-	 * @return				
-	 * 						- TRUE if host has IP 0.0.0.0 for default route 
-	 * 						- FALSE otherwise
+	 * @return		TRUE if host is 0.0.0.0 or 0::0, FALSE otherwise
 	 */
 	bool (*is_anyaddr) (host_t *this);
 	
 	/** 
-	 * @brief get the address of this host as chunk_t
+	 * Get the address of this host as chunk_t
 	 * 
 	 * Returned chunk points to internal data.
 	 * 
-	 * @param this			object
-	 * @return				address string, 
+	 * @return		address string, 
 	 */
 	chunk_t (*get_address) (host_t *this);
 		
 	/** 
-	 * @brief get the port of this host
+	 * Get the port of this host
 	 * 
-	 * @param this			object to clone
-	 * @return				port number
+	 * @return		port number
 	 */
 	u_int16_t (*get_port) (host_t *this);
 
 	/** 
-	 * @brief set the port of this host
+	 * Set the port of this host
 	 *
-	 * @param this			object to clone
-	 * @param port			port numer
+	 * @param port	port numer
 	 */
 	void (*set_port) (host_t *this, u_int16_t port);
 		
 	/** 
-	 * @brief Compare the ips of two hosts hosts.
+	 * Compare the ips of two hosts hosts.
 	 * 
-	 * @param this			object to compare
-	 * @param other			the other to compare
-	 * @return				TRUE if addresses are equal.
+	 * @param other	the other to compare
+	 * @return		TRUE if addresses are equal.
 	 */
 	bool (*ip_equals) (host_t *this, host_t *other);
 		
 	/** 
-	 * @brief Compare two hosts, with port.
+	 * Compare two hosts, with port.
 	 * 
-	 * @param this			object to compare
-	 * @param other			the other to compare
-	 * @return				TRUE if addresses and ports are equal.
+	 * @param other	the other to compare
+	 * @return		TRUE if addresses and ports are equal.
 	 */
 	bool (*equals) (host_t *this, host_t *other);
 
 	/** 
-	 * @brief Compare two hosts and return the differences.
+	 * Compare two hosts and return the differences.
 	 *
-	 * @param this			object to compare
-	 * @param other			the other to compare
-	 * @return				differences in a combination of host_diff_t's
+	 * @param other	the other to compare
+	 * @return		differences in a combination of host_diff_t's
 	 */
 	host_diff_t (*get_differences) (host_t *this, host_t *other);
 	
 	/** 
-	 * @brief Destroy this host object
-	 * 
-	 * @param this			calling
-	 * @return				SUCCESS in any case
+	 * Destroy this host object.
 	 */
 	void (*destroy) (host_t *this);
 };
 
 /**
- * @brief Constructor to create a host_t object from an address string.
+ * Constructor to create a host_t object from an address string.
  *
  * @param string		string of an address, such as "152.96.193.130"
  * @param port			port number
- * @return 				
- * 						- host_t object 
- * 						- NULL, if string not an address.
- * 
- * @ingroup network
+ * @return 				host_t, NULL if string not an address.
  */
 host_t *host_create_from_string(char *string, u_int16_t port);
 
 /**
- * @brief Constructor to create a host_t object from an address chunk
+ * Constructor to create a host_t object from an address chunk
  *
- * @param family 		Address family to use for this object, such as AF_INET or AF_INET6
- * @param address		address as 4 byte chunk_t in networ order
+ * @param family 		Address family, such as AF_INET or AF_INET6
+ * @param address		address as chunk_t in networ order
  * @param port			port number
- * @return 				
- * 						- host_t object 
- * 						- NULL, if family not supported or chunk_t length not 4 bytes.
- * 
- * @ingroup network
+ * @return 				host_t, NULL if family not supported/chunk invalid
  */
 host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
 
 /**
- * @brief Constructor to create a host_t object from a sockaddr struct
+ * Constructor to create a host_t object from a sockaddr struct
  *
  * @param sockaddr		sockaddr struct which contains family, address and port
- * @return 				
- * 						- host_t object 
- * 						- NULL, if family not supported.
- * 
- * @ingroup network
+ * @return 				host_t, NULL if family not supported
  */
 host_t *host_create_from_sockaddr(sockaddr_t *sockaddr);
 
 /**
- * @brief Create a host without an address, a "any" host.
+ * Create a host without an address, a "any" host.
  *
  * @param family		family of the any host
- * @return 				
- * 						- host_t object 
- * 						- NULL, if family not supported.
- * 
- * @ingroup network
+ * @return 				host_t, NULL if family not supported
  */
 host_t *host_create_any(int family);
 
-#endif /*HOST_H_*/
+/**
+ * Get printf hooks for a host.
+ *
+ * Arguments are: 
+ *    host_t *host
+ * Use #-modifier to include port number
+ */
+printf_hook_functions_t host_get_printf_hooks();
+
+#endif /* HOST_H_ @}*/

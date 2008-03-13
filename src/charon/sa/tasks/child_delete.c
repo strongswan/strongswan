@@ -1,10 +1,3 @@
-/**
- * @file child_delete.c
- *
- * @brief Implementation of the child_delete task.
- *
- */
-
 /*
  * Copyright (C) 2006-2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "child_delete.h"

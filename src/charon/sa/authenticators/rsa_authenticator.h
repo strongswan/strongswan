@@ -1,10 +1,3 @@
-/**
- * @file rsa_authenticator.h
- *
- * @brief Interface of rsa_authenticator_t.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup rsa_authenticator rsa_authenticator
+ * @{ @ingroup authenticators
  */
 
 #ifndef RSA_AUTHENTICATOR_H_
@@ -28,13 +28,7 @@ typedef struct rsa_authenticator_t rsa_authenticator_t;
 #include <sa/authenticators/authenticator.h>
 
 /**
- * @brief Implementation of the authenticator_t interface using AUTH_RSA.
- *
- * @b Constructors:
- *  - rsa_authenticator_create()
- *  - authenticator_create() using auth_method AUTH_RSA
- *
- * @ingroup authenticators
+ * Implementation of the authenticator_t interface using AUTH_RSA.
  */
 struct rsa_authenticator_t {
 
@@ -45,13 +39,11 @@ struct rsa_authenticator_t {
 };
 
 /**
- * @brief Creates an authenticator for AUTH_RSA.
+ * Creates an authenticator for AUTH_RSA.
  *
  * @param ike_sa		associated ike_sa
  * @return				rsa_authenticator_t object
- *
- * @ingroup authenticators
  */
 rsa_authenticator_t *rsa_authenticator_create(ike_sa_t *ike_sa);
 
-#endif /* RSA_AUTHENTICATOR_H_ */
+#endif /* RSA_AUTHENTICATOR_H_ @} */

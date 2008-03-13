@@ -1,13 +1,7 @@
-/**
- * @file daemon.c
- * 
- * @brief Implementation of daemon_t and main of IKEv2-Daemon.
- * 
- */
-
-/* Copyright (C) 2006-2007 Tobias Brunner
+/* 
+ * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -41,11 +35,9 @@
 #include "daemon.h"
 
 #include <library.h>
-#include <crypto/ca.h>
-#include <utils/fetcher.h>
-#include <config/credentials/local_credential_store.h>
-#include <config/backends/local_backend.h>
-#include <sa/authenticators/eap/eap_method.h>
+#include <credentials/credential_manager.h>
+#include <config/backend_manager.h>
+#include <config/traffic_selector.h>
 
 /* on some distros, a capset definition is missing */
 #ifdef NO_CAPSET_DEFINED
@@ -99,6 +91,12 @@ static void dbg_bus(int level, char *fmt, ...)
 	va_start(args, fmt);
 	charon->bus->vsignal(charon->bus, DBG_LIB, level, fmt, args);
 	va_end(args);
+}
+/**
+ * Logging hook for library logs before logging facility initiated
+ */
+static void dbg_silent(int level, char *fmt, ...)
+{
 }
 
 /**
@@ -171,12 +169,17 @@ static void run(private_daemon_t *this)
 static void destroy(private_daemon_t *this)
 {
 	/* terminate all idle threads */
-	this->public.processor->set_threads(this->public.processor, 0);
+	if (this->public.processor)
+	{
+		this->public.processor->set_threads(this->public.processor, 0);
+	}
 	/* close all IKE_SAs */
+	DESTROY_IF(this->public.plugins);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
-	DESTROY_IF(this->public.interfaces);
+	DESTROY_IF(this->public.controller);
+	DESTROY_IF(this->public.eap);
 #ifdef P2P	
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
@@ -323,29 +326,38 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 #endif /* INTEGRITY_TEST */
 	
 	this->public.ike_sa_manager = ike_sa_manager_create();
+	if (this->public.ike_sa_manager == NULL)
+	{
+		return FALSE;
+	}
 	this->public.processor = processor_create();
 	this->public.scheduler = scheduler_create();
 
 	/* load secrets, ca certificates and crls */
-	this->public.credentials = (credential_store_t*)local_credential_store_create();
-	this->public.credentials->load_ca_certificates(this->public.credentials);
-	this->public.credentials->load_aa_certificates(this->public.credentials);
-	this->public.credentials->load_attr_certificates(this->public.credentials);
-	this->public.credentials->load_ocsp_certificates(this->public.credentials);
-	this->public.credentials->load_crls(this->public.credentials);
-	this->public.credentials->load_secrets(this->public.credentials, FALSE);
-	
-	this->public.interfaces = interface_manager_create();
+	this->public.credentials = credential_manager_create();
+	this->public.controller = controller_create();
+	this->public.eap = eap_manager_create();
 	this->public.backends = backend_manager_create();
+	this->public.plugins = plugin_loader_create();
 	this->public.kernel_interface = kernel_interface_create();
 	this->public.socket = socket_create();
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
+	if (this->public.receiver == NULL)
+	{
+		return FALSE;
+	}
 	
 #ifdef P2P
 	this->public.connect_manager = connect_manager_create();
+	if (this->public.connect_manager == NULL)
+	{
+		return FALSE;
+	}
 	this->public.mediation_manager = mediation_manager_create();
 #endif /* P2P */
+
+	this->public.plugins->load(this->public.plugins, IPSEC_PLUGINDIR, "libcharon-");
 	
 	return TRUE;
 }
@@ -401,7 +413,9 @@ private_daemon_t *daemon_create(void)
 	this->public.scheduler = NULL;
 	this->public.kernel_interface = NULL;
 	this->public.processor = NULL;
-	this->public.interfaces = NULL;
+	this->public.controller = NULL;
+	this->public.eap = NULL;
+	this->public.plugins = NULL;
 	this->public.bus = NULL;
 	this->public.outlog = NULL;
 	this->public.syslog = NULL;
@@ -443,7 +457,6 @@ static void usage(const char *msg)
 					"         [--strictcrlpolicy]\n"
 					"         [--cachecrls]\n"
 					"         [--crlcheckinterval <interval>]\n"
-					"         [--eapdir <dir>]\n"
 					"         [--use-syslog]\n"
 					"         [--debug-<type> <level>]\n"
 					"           <type>:  log context type (dmn|mgr|ike|chd|job|cfg|knl|net|enc|lib)\n"
@@ -460,10 +473,8 @@ static void usage(const char *msg)
 int main(int argc, char *argv[])
 {
 	u_int crl_check_interval = 0;
-	strict_t strict_crl_policy = STRICT_NO;
 	bool cache_crls = FALSE;
 	bool use_syslog = FALSE;
-	char *eapdir = IPSEC_EAPDIR;
 
 	private_daemon_t *private_charon;
 	FILE *pid_file;
@@ -471,6 +482,14 @@ int main(int argc, char *argv[])
 	level_t levels[DBG_MAX];
 	int signal;
 	
+	/* silence the library during initialization, as we have no bus yet */
+	dbg = dbg_silent;
+	
+	/* initialize library */
+	library_init(IPSEC_DIR "/strongswan.conf");
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
+	lib->printf_hook->add_handler(lib->printf_hook, 'R',
+								  traffic_selector_get_printf_hooks());
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
 	
@@ -491,10 +510,8 @@ int main(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
-			{ "strictcrlpolicy", required_argument, NULL, 'r' },
 			{ "cachecrls", no_argument, NULL, 'C' },
 			{ "crlcheckinterval", required_argument, NULL, 'x' },
-			{ "eapdir", required_argument, NULL, 'e' },
 			/* TODO: handle "debug-all" */
 			{ "debug-dmn", required_argument, &signal, DBG_DMN },
 			{ "debug-mgr", required_argument, &signal, DBG_MGR },
@@ -523,17 +540,11 @@ int main(int argc, char *argv[])
 			case 'l':
 				use_syslog = TRUE;
 				continue;
-			case 'r':
-				strict_crl_policy = atoi(optarg);
-				continue;
 			case 'C':
 				cache_crls = TRUE;
 				continue;
 			case 'x':
 				crl_check_interval = atoi(optarg);
-				continue;
-			case 'e':
-				eapdir = optarg;
 				continue;
 			case 0:
 				/* option is in signal */
@@ -553,14 +564,6 @@ int main(int argc, char *argv[])
 		destroy(private_charon);
 		exit(-1);
 	}
-
-	/* initialize fetcher_t class */
-	fetcher_initialize();
-	/* load pluggable EAP modules */
-	eap_method_load(eapdir);
-	
-	/* set strict_crl_policy, cache_crls and crl_check_interval options */
-	ca_info_set_options(strict_crl_policy, cache_crls, crl_check_interval);
 
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)
@@ -586,11 +589,11 @@ int main(int argc, char *argv[])
 	/* run daemon */
 	run(private_charon);
 	
-	eap_method_unload();
-	fetcher_finalize();
 	/* normal termination, cleanup and exit */
 	destroy(private_charon);
 	unlink(PID_FILE);
+	
+	library_deinit();
 	
 	return 0;
 }

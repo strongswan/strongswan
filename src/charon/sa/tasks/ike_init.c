@@ -1,10 +1,3 @@
-/**
- * @file ike_init.c
- *
- * @brief Implementation of the ike_init task.
- *
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "ike_init.h"
@@ -195,7 +190,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
 				if (!this->initiator)
 				{
-					this->dh = diffie_hellman_create(this->dh_group);
+					this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
 				}
 				if (this->dh)
 				{
@@ -241,7 +236,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	if (!this->dh)
 	{
 		this->dh_group = this->config->get_dh_group(this->config);
-		this->dh = diffie_hellman_create(this->dh_group);
+		this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
 		if (this->dh == NULL)
 		{
 			SIG(IKE_UP_FAILED, "configured DH group %N not supported",
@@ -532,7 +527,7 @@ static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
 	
 	this->ike_sa = ike_sa;
 	this->proposal = NULL;
-	this->dh = diffie_hellman_create(this->dh_group);
+	this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
 }
 
 /**

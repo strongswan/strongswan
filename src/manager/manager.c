@@ -1,10 +1,3 @@
-/**
- * @file manager.c
- *
- * @brief Implementation of manager_t.
- *
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "manager.h"
@@ -39,9 +34,9 @@ struct private_manager_t {
 	manager_t public;
 	
 	/**
-	 * underlying database
+	 * underlying storage database
 	 */
-	database_t *db;
+	storage_t *store;
 	
 	/**
 	 * user id, if we are logged in
@@ -59,7 +54,7 @@ struct private_manager_t {
  */
 static enumerator_t* create_gateway_enumerator(private_manager_t *this)
 {
-	return this->db->create_gateway_enumerator(this->db, this->user);
+	return this->store->create_gateway_enumerator(this->store, this->user);
 }
 
 /**
@@ -77,7 +72,7 @@ static gateway_t* select_gateway(private_manager_t *this, int select_id)
 		if (this->gateway) this->gateway->destroy(this->gateway);
 		this->gateway = NULL;
 		
-		enumerator = this->db->create_gateway_enumerator(this->db, this->user);
+		enumerator = this->store->create_gateway_enumerator(this->store, this->user);
 		while (enumerator->enumerate(enumerator, &id, &name, &port, &address))
 		{
 			if (select_id == id)
@@ -117,7 +112,7 @@ static bool login(private_manager_t *this, char *username, char *password)
 {
 	if (!this->user)
 	{
-		this->user = this->db->login(this->db, username, password);
+		this->user = this->store->login(this->store, username, password);
 	}
 	return this->user != 0;
 }
@@ -147,7 +142,7 @@ static void destroy(private_manager_t *this)
 /*
  * see header file
  */
-manager_t *manager_create(database_t *database)
+manager_t *manager_create(storage_t *storage)
 {
 	private_manager_t *this = malloc_thing(private_manager_t);
 	
@@ -159,7 +154,7 @@ manager_t *manager_create(database_t *database)
 	this->public.context.destroy = (void(*)(context_t*))destroy;
 	
 	this->user = 0;
-	this->db = database;
+	this->store = storage;
 	this->gateway = NULL;
 	
 	return &this->public;

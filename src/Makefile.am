@@ -31,6 +31,10 @@ if USE_UML
   SUBDIRS += dumm
 endif
 
+if USE_FAST
+  SUBDIRS += libfast
+endif
+
 if USE_MANAGER
   SUBDIRS += manager
 endif

@@ -1,10 +1,3 @@
-/**
- * @file child_sa.h
- *
- * @brief Interface of child_sa_t.
- *
- */
-
 /*
  * Copyright (C) 2006-2007 Martin Willi
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
@@ -19,8 +12,14 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
+/**
+ * @defgroup child_sa child_sa
+ * @{ @ingroup sa
+ */
 
 #ifndef CHILD_SA_H_
 #define CHILD_SA_H_
@@ -35,7 +34,7 @@ typedef struct child_sa_t child_sa_t;
 #include <config/child_cfg.h>
 
 /**
- * @brief States of a CHILD_SA
+ * States of a CHILD_SA
  */
 enum child_sa_state_t {
 	
@@ -71,7 +70,7 @@ enum child_sa_state_t {
 extern enum_name_t *child_sa_state_names;
 
 /**
- * @brief Represents an IPsec SAs between two hosts.
+ * Represents an IPsec SAs between two hosts.
  * 
  * A child_sa_t contains two SAs. SAs for both
  * directions are managed in one child_sa_t object. Both
@@ -86,57 +85,47 @@ extern enum_name_t *child_sa_state_names;
  * - A calls child_sa_t.update to update the already allocated SPIs with the chosen proposal
  * 
  * Once SAs are set up, policies can be added using add_policies.
- * 
- * 
- * @b Constructors:
- *  - child_sa_create()
- * 
- * @ingroup sa
  */
 struct child_sa_t {
 	
 	/**
-	 * @brief Get the name of the config this CHILD_SA uses.
+	 * Get the name of the config this CHILD_SA uses.
 	 *
-	 * @param this			calling object
-	 * @return				name
+	 * @return			name
 	 */
 	char* (*get_name) (child_sa_t *this);
 	
 	/**
-	 * @brief Get the reqid of the CHILD SA.
+	 * Get the reqid of the CHILD SA.
 	 * 
 	 * Every CHILD_SA has a reqid. The kernel uses this ID to
 	 * identify it.
 	 *
-	 * @param this 		calling object
 	 * @return 			reqid of the CHILD SA
 	 */
 	u_int32_t (*get_reqid)(child_sa_t *this);
 	
 	/**
-	 * @brief Get the SPI of this CHILD_SA.
+	 * Get the SPI of this CHILD_SA.
 	 * 
 	 * Set the boolean parameter inbound to TRUE to
 	 * get the SPI for which we receive packets, use
 	 * FALSE to get those we use for sending packets.
 	 *
-	 * @param this 		calling object
 	 * @param inbound	TRUE to get inbound SPI, FALSE for outbound.
 	 * @return 			spi of the CHILD SA
 	 */
 	u_int32_t (*get_spi) (child_sa_t *this, bool inbound);
 	
 	/**
-	 * @brief Get the protocol which this CHILD_SA uses to protect traffic.
+	 * Get the protocol which this CHILD_SA uses to protect traffic.
 	 *
-	 * @param this 		calling object
 	 * @return 			AH | ESP
 	 */
 	protocol_id_t (*get_protocol) (child_sa_t *this);
 	
 	/**
-	 * @brief Get info and statistics about this CHILD_SA.
+	 * Get info and statistics about this CHILD_SA.
 	 *
 	 * @param mode		mode this IKE_SA uses
 	 * @param encr_algo	encryption algorithm used by this CHILD_SA.
@@ -155,7 +144,7 @@ struct child_sa_t {
 					  u_int32_t *use_fwd);
 	
 	/**
-	 * @brief Allocate SPIs for given proposals.
+	 * Allocate SPIs for given proposals.
 	 * 
 	 * Since the kernel manages SPIs for us, we need
 	 * to allocate them. If a proposal contains more
@@ -163,15 +152,13 @@ struct child_sa_t {
 	 * allocated. SPIs are stored internally and written
 	 * back to the proposal.
 	 *
-	 * @param this 		calling object
 	 * @param proposals	list of proposals for which SPIs are allocated
 	 */
 	status_t (*alloc)(child_sa_t *this, linked_list_t* proposals);
 	
 	/**
-	 * @brief Install the kernel SAs for a proposal, without previous SPI allocation.
+	 * Install the kernel SAs for a proposal, without previous SPI allocation.
 	 *
-	 * @param this 		calling object
 	 * @param proposal	proposal for which SPIs are allocated
 	 * @param mode		mode for the CHILD_SA
 	 * @param prf_plus	key material to use for key derivation
@@ -181,11 +168,10 @@ struct child_sa_t {
 					prf_plus_t *prf_plus);
 	
 	/**
-	 * @brief Install the kernel SAs for a proposal, after SPIs have been allocated.
+	 * Install the kernel SAs for a proposal, after SPIs have been allocated.
 	 *
 	 * Updates an SA, for which SPIs are already allocated via alloc().
 	 *
-	 * @param this 		calling object
 	 * @param proposal	proposal for which SPIs are allocated
 	 * @param mode		mode for the CHILD_SA
 	 * @param prf_plus	key material to use for key derivation
@@ -195,11 +181,10 @@ struct child_sa_t {
 					   prf_plus_t *prf_plus);
 
 	/**
-	 * @brief Update the hosts in the kernel SAs and policies.
+	 * Update the hosts in the kernel SAs and policies.
 	 *
 	 * The CHILD must be INSTALLED to do this update.
 	 *
-	 * @param this		calling object
 	 * @param me		the new local host
 	 * @param other		the new remote host
 	 * @param			TRUE to use UDP encapsulation for NAT traversal
@@ -209,12 +194,11 @@ struct child_sa_t {
 							 bool encap);
 	
 	/**
-	 * @brief Install the policies using some traffic selectors.
+	 * Install the policies using some traffic selectors.
 	 *
 	 * Supplied lists of traffic_selector_t's specify the policies
 	 * to use for this child sa.
 	 *
-	 * @param this 		calling object
 	 * @param my_ts		traffic selectors for local site
 	 * @param other_ts	traffic selectors for remote site
 	 * @param mode		mode for the SA: tunnel/transport
@@ -224,18 +208,16 @@ struct child_sa_t {
 							 linked_list_t *other_ts_list, mode_t mode);
 	
 	/**
-	 * @brief Get the traffic selectors of added policies of local host.
+	 * Get the traffic selectors of added policies of local host.
 	 *
-	 * @param this 		calling object
 	 * @param local		TRUE for own traffic selectors, FALSE for remote
 	 * @return			list of traffic selectors
 	 */	
 	linked_list_t* (*get_traffic_selectors) (child_sa_t *this, bool local);
 	
 	/**
-	 * @brief Get the time of this child_sa_t's last use (i.e. last use of any of its policies)
+	 * Get the time of this child_sa_t's last use (i.e. last use of any of its policies)
 	 * 
-	 * @param this 		calling object
 	 * @param inbound	query for in- or outbound usage
 	 * @param use_time	the time
 	 * @return			SUCCESS or FAILED
@@ -243,48 +225,42 @@ struct child_sa_t {
 	status_t (*get_use_time) (child_sa_t *this, bool inbound, time_t *use_time);
 	
 	/**
-	 * @brief Get the state of the CHILD_SA.
-	 *
-	 * @param this 		calling object
+	 * Get the state of the CHILD_SA.
 	 */	
 	child_sa_state_t (*get_state) (child_sa_t *this);
 	
 	/**
-	 * @brief Set the state of the CHILD_SA.
+	 * Set the state of the CHILD_SA.
 	 *
-	 * @param this 		calling object
+	 * @param state		state to set on CHILD_SA
 	 */	
 	void (*set_state) (child_sa_t *this, child_sa_state_t state);
 	
 	/**
-	 * @brief Get the config used to set up this child sa.
+	 * Get the config used to set up this child sa.
 	 *
-	 * @param this 		calling object
 	 * @return			child_cfg
 	 */
 	child_cfg_t* (*get_config) (child_sa_t *this);
 	
 	/**
-	 * @brief Set the virtual IP used received from IRAS.
+	 * Set the virtual IP used received from IRAS.
 	 *
 	 * To allow proper setup of firewall rules, the virtual IP is required
 	 * for filtering.
 	 *
-	 * @param this 		calling object
 	 * @param ip		own virtual IP
 	 */
 	void (*set_virtual_ip) (child_sa_t *this, host_t *ip);
 	
 	/**
-	 * @brief Destroys a child_sa.
-	 *
-	 * @param this 		calling object
+	 * Destroys a child_sa.
 	 */
 	void (*destroy) (child_sa_t *this);
 };
 
 /**
- * @brief Constructor to create a new child_sa_t.
+ * Constructor to create a new child_sa_t.
  *
  * @param me			own address
  * @param other			remote address
@@ -294,11 +270,9 @@ struct child_sa_t {
  * @param reqid			reqid of old CHILD_SA when rekeying, 0 otherwise
  * @param encap			TRUE to enable UDP encapsulation (NAT traversal)
  * @return				child_sa_t object
- * 
- * @ingroup sa
  */
 child_sa_t * child_sa_create(host_t *me, host_t *other,
 							 identification_t *my_id, identification_t* other_id,
 							 child_cfg_t *config, u_int32_t reqid, bool encap);
 
-#endif /*CHILD_SA_H_*/
+#endif /*CHILD_SA_H_ @} */

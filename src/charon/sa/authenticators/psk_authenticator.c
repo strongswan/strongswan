@@ -1,10 +1,3 @@
-/**
- * @file psk_authenticator.c
- *
- * @brief Implementation of psk_authenticator_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <string.h>
@@ -26,6 +21,7 @@
 #include "psk_authenticator.h"
 
 #include <daemon.h>
+#include <credentials/auth_info.h>
 
 /**
  * Key pad for the AUTH method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
@@ -105,39 +101,49 @@ chunk_t build_shared_key_signature(chunk_t ike_sa_init, chunk_t nonce,
  * Implementation of authenticator_t.verify.
  */
 static status_t verify(private_psk_authenticator_t *this, chunk_t ike_sa_init,
- 				chunk_t my_nonce, auth_payload_t *auth_payload)
+ 					   chunk_t my_nonce, auth_payload_t *auth_payload)
 {
-	status_t status;
-	chunk_t auth_data, recv_auth_data, shared_key;
+	chunk_t auth_data, recv_auth_data;
 	identification_t *my_id, *other_id;
+	shared_key_t *shared_key;
+	enumerator_t *enumerator;
+	bool authenticated = FALSE;
+	int keys_found = 0;
 	
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
-	status = charon->credentials->get_shared_key(charon->credentials, my_id,
-												 other_id, &shared_key);
-	if (status != SUCCESS)
+	enumerator = charon->credentials->create_shared_enumerator(
+							charon->credentials, SHARED_IKE, my_id, other_id);
+	while (!authenticated && enumerator->enumerate(enumerator, &shared_key, NULL, NULL))
 	{
-		DBG1(DBG_IKE, "no shared key found for '%D' - '%D'",  my_id, other_id);
-		return status;
-	}
-	
-	auth_data = build_shared_key_signature(ike_sa_init, my_nonce, shared_key,
-						other_id, this->ike_sa->get_skp_verify(this->ike_sa),
-						this->ike_sa->get_prf(this->ike_sa));
-	chunk_free_randomized(&shared_key);
-	
-	recv_auth_data = auth_payload->get_data(auth_payload);
-	if (auth_data.len != recv_auth_data.len ||
-		!memeq(auth_data.ptr, recv_auth_data.ptr, auth_data.len))
-	{
-		DBG1(DBG_IKE, "PSK MAC verification failed");
+		keys_found++;
+		auth_data = build_shared_key_signature(ike_sa_init, my_nonce,
+									shared_key->get_key(shared_key), other_id,
+									this->ike_sa->get_skp_verify(this->ike_sa),
+									this->ike_sa->get_prf(this->ike_sa));
+		recv_auth_data = auth_payload->get_data(auth_payload);
+		if (auth_data.len == recv_auth_data.len &&
+			memeq(auth_data.ptr, recv_auth_data.ptr, auth_data.len))
+		{
+			DBG1(DBG_IKE, "authentication of '%D' with %N successful",
+				 other_id, auth_method_names, AUTH_PSK);
+			authenticated = TRUE;
+		}
 		chunk_free(&auth_data);
+	}
+	enumerator->destroy(enumerator);
+	
+	if (!authenticated)
+	{
+		if (keys_found == 0)
+		{
+			DBG1(DBG_IKE, "no shared key found for '%D' - '%D'", my_id, other_id);
+			return NOT_FOUND;
+		}
+		DBG1(DBG_IKE, "tried %d shared key%s for '%D' - '%D', but MAC mismatched",
+			 keys_found, keys_found == 1 ? "" : "s", my_id, other_id);
 		return FAILED;
 	}
-	chunk_free(&auth_data);
-	
-	DBG1(DBG_IKE, "authentication of '%D' with %N successful",
-		 other_id, auth_method_names, AUTH_PSK);
 	return SUCCESS;
 }
 
@@ -147,28 +153,27 @@ static status_t verify(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 static status_t build(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 					  chunk_t other_nonce, auth_payload_t **auth_payload)
 {
-	chunk_t shared_key;
+	shared_key_t *shared_key;
 	chunk_t auth_data;
-	status_t status;
 	identification_t *my_id, *other_id;
 	
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
 		 my_id, auth_method_names, AUTH_PSK);
-	status = charon->credentials->get_shared_key(charon->credentials, my_id,
-												 other_id, &shared_key);
-	if (status != SUCCESS)
+	shared_key = charon->credentials->get_shared(charon->credentials, SHARED_IKE,
+												 my_id, other_id);
+	if (shared_key == NULL)
 	{
 		DBG1(DBG_IKE, "no shared key found for '%D' - '%D'", my_id, other_id);
-		return status;
+		return NOT_FOUND;
 	}
-			
-	auth_data = build_shared_key_signature(ike_sa_init, other_nonce, shared_key,
-							my_id, this->ike_sa->get_skp_build(this->ike_sa),
-							this->ike_sa->get_prf(this->ike_sa));
+	auth_data = build_shared_key_signature(ike_sa_init, other_nonce,
+									shared_key->get_key(shared_key), my_id,
+									this->ike_sa->get_skp_build(this->ike_sa),
+									this->ike_sa->get_prf(this->ike_sa));
+	shared_key->destroy(shared_key);
 	DBG2(DBG_IKE, "successfully created shared key MAC");
-	chunk_free_randomized(&shared_key);
 	*auth_payload = auth_payload_create();
 	(*auth_payload)->set_auth_method(*auth_payload, AUTH_PSK);
 	(*auth_payload)->set_data(*auth_payload, auth_data);

@@ -32,7 +32,7 @@
 #include <defs.h>
 #include <log.h>
 
-#include <stroke.h>
+#include <stroke_msg.h>
 
 #include "starterstroke.h"
 #include "confread.h"
@@ -175,7 +175,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->sourceip = push_string(msg, buffer);
 }
 
-int starter_stroke_add_conn(starter_conn_t *conn)
+int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 {
 	stroke_msg_t msg;
 
@@ -232,6 +232,7 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	}
 	msg.add_conn.mobike = conn->policy & POLICY_MOBIKE;
 	msg.add_conn.force_encap = conn->policy & POLICY_FORCE_ENCAP;
+	msg.add_conn.crl_policy = cfg->setup.strictcrlpolicy;
 	msg.add_conn.algorithms.ike = push_string(&msg, conn->ike);
 	msg.add_conn.algorithms.esp = push_string(&msg, conn->esp);
 	msg.add_conn.dpd.delay = conn->dpd_delay;

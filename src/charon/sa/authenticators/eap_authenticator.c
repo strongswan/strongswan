@@ -1,10 +1,3 @@
-/**
- * @file eap_authenticator.c
- *
- * @brief Implementation of eap_authenticator_t.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <string.h>
@@ -160,9 +155,9 @@ static status_t initiate(private_eap_authenticator_t *this, eap_type_t type,
 	{
 		DBG1(DBG_IKE, "requesting %N authentication", eap_type_names, type);
 	}
-	this->method = eap_method_create(type, vendor, this->role,
-									 this->ike_sa->get_my_id(this->ike_sa),
-									 this->ike_sa->get_other_id(this->ike_sa));
+	this->method = charon->eap->create_instance(charon->eap, type, vendor,
+						this->role, this->ike_sa->get_my_id(this->ike_sa),
+						this->ike_sa->get_other_id(this->ike_sa));
 	
 	if (this->method == NULL)
 	{
@@ -195,9 +190,11 @@ static status_t process_peer(private_eap_authenticator_t *this,
 	
 	if (!vendor && type == EAP_IDENTITY)
 	{
-		eap_method_t *method = eap_method_create(type, 0, EAP_PEER,
-									   this->ike_sa->get_other_id(this->ike_sa),
-									   this->ike_sa->get_my_id(this->ike_sa));
+		eap_method_t *method;
+		
+		method = charon->eap->create_instance(charon->eap, type, 0, EAP_PEER,
+									this->ike_sa->get_other_id(this->ike_sa),
+									this->ike_sa->get_my_id(this->ike_sa));
 		
 		if (method == NULL || method->process(method, in, out) != SUCCESS)
 		{
@@ -227,9 +224,10 @@ static status_t process_peer(private_eap_authenticator_t *this,
 			DBG1(DBG_IKE, "EAP server requested %N authentication",
 				 eap_type_names, type);
 		}
-		this->method = eap_method_create(type, vendor, EAP_PEER,
-							this->ike_sa->get_other_id(this->ike_sa),
-							this->ike_sa->get_my_id(this->ike_sa));
+		this->method = charon->eap->create_instance(charon->eap,
+									type, vendor, EAP_PEER,
+									this->ike_sa->get_other_id(this->ike_sa),
+									this->ike_sa->get_my_id(this->ike_sa));
 		if (this->method == NULL)
 		{
 			DBG1(DBG_IKE, "EAP server requested unsupported "

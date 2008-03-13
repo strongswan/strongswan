@@ -1,13 +1,5 @@
-/**
- * @file pkcs9.c
- *
- * @brief Implementation of pkcs9_t.
- *
- */
-
 /*
  * Copyright (C)2008 Andreas Steffen
- *
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: pkcs7.c 3423 2008-01-22 10:32:37Z andreas $
+ * $Id$
  */
 
 #include <library.h>

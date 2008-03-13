@@ -1,13 +1,5 @@
-/**
- * @file optionsfrom.c
- * 
- * @brief read command line options from a file
- * 
- */
-
 /*
  * Copyright (C) 2007-2008 Andreas Steffen
- *
  * Hochschule fuer Technik Rapperswil
  *
  * This library is free software; you can redistribute it and/or modify it
@@ -20,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  *
- * RCSID $Id$
+ * $Id$
  */
 
 #include <stdio.h>

@@ -1,10 +1,3 @@
-/**
- * @file ike_sa.h
- *
- * @brief Interface of ike_sa_t.
- *
- */
-
 /*
  * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -21,6 +14,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_sa ike_sa
+ * @{ @ingroup sa
  */
 
 #ifndef IKE_SA_H_
@@ -42,40 +42,32 @@ typedef struct ike_sa_t ike_sa_t;
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
-#include <crypto/ca.h>
 #include <config/peer_cfg.h>
 #include <config/ike_cfg.h>
+#include <credentials/auth_info.h>
 
 /**
  * Timeout in milliseconds after that a half open IKE_SA gets deleted.
- *
- * @ingroup sa
  */
 #define HALF_OPEN_IKE_SA_TIMEOUT 30000
 
 /**
  * Interval to send keepalives when NATed, in seconds.
- *
- * @ingroup sa
  */
 #define KEEPALIVE_INTERVAL 20
 
 /**
  * After which time rekeying should be retried if it failed, in seconds.
- *
- * @ingroup sa
  */
 #define RETRY_INTERVAL 30
 
 /**
  * Jitter to subtract from RETRY_INTERVAL to randomize rekey retry.
- *
- * @ingroup sa
  */
 #define RETRY_JITTER 20
 
 /**
- * @brief Extensions (or optional features) the peer supports
+ * Extensions (or optional features) the peer supports
  */
 enum ike_extension_t {
 	
@@ -91,7 +83,7 @@ enum ike_extension_t {
 };
 
 /**
- * @brief Conditions of an IKE_SA, change during its lifetime
+ * Conditions of an IKE_SA, change during its lifetime
  */
 enum ike_condition_t {
 	
@@ -119,6 +111,11 @@ enum ike_condition_t {
 	 * peer has ben authenticated using EAP
 	 */
 	COND_EAP_AUTHENTICATED = (1<<4),
+
+	/**
+	 * received a certificate request from the peer
+	 */
+	COND_CERTREQ_SEEN = (1<<4),
 };
 
 /**
@@ -138,7 +135,7 @@ enum statistic_t {
 };
 
 /**
- * @brief State of an IKE_SA.
+ * State of an IKE_SA.
  *
  * An IKE_SA passes various states in its lifetime. A newly created
  * SA is in the state CREATED.
@@ -173,8 +170,6 @@ enum statistic_t {
                          X
                         / \
    @endverbatim
- *
- * @ingroup sa
  */
 enum ike_sa_state_t {
 	
@@ -210,365 +205,323 @@ enum ike_sa_state_t {
 extern enum_name_t *ike_sa_state_names;
 
 /**
- * @brief Class ike_sa_t representing an IKE_SA.
+ * Class ike_sa_t representing an IKE_SA.
  *
  * An IKE_SA contains crypto information related to a connection
  * with a peer. It contains multiple IPsec CHILD_SA, for which
  * it is responsible. All traffic is handled by an IKE_SA, using
  * the task manager and its tasks.
- *
- * @b Constructors:
- * - ike_sa_create()
- * 
- * @ingroup sa
  */
 struct ike_sa_t {
 
 	/**
-	 * @brief Get the id of the SA.
+	 * Get the id of the SA.
 	 * 
 	 * Returned ike_sa_id_t object is not getting cloned!
 	 *
-	 * @param this 			calling object
 	 * @return 				ike_sa's ike_sa_id_t
 	 */
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the numerical ID uniquely defining this IKE_SA.
+	 * Get the numerical ID uniquely defining this IKE_SA.
 	 *
-	 * @param this 			calling object
 	 * @return 				unique ID
 	 */
 	u_int32_t (*get_unique_id) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the state of the IKE_SA.
+	 * Get the state of the IKE_SA.
 	 *
-	 * @param this			calling object
 	 * @return				state of the IKE_SA
 	 */
 	ike_sa_state_t (*get_state) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the state of the IKE_SA.
+	 * Set the state of the IKE_SA.
 	 *
-	 * @param this			calling object
 	 * @param state			state to set for the IKE_SA
 	 */
 	void (*set_state) (ike_sa_t *this, ike_sa_state_t ike_sa);
 	
 	/**
-	 * @brief Get the name of the connection this IKE_SA uses.
+	 * Get the name of the connection this IKE_SA uses.
 	 *
-	 * @param this			calling object
 	 * @return				name
 	 */
 	char* (*get_name) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get statistic values from the IKE_SA.
+	 * Get statistic values from the IKE_SA.
 	 *
-	 * @param this			calling object
 	 * @param kind			kind of requested value
 	 * @return				value as integer
 	 */
 	u_int32_t (*get_statistic)(ike_sa_t *this, statistic_t kind);
 	
 	/**
-	 * @brief Get the own host address.
+	 * Get the own host address.
 	 * 
-	 * @param this 			calling object
 	 * @return				host address
 	 */
 	host_t* (*get_my_host) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the own host address.
+	 * Set the own host address.
 	 * 
-	 * @param this 			calling object
 	 * @param me			host address
 	 */
 	void (*set_my_host) (ike_sa_t *this, host_t *me);
 	
 	/**
-	 * @brief Get the other peers host address.
+	 * Get the other peers host address.
 	 * 
-	 * @param this 			calling object
 	 * @return				host address
 	 */
 	host_t* (*get_other_host) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the others host address.
+	 * Set the others host address.
 	 * 
-	 * @param this 			calling object
 	 * @param other			host address
 	 */
 	void (*set_other_host) (ike_sa_t *this, host_t *other);
 	
 	/**
-	 * @brief Update the IKE_SAs host.
+	 * Update the IKE_SAs host.
 	 *
 	 * Hosts may be NULL to use current host.
 	 *
-	 * @param this			calling object
 	 * @param me			new local host address, or NULL
 	 * @param other			new remote host address, or NULL
 	 */
 	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other);
 	
 	/**
-	 * @brief Get the own identification.
+	 * Get the own identification.
 	 * 
-	 * @param this 			calling object
 	 * @return				identification
 	 */
 	identification_t* (*get_my_id) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the own identification.
+	 * Set the own identification.
 	 * 
-	 * @param this 			calling object
 	 * @param me			identification
 	 */
 	void (*set_my_id) (ike_sa_t *this, identification_t *me);
 	
 	/**
-	 * @brief Get the other peer's identification.
+	 * Get the other peer's identification.
 	 * 
-	 * @param this 			calling object
 	 * @return				identification
 	 */
 	identification_t* (*get_other_id) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the other peer's identification.
+	 * Set the other peer's identification.
 	 * 
-	 * @param this 			calling object
 	 * @param other			identification
 	 */
 	void (*set_other_id) (ike_sa_t *this, identification_t *other);
 	
 	/**
-	 * @brief Get the other peer's certification authority
+	 * Get the config used to setup this IKE_SA.
 	 * 
-	 * @param this 			calling object
-	 * @return			ca_info_t record of other ca
-	 */
-	ca_info_t* (*get_other_ca) (ike_sa_t *this);
-	
-	/**
-	 * @brief Set the other peer's certification authority
-	 * 
-	 * @param this 			calling object
-	 * @param other_ca		ca_info_t record of other ca
-	 */
-	void (*set_other_ca) (ike_sa_t *this, ca_info_t *other_ca);
-	
-	/**
-	 * @brief Get the config used to setup this IKE_SA.
-	 * 
-	 * @param this 			calling object
 	 * @return				ike_config
 	 */
 	ike_cfg_t* (*get_ike_cfg) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the config to setup this IKE_SA.
+	 * Set the config to setup this IKE_SA.
 	 * 
-	 * @param this 			calling object
 	 * @param config		ike_config to use
 	 */
 	void (*set_ike_cfg) (ike_sa_t *this, ike_cfg_t* config);
 
 	/**
-	 * @brief Get the peer config used by this IKE_SA.
+	 * Get the peer config used by this IKE_SA.
 	 * 
-	 * @param this 			calling object
 	 * @return				peer_config
 	 */
 	peer_cfg_t* (*get_peer_cfg) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the peer config to use with this IKE_SA.
+	 * Set the peer config to use with this IKE_SA.
 	 * 
-	 * @param this 			calling object
 	 * @param config		peer_config to use
 	 */
 	void (*set_peer_cfg) (ike_sa_t *this, peer_cfg_t *config);
 	
 	/**
-	 * @brief Add an additional address for the peer.
+	 * Get authentication/authorization info for local peer.
+	 *
+	 * @return				auth_info for me
+	 */
+	auth_info_t* (*get_my_auth)(ike_sa_t *this);
+	
+	/**
+	 * Get authentication/authorization info for remote peer.
+	 *
+	 * @return				auth_info for me
+	 */
+	auth_info_t* (*get_other_auth)(ike_sa_t *this);
+	
+	/**
+	 * Add an additional address for the peer.
 	 *
 	 * In MOBIKE, a peer may transmit additional addresses where it is
 	 * reachable. These are stored in the IKE_SA.
 	 * The own list of addresses is not stored, they are queried from
 	 * the kernel when required.
 	 *
-	 * @param this			calling object
 	 * @param host			host to add to list
 	 */
 	void (*add_additional_address)(ike_sa_t *this, host_t *host);
 	
 	/**
-	 * @brief Create an iterator over all additional addresses of the peer.
+	 * Create an iterator over all additional addresses of the peer.
 	 *
-	 * @param this			calling object
 	 * @return 				iterator over addresses
 	 */
 	iterator_t* (*create_additional_address_iterator)(ike_sa_t *this);
 	
 	/**
-	 * @brief Enable an extension the peer supports.
+	 * Enable an extension the peer supports.
 	 *
 	 * If support for an IKE extension is detected, this method is called
 	 * to enable that extension and behave accordingly.
 	 *
-	 * @param this			calling object
 	 * @param extension		extension to enable
 	 */
 	void (*enable_extension)(ike_sa_t *this, ike_extension_t extension);
 	
 	/**
-	 * @brief Check if the peer supports an extension.
+	 * Check if the peer supports an extension.
 	 *
-	 * @param this			calling object
 	 * @param extension		extension to check for support
 	 * @return				TRUE if peer supports it, FALSE otherwise
 	 */
 	bool (*supports_extension)(ike_sa_t *this, ike_extension_t extension);
 	
 	/**
-	 * @brief Enable/disable a condition flag for this IKE_SA.
+	 * Enable/disable a condition flag for this IKE_SA.
 	 *
-	 * @param this 			calling object
 	 * @param condition		condition to enable/disable
 	 * @param enable		TRUE to enable condition, FALSE to disable
 	 */
 	void (*set_condition) (ike_sa_t *this, ike_condition_t condition, bool enable);
 
 	/**
-	 * @brief Check if a condition flag is set.
+	 * Check if a condition flag is set.
 	 *
-	 * @param this 			calling object
 	 * @param condition		condition to check
 	 * @return				TRUE if condition flag set, FALSE otherwise
 	 */
 	bool (*has_condition) (ike_sa_t *this, ike_condition_t condition);
 	
 	/**
-	 * @brief Get the number of queued MOBIKE address updates.
+	 * Get the number of queued MOBIKE address updates.
 	 *
-	 * @param this			calling object
 	 * @return				number of pending updates
 	 */
 	u_int32_t (*get_pending_updates)(ike_sa_t *this);
 	
 	/**
-	 * @brief Set the number of queued MOBIKE address updates.
+	 * Set the number of queued MOBIKE address updates.
 	 *
-	 * @param this			calling object
 	 * @param updates		number of pending updates
 	 */
 	void (*set_pending_updates)(ike_sa_t *this, u_int32_t updates);
 
 #ifdef P2P
 	/**
-	 * @brief Get the server reflexive host.
+	 * Get the server reflexive host.
 	 * 
-	 * @param this 			calling object
 	 * @return				server reflexive host
 	 */
 	host_t* (*get_server_reflexive_host) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the server reflexive host.
+	 * Set the server reflexive host.
 	 * 
-	 * @param this 			calling object
 	 * @param host			server reflexive host
 	 */
 	void (*set_server_reflexive_host) (ike_sa_t *this, host_t *host);
 	
 	/**
-	 * @brief Initiate the mediation of a mediated connection (i.e. initiate a
+	 * Initiate the mediation of a mediated connection (i.e. initiate a
 	 * P2P_CONNECT exchange).
 	 * 
-	 * @param this 				calling object
 	 * @param mediated_cfg		peer_cfg of the mediated connection
 	 * @return				
-	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed
+	 * 							- SUCCESS if initialization started
+	 * 							- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate_mediation) (ike_sa_t *this, peer_cfg_t *mediated_cfg);
 	
 	/**
-	 * @brief Initiate the mediated connection
+	 * Initiate the mediated connection
 	 * 
-	 * @param this 				calling object
 	 * @param me				local endpoint (gets cloned)
 	 * @param other				remote endpoint (gets cloned)
 	 * @param childs			linked list of child_cfg_t of CHILD_SAs (gets cloned)
 	 * @return				
-	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed
+	 * 							- SUCCESS if initialization started
+	 * 							- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate_mediated) (ike_sa_t *this, host_t *me, host_t *other,
 			linked_list_t *childs);
 	
 	/**
-	 * @brief Relay data from one peer to another (i.e. initiate a
+	 * Relay data from one peer to another (i.e. initiate a
 	 * P2P_CONNECT exchange).
 	 *
 	 * Data is cloned.
 	 * 
-	 * @param this 				calling object
 	 * @param requester			ID of the requesting peer
 	 * @param session_id		data of the P2P_SESSIONID payload
 	 * @param session_key		data of the P2P_SESSIONKEY payload
 	 * @param endpoints			endpoints
 	 * @param response			TRUE if this is a response
 	 * @return				
-	 * 						- SUCCESS if relay started
-	 * 						- DESTROY_ME if relay failed
+	 * 							- SUCCESS if relay started
+	 * 							- DESTROY_ME if relay failed
 	 */
 	status_t (*relay) (ike_sa_t *this, identification_t *requester, chunk_t session_id,
 			chunk_t session_key, linked_list_t *endpoints, bool response);
 	
 	/**
-	 * @brief Send a callback to a peer.
+	 * Send a callback to a peer.
 	 * 
 	 * Data is cloned.
 	 * 
-	 * @param this				calling object
 	 * @param peer_id			ID of the other peer
 	 * @return
-	 * 						- SUCCESS if response started
-	 * 						- DESTROY_ME if response failed
+	 * 							- SUCCESS if response started
+	 * 							- DESTROY_ME if response failed
 	 */
 	status_t (*callback) (ike_sa_t *this, identification_t *peer_id);
 	
 	/**
-	 * @brief Respond to a P2P_CONNECT request.
+	 * Respond to a P2P_CONNECT request.
 	 * 
 	 * Data is cloned.
 	 * 
-	 * @param this				calling object
 	 * @param peer_id			ID of the other peer
 	 * @param session_id		the session ID supplied by the initiator
 	 * @return
-	 * 						- SUCCESS if response started
-	 * 						- DESTROY_ME if response failed
+	 * 							- SUCCESS if response started
+	 * 							- DESTROY_ME if response failed
 	 */
 	status_t (*respond) (ike_sa_t *this, identification_t *peer_id, chunk_t session_id);
 #endif /* P2P */
 	
 	/**
-	 * @brief Initiate a new connection.
+	 * Initiate a new connection.
 	 *
 	 * The configs are owned by the IKE_SA after the call.
 	 * 
-	 * @param this 			calling object
 	 * @param child_cfg		child config to create CHILD from
 	 * @return				
 	 * 						- SUCCESS if initialization started
@@ -577,12 +530,11 @@ struct ike_sa_t {
 	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg);
 
 	/**
-	 * @brief Route a policy in the kernel.
+	 * Route a policy in the kernel.
 	 *
 	 * Installs the policies in the kernel. If traffic matches,
 	 * the kernel requests connection setup from the IKE_SA via acquire().
 	 * 
-	 * @param this 			calling object
 	 * @param child_cfg		child config to route
 	 * @return				
 	 * 						- SUCCESS if routed successfully
@@ -591,9 +543,8 @@ struct ike_sa_t {
 	status_t (*route) (ike_sa_t *this, child_cfg_t *child_cfg);
 
 	/**
-	 * @brief Unroute a policy in the kernel previously routed.
+	 * Unroute a policy in the kernel previously routed.
 	 *
-	 * @param this 			calling object
 	 * @param reqid			reqid of CHILD_SA to unroute
 	 * @return				
 	 * 						- SUCCESS if route removed
@@ -603,12 +554,11 @@ struct ike_sa_t {
 	status_t (*unroute) (ike_sa_t *this, u_int32_t reqid);
 	
 	/**
-	 * @brief Acquire connection setup for an installed kernel policy.
+	 * Acquire connection setup for an installed kernel policy.
 	 *
 	 * If an installed policy raises an acquire, the kernel calls
 	 * this function to establish the CHILD_SA (and maybe the IKE_SA).
 	 *
-	 * @param this 			calling object
 	 * @param reqid			reqid of the CHILD_SA the policy belongs to.
 	 * @return				
 	 * 						- SUCCESS if initialization started
@@ -617,13 +567,12 @@ struct ike_sa_t {
 	status_t (*acquire) (ike_sa_t *this, u_int32_t reqid);
 	
 	/**
-	 * @brief Initiates the deletion of an IKE_SA.
+	 * Initiates the deletion of an IKE_SA.
 	 * 
 	 * Sends a delete message to the remote peer and waits for
 	 * its response. If the response comes in, or a timeout occurs,
 	 * the IKE SA gets deleted.
 	 * 
-	 * @param this 			calling object
 	 * @return
 	 * 						- SUCCESS if deletion is initialized
 	 * 						- INVALID_STATE, if the IKE_SA is not in 
@@ -633,7 +582,7 @@ struct ike_sa_t {
 	status_t (*delete) (ike_sa_t *this);
 	
 	/**
-	 * @brief Update IKE_SAs after network interfaces have changed.
+	 * Update IKE_SAs after network interfaces have changed.
 	 *
 	 * Whenever the network interface configuration changes, the kernel
 	 * interface calls roam() on each IKE_SA. The IKE_SA then checks if
@@ -641,21 +590,19 @@ struct ike_sa_t {
 	 * If MOBIKE is supported, addresses are updated; If not, the tunnel is
 	 * restarted.
 	 *
-	 * @param this			calling object
 	 * @param address		TRUE if address list changed, FALSE otherwise
 	 * @return				SUCCESS, FAILED, DESTROY_ME
 	 */
 	status_t (*roam)(ike_sa_t *this, bool address);
 	
 	/**
-	 * @brief Processes a incoming IKEv2-Message.
+	 * Processes a incoming IKEv2-Message.
 	 *
 	 * Message processing may fail. If a critical failure occurs, 
 	 * process_message() return DESTROY_ME. Then the caller must 
 	 * destroy the IKE_SA immediatly, as it is unusable.
 	 * 
-	 * @param this 			calling object
-	 * @param message 	message to process
+	 * @param message 		message to process
 	 * @return 				
 	 * 						- SUCCESS
 	 * 						- FAILED
@@ -664,12 +611,11 @@ struct ike_sa_t {
 	status_t (*process_message) (ike_sa_t *this, message_t *message);
 	
 	/**
-	 * @brief Generate a IKE message to send it to the peer.
+	 * Generate a IKE message to send it to the peer.
 	 * 
 	 * This method generates all payloads in the message and encrypts/signs
 	 * the packet.
 	 * 
-	 * @param this 			calling object
 	 * @param message 		message to generate
 	 * @param packet		generated output packet
 	 * @return 				
@@ -681,9 +627,8 @@ struct ike_sa_t {
 								  packet_t **packet);
 	
 	/**
-	 * @brief Retransmits a request.
+	 * Retransmits a request.
 	 * 
-	 * @param this 			calling object
 	 * @param message_id	ID of the request to retransmit
 	 * @return
 	 * 						- SUCCESS
@@ -692,13 +637,12 @@ struct ike_sa_t {
 	status_t (*retransmit) (ike_sa_t *this, u_int32_t message_id);
 	
 	/**
-	 * @brief Sends a DPD request to the peer.
+	 * Sends a DPD request to the peer.
 	 *
 	 * To check if a peer is still alive, periodic
 	 * empty INFORMATIONAL messages are sent if no
 	 * other traffic was received.
 	 * 
-	 * @param this			calling object
 	 * @return
 	 * 						- SUCCESS
 	 * 						- DESTROY_ME, if peer did not respond
@@ -706,19 +650,17 @@ struct ike_sa_t {
 	status_t (*send_dpd) (ike_sa_t *this);
 	
 	/**
-	 * @brief Sends a keep alive packet.
+	 * Sends a keep alive packet.
 	 *
 	 * To refresh NAT tables in a NAT router
 	 * between the peers, periodic empty
 	 * UDP packets are sent if no other traffic
 	 * was sent.
-	 *
-	 * @param this			calling object
 	 */
 	void (*send_keepalive) (ike_sa_t *this);
 
 	/**
-	 * @brief Derive all keys and create the transforms for IKE communication.
+	 * Derive all keys and create the transforms for IKE communication.
 	 *
 	 * Keys are derived using the diffie hellman secret, nonces and internal
 	 * stored SPIs.
@@ -726,7 +668,6 @@ struct ike_sa_t {
 	 * existing IKE_SA (rekeying). The SK_d key from the old IKE_SA
 	 * is included in the derivation process.
 	 *
-	 * @param this 			calling object
 	 * @param proposal		proposal which contains algorithms to use
 	 * @param secret		secret derived from DH exchange, gets freed
 	 * @param nonce_i		initiators nonce
@@ -740,49 +681,43 @@ struct ike_sa_t {
 							bool initiator, prf_t *child_prf, prf_t *old_prf);
 	
 	/**
-	 * @brief Get a multi purpose prf for the negotiated PRF function.
+	 * Get a multi purpose prf for the negotiated PRF function.
 	 * 
-	 * @param this 			calling object
 	 * @return				pointer to prf_t object
 	 */
 	prf_t *(*get_prf) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the prf-object, which is used to derive keys for child SAs.
+	 * Get the prf-object, which is used to derive keys for child SAs.
 	 * 
-	 * @param this 			calling object
 	 * @return				pointer to prf_t object
 	 */
 	prf_t *(*get_child_prf) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the key to build outgoing authentication data.
+	 * Get the key to build outgoing authentication data.
 	 * 
-	 * @param this 			calling object
 	 * @return				pointer to prf_t object
 	 */
 	chunk_t (*get_skp_build) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the key to verify incoming authentication data.
+	 * Get the key to verify incoming authentication data.
 	 * 
-	 * @param this 			calling object
 	 * @return				pointer to prf_t object
 	 */
 	chunk_t (*get_skp_verify) (ike_sa_t *this);
 	
 	/**
-	 * @brief Associates a child SA to this IKE SA
+	 * Associates a child SA to this IKE SA
 	 * 
-	 * @param this 			calling object
 	 * @param child_sa		child_sa to add
 	 */
 	void (*add_child_sa) (ike_sa_t *this, child_sa_t *child_sa);
 	
 	/**
-	 * @brief Get a CHILD_SA identified by protocol and SPI.
+	 * Get a CHILD_SA identified by protocol and SPI.
 	 * 
-	 * @param this 			calling object
 	 * @param protocol		protocol of the SA
 	 * @param spi			SPI of the CHILD_SA
 	 * @param inbound		TRUE if SPI is inbound, FALSE if outbound
@@ -792,19 +727,17 @@ struct ike_sa_t {
 								 u_int32_t spi, bool inbound);
 	
 	/**
-	 * @brief Create an iterator over all CHILD_SAs.
+	 * Create an iterator over all CHILD_SAs.
 	 * 
-	 * @param this 			calling object
 	 * @return				iterator
 	 */
 	iterator_t* (*create_child_sa_iterator) (ike_sa_t *this);
 	
 	/**
-	 * @brief Rekey the CHILD SA with the specified reqid.
+	 * Rekey the CHILD SA with the specified reqid.
 	 *
 	 * Looks for a CHILD SA owned by this IKE_SA, and start the rekeing.
 	 *
-	 * @param this 			calling object
 	 * @param protocol		protocol of the SA
 	 * @param spi			inbound SPI of the CHILD_SA
 	 * @return
@@ -814,13 +747,12 @@ struct ike_sa_t {
 	status_t (*rekey_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
 
 	/**
-	 * @brief Close the CHILD SA with the specified protocol/SPI.
+	 * Close the CHILD SA with the specified protocol/SPI.
 	 *
 	 * Looks for a CHILD SA owned by this IKE_SA, deletes it and
 	 * notify's the remote peer about the delete. The associated
 	 * states and policies in the kernel get deleted, if they exist.
 	 *
-	 * @param this 			calling object
 	 * @param protocol		protocol of the SA
 	 * @param spi			inbound SPI of the CHILD_SA
 	 * @return
@@ -830,11 +762,10 @@ struct ike_sa_t {
 	status_t (*delete_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
 
 	/**
-	 * @brief Destroy a CHILD SA with the specified protocol/SPI.
+	 * Destroy a CHILD SA with the specified protocol/SPI.
 	 *
 	 * Looks for a CHILD SA owned by this IKE_SA and destroys it.
 	 *
-	 * @param this 			calling object
 	 * @param protocol		protocol of the SA
 	 * @param spi			inbound SPI of the CHILD_SA
 	 * @return
@@ -844,99 +775,89 @@ struct ike_sa_t {
 	status_t (*destroy_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
 
 	/**
-	 * @brief Rekey the IKE_SA.
+	 * Rekey the IKE_SA.
 	 *
 	 * Sets up a new IKE_SA, moves all CHILDs to it and deletes this IKE_SA.
 	 *
-	 * @param this 			calling object
 	 * @return				- SUCCESS, if IKE_SA rekeying initiated
 	 */
 	status_t (*rekey) (ike_sa_t *this);
 
 	/**
-	 * @brief Restablish the IKE_SA.
+	 * Restablish the IKE_SA.
 	 *
 	 * Create a completely new IKE_SA with authentication, recreates all children
 	 * within the IKE_SA, closes this IKE_SA.
 	 *
-	 * @param this 			calling object
 	 * @return				DESTROY_ME to destroy the IKE_SA
 	 */
 	status_t (*reestablish) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the lifetime limit received from a AUTH_LIFETIME notify.
+	 * Set the lifetime limit received from a AUTH_LIFETIME notify.
 	 *
-	 * @param this			calling object
 	 * @param lifetime		lifetime in seconds
 	 */
 	void (*set_auth_lifetime)(ike_sa_t *this, u_int32_t lifetime);
 	
 	/**
-	 * @brief Set the virtual IP to use for this IKE_SA and its children.
+	 * Set the virtual IP to use for this IKE_SA and its children.
 	 *
 	 * The virtual IP is assigned per IKE_SA, not per CHILD_SA. It has the same
 	 * lifetime as the IKE_SA.
 	 *
-	 * @param this 			calling object
+	 * @param local			TRUE to set local address, FALSE for remote
+	 * @param ip			IP to set as virtual IP
 	 */
 	void (*set_virtual_ip) (ike_sa_t *this, bool local, host_t *ip);
 	
 	/**
-	 * @brief Get the virtual IP configured.
+	 * Get the virtual IP configured.
 	 *
-	 * @param this 			calling object
 	 * @param local			TRUE to get local virtual IP, FALSE for remote
+	 * @return				host_t *virtual IP
 	 */
 	host_t* (*get_virtual_ip) (ike_sa_t *this, bool local);
 	
 	/**
-	 * @brief Add a DNS server to the system.
+	 * Add a DNS server to the system.
 	 *
 	 * An IRAS may send a DNS server. To use it, it is installed on the
 	 * system. The DNS entry has a lifetime until the IKE_SA gets closed.
 	 *
-	 * @param this 			calling object
 	 * @param dns			DNS server to install on the system
 	 */
 	void (*add_dns_server) (ike_sa_t *this, host_t *dns);
 	
 	/**
-	 * @brief Inherit all attributes of other to this after rekeying.
+	 * Inherit all attributes of other to this after rekeying.
 	 *
 	 * When rekeying is completed, all CHILD_SAs, the virtual IP and all
 	 * outstanding tasks are moved from other to this.
 	 * As this call may initiate inherited tasks, a status is returned.
 	 *
-	 * @param this 			calling object
 	 * @param other			other task to inherit from
 	 * @return				DESTROY_ME if initiation of inherited task failed
 	 */
 	status_t (*inherit) (ike_sa_t *this, ike_sa_t *other);
 		
 	/**
-	 * @brief Reset the IKE_SA, useable when initiating fails
-	 *
-	 * @param this 			calling object
+	 * Reset the IKE_SA, useable when initiating fails
 	 */
 	void (*reset) (ike_sa_t *this);
 	
 	/**
-	 * @brief Destroys a ike_sa_t object.
-	 *
-	 * @param this 			calling object
+	 * Destroys a ike_sa_t object.
 	 */
 	void (*destroy) (ike_sa_t *this);
 };
 
 /**
- * @brief Creates an ike_sa_t object with a specific ID.
+ * Creates an ike_sa_t object with a specific ID.
  *
  * @param ike_sa_id 	ike_sa_id_t object to associate with new IKE_SA
  * @return 				ike_sa_t object
- * 
- * @ingroup sa
  */
 ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id);
 
-#endif /* IKE_SA_H_ */
+#endif /* IKE_SA_H_ @} */

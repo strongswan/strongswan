@@ -1,10 +1,3 @@
-/**
- * @file connect_manager.c
- *
- * @brief Implementation of connect_manager_t.
- *
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "connect_manager.h"
@@ -1516,7 +1511,14 @@ connect_manager_t *connect_manager_create()
 	this->public.set_responder_data = (status_t(*)(connect_manager_t*,chunk_t,chunk_t,linked_list_t*))set_responder_data;
 	this->public.process_check = (void(*)(connect_manager_t*,message_t*))process_check;
 	
-	this->hasher = hasher_create(HASH_SHA1);
+	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (hasher == NULL)
+	{
+		DBG1(DBG_IKE, "unable to create connect manager, SHA1 not supported");
+		free(this);
+		return NULL;
+	}
+	
 	this->checklists = linked_list_create();
 	this->initiated = linked_list_create();
 	

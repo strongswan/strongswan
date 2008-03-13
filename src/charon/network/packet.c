@@ -1,10 +1,3 @@
-/**
- * @file packet.c
- * 
- * @brief Implementation of packet_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,11 +12,11 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
-
 #include "packet.h"
-
 
 typedef struct private_packet_t private_packet_t;
 

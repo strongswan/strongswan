@@ -1,10 +1,3 @@
-/**
- * @file ike_natd.h
- * 
- * @brief Interface ike_natd_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_natd ike_natd
+ * @{ @ingroup tasks
  */
 
 #ifndef IKE_NATD_H_
@@ -30,12 +30,7 @@ typedef struct ike_natd_t ike_natd_t;
 #include <sa/tasks/task.h>
 
 /**
- * @brief Task of type ike_natd, detects NAT situation in IKE_SA_INIT exchange.
- *
- * @b Constructors:
- *  - ike_natd_create()
- * 
- * @ingroup tasks
+ * Task of type ike_natd, detects NAT situation in IKE_SA_INIT exchange.
  */
 struct ike_natd_t {
 
@@ -46,7 +41,7 @@ struct ike_natd_t {
 };
 
 /**
- * @brief Create a new ike_natd task.
+ * Create a new ike_natd task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if thask is the original initator
@@ -54,4 +49,4 @@ struct ike_natd_t {
  */
 ike_natd_t *ike_natd_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_NATD_H_ */
+#endif /* IKE_NATD_H_ @} */

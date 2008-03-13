@@ -1,10 +1,3 @@
-/**
- * @file log.h
- *
- * @brief Logging functions for the library.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+ 
+/**
+ * @defgroup debug debug
+ * @{ @ingroup libstrongswan
  */
 
 #ifndef DEBUG_H_
@@ -60,4 +60,4 @@ extern void (*dbg) (int level, char *fmt, ...);
 /** default logging function, prints to stderr */
 void dbg_default(int level, char *fmt, ...);
 
-#endif /* DEBUG_H_ */
+#endif /* DEBUG_H_ @} */

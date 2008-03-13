@@ -1,10 +1,3 @@
-/**
- * @file process_message_job.h
- * 
- * @brief Interface of process_message_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup process_message_job process_message_job
+ * @{ @ingroup jobs
  */
 
 #ifndef PROCESS_MESSAGE_JOB_H_
@@ -31,12 +31,7 @@ typedef struct process_message_job_t process_message_job_t;
 #include <processing/jobs/job.h>
 
 /**
- * @brief Class representing an PROCESS_MESSAGE job.
- *
- * @b Constructors:
- * - process_message_job_create()
- *
- * @ingroup jobs
+ * Class representing an PROCESS_MESSAGE job.
  */
 struct process_message_job_t {
 	/**
@@ -46,13 +41,11 @@ struct process_message_job_t {
 };
 
 /**
- * @brief Creates a job of type PROCESS_MESSAGE.
+ * Creates a job of type PROCESS_MESSAGE.
  * 
  * @param message		message to process
  * @return				created process_message_job_t object
- * 
- * @ingroup jobs
  */
 process_message_job_t *process_message_job_create(message_t *message);
 
-#endif /*PROCESS_MESSAGE_JOB_H_*/
+#endif /*PROCESS_MESSAGE_JOB_H_ @} */

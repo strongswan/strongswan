@@ -1,10 +1,3 @@
-/**
- * @file bus.h
- *
- * @brief Interface of bus_t.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup bus bus
+ * @{ @ingroup charon
  */
 
 #ifndef BUS_H_
@@ -36,7 +36,7 @@ typedef struct bus_t bus_t;
 
 
 /**
- * @brief signals emitted by the daemon.
+ * signals emitted by the daemon.
  *
  * Signaling is for different purporses. First, it allows debugging via
  * "debugging signal messages", sencondly, it allows to follow certain
@@ -52,8 +52,6 @@ typedef struct bus_t bus_t;
  * Debug signal betwee a START and a SUCCESS/FAILED belongs to that operation
  * if the IKE_SA is the same. The thread may change, as multiple threads
  * may be involved in a complex scenario.
- *
- * @ingroup bus
  */
 enum signal_t {
 	/** pseudo signal, representing any other signal */
@@ -157,7 +155,7 @@ enum level_t {
 
 #if DEBUG_LEVEL >= 1
 /**
- * @brief Log a debug message via the signal bus.
+ * Log a debug message via the signal bus.
  *
  * @param signal	signal_t signal description
  * @param format	printf() style format string
@@ -189,7 +187,7 @@ enum level_t {
 #endif /* DBG4 */
 
 /**
- * @brief Raise a signal for an occured event.
+ * Raise a signal for an occured event.
  *
  * @param sig		signal_t signal description
  * @param format	printf() style format string
@@ -198,7 +196,7 @@ enum level_t {
 #define SIG(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_0, format, ##__VA_ARGS__)
 
 /**
- * @brief Get the type of a signal.
+ * Get the type of a signal.
  *
  * A signal may be a debugging signal with a specific context. They have
  * a level specific for their context > 0. All audit signals use the
@@ -211,17 +209,15 @@ enum level_t {
 
 
 /**
- * @brief Interface for registering at the signal bus.
+ * Interface for registering at the signal bus.
  *
  * To receive signals from the bus, the client implementing the
  * bus_listener_t interface registers itself at the signal bus.
- *
- * @ingroup bus
  */
 struct bus_listener_t {
 	
 	/**
-	 * @brief Send a signal to a bus listener.
+	 * Send a signal to a bus listener.
 	 *
 	 * A numerical identification for the thread is included, as the
 	 * associated IKE_SA, if any. Signal specifies the type of
@@ -231,8 +227,10 @@ struct bus_listener_t {
 	 * a "..." parameters to functions is not (cleanly) possible.
 	 * The implementing signal function returns TRUE to stay registered
 	 * to the bus, or FALSE to unregister itself.
+	 * You should not call bus_t.signal() inside of a registered listener,
+	 * as it WILL call itself recursively. If you do so, make shure to 
+	 * avoid infinite recursion. Watch your stack!
 	 *
-	 * @param this		listener
 	 * @param singal	kind of the signal (up, down, rekeyed, ...)
 	 * @param level		verbosity level of the signal
 	 * @param thread	ID of the thread raised this signal
@@ -246,40 +244,36 @@ struct bus_listener_t {
 };
 
 /**
- * @brief Signal bus which sends signals to registered listeners.
+ * Signal bus which sends signals to registered listeners.
  *
  * The signal bus is not much more than a multiplexer. A listener interested
  * in receiving event signals registers at the bus. Any signals sent to
  * are delivered to all registered listeners.
  * To deliver signals to threads, the blocking listen() call may be used
  * to wait for a signal.
- *
- * @ingroup bus
  */
 struct bus_t {
 	
 	/**
-	 * @brief Register a listener to the bus.
+	 * Register a listener to the bus.
 	 *
 	 * A registered listener receives all signals which are sent to the bus.
 	 * The listener is passive; the thread which emitted the signal
 	 * processes the listener routine.
 	 *
-	 * @param this		bus
 	 * @param listener	listener to register.
 	 */
 	void (*add_listener) (bus_t *this, bus_listener_t *listener);
 	
 	/**
-	 * @brief Unregister a listener from the bus.
+	 * Unregister a listener from the bus.
 	 *
-	 * @param this		bus
 	 * @param listener	listener to unregister.
 	 */
 	void (*remove_listener) (bus_t *this, bus_listener_t *listener);
 	
 	/**
-	 * @brief Register a listener and block the calling thread.
+	 * Register a listener and block the calling thread.
 	 *
 	 * This call registers a listener and blocks the calling thread until
 	 * its listeners function returns FALSE. This allows to wait for certain
@@ -287,14 +281,13 @@ struct bus_t {
 	 * registered, this allows to listen on events we initiate with the job
 	 * without missing any signals.
 	 *
-	 * @param this		bus
 	 * @param listener	listener to register
 	 * @param job		job to execute asynchronously when registered, or NULL
 	 */
 	void (*listen)(bus_t *this, bus_listener_t *listener, job_t *job);
 	
 	/**
-	 * @brief Set the IKE_SA the calling thread is using.
+	 * Set the IKE_SA the calling thread is using.
 	 *
 	 * To associate an received signal to an IKE_SA without passing it as
 	 * parameter each time, the thread registers it's used IKE_SA each
@@ -302,13 +295,12 @@ struct bus_t {
 	 * the IKE_SA (by passing NULL). This IKE_SA is stored per-thread, so each
 	 * thread has one IKE_SA registered (or not).
 	 * 
-	 * @param this		bus
 	 * @param ike_sa	ike_sa to register, or NULL to unregister
 	 */
 	void (*set_sa) (bus_t *this, ike_sa_t *ike_sa);
 	
 	/**
-	 * @brief Send a signal to the bus.
+	 * Send a signal to the bus.
 	 *
 	 * The signal specifies the type of the event occured. The format string
 	 * specifies an additional informational or error message with a
@@ -316,7 +308,6 @@ struct bus_t {
 	 * Some useful macros are available to shorten this call.
 	 * @see SIG(), DBG1()
 	 *
-	 * @param this		bus
 	 * @param singal	kind of the signal (up, down, rekeyed, ...)
 	 * @param level		verbosity level of the signal
 	 * @param format	printf() style format string
@@ -325,7 +316,7 @@ struct bus_t {
 	void (*signal) (bus_t *this, signal_t signal, level_t level, char* format, ...);
 	
 	/**
-	 * @brief Send a signal to the bus using va_list arguments.
+	 * Send a signal to the bus using va_list arguments.
 	 *
 	 * Same as bus_t.signal(), but uses va_list argument list.
 	 *
@@ -333,7 +324,6 @@ struct bus_t {
 	 * called extensively and therefore shouldn't allocate heap memory or
 	 * do other expensive tasks!
 	 *
-	 * @param this		bus
 	 * @param singal	kind of the signal (up, down, rekeyed, ...)
 	 * @param level		verbosity level of the signal
 	 * @param format	printf() style format string
@@ -342,20 +332,16 @@ struct bus_t {
 	void (*vsignal) (bus_t *this, signal_t signal, level_t level, char* format, va_list args);
 	
 	/**
-	 * @brief Destroy the signal bus.
-	 *
-	 * @param this		bus to destroy
+	 * Destroy the signal bus.
 	 */
 	void (*destroy) (bus_t *this);
 };
 
 /**
- * @brief Create the signal bus which multiplexes signals to its listeners.
+ * Create the signal bus which multiplexes signals to its listeners.
  *
  * @return		signal bus instance
- * 
- * @ingroup bus
  */
 bus_t *bus_create();
 
-#endif /* BUS_H_ */
+#endif /* BUS_H_ @} */

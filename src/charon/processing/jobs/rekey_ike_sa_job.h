@@ -1,10 +1,3 @@
-/**
- * @file rekey_ike_sa_job.h
- * 
- * @brief Interface of rekey_ike_sa_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup rekey_ike_sa_job rekey_ike_sa_job
+ * @{ @ingroup jobs
  */
 
 #ifndef REKEY_IKE_SA_JOB_H_
@@ -30,14 +30,9 @@ typedef struct rekey_ike_sa_job_t rekey_ike_sa_job_t;
 #include <processing/jobs/job.h>
 
 /**
- * @brief Class representing an REKEY_IKE_SA Job.
+ * Class representing an REKEY_IKE_SA Job.
  * 
  * This job initiates the rekeying of an IKE_SA.
- * 
- * @b Constructors:
- *  - rekey_ike_sa_job_create()
- * 
- * @ingroup jobs
  */
 struct rekey_ike_sa_job_t {
 	/**
@@ -47,14 +42,12 @@ struct rekey_ike_sa_job_t {
 };
 
 /**
- * @brief Creates a job of type REKEY_IKE_SA.
+ * Creates a job of type REKEY_IKE_SA.
  *
  * @param ike_sa_id		ID of the IKE_SA to rekey
  * @param reauth		TRUE to reauthenticate peer, FALSE for rekeying only
  * @return				rekey_ike_sa_job_t object
- * 
- * @ingroup jobs
  */
 rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id, bool reauth);
 
-#endif /* REKEY_IKE_SA_JOB_H_ */
+#endif /* REKEY_IKE_SA_JOB_H_ @} */

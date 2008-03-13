@@ -1,10 +1,3 @@
-/**
- * @file auth_controller.h
- * 
- * @brief Interface of auth_controller_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup auth_controller auth_controller
+ * @{ @ingroup controller
  */
 
 #ifndef AUTH_CONTROLLER_H_
@@ -29,7 +29,7 @@
 typedef struct auth_controller_t auth_controller_t;
 
 /**
- * @brief Authentication controller.
+ * Authentication controller.
  */
 struct auth_controller_t {
 
@@ -40,8 +40,8 @@ struct auth_controller_t {
 };
 
 /**
- * @brief Create a auth_controller controller instance.
+ * Create a auth_controller controller instance.
  */
 controller_t *auth_controller_create(context_t *context, void *param);
 
-#endif /* AUTH_CONTROLLER_H_ */
+#endif /* AUTH_CONTROLLER_H_ @} */

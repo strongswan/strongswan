@@ -21,7 +21,7 @@
 
 err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp);
 
-bool pem_asn1_load_file(const char *filename, chunk_t *passphrase,
-						const char *type, chunk_t *blob, bool *pgp);
+bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
+						chunk_t *blob, bool *pgp);
 
-#endif /*PEM_H_*/
+#endif /*PEM_H_ @} */

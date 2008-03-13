@@ -1,10 +1,3 @@
-/**
- * @file ike_sa_manager.h
- * 
- * @brief Interface of ike_sa_manager_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_sa_manager ike_sa_manager
+ * @{ @ingroup sa
  */
 
 #ifndef IKE_SA_MANAGER_H_
@@ -32,7 +32,7 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
 #include <config/peer_cfg.h>
 
 /**
- * @brief The IKE_SA-Manager is responsible for managing all initiated and responded IKE_SA's.
+ * The IKE_SA-Manager is responsible for managing all initiated and responded IKE_SA's.
  *
  * To avoid access from multiple threads, IKE_SAs must be checked out from
  * the manager, and checked in after usage. 
@@ -42,18 +42,12 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
  * This could be done by comparing thread-ids via pthread_self()...
  * 
  * @todo Managing of ike_sa_t objects in a hash table instead of linked list.
- * 
- * @b Constructors:
- * - ike_sa_manager_create()
- * 
- * @ingroup sa
  */
 struct ike_sa_manager_t {
 	
 	/**
-	 * @brief Checkout an existing IKE_SA.
+	 * Checkout an existing IKE_SA.
 	 * 
-	 * @param this 				the manager object
 	 * @param ike_sa_id			the SA identifier, will be updated
 	 * @returns 					
 	 * 							- checked out IKE_SA if found
@@ -62,16 +56,15 @@ struct ike_sa_manager_t {
 	ike_sa_t* (*checkout) (ike_sa_manager_t* this, ike_sa_id_t *sa_id);
 	
 	/**
-	 * @brief Create and check out a new IKE_SA.
+	 * Create and check out a new IKE_SA.
 	 * 
-	 * @param this 				the manager object
 	 * @param initiator			TRUE for initiator, FALSE otherwise
 	 * @returns 				created andchecked out IKE_SA
 	 */
 	ike_sa_t* (*checkout_new) (ike_sa_manager_t* this, bool initiator);
 	
 	/**
-	 * @brief Checkout an IKE_SA by a message.
+	 * Checkout an IKE_SA by a message.
 	 * 
 	 * In some situations, it is necessary that the manager knows the
 	 * message to use for the checkout. This has the folloing reasons:
@@ -86,7 +79,6 @@ struct ike_sa_manager_t {
 	 * If processing the message does not make sense (for the reasons above),
 	 * NULL is returned.
 	 * 
-	 * @param this 				the manager object
 	 * @param ike_sa_id			the SA identifier, will be updated
 	 * @returns 					
 	 * 							- checked out/created IKE_SA
@@ -95,7 +87,7 @@ struct ike_sa_manager_t {
 	ike_sa_t* (*checkout_by_message) (ike_sa_manager_t* this, message_t *message);
 	
 	/**
-	 * @brief Checkout an IKE_SA for initiation by a peer_config.
+	 * Checkout an IKE_SA for initiation by a peer_config.
 	 *
 	 * To initiate, a CHILD_SA may be established within an existing IKE_SA.
 	 * This call checks for an existing IKE_SA by comparing the configuration.
@@ -104,7 +96,6 @@ struct ike_sa_manager_t {
 	 * If no IKE_SA is found, a new one is created. This is also the case when
 	 * the found IKE_SA is in the DELETING state.
 	 *
-	 * @param this			 	the manager object
 	 * @param peer_cfg			configuration used to find an existing IKE_SA
 	 * @return					checked out/created IKE_SA
 	 */
@@ -112,14 +103,13 @@ struct ike_sa_manager_t {
 								 	 peer_cfg_t *peer_cfg);
 	
 	/**
-	 * @brief Check out an IKE_SA a unique ID.
+	 * Check out an IKE_SA a unique ID.
 	 *
 	 * Every IKE_SA and every CHILD_SA is uniquely identified by an ID. 
 	 * These checkout function uses, depending
 	 * on the child parameter, the unique ID of the IKE_SA or the reqid
 	 * of one of a IKE_SAs CHILD_SA.
 	 *
-	 * @param this				the manager object
 	 * @param id				unique ID of the object
 	 * @param child				TRUE to use CHILD, FALSE to use IKE_SA
 	 * @return
@@ -130,12 +120,11 @@ struct ike_sa_manager_t {
 								 bool child);
 	
 	/**
-	 * @brief Check out an IKE_SA by the policy/connection name.
+	 * Check out an IKE_SA by the policy/connection name.
 	 *
 	 * Check out the IKE_SA by the connections name or by a CHILD_SAs policy
 	 * name.
 	 *
-	 * @param this				the manager object
 	 * @param name				name of the connection/policy
 	 * @param child				TRUE to use policy name, FALSE to use conn name
 	 * @return
@@ -146,24 +135,22 @@ struct ike_sa_manager_t {
 								   bool child);
 	
 	/**
-	 * @brief Create an iterator over all stored IKE_SAs.
+	 * Create an iterator over all stored IKE_SAs.
 	 *
 	 * The avoid synchronization issues, the iterator locks access
 	 * to the manager exclusively, until it gets destroyed.
 	 * This iterator is for reading only! Writing will corrupt the manager.
 	 *
-	 * @param this			 	the manager object
 	 * @return					iterator over all IKE_SAs.
 	 */
 	iterator_t *(*create_iterator) (ike_sa_manager_t* this);
 	
 	/**
-	 * @brief Checkin the SA after usage.
+	 * Checkin the SA after usage.
 	 * 
 	 * @warning the SA pointer MUST NOT be used after checkin! 
 	 * The SA must be checked out again!
 	 *  
-	 * @param this			 	the manager object
 	 * @param ike_sa_id			the SA identifier, will be updated
 	 * @param ike_sa			checked out SA
 	 * @returns 				
@@ -173,7 +160,7 @@ struct ike_sa_manager_t {
 	status_t (*checkin) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 	
 	/**
-	 * @brief Destroy a checked out SA.
+	 * Destroy a checked out SA.
 	 *
 	 * The IKE SA is destroyed without notification of the remote peer.
 	 * Use this only if the other peer doesn't respond or behaves not
@@ -182,7 +169,6 @@ struct ike_sa_manager_t {
 	 * so this can be called if the SA is in a "unclean" state, without the
 	 * risk that another thread can get the SA.
 	 *
-	 * @param this			 	the manager object
 	 * @param ike_sa			SA to delete
 	 * @returns 				
 	 * 							- SUCCESS if found
@@ -191,7 +177,7 @@ struct ike_sa_manager_t {
 	status_t (*checkin_and_destroy) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 	
 	/**
-	 * @brief Get the number of IKE_SAs which are in the connecting state.
+	 * Get the number of IKE_SAs which are in the connecting state.
 	 *
 	 * To prevent the server from resource exhaustion, cookies and other
 	 * mechanisms are used. The number of half open IKE_SAs is a good
@@ -200,29 +186,24 @@ struct ike_sa_manager_t {
 	 * from this IP are counted.
 	 * Only SAs for which we are the responder are counted.
 	 * 
-	 * @param this				the manager object
 	 * @param ip				NULL for all, IP for half open IKE_SAs with IP
 	 * @return					number of half open IKE_SAs
 	 */
 	int (*get_half_open_count) (ike_sa_manager_t *this, host_t *ip);
 	
 	/**
-	 * @brief Destroys the manager with all associated SAs.
+	 * Destroys the manager with all associated SAs.
 	 * 
 	 * Threads will be driven out, so all SAs can be deleted cleanly.
-	 * 
-	 * @param this				 the manager object
 	 */
 	void (*destroy) (ike_sa_manager_t *this);
 };
 
 /**
- * @brief Create a manager.
+ * Create a manager.
  * 
- * @returns 	ike_sa_manager_t object
- * 
- * @ingroup sa
+ * @returns 	ike_sa_manager_t object, NULL if initialization fails
  */
 ike_sa_manager_t *ike_sa_manager_create(void);
 
-#endif /*IKE_SA_MANAGER_H_*/
+#endif /*IKE_SA_MANAGER_H_ @} */

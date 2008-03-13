@@ -1,10 +1,3 @@
-/**
- * @file ike_sa_manager.c
- *
- * @brief Implementation of ike_sa_mananger_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <pthread.h>
@@ -30,6 +25,7 @@
 #include <sa/ike_sa_id.h>
 #include <bus/bus.h>
 #include <utils/linked_list.h>
+#include <crypto/hashers/hasher.h>
 
 typedef struct entry_t entry_t;
 
@@ -508,7 +504,6 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	{
 		identification_t *found_my_id, *found_other_id;
 		host_t *found_my_host, *found_other_host;
-		int wc;
 		
 		if (!wait_for_entry(this, entry))
 		{
@@ -541,8 +536,8 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 			 my_host->ip_equals(my_host, found_my_host)) &&
 			(other_host->is_anyaddr(other_host) ||
 			 other_host->ip_equals(other_host, found_other_host)) &&
-			found_my_id->matches(found_my_id, my_id, &wc) &&
-			found_other_id->matches(found_other_id, other_id, &wc) &&
+			found_my_id->matches(found_my_id, my_id) &&
+			found_other_id->matches(found_other_id, other_id) &&
 			streq(peer_cfg->get_name(peer_cfg),
 				  entry->ike_sa->get_name(entry->ike_sa)))
 		{
@@ -920,10 +915,15 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.get_half_open_count = (int(*)(ike_sa_manager_t*,host_t*))get_half_open_count;
 	
 	/* initialize private variables */
+	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
+	if (this->hasher == NULL)
+	{
+		DBG1(DBG_MGR, "manager initialization failed, no hasher supported");
+		free(this);
+		return NULL;
+	}
 	this->ike_sa_list = linked_list_create();
 	pthread_mutex_init(&this->mutex, NULL);
 	this->randomizer = randomizer_create();
-	this->hasher = hasher_create(HASH_SHA1);
-	
 	return &this->public;
 }

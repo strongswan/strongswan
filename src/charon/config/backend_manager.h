@@ -1,10 +1,3 @@
-/**
- * @file backend_manager.h
- * 
- * @brief Interface backend_manager_t.
- *  
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup backend_manager backend_manager
+ * @{ @ingroup config
  */
 
 #ifndef BACKEND_MANAGER_H_
@@ -30,20 +30,15 @@ typedef struct backend_manager_t backend_manager_t;
 #include <utils/identification.h>
 #include <config/ike_cfg.h>
 #include <config/peer_cfg.h>
-#include <config/backends/backend.h>
+#include <config/backend.h>
 
 
 /**
- * @brief A loader and multiplexer to use multiple backends.
+ * A loader and multiplexer to use multiple backends.
  *
  * Charon allows the use of multiple configuration backends simultaneously. To
  * access all this backends by a single call, this class wraps multiple
- * backends behind a single object. It is also responsible for loading
- * the backend modules and cleaning them up.
- * A backend may be writeable or not. All backends implement the backend_t
- * interface, those who are writeable additionally implement the
- * writeable_backend_t interface. Adding configs to the backend_manager will
- * be redirected to the first writeable backend.
+ * backends behind a single object.
  * @verbatim
 
    +---------+      +-----------+         +--------------+     |
@@ -55,18 +50,12 @@ typedef struct backend_manager_t backend_manager_t;
    +---------+      +-----------+                              |
    
    @endverbatim
- *
- * @b Constructors:
- * - backend_manager_create()
- * 
- * @ingroup config
  */
 struct backend_manager_t {
 	
 	/**
-	 * @brief Get an ike_config identified by two hosts.
+	 * Get an ike_config identified by two hosts.
 	 *
-	 * @param this				calling object
 	 * @param my_host			address of own host
 	 * @param other_host		address of remote host
 	 * @return					matching ike_config, or NULL if none found
@@ -75,59 +64,57 @@ struct backend_manager_t {
 							  host_t *my_host, host_t *other_host);
 	
 	/**
-	 * @brief Get a peer_config identified by two IDs and the peer's certificate issuer
+	 * Get a peer_config identified by two IDs and authorization info.
 	 *
-	 * @param this				calling object
 	 * @param my_id				own ID
 	 * @param other_id			peer ID
-	 * @param other_ca_info		info record on issuer of peer certificate
+	 * @param auth_info			authorization info
 	 * @return					matching peer_config, or NULL if none found
 	 */
-	peer_cfg_t* (*get_peer_cfg)(backend_manager_t *this,
-								identification_t *my_id, identification_t *other_id,
-								ca_info_t *other_ca_info);
+	peer_cfg_t* (*get_peer_cfg)(backend_manager_t *this, identification_t *my_id,
+								identification_t *other_id, auth_info_t *auth);
 	
 	/**
-	 * @brief Get a peer_config identified by it's name.
+	 * Get a peer_config identified by it's name.
 	 *
-	 * @param this				calling object
 	 * @param name				name of the peer_config
 	 * @return					matching peer_config, or NULL if none found
 	 */
 	peer_cfg_t* (*get_peer_cfg_by_name)(backend_manager_t *this, char *name);
 	
 	/**
-	 * @brief Add a peer_config to the first found writable backend.
+	 * Create an enumerator over all peer configs.
 	 *
-	 * @param this		calling object
-	 * @param config	peer_config to add to the backend
+	 * @return 					enumerator over peer configs
 	 */
-	void (*add_peer_cfg)(backend_manager_t *this, peer_cfg_t *config);
+	enumerator_t* (*create_peer_cfg_enumerator)(backend_manager_t *this);
 	
 	/**
-	 * @brief Create an iterator over all peer configs of the writable backend.
+	 * Register a backend on the manager.
 	 *
-	 * @param this		calling object
-	 * @return 			iterator over peer configs
+	 * @param backend			backend to register
 	 */
-	iterator_t* (*create_iterator)(backend_manager_t *this);
+	void (*add_backend)(backend_manager_t *this, backend_t *backend);
 	
 	/**
-	 * @brief Destroys a backend_manager_t object.
+	 * Unregister a backend.
 	 *
-	 * @param this 					calling object
+	 * @param backend			backend to unregister
+	 */
+	void (*remove_backend)(backend_manager_t *this, backend_t *backend);
+	
+	/**
+	 * Destroys a backend_manager_t object.
 	 */
 	void (*destroy) (backend_manager_t *this);
 };
 
 /**
- * @brief Creates a new instance of the manager and loads all backends.
+ * Create an instance of the backend manager
  *
  * @return		backend_manager instance
- *
- * @ingroup config
  */
 backend_manager_t* backend_manager_create(void);
 
-#endif /*BACKEND_MANAGER_H_*/
+#endif /*BACKEND_MANAGER_H_ @} */
 

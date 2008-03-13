@@ -1,11 +1,5 @@
-/**
- * @file leak_detective.h
- * 
- * @brief malloc/free hooks to detect leaks.
- */
-
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -19,17 +13,41 @@
  * for more details.
  */
 
+/**
+ * @defgroup leak_detective leak_detective
+ * @{ @ingroup utils
+ */
+
 #ifndef LEAK_DETECTIVE_H_
 #define LEAK_DETECTIVE_H_
 
 /**
- * Log status information about allocation
+ * Maximum depth stack frames to register
  */
-void leak_detective_status(FILE *stream);
+#define STACK_FRAMES_COUNT 20
+
+typedef struct leak_detective_t leak_detective_t;
 
 /**
- * Max number of stack frames to include in a backtrace.
+ * Leak detective finds leaks and bad frees using malloc hooks.
+ *
+ * Currently leaks are reported to stderr on destruction.
+ *
+ * @todo Build an API for leak detective, allowing leak enumeration, statistics
+ * and dynamic whitelisting.
  */
-#define STACK_FRAMES_COUNT 30
+struct leak_detective_t {
+		
+	/**
+     * Destroy a leak_detective instance.
+     */
+    void (*destroy)(leak_detective_t *this);
+};
 
-#endif /* LEAK_DETECTIVE_H_ */
+/**
+ * Create a leak_detective instance.
+ */
+leak_detective_t *leak_detective_create();
+
+#endif /* LEAK_DETECTIVE_H_ @}*/
+

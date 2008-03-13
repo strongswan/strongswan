@@ -1,10 +1,3 @@
-/**
- * @file scheduler.h
- * 
- * @brief Interface of scheduler_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup scheduler scheduler
+ * @{ @ingroup processing
  */
 
 #ifndef SCHEDULER_H_
@@ -30,52 +30,40 @@ typedef struct scheduler_t scheduler_t;
 #include <processing/jobs/job.h>
 
 /**
- * @brief The scheduler queues and executes timed events.
+ * The scheduler queues and executes timed events.
  *
  * The scheduler stores timed events and passes them to the processor.
- *
- * @b Constructors:
- *  - scheduler_create()
- *
- * @ingroup processing
  */
 struct scheduler_t { 	
 
 	/**
-	 * @brief Adds a event to the queue, using a relative time offset.
+	 * Adds a event to the queue, using a relative time offset.
 	 *
 	 * Schedules a job for execution using a relative time offset.
 	 *
-	 * @param this			calling object
  	 * @param job 			job to schedule
   	 * @param time 			relative to to schedule job (in ms)
 	 */
 	void (*schedule_job) (scheduler_t *this, job_t *job, u_int32_t time);
 	
 	/**
-	 * @brief Returns number of jobs scheduled.
+	 * Returns number of jobs scheduled.
 	 *
-	 * @param this			calling object
 	 * @return 				number of scheduled jobs
 	 */
 	u_int (*get_job_load) (scheduler_t *this);
 	
 	/**
-	 * @brief Destroys a scheduler object.
-	 * 
-	 * @param this		 	calling object
+	 * Destroys a scheduler object.
 	 */
 	void (*destroy) (scheduler_t *this);
 };
 
 /**
- * @brief Create a scheduler.
+ * Create a scheduler.
  * 
  * @return 		scheduler_t object
- * 
- * @ingroup processing
  */
 scheduler_t *scheduler_create(void);
 
-#endif /*SCHEDULER_H_*/
-
+#endif /*SCHEDULER_H_ @} */

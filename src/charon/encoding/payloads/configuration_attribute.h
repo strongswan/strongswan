@@ -1,10 +1,3 @@
-/**
- * @file configuration_attribute.h
- * 
- * @brief Interface of configuration_attribute_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup configuration_attribute configuration_attribute
+ * @{ @ingroup payloads
  */
 
 #ifndef CONFIGURATION_ATTRIBUTE_H_
@@ -33,15 +33,11 @@ typedef struct configuration_attribute_t configuration_attribute_t;
 
 /**
  * Configuration attribute header length in bytes.
- * 
- * @ingroup payloads
  */
 #define CONFIGURATION_ATTRIBUTE_HEADER_LENGTH 4
 
 /**
  * Type of the attribute, as in IKEv2 RFC 3.15.1.
- * 
- * @ingroup payloads
  */
 enum configuration_attribute_type_t {
 	INTERNAL_IP4_ADDRESS = 1,
@@ -62,20 +58,13 @@ enum configuration_attribute_type_t {
 
 /** 
  * enum names for configuration_attribute_type_t.
- * 
- * @ingroup payloads
  */
 extern enum_name_t *configuration_attribute_type_names;
 
 /**
- * @brief Class representing an IKEv2-CONFIGURATION Attribute.
+ * Class representing an IKEv2-CONFIGURATION Attribute.
  * 
  * The CONFIGURATION ATTRIBUTE format is described in RFC section 3.15.1.
- * 
- * @b Constructors:
- * - configuration_attribute_create()
- * 
- * @ingroup payloads
  */
 struct configuration_attribute_t {
 	/**
@@ -84,64 +73,55 @@ struct configuration_attribute_t {
 	payload_t payload_interface;
 
 	/**
-	 * @brief Returns the currently set value of the attribute.
+	 * Returns the currently set value of the attribute.
 	 * 	
 	 * @warning Returned data are not copied.
 	 * 
-	 * @param this 	calling configuration_attribute_t object
 	 * @return 		chunk_t pointing to the value
 	 */
 	chunk_t (*get_value) (configuration_attribute_t *this);
 	
 	/**
-	 * @brief Sets the value of the attribute.
+	 * Sets the value of the attribute.
 	 * 	
-	 * @warning Value is getting copied.
+	 * Value is getting copied.
 	 * 
-	 * @param this 	calling configuration_attribute_t object
 	 * @param value chunk_t pointing to the value to set
 	 */
 	void (*set_value) (configuration_attribute_t *this, chunk_t value);
 
 	/**
-	 * @brief Sets the type of the attribute.
+	 * Sets the type of the attribute.
 	 * 	
-	 * @param this 	calling configuration_attribute_t object
 	 * @param type	type to set (most significant bit is set to zero)
 	 */
 	void (*set_type) (configuration_attribute_t *this, u_int16_t type);
 	
 	/**
-	 * @brief get the type of the attribute.
+	 * get the type of the attribute.
 	 * 	
-	 * @param this 	calling configuration_attribute_t object
 	 * @return 		type of the value
 	 */
 	u_int16_t (*get_type) (configuration_attribute_t *this);
 	
 	/**
-	 * @brief get the length of an attribute.
+	 * get the length of an attribute.
 	 * 	
-	 * @param this 	calling configuration_attribute_t object
 	 * @return 		type of the value
 	 */
 	u_int16_t (*get_length) (configuration_attribute_t *this);
 	
 	/**
-	 * @brief Destroys an configuration_attribute_t object.
-	 *
-	 * @param this 	configuration_attribute_t object to destroy
+	 * Destroys an configuration_attribute_t object.
 	 */
 	void (*destroy) (configuration_attribute_t *this);
 };
 
 /**
- * @brief Creates an empty configuration_attribute_t object.
+ * Creates an empty configuration_attribute_t object.
  * 
  * @return			created configuration_attribute_t object
- * 
- * @ingroup payloads
  */
 configuration_attribute_t *configuration_attribute_create(void);
 
-#endif /* CONFIGURATION_ATTRIBUTE_H_*/
+#endif /* CONFIGURATION_ATTRIBUTE_H_ @} */

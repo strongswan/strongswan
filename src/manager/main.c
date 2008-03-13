@@ -1,10 +1,3 @@
-/**
- * @file main.c
- *
- * @brief Implementation of dispatcher_t.
- *
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,13 +11,15 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <dispatcher.h>
 #include <stdio.h>
 
 #include "manager.h"
-#include "database.h"
+#include "storage.h"
 #include "controller/auth_controller.h"
 #include "controller/ikesa_controller.h"
 #include "controller/gateway_controller.h"
@@ -38,34 +33,40 @@
 int main (int arc, char *argv[])
 {
 	dispatcher_t *dispatcher;
-	database_t *database;
+	storage_t *storage;
 	char *socket = NULL;
+	bool debug = FALSE;
 	
 #ifdef FCGI_SOCKET
 	socket = FCGI_SOCKET;
+	debug = TRUE;
 #endif /* FCGI_SOCKET */
+
+	library_init(IPSECDIR "/manager.conf");
 	
-	database = database_create(DBFILE);
-	if (database == NULL)
+	storage = storage_create("sqlite://"DBFILE);
+	if (storage == NULL)
 	{
 		fprintf(stderr, "opening database '%s' failed.\n", DBFILE);
 		return 1;
 	}
 	
-	dispatcher = dispatcher_create(socket, SESSION_TIMEOUT,
-						(context_constructor_t)manager_create, database);
+	dispatcher = dispatcher_create(socket, debug, SESSION_TIMEOUT,
+						(context_constructor_t)manager_create, storage);
 	dispatcher->add_controller(dispatcher, ikesa_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, gateway_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, auth_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, control_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, config_controller_create, NULL);
 	
-	dispatcher->run(dispatcher, THREADS, NULL, NULL, NULL, NULL);
+	dispatcher->run(dispatcher, THREADS);
 	
 	dispatcher->waitsignal(dispatcher);
 	
 	dispatcher->destroy(dispatcher);
-	database->destroy(database);
+	storage->destroy(storage);
+	
+	library_deinit();
 
     return 0;
 }

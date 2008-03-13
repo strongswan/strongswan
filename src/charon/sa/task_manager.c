@@ -1,10 +1,3 @@
-/**
- * @file task_manager.c
- *
- * @brief Implementation of task_manager_t.
- *
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "task_manager.h"
@@ -31,7 +26,8 @@
 #include <sa/tasks/ike_mobike.h>
 #include <sa/tasks/ike_auth.h>
 #include <sa/tasks/ike_auth_lifetime.h>
-#include <sa/tasks/ike_cert.h>
+#include <sa/tasks/ike_cert_pre.h>
+#include <sa/tasks/ike_cert_post.h>
 #include <sa/tasks/ike_rekey.h>
 #include <sa/tasks/ike_delete.h>
 #include <sa/tasks/ike_config.h>
@@ -328,7 +324,7 @@ static status_t build_request(private_task_manager_t *this)
 					this->initiating.mid = 0;
 					exchange = IKE_SA_INIT;
 					activate_task(this, IKE_NATD);
-					activate_task(this, IKE_CERT);
+					activate_task(this, IKE_CERT_PRE);
 #ifdef P2P
 					/* this task has to be activated before the IKE_AUTHENTICATE
 					 * task, because that task pregenerates the packet after
@@ -337,6 +333,7 @@ static status_t build_request(private_task_manager_t *this)
 					activate_task(this, IKE_P2P);
 #endif /* P2P */
 					activate_task(this, IKE_AUTHENTICATE);
+					activate_task(this, IKE_CERT_POST);
 					activate_task(this, IKE_CONFIG);
 					activate_task(this, CHILD_CREATE);
 					activate_task(this, IKE_AUTH_LIFETIME);
@@ -687,13 +684,15 @@ static status_t process_request(private_task_manager_t *this,
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_natd_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_cert_create(this->ike_sa, FALSE);
+			task = (task_t*)ike_cert_pre_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 #ifdef P2P			
 			task = (task_t*)ike_p2p_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 #endif /* P2P */
 			task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
+			task = (task_t*)ike_cert_post_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);

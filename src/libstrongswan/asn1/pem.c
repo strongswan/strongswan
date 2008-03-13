@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id$
+ * $Id$
  */
 
 #include <stdio.h>
@@ -95,10 +95,16 @@ static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_s
 	u_int8_t padding, *last_padding_pos, *first_padding_pos;
 	
 	if (passphrase == NULL || passphrase->len == 0)
+	{
 		return "missing passphrase";
+	}
 
 	/* build key from passphrase and IV */
-	hasher = hasher_create(HASH_MD5);
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
+	if (hasher == NULL)
+	{
+		return "MD5 hasher not supported";
+	}
 	hash.len = hasher->get_hash_size(hasher);
 	hash.ptr = alloca(hash.len);
 	hasher->get_hash(hasher, *passphrase, NULL);
@@ -115,7 +121,7 @@ static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_s
 	hasher->destroy(hasher);
 	
 	/* decrypt blob */
-	crypter = crypter_create(alg, key_size);
+	crypter = lib->crypto->create_crypter(lib->crypto, alg, key_size);
 	crypter->set_key(crypter, key);
 	if (crypter->decrypt(crypter, *blob, *iv, &decrypted) != SUCCESS)
 	{
@@ -310,8 +316,8 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 /* load a coded key or certificate file with autodetection
  * of binary DER or base64 PEM ASN.1 formats and armored PGP format
  */
-bool pem_asn1_load_file(const char *filename, chunk_t *passphrase,
-						const char *type, chunk_t *blob, bool *pgp)
+bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
+						chunk_t *blob, bool *pgp)
 {
 	err_t ugh = NULL;
 
@@ -326,7 +332,7 @@ bool pem_asn1_load_file(const char *filename, chunk_t *passphrase,
 		blob->ptr = malloc(blob->len);
 		bytes = fread(blob->ptr, 1, blob->len, fd);
 		fclose(fd);
-		DBG1("  loading %s file '%s' (%d bytes)", type, filename, bytes);
+		DBG2("  loading '%s' (%d bytes)", filename, bytes);
 
 		*pgp = FALSE;
 
@@ -364,7 +370,7 @@ bool pem_asn1_load_file(const char *filename, chunk_t *passphrase,
 	}
 	else
 	{
-		DBG1("  could not open %s file '%s'", type, filename);
+		DBG1("  reading file '%s' failed", filename);
 	}
 	return FALSE;
 }

@@ -1,10 +1,3 @@
-/**
- * @file mediation_manager.h
- * 
- * @brief Interface of mediation_manager_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup mediation_manager mediation_manager
+ * @{ @ingroup sa
  */
 
 #ifndef MEDIATION_MANAGER_H_
@@ -29,29 +29,22 @@ typedef struct mediation_manager_t mediation_manager_t;
 #include <utils/identification.h>
 
 /**
- * @brief The mediation manager is responsible for managing currently online
+ * The mediation manager is responsible for managing currently online
  * peers and registered requests for offline peers on the mediation server.
- * 
- * @b Constructors:
- * - mediation_manager_create()
- * 
- * @ingroup sa
  */
 struct mediation_manager_t {
 	
 	/**
-	 * @brief Remove the IKE_SA of a peer.
+	 * Remove the IKE_SA of a peer.
 	 * 
-	 * @param this 				the manager object
 	 * @param ike_sa_id			the IKE_SA ID of the peer's SA
 	 */
 	void (*remove) (mediation_manager_t* this, ike_sa_id_t *ike_sa_id);
 	
 	/**
-	 * @brief Update the ike_sa_id that is assigned to a peer's ID. If the peer
+	 * Update the ike_sa_id that is assigned to a peer's ID. If the peer
 	 * is new, it gets a new record assigned. 
 	 * 
-	 * @param this 				the manager object
 	 * @param peer_id			the peer's ID
 	 * @param ike_sa_id			the IKE_SA ID of the peer's SA
 	 */
@@ -59,9 +52,8 @@ struct mediation_manager_t {
 			ike_sa_id_t *ike_sa_id);
 	
 	/**
-	 * @brief Checks if a specific peer is online.
+	 * Checks if a specific peer is online.
 	 * 
-	 * @param this 				the manager object
 	 * @param peer_id			the peer's ID
 	 * @returns 					
 	 * 							- IKE_SA ID of the peer's SA.
@@ -71,10 +63,9 @@ struct mediation_manager_t {
 			identification_t *peer_id);
 	
 	/**
-	 * @brief Checks if a specific peer is online and registers the requesting
+	 * Checks if a specific peer is online and registers the requesting
 	 * peer if it is not.
 	 * 
-	 * @param this 				the manager object
 	 * @param peer_id			the peer's ID
 	 * @param requester			the requesters ID
 	 * @returns 					
@@ -85,20 +76,16 @@ struct mediation_manager_t {
 			identification_t *peer_id, identification_t *requester);
 	
 	/**
-	 * @brief Destroys the manager with all data.
-	 * 
-	 * @param this				 the manager object
+	 * Destroys the manager with all data.
 	 */
 	void (*destroy) (mediation_manager_t *this);
 };
 
 /**
- * @brief Create a manager.
+ * Create a manager.
  * 
  * @returns 	mediation_manager_t object
- * 
- * @ingroup sa
  */
 mediation_manager_t *mediation_manager_create(void);
 
-#endif /*MEDIATION_MANAGER_H_*/
+#endif /*MEDIATION_MANAGER_H_ @} */

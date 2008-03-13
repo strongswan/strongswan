@@ -1,10 +1,3 @@
-/**
- * @file manager.h
- * 
- * @brief Interface of manager_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,12 +11,24 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup manager manager
+ *
+ * @defgroup controller controller
+ * @ingroup manager
+ *
+ * @defgroup manager_i manager
+ * @{ @ingroup manager
  */
 
 #ifndef MANAGER_H_
 #define MANAGER_H_
 
-#include "database.h"
+#include "storage.h"
 #include "gateway.h"
 
 #include <context.h>
@@ -33,7 +38,7 @@
 typedef struct manager_t manager_t;
 
 /**
- * @brief The manager, manages multiple gateways.
+ * The manager, manages multiple gateways.
  */
 struct manager_t {
 
@@ -43,7 +48,7 @@ struct manager_t {
 	context_t context;
 	
 	/**
-	 * @brief Create an iterator over all configured gateways.
+	 * Create an iterator over all configured gateways.
 	 *
 	 * enumerate() arguments: int id, char *name, int port, char *address
 	 * If port is 0, address is a Unix socket address.
@@ -53,7 +58,7 @@ struct manager_t {
 	enumerator_t* (*create_gateway_enumerator)(manager_t *this);
 	
 	/**
-	 * @brief Select a gateway.
+	 * Select a gateway.
 	 *
 	 * If id is 0, the previously selected gateway is returned. If none has
 	 * been selected yet, NULL is returned.
@@ -64,7 +69,7 @@ struct manager_t {
 	gateway_t* (*select_gateway)(manager_t *this, int id);
 	
 	/**
-	 * @brief Try to log in.
+	 * Try to log in.
 	 *
 	 * @param username	username
 	 * @param password	cleartext password
@@ -73,21 +78,21 @@ struct manager_t {
 	bool (*login)(manager_t *this, char *username, char *password);
 	
 	/**
-	 * @brief Check if user logged in.
+	 * Check if user logged in.
 	 *
 	 * @return			TRUE if logged in
 	 */
 	bool (*logged_in)(manager_t *this);
 	
 	/**
-	 * @brief Log out.
+	 * Log out.
 	 */
 	void (*logout)(manager_t *this);
 };
 
 /**
- * @brief Create a manager instance.
+ * Create a manager instance.
  */
-manager_t *manager_create(database_t *database);
+manager_t *manager_create(storage_t *storage);
 
-#endif /* MANAGER_H_ */
+#endif /* MANAGER_H_ @} */

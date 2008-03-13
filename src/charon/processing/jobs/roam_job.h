@@ -1,9 +1,3 @@
-/**
- * @file roam_job.h
- * 
- * @brief Interface of roam_job_t.
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -17,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup roam_job roam_job
+ * @{ @ingroup jobs
  */
 
 #ifndef ROAM_JOB_H_
@@ -29,15 +30,10 @@ typedef struct roam_job_t roam_job_t;
 #include <processing/jobs/job.h>
 
 /**
- * @brief A job to inform IKE_SAs about changed local address setup.
+ * A job to inform IKE_SAs about changed local address setup.
  * 
  * If a local address appears or disappears, the kernel fires this job to
  * update all IKE_SAs.
- * 
- * @b Constructors:
- * - roam_job_create()
- * 
- * @ingroup jobs
  */
 struct roam_job_t {
 
@@ -48,14 +44,11 @@ struct roam_job_t {
 };
 
 /**
- * @brief Creates a job to inform IKE_SAs about an updated address list.
+ * Creates a job to inform IKE_SAs about an updated address list.
  * 
  * @param address		TRUE if address list changed, FALSE if routing changed
  * @return				initiate_ike_sa_job_t object
- * 
- * @ingroup jobs
  */
 roam_job_t *roam_job_create(bool address);
 
-#endif /*ROAM_JOB_H_*/
-
+#endif /*ROAM_JOB_H_ @} */

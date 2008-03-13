@@ -1,10 +1,3 @@
-/**
- * @file acquire_job.h
- * 
- * @brief Interface of acquire_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup acquire_job acquire_job
+ * @{ @ingroup jobs
  */
 
 #ifndef ACQUIRE_JOB_H_
@@ -29,14 +29,9 @@ typedef struct acquire_job_t acquire_job_t;
 #include <processing/jobs/job.h>
 
 /**
- * @brief Class representing an ACQUIRE Job.
+ * Class representing an ACQUIRE Job.
  * 
  * This job initiates a CHILD SA on kernel request.
- * 
- * @b Constructors:
- *  - acquire_job_create()
- * 
- * @ingroup jobs
  */
 struct acquire_job_t {
 	/**
@@ -46,15 +41,13 @@ struct acquire_job_t {
 };
 
 /**
- * @brief Creates a job of type ACQUIRE.
+ * Creates a job of type ACQUIRE.
  *
  * We use the reqid to find the routed CHILD_SA.
  *
  * @param reqid		reqid of the CHILD_SA to acquire
  * @return			acquire_job_t object
- * 
- * @ingroup jobs
  */
 acquire_job_t *acquire_job_create(u_int32_t reqid);
 
-#endif /* REKEY_CHILD_SA_JOB_H_ */
+#endif /* REKEY_CHILD_SA_JOB_H_ @} */

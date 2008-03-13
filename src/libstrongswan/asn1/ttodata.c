@@ -11,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
+ *
+ * $Id$
  */
 
 #include "ttodata.h"
@@ -34,7 +36,7 @@ static const char *badch(const char *, int, char *, size_t);
 #define	BADOFF(code) (BADCH0-(code))
 
 /**
- * @brief convert text to data, with verbose error reports
+ * convert text to data, with verbose error reports
  * 
  * If some of this looks slightly odd, it's because it has changed
  * repeatedly (from the original atodata()) without a major rewrite.
@@ -197,7 +199,7 @@ const char *ttodatav(const char *src, size_t srclen, int base, char *dst, size_t
 }
 
 /**
- * @brief ttodata - convert text to data
+ * ttodata - convert text to data
  * 
  * @param src
  * @param srclen	0 means apply strlen()
@@ -214,7 +216,7 @@ const char *ttodata(const char *src, size_t srclen, int base, char *dst, size_t 
 }
 
 /**
- * @brief atodata - convert ASCII to data
+ * atodata - convert ASCII to data
  * 
  * backward-compatibility interface
  * 
@@ -234,7 +236,7 @@ size_t atodata(const char *src, size_t srclen, char *dst, size_t dstlen)
 }
 
 /**
- * @brief  atobytes - convert ASCII to data bytes
+ *  atobytes - convert ASCII to data bytes
  *
  * another backward-compatibility interface
  */
@@ -244,7 +246,7 @@ const char *atobytes(const char *src, size_t srclen, char *dst, size_t dstlen, s
 }
 
 /**
- * @brief unhex - convert two ASCII hex digits to byte
+ * unhex - convert two ASCII hex digits to byte
  * 
  * @param src 		known to be full length
  * @param dstnumber of result bytes, or error code
@@ -290,7 +292,7 @@ static int unhex(const char *src, char *dst, size_t dstlen)
 }
 
 /**
- * @brief unb64 - convert four ASCII base64 digits to three bytes
+ * unb64 - convert four ASCII base64 digits to three bytes
  *
  * Note that a base64 digit group is padded out with '=' if it represents
  * less than three bytes:  one byte is dd==, two is ddd=, three is dddd.
@@ -368,7 +370,7 @@ static int unb64(const char *src, char *dst, size_t dstlen)
 }
 
 /**
- * @brief untext - convert one ASCII character to byte
+ * untext - convert one ASCII character to byte
  * 
  * @param src		known to be full length
  * @param dst		
@@ -386,7 +388,7 @@ static int untext(const char *src, char *dst, size_t dstlen)
 }
 
 /**
- * @brief badch - produce a nice complaint about an unknown character
+ * badch - produce a nice complaint about an unknown character
  *
  * If the compiler complains that the array bigenough[] has a negative
  * size, that means the TTODATAV_BUF constant has been set too small.

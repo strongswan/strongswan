@@ -1,10 +1,3 @@
-/**
- * @file notify_payload.c
- * 
- * @brief Implementation of notify_payload_t.
- * 
- */
-
 /*
  * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -21,6 +14,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stddef.h>

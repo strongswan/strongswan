@@ -72,6 +72,7 @@ AC_ARG_WITH(
     [AC_SUBST(ipsecdir, "$withval")],
     [AC_SUBST(ipsecdir, "${libexecdir}/ipsec")]
 )
+AC_SUBST(plugindir, "${ipsecdir}/plugins")
 
 AC_ARG_WITH(
     [plugindir],
@@ -81,31 +82,10 @@ AC_ARG_WITH(
 )
 
 AC_ARG_WITH(
-    [eapdir],
-    AS_HELP_STRING([--with-eapdir=dir],[path for pluggable EAP modules other than "plugindir/eap"]),
-    [AC_SUBST(eapdir, "$withval")],
-    [AC_SUBST(eapdir, "${plugindir}/eap")]
-)
-
-AC_ARG_WITH(
-    [backenddir],
-    AS_HELP_STRING([--with-backenddir=dir],[path for pluggable configuration backend modules other than "plugindir/backends"]),
-    [AC_SUBST(backenddir, "$withval")],
-    [AC_SUBST(backenddir, "${plugindir}/backends")]
-)
-
-AC_ARG_WITH(
-    [interfacedir],
-    AS_HELP_STRING([--with-interfacedir=dir],[path for pluggable control interface modules other than "plugindir/interfaces"]),
-    [AC_SUBST(interfacedir, "$withval")],
-    [AC_SUBST(interfacedir, "${plugindir}/interfaces")]
-)
-
-AC_ARG_WITH(
     [sim-reader],
     AS_HELP_STRING([--with-sim-reader=library.so],[library containing the sim_run_alg()/sim_get_triplet() function for EAP-SIM]),
     [AC_SUBST(simreader, "$withval")],
-    [AC_SUBST(simreader, "${plugindir}/libcharon-eapsim-file.so")]
+    [AC_SUBST(simreader, "${plugindir}/libeapsim-file.so")]
 )
 
 AC_ARG_WITH(
@@ -144,24 +124,148 @@ AC_ARG_WITH(
 )
 
 AC_ARG_ENABLE(
-    [http],
-    AS_HELP_STRING([--enable-http],[enable OCSP and fetching of Certificates and CRLs over HTTP (default is NO). Requires libcurl.]),
+    [curl],
+    AS_HELP_STRING([--enable-curl],[enable CURL fetcher plugin to fetch files via libcurl (default is NO). Requires libcurl.]),
     [if test x$enableval = xyes; then
-        http=true
-        AC_DEFINE(LIBCURL)
+        curl=true
     fi]
 )
-AM_CONDITIONAL(USE_LIBCURL, test x$http = xtrue)
+AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
 
 AC_ARG_ENABLE(
     [ldap],
-    AS_HELP_STRING([--enable-ldap],[enable fetching of CRLs from LDAP (default is NO). Requires openLDAP.]),
+    AS_HELP_STRING([--enable-ldap],[enable LDAP fetching plugin to fetch files via libldap (default is NO). Requires openLDAP.]),
     [if test x$enableval = xyes; then
         ldap=true
-        AC_DEFINE(LIBLDAP)
     fi]
 )
-AM_CONDITIONAL(USE_LIBLDAP, test x$ldap = xtrue)
+AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
+
+AC_ARG_ENABLE(
+    [aes],
+    AS_HELP_STRING([--disable-aes],[disable own AES software implementation plugin. (default is NO).]),
+    [if test x$enableval = xyes; then
+        aes=true
+     else
+        aes=false
+    fi],
+    aes=true
+)
+AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
+
+AC_ARG_ENABLE(
+    [des],
+    AS_HELP_STRING([--disable-des],[disable own DES/3DES software implementation plugin. (default is NO).]),
+    [if test x$enableval = xyes; then
+        des=true
+     else
+        des=false
+    fi],
+    des=true
+)
+AM_CONDITIONAL(USE_DES, test x$des = xtrue)
+
+AC_ARG_ENABLE(
+    [md5],
+    AS_HELP_STRING([--disable-md5],[disable own MD5 software implementation plugin. (default is NO).]),
+    [if test x$enableval = xyes; then
+        md5=true
+     else
+        md5=false
+    fi],
+    md5=true
+)
+AM_CONDITIONAL(USE_MD5, test x$md5 = xtrue)
+
+AC_ARG_ENABLE(
+    [sha1],
+    AS_HELP_STRING([--disable-sha1],[disable own SHA1 software implementation plugin. (default is NO).]),
+    [if test x$enableval = xyes; then
+        sha1=true
+     else
+        sha1=false
+    fi],
+    sha1=true
+)
+AM_CONDITIONAL(USE_SHA1, test x$sha1 = xtrue)
+
+AC_ARG_ENABLE(
+    [sha2],
+    AS_HELP_STRING([--disable-sha2],[disable own SHA256/SHA384/SHA512 software implementation plugin. (default is NO).]),
+    [if test x$enableval = xyes; then
+        sha2=true
+     else
+        sha2=false
+    fi],
+    sha2=true
+)
+AM_CONDITIONAL(USE_SHA2, test x$sha2 = xtrue)
+
+AC_ARG_ENABLE(
+    [fips-prf],
+    AS_HELP_STRING([--disable-fips-prf],[disable FIPS PRF software implementation plugin. (default is NO).]),
+    [if test x$enableval = xyes; then
+        fips_prf=true
+     else
+        fips_prf=false
+    fi],
+    fips_prf=true
+)
+AM_CONDITIONAL(USE_FIPS_PRF, test x$fips_prf = xtrue)
+
+AC_ARG_ENABLE(
+    [gmp],
+    AS_HELP_STRING([--disable-gmp],[disable own GNU MP (libgmp) based crypto implementation plugin. (default is NO).]),
+    [if test x$enableval = xyes; then
+        gmp=true
+     else
+        gmp=false
+    fi],
+    gmp=true
+)
+AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
+
+AC_ARG_ENABLE(
+    [x509],
+    AS_HELP_STRING([--disable-x509],[disable own X509 certificate implementation plugin. (default is NO).]),
+    [if test x$enableval = xyes; then
+        x509=true
+     else
+        x509=false
+    fi],
+    x509=true
+)
+AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
+
+AC_ARG_ENABLE(
+    [hmac],
+    AS_HELP_STRING([--disable-hmac],[disable HMAC crypto implementation plugin. (default is NO).]),
+    [if test x$enableval = xyes; then
+        hmac=true
+     else
+        hmac=false
+    fi],
+    hmac=true
+)
+AM_CONDITIONAL(USE_HMAC, test x$hmac = xtrue)
+
+AC_ARG_ENABLE(
+    [mysql],
+    AS_HELP_STRING([--enable-mysql],[enable MySQL database support (default is NO). Requires libmysqlclient_r.]),
+    [if test x$enableval = xyes; then
+        mysql=true
+    fi]
+)
+AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
+
+AC_ARG_ENABLE(
+    [sqlite],
+    AS_HELP_STRING([--enable-sqlite],[enable SQLite database support (default is NO). Requires libsqlite3.]),
+    [if test x$enableval = xyes; then
+        sqlite=true
+    fi]
+)
+AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 
 AC_ARG_ENABLE(
     [stroke],
@@ -174,6 +278,16 @@ AC_ARG_ENABLE(
     stroke=true
 )
 AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
+
+AC_ARG_ENABLE(
+    [med-db],
+    AS_HELP_STRING([--enable-med-db],[enable MySQL mediation database plugin (default is NO).]),
+    [if test x$enableval = xyes; then
+        med_db=true
+        AC_DEFINE(LIBDBUS)
+    fi]
+)
+AM_CONDITIONAL(USE_MED_DB, test x$med_db = xtrue)
 
 AC_ARG_ENABLE(
     [dbus],
@@ -196,14 +310,13 @@ AC_ARG_ENABLE(
 AM_CONDITIONAL(USE_LIBXML, test x$xml = xtrue)
 
 AC_ARG_ENABLE(
-    [sqlite],
-    AS_HELP_STRING([--enable-sqlite],[enable SQLite configuration backend (default is NO). Requires libsqlite3.]),
+    [sql],
+    AS_HELP_STRING([--enable-sql],[enable SQL database configuration backend (default is NO).]),
     [if test x$enableval = xyes; then
-        sqlite=true
-        AC_DEFINE(LIBSQLITE)
+        sql=true
     fi]
 )
-AM_CONDITIONAL(USE_LIBSQLITE, test x$sqlite = xtrue)
+AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 
 AC_ARG_ENABLE(
     [smartcard],
@@ -232,6 +345,15 @@ AC_ARG_ENABLE(
     fi]
 )
 AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
+
+AC_ARG_ENABLE(
+    [unit-tests],
+    AS_HELP_STRING([--enable-unit-tests],[enable unit tests on IKEv2 daemon startup (default is NO).]),
+    [if test x$enableval = xyes; then
+        unittest=true
+    fi]
+)
+AM_CONDITIONAL(USE_UNIT_TESTS, test x$unittest = xtrue)
 
 AC_ARG_ENABLE(
     [eap-sim],
@@ -310,6 +432,15 @@ AC_ARG_ENABLE(
     fi]
 )
 AM_CONDITIONAL(USE_UML, test x$uml = xtrue)
+
+AC_ARG_ENABLE(
+    [fast],
+    AS_HELP_STRING([--enable-fast],[build libfast (FastCGI Application Server w/ templates (default is NO).]),
+    [if test x$enableval = xyes; then
+        fast=true
+    fi]
+)
+AM_CONDITIONAL(USE_FAST, test x$fast = xtrue)
 
 AC_ARG_ENABLE(
     [manager],
@@ -409,7 +540,10 @@ dnl ==========================
 dnl  check required libraries
 dnl ==========================
 
+AC_HAVE_LIBRARY(dl)
+
 AC_CHECK_FUNCS(backtrace)
+AC_CHECK_FUNCS(dladdr)
 AC_CHECK_FUNCS(getifaddrs)
 
 AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])	
@@ -417,8 +551,8 @@ if test "$ldap" = "true"; then
     AC_HAVE_LIBRARY([ldap],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP enabled, but library ldap not found])])
     AC_HAVE_LIBRARY([lber],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP enabled, but library lber not found])])
 fi
-if test "$http" = "true"; then
-    AC_HAVE_LIBRARY([curl],[LIBS="$LIBS"],[AC_MSG_ERROR([HTTP enabled, but library curl not found])])
+if test "$curl" = "true"; then
+    AC_HAVE_LIBRARY([curl],[LIBS="$LIBS"],[AC_MSG_ERROR([CURL enabled, but library curl not found])])
 fi
 
 if test "$xml" = "true"; then
@@ -460,8 +594,8 @@ AC_TRY_COMPILE(
 if test "$ldap" = "true"; then
     AC_CHECK_HEADER([ldap.h],,[AC_MSG_ERROR([LDAP enabled, but ldap.h not found!])])
 fi
-if test "$http" = "true"; then
-    AC_CHECK_HEADER([curl/curl.h],,[AC_MSG_ERROR([HTTP enabled, but curl.h not found!])])
+if test "$curl" = "true"; then
+    AC_CHECK_HEADER([curl/curl.h],,[AC_MSG_ERROR([CURL enabled, but curl.h not found!])])
 fi
 
 dnl ==============================
@@ -473,11 +607,34 @@ AC_OUTPUT(
 	src/Makefile
 	src/include/Makefile
 	src/libstrongswan/Makefile
+	src/libstrongswan/plugins/aes/Makefile
+	src/libstrongswan/plugins/des/Makefile
+	src/libstrongswan/plugins/md5/Makefile
+	src/libstrongswan/plugins/sha1/Makefile
+	src/libstrongswan/plugins/sha2/Makefile
+	src/libstrongswan/plugins/fips_prf/Makefile
+	src/libstrongswan/plugins/gmp/Makefile
+	src/libstrongswan/plugins/hmac/Makefile
+	src/libstrongswan/plugins/x509/Makefile
+	src/libstrongswan/plugins/curl/Makefile
+	src/libstrongswan/plugins/ldap/Makefile
+	src/libstrongswan/plugins/mysql/Makefile
+	src/libstrongswan/plugins/sqlite/Makefile
 	src/libcrypto/Makefile
 	src/libfreeswan/Makefile
 	src/pluto/Makefile
 	src/whack/Makefile
 	src/charon/Makefile
+	src/charon/plugins/eap_aka/Makefile
+	src/charon/plugins/eap_identity/Makefile
+	src/charon/plugins/eap_md5/Makefile
+	src/charon/plugins/eap_sim/Makefile
+	src/charon/plugins/dbus/Makefile
+	src/charon/plugins/xml/Makefile
+	src/charon/plugins/sql/Makefile
+	src/charon/plugins/med_db/Makefile
+	src/charon/plugins/stroke/Makefile
+	src/charon/plugins/unit_tester/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile
@@ -487,6 +644,7 @@ AC_OUTPUT(
 	src/openac/Makefile
 	src/scepclient/Makefile
 	src/dumm/Makefile
+	src/libfast/Makefile
 	src/manager/Makefile
 	testing/Makefile
 )

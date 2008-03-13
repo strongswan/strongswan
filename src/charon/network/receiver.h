@@ -1,10 +1,3 @@
-/**
- * @file receiver.h
- *
- * @brief Interface of receiver_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup receiver receiver
+ * @{ @ingroup network
  */
 
 #ifndef RECEIVER_H_
@@ -30,7 +30,7 @@ typedef struct receiver_t receiver_t;
 #include <utils/host.h>
 
 /**
- * @brief Receives packets from the socket and adds them to the job queue.
+ * Receives packets from the socket and adds them to the job queue.
  * 
  * The receiver starts a thread, wich reads on the blocking socket. A received
  * packet is preparsed and a process_message_job is queued in the job queue.
@@ -50,32 +50,23 @@ typedef struct receiver_t receiver_t;
  * 
  * Further, the number of half-initiated IKE_SAs is limited per peer. This
  * mades it impossible for a peer to flood the server with its real IP address.
- * 
- * @b Constructors:
- *  - receiver_create()
- * 
- * @ingroup network
  */
 struct receiver_t {
 	
 	/**
-	 * @brief Destroys a receiver_t object.
-	 *
-	 * @param receiver 	receiver object
+	 * Destroys a receiver_t object.
 	 */
 	void (*destroy) (receiver_t *receiver);
 };
 
 /**
- * @brief Create a receiver_t object.
+ * Create a receiver_t object.
  * 
  * The receiver thread will start working, get data
  * from the socket and add those packets to the job queue.
  * 
- * @return	receiver_t object
- * 
- * @ingroup network
+ * @return	receiver_t object, NULL if initialization fails
  */
 receiver_t * receiver_create(void);
 
-#endif /*RECEIVER_H_*/
+#endif /*RECEIVER_H_ @} */

@@ -1,12 +1,5 @@
-/**
- * @file lexparser.c
- * 
- * @brief lexical parser for text-based configuration files
- *  
- */
-
 /*
- * Copyright (C) 2001-2006 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2001-2006 Andreas Steffen
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id$
+ * $Id$
  */
 
 /* memrchr is a GNU extension */

@@ -1,10 +1,3 @@
-/**
- * @file linked_list.c
- *
- * @brief Implementation of linked_list_t.
- *
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
@@ -20,6 +13,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stdlib.h>
@@ -157,6 +152,11 @@ struct private_enumerator_t {
 	 * next item to enumerate
 	 */
 	element_t *next;
+	
+	/**
+	 * current item
+	 */
+	element_t *current;
 };
 
 /**
@@ -169,6 +169,7 @@ static bool enumerate(private_enumerator_t *this, void **item)
 		return FALSE;
 	}
 	*item = this->next->value;
+	this->current = this->next;
 	this->next = this->next->next;
 	return TRUE;
 }
@@ -183,6 +184,7 @@ static enumerator_t* create_enumerator(private_linked_list_t *this)
 	enumerator->enumerator.enumerate = (void*)enumerate;
 	enumerator->enumerator.destroy = (void*)free;
 	enumerator->next = this->first;
+	enumerator->current = NULL;
 	
 	return &enumerator->enumerator;
 }
@@ -459,34 +461,37 @@ static void insert_first(private_linked_list_t *this, void *item)
 }
 
 /**
- * Implementation of linked_list_t.remove_first.
+ * unlink an element form the list, returns following element
  */
-static status_t remove_first(private_linked_list_t *this, void **item)
+static element_t* remove_element(private_linked_list_t *this, element_t *element)
 {
-	element_t *element = this->first;
-	
-	if (element == NULL)
+	element_t *next, *previous;
+
+	next = element->next;
+	previous = element->previous;
+	free(element);
+	if (next) 
 	{
-		return NOT_FOUND;
+		next->previous = previous;
 	}
-	if (element->next != NULL)
+	else
 	{
-		element->next->previous = NULL;
+		this->last = previous;
 	}
-	this->first = element->next;
-	
-	if (item != NULL)
+	if (previous)
 	{
-		*item = element->value;
+		previous->next = next;
+	}
+	else
+	{
+		this->first = next;
 	}
 	if (--this->count == 0)
 	{
+		this->first = NULL;
 		this->last = NULL;
 	}
-	
-	free(element);
-	
-	return SUCCESS;
+	return next;
 }
 
 /**
@@ -500,6 +505,19 @@ static status_t get_first(private_linked_list_t *this, void **item)
 	}
 	*item = this->first->value;
 	return SUCCESS;
+}
+
+/**
+ * Implementation of linked_list_t.remove_first.
+ */
+static status_t remove_first(private_linked_list_t *this, void **item)
+{
+	if (get_first(this, item) == SUCCESS)
+	{
+		remove_element(this, this->first);
+		return SUCCESS;
+	}
+	return NOT_FOUND;
 }
 
 /**
@@ -529,139 +547,6 @@ static void insert_last(private_linked_list_t *this, void *item)
 }
 
 /**
- * Implementation of linked_list_t.remove_last.
- */
-static status_t remove_last(private_linked_list_t *this, void **item)
-{
-	element_t *element = this->last;
-	
-	if (element == NULL)
-	{
-		return NOT_FOUND;
-	}
-	if (element->previous != NULL)
-	{
-		element->previous->next = NULL;
-	}
-	this->last = element->previous;
-	
-	if (item != NULL)
-	{
-		*item = element->value;
-	}
-	if (--this->count == 0)
-	{
-		this->first = NULL;
-	}
-	
-	free(element);
-	
-	return SUCCESS;
-}
-
-/**
- * Implementation of linked_list_t.insert_at_position.
- */
-static status_t insert_at_position (private_linked_list_t *this,size_t position, void *item)
-{
-	element_t *current_element;
-	int i;
-	
-	if (this->count <= position)
-	{
-		return INVALID_ARG;
-	}
-	
-	current_element =  this->first;
-	
-	for (i = 0; i < position;i++)
-	{
-		current_element = current_element->next;
-	}
-	
-	if (current_element == NULL)
-	{
-		this->public.insert_last(&(this->public),item);
-		return SUCCESS;
-	}
-	
-	element_t *element = element_create(item);
-	if (current_element->previous == NULL)
-	{
-		current_element->previous = element;
-		element->next = current_element;
-		this->first = element;
-	}
-	else
-	{
-		current_element->previous->next = element;
-		element->previous = current_element->previous;
-		current_element->previous = element;
-		element->next = current_element;
-	}
-
-
-	this->count++;
-	return SUCCESS;
-}
-	
-/**
- * Implementation of linked_list_t.remove_at_position.
- */
-static status_t remove_at_position(private_linked_list_t *this,size_t position, void **item)
-{
-	iterator_t *iterator;
-	int i;
-	
-	if (this->count <= position)
-	{
-		return INVALID_ARG;
-	}
-	
-	iterator = this->public.create_iterator(&(this->public),TRUE);
-	iterator->iterate(iterator, item);
-	for (i = 0; i < position; i++)
-	{
-		if (!iterator->iterate(iterator, item))
-		{
-			iterator->destroy(iterator);
-			return INVALID_ARG;
-		}
-	}
-	iterator->remove(iterator);
-	iterator->destroy(iterator);
-	
-	return SUCCESS;
-}
-
-/**
- * Implementation of linked_list_t.get_at_position.
- */
-static status_t get_at_position(private_linked_list_t *this,size_t position, void **item)
-{
-	int i;
-	iterator_t *iterator;
-	
-	if (this->count <= position)
-	{
-		return INVALID_ARG;
-	}
-
-	iterator = this->public.create_iterator(&(this->public),TRUE);
-	iterator->iterate(iterator, item);
-	for (i = 0; i < position; i++)
-	{
-		if (!iterator->iterate(iterator, item))
-		{
-			iterator->destroy(iterator);
-			return INVALID_ARG;
-		}
-	}
-	iterator->destroy(iterator);
-	return SUCCESS;
-}
-
-/**
  * Implementation of linked_list_t.get_last.
  */
 static status_t get_last(private_linked_list_t *this, void **item)
@@ -670,10 +555,59 @@ static status_t get_last(private_linked_list_t *this, void **item)
 	{
 		return NOT_FOUND;
 	}
-
 	*item = this->last->value;
-
 	return SUCCESS;
+}
+
+/**
+ * Implementation of linked_list_t.remove_last.
+ */
+static status_t remove_last(private_linked_list_t *this, void **item)
+{
+	if (get_last(this, item) == SUCCESS)
+	{
+		remove_element(this, this->last);
+		return SUCCESS;
+	}
+	return NOT_FOUND;
+}
+	
+/**
+ * Implementation of linked_list_t.remove.
+ */
+static int remove(private_linked_list_t *this, void *item,
+				  bool (*compare)(void *,void*))
+{
+	element_t *current = this->first;
+	int removed = 0;
+	
+	while (current)
+	{
+		if ((compare && compare(current->value, item)) ||
+			(!compare && current->value == item))
+		{
+			removed++;
+			current = remove_element(this, current);
+		}
+		else
+		{
+			current = current->next;
+		}
+	}
+	return removed;
+}
+
+/**
+ * Implementation of linked_list_t.remove_at.
+ */
+static void remove_at(private_linked_list_t *this, private_enumerator_t *enumerator)
+{
+	if (enumerator->current)
+	{
+		remove_element(this, enumerator->current);
+		enumerator->current = NULL;
+		enumerator->next = this->first;
+	}
 }
 
 /**
@@ -895,9 +829,8 @@ linked_list_t *linked_list_create()
 	this->public.insert_last = (void (*) (linked_list_t *, void *item))insert_last;
 	this->public.remove_first = (status_t (*) (linked_list_t *, void **item))remove_first;
 	this->public.remove_last = (status_t (*) (linked_list_t *, void **item))remove_last;
-	this->public.insert_at_position = (status_t (*) (linked_list_t *,size_t, void *))insert_at_position;
-	this->public.remove_at_position = (status_t (*) (linked_list_t *,size_t, void **))remove_at_position;
-	this->public.get_at_position = (status_t (*) (linked_list_t *,size_t, void **))get_at_position;
+	this->public.remove = (int(*)(linked_list_t*, void *item, bool (*compare)(void *,void*)))remove;
+	this->public.remove_at = (void(*)(linked_list_t*, enumerator_t *enumerator))remove_at;
 	this->public.invoke_offset = (void (*)(linked_list_t*,size_t))invoke_offset;
 	this->public.invoke_function = (void (*)(linked_list_t*,void(*)(void*)))invoke_function;
 	this->public.clone_offset = (linked_list_t * (*)(linked_list_t*,size_t))clone_offset;

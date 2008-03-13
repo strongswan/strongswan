@@ -1,10 +1,3 @@
-/**
- * @file signer.h
- * 
- * @brief Interface for signer_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+ 
+/**
+ * @defgroup signer signer
+ * @{ @ingroup crypto
  */
 
 #ifndef SIGNER_H_
@@ -30,11 +30,9 @@ typedef struct signer_t signer_t;
 #include <library.h>
 
 /**
- * @brief Integrity algorithm, as in IKEv2 RFC 3.3.2.
+ * Integrity algorithm, as in IKEv2 RFC 3.3.2.
  *
  * Algorithms not specified in IKEv2 are allocated in private use space.
- *
- * @ingroup signers
  */
 enum integrity_algorithm_t {
 	AUTH_UNDEFINED = 1024,
@@ -61,93 +59,65 @@ enum integrity_algorithm_t {
 extern enum_name_t *integrity_algorithm_names;
 
 /**
- * @brief Generig interface for a symmetric signature algorithm.
- *
- * @b Constructors:
- *  - signer_create()
- *  - hmac_signer_create()
- *
- * @todo Implement more integrity algorithms
- *
- * @ingroup signers
+ * Generig interface for a symmetric signature algorithm.
  */
 struct signer_t {
 	/**
-	 * @brief Generate a signature.
+	 * Generate a signature.
 	 *
 	 * If buffer is NULL, data is processed and prepended to a next call until
 	 * buffer is a valid pointer.
 	 * 
-	 * @param this			calling object
-	 * @param data			a chunk containing the data to sign
-	 * @param[out] buffer	pointer where the signature will be written
+	 * @param data		a chunk containing the data to sign
+	 * @param buffer	pointer where the signature will be written
 	 */
 	void (*get_signature) (signer_t *this, chunk_t data, u_int8_t *buffer);
 	
 	/**
-	 * @brief Generate a signature and allocate space for it.
+	 * Generate a signature and allocate space for it.
 	 *
 	 * If chunk is NULL, data is processed and prepended to a next call until
 	 * chunk is a valid chunk pointer.
 	 * 
-	 * @param this			calling object
-	 * @param data			a chunk containing the data to sign
-	 * @param[out] chunk	chunk which will hold the allocated signature
+	 * @param data		a chunk containing the data to sign
+	 * @param chunk		chunk which will hold the allocated signature
 	 */
 	void (*allocate_signature) (signer_t *this, chunk_t data, chunk_t *chunk);
 	
 	/**
-	 * @brief Verify a signature.
+	 * Verify a signature.
 	 * 
-	 * @param this			calling object
-	 * @param data			a chunk containing the data to verify
-	 * @param signature		a chunk containing the signature
-	 * @return				TRUE, if signature is valid, FALSE otherwise
+	 * @param data		a chunk containing the data to verify
+	 * @param signature	a chunk containing the signature
+	 * @return			TRUE, if signature is valid, FALSE otherwise
 	 */
 	bool (*verify_signature) (signer_t *this, chunk_t data, chunk_t signature);
 	
 	/**
-	 * @brief Get the block size of this signature algorithm.
+	 * Get the block size of this signature algorithm.
 	 * 
-	 * @param this			calling object
-	 * @return				block size in bytes
+	 * @return			block size in bytes
 	 */
 	size_t (*get_block_size) (signer_t *this);
 	
 	/**
-	 * @brief Get the key size of the signature algorithm.
+	 * Get the key size of the signature algorithm.
 	 * 
-	 * @param this			calling object
-	 * @return				key size in bytes
+	 * @return			key size in bytes
 	 */
 	size_t (*get_key_size) (signer_t *this);
 	
 	/**
-	 * @brief Set the key for this object.
+	 * Set the key for this object.
 	 * 
-	 * @param this			calling object
-	 * @param key			key to set
+	 * @param key		key to set
 	 */
 	void (*set_key) (signer_t *this, chunk_t key);
 	
 	/**
-	 * @brief Destroys a signer_t object.
-	 *
-	 * @param this			calling object
+	 * Destroys a signer_t object.
 	 */
 	void (*destroy) (signer_t *this);
 };
 
-/**
- * @brief Creates a new signer_t object.
- * 
- * @param integrity_algorithm	Algorithm to use for signing and verifying.
- * @return
- * 								- signer_t object
- * 								- NULL if signer not supported
- * 
- * @ingroup signers
- */
-signer_t *signer_create(integrity_algorithm_t integrity_algorithm);
-
-#endif /*SIGNER_H_*/
+#endif /*SIGNER_H_ @} */

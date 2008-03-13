@@ -1,13 +1,5 @@
-/**
- * @file library.c
- *
- * @brief Helper functions and definitions.
- *
- */
-
 /*
- * Copyright (C) 2005-2006 Martin Willi
- * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -19,175 +11,99 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
-
-#include <string.h>
-#include <time.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <pthread.h>
 
 #include "library.h"
 
-#include <printf_hook.h>
+#include <stdlib.h>
 
-ENUM(status_names, SUCCESS, DESTROY_ME,
-	"SUCCESS",
-	"FAILED",
-	"OUT_OF_RES",
-	"ALREADY_DONE",
-	"NOT_SUPPORTED",
-	"INVALID_ARG",
-	"NOT_FOUND",
-	"PARSE_ERROR",
-	"VERIFY_ERROR",
-	"INVALID_STATE",
-	"DESTROY_ME",
-	"NEED_MORE",
-);
+#include <utils.h>
+#include <chunk.h>
+#include <utils/identification.h>
+#include <utils/host.h>
+#include <utils/leak_detective.h>
+
+typedef struct private_library_t private_library_t;
 
 /**
- * Described in header.
+ * private data of library
  */
-void *clalloc(void * pointer, size_t size)
+struct private_library_t {
+
+	/**
+	 * public functions
+	 */
+	library_t public;
+
+#ifdef LEAK_DETECTIVE
+	/**
+	 * Memory leak detective, if enabled
+	 */
+	leak_detective_t *detective;
+#endif /* LEAK_DETECTIVE */
+};
+
+/**
+ * library instance
+ */
+library_t *lib;
+
+/**
+ * Implementation of library_t.destroy
+ */
+void library_deinit()
 {
-	void *data;
-	data = malloc(size);
+	private_library_t *this = (private_library_t*)lib;
+
+	this->public.plugins->destroy(this->public.plugins);
+	this->public.settings->destroy(this->public.settings);
+	this->public.creds->destroy(this->public.creds);
+	this->public.crypto->destroy(this->public.crypto);
+	this->public.fetcher->destroy(this->public.fetcher);
+	this->public.db->destroy(this->public.db);
+	this->public.printf_hook->destroy(this->public.printf_hook);
 	
-	memcpy(data, pointer,size);
+#ifdef LEAK_DETECTIVE
+	if (this->detective)
+	{
+		this->detective->destroy(this->detective);
+	}
+#endif /* LEAK_DETECTIVE */
+	free(this);
+	lib = NULL;
+}
+
+/*
+ * see header file
+ */
+void library_init(char *settings)
+{
+	printf_hook_t *pfh;
+	private_library_t *this = malloc_thing(private_library_t);
+	lib = &this->public;
 	
-	return (data);
-}
+#ifdef LEAK_DETECTIVE
+	this->detective = leak_detective_create();
+#endif /* LEAK_DETECTIVE */
 
-/**
- * Described in header.
- */
-void memxor(u_int8_t dest[], u_int8_t src[], size_t n)
-{
-	size_t i;
-	for (i = 0; i < n; i++)
-	{
-		dest[i] ^= src[i];
-	}
-}
-
-/**
- * We use a single mutex for all refcount variables. This
- * is not optimal for performance, but the critical section
- * is not that long...
- * TODO: Consider to include a mutex in each refcount_t variable.
- */
-static pthread_mutex_t ref_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-/**
- * Described in header.
- * 
- * TODO: May be implemented with atomic CPU instructions
- * instead of a mutex.
- */
-void ref_get(refcount_t *ref)
-{
-	pthread_mutex_lock(&ref_mutex);
-	(*ref)++;
-	pthread_mutex_unlock(&ref_mutex);
-}
-
-/**
- * Described in header.
- * 
- * TODO: May be implemented with atomic CPU instructions
- * instead of a mutex.
- */
-bool ref_put(refcount_t *ref)
-{
-	bool more_refs;
+	pfh = printf_hook_create();
+	this->public.printf_hook = pfh;
 	
-	pthread_mutex_lock(&ref_mutex);
-	more_refs = --(*ref);
-	pthread_mutex_unlock(&ref_mutex);
-	return !more_refs;
-}
-
-/**
- * output handler in printf() for time_t
- */
-static int print_time(FILE *stream, const struct printf_info *info,
-					  const void *const *args)
-{
-	static const char* months[] = {
-		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-	};
-	time_t *time = *((time_t**)(args[0]));
-	bool utc = TRUE;
-	struct tm t;
+	pfh->add_handler(pfh, 'b', mem_get_printf_hooks());
+	pfh->add_handler(pfh, 'B', chunk_get_printf_hooks());
+	pfh->add_handler(pfh, 'D', identification_get_printf_hooks());
+	pfh->add_handler(pfh, 'H', host_get_printf_hooks());
+	pfh->add_handler(pfh, 'N', enum_get_printf_hooks());
+	pfh->add_handler(pfh, 'T', time_get_printf_hooks());
+	pfh->add_handler(pfh, 'V', time_delta_get_printf_hooks());
 	
-	if (info->alt)
-	{
-		utc = *((bool*)(args[1]));
-	}
-	if (time == UNDEFINED_TIME)
-	{
-		return fprintf(stream, "--- -- --:--:--%s----",
-					   info->alt ? " UTC " : " ");
-	}
-	if (utc)
-	{
-		gmtime_r(time, &t);
-	}
-	else
-	{
-		localtime_r(time, &t);
-	}
-	return fprintf(stream, "%s %02d %02d:%02d:%02d%s%04d",
-				   months[t.tm_mon], t.tm_mday, t.tm_hour, t.tm_min,
-				   t.tm_sec, utc ? " UTC " : " ", t.tm_year + 1900);
+	this->public.crypto = crypto_factory_create();
+	this->public.creds = credential_factory_create();
+	this->public.fetcher = fetcher_manager_create();
+	this->public.db = database_factory_create();
+	this->public.settings = settings_create(settings);
+	this->public.plugins = plugin_loader_create();
 }
 
-/**
- * output handler in printf() for time deltas
- */
-static int print_time_delta(FILE *stream, const struct printf_info *info,
-							const void *const *args)
-{
-	char* unit = "second";
-	time_t *arg1, *arg2;
-	time_t delta;
-	
-	arg1 = *((time_t**)(args[0]));
-	if (info->alt)
-	{
-		arg2 = *((time_t**)(args[1]));
-		delta = abs(*arg1 - *arg2);
-	}
-	else
-	{
-		delta = *arg1;
-	}
-
-	if (delta > 2 * 60 * 60 * 24)
-	{
-		delta /= 60 * 60 * 24;
-		unit = "day";
-	}
-	else if (delta > 2 * 60 * 60)
-	{
-		delta /= 60 * 60;
-		unit = "hour";
-	}
-	else if (delta > 2 * 60)
-	{
-		delta /= 60;
-		unit = "minute";
-	}
-	return fprintf(stream, "%d %s%s", delta, unit, (delta == 1)? "":"s");
-}
-
-/**
- * register printf() handlers for time_t
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_TIME, print_time, arginfo_ptr_alt_ptr_int);
-	register_printf_function(PRINTF_TIME_DELTA, print_time_delta, arginfo_ptr_alt_ptr_ptr);
-}

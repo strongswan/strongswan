@@ -1,10 +1,3 @@
-/**
- * @file ike_delete.h
- * 
- * @brief Interface ike_delete_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_delete ike_delete
+ * @{ @ingroup tasks
  */
 
 #ifndef IKE_DELETE_H_
@@ -30,12 +30,7 @@ typedef struct ike_delete_t ike_delete_t;
 #include <sa/tasks/task.h>
 
 /**
- * @brief Task of type ike_delete, delete an IKE_SA.
- *
- * @b Constructors:
- *  - ike_delete_create()
- * 
- * @ingroup tasks
+ * Task of type ike_delete, delete an IKE_SA.
  */
 struct ike_delete_t {
 
@@ -46,7 +41,7 @@ struct ike_delete_t {
 };
 
 /**
- * @brief Create a new ike_delete task.
+ * Create a new ike_delete task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if we initiate the delete
@@ -54,4 +49,4 @@ struct ike_delete_t {
  */
 ike_delete_t *ike_delete_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_DELETE_H_ */
+#endif /* IKE_DELETE_H_ @} */

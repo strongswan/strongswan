@@ -1,10 +1,3 @@
-/**
- * @file psk_authenticator.h
- *
- * @brief Interface of psk_authenticator_t.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup psk_authenticator psk_authenticator
+ * @{ @ingroup authenticators
  */
 
 #ifndef PSK_AUTHENTICATOR_H_
@@ -28,13 +28,7 @@ typedef struct psk_authenticator_t psk_authenticator_t;
 #include <sa/authenticators/authenticator.h>
 
 /**
- * @brief Implementation of the authenticator_t interface using AUTH_PSK.
- *
- * @b Constructors:
- *  - psk_authenticator_create()
- *  - authenticator_create() using auth_method AUTH_PSK
- *
- * @ingroup authenticators
+ * Implementation of the authenticator_t interface using AUTH_PSK.
  */
 struct psk_authenticator_t {
 
@@ -45,13 +39,11 @@ struct psk_authenticator_t {
 };
 
 /**
- * @brief Creates an authenticator for AUTH_PSK.
+ * Creates an authenticator for AUTH_PSK.
  *
  * @param ike_sa		associated ike_sa
  * @return				psk_authenticator_t object
- *
- * @ingroup authenticators
  */
 psk_authenticator_t *psk_authenticator_create(ike_sa_t *ike_sa);
 
-#endif /* PSK_AUTHENTICATOR_H_ */
+#endif /* PSK_AUTHENTICATOR_H_ @} */

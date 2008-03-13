@@ -1,9 +1,3 @@
-/**
- * @file send_dpd_job.h
- * 
- * @brief Interface of send_dpd_job_t.
- */
-
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Hochschule fuer Technik Rapperswil
@@ -17,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup send_dpd_job send_dpd_job
+ * @{ @ingroup jobs
  */
 
 #ifndef SEND_DPD_JOB_H_
@@ -29,16 +30,11 @@ typedef struct send_dpd_job_t send_dpd_job_t;
 #include <sa/ike_sa_id.h>
 
 /**
- * @brief Class representing a SEND_DPD Job.
+ * Class representing a SEND_DPD Job.
  * 
  * Job to periodically send a Dead Peer Detection (DPD) request,
  * ie. an IKE request with no payloads other than the encrypted payload
  * required by the syntax.
- * 
- * @b Constructors:
- * - send_dpd_job_create()
- * 
- * @ingroup jobs
  */
 struct send_dpd_job_t {
 	/**
@@ -48,13 +44,11 @@ struct send_dpd_job_t {
 };
 
 /**
- * @brief Creates a job of type SEND_DPD.
+ * Creates a job of type SEND_DPD.
  * 
  * @param ike_sa_id		identification of the ike_sa as ike_sa_id_t object (gets cloned)
  * @return				initiate_ike_sa_job_t object
- * 
- * @ingroup jobs
  */
 send_dpd_job_t *send_dpd_job_create(ike_sa_id_t *ike_sa_id);
 
-#endif /*SEND_DPD_JOB_H_*/
+#endif /*SEND_DPD_JOB_H_ @} */

@@ -589,7 +589,7 @@ int main (int argc, char **argv)
 		    }
 		    if (starter_charon_pid())
 		    {
-			starter_stroke_add_conn(conn);
+			starter_stroke_add_conn(cfg, conn);
 		    }
 		    if (starter_pluto_pid())
 		    {

@@ -1,12 +1,5 @@
-/**
- * @file cert_payload.c
- * 
- * @brief Implementation of cert_payload_t.
- * 
- */
-
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -19,29 +12,31 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stddef.h>
 
+#include <daemon.h>
+
 #include "cert_payload.h"
 
-
-ENUM(cert_encoding_names, CERT_NONE, CERT_OCSP_CONTENT,
-	"CERT_NONE",
-	"CERT_PKCS7_WRAPPED_X509",
-	"CERT_PGP",
-	"CERT_DNS_SIGNED_KEY",
-	"CERT_X509_SIGNATURE",
-	"CERT_X509_KEY_EXCHANGE",
-	"CERT_KERBEROS_TOKENS",
-	"CERT_CRL",
-	"CERT_ARL",
-	"CERT_SPKI",
-	"CERT_X509_ATTRIBUTE",
-	"CERT_RAW_RSA_KEY",
-	"CERT_X509_HASH_AND_URL",
-	"CERT_X509_HASH_AND_URL_BUNDLE",
-	"CERT_OCSP_CONTENT",
+ENUM(cert_encoding_names, ENC_PKCS7_WRAPPED_X509, ENC_OCSP_CONTENT,
+	"ENC_PKCS7_WRAPPED_X509",
+	"ENC_PGP",
+	"ENC_DNS_SIGNED_KEY",
+	"ENC_X509_SIGNATURE",
+	"ENC_X509_KEY_EXCHANGE",
+	"ENC_KERBEROS_TOKENS",
+	"ENC_CRL",
+	"ENC_ARL",
+	"ENC_SPKI",
+	"ENC_X509_ATTRIBUTE",
+	"ENC_RAW_RSA_KEY",
+	"ENC_X509_HASH_AND_URL",
+	"ENC_X509_HASH_AND_URL_BUNDLE",
+	"ENC_OCSP_CONTENT",
 );
 
 typedef struct private_cert_payload_t private_cert_payload_t;
@@ -74,12 +69,12 @@ struct private_cert_payload_t {
 	/**
 	 * Encoding of the CERT Data.
 	 */
-	u_int8_t cert_encoding;
+	u_int8_t encoding;
 	
 	/**
 	 * The contained cert data value.
 	 */
-	chunk_t cert_data;
+	chunk_t data;
 };
 
 /**
@@ -105,9 +100,9 @@ encoding_rule_t cert_payload_encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_cert_payload_t, payload_length)},
  	/* 1 Byte CERT type*/
-	{ U_INT_8,			offsetof(private_cert_payload_t, cert_encoding)	},
+	{ U_INT_8,			offsetof(private_cert_payload_t, encoding)		},
 	/* some cert data bytes, length is defined in PAYLOAD_LENGTH */
-	{ CERT_DATA,			offsetof(private_cert_payload_t, cert_data) }
+	{ CERT_DATA,		offsetof(private_cert_payload_t, data) 			}
 };
 
 /*
@@ -128,19 +123,14 @@ encoding_rule_t cert_payload_encodings[] = {
  */
 static status_t verify(private_cert_payload_t *this)
 {
-	if ((this->cert_encoding == 0) ||
-		((this->cert_encoding >= CERT_ROOF) && (this->cert_encoding <= 200)))
-	{
-		/* reserved IDs */
-		return FAILED;
-	}
 	return SUCCESS;
 }
 
 /**
  * Implementation of cert_payload_t.get_encoding_rules.
  */
-static void get_encoding_rules(private_cert_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+static void get_encoding_rules(private_cert_payload_t *this,
+							   encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = cert_payload_encodings;
 	*rule_count = sizeof(cert_payload_encodings) / sizeof(encoding_rule_t);
@@ -159,7 +149,7 @@ static payload_type_t get_payload_type(private_cert_payload_t *this)
  */
 static payload_type_t get_next_type(private_cert_payload_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
 /**
@@ -179,56 +169,37 @@ static size_t get_length(private_cert_payload_t *this)
 }
 
 /**
- * Implementation of cert_payload_t.set_cert_encoding.
+ * Implementation of cert_payload_t.get_cert.
  */
-static void set_cert_encoding (private_cert_payload_t *this, cert_encoding_t encoding)
+static certificate_t* get_cert(private_cert_payload_t *this)
 {
-	this->cert_encoding = encoding;
-}
-
-/**
- * Implementation of cert_payload_t.get_cert_encoding.
- */
-static cert_encoding_t get_cert_encoding (private_cert_payload_t *this)
-{
-	return (this->cert_encoding);
-}
-
-/**
- * Implementation of cert_payload_t.set_data.
- */
-static void set_data (private_cert_payload_t *this, chunk_t data)
-{
-	if (this->cert_data.ptr != NULL)
+	certificate_type_t type;
+	
+	switch (this->encoding)
 	{
-		chunk_free(&(this->cert_data));
+		case ENC_X509_SIGNATURE:
+			type = CERT_X509;
+			break;
+		case ENC_PKCS7_WRAPPED_X509:
+		case ENC_PGP:
+		case ENC_DNS_SIGNED_KEY:
+		case ENC_KERBEROS_TOKEN:
+		case ENC_CRL:
+		case ENC_ARL:
+		case ENC_SPKI:
+		case ENC_X509_ATTRIBUTE:
+		case ENC_RAW_RSA_KEY:
+		case ENC_X509_HASH_AND_URL:
+		case ENC_X509_HASH_AND_URL_BUNDLE:
+		case ENC_OCSP_CONTENT:
+		default:
+			DBG1(DBG_ENC, "certificate encoding %N not supported",
+				 cert_encoding_names, this->encoding);
+			return NULL;
 	}
-	this->cert_data.ptr = clalloc(data.ptr,data.len);
-	this->cert_data.len = data.len;
-	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH + this->cert_data.len;
-}
-
-/**
- * Implementation of cert_payload_t.get_data.
- */
-static chunk_t get_data (private_cert_payload_t *this)
-{
-	return (this->cert_data);
-}
-
-/**
- * Implementation of cert_payload_t.get_data_clone.
- */
-static chunk_t get_data_clone (private_cert_payload_t *this)
-{
-	chunk_t cloned_data;
-	if (this->cert_data.ptr == NULL)
-	{
-		return (this->cert_data);
-	}
-	cloned_data.ptr = clalloc(this->cert_data.ptr,this->cert_data.len);
-	cloned_data.len = this->cert_data.len;
-	return cloned_data;
+	return lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
+							  BUILD_BLOB_ASN1_DER, chunk_clone(this->data),
+							  BUILD_END);
 }
 
 /**
@@ -236,11 +207,7 @@ static chunk_t get_data_clone (private_cert_payload_t *this)
  */
 static void destroy(private_cert_payload_t *this)
 {
-	if (this->cert_data.ptr != NULL)
-	{
-		chunk_free(&(this->cert_data));
-	}
-	
+	chunk_free(&this->data);
 	free(this);	
 }
 
@@ -251,7 +218,6 @@ cert_payload_t *cert_payload_create()
 {
 	private_cert_payload_t *this = malloc_thing(private_cert_payload_t);
 
-	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t*))verify;
 	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t*,encoding_rule_t**, size_t*))get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t*))get_length;
@@ -260,31 +226,38 @@ cert_payload_t *cert_payload_create()
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t*))get_payload_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t*))destroy;
 	
-	/* public functions */
 	this->public.destroy = (void (*) (cert_payload_t*))destroy;
-	this->public.set_cert_encoding = (void (*) (cert_payload_t*,cert_encoding_t))set_cert_encoding;
-	this->public.get_cert_encoding = (cert_encoding_t (*) (cert_payload_t*))get_cert_encoding;
-	this->public.set_data = (void (*) (cert_payload_t*,chunk_t))set_data;
-	this->public.get_data_clone = (chunk_t (*) (cert_payload_t*))get_data_clone;
-	this->public.get_data = (chunk_t (*) (cert_payload_t*))get_data;
+	this->public.get_cert = (certificate_t* (*) (cert_payload_t*))get_cert;
 	
-	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH;
-	this->cert_data = chunk_empty;
+	this->data = chunk_empty;
+	this->encoding = 0;
 
-	return (&(this->public));
+	return &this->public;
 }
 
 /*
  * Described in header
  */
-cert_payload_t *cert_payload_create_from_x509(x509_t *cert)
+cert_payload_t *cert_payload_create_from_cert(certificate_t *cert)
 {
-	cert_payload_t *this = cert_payload_create();
+	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create();
 
-	this->set_cert_encoding(this, CERT_X509_SIGNATURE);
-	this->set_data(this, cert->get_certificate(cert));
-	return this;
+	switch (cert->get_type(cert))
+	{
+		case CERT_X509:
+			this->encoding = ENC_X509_SIGNATURE;
+			break;
+		default:
+			DBG1(DBG_ENC, "embedding %N certificate in payload failed",
+				 certificate_type_names, cert->get_type(cert));
+			free(this);
+			return NULL;
+	}
+	this->data = cert->get_encoding(cert);
+	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH + this->data.len;
+	return &this->public;
 }
+

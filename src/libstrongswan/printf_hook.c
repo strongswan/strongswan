@@ -1,12 +1,5 @@
-/**
- * @file printf_hook.c
- *
- * @brief Printf hook definitions and arginfo functions.
- *
- */
-
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,124 +11,55 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "printf_hook.h"
 
+#include <utils.h>
+
+typedef struct private_printf_hook_t private_printf_hook_t;
+
 /**
- * arginfo handler in printf() pointer
+ * private data of printf_hook
  */
-int arginfo_ptr(const struct printf_info *info, size_t n, int *argtypes)
+struct private_printf_hook_t {
+
+	/**
+	 * public functions
+	 */
+	printf_hook_t public;
+};
+
+/**
+ * Implementation of printf_hook_t.add_handler.
+ */
+static void add_handler(private_printf_hook_t *this, char spec, 
+						printf_hook_functions_t hook)
 {
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
+	register_printf_function(spec, hook.print, hook.arginfo);
 }
 
 /**
- * arginfo handler for two prt arguments
+ * Implementation of printf_hook_t.destroy
  */
-int arginfo_ptr_ptr(const struct printf_info *info, size_t n, int *argtypes)
+static void destroy(private_printf_hook_t *this)
 {
-	if (n > 1)
-	{
-		argtypes[0] = PA_POINTER;
-		argtypes[1] = PA_POINTER;
-	}
-	return 2;
+	free(this);
 }
 
-/**
- * arginfo handler for one ptr, one int
+/*
+ * see header file
  */
-int arginfo_ptr_int(const struct printf_info *info, size_t n, int *argtypes)
+printf_hook_t *printf_hook_create()
 {
-	if (n > 1)
-	{
-		argtypes[0] = PA_POINTER;
-		argtypes[1] = PA_INT;
-	}
-	return 2;
-}
-
-/**
- * arginfo handler for two int arguments
- */
-int arginfo_int_int(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 1)
-	{
-		argtypes[0] = PA_INT;
-		argtypes[1] = PA_INT;
-	}
-	return 2;
-}
-
-/**
- * special arginfo handler respecting alt flag
- */
-int arginfo_int_alt_int_int(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (info->alt)
-	{
-		if (n > 1)
-		{
-			argtypes[0] = PA_INT;
-			argtypes[1] = PA_INT;
-		}
-		return 2;
-	}
+	private_printf_hook_t *this = malloc_thing(private_printf_hook_t);
 	
-	if (n > 0)
-	{
-		argtypes[0] = PA_INT;
-	}
-	return 1;
-}
-
-/**
- * special arginfo handler respecting alt flag
- */
-int arginfo_ptr_alt_ptr_int(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (info->alt)
-	{
-		if (n > 1)
-		{
-			argtypes[0] = PA_POINTER;
-			argtypes[1] = PA_INT;
-		}
-		return 2;
-	}
+	this->public.add_handler = (void(*)(printf_hook_t*, char, printf_hook_functions_t))add_handler;
+	this->public.destroy = (void(*)(printf_hook_t*))destroy;
 	
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
- * special arginfo handler respecting alt flag
- */
-int arginfo_ptr_alt_ptr_ptr(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (info->alt)
-	{
-		if (n > 1)
-		{
-			argtypes[0] = PA_POINTER;
-			argtypes[1] = PA_POINTER;
-		}
-		return 2;
-	}
 	
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
+	return &this->public;
 }
 

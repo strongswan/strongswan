@@ -1,10 +1,3 @@
-/**
- * @file eap_authenticator.h
- *
- * @brief Interface of eap_authenticator_t.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup eap_authenticator eap_authenticator
+ * @{ @ingroup authenticators
  */
 
 #ifndef EAP_AUTHENTICATOR_H_
@@ -29,7 +29,7 @@ typedef struct eap_authenticator_t eap_authenticator_t;
 #include <encoding/payloads/eap_payload.h>
 
 /**
- * @brief Implementation of the authenticator_t interface using AUTH_EAP.
+ * Implementation of the authenticator_t interface using AUTH_EAP.
  *
  * Authentication using EAP involves the most complex authenticator. It stays
  * alive over multiple ike_auth transactions and handles multiple EAP
@@ -68,11 +68,6 @@ typedef struct eap_authenticator_t eap_authenticator_t;
      +--------+                                +--------+
 
    @endverbatim
- * @b Constructors:
- *  - eap_authenticator_create()
- *  - authenticator_create() using auth_method AUTH_EAP
- *
- * @ingroup authenticators
  */
 struct eap_authenticator_t {
 
@@ -82,7 +77,7 @@ struct eap_authenticator_t {
 	authenticator_t authenticator_interface;
 	
 	/**
-	 * @brief Check if the EAP method was/is mutual and secure.
+	 * Check if the EAP method was/is mutual and secure.
 	 *
 	 * RFC4306 proposes to authenticate the EAP responder (server) by standard
 	 * IKEv2 methods (RSA, psk). Not all, but some EAP methods
@@ -93,19 +88,17 @@ struct eap_authenticator_t {
 	 * AUTH payload, the client must verify that the server initiated mutual
 	 * EAP authentication before it can trust the server.
 	 *
-	 * @param this	calling object
 	 * @return		TRUE, if no AUTH payload required, FALSE otherwise
 	 */
 	bool (*is_mutual) (eap_authenticator_t* this);
 	
 	/**
-	 * @brief Initiate the EAP exchange.
+	 * Initiate the EAP exchange.
 	 *
 	 * The server initiates EAP exchanges, so the client never calls
 	 * this method. If initiate() returns NEED_MORE, the EAP authentication
 	 * process started. In any case, a payload is created in "out".
 	 *
-	 * @param this		calling object
 	 * @param type		EAP method to use to authenticate client
 	 * @param vendor	EAP vendor identifier, if type is vendor specific, or 0
 	 * @param out		created initiaal EAP message to send
@@ -117,7 +110,7 @@ struct eap_authenticator_t {
 						  u_int32_t vendor, eap_payload_t **out);
 	
 	/**
-	 * @brief Process an EAP message.
+	 * Process an EAP message.
 	 *
 	 * After receiving an EAP message "in", the peer/server processes
 	 * the payload and creates a reply/subsequent request.
@@ -132,7 +125,6 @@ struct eap_authenticator_t {
 	 * If a SUCCESS is returned (on any side), the EAP authentication was
 	 * successful and the AUTH payload can be exchanged.
 	 *
-	 * @param this	calling object
 	 * @param in	received EAP message
 	 * @param out	created EAP message to send
 	 * @return
@@ -145,13 +137,11 @@ struct eap_authenticator_t {
 };
 
 /**
- * @brief Creates an authenticator for AUTH_EAP.
+ * Creates an authenticator for AUTH_EAP.
  *
  * @param ike_sa		associated ike_sa
  * @return				eap_authenticator_t object
- *
- * @ingroup authenticators
  */
 eap_authenticator_t *eap_authenticator_create(ike_sa_t *ike_sa);
 
-#endif /* EAP_AUTHENTICATOR_H_ */
+#endif /* EAP_AUTHENTICATOR_H_ @} */

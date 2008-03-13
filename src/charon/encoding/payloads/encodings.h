@@ -1,10 +1,3 @@
-/**
- * @file encodings.h
- * 
- * @brief Definition of encoding_type_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup encodings encodings
+ * @{ @ingroup payloads
  */
 
 #ifndef ENCODINGS_H_
@@ -30,7 +30,7 @@ typedef struct encoding_rule_t encoding_rule_t;
 #include <library.h>
 
 /**
- * @brief All different kinds of encoding types. 
+ * All different kinds of encoding types. 
  *
  * Each field of an IKEv2-Message (in header or payload) 
  * which has to be parsed or generated differently has its own
@@ -40,8 +40,6 @@ typedef struct encoding_rule_t encoding_rule_t;
  * from PRIVATE USE space. Also the substructures 
  * of specific payload types get their own payload_id 
  * from PRIVATE_USE space. See IKEv2-Draft for more informations.
- *
- * @ingroup payloads
  */
 enum encoding_type_t {
 	
@@ -114,7 +112,7 @@ enum encoding_type_t {
 	U_INT_64,
 	
 	/**
-	 * @brief represents a RESERVED_BIT used in FLAG-Bytes.
+	 * represents a RESERVED_BIT used in FLAG-Bytes.
 	 * 
 	 * When generating, the next bit is set to zero and the current write 
 	 * position is moved one bit forward.
@@ -128,7 +126,7 @@ enum encoding_type_t {
 	RESERVED_BIT,
 	
 	/**
-	 * @brief represents a RESERVED_BYTE.
+	 * represents a RESERVED_BYTE.
 	 * 
 	 * When generating, the next byte is set to zero and the current write 
 	 * position is moved one byte forward.
@@ -499,21 +497,16 @@ enum encoding_type_t {
 
 /**
  * enum name for encoding_type_t
- * 
- * @ingroup payloads
  */
 extern enum_name_t *encoding_type_names;
 
 /**
+ * Rule how to en-/decode a payload field.
+ *
  * An encoding rule is a mapping of a specific encoding type to 
  * a location in the data struct where the current field is stored to
  * or read from.
- * 
- * For examples see files in this directory.
- * 
  * This rules are used by parser and generator.
- * 
- * @ingroup payloads
  */
 struct encoding_rule_t {
 	
@@ -534,4 +527,4 @@ struct encoding_rule_t {
 	u_int32_t offset;
 };
 
-#endif /*ENCODINGS_H_*/
+#endif /*ENCODINGS_H_ @} */

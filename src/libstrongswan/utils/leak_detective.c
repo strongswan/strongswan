@@ -1,11 +1,5 @@
-/**
- * @file leak_detective.c
- * 
- * @brief Allocation hooks to find memory leaks.
- */
-
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,8 +11,15 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
+#ifdef HAVE_DLADDR
+# define _GNU_SOURCE
+# include <dlfcn.h>
+#endif /* HAVE_DLADDR */
+	
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
@@ -33,6 +34,7 @@
 #include <pthread.h>
 #include <netdb.h>
 #include <printf.h>
+#include <locale.h>
 #ifdef HAVE_BACKTRACE
 # include <execinfo.h>
 #endif /* HAVE_BACKTRACE */
@@ -42,7 +44,18 @@
 #include <library.h>
 #include <debug.h>
 
-#ifdef LEAK_DETECTIVE
+typedef struct private_leak_detective_t private_leak_detective_t;
+
+/**
+ * private data of leak_detective
+ */
+struct private_leak_detective_t {
+
+	/**
+	 * public functions
+	 */
+	leak_detective_t public;
+};
 
 /**
  * Magic value which helps to detect memory corruption. Yummy!
@@ -146,77 +159,103 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
 	char **strings;
 	size_t i;
 
-	strings = backtrace_symbols (stack_frames, stack_frame_count);
+	strings = backtrace_symbols(stack_frames, stack_frame_count);
 
-	DBG1("  dumping %d stack frame addresses", stack_frame_count);
+	fprintf(stderr, " dumping %d stack frame addresses\n", stack_frame_count);
 
 	for (i = 0; i < stack_frame_count; i++)
 	{
-		DBG1("    %s", strings[i]);
+#ifdef HAVE_DLADDR
+		Dl_info info;
+		
+		/* TODO: this is quite hackish, but it works. A more proper solution
+		 * would execve addr2strongline and pipe the output to DBG1() */
+		if (dladdr(stack_frames[i], &info))
+		{
+			char cmd[1024];
+			void *ptr = stack_frames[i];
+			
+			if (strstr(info.dli_fname, ".so"))
+			{
+				ptr = (void*)(stack_frames[i] - info.dli_fbase);
+			}
+			snprintf(cmd, sizeof(cmd), "addr2line -e %s %p", info.dli_fname, ptr);
+			if (info.dli_sname)
+			{
+				fprintf(stderr, "  \e[33m%s\e[0m @ %p (\e[31m%s+0x%x\e[0m) [%p]\n",
+						info.dli_fname, info.dli_fbase, info.dli_sname,
+						stack_frames[i] - info.dli_saddr, stack_frames[i]);
+			}
+			else
+			{
+				fprintf(stderr, "  \e[33m%s\e[0m @ %p [%p]\n", info.dli_fname,
+						info.dli_fbase, stack_frames[i]);
+			}
+			fprintf(stderr, "    -> \e[32m");
+			system(cmd);
+			fprintf(stderr, "\e[0m");
+		}
+		else
+#endif /* HAVE_DLADDR */
+		{
+			fprintf(stderr, "    %s\n", strings[i]);
+		}
 	}
 	free (strings);
 #endif /* HAVE_BACKTRACE */
 }
 
 /**
- * Whitelist, which contains address ranges in stack frames ignored when leaking.
- * 
- * This is necessary, as some function use allocation hacks (static buffers)
- * and so on, which we want to suppress on leak reports.
+ * Leak report white list
  *
- * The range_size is calculated using the readelf utility, e.g.:
- * readelf -s /lib/glibc.so.6
- * The values are for glibc-2.4 and may or may not be correct on other systems.
+ * List of functions using static allocation buffers or should be suppressed
+ * otherwise on leak report. 
  */
-typedef struct whitelist_t whitelist_t;
-
-struct whitelist_t {
-	void* range_start;
-	size_t range_size;
-};
-
-#ifdef LIBCURL
-/* dummy declaration for whitelisting */
-void *Curl_getaddrinfo(void);
-#endif /* LIBCURL */
-
-whitelist_t whitelist[] = {
-	{pthread_create,			2542},
-	{pthread_setspecific,		 217},
-	{mktime,					  60},
-	{tzset,						 123},
-	{inet_ntoa,					 249},
-	{strerror,					 180},
-	{getprotobynumber,			 291},
-	{getservbyport,				 311},
-	{register_printf_function,	 159},
-	{syslog,					  44},
-	{vsyslog,					  41},
-	{dlopen,					 109},
-#	ifdef LIBCURL
-	/* from /usr/lib/libcurl.so.3 */
-	{Curl_getaddrinfo,			 480},
-#	endif /* LIBCURL */
+char *whitelist[] = {
+	"pthread_create",
+	"pthread_setspecific",
+	"mktime",
+	"tzset",
+	"inet_ntoa",
+	"strerror",
+	"getprotobynumber",
+	"getservbyport",
+	"getservbyname",
+	"register_printf_function",
+	"syslog",
+	"vsyslog",
+	"dlopen",
+	"getaddrinfo",
+	"setlocale",
+	"mysql_init_character_set",
+	"init_client_errs",
+	"my_thread_init",
 };
 
 /**
- * Check if this stack frame is whitelisted.
+ * check if a stack frame contains functions listed above
  */
 static bool is_whitelisted(void **stack_frames, int stack_frame_count)
 {
 	int i, j;
 	
+#ifdef HAVE_DLADDR
 	for (i=0; i< stack_frame_count; i++)
 	{
-		for (j=0; j<sizeof(whitelist)/sizeof(whitelist_t); j++)
-		{
-			if (stack_frames[i] >= whitelist[j].range_start &&
-				stack_frames[i] <= (whitelist[j].range_start + whitelist[j].range_size))
+		Dl_info info;
+		
+		if (dladdr(stack_frames[i], &info) && info.dli_sname)
+		{	
+			for (j = 0; j < sizeof(whitelist)/sizeof(char*); j++)
 			{
-				return TRUE;
+				if (streq(info.dli_sname, whitelist[j]))
+				{
+					return TRUE;
+				}
 			}
 		}
 	}
+#endif /* HAVE_DLADDR */
 	return FALSE;
 }
 
@@ -232,8 +271,9 @@ void report_leaks()
 	{
 		if (!is_whitelisted(hdr->stack_frames, hdr->stack_frame_count))
 		{
-			DBG1("Leak (%d bytes at %p):", hdr->bytes, hdr + 1);
-			log_stack_frames(hdr->stack_frames, hdr->stack_frame_count);
+			fprintf(stderr, "Leak (%d bytes at %p):\n", hdr->bytes, hdr + 1);
+			/* skip the first frame, contains leak detective logic */
+			log_stack_frames(hdr->stack_frames + 1, hdr->stack_frame_count - 1);
 			leaks++;
 		}
 	}
@@ -241,13 +281,13 @@ void report_leaks()
 	switch (leaks)
 	{
 		case 0:
-			DBG1("No leaks detected");
+			fprintf(stderr, "No leaks detected\n");
 			break;
 		case 1:
-			DBG1("One leak detected");
+			fprintf(stderr, "One leak detected\n");
 			break;
 		default:
-			DBG1("%d leaks detected", leaks);
+			fprintf(stderr, "%d leaks detected\n", leaks);
 			break;
 	}
 }
@@ -334,8 +374,8 @@ void free_hook(void *ptr, const void *caller)
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
-		DBG1("freeing of invalid memory (%p, MAGIC 0x%x != 0x%x):",
-			 ptr, hdr->magic, MEMORY_HEADER_MAGIC);
+		fprintf(stderr, "freeing of invalid memory (%p, MAGIC 0x%x != 0x%x):\n",
+				ptr, hdr->magic, MEMORY_HEADER_MAGIC);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		install_hooks();
@@ -380,7 +420,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
-		DBG1("reallocation of invalid memory (%p):", old);
+		fprintf(stderr, "reallocation of invalid memory (%p):\n", old);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		install_hooks();
@@ -407,65 +447,31 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 }
 
 /**
- * Setup leak detective
+ * Implementation of leak_detective_t.destroy
  */
-void __attribute__ ((constructor)) leak_detective_init()
+static void destroy(private_leak_detective_t *this)
 {
-	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
-	{
-		install_hooks();
-	}
-}
-
-/**
- * Clean up leak detective
- */
-void __attribute__ ((destructor)) leak_detective_cleanup()
-{
-	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
+	if (installed)
 	{
 		uninstall_hooks();
 		report_leaks();
 	}
+	free(this);
 }
 
-/**
- * Log memory allocation statistics
+/*
+ * see header file
  */
-void leak_detective_status(FILE *stream)
+leak_detective_t *leak_detective_create()
 {
-	u_int blocks = 0;
-	size_t bytes = 0;
-	memory_header_t *hdr = &first_header;
+	private_leak_detective_t *this = malloc_thing(private_leak_detective_t);
 	
-	if (getenv("LEAK_DETECTIVE_DISABLE"))
+	this->public.destroy = (void(*)(leak_detective_t*))destroy;
+	
+	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
 	{
-		return;
+		install_hooks();
 	}
-	
-	pthread_mutex_lock(&mutex);
-	while ((hdr = hdr->next))
-	{
-		blocks++;
-		bytes += hdr->bytes;
-	}
-	pthread_mutex_unlock(&mutex);
-	
-	fprintf(stream, "allocation statistics:\n");
-	fprintf(stream, "  call stats: malloc: %d, free: %d, realloc: %d\n",
-			count_malloc, count_free, count_realloc);
-	fprintf(stream, "  allocated %d blocks, total size %d bytes (avg. %d bytes)\n",
-			blocks, bytes, bytes/blocks);
+	return &this->public;
 }
 
-#else /* !LEAK_DETECTION */
-
-/**
- * Dummy when !using LEAK_DETECTIVE
- */
-void leak_detective_status(FILE *stream)
-{
-
-}
-
-#endif /* LEAK_DETECTION */

@@ -1,10 +1,3 @@
-/**
- * @file gateway_controller.h
- * 
- * @brief Interface of gateway_controller_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup gateway_controller gateway_controller
+ * @{ @ingroup controller
  */
 
 #ifndef GATEWAY_CONTROLLER_H_
@@ -29,7 +29,7 @@
 typedef struct gateway_controller_t gateway_controller_t;
 
 /**
- * @brief Status controller.
+ * Status controller.
  */
 struct gateway_controller_t {
 
@@ -40,8 +40,8 @@ struct gateway_controller_t {
 };
 
 /**
- * @brief Create a gateway_controller controller instance.
+ * Create a gateway_controller controller instance.
  */
 controller_t *gateway_controller_create(context_t *context, void *param);
 
-#endif /* GATEWAY_CONTROLLER_H_ */
+#endif /* GATEWAY_CONTROLLER_H_ @} */

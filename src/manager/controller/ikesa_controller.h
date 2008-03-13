@@ -1,10 +1,3 @@
-/**
- * @file ikesa_controller.h
- * 
- * @brief Interface of ikesa_controller_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ikesa_controller ikesa_controller
+ * @{ @ingroup controller
  */
 
 #ifndef IKESA_CONTROLLER_H_
@@ -29,7 +29,7 @@
 typedef struct ikesa_controller_t ikesa_controller_t;
 
 /**
- * @brief Status controller.
+ * Status controller.
  */
 struct ikesa_controller_t {
 
@@ -40,8 +40,8 @@ struct ikesa_controller_t {
 };
 
 /**
- * @brief Create a ikesa_controller controller instance.
+ * Create a ikesa_controller controller instance.
  */
 controller_t *ikesa_controller_create(context_t *context, void *param);
 
-#endif /* IKESA_CONTROLLER_H_ */
+#endif /* IKESA_CONTROLLER_H_ @} */

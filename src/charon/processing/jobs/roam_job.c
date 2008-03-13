@@ -1,10 +1,3 @@
-/**
- * @file roam_job.c
- * 
- * @brief Implementation of roam_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,8 +11,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
-
 
 #include <stdlib.h>
 

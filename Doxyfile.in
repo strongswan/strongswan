@@ -70,12 +70,12 @@ WARN_LOGFILE =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT = src/libstrongswan src/charon
+INPUT = src/libstrongswan src/charon src/libfast src/manager
 FILE_PATTERNS = *.h
 RECURSIVE = YES
 EXCLUDE = 
 EXCLUDE_SYMLINKS = NO
-EXCLUDE_PATTERNS = 
+EXCLUDE_PATTERNS = */.svn/*
 EXAMPLE_PATH = 
 EXAMPLE_PATTERNS = 
 EXAMPLE_RECURSIVE = NO

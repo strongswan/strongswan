@@ -1,10 +1,3 @@
-/**
- * @file fips_signer.c
- * 
- * @brief Computes a HMAC signature and stores it in fips_signature.h.
- * 
- */
-
 /*
  * Copyright (C) 2007 Bruno Krieg, Daniel Wydler
  * Hochschule fuer Technik Rapperswil, Switzerland
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stdio.h>
@@ -57,7 +52,7 @@ int main(int argc, char* argv[])
 	fprintf(f, "const char *hmac_key = \"%s\";\n", hmac_key);
 	fprintf(f, "const char *hmac_signature = \"%s\";\n", hmac_signature);
 	fprintf(f, "\n");
-	fprintf(f, "#endif /* FIPS_SIGNATURE_H_ */\n");
+	fprintf(f, "#endif /* FIPS_SIGNATURE_H_ @} */\n");
 	fclose(f);
 	exit(0);
 }

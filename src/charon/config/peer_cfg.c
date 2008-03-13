@@ -1,10 +1,3 @@
-/**
- * @file peer_cfg.c
- * 
- * @brief Implementation of peer_cfg_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
@@ -20,6 +13,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <string.h>
@@ -29,7 +24,6 @@
 
 #include <utils/linked_list.h>
 #include <utils/identification.h>
-#include <crypto/ietf_attr_list.h>
 
 ENUM(cert_policy_names, CERT_ALWAYS_SEND, CERT_NEVER_SEND,
 	"CERT_ALWAYS_SEND",
@@ -95,21 +89,6 @@ struct private_peer_cfg_t {
 	 * allowed id for other
 	 */
 	identification_t *other_id;
-	
-	/**
-	 * we have a cert issued by this CA
-	 */
-	identification_t *my_ca;
-	
-	/**
-	 * we require the other end to have a cert issued by this CA
-	 */
-	identification_t *other_ca;
-	
-	/**
-	 * we require the other end to belong to at least one group
-	 */
-	linked_list_t *groups;
 	
 	/**
 	 * should we send a certificate
@@ -180,6 +159,11 @@ struct private_peer_cfg_t {
 	 * virtual IP to use remotly
 	 */
 	host_t *other_virtual_ip;
+	
+	/**
+	 * required authorization constraints
+	 */
+	auth_info_t *auth;
 
 #ifdef P2P	
 	/**
@@ -235,12 +219,26 @@ static void add_child_cfg(private_peer_cfg_t *this, child_cfg_t *child_cfg)
 }
 
 /**
- * Implementation of peer_cfg_t.create_child_cfg_iterator.
+ * Implementation of peer_cfg_t.remove_child_cfg.
  */
-static iterator_t* create_child_cfg_iterator(private_peer_cfg_t *this)
+static void remove_child_cfg(private_peer_cfg_t *this, enumerator_t *enumerator)
 {
-	return this->child_cfgs->create_iterator_locked(this->child_cfgs,
-													&this->mutex);
+	pthread_mutex_lock(&this->mutex);
+	this->child_cfgs->remove_at(this->child_cfgs, enumerator);
+	pthread_mutex_unlock(&this->mutex);
+}
+
+/**
+ * Implementation of peer_cfg_t.create_child_cfg_enumerator.
+ */
+static enumerator_t* create_child_cfg_enumerator(private_peer_cfg_t *this)
+{
+	enumerator_t *enumerator;
+
+	pthread_mutex_lock(&this->mutex);
+	enumerator = this->child_cfgs->create_enumerator(this->child_cfgs);
+	return enumerator_create_cleaner(enumerator,
+									 (void*)pthread_mutex_unlock, &this->mutex);
 }
 
 /**
@@ -267,10 +265,10 @@ static child_cfg_t* select_child_cfg(private_peer_cfg_t *this,
 									 host_t *my_host, host_t *other_host)
 {
 	child_cfg_t *current, *found = NULL;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	
-	iterator = create_child_cfg_iterator(this);
-	while (iterator->iterate(iterator, (void**)&current))
+	enumerator = create_child_cfg_enumerator(this);
+	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (contains_ts(current, TRUE, my_ts, my_host) &&
 			contains_ts(current, FALSE, other_ts, other_host))
@@ -280,7 +278,7 @@ static child_cfg_t* select_child_cfg(private_peer_cfg_t *this,
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return found;
 }
 
@@ -298,30 +296,6 @@ static identification_t *get_my_id(private_peer_cfg_t *this)
 static identification_t *get_other_id(private_peer_cfg_t *this)
 {
 	return this->other_id;
-}
-
-/**
- * Implementation of peer_cfg_t.get_my_ca
- */
-static identification_t *get_my_ca(private_peer_cfg_t *this)
-{
-	return this->my_ca;
-}
-
-/**
- * Implementation of peer_cfg_t.get_other_ca
- */
-static identification_t *get_other_ca(private_peer_cfg_t *this)
-{
-	return this->other_ca;
-}
-
-/**
- * Implementation of peer_cfg_t.get_groups
- */
-static linked_list_t *get_groups(private_peer_cfg_t *this)
-{
-	return this->groups;
 }
 
 /**
@@ -452,6 +426,14 @@ static host_t* get_other_virtual_ip(private_peer_cfg_t *this, host_t *suggestion
 	}
 	return suggestion->clone(suggestion);
 }
+	
+/**
+ * Implementation of peer_cfg_t.get_auth.
+ */
+static auth_info_t* get_auth(private_peer_cfg_t *this)
+{
+	return this->auth;
+}
 
 #ifdef P2P
 /**
@@ -502,15 +484,13 @@ static void destroy(private_peer_cfg_t *this)
 		this->child_cfgs->destroy_offset(this->child_cfgs, offsetof(child_cfg_t, destroy));
 		this->my_id->destroy(this->my_id);
 		this->other_id->destroy(this->other_id);
-		DESTROY_IF(this->my_ca);
-		DESTROY_IF(this->other_ca);
 		DESTROY_IF(this->my_virtual_ip);
 		DESTROY_IF(this->other_virtual_ip);
+		this->auth->destroy(this->auth);
 #ifdef P2P
 		DESTROY_IF(this->p2p_mediated_by);
 		DESTROY_IF(this->peer_id);
 #endif /* P2P */
-		ietfAttr_list_destroy(this->groups);
 		free(this->name);
 		free(this);
 	}
@@ -521,8 +501,7 @@ static void destroy(private_peer_cfg_t *this)
  */
 peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
-							identification_t *my_ca, identification_t *other_ca,
-							linked_list_t *groups, cert_policy_t cert_policy,
+							cert_policy_t cert_policy,
 							auth_method_t auth_method, eap_type_t eap_type,
 							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,
@@ -540,13 +519,11 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_ike_version = (u_int(*) (peer_cfg_t *))get_ike_version;	
 	this->public.get_ike_cfg = (ike_cfg_t* (*) (peer_cfg_t *))get_ike_cfg;
 	this->public.add_child_cfg = (void (*) (peer_cfg_t *, child_cfg_t*))add_child_cfg;
-	this->public.create_child_cfg_iterator = (iterator_t* (*) (peer_cfg_t *))create_child_cfg_iterator;
+	this->public.remove_child_cfg = (void(*)(peer_cfg_t*, enumerator_t*))remove_child_cfg;
+	this->public.create_child_cfg_enumerator = (enumerator_t* (*) (peer_cfg_t *))create_child_cfg_enumerator;
 	this->public.select_child_cfg = (child_cfg_t* (*) (peer_cfg_t *,linked_list_t*,linked_list_t*,host_t*,host_t*))select_child_cfg;
 	this->public.get_my_id = (identification_t* (*)(peer_cfg_t*))get_my_id;
 	this->public.get_other_id = (identification_t* (*)(peer_cfg_t *))get_other_id;
-	this->public.get_my_ca = (identification_t* (*)(peer_cfg_t *))get_my_ca;
-	this->public.get_other_ca = (identification_t* (*)(peer_cfg_t *))get_other_ca;
-	this->public.get_groups = (linked_list_t* (*)(peer_cfg_t *))get_groups;
 	this->public.get_cert_policy = (cert_policy_t (*) (peer_cfg_t *))get_cert_policy;
 	this->public.get_auth_method = (auth_method_t (*) (peer_cfg_t *))get_auth_method;
 	this->public.get_eap_type = (eap_type_t (*) (peer_cfg_t *,u_int32_t*))get_eap_type;
@@ -559,6 +536,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_dpd_action = (dpd_action_t (*) (peer_cfg_t *))get_dpd_action;
 	this->public.get_my_virtual_ip = (host_t* (*) (peer_cfg_t *))get_my_virtual_ip;
 	this->public.get_other_virtual_ip = (host_t* (*) (peer_cfg_t *, host_t *))get_other_virtual_ip;
+	this->public.get_auth = (auth_info_t*(*)(peer_cfg_t*))get_auth;
 	this->public.get_ref = (void(*)(peer_cfg_t *))get_ref;
 	this->public.destroy = (void(*)(peer_cfg_t *))destroy;
 #ifdef P2P	
@@ -575,9 +553,6 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	pthread_mutex_init(&this->mutex, NULL);
 	this->my_id = my_id;
 	this->other_id = other_id;
-	this->my_ca = my_ca;
-	this->other_ca = other_ca;
-	this->groups = groups;
 	this->cert_policy = cert_policy;
 	this->auth_method = auth_method;
 	this->eap_type = eap_type;
@@ -600,11 +575,15 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->dpd_action = dpd_action;
 	this->my_virtual_ip = my_virtual_ip;
 	this->other_virtual_ip = other_virtual_ip;
+	this->auth = auth_info_create();
 	this->refcount = 1;
 #ifdef P2P
 	this->p2p_mediation = p2p_mediation;
 	this->p2p_mediated_by = p2p_mediated_by;
 	this->peer_id = peer_id;
+#else /* P2P */
+	DESTROY_IF(p2p_mediated_by);
+	DESTROY_IF(peer_id);
 #endif /* P2P */
 
 	return &this->public;

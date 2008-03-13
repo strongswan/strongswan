@@ -1,10 +1,3 @@
-/**
- * @file delete_child_sa_job.h
- * 
- * @brief Interface of delete_child_sa_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup delete_child_sa_job delete_child_sa_job
+ * @{ @ingroup jobs
  */
 
 #ifndef DELETE_CHILD_SA_JOB_H_
@@ -32,14 +32,9 @@ typedef struct delete_child_sa_job_t delete_child_sa_job_t;
 
 
 /**
- * @brief Class representing an DELETE_CHILD_SA Job.
+ * Class representing an DELETE_CHILD_SA Job.
  * 
  * This job initiates the delete of a CHILD SA.
- * 
- * @b Constructors:
- *  - delete_child_sa_job_create()
- * 
- * @ingroup jobs
  */
 struct delete_child_sa_job_t {
 	/**
@@ -49,7 +44,7 @@ struct delete_child_sa_job_t {
 };
 
 /**
- * @brief Creates a job of type DELETE_CHILD_SA.
+ * Creates a job of type DELETE_CHILD_SA.
  *
  * The CHILD_SA is identified by its reqid, protocol (AH/ESP) and its
  * inbound SPI.
@@ -58,11 +53,9 @@ struct delete_child_sa_job_t {
  * @param protocol	protocol of the CHILD_SA
  * @param spi		security parameter index of the CHILD_SA
  * @return			delete_child_sa_job_t object
- * 
- * @ingroup jobs
  */
 delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid, 
 												  protocol_id_t protocol, 
 												  u_int32_t spi);
 
-#endif /* DELETE_CHILD_SA_JOB_H_ */
+#endif /* DELETE_CHILD_SA_JOB_H_ @} */

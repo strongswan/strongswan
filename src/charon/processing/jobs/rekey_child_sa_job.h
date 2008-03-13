@@ -1,10 +1,3 @@
-/**
- * @file rekey_child_sa_job.h
- * 
- * @brief Interface of rekey_child_sa_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup rekey_child_sa_job rekey_child_sa_job
+ * @{ @ingroup jobs
  */
 
 #ifndef REKEY_CHILD_SA_JOB_H_
@@ -31,14 +31,9 @@ typedef struct rekey_child_sa_job_t rekey_child_sa_job_t;
 #include <config/proposal.h>
 
 /**
- * @brief Class representing an REKEY_CHILD_SA Job.
+ * Class representing an REKEY_CHILD_SA Job.
  *
  * This job initiates the rekeying of a CHILD SA.
- *
- * @b Constructors:
- *  - rekey_child_sa_job_create()
- *
- * @ingroup jobs
  */
 struct rekey_child_sa_job_t {
 	/**
@@ -48,7 +43,7 @@ struct rekey_child_sa_job_t {
 };
 
 /**
- * @brief Creates a job of type REKEY_CHILD_SA.
+ * Creates a job of type REKEY_CHILD_SA.
  *
  * The CHILD_SA is identified by its protocol (AH/ESP) and its
  * inbound SPI.
@@ -57,9 +52,8 @@ struct rekey_child_sa_job_t {
  * @param protocol	protocol of the CHILD_SA
  * @param spi		security parameter index of the CHILD_SA
  * @return			rekey_child_sa_job_t object
- * 
- * @ingroup jobs
  */
-rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid, protocol_id_t protocol, u_int32_t spi);
-
-#endif /* REKEY_CHILD_SA_JOB_H_ */
+rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid, 
+												protocol_id_t protocol,
+												u_int32_t spi);
+#endif /* REKEY_CHILD_SA_JOB_H_ @} */

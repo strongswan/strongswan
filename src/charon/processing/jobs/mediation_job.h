@@ -1,9 +1,3 @@
-/**
- * @file mediation_job.h
- * 
- * @brief Interface of mediation_job_t.
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
@@ -17,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup mediation_job mediation_job
+ * @{ @ingroup jobs
  */
 
 #ifndef MEDIATION_JOB_H_
@@ -30,14 +31,9 @@ typedef struct mediation_job_t mediation_job_t;
 #include <utils/linked_list.h>
 
 /**
- * @brief Class representing a MEDIATION Job.
+ * Class representing a MEDIATION Job.
  * 
  * This job handles the mediation on the mediation server.
- * 
- * @b Constructors:
- * - mediation_job_create()
- * 
- * @ingroup jobs
  */
 struct mediation_job_t {
 	/**
@@ -47,7 +43,7 @@ struct mediation_job_t {
 };
 
 /**
- * @brief Creates a job of type MEDIATION.
+ * Creates a job of type MEDIATION.
  * 
  * Parameters get cloned.
  * 
@@ -58,8 +54,6 @@ struct mediation_job_t {
  * @param endpoints		list of submitted endpoints
  * @param response		TRUE if this is a response
  * @return				job object
- * 
- * @ingroup jobs
  */
 mediation_job_t *mediation_job_create(identification_t *peer_id,
 		identification_t *requester, chunk_t session_id, chunk_t session_key,
@@ -67,7 +61,7 @@ mediation_job_t *mediation_job_create(identification_t *peer_id,
 
 
 /**
- * @brief Creates a special job of type MEDIATION that is used to send a callback
+ * Creates a special job of type MEDIATION that is used to send a callback
  * notification to a peer.
  * 
  * Parameters get cloned.
@@ -75,10 +69,8 @@ mediation_job_t *mediation_job_create(identification_t *peer_id,
  * @param requester		ID of the waiting peer
  * @param peer_id		ID of the requested peer
  * @return				job object
- * 
- * @ingroup jobs
  */
 mediation_job_t *mediation_callback_job_create(identification_t *requester,
 		identification_t *peer_id);
 
-#endif /*MEDIATION_JOB_H_*/
+#endif /*MEDIATION_JOB_H_ @} */

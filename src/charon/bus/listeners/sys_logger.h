@@ -1,10 +1,3 @@
-/**
- * @file sys_logger.h
- *
- * @brief Interface of sys_logger_t.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup sys_logger sys_logger
+ * @{ @ingroup listeners
  */
 
 #ifndef SYS_LOGGER_H_
@@ -30,12 +30,7 @@ typedef struct sys_logger_t sys_logger_t;
 #include <bus/bus.h>
 
 /**
- * @brief Logger for syslog which implements bus_listener_t.
- *
- * @b Constructors:
- *  - sys_logger_create()
- *
- * @ingroup listeners
+ * Logger for syslog which implements bus_listener_t.
  */
 struct sys_logger_t {
 	
@@ -45,31 +40,25 @@ struct sys_logger_t {
 	bus_listener_t listener;
 	
 	/**
-	 * @brief Set the loglevel for a signal type.
+	 * Set the loglevel for a signal type.
 	 *
-	 * @param this		stream_logger_t object
 	 * @param singal	type of signal
 	 * @param level		max level to log
 	 */
 	void (*set_level) (sys_logger_t *this, signal_t signal, level_t level);
 	
 	/**
-	 * @brief Destroys a sys_logger_t object.
-	 *
-	 * @param this		sys_logger_t object
+	 * Destroys a sys_logger_t object.
 	 */
 	void (*destroy) (sys_logger_t *this);
 };
 
 /**
- * @brief Constructor to create a sys_logger_t object.
+ * Constructor to create a sys_logger_t object.
  *
  * @param facility	syslog facility to use
  * @return			sys_logger_t object
- *
- * @ingroup listeners
  */
 sys_logger_t *sys_logger_create(int facility);
 
-
-#endif /* SYS_LOGGER_H_ */
+#endif /* SYS_LOGGER_H_ @} */

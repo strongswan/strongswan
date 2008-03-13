@@ -1,10 +1,3 @@
-/**
- * @file chunk.c
- *
- * @brief Pointer/lenght abstraction and its functions.
- *
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <stdio.h>
@@ -357,81 +352,21 @@ bool chunk_equals_or_null(chunk_t a, chunk_t b)
 }
 
 /**
- * Number of bytes per line to dump raw data
- */
-#define BYTES_PER_LINE 16
-
-/**
- * output handler in printf() for byte ranges
- */
-static int print_bytes(FILE *stream, const struct printf_info *info,
-					   const void *const *args)
-{
-	char *bytes = *((void**)(args[0]));
-	int len = *((size_t*)(args[1]));
-	
-	char buffer[BYTES_PER_LINE * 3];
-	char ascii_buffer[BYTES_PER_LINE + 1];
-	char *buffer_pos = buffer;
-	char *bytes_pos  = bytes;
-	char *bytes_roof = bytes + len;
-	int line_start = 0;
-	int i = 0;
-	int written = 0;
-	
-	written += fprintf(stream, "=> %d bytes @ %p", len, bytes);
-	
-	while (bytes_pos < bytes_roof)
-	{
-		*buffer_pos++ = hexdig_upper[(*bytes_pos >> 4) & 0xF];
-		*buffer_pos++ = hexdig_upper[ *bytes_pos       & 0xF];
-
-		ascii_buffer[i++] =
-				(*bytes_pos > 31 && *bytes_pos < 127) ? *bytes_pos : '.';
-
-		if (++bytes_pos == bytes_roof || i == BYTES_PER_LINE) 
-		{
-			int padding = 3 * (BYTES_PER_LINE - i);
-			int written;
-			
-			while (padding--)
-			{
-				*buffer_pos++ = ' ';
-			}
-			*buffer_pos++ = '\0';
-			ascii_buffer[i] = '\0';
-			
-			written += fprintf(stream, "\n%4d: %s  %s",
-							   line_start, buffer, ascii_buffer);
-
-			
-			buffer_pos = buffer;
-			line_start += BYTES_PER_LINE;
-			i = 0;
-		}
-		else
-		{
-			*buffer_pos++ = ' ';
-		}
-	}
-	return written;
-}
-
-/**
  * output handler in printf() for chunks
  */
-static int print_chunk(FILE *stream, const struct printf_info *info,
+static int chunk_print(FILE *stream, const struct printf_info *info,
 					   const void *const *args)
 {
 	chunk_t *chunk = *((chunk_t**)(args[0]));
 	bool first = TRUE;
 	chunk_t copy = *chunk;
 	int written = 0;
+	printf_hook_functions_t mem = mem_get_printf_hooks();
 	
 	if (!info->alt)
 	{
 		const void *new_args[] = {&chunk->ptr, &chunk->len};
-		return print_bytes(stream, info, new_args);
+		return mem.print(stream, info, new_args);
 	}
 	
 	while (copy.len > 0)
@@ -451,10 +386,24 @@ static int print_chunk(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * register printf() handlers
+ * arginfo handler for printf() mem ranges
  */
-static void __attribute__ ((constructor))print_register()
+static int chunk_arginfo(const struct printf_info *info, size_t n, int *argtypes)
 {
-	register_printf_function(PRINTF_CHUNK, print_chunk, arginfo_ptr);
-	register_printf_function(PRINTF_BYTES, print_bytes, arginfo_ptr_int);
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
 }
+
+/**
+ * return printf hook functions for a chunk
+ */
+printf_hook_functions_t chunk_get_printf_hooks()
+{
+	printf_hook_functions_t hooks = {chunk_print, chunk_arginfo};
+	
+	return hooks;
+}
+

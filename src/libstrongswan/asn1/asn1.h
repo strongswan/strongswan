@@ -1,10 +1,3 @@
-/**
- * @file asn1.h
- *
- * @brief Simple ASN.1 parser
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Will
  * Copyright (C) 2000-2008 Andreas Steffen
@@ -21,11 +14,16 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id$
+ * $Id$
+ */
+ 
+/**
+ * @defgroup asn1 asn1
+ * @{ @ingroup asn1
  */
 
-#ifndef _ASN1_H
-#define _ASN1_H
+#ifndef ASN1_H_
+#define ASN1_H_
 
 #include <stdarg.h>
 #include <gmp.h>
@@ -35,9 +33,7 @@
 
 
 /**
- * @brief Definition of some primitive ASN1 types
- *
- * @ingroup asn1
+ * Definition of some primitive ASN1 types
  */
 typedef enum {
     ASN1_EOC =				0x00,
@@ -87,7 +83,6 @@ typedef enum {
 } asn1_t;
 
 /* Definition of ASN1 flags */
-
 #define ASN1_NONE	0x00
 #define ASN1_DEF	0x01
 #define ASN1_OPT	0x02
@@ -100,7 +95,6 @@ typedef enum {
 #define ASN1_INVALID_LENGTH	0xffffffff
 
 /* definition of an ASN.1 object */
-
 typedef struct {
 	u_int   level;
 	const u_char  *name;
@@ -141,9 +135,8 @@ extern bool is_asn1(chunk_t blob);
 
 extern void code_asn1_length(size_t length, chunk_t *code);
 extern u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen);
-extern chunk_t asn1_integer_from_mpz(const mpz_t value);
 extern chunk_t asn1_simple_object(asn1_t tag, chunk_t content);
 extern chunk_t asn1_bitstring(const char *mode, chunk_t content);
 extern chunk_t asn1_wrap(asn1_t type, const char *mode, ...);
 
-#endif /* _ASN1_H */
+#endif /* ASN1_H_ @}*/

@@ -1,10 +1,3 @@
-/**
- * @file identification.h
- *
- * @brief Interface of identification_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+ 
+/**
+ * @defgroup identification identification
+ * @{ @ingroup utils
  */
 
 
@@ -27,15 +27,33 @@
 
 typedef enum id_type_t id_type_t;
 typedef struct identification_t identification_t;
+typedef enum id_match_t id_match_t;
 
 #include <library.h>
 
-#define MAX_WILDCARDS     14
+/** 
+ * Matches returned from identification_t.match
+ */
+enum id_match_t {
+	/* no match */
+	ID_MATCH_NONE = 0,
+	/* match to %any ID */
+	ID_MATCH_ANY = 1,
+	/* match with maximum allowed wildcards */
+	ID_MATCH_MAX_WILDCARDS = 2,
+	/* match with only one wildcard */
+	ID_MATCH_ONE_WILDCARD = 19,
+	/* perfect match, won't get better */
+	ID_MATCH_PERFECT = 20,
+};
 
 /**
- * @brief ID Types in a ID payload.
- *
- * @ingroup utils
+ * enum names for id_match_t.
+ */
+extern enum_name_t *id_match_names;
+
+/**
+ * ID Types in a ID payload.
  */
 enum id_type_t {
 
@@ -109,7 +127,16 @@ enum id_type_t {
 	 * private type which represents a GeneralName of type URI
 	 */
 	ID_DER_ASN1_GN_URI = 201,
-
+	
+	/**
+	 * SHA1 hash over PKCS#1 subjectPublicKeyInfo
+	 */
+	ID_PUBKEY_INFO_SHA1,
+	
+	/**
+	 * SHA1 hash over PKCS#1 subjectPublicKey
+	 */
+	ID_PUBKEY_SHA1,
 };
 
 /**
@@ -118,110 +145,84 @@ enum id_type_t {
 extern enum_name_t *id_type_names;
 
 /**
- * @brief Generic identification, such as used in ID payload.
- * 
- * The following types are possible:
- * - ID_IPV4_ADDR
- * - ID_FQDN
- * - ID_RFC822_ADDR
- * - ID_IPV6_ADDR
- * - ID_DER_ASN1_DN
- * - ID_DER_ASN1_GN
- * - ID_KEY_ID
- * - ID_DER_ASN1_GN_URI
- * 
- * @b Constructors:
- * - identification_create_from_string()
- * - identification_create_from_encoding()
+ * Generic identification, such as used in ID payload.
  * 
  * @todo Support for ID_DER_ASN1_GN is minimal right now. Comparison
  * between them and ID_IPV4_ADDR/RFC822_ADDR would be nice.
- *
- * @ingroup utils
  */
 struct identification_t {
 	
 	/**
-	 * @brief Get the encoding of this id, to send over
+	 * Get the encoding of this id, to send over
 	 * the network.
 	 * 
-	 * @warning Result points to internal data, do NOT free!
+	 * Result points to internal data, do not free.
 	 * 
-	 * @param this		the identification_t object
 	 * @return 			a chunk containing the encoded bytes
 	 */
 	chunk_t (*get_encoding) (identification_t *this);
 	
 	/**
-	 * @brief Get the type of this identification.
+	 * Get the type of this identification.
 	 * 
-	 * @param this		the identification_t object
 	 * @return 			id_type_t
 	 */
 	id_type_t (*get_type) (identification_t *this);
 	
 	/**
-	 * @brief Check if two identification_t objects are equal.
+	 * Check if two identification_t objects are equal.
 	 * 
-	 * @param this		the identification_t object
 	 * @param other		other identification_t object
 	 * @return 			TRUE if the IDs are equal
 	 */
 	bool (*equals) (identification_t *this, identification_t *other);
 	
 	/**
-	 * @brief Check if an ID matches a wildcard ID.
+	 * Check if an ID matches a wildcard ID.
 	 * 
 	 * An identification_t may contain wildcards, such as
 	 * *@strongswan.org. This call checks if a given ID
 	 * (e.g. tester@strongswan.org) belongs to a such wildcard
-	 * ID. Returns TRUE if
+	 * ID. Returns > 0 if
 	 * - IDs are identical
 	 * - other is of type ID_ANY
 	 * - other contains a wildcard and matches this
+	 *
+	 * The larger the return value is, the better is the match. Zero means
+	 * no match at all, 1 means a bad match, and 2 a slightly better match.
 	 * 
-	 * @param this		the ID without wildcard
-	 * @param other		the ID containing a wildcard
+	 * @param other		the ID containing one or more wildcards
 	 * @param wildcards	returns the number of wildcards, may be NULL
-	 * @return 			TRUE if match is found
+	 * @return 			match value as described above
 	 */
-	bool (*matches) (identification_t *this, identification_t *other, int *wildcards);
+	id_match_t (*matches) (identification_t *this, identification_t *other);
 	
 	/**
-	 * @brief Check if an ID is a wildcard ID.
+	 * Check if an ID is a wildcard ID.
 	 *
 	 * If the ID represents multiple IDs (with wildcards, or
 	 * as the type ID_ANY), TRUE is returned. If it is unique,
 	 * FALSE is returned.
 	 * 
-	 * @param this		identification_t object
 	 * @return 			TRUE if ID contains wildcards
 	 */
 	bool (*contains_wildcards) (identification_t *this);
 	
 	/**
-	 * @brief Clone a identification_t instance.
+	 * Clone a identification_t instance.
 	 * 
-	 * @param this		the identification_t object to clone
 	 * @return 			clone of this
 	 */
 	identification_t *(*clone) (identification_t *this);
 
 	/**
-	 * @brief Destroys a identification_t object.
-	 *
-	 * @param this 		identification_t object
+	 * Destroys a identification_t object.
 	 */
 	void (*destroy) (identification_t *this);
 };
 
 /**
- * @brief Creates an identification_t object from a string.
- * 
- * @param string	input string, which will be converted
- * @return
- * 					- created identification_t object, or
- * 					- NULL if unsupported string supplied.
+ * Creates an identification_t object from a string.
  *
  * The input string may be e.g. one of the following:
  * - ID_IPV4_ADDR:		192.168.0.1
@@ -239,23 +240,29 @@ struct identification_t {
  * ND, UID, DC, CN, S, SN, serialNumber, C, L, ST, O, OU, T, D,
  * N, G, I, ID, EN, EmployeeNumber, E, Email, emailAddress, UN, 
  * unstructuredName, TCGID.
- *
- * @ingroup utils
+ * 
+ * @param string	input string, which will be converted
+ * @return			created identification_t, NULL if not supported.
  */
 identification_t * identification_create_from_string(char *string);
 
 /**
- * @brief Creates an identification_t object from an encoded chunk.
- * 
- * @param type		type of this id, such as ID_IPV4_ADDR
- * @param encoded	encoded bytes, such as from identification_t.get_encoding
- * @return			identification_t object
+ * Creates an identification_t object from an encoded chunk.
  *
  * In contrast to identification_create_from_string(), this constructor never
  * returns NULL, even when the conversion to a string representation fails.
- *
- * @ingroup utils
+ * 
+ * @param type		type of this id, such as ID_IPV4_ADDR
+ * @param encoded	encoded bytes, such as from identification_t.get_encoding
+ * @return			identification_t
  */
 identification_t * identification_create_from_encoding(id_type_t type, chunk_t encoded);
 
-#endif /* IDENTIFICATION_H_ */
+/**
+ * Get the printf hook functions.
+ * 
+ * @return			printf hook functions
+ */
+printf_hook_functions_t identification_get_printf_hooks();
+
+#endif /* IDENTIFICATION_H_ @} */

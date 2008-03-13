@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <stddef.h>
 
-#include "stroke.h"
+#include "stroke_msg.h"
 #include "stroke_keywords.h"
 
 struct stroke_token {

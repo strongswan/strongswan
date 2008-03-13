@@ -1,10 +1,3 @@
-/**
- * @file parser.h
- *
- * @brief Interface of parser_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup parser parser
+ * @{ @ingroup encoding
  */
 
 #ifndef PARSER_H_
@@ -31,65 +31,51 @@ typedef struct parser_t parser_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * @brief A parser_t class to parse IKEv2 payloads.
+ * A parser_t class to parse IKEv2 payloads.
  *
  * A parser is used for parsing one chunk of data. Multiple
  * payloads can be parsed out of the chunk using parse_payload.
  * The parser remains the state until destroyed.
- *
- * @b Constructors:
- * - parser_create()
- *
- * @ingroup encoding
  */
 struct parser_t {
 	
 	/**
-	 * @brief Parses the next payload.
+	 * Parses the next payload.
 	 * 
 	 * @warning Caller is responsible for freeing allocated payload.
 	 * 
 	 * Rules for parsing are described in the payload definition.
 	 *
-	 * @param this				parser_t bject
-	 * @param payload_type		payload type to parse
-	 * @param[out] payload		pointer where parsed payload was allocated
+	 * @param payload_type	payload type to parse
+	 * @param payload		pointer where parsed payload was allocated
 	 * @return 			
-	 * 							- SUCCESSFUL if succeeded,
-	 * 							- PARSE_ERROR if corrupted/invalid data found
+	 * 						- SUCCESSFUL if succeeded,
+	 * 						- PARSE_ERROR if corrupted/invalid data found
 	 */
 	status_t (*parse_payload) (parser_t *this, payload_type_t payload_type, payload_t **payload);
 	
 	/**
 	 * Gets the remaining byte count which is not currently parsed.
-	 * 
-	 * @param parser		parser_t object
 	 */
 	int (*get_remaining_byte_count) (parser_t *this);
 	
 	/**
-	 * @brief Resets the current parser context.
-	 *
-	 * @param parser		parser_t object
+	 * Resets the current parser context.
 	 */
 	void (*reset_context) (parser_t *this);
 	
 	/**
-	 * @brief Destroys a parser_t object.
-	 *
-	 * @param parser		parser_t object
+	 * Destroys a parser_t object.
 	 */
 	void (*destroy) (parser_t *this);
 };
 
 /**
- * @brief Constructor to create a parser_t object.
+ * Constructor to create a parser_t object.
  * 
- * @param data				chunk of data to parse with this parser_t object
- * @return 					parser_t object
- * 
- * @ingroup encoding
+ * @param data		chunk of data to parse with this parser_t object
+ * @return 			parser_t object
  */
 parser_t *parser_create(chunk_t data);
 
-#endif /*PARSER_H_*/
+#endif /*PARSER_H_ @} */

@@ -49,7 +49,6 @@ nat_traversal,     KW_NAT_TRAVERSAL
 keep_alive,        KW_KEEP_ALIVE
 virtual_private,   KW_VIRTUAL_PRIVATE
 eap,               KW_EAP
-eapdir,            KW_EAPDIR
 mobike,	           KW_MOBIKE
 forceencaps,       KW_FORCEENCAPS
 pkcs11module,      KW_PKCS11MODULE

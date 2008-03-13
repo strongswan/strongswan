@@ -1,10 +1,3 @@
-/**
- * @file child_create.h
- * 
- * @brief Interface child_create_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup child_create child_create
+ * @{ @ingroup tasks
  */
 
 #ifndef CHILD_CREATE_H_
@@ -31,15 +31,10 @@ typedef struct child_create_t child_create_t;
 #include <config/child_cfg.h>
 
 /**
- * @brief Task of type CHILD_CREATE, established a new CHILD_SA.
+ * Task of type CHILD_CREATE, established a new CHILD_SA.
  *
  * This task may be included in the IKE_AUTH message or in a separate 
  * CREATE_CHILD_SA exchange.
- *
- * @b Constructors:
- *  - child_create_create()
- * 
- * @ingroup tasks
  */
 struct child_create_t {
 
@@ -49,35 +44,32 @@ struct child_create_t {
 	task_t task;
 	
 	/**
-	 * @brief Use a specific reqid for the CHILD_SA.
+	 * Use a specific reqid for the CHILD_SA.
 	 *
 	 * When this task is used for rekeying, the same reqid is used
 	 * for the new CHILD_SA. 
 	 *
-	 * @param this		calling object
 	 * @param reqid		reqid to use
 	 */
 	void (*use_reqid) (child_create_t *this, u_int32_t reqid);
 	
 	/**
-	 * @brief Get the lower of the two nonces, used for rekey collisions.
+	 * Get the lower of the two nonces, used for rekey collisions.
 	 *
-	 * @param this		calling object
 	 * @return			lower nonce
 	 */
 	chunk_t (*get_lower_nonce) (child_create_t *this);
 	
 	/**
-	 * @brief Get the CHILD_SA established/establishing by this task.
+	 * Get the CHILD_SA established/establishing by this task.
 	 *
-	 * @param this		calling object
 	 * @return			child_sa
 	 */
 	child_sa_t* (*get_child) (child_create_t *this);
 };
 
 /**
- * @brief Create a new child_create task.
+ * Create a new child_create task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param config		child_cfg if task initiator, NULL if responder
@@ -85,4 +77,4 @@ struct child_create_t {
  */
 child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config);
 
-#endif /* CHILD_CREATE_H_ */
+#endif /* CHILD_CREATE_H_ @} */

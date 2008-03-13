@@ -1,10 +1,3 @@
-/**
- * @file randomizer.h
- * 
- * @brief Interface of randomizer_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+ 
+/**
+ * @defgroup randomizer randomizer
+ * @{ @ingroup utils
  */
 
 #ifndef RANDOMIZER_H_
@@ -43,72 +43,59 @@ typedef struct randomizer_t randomizer_t;
 #endif
 
 /**
- * @brief Class used to get random and pseudo random values.
- * 
- * @b Constructors:
- *  - randomizer_create()
- * 
- * @ingroup utils
+ * Class used to get random and pseudo random values.
  */
 struct randomizer_t {
 	
 	/**
-	 * @brief Reads a specific number of bytes from random device.
-	 * 
-	 * @param this 					calling randomizer_t object
-	 * @param bytes					number of bytes to read
-	 * @param[out] buffer			pointer to buffer where to write the data in.
-	 * 								Size of buffer has to be at least bytes.
-	 * @return						SUCCESS, or FAILED
+	 * Reads a specific number of bytes from random device.
+	 *
+	 * @param bytes			number of bytes to read
+	 * @param buffer		pointer to buffer where to write the data in.
+	 * @return				SUCCESS, or FAILED
 	 */
-	status_t (*get_random_bytes) (randomizer_t *this, size_t bytes, u_int8_t *buffer);
+	status_t (*get_random_bytes) (randomizer_t *this,
+								  size_t bytes, u_int8_t *buffer);
 	
 	/**
-	 * @brief Allocates space and writes in random bytes.
+	 * Allocates space and writes in random bytes.
 	 * 
-	 * @param this 					calling randomizer_t object
-	 * @param bytes					number of bytes to allocate
-	 * @param[out] chunk			chunk which will hold the allocated random bytes
-	 * @return						SUCCESS, or FAILED
+	 * @param bytes			number of bytes to allocate
+	 * @param chunk			chunk which will hold the allocated random bytes
+	 * @return				SUCCESS, or FAILED
 	 */	
-	status_t (*allocate_random_bytes) (randomizer_t *this, size_t bytes, chunk_t *chunk);
+	status_t (*allocate_random_bytes) (randomizer_t *this,
+									   size_t bytes, chunk_t *chunk);
 	
 	/**
-	 * @brief Reads a specific number of bytes from pseudo random device.
+	 * Reads a specific number of bytes from pseudo random device.
 	 * 
-	 * @param this 					calling randomizer_t object
-	 * @param bytes					number of bytes to read
-	 * @param[out] buffer			pointer to buffer where to write the data in.
-	 * 								size of buffer has to be at least bytes.
-	 * @return						SUCCESS, or FAILED
+	 * @param bytes			number of bytes to read
+	 * @param buffer		pointer to buffer where to write the data in.
+	 * @return				SUCCESS, or FAILED
 	 */
 	status_t (*get_pseudo_random_bytes) (randomizer_t *this,size_t bytes, u_int8_t *buffer);
 	
 	/**
-	 * @brief Allocates space and writes in pseudo random bytes.
+	 * Allocates space and writes in pseudo random bytes.
 	 * 
-	 * @param this 					calling randomizer_t object
-	 * @param bytes					number of bytes to allocate
-	 * @param[out] chunk			chunk which will hold the allocated random bytes
-	 * @return						SUCCESS, or FAILED
+	 * @param bytes			number of bytes to allocate
+	 * @param chunk			chunk which will hold the allocated random bytes
+	 * @return				SUCCESS, or FAILED
 	 */	
 	status_t (*allocate_pseudo_random_bytes) (randomizer_t *this, size_t bytes, chunk_t *chunk);
 
 	/**
-	 * @brief Destroys a randomizer_t object.
-	 *
-	 * @param this 	randomizer_t object to destroy
+	 * Destroys a randomizer_t object.
 	 */
 	void (*destroy) (randomizer_t *this);
 };
 
 /**
- * @brief Creates a randomizer_t object.
+ * Creates a randomizer_t object.
  * 
- * @return	created randomizer_t, or
- * 
- * @ingroup utils
+ * @return	created randomizer_t
  */
 randomizer_t *randomizer_create(void);
 
-#endif /*RANDOMIZER_H_*/
+#endif /*RANDOMIZER_H_ @} */

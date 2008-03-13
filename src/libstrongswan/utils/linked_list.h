@@ -1,10 +1,3 @@
-/**
- * @file linked_list.h
- * 
- * @brief Interface of linked_list_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
@@ -20,6 +13,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+ 
+/**
+ * @defgroup linked_list linked_list
+ * @{ @ingroup utils
  */
 
 #ifndef LINKED_LIST_H_
@@ -42,51 +42,42 @@ typedef struct linked_list_t linked_list_t;
  * @return
  * 						- TRUE, if the item matched
  * 						- FALSE, otherwise
- * @ingroup utils
  */
 typedef bool (*linked_list_match_t)(void *item, ...);
 
 /**
- * @brief Class implementing a double linked list.
+ * Class implementing a double linked list.
  *
  * General purpose linked list. This list is not synchronized.
- *
- * @b Costructors:
- * - linked_list_create()
- *
- * @ingroup utils
  */
 struct linked_list_t {
 
 	/**
-	 * @brief Gets the count of items in the list.
+	 * Gets the count of items in the list.
 	 * 
-	 * @param this 		calling object
 	 * @return 			number of items in list
 	 */
 	int (*get_count) (linked_list_t *this);
 	
 	/**
-	 * @brief Creates a iterator for the given list.
+	 * Creates a iterator for the given list.
 	 * 
 	 * @warning Created iterator_t object has to get destroyed by the caller.
 	 *
 	 * @deprecated Iterator is obsolete and will disappear, it is too
 	 * complicated to implement. Use enumerator instead.
 	 * 
-	 * @param this 		calling object
 	 * @param forward 	iterator direction (TRUE: front to end)
 	 * @return			new iterator_t object
 	 */
 	iterator_t *(*create_iterator) (linked_list_t *this, bool forward);
 	
 	/**
-	 * @brief Creates a iterator, locking a mutex.
+	 * Creates a iterator, locking a mutex.
 	 *
 	 * The supplied mutex is acquired immediately, and released
 	 * when the iterator gets destroyed.
 	 * 
-	 * @param this	 	calling object
 	 * @param mutex 	mutex to use for exclusive access
 	 * @return			new iterator_t object
 	 */
@@ -94,113 +85,86 @@ struct linked_list_t {
 										   pthread_mutex_t *mutex);
 	
 	/**
-	 * @brief Create an enumerator over the list.
+	 * Create an enumerator over the list.
 	 *
 	 * The enumerator is a "lightweight" iterator. It only has two methods
 	 * and should therefore be much easier to implement.
 	 *
-	 * @param this		calling object
 	 * @return			enumerator over list items
 	 */
 	enumerator_t* (*create_enumerator)(linked_list_t *this);
 	
 	/**
-	 * @brief Inserts a new item at the beginning of the list.
+	 * Inserts a new item at the beginning of the list.
 	 *
-	 * @param this 		calling object
-	 * @param[in] item	item value to insert in list
+	 * @param item		item value to insert in list
 	 */
 	void (*insert_first) (linked_list_t *this, void *item);
 
 	/**
-	 * @brief Removes the first item in the list and returns its value.
+	 * Removes the first item in the list and returns its value.
 	 * 
-	 * @param this 		calling object
-	 * @param[out] item returned value of first item, or NULL
-	 * @return
-	 * 					- SUCCESS
-	 * 					- NOT_FOUND, if list is empty
+	 * @param item 		returned value of first item, or NULL
+	 * @return			SUCCESS, or NOT_FOUND if list is empty
 	 */
 	status_t (*remove_first) (linked_list_t *this, void **item);
-
+	
 	/**
-	 * @brief Returns the value of the first list item without removing it.
+	 * Remove an item from the list where the enumerator points to.
+	 *
+	 * @param enumerator enumerator with position
+	 */
+	void (*remove_at)(linked_list_t *this, enumerator_t *enumerator);
+	
+	/**
+	 * Remove items from the list matching item.
+	 * 
+	 * If a compare function is given, it is called for each item, where
+	 * the first parameter is the current list item and the second parameter
+	 * is the supplied item parameter.
+	 * If compare is NULL, compare is is done by pointer.
+	 *
+	 * @param item		item to remove/pass to comparator
+	 * @param compare	compare function, or NULL
+	 * @return			number of removed items
+	 */
+	int (*remove)(linked_list_t *this, void *item, bool (*compare)(void *,void*));
+	
+	/**
+	 * Returns the value of the first list item without removing it.
 	 * 
 	 * @param this	 	calling object
-	 * @param[out] item	returned value of first item
-	 * @return
-	 * 					- SUCCESS
-	 * 					- NOT_FOUND, if list is empty
+	 * @param item		returned value of first item
+	 * @return			SUCCESS, NOT_FOUND if list is empty
 	 */
 	status_t (*get_first) (linked_list_t *this, void **item);
 
 	/**
-	 * @brief Inserts a new item at the end of the list.
+	 * Inserts a new item at the end of the list.
 	 * 
-	 * @param this 		calling object
-	 * @param[in] item 	value to insert into list
+	 * @param item 		value to insert into list
 	 */
 	void (*insert_last) (linked_list_t *this, void *item);
-	
-	/**
-	 * @brief Inserts a new item at a given position in the list.
-	 * 
-	 * @param this		calling object
-	 * @param position	position starting at 0 to insert new entry
-	 * @param[in] item	value to insert into list
-	 * @return
-	 * 					- SUCCESS
-	 * 					- INVALID_ARG if position not existing
-	 */
-	status_t (*insert_at_position) (linked_list_t *this,size_t position, void *item);
-	
-	/**
-	 * @brief Removes an item from a given position in the list.
-	 * 
-	 * @param this	 	calling object
-	 * @param position	position starting at 0 to remove entry from
-	 * @param[out] item removed item will be stored at this location
-	 * @return
-	 * 						- SUCCESS
-	 * 						- INVALID_ARG if position not existing
-	 */
-	status_t (*remove_at_position) (linked_list_t *this, size_t position, void **item);
 
 	/**
-	 * @brief Get an item from a given position in the list.
+	 * Removes the last item in the list and returns its value.
 	 * 
 	 * @param this	 	calling object
-	 * @param position	position starting at 0 to get entry from
-	 * @param[out] item	item will be stored at this location
-	 * @return
-	 * 						- SUCCESS
-	 * 						- INVALID_ARG if position not existing
-	 */
-	status_t (*get_at_position) (linked_list_t *this, size_t position, void **item);
-
-	/**
-	 * @brief Removes the last item in the list and returns its value.
-	 * 
-	 * @param this	 	calling object
-	 * @param[out] item	returned value of last item, or NULL
-	 * @return
-	 * 						- SUCCESS
-	 * 						- NOT_FOUND if list is empty
+	 * @param item		returned value of last item, or NULL
+	 * @return			SUCCESS, NOT_FOUND if list is empty
 	 */
 	status_t (*remove_last) (linked_list_t *this, void **item);
 
 	/**
-	 * @brief Returns the value of the last list item without removing it.
+	 * Returns the value of the last list item without removing it.
 	 * 
 	 * @param this 		calling object
-	 * @param[out] item	returned value of last item
-	 * @return
-	 * 					- SUCCESS
-	 * 					- NOT_FOUND if list is empty
+	 * @param item		returned value of last item
+	 * @return			SUCCESS, NOT_FOUND if list is empty
 	 */
 	status_t (*get_last) (linked_list_t *this, void **item);
 	
-	/** @brief Find the first matching element in the list.
+	/** Find the first matching element in the list.
 	 * 
 	 * The first object passed to the match function is the current list item,
 	 * followed by the user supplied data.
@@ -210,19 +174,15 @@ struct linked_list_t {
 	 * 
 	 * @warning Only use pointers as user supplied data.
 	 *
-	 * @param this			calling object
 	 * @param match			comparison function to call on each object
-	 * @param[out] item		
-	 * 						- the list item, if found
-	 * 						- NULL, otherwise
+	 * @param item			the list item, if found
 	 * @param ...			user data to supply to match function (limited to 5 arguments)
-	 * @return				
-	 * 						- SUCCESS, if found
-	 * 						- NOT_FOUND, otherwise
+	 * @return				SUCCESS if found, NOT_FOUND otherwise
 	 */
-	status_t (*find_first) (linked_list_t *this, linked_list_match_t match, void **item, ...);
+	status_t (*find_first) (linked_list_t *this, linked_list_match_t match,
+							void **item, ...);
 	
-	/** @brief Find the last matching element in the list.
+	/** Find the last matching element in the list.
 	 * 
 	 * The first object passed to the match function is the current list item,
 	 * followed by the user supplied data.
@@ -232,20 +192,16 @@ struct linked_list_t {
 	 * 
 	 * @warning Only use pointers as user supplied data.
 	 *
-	 * @param this			calling object
 	 * @param match			comparison function to call on each object
-	 * @param[out] item		
-	 * 						- the list item, if found
-	 * 						- NULL, otherwise
+	 * @param item			the list item, if found
 	 * @param ...			user data to supply to match function (limited to 5 arguments)
-	 * @return				
-	 * 						- SUCCESS, if found
-	 * 						- NOT_FOUND, otherwise
+	 * @return				SUCCESS if found, NOT_FOUND otherwise
 	 */
-	status_t (*find_last) (linked_list_t *this, linked_list_match_t match, void **item, ...);
+	status_t (*find_last) (linked_list_t *this, linked_list_match_t match,
+						   void **item, ...);
 	
 	/**
-	 * @brief Invoke a method on all of the contained objects.
+	 * Invoke a method on all of the contained objects.
 	 *
 	 * If a linked list contains objects with function pointers,
 	 * invoke() can call a method on each of the objects. The
@@ -253,79 +209,68 @@ struct linked_list_t {
 	 * which can be evalutated at compile time using the offsetof
 	 * macro, e.g.: list->invoke(list, offsetof(object_t, method));
 	 * 
-	 * @param this 		calling object
 	 * @param offset	offset of the method to invoke on objects
 	 */
 	void (*invoke_offset) (linked_list_t *this, size_t offset);
 	
 	/**
-	 * @brief Invoke a function on all of the contained objects.
+	 * Invoke a function on all of the contained objects.
 	 * 
-	 * @param this 		calling object
 	 * @param offset	offset of the method to invoke on objects
 	 */
 	void (*invoke_function) (linked_list_t *this, void (*)(void*));
 	
 	/**
-	 * @brief Clones a list and its objects using the objects' clone method.
+	 * Clones a list and its objects using the objects' clone method.
 	 * 
-	 * @param this		calling object
 	 * @param offset	offset ot the objects clone function
 	 * @return			cloned list
 	 */
 	linked_list_t *(*clone_offset) (linked_list_t *this, size_t offset);
 	
 	/**
-	 * @brief Clones a list and its objects using a given function.
+	 * Clones a list and its objects using a given function.
 	 * 
-	 * @param this		calling object
 	 * @param function	function that clones an object
 	 * @return			cloned list
 	 */
 	linked_list_t *(*clone_function) (linked_list_t *this, void*(*)(void*));
 	
 	/**
-	 * @brief Destroys a linked_list object.
-	 * 
-	 * @param this		calling object
+	 * Destroys a linked_list object.
 	 */
 	void (*destroy) (linked_list_t *this);
 	
 	/**
-	 * @brief Destroys a list and its objects using the destructor.
+	 * Destroys a list and its objects using the destructor.
 	 *
 	 * If a linked list and the contained objects should be destroyed, use
 	 * destroy_offset. The supplied offset specifies the destructor to
 	 * call on each object. The offset may be calculated using the offsetof
 	 * macro, e.g.: list->destroy_offset(list, offsetof(object_t, destroy));
 	 *
-	 * @param this	 	calling object
 	 * @param offset	offset of the objects destructor
 	 */
 	void (*destroy_offset) (linked_list_t *this, size_t offset);
 	
 	/**
-	 * @brief Destroys a list and its contents using a a cleanup function.
+	 * Destroys a list and its contents using a a cleanup function.
 	 * 
 	 * If a linked list and its contents should get destroyed using a specific
 	 * cleanup function, use destroy_function. This is useful when the
 	 * list contains malloc()-ed blocks which should get freed,
 	 * e.g.: list->destroy_function(list, free);
 	 *
-	 * @param this 		calling object
 	 * @param function	function to call on each object
 	 */
 	void (*destroy_function) (linked_list_t *this, void (*)(void*));
 };
 
 /**
- * @brief Creates an empty linked list object.
+ * Creates an empty linked list object.
  * 
  * @return 		linked_list_t object.
- * 
- * @ingroup utils
  */
 linked_list_t *linked_list_create(void);
 
-
-#endif /*LINKED_LIST_H_*/
+#endif /*LINKED_LIST_H_ @} */

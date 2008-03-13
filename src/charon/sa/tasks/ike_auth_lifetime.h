@@ -1,10 +1,3 @@
-/**
- * @file ike_auth_lifetime.h
- * 
- * @brief Interface ike_auth_lifetime_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ike_auth_lifetime ike_auth_lifetime
+ * @{ @ingroup tasks
  */
 
 #ifndef IKE_AUTH_LIFETIME_H_
@@ -30,15 +30,10 @@ typedef struct ike_auth_lifetime_t ike_auth_lifetime_t;
 #include <sa/tasks/task.h>
 
 /**
- * @brief Task of type IKE_AUTH_LIFETIME, implements RFC4478.
+ * Task of type IKE_AUTH_LIFETIME, implements RFC4478.
  *
  * This task exchanges lifetimes for IKE_AUTH to force a client to 
  * reauthenticate before the responders lifetime reaches the limit.
- *
- * @b Constructors:
- *  - ike_auth_lifetime_create()
- * 
- * @ingroup tasks
  */
 struct ike_auth_lifetime_t {
 
@@ -49,7 +44,7 @@ struct ike_auth_lifetime_t {
 };
 
 /**
- * @brief Create a new IKE_AUTH_LIFETIME task.
+ * Create a new IKE_AUTH_LIFETIME task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if taks is initiated by us
@@ -57,5 +52,4 @@ struct ike_auth_lifetime_t {
  */
 ike_auth_lifetime_t *ike_auth_lifetime_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_MOBIKE_H_ */
-
+#endif /* IKE_MOBIKE_H_ @} */

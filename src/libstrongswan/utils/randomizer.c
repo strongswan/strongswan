@@ -1,10 +1,3 @@
-/**
- * @file randomizer.c
- * 
- * @brief Implementation of randomizer_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <string.h>
@@ -41,25 +36,13 @@ struct private_randomizer_t {
 	 * Public randomizer_t interface.
 	 */
 	randomizer_t public;
-	
-	/**
-	 * @brief Reads a specific number of bytes from random or pseudo random device.
-	 * 
-	 * @param this					calling object
-	 * @param pseudo_random			TRUE, if from pseudo random bytes should be read,
-	 * 								FALSE for true random bytes
-	 * @param bytes					number of bytes to read
-	 * @param[out] buffer			pointer to buffer where to write the data in.
-	 * 								Size of buffer has to be at least bytes.
-	 */
-	status_t (*get_bytes_from_device) (private_randomizer_t *this,bool pseudo_random, size_t bytes, u_int8_t *buffer);
 };
 
-
 /**
- * Implementation of private_randomizer_t.get_bytes_from_device.
+ * Read bytes from the random device
  */
-static status_t get_bytes_from_device(private_randomizer_t *this,bool pseudo_random, size_t bytes, u_int8_t *buffer)
+static status_t read_bytes(private_randomizer_t *this,
+						   bool pseudo_random, size_t bytes, u_int8_t *buffer)
 {
 	size_t ndone;
 	int device;
@@ -91,20 +74,22 @@ static status_t get_bytes_from_device(private_randomizer_t *this,bool pseudo_ran
 /**
  * Implementation of randomizer_t.get_random_bytes.
  */
-static status_t get_random_bytes(private_randomizer_t *this,size_t bytes, u_int8_t *buffer)
+static status_t get_random_bytes(private_randomizer_t *this,size_t bytes,
+								 u_int8_t *buffer)
 {
-	return this->get_bytes_from_device(this, FALSE, bytes, buffer);
+	return read_bytes(this, FALSE, bytes, buffer);
 }
 
 /**
  * Implementation of randomizer_t.allocate_random_bytes.
  */
-static status_t allocate_random_bytes(private_randomizer_t *this, size_t bytes, chunk_t *chunk)
+static status_t allocate_random_bytes(private_randomizer_t *this, size_t bytes,
+									  chunk_t *chunk)
 {
 	status_t status;
 	chunk->len = bytes;
 	chunk->ptr = malloc(bytes);
-	status = this->get_bytes_from_device(this, FALSE, bytes, chunk->ptr);
+	status = read_bytes(this, FALSE, bytes, chunk->ptr);
 	if (status != SUCCESS)
 	{
 		free(chunk->ptr);
@@ -115,20 +100,22 @@ static status_t allocate_random_bytes(private_randomizer_t *this, size_t bytes, 
 /**
  * Implementation of randomizer_t.get_pseudo_random_bytes.
  */
-static status_t get_pseudo_random_bytes(private_randomizer_t *this,size_t bytes, u_int8_t *buffer)
+static status_t get_pseudo_random_bytes(private_randomizer_t *this, 
+										size_t bytes, u_int8_t *buffer)
 {
-	return (this->get_bytes_from_device(this, TRUE, bytes, buffer));
+	return read_bytes(this, TRUE, bytes, buffer);
 }
 
 /**
  * Implementation of randomizer_t.allocate_pseudo_random_bytes.
  */
-static status_t allocate_pseudo_random_bytes(private_randomizer_t *this, size_t bytes, chunk_t *chunk)
+static status_t allocate_pseudo_random_bytes(private_randomizer_t *this,
+											 size_t bytes, chunk_t *chunk)
 {
 	status_t status;
 	chunk->len = bytes;
 	chunk->ptr = malloc(bytes);
-	status = this->get_bytes_from_device(this, TRUE, bytes, chunk->ptr);
+	status = read_bytes(this, TRUE, bytes, chunk->ptr);
 	if (status != SUCCESS)
 	{
 		free(chunk->ptr);
@@ -158,8 +145,6 @@ randomizer_t *randomizer_create(void)
 	this->public.allocate_pseudo_random_bytes = (status_t (*) (randomizer_t *,size_t, chunk_t *)) allocate_pseudo_random_bytes;
 	this->public.destroy = (void (*) (randomizer_t *))destroy;
 	
-	/* private functions */
-	this->get_bytes_from_device = get_bytes_from_device;
-	
-	return &(this->public);
+	return &this->public;
 }
+

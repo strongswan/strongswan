@@ -1,10 +1,3 @@
-/**
- * @file gateway.c
- *
- * @brief Implementation of gateway_t.
- *
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "gateway.h"
@@ -29,7 +24,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include <lib/xml.h>
+#include <xml.h>
 
 typedef struct private_gateway_t private_gateway_t;
 

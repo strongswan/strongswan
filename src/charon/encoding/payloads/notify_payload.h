@@ -1,10 +1,3 @@
-/**
- * @file notify_payload.h
- * 
- * @brief Interface of notify_payload_t.
- * 
- */
-
 /*
  * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -21,8 +14,14 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
+/**
+ * @defgroup notify_payload notify_payload
+ * @{ @ingroup payloads
+ */
 
 #ifndef NOTIFY_PAYLOAD_H_
 #define NOTIFY_PAYLOAD_H_
@@ -37,17 +36,13 @@ typedef struct notify_payload_t notify_payload_t;
 
 /**
  * Notify payload length in bytes without any spi and notification data.
- * 
- * @ingroup payloads
  */
 #define NOTIFY_PAYLOAD_HEADER_LENGTH 8
 
 /**
- * @brief Notify message types.
+ * Notify message types.
  *
  * See IKEv2 RFC 3.10.1.
- *
- * @ingroup payloads
  */
 enum notify_type_t {
 	/* notify error messages */
@@ -109,30 +104,18 @@ enum notify_type_t {
 
 /**
  * enum name for notify_type_t.
- *
- * @ingroup payloads
  */
 extern enum_name_t *notify_type_names;
 
 /**
  * enum name for notify_type_t (shorter strings).
- *
- * @ingroup payloads
  */
 extern enum_name_t *notify_type_short_names;
 
 /**
- * @brief Class representing an IKEv2-Notify Payload.
+ * Class representing an IKEv2-Notify Payload.
  * 
  * The Notify Payload format is described in Draft section 3.10.
- * 
- * @b Constructors:
- * - notify_payload_create()
- * - notify_payload_create_from_protocol_and_type()
- * 
- * @todo Build specified constructor/getter for notify's
- *
- * @ingroup payloads
  */
 struct notify_payload_t {
 	/**
@@ -141,104 +124,91 @@ struct notify_payload_t {
 	payload_t payload_interface;
 	
 	/**
-	 * @brief Gets the protocol id of this payload.
+	 * Gets the protocol id of this payload.
 	 * 	
-	 * @param this 		calling notify_payload_t object
 	 * @return 			protocol id of this payload
 	 */
 	u_int8_t (*get_protocol_id) (notify_payload_t *this);
 
 	/**
-	 * @brief Sets the protocol id of this payload.
+	 * Sets the protocol id of this payload.
 	 * 	
-	 * @param this 			calling notify_payload_t object
 	 * @param protocol_id	protocol id to set
 	 */
 	void (*set_protocol_id) (notify_payload_t *this, u_int8_t protocol_id);
 
 	/**
-	 * @brief Gets the notify message type of this payload.
+	 * Gets the notify message type of this payload.
 	 * 	
-	 * @param this 		calling notify_payload_t object
 	 * @return 			notify message type of this payload
 	 */
 	notify_type_t (*get_notify_type) (notify_payload_t *this);
 
 	/**
-	 * @brief Sets notify message type of this payload.
+	 * Sets notify message type of this payload.
 	 * 	
-	 * @param this 		calling notify_payload_t object
 	 * @param type		notify message type to set
 	 */
 	void (*set_notify_type) (notify_payload_t *this, notify_type_t type);
 
 	/**
-	 * @brief Returns the currently set spi of this payload.
+	 * Returns the currently set spi of this payload.
 	 * 
 	 * This is only valid for notifys with protocol AH|ESP
 	 *
-	 * @param this 	calling notify_payload_t object
 	 * @return 		SPI value
 	 */
 	u_int32_t (*get_spi) (notify_payload_t *this);
 	
 	/**
-	 * @brief Sets the spi of this payload.
+	 * Sets the spi of this payload.
 	 * 
 	 * This is only valid for notifys with protocol AH|ESP
 	 * 
-	 * @param this 	calling notify_payload_t object
 	 * @param spi	SPI value
 	 */
 	void (*set_spi) (notify_payload_t *this, u_int32_t spi);
 
 	/**
-	 * @brief Returns the currently set notification data of payload.
+	 * Returns the currently set notification data of payload.
 	 * 	
-	 * @warning Returned data are not copied.
+	 * Returned data are not copied.
 	 * 
-	 * @param this 	calling notify_payload_t object
 	 * @return 		chunk_t pointing to the value
 	 */
 	chunk_t (*get_notification_data) (notify_payload_t *this);
 	
 	/**
-	 * @brief Sets the notification data of this payload.
+	 * Sets the notification data of this payload.
 	 * 	
 	 * @warning Value is getting copied.
 	 * 
-	 * @param this 					calling notify_payload_t object
 	 * @param notification_data 	chunk_t pointing to the value to set
 	 */
-	void (*set_notification_data) (notify_payload_t *this, chunk_t notification_data);
+	void (*set_notification_data) (notify_payload_t *this,
+								   chunk_t notification_data);
 
 	/**
-	 * @brief Destroys an notify_payload_t object.
-	 *
-	 * @param this 	notify_payload_t object to destroy
+	 * Destroys an notify_payload_t object.
 	 */
 	void (*destroy) (notify_payload_t *this);
 };
 
 /**
- * @brief Creates an empty notify_payload_t object
+ * Creates an empty notify_payload_t object
  * 
  * @return			created notify_payload_t object
- * 
- * @ingroup payloads
  */
 notify_payload_t *notify_payload_create(void);
 
 /**
- * @brief Creates an notify_payload_t object of specific type for specific protocol id.
+ * Creates an notify_payload_t object of specific type for specific protocol id.
  * 
  * @param protocol_id			protocol id (IKE, AH or ESP)
  * @param type					notify type (see notify_type_t)
  * @return						notify_payload_t object
- * 
- * @ingroup payloads
  */
-notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t protocol_id, notify_type_t type);
+notify_payload_t *notify_payload_create_from_protocol_and_type(
+								protocol_id_t protocol_id, notify_type_t type);
 
-
-#endif /*NOTIFY_PAYLOAD_H_*/
+#endif /*NOTIFY_PAYLOAD_H_ @} */

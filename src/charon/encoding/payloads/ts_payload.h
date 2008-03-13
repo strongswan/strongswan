@@ -1,10 +1,3 @@
-/**
- * @file ts_payload.h
- * 
- * @brief Interface of ts_payload_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ts_payload ts_payload
+ * @{ @ingroup payloads
  */
 
 
@@ -35,22 +35,14 @@ typedef struct ts_payload_t ts_payload_t;
 
 /**
  * Length of a TS payload without the Traffic selectors.
- * 
- * @ingroup payloads
  */
 #define TS_PAYLOAD_HEADER_LENGTH 8
 
 
 /**
- * @brief Class representing an IKEv2 TS payload.
+ * Class representing an IKEv2 TS payload.
  *
  * The TS payload format is described in RFC section 3.13.
- *
- * @b Constructors:
- * - ts_payload_create()
- * - ts_payload_create_from_traffic_selectors()
- *
- * @ingroup payloads
  */
 struct ts_payload_t {
 	/**
@@ -59,9 +51,8 @@ struct ts_payload_t {
 	payload_t payload_interface;
 	
 	/**
-	 * @brief Get the type of TSpayload (TSi or TSr).
+	 * Get the type of TSpayload (TSi or TSr).
 	 *
-	 * @param this 			calling id_payload_t object
 	 * @return
 	 * 						- TRUE if this payload is of type TSi
 	 * 						- FALSE if this payload is of type TSr
@@ -69,9 +60,8 @@ struct ts_payload_t {
 	bool (*get_initiator) (ts_payload_t *this);
 	
 	/**
-	 * @brief Set the type of TS payload (TSi or TSr).
+	 * Set the type of TS payload (TSi or TSr).
 	 *
-	 * @param this 			calling id_payload_t object
 	 * @param is_initiator	
 	 * 						- TRUE if this payload is of type TSi
 	 * 						- FALSE if this payload is of type TSr
@@ -79,75 +69,61 @@ struct ts_payload_t {
 	void (*set_initiator) (ts_payload_t *this,bool is_initiator);
 	
 	/**
-	 * @brief Adds a traffic_selector_substructure_t object to this object.
-	 * 
-	 * @warning The added traffic_selector_substructure_t object  is 
-	 * 			getting destroyed in destroy function of ts_payload_t.
+	 * Adds a traffic_selector_substructure_t object to this object.
 	 *
-	 * @param this 				calling ts_payload_t object
 	 * @param traffic_selector  traffic_selector_substructure_t object to add
 	 */
-	void (*add_traffic_selector_substructure) (ts_payload_t *this,traffic_selector_substructure_t *traffic_selector);
+	void (*add_traffic_selector_substructure) (ts_payload_t *this,
+							traffic_selector_substructure_t *traffic_selector);
 	
 	/**
-	 * @brief Creates an iterator of stored traffic_selector_substructure_t objects.
+	 * Creates an iterator of stored traffic_selector_substructure_t objects.
 	 * 
-	 * @warning The created iterator has to get destroyed by the caller!
-	 * 
-	 * @warning When removing an traffic_selector_substructure_t object 
-	 * 			using this iterator, the length of this payload 
-	 * 			has to get refreshed by calling payload_t.get_length!
+	 * When removing an traffic_selector_substructure_t object 
+	 * using this iterator, the length of this payload 
+	 * has to get refreshed by calling payload_t.get_length!
 	 *
-	 * @param this 			calling ts_payload_t object
-	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * @param forward 		iterator direction (TRUE: front to end)
 	 * @return				created iterator_t object
 	 */
-	iterator_t *(*create_traffic_selector_substructure_iterator) (ts_payload_t *this, bool forward);
+	iterator_t *(*create_traffic_selector_substructure_iterator) (
+											ts_payload_t *this, bool forward);
 	
 	/**
-	 * @brief Get a list of nested traffic selectors as traffic_selector_t.
+	 * Get a list of nested traffic selectors as traffic_selector_t.
 	 * 
 	 * Resulting list and its traffic selectors must be destroyed after usage
 	 *
-	 * @param this 			calling ts_payload_t object
 	 * @return				list of traffic selectors
 	 */
 	linked_list_t *(*get_traffic_selectors) (ts_payload_t *this);
 
 	/**
-	 * @brief Destroys an ts_payload_t object.
-	 *
-	 * @param this 	ts_payload_t object to destroy
+	 * Destroys an ts_payload_t object.
 	 */
 	void (*destroy) (ts_payload_t *this);
 };
 
 /**
- * @brief Creates an empty ts_payload_t object.
- * 
+ * Creates an empty ts_payload_t object.
  * 
  * @param is_initiator	
  * 						- TRUE if this payload is of type TSi
  * 						- FALSE if this payload is of type TSr
  * @return				ts_payload_t object
- * 
- * @ingroup payloads
  */
 ts_payload_t *ts_payload_create(bool is_initiator);
 
 /**
- * @brief Creates ts_payload with a list of traffic_selector_t
- * 
+ * Creates ts_payload with a list of traffic_selector_t
  * 
  * @param is_initiator	
  * 							- TRUE if this payload is of type TSi
  * 							- FALSE if this payload is of type TSr
  * @param traffic_selectors	list of traffic selectors to include
  * @return					ts_payload_t object
- * 
- * @ingroup payloads
  */
-ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, linked_list_t *traffic_selectors);
+ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, 
+											linked_list_t *traffic_selectors);
 
-
-#endif /* TS_PAYLOAD_H_ */
+#endif /* TS_PAYLOAD_H_ @} */

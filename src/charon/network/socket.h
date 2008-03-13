@@ -1,10 +1,3 @@
-/**
- * @file socket.h
- * 
- * @brief Interface for socket_t.
- * 
- */
-
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
@@ -20,6 +13,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup socket socket
+ * @{ @ingroup network
  */
 
 #ifndef SOCKET_H_
@@ -33,38 +33,36 @@ typedef struct socket_t socket_t;
 #include <utils/linked_list.h>
 
 /**
- * @brief Maximum size of a packet.
+ * Maximum size of a packet.
  *
- * 3000 Bytes should be sufficient, see IKEv2 RFC.
- *
- * @ingroup network
+ * 3000 Bytes should be sufficient, see IKEv2 RFC. However, we currently
+ * do not support HASH_AND_URL certificates, so we require to transmit
+ * the full certificates. To run our multi-CA test with 2 intermediate CAs,
+ * 5000 bytes is sufficient.
  */
-#define MAX_PACKET 3000
+#define MAX_PACKET 5000
 
 /**
- * @brief Abstraction of all sockets (IPv6/IPv6 send/receive).
+ * Abstraction of all sockets (IPv4/IPv6 send/receive).
  *
  * All available sockets are bound and the receive function
- * reads from them. To allow binding of other daemons (pluto) to
- * UDP/500, this implementation uses RAW sockets. An installed
- * "Linux socket filter" filters out all non-IKEv2 traffic and handles
- * just IKEv2 messages. An other daemon (pluto) must handle all traffic
- * seperatly, e.g. ignore IKEv2 traffic, since charon handles that. 
- * 
- * @b Constructors:
- * - socket_create()
- * 
- * @ingroup network
+ * reads from them. There are actually two implementations:
+ * The first uses raw sockets to allow binding of other daemons (pluto) to
+ * UDP/500. An installed "Linux socket filter" filters out all non-IKEv2 
+ * traffic and handles just IKEv2 messages. An other daemon (pluto) must 
+ * handle all traffic seperatly, e.g. ignore IKEv2 traffic, since charon 
+ * handles that.
+ * The other implementation uses normal sockets and is built if
+ * --disable-pluto is given to the configure script.
  */
 struct socket_t {
 	
 	/**
-	 * @brief Receive a packet.
+	 * Receive a packet.
 	 * 
 	 * Reads a packet from the socket and sets source/dest
 	 * appropriately.
 	 * 
-	 * @param this			socket_t object to work on
 	 * @param packet		pinter gets address from allocated packet_t
 	 * @return 				
 	 * 						- SUCCESS when packet successfully received
@@ -73,14 +71,13 @@ struct socket_t {
 	status_t (*receive) (socket_t *this, packet_t **packet);
 	
 	/**
-	 * @brief Send a packet.
+	 * Send a packet.
 	 * 
 	 * Sends a packet to the net using destination from the packet.
 	 * Packet is sent using default routing mechanisms, thus the 
 	 * source address in packet is ignored.
 	 * 
-	 * @param this			socket_t object to work on
-	 * @param packet[out]	packet_t to send
+	 * @param packet		packet_t to send
 	 * @return 				
 	 * 						- SUCCESS when packet successfully sent
 	 * 						- FAILED when unable to send
@@ -88,23 +85,16 @@ struct socket_t {
 	status_t (*send) (socket_t *this, packet_t *packet);
 	
 	/**
-	 * @brief Destroy sockets.
-	 * 
-	 * close sockets and destroy socket_t object
-	 * 
-	 * @param this 			socket_t to destroy
+	 * Destroy socket.
 	 */
 	void (*destroy) (socket_t *this);
 };
 
 /**
- * @brief Create a socket_t, wich binds multiple sockets.
+ * Create a socket_t, wich binds multiple sockets.
  *
  * @return  				socket_t object
- *
- * @ingroup network
  */
 socket_t *socket_create();
 
-
-#endif /*SOCKET_H_*/
+#endif /*SOCKET_H_ @} */

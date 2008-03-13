@@ -118,11 +118,6 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     {
 	arg[argc++] = "--use-syslog";
     }
-    if (cfg->setup.strictcrlpolicy)
-    {
-	arg[argc++] = "--strictcrlpolicy";
-	arg[argc++] = cfg->setup.strictcrlpolicy == STRICT_IFURI ? "2":"1";
-    }
     if (cfg->setup.cachecrls)
     {
 	arg[argc++] = "--cachecrls";
@@ -132,11 +127,6 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 	snprintf(buffer1, BUF_LEN, "%u", cfg->setup.crlcheckinterval);
 	arg[argc++] = "--crlcheckinterval";
 	arg[argc++] = buffer1;
-    }
-    if (cfg->setup.eapdir)
-    {
-	arg[argc++] = "--eapdir";
-	arg[argc++] = cfg->setup.eapdir;
     }
 
     {   /* parse debug string */

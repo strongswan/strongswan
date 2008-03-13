@@ -4,16 +4,13 @@ charon_SOURCES = \
 bus/bus.c bus/bus.h \
 bus/listeners/file_logger.c bus/listeners/file_logger.h \
 bus/listeners/sys_logger.c bus/listeners/sys_logger.h \
-config/backends/backend.h config/backends/writeable_backend.h \
-config/backend_manager.c config/backend_manager.h \
+config/backend_manager.c config/backend_manager.h config/backend.h \
 config/child_cfg.c config/child_cfg.h \
-config/credentials/local_credential_store.c config/credentials/local_credential_store.h \
 config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
 config/proposal.c config/proposal.h \
 config/traffic_selector.c config/traffic_selector.h \
-control/interfaces/interface.h \
-control/interface_manager.c control/interface_manager.h \
+control/controller.c control/controller.h \
 daemon.c daemon.h \
 encoding/generator.c encoding/generator.h \
 encoding/message.c encoding/message.h \
@@ -63,6 +60,7 @@ processing/processor.c processing/processor.h  \
 sa/authenticators/authenticator.c sa/authenticators/authenticator.h \
 sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \
+sa/authenticators/eap/eap_manager.c sa/authenticators/eap/eap_manager.h \
 sa/authenticators/psk_authenticator.c sa/authenticators/psk_authenticator.h \
 sa/authenticators/rsa_authenticator.c sa/authenticators/rsa_authenticator.h \
 sa/child_sa.c sa/child_sa.h \
@@ -74,7 +72,8 @@ sa/tasks/child_create.c sa/tasks/child_create.h \
 sa/tasks/child_delete.c sa/tasks/child_delete.h \
 sa/tasks/child_rekey.c sa/tasks/child_rekey.h \
 sa/tasks/ike_auth.c sa/tasks/ike_auth.h \
-sa/tasks/ike_cert.c sa/tasks/ike_cert.h \
+sa/tasks/ike_cert_pre.c sa/tasks/ike_cert_pre.h \
+sa/tasks/ike_cert_post.c sa/tasks/ike_cert_post.h \
 sa/tasks/ike_config.c sa/tasks/ike_config.h \
 sa/tasks/ike_delete.c sa/tasks/ike_delete.h \
 sa/tasks/ike_dpd.c sa/tasks/ike_dpd.h \
@@ -84,7 +83,10 @@ sa/tasks/ike_mobike.c sa/tasks/ike_mobike.h \
 sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
-sa/tasks/task.c sa/tasks/task.h
+sa/tasks/task.c sa/tasks/task.h \
+credentials/credential_manager.c credentials/credential_manager.h \
+credentials/auth_info.c credentials/auth_info.h \
+credentials/credential_set.h
 
 # Use RAW socket if pluto gets built
 if USE_PLUTO
@@ -102,89 +104,53 @@ if USE_P2P
     sa/tasks/ike_p2p.c sa/tasks/ike_p2p.h
 endif
 
-INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
-AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
-	-DIPSEC_EAPDIR=\"${eapdir}\" -DIPSEC_BACKENDDIR=\"${backenddir}\" -DIPSEC_INTERFACEDIR=\"${interfacedir}\" \
-	-DSIM_READER_LIB=\"${simreader}\"
-charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread -lm -ldl
+INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
+AM_CFLAGS = -rdynamic -DIPSEC_DIR=\"${ipsecdir}\" \
+	-DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_PLUGINDIR=\"${plugindir}\"
+charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm -ldl
 
-if USE_LIBCURL
-  charon_LDADD += -lcurl
+# build optional plugins
+########################
+
+SUBDIRS = 
+
+if USE_UNIT_TESTS
+  SUBDIRS += plugins/unit_tester
 endif
-
-
-# build EAP plugins
-###################
-eap_LTLIBRARIES =
-
-if USE_EAP_IDENTITY
-  eap_LTLIBRARIES += libcharon-eapidentity.la
-  libcharon_eapidentity_la_SOURCES = sa/authenticators/eap/eap_identity.h sa/authenticators/eap/eap_identity.c
-  libcharon_eapidentity_la_LDFLAGS = -module
-endif
-
-if USE_EAP_SIM
-  eap_LTLIBRARIES += libcharon-eapsim.la
-  libcharon_eapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
-  libcharon_eapsim_la_LDFLAGS = -module
-
-  plugin_LTLIBRARIES = libcharon-eapsim-file.la
-  libcharon_eapsim_file_la_SOURCES = sa/authenticators/eap/sim/eap_sim_file.c
-  libcharon_eapsim_file_la_LDFLAGS = -module
-endif
-
-if USE_EAP_MD5
-  eap_LTLIBRARIES += libcharon-eapmd5.la
-  libcharon_eapmd5_la_SOURCES = sa/authenticators/eap/eap_md5.h sa/authenticators/eap/eap_md5.c
-  libcharon_eapmd5_la_LDFLAGS = -module
-endif
-
-if USE_EAP_AKA
-  eap_LTLIBRARIES += libcharon-eapaka.la
-  libcharon_eapaka_la_SOURCES = sa/authenticators/eap/eap_aka.h sa/authenticators/eap/eap_aka.c
-  libcharon_eapaka_la_LDFLAGS = -module
-endif
-
-# build backends
-################
-backend_LTLIBRARIES =
 
 if USE_STROKE
-  backend_LTLIBRARIES += libcharon-local.la
-  libcharon_local_la_SOURCES = config/backends/local_backend.h config/backends/local_backend.c
-  libcharon_local_la_LDFLAGS = -module
-endif
-
-if USE_LIBSQLITE
-  backend_LTLIBRARIES += libcharon-sqlite.la
-  libcharon_sqlite_la_SOURCES = config/backends/sqlite_backend.h config/backends/sqlite_backend.c
-  libcharon_sqlite_la_LIBADD = -lsqlite3
-  libcharon_sqlite_la_LDFLAGS = -module
-endif
-
-# build control interfaces
-##########################
-interface_LTLIBRARIES =
-
-if USE_STROKE
-  interface_LTLIBRARIES += libcharon-stroke.la
-  libcharon_stroke_la_SOURCES = control/interfaces/stroke_interface.h control/interfaces/stroke_interface.c
-  libcharon_stroke_la_LDFLAGS = -module
+  SUBDIRS += plugins/stroke
 endif
 
 if USE_LIBDBUS
-  interface_LTLIBRARIES += libcharon-dbus.la
-  libcharon_dbus_la_SOURCES = control/interfaces/dbus_interface.h control/interfaces/dbus_interface.c
-  libcharon_dbus_la_LDFLAGS = -module
-  libcharon_dbus_la_LIBADD = ${dbus_LIBS}
-  INCLUDES += ${dbus_CFLAGS}
+  SUBDIRS += plugins/dbus
 endif
 
 if USE_LIBXML
-  interface_LTLIBRARIES += libcharon-xml.la
-  libcharon_xml_la_SOURCES = control/interfaces/xml_interface.h control/interfaces/xml_interface.c
-  libcharon_xml_la_LDFLAGS = -module
-  libcharon_xml_la_LIBADD = ${xml_LIBS}
-  INCLUDES += ${xml_CFLAGS}
+  SUBDIRS += plugins/xml
+endif
+
+if USE_SQL
+  SUBDIRS += plugins/sql
+endif
+
+if USE_EAP_IDENTITY
+  SUBDIRS += plugins/eap_identity
+endif
+
+if USE_EAP_SIM
+  SUBDIRS += plugins/eap_sim
+endif
+
+if USE_EAP_MD5
+  SUBDIRS += plugins/eap_md5
+endif
+
+if USE_EAP_AKA
+  SUBDIRS += plugins/eap_aka
+endif
+
+if USE_MED_DB
+  SUBDIRS += plugins/med_db
 endif
 

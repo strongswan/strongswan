@@ -1,10 +1,3 @@
-/**
- * @file host.c
- * 
- * @brief Implementation of host_t.
- * 
- */
-
 /*
  * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -21,6 +14,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <string.h>
@@ -32,7 +27,7 @@
 typedef struct private_host_t private_host_t;
 
 /**
- * @brief Private Data of a host object.
+ * Private Data of a host object.
  */
 struct private_host_t { 	
 	/**
@@ -155,12 +150,27 @@ static int print(FILE *stream, const struct printf_info *info,
 	}
 }
 
+
 /**
- * register printf() handlers
+ * arginfo handler for printf() hosts
  */
-static void __attribute__ ((constructor))print_register()
+int arginfo(const struct printf_info *info, size_t n, int *argtypes)
 {
-	register_printf_function(PRINTF_HOST, print, arginfo_ptr);
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * return printf hook functions for a host
+ */
+printf_hook_functions_t host_get_printf_hooks()
+{
+	printf_hook_functions_t hooks = {print, arginfo};
+	
+	return hooks;
 }
 
 /**

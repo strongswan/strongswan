@@ -1,9 +1,3 @@
-/**
- * @file initiate_mediation_job.h
- * 
- * @brief Interface of initiate_mediation_job_t.
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
@@ -17,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup initiate_mediation_job initiate_mediation_job
+ * @{ @ingroup jobs
  */
 
 #ifndef INITIATE_MEDIATION_JOB_H_
@@ -29,15 +30,10 @@ typedef struct initiate_mediation_job_t initiate_mediation_job_t;
 #include <sa/ike_sa_id.h>
 
 /**
- * @brief Class representing a INITIATE_MEDIATION Job.
+ * Class representing a INITIATE_MEDIATION Job.
  * 
  * This job will initiate a mediation on behalf of a mediated connection.
  * If required the mediation connection is established.
- * 
- * @b Constructors:
- * - initiate_mediation_job_create()
- * 
- * @ingroup jobs
  */
 struct initiate_mediation_job_t {
 	/**
@@ -47,28 +43,24 @@ struct initiate_mediation_job_t {
 };
 
 /**
- * @brief Creates a job of type INITIATE_MEDIATION.
+ * Creates a job of type INITIATE_MEDIATION.
  * 
  * @param ike_sa_id		identification of the ike_sa as ike_sa_id_t object (gets cloned)
  * @param child_cfg		child config of the child_sa (gets cloned)
  * @return				job object
- * 
- * @ingroup jobs
  */
 initiate_mediation_job_t *initiate_mediation_job_create(ike_sa_id_t *ike_sa_id,
 		child_cfg_t *child_cfg);
 
 /**
- * @brief Creates a special job of type INITIATE_MEDIATION that reinitiates a
+ * Creates a special job of type INITIATE_MEDIATION that reinitiates a
  * specific connection.
  * 
  * @param mediation_sa_id		identification of the mediation sa (gets cloned)
  * @param mediated_sa_id		identification of the mediated sa (gets cloned)
  * @return						job object
- * 
- * @ingroup jobs
  */
 initiate_mediation_job_t *reinitiate_mediation_job_create(ike_sa_id_t *mediation_sa_id,
 		ike_sa_id_t *mediated_sa_id);
 
-#endif /*INITIATE_MEDIATION_JOB_H_*/
+#endif /*INITIATE_MEDIATION_JOB_H_ @} */

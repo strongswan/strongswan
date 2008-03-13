@@ -1,10 +1,3 @@
-/**
- * @file traffic_selector.c
- * 
- * @brief Implementation of traffic_selector_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
@@ -20,6 +13,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <arpa/inet.h>
@@ -276,11 +271,25 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * register printf() handlers
+ * arginfo handler for printf() traffic selector
  */
-static void __attribute__ ((constructor))print_register()
+static int arginfo(const struct printf_info *info, size_t n, int *argtypes)
 {
-	register_printf_function(PRINTF_TRAFFIC_SELECTOR, print, arginfo_ptr);
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * return printf hook functions for a chunk
+ */
+printf_hook_functions_t traffic_selector_get_printf_hooks()
+{
+	printf_hook_functions_t hooks = {print, arginfo};
+	
+	return hooks;
 }
 
 /**

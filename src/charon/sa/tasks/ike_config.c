@@ -1,10 +1,3 @@
-/**
- * @file ike_config.c
- *
- * @brief Implementation of the ike_config task.
- *
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "ike_config.h"

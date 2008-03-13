@@ -1,10 +1,3 @@
-/**
- * @file crypter.h
- * 
- * @brief Interface crypter_t
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+ 
+/**
+ * @defgroup crypter crypter
+ * @{ @ingroup crypto
  */
 
 #ifndef CRYPTER_H_
@@ -30,21 +30,12 @@ typedef struct crypter_t crypter_t;
 #include <library.h>
 
 /**
- * @brief Encryption algorithm, as in IKEv2 RFC 3.3.2.
- *
- * Currently only the following algorithms are implemented:
- * - ENCR_AES_CBC
- * - ENCR_DES
- * - ENCR_3DES
- *
- * @ingroup crypters
+ * Encryption algorithm, as in IKEv2 RFC 3.3.2.
  */
 enum encryption_algorithm_t {
 	ENCR_UNDEFINED = 1024,
 	ENCR_DES_IV64 = 1,
-	/** Implemented in class des_crypter_t */
 	ENCR_DES = 2,
-	/** Implemented in class des_crypter_t */
 	ENCR_3DES = 3,
 	ENCR_RC5 = 4,
 	ENCR_IDEA = 5,
@@ -53,7 +44,6 @@ enum encryption_algorithm_t {
 	ENCR_3IDEA = 8,
 	ENCR_DES_IV32 = 9,
 	ENCR_NULL = 11,
-	/** Implemented in class aes_cbc_crypter_t */
 	ENCR_AES_CBC = 12,
 	ENCR_AES_CTR = 13
 };
@@ -64,92 +54,58 @@ enum encryption_algorithm_t {
 extern enum_name_t *encryption_algorithm_names;
 
 /**
- * @brief Generic interface for symmetric encryption algorithms.
- *
- * @b Constructors:
- *  - crypter_create()
- *
- * @ingroup crypters
+ * Generic interface for symmetric encryption algorithms.
  */
 struct crypter_t {
 	
 	/**
-	 * @brief Encrypt a chunk of data and allocate space for the encrypted value.
+	 * Encrypt a chunk of data and allocate space for the encrypted value.
 	 *
-	 * @param this				calling object
-	 * @param data				data to encrypt
-	 * @param iv				initializing vector
-	 * @param[out] encrypted	pointer where the encrypted bytes will be written
-	 * @return
-	 * 							- SUCCESS
-	 * 							- INVALID_ARG if data size not a multiple of block size
+	 * @param data			data to encrypt
+	 * @param iv			initializing vector
+	 * @param encrypted		pointer where the encrypted bytes will be written
+	 * @return				SUCCESS, or INVALID_ARG if size invalid
 	 */
-	status_t (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted);
+	status_t (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv,
+						 chunk_t *encrypted);
 	
 	/**
-	 * @brief Decrypt a chunk of data and allocate space for the decrypted value.
+	 * Decrypt a chunk of data and allocate space for the decrypted value.
 	 * 
-	 * @param this				calling object
-	 * @param data				data to decrypt
-	 * @param iv				initializing vector
-	 * @param[out] encrypted	pointer where the decrypted bytes will be written
-	 * @return
-	 * 							- SUCCESS
-	 * 							- INVALID_ARG if data size not a multiple of block size
+	 * @param data			data to decrypt
+	 * @param iv			initializing vector
+	 * @param encrypted		pointer where the decrypted bytes will be written
+	 * @return				SUCCESS, or INVALID_ARG if invalid
 	 */
-	status_t (*decrypt) (crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted);
+	status_t (*decrypt) (crypter_t *this, chunk_t data, chunk_t iv,
+						 chunk_t *decrypted);
 
 	/**
-	 * @brief Get the block size of this crypter_t object.
+	 * Get the block size of the crypto algorithm.
 	 * 
-	 * @param this				calling object
 	 * @return					block size in bytes
 	 */
 	size_t (*get_block_size) (crypter_t *this);
 
 	/**
-	 * @brief Get the key size of this crypter_t object.
+	 * Get the key size of the crypto algorithm.
 	 * 
-	 * @param this				calling object
 	 * @return					key size in bytes
 	 */
 	size_t (*get_key_size) (crypter_t *this);
 	
 	/**
-	 * @brief Set the key for this crypter_t object.
+	 * Set the key.
 	 * 
-	 * @param this				calling object
 	 * @param key				key to set
-	 * @return
-	 * 							- SUCCESS
-	 * 							- INVALID_ARG if key length invalid
+	 * @return					SUCCESS, or INVALID_ARG if key length invalid
 	 */
 	status_t (*set_key) (crypter_t *this, chunk_t key);
 	
 	/**
-	 * @brief Destroys a crypter_t object.
-	 *
-	 * @param this 				calling object
+	 * Destroys a crypter_t object.
 	 */
 	void (*destroy) (crypter_t *this);
 };
 
-/**
- * @brief Generic constructor for crypter_t objects.
- * 
- * Currently only the following algorithms are implemented:
- * - ENCR_AES_CBC
- * - ENCR_DES
- * - ENCR_3DES
- * 
- * The key_size is ignored for algorithms with fixed key size.
- * 
- * @param encryption_algorithm	Algorithm to use for crypter
- * @param key_size 				size of the key in bytes
- * @return
- * 								- crypter_t object
- * 								- NULL if encryption algorithm/key_size is not supported
- */
-crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm, size_t key_size);
-
-#endif /*CRYPTER_H_*/
+#endif /*CRYPTER_H_ @} */

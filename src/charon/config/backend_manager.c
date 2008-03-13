@@ -1,10 +1,3 @@
-/**
- * @file backend_manager.c
- * 
- * @brief Implementation of backend_manager_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,18 +11,18 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "backend_manager.h"
 
 #include <sys/types.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <dlfcn.h>
+#include <pthread.h>
 
 #include <daemon.h>
 #include <utils/linked_list.h>
-#include <config/backends/writeable_backend.h>
+#include <utils/mutex.h>
 
 
 typedef struct private_backend_manager_t private_backend_manager_t;
@@ -50,49 +43,209 @@ struct private_backend_manager_t {
 	linked_list_t *backends;
 	
 	/**
-	 * Additional list of writable backends.
+	 * locking mutex
 	 */
-	linked_list_t *writeable;
-	
-	/**
-	 * List of dlopen() handles we used to open backends
-	 */
-	linked_list_t *handles;
+	mutex_t *mutex;
 };
+
+/**
+ * data to pass nested IKE enumerator
+ */
+typedef struct {
+	private_backend_manager_t *this;
+	host_t *me;
+	host_t *other;
+} ike_data_t;
+
+/**
+ * data to pass nested peer enumerator
+ */
+typedef struct {
+	private_backend_manager_t *this;
+	identification_t *me;
+	identification_t *other;
+} peer_data_t;
+
+/**
+ * destroy IKE enumerator data and unlock list
+ */
+static void ike_enum_destroy(ike_data_t *data)
+{
+	data->this->mutex->unlock(data->this->mutex);
+	free(data);
+}
+
+/**
+ * destroy PEER enumerator data and unlock list
+ */
+static void peer_enum_destroy(peer_data_t *data)
+{
+	data->this->mutex->unlock(data->this->mutex);
+	free(data);
+}
+
+/**
+ * inner enumerator constructor for IKE cfgs
+ */
+static enumerator_t *ike_enum_create(backend_t *backend, ike_data_t *data)
+{
+	return backend->create_ike_cfg_enumerator(backend, data->me, data->other);
+}
+
+/**
+ * inner enumerator constructor for Peer cfgs
+ */
+static enumerator_t *peer_enum_create(backend_t *backend, peer_data_t *data)
+{
+	return backend->create_peer_cfg_enumerator(backend, data->me, data->other);
+}
+/**
+ * inner enumerator constructor for all Peer cfgs
+ */
+static enumerator_t *peer_enum_create_all(backend_t *backend)
+{
+	return backend->create_peer_cfg_enumerator(backend, NULL, NULL);
+}
 
 /**
  * implements backend_manager_t.get_ike_cfg.
  */
 static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this, 
-							  host_t *my_host, host_t *other_host)
+							  host_t *me, host_t *other)
 {
-	backend_t *backend;
-	ike_cfg_t *config = NULL;
-	iterator_t *iterator = this->backends->create_iterator(this->backends, TRUE);
-	while (config == NULL && iterator->iterate(iterator, (void**)&backend))
+	ike_cfg_t *current, *found = NULL;
+	enumerator_t *enumerator;
+	host_t *my_candidate, *other_candidate;
+	ike_data_t *data;
+	enum {
+		MATCH_NONE  = 0x00,
+		MATCH_ANY   = 0x01,
+		MATCH_ME    = 0x04,
+		MATCH_OTHER = 0x08,
+	} prio, best = MATCH_ANY;
+	
+	data = malloc_thing(ike_data_t);
+	data->this = this;
+	data->me = me;
+	data->other = other;
+	
+	DBG2(DBG_CFG, "looking for a config for %H...%H", me, other);
+	
+	this->mutex->lock(this->mutex);
+	enumerator = enumerator_create_nested(
+						this->backends->create_enumerator(this->backends),
+						(void*)ike_enum_create, data, (void*)ike_enum_destroy);
+	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
-		config = backend->get_ike_cfg(backend, my_host, other_host);
+		prio = MATCH_NONE;
+		my_candidate = current->get_my_host(current);
+		other_candidate = current->get_other_host(current);
+		
+		if (my_candidate->ip_equals(my_candidate, me))
+		{
+			prio += MATCH_ME;
+		}
+		else if (my_candidate->is_anyaddr(my_candidate))
+		{
+			prio += MATCH_ANY;
+		}
+		if (other_candidate->ip_equals(other_candidate, other))
+		{
+			prio += MATCH_OTHER;
+		}
+		else if (other_candidate->is_anyaddr(other_candidate))
+		{
+			prio += MATCH_ANY;
+		}
+		
+		DBG2(DBG_CFG, "  candidate: %H...%H, prio %d",
+			 my_candidate, other_candidate, prio);
+		
+		/* we require at least two MATCH_ANY */
+		if (prio > best)
+		{
+			best = prio;
+			DESTROY_IF(found);
+			found = current;
+			found->get_ref(found);
+		}
 	}
-	iterator->destroy(iterator);
-	return config;
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+	return found;
+}
+
+
+static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this)
+{
+	this->mutex->lock(this->mutex);
+	return enumerator_create_nested(
+							this->backends->create_enumerator(this->backends),
+							(void*)peer_enum_create_all, this->mutex,
+							(void*)this->mutex->unlock);
 }
 
 /**
  * implements backend_manager_t.get_peer_cfg.
  */			
 static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this,
-								identification_t *my_id, identification_t *other_id,
-								ca_info_t *other_ca_info)
+								identification_t *me, identification_t *other,
+								auth_info_t *auth)
 {
-	backend_t *backend;
-	peer_cfg_t *config = NULL;
-	iterator_t *iterator = this->backends->create_iterator(this->backends, TRUE);
-	while (config == NULL && iterator->iterate(iterator, (void**)&backend))
+	peer_cfg_t *current, *found = NULL;
+	enumerator_t *enumerator;
+	identification_t *my_candidate, *other_candidate;
+	id_match_t best = ID_MATCH_NONE;
+	peer_data_t *data;
+	
+	DBG2(DBG_CFG, "looking for a config for %D...%D", me, other);
+	
+	data = malloc_thing(peer_data_t);
+	data->this = this;
+	data->me = me;
+	data->other = other;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = enumerator_create_nested(
+						this->backends->create_enumerator(this->backends),
+						(void*)peer_enum_create, data, (void*)peer_enum_destroy);
+	while (enumerator->enumerate(enumerator, &current))
 	{
-		config = backend->get_peer_cfg(backend, my_id, other_id, other_ca_info);
+		id_match_t m1, m2, sum;
+
+		my_candidate = current->get_my_id(current);
+		other_candidate = current->get_other_id(current);
+		
+		m1 = my_candidate->matches(my_candidate, me);
+		m2 = other->matches(other, other_candidate);
+		sum = m1 + m2;
+		
+		if (m1 && m2)
+		{
+			if (auth->complies(auth, current->get_auth(current)))
+			{
+				DBG2(DBG_CFG, "  candidate '%s': %D...%D, prio %d",
+				 	 current->get_name(current), my_candidate,
+				 	 other_candidate, sum);
+				if (sum > best)
+				{
+					DESTROY_IF(found);
+					found = current;
+					found->get_ref(found);
+					best = sum;
+				}
+			}
+		}
 	}
-	iterator->destroy(iterator);
-	return config;
+	if (found)
+	{
+		DBG1(DBG_CFG, "found matching config \"%s\": %D...%D, prio %d",
+			 found->get_name(found), found->get_my_id(found),
+			 found->get_other_id(found), best);
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+	return found;
 }
 
 /**
@@ -102,112 +255,37 @@ static peer_cfg_t *get_peer_cfg_by_name(private_backend_manager_t *this, char *n
 {
 	backend_t *backend;
 	peer_cfg_t *config = NULL;
-	iterator_t *iterator = this->backends->create_iterator(this->backends, TRUE);
-	while (config == NULL && iterator->iterate(iterator, (void**)&backend))
+	enumerator_t *enumerator;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->backends->create_enumerator(this->backends);
+	while (config == NULL && enumerator->enumerate(enumerator, (void**)&backend))
 	{
 		config = backend->get_peer_cfg_by_name(backend, name);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
 	return config;
 }
 
 /**
- * implements backend_manager_t.add_peer_cfg.
- */	
-static void add_peer_cfg(private_backend_manager_t *this, peer_cfg_t *config)
-{
-	writeable_backend_t *backend;
-	
-	if (this->writeable->get_first(this->writeable, (void**)&backend) == SUCCESS)
-	{
-		backend->add_cfg(backend, config);
-	}
-}
-
-/**
- * implements backend_manager_t.create_iterator.
- */	
-static iterator_t* create_iterator(private_backend_manager_t *this)
-{
-	writeable_backend_t *backend;
-	
-	if (this->writeable->get_first(this->writeable, (void**)&backend) == SUCCESS)
-	{
-		return backend->create_iterator(backend);
-	}
-	/* give out an empty iterator if we have no writable backend*/
-	return this->writeable->create_iterator(this->writeable, TRUE);
-}
-
-/**
- * load the configuration backend modules
+ * Implementation of backend_manager_t.remove_backend.
  */
-static void load_backends(private_backend_manager_t *this)
+static void remove_backend(private_backend_manager_t *this, backend_t *backend)
 {
-	struct dirent* entry;
-	DIR* dir;
+	this->mutex->lock(this->mutex);
+	this->backends->remove(this->backends, backend, NULL);
+	this->mutex->unlock(this->mutex);
+}
 
-	dir = opendir(IPSEC_BACKENDDIR);
-	if (dir == NULL)
-	{
-		DBG1(DBG_CFG, "error opening backend modules directory "IPSEC_BACKENDDIR);
-		return;
-	}
-	
-	DBG1(DBG_CFG, "loading backend modules from '"IPSEC_BACKENDDIR"'");
-
-	while ((entry = readdir(dir)) != NULL)
-	{
-		char file[256];
-		backend_t *backend;
-		backend_constructor_t constructor;
-		void *handle;
-		char *ending;
-		
-		snprintf(file, sizeof(file), IPSEC_BACKENDDIR"/%s", entry->d_name);
-		
-		ending = entry->d_name + strlen(entry->d_name) - 3;
-		if (ending <= entry->d_name || !streq(ending, ".so"))
-		{
-			/* skip anything which does not look like a library */
-			DBG2(DBG_CFG, "  skipping %s, doesn't look like a library",
-				 entry->d_name);
-			continue;
-		}
-		/* try to load the library */
-		handle = dlopen(file, RTLD_LAZY);
-		if (handle == NULL)
-		{
-			DBG1(DBG_CFG, "  opening backend module %s failed: %s",
-				 entry->d_name, dlerror());
-			continue;
-		}
-		constructor = dlsym(handle, "backend_create");
-		if (constructor == NULL)
-		{
-			DBG1(DBG_CFG, "  backend module %s has no backend_create() "
-				 "function, skipped", entry->d_name);
-			dlclose(handle);
-			continue;
-		}
-		
-		backend = constructor();
-		if (backend == NULL)
-		{
-			DBG1(DBG_CFG, "  unable to create instance of backend "
-				 "module %s, skipped", entry->d_name);
-			dlclose(handle);
-			continue;
-		}
-		DBG1(DBG_CFG, "  loaded backend module successfully from %s", entry->d_name);
-		this->backends->insert_last(this->backends, backend);
-		if (backend->is_writeable(backend))
-		{
-			this->writeable->insert_last(this->writeable, backend);
-		}
-		this->handles->insert_last(this->handles, handle);
-	}
-	closedir(dir);
+/**
+ * Implementation of backend_manager_t.add_backend.
+ */
+static void add_backend(private_backend_manager_t *this, backend_t *backend)
+{
+	this->mutex->lock(this->mutex);
+	this->backends->insert_last(this->backends, backend);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -215,9 +293,8 @@ static void load_backends(private_backend_manager_t *this)
  */
 static void destroy(private_backend_manager_t *this)
 {
-	this->backends->destroy_offset(this->backends, offsetof(backend_t, destroy));
-	this->writeable->destroy(this->writeable);
-	this->handles->destroy_function(this->handles, (void*)dlclose);
+	this->backends->destroy(this->backends);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -229,17 +306,15 @@ backend_manager_t *backend_manager_create()
 	private_backend_manager_t *this = malloc_thing(private_backend_manager_t);
 	
 	this->public.get_ike_cfg = (ike_cfg_t* (*)(backend_manager_t*, host_t*, host_t*))get_ike_cfg;
-	this->public.get_peer_cfg = (peer_cfg_t* (*)(backend_manager_t*,identification_t*,identification_t*,ca_info_t*))get_peer_cfg;
+	this->public.get_peer_cfg = (peer_cfg_t* (*)(backend_manager_t*,identification_t*,identification_t*,auth_info_t*))get_peer_cfg;
 	this->public.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_manager_t*,char*))get_peer_cfg_by_name;
-	this->public.add_peer_cfg = (void (*)(backend_manager_t*,peer_cfg_t*))add_peer_cfg;
-	this->public.create_iterator = (iterator_t* (*)(backend_manager_t*))create_iterator;
+	this->public.create_peer_cfg_enumerator = (enumerator_t* (*)(backend_manager_t*))create_peer_cfg_enumerator;
+	this->public.add_backend = (void(*)(backend_manager_t*, backend_t *backend))add_backend;
+	this->public.remove_backend = (void(*)(backend_manager_t*, backend_t *backend))remove_backend;
 	this->public.destroy = (void (*)(backend_manager_t*))destroy;
 	
 	this->backends = linked_list_create();
-	this->writeable = linked_list_create();
-	this->handles = linked_list_create();
-	
-	load_backends(this);
+	this->mutex = mutex_create(MUTEX_RECURSIVE);
 	
 	return &this->public;
 }

@@ -1,10 +1,3 @@
-/**
- * @file callback_job.h
- * 
- * @brief Interface of callback_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup callback_job callback_job
+ * @{ @ingroup jobs
  */
 
 #ifndef CALLBACK_JOB_H_
@@ -32,12 +32,10 @@ typedef struct callback_job_t callback_job_t;
 typedef enum job_requeue_t job_requeue_t;
 
 /**
- * @brief Job requeueing policy
+ * Job requeueing policy
  *
  * The job requeueing policy defines how a job is handled when the callback
  * function returns.
- *
- * @ingroup jobs
  */
 enum job_requeue_t {
 
@@ -58,20 +56,18 @@ enum job_requeue_t {
 };
 
 /**
- * @brief The callback function to use for the callback job.
+ * The callback function to use for the callback job.
  *
  * This is the function to use as callback for a callback job. It receives
  * a parameter supplied to the callback jobs constructor.
  *
  * @param data			param supplied to job
  * @return				requeing policy how to requeue the job
- *
- * @ingroup jobs
  */
 typedef job_requeue_t (*callback_job_cb_t)(void *data);
 
 /**
- * @brief Cleanup function to use for data cleanup.
+ * Cleanup function to use for data cleanup.
  *
  * The callback has an optional user argument which receives data. However,
  * this data may be cleaned up if it is allocated. This is the function
@@ -79,22 +75,15 @@ typedef job_requeue_t (*callback_job_cb_t)(void *data);
  *
  * @param data			param supplied to job
  * @return				requeing policy how to requeue the job
- *
- * @ingroup jobs
  */
 typedef void (*callback_job_cleanup_t)(void *data);
 
 /**
- * @brief Class representing an callback Job.
+ * Class representing an callback Job.
  *
  * This is a special job which allows a simple callback function to
  * be executed by a thread of the thread pool. This allows simple execution
  * of asynchronous methods, without to manage threads.
- *
- * @b Constructors:
- * - callback_job_create()
- *
- * @ingroup jobs
  */
 struct callback_job_t {
 	/**
@@ -103,15 +92,13 @@ struct callback_job_t {
 	job_t job_interface;
 	
 	/**
-	 * @brief Cancel the jobs thread and wait for its termination.
-	 *
-	 * @param this		calling object
+	 * Cancel the jobs thread and wait for its termination.
 	 */
 	void (*cancel)(callback_job_t *this);
 };
 
 /**
- * @brief Creates a callback job.
+ * Creates a callback job.
  *
  * The cleanup function is called when the job gets destroyed to destroy
  * the associated data.
@@ -124,12 +111,9 @@ struct callback_job_t {
  * @param cleanup			destructor for data on destruction, or NULL
  * @param parent			parent of this job
  * @return					callback_job_t object
- * 
- * @ingroup jobs
  */
 callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 									callback_job_cleanup_t cleanup,
 									callback_job_t *parent);
 
-#endif /* CALLBACK_JOB_H_ */
-
+#endif /* CALLBACK_JOB_H_ @} */

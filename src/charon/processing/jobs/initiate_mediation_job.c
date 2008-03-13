@@ -1,10 +1,3 @@
-/**
- * @file initiate_mediation_job.c
- * 
- * @brief Implementation of initiate_mediation_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
@@ -18,8 +11,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
-
 
 #include "initiate_mediation_job.h"
 

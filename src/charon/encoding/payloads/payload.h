@@ -1,10 +1,3 @@
-/**
- * @file payload.h
- * 
- * @brief Interface payload_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
@@ -20,6 +13,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup payload payload
+ * @{ @ingroup payloads
  */
 
 #ifndef PAYLOAD_H_
@@ -33,12 +33,10 @@ typedef struct payload_t payload_t;
 
 
 /**
- * @brief Payload-Types of a IKEv2-Message.
+ * Payload-Types of a IKEv2-Message.
  *
  * Header and substructures are also defined as 
  * payload types with values from PRIVATE USE space.
- *
- * @ingroup payloads
  */
 enum payload_type_t{
 
@@ -204,80 +202,65 @@ extern enum_name_t *payload_type_names;
 extern enum_name_t *payload_type_short_names;
 
 /**
- * @brief Generic interface for all payload types (incl.header and substructures).
+ * Generic interface for all payload types (incl.header and substructures).
  * 
  * To handle all kinds of payloads on a generic way, this interface must
  * be implemented by every payload. This allows parser_t/generator_t a simple
  * handling of all payloads.
- * 
- * @b Constructors:
- * - payload_create() with the payload to instantiate.
- * 
- * @ingroup payloads
  */
 struct payload_t {
 	
 	/**
-	 * @brief Get encoding rules for this payload.
+	 * Get encoding rules for this payload.
 	 *
-	 * @param this 				calling object
-	 * @param[out] rules		location to store pointer of first rule
-	 * @param[out] rule_count	location to store number of rules
+	 * @param rules			location to store pointer of first rule
+	 * @param rule_count	location to store number of rules
 	 */
 	void (*get_encoding_rules) (payload_t *this, encoding_rule_t **rules, size_t *rule_count);
 
 	/**
-	 * @brief Get type of payload.
+	 * Get type of payload.
 	 *
-	 * @param this 				calling object
-	 * @return 					type of this payload
+	 * @return 				type of this payload
 	 */
 	payload_type_t (*get_type) (payload_t *this);
 
 	/**
-	 * @brief Get type of next payload or NO_PAYLOAD (0) if this is the last one.
+	 * Get type of next payload or NO_PAYLOAD (0) if this is the last one.
 	 *
-	 * @param this 				calling object
-	 * @return 					type of next payload
+	 * @return 				type of next payload
 	 */
 	payload_type_t (*get_next_type) (payload_t *this);
 	
 	/**
-	 * @brief Set type of next payload.
+	 * Set type of next payload.
 	 *
-	 * @param this 				calling object
-	 * @param type 				type of next payload
+	 * @param type 			type of next payload
 	 */
 	void (*set_next_type) (payload_t *this,payload_type_t type);
 
 	/**
-	 * @brief Get length of payload.
+	 * Get length of payload.
 	 *
-	 * @param this 				calling object
-	 * @return 					length of this payload
+	 * @return 				length of this payload
 	 */
 	size_t (*get_length) (payload_t *this);
 	
 	/**
-	 * @brief Verifies payload structure and makes consistence check.
+	 * Verifies payload structure and makes consistence check.
 	 *
-	 * @param this 				calling object
-	 * @return 					
-	 *							- SUCCESS
-	 * 							- FAILED if consistence not given
+	 * @return 				SUCCESS,  FAILED if consistence not given
 	 */
 	status_t (*verify) (payload_t *this);
 	
 	/**
-	 * @brief Destroys a payload and all included substructures.
-	 *
-	 * @param this 				payload to destroy
+	 * Destroys a payload and all included substructures.
 	 */
 	void (*destroy) (payload_t *this);
 };
 
 /**
- * @brief Create an empty payload.
+ * Create an empty payload.
  * 
  * Useful for the parser, who wants a generic constructor for all payloads.
  * It supports all payload_t methods. If a payload type is not known, 
@@ -288,4 +271,4 @@ struct payload_t {
  */
 payload_t *payload_create(payload_type_t type);
 
-#endif /*PAYLOAD_H_*/
+#endif /*PAYLOAD_H_ @} */

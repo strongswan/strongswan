@@ -1,10 +1,3 @@
-/**
- * @file pkcs7.c
- *
- * @brief Implementation of pkcs7_t.
- *
- */
-
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Copyright (C) 2002-2008 Andreas Steffen
@@ -21,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id$
+ * $Id$
  */
 
 #include <stdlib.h>
@@ -459,10 +452,18 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 			}
 			else
 			{
-				hasher_t *hasher = hasher_create(algorithm);
+				hasher_t *hasher;
 				chunk_t hash;
 				bool valid;
 
+				hasher = lib->crypto->create_hasher(lib->crypto, algorithm)
+				if (hasher == NULL)
+				{
+					DBG1("hash algorithm %N not supported",
+						 hash_algorithm_names, algorithm);
+					free(messageDigest.ptr);
+					return FALSE;
+				}
 				hasher->allocate_hash(hasher, this->data, &hash);
 				hasher->destroy(hasher);
 				DBG3("hash: %B", &hash);
@@ -873,15 +874,24 @@ bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 
 	if (this->attributes != NULL)
 	{
-		if (this->data.ptr != NULL)
+		if(this->data.ptr != NULL)
 		{
+			hasher_t *hasher;
+		
+			hasher = lib->crypto->create_hasher(lib->crypto, alg);
+			if (hasher == NULL)
+			{
+				DBG1("  hash algorithm %N not support",
+					 hash_algorithm_names, alg);
+				return FALSE;
+			}
+		
 			/* take the current time as signingTime */
 			time_t now = time(NULL);
 			chunk_t	signingTime = timetoasn1(&now, ASN1_UTCTIME);
 
 			chunk_t messageDigest, attributes;
-			hasher_t *hasher = hasher_create(alg);
-		
+	
 			hasher->allocate_hash(hasher, this->data, &messageDigest);
 			hasher->destroy(hasher);
 			this->attributes->set_attribute(this->attributes,

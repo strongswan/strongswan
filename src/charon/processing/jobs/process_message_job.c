@@ -1,10 +1,3 @@
-/**
- * @file process_message_job.h
- * 
- * @brief Implementation of process_message_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,8 +12,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
-
 
 #include "process_message_job.h"
 

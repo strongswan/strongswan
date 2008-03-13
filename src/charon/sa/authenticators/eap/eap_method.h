@@ -1,10 +1,3 @@
-/**
- * @file eap_method.h
- *
- * @brief Interface eap_method_t.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup eap_method eap_method
+ * @{ @ingroup eap
  */
 
 #ifndef EAP_METHOD_H_
@@ -34,8 +34,6 @@ typedef enum eap_code_t eap_code_t;
 
 /**
  * Role of an eap_method, SERVER or PEER (client)
- *
- * @ingroup eap
  */
 enum eap_role_t {
 	EAP_SERVER,
@@ -43,15 +41,11 @@ enum eap_role_t {
 };
 /**
  * enum names for eap_role_t.
- *
- * @ingroup eap
  */
 extern enum_name_t *eap_role_names;
 
 /**
  * EAP types, defines the EAP method implementation
- *
- * @ingroup eap
  */
 enum eap_type_t {
 	EAP_IDENTITY = 1,
@@ -68,15 +62,11 @@ enum eap_type_t {
 
 /**
  * enum names for eap_type_t.
- *
- * @ingroup eap
  */
 extern enum_name_t *eap_type_names;
 
 /**
  * EAP code, type of an EAP message
- *
- * @ingroup eap
  */
 enum eap_code_t {
 	EAP_REQUEST = 1,
@@ -87,14 +77,12 @@ enum eap_code_t {
 
 /**
  * enum names for eap_code_t.
- *
- * @ingroup eap
  */
 extern enum_name_t *eap_code_names;
 
 
 /**
- * @brief Interface of an EAP method for server and client side.
+ * Interface of an EAP method for server and client side.
  *
  * An EAP method initiates an EAP exchange and processes requests and
  * responses. An EAP method may need multiple exchanges before succeeding, and
@@ -107,22 +95,16 @@ extern enum_name_t *eap_code_names;
  * authentication. Even if a mutual EAP method is used, the traditional
  * AUTH payloads are required. Only these include the nonces and messages from
  * ike_sa_init and therefore prevent man in the middle attacks.
- *
- * @b Constructors:
- *  - eap_method_create()
- *
- * @ingroup eap
  */
 struct eap_method_t {
 	
 	/**
-	 * @brief Initiate the EAP exchange.
+	 * Initiate the EAP exchange.
 	 *
 	 * initiate() is only useable for server implementations, as clients only
 	 * reply to server requests.
 	 * A eap_payload is created in "out" if result is NEED_MORE.
 	 *
-	 * @param this 		calling object
 	 * @param out		eap_payload to send to the client
 	 * @return
 	 * 					- NEED_MORE, if an other exchange is required
@@ -131,11 +113,10 @@ struct eap_method_t {
 	status_t (*initiate) (eap_method_t *this, eap_payload_t **out);
 	
 	/**
-	 * @brief Process a received EAP message.
+	 * Process a received EAP message.
 	 *
 	 * A eap_payload is created in "out" if result is NEED_MORE.
 	 *
-	 * @param this 		calling object
 	 * @param in		eap_payload response received
 	 * @param out		created eap_payload to send
 	 * @return
@@ -147,31 +128,28 @@ struct eap_method_t {
 						 eap_payload_t **out);
 	
 	/**
-	 * @brief Get the EAP type implemented in this method.
+	 * Get the EAP type implemented in this method.
 	 *
-	 * @param this 		calling object
 	 * @param vendor	pointer receiving vendor identifier for type, 0 for none
 	 * @return			type of the EAP method
 	 */
 	eap_type_t (*get_type) (eap_method_t *this, u_int32_t *vendor);
 	
 	/**
-	 * @brief Check if this EAP method authenticates the server.
+	 * Check if this EAP method authenticates the server.
 	 *
 	 * Some EAP methods provide mutual authentication and 
 	 * allow authentication using only EAP, if the peer supports it.
 	 *
-	 * @param this 		calling object
 	 * @return			TRUE if methods provides mutual authentication
 	 */
 	bool (*is_mutual) (eap_method_t *this);
 	
 	/**
-	 * @brief Get the MSK established by this EAP method.
+	 * Get the MSK established by this EAP method.
 	 *
 	 * Not all EAP methods establish a shared secret.
 	 *
-	 * @param this 		calling object
 	 * @param msk		chunk receiving internal stored MSK
 	 * @return
 	 *					- SUCCESS, or
@@ -180,68 +158,25 @@ struct eap_method_t {
 	status_t (*get_msk) (eap_method_t *this, chunk_t *msk);
 	
 	/**
-	 * @brief Destroys a eap_method_t object.
-	 *
-	 * @param this 				calling object
+	 * Destroys a eap_method_t object.
 	 */
 	void (*destroy) (eap_method_t *this);
 };
 
 /**
- * @brief Creates an EAP method for a specific type and role.
- *
- * @param eap_type		EAP type to use
- * @param eap_vendor	vendor identifier if a vendor specifc EAP type is used
- * @param role			role of the eap_method, server or peer
- * @param server		ID of acting server
- * @param peer			ID of involved peer (client)
- * @return				eap_method_t object
- *
- * @ingroup eap
- */
-eap_method_t *eap_method_create(eap_type_t eap_type, u_int32_t eap_vendor,
-								eap_role_t role, identification_t *server,
-								identification_t *peer);
-
-/**
- * @brief (Re-)Load all EAP modules in the EAP modules directory.
- *
- * For security reasons, the directory and all it's modules must be owned
- * by root and must not be writeable by someone else.
- *
- * @param dir			directory of the EAP modules
- *
- * @ingroup eap
- */
-void eap_method_load(char *directory);
-
-/**
- * @brief Unload all loaded EAP modules
- *
- * @ingroup eap
- */
-void eap_method_unload();
-
-/**
- * @brief Constructor definition for a pluggable EAP module.
+ * Constructor definition for a pluggable EAP method.
  *
  * Each EAP module must define a constructor function which will return
- * an initialized object with the methods defined in eap_method_t. The
- * constructor must be named eap_create() and it's signature must be equal
- * to that of eap_constructor_t.
- * A module may implement only a single role. If it does not support the role
- * requested, NULL should be returned. Multiple modules are allowed of the
- * same EAP type to support seperate implementations of peer/server.
+ * an initialized object with the methods defined in eap_method_t.
+ * Constructors for server and peers are identical, to support both roles
+ * of a EAP method, a plugin needs register two constructors in the
+ * eap_manager_t.
  *
- * @param role			role the module will play, peer or server
  * @param server		ID of the server to use for credential lookup
  * @param peer			ID of the peer to use for credential lookup
  * @return				implementation of the eap_method_t interface
- *
- * @ingroup eap
  */
-typedef eap_method_t *(*eap_constructor_t)(eap_role_t role,
-										   identification_t *server,
+typedef eap_method_t *(*eap_constructor_t)(identification_t *server,
 										   identification_t *peer);
 
-#endif /* EAP_METHOD_H_ */
+#endif /* EAP_METHOD_H_ @} */

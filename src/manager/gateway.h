@@ -1,10 +1,3 @@
-/**
- * @file gateway.h
- * 
- * @brief Interface of gateway_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup gateway gateway
+ * @{ @ingroup manager
  */
 
 #ifndef GATEWAY_H_
@@ -29,12 +29,12 @@
 typedef struct gateway_t gateway_t;
 
 /**
- * @brief A connection to a gateway.
+ * A connection to a gateway.
  */
 struct gateway_t {
 	
 	/**
-	 * @brief Send an XML request to the gateway.
+	 * Send an XML request to the gateway.
 	 *
 	 * @param xml		xml request string
 	 * @return			allocated xml response string
@@ -42,21 +42,21 @@ struct gateway_t {
 	char* (*request)(gateway_t *this, char *xml);
 	
 	/**
-	 * @brief Query the list of IKE_SAs and all its children.
+	 * Query the list of IKE_SAs and all its children.
 	 *
 	 * @return			enumerator over ikesa XML elements
 	 */
 	enumerator_t* (*query_ikesalist)(gateway_t *this);
 	
 	/**
-	 * @brief Query the list of peer configs and its subconfigs.
+	 * Query the list of peer configs and its subconfigs.
 	 *
 	 * @return			enumerator over peerconfig XML elements
 	 */
 	enumerator_t* (*query_configlist)(gateway_t *this);
 	
 	/**
-	 * @brief Terminate an IKE or a CHILD SA.
+	 * Terminate an IKE or a CHILD SA.
 	 *
 	 * @param ike		TRUE for IKE-, FALSE for a CHILD-SA
 	 * @param id		ID of the SA to terminate
@@ -65,7 +65,7 @@ struct gateway_t {
 	enumerator_t* (*terminate)(gateway_t *this, bool ike, u_int32_t id);
 	
 	/**
-	 * @brief Initiate an IKE or a CHILD SA.
+	 * Initiate an IKE or a CHILD SA.
 	 *
 	 * @param ike		TRUE for IKE-, FALSE for CHILD-SA
 	 * @param name		name of the peer/child config
@@ -74,13 +74,13 @@ struct gateway_t {
 	enumerator_t* (*initiate)(gateway_t *this, bool ike, char *name);
 	
 	/**
-     * @brief Destroy a gateway instance.
+     * Destroy a gateway instance.
      */
     void (*destroy)(gateway_t *this);
 };
 
 /**
- * @brief Create a gateway instance using a TCP connection.
+ * Create a gateway instance using a TCP connection.
  *
  * @param name			name of the gateway
  * @param host			gateway connection endpoint
@@ -89,11 +89,11 @@ struct gateway_t {
 gateway_t *gateway_create_tcp(char *name, host_t *host);
 
 /**
- * @brief Create a gateway instance using a UNIX socket.
+ * Create a gateway instance using a UNIX socket.
  *
  * @param name			name of the gateway
  * @param 
  */
 gateway_t *gateway_create_unix(char *name);
 
-#endif /* GATEWAY_H_ */
+#endif /* GATEWAY_H_ @} */

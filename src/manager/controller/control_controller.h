@@ -1,10 +1,3 @@
-/**
- * @file control_controller.h
- * 
- * @brief Interface of control_controller_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup control_controller control_controller
+ * @{ @ingroup controller
  */
 
 #ifndef CONTROL_CONTROLLER_H_
@@ -29,7 +29,7 @@
 typedef struct control_controller_t control_controller_t;
 
 /**
- * @brief Status controller.
+ * Control controller.
  */
 struct control_controller_t {
 
@@ -40,7 +40,7 @@ struct control_controller_t {
 };
 
 /**
- * @brief Create a control_controller controller instance.
+ * Create a control_controller controller instance.
  */
 controller_t *control_controller_create(context_t *context, void *param);
 

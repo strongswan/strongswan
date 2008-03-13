@@ -1,10 +1,3 @@
-/**
- * @file signer.c
- * 
- * @brief Implementation of generic signer_t constructor.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,11 +12,11 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "signer.h"
-
-#include <crypto/signers/hmac_signer.h>
 
 ENUM_BEGIN(integrity_algorithm_names, AUTH_UNDEFINED, AUTH_HMAC_SHA1_128,
 	"UNDEFINED",
@@ -40,26 +33,3 @@ ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_SHA2_256_128, AUTH_HMAC_SHA2_512_
 	"AUTH_HMAC_SHA2_512_256");
 ENUM_END(integrity_algorithm_names, AUTH_HMAC_SHA2_512_256);
 
-/*
- * Described in header.
- */
-signer_t *signer_create(integrity_algorithm_t integrity_algorithm)
-{
-	switch(integrity_algorithm)
-	{
-		case AUTH_HMAC_SHA1_96:
-			return (signer_t *)hmac_signer_create(HASH_SHA1, 12);
-		case AUTH_HMAC_SHA1_128:
-			return (signer_t *)hmac_signer_create(HASH_SHA1, 16);
-		case AUTH_HMAC_MD5_96:
-			return (signer_t *)hmac_signer_create(HASH_MD5, 12);
-		case AUTH_HMAC_SHA2_256_128:
-			return (signer_t *)hmac_signer_create(HASH_SHA256, 16);
-		case AUTH_HMAC_SHA2_384_192:
-			return (signer_t *)hmac_signer_create(HASH_SHA384, 24);
-		case AUTH_HMAC_SHA2_512_256:
-			return (signer_t *)hmac_signer_create(HASH_SHA512, 32);
-		default:
-			return NULL;
-	}
-}

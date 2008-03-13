@@ -1,12 +1,5 @@
-/**
- * @file chunk.h
- *
- * @brief Pointer/length abstraction and its functions.
- *
- */
-
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup chunk chunk
+ * @{ @ingroup libstrongswan
  */
 
 #ifndef CHUNK_H_
@@ -26,8 +26,7 @@
 
 #include <string.h>
 #include <stdarg.h>
-
-#include <library.h>
+#include <sys/types.h>
 
 typedef struct chunk_t chunk_t;
 
@@ -40,6 +39,8 @@ struct chunk_t {
 	/** Length of data in bytes */
 	size_t len;
 };
+
+#include <library.h>
 
 /**
  * A { NULL, 0 }-chunk handy for initialization.
@@ -161,4 +162,12 @@ bool chunk_equals(chunk_t a, chunk_t b);
  */
 bool chunk_equals_or_null(chunk_t a, chunk_t b);
 
-#endif /* CHUNK_H_ */
+/**
+ * Get printf hooks for a chunk.
+ *
+ * Arguments are: 
+ *    chunk_t *chunk
+ */
+printf_hook_functions_t chunk_get_printf_hooks();
+
+#endif /* CHUNK_H_ @}*/

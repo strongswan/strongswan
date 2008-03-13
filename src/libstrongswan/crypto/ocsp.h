@@ -1,12 +1,4 @@
-/**
- * @file ocsp.h
- * 
- * @brief Interface of ocsp_t
- * 
- */
-
-/* Support of the Online Certificate Status Protocol (OCSP) Support
- *
+/*
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
  * Copyright (C) 2007 Andreas Steffen
  *
@@ -22,7 +14,12 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id$
+ * $Id$
+ */
+ 
+/**
+ * @defgroup ocsp ocsp
+ * @{ @ingroup crypto
  */
 
 #ifndef OCSP_H_
@@ -51,39 +48,32 @@ typedef enum {
 } response_status;
 
 /**
- * @brief Online Certficate Status Protocol (OCSP)
- *
- * @ingroup transforms
+ * Online Certficate Status Protocol (OCSP)
  */
 struct ocsp_t {
 
 	/**
-	 * @brief Fetches the actual certificate status via OCSP
+	 * Fetches the actual certificate status via OCSP
 	 * 
-	 * @param uris				linked list of ocsp uris
 	 * @param certinfo			certificate status info to be updated
 	 * @param credentials		credential store needed for trust path verification
 	 */
 	void (*fetch) (ocsp_t *this, certinfo_t *certinfo, credential_store_t *credentials);
 
 	/**
-	 * @brief Destroys the ocsp_t object.
-	 * 
-	 * @param this			ocsp object to destroy
+	 * Destroys the ocsp_t object.
 	 */
 	void (*destroy) (ocsp_t *this);
 
 };
 
 /**
- * @brief Create an ocsp_t object.
+ * Create an ocsp_t object.
  * 
  * @param cacert 	ca certificate
  * @param uris	 	linked list of ocsp uris
  * @return 			created ocsp_t object
- * 
- * @ingroup transforms
  */
 ocsp_t *ocsp_create(x509_t *cacert, linked_list_t *uris);
 
-#endif /* OCSP_H_ */
+#endif /* OCSP_H_ @} */

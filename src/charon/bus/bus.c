@@ -1,10 +1,3 @@
-/**
- * @file bus.c
- *
- * @brief Implementation of bus_t.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include "bus.h"
@@ -25,6 +20,7 @@
 #include <pthread.h>
 
 #include <daemon.h>
+#include <utils/mutex.h>
 
 ENUM(signal_names, SIG_ANY, SIG_MAX,
 	/** should not get printed */
@@ -72,9 +68,9 @@ struct private_bus_t {
 	linked_list_t *listeners;
 	
 	/**
-	 * mutex to synchronize active listeners
+	 * mutex to synchronize active listeners, recursively
 	 */
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 	
 	/**
 	 * Thread local storage for a unique, simple thread ID
@@ -107,7 +103,7 @@ struct entry_t {
 	/**
 	 * condvar where active listeners wait
 	 */
-	pthread_cond_t cond;
+	condvar_t *condvar;
 };
 
 /**
@@ -119,9 +115,18 @@ static entry_t *entry_create(bus_listener_t *listener, bool blocker)
 	
 	this->listener = listener;
 	this->blocker = blocker;
-	pthread_cond_init(&this->cond, NULL);
+	this->condvar = condvar_create(CONDVAR_DEFAULT);
 	
 	return this;
+}
+
+/**
+ * destroy an entry_t
+ */
+static void entry_destroy(entry_t *entry)
+{
+	entry->condvar->destroy(entry->condvar);
+	free(entry);
 }
 
 /**
@@ -151,9 +156,9 @@ static int get_thread_number(private_bus_t *this)
  */
 static void add_listener(private_bus_t *this, bus_listener_t *listener)
 {
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	this->listeners->insert_last(this->listeners, entry_create(listener, FALSE));
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -164,19 +169,19 @@ static void remove_listener(private_bus_t *this, bus_listener_t *listener)
 	iterator_t *iterator;
 	entry_t *entry;
 
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	iterator = this->listeners->create_iterator(this->listeners, TRUE);
 	while (iterator->iterate(iterator, (void**)&entry))
 	{
 		if (entry->listener == listener)
 		{
 			iterator->remove(iterator);
-			free(entry);
+			entry_destroy(entry);
 			break;
 		}
 	}
 	iterator->destroy(iterator);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 typedef struct cleanup_data_t cleanup_data_t;
@@ -205,7 +210,7 @@ static void listener_cleanup(cleanup_data_t *data)
 		if (entry == data->entry)
 		{
 			iterator->remove(iterator);
-			free(entry);
+			entry_destroy(entry);
 			break;
 		}
 	}
@@ -223,21 +228,21 @@ static void listen_(private_bus_t *this, bus_listener_t *listener, job_t *job)
 	data.this = this;
 	data.entry = entry_create(listener, TRUE);
 
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	this->listeners->insert_last(this->listeners, data.entry);
 	charon->processor->queue_job(charon->processor, job);
-	pthread_cleanup_push((void*)pthread_mutex_unlock, &this->mutex);
+	pthread_cleanup_push((void*)this->mutex->unlock, this->mutex);
 	pthread_cleanup_push((void*)listener_cleanup, &data);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old);
 	while (data.entry->blocker)
 	{
-		pthread_cond_wait(&data.entry->cond, &this->mutex);
+		data.entry->condvar->wait(data.entry->condvar, this->mutex);
 	}
 	pthread_setcancelstate(old, NULL);
 	pthread_cleanup_pop(FALSE);
 	/* unlock mutex */
 	pthread_cleanup_pop(TRUE);
-	free(data.entry);
+	entry_destroy(data.entry);
 }
 
 /**
@@ -248,6 +253,7 @@ static void set_sa(private_bus_t *this, ike_sa_t *ike_sa)
 	pthread_setspecific(this->thread_sa, ike_sa);
 }
 
+	
 /**
  * Implementation of bus_t.vsignal.
  */
@@ -259,7 +265,7 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 	ike_sa_t *ike_sa;
 	long thread;
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	ike_sa = pthread_getspecific(this->thread_sa);
 	thread = get_thread_number(this);
 	
@@ -275,18 +281,18 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 			if (entry->blocker)
 			{
 				entry->blocker = FALSE;
-				pthread_cond_signal(&entry->cond);
+				entry->condvar->signal(entry->condvar);
 			}
 			else
 			{
-				free(entry);
+				entry_destroy(entry);
 			}
 		}
 		va_end(args_copy);
 	}
 	iterator->destroy(iterator);
 	
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -307,7 +313,8 @@ static void signal_(private_bus_t *this, signal_t signal, level_t level,
  */
 static void destroy(private_bus_t *this)
 {
-	this->listeners->destroy_function(this->listeners, free);
+	this->mutex->destroy(this->mutex);
+	this->listeners->destroy_function(this->listeners, (void*)entry_destroy);
 	free(this);
 }
 
@@ -327,7 +334,7 @@ bus_t *bus_create()
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();
-	pthread_mutex_init(&this->mutex, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	pthread_key_create(&this->thread_id, NULL);
 	pthread_key_create(&this->thread_sa, NULL);
 	

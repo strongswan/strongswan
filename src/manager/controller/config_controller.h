@@ -1,10 +1,3 @@
-/**
- * @file config_controller.h
- * 
- * @brief Interface of config_controller_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup config_controller config_controller
+ * @{ @ingroup controller
  */
 
 #ifndef CONFIG_CONTROLLER_H_
@@ -29,7 +29,7 @@
 typedef struct config_controller_t config_controller_t;
 
 /**
- * @brief Status controller.
+ * Status controller.
  */
 struct config_controller_t {
 
@@ -40,8 +40,8 @@ struct config_controller_t {
 };
 
 /**
- * @brief Create a config_controller controller instance.
+ * Create a config_controller controller instance.
  */
 controller_t *config_controller_create(context_t *context, void *param);
 
-#endif /* CONFIG_CONTROLLER_H_ */
+#endif /* CONFIG_CONTROLLER_H_ @} */

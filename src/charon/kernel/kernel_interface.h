@@ -1,10 +1,3 @@
-/**
- * @file kernel_interface.h
- *
- * @brief Interface of kernel_interface_t.
- *
- */
-
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
@@ -20,6 +13,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup kernel_interface kernel_interface
+ * @{ @ingroup kernel
  */
 
 #ifndef KERNEL_INTERFACE_H_
@@ -37,8 +37,6 @@ typedef struct kernel_interface_t kernel_interface_t;
  * Direction of a policy. These are equal to those
  * defined in xfrm.h, but we want to stay implementation
  * neutral here.
- *
- * @ingroup kernel
  */
 enum policy_dir_t {
 	/** Policy for inbound traffic */
@@ -50,7 +48,7 @@ enum policy_dir_t {
 };
 
 /**
- * @brief Interface to the kernel.
+ * Interface to the kernel.
  * 
  * The kernel interface handles the communication with the kernel
  * for SA and policy management. It allows setup of these, and provides 
@@ -59,36 +57,28 @@ enum policy_dir_t {
  * reference counting. The Linux kernel does not allow the same policy
  * installed twice, but we need this as CHILD_SA exist multiple times
  * when rekeying. Thats why we do reference counting of policies.
- *
- * @b Constructors:
- *  - kernel_interface_create()
- *
- * @ingroup kernel
  */
 struct kernel_interface_t {
 
 	/**
-	 * @brief Get a SPI from the kernel.
+	 * Get a SPI from the kernel.
 	 *
 	 * @warning get_spi() implicitely creates an SA with
 	 * the allocated SPI, therefore the replace flag
 	 * in add_sa() must be set when installing this SA.
 	 * 
-	 * @param this		calling object
 	 * @param src		source address of SA
 	 * @param dst		destination address of SA
 	 * @param protocol	protocol for SA (ESP/AH)
 	 * @param reqid		unique ID for this SA
-	 * @param[out] spi	allocated spi
-	 * @return
-	 * 					- SUCCESS
-	 * 					- FAILED if kernel comm failed
+	 * @param spi		allocated spi
+	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*get_spi)(kernel_interface_t *this, host_t *src, host_t *dst, 
 						protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi);
 	
 	/**
-	 * @brief Add an SA to the SAD.
+	 * Add an SA to the SAD.
 	 * 
 	 * add_sa() may update an already allocated
 	 * SPI (via get_spi). In this case, the replace
@@ -98,7 +88,6 @@ struct kernel_interface_t {
 	 * gets the keys itself from the PRF, as we don't know
 	 * his algorithms and key sizes.
 	 * 
-	 * @param this			calling object
 	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
@@ -112,9 +101,7 @@ struct kernel_interface_t {
 	 * @param mode			mode of the SA (tunnel, transport)
 	 * @param encap			enable UDP encapsulation for NAT traversal
 	 * @param replace		Should an already installed SA be updated?
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if kernel comm failed
+	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_sa) (kernel_interface_t *this,
 						host_t *src, host_t *dst, u_int32_t spi,
@@ -125,14 +112,13 @@ struct kernel_interface_t {
 						bool update);
 	
 	/**
-	 * @brief Update the hosts on an installed SA.
+	 * Update the hosts on an installed SA.
 	 *
 	 * We cannot directly update the destination address as the kernel
 	 * requires the spi, the protocol AND the destination address (and family)
 	 * to identify SAs. Therefore if the destination address changed we
 	 * create a new SA and delete the old one.
 	 *
-	 * @param this			calling object
 	 * @param spi			SPI of the SA
 	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @param src			current source address
@@ -140,9 +126,7 @@ struct kernel_interface_t {
 	 * @param new_src		new source address
 	 * @param new_dst		new destination address
 	 * @param encap			use UDP encapsulation
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if kernel comm failed
+	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*update_sa)(kernel_interface_t *this,
 						  u_int32_t spi, protocol_id_t protocol,
@@ -150,44 +134,37 @@ struct kernel_interface_t {
 						  host_t *new_src, host_t *new_dst, bool encap);
 	
 	/**
-	 * @brief Query the use time of an SA.
+	 * Query the use time of an SA.
 	 *
 	 * The use time of an SA is not the time of the last usage, but 
 	 * the time of the first usage of the SA.
 	 * 
-	 * @param this			calling object
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
 	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @param[out] use_time	the time of this SA's last use
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if kernel comm failed
+	 * @param use_time		pointer receives the time of this SA's last use
+	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_sa) (kernel_interface_t *this, host_t *dst, u_int32_t spi, 
 						  protocol_id_t protocol, u_int32_t *use_time);
 	
 	/**
-	 * @brief Delete a previusly installed SA from the SAD.
+	 * Delete a previusly installed SA from the SAD.
 	 * 
-	 * @param this			calling object
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
 	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if kernel comm failed
+	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_sa) (kernel_interface_t *this, host_t *dst, u_int32_t spi,
 						protocol_id_t protocol);
 	
 	/**
-	 * @brief Add a policy to the SPD.
+	 * Add a policy to the SPD.
 	 * 
 	 * A policy is always associated to an SA. Traffic which matches a
 	 * policy is handled by the SA with the same reqid.
 	 * 
-	 * @param this			calling object
 	 * @param src			source address of SA
 	 * @param dst			dest address of SA
 	 * @param src_ts		traffic selector to match traffic source
@@ -197,9 +174,7 @@ struct kernel_interface_t {
 	 * @param reqid			uniqe ID of an SA to use to enforce policy
 	 * @param high_prio		if TRUE, uses a higher priority than any with FALSE
 	 * @param mode			mode of SA (tunnel, transport)
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if kernel comm failed
+	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_policy) (kernel_interface_t *this,
 							host_t *src, host_t *dst,
@@ -209,19 +184,16 @@ struct kernel_interface_t {
 							u_int32_t reqid, bool high_prio, mode_t mode);
 	
 	/**
-	 * @brief Query the use time of a policy.
+	 * Query the use time of a policy.
 	 *
 	 * The use time of a policy is the time the policy was used
 	 * for the last time.
 	 * 
-	 * @param this			calling object
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
 	 * @param[out] use_time	the time of this SA's last use
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if kernel comm failed
+	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_policy) (kernel_interface_t *this,
 							  traffic_selector_t *src_ts, 
@@ -229,20 +201,17 @@ struct kernel_interface_t {
 							  policy_dir_t direction, u_int32_t *use_time);
 	
 	/**
-	 * @brief Remove a policy from the SPD.
+	 * Remove a policy from the SPD.
 	 *
 	 * The kernel interface implements reference counting for policies.
 	 * If the same policy is installed multiple times (in the case of rekeying),
 	 * the reference counter is increased. del_policy() decreases the ref counter
 	 * and removes the policy only when no more references are available.
 	 *
-	 * @param this			calling object
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if kernel comm failed
+	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_policy) (kernel_interface_t *this,
 							traffic_selector_t *src_ts, 
@@ -250,82 +219,69 @@ struct kernel_interface_t {
 							policy_dir_t direction);
 	
 	/**
-	 * @brief Get our outgoing source address for a destination.
+	 * Get our outgoing source address for a destination.
 	 *
 	 * Does a route lookup to get the source address used to reach dest.
 	 * The returned host is allocated and must be destroyed.
 	 *
-	 * @param this			calling object
 	 * @param dest			target destination address
 	 * @return				outgoing source address, NULL if unreachable
 	 */
 	host_t* (*get_source_addr)(kernel_interface_t *this, host_t *dest);
 	
 	/**
-	 * @brief Get the interface name of a local address.
+	 * Get the interface name of a local address.
 	 *
-	 * @param this			calling object
 	 * @param host			address to get interface name from
 	 * @return 				allocated interface name, or NULL if not found
 	 */
 	char* (*get_interface) (kernel_interface_t *this, host_t *host);
 	
 	/**
-	 * @brief Creates an iterator over all local addresses.
+	 * Creates an iterator over all local addresses.
 	 *
 	 * This function blocks an internal cached address list until the
 	 * iterator gets destroyed.
 	 * These hosts are read-only, do not modify or free.
 	 *
-	 * @param this			calling object
 	 * @return 				iterator over host_t's
 	 */
 	iterator_t *(*create_address_iterator) (kernel_interface_t *this);
 	
 	/**
-	 * @brief Add a virtual IP to an interface.
+	 * Add a virtual IP to an interface.
 	 *
 	 * Virtual IPs are attached to an interface. If an IP is added multiple
 	 * times, the IP is refcounted and not removed until del_ip() was called
 	 * as many times as add_ip().
 	 * The virtual IP is attached to the interface where the iface_ip is found.
 	 *
-	 * @param this			calling object
 	 * @param virtual_ip	virtual ip address to assign
 	 * @param iface_ip		IP of an interface to attach virtual IP
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if kernel comm failed
+	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_ip) (kernel_interface_t *this, host_t *virtual_ip,
 						host_t *iface_ip);
 	
 	/**
-	 * @brief Remove a virtual IP from an interface.
+	 * Remove a virtual IP from an interface.
 	 *
 	 * The kernel interface uses refcounting, see add_ip().
 	 *
-	 * @param this			calling object
 	 * @param virtual_ip	virtual ip address to assign
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if kernel comm failed
+	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip);
 	
 	/**
-	 * @brief Destroys a kernel_interface object.
-	 *
-	 * @param kernel_interface_t 	calling object
+	 * Destroys a kernel_interface object.
 	 */
 	void (*destroy) (kernel_interface_t *kernel_interface);
 };
 
 /**
- * @brief Creates an object of type kernel_interface_t.
- * 
- * @ingroup kernel
+ * Creates an object of type kernel_interface_t.
  */
 kernel_interface_t *kernel_interface_create(void);
 
-#endif /*KERNEL_INTERFACE_H_*/
+#endif /*KERNEL_INTERFACE_H_ @} */

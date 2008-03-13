@@ -1,10 +1,3 @@
-/**
- * @file ike_sa.c
- *
- * @brief Implementation of ike_sa_t.
- *
- */
-
 /*
  * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -21,6 +14,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 #include <sys/time.h>
@@ -53,7 +48,8 @@
 #include <sa/tasks/ike_auth.h>
 #include <sa/tasks/ike_auth_lifetime.h>
 #include <sa/tasks/ike_config.h>
-#include <sa/tasks/ike_cert.h>
+#include <sa/tasks/ike_cert_pre.h>
+#include <sa/tasks/ike_cert_post.h>
 #include <sa/tasks/ike_rekey.h>
 #include <sa/tasks/ike_reauth.h>
 #include <sa/tasks/ike_delete.h>
@@ -122,6 +118,16 @@ struct private_ike_sa_t {
 	peer_cfg_t *peer_cfg;
 	
 	/**
+	 * associated authentication/authorization info for local peer
+	 */
+	auth_info_t *my_auth;
+	
+	/**
+	 * associated authentication/authorization info for remote peer
+	 */
+	auth_info_t *other_auth;
+	
+	/**
 	 * Juggles tasks to process messages
 	 */
 	task_manager_t *task_manager;
@@ -152,11 +158,6 @@ struct private_ike_sa_t {
 	 * Identification used for other
 	 */
 	identification_t *other_id;
-	
-	/**
-	 * CA that issued the certificate of other
-	 */
-	ca_info_t *other_ca;
 	
 	/**
 	 * set of extensions the peer supports
@@ -423,6 +424,22 @@ static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 		this->other_id = this->peer_cfg->get_other_id(this->peer_cfg);
 		this->other_id = this->other_id->clone(this->other_id);
 	}
+}
+
+/**
+ * Implementation of ike_sa_t.get_my_auth.
+ */
+static auth_info_t* get_my_auth(private_ike_sa_t *this)
+{
+	return this->my_auth;
+}
+
+/**
+ * Implementation of ike_sa_t.get_other_auth.
+ */
+static auth_info_t* get_other_auth(private_ike_sa_t *this)
+{
+	return this->other_auth;
 }
 
 /**
@@ -1020,9 +1037,11 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_natd_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_cert_create(&this->public, TRUE);
+		task = (task_t*)ike_cert_pre_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_cert_post_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
@@ -1112,9 +1131,11 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_natd_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_cert_create(&this->public, TRUE);
+		task = (task_t*)ike_cert_pre_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_cert_post_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
@@ -1502,11 +1523,13 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 				new->task_manager->queue_task(new->task_manager, task);
 				task = (task_t*)ike_natd_create(&new->public, TRUE);
 				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_cert_create(&new->public, TRUE);
+				task = (task_t*)ike_cert_pre_create(&new->public, TRUE);
 				new->task_manager->queue_task(new->task_manager, task);
 				task = (task_t*)ike_config_create(&new->public, TRUE);
 				new->task_manager->queue_task(new->task_manager, task);
 				task = (task_t*)ike_auth_create(&new->public, TRUE);
+				new->task_manager->queue_task(new->task_manager, task);
+				task = (task_t*)ike_cert_post_create(&new->public, TRUE);
 				new->task_manager->queue_task(new->task_manager, task);
 				
 				while (to_restart->remove_last(to_restart, (void**)&child_cfg) == SUCCESS)
@@ -1607,22 +1630,6 @@ static void set_other_id(private_ike_sa_t *this, identification_t *other)
 }
 
 /**
- * Implementation of ike_sa_t.get_other_ca.
- */
-static ca_info_t* get_other_ca(private_ike_sa_t *this)
-{
-	return this->other_ca;
-}
-
-/**
- * Implementation of ike_sa_t.set_other_ca.
- */
-static void set_other_ca(private_ike_sa_t *this, ca_info_t *other_ca)
-{
-	this->other_ca = other_ca;
-}
-
-/**
  * Implementation of ike_sa_t.derive_keys.
  */
 static status_t derive_keys(private_ike_sa_t *this,
@@ -1643,14 +1650,16 @@ static status_t derive_keys(private_ike_sa_t *this,
 	/* Create SAs general purpose PRF first, we may use it here */
 	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo))
 	{
-		DBG1(DBG_IKE, "key derivation failed: no PSEUDO_RANDOM_FUNCTION");;
+		DBG1(DBG_IKE, "no %N selected",
+			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
 		return FAILED;
 	}
-	this->prf = prf_create(algo->algorithm);
+	this->prf = lib->crypto->create_prf(lib->crypto, algo->algorithm);
 	if (this->prf == NULL)
 	{
-		DBG1(DBG_IKE, "key derivation failed: PSEUDO_RANDOM_FUNCTION "
-			 "%N not supported!", pseudo_random_function_names, algo->algorithm);
+		DBG1(DBG_IKE, "%N %N not supported!",
+			 transform_type_names, PSEUDO_RANDOM_FUNCTION,
+			 pseudo_random_function_names, algo->algorithm);
 		return FAILED;
 	}
 	
@@ -1694,7 +1703,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 	
 	/* SK_d is used for generating CHILD_SA key mat => child_prf */
 	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
-	this->child_prf = prf_create(algo->algorithm);
+	this->child_prf = lib->crypto->create_prf(lib->crypto, algo->algorithm);
 	key_size = this->child_prf->get_key_size(this->child_prf);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_d secret %B", &key);
@@ -1704,15 +1713,18 @@ static status_t derive_keys(private_ike_sa_t *this,
 	/* SK_ai/SK_ar used for integrity protection => signer_in/signer_out */
 	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo))
 	{
-		DBG1(DBG_IKE, "key derivation failed: no INTEGRITY_ALGORITHM");
+		DBG1(DBG_IKE, "no %N selected",
+			 transform_type_names, INTEGRITY_ALGORITHM);
 		return FAILED;
 	}
-	signer_i = signer_create(algo->algorithm);
-	signer_r = signer_create(algo->algorithm);
+	signer_i = lib->crypto->create_signer(lib->crypto, algo->algorithm);
+	signer_r = lib->crypto->create_signer(lib->crypto, algo->algorithm);
 	if (signer_i == NULL || signer_r == NULL)
 	{
-		DBG1(DBG_IKE, "key derivation failed: INTEGRITY_ALGORITHM "
-			"%N not supported!", integrity_algorithm_names ,algo->algorithm);
+		DBG1(DBG_IKE, "%N %N not supported!",
+			 transform_type_names, INTEGRITY_ALGORITHM,
+			 integrity_algorithm_names ,algo->algorithm);
+		prf_plus->destroy(prf_plus);
 		return FAILED;
 	}
 	key_size = signer_i->get_key_size(signer_i);
@@ -1741,16 +1753,21 @@ static status_t derive_keys(private_ike_sa_t *this,
 	/* SK_ei/SK_er used for encryption => crypter_in/crypter_out */
 	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo))
 	{
-		DBG1(DBG_IKE, "key derivation failed: no ENCRYPTION_ALGORITHM");
+		DBG1(DBG_IKE, "no %N selected",
+			 transform_type_names, ENCRYPTION_ALGORITHM);
+		prf_plus->destroy(prf_plus);
 		return FAILED;
 	}
-	crypter_i = crypter_create(algo->algorithm, algo->key_size / 8);
-	crypter_r = crypter_create(algo->algorithm, algo->key_size / 8);
+	crypter_i = lib->crypto->create_crypter(lib->crypto, algo->algorithm,
+											algo->key_size / 8);
+	crypter_r = lib->crypto->create_crypter(lib->crypto, algo->algorithm,
+											algo->key_size / 8);
 	if (crypter_i == NULL || crypter_r == NULL)
 	{
-		DBG1(DBG_IKE, "key derivation failed: ENCRYPTION_ALGORITHM "
-			"%N (key size %d) not supported!",
-			encryption_algorithm_names, algo->algorithm, algo->key_size);
+		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
+			 transform_type_names, ENCRYPTION_ALGORITHM,
+			 encryption_algorithm_names, algo->algorithm, algo->key_size);
+		prf_plus->destroy(prf_plus);
 		return FAILED;
 	}
 	key_size = crypter_i->get_key_size(crypter_i);
@@ -2309,6 +2326,8 @@ static void destroy(private_ike_sa_t *this)
 	
 	DESTROY_IF(this->ike_cfg);
 	DESTROY_IF(this->peer_cfg);
+	DESTROY_IF(this->my_auth);
+	DESTROY_IF(this->other_auth);
 	
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	this->task_manager->destroy(this->task_manager);
@@ -2337,6 +2356,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_ike_cfg = (void (*)(ike_sa_t*,ike_cfg_t*))set_ike_cfg;
 	this->public.get_peer_cfg = (peer_cfg_t* (*)(ike_sa_t*))get_peer_cfg;
 	this->public.set_peer_cfg = (void (*)(ike_sa_t*,peer_cfg_t*))set_peer_cfg;
+	this->public.get_my_auth = (auth_info_t*(*)(ike_sa_t*))get_my_auth;
+	this->public.get_other_auth = (auth_info_t*(*)(ike_sa_t*))get_other_auth;
 	this->public.get_id = (ike_sa_id_t* (*)(ike_sa_t*)) get_id;
 	this->public.get_my_host = (host_t* (*)(ike_sa_t*)) get_my_host;
 	this->public.set_my_host = (void (*)(ike_sa_t*,host_t*)) set_my_host;
@@ -2347,8 +2368,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_my_id = (void (*)(ike_sa_t*,identification_t*)) set_my_id;
 	this->public.get_other_id = (identification_t* (*)(ike_sa_t*)) get_other_id;
 	this->public.set_other_id = (void (*)(ike_sa_t*,identification_t*)) set_other_id;
-	this->public.get_other_ca = (ca_info_t* (*)(ike_sa_t*)) get_other_ca;
-	this->public.set_other_ca = (void (*)(ike_sa_t*,ca_info_t*)) set_other_ca;
 	this->public.enable_extension = (void(*)(ike_sa_t*, ike_extension_t extension))enable_extension;
 	this->public.supports_extension = (bool(*)(ike_sa_t*, ike_extension_t extension))supports_extension;
 	this->public.set_condition = (void (*)(ike_sa_t*, ike_condition_t,bool)) set_condition;
@@ -2401,7 +2420,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->other_host = host_create_any(AF_INET);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
-	this->other_ca = NULL;
 	this->extensions = 0;
 	this->conditions = 0;
 	this->crypter_in = NULL;
@@ -2420,6 +2438,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->time.delete = 0;
 	this->ike_cfg = NULL;
 	this->peer_cfg = NULL;
+	this->my_auth = auth_info_create();
+	this->other_auth = auth_info_create();
 	this->task_manager = task_manager_create(&this->public);
 	this->unique_id = ++unique_id;
 	this->my_virtual_ip = NULL;

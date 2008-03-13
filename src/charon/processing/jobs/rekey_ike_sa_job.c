@@ -1,10 +1,3 @@
-/**
- * @file rekey_ike_sa_job.c
- * 
- * @brief Implementation of rekey_ike_sa_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,12 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
-
+ 
 #include "rekey_ike_sa_job.h"
 
 #include <daemon.h>
-
 
 typedef struct private_rekey_ike_sa_job_t private_rekey_ike_sa_job_t;
 

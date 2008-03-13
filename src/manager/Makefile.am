@@ -1,27 +1,16 @@
 ipsec_PROGRAMS = manager.fcgi
 
 manager_fcgi_SOURCES = \
-main.c manager.c manager.h gateway.h gateway.c database.h database.c \
+main.c manager.c manager.h gateway.h gateway.c storage.h storage.c xml.h xml.c \
 controller/auth_controller.c controller/auth_controller.h \
 controller/ikesa_controller.c controller/ikesa_controller.h \
 controller/control_controller.c controller/control_controller.h \
 controller/config_controller.c controller/config_controller.h \
 controller/gateway_controller.c controller/gateway_controller.h
 
-manager_fcgi_LDADD = $(top_builddir)/src/manager/libappserv.la -lsqlite3
+manager_fcgi_LDADD = $(top_builddir)/src/libfast/libfast.la ${xml_LIBS}
 
-
-
-lib_LTLIBRARIES = libappserv.la
-
-libappserv_la_SOURCES = \
-lib/context.h lib/dispatcher.c lib/request.h lib/session.h \
-lib/controller.h lib/dispatcher.h lib/request.c lib/session.c \
-lib/xml.h lib/xml.c 
-
-libappserv_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lfcgi -lpthread -lneo_cgi -lneo_cs -lneo_utl ${xml_LIBS}
-
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/manager/lib -I/usr/include/ClearSilver ${xml_CFLAGS}
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast ${xml_CFLAGS}
 AM_CFLAGS = -rdynamic -DIPSECDIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\"
 
 ipsec_DATA = manager.db

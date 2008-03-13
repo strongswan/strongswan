@@ -1,10 +1,3 @@
-/**
- * @file retransmit_job.h
- * 
- * @brief Interface of retransmit_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup retransmit_job retransmit_job
+ * @{ @ingroup jobs
  */
 
 #ifndef RETRANSMIT_JOB_H_
@@ -31,16 +31,11 @@ typedef struct retransmit_job_t retransmit_job_t;
 #include <sa/ike_sa_id.h>
 
 /**
- * @brief Class representing an retransmit Job.
+ * Class representing an retransmit Job.
  *
  * This job is scheduled every time a request is sent over the
  * wire. If the response to the request is not received at schedule
  * time, the retransmission will be initiated.
- *
- * @b Constructors:
- * - retransmit_job_create()
- *
- * @ingroup jobs
  */
 struct retransmit_job_t {
 	/**
@@ -50,15 +45,13 @@ struct retransmit_job_t {
 };
 
 /**
- * @brief Creates a job of type retransmit.
+ * Creates a job of type retransmit.
  * 
  * @param message_id		message_id of the request to resend
  * @param ike_sa_id			identification of the ike_sa as ike_sa_id_t
  * @return					retransmit_job_t object
- * 
- * @ingroup jobs
  */
 retransmit_job_t *retransmit_job_create(u_int32_t message_id,
 										ike_sa_id_t *ike_sa_id);
 
-#endif /* RETRANSMIT_JOB_H_ */
+#endif /* RETRANSMIT_JOB_H_ @} */

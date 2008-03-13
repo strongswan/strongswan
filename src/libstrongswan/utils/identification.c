@@ -1,12 +1,5 @@
-/**
- * @file identification.c
- * 
- * @brief Implementation of identification_t. 
- * 
- */
-
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -20,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id$
+ * $Id$
  */
 
 #define _GNU_SOURCE
@@ -36,6 +29,14 @@
 
 #include <asn1/asn1.h>
 
+ENUM_BEGIN(id_match_names, ID_MATCH_NONE, ID_MATCH_MAX_WILDCARDS,
+	"MATCH_NONE",
+	"MATCH_ANY",
+	"MATCH_MAX_WILDCARDS");
+ENUM_NEXT(id_match_names, ID_MATCH_PERFECT, ID_MATCH_PERFECT, ID_MATCH_MAX_WILDCARDS,
+	"MATCH_PERFECT");
+ENUM_END(id_match_names, ID_MATCH_PERFECT);
+
 ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_ID,
 	"ID_ANY",
 	"ID_IPV4_ADDR",
@@ -49,10 +50,11 @@ ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_ID,
 	"ID_DER_ASN1_DN",
 	"ID_DER_ASN1_GN",
 	"ID_KEY_ID");
-ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_DER_ASN1_GN_URI, ID_KEY_ID,
-	"ID_DER_ASN1_GN_URI");
-ENUM_END(id_type_names, ID_DER_ASN1_GN_URI);
-
+ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_PUBKEY_SHA1, ID_KEY_ID,
+	"ID_DER_ASN1_GN_URI",
+	"ID_PUBKEY_INFO_SHA1",
+	"ID_PUBKEY_SHA1");
+ENUM_END(id_type_names, ID_PUBKEY_SHA1);
 
 /**
  * X.501 acronyms for well known object identifiers (OIDs)
@@ -237,7 +239,7 @@ static chunk_t sanitize_chunk(chunk_t chunk)
 /**
  * Pointer is set to the first RDN in a DN
  */
-static status_t init_rdn(chunk_t dn, chunk_t *rdn, chunk_t *attribute, bool *next)
+static bool init_rdn(chunk_t dn, chunk_t *rdn, chunk_t *attribute, bool *next)
 {
 	*rdn = chunk_empty;
 	*attribute = chunk_empty;
@@ -246,7 +248,7 @@ static status_t init_rdn(chunk_t dn, chunk_t *rdn, chunk_t *attribute, bool *nex
 	if (*dn.ptr != ASN1_SEQUENCE)
 	{
 		/* DN is not a SEQUENCE */
-		return FAILED;
+		return FALSE;
 	}
 	
 	rdn->len = asn1_length(&dn);
@@ -254,7 +256,7 @@ static status_t init_rdn(chunk_t dn, chunk_t *rdn, chunk_t *attribute, bool *nex
 	if (rdn->len == ASN1_INVALID_LENGTH)
 	{
 		/* Invalid RDN length */
-		return FAILED;
+		return FALSE;
 	}
 	
 	rdn->ptr = dn.ptr;
@@ -262,13 +264,13 @@ static status_t init_rdn(chunk_t dn, chunk_t *rdn, chunk_t *attribute, bool *nex
 	/* are there any RDNs ? */
 	*next = rdn->len > 0;
 	
-	return SUCCESS;
+	return TRUE;
 }
 
 /**
  * Fetches the next RDN in a DN
  */
-static status_t get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, chunk_t *value, asn1_t *type, bool *next)
+static bool get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, chunk_t *value, asn1_t *type, bool *next)
 {
 	chunk_t body;
 
@@ -283,13 +285,13 @@ static status_t get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, ch
 		if (*rdn->ptr != ASN1_SET)
 		{
 			/* RDN is not a SET */
-			return FAILED;
+			return FALSE;
 		}
 		attribute->len = asn1_length(rdn);
 		if (attribute->len == ASN1_INVALID_LENGTH)
 		{
 			/* Invalid attribute length */
-			return FAILED;
+			return FALSE;
 		}
 		attribute->ptr = rdn->ptr;
 		/* advance to start of next RDN */
@@ -301,7 +303,7 @@ static status_t get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, ch
 	if (*attribute->ptr != ASN1_SEQUENCE)
 	{
 		/* attributeTypeAndValue is not a SEQUENCE */
-		return FAILED;
+		return FALSE;
 	}
 	
 	/* extract the attribute body */
@@ -310,7 +312,7 @@ static status_t get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, ch
 	if (body.len == ASN1_INVALID_LENGTH)
 	{
 		/* Invalid attribute body length */
-		return FAILED;
+		return FALSE;
 	}
 	
 	body.ptr = attribute->ptr;
@@ -323,7 +325,7 @@ static status_t get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, ch
 	if (*body.ptr != ASN1_OID)
 	{
 		/* attributeType is not an OID */
-		return FAILED;
+		return FALSE;
 	}
 	/* extract OID */
 	oid->len = asn1_length(&body);
@@ -331,7 +333,7 @@ static status_t get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, ch
 	if (oid->len == ASN1_INVALID_LENGTH)
 	{
 		/* Invalid attribute OID length */
-		return FAILED;
+		return FALSE;
 	}
 	oid->ptr = body.ptr;
 	
@@ -348,19 +350,19 @@ static status_t get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, ch
 	if (value->len == ASN1_INVALID_LENGTH)
 	{
 		/* Invalid attribute string length */
-		return FAILED;
+		return FALSE;
 	}
 	value->ptr = body.ptr;
 	
 	/* are there any RDNs left? */
 	*next = rdn->len > 0 || attribute->len > 0;
-	return SUCCESS;
+	return TRUE;
 }
 
 /**
  * Parses an ASN.1 distinguished name int its OID/value pairs
  */
-static status_t dntoa(chunk_t dn, chunk_t *str)
+static bool dntoa(chunk_t dn, chunk_t *str)
 {
 	chunk_t rdn, oid, attribute, value, proper;
 	asn1_t type;
@@ -368,17 +370,17 @@ static status_t dntoa(chunk_t dn, chunk_t *str)
 	bool next;
 	bool first = TRUE;
 
-	status_t status = init_rdn(dn, &rdn, &attribute, &next);
-
-	if (status != SUCCESS)
-		return status;
+	if (!init_rdn(dn, &rdn, &attribute, &next))
+	{
+		return FALSE;
+	}
 
 	while (next)
 	{
-		status = get_next_rdn(&rdn, &attribute, &oid, &value, &type, &next);
-
-		if (status != SUCCESS)
-			return status;
+		if (!get_next_rdn(&rdn, &attribute, &oid, &value, &type, &next))
+		{
+			return FALSE;
+		}
 
 		if (first) 
 		{ /* first OID/value pair */
@@ -404,7 +406,7 @@ static status_t dntoa(chunk_t dn, chunk_t *str)
 		update_chunk(str, snprintf(str->ptr,str->len,"=%.*s", (int)proper.len, proper.ptr));
 		chunk_free(&proper);
 	}
-	return SUCCESS;
+	return TRUE;
 }
 
 /**
@@ -420,15 +422,17 @@ static bool same_dn(chunk_t a, chunk_t b)
 
 	/* same lengths for the DNs */
 	if (a.len != b.len)
+	{
 		return FALSE;
-
+	}
 	/* try a binary comparison first */
 	if (memeq(a.ptr, b.ptr, b.len))
+	{
 		return TRUE;
- 
+	}
 	/* initialize DN parsing */
-	if (init_rdn(a, &rdn_a, &attribute_a, &next_a) != SUCCESS
-	||	init_rdn(b, &rdn_b, &attribute_b, &next_b) != SUCCESS)
+	if (!init_rdn(a, &rdn_a, &attribute_a, &next_a) ||
+		!init_rdn(b, &rdn_b, &attribute_b, &next_b))
 	{
 		return FALSE;
 	}
@@ -437,23 +441,27 @@ static bool same_dn(chunk_t a, chunk_t b)
 	while (next_a && next_b)
 	{
 		/* parse next RDNs and check for errors */
-		if (get_next_rdn(&rdn_a, &attribute_a, &oid_a, &value_a, &type_a, &next_a) != SUCCESS 
-		||  get_next_rdn(&rdn_b, &attribute_b, &oid_b, &value_b, &type_b, &next_b) != SUCCESS)
+		if (!get_next_rdn(&rdn_a, &attribute_a, &oid_a, &value_a, &type_a, &next_a) || 
+			!get_next_rdn(&rdn_b, &attribute_b, &oid_b, &value_b, &type_b, &next_b))
 		{
 			return FALSE;
 		}
 
 		/* OIDs must agree */
-		if (oid_a.len != oid_b.len || memcmp(oid_a.ptr, oid_b.ptr, oid_b.len) != 0)
+		if (oid_a.len != oid_b.len || !memeq(oid_a.ptr, oid_b.ptr, oid_b.len))
+		{
 			return FALSE;
+		}
 
 		/* same lengths for values */
 		if (value_a.len != value_b.len)
+		{
 			return FALSE;
+		}
 
 		/* printableStrings and email RDNs require uppercase comparison */
-		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING
-		|| (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
+		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
+			(type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
 			{
@@ -470,8 +478,9 @@ static bool same_dn(chunk_t a, chunk_t b)
 	}
 	/* both DNs must have same number of RDNs */
 	if (next_a || next_b)
+	{
 		return FALSE;
-
+	}
 	/* the two DNs are equal! */
 	return TRUE;
 }
@@ -490,14 +499,11 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 	bool next_a, next_b;
 
 	/* initialize wildcard counter */
-	if (wildcards)
-	{
-		*wildcards = 0;
-	}
+	*wildcards = 0;
 
 	/* initialize DN parsing */
-	if (init_rdn(a, &rdn_a, &attribute_a, &next_a) != SUCCESS
-	||	init_rdn(b, &rdn_b, &attribute_b, &next_b) != SUCCESS)
+	if (!init_rdn(a, &rdn_a, &attribute_a, &next_a) ||
+		!init_rdn(b, &rdn_b, &attribute_b, &next_b))
 	{
 		return FALSE;
 	}
@@ -506,31 +512,32 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 	while (next_a && next_b)
 	{
 		/* parse next RDNs and check for errors */
-		if (get_next_rdn(&rdn_a, &attribute_a, &oid_a, &value_a, &type_a, &next_a) != SUCCESS
-		||	get_next_rdn(&rdn_b, &attribute_b, &oid_b, &value_b, &type_b, &next_b) != SUCCESS)
+		if (!get_next_rdn(&rdn_a, &attribute_a, &oid_a, &value_a, &type_a, &next_a) ||
+			!get_next_rdn(&rdn_b, &attribute_b, &oid_b, &value_b, &type_b, &next_b))
 		{
 			return FALSE;
 		}
 		/* OIDs must agree */
 		if (oid_a.len != oid_b.len || memcmp(oid_a.ptr, oid_b.ptr, oid_b.len) != 0)
+		{
 			return FALSE;
+		}
 
 		/* does rdn_b contain a wildcard? */
 		if (value_b.len == 1 && *value_b.ptr == '*')
 		{
-			if (wildcards)
-			{
-				(*wildcards)++;
-			}
+			(*wildcards)++;
 			continue;
 		}
 		/* same lengths for values */
 		if (value_a.len != value_b.len)
+		{
 			return FALSE;
+		}
 
 		/* printableStrings and email RDNs require uppercase comparison */
-		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING
-		|| (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
+		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
+			(type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
 			{
@@ -550,12 +557,8 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 	{
 		return FALSE;
 	}
-
 	/* the two DNs match! */
-	if (wildcards)
-	{
-		*wildcards = min(*wildcards, MAX_WILDCARDS);
-	}
+	*wildcards = min(*wildcards, ID_MATCH_ONE_WILDCARD - ID_MATCH_MAX_WILDCARDS);
 	return TRUE;
 }
 
@@ -776,120 +779,107 @@ static bool equals_strcasecmp(private_identification_t *this,
 /**
  * Default implementation of identification_t.matches.
  */
-static bool matches_binary(private_identification_t *this, 
-						   private_identification_t *other, int *wildcards)
+static id_match_t matches_binary(private_identification_t *this, 
+						   private_identification_t *other)
 {
 	if (other->type == ID_ANY)
 	{
-		if (wildcards)
-		{
-			*wildcards = MAX_WILDCARDS;
-		}
-		return TRUE;
+		return ID_MATCH_ANY;
 	}
-	if (wildcards)
+	if (this->type == other->type && 
+		chunk_equals(this->encoded, other->encoded))
 	{
-		*wildcards = 0;
+		return ID_MATCH_PERFECT;
 	}
-	return this->type == other->type &&
-							chunk_equals(this->encoded, other->encoded);
+	return ID_MATCH_NONE;
 }
 
 /**
  * Special implementation of identification_t.matches for ID_RFC822_ADDR/ID_FQDN.
  * Checks for a wildcard in other-string, and compares it against this-string.
  */
-static bool matches_string(private_identification_t *this,
-						   private_identification_t *other, int *wildcards)
+static id_match_t matches_string(private_identification_t *this,
+						   private_identification_t *other)
 {
 	u_int len = other->encoded.len;
 	
 	if (other->type == ID_ANY)
 	{
-		if (wildcards)
-		{
-			*wildcards = MAX_WILDCARDS;
-		}
-		return TRUE;
+		return ID_MATCH_ANY;
 	}
-	
 	if (this->type != other->type)
-		return FALSE;
-
+	{
+		return ID_MATCH_NONE;
+	}
 	/* try a binary comparison first */
 	if (equals_binary(this, other))
 	{
-		if (wildcards)
-		{
-			*wildcards = 0;
-		}
-		return TRUE;
+		return ID_MATCH_PERFECT;
 	}
-	
 	if (len == 0 || this->encoded.len < len)
-		return FALSE;
+	{
+		return ID_MATCH_NONE;
+	}
 
 	/* check for single wildcard at the head of the string */
 	if (*other->encoded.ptr == '*')
 	{
-		if (wildcards)
-		{
-			*wildcards = 1;
-		}
-
 		/* single asterisk matches any string */
 		if (len-- == 1)
-			return TRUE;
-
-		if (memeq(this->encoded.ptr + this->encoded.len - len, other->encoded.ptr + 1, len))
-			return TRUE;
+		{	/* not better than ID_ANY */
+			return ID_MATCH_ANY;
+		}
+		if (memeq(this->encoded.ptr + this->encoded.len - len, 
+				  other->encoded.ptr + 1, len))
+		{
+			return ID_MATCH_ONE_WILDCARD;
+		}
 	}
-	
-	return FALSE;
+	return ID_MATCH_NONE;
 }
 
 /**
  * Special implementation of identification_t.matches for ID_ANY.
  * ANY matches only another ANY, but nothing other
  */
-static bool matches_any(private_identification_t *this,
-						private_identification_t *other, int *wildcards)
-{
-	if (wildcards)
-	{
-		*wildcards = 0;
-	}
-	return other->type == ID_ANY;
-}
-
-/**
- * Special implementation of identification_t.matches for ID_DER_ASN1_DN.
- * ANY matches any, even ANY, thats why its there...
- */
-static bool matches_dn(private_identification_t *this,
-					   private_identification_t *other, int *wildcards)
+static id_match_t matches_any(private_identification_t *this,
+							  private_identification_t *other)
 {
 	if (other->type == ID_ANY)
 	{
-		if (wildcards)
-		{
-			*wildcards = MAX_WILDCARDS;
-		}
-		return TRUE;
+		return ID_MATCH_ANY;
+	}
+	return ID_MATCH_NONE;
+}
+
+/**
+ * Special implementation of identification_t.matches for ID_DER_ASN1_DN
+ */
+static id_match_t matches_dn(private_identification_t *this,
+							 private_identification_t *other)
+{
+	int wc;
+
+	if (other->type == ID_ANY)
+	{
+		return ID_MATCH_ANY;
 	}
 	
 	if (this->type == other->type)
 	{
-		return match_dn(this->encoded, other->encoded, wildcards);
+		if (match_dn(this->encoded, other->encoded, &wc))
+		{
+			return ID_MATCH_PERFECT - wc;
+		}
 	}
-	return FALSE;
+	return ID_MATCH_NONE;
 }
 
 /**
  * output handler in printf()
  */
 static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
+						 const void *const *args)
 {
 	private_identification_t *this = *((private_identification_t**)(args[0]));
 	char buf[BUF_LEN];
@@ -944,12 +934,14 @@ static int print(FILE *stream, const struct printf_info *info,
 			snprintf(buf, sizeof(buf), "%.*s", this->encoded.len, this->encoded.ptr);
 			/* TODO: whats returned on failure?*/
 			dntoa(this->encoded, &buf_chunk);
-			return fprintf(stream, "%s", buf);
+			return fprintf(stream, "\"%s\"", buf);
 		}
 		case ID_DER_ASN1_GN:
 			return fprintf(stream, "(ASN.1 general Name");
 		case ID_KEY_ID:
-			return fprintf(stream, "(KEY_ID)");
+		case ID_PUBKEY_INFO_SHA1:
+		case ID_PUBKEY_SHA1:
+			return fprintf(stream, "%#B", &this->encoded);
 		case ID_DER_ASN1_GN_URI:
 		{
 			proper = sanitize_chunk(this->encoded);
@@ -963,11 +955,25 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * register printf() handlers
+ * arginfo handler
  */
-static void __attribute__ ((constructor))print_register()
+static int arginfo(const struct printf_info *info, size_t n, int *argtypes)
 {
-	register_printf_function(PRINTF_IDENTIFICATION, print, arginfo_ptr);
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * Get printf hook functions
+ */
+printf_hook_functions_t identification_get_printf_hooks()
+{
+	printf_hook_functions_t hook = {print, arginfo};
+	
+	return hook;
 }
 
 /**
@@ -1011,7 +1017,7 @@ static private_identification_t *identification_create(void)
 	this->public.destroy = (void (*) (identification_t*))destroy;
 	/* we use these as defaults, the may be overloaded for special ID types */
 	this->public.equals = (bool (*) (identification_t*,identification_t*))equals_binary;
-	this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_binary;
+	this->public.matches = (id_match_t (*) (identification_t*,identification_t*))matches_binary;
 	
 	this->encoded = chunk_empty;
 	
@@ -1041,7 +1047,7 @@ identification_t *identification_create_from_string(char *string)
 		}
 		this->type = ID_DER_ASN1_DN;
 		this->public.equals = (bool (*) (identification_t*,identification_t*))equals_dn;
-		this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_dn;
+		this->public.matches = (id_match_t (*) (identification_t*,identification_t*))matches_dn;
 		return &this->public;
 	}
 	else if (strchr(string, '@') == NULL)
@@ -1054,8 +1060,8 @@ identification_t *identification_create_from_string(char *string)
 		{
 			/* any ID will be accepted */
 			this->type = ID_ANY;
-			this->public.matches = (bool (*)
-					(identification_t*,identification_t*,int*))matches_any;
+			this->public.matches = (id_match_t (*)
+					(identification_t*,identification_t*))matches_any;
 			return &this->public;
 		}
 		else
@@ -1072,8 +1078,8 @@ identification_t *identification_create_from_string(char *string)
 					this->type = ID_FQDN;
 					this->encoded.ptr = strdup(string);
 					this->encoded.len = strlen(string);
-					this->public.matches = (bool (*) 
-						(identification_t*,identification_t*,int*))matches_string;
+					this->public.matches = (id_match_t (*) 
+						(identification_t*,identification_t*))matches_string;
 					this->public.equals = (bool (*)
 						(identification_t*,identification_t*))equals_strcasecmp;
 					return &(this->public);
@@ -1114,8 +1120,8 @@ identification_t *identification_create_from_string(char *string)
 				this->type = ID_FQDN;
 				this->encoded.ptr = strdup(string + 1);
 				this->encoded.len = strlen(string + 1);
-				this->public.matches = (bool (*) 
-						(identification_t*,identification_t*,int*))matches_string;
+				this->public.matches = (id_match_t (*) 
+						(identification_t*,identification_t*))matches_string;
 				this->public.equals = (bool (*)
 							(identification_t*,identification_t*))equals_strcasecmp;
 				return &(this->public);
@@ -1126,8 +1132,8 @@ identification_t *identification_create_from_string(char *string)
 			this->type = ID_RFC822_ADDR;
 			this->encoded.ptr = strdup(string);
 			this->encoded.len = strlen(string);
-			this->public.matches = (bool (*) 
-					(identification_t*,identification_t*,int*))matches_string;
+			this->public.matches = (id_match_t (*) 
+					(identification_t*,identification_t*))matches_string;
 			this->public.equals = (bool (*)
 						(identification_t*,identification_t*))equals_strcasecmp;
 			return &(this->public);
@@ -1146,27 +1152,29 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 	switch (type)
 	{
 		case ID_ANY:
-			this->public.matches = (bool (*)
-					(identification_t*,identification_t*,int*))matches_any;
+			this->public.matches = (id_match_t (*)
+					(identification_t*,identification_t*))matches_any;
 			break;
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
-			this->public.matches = (bool (*)
-					(identification_t*,identification_t*,int*))matches_string;
+			this->public.matches = (id_match_t (*)
+					(identification_t*,identification_t*))matches_string;
 			this->public.equals = (bool (*)
 						(identification_t*,identification_t*))equals_strcasecmp;
 			break;
 		case ID_DER_ASN1_DN:
 			this->public.equals = (bool (*)
 					(identification_t*,identification_t*))equals_dn;
-			this->public.matches = (bool (*)
-					(identification_t*,identification_t*,int*))matches_dn;
+			this->public.matches = (id_match_t (*)
+					(identification_t*,identification_t*))matches_dn;
 			break;
 		case ID_IPV4_ADDR:
 		case ID_IPV6_ADDR:
 		case ID_DER_ASN1_GN:
 		case ID_KEY_ID:
 		case ID_DER_ASN1_GN_URI:
+		case ID_PUBKEY_INFO_SHA1:
+		case ID_PUBKEY_SHA1:
 		default:
 			break;
 	}

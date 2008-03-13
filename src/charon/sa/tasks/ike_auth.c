@@ -1,10 +1,3 @@
-/**
- * @file ike_auth.c
- *
- * @brief Implementation of the ike_auth task.
- *
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -18,7 +11,9 @@
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * for more details.
+ * for more details
+ *
+ * $Id$
  */
 
 #include "ike_auth.h"
@@ -231,7 +226,7 @@ static status_t process_id(private_ike_auth_t *this, message_t *message)
 	{
 		id = idr->get_identification(idr);
 		req = this->ike_sa->get_other_id(this->ike_sa);
-		if (!id->matches(id, req, NULL))
+		if (!id->matches(id, req))
 		{
 			SIG(IKE_UP_FAILED, "peer ID %D unacceptable, %D required", id, req);
 			id->destroy(id);
@@ -525,13 +520,13 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 			this->eap_auth = eap_authenticator_create(this->ike_sa);
 			break;
 		default:
-			break;
+			return NEED_MORE;
 	}
 
 	config = charon->backends->get_peer_cfg(charon->backends,
 									this->ike_sa->get_my_id(this->ike_sa),
 									this->ike_sa->get_other_id(this->ike_sa),
-									this->ike_sa->get_other_ca(this->ike_sa));
+									this->ike_sa->get_other_auth(this->ike_sa));
 	if (config)
 	{
 		this->ike_sa->set_peer_cfg(this->ike_sa, config);
@@ -555,6 +550,13 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		return collect_my_init_data(this, message);
+	}
+	
+	if (!this->peer_authenticated && this->eap_auth == NULL)
+	{
+		/* peer not authenticated, nor does it want to use EAP */
+		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
+		return FAILED;
 	}
 	
 	config = this->ike_sa->get_peer_cfg(this->ike_sa);
@@ -587,13 +589,6 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		return SUCCESS;
 	}
 	
-	if (this->eap_auth == NULL)
-	{
-		/* peer not authenticated, nor does it want to use EAP */
-		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
-		return FAILED;
-	}
-	
 	/* initiate EAP authenitcation */
 	eap_type = config->get_eap_type(config, &eap_vendor);
 	status = this->eap_auth->initiate(this->eap_auth, eap_type,
@@ -618,6 +613,8 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 {
 	iterator_t *iterator;
 	payload_t *payload;
+	peer_cfg_t *config;
+	auth_info_t *auth;
 	
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
@@ -687,10 +684,18 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 		return process_eap_i(this, message);
 	}
 	
+	config = this->ike_sa->get_peer_cfg(this->ike_sa);
+	auth = this->ike_sa->get_other_auth(this->ike_sa);
+	if (!auth->complies(auth, config->get_auth(config)))
+	{
+		SIG(IKE_UP_FAILED, "authorization of %D for config %s failed",
+			this->ike_sa->get_other_id(this->ike_sa), config->get_name(config));
+		return FAILED;
+	}
 	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 	SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %D[%H]...[%H]%D",
 		this->ike_sa->get_name(this->ike_sa),
-		this->ike_sa->get_my_id(this->ike_sa), 
+		this->ike_sa->get_my_id(this->ike_sa),
 		this->ike_sa->get_my_host(this->ike_sa),
 		this->ike_sa->get_other_host(this->ike_sa),
 		this->ike_sa->get_other_id(this->ike_sa));
