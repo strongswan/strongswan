@@ -115,8 +115,8 @@ static void initiate(private_initiate_mediation_job_t *this)
 		 * we do not check the status, but NEED_MORE would be returned on success
 		 * because the registered callback returns FALSE then
 		 * this->mediation_sa_id is set in the callback */
-		charon->interfaces->initiate(charon->interfaces,
-				mediation_cfg, NULL, (interface_manager_cb_t)initiate_callback, this);
+		charon->controller->initiate(charon->controller,
+				mediation_cfg, NULL, (controller_cb_t)initiate_callback, this);
 		if (!this->mediation_sa_id)
 		{
 			DBG1(DBG_JOB, "initiating mediation connection '%s' failed",

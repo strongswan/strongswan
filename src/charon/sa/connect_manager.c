@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1512,7 +1512,7 @@ connect_manager_t *connect_manager_create()
 	this->public.process_check = (void(*)(connect_manager_t*,message_t*))process_check;
 	
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher == NULL)
+	if (this->hasher == NULL)
 	{
 		DBG1(DBG_IKE, "unable to create connect manager, SHA1 not supported");
 		free(this);

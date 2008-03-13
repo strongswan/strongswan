@@ -318,7 +318,7 @@ static status_t build_i(private_ike_p2p_t *this, message_t *message)
 			}
 			else
 			{
-				/* FIXME: should we make that configurable */
+				/* FIXME: should we make that configurable? */
 				message->add_notify(message, FALSE, P2P_CALLBACK, chunk_empty);
 			}
 			
