@@ -17,7 +17,7 @@
 
 /**
  * @defgroup sql_config_i sql_config
- * @{ @ingroup sql_config
+ * @{ @ingroup sql
  */
 
 #ifndef SQL_CONFIG_H_
