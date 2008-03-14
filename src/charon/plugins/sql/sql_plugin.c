@@ -19,6 +19,7 @@
 
 #include <daemon.h>
 #include "sql_config.h"
+#include "sql_cred.h"
 
 typedef struct private_sql_plugin_t private_sql_plugin_t;
 
@@ -41,6 +42,11 @@ struct private_sql_plugin_t {
 	 * configuration backend
 	 */
 	sql_config_t *config;
+	
+	/**
+	 * credential set
+	 */
+	sql_cred_t *cred;
 };
 
 /**
@@ -49,7 +55,9 @@ struct private_sql_plugin_t {
 static void destroy(private_sql_plugin_t *this)
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
+	charon->credentials->remove_set(charon->credentials, &this->cred->set);
 	this->config->destroy(this->config);
+	this->cred->destroy(this->cred);
 	this->db->destroy(this->db);
 	free(this);
 }
@@ -81,8 +89,10 @@ plugin_t *plugin_create()
 		return NULL;
 	}
 	this->config = sql_config_create(this->db);
-		
+	this->cred = sql_cred_create(this->db);
+	
 	charon->backends->add_backend(charon->backends, &this->config->backend);
+	charon->credentials->add_set(charon->credentials, &this->cred->set);
 	
 	return &this->public.plugin;
 }

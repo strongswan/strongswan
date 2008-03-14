@@ -81,3 +81,36 @@ CREATE TABLE `traffic_selectors` (
   PRIMARY KEY  (`id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+
+DROP TABLE IF EXISTS shared_secrets;
+CREATE TABLE shared_secrets (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `type` tinyint(3) unsigned NOT NULL,
+  `local` varchar(64) default NULL,
+  `remote` varchar(64) default NULL,
+  `data` BLOB NOT NULL,
+  PRIMARY KEY  (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
+DROP TABLE IF EXISTS certificates;
+CREATE TABLE certificates (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `type` tinyint(3) unsigned NOT NULL,
+  `keytype` tinyint(3) unsigned NOT NULL,
+  `keyid` BLOB NOT NULL,
+  `subject` varchar(64) default NULL,
+  `data` BLOB NOT NULL,
+  PRIMARY KEY  (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
+DROP TABLE IF EXISTS private_keys;
+CREATE TABLE private_keys (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `type` tinyint(3) unsigned NOT NULL,
+  `keyid` tinyblob NOT NULL,
+  `data` BLOB NOT NULL,
+  PRIMARY KEY  (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+

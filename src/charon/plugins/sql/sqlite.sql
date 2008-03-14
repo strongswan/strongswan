@@ -73,3 +73,29 @@ CREATE TABLE traffic_selectors (
   end_port INTEGER NOT NULL default '65535'
 );
 
+DROP TABLE IF EXISTS shared_secrets;
+CREATE TABLE shared_secrets (
+	id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	type INTEGER NOT NULL,
+	local TEXT default NULL,
+	remote TEXT default NULL,
+	data BLOB NOT NULL
+);
+
+DROP TABLE IF EXISTS certificates;
+CREATE TABLE certificates (
+	id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	type INTEGER NOT NULL,
+	keytype INTEGER NOT NULL,
+	keyid BLOB NOT NULL,
+	subject TEXT default NULL,
+	data BLOB NOT NULL
+);
+
+DROP TABLE IF EXISTS private_keys;
+CREATE TABLE private_keys (
+	id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	type INTEGER NOT NULL,
+	keyid BLOB NOT NULL,
+	data BLOB NOT NULL
+);
