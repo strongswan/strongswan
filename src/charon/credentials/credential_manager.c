@@ -1194,6 +1194,80 @@ static bool auth_contains_cacert(auth_info_t *auth, certificate_t *cert)
 }
 
 /**
+ * build a trustchain from subject up to a trust anchor in trusted
+ */
+static auth_info_t *build_trustchain(private_credential_manager_t *this,
+									 certificate_t *subject, auth_info_t *auth)
+{	
+	certificate_t *issuer, *current;
+	auth_info_t *trustchain;
+	u_int level = 0;
+	
+	trustchain = auth_info_create();
+	
+	if (!auth->get_item(auth, AUTHN_CA_CERT, (void**)&current))
+	{
+		/* no trust anchor specified, return this cert only */
+		trustchain->add_item(trustchain, AUTHZ_SUBJECT_CERT, subject);
+		return trustchain;
+	}
+	
+	current = subject->get_ref(subject);
+	while (TRUE)
+	{
+		if (auth_contains_cacert(auth, current))
+		{
+			trustchain->add_item(trustchain, AUTHZ_CA_CERT, current);
+			current->destroy(current);
+			return trustchain;
+		}
+		if (subject == current)
+		{
+			trustchain->add_item(trustchain, AUTHZ_SUBJECT_CERT, current);
+		}
+		else
+		{
+			trustchain->add_item(trustchain, AUTHZ_IM_CERT, current);
+		}
+		issuer = get_issuer_cert(this, current);
+		if (!issuer || issuer->equals(issuer, current) || level > MAX_CA_LEVELS)
+		{
+			DESTROY_IF(issuer);
+			current->destroy(current);
+			break;
+		}
+		current->destroy(current);
+		current = issuer;
+		level++;
+	}
+	trustchain->destroy(trustchain);
+	return NULL;
+}
+
+/**
+ * find a private key of a give certificate
+ */
+static private_key_t *get_private_by_cert(private_credential_manager_t *this,
+										  certificate_t *cert, key_type_t type)
+{
+	private_key_t *private = NULL;
+	identification_t* keyid;
+	public_key_t *public;
+
+	public = cert->get_public_key(cert);
+	if (public)
+	{
+		keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
+		if (keyid)
+		{
+			private = get_private_by_keyid(this, type, keyid);
+		}
+		public->destroy(public);
+	}
+	return private;
+}
+
+/**
  * Implementation of credential_manager_t.get_private.
  */
 static private_key_t *get_private(private_credential_manager_t *this,
@@ -1201,12 +1275,9 @@ static private_key_t *get_private(private_credential_manager_t *this,
 								  auth_info_t *auth)
 {
 	enumerator_t *enumerator;
-	private_key_t *private;
-	public_key_t *public;
-	certificate_t *subject, *issuer, *candidate;
-	auth_info_t *cand_auth;
-	identification_t* keyid;
-	bool match = FALSE;
+	certificate_t *cert;
+	private_key_t *private = NULL;
+	auth_info_t *trustchain;
 	
 	/* check if this is a lookup by key ID, and do it if so */
 	if (id)
@@ -1222,111 +1293,26 @@ static private_key_t *get_private(private_credential_manager_t *this,
 	}
 	
 	this->mutex->lock(this->mutex);
-	/* Check if peer has included its trust anchors.
-	 * If not we fall back to our trust anchors */
-	if (!auth->get_item(auth, AUTHN_CA_CERT, (void**)&issuer))
-	{
-		enumerator = create_cert_enumerator(this, CERT_ANY, type, NULL, TRUE);
-		while (enumerator->enumerate(enumerator, &issuer))
-		{
-			auth->add_item(auth, AUTHN_CA_CERT, issuer);
-		}
-		enumerator->destroy(enumerator);
-	}
-	DBG2(DBG_CFG, "finding private key with certificate the peer trusts");
-	
-	/* get all available end entity certificates for us... */
+	/* get all available end entity certificates for ourself */
 	enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
-	while (enumerator->enumerate(enumerator, &subject))
-	{	/* ... check for public ... */
-		public = subject->get_public_key(subject);
-		if (public)
-		{	/* ... and private keys for that certificate, ... */
-			/* TODO: check other keyid types? */
-			keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-			if (keyid)
+	while (enumerator->enumerate(enumerator, &cert))
+	{	
+		private = get_private_by_cert(this, cert, type);
+		if (private)
+		{
+			trustchain = build_trustchain(this, cert, auth);
+			if (trustchain)
 			{
-				private = get_private_by_keyid(this, type, keyid);
-				if (private)
-				{
-					u_int level = 0;
-					bool bad_path = FALSE;
-					issuer = NULL;
-			
-					match = TRUE;
-					DBG2(DBG_CFG, "  checking end entity cert %D",
-						 subject->get_subject(subject));
-					cand_auth = auth_info_create();
-					/* .. check for a trust-path up to a peer-trusted CA */
-					candidate = subject->get_ref(subject);
-					while (!auth_contains_cacert(auth, candidate))
-					{
-						cand_auth->add_item(cand_auth, subject == candidate ?
-								AUTHZ_SUBJECT_CERT : AUTHZ_IM_CERT,	candidate);
-						issuer = get_issuer_cert(this, candidate);
-						/* check if we have an issuing certificate */
-						if (!issuer)
-						{
-							DBG2(DBG_CFG, "    no issuer, checking next cert");
-							bad_path = TRUE;
-							break;
-						}
-						/* and it is not self-issued */
-						if (issuer->equals(issuer, candidate) ||
-							level > MAX_CA_LEVELS)
-						{
-							issuer->destroy(issuer);
-							issuer = NULL;
-							bad_path = TRUE;
-							DBG2(DBG_CFG, "    cert is self-signed, skipped");
-							break;
-						}
-						DBG2(DBG_CFG, "    checking issuer cert %D",
-							 issuer->get_subject(issuer));
-						candidate->destroy(candidate);
-						candidate = issuer;
-						level++;
-					}
-					if (bad_path)
-					{	/* no issuer cert found peer trusts, try another path */
-						cand_auth->destroy(cand_auth);
-						private->destroy(private);
-						public->destroy(public);
-						continue;
-					}
-					if (issuer)
-					{
-						DBG2(DBG_CFG, "  peer trusts issuer %D",
-							 issuer->get_subject(issuer));
-					}
-					else
-					{
-						candidate->destroy(candidate);
-					}
-					auth->merge(auth, cand_auth);
-					cand_auth->destroy(cand_auth);
-					DESTROY_IF(issuer);
-					public->destroy(public);
-					enumerator->destroy(enumerator);
-					this->mutex->unlock(this->mutex);
-					return private;
-				}
+				auth->merge(auth, trustchain);
+				trustchain->destroy(trustchain);
+				break;
 			}
-			public->destroy(public);
+			private->destroy(private);
 		}
 	}
+	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
-	if (match)
-	{
-		DBG1(DBG_CFG, "found a private key/cert for %D, but none which the "
-			 "peer trusts", id);
-	}
-	else
-	{
-		DBG1(DBG_CFG, "no private key found for %D", id);
-	}
-	/* no trusted path found, unable to sign */
-	return NULL;
+	return private;
 }
 
 /**
