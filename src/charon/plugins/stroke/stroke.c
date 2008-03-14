@@ -570,7 +570,7 @@ static chunk_t get_key(private_shared_key_t *this)
 /**
  * create a shared key
  */
-static private_shared_key_t *shared_key_create(shared_key_type_t type, chunk_t key)
+static private_shared_key_t *private_shared_key_create(shared_key_type_t type, chunk_t key)
 {
 	private_shared_key_t *this = malloc_thing(private_shared_key_t);
 
@@ -739,9 +739,6 @@ static x509_t* load_cert(char *path, x509_flag_t flag)
 		cert->destroy(cert);
 		return NULL;
 	}
-
-	/* set cert flags to flag but keep X509_SELF_SIGNED property */
-	x509->set_flags(x509, flag | (flags & X509_SELF_SIGNED));
  		
 	/* check validity */
 	{
@@ -777,11 +774,7 @@ static certificate_t* add_x509_cert(private_stroke_t *this, x509_t* x509)
 	{
 		if (current->equals(current, cert))
 		{
-			x509_flag_t flags = x509->get_flags(x509);
-			x509_t *x509c = (x509_t*)current;
-
-			/* cert already in queue - add flags and discard */
-			x509c->set_flags(x509c, flags | x509c->get_flags(x509c));
+			/* cert already in queue */
 			cert->destroy(cert);
 			cert = current;
 			new = FALSE;
@@ -912,7 +905,7 @@ static void load_peer_cert(private_stroke_t *this,
 		snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
 	}
 	
-	x509 = load_cert(path, X509_PEER);
+	x509 = load_cert(path, 0);
 
 	if (x509)
 	{
@@ -1232,7 +1225,7 @@ static void load_secrets(private_stroke_t *this)
 				DBG1(DBG_CFG, "line %d: malformed secret: %s", line_nr, ugh);
 				goto error;
 			}
-			shared_key = shared_key_create(type, secret);
+			shared_key = private_shared_key_create(type, secret);
 			DBG1(DBG_CFG, "  loaded %N secret for %s", shared_key_type_names, type,
 				 ids.len > 0 ? (char*)ids.ptr : "%any");
 			DBG4(DBG_CFG, "  secret:", secret);
@@ -2643,7 +2636,8 @@ static void stroke_list_certs(char *label, x509_flag_t flags, bool utc, FILE *ou
 		x509_t *x509 = (x509_t*)cert;
 		x509_flag_t x509_flags = x509->get_flags(x509);
 
-		if (x509_flags & flags)
+		/* list only if flag is set, or flags == 0 (ignoring self-signed) */
+		if ((x509_flags & flags) || (flags == (x509_flags & ~X509_SELF_SIGNED)))
 		{
 			enumerator_t *enumerator;
 			identification_t *altName;
@@ -2721,12 +2715,9 @@ static void stroke_list_certs(char *label, x509_flag_t flags, bool utc, FILE *ou
 				id    = public->get_id(public, ID_PUBKEY_SHA1);
 				keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
 
-				if (flags & X509_PEER)
-				{
-					private = charon->credentials->get_private(
+				private = charon->credentials->get_private(
 									charon->credentials, 
-									public->get_type(public), id, NULL);
-				}
+									public->get_type(public), keyid, NULL);
 				fprintf(out, "  pubkey:    %N %d bits%s\n",
 						key_type_names, public->get_type(public),
 						public->get_keysize(public) * 8,
@@ -2915,22 +2906,22 @@ static void stroke_list(private_stroke_t *this, stroke_msg_t *msg, FILE *out)
 	if (msg->list.flags & LIST_CERTS)
 	{
 		stroke_list_certs("X.509 End Entity Certificates",
-						   X509_PEER, msg->list.utc, out);
+						  0, msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_CACERTS)
 	{
 		stroke_list_certs("X.509 CA Certificates",
-						   X509_CA, msg->list.utc, out);
+						  X509_CA, msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_OCSPCERTS)
 	{
 		stroke_list_certs("X.509 OCSP Signer Certificates",
-						   X509_OCSP_SIGNER, msg->list.utc, out);
+						  X509_OCSP_SIGNER, msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_AACERTS)
 	{
 		stroke_list_certs("X.509 AA Certificates",
-						   X509_AA, msg->list.utc, out);
+						  X509_AA, msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_ACERTS)
 	{

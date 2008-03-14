@@ -1012,14 +1012,6 @@ static private_x509_cert_t* get_ref(private_x509_cert_t *this)
 }
 
 /**
- * Implementation of x509_cert_t.set_flags.
- */
-static void set_flags(private_x509_cert_t *this, x509_flag_t flags)
-{
-	this->flags = flags;
-}
-
-/**
  * Implementation of x509_cert_t.get_flags.
  */
 static x509_flag_t get_flags(private_x509_cert_t *this)
@@ -1167,7 +1159,6 @@ static x509_cert_t *load(chunk_t chunk)
 	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t *other))equals;
 	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
 	this->public.interface.interface.destroy = (void (*)(certificate_t *this))destroy;
-	this->public.interface.set_flags = (void (*)(x509_t*, x509_flag_t flags))set_flags;
 	this->public.interface.get_flags = (x509_flag_t (*)(x509_t*))get_flags;
 	this->public.interface.get_serial = (chunk_t (*)(x509_t*))get_serial;
 	this->public.interface.get_authKeyIdentifier = (identification_t* (*)(x509_t*))get_authKeyIdentifier;

@@ -83,4 +83,13 @@ struct shared_key_t {
     void (*destroy)(shared_key_t *this);
 };
 
+/**
+ * A simple private key implementation
+ *
+ * @param type		type of the shared key
+ * @param key		key data, gets owned by instance
+ * @return			simple shared key instance
+ */
+shared_key_t *shared_key_create(shared_key_type_t type, chunk_t key);
+
 #endif /** SHARED_KEY_H_ @} */

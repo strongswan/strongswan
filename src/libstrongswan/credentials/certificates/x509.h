@@ -37,10 +37,8 @@ enum x509_flag_t {
 	X509_AA = 			(1<<1),
 	/** cert has OCSP signer constraint */
 	X509_OCSP_SIGNER = 	(1<<2),
-	/** cert belongs to an end entity  */
-	X509_PEER =         (1<<3),
 	/** cert is self-signed */
-	X509_SELF_SIGNED =  (1<<4),
+	X509_SELF_SIGNED =  (1<<3),
 };
 
 /**
@@ -67,13 +65,6 @@ struct x509_t {
 	 * @return			set of flags
 	 */
 	x509_flag_t (*get_flags)(x509_t *this);
-	
-	/**
-	 * Set the flags for this certificate.
-	 *
-	 * @param flags		set of flags
-	 */
-	void (*set_flags)(x509_t *this, x509_flag_t flags);
 	
 	/**
 	 * Get the certificate serial number.
