@@ -212,7 +212,7 @@ static conn_t *conn_get(private_mysql_database_t *this)
 		{
 			this->mutex->lock(this->mutex);
 			this->pool->insert_last(this->pool, found);
-			DBG1("increased MySQL connection pool size to %d",
+			DBG2("increased MySQL connection pool size to %d",
 				 this->pool->get_count(this->pool));
 			this->mutex->unlock(this->mutex);
 		}
