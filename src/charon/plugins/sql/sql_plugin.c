@@ -20,6 +20,7 @@
 #include <daemon.h>
 #include "sql_config.h"
 #include "sql_cred.h"
+#include "sql_logger.h"
 
 typedef struct private_sql_plugin_t private_sql_plugin_t;
 
@@ -47,6 +48,11 @@ struct private_sql_plugin_t {
 	 * credential set
 	 */
 	sql_cred_t *cred;
+	
+	/**
+	 * bus listener/logger
+	 */
+	sql_logger_t *logger;
 };
 
 /**
@@ -56,8 +62,10 @@ static void destroy(private_sql_plugin_t *this)
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	charon->credentials->remove_set(charon->credentials, &this->cred->set);
+	charon->bus->remove_listener(charon->bus, &this->logger->listener);
 	this->config->destroy(this->config);
 	this->cred->destroy(this->cred);
+	this->logger->destroy(this->logger);
 	this->db->destroy(this->db);
 	free(this);
 }
@@ -90,9 +98,11 @@ plugin_t *plugin_create()
 	}
 	this->config = sql_config_create(this->db);
 	this->cred = sql_cred_create(this->db);
+	this->logger = sql_logger_create(this->db);
 	
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->credentials->add_set(charon->credentials, &this->cred->set);
+	charon->bus->add_listener(charon->bus, &this->logger->listener);
 	
 	return &this->public.plugin;
 }

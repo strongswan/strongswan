@@ -99,3 +99,27 @@ CREATE TABLE private_keys (
 	keyid BLOB NOT NULL,
 	data BLOB NOT NULL
 );
+
+DROP TABLE IF EXISTS ike_sas;
+CREATE TABLE ike_sas (
+  local_spi BLOB NOT NULL PRIMARY KEY,
+  remote_spi BLOB NOT NULL,
+  id INTEGER NOT NULL,
+  initiator INTEGER NOT NULL,
+  local_id TEXT NOT NULL,
+  remote_id TEXT NOT NULL,
+  local TEXT NOT NULL,
+  remote TEXT NOT NULL
+);
+
+DROP TABLE IF EXISTS logs;
+CREATE TABLE logs (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  local_spi BLOB NOT NULL,
+  signal INTEGER NOT NULL,
+  level INTEGER NOT NULL,
+  msg TEXT NOT NULL
+);
+
+
+

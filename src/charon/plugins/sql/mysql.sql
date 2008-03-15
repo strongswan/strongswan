@@ -114,3 +114,28 @@ CREATE TABLE private_keys (
   PRIMARY KEY  (`id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+
+DROP TABLE IF EXISTS ike_sas;
+CREATE TABLE ike_sas (
+  `local_spi` BLOB(8) NOT NULL,
+  `remote_spi` BLOB(8) NOT NULL,
+  `id` int(10) unsigned NOT NULL,
+  `initiator` tinyint(1) NOT NULL,
+  `local_id` varchar(64) collate utf8_unicode_ci default NULL,
+  `remote_id` varchar(64) collate utf8_unicode_ci default NULL,
+  `local` varchar(64) collate utf8_unicode_ci NOT NULL,
+  `remote` varchar(64) collate utf8_unicode_ci NOT NULL,
+  PRIMARY KEY  (local_spi(8))
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+DROP TABLE IF EXISTS logs;
+CREATE TABLE logs (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `local_spi` BLOB(8) NOT NULL,
+  `signal` tinyint(3) NOT NULL,
+  `level` tinyint(3) NOT NULL,
+  `msg`varchar(256) NOT NULL,
+  PRIMARY KEY  (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
