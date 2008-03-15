@@ -778,6 +778,7 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	DBG2(DBG_MGR, "checkin and destroy IKE_SA");
+	charon->bus->set_sa(charon->bus, NULL);
 
 	pthread_mutex_lock(&(this->mutex));
 
@@ -798,7 +799,6 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));
-	charon->bus->set_sa(charon->bus, ike_sa);
 	return retval;
 }
 
