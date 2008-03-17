@@ -1143,7 +1143,7 @@ static void destroy(private_x509_cert_t *this)
 /**
  * load x509 certificate from a chunk
  */
-static x509_cert_t *load(chunk_t chunk)
+static private_x509_cert_t *load(chunk_t chunk)
 {
 	private_x509_cert_t *this = malloc_thing(private_x509_cert_t);
 	
@@ -1188,7 +1188,7 @@ static x509_cert_t *load(chunk_t chunk)
 	{
 		this->flags |= X509_SELF_SIGNED;
 	}
-	return &this->public;
+	return this;
 }
 
 typedef struct private_builder_t private_builder_t;
@@ -1199,7 +1199,9 @@ struct private_builder_t {
 	/** implements the builder interface */
 	builder_t public;
 	/** loaded certificate */
-	x509_cert_t *cert;
+	private_x509_cert_t *cert;
+	/** additional flags to enforce */
+	x509_flag_t flags;
 };
 
 /**
@@ -1207,10 +1209,12 @@ struct private_builder_t {
  */
 static x509_cert_t *build(private_builder_t *this)
 {
-	x509_cert_t *cert = this->cert;
+	private_x509_cert_t *cert;
 	
+	cert = this->cert;
+	cert->flags |= this->flags;
 	free(this);
-	return cert;
+	return &cert->public;
 }
 
 /**
@@ -1220,25 +1224,28 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
 	
-	if (this->cert)
-	{
-		DBG1("ignoring surplus build part %N", builder_part_names, part);
-		return;
-	}
-	
+	va_start(args, part);
 	switch (part)
 	{
 		case BUILD_BLOB_ASN1_DER:
 		{
-			va_start(args, part);
+			if (this->cert)
+			{
+				destroy(this->cert);
+			}
 			this->cert = load(va_arg(args, chunk_t));
-			va_end(args);
+			break;
+		}
+		case BUILD_X509_FLAG:
+		{
+			this->flags = va_arg(args, x509_flag_t);
 			break;
 		}
 		default:
 			DBG1("ignoring unsupported build part %N", builder_part_names, part);
 			break;
 	}
+	va_end(args);
 }
 
 /**
@@ -1256,6 +1263,7 @@ builder_t *x509_cert_builder(certificate_type_t type)
 	this = malloc_thing(private_builder_t);
 	
 	this->cert = NULL;
+	this->flags = 0;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
 	

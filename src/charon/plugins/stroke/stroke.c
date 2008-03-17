@@ -710,9 +710,9 @@ static x509_t* load_cert(char *path, x509_flag_t flag)
 {
 	bool pgp = FALSE;
 	chunk_t chunk;
-	x509_flag_t flags;
 	x509_t *x509;
 	certificate_t *cert;
+	time_t notBefore, notAfter, now;
 	
 	if (!pem_asn1_load_file(path, NULL, &chunk, &pgp))
 	{
@@ -721,40 +721,29 @@ static x509_t* load_cert(char *path, x509_flag_t flag)
 	}
 	x509 = (x509_t*)lib->creds->create(lib->creds,
 									   CRED_CERTIFICATE, CERT_X509,
-									   BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+									   BUILD_BLOB_ASN1_DER, chunk,
+									   BUILD_X509_FLAG, flag,
+									   BUILD_END);
 	if (x509 == NULL)
 	{
 		DBG1(DBG_CFG, "  could not load certificate file '%s'", path);
 		return NULL;
 	}
 	DBG1(DBG_CFG, "  loaded certificate file '%s'", path);
-
+	
+	/* check validity */
 	cert = &x509->interface;
-	flags = x509->get_flags(x509);
-
-	/* check basicConstraints */
-	if ((flag & X509_CA)  && !(flags & X509_CA))
+	now = time(NULL);
+	cert->get_validity(cert, &now, &notBefore, &notAfter);
+	if (now > notAfter)
 	{
-		DBG1(DBG_CFG, "  isCA basicConstraint is not set, certificate discarded");
+		DBG1(DBG_CFG, "  certificate expired at %T, discarded", &notAfter);
 		cert->destroy(cert);
 		return NULL;
 	}
- 		
-	/* check validity */
+	if (now < notBefore)
 	{
-		time_t notBefore, notAfter, now = time(NULL);
-
-		cert->get_validity(cert, &now, &notBefore, &notAfter);
-		if (now > notAfter)
-		{
-			DBG1(DBG_CFG, "  certificate expired at %T, discarded", &notAfter);
-			cert->destroy(cert);
-			return NULL;
-		}
-		if (now < notBefore)
-		{
-			DBG1(DBG_CFG, "  certificate not valid before %T", &notBefore);
-		}
+		DBG1(DBG_CFG, "  certificate not valid before %T", &notBefore);
 	}
 	return x509;
 }

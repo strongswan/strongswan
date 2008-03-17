@@ -58,8 +58,10 @@ enum builder_part_t {
 	BUILD_ISSUER_ALTNAME,
 	/** a CA certificate, certificate_t* */
 	BUILD_CA_CERT,
-	/** a certificcate, certificate_t* */
+	/** a certificate, certificate_t* */
 	BUILD_CERT,
+	/** enforce an additional X509 flag, x509_flag_t */
+	BUILD_X509_FLAG,
 	/** end of variable argument builder list */
 	BUILD_END,
 };

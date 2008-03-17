@@ -20,6 +20,7 @@
 #include <debug.h>
 #include <utils/linked_list.h>
 #include <utils/mutex.h>
+#include <credentials/certificates/x509.h>
 
 typedef struct private_credential_factory_t private_credential_factory_t;
 
@@ -147,6 +148,9 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_BLOB_ASN1_DER:
 					builder->add(builder, part, va_arg(args, chunk_t));
 					continue;
+				case BUILD_X509_FLAG:
+					builder->add(builder, part, va_arg(args, x509_flag_t));
+					continue;
 				case BUILD_KEY_SIZE:
 					builder->add(builder, part, va_arg(args, u_int));
 					continue;
@@ -164,7 +168,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				default:
 					DBG1("builder part %N not supported by factory",
 						 builder_part_names, part);
-					continue;
+					break;
 			}
 			break;
 		}
@@ -219,6 +223,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				continue;
 			}
 			case BUILD_KEY_SIZE:
+			case BUILD_X509_FLAG:
 				continue;
 			default:
 				DBG1("builder part %N not supported by factory",
