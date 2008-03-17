@@ -307,20 +307,20 @@ static bool parse(private_x509_crl_t *this)
 /**
  * enumerator filter callback for create_enumerator
  */
-static bool filter(void *data, revoked_t *revoked, chunk_t *serial, void *p2,
+static bool filter(void *data, revoked_t **revoked, chunk_t *serial, void *p2,
 				   time_t *date, void *p3, crl_reason_t *reason)
 {
 	if (serial)
 	{
-		*serial = revoked->serial;
+		*serial = (*revoked)->serial;
 	}
 	if (date)
 	{
-		*date = revoked->date;
+		*date = (*revoked)->date;
 	}
 	if (reason)
 	{
-		*reason = revoked->reason;
+		*reason = (*revoked)->reason;
 	}
 	return TRUE;
 }
