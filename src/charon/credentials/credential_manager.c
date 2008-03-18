@@ -894,6 +894,7 @@ static bool check_certificate(private_credential_manager_t *this,
 					DBG2(DBG_CFG, "OCSP check skipped, no OCSP URI found");
 					break;
 				case VALIDATION_FAILED:
+				case VALIDATION_UNKNOWN:
 					DBG1(DBG_CFG, "OCSP check failed, fallback to CRL");
 					break;
 			}
