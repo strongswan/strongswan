@@ -1,5 +1,15 @@
 
 
+DROP TABLE IF EXISTS `identities`;
+CREATE TABLE `identities` (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `type` tinyint(4) unsigned NOT NULL,
+  `data` varbinary(64) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE (`type`, `data`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
 DROP TABLE IF EXISTS `child_configs`;
 CREATE TABLE `child_configs` (
   `id` int(10) unsigned NOT NULL auto_increment,
@@ -10,7 +20,8 @@ CREATE TABLE `child_configs` (
   `updown` varchar(128) collate utf8_unicode_ci default NULL,
   `hostaccess` tinyint(1) unsigned NOT NULL default '1',
   `mode` tinyint(4) unsigned NOT NULL default '1',
-  PRIMARY KEY  (`id`)
+  PRIMARY KEY (`id`),
+  INDEX (`name`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
@@ -18,7 +29,8 @@ DROP TABLE IF EXISTS `child_config_traffic_selector`;
 CREATE TABLE `child_config_traffic_selector` (
   `child_cfg` int(10) unsigned NOT NULL,
   `traffic_selector` int(10) unsigned NOT NULL,
-  `kind` tinyint(3) unsigned NOT NULL
+  `kind` tinyint(3) unsigned NOT NULL,
+  INDEX (`child_cfg`, `traffic_selector`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
@@ -27,15 +39,15 @@ CREATE TABLE `ike_configs` (
   `id` int(10) unsigned NOT NULL auto_increment,
   `certreq` tinyint(3) unsigned NOT NULL default '1',
   `force_encap` tinyint(1) NOT NULL default '0',
-  `local` varchar(64) collate utf8_unicode_ci NOT NULL,
-  `remote` varchar(64) collate utf8_unicode_ci NOT NULL,
-  PRIMARY KEY  (`id`)
+  `local` varchar(128) collate utf8_unicode_ci NOT NULL,
+  `remote` varchar(128) collate utf8_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `peer_configs`;
 CREATE TABLE `peer_configs` (
-  `id` int(11) NOT NULL auto_increment,
+  `id` int(10) unsigned NOT NULL auto_increment,
   `name` varchar(32) collate utf8_unicode_ci NOT NULL,
   `ike_version` tinyint(3) unsigned NOT NULL default '2',
   `ike_cfg` int(10) unsigned NOT NULL,
@@ -53,19 +65,19 @@ CREATE TABLE `peer_configs` (
   `mobike` tinyint(1) NOT NULL default '1',
   `dpd_delay` mediumint(8) unsigned NOT NULL default '120',
   `dpd_action` tinyint(3) unsigned NOT NULL default '1',
-  `local_vip` varchar(128) collate utf8_unicode_ci default NULL,
-  `remote_vip` varchar(128) collate utf8_unicode_ci default NULL,
   `mediation` tinyint(1) NOT NULL default '0',
-  `mediated_by` int(11) NOT NULL default '0',
-  `peer_id` varchar(64) collate utf8_unicode_ci default NULL,
-  PRIMARY KEY  (`id`)
+  `mediated_by` int(10) unsigned NOT NULL default '0',
+  `peer_id` int(10) unsigned NOT NULL default '0',
+  PRIMARY KEY (`id`),
+  INDEX (`name`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `peer_config_child_config`;
 CREATE TABLE `peer_config_child_config` (
   `peer_cfg` int(10) unsigned NOT NULL,
-  `child_cfg` int(10) unsigned NOT NULL
+  `child_cfg` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`peer_cfg`, `child_cfg`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
@@ -74,22 +86,11 @@ CREATE TABLE `traffic_selectors` (
   `id` int(10) unsigned NOT NULL auto_increment,
   `type` tinyint(3) unsigned NOT NULL default '7',
   `protocol` smallint(5) unsigned NOT NULL default '0',
-  `start_addr` varchar(40) collate utf8_unicode_ci default NULL,
-  `end_addr` varchar(40) collate utf8_unicode_ci default NULL,
+  `start_addr` varbinary(16) default NULL,
+  `end_addr` varbinary(16) default NULL,
   `start_port` smallint(5) unsigned NOT NULL default '0',
   `end_port` smallint(5) unsigned NOT NULL default '65535',
-  PRIMARY KEY  (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
-
-DROP TABLE IF EXISTS shared_secrets;
-CREATE TABLE shared_secrets (
-  `id` int(10) unsigned NOT NULL auto_increment,
-  `type` tinyint(3) unsigned NOT NULL,
-  `local` varchar(64) default NULL,
-  `remote` varchar(64) default NULL,
-  `data` BLOB NOT NULL,
-  PRIMARY KEY  (`id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
@@ -98,10 +99,16 @@ CREATE TABLE certificates (
   `id` int(10) unsigned NOT NULL auto_increment,
   `type` tinyint(3) unsigned NOT NULL,
   `keytype` tinyint(3) unsigned NOT NULL,
-  `keyid` BLOB NOT NULL,
-  `subject` varchar(64) default NULL,
   `data` BLOB NOT NULL,
-  PRIMARY KEY  (`id`)
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
+DROP TABLE IF EXISTS certificate_identity;
+CREATE TABLE certificate_identity (
+  `certificate` int(10) unsigned NOT NULL,
+  `identity` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`certificate`, `identity`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
@@ -109,33 +116,63 @@ DROP TABLE IF EXISTS private_keys;
 CREATE TABLE private_keys (
   `id` int(10) unsigned NOT NULL auto_increment,
   `type` tinyint(3) unsigned NOT NULL,
-  `keyid` tinyblob NOT NULL,
   `data` BLOB NOT NULL,
   PRIMARY KEY  (`id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
+DROP TABLE IF EXISTS private_key_identity;
+CREATE TABLE private_key_identity (
+  `private_key` int(10) unsigned NOT NULL,
+  `identity` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`private_key`, `identity`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
+DROP TABLE IF EXISTS shared_secrets;
+CREATE TABLE shared_secrets (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `type` tinyint(3) unsigned NOT NULL,
+  `data` varbinary(256) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
+DROP TABLE IF EXISTS shared_secret_identity;
+CREATE TABLE shared_secret_identity (
+  `shared_secret` int(10) unsigned NOT NULL,
+  `identity` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`shared_secret`, `identity`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
 DROP TABLE IF EXISTS ike_sas;
 CREATE TABLE ike_sas (
-  `local_spi` BLOB(8) NOT NULL,
-  `remote_spi` BLOB(8) NOT NULL,
+  `local_spi` varbinary(8) NOT NULL,
+  `remote_spi` varbinary(8) NOT NULL,
   `id` int(10) unsigned NOT NULL,
   `initiator` tinyint(1) NOT NULL,
-  `local_id` varchar(64) collate utf8_unicode_ci default NULL,
-  `remote_id` varchar(64) collate utf8_unicode_ci default NULL,
-  `local` varchar(64) collate utf8_unicode_ci NOT NULL,
-  `remote` varchar(64) collate utf8_unicode_ci NOT NULL,
-  PRIMARY KEY  (local_spi(8))
+  `local_id_type` tinyint(3) NOT NULL,
+  `local_id_data` varbinary(64) NOT NULL,
+  `remote_id_type` tinyint(3) NOT NULL,
+  `remote_id_data` varbinary(64) NOT NULL,
+  `host_family` tinyint(3) NOT NULL,
+  `local_host_data` varbinary(16) NOT NULL,
+  `remote_host_data` varbinary(16) NOT NULL,
+  `lastuse` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+  PRIMARY KEY (`local_spi`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
 
 DROP TABLE IF EXISTS logs;
 CREATE TABLE logs (
   `id` int(10) unsigned NOT NULL auto_increment,
-  `local_spi` BLOB(8) NOT NULL,
+  `local_spi` varbinary(8) NOT NULL,
   `signal` tinyint(3) NOT NULL,
   `level` tinyint(3) NOT NULL,
-  `msg`varchar(256) NOT NULL,
-  PRIMARY KEY  (`id`)
+  `msg` varchar(256) NOT NULL,
+  `time` timestamp NOT NULL default CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 

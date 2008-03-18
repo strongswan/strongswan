@@ -94,29 +94,29 @@ static enumerator_t* create_private_enumerator(private_sql_cred_t *this,
 											   identification_t *id)
 {
 	private_enumerator_t *e;
-	chunk_t keyid = chunk_empty;
 	
-	if (id)
-	{
-		if (id->get_type(id) != ID_PUBKEY_INFO_SHA1)
-		{
-			DBG1(DBG_CFG, "looking for %N private key", id_type_names, id->get_type(id));
-			return NULL;
-		}
-		keyid = id->get_encoding(id);
-		DBG1(DBG_CFG, "looking for %#B", &keyid);
-	}
-	DBG1(DBG_CFG, "looking for a private key");
 	e = malloc_thing(private_enumerator_t);
 	e->current = NULL;
 	e->public.enumerate = (void*)private_enumerator_enumerate;
 	e->public.destroy = (void*)private_enumerator_destroy;
-	e->inner = this->db->query(this->db,
-			"SELECT type, data FROM private_keys "
-			"WHERE (? OR keyid = ?) AND (? OR type = ?)",
-			DB_INT, id == NULL, DB_BLOB, keyid,
-			DB_INT, type == KEY_ANY, DB_INT, type,
-			DB_INT, DB_BLOB);
+	if (id && id->get_type(id) != ID_ANY)
+	{
+		e->inner = this->db->query(this->db,
+				"SELECT p.type, p.data FROM private_keys AS p "
+				"JOIN private_key_identity AS pi ON p.id = pi.private_key "
+				"JOIN identities AS i ON pi.identity = i.id "
+				"WHERE i.type = ? AND i.data = ? AND (? OR p.type = ?)",
+				DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
+				DB_INT, type == KEY_ANY, DB_INT, type,
+				DB_INT, DB_BLOB);
+	}
+	else
+	{
+		e->inner = this->db->query(this->db,
+				"SELECT type, data FROM private_keys WHERE (? OR type = ?)",
+				DB_INT, type == KEY_ANY, DB_INT, type,
+				DB_INT, DB_BLOB);
+	}
 	if (!e->inner)
 	{
 		free(e);
@@ -180,29 +180,33 @@ static enumerator_t* create_cert_enumerator(private_sql_cred_t *this,
 										identification_t *id, bool trusted)
 {
 	cert_enumerator_t *e;
-	chunk_t enc = chunk_empty;
-	id_type_t type = ID_ANY;
-	
-	if (id)
-	{
-		type = id->get_type(id);
-		enc = id->get_encoding(id);
-	}
 	
 	e = malloc_thing(cert_enumerator_t);
 	e->current = NULL;
 	e->public.enumerate = (void*)cert_enumerator_enumerate;
 	e->public.destroy = (void*)cert_enumerator_destroy;
-	e->inner = this->db->query(this->db,
-			"SELECT type, data FROM certificates "
-			"WHERE (? OR type = ?) AND (? OR keytype = ?) AND "
-			"(? OR (? AND subject = ?) OR (? AND keyid = ?))",
-			DB_INT, cert == CERT_ANY, DB_INT, cert,
-			DB_INT, key == KEY_ANY, DB_INT, key,
-			DB_INT, id == NULL,
-			DB_INT, type == ID_DER_ASN1_DN, DB_BLOB, enc,
-			DB_INT, type == ID_PUBKEY_INFO_SHA1, DB_BLOB, enc,
-			DB_INT, DB_BLOB);
+	if (id && id->get_type(id) != ID_ANY)
+	{
+		e->inner = this->db->query(this->db,
+				"SELECT c.type, c.data FROM certificates AS c "
+				"JOIN certificate_identity AS ci ON c.id = ci.certificate "
+				"JOIN identities AS i ON ci.identity = i.id "
+				"WHERE i.type = ? AND i.data = ? AND "
+				"(? OR c.type = ?) AND (? OR c.keytype = ?)",
+				DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
+				DB_INT, cert == CERT_ANY, DB_INT, cert,
+				DB_INT, key == KEY_ANY, DB_INT, key,
+				DB_INT, DB_BLOB);
+	}
+	else
+	{
+		e->inner = this->db->query(this->db,
+				"SELECT type, data FROM certificates WHERE "
+				"(? OR type = ?) AND (? OR keytype = ?)",
+				DB_INT, cert == CERT_ANY, DB_INT, cert,
+				DB_INT, key == KEY_ANY, DB_INT, key,
+				DB_INT, DB_BLOB);
+	}
 	if (!e->inner)
 	{
 		free(e);
@@ -219,10 +223,10 @@ typedef struct {
 	enumerator_t public;
 	/** inner SQL enumerator */
 	enumerator_t *inner;
-	/** match of me */
-	id_match_t me;
-	/** match of other */
-	id_match_t other;
+	/** own identity */
+	identification_t *me;
+	/** remote identity */
+	identification_t *other;
 	/** currently enumerated private key */
 	shared_key_t *current;
 } shared_enumerator_t;
@@ -246,11 +250,11 @@ static bool shared_enumerator_enumerate(shared_enumerator_t *this,
 			*shared = this->current;
 			if (me)
 			{
-				*me = this->me;
+				*me = this->me ? ID_MATCH_PERFECT : ID_MATCH_ANY;
 			}
 			if (other)
 			{
-				*other = this->other;
+				*other = this->other ? ID_MATCH_PERFECT : ID_MATCH_ANY;
 			}
 			return TRUE;
 		}
@@ -277,31 +281,48 @@ static enumerator_t* create_shared_enumerator(private_sql_cred_t *this,
 								  identification_t *me, identification_t *other)
 {
 	shared_enumerator_t *e;
-	chunk_t my_chunk = chunk_empty, other_chunk = chunk_empty;
 	
 	e = malloc_thing(shared_enumerator_t);
-	e->me = ID_MATCH_ANY;
-	e->other = ID_MATCH_ANY;
-	if (me)
-	{
-		e->me = ID_MATCH_PERFECT;
-		my_chunk = me->get_encoding(me);
-	}
-	if (other)
-	{
-		e->other = ID_MATCH_PERFECT;
-		other_chunk = other->get_encoding(other);
-	}
+	e->me = me;
+	e->other = other;
 	e->current = NULL;
 	e->public.enumerate = (void*)shared_enumerator_enumerate;
 	e->public.destroy = (void*)shared_enumerator_destroy;
-	e->inner = this->db->query(this->db,
-			"SELECT type, data FROM certificates "
-			"WHERE (? OR local = ?) AND (? OR remote = ?) AND (? OR type = ?)",
-			DB_INT, me == NULL, DB_BLOB, my_chunk,
-			DB_INT, other == NULL, DB_BLOB, other_chunk,
-			DB_INT, type == SHARED_ANY, DB_INT, type,
-			DB_INT, DB_BLOB);
+	if (!me && !other)
+	{
+		e->inner = this->db->query(this->db,
+				"SELECT type, data FROM shared_secrets WHERE  (? OR type = ?)",
+				DB_INT, type == SHARED_ANY, DB_INT, type,
+				DB_INT, DB_BLOB);
+	}
+	else if (me && other)
+	{
+		e->inner = this->db->query(this->db,
+				"SELECT s.type, s.data FROM shared_secrets AS s "
+				"JOIN shared_secret_identity AS sm ON s.id = sm.shared_secret "
+				"JOIN identities AS m ON sm.identity = m.id "
+				"JOIN shared_secret_identity AS so ON s.id = so.shared_secret "
+				"JOIN identities AS o ON so.identity = o.id "
+				"WHERE m.type = ? AND m.data = ? AND o.type = ? AND o.data = ? "
+				"AND (? OR s.type = ?)",
+				DB_INT, me->get_type(me), DB_BLOB, me->get_encoding(me),
+				DB_INT, other->get_type(other), DB_BLOB, other->get_encoding(other),
+				DB_INT, type == SHARED_ANY, DB_INT, type,
+				DB_INT, DB_BLOB);				
+	}
+	else
+	{
+		identification_t *id = me ? me : other;
+		
+		e->inner = this->db->query(this->db,
+				"SELECT s.type, s.data FROM shared_secrets AS s "
+				"JOIN shared_secret_identity AS si ON s.id = si.shared_secret "
+				"JOIN identities AS i ON si.identity = i.id "
+				"WHERE i.type = ? AND i.data = ? AND (? OR s.type = ?)",
+				DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
+				DB_INT, type == SHARED_ANY, DB_INT, type,
+				DB_INT, DB_BLOB);
+	}
 	if (!e->inner)
 	{
 		free(e);

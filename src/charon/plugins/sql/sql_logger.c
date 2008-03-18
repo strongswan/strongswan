@@ -42,6 +42,11 @@ struct private_sql_logger_t {
 	 * logging level
 	 */
 	int level;
+	
+	/**
+	 * avoid recursive logging
+	 */
+	bool recursive;
 };
 
 
@@ -51,20 +56,25 @@ struct private_sql_logger_t {
 static bool signal_(private_sql_logger_t *this, signal_t signal, level_t level,
 					int thread, ike_sa_t* ike_sa, char *format, va_list args)
 {
+	if (this->recursive)
+	{
+		return TRUE;
+	}
+	this->recursive = TRUE;
+
 	if (ike_sa && level <= this->level)
 	{
-		char buffer[8192], local_id[64], remote_id[64], local[40], remote[40];
-		char *current = buffer, *next;
+		char buffer[8192];
 		chunk_t local_spi, remote_spi;
+		host_t *local_host, *remote_host;
+		identification_t *local_id, *remote_id;
 		u_int64_t ispi, rspi;
-		bool initiator;
 		ike_sa_id_t *id;
 	
 		id = ike_sa->get_id(ike_sa);
-		initiator = id->is_initiator(id);
 		ispi = id->get_initiator_spi(id);
 		rspi = id->get_responder_spi(id);
-		if (initiator)
+		if (id->is_initiator(id))
 		{
 			local_spi.ptr = (char*)&ispi;
 			remote_spi.ptr = (char*)&rspi;
@@ -75,39 +85,35 @@ static bool signal_(private_sql_logger_t *this, signal_t signal, level_t level,
 			remote_spi.ptr = (char*)&ispi;
 		}
 		local_spi.len = remote_spi.len = sizeof(ispi);
-		snprintf(local_id, sizeof(local_id), "%D", ike_sa->get_my_id(ike_sa));
-		snprintf(remote_id, sizeof(remote_id), "%D", ike_sa->get_other_id(ike_sa));
-		snprintf(local, sizeof(local), "%H", ike_sa->get_my_host(ike_sa));
-		snprintf(remote, sizeof(remote), "%H", ike_sa->get_other_host(ike_sa));
+		local_id = ike_sa->get_my_id(ike_sa);
+		remote_id = ike_sa->get_other_id(ike_sa);
+		local_host = ike_sa->get_my_host(ike_sa);
+		remote_host = ike_sa->get_other_host(ike_sa);
 		
-		/* write in memory buffer first */
 		vsnprintf(buffer, sizeof(buffer), format, args);
-	
+		
 		this->db->execute(this->db, NULL, "REPLACE INTO ike_sas ("
 						  "local_spi, remote_spi, id, initiator, "
-						  "local_id, remote_id, local, remote) "
-						  "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+						  "local_id_type, local_id_data, "
+						  "remote_id_type, remote_id_data, "
+						  "host_family, local_host_data, remote_host_data) "
+						  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 						  DB_BLOB, local_spi, DB_BLOB, remote_spi,
 						  DB_INT, ike_sa->get_unique_id(ike_sa),
-						  DB_INT, initiator,
-						  DB_TEXT, local_id, DB_TEXT, remote_id, 
-						  DB_TEXT, local, DB_TEXT, remote);
-		/* do a log with every line */
-		while (current)
-		{
-			next = strchr(current, '\n');
-			if (next)
-			{
-				*(next++) = '\0';
-			}
-			this->db->execute(this->db, NULL,
-							  "INSERT INTO logs (local_spi, signal, level, msg) "
-							  "VALUES (?, ?, ?, ?)",
-							  DB_BLOB, local_spi, DB_INT, signal, DB_INT, level,
-							  DB_TEXT, current);
-			current = next;
-		}
+						  DB_INT, id->is_initiator(id),
+						  DB_INT, local_id->get_type(local_id),
+						  DB_BLOB, local_id->get_encoding(local_id),
+						  DB_INT, remote_id->get_type(remote_id),
+						  DB_BLOB, remote_id->get_encoding(remote_id),
+						  DB_INT, local_host->get_family(local_host),
+						  DB_BLOB, local_host->get_address(local_host),
+						  DB_BLOB, remote_host->get_address(remote_host));
+		this->db->execute(this->db, NULL, "INSERT INTO logs ("
+						  "local_spi, signal, level, msg) VALUES (?, ?, ?, ?)",
+						  DB_BLOB, local_spi, DB_INT, signal, DB_INT, level,
+						  DB_TEXT, buffer);
 	}
+	this->recursive = FALSE;
 	/* always stay registered */
 	return TRUE;
 }
@@ -131,6 +137,7 @@ sql_logger_t *sql_logger_create(database_t *db)
 	this->public.destroy = (void(*)(sql_logger_t*))destroy;
 	
 	this->db = db;
+	this->recursive = FALSE;
 	
 	this->level = lib->settings->get_int(lib->settings,
 										 "charon.plugins.sql.loglevel", 1);
