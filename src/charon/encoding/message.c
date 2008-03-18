@@ -163,6 +163,7 @@ static payload_order_t ike_sa_init_i_payload_order[] = {
 	{NONCE, 						0},
 	{NOTIFY,						NAT_DETECTION_SOURCE_IP},
 	{NOTIFY,						NAT_DETECTION_DESTINATION_IP},
+	{NOTIFY,						0},
 	{VENDOR_ID,						0},
 };
 
@@ -190,6 +191,7 @@ static payload_order_t ike_sa_init_r_payload_order[] = {
 	{NOTIFY,						NAT_DETECTION_DESTINATION_IP},
 	{NOTIFY,						HTTP_CERT_LOOKUP_SUPPORTED},
 	{CERTIFICATE_REQUEST,			0},
+	{NOTIFY,						0},
 	{VENDOR_ID,						0},
 };
 
@@ -243,6 +245,7 @@ static payload_order_t ike_auth_i_payload_order[] = {
 	{NOTIFY,						ADDITIONAL_IP4_ADDRESS},
 	{NOTIFY,						ADDITIONAL_IP6_ADDRESS},
 	{NOTIFY,						NO_ADDITIONAL_ADDRESSES},
+	{NOTIFY,						0},
 	{VENDOR_ID,						0},
 };
 
@@ -285,6 +288,7 @@ static payload_order_t ike_auth_r_payload_order[] = {
 	{NOTIFY,						ADDITIONAL_IP4_ADDRESS},
 	{NOTIFY,						ADDITIONAL_IP6_ADDRESS},
 	{NOTIFY,						NO_ADDITIONAL_ADDRESSES},
+	{NOTIFY,						0},
 	{VENDOR_ID,						0},
 };
 
@@ -360,6 +364,7 @@ static payload_order_t create_child_sa_i_payload_order[] = {
 	{KEY_EXCHANGE, 					0},
 	{TRAFFIC_SELECTOR_INITIATOR,	0},
 	{TRAFFIC_SELECTOR_RESPONDER,	0},
+	{NOTIFY,						0},
 };
 
 /**
@@ -392,6 +397,7 @@ static payload_order_t create_child_sa_r_payload_order[] = {
 	{TRAFFIC_SELECTOR_INITIATOR,	0},
 	{TRAFFIC_SELECTOR_RESPONDER,	0},
 	{NOTIFY,						ADDITIONAL_TS_POSSIBLE},
+	{NOTIFY,						0},
 };
 
 #ifdef P2P
