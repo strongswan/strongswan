@@ -1356,7 +1356,7 @@ static bool ike_filter(ike_data_t *data, peer_cfg_t **in, ike_cfg_t **out)
 	me = ike_cfg->get_my_host(ike_cfg);
 	other = ike_cfg->get_other_host(ike_cfg);
 	if ((!data->me || me->is_anyaddr(me) || me->ip_equals(me, data->me)) &&
-		(!data->other || other->is_anyaddr(other) || other->ip_equals(other, data->me)))
+		(!data->other || other->is_anyaddr(other) || other->ip_equals(other, data->other)))
 	{
 		*out = ike_cfg;
 		return TRUE;
