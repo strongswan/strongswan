@@ -144,10 +144,11 @@ static const asn1Object_t privkey_objects[] = {
 #define PRIV_KEY_ROOF			16
 
 /**
- * defined in rsa_public_key.c
+ * shared functions, implemented in gmp_rsa_public_key.c
  */
 bool gmp_rsa_public_key_build_id(mpz_t n, mpz_t e, identification_t **keyid,
 								 identification_t **keyid_info);
+gmp_rsa_public_key_t *gmp_rsa_public_key_create_from_n_e(mpz_t n, mpz_t e);
 
 /**
  * Auxiliary function overwriting private key material with
@@ -381,8 +382,7 @@ static identification_t* get_id(private_gmp_rsa_private_key_t *this,
  */
 static gmp_rsa_public_key_t* get_public_key(private_gmp_rsa_private_key_t *this)
 {
-	DBG1("creating RSA public key from private key not implemented");
-	return NULL;
+	return gmp_rsa_public_key_create_from_n_e(this->n, this->e);
 }
 
 /**

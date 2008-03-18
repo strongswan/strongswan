@@ -12,6 +12,7 @@ libcharon_unit_tester_la_SOURCES = unit_tester.c unit_tester.h \
   tests/test_curl.c \
   tests/test_mysql.c \
   tests/test_sqlite.c \
-  tests/test_mutex.c
+  tests/test_mutex.c \
+  tests/test_rsa_gen.c
 libcharon_unit_tester_la_LDFLAGS = -module
 
