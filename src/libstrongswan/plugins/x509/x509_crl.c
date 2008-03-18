@@ -326,39 +326,6 @@ static bool filter(void *data, revoked_t **revoked, chunk_t *serial, void *p2,
 }
 
 /**
- * Implementation of crl_t.is_newer.
- */
-static bool is_newer(private_x509_crl_t *this, crl_t *that)
-{
-	chunk_t that_crlNumber = that->get_serial(that);
-	bool new;
-	
-	/* compare crlNumbers if available - otherwise use thisUpdate */
-	if (this->crlNumber.ptr != NULL && that_crlNumber.ptr != NULL)
-	{
-		new = chunk_compare(this->crlNumber, that_crlNumber) > 0;
-		DBG1("  crl #%#B is %s - existing crl #%#B %s",
-				&this->crlNumber, new ? "newer":"not newer",
-				&that_crlNumber,  new ? "replaced":"retained");
-	}
-	else 
-	{
-		certificate_t *this_cert = &this->public.crl.certificate;
-		certificate_t *that_cert = &that->certificate;
-
-		time_t this_update, that_update, now = time(NULL);
-
-		this_cert->get_validity(this_cert, &now, &this_update, NULL);
-		that_cert->get_validity(that_cert, &now, &that_update, NULL);
-		new = this_update > that_update;
-		DBG1("  crl from %#T is %s - existing crl from %#T %s",
-				&this_update, FALSE, new ? "newer":"not newer",
-				&that_update, FALSE, new ? "replaced":"retained");
-	}
-	return new;
-}
-
-/**
  * Implementation of crl_t.get_serial.
  */
 static chunk_t get_serial(private_x509_crl_t *this)
@@ -550,15 +517,48 @@ static bool get_validity(private_x509_crl_t *this, time_t *when,
 	{
 		t = time(NULL);
 	}
-	if (not_after)
-	{
-		*not_after = this->nextUpdate;
-	}
 	if (not_before)
 	{
 		*not_before = this->thisUpdate;
 	}
+	if (not_after)
+	{
+		*not_after = this->nextUpdate;
+	}
 	return (t <= this->nextUpdate);
+}
+
+/**
+ * Implementation of certificate_t.is_newer.
+ */
+static bool is_newer(private_x509_crl_t *this, crl_t *that)
+{
+	chunk_t that_crlNumber = that->get_serial(that);
+	bool new;
+	
+	/* compare crlNumbers if available - otherwise use thisUpdate */
+	if (this->crlNumber.ptr != NULL && that_crlNumber.ptr != NULL)
+	{
+		new = chunk_compare(this->crlNumber, that_crlNumber) > 0;
+		DBG1("  crl #%#B is %s - existing crl #%#B %s",
+				&this->crlNumber, new ? "newer":"not newer",
+				&that_crlNumber,  new ? "replaced":"retained");
+	}
+	else 
+	{
+		certificate_t *this_cert = &this->public.crl.certificate;
+		certificate_t *that_cert = &that->certificate;
+
+		time_t this_update, that_update, now = time(NULL);
+
+		this_cert->get_validity(this_cert, &now, &this_update, NULL);
+		that_cert->get_validity(that_cert, &now, &that_update, NULL);
+		new = this_update > that_update;
+		DBG1("  crl from %#T is %s - existing crl from %#T %s",
+				&this_update, FALSE, new ? "newer":"not newer",
+				&that_update, FALSE, new ? "replaced":"retained");
+	}
+	return new;
 }
 	
 /**
@@ -609,7 +609,6 @@ static x509_crl_t *load(chunk_t chunk)
 {
 	private_x509_crl_t *this = malloc_thing(private_x509_crl_t);
 	
-	this->public.crl.is_newer = (bool (*)(crl_t*,crl_t*))is_newer;
 	this->public.crl.get_serial = (chunk_t (*)(crl_t*))get_serial;
 	this->public.crl.get_authKeyIdentifier = (identification_t* (*)(crl_t*))get_authKeyIdentifier;
 	this->public.crl.create_enumerator = (enumerator_t* (*)(crl_t*))create_enumerator;
@@ -621,6 +620,7 @@ static x509_crl_t *load(chunk_t chunk)
 	this->public.crl.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer,bool))issued_by;
 	this->public.crl.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.crl.certificate.get_validity = (bool (*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
+	this->public.crl.certificate.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
 	this->public.crl.certificate.get_encoding = (chunk_t (*)(certificate_t*))get_encoding;
 	this->public.crl.certificate.equals = (bool (*)(certificate_t*, certificate_t *other))equals;
 	this->public.crl.certificate.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;

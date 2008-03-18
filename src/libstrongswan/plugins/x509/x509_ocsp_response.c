@@ -58,7 +58,10 @@ struct private_x509_ocsp_response_t {
 	int signatureAlgorithm;
 	
 	/**
-	 * signature value
+	 * signature	enumerator = this->responses->create_enumerator(this->responses);
+	while (enumerator->enumerate(enumerator, &response))
+	{
+ value
 	 */
 	chunk_t signature;
 	
@@ -420,7 +423,7 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 				}
 	    		break;
 			case SINGLE_RESPONSE_CERT_STATUS_UNKNOWN:
-				response->status = VALIDATION_FAILED;
+				response->status = VALIDATION_UNKNOWN;
 				break;
 			case SINGLE_RESPONSE_THIS_UPDATE:
 				response->thisUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
@@ -725,13 +728,25 @@ static public_key_t* get_public_key(private_x509_ocsp_response_t *this)
 }
 
 /**
- * Implementation of x509_cert_t.get_validity.
+ * Implementation of certificate_t.get_validity.
  */
 static bool get_validity(private_x509_ocsp_response_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
 {
+	enumerator_t *enumerator;
+	single_response_t *response;
+	time_t thisUpdate = this->producedAt;
+	time_t nextUpdate = 0;
 	time_t t;
 	
+	enumerator = this->responses->create_enumerator(this->responses);
+	if (enumerator->enumerate(enumerator, &response))
+	{
+		thisUpdate = response->thisUpdate;
+		nextUpdate = response->nextUpdate;
+	}
+	enumerator->destroy(enumerator);
+
 	if (when == NULL)
 	{
 		t = time(NULL);
@@ -742,18 +757,30 @@ static bool get_validity(private_x509_ocsp_response_t *this, time_t *when,
 	}
 	if (not_before)
 	{
-		*not_before = this->producedAt;
+		*not_before = thisUpdate;
 	}
 	if (not_after)
 	{
-		*not_after = ~0;
+		*not_after = nextUpdate;
 	}
-	/* valid from produceAt up to infinity */
-	if (t >= this->producedAt)
-	{
-		return TRUE;
-	}
-	return FALSE;
+	return (t < nextUpdate);
+}
+
+/**
+ * Implementation of certificate_t.is_newer.
+ */
+static bool is_newer(certificate_t *this, certificate_t *that)
+{
+	time_t this_update, that_update, now = time(NULL);
+	bool new;
+
+	this->get_validity(this, &now, &this_update, NULL);
+	that->get_validity(that, &now, &that_update, NULL);
+	new = this_update > that_update;
+	DBG1("  ocsp response from %#T is %s - existing ocsp response from %#T %s",
+				&this_update, FALSE, new ? "newer":"not newer",
+				&that_update, FALSE, new ? "replaced":"retained");
+	return new;
 }
 	
 /**
@@ -828,6 +855,7 @@ static x509_ocsp_response_t *load(chunk_t data)
 	this->public.interface.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer,bool))issued_by;
 	this->public.interface.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.interface.certificate.get_validity = (bool(*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
+	this->public.interface.certificate.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
 	this->public.interface.certificate.get_encoding = (chunk_t(*)(certificate_t*))get_encoding;
 	this->public.interface.certificate.equals = (bool(*)(certificate_t*, certificate_t *other))equals;
 	this->public.interface.certificate.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;

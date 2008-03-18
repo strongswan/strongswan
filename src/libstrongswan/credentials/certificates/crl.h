@@ -58,13 +58,6 @@ struct crl_t {
 	certificate_t certificate;
 	
 	/**
-	 * Is that newer than this?
-	 *
-	 * @return			TRUE if newer, FALSE otherwise
-	 */
-	bool (*is_newer)(crl_t *this, crl_t *that);
-	
-	/**
 	 * Get the CRL serial number.
 	 *
 	 * @return			chunk pointing to internal crlNumber

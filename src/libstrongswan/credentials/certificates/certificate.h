@@ -160,6 +160,13 @@ struct certificate_t {
 						 time_t *not_before, time_t *not_after);
 	
 	/**
+	 * Is this newer than that?
+	 *
+	 * @return			TRUE if newer, FALSE otherwise
+	 */
+	bool (*is_newer)(certificate_t *this, certificate_t *that);
+	
+	/**
 	 * Get the certificate in an encoded form.
 	 *
 	 * @return				allocated chunk of encoded cert
