@@ -52,6 +52,12 @@ bool test_rsa_gen()
 			DBG1(DBG_CFG, "verifying RSA signature failed");
 			return FALSE;
 		}
+		sig.ptr[sig.len-1]++;
+		if (public->verify(public, SIGN_RSA_EMSA_PKCS1_SHA1, data, sig))
+		{
+			DBG1(DBG_CFG, "verifying faked RSA signature succeeded!");
+			return FALSE;
+		}
 		free(sig.ptr);
 		public->destroy(public);
 		private->destroy(private);
