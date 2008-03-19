@@ -81,7 +81,7 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 		 * TODO: allow other hash algorithms and note it in "auth" */
 		if (public->verify(public, SIGN_RSA_EMSA_PKCS1_SHA1, octets, auth_data))
 		{
-			DBG1(DBG_IKE, "authentication of %D with %N successful",
+			DBG1(DBG_IKE, "authentication of '%D' with %N successful",
 						   other_id, auth_method_names, AUTH_RSA);
 			status = SUCCESS;
 		}
@@ -89,7 +89,7 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	}
 	else
 	{
-		DBG1(DBG_IKE, "no trusted public key found for %D", other_id);
+		DBG1(DBG_IKE, "no trusted public key found for '%D'", other_id);
 	}
 	chunk_free(&octets);
 	return status;
@@ -109,7 +109,7 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	auth_info_t *auth;
 
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
-	DBG1(DBG_IKE, "authentication of %D (myself) with %N",
+	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
 		 my_id, auth_method_names, AUTH_RSA);
 	
 	auth = this->ike_sa->get_my_auth(this->ike_sa);
@@ -117,7 +117,7 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 											   my_id, auth);
 	if (private == NULL)
 	{
-		DBG1(DBG_IKE, "no RSA private key found for %D", my_id);
+		DBG1(DBG_IKE, "no RSA private key found for '%D'", my_id);
 		return NOT_FOUND;
 	}
 	prf = this->ike_sa->get_prf(this->ike_sa);

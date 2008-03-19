@@ -86,7 +86,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 				{
 					break;
 				}
-				DBG1(DBG_IKE, "sending end entity cert %D",
+				DBG1(DBG_IKE, "sending end entity cert \"%D\"",
 					 cert->get_subject(cert));
 				message->add_payload(message, (payload_t*)payload);
 				
@@ -98,7 +98,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 						payload = cert_payload_create_from_cert(cert);
 						if (payload)
 						{
-							DBG1(DBG_IKE, "sending issuer cert %D",
+							DBG1(DBG_IKE, "sending issuer cert \"%D\"",
 								 cert->get_subject(cert));
 							message->add_payload(message, (payload_t*)payload);
 						}

@@ -934,7 +934,7 @@ static int print(FILE *stream, const struct printf_info *info,
 			snprintf(buf, sizeof(buf), "%.*s", this->encoded.len, this->encoded.ptr);
 			/* TODO: whats returned on failure?*/
 			dntoa(this->encoded, &buf_chunk);
-			return fprintf(stream, "\"%s\"", buf);
+			return fprintf(stream, "%s", buf);
 		}
 		case ID_DER_ASN1_GN:
 			return fprintf(stream, "(ASN.1 general Name");

@@ -502,19 +502,19 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				version = (object.len)? (1 + (u_int)*object.ptr) : 1;
 				if (version != OCSP_BASIC_RESPONSE_VERSION)
 				{
-					DBG1("OCSP ResponseData version %d not supported", version);
+					DBG1("  ocsp ResponseData version %d not supported", version);
 					return FALSE;
 				}
 				break;
 			case BASIC_RESPONSE_ID_BY_NAME:
 				this->responderId = identification_create_from_encoding(
 													ID_DER_ASN1_DN, object);
-				DBG3("  %D", this->responderId);
+				DBG2("  '%D'", this->responderId);
 				break;
 			case BASIC_RESPONSE_ID_BY_KEY:
 				this->responderId = identification_create_from_encoding(
 													ID_PUBKEY_INFO_SHA1, object);
-				DBG3("  %D", this->responderId);
+				DBG2("  '%D'", this->responderId);
 				break;
 			case BASIC_RESPONSE_PRODUCED_AT:
 				this->producedAt = asn1totime(&object, ASN1_GENERALIZEDTIME);
@@ -527,7 +527,7 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				break;
 			case BASIC_RESPONSE_CRITICAL:
 				critical = object.len && *object.ptr;
-				DBG3("  %s", critical ? "TRUE" : "FALSE");
+				DBG2("  %s", critical ? "TRUE" : "FALSE");
 				break;
 			case BASIC_RESPONSE_EXT_VALUE:
 				if (extn_oid == OID_NONCE)
@@ -591,7 +591,7 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 	    			case OCSP_SUCCESSFUL:
 						break;
 					default:
-						DBG1("OCSP response status: %N",
+						DBG1("  ocsp response status: %N",
 							 ocsp_status_names, status);
 						return FALSE;
 				}
@@ -605,7 +605,7 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 					case OID_BASIC:
 						return parse_basicOCSPResponse(this, object, level+1);
 					default:
-						DBG1("OCSP response type %#B not supported", &object);
+						DBG1("  ocsp response type %#B not supported", &object);
 						return FALSE;
 				}
 				break;

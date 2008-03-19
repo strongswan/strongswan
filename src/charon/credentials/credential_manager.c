@@ -410,11 +410,8 @@ static ocsp_wrapper_t *ocsp_wrapper_create(ocsp_response_t *response)
 static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 								 certificate_t *subject, certificate_t *issuer)
 {
-	certificate_t *request, *response, *issuer_cert;
+	certificate_t *request, *response;
 	chunk_t send, receive;
-	identification_t *responder;
-	auth_info_t *auth;
-	ocsp_wrapper_t *wrapper;
 	
 	/* TODO: requestor name, signature */
 	request = lib->creds->create(lib->creds,
@@ -429,6 +426,8 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 	
 	send = request->get_encoding(request);
 	request->destroy(request);
+
+	DBG1(DBG_CFG, "requesting ocsp response from '%s' ...", url);
 	if (lib->fetcher->fetch(lib->fetcher, url, &receive, 
 							FETCH_REQUEST_DATA, send,
 							FETCH_REQUEST_TYPE, "application/ocsp-request",
@@ -449,29 +448,40 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 		return NULL;
 	}
 	
-	responder = response->get_issuer(response);
-	auth = auth_info_create();
-	wrapper = ocsp_wrapper_create((ocsp_response_t*)response);
-	this->sets->insert_first(this->sets, wrapper);
-	issuer_cert = get_trusted_cert(this, KEY_ANY, responder, auth, FALSE, FALSE);
-	this->sets->remove(this->sets, wrapper, NULL);
-	free(wrapper);
-	auth->destroy(auth);
-	if (!issuer_cert)
+
+	/* verify the signature of the ocsp response */
 	{
-		DBG1(DBG_CFG, "  ocsp response untrusted: no signer certificate found");
-		response->destroy(response);
-		return NULL;
-	}
-	if (!response->issued_by(response, issuer_cert, TRUE))
-	{
-		DBG1(DBG_CFG, "  ocsp response untrusted: bad signature");
-		response->destroy(response);
+		certificate_t *issuer_cert;
+		identification_t *responder;
+		auth_info_t *auth;
+		ocsp_wrapper_t *wrapper;
+		bool ok;
+ 
+		auth = auth_info_create();
+		wrapper = ocsp_wrapper_create((ocsp_response_t*)response);
+		this->sets->insert_first(this->sets, wrapper);
+		responder = response->get_issuer(response);
+		issuer_cert = get_trusted_cert(this, KEY_ANY, responder, auth, FALSE, FALSE);
+		this->sets->remove(this->sets, wrapper, NULL);
+		free(wrapper);
+		auth->destroy(auth);
+
+		if (!issuer_cert)
+		{
+			DBG1(DBG_CFG, "  ocsp response untrusted: no signer certificate found");
+			response->destroy(response);
+			return NULL;
+		}
+		ok = response->issued_by(response, issuer_cert, TRUE);
 		issuer_cert->destroy(issuer_cert);
-		return NULL;
+		DBG1(DBG_CFG, "  ocsp response is %strusted: %s signature",
+						 ok ? "":"un", ok ? "good" : "bad");
+		if (ok)
+		{
+			response->destroy(response);
+			return NULL;
+		}
 	}
-	issuer_cert->destroy(issuer_cert);
-	
 	/* TODO: cache response? */
 	return response;
 }
@@ -863,7 +873,7 @@ static bool check_certificate(private_credential_manager_t *this,
 	}
 	if (issuer && !subject->issued_by(subject, issuer, TRUE))
 	{
-		DBG1(DBG_CFG, "certificate %D not issued by %D",
+		DBG1(DBG_CFG, "certificate not issued by \"%D\"",
 			 subject->get_subject(subject), issuer->get_subject(issuer));
 		return FALSE;
 	}
@@ -1055,8 +1065,8 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 			public = subject->get_public_key(subject);
 			if (public)
 			{
-				DBG2(DBG_CFG, "using trusted certificate %D",
-					 subject->get_subject(subject));
+				DBG1(DBG_CFG, "  using trusted certificate \"%D\"",
+							     subject->get_subject(subject));
 				this->sets->remove(this->sets, wrapper, NULL);
 				free(wrapper);
 				this->mutex->unlock(this->mutex);
@@ -1076,7 +1086,7 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 	subject = get_cert(this, CERT_ANY, type, id, FALSE);
 	if (!subject)
 	{
-		DBG1(DBG_CFG, "no end entity certificate found for %D", id);
+		DBG1(DBG_CFG, "no end entity certificate found for \"%D\"", id);
 	}
 	else
 	{
@@ -1093,7 +1103,7 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 									  issuer == subject ? auth2 : NULL) &&
 					check_certificate(this, candidate, NULL, crl, ocsp, NULL))
 				{
-					DBG2(DBG_CFG, "using trusted root CA certificate %D",
+					DBG1(DBG_CFG, "  using trusted root ca certificate \"%D\"",
 						 candidate->get_subject(candidate));
 					issuer = candidate;
 					trusted = TRUE;
@@ -1120,13 +1130,13 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 				{
 					if (issuer != subject)
 					{
-						DBG2(DBG_CFG, "using intermediate CA certificate %D",
+						DBG1(DBG_CFG, "  using intermediate ca certificate \"%D\"",
 							 candidate->get_subject(candidate));
 						auth1->add_item(auth1, AUTHZ_IM_CERT, candidate);
 					}
 					else
 					{
-						DBG2(DBG_CFG, "using end entity certificate %D",
+						DBG1(DBG_CFG, "  using end entity certificate \"%D\"",
 							 candidate->get_subject(candidate));
 					}
 					issuer = candidate;

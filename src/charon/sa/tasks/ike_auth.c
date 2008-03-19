@@ -187,7 +187,7 @@ static status_t process_auth(private_ike_auth_t *this, message_t *message)
 
 	if (auth == NULL)
 	{
-		SIG(IKE_UP_FAILED, "authentication method %N used by %D not "
+		SIG(IKE_UP_FAILED, "authentication method %N used by '%D' not "
 			"supported", auth_method_names, auth_method,
 			this->ike_sa->get_other_id(this->ike_sa));
 		return NOT_SUPPORTED;
@@ -228,7 +228,7 @@ static status_t process_id(private_ike_auth_t *this, message_t *message)
 		req = this->ike_sa->get_other_id(this->ike_sa);
 		if (!id->matches(id, req))
 		{
-			SIG(IKE_UP_FAILED, "peer ID %D unacceptable, %D required", id, req);
+			SIG(IKE_UP_FAILED, "peer ID '%D' unacceptable, '%D' required", id, req);
 			id->destroy(id);
 			return FAILED;
 		}
@@ -316,12 +316,12 @@ static status_t build_auth_eap(private_ike_auth_t *this, message_t *message)
 	if (!this->initiator)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %D[%H]...[%H]%D",
+		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
 			this->ike_sa->get_name(this->ike_sa),
-			this->ike_sa->get_my_id(this->ike_sa), 
 			this->ike_sa->get_my_host(this->ike_sa),
-			this->ike_sa->get_other_host(this->ike_sa),
-			this->ike_sa->get_other_id(this->ike_sa));
+			this->ike_sa->get_my_id(this->ike_sa), 
+			this->ike_sa->get_other_id(this->ike_sa),
+			this->ike_sa->get_other_host(this->ike_sa));
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -362,12 +362,12 @@ static status_t process_auth_eap(private_ike_auth_t *this, message_t *message)
 	if (this->initiator)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %D[%H]...[%H]%D",
+		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
 			this->ike_sa->get_name(this->ike_sa),
-			this->ike_sa->get_my_id(this->ike_sa), 
 			this->ike_sa->get_my_host(this->ike_sa),
-			this->ike_sa->get_other_host(this->ike_sa),
-			this->ike_sa->get_other_id(this->ike_sa));
+			this->ike_sa->get_my_id(this->ike_sa), 
+			this->ike_sa->get_other_id(this->ike_sa),
+			this->ike_sa->get_other_host(this->ike_sa));
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -399,7 +399,7 @@ static status_t process_eap_i(private_ike_auth_t *this, message_t *message)
 			return NEED_MORE;
 		default:
 			this->eap_payload = NULL;
-			SIG(IKE_UP_FAILED, "failed to authenticate against %D using EAP",
+			SIG(IKE_UP_FAILED, "failed to authenticate against '%D' using EAP",
 				this->ike_sa->get_other_id(this->ike_sa));
 			return FAILED;
 	}
@@ -562,7 +562,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	config = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (config == NULL)
 	{
-		SIG(IKE_UP_FAILED, "no matching config found for %D...%D",
+		SIG(IKE_UP_FAILED, "no matching config found for '%D'...'%D'",
 			this->ike_sa->get_my_id(this->ike_sa),
 			this->ike_sa->get_other_id(this->ike_sa));
 		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
@@ -580,12 +580,12 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	if (this->peer_authenticated)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %D[%H]...[%H]%D",
+		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
 			this->ike_sa->get_name(this->ike_sa),
-			this->ike_sa->get_my_id(this->ike_sa), 
 			this->ike_sa->get_my_host(this->ike_sa),
-			this->ike_sa->get_other_host(this->ike_sa),
-			this->ike_sa->get_other_id(this->ike_sa));
+			this->ike_sa->get_my_id(this->ike_sa), 
+			this->ike_sa->get_other_id(this->ike_sa),
+			this->ike_sa->get_other_host(this->ike_sa));
 		return SUCCESS;
 	}
 	
@@ -688,17 +688,17 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 	auth = this->ike_sa->get_other_auth(this->ike_sa);
 	if (!auth->complies(auth, config->get_auth(config)))
 	{
-		SIG(IKE_UP_FAILED, "authorization of %D for config %s failed",
+		SIG(IKE_UP_FAILED, "authorization of '%D' for config %s failed",
 			this->ike_sa->get_other_id(this->ike_sa), config->get_name(config));
 		return FAILED;
 	}
 	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-	SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %D[%H]...[%H]%D",
+	SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
 		this->ike_sa->get_name(this->ike_sa),
-		this->ike_sa->get_my_id(this->ike_sa),
 		this->ike_sa->get_my_host(this->ike_sa),
-		this->ike_sa->get_other_host(this->ike_sa),
-		this->ike_sa->get_other_id(this->ike_sa));
+		this->ike_sa->get_my_id(this->ike_sa),
+		this->ike_sa->get_other_id(this->ike_sa),
+		this->ike_sa->get_other_host(this->ike_sa));
 	return SUCCESS;
 }
 
