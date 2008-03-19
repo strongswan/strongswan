@@ -626,7 +626,7 @@ static bool shared_filter(shared_data_t *data,
 {
 	id_match_t my_match, other_match;
 
-	if (!(*in)->type == SHARED_ANY && !(*in)->type == data->type)
+	if (data->type != SHARED_ANY && (*in)->type != data->type)
 	{
 		return FALSE;
 	}
