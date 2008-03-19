@@ -111,33 +111,4 @@ struct private_key_t {
     void (*destroy)(private_key_t *this);
 };
 
-/**
- * Read a private key from a file.
- * 
- * @param type			type of the key
- * @param filename		filename to read key from
- * @param passphrase	passphrase to decrypt an encrypted key
- * @return 				loaded private key, NULL if failed
- */
-private_key_t *private_key_create_from_file(key_type_t type, char *filename,
-										    chunk_t passphrase);
-
-/**
- * Create a private key from a chunk.
- * 
- * @param type			type of the key
- * @param chunk			chunk to create key from
- * @return 				loaded private key, NULL if failed
- */
-private_key_t *private_key_create_from_chunk(key_type_t type, chunk_t chunk);
-
-/**
- * Generate a new private key.
- * 
- * @param type			type of the key
- * @param size			key size in bytes
- * @return 				generated private key, NULL if failed
- */
-private_key_t *private_key_create_generated(key_type_t type, size_t size);
-
 #endif /* PRIVATE_KEY_H_ @} */

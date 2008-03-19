@@ -142,22 +142,4 @@ struct public_key_t {
 	void (*destroy)(public_key_t *this);
 };
 
-/**
- * Read a public key from a file.
- * 
- * @param type			type of the key
- * @param filename		filename to read key from
- * @return 				loaded public key, NULL if failed
- */
-public_key_t *public_key_create_from_file(key_type_t type, char *filename);
-
-/**
- * Create a public key from a chunk.
- * 
- * @param type			type of the key
- * @param chunk			chunk to create key from
- * @return 				loaded public key, NULL if failed
- */
-public_key_t *public_key_create_from_chunk(key_type_t type, chunk_t chunk);
-
 #endif /* PUBLIC_KEY_H_ @} */
