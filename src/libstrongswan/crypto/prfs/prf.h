@@ -53,6 +53,11 @@ enum pseudo_random_function_t {
 	PRF_FIPS_SHA1_160 = 1025,
 	/** Could be implemented via fips_prf_t, uses fixed output size of 160bit */
 	PRF_FIPS_DES = 1026,
+	/** 
+	 * Keyed hash algorithm using SHA1, used in EAP-AKA:
+	 * This PRF uses SHA1, but XORs the key into the IV. No "Final()" operation
+	 * is applied to the SHA1 state. */
+	PRF_KEYED_SHA1 = 1027,
 };
 
 /**

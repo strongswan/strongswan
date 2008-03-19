@@ -45,6 +45,7 @@ bool fips_prf_test()
 	prf = lib->crypto->create_prf(lib->crypto, PRF_FIPS_SHA1_160);
 	if (prf == NULL)
 	{
+		DBG1(DBG_CFG, "FIPS PRF implementation not found");
 		return FALSE;
 	}
 	prf->set_key(prf, key);
@@ -52,6 +53,8 @@ bool fips_prf_test()
 	prf->destroy(prf);
 	if (!chunk_equals(result, expected))
 	{
+		DBG1(DBG_CFG, "FIPS PRF result invalid:\nexpected: %Bresult: %B",
+			 &expected, &result);
 		chunk_free(&result);
 		return FALSE;
 	}

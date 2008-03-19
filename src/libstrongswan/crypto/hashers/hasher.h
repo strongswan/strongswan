@@ -41,11 +41,9 @@ enum hash_algorithm_t {
 	HASH_MD2 			= 2,
 	HASH_MD5 			= 3,
 	HASH_SHA1 			= 4,
-	/** special SHA1 which does not run SHA1Final, but copies the state */
-	HASH_SHA1_NOFINAL	= 5,
-	HASH_SHA256 		= 6,
-	HASH_SHA384 		= 7,
-	HASH_SHA512 		= 8,
+	HASH_SHA256 		= 5,
+	HASH_SHA384 		= 6,
+	HASH_SHA512 		= 7,
 };
 
 #define HASH_SIZE_MD2		16

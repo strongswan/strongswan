@@ -43,24 +43,15 @@ struct private_fips_prf_t {
 	size_t b;
 	
 	/**
-	 * associated hasher when using SHA1 mode
+	 * Keyed SHA1 prf: It does not use SHA1Final operation
 	 */
-	hasher_t *hasher;
+	prf_t *keyed_prf;
 	
 	/**
 	 * G function, either SHA1 or DES
 	 */
-	void (*g)(private_fips_prf_t *this, u_int8_t t[], chunk_t c, u_int8_t res[]);
+	void (*g)(private_fips_prf_t *this, chunk_t c, u_int8_t res[]);
 };
-
-/**
- * t used in G(), equals to initial SHA1 value
- */
-static u_int8_t t[] = {
-	0x67,0x45,0x23,0x01,0xEF,0xCD,0xAB,0x89,0x98,0xBA,
-	0xDC,0xFE,0x10,0x32,0x54,0x76,0xC3,0xD2,0xE1,0xF0,
-};
-
 
 /**
  * sum = (a + b) mod 2 ^ (length * 8)
@@ -140,7 +131,7 @@ static void get_bytes(private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
 		add_mod(this->b, xkey, xseed, xval);
 		DBG3("XVAL %b", xval, this->b);
 		/* b. wi = G(t, XVAL ) */
-		this->g(this, t, xval_chunk, &w[i * this->b]);
+		this->g(this, xval_chunk, &w[i * this->b]);
 		DBG3("w[%d] %b", i, &w[i * this->b], this->b);
 		/* c. XKEY = (1 + XKEY + wi) mod 2b */
 		add_mod(this->b, xkey, &w[i * this->b], sum);
@@ -187,7 +178,7 @@ static void set_key(private_fips_prf_t *this, chunk_t key)
 /**
  * Implementation of the G() function based on SHA1
  */
-void g_sha1(private_fips_prf_t *this, u_int8_t t[], chunk_t c, u_int8_t res[])
+void g_sha1(private_fips_prf_t *this, chunk_t c, u_int8_t res[])
 {
 	u_int8_t buf[64];
 	
@@ -205,8 +196,9 @@ void g_sha1(private_fips_prf_t *this, u_int8_t t[], chunk_t c, u_int8_t res[])
 		c.len = sizeof(buf);
 	}
 	
-	/* calculate the special (HASH_SHA1_STATE) hash*/
-	this->hasher->get_hash(this->hasher, c, res);
+	/* use the keyed hasher, but use an empty key to use SHA1 IV */
+	this->keyed_prf->set_key(this->keyed_prf, chunk_empty);
+	this->keyed_prf->get_bytes(this->keyed_prf, c, res);
 }
 
 /**
@@ -214,7 +206,7 @@ void g_sha1(private_fips_prf_t *this, u_int8_t t[], chunk_t c, u_int8_t res[])
  */
 static void destroy(private_fips_prf_t *this)
 {
-	this->hasher->destroy(this->hasher);
+	this->keyed_prf->destroy(this->keyed_prf);
 	free(this->key);
 	free(this);
 }
@@ -239,9 +231,8 @@ fips_prf_t *fips_prf_create(pseudo_random_function_t algo)
 		{
 			this->g = g_sha1;
 			this->b = 20;
-			this->hasher = lib->crypto->create_hasher(lib->crypto,
-													  HASH_SHA1_NOFINAL);
-			if (this->hasher == NULL)
+			this->keyed_prf = lib->crypto->create_prf(lib->crypto, PRF_KEYED_SHA1);
+			if (this->keyed_prf == NULL)
 			{
 				free(this);
 				return NULL;

@@ -204,11 +204,6 @@ struct private_eap_aka_t {
 	hasher_t *sha1;
 	
 	/**
-	 * SHA1_NOFINAL hasher for G() function
-	 */
-	hasher_t *sha1_nof;
-	
-	/**
 	 * MAC function used in EAP-AKA
 	 */
 	signer_t *signer;
@@ -217,6 +212,11 @@ struct private_eap_aka_t {
 	 * pseudo random function used in EAP-aka
 	 */
 	prf_t *prf;
+	
+	/**
+	 * Special keyed SHA1 hasher used in EAP-AKA, implemented as PRF
+	 */
+	prf_t *keyed_prf;
 	
 	/**
 	 * Key for EAP MAC
@@ -437,48 +437,31 @@ static void step4(private_eap_aka_t *this, u_int8_t x[])
 }
 
 /**
- * Implementation of the G() function based on SHA1
- */
-static void g_sha1(private_eap_aka_t *this,
-				   u_int8_t t[], chunk_t c, u_int8_t res[])
-{
-	u_int8_t buf[64];
-	
-	if (c.len < sizeof(buf))
-	{
-		/* pad c with zeros */
-		memset(buf, 0, sizeof(buf));
-		memcpy(buf, c.ptr, c.len);
-		c.ptr = buf;
-		c.len = sizeof(buf);
-	}
-	else
-	{
-		/* not more than 512 bits can be G()-ed */
-		c.len = sizeof(buf);
-	}
-	
-	/* calculate the special (HASH_SHA1_STATE) hash*/
-	this->sha1_nof->get_hash(this->sha1_nof, c, res);
-}
-
-/**
  * Step 3 of the various fx() functions:
  * XOR the key into the SHA1 IV
  */
 static void step3(private_eap_aka_t *this,
 				  chunk_t k, chunk_t payload, u_int8_t h[])
 {
-	u_int8_t iv[] = {
-		0x67,0x45,0x23,0x01,0xEF,0xCD,0xAB,0x89,0x98,0xBA,
-		0xDC,0xFE,0x10,0x32,0x54,0x76,0xC3,0xD2,0xE1,0xF0,
-	};
+	u_int8_t buf[64];
 	
-	/* XOR key into IV */
-	memxor(iv, k.ptr, k.len);
+	if (payload.len < sizeof(buf))
+	{
+		/* pad c with zeros */
+		memset(buf, 0, sizeof(buf));
+		memcpy(buf, payload.ptr, payload.len);
+		payload.ptr = buf;
+		payload.len = sizeof(buf);
+	}
+	else
+	{
+		/* not more than 512 bits can be G()-ed */
+		payload.len = sizeof(buf);
+	}
 	
-	/* hash it with the G() function defined in FIPS 186-2 from fips_prf.h */
-	g_sha1(this, iv, payload, h);
+	/* use the keyed hasher to build the hash */
+	this->keyed_prf->set_key(this->keyed_prf, k);
+	this->keyed_prf->get_bytes(this->keyed_prf, payload, h);
 }
 
 /**
@@ -1282,6 +1265,7 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 	/* verify EAP message MAC AT_MAC */
 	DBG3(DBG_IKE, "verifying AT_MAC signature of %B", &message);
 	DBG3(DBG_IKE, "using key %B", &this->k_auth);
+	this->signer->set_key(this->signer, this->k_auth);
 	if (!this->signer->verify_signature(this->signer, message, at_mac))
 	{
 		*out = build_aka_payload(this, EAP_RESPONSE, identifier, AKA_CLIENT_ERROR,
@@ -1468,9 +1452,9 @@ static bool is_mutual(private_eap_aka_t *this)
 static void destroy(private_eap_aka_t *this)
 {
 	DESTROY_IF(this->sha1);
-	DESTROY_IF(this->sha1_nof);
 	DESTROY_IF(this->signer);
 	DESTROY_IF(this->prf);
+	DESTROY_IF(this->keyed_prf);
 	chunk_free(&this->k_encr);
 	chunk_free(&this->k_auth);
 	chunk_free(&this->msk);
@@ -1508,17 +1492,17 @@ static private_eap_aka_t *eap_aka_create_generic(identification_t *server,
 	this->rand = chunk_empty;
 	
 	this->sha1 = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	this->sha1_nof = lib->crypto->create_hasher(lib->crypto, HASH_SHA1_NOFINAL);
 	this->signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_SHA1_128);
 	this->prf = lib->crypto->create_prf(lib->crypto, PRF_FIPS_SHA1_160);
+	this->keyed_prf = lib->crypto->create_prf(lib->crypto, PRF_KEYED_SHA1);
 
-	if (!this->sha1 || !this->sha1_nof || !this->signer || !this->prf)
+	if (!this->sha1 || !this->signer || !this->prf || !this->keyed_prf)
 	{
 		DBG1(DBG_IKE, "unable to initiate EAP-AKA, FIPS-PRF/SHA1 not supported");
 		DESTROY_IF(this->sha1);
-		DESTROY_IF(this->sha1_nof);
 		DESTROY_IF(this->signer);
 		DESTROY_IF(this->prf);
+		DESTROY_IF(this->keyed_prf);
 		destroy(this);
 		return NULL;
 	}
