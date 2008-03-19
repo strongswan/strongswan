@@ -86,6 +86,8 @@ sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/task.c sa/tasks/task.h \
 credentials/credential_manager.c credentials/credential_manager.h \
 credentials/auth_info.c credentials/auth_info.h \
+credentials/sets/auth_info_wrapper.c credentials/sets/auth_info_wrapper.h \
+credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
 credentials/credential_set.h
 
 # Use RAW socket if pluto gets built

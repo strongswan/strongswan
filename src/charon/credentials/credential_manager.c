@@ -20,6 +20,8 @@
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/mutex.h>
+#include <credentials/sets/auth_info_wrapper.h>
+#include <credentials/sets/ocsp_response_wrapper.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
 #include <credentials/certificates/ocsp_request.h>
@@ -300,111 +302,6 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 									   auth_info_t *auth, bool crl, bool ocsp);
 
 /**
- * credential_set_t implementation around an OCSP response
- */
-typedef struct ocsp_wrapper_t {
-	credential_set_t set;
-	ocsp_response_t *response;
-} ocsp_wrapper_t;
-
-/**
- * enumerator for ocsp_wrapper_t.create_cert_enumerator()
- */
-typedef struct {
-	enumerator_t public;
-	enumerator_t *inner;
-	certificate_type_t cert;
-	key_type_t key;
-	identification_t *id;
-} ocsp_wrapper_enumerator_t;
-
-/**
- * enumerate function for ocsp_wrapper_enumerator_t
- */
-static bool ocsp_wrapper_enum_enumerate(ocsp_wrapper_enumerator_t *this,
-									    certificate_t **cert)
-{
-	certificate_t *current;
-	public_key_t *public;
-
-	while (this->inner->enumerate(this->inner, &current))
-	{
-		if (this->cert != CERT_ANY && this->cert != current->get_type(current))
-		{	/* CERT type requested, but does not match */
-			continue;
-		}
-		public = current->get_public_key(current);
-		if (this->key != KEY_ANY && !public)
-		{	/* key type requested, but no public key */
-			DESTROY_IF(public);
-			continue;
-		}
-		if (this->key != KEY_ANY && public && this->key != public->get_type(public))
-		{	/* key type requested, but public key has another type */
-			DESTROY_IF(public);
-			continue;
-		}
-		DESTROY_IF(public);
-		if (this->id && !current->has_subject(current, this->id))
-		{	/* subject requested, but does not match */
-			continue;
-		}
-		*cert = current;
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
- * destroy function for ocsp_wrapper_enumerator_t
- */
-static void ocsp_wrapper_enum_destroy(ocsp_wrapper_enumerator_t *this)
-{
-	this->inner->destroy(this->inner);
-	free(this);
-}
-
-/**
- * implementation of ocsp_wrapper_t.set.create_cert_enumerator
- */
-static enumerator_t *ocsp_wrapper_create_enumerator(ocsp_wrapper_t *this,
-										certificate_type_t cert, key_type_t key,
-										identification_t *id, bool trusted)
-{
-	ocsp_wrapper_enumerator_t *enumerator;
-	
-	if (trusted)
-	{
-		return NULL;
-	}
-	
-	enumerator = malloc_thing(ocsp_wrapper_enumerator_t);
-	enumerator->cert = cert;
-	enumerator->key = key;
-	enumerator->id = id;
-	enumerator->inner = this->response->create_cert_enumerator(this->response);
-	enumerator->public.enumerate = (void*)ocsp_wrapper_enum_enumerate;
-	enumerator->public.destroy = (void*)ocsp_wrapper_enum_destroy;
-	return &enumerator->public;
-}
-
-/**
- * create credential_set wrapper around an OCSP response
- */
-static ocsp_wrapper_t *ocsp_wrapper_create(ocsp_response_t *response)
-{
-	ocsp_wrapper_t *this = malloc_thing(ocsp_wrapper_t);
-	
-	this->response = response;
-	this->set.create_private_enumerator = (void*)return_null;
-	this->set.create_cert_enumerator = (void*)ocsp_wrapper_create_enumerator;
-	this->set.create_shared_enumerator = (void*)return_null;
-	this->set.create_cdp_enumerator = (void*)return_null;
-
-	return this;
-}
-
-/**
  * Do an OCSP request
  */
 static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
@@ -454,16 +351,16 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 		certificate_t *issuer_cert;
 		identification_t *responder;
 		auth_info_t *auth;
-		ocsp_wrapper_t *wrapper;
+		ocsp_response_wrapper_t *wrapper;
  
 		auth = auth_info_create();
-		wrapper = ocsp_wrapper_create((ocsp_response_t*)response);
+		wrapper = ocsp_response_wrapper_create((ocsp_response_t*)response);
 		this->sets->insert_first(this->sets, wrapper);
 		responder = response->get_issuer(response);
 		DBG1(DBG_CFG, "ocsp signer is \"%D\"", responder);
 		issuer_cert = get_trusted_cert(this, KEY_ANY, responder, auth, FALSE, FALSE);
 		this->sets->remove(this->sets, wrapper, NULL);
-		free(wrapper);
+		wrapper->destroy(wrapper);
 		auth->destroy(auth);
 
 		if (!issuer_cert)
@@ -897,29 +794,20 @@ static bool check_certificate(private_credential_manager_t *this,
 							  bool crl, bool ocsp, auth_info_t *auth)
 {
 	time_t not_before, not_after;
-
+	
 	if (!subject->get_validity(subject, NULL, &not_before, &not_after))
 	{
-		DBG1(DBG_CFG, "certificate is invalid: validity from %T to %T)",
-			 		  &not_before, &not_after);
+		DBG1(DBG_CFG, "subject certificate invalid (valid from %T to %T)",
+			 &not_before, &not_after);
 		return FALSE;
 	}
-	if (issuer)
+	if (!issuer->get_validity(issuer, NULL, &not_before, &not_after))
 	{
-		/* check the issuer's signature */
-		if (subject->issued_by(subject, issuer, TRUE))
-		{
-			DBG1(DBG_CFG, "certificate correctly signed by \"%D\"",
-						   issuer->get_subject(issuer));
-		}
-		else
-		{
-			DBG1(DBG_CFG, "certificate not issued by \"%D\"",
-						   issuer->get_subject(issuer));
-			return FALSE;
-		}
+		DBG1(DBG_CFG, "issuer certificate invalid (valid from %T to %T)",
+			 &not_before, &not_after);
+		return FALSE;
 	}
-	if (issuer && issuer->get_type(issuer) == CERT_X509 &&
+	if (issuer->get_type(issuer) == CERT_X509 &&
 		subject->get_type(subject) == CERT_X509)
 	{
 		if (ocsp)
@@ -967,251 +855,140 @@ static bool check_certificate(private_credential_manager_t *this,
 }
 
 /**
- * credential_set_t implementation around a auth_info_t
+ * Get a trusted certificate from a credential set
  */
-typedef struct auth_wrapper_t {
-	credential_set_t set;
-	auth_info_t *auth;
-} auth_wrapper_t;
-
-/**
- * enumerator for auth_wrapper_t.create_cert_enumerator()
- */
-typedef struct {
-	enumerator_t public;
-	enumerator_t *inner;
-	certificate_type_t cert;
-	key_type_t key;
-	identification_t *id;
-} auth_wrapper_enumerator_t;
-
-/**
- * enumerate function for auth_wrapper_enumerator_t
- */
-static bool auth_wrapper_enum_enumerate(auth_wrapper_enumerator_t *this,
-									    certificate_t **cert)
+static certificate_t *get_pretrusted_cert(private_credential_manager_t *this,
+										  key_type_t type, identification_t *id)
 {
-	auth_item_t type;
-	certificate_t *current;
+	certificate_t *subject;
 	public_key_t *public;
-
-	while (this->inner->enumerate(this->inner, &type, &current))
-	{
-		if (type != AUTHN_SUBJECT_CERT && 
-			type != AUTHN_IM_CERT)
-		{
-			continue;
-		}
-
-		if (this->cert != CERT_ANY && this->cert != current->get_type(current))
-		{	/* CERT type requested, but does not match */
-			continue;
-		}
-		public = current->get_public_key(current);
-		if (this->key != KEY_ANY && !public)
-		{	/* key type requested, but no public key */
-			DESTROY_IF(public);
-			continue;
-		}
-		if (this->key != KEY_ANY && public && this->key != public->get_type(public))
-		{	/* key type requested, but public key has another type */
-			DESTROY_IF(public);
-			continue;
-		}
-		DESTROY_IF(public);
-		if (this->id && !current->has_subject(current, this->id))
-		{	/* subject requested, but does not match */
-			continue;
-		}
-		*cert = current;
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
- * destroy function for auth_wrapper_enumerator_t
- */
-static void auth_wrapper_enum_destroy(auth_wrapper_enumerator_t *this)
-{
-	this->inner->destroy(this->inner);
-	free(this);
-}
-
-/**
- * implementation of auth_wrapper_t.set.create_cert_enumerator
- */
-static enumerator_t *auth_wrapper_create_enumerator(auth_wrapper_t *this,
-										certificate_type_t cert, key_type_t key,
-										identification_t *id, bool trusted)
-{
-	auth_wrapper_enumerator_t *enumerator;
 	
-	if (trusted)
+	subject = get_cert(this, CERT_ANY, type, id, TRUE);
+	if (!subject)
 	{
 		return NULL;
 	}
-	
-	enumerator = malloc_thing(auth_wrapper_enumerator_t);
-	enumerator->cert = cert;
-	enumerator->key = key;
-	enumerator->id = id;
-	enumerator->inner = this->auth->create_item_enumerator(this->auth);
-	enumerator->public.enumerate = (void*)auth_wrapper_enum_enumerate;
-	enumerator->public.destroy = (void*)auth_wrapper_enum_destroy;
-	return &enumerator->public;
+	public = subject->get_public_key(subject);
+	if (!public)
+	{
+		subject->destroy(subject);
+		return NULL;
+	}
+	public->destroy(public);
+	return subject;
 }
 
 /**
- * create credential_set wrapper around auth_info_t
+ * try to build the next link in the trustchain, either to a root CA (trusted)
+ * or to an intermediate CA.
  */
-static auth_wrapper_t *auth_wrapper_create(auth_info_t *auth)
+static auth_info_t *verify_trustchain(private_credential_manager_t *this,
+									  certificate_t **issuerp, bool crl,
+									  bool ocsp, bool peer, bool trusted)
 {
-	auth_wrapper_t *this = malloc_thing(auth_wrapper_t);
+	enumerator_t *enumerator;
+	certificate_t *candidate, *issuer;
+	auth_info_t *auth = NULL;
 	
-	this->auth = auth;
-	this->set.create_private_enumerator = (void*)return_null;
-	this->set.create_cert_enumerator = (void*)auth_wrapper_create_enumerator;
-	this->set.create_shared_enumerator = (void*)return_null;
-	this->set.create_cdp_enumerator = (void*)return_null;
-
-	return this;
+	issuer = *issuerp;
+	enumerator = create_cert_enumerator(this, issuer->get_type(issuer), KEY_ANY,
+										issuer->get_issuer(issuer), trusted);
+	while (enumerator->enumerate(enumerator, &candidate))
+	{
+		if (!issuer->issued_by(issuer, candidate, TRUE))
+		{
+			continue;
+		}
+		auth = auth_info_create();
+		if (check_certificate(this, issuer, candidate, crl, ocsp,
+							  peer ? auth : NULL))
+		{
+			issuer->destroy(issuer);
+			*issuerp = candidate->get_ref(candidate);
+			break;
+		}
+		auth->destroy(auth);
+		auth = NULL;
+		break;
+	}
+	enumerator->destroy(enumerator);
+	return auth;
 }
 
 /**
- * Get a trusted certificate
+ * Get a trusted certificate by verifying the trustchain
  */
 static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 									   key_type_t type, identification_t *id,
 									   auth_info_t *auth, bool crl, bool ocsp)
 {
-	enumerator_t *enumerator;
-	auth_wrapper_t *wrapper;
-	certificate_t *subject, *issuer, *candidate;
-	public_key_t *public;
-	bool trusted = FALSE;
+	certificate_t *subject, *issuer;
+	bool peer = TRUE, trusted = FALSE;
 	auth_info_t *auth1, *auth2;
 	u_int level = 0;
 	
-	this->mutex->lock(this->mutex);
-	wrapper = auth_wrapper_create(auth);
-	this->sets->insert_first(this->sets, wrapper);
-	
 	/* check if we have a trusted certificate for that peer */
-	auth1 = auth_info_create();
-	subject = get_cert(this, CERT_ANY, type, id, TRUE);
+	subject = get_pretrusted_cert(this, type, id);
 	if (subject)
-	{
-		if (check_certificate(this, subject, NULL, crl, ocsp, auth1))
-		{
-			public = subject->get_public_key(subject);
-			if (public)
-			{
-				DBG1(DBG_CFG, "found trusted certificate \"%D\"",
-							     subject->get_subject(subject));
-				this->sets->remove(this->sets, wrapper, NULL);
-				free(wrapper);
-				this->mutex->unlock(this->mutex);
-				auth->add_item(auth1, AUTHZ_SUBJECT_CERT, subject);
-				public->destroy(public);
-				auth->merge(auth, auth1);
-				auth1->destroy(auth1);
-				return subject;
-			}
-		}
-		subject->destroy(subject);
+	{	/* if we find a trusted certificate, we accept it. However, to 
+		 * fullfill authorization rules, we try build the trustchain anyway. */
+		trusted = TRUE;
 	}
-	auth1->destroy(auth1);
-	
-	/* check for an untrusted certificate */
-	auth1 = auth_info_create();
-	subject = get_cert(this, CERT_ANY, type, id, FALSE);
+	else
+	{	/* check for an untrusted peer certificate */
+		subject = get_cert(this, CERT_ANY, type, id, FALSE);
+	}
 	if (!subject)
 	{
 		DBG1(DBG_CFG, "no certificate found for '%D'", id);
+		return NULL;
 	}
-	else
+	DBG1(DBG_CFG, "  using end entity certificate \"%D\"",
+		 subject->get_subject(subject));
+	auth1 = auth_info_create();
+	auth->add_item(auth, AUTHZ_SUBJECT_CERT, subject);
+	issuer = subject->get_ref(subject);
+	while (level++ < MAX_CA_LEVELS)
 	{
-		DBG1(DBG_CFG, "found untrusted certificate for '%D'", id);
-		issuer = subject;
-		do
+		/* look for a trusted CA certificate */
+		auth2 = verify_trustchain(this, &issuer, crl, ocsp, peer, TRUE);
+		if (auth2)
 		{
-			/* look for a trusted certificate */
-			auth2 = auth_info_create();
-			enumerator = create_cert_enumerator(this, issuer->get_type(issuer), 
-									KEY_ANY, issuer->get_issuer(issuer), TRUE);
-			while (enumerator->enumerate(enumerator, &candidate))
-			{
-				if (check_certificate(this, issuer, candidate, crl, ocsp,
-									  issuer == subject ? auth2 : NULL) &&
-					check_certificate(this, candidate, NULL, crl, ocsp, NULL))
-				{
-					DBG1(DBG_CFG, "reached trusted root ca certificate \"%D\"",
-						 candidate->get_subject(candidate));
-					issuer = candidate;
-					trusted = TRUE;
-					auth1->merge(auth1, auth2);
-					auth1->add_item(auth1, AUTHZ_CA_CERT, candidate);
-					break;
-				}
-			}
-			enumerator->destroy(enumerator);
+			DBG1(DBG_CFG, "  using trusted root CA certificate \"%D\"",
+				 issuer->get_subject(issuer));
+			auth1->merge(auth1, auth2);	
 			auth2->destroy(auth2);
-			if (trusted)
-			{
-				break;
-			}
-			
-			/* no trusted certificate found, look for an untrusted */
-			enumerator = create_cert_enumerator(this, issuer->get_type(issuer), 
-									KEY_ANY, issuer->get_issuer(issuer), FALSE);
-			while (enumerator->enumerate(enumerator, &candidate))
-			{
-				auth2 = auth_info_create();
-				if (check_certificate(this, issuer, candidate, crl, ocsp,
-									  issuer == subject ? auth2 : NULL))
-				{
-					if (issuer != subject)
-					{
-						DBG1(DBG_CFG, "found intermediate ca certificate \"%D\"",
-							 candidate->get_subject(candidate));
-						auth1->add_item(auth1, AUTHZ_IM_CERT, candidate);
-					}
-					else
-					{
-						DBG1(DBG_CFG, "found end entity certificate \"%D\"",
-							 candidate->get_subject(candidate));
-					}
-					issuer = candidate;
-					auth1->merge(auth1, auth2);
-					auth2->destroy(auth2);
-					/* check next level */
-					break;
-				}
-				auth2->destroy(auth2);
-			}
-			enumerator->destroy(enumerator);
+			auth1->add_item(auth1, AUTHZ_CA_CERT, issuer);	
+			trusted = TRUE;
+			break;
 		}
-		while (++level < MAX_CA_LEVELS);
-		
-		if (!trusted)
+		/* check for a untrusted intermediate CA */
+		auth2 = verify_trustchain(this, &issuer, crl, ocsp, peer, FALSE);
+		if (auth2)
 		{
-			subject->destroy(subject);
-			subject = NULL;
+			DBG1(DBG_CFG, "  using intermediate CA certificate \"%D\"",
+				 issuer->get_subject(issuer));
+			auth1->merge(auth1, auth2);
+			auth2->destroy(auth2);
+			auth1->add_item(auth1, AUTHZ_IM_CERT, issuer);
+			peer = FALSE;
+			continue;
 		}
+		break;
 	}
-	this->sets->remove(this->sets, wrapper, NULL);
-	free(wrapper);
-	this->mutex->unlock(this->mutex);
-	if (subject)
+	issuer->destroy(issuer);
+	if (trusted)
 	{
 		auth->add_item(auth, AUTHZ_SUBJECT_CERT, subject);
 		auth->merge(auth, auth1);
-		auth1->destroy(auth1);
-		return subject;
+	}
+	else
+	{
+		subject->destroy(subject);
+		subject = NULL;
 	}
 	auth1->destroy(auth1);
-	return NULL;
+	return subject;
 }
 
 /**
@@ -1221,17 +998,25 @@ static public_key_t *get_public(private_credential_manager_t *this,
 								key_type_t type, identification_t *id,
 								auth_info_t *auth)
 {
-	public_key_t *public;
+	public_key_t *public = NULL;
 	certificate_t *cert;
+	auth_info_wrapper_t *wrapper;
+	
+	wrapper = auth_info_wrapper_create(auth);
+	this->mutex->lock(this->mutex);
+	this->sets->insert_first(this->sets, wrapper);
 	
 	cert = get_trusted_cert(this, type, id, auth, TRUE, TRUE);
 	if (cert)
 	{
 		public = cert->get_public_key(cert);
 		cert->destroy(cert);
-		return public;
 	}
-	return NULL;
+	
+	this->sets->remove(this->sets, wrapper, NULL);
+	wrapper->destroy(wrapper);
+	this->mutex->unlock(this->mutex);
+	return public;
 }
 
 /**

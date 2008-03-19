@@ -36,6 +36,9 @@
  * @defgroup ccredentials credentials
  * @ingroup charon
  *
+ * @defgroup sets sets
+ * @ingroup ccredentials
+ *
  * @defgroup encoding encoding
  * @ingroup charon
  *
