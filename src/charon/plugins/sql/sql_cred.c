@@ -332,14 +332,6 @@ static enumerator_t* create_shared_enumerator(private_sql_cred_t *this,
 }
 
 /**
- * return null
- */
-static void *return_null()
-{
-	return NULL;
-}
-
-/**
  * Implementation of sql_cred_t.destroy.
  */
 static void destroy(private_sql_cred_t *this)

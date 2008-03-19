@@ -210,6 +210,11 @@ void *clalloc(void *pointer, size_t size);
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 
 /**
+ * returns null
+ */
+void *return_null();
+
+/**
  * Special type to count references
  */
 typedef volatile u_int refcount_t;

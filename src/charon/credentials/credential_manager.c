@@ -298,13 +298,6 @@ static shared_key_t *get_shared(private_credential_manager_t *this,
 static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 									   key_type_t type, identification_t *id,
 									   auth_info_t *auth, bool crl, bool ocsp);
-/**
- * return null ;-)
- */
-static void *return_null()
-{
-	return NULL;
-}
 
 /**
  * credential_set_t implementation around an OCSP response
@@ -492,22 +485,20 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 {
 	certificate_t *sub = (certificate_t*)subject;
 	certificate_t *best_cert = NULL;
+	certificate_t *cert;
+	public_key_t *public;
 	cert_validation_t valid = VALIDATION_SKIPPED;
 	identification_t *keyid = NULL;
 	bool stale = TRUE;
 	
 	/* derive the authorityKeyIdentifier from the issuer's public key */
+	cert = &issuer->interface;
+	public = cert->get_public_key(cert);
+	if (public)
 	{
-		certificate_t *cert = &issuer->interface;
-		public_key_t *public = cert->get_public_key(cert);
-
-		if (public)
-		{
-			keyid = public->get_id(public, ID_PUBKEY_SHA1);
-			public->destroy(public);
-		}
+		keyid = public->get_id(public, ID_PUBKEY_SHA1);
 	}
-
+	
 	/* find a cached ocsp response by authorityKeyIdentifier */	
 	if (keyid)
 	{
@@ -612,6 +603,7 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 		}
 		enumerator->destroy(enumerator);
 	}
+	DESTROY_IF(public);
 
 	/* if we have an ocsp response, check the revocation status */
 	if (best_cert)
@@ -638,7 +630,7 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 		}
 		best_cert->destroy(best_cert);
 	}
-
+	
 	if (auth)
 	{
 		auth->add_item(auth, AUTHZ_OCSP_VALIDATION, &valid);
@@ -707,19 +699,17 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 {
 	identification_t *keyid = NULL;
 	certificate_t *best_cert = NULL;
+	certificate_t *cert;
+	public_key_t *public;
 	cert_validation_t valid = VALIDATION_SKIPPED;
 	bool stale = TRUE;
 	
 	/* derive the authorityKeyIdentifier from the issuer's public key */
+	cert = &issuer->interface;
+	public = cert->get_public_key(cert);
+	if (public)
 	{
-		certificate_t *cert = &issuer->interface;
-		public_key_t *public = cert->get_public_key(cert);
-
-		if (public)
-		{
-			keyid = public->get_id(public, ID_PUBKEY_SHA1);
-			public->destroy(public);
-		}
+		keyid = public->get_id(public, ID_PUBKEY_SHA1);
 	}
 	
 	/* find a cached crl by authorityKeyIdentifier */
@@ -820,6 +810,7 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 		}
 		enumerator->destroy(enumerator);
 	}
+	DESTROY_IF(public);
 
 	/* if we have a crl, check the revocation status */
 	if (best_cert)
@@ -884,8 +875,7 @@ static bool check_certificate(private_credential_manager_t *this,
 			switch (check_ocsp(this, (x509_t*)subject, (x509_t*)issuer, auth))
 			{
 				case VALIDATION_GOOD:
-					DBG1(DBG_CFG, "certificate status is good",
-						 subject->get_subject(subject));
+					DBG1(DBG_CFG, "certificate status is good");
 					return TRUE;
 				case VALIDATION_REVOKED:
 					/* has already been logged */			
@@ -905,10 +895,10 @@ static bool check_certificate(private_credential_manager_t *this,
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
-					break;
+					return TRUE;
 				case VALIDATION_REVOKED:		
 					/* has already been logged */			
-					break;
+					return FALSE;
 				case VALIDATION_UNKNOWN:
 					DBG1(DBG_CFG, "certificate status is unknown");
 					break;

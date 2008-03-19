@@ -282,14 +282,6 @@ static void ca_section_destroy(ca_section_t *this)
 }
 
 /**
- * another return NULL 
- */
-static void* return_null()
-{
-	return NULL;
-}
-
-/**
  * data to pass to create_inner_cdp
  */
 typedef struct {

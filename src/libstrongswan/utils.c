@@ -64,6 +64,14 @@ void memxor(u_int8_t dest[], u_int8_t src[], size_t n)
 }
 
 /**
+ * return null
+ */
+void *return_null()
+{
+	return NULL;
+}
+
+/**
  * We use a single mutex for all refcount variables. This
  * is not optimal for performance, but the critical section
  * is not that long...

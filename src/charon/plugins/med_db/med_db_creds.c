@@ -173,14 +173,6 @@ static enumerator_t* create_shared_enumerator(private_med_db_creds_t *this,
 	}
 	return NULL;
 }
-
-/**
- * returns null
- */
-static void *return_null()
-{
-	return NULL;
-}
 	
 /**
  * Implementation of backend_t.destroy.
