@@ -476,7 +476,7 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 		issuer_cert->destroy(issuer_cert);
 		DBG1(DBG_CFG, "  ocsp response is %strusted: %s signature",
 						 ok ? "":"un", ok ? "good" : "bad");
-		if (ok)
+		if (!ok)
 		{
 			response->destroy(response);
 			return NULL;
