@@ -1287,9 +1287,19 @@ static void peer_data_destroy(peer_data_t *data)
  */
 static bool peer_filter(peer_data_t *data, peer_cfg_t **in, peer_cfg_t **out)
 {
-
-	if ((!data->me || data->me->matches(data->me, (*in)->get_my_id(*in))) &&
-		(!data->other || data->other->matches(data->other, (*in)->get_other_id(*in))))
+	bool match_me = FALSE, match_other = FALSE;
+	identification_t *me, *other;
+	
+	me = (*in)->get_my_id(*in);
+	other = (*in)->get_other_id(*in);
+	
+	/* own ID may have wildcards in data (no IDr payload) or in config */
+	match_me = (!data->me || data->me->matches(data->me, me) ||
+				me->matches(me, data->me));
+	/* others ID has wildcards in config only */
+	match_other = (!data->other || data->other->matches(data->other, other));
+	
+	if (match_me && match_other)
 	{
 		*out = *in;
 		return TRUE;

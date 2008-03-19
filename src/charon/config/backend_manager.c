@@ -216,7 +216,12 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this,
 		my_candidate = current->get_my_id(current);
 		other_candidate = current->get_other_id(current);
 		
+		/* own ID may have wildcards in both, config and request (missing IDr) */
 		m1 = my_candidate->matches(my_candidate, me);
+		if (!m1)
+		{
+			m1 = me->matches(me, my_candidate);
+		}
 		m2 = other->matches(other, other_candidate);
 		sum = m1 + m2;
 		
