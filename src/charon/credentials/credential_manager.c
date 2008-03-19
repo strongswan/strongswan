@@ -535,8 +535,12 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 	/* check the validity of the cached ocsp response if one was found */
 	if (best_cert)
 	{
-		stale = !best_cert->get_validity(best_cert, NULL, NULL, NULL);
-		DBG1(DBG_CFG, "cached ocsp response is %s", stale? "stale":"valid");
+		time_t nextUpdate;
+
+		stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
+		DBG1(DBG_CFG, "cached ocsp response is %s %#T",
+					   stale? "stale: since":"valid: until",
+					   &nextUpdate, FALSE );
 	}
 
 	/* fallback to URL fetching from CDPs */
@@ -559,10 +563,14 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 				/* select most recent ocsp response until valid one is found */
 				if (best_cert == NULL || cert->is_newer(cert, best_cert))
 				{
+					time_t nextUpdate;
+
 					DESTROY_IF(best_cert);
 					best_cert = cert;
-					stale = !best_cert->get_validity(best_cert, NULL, NULL, NULL);
-					DBG1(DBG_CFG, "ocsp response is %s", stale? "stale":"valid");
+					stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
+					DBG1(DBG_CFG, "ocsp response is %s %#T",
+								   stale? "stale: since":"valid: until",
+								   &nextUpdate, FALSE );
 					if (!stale)
 					{
 						break;
@@ -596,10 +604,14 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 				/* select most recent ocsp response until valid one is found */
 				if (best_cert == NULL || cert->is_newer(cert, best_cert))
 				{
+					time_t nextUpdate;
+
 					DESTROY_IF(best_cert);
 					best_cert = cert;
-					stale = !best_cert->get_validity(best_cert, NULL, NULL, NULL);
-					DBG1(DBG_CFG, "ocsp response is %s", stale? "stale":"valid");
+					stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
+					DBG1(DBG_CFG, "ocsp response is %s %#T",
+								   stale? "stale: since":"valid: until",
+								   &nextUpdate, FALSE );
 					if (!stale)
 					{
 						break;
@@ -744,8 +756,12 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 	/* check the validity of the cached crl if one was found */
 	if (best_cert)
 	{
-		stale = !best_cert->get_validity(best_cert, NULL, NULL, NULL);
-		DBG1(DBG_CFG, "cached crl is %s", stale? "stale":"valid");
+		time_t nextUpdate;
+
+		stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
+		DBG1(DBG_CFG, "cached crl is %s %#T",
+					   stale? "stale: since":"valid: until",
+					   &nextUpdate, FALSE );
 	}
 
 	/* fallback to fetching crls from cdps defined in ca info sections */
@@ -767,10 +783,14 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 				/* select most recent crl until valid one is found */
 				if (best_cert == NULL || cert->is_newer(cert, best_cert))
 				{
+					time_t nextUpdate;
+
 					DESTROY_IF(best_cert);
 					best_cert = cert;
-					stale = !best_cert->get_validity(best_cert, NULL, NULL, NULL);
-					DBG1(DBG_CFG, "fetched crl is %s", stale? "stale":"valid");
+					stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
+					DBG1(DBG_CFG, "fetched crl is %s %#T",
+								   stale? "stale: since":"valid: until",
+								   &nextUpdate, FALSE );
 					if (!stale)
 					{
 						break;
@@ -803,10 +823,14 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 				/* select most recent crl until valid one is found */
 				if (best_cert == NULL || cert->is_newer(cert, best_cert))
 				{
+					time_t nextUpdate;
+
 					DESTROY_IF(best_cert);
 					best_cert = cert;
-					stale = !best_cert->get_validity(best_cert, NULL, NULL, NULL);
-					DBG1(DBG_CFG, "fetched crl is %s", stale? "stale":"valid");
+					stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
+					DBG1(DBG_CFG, "fetched crl is %s %#T",
+								   stale? "stale: since":"valid: until",
+								   &nextUpdate, FALSE );
 					if (!stale)
 					{
 						break;
