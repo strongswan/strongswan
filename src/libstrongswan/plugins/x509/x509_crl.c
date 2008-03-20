@@ -24,6 +24,7 @@ typedef struct revoked_t revoked_t;
 #include <library.h>
 #include <asn1/asn1.h>
 #include <credentials/certificates/x509.h>
+#include <utils/linked_list.h>
 
 /**
  * entry for a revoked certificate
