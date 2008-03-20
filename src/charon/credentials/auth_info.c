@@ -25,6 +25,7 @@
 
 ENUM(auth_item_names, AUTHN_CA_CERT, AUTHZ_AC_GROUP,
 	"AUTHN_CA_CERT",
+	"AUTHN_CA_CERT_KEYID",
 	"AUTHN_IM_CERT",
 	"AUTHN_SUBJECT_CERT",
 	"AUTHZ_PUBKEY",
@@ -162,6 +163,7 @@ static void add_item(private_auth_info_t *this, auth_item_t type, void *value)
 			item->value = method;
 			break;
 		}
+		case AUTHN_CA_CERT_KEYID:
 		case AUTHZ_AC_GROUP:
 		{
 			identification_t *id = (identification_t*)value;
@@ -189,6 +191,7 @@ static bool complies(private_auth_info_t *this, auth_info_t *constraints)
 	{
 		switch (type)
 		{
+			case AUTHN_CA_CERT_KEYID:
 			case AUTHN_CA_CERT:
 			case AUTHN_IM_CERT:
 			case AUTHN_SUBJECT_CERT:
@@ -322,6 +325,7 @@ static void destroy(private_auth_info_t *this)
 				free(item->value);
 				break;
 			}
+			case AUTHN_CA_CERT_KEYID:
 			case AUTHZ_AC_GROUP:
 			{
 				identification_t *id = (identification_t*)item->value;

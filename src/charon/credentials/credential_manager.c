@@ -1064,6 +1064,25 @@ static bool auth_contains_cacert(auth_info_t *auth, certificate_t *cert)
 			found = TRUE;
 			break;
 		}
+		if (type == AUTHN_CA_CERT_KEYID)
+		{
+			public_key_t *public;
+			identification_t *certid, *keyid;
+			
+			public = cert->get_public_key(cert);
+			if (public)
+			{
+				keyid = (identification_t*)value;
+				certid = public->get_id(public, keyid->get_type(keyid));
+				if (certid && certid->equals(certid, keyid))
+				{
+					public->destroy(public);
+					found = TRUE;
+					break;
+				}
+				public->destroy(public);
+			}
+		}
 	}
 	enumerator->destroy(enumerator);
 	return found;

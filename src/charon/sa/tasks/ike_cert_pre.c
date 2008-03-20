@@ -94,17 +94,18 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 					cert->destroy(cert);
 					ca_found = TRUE;
 				}
+				else
+				{
+					DBG1(DBG_IKE, "received cert request of unknown cert "
+						 "\"%D\"", id);
+					auth->add_item(auth, AUTHN_CA_CERT_KEYID, id);
+				}
 				id->destroy(id);
 			}
 			enumerator->destroy(enumerator);
 		}
 	}
 	iterator->destroy(iterator);
-	
-	if (this->ike_sa->has_condition(this->ike_sa, COND_CERTREQ_SEEN) && !ca_found)
-	{
-		DBG1(DBG_IKE, "received cert request, but no such CA cert found");
-	}
 }
 
 /**

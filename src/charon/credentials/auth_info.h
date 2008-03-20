@@ -61,6 +61,8 @@ enum auth_item_t {
 	
 	/** CA certificate to use for authentication, value is certificate_t* */
 	AUTHN_CA_CERT,
+	/** Keyid of a CA certificate to use, value is identification_t* */
+	AUTHN_CA_CERT_KEYID,
 	/** intermediate certificate, value is certificate_t* */
 	AUTHN_IM_CERT,
 	/** certificate for trustchain verification, value is certificate_t* */
