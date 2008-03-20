@@ -12,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 /**
@@ -26,7 +28,7 @@ typedef struct crl_t crl_t;
 typedef enum crl_reason_t crl_reason_t;
 
 #include <library.h>
-#include <utils/linked_list.h>
+#include <credentials/certificates/certificate.h>
 
 /**
  * RFC 2459 CRL reason codes
