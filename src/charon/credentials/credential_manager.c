@@ -20,6 +20,7 @@
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/mutex.h>
+#include <credentials/sets/cert_cache.h>
 #include <credentials/sets/auth_info_wrapper.h>
 #include <credentials/sets/ocsp_response_wrapper.h>
 #include <credentials/certificates/x509.h>
@@ -45,6 +46,11 @@ struct private_credential_manager_t {
 	 * list of credential sets
 	 */
 	linked_list_t *sets;
+	
+	/**
+	 * trust relationship and certificate cache
+	 */
+	cert_cache_t *cache;
 	
 	/**
 	 * mutex to gain exclusive access
@@ -356,7 +362,9 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
  
 		auth = auth_info_create();
 		wrapper = ocsp_response_wrapper_create((ocsp_response_t*)response);
+		this->sets->remove(this->sets, this->cache, NULL);
 		this->sets->insert_first(this->sets, wrapper);
+		this->sets->insert_first(this->sets, this->cache);
 		responder = response->get_issuer(response);
 		DBG1(DBG_CFG, "ocsp signer is \"%D\"", responder);
 		issuer_cert = get_trusted_cert(this, KEY_ANY, responder, auth, FALSE, FALSE);
@@ -370,7 +378,7 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 			response->destroy(response);
 			return NULL;
 		}
-		if (response->issued_by(response, issuer_cert, TRUE))
+		if (this->cache->issued_by(this->cache, response, issuer_cert))
 		{
 			DBG1(DBG_CFG, "ocsp response correctly signed by \"%D\"",
 						   issuer_cert->get_subject(issuer_cert));
@@ -601,7 +609,7 @@ static certificate_t* fetch_crl(private_credential_manager_t *this, char *url)
 			return NULL;
 		}
 		
-		if (crl_cert->issued_by(crl_cert, issuer_cert, TRUE))
+		if (this->cache->issued_by(this->cache, crl_cert, issuer_cert))
 		{
 			DBG1(DBG_CFG, "crl correctly signed by \"%D\"",
 						   issuer_cert->get_subject(issuer_cert));
@@ -892,7 +900,7 @@ static certificate_t *get_issuer_cert(private_credential_manager_t *this,
 										subject->get_issuer(subject), trusted);
 	while (enumerator->enumerate(enumerator, &candidate))
 	{
-		if (subject->issued_by(subject, candidate, TRUE))
+		if (this->cache->issued_by(this->cache, subject, candidate))
 		{
 			issuer = candidate->get_ref(candidate);
 			break;
@@ -1031,7 +1039,9 @@ static public_key_t *get_public(private_credential_manager_t *this,
 	
 	wrapper = auth_info_wrapper_create(auth);
 	this->mutex->lock(this->mutex);
+	this->sets->remove(this->sets, this->cache, NULL);
 	this->sets->insert_first(this->sets, wrapper);
+	this->sets->insert_first(this->sets, this->cache);
 	
 	cert = get_trusted_cert(this, type, id, auth, TRUE, TRUE);
 	if (cert)
@@ -1250,7 +1260,9 @@ static void remove_set(private_credential_manager_t *this, credential_set_t *set
  */
 static void destroy(private_credential_manager_t *this)
 {
+	this->sets->remove(this->sets, this->cache, NULL);
 	this->sets->destroy(this->sets);
+	this->cache->destroy(this->cache);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -1274,6 +1286,8 @@ credential_manager_t *credential_manager_create()
 	this->public.destroy = (void(*)(credential_manager_t*))destroy;
 	
 	this->sets = linked_list_create();
+	this->cache = cert_cache_create();
+	this->sets->insert_first(this->sets, this->cache);
 	this->mutex = mutex_create(MUTEX_RECURSIVE);
 	
 	return &this->public;
