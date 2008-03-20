@@ -52,6 +52,16 @@ struct private_nm_applet_gui_t {
 	 * name of the connection
 	 */
 	GtkEntry *name;
+	
+	/**
+	 * gateway address
+	 */
+	GtkEntry *gateway;
+	
+	/**
+	 * username
+	 */
+	GtkEntry *user;
 };
 
 static const char *get_display_name(private_nm_applet_gui_t *this)
@@ -70,7 +80,8 @@ static GtkWidget *get_widget(private_nm_applet_gui_t *this, GSList *properties,
 	GSList *i;
 
 	gtk_entry_set_text(this->name, "");
-	/*gtk_entry_set_text(this->gateway, "");*/
+	gtk_entry_set_text(this->gateway, "");
+	gtk_entry_set_text(this->user, "");
 	
 	if (connection_name)
 	{
@@ -87,15 +98,17 @@ static GtkWidget *get_widget(private_nm_applet_gui_t *this, GSList *properties,
 		if (properties)
 		{
 			value = properties->data;
-			/*
 			if (strcmp(key, "gateway") == 0)
 			{
 			    gtk_entry_set_text(this->gateway, value);
-			}*/
+			}
+			if (strcmp(key, "user") == 0)
+			{
+			    gtk_entry_set_text(this->user, value);
+			}
 			properties = g_slist_next(properties);
 		}
 	}
-
 	return this->widget;
 }
 
@@ -103,8 +116,10 @@ static GSList *get_properties(private_nm_applet_gui_t *this)
 {
 	GSList *props = NULL;
 	
-	/*props = g_slist_append(props, g_strdup("gateway"));
-	props = g_slist_append(props, g_strdup(gtk_entry_get_text(this->gateway)));*/
+	props = g_slist_append(props, g_strdup("gateway"));
+	props = g_slist_append(props, g_strdup(gtk_entry_get_text(this->gateway)));
+	props = g_slist_append(props, g_strdup("user"));
+	props = g_slist_append(props, g_strdup(gtk_entry_get_text(this->user)));
 	
 	return props;
 }
@@ -178,14 +193,16 @@ NetworkManagerVpnUI* nm_vpn_properties_factory(void)
     this->public.data = NULL;
     
     this->callback = NULL;
-    this->xml = glade_xml_new("/home/martin/strongswan/trunk/src/networkmanager/nm_applet_gui.xml", NULL, NULL);
+    this->xml = glade_xml_new("/home/martin/strongswan/trunk/src/charon/plugins/dbus/nm_applet_gui.xml", NULL, NULL);
 	
 	if (this->xml != NULL)
 	{
     	this->widget = glade_xml_get_widget(this->xml, "main");
     	this->name = GTK_ENTRY(glade_xml_get_widget(this->xml, "name"));
+    	this->gateway = GTK_ENTRY(glade_xml_get_widget(this->xml, "gateway"));
+    	this->user = GTK_ENTRY(glade_xml_get_widget(this->xml, "user"));
     		
-		if (this->widget && this->name)
+		if (this->widget && this->name && this->gateway && this->user)
 		{
 			return &this->public;
 		}
