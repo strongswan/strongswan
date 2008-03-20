@@ -680,7 +680,8 @@ static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer,
 				return FALSE;
 		}
 	}
-	if (!(x509->get_flags(x509) & X509_OCSP_SIGNER))
+	if (!(x509->get_flags(x509) & X509_OCSP_SIGNER) &&
+		!(x509->get_flags(x509) & X509_CA))
 	{
 		return FALSE;
 	}
