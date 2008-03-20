@@ -1106,7 +1106,6 @@ static auth_info_t *build_trustchain(private_credential_manager_t *this,
 		trustchain->add_item(trustchain, AUTHZ_SUBJECT_CERT, subject);
 		return trustchain;
 	}
-	
 	current = subject->get_ref(subject);
 	while (TRUE)
 	{
@@ -1188,10 +1187,10 @@ static private_key_t *get_private(private_credential_manager_t *this,
 	}
 	
 	this->mutex->lock(this->mutex);
-	/* get all available end entity certificates for ourself */
+	/* try to build a trustchain for each certificate found */
 	enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
 	while (enumerator->enumerate(enumerator, &cert))
-	{	
+	{
 		private = get_private_by_cert(this, cert, type);
 		if (private)
 		{
@@ -1203,9 +1202,25 @@ static private_key_t *get_private(private_credential_manager_t *this,
 				break;
 			}
 			private->destroy(private);
+			private = NULL;
 		}
 	}
 	enumerator->destroy(enumerator);
+	/* if no valid trustchain was found, fall back to the first usable cert */
+	if (!private)
+	{
+		enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
+		while (enumerator->enumerate(enumerator, &cert))
+		{
+			private = get_private_by_cert(this, cert, type);
+			if (private)
+			{
+				auth->add_item(auth, AUTHZ_SUBJECT_CERT, cert);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 	this->mutex->unlock(this->mutex);
 	return private;
 }
