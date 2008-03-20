@@ -45,8 +45,6 @@
 #include <fips_signature.h>
 #endif /* INTEGRITY_TEST */
 
-#include "build.h"
-
 #define OPENAC_PATH   		IPSEC_CONFDIR "/openac"
 #define OPENAC_SERIAL 		IPSEC_CONFDIR "/openac/serial"
 
