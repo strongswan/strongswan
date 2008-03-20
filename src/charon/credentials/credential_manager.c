@@ -987,7 +987,7 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 	if (subject)
 	{	/* if we find a trusted certificate, we accept it. However, to 
 		 * fullfill authorization rules, we try build the trustchain anyway. */
-		if (verify_trustchain(this, subject, auth, crl, ocsp, TRUE))
+		if (verify_trustchain(this, subject, auth, TRUE, crl, ocsp))
 		{
 			DBG1(DBG_CFG, "  using pre-trusted certificate \"%D\"",
 				 subject->get_subject(subject));
