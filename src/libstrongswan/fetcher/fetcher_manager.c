@@ -15,6 +15,8 @@
  * $Id$
  */
 
+#define _GNU_SOURCE
+
 #include "fetcher_manager.h"
 
 #include <debug.h>
