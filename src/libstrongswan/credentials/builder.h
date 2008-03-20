@@ -56,6 +56,10 @@ enum builder_part_t {
 	BUILD_ISSUER,
 	/** additional issuer name, identification_t* */
 	BUILD_ISSUER_ALTNAME,
+	/** notBefore, time_t* */
+	BUILD_NOT_BEFORE_TIME,
+	/** notAfter, time_t* */
+	BUILD_NOT_AFTER_TIME,
 	/** a CA certificate, certificate_t* */
 	BUILD_CA_CERT,
 	/** a certificate, certificate_t* */

@@ -34,6 +34,7 @@ credentials/keys/public_key.c credentials/keys/public_key.h \
 credentials/keys/shared_key.c credentials/keys/shared_key.h \
 credentials/certificates/certificate.c credentials/certificates/certificate.h \
 credentials/certificates/x509.h credentials/certificates/x509.c \
+credentials/certificates/ac.h \
 credentials/certificates/crl.h credentials/certificates/crl.c \
 credentials/certificates/ocsp_request.h credentials/certificates/ocsp_request.c \
 credentials/certificates/ocsp_response.h credentials/certificates/ocsp_response.c \

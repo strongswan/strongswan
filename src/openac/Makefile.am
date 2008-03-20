@@ -1,5 +1,5 @@
 ipsec_PROGRAMS = openac
-openac_SOURCES = openac.c build.c build.h
+openac_SOURCES = openac.c
 dist_man_MANS = openac.8
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
