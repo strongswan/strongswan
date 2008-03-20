@@ -718,7 +718,7 @@ static x509_t* load_cert(char *path, x509_flag_t flag)
 									   BUILD_END);
 	if (x509 == NULL)
 	{
-		DBG1(DBG_CFG, "  could not load certificate file '%s'", path);
+		DBG1(DBG_CFG, "  could not parse loaded certificate file '%s'", path);
 		return NULL;
 	}
 	DBG1(DBG_CFG, "  loaded certificate file '%s'", path);
