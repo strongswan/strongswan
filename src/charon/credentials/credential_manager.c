@@ -324,7 +324,8 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 	send = request->get_encoding(request);
 	request->destroy(request);
 
-	DBG1(DBG_CFG, "requesting ocsp response from '%s' ...", url);
+	DBG1(DBG_CFG, "requesting ocsp status for '%D' from '%s' ...",
+		 subject->get_subject(subject), url);
 	if (lib->fetcher->fetch(lib->fetcher, url, &receive, 
 							FETCH_REQUEST_DATA, send,
 							FETCH_REQUEST_TYPE, "application/ocsp-request",
@@ -486,6 +487,7 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 		}
 		enumerator->destroy(enumerator);
 	}
+	DESTROY_IF(public);
 
 	/* fallback to URL fetching from subject certificate's URIs */
 	if (stale)
@@ -527,7 +529,6 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 		}
 		enumerator->destroy(enumerator);
 	}
-	DESTROY_IF(public);
 
 	/* if we have an ocsp response, check the revocation status */
 	if (best_cert)
@@ -879,40 +880,96 @@ static certificate_t *get_pretrusted_cert(private_credential_manager_t *this,
 }
 
 /**
- * try to build the next link in the trustchain, either to a root CA (trusted)
- * or to an intermediate CA.
+ * Get the issuing certificate of a subject certificate
  */
-static auth_info_t *verify_trustchain(private_credential_manager_t *this,
-									  certificate_t **issuerp, bool crl,
-									  bool ocsp, bool peer, bool trusted)
+static certificate_t *get_issuer_cert(private_credential_manager_t *this,
+									  certificate_t *subject, bool trusted)
 {
 	enumerator_t *enumerator;
-	certificate_t *candidate, *issuer;
-	auth_info_t *auth = NULL;
+	certificate_t *issuer = NULL, *candidate;
 	
-	issuer = *issuerp;
-	enumerator = create_cert_enumerator(this, issuer->get_type(issuer), KEY_ANY,
-										issuer->get_issuer(issuer), trusted);
+	enumerator = create_cert_enumerator(this, subject->get_type(subject), KEY_ANY, 
+										subject->get_issuer(subject), trusted);
 	while (enumerator->enumerate(enumerator, &candidate))
 	{
-		if (!issuer->issued_by(issuer, candidate, TRUE))
+		if (subject->issued_by(subject, candidate, TRUE))
 		{
-			continue;
-		}
-		auth = auth_info_create();
-		if (check_certificate(this, issuer, candidate, crl, ocsp,
-							  peer ? auth : NULL))
-		{
-			issuer->destroy(issuer);
-			*issuerp = candidate->get_ref(candidate);
+			issuer = candidate->get_ref(candidate);
 			break;
 		}
-		auth->destroy(auth);
-		auth = NULL;
-		break;
 	}
 	enumerator->destroy(enumerator);
-	return auth;
+	return issuer;
+}
+
+/**
+ * try to verify trustchain of subject, return TRUE if trusted
+ */
+static bool verify_trustchain(private_credential_manager_t *this,
+							  certificate_t *subject, auth_info_t *result,
+							  bool trusted, bool crl, bool ocsp)
+{
+	certificate_t *current, *issuer;
+	auth_info_t *auth;
+	u_int level = 0;
+	
+	auth = auth_info_create();
+	current = subject->get_ref(subject);
+	while (level++ < MAX_CA_LEVELS)
+	{
+		issuer = get_issuer_cert(this, current, TRUE);
+		if (issuer)
+		{
+			auth->add_item(auth, AUTHZ_CA_CERT, issuer);	
+			DBG1(DBG_CFG, "  using trusted root CA certificate \"%D\"",
+				 issuer->get_subject(issuer));
+			trusted = TRUE;
+		}
+		else
+		{
+			issuer = get_issuer_cert(this, current, FALSE);
+			if (issuer)
+			{
+				if (current->equals(current, issuer))
+				{
+					DBG1(DBG_CFG, "  certificate \"%D\" is self-signed, but ",
+						 "not trusted", current->get_subject(current));
+					issuer->destroy(issuer);
+					break;
+				}
+				auth->add_item(auth, AUTHZ_IM_CERT, issuer);
+				DBG1(DBG_CFG, "  using intermediate CA certificate \"%D\"",
+					 issuer->get_subject(issuer));
+			}
+			else
+			{
+				DBG1(DBG_CFG, "no issuer certificate found for \"%D\"", 
+					 issuer->get_subject(issuer));
+				current->destroy(current);
+				break;
+			}
+		}
+		if (!check_certificate(this, current, issuer, crl, ocsp,
+							   current == subject ? auth : NULL))
+		{
+			trusted = FALSE;
+			issuer->destroy(issuer);
+			break;
+		}
+		current->destroy(current);
+		current = issuer;
+		if (trusted)
+		{
+			break;
+		}
+	}
+	current->destroy(current);
+	if (trusted)
+	{
+		result->merge(result, auth);
+	}
+	auth->destroy(auth);
+	return trusted;
 }
 
 /**
@@ -922,72 +979,42 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 									   key_type_t type, identification_t *id,
 									   auth_info_t *auth, bool crl, bool ocsp)
 {
-	certificate_t *subject, *issuer;
-	bool peer = TRUE, trusted = FALSE;
-	auth_info_t *auth1, *auth2;
-	u_int level = 0;
+	certificate_t *subject, *current;
+	enumerator_t *enumerator;
 	
 	/* check if we have a trusted certificate for that peer */
 	subject = get_pretrusted_cert(this, type, id);
 	if (subject)
 	{	/* if we find a trusted certificate, we accept it. However, to 
 		 * fullfill authorization rules, we try build the trustchain anyway. */
-		trusted = TRUE;
-	}
-	else
-	{	/* check for an untrusted peer certificate */
-		subject = get_cert(this, CERT_ANY, type, id, FALSE);
-	}
-	if (!subject)
-	{
-		DBG1(DBG_CFG, "no certificate found for '%D'", id);
-		return NULL;
-	}
-	DBG1(DBG_CFG, "  using end entity certificate \"%D\"",
-		 subject->get_subject(subject));
-	auth1 = auth_info_create();
-	auth->add_item(auth, AUTHZ_SUBJECT_CERT, subject);
-	issuer = subject->get_ref(subject);
-	while (level++ < MAX_CA_LEVELS)
-	{
-		/* look for a trusted CA certificate */
-		auth2 = verify_trustchain(this, &issuer, crl, ocsp, peer, TRUE);
-		if (auth2)
+		if (verify_trustchain(this, subject, auth, crl, ocsp, TRUE))
 		{
-			DBG1(DBG_CFG, "  using trusted root CA certificate \"%D\"",
-				 issuer->get_subject(issuer));
-			auth1->merge(auth1, auth2);	
-			auth2->destroy(auth2);
-			auth1->add_item(auth1, AUTHZ_CA_CERT, issuer);	
-			trusted = TRUE;
+			DBG1(DBG_CFG, "  using pre-trusted certificate \"%D\"",
+				 subject->get_subject(subject));
+			return subject;
+		}
+		subject->destroy(subject);
+	}
+	
+	subject = NULL;
+	/* try to verify the trustchain for each certificate found */
+	enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		DBG1(DBG_CFG, "  using certificate \"%D\"",
+			 current->get_subject(current));
+		if (verify_trustchain(this, current, auth, FALSE, crl, ocsp))
+		{
+			subject = current->get_ref(current);
 			break;
 		}
-		/* check for a untrusted intermediate CA */
-		auth2 = verify_trustchain(this, &issuer, crl, ocsp, peer, FALSE);
-		if (auth2)
-		{
-			DBG1(DBG_CFG, "  using intermediate CA certificate \"%D\"",
-				 issuer->get_subject(issuer));
-			auth1->merge(auth1, auth2);
-			auth2->destroy(auth2);
-			auth1->add_item(auth1, AUTHZ_IM_CERT, issuer);
-			peer = FALSE;
-			continue;
-		}
-		break;
 	}
-	issuer->destroy(issuer);
-	if (trusted)
+	enumerator->destroy(enumerator);
+	
+	if (!subject)
 	{
-		auth->add_item(auth, AUTHZ_SUBJECT_CERT, subject);
-		auth->merge(auth, auth1);
+		DBG1(DBG_CFG, "no trusted certificate found for '%D'", id);
 	}
-	else
-	{
-		subject->destroy(subject);
-		subject = NULL;
-	}
-	auth1->destroy(auth1);
 	return subject;
 }
 
@@ -1017,29 +1044,6 @@ static public_key_t *get_public(private_credential_manager_t *this,
 	wrapper->destroy(wrapper);
 	this->mutex->unlock(this->mutex);
 	return public;
-}
-
-/**
- * Get the issuing certificate of a subject certificate
- */
-static certificate_t *get_issuer_cert(private_credential_manager_t *this,
-									  certificate_t *subject)
-{
-	enumerator_t *enumerator;
-	certificate_t *issuer = NULL, *candidate;
-	
-	enumerator = create_cert_enumerator(this, subject->get_type(subject), KEY_ANY, 
-										subject->get_issuer(subject), FALSE);
-	while (enumerator->enumerate(enumerator, &candidate))
-	{
-		if (subject->issued_by(subject, candidate, FALSE))
-		{
-			issuer = candidate->get_ref(candidate);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return issuer;
 }
 
 /**
@@ -1101,7 +1105,7 @@ static auth_info_t *build_trustchain(private_credential_manager_t *this,
 		{
 			trustchain->add_item(trustchain, AUTHZ_IM_CERT, current);
 		}
-		issuer = get_issuer_cert(this, current);
+		issuer = get_issuer_cert(this, current, FALSE);
 		if (!issuer || issuer->equals(issuer, current) || level > MAX_CA_LEVELS)
 		{
 			DESTROY_IF(issuer);
