@@ -391,7 +391,7 @@ static chunk_t build_authorityKeyIdentifier(private_x509_ac_t *this)
 static chunk_t build_extensions(private_x509_ac_t *this)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "mc",
-				build_authorityKeyID(this),
+				build_authorityKeyIdentifier(this),
 				ASN1_noRevAvail_ext);
 }
 
@@ -418,11 +418,14 @@ static chunk_t build_attr_cert_info(private_x509_ac_t *this)
 static chunk_t build_ac(private_x509_ac_t *this)
 {
 	chunk_t signatureValue;
-	chunk_t attributeCertificateInfo = build_attr_cert_info(this);
-/*
-	signerkey->build_emsa_pkcs1_signature(signerkey, HASH_SHA1,
-					 attributeCertificateInfo, &signatureValue);
-*/
+    chunk_t attributeCertificateInfo;
+
+	DBG1("build_ac:");
+	attributeCertificateInfo = build_attr_cert_info(this);
+
+	this->signerKey->sign(this->signerKey, SIGN_RSA_EMSA_PKCS1_SHA1,
+						  attributeCertificateInfo, &signatureValue);
+
 	return asn1_wrap(ASN1_SEQUENCE, "mcm",
 				attributeCertificateInfo,
 				asn1_algorithmIdentifier(OID_SHA1_WITH_RSA),
@@ -704,6 +707,7 @@ static private_x509_ac_t *create_empty()
 	this->signerKey = NULL;
 	this->charging = linked_list_create();
 	this->groups = linked_list_create();
+	this->ref = 1;
 
 	return this;
 }
@@ -754,6 +758,9 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 		case BUILD_NOT_AFTER_TIME:
 			this->ac->notAfter = va_arg(args, time_t);
 			break;
+		case BUILD_SERIAL:
+			this->ac->serialNumber = va_arg(args, chunk_t);
+			break;
 		case BUILD_CERT:
 			cert = va_arg(args, certificate_t*);
 			if (cert->get_type(cert) == CERT_X509)
@@ -766,6 +773,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			}
 			break;
 		case BUILD_SIGNING_CERT:
+			cert = va_arg(args, certificate_t*);
 			if (cert->get_type(cert) == CERT_X509)
 			{
 				this->ac->signerCert = cert;

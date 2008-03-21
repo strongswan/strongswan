@@ -571,12 +571,12 @@ int main(int argc, char **argv)
 									   BUILD_CERT, user_cert,
 									   BUILD_NOT_BEFORE_TIME, notBefore,
 									   BUILD_NOT_AFTER_TIME, notAfter,
+									   BUILD_SERIAL, serial,
 									   BUILD_SIGNING_CERT, signer_cert,
 									   BUILD_SIGNING_KEY, signer_key,
 									   BUILD_END);
 		if (!attr_cert)
 		{
-			status = 1;
 			goto end;
 		}
 	
@@ -596,10 +596,10 @@ int main(int argc, char **argv)
 
 end:
 	/* delete all dynamically allocated objects */
+	DESTROY_IF(attr_cert);
 	DESTROY_IF(signer_key);
 	DESTROY_IF(signer_cert);
 	DESTROY_IF(user_cert);
-	DESTROY_IF(attr_cert);
 	free(attr_chunk.ptr);
 	free(serial.ptr);
 	closelog();
