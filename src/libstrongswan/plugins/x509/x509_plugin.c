@@ -19,6 +19,7 @@
 
 #include <library.h>
 #include "x509_cert.h"
+#include "x509_ac.h"
 #include "x509_crl.h"
 #include "x509_ocsp_request.h"
 #include "x509_ocsp_response.h"
@@ -44,6 +45,8 @@ static void destroy(private_x509_plugin_t *this)
 	lib->creds->remove_builder(lib->creds,
 							   (builder_constructor_t)x509_cert_builder);
 	lib->creds->remove_builder(lib->creds,
+							   (builder_constructor_t)x509_ac_builder);
+	lib->creds->remove_builder(lib->creds,
 							   (builder_constructor_t)x509_crl_builder);
 	lib->creds->remove_builder(lib->creds,
 							   (builder_constructor_t)x509_ocsp_request_builder);
@@ -63,6 +66,8 @@ plugin_t *plugin_create()
 
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							(builder_constructor_t)x509_cert_builder);
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC,
+							(builder_constructor_t)x509_ac_builder);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
 							(builder_constructor_t)x509_crl_builder);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST,
