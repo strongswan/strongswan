@@ -569,8 +569,8 @@ int main(int argc, char **argv)
 		attr_cert = lib->creds->create(lib->creds,
 									   CRED_CERTIFICATE, CERT_X509_AC,
 									   BUILD_CERT, user_cert,
-									   BUILD_NOT_BEFORE_TIME, &notBefore,
-									   BUILD_NOT_AFTER_TIME, &notAfter,
+									   BUILD_NOT_BEFORE_TIME, notBefore,
+									   BUILD_NOT_AFTER_TIME, notAfter,
 									   BUILD_SIGNING_CERT, signer_cert,
 									   BUILD_SIGNING_KEY, signer_key,
 									   BUILD_END);

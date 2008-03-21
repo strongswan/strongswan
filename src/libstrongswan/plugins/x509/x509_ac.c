@@ -129,17 +129,17 @@ struct private_x509_ac_t {
     /**
      * Holder certificate
      */
-	x509_t *holder_cert;
+	certificate_t *holderCert;
 
     /**
      * Signer certificate
      */
-	x509_t *signer_cert;
+	certificate_t *signerCert;
 
    /**
     * Signer private key;
     */
-	private_key_t *signer_key;
+	private_key_t *signerKey;
 
 	/**
 	 * reference count
@@ -291,11 +291,9 @@ static chunk_t build_directoryName(asn1_t tag, chunk_t name)
  */
 static chunk_t build_holder(private_x509_ac_t *this)
 {
-	x509_t *x509 = this->holder_cert;
-	certificate_t *cert = &x509->interface;
-
-	identification_t *issuer = cert->get_issuer(cert);
-	identification_t *subject = cert->get_subject(cert);
+	x509_t* x509 = (x509_t*)this->holderCert;
+	identification_t *issuer = this->holderCert->get_issuer(this->holderCert);
+	identification_t *subject = this->holderCert->get_subject(this->holderCert);
 
 	return asn1_wrap(ASN1_SEQUENCE, "mm",
 		asn1_wrap(ASN1_CONTEXT_C_0, "mm",
@@ -310,9 +308,7 @@ static chunk_t build_holder(private_x509_ac_t *this)
  */
 static chunk_t build_v2_form(private_x509_ac_t *this)
 {
-	x509_t *x509 = this->signer_cert;
-	certificate_t *cert = &x509->interface;
-	identification_t *subject = cert->get_subject(cert);
+	identification_t *subject = this->signerCert->get_subject(this->signerCert);
 
 	return asn1_wrap(ASN1_CONTEXT_C_0, "m",
 		build_directoryName(ASN1_SEQUENCE, subject->get_encoding(subject)));
@@ -353,10 +349,9 @@ static chunk_t build_attributes(private_x509_ac_t *this)
  */
 static chunk_t build_authorityKeyIdentifier(private_x509_ac_t *this)
 {
-	x509_t *x509 = this->signer_cert;
-	certificate_t *cert = &x509->interface;
-	identification_t *issuer = cert->get_issuer(cert);
-	public_key_t *public = cert->get_public_key(cert);
+	x509_t *x509 = (x509_t*)this->signerCert;
+	identification_t *issuer = this->signerCert->get_issuer(this->signerCert);
+	public_key_t *public = this->signerCert->get_public_key(this->signerCert);
 	chunk_t keyIdentifier;
 	chunk_t authorityCertIssuer;
 	chunk_t authorityCertSerialNumber;
@@ -668,6 +663,9 @@ static void destroy(private_x509_ac_t *this)
 		DESTROY_IF(this->entityName);
 		DESTROY_IF(this->issuerName);
 		DESTROY_IF(this->authKeyIdentifier);
+		DESTROY_IF(this->holderCert);
+		DESTROY_IF(this->signerCert);
+		DESTROY_IF(this->signerKey);
 		ietfAttr_list_destroy(this->charging);
 		ietfAttr_list_destroy(this->groups);
 		free(this->encoding.ptr);
@@ -701,6 +699,9 @@ static private_x509_ac_t *create_empty()
 	this->entityName = NULL;
 	this->issuerName = NULL;
 	this->authKeyIdentifier = NULL;
+	this->holderCert = NULL;
+	this->signerCert = NULL;
+	this->signerKey = NULL;
 	this->charging = linked_list_create();
 	this->groups = linked_list_create();
 
@@ -727,7 +728,7 @@ static x509_ac_t *build(private_builder_t *this)
 	
 	ac = this->ac;
 	free(this);
-	if (ac->holder_cert && ac->signer_cert && ac->signer_key)
+	if (ac->holderCert && ac->signerCert && ac->signerKey)
 	{
 		ac->encoding = build_ac(ac);
 		return &ac->public;
@@ -743,21 +744,21 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
 	certificate_t *cert;
-	
+
 	va_start(args, part);
 	switch (part)
 	{
 		case BUILD_NOT_BEFORE_TIME:
-			this->ac->notBefore = *va_arg(args, time_t*);
+			this->ac->notBefore = va_arg(args, time_t);
 			break;
 		case BUILD_NOT_AFTER_TIME:
-			this->ac->notAfter = *va_arg(args, time_t*);
+			this->ac->notAfter = va_arg(args, time_t);
 			break;
 		case BUILD_CERT:
 			cert = va_arg(args, certificate_t*);
 			if (cert->get_type(cert) == CERT_X509)
 			{
-				this->ac->holder_cert = (x509_t*)cert;
+				this->ac->holderCert = cert;
 			}
 			else
 			{
@@ -767,7 +768,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 		case BUILD_SIGNING_CERT:
 			if (cert->get_type(cert) == CERT_X509)
 			{
-				this->ac->signer_cert = (x509_t*)cert;
+				this->ac->signerCert = cert;
 			}
 			else
 			{
@@ -775,7 +776,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			}
 			break;
 		case BUILD_SIGNING_KEY:
-			this->ac->signer_key = va_arg(args, private_key_t*);
+			this->ac->signerKey = va_arg(args, private_key_t*);
 			break;
 		default:
 			DBG1("ignoring unsupported build part %N", builder_part_names, part);

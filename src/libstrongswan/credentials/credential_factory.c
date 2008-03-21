@@ -154,6 +154,10 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_KEY_SIZE:
 					builder->add(builder, part, va_arg(args, u_int));
 					continue;
+				case BUILD_NOT_BEFORE_TIME:
+				case BUILD_NOT_AFTER_TIME:
+					builder->add(builder, part, va_arg(args, time_t));
+					continue;
 				case BUILD_SIGNING_KEY:
 				case BUILD_PUBLIC_KEY:
 				case BUILD_SUBJECT:
