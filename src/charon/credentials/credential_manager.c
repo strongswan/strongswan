@@ -939,8 +939,8 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			{
 				if (current->equals(current, issuer))
 				{
-					DBG1(DBG_CFG, "certificate \"%D\" is self-signed, but ",
-						 "not trusted", current->get_subject(current));
+					DBG1(DBG_CFG, "  self-signed certificate \"%D\" is not trusted",
+						 current->get_subject(current));
 					issuer->destroy(issuer);
 					break;
 				}
