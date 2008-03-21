@@ -953,14 +953,14 @@ static bool issued_by(private_x509_cert_t *this, certificate_t *issuer,
 		{
 			return FALSE;
 		}
-		if (!this->issuer->equals(this->issuer, issuer->get_subject(issuer)))
-		{
-			return FALSE;
-		}
 		if (!(x509->get_flags(x509) & X509_CA))
 		{
 			return FALSE;
 		}
+	}
+	if (!this->issuer->equals(this->issuer, issuer->get_subject(issuer)))
+	{
+		return FALSE;
 	}
 	if (!sigcheck)
 	{
@@ -1208,9 +1208,8 @@ static private_x509_cert_t *load(chunk_t chunk)
 		return NULL;
 	}
 	
-	/* check if the certificate self-signed */
-	if (this->subject->equals(this->subject, this->issuer) &&
-		issued_by(this, &this->public.interface.interface, TRUE))
+	/* check if the certificate is self-signed */
+	if (issued_by(this, &this->public.interface.interface, TRUE))
 	{
 		this->flags |= X509_SELF_SIGNED;
 	}
