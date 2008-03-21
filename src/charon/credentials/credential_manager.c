@@ -330,8 +330,7 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 	send = request->get_encoding(request);
 	request->destroy(request);
 
-	DBG1(DBG_CFG, "requesting ocsp status for '%D' from '%s' ...",
-		 subject->get_subject(subject), url);
+	DBG1(DBG_CFG, "requesting ocsp status from '%s' ...", url);
 	if (lib->fetcher->fetch(lib->fetcher, url, &receive, 
 							FETCH_REQUEST_DATA, send,
 							FETCH_REQUEST_TYPE, "application/ocsp-request",
@@ -366,7 +365,7 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 		this->sets->insert_first(this->sets, wrapper);
 		this->sets->insert_first(this->sets, this->cache);
 		responder = response->get_issuer(response);
-		DBG1(DBG_CFG, "ocsp signer is \"%D\"", responder);
+		DBG1(DBG_CFG, "  ocsp signer is \"%D\"", responder);
 		issuer_cert = get_trusted_cert(this, KEY_ANY, responder, auth, FALSE, FALSE);
 		this->sets->remove(this->sets, wrapper, NULL);
 		wrapper->destroy(wrapper);
@@ -380,13 +379,13 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 		}
 		if (this->cache->issued_by(this->cache, response, issuer_cert))
 		{
-			DBG1(DBG_CFG, "ocsp response correctly signed by \"%D\"",
+			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%D\"",
 						   issuer_cert->get_subject(issuer_cert));
 			issuer_cert->destroy(issuer_cert);
 		}
 		else
 		{
-			DBG1(DBG_CFG, "ocsp response not issued by \"%D\"",
+			DBG1(DBG_CFG, "ocsp response not accepted from \"%D\"",
 						   issuer_cert->get_subject(issuer_cert));
 			issuer_cert->destroy(issuer_cert);
 			response->destroy(response);
@@ -611,13 +610,13 @@ static certificate_t* fetch_crl(private_credential_manager_t *this, char *url)
 		
 		if (this->cache->issued_by(this->cache, crl_cert, issuer_cert))
 		{
-			DBG1(DBG_CFG, "crl correctly signed by \"%D\"",
+			DBG1(DBG_CFG, "  crl correctly signed by \"%D\"",
 						   issuer_cert->get_subject(issuer_cert));
 			issuer_cert->destroy(issuer_cert);
 		}
 		else
 		{
-			DBG1(DBG_CFG, "crl not issued by \"%D\"",
+			DBG1(DBG_CFG, "crl not accepted from \"%D\"",
 						   issuer_cert->get_subject(issuer_cert));
 			issuer_cert->destroy(issuer_cert);
 			crl_cert->destroy(crl_cert);
@@ -830,11 +829,11 @@ static bool check_certificate(private_credential_manager_t *this,
 					/* has already been logged */			
 					return FALSE;
 				case VALIDATION_SKIPPED:
-					DBG2(DBG_CFG, "OCSP check skipped, no OCSP URI found");
+					DBG2(DBG_CFG, "ocsp check skipped, no ocsp found");
 					break;
 				case VALIDATION_FAILED:
 				case VALIDATION_UNKNOWN:
-					DBG1(DBG_CFG, "OCSP check failed, fallback to CRL");
+					DBG1(DBG_CFG, "ocsp check failed, fallback to crl");
 					break;
 			}
 		}
@@ -911,11 +910,11 @@ static certificate_t *get_issuer_cert(private_credential_manager_t *this,
 }
 
 /**
- * try to verify trustchain of subject, return TRUE if trusted
+ * try to verify the trust chain of subject, return TRUE if trusted
  */
-static bool verify_trustchain(private_credential_manager_t *this,
-							  certificate_t *subject, auth_info_t *result,
-							  bool trusted, bool crl, bool ocsp)
+static bool verify_trust_chain(private_credential_manager_t *this,
+							   certificate_t *subject, auth_info_t *result,
+							   bool trusted, bool crl, bool ocsp)
 {
 	certificate_t *current, *issuer;
 	auth_info_t *auth;
@@ -929,7 +928,7 @@ static bool verify_trustchain(private_credential_manager_t *this,
 		if (issuer)
 		{
 			auth->add_item(auth, AUTHZ_CA_CERT, issuer);	
-			DBG1(DBG_CFG, "  using trusted root CA certificate \"%D\"",
+			DBG1(DBG_CFG, "  using trusted ca certificate \"%D\"",
 				 issuer->get_subject(issuer));
 			trusted = TRUE;
 		}
@@ -940,13 +939,13 @@ static bool verify_trustchain(private_credential_manager_t *this,
 			{
 				if (current->equals(current, issuer))
 				{
-					DBG1(DBG_CFG, "  certificate \"%D\" is self-signed, but ",
+					DBG1(DBG_CFG, "certificate \"%D\" is self-signed, but ",
 						 "not trusted", current->get_subject(current));
 					issuer->destroy(issuer);
 					break;
 				}
 				auth->add_item(auth, AUTHZ_IM_CERT, issuer);
-				DBG1(DBG_CFG, "  using intermediate CA certificate \"%D\"",
+				DBG1(DBG_CFG, "  using untrusted ca certificate \"%D\"",
 					 issuer->get_subject(issuer));
 			}
 			else
@@ -981,7 +980,7 @@ static bool verify_trustchain(private_credential_manager_t *this,
 }
 
 /**
- * Get a trusted certificate by verifying the trustchain
+ * Get a trusted certificate by verifying the trust chain
  */
 static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 									   key_type_t type, identification_t *id,
@@ -993,9 +992,10 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 	/* check if we have a trusted certificate for that peer */
 	subject = get_pretrusted_cert(this, type, id);
 	if (subject)
-	{	/* if we find a trusted certificate, we accept it. However, to 
-		 * fullfill authorization rules, we try build the trustchain anyway. */
-		if (verify_trustchain(this, subject, auth, TRUE, crl, ocsp))
+	{
+		/* if we find a trusted certificate, we accept it. However, to fulfill 
+		 * authorization rules, we try to build the trust chain anyway. */
+		if (verify_trust_chain(this, subject, auth, TRUE, crl, ocsp))
 		{
 			DBG1(DBG_CFG, "  using pre-trusted certificate \"%D\"",
 				 subject->get_subject(subject));
@@ -1011,7 +1011,7 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 	{
 		DBG1(DBG_CFG, "  using certificate \"%D\"",
 			 current->get_subject(current));
-		if (verify_trustchain(this, current, auth, FALSE, crl, ocsp))
+		if (verify_trust_chain(this, current, auth, FALSE, crl, ocsp))
 		{
 			subject = current->get_ref(current);
 			break;
