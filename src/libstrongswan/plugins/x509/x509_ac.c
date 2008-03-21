@@ -349,34 +349,33 @@ static chunk_t build_attributes(private_x509_ac_t *this)
  */
 static chunk_t build_authorityKeyIdentifier(private_x509_ac_t *this)
 {
-	x509_t *x509 = (x509_t*)this->signerCert;
-	identification_t *issuer = this->signerCert->get_issuer(this->signerCert);
-	public_key_t *public = this->signerCert->get_public_key(this->signerCert);
 	chunk_t keyIdentifier;
 	chunk_t authorityCertIssuer;
 	chunk_t authorityCertSerialNumber;
+	x509_t *x509 = (x509_t*)this->signerCert;
+	identification_t *issuer = this->signerCert->get_issuer(this->signerCert);
+	public_key_t *public = this->signerCert->get_public_key(this->signerCert);
 
 	if (public)
 	{
-		this->authKeyIdentifier = public->get_id(public, ID_PUBKEY_SHA1);
+		identification_t *keyid = public->get_id(public, ID_PUBKEY_SHA1);
+
+		this->authKeyIdentifier = keyid = keyid->clone(keyid);
+		keyIdentifier = keyid->get_encoding(keyid);		
 		public->destroy(public);
-		keyIdentifier = this->authKeyIdentifier->get_encoding(this->authKeyIdentifier);		
 	}
 	else
 	{
 		keyIdentifier = chunk_empty;
 	}
-
 	authorityCertIssuer = build_directoryName(ASN1_CONTEXT_C_1,
 								issuer->get_encoding(issuer));
-
 	authorityCertSerialNumber = asn1_simple_object(ASN1_CONTEXT_S_2,
 									x509->get_serial(x509));
-
 	return asn1_wrap(ASN1_SEQUENCE, "cm",
 				ASN1_authorityKeyIdentifier_oid,
 				asn1_wrap(ASN1_OCTET_STRING, "m",
-					asn1_wrap(ASN1_SEQUENCE, "mmm",
+					asn1_wrap(ASN1_SEQUENCE, "cmm",
 						keyIdentifier,
 						authorityCertIssuer,
 						authorityCertSerialNumber
@@ -420,7 +419,6 @@ static chunk_t build_ac(private_x509_ac_t *this)
 	chunk_t signatureValue;
     chunk_t attributeCertificateInfo;
 
-	DBG1("build_ac:");
 	attributeCertificateInfo = build_attr_cert_info(this);
 
 	this->signerKey->sign(this->signerKey, SIGN_RSA_EMSA_PKCS1_SHA1,
@@ -666,9 +664,6 @@ static void destroy(private_x509_ac_t *this)
 		DESTROY_IF(this->entityName);
 		DESTROY_IF(this->issuerName);
 		DESTROY_IF(this->authKeyIdentifier);
-		DESTROY_IF(this->holderCert);
-		DESTROY_IF(this->signerCert);
-		DESTROY_IF(this->signerKey);
 		ietfAttr_list_destroy(this->charging);
 		ietfAttr_list_destroy(this->groups);
 		free(this->encoding.ptr);
@@ -698,6 +693,7 @@ static private_x509_ac_t *create_empty()
 	this->public.interface.certificate.destroy = (void (*)(certificate_t *this))destroy;
 
 	/* initialize */
+	this->encoding = chunk_empty;
 	this->holderIssuer = NULL;
 	this->entityName = NULL;
 	this->issuerName = NULL;
