@@ -251,6 +251,14 @@ starter_whack_add_conn(starter_conn_t *conn)
     msg.sa_keying_tries       = conn->sa_keying_tries;
     msg.policy                = conn->policy;
 
+    /*
+     * Make sure the IKEv2-only policy bits are unset for IKEv1 connections
+     */
+    msg.policy &= ~POLICY_DONT_REAUTH;
+    msg.policy &= ~POLICY_BEET;
+    msg.policy &= ~POLICY_MOBIKE;
+    msg.policy &= ~POLICY_FORCE_ENCAP;
+
     set_whack_end(&msg.left, &conn->left, conn->addr_family);
     set_whack_end(&msg.right, &conn->right, conn->addr_family);
 
