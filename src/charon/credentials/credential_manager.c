@@ -993,11 +993,21 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 	subject = get_pretrusted_cert(this, type, id);
 	if (subject)
 	{
-		/* if we find a trusted certificate, we accept it. However, to fulfill 
-		 * authorization rules, we try to build the trust chain anyway. */
+
+		if (subject->issued_by(subject, subject, TRUE))
+		{
+			DBG1(DBG_CFG, "  using trusted self-signed certificate \"%D\"",
+				 subject->get_subject(subject));
+			return subject;
+		}
+
+		/* if we find a trusted certificate, we accept it. However, in order
+         * to fulfill authorization rules, we try to build the trust chain
+		 * anyway.
+		 */
 		if (verify_trust_chain(this, subject, auth, TRUE, crl, ocsp))
 		{
-			DBG1(DBG_CFG, "  using pre-trusted certificate \"%D\"",
+			DBG1(DBG_CFG, "  using trusted certificate \"%D\"",
 				 subject->get_subject(subject));
 			return subject;
 		}
@@ -1005,7 +1015,7 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 	}
 	
 	subject = NULL;
-	/* try to verify the trustchain for each certificate found */
+	/* try to verify the trust chain for each certificate found */
 	enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
 	while (enumerator->enumerate(enumerator, &current))
 	{
