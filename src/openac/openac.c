@@ -33,6 +33,7 @@
 #include <time.h>
 #include <gmp.h>
 
+#include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
 #include <asn1/ttodata.h>
@@ -297,20 +298,25 @@ int main(int argc, char **argv)
 	char *groups = "";
 	char buf[BUF_LEN];
 
-	chunk_t serial;
 	chunk_t passphrase = { buf, 0 };
+	chunk_t serial = chunk_empty;
 	chunk_t attr_chunk = chunk_empty;
 
 	int status = 1;
 	
-	options_t *options = options_create();
-
 	/* enable openac debugging hook */
 	dbg = openac_dbg;
 
 	passphrase.ptr[0] = '\0';
 
 	openlog("openac", 0, LOG_AUTHPRIV);
+
+	/* initialize library */
+	library_init(IPSEC_DIR "/strongswan.conf");
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
+
+	/* initialize optionsfrom */
+	options_t *options = options_create();
 
 	/* handle arguments */
 	for (;;)
@@ -568,14 +574,24 @@ int main(int argc, char **argv)
 									   BUILD_SIGNING_CERT, signer_cert,
 									   BUILD_SIGNING_KEY, signer_key,
 									   BUILD_END);
-		attr_chunk = attr_cert->get_encoding(attr_cert);
+		if (!attr_cert)
+		{
+			status = 1;
+			goto end;
+		}
 	
 		/* write the attribute certificate to file */
+		attr_chunk = attr_cert->get_encoding(attr_cert);
 		if (chunk_write(attr_chunk, outfile, "attribute cert", 0022, TRUE))
 		{
 			write_serial(serial);
 			status = 0;
 		}
+	}
+	else
+	{
+		usage("some of the mandatory parameters --usercert --cert --key "
+			  "are missing");
 	}
 
 end:
@@ -589,5 +605,6 @@ end:
 	closelog();
 	dbg = dbg_default;
 	options->destroy(options);
+	library_deinit();
 	exit(status);
 }

@@ -3,6 +3,8 @@ openac_SOURCES = openac.c
 dist_man_MANS = openac.8
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
-AM_CFLAGS = -DIPSEC_CONFDIR=\"${confdir}\"
+AM_CFLAGS = -DIPSEC_CONFDIR=\"${confdir}\" \
+            -DIPSEC_DIR=\"${ipsecdir}\" \
+	        -DIPSEC_PLUGINDIR=\"${plugindir}\"
 openac_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp
 
