@@ -34,6 +34,7 @@ ENUM(certificate_type_names, CERT_ANY, CERT_PGP,
 ENUM(cert_validation_names, VALIDATION_GOOD, VALIDATION_SKIPPED,
 	"GOOD",
 	"REVOKED",
+	"UNKNOWN",
 	"FAILED",
 	"SKIPPED",
 );
