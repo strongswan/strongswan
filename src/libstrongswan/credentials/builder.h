@@ -60,9 +60,11 @@ enum builder_part_t {
 	BUILD_NOT_BEFORE_TIME,
 	/** notAfter, time_t* */
 	BUILD_NOT_AFTER_TIME,
-	/** notAfter, time_t* */
-	BUILD_SERIAL,
 	/** a serial number in binary form, chunk_t */
+	BUILD_SERIAL,
+	/** a comma-separated list of ietf group attributes, char* */
+	BUILD_IETF_GROUP_ATTR,
+	/** a ca certificate, certificate_t* */
 	BUILD_CA_CERT,
 	/** a certificate, certificate_t* */
 	BUILD_CERT,

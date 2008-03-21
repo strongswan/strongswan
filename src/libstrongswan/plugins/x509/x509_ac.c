@@ -757,6 +757,10 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 		case BUILD_SERIAL:
 			this->ac->serialNumber = va_arg(args, chunk_t);
 			break;
+		case BUILD_IETF_GROUP_ATTR:
+			ietfAttr_list_create_from_string(va_arg(args, char*),
+											 this->ac->groups);
+			break;
 		case BUILD_CERT:
 			cert = va_arg(args, certificate_t*);
 			if (cert->get_type(cert) == CERT_X509)

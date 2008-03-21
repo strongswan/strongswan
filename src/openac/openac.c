@@ -572,6 +572,7 @@ int main(int argc, char **argv)
 									   BUILD_NOT_BEFORE_TIME, notBefore,
 									   BUILD_NOT_AFTER_TIME, notAfter,
 									   BUILD_SERIAL, serial,
+									   BUILD_IETF_GROUP_ATTR, groups,
 									   BUILD_SIGNING_CERT, signer_cert,
 									   BUILD_SIGNING_KEY, signer_key,
 									   BUILD_END);

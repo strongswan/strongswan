@@ -168,6 +168,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_SIGNING_CERT:
 				case BUILD_CA_CERT:
 				case BUILD_CERT:
+				case BUILD_IETF_GROUP_ATTR:
 					builder->add(builder, part, va_arg(args, void*));
 					continue;
 				default:
