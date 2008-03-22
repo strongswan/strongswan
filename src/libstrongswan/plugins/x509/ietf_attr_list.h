@@ -1,10 +1,3 @@
-/**
- * @file ietf_attr_list.h
- * 
- * @brief Handling of ietfAttr_t linked lists
- * 
- */
-
 /*
  * Copyright (C) 2007 Andreas Steffen
  *
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup ietf_attr_list ietf_attr_list
+ * @{ @ingroup x509_p
  */
 
 #ifndef IETF_ATTR_LIST_H_
@@ -34,8 +34,6 @@
  * @param list_a	first alphabetically-sorted list
  * @param list_b	second alphabetically-sorted list
  * @return			TRUE if equal	
- *
- * @ingroup crypto
  */
 bool ietfAttr_list_equals(linked_list_t *list_a, linked_list_t *list_b);
 
@@ -43,9 +41,7 @@ bool ietfAttr_list_equals(linked_list_t *list_a, linked_list_t *list_b);
  * @brief Lists a linked list of ietfAttr_t objects
  *
  * @param list		alphabetically-sorted linked list of attributes
-   @param out		output file	
- *
- * @ingroup crypto
+ * @param out		output file	
  */
 void ietfAttr_list_list(linked_list_t *list, FILE *out);
 
@@ -54,9 +50,7 @@ void ietfAttr_list_list(linked_list_t *list, FILE *out);
  *
  * @param msg		string with comma-separated group names
  * @param list		alphabetically-sorted linked list of attributes
- *
- * @ingroup crypto
- */
+  */
 void ietfAttr_list_create_from_string(char *msg, linked_list_t *list);
 
 /**
@@ -80,10 +74,8 @@ chunk_t ietfAttr_list_encode(linked_list_t *list);
  * @brief Destroys a linked list of ietfAttr_t objects
  *
  * @param list		list to be destroyed
- *
- * @ingroup crypto
  */
 void ietfAttr_list_destroy(linked_list_t *list);
 
-#endif /* IETF_ATTR_LIST_H_ */
+#endif /* IETF_ATTR_LIST_H_ @}*/
 

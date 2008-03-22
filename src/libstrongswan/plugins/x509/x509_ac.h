@@ -31,7 +31,7 @@
 typedef struct x509_ac_t x509_ac_t;
 
 /**
- * Implementation of ocsp_request_t using own ASN1 parser.
+ * Implementation of ac_t using own ASN1 parser.
  */
 struct x509_ac_t {
 

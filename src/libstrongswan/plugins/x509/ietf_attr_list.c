@@ -1,10 +1,3 @@
-/**
- * @file ietf_attr.c
- * 
- * @brief Implementation of ietfAttr_t.
- * 
- */
-
 /* 
  * Copyright (C) 2007 Andreas Steffen, Hochschule fuer Technik Rapperswil
  *
