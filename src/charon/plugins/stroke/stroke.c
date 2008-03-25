@@ -37,6 +37,7 @@
 #include <daemon.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
+#include <credentials/certificates/ac.h>
 #include <credentials/certificates/ocsp_request.h>
 #include <credentials/certificates/ocsp_response.h>
 #include <control/controller.h>
@@ -696,51 +697,6 @@ static void pop_string(stroke_msg_t *msg, char **string)
 }
 
 /**
- * Load an X.509 certificate
- */
-static x509_t* load_cert(char *path, x509_flag_t flag)
-{
-	bool pgp = FALSE;
-	chunk_t chunk;
-	x509_t *x509;
-	certificate_t *cert;
-	time_t notBefore, notAfter, now;
-	
-	if (!pem_asn1_load_file(path, NULL, &chunk, &pgp))
-	{
-		DBG1(DBG_CFG, "  could not load certificate file '%s'", path);
-		return NULL;
-	}
-	x509 = (x509_t*)lib->creds->create(lib->creds,
-									   CRED_CERTIFICATE, CERT_X509,
-									   BUILD_BLOB_ASN1_DER, chunk,
-									   BUILD_X509_FLAG, flag,
-									   BUILD_END);
-	if (x509 == NULL)
-	{
-		DBG1(DBG_CFG, "  could not parse loaded certificate file '%s'", path);
-		return NULL;
-	}
-	DBG1(DBG_CFG, "  loaded certificate file '%s'", path);
-	
-	/* check validity */
-	cert = &x509->interface;
-	now = time(NULL);
-	cert->get_validity(cert, &now, &notBefore, &notAfter);
-	if (now > notAfter)
-	{
-		DBG1(DBG_CFG, "  certificate expired at %T, discarded", &notAfter);
-		cert->destroy(cert);
-		return NULL;
-	}
-	if (now < notBefore)
-	{
-		DBG1(DBG_CFG, "  certificate not valid before %T", &notBefore);
-	}
-	return x509;
-}
-
-/**
  * Add X.509 certificate to chain
  */
 static certificate_t* add_x509_cert(private_stroke_t *this, x509_t* x509)
@@ -886,7 +842,7 @@ static void load_peer_cert(private_stroke_t *this,
 		snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
 	}
 	
-	x509 = load_cert(path, 0);
+	x509 = x509_create_from_file(path, "end entity cert", 0);
 
 	if (x509)
 	{
@@ -921,7 +877,7 @@ static certificate_t* load_ca_cert(private_stroke_t *this, char *filename)
 		snprintf(path, sizeof(path), "%s/%s", CA_CERTIFICATE_DIR, filename);
 	}
 	
-	x509 = load_cert(path, X509_CA);
+	x509 = x509_create_from_file(path, "ca cert", X509_CA);
 
 	if (x509)
 	{
@@ -936,8 +892,8 @@ static certificate_t* load_ca_cert(private_stroke_t *this, char *filename)
 /**
  * load trusted certificates from a directory
  */
-static void load_certdir(private_stroke_t *this,
-						 char *path, certificate_type_t type, x509_flag_t flag)
+static void load_certdir(private_stroke_t *this, char *path, char* label,
+						 certificate_type_t type, x509_flag_t flag)
 {
 	struct stat st;
 	char *file;
@@ -957,52 +913,53 @@ static void load_certdir(private_stroke_t *this,
 			/* skip special file */
 			continue;
 		}
-		if (type == CERT_X509)
+		switch (type)
 		{
-			x509_t *x509 = load_cert(file, flag);
-
-			if (x509)
-			{
-				add_x509_cert(this, x509);
-			}
-		}
-		else
-		{	
-			certificate_t *cert;
-			bool pgp = FALSE;
-			chunk_t chunk;
-	
-			if (!pem_asn1_load_file(file, NULL, &chunk, &pgp))
-			{
-				continue;
-			}
-			cert = lib->creds->create(lib->creds,
-									  CRED_CERTIFICATE, type,
-									  BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
-			if (type == CERT_X509_CRL)
-			{
-				if (cert)
+			case CERT_X509:
 				{
-					crl_t *crl = (crl_t*)cert;
+					x509_t *x509 = x509_create_from_file(file, label, flag);
 
-					DBG1(DBG_CFG, "  loaded crl file '%s'", file);
-
-					/* only trusted crls are added to the store */
-					if (verify_crl(crl))
+					if (x509)
 					{
-						add_crl(this, crl);
+						add_x509_cert(this, x509);
 					}
-					else
+				}
+				break;
+			case CERT_X509_CRL:
+				{
+					crl_t *crl = crl_create_from_file(file);
+
+					if (crl)
 					{
-						DBG1(DBG_CFG, "  crl discarded");
+						certificate_t *cert = &crl->certificate;
+
+						/* only trusted crls are added to the store */
+						if (verify_crl(crl))
+						{
+							add_crl(this, crl);
+						}
+						else
+						{
+							DBG1(DBG_CFG, "  crl discarded");
+							cert->destroy(cert);
+						}
+					}
+				}
+				break;
+			case CERT_X509_AC:
+				{
+					ac_t *ac = ac_create_from_file(file);
+
+					if (ac)
+					{
+						certificate_t *cert = &ac->certificate;
+
 						cert->destroy(cert);
 					}
 				}
-				else 
-				{
-					DBG1(DBG_CFG, " could not load crl file '%s'", file);
-				}
-			}
+				break;
+			default:
+				break;	
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -2945,34 +2902,34 @@ static void stroke_reread(private_stroke_t *this,
 	}
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
-		DBG1(DBG_CFG, "rereading CA certificates from '%s'",
+		DBG1(DBG_CFG, "rereading ca certificates from '%s'",
 			 CA_CERTIFICATE_DIR);
-		load_certdir(this, CA_CERTIFICATE_DIR, CERT_X509, X509_CA);
+		load_certdir(this, CA_CERTIFICATE_DIR, "ca cert", CERT_X509, X509_CA);
 	}
 	if (msg->reread.flags & REREAD_OCSPCERTS)
 	{
-		DBG1(DBG_CFG, "rereading OCSP signer certificates from '%s'",
+		DBG1(DBG_CFG, "rereading ocsp signer certificates from '%s'",
 			 OCSP_CERTIFICATE_DIR);
-		load_certdir(this, OCSP_CERTIFICATE_DIR, CERT_X509,
+		load_certdir(this, OCSP_CERTIFICATE_DIR, "ocsp cert", CERT_X509,
 			 X509_OCSP_SIGNER);
 	}
 	if (msg->reread.flags & REREAD_AACERTS)
 	{
-		DBG1(DBG_CFG, "rereading AA certificates from '%s'",
+		DBG1(DBG_CFG, "rereading aa certificates from '%s'",
 			 AA_CERTIFICATE_DIR);
-		load_certdir(this, AA_CERTIFICATE_DIR, CERT_X509, X509_AA);
+		load_certdir(this, AA_CERTIFICATE_DIR, "aa cert", CERT_X509, X509_AA);
 	}
 	if (msg->reread.flags & REREAD_ACERTS)
 	{
 		DBG1(DBG_CFG, "rereading attribute certificates from '%s'",
 			 ATTR_CERTIFICATE_DIR);
-		load_certdir(this, ATTR_CERTIFICATE_DIR, CERT_X509_AC, 0);
+		load_certdir(this, ATTR_CERTIFICATE_DIR, "attr cert", CERT_X509_AC, 0);
 	}
 	if (msg->reread.flags & REREAD_CRLS)
 	{
-		DBG1(DBG_CFG, "rereading CRLs from '%s'",
+		DBG1(DBG_CFG, "rereading crls from '%s'",
 			 CRL_DIR);
-		load_certdir(this, CRL_DIR, CERT_X509_CRL, 0);
+		load_certdir(this, CRL_DIR, "crl", CERT_X509_CRL, 0);
 	}
 }
 
@@ -3242,25 +3199,25 @@ static bool open_socket(private_stroke_t *this)
  */
 static void load_certs(private_stroke_t *this)
 {
-	DBG1(DBG_CFG, "loading CA certificates from '%s'",
+	DBG1(DBG_CFG, "loading ca certificates from '%s'",
 		 CA_CERTIFICATE_DIR);
-	load_certdir(this, CA_CERTIFICATE_DIR, CERT_X509, X509_CA);
+	load_certdir(this, CA_CERTIFICATE_DIR, "ca cert", CERT_X509, X509_CA);
 
-	DBG1(DBG_CFG, "loading AA certificates from '%s'",
+	DBG1(DBG_CFG, "loading aa certificates from '%s'",
 		 AA_CERTIFICATE_DIR);
-	load_certdir(this, AA_CERTIFICATE_DIR, CERT_X509, X509_AA);
+	load_certdir(this, AA_CERTIFICATE_DIR, "aa cert", CERT_X509, X509_AA);
 
-	DBG1(DBG_CFG, "loading OCSP signer certificates from '%s'",
+	DBG1(DBG_CFG, "loading ocsp signer certificates from '%s'",
 		 OCSP_CERTIFICATE_DIR);
-	load_certdir(this, OCSP_CERTIFICATE_DIR, CERT_X509, X509_OCSP_SIGNER);
+	load_certdir(this, OCSP_CERTIFICATE_DIR, "ocsp cert", CERT_X509, X509_OCSP_SIGNER);
 
 	DBG1(DBG_CFG, "loading attribute certificates from '%s'",
 		 ATTR_CERTIFICATE_DIR);
-	load_certdir(this, ATTR_CERTIFICATE_DIR, CERT_X509_AC, 0);
+	load_certdir(this, ATTR_CERTIFICATE_DIR, "attr cert", CERT_X509_AC, 0);
 
-	DBG1(DBG_CFG, "loading CRLs from '%s'",
+	DBG1(DBG_CFG, "loading crls from '%s'",
 		 CRL_DIR);
-	load_certdir(this, CRL_DIR, CERT_X509_CRL, 0);
+	load_certdir(this, CRL_DIR, "crl", CERT_X509_CRL, 0);
 }
 
 /*

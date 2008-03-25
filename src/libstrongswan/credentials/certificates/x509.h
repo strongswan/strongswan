@@ -104,4 +104,9 @@ struct x509_t {
 	enumerator_t* (*create_ocsp_uri_enumerator)(x509_t *this);
 };
 
+/**
+ * Load and parse an X.509 certificate file
+ */
+x509_t* x509_create_from_file(char *path, char *label, x509_flag_t flag);
+
 #endif /* X509_H_ @}*/

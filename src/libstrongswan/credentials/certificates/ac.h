@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2002 Ueli Galizzi, Ariane Seiler
  * Copyright (C) 2003 Martin Berner, Lukas Suter
- * Copyright (C) 2007 Andreas Steffen
+ * Copyright (C) 2002-2008 Andreas Steffen
  *
  * Hochschule fuer Technik Rapperswil
  *
@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ac.h 3300 2007-10-12 21:53:18Z andreas $
+ * $Id: ac.h 3300 2007-10-12 21:53:18Z andreas $
  */
 
 /**
@@ -53,6 +53,11 @@ struct ac_t {
 	 */
 	bool (*equals_holder) (const ac_t *this, const ac_t *other);
 };
+
+/**
+ * Load and parse an X.509 attribute certificate file
+ */
+ac_t* ac_create_from_file(char *path);
 
 #endif /* AC_H_ @}*/
 
