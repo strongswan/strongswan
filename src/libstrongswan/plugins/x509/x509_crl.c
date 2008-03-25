@@ -57,9 +57,9 @@ struct private_x509_crl_t {
 	x509_crl_t public;
 	
 	/**
-	 * X.509 crl in DER format
+	 * X.509 crl encoding in ASN.1 DER format
 	 */
-	chunk_t certificateList;
+	chunk_t encoding;
 
 	/**
 	 * X.509 crl body over which signature is computed
@@ -201,7 +201,7 @@ static bool parse(private_x509_crl_t *this)
 	u_int level;
 	int objectID = 0;
 
-	asn1_init(&ctx, this->certificateList, 0, FALSE, FALSE);
+	asn1_init(&ctx, this->encoding, 0, FALSE, FALSE);
 	while (objectID < CRL_OBJ_ROOF)
 	{
 		if (!extract_object(crlObjects, &objectID, &object, &level, &ctx))
@@ -567,7 +567,7 @@ static bool is_newer(private_x509_crl_t *this, crl_t *that)
  */
 static chunk_t get_encoding(private_x509_crl_t *this)
 {
-	return chunk_clone(this->certificateList);
+	return chunk_clone(this->encoding);
 }
 
 /**
@@ -598,15 +598,15 @@ static void destroy(private_x509_crl_t *this)
 		this->revoked->destroy_function(this->revoked, free);
 		DESTROY_IF(this->issuer);
 		DESTROY_IF(this->authKeyIdentifier);
-		free(this->certificateList.ptr);
+		free(this->encoding.ptr);
 		free(this);
 	}
 }
 
 /**
- * load a X509 CRL from a chunk of date (ASN1 DER)
+ * create an empty but initialized X.509 crl
  */
-static x509_crl_t *load(chunk_t chunk)
+static private_x509_crl_t* create_empty(void)
 {
 	private_x509_crl_t *this = malloc_thing(private_x509_crl_t);
 	
@@ -627,7 +627,7 @@ static x509_crl_t *load(chunk_t chunk)
 	this->public.crl.certificate.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
 	this->public.crl.certificate.destroy = (void (*)(certificate_t *this))destroy;
 	
-	this->certificateList = chunk;
+	this->encoding = chunk_empty;
 	this->tbsCertList = chunk_empty;
 	this->issuer = NULL;
 	this->crlNumber = chunk_empty;
@@ -636,13 +636,48 @@ static x509_crl_t *load(chunk_t chunk)
 	this->authKeySerialNumber = chunk_empty;
 	this->ref = 1;
 	
+	return this;
+}
+
+/**
+ * create an X.509 crl from a chunk
+ */
+static private_x509_crl_t* create_from_chunk(chunk_t chunk)
+{
+	private_x509_crl_t *this = create_empty();
+
+	this->encoding = chunk;
 	if (!parse(this))
 	{
 		destroy(this);
 		return NULL;
 	}
+	return this;
+}
+
+/**
+ * create an X.509 crl from a file
+ */
+static private_x509_crl_t* create_from_file(char *path)
+{
+	bool pgp = FALSE;
+	chunk_t chunk;
+	private_x509_crl_t *this;
 	
-	return &this->public;
+	if (!pem_asn1_load_file(path, NULL, &chunk, &pgp))
+	{
+		return NULL;
+	}
+
+	this = create_from_chunk(chunk);
+
+	if (this == NULL)
+	{
+		DBG1("  could not parse loaded crl file '%s'",path);
+		return NULL;
+	}
+	DBG1("  loaded crl file '%s'",  path);
+	return this;
 }
 
 typedef struct private_builder_t private_builder_t;
@@ -653,15 +688,15 @@ struct private_builder_t {
 	/** implements the builder interface */
 	builder_t public;
 	/** loaded CRL */
-	x509_crl_t *crl;
+	private_x509_crl_t *crl;
 };
 
 /**
  * Implementation of builder_t.build
  */
-static x509_crl_t *build(private_builder_t *this)
+static private_x509_crl_t *build(private_builder_t *this)
 {
-	x509_crl_t *crl = this->crl;
+	private_x509_crl_t *crl = this->crl;
 	
 	free(this);
 	return crl;
@@ -680,19 +715,22 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 		return;
 	}
 	
+	va_start(args, part);
 	switch (part)
 	{
+		case BUILD_FROM_FILE:
+			this->crl = create_from_file(va_arg(args, char*));
+			break;
 		case BUILD_BLOB_ASN1_DER:
 		{
-			va_start(args, part);
-			this->crl = load(va_arg(args, chunk_t));
-			va_end(args);
+			this->crl = create_from_chunk(va_arg(args, chunk_t));
 			break;
 		}
 		default:
 			DBG1("ignoring unsupported build part %N", builder_part_names, part);
 			break;
 	}
+	va_end(args);
 }
 
 /**

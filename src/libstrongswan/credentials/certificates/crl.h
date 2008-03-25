@@ -85,9 +85,4 @@ struct crl_t {
 	
 };
 
-/**
- * Load and parse an X.509 crl file
- */
-crl_t* crl_create_from_file(char *path);
-
 #endif /* CRL_H_ @}*/

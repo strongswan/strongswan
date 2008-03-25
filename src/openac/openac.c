@@ -488,25 +488,29 @@ int main(int argc, char **argv)
 	/* load the signer's X.509 certificate */
 	if (certfile != NULL)
 	{
-		x509_t *x509 = x509_create_from_file(certfile, "signer cert", 0);
-
-		if (x509 == NULL)
+		signerCert = lib->creds->create(lib->creds,
+										CRED_CERTIFICATE, CERT_X509,
+										BUILD_FROM_FILE, certfile,
+										BUILD_X509_FLAG, 0,
+										BUILD_END);
+		if (signerCert == NULL)
 		{
 			goto end;
 		}
-		signerCert = &x509->interface;
 	}
 
 	/* load the users's X.509 certificate */
 	if (usercertfile != NULL)
 	{
-		x509_t *x509 = x509_create_from_file(usercertfile, "user cert", 0);
-
-		if (x509 == NULL)
+		userCert = lib->creds->create(lib->creds,
+									  CRED_CERTIFICATE, CERT_X509,
+									  BUILD_FROM_FILE, usercertfile,
+									  BUILD_X509_FLAG, 0,
+									  BUILD_END);
+		if (userCert == NULL)
 		{
 			goto end;
 		}
-		userCert = &x509->interface;
 	}
 
 	/* compute validity interval */

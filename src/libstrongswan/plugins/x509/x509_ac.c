@@ -29,6 +29,9 @@
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
 
+extern identification_t* x509_parse_authorityKeyIdentifier(chunk_t blob,
+							 int level0, chunk_t *authKeySerialNumber);
+
 typedef struct private_x509_ac_t private_x509_ac_t;
 
 /**
@@ -42,7 +45,7 @@ struct private_x509_ac_t {
 	x509_ac_t public;
 	
 	/**
-	 * X.509 attribute certificate in DER format
+	 * X.509 attribute certificate encoding in ASN.1 DER format
 	 */
 	chunk_t encoding;
 
@@ -82,11 +85,6 @@ struct private_x509_ac_t {
 	identification_t *issuerName;
 
 	/**
-	 * Signature algorithm
-	 */
-	int algorithm;
-
-	/**
 	 * Start time of certificate validity
 	 */
 	time_t notBefore;
@@ -120,6 +118,11 @@ struct private_x509_ac_t {
 	 * No revocation information available
 	 */
 	bool noRevAvail;
+
+	/**
+	 * Signature algorithm
+	 */
+	int algorithm;
 
 	/**
 	 * Signature
@@ -256,7 +259,6 @@ static const asn1Object_t acObjects[] =
 	{ 1,   "signatureValue",				ASN1_BIT_STRING,	  ASN1_BODY }  /* 54 */
 };
 
-#define AC_OBJ_CERTIFICATE			 0
 #define AC_OBJ_CERTIFICATE_INFO		 1
 #define AC_OBJ_VERSION				 2
 #define AC_OBJ_HOLDER_ISSUER		 5
@@ -276,6 +278,224 @@ static const asn1Object_t acObjects[] =
 #define AC_OBJ_ALGORITHM			53
 #define AC_OBJ_SIGNATURE			54
 #define AC_OBJ_ROOF					55
+
+/**
+ * Parses an X.509 attribute certificate
+ */
+static bool parse(private_x509_ac_t *this)
+{
+	return FALSE;
+}
+/**
+ * parses a directoryName
+ */
+static bool parse_directoryName(chunk_t blob, int level, bool implicit, identification_t **name)
+{
+	bool has_directoryName;
+	linked_list_t *list = linked_list_create();
+
+	x509_parse_generalNames(blob, level, implicit, list);
+	has_directoryName = list->get_count(list) > 0;
+
+	if (has_directoryName)
+	{
+		iterator_t *iterator = list->create_iterator(list, TRUE);
+		identification_t *directoryName;
+		bool first = TRUE;
+
+		while (iterator->iterate(iterator, (void**)&directoryName))
+		{
+			if (first)
+			{
+				*name = directoryName;
+				first = FALSE;
+			}
+			else
+			{
+				DBG1("more than one directory name - first selected");
+				directoryName->destroy(directoryName);
+			}
+		}
+		iterator->destroy(iterator);
+	}
+	else
+	{
+		DBG1("no directoryName found");
+	}
+
+	list->destroy(list);
+	return has_directoryName;
+}
+
+/**
+ * parses roleSyntax
+ */
+static void parse_roleSyntax(chunk_t blob, int level0)
+{
+	asn1_ctx_t ctx;
+	chunk_t object;
+	u_int level;
+	int objectID = 0;
+
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+	while (objectID < ROLE_ROOF)
+	{
+		if (!extract_object(roleSyntaxObjects, &objectID, &object, &level, &ctx))
+		{
+			return;
+		}
+
+		switch (objectID)
+		{
+			default:
+				break;
+		}
+		objectID++;
+	}
+}
+
+/**
+ * Parses an X.509 attribute certificate
+ */
+static bool parse_certificate(private_x509_ac_t *this)
+{
+	asn1_ctx_t ctx;
+	bool critical;
+	chunk_t object;
+	u_int level;
+	int objectID = 0;
+	int type = OID_UNKNOWN;
+	int extn_oid = OID_UNKNOWN;
+	int sig_alg = OID_UNKNOWN;
+
+	asn1_init(&ctx, this->encoding, 0, FALSE, FALSE);
+	while (objectID < AC_OBJ_ROOF)
+	{
+		if (!extract_object(acObjects, &objectID, &object, &level, &ctx))
+		{
+			return FALSE;
+		}
+
+		/* those objects which will parsed further need the next higher level */
+		level++;
+
+		switch (objectID)
+		{
+			case AC_OBJ_CERTIFICATE_INFO:
+				this->certificateInfo = object;
+				break;
+			case AC_OBJ_VERSION:
+				this->version = (object.len) ? (1 + (u_int)*object.ptr) : 1;
+				DBG2("  v%d", this->version);
+				if (this->version != 2)
+				{
+					DBG1("v%d attribute certificates are not supported", this->version);
+					return FALSE;
+				}
+				break;
+			case AC_OBJ_HOLDER_ISSUER:
+				if (!parse_directoryName(object, level, FALSE, &this->holderIssuer))
+				{
+					return FALSE;
+				}
+				break;
+			case AC_OBJ_HOLDER_SERIAL:
+				this->holderSerial = object;
+				break;
+			case AC_OBJ_ENTITY_NAME:
+				if (!parse_directoryName(object, level, TRUE, &this->entityName))
+				{
+					return FALSE;
+				}
+				break;
+			case AC_OBJ_ISSUER_NAME:
+				if (!parse_directoryName(object, level, FALSE, &this->issuerName))
+				{
+					return FALSE;
+				}
+				break;
+			case AC_OBJ_SIG_ALG:
+				sig_alg = parse_algorithmIdentifier(object, level, NULL);
+				break;
+			case AC_OBJ_SERIAL_NUMBER:
+				this->serialNumber = object;
+				break;
+			case AC_OBJ_NOT_BEFORE:
+				this->notBefore = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				break;
+			case AC_OBJ_NOT_AFTER:
+				this->notAfter = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				break;
+			case AC_OBJ_ATTRIBUTE_TYPE:
+				type = known_oid(object);
+				break;
+			case AC_OBJ_ATTRIBUTE_VALUE:
+				{
+					switch (type)
+					{
+						case OID_AUTHENTICATION_INFO:
+							DBG2("  need to parse authenticationInfo");
+							break;
+						case OID_ACCESS_IDENTITY:
+							DBG2("  need to parse accessIdentity");
+							break;
+						case OID_CHARGING_IDENTITY:
+							ietfAttr_list_create_from_chunk(object, this->charging, level);
+							break;
+						case OID_GROUP:
+							ietfAttr_list_create_from_chunk(object, this->groups, level);
+							break;
+						case OID_ROLE:
+							parse_roleSyntax(object, level);
+							break;
+						default:
+							break;
+					}
+				}
+				break;
+			case AC_OBJ_EXTN_ID:
+				extn_oid = known_oid(object);
+				break;
+			case AC_OBJ_CRITICAL:
+				critical = object.len && *object.ptr;
+				DBG2("  %s",(critical)?"TRUE":"FALSE");
+				break;
+			case AC_OBJ_EXTN_VALUE:
+				{
+					switch (extn_oid)
+					{
+						case OID_CRL_DISTRIBUTION_POINTS:
+							DBG2("  need to parse crlDistributionPoints");
+							break;
+						case OID_AUTHORITY_KEY_ID:
+							this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(object,
+							 							level, &this->authKeySerialNumber);
+						break;
+							break;
+						case OID_TARGET_INFORMATION:
+							DBG2("  need to parse targetInformation");
+							break;
+						case OID_NO_REV_AVAIL:
+							this->noRevAvail = TRUE;
+							break;
+						default:
+							break;
+					}
+				}
+				break;
+			case AC_OBJ_ALGORITHM:
+				this->algorithm != parse_algorithmIdentifier(object, level, NULL);
+				break;
+			case AC_OBJ_SIGNATURE:
+				this->signature = object;
+				break;
+			default:
+				break;
+		}
+		objectID++;
+	}
+	return TRUE;
+}
 
 /**
  * build directoryName
@@ -678,7 +898,7 @@ static void destroy(private_x509_ac_t *this)
 /**
  * create an empty but initialized X.509 attribute certificate
  */
-static private_x509_ac_t *create_empty()
+static private_x509_ac_t *create_empty(void)
 {
 	private_x509_ac_t *this = malloc_thing(private_x509_ac_t);
 	
@@ -712,6 +932,47 @@ static private_x509_ac_t *create_empty()
 	return this;
 }
 
+/**
+ * create X.509 attribute certificate from a chunk
+ */
+static private_x509_ac_t* create_from_chunk(chunk_t chunk)
+{
+	private_x509_ac_t *this = create_empty();
+
+	this->encoding = chunk;
+	if (!parse_certificate(this))
+	{
+		destroy(this);
+		return NULL;
+	}
+	return this;
+}	
+
+/**
+ * create X.509 crl from a file
+ */
+static private_x509_ac_t* create_from_file(char *path)
+{
+	bool pgp = FALSE;
+	chunk_t chunk;
+	private_x509_ac_t *this;
+	
+	if (!pem_asn1_load_file(path, NULL, &chunk, &pgp))
+	{
+		return NULL;
+	}
+
+	this = create_from_chunk(chunk);
+
+	if (this == NULL)
+	{
+		DBG1("  could not parse loaded attribute certificate file '%s'", path);
+		return NULL;
+	}
+	DBG1("  loaded attribute certificate file '%s'", path);
+	return this;
+}
+	
 typedef struct private_builder_t private_builder_t;
 /**
  * Builder implementation for certificate loading
@@ -726,19 +987,23 @@ struct private_builder_t {
 /**
  * Implementation of builder_t.build
  */
-static x509_ac_t *build(private_builder_t *this)
+static private_x509_ac_t* build(private_builder_t *this)
 {
-	private_x509_ac_t *ac;
-	
-	ac = this->ac;
+	private_x509_ac_t *ac = this->ac;
+
 	free(this);
-	if (ac->holderCert && ac->signerCert && ac->signerKey)
+
+	/* synthesis if TRUE or analysis if FALSE */
+	if (ac->encoding.ptr == NULL)
 	{
-		ac->encoding = build_ac(ac);
-		return &ac->public;
+		if (ac->holderCert && ac->signerCert && ac->signerKey)
+		{
+			ac->encoding = build_ac(ac);
+			return ac;
+		}
+		destroy(ac);
+		return NULL;
 	}
-	destroy(ac);
-	return NULL;
 }
 
 /**
@@ -752,6 +1017,20 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	va_start(args, part);
 	switch (part)
 	{
+		case BUILD_FROM_FILE:
+			if (this->ac)
+			{
+				destroy(this->ac);
+			}
+			this->ac = create_from_file(va_arg(args, char*));
+			break;
+		case BUILD_BLOB_ASN1_DER:
+			if (this->ac)
+			{
+				destroy(this->ac);
+			}
+			this->ac = create_from_chunk(va_arg(args, chunk_t));
+			break;
 		case BUILD_NOT_BEFORE_TIME:
 			this->ac->notBefore = va_arg(args, time_t);
 			break;

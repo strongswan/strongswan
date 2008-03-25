@@ -16,9 +16,6 @@
  * $Id$
  */
 
-#include <library.h>
-#include <debug.h>
-#include <asn1/pem.h>
 #include "crl.h"
 
 ENUM(crl_reason_names, CRL_UNSPECIFIED, CRL_REMOVE_FROM_CRL,
@@ -32,29 +29,3 @@ ENUM(crl_reason_names, CRL_UNSPECIFIED, CRL_REMOVE_FROM_CRL,
 	"reason #7",
 	"remove from crl",
 );
-
-/*
- * Defined in header.
- */
-crl_t* crl_create_from_file(char *path)
-{
-	crl_t *crl;
-	bool pgp = FALSE;
-	chunk_t chunk;
-	
-	if (!pem_asn1_load_file(path, NULL, &chunk, &pgp))
-	{
-		DBG1("  could not load crl file '%s'", path);
-		return NULL;
-	}
-	crl = (crl_t*)lib->creds->create(lib->creds,
-									 CRED_CERTIFICATE, CERT_X509_CRL,
-									 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
-	if (crl == NULL)
-	{
-		DBG1("  could not parse loaded crl file '%s'", path);
-		return NULL;
-	}
-	DBG1("  loaded crl file '%s'", path);
-	return crl;
-}

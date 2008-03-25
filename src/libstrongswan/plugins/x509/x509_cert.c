@@ -66,7 +66,7 @@ struct private_x509_cert_t {
 	x509_cert_t public;
 
 	/**
-	 * DER encoded X.509 certificate
+	 * X.509 certificate encoding in ASN.1 DER format
 	 */
 	chunk_t encoding;
 
@@ -735,8 +735,8 @@ static bool parse_certificate(private_x509_cert_t *this)
 	u_int level;
 	int objectID = 0;
 	int extn_oid = OID_UNKNOWN;
-	int key_alg = 0;
-	int sig_alg = 0;
+	int key_alg = OID_UNKNOWN;
+	int sig_alg = OID_UNKNOWN;
 	chunk_t subjectPublicKey = chunk_empty;
 	
 	asn1_init(&ctx, this->encoding, 0, FALSE, FALSE);
@@ -1163,9 +1163,9 @@ static void destroy(private_x509_cert_t *this)
 }
 
 /**
- * load x509 certificate from a chunk
+ * create an empty but initialized X.509 certificate
  */
-static private_x509_cert_t *load(chunk_t chunk)
+static private_x509_cert_t* create_empty(void)
 {
 	private_x509_cert_t *this = malloc_thing(private_x509_cert_t);
 	
@@ -1189,7 +1189,7 @@ static private_x509_cert_t *load(chunk_t chunk)
 	this->public.interface.create_crl_uri_enumerator = (enumerator_t* (*)(x509_t*))create_crl_uri_enumerator;
 	this->public.interface.create_ocsp_uri_enumerator = (enumerator_t* (*)(x509_t*))create_ocsp_uri_enumerator;
 
-	this->encoding = chunk;
+	this->encoding = chunk_empty;
 	this->public_key = NULL;
 	this->subject = NULL;
 	this->issuer = NULL;
@@ -1201,19 +1201,56 @@ static private_x509_cert_t *load(chunk_t chunk)
 	this->authKeySerialNumber = chunk_empty;
 	this->flags = 0;
 	this->ref = 1;
-	
+
+	return this;
+}
+
+/**
+ * create an X.509 certificate from a chunk
+ */
+static private_x509_cert_t *create_from_chunk(chunk_t chunk)
+{
+	private_x509_cert_t *this = create_empty();
+
+	this->encoding = chunk;
 	if (!parse_certificate(this))
 	{
 		destroy(this);
 		return NULL;
 	}
-	
+
 	/* check if the certificate is self-signed */
 	if (issued_by(this, &this->public.interface.interface, TRUE))
 	{
 		this->flags |= X509_SELF_SIGNED;
 	}
 	return this;
+}
+
+/**
+ * create an X.509 certificate from a file
+ */
+static private_x509_cert_t *create_from_file(char *path)
+{
+	bool pgp = FALSE;
+	chunk_t chunk;
+	private_x509_cert_t *this;
+	
+	if (!pem_asn1_load_file(path, NULL, &chunk, &pgp))
+	{
+		return NULL;
+	}
+
+	this = create_from_chunk(chunk);
+
+	if (this == NULL)
+	{
+		DBG1("  could not parse loaded certificate file '%s'",path);
+		return NULL;
+	}
+	DBG1("  loaded certificate file '%s'",  path);
+	return this;
+
 }
 
 typedef struct private_builder_t private_builder_t;
@@ -1232,14 +1269,24 @@ struct private_builder_t {
 /**
  * Implementation of builder_t.build
  */
-static x509_cert_t *build(private_builder_t *this)
+static private_x509_cert_t *build(private_builder_t *this)
 {
-	private_x509_cert_t *cert;
-	
-	cert = this->cert;
-	cert->flags |= this->flags;
+	private_x509_cert_t *cert = this->cert;
+	x509_flag_t flags = this->flags;
+
 	free(this);
-	return &cert->public;
+	if (cert == NULL)
+	{
+		return NULL;
+	}
+	if ((flags & X509_CA) && !(cert->flags & X509_CA))
+	{
+		DBG1("  ca certificate must have ca basic constraint set, discarded");
+		destroy(cert);
+		return NULL;
+	}
+	cert->flags |= flags;
+	return cert;
 }
 
 /**
@@ -1252,12 +1299,11 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	va_start(args, part);
 	switch (part)
 	{
+		case BUILD_FROM_FILE:
+			this->cert = create_from_file(va_arg(args, char*));
+			break;
 		case BUILD_BLOB_ASN1_DER:
-			if (this->cert)
-			{
-				destroy(this->cert);
-			}
-			this->cert = load(va_arg(args, chunk_t));
+			this->cert = create_from_chunk(va_arg(args, chunk_t));
 			break;
 		case BUILD_X509_FLAG:
 			this->flags = va_arg(args, x509_flag_t);

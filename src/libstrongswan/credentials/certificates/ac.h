@@ -54,10 +54,5 @@ struct ac_t {
 	bool (*equals_holder) (const ac_t *this, const ac_t *other);
 };
 
-/**
- * Load and parse an X.509 attribute certificate file
- */
-ac_t* ac_create_from_file(char *path);
-
 #endif /* AC_H_ @}*/
 
