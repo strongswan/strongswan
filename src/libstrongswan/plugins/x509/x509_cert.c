@@ -68,7 +68,7 @@ struct private_x509_cert_t {
 	/**
 	 * DER encoded X.509 certificate
 	 */
-	chunk_t certificate;
+	chunk_t encoding;
 
 	/**
 	 * X.509 certificate body over which signature is computed
@@ -739,7 +739,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 	int sig_alg = 0;
 	chunk_t subjectPublicKey = chunk_empty;
 	
-	asn1_init(&ctx, this->certificate, 0, FALSE, FALSE);
+	asn1_init(&ctx, this->encoding, 0, FALSE, FALSE);
 	while (objectID < X509_OBJ_ROOF)
 	{
 		if (!extract_object(certObjects, &objectID, &object, &level, &ctx))
@@ -1073,7 +1073,7 @@ static bool is_newer(certificate_t *this, certificate_t *that)
  */
 static chunk_t get_encoding(private_x509_cert_t *this)
 {
-	return chunk_clone(this->certificate);
+	return chunk_clone(this->encoding);
 }
 
 /**
@@ -1157,7 +1157,7 @@ static void destroy(private_x509_cert_t *this)
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->public_key);
 		DESTROY_IF(this->authKeyIdentifier);
-		chunk_free(&this->certificate);
+		chunk_free(&this->encoding);
 		free(this);
 	}
 }
@@ -1189,7 +1189,7 @@ static private_x509_cert_t *load(chunk_t chunk)
 	this->public.interface.create_crl_uri_enumerator = (enumerator_t* (*)(x509_t*))create_crl_uri_enumerator;
 	this->public.interface.create_ocsp_uri_enumerator = (enumerator_t* (*)(x509_t*))create_ocsp_uri_enumerator;
 
-	this->certificate = chunk;
+	this->encoding = chunk;
 	this->public_key = NULL;
 	this->subject = NULL;
 	this->issuer = NULL;
@@ -1253,19 +1253,15 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	switch (part)
 	{
 		case BUILD_BLOB_ASN1_DER:
-		{
 			if (this->cert)
 			{
 				destroy(this->cert);
 			}
 			this->cert = load(va_arg(args, chunk_t));
 			break;
-		}
 		case BUILD_X509_FLAG:
-		{
 			this->flags = va_arg(args, x509_flag_t);
 			break;
-		}
 		default:
 			DBG1("ignoring unsupported build part %N", builder_part_names, part);
 			break;
