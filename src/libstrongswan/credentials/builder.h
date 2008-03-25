@@ -38,9 +38,11 @@ typedef builder_t* (*builder_constructor_t)(int subtype);
  * Parts to build credentials from.
  */
 enum builder_part_t {
-	/** DER encoded ASN1 blob, argument is a chunk_t */
+	/** path to a file containing an ASN1 blob, char* */
+	BUILD_FROM_FILE,
+	/** DER encoded ASN1 blob, chunk_t */
 	BUILD_BLOB_ASN1_DER,
-	/** key size in bits, as used for key generation, as u_int */
+	/** key size in bits, as used for key generation, u_int */
 	BUILD_KEY_SIZE,
 	/** private key to use for signing, private_key_t* */
 	BUILD_SIGNING_KEY,

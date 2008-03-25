@@ -16,6 +16,7 @@
 #include "builder.h"
 
 ENUM(builder_part_names, BUILD_BLOB_ASN1_DER, BUILD_END,
+	"BUILD_FROM_FILE",
 	"BUILD_BLOB_ASN1_DER",
 	"BUILD_KEY_SIZE",
 	"BUILD_SIGNING_KEY",
