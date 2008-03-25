@@ -664,6 +664,10 @@ static void destroy(private_x509_ac_t *this)
 		DESTROY_IF(this->entityName);
 		DESTROY_IF(this->issuerName);
 		DESTROY_IF(this->authKeyIdentifier);
+		DESTROY_IF(this->holderCert);
+		DESTROY_IF(this->signerCert);
+		DESTROY_IF(this->signerKey);
+
 		ietfAttr_list_destroy(this->charging);
 		ietfAttr_list_destroy(this->groups);
 		free(this->encoding.ptr);
