@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008 Martin Willi
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,37 +16,29 @@
  */
 
 /**
- * @defgroup stroke stroke
- * @ingroup cplugins
- *
- * @defgroup stroke_i stroke
+ * @defgroup stroke_socket stroke_socket
  * @{ @ingroup stroke
  */
- 
-#ifndef STROKE_H_
-#define STROKE_H_
 
-#include <plugins/plugin.h>
+#ifndef STROKE_SOCKET_H_
+#define STROKE_SOCKET_H_
 
-typedef struct stroke_t stroke_t;
+typedef struct stroke_socket_t stroke_socket_t;
 
 /**
- * strongSwan 2.x style configuration and control interface.
- *
- * Stroke is a home-brewed communication interface inspired by whack. It
- * uses a unix socket (/var/run/charon.ctl).
+ * Stroke socket, opens UNIX communication socket, reads and dispatches.
  */
-struct stroke_t {
-
+struct stroke_socket_t {
+		
 	/**
-	 * implements plugin interface
-	 */
-	plugin_t plugin;
+     * Destroy a stroke_socket instance.
+     */
+    void (*destroy)(stroke_socket_t *this);
 };
 
 /**
- * Instanciate stroke plugin.
+ * Create a stroke_socket instance.
  */
-plugin_t *plugin_create();
+stroke_socket_t *stroke_socket_create();
 
-#endif /* STROKE_H_ @}*/
+#endif /* STROKE_SOCKET_H_ @}*/
