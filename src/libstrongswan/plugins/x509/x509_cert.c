@@ -498,7 +498,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 /**
  * extracts one or several GNs and puts them into a chained list
  */
-void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list)
+void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list)
 {
 	asn1_ctx_t ctx;
 	chunk_t object;
@@ -581,7 +581,7 @@ identification_t* x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
 			}
 			case AUTH_KEY_ID_CERT_ISSUER:
 			{
-				/* TODO: parse_generalNames(object, level+1, TRUE); */
+				/* TODO: x509_parse_generalNames(object, level+1, TRUE); */
 				break;
 			}
 			case AUTH_KEY_ID_CERT_SERIAL:
@@ -708,7 +708,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 		}
 		if (objectID == CRL_DIST_POINTS_FULLNAME)
 		{	/* append extracted generalNames to existing chained list */
-			parse_generalNames(object, level+1, TRUE, list);
+			x509_parse_generalNames(object, level+1, TRUE, list);
 	
 			while (list->remove_last(list, (void**)&id) == SUCCESS)
 			{
@@ -817,7 +817,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 						this->subjectKeyID = parse_keyIdentifier(object, level, FALSE);
 						break;
 					case OID_SUBJECT_ALT_NAME:
-						parse_generalNames(object, level, FALSE, this->subjectAltNames);
+						x509_parse_generalNames(object, level, FALSE, this->subjectAltNames);
 						break;
 					case OID_BASIC_CONSTRAINTS:
 						if (parse_basicConstraints(object, level))

@@ -25,6 +25,7 @@
 #include <debug.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
+#include <asn1/pem.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
@@ -280,12 +281,10 @@ static const asn1Object_t acObjects[] =
 #define AC_OBJ_ROOF					55
 
 /**
- * Parses an X.509 attribute certificate
+ * declaration of function implemented in x509_cert.c
  */
-static bool parse(private_x509_ac_t *this)
-{
-	return FALSE;
-}
+extern void x509_parse_generalNames(chunk_t blob, int level0, bool implicit,
+									linked_list_t *list);
 /**
  * parses a directoryName
  */
@@ -484,7 +483,7 @@ static bool parse_certificate(private_x509_ac_t *this)
 				}
 				break;
 			case AC_OBJ_ALGORITHM:
-				this->algorithm != parse_algorithmIdentifier(object, level, NULL);
+				this->algorithm = parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case AC_OBJ_SIGNATURE:
 				this->signature = object;
@@ -911,6 +910,7 @@ static private_x509_ac_t *create_empty(void)
 	this->public.interface.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer,bool))issued_by;
 	this->public.interface.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.interface.certificate.get_validity = (bool(*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
+	this->public.interface.certificate.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
 	this->public.interface.certificate.get_encoding = (chunk_t(*)(certificate_t*))get_encoding;
 	this->public.interface.certificate.equals = (bool(*)(certificate_t*, certificate_t *other))equals;
 	this->public.interface.certificate.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
@@ -1002,6 +1002,10 @@ static private_x509_ac_t* build(private_builder_t *this)
 			return ac;
 		}
 		destroy(ac);
+		return NULL;
+	}
+	else
+	{
 		return NULL;
 	}
 }
