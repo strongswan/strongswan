@@ -484,6 +484,11 @@ static bool parse_certificate(private_x509_ac_t *this)
 				break;
 			case AC_OBJ_ALGORITHM:
 				this->algorithm = parse_algorithmIdentifier(object, level, NULL);
+				if (this->algorithm != sig_alg)
+				{
+					DBG1("  signature algorithms do not agree");
+					return FALSE;
+				}
 				break;
 			case AC_OBJ_SIGNATURE:
 				this->signature = object;

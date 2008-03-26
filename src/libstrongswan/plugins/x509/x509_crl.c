@@ -200,6 +200,7 @@ static bool parse(private_x509_crl_t *this)
 	revoked_t *revoked = NULL;
 	chunk_t object;
 	u_int level;
+	int sig_alg = OID_UNKNOWN;
 	int objectID = 0;
 
 	asn1_init(&ctx, this->encoding, 0, FALSE, FALSE);
@@ -223,7 +224,7 @@ static bool parse(private_x509_crl_t *this)
 				DBG2("  v%d", this->version);
 				break;
 			case CRL_OBJ_SIG_ALG:
-				this->algorithm = parse_algorithmIdentifier(object, level, NULL);
+				sig_alg = parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case CRL_OBJ_ISSUER:
 				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
@@ -287,8 +288,8 @@ static bool parse(private_x509_crl_t *this)
 				break;
 			case CRL_OBJ_ALGORITHM:
 			{
-				int algo = parse_algorithmIdentifier(object, level, NULL);
-				if (this->algorithm != algo)
+				this->algorithm = parse_algorithmIdentifier(object, level, NULL);
+				if (this->algorithm != sig_alg)
 				{
 					DBG1("  signature algorithms do not agree");
 					return FALSE;
