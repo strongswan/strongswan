@@ -62,13 +62,13 @@ extern enum_name_t *certificate_type_names;
 enum cert_validation_t {
 	/** certificate has been validated successfully */
 	VALIDATION_GOOD,
-	/** validation failed, certificate is revoked */
+	/** certificate has been validated, but check based on stale information */
+	VALIDATION_STALE,
+	/** certificate has been revoked */
 	VALIDATION_REVOKED,
-	/* ocsp status is unknown or crl is stale */
-	VALIDATION_UNKNOWN,
-	/** validation process failed due to an error */
+	/** validation failed due to a processing error */
 	VALIDATION_FAILED,
-	/** validation has been skipped (no cdps available) */
+	/** validation has been skipped due to missing validation information */
 	VALIDATION_SKIPPED,
 };
 
@@ -129,17 +129,12 @@ struct certificate_t {
 	id_match_t (*has_issuer)(certificate_t *this, identification_t *issuer);
 	
 	/**
-	 * Check if this certificate is issued by a specific issuer.
+	 * Check if this certificate is issued and signed by a specific issuer.
 	 *
-	 * As signature verification is computional expensive, it is optional 
-	 * and may be skipped. While this is not sufficient for verification
-	 * purposes, it is to e.g. find matching certificates.
-	 * 
 	 * @param issuer	issuer's certificate
-	 * @param checksig	TRUE to verify signature, FALSE to compare issuer only
 	 * @return 			TRUE if certificate issued by issuer and trusted
 	 */
-	bool (*issued_by)(certificate_t *this, certificate_t *issuer, bool checksig);
+	bool (*issued_by)(certificate_t *this, certificate_t *issuer);
 	
 	/**
 	 * Get the public key associated to this certificate.

@@ -378,8 +378,7 @@ static id_match_t has_issuer(private_x509_ocsp_request_t *this,
 /**
  * Implementation of certificate_t.issued_by
  */
-static bool issued_by(private_x509_ocsp_request_t *this, certificate_t *issuer,
-					  bool sigcheck)
+static bool issued_by(private_x509_ocsp_request_t *this, certificate_t *issuer)
 {
 	DBG1("OCSP request validation not implemented!");
 	return FALSE;
@@ -482,7 +481,7 @@ static private_x509_ocsp_request_t *create_empty()
 	this->public.interface.interface.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
 	this->public.interface.interface.has_subject = (id_match_t(*)(certificate_t*, identification_t *subject))has_subject;
 	this->public.interface.interface.has_issuer = (id_match_t(*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.interface.interface.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer,bool))issued_by;
+	this->public.interface.interface.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
 	this->public.interface.interface.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.interface.interface.get_validity = (bool(*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
 	this->public.interface.interface.get_encoding = (chunk_t(*)(certificate_t*))get_encoding;

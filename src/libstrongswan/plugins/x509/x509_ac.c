@@ -714,8 +714,7 @@ static id_match_t has_issuer(private_x509_ac_t *this, identification_t *issuer)
 /**
  * Implementation of certificate_t.issued_by
  */
-static bool issued_by(private_x509_ac_t *this, certificate_t *issuer,
-					  bool sigcheck)
+static bool issued_by(private_x509_ac_t *this, certificate_t *issuer)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -752,11 +751,6 @@ static bool issued_by(private_x509_ac_t *this, certificate_t *issuer,
 		{
 			return FALSE;
 		}
-	}
-
-	if (!sigcheck)
-	{
-		return TRUE;
 	}
 	/* TODO: generic OID to scheme mapper? */
 	switch (this->algorithm)
@@ -912,7 +906,7 @@ static private_x509_ac_t *create_empty(void)
 	this->public.interface.certificate.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
 	this->public.interface.certificate.has_subject = (id_match_t(*)(certificate_t*, identification_t *subject))has_subject;
 	this->public.interface.certificate.has_issuer = (id_match_t(*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.interface.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer,bool))issued_by;
+	this->public.interface.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
 	this->public.interface.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.interface.certificate.get_validity = (bool(*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
 	this->public.interface.certificate.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;

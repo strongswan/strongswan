@@ -51,7 +51,7 @@ struct ac_t {
 	 * @param that			other attribute certificate
 	 * @return				TRUE if same holder
 	 */
-	bool (*equals_holder) (const ac_t *this, const ac_t *other);
+	bool (*equals_holder) (ac_t *this, ac_t *other);
 };
 
 #endif /* AC_H_ @}*/

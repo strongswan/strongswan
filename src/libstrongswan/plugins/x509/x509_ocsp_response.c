@@ -31,6 +31,11 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
 
+/**
+ * how long do we use an OCSP response without a nextUpdate
+ */
+#define OCSP_DEFAULT_LIFETIME 30
+
 typedef struct private_x509_ocsp_response_t private_x509_ocsp_response_t;
 
 /**
@@ -58,10 +63,7 @@ struct private_x509_ocsp_response_t {
 	int signatureAlgorithm;
 	
 	/**
-	 * signature	enumerator = this->responses->create_enumerator(this->responses);
-	while (enumerator->enumerate(enumerator, &response))
-	{
- value
+	 * signature
 	 */
 	chunk_t signature;
 	
@@ -74,6 +76,11 @@ struct private_x509_ocsp_response_t {
 	 * time of response production
 	 */
 	time_t producedAt;
+	
+	/**
+	 * latest nextUpdate in this OCSP response
+	 */
+	time_t usableUntil;
 	
 	/**
 	 * list of included certificates
@@ -382,8 +389,9 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 	response->status = VALIDATION_FAILED;
 	response->revocationTime = 0;
 	response->revocationReason = CRL_UNSPECIFIED;
-	response->thisUpdate = 0;
-	response->nextUpdate = 0;
+	response->thisUpdate = UNDEFINED_TIME;
+	/* if nextUpdate is missing, we give it a short lifetime */
+	response->nextUpdate = this->producedAt + OCSP_DEFAULT_LIFETIME;
 
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	while (objectID < SINGLE_RESPONSE_ROOF)
@@ -423,16 +431,24 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 				}
 	    		break;
 			case SINGLE_RESPONSE_CERT_STATUS_UNKNOWN:
-				response->status = VALIDATION_UNKNOWN;
+				response->status = VALIDATION_FAILED;
 				break;
 			case SINGLE_RESPONSE_THIS_UPDATE:
 				response->thisUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
 				break;
 			case SINGLE_RESPONSE_NEXT_UPDATE:
 				response->nextUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				if (response->nextUpdate > this->usableUntil)
+				{
+					this->usableUntil = response->nextUpdate;
+				}
 	    		break;
 		}
 		objectID++;
+	}
+	if (this->usableUntil == UNDEFINED_TIME)
+	{
+		this->usableUntil = this->producedAt + OCSP_DEFAULT_LIFETIME;
 	}
 	this->responses->insert_last(this->responses, response);
 	return TRUE;
@@ -643,8 +659,7 @@ static id_match_t has_issuer(private_x509_ocsp_response_t *this,
 /**
  * Implementation of certificate_t.issued_by
  */
-static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer,
-					  bool sigcheck)
+static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -684,10 +699,6 @@ static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer,
 		!(x509->get_flags(x509) & X509_CA))
 	{
 		return FALSE;
-	}
-	if (!sigcheck)
-	{
-		return TRUE;
 	}
 	/* TODO: generic OID to scheme mapper? */
 	switch (this->signatureAlgorithm)
@@ -734,19 +745,7 @@ static public_key_t* get_public_key(private_x509_ocsp_response_t *this)
 static bool get_validity(private_x509_ocsp_response_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
 {
-	enumerator_t *enumerator;
-	single_response_t *response;
-	time_t thisUpdate = this->producedAt;
-	time_t nextUpdate = 0;
 	time_t t;
-	
-	enumerator = this->responses->create_enumerator(this->responses);
-	if (enumerator->enumerate(enumerator, &response))
-	{
-		thisUpdate = response->thisUpdate;
-		nextUpdate = response->nextUpdate;
-	}
-	enumerator->destroy(enumerator);
 
 	if (when == NULL)
 	{
@@ -758,13 +757,13 @@ static bool get_validity(private_x509_ocsp_response_t *this, time_t *when,
 	}
 	if (not_before)
 	{
-		*not_before = thisUpdate;
+		*not_before = this->producedAt;
 	}
 	if (not_after)
 	{
-		*not_after = nextUpdate;
+		*not_after = this->usableUntil;
 	}
-	return (t < nextUpdate);
+	return (t < this->usableUntil);
 }
 
 /**
@@ -853,7 +852,7 @@ static x509_ocsp_response_t *load(chunk_t data)
 	this->public.interface.certificate.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
 	this->public.interface.certificate.has_subject = (id_match_t(*)(certificate_t*, identification_t *subject))has_issuer;
 	this->public.interface.certificate.has_issuer = (id_match_t(*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.interface.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer,bool))issued_by;
+	this->public.interface.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
 	this->public.interface.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.interface.certificate.get_validity = (bool(*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
 	this->public.interface.certificate.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
@@ -869,6 +868,7 @@ static x509_ocsp_response_t *load(chunk_t data)
 	this->tbsResponseData = chunk_empty;
 	this->responderId = NULL;
 	this->producedAt = UNDEFINED_TIME;
+	this->usableUntil = UNDEFINED_TIME;
 	this->responses = linked_list_create();
 	this->nonce = chunk_empty;
 	this->signatureAlgorithm = OID_UNKNOWN;

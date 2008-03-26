@@ -331,6 +331,7 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 	request->destroy(request);
 
 	DBG1(DBG_CFG, "requesting ocsp status from '%s' ...", url);
+	/* TODO: unlock manager while fetching? */
 	if (lib->fetcher->fetch(lib->fetcher, url, &receive, 
 							FETCH_REQUEST_DATA, send,
 							FETCH_REQUEST_TYPE, "application/ocsp-request",
@@ -350,50 +351,111 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 		DBG1(DBG_CFG, "parsing ocsp response failed");
 		return NULL;
 	}
+	return response;
+}
+
+/**
+ * check the signature of an OCSP response 
+ */
+static bool check_ocsp_response(private_credential_manager_t *this,
+							    ocsp_response_t *response)
+{
+	certificate_t *issuer, *subject;
+	identification_t *responder;
+	auth_info_t *auth;
+	ocsp_response_wrapper_t *wrapper;
+
+	auth = auth_info_create();
+	wrapper = ocsp_response_wrapper_create((ocsp_response_t*)response);
+	this->sets->remove(this->sets, this->cache, NULL);
+	this->sets->insert_first(this->sets, wrapper);
+	this->sets->insert_first(this->sets, this->cache);
 	
+	subject = &response->certificate;
+	responder = subject->get_issuer(subject);
+	issuer = get_trusted_cert(this, KEY_ANY, responder, auth, FALSE, FALSE);
+	
+	this->sets->remove(this->sets, wrapper, NULL);
+	wrapper->destroy(wrapper);
+	auth->destroy(auth);
 
-	/* verify the signature of the ocsp response */
+	if (!issuer)
 	{
-		certificate_t *issuer_cert;
-		identification_t *responder;
-		auth_info_t *auth;
-		ocsp_response_wrapper_t *wrapper;
- 
-		auth = auth_info_create();
-		wrapper = ocsp_response_wrapper_create((ocsp_response_t*)response);
-		this->sets->remove(this->sets, this->cache, NULL);
-		this->sets->insert_first(this->sets, wrapper);
-		this->sets->insert_first(this->sets, this->cache);
-		responder = response->get_issuer(response);
-		DBG1(DBG_CFG, "  ocsp signer is \"%D\"", responder);
-		issuer_cert = get_trusted_cert(this, KEY_ANY, responder, auth, FALSE, FALSE);
-		this->sets->remove(this->sets, wrapper, NULL);
-		wrapper->destroy(wrapper);
-		auth->destroy(auth);
+		DBG1(DBG_CFG, "OCSP response verification failed, responder cert missing");
+		return FALSE;
+	}
+	if (!this->cache->issued_by(this->cache, subject, issuer))
+	{
+		DBG1(DBG_CFG, "OCSP response verification failed");
+		issuer->destroy(issuer);
+		return FALSE;
+	}
+	issuer->destroy(issuer);
+	return TRUE;
+}
 
-		if (!issuer_cert)
+/**
+ * Get the better of two OCSP responses, and check for usable OCSP info
+ */
+static certificate_t *get_better_ocsp(private_credential_manager_t *this,
+									  certificate_t *cand, certificate_t *best,
+									  x509_t *subject, x509_t *issuer,
+									  cert_validation_t *valid)
+{
+	ocsp_response_t *response;
+	time_t revocation, this_update, next_update, valid_until;
+	crl_reason_t reason;
+	
+	response = (ocsp_response_t*)cand;
+
+	/* check ocsp signature */
+	if (!check_ocsp_response(this, response))
+	{
+		cand->destroy(cand);
+		return best;
+	}
+	/* check if response contains our certificate */
+	switch (response->get_status(response, subject, issuer, &revocation, &reason,
+								 &this_update, &next_update))
+	{
+		case VALIDATION_REVOKED:
+			/* subject has been revoked by a valid OCSP response */
+			DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
+				 		  &revocation, crl_reason_names, reason);
+			DESTROY_IF(best);
+			return cand;
+		case VALIDATION_GOOD:
+			/* results in either good or stale */
+			break;
+		default:
+		case VALIDATION_FAILED:
+			/* candidate unusable, does not contain our cert */
+			cand->destroy(cand);
+			return best;
+	}
+
+	/* select the better of the two responses */
+	if (best == NULL || cand->is_newer(cand, best))
+	{
+		DESTROY_IF(best);
+		best = cand;
+		if (best->get_validity(best, NULL, NULL, &valid_until))
 		{
-			DBG1(DBG_CFG, "ocsp response untrusted: no signer certificate found");
-			response->destroy(response);
-			return NULL;
-		}
-		if (this->cache->issued_by(this->cache, response, issuer_cert))
-		{
-			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%D\"",
-						   issuer_cert->get_subject(issuer_cert));
-			issuer_cert->destroy(issuer_cert);
+			DBG1(DBG_CFG, "  ocsp response is valid: until %#T", &valid_until);
+			*valid = VALIDATION_GOOD;
 		}
 		else
 		{
-			DBG1(DBG_CFG, "ocsp response not accepted from \"%D\"",
-						   issuer_cert->get_subject(issuer_cert));
-			issuer_cert->destroy(issuer_cert);
-			response->destroy(response);
-			return NULL;
+			DBG1(DBG_CFG, "  ocsp response is stale: since %#T", &valid_until);
+			*valid = VALIDATION_STALE;
 		}
 	}
-	/* TODO: cache response? */
-	return response;
+	else
+	{
+		*valid = VALIDATION_STALE;
+		cand->destroy(cand);
+	}
+	return best;
 }
 
 /**
@@ -403,92 +465,49 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 								    x509_t *subject, x509_t *issuer, 
 								    auth_info_t *auth)
 {
-	certificate_t *sub = (certificate_t*)subject;
-	certificate_t *best_cert = NULL;
-	certificate_t *cert;
-	public_key_t *public;
+	enumerator_t *enumerator;
 	cert_validation_t valid = VALIDATION_SKIPPED;
+	certificate_t *best = NULL, *current;
 	identification_t *keyid = NULL;
-	bool stale = TRUE;
+	public_key_t *public;
+	char *uri = NULL;
+
+	/** lookup cache for valid OCSP responses */
+	enumerator = create_cert_enumerator(this, CERT_X509_OCSP_RESPONSE,
+										KEY_ANY, NULL, FALSE);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		current->get_ref(current);
+		best = get_better_ocsp(this, current, best, subject, issuer, &valid);
+		if (best && valid != VALIDATION_STALE)
+		{
+			DBG1(DBG_CFG, "  used cached ocsp response");
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
 	
 	/* derive the authorityKeyIdentifier from the issuer's public key */
-	cert = &issuer->interface;
-	public = cert->get_public_key(cert);
+	current = &issuer->interface;
+	public = current->get_public_key(current);
 	if (public)
 	{
 		keyid = public->get_id(public, ID_PUBKEY_SHA1);
 	}
-	
-	/* find a cached ocsp response by authorityKeyIdentifier */	
-	if (keyid)
+	/** fetch from configured OCSP responder URLs */
+	if (keyid && valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
 	{
-		enumerator_t *enumerator = create_cert_enumerator(this,
-										 CERT_X509_OCSP_RESPONSE,
-										 KEY_ANY, keyid, TRUE);
-		certificate_t *cert;
-
-		while (enumerator->enumerate(enumerator, &cert))
-		{
-			if (cert->has_subject(cert, sub->get_subject(sub)))
-			{
-				/* select most recent ocsp response */
-				if (best_cert == NULL || cert->is_newer(cert, best_cert))
-				{
-					DESTROY_IF(best_cert);
-					best_cert = cert->get_ref(cert);
-				}
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-
-	/* check the validity of the cached ocsp response if one was found */
-	if (best_cert)
-	{
-		time_t nextUpdate;
-
-		stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
-		DBG1(DBG_CFG, "cached ocsp response is %s %#T",
-					   stale? "stale: since":"valid: until",
-					   &nextUpdate, FALSE );
-	}
-
-	/* fallback to URL fetching from CDPs */
-	if (stale && keyid)
-	{
-		enumerator_t *enumerator = create_cdp_enumerator(this,
-										 CERT_X509_OCSP_RESPONSE, keyid);
-		char *uri;
-
+		enumerator = create_cdp_enumerator(this, CERT_X509_OCSP_RESPONSE, keyid);
 		while (enumerator->enumerate(enumerator, &uri))
 		{
-			certificate_t* cert = fetch_ocsp(this, uri, &subject->interface,
-														&issuer->interface);
-
-			/* redefine default since we have at least one uri */
-			valid = VALIDATION_FAILED;
-
-			if (cert)
+			current = fetch_ocsp(this, uri, &subject->interface,
+								 &issuer->interface);
+			if (current)
 			{
-				/* select most recent ocsp response until valid one is found */
-				if (best_cert == NULL || cert->is_newer(cert, best_cert))
+				best = get_better_ocsp(this, current, best, subject, issuer, &valid);
+				if (best && valid != VALIDATION_STALE)
 				{
-					time_t nextUpdate;
-
-					DESTROY_IF(best_cert);
-					best_cert = cert;
-					stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
-					DBG1(DBG_CFG, "ocsp response is %s %#T",
-								   stale? "stale: since":"valid: until",
-								   &nextUpdate, FALSE );
-					if (!stale)
-					{
-						break;
-					}
-				}
-				else
-				{
-					cert->destroy(cert);
+					break;
 				}
 			}
 		}
@@ -497,76 +516,34 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 	DESTROY_IF(public);
 
 	/* fallback to URL fetching from subject certificate's URIs */
-	if (stale)
+	if (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
 	{
-		enumerator_t *enumerator = subject->create_ocsp_uri_enumerator(subject);
-		char *uri;
-
+		enumerator = subject->create_ocsp_uri_enumerator(subject);
 		while (enumerator->enumerate(enumerator, &uri))
 		{
-			certificate_t* cert = fetch_ocsp(this, uri, &subject->interface,
-														&issuer->interface);
-
-			/* redefine default since we have at least one uri */
-			valid = VALIDATION_FAILED;
-
-			if (cert)
+			current = fetch_ocsp(this, uri, &subject->interface,
+								 &issuer->interface);
+			if (current)
 			{
-				/* select most recent ocsp response until valid one is found */
-				if (best_cert == NULL || cert->is_newer(cert, best_cert))
+				best = get_better_ocsp(this, current, best, subject, issuer, &valid);
+				if (best && valid != VALIDATION_STALE)
 				{
-					time_t nextUpdate;
-
-					DESTROY_IF(best_cert);
-					best_cert = cert;
-					stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
-					DBG1(DBG_CFG, "ocsp response is %s %#T",
-								   stale? "stale: since":"valid: until",
-								   &nextUpdate, FALSE );
-					if (!stale)
-					{
-						break;
-					}
-				}
-				else
-				{
-					cert->destroy(cert);
+					break;
 				}
 			}
 		}
 		enumerator->destroy(enumerator);
 	}
-
-	/* if we have an ocsp response, check the revocation status */
-	if (best_cert)
+	/* an uri was found, but no result. switch validation state to failed */
+	if (valid == VALIDATION_SKIPPED && uri)
 	{
-		time_t revocation, this_update, next_update;
-		crl_reason_t reason;
-		ocsp_response_t *response = (ocsp_response_t*)best_cert;
-		
-		valid = response->get_status(response, subject, issuer, &revocation,
-									 &reason, &this_update, &next_update);
-		switch (valid)
-		{
-			case VALIDATION_FAILED:
-				DBG1(DBG_CFG, "subject not found in ocsp response");
-				break;
-			case VALIDATION_REVOKED:
-				DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
-					 		  &revocation, crl_reason_names, reason);
-				break;
-			case VALIDATION_GOOD:
-			case VALIDATION_UNKNOWN:
-			default:
-				break;
-		}
-		best_cert->destroy(best_cert);
+		valid = VALIDATION_FAILED;
 	}
-	
 	if (auth)
 	{
 		auth->add_item(auth, AUTHZ_OCSP_VALIDATION, &valid);
 	}
+	DESTROY_IF(best);
 	return valid;
 }
 
@@ -771,7 +748,7 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 		enumerator_t *enumerator = crl->create_enumerator(crl);
 
 		/* redefine default */
-		valid = stale ? VALIDATION_UNKNOWN : VALIDATION_GOOD;
+		valid = stale ? VALIDATION_STALE : VALIDATION_GOOD;
 
 		while (enumerator->enumerate(enumerator, &serial, &revocation, &reason))
 		{
@@ -831,8 +808,10 @@ static bool check_certificate(private_credential_manager_t *this,
 				case VALIDATION_SKIPPED:
 					DBG2(DBG_CFG, "ocsp check skipped, no ocsp found");
 					break;
+				case VALIDATION_STALE:
+					DBG1(DBG_CFG, "ocsp information stale, fallback to crl");
+					break;
 				case VALIDATION_FAILED:
-				case VALIDATION_UNKNOWN:
 					DBG1(DBG_CFG, "ocsp check failed, fallback to crl");
 					break;
 			}
@@ -847,14 +826,12 @@ static bool check_certificate(private_credential_manager_t *this,
 				case VALIDATION_REVOKED:		
 					/* has already been logged */			
 					return FALSE;
-				case VALIDATION_UNKNOWN:
-					DBG1(DBG_CFG, "certificate status is unknown");
-					break;
 				case VALIDATION_FAILED:
 				case VALIDATION_SKIPPED:
 					DBG1(DBG_CFG, "certificate status is not available");
-					break;		
-				default:
+					break;
+				case VALIDATION_STALE:
+					DBG1(DBG_CFG, "certificate status is unknown, crl is stale");
 					break;
 			}
 		}
@@ -993,8 +970,8 @@ static certificate_t *get_trusted_cert(private_credential_manager_t *this,
 	subject = get_pretrusted_cert(this, type, id);
 	if (subject)
 	{
-
-		if (subject->issued_by(subject, subject, TRUE))
+		/* if we find a trusted self signed certificate, we just accept it */
+		if (this->cache->issued_by(this->cache, subject, subject))
 		{
 			DBG1(DBG_CFG, "  using trusted self-signed certificate \"%D\"",
 				 subject->get_subject(subject));

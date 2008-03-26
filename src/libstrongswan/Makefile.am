@@ -36,7 +36,7 @@ credentials/certificates/certificate.c credentials/certificates/certificate.h \
 credentials/certificates/x509.h credentials/certificates/x509.c \
 credentials/certificates/ac.h \
 credentials/certificates/crl.h credentials/certificates/crl.c \
-credentials/certificates/ocsp_request.h credentials/certificates/ocsp_request.c \
+credentials/certificates/ocsp_request.h \
 credentials/certificates/ocsp_response.h credentials/certificates/ocsp_response.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 database/database.h database/database_factory.h database/database_factory.c \

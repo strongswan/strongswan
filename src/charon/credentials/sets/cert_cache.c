@@ -93,7 +93,7 @@ static bool issued_by(private_cert_cache_t *this,
 		return TRUE;
 	}
 	/* no cache hit, check signature */
-	if (!subject->issued_by(subject, issuer, TRUE))
+	if (!subject->issued_by(subject, issuer))
 	{
 		return FALSE;
 	}
@@ -131,10 +131,9 @@ static bool certs_filter(cert_data_t *data, relation_t **in, certificate_t **out
 	public_key_t *public;
 	certificate_t *cert;
 	
-	/* serve all subjects, but only if an ID is requestd (no listing) */
 	cert = (*in)->subject;
 	if ((data->cert == CERT_ANY || cert->get_type(cert) == data->cert) &&
-		data->id && cert->has_subject(cert, data->id))
+		(!data->id || cert->has_subject(cert, data->id)))
 	{
 		if (data->key == KEY_ANY)
 		{

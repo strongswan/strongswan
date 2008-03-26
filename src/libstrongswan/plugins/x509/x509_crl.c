@@ -362,15 +362,7 @@ static certificate_type_t get_type(private_x509_crl_t *this)
 }
 
 /**
- * Implementation of certificate_t.get_subject
- */
-static identification_t* get_subject(private_x509_crl_t *this)
-{
-	return this->issuer;
-}
-
-/**
- * Implementation of certificate_t.get_issuer
+ * Implementation of certificate_t.get_issuer and get_subject
  */
 static identification_t* get_issuer(private_x509_crl_t *this)
 {
@@ -378,15 +370,7 @@ static identification_t* get_issuer(private_x509_crl_t *this)
 }
 
 /**
- * Implementation of certificate_t.has_subject.
- */
-static id_match_t has_subject(private_x509_crl_t *this, identification_t *subject)
-{
-	return ID_MATCH_NONE;	
-}
-
-/**
- * Implementation of certificate_t.has_issuer.
+ * Implementation of certificate_t.has_subject and has_issuer.
  */
 static id_match_t has_issuer(private_x509_crl_t *this, identification_t *issuer)
 {
@@ -413,8 +397,7 @@ static id_match_t has_issuer(private_x509_crl_t *this, identification_t *issuer)
 /**
  * Implementation of certificate_t.issued_by
  */
-static bool issued_by(private_x509_crl_t *this, certificate_t *issuer,
-					  bool sigcheck)
+static bool issued_by(private_x509_crl_t *this, certificate_t *issuer)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -451,11 +434,6 @@ static bool issued_by(private_x509_crl_t *this, certificate_t *issuer,
 		{
 			return FALSE;
 		}
-	}
-
-	if (!sigcheck)
-	{
-		return TRUE;
 	}
 	/* TODO: generic OID to scheme mapper? */
 	switch (this->algorithm)
@@ -616,11 +594,11 @@ static private_x509_crl_t* create_empty(void)
 	this->public.crl.get_authKeyIdentifier = (identification_t* (*)(crl_t*))get_authKeyIdentifier;
 	this->public.crl.create_enumerator = (enumerator_t* (*)(crl_t*))create_enumerator;
 	this->public.crl.certificate.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
-	this->public.crl.certificate.get_subject = (identification_t* (*)(certificate_t *this))get_subject;
+	this->public.crl.certificate.get_subject = (identification_t* (*)(certificate_t *this))get_issuer;
 	this->public.crl.certificate.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.crl.certificate.has_subject = (id_match_t (*)(certificate_t*, identification_t *subject))has_subject;
+	this->public.crl.certificate.has_subject = (id_match_t (*)(certificate_t*, identification_t *subject))has_issuer;
 	this->public.crl.certificate.has_issuer = (id_match_t (*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.crl.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer,bool))issued_by;
+	this->public.crl.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
 	this->public.crl.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.crl.certificate.get_validity = (bool (*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
 	this->public.crl.certificate.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
