@@ -36,6 +36,11 @@ struct private_stroke_list_t {
 	 * public functions
 	 */
 	stroke_list_t public;
+	
+	/**
+	 * timestamp of daemon start
+	 */
+	time_t uptime;
 };
 
 /**
@@ -178,12 +183,15 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	child_cfg_t *child_cfg;
 	ike_sa_t *ike_sa;
 	char *name = NULL;
+	time_t uptime;
 	
 	name = msg->status.name;
 	
 	if (all)
 	{
+		uptime = time(NULL) - this->uptime;
 		fprintf(out, "Performance:\n");
+		fprintf(out, "  uptime: %V, since %T\n", &uptime, &this->uptime);
 		fprintf(out, "  worker threads: %d idle of %d,",
 				charon->processor->get_idle_threads(charon->processor),
 				charon->processor->get_total_threads(charon->processor));
@@ -516,6 +524,8 @@ stroke_list_t *stroke_list_create()
 	this->public.list = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out))list;
 	this->public.status = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out,bool))status;
 	this->public.destroy = (void(*)(stroke_list_t*))destroy;
+	
+	this->uptime = time(NULL);
 	
 	return &this->public;
 }
