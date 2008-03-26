@@ -23,21 +23,21 @@
 #ifndef ENDPOINT_NOTIFY_H_
 #define ENDPOINT_NOTIFY_H_
 
-#define P2P_PRIO_HOST   255
-#define P2P_PRIO_SERVER 100
-#define P2P_PRIO_PEER   120
-#define P2P_PRIO_RELAY  0
+#define ME_PRIO_HOST   255
+#define ME_PRIO_SERVER 100
+#define ME_PRIO_PEER   120
+#define ME_PRIO_RELAY  0
 
-typedef enum p2p_endpoint_family_t p2p_endpoint_family_t;
-typedef enum p2p_endpoint_type_t p2p_endpoint_type_t;
+typedef enum me_endpoint_family_t me_endpoint_family_t;
+typedef enum me_endpoint_type_t me_endpoint_type_t;
 typedef struct endpoint_notify_t endpoint_notify_t;
 
 #include <encoding/payloads/notify_payload.h>
 
 /**
- * P2P endpoint families.
+ * ME endpoint families.
  */
-enum p2p_endpoint_family_t {
+enum me_endpoint_family_t {
 	
 	NO_FAMILY = 0,
 	
@@ -50,9 +50,9 @@ enum p2p_endpoint_family_t {
 };
 
 /**
- * P2P endpoint types.
+ * ME endpoint types.
  */
-enum p2p_endpoint_type_t {
+enum me_endpoint_type_t {
 	
 	NO_TYPE = 0,
 	
@@ -69,12 +69,12 @@ enum p2p_endpoint_type_t {
 };
 
 /**
- * enum name for p2p_endpoint_type_t.
+ * enum name for me_endpoint_type_t.
  */
-extern enum_name_t *p2p_endpoint_type_names;
+extern enum_name_t *me_endpoint_type_names;
 
 /**
- * Class representing a P2P_ENDPOINT notify. In fact it's not
+ * Class representing a ME_ENDPOINT Notify payload. In fact it's not
  * the notify per se, but the notification data of that notify that is
  * handled with this class.
  */
@@ -98,14 +98,14 @@ struct endpoint_notify_t {
 	 * 
 	 * @return			endpoint type
 	 */
-	p2p_endpoint_type_t (*get_type) (endpoint_notify_t *this);
+	me_endpoint_type_t (*get_type) (endpoint_notify_t *this);
 	
 	/**
 	 * Returns the endpoint family of this endpoint.
 	 * 
 	 * @return			endpoint family
 	 */
-	p2p_endpoint_family_t (*get_family) (endpoint_notify_t *this);
+	me_endpoint_family_t (*get_family) (endpoint_notify_t *this);
 	
 	/**
 	 * Returns the host of this endpoint.
@@ -160,7 +160,7 @@ endpoint_notify_t *endpoint_notify_create(void);
  * @param base		base of the endpoint, applies only to reflexive endpoints (gets cloned)
  * @return			created endpoint_notify_t object
  */
-endpoint_notify_t *endpoint_notify_create_from_host(p2p_endpoint_type_t type,
+endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type,
 													host_t *host, host_t *base);
 
 /**

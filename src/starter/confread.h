@@ -130,9 +130,9 @@ struct starter_conn {
 	dpd_action_t	dpd_action;
 	int		dpd_count;
 	
-	bool		p2p_mediation;
-	char		*p2p_mediated_by;
-	char		*p2p_peerid;
+	bool		me_mediation;
+	char		*me_mediated_by;
+	char		*me_peerid;
 
 	starter_conn_t *next;
 };

@@ -292,7 +292,7 @@ struct peer_cfg_t {
 	 */
 	host_t* (*get_other_virtual_ip) (peer_cfg_t *this, host_t *suggestion);
 	
-#ifdef P2P	
+#ifdef ME
 	/**
 	 * Is this a mediation connection?
 	 * 
@@ -318,7 +318,7 @@ struct peer_cfg_t {
 	 * @return				the id of the other peer
 	 */
 	identification_t* (*get_peer_id) (peer_cfg_t *this);
-#endif /* P2P */
+#endif /* ME */
 
 	/**
 	 * Check if two peer configurations are equal.
@@ -380,8 +380,8 @@ struct peer_cfg_t {
  * @param dpd_action		what to do with CHILD_SAs when detected a dead peer
  * @param my_virtual_ip		virtual IP for local host, or NULL
  * @param other_virtual_ip	virtual IP for remote host, or NULL
- * @param p2p_mediation		TRUE if this is a mediation connection
- * @param p2p_mediated_by	name of the mediation connection to mediate through
+ * @param mediation			TRUE if this is a mediation connection
+ * @param mediated_by		peer_cfg_t of the mediation connection to mediate through
  * @param peer_id			ID that identifies our peer at the mediation server
  * @return 					peer_cfg_t object
  */
@@ -395,7 +395,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							u_int32_t over_time, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
 							host_t *my_virtual_ip, host_t *other_virtual_ip,
-							bool p2p_mediation, peer_cfg_t *p2p_mediated_by,
+							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id);
 
 #endif /* PEER_CFG_H_ @} */

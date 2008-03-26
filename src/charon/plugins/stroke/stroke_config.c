@@ -375,8 +375,8 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	}
 	
 	
-#ifdef P2P
-	if (msg->add_conn.p2p.mediation && msg->add_conn.p2p.mediated_by)
+#ifdef ME
+	if (msg->add_conn.ikeme.mediation && msg->add_conn.ikeme.mediated_by)
 	{
 		DBG1(DBG_CFG, "a mediation connection cannot be a"
 				" mediated connection at the same time, aborting");
@@ -385,14 +385,14 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		return NULL;
 	}
 	
-	if (msg->add_conn.p2p.mediated_by)
+	if (msg->add_conn.ikeme.mediated_by)
 	{
 		mediated_by = charon->backends->get_peer_cfg_by_name(charon->backends,
-												msg->add_conn.p2p.mediated_by);
+												msg->add_conn.ikeme.mediated_by);
 		if (!mediated_by)
 		{
 			DBG1(DBG_CFG, "mediation connection '%s' not found, aborting",
-				 msg->add_conn.p2p.mediated_by);
+				 msg->add_conn.ikeme.mediated_by);
 			me->destroy(me);
 			other->destroy(other);
 			return NULL;
@@ -402,7 +402,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		{
 			DBG1(DBG_CFG, "connection '%s' as referred to by '%s' is"
 				 "no mediation connection, aborting", 
-				msg->add_conn.p2p.mediated_by, msg->add_conn.name);
+				msg->add_conn.ikeme.mediated_by, msg->add_conn.name);
 			mediated_by->destroy(mediated_by);
 			me->destroy(me);
 			other->destroy(other);
@@ -410,12 +410,12 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		}
 	}
 	
-	if (msg->add_conn.p2p.peerid)
+	if (msg->add_conn.ikeme.peerid)
 	{
-		peer_id = identification_create_from_string(msg->add_conn.p2p.peerid);
+		peer_id = identification_create_from_string(msg->add_conn.ikeme.peerid);
 		if (!peer_id)
 		{
-			DBG1(DBG_CFG, "invalid peer ID: %s\n", msg->add_conn.p2p.peerid);
+			DBG1(DBG_CFG, "invalid peer ID: %s\n", msg->add_conn.ikeme.peerid);
 			mediated_by->destroy(mediated_by);
 			me->destroy(me);
 			other->destroy(other);
@@ -427,7 +427,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		/* no peer ID supplied, assume right ID */
 		peer_id = other->clone(other);
 	}
-#endif /* P2P */
+#endif /* ME */
 	
 	if (msg->add_conn.me.cert)
 	{
@@ -471,7 +471,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		msg->add_conn.eap_type,	msg->add_conn.eap_vendor,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay, msg->add_conn.dpd.action,
-		my_vip, other_vip, msg->add_conn.p2p.mediation, mediated_by, peer_id);
+		my_vip, other_vip, msg->add_conn.ikeme.mediation, mediated_by, peer_id);
 }
 
 /**

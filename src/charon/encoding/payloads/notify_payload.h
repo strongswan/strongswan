@@ -63,8 +63,8 @@ enum notify_type_t {
 	INVALID_SELECTORS = 39,
 	UNACCEPTABLE_ADDRESSES = 40,
 	UNEXPECTED_NAT_DETECTED = 41,
-	/* P2P-NAT-T, private use */
-	P2P_CONNECT_FAILED = 8192,
+	/* IKE-ME, private use */
+	ME_CONNECT_FAILED = 8192,
 	
 	/* notify status messages */
 	INITIAL_CONTACT = 16384,
@@ -93,13 +93,13 @@ enum notify_type_t {
 	EAP_ONLY_AUTHENTICATION = 40960,
 	/* BEET mode, not even a draft yet. private use */
 	USE_BEET_MODE = 40961,
-	/* P2P-NAT-T, private use */
-	P2P_MEDIATION = 40962,
-	P2P_ENDPOINT = 40963,
-	P2P_CALLBACK = 40964,
-	P2P_SESSIONID = 40965,
-	P2P_SESSIONKEY = 40966,
-	P2P_RESPONSE = 40967
+	/* IKE-ME, private use */
+	ME_MEDIATION = 40962,
+	ME_ENDPOINT = 40963,
+	ME_CALLBACK = 40964,
+	ME_CONNECTID = 40965,
+	ME_CONNECTKEY = 40966,
+	ME_RESPONSE = 40967
 };
 
 /**

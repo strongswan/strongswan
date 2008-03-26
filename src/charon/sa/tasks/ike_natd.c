@@ -254,7 +254,7 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 	{
 		peer_cfg_t *peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 
-#ifdef P2P		
+#ifdef ME
 		/* if we are on a mediated connection we have already switched to
 		 * port 4500 and the correct destination port is already configured,
 		 * therefore we must not switch again */
@@ -262,14 +262,14 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 		{
 			return SUCCESS;
 		}
-#endif /* P2P */
+#endif /* ME */
 		
 		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY) ||
-#ifdef P2P
+#ifdef ME
 			/* if we are on a mediation connection we swith to port 4500 even
 			 * if no NAT is detected. */
 			peer_cfg->is_mediation(peer_cfg) ||
-#endif /* P2P */
+#endif /* ME */
 			/* if peer supports NAT-T, we switch to port 4500 even
 			 * if no NAT is detected. MOBIKE requires this. */
 			(peer_cfg->use_mobike(peer_cfg) &&

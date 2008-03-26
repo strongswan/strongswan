@@ -43,14 +43,14 @@ struct private_mediation_job_t {
 	identification_t *source;
 	
 	/**
-	 * P2P_SESSIONID
+	 * ME_CONNECTID
 	 */
-	chunk_t session_id;
+	chunk_t connect_id;
 	
 	/**
-	 * P2P_SESSIONKEY
+	 * ME_CONNECTKEY
 	 */
-	chunk_t session_key;
+	chunk_t connect_key;
 	
 	/**
 	 * Submitted endpoints
@@ -75,8 +75,8 @@ static void destroy(private_mediation_job_t *this)
 {
 	DESTROY_IF(this->target);
 	DESTROY_IF(this->source);
-	chunk_free(&this->session_id);
-	chunk_free(&this->session_key);
+	chunk_free(&this->connect_id);
+	chunk_free(&this->connect_key);
 	DESTROY_OFFSET_IF(this->endpoints, offsetof(endpoint_notify_t, destroy));
 	free(this);
 }
@@ -111,8 +111,8 @@ static void execute(private_mediation_job_t *this)
 			else
 			{
 				/* normal mediation between two peers */
-				if (target_sa->relay(target_sa, this->source, this->session_id,
-						this->session_key, this->endpoints, this->response) != SUCCESS)
+				if (target_sa->relay(target_sa, this->source, this->connect_id,
+						this->connect_key, this->endpoints, this->response) != SUCCESS)
 				{
 					DBG1(DBG_JOB, "mediation between '%D' and '%D' failed",
 							this->source, this->target);
@@ -154,8 +154,8 @@ static private_mediation_job_t *mediation_job_create_empty()
 	this->target = NULL;
 	this->source = NULL;
 	this->callback = FALSE;
-	this->session_id = chunk_empty;
-	this->session_key = chunk_empty;
+	this->connect_id = chunk_empty;
+	this->connect_key = chunk_empty;
 	this->endpoints = NULL;
 	this->response = FALSE;
 	
@@ -166,15 +166,15 @@ static private_mediation_job_t *mediation_job_create_empty()
  * Described in header
  */
 mediation_job_t *mediation_job_create(identification_t *peer_id,
-		identification_t *requester, chunk_t session_id, chunk_t session_key,
+		identification_t *requester, chunk_t connect_id, chunk_t connect_key,
 		linked_list_t *endpoints, bool response)
 {
 	private_mediation_job_t *this = mediation_job_create_empty();
 
 	this->target = peer_id->clone(peer_id);
 	this->source = requester->clone(requester);
-	this->session_id = chunk_clone(session_id);
-	this->session_key = chunk_clone(session_key);
+	this->connect_id = chunk_clone(connect_id);
+	this->connect_key = chunk_clone(connect_key);
 	this->endpoints = endpoints->clone_offset(endpoints, offsetof(endpoint_notify_t, clone));
 	this->response = response;
 	

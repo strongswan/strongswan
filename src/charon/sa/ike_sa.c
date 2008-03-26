@@ -63,8 +63,8 @@
 #include <processing/jobs/send_keepalive_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
 
-#ifdef P2P
-#include <sa/tasks/ike_p2p.h>
+#ifdef ME
+#include <sa/tasks/ike_me.h>
 #include <processing/jobs/initiate_mediation_job.h>
 #endif
 
@@ -142,12 +142,12 @@ struct private_ike_sa_t {
 	 */
 	host_t *other_host;
 	
-#ifdef P2P	
+#ifdef ME
 	/**
 	 * Server reflexive host
 	 */
 	host_t *server_reflexive_host;
-#endif /* P2P */
+#endif /* ME */
 		
 	/**
 	 * Identification used for us
@@ -924,7 +924,7 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 	response->destroy(response);
 }
 
-#ifdef P2P
+#ifdef ME
 /**
  * Implementation of ike_sa_t.get_server_reflexive_host.
  */
@@ -946,10 +946,10 @@ static void set_server_reflexive_host(private_ike_sa_t *this, host_t *host)
  * Implementation of ike_sa_t.respond
  */
 static status_t respond(private_ike_sa_t *this, identification_t *peer_id,
-		chunk_t session_id)
+		chunk_t connect_id)
 {
-	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
-	task->respond(task, peer_id, session_id);
+	ike_me_t *task = ike_me_create(&this->public, TRUE);
+	task->respond(task, peer_id, connect_id);
 	this->task_manager->queue_task(this->task_manager, (task_t*)task);
 	return this->task_manager->initiate(this->task_manager);
 }
@@ -959,7 +959,7 @@ static status_t respond(private_ike_sa_t *this, identification_t *peer_id,
  */
 static status_t callback(private_ike_sa_t *this, identification_t *peer_id)
 {
-	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
+	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->callback(task, peer_id);
 	this->task_manager->queue_task(this->task_manager, (task_t*)task);
 	return this->task_manager->initiate(this->task_manager);
@@ -969,10 +969,10 @@ static status_t callback(private_ike_sa_t *this, identification_t *peer_id)
  * Implementation of ike_sa_t.relay
  */
 static status_t relay(private_ike_sa_t *this, identification_t *requester,
-			chunk_t session_id, chunk_t session_key, linked_list_t *endpoints, bool response)
+			chunk_t connect_id, chunk_t connect_key, linked_list_t *endpoints, bool response)
 {
-	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
-	task->relay(task, requester, session_id, session_key, endpoints, response);
+	ike_me_t *task = ike_me_create(&this->public, TRUE);
+	task->relay(task, requester, connect_id, connect_key, endpoints, response);
 	this->task_manager->queue_task(this->task_manager, (task_t*)task);
 	return this->task_manager->initiate(this->task_manager);
 }
@@ -982,7 +982,7 @@ static status_t relay(private_ike_sa_t *this, identification_t *requester,
  */
 static status_t initiate_mediation(private_ike_sa_t *this, peer_cfg_t *mediated_cfg)
 {
-	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
+	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->connect(task, mediated_cfg->get_peer_id(mediated_cfg));
 	this->task_manager->queue_task(this->task_manager, (task_t*)task);
 	return this->task_manager->initiate(this->task_manager);
@@ -1008,7 +1008,7 @@ static status_t initiate_mediated(private_ike_sa_t *this, host_t *me, host_t *ot
 	iterator->destroy(iterator);
 	return this->task_manager->initiate(this->task_manager);
 }
-#endif /* P2P */
+#endif /* ME */
 
 /**
  * Implementation of ike_sa_t.initiate.
@@ -1020,9 +1020,9 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	if (this->state == IKE_CREATED)
 	{
 		if (this->other_host->is_anyaddr(this->other_host)
-#ifdef P2P
+#ifdef ME
 			&& !this->peer_cfg->get_mediated_by(this->peer_cfg)
-#endif /* P2P */
+#endif /* ME */
 			)
 		{
 			child_cfg->destroy(child_cfg);
@@ -1052,13 +1052,13 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 			task = (task_t*)ike_mobike_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);
 		}
-#ifdef P2P
-		task = (task_t*)ike_p2p_create(&this->public, TRUE);
+#ifdef ME
+		task = (task_t*)ike_me_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-#endif /* P2P */
+#endif /* ME */
 	}
 
-#ifdef P2P
+#ifdef ME
 	if (this->peer_cfg->get_mediated_by(this->peer_cfg))
 	{
 		/* mediated connection, initiate mediation process */
@@ -1075,7 +1075,7 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		}
 	}
 	else
-#endif /* P2P */
+#endif /* ME */
 	{
 		/* normal IKE_SA with CHILD_SA */
 		task = (task_t*)child_create_create(&this->public, child_cfg);
@@ -1090,7 +1090,7 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
  * Implementation of ike_sa_t.acquire.
  */
 static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
-{	/* FIXME: P2P-NAT-T */
+{	/* FIXME: IKE-ME */
 	child_cfg_t *child_cfg;
 	iterator_t *iterator;
 	child_sa_t *current, *child_sa = NULL;
@@ -1418,7 +1418,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
  * Implementation of ike_sa_t.retransmit.
  */
 static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
-{	/* FIXME: P2P-NAT-T */
+{	/* FIXME: IKE-ME */
 	this->time.outbound = time(NULL);
 	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
 	{
@@ -2306,7 +2306,7 @@ static void destroy(private_ike_sa_t *this)
 													offsetof(host_t, destroy));
 	this->additional_addresses->destroy_offset(this->additional_addresses,
 													offsetof(host_t, destroy));
-#ifdef P2P	
+#ifdef ME
 	if (this->peer_cfg && this->peer_cfg->is_mediation(this->peer_cfg) &&
 			!this->ike_sa_id->is_initiator(this->ike_sa_id))
 	{
@@ -2314,7 +2314,7 @@ static void destroy(private_ike_sa_t *this)
 		charon->mediation_manager->remove(charon->mediation_manager, this->ike_sa_id);
 	}
 	DESTROY_IF(this->server_reflexive_host);
-#endif /* P2P */
+#endif /* ME */
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
@@ -2400,7 +2400,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_virtual_ip = (void (*)(ike_sa_t*,bool,host_t*))set_virtual_ip;
 	this->public.get_virtual_ip = (host_t* (*)(ike_sa_t*,bool))get_virtual_ip;
 	this->public.add_dns_server = (void (*)(ike_sa_t*,host_t*))add_dns_server;
-#ifdef P2P
+#ifdef ME
 	this->public.get_server_reflexive_host = (host_t* (*)(ike_sa_t*)) get_server_reflexive_host;
 	this->public.set_server_reflexive_host = (void (*)(ike_sa_t*,host_t*)) set_server_reflexive_host;
 	this->public.initiate_mediation = (status_t (*)(ike_sa_t*,peer_cfg_t*)) initiate_mediation;
@@ -2408,7 +2408,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.relay = (status_t (*)(ike_sa_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool)) relay;
 	this->public.callback = (status_t (*)(ike_sa_t*,identification_t*)) callback;
 	this->public.respond = (status_t (*)(ike_sa_t*,identification_t*,chunk_t)) respond;
-#endif /* P2P */
+#endif /* ME */
 	
 	/* initialize private fields */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
@@ -2446,9 +2446,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->pending_updates = 0;
 	this->keyingtry = 0;
 	this->ike_initiator = FALSE;
-#ifdef P2P
+#ifdef ME
 	this->server_reflexive_host = NULL;
-#endif /* P2P */
+#endif /* ME */
 	
 	return &this->public;
 }

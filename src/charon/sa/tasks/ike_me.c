@@ -15,7 +15,7 @@
  * $Id$
  */
  
-#include "ike_p2p.h"
+#include "ike_me.h"
 
 #include <string.h>
 
@@ -26,27 +26,27 @@
 #include <encoding/payloads/endpoint_notify.h>
 #include <processing/jobs/mediation_job.h>
 
-#define P2P_SESSIONID_LEN 8
-#define P2P_SESSIONKEY_LEN 16
+#define ME_CONNECTID_LEN 8
+#define ME_CONNECTKEY_LEN 16
 
 /* FIXME: proposed values */
-#define P2P_SESSIONID_MIN_LEN 4
-#define P2P_SESSIONID_MAX_LEN 16
-#define P2P_SESSIONKEY_MIN_LEN 8
-#define P2P_SESSIONKEY_MAX_LEN 64
+#define ME_CONNECTID_MIN_LEN 4
+#define ME_CONNECTID_MAX_LEN 16
+#define ME_CONNECTKEY_MIN_LEN 8
+#define ME_CONNECTKEY_MAX_LEN 64
 
 
-typedef struct private_ike_p2p_t private_ike_p2p_t;
+typedef struct private_ike_me_t private_ike_me_t;
 
 /**
- * Private members of a ike_p2p_t task.
+ * Private members of a ike_me_t task.
  */
-struct private_ike_p2p_t {
+struct private_ike_me_t {
 	
 	/**
 	 * Public methods and task_t interface.
 	 */
-	ike_p2p_t public;
+	ike_me_t public;
 	
 	/**
 	 * Assigned IKE_SA.
@@ -100,12 +100,12 @@ struct private_ike_p2p_t {
 	/**
 	 * Received ID used for connectivity checks
 	 */
-	chunk_t session_id;
+	chunk_t connect_id;
 	
 	/**
 	 * Received key used for connectivity checks
 	 */
-	chunk_t session_key;
+	chunk_t connect_key;
 	
 	/**
 	 * Peer config of the mediated connection
@@ -133,7 +133,7 @@ static void add_endpoints_to_message(message_t *message, linked_list_t *endpoint
 /**
  * Gathers endpoints and adds them to the current message
  */
-static void gather_and_add_endpoints(private_ike_p2p_t *this, message_t *message)
+static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 {
 	iterator_t *iterator;
 	host_t *addr, *host;
@@ -171,7 +171,7 @@ static void gather_and_add_endpoints(private_ike_p2p_t *this, message_t *message
 /**
  * read notifys from message and evaluate them
  */
-static void process_payloads(private_ike_p2p_t *this, message_t *message)
+static void process_payloads(private_ike_me_t *this, message_t *message)
 {
 	iterator_t *iterator;
 	payload_t *payload;
@@ -188,55 +188,55 @@ static void process_payloads(private_ike_p2p_t *this, message_t *message)
 		
 		switch (notify->get_notify_type(notify))
 		{
-			case P2P_CONNECT_FAILED:
+			case ME_CONNECT_FAILED:
 			{
-				DBG2(DBG_IKE, "received P2P_CONNECT_FAILED notify");
+				DBG2(DBG_IKE, "received ME_CONNECT_FAILED notify");
 				this->failed = TRUE;
 				break;
 			}
-			case P2P_MEDIATION:
+			case ME_MEDIATION:
 			{
-				DBG2(DBG_IKE, "received P2P_MEDIATION notify");
+				DBG2(DBG_IKE, "received ME_MEDIATION notify");
 				this->mediation = TRUE;
 				break;
 			}
-			case P2P_ENDPOINT:
+			case ME_ENDPOINT:
 			{
 				endpoint_notify_t *endpoint = endpoint_notify_create_from_payload(notify);
 				if (!endpoint)
 				{
-					DBG1(DBG_IKE, "received invalid P2P_ENDPOINT notify");
+					DBG1(DBG_IKE, "received invalid ME_ENDPOINT notify");
 					break;
 				}
-				DBG1(DBG_IKE, "received %N P2P_ENDPOINT %#H", p2p_endpoint_type_names,
+				DBG1(DBG_IKE, "received %N ME_ENDPOINT %#H", me_endpoint_type_names,
 					endpoint->get_type(endpoint), endpoint->get_host(endpoint));
 				
 				this->remote_endpoints->insert_last(this->remote_endpoints, endpoint);
 				break;
 			}
-			case P2P_CALLBACK:
+			case ME_CALLBACK:
 			{
-				DBG2(DBG_IKE, "received P2P_CALLBACK notify");
+				DBG2(DBG_IKE, "received ME_CALLBACK notify");
 				this->callback = TRUE;
 				break;
 			}
-			case P2P_SESSIONID:
+			case ME_CONNECTID:
 			{
-				chunk_free(&this->session_id);
-				this->session_id = chunk_clone(notify->get_notification_data(notify));
-				DBG2(DBG_IKE, "received P2P_SESSIONID %#B", &this->session_id);
+				chunk_free(&this->connect_id);
+				this->connect_id = chunk_clone(notify->get_notification_data(notify));
+				DBG2(DBG_IKE, "received ME_CONNECTID %#B", &this->connect_id);
 				break;
 			}
-			case P2P_SESSIONKEY:
+			case ME_CONNECTKEY:
 			{
-				chunk_free(&this->session_key);
-				this->session_key = chunk_clone(notify->get_notification_data(notify));
-				DBG4(DBG_IKE, "received P2P_SESSIONKEY %#B", &this->session_key);
+				chunk_free(&this->connect_key);
+				this->connect_key = chunk_clone(notify->get_notification_data(notify));
+				DBG4(DBG_IKE, "received ME_CONNECTKEY %#B", &this->connect_key);
 				break;
 			}
-			case P2P_RESPONSE:
+			case ME_RESPONSE:
 			{
-				DBG2(DBG_IKE, "received P2P_RESPONSE notify");
+				DBG2(DBG_IKE, "received ME_RESPONSE notify");
 				this->response = TRUE;
 				break;
 			}
@@ -250,7 +250,7 @@ static void process_payloads(private_ike_p2p_t *this, message_t *message)
 /**
  * Implementation of task_t.process for initiator
  */
-static status_t build_i(private_ike_p2p_t *this, message_t *message)
+static status_t build_i(private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
@@ -259,8 +259,8 @@ static status_t build_i(private_ike_p2p_t *this, message_t *message)
 			peer_cfg_t *peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 			if (peer_cfg->is_mediation(peer_cfg))
 			{
-				DBG2(DBG_IKE, "adding P2P_MEDIATION");
-				message->add_notify(message, FALSE, P2P_MEDIATION, chunk_empty);
+				DBG2(DBG_IKE, "adding ME_MEDIATION");
+				message->add_notify(message, FALSE, ME_MEDIATION, chunk_empty);
 			}
 			else
 			{
@@ -278,7 +278,7 @@ static status_t build_i(private_ike_p2p_t *this, message_t *message)
 			}
 			break;
 		}
-		case P2P_CONNECT:
+		case ME_CONNECT:
 		{
 			id_payload_t *id_payload;
 			randomizer_t *rand = randomizer_create();
@@ -288,38 +288,38 @@ static status_t build_i(private_ike_p2p_t *this, message_t *message)
 			
 			if (!this->response)
 			{
-				/* only the initiator creates a session ID. the responder returns
-				 * the session ID that it received from the initiator */
+				/* only the initiator creates a connect ID. the responder returns
+				 * the connect ID that it received from the initiator */
 				if (rand->allocate_pseudo_random_bytes(rand,
-						P2P_SESSIONID_LEN, &this->session_id) != SUCCESS)
+						ME_CONNECTID_LEN, &this->connect_id) != SUCCESS)
 				{
-					DBG1(DBG_IKE, "unable to generate session ID for P2P_CONNECT");		
+					DBG1(DBG_IKE, "unable to generate connect ID for ME_CONNECT");		
 					rand->destroy(rand);
 					return FAILED;
 				}
 			}
 			
 			if (rand->allocate_pseudo_random_bytes(rand,
-					P2P_SESSIONKEY_LEN, &this->session_key) != SUCCESS)
+					ME_CONNECTKEY_LEN, &this->connect_key) != SUCCESS)
 			{
-				DBG1(DBG_IKE, "unable to generate session key for P2P_CONNECT");
+				DBG1(DBG_IKE, "unable to generate connect key for ME_CONNECT");
 				rand->destroy(rand);
 				return FAILED;
 			}
 			
 			rand->destroy(rand);
 			
-			message->add_notify(message, FALSE, P2P_SESSIONID, this->session_id);
-			message->add_notify(message, FALSE, P2P_SESSIONKEY, this->session_key);
+			message->add_notify(message, FALSE, ME_CONNECTID, this->connect_id);
+			message->add_notify(message, FALSE, ME_CONNECTKEY, this->connect_key);
 			
 			if (this->response)
 			{
-				message->add_notify(message, FALSE, P2P_RESPONSE, chunk_empty);
+				message->add_notify(message, FALSE, ME_RESPONSE, chunk_empty);
 			}
 			else
 			{
 				/* FIXME: should we make that configurable? */
-				message->add_notify(message, FALSE, P2P_CALLBACK, chunk_empty);
+				message->add_notify(message, FALSE, ME_CALLBACK, chunk_empty);
 			}
 			
 			gather_and_add_endpoints(this, message);
@@ -335,17 +335,17 @@ static status_t build_i(private_ike_p2p_t *this, message_t *message)
 /**
  * Implementation of task_t.process for responder
  */
-static status_t process_r(private_ike_p2p_t *this, message_t *message)
+static status_t process_r(private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
-		case P2P_CONNECT:
+		case ME_CONNECT:
 		{
 			id_payload_t *id_payload;
 			id_payload = (id_payload_t*)message->get_payload(message, ID_PEER);
 			if (!id_payload)
 			{
-				DBG1(DBG_IKE, "received P2P_CONNECT without ID_PEER payload, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ID_PEER payload, aborting");
 				break;
 			}
 			this->peer_id = id_payload->get_identification(id_payload);
@@ -354,32 +354,32 @@ static status_t process_r(private_ike_p2p_t *this, message_t *message)
 			
 			if (this->callback)
 			{
-				DBG1(DBG_IKE, "received P2P_CALLBACK for '%D'", this->peer_id);
+				DBG1(DBG_IKE, "received ME_CALLBACK for '%D'", this->peer_id);
 				break;
 			}			
 			
-			if (!this->session_id.ptr)
+			if (!this->connect_id.ptr)
 			{
-				DBG1(DBG_IKE, "received P2P_CONNECT without P2P_SESSIONID notify, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTID notify, aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
 			
-			if (!this->session_key.ptr)
+			if (!this->connect_key.ptr)
 			{
-				DBG1(DBG_IKE, "received P2P_CONNECT without P2P_SESSIONKEY notify, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTKEY notify, aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
 			
 			if (!this->remote_endpoints->get_count(this->remote_endpoints))
 			{
-				DBG1(DBG_IKE, "received P2P_CONNECT without any P2P_ENDPOINT payloads, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without any ME_ENDPOINT payloads, aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
 			
-			DBG1(DBG_IKE, "received P2P_CONNECT");
+			DBG1(DBG_IKE, "received ME_CONNECT");
 			break;
 		}
 		default:
@@ -391,11 +391,11 @@ static status_t process_r(private_ike_p2p_t *this, message_t *message)
 /**
  * Implementation of task_t.build for responder
  */
-static status_t build_r(private_ike_p2p_t *this, message_t *message)
+static status_t build_r(private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
-		case P2P_CONNECT:
+		case ME_CONNECT:
 		{
 			if (this->invalid_syntax)
 			{
@@ -417,7 +417,7 @@ static status_t build_r(private_ike_p2p_t *this, message_t *message)
 				 * as initiator, upon receiving a response from another peer,
 				 * update the checklist and start sending checks */
 				charon->connect_manager->set_responder_data(charon->connect_manager,
-						this->session_id, this->session_key, this->remote_endpoints);
+						this->connect_id, this->connect_key, this->remote_endpoints);
 			}
 			else
 			{
@@ -425,10 +425,10 @@ static status_t build_r(private_ike_p2p_t *this, message_t *message)
 				 * as responder, create a checklist with the initiator's data */
 				charon->connect_manager->set_initiator_data(charon->connect_manager,
 						this->peer_id, this->ike_sa->get_my_id(this->ike_sa),
-						this->session_id, this->session_key, this->remote_endpoints,
+						this->connect_id, this->connect_key, this->remote_endpoints,
 						FALSE);
 				if (this->ike_sa->respond(this->ike_sa, this->peer_id,
-						this->session_id) != SUCCESS)
+						this->connect_id) != SUCCESS)
 				{
 					return FAILED;
 				}
@@ -444,7 +444,7 @@ static status_t build_r(private_ike_p2p_t *this, message_t *message)
 /**
  * Implementation of task_t.process for initiator
  */
-static status_t process_i(private_ike_p2p_t *this, message_t *message)
+static status_t process_i(private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
@@ -454,7 +454,7 @@ static status_t process_i(private_ike_p2p_t *this, message_t *message)
 		
 			if (!this->mediation)
 			{
-				DBG1(DBG_IKE, "server did not return a P2P_MEDIATION, aborting");
+				DBG1(DBG_IKE, "server did not return a ME_MEDIATION, aborting");
 				return FAILED;
 			}
 	
@@ -480,7 +480,7 @@ static status_t process_i(private_ike_p2p_t *this, message_t *message)
 			
 			break;
 		}
-		case P2P_CONNECT:
+		case ME_CONNECT:
 		{
 			process_payloads(this, message);
 			
@@ -498,7 +498,7 @@ static status_t process_i(private_ike_p2p_t *this, message_t *message)
 					/* FIXME: handle result of set_responder_data.
 					 * as responder, we update the checklist and start sending checks */
 					charon->connect_manager->set_responder_data(charon->connect_manager,
-							this->session_id, this->session_key, this->local_endpoints);
+							this->connect_id, this->connect_key, this->local_endpoints);
 				}
 				else
 				{
@@ -506,7 +506,7 @@ static status_t process_i(private_ike_p2p_t *this, message_t *message)
 					 * as initiator, we create a checklist and set the initiator's data */
 					charon->connect_manager->set_initiator_data(charon->connect_manager,
 						this->ike_sa->get_my_id(this->ike_sa), this->peer_id,
-						this->session_id, this->session_key, this->local_endpoints,
+						this->connect_id, this->connect_key, this->local_endpoints,
 						TRUE);
 				}
 			}
@@ -521,27 +521,27 @@ static status_t process_i(private_ike_p2p_t *this, message_t *message)
 /**
  * Implementation of task_t.process for initiator (mediation server)
  */
-static status_t build_i_ms(private_ike_p2p_t *this, message_t *message)
+static status_t build_i_ms(private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
-		case P2P_CONNECT:
+		case ME_CONNECT:
 		{
 			id_payload_t *id_payload = id_payload_create_from_identification(ID_PEER, this->peer_id);
 			message->add_payload(message, (payload_t*)id_payload);
 			
 			if (this->callback)
 			{
-				message->add_notify(message, FALSE, P2P_CALLBACK, chunk_empty);
+				message->add_notify(message, FALSE, ME_CALLBACK, chunk_empty);
 			}
 			else
 			{
 				if (this->response)
 				{
-					message->add_notify(message, FALSE, P2P_RESPONSE, chunk_empty);
+					message->add_notify(message, FALSE, ME_RESPONSE, chunk_empty);
 				}	
-				message->add_notify(message, FALSE, P2P_SESSIONID, this->session_id);
-				message->add_notify(message, FALSE, P2P_SESSIONKEY, this->session_key);
+				message->add_notify(message, FALSE, ME_CONNECTID, this->connect_id);
+				message->add_notify(message, FALSE, ME_CONNECTKEY, this->connect_key);
 				
 				add_endpoints_to_message(message, this->remote_endpoints);
 			}
@@ -557,7 +557,7 @@ static status_t build_i_ms(private_ike_p2p_t *this, message_t *message)
 /**
  * Implementation of task_t.process for responder (mediation server)
  */
-static status_t process_r_ms(private_ike_p2p_t *this, message_t *message)
+static status_t process_r_ms(private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
@@ -571,13 +571,13 @@ static status_t process_r_ms(private_ike_p2p_t *this, message_t *message)
 			process_payloads(this, message);
 			break;
 		}
-		case P2P_CONNECT:
+		case ME_CONNECT:
 		{
 			id_payload_t *id_payload;
 			id_payload = (id_payload_t*)message->get_payload(message, ID_PEER);
 			if (!id_payload)
 			{
-				DBG1(DBG_IKE, "received P2P_CONNECT without ID_PEER payload, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ID_PEER payload, aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
@@ -586,23 +586,23 @@ static status_t process_r_ms(private_ike_p2p_t *this, message_t *message)
 			
 			process_payloads(this, message);
 			
-			if (!this->session_id.ptr)
+			if (!this->connect_id.ptr)
 			{
-				DBG1(DBG_IKE, "received P2P_CONNECT without P2P_SESSIONID notify, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTID notify, aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
 			
-			if (!this->session_key.ptr)
+			if (!this->connect_key.ptr)
 			{
-				DBG1(DBG_IKE, "received P2P_CONNECT without P2P_SESSIONKEY notify, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTKEY notify, aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
 			
 			if (!this->remote_endpoints->get_count(this->remote_endpoints))
 			{
-				DBG1(DBG_IKE, "received P2P_CONNECT without any P2P_ENDPOINT payloads, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without any ME_ENDPOINT payloads, aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
@@ -618,13 +618,13 @@ static status_t process_r_ms(private_ike_p2p_t *this, message_t *message)
 /**
  * Implementation of task_t.build for responder (mediation server)
  */
-static status_t build_r_ms(private_ike_p2p_t *this, message_t *message)
+static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
 		{
-			message->add_notify(message, FALSE, P2P_MEDIATION, chunk_empty);
+			message->add_notify(message, FALSE, ME_MEDIATION, chunk_empty);
 			return NEED_MORE;
 		}
 		case IKE_AUTH:
@@ -650,7 +650,7 @@ static status_t build_r_ms(private_ike_p2p_t *this, message_t *message)
 			
 			break;
 		}
-		case P2P_CONNECT:
+		case ME_CONNECT:
 		{	
 			if (this->invalid_syntax)
 			{
@@ -673,13 +673,13 @@ static status_t build_r_ms(private_ike_p2p_t *this, message_t *message)
 			if (!peer_sa)
 			{
 				/* the peer is not online */
-				message->add_notify(message, TRUE, P2P_CONNECT_FAILED, chunk_empty);
+				message->add_notify(message, TRUE, ME_CONNECT_FAILED, chunk_empty);
 				break;
 			}
 			
 			job_t *job = (job_t*)mediation_job_create(this->peer_id,
-					this->ike_sa->get_other_id(this->ike_sa), this->session_id,
-					this->session_key, this->remote_endpoints, this->response);
+					this->ike_sa->get_other_id(this->ike_sa), this->connect_id,
+					this->connect_key, this->remote_endpoints, this->response);
 			charon->processor->queue_job(charon->processor, job);
 			
 			break;
@@ -693,48 +693,48 @@ static status_t build_r_ms(private_ike_p2p_t *this, message_t *message)
 /**
  * Implementation of task_t.process for initiator (mediation server)
  */
-static status_t process_i_ms(private_ike_p2p_t *this, message_t *message)
+static status_t process_i_ms(private_ike_me_t *this, message_t *message)
 {
 	return SUCCESS;
 }
 
 /**
- * Implementation of ike_p2p.connect
+ * Implementation of ike_me.connect
  */
-static void p2p_connect(private_ike_p2p_t *this, identification_t *peer_id)
+static void me_connect(private_ike_me_t *this, identification_t *peer_id)
 {
 	this->peer_id = peer_id->clone(peer_id);
 }
 
 /**
- * Implementation of ike_p2p.respond
+ * Implementation of ike_me.respond
  */
-static void p2p_respond(private_ike_p2p_t *this, identification_t *peer_id, 
-		chunk_t session_id)
+static void me_respond(private_ike_me_t *this, identification_t *peer_id, 
+		chunk_t connect_id)
 {
 	this->peer_id = peer_id->clone(peer_id);
-	this->session_id = chunk_clone(session_id);
+	this->connect_id = chunk_clone(connect_id);
 	this->response = TRUE;
 }
 
 /**
- * Implementation of ike_p2p.callback
+ * Implementation of ike_me.callback
  */
-static void p2p_callback(private_ike_p2p_t *this, identification_t *peer_id)
+static void me_callback(private_ike_me_t *this, identification_t *peer_id)
 {
 	this->peer_id = peer_id->clone(peer_id);
 	this->callback = TRUE;
 }
 
 /**
- * Implementation of ike_p2p.relay
+ * Implementation of ike_me.relay
  */
-static void relay(private_ike_p2p_t *this, identification_t *requester, chunk_t session_id,
-		chunk_t session_key, linked_list_t *endpoints, bool response)
+static void relay(private_ike_me_t *this, identification_t *requester, chunk_t connect_id,
+		chunk_t connect_key, linked_list_t *endpoints, bool response)
 {
 	this->peer_id = requester->clone(requester);
-	this->session_id = chunk_clone(session_id);
-	this->session_key = chunk_clone(session_key);
+	this->connect_id = chunk_clone(connect_id);
+	this->connect_key = chunk_clone(connect_key);
 	this->remote_endpoints = endpoints->clone_offset(endpoints, offsetof(endpoint_notify_t, clone));
 	this->response = response;
 }
@@ -742,15 +742,15 @@ static void relay(private_ike_p2p_t *this, identification_t *requester, chunk_t 
 /**
  * Implementation of task_t.get_type
  */
-static task_type_t get_type(private_ike_p2p_t *this)
+static task_type_t get_type(private_ike_me_t *this)
 {
-	return IKE_P2P;
+	return IKE_ME;
 }
 
 /**
  * Implementation of task_t.migrate
  */
-static void migrate(private_ike_p2p_t *this, ike_sa_t *ike_sa)
+static void migrate(private_ike_me_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
 }
@@ -758,12 +758,12 @@ static void migrate(private_ike_p2p_t *this, ike_sa_t *ike_sa)
 /**
  * Implementation of task_t.destroy
  */
-static void destroy(private_ike_p2p_t *this)
+static void destroy(private_ike_me_t *this)
 {
 	DESTROY_IF(this->peer_id);
 	
-	chunk_free(&this->session_id);
-	chunk_free(&this->session_key);
+	chunk_free(&this->connect_id);
+	chunk_free(&this->connect_key);
 	
 	this->local_endpoints->destroy_offset(this->local_endpoints, offsetof(endpoint_notify_t, destroy));
 	this->remote_endpoints->destroy_offset(this->remote_endpoints, offsetof(endpoint_notify_t, destroy));
@@ -775,9 +775,9 @@ static void destroy(private_ike_p2p_t *this)
 /*
  * Described in header.
  */
-ike_p2p_t *ike_p2p_create(ike_sa_t *ike_sa, bool initiator)
+ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_p2p_t *this = malloc_thing(private_ike_p2p_t);
+	private_ike_me_t *this = malloc_thing(private_ike_me_t);
 
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
@@ -812,17 +812,17 @@ ike_p2p_t *ike_p2p_create(ike_sa_t *ike_sa, bool initiator)
 		}
 	}
 	
-	this->public.connect = (void(*)(ike_p2p_t*,identification_t*))p2p_connect;
-	this->public.respond = (void(*)(ike_p2p_t*,identification_t*,chunk_t))p2p_respond;
-	this->public.callback = (void(*)(ike_p2p_t*,identification_t*))p2p_callback;
-	this->public.relay = (void(*)(ike_p2p_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool))relay;
+	this->public.connect = (void(*)(ike_me_t*,identification_t*))me_connect;
+	this->public.respond = (void(*)(ike_me_t*,identification_t*,chunk_t))me_respond;
+	this->public.callback = (void(*)(ike_me_t*,identification_t*))me_callback;
+	this->public.relay = (void(*)(ike_me_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool))relay;
 	
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
 	
 	this->peer_id = NULL;
-	this->session_id = chunk_empty;
-	this->session_key = chunk_empty;
+	this->connect_id = chunk_empty;
+	this->connect_key = chunk_empty;
 	this->local_endpoints = linked_list_create();
 	this->remote_endpoints = linked_list_create();
 	this->mediation = FALSE;

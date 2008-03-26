@@ -180,10 +180,10 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.scheduler);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
-#ifdef P2P	
+#ifdef ME
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
-#endif /* P2P */
+#endif /* ME */
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.credentials);
 	DESTROY_IF(this->public.sender);
@@ -348,14 +348,14 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 		return FALSE;
 	}
 	
-#ifdef P2P
+#ifdef ME
 	this->public.connect_manager = connect_manager_create();
 	if (this->public.connect_manager == NULL)
 	{
 		return FALSE;
 	}
 	this->public.mediation_manager = mediation_manager_create();
-#endif /* P2P */
+#endif /* ME */
 
 	this->public.plugins->load(this->public.plugins, IPSEC_PLUGINDIR, "libcharon-");
 	

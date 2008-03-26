@@ -649,8 +649,8 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				case AUTH_LIFETIME:
 					/* handled in ike_auth_lifetime task */
 					break;
-				case P2P_ENDPOINT:
-					/* handled in ike_p2p task */
+				case ME_ENDPOINT:
+					/* handled in ike_me task */
 					break;
 				default:
 				{

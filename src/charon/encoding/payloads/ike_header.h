@@ -82,12 +82,12 @@ enum exchange_type_t{
 	 * INFORMATIONAL.
 	 */
 	INFORMATIONAL = 37,
-#ifdef P2P
+#ifdef ME
 	/**
-	 * P2P_CONNECT
+	 * ME_CONNECT
 	 */
-	P2P_CONNECT = 240
-#endif /* P2P */
+	ME_CONNECT = 240
+#endif /* ME */
 };
 
 /**

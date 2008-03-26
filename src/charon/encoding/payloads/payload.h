@@ -125,13 +125,13 @@ enum payload_type_t{
 	 */
 	EXTENSIBLE_AUTHENTICATION = 48,
 	
-#ifdef P2P	
+#ifdef ME
 	/**
-	 * Identification payload for peers in P2P-NAT-T has a value from
+	 * Identification payload for peers has a value from
 	 * the PRIVATE USE space. 
 	 */
 	ID_PEER = 128,
-#endif /* P2P */
+#endif /* ME */
 	
 	/**
 	 * Header has a value of PRIVATE USE space.

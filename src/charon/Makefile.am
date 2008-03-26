@@ -98,13 +98,13 @@ else
   charon_SOURCES += network/socket.c
 endif
 
-if USE_P2P
+if USE_ME
   charon_SOURCES += encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
     processing/jobs/initiate_mediation_job.c processing/jobs/initiate_mediation_job.h \
     processing/jobs/mediation_job.c processing/jobs/mediation_job.h \
     sa/connect_manager.c sa/connect_manager.h \
     sa/mediation_manager.c sa/mediation_manager.h \
-    sa/tasks/ike_p2p.c sa/tasks/ike_p2p.h
+    sa/tasks/ike_me.c sa/tasks/ike_me.h
 endif
 
 INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon

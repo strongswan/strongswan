@@ -49,14 +49,14 @@ struct mediation_job_t {
  * 
  * @param peer_id		ID of the requested peer
  * @param requester		ID of the requesting peer
- * @param session_id	content of P2P_SESSIONID (could be NULL)
- * @param session_key	content of P2P_SESSIONKEY
+ * @param connect_id	content of ME_CONNECTID (could be NULL)
+ * @param connect_key	content of ME_CONNECTKEY
  * @param endpoints		list of submitted endpoints
  * @param response		TRUE if this is a response
  * @return				job object
  */
 mediation_job_t *mediation_job_create(identification_t *peer_id,
-		identification_t *requester, chunk_t session_id, chunk_t session_key,
+		identification_t *requester, chunk_t connect_id, chunk_t connect_key,
 		linked_list_t *endpoints, bool response);
 
 

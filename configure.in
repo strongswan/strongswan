@@ -453,13 +453,13 @@ AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 
 AC_ARG_ENABLE(
     [p2p],
-    AS_HELP_STRING([--enable-p2p],[enable peer-to-peer NAT traversal (default is NO).]),
+    AS_HELP_STRING([--enable-p2p],[enable mediation extensions for IKEv2 (default is NO).]),
     [if test x$enableval = xyes; then
-        p2p=true
-        AC_DEFINE(P2P)
+        me=true
+        AC_DEFINE(ME)
     fi]
 )
-AM_CONDITIONAL(USE_P2P, test x$p2p = xtrue)
+AM_CONDITIONAL(USE_ME, test x$me = xtrue)
 
 AC_ARG_ENABLE(
     [integrity-test],

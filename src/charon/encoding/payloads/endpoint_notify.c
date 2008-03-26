@@ -41,12 +41,12 @@ struct private_endpoint_notify_t {
 	/**
 	 * Family
 	 */
-	p2p_endpoint_family_t family;
+	me_endpoint_family_t family;
 		
 	/**
 	 * Endpoint type
 	 */
-	p2p_endpoint_type_t type;
+	me_endpoint_type_t type;
 	
 	/**
 	 * Endpoint
@@ -71,7 +71,7 @@ struct private_endpoint_notify_t {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-ENUM(p2p_endpoint_type_names, HOST, RELAYED,
+ENUM(me_endpoint_type_names, HOST, RELAYED,
 	"HOST",
 	"SERVER_REFLEXIVE",
 	"PEER_REFLEXIVE",
@@ -115,7 +115,7 @@ static status_t parse_uint32(u_int8_t **cur, u_int8_t *top, u_int32_t *val)
 }
 
 /**
- * Parses the notification data of a P2P_ENDPOINT notify
+ * Parses the notification data of a ME_ENDPOINT notify
  */
 static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t data)
 {
@@ -125,29 +125,29 @@ static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t
 	u_int8_t *cur = data.ptr;
 	u_int8_t *top = data.ptr + data.len;
 	
-	DBG3(DBG_IKE, "p2p_endpoint_data %B", &data);
+	DBG3(DBG_IKE, "me_endpoint_data %B", &data);
 	
 	if (parse_uint32(&cur, top, &this->priority) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "failed to parse P2P_ENDPOINT: invalid priority");
+		DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid priority");
 		return FAILED;
 	}
 
 	if (parse_uint8(&cur, top, &family) != SUCCESS || family >= MAX_FAMILY)
 	{
-		DBG1(DBG_IKE, "failed to parse P2P_ENDPOINT: invalid family");
+		DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid family");
 		return FAILED;
 	}
 	
-	this->family = (p2p_endpoint_family_t)family;
+	this->family = (me_endpoint_family_t)family;
 	
 	if (parse_uint8(&cur, top, &type) != SUCCESS || type >= MAX_TYPE)
 	{
-		DBG1(DBG_IKE, "failed to parse P2P_ENDPOINT: invalid type");
+		DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid type");
 		return FAILED;
 	}
 	
-	this->type = (p2p_endpoint_type_t)type;
+	this->type = (me_endpoint_type_t)type;
 	
 	addr_family = AF_INET;
 	addr.len = 4;
@@ -161,13 +161,13 @@ static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t
 		case IPv4:
 			if (parse_uint16(&cur, top, &port) != SUCCESS)
 			{
-				DBG1(DBG_IKE, "failed to parse P2P_ENDPOINT: invalid port");
+				DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid port");
 				return FAILED;	
 			}
 			
 			if (cur + addr.len > top)
 			{
-				DBG1(DBG_IKE, "failed to parse P2P_ENDPOINT: invalid IP address");
+				DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid IP address");
 				return FAILED;
 			}
 			
@@ -185,7 +185,7 @@ static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t
 
 
 /**
- * Generates the notification data of a P2P_ENDPOINT notify
+ * Generates the notification data of a ME_ENDPOINT notify
  */
 static chunk_t build_notification_data(private_endpoint_notify_t *this)
 {
@@ -217,7 +217,7 @@ static chunk_t build_notification_data(private_endpoint_notify_t *this)
 	/* data = prio | family | type | port | addr */
 	data = chunk_cat("ccccc", prio_chunk, family_chunk, type_chunk,
 			port_chunk, addr_chunk);
-	DBG3(DBG_IKE, "p2p_endpoint_data %B", &data);
+	DBG3(DBG_IKE, "me_endpoint_data %B", &data);
 	
 	return data;
 }
@@ -231,7 +231,7 @@ static notify_payload_t *build_notify(private_endpoint_notify_t *this)
 	notify_payload_t *notify;	
 	
 	notify = notify_payload_create();
-	notify->set_notify_type(notify, P2P_ENDPOINT);
+	notify->set_notify_type(notify, ME_ENDPOINT);
 	data = build_notification_data(this);
 	notify->set_notification_data(notify, data);
 	chunk_free(&data);
@@ -258,7 +258,7 @@ static void set_priority(private_endpoint_notify_t *this, u_int32_t priority)
 /**
  * Implementation of endpoint_notify_t.get_type.
  */
-static p2p_endpoint_type_t get_type(private_endpoint_notify_t *this)
+static me_endpoint_type_t get_type(private_endpoint_notify_t *this)
 {
 	return this->type;
 }
@@ -266,7 +266,7 @@ static p2p_endpoint_type_t get_type(private_endpoint_notify_t *this)
 /**
  * Implementation of endpoint_notify_t.get_family.
  */
-static p2p_endpoint_family_t get_family(private_endpoint_notify_t *this)
+static me_endpoint_family_t get_family(private_endpoint_notify_t *this)
 {
 	return this->family;
 }
@@ -330,8 +330,8 @@ endpoint_notify_t *endpoint_notify_create()
 	/* public functions */
 	this->public.get_priority = (u_int32_t (*) (endpoint_notify_t *)) get_priority;
 	this->public.set_priority = (void (*) (endpoint_notify_t *, u_int32_t)) set_priority;
-	this->public.get_type = (p2p_endpoint_type_t (*) (endpoint_notify_t *)) get_type;
-	this->public.get_family = (p2p_endpoint_family_t (*) (endpoint_notify_t *)) get_family;
+	this->public.get_type = (me_endpoint_type_t (*) (endpoint_notify_t *)) get_type;
+	this->public.get_family = (me_endpoint_family_t (*) (endpoint_notify_t *)) get_family;
 	this->public.get_host = (host_t *(*) (endpoint_notify_t *)) get_host;
 	this->public.get_base = (host_t *(*) (endpoint_notify_t *)) get_base;
 	this->public.build_notify = (notify_payload_t *(*) (endpoint_notify_t *)) build_notify;
@@ -351,7 +351,7 @@ endpoint_notify_t *endpoint_notify_create()
 /**
  * Described in header
  */
-endpoint_notify_t *endpoint_notify_create_from_host(p2p_endpoint_type_t type, host_t *host, host_t *base)
+endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type, host_t *host, host_t *base)
 {
 	private_endpoint_notify_t *this = (private_endpoint_notify_t*)endpoint_notify_create();
 	
@@ -360,17 +360,17 @@ endpoint_notify_t *endpoint_notify_create_from_host(p2p_endpoint_type_t type, ho
 	switch(type)
 	{
 		case HOST:
-			this->priority = pow(2, 16) * P2P_PRIO_HOST; 
+			this->priority = pow(2, 16) * ME_PRIO_HOST; 
 			break;
 		case SERVER_REFLEXIVE:
-			this->priority = pow(2, 16) * P2P_PRIO_SERVER; 
+			this->priority = pow(2, 16) * ME_PRIO_SERVER; 
 			break;
 		case PEER_REFLEXIVE:
-			this->priority = pow(2, 16) * P2P_PRIO_PEER; 
+			this->priority = pow(2, 16) * ME_PRIO_PEER; 
 			break;
 		case RELAYED:
 		default:
-			this->priority = pow(2, 16) * P2P_PRIO_RELAY; 
+			this->priority = pow(2, 16) * ME_PRIO_RELAY; 
 			break;
 	}
 	
@@ -410,7 +410,7 @@ endpoint_notify_t *endpoint_notify_create_from_host(p2p_endpoint_type_t type, ho
  */
 endpoint_notify_t *endpoint_notify_create_from_payload(notify_payload_t *notify)
 {
-	if (notify->get_notify_type(notify) != P2P_ENDPOINT)
+	if (notify->get_notify_type(notify) != ME_ENDPOINT)
 	{
 		return NULL;
 	}

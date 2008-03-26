@@ -2,10 +2,10 @@ alice::ipsec statusall::medsrv.*ESTABLISHED::YES
 venus::ipsec statusall::medsrv.*ESTABLISHED::YES
 carol::ipsec statusall::medsrv.*ESTABLISHED.*PH_IP_MOON.*6cu1UTVw@medsrv.org::YES
 carol::ipsec statusall::medsrv.*ESTABLISHED.*PH_IP_MOON.*F1ubAio8@medsrv.org::YES
-alice::cat /var/log/daemon.log::received P2P_CALLBACK::YES
-alice::ipsec statusall::p2p.*ESTABLISHED::YES
-venus::ipsec statusall::p2p.*ESTABLISHED::YES
-alice::ipsec statusall::p2p.*INSTALLED::YES
-venus::ipsec statusall::p2p.*INSTALLED::YES
+alice::cat /var/log/daemon.log::received ME_CALLBACK::YES
+alice::ipsec statusall::peer.*ESTABLISHED::YES
+venus::ipsec statusall::peer.*ESTABLISHED::YES
+alice::ipsec statusall::peer.*INSTALLED::YES
+venus::ipsec statusall::peer.*INSTALLED::YES
 alice::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_VENUS: icmp_seq=1::YES
 venus::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES

@@ -76,9 +76,9 @@ dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION
 modeconfig,        KW_MODECONFIG
 xauth,             KW_XAUTH
-p2p_mediation,     KW_P2P_MEDIATION
-p2p_mediated_by,   KW_P2P_MEDIATED_BY
-p2p_peerid,        KW_P2P_PEERID
+p2p_mediation,     KW_ME_MEDIATION
+p2p_mediated_by,   KW_ME_MEDIATED_BY
+p2p_peerid,        KW_ME_PEERID
 cacert,            KW_CACERT
 ldaphost,          KW_LDAPHOST
 ldapbase,          KW_LDAPBASE

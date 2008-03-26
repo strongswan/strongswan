@@ -105,13 +105,13 @@ ENUM_NEXT(exchange_type_names, IKE_SA_INIT, INFORMATIONAL, EXCHANGE_TYPE_UNDEFIN
 	"IKE_AUTH",
 	"CREATE_CHILD_SA",
 	"INFORMATIONAL");
-#ifdef P2P
-ENUM_NEXT(exchange_type_names, P2P_CONNECT, P2P_CONNECT, INFORMATIONAL,
-	"P2P_CONNECT");
-ENUM_END(exchange_type_names, P2P_CONNECT);
+#ifdef ME
+ENUM_NEXT(exchange_type_names, ME_CONNECT, ME_CONNECT, INFORMATIONAL,
+	"ME_CONNECT");
+ENUM_END(exchange_type_names, ME_CONNECT);
 #else
 ENUM_END(exchange_type_names, INFORMATIONAL);
-#endif /* P2P */
+#endif /* ME */
 
 /**
  * Encoding rules to parse or generate a IKEv2-Header.
@@ -176,9 +176,9 @@ static status_t verify(private_ike_header_t *this)
 {
 	if ((this->exchange_type < IKE_SA_INIT) ||
 		((this->exchange_type > INFORMATIONAL)
-#ifdef P2P
-			&& (this->exchange_type != P2P_CONNECT)
-#endif /* P2P */
+#ifdef ME
+			&& (this->exchange_type != ME_CONNECT)
+#endif /* ME */
 		))
 	{
 		/* unsupported exchange type */
@@ -186,11 +186,11 @@ static status_t verify(private_ike_header_t *this)
 	}
 
 	if (this->initiator_spi == 0
-#ifdef P2P
+#ifdef ME
 		/* we allow zero spi for INFORMATIONAL exchanges,
-		 * to allow P2P connectivity checks */
+		 * to allow connectivity checks */
 		&& this->exchange_type != INFORMATIONAL
-#endif /* P2P */
+#endif /* ME */
 		)
 	{
 		/* initiator spi not set */

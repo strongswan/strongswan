@@ -165,23 +165,23 @@ struct private_peer_cfg_t {
 	 */
 	auth_info_t *auth;
 
-#ifdef P2P	
+#ifdef ME	
 	/**
 	 * Is this a mediation connection?
 	 */
-	bool p2p_mediation;
+	bool mediation;
 	
 	/**
 	 * Name of the mediation connection to mediate through
 	 */
-	peer_cfg_t *p2p_mediated_by;
+	peer_cfg_t *mediated_by;
 	
 	/**
 	 * ID of our peer at the mediation server (= leftid of the peer's conn with
 	 * the mediation server)
 	 */
 	identification_t *peer_id;
-#endif /* P2P */
+#endif /* ME */
 };
 
 /**
@@ -435,13 +435,13 @@ static auth_info_t* get_auth(private_peer_cfg_t *this)
 	return this->auth;
 }
 
-#ifdef P2P
+#ifdef ME
 /**
  * Implementation of peer_cfg_t.is_mediation.
  */
 static bool is_mediation(private_peer_cfg_t *this)
 {
-	return this->p2p_mediation;
+	return this->mediation;
 }
 
 /**
@@ -449,9 +449,9 @@ static bool is_mediation(private_peer_cfg_t *this)
  */
 static peer_cfg_t* get_mediated_by(private_peer_cfg_t *this)
 {
-	if (this->p2p_mediated_by) {
-		this->p2p_mediated_by->get_ref(this->p2p_mediated_by);
-		return this->p2p_mediated_by;
+	if (this->mediated_by) {
+		this->mediated_by->get_ref(this->mediated_by);
+		return this->mediated_by;
 	}
 	return NULL;
 }
@@ -463,7 +463,7 @@ static identification_t* get_peer_id(private_peer_cfg_t *this)
 {
 	return this->peer_id;
 }
-#endif /* P2P */
+#endif /* ME */
 
 /**
  * Implementation of peer_cfg_t.equals.
@@ -502,13 +502,13 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 		 (this->other_virtual_ip && other->other_virtual_ip &&
 		  this->other_virtual_ip->equals(this->other_virtual_ip, other->other_virtual_ip))) &&
 		this->auth->equals(this->auth, other->auth) 
-#ifdef P2P
-		&& this->p2p_mediation == other->p2p_mediation &&
-		this->p2p_mediated_by == other->p2p_mediated_by &&
+#ifdef ME
+		&& this->mediation == other->mediation &&
+		this->mediated_by == other->mediated_by &&
 		(this->peer_id == other->peer_id ||
 		 (this->peer_id && other->peer_id &&
 		  this->peer_id->equals(this->peer_id, other->peer_id)))
-#endif /* P2P */
+#endif /* ME */
 		);
 }
 
@@ -534,10 +534,10 @@ static void destroy(private_peer_cfg_t *this)
 		DESTROY_IF(this->my_virtual_ip);
 		DESTROY_IF(this->other_virtual_ip);
 		this->auth->destroy(this->auth);
-#ifdef P2P
-		DESTROY_IF(this->p2p_mediated_by);
+#ifdef ME
+		DESTROY_IF(this->mediated_by);
 		DESTROY_IF(this->peer_id);
-#endif /* P2P */
+#endif /* ME */
 		free(this->name);
 		free(this);
 	}
@@ -556,7 +556,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							u_int32_t over_time, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
 							host_t *my_virtual_ip, host_t *other_virtual_ip,
-							bool p2p_mediation, peer_cfg_t *p2p_mediated_by,
+							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id)
 {
 	private_peer_cfg_t *this = malloc_thing(private_peer_cfg_t);
@@ -587,11 +587,11 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.equals = (bool(*)(peer_cfg_t*, peer_cfg_t *other))equals;
 	this->public.get_ref = (void(*)(peer_cfg_t *))get_ref;
 	this->public.destroy = (void(*)(peer_cfg_t *))destroy;
-#ifdef P2P	
+#ifdef ME
 	this->public.is_mediation = (bool (*) (peer_cfg_t *))is_mediation;
 	this->public.get_mediated_by = (peer_cfg_t* (*) (peer_cfg_t *))get_mediated_by;
 	this->public.get_peer_id = (identification_t* (*) (peer_cfg_t *))get_peer_id;
-#endif /* P2P */
+#endif /* ME */
 	
 	/* apply init values */
 	this->name = strdup(name);
@@ -625,14 +625,14 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->other_virtual_ip = other_virtual_ip;
 	this->auth = auth_info_create();
 	this->refcount = 1;
-#ifdef P2P
-	this->p2p_mediation = p2p_mediation;
-	this->p2p_mediated_by = p2p_mediated_by;
+#ifdef ME
+	this->mediation = mediation;
+	this->mediated_by = mediated_by;
 	this->peer_id = peer_id;
-#else /* P2P */
-	DESTROY_IF(p2p_mediated_by);
+#else /* ME */
+	DESTROY_IF(mediated_by);
 	DESTROY_IF(peer_id);
-#endif /* P2P */
+#endif /* ME */
 
 	return &this->public;
 }

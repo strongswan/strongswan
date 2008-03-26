@@ -161,10 +161,10 @@ typedef struct daemon_t daemon_t;
 #include <sa/authenticators/eap/eap_manager.h>
 #include <plugins/plugin_loader.h>
 
-#ifdef P2P
+#ifdef ME
 #include <sa/connect_manager.h>
 #include <sa/mediation_manager.h>
-#endif /* P2P */
+#endif /* ME */
 
 /**
  * Name of the daemon.
@@ -277,7 +277,7 @@ struct daemon_t {
 	 */
 	eap_manager_t *eap;
 	
-#ifdef P2P
+#ifdef ME
 	/**
 	 * Connect manager
 	 */
@@ -287,7 +287,7 @@ struct daemon_t {
 	 * Mediation manager
 	 */
 	mediation_manager_t *mediation_manager;
-#endif /* P2P */
+#endif /* ME */
 	
 	/**
 	 * Shut down the daemon.

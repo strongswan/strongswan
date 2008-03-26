@@ -434,7 +434,7 @@ struct ike_sa_t {
 	 */
 	void (*set_pending_updates)(ike_sa_t *this, u_int32_t updates);
 
-#ifdef P2P
+#ifdef ME
 	/**
 	 * Get the server reflexive host.
 	 * 
@@ -451,7 +451,7 @@ struct ike_sa_t {
 	
 	/**
 	 * Initiate the mediation of a mediated connection (i.e. initiate a
-	 * P2P_CONNECT exchange).
+	 * ME_CONNECT exchange).
 	 * 
 	 * @param mediated_cfg		peer_cfg of the mediated connection
 	 * @return				
@@ -475,21 +475,21 @@ struct ike_sa_t {
 	
 	/**
 	 * Relay data from one peer to another (i.e. initiate a
-	 * P2P_CONNECT exchange).
+	 * ME_CONNECT exchange).
 	 *
 	 * Data is cloned.
 	 * 
 	 * @param requester			ID of the requesting peer
-	 * @param session_id		data of the P2P_SESSIONID payload
-	 * @param session_key		data of the P2P_SESSIONKEY payload
+	 * @param connect_id		data of the ME_CONNECTID payload
+	 * @param connect_key		data of the ME_CONNECTKEY payload
 	 * @param endpoints			endpoints
 	 * @param response			TRUE if this is a response
 	 * @return				
 	 * 							- SUCCESS if relay started
 	 * 							- DESTROY_ME if relay failed
 	 */
-	status_t (*relay) (ike_sa_t *this, identification_t *requester, chunk_t session_id,
-			chunk_t session_key, linked_list_t *endpoints, bool response);
+	status_t (*relay) (ike_sa_t *this, identification_t *requester, chunk_t connect_id,
+			chunk_t connect_key, linked_list_t *endpoints, bool response);
 	
 	/**
 	 * Send a callback to a peer.
@@ -504,18 +504,18 @@ struct ike_sa_t {
 	status_t (*callback) (ike_sa_t *this, identification_t *peer_id);
 	
 	/**
-	 * Respond to a P2P_CONNECT request.
+	 * Respond to a ME_CONNECT request.
 	 * 
 	 * Data is cloned.
 	 * 
 	 * @param peer_id			ID of the other peer
-	 * @param session_id		the session ID supplied by the initiator
+	 * @param connect_id		the connect ID supplied by the initiator
 	 * @return
 	 * 							- SUCCESS if response started
 	 * 							- DESTROY_ME if response failed
 	 */
-	status_t (*respond) (ike_sa_t *this, identification_t *peer_id, chunk_t session_id);
-#endif /* P2P */
+	status_t (*respond) (ike_sa_t *this, identification_t *peer_id, chunk_t connect_id);
+#endif /* ME */
 	
 	/**
 	 * Initiate a new connection.

@@ -67,7 +67,7 @@ struct connect_manager_t {
 	 * 
 	 * @param initiator			ID of the initiator
 	 * @param responder			ID of the responder
-	 * @param session_id		the session ID provided by the initiator
+	 * @param connect_id		the connect ID provided by the initiator
 	 * @param key				the initiator's key
 	 * @param endpoints			the initiator's endpoints
 	 * @param is_initiator		TRUE, if the caller of this method is the initiator
@@ -76,13 +76,13 @@ struct connect_manager_t {
 	 */
 	status_t (*set_initiator_data) (connect_manager_t *this,
 		identification_t *initiator, identification_t *responder,
-		chunk_t session_id, chunk_t key, linked_list_t *endpoints, bool is_initiator);
+		chunk_t connect_id, chunk_t key, linked_list_t *endpoints, bool is_initiator);
 	
 	/**
 	 * Updates a checklist and sets the responder's data. The checklist's
 	 * state is advanced to WAITING which means that checks will be sent.
 	 * 
-	 * @param session_id		the session ID
+	 * @param connect_id		the connect ID
 	 * @param chunk_t			the responder's key
 	 * @param endpoints			the responder's endpoints 
 	 * @returns 				
@@ -90,7 +90,7 @@ struct connect_manager_t {
 	 * 							- SUCCESS, otherwise
 	 */
 	status_t (*set_responder_data) (connect_manager_t *this,
-		chunk_t session_id, chunk_t key, linked_list_t *endpoints);
+		chunk_t connect_id, chunk_t key, linked_list_t *endpoints);
 	
 	
 	/**

@@ -87,12 +87,12 @@ typedef enum {
     KW_DPDACTION,
     KW_MODECONFIG,
     KW_XAUTH,
-    KW_P2P_MEDIATION,
-    KW_P2P_MEDIATED_BY,
-    KW_P2P_PEERID,
+    KW_ME_MEDIATION,
+    KW_ME_MEDIATED_BY,
+    KW_ME_PEERID,
 
 #define KW_CONN_FIRST	KW_CONN_SETUP
-#define KW_CONN_LAST	KW_P2P_PEERID
+#define KW_CONN_LAST	KW_ME_PEERID
 
    /* ca section keywords */
     KW_CA_NAME,

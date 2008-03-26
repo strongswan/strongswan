@@ -59,10 +59,10 @@ enum task_type_t {
 	IKE_DELETE,
 	/** liveness check */
 	IKE_DPD,
-#ifdef P2P
-	/** handle P2P-NAT-T stuff */
-	IKE_P2P,
-#endif /* P2P */
+#ifdef ME
+	/** handle ME stuff */
+	IKE_ME,
+#endif /* ME */
 	/** establish a CHILD_SA within an IKE_SA */
 	CHILD_CREATE,
 	/** delete an established CHILD_SA */

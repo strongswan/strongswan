@@ -16,32 +16,32 @@
  */
 
 /**
- * @defgroup ike_p2p ike_p2p
+ * @defgroup ike_me ike_me
  * @{ @ingroup tasks
  */
 
-#ifndef IKE_P2P_H_
-#define IKE_P2P_H_
+#ifndef IKE_ME_H_
+#define IKE_ME_H_
 
-typedef struct ike_p2p_t ike_p2p_t;
+typedef struct ike_me_t ike_me_t;
 
 #include <library.h>
 #include <sa/ike_sa.h>
 #include <sa/tasks/task.h>
 
 /**
- * Task of type IKE_P2P, detects and handles P2P-NAT-T extensions.
+ * Task of type IKE_ME, detects and handles IKE-ME extensions.
  *
- * This tasks handles the P2P_MEDIATION notify exchange to setup a mediation
- * connection, allows to initiate mediated connections using P2P_CONNECT
+ * This tasks handles the ME_MEDIATION Notify exchange to setup a mediation
+ * connection, allows to initiate mediated connections using ME_CONNECT
  * exchanges and to request reflexive addresses from the mediation server using
- * P2P_ENDPOINT notifies.
+ * ME_ENDPOINT notifies.
  * 
  * @note This task has to be activated before the IKE_AUTH task, because that
  * task generates the IKE_SA_INIT message so that no more payloads can be added
  * to it afterwards.
  */
-struct ike_p2p_t {
+struct ike_me_t {
 
 	/**
 	 * Implements the task_t interface
@@ -49,52 +49,52 @@ struct ike_p2p_t {
 	task_t task;
 	
 	/**
-	 * Initiates a connection with another peer (i.e. sends a P2P_CONNECT
+	 * Initiates a connection with another peer (i.e. sends a ME_CONNECT
 	 * to the mediation server)
 	 *
 	 * @param peer_id			ID of the other peer (gets cloned)
 	 */
-	void (*connect)(ike_p2p_t *this, identification_t *peer_id);
+	void (*connect)(ike_me_t *this, identification_t *peer_id);
 	
 	/**
-	 * Responds to a P2P_CONNECT from another peer (i.e. sends a P2P_CONNECT
+	 * Responds to a ME_CONNECT from another peer (i.e. sends a ME_CONNECT
 	 * to the mediation server)
 	 * 
 	 * @param peer_id			ID of the other peer (gets cloned)
-	 * @param session_id		the session ID as provided by the initiator (gets cloned)
+	 * @param connect_id		the connect ID as provided by the initiator (gets cloned)
 	 */
-	void (*respond)(ike_p2p_t *this, identification_t *peer_id, chunk_t session_id);
+	void (*respond)(ike_me_t *this, identification_t *peer_id, chunk_t connect_id);
 	
 	/**
-	 * Sends a P2P_CALLBACK to a peer that previously requested another peer.
+	 * Sends a ME_CALLBACK to a peer that previously requested another peer.
 	 * 
 	 * @param peer_id			ID of the other peer (gets cloned)
 	 */
-	void (*callback)(ike_p2p_t *this, identification_t *peer_id);
+	void (*callback)(ike_me_t *this, identification_t *peer_id);
 	
 	/**
-	 * Relays data to another peer (i.e. sends a P2P_CONNECT to the peer)
+	 * Relays data to another peer (i.e. sends a ME_CONNECT to the peer)
 	 * 
 	 * Data gets cloned.
 	 * 
 	 * @param requester			ID of the requesting peer
-	 * @param session_id		content of the P2P_SESSIONID notify
-	 * @param session_key		content of the P2P_SESSIONKEY notify
+	 * @param connect_id		content of the ME_CONNECTID notify
+	 * @param connect_key		content of the ME_CONNECTKEY notify
 	 * @param endpoints			endpoints
 	 * @param response			TRUE if this is a response
 	 */
-	void (*relay)(ike_p2p_t *this, identification_t *requester, chunk_t session_id,
-			chunk_t session_key, linked_list_t *endpoints, bool response);
+	void (*relay)(ike_me_t *this, identification_t *requester, chunk_t connect_id,
+			chunk_t connect_key, linked_list_t *endpoints, bool response);
 
 };
 
 /**
- * Create a new ike_p2p task.
+ * Create a new ike_me task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if taks is initiated by us
- * @return			  	ike_p2p task to handle by the task_manager
+ * @return			  	ike_me task to handle by the task_manager
  */
-ike_p2p_t *ike_p2p_create(ike_sa_t *ike_sa, bool initiator);
+ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /*IKE_P2P_H_ @} */
+#endif /*IKE_ME_H_ @} */

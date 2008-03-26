@@ -129,9 +129,9 @@ static int add_connection(char *name,
 	msg.add_conn.dpd.delay = 0;
 	msg.add_conn.dpd.action = 1;
 	
-	msg.add_conn.p2p.mediation = 0;
-	msg.add_conn.p2p.mediated_by = NULL;
-	msg.add_conn.p2p.peerid = NULL;
+	msg.add_conn.ikeme.mediation = 0;
+	msg.add_conn.ikeme.mediated_by = NULL;
+	msg.add_conn.ikeme.peerid = NULL;
 	
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);

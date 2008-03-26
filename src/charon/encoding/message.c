@@ -207,7 +207,7 @@ static payload_rule_t ike_auth_i_payload_rules[] = {
 	{CERTIFICATE,					0,	4,						TRUE,	FALSE},
 	{CERTIFICATE_REQUEST,			0,	1,						TRUE,	FALSE},
 	{ID_RESPONDER,					0,	1,						TRUE,	FALSE},
-#ifdef P2P
+#ifdef ME
 	{SECURITY_ASSOCIATION,			0,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
@@ -215,7 +215,7 @@ static payload_rule_t ike_auth_i_payload_rules[] = {
 	{SECURITY_ASSOCIATION,			1,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_INITIATOR,	1,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,	1,	1,						TRUE,	FALSE},
-#endif /* P2P */
+#endif /* ME */
 	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
 	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
 };
@@ -400,11 +400,11 @@ static payload_order_t create_child_sa_r_payload_order[] = {
 	{NOTIFY,						0},
 };
 
-#ifdef P2P
+#ifdef ME
 /**
- * Message rule for P2P_CONNECT from initiator.
+ * Message rule for ME_CONNECT from initiator.
  */
-static payload_rule_t p2p_connect_i_payload_rules[] = {
+static payload_rule_t me_connect_i_payload_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
 	{ID_PEER,						1,	1,						TRUE,	FALSE},
@@ -412,9 +412,9 @@ static payload_rule_t p2p_connect_i_payload_rules[] = {
 };
 
 /**
- * payload order for P2P_CONNECT from initiator.
+ * payload order for ME_CONNECT from initiator.
  */
-static payload_order_t p2p_connect_i_payload_order[] = {
+static payload_order_t me_connect_i_payload_order[] = {
 /*	payload type					notify type */
 	{NOTIFY,						0},
 	{ID_PEER,						0},
@@ -422,23 +422,23 @@ static payload_order_t p2p_connect_i_payload_order[] = {
 };
 
 /**
- * Message rule for P2P_CONNECT from responder.
+ * Message rule for ME_CONNECT from responder.
  */
-static payload_rule_t p2p_connect_r_payload_rules[] = {
+static payload_rule_t me_connect_r_payload_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
 	{VENDOR_ID,						0,	10,						TRUE,	FALSE}
 };
 
 /**
- * payload order for P2P_CONNECT from responder.
+ * payload order for ME_CONNECT from responder.
  */
-static payload_order_t p2p_connect_r_payload_order[] = {
+static payload_order_t me_connect_r_payload_order[] = {
 /*	payload type					notify type */
 	{NOTIFY,						0},
 	{VENDOR_ID,						0},
 };
-#endif /* P2P */
+#endif /* ME */
 
 /**
  * Message rules, defines allowed payloads.
@@ -492,20 +492,20 @@ static message_rule_t message_rules[] = {
 		(sizeof(create_child_sa_r_payload_order)/sizeof(payload_order_t)),
 		create_child_sa_r_payload_order,
 	},
-#ifdef P2P
-	{P2P_CONNECT,		TRUE,	TRUE,
-		(sizeof(p2p_connect_i_payload_rules)/sizeof(payload_rule_t)),
-		p2p_connect_i_payload_rules,
-		(sizeof(p2p_connect_i_payload_order)/sizeof(payload_order_t)),
-		p2p_connect_i_payload_order,
+#ifdef ME
+	{ME_CONNECT,		TRUE,	TRUE,
+		(sizeof(me_connect_i_payload_rules)/sizeof(payload_rule_t)),
+		me_connect_i_payload_rules,
+		(sizeof(me_connect_i_payload_order)/sizeof(payload_order_t)),
+		me_connect_i_payload_order,
 	},
-	{P2P_CONNECT,		FALSE,	TRUE,
-		(sizeof(p2p_connect_r_payload_rules)/sizeof(payload_rule_t)),
-		p2p_connect_r_payload_rules,
-		(sizeof(p2p_connect_r_payload_order)/sizeof(payload_order_t)),
-		p2p_connect_r_payload_order,
+	{ME_CONNECT,		FALSE,	TRUE,
+		(sizeof(me_connect_r_payload_rules)/sizeof(payload_rule_t)),
+		me_connect_r_payload_rules,
+		(sizeof(me_connect_r_payload_order)/sizeof(payload_order_t)),
+		me_connect_r_payload_order,
 	},
-#endif /* P2P */	
+#endif /* ME */	
 };
 
 

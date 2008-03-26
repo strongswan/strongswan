@@ -218,7 +218,7 @@ struct stroke_msg_t {
 				int mediation;
 				char *mediated_by;
 				char *peerid;
-			} p2p;
+			} ikeme;
 			stroke_end_t me, other;
 		} add_conn;
 

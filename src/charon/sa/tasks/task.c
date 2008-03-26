@@ -31,9 +31,9 @@ ENUM(task_type_names, IKE_INIT, CHILD_REKEY,
 	"IKE_REAUTH",
 	"IKE_DELETE",
 	"IKE_DPD",
-#ifdef P2P
-	"IKE_P2P",
-#endif /* P2P */
+#ifdef ME
+	"IKE_ME",
+#endif /* ME */
 	"CHILD_CREATE",
 	"CHILD_DELETE",
 	"CHILD_REKEY",
