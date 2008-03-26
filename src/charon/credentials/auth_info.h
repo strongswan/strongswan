@@ -63,6 +63,8 @@ enum auth_item_t {
 	AUTHN_CA_CERT,
 	/** Keyid of a CA certificate to use, value is identification_t* */
 	AUTHN_CA_CERT_KEYID,
+	/** subject DN of a CA certificate to use, value is identification_t* */
+	AUTHN_CA_CERT_NAME,
 	/** intermediate certificate, value is certificate_t* */
 	AUTHN_IM_CERT,
 	/** certificate for trustchain verification, value is certificate_t* */
@@ -80,6 +82,8 @@ enum auth_item_t {
 	AUTHZ_EAP,
 	/** certificate authority, value is certificate_t* */
 	AUTHZ_CA_CERT,
+	/** subject DN of a certificate authority, value is identification_t* */
+	AUTHZ_CA_CERT_NAME,
 	/** intermediate certificate in trustchain, value is certificate_t* */
 	AUTHZ_IM_CERT,
 	/** subject certificate, value is certificate_t* */
@@ -145,6 +149,14 @@ struct auth_info_t {
 	 * @param other		items to read for merge
 	 */
 	void (*merge)(auth_info_t *this, auth_info_t *other);
+	
+	/**
+	 * Check two auth_infos for equality.
+	 *
+	 * @param other		other item to compaire against this
+	 * @return			TRUE if auth infos identical
+	 */
+	bool (*equals)(auth_info_t *this, auth_info_t *other);
 	
 	/**
      * Destroy a auth_info instance with all associated values.

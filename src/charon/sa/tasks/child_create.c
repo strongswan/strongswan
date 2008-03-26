@@ -222,11 +222,11 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	
 	if (!this->proposal->has_dh_group(this->proposal, this->dh_group))
 	{
-		algorithm_t *algo;
+		u_int16_t group;
+		
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
-										  &algo))
+										  &group, NULL))
 		{
-			u_int16_t group = algo->algorithm;
 			SIG(CHILD_UP_FAILED, "DH group %N inacceptable, requesting %N",
 				diffie_hellman_group_names, this->dh_group,
 				diffie_hellman_group_names, group);

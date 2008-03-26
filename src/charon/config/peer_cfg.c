@@ -466,6 +466,53 @@ static identification_t* get_peer_id(private_peer_cfg_t *this)
 #endif /* P2P */
 
 /**
+ * Implementation of peer_cfg_t.equals.
+ */
+static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
+{
+	if (this == other)
+	{
+		return TRUE;
+	}
+	if (this->public.equals != other->public.equals)
+	{
+		return FALSE;
+	}
+	
+	return (
+		this->ike_version == other->ike_version &&
+		this->my_id->equals(this->my_id, other->my_id) &&
+		this->other_id->equals(this->other_id, other->other_id) &&
+		this->cert_policy == other->cert_policy &&
+		this->auth_method == other->auth_method &&
+		this->eap_type == other->eap_type &&
+		this->eap_vendor == other->eap_vendor &&
+		this->keyingtries == other->keyingtries &&
+		this->use_mobike == other->use_mobike &&
+		this->rekey_time == other->rekey_time &&
+		this->reauth_time == other->reauth_time &&
+		this->jitter_time == other->jitter_time &&
+		this->over_time == other->over_time &&
+		this->dpd_delay == other->dpd_delay &&
+		this->dpd_action == other->dpd_action &&
+		(this->my_virtual_ip == other->my_virtual_ip ||
+		 (this->my_virtual_ip && other->my_virtual_ip &&
+		  this->my_virtual_ip->equals(this->my_virtual_ip, other->my_virtual_ip))) &&
+		(this->other_virtual_ip == other->other_virtual_ip ||
+		 (this->other_virtual_ip && other->other_virtual_ip &&
+		  this->other_virtual_ip->equals(this->other_virtual_ip, other->other_virtual_ip))) &&
+		this->auth->equals(this->auth, other->auth) 
+#ifdef P2P
+		&& this->p2p_mediation == other->p2p_mediation &&
+		this->p2p_mediated_by == other->p2p_mediated_by &&
+		(this->peer_id == other->peer_id ||
+		 (this->peer_id && other->peer_id &&
+		  this->peer_id->equals(this->peer_id, other->peer_id)))
+#endif /* P2P */
+		);
+}
+
+/**
  * Implements peer_cfg_t.get_ref.
  */
 static void get_ref(private_peer_cfg_t *this)
@@ -537,6 +584,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_my_virtual_ip = (host_t* (*) (peer_cfg_t *))get_my_virtual_ip;
 	this->public.get_other_virtual_ip = (host_t* (*) (peer_cfg_t *, host_t *))get_other_virtual_ip;
 	this->public.get_auth = (auth_info_t*(*)(peer_cfg_t*))get_auth;
+	this->public.equals = (bool(*)(peer_cfg_t*, peer_cfg_t *other))equals;
 	this->public.get_ref = (void(*)(peer_cfg_t *))get_ref;
 	this->public.destroy = (void(*)(peer_cfg_t *))destroy;
 #ifdef P2P	

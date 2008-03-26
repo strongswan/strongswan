@@ -105,6 +105,14 @@ struct ike_cfg_t {
 	diffie_hellman_group_t (*get_dh_group)(ike_cfg_t *this);
 	
 	/**
+	 * Check if two IKE configs are equal.
+	 *
+	 * @param other		other to check for equality
+	 * @return			TRUE if other equal to this
+	 */
+	bool (*equals)(ike_cfg_t *this, ike_cfg_t *other);
+	
+	/**
 	 * Get a new reference to this ike_cfg.
 	 *
 	 * Get a new reference to this ike_cfg by increasing

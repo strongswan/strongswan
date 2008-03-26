@@ -96,7 +96,9 @@ struct kernel_interface_t {
 	 * @param expire_soft	lifetime in seconds before rekeying
 	 * @param expire_hard	lieftime in seconds before delete
 	 * @param enc_alg		Algorithm to use for encryption (ESP only)
+	 * @param enc_size		key length of encryption algorithm, if dynamic
 	 * @param int_alg		Algorithm to use for integrity protection
+	 * @param int_size		key length of integrity algorithm, if dynamic
 	 * @param prf_plus		PRF to derive keys from
 	 * @param mode			mode of the SA (tunnel, transport)
 	 * @param encap			enable UDP encapsulation for NAT traversal
@@ -107,7 +109,8 @@ struct kernel_interface_t {
 						host_t *src, host_t *dst, u_int32_t spi,
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int64_t expire_soft, u_int64_t expire_hard,
-						algorithm_t *enc_alg, algorithm_t *int_alg,
+					    u_int16_t enc_alg, u_int16_t enc_size,
+					    u_int16_t int_alg, u_int16_t int_size,
 						prf_plus_t *prf_plus, mode_t mode, bool encap,
 						bool update);
 	

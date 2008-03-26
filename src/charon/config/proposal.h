@@ -26,7 +26,6 @@
 typedef enum protocol_id_t protocol_id_t;
 typedef enum transform_type_t transform_type_t;
 typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
-typedef struct algorithm_t algorithm_t;
 typedef struct proposal_t proposal_t;
 
 #include <library.h>
@@ -85,24 +84,6 @@ enum extended_sequence_numbers_t {
  */
 extern enum_name_t *extended_sequence_numbers_names;
 
-
-
-/**
- * Struct used to store different kinds of algorithms. The internal
- * lists of algorithms contain such structures.
- */
-struct algorithm_t {
-	/**
-	 * Value from an encryption_algorithm_t/integrity_algorithm_t/...
-	 */
-	u_int16_t algorithm;
-	
-	/**
-	 * the associated key size in bits, or zero if not needed
-	 */
-	u_int16_t key_size;
-};
-
 /**
  * Stores a set of algorithms used for an SA.
  * 
@@ -129,15 +110,16 @@ struct proposal_t {
 	 * @param alg			identifier for algorithm
 	 * @param key_size		key size to use
 	 */
-	void (*add_algorithm) (proposal_t *this, transform_type_t type, u_int16_t alg, size_t key_size);
+	void (*add_algorithm) (proposal_t *this, transform_type_t type,
+						   u_int16_t alg, u_int16_t key_size);
 	
 	/**
-	 * Get an iterator over algorithms for a specifc algo type.
+	 * Get an enumerator over algorithms for a specifc algo type.
 	 * 
 	 * @param type			kind of algorithm
-	 * @return				iterator over algorithm_t's
+	 * @return				enumerator over u_int16_t alg, u_int16_t key_size
 	 */
-	iterator_t *(*create_algorithm_iterator) (proposal_t *this, transform_type_t type);
+	enumerator_t *(*create_enumerator) (proposal_t *this, transform_type_t type);
 	
 	/**
 	 * Get the algorithm for a type to use.
@@ -145,10 +127,12 @@ struct proposal_t {
 	 * If there are multiple algorithms, only the first is returned.
 	 * 
 	 * @param type			kind of algorithm
-	 * @param algo			pointer which receives algorithm and key size
+	 * @param alg			pointer which receives algorithm
+	 * @param key_size		pointer which receives the key size
 	 * @return				TRUE if algorithm of this kind available
 	 */
-	bool (*get_algorithm) (proposal_t *this, transform_type_t type, algorithm_t** algo);
+	bool (*get_algorithm) (proposal_t *this, transform_type_t type,
+						   u_int16_t *alg, u_int16_t *key_size);
 	
 	/**
 	 * Check if the proposal has a specific DH group.
@@ -157,6 +141,11 @@ struct proposal_t {
 	 * @return				TRUE if algorithm included
 	 */
 	bool (*has_dh_group) (proposal_t *this, diffie_hellman_group_t group);
+	
+	/**
+	 * Strip DH groups from proposal to use it without PFS.
+	 */
+	void (*strip_dh)(proposal_t *this);	
 
 	/**
 	 * Compare two proposal, and select a matching subset.
@@ -190,6 +179,14 @@ struct proposal_t {
 	 * @param spi			spi to set for proto
 	 */
 	void (*set_spi) (proposal_t *this, u_int64_t spi);
+	
+	/**
+	 * Check for the eqality of two proposals.
+	 *
+	 * @param other			other proposal to check for equality
+	 * @return				TRUE if other equal to this
+	 */
+	bool (*equals)(proposal_t *this, proposal_t *other);
 	
 	/**
 	 * Clone a proposal.

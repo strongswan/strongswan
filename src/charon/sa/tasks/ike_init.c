@@ -316,11 +316,11 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		!this->proposal->has_dh_group(this->proposal, this->dh_group) ||
 		this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
 	{
-		algorithm_t *algo;
+		u_int16_t group;
+		
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
-										  &algo))
+										  &group, NULL))
 		{
-			u_int16_t group = algo->algorithm;
 			SIG(CHILD_UP_FAILED, "DH group %N inacceptable, requesting %N",
 				diffie_hellman_group_names, this->dh_group,
 				diffie_hellman_group_names, group);

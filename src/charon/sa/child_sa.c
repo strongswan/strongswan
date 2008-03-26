@@ -110,12 +110,22 @@ struct private_child_sa_t {
 	/**
 	 * encryption algorithm used for this SA
 	 */
-	algorithm_t encryption;
+	u_int16_t enc_alg;
+	
+	/**
+	 * key size of enc_alg
+	 */
+	u_int16_t enc_size;
 	
 	/**
 	 * integrity protection algorithm used for this SA
 	 */
-	algorithm_t integrity;
+	u_int16_t int_alg;
+	
+	/**
+	 * key size of int_alg
+	 */
+	u_int16_t int_size;
 	
 	/**
 	 * time, on which SA was installed
@@ -246,10 +256,10 @@ static void get_stats(private_child_sa_t *this, mode_t *mode,
 	iterator->destroy(iterator);
 
 	*mode = this->mode;
-	*encr_algo = this->encryption.algorithm;
-	*encr_len = this->encryption.key_size;
-	*int_algo = this->integrity.algorithm;
-	*int_len = this->integrity.key_size;
+	*encr_algo = this->enc_alg;
+	*encr_len = this->enc_size;
+	*int_algo = this->int_alg;
+	*int_len = this->int_size;
 	*rekey = this->rekey_time;
 	*use_in = in;
 	*use_out = out;
@@ -493,10 +503,7 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 static status_t install(private_child_sa_t *this, proposal_t *proposal,
 						mode_t mode, prf_plus_t *prf_plus, bool mine)
 {
-	u_int32_t spi, soft, hard;;
-	algorithm_t *enc_algo, *int_algo;
-	algorithm_t enc_algo_none = {ENCR_UNDEFINED, 0};
-	algorithm_t int_algo_none = {AUTH_UNDEFINED, 0};
+	u_int32_t spi, soft, hard;
 	host_t *src;
 	host_t *dst;
 	status_t status;
@@ -544,43 +551,32 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 		 protocol_id_names, this->protocol);
 	
 	/* select encryption algo */
-	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_algo))
+	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
+								&this->enc_alg, &this->enc_size))
 	{
-		DBG2(DBG_CHD, "  using %N for encryption",
-			 encryption_algorithm_names, enc_algo->algorithm);
-	}
-	else
-	{
-		enc_algo = &enc_algo_none;
+		DBG2(DBG_CHD, "  using %N for encryption", 
+			 encryption_algorithm_names, this->enc_alg);
 	}
 	
 	/* select integrity algo */
-	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_algo))
+	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
+								&this->int_alg, &this->int_size))
 	{
 		DBG2(DBG_CHD, "  using %N for integrity",
-			 integrity_algorithm_names, int_algo->algorithm);
+			 integrity_algorithm_names, this->int_alg);
 	}
-	else
-	{
-		int_algo = &int_algo_none;
-	}
-	
 	soft = this->config->get_lifetime(this->config, TRUE);
 	hard = this->config->get_lifetime(this->config, FALSE);
 	
 	/* send SA down to the kernel */
 	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
-											  src, dst, spi, this->protocol,
-											  this->reqid, mine ? soft : 0,
-											  hard, enc_algo, int_algo,
-											  prf_plus, mode, this->encap, mine);
-	
-	this->encryption = *enc_algo;
-	this->integrity = *int_algo;
+				src, dst, spi, this->protocol, this->reqid, mine ? soft : 0, hard, 
+				this->enc_alg, this->enc_size, this->int_alg, this->int_size,
+				prf_plus, mode, this->encap, mine);
+					
 	this->install_time = time(NULL);
 	this->rekey_time = this->install_time + soft;
-	
 	return status;
 }
 
@@ -987,10 +983,10 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->state = CHILD_CREATED;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;
-	this->encryption.algorithm = ENCR_UNDEFINED;
-	this->encryption.key_size = 0;
-	this->integrity.algorithm = AUTH_UNDEFINED;
-	this->encryption.key_size = 0;
+	this->enc_alg = ENCR_UNDEFINED;
+	this->enc_size = 0;
+	this->int_alg = AUTH_UNDEFINED;
+	this->int_size = 0;
 	this->policies = linked_list_create();
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();

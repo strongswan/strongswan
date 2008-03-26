@@ -718,6 +718,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 		}
 		default:
 		{
+			net->destroy(net);
 			free(this);
 			return NULL;
 		}
@@ -727,6 +728,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 		this->from_port = port;
 		this->to_port = port;
 	}
+	net->destroy(net);
 	return (&this->public);
 }
 
@@ -779,12 +781,11 @@ traffic_selector_t *traffic_selector_create_from_string(
 /*
  * see header
  */
-traffic_selector_t *traffic_selector_create_dynamic(
-									u_int8_t protocol, ts_type_t type,
+traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol, 
 									u_int16_t from_port, u_int16_t to_port)
 {
-	private_traffic_selector_t *this = traffic_selector_create(protocol, type,
-															from_port, to_port);
+	private_traffic_selector_t *this = traffic_selector_create(
+							protocol, TS_IPV4_ADDR_RANGE, from_port, to_port);
 	
 	memset(this->from6, 0, sizeof(this->from6));
 	memset(this->to6, 0xFF, sizeof(this->to6));
@@ -827,4 +828,3 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 	return this;
 }
 
-/* vim: set ts=4 sw=4 noet: */

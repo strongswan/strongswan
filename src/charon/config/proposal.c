@@ -51,6 +51,7 @@ ENUM(extended_sequence_numbers_names, NO_EXT_SEQ_NUMBERS, EXT_SEQ_NUMBERS,
 );
 
 typedef struct private_proposal_t private_proposal_t;
+typedef struct algorithm_t algorithm_t;
 
 /**
  * Private data of an proposal_t object
@@ -99,9 +100,24 @@ struct private_proposal_t {
 };
 
 /**
+ * Struct used to store different kinds of algorithms. 
+ */
+struct algorithm_t {
+	/**
+	 * Value from an encryption_algorithm_t/integrity_algorithm_t/...
+	 */
+	u_int16_t algorithm;
+	
+	/**
+	 * the associated key size in bits, or zero if not needed
+	 */
+	u_int16_t key_size;
+};
+
+/**
  * Add algorithm/keysize to a algorithm list
  */
-static void add_algo(linked_list_t *list, u_int16_t algo, size_t key_size)
+static void add_algo(linked_list_t *list, u_int16_t algo, u_int16_t key_size)
 {
 	algorithm_t *algo_key;
 	
@@ -114,7 +130,8 @@ static void add_algo(linked_list_t *list, u_int16_t algo, size_t key_size)
 /**
  * Implements proposal_t.add_algorithm
  */
-static void add_algorithm(private_proposal_t *this, transform_type_t type, u_int16_t algo, size_t key_size)
+static void add_algorithm(private_proposal_t *this, transform_type_t type,
+						  u_int16_t algo, u_int16_t key_size)
 {
 	switch (type)
 	{
@@ -139,41 +156,68 @@ static void add_algorithm(private_proposal_t *this, transform_type_t type, u_int
 }
 
 /**
- * Implements proposal_t.create_algorithm_iterator.
+ * filter function for peer configs
  */
-static iterator_t *create_algorithm_iterator(private_proposal_t *this, transform_type_t type)
+static bool alg_filter(void *null, algorithm_t **in, u_int16_t *alg,
+					   void **unused, u_int16_t *key_size)
 {
+	algorithm_t *algo = *in;
+	*alg = algo->algorithm;
+	if (key_size)
+	{
+		*key_size = algo->key_size;
+	}
+	return TRUE;
+}
+
+/**
+ * Implements proposal_t.create_enumerator.
+ */
+static enumerator_t *create_enumerator(private_proposal_t *this,
+									   transform_type_t type)
+{
+	linked_list_t *list;
+
 	switch (type)
 	{
 		case ENCRYPTION_ALGORITHM:
-			return this->encryption_algos->create_iterator(this->encryption_algos, TRUE);
-		case INTEGRITY_ALGORITHM:
-			return this->integrity_algos->create_iterator(this->integrity_algos, TRUE);
-		case PSEUDO_RANDOM_FUNCTION:
-			return this->prf_algos->create_iterator(this->prf_algos, TRUE);
-		case DIFFIE_HELLMAN_GROUP:
-			return this->dh_groups->create_iterator(this->dh_groups, TRUE);
-		case EXTENDED_SEQUENCE_NUMBERS:
-			return this->esns->create_iterator(this->esns, TRUE);
-		default:
+			list = this->encryption_algos;
 			break;
+		case INTEGRITY_ALGORITHM:
+			list = this->integrity_algos;
+			break;
+		case PSEUDO_RANDOM_FUNCTION:
+			list = this->prf_algos;
+			break;
+		case DIFFIE_HELLMAN_GROUP:
+			list = this->dh_groups;
+			break;
+		case EXTENDED_SEQUENCE_NUMBERS:
+			list = this->esns;
+			break;
+		default:
+			return NULL;
 	}
-	return NULL;
+	return enumerator_create_filter(list->create_enumerator(list),
+									(void*)alg_filter, NULL, NULL);
 }
 
 /**
  * Implements proposal_t.get_algorithm.
  */
-static bool get_algorithm(private_proposal_t *this, transform_type_t type, algorithm_t** algo)
+static bool get_algorithm(private_proposal_t *this, transform_type_t type,
+						  u_int16_t *alg, u_int16_t *key_size)
 {
-	iterator_t *iterator = create_algorithm_iterator(this, type);
-	if (iterator->iterate(iterator, (void**)algo))
+	enumerator_t *enumerator;
+	bool found = FALSE;
+	
+	enumerator = create_enumerator(this, type);
+	if (enumerator->enumerate(enumerator, alg, key_size))
 	{
-		iterator->destroy(iterator);
-		return TRUE;
+		found = TRUE;
 	}
-	iterator->destroy(iterator);
-	return FALSE;
+	enumerator->destroy(enumerator);
+	return found;
 }
 
 /**
@@ -181,14 +225,15 @@ static bool get_algorithm(private_proposal_t *this, transform_type_t type, algor
  */
 static bool has_dh_group(private_proposal_t *this, diffie_hellman_group_t group)
 {
-	algorithm_t *current;
-	iterator_t *iterator;
 	bool result = FALSE;
 	
-	iterator = this->dh_groups->create_iterator(this->dh_groups, TRUE);
-	if (iterator->get_count(iterator))
+	if (this->dh_groups->get_count(this->dh_groups))
 	{
-		while (iterator->iterate(iterator, (void**)&current))
+		algorithm_t *current;
+		enumerator_t *enumerator;
+		
+		enumerator = this->dh_groups->create_enumerator(this->dh_groups);
+		while (enumerator->enumerate(enumerator, (void**)&current))
 		{
 			if (current->algorithm == group)
 			{
@@ -196,22 +241,36 @@ static bool has_dh_group(private_proposal_t *this, diffie_hellman_group_t group)
 				break;
 			}
 		}
+		enumerator->destroy(enumerator);
 	}
 	else if (group == MODP_NONE)
 	{
 		result = TRUE;
 	}
-	iterator->destroy(iterator);
 	return result;
+}
+
+/**
+ * Implementation of proposal_t.strip_dh.
+ */
+static void strip_dh(private_proposal_t *this)
+{
+	algorithm_t *alg;
+	
+	while (this->dh_groups->remove_last(this->dh_groups, (void**)&alg) == SUCCESS)
+	{
+		free(alg);
+	}
 }
 
 /**
  * Find a matching alg/keysize in two linked lists
  */
-static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add, u_int16_t *alg, size_t *key_size)
+static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add,
+						u_int16_t *alg, size_t *key_size)
 {
-	iterator_t *first_iter, *second_iter;
-	algorithm_t *first_alg, *second_alg;
+	enumerator_t *e1, *e2;
+	algorithm_t *alg1, *alg2;
 	
 	/* if in both are zero algorithms specified, we HAVE a match */
 	if (first->get_count(first) == 0 && second->get_count(second) == 0)
@@ -220,30 +279,31 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add, 
 		return TRUE;
 	}
 	
-	first_iter = first->create_iterator(first, TRUE);
-	second_iter = second->create_iterator(second, TRUE);
+	e1 = first->create_enumerator(first);
+	e2 = second->create_enumerator(second);
 	/* compare algs, order of algs in "first" is preferred */
-	while (first_iter->iterate(first_iter, (void**)&first_alg))
+	while (e1->enumerate(e1, &alg1))
 	{
-		second_iter->reset(second_iter);
-		while (second_iter->iterate(second_iter, (void**)&second_alg))
+		e2->destroy(e2);
+		e2 = second->create_enumerator(second);
+		while (e2->enumerate(e2, &alg2))
 		{
-			if (first_alg->algorithm == second_alg->algorithm &&
-				first_alg->key_size == second_alg->key_size)
+			if (alg1->algorithm == alg2->algorithm &&
+				alg1->key_size == alg2->key_size)
 			{
 				/* ok, we have an algorithm */
-				*alg = first_alg->algorithm;
-				*key_size = first_alg->key_size;
+				*alg = alg1->algorithm;
+				*key_size = alg1->key_size;
 				*add = TRUE;
-				first_iter->destroy(first_iter);
-				second_iter->destroy(second_iter);
+				e1->destroy(e1);
+				e2->destroy(e2);
 				return TRUE;
 			}
 		}
 	}
 	/* no match in all comparisons */
-	first_iter->destroy(first_iter);
-	second_iter->destroy(second_iter);
+	e1->destroy(e1);
+	e2->destroy(e2);
 	return FALSE;
 }
 
@@ -377,14 +437,67 @@ static u_int64_t get_spi(private_proposal_t *this)
 static void clone_algo_list(linked_list_t *list, linked_list_t *clone_list)
 {
 	algorithm_t *algo, *clone_algo;
-	iterator_t *iterator = list->create_iterator(list, TRUE);
-	while (iterator->iterate(iterator, (void**)&algo))
+	enumerator_t *enumerator;
+	
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &algo))
 	{
 		clone_algo = malloc_thing(algorithm_t);
 		memcpy(clone_algo, algo, sizeof(algorithm_t));
 		clone_list->insert_last(clone_list, (void*)clone_algo);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * check if an algorithm list equals
+ */
+static bool algo_list_equals(linked_list_t *l1, linked_list_t *l2)
+{
+	enumerator_t *e1, *e2;
+	algorithm_t *alg1, *alg2;
+	bool equals = TRUE;
+	
+	if (l1->get_count(l1) != l2->get_count(l2))
+	{
+		return FALSE;
+	}
+	
+	e1 = l1->create_enumerator(l1);
+	e2 = l2->create_enumerator(l2);
+	while (e1->enumerate(e1, &alg1) && e2->enumerate(e2, &alg2))
+	{
+		if (alg1->algorithm != alg2->algorithm ||
+			alg1->key_size != alg2->key_size)
+		{
+			equals = FALSE;
+			break;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+	return equals;
+}
+
+/**
+ * Implementation of proposal_t.equals.
+ */
+static bool equals(private_proposal_t *this, private_proposal_t *other)
+{
+	if (this == other)
+	{
+		return TRUE;
+	}
+	if (this->public.equals != other->public.equals)
+	{
+		return FALSE;
+	}
+	return (
+		algo_list_equals(this->encryption_algos, other->encryption_algos) &&
+		algo_list_equals(this->integrity_algos, other->integrity_algos) &&
+		algo_list_equals(this->prf_algos, other->prf_algos) &&
+		algo_list_equals(this->dh_groups, other->dh_groups) &&
+		algo_list_equals(this->esns, other->esns));
 }
 
 /**
@@ -548,14 +661,16 @@ proposal_t *proposal_create(protocol_id_t protocol)
 {
 	private_proposal_t *this = malloc_thing(private_proposal_t);
 	
-	this->public.add_algorithm = (void (*)(proposal_t*,transform_type_t,u_int16_t,size_t))add_algorithm;
-	this->public.create_algorithm_iterator = (iterator_t* (*)(proposal_t*,transform_type_t))create_algorithm_iterator;
-	this->public.get_algorithm = (bool (*)(proposal_t*,transform_type_t,algorithm_t**))get_algorithm;
+	this->public.add_algorithm = (void (*)(proposal_t*,transform_type_t,u_int16_t,u_int16_t))add_algorithm;
+	this->public.create_enumerator = (enumerator_t* (*)(proposal_t*,transform_type_t))create_enumerator;
+	this->public.get_algorithm = (bool (*)(proposal_t*,transform_type_t,u_int16_t*,u_int16_t*))get_algorithm;
 	this->public.has_dh_group = (bool (*)(proposal_t*,diffie_hellman_group_t))has_dh_group;
+	this->public.strip_dh = (void(*)(proposal_t*))strip_dh;
 	this->public.select = (proposal_t* (*)(proposal_t*,proposal_t*))select_proposal;
 	this->public.get_protocol = (protocol_id_t(*)(proposal_t*))get_protocol;
 	this->public.set_spi = (void(*)(proposal_t*,u_int64_t))set_spi;
 	this->public.get_spi = (u_int64_t(*)(proposal_t*))get_spi;
+	this->public.equals = (bool(*)(proposal_t*, proposal_t *other))equals;
 	this->public.clone = (proposal_t*(*)(proposal_t*))clone_;
 	this->public.destroy = (void(*)(proposal_t*))destroy;
 	

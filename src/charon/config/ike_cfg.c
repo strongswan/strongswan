@@ -165,22 +165,62 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
  */
 static diffie_hellman_group_t get_dh_group(private_ike_cfg_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	proposal_t *proposal;
-	algorithm_t *algo;
-	diffie_hellman_group_t dh_group = MODP_NONE;
+	u_int16_t dh_group = MODP_NONE;
 	
-	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->iterate(iterator, (void**)&proposal))
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &algo))
+		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
 		{
-			dh_group = algo->algorithm;
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return dh_group;
+}
+
+/**
+ * Implementation of ike_cfg_t.equals.
+ */
+static bool equals(private_ike_cfg_t *this, private_ike_cfg_t *other)
+{
+	enumerator_t *e1, *e2;
+	proposal_t *p1, *p2;
+	bool eq = TRUE;
+	
+	if (this == other)
+	{
+		return TRUE;
+	}
+	if (this->public.equals != other->public.equals)
+	{
+		return FALSE;
+	}
+	if (this->proposals->get_count(this->proposals) !=
+		other->proposals->get_count(other->proposals))
+	{
+		return FALSE;
+	}
+	e1 = this->proposals->create_enumerator(this->proposals);
+	e2 = this->proposals->create_enumerator(this->proposals);
+	while (e1->enumerate(e1, &p1) && e2->enumerate(e2, &p2))
+	{
+		if (!p1->equals(p1, p2))
+		{
+			eq = FALSE;
+			break;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+
+	return (eq &&
+		this->certreq == other->certreq &&
+		this->force_encap == other->force_encap &&
+		this->my_host->equals(this->my_host, other->my_host) &&
+		this->other_host->equals(this->other_host, other->other_host));
 }
 
 /**
@@ -223,6 +263,7 @@ ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 	this->public.get_proposals = (linked_list_t*(*)(ike_cfg_t*))get_proposals;
 	this->public.select_proposal = (proposal_t*(*)(ike_cfg_t*,linked_list_t*))select_proposal;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(ike_cfg_t*)) get_dh_group;
+	this->public.equals = (bool(*)(ike_cfg_t*,ike_cfg_t*)) equals;
 	this->public.get_ref = (void(*)(ike_cfg_t*))get_ref;
 	this->public.destroy = (void(*)(ike_cfg_t*))destroy;
 	

@@ -319,6 +319,16 @@ struct peer_cfg_t {
 	 */
 	identification_t* (*get_peer_id) (peer_cfg_t *this);
 #endif /* P2P */
+
+	/**
+	 * Check if two peer configurations are equal.
+	 *
+	 * This method does not compare associated ike/child_cfg.
+	 *
+	 * @param other			candidate to check for equality against this
+	 * @return				TRUE if peer_cfg and ike_cfg are equal
+	 */
+	bool (*equals)(peer_cfg_t *this, peer_cfg_t *other);
 	
 	/**
 	 * Get a new reference.

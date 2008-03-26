@@ -114,42 +114,25 @@ static void add_proposal(private_child_cfg_t *this, proposal_t *proposal)
 }
 
 /**
- * strip out DH groups from a proposal
- */
-static void strip_dh_from_proposal(proposal_t *proposal)
-{
-	iterator_t *iterator;
-	algorithm_t *algo;
-	
-	iterator = proposal->create_algorithm_iterator(proposal, DIFFIE_HELLMAN_GROUP);
-	while (iterator->iterate(iterator, (void**)&algo))
-	{
-		iterator->remove(iterator);
-		free(algo);
-	}
-	iterator->destroy(iterator);
-}
-
-/**
  * Implementation of child_cfg_t.get_proposals
  */
 static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	proposal_t *current;
 	linked_list_t *proposals = linked_list_create();
 	
-	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &current))
 	{
 		current = current->clone(current);
 		if (strip_dh)
 		{
-			strip_dh_from_proposal(current);
+			current->strip_dh(current);
 		}
 		proposals->insert_last(proposals, current);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	return proposals;
 }
@@ -160,22 +143,21 @@ static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 static proposal_t* select_proposal(private_child_cfg_t*this,
 								   linked_list_t *proposals, bool strip_dh)
 {
-	iterator_t *stored_iter, *supplied_iter;
+	enumerator_t *stored_enum, *supplied_enum;
 	proposal_t *stored, *supplied, *selected = NULL;
 	
-	stored_iter = this->proposals->create_iterator(this->proposals, TRUE);
-	supplied_iter = proposals->create_iterator(proposals, TRUE);
+	stored_enum = this->proposals->create_enumerator(this->proposals);
+	supplied_enum = proposals->create_enumerator(proposals);
 	
 	/* compare all stored proposals with all supplied. Stored ones are preferred. */
-	while (stored_iter->iterate(stored_iter, (void**)&stored))
+	while (stored_enum->enumerate(stored_enum, &stored))
 	{
 		stored = stored->clone(stored);
-		supplied_iter->reset(supplied_iter);
-		while (supplied_iter->iterate(supplied_iter, (void**)&supplied))
+		while (supplied_enum->enumerate(supplied_enum, &supplied))
 		{
 			if (strip_dh)
 			{
-				strip_dh_from_proposal(stored);
+				stored->strip_dh(stored);
 			}
 			selected = stored->select(stored, supplied);
 			if (selected)
@@ -188,9 +170,11 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 		{
 			break;
 		}
+		supplied_enum->destroy(supplied_enum);
+		supplied_enum = proposals->create_enumerator(proposals);	
 	}
-	stored_iter->destroy(stored_iter);
-	supplied_iter->destroy(supplied_iter);
+	stored_enum->destroy(stored_enum);
+	supplied_enum->destroy(supplied_enum);
 	return selected;
 }
 
@@ -217,17 +201,17 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 											linked_list_t *supplied,
 											host_t *host)
 {
-	iterator_t *i1, *i2;
+	enumerator_t *e1, *e2;
 	traffic_selector_t *ts1, *ts2, *selected;
 	linked_list_t *result = linked_list_create();
 	
 	if (local)
 	{
-		i1 = this->my_ts->create_iterator(this->my_ts, TRUE);
+		e1 = this->my_ts->create_enumerator(this->my_ts);
 	}
 	else
 	{
-		i1 = this->other_ts->create_iterator(this->other_ts, FALSE);
+		e1 = this->other_ts->create_enumerator(this->other_ts);
 	}
 	
 	/* no list supplied, just fetch the stored traffic selectors */
@@ -235,7 +219,7 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 	{
 		DBG2(DBG_CFG, "proposing traffic selectors for %s:", 
 			 local ? "us" : "other");
-		while (i1->iterate(i1, (void**)&ts1))
+		while (e1->enumerate(e1, &ts1))
 		{
 			/* we make a copy of the TS, this allows us to update dynamic TS' */
 			selected = ts1->clone(ts1);
@@ -246,15 +230,15 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 			DBG2(DBG_CFG, " %R (derived from %R)", selected, ts1);
 			result->insert_last(result, selected);
 		}
-		i1->destroy(i1);
+		e1->destroy(e1);
 	}
 	else
 	{
 		DBG2(DBG_CFG, "selecting traffic selectors for %s:", 
 			 local ? "us" : "other");
-		i2 = supplied->create_iterator(supplied, TRUE);
+		e2 = supplied->create_enumerator(supplied);
 		/* iterate over all stored selectors */
-		while (i1->iterate(i1, (void**)&ts1))
+		while (e1->enumerate(e1, &ts1))
 		{
 			/* we make a copy of the TS, as we have to update dynamic TS' */
 			ts1 = ts1->clone(ts1);
@@ -263,9 +247,8 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 				ts1->set_address(ts1, host);
 			}
 			
-			i2->reset(i2);
 			/* iterate over all supplied traffic selectors */
-			while (i2->iterate(i2, (void**)&ts2))
+			while (e2->enumerate(e2, &ts2))
 			{
 				selected = ts1->get_subset(ts1, ts2);
 				if (selected)
@@ -280,40 +263,44 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 						 ts1, ts2, selected);
 				}
 			}
+			e2->destroy(e2);
+			e2 = supplied->create_enumerator(supplied);
 			ts1->destroy(ts1);
 		}
-		i1->destroy(i1);
-		i2->destroy(i2);
+		e1->destroy(e1);
+		e2->destroy(e2);
 	}
 	
 	/* remove any redundant traffic selectors in the list */
-	i1 = result->create_iterator(result, TRUE);
-	i2 = result->create_iterator(result, TRUE);
-	while (i1->iterate(i1, (void**)&ts1))
+	e1 = result->create_enumerator(result);
+	e2 = result->create_enumerator(result);
+	while (e1->enumerate(e1, &ts1))
 	{
-		while (i2->iterate(i2, (void**)&ts2))
+		while (e2->enumerate(e2, &ts2))
 		{
 			if (ts1 != ts2)
 			{
 				if (ts2->is_contained_in(ts2, ts1))
 				{
-					i2->remove(i2);
+					result->remove_at(result, e2);
 					ts2->destroy(ts2);
-					i1->reset(i1);
+					e1->destroy(e1);
+					e1 = result->create_enumerator(result);
 					break;
 				}
 				if (ts1->is_contained_in(ts1, ts2))
 				{
-					i1->remove(i1);
+					result->remove_at(result, e1);
 					ts1->destroy(ts1);
-					i2->reset(i2);
+					e2->destroy(e2);
+					e2 = result->create_enumerator(result);
 					break;
 				}
 			}
 		}
 	}
-	i1->destroy(i1);
-	i2->destroy(i2);
+	e1->destroy(e1);
+	e2->destroy(e2);
 	
 	return result;
 }
@@ -363,21 +350,19 @@ static mode_t get_mode(private_child_cfg_t *this)
  */
 static diffie_hellman_group_t get_dh_group(private_child_cfg_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	proposal_t *proposal;
-	algorithm_t *algo;
-	diffie_hellman_group_t dh_group = MODP_NONE;
+	u_int16_t dh_group = MODP_NONE;
 	
-	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->iterate(iterator, (void**)&proposal))
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &algo))
+		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
 		{
-			dh_group = algo->algorithm;
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return dh_group;
 }
 

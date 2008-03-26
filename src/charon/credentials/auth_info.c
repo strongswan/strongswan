@@ -26,12 +26,14 @@
 ENUM(auth_item_names, AUTHN_CA_CERT, AUTHZ_AC_GROUP,
 	"AUTHN_CA_CERT",
 	"AUTHN_CA_CERT_KEYID",
+	"AUTHN_CA_CERT_NAME",
 	"AUTHN_IM_CERT",
 	"AUTHN_SUBJECT_CERT",
 	"AUTHZ_PUBKEY",
 	"AUTHZ_PSK",
 	"AUTHZ_EAP",
 	"AUTHZ_CA_CERT",
+	"AUTHZ_CA_CERT_NAME",
 	"AUTHZ_IM_CERT",
 	"AUTHZ_SUBJECT_CERT",
 	"AUTHZ_CRL_VALIDATION",
@@ -164,6 +166,8 @@ static void add_item(private_auth_info_t *this, auth_item_t type, void *value)
 			break;
 		}
 		case AUTHN_CA_CERT_KEYID:
+		case AUTHN_CA_CERT_NAME:
+		case AUTHZ_CA_CERT_NAME:
 		case AUTHZ_AC_GROUP:
 		{
 			identification_t *id = (identification_t*)value;
@@ -193,6 +197,7 @@ static bool complies(private_auth_info_t *this, auth_info_t *constraints)
 		{
 			case AUTHN_CA_CERT_KEYID:
 			case AUTHN_CA_CERT:
+			case AUTHN_CA_CERT_NAME:
 			case AUTHN_IM_CERT:
 			case AUTHN_SUBJECT_CERT:
 			{	/* skip non-authorization tokens */
@@ -237,6 +242,7 @@ static bool complies(private_auth_info_t *this, auth_info_t *constraints)
 				}
 				break;
 			}
+			case AUTHZ_CA_CERT_NAME:
 			case AUTHZ_PUBKEY:
 			case AUTHZ_PSK:
 			case AUTHZ_IM_CERT:
@@ -285,6 +291,97 @@ static void merge(private_auth_info_t *this, private_auth_info_t *other)
 }
 
 /**
+ * Implementation of auth_info_t.equals.
+ */
+static bool equals(private_auth_info_t *this, private_auth_info_t *other)
+{
+	enumerator_t *e1, *e2;
+	item_t *i1, *i2;
+	bool equal = TRUE, found;
+	
+	e1 = this->items->create_enumerator(this->items);
+	while (e1->enumerate(e1, &i1))
+	{
+		found = FALSE;
+		e2 = this->items->create_enumerator(this->items);
+		while (e2->enumerate(e2, &i2))
+		{
+			if (i1->type == i2->type)
+			{
+				switch (i1->type)
+				{
+					case AUTHZ_CRL_VALIDATION:
+					case AUTHZ_OCSP_VALIDATION:
+					{
+						cert_validation_t c1, c2;
+						
+						c1 = *(cert_validation_t*)i1->value;
+						c2 = *(cert_validation_t*)i2->value;
+					
+						if (c1 == c2)
+						{
+							found = TRUE;
+							break;
+						}
+						continue;
+					}
+					case AUTHN_CA_CERT:
+					case AUTHN_IM_CERT:
+					case AUTHN_SUBJECT_CERT:
+					case AUTHZ_CA_CERT:
+					case AUTHZ_IM_CERT:
+					case AUTHZ_SUBJECT_CERT:
+					{
+						certificate_t *c1, *c2;
+						
+						c1 = (certificate_t*)i1->value;
+						c2 = (certificate_t*)i2->value;
+					
+						if (c1->equals(c1, c2))
+						{
+							found = TRUE;
+							break;
+						}
+						continue;
+					}
+					case AUTHN_CA_CERT_KEYID:
+					case AUTHN_CA_CERT_NAME:
+					case AUTHZ_CA_CERT_NAME:
+					{
+						identification_t *c1, *c2;
+						
+						c1 = (identification_t*)i1->value;
+						c2 = (identification_t*)i2->value;
+					
+						if (c1->equals(c1, c2))
+						{
+							found = TRUE;
+							break;
+						}
+						continue;
+					}
+					case AUTHZ_PUBKEY:
+					case AUTHZ_PSK:
+					case AUTHZ_EAP:
+					case AUTHZ_AC_GROUP:
+						/* TODO: implement value comparison */
+						break;
+				}
+				break;
+			}
+		}
+		e2->destroy(e2);
+		if (!found)
+		{
+			equal = FALSE;
+			break;
+		}
+	}
+	e1->destroy(e1);
+	return equal;
+}
+
+/**
  * Implementation of auth_info_t.destroy
  */
 static void destroy(private_auth_info_t *this)
@@ -326,6 +423,8 @@ static void destroy(private_auth_info_t *this)
 				break;
 			}
 			case AUTHN_CA_CERT_KEYID:
+			case AUTHN_CA_CERT_NAME:
+			case AUTHZ_CA_CERT_NAME:
 			case AUTHZ_AC_GROUP:
 			{
 				identification_t *id = (identification_t*)item->value;
@@ -351,6 +450,7 @@ auth_info_t *auth_info_create()
 	this->public.create_item_enumerator = (enumerator_t*(*)(auth_info_t*))create_item_enumerator;
 	this->public.complies = (bool(*)(auth_info_t*, auth_info_t *))complies;
 	this->public.merge = (void(*)(auth_info_t*, auth_info_t *other))merge;
+	this->public.equals = (bool(*)(auth_info_t*, auth_info_t *other))equals;
 	this->public.destroy = (void(*)(auth_info_t*))destroy;
 	
 	this->items = linked_list_create();

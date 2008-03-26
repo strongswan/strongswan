@@ -1639,8 +1639,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 {
 	prf_plus_t *prf_plus;
 	chunk_t skeyseed, key, nonces, prf_plus_seed;
-	algorithm_t *algo;
-	size_t key_size;
+	u_int16_t alg, key_size;
 	crypter_t *crypter_i, *crypter_r;
 	signer_t *signer_i, *signer_r;
 	u_int8_t spi_i_buf[sizeof(u_int64_t)], spi_r_buf[sizeof(u_int64_t)];
@@ -1648,18 +1647,18 @@ static status_t derive_keys(private_ike_sa_t *this,
 	chunk_t spi_r = chunk_from_buf(spi_r_buf);
 	
 	/* Create SAs general purpose PRF first, we may use it here */
-	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo))
+	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL))
 	{
 		DBG1(DBG_IKE, "no %N selected",
 			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
 		return FAILED;
 	}
-	this->prf = lib->crypto->create_prf(lib->crypto, algo->algorithm);
+	this->prf = lib->crypto->create_prf(lib->crypto, alg);
 	if (this->prf == NULL)
 	{
 		DBG1(DBG_IKE, "%N %N not supported!",
 			 transform_type_names, PSEUDO_RANDOM_FUNCTION,
-			 pseudo_random_function_names, algo->algorithm);
+			 pseudo_random_function_names, alg);
 		return FAILED;
 	}
 	
@@ -1702,8 +1701,8 @@ static status_t derive_keys(private_ike_sa_t *this,
 	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr */
 	
 	/* SK_d is used for generating CHILD_SA key mat => child_prf */
-	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
-	this->child_prf = lib->crypto->create_prf(lib->crypto, algo->algorithm);
+	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL);
+	this->child_prf = lib->crypto->create_prf(lib->crypto, alg);
 	key_size = this->child_prf->get_key_size(this->child_prf);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_d secret %B", &key);
@@ -1711,19 +1710,19 @@ static status_t derive_keys(private_ike_sa_t *this,
 	chunk_free(&key);
 	
 	/* SK_ai/SK_ar used for integrity protection => signer_in/signer_out */
-	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo))
+	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
 	{
 		DBG1(DBG_IKE, "no %N selected",
 			 transform_type_names, INTEGRITY_ALGORITHM);
 		return FAILED;
 	}
-	signer_i = lib->crypto->create_signer(lib->crypto, algo->algorithm);
-	signer_r = lib->crypto->create_signer(lib->crypto, algo->algorithm);
+	signer_i = lib->crypto->create_signer(lib->crypto, alg);
+	signer_r = lib->crypto->create_signer(lib->crypto, alg);
 	if (signer_i == NULL || signer_r == NULL)
 	{
 		DBG1(DBG_IKE, "%N %N not supported!",
 			 transform_type_names, INTEGRITY_ALGORITHM,
-			 integrity_algorithm_names ,algo->algorithm);
+			 integrity_algorithm_names ,alg);
 		prf_plus->destroy(prf_plus);
 		return FAILED;
 	}
@@ -1751,22 +1750,20 @@ static status_t derive_keys(private_ike_sa_t *this,
 	}
 	
 	/* SK_ei/SK_er used for encryption => crypter_in/crypter_out */
-	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo))
+	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &key_size))
 	{
 		DBG1(DBG_IKE, "no %N selected",
 			 transform_type_names, ENCRYPTION_ALGORITHM);
 		prf_plus->destroy(prf_plus);
 		return FAILED;
 	}
-	crypter_i = lib->crypto->create_crypter(lib->crypto, algo->algorithm,
-											algo->key_size / 8);
-	crypter_r = lib->crypto->create_crypter(lib->crypto, algo->algorithm,
-											algo->key_size / 8);
+	crypter_i = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
+	crypter_r = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
 	if (crypter_i == NULL || crypter_r == NULL)
 	{
 		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
 			 transform_type_names, ENCRYPTION_ALGORITHM,
-			 encryption_algorithm_names, algo->algorithm, algo->key_size);
+			 encryption_algorithm_names, alg, key_size);
 		prf_plus->destroy(prf_plus);
 		return FAILED;
 	}

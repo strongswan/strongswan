@@ -146,19 +146,15 @@ kernel_algorithm_t integrity_algs[] = {
  * Look up a kernel algorithm name and its key size
  */
 char* lookup_algorithm(kernel_algorithm_t *kernel_algo, 
-					   algorithm_t *ikev2_algo, u_int *key_size)
+					   u_int16_t ikev2_algo, u_int16_t *key_size)
 {
 	while (kernel_algo->ikev2_id != END_OF_LIST)
 	{
-		if (ikev2_algo->algorithm == kernel_algo->ikev2_id)
+		if (ikev2_algo == kernel_algo->ikev2_id)
 		{
 			/* match, evaluate key length */
-			if (ikev2_algo->key_size)
-			{	/* variable length */
-				*key_size = ikev2_algo->key_size;
-			}
-			else
-			{	/* fixed length */
+			if (*key_size == 0)
+			{	/* update key size of not set */
 				*key_size = kernel_algo->key_size;
 			}
 			return kernel_algo->name;
@@ -1901,13 +1897,13 @@ static status_t add_sa(private_kernel_interface_t *this,
 					   host_t *src, host_t *dst, u_int32_t spi,
 					   protocol_id_t protocol, u_int32_t reqid,
 					   u_int64_t expire_soft, u_int64_t expire_hard,
-					   algorithm_t *enc_alg, algorithm_t *int_alg,
+					   u_int16_t enc_alg, u_int16_t enc_size,
+					   u_int16_t int_alg, u_int16_t int_size,
 					   prf_plus_t *prf_plus, mode_t mode, bool encap,
 					   bool replace)
 {
 	unsigned char request[BUFFER_SIZE];
 	char *alg_name;
-	u_int key_size;
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
 	
@@ -1942,20 +1938,20 @@ static status_t add_sa(private_kernel_interface_t *this,
 	
 	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_usersa_info);
 	
-	if (enc_alg->algorithm != ENCR_UNDEFINED)
+	if (enc_alg != ENCR_UNDEFINED)
 	{
 		rthdr->rta_type = XFRMA_ALG_CRYPT;
-		alg_name = lookup_algorithm(encryption_algs, enc_alg, &key_size);
+		alg_name = lookup_algorithm(encryption_algs, enc_alg, &enc_size);
 		if (alg_name == NULL)
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
-				 encryption_algorithm_names, enc_alg->algorithm);
+				 encryption_algorithm_names, enc_alg);
 			return FAILED;
 		}
 		DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
-			 encryption_algorithm_names, enc_alg->algorithm, key_size);
+			 encryption_algorithm_names, enc_alg, enc_size);
 		
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + key_size);
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + enc_size);
 		hdr->nlmsg_len += rthdr->rta_len;
 		if (hdr->nlmsg_len > sizeof(request))
 		{
@@ -1963,27 +1959,27 @@ static status_t add_sa(private_kernel_interface_t *this,
 		}
 		
 		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
-		algo->alg_key_len = key_size;
+		algo->alg_key_len = enc_size;
 		strcpy(algo->alg_name, alg_name);
-		prf_plus->get_bytes(prf_plus, key_size / 8, algo->alg_key);
+		prf_plus->get_bytes(prf_plus, enc_size / 8, algo->alg_key);
 		
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 	
-	if (int_alg->algorithm  != AUTH_UNDEFINED)
+	if (int_alg  != AUTH_UNDEFINED)
 	{
 		rthdr->rta_type = XFRMA_ALG_AUTH;
-		alg_name = lookup_algorithm(integrity_algs, int_alg, &key_size);
+		alg_name = lookup_algorithm(integrity_algs, int_alg, &int_size);
 		if (alg_name == NULL)
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!", 
-				 integrity_algorithm_names, int_alg->algorithm);
+				 integrity_algorithm_names, int_alg);
 			return FAILED;
 		}
 		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
-			 integrity_algorithm_names, int_alg->algorithm, key_size);
+			 integrity_algorithm_names, int_alg, int_size);
 		
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + key_size);
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + int_size);
 		hdr->nlmsg_len += rthdr->rta_len;
 		if (hdr->nlmsg_len > sizeof(request))
 		{
@@ -1991,9 +1987,9 @@ static status_t add_sa(private_kernel_interface_t *this,
 		}
 		
 		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
-		algo->alg_key_len = key_size;
+		algo->alg_key_len = int_size;
 		strcpy(algo->alg_name, alg_name);
-		prf_plus->get_bytes(prf_plus, key_size / 8, algo->alg_key);
+		prf_plus->get_bytes(prf_plus, int_size / 8, algo->alg_key);
 		
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
@@ -2592,7 +2588,7 @@ kernel_interface_t *kernel_interface_create()
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,mode_t,bool,bool))add_sa;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,u_int16_t,u_int16_t,u_int16_t,prf_plus_t*,mode_t,bool,bool))add_sa;
 	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
 	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
