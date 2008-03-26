@@ -18,7 +18,7 @@
 #include <stdio.h>
 
 #include <debug.h>
-#include <crypto/signers/hmac_signer.h>
+#include <crypto/signers/signer.h>
 #include "fips.h"
 
 extern const u_char FIPS_rodata_start[];
@@ -56,7 +56,7 @@ bool fips_compute_hmac_signature(const char *key, char *signature)
     DBG1("  RODATA: %p + %6d = %p",
 			FIPS_rodata_start, (int)rodata_len, FIPS_rodata_end);
 
-    signer = (signer_t *)hmac_signer_create(HASH_SHA1, HASH_SIZE_SHA1);
+    signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_SHA1_128);
 	if (signer == NULL)
 	{
 	    DBG1("  SHA-1 HMAC signer could not be created");

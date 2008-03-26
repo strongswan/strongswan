@@ -26,6 +26,10 @@ int main(int argc, char* argv[])
 	char *hmac_key = "strongSwan Version " VERSION;
 	char  hmac_signature[BUF_LEN];
 
+	/* initialize library */
+	library_init(IPSEC_DIR "/strongswan.conf");
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
+
 	if (!fips_compute_hmac_signature(hmac_key, hmac_signature))
 	{
 		exit(1);
@@ -54,5 +58,7 @@ int main(int argc, char* argv[])
 	fprintf(f, "\n");
 	fprintf(f, "#endif /* FIPS_SIGNATURE_H_ @} */\n");
 	fclose(f);
+
+	library_deinit();
 	exit(0);
 }
