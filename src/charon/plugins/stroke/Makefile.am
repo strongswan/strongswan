@@ -12,6 +12,7 @@ libcharon_stroke_la_SOURCES = stroke_plugin.h stroke_plugin.c \
   stroke_cred.h stroke_cred.c \
   stroke_ca.h stroke_ca.c \
   stroke_list.h stroke_list.c \
-  stroke_shared_key.h stroke_shared_key.c \
+  stroke_shared_key.h stroke_shared_key.c
+
 libcharon_stroke_la_LDFLAGS = -module
 
