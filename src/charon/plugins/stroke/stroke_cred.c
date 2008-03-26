@@ -204,7 +204,7 @@ static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
 	{
 		if (trusted)
 		{
-			return FALSE;
+			return NULL;
 		}
 		
 		data = malloc_thing(id_data_t);

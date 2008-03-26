@@ -425,7 +425,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	else
 	{
 		/* no peer ID supplied, assume right ID */
-		peer_id = other_id->clone(other_id);
+		peer_id = other->clone(other);
 	}
 #endif /* P2P */
 	
