@@ -187,13 +187,13 @@ static bool complies(private_auth_info_t *this, auth_info_t *constraints)
 {
 	enumerator_t *enumerator;
 	bool success = TRUE;
-	auth_item_t type;
+	auth_item_t t1, t2;
 	void *value;
 	
 	enumerator = constraints->create_item_enumerator(constraints);
-	while (enumerator->enumerate(enumerator, &type, &value))
+	while (enumerator->enumerate(enumerator, &t1, &value))
 	{
-		switch (type)
+		switch (t1)
 		{
 			case AUTHN_CA_CERT_KEYID:
 			case AUTHN_CA_CERT:
@@ -210,12 +210,12 @@ static bool complies(private_auth_info_t *this, auth_info_t *constraints)
 			
 				/* OCSP validation is also sufficient for CRL constraint, but
 				 * not vice-versa */
-				if (!get_item(this, type, (void**)&valid) &&
-					type == AUTHZ_CRL_VALIDATION &&
+				if (!get_item(this, t1, (void**)&valid) &&
+					t1 == AUTHZ_CRL_VALIDATION &&
 					!get_item(this, AUTHZ_OCSP_VALIDATION, (void**)&valid))
 				{
 					DBG1(DBG_CFG, "constraint check failed: %N requires at "
-						 "least %N, but no check done", auth_item_names, type,
+						 "least %N, but no check done", auth_item_names, t1,
 						 cert_validation_names, *(cert_validation_t*)value);
 					success = FALSE;
 					break;
@@ -234,7 +234,7 @@ static bool complies(private_auth_info_t *this, auth_info_t *constraints)
 						}	/* FALL */
 					default:
 						DBG1(DBG_CFG, "constraint check failed: %N is %N, but "
-							 "requires at least %N", auth_item_names, type,
+							 "requires at least %N", auth_item_names, t1,
 							 cert_validation_names, *valid,
 							 cert_validation_names, *(cert_validation_t*)value);
 						success = FALSE;
@@ -242,29 +242,66 @@ static bool complies(private_auth_info_t *this, auth_info_t *constraints)
 				}
 				break;
 			}
+			case AUTHZ_CA_CERT:
+			{
+				enumerator_t *enumerator;
+				certificate_t *c1, *c2;
+				
+				c1 = (certificate_t*)value;
+				
+				success = FALSE;
+				enumerator = create_item_enumerator(this);
+				while (enumerator->enumerate(enumerator, &t2, &c2))
+				{
+					if ((t2 == AUTHZ_CA_CERT || t2 == AUTHZ_IM_CERT) &&
+						c1->equals(c1, c2))
+					{
+						success = TRUE;
+					}
+				}
+				enumerator->destroy(enumerator);
+				if (!success)
+				{
+					DBG1(DBG_CFG, "constraint check failed: peer not "
+						 "authenticated by CA '%D'.", c1->get_subject(c1));
+				}
+				break;
+			}
 			case AUTHZ_CA_CERT_NAME:
+			{
+				enumerator_t *enumerator;
+				certificate_t *cert;
+				identification_t *id;
+				
+				id = (identification_t*)value;
+				success = FALSE;
+				enumerator = create_item_enumerator(this);
+				while (enumerator->enumerate(enumerator, &t2, &cert))
+				{
+					if ((t2 == AUTHZ_CA_CERT || t2 == AUTHZ_IM_CERT) &&
+						cert->has_subject(cert, id))
+					{
+						success = TRUE;
+					}
+				}
+				enumerator->destroy(enumerator);
+				if (!success)
+				{
+					DBG1(DBG_CFG, "constraint check failed: peer not "
+						 "authenticated by CA '%D'.", id);
+				}
+				break;
+			}
 			case AUTHZ_PUBKEY:
 			case AUTHZ_PSK:
 			case AUTHZ_IM_CERT:
 			case AUTHZ_SUBJECT_CERT:
 			case AUTHZ_EAP:
 			case AUTHZ_AC_GROUP:
-				DBG1(DBG_CFG, "constraint check %N not implemented!",
-					 auth_item_names, type);
-				success = FALSE;
-				break;
-			case AUTHZ_CA_CERT:
 			{
-				certificate_t *cert;
-			
-				if (!get_item(this, AUTHZ_CA_CERT, (void**)&cert) ||
-					!cert->equals(cert, (certificate_t*)value))
-				{
-					cert = (certificate_t*)value;
-					DBG1(DBG_CFG, "constraint check failed: peer not "
-						 "authenticated by CA '%D'.", cert->get_issuer(cert));
-					success = FALSE;
-				}
+				DBG1(DBG_CFG, "constraint check %N not implemented!",
+					 auth_item_names, t1);
+				success = FALSE;
 				break;
 			}
 		}
