@@ -303,7 +303,7 @@ static bool equals(private_auth_info_t *this, private_auth_info_t *other)
 	while (e1->enumerate(e1, &i1))
 	{
 		found = FALSE;
-		e2 = this->items->create_enumerator(this->items);
+		e2 = other->items->create_enumerator(other->items);
 		while (e2->enumerate(e2, &i2))
 		{
 			if (i1->type == i2->type)
