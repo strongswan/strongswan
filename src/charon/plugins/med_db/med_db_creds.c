@@ -70,60 +70,6 @@ static void data_destroy(data_t *this)
 }
 
 /**
- * Implementation of shared_key_t.get_type.
- */
-static shared_key_type_t get_type(private_shared_key_t *this)
-{
-	return SHARED_IKE;
-}
-
-/**
- * Implementation of shared_key_t.get_ref.
- */
-static private_shared_key_t* get_ref(private_shared_key_t *this)
-{
-	ref_get(&this->ref);
-	return this;
-}
-
-/**
- * Implementation of shared_key_t.destroy
- */
-static void shared_key_destroy(private_shared_key_t *this)
-{
-	if (ref_put(&this->ref))
-	{
-		chunk_free(&this->key);
-		free(this);
-	}
-}
-
-/**
- * Implementation of shared_key_t.get_key.
- */
-static chunk_t get_key(private_shared_key_t *this)
-{
-	return this->key;
-}
-
-/**
- * create a shared key
- */
-static shared_key_t *shared_key_create(chunk_t key)
-{
-	private_shared_key_t *this = malloc_thing(private_shared_key_t);
-
-	this->public.get_type = (shared_key_type_t(*)(shared_key_t*))get_type;
-	this->public.get_key = (chunk_t(*)(shared_key_t*))get_key;
-	this->public.get_ref = (shared_key_t*(*)(shared_key_t*))get_ref;
-	this->public.destroy = (void(*)(shared_key_t*))shared_key_destroy;
-
-	this->key = chunk_clone(key);
-	this->ref = 1;
-	return &this->public;
-}
-
-/**
  * filter for enumerator, returns for each SQL result a shared key and match
  */
 static bool filter(data_t *this, chunk_t *chunk, shared_key_t **out,
@@ -131,7 +77,7 @@ static bool filter(data_t *this, chunk_t *chunk, shared_key_t **out,
 				   void **unused2, id_match_t *match_other)
 {
 	DESTROY_IF(this->current);
-	this->current = shared_key_create(*chunk);
+	this->current = shared_key_create(SHARED_IKE, *chunk);
 	*out = this->current;
 	/* we have unique matches only, but do not compare own ID */
 	if (match_me)
