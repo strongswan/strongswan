@@ -58,7 +58,8 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	chunk_t auth_data, octets;
 	identification_t *other_id;
 	prf_t *prf;
-	auth_info_t *auth;
+	auth_info_t *auth, *current_auth;
+	enumerator_t *enumerator;
 	status_t status = FAILED;
 	
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
@@ -73,9 +74,9 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	octets = build_tbs_octets(ike_sa_init, my_nonce, other_id, prf);
 	
 	auth = this->ike_sa->get_other_auth(this->ike_sa);
-	public = charon->credentials->get_public(charon->credentials, KEY_RSA,
-											 other_id, auth);
-	if (public)
+	enumerator = charon->credentials->create_public_enumerator(
+								charon->credentials, KEY_RSA, other_id, auth);
+	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
 		/* We are currently fixed to SHA1 hashes.
 		 * TODO: allow other hash algorithms and note it in "auth" */
@@ -84,13 +85,15 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 			DBG1(DBG_IKE, "authentication of '%D' with %N successful",
 						   other_id, auth_method_names, AUTH_RSA);
 			status = SUCCESS;
+			auth->merge(auth, current_auth);
+			break;
 		}
-		public->destroy(public);
+		else
+		{
+			DBG1(DBG_IKE, "signature validation failed, looking for another key");
+		}
 	}
-	else
-	{
-		DBG1(DBG_IKE, "no trusted public key found for '%D'", other_id);
-	}
+	enumerator->destroy(enumerator);
 	chunk_free(&octets);
 	return status;
 }

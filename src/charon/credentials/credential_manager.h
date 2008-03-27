@@ -144,20 +144,24 @@ struct credential_manager_t {
 	 */
 	private_key_t* (*get_private)(credential_manager_t *this, key_type_t type,
 								  identification_t *id, auth_info_t *auth);
+	
 	/**
-	 * Get a public key to verify a signature.
+	 * Create an enumerator over trusted public keys.
 	 *
-	 * The get_public() method gets a trusted public key to verify a signature
-	 * of id. The auth parameter contains additional authentication infos,
-	 * e.g. peer and intermediate certificates.
+	 * This method gets a an enumerator over trusted public keys to verify a
+	 * signature created by id. The auth parameter contains additional 
+	 * authentication infos, e.g. peer and intermediate certificates.
+	 * The resulting enumerator enumerates over public_key_t *, auth_info_t *,
+	 * where the auth info contains gained privileges for the authorization
+	 * process.
 	 *
-	 * @param type		type of key to get
-	 * @param id		identification the key belongs to
-	 * @param auth		auth_info helper, including certificates to verify key
-	 * @return			public_key_t, NULL if none found
+	 * @param type		type of the key to get
+	 * @param id		owner of the key, signer of the signature
+	 * @param auth		authentication infos
+	 * @return			enumerator
 	 */
-	public_key_t* (*get_public)(credential_manager_t *this, key_type_t type,
-								identification_t *id, auth_info_t *auth);
+	enumerator_t* (*create_public_enumerator)(credential_manager_t *this,
+					key_type_t type, identification_t *id, auth_info_t *auth);
 	
 	/**
 	 * Flush the certificate cache.
