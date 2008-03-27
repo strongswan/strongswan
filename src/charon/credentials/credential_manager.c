@@ -904,10 +904,20 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 		issuer = get_issuer_cert(this, current, TRUE);
 		if (issuer)
 		{
-			auth->add_item(auth, AUTHZ_CA_CERT, issuer);	
-			DBG1(DBG_CFG, "  using trusted ca certificate \"%D\"",
-				 issuer->get_subject(issuer));
-			trusted = TRUE;
+			/* accept only self-signed CAs as trust anchor */
+			if (this->cache->issued_by(this->cache, issuer, issuer))
+			{
+				auth->add_item(auth, AUTHZ_CA_CERT, issuer);
+				DBG1(DBG_CFG, "  using trusted ca certificate \"%D\"",
+					 issuer->get_subject(issuer));
+				trusted = TRUE;
+			}
+			else
+			{
+				auth->add_item(auth, AUTHZ_IM_CERT, issuer);
+				DBG1(DBG_CFG, "  using trusted intermediate ca certificate "
+					 "\"%D\"", issuer->get_subject(issuer));
+			}
 		}
 		else
 		{
@@ -922,8 +932,8 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 					break;
 				}
 				auth->add_item(auth, AUTHZ_IM_CERT, issuer);
-				DBG1(DBG_CFG, "  using untrusted ca certificate \"%D\"",
-					 issuer->get_subject(issuer));
+				DBG1(DBG_CFG, "  using untrusted intermediate certificate "
+					 "\"%D\"", issuer->get_subject(issuer));
 			}
 			else
 			{
