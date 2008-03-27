@@ -333,7 +333,8 @@ static status_t verify(private_notify_payload_t *this)
 			break;
 		}
 		case ME_ENDPOINT:
-			if (this->notification_data.len != 12 ||
+			if (this->notification_data.len != 8 &&
+				this->notification_data.len != 12 &&
 				this->notification_data.len != 24)
 			{
 				bad_length = TRUE;
