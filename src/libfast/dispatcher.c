@@ -344,6 +344,7 @@ static void destroy(private_dispatcher_t *this)
 	this->sessions->destroy_function(this->sessions, (void*)session_entry_destroy);
 	this->controllers->destroy_function(this->controllers, free);
 	this->filters->destroy_function(this->filters, free);
+	free(this->threads);
 	free(this);
 }
 
@@ -370,6 +371,7 @@ dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
     this->fd = 0;
     this->timeout = timeout;
     this->debug = debug;
+    this->threads = NULL;
 	
     FCGX_Init();
     
