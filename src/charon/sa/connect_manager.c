@@ -344,8 +344,8 @@ struct check_t {
 	/** raw endpoint payload (to verify the signature) */
 	chunk_t endpoint_raw;
 	
-    /** cookie */
-    chunk_t cookie;
+    /** connect auth */
+    chunk_t auth;
 };
 
 /**
@@ -355,7 +355,7 @@ static void check_destroy(check_t *this)
 {
 	chunk_free(&this->connect_id);
 	chunk_free(&this->endpoint_raw);
-	chunk_free(&this->cookie);
+	chunk_free(&this->auth);
 	DESTROY_IF(this->endpoint);
 	free(this);
 }
@@ -368,7 +368,7 @@ static check_t *check_create()
 	check_t *this = malloc_thing(check_t);
 	
 	this->connect_id = chunk_empty;
-	this->cookie = chunk_empty;
+	this->auth = chunk_empty;
 	this->endpoint_raw = chunk_empty;
 	this->endpoint = NULL;
 	
@@ -863,15 +863,15 @@ static status_t process_payloads(message_t *message, check_t *check)
 				DBG2(DBG_IKE, "received ME_CONNECTID %#B", &check->connect_id);
 				break;
 			}
-			case COOKIE:
+			case ME_CONNECTAUTH:
 			{
-				if (check->cookie.ptr)
+				if (check->auth.ptr)
 				{
-					DBG1(DBG_IKE, "connectivity check contains multiple COOKIE notifies");
+					DBG1(DBG_IKE, "connectivity check contains multiple ME_CONNECTAUTH notifies");
 					break;
 				}
-				check->cookie = chunk_clone(notify->get_notification_data(notify));
-				DBG2(DBG_IKE, "received COOKIE %#B", &check->cookie);
+				check->auth = chunk_clone(notify->get_notification_data(notify));
+				DBG2(DBG_IKE, "received ME_CONNECTAUTH %#B", &check->auth);
 				break;
 			}
 			default:
@@ -880,7 +880,7 @@ static status_t process_payloads(message_t *message, check_t *check)
 	}
 	iterator->destroy(iterator);
 	
-	if (!check->connect_id.ptr || !check->endpoint || !check->cookie.ptr)
+	if (!check->connect_id.ptr || !check->endpoint || !check->auth.ptr)
 	{
 		DBG1(DBG_IKE, "at least one payload was missing from the connectivity check");
 		return FAILED;
@@ -1014,9 +1014,9 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 	message->add_payload(message, (payload_t*)endpoint);
 	DBG2(DBG_IKE, "send ME_ENDPOINT notify");
 	
-	check->cookie = build_signature(this, checklist, check, TRUE);
-	message->add_notify(message, FALSE, COOKIE, check->cookie);
-	DBG2(DBG_IKE, "send COOKIE %#B", &check->cookie);
+	check->auth = build_signature(this, checklist, check, TRUE);
+	message->add_notify(message, FALSE, ME_CONNECTAUTH, check->auth);
+	DBG2(DBG_IKE, "send ME_CONNECTAUTH %#B", &check->auth);
 	
 	packet_t *packet;
 	if (message->generate(message, NULL, NULL, &packet) == SUCCESS)
@@ -1334,7 +1334,7 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 	}
 	
 	chunk_t sig = build_signature(this, checklist, check, FALSE); 
-	if (!chunk_equals(sig, check->cookie))
+	if (!chunk_equals(sig, check->auth))
 	{
 		DBG1(DBG_IKE, "connectivity check verification failed");
 		check_destroy(check);

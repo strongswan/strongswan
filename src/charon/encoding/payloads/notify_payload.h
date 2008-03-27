@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -99,7 +99,8 @@ enum notify_type_t {
 	ME_CALLBACK = 40964,
 	ME_CONNECTID = 40965,
 	ME_CONNECTKEY = 40966,
-	ME_RESPONSE = 40967
+	ME_CONNECTAUTH = 40967,
+	ME_RESPONSE = 40968
 };
 
 /**

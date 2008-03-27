@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -85,6 +85,7 @@ ENUM_NEXT(notify_type_names, ME_MEDIATION, ME_RESPONSE, USE_BEET_MODE,
 	"ME_CALLBACK",
 	"ME_CONNECTID",
 	"ME_CONNECTKEY",
+	"ME_CONNECTAUTH",
 	"ME_RESPONSE");
 ENUM_END(notify_type_names, ME_RESPONSE);
 
@@ -148,6 +149,7 @@ ENUM_NEXT(notify_type_short_names, ME_MEDIATION, ME_RESPONSE, USE_BEET_MODE,
 	"ME_CB",
 	"ME_CID",
 	"ME_CKEY",
+	"ME_CAUTH",
 	"ME_R");
 ENUM_END(notify_type_short_names, ME_RESPONSE);
 
@@ -288,6 +290,7 @@ static status_t verify(private_notify_payload_t *this)
 		}
 		case NAT_DETECTION_SOURCE_IP:
 		case NAT_DETECTION_DESTINATION_IP:
+		case ME_CONNECTAUTH:
 		{
 			if (this->notification_data.len != HASH_SIZE_SHA1)
 			{
