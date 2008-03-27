@@ -160,6 +160,13 @@ struct credential_manager_t {
 								identification_t *id, auth_info_t *auth);
 	
 	/**
+	 * Flush the certificate cache.
+	 *
+	 * @param type		type of certificate to flush, or CERT_ANY
+	 */
+	void (*flush_cache)(credential_manager_t *this, certificate_type_t type);
+		
+	/**
 	 * Register a credential set to the manager.
 	 *
 	 * @param set		set to register

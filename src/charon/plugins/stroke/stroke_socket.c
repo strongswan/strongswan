@@ -271,8 +271,8 @@ static void stroke_del_ca(private_stroke_socket_t *this,
 /**
  * show status of daemon
  */
-static void stroke_status(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *out,
-						  bool all)
+static void stroke_status(private_stroke_socket_t *this,
+						  stroke_msg_t *msg, FILE *out, bool all)
 {
 	pop_string(msg, &(msg->status.name));
 	
@@ -303,9 +303,11 @@ static void stroke_reread(private_stroke_socket_t *this,
 /**
  * purge various information
  */
-static void stroke_purge(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *out)
+static void stroke_purge(private_stroke_socket_t *this,
+						 stroke_msg_t *msg, FILE *out)
 {
-	/* TODO: flush cache */
+	charon->credentials->flush_cache(charon->credentials,
+									 CERT_X509_OCSP_RESPONSE);
 }
 
 signal_t get_signal_from_logtype(char *type)

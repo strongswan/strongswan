@@ -1223,6 +1223,17 @@ static private_key_t *get_private(private_credential_manager_t *this,
 }
 
 /**
+ * Implementation of credential_manager_t.flush_cache.
+ */
+static void flush_cache(private_credential_manager_t *this,
+						certificate_type_t type)
+{
+	this->mutex->lock(this->mutex);
+	this->cache->flush(this->cache, type);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
  * Implementation of credential_manager_t.add_set.
  */
 static void add_set(private_credential_manager_t *this,
@@ -1268,6 +1279,7 @@ credential_manager_t *credential_manager_create()
 	this->public.get_shared = (shared_key_t *(*)(credential_manager_t *this,shared_key_type_t type,identification_t *me, identification_t *other))get_shared;
 	this->public.get_private = (private_key_t*(*)(credential_manager_t*, key_type_t type, identification_t *, auth_info_t*))get_private;
 	this->public.get_public = (public_key_t*(*)(credential_manager_t*, key_type_t type, identification_t *, auth_info_t*))get_public;
+	this->public.flush_cache = (void(*)(credential_manager_t*, certificate_type_t type))flush_cache;
 	this->public.add_set = (void(*)(credential_manager_t*, credential_set_t *set))add_set;
 	this->public.remove_set = (void(*)(credential_manager_t*, credential_set_t *set))remove_set;
 	this->public.destroy = (void(*)(credential_manager_t*))destroy;

@@ -179,6 +179,27 @@ static enumerator_t *create_enumerator(private_cert_cache_t *this,
 }
 
 /**
+ * Implementation of cert_cache_t.flush.
+ */
+static void flush(private_cert_cache_t *this, certificate_type_t type)
+{
+	enumerator_t *enumerator;
+	relation_t *relation;
+	
+	enumerator = this->relations->create_enumerator(this->relations);
+	while (enumerator->enumerate(enumerator, &relation))
+	{
+		if (type == CERT_ANY ||
+			type == relation->subject->get_type(relation->subject))
+		{
+			this->relations->remove_at(this->relations, enumerator);
+			relation_destroy(relation);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Implementation of cert_cache_t.destroy
  */
 static void destroy(private_cert_cache_t *this)
@@ -199,6 +220,7 @@ cert_cache_t *cert_cache_create()
 	this->public.set.create_shared_enumerator = (void*)return_null;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.issued_by = (bool(*)(cert_cache_t*, certificate_t *subject, certificate_t *issuer))issued_by;
+	this->public.flush = (void(*)(cert_cache_t*, certificate_type_t type))flush;
 	this->public.destroy = (void(*)(cert_cache_t*))destroy;
 	
 	this->relations = linked_list_create();

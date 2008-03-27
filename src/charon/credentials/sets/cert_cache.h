@@ -53,6 +53,13 @@ struct cert_cache_t {
 					  certificate_t *subject, certificate_t *issuer);
 	
 	/**
+	 * Flush the certificate cache.
+	 *
+	 * @param type			type of certificate to flush, or CERT_ANY
+	 */
+	void (*flush)(cert_cache_t *this, certificate_type_t type);
+		
+	/**
 	 * Destroy a cert_cache instance.
 	 */
 	void (*destroy)(cert_cache_t *this);
