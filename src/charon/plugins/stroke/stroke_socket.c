@@ -168,9 +168,9 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	pop_string(msg, &msg->add_conn.ikeme.mediated_by);
 	pop_string(msg, &msg->add_conn.ikeme.peerid);
-	DBG2(DBG_CFG, "  p2p_mediation=%s", msg->add_conn.ikeme.mediation ? "yes" : "no");
-	DBG2(DBG_CFG, "  p2p_mediated_by=%s", msg->add_conn.ikeme.mediated_by);
-	DBG2(DBG_CFG, "  p2p_peerid=%s", msg->add_conn.ikeme.peerid);
+	DBG2(DBG_CFG, "  mediation=%s", msg->add_conn.ikeme.mediation ? "yes" : "no");
+	DBG2(DBG_CFG, "  mediated_by=%s", msg->add_conn.ikeme.mediated_by);
+	DBG2(DBG_CFG, "  me_peerid=%s", msg->add_conn.ikeme.peerid);
 
 	this->config->add(this->config, msg);
 }

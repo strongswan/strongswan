@@ -452,8 +452,8 @@ AC_ARG_ENABLE(
 AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 
 AC_ARG_ENABLE(
-    [p2p],
-    AS_HELP_STRING([--enable-p2p],[enable mediation extensions for IKEv2 (default is NO).]),
+    [mediation],
+    AS_HELP_STRING([--enable-mediation],[enable IKEv2 Mediation Extension (default is NO).]),
     [if test x$enableval = xyes; then
         me=true
         AC_DEFINE(ME)

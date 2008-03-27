@@ -151,9 +151,9 @@ then
     echo -n " --enable-eap-sim" >> $INSTALLSHELL
     fi
 
-if [ "$USE_P2P" = "yes" ]
+if [ "$USE_ME" = "yes" ]
 then
-    echo -n " --enable-p2p" >> $INSTALLSHELL
+    echo -n " --enable-mediation" >> $INSTALLSHELL
 fi
     
 if [ "$USE_LEAK_DETECTIVE" = "yes" ]

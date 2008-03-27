@@ -788,31 +788,31 @@ and
 .B client
 (the default).
 
-.SS "CONN PARAMETERS: PEER-TO-PEER"
-The following parameters are relevant to Peer-to-Peer NAT-T operation
-only.
+.SS "CONN PARAMETERS: IKEv2 MEDIATION EXTENSION"
+The following parameters are relevant to IKEv2 Mediation Extension 
+operation only.
 .TP 14
-.B p2p_mediation
-whether this connection is a P2P mediation connection, ie. whether this
+.B mediation
+whether this connection is a mediation connection, ie. whether this
 connection is used to mediate other connections.  Mediation connections
 create no child SA. Acceptable values are
 .B no
 (the default) and
 .BR yes .
 .TP
-.B p2p_mediated_by
+.B mediated_by
 the name of the connection to mediate this connection through.  If given,
 the connection will be mediated through the named mediation connection.
 The mediation connection must set
-.BR p2p_mediation=yes .
+.BR mediation=yes .
 .TP
-.B p2p_peerid
+.B me_peerid
 ID as which the peer is known to the mediation server, ie. which the other
 end of this connection uses as its
 .B leftid
 on its connection to the mediation server.  This is the ID we request the
 mediation server to mediate us with.  If
-.B p2p_peerid
+.B me_peerid
 is not given, the
 .B rightid
 of this connection will be used as peer ID.
