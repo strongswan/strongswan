@@ -230,6 +230,7 @@ char *whitelist[] = {
 	"mysql_init_character_set",
 	"init_client_errs",
 	"my_thread_init",
+	"FCGX_Init",
 };
 
 /**
@@ -265,11 +266,15 @@ static bool is_whitelisted(void **stack_frames, int stack_frame_count)
 void report_leaks()
 {
 	memory_header_t *hdr;
-	int leaks = 0;
+	int leaks = 0, whitelisted = 0;
 	
 	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 	{
-		if (!is_whitelisted(hdr->stack_frames, hdr->stack_frame_count))
+		if (is_whitelisted(hdr->stack_frames, hdr->stack_frame_count))
+		{
+			whitelisted++;
+		}
+		else
 		{
 			fprintf(stderr, "Leak (%d bytes at %p):\n", hdr->bytes, hdr + 1);
 			/* skip the first frame, contains leak detective logic */
@@ -281,15 +286,16 @@ void report_leaks()
 	switch (leaks)
 	{
 		case 0:
-			fprintf(stderr, "No leaks detected\n");
+			fprintf(stderr, "No leaks detected");
 			break;
 		case 1:
-			fprintf(stderr, "One leak detected\n");
+			fprintf(stderr, "One leak detected");
 			break;
 		default:
-			fprintf(stderr, "%d leaks detected\n", leaks);
+			fprintf(stderr, "%d leaks detected", leaks);
 			break;
 	}
+	fprintf(stderr, ", %d suppressed by whitelist\n", whitelisted);
 }
 
 /**
