@@ -26,15 +26,8 @@
 #include <encoding/payloads/endpoint_notify.h>
 #include <processing/jobs/mediation_job.h>
 
-#define ME_CONNECTID_LEN 8
+#define ME_CONNECTID_LEN 4
 #define ME_CONNECTKEY_LEN 16
-
-/* FIXME: proposed values */
-#define ME_CONNECTID_MIN_LEN 4
-#define ME_CONNECTID_MAX_LEN 16
-#define ME_CONNECTKEY_MIN_LEN 8
-#define ME_CONNECTKEY_MAX_LEN 64
-
 
 typedef struct private_ike_me_t private_ike_me_t;
 

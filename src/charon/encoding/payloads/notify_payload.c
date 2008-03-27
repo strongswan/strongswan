@@ -332,7 +332,27 @@ static status_t verify(private_notify_payload_t *this)
 			}
 			break;
 		}
-		/* FIXME: check size of IKE-ME payloads */
+		case ME_ENDPOINT:
+			if (this->notification_data.len != 12 ||
+				this->notification_data.len != 24)
+			{
+				bad_length = TRUE;
+			}
+			break;
+		case ME_CONNECTID:
+			if (this->notification_data.len < 4 ||
+				this->notification_data.len > 16)
+			{
+				bad_length = TRUE;
+			}
+			break;
+		case ME_CONNECTKEY:
+			if (this->notification_data.len < 16 ||
+				this->notification_data.len > 32)
+			{
+				bad_length = TRUE;
+			}
+			break;
 		default:
 			/* TODO: verify */
 			break;
