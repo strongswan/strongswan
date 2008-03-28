@@ -320,7 +320,7 @@ size_t srclen;			/* known to be >0 */
 ip_address *dst;
 {
 	const char *stop = src + srclen;	/* just past end */
-	unsigned piece;
+	unsigned piece = 0;
 	int gapat;		/* where was empty piece seen */
 	err_t oops;
 #	define	NPIECES	8
