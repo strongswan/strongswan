@@ -705,10 +705,13 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 		while (enumerator->enumerate(enumerator, &uri))
 		{
 			current = fetch_crl(this, uri);
-			best = get_better_crl(this, current, best, subject, issuer, &valid);
-			if (best && valid != VALIDATION_STALE)
+			if (current)
 			{
-				break;
+				best = get_better_crl(this, current, best, subject, issuer, &valid);
+				if (best && valid != VALIDATION_STALE)
+				{
+					break;
+				}
 			}
 		}
 		enumerator->destroy(enumerator);
@@ -723,10 +726,13 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 		while (enumerator->enumerate(enumerator, &uri))
 		{
 			current = fetch_crl(this, uri);
-			best = get_better_crl(this, current, best, subject, issuer, &valid);
-			if (best && valid != VALIDATION_STALE)
+			if (current)
 			{
-				break;
+				best = get_better_crl(this, current, best, subject, issuer, &valid);
+				if (best && valid != VALIDATION_STALE)
+				{
+					break;
+				}
 			}
 		}
 		enumerator->destroy(enumerator);
