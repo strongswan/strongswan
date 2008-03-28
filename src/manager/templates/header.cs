@@ -18,7 +18,7 @@
     <div class="menu">
       | <a href="<?cs var:base ?>/ikesa/list">IKE SAs</a>
       | <a href="<?cs var:base ?>/config/list">Config</a>
-      | <a href="<?cs var:base ?>/gateway/list">Select Gateway</a>
+      | <a href="<?cs var:base ?>/gateway/list">Gateway</a>
       | <a href="<?cs var:base ?>/auth/logout">Logout</a>
     </div>
     <hr class="cleft"/>
