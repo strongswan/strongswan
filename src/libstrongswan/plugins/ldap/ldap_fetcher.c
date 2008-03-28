@@ -135,7 +135,7 @@ static status_t fetch(private_ldap_fetcher_t *this, char *url,
 	ldap_set_option(ldap, LDAP_OPT_PROTOCOL_VERSION, &ldap_version);
 	ldap_set_option(ldap, LDAP_OPT_NETWORK_TIMEOUT, &timeout);
 
-	DBG1("sending LDAP request to '%s'...", url);
+	DBG2("sending LDAP request to '%s'...", url);
 
 	res = ldap_simple_bind_s(ldap, NULL, NULL);
 	if (res == LDAP_SUCCESS)
