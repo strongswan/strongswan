@@ -2167,7 +2167,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 
 	    /* Schedule for whatever timeout is specified */
 	    {
-		time_t delay;
+		time_t delay = UNDEFINED_TIME;
 		enum event_type kind = smc->timeout_event;
 		bool agreed_time = FALSE;
 		struct connection *c = st->st_connection;

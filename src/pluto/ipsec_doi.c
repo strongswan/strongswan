@@ -952,7 +952,6 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
     /* SA out */
     {
 	u_char *sa_start = rbody.cur;
-	lset_t auth_policy = policy & POLICY_ID_AUTH_MASK;
 
 	if (!out_sa(&rbody, &oakley_sadb, st, TRUE
 	, vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE))
@@ -2800,7 +2799,7 @@ compute_proto_keymat(struct state *st
 , u_int8_t protoid
 , struct ipsec_proto_info *pi)
 {
-    size_t needed_len; /* bytes of keying material needed */
+    size_t needed_len = 0; /* bytes of keying material needed */
 
     /* Add up the requirements for keying material
      * (It probably doesn't matter if we produce too much!)
@@ -3754,7 +3753,7 @@ main_id_and_auth(struct msg_digest *md
 	    struct key_continuation *nkc
 		= alloc_thing(struct key_continuation, "key continuation");
 	    enum key_oppo_step step_done = kc == NULL? kos_null : kc->step;
-	    err_t ugh;
+	    err_t ugh = NULL;
 
 	    /* Record that state is used by a suspended md */
 	    passert(st->st_suspended_md == NULL);
@@ -4308,7 +4307,7 @@ report_verify_failure(struct verify_oppo_bundle *b, err_t ugh)
     char fgwb[ADDRTOT_BUF]
 	, cb[ADDRTOT_BUF];
     ip_address client;
-    err_t which;
+    err_t which = NULL;
 
     switch (b->step)
     {
@@ -4384,7 +4383,7 @@ quick_inI1_outR1_start_query(struct verify_oppo_bundle *b
 	, *our_id	/* needed for myid playing */
 	, our_id_space;	/* ephemeral: no need for unshare_id_content */
     ip_address client;
-    err_t ugh;
+    err_t ugh = NULL;
 
     /* Record that state is used by a suspended md */
     b->step = next_step;    /* not just vc->b.step */
@@ -4495,7 +4494,7 @@ quick_inI1_outR1_process_answer(struct verify_oppo_bundle *b
 , struct state *p1st)
 {
     struct connection *c = p1st->st_connection;
-    enum verify_oppo_step next_step;
+    enum verify_oppo_step next_step = vos_our_client;
     err_t ugh = NULL;
 
     DBG(DBG_CONTROL,

@@ -521,9 +521,6 @@ ike_alg_test(void)
 
     for (a = ike_alg_base[IKE_ALG_ENCRYPT]; a != NULL; a = a->algo_next)
     {
-	
-        struct encrypt_desc *desc = (struct encrypt_desc*)a;
-
 	plog("  %s self-test not available", enum_name(&oakley_enc_names, a->algo_id));
     }
 

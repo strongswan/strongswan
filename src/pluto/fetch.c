@@ -825,7 +825,9 @@ fetch_thread(void *arg)
 void
 init_fetch(void)
 {
+#if defined(LIBCURL) || defined (THREADS)
     int status;
+#endif
 
 #ifdef LIBCURL
     /* init curl */

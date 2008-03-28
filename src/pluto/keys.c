@@ -83,7 +83,7 @@ static pubkey_t*
 allocate_RSA_public_key(const cert_t cert)
 {
     pubkey_t *pk = alloc_thing(pubkey_t, "pubkey");
-    chunk_t e, n;
+    chunk_t e = empty_chunk, n = empty_chunk;
 
     switch (cert.type)
     {
@@ -335,7 +335,7 @@ get_x509_private_key(const x509cert_t *cert)
 {
     secret_t *s;
     const RSA_private_key_t *pri = NULL;
-    const cert_t c = {CERT_X509_SIGNATURE, {cert}};
+    const cert_t c = {CERT_X509_SIGNATURE, {(x509cert_t*)cert}};
 
     pubkey_t *pubkey = allocate_RSA_public_key(c);
 
@@ -1473,7 +1473,7 @@ add_pgp_public_key(pgpcert_t *cert , time_t until
 void
 remove_x509_public_key(const x509cert_t *cert)
 {
-    const cert_t c = {CERT_X509_SIGNATURE, {cert}};
+    const cert_t c = {CERT_X509_SIGNATURE, {(x509cert_t*)cert}};
     pubkey_list_t *p, **pp;
     pubkey_t *revoked_pk;
 

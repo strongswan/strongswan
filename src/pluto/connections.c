@@ -2354,7 +2354,7 @@ initiate_opportunistic_body(struct find_oppo_bundle *b
 	 * DNS query (if any).  It also selects the kind of the next step.
 	 * The second chunk initiates the next DNS query (if any).
 	 */
-	enum find_oppo_step next_step;
+	enum find_oppo_step next_step = fos_myid_ip_txt;
 	err_t ugh = ac_ugh;
 	char mycredentialstr[BUF_LEN];
 	char cib[CONN_INST_BUF];
@@ -3279,7 +3279,7 @@ refine_host_connection(const struct state *st, const struct id *peer_id
     struct connection *d;
     struct connection *best_found = NULL;
     u_int16_t auth = st->st_oakley.auth;
-    lset_t auth_policy;
+    lset_t auth_policy = POLICY_PSK;
     const chunk_t *psk = NULL;
     bool wcpip;	/* wildcard Peer IP? */
     int best_prio = PRIO_NO_MATCH_FOUND;

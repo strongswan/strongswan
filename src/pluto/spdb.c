@@ -296,9 +296,9 @@ out_sa(pb_stream *outs
 	    struct db_prop *p = &pc->props[pn];
 	    pb_stream proposal_pbs;
 	    struct isakmp_proposal proposal;
-	    struct_desc *trans_desc;
-	    struct_desc *attr_desc;
-	    enum_names **attr_val_descs;
+	    struct_desc *trans_desc = NULL;
+	    struct_desc *attr_desc = NULL;
+	    enum_names **attr_val_descs = NULL;
 	    int tn;
 	    bool tunnel_mode;
 
@@ -1166,6 +1166,8 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 	    case OAKLEY_GROUP_ORDER | ISAKMP_ATTR_AF_TLV:
 #endif
 	    default:
+		/* fix compiler warning */
+		memset(&ta, 0, sizeof(ta));
 		ugh = "unsupported OAKLEY attribute";
 		break;
 	    }
@@ -1761,7 +1763,9 @@ parse_ipsec_sa_body(
     {
 	int propno = next_proposal.isap_proposal;
 	pb_stream ah_prop_pbs, esp_prop_pbs, ipcomp_prop_pbs;
-	struct isakmp_proposal ah_proposal, esp_proposal, ipcomp_proposal;
+	struct isakmp_proposal ah_proposal = {0, 0, 0, 0, 0, 0, 0};
+	struct isakmp_proposal esp_proposal = {0, 0, 0, 0, 0, 0, 0};
+	struct isakmp_proposal ipcomp_proposal = {0, 0, 0, 0, 0, 0, 0};
 	ipsec_spi_t ah_spi = 0;
 	ipsec_spi_t esp_spi = 0;
 	ipsec_spi_t ipcomp_cpi = 0;

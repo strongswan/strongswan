@@ -701,7 +701,7 @@ void
 scx_init(const char* module, const char *init_args)
 {
 #ifdef SMARTCARD
-    CK_C_INITIALIZE_ARGS args = { .pReserved = init_args, };
+    CK_C_INITIALIZE_ARGS args = { .pReserved = (char *)init_args, };
     CK_RV rv;
 
     if (scx_initialized)
@@ -1442,7 +1442,7 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 	if (rv == CKR_FUNCTION_NOT_SUPPORTED)
 	{
 	    RSA_public_key_t rsa;
-	    chunk_t plain_text = {in, inlen};
+	    chunk_t plain_text = {(u_char*)in, inlen};
 	    chunk_t cipher_text; 
 
 	    DBG(DBG_CONTROL,
@@ -1496,7 +1496,7 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
     DBG(DBG_CONTROL,
 	DBG_log("doing RSA encryption on smartcard")
     )
-    rv = pkcs11_functions->C_Encrypt(sc->session, in, inlen
+    rv = pkcs11_functions->C_Encrypt(sc->session, (u_char*)in, inlen
 		, out, &len);
     if (rv != CKR_OK)
     {
@@ -1570,7 +1570,7 @@ scx_decrypt(smartcard_t *sc, const u_char *in, size_t inlen
 	return FALSE;
     }
 
-    rv = pkcs11_functions->C_Decrypt(sc->session, in, inlen
+    rv = pkcs11_functions->C_Decrypt(sc->session, (u_char*)in, inlen
 		, out, &len);
     if (rv != CKR_OK)
     {
