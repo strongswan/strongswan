@@ -212,8 +212,10 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
  * otherwise on leak report. 
  */
 char *whitelist[] = {
+	/* pthread stuff */
 	"pthread_create",
 	"pthread_setspecific",
+	/* glibc functions */
 	"mktime",
 	"tzset",
 	"inet_ntoa",
@@ -224,13 +226,22 @@ char *whitelist[] = {
 	"register_printf_function",
 	"syslog",
 	"vsyslog",
-	"dlopen",
 	"getaddrinfo",
 	"setlocale",
+	/* ignore dlopen, as we do not dlclose to get proper leak reports */
+	"dlopen",
+	/* mysql functions */
 	"mysql_init_character_set",
 	"init_client_errs",
 	"my_thread_init",
+	/* fastcgi library */
 	"FCGX_Init",
+	/* libxml */
+	"xmlInitCharEncodingHandlers",
+	"xmlInitParser",
+	"xmlInitParserCtxt",
+	/* ClearSilver */
+	"nerr_init",
 };
 
 /**
