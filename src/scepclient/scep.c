@@ -340,7 +340,7 @@ chunk_t
 scep_messageType_attribute(scep_msg_t m)
 {
     chunk_t msgType = {
-	msgType_values[m],
+	(u_char*)msgType_values[m],
 	strlen(msgType_values[m])
     };
 
