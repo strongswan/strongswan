@@ -36,6 +36,7 @@
 #include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
+#include <asn1/pem.h>
 #include <asn1/ttodata.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
@@ -184,7 +185,7 @@ static private_key_t* private_key_create_from_file(char *path, chunk_t *secret)
 	chunk_t chunk = chunk_empty;
 	private_key_t *key = NULL;
 
-	if (!pem_asn1_load_file(path, &secret, &chunk, &pgp))
+	if (!pem_asn1_load_file(path, secret, &chunk, &pgp))
 	{
 		DBG1("  could not load private key file '%s'", path);
 		return NULL;
