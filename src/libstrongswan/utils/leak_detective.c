@@ -63,6 +63,11 @@ struct private_leak_detective_t {
 #define MEMORY_HEADER_MAGIC 0x7ac0be11
 
 /**
+ * Magic written to tail of allocation
+ */
+#define MEMORY_TAIL_MAGIC 0xcafebabe
+
+/**
  * Pattern which is filled in memory before freeing it
  */
 #define MEMORY_FREE_PATTERN 0xFF
@@ -84,20 +89,17 @@ static u_int count_free = 0;
 static u_int count_realloc = 0;
 
 typedef struct memory_header_t memory_header_t;
+typedef struct memory_tail_t memory_tail_t;
 
 /**
  * Header which is prepended to each allocated memory block
  */
 struct memory_header_t {
-	/**
-	 * Magci byte which must(!) hold MEMORY_HEADER_MAGIC
-	 */
-	u_int32_t magic;
 	
 	/**
 	 * Number of bytes following after the header
 	 */
-	size_t bytes;
+	u_int bytes;
 	
 	/**
 	 * Stack frames at the time of allocation
@@ -118,7 +120,25 @@ struct memory_header_t {
 	 * Pointer to next entry in linked list
 	 */
 	memory_header_t *next;
-};
+	
+	/**
+	 * magic bytes to detect bad free or heap underflow, MEMORY_HEADER_MAGIC
+	 */
+	u_int32_t magic;
+	
+}__attribute__((__packed__));
+
+/**
+ * tail appended to each allocated memory block
+ */
+struct memory_tail_t {
+
+	/**
+	 * Magic bytes to detect heap overflow, MEMORY_TAIL_MAGIC
+	 */
+	u_int32_t magic;
+	
+}__attribute__((__packed__));
 
 /**
  * first mem header is just a dummy to chain 
@@ -346,17 +366,21 @@ static void uninstall_hooks()
 void *malloc_hook(size_t bytes, const void *caller)
 {
 	memory_header_t *hdr;
+	memory_tail_t *tail;
 	
 	pthread_mutex_lock(&mutex);
 	count_malloc++;
 	uninstall_hooks();
-	hdr = malloc(bytes + sizeof(memory_header_t));
+	hdr = malloc(sizeof(memory_header_t) + bytes + sizeof(memory_tail_t));
+	tail = ((void*)hdr) + bytes + sizeof(memory_header_t);
 	/* set to something which causes crashes */
-	memset(hdr, MEMORY_ALLOC_PATTERN, bytes + sizeof(memory_header_t));
+	memset(hdr, MEMORY_ALLOC_PATTERN,
+		   sizeof(memory_header_t) + bytes + sizeof(memory_tail_t));
 	
 	hdr->magic = MEMORY_HEADER_MAGIC;
 	hdr->bytes = bytes;
 	hdr->stack_frame_count = backtrace(hdr->stack_frames, STACK_FRAMES_COUNT);
+	tail->magic = MEMORY_TAIL_MAGIC;
 	install_hooks();
 	
 	/* insert at the beginning of the list */
@@ -378,21 +402,36 @@ void free_hook(void *ptr, const void *caller)
 {
 	void *stack_frames[STACK_FRAMES_COUNT];
 	int stack_frame_count;
-	memory_header_t *hdr = ptr - sizeof(memory_header_t);
+	memory_header_t *hdr;
+	memory_tail_t *tail;
 	
 	/* allow freeing of NULL */
 	if (ptr == NULL)
 	{
 		return;
 	}
+	hdr = ptr - sizeof(memory_header_t);
+	tail = ptr + hdr->bytes;
 	
 	pthread_mutex_lock(&mutex);
 	count_free++;
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
-		fprintf(stderr, "freeing of invalid memory (%p, MAGIC 0x%x != 0x%x):\n",
+		fprintf(stderr, "freeing memory with corrupted header "
+				"(%p, MAGIC 0x%x != 0x%x):\n",
 				ptr, hdr->magic, MEMORY_HEADER_MAGIC);
+		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
+		log_stack_frames(stack_frames, stack_frame_count);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
+		return;
+	}
+	if (tail->magic != MEMORY_TAIL_MAGIC)
+	{
+		fprintf(stderr, "freeing memory with corrupted tail "
+				"(%p, MAGIC 0x%x != 0x%x):\n",
+				ptr, tail->magic, MEMORY_TAIL_MAGIC);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		install_hooks();
@@ -423,6 +462,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	memory_header_t *hdr;
 	void *stack_frames[STACK_FRAMES_COUNT];
 	int stack_frame_count;
+	memory_tail_t *tail;
 	
 	/* allow reallocation of NULL */
 	if (old == NULL)
@@ -431,13 +471,16 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	}
 	
 	hdr = old - sizeof(memory_header_t);
+	tail = old + hdr->bytes;
 	
 	pthread_mutex_lock(&mutex);
 	count_realloc++;
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
-		fprintf(stderr, "reallocation of invalid memory (%p):\n", old);
+		fprintf(stderr, "reallocating memory with corrupted header "
+				"(%p, MAGIC 0x%x != 0x%x):\n",
+				old, hdr->magic, MEMORY_HEADER_MAGIC);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		install_hooks();
@@ -445,8 +488,23 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 		raise(SIGKILL);
 		return NULL;
 	}
-	
-	hdr = realloc(hdr, bytes + sizeof(memory_header_t));
+	if (tail->magic != MEMORY_TAIL_MAGIC)
+	{
+		fprintf(stderr, "reallocating memory with corrupted tail "
+				"(%p, MAGIC 0x%x != 0x%x):\n",
+				old, tail->magic, MEMORY_TAIL_MAGIC);
+		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
+		log_stack_frames(stack_frames, stack_frame_count);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
+		raise(SIGKILL);
+		return NULL;
+	}
+	/* clear tail magic, allocate, set tail magic */
+	memset(&tail->magic, MEMORY_ALLOC_PATTERN, sizeof(tail->magic));
+	hdr = realloc(hdr, sizeof(memory_header_t) + bytes + sizeof(memory_tail_t));
+	tail = ((void*)hdr) + bytes + sizeof(memory_header_t);
+	tail->magic = MEMORY_TAIL_MAGIC;
 	
 	/* update statistics */
 	hdr->bytes = bytes;
