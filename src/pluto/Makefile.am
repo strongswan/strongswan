@@ -134,3 +134,8 @@ if USE_LDAP
   AM_CFLAGS += -DLIBLDAP
 endif
 
+# This compile option activates smartcard support
+if USE_SMARTCARD
+  AM_CFLAGS += -DSMARTCARD
+endif
+

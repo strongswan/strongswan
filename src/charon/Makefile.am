@@ -91,6 +91,14 @@ credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/credential_set.h
 
+INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
+AM_CFLAGS = -rdynamic -DIPSEC_DIR=\"${ipsecdir}\" \
+	-DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_PLUGINDIR=\"${plugindir}\"
+charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm -ldl
+
+# compile options
+#################
+
 # Use RAW socket if pluto gets built
 if USE_PLUTO
   charon_SOURCES += network/socket-raw.c
@@ -99,6 +107,7 @@ else
 endif
 
 if USE_ME
+  AM_CFLAGS += -DME
   charon_SOURCES += encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
     processing/jobs/initiate_mediation_job.c processing/jobs/initiate_mediation_job.h \
     processing/jobs/mediation_job.c processing/jobs/mediation_job.h \
@@ -107,10 +116,13 @@ if USE_ME
     sa/tasks/ike_me.c sa/tasks/ike_me.h
 endif
 
-INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
-AM_CFLAGS = -rdynamic -DIPSEC_DIR=\"${ipsecdir}\" \
-	-DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_PLUGINDIR=\"${plugindir}\"
-charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm -ldl
+if USE_INTEGRITY_TEST
+  AM_CFLAGS += -DINTEGRITY_TEST
+endif
+
+if USE_SELF_TEST
+  AM_CFLAGS += -DSELF_TEST
+endif
 
 # build optional plugins
 ########################
@@ -125,12 +137,8 @@ if USE_STROKE
   SUBDIRS += plugins/stroke
 endif
 
-if USE_LIBDBUS
-  SUBDIRS += plugins/dbus
-endif
-
-if USE_LIBXML
-  SUBDIRS += plugins/xml
+if USE_SMP
+  SUBDIRS += plugins/smp
 endif
 
 if USE_SQL

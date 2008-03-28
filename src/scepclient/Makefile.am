@@ -25,7 +25,14 @@ scepclient_LDADD = asn1.o ca.o crl.o certs.o constants.o defs.o fetch.o id.o \
 
 # This compile option activates smartcard support
 if USE_SMARTCARD
+  AM_CFLAGS += -DSMARTCARD
   scepclient_LDADD += -ldl
+endif
+
+# This compile option activates dynamic URL fetching using libcurl
+if USE_CURL
+  AM_CFLAGS += -DLIBCURL
+  scepclient_LDADD += -lcurl
 endif
 
 dist_man_MANS = scepclient.8

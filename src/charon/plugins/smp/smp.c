@@ -17,7 +17,7 @@
 
 #include <stdlib.h>
 
-#include "xml.h"
+#include "smp.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -35,17 +35,17 @@
 #include <processing/jobs/callback_job.h>
 
 
-typedef struct private_xml_t private_xml_t;
+typedef struct private_smp_t private_smp_t;
 
 /**
- * Private data of an xml_t object.
+ * Private data of an smp_t object.
  */
-struct private_xml_t {
+struct private_smp_t {
 
 	/**
-	 * Public part of xml_t object.
+	 * Public part of smp_t object.
 	 */
-	xml_t public;
+	smp_t public;
 	
 	/**
 	 * XML unix socket fd
@@ -662,7 +662,7 @@ static job_requeue_t process(int *fdp)
 /**
  * accept from XML socket and create jobs to process connections
  */
-static job_requeue_t dispatch(private_xml_t *this)
+static job_requeue_t dispatch(private_smp_t *this)
 {
 	struct sockaddr_un strokeaddr;
 	int oldstate, fd, *fdp, strokeaddrlen = sizeof(strokeaddr);
@@ -691,7 +691,7 @@ static job_requeue_t dispatch(private_xml_t *this)
 /**
  * Implementation of itnerface_t.destroy.
  */
-static void destroy(private_xml_t *this)
+static void destroy(private_smp_t *this)
 {
 	this->job->cancel(this->job);
 	close(this->socket);
@@ -704,7 +704,7 @@ static void destroy(private_xml_t *this)
 plugin_t *plugin_create()
 {
 	struct sockaddr_un unix_addr = { AF_UNIX, IPSEC_PIDDIR "/charon.xml"};
-	private_xml_t *this = malloc_thing(private_xml_t);
+	private_smp_t *this = malloc_thing(private_smp_t);
 	mode_t old;
 
 	this->public.plugin.destroy = (void (*)(plugin_t*))destroy;

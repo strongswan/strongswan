@@ -16,27 +16,27 @@
  */
 
 /**
- * @defgroup xml xml
+ * @defgroup smp smp
  * @ingroup cplugins
  *
- * @defgroup xml_i xml
- * @{ @ingroup xml
+ * @defgroup smp_i smp
+ * @{ @ingroup smp
  */
 
-#ifndef XML_H_
-#define XML_H_
+#ifndef SMP_H_
+#define SMP_H_
 
 #include <plugins/plugin.h>
 
-typedef struct xml_t xml_t;
+typedef struct smp_t smp_t;
 
 /**
- * XML configuration and control interface.
+ * SMP configuration and control interface.
  *
- * The XML interface uses a socket and a to communicate. The syntax is strict
+ * The SMP interface uses a socket and a to communicate. The syntax is strict
  * XML, defined in the schema.xml specification.
  */
-struct xml_t {
+struct smp_t {
 
 	/**
 	 * implements the plugin interface.
@@ -45,7 +45,7 @@ struct xml_t {
 };
 
 /**
- * Create a xml plugin instance.
+ * Create a smp plugin instance.
  */
 plugin_t *plugin_create();
 

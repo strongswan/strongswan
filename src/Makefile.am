@@ -27,7 +27,7 @@ if USE_TOOLS
   SUBDIRS += openac scepclient
 endif
 
-if USE_UML
+if USE_DUMM
   SUBDIRS += dumm
 endif
 
