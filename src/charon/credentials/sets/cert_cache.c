@@ -20,7 +20,7 @@
 #include <daemon.h>
 #include <utils/linked_list.h>
 
-#define CACHE_LIMIT 30
+#define CACHE_SIZE 30
 
 typedef struct private_cert_cache_t private_cert_cache_t;
 typedef struct relation_t relation_t;
@@ -39,6 +39,16 @@ struct private_cert_cache_t {
 	 * list of trusted subject-issuer relations, as relation_t
 	 */
 	linked_list_t *relations;
+	
+	/**
+	 * do we have an active enumerator
+	 */
+	bool enumerating;
+	
+	/**
+	 * have we increased the cache without a check_cache?
+	 */
+	bool check_required;
 };
 
 /**
@@ -64,12 +74,44 @@ static void relation_destroy(relation_t *this)
 }
 
 /**
+ * check the cache for oversize
+ */
+static void check_cache(private_cert_cache_t *this)
+{
+	if (this->enumerating)
+	{
+		this->check_required = TRUE;
+	}
+	else
+	{
+		while (this->relations->get_count(this->relations) > CACHE_SIZE)
+		{
+			relation_t *oldest = NULL, *current;
+			enumerator_t *enumerator;
+			
+			enumerator = this->relations->create_enumerator(this->relations);
+			while (enumerator->enumerate(enumerator, &current))
+			{
+				if (oldest == NULL || oldest->last_use <= current->last_use)
+				{
+					oldest = current;
+				}
+			}
+			enumerator->destroy(enumerator);
+			this->relations->remove(this->relations, oldest, NULL);
+			relation_destroy(oldest);
+		}
+		this->check_required = FALSE;
+	}
+}
+
+/**
  * Implementation of cert_cache_t.issued_by.
  */
 static bool issued_by(private_cert_cache_t *this,
 					  certificate_t *subject, certificate_t *issuer)
 {
-	relation_t *found = NULL, *current, *oldest = NULL;
+	relation_t *found = NULL, *current;
 	enumerator_t *enumerator;
 	
 	/* lookup cache */
@@ -81,10 +123,6 @@ static bool issued_by(private_cert_cache_t *this,
 			current->last_use = time(NULL);
 			found = current;
 			break;
-		}
-		if (oldest == NULL || oldest->last_use <= current->last_use)
-		{
-			oldest = current;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -102,12 +140,8 @@ static bool issued_by(private_cert_cache_t *this,
 	found->subject = subject->get_ref(subject);
 	found->issuer = issuer->get_ref(issuer);
 	found->last_use = time(NULL);
-	if (this->relations->get_count(this->relations) > CACHE_LIMIT && oldest)
-	{
-		this->relations->remove(this->relations, oldest, NULL);
-		relation_destroy(oldest);
-	}
 	this->relations->insert_last(this->relations, found);
+	check_cache(this);
 	return TRUE;
 }
 
@@ -121,6 +155,8 @@ typedef struct {
 	key_type_t key;
 	/** ID to get a cert from */
 	identification_t *id;
+	/** reverse pointer to cache */
+	private_cert_cache_t *this;
 } cert_data_t;
 
 /**
@@ -167,6 +203,19 @@ static bool certs_filter(cert_data_t *data, relation_t **in, certificate_t **out
 }
 
 /**
+ * clean up enumeration data
+ */
+static void certs_destroy(cert_data_t *data)
+{
+	data->this->enumerating--;
+	if (data->this->check_required)
+	{
+		check_cache(data->this);
+	}
+	free(data);
+}
+
+/**
  * implementation of credential_set_t.create_cert_enumerator
  */
 static enumerator_t *create_enumerator(private_cert_cache_t *this,
@@ -183,10 +232,12 @@ static enumerator_t *create_enumerator(private_cert_cache_t *this,
 	data->cert = cert;
 	data->key = key;
 	data->id = id;
+	data->this = this;
+	this->enumerating++;
 	
 	return enumerator_create_filter(
 							this->relations->create_enumerator(this->relations),
-							(void*)certs_filter, data, (void*)free);
+							(void*)certs_filter, data, (void*)certs_destroy);
 }
 
 /**
@@ -235,6 +286,8 @@ cert_cache_t *cert_cache_create()
 	this->public.destroy = (void(*)(cert_cache_t*))destroy;
 	
 	this->relations = linked_list_create();
+	this->enumerating = FALSE;
+	this->check_required = FALSE;
 	
 	return &this->public;
 }
