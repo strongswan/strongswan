@@ -64,7 +64,7 @@ bool fips_compute_hmac_signature(const char *key, char *signature)
 	}
 	else
 	{
-		chunk_t hmac_key = { key, strlen(key) };
+		chunk_t hmac_key = { (u_char *)key, strlen(key) };
 		chunk_t text_chunk = { text_start, text_len };
 		chunk_t rodata_chunk = { (u_char *)FIPS_rodata_start, rodata_len };
 		chunk_t signature_chunk = chunk_empty;
