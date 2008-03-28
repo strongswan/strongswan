@@ -16,6 +16,7 @@
  */
 
 #include <dispatcher.h>
+#include <debug.h>
 #include <stdio.h>
 
 #include "manager.h"
@@ -26,32 +27,36 @@
 #include "controller/control_controller.h"
 #include "controller/config_controller.h"
 
-#define DBFILE IPSECDIR "/manager.db"
-#define SESSION_TIMEOUT 900
-#define THREADS 10
-
 int main (int arc, char *argv[])
 {
 	dispatcher_t *dispatcher;
 	storage_t *storage;
-	char *socket = NULL;
-	bool debug = FALSE;
-	
-#ifdef FCGI_SOCKET
-	socket = FCGI_SOCKET;
-	debug = TRUE;
-#endif /* FCGI_SOCKET */
+	char *socket;
+	char *database;
+	bool debug;
+	int threads, timeout;
 
-	library_init(IPSECDIR "/manager.conf");
+	library_init(IPSECDIR "/strongswan.conf");
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
 	
-	storage = storage_create("sqlite://"DBFILE);
-	if (storage == NULL)
+	socket = lib->settings->get_str(lib->settings, "manager.socket", NULL);
+	debug = lib->settings->get_bool(lib->settings, "manager.debug", FALSE);
+	timeout = lib->settings->get_int(lib->settings, "manager.timeout", 900);
+	threads = lib->settings->get_int(lib->settings, "manager.threads", 10);
+	database = lib->settings->get_str(lib->settings, "manager.database", NULL);
+	if (!database)
 	{
-		fprintf(stderr, "opening database '%s' failed.\n", DBFILE);
+		DBG1("database URI undefined, set manager.database in strongswan.conf");
 		return 1;
 	}
 	
-	dispatcher = dispatcher_create(socket, debug, SESSION_TIMEOUT,
+	storage = storage_create(database);
+	if (storage == NULL)
+	{
+		return 1;
+	}
+	
+	dispatcher = dispatcher_create(socket, debug, timeout,
 						(context_constructor_t)manager_create, storage);
 	dispatcher->add_controller(dispatcher, ikesa_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, gateway_controller_create, NULL);
@@ -59,7 +64,7 @@ int main (int arc, char *argv[])
 	dispatcher->add_controller(dispatcher, control_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, config_controller_create, NULL);
 	
-	dispatcher->run(dispatcher, THREADS);
+	dispatcher->run(dispatcher, threads);
 	
 	dispatcher->waitsignal(dispatcher);
 	
