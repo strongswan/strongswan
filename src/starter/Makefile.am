@@ -16,7 +16,7 @@ PLUTODIR=$(top_srcdir)/src/pluto
 SCEPCLIENTDIR=$(top_srcdir)/src/scepclient
 
 lex.yy.c:	y.tab.c parser.l parser.y parser.h
-		$(LEX) parser.l
+		$(LEX) --nounput parser.l 
 
 y.tab.c:	parser.l parser.y parser.h
 		$(YACC) -v -d parser.y
