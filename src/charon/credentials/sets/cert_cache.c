@@ -132,6 +132,17 @@ static bool certs_filter(cert_data_t *data, relation_t **in, certificate_t **out
 	certificate_t *cert;
 	
 	cert = (*in)->subject;
+	if (data->key == KEY_ANY && data->id && 
+		(data->cert == CERT_ANY || data->cert == CERT_X509_CRL) &&
+		cert->get_type(cert) == CERT_X509_CRL)
+	{	/* CRL lookup is done using issuer/authkeyidentifier */
+		if (cert->has_issuer(cert, data->id))
+		{
+			*out = cert;
+			return TRUE;
+		}
+	}
+	
 	if ((data->cert == CERT_ANY || cert->get_type(cert) == data->cert) &&
 		(!data->id || cert->has_subject(cert, data->id)))
 	{

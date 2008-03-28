@@ -356,8 +356,8 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 /**
  * check the signature of an OCSP response 
  */
-static bool check_ocsp_response(private_credential_manager_t *this,
-							    ocsp_response_t *response)
+static bool verify_ocsp(private_credential_manager_t *this, 
+						ocsp_response_t *response)
 {
 	certificate_t *issuer, *subject;
 	identification_t *responder;
@@ -403,7 +403,7 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 	response = (ocsp_response_t*)cand;
 
 	/* check ocsp signature */
-	if (!check_ocsp_response(this, response))
+	if (!verify_ocsp(this, response))
 	{
 		DBG1(DBG_CFG, "OCSP response verification failed");
 		cand->destroy(cand);
@@ -418,6 +418,7 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 			DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
 				 		  &revocation, crl_reason_names, reason);
 			DESTROY_IF(best);
+			*valid = VALIDATION_REVOKED;
 			return cand;
 		case VALIDATION_GOOD:
 			/* results in either good or stale */
@@ -476,7 +477,7 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 		best = get_better_ocsp(this, current, best, subject, issuer, &valid);
 		if (best && valid != VALIDATION_STALE)
 		{
-			DBG1(DBG_CFG, "  used cached ocsp response");
+			DBG1(DBG_CFG, "found cached ocsp response");
 			break;
 		}
 	}
@@ -547,9 +548,7 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
  */
 static certificate_t* fetch_crl(private_credential_manager_t *this, char *url)
 {
-	certificate_t *crl, *issuer;
-	enumerator_t *enumerator;
-	bool verified = FALSE;
+	certificate_t *crl;
 	chunk_t chunk;
 	
 	/* TODO: unlock the manager while fetching? */
@@ -566,8 +565,18 @@ static certificate_t* fetch_crl(private_credential_manager_t *this, char *url)
 		DBG1(DBG_CFG, "crl fetched successfully but parsing failed");
 		return NULL;
 	}
+	return crl;
+}
+
+/**
+ * check the signature of an CRL
+ */
+static bool verify_crl(private_credential_manager_t *this, certificate_t *crl)
+{
+	certificate_t *issuer;
+	enumerator_t *enumerator;
+	bool verified = FALSE;
 	
-	/* verify the signature of the fetched crl */
 	enumerator = create_trusted_enumerator(this, KEY_ANY, crl->get_issuer(crl),
 										   FALSE, FALSE);
 	while (enumerator->enumerate(enumerator, &issuer, NULL))
@@ -581,14 +590,70 @@ static certificate_t* fetch_crl(private_credential_manager_t *this, char *url)
 		}
 	}
 	enumerator->destroy(enumerator);
+	
+	return verified;
+}
 
-	if (!verified)
+/**
+ * Get the better of two CRLs, and check for usable CRL info
+ */
+static certificate_t *get_better_crl(private_credential_manager_t *this,
+									 certificate_t *cand, certificate_t *best,
+									 x509_t *subject, x509_t *issuer,
+									 cert_validation_t *valid)
+{
+	enumerator_t *enumerator;
+	time_t revocation, valid_until;
+	crl_reason_t reason;
+	chunk_t serial;
+	crl_t *crl;
+
+	/* check CRL signature */
+	if (!verify_crl(this, cand))
 	{
-		DBG1(DBG_CFG, "crl is untrusted: issuer certificate not found");
-		crl->destroy(crl);
-		return NULL;
+		DBG1(DBG_CFG, "crl response verification failed");
+		cand->destroy(cand);
+		return best;
 	}
-	return crl;
+	
+	crl = (crl_t*)cand;
+	enumerator = crl->create_enumerator(crl);
+	while (enumerator->enumerate(enumerator, &serial, &revocation, &reason))
+	{
+		if (chunk_equals(serial, subject->get_serial(subject)))
+		{
+			DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
+				 &revocation, crl_reason_names, reason);
+			*valid = VALIDATION_REVOKED;
+			enumerator->destroy(enumerator);
+			DESTROY_IF(best);
+			return cand;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* select the better of the two CRLs */
+	if (best == NULL || cand->is_newer(cand, best))
+	{
+		DESTROY_IF(best);
+		best = cand;
+		if (best->get_validity(best, NULL, NULL, &valid_until))
+		{
+			DBG1(DBG_CFG, "  crl is valid: until %#T", &valid_until);
+			*valid = VALIDATION_GOOD;
+		}
+		else
+		{
+			DBG1(DBG_CFG, "  crl is stale: since %#T", &valid_until);
+			*valid = VALIDATION_STALE;
+		}
+	}
+	else
+	{
+		*valid = VALIDATION_STALE;
+		cand->destroy(cand);
+	}
+	return best;
 }
 
 /**
@@ -598,16 +663,17 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 								   x509_t *subject, x509_t *issuer, 
 								   auth_info_t *auth)
 {
-	identification_t *keyid = NULL;
-	certificate_t *best_cert = NULL;
-	certificate_t *cert;
-	public_key_t *public;
 	cert_validation_t valid = VALIDATION_SKIPPED;
-	bool stale = TRUE;
+	identification_t *keyid = NULL;
+	certificate_t *best = NULL;
+	certificate_t *current;
+	public_key_t *public;
+	enumerator_t *enumerator;
+	char *uri;
 	
 	/* derive the authorityKeyIdentifier from the issuer's public key */
-	cert = &issuer->interface;
-	public = cert->get_public_key(cert);
+	current = &issuer->interface;
+	public = current->get_public_key(current);
 	if (public)
 	{
 		keyid = public->get_id(public, ID_PUBKEY_SHA1);
@@ -616,146 +682,66 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 	/* find a cached crl by authorityKeyIdentifier */
 	if (keyid)
 	{
-		enumerator_t *enumerator = create_cert_enumerator(this, CERT_X509_CRL,
-														KEY_ANY, keyid, TRUE);
-		certificate_t *cert;
-
-		while (enumerator->enumerate(enumerator, &cert))
+		enumerator = create_cert_enumerator(this, CERT_X509_CRL, KEY_ANY, 
+											keyid, FALSE);
+		while (enumerator->enumerate(enumerator, &current))
 		{
-			/* select most recent crl */
-			if (best_cert == NULL || cert->is_newer(cert, best_cert))
+			current->get_ref(current);
+			best = get_better_crl(this, current, best, subject, issuer, &valid);
+			if (best && valid != VALIDATION_STALE)
 			{
-				DESTROY_IF(best_cert);
-				best_cert = cert->get_ref(cert);
+				DBG1(DBG_CFG, "found cached crl");
+				break;
 			}
 		}
 		enumerator->destroy(enumerator);
 	}
 
-	/* check the validity of the cached crl if one was found */
-	if (best_cert)
+	/* fallback to fetching crls from credential sets cdps */
+	if (keyid && valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
 	{
-		time_t nextUpdate;
-
-		stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
-		DBG1(DBG_CFG, "cached crl is %s %#T",
-					   stale? "stale: since":"valid: until",
-					   &nextUpdate, FALSE );
-	}
-
-	/* fallback to fetching crls from cdps defined in ca info sections */
-	if (stale && keyid)
-	{
-		enumerator_t *enumerator = create_cdp_enumerator(this, CERT_X509_CRL,
-														 keyid);
-		char *uri;
+		enumerator = create_cdp_enumerator(this, CERT_X509_CRL, keyid);
 
 		while (enumerator->enumerate(enumerator, &uri))
 		{
-			certificate_t *cert = fetch_crl(this, uri);
-
-			/* redefine default since we have at least one uri */
-			valid = VALIDATION_FAILED;
-
-			if (cert)
+			current = fetch_crl(this, uri);
+			best = get_better_crl(this, current, best, subject, issuer, &valid);
+			if (best && valid != VALIDATION_STALE)
 			{
-				/* select most recent crl until valid one is found */
-				if (best_cert == NULL || cert->is_newer(cert, best_cert))
-				{
-					time_t nextUpdate;
-
-					DESTROY_IF(best_cert);
-					best_cert = cert;
-					stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
-					DBG1(DBG_CFG, "fetched crl is %s %#T",
-								   stale? "stale: since":"valid: until",
-								   &nextUpdate, FALSE );
-					if (!stale)
-					{
-						break;
-					}
-				}
-				else
-				{
-					cert->destroy(cert);
-				}
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-
-	/* fallback to fetching crls from cdps defined in the subject's certificate */
-	if (stale)
-	{
-		enumerator_t *enumerator = subject->create_crl_uri_enumerator(subject);
-		char *uri;
-
-		while (enumerator->enumerate(enumerator, &uri))
-		{
-			certificate_t *cert = fetch_crl(this, uri);
-
-			/* redefine default since we have at least one uri */
-			valid = VALIDATION_FAILED;
-
-			if (cert)
-			{
-				/* select most recent crl until valid one is found */
-				if (best_cert == NULL || cert->is_newer(cert, best_cert))
-				{
-					time_t nextUpdate;
-
-					DESTROY_IF(best_cert);
-					best_cert = cert;
-					stale = !best_cert->get_validity(best_cert, NULL, NULL, &nextUpdate);
-					DBG1(DBG_CFG, "fetched crl is %s %#T",
-								   stale? "stale: since":"valid: until",
-								   &nextUpdate, FALSE );
-					if (!stale)
-					{
-						break;
-					}
-				}
-				else
-				{
-					cert->destroy(cert);
-				}
+				break;
 			}
 		}
 		enumerator->destroy(enumerator);
 	}
 	DESTROY_IF(public);
 
-	/* if we have a crl, check the revocation status */
-	if (best_cert)
+	/* fallback to fetching crls from cdps from subject's certificate */
+	if (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
 	{
-		chunk_t subject_serial = subject->get_serial(subject);
-		chunk_t serial;
-		time_t revocation;
-		crl_reason_t reason;
-		crl_t *crl = (crl_t*)best_cert;
-		enumerator_t *enumerator = crl->create_enumerator(crl);
+		enumerator = subject->create_crl_uri_enumerator(subject);
 
-		/* redefine default */
-		valid = stale ? VALIDATION_STALE : VALIDATION_GOOD;
-
-		while (enumerator->enumerate(enumerator, &serial, &revocation, &reason))
+		while (enumerator->enumerate(enumerator, &uri))
 		{
-			if (chunk_equals(serial, subject_serial))
+			current = fetch_crl(this, uri);
+			best = get_better_crl(this, current, best, subject, issuer, &valid);
+			if (best && valid != VALIDATION_STALE)
 			{
-				DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
-					 &revocation, crl_reason_names, reason);
-				valid = VALIDATION_REVOKED;
 				break;
 			}
 		}
 		enumerator->destroy(enumerator);
-		best_cert->destroy(best_cert);
 	}
-
+	
+	/* an uri was found, but no result. switch validation state to failed */
+	if (valid == VALIDATION_SKIPPED && uri)
+	{
+		valid = VALIDATION_FAILED;
+	}
 	if (auth)
 	{
 		auth->add_item(auth, AUTHZ_CRL_VALIDATION, &valid);
 	}
+	DESTROY_IF(best);
 	return valid;
 }
 
