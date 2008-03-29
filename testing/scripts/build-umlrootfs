@@ -133,7 +133,7 @@ echo -n " --enable-integrity-test" >> $INSTALLSHELL
 
 if [ "$USE_LIBCURL" = "yes" ]
 then
-    echo -n " --enable-http" >> $INSTALLSHELL
+    echo -n " --enable-curl" >> $INSTALLSHELL
 fi
 
 if [ "$USE_LDAP" = "yes" ]
@@ -151,11 +151,16 @@ then
     echo -n " --enable-eap-sim" >> $INSTALLSHELL
     fi
 
-if [ "$USE_ME" = "yes" ]
+if [ "$USE_MEDIATION" = "yes" ]
 then
     echo -n " --enable-mediation" >> $INSTALLSHELL
 fi
-    
+
+if [ "$USE_INTEGRITY_TEST" = "yes" ]
+then
+    echo -n " --enable-integrity-test" >> $INSTALLSHELL
+fi
+        
 if [ "$USE_LEAK_DETECTIVE" = "yes" ]
 then
     echo -n " --enable-leak-detective" >> $INSTALLSHELL
