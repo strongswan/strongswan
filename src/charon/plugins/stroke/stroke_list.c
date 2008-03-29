@@ -191,7 +191,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	{
 		uptime = time(NULL) - this->uptime;
 		fprintf(out, "Performance:\n");
-		fprintf(out, "  uptime: %V, since %T\n", &uptime, &this->uptime);
+		fprintf(out, "  uptime: %V, since %#T\n", &uptime, &this->uptime, FALSE);
 		fprintf(out, "  worker threads: %d idle of %d,",
 				charon->processor->get_idle_threads(charon->processor),
 				charon->processor->get_total_threads(charon->processor));
