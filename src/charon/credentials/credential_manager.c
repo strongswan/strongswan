@@ -366,9 +366,7 @@ static bool verify_ocsp(private_credential_manager_t *this,
 	bool verified = FALSE;
 
 	wrapper = ocsp_response_wrapper_create((ocsp_response_t*)response);
-	this->sets->remove(this->sets, this->cache, NULL);
-	this->sets->insert_first(this->sets, wrapper);
-	this->sets->insert_first(this->sets, this->cache);
+	this->sets->insert_last(this->sets, wrapper);
 	
 	subject = &response->certificate;
 	responder = subject->get_issuer(subject);
@@ -1106,14 +1104,14 @@ static bool public_enumerate(public_enumerator_t *this,
  */
 static void public_destroy(public_enumerator_t *this)
 {
+	DESTROY_IF(this->current);
+	this->inner->destroy(this->inner);
 	if (this->wrapper)
 	{
 		this->this->sets->remove(this->this->sets, this->wrapper, NULL);
-		this->this->mutex->unlock(this->this->mutex);
 		this->wrapper->destroy(this->wrapper);
 	}
-	DESTROY_IF(this->current);
-	this->inner->destroy(this->inner);
+	this->this->mutex->unlock(this->this->mutex);
 	free(this);
 }
 
@@ -1135,9 +1133,7 @@ static enumerator_t* create_public_enumerator(private_credential_manager_t *this
 	if (auth)
 	{
 		enumerator->wrapper = auth_info_wrapper_create(auth);
-		this->sets->remove(this->sets, this->cache, NULL);
-		this->sets->insert_first(this->sets, enumerator->wrapper);
-		this->sets->insert_first(this->sets, this->cache);
+		this->sets->insert_last(this->sets, enumerator->wrapper);
 	}
 	return &enumerator->public;
 }
