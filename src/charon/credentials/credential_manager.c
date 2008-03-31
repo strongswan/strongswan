@@ -938,6 +938,10 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 		}
 	}
 	current->destroy(current);
+	if (level > MAX_CA_LEVELS)
+	{
+		DBG1(DBG_CFG, "maximum ca path length of %d levels reached", level);
+	}
 	if (trusted)
 	{
 		result->merge(result, auth);
