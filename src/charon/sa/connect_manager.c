@@ -29,13 +29,16 @@
 #include <encoding/payloads/endpoint_notify.h>
 
 /* base timeout
- * the sending interval is ME_INTERVAL * active checklists (N)
- * retransmission timeout is ME_INTERVAL * N * checks in waiting state (NW) */
-#define ME_INTERVAL 20 /* ms */
-/* min retransmission timeout (RTO is ME_INTERVAL * N * checks in waiting state) */
-#define ME_RTO_MIN 100 /* ms */
-/* max number of retransmissions (+ the initial check) */
-#define ME_MAX_RETRANS 2
+ * the check interval is ME_INTERVAL * active checklists (N) */
+ #define ME_INTERVAL 20 /* ms */
+/* retransmission timeout is first ME_RTO_B * N for ME_BOOST retransmissions
+ * then gets reduced to ME_RTO * N. */
+/* number of initial retransmissions sent in short interval */
+#define ME_BOOST 2
+/* retransmission timeout */
+#define ME_RTO 100 /* ms */
+/* max number of retransmissions */
+#define ME_MAX_RETRANS 9
 
 
 typedef struct private_connect_manager_t private_connect_manager_t;
@@ -676,14 +679,14 @@ static status_t get_pair_by_hosts(linked_list_t *pairs, host_t *local, host_t *r
 				(void**)pair, local, remote);
 }
 
-/**
- * Searches for a pair with a specific id
- */
 static bool match_pair_by_id(endpoint_pair_t *current, u_int32_t *id)
 {
 	return current->id == *id;
 }
 
+/**
+ * Searches for a pair with a specific id
+ */
 static status_t get_pair_by_id(check_list_t *checklist, u_int32_t id, endpoint_pair_t **pair)
 {
 	return checklist->pairs->find_first(checklist->pairs,
@@ -691,14 +694,14 @@ static status_t get_pair_by_id(check_list_t *checklist, u_int32_t id, endpoint_p
 				(void**)pair, &id);
 }
 
-/**
- * Returns the best pair of state CHECK_SUCCEEDED from a checklist. 
- */
 static bool match_succeeded_pair(endpoint_pair_t *current)
 {
 	return current->state == CHECK_SUCCEEDED;
 }
 
+/**
+ * Returns the best pair of state CHECK_SUCCEEDED from a checklist. 
+ */
 static status_t get_best_valid_pair(check_list_t *checklist, endpoint_pair_t **pair)
 {
 	return checklist->pairs->find_first(checklist->pairs,
@@ -706,14 +709,14 @@ static status_t get_best_valid_pair(check_list_t *checklist, endpoint_pair_t **p
 				(void**)pair);
 }
 
-/**
- * Returns and *removes* the first triggered pair in state CHECK_WAITING. 
- */
 static bool match_waiting_pair(endpoint_pair_t *current)
 {
 	return current->state == CHECK_WAITING;
 }
 
+/**
+ * Returns and *removes* the first triggered pair in state CHECK_WAITING. 
+ */
 static status_t get_triggered_pair(check_list_t *checklist, endpoint_pair_t **pair)
 {
 	iterator_t *iterator;
@@ -913,7 +916,7 @@ static chunk_t build_signature(private_connect_manager_t *this,
 	return sig_hash;
 }
 
-static void queue_retransmission(private_connect_manager_t *this, chunk_t connect_id, u_int32_t mid);
+static void queue_retransmission(private_connect_manager_t *this, check_list_t *checklist, endpoint_pair_t *pair);
 static void schedule_checks(private_connect_manager_t *this, check_list_t *checklist, u_int32_t time);
 static void finish_checks(private_connect_manager_t *this, check_list_t *checklist);
 
@@ -952,7 +955,7 @@ static job_requeue_t retransmit(retransmit_data_t *data)
 	
 	if (++pair->retransmitted >= ME_MAX_RETRANS)
 	{
-		DBG2(DBG_IKE, "pair with id '%d' failed after %d tries",
+		DBG2(DBG_IKE, "pair with id '%d' failed after %d retransmissions",
 				data->mid, pair->retransmitted);
 		pair->state = CHECK_FAILED;
 		goto retransmit_end;
@@ -960,7 +963,7 @@ static job_requeue_t retransmit(retransmit_data_t *data)
 	
 	charon->sender->send(charon->sender, pair->packet->clone(pair->packet));
 	
-	queue_retransmission(this, checklist->connect_id, pair->id);
+	queue_retransmission(this, checklist, pair);
 
 retransmit_end:
 	update_checklist_state(checklist);
@@ -984,11 +987,24 @@ retransmit_end:
 /**
  * Queues a retransmission job
  */
-static void queue_retransmission(private_connect_manager_t *this, chunk_t connect_id, u_int32_t mid)
+static void queue_retransmission(private_connect_manager_t *this, check_list_t *checklist, endpoint_pair_t *pair)
 {
-	retransmit_data_t *data = retransmit_data_create(this, chunk_clone(connect_id), mid);
+	retransmit_data_t *data = retransmit_data_create(this, chunk_clone(checklist->connect_id), pair->id);
 	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)retransmit, data, (callback_job_cleanup_t)retransmit_data_destroy, NULL);
-	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, ME_RTO_MIN);
+	
+	/*
+	u_int32_t NW = 0;
+	checklist->pairs->invoke_function(checklist->pairs, (linked_list_invoke_t)count_waiting_pairs, &NW);
+	u_int32_t rto = max(ME_INTERVAL * N * (NW + 1), ME_RTO_MIN);
+	*/
+	u_int32_t N = this->checklists->get_count(this->checklists);
+	u_int32_t rto = ME_INTERVAL * N;
+	if (pair->retransmitted > ME_BOOST)
+	{
+		rto = ME_RTO * N;
+	}
+	DBG2(DBG_IKE, "retransmission of pair '%d' in %dms - %d active checklist(s)", pair->id, rto, N);
+	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, rto);
 }
 
 /**
@@ -1027,7 +1043,7 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 		{
 			DESTROY_IF(pair->packet);
 			pair->packet = packet;
-			queue_retransmission(this, checklist->connect_id, pair->id);
+			queue_retransmission(this, checklist, pair);
 		}
 		else
 		{
@@ -1173,11 +1189,6 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
 					"and '%D'", checklist->initiator.id, checklist->responder.id);
 		}
 	}
-	
-	/* remove_checklist(this, checklist);
-	 * check_list_destroy(checklist);
-	 * FIXME: we should do this ^^^ after a specific timeout on the 
-	 * responder side */
 }
 
 /**
