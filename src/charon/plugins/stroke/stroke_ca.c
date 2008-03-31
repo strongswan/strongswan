@@ -307,7 +307,7 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 			first = FALSE;
 		}
 		fprintf(out, "\n");
-		fprintf(out, "  authname: %D\n", cert->get_subject(cert));
+		fprintf(out, "  authname: \"%D\"\n", cert->get_subject(cert));
 
 		/* list authkey and keyid */
 		if (public)
