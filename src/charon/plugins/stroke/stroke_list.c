@@ -18,6 +18,7 @@
 #include "stroke_list.h"
 
 #include <daemon.h>
+#include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
 
@@ -274,17 +275,52 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 }
 
 /**
+ * create a unique certificate list without duplicates
+ */
+static linked_list_t* create_unique_cert_list(certificate_type_t type)
+{
+	linked_list_t *list = linked_list_create();
+	enumerator_t *enumerator = charon->credentials->create_cert_enumerator(
+									charon->credentials, type, KEY_ANY,
+									NULL, FALSE);
+	certificate_t *cert;
+
+	while (enumerator->enumerate(enumerator, (void**)&cert))
+	{
+		enumerator_t *list_enum = list->create_enumerator(list);
+		certificate_t *list_cert;
+		bool unique = TRUE;
+		
+		while (list_enum->enumerate(list_enum, (void**)&list_cert))
+		{
+			/* exit if we have a duplicate? */
+			if (list_cert == cert)
+			{
+				unique = FALSE;
+				break;
+			}
+		}
+		if (unique)
+		{
+			list->insert_last(list, (void *)cert->get_ref(cert));
+		}
+		list_enum->destroy(list_enum);
+	}
+	enumerator->destroy(enumerator);
+	return list;
+}
+
+/**
  * list all X.509 certificates matching the flags
  */
-static void stroke_list_certs(char *label, x509_flag_t flags, bool utc, FILE *out)
+static void stroke_list_certs(linked_list_t *list, char *label, 
+							  x509_flag_t flags, bool utc, FILE *out)
 {
 	bool first = TRUE;
 	time_t now = time(NULL);
+	enumerator_t *enumerator = list->create_enumerator(list);
 	certificate_t *cert;
-	enumerator_t *enumerator;
-	
-	enumerator = charon->credentials->create_cert_enumerator(
-						charon->credentials, CERT_X509, KEY_ANY, NULL, FALSE);
+
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		x509_t *x509 = (x509_t*)cert;
@@ -330,8 +366,8 @@ static void stroke_list_certs(char *label, x509_flag_t flags, bool utc, FILE *ou
 			}
 			enumerator->destroy(enumerator);
 
-			fprintf(out, "  subject:  %D\n", cert->get_subject(cert));
-			fprintf(out, "  issuer:   %D\n", cert->get_issuer(cert));
+			fprintf(out, "  subject:  \"%D\"\n", cert->get_subject(cert));
+			fprintf(out, "  issuer:   \"%D\"\n", cert->get_issuer(cert));
 			fprintf(out, "  serial:    %#B\n", &serial);
 
 			/* list validity */
@@ -393,17 +429,23 @@ static void stroke_list_certs(char *label, x509_flag_t flags, bool utc, FILE *ou
 }
 
 /**
+ * list all X.509 attribute certificates
+ */
+static void stroke_list_acerts(bool utc, FILE *out)
+{
+
+}
+
+/**
  * list all X.509 CRLs
  */
-static void stroke_list_crls(bool utc, FILE *out)
+static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 {
 	bool first = TRUE;
 	time_t thisUpdate, nextUpdate, now = time(NULL);
+	enumerator_t *enumerator = list->create_enumerator(list);
 	certificate_t *cert;
-	enumerator_t *enumerator;
 	
-	enumerator = charon->credentials->create_cert_enumerator(
-						charon->credentials, CERT_X509_CRL, KEY_ANY, NULL, FALSE);
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		crl_t *crl = (crl_t*)cert;
@@ -418,7 +460,7 @@ static void stroke_list_crls(bool utc, FILE *out)
 		}
 		fprintf(out, "\n");
 
-		fprintf(out, "  issuer:   %D\n", cert->get_issuer(cert));
+		fprintf(out, "  issuer:   \"%D\"\n", cert->get_issuer(cert));
 
 		/* list optional crlNumber */
 		if (serial.ptr)
@@ -468,42 +510,60 @@ static void stroke_list_crls(bool utc, FILE *out)
 }
 
 /**
+ * list all OCSP responses
+ */
+static void stroke_list_ocsp(bool utc, FILE *out)
+{
+
+}
+
+/**
  * Implementation of stroke_list_t.list.
  */
 static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 {
+	linked_list_t *cert_list = NULL;
+
+	if (msg->list.flags & (LIST_CERTS | LIST_CACERTS | LIST_OCSPCERTS | LIST_AACERTS))
+	{
+		cert_list = create_unique_cert_list(CERT_X509);
+	}
 	if (msg->list.flags & LIST_CERTS)
 	{
-		stroke_list_certs("X.509 End Entity Certificates",
+		stroke_list_certs(cert_list, "X.509 End Entity Certificates",
 						  0, msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_CACERTS)
 	{
-		stroke_list_certs("X.509 CA Certificates",
+		stroke_list_certs(cert_list, "X.509 CA Certificates",
 						  X509_CA, msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_OCSPCERTS)
 	{
-		stroke_list_certs("X.509 OCSP Signer Certificates",
+		stroke_list_certs(cert_list, "X.509 OCSP Signer Certificates",
 						  X509_OCSP_SIGNER, msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_AACERTS)
 	{
-		stroke_list_certs("X.509 AA Certificates",
+		stroke_list_certs(cert_list, "X.509 AA Certificates",
 						  X509_AA, msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_ACERTS)
 	{
-
+		stroke_list_acerts(msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_CRLS)
 	{
-		stroke_list_crls(msg->list.utc, out);
+		linked_list_t *crl_list = create_unique_cert_list(CERT_X509_CRL);
+
+		stroke_list_crls(crl_list, msg->list.utc, out);
+		crl_list->destroy_offset(crl_list, offsetof(certificate_t, destroy)); 
 	}
 	if (msg->list.flags & LIST_OCSP)
 	{
-
+		stroke_list_ocsp(msg->list.utc, out);
 	}
+	DESTROY_OFFSET_IF(cert_list, offsetof(certificate_t, destroy));
 }
 
 /**
