@@ -271,14 +271,14 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.process for initiator
+ * Implementation of task_t.process for responder
  */
 static status_t process_r(private_ike_init_t *this, message_t *message)
 {	
 	randomizer_t *randomizer;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	SIG(IKE_UP_FAILED, "%H is initiating an IKE_SA",
+	SIG(IKE_UP_START, "%H is initiating an IKE_SA",
 		message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
