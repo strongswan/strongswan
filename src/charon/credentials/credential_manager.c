@@ -375,6 +375,8 @@ static bool verify_ocsp(private_credential_manager_t *this,
 	{
 		if (this->cache->issued_by(this->cache, subject, issuer))
 		{
+			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%D\"",
+						     issuer->get_subject(issuer));
 			verified = TRUE;
 			break;
 		}
@@ -403,7 +405,7 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 	/* check ocsp signature */
 	if (!verify_ocsp(this, response))
 	{
-		DBG1(DBG_CFG, "OCSP response verification failed");
+		DBG1(DBG_CFG, "ocsp response verification failed");
 		cand->destroy(cand);
 		return best;
 	}
