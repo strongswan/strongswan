@@ -918,8 +918,8 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			else
 			{
 				DBG1(DBG_CFG, "no issuer certificate found for \"%D\"", 
-					 issuer->get_subject(issuer));
-				current->destroy(current);
+					 current->get_subject(current));
+				issuer->destroy(issuer);
 				break;
 			}
 		}
@@ -1006,7 +1006,8 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 				}
 				return TRUE;
 			}
-			return FALSE;
+			this->current->destroy(this->current);
+			this->current = NULL;
 		}
 	}
 	/* try to verify the trust chain for each certificate found */
@@ -1024,6 +1025,7 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 			}
 			return TRUE;
 		}
+		this->current = NULL;
 	}
 	return FALSE;
 }
