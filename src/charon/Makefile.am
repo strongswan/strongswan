@@ -107,7 +107,6 @@ else
 endif
 
 if USE_ME
-  AM_CFLAGS += -DME
   charon_SOURCES += encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
     processing/jobs/initiate_mediation_job.c processing/jobs/initiate_mediation_job.h \
     processing/jobs/mediation_job.c processing/jobs/mediation_job.h \

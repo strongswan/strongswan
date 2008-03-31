@@ -615,6 +615,14 @@ AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 
 dnl ==============================
+dnl  set global definitions
+dnl ==============================
+
+if test x$me = xtrue; then
+	AC_DEFINE(ME)
+fi
+
+dnl ==============================
 dnl  build Makefiles
 dnl ==============================
 
