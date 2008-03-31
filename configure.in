@@ -645,7 +645,6 @@ AC_OUTPUT(
 	src/charon/plugins/eap_identity/Makefile
 	src/charon/plugins/eap_md5/Makefile
 	src/charon/plugins/eap_sim/Makefile
-	src/charon/plugins/dbus/Makefile
 	src/charon/plugins/smp/Makefile
 	src/charon/plugins/sql/Makefile
 	src/charon/plugins/med_db/Makefile
