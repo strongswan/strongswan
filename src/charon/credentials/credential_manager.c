@@ -435,12 +435,14 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 		best = cand;
 		if (best->get_validity(best, NULL, NULL, &valid_until))
 		{
-			DBG1(DBG_CFG, "  ocsp response is valid: until %#T", &valid_until);
+			DBG1(DBG_CFG, "  ocsp response is valid: until %#T",
+							 &valid_until, FALSE);
 			*valid = VALIDATION_GOOD;
 		}
 		else
 		{
-			DBG1(DBG_CFG, "  ocsp response is stale: since %#T", &valid_until);
+			DBG1(DBG_CFG, "  ocsp response is stale: since %#T",
+							 &valid_until, FALSE);
 			*valid = VALIDATION_STALE;
 		}
 	}
@@ -637,12 +639,12 @@ static certificate_t *get_better_crl(private_credential_manager_t *this,
 		best = cand;
 		if (best->get_validity(best, NULL, NULL, &valid_until))
 		{
-			DBG1(DBG_CFG, "  crl is valid: until %#T", &valid_until);
+			DBG1(DBG_CFG, "  crl is valid: until %#T", &valid_until, FALSE);
 			*valid = VALIDATION_GOOD;
 		}
 		else
 		{
-			DBG1(DBG_CFG, "  crl is stale: since %#T", &valid_until);
+			DBG1(DBG_CFG, "  crl is stale: since %#T", &valid_until, FALSE);
 			*valid = VALIDATION_STALE;
 		}
 	}
