@@ -24,8 +24,8 @@
 #define ENDPOINT_NOTIFY_H_
 
 #define ME_PRIO_HOST   255
-#define ME_PRIO_SERVER 100
-#define ME_PRIO_PEER   120
+#define ME_PRIO_PEER   128
+#define ME_PRIO_SERVER 64
 #define ME_PRIO_RELAY  0
 
 typedef enum me_endpoint_family_t me_endpoint_family_t;
@@ -58,9 +58,9 @@ enum me_endpoint_type_t {
 	
 	HOST = 1,
 	
-	SERVER_REFLEXIVE = 2,
+	PEER_REFLEXIVE = 2,
 	
-	PEER_REFLEXIVE = 3,
+	SERVER_REFLEXIVE = 3,
 	
 	RELAYED = 4,
 	

@@ -73,8 +73,8 @@ struct private_endpoint_notify_t {
 
 ENUM(me_endpoint_type_names, HOST, RELAYED,
 	"HOST",
-	"SERVER_REFLEXIVE",
 	"PEER_REFLEXIVE",
+	"SERVER_REFLEXIVE",
 	"RELAYED"
 );
 
@@ -362,11 +362,11 @@ endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type, hos
 		case HOST:
 			this->priority = pow(2, 16) * ME_PRIO_HOST; 
 			break;
-		case SERVER_REFLEXIVE:
-			this->priority = pow(2, 16) * ME_PRIO_SERVER; 
-			break;
 		case PEER_REFLEXIVE:
 			this->priority = pow(2, 16) * ME_PRIO_PEER; 
+			break;
+		case SERVER_REFLEXIVE:
+			this->priority = pow(2, 16) * ME_PRIO_SERVER; 
 			break;
 		case RELAYED:
 		default:
