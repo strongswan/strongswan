@@ -30,5 +30,5 @@ DEFINE_TEST("CURL get", test_curl_get, FALSE)
 DEFINE_TEST("MySQL operations", test_mysql, FALSE)
 DEFINE_TEST("SQLite operations", test_sqlite, FALSE)
 DEFINE_TEST("mutex primitive", test_mutex, FALSE)
-DEFINE_TEST("RSA key generation", test_rsa_gen, TRUE)
-
+DEFINE_TEST("RSA key generation", test_rsa_gen, FALSE)
+DEFINE_TEST("RSA subjectPublicKeyInfo loading", test_rsa_load_any, TRUE)
