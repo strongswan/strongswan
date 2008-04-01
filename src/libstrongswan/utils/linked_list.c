@@ -149,9 +149,9 @@ struct private_enumerator_t {
 	enumerator_t enumerator;
 	
 	/**
-	 * next item to enumerate
+	 * associated linked list
 	 */
-	element_t *next;
+	private_linked_list_t *list;
 	
 	/**
 	 * current item
@@ -164,13 +164,23 @@ struct private_enumerator_t {
  */
 static bool enumerate(private_enumerator_t *this, void **item)
 {
-	if (this->next == NULL)
+	if (!this->current)
 	{
-		return FALSE;
+		if (!this->list->first)
+		{
+			return FALSE;
+		}
+		this->current = this->list->first;
 	}
-	*item = this->next->value;
-	this->current = this->next;
-	this->next = this->next->next;
+	else
+	{
+		if (!this->current->next)
+		{
+			return FALSE;
+		}
+		this->current = this->current->next;
+	}
+	*item = this->current->value;
 	return TRUE;
 }
 
@@ -183,7 +193,7 @@ static enumerator_t* create_enumerator(private_linked_list_t *this)
 	
 	enumerator->enumerator.enumerate = (void*)enumerate;
 	enumerator->enumerator.destroy = (void*)free;
-	enumerator->next = this->first;
+	enumerator->list = this;
 	enumerator->current = NULL;
 	
 	return &enumerator->enumerator;
@@ -602,11 +612,13 @@ static int remove(private_linked_list_t *this, void *item,
  */
 static void remove_at(private_linked_list_t *this, private_enumerator_t *enumerator)
 {
+	element_t *current;
+
 	if (enumerator->current)
 	{
-		remove_element(this, enumerator->current);
-		enumerator->current = NULL;
-		enumerator->next = this->first;
+		current = enumerator->current;
+		enumerator->current = current->previous;
+		remove_element(this, current);
 	}
 }
 
