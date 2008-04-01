@@ -14,8 +14,6 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast ${xml_C
 AM_CFLAGS = -rdynamic -DIPSECDIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
   -DIPSEC_PLUGINDIR=\"${plugindir}\"
 
-ipsec_DATA = manager.db
-
 # Don't forget to add templates to EXTRA_DIST !!! How to automate?
 ipsec_templatesdir = ${ipsecdir}/templates
 ipsec_templates_DATA = templates/header.cs templates/footer.cs templates/error.cs
@@ -44,7 +42,7 @@ templates/static/gateway-left.png templates/static/client-left.png templates/sta
 templates/static/router.png templates/static/gateway-right.png templates/static/client-right.png \
 templates/static/close.png templates/static/initiate.png
 
-EXTRA_DIST = manager.db templates/header.cs templates/footer.cs templates/error.cs \
+EXTRA_DIST = templates/header.cs templates/footer.cs templates/error.cs \
 templates/auth/login.cs templates/gateway/list.cs templates/ikesa/list.cs \
 templates/config/list.cs templates/control/result.cs \
 templates/static/style.css templates/static/script.js templates/static/jquery.js \
