@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -265,7 +266,16 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	}
 	
 	build_payloads(this, message);
-	
+
+#ifdef ME
+	{
+		chunk_t connect_id = this->ike_sa->get_connect_id(this->ike_sa);
+		if (connect_id.ptr)
+		{
+			message->add_notify(message, FALSE, ME_CONNECTID, connect_id);
+		}
+	}
+#endif /* ME */
 	
 	return NEED_MORE;
 }
@@ -289,6 +299,56 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 		DBG1(DBG_IKE, "error generating random nonce value");
 	}
 	randomizer->destroy(randomizer);
+	
+#ifdef ME
+	{
+		chunk_t connect_id = chunk_empty;
+		iterator_t *iterator;
+		payload_t *payload;
+	
+		/* check for a ME_CONNECTID notify */
+		iterator = message->get_payload_iterator(message);
+		while (iterator->iterate(iterator, (void**)&payload))
+		{
+			if (payload->get_type(payload) == NOTIFY)
+			{
+				notify_payload_t *notify = (notify_payload_t*)payload;
+				notify_type_t type = notify->get_notify_type(notify);
+			
+				switch (type)
+				{
+					case ME_CONNECTID:
+					{
+						chunk_free(&connect_id);
+						connect_id = chunk_clone(notify->get_notification_data(notify));
+						DBG2(DBG_IKE, "received ME_CONNECTID %#B", &connect_id);
+						break;
+					}
+					default:
+					{
+						if (type < 16383)
+						{
+							DBG1(DBG_IKE, "received %N notify error",
+								notify_type_names, type);
+							break;	
+						}
+						DBG1(DBG_IKE, "received %N notify",
+							notify_type_names, type);
+						break;
+					}
+				}
+			}
+		}
+		iterator->destroy(iterator);
+		
+		if (connect_id.ptr)
+		{
+			charon->connect_manager->stop_checks(charon->connect_manager,
+				connect_id);
+			chunk_free(&connect_id);
+		}
+	}
+#endif /* ME */
 	
 	process_payloads(this, message);
 	

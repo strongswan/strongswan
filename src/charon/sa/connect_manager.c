@@ -1147,7 +1147,8 @@ static job_requeue_t initiate_mediated(initiate_data_t *data)
 		while (iterator->iterate(iterator, (void**)&waiting_sa))
 		{
 			ike_sa_t *sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, waiting_sa->ike_sa_id);
-			if (sa->initiate_mediated(sa, pair->local, pair->remote, waiting_sa->childs) != SUCCESS)
+			if (sa->initiate_mediated(sa, pair->local, pair->remote, waiting_sa->childs,
+					checklist->connect_id) != SUCCESS)
 			{
 				SIG(IKE_UP_FAILED, "establishing the mediated connection failed");
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, sa);
@@ -1493,6 +1494,33 @@ static status_t set_responder_data(private_connect_manager_t *this,
 }
 
 /**
+ * Implementation of connect_manager_t.stop_checks.
+ */
+static status_t stop_checks(private_connect_manager_t *this, chunk_t connect_id)
+{
+	check_list_t *checklist;
+
+	pthread_mutex_lock(&(this->mutex));
+	
+	if (get_checklist_by_id(this, connect_id, &checklist) != SUCCESS)
+	{
+		DBG1(DBG_IKE, "checklist with id '%B' not found",
+				&connect_id);
+		pthread_mutex_unlock(&(this->mutex));
+		return NOT_FOUND;
+	}
+	
+	DBG1(DBG_IKE, "removing checklist with id '%B'", &connect_id);
+	
+	remove_checklist(this, checklist);
+	check_list_destroy(checklist);
+	
+	pthread_mutex_unlock(&(this->mutex));
+	
+	return SUCCESS;
+}
+
+/**
  * Implementation of connect_manager_t.destroy.
  */
 static void destroy(private_connect_manager_t *this)
@@ -1521,6 +1549,7 @@ connect_manager_t *connect_manager_create()
 	this->public.set_initiator_data = (status_t(*)(connect_manager_t*,identification_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool))set_initiator_data;
 	this->public.set_responder_data = (status_t(*)(connect_manager_t*,chunk_t,chunk_t,linked_list_t*))set_responder_data;
 	this->public.process_check = (void(*)(connect_manager_t*,message_t*))process_check;
+	this->public.stop_checks = (status_t(*)(connect_manager_t*,chunk_t))stop_checks;
 	
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (this->hasher == NULL)

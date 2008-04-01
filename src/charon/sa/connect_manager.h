@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -92,6 +92,16 @@ struct connect_manager_t {
 	status_t (*set_responder_data) (connect_manager_t *this,
 		chunk_t connect_id, chunk_t key, linked_list_t *endpoints);
 	
+	/**
+	 * Stops checks for a checklist. Used after the responder received an IKE_SA_INIT
+	 * request which contains a ME_CONNECTID payload.
+	 * 
+	 * @param connect_id		the connect ID
+	 * @returns
+	 * 							- NOT_FOUND, if the checklist has not been found
+	 * 							- SUCCESS, otherwise
+	 */
+	status_t (*stop_checks) (connect_manager_t *this, chunk_t connect_id);
 	
 	/**
 	 * Processes a connectivity check

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -147,6 +147,11 @@ struct private_ike_sa_t {
 	 * Server reflexive host
 	 */
 	host_t *server_reflexive_host;
+	
+	/**
+	 * Connect ID
+	 */
+	chunk_t connect_id;
 #endif /* ME */
 		
 	/**
@@ -943,6 +948,14 @@ static void set_server_reflexive_host(private_ike_sa_t *this, host_t *host)
 }
 
 /**
+ * Implementation of ike_sa_t.get_connect_id.
+ */
+static chunk_t get_connect_id(private_ike_sa_t *this)
+{
+	return this->connect_id;
+}
+
+/**
  * Implementation of ike_sa_t.respond
  */
 static status_t respond(private_ike_sa_t *this, identification_t *peer_id,
@@ -992,10 +1005,11 @@ static status_t initiate_mediation(private_ike_sa_t *this, peer_cfg_t *mediated_
  * Implementation of ike_sa_t.initiate_mediated
  */
 static status_t initiate_mediated(private_ike_sa_t *this, host_t *me, host_t *other,
-		linked_list_t *childs)
+		linked_list_t *childs, chunk_t connect_id)
 {
 	this->my_host = me->clone(me);
 	this->other_host = other->clone(other);
+	this->connect_id = chunk_clone(connect_id);
 	
 	task_t *task;
 	child_cfg_t *child_cfg;	
@@ -2314,6 +2328,7 @@ static void destroy(private_ike_sa_t *this)
 		charon->mediation_manager->remove(charon->mediation_manager, this->ike_sa_id);
 	}
 	DESTROY_IF(this->server_reflexive_host);
+	chunk_free(&this->connect_id);
 #endif /* ME */
 	
 	DESTROY_IF(this->my_host);
@@ -2403,8 +2418,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 #ifdef ME
 	this->public.get_server_reflexive_host = (host_t* (*)(ike_sa_t*)) get_server_reflexive_host;
 	this->public.set_server_reflexive_host = (void (*)(ike_sa_t*,host_t*)) set_server_reflexive_host;
+	this->public.get_connect_id = (chunk_t (*)(ike_sa_t*)) get_connect_id;
 	this->public.initiate_mediation = (status_t (*)(ike_sa_t*,peer_cfg_t*)) initiate_mediation;
-	this->public.initiate_mediated = (status_t (*)(ike_sa_t*,host_t*,host_t*,linked_list_t*)) initiate_mediated;
+	this->public.initiate_mediated = (status_t (*)(ike_sa_t*,host_t*,host_t*,linked_list_t*,chunk_t)) initiate_mediated;
 	this->public.relay = (status_t (*)(ike_sa_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool)) relay;
 	this->public.callback = (status_t (*)(ike_sa_t*,identification_t*)) callback;
 	this->public.respond = (status_t (*)(ike_sa_t*,identification_t*,chunk_t)) respond;
@@ -2448,6 +2464,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->ike_initiator = FALSE;
 #ifdef ME
 	this->server_reflexive_host = NULL;
+	this->connect_id = chunk_empty;
 #endif /* ME */
 	
 	return &this->public;

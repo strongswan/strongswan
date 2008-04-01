@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -450,6 +450,13 @@ struct ike_sa_t {
 	void (*set_server_reflexive_host) (ike_sa_t *this, host_t *host);
 	
 	/**
+	 * Get the connect ID.
+	 * 
+	 * @return				connect ID
+	 */
+	chunk_t (*get_connect_id) (ike_sa_t *this);
+	
+	/**
 	 * Initiate the mediation of a mediated connection (i.e. initiate a
 	 * ME_CONNECT exchange).
 	 * 
@@ -466,12 +473,13 @@ struct ike_sa_t {
 	 * @param me				local endpoint (gets cloned)
 	 * @param other				remote endpoint (gets cloned)
 	 * @param childs			linked list of child_cfg_t of CHILD_SAs (gets cloned)
+	 * @param connect_id		connect ID (gets cloned)
 	 * @return				
 	 * 							- SUCCESS if initialization started
 	 * 							- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate_mediated) (ike_sa_t *this, host_t *me, host_t *other,
-			linked_list_t *childs);
+			linked_list_t *childs, chunk_t connect_id);
 	
 	/**
 	 * Relay data from one peer to another (i.e. initiate a
