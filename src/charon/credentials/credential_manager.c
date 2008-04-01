@@ -970,8 +970,6 @@ typedef struct {
 	bool crl;
 	/** TRUE to do OCSP checking */
 	bool ocsp;
-	/** currently enumerating certificate */
-	certificate_t *current;
 	/** pretrusted certificate we have served at first invocation */
 	certificate_t *pretrusted;
 	/** currently enumerating auth info */
@@ -984,6 +982,8 @@ typedef struct {
 static bool trusted_enumerate(trusted_enumerator_t *this,
 							  certificate_t **cert, auth_info_t **auth)
 {
+	certificate_t *current;
+	
 	DESTROY_IF(this->auth);
 	this->auth = auth_info_create();
 	
@@ -1016,20 +1016,20 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 		}
 	}
 	/* try to verify the trust chain for each certificate found */
-	while (this->candidates->enumerate(this->candidates, &this->current))
+	while (this->candidates->enumerate(this->candidates, &current))
 	{
 		if (this->pretrusted &&
-			this->pretrusted->equals(this->pretrusted, this->current))
+			this->pretrusted->equals(this->pretrusted, current))
 		{	/* skip pretrusted certificate we already served */
 			continue;
 		}
 	
 		DBG1(DBG_CFG, "  using certificate \"%D\"",
-			 this->current->get_subject(this->current));
-		if (verify_trust_chain(this->this, this->current, this->auth, FALSE,
+			 current->get_subject(current));
+		if (verify_trust_chain(this->this, current, this->auth, FALSE,
 							   this->crl, this->ocsp))
 		{
-			*cert = this->current;
+			*cert = current;
 			if (auth)
 			{
 				*auth = this->auth;
@@ -1069,7 +1069,6 @@ static enumerator_t *create_trusted_enumerator(private_credential_manager_t *thi
 	enumerator->crl = crl;
 	enumerator->ocsp = ocsp;
 	enumerator->pretrusted = NULL;
-	enumerator->current = NULL;
 	enumerator->auth = NULL;
 	
 	return &enumerator->public;
