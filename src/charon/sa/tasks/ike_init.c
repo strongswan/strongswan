@@ -332,7 +332,7 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 								notify_type_names, type);
 							break;	
 						}
-						DBG1(DBG_IKE, "received %N notify",
+						DBG2(DBG_IKE, "received %N notify",
 							notify_type_names, type);
 						break;
 					}
