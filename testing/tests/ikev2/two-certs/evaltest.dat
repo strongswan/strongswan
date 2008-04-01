@@ -1,6 +1,7 @@
-moon::cat /var/log/daemon.log::candidate peer certificate was not successfully verified::YES
-moon::cat /var/log/daemon.log::candidate peer certificate has a non-matching RSA public key::YES
-moon::cat /var/log/daemon.log::candidate peer certificate has a matching RSA public key::YES
+moon::cat /var/log/daemon.log::certificate was revoked::YES
+moon::cat /var/log/daemon.log::authentication of.*carol@strongswan.org.*with RSA signature successful::YES
+moon::cat /var/log/daemon.log::signature validation failed, looking for another key::YES
+moon::cat /var/log/daemon.log::authentication of.*dave@strongswan.org.*with RSA signature successful::YES
 moon::ipsec statusall::carol.*ESTABLISHED::YES
 moon::ipsec statusall::dave.*ESTABLISHED::YES
 carol::ipsec statusall::home.*ESTABLISHED::YES

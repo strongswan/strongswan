@@ -1,5 +1,6 @@
-moon::cat /var/log/daemon.log::received valid http response::YES
-moon::cat /var/log/daemon.log::received certificate is no ocsp signer - rejected::YES
-moon::cat /var/log/daemon.log::certificate status unknown::YES
+moon::cat /var/log/daemon.log::requesting ocsp status from::YES
+moon::cat /var/log/daemon.log::ocsp response verification failed::YES
+moon::cat /var/log/daemon.log::certificate status is not available::YES
+moon::cat /var/log/daemon.log::constraint check failed.*VALIDATION_FAILED.*VALIDATION_GOOD::YES
 moon::ipsec status::rw.*ESTABLISHED::NO
 carol::ipsec status::home.*ESTABLISHED::NO
