@@ -7,7 +7,7 @@
 int main(int argc, char *argv[])
 {
 	int i, end = 0;
-	char byte;
+	unsigned char byte;
 
 	printf("char %s[] = {\n", argc > 1 ? argv[1] : "data");
 	while (1)
@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 				end = 1;
 				break;
 			}
-			printf("0x%02x,", byte);
+			printf("0x%02x,", (unsigned int)byte);
 		}
 		printf("\n");
 		if (end)
