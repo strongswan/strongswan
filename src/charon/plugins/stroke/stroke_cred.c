@@ -635,7 +635,7 @@ static void load_secrets(private_stroke_cred_t *this)
 		{
 			continue;
 		}
-		if (!extract_token(&ids, ':', &line))
+		if (!extract_last_token(&ids, ':', &line))
 		{
 			DBG1(DBG_CFG, "line %d: missing ':' separator", line_nr);
 			goto error;
