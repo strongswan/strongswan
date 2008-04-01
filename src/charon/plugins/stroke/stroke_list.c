@@ -284,27 +284,38 @@ static linked_list_t* create_unique_cert_list(certificate_type_t type)
 									charon->credentials, type, KEY_ANY,
 									NULL, FALSE);
 	certificate_t *cert;
-
+	
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
-		enumerator_t *list_enum = list->create_enumerator(list);
+		iterator_t *iterator = list->create_iterator(list, TRUE);
+		identification_t *issuer = cert->get_issuer(cert);
+		bool previous_same, same = FALSE, last = TRUE;
 		certificate_t *list_cert;
-		bool unique = TRUE;
 		
-		while (list_enum->enumerate(list_enum, (void**)&list_cert))
+		while (iterator->iterate(iterator, (void**)&list_cert))
 		{
 			/* exit if we have a duplicate? */
 			if (list_cert == cert)
 			{
-				unique = FALSE;
+				last = FALSE;
+				break;
+			}
+			/* group certificates with same issuer */
+			previous_same = same;
+			same = list_cert->has_issuer(list_cert, issuer);
+			if (previous_same && !same)
+			{
+				iterator->insert_before(iterator, (void *)cert->get_ref(cert));
+				last = FALSE;
 				break;
 			}
 		}
-		if (unique)
+		iterator->destroy(iterator);
+
+		if (last)
 		{
 			list->insert_last(list, (void *)cert->get_ref(cert));
 		}
-		list_enum->destroy(list_enum);
 	}
 	enumerator->destroy(enumerator);
 	return list;
