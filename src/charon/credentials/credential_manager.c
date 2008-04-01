@@ -972,6 +972,8 @@ typedef struct {
 	bool ocsp;
 	/** currently enumerating certificate */
 	certificate_t *current;
+	/** pretrusted certificate we have served at first invocation */
+	certificate_t *pretrusted;
 	/** currently enumerating auth info */
 	auth_info_t *auth;
 } trusted_enumerator_t;
@@ -982,7 +984,6 @@ typedef struct {
 static bool trusted_enumerate(trusted_enumerator_t *this,
 							  certificate_t **cert, auth_info_t **auth)
 {
-	DESTROY_IF(this->current);
 	DESTROY_IF(this->auth);
 	this->auth = auth_info_create();
 	
@@ -992,46 +993,49 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 		this->candidates = create_cert_enumerator(this->this, CERT_ANY,
 												  this->type, this->id, FALSE);
 		/* check if we have a trusted certificate for that peer */
-		this->current = get_pretrusted_cert(this->this, this->type, this->id);
-		if (this->current)
+		this->pretrusted = get_pretrusted_cert(this->this, this->type, this->id);
+		if (this->pretrusted)
 		{
 			/* if we find a trusted self signed certificate, we just accept it.
 			 * However, in order to fulfill authorization rules, we try to build 
 			 * the trust chain if it is not self signed */
 			if (this->this->cache->issued_by(this->this->cache,
-											 this->current, this->current) ||
-				verify_trust_chain(this->this, this->current, this->auth,
-											 TRUE, this->crl, this->ocsp))
+								   this->pretrusted, this->pretrusted) ||
+				verify_trust_chain(this->this, this->pretrusted, this->auth,
+								   TRUE, this->crl, this->ocsp))
 			{
 				DBG1(DBG_CFG, "  using trusted certificate \"%D\"",
-					 this->current->get_subject(this->current));
-				*cert = this->current;
+					 this->pretrusted->get_subject(this->pretrusted));
+				*cert = this->pretrusted;
 				if (auth)
 				{
 					*auth = this->auth;
 				}
 				return TRUE;
 			}
-			this->current->destroy(this->current);
-			this->current = NULL;
 		}
 	}
 	/* try to verify the trust chain for each certificate found */
 	while (this->candidates->enumerate(this->candidates, &this->current))
 	{
+		if (this->pretrusted &&
+			this->pretrusted->equals(this->pretrusted, this->current))
+		{	/* skip pretrusted certificate we already served */
+			continue;
+		}
+	
 		DBG1(DBG_CFG, "  using certificate \"%D\"",
 			 this->current->get_subject(this->current));
 		if (verify_trust_chain(this->this, this->current, this->auth, FALSE,
 							   this->crl, this->ocsp))
 		{
-			*cert = this->current->get_ref(this->current);
+			*cert = this->current;
 			if (auth)
 			{
 				*auth = this->auth;
 			}
 			return TRUE;
 		}
-		this->current = NULL;
 	}
 	return FALSE;
 }
@@ -1041,7 +1045,7 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
  */
 static void trusted_destroy(trusted_enumerator_t *this)
 {
-	DESTROY_IF(this->current);
+	DESTROY_IF(this->pretrusted);
 	DESTROY_IF(this->auth);
 	DESTROY_IF(this->candidates);
 	free(this);
@@ -1064,6 +1068,7 @@ static enumerator_t *create_trusted_enumerator(private_credential_manager_t *thi
 	enumerator->id = id;
 	enumerator->crl = crl;
 	enumerator->ocsp = ocsp;
+	enumerator->pretrusted = NULL;
 	enumerator->current = NULL;
 	enumerator->auth = NULL;
 	
