@@ -276,6 +276,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 
 /**
  * create a unique certificate list without duplicates
+ * certicates having the same issuer are grouped together.
  */
 static linked_list_t* create_unique_cert_list(certificate_type_t type)
 {
@@ -523,9 +524,26 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 /**
  * list all OCSP responses
  */
-static void stroke_list_ocsp(bool utc, FILE *out)
+static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 {
+	bool first = TRUE;
+	time_t thisUpdate, nextUpdate, now = time(NULL);
+	enumerator_t *enumerator = list->create_enumerator(list);
+	certificate_t *cert;
+	
+	while (enumerator->enumerate(enumerator, (void**)&cert))
+	{
+		if (first)
+		{
+			fprintf(out, "\n");
+			fprintf(out, "List of OCSP responses:\n");
+			fprintf(out, "\n");
+			first = FALSE;
+		}
 
+		fprintf(out, "  signer:   \"%D\"\n", cert->get_issuer(cert));
+	}
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -572,7 +590,10 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 	}
 	if (msg->list.flags & LIST_OCSP)
 	{
-		stroke_list_ocsp(msg->list.utc, out);
+		linked_list_t *ocsp_list = create_unique_cert_list(CERT_X509_OCSP_RESPONSE);
+
+		stroke_list_ocsp(ocsp_list, msg->list.utc, out);
+		ocsp_list->destroy_offset(ocsp_list, offsetof(certificate_t, destroy)); 
 	}
 	DESTROY_OFFSET_IF(cert_list, offsetof(certificate_t, destroy));
 }
