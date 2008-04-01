@@ -34,20 +34,6 @@
  */
 extern chunk_t gmp_mpz_to_asn1(const mpz_t value);
 
-/**
- * ASN.1 definition of a subjectPublicKeyInfo structure
- */
-static const asn1Object_t pkinfoObjects[] = {
-	{ 0, "subjectPublicKeyInfo",ASN1_SEQUENCE,		ASN1_NONE	}, /* 0 */
-	{ 1,   "algorithm",			ASN1_EOC,			ASN1_RAW	}, /* 1 */
-	{ 1,   "subjectPublicKey",	ASN1_BIT_STRING,	ASN1_NONE	}, /* 2 */
-	{ 2,     "RSAPublicKey",	ASN1_SEQUENCE,		ASN1_RAW	}, /* 3 */
-};
-#define PKINFO						0
-#define PKINFO_SUBJECT_PK_ALGORITHM	1
-#define PKINFO_SUBJECT_PK			2
-#define PKINFO_gmp_rsa_public_key		3
-#define PKINFO_ROOF					4
 
 /* ASN.1 definition of RSApublicKey */
 static const asn1Object_t pubkeyObjects[] = {
@@ -56,7 +42,7 @@ static const asn1Object_t pubkeyObjects[] = {
 	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  2 */
 };
 
-#define PUB_KEY_gmp_rsa_public_key		0
+#define PUB_KEY_RSA_PUBLIC_KEY		0
 #define PUB_KEY_MODULUS				1
 #define PUB_KEY_EXPONENT			2
 #define PUB_KEY_ROOF				3
@@ -519,7 +505,6 @@ static gmp_rsa_public_key_t *load(chunk_t blob)
 	}
 	return &this->public;
 }
-
 
 typedef struct private_builder_t private_builder_t;
 /**
