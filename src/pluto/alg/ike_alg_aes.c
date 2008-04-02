@@ -34,7 +34,7 @@ do_aes(u_int8_t *buf, size_t buf_len, u_int8_t *key, size_t key_size, u_int8_t *
 	memcpy(new_iv=iv_bak, (char*) buf + buf_len - AES_CBC_BLOCK_SIZE
 		, AES_CBC_BLOCK_SIZE);
 
-    AES_cbc_encrypt(&aes_ctx, buf, buf, buf_len, iv, enc);
+    SS_AES_cbc_encrypt(&aes_ctx, buf, buf, buf_len, iv, enc);
 
     if (enc)
 	new_iv = (char*) buf + buf_len-AES_CBC_BLOCK_SIZE;
