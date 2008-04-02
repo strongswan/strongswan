@@ -527,7 +527,6 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 {
 	bool first = TRUE;
-	time_t thisUpdate, nextUpdate, now = time(NULL);
 	enumerator_t *enumerator = list->create_enumerator(list);
 	certificate_t *cert;
 	

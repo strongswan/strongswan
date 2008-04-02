@@ -19,6 +19,7 @@
 #include "gmp_public_key.h"
 
 #include <asn1/asn1.h>
+#include <debug.h>
 
 /**
  * ASN.1 definition of a subjectPublicKeyInfo structure
