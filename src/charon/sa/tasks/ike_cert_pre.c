@@ -97,7 +97,7 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 				else
 				{
 					DBG1(DBG_IKE, "received cert request for unknown ca "
-						 "\"%D\"", id);
+								  "with keyid %D", id);
 					auth->add_item(auth, AUTHN_CA_CERT_KEYID, id);
 				}
 				id->destroy(id);

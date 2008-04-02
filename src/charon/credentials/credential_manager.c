@@ -426,6 +426,7 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 		default:
 		case VALIDATION_FAILED:
 			/* candidate unusable, does not contain our cert */
+			DBG1(DBG_CFG, "  ocsp response contains no status on our certificate");
 			cand->destroy(cand);
 			return best;
 	}
@@ -479,12 +480,12 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 		best = get_better_ocsp(this, current, best, subject, issuer, &valid);
 		if (best && valid != VALIDATION_STALE)
 		{
-			DBG1(DBG_CFG, "found cached ocsp response");
+			DBG1(DBG_CFG, "  using cached ocsp response");
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	
+
 	/* derive the authorityKeyIdentifier from the issuer's public key */
 	current = &issuer->interface;
 	public = current->get_public_key(current);
