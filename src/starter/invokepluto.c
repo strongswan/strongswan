@@ -167,6 +167,10 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
     {
 	arg[argc++] = "--nat_traversal";
     }
+    if (cfg->setup.force_keepalive)
+    {
+	arg[argc++] = "--force_keepalive";
+    }
     if (cfg->setup.keep_alive)
     {
 	static char buf2[15];

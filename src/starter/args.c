@@ -171,6 +171,7 @@ static const token_info_t token_info[] =
     { ARG_ENUM, offsetof(starter_config_t, setup.nocrsend), LST_bool               },
     { ARG_ENUM, offsetof(starter_config_t, setup.nat_traversal), LST_bool          },
     { ARG_TIME, offsetof(starter_config_t, setup.keep_alive), NULL                 },
+    { ARG_ENUM, offsetof(starter_config_t, setup.force_keepalive), LST_bool        },
     { ARG_STR,  offsetof(starter_config_t, setup.virtual_private), NULL            },
     { ARG_STR,  offsetof(starter_config_t, setup.pkcs11module), NULL               },
     { ARG_STR,  offsetof(starter_config_t, setup.pkcs11initargs), NULL             },

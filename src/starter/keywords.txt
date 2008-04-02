@@ -47,6 +47,7 @@ strictcrlpolicy,   KW_STRICTCRLPOLICY
 nocrsend,          KW_NOCRSEND
 nat_traversal,     KW_NAT_TRAVERSAL
 keep_alive,        KW_KEEP_ALIVE
+force_keepalive,   KW_FORCE_KEEPALIVE
 virtual_private,   KW_VIRTUAL_PRIVATE
 eap,               KW_EAP
 mobike,	           KW_MOBIKE

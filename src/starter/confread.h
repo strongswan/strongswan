@@ -184,6 +184,7 @@ struct starter_config {
 		bool	 nocrsend;
 		bool	 nat_traversal;
 		u_int	 keep_alive;
+		u_int	 force_keepalive;
 		char	 *virtual_private;
 		char	 *pkcs11module;
 		char	 *pkcs11initargs;
