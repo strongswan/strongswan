@@ -359,6 +359,8 @@ static void check_destroy(check_t *this)
 	chunk_free(&this->connect_id);
 	chunk_free(&this->endpoint_raw);
 	chunk_free(&this->auth);
+	DESTROY_IF(this->src);
+	DESTROY_IF(this->dst);
 	DESTROY_IF(this->endpoint);
 	free(this);
 }
@@ -373,6 +375,8 @@ static check_t *check_create()
 	this->connect_id = chunk_empty;
 	this->auth = chunk_empty;
 	this->endpoint_raw = chunk_empty;
+	this->src = NULL;
+	this->dst = NULL;
 	this->endpoint = NULL;
 	
 	this->mid = 0;
@@ -1020,7 +1024,9 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 	message->set_destination(message, check->dst->clone(check->dst));
 	message->set_source(message, check->src->clone(check->src));
 	
-	message->set_ike_sa_id(message, ike_sa_id_create(0, 0, request));
+	ike_sa_id_t *ike_sa_id = ike_sa_id_create(0, 0, request);
+	message->set_ike_sa_id(message, ike_sa_id);
+	ike_sa_id->destroy(ike_sa_id);
 
 	message->add_notify(message, FALSE, ME_CONNECTID, check->connect_id);
 	DBG2(DBG_IKE, "send ME_CONNECTID %#B", &check->connect_id);
@@ -1050,6 +1056,7 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 			packet->destroy(packet);
 		}
 	}
+	message->destroy(message);
 }
 
 /**
@@ -1323,7 +1330,9 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 	check_t *check = check_create();
 	check->mid = message->get_message_id(message);
 	check->src = message->get_source(message);
+	check->src = check->src->clone(check->src);
 	check->dst = message->get_destination(message);
+	check->dst = check->dst->clone(check->dst);
 	
 	if (process_payloads(message, check) != SUCCESS)
 	{

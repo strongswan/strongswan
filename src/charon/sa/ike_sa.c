@@ -1087,6 +1087,7 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		{	/* FIXME: we should try to find a better solution to this */
 			SIG(CHILD_UP_SUCCESS, "mediation connection is already up and running");
 		}
+		DESTROY_IF(child_cfg);
 	}
 	else
 #endif /* ME */

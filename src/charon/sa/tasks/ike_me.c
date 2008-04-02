@@ -241,7 +241,7 @@ static void process_payloads(private_ike_me_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.process for initiator
+ * Implementation of task_t.build for initiator
  */
 static status_t build_i(private_ike_me_t *this, message_t *message)
 {
@@ -512,7 +512,7 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.process for initiator (mediation server)
+ * Implementation of task_t.build for initiator (mediation server)
  */
 static status_t build_i_ms(private_ike_me_t *this, message_t *message)
 {
@@ -556,12 +556,22 @@ static status_t process_r_ms(private_ike_me_t *this, message_t *message)
 	{
 		case IKE_SA_INIT:
 		{
+			/* FIXME: we should check for SA* and TS* payloads
+			 * if any are there send NO_ADDITIONAL_SAS back and delete this SA */
 			process_payloads(this, message);
 			return this->mediation ? NEED_MORE : SUCCESS;
 		}
 		case IKE_AUTH:
 		{
+			/* FIXME: we should check whether the current peer_config is configured
+			 * as mediation connection */
 			process_payloads(this, message);
+			break;
+		}
+		case CREATE_CHILD_SA:
+		{
+			/* FIXME: if this is not to rekey the IKE SA we have to return a
+			 * NO_ADDITIONAL_SAS and then delete the SA */
 			break;
 		}
 		case ME_CONNECT:
@@ -633,8 +643,10 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 				
 				endpoint = endpoint_notify_create_from_host(SERVER_REFLEXIVE, host, NULL);								
 				message->add_payload(message, (payload_t*)endpoint->build_notify(endpoint));
+				endpoint->destroy(endpoint);
 			}
 			
+			/* FIXME: we must delete any existing IKE_SAs */
 			charon->mediation_manager->update_sa_id(charon->mediation_manager,
 					this->ike_sa->get_other_id(this->ike_sa),
 					this->ike_sa->get_id(this->ike_sa));
@@ -728,7 +740,10 @@ static void relay(private_ike_me_t *this, identification_t *requester, chunk_t c
 	this->peer_id = requester->clone(requester);
 	this->connect_id = chunk_clone(connect_id);
 	this->connect_key = chunk_clone(connect_key);
+	
+	this->remote_endpoints->destroy_offset(this->remote_endpoints, offsetof(endpoint_notify_t, destroy));
 	this->remote_endpoints = endpoints->clone_offset(endpoints, offsetof(endpoint_notify_t, clone));
+	
 	this->response = response;
 }
 

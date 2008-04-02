@@ -316,6 +316,7 @@ static endpoint_notify_t *_clone(private_endpoint_notify_t *this)
 static status_t destroy(private_endpoint_notify_t *this)
 {
 	DESTROY_IF(this->endpoint);
+	DESTROY_IF(this->base);
 	free(this);
 	return SUCCESS;
 }
@@ -374,6 +375,7 @@ endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type, hos
 			break;
 	}
 	
+	/* FIXME: if there is more than one ip address we should vary this priority */
 	this->priority += 65535;
 	
 	if (!host)
@@ -390,7 +392,7 @@ endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type, hos
 			this->family = IPv6;
 			break;
 		default:
-			/* unsupported family type, we do not set the hsot
+			/* unsupported family type, we do not set the host
 			 * (family is set to NO_FAMILY) */
 			return &this->public;
 	}
