@@ -482,7 +482,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					this->cookie = chunk_clone(notify->get_notification_data(notify));
 					this->ike_sa->reset(this->ike_sa);
 					iterator->destroy(iterator);
-					DBG1(DBG_IKE, "received %N notify", notify_type_names, type);
+					DBG2(DBG_IKE, "received %N notify", notify_type_names, type);
 					return NEED_MORE;
 				}
 				default:
@@ -494,7 +494,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 						iterator->destroy(iterator);
 						return FAILED;	
 					}
-					DBG1(DBG_IKE, "received %N notify",
+					DBG2(DBG_IKE, "received %N notify",
 						notify_type_names, type);
 					break;
 				}
