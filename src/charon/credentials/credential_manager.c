@@ -329,7 +329,7 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 	send = request->get_encoding(request);
 	request->destroy(request);
 
-	DBG1(DBG_CFG, "requesting ocsp status from '%s' ...", url);
+	DBG1(DBG_CFG, "  requesting ocsp status from '%s' ...", url);
 	/* TODO: unlock manager while fetching? */
 	if (lib->fetcher->fetch(lib->fetcher, url, &receive, 
 							FETCH_REQUEST_DATA, send,
@@ -554,7 +554,7 @@ static certificate_t* fetch_crl(private_credential_manager_t *this, char *url)
 	chunk_t chunk;
 	
 	/* TODO: unlock the manager while fetching? */
-	DBG1(DBG_CFG, "fetching crl from '%s' ...", url);
+	DBG1(DBG_CFG, "  fetching crl from '%s' ...", url);
 	if (lib->fetcher->fetch(lib->fetcher, url, &chunk, FETCH_END) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "crl fetching failed");
@@ -692,7 +692,7 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 			best = get_better_crl(this, current, best, subject, issuer, &valid);
 			if (best && valid != VALIDATION_STALE)
 			{
-				DBG1(DBG_CFG, "found cached crl");
+				DBG1(DBG_CFG, "  using cached crl");
 				break;
 			}
 		}
@@ -777,6 +777,11 @@ static bool check_certificate(private_credential_manager_t *this,
 	if (issuer->get_type(issuer) == CERT_X509 &&
 		subject->get_type(subject) == CERT_X509)
 	{
+		if (ocsp || crl)
+		{
+			DBG1(DBG_CFG, "checking certificate status of \"%D\"",
+						   subject->get_subject(subject));
+		}
 		if (ocsp)
 		{
 			switch (check_ocsp(this, (x509_t*)subject, (x509_t*)issuer, auth))
