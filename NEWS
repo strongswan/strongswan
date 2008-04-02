@@ -1,7 +1,36 @@
 strongswan-4.2.0
 ----------------
 
+- libstrongswan has been modularized to attach crypto algorithms,
+  credential implementations (keys, certificates) and fetchers dynamically
+  through plugins. Existing code has been ported to plugins:
+    - RSA/Diffie-Hellman implementation using the GNU Multi Precision library
+    - X509 certificate system supporting CRLs, OCSP and attribute certificates
+    - Multiple plugins providing crypto algorithms in software
+    - CURL and OpenLDAP fetcher
 
+- libstrongswan gained a relational database API which uses pluggable database
+  providers. Plugins for MySQL and SQLite are available.
+
+- The IKEv2 keying daemon charon is more extensible. Generic plugins may provide
+  connection configuration, credentials and EAP methods or control the daemon.
+  Existing code has been ported to plugins:
+    - EAP-AKA, EAP-SIM, EAP-MD5 and EAP-Identity
+    - stroke configuration, credential and control (compatible to pluto)
+    - XML bases management protocol to control and query the daemon
+  The following new plugins are available:
+    - An experimental SQL configuration, credential and logging plugin on
+      top of either MySQL or SQLite
+    - A unit testing plugin to run tests at daemon startup
+
+- The authentication and credential framework in charon has been heavily
+  refactored to support modular credential providers, proper
+  CERTREQ/CERT payload exchanges and extensible authorization rules.
+
+- The framework of strongSwan Manager has envolved to the web application 
+  framework libfast (FastCGI Application Server w/ Templates) and is usable
+  by other applications.
+	
 
 strongswan-4.1.11
 -----------------
