@@ -193,11 +193,13 @@ static void set_threads(private_processor_t *this, u_int count)
 static void destroy(private_processor_t *this)
 {
 	set_threads(this, 0);
+	pthread_mutex_lock(&this->mutex);
 	while (this->total_threads > 0)
 	{
 		pthread_cond_broadcast(&this->condvar);
 		pthread_cond_wait(&this->condvar, &this->mutex);
 	}
+	pthread_mutex_unlock(&this->mutex);
 	this->list->destroy_offset(this->list, offsetof(job_t, destroy));
 	free(this);
 }
