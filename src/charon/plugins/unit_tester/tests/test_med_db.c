@@ -47,6 +47,6 @@ bool test_med_db()
 	}
 	enumerator->destroy(enumerator);
 	id->destroy(id);
-	return TRUE;
+	return good;
 }
 
