@@ -18,9 +18,18 @@
 #ifndef _XAUTH_H
 #define _XAUTH_H
 
+#include <freeswan.h>
+#include "defs.h"
+
 /* XAUTH credentials */
 
 struct chunk_t;
+
+typedef struct {
+    char *conn_name;
+    char id[BUF_LEN];
+    char ip_address[ADDRTOT_BUF];
+} xauth_peer_t;
 
 typedef struct {
     chunk_t user_name;
@@ -30,7 +39,7 @@ typedef struct {
 typedef struct {
     void *handle;
     bool (*get_secret) (xauth_t *xauth_secret);
-    bool (*verify_secret) (const char *conn_name, const xauth_t *xauth_secret);
+    bool (*verify_secret) (const xauth_peer_t *peer, const xauth_t *xauth_secret);
 } xauth_module_t;
 
 extern xauth_module_t xauth_module;

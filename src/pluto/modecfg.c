@@ -967,6 +967,12 @@ xauth_inR1(struct msg_digest *md)
     }
     else 
     {
+	xauth_peer_t peer;
+
+	peer.conn_name = st->st_connection->name;
+	addrtot(&md->sender, 0, peer.ip_address, sizeof(peer.ip_address));
+	idtoa(&md->st->st_connection->spd.that.id, peer.id, sizeof(peer.id));
+
 	DBG(DBG_CONTROL,
 	    DBG_log("peer xauth user name is '%.*s'"
 		   , ia.xauth_secret.user_name.len
@@ -977,9 +983,8 @@ xauth_inR1(struct msg_digest *md)
 		   , ia.xauth_secret.user_password.len
 		   , ia.xauth_secret.user_password.ptr)
 	)
-	/* verify the user credentials using a plugn function */
-	st->st_xauth.status = xauth_module.verify_secret(st->st_connection->name
-						       , &ia.xauth_secret);
+	/* verify the user credentials using a plugin function */
+	st->st_xauth.status = xauth_module.verify_secret(&peer, &ia.xauth_secret);
 	plog("extended authentication %s", st->st_xauth.status? "was successful":"failed");
     }
 
