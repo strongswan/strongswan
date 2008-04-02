@@ -51,6 +51,7 @@ static void destroy(private_med_db_plugin_t *this)
 {
 	charon->credentials->remove_set(charon->credentials, &this->creds->set);
 	this->creds->destroy(this->creds);
+	this->db->destroy(this->db);
 	free(this);
 }
 
@@ -64,7 +65,8 @@ plugin_t *plugin_create()
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
-	uri = lib->settings->get_str(lib->settings, "plugins.med_db.database", NULL);
+	uri = lib->settings->get_str(lib->settings,
+								 "charon.plugins.med_db.database", NULL);
 	if (!uri)
 	{
 		DBG1(DBG_CFG, "mediation database URI not defined, skipped");
@@ -72,6 +74,7 @@ plugin_t *plugin_create()
 		return NULL;
 	}
 	
+	this->db = lib->db->create(lib->db, uri);
 	if (this->db == NULL)
 	{
 		DBG1(DBG_CFG, "opening mediation server database failed");
