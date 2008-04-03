@@ -426,42 +426,31 @@ void free_hook(void *ptr, const void *caller)
 	
 	count_free++;
 	uninstall_hooks();
-	if (hdr->magic != MEMORY_HEADER_MAGIC)
+	if (hdr->magic != MEMORY_HEADER_MAGIC ||
+		tail->magic != MEMORY_TAIL_MAGIC)
 	{
-		fprintf(stderr, "freeing memory with corrupted header "
-				"(%p, MAGIC 0x%x != 0x%x):\n",
-				ptr, hdr->magic, MEMORY_HEADER_MAGIC);
+		fprintf(stderr, "freeing invalid memory (%p): "
+				"header magic 0x%x, tail magic 0x%x:\n",
+				ptr, hdr->magic, tail->magic);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
-		install_hooks();
-		pthread_setschedparam(thread_id, oldpolicy, &params);
-		return;
 	}
-	if (tail->magic != MEMORY_TAIL_MAGIC)
+	else
 	{
-		fprintf(stderr, "freeing memory with corrupted tail "
-				"(%p, MAGIC 0x%x != 0x%x):\n",
-				ptr, tail->magic, MEMORY_TAIL_MAGIC);
-		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
-		log_stack_frames(stack_frames, stack_frame_count);
-		install_hooks();
-		pthread_setschedparam(thread_id, oldpolicy, &oldparams);
-		return;
+		/* remove item from list */
+		if (hdr->next)
+		{
+			hdr->next->previous = hdr->previous;
+		}
+		hdr->previous->next = hdr->next;
+	
+		/* clear MAGIC, set mem to something remarkable */
+		memset(hdr, MEMORY_FREE_PATTERN, hdr->bytes + sizeof(memory_header_t));
+	
+		free(hdr);
 	}
 	
-	/* remove item from list */
-	if (hdr->next)
-	{
-		hdr->next->previous = hdr->previous;
-	}
-	hdr->previous->next = hdr->next;
-	
-	/* clear MAGIC, set mem to something remarkable */
-	memset(hdr, MEMORY_FREE_PATTERN, hdr->bytes + sizeof(memory_header_t));
-	
-	free(hdr);
 	install_hooks();
-	
 	pthread_setschedparam(thread_id, oldpolicy, &params);
 }
 
@@ -494,40 +483,25 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	
 	count_realloc++;
 	uninstall_hooks();
-	if (hdr->magic != MEMORY_HEADER_MAGIC)
+	if (hdr->magic != MEMORY_HEADER_MAGIC ||
+		tail->magic != MEMORY_TAIL_MAGIC)
 	{
-		fprintf(stderr, "reallocating memory with corrupted header "
-				"(%p, MAGIC 0x%x != 0x%x):\n",
-				old, hdr->magic, MEMORY_HEADER_MAGIC);
+		fprintf(stderr, "reallocating invalid memory (%p): "
+				"header magic 0x%x, tail magic 0x%x:\n",
+				old, hdr->magic, tail->magic);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
-		install_hooks();
-		pthread_setschedparam(thread_id, oldpolicy, &oldparams);
-		raise(SIGKILL);
-		return NULL;
-	}
-	if (tail->magic != MEMORY_TAIL_MAGIC)
-	{
-		fprintf(stderr, "reallocating memory with corrupted tail "
-				"(%p, MAGIC 0x%x != 0x%x):\n",
-				old, tail->magic, MEMORY_TAIL_MAGIC);
-		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
-		log_stack_frames(stack_frames, stack_frame_count);
-		install_hooks();
-		pthread_setschedparam(thread_id, oldpolicy, &oldparams);
-		raise(SIGKILL);
-		return NULL;
 	}
 	/* clear tail magic, allocate, set tail magic */
 	memset(&tail->magic, MEMORY_ALLOC_PATTERN, sizeof(tail->magic));
 	hdr = realloc(hdr, sizeof(memory_header_t) + bytes + sizeof(memory_tail_t));
 	tail = ((void*)hdr) + bytes + sizeof(memory_header_t);
 	tail->magic = MEMORY_TAIL_MAGIC;
-	
+
 	/* update statistics */
 	hdr->bytes = bytes;
 	hdr->stack_frame_count = backtrace(hdr->stack_frames, STACK_FRAMES_COUNT);
-	
+
 	/* update header of linked list neighbours */
 	if (hdr->next)
 	{
