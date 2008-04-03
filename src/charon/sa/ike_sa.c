@@ -396,6 +396,7 @@ static peer_cfg_t* get_peer_cfg(private_ike_sa_t *this)
  */
 static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 {
+	DESTROY_IF(this->peer_cfg);
 	peer_cfg->get_ref(peer_cfg);
 	this->peer_cfg = peer_cfg;
 
@@ -1007,8 +1008,8 @@ static status_t initiate_mediation(private_ike_sa_t *this, peer_cfg_t *mediated_
 static status_t initiate_mediated(private_ike_sa_t *this, host_t *me, host_t *other,
 		linked_list_t *childs, chunk_t connect_id)
 {
-	this->my_host = me->clone(me);
-	this->other_host = other->clone(other);
+	set_my_host(this, me->clone(me));
+	set_other_host(this, other->clone(other));
 	this->connect_id = chunk_clone(connect_id);
 	
 	task_t *task;

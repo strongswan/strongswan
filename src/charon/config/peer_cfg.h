@@ -303,7 +303,7 @@ struct peer_cfg_t {
 	/**
 	 * Get peer_cfg of the connection this one is mediated through.
 	 * 
-	 * @return				reference to peer_cfg of the mediation connection
+	 * @return				the peer_cfg of the mediation connection
 	 */
 	peer_cfg_t* (*get_mediated_by) (peer_cfg_t *this);
 	

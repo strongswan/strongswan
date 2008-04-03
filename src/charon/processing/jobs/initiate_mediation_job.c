@@ -94,6 +94,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediated_sa);
 		
 		mediation_cfg = mediated_cfg->get_mediated_by(mediated_cfg);
+		mediation_cfg->get_ref(mediation_cfg);
 		
 		if (charon->connect_manager->check_and_register(charon->connect_manager,
 				mediation_cfg->get_my_id(mediation_cfg),

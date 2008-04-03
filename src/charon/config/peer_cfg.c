@@ -449,11 +449,7 @@ static bool is_mediation(private_peer_cfg_t *this)
  */
 static peer_cfg_t* get_mediated_by(private_peer_cfg_t *this)
 {
-	if (this->mediated_by) {
-		this->mediated_by->get_ref(this->mediated_by);
-		return this->mediated_by;
-	}
-	return NULL;
+	return this->mediated_by;
 }
 
 /**
