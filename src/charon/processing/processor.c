@@ -66,7 +66,12 @@ struct private_processor_t {
 	/**
 	 * Condvar to wait for new jobs
 	 */
-	pthread_cond_t condvar;
+	pthread_cond_t jobadded;
+	
+	/**
+	 * Condvar to wait for terminated threads
+	 */
+	pthread_cond_t threadterminated;
 };
 
 static void process_jobs(private_processor_t *this);
@@ -80,7 +85,10 @@ static void restart(private_processor_t *this)
 	
 	if (pthread_create(&thread, NULL, (void*)process_jobs, this) != 0)
 	{
+		pthread_mutex_lock(&this->mutex);
 		this->total_threads--;
+		pthread_cond_broadcast(&this->threadterminated);
+		pthread_mutex_unlock(&this->mutex);
 	}
 }
 
@@ -103,7 +111,7 @@ static void process_jobs(private_processor_t *this)
 		if (this->list->get_count(this->list) == 0)
 		{
 			this->idle_threads++;
-			pthread_cond_wait(&this->condvar, &this->mutex);
+			pthread_cond_wait(&this->jobadded, &this->mutex);
 			this->idle_threads--;
 			continue;
 		}
@@ -116,7 +124,7 @@ static void process_jobs(private_processor_t *this)
 		pthread_mutex_lock(&this->mutex);
 	}
 	this->total_threads--;
-	pthread_cond_broadcast(&this->condvar);
+	pthread_cond_signal(&this->threadterminated);
 	pthread_mutex_unlock(&this->mutex);
 }
 
@@ -125,7 +133,11 @@ static void process_jobs(private_processor_t *this)
  */
 static u_int get_total_threads(private_processor_t *this)
 {
-	return this->total_threads;
+	u_int count;
+	pthread_mutex_lock(&this->mutex);
+	count = this->total_threads; 
+	pthread_mutex_unlock(&this->mutex);
+	return count;
 }
 
 /**
@@ -133,7 +145,11 @@ static u_int get_total_threads(private_processor_t *this)
  */
 static u_int get_idle_threads(private_processor_t *this)
 {
-	return this->idle_threads;
+	u_int count;
+	pthread_mutex_lock(&this->mutex);
+	count = this->idle_threads;
+	pthread_mutex_unlock(&this->mutex);
+	return count;
 }
 
 /**
@@ -155,8 +171,8 @@ static void queue_job(private_processor_t *this, job_t *job)
 {
 	pthread_mutex_lock(&this->mutex);
 	this->list->insert_last(this->list, job);
+	pthread_cond_signal(&this->jobadded);
 	pthread_mutex_unlock(&this->mutex);
-	pthread_cond_signal(&this->condvar);
 }
 	
 /**
@@ -184,6 +200,7 @@ static void set_threads(private_processor_t *this, u_int count)
 	{	/* decrease thread count */
 		this->desired_threads = count;
 	}
+	pthread_cond_broadcast(&this->jobadded);
 	pthread_mutex_unlock(&this->mutex);
 }
 
@@ -196,8 +213,8 @@ static void destroy(private_processor_t *this)
 	pthread_mutex_lock(&this->mutex);
 	while (this->total_threads > 0)
 	{
-		pthread_cond_broadcast(&this->condvar);
-		pthread_cond_wait(&this->condvar, &this->mutex);
+		pthread_cond_broadcast(&this->jobadded);
+		pthread_cond_wait(&this->threadterminated, &this->mutex);
 	}
 	pthread_mutex_unlock(&this->mutex);
 	this->list->destroy_offset(this->list, offsetof(job_t, destroy));
@@ -220,7 +237,8 @@ processor_t *processor_create(size_t pool_size)
 	
 	this->list = linked_list_create();
 	pthread_mutex_init(&this->mutex, NULL);
-	pthread_cond_init(&this->condvar, NULL);
+	pthread_cond_init(&this->jobadded, NULL);
+	pthread_cond_init(&this->threadterminated, NULL);
 	this->total_threads = 0;
 	this->desired_threads = 0;
 	this->idle_threads = 0;

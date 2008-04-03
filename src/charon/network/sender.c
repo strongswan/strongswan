@@ -53,9 +53,14 @@ struct private_sender_t {
 	pthread_mutex_t mutex;
 
 	/**
-	 * condvar to signal for packets in list
+	 * condvar to signal for packets added to list
 	 */
-	pthread_cond_t condvar;
+	pthread_cond_t gotone;
+	
+	/**
+	 * condvar to signal for packets sent
+	 */
+	pthread_cond_t sentone;
 };
 
 /**
@@ -71,8 +76,8 @@ static void send_(private_sender_t *this, packet_t *packet)
 	
 	pthread_mutex_lock(&this->mutex);
 	this->list->insert_last(this->list, packet);
+	pthread_cond_signal(&this->gotone);
 	pthread_mutex_unlock(&this->mutex);
-	pthread_cond_signal(&this->condvar);
 }
 
 /**
@@ -90,12 +95,13 @@ static job_requeue_t send_packets(private_sender_t * this)
 		pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&this->mutex);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 		
-		pthread_cond_wait(&this->condvar, &this->mutex);
+		pthread_cond_wait(&this->gotone, &this->mutex);
 		
 		pthread_setcancelstate(oldstate, NULL);
 		pthread_cleanup_pop(0);
 	}
 	this->list->remove_first(this->list, (void**)&packet);
+	pthread_cond_signal(&this->sentone);
 	pthread_mutex_unlock(&this->mutex);
 	
 	charon->socket->send(charon->socket, packet);
@@ -109,10 +115,13 @@ static job_requeue_t send_packets(private_sender_t * this)
 static void destroy(private_sender_t *this)
 {
 	/* send all packets in the queue */
+	pthread_mutex_lock(&this->mutex);
 	while (this->list->get_count(this->list))
 	{
-		sched_yield();
+		pthread_cond_wait(&this->sentone, &this->mutex);
 	}
+	pthread_mutex_unlock(&this->mutex);
+	pthread_mutex_destroy(&this->mutex);
 	this->job->cancel(this->job);
 	this->list->destroy(this->list);
 	free(this);
@@ -130,7 +139,8 @@ sender_t * sender_create()
 
 	this->list = linked_list_create();
 	pthread_mutex_init(&this->mutex, NULL);
-	pthread_cond_init(&this->condvar, NULL);
+	pthread_cond_init(&this->gotone, NULL);
+	pthread_cond_init(&this->sentone, NULL);
 
 	this->job = callback_job_create((callback_job_cb_t)send_packets,
 									this, NULL, NULL);

@@ -56,11 +56,6 @@ struct private_callback_job_t {
 	pthread_mutex_t mutex;
 
 	/**
-	 * condvar to synchronize thread startup/cancellation
-	 */
-	pthread_cond_t condvar;
-	
-	/**
 	 * list of asociated child jobs
 	 */
 	linked_list_t *children;
@@ -140,7 +135,6 @@ static void execute(private_callback_job_t *this)
 
 	pthread_mutex_lock(&this->mutex);
 	this->thread = pthread_self();
-	pthread_cond_signal(&this->condvar);
 	pthread_mutex_unlock(&this->mutex);
 	
 	pthread_cleanup_push((void*)destroy, this);
@@ -187,7 +181,6 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 
 	/* private variables */
 	pthread_mutex_init(&this->mutex, NULL);
-	pthread_cond_init(&this->condvar, NULL);
 	this->callback = cb;
 	this->data = data;
 	this->cleanup = cleanup;
