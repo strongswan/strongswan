@@ -84,6 +84,10 @@ static void *malloc_hook(size_t, const void *);
 static void *realloc_hook(void *, size_t, const void *);
 static void free_hook(void*, const void *);
 
+void *(*old_malloc_hook)(size_t, const void *);
+void *(*old_realloc_hook)(void *, size_t, const void *);
+void (*old_free_hook)(void*, const void *);
+
 static u_int count_malloc = 0;
 static u_int count_free = 0;
 static u_int count_realloc = 0;
@@ -153,11 +157,6 @@ static memory_header_t first_header = {
 };
 
 /**
- * standard hooks, used to temparily remove hooking
- */
-static void *old_malloc_hook, *old_realloc_hook, *old_free_hook;
-
-/**
  * are the hooks currently installed? 
  */
 static bool installed = FALSE;
@@ -170,23 +169,22 @@ static bool installed = FALSE;
 static void log_stack_frames(void **stack_frames, int stack_frame_count)
 {
 #ifdef HAVE_BACKTRACE
-	char **strings;
 	size_t i;
-
+	char **strings;
+	
 	strings = backtrace_symbols(stack_frames, stack_frame_count);
 
-	fprintf(stderr, " dumping %d stack frame addresses\n", stack_frame_count);
-
+	fprintf(stderr, " dumping %d stack frame addresses:\n", stack_frame_count);
 	for (i = 0; i < stack_frame_count; i++)
 	{
 #ifdef HAVE_DLADDR
 		Dl_info info;
 		
-		/* TODO: this is quite hackish, but it works. A more proper solution
-		 * would execve addr2strongline and pipe the output to DBG1() */
 		if (dladdr(stack_frames[i], &info))
 		{
 			char cmd[1024];
+			FILE *output;
+			char c;
 			void *ptr = stack_frames[i];
 			
 			if (strstr(info.dli_fname, ".so"))
@@ -196,7 +194,7 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
 			snprintf(cmd, sizeof(cmd), "addr2line -e %s %p", info.dli_fname, ptr);
 			if (info.dli_sname)
 			{
-				fprintf(stderr, "  \e[33m%s\e[0m @ %p (\e[31m%s+0x%x\e[0m) [%p]\n",
+				fprintf(stderr, "  \e[33m%s\e[0m @ %p (\e[31m%s\e[0m+0x%x) [%p]\n",
 						info.dli_fname, info.dli_fbase, info.dli_sname,
 						stack_frames[i] - info.dli_saddr, stack_frames[i]);
 			}
@@ -206,14 +204,28 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
 						info.dli_fbase, stack_frames[i]);
 			}
 			fprintf(stderr, "    -> \e[32m");
-			system(cmd);
-			fprintf(stderr, "\e[0m");
-		}
-		else
+			output = popen(cmd, "r");
+			if (output)
+			{
+				while (TRUE)
+				{
+					c = getc(output);
+					if (c == '\n' || c == EOF)
+					{
+						break;
+					}
+					fputc(c, stderr);
+				}
+			}
+			else
+			{
 #endif /* HAVE_DLADDR */
-		{
-			fprintf(stderr, "    %s\n", strings[i]);
+				fprintf(stderr, "    %s\n", strings[i]);
+#ifdef HAVE_DLADDR
+			}
+			fprintf(stderr, "\n\e[0m");
 		}
+#endif /* HAVE_DLADDR */
 	}
 	free (strings);
 #endif /* HAVE_BACKTRACE */
