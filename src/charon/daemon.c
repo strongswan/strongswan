@@ -233,7 +233,7 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	struct __user_cap_data_struct data;
 	
 	/* CAP_NET_ADMIN is needed to use netlink */
-	u_int32_t keep = (1<<CAP_NET_ADMIN);
+	u_int32_t keep = (1<<CAP_NET_ADMIN) | (1<<CAP_SYS_NICE);
 	
 	if (full)
 	{

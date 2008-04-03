@@ -163,12 +163,6 @@ static void *old_malloc_hook, *old_realloc_hook, *old_free_hook;
 static bool installed = FALSE;
 
 /**
- * Mutex to exclusivly uninstall hooks, access heap list
- */
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-
-/**
  * log stack frames queried by backtrace()
  * TODO: Dump symbols of static functions. This could be done with
  * the addr2line utility or the GNU BFD Library...
@@ -367,8 +361,15 @@ void *malloc_hook(size_t bytes, const void *caller)
 {
 	memory_header_t *hdr;
 	memory_tail_t *tail;
+	pthread_t thread_id = pthread_self();
+    int oldpolicy;
+    struct sched_param oldparams, params;
+    
+    pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
+    
+    params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
 	
-	pthread_mutex_lock(&mutex);
 	count_malloc++;
 	uninstall_hooks();
 	hdr = malloc(sizeof(memory_header_t) + bytes + sizeof(memory_tail_t));
@@ -391,7 +392,9 @@ void *malloc_hook(size_t bytes, const void *caller)
 	}
 	hdr->previous = &first_header;
 	first_header.next = hdr;
-	pthread_mutex_unlock(&mutex);
+	
+	pthread_setschedparam(thread_id, oldpolicy, &oldparams);
+	
 	return hdr + 1;
 }
 
@@ -404,7 +407,10 @@ void free_hook(void *ptr, const void *caller)
 	int stack_frame_count;
 	memory_header_t *hdr;
 	memory_tail_t *tail;
-	
+	pthread_t thread_id = pthread_self();
+    int oldpolicy;
+    struct sched_param oldparams, params;
+    
 	/* allow freeing of NULL */
 	if (ptr == NULL)
 	{
@@ -413,7 +419,11 @@ void free_hook(void *ptr, const void *caller)
 	hdr = ptr - sizeof(memory_header_t);
 	tail = ptr + hdr->bytes;
 	
-	pthread_mutex_lock(&mutex);
+	pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
+	
+    params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
+	
 	count_free++;
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
@@ -424,7 +434,7 @@ void free_hook(void *ptr, const void *caller)
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		install_hooks();
-		pthread_mutex_unlock(&mutex);
+		pthread_setschedparam(thread_id, oldpolicy, &params);
 		return;
 	}
 	if (tail->magic != MEMORY_TAIL_MAGIC)
@@ -435,7 +445,7 @@ void free_hook(void *ptr, const void *caller)
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		install_hooks();
-		pthread_mutex_unlock(&mutex);
+		pthread_setschedparam(thread_id, oldpolicy, &oldparams);
 		return;
 	}
 	
@@ -451,7 +461,8 @@ void free_hook(void *ptr, const void *caller)
 	
 	free(hdr);
 	install_hooks();
-	pthread_mutex_unlock(&mutex);
+	
+	pthread_setschedparam(thread_id, oldpolicy, &params);
 }
 
 /**
@@ -463,7 +474,10 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	void *stack_frames[STACK_FRAMES_COUNT];
 	int stack_frame_count;
 	memory_tail_t *tail;
-	
+	pthread_t thread_id = pthread_self();
+    int oldpolicy;
+    struct sched_param oldparams, params;
+    
 	/* allow reallocation of NULL */
 	if (old == NULL)
 	{
@@ -473,7 +487,11 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	hdr = old - sizeof(memory_header_t);
 	tail = old + hdr->bytes;
 	
-	pthread_mutex_lock(&mutex);
+	pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
+	
+	params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
+	
 	count_realloc++;
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
@@ -484,7 +502,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		install_hooks();
-		pthread_mutex_unlock(&mutex);
+		pthread_setschedparam(thread_id, oldpolicy, &oldparams);
 		raise(SIGKILL);
 		return NULL;
 	}
@@ -496,7 +514,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		install_hooks();
-		pthread_mutex_unlock(&mutex);
+		pthread_setschedparam(thread_id, oldpolicy, &oldparams);
 		raise(SIGKILL);
 		return NULL;
 	}
@@ -517,7 +535,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	}
 	hdr->previous->next = hdr;
 	install_hooks();
-	pthread_mutex_unlock(&mutex);
+	pthread_setschedparam(thread_id, oldpolicy, &oldparams);
 	return hdr + 1;
 }
 
