@@ -1439,6 +1439,7 @@ static void check_and_initiate(private_connect_manager_t *this, ike_sa_id_t *med
 				waiting_sa->ike_sa_id);
 		charon->processor->queue_job(charon->processor, job);
 	}
+	iterator->destroy(iterator);
 
 	pthread_mutex_unlock(&(this->mutex));
 }
