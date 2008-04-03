@@ -172,9 +172,9 @@ typedef struct daemon_t daemon_t;
 #define DAEMON_NAME "charon"
 
 /**
- * Number of threads in the thread pool.
+ * Number of threads in the thread pool, if not specified in config.
  */
-#define WORKER_THREADS 16
+#define DEFAULT_THREADS 16
 
 /**
  * UDP Port on which the daemon will listen for incoming traffic.

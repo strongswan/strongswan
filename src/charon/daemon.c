@@ -584,7 +584,9 @@ int main(int argc, char *argv[])
 	drop_capabilities(private_charon, TRUE);
 	
 	/* start the engine, go multithreaded */
-	charon->processor->set_threads(charon->processor, WORKER_THREADS);
+	charon->processor->set_threads(charon->processor,
+						lib->settings->get_int(lib->settings, "charon.threads",
+											   DEFAULT_THREADS));
 	
 	/* run daemon */
 	run(private_charon);
