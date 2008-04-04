@@ -23,7 +23,6 @@
 
 #include "x509_cert.h"
 
-#include <gmp.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
