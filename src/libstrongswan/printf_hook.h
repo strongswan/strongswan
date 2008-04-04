@@ -37,14 +37,17 @@ typedef struct printf_hook_functions_t printf_hook_functions_t;
 struct printf_hook_functions_t {
 
 	/**
-	 * Printf hook print function
+	 * Printf hook print function. This is actually of type "printf_function",
+	 * however glibc does it typedef to function, but uclibc to a pointer.
+	 * So we redefine it here.
 	 */
-	printf_function *print;
+	int (*print)(FILE *, const struct printf_info *info, const void *const *args);
 	
 	/**
-	 * Printf hook arginfo function
+	 * Printf hook arginfo function, which is actually of type
+	 * "printf_arginfo_function".
 	 */
-	printf_arginfo_function *arginfo;
+	int (*arginfo)(const struct printf_info *info, size_t n, int *argtypes);
 };
 
 /**
