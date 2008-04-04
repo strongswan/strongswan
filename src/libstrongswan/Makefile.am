@@ -44,7 +44,6 @@ utils.h utils.c \
 utils/host.c utils/host.h \
 utils/identification.c utils/identification.h \
 utils/iterator.h \
-utils/leak_detective.c utils/leak_detective.h \
 utils/lexparser.c utils/lexparser.h \
 utils/linked_list.c utils/linked_list.h \
 utils/enumerator.c utils/enumerator.h \
@@ -52,11 +51,6 @@ utils/optionsfrom.c utils/optionsfrom.h \
 utils/randomizer.c utils/randomizer.h \
 utils/mutex.c utils/mutex.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
-
-if USE_INTEGRITY_TEST
-  libstrongswan_la_SOURCES += \
-  fips/fips_canister_end.c
-endif
 
 libstrongswan_la_LIBADD = -lpthread -ldl
 
@@ -66,6 +60,12 @@ AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" \
 
 if USE_LEAK_DETECTIVE
   AM_CFLAGS += -DLEAK_DETECTIVE
+  libstrongswan_la_SOURCES += utils/leak_detective.c utils/leak_detective.h
+endif
+
+if USE_INTEGRITY_TEST
+  libstrongswan_la_SOURCES += \
+  fips/fips_canister_end.c
 endif
 
 EXTRA_DIST = asn1/oid.txt asn1/oid.pl

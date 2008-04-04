@@ -23,7 +23,9 @@
 #include <chunk.h>
 #include <utils/identification.h>
 #include <utils/host.h>
+#ifdef LEAK_DETECTIVE
 #include <utils/leak_detective.h>
+#endif
 
 typedef struct private_library_t private_library_t;
 
