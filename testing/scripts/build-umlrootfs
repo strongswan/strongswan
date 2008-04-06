@@ -129,7 +129,6 @@ echo "ln -sf /usr/share/zoneinfo/${TZUML} /etc/localtime" >> $INSTALLSHELL
 echo "cd /root/${STRONGSWANVERSION}" >> $INSTALLSHELL
 echo -n "./configure --sysconfdir=/etc" >> $INSTALLSHELL
 echo -n " --with-random-device=/dev/urandom" >> $INSTALLSHELL
-echo -n " --enable-integrity-test" >> $INSTALLSHELL
 
 if [ "$USE_LIBCURL" = "yes" ]
 then
@@ -151,16 +150,21 @@ then
     echo -n " --enable-eap-sim" >> $INSTALLSHELL
     fi
 
+if [ "$USE_SQL" = "yes" ]
+then
+    echo -n " --enable-sql --enable-sqlite" >> $INSTALLSHELL
+    fi
+
 if [ "$USE_MEDIATION" = "yes" ]
 then
     echo -n " --enable-mediation" >> $INSTALLSHELL
 fi
-
+    
 if [ "$USE_INTEGRITY_TEST" = "yes" ]
 then
     echo -n " --enable-integrity-test" >> $INSTALLSHELL
 fi
-        
+
 if [ "$USE_LEAK_DETECTIVE" = "yes" ]
 then
     echo -n " --enable-leak-detective" >> $INSTALLSHELL

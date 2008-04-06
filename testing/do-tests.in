@@ -469,13 +469,20 @@ do
 		    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
 	    done
 
+		if [ $SUBDIR = "sql" ]
+		then
+			scp $HOSTLOGIN:/etc/ipsec.d/ipsec.sql \
+		    	$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
+		else
+			touch $TESTRESULTDIR/${host}.ipsec.sql
+		fi
 	    ssh $HOSTLOGIN ip route list table $SOURCEIP_ROUTING_TABLE \
 		    > $TESTRESULTDIR/${host}.iproute 2>/dev/null
 	    ssh $HOSTLOGIN $IPTABLES -v -n -L \
 		    > $TESTRESULTDIR/${host}.iptables 2>/dev/null
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
     <h3>$host</h3>
-      <table border="0" cellspacing="0" width="400">
+      <table border="0" cellspacing="0" width="600">
       <tr>
 	<td>
 	  <ul>
@@ -491,7 +498,12 @@ do
 	    <li><a href="$host.daemon.log">daemon.log</a></li>
 	    <li><a href="$host.iproute">ip route list table $SOURCEIP_ROUTING_TABLE</a></li>
 	    <li><a href="$host.iptables">$IPTABLES -L</a></li>
-	</ul>
+	  </ul>
+      </td>
+	<td valign="top">
+	  <ul>
+	    <li><a href="$host.ipsec.sql">ipsec.sql</a></li>
+	  </ul>
       </td>
     </tr>
     </table>
