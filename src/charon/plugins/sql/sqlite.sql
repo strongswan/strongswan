@@ -17,7 +17,7 @@ CREATE TABLE child_configs (
   rekeytime INTEGER NOT NULL DEFAULT '1200',
   jitter INTEGER NOT NULL DEFAULT '60',
   updown TEXT DEFAULT NULL,
-  hostaccess INTEGER NOT NULL DEFAULT '1',
+  hostaccess INTEGER NOT NULL DEFAULT '0',
   mode INTEGER NOT NULL DEFAULT '1'
 );
 DROP INDEX IF EXISTS child_configs_name;

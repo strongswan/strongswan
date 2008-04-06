@@ -18,7 +18,7 @@ CREATE TABLE `child_configs` (
   `rekeytime` mediumint(8) unsigned NOT NULL default '1200',
   `jitter` mediumint(8) unsigned NOT NULL default '60',
   `updown` varchar(128) collate utf8_unicode_ci default NULL,
-  `hostaccess` tinyint(1) unsigned NOT NULL default '1',
+  `hostaccess` tinyint(1) unsigned NOT NULL default '0',
   `mode` tinyint(4) unsigned NOT NULL default '1',
   PRIMARY KEY (`id`),
   INDEX (`name`)
