@@ -722,7 +722,7 @@ static void load_secrets(private_stroke_cred_t *this)
 			shared_key = stroke_shared_key_create(type, secret);
 			DBG1(DBG_CFG, "  loaded %N secret for %s", shared_key_type_names, type,
 				 ids.len > 0 ? (char*)ids.ptr : "%any");
-			DBG4(DBG_CFG, "  secret:", secret);
+			DBG4(DBG_CFG, "  secret: %#B", &secret);
 			
 			this->shared->insert_last(this->shared, shared_key);
 			while (ids.len > 0)
