@@ -1,0 +1,12 @@
+moon::cp /etc/ipsec.d/strongswan.conf /usr/local/libexec/ipsec
+moon::rm /etc/ipsec.d/cacerts/*
+moon::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
+sun::cp /etc/ipsec.d/strongswan.conf /usr/local/libexec/ipsec
+sun::rm /etc/ipsec.d/cacerts/*
+sun::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
+moon::/etc/init.d/iptables start 2> /dev/null
+sun::/etc/init.d/iptables start 2> /dev/null
+moon::ipsec start
+sun::ipsec start
+moon::sleep 1 
+moon::ipsec up net-net
