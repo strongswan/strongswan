@@ -186,24 +186,6 @@ INSERT INTO shared_secrets (
   1, X'bfe364c58f4b2d9bf08f8a820b6a3f806ad60c5d9ddb58cb'
 );
 
-INSERT INTO shared_secrets (
-   type, data
-) VALUES ( 
-  1, X'45a30759df97dc26a15b88ff'
-);
-
-INSERT INTO shared_secrets (
-   type, data
-) VALUES ( 
-  1, 'This is a strong password'
-);
-
-INSERT INTO shared_secrets (
-   type, data
-) VALUES ( 
-  1, 'My "home" is my "castle"!'
-);
-
 INSERT INTO shared_secret_identity (
   shared_secret, identity
 ) VALUES (
@@ -214,30 +196,6 @@ INSERT INTO shared_secret_identity (
   shared_secret, identity
 ) VALUES (
   1, 2
-);
-
-INSERT INTO shared_secret_identity (
-  shared_secret, identity
-) VALUES (
-  2, 1
-);
-
-INSERT INTO shared_secret_identity (
-  shared_secret, identity
-) VALUES (
-  2, 3
-);
-
-INSERT INTO shared_secret_identity (
-  shared_secret, identity
-) VALUES (
-  3, 2
-);
-
-INSERT INTO shared_secret_identity (
-  shared_secret, identity
-) VALUES (
-  4, 3
 );
 
 /* Configurations */
