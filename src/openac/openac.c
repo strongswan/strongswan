@@ -267,7 +267,7 @@ int main(int argc, char **argv)
 	openlog("openac", 0, LOG_AUTHPRIV);
 
 	/* initialize library */
-	library_init(IPSEC_DIR "/strongswan.conf");
+	library_init(STRONGSWAN_CONF);
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
 
 	/* initialize optionsfrom */

@@ -36,7 +36,7 @@ int main (int arc, char *argv[])
 	bool debug;
 	int threads, timeout;
 
-	library_init(IPSECDIR "/strongswan.conf");
+	library_init(STRONGSWAN_CONF);
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
 	
 	socket = lib->settings->get_str(lib->settings, "manager.socket", NULL);

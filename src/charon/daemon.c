@@ -486,7 +486,7 @@ int main(int argc, char *argv[])
 	dbg = dbg_silent;
 	
 	/* initialize library */
-	library_init(IPSEC_DIR "/strongswan.conf");
+	library_init(STRONGSWAN_CONF);
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
 	lib->printf_hook->add_handler(lib->printf_hook, 'R',
 								  traffic_selector_get_printf_hooks());

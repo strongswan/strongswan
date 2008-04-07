@@ -53,6 +53,13 @@ AC_ARG_WITH(
 )
 
 AC_ARG_WITH(
+	[strongswan-conf],
+	AS_HELP_STRING([--with-strongswan-conf=file],[strongswan.conf file other than "sysconfdir/strongswan.conf"]),
+	[AC_DEFINE_UNQUOTED(STRONGSWAN_CONF, "$withval")],
+	[AC_DEFINE_UNQUOTED(STRONGSWAN_CONF, "${sysconfdir}/strongswan.conf")]
+)
+
+AC_ARG_WITH(
 	[urandom-device],
 	AS_HELP_STRING([--with-urandom-device=dev],[set the device for pseudo random data other than "/dev/urandom"]),
 	[AC_DEFINE_UNQUOTED(DEV_URANDOM, "$withval")],
