@@ -296,7 +296,7 @@ static linked_list_t* create_unique_cert_list(certificate_type_t type)
 		while (iterator->iterate(iterator, (void**)&list_cert))
 		{
 			/* exit if we have a duplicate? */
-			if (list_cert == cert)
+			if (list_cert->equals(list_cert, cert))
 			{
 				last = FALSE;
 				break;
