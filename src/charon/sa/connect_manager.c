@@ -40,6 +40,10 @@
 /* max number of retransmissions */
 #define ME_MAX_RETRANS 13
 
+/* time to wait before the initiator finishes the connectivity checks after
+ * the first check has succeeded */
+#define ME_WAIT_TO_FINISH 1000 /* ms */
+
 
 typedef struct private_connect_manager_t private_connect_manager_t;
 
@@ -193,6 +197,9 @@ struct check_list_t {
     /** TRUE if this is the initiator */
 	bool is_initiator;
 	
+	/** TRUE if the initiator is finishing the checks */
+	bool is_finishing;
+	
 };
 
 /**
@@ -240,6 +247,7 @@ static check_list_t *check_list_create(identification_t *initiator, identificati
     this->triggered = linked_list_create();
     this->state = CHECK_NONE;
     this->is_initiator = is_initiator;
+    this->is_finishing = FALSE;
     
 	return this;
 }
@@ -413,7 +421,7 @@ static sender_data_t *sender_data_create(private_connect_manager_t *connect_mana
 {
 	sender_data_t *this = malloc_thing(sender_data_t);	
 	this->connect_manager = connect_manager;
-	this->connect_id = connect_id;
+	this->connect_id = chunk_clone(connect_id);
 	return this;
 }
 
@@ -594,51 +602,6 @@ static status_t endpoints_contain(linked_list_t *endpoints, host_t *host, endpoi
 	return endpoints->find_first(endpoints,
 				(linked_list_match_t)match_endpoint_by_host,
 				(void**)endpoint, host);
-}
-
-/**
- * Updates the state of the whole checklist
- */
-static void update_checklist_state(check_list_t *checklist)
-{
-	iterator_t *iterator;
-	endpoint_pair_t *current;
-	bool in_progress = FALSE, succeeded = FALSE;
-
-	iterator = checklist->pairs->create_iterator(checklist->pairs, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		switch(current->state)
-		{
-			case CHECK_WAITING:
-				/* at least one is still waiting -> checklist remains
-				 * in waiting state */
-				iterator->destroy(iterator);
-				return;
-			case CHECK_IN_PROGRESS:
-				in_progress = TRUE;
-				break;
-			case CHECK_SUCCEEDED:
-				succeeded = TRUE;
-				break;
-			default:
-				break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	if (in_progress)
-	{
-		checklist->state = CHECK_IN_PROGRESS;
-	}
-	else if (succeeded)
-	{
-		checklist->state = CHECK_SUCCEEDED;
-	}
-	else
-	{
-		checklist->state = CHECK_FAILED;
-	}
 }
 
 /**
@@ -925,6 +888,91 @@ static void schedule_checks(private_connect_manager_t *this, check_list_t *check
 static void finish_checks(private_connect_manager_t *this, check_list_t *checklist);
 
 /**
+ * After one of the initiator's pairs has succeeded we finish the checks without
+ * waiting for all the timeouts  
+ */
+static job_requeue_t initiator_finish(sender_data_t *data)
+{
+	private_connect_manager_t *this = data->connect_manager;
+
+	pthread_mutex_lock(&(this->mutex));
+
+	check_list_t *checklist;
+	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
+	{
+		DBG1(DBG_IKE, "checklist with id '%B' not found, can't finish connectivity checks",
+				&data->connect_id);
+		pthread_mutex_unlock(&(this->mutex));
+		return JOB_REQUEUE_NONE;
+	}
+	
+	finish_checks(this, checklist);
+	
+	pthread_mutex_unlock(&(this->mutex));
+	
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Updates the state of the whole checklist
+ */
+static void update_checklist_state(private_connect_manager_t *this, check_list_t *checklist)
+{
+	iterator_t *iterator;
+	endpoint_pair_t *current;
+	bool in_progress = FALSE, succeeded = FALSE;
+
+	iterator = checklist->pairs->create_iterator(checklist->pairs, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		switch(current->state)
+		{
+			case CHECK_WAITING:
+				/* at least one is still waiting -> checklist remains
+				 * in waiting state */
+				iterator->destroy(iterator);
+				return;
+			case CHECK_IN_PROGRESS:
+				in_progress = TRUE;
+				break;
+			case CHECK_SUCCEEDED:
+				succeeded = TRUE;
+				break;
+			default:
+				break;
+		}
+	}
+	iterator->destroy(iterator);
+	
+	if (checklist->is_initiator && succeeded && !checklist->is_finishing)
+	{
+		/* instead of waiting until all checks have finished (i.e. all
+		 * retransmissions have failed) the initiator finishes the checks
+		 * right after the first check has succeeded. to allow a probably
+		 * better pair to succeed, we still wait a certain time */
+		DBG2(DBG_IKE, "fast finishing checks for checklist '%B'", &checklist->connect_id);
+		
+		sender_data_t *data = sender_data_create(this, checklist->connect_id);
+		job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiator_finish, data, (callback_job_cleanup_t)sender_data_destroy, NULL);
+		charon->scheduler->schedule_job(charon->scheduler, job, ME_WAIT_TO_FINISH);
+		checklist->is_finishing = TRUE;
+	}
+	
+	if (in_progress)
+	{
+		checklist->state = CHECK_IN_PROGRESS;
+	}
+	else if (succeeded)
+	{
+		checklist->state = CHECK_SUCCEEDED;
+	}
+	else
+	{
+		checklist->state = CHECK_FAILED;
+	}
+}
+
+/**
  * This function is triggered for each sent check after a specific timeout
  */
 static job_requeue_t retransmit(retransmit_data_t *data)
@@ -970,7 +1018,7 @@ static job_requeue_t retransmit(retransmit_data_t *data)
 	queue_retransmission(this, checklist, pair);
 
 retransmit_end:
-	update_checklist_state(checklist);
+	update_checklist_state(this, checklist);
 	
 	switch(checklist->state)
 	{
@@ -1114,8 +1162,7 @@ static job_requeue_t sender(sender_data_t *data)
 	check_destroy(check);
 	
 	/* schedule this job again */
-	u_int32_t N = this->checklists->get_count(this->checklists);
-	schedule_checks(this, checklist, ME_INTERVAL * N);
+	schedule_checks(this, checklist, ME_INTERVAL);
 	
 	pthread_mutex_unlock(&(this->mutex));
 	
@@ -1128,8 +1175,7 @@ static job_requeue_t sender(sender_data_t *data)
  */
 static void schedule_checks(private_connect_manager_t *this, check_list_t *checklist, u_int32_t time)
 {
-	chunk_t connect_id = chunk_clone(checklist->connect_id);
-	sender_data_t *data = sender_data_create(this, connect_id);
+	sender_data_t *data = sender_data_create(this, checklist->connect_id);
 	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)sender_data_destroy, NULL);
 	charon->scheduler->schedule_job(charon->scheduler, job, time);
 }
@@ -1225,7 +1271,7 @@ static void process_response(private_connect_manager_t *this, check_t *check,
 			local_endpoints->insert_last(local_endpoints, local_endpoint);
 		}
 		
-		update_checklist_state(checklist);
+		update_checklist_state(this, checklist);
 		
 		switch(checklist->state)
 		{
@@ -1266,7 +1312,7 @@ static void process_request(private_connect_manager_t *this, check_t *check,
 		{
 			case CHECK_IN_PROGRESS:
 				/* prevent retransmissions */
-				pair->retransmitted = ME_MAX_RETRANS; 
+				pair->retransmitted = ME_MAX_RETRANS;
 				/* FIXME: we should wait to the next rto to send the triggered check
 				 * fall-through */
 			case CHECK_WAITING:
