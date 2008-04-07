@@ -463,7 +463,7 @@ do
 		    > $TESTRESULTDIR/${host}.$command 2>/dev/null
 	    done
 
-	    for file in ipsec.conf ipsec.secrets
+	    for file in strongswan.conf ipsec.conf ipsec.secrets
 	    do
 		scp $HOSTLOGIN:/etc/$file \
 		    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
@@ -471,14 +471,12 @@ do
 
 		if [ $SUBDIR = "sql" ]
 		then
-			scp $HOSTLOGIN:/etc/ipsec.d/ipsec.sql \
+			scp $HOSTLOGIN:/etc/ipsec.sql \
 		    	$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
-			scp $HOSTLOGIN:/etc/ipsec.d/strongswan.conf \
-		    	$TESTRESULTDIR/${host}.strongswan.conf > /dev/null 2>&1
 		else
 			touch $TESTRESULTDIR/${host}.ipsec.sql
-			touch $TESTRESULTDIR/${host}.strongswan.conf
 		fi
+
 	    ssh $HOSTLOGIN ip xfrm policy \
 		    > $TESTRESULTDIR/${host}.ip.policy 2>/dev/null
 	    ssh $HOSTLOGIN ip xfrm state \
