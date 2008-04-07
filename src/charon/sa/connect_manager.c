@@ -38,7 +38,7 @@
 /* base for retransmissions */
 #define ME_RETRANS_BASE 1.8
 /* max number of retransmissions */
-#define ME_MAX_RETRANS 14
+#define ME_MAX_RETRANS 13
 
 
 typedef struct private_connect_manager_t private_connect_manager_t;
@@ -957,10 +957,10 @@ static job_requeue_t retransmit(retransmit_data_t *data)
 		goto retransmit_end;
 	}
 	
-	if (++pair->retransmitted >= ME_MAX_RETRANS)
+	if (++pair->retransmitted > ME_MAX_RETRANS)
 	{
 		DBG2(DBG_IKE, "pair with id '%d' failed after %d retransmissions",
-				data->mid, pair->retransmitted);
+				data->mid, ME_MAX_RETRANS);
 		pair->state = CHECK_FAILED;
 		goto retransmit_end;
 	}
@@ -996,12 +996,14 @@ static void queue_retransmission(private_connect_manager_t *this, check_list_t *
 	retransmit_data_t *data = retransmit_data_create(this, chunk_clone(checklist->connect_id), pair->id);
 	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)retransmit, data, (callback_job_cleanup_t)retransmit_data_destroy, NULL);
 	
+	u_int32_t retransmission = pair->retransmitted + 1;
 	u_int32_t rto = ME_INTERVAL;
-	if (pair->retransmitted > ME_BOOST)
+	if (retransmission > ME_BOOST)
 	{
-		rto = (u_int32_t)(ME_INTERVAL * pow(ME_RETRANS_BASE, pair->retransmitted - ME_BOOST));
+		rto = (u_int32_t)(ME_INTERVAL * pow(ME_RETRANS_BASE, retransmission - ME_BOOST));
 	}
-	DBG2(DBG_IKE, "retransmission %d of pair '%d' in %dms", pair->retransmitted, pair->id, rto);
+	DBG2(DBG_IKE, "scheduling retransmission %d of pair '%d' in %dms", retransmission, pair->id, rto);
+	
 	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, rto);
 }
 
