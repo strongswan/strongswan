@@ -50,7 +50,7 @@ struct private_x509_ocsp_response_t {
 	/**
 	 * complete encoded OCSP response
 	 */
-	chunk_t data;
+	chunk_t encoding;
 	
 	/**
 	 * data for signature verficiation
@@ -591,7 +591,7 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 	int responseType = OID_UNKNOWN;
 	ocsp_status_t status;
 
-	asn1_init(&ctx, this->data, 0, FALSE, FALSE);
+	asn1_init(&ctx, this->encoding, 0, FALSE, FALSE);
 	while (objectID < OCSP_RESPONSE_ROOF)
 	{
 		if (!extract_object(ocspResponseObjects, &objectID, &object, &level, &ctx))
@@ -788,7 +788,7 @@ static bool is_newer(certificate_t *this, certificate_t *that)
  */
 static chunk_t get_encoding(private_x509_ocsp_response_t *this)
 {
-	return chunk_clone(this->data);
+	return chunk_clone(this->encoding);
 }
 
 /**
@@ -796,6 +796,9 @@ static chunk_t get_encoding(private_x509_ocsp_response_t *this)
  */
 static bool equals(private_x509_ocsp_response_t *this, certificate_t *other)
 {
+	chunk_t encoding;
+	bool equal;
+	
 	if (this == (private_x509_ocsp_response_t*)other)
 	{
 		return TRUE;
@@ -804,14 +807,14 @@ static bool equals(private_x509_ocsp_response_t *this, certificate_t *other)
 	{
 		return FALSE;
 	}
-	/* check if we have the same X509 implementation */
 	if (other->equals == (void*)equals)
-	{
-		return chunk_equals(this->data, 
-							((private_x509_ocsp_response_t*)other)->data); 
+	{	/* skip allocation if we have the same implementation */
+		return chunk_equals(this->encoding, ((private_x509_ocsp_response_t*)other)->encoding); 
 	}
-	/* TODO: compare against other implementation */
-	return FALSE;
+	encoding = other->get_encoding(other);
+	equal = chunk_equals(this->encoding, encoding);
+	free(encoding.ptr);
+	return equal;
 }
 
 /**
@@ -833,7 +836,7 @@ static void destroy(private_x509_ocsp_response_t *this)
 		this->certs->destroy_offset(this->certs, offsetof(certificate_t, destroy));
 		this->responses->destroy_function(this->responses, free);
 		DESTROY_IF(this->responderId);
-		free(this->data.ptr);
+		free(this->encoding.ptr);
 		free(this);
 	}
 }
@@ -864,7 +867,7 @@ static x509_ocsp_response_t *load(chunk_t data)
 	this->public.interface.create_cert_enumerator = (enumerator_t*(*)(ocsp_response_t*))create_cert_enumerator;
 	
 	this->ref = 1;
-	this->data = data;
+	this->encoding = data;
 	this->tbsResponseData = chunk_empty;
 	this->responderId = NULL;
 	this->producedAt = UNDEFINED_TIME;

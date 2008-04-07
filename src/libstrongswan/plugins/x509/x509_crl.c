@@ -555,17 +555,21 @@ static chunk_t get_encoding(private_x509_crl_t *this)
  */
 static bool equals(private_x509_crl_t *this, certificate_t *other)
 {
+	chunk_t encoding;
+	bool equal;
+	
 	if ((certificate_t*)this == other)
 	{
 		return TRUE;
 	}
 	if (other->equals == (void*)equals)
-	{	/* same implementation */
-		return chunk_equals(this->signature,
-							((private_x509_crl_t*)other)->signature);
+	{	/* skip allocation if we have the same implementation */
+		return chunk_equals(this->encoding, ((private_x509_crl_t*)other)->encoding); 
 	}
-	/* TODO: compare against other implementations */
-	return FALSE;
+	encoding = other->get_encoding(other);
+	equal = chunk_equals(this->encoding, encoding);
+	free(encoding.ptr);
+	return equal;
 }
 
 /**

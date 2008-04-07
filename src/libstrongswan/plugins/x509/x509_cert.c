@@ -1075,6 +1075,9 @@ static chunk_t get_encoding(private_x509_cert_t *this)
  */
 static bool equals(private_x509_cert_t *this, certificate_t *other)
 {
+	chunk_t encoding;
+	bool equal;
+
 	if (this == (private_x509_cert_t*)other)
 	{
 		return TRUE;
@@ -1083,17 +1086,14 @@ static bool equals(private_x509_cert_t *this, certificate_t *other)
 	{
 		return FALSE;
 	}
-	/* check if we have the same X509 implementation */
 	if (other->equals == (void*)equals)
-	{
-		if (this->signature.len == 0)
-		{
-			return FALSE;
-		}
-		return chunk_equals(this->signature, ((private_x509_cert_t*)other)->signature); 
+	{	/* skip allocation if we have the same implementation */
+		return chunk_equals(this->encoding, ((private_x509_cert_t*)other)->encoding); 
 	}
-	/* TODO: compare against other implementation */
-	return FALSE;
+	encoding = other->get_encoding(other);
+	equal = chunk_equals(this->encoding, encoding);
+	free(encoding.ptr);
+	return equal;
 }
 
 /**
