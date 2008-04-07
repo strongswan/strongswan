@@ -118,11 +118,24 @@ static bool issued_by(private_cert_cache_t *this,
 	enumerator = this->relations->create_enumerator(this->relations);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current->subject == subject && current->issuer == issuer)
+		bool match = FALSE;
+	
+		/* check for equal certificates */
+		if (subject->equals(subject, current->subject))
 		{
-			current->last_use = time(NULL);
-			found = current;
-			break;
+			match = TRUE;
+			subject = current->subject;
+		}
+		if (issuer->equals(issuer, current->issuer))
+		{
+			issuer = current->issuer;
+			/* if both certs match, we already have a relation */
+			if (match)
+			{
+				current->last_use = time(NULL);
+				found = current;
+				break;
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
