@@ -29,16 +29,16 @@
 #include <encoding/payloads/endpoint_notify.h>
 
 /* base timeout
- * the check interval is ME_INTERVAL * active checklists (N) */
- #define ME_INTERVAL 20 /* ms */
-/* retransmission timeout is first ME_RTO_B * N for ME_BOOST retransmissions
- * then gets reduced to ME_RTO * N. */
+ * the check interval is ME_INTERVAL */
+ #define ME_INTERVAL 25 /* ms */
+/* retransmission timeout is first ME_INTERVAL for ME_BOOST retransmissions
+ * then gets reduced to ME_INTERVAL * ME_RETRANS_BASE ^ (sent retransmissions - ME_BOOST). */
 /* number of initial retransmissions sent in short interval */
 #define ME_BOOST 2
-/* retransmission timeout */
-#define ME_RTO 100 /* ms */
+/* base for retransmissions */
+#define ME_RETRANS_BASE 1.8
 /* max number of retransmissions */
-#define ME_MAX_RETRANS 9
+#define ME_MAX_RETRANS 14
 
 
 typedef struct private_connect_manager_t private_connect_manager_t;
@@ -996,18 +996,12 @@ static void queue_retransmission(private_connect_manager_t *this, check_list_t *
 	retransmit_data_t *data = retransmit_data_create(this, chunk_clone(checklist->connect_id), pair->id);
 	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)retransmit, data, (callback_job_cleanup_t)retransmit_data_destroy, NULL);
 	
-	/*
-	u_int32_t NW = 0;
-	checklist->pairs->invoke_function(checklist->pairs, (linked_list_invoke_t)count_waiting_pairs, &NW);
-	u_int32_t rto = max(ME_INTERVAL * N * (NW + 1), ME_RTO_MIN);
-	*/
-	u_int32_t N = this->checklists->get_count(this->checklists);
-	u_int32_t rto = ME_INTERVAL * N;
+	u_int32_t rto = ME_INTERVAL;
 	if (pair->retransmitted > ME_BOOST)
 	{
-		rto = ME_RTO * N;
+		rto = (u_int32_t)(ME_INTERVAL * pow(ME_RETRANS_BASE, pair->retransmitted - ME_BOOST));
 	}
-	DBG2(DBG_IKE, "retransmission of pair '%d' in %dms - %d active checklist(s)", pair->id, rto, N);
+	DBG2(DBG_IKE, "retransmission %d of pair '%d' in %dms", pair->retransmitted, pair->id, rto);
 	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, rto);
 }
 
