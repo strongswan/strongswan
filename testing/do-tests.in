@@ -471,7 +471,7 @@ do
 
 		if [ $SUBDIR = "sql" ]
 		then
-			scp $HOSTLOGIN:/etc/ipsec.sql \
+			scp $HOSTLOGIN:/ipsec.d/etc/ipsec.sql \
 		    	$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
 		else
 			touch $TESTRESULTDIR/${host}.ipsec.sql
