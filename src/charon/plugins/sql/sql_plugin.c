@@ -81,7 +81,7 @@ plugin_t *plugin_create()
 	uri = lib->settings->get_str(lib->settings, "charon.plugins.sql.database", NULL);
 	if (!uri)
 	{
-		DBG1(DBG_CFG, "SQL plugin database URI not set");
+		DBG1(DBG_CFG, "sql plugin: database URI not set");
 		return NULL;
 	}
 	
@@ -92,7 +92,7 @@ plugin_t *plugin_create()
 	this->db = lib->db->create(lib->db, uri);
 	if (!this->db)
 	{
-		DBG1(DBG_CFG, "SQL plugin failed to connect to database");
+		DBG1(DBG_CFG, "sql plugin failed to connect to database");
 		free(this);
 		return NULL;
 	}
