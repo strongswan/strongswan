@@ -927,7 +927,6 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			{
 				DBG1(DBG_CFG, "no issuer certificate found for \"%D\"", 
 					 current->get_subject(current));
-				issuer->destroy(issuer);
 				break;
 			}
 		}
