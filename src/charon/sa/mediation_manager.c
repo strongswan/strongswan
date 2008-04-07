@@ -241,6 +241,7 @@ static void update_sa_id(private_mediation_manager_t *this, identification_t *pe
 	{
 		job_t *job = (job_t*)mediation_callback_job_create(requester, peer_id);
 		charon->processor->queue_job(charon->processor, job);
+		requester->destroy(requester);
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));
