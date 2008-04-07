@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup database database
+ * @defgroup databasei database
  * @{ @ingroup database
  */
 

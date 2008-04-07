@@ -18,7 +18,7 @@
  */
  
 /**
- * @defgroup asn1 asn1
+ * @defgroup asn1i asn1
  * @{ @ingroup asn1
  */
 

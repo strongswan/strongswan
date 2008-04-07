@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup fetcher fetcher
+ * @defgroup fetcheri fetcher
  * @{ @ingroup fetcher
  */
 
