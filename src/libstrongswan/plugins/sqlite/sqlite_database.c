@@ -283,13 +283,14 @@ sqlite_database_t *sqlite_database_create(char *uri)
 	this->public.db.execute = (int (*)(database_t *this, int *rowid, char *sql, ...))execute;
 	this->public.db.destroy = (void(*)(database_t*))destroy;
 	
+	this->mutex = mutex_create(MUTEX_DEFAULT);
+	
 	if (sqlite3_open(file, &this->db) != SQLITE_OK)
 	{
 		DBG1("opening SQLite database '%s' failed", file);
 		destroy(this);
 		return NULL;
 	}
-	this->mutex = mutex_create(MUTEX_DEFAULT);
 	
 	return &this->public;
 }
