@@ -392,45 +392,12 @@ static check_t *check_create()
 	return this;
 }
 
-typedef struct sender_data_t sender_data_t;
+typedef struct callback_data_t callback_data_t;
 
 /**
- * Data required by the sender
+ * Data required by several callback jobs used in this file
  */
-struct sender_data_t {
-	/** connect manager */
-	private_connect_manager_t *connect_manager;
-	
-	/** connect id */
-	chunk_t connect_id;
-};
-
-/**
- * Destroys a sender data object
- */
-static void sender_data_destroy(sender_data_t *this)
-{
-	chunk_free(&this->connect_id);
-	free(this);
-}
-
-/**
- * Creates a new sender data object
- */
-static sender_data_t *sender_data_create(private_connect_manager_t *connect_manager, chunk_t connect_id)
-{
-	sender_data_t *this = malloc_thing(sender_data_t);	
-	this->connect_manager = connect_manager;
-	this->connect_id = chunk_clone(connect_id);
-	return this;
-}
-
-typedef struct retransmit_data_t retransmit_data_t;
-
-/**
- * Data required by the retransmission job
- */
-struct retransmit_data_t {
+struct callback_data_t {
 	/** connect manager */
 	private_connect_manager_t *connect_manager;
 	
@@ -442,26 +409,35 @@ struct retransmit_data_t {
 };
 
 /**
- * Destroys a retransmission data object
+ * Destroys a callback data object
  */
-static void retransmit_data_destroy(retransmit_data_t *this)
+static void callback_data_destroy(callback_data_t *this)
 {
 	chunk_free(&this->connect_id);
 	free(this);
 }
 
 /**
+ * Creates a new callback data object
+ */
+static callback_data_t *callback_data_create(private_connect_manager_t *connect_manager,
+		chunk_t connect_id)
+{
+	callback_data_t *this = malloc_thing(callback_data_t);	
+	this->connect_manager = connect_manager;
+	this->connect_id = chunk_clone(connect_id);
+	this->mid = 0;
+	return this;
+}
+
+/**
  * Creates a new retransmission data object
  */
-static retransmit_data_t *retransmit_data_create(private_connect_manager_t *connect_manager,
+static callback_data_t *retransmit_data_create(private_connect_manager_t *connect_manager,
 		chunk_t connect_id, u_int32_t mid)
 {
-	retransmit_data_t *this = malloc_thing(retransmit_data_t);
-	
-	this->connect_manager = connect_manager;
-	this->connect_id = connect_id;
+	callback_data_t *this = callback_data_create(connect_manager, connect_id);
 	this->mid = mid;
-
 	return this;
 }
 
@@ -891,7 +867,7 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
  * After one of the initiator's pairs has succeeded we finish the checks without
  * waiting for all the timeouts  
  */
-static job_requeue_t initiator_finish(sender_data_t *data)
+static job_requeue_t initiator_finish(callback_data_t *data)
 {
 	private_connect_manager_t *this = data->connect_manager;
 
@@ -952,8 +928,8 @@ static void update_checklist_state(private_connect_manager_t *this, check_list_t
 		 * better pair to succeed, we still wait a certain time */
 		DBG2(DBG_IKE, "fast finishing checks for checklist '%B'", &checklist->connect_id);
 		
-		sender_data_t *data = sender_data_create(this, checklist->connect_id);
-		job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiator_finish, data, (callback_job_cleanup_t)sender_data_destroy, NULL);
+		callback_data_t *data = callback_data_create(this, checklist->connect_id);
+		job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiator_finish, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
 		charon->scheduler->schedule_job(charon->scheduler, job, ME_WAIT_TO_FINISH);
 		checklist->is_finishing = TRUE;
 	}
@@ -975,7 +951,7 @@ static void update_checklist_state(private_connect_manager_t *this, check_list_t
 /**
  * This function is triggered for each sent check after a specific timeout
  */
-static job_requeue_t retransmit(retransmit_data_t *data)
+static job_requeue_t retransmit(callback_data_t *data)
 {
 	private_connect_manager_t *this = data->connect_manager;
 	
@@ -1041,8 +1017,8 @@ retransmit_end:
  */
 static void queue_retransmission(private_connect_manager_t *this, check_list_t *checklist, endpoint_pair_t *pair)
 {
-	retransmit_data_t *data = retransmit_data_create(this, chunk_clone(checklist->connect_id), pair->id);
-	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)retransmit, data, (callback_job_cleanup_t)retransmit_data_destroy, NULL);
+	callback_data_t *data = retransmit_data_create(this, checklist->connect_id, pair->id);
+	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)retransmit, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
 	
 	u_int32_t retransmission = pair->retransmitted + 1;
 	u_int32_t rto = ME_INTERVAL;
@@ -1115,7 +1091,7 @@ static void queue_triggered_check(check_list_t *checklist, endpoint_pair_t *pair
 /**
  * This function is triggered for each checklist at a specific interval
  */
-static job_requeue_t sender(sender_data_t *data)
+static job_requeue_t sender(callback_data_t *data)
 {
 	private_connect_manager_t *this = data->connect_manager;
 
@@ -1175,8 +1151,8 @@ static job_requeue_t sender(sender_data_t *data)
  */
 static void schedule_checks(private_connect_manager_t *this, check_list_t *checklist, u_int32_t time)
 {
-	sender_data_t *data = sender_data_create(this, checklist->connect_id);
-	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)sender_data_destroy, NULL);
+	callback_data_t *data = callback_data_create(this, checklist->connect_id);
+	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
 	charon->scheduler->schedule_job(charon->scheduler, job, time);
 }
 
