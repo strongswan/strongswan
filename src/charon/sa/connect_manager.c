@@ -690,6 +690,24 @@ static status_t get_triggered_pair(check_list_t *checklist, endpoint_pair_t **pa
 }
 
 /**
+ * Prints all the pairs on a checklist
+ */
+static void print_checklist(check_list_t *checklist)
+{
+	iterator_t *iterator;
+	endpoint_pair_t *current;
+	
+	DBG1(DBG_IKE, "pairs on checklist %#B:", &checklist->connect_id);
+	iterator = checklist->pairs->create_iterator(checklist->pairs, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		DBG1(DBG_IKE, " * %#H - %#H (%d)", current->local, current->remote,
+				current->priority);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Prunes identical pairs with lower priority from the list
  * Note: this function also numbers the remaining pairs serially
  */
@@ -719,7 +737,7 @@ static void prune_pairs(linked_list_t *pairs)
 				 * order, and we iterate the list from the beginning, we are
 				 * sure that the priority of 'other' is lower than that of
 				 * 'current', remove it */
-				DBG1(DBG_IKE, "pruning endpoint pair %H - %H with priority %d",
+				DBG1(DBG_IKE, "pruning endpoint pair %#H - %#H with priority %d",
 						other->local, other->remote, other->priority);
 				search->remove(search);
 				endpoint_pair_destroy(other);
@@ -756,6 +774,8 @@ static void build_pairs(check_list_t *checklist)
 		iterator_r->destroy(iterator_r);
 	}
 	iterator_i->destroy(iterator_i);
+	
+	print_checklist(checklist);
 
 	prune_pairs(checklist->pairs);
 }
@@ -1072,6 +1092,7 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 		{
 			DESTROY_IF(pair->packet);
 			pair->packet = packet;
+			pair->retransmitted = 0;
 			queue_retransmission(this, checklist, pair);
 		}
 		else
@@ -1088,10 +1109,11 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 static void queue_triggered_check(private_connect_manager_t *this, 
 		check_list_t *checklist, endpoint_pair_t *pair)
 {
+	DBG2(DBG_IKE, "queueing triggered check for pair '%d'", pair->id);
  	pair->state = CHECK_WAITING;
  	checklist->triggered->insert_last(checklist->triggered, pair);
  	
- 	if (checklist->sender)
+ 	if (!checklist->sender)
  	{
  		/* if the sender is not running we restart it */
  		schedule_checks(this, checklist, ME_INTERVAL);
