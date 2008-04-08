@@ -200,6 +200,9 @@ struct check_list_t {
 	/** TRUE if the initiator is finishing the checks */
 	bool is_finishing;
 	
+	/** the current sender job */
+	job_t *sender;
+	
 };
 
 /**
@@ -1082,10 +1085,17 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 /**
  * Queues a triggered check
  */
-static void queue_triggered_check(check_list_t *checklist, endpoint_pair_t *pair)
+static void queue_triggered_check(private_connect_manager_t *this, 
+		check_list_t *checklist, endpoint_pair_t *pair)
 {
  	pair->state = CHECK_WAITING;
  	checklist->triggered->insert_last(checklist->triggered, pair);
+ 	
+ 	if (checklist->sender)
+ 	{
+ 		/* if the sender is not running we restart it */
+ 		schedule_checks(this, checklist, ME_INTERVAL);
+ 	}
 }
 
 /**
@@ -1096,7 +1106,7 @@ static job_requeue_t sender(callback_data_t *data)
 	private_connect_manager_t *this = data->connect_manager;
 
 	pthread_mutex_lock(&(this->mutex));
-
+	
 	check_list_t *checklist;
 	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
 	{
@@ -1105,6 +1115,9 @@ static job_requeue_t sender(callback_data_t *data)
 		pthread_mutex_unlock(&(this->mutex));
 		return JOB_REQUEUE_NONE;
 	}
+	
+	/* reset the sender */
+	checklist->sender = NULL;
 	
 	endpoint_pair_t *pair;
 	if (get_triggered_pair(checklist, &pair) != SUCCESS)
@@ -1152,8 +1165,8 @@ static job_requeue_t sender(callback_data_t *data)
 static void schedule_checks(private_connect_manager_t *this, check_list_t *checklist, u_int32_t time)
 {
 	callback_data_t *data = callback_data_create(this, checklist->connect_id);
-	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
-	charon->scheduler->schedule_job(charon->scheduler, job, time);
+	checklist->sender = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
+	charon->scheduler->schedule_job(charon->scheduler, checklist->sender, time);
 }
 
 /**
@@ -1293,7 +1306,7 @@ static void process_request(private_connect_manager_t *this, check_t *check,
 				 * fall-through */
 			case CHECK_WAITING:
 			case CHECK_FAILED:
-				queue_triggered_check(checklist, pair);
+				queue_triggered_check(this, checklist, pair);
 				break;
 			case CHECK_SUCCEEDED:
 			default:
@@ -1312,7 +1325,7 @@ static void process_request(private_connect_manager_t *this, check_t *check,
 		
 		insert_pair_by_priority(checklist->pairs, pair);
 		
-		queue_triggered_check(checklist, pair);
+		queue_triggered_check(this, checklist, pair);
 		
 		local_endpoint->destroy(local_endpoint);
 	}
