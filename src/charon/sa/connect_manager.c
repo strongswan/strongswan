@@ -754,6 +754,7 @@ static void prune_pairs(linked_list_t *pairs)
  */
 static void build_pairs(check_list_t *checklist)
 {
+	/* FIXME: limit endpoints and pairs */
 	iterator_t *iterator_i, *iterator_r;
 	endpoint_notify_t *initiator, *responder;
 	
@@ -864,10 +865,12 @@ static status_t process_payloads(message_t *message, check_t *check)
 static chunk_t build_signature(private_connect_manager_t *this, 
 		check_list_t *checklist, check_t *check, bool outbound)
 {
+	u_int32_t mid;
 	chunk_t mid_chunk, key_chunk, sig_chunk;
 	chunk_t sig_hash;
 	
-	mid_chunk = chunk_from_thing(check->mid);
+	mid = htonl(check->mid);
+	mid_chunk = chunk_from_thing(mid);
 	
 	key_chunk = (checklist->is_initiator && outbound) || (!checklist->is_initiator && !outbound)
 					? checklist->initiator.key : checklist->responder.key;
