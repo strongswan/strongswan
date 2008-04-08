@@ -30,7 +30,7 @@
 
 /* base timeout
  * the check interval is ME_INTERVAL */
- #define ME_INTERVAL 25 /* ms */
+#define ME_INTERVAL 25 /* ms */
 /* retransmission timeout is first ME_INTERVAL for ME_BOOST retransmissions
  * then gets reduced to ME_INTERVAL * ME_RETRANS_BASE ^ (sent retransmissions - ME_BOOST). */
 /* number of initial retransmissions sent in short interval */
@@ -852,8 +852,8 @@ static chunk_t build_signature(private_connect_manager_t *this,
 	/* signature = SHA1( MID | ME_CONNECTID | ME_ENDPOINT | ME_CONNECTKEY ) */
 	sig_chunk = chunk_cat("cccc", mid_chunk, check->connect_id, check->endpoint_raw, key_chunk);
 	this->hasher->allocate_hash(this->hasher, sig_chunk, &sig_hash);
-	DBG3(DBG_IKE, "sig_chunk %B", &sig_chunk);
-	DBG3(DBG_IKE, "sig_hash %B", &sig_hash);
+	DBG3(DBG_IKE, "sig_chunk %#B", &sig_chunk);
+	DBG3(DBG_IKE, "sig_hash %#B", &sig_hash);
 	
 	chunk_free(&sig_chunk);
 	return sig_hash;
@@ -876,7 +876,7 @@ static job_requeue_t initiator_finish(callback_data_t *data)
 	check_list_t *checklist;
 	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' not found, can't finish connectivity checks",
+		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't finish connectivity checks",
 				&data->connect_id);
 		pthread_mutex_unlock(&(this->mutex));
 		return JOB_REQUEUE_NONE;
@@ -926,7 +926,7 @@ static void update_checklist_state(private_connect_manager_t *this, check_list_t
 		 * retransmissions have failed) the initiator finishes the checks
 		 * right after the first check has succeeded. to allow a probably
 		 * better pair to succeed, we still wait a certain time */
-		DBG2(DBG_IKE, "fast finishing checks for checklist '%B'", &checklist->connect_id);
+		DBG2(DBG_IKE, "fast finishing checks for checklist '%#B'", &checklist->connect_id);
 		
 		callback_data_t *data = callback_data_create(this, checklist->connect_id);
 		job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiator_finish, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
@@ -960,7 +960,7 @@ static job_requeue_t retransmit(callback_data_t *data)
 	check_list_t *checklist;
 	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' not found, can't retransmit connectivity check",
+		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't retransmit connectivity check",
 				&data->connect_id);
 		pthread_mutex_unlock(&(this->mutex));
 		return JOB_REQUEUE_NONE;
@@ -1100,7 +1100,7 @@ static job_requeue_t sender(callback_data_t *data)
 	check_list_t *checklist;
 	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' not found, can't send connectivity check",
+		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't send connectivity check",
 				&data->connect_id);
 		pthread_mutex_unlock(&(this->mutex));
 		return JOB_REQUEUE_NONE;
@@ -1365,7 +1365,7 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 	check_list_t *checklist;
 	if (get_checklist_by_id(this, check->connect_id, &checklist) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' not found",
+		DBG1(DBG_IKE, "checklist with id '%#B' not found",
 				&check->connect_id);
 		check_destroy(check);
 		pthread_mutex_unlock(&(this->mutex));
@@ -1475,7 +1475,7 @@ static status_t set_initiator_data(private_connect_manager_t *this,
 	
 	if (get_checklist_by_id(this, connect_id, NULL) == SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' already exists, aborting",
+		DBG1(DBG_IKE, "checklist with id '%#B' already exists, aborting",
 				&connect_id);
 		pthread_mutex_unlock(&(this->mutex));
 		return FAILED;
@@ -1501,7 +1501,7 @@ static status_t set_responder_data(private_connect_manager_t *this,
 	
 	if (get_checklist_by_id(this, connect_id, &checklist) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' not found",
+		DBG1(DBG_IKE, "checklist with id '%#B' not found",
 				&connect_id);
 		pthread_mutex_unlock(&(this->mutex));
 		return NOT_FOUND;
@@ -1532,13 +1532,13 @@ static status_t stop_checks(private_connect_manager_t *this, chunk_t connect_id)
 	
 	if (get_checklist_by_id(this, connect_id, &checklist) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' not found",
+		DBG1(DBG_IKE, "checklist with id '%#B' not found",
 				&connect_id);
 		pthread_mutex_unlock(&(this->mutex));
 		return NOT_FOUND;
 	}
 	
-	DBG1(DBG_IKE, "removing checklist with id '%B'", &connect_id);
+	DBG1(DBG_IKE, "removing checklist with id '%#B'", &connect_id);
 	
 	remove_checklist(this, checklist);
 	check_list_destroy(checklist);
