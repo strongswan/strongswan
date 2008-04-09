@@ -436,6 +436,11 @@ struct ike_sa_t {
 
 #ifdef ME
 	/**
+	 * Activate mediation server functionality for this IKE_SA.
+	 */
+	void (*act_as_mediation_server) (ike_sa_t *this);
+	
+	/**
 	 * Get the server reflexive host.
 	 * 
 	 * @return				server reflexive host

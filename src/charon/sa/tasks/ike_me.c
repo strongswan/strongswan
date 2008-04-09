@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -480,9 +480,7 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 			if (this->failed)
 			{
 				DBG1(DBG_IKE, "peer '%D' is not online", this->peer_id);
-				/* FIXME: notify the mediated connection (job?)
-				 * FIXME: probably delete the created checklist, at least as 
-				 * responder */
+				/* FIXME: notify the mediated connection (job?) */
 			}
 			else
 			{
@@ -501,6 +499,8 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 						this->ike_sa->get_my_id(this->ike_sa), this->peer_id,
 						this->connect_id, this->connect_key, this->local_endpoints,
 						TRUE);
+					/* FIXME: also start a timer for the whole transaction (maybe
+					 * within the connect_manager?) */
 				}
 			}
 			break;
@@ -646,10 +646,8 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 				endpoint->destroy(endpoint);
 			}
 			
-			/* FIXME: we must delete any existing IKE_SAs */
-			charon->mediation_manager->update_sa_id(charon->mediation_manager,
-					this->ike_sa->get_other_id(this->ike_sa),
-					this->ike_sa->get_id(this->ike_sa));
+			/* FIXME: we actually must delete any existing IKE_SAs with the same remote id */
+			this->ike_sa->act_as_mediation_server(this->ike_sa);
 			
 			SIG(CHILD_UP_SUCCESS, "established mediation connection without CHILD_SA successfully");
 			
@@ -700,6 +698,10 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
  */
 static status_t process_i_ms(private_ike_me_t *this, message_t *message)
 {
+	/* FIXME: theoretically we should be prepared to receive a ME_CONNECT_FAILED
+	 * here if the responding peer is not able to proceed. in this case we shall
+	 * notify the initiating peer with a ME_CONNECT request containing only a
+	 * ME_CONNECT_FAILED */
 	return SUCCESS;
 }
 

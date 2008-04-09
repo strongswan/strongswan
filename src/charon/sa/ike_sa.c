@@ -144,6 +144,11 @@ struct private_ike_sa_t {
 	
 #ifdef ME
 	/**
+	 * Are we mediation server
+	 */
+	bool is_mediation_server;
+	
+	/**
 	 * Server reflexive host
 	 */
 	host_t *server_reflexive_host;
@@ -931,6 +936,16 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 }
 
 #ifdef ME
+/**
+ * Implementation of ike_sa_t.act_as_mediation_server.
+ */
+static void act_as_mediation_server(private_ike_sa_t *this)
+{
+	charon->mediation_manager->update_sa_id(charon->mediation_manager,
+			this->other_id, this->ike_sa_id);
+	this->is_mediation_server = TRUE;
+}
+
 /**
  * Implementation of ike_sa_t.get_server_reflexive_host.
  */
@@ -2127,6 +2142,18 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	{
 		send_keepalive(this);
 	}
+	
+#ifdef ME
+	if (other->is_mediation_server)
+	{
+		act_as_mediation_server(this);
+	}
+	else if (other->server_reflexive_host)
+	{
+		this->server_reflexive_host = other->server_reflexive_host->clone(
+				other->server_reflexive_host);
+	}
+#endif /* ME */
 
 	/* adopt all children */
 	while (other->child_sas->remove_last(other->child_sas,
@@ -2332,10 +2359,8 @@ static void destroy(private_ike_sa_t *this)
 	this->additional_addresses->destroy_offset(this->additional_addresses,
 													offsetof(host_t, destroy));
 #ifdef ME
-	if (this->peer_cfg && this->peer_cfg->is_mediation(this->peer_cfg) &&
-			!this->ike_sa_id->is_initiator(this->ike_sa_id))
+	if (this->is_mediation_server)
 	{
-		/* mediation server */
 		charon->mediation_manager->remove(charon->mediation_manager, this->ike_sa_id);
 	}
 	DESTROY_IF(this->server_reflexive_host);
@@ -2427,6 +2452,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_virtual_ip = (host_t* (*)(ike_sa_t*,bool))get_virtual_ip;
 	this->public.add_dns_server = (void (*)(ike_sa_t*,host_t*))add_dns_server;
 #ifdef ME
+	this->public.act_as_mediation_server = (void (*)(ike_sa_t*)) act_as_mediation_server;
 	this->public.get_server_reflexive_host = (host_t* (*)(ike_sa_t*)) get_server_reflexive_host;
 	this->public.set_server_reflexive_host = (void (*)(ike_sa_t*,host_t*)) set_server_reflexive_host;
 	this->public.get_connect_id = (chunk_t (*)(ike_sa_t*)) get_connect_id;
@@ -2474,6 +2500,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->keyingtry = 0;
 	this->ike_initiator = FALSE;
 #ifdef ME
+	this->is_mediation_server = FALSE;
 	this->server_reflexive_host = NULL;
 	this->connect_id = chunk_empty;
 #endif /* ME */
