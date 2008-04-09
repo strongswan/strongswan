@@ -153,12 +153,12 @@ struct private_peer_cfg_t {
 	/**
 	 * virtual IP to use locally
 	 */
-	host_t *my_virtual_ip;
+	host_t *virtual_ip;
 	
 	/**
-	 * virtual IP to use remotly
+	 * pool to acquire configuration attributes from
 	 */
-	host_t *other_virtual_ip;
+	char *pool;
 	
 	/**
 	 * required authorization constraints
@@ -396,35 +396,19 @@ static dpd_action_t get_dpd_action(private_peer_cfg_t *this)
 }
 
 /**
- * Implementation of peer_cfg_t.get_my_virtual_ip.
+ * Implementation of peer_cfg_t.get_virtual_ip.
  */
-static host_t* get_my_virtual_ip(private_peer_cfg_t *this)
+static host_t* get_virtual_ip(private_peer_cfg_t *this)
 {
-	if (this->my_virtual_ip == NULL)
-	{
-		return NULL;
-	}
-	return this->my_virtual_ip->clone(this->my_virtual_ip);
+	return this->virtual_ip;
 }
-
+	
 /**
- * Implementation of peer_cfg_t.get_other_virtual_ip.
+ * Implementation of peer_cfg_t.get_pool.
  */
-static host_t* get_other_virtual_ip(private_peer_cfg_t *this, host_t *suggestion)
+static char* get_pool(private_peer_cfg_t *this)
 {
-	if (this->other_virtual_ip == NULL)
-	{	/* disallow */
-		return NULL;
-	}
-	if (!this->other_virtual_ip->is_anyaddr(this->other_virtual_ip))
-	{	/* force own configuration */
-		return this->other_virtual_ip->clone(this->other_virtual_ip);
-	}
-	if (suggestion == NULL || suggestion->is_anyaddr(suggestion))
-	{
-		return NULL;
-	}
-	return suggestion->clone(suggestion);
+	return this->pool;
 }
 	
 /**
@@ -491,12 +475,10 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 		this->over_time == other->over_time &&
 		this->dpd_delay == other->dpd_delay &&
 		this->dpd_action == other->dpd_action &&
-		(this->my_virtual_ip == other->my_virtual_ip ||
-		 (this->my_virtual_ip && other->my_virtual_ip &&
-		  this->my_virtual_ip->equals(this->my_virtual_ip, other->my_virtual_ip))) &&
-		(this->other_virtual_ip == other->other_virtual_ip ||
-		 (this->other_virtual_ip && other->other_virtual_ip &&
-		  this->other_virtual_ip->equals(this->other_virtual_ip, other->other_virtual_ip))) &&
+		(this->virtual_ip == other->virtual_ip ||
+		 (this->virtual_ip && other->virtual_ip &&
+		  this->virtual_ip->equals(this->virtual_ip, other->virtual_ip))) &&
+		(this->pool == other->pool || streq(this->pool, other->pool)) &&
 		this->auth->equals(this->auth, other->auth) 
 #ifdef ME
 		&& this->mediation == other->mediation &&
@@ -527,14 +509,14 @@ static void destroy(private_peer_cfg_t *this)
 		this->child_cfgs->destroy_offset(this->child_cfgs, offsetof(child_cfg_t, destroy));
 		this->my_id->destroy(this->my_id);
 		this->other_id->destroy(this->other_id);
-		DESTROY_IF(this->my_virtual_ip);
-		DESTROY_IF(this->other_virtual_ip);
+		DESTROY_IF(this->virtual_ip);
 		this->auth->destroy(this->auth);
 #ifdef ME
 		DESTROY_IF(this->mediated_by);
 		DESTROY_IF(this->peer_id);
 #endif /* ME */
 		free(this->name);
+		free(this->pool);
 		free(this);
 	}
 }
@@ -551,7 +533,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							u_int32_t reauth_time, u_int32_t jitter_time,
 							u_int32_t over_time, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
-							host_t *my_virtual_ip, host_t *other_virtual_ip,
+							host_t *virtual_ip, char *pool,
 							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id)
 {
@@ -577,8 +559,8 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.use_mobike = (bool (*) (peer_cfg_t *))use_mobike;
 	this->public.get_dpd_delay = (u_int32_t (*) (peer_cfg_t *))get_dpd_delay;
 	this->public.get_dpd_action = (dpd_action_t (*) (peer_cfg_t *))get_dpd_action;
-	this->public.get_my_virtual_ip = (host_t* (*) (peer_cfg_t *))get_my_virtual_ip;
-	this->public.get_other_virtual_ip = (host_t* (*) (peer_cfg_t *, host_t *))get_other_virtual_ip;
+	this->public.get_virtual_ip = (host_t* (*) (peer_cfg_t *))get_virtual_ip;
+	this->public.get_pool = (char*(*)(peer_cfg_t*))get_pool;
 	this->public.get_auth = (auth_info_t*(*)(peer_cfg_t*))get_auth;
 	this->public.equals = (bool(*)(peer_cfg_t*, peer_cfg_t *other))equals;
 	this->public.get_ref = (void(*)(peer_cfg_t *))get_ref;
@@ -617,8 +599,8 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->use_mobike = mobike;
 	this->dpd_delay = dpd_delay;
 	this->dpd_action = dpd_action;
-	this->my_virtual_ip = my_virtual_ip;
-	this->other_virtual_ip = other_virtual_ip;
+	this->virtual_ip = virtual_ip;
+	this->pool = pool ? strdup(pool) : NULL;
 	this->auth = auth_info_create();
 	this->refcount = 1;
 #ifdef ME

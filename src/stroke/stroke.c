@@ -105,61 +105,28 @@ static int add_connection(char *name,
 {
 	stroke_msg_t msg;
 	
+	memset(&msg, 0, sizeof(msg));
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.type = STR_ADD_CONN;
 	
 	msg.add_conn.name = push_string(&msg, name);
 	msg.add_conn.ikev2 = 1;
 	msg.add_conn.auth_method = 2;
-	msg.add_conn.eap_type = 0;
 	msg.add_conn.mode = 1;
 	msg.add_conn.mobike = 1;
-	msg.add_conn.force_encap = 0;
-	
-	msg.add_conn.rekey.reauth = 0;
-	msg.add_conn.rekey.ipsec_lifetime = 0;
-	msg.add_conn.rekey.ike_lifetime = 0;
-	msg.add_conn.rekey.margin = 0;
-	msg.add_conn.rekey.tries = 0;
-	msg.add_conn.rekey.fuzz = 0;
-	
-	msg.add_conn.algorithms.ike = NULL;
-	msg.add_conn.algorithms.esp = NULL;
-	
-	msg.add_conn.dpd.delay = 0;
 	msg.add_conn.dpd.action = 1;
-	
-	msg.add_conn.ikeme.mediation = 0;
-	msg.add_conn.ikeme.mediated_by = NULL;
-	msg.add_conn.ikeme.peerid = NULL;
 	
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);
 	msg.add_conn.me.subnet = push_string(&msg, my_net);
 	msg.add_conn.me.subnet_mask = my_netmask;
-	msg.add_conn.me.sourceip = NULL;
-	msg.add_conn.me.virtual_ip = 0;
-	msg.add_conn.me.cert = NULL;
-	msg.add_conn.me.ca = NULL;
 	msg.add_conn.me.sendcert = 1;
-	msg.add_conn.me.hostaccess = 0;
-	msg.add_conn.me.tohost = 0;
-	msg.add_conn.me.protocol = 0;
-	msg.add_conn.me.port = 0;
 	
 	msg.add_conn.other.id = push_string(&msg, other_id);
 	msg.add_conn.other.address = push_string(&msg, other_addr);
 	msg.add_conn.other.subnet = push_string(&msg, other_net);
 	msg.add_conn.other.subnet_mask = other_netmask;
-	msg.add_conn.other.sourceip = NULL;
-	msg.add_conn.other.virtual_ip = 0;
-	msg.add_conn.other.cert = NULL;
-	msg.add_conn.other.ca = NULL;
 	msg.add_conn.other.sendcert = 1;
-	msg.add_conn.other.hostaccess = 0;
-	msg.add_conn.other.tohost = 0;
-	msg.add_conn.other.protocol = 0;
-	msg.add_conn.other.port = 0;
 	
 	return send_stroke_msg(&msg);
 }

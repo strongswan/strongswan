@@ -354,7 +354,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 {
 	identification_t *me, *other, *peer_id = NULL;
 	peer_cfg_t *mediated_by = NULL;
-	host_t *my_vip = NULL, *other_vip = NULL;
+	host_t *vip = NULL;
 	certificate_t *cert;
 	u_int32_t rekey = 0, reauth = 0, over, jitter;
 	
@@ -457,21 +457,43 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	{
 		rekey = msg->add_conn.rekey.ike_lifetime - over;
 	}	
-	if (msg->add_conn.me.virtual_ip && msg->add_conn.me.sourceip)
+	if (msg->add_conn.me.sourceip_size)
 	{
-		my_vip = host_create_from_string(msg->add_conn.me.sourceip, 0);
+		if (msg->add_conn.me.sourceip)
+		{
+			vip = host_create_from_string(msg->add_conn.me.sourceip, 0);
+		}
+		if (!vip)
+		{	/* if it is set to something like %poolname, request an address */
+			if (msg->add_conn.me.subnet)
+			{	/* use the same addreass as in subnet, if any */
+				if (strchr(msg->add_conn.me.subnet, '.'))
+				{
+					vip = host_create_any(AF_INET);
+				}
+				else
+				{
+					vip = host_create_any(AF_INET6);
+				}
+			}
+			else
+			{
+				host_t* my_host = ike_cfg->get_my_host(ike_cfg);
+				vip = host_create_any(my_host->get_family(my_host));
+			}
+		}
 	}
-	if (msg->add_conn.other.virtual_ip && msg->add_conn.other.sourceip)
-	{
-		other_vip = host_create_from_string(msg->add_conn.other.sourceip, 0);
-	}
+	/* other.sourceip is managed in stroke_attributes. If it is set, we define
+	 * the pool name as the connection name, which the attribute provider
+	 * uses to serve pool addresses. */
 	return peer_cfg_create(msg->add_conn.name,
 		msg->add_conn.ikev2 ? 2 : 1, ike_cfg, me, other,
 		msg->add_conn.me.sendcert, msg->add_conn.auth_method,
 		msg->add_conn.eap_type,	msg->add_conn.eap_vendor,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay, msg->add_conn.dpd.action,
-		my_vip, other_vip, msg->add_conn.ikeme.mediation, mediated_by, peer_id);
+		vip, msg->add_conn.other.sourceip ? msg->add_conn.name : NULL,
+		msg->add_conn.ikeme.mediation, mediated_by, peer_id);
 }
 
 /**

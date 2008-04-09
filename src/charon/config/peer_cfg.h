@@ -276,21 +276,16 @@ struct peer_cfg_t {
 	 * used for a request and may be changed by the server.
 	 *
 	 * @param suggestion	NULL, %any or specific
-	 * @return				clone of an IP, %any or NULL
+	 * @return				virtual IP, %any or NULL
 	 */
-	host_t* (*get_my_virtual_ip) (peer_cfg_t *this);
+	host_t* (*get_virtual_ip) (peer_cfg_t *this);
 	
 	/**
-	 * Get a virtual IP for the remote peer.
+	 * Get the name of the pool to acquire configuration attributes from.
 	 *
-	 * An IP may be supplied, if one was requested by the initiator. However,
-	 * the suggestion is not more as it says, any address may be returned, even
-	 * NULL to not use virtual IPs.
-	 *
-	 * @param suggestion	NULL, %any or specific
-	 * @return				clone of an IP to use
+	 * @return				pool name, NULL if none defined
 	 */
-	host_t* (*get_other_virtual_ip) (peer_cfg_t *this, host_t *suggestion);
+	char* (*get_pool)(peer_cfg_t *this);
 	
 #ifdef ME
 	/**
@@ -378,8 +373,8 @@ struct peer_cfg_t {
  * @param mobike			use MOBIKE (RFC4555) if peer supports it
  * @param dpd_delay			after how many seconds of inactivity to check DPD
  * @param dpd_action		what to do with CHILD_SAs when detected a dead peer
- * @param my_virtual_ip		virtual IP for local host, or NULL
- * @param other_virtual_ip	virtual IP for remote host, or NULL
+ * @param virtual_ip		virtual IP for local host, or NULL
+ * @param pool				pool name to get configuration attributes from, or NULL
  * @param mediation			TRUE if this is a mediation connection
  * @param mediated_by		peer_cfg_t of the mediation connection to mediate through
  * @param peer_id			ID that identifies our peer at the mediation server
@@ -394,7 +389,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							u_int32_t reauth_time, u_int32_t jitter_time,
 							u_int32_t over_time, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
-							host_t *my_virtual_ip, host_t *other_virtual_ip,
+							host_t *virtual_ip, char *pool,
 							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id);
 

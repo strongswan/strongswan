@@ -10,6 +10,8 @@ config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
 config/proposal.c config/proposal.h \
 config/traffic_selector.c config/traffic_selector.h \
+config/attributes/attribute_provider.h \
+config/attributes/attribute_manager.c config/attributes/attribute_manager.h \
 control/controller.c control/controller.h \
 daemon.c daemon.h \
 encoding/generator.c encoding/generator.h \

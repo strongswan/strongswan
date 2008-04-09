@@ -535,11 +535,10 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	if (!this->reqid)
 	{
 		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-		vip = peer_cfg->get_my_virtual_ip(peer_cfg);
+		vip = peer_cfg->get_virtual_ip(peer_cfg);
 		if (vip)
 		{
 			propose_all = TRUE;
-			vip->destroy(vip);
 		}
 	}
 	

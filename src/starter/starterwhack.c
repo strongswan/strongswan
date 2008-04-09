@@ -149,13 +149,28 @@ connection_name(starter_conn_t *conn)
 
 static void
 set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
-{
+{   
+    if (end->srcip && end->srcip[0] != '%')
+    {
+	int len = 0;
+	char *pos, *v6;
+
+	pos = strchr(end->srcip, '/');
+	v6 = strchr(end->srcip, ':');
+	if (pos)
+	{
+	    /* use first address only for pluto */
+	    len = pos - end->srcip;
+	}
+	w->has_srcip = 1;
+	ttoaddr(end->srcip, len, v6 ? AF_INET6 : AF_INET, &w->host_srcip);
+    }
+    
     w->id                  = end->id;
     w->cert                = end->cert;
     w->ca                  = end->ca;
     w->groups              = end->groups;
     w->host_addr           = end->addr;
-    w->host_srcip          = end->srcip;
     w->has_client          = end->has_client;
 
     if (family == AF_INET6 && isanyaddr(&end->nexthop))
@@ -171,7 +186,6 @@ set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
 
     w->has_client_wildcard = end->has_client_wildcard;
     w->has_port_wildcard   = end->has_port_wildcard;
-    w->has_srcip           = end->has_srcip;
     w->has_natip           = end->has_natip;
     w->allow_any           = end->allow_any && !end->dns_failed;
     w->modecfg             = end->modecfg;

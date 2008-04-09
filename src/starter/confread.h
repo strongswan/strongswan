@@ -67,12 +67,10 @@ struct starter_end {
 	char		*iface;
 	ip_address	addr;
 	ip_address	nexthop;
-	ip_address	srcip;
 	ip_subnet	subnet;
 	bool		has_client;
 	bool		has_client_wildcard;
 	bool		has_port_wildcard;
-	bool		has_srcip;
 	bool		has_natip;
 	bool		modecfg;
 	certpolicy_t	sendcert;
@@ -84,6 +82,7 @@ struct starter_end {
 	u_int16_t	port;
 	u_int8_t	protocol;
 	char		*virt;
+	char		*srcip;
 };
 
 typedef struct also also_t;

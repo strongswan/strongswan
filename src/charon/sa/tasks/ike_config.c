@@ -261,14 +261,14 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 		
 		/* reuse virtual IP if we already have one */
 		vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
+		if (!vip)
+		{
+			config = this->ike_sa->get_peer_cfg(this->ike_sa);
+			vip = config->get_virtual_ip(config);
+		}
 		if (vip)
 		{
 			this->virtual_ip = vip->clone(vip);
-		}
-		else
-		{
-			config = this->ike_sa->get_peer_cfg(this->ike_sa);
-			this->virtual_ip = config->get_my_virtual_ip(config);
 		}
 		
 		build_payloads(this, message, CFG_REQUEST);
@@ -305,11 +305,14 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			host_t *ip;
 			
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
-			ip = config->get_other_virtual_ip(config, this->virtual_ip);
-			if (ip == NULL || ip->is_anyaddr(ip))
+			ip = charon->attributes->acquire_address(charon->attributes, 
+									config->get_pool(config),
+									this->ike_sa->get_other_id(this->ike_sa),
+									this->ike_sa->get_other_auth(this->ike_sa),
+									this->virtual_ip);
+			if (ip == NULL)
 			{
 				DBG1(DBG_IKE, "not assigning a virtual IP to peer");
-				DESTROY_IF(ip);
 				return SUCCESS;
 			}
 			DBG1(DBG_IKE, "assigning virtual IP %H to peer", ip);
@@ -317,16 +320,6 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			
 			this->virtual_ip->destroy(this->virtual_ip);
 			this->virtual_ip = ip;
-			
-			/* DNS testing values
-			if (this->dns->remove_last(this->dns, (void**)&ip) == SUCCESS)
-			{
-				ip->destroy(ip);
-				ip = host_create_from_string("10.3.0.1", 0);
-				this->dns->insert_last(this->dns, ip);
-				ip = host_create_from_string("10.3.0.2", 0);
-				this->dns->insert_last(this->dns, ip);
-			} */
 			
 			build_payloads(this, message, CFG_REPLY);
 		}
@@ -354,7 +347,11 @@ static status_t process_i(private_ike_config_t *this, message_t *message)
 		if (this->virtual_ip == NULL)
 		{	/* force a configured virtual IP, even server didn't return one */
 			config = this->ike_sa->get_peer_cfg(this->ike_sa);
-			this->virtual_ip = config->get_my_virtual_ip(config);
+			this->virtual_ip = config->get_virtual_ip(config);
+			if (this->virtual_ip)
+			{
+				this->virtual_ip = this->virtual_ip->clone(this->virtual_ip);
+			}
 		}
 
 		if (this->virtual_ip && !this->virtual_ip->is_anyaddr(this->virtual_ip))

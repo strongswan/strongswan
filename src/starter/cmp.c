@@ -29,6 +29,7 @@
 #define VARCMP(obj) if (c1->obj != c2->obj) return FALSE
 #define ADDCMP(obj) if (!sameaddr(&c1->obj,&c2->obj)) return FALSE
 #define SUBCMP(obj) if (!samesubnet(&c1->obj,&c2->obj)) return FALSE
+#define STRCMP(obj) if (strcmp(c1->obj,c2->obj)) return FALSE
 
 static bool
 starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
@@ -45,12 +46,11 @@ starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
 	ADDCMP(addr);
     }
     ADDCMP(nexthop);
-    ADDCMP(srcip);
+    STRCMP(srcip);
     SUBCMP(subnet);
     VARCMP(has_client);
     VARCMP(has_client_wildcard);
     VARCMP(has_port_wildcard);
-    VARCMP(has_srcip);
     VARCMP(modecfg);
     VARCMP(port);
     VARCMP(protocol);

@@ -88,10 +88,8 @@ static void default_values(starter_config_t *cfg)
 
 	anyaddr(AF_INET, &cfg->conn_default.left.addr);
 	anyaddr(AF_INET, &cfg->conn_default.left.nexthop);
-	anyaddr(AF_INET, &cfg->conn_default.left.srcip);
 	anyaddr(AF_INET, &cfg->conn_default.right.addr);
 	anyaddr(AF_INET, &cfg->conn_default.right.nexthop);
-	anyaddr(AF_INET, &cfg->conn_default.right.srcip);
 
 	cfg->ca_default.seen = LEMPTY;
 }
@@ -284,28 +282,41 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		}
 		else
 		{
+			ip_address addr;
+			ip_subnet net;
+		
 			conn->tunnel_addr_family = ip_version(value);
-			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &end->srcip);
+			if (strchr(value, '/'))
+			{	/* CIDR notation, address pool */
+				ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &net);
+			}
+			else if (value[0] != '%')
+			{	/* old style fixed srcip, a %poolname otherwise */
+				ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
+			}
 			if (ugh != NULL)
 			{
 				plog("# bad addr: %s=%s [%s]", name, value, ugh);
 				goto err;
 			}
-			end->has_srcip = TRUE;
+			end->srcip = clone_str(value, "srcip");
 		}
 		conn->policy |= POLICY_TUNNEL;
 		break;
 	case KW_NATIP:
-		if (end->has_srcip)
+		if (end->srcip)
 		{
 			plog("# natip and sourceip cannot be defined at the same time");
 			goto err;
 		}
 		if (streq(value, "%defaultroute"))
 		{
+			char buf[64];
+		
 			if (cfg->defaultroute.defined)
 			{
-				end->srcip    = cfg->defaultroute.addr;
+				addrtot(&cfg->defaultroute.addr, 0, buf, sizeof(buf));
+				end->srcip = clone_str(buf, "natip");
 			}
 			else
 			{
@@ -315,13 +326,16 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		}
 		else
 		{
+			ip_address addr;
+			
 			conn->tunnel_addr_family = ip_version(value);
-			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &end->srcip);
+			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
 			if (ugh != NULL)
 			{
 				plog("# bad addr: %s=%s [%s]", name, value, ugh);
 				goto err;
 			}
+			end->srcip = clone_str(value, "srcip");
 		}
 		end->has_natip = TRUE;
 		conn->policy |= POLICY_TUNNEL;

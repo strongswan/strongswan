@@ -35,8 +35,6 @@
 #include "daemon.h"
 
 #include <library.h>
-#include <credentials/credential_manager.h>
-#include <config/backend_manager.h>
 #include <config/traffic_selector.h>
 
 /* on some distros, a capset definition is missing */
@@ -185,6 +183,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.mediation_manager);
 #endif /* ME */
 	DESTROY_IF(this->public.backends);
+	DESTROY_IF(this->public.attributes);
 	DESTROY_IF(this->public.credentials);
 	DESTROY_IF(this->public.sender);
 	DESTROY_IF(this->public.receiver);
@@ -338,6 +337,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
 	this->public.backends = backend_manager_create();
+	this->public.attributes = attribute_manager_create();
 	this->public.plugins = plugin_loader_create();
 	this->public.kernel_interface = kernel_interface_create();
 	this->public.socket = socket_create();
@@ -408,6 +408,7 @@ private_daemon_t *daemon_create(void)
 	this->public.ike_sa_manager = NULL;
 	this->public.credentials = NULL;
 	this->public.backends = NULL;
+	this->public.attributes = NULL;
 	this->public.sender= NULL;
 	this->public.receiver = NULL;
 	this->public.scheduler = NULL;

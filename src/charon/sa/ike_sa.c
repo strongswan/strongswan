@@ -2315,7 +2315,16 @@ static void destroy(private_ike_sa_t *this)
 										 this->my_virtual_ip);
 		this->my_virtual_ip->destroy(this->my_virtual_ip);
 	}
-	DESTROY_IF(this->other_virtual_ip);
+	if (this->other_virtual_ip)
+	{
+		if (this->peer_cfg && this->peer_cfg->get_pool(this->peer_cfg))
+		{
+			charon->attributes->release_address(charon->attributes,
+									this->peer_cfg->get_pool(this->peer_cfg),
+									this->other_virtual_ip);
+		}
+		this->other_virtual_ip->destroy(this->other_virtual_ip);
+	}
 	
 	remove_dns_servers(this);
 	this->dns_servers->destroy_offset(this->dns_servers,

@@ -1,0 +1,60 @@
+/*
+ * Copyright (C) 2008 Martin Willi
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ *
+ * $Id$
+ */
+
+/**
+ * @defgroup attribute_provider attribute_provider
+ * @{ @ingroup attributes
+ */
+
+#ifndef ATTRIBUTE_PROVIDER_H_
+#define ATTRIBUTE_PROVIDER_H_
+
+#include <library.h>
+#include <utils/host.h>
+#include <credentials/auth_info.h>
+
+typedef struct attribute_provider_t attribute_provider_t;
+
+/**
+ * Interface to provide attributes to peers through attribute manager.
+ */
+struct attribute_provider_t {
+
+	/**
+	 * Acquire a virtual IP address to assign to a peer.
+	 *
+	 * @param pool			name of the pool to acquire address from
+	 * @param id			peer ID
+	 * @param auth			authorization infos
+	 * @param requested		IP in configuration request
+	 * @return				allocated address, NULL to serve none
+	 */
+	host_t* (*acquire_address)(attribute_provider_t *this,
+							   char *pool, identification_t *id, 
+							   auth_info_t *auth, host_t *requested);
+	/**
+	 * Release a previously acquired address.
+	 *
+	 * @param pool			name of the pool this address was acquired from
+	 * @param address		address to release
+	 * @return				TRUE if the address has been released by the provider
+	 */
+	bool (*release_address)(attribute_provider_t *this,
+							char *pool, host_t *address);
+};
+
+#endif /* ATTRIBUTE_PROVIDER_H_ @}*/
