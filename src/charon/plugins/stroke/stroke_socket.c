@@ -33,6 +33,7 @@
 #include "stroke_control.h"
 #include "stroke_cred.h"
 #include "stroke_ca.h"
+#include "stroke_attribute.h"
 #include "stroke_list.h"
 
 typedef struct stroke_job_context_t stroke_job_context_t;
@@ -62,6 +63,11 @@ struct private_stroke_socket_t {
 	 * configuration backend
 	 */
 	stroke_config_t *config;
+	
+	/**
+	 * attribute provider
+	 */
+	stroke_attribute_t *attribute;
 	
 	/**
 	 * controller to control daemon
@@ -173,6 +179,7 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG2(DBG_CFG, "  me_peerid=%s", msg->add_conn.ikeme.peerid);
 
 	this->config->add(this->config, msg);
+	this->attribute->add_pool(this->attribute, msg);
 }
 
 /**
@@ -184,6 +191,7 @@ static void stroke_del_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG1(DBG_CFG, "received stroke: delete connection '%s'", msg->del_conn.name);
 	
 	this->config->del(this->config, msg);
+	this->attribute->del_pool(this->attribute, msg);
 }
 
 /**
@@ -542,9 +550,11 @@ static void destroy(private_stroke_socket_t *this)
 	charon->credentials->remove_set(charon->credentials, &this->ca->set);
 	charon->credentials->remove_set(charon->credentials, &this->cred->set);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
+	charon->attributes->remove_provider(charon->attributes, &this->attribute->provider);
 	this->cred->destroy(this->cred);
 	this->ca->destroy(this->ca);
 	this->config->destroy(this->config);
+	this->attribute->destroy(this->attribute);
 	this->control->destroy(this->control);
 	this->list->destroy(this->list);
 	free(this);
@@ -566,6 +576,7 @@ stroke_socket_t *stroke_socket_create()
 	}
 	
 	this->cred = stroke_cred_create();
+	this->attribute = stroke_attribute_create();
 	this->ca = stroke_ca_create(this->cred);
 	this->config = stroke_config_create(this->cred);
 	this->control = stroke_control_create();
@@ -574,6 +585,7 @@ stroke_socket_t *stroke_socket_create()
 	charon->credentials->add_set(charon->credentials, &this->ca->set);
 	charon->credentials->add_set(charon->credentials, &this->cred->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
+	charon->attributes->add_provider(charon->attributes, &this->attribute->provider);
 	
 	this->job = callback_job_create((callback_job_cb_t)receive,
 									this, NULL, NULL);
