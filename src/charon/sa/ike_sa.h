@@ -433,6 +433,13 @@ struct ike_sa_t {
 	 * @param updates		number of pending updates
 	 */
 	void (*set_pending_updates)(ike_sa_t *this, u_int32_t updates);
+	
+	/**
+	 * Check if we are the original initiator of this IKE_SA (rekeying does not
+	 * change this flag).
+	 */
+	bool (*is_ike_initiator)(ike_sa_t *this);
+	
 
 #ifdef ME
 	/**

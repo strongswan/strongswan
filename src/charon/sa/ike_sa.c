@@ -508,6 +508,15 @@ static void set_ike_cfg(private_ike_sa_t *this, ike_cfg_t *ike_cfg)
 	ike_cfg->get_ref(ike_cfg);
 	this->ike_cfg = ike_cfg;
 }
+
+/**
+ * Implementation of ike_sa_t.is_ike_initiator
+ */
+static bool is_ike_initiator(private_ike_sa_t *this)
+{
+	return this->ike_initiator;
+}
+
 /**
  * Implementation of ike_sa_t.enable_extension.
  */
@@ -2422,6 +2431,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.has_condition = (bool (*)(ike_sa_t*,ike_condition_t)) has_condition;
 	this->public.set_pending_updates = (void(*)(ike_sa_t*, u_int32_t updates))set_pending_updates;
 	this->public.get_pending_updates = (u_int32_t(*)(ike_sa_t*))get_pending_updates;
+	this->public.is_ike_initiator = (bool (*)(ike_sa_t*))is_ike_initiator;
 	this->public.create_additional_address_iterator = (iterator_t*(*)(ike_sa_t*))create_additional_address_iterator;
 	this->public.add_additional_address = (void(*)(ike_sa_t*, host_t *host))add_additional_address;
 	this->public.retransmit = (status_t (*)(ike_sa_t *, u_int32_t)) retransmit;
