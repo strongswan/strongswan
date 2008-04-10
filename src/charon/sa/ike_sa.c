@@ -1030,29 +1030,21 @@ static status_t initiate_mediation(private_ike_sa_t *this, peer_cfg_t *mediated_
  * Implementation of ike_sa_t.initiate_mediated
  */
 static status_t initiate_mediated(private_ike_sa_t *this, host_t *me, host_t *other,
-		linked_list_t *childs, chunk_t connect_id)
+		chunk_t connect_id)
 {
 	set_my_host(this, me->clone(me));
 	set_other_host(this, other->clone(other));
+	chunk_free(&this->connect_id);
 	this->connect_id = chunk_clone(connect_id);
 	
-	task_t *task;
-	child_cfg_t *child_cfg;	
-	iterator_t *iterator = childs->create_iterator(childs, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_cfg))
-	{
-		task = (task_t*)child_create_create(&this->public, child_cfg);
-		this->task_manager->queue_task(this->task_manager, task);
-	}
-	iterator->destroy(iterator);
 	return this->task_manager->initiate(this->task_manager);
 }
 #endif /* ME */
 
 /**
- * Implementation of ike_sa_t.initiate.
+ * Initiates a CHILD_SA using the appropriate reqid
  */
-static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
+static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_cfg, u_int32_t reqid)
 {
 	task_t *task;
 	
@@ -1098,16 +1090,9 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	}
 
 #ifdef ME
-	if (this->peer_cfg->get_mediated_by(this->peer_cfg))
+	if (this->peer_cfg->is_mediation(this->peer_cfg))
 	{
-		/* mediated connection, initiate mediation process */
-		job_t *job = (job_t*)initiate_mediation_job_create(this->ike_sa_id, child_cfg);
-		child_cfg->destroy(child_cfg);
-		charon->processor->queue_job(charon->processor, job);
-		return SUCCESS;
-	}
-	else if (this->peer_cfg->is_mediation(this->peer_cfg))
-	{
+		/* mediation connection */
 		if (this->state == IKE_ESTABLISHED)
 		{	/* FIXME: we should try to find a better solution to this */
 			SIG(CHILD_UP_SUCCESS, "mediation connection is already up and running");
@@ -1120,22 +1105,43 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		/* normal IKE_SA with CHILD_SA */
 		task = (task_t*)child_create_create(&this->public, child_cfg);
 		child_cfg->destroy(child_cfg);
+		if (reqid)
+		{
+			child_create_t *child_create = (child_create_t*)task;
+			child_create->use_reqid(child_create, reqid);
+		}
 		this->task_manager->queue_task(this->task_manager, task);
+
+#ifdef ME
+		if (this->peer_cfg->get_mediated_by(this->peer_cfg))
+		{
+			/* mediated connection, initiate mediation process */
+			job_t *job = (job_t*)initiate_mediation_job_create(this->ike_sa_id);
+			charon->processor->queue_job(charon->processor, job);
+			return SUCCESS;
+		}
+#endif /* ME */
 	}
 	
 	return this->task_manager->initiate(this->task_manager);
 }
 
 /**
+ * Implementation of ike_sa_t.initiate.
+ */
+static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
+{
+	return initiate_with_reqid(this, child_cfg, 0);
+}
+
+/**
  * Implementation of ike_sa_t.acquire.
  */
 static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
-{	/* FIXME: IKE-ME */
+{
 	child_cfg_t *child_cfg;
 	iterator_t *iterator;
 	child_sa_t *current, *child_sa = NULL;
-	task_t *task;
-	child_create_t *child_create;
 	
 	if (this->state == IKE_DELETING)
 	{
@@ -1164,36 +1170,10 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		return FAILED;
 	}
 	
-	
-	if (this->state == IKE_CREATED)
-	{
-		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_natd_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_cert_pre_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_auth_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_cert_post_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_config_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_auth_lifetime_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		if (this->peer_cfg->use_mobike(this->peer_cfg))
-		{
-			task = (task_t*)ike_mobike_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-		}
-	}
-	
 	child_cfg = child_sa->get_config(child_sa);
-	child_create = child_create_create(&this->public, child_cfg);
-	child_create->use_reqid(child_create, reqid);
-	this->task_manager->queue_task(this->task_manager, (task_t*)child_create);
+	child_cfg->get_ref(child_cfg);
 	
-	return this->task_manager->initiate(this->task_manager);
+	return initiate_with_reqid(this, child_cfg, reqid);
 }
 
 /**
@@ -2472,7 +2452,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_server_reflexive_host = (void (*)(ike_sa_t*,host_t*)) set_server_reflexive_host;
 	this->public.get_connect_id = (chunk_t (*)(ike_sa_t*)) get_connect_id;
 	this->public.initiate_mediation = (status_t (*)(ike_sa_t*,peer_cfg_t*)) initiate_mediation;
-	this->public.initiate_mediated = (status_t (*)(ike_sa_t*,host_t*,host_t*,linked_list_t*,chunk_t)) initiate_mediated;
+	this->public.initiate_mediated = (status_t (*)(ike_sa_t*,host_t*,host_t*,chunk_t)) initiate_mediated;
 	this->public.relay = (status_t (*)(ike_sa_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool)) relay;
 	this->public.callback = (status_t (*)(ike_sa_t*,identification_t*)) callback;
 	this->public.respond = (status_t (*)(ike_sa_t*,identification_t*,chunk_t)) respond;

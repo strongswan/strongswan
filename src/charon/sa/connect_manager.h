@@ -26,7 +26,6 @@
 typedef struct connect_manager_t connect_manager_t;
 
 #include <encoding/message.h>
-#include <config/child_cfg.h>
 #include <sa/ike_sa_id.h>
 #include <utils/identification.h>
 
@@ -43,14 +42,12 @@ struct connect_manager_t {
 	 * @param id				my id
 	 * @param peer_id			the other peer's id
 	 * @param mediated_sa		the IKE_SA ID of the mediated connection
-	 * @param child				the CHILD_SA config of the mediated connection 
 	 * @returns 				
 	 * 							- TRUE, if there was already a mediated connection registered
 	 * 							- FALSE, otherwise
 	 */
 	bool (*check_and_register) (connect_manager_t *this,
-			identification_t *id, identification_t *peer_id,
-			ike_sa_id_t *mediated_sa, child_cfg_t *child);
+			identification_t *id, identification_t *peer_id, ike_sa_id_t *mediated_sa);
 	
 	/**
 	 * Checks if there are waiting connections with a specific peer.

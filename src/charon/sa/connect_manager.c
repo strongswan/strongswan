@@ -255,43 +255,6 @@ static check_list_t *check_list_create(identification_t *initiator, identificati
 	return this;
 }
 
-
-typedef struct waiting_sa_t waiting_sa_t;
-
-/**
- * For an initiator, the data stored about a waiting mediated sa
- */
-struct waiting_sa_t {
-	/** ike sa id */
-	ike_sa_id_t *ike_sa_id;
-	
-	/** list of child_cfg_t */
-	linked_list_t *childs;
-};
-
-/**
- * Destroys a queued mediated sa
- */
-static void waiting_sa_destroy(waiting_sa_t *this)
-{
-	DESTROY_IF(this->ike_sa_id);
-	this->childs->destroy_offset(this->childs, offsetof(child_cfg_t, destroy));
-	free(this);
-}
-
-/**
- * Creates a new mediated sa object
- */
-static waiting_sa_t *waiting_sa_create(ike_sa_id_t *ike_sa_id)
-{
-	waiting_sa_t *this = malloc_thing(waiting_sa_t);
-	
-	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-	this->childs = linked_list_create();
-    
-	return this;
-}
-
 typedef struct initiated_t initiated_t;
 
 /**
@@ -315,7 +278,7 @@ static void initiated_destroy(initiated_t *this)
 {
 	DESTROY_IF(this->id);
 	DESTROY_IF(this->peer_id);
-	this->mediated->destroy_function(this->mediated, (void*)waiting_sa_destroy);
+	this->mediated->destroy_offset(this->mediated, offsetof(ike_sa_id_t, destroy));
 	free(this);
 }
 
@@ -515,21 +478,6 @@ static void remove_initiated(private_connect_manager_t *this, initiated_t *initi
 		}
 	}
 	iterator->destroy(iterator);
-}
-
-/**
- * Finds a waiting sa
- */
-static bool match_waiting_sa(waiting_sa_t *current, ike_sa_id_t *ike_sa_id)
-{
-	return ike_sa_id->equals(ike_sa_id, current->ike_sa_id);
-}
-
-static status_t get_waiting_sa(initiated_t *initiated, ike_sa_id_t *ike_sa_id, waiting_sa_t **waiting_sa)
-{
-	return initiated->mediated->find_first(initiated->mediated,
-				(linked_list_match_t)match_waiting_sa,
-				(void**)waiting_sa, ike_sa_id);
 }
 
 /**
@@ -1205,13 +1153,12 @@ static job_requeue_t initiate_mediated(initiate_data_t *data)
 	endpoint_pair_t *pair;
 	if (get_best_valid_pair(checklist, &pair) == SUCCESS)
 	{
-		waiting_sa_t *waiting_sa;
+		ike_sa_id_t *waiting_sa;
 		iterator_t *iterator = initiated->mediated->create_iterator(initiated->mediated, TRUE);
 		while (iterator->iterate(iterator, (void**)&waiting_sa))
 		{
-			ike_sa_t *sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, waiting_sa->ike_sa_id);
-			if (sa->initiate_mediated(sa, pair->local, pair->remote, waiting_sa->childs,
-					checklist->connect_id) != SUCCESS)
+			ike_sa_t *sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, waiting_sa);
+			if (sa->initiate_mediated(sa, pair->local, pair->remote, checklist->connect_id) != SUCCESS)
 			{
 				SIG(IKE_UP_FAILED, "establishing the mediated connection failed");
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, sa);
@@ -1440,7 +1387,7 @@ static void process_check(private_connect_manager_t *this, message_t *message)
  */
 static bool check_and_register(private_connect_manager_t *this,
 			identification_t *id, identification_t *peer_id,
-			ike_sa_id_t *mediated_sa, child_cfg_t *child)
+			ike_sa_id_t *mediated_sa)
 {
 	initiated_t *initiated;
 	bool already_there = TRUE;
@@ -1455,15 +1402,11 @@ static bool check_and_register(private_connect_manager_t *this,
 		already_there = FALSE;
 	}
 	
-	waiting_sa_t *waiting_sa;
-	if (get_waiting_sa(initiated, mediated_sa, &waiting_sa) != SUCCESS)
+	if (initiated->mediated->find_first(initiated->mediated, 
+			(linked_list_match_t)mediated_sa->equals, NULL, mediated_sa) != SUCCESS)
 	{
-		waiting_sa = waiting_sa_create(mediated_sa);
-		initiated->mediated->insert_last(initiated->mediated, waiting_sa);
+		initiated->mediated->insert_last(initiated->mediated, mediated_sa->clone(mediated_sa));
 	}
-
-	child->get_ref(child);
-	waiting_sa->childs->insert_last(waiting_sa->childs, child);
 
 	pthread_mutex_unlock(&(this->mutex));
 
@@ -1487,12 +1430,11 @@ static void check_and_initiate(private_connect_manager_t *this, ike_sa_id_t *med
 		return;
 	}
 	
-	waiting_sa_t *waiting_sa;
+	ike_sa_id_t *waiting_sa;
 	iterator_t *iterator = initiated->mediated->create_iterator(initiated->mediated, TRUE);
 	while (iterator->iterate(iterator, (void**)&waiting_sa))
 	{
-		job_t *job = (job_t*)reinitiate_mediation_job_create(mediation_sa,
-				waiting_sa->ike_sa_id);
+		job_t *job = (job_t*)reinitiate_mediation_job_create(mediation_sa, waiting_sa);
 		charon->processor->queue_job(charon->processor, job);
 	}
 	iterator->destroy(iterator);
@@ -1610,7 +1552,7 @@ connect_manager_t *connect_manager_create()
 	private_connect_manager_t *this = malloc_thing(private_connect_manager_t);
 
 	this->public.destroy = (void(*)(connect_manager_t*))destroy;
-	this->public.check_and_register = (bool(*)(connect_manager_t*,identification_t*,identification_t*,ike_sa_id_t*,child_cfg_t*))check_and_register;
+	this->public.check_and_register = (bool(*)(connect_manager_t*,identification_t*,identification_t*,ike_sa_id_t*))check_and_register;
 	this->public.check_and_initiate = (void(*)(connect_manager_t*,ike_sa_id_t*,identification_t*,identification_t*))check_and_initiate;
 	this->public.set_initiator_data = (status_t(*)(connect_manager_t*,identification_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool))set_initiator_data;
 	this->public.set_responder_data = (status_t(*)(connect_manager_t*,chunk_t,chunk_t,linked_list_t*))set_responder_data;
