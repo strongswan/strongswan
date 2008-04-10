@@ -2011,7 +2011,12 @@ static status_t reestablish(private_ike_sa_t *this)
 	{
 		DBG1(DBG_IKE, "initiator did not reauthenticate as requested");
 		if (this->other_virtual_ip != NULL ||
-			has_condition(this, COND_EAP_AUTHENTICATED))
+			has_condition(this, COND_EAP_AUTHENTICATED)
+#ifdef ME
+			/* if we are mediation server we too cannot reauth the IKE_SA */
+			|| this->is_mediation_server
+#endif /* ME */
+			)
 		{
 			time_t now = time(NULL);
 			
