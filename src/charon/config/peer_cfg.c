@@ -31,13 +31,6 @@ ENUM(cert_policy_names, CERT_ALWAYS_SEND, CERT_NEVER_SEND,
 	"CERT_NEVER_SEND"
 );
 
-ENUM(dpd_action_names, DPD_NONE, DPD_RESTART,
-	"DPD_NONE",
-	"DPD_CLEAR",
-	"DPD_ROUTE",
-	"DPD_RESTART"
-);
-
 typedef struct private_peer_cfg_t private_peer_cfg_t;
 
 /**
@@ -141,14 +134,9 @@ struct private_peer_cfg_t {
 	u_int32_t over_time;
 	
 	/**
-	 * What to do with an SA when other peer seams to be dead?
+	 * DPD check intervall
 	 */
-	bool dpd_delay;
-	
-	/**
-	 * What to do with CHILDren when other peer seams to be dead?
-	 */
-	bool dpd_action;
+	u_int32_t dpd;
 	
 	/**
 	 * virtual IP to use locally
@@ -380,19 +368,11 @@ static bool use_mobike(private_peer_cfg_t *this)
 }
 
 /**
- * Implements peer_cfg_t.get_dpd_delay
+ * Implements peer_cfg_t.get_dpd
  */
-static u_int32_t get_dpd_delay(private_peer_cfg_t *this)
+static u_int32_t get_dpd(private_peer_cfg_t *this)
 {
-	return this->dpd_delay;
-}
-
-/**
- * Implements peer_cfg_t.get_dpd_action
- */
-static dpd_action_t get_dpd_action(private_peer_cfg_t *this)
-{
-	return this->dpd_action;
+	return this->dpd;
 }
 
 /**
@@ -473,8 +453,7 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 		this->reauth_time == other->reauth_time &&
 		this->jitter_time == other->jitter_time &&
 		this->over_time == other->over_time &&
-		this->dpd_delay == other->dpd_delay &&
-		this->dpd_action == other->dpd_action &&
+		this->dpd == other->dpd &&
 		(this->virtual_ip == other->virtual_ip ||
 		 (this->virtual_ip && other->virtual_ip &&
 		  this->virtual_ip->equals(this->virtual_ip, other->virtual_ip))) &&
@@ -531,8 +510,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,
 							u_int32_t reauth_time, u_int32_t jitter_time,
-							u_int32_t over_time, bool mobike,
-							u_int32_t dpd_delay, dpd_action_t dpd_action,
+							u_int32_t over_time, bool mobike, u_int32_t dpd,
 							host_t *virtual_ip, char *pool,
 							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id)
@@ -557,8 +535,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_reauth_time = (u_int32_t(*)(peer_cfg_t*))get_reauth_time;
 	this->public.get_over_time = (u_int32_t(*)(peer_cfg_t*))get_over_time;
 	this->public.use_mobike = (bool (*) (peer_cfg_t *))use_mobike;
-	this->public.get_dpd_delay = (u_int32_t (*) (peer_cfg_t *))get_dpd_delay;
-	this->public.get_dpd_action = (dpd_action_t (*) (peer_cfg_t *))get_dpd_action;
+	this->public.get_dpd = (u_int32_t (*) (peer_cfg_t *))get_dpd;
 	this->public.get_virtual_ip = (host_t* (*) (peer_cfg_t *))get_virtual_ip;
 	this->public.get_pool = (char*(*)(peer_cfg_t*))get_pool;
 	this->public.get_auth = (auth_info_t*(*)(peer_cfg_t*))get_auth;
@@ -597,8 +574,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->jitter_time = jitter_time;
 	this->over_time = over_time;
 	this->use_mobike = mobike;
-	this->dpd_delay = dpd_delay;
-	this->dpd_action = dpd_action;
+	this->dpd = dpd;
 	this->virtual_ip = virtual_ip;
 	this->pool = pool ? strdup(pool) : NULL;
 	this->auth = auth_info_create();

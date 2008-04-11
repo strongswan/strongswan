@@ -133,7 +133,7 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 						&updown, &hostaccess, &mode))
 	{
 		child_cfg = child_cfg_create(name, lifetime, rekeytime, jitter,
-									 updown, hostaccess, mode);
+									 updown, hostaccess, mode, ACTION_NONE);
 		/* TODO: read proposal from db */
 		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 		add_traffic_selectors(this, child_cfg, id);
@@ -311,7 +311,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 							name, 2, ike, local_id, remote_id, cert_policy,
 							auth_method, eap_type, eap_vendor, keyingtries, 
 							rekeytime, reauthtime, jitter, overtime, mobike,
-							dpd_delay, dpd_action, NULL, NULL,
+							dpd_delay, NULL, NULL,
 							mediation, mediated_cfg, peer_id);
 			add_child_cfgs(this, peer_cfg, id);
 			return peer_cfg;

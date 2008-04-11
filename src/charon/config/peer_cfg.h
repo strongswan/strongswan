@@ -25,7 +25,6 @@
 #ifndef PEER_CFG_H_
 #define PEER_CFG_H_
 
-typedef enum dpd_action_t dpd_action_t;
 typedef enum cert_policy_t cert_policy_t;
 typedef struct peer_cfg_t peer_cfg_t;
 
@@ -62,27 +61,6 @@ enum cert_policy_t {
  * enum strings for cert_policy_t
  */
 extern enum_name_t *cert_policy_names;
-
-/**
- * Actions to take when a peer does not respond (dead peer detected).
- *
- * These values are the same as in pluto/starter, so do not modify them!
- */
-enum dpd_action_t {
-	/** DPD disabled */
-	DPD_NONE,
-	/** remove CHILD_SAs without replacement */
-	DPD_CLEAR,
-	/** route the CHILD_SAs to resetup when needed */
-	DPD_ROUTE,
-	/** restart CHILD_SAs in a new IKE_SA, immediately */
-	DPD_RESTART,
-};
-
-/**
- * enum names for dpd_action_t.
- */
-extern enum_name_t *dpd_action_names;
 
 /**
  * Configuration of a peer, specified by IDs.
@@ -259,14 +237,7 @@ struct peer_cfg_t {
 	 * 
 	 * @return			dpd_delay in seconds
 	 */
-	u_int32_t (*get_dpd_delay) (peer_cfg_t *this);
-	
-	/**
-	 * What should be done with a CHILD_SA, when other peer does not respond.
-	 *
-	 * @return			dpd action
-	 */	
-	dpd_action_t (*get_dpd_action) (peer_cfg_t *this);
+	u_int32_t (*get_dpd) (peer_cfg_t *this);
 	
 	/**
 	 * Get a virtual IP for the local peer.
@@ -371,8 +342,7 @@ struct peer_cfg_t {
  * @param over_time			maximum overtime before closing a rekeying/reauth SA
  * @param reauth			sould be done reauthentication instead of rekeying?
  * @param mobike			use MOBIKE (RFC4555) if peer supports it
- * @param dpd_delay			after how many seconds of inactivity to check DPD
- * @param dpd_action		what to do with CHILD_SAs when detected a dead peer
+ * @param dpd				DPD check interval, 0 to disable
  * @param virtual_ip		virtual IP for local host, or NULL
  * @param pool				pool name to get configuration attributes from, or NULL
  * @param mediation			TRUE if this is a mediation connection
@@ -387,8 +357,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,
 							u_int32_t reauth_time, u_int32_t jitter_time,
-							u_int32_t over_time, bool mobike,
-							u_int32_t dpd_delay, dpd_action_t dpd_action,
+							u_int32_t over_time, bool mobike, u_int32_t dpd,
 							host_t *virtual_ip, char *pool,
 							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id);

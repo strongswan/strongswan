@@ -599,7 +599,7 @@ static status_t send_dpd(private_ike_sa_t *this)
 	send_dpd_job_t *job;
 	time_t diff, delay;
 	
-	delay = this->peer_cfg->get_dpd_delay(this->peer_cfg);
+	delay = this->peer_cfg->get_dpd(this->peer_cfg);
 	
 	if (delay == 0)
 	{
@@ -1435,147 +1435,6 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 }
 
 /**
- * Implementation of ike_sa_t.retransmit.
- */
-static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
-{	/* FIXME: IKE-ME */
-	this->time.outbound = time(NULL);
-	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
-	{
-		child_cfg_t *child_cfg;
-		child_sa_t* child_sa;
-		linked_list_t *to_route, *to_restart;
-		iterator_t *iterator;
-		
-		/* send a proper signal to brief interested bus listeners */
-		switch (this->state)
-		{
-			case IKE_CONNECTING:
-			{
-				/* retry IKE_SA_INIT if we have multiple keyingtries */
-				u_int32_t tries = this->peer_cfg->get_keyingtries(this->peer_cfg);
-				this->keyingtry++;
-				if (tries == 0 || tries > this->keyingtry)
-				{
-					SIG(IKE_UP_FAILED, "peer not responding, trying again "
-						"(%d/%d) in background ", this->keyingtry + 1, tries);
-					reset(this);
-					return this->task_manager->initiate(this->task_manager);
-				}
-				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
-				break;
-			}
-			case IKE_REKEYING:
-				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
-				break;
-			case IKE_DELETING:
-				SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
-				break;
-			default:
-				break;
-		}
-		
-		/* summarize how we have to handle each child */
-		to_route = linked_list_create();
-		to_restart = linked_list_create();
-		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-		while (iterator->iterate(iterator, (void**)&child_sa))
-		{
-			child_cfg = child_sa->get_config(child_sa);
-			
-			if (child_sa->get_state(child_sa) == CHILD_ROUTED)
-			{
-				/* reroute routed CHILD_SAs */
-				to_route->insert_last(to_route, child_cfg);
-			}
-			else
-			{
-				/* use DPD action for established CHILD_SAs */
-				switch (this->peer_cfg->get_dpd_action(this->peer_cfg))
-				{
-					case DPD_ROUTE:
-						to_route->insert_last(to_route, child_cfg);
-						break;
-					case DPD_RESTART:
-						to_restart->insert_last(to_restart, child_cfg);
-						break;
-					default:
-						break;
-				}
-			}
-		}
-		iterator->destroy(iterator);
-		
-		/* create a new IKE_SA if we have to route or to restart */
-		if (to_route->get_count(to_route) || to_restart->get_count(to_restart))
-		{
-			private_ike_sa_t *new;
-			task_t *task;
-			
-			new = (private_ike_sa_t*)charon->ike_sa_manager->checkout_new(
-												charon->ike_sa_manager, TRUE);
-			
-			set_peer_cfg(new, this->peer_cfg);
-			/* use actual used host, not the wildcarded one in config */
-			new->other_host->destroy(new->other_host);
-			new->other_host = this->other_host->clone(this->other_host);
-			/* reset port to 500, but only if peer is not NATed */
-			if (!has_condition(this, COND_NAT_THERE))
-			{
-				new->other_host->set_port(new->other_host, IKEV2_UDP_PORT);
-			}
-			/* take over virtual ip, as we need it for a proper route */
-			if (this->my_virtual_ip)
-			{
-				set_virtual_ip(new, TRUE, this->my_virtual_ip);
-			}
-			
-			/* install routes */
-			while (to_route->remove_last(to_route, (void**)&child_cfg) == SUCCESS)
-			{
-				route(new, child_cfg);
-			}
-			
-			/* restart children */
-			if (to_restart->get_count(to_restart))
-			{
-				task = (task_t*)ike_init_create(&new->public, TRUE, NULL);
-				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_natd_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_cert_pre_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_config_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_auth_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_cert_post_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				
-				while (to_restart->remove_last(to_restart, (void**)&child_cfg) == SUCCESS)
-				{
-					task = (task_t*)child_create_create(&new->public, child_cfg);
-					new->task_manager->queue_task(new->task_manager, task);
-				}		
-				task = (task_t*)ike_auth_lifetime_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				if (this->peer_cfg->use_mobike(this->peer_cfg))
-				{
-					task = (task_t*)ike_mobike_create(&new->public, TRUE);
-					new->task_manager->queue_task(new->task_manager, task);
-				}
-				new->task_manager->initiate(new->task_manager);
-			}
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, &new->public);
-		}
-		to_route->destroy(to_route);
-		to_restart->destroy(to_restart);
-		return DESTROY_ME;
-	}
-	return SUCCESS;
-}
-
-/**
  * Implementation of ike_sa_t.get_prf.
  */
 static prf_t *get_prf(private_ike_sa_t *this)
@@ -1978,9 +1837,9 @@ static status_t rekey(private_ike_sa_t *this)
 }
 
 /**
- * Implementation of ike_sa_t.reestablish
+ * Implementation of ike_sa_t.reauth
  */
-static status_t reestablish(private_ike_sa_t *this)
+static status_t reauth(private_ike_sa_t *this)
 {
 	task_t *task;
 
@@ -2012,6 +1871,134 @@ static status_t reestablish(private_ike_sa_t *this)
 	this->task_manager->queue_task(this->task_manager, task);
 
 	return this->task_manager->initiate(this->task_manager);
+}
+
+/**
+ * Implementation of ike_sa_t.reestablish
+ */
+static status_t reestablish(private_ike_sa_t *this)
+{
+	ike_sa_t *new;
+	host_t *host;
+	iterator_t *iterator;
+	child_sa_t *child_sa;
+	child_cfg_t *child_cfg;
+	action_t action;
+	bool required = FALSE;
+	status_t status = FAILED;
+	
+	if (!this->ike_initiator &&
+		(this->other_virtual_ip != NULL ||
+		 has_condition(this, COND_EAP_AUTHENTICATED)
+#ifdef ME
+		 || this->is_mediation_server
+#endif /* ME */
+		))
+	{
+		return FAILED;
+	}
+	
+	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager, TRUE);
+	new->set_peer_cfg(new, this->peer_cfg);
+	host = this->other_host;
+	new->set_other_host(new, host->clone(host));
+	host = this->my_host;
+	new->set_my_host(new, host->clone(host));
+	/* if we already have a virtual IP, we reuse it */
+	host = this->my_virtual_ip;
+	if (host)
+	{
+		new->set_virtual_ip(new, TRUE, host);
+	}
+	
+#ifdef ME
+	/* we initiate the new IKE_SA of the mediation connection without CHILD_SA */
+	if (this->peer_cfg->is_mediation(this->peer_cfg))
+	{
+		required = TRUE;
+	}
+#endif /* ME */
+	
+	iterator = create_child_sa_iterator(this);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		child_cfg = child_sa->get_config(child_sa);
+		action = child_cfg->get_action(child_cfg);
+	
+		if (action == ACTION_RESTART || action == ACTION_ROUTE)
+		{
+			required = TRUE;
+			if (action == ACTION_RESTART)
+			{
+				DBG1(DBG_IKE, "restarting CHILD_SA %s",
+					 child_cfg->get_name(child_cfg));
+				child_cfg->get_ref(child_cfg);
+				status = new->initiate(new, child_cfg);
+				if (status == DESTROY_ME)
+				{
+					required = FALSE;
+					break;
+				}
+			}
+			else
+			{
+				new->route(new, child_cfg);
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	
+	if (required)
+	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
+	}
+	else
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
+		DBG1(DBG_IKE, "unable to reestablish IKE_SA, no CHILD_SA to recreate");
+	}
+	return status;
+}
+
+/**
+ * Implementation of ike_sa_t.retransmit.
+ */
+static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
+{
+	this->time.outbound = time(NULL);
+	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
+	{
+		/* send a proper signal to brief interested bus listeners */
+		switch (this->state)
+		{
+			case IKE_CONNECTING:
+			{
+				/* retry IKE_SA_INIT if we have multiple keyingtries */
+				u_int32_t tries = this->peer_cfg->get_keyingtries(this->peer_cfg);
+				this->keyingtry++;
+				if (tries == 0 || tries > this->keyingtry)
+				{
+					SIG(IKE_UP_FAILED, "peer not responding, trying again "
+						"(%d/%d) in background ", this->keyingtry + 1, tries);
+					reset(this);
+					return this->task_manager->initiate(this->task_manager);
+				}
+				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
+				break;
+			}
+			case IKE_REKEYING:
+				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
+				break;
+			case IKE_DELETING:
+				SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
+				break;
+			default:
+				break;
+		}
+		reestablish(this);
+		return DESTROY_ME;
+	}
+	return SUCCESS;
 }
 
 /**
@@ -2087,9 +2074,9 @@ static status_t roam(private_ike_sa_t *this, bool address)
 		this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
 		return this->task_manager->initiate(this->task_manager);
 	}
-	DBG1(DBG_IKE, "reestablishing IKE_SA due address change");
-	/* ... reestablish if not */
-	return reestablish(this);
+	DBG1(DBG_IKE, "reauthenticating IKE_SA due address change");
+	/* ... reauth if not */
+	return reauth(this);
 }
 
 /**
@@ -2436,6 +2423,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.delete_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t)) delete_child_sa;
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
 	this->public.rekey = (status_t (*)(ike_sa_t*))rekey;
+	this->public.reauth = (status_t (*)(ike_sa_t*))reauth;
 	this->public.reestablish = (status_t (*)(ike_sa_t*))reestablish;
 	this->public.set_auth_lifetime = (void(*)(ike_sa_t*, u_int32_t lifetime))set_auth_lifetime;
 	this->public.roam = (status_t(*)(ike_sa_t*,bool))roam;

@@ -115,7 +115,7 @@ enum ike_condition_t {
 	/**
 	 * received a certificate request from the peer
 	 */
-	COND_CERTREQ_SEEN = (1<<4),
+	COND_CERTREQ_SEEN = (1<<5),
 };
 
 /**
@@ -803,10 +803,19 @@ struct ike_sa_t {
 	status_t (*rekey) (ike_sa_t *this);
 
 	/**
-	 * Restablish the IKE_SA.
+	 * Reauthenticate the IKE_SA.
 	 *
 	 * Create a completely new IKE_SA with authentication, recreates all children
 	 * within the IKE_SA, closes this IKE_SA.
+	 *
+	 * @return				DESTROY_ME to destroy the IKE_SA
+	 */
+	status_t (*reauth) (ike_sa_t *this);
+
+	/**
+	 * Restablish the IKE_SA.
+	 *
+	 * Reestablish an IKE_SA after it has been closed.
 	 *
 	 * @return				DESTROY_ME to destroy the IKE_SA
 	 */

@@ -68,7 +68,7 @@ static void execute(private_rekey_ike_sa_job_t *this)
 	{
 		if (this->reauth)
 		{
-			status = ike_sa->reestablish(ike_sa);
+			status = ike_sa->reauth(ike_sa);
 		}
 		else
 		{

@@ -87,6 +87,7 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
 			break;
 		case IKE_ESTABLISHED:
 			DBG1(DBG_IKE, "deleting IKE_SA on request");
+			this->ike_sa->reestablish(this->ike_sa);
 			break;
 		case IKE_REKEYING:
 			break;

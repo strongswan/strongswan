@@ -25,6 +25,7 @@
 #define CHILD_CFG_H_
 
 typedef enum mode_t mode_t;
+typedef enum action_t action_t;
 typedef struct child_cfg_t child_cfg_t;
 
 #include <library.h>
@@ -49,6 +50,23 @@ enum mode_t {
  * enum names for mode_t.
  */
 extern enum_name_t *mode_names;
+
+/**
+ * Action to take when DPD detected/connection gets closed by peer.
+ */
+enum action_t {
+	/** No action */
+	ACTION_NONE,
+	/** Route config to reestablish on demand */
+	ACTION_ROUTE,
+	/** Restart config immediately */
+	ACTION_RESTART,
+};
+
+/**
+ * enum names for action_t.
+ */
+extern enum_name_t *action_names;
 
 /**
  * A child_cfg_t defines the config template for a CHILD_SA.
@@ -170,9 +188,16 @@ struct child_cfg_t {
 	 * The mode is either tunnel, transport or BEET. The peer must agree
 	 * on the method, fallback is tunnel mode.
 	 * 
-	 * @return				lifetime in seconds
+	 * @return				ipsec mode
 	 */
 	mode_t (*get_mode) (child_cfg_t *this);
+	
+	/**
+	 * Action to take on DPD/passive close
+	 *
+	 * @return				DPD/passive close action
+	 */	
+	action_t (*get_action) (child_cfg_t *this);
 	
 	/**
 	 * Get the DH group to use for CHILD_SA setup.
@@ -218,10 +243,12 @@ struct child_cfg_t {
  * @param updown			updown script to execute on up/down event
  * @param hostaccess		TRUE to allow access to the local host
  * @param mode				mode to propose for CHILD_SA, transport, tunnel or BEET
+ * @param action			DPD/passive close action
  * @return 					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
-							  char *updown, bool hostaccess, mode_t mode);
+							  char *updown, bool hostaccess, mode_t mode,
+							  action_t action);
 
 #endif /* CHILD_CFG_H_ @} */

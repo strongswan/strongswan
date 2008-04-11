@@ -68,7 +68,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	
-	/* reestablish only if we have children */
+	/* reauthenticate only if we have children */
 	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
 	if (iterator->get_count(iterator) == 0
 #ifdef ME
@@ -77,7 +77,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 #endif /* ME */
 		)
 	{
-		DBG1(DBG_IKE, "unable to reestablish IKE_SA, no CHILD_SA to recreate");
+		DBG1(DBG_IKE, "unable to reauthenticate IKE_SA, no CHILD_SA to recreate");
 		iterator->destroy(iterator);
 		return FAILED;
 	}
@@ -104,7 +104,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 		{
 			charon->ike_sa_manager->checkin_and_destroy(
 								charon->ike_sa_manager, new);
-			DBG1(DBG_IKE, "reestablishing IKE_SA failed");
+			DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
 			return FAILED;
 		}
 	}
@@ -131,7 +131,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 					iterator->destroy(iterator);
 					charon->ike_sa_manager->checkin_and_destroy(
 										charon->ike_sa_manager, new);
-					DBG1(DBG_IKE, "reestablishing IKE_SA failed");
+					DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
 					return FAILED;
 				}
 				break;

@@ -28,6 +28,12 @@ ENUM(mode_names, MODE_TRANSPORT, MODE_BEET,
 	"BEET",
 );
 
+ENUM(action_names, ACTION_NONE, ACTION_RESTART,
+	"ACTION_NONE",
+	"ACTION_ROUTE",
+	"ACTION_RESTART",
+);
+
 typedef struct private_child_cfg_t private_child_cfg_t;
 
 /**
@@ -79,6 +85,11 @@ struct private_child_cfg_t {
 	 * Mode to propose for a initiated CHILD: tunnel/transport
 	 */
 	mode_t mode;
+	
+	/**
+	 * action to take on DPD/passive close
+	 */
+	action_t action;
 	
 	/**
 	 * Time before an SA gets invalid
@@ -338,11 +349,19 @@ static u_int32_t get_lifetime(private_child_cfg_t *this, bool rekey)
 }
 
 /**
- * Implementation of child_cfg_t.get_name
+ * Implementation of child_cfg_t.get_mode
  */
 static mode_t get_mode(private_child_cfg_t *this)
 {
 	return this->mode;
+}
+
+/**
+ * Implementation of child_cfg_t.get_action
+ */
+static action_t get_action(private_child_cfg_t *this)
+{
+	return this->action;
 }
 
 /**
@@ -398,11 +417,11 @@ static void destroy(private_child_cfg_t *this)
  */
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
-							  char *updown, bool hostaccess, mode_t mode)
+							  char *updown, bool hostaccess, mode_t mode,
+							  action_t action)
 {
 	private_child_cfg_t *this = malloc_thing(private_child_cfg_t);
 
-	/* public functions */
 	this->public.get_name = (char* (*) (child_cfg_t*))get_name;
 	this->public.add_traffic_selector = (void (*)(child_cfg_t*,bool,traffic_selector_t*))add_traffic_selector;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_cfg_t*,bool,linked_list_t*,host_t*))get_traffic_selectors;
@@ -412,12 +431,12 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.get_updown = (char* (*) (child_cfg_t*))get_updown;
 	this->public.get_hostaccess = (bool (*) (child_cfg_t*))get_hostaccess;
 	this->public.get_mode = (mode_t (*) (child_cfg_t *))get_mode;
+	this->public.get_action = (action_t (*) (child_cfg_t *))get_action;
 	this->public.get_lifetime = (u_int32_t (*) (child_cfg_t *,bool))get_lifetime;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(child_cfg_t*)) get_dh_group;
 	this->public.get_ref = (void (*) (child_cfg_t*))get_ref;
 	this->public.destroy = (void (*) (child_cfg_t*))destroy;
 	
-	/* apply init values */
 	this->name = strdup(name);
 	this->lifetime = lifetime;
 	this->rekeytime = rekeytime;
@@ -425,8 +444,7 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->updown = updown ? strdup(updown) : NULL;
 	this->hostaccess = hostaccess;
 	this->mode = mode;
-	
-	/* initialize private members*/
+	this->action = action;
 	this->refcount = 1;
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();
@@ -434,3 +452,4 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 
 	return &this->public;
 }
+

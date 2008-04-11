@@ -491,7 +491,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		msg->add_conn.me.sendcert, msg->add_conn.auth_method,
 		msg->add_conn.eap_type,	msg->add_conn.eap_vendor,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
-		msg->add_conn.mobike, msg->add_conn.dpd.delay, msg->add_conn.dpd.action,
+		msg->add_conn.mobike, msg->add_conn.dpd.delay,
 		vip, msg->add_conn.other.sourceip ? msg->add_conn.name : NULL,
 		msg->add_conn.ikeme.mediation, mediated_by, peer_id);
 }
@@ -626,13 +626,26 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 {
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
+	action_t action;
 	
+	switch (msg->add_conn.dpd.action)
+	{	/* map startes magic values to our action type */
+		case 2: /* =hold */
+			action = ACTION_ROUTE;
+			break;
+		case 3: /* =restart */
+			action = ACTION_RESTART;
+			break;
+		default:
+			action = ACTION_NONE;
+			break;
+	}
 	child_cfg = child_cfg_create(
 				msg->add_conn.name, msg->add_conn.rekey.ipsec_lifetime,
 				msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
 				msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
 				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
-				msg->add_conn.mode);
+				msg->add_conn.mode, action);
 	
 	ts = build_ts(this, &msg->add_conn.me);
 	if (!ts)
