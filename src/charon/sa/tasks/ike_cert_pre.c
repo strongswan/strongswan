@@ -209,7 +209,7 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	certreq_payload_t *x509_req = NULL;
 	
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
-	if (ike_cfg->send_certreq(ike_cfg) == CERT_NEVER_SEND)
+	if (!ike_cfg->send_certreq(ike_cfg))
 	{
 		return;
 	}
