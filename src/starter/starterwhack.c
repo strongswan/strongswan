@@ -162,10 +162,13 @@ set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
 	    /* use first address only for pluto */
 	    len = pos - end->srcip;
 	}
-	w->has_srcip = 1;
+	w->has_srcip = !end->has_natip;
 	ttoaddr(end->srcip, len, v6 ? AF_INET6 : AF_INET, &w->host_srcip);
     }
-    
+    else
+    {
+	anyaddr(AF_INET, &w->host_srcip);	
+    }    
     w->id                  = end->id;
     w->cert                = end->cert;
     w->ca                  = end->ca;
