@@ -147,7 +147,7 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	bool child;
 	int len;
 	ike_sa_t *ike_sa;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	stroke_log_info_t info;
 	
 	string = msg->terminate.name;
@@ -197,8 +197,8 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	info.out = out;
 	info.level = msg->output_verbosity;
 	
-	iterator = charon->controller->create_ike_sa_iterator(charon->controller);
-	while (iterator->iterate(iterator, (void**)&ike_sa))
+	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		child_sa_t *child_sa;
 		iterator_t *children;
@@ -213,7 +213,7 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 				{
 					id = child_sa->get_reqid(child_sa);
 					children->destroy(children);
-					iterator->destroy(iterator);
+					enumerator->destroy(enumerator);
 					
 					charon->controller->terminate_child(charon->controller, id,
 									(controller_cb_t)stroke_log, &info);
@@ -227,7 +227,7 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 		{
 			id = ike_sa->get_unique_id(ike_sa);
 			/* unlock manager first */
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 			
 			charon->controller->terminate_ike(charon->controller, id,
 								 	(controller_cb_t)stroke_log, &info);
@@ -235,9 +235,8 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 		}
 		
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	DBG1(DBG_CFG, "no such SA found");
-
 }
 
 /**
@@ -285,7 +284,7 @@ static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out
 {
 	char *name;
 	ike_sa_t *ike_sa;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	stroke_log_info_t info;
 	
 	name = msg->terminate.name;
@@ -293,8 +292,8 @@ static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out
 	info.out = out;
 	info.level = msg->output_verbosity;
 	
-	iterator = charon->controller->create_ike_sa_iterator(charon->controller);
-	while (iterator->iterate(iterator, (void**)&ike_sa))
+	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		child_sa_t *child_sa;
 		iterator_t *children;
@@ -308,7 +307,7 @@ static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out
 			{
 				id = child_sa->get_reqid(child_sa);
 				children->destroy(children);
-				iterator->destroy(iterator);
+				enumerator->destroy(enumerator);
 				charon->controller->unroute(charon->controller, id,
 								(controller_cb_t)stroke_log, &info);
 				return;
@@ -316,7 +315,7 @@ static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out
 		}
 		children->destroy(children);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	DBG1(DBG_CFG, "no such SA found");
 }
 

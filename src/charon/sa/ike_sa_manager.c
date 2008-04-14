@@ -155,20 +155,20 @@ struct private_ike_sa_manager_t {
 /**
  * Implementation of private_ike_sa_manager_t.get_entry_by_id.
  */
-static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, entry_t **entry)
+static status_t get_entry_by_id(private_ike_sa_manager_t *this,
+								ike_sa_id_t *ike_sa_id, entry_t **entry)
 {
-	linked_list_t *list = this->ike_sa_list;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	entry_t *current;
 	status_t status;
 	
-	/* create iterator over list of ike_sa's */
-	iterator = list->create_iterator(list, TRUE);
+	/* create enumerator over list of ike_sa's */
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 
 	/* default status */
 	status = NOT_FOUND;
 	
-	while (iterator->iterate(iterator, (void**)&current))
+	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id))
 		{
@@ -194,26 +194,26 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 		}
 	}
 	
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return status;
 }
 
 /**
  * Implementation of private_ike_sa_manager_t.get_entry_by_sa.
  */
-static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa, entry_t **entry)
+static status_t get_entry_by_sa(private_ike_sa_manager_t *this,
+								ike_sa_t *ike_sa, entry_t **entry)
 {
-	linked_list_t *list = this->ike_sa_list;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	entry_t *current;
 	status_t status;
 	
-	iterator = list->create_iterator(list, TRUE);
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 	
 	/* default status */
 	status = NOT_FOUND;
 	
-	while (iterator->iterate(iterator, (void**)&current))
+	while (enumerator->enumerate(enumerator, &current))
 	{
 		/* only pointers are compared */
 		if (current->ike_sa == ike_sa)
@@ -224,7 +224,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	return status;
 }
@@ -234,16 +234,15 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
  */
 static status_t delete_entry(private_ike_sa_manager_t *this, entry_t *entry)
 {
-	linked_list_t *list = this->ike_sa_list;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	entry_t *current;
 	status_t status;
 	
-	iterator = list->create_iterator(list, TRUE);
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 
 	status = NOT_FOUND;
 	
-	while (iterator->iterate(iterator, (void**)&current))
+	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (current == entry)
 		{
@@ -259,13 +258,13 @@ static status_t delete_entry(private_ike_sa_manager_t *this, entry_t *entry)
 			}
 			
 			DBG2(DBG_MGR,  "found entry by pointer, deleting it");
-			iterator->remove(iterator);
+			this->ike_sa_list->remove_at(this->ike_sa_list, enumerator);
 			entry_destroy(entry);
 			status = SUCCESS;
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return status;
 }
 
@@ -382,7 +381,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		/* IKE_SA_INIT request. Check for an IKE_SA with such a message hash. */
-		iterator_t *iterator;
+		enumerator_t *enumerator;
 		chunk_t data, hash;
 		
 		data = message->get_packet_data(message);
@@ -390,14 +389,14 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 		chunk_free(&data);
 		
 		pthread_mutex_lock(&this->mutex);
-		iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-		while (iterator->iterate(iterator, (void**)&entry))
+		enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+		while (enumerator->enumerate(enumerator, &entry))
 		{
 			if (chunk_equals(hash, entry->init_hash))
 			{
 				if (entry->message_id == 0)
 				{
-					iterator->destroy(iterator);
+					enumerator->destroy(enumerator);
 					pthread_mutex_unlock(&this->mutex);
 					chunk_free(&hash);
 					id->destroy(id);
@@ -414,7 +413,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 				break;
 			}
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 		pthread_mutex_unlock(&this->mutex);
 		
 		if (ike_sa == NULL)
@@ -484,7 +483,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 									peer_cfg_t *peer_cfg)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	identification_t *my_id, *other_id;
@@ -499,8 +498,8 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	
 	pthread_mutex_lock(&(this->mutex));
 	
-	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->iterate(iterator, (void**)&entry))
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
 		identification_t *found_my_id, *found_other_id;
 		host_t *found_my_host, *found_other_host;
@@ -549,7 +548,7 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	if (!ike_sa)
 	{
@@ -584,15 +583,16 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 								bool child)
 {
-	iterator_t *iterator, *children;
+	enumerator_t *enumerator;
+	iterator_t *children;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
 	
 	pthread_mutex_lock(&(this->mutex));
 	
-	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->iterate(iterator, (void**)&entry))
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
 		if (wait_for_entry(this, entry))
 		{
@@ -625,7 +625,7 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	pthread_mutex_unlock(&(this->mutex));
 	
 	charon->bus->set_sa(charon->bus, ike_sa);
@@ -638,15 +638,16 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 								  bool child)
 {
-	iterator_t *iterator, *children;
+	enumerator_t *enumerator;
+	iterator_t *children;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
 	
 	pthread_mutex_lock(&(this->mutex));
 	
-	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->iterate(iterator, (void**)&entry))
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
 		if (wait_for_entry(this, entry))
 		{
@@ -679,7 +680,7 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	pthread_mutex_unlock(&(this->mutex));
 	
 	charon->bus->set_sa(charon->bus, ike_sa);
@@ -687,31 +688,36 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 }
 
 /**
- * Iterator hook for iterate, gets ike_sas instead of entries
+ * enumerator cleanup function
  */
-static hook_result_t iterator_hook(private_ike_sa_manager_t* this, entry_t *in,
-								   ike_sa_t **out)
+static void enumerator_unlock(private_ike_sa_manager_t *this)
 {
-	/* check out entry */
-	if (wait_for_entry(this, in))
+	pthread_mutex_unlock(&this->mutex);
+}
+
+/**
+ * enumerator filter function 
+ */
+static bool enumerator_filter(private_ike_sa_manager_t *this,
+							  entry_t **in, ike_sa_t **out)
+{
+	if (wait_for_entry(this, *in))
 	{
-		*out = in->ike_sa;
-		return HOOK_NEXT;
+		*out = (*in)->ike_sa;
+		return TRUE;
 	}
-	return HOOK_SKIP;
+	return FALSE;
 }
 
 /**
  * Implementation of ike_sa_manager_t.create_iterator.
  */
-static iterator_t *create_iterator(private_ike_sa_manager_t* this)
+static enumerator_t *create_enumerator(private_ike_sa_manager_t* this)
 {
-	iterator_t *iterator = this->ike_sa_list->create_iterator_locked(
-											this->ike_sa_list, &this->mutex);
-	
-	/* register hook to iterator over ike_sas, not entries */
-	iterator->set_iterator_hook(iterator, (iterator_hook_t*)iterator_hook, this);
-	return iterator;
+	pthread_mutex_lock(&this->mutex);
+	return enumerator_create_filter(
+						this->ike_sa_list->create_enumerator(this->ike_sa_list),
+						(void*)enumerator_filter, this, (void*)enumerator_unlock);
 }
 
 /**
@@ -807,13 +813,13 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
  */
 static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	entry_t *entry;
 	int count = 0;
 
 	pthread_mutex_lock(&(this->mutex));
-	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->iterate(iterator, (void**)&entry))
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
 		/* we check if we have a responder CONNECTING IKE_SA without checkout */
 		if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
@@ -834,7 +840,7 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	pthread_mutex_unlock(&(this->mutex));
 	return count;
@@ -846,25 +852,25 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 static void destroy(private_ike_sa_manager_t *this)
 {
 	/* destroy all list entries */
-	linked_list_t *list = this->ike_sa_list;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	entry_t *entry;
 	
 	pthread_mutex_lock(&(this->mutex));
 	DBG2(DBG_MGR, "going to destroy IKE_SA manager and all managed IKE_SA's");
 	/* Step 1: drive out all waiting threads  */
 	DBG2(DBG_MGR, "set driveout flags for all stored IKE_SA's");
-	iterator = list->create_iterator(list, TRUE);
-	while (iterator->iterate(iterator, (void**)&entry))
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
 		/* do not accept new threads, drive out waiting threads */
 		entry->driveout_new_threads = TRUE;
 		entry->driveout_waiting_threads = TRUE;	
 	}
+	enumerator->destroy(enumerator);
 	DBG2(DBG_MGR, "wait for all threads to leave IKE_SA's");
 	/* Step 2: wait until all are gone */
-	iterator->reset(iterator);
-	while (iterator->iterate(iterator, (void**)&entry))
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
 		while (entry->waiting_threads)
 		{
@@ -874,18 +880,19 @@ static void destroy(private_ike_sa_manager_t *this)
 			pthread_cond_wait(&(entry->condvar), &(this->mutex));
 		}
 	}
+	enumerator->destroy(enumerator);
 	DBG2(DBG_MGR, "delete all IKE_SA's");
 	/* Step 3: initiate deletion of all IKE_SAs */
-	iterator->reset(iterator);
-	while (iterator->iterate(iterator, (void**)&entry))
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
 		entry->ike_sa->delete(entry->ike_sa);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	DBG2(DBG_MGR, "destroy all entries");
 	/* Step 4: destroy all entries */
-	list->destroy_function(list, (void*)entry_destroy);
+	this->ike_sa_list->destroy_function(this->ike_sa_list, (void*)entry_destroy);
 	pthread_mutex_unlock(&(this->mutex));
 	
 	this->randomizer->destroy(this->randomizer);
@@ -909,7 +916,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.checkout_by_config = (ike_sa_t*(*)(ike_sa_manager_t*,peer_cfg_t*))checkout_by_config;
 	this->public.checkout_by_id = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t,bool))checkout_by_id;
 	this->public.checkout_by_name = (ike_sa_t*(*)(ike_sa_manager_t*,char*,bool))checkout_by_name;
-	this->public.create_iterator = (iterator_t*(*)(ike_sa_manager_t*))create_iterator;
+	this->public.create_enumerator = (enumerator_t*(*)(ike_sa_manager_t*))create_enumerator;
 	this->public.checkin = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
 	this->public.checkin_and_destroy = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;
 	this->public.get_half_open_count = (int(*)(ike_sa_manager_t*,host_t*))get_half_open_count;
@@ -927,3 +934,4 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->randomizer = randomizer_create();
 	return &this->public;
 }
+

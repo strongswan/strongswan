@@ -56,18 +56,18 @@ static void execute(private_roam_job_t *this)
 	ike_sa_t *ike_sa;
 	linked_list_t *list;
 	ike_sa_id_t *id;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	
-	/* iterating over all IKE_SAs gives us no way to checkin_and_destroy 
+	/* enumerator over all IKE_SAs gives us no way to checkin_and_destroy 
 	 * after a DESTROY_ME, so we check out each available IKE_SA by hand. */
 	list = linked_list_create();
-	iterator = charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
-	while (iterator->iterate(iterator, (void**)&ike_sa))
+	enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
+	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		id = ike_sa->get_id(ike_sa);
 		list->insert_last(list, id->clone(id));
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	while (list->remove_last(list, (void**)&id) == SUCCESS)
 	{

@@ -184,6 +184,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	child_cfg_t *child_cfg;
 	ike_sa_t *ike_sa;
 	char *name = NULL;
+	bool found = FALSE;
 	time_t uptime;
 	
 	name = msg->status.name;
@@ -240,20 +241,18 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		enumerator->destroy(enumerator);
 	}
 	
-	iterator = charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
-	if (all && iterator->get_count(iterator) > 0)
-	{
-		fprintf(out, "Security Associations:\n");
-	}
-	while (iterator->iterate(iterator, (void**)&ike_sa))
+	fprintf(out, "Security Associations:\n");
+	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		bool ike_printed = FALSE;
 		child_sa_t *child_sa;
 		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
-
+		
 		if (name == NULL || streq(name, ike_sa->get_name(ike_sa)))
 		{
 			log_ike_sa(out, ike_sa, all);
+			found = TRUE;
 			ike_printed = TRUE;
 		}
 
@@ -264,6 +263,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 				if (!ike_printed)
 				{
 					log_ike_sa(out, ike_sa, all);
+					found = TRUE;
 					ike_printed = TRUE;
 				}
 				log_child_sa(out, child_sa, all);
@@ -271,7 +271,19 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		}
 		children->destroy(children);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
+	
+	if (!found)
+	{
+		if (name)
+		{
+			fprintf(out, "  no match\n");
+		}
+		else
+		{
+			fprintf(out, "  none\n");
+		}
+	}
 }
 
 /**

@@ -203,7 +203,7 @@ static bool start_connection(private_dbus_t *this, DBusMessage* msg)
 static bool stop_connection(private_dbus_t *this, DBusMessage* msg)
 {
 	u_int32_t id;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
 	
 	if (this->name == NULL)
@@ -215,8 +215,8 @@ static bool stop_connection(private_dbus_t *this, DBusMessage* msg)
 	
 	set_state(this, NM_VPN_STATE_STOPPING);
 	
-	iterator = charon->controller->create_ike_sa_iterator(charon->controller);
-	while (iterator->iterate(iterator, (void**)&ike_sa))
+	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	while (enumerator->enumerate(enumerator, (void**)&ike_sa))
 	{
 		child_sa_t *child_sa;
 		iterator_t *children;
@@ -224,7 +224,7 @@ static bool stop_connection(private_dbus_t *this, DBusMessage* msg)
 		if (this->name && streq(this->name, ike_sa->get_name(ike_sa)))
 		{
 			id = ike_sa->get_unique_id(ike_sa);
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 			charon->controller->terminate_ike(charon->controller, id, NULL, NULL);
 			set_state(this, NM_VPN_STATE_STOPPED);
 			return TRUE;;
@@ -236,7 +236,7 @@ static bool stop_connection(private_dbus_t *this, DBusMessage* msg)
 			{
 				id = child_sa->get_reqid(child_sa);
 				children->destroy(children);
-				iterator->destroy(iterator);
+				enumerator->destroy(enumerator);
 				charon->controller->terminate_child(charon->controller, id, NULL, NULL);
 				set_state(this, NM_VPN_STATE_STOPPED);
 				return TRUE;
@@ -244,7 +244,7 @@ static bool stop_connection(private_dbus_t *this, DBusMessage* msg)
 		}
 		children->destroy(children);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	set_state(this, NM_VPN_STATE_STOPPED);
 	return TRUE;
 }

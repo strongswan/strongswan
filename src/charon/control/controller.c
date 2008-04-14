@@ -116,9 +116,9 @@ static void nop(job_t *job)
 /**
  * Implementation of controller_t.create_ike_sa_iterator.
  */
-static iterator_t* create_ike_sa_iterator(controller_t *this)
+static enumerator_t* create_ike_sa_enumerator(controller_t *this)
 {
-	return charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
+	return charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
 }
 
 /**
@@ -561,7 +561,7 @@ controller_t *controller_create(void)
 {
 	private_controller_t *this = malloc_thing(private_controller_t);
 	
-	this->public.create_ike_sa_iterator = (iterator_t*(*)(controller_t*))create_ike_sa_iterator;
+	this->public.create_ike_sa_enumerator = (enumerator_t*(*)(controller_t*))create_ike_sa_enumerator;
 	this->public.initiate = (status_t(*)(controller_t*,peer_cfg_t*,child_cfg_t*,bool(*)(void*,signal_t,level_t,ike_sa_t*,char*,va_list),void*))initiate;
 	this->public.terminate_ike = (status_t(*)(controller_t*,u_int32_t,controller_cb_t, void*))terminate_ike;
 	this->public.terminate_child = (status_t(*)(controller_t*,u_int32_t,controller_cb_t, void *param))terminate_child;

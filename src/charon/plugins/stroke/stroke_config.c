@@ -488,7 +488,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	 * uses to serve pool addresses. */
 	return peer_cfg_create(msg->add_conn.name,
 		msg->add_conn.ikev2 ? 2 : 1, ike_cfg, me, other,
-		msg->add_conn.me.sendcert, msg->add_conn.auth_method,
+		msg->add_conn.me.sendcert, UNIQUE_NO, msg->add_conn.auth_method,
 		msg->add_conn.eap_type,	msg->add_conn.eap_vendor,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay,

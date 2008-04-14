@@ -64,14 +64,14 @@ typedef struct controller_t controller_t;
 struct controller_t {
 
 	/**
-	 * Create an iterator for all IKE_SAs.
+	 * Create an enumerator for all IKE_SAs.
 	 *
-	 * The iterator blocks the IKE_SA manager until it gets destroyed. Do
+	 * The enumerator blocks the IKE_SA manager until it gets destroyed. Do
 	 * not call another interface/manager method while the iterator is alive.
 	 *
-	 * @return				iterator, locks IKE_SA manager until destroyed
+	 * @return				enumerator, locks IKE_SA manager until destroyed
 	 */
-	iterator_t* (*create_ike_sa_iterator)(controller_t *this);
+	enumerator_t* (*create_ike_sa_enumerator)(controller_t *this);
 
 	/**
 	 * Initiate a CHILD_SA, and if required, an IKE_SA.

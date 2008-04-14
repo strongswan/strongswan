@@ -135,15 +135,14 @@ struct ike_sa_manager_t {
 								   bool child);
 	
 	/**
-	 * Create an iterator over all stored IKE_SAs.
+	 * Create an enumerator over all stored IKE_SAs.
 	 *
-	 * The avoid synchronization issues, the iterator locks access
+	 * The avoid synchronization issues, the enumerator locks access
 	 * to the manager exclusively, until it gets destroyed.
-	 * This iterator is for reading only! Writing will corrupt the manager.
 	 *
-	 * @return					iterator over all IKE_SAs.
+	 * @return					enumerator over all IKE_SAs.
 	 */
-	iterator_t *(*create_iterator) (ike_sa_manager_t* this);
+	enumerator_t *(*create_enumerator) (ike_sa_manager_t* this);
 	
 	/**
 	 * Checkin the SA after usage.
