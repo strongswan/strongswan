@@ -626,18 +626,18 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 {
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
-	action_t action;
+	action_t dpd;
 	
 	switch (msg->add_conn.dpd.action)
 	{	/* map startes magic values to our action type */
 		case 2: /* =hold */
-			action = ACTION_ROUTE;
+			dpd = ACTION_ROUTE;
 			break;
 		case 3: /* =restart */
-			action = ACTION_RESTART;
+			dpd = ACTION_RESTART;
 			break;
 		default:
-			action = ACTION_NONE;
+			dpd = ACTION_NONE;
 			break;
 	}
 	child_cfg = child_cfg_create(
@@ -645,7 +645,7 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 				msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
 				msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
 				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
-				msg->add_conn.mode, action);
+				msg->add_conn.mode, dpd, ACTION_NONE);
 	
 	ts = build_ts(this, &msg->add_conn.me);
 	if (!ts)

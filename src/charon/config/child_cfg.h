@@ -193,11 +193,18 @@ struct child_cfg_t {
 	mode_t (*get_mode) (child_cfg_t *this);
 	
 	/**
-	 * Action to take on DPD/passive close
+	 * Action to take on DPD.
 	 *
-	 * @return				DPD/passive close action
+	 * @return				DPD action
 	 */	
-	action_t (*get_action) (child_cfg_t *this);
+	action_t (*get_dpd_action) (child_cfg_t *this);
+	
+	/**
+	 * Action to take if CHILD_SA gets closed.
+	 *
+	 * @return				close action
+	 */	
+	action_t (*get_close_action) (child_cfg_t *this);
 	
 	/**
 	 * Get the DH group to use for CHILD_SA setup.
@@ -243,12 +250,13 @@ struct child_cfg_t {
  * @param updown			updown script to execute on up/down event
  * @param hostaccess		TRUE to allow access to the local host
  * @param mode				mode to propose for CHILD_SA, transport, tunnel or BEET
- * @param action			DPD/passive close action
+ * @param dpd_action		DPD action
+ * @param close_action		lose action
  * @return 					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
 							  char *updown, bool hostaccess, mode_t mode,
-							  action_t action);
+							  action_t dpd_action, action_t close_action);
 
 #endif /* CHILD_CFG_H_ @} */

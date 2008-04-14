@@ -173,7 +173,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
 		if (!this->initiator)
 		{	/* enforce child_cfg policy if deleted passively */
-			switch (child_cfg->get_action(child_cfg))
+			switch (child_cfg->get_close_action(child_cfg))
 			{
 				case ACTION_RESTART:
 					child_cfg->get_ref(child_cfg);

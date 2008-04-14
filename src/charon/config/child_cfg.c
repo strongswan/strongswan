@@ -87,9 +87,14 @@ struct private_child_cfg_t {
 	mode_t mode;
 	
 	/**
-	 * action to take on DPD/passive close
+	 * action to take on DPD
 	 */
-	action_t action;
+	action_t dpd_action;
+	
+	/**
+	 * action to take on CHILD_SA close
+	 */
+	action_t close_action;
 	
 	/**
 	 * Time before an SA gets invalid
@@ -357,11 +362,19 @@ static mode_t get_mode(private_child_cfg_t *this)
 }
 
 /**
- * Implementation of child_cfg_t.get_action
+ * Implementation of child_cfg_t.get_dpd_action
  */
-static action_t get_action(private_child_cfg_t *this)
+static action_t get_dpd_action(private_child_cfg_t *this)
 {
-	return this->action;
+	return this->dpd_action;
+}
+
+/**
+ * Implementation of child_cfg_t.get_close_action
+ */
+static action_t get_close_action(private_child_cfg_t *this)
+{
+	return this->close_action;
 }
 
 /**
@@ -418,7 +431,7 @@ static void destroy(private_child_cfg_t *this)
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
 							  char *updown, bool hostaccess, mode_t mode,
-							  action_t action)
+							  action_t dpd_action, action_t close_action)
 {
 	private_child_cfg_t *this = malloc_thing(private_child_cfg_t);
 
@@ -431,7 +444,8 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.get_updown = (char* (*) (child_cfg_t*))get_updown;
 	this->public.get_hostaccess = (bool (*) (child_cfg_t*))get_hostaccess;
 	this->public.get_mode = (mode_t (*) (child_cfg_t *))get_mode;
-	this->public.get_action = (action_t (*) (child_cfg_t *))get_action;
+	this->public.get_dpd_action = (action_t (*) (child_cfg_t *))get_dpd_action;
+	this->public.get_close_action = (action_t (*) (child_cfg_t *))get_close_action;
 	this->public.get_lifetime = (u_int32_t (*) (child_cfg_t *,bool))get_lifetime;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(child_cfg_t*)) get_dh_group;
 	this->public.get_ref = (void (*) (child_cfg_t*))get_ref;
@@ -444,7 +458,8 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->updown = updown ? strdup(updown) : NULL;
 	this->hostaccess = hostaccess;
 	this->mode = mode;
-	this->action = action;
+	this->dpd_action = dpd_action;
+	this->close_action = close_action;
 	this->refcount = 1;
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();

@@ -1880,6 +1880,7 @@ static status_t reestablish(private_ike_sa_t *this)
 {
 	ike_sa_t *new;
 	host_t *host;
+	action_t action;
 	iterator_t *iterator;
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
@@ -1891,7 +1892,15 @@ static status_t reestablish(private_ike_sa_t *this)
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
 		child_cfg = child_sa->get_config(child_sa);
-		switch (child_cfg->get_action(child_cfg))
+		if (this->state == IKE_DELETING)
+		{
+			action = child_cfg->get_close_action(child_cfg);
+		}
+		else
+		{
+			action = child_cfg->get_dpd_action(child_cfg);
+		}
+		switch (action)
 		{
 			case ACTION_RESTART:
 			case ACTION_ROUTE:
@@ -1951,7 +1960,15 @@ static status_t reestablish(private_ike_sa_t *this)
 		while (iterator->iterate(iterator, (void**)&child_sa))
 		{
 			child_cfg = child_sa->get_config(child_sa);
-			switch (child_cfg->get_action(child_cfg))
+			if (this->state == IKE_DELETING)
+			{
+				action = child_cfg->get_close_action(child_cfg);
+			}
+			else
+			{
+				action = child_cfg->get_dpd_action(child_cfg);
+			}
+			switch (action)
 			{
 				case ACTION_RESTART:
 					DBG1(DBG_IKE, "restarting CHILD_SA %s",
@@ -2011,16 +2028,16 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
 				break;
 			}
-			case IKE_REKEYING:
-				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
-				break;
 			case IKE_DELETING:
 				SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
 				break;
+			case IKE_REKEYING:
+				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
+				/* FALL */
 			default:
+				reestablish(this);
 				break;
 		}
-		reestablish(this);
 		return DESTROY_ME;
 	}
 	return SUCCESS;

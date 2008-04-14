@@ -133,7 +133,8 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 						&updown, &hostaccess, &mode))
 	{
 		child_cfg = child_cfg_create(name, lifetime, rekeytime, jitter,
-									 updown, hostaccess, mode, ACTION_NONE);
+									 updown, hostaccess, mode,
+									 ACTION_NONE, ACTION_NONE);
 		/* TODO: read proposal from db */
 		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 		add_traffic_selectors(this, child_cfg, id);
