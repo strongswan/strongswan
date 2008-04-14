@@ -252,6 +252,13 @@ do
 	    continue
 	fi
 
+	if [ $name = "rw-psk-ipv6" ]
+	then
+	    IPTABLES="ip6tables"
+	else
+	    IPTABLES="iptables"
+	fi
+
 	[ -f $DEFAULTTESTSDIR/${testname}/description.txt ] || die "!! File 'description.txt' is missing"
 	[ -f $DEFAULTTESTSDIR/${testname}/test.conf ]       || die "!! File 'test.conf' is missing"
 	[ -f $DEFAULTTESTSDIR/${testname}/pretest.dat ]     || die "!! File 'pretest.dat' is missing"
