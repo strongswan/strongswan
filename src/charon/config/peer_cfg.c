@@ -89,6 +89,11 @@ struct private_peer_cfg_t {
 	cert_policy_t cert_policy;
 	
 	/**
+	 * uniqueness of an IKE_SA
+	 */
+	unique_policy_t unique;
+	
+	/**
 	 * Method to use for own authentication data
 	 */
 	auth_method_t auth_method;
@@ -295,6 +300,14 @@ static cert_policy_t get_cert_policy(private_peer_cfg_t *this)
 }
 
 /**
+ * Implementation of peer_cfg_t.get_unique_policy.
+ */
+static unique_policy_t get_unique_policy(private_peer_cfg_t *this)
+{
+	return this->unique;
+}
+
+/**
  * Implementation of connection_t.auth_method_t.
  */
 static auth_method_t get_auth_method(private_peer_cfg_t *this)
@@ -444,6 +457,7 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 		this->my_id->equals(this->my_id, other->my_id) &&
 		this->other_id->equals(this->other_id, other->other_id) &&
 		this->cert_policy == other->cert_policy &&
+		this->unique == other->unique &&
 		this->auth_method == other->auth_method &&
 		this->eap_type == other->eap_type &&
 		this->eap_vendor == other->eap_vendor &&
@@ -505,7 +519,7 @@ static void destroy(private_peer_cfg_t *this)
  */
 peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
-							cert_policy_t cert_policy,
+							cert_policy_t cert_policy, unique_policy_t unique,
 							auth_method_t auth_method, eap_type_t eap_type,
 							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,
@@ -528,6 +542,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_my_id = (identification_t* (*)(peer_cfg_t*))get_my_id;
 	this->public.get_other_id = (identification_t* (*)(peer_cfg_t *))get_other_id;
 	this->public.get_cert_policy = (cert_policy_t (*) (peer_cfg_t *))get_cert_policy;
+	this->public.get_unique_policy = (unique_policy_t (*) (peer_cfg_t *))get_unique_policy;
 	this->public.get_auth_method = (auth_method_t (*) (peer_cfg_t *))get_auth_method;
 	this->public.get_eap_type = (eap_type_t (*) (peer_cfg_t *,u_int32_t*))get_eap_type;
 	this->public.get_keyingtries = (u_int32_t (*) (peer_cfg_t *))get_keyingtries;
@@ -557,6 +572,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->my_id = my_id;
 	this->other_id = other_id;
 	this->cert_policy = cert_policy;
+	this->unique = unique;
 	this->auth_method = auth_method;
 	this->eap_type = eap_type;
 	this->eap_vendor = eap_vendor;

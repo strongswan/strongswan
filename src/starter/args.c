@@ -62,6 +62,14 @@ static const char *LST_sendcert[] = {
      NULL
 };
 
+static const char *LST_unique[] = {
+    "no",
+    "yes",
+    "replace",
+    "keep",
+     NULL
+};
+
 static const char *LST_strict[] = {
     "no",
     "yes",
@@ -163,7 +171,7 @@ static const token_info_t token_info[] =
     { ARG_STR,  offsetof(starter_config_t, setup.charondebug),  NULL               },
     { ARG_STR,  offsetof(starter_config_t, setup.prepluto), NULL                   },
     { ARG_STR,  offsetof(starter_config_t, setup.postpluto), NULL                  },
-    { ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_bool              },
+    { ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_unique            },
     { ARG_UINT, offsetof(starter_config_t, setup.overridemtu), NULL                },
     { ARG_TIME, offsetof(starter_config_t, setup.crlcheckinterval), NULL           },
     { ARG_ENUM, offsetof(starter_config_t, setup.cachecrls), LST_bool              },

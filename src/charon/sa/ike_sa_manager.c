@@ -686,6 +686,44 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
+	
+/**
+ * Implementation of ike_sa_manager_t.checkout_duplicate.
+ */
+static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
+									ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	ike_sa_t *duplicate = NULL;
+	identification_t *me, *other;
+	
+	me = ike_sa->get_my_id(ike_sa);
+	other = ike_sa->get_other_id(ike_sa);
+	
+	pthread_mutex_lock(&this->mutex);
+	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->ike_sa == ike_sa)
+		{	/* self is not a duplicate */
+			continue;
+		}
+		if (wait_for_entry(this, entry))
+		{
+			if (me->equals(me, entry->ike_sa->get_my_id(entry->ike_sa)) &&
+				other->equals(other, entry->ike_sa->get_other_id(entry->ike_sa)))
+			{
+				duplicate = entry->ike_sa;
+				entry->checked_out = TRUE;
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	pthread_mutex_unlock(&this->mutex);
+	return duplicate;
+}
 
 /**
  * enumerator cleanup function
@@ -916,6 +954,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.checkout_by_config = (ike_sa_t*(*)(ike_sa_manager_t*,peer_cfg_t*))checkout_by_config;
 	this->public.checkout_by_id = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t,bool))checkout_by_id;
 	this->public.checkout_by_name = (ike_sa_t*(*)(ike_sa_manager_t*,char*,bool))checkout_by_name;
+	this->public.checkout_duplicate = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_t *ike_sa))checkout_duplicate;
 	this->public.create_enumerator = (enumerator_t*(*)(ike_sa_manager_t*))create_enumerator;
 	this->public.checkin = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
 	this->public.checkin_and_destroy = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;

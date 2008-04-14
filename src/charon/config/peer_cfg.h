@@ -26,6 +26,7 @@
 #define PEER_CFG_H_
 
 typedef enum cert_policy_t cert_policy_t;
+typedef enum unique_policy_t unique_policy_t;
 typedef struct peer_cfg_t peer_cfg_t;
 
 #include <library.h>
@@ -61,6 +62,23 @@ enum cert_policy_t {
  * enum strings for cert_policy_t
  */
 extern enum_name_t *cert_policy_names;
+
+/**
+ * Uniqueness of an IKE_SA, used to drop multiple connections with one peer.
+ */
+enum unique_policy_t {
+	/** do not check for client uniqueness */
+	UNIQUE_NO,
+	/** replace unique IKE_SAs if new ones get established */
+	UNIQUE_REPLACE,
+	/** keep existing IKE_SAs, close the new ones on connection attept */
+	UNIQUE_KEEP,
+};
+
+/**
+ * enum strings for unique_policy_t
+ */
+extern enum_name_t *unique_policy_names;
 
 /**
  * Configuration of a peer, specified by IDs.
@@ -177,6 +195,13 @@ struct peer_cfg_t {
 	 * @return			certificate sending policy
 	 */
 	cert_policy_t (*get_cert_policy) (peer_cfg_t *this);
+
+	/**
+	 * How to handle uniqueness of IKE_SAs?
+	 *
+	 * @return			unique policy
+	 */
+	unique_policy_t (*get_unique_policy) (peer_cfg_t *this);
 
 	/**
 	 * Get the authentication method to use to authenticate us.
@@ -332,6 +357,7 @@ struct peer_cfg_t {
  * @param my_id 			identification_t for ourselves
  * @param other_id 			identification_t for the remote guy
  * @param cert_policy		should we send a certificate payload?
+ * @param unique			uniqueness of an IKE_SA
  * @param auth_method		auth method to use to authenticate us
  * @param eap_type			EAP type to use for peer authentication
  * @param eap_vendor		EAP vendor identifier, if vendor specific type is used
@@ -352,7 +378,7 @@ struct peer_cfg_t {
  */
 peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
-							cert_policy_t cert_policy,
+							cert_policy_t cert_policy, unique_policy_t unique,
 							auth_method_t auth_method, eap_type_t eap_type,
 							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,

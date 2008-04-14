@@ -103,6 +103,14 @@ struct ike_sa_manager_t {
 								 	 peer_cfg_t *peer_cfg);
 	
 	/**
+	 * Check out a duplicate if ike_sa to do uniqueness tests.
+	 *
+	 * @param ike_sa			ike_sa to get a duplicate from
+	 * @return					checked out duplicate
+	 */
+	ike_sa_t* (*checkout_duplicate)(ike_sa_manager_t *this, ike_sa_t *ike_sa);
+	
+	/**
 	 * Check out an IKE_SA a unique ID.
 	 *
 	 * Every IKE_SA and every CHILD_SA is uniquely identified by an ID. 

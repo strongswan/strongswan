@@ -356,6 +356,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	peer_cfg_t *mediated_by = NULL;
 	host_t *vip = NULL;
 	certificate_t *cert;
+	unique_policy_t unique;
 	u_int32_t rekey = 0, reauth = 0, over, jitter;
 	
 	me = identification_create_from_string(msg->add_conn.me.id ?
@@ -483,12 +484,25 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 			}
 		}
 	}
+	switch (msg->add_conn.unique)
+	{
+		case 1: /* yes */
+		case 2: /* replace */
+			unique = UNIQUE_REPLACE;
+			break;
+		case 3: /* keep */
+			unique = UNIQUE_KEEP;
+			break;
+		default: /* no */
+			unique = UNIQUE_NO;
+			break;
+	}
 	/* other.sourceip is managed in stroke_attributes. If it is set, we define
 	 * the pool name as the connection name, which the attribute provider
 	 * uses to serve pool addresses. */
 	return peer_cfg_create(msg->add_conn.name,
 		msg->add_conn.ikev2 ? 2 : 1, ike_cfg, me, other,
-		msg->add_conn.me.sendcert, UNIQUE_NO, msg->add_conn.auth_method,
+		msg->add_conn.me.sendcert, unique, msg->add_conn.auth_method,
 		msg->add_conn.eap_type,	msg->add_conn.eap_vendor,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay,

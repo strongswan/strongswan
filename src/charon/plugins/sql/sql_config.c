@@ -309,11 +309,11 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 		if (ike)
 		{
 			peer_cfg = peer_cfg_create(
-							name, 2, ike, local_id, remote_id, cert_policy,
-							auth_method, eap_type, eap_vendor, keyingtries, 
-							rekeytime, reauthtime, jitter, overtime, mobike,
-							dpd_delay, NULL, NULL,
-							mediation, mediated_cfg, peer_id);
+					name, 2, ike, local_id, remote_id, cert_policy, UNIQUE_NO,
+					auth_method, eap_type, eap_vendor, keyingtries, 
+					rekeytime, reauthtime, jitter, overtime, mobike,
+					dpd_delay, NULL, NULL,
+					mediation, mediated_cfg, peer_id);
 			add_child_cfgs(this, peer_cfg, id);
 			return peer_cfg;
 		}

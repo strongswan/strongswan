@@ -1049,6 +1049,13 @@ and
 Participant IDs normally \fIare\fR unique,
 so a new (automatically-keyed) connection using the same ID is
 almost invariably intended to replace an old one.
+The IKEv2 daemon also accepts the value
+.B replace
+wich is identical to
+.B yes
+and the value
+.B keep
+to reject new IKE_SA setups and keep the duplicate established earlier.
 .PP
 The following
 .B config section
