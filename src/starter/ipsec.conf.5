@@ -633,7 +633,10 @@ The internal source IP to use in a tunnel for the remote peer. If the
 value is
 .B %config
 on the responder side, the initiator must propose a address which is then echoed
-back.
+back. The IKEv2 daemon also supports address pools expressed as
+\fInetwork\fB/\fInetmask\fR
+or the use of an external IP address pool using %\fIpoolname\fR
+, where \fIpoolname\fR is the name of the IP address pool used for the lookup.
 .TP
 .B leftsubnet
 private subnet behind the left participant, expressed as
