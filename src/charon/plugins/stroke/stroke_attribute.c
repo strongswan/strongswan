@@ -62,7 +62,7 @@ typedef struct {
  */
 static void pool_destroy(pool_t *this)
 {
-	this->base->destroy(this->base);
+	DESTROY_IF(this->base);
 	free(this->name);
 	free(this->in_use);
 	free(this);
@@ -168,11 +168,18 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 	{
 		if (requested && !requested->is_anyaddr(requested))
 		{
-			i = host2offset(pool, requested);
-			if (i >= 0 && !pool->in_use[i])
-			{
-				pool->in_use[i] = TRUE;
+			if (pool->count == 0)
+			{	/* %config, give any */
 				host = requested->clone(requested);
+			}
+			else
+			{
+				i = host2offset(pool, requested);
+				if (i >= 0 && !pool->in_use[i])
+				{
+					pool->in_use[i] = TRUE;
+					host = requested->clone(requested);
+				}
 			}
 		}
 		if (!host)
@@ -206,11 +213,14 @@ static bool release_address(private_stroke_attribute_t *this,
 	pool = find_pool(this, name);
 	if (pool)
 	{
-		i = host2offset(pool, address);
-		if (i >= 0 && pool->in_use[i])
+		if (pool->count != 0)
 		{
-			pool->in_use[i] = FALSE;
-			found =TRUE;
+			i = host2offset(pool, address);
+			if (i >= 0 && pool->in_use[i])
+			{
+				pool->in_use[i] = FALSE;
+				found = TRUE;
+			}
 		}
 	}
 	this->mutex->unlock(this->mutex);
@@ -222,41 +232,53 @@ static bool release_address(private_stroke_attribute_t *this,
  */
 static void add_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
 {
-	if (msg->add_conn.other.sourceip && msg->add_conn.other.sourceip_size)
+	if (msg->add_conn.other.sourceip_size)
 	{
 		pool_t *pool;
-		u_int32_t bits;
-		int family;
 		
-		DBG1(DBG_CFG, "adding virtual IP address pool '%s': %s/%d", 
-			 msg->add_conn.name, msg->add_conn.other.sourceip, 
-			 msg->add_conn.other.sourceip_size);
-		
-		pool = malloc_thing(pool_t);
-		pool->base = host_create_from_string(msg->add_conn.other.sourceip, 0);
-		if (!pool->base)
+		if (msg->add_conn.other.sourceip)
 		{
-			free(pool);
-			DBG1(DBG_CFG, "virtual IP address invalid, discarded");
-			return;
-		}
-		pool->name = strdup(msg->add_conn.name);
-		family = pool->base->get_family(pool->base);
-		bits = (family == AF_INET ? 32 : 128) - msg->add_conn.other.sourceip_size;
-		if (bits > POOL_LIMIT)
-		{
-			bits = POOL_LIMIT;
-			DBG1(DBG_CFG, "virtual IP pool to large, limiting to %s/%d",
-				 msg->add_conn.other.sourceip,
-				 (family == AF_INET ? 32 : 128) - bits);
-		}
-		pool->count = 1 << (bits);
-		pool->in_use = calloc(pool->count, sizeof(u_int8_t));
+			u_int32_t bits;
+			int family;
 		
-		if (pool->count > 2)
-		{	/* do not use first and last addresses of a block */
-			pool->in_use[0] = TRUE;
-			pool->in_use[pool->count-1] = TRUE;
+			DBG1(DBG_CFG, "adding virtual IP address pool '%s': %s/%d", 
+				 msg->add_conn.name, msg->add_conn.other.sourceip, 
+				 msg->add_conn.other.sourceip_size);
+		
+			pool = malloc_thing(pool_t);
+			pool->base = host_create_from_string(msg->add_conn.other.sourceip, 0);
+			if (!pool->base)
+			{
+				free(pool);
+				DBG1(DBG_CFG, "virtual IP address invalid, discarded");
+				return;
+			}
+			pool->name = strdup(msg->add_conn.name);
+			family = pool->base->get_family(pool->base);
+			bits = (family == AF_INET ? 32 : 128) - msg->add_conn.other.sourceip_size;
+			if (bits > POOL_LIMIT)
+			{
+				bits = POOL_LIMIT;
+				DBG1(DBG_CFG, "virtual IP pool to large, limiting to %s/%d",
+					 msg->add_conn.other.sourceip,
+					 (family == AF_INET ? 32 : 128) - bits);
+			}
+			pool->count = 1 << (bits);
+			pool->in_use = calloc(pool->count, sizeof(u_int8_t));
+		
+			if (pool->count > 2)
+			{	/* do not use first and last addresses of a block */
+				pool->in_use[0] = TRUE;
+				pool->in_use[pool->count-1] = TRUE;
+			}
+		}
+		else
+		{	/* %config, add an empty pool */
+			pool = malloc_thing(pool_t);
+			pool->name = strdup(msg->add_conn.name);
+			pool->base = NULL;
+			pool->count = 0;
+			pool->in_use = NULL;
 		}
 		this->mutex->lock(this->mutex);
 		this->pools->insert_last(this->pools, pool);

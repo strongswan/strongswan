@@ -302,14 +302,17 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 		
 		if (config && this->virtual_ip)
 		{
-			host_t *ip;
+			host_t *ip = NULL;
 			
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
-			ip = charon->attributes->acquire_address(charon->attributes, 
+			if (config->get_pool(config))
+			{
+				ip = charon->attributes->acquire_address(charon->attributes, 
 									config->get_pool(config),
 									this->ike_sa->get_other_id(this->ike_sa),
 									this->ike_sa->get_other_auth(this->ike_sa),
 									this->virtual_ip);
+			}
 			if (ip == NULL)
 			{
 				DBG1(DBG_IKE, "not assigning a virtual IP to peer");
