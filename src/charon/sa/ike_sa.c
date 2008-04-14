@@ -1883,10 +1883,37 @@ static status_t reestablish(private_ike_sa_t *this)
 	iterator_t *iterator;
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
-	action_t action;
 	bool required = FALSE;
 	status_t status = FAILED;
 	
+	/* check if we have children to keep up at all*/
+	iterator = create_child_sa_iterator(this);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		child_cfg = child_sa->get_config(child_sa);
+		switch (child_cfg->get_action(child_cfg))
+		{
+			case ACTION_RESTART:
+			case ACTION_ROUTE:
+				required = TRUE;
+			default:
+				break;
+		}
+	}
+	iterator->destroy(iterator);
+#ifdef ME
+	/* we initiate the new IKE_SA of the mediation connection without CHILD_SA */
+	if (this->peer_cfg->is_mediation(this->peer_cfg))
+	{
+		required = TRUE;
+	}
+#endif /* ME */
+	if (!required)
+	{
+		return FAILED;
+	}
+	
+	/* check if we are able to reestablish this IKE_SA */
 	if (!this->ike_initiator &&
 		(this->other_virtual_ip != NULL ||
 		 has_condition(this, COND_EAP_AUTHENTICATED)
@@ -1895,6 +1922,7 @@ static status_t reestablish(private_ike_sa_t *this)
 #endif /* ME */
 		))
 	{
+		DBG1(DBG_IKE, "unable to reestablish IKE_SA due asymetric setup");
 		return FAILED;
 	}
 	
@@ -1912,52 +1940,49 @@ static status_t reestablish(private_ike_sa_t *this)
 	}
 	
 #ifdef ME
-	/* we initiate the new IKE_SA of the mediation connection without CHILD_SA */
 	if (this->peer_cfg->is_mediation(this->peer_cfg))
 	{
-		required = TRUE;
+		status = new->initiate(new, NULL);
 	}
+	else
 #endif /* ME */
-	
-	iterator = create_child_sa_iterator(this);
-	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		child_cfg = child_sa->get_config(child_sa);
-		action = child_cfg->get_action(child_cfg);
-	
-		if (action == ACTION_RESTART || action == ACTION_ROUTE)
+		iterator = create_child_sa_iterator(this);
+		while (iterator->iterate(iterator, (void**)&child_sa))
 		{
-			required = TRUE;
-			if (action == ACTION_RESTART)
+			child_cfg = child_sa->get_config(child_sa);
+			switch (child_cfg->get_action(child_cfg))
 			{
-				DBG1(DBG_IKE, "restarting CHILD_SA %s",
-					 child_cfg->get_name(child_cfg));
-				child_cfg->get_ref(child_cfg);
-				status = new->initiate(new, child_cfg);
-				if (status == DESTROY_ME)
-				{
-					required = FALSE;
+				case ACTION_RESTART:
+					DBG1(DBG_IKE, "restarting CHILD_SA %s",
+						 child_cfg->get_name(child_cfg));
+					child_cfg->get_ref(child_cfg);
+					status = new->initiate(new, child_cfg);
 					break;
-				}
+				case ACTION_ROUTE:
+					status = new->route(new, child_cfg);
+					break;
+				default:
+					continue;
 			}
-			else
+			if (status == DESTROY_ME)
 			{
-				new->route(new, child_cfg);
+				break;
 			}
 		}
+		iterator->destroy(iterator);
 	}
-	iterator->destroy(iterator);
 	
-	if (required)
+	if (status == DESTROY_ME)
 	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
+		return FAILED;
 	}
 	else
 	{
-		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
-		DBG1(DBG_IKE, "unable to reestablish IKE_SA, no CHILD_SA to recreate");
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
+		return SUCCESS;
 	}
-	return status;
 }
 
 /**
