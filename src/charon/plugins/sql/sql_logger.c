@@ -140,7 +140,7 @@ sql_logger_t *sql_logger_create(database_t *db)
 	this->recursive = FALSE;
 	
 	this->level = lib->settings->get_int(lib->settings,
-										 "charon.plugins.sql.loglevel", 1);
+										 "charon.plugins.sql.loglevel", -1);
 	
 	return &this->public;
 }
