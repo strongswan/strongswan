@@ -82,7 +82,7 @@ asn1/oid.h :	asn1/oid.txt asn1/oid.pl
 # build plugins with their own Makefile
 #######################################
 
-SUBDIRS = 
+SUBDIRS = .
 
 if USE_AES
   SUBDIRS += plugins/aes

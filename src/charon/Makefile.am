@@ -128,7 +128,7 @@ endif
 # build optional plugins
 ########################
 
-SUBDIRS = 
+SUBDIRS = . 
 
 if USE_UNIT_TESTS
   SUBDIRS += plugins/unit_tester
