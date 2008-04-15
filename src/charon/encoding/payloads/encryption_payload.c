@@ -27,7 +27,6 @@
 #include <encoding/generator.h>
 #include <encoding/parser.h>
 #include <utils/iterator.h>
-#include <utils/randomizer.h>
 #include <crypto/signers/signer.h>
 
 
@@ -322,7 +321,7 @@ static void generate(private_encryption_payload_t *this)
 static status_t encrypt(private_encryption_payload_t *this)
 {
 	chunk_t iv, padding, to_crypt, result;
-	randomizer_t *randomizer;
+	rng_t *rng;
 	status_t status;
 	size_t block_size;
 	
@@ -333,8 +332,12 @@ static status_t encrypt(private_encryption_payload_t *this)
 	}
 	
 	/* for random data in iv and padding */
-	randomizer = randomizer_create();
-	
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
+	{
+		DBG1(DBG_ENC, "could not encrypt, no RNG found");
+		return FAILED;
+	}
 	/* build payload chunk */
 	generate(this);
 	
@@ -344,12 +347,7 @@ static status_t encrypt(private_encryption_payload_t *this)
 	/* build padding */
 	block_size = this->crypter->get_block_size(this->crypter);
 	padding.len = block_size - ((this->decrypted.len + 1) %  block_size);
-	status = randomizer->allocate_pseudo_random_bytes(randomizer, padding.len, &padding);
-	if (status != SUCCESS)
-	{
-		randomizer->destroy(randomizer);
-		return status;
-	}
+	rng->allocate_bytes(rng, padding.len, &padding);
 	
 	/* concatenate payload data, padding, padding len */
 	to_crypt.len = this->decrypted.len + padding.len + 1;
@@ -361,14 +359,8 @@ static status_t encrypt(private_encryption_payload_t *this)
 		
 	/* build iv */
 	iv.len = block_size;
-	status = randomizer->allocate_pseudo_random_bytes(randomizer, iv.len, &iv);
-	randomizer->destroy(randomizer);
-	if (status != SUCCESS)
-	{
-		chunk_free(&to_crypt);
-		chunk_free(&padding);
-		return status;
-	}
+	rng->allocate_bytes(rng, iv.len, &iv);
+	rng->destroy(rng);
 	
 	DBG3(DBG_ENC, "data before encryption with padding %B", &to_crypt);
 	

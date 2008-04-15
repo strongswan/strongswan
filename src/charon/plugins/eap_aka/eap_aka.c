@@ -45,7 +45,6 @@
 
 #include <daemon.h>
 #include <library.h>
-#include <utils/randomizer.h>
 #include <crypto/hashers/hasher.h>
 
 /* Use test vectors specified in S.S0055
@@ -835,7 +834,7 @@ static eap_payload_t *build_aka_payload(private_eap_aka_t *this, eap_code_t code
 static status_t server_initiate_challenge(private_eap_aka_t *this, chunk_t sqn,
 										  eap_payload_t **out)
 {
-	randomizer_t *randomizer;
+	rng_t *rng;
 	status_t status;
 	chunk_t mac, ak, autn;
 	
@@ -845,16 +844,16 @@ static status_t server_initiate_challenge(private_eap_aka_t *this, chunk_t sqn,
 	chunk_free(&this->xres);
 	
 	/* generate RAND:
-	 * we use our standard randomizer, not f0() proposed in S.S0055
+	 * we use a registered RNG, not f0() proposed in S.S0055
 	 */
-	randomizer = randomizer_create();
-	status = randomizer->allocate_pseudo_random_bytes(randomizer, RAND_LENGTH, &this->rand);
-	randomizer->destroy(randomizer);
-	if (status != SUCCESS)
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
 	{
 		DBG1(DBG_IKE, "generating RAND for EAP-AKA authentication failed");
 		return FAILED;
 	}
+	rng->allocate_bytes(rng, RAND_LENGTH, &this->rand);
+	rng->destroy(rng);
 	
 #	ifdef TEST_VECTORS
 	/* Test vector for RAND */

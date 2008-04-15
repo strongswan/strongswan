@@ -1037,7 +1037,7 @@ eap_sim_t *eap_sim_create_generic(eap_role_t role, identification_t *server,
 								  identification_t *peer)
 {
 	private_eap_sim_t *this;
-	randomizer_t *randomizer;
+	rng_t *rng;
 	void *symbol;
 	char *name;
   	
@@ -1098,16 +1098,15 @@ eap_sim_t *eap_sim_create_generic(eap_role_t role, identification_t *server,
 			this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))peer_process;
 			this->alg = symbol;
 			this->type = EAP_RESPONSE;
-			randomizer = randomizer_create();
-			if (randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_LEN,
-														 &this->nonce))
+			rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+			if (!rng)
 			{
-				DBG1(DBG_IKE, "unable to generate NONCE for EAP_SIM");		
-				randomizer->destroy(randomizer);
+				DBG1(DBG_IKE, "unable to generate NONCE for EAP_SIM");
 				free(this);
 				return NULL;
 			}
-			randomizer->destroy(randomizer);
+			rng->allocate_bytes(rng, NONCE_LEN, &this->nonce);
+			rng->destroy(rng);
  			break;
 		default:
 			free(this);

@@ -28,6 +28,7 @@ typedef struct crypto_factory_t crypto_factory_t;
 #include <crypto/signers/signer.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
+#include <crypto/rngs/rng.h>
 #include <crypto/diffie_hellman.h>
 
 /**
@@ -46,9 +47,14 @@ typedef signer_t* (*signer_constructor_t)(integrity_algorithm_t algo);
 typedef hasher_t* (*hasher_constructor_t)(hash_algorithm_t algo);
 
 /**
- * Constructor function for pseudo random fucntions
+ * Constructor function for pseudo random functions
  */
 typedef prf_t* (*prf_constructor_t)(pseudo_random_function_t algo);
+
+/**
+ * Constructor function for source of randomness
+ */
+typedef rng_t* (*rng_constructor_t)(rng_quality_t quality);
 
 /**
  * Constructor function for diffie hellman
@@ -94,6 +100,14 @@ struct crypto_factory_t {
 	 * @return				prf_t instance, NULL if not supported
 	 */
 	prf_t* (*create_prf)(crypto_factory_t *this, pseudo_random_function_t algo);
+	
+	/**
+	 * Create a source of randomness.
+	 *
+	 * @param quality		required randomness quality
+	 * @return				rng_t instance, NULL if no RNG with such a quality
+	 */
+	rng_t* (*create_rng)(crypto_factory_t *this, rng_quality_t quality);
 	
 	/**
 	 * Create a diffie hellman instance.
@@ -174,6 +188,21 @@ struct crypto_factory_t {
 	 * @param create		constructor function to unregister
 	 */
 	void (*remove_prf)(crypto_factory_t *this, prf_constructor_t create);
+	
+	/**
+	 * Register a source of randomness.
+	 *
+	 * @param quality		quality of randomness this RNG serves
+	 * @param create		constructor function for such a quality
+	 */
+	void (*add_rng)(crypto_factory_t *this, rng_quality_t quality, rng_constructor_t create);
+	
+	/**
+	 * Unregister a source of randomness.
+	 *
+	 * @param create		constructor function to unregister
+	 */
+	void (*remove_rng)(crypto_factory_t *this, rng_constructor_t create);
 	
 	/**
 	 * Register a diffie hellman constructor.

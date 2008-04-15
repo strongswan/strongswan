@@ -574,7 +574,7 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 
 	    if (ugh != NULL)
 		{
-			chunk_free_randomized(secret);
+			chunk_clear(secret);
 			return ugh;
 		}
 		secret->len = len;
@@ -702,7 +702,7 @@ static void load_secrets(private_stroke_cred_t *this)
 					this->private->insert_last(this->private, key);
 				}
 			}
-			chunk_free_randomized(&secret);
+			chunk_clear(&secret);
 		}
 		else if ((match("PSK", &token) && (type = SHARED_IKE)) ||
 				 (match("EAP", &token) && (type = SHARED_EAP)) ||
@@ -774,7 +774,7 @@ static void load_secrets(private_stroke_cred_t *this)
 	}
 error:
 	this->mutex->unlock(this->mutex);
-	chunk_free_randomized(&chunk);
+	chunk_clear(&chunk);
 }
 
 /**

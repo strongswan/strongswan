@@ -136,17 +136,16 @@ static status_t get_nonce(message_t *message, chunk_t *nonce)
  */
 static status_t generate_nonce(chunk_t *nonce)
 {
-	status_t status;
-	randomizer_t *randomizer = randomizer_create();
+	rng_t *rng;
 	
-	status = randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE,
-													  nonce);
-	randomizer->destroy(randomizer);
-	if (status != SUCCESS)
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
 	{
-		DBG1(DBG_IKE, "error generating random nonce value");
+		DBG1(DBG_IKE, "error generating nonce value, no RNG found");
 		return FAILED;
 	}
+	rng->allocate_bytes(rng, NONCE_SIZE, nonce);
+	rng->destroy(rng);
 	return SUCCESS;
 }
 

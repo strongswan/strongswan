@@ -23,7 +23,6 @@
 
 #include <debug.h>
 #include <printf_hook.h>
-#include <utils/randomizer.h>
 
 /**
  * Empty chunk.
@@ -285,22 +284,10 @@ void chunk_free(chunk_t *chunk)
 /**
  * Described in header.
  */
-void chunk_free_randomized(chunk_t *chunk)
+void chunk_clear(chunk_t *chunk)
 {
-	if (chunk->ptr)
-	{
-		if (chunk->len > 0)
-		{
-			randomizer_t *randomizer = randomizer_create();
-
-			randomizer->get_pseudo_random_bytes(randomizer,
-												chunk->len, chunk->ptr);
-			randomizer->destroy(randomizer);
-		};
-		free(chunk->ptr);
-		chunk->ptr = NULL;
-	}
-	chunk->len = 0;
+	memset(chunk->ptr, 0, chunk->len);
+	chunk_free(chunk);
 }
 
 /**

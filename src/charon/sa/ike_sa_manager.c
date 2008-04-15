@@ -142,9 +142,9 @@ struct private_ike_sa_manager_t {
 	 linked_list_t *ike_sa_list;
 	 
 	 /**
-	  * A randomizer, to get random SPIs for our side
+	  * RNG to get random SPIs for our side
 	  */
-	 randomizer_t *randomizer;
+	 rng_t *rng;
 	 
 	 /**
 	  * SHA1 hasher for IKE_SA_INIT retransmit detection
@@ -304,8 +304,7 @@ static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
 {
 	u_int64_t spi;
 	
-	this->randomizer->get_pseudo_random_bytes(this->randomizer, sizeof(spi),
-											  (u_int8_t*)&spi);
+	this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi);
 	return spi;
 }
 
@@ -933,7 +932,7 @@ static void destroy(private_ike_sa_manager_t *this)
 	this->ike_sa_list->destroy_function(this->ike_sa_list, (void*)entry_destroy);
 	pthread_mutex_unlock(&(this->mutex));
 	
-	this->randomizer->destroy(this->randomizer);
+	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
 	
 	free(this);
@@ -968,9 +967,16 @@ ike_sa_manager_t *ike_sa_manager_create()
 		free(this);
 		return NULL;
 	}
+	this->rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (this->rng == NULL)
+	{
+		DBG1(DBG_MGR, "manager initialization failed, no RNG supported");
+		this->hasher->destroy(this->hasher);
+		free(this);
+		return NULL;
+	}
 	this->ike_sa_list = linked_list_create();
 	pthread_mutex_init(&this->mutex, NULL);
-	this->randomizer = randomizer_create();
 	return &this->public;
 }
 

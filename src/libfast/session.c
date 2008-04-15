@@ -24,7 +24,6 @@
 #include <stdio.h>
 
 #include <utils/linked_list.h>
-#include <utils/randomizer.h>
 
 typedef struct private_session_t private_session_t;
 
@@ -82,12 +81,16 @@ static void create_sid(private_session_t *this, request_t *request)
 {
 	char buf[16];
 	chunk_t chunk = chunk_from_buf(buf);
-	randomizer_t *randomizer = randomizer_create();
+	rng_t *rng;
 	
-	randomizer->get_pseudo_random_bytes(randomizer, sizeof(buf), buf);
-	this->sid = chunk_to_hex(chunk, FALSE);
-	request->add_cookie(request, "SID", this->sid);
-	randomizer->destroy(randomizer);
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (rng)
+	{
+		rng->get_bytes(rng, sizeof(buf), buf);
+		this->sid = chunk_to_hex(chunk, FALSE);
+		request->add_cookie(request, "SID", this->sid);
+		rng->destroy(rng);
+	}
 }
 
 /**

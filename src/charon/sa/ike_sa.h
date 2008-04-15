@@ -38,7 +38,6 @@ typedef struct ike_sa_t ike_sa_t;
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
 #include <sa/tasks/task.h>
-#include <utils/randomizer.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>

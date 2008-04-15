@@ -218,8 +218,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
  */
 static status_t build_i(private_ike_init_t *this, message_t *message)
 {
-	randomizer_t *randomizer;
-	status_t status;
+	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	SIG(IKE_UP_START, "initiating IKE_SA '%s' to %H",
@@ -249,15 +248,14 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	/* generate nonce only when we are trying the first time */
 	if (this->my_nonce.ptr == NULL)
 	{
-		randomizer = randomizer_create();
-		status = randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE,
-														  &this->my_nonce);
-		randomizer->destroy(randomizer);
-		if (status != SUCCESS)
+		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+		if (!rng)
 		{
-			SIG(IKE_UP_FAILED, "error generating random nonce value");
+			SIG(IKE_UP_FAILED, "error generating nonce");
 			return FAILED;
 		}
+		rng->allocate_bytes(rng, NONCE_SIZE, &this->my_nonce);
+		rng->destroy(rng);
 	}
 	
 	if (this->cookie.ptr)
@@ -285,20 +283,21 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
  */
 static status_t process_r(private_ike_init_t *this, message_t *message)
 {	
-	randomizer_t *randomizer;
+	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	SIG(IKE_UP_START, "%H is initiating an IKE_SA",
 		message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
-	randomizer = randomizer_create();
-	if (randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE,
-												 &this->my_nonce) != SUCCESS)
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
 	{
-		DBG1(DBG_IKE, "error generating random nonce value");
+		DBG1(DBG_IKE, "error generating nonce");
+		return FAILED;
 	}
-	randomizer->destroy(randomizer);
+	rng->allocate_bytes(rng, NONCE_SIZE, &this->my_nonce);
+	rng->destroy(rng);
 	
 #ifdef ME
 	{

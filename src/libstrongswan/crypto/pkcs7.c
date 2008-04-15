@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id$
+ * $Id: pkcs7.c 3488 2008-02-21 15:10:02Z martin $
  */
 
 #include <stdlib.h>
@@ -30,7 +30,6 @@
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/rsa/rsa_public_key.h>
-#include <utils/randomizer.h>
 #include <utils/linked_list.h>
 
 #include "pkcs7.h"
@@ -779,17 +778,17 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 	 * and a pseudo-random iv
 	 */
 	{
-		randomizer_t *randomizer = randomizer_create();
-
-		randomizer->allocate_random_bytes(randomizer,
-			 crypter->get_key_size(crypter), &symmetricKey);
+		rng_t *rng;
+		
+		rng = lib->crypto->create_rng(lib->crypto, RNG_REAL);
+		rng->allocate_bytes(rng, crypter->get_key_size(crypter), &symmetricKey);
 		DBG4("  symmetric encryption key: %B", &symmetricKey);
+		rng->destroy(rng);
 
-		randomizer->allocate_pseudo_random_bytes(randomizer,
-			crypter->get_block_size(crypter), &iv);
+		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+		rng->allocate_bytes(rng, crypter->get_block_size(crypter), &iv);
 		DBG4("  initialization vector: %B", &iv);
-
-		randomizer->destroy(randomizer);
+		rng->destroy(rng);
 	}
 
 	/* pad the data so that the total length becomes
@@ -816,7 +815,7 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 	crypter->set_key(crypter, symmetricKey);
 	crypter->encrypt(crypter, in, iv, &out);
 	crypter->destroy(crypter);
-	chunk_free_randomized(&in);
+	chunk_clear(&in);
     DBG3("  encrypted data: %B", &out);
 
 	/* build pkcs7 enveloped data object */ 
@@ -835,7 +834,7 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 		rsa_public_key_t *public_key = cert->get_public_key(cert);
 
 		public_key->pkcs1_encrypt(public_key, symmetricKey, &wrappedKey);
-		chunk_free_randomized(&symmetricKey);
+		chunk_clear(&symmetricKey);
 
 		encryptedKey = asn1_wrap(ASN1_OCTET_STRING, "m", wrappedKey);
 

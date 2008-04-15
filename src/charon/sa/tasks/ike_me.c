@@ -274,33 +274,25 @@ static status_t build_i(private_ike_me_t *this, message_t *message)
 		case ME_CONNECT:
 		{
 			id_payload_t *id_payload;
-			randomizer_t *rand = randomizer_create();
+			rng_t *rng;
 			
 			id_payload = id_payload_create_from_identification(ID_PEER, this->peer_id);
 			message->add_payload(message, (payload_t*)id_payload);
 			
+			rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+			if (!rng)
+			{
+				DBG1(DBG_IKE, "unable to generate connect ID for ME_CONNECT");	
+				return FAILED;
+			}
 			if (!this->response)
 			{
 				/* only the initiator creates a connect ID. the responder returns
 				 * the connect ID that it received from the initiator */
-				if (rand->allocate_pseudo_random_bytes(rand,
-						ME_CONNECTID_LEN, &this->connect_id) != SUCCESS)
-				{
-					DBG1(DBG_IKE, "unable to generate connect ID for ME_CONNECT");		
-					rand->destroy(rand);
-					return FAILED;
-				}
+				rng->allocate_bytes(rng, ME_CONNECTID_LEN, &this->connect_id);
 			}
-			
-			if (rand->allocate_pseudo_random_bytes(rand,
-					ME_CONNECTKEY_LEN, &this->connect_key) != SUCCESS)
-			{
-				DBG1(DBG_IKE, "unable to generate connect key for ME_CONNECT");
-				rand->destroy(rand);
-				return FAILED;
-			}
-			
-			rand->destroy(rand);
+			rng->allocate_bytes(rng, ME_CONNECTKEY_LEN, &this->connect_key);
+			rng->destroy(rng);
 			
 			message->add_notify(message, FALSE, ME_CONNECTID, this->connect_id);
 			message->add_notify(message, FALSE, ME_CONNECTKEY, this->connect_key);

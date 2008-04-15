@@ -23,6 +23,7 @@ crypto/crypters/crypter.c crypto/crypters/crypter.h \
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
 crypto/pkcs9.c crypto/pkcs9.h \
 crypto/prfs/prf.c crypto/prfs/prf.h \
+crypto/rngs/rng.c crypto/rngs/rng.h \
 crypto/prf_plus.h crypto/prf_plus.c \
 crypto/signers/signer.c crypto/signers/signer.h \
 crypto/diffie_hellman.c crypto/diffie_hellman.h \
@@ -48,7 +49,6 @@ utils/lexparser.c utils/lexparser.h \
 utils/linked_list.c utils/linked_list.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
-utils/randomizer.c utils/randomizer.h \
 utils/mutex.c utils/mutex.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
@@ -110,6 +110,10 @@ endif
 
 if USE_GMP
   SUBDIRS += plugins/gmp
+endif
+
+if USE_RANDOM
+  SUBDIRS += plugins/random
 endif
 
 if USE_HMAC

@@ -23,7 +23,6 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <utils/identification.h>
-#include <utils/randomizer.h>
 #include <utils/linked_list.h>
 #include <debug.h>
 #include <credentials/certificates/x509.h>
@@ -205,14 +204,18 @@ static chunk_t build_requestList(private_x509_ocsp_request_t *this)
  */
 static chunk_t build_nonce(private_x509_ocsp_request_t *this)
 {
-	randomizer_t *randomizer;
+	rng_t *rng;
 	
-	randomizer = randomizer_create();
-	randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_LEN, &this->nonce);
-	randomizer->destroy(randomizer);
-	
-    return asn1_wrap(ASN1_SEQUENCE, "cm", ASN1_nonce_oid,
-				asn1_simple_object(ASN1_OCTET_STRING, this->nonce));
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (rng)
+	{
+		rng->allocate_bytes(rng, NONCE_LEN, &this->nonce);
+		rng->destroy(rng);
+		return asn1_wrap(ASN1_SEQUENCE, "cm", ASN1_nonce_oid,
+					asn1_simple_object(ASN1_OCTET_STRING, this->nonce));
+	}
+	DBG1("creating OCSP request nonce failed, no RNG found");
+	return chunk_empty;
 }
 
 /**

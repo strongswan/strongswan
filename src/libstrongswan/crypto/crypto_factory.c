@@ -52,6 +52,14 @@ struct prf_entry_t {
 	prf_constructor_t create;
 };
 
+typedef struct rng_entry_t rng_entry_t;
+struct rng_entry_t {
+	/** quality of randomness */
+	rng_quality_t quality;
+	/** associated constructor */
+	rng_constructor_t create;
+};
+
 typedef struct dh_entry_t dh_entry_t;
 struct dh_entry_t {
 	/** hash algorithm */
@@ -88,9 +96,14 @@ struct private_crypto_factory_t {
 	linked_list_t *hashers;
 	
 	/**
-	 * registered perfs, as prf_entry_t
+	 * registered prfs, as prf_entry_t
 	 */
 	linked_list_t *prfs;
+	
+	/**
+	 * registered rngs, as rng_entry_t
+	 */
+	linked_list_t *rngs;
 	
 	/**
 	 * registered diffie hellman, as dh_entry_t
@@ -214,6 +227,39 @@ static prf_t* create_prf(private_crypto_factory_t *this,
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
 	return prf;
+}
+
+/**
+ * Implementation of crypto_factory_t.create_rng.
+ */
+static rng_t* create_rng(private_crypto_factory_t *this, rng_quality_t quality)
+{
+	enumerator_t *enumerator;
+	rng_entry_t *entry;
+	u_int diff = ~0;
+	rng_constructor_t constr = NULL;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->rngs->create_enumerator(this->rngs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{	/* find the best matching quality, but at least as good as requested */
+		if (entry->quality >= quality && diff > entry->quality - quality)
+		{
+			diff = entry->quality - quality;
+			constr = entry->create;
+			if (diff == 0)
+			{	/* perfect match, won't get better */
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+	if (constr)
+	{
+		return constr(quality);
+	}
+	return NULL;
 }
 
 /**
@@ -397,6 +443,43 @@ static void remove_prf(private_crypto_factory_t *this, prf_constructor_t create)
 }
 
 /**
+ * Implementation of crypto_factory_t.add_rng.
+ */
+static void add_rng(private_crypto_factory_t *this, rng_quality_t quality,
+					rng_constructor_t create)
+{
+	rng_entry_t *entry = malloc_thing(rng_entry_t);
+	
+	entry->quality = quality;
+	entry->create = create;
+	this->mutex->lock(this->mutex);
+	this->rngs->insert_last(this->rngs, entry);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Implementation of crypto_factory_t.remove_rng.
+ */
+static void remove_rng(private_crypto_factory_t *this, rng_constructor_t create)
+{
+	rng_entry_t *entry;
+	enumerator_t *enumerator;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->rngs->create_enumerator(this->rngs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->create == create)
+		{
+			this->rngs->remove_at(this->rngs, enumerator);
+			free(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
  * Implementation of crypto_factory_t.add_dh.
  */
 static void add_dh(private_crypto_factory_t *this, diffie_hellman_group_t group,
@@ -442,6 +525,7 @@ static void destroy(private_crypto_factory_t *this)
 	this->signers->destroy_function(this->signers, free);
 	this->hashers->destroy_function(this->hashers, free);
 	this->prfs->destroy_function(this->prfs, free);
+	this->rngs->destroy_function(this->rngs, free);
 	this->dhs->destroy_function(this->dhs, free);
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -458,6 +542,7 @@ crypto_factory_t *crypto_factory_create()
 	this->public.create_signer = (signer_t*(*)(crypto_factory_t*, integrity_algorithm_t))create_signer;
 	this->public.create_hasher = (hasher_t*(*)(crypto_factory_t*, hash_algorithm_t))create_hasher;
 	this->public.create_prf = (prf_t*(*)(crypto_factory_t*, pseudo_random_function_t))create_prf;
+	this->public.create_rng = (rng_t*(*)(crypto_factory_t*, rng_quality_t quality))create_rng;
 	this->public.create_dh = (diffie_hellman_t*(*)(crypto_factory_t*, diffie_hellman_group_t group))create_dh;
 	this->public.add_crypter = (void(*)(crypto_factory_t*, encryption_algorithm_t algo, crypter_constructor_t create))add_crypter;
 	this->public.remove_crypter = (void(*)(crypto_factory_t*, crypter_constructor_t create))remove_crypter;
@@ -467,6 +552,8 @@ crypto_factory_t *crypto_factory_create()
 	this->public.remove_hasher = (void(*)(crypto_factory_t*, hasher_constructor_t create))remove_hasher;
 	this->public.add_prf = (void(*)(crypto_factory_t*, pseudo_random_function_t algo, prf_constructor_t create))add_prf;
 	this->public.remove_prf = (void(*)(crypto_factory_t*, prf_constructor_t create))remove_prf;
+	this->public.add_rng = (void(*)(crypto_factory_t*, rng_quality_t quality, rng_constructor_t create))add_rng;
+	this->public.remove_rng = (void(*)(crypto_factory_t*, rng_constructor_t create))remove_rng;
 	this->public.add_dh = (void(*)(crypto_factory_t*, diffie_hellman_group_t algo, dh_constructor_t create))add_dh;
 	this->public.remove_dh = (void(*)(crypto_factory_t*, dh_constructor_t create))remove_dh;
 	this->public.destroy = (void(*)(crypto_factory_t*))destroy;
@@ -475,6 +562,7 @@ crypto_factory_t *crypto_factory_create()
 	this->signers = linked_list_create();
 	this->hashers = linked_list_create();
 	this->prfs = linked_list_create();
+	this->rngs = linked_list_create();
 	this->dhs = linked_list_create();
 	this->mutex = mutex_create(MUTEX_RECURSIVE);
 	

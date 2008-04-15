@@ -90,12 +90,6 @@ static void dbg_bus(int level, char *fmt, ...)
 	charon->bus->vsignal(charon->bus, DBG_LIB, level, fmt, args);
 	va_end(args);
 }
-/**
- * Logging hook for library logs before logging facility initiated
- */
-static void dbg_silent(int level, char *fmt, ...)
-{
-}
 
 /**
  * Logging hook for library logs, using stderr output
@@ -104,11 +98,14 @@ static void dbg_stderr(int level, char *fmt, ...)
 {
 	va_list args;
 	
-	va_start(args, fmt);
-	fprintf(stderr, "00[LIB] ");
-	vfprintf(stderr, fmt, args);
-	fprintf(stderr, "\n");
-	va_end(args);
+	if (level <= 1)
+	{
+		va_start(args, fmt);
+		fprintf(stderr, "00[LIB] ");
+		vfprintf(stderr, fmt, args);
+		fprintf(stderr, "\n");
+		va_end(args);
+	}
 }
 
 /**
@@ -483,8 +480,8 @@ int main(int argc, char *argv[])
 	level_t levels[DBG_MAX];
 	int signal;
 	
-	/* silence the library during initialization, as we have no bus yet */
-	dbg = dbg_silent;
+	/* logging for library during initialization, as we have no bus yet */
+	dbg = dbg_stderr;
 	
 	/* initialize library */
 	library_init(STRONGSWAN_CONF);

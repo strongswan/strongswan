@@ -26,8 +26,6 @@
 
 #include <debug.h>
 #include <asn1/asn1.h>
-#include <utils/randomizer.h>
-#include <crypto/hashers/hasher.h>
 
 /**
  *  Public exponent to use for key generation.
@@ -151,23 +149,17 @@ bool gmp_rsa_public_key_build_id(mpz_t n, mpz_t e, identification_t **keyid,
 gmp_rsa_public_key_t *gmp_rsa_public_key_create_from_n_e(mpz_t n, mpz_t e);
 
 /**
- * Auxiliary function overwriting private key material with
- * pseudo-random bytes before releasing it
+ * Auxiliary function overwriting private key material with zero bytes
  */
 static void mpz_clear_randomized(mpz_t z)
 {
 	size_t len = mpz_size(z) * GMP_LIMB_BITS / BITS_PER_BYTE;
-	u_int8_t *random_bytes = alloca(len);
-
-	randomizer_t *randomizer = randomizer_create();
+	u_int8_t *random = alloca(len);
 	
-	randomizer->get_pseudo_random_bytes(randomizer, len, random_bytes);
-
-	/* overwrite mpz_t with pseudo-random bytes before clearing it */
-	mpz_import(z, len, 1, 1, 1, 0, random_bytes);
+	memset(random, 0, len);
+	/* overwrite mpz_t with zero bytes before clearing it */
+	mpz_import(z, len, 1, 1, 1, 0, random);
 	mpz_clear(z);
-
-	randomizer->destroy(randomizer);
 }
 
 /**
@@ -176,34 +168,31 @@ static void mpz_clear_randomized(mpz_t z)
 static status_t compute_prime(private_gmp_rsa_private_key_t *this,
 							  size_t prime_size, mpz_t *prime)
 {
-	randomizer_t *randomizer;
+	rng_t *rng;
 	chunk_t random_bytes;
-	status_t status;
 	
-	randomizer = randomizer_create();
+	rng = lib->crypto->create_rng(lib->crypto, RNG_REAL);
+	if (!rng)
+	{
+		DBG1("no RNG of quality %N found", rng_quality_names, RNG_REAL);
+		return FAILED;
+	}
+	
 	mpz_init(*prime);
-	
 	do
 	{
-		status = randomizer->allocate_random_bytes(randomizer, prime_size,
-												   &random_bytes);
-		if (status != SUCCESS)
-		{
-			randomizer->destroy(randomizer);
-			mpz_clear(*prime);
-			return FAILED;
-		}
+		rng->allocate_bytes(rng, prime_size, &random_bytes);
 		/* make sure most significant bit is set */
 		random_bytes.ptr[0] = random_bytes.ptr[0] | 0x80;
 		
 		mpz_import(*prime, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
 		mpz_nextprime (*prime, *prime);
-		chunk_free_randomized(&random_bytes);
+		chunk_clear(&random_bytes);
 	}
 	/* check if it isn't too large */
 	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_size);
 	
-	randomizer->destroy(randomizer);
+	rng->destroy(rng);
 	return SUCCESS;
 }
 
@@ -705,7 +694,7 @@ static gmp_rsa_private_key_t *load(chunk_t blob)
 	{
 		if (!extract_object(privkey_objects, &objectID, &object, &level, &ctx))
 		{
-			chunk_free_randomized(&blob);
+			chunk_clear(&blob);
 			destroy(this);
 			return NULL;
 		}
@@ -714,7 +703,7 @@ static gmp_rsa_private_key_t *load(chunk_t blob)
 			case PRIV_KEY_VERSION:
 				if (object.len > 0 && *object.ptr != 0)
 				{
-					chunk_free_randomized(&blob);
+					chunk_clear(&blob);
 					destroy(this);
 					return NULL;
 				}
@@ -746,7 +735,7 @@ static gmp_rsa_private_key_t *load(chunk_t blob)
 		}
 		objectID++;
 	}
-	chunk_free_randomized(&blob);
+	chunk_clear(&blob);
 	
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
 	if (!gmp_rsa_public_key_build_id(this->n, this->e,

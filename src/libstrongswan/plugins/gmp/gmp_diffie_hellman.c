@@ -22,7 +22,6 @@
 
 #include "gmp_diffie_hellman.h"
 
-#include <utils/randomizer.h>
 #include <debug.h>
 
 
@@ -521,9 +520,8 @@ static void destroy(private_gmp_diffie_hellman_t *this)
 gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 {
 	private_gmp_diffie_hellman_t *this = malloc_thing(private_gmp_diffie_hellman_t);
-	randomizer_t *randomizer;
+	rng_t *rng;
 	chunk_t random;
-	status_t status;
 
 	/* public functions */
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
@@ -550,15 +548,15 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 		destroy(this);
 		return NULL;
 	}
-	randomizer = randomizer_create();
-	status = randomizer->allocate_pseudo_random_bytes(
-											randomizer, this->p_len, &random);
-	randomizer->destroy(randomizer);
-	if (status != SUCCESS)
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (!rng)
 	{
+		DBG1("no RNG found for quality %N", rng_quality_names, RNG_STRONG);
 		destroy(this);
 		return NULL;
 	}
+	rng->allocate_bytes(rng, this->p_len, &random);
+	rng->destroy(rng);
 	mpz_import(this->xa, random.len, 1, 1, 1, 0, random.ptr);
 	chunk_free(&random);
 	

@@ -95,9 +95,9 @@ char *chunk_to_hex(chunk_t chunk, bool uppercase);
 void chunk_free(chunk_t *chunk);
 
 /**
- * Overwrite the contents of a chunk with pseudo-random bytes and free them
+ * Overwrite the contents of a chunk and free it
  */
-void chunk_free_randomized(chunk_t *chunk);
+void chunk_clear(chunk_t *chunk);
 
 /**
  * Initialize a chunk to point to buffer inspectable by sizeof()

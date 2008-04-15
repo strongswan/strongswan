@@ -113,17 +113,17 @@ static chunk_t generate_natd_hash(private_ike_natd_t *this,
  */
 static chunk_t generate_natd_hash_faked(private_ike_natd_t *this)
 {
-	randomizer_t *randomizer;
+	rng_t *rng;
 	chunk_t chunk;
 	
-	randomizer = randomizer_create();
-	if (randomizer->allocate_pseudo_random_bytes(randomizer, HASH_SIZE_SHA1,
-												 &chunk) != SUCCESS)
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
 	{
 		DBG1(DBG_IKE, "unable to get random bytes for NATD fake");
-		chunk = chunk_empty;
+		return chunk_empty;
 	}
-	randomizer->destroy(randomizer);
+	rng->allocate_bytes(rng, HASH_SIZE_SHA1, &chunk);
+	rng->destroy(rng);
 	return chunk;
 }
 

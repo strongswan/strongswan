@@ -122,18 +122,16 @@ static status_t initiate_peer(private_eap_md5_t *this, eap_payload_t **out)
  */
 static status_t initiate_server(private_eap_md5_t *this, eap_payload_t **out)
 {
-	randomizer_t *randomizer;
-	status_t status;
+	rng_t *rng;
 	eap_md5_header_t *req;
 	
-	randomizer = randomizer_create();
-	status = randomizer->allocate_pseudo_random_bytes(randomizer, CHALLENGE_LEN,
-													  &this->challenge);
-	randomizer->destroy(randomizer);
-	if (status != SUCCESS)
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
 	{
 		return FAILED;
 	}
+	rng->allocate_bytes(rng, CHALLENGE_LEN, &this->challenge);
+	rng->destroy(rng);
 	
 	req = alloca(PAYLOAD_LEN);
 	req->length = htons(PAYLOAD_LEN);

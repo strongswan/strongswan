@@ -88,9 +88,9 @@ struct private_receiver_t {
  	u_int32_t secret_offset;
  	
  	/**
- 	 * the randomizer to use for secret generation
+ 	 * the RNG to use for secret generation
  	 */
- 	randomizer_t *randomizer;
+ 	rng_t *rng;
  	
  	/**
  	 * hasher to use for cookie calculation
@@ -304,8 +304,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 				DBG1(DBG_NET, "generating new cookie secret after %d uses",
 					 this->secret_used);
 				memcpy(this->secret_old, this->secret, SECRET_LENGTH);	
-				this->randomizer->get_pseudo_random_bytes(this->randomizer,
-												SECRET_LENGTH, this->secret);
+				this->rng->get_bytes(this->rng,	SECRET_LENGTH, this->secret);
 				this->secret_switch = now;
 				this->secret_used = 0;
 			}
@@ -333,7 +332,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 static void destroy(private_receiver_t *this)
 {
 	this->job->cancel(this->job);
-	this->randomizer->destroy(this->randomizer);
+	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
 	free(this);
 }
@@ -355,12 +354,18 @@ receiver_t *receiver_create()
 		free(this);
 		return NULL;
 	}
-	this->randomizer = randomizer_create();
+	this->rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (this->rng == NULL)
+	{
+		DBG1(DBG_NET, "creating cookie RNG failed, no RNG supported");
+		this->hasher->destroy(this->hasher);
+		free(this);
+		return NULL;
+	}
 	this->secret_switch = now;
 	this->secret_offset = random() % now;
 	this->secret_used = 0;
-	this->randomizer->get_pseudo_random_bytes(this->randomizer, SECRET_LENGTH,
-											  this->secret);
+	this->rng->get_bytes(this->rng, SECRET_LENGTH, this->secret);
 	memcpy(this->secret_old, this->secret, SECRET_LENGTH);
 
 	this->job = callback_job_create((callback_job_cb_t)receive_packets,
