@@ -146,12 +146,12 @@ static void write_address(xmlTextWriterPtr writer, char *element, host_t *host)
 static void write_networks(xmlTextWriterPtr writer, char *element,
 						   linked_list_t *list)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	traffic_selector_t *ts;
 	
 	xmlTextWriterStartElement(writer, element);
-	iterator = list->create_iterator(list, TRUE);
-	while (iterator->iterate(iterator, (void**)&ts))
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, (void**)&ts))
 	{
 		xmlTextWriterStartElement(writer, "network");
 		xmlTextWriterWriteAttribute(writer, "type",
@@ -159,7 +159,7 @@ static void write_networks(xmlTextWriterPtr writer, char *element,
 		xmlTextWriterWriteFormatString(writer, "%R", ts);
 		xmlTextWriterEndElement(writer);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	xmlTextWriterEndElement(writer);
 }
 
@@ -210,7 +210,7 @@ static void write_child(xmlTextWriterPtr writer, child_sa_t *child)
  */
 static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
 
 	/* <ikesalist> */
