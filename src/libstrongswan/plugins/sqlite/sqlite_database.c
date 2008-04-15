@@ -51,7 +51,7 @@ struct private_sqlite_database_t {
 static sqlite3_stmt* run(private_sqlite_database_t *this, char *sql,
 						 va_list *args)
 {
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	int params, i, res = SQLITE_OK;
 	
 	if (sqlite3_prepare_v2(this->db, sql, -1, &stmt, NULL) == SQLITE_OK)
@@ -105,8 +105,13 @@ static sqlite3_stmt* run(private_sqlite_database_t *this, char *sql,
 			}
 		}
 	}
+	else
+	{
+		DBG1("preparing sqlite statement failed: %s", sqlite3_errmsg(this->db));
+	}
 	if (res != SQLITE_OK)
 	{
+		DBG1("binding sqlite statement failed: %s", sqlite3_errmsg(this->db));
 		sqlite3_finalize(stmt);
 		return NULL;
 	}
@@ -122,6 +127,8 @@ typedef struct {
 	int count;
 	/** column types */
 	db_type_t *columns;
+	/** reference to db connection */
+	sqlite3 *db;
 } sqlite_enumerator_t;
 
 /**
@@ -142,9 +149,15 @@ static bool sqlite_enumerator_enumerate(sqlite_enumerator_t *this, ...)
 	int i;
 	va_list args;
 
-	if (sqlite3_step(this->stmt) != SQLITE_ROW)
+	switch (sqlite3_step(this->stmt))
 	{
-		return FALSE;
+		case SQLITE_ROW:
+			break;
+		default:
+			DBG1("stepping sqlite statement failed: %s", sqlite3_errmsg(this->db));
+			/* fall */
+		case SQLITE_DONE:
+			return FALSE;
 	}
 	va_start(args, this);
 	for (i = 0; i < this->count; i++)
@@ -183,6 +196,7 @@ static bool sqlite_enumerator_enumerate(sqlite_enumerator_t *this, ...)
 				break;
 			}
 			default:
+				DBG1("invalid result type supplied");
 				return FALSE;
 		}
 	}
@@ -211,6 +225,7 @@ static enumerator_t* query(private_sqlite_database_t *this, char *sql, ...)
 		enumerator->stmt = stmt;
 		enumerator->count = sqlite3_column_count(stmt);
 		enumerator->columns = malloc(sizeof(db_type_t) * enumerator->count);
+		enumerator->db = this->db;
 		for (i = 0; i < enumerator->count; i++)
 		{
 			enumerator->columns[i] = va_arg(args, db_type_t);
@@ -243,6 +258,10 @@ static int execute(private_sqlite_database_t *this, int *rowid, char *sql, ...)
 				*rowid = sqlite3_last_insert_rowid(this->db);
 			}
 			affected = sqlite3_changes(this->db);
+		}
+		else
+		{
+			DBG1("sqlite execute failed: %s", sqlite3_errmsg(this->db));
 		}
 		sqlite3_finalize(stmt);
 	}
@@ -287,7 +306,8 @@ sqlite_database_t *sqlite_database_create(char *uri)
 	
 	if (sqlite3_open(file, &this->db) != SQLITE_OK)
 	{
-		DBG1("opening SQLite database '%s' failed", file);
+		DBG1("opening SQLite database '%s' failed: %s",
+			 file, sqlite3_errmsg(this->db));
 		destroy(this);
 		return NULL;
 	}
