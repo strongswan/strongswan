@@ -125,16 +125,15 @@ static void add_traffic_selectors(private_sql_config_t *this,
  */
 static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 {
-	int id, lifetime, rekeytime, jitter, hostaccess, mode;
+	int id, lifetime, rekeytime, jitter, hostaccess, mode, dpd, close;
 	char *name, *updown;
 	child_cfg_t *child_cfg;
 	
 	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, 
-						&updown, &hostaccess, &mode))
+						&updown, &hostaccess, &mode, &dpd, &close))
 	{
 		child_cfg = child_cfg_create(name, lifetime, rekeytime, jitter,
-									 updown, hostaccess, mode,
-									 ACTION_NONE, ACTION_NONE);
+									 updown, hostaccess, mode, dpd, close);
 		/* TODO: read proposal from db */
 		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 		add_traffic_selectors(this, child_cfg, id);
@@ -153,12 +152,12 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 	
 	e = this->db->query(this->db,
 			"SELECT id, name, lifetime, rekeytime, jitter, "
-			"updown, hostaccess, mode "
+			"updown, hostaccess, mode, dpd_action, close_action "
 			"FROM child_configs JOIN peer_config_child_config ON id = child_cfg "
 			"WHERE peer_cfg = ?",
 			DB_INT, id,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT,
-			DB_TEXT, DB_INT, DB_INT);
+			DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT);
 	if (e)
 	{
 		while ((child_cfg = build_child_cfg(this, e)))
@@ -246,9 +245,10 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 	
 	e = this->db->query(this->db,
 			"SELECT c.id, name, ike_cfg, l.type, l.data, r.type, r.data, "
-			"cert_policy, auth_method, eap_type, eap_vendor, keyingtries, "
-			"rekeytime, reauthtime, jitter, overtime, mobike, dpd_delay, "
-			"dpd_action, mediation, mediated_by, COALESCE(p.type, 0), p.data "
+			"cert_policy, uniqueid, auth_method, eap_type, eap_vendor, "
+			"keyingtries, rekeytime, reauthtime, jitter, overtime, mobike, "
+			"dpd_delay, virtual, pool, "
+			"mediation, mediated_by, COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
 			"JOIN identities AS l ON local_id = l.id "
 			"JOIN identities AS r ON remote_id = r.id "
@@ -256,9 +256,10 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 			"WHERE id = ?",
 			DB_INT, id,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_BLOB, DB_INT, DB_BLOB,
-			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
-			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
-			DB_INT, DB_INT, DB_INT, DB_INT, DB_BLOB);
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, 
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, 
+			DB_INT, DB_TEXT, DB_TEXT,
+			DB_INT, DB_INT, DB_INT, DB_BLOB);
 	if (e)
 	{
 		peer_cfg = build_peer_cfg(this, e, NULL, NULL);
@@ -274,21 +275,23 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 								  identification_t *me, identification_t *other)
 {
 	int id, ike_cfg, l_type, r_type,
-		cert_policy, auth_method, eap_type, eap_vendor, keyingtries,
+		cert_policy, uniqueid, auth_method, eap_type, eap_vendor, keyingtries,
 		rekeytime, reauthtime, jitter, overtime, mobike, dpd_delay,
-		dpd_action, mediation, mediated_by, p_type;
+		mediation, mediated_by, p_type;
 	chunk_t l_data, r_data, p_data;
-	char *name;
+	char *name, *virtual, *pool;
 	
 	while (e->enumerate(e,
 			&id, &name, &ike_cfg, &l_type, &l_data, &r_type, &r_data,
-			&cert_policy, &auth_method, &eap_type, &eap_vendor, &keyingtries,
-			&rekeytime, &reauthtime, &jitter, &overtime, &mobike, &dpd_delay,
-			&dpd_action, &mediation, &mediated_by, &p_type, &p_data))
+			&cert_policy, &uniqueid, &auth_method, &eap_type, &eap_vendor,
+			&keyingtries, &rekeytime, &reauthtime, &jitter, &overtime, &mobike, 
+			&dpd_delay,	&virtual, &pool,
+			&mediation, &mediated_by, &p_type, &p_data))
 	{
 		identification_t *local_id, *remote_id, *peer_id = NULL;
 		peer_cfg_t *peer_cfg, *mediated_cfg;
 		ike_cfg_t *ike;
+		host_t *vip = NULL;
 		
 		local_id = identification_create_from_encoding(l_type, l_data);
 		remote_id = identification_create_from_encoding(r_type, r_data);
@@ -305,14 +308,17 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 		{
 			peer_id = identification_create_from_encoding(p_type, p_data);
 		}
-		
+		if (virtual)
+		{
+			vip = host_create_from_string(virtual, 0);
+		}
 		if (ike)
 		{
 			peer_cfg = peer_cfg_create(
-					name, 2, ike, local_id, remote_id, cert_policy, UNIQUE_NO,
+					name, 2, ike, local_id, remote_id, cert_policy, uniqueid,
 					auth_method, eap_type, eap_vendor, keyingtries, 
 					rekeytime, reauthtime, jitter, overtime, mobike,
-					dpd_delay, NULL, NULL,
+					dpd_delay, vip, pool,
 					mediation, mediated_cfg, peer_id);
 			add_child_cfgs(this, peer_cfg, id);
 			return peer_cfg;
@@ -336,9 +342,10 @@ static peer_cfg_t *get_peer_cfg_by_name(private_sql_config_t *this, char *name)
 	
 	e = this->db->query(this->db,
 			"SELECT c.id, name, ike_cfg, l.type, l.data, r.type, r.data, "
-			"cert_policy, auth_method, eap_type, eap_vendor, keyingtries, "
-			"rekeytime, reauthtime, jitter, overtime, mobike, dpd_delay, "
-			"dpd_action, mediation, mediated_by, COALESCE(p.type, 0), p.data "
+			"cert_policy, uniqueid, auth_method, eap_type, eap_vendor, "
+			"keyingtries, rekeytime, reauthtime, jitter, overtime, mobike, "
+			"dpd_delay, virtual, pool, "
+			"mediation, mediated_by, COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
 			"JOIN identities AS l ON local_id = l.id "
 			"JOIN identities AS r ON remote_id = r.id "
@@ -348,7 +355,8 @@ static peer_cfg_t *get_peer_cfg_by_name(private_sql_config_t *this, char *name)
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_BLOB, DB_INT, DB_BLOB,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
-			DB_INT, DB_INT, DB_INT, DB_INT, DB_BLOB);
+			DB_INT, DB_TEXT, DB_TEXT,
+			DB_INT, DB_INT,	DB_INT, DB_BLOB);
 	if (e)
 	{
 		peer_cfg = build_peer_cfg(this, e, NULL, NULL);
@@ -484,9 +492,10 @@ static enumerator_t* create_peer_cfg_enumerator(private_sql_config_t *this,
 	/* TODO: only get configs whose IDs match exactly or contain wildcards */
 	e->inner = this->db->query(this->db,
 			"SELECT c.id, name, ike_cfg, l.type, l.data, r.type, r.data, "
-			"cert_policy, auth_method, eap_type, eap_vendor, keyingtries, "
-			"rekeytime, reauthtime, jitter, overtime, mobike, dpd_delay, "
-			"dpd_action, mediation, mediated_by, COALESCE(p.type, 0), p.data "
+			"cert_policy, uniqueid, auth_method, eap_type, eap_vendor, "
+			"keyingtries, rekeytime, reauthtime, jitter, overtime, mobike, "
+			"dpd_delay, virtual, pool, "
+			"mediation, mediated_by, COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
 			"JOIN identities AS l ON local_id = l.id "
 			"JOIN identities AS r ON remote_id = r.id "
@@ -496,7 +505,8 @@ static enumerator_t* create_peer_cfg_enumerator(private_sql_config_t *this,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_BLOB, DB_INT, DB_BLOB,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
-			DB_INT, DB_INT, DB_INT, DB_INT, DB_BLOB);
+			DB_INT,	DB_TEXT, DB_TEXT,
+			DB_INT, DB_INT, DB_INT, DB_BLOB);
 	if (!e->inner)
 	{
 		free(e);

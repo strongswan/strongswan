@@ -18,7 +18,9 @@ CREATE TABLE child_configs (
   jitter INTEGER NOT NULL DEFAULT '60',
   updown TEXT DEFAULT NULL,
   hostaccess INTEGER NOT NULL DEFAULT '0',
-  mode INTEGER NOT NULL DEFAULT '1'
+  mode INTEGER NOT NULL DEFAULT '1',
+  dpd_action INTEGER NOT NULL DEFAULT '0',
+  close_action INTEGER NOT NULL DEFAULT '0'
 );
 DROP INDEX IF EXISTS child_configs_name;
 CREATE INDEX child_configs_name ON child_configs (
@@ -57,6 +59,7 @@ CREATE TABLE peer_configs (
   local_id TEXT NOT NULL,
   remote_id TEXT NOT NULL,
   cert_policy INTEGER NOT NULL DEFAULT '1',
+  uniqueid INTEGER NOT NULL DEFAULT '0',
   auth_method INTEGER NOT NULL DEFAULT '1',
   eap_type INTEGER NOT NULL DEFAULT '0',
   eap_vendor INTEGER NOT NULL DEFAULT '0',
@@ -67,7 +70,8 @@ CREATE TABLE peer_configs (
   overtime INTEGER NOT NULL DEFAULT '300',
   mobike INTEGER NOT NULL DEFAULT '1',
   dpd_delay INTEGER NOT NULL DEFAULT '120',
-  dpd_action INTEGER NOT NULL DEFAULT '1',
+  virtual TEXT DEFAULT NULL,
+  pool TEXT DEFAULT NULL,
   mediation INTEGER NOT NULL DEFAULT '0',
   mediated_by INTEGER NOT NULL DEFAULT '0',
   peer_id INTEGER NOT NULL DEFAULT '0'

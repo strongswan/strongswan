@@ -20,6 +20,8 @@ CREATE TABLE `child_configs` (
   `updown` varchar(128) collate utf8_unicode_ci default NULL,
   `hostaccess` tinyint(1) unsigned NOT NULL default '0',
   `mode` tinyint(4) unsigned NOT NULL default '1',
+  `dpd_action` tinyint(4) unsigned NOT NULL default '0',
+  `close_action` tinyint(4) unsigned NOT NULL default '0',
   PRIMARY KEY (`id`),
   INDEX (`name`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
@@ -54,6 +56,7 @@ CREATE TABLE `peer_configs` (
   `local_id` varchar(64) collate utf8_unicode_ci NOT NULL,
   `remote_id` varchar(64) collate utf8_unicode_ci NOT NULL,
   `cert_policy` tinyint(3) unsigned NOT NULL default '1',
+  `uniqueid` tinyint(3) unsigned NOT NULL default '0',
   `auth_method` tinyint(3) unsigned NOT NULL default '1',
   `eap_type` tinyint(3) unsigned NOT NULL default '0',
   `eap_vendor` smallint(5) unsigned NOT NULL default '0',
@@ -64,7 +67,8 @@ CREATE TABLE `peer_configs` (
   `overtime` mediumint(8) unsigned NOT NULL default '300',
   `mobike` tinyint(1) NOT NULL default '1',
   `dpd_delay` mediumint(8) unsigned NOT NULL default '120',
-  `dpd_action` tinyint(3) unsigned NOT NULL default '1',
+  `virtual` varchar(40) default NULL,
+  `pool` varchar(32) default NULL,
   `mediation` tinyint(1) NOT NULL default '0',
   `mediated_by` int(10) unsigned NOT NULL default '0',
   `peer_id` int(10) unsigned NOT NULL default '0',
