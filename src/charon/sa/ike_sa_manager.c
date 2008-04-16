@@ -777,6 +777,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	status_t retval;
 	entry_t *entry;
 	ike_sa_id_t *ike_sa_id;
+	host_t *other;
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	
@@ -793,9 +794,12 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		entry->checked_out = FALSE;
 		entry->message_id = -1;
 		/* apply remote address for DoS detection */
-		DESTROY_IF(entry->other);
-		entry->other = ike_sa->get_other_host(ike_sa);
-		entry->other = entry->other->clone(entry->other);
+		other = ike_sa->get_other_host(ike_sa);
+		if (!entry->other || !other->equals(other, entry->other))
+		{
+			DESTROY_IF(entry->other);
+			entry->other = other->clone(other);
+		}
 		DBG2(DBG_MGR, "check-in of IKE_SA successful.");
 		pthread_cond_signal(&(entry->condvar));
 	 	retval = SUCCESS;
