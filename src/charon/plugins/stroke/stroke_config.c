@@ -497,6 +497,11 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 			unique = UNIQUE_NO;
 			break;
 	}
+	if (msg->add_conn.dpd.action == 0)
+	{	/* dpdaction=none disables DPD */
+		msg->add_conn.dpd.delay = 0;
+	}
+	
 	/* other.sourceip is managed in stroke_attributes. If it is set, we define
 	 * the pool name as the connection name, which the attribute provider
 	 * uses to serve pool addresses. */
