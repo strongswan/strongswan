@@ -75,6 +75,11 @@ struct entry_t {
 	chunk_t init_hash;
 	
 	/**
+	 * remote host address, required for DoS detection
+	 */
+	host_t *other;
+	
+	/**
 	 * message ID currently processing, if any
 	 */
 	u_int32_t message_id;
@@ -89,6 +94,7 @@ static status_t entry_destroy(entry_t *this)
 	this->ike_sa->destroy(this->ike_sa);
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	chunk_free(&this->init_hash);
+	DESTROY_IF(this->other);
 	free(this);
 	return SUCCESS;
 }
@@ -109,6 +115,7 @@ static entry_t *entry_create(ike_sa_id_t *ike_sa_id)
 	this->driveout_waiting_threads = FALSE;
 	this->message_id = -1;
 	this->init_hash = chunk_empty;
+	this->other = NULL;
 	
 	/* ike_sa_id is always cloned */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
@@ -785,6 +792,10 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		/* signal waiting threads */
 		entry->checked_out = FALSE;
 		entry->message_id = -1;
+		/* apply remote address for DoS detection */
+		DESTROY_IF(entry->other);
+		entry->other = ike_sa->get_other_host(ike_sa);
+		entry->other = entry->other->clone(entry->other);
 		DBG2(DBG_MGR, "check-in of IKE_SA successful.");
 		pthread_cond_signal(&(entry->condvar));
 	 	retval = SUCCESS;
@@ -862,11 +873,10 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 		if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
 			entry->ike_sa->get_state(entry->ike_sa) == IKE_CONNECTING)
 		{
-			/* if we have a host, we have wait until no other uses the IKE_SA */
+			/* if we have a host, count only matching IKE_SAs */
 			if (ip)
 			{
-				if (wait_for_entry(this, entry) && ip->ip_equals(ip, 
-								entry->ike_sa->get_other_host(entry->ike_sa)))
+				if (entry->other && ip->ip_equals(ip, entry->other))
 				{
 					count++;
 				}
