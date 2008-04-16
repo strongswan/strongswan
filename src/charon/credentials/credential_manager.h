@@ -63,9 +63,8 @@ typedef struct credential_manager_t credential_manager_t;
     
    @endverbatim                                       
  *
- * Synchronization is done completely in the manager, so the sets don't have
- * to worry about it. The locking mechanism is reentrant save, so sets can
- * call the manager.
+ * The credential manager uses rwlocks for performance reasons, credential
+ * sets must be fully thread save.
  */
 struct credential_manager_t {
 	

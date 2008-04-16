@@ -19,6 +19,7 @@
 
 #include <daemon.h>
 #include <utils/linked_list.h>
+#include <utils/mutex.h>
 
 #define CACHE_SIZE 30
 
@@ -49,6 +50,11 @@ struct private_cert_cache_t {
 	 * have we increased the cache without a check_cache?
 	 */
 	bool check_required;
+	
+	/**
+	 * mutex to lock relations list
+	 */
+	mutex_t *mutex;
 };
 
 /**
@@ -115,6 +121,7 @@ static bool issued_by(private_cert_cache_t *this,
 	enumerator_t *enumerator;
 	
 	/* lookup cache */
+	this->mutex->lock(this->mutex);
 	enumerator = this->relations->create_enumerator(this->relations);
 	while (enumerator->enumerate(enumerator, &current))
 	{
@@ -139,6 +146,7 @@ static bool issued_by(private_cert_cache_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
 	if (found)
 	{
 		return TRUE;
@@ -153,8 +161,10 @@ static bool issued_by(private_cert_cache_t *this,
 	found->subject = subject->get_ref(subject);
 	found->issuer = issuer->get_ref(issuer);
 	found->last_use = time(NULL);
+	this->mutex->lock(this->mutex);
 	this->relations->insert_last(this->relations, found);
 	check_cache(this);
+	this->mutex->unlock(this->mutex);
 	return TRUE;
 }
 
@@ -225,6 +235,7 @@ static void certs_destroy(cert_data_t *data)
 	{
 		check_cache(data->this);
 	}
+	data->this->mutex->unlock(data->this->mutex);
 	free(data);
 }
 
@@ -246,8 +257,9 @@ static enumerator_t *create_enumerator(private_cert_cache_t *this,
 	data->key = key;
 	data->id = id;
 	data->this = this;
-	this->enumerating++;
 	
+	this->mutex->lock(this->mutex);
+	this->enumerating++;
 	return enumerator_create_filter(
 							this->relations->create_enumerator(this->relations),
 							(void*)certs_filter, data, (void*)certs_destroy);
@@ -261,6 +273,7 @@ static void flush(private_cert_cache_t *this, certificate_type_t type)
 	enumerator_t *enumerator;
 	relation_t *relation;
 	
+	this->mutex->lock(this->mutex);
 	enumerator = this->relations->create_enumerator(this->relations);
 	while (enumerator->enumerate(enumerator, &relation))
 	{
@@ -272,6 +285,7 @@ static void flush(private_cert_cache_t *this, certificate_type_t type)
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -280,6 +294,7 @@ static void flush(private_cert_cache_t *this, certificate_type_t type)
 static void destroy(private_cert_cache_t *this)
 {
 	this->relations->destroy_function(this->relations, (void*)relation_destroy);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -301,6 +316,7 @@ cert_cache_t *cert_cache_create()
 	this->relations = linked_list_create();
 	this->enumerating = FALSE;
 	this->check_required = FALSE;
+	this->mutex = mutex_create(MUTEX_RECURSIVE);
 	
 	return &this->public;
 }

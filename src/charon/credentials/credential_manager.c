@@ -48,14 +48,19 @@ struct private_credential_manager_t {
 	linked_list_t *sets;
 	
 	/**
+	 * thread local set of credentials, linked_list_t with credential_set_t's
+	 */
+	pthread_key_t local_sets;
+	
+	/**
 	 * trust relationship and certificate cache
 	 */
 	cert_cache_t *cache;
 	
 	/**
-	 * mutex to gain exclusive access
+	 * read-write lock to sets list
 	 */
-	mutex_t *mutex;
+	pthread_rwlock_t lock;
 };
 
 /** data to pass to create_private_enumerator */
@@ -89,12 +94,75 @@ typedef struct {
 	identification_t *other;
 } shared_data_t;
 
+/** enumerator over local and global sets */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** enumerator over global sets */
+	enumerator_t *global;
+	/** enumerator over local sets */
+	enumerator_t *local;
+} sets_enumerator_t;
+
+/**
+ * destroy a sets_enumerator_t
+ */
+static void sets_enumerator_destroy(sets_enumerator_t *this)
+{
+	DESTROY_IF(this->global);
+	DESTROY_IF(this->local);
+	free(this);
+}
+
+/**
+ * sets_enumerator_t.enumerate
+ */
+static bool sets_enumerator_enumerate(sets_enumerator_t *this,
+									  credential_set_t **set)
+{
+	if (this->global)
+	{
+		if (this->global->enumerate(this->global, set))
+		{
+			return TRUE;
+		}
+		/* end of global sets, look for local */
+		this->global->destroy(this->global);
+		this->global = NULL;
+	}
+	if (this->local)
+	{
+		return this->local->enumerate(this->local, set);
+	}
+	return FALSE;
+}
+
+/**
+ * create an enumerator over both, global and local sets
+ */
+static enumerator_t *create_sets_enumerator(private_credential_manager_t *this)
+{
+	linked_list_t *local;
+	sets_enumerator_t *enumerator = malloc_thing(sets_enumerator_t);
+	
+	enumerator->public.enumerate = (void*)sets_enumerator_enumerate;
+	enumerator->public.destroy = (void*)sets_enumerator_destroy;
+	enumerator->global = this->sets->create_enumerator(this->sets);
+	enumerator->local = NULL;
+	local = pthread_getspecific(this->local_sets);
+	if (local)
+	{
+		enumerator->local = local->create_enumerator(local);
+	}
+	return &enumerator->public;
+}
+
 /**
  * cleanup function for cert data
  */
 static void destroy_cert_data(cert_data_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	pthread_rwlock_unlock(&data->this->lock);
 	free(data);
 }
 
@@ -121,8 +189,8 @@ static enumerator_t *create_cert_enumerator(private_credential_manager_t *this,
 	data->id = id;
 	data->trusted = trusted;
 	
-	this->mutex->lock(this->mutex);
-	return enumerator_create_nested(this->sets->create_enumerator(this->sets),
+	pthread_rwlock_rdlock(&this->lock);
+	return enumerator_create_nested(create_sets_enumerator(this),
 									(void*)create_cert, data,
 									(void*)destroy_cert_data);
 }
@@ -137,7 +205,6 @@ static certificate_t *get_cert(private_credential_manager_t *this,
 	certificate_t *current, *found = NULL;
 	enumerator_t *enumerator;
 	
-	this->mutex->lock(this->mutex);
 	enumerator = create_cert_enumerator(this, cert, key, id, trusted);
 	if (enumerator->enumerate(enumerator, &current))
 	{
@@ -145,7 +212,6 @@ static certificate_t *get_cert(private_credential_manager_t *this,
 		found = current->get_ref(current);
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
 	return found;
 }
 
@@ -155,7 +221,7 @@ static certificate_t *get_cert(private_credential_manager_t *this,
  */
 static void destroy_cdp_data(cdp_data_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	pthread_rwlock_unlock(&data->this->lock);
 	free(data);
 }
 
@@ -177,8 +243,8 @@ static enumerator_t * create_cdp_enumerator(private_credential_manager_t *this,
 	data->type = type;
 	data->id = id;
 	
-	this->mutex->lock(this->mutex);
-	return enumerator_create_nested(this->sets->create_enumerator(this->sets),
+	pthread_rwlock_rdlock(&this->lock);
+	return enumerator_create_nested(create_sets_enumerator(this),
 									(void*)create_cdp, data,
 									(void*)destroy_cdp_data);
 }
@@ -188,7 +254,7 @@ static enumerator_t * create_cdp_enumerator(private_credential_manager_t *this,
  */
 static void destroy_private_data(private_data_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	pthread_rwlock_unlock(&data->this->lock);
 	free(data);
 }
 
@@ -213,9 +279,10 @@ static enumerator_t* create_private_enumerator(
 	data->this = this;
 	data->type = key;
 	data->keyid = keyid;
-	this->mutex->lock(this->mutex);
-	return enumerator_create_nested(this->sets->create_enumerator(this->sets),
-						(void*)create_private, data, (void*)destroy_private_data);
+	pthread_rwlock_rdlock(&this->lock);
+	return enumerator_create_nested(create_sets_enumerator(this),
+									(void*)create_private, data,
+									(void*)destroy_private_data);
 }
 
 /**
@@ -241,7 +308,7 @@ static private_key_t *get_private_by_keyid(private_credential_manager_t *this,
  */
 static void destroy_shared_data(shared_data_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	pthread_rwlock_unlock(&data->this->lock);
 	free(data);
 }
 
@@ -266,8 +333,8 @@ static enumerator_t *create_shared_enumerator(private_credential_manager_t *this
 	data->me = me;
 	data->other = other;
 	
-	this->mutex->lock(this->mutex);
-	return enumerator_create_nested(this->sets->create_enumerator(this->sets),
+	pthread_rwlock_rdlock(&this->lock);
+	return enumerator_create_nested(create_sets_enumerator(this),
 									(void*)create_shared, data, 
 									(void*)destroy_shared_data);
 }
@@ -301,11 +368,40 @@ static shared_key_t *get_shared(private_credential_manager_t *this,
 }
 
 /**
+ * add a credential set to the thread local list
+ */
+static void add_local_set(private_credential_manager_t *this,
+						  credential_set_t *set)
+{
+	linked_list_t *sets;
+
+	sets = pthread_getspecific(this->local_sets);
+	if (!sets)
+	{	/* first invocation */
+		sets = linked_list_create();
+		pthread_setspecific(this->local_sets, sets);
+	}
+	sets->insert_last(sets, set);
+}
+
+/**
+ * remove a credential set from the thread local list
+ */
+static void remove_local_set(private_credential_manager_t *this,
+							 credential_set_t *set)
+{
+	linked_list_t *sets;
+	
+	sets = pthread_getspecific(this->local_sets);
+	sets->remove(sets, set, NULL);
+}
+
+/**
  * forward declaration 
  */
-
 static enumerator_t *create_trusted_enumerator(private_credential_manager_t *this,
 					key_type_t type, identification_t *id, bool crl, bool ocsp);
+
 /**
  * Do an OCSP request
  */
@@ -366,7 +462,7 @@ static bool verify_ocsp(private_credential_manager_t *this,
 	bool verified = FALSE;
 
 	wrapper = ocsp_response_wrapper_create((ocsp_response_t*)response);
-	this->sets->insert_last(this->sets, wrapper);
+	add_local_set(this, &wrapper->set);
 	
 	subject = &response->certificate;
 	responder = subject->get_issuer(subject);
@@ -383,7 +479,7 @@ static bool verify_ocsp(private_credential_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 	
-	this->sets->remove(this->sets, wrapper, NULL);
+	remove_local_set(this, &wrapper->set);
 	wrapper->destroy(wrapper);
 	return verified;
 }
@@ -1125,10 +1221,10 @@ static void public_destroy(public_enumerator_t *this)
 	this->inner->destroy(this->inner);
 	if (this->wrapper)
 	{
-		this->this->sets->remove(this->this->sets, this->wrapper, NULL);
+		remove_local_set(this->this, &this->wrapper->set);
 		this->wrapper->destroy(this->wrapper);
 	}
-	this->this->mutex->unlock(this->this->mutex);
+	pthread_rwlock_unlock(&this->this->lock);
 	free(this);
 }
 
@@ -1146,12 +1242,12 @@ static enumerator_t* create_public_enumerator(private_credential_manager_t *this
 	enumerator->this = this;
 	enumerator->current = NULL;
 	enumerator->wrapper = NULL;
-	this->mutex->lock(this->mutex);
 	if (auth)
 	{
 		enumerator->wrapper = auth_info_wrapper_create(auth);
-		this->sets->insert_last(this->sets, enumerator->wrapper);
+		add_local_set(this, &enumerator->wrapper->set);
 	}
+	pthread_rwlock_rdlock(&this->lock);
 	return &enumerator->public;
 }
 
@@ -1295,7 +1391,6 @@ static private_key_t *get_private(private_credential_manager_t *this,
 		}
 	}
 	
-	this->mutex->lock(this->mutex);
 	/* try to build a trustchain for each certificate found */
 	enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
 	while (enumerator->enumerate(enumerator, &cert))
@@ -1330,7 +1425,6 @@ static private_key_t *get_private(private_credential_manager_t *this,
 		}
 		enumerator->destroy(enumerator);
 	}
-	this->mutex->unlock(this->mutex);
 	return private;
 }
 
@@ -1340,9 +1434,7 @@ static private_key_t *get_private(private_credential_manager_t *this,
 static void flush_cache(private_credential_manager_t *this,
 						certificate_type_t type)
 {
-	this->mutex->lock(this->mutex);
 	this->cache->flush(this->cache, type);
-	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -1351,18 +1443,19 @@ static void flush_cache(private_credential_manager_t *this,
 static void add_set(private_credential_manager_t *this,
 							   credential_set_t *set)
 {
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_wrlock(&this->lock);
 	this->sets->insert_last(this->sets, set);
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 }
+
 /**
  * Implementation of credential_manager_t.remove_set.
  */
 static void remove_set(private_credential_manager_t *this, credential_set_t *set)
 {
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_wrlock(&this->lock);
 	this->sets->remove(this->sets, set, NULL);
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 }
 
 /**
@@ -1372,8 +1465,9 @@ static void destroy(private_credential_manager_t *this)
 {
 	this->sets->remove(this->sets, this->cache, NULL);
 	this->sets->destroy(this->sets);
+	pthread_key_delete(this->local_sets);
 	this->cache->destroy(this->cache);
-	this->mutex->destroy(this->mutex);
+	pthread_rwlock_destroy(&this->lock);
 	free(this);
 }
 
@@ -1397,9 +1491,10 @@ credential_manager_t *credential_manager_create()
 	this->public.destroy = (void(*)(credential_manager_t*))destroy;
 	
 	this->sets = linked_list_create();
+	pthread_key_create(&this->local_sets, (void*)this->sets->destroy);
 	this->cache = cert_cache_create();
 	this->sets->insert_first(this->sets, this->cache);
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	pthread_rwlock_init(&this->lock, NULL);
 	
 	return &this->public;
 }
