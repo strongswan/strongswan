@@ -163,7 +163,17 @@ struct credential_manager_t {
 					key_type_t type, identification_t *id, auth_info_t *auth);
 	
 	/**
+	 * Cache a certificate by invoking cache_cert() on all registerd sets.
+	 *
+	 * @param cert		certificate to cache
+	 */
+	void (*cache_cert)(credential_manager_t *this, certificate_t *cert);
+	
+	/**
 	 * Flush the certificate cache.
+	 *
+	 * Only the managers local cache is flushed, but not the sets cache filled
+	 * by the cache_cert() method.
 	 *
 	 * @param type		type of certificate to flush, or CERT_ANY
 	 */

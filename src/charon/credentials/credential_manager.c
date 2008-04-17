@@ -1438,6 +1438,24 @@ static void flush_cache(private_credential_manager_t *this,
 }
 
 /**
+ * Implementation of credential_manager_t.cache_cert.
+ */
+static void cache_cert(private_credential_manager_t *this, certificate_t *cert)
+{
+	credential_set_t *set;
+	enumerator_t *enumerator;
+	
+	pthread_rwlock_rdlock(&this->lock);
+	enumerator = this->sets->create_enumerator(this->sets);
+	while (enumerator->enumerate(enumerator, &set))
+	{
+		set->cache_cert(set, cert);
+	}
+	enumerator->destroy(enumerator);
+	pthread_rwlock_unlock(&this->lock);
+}	
+
+/**
  * Implementation of credential_manager_t.add_set.
  */
 static void add_set(private_credential_manager_t *this,
@@ -1486,6 +1504,7 @@ credential_manager_t *credential_manager_create()
 	this->public.get_private = (private_key_t*(*)(credential_manager_t*, key_type_t type, identification_t *, auth_info_t*))get_private;
 	this->public.create_public_enumerator = (enumerator_t*(*)(credential_manager_t*, key_type_t type, identification_t *id, auth_info_t *aut))create_public_enumerator;
 	this->public.flush_cache = (void(*)(credential_manager_t*, certificate_type_t type))flush_cache;
+	this->public.cache_cert = (void(*)(credential_manager_t*, certificate_t *cert))cache_cert;
 	this->public.add_set = (void(*)(credential_manager_t*, credential_set_t *set))add_set;
 	this->public.remove_set = (void(*)(credential_manager_t*, credential_set_t *set))remove_set;
 	this->public.destroy = (void(*)(credential_manager_t*))destroy;

@@ -106,14 +106,6 @@ struct interface_job_t {
 };
 
 /**
- * Implements the famous nop operation
- */
-static void nop(job_t *job)
-{
-	/* NOP */
-}
-
-/**
  * Implementation of controller_t.create_ike_sa_iterator.
  */
 static enumerator_t* create_ike_sa_enumerator(controller_t *this)

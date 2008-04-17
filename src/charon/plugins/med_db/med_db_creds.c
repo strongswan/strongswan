@@ -144,6 +144,7 @@ med_db_creds_t *med_db_creds_create(database_t *db)
 	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
 	this->public.set.create_shared_enumerator = (void*)return_null;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
+	this->public.set.cache_cert = (void*)nop;
 
 	this->public.destroy = (void (*)(med_db_creds_t*))destroy;
 	

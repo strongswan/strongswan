@@ -215,6 +215,11 @@ void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 void *return_null();
 
 /**
+ * No-Operation function
+ */
+void nop();
+
+/**
  * Special type to count references
  */
 typedef volatile u_int refcount_t;

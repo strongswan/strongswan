@@ -305,6 +305,14 @@ static enumerator_t* create_shared_enumerator(private_stroke_cred_t *this,
 }
 
 /**
+ * Implementation of credential_set_t.cache_cert.
+ */
+static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
+{
+	/* TODO: implement crl writeback to ipsec.d/crls */
+}
+
+/**
  * Add a certificate to chain
  */
 static certificate_t* add_cert(private_stroke_cred_t *this, certificate_t *cert)
@@ -868,6 +876,7 @@ stroke_cred_t *stroke_cred_create()
 	this->public.set.create_private_enumerator = (void*)create_private_enumerator;
 	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
 	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
+	this->public.set.cache_cert = (void*)cache_cert;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.reread = (void(*)(stroke_cred_t*, stroke_msg_t *msg))reread;
 	this->public.load_ca = (certificate_t*(*)(stroke_cred_t*, char *filename))load_ca;

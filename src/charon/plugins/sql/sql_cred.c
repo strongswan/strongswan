@@ -332,13 +332,20 @@ static enumerator_t* create_shared_enumerator(private_sql_cred_t *this,
 }
 
 /**
+ * Implementation of credential_set_t.cache_cert.
+ */
+static void cache_cert(private_sql_cred_t *this, certificate_t *cert)
+{
+	/* TODO: implement CRL caching to database */
+}
+
+/**
  * Implementation of sql_cred_t.destroy.
  */
 static void destroy(private_sql_cred_t *this)
 {
 	free(this);
 }
-
 /**
  * Described in header.
  */
@@ -350,6 +357,7 @@ sql_cred_t *sql_cred_create(database_t *db)
 	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
 	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
+	this->public.set.cache_cert = (void*)cache_cert;
 	this->public.destroy = (void(*)(sql_cred_t*))destroy;
 	
 	this->db = db;

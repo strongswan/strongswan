@@ -72,6 +72,13 @@ void *return_null()
 }
 
 /**
+ * nop operation
+ */
+void nop()
+{
+}
+
+/**
  * We use a single mutex for all refcount variables. This
  * is not optimal for performance, but the critical section
  * is not that long...

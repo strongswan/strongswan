@@ -139,6 +139,7 @@ ocsp_response_wrapper_t *ocsp_response_wrapper_create(ocsp_response_t *response)
 	this->public.set.create_cert_enumerator = (void*)create_enumerator;
 	this->public.set.create_shared_enumerator = (void*)return_null;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
+	this->public.set.cache_cert = (void*)nop;
 	this->public.destroy = (void(*)(ocsp_response_wrapper_t*))destroy;
 	
 	this->response = response;

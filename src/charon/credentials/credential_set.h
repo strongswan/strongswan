@@ -87,7 +87,17 @@ struct credential_set_t {
 	 * @return			an enumerator over CDPs as char*
 	 */
 	enumerator_t *(*create_cdp_enumerator)(credential_set_t *this,
-						certificate_type_t type, identification_t *id);	
+						certificate_type_t type, identification_t *id);
+	
+	/**
+	 * Cache a certificate in the credential set.
+	 *
+	 * The caching policy is implementation dependent, the sets may cache the
+	 * certificate in-memory, persistent on disk or not at all.
+	 *
+	 * @param cert		certificate to cache
+	 */
+	void (*cache_cert)(credential_set_t *this, certificate_t *cert);	
 };
 
 #endif /* CREDENTIAL_SET_H_ @} */

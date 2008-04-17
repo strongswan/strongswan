@@ -145,6 +145,7 @@ auth_info_wrapper_t *auth_info_wrapper_create(auth_info_t *auth)
 	this->public.set.create_cert_enumerator = (void*)create_enumerator;
 	this->public.set.create_shared_enumerator = (void*)return_null;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
+	this->public.set.cache_cert = (void*)nop;
 	this->public.destroy = (void(*)(auth_info_wrapper_t*))destroy;
 	
 	this->auth = auth;

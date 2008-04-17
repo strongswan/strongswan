@@ -266,6 +266,14 @@ static enumerator_t *create_enumerator(private_cert_cache_t *this,
 }
 
 /**
+ * Implementation of credential_set_t.cache_cert.
+ */
+static void cache_cert(private_cert_cache_t *this, certificate_t *cert)
+{
+	/* TODO: implement caching */
+}
+
+/**
  * Implementation of cert_cache_t.flush.
  */
 static void flush(private_cert_cache_t *this, certificate_type_t type)
@@ -309,6 +317,7 @@ cert_cache_t *cert_cache_create()
 	this->public.set.create_cert_enumerator = (void*)create_enumerator;
 	this->public.set.create_shared_enumerator = (void*)return_null;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
+	this->public.set.cache_cert = (void*)cache_cert;
 	this->public.issued_by = (bool(*)(cert_cache_t*, certificate_t *subject, certificate_t *issuer))issued_by;
 	this->public.flush = (void(*)(cert_cache_t*, certificate_type_t type))flush;
 	this->public.destroy = (void(*)(cert_cache_t*))destroy;
