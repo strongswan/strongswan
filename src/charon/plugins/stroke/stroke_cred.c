@@ -305,14 +305,6 @@ static enumerator_t* create_shared_enumerator(private_stroke_cred_t *this,
 }
 
 /**
- * Implementation of credential_set_t.cache_cert.
- */
-static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
-{
-	/* TODO: implement crl writeback to ipsec.d/crls */
-}
-
-/**
  * Add a certificate to chain
  */
 static certificate_t* add_cert(private_stroke_cred_t *this, certificate_t *cert)
@@ -376,7 +368,7 @@ static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
 /**
  * Add X.509 CRL to chain
  */
-static void add_crl(private_stroke_cred_t *this, crl_t* crl)
+static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
 {
 	certificate_t *current, *cert = &crl->certificate;
 	enumerator_t *enumerator;
@@ -431,6 +423,7 @@ static void add_crl(private_stroke_cred_t *this, crl_t* crl)
 		this->certs->insert_last(this->certs, cert);
 	}
 	this->mutex->unlock(this->mutex);
+	return new;
 }
 
 /**
@@ -527,6 +520,44 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 		}
 	}
 	enumerator->destroy(enumerator);
+}
+
+/**
+ * Implementation of credential_set_t.cache_cert.
+ */
+static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
+{
+	if (cert->get_type(cert) == CERT_X509_CRL)
+	{
+		/* CRLs get cached to /etc/ipsec.d/crls/authkeyId.der */
+		crl_t *crl = (crl_t*)cert;
+	
+		cert->get_ref(cert);
+		if (add_crl(this, crl))
+		{
+			char buf[256];
+			char *hex;
+			chunk_t chunk;
+			identification_t *id;
+			
+			id = crl->get_authKeyIdentifier(crl);
+			chunk = id->get_encoding(id);
+			hex = chunk_to_hex(chunk, FALSE);
+			snprintf(buf, sizeof(buf), "%s/%s.der", CRL_DIR, hex);
+			free(hex);
+			
+			chunk = cert->get_encoding(cert);
+			if (chunk_write(chunk, buf, 022, TRUE))
+			{
+				DBG1(DBG_CFG, "cached crl to %s", buf);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "caching  crl to %s failed", buf);
+			}
+			free(chunk.ptr);
+		}
+	}
 }
 
 /**
@@ -876,8 +907,8 @@ stroke_cred_t *stroke_cred_create()
 	this->public.set.create_private_enumerator = (void*)create_private_enumerator;
 	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
 	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
-	this->public.set.cache_cert = (void*)cache_cert;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
+	this->public.set.cache_cert = (void*)cache_cert;
 	this->public.reread = (void(*)(stroke_cred_t*, stroke_msg_t *msg))reread;
 	this->public.load_ca = (certificate_t*(*)(stroke_cred_t*, char *filename))load_ca;
 	this->public.load_peer = (certificate_t*(*)(stroke_cred_t*, char *filename))load_peer;
