@@ -534,7 +534,7 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 {
 	if (cert->get_type(cert) == CERT_X509_CRL && this->cachecrl)
 	{
-		/* CRLs get cached to /etc/ipsec.d/crls/authkeyId.der */
+		/* CRLs get written to /etc/ipsec.d/crls/authkeyId.crl */
 		crl_t *crl = (crl_t*)cert;
 	
 		cert->get_ref(cert);
@@ -548,17 +548,17 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 			id = crl->get_authKeyIdentifier(crl);
 			chunk = id->get_encoding(id);
 			hex = chunk_to_hex(chunk, FALSE);
-			snprintf(buf, sizeof(buf), "%s/%s.der", CRL_DIR, hex);
+			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex);
 			free(hex);
 			
 			chunk = cert->get_encoding(cert);
 			if (chunk_write(chunk, buf, 022, TRUE))
 			{
-				DBG1(DBG_CFG, "cached crl to %s", buf);
+				DBG1(DBG_CFG, "  written crl to '%s'", buf);
 			}
 			else
 			{
-				DBG1(DBG_CFG, "caching  crl to %s failed", buf);
+				DBG1(DBG_CFG, "  writing crl to '%s' failed", buf);
 			}
 			free(chunk.ptr);
 		}
