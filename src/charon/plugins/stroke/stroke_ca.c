@@ -346,6 +346,7 @@ stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 	this->public.set.create_cert_enumerator = (void*)return_null;
 	this->public.set.create_shared_enumerator = (void*)return_null;
 	this->public.set.create_cdp_enumerator = (void*)create_cdp_enumerator;
+	this->public.set.cache_cert = (void*)nop;
 	this->public.add = (void(*)(stroke_ca_t*, stroke_msg_t *msg))add;
 	this->public.del = (void(*)(stroke_ca_t*, stroke_msg_t *msg))del;
 	this->public.list = (void(*)(stroke_ca_t*, stroke_msg_t *msg, FILE *out))list;
