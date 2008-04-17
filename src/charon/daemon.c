@@ -169,6 +169,10 @@ static void destroy(private_daemon_t *this)
 		this->public.processor->set_threads(this->public.processor, 0);
 	}
 	/* close all IKE_SAs */
+	if (this->public.ike_sa_manager)
+	{
+		this->public.ike_sa_manager->flush(this->public.ike_sa_manager);
+	}
 	DESTROY_IF(this->public.plugins);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.kernel_interface);

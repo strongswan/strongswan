@@ -199,9 +199,16 @@ struct ike_sa_manager_t {
 	int (*get_half_open_count) (ike_sa_manager_t *this, host_t *ip);
 	
 	/**
-	 * Destroys the manager with all associated SAs.
+	 * Delete all existing IKE_SAs and destroy them immediately.
 	 * 
 	 * Threads will be driven out, so all SAs can be deleted cleanly.
+	 */
+	void (*flush)(ike_sa_manager_t *this);
+	
+	/**
+	 * Destroys the manager with all associated SAs.
+	 *
+	 * A call to flush() is required before calling destroy.
 	 */
 	void (*destroy) (ike_sa_manager_t *this);
 };

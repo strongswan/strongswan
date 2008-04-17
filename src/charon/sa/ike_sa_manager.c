@@ -898,9 +898,9 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 }
 
 /**
- * Implementation of ike_sa_manager_t.destroy.
+ * Implementation of ike_sa_manager_t.flush.
  */
-static void destroy(private_ike_sa_manager_t *this)
+static void flush(private_ike_sa_manager_t *this)
 {
 	/* destroy all list entries */
 	enumerator_t *enumerator;
@@ -943,9 +943,20 @@ static void destroy(private_ike_sa_manager_t *this)
 	
 	DBG2(DBG_MGR, "destroy all entries");
 	/* Step 4: destroy all entries */
-	this->ike_sa_list->destroy_function(this->ike_sa_list, (void*)entry_destroy);
+	while (this->ike_sa_list->remove_last(this->ike_sa_list,
+										  (void**)&entry) == SUCCESS)
+	{
+		entry_destroy(entry);
+	}
 	pthread_mutex_unlock(&(this->mutex));
-	
+}
+
+/**
+ * Implementation of ike_sa_manager_t.destroy.
+ */
+static void destroy(private_ike_sa_manager_t *this)
+{
+	this->ike_sa_list->destroy(this->ike_sa_list);
 	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
 	
@@ -960,6 +971,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	private_ike_sa_manager_t *this = malloc_thing(private_ike_sa_manager_t);
 
 	/* assign public functions */
+	this->public.flush = (void(*)(ike_sa_manager_t*))flush;
 	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
 	this->public.checkout = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_id_t*))checkout;
 	this->public.checkout_new = (ike_sa_t*(*)(ike_sa_manager_t*,bool))checkout_new;
