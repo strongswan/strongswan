@@ -105,7 +105,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 {
     int pid, i;
     struct stat stb;
-    char buffer[BUF_LEN], buffer1[BUF_LEN];
+    char buffer[BUF_LEN];
     int argc = 1;
     char *arg[] = {
 	CHARON_CMD, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,

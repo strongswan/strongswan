@@ -116,3 +116,11 @@ INSERT INTO certificate_identity (
 ) VALUES (
 	2, 5
 );
+
+INSERT INTO pools (
+	name, start, end, next
+) VALUES (
+	'a', X'0a050000', X'0a05ffff', X'0a050000'
+);
+
+
