@@ -511,7 +511,8 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		msg->add_conn.eap_type,	msg->add_conn.eap_vendor,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay,
-		vip, msg->add_conn.other.sourceip_size ? msg->add_conn.name : NULL,
+		vip, msg->add_conn.other.sourceip_size ?
+							msg->add_conn.name : msg->add_conn.other.sourceip,
 		msg->add_conn.ikeme.mediation, mediated_by, peer_id);
 }
 
