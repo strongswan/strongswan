@@ -355,6 +355,13 @@ static void stroke_loglevel(private_stroke_socket_t *this, stroke_msg_t *msg, FI
 	charon->syslog->set_level(charon->syslog, signal, msg->loglevel.level);
 }
 
+/**
+ * set various config options
+ */
+static void stroke_config(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *out)
+{
+	this->cred->cachecrl(this->cred, msg->config.cachecrl);
+}
 
 /**
  * destroy a job context
@@ -447,6 +454,9 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			break;
 		case STR_LOGLEVEL:
 			stroke_loglevel(this, msg, out);
+			break;
+		case STR_CONFIG:
+			stroke_config(this, msg, out);
 			break;
 		case STR_LIST:
 			stroke_list(this, msg, out);

@@ -73,6 +73,11 @@ struct private_stroke_cred_t {
 	 * mutex to lock lists above
 	 */
 	mutex_t *mutex;
+	
+	/**
+	 * cache CRLs to disk?
+	 */
+	bool cachecrl;
 };
 
 /**
@@ -527,7 +532,7 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
  */
 static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 {
-	if (cert->get_type(cert) == CERT_X509_CRL)
+	if (cert->get_type(cert) == CERT_X509_CRL && this->cachecrl)
 	{
 		/* CRLs get cached to /etc/ipsec.d/crls/authkeyId.der */
 		crl_t *crl = (crl_t*)cert;
@@ -559,6 +564,17 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 		}
 	}
 }
+
+/**
+ * Implementation of stroke_cred_t.cachecrl.
+ */
+static void cachecrl(private_stroke_cred_t *this, bool enabled)
+{
+	DBG1(DBG_CFG, "crl caching to %s %s",
+		 CRL_DIR, enabled ? "enabled" : "disabled");
+	this->cachecrl = enabled;
+}
+
 
 /**
  * Convert a string of characters into a binary secret
@@ -912,6 +928,7 @@ stroke_cred_t *stroke_cred_create()
 	this->public.reread = (void(*)(stroke_cred_t*, stroke_msg_t *msg))reread;
 	this->public.load_ca = (certificate_t*(*)(stroke_cred_t*, char *filename))load_ca;
 	this->public.load_peer = (certificate_t*(*)(stroke_cred_t*, char *filename))load_peer;
+	this->public.cachecrl = (void(*)(stroke_cred_t*, bool enabled))cachecrl;
 	this->public.destroy = (void(*)(stroke_cred_t*))destroy;
 	
 	this->certs = linked_list_create();
@@ -921,6 +938,8 @@ stroke_cred_t *stroke_cred_create()
 
 	load_certs(this);
 	load_secrets(this);
+	
+	this->cachecrl = FALSE;
 	
 	return &this->public;
 }

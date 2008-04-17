@@ -63,6 +63,13 @@ struct stroke_cred_t {
 	certificate_t* (*load_peer)(stroke_cred_t *this, char *filename);
 	
 	/**
+	 * Enable/Disable CRL caching to disk.
+	 *
+	 * @param enabled		TRUE to enable, FALSE to disable
+	 */
+	void (*cachecrl)(stroke_cred_t *this, bool enabled);
+	
+	/**
      * Destroy a stroke_cred instance.
      */
     void (*destroy)(stroke_cred_t *this);

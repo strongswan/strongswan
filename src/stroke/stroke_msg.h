@@ -169,6 +169,8 @@ struct stroke_msg_t {
 		STR_DEL_CA,
 		/* set a log type to log/not log */
 		STR_LOGLEVEL,
+		/* configure global options for stroke */
+		STR_CONFIG,
 		/* list various objects */
 		STR_LIST,
 		/* reread various objects */
@@ -238,6 +240,11 @@ struct stroke_msg_t {
 			char *type;
 			int level;
 		} loglevel;
+		
+		/* data for STR_CONFIG */
+		struct {
+			int cachecrl;
+		} config;
 
 		/* data for STR_LIST */
 		struct {

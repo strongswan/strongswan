@@ -118,16 +118,6 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     {
 	arg[argc++] = "--use-syslog";
     }
-    if (cfg->setup.cachecrls)
-    {
-	arg[argc++] = "--cachecrls";
-    }
-    if (cfg->setup.crlcheckinterval > 0)
-    {
-	snprintf(buffer1, BUF_LEN, "%u", cfg->setup.crlcheckinterval);
-	arg[argc++] = "--crlcheckinterval";
-	arg[argc++] = buffer1;
-    }
 
     {   /* parse debug string */
     	char *pos, *level, *buf_pos, type[4];

@@ -327,4 +327,17 @@ int starter_stroke_del_ca(starter_ca_t *ca)
 	return send_stroke_msg(&msg);
 }
 
+int starter_stroke_configure(starter_config_t *cfg)
+{
+	stroke_msg_t msg;
+    
+	if (cfg->setup.cachecrls)
+	{
+		msg.type = STR_CONFIG;
+		msg.length = offsetof(stroke_msg_t, buffer);
+		msg.config.cachecrl = 1;
+		return send_stroke_msg(&msg);
+	}
+	return 0;
+}
 

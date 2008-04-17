@@ -456,9 +456,6 @@ static void usage(const char *msg)
 	fprintf(stderr, "Usage: charon\n"
 					"         [--help]\n"
 					"         [--version]\n"
-					"         [--strictcrlpolicy]\n"
-					"         [--cachecrls]\n"
-					"         [--crlcheckinterval <interval>]\n"
 					"         [--use-syslog]\n"
 					"         [--debug-<type> <level>]\n"
 					"           <type>:  log context type (dmn|mgr|ike|chd|job|cfg|knl|net|enc|lib)\n"
@@ -474,8 +471,6 @@ static void usage(const char *msg)
  */
 int main(int argc, char *argv[])
 {
-	u_int crl_check_interval = 0;
-	bool cache_crls = FALSE;
 	bool use_syslog = FALSE;
 
 	private_daemon_t *private_charon;
@@ -512,8 +507,6 @@ int main(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
-			{ "cachecrls", no_argument, NULL, 'C' },
-			{ "crlcheckinterval", required_argument, NULL, 'x' },
 			/* TODO: handle "debug-all" */
 			{ "debug-dmn", required_argument, &signal, DBG_DMN },
 			{ "debug-mgr", required_argument, &signal, DBG_MGR },
@@ -541,12 +534,6 @@ int main(int argc, char *argv[])
 				exit(0);
 			case 'l':
 				use_syslog = TRUE;
-				continue;
-			case 'C':
-				cache_crls = TRUE;
-				continue;
-			case 'x':
-				crl_check_interval = atoi(optarg);
 				continue;
 			case 0:
 				/* option is in signal */

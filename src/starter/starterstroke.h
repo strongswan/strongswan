@@ -25,5 +25,6 @@ extern int starter_stroke_route_conn(starter_conn_t *conn);
 extern int starter_stroke_initiate_conn(starter_conn_t *conn);
 extern int starter_stroke_add_ca(starter_ca_t *ca);
 extern int starter_stroke_del_ca(starter_ca_t *ca);
+extern int starter_stroke_configure(starter_config_t *cfg);
 
 #endif /* _STARTER_STROKE_H_ */

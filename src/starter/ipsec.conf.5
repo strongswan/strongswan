@@ -885,7 +885,7 @@ The currently-accepted
 names in a
 .B config
 .B setup
-section are:
+section affecting both daemons are:
 .TP 14
 .B cachecrls
 certificate revocation lists (CRLs) fetched via http or ldap will be cached in
@@ -904,11 +904,6 @@ Accepted values are
 (the default)
 or
 .BR no .
-.TP
-.B crlcheckinterval
-interval in seconds. CRL fetching is enabled if the value is greater than zero.
-Asynchronous, periodic checking for fresh CRLs is currently done by the
-IKEv1 Pluto daemon only.
 .TP
 .B dumpdir
 in what directory should things started by \fBipsec starter\fR
@@ -940,10 +935,36 @@ which reverts to
 if at least one CRL URI is defined and to
 .B no
 if no URI is known.
+.TP
+.B uniqueids
+whether a particular participant ID should be kept unique,
+with any new (automatically keyed)
+connection using an ID from a different IP address
+deemed to replace all old ones using that ID;
+acceptable values are
+.B yes
+(the default)
+and
+.BR no .
+Participant IDs normally \fIare\fR unique,
+so a new (automatically-keyed) connection using the same ID is
+almost invariably intended to replace an old one.
+The IKEv2 daemon also accepts the value
+.B replace
+wich is identical to
+.B yes
+and the value
+.B keep
+to reject new IKE_SA setups and keep the duplicate established earlier.
 .PP
 The following
 .B config section
 parameters are used by the IKEv1 Pluto daemon only:
+.TP
+.B crlcheckinterval
+interval in seconds. CRL fetching is enabled if the value is greater than zero.
+Asynchronous, periodic checking for fresh CRLs is currently done by the
+IKEv1 Pluto daemon only.
 .TP
 .B keep_alive
 interval in seconds between NAT keep alive packets, the default being 20 seconds.
@@ -1035,27 +1056,6 @@ Default is none.
 .TP
 .B virtual_private
 defines private networks using a wildcard notation.
-.TP
-.B uniqueids
-whether a particular participant ID should be kept unique,
-with any new (automatically keyed)
-connection using an ID from a different IP address
-deemed to replace all old ones using that ID;
-acceptable values are
-.B yes
-(the default)
-and
-.BR no .
-Participant IDs normally \fIare\fR unique,
-so a new (automatically-keyed) connection using the same ID is
-almost invariably intended to replace an old one.
-The IKEv2 daemon also accepts the value
-.B replace
-wich is identical to
-.B yes
-and the value
-.B keep
-to reject new IKE_SA setups and keep the duplicate established earlier.
 .PP
 The following
 .B config section

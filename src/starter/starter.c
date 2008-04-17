@@ -541,6 +541,7 @@ int main (int argc, char **argv)
 		    /* schedule next try */
 		    alarm(PLUTO_RESTART_DELAY);
 		}
+		starter_stroke_configure(cfg);
 	    }
 	    _action_ &= ~FLAG_ACTION_START_CHARON;
 	}
