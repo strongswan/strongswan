@@ -1,3 +1,13 @@
+strongswan-4.2.1
+----------------
+
+- re-implemented cachecrls=yes.
+
+- set DPD defaults to dpd_delay=30s and dpd_timeout=150s.
+
+- fixed a couple of minor bugs.
+
+
 strongswan-4.2.0
 ----------------
 
