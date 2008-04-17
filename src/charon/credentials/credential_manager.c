@@ -397,6 +397,24 @@ static void remove_local_set(private_credential_manager_t *this,
 }
 
 /**
+ * Implementation of credential_manager_t.cache_cert.
+ */
+static void cache_cert(private_credential_manager_t *this, certificate_t *cert)
+{
+	credential_set_t *set;
+	enumerator_t *enumerator;
+	
+	pthread_rwlock_rdlock(&this->lock);
+	enumerator = this->sets->create_enumerator(this->sets);
+	while (enumerator->enumerate(enumerator, &set))
+	{
+		set->cache_cert(set, cert);
+	}
+	enumerator->destroy(enumerator);
+	pthread_rwlock_unlock(&this->lock);
+}
+
+/**
  * forward declaration 
  */
 static enumerator_t *create_trusted_enumerator(private_credential_manager_t *this,
@@ -490,11 +508,12 @@ static bool verify_ocsp(private_credential_manager_t *this,
 static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 									  certificate_t *cand, certificate_t *best,
 									  x509_t *subject, x509_t *issuer,
-									  cert_validation_t *valid)
+									  cert_validation_t *valid, bool cache)
 {
 	ocsp_response_t *response;
 	time_t revocation, this_update, next_update, valid_until;
 	crl_reason_t reason;
+	bool revoked = FALSE;
 	
 	response = (ocsp_response_t*)cand;
 
@@ -513,9 +532,8 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 			/* subject has been revoked by a valid OCSP response */
 			DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
 				 		  &revocation, crl_reason_names, reason);
-			DESTROY_IF(best);
-			*valid = VALIDATION_REVOKED;
-			return cand;
+			revoked = TRUE;
+			break;
 		case VALIDATION_GOOD:
 			/* results in either good or stale */
 			break;
@@ -537,6 +555,10 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 			DBG1(DBG_CFG, "  ocsp response is valid: until %#T",
 							 &valid_until, FALSE);
 			*valid = VALIDATION_GOOD;
+			if (cache)
+			{	/* cache non-stale only, stale certs get refetched */
+				cache_cert(this, best);
+			}
 		}
 		else
 		{
@@ -549,6 +571,10 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 	{
 		*valid = VALIDATION_STALE;
 		cand->destroy(cand);
+	}
+	if (revoked)
+	{	/* revoked always counts, even if stale */
+		*valid = VALIDATION_REVOKED;
 	}
 	return best;
 }
@@ -573,7 +599,8 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		current->get_ref(current);
-		best = get_better_ocsp(this, current, best, subject, issuer, &valid);
+		best = get_better_ocsp(this, current, best, subject, issuer,
+							   &valid, FALSE);
 		if (best && valid != VALIDATION_STALE)
 		{
 			DBG1(DBG_CFG, "  using cached ocsp response");
@@ -599,7 +626,8 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 								 &issuer->interface);
 			if (current)
 			{
-				best = get_better_ocsp(this, current, best, subject, issuer, &valid);
+				best = get_better_ocsp(this, current, best, subject, issuer,
+									   &valid, TRUE);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -620,7 +648,8 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 								 &issuer->interface);
 			if (current)
 			{
-				best = get_better_ocsp(this, current, best, subject, issuer, &valid);
+				best = get_better_ocsp(this, current, best, subject, issuer,
+									   &valid, TRUE);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -699,7 +728,7 @@ static bool verify_crl(private_credential_manager_t *this, certificate_t *crl)
 static certificate_t *get_better_crl(private_credential_manager_t *this,
 									 certificate_t *cand, certificate_t *best,
 									 x509_t *subject, x509_t *issuer,
-									 cert_validation_t *valid)
+									 cert_validation_t *valid, bool cache)
 {
 	enumerator_t *enumerator;
 	time_t revocation, valid_until;
@@ -740,6 +769,10 @@ static certificate_t *get_better_crl(private_credential_manager_t *this,
 		{
 			DBG1(DBG_CFG, "  crl is valid: until %#T", &valid_until, FALSE);
 			*valid = VALIDATION_GOOD;
+			if (cache)
+			{	/* we cache non-stale crls only, as a stale crls are refetched */
+				cache_cert(this, best);
+			}
 		}
 		else
 		{
@@ -786,7 +819,8 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 		while (enumerator->enumerate(enumerator, &current))
 		{
 			current->get_ref(current);
-			best = get_better_crl(this, current, best, subject, issuer, &valid);
+			best = get_better_crl(this, current, best, subject, issuer,
+								  &valid, FALSE);
 			if (best && valid != VALIDATION_STALE)
 			{
 				DBG1(DBG_CFG, "  using cached crl");
@@ -806,7 +840,8 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 			current = fetch_crl(this, uri);
 			if (current)
 			{
-				best = get_better_crl(this, current, best, subject, issuer, &valid);
+				best = get_better_crl(this, current, best, subject, issuer,
+									  &valid, TRUE);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -827,7 +862,8 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 			current = fetch_crl(this, uri);
 			if (current)
 			{
-				best = get_better_crl(this, current, best, subject, issuer, &valid);
+				best = get_better_crl(this, current, best, subject, issuer,
+									  &valid, TRUE);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -1436,24 +1472,6 @@ static void flush_cache(private_credential_manager_t *this,
 {
 	this->cache->flush(this->cache, type);
 }
-
-/**
- * Implementation of credential_manager_t.cache_cert.
- */
-static void cache_cert(private_credential_manager_t *this, certificate_t *cert)
-{
-	credential_set_t *set;
-	enumerator_t *enumerator;
-	
-	pthread_rwlock_rdlock(&this->lock);
-	enumerator = this->sets->create_enumerator(this->sets);
-	while (enumerator->enumerate(enumerator, &set))
-	{
-		set->cache_cert(set, cert);
-	}
-	enumerator->destroy(enumerator);
-	pthread_rwlock_unlock(&this->lock);
-}	
 
 /**
  * Implementation of credential_manager_t.add_set.
