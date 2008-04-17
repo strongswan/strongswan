@@ -544,6 +544,7 @@ int main(int argc, char **argv)
 		attr_chunk = attr_cert->get_encoding(attr_cert);
 		if (chunk_write(attr_chunk, outfile, "attribute cert", 0022, TRUE))
 		{
+			DBG1("  wrote attribute cert file '%s' (%u bytes)", outfile, chunk.len);
 			write_serial(serial);
 			status = 0;
 		}

@@ -18,6 +18,8 @@
 
 #include <stdio.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
 
 #include "chunk.h"
 
@@ -205,41 +207,38 @@ void chunk_split(chunk_t chunk, const char *mode, ...)
 /**
  * Described in header.
  */
-bool chunk_write(chunk_t chunk, const char *path, const char *label, mode_t mask, bool force)
+bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force)
 {
 	mode_t oldmask;
 	FILE *fd;
+	bool good = FALSE;
 
-	if (!force)
+	if (!force && access(path, F_OK) == 0)
 	{
-		fd = fopen(path, "r");
-		if (fd)
-		{
-			fclose(fd);
-			DBG1("  %s file '%s' already exists", label, path);
-			return FALSE;
-		}
+		DBG1("  file '%s' already exists", path);
+		return FALSE;
 	}
-
-	/* set umask */
 	oldmask = umask(mask);
-
 	fd = fopen(path, "w");
-
 	if (fd)
 	{
-		fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd);
+		if (fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd) == chunk.len)
+		{
+			good = TRUE;
+		}
+		else
+		{
+			DBG1("  writing to file '%s' failed: %s", path, strerror(errno));
+		}
 		fclose(fd);
-		DBG1("  written %s file '%s' (%u bytes)", label, path, chunk.len);
-		umask(oldmask);
 		return TRUE;
 	}
 	else
 	{
-		DBG1("  could not open %s file '%s' for writing", label, path);
-		umask(oldmask);
-		return FALSE;
+		DBG1("  could not open file '%s': %s", path, strerror(errno));
 	}
+	umask(oldmask);
+	return good;
 }
 
 /** hex conversion digits */

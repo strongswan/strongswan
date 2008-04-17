@@ -82,7 +82,7 @@ void chunk_split(chunk_t chunk, const char *mode, ...);
 /**
   * Write the binary contents of a chunk_t to a file
   */
-bool chunk_write(chunk_t chunk, const char *path, const char *label, mode_t mask, bool force);
+bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force);
 
 /**
  * convert a chunk to an allocated hex string 
