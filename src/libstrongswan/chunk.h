@@ -65,7 +65,7 @@ size_t chunk_length(const char *mode, ...);
 /**
  * Concatenate chunks into a chunk pointing to "ptr",
  * "mode" is a string of "c" (copy) and "m" (move), which says
- * how to handle to chunks in "..."
+ * how to handle the chunks in "..."
  */
 chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...);
 
