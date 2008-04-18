@@ -43,6 +43,11 @@ struct private_stroke_config_t {
 	mutex_t *mutex;
 	
 	/**
+	 * ca sections
+	 */
+	stroke_ca_t *ca;
+	
+	/**
 	 * credentials
 	 */
 	stroke_cred_t *cred;
@@ -435,6 +440,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		cert = this->cred->load_peer(this->cred, msg->add_conn.me.cert);
 		if (cert)
 		{
+			this->ca->check_for_hash_and_url(this->ca, cert);
 			me = update_peerid(cert, me);
 			cert->destroy(cert);
 		}
@@ -805,7 +811,7 @@ static void destroy(private_stroke_config_t *this)
 /*
  * see header file
  */
-stroke_config_t *stroke_config_create(stroke_cred_t *cred)
+stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred)
 {
 	private_stroke_config_t *this = malloc_thing(private_stroke_config_t);
 	
@@ -818,6 +824,7 @@ stroke_config_t *stroke_config_create(stroke_cred_t *cred)
 	
 	this->list = linked_list_create();
 	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	this->ca = ca;
 	this->cred = cred;
 	
 	return &this->public;

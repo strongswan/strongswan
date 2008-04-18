@@ -4,6 +4,7 @@
  * Copyright (C) 2002 Mario Strasser
  * Copyright (C) 2000-2006 Andreas Steffen
  * Copyright (C) 2006-2008 Martin Willi
+ * Copyright (C) 2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -68,6 +69,11 @@ struct private_x509_cert_t {
 	 * X.509 certificate encoding in ASN.1 DER format
 	 */
 	chunk_t encoding;
+	
+	/**
+	 * SHA1 hash of the DER encoding of this X.509 certificate
+	 */
+	chunk_t encoding_hash;
 
 	/**
 	 * X.509 certificate body over which signature is computed
@@ -904,6 +910,12 @@ static id_match_t has_subject(private_x509_cert_t *this, identification_t *subje
 	identification_t *current;
 	enumerator_t *enumerator;
 	id_match_t match, best;
+	
+	if (this->encoding_hash.ptr && subject->get_type(subject) == ID_CERT_DER_SHA1 &&
+		chunk_equals(this->encoding_hash, subject->get_encoding(subject)))
+	{
+		return ID_MATCH_PERFECT;
+	}
 
 	best = this->subject->matches(this->subject, subject);
 	enumerator = this->subjectAltNames->create_enumerator(this->subjectAltNames);
@@ -1152,6 +1164,7 @@ static void destroy(private_x509_cert_t *this)
 		DESTROY_IF(this->public_key);
 		DESTROY_IF(this->authKeyIdentifier);
 		chunk_free(&this->encoding);
+		chunk_free(&this->encoding_hash);
 		free(this);
 	}
 }
@@ -1184,6 +1197,7 @@ static private_x509_cert_t* create_empty(void)
 	this->public.interface.create_ocsp_uri_enumerator = (enumerator_t* (*)(x509_t*))create_ocsp_uri_enumerator;
 
 	this->encoding = chunk_empty;
+	this->encoding_hash = chunk_empty;
 	this->public_key = NULL;
 	this->subject = NULL;
 	this->issuer = NULL;
@@ -1218,6 +1232,18 @@ static private_x509_cert_t *create_from_chunk(chunk_t chunk)
 	{
 		this->flags |= X509_SELF_SIGNED;
 	}
+	
+	hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (hasher != NULL)
+	{
+		hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash);
+		hasher->destroy(hasher);
+	}
+	else
+	{
+		DBG1("  unable to create hash of certificate, SHA1 not supported");		
+	}
+	
 	return this;
 }
 

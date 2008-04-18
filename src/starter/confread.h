@@ -1,6 +1,4 @@
 /* strongSwan IPsec config file parser
- * Copyright (C) 2007 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2001-2002 Mathieu Lafon
  * Arkoon Network Security
  *
@@ -154,6 +152,7 @@ struct starter_ca {
 	char		*crluri2;
 	char		*ocspuri;
 	char		*ocspuri2;
+	char        *certuribase;
 
 	bool		strict;
 

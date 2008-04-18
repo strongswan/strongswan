@@ -25,6 +25,7 @@
 
 #include <config/backend.h>
 #include <stroke_msg.h>
+#include "stroke_ca.h"
 #include "stroke_cred.h"
 
 typedef struct stroke_config_t stroke_config_t;
@@ -62,6 +63,6 @@ struct stroke_config_t {
 /**
  * Create a stroke_config instance.
  */
-stroke_config_t *stroke_config_create(stroke_cred_t *cred);
+stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred);
 
 #endif /* STROKE_CONFIG_H_ @}*/

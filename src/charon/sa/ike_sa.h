@@ -79,6 +79,11 @@ enum ike_extension_t {
 	 * peer supports MOBIKE (RFC4555)
 	 */
 	EXT_MOBIKE = (1<<1),
+	
+	/**
+	 * peer supports HTTP cert lookups as specified in RFC4306
+	 */
+	EXT_HASH_AND_URL = (1<<2),
 };
 
 /**

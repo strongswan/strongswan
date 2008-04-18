@@ -1,6 +1,5 @@
 %{
 /* strongSwan keywords
- * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -89,6 +88,7 @@ crluri2,           KW_CRLURI2
 ocspuri,           KW_OCSPURI
 ocspuri1,          KW_OCSPURI
 ocspuri2,          KW_OCSPURI2
+certuribase,       KW_CERTURIBASE
 left,              KW_LEFT
 leftnexthop,       KW_LEFTNEXTHOP
 leftsubnet,        KW_LEFTSUBNET

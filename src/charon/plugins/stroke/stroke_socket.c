@@ -250,13 +250,15 @@ static void stroke_add_ca(private_stroke_socket_t *this,
 	pop_string(msg, &msg->add_ca.crluri2);
 	pop_string(msg, &msg->add_ca.ocspuri);
 	pop_string(msg, &msg->add_ca.ocspuri2);
+	pop_string(msg, &msg->add_ca.certuribase);
 
-	DBG2(DBG_CFG, "ca %s",        msg->add_ca.name);
-	DBG2(DBG_CFG, "  cacert=%s",  msg->add_ca.cacert);
-	DBG2(DBG_CFG, "  crluri=%s",  msg->add_ca.crluri);
-	DBG2(DBG_CFG, "  crluri2=%s", msg->add_ca.crluri2);
-	DBG2(DBG_CFG, "  ocspuri=%s", msg->add_ca.ocspuri);
-	DBG2(DBG_CFG, "  ocspuri2=%s", msg->add_ca.ocspuri2);
+	DBG2(DBG_CFG, "ca %s",            msg->add_ca.name);
+	DBG2(DBG_CFG, "  cacert=%s",      msg->add_ca.cacert);
+	DBG2(DBG_CFG, "  crluri=%s",      msg->add_ca.crluri);
+	DBG2(DBG_CFG, "  crluri2=%s",     msg->add_ca.crluri2);
+	DBG2(DBG_CFG, "  ocspuri=%s",     msg->add_ca.ocspuri);
+	DBG2(DBG_CFG, "  ocspuri2=%s",    msg->add_ca.ocspuri2);
+	DBG2(DBG_CFG, "  certuribase=%s", msg->add_ca.certuribase);
 	
 	DBG1(DBG_CFG, "received stroke: add ca '%s'", msg->add_ca.name);
 	
@@ -588,7 +590,7 @@ stroke_socket_t *stroke_socket_create()
 	this->cred = stroke_cred_create();
 	this->attribute = stroke_attribute_create();
 	this->ca = stroke_ca_create(this->cred);
-	this->config = stroke_config_create(this->cred);
+	this->config = stroke_config_create(this->ca, this->cred);
 	this->control = stroke_control_create();
 	this->list = stroke_list_create();
 	

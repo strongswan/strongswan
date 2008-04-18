@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -69,6 +70,10 @@ enum auth_item_t {
 	AUTHN_IM_CERT,
 	/** certificate for trustchain verification, value is certificate_t* */
 	AUTHN_SUBJECT_CERT,
+	/** intermediate certificate supplied as hash and url */
+	AUTHN_IM_HASH_URL,
+	/** end-entity certificate supplied as hash and url */
+	AUTHN_SUBJECT_HASH_URL,
 	
 	/*
 	 * item provided to authorization process
@@ -125,6 +130,14 @@ struct auth_info_t {
 	 * @return			bool if item has been found
 	 */
 	bool (*get_item)(auth_info_t *this, auth_item_t type, void **value);
+	
+	/**
+	 * Replace an item.
+	 * 
+	 * @param type		new auth_info type
+	 * @param value		pointer to the new value
+	 */
+	void (*replace_item)(enumerator_t *this, auth_item_t type, void *value);
 	
 	/**
 	 * Create an enumerator over all items.

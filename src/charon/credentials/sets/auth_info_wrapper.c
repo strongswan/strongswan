@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,6 +15,8 @@
  *
  * $Id$
  */
+
+#include <daemon.h>
 
 #include "auth_info_wrapper.h"
 
@@ -43,6 +46,8 @@ typedef struct {
 	enumerator_t public;
 	/** inner enumerator from auth_info */
 	enumerator_t *inner;
+	/** wrapped auth info */
+	auth_info_t *auth;
 	/** enumerated cert type */
 	certificate_type_t cert;
 	/** enumerated key type */
@@ -50,6 +55,52 @@ typedef struct {
 	/** enumerated id */
 	identification_t *id;
 } wrapper_enumerator_t;
+
+/**
+ * Tries to fetch a certificate that was supplied as hash and URL (replaces the
+ * item's type and value in place).
+ */
+static bool fetch_cert(wrapper_enumerator_t *enumerator, auth_item_t *type, void **value)
+{
+	char *url = (char*)*value;
+	if (!url)
+	{
+		/* fetching the certificate previously failed */
+		return FALSE;
+	}
+	
+	chunk_t data;
+	certificate_t *cert;
+	
+	DBG1(DBG_CFG, "fetching certificate from '%s' ...", url);
+	if (lib->fetcher->fetch(lib->fetcher, url, &data) != SUCCESS)
+	{
+		DBG1(DBG_CFG, "fetching certificate from '%s' failed", url);
+		/* we set the item to NULL, so we can skip it */
+		enumerator->auth->replace_item(enumerator->inner, *type, NULL);
+		return FALSE;
+	}
+	
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+					  BUILD_BLOB_ASN1_DER, data, BUILD_END);
+	
+	if (!cert)
+	{
+		DBG1(DBG_CFG, "parsing fetched certificate failed");
+		/* we set the item to NULL, so we can skip it */
+		enumerator->auth->replace_item(enumerator->inner, *type, NULL);
+		return FALSE;
+	}
+	
+	DBG1(DBG_CFG, "fetched certificate \"%D\"", cert->get_subject(cert));
+	charon->credentials->cache_cert(charon->credentials, cert);
+	
+	*type = (*type == AUTHN_IM_HASH_URL) ? AUTHN_IM_CERT : AUTHN_SUBJECT_CERT;
+	*value = cert;
+	enumerator->auth->replace_item(enumerator->inner, *type, cert);
+	
+	return TRUE;
+}
 
 /**
  * enumerate function for wrapper_enumerator_t
@@ -62,8 +113,16 @@ static bool enumerate(wrapper_enumerator_t *this, certificate_t **cert)
 
 	while (this->inner->enumerate(this->inner, &type, &current))
 	{
-		if (type != AUTHN_SUBJECT_CERT && 
-			type != AUTHN_IM_CERT)
+		if (type == AUTHN_IM_HASH_URL ||
+			type == AUTHN_SUBJECT_HASH_URL)
+		{
+			if (!fetch_cert(this, &type, (void**)&current))
+			{
+				continue;
+			}
+		}
+		else if (type != AUTHN_SUBJECT_CERT && 
+				 type != AUTHN_IM_CERT)
 		{
 			continue;
 		}
@@ -117,6 +176,7 @@ static enumerator_t *create_enumerator(private_auth_info_wrapper_t *this,
 		return NULL;
 	}
 	enumerator = malloc_thing(wrapper_enumerator_t);
+	enumerator->auth = this->auth;
 	enumerator->cert = cert;
 	enumerator->key = key;
 	enumerator->id = id;

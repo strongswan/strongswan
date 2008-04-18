@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -59,6 +60,13 @@ struct stroke_ca_t {
 	 * @param msg		stroke message
 	 */
 	void (*list)(stroke_ca_t *this, stroke_msg_t *msg, FILE *out);
+	
+	/**
+	 * Check if a certificate can be made available through hash and URL.
+	 * 
+	 * @param cert		peer certificate
+	 */
+	void (*check_for_hash_and_url)(stroke_ca_t *this, certificate_t* cert);
 	
 	/**
      * Destroy a stroke_ca instance.

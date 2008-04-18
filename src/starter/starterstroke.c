@@ -1,5 +1,4 @@
 /* Stroke for charon is the counterpart to whack from pluto
- * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -308,12 +307,13 @@ int starter_stroke_add_ca(starter_ca_t *ca)
 
 	msg.type = STR_ADD_CA;
 	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.add_ca.name =     push_string(&msg, ca->name);
-	msg.add_ca.cacert =   push_string(&msg, ca->cacert);
-	msg.add_ca.crluri =   push_string(&msg, ca->crluri);
-	msg.add_ca.crluri2 =  push_string(&msg, ca->crluri2);
-	msg.add_ca.ocspuri =  push_string(&msg, ca->ocspuri);
-	msg.add_ca.ocspuri2 = push_string(&msg, ca->ocspuri2);
+	msg.add_ca.name =        push_string(&msg, ca->name);
+	msg.add_ca.cacert =      push_string(&msg, ca->cacert);
+	msg.add_ca.crluri =      push_string(&msg, ca->crluri);
+	msg.add_ca.crluri2 =     push_string(&msg, ca->crluri2);
+	msg.add_ca.ocspuri =     push_string(&msg, ca->ocspuri);
+	msg.add_ca.ocspuri2 =    push_string(&msg, ca->ocspuri2);
+	msg.add_ca.certuribase = push_string(&msg, ca->certuribase);
 	return send_stroke_msg(&msg);
 }
 

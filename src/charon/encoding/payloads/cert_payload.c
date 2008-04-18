@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -17,6 +18,7 @@
  */
 
 #include <stddef.h>
+#include <ctype.h>
 
 #include <daemon.h>
 
@@ -75,6 +77,11 @@ struct private_cert_payload_t {
 	 * The contained cert data value.
 	 */
 	chunk_t data;
+	
+	/**
+	 * TRUE if the hash and URL data is invalid
+	 */
+	bool invalid_hash_and_url;
 };
 
 /**
@@ -123,6 +130,42 @@ encoding_rule_t cert_payload_encodings[] = {
  */
 static status_t verify(private_cert_payload_t *this)
 {
+	if (this->encoding == ENC_X509_HASH_AND_URL ||
+		this->encoding == ENC_X509_HASH_AND_URL_BUNDLE)
+	{
+		/* rough verification of hash and URL encoded certificates */
+		if (this->data.len <= 20)
+		{
+			DBG1(DBG_ENC, "invalid payload length for hash and URL (%d), ignore",
+					this->data.len);
+			this->invalid_hash_and_url = TRUE;
+			return SUCCESS;
+		}
+		
+		int i = 20; /* skipping the hash */
+		for (; i < this->data.len; ++i)
+		{
+			if (this->data.ptr[i] == '\0')
+			{
+				/* null terminated, fine */
+				return SUCCESS;
+			}
+			else if (!isprint(this->data.ptr[i]))
+			{
+				DBG1(DBG_ENC, "non printable characters in URL of hash and URL"
+						" encoded certificate payload, ignore");
+				this->invalid_hash_and_url = TRUE;
+				return SUCCESS;
+			}
+		}
+		
+		/* URL is not null terminated, correct that */
+		chunk_t data = chunk_alloc(this->data.len + 1);
+		memcpy(data.ptr, this->data.ptr, this->data.len);
+		data.ptr[this->data.len] = '\0';
+		chunk_free(&this->data);
+		this->data = data;
+	}
 	return SUCCESS;
 }
 
@@ -169,37 +212,56 @@ static size_t get_length(private_cert_payload_t *this)
 }
 
 /**
+ * Implementation of cert_payload_t.get_cert_encoding.
+ */
+static cert_encoding_t get_cert_encoding(private_cert_payload_t *this)
+{
+	return this->encoding;
+}
+
+/**
  * Implementation of cert_payload_t.get_cert.
  */
-static certificate_t* get_cert(private_cert_payload_t *this)
+static certificate_t *get_cert(private_cert_payload_t *this)
 {
-	certificate_type_t type;
-	
-	switch (this->encoding)
+	if (this->encoding != ENC_X509_SIGNATURE)
 	{
-		case ENC_X509_SIGNATURE:
-			type = CERT_X509;
-			break;
-		case ENC_PKCS7_WRAPPED_X509:
-		case ENC_PGP:
-		case ENC_DNS_SIGNED_KEY:
-		case ENC_KERBEROS_TOKEN:
-		case ENC_CRL:
-		case ENC_ARL:
-		case ENC_SPKI:
-		case ENC_X509_ATTRIBUTE:
-		case ENC_RAW_RSA_KEY:
-		case ENC_X509_HASH_AND_URL:
-		case ENC_X509_HASH_AND_URL_BUNDLE:
-		case ENC_OCSP_CONTENT:
-		default:
-			DBG1(DBG_ENC, "certificate encoding %N not supported",
-				 cert_encoding_names, this->encoding);
-			return NULL;
+		return NULL;
 	}
-	return lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
+	return lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							  BUILD_BLOB_ASN1_DER, chunk_clone(this->data),
 							  BUILD_END);
+}
+
+/**
+ * Implementation of cert_payload_t.get_hash.
+ */
+static chunk_t get_hash(private_cert_payload_t *this)
+{
+	chunk_t hash = chunk_empty;
+	if ((this->encoding != ENC_X509_HASH_AND_URL &&
+		this->encoding != ENC_X509_HASH_AND_URL_BUNDLE) ||
+		this->invalid_hash_and_url)
+	{
+		return hash;
+	}
+	hash.ptr = this->data.ptr;
+	hash.len = 20;
+	return hash;
+}
+
+/**
+ * Implementation of cert_payload_t.get_url.
+ */
+static char *get_url(private_cert_payload_t *this)
+{
+	if ((this->encoding != ENC_X509_HASH_AND_URL &&
+		this->encoding != ENC_X509_HASH_AND_URL_BUNDLE) ||
+		this->invalid_hash_and_url)
+	{
+		return NULL;
+	}
+	return (char*)this->data.ptr + 20;
 }
 
 /**
@@ -228,12 +290,16 @@ cert_payload_t *cert_payload_create()
 	
 	this->public.destroy = (void (*) (cert_payload_t*))destroy;
 	this->public.get_cert = (certificate_t* (*) (cert_payload_t*))get_cert;
+	this->public.get_cert_encoding = (cert_encoding_t (*) (cert_payload_t*))get_cert_encoding;
+	this->public.get_hash = (chunk_t (*) (cert_payload_t*))get_hash;
+	this->public.get_url = (char* (*) (cert_payload_t*))get_url;
 	
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH;
 	this->data = chunk_empty;
 	this->encoding = 0;
+	this->invalid_hash_and_url = FALSE;
 
 	return &this->public;
 }
@@ -257,6 +323,24 @@ cert_payload_t *cert_payload_create_from_cert(certificate_t *cert)
 			return NULL;
 	}
 	this->data = cert->get_encoding(cert);
+	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH + this->data.len;
+	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url)
+{
+	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create();
+	chunk_t url_chunk;
+	
+	this->encoding = ENC_X509_HASH_AND_URL;
+	
+	url_chunk.ptr = url;
+	url_chunk.len = strlen(url) + 1;
+	
+	this->data = chunk_cat("cc", hash, url_chunk);
 	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH + this->data.len;
 	return &this->public;
 }

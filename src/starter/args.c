@@ -1,5 +1,4 @@
 /* automatic handling of confread struct arguments
- * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2006 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -233,6 +232,7 @@ static const token_info_t token_info[] =
     { ARG_STR,  offsetof(starter_ca_t, crluri2), NULL                              },
     { ARG_STR,  offsetof(starter_ca_t, ocspuri), NULL                              },
     { ARG_STR,  offsetof(starter_ca_t, ocspuri2), NULL                             },
+    { ARG_STR,  offsetof(starter_ca_t, certuribase), NULL                          },
 
     /* end keywords */
     { ARG_MISC, 0, NULL  /* KW_HOST */                                             },

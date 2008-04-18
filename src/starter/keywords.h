@@ -1,5 +1,4 @@
 /* strongSwan keywords
- * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -105,9 +104,10 @@ typedef enum {
     KW_CRLURI2,
     KW_OCSPURI,
     KW_OCSPURI2,
+    KW_CERTURIBASE,
 
 #define KW_CA_FIRST	KW_CA_SETUP
-#define KW_CA_LAST	KW_OCSPURI2
+#define KW_CA_LAST	KW_CERTURIBASE
 
    /* end keywords */
     KW_HOST,

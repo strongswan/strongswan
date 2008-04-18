@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -80,6 +81,32 @@ struct cert_payload_t {
 	certificate_t *(*get_cert)(cert_payload_t *this);
 	
 	/**
+	 * Get the encoding of the certificate.
+	 * 
+	 * @return				encoding
+	 */
+	cert_encoding_t (*get_cert_encoding)(cert_payload_t *this);
+	
+	/**
+	 * Get the hash if this is a hash and URL encoded certificate.
+	 * 
+	 * This function returns internal data, do not free.
+	 * 
+	 * @return				hash
+	 */
+	chunk_t (*get_hash)(cert_payload_t *this);
+	
+	/**
+	 * Get the URL if this is a hash and URL encoded certificate.
+	 * 
+	 * This function returns internal data, do not free.
+	 * 
+	 * @return				url
+	 */
+	char *(*get_url)(cert_payload_t *this);
+	
+	
+	/**
 	 * Destroys the cert_payload object.
 	 */
 	void (*destroy) (cert_payload_t *this);
@@ -100,5 +127,14 @@ cert_payload_t *cert_payload_create(void);
  * @return					cert_payload_t object
  */
 cert_payload_t *cert_payload_create_from_cert(certificate_t *cert);
+
+/**
+ * Creates a certificate payload with hash and URL encoding of a certificate.
+ * 
+ * @param hash				hash of the DER encoded certificate (get's cloned)
+ * @param url				the URL to locate the certificate (get's cloned)
+ * @return					cert_payload_t object
+ */
+cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url);
 
 #endif /* CERT_PAYLOAD_H_ @} */

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -20,6 +21,7 @@
 
 #include <utils/mutex.h>
 #include <utils/linked_list.h>
+#include <crypto/hashers/hasher.h>
 
 #include <daemon.h>
 
@@ -77,6 +79,16 @@ struct ca_section_t {
 	 * OCSP URIs
 	 */
 	linked_list_t *ocsp;
+	
+	/**
+	 * Hashes of certificates issued by this CA
+	 */
+	linked_list_t *hashes;
+	
+	/**
+	 * Base URI used for certificates from this CA
+	 */
+	char *certuribase;
 };
 
 /**
@@ -90,6 +102,8 @@ static ca_section_t *ca_section_create(char *name, certificate_t *cert)
 	ca->crl = linked_list_create();
 	ca->ocsp = linked_list_create();
 	ca->cert = cert;
+	ca->hashes = linked_list_create();
+	ca->certuribase = NULL;
 	return ca;
 }
 
@@ -100,6 +114,8 @@ static void ca_section_destroy(ca_section_t *this)
 {
 	this->crl->destroy_function(this->crl, free);
 	this->ocsp->destroy_function(this->ocsp, free);
+	this->hashes->destroy_offset(this->hashes, offsetof(identification_t, destroy));
+	free(this->certuribase);
 	free(this->name);
 	free(this);
 }
@@ -162,6 +178,39 @@ static enumerator_t *create_inner_cdp(ca_section_t *section, cdp_data_t *data)
 }
 
 /**
+ * inner enumerator constructor for hash and URL
+ */
+static enumerator_t *create_inner_cdp_hashandurl(ca_section_t *section, cdp_data_t *data)
+{
+	enumerator_t *enumerator = NULL, *hash_enum;
+	identification_t *current;
+	
+	if (!data->id || !section->certuribase)
+	{
+		return NULL;
+	}
+	
+	hash_enum = section->hashes->create_enumerator(section->hashes);
+	while (hash_enum->enumerate(hash_enum, &current))
+	{	
+		if (current->matches(current, data->id))
+		{
+			chunk_t hash = current->get_encoding(current);
+			char *hash_str = chunk_to_hex(hash, FALSE);
+			char *url = malloc(strlen(section->certuribase) + 40 + 1);
+			strcpy(url, section->certuribase);
+			strncat(url, hash_str, 40);
+			free(hash_str);
+			
+			enumerator = enumerator_create_single(url, free);
+			break;
+		}
+	}
+	hash_enum->destroy(hash_enum);
+	return enumerator;
+}
+
+/**
  * Implementation of credential_set_t.create_cdp_enumerator.
  */
 static enumerator_t *create_cdp_enumerator(private_stroke_ca_t *this,
@@ -170,7 +219,8 @@ static enumerator_t *create_cdp_enumerator(private_stroke_ca_t *this,
 	cdp_data_t *data;
 
 	switch (type)
-	{	/* we serve CRLs and OCSP responders */
+	{	/* we serve CRLs, OCSP responders and URLs for hash and URL */
+		case CERT_X509:
 		case CERT_X509_CRL:
 		case CERT_X509_OCSP_RESPONSE:
 		case CERT_ANY:
@@ -185,8 +235,8 @@ static enumerator_t *create_cdp_enumerator(private_stroke_ca_t *this,
 	
 	this->mutex->lock(this->mutex);
 	return enumerator_create_nested(this->sections->create_enumerator(this->sections),
-									(void*)create_inner_cdp, data,
-									(void*)cdp_data_destroy);
+			(type == CERT_X509) ? (void*)create_inner_cdp_hashandurl : (void*)create_inner_cdp,
+			data, (void*)cdp_data_destroy);
 }
 /**
  * Implementation of stroke_ca_t.add.
@@ -220,6 +270,10 @@ static void add(private_stroke_ca_t *this, stroke_msg_t *msg)
 		if (msg->add_ca.ocspuri2)
 		{
 			ca->ocsp->insert_last(ca->ocsp, strdup(msg->add_ca.ocspuri2));
+		}
+		if (msg->add_ca.certuribase)
+		{
+			ca->certuribase = strdup(msg->add_ca.certuribase);
 		}
 		this->mutex->lock(this->mutex);
 		this->sections->insert_last(this->sections, ca);
@@ -285,6 +339,42 @@ static void list_uris(linked_list_t *list, char *label, FILE *out)
 }
 
 /**
+ * Implementation of stroke_ca_t.check_for_hash_and_url.
+ */
+static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cert)
+{
+	ca_section_t *section;
+	enumerator_t *enumerator;
+	
+	hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (hasher == NULL)
+	{
+		DBG1(DBG_IKE, "unable to use hash and URL, SHA1 not supported");
+		return;
+	}
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->sections->create_enumerator(this->sections);
+	while (enumerator->enumerate(enumerator, (void**)&section))
+	{
+		if (section->certuribase && cert->issued_by(cert, section->cert))
+		{
+			chunk_t hash, encoded = cert->get_encoding(cert);
+			hasher->allocate_hash(hasher, encoded, &hash);
+			section->hashes->insert_last(section->hashes,
+					identification_create_from_encoding(ID_CERT_DER_SHA1, hash));
+			chunk_free(&hash);
+			chunk_free(&encoded);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+	
+	hasher->destroy(hasher);
+}
+
+/**
  * Implementation of stroke_ca_t.list.
  */
 static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
@@ -307,19 +397,20 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 			first = FALSE;
 		}
 		fprintf(out, "\n");
-		fprintf(out, "  authname: \"%D\"\n", cert->get_subject(cert));
+		fprintf(out, "  authname:   \"%D\"\n", cert->get_subject(cert));
 
 		/* list authkey and keyid */
 		if (public)
 		{
-			fprintf(out, "  authkey:   %D\n",
+			fprintf(out, "  authkey:     %D\n",
 					public->get_id(public, ID_PUBKEY_SHA1));
-			fprintf(out, "  keyid:     %D\n",
+			fprintf(out, "  keyid:       %D\n",
 					public->get_id(public, ID_PUBKEY_INFO_SHA1));
 			public->destroy(public);
 		}
-		list_uris(section->crl, "  crluris:  ", out);
-		list_uris(section->ocsp, "  ocspuris: ", out);
+		list_uris(section->crl, "  crluris:    ", out);
+		list_uris(section->ocsp, "  ocspuris:   ", out);
+		fprintf(out, "  certuribase: '%s'\n", section->certuribase);
 	}
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
@@ -350,6 +441,7 @@ stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 	this->public.add = (void(*)(stroke_ca_t*, stroke_msg_t *msg))add;
 	this->public.del = (void(*)(stroke_ca_t*, stroke_msg_t *msg))del;
 	this->public.list = (void(*)(stroke_ca_t*, stroke_msg_t *msg, FILE *out))list;
+	this->public.check_for_hash_and_url = (void(*)(stroke_ca_t*, certificate_t*))check_for_hash_and_url;
 	this->public.destroy = (void(*)(stroke_ca_t*))destroy;
 	
 	this->sections = linked_list_create();

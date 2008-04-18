@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -29,6 +30,8 @@ ENUM(auth_item_names, AUTHN_CA_CERT, AUTHZ_AC_GROUP,
 	"AUTHN_CA_CERT_NAME",
 	"AUTHN_IM_CERT",
 	"AUTHN_SUBJECT_CERT",
+	"AUTHN_IM_HASH_URL",
+	"AUTHN_SUBJECT_HASH_URL",
 	"AUTHZ_PUBKEY",
 	"AUTHZ_PSK",
 	"AUTHZ_EAP",
@@ -69,14 +72,38 @@ struct item_t {
 };
 
 /**
- * implements item_enumerator_t.enumerate
+ * enumerator for auth_info_wrapper_t.create_cert_enumerator()
  */
-static bool item_filter(void *data, item_t **item, auth_item_t *type,
-									void *unused, void **value)
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** inner enumerator from linked_list_t */
+	enumerator_t *inner;
+	/** the current item */
+	item_t *item;
+} item_enumerator_t;
+
+/**
+ * enumerate function for item_enumerator_t
+ */
+static bool enumerate(item_enumerator_t *this, auth_item_t *type, void **value)
 {
-	*type = (*item)->type;
-	*value = (*item)->value;
-	return TRUE;
+	if (this->inner->enumerate(this->inner, &this->item))
+	{
+		*type = this->item->type;
+		*value = this->item->value;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * destroy function for item_enumerator_t
+ */
+static void item_enumerator_destroy(item_enumerator_t *this)
+{
+	this->inner->destroy(this->inner);
+	free(this);
 }
 
 /**
@@ -84,8 +111,26 @@ static bool item_filter(void *data, item_t **item, auth_item_t *type,
  */
 static enumerator_t* create_item_enumerator(private_auth_info_t *this)
 {
-	return enumerator_create_filter(this->items->create_enumerator(this->items),
-									(void*)item_filter, NULL, NULL);
+	item_enumerator_t *enumerator;
+	
+	enumerator = malloc_thing(item_enumerator_t);
+	enumerator->item = NULL;
+	enumerator->inner = this->items->create_enumerator(this->items);
+	enumerator->public.enumerate = (void*)enumerate;
+	enumerator->public.destroy = (void*)item_enumerator_destroy;
+	return &enumerator->public;
+}
+
+static void destroy_item_value(item_t *item);
+
+/**
+ * Implementation of auth_info_t.replace_item.
+ */
+static void replace_item(item_enumerator_t *enumerator, auth_item_t type, void *value)
+{
+	destroy_item_value(enumerator->item);
+	enumerator->item->type = type;
+	enumerator->item->value = value;
 }
 
 /**
@@ -134,6 +179,12 @@ static void add_item(private_auth_info_t *this, auth_item_t type, void *value)
 			shared_key_t *key = (shared_key_t*)value;
 
 			item->value = key->get_ref(key);
+			break;
+		}
+		case AUTHN_IM_HASH_URL:
+		case AUTHN_SUBJECT_HASH_URL:
+		{
+			item->value = strdup(value);
 			break;
 		}
 		case AUTHN_CA_CERT:
@@ -200,6 +251,8 @@ static bool complies(private_auth_info_t *this, auth_info_t *constraints)
 			case AUTHN_CA_CERT_NAME:
 			case AUTHN_IM_CERT:
 			case AUTHN_SUBJECT_CERT:
+			case AUTHN_IM_HASH_URL:
+			case AUTHN_SUBJECT_HASH_URL:
 			{	/* skip non-authorization tokens */
 				continue;
 			}
@@ -362,6 +415,16 @@ static bool equals(private_auth_info_t *this, private_auth_info_t *other)
 						}
 						continue;
 					}
+					case AUTHN_IM_HASH_URL:
+					case AUTHN_SUBJECT_HASH_URL:
+					{
+						if (streq(i1->value, i2->value))
+						{
+							found = TRUE;
+							break;
+						}
+						continue;
+					}
 					case AUTHN_CA_CERT:
 					case AUTHN_IM_CERT:
 					case AUTHN_SUBJECT_CERT:
@@ -419,6 +482,57 @@ static bool equals(private_auth_info_t *this, private_auth_info_t *other)
 }
 
 /**
+ * Destroy the value associated with an item
+ */
+static void destroy_item_value(item_t *item)
+{
+	switch (item->type)
+	{
+		case AUTHZ_PUBKEY:
+		{
+			public_key_t *key = (public_key_t*)item->value;
+			key->destroy(key);
+			break;
+		}
+		case AUTHZ_PSK:
+		{
+			shared_key_t *key = (shared_key_t*)item->value;
+			key->destroy(key);
+			break;
+		}
+		case AUTHN_CA_CERT:
+		case AUTHN_IM_CERT:
+		case AUTHN_SUBJECT_CERT:
+		case AUTHZ_CA_CERT:
+		case AUTHZ_IM_CERT:
+		case AUTHZ_SUBJECT_CERT:
+		{
+			certificate_t *cert = (certificate_t*)item->value;
+			cert->destroy(cert);
+			break;
+		}
+		case AUTHN_IM_HASH_URL:
+		case AUTHN_SUBJECT_HASH_URL:
+		case AUTHZ_CRL_VALIDATION:
+		case AUTHZ_OCSP_VALIDATION:
+		case AUTHZ_EAP:
+		{
+			free(item->value);
+			break;
+		}
+		case AUTHN_CA_CERT_KEYID:
+		case AUTHN_CA_CERT_NAME:
+		case AUTHZ_CA_CERT_NAME:
+		case AUTHZ_AC_GROUP:
+		{
+			identification_t *id = (identification_t*)item->value;
+			id->destroy(id);
+			break;
+		}
+	}
+}
+
+/**
  * Implementation of auth_info_t.destroy
  */
 static void destroy(private_auth_info_t *this)
@@ -427,48 +541,7 @@ static void destroy(private_auth_info_t *this)
 	
 	while (this->items->remove_last(this->items, (void**)&item) == SUCCESS)
 	{
-		switch (item->type)
-		{
-			case AUTHZ_PUBKEY:
-			{
-				public_key_t *key = (public_key_t*)item->value;
-				key->destroy(key);
-				break;
-			}
-			case AUTHZ_PSK:
-			{
-				shared_key_t *key = (shared_key_t*)item->value;
-				key->destroy(key);
-				break;
-			}
-			case AUTHN_CA_CERT:
-			case AUTHN_IM_CERT:
-			case AUTHN_SUBJECT_CERT:
-			case AUTHZ_CA_CERT:
-			case AUTHZ_IM_CERT:
-			case AUTHZ_SUBJECT_CERT:
-			{
-				certificate_t *cert = (certificate_t*)item->value;
-				cert->destroy(cert);
-				break;
-			}
-			case AUTHZ_CRL_VALIDATION:
-			case AUTHZ_OCSP_VALIDATION:
-			case AUTHZ_EAP:
-			{
-				free(item->value);
-				break;
-			}
-			case AUTHN_CA_CERT_KEYID:
-			case AUTHN_CA_CERT_NAME:
-			case AUTHZ_CA_CERT_NAME:
-			case AUTHZ_AC_GROUP:
-			{
-				identification_t *id = (identification_t*)item->value;
-				id->destroy(id);
-				break;
-			}
-		}
+		destroy_item_value(item);
 		free(item);
 	}
 	this->items->destroy(this->items);
@@ -484,6 +557,7 @@ auth_info_t *auth_info_create()
 	
 	this->public.add_item = (void(*)(auth_info_t*, auth_item_t type, void *value))add_item;
 	this->public.get_item = (bool(*)(auth_info_t*, auth_item_t type, void **value))get_item;
+	this->public.replace_item = (void(*)(enumerator_t*,auth_item_t,void*))replace_item;
 	this->public.create_item_enumerator = (enumerator_t*(*)(auth_info_t*))create_item_enumerator;
 	this->public.complies = (bool(*)(auth_info_t*, auth_info_t *))complies;
 	this->public.merge = (void(*)(auth_info_t*, auth_info_t *other))merge;

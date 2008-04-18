@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2006-2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -45,6 +46,11 @@ struct private_ike_cert_pre_t {
 	 * Are we the initiator?
 	 */
 	bool initiator;
+	
+	/**
+	 * Did we send a HTTP_CERT_LOOKUP_SUPPORTED Notify?
+	 */
+	bool http_cert_lookup_supported_sent;
 };
 
 /**
@@ -62,50 +68,106 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	iterator = message->get_payload_iterator(message);
 	while (iterator->iterate(iterator, (void**)&payload))
 	{
-		if (payload->get_type(payload) == CERTIFICATE_REQUEST)
+		switch(payload->get_type(payload))
 		{
-			certreq_payload_t *certreq = (certreq_payload_t*)payload;
-			chunk_t keyid;
-			enumerator_t *enumerator;
-			
-			this->ike_sa->set_condition(this->ike_sa, COND_CERTREQ_SEEN, TRUE);
-			
-			if (certreq->get_cert_type(certreq) != CERT_X509)
+			case CERTIFICATE_REQUEST:
 			{
-				DBG1(DBG_IKE, "cert payload %N not supported - ignored",
-					 certificate_type_names, certreq->get_cert_type(certreq));
-				continue;
-			}
-			enumerator = certreq->create_keyid_enumerator(certreq);
-			while (enumerator->enumerate(enumerator, &keyid))
-			{
-				identification_t *id;
-				certificate_t *cert;
+				certreq_payload_t *certreq = (certreq_payload_t*)payload;
+				chunk_t keyid;
+				enumerator_t *enumerator;
 				
-				id = identification_create_from_encoding(
-										ID_PUBKEY_INFO_SHA1, keyid);
-				cert = charon->credentials->get_cert(charon->credentials, 
-										CERT_X509, KEY_ANY, id, TRUE);
-				if (cert)
+				this->ike_sa->set_condition(this->ike_sa, COND_CERTREQ_SEEN, TRUE);
+				
+				if (certreq->get_cert_type(certreq) != CERT_X509)
 				{
-					DBG1(DBG_IKE, "received cert request for \"%D\"",
-						 cert->get_subject(cert));
-					auth->add_item(auth, AUTHN_CA_CERT, cert);
-					cert->destroy(cert);
-					ca_found = TRUE;
+					DBG1(DBG_IKE, "cert payload %N not supported - ignored",
+						 certificate_type_names, certreq->get_cert_type(certreq));
+					break;
 				}
-				else
+				enumerator = certreq->create_keyid_enumerator(certreq);
+				while (enumerator->enumerate(enumerator, &keyid))
 				{
-					DBG1(DBG_IKE, "received cert request for unknown ca "
-								  "with keyid %D", id);
-					auth->add_item(auth, AUTHN_CA_CERT_KEYID, id);
+					identification_t *id;
+					certificate_t *cert;
+					
+					id = identification_create_from_encoding(
+											ID_PUBKEY_INFO_SHA1, keyid);
+					cert = charon->credentials->get_cert(charon->credentials, 
+											CERT_X509, KEY_ANY, id, TRUE);
+					if (cert)
+					{
+						DBG1(DBG_IKE, "received cert request for \"%D\"",
+							 cert->get_subject(cert));
+						auth->add_item(auth, AUTHN_CA_CERT, cert);
+						cert->destroy(cert);
+						ca_found = TRUE;
+					}
+					else
+					{
+						DBG1(DBG_IKE, "received cert request for unknown ca "
+									  "with keyid %D", id);
+						auth->add_item(auth, AUTHN_CA_CERT_KEYID, id);
+					}
+					id->destroy(id);
 				}
-				id->destroy(id);
+				enumerator->destroy(enumerator);
+				break;
 			}
-			enumerator->destroy(enumerator);
+			case NOTIFY:
+			{
+				notify_payload_t *notify = (notify_payload_t*)payload;
+				
+				/* we only handle one type of notify here */
+				if (notify->get_notify_type(notify) == HTTP_CERT_LOOKUP_SUPPORTED)
+				{
+					this->ike_sa->enable_extension(this->ike_sa, EXT_HASH_AND_URL);
+				}
+				break;
+			}
+			default:
+				/* ignore other payloads here, these are handled elsewhere */
+				break;
 		}
 	}
 	iterator->destroy(iterator);
+}
+
+/**
+ * tries to extract a certificate from the cert payload or the credential
+ * manager (based on the hash of a hash and URL encoded cert).
+ * Note: the returned certificate (if any) has to be destroyed
+ */ 
+static certificate_t *try_get_cert(cert_payload_t *cert_payload)
+{
+	certificate_t *cert = NULL;
+	switch (cert_payload->get_cert_encoding(cert_payload))
+	{
+		case ENC_X509_SIGNATURE:
+		{
+			cert = cert_payload->get_cert(cert_payload);
+			break;
+		}
+		case ENC_X509_HASH_AND_URL:
+		{
+			identification_t *id;
+			chunk_t hash = cert_payload->get_hash(cert_payload);
+			if (!hash.ptr)
+			{
+				/* invalid hash and URL data (logged elsewhere) */
+				break;
+			}
+			id = identification_create_from_encoding(ID_CERT_DER_SHA1, hash);
+			cert = charon->credentials->get_cert(charon->credentials, 
+									CERT_X509, KEY_ANY, id, FALSE);
+			id->destroy(id);
+			break;
+		}
+		default:
+		{
+			break;
+		}
+	}
+	return cert;
 }
 
 /**
@@ -125,28 +187,85 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 	{
 		if (payload->get_type(payload) == CERTIFICATE)
 		{
-			certificate_t *cert;
 			cert_payload_t *cert_payload = (cert_payload_t*)payload;
-			
-			cert = cert_payload->get_cert(cert_payload);
-			if (cert)
+			cert_encoding_t type = cert_payload->get_cert_encoding(cert_payload);
+			switch (type)
 			{
-				if (first)
-				{	/* the first certificate MUST be an end entity one */
-				
-					DBG1(DBG_IKE, "received end entity cert \"%D\"",
-						 cert->get_subject(cert));
-					auth->add_item(auth, AUTHN_SUBJECT_CERT, cert);
-					first = FALSE;
-				}
-				else
+				case ENC_X509_SIGNATURE:
+				case ENC_X509_HASH_AND_URL:
 				{
-					DBG1(DBG_IKE, "received issuer cert \"%D\"",
-						 cert->get_subject(cert));
-					auth->add_item(auth, AUTHN_IM_CERT, cert);
+					if (type == ENC_X509_HASH_AND_URL &&
+						!this->http_cert_lookup_supported_sent)
+					{
+						DBG1(DBG_IKE, "received hash and URL encoded cert, but"
+								" we don't accept them, ignore");
+						break;
+					}
+					
+					certificate_t *cert = try_get_cert(cert_payload);
+					
+					if (cert)
+					{
+						/* we've got a certificate from the payload or the cache */ 
+						if (first)
+						{	/* the first certificate MUST be an end entity one */
+							DBG1(DBG_IKE, "received end entity cert \"%D\"",
+								 cert->get_subject(cert));
+							auth->add_item(auth, AUTHN_SUBJECT_CERT, cert);
+							first = FALSE;
+						}
+						else
+						{
+							DBG1(DBG_IKE, "received issuer cert \"%D\"",
+								 cert->get_subject(cert));
+							auth->add_item(auth, AUTHN_IM_CERT, cert);
+						}
+						cert->destroy(cert);
+					}
+					else if (type == ENC_X509_HASH_AND_URL)
+					{
+						/* we received a hash and URL encoded certificate that
+						 * we haven't fetched yet, we store the URL and fetch
+						 * it later */
+						char *url = cert_payload->get_url(cert_payload);
+						if (!url)
+						{
+							DBG1(DBG_IKE, "received invalid hash and URL encoded"
+									" cert, ignore");
+							break;
+						}
+						
+						if (first)
+						{	/* the first certificate MUST be an end entity one */
+							DBG1(DBG_IKE, "received hash and URL for end"
+									" entity cert \"%s\"", url);
+							auth->add_item(auth, AUTHN_SUBJECT_HASH_URL, url);
+							first = FALSE;
+						}
+						else
+						{
+							DBG1(DBG_IKE, "received hash and URL for issuer"
+									" cert \"%s\"", url);
+							auth->add_item(auth, AUTHN_IM_HASH_URL, url);
+						}
+					}
+					break;
 				}
+				case ENC_PKCS7_WRAPPED_X509:
+				case ENC_PGP:
+				case ENC_DNS_SIGNED_KEY:
+				case ENC_KERBEROS_TOKEN:
+				case ENC_CRL:
+				case ENC_ARL:
+				case ENC_SPKI:
+				case ENC_X509_ATTRIBUTE:
+				case ENC_RAW_RSA_KEY:
+				case ENC_X509_HASH_AND_URL_BUNDLE:
+				case ENC_OCSP_CONTENT:
+				default:
+					DBG1(DBG_ENC, "certificate encoding %N not supported",
+						 cert_encoding_names, cert_payload->get_cert_encoding(cert_payload));
 			}
-			cert->destroy(cert);
 		}
 	}
 	iterator->destroy(iterator);
@@ -237,6 +356,15 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 			add_certreq_payload(message, &x509_req, cert);
 		}
 		enumerator->destroy(enumerator);
+	}
+	
+	/* if we've added at least one certreq, we notify our peer that we support
+	 * hash and URL for the requested certificates */
+	if (lib->settings->get_bool(lib->settings, "charon.hash_and_url", FALSE) &&
+		message->get_payload(message, CERTIFICATE_REQUEST))
+	{
+		message->add_notify(message, FALSE, HTTP_CERT_LOOKUP_SUPPORTED, chunk_empty);
+		this->http_cert_lookup_supported_sent = TRUE;
 	}
 }
 
@@ -342,6 +470,7 @@ ike_cert_pre_t *ike_cert_pre_create(ike_sa_t *ike_sa, bool initiator)
 	
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
+	this->http_cert_lookup_supported_sent = FALSE;
 	
 	return &this->public;
 }

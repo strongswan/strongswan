@@ -50,11 +50,12 @@ ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_ID,
 	"ID_DER_ASN1_DN",
 	"ID_DER_ASN1_GN",
 	"ID_KEY_ID");
-ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_PUBKEY_SHA1, ID_KEY_ID,
+ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_CERT_DER_SHA1, ID_KEY_ID,
 	"ID_DER_ASN1_GN_URI",
 	"ID_PUBKEY_INFO_SHA1",
-	"ID_PUBKEY_SHA1");
-ENUM_END(id_type_names, ID_PUBKEY_SHA1);
+	"ID_PUBKEY_SHA1",
+	"ID_CERT_DER_SHA1");
+ENUM_END(id_type_names, ID_CERT_DER_SHA1);
 
 /**
  * X.501 acronyms for well known object identifiers (OIDs)
@@ -941,6 +942,7 @@ static int print(FILE *stream, const struct printf_info *info,
 		case ID_KEY_ID:
 		case ID_PUBKEY_INFO_SHA1:
 		case ID_PUBKEY_SHA1:
+		case ID_CERT_DER_SHA1:
 			return fprintf(stream, "%#B", &this->encoded);
 		case ID_DER_ASN1_GN_URI:
 		{
@@ -1175,6 +1177,7 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 		case ID_DER_ASN1_GN_URI:
 		case ID_PUBKEY_INFO_SHA1:
 		case ID_PUBKEY_SHA1:
+		case ID_CERT_DER_SHA1:
 		default:
 			break;
 	}

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2006-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -48,6 +49,55 @@ struct private_ike_cert_post_t {
 };
 
 /**
+ * Generates the cert payload, if possible with hash and url
+ */
+static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this, certificate_t *cert)
+{
+	cert_payload_t *payload = NULL;
+	
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_HASH_AND_URL))
+	{
+		/* ok, our peer sent us a HTTP_CERT_LOOKUP_SUPPORTED Notify */
+		hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+		if (hasher != NULL)
+		{	
+			chunk_t hash, encoded = cert->get_encoding(cert);
+			enumerator_t *enumerator;
+			char *url;
+			
+			hasher->allocate_hash(hasher, encoded, &hash);
+			identification_t *id = identification_create_from_encoding(ID_CERT_DER_SHA1, hash);
+			
+			enumerator = charon->credentials->create_cdp_enumerator(charon->credentials, CERT_X509, id);
+			if (enumerator->enumerate(enumerator, &url))
+			{
+				/* if we have an URL available we send that to our peer */
+				payload = cert_payload_create_from_hash_and_url(hash, url);
+			}
+			enumerator->destroy(enumerator);
+			
+			id->destroy(id);
+			chunk_free(&hash);
+			chunk_free(&encoded);
+			hasher->destroy(hasher);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "unable to use hash and URL, SHA1 not supported");
+		}
+	}
+	
+	if (!payload)
+	{
+		/* our peer does not support hash and URL or we do not have an URL
+		 * to send to our peer, just create a normal cert payload */
+		payload = cert_payload_create_from_cert(cert);
+	}
+	
+	return payload;
+}
+
+/**
  * add certificates to message
  */
 static void build_certs(private_ike_cert_post_t *this, message_t *message)
@@ -81,7 +131,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 				{
 					break;
 				}
-				payload = cert_payload_create_from_cert(cert);
+				payload = build_cert_payload(this, cert);
 				if (!payload)
 				{
 					break;

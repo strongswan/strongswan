@@ -137,6 +137,11 @@ enum id_type_t {
 	 * SHA1 hash over PKCS#1 subjectPublicKey
 	 */
 	ID_PUBKEY_SHA1,
+	
+	/**
+	 * SHA1 hash of the binary DER encoding of a certificate
+	 */
+	ID_CERT_DER_SHA1,
 };
 
 /**
