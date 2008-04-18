@@ -236,7 +236,7 @@ static enumerator_t *create_cdp(credential_set_t *set, cdp_data_t *data)
  * Implementation of credential_manager_t.create_cdp_enumerator.
  */
 static enumerator_t * create_cdp_enumerator(private_credential_manager_t *this,
-								credential_type_t type, identification_t *id)
+								certificate_type_t type, identification_t *id)
 {
 	cdp_data_t *data = malloc_thing(cdp_data_t);
 	data->this = this;
@@ -1516,7 +1516,7 @@ credential_manager_t *credential_manager_create()
 	
 	this->public.create_cert_enumerator = (enumerator_t *(*)(credential_manager_t *this,certificate_type_t cert, key_type_t key,identification_t *id,bool))create_cert_enumerator;
 	this->public.create_shared_enumerator = (enumerator_t *(*)(credential_manager_t *this, shared_key_type_t type,identification_t *me, identification_t *other))create_shared_enumerator;
-	this->public.create_cdp_enumerator = (enumerator_t *(*)(credential_manager_t*, credential_type_t type, identification_t *id))create_cdp_enumerator;
+	this->public.create_cdp_enumerator = (enumerator_t *(*)(credential_manager_t*, certificate_type_t type, identification_t *id))create_cdp_enumerator;
 	this->public.get_cert = (certificate_t *(*)(credential_manager_t *this,certificate_type_t cert, key_type_t key,identification_t *, bool))get_cert;
 	this->public.get_shared = (shared_key_t *(*)(credential_manager_t *this,shared_key_type_t type,identification_t *me, identification_t *other))get_shared;
 	this->public.get_private = (private_key_t*(*)(credential_manager_t*, key_type_t type, identification_t *, auth_info_t*))get_private;

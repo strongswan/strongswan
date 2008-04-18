@@ -103,7 +103,7 @@ struct credential_manager_t {
 	 * @return			enumerator of CDPs as char*
 	 */
 	enumerator_t *(*create_cdp_enumerator)(credential_manager_t *this,
-								credential_type_t type, identification_t *id);
+								certificate_type_t type, identification_t *id);
 	/**
 	 * Get a trusted or untrusted certificate.
 	 *
