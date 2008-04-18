@@ -1,12 +1,37 @@
 strongswan-4.2.1
 ----------------
 
-- re-implemented cachecrls=yes.
+- hash and url
+
+- The IKEv2 daemon charon now supports the "uniqueids" option to close multiple
+  IKE_SAs with the same peer. The option value "keep" prefers existing
+  connection setups over new ones, where the value "replace" replaces existing
+  connections.
+  
+- The crypto factory in libstrongswan additionaly supports random number 
+  generators, plugins may provide other sources of randomness. The default
+  plugin reads random data from /dev/(u)random.
+
+- Extended the credential framework by a caching option to allow plugins 
+  persistent caching of fetched credentials. The "cachecrl" option has been
+  reeimplemented.
+
+- The new trustchain verification introduced in 4.2.0 has been parallelized.
+  Threads fetching CRL or OCSP information no longer block other threads.
+
+- A new IKEv2 configuration attribute framework has been introduced allowing
+  plugins to provide virtual IP addresses, and in the future, other
+  configuration attribute services (e.g. DNS/WINS servers).
+
+- The stroke plugin has been extended to provide virutal IP addresses from
+  a pool defined in ipsec.conf. The "rightsourceip" parameter now accepts
+  address pools in CIDR notation (e.g. 10.1.1.0/24). The parameter also accepts
+  the value "%poolname", where "poolname" identifies a pool provided by a
+  seperate plugin.
+
+- Fixed compilation on uClibc and a couple of minor bugs.
 
 - set DPD defaults to dpd_delay=30s and dpd_timeout=150s.
-
-- fixed a couple of minor bugs.
-
 
 strongswan-4.2.0
 ----------------
