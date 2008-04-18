@@ -102,7 +102,7 @@ static sparse_names ealg_list = {
 	{ SADB_X_EALG_CASTCBC, "cast128" },
 	{ SADB_X_EALG_BLOWFISHCBC, "blowfish" },
 	{ SADB_X_EALG_AESCBC, "aes" },
-	{ SADB_X_EALG_CAMELLIACBC, "camellia" },
+	{ SADB_X_EALG_CAMELLIACBC, "cbc(camellia)" },
 	{ SADB_X_EALG_SERPENTCBC, "serpent" },
 	{ SADB_X_EALG_TWOFISHCBC, "twofish" },
 	{ 0, sparse_end }
