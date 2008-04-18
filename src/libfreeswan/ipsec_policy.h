@@ -75,14 +75,16 @@ enum ipsec_bandwidth_quality {
  * and in http://www.iana.org/assignments/isakmp-registry
  */
 enum ipsec_authentication_algo {
-  AH_NONE     = 0,
-  AH_MD5      = 2,
-  AH_SHA      = 3,
-  AH_DES      = 4,
-  AH_SHA2_256 = 5,
-  AH_SHA2_384 = 6,
-  AH_SHA2_512 = 7,
-  AH_RIPEMD   = 8
+  AH_NONE         = 0,
+  AH_MD5          = 2,
+  AH_SHA          = 3,
+  AH_DES          = 4,
+  AH_SHA2_256     = 5,
+  AH_SHA2_384     = 6,
+  AH_SHA2_512     = 7,
+  AH_RIPEMD       = 8,
+  AH_AES_XCBC_MAC = 9,
+  AH_RSA          = 10
 };
 
 /* IPsec ESP transform values
@@ -91,25 +93,31 @@ enum ipsec_authentication_algo {
  */
 
 enum ipsec_cipher_algo {
-  ESP_NONE	 = 0,
-  ESP_DES_IV64   = 1,
-  ESP_DES        = 2,
-  ESP_3DES       = 3,
-  ESP_RC5        = 4,
-  ESP_IDEA       = 5,
-  ESP_CAST       = 6,
-  ESP_BLOWFISH   = 7,
-  ESP_3IDEA      = 8,
-  ESP_DES_IV32   = 9,
-  ESP_RC4        = 10,
-  ESP_NULL       = 11,
-  ESP_AES        = 12,
-  ESP_AES_CTR    = 13,
-  ESP_AES_CCM_8  = 14,
-  ESP_AES_CCM_12 = 15,
-  ESP_AES_CCM_16 = 16,
-  ESP_SERPENT    = 252,
-  ESP_TWOFISH    = 253
+  ESP_NONE	    = 0,
+  ESP_DES_IV64      = 1,
+  ESP_DES           = 2,
+  ESP_3DES          = 3,
+  ESP_RC5           = 4,
+  ESP_IDEA          = 5,
+  ESP_CAST          = 6,
+  ESP_BLOWFISH      = 7,
+  ESP_3IDEA         = 8,
+  ESP_DES_IV32      = 9,
+  ESP_RC4           = 10,
+  ESP_NULL          = 11,
+  ESP_AES           = 12,
+  ESP_AES_CTR       = 13,
+  ESP_AES_CCM_8     = 14,
+  ESP_AES_CCM_12    = 15,
+  ESP_AES_CCM_16    = 16,
+  ESP_UNASSIGNED_17 = 17,
+  ESP_AES_GCM_8     = 18,
+  ESP_AES_GCM_12    = 19,
+  ESP_AES_GCM_16    = 20,
+  ESP_SEED_CBC      = 21,
+  ESP_CAMELLIA      = 22,
+  ESP_SERPENT       = 252,
+  ESP_TWOFISH       = 253
 };
 
 /* IPCOMP transform values

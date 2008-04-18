@@ -992,6 +992,8 @@ extern enum_names auth_alg_names, extended_auth_alg_names;
 #define AUTH_ALGORITHM_HMAC_SHA2_384	6
 #define AUTH_ALGORITHM_HMAC_SHA2_512	7
 #define AUTH_ALGORITHM_HMAC_RIPEMD	8
+#define AUTH_ALGORITHM_AES_XCBC_MAC	9
+#define AUTH_ALGORITHM_SIG_RSA		10
 #define AUTH_ALGORITHM_NULL		251
 
 /* Oakley Lifetime Type attribute

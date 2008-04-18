@@ -377,11 +377,13 @@ static const char *const ah_transform_name[] = {
 	"AH_SHA2_256",
 	"AH_SHA2_384",
 	"AH_SHA2_512",
-	"AH_RIPEMD"
+	"AH_RIPEMD",
+	"AH_AES_XCBC_MAC",
+	"AH_RSA"
     };
 
 enum_names ah_transformid_names =
-    { AH_MD5, AH_RIPEMD, ah_transform_name, NULL };
+    { AH_MD5, AH_RSA, ah_transform_name, NULL };
 
 /* IPsec ESP transform values */
 
@@ -401,7 +403,13 @@ static const char *const esp_transform_name[] = {
 	"ESP_AES-CTR",
 	"ESP_AES-CCM_8",
 	"ESP_AES-CCM_12",
-	"ESP_AES-CCM_16"
+	"ESP_AES-CCM_16",
+	"ESP_UNASSIGNED_17",
+	"ESP_AES_GCM_8",
+	"ESP_AES_GCM_12",
+	"ESP_AES_GCM_16",
+	"ESP_SEED_CBC",
+	"ESP_CAMELLIA"
     };
 
 /*
@@ -417,7 +425,7 @@ enum_names esp_transformid_names_high =
     { ESP_SERPENT, ESP_TWOFISH, esp_transform_name_high, NULL };
 
 enum_names esp_transformid_names =
-    { ESP_DES_IV64, ESP_AES_CCM_16, esp_transform_name, &esp_transformid_names_high };
+    { ESP_DES_IV64, ESP_CAMELLIA, esp_transform_name, &esp_transformid_names_high };
 
 /* IPCOMP transform values */
 
@@ -684,6 +692,8 @@ static const char *const auth_alg_name[] = {
 	"AUTH_ALGORITHM_HMAC_SHA2_384",
 	"AUTH_ALGORITHM_HMAC_SHA2_512",
 	"AUTH_ALGORITHM_HMAC_RIPEMD",
+	"AUTH_ALGORITHM_AES_XCBC_MAC",
+	"AUTH_ALGORITHM_SIG_RSA"
     };
 
 static const char *const extended_auth_alg_name[] = {
@@ -694,7 +704,7 @@ enum_names extended_auth_alg_names =
     { AUTH_ALGORITHM_NULL, AUTH_ALGORITHM_NULL, extended_auth_alg_name, NULL };
 
 enum_names auth_alg_names =
-    { AUTH_ALGORITHM_HMAC_MD5, AUTH_ALGORITHM_HMAC_RIPEMD, auth_alg_name
+    { AUTH_ALGORITHM_HMAC_MD5, AUTH_ALGORITHM_SIG_RSA, auth_alg_name
 	, &extended_auth_alg_names };
 
 /* From draft-beaulieu-ike-xauth */
