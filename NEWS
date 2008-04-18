@@ -28,15 +28,20 @@ strongswan-4.2.1
   plugins to provide virtual IP addresses, and in the future, other
   configuration attribute services (e.g. DNS/WINS servers).
 
-- The stroke plugin has been extended to provide virutal IP addresses from
+- The stroke plugin has been extended to provide virtual IP addresses from
   a pool defined in ipsec.conf. The "rightsourceip" parameter now accepts
   address pools in CIDR notation (e.g. 10.1.1.0/24). The parameter also accepts
   the value "%poolname", where "poolname" identifies a pool provided by a
-  seperate plugin.
+  separate plugin.
 
 - Fixed compilation on uClibc and a couple of minor bugs.
 
-- set DPD defaults to dpd_delay=30s and dpd_timeout=150s.
+- set DPD defaults in ipsec starter to dpd_delay=30s and dpd_timeout=150s.
+
+- The IKEv1 pluto daemon now supports the ESP encryption algorithm CAMELLIA
+  with bit lengths of 128, 192, and 256 bits, as well as the authentication
+  algorithm AES_XCBC_MAC. Configuration example: esp=camellia192-aesxcbc.
+
 
 strongswan-4.2.0
 ----------------
