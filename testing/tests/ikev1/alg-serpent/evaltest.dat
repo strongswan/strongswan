@@ -1,9 +1,10 @@
-
 carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
 moon::ipsec status::rw.*STATE_QUICK_R2.*IPsec SA established::YES
-moon::ipsec statusall::IKE algorithm newest: SERPENT_CBC_256-SHA2_512-MODP4096::YES
 carol::ipsec statusall::IKE algorithm newest: SERPENT_CBC_256-SHA2_512-MODP4096::YES
-moon::ipsec statusall::ESP algorithm newest: SERPENT_256-HMAC_SHA2_256::YES
+moon::ipsec statusall::IKE algorithm newest: SERPENT_CBC_256-SHA2_512-MODP4096::YES
 carol::ipsec statusall::ESP algorithm newest: SERPENT_256-HMAC_SHA2_256::YES
+moon::ipsec statusall::ESP algorithm newest: SERPENT_256-HMAC_SHA2_256::YES
+carol::ip xfrm state::enc cbc(serpent)::YES
+moon::ip xfrm state::enc cbc(serpent)::YES
 carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
 
