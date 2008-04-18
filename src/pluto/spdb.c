@@ -2058,7 +2058,7 @@ parse_ipsec_sa_body(
 		/* set default key length for AES encryption */
 		if (!esp_attrs.key_len && esp_attrs.transid == ESP_AES)
 		{
-		    esp_attrs.key_len = 128 / BITS_PER_BYTE;
+		    esp_attrs.key_len = 128; /* bits */
 		}
 
 		if (!kernel_alg_esp_enc_ok(esp_attrs.transid, esp_attrs.key_len
