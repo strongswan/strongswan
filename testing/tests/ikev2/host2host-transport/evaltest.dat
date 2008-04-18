@@ -1,4 +1,4 @@
-moon::cat /var/log/daemon.log::received USE_TRANSPORT_MODE notify::YES
+moon::cat /var/log/daemon.log::parsed IKE_AUTH response.*N(USE_TRANSP)::YES
 moon::ipsec status::host-host.*INSTALLED.*TRANSPORT::YES
 sun::ipsec status::host-host.*INSTALLED.*TRANSPORT::YES
 moon::ip xfrm state::mode transport::YES
