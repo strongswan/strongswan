@@ -1,7 +1,12 @@
 strongswan-4.2.1
 ----------------
 
-- hash and url
+- Support for hash and URL encoded certificate payloads has been implemented
+  in the IKEv2 daemon charon. Using the "certuribase" option of a CA section
+  allows to assign a base URL to all certificates issued by the specified CA.
+  The final URL is then built by concatenating that base and the hex encoded
+  SHA1 hash of the DER encoded certificate. Note that this feature is disabled
+  by default and must be enabled using the option "charon.hash_and_url".
 
 - The IKEv2 daemon charon now supports the "uniqueids" option to close multiple
   IKE_SAs with the same peer. The option value "keep" prefers existing
