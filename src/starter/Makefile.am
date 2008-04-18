@@ -31,7 +31,6 @@ defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 		$(COMPILE) -c -o $@ $<
 
 install-exec-local :	
-		test -e "$(DESTDIR)${sysconfdir}" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)"
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d"
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/cacerts" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d/cacerts"
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/ocspcerts" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)/ipsec.d/ocspcerts"

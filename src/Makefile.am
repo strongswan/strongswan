@@ -1,4 +1,4 @@
-SUBDIRS = include
+SUBDIRS = . include
 
 if USE_FILE_CONFIG
   SUBDIRS += libfreeswan starter ipsec _copyright
@@ -39,3 +39,8 @@ if USE_MANAGER
   SUBDIRS += manager
 endif
 
+EXTRA_DIST = strongswan.conf
+
+install-exec-local :	
+		test -e "$(DESTDIR)${sysconfdir}" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)"
+		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -m 600 strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf
