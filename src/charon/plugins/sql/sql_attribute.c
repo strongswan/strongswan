@@ -18,6 +18,7 @@
 #include "sql_attribute.h"
 
 #include <daemon.h>
+#include <utils/mutex.h>
 
 typedef struct private_sql_attribute_t private_sql_attribute_t;
 
@@ -35,6 +36,11 @@ struct private_sql_attribute_t {
 	 * database connection
 	 */
 	database_t *db;
+	
+	/**
+	 * mutex to simulate transactions
+	 */
+	mutex_t *mutex;
 };
 
 /** 
@@ -80,7 +86,10 @@ static host_t* get_lease(private_sql_attribute_t *this,
 	host_t *ip = NULL;
 	int lease;
 	
-				POS;
+	/* transaction simulation, see create_lease() */
+	this->mutex->lock(this->mutex);
+	
+	/* select a lease for "id" which still valid */
 	e = this->db->query(this->db,
 						"SELECT l.id, l.address FROM leases AS l "
 						"JOIN pools AS p ON l.pool = p.id "
@@ -95,16 +104,19 @@ static host_t* get_lease(private_sql_attribute_t *this,
 	{
 		if (e->enumerate(e, &lease, &address))
 		{
+			/* found one, set the lease to active */
 			if (this->db->execute(this->db, NULL,
 						  "UPDATE leases SET release = NULL WHERE id = ?",
 						  DB_INT, lease) > 0)
 			{
-				POS;
 				ip = ip_from_chunk(address);
+				DBG1(DBG_CFG, "reassigning address from valid lease "
+					 "from pool %s", name);
 			}
 		}
 		e->destroy(e);
 	}
+	this->mutex->unlock(this->mutex);
 	return ip;
 }
 
@@ -114,53 +126,94 @@ static host_t* get_lease(private_sql_attribute_t *this,
 static host_t* create_lease(private_sql_attribute_t *this,
 							char *name, identification_t *id)
 {
-	enumerator_t *e, *f;
+	enumerator_t *e;
 	chunk_t address;
 	host_t *ip = NULL;
 	int pool, identity = 0;
-				POS;
+	bool new = FALSE;
 	
+	/* we currently do not use database transactions. While this would be 
+	 * the clean way, there is no real advantage, but some disadvantages:
+	 * - we would require InnoDB for mysql, as MyISAM does not support trans.
+	 * - the mysql plugin uses connection pooling, and we would need a 
+	 *   mechanism to lock transactions to a single connection.
+	 */
+	this->mutex->lock(this->mutex);
+	
+	/* find an address which has outdated leases only */
 	e = this->db->query(this->db,
-			"SELECT id, next FROM pools WHERE name = ? AND next <= end",
-			DB_TEXT, name,
-			DB_INT, DB_BLOB);
-	if (!e)
+						"SELECT pool, address FROM leases "
+						"JOIN pools ON leases.pool = pools.id "
+						"WHERE name = ? "
+						"GROUP BY address HAVING release NOTNULL "
+						"AND MAX(release) < ? + pools.timeout LIMIT 1",
+						DB_TEXT, name, DB_UINT, time(NULL),
+						DB_INT, DB_BLOB);
+	
+	if (!e || !e->enumerate(e, &pool, &address))
 	{
-		return NULL;
+		DESTROY_IF(e);
+		/* no outdated lease found, acquire new address */
+		e = this->db->query(this->db,
+				"SELECT id, next FROM pools WHERE name = ? AND next <= end",
+				DB_TEXT, name,
+				DB_INT, DB_BLOB);
+		if (!e || !e->enumerate(e, &pool, &address))
+		{
+			/* pool seems full */
+			DESTROY_IF(e);
+			this->mutex->unlock(this->mutex);
+			return NULL;
+		}
+		new = TRUE;
 	}
-	if (e->enumerate(e, &pool, &address))
-	{
-		f = this->db->query(this->db,
+	address = chunk_clonea(address);
+	e->destroy(e);
+	
+	/* look for peer identity in the identities table */
+	e = this->db->query(this->db,
 						"SELECT id FROM identities WHERE type = ? AND data = ?",
 						DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
 						DB_INT);
-		if (f)
-		{
-			if (!f->enumerate(f, &identity))
-			{
-				this->db->execute(this->db, &identity,
+	if (!e || !e->enumerate(e, &identity))
+	{
+		DESTROY_IF(e);
+		/* not found, insert new one */
+		this->db->execute(this->db, &identity,
 					  "INSERT INTO identities (type, data) VALUES (?, ?)",
 					  DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id));
-			}
-			f->destroy(f);
-		}
-		if (identity)
+	}
+	else
+	{
+		e->destroy(e);
+	}
+	/* if we have an identity, insert a new lease */
+	if (identity)
+	{
+		if (this->db->execute(this->db, NULL,
+				 "INSERT INTO leases (pool, address, identity, acquire) "
+				 "VALUES (?, ?, ?, ?)",
+				 DB_INT, pool, DB_BLOB, address, DB_INT, identity,
+				 DB_UINT, time(NULL)) > 0)
 		{
-			if (this->db->execute(this->db, NULL,
-						  "INSERT INTO leases "
-						  "(pool, address, identity) VALUES (?, ?, ?)",
-						  DB_INT, pool, DB_BLOB, address, DB_INT, identity) > 0)
-			{
-				POS;
-				ip = ip_from_chunk(address);
+			ip = ip_from_chunk(address);
+			if (new)
+			{	/* update next address, as we have consumed one */
 				increment_chunk(address);
 				this->db->execute(this->db, NULL,
 								  "UPDATE pools set next = ? WHERE id = ?",
 								  DB_BLOB, address, DB_INT, pool);
+				DBG1(DBG_CFG, "assigning lease with new address "
+					 "from pool %s", name);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "reassigning address from expired lease "
+					 "from pool %s", name);
 			}
 		}
 	}
-	e->destroy(e);
+	this->mutex->unlock(this->mutex);
 	return ip;
 }
 
@@ -188,13 +241,12 @@ static bool release_address(private_sql_attribute_t *this,
 							char *name, host_t *address)
 {
 	if (this->db->execute(this->db, NULL,
-			"UPDATE leases SET release = DATE('NOW') WHERE "
+			"UPDATE leases SET release = ? WHERE "
 			"pool IN (SELECT id FROM pools WHERE name = ?) AND "
-			"address = ? "
-			"ORDER BY acquire LIMIT 1",
+			"address = ? AND release ISNULL",
+			DB_UINT, time(NULL),
 			DB_TEXT, name, DB_BLOB, address->get_address(address)) > 0)
 	{
-				POS;
 		return TRUE;
 	}
 	return FALSE;
@@ -205,6 +257,7 @@ static bool release_address(private_sql_attribute_t *this,
  */
 static void destroy(private_sql_attribute_t *this)
 {
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -220,6 +273,7 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 	this->public.destroy = (void(*)(sql_attribute_t*))destroy;
 	
 	this->db = db;
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	
 	return &this->public;
 }
