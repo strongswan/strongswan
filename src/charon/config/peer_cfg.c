@@ -471,7 +471,8 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 		(this->virtual_ip == other->virtual_ip ||
 		 (this->virtual_ip && other->virtual_ip &&
 		  this->virtual_ip->equals(this->virtual_ip, other->virtual_ip))) &&
-		(this->pool == other->pool || streq(this->pool, other->pool)) &&
+		(this->pool == other->pool || 
+		 (this->pool && other->pool && streq(this->pool, other->pool))) &&
 		this->auth->equals(this->auth, other->auth) 
 #ifdef ME
 		&& this->mediation == other->mediation &&
