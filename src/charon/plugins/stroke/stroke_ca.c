@@ -178,7 +178,7 @@ static enumerator_t *create_inner_cdp(ca_section_t *section, cdp_data_t *data)
 }
 
 /**
- * inner enumerator constructor for hash and URL
+ * inner enumerator constructor for "Hash and URL"
  */
 static enumerator_t *create_inner_cdp_hashandurl(ca_section_t *section, cdp_data_t *data)
 {
@@ -219,7 +219,7 @@ static enumerator_t *create_cdp_enumerator(private_stroke_ca_t *this,
 	cdp_data_t *data;
 
 	switch (type)
-	{	/* we serve CRLs, OCSP responders and URLs for hash and URL */
+	{	/* we serve CRLs, OCSP responders and URLs for "Hash and URL" */
 		case CERT_X509:
 		case CERT_X509_CRL:
 		case CERT_X509_OCSP_RESPONSE:
@@ -349,7 +349,7 @@ static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cer
 	hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (hasher == NULL)
 	{
-		DBG1(DBG_IKE, "unable to use hash and URL, SHA1 not supported");
+		DBG1(DBG_IKE, "unable to use hash-and-url: sha1 not supported");
 		return;
 	}
 	
@@ -397,19 +397,19 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 			first = FALSE;
 		}
 		fprintf(out, "\n");
-		fprintf(out, "  authname:   \"%D\"\n", cert->get_subject(cert));
+		fprintf(out, "  authname:    \"%D\"\n", cert->get_subject(cert));
 
 		/* list authkey and keyid */
 		if (public)
 		{
-			fprintf(out, "  authkey:     %D\n",
+			fprintf(out, "  authkey:      %D\n",
 					public->get_id(public, ID_PUBKEY_SHA1));
-			fprintf(out, "  keyid:       %D\n",
+			fprintf(out, "  keyid:        %D\n",
 					public->get_id(public, ID_PUBKEY_INFO_SHA1));
 			public->destroy(public);
 		}
-		list_uris(section->crl, "  crluris:    ", out);
-		list_uris(section->ocsp, "  ocspuris:   ", out);
+		list_uris(section->crl, "  crluris:     ", out);
+		list_uris(section->ocsp, "  ocspuris:    ", out);
 		fprintf(out, "  certuribase: '%s'\n", section->certuribase);
 	}
 	enumerator->destroy(enumerator);

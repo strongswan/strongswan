@@ -134,7 +134,7 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 
 /**
  * tries to extract a certificate from the cert payload or the credential
- * manager (based on the hash of a hash and URL encoded cert).
+ * manager (based on the hash of a "Hash and URL" encoded cert).
  * Note: the returned certificate (if any) has to be destroyed
  */ 
 static certificate_t *try_get_cert(cert_payload_t *cert_payload)
@@ -153,7 +153,7 @@ static certificate_t *try_get_cert(cert_payload_t *cert_payload)
 			chunk_t hash = cert_payload->get_hash(cert_payload);
 			if (!hash.ptr)
 			{
-				/* invalid hash and URL data (logged elsewhere) */
+				/* invalid "Hash and URL" data (logged elsewhere) */
 				break;
 			}
 			id = identification_create_from_encoding(ID_CERT_DER_SHA1, hash);
@@ -197,7 +197,7 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 					if (type == ENC_X509_HASH_AND_URL &&
 						!this->http_cert_lookup_supported_sent)
 					{
-						DBG1(DBG_IKE, "received hash and URL encoded cert, but"
+						DBG1(DBG_IKE, "received hash-and-url encoded cert, but"
 								" we don't accept them, ignore");
 						break;
 					}
@@ -224,27 +224,27 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 					}
 					else if (type == ENC_X509_HASH_AND_URL)
 					{
-						/* we received a hash and URL encoded certificate that
+						/* we received a "Hash and URL" encoded certificate that
 						 * we haven't fetched yet, we store the URL and fetch
 						 * it later */
 						char *url = cert_payload->get_url(cert_payload);
 						if (!url)
 						{
-							DBG1(DBG_IKE, "received invalid hash and URL encoded"
+							DBG1(DBG_IKE, "received invalid hash-and-url encoded"
 									" cert, ignore");
 							break;
 						}
 						
 						if (first)
 						{	/* the first certificate MUST be an end entity one */
-							DBG1(DBG_IKE, "received hash and URL for end"
+							DBG1(DBG_IKE, "received hash-and-url for end"
 									" entity cert \"%s\"", url);
 							auth->add_item(auth, AUTHN_SUBJECT_HASH_URL, url);
 							first = FALSE;
 						}
 						else
 						{
-							DBG1(DBG_IKE, "received hash and URL for issuer"
+							DBG1(DBG_IKE, "received hash-and-url for issuer"
 									" cert \"%s\"", url);
 							auth->add_item(auth, AUTHN_IM_HASH_URL, url);
 						}
@@ -359,7 +359,7 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	}
 	
 	/* if we've added at least one certreq, we notify our peer that we support
-	 * hash and URL for the requested certificates */
+	 * "Hash and URL" for the requested certificates */
 	if (lib->settings->get_bool(lib->settings, "charon.hash_and_url", FALSE) &&
 		message->get_payload(message, CERTIFICATE_REQUEST))
 	{

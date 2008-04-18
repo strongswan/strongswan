@@ -57,7 +57,7 @@ typedef struct {
 } wrapper_enumerator_t;
 
 /**
- * Tries to fetch a certificate that was supplied as hash and URL (replaces the
+ * Tries to fetch a certificate that was supplied as "Hash and URL" (replaces the
  * item's type and value in place).
  */
 static bool fetch_cert(wrapper_enumerator_t *enumerator, auth_item_t *type, void **value)
@@ -72,10 +72,10 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator, auth_item_t *type, void
 	chunk_t data;
 	certificate_t *cert;
 	
-	DBG1(DBG_CFG, "fetching certificate from '%s' ...", url);
+	DBG1(DBG_CFG, "  fetching certificate from '%s' ...", url);
 	if (lib->fetcher->fetch(lib->fetcher, url, &data) != SUCCESS)
 	{
-		DBG1(DBG_CFG, "fetching certificate from '%s' failed", url);
+		DBG1(DBG_CFG, "  fetching certificate failed");
 		/* we set the item to NULL, so we can skip it */
 		enumerator->auth->replace_item(enumerator->inner, *type, NULL);
 		return FALSE;
@@ -86,13 +86,13 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator, auth_item_t *type, void
 	
 	if (!cert)
 	{
-		DBG1(DBG_CFG, "parsing fetched certificate failed");
+		DBG1(DBG_CFG, "  parsing fetched certificate failed");
 		/* we set the item to NULL, so we can skip it */
 		enumerator->auth->replace_item(enumerator->inner, *type, NULL);
 		return FALSE;
 	}
 	
-	DBG1(DBG_CFG, "fetched certificate \"%D\"", cert->get_subject(cert));
+	DBG1(DBG_CFG, "  fetched certificate \"%D\"", cert->get_subject(cert));
 	charon->credentials->cache_cert(charon->credentials, cert);
 	
 	*type = (*type == AUTHN_IM_HASH_URL) ? AUTHN_IM_CERT : AUTHN_SUBJECT_CERT;

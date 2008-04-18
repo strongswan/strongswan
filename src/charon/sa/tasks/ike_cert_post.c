@@ -49,7 +49,7 @@ struct private_ike_cert_post_t {
 };
 
 /**
- * Generates the cert payload, if possible with hash and url
+ * Generates the cert payload, if possible with "Hash and URL"
  */
 static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this, certificate_t *cert)
 {
@@ -83,13 +83,13 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this, certifi
 		}
 		else
 		{
-			DBG1(DBG_IKE, "unable to use hash and URL, SHA1 not supported");
+			DBG1(DBG_IKE, "unable to use hash-and-url: sha1 not supported");
 		}
 	}
 	
 	if (!payload)
 	{
-		/* our peer does not support hash and URL or we do not have an URL
+		/* our peer does not support "Hash and URL" or we do not have an URL
 		 * to send to our peer, just create a normal cert payload */
 		payload = cert_payload_create_from_cert(cert);
 	}

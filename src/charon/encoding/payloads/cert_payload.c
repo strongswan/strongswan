@@ -79,7 +79,7 @@ struct private_cert_payload_t {
 	chunk_t data;
 	
 	/**
-	 * TRUE if the hash and URL data is invalid
+	 * TRUE if the "Hash and URL" data is invalid
 	 */
 	bool invalid_hash_and_url;
 };
@@ -133,10 +133,10 @@ static status_t verify(private_cert_payload_t *this)
 	if (this->encoding == ENC_X509_HASH_AND_URL ||
 		this->encoding == ENC_X509_HASH_AND_URL_BUNDLE)
 	{
-		/* rough verification of hash and URL encoded certificates */
+		/* coarse verification of "Hash and URL" encoded certificates */
 		if (this->data.len <= 20)
 		{
-			DBG1(DBG_ENC, "invalid payload length for hash and URL (%d), ignore",
+			DBG1(DBG_ENC, "invalid payload length for hash-and-url (%d), ignore",
 					this->data.len);
 			this->invalid_hash_and_url = TRUE;
 			return SUCCESS;
@@ -152,7 +152,7 @@ static status_t verify(private_cert_payload_t *this)
 			}
 			else if (!isprint(this->data.ptr[i]))
 			{
-				DBG1(DBG_ENC, "non printable characters in URL of hash and URL"
+				DBG1(DBG_ENC, "non printable characters in url of hash-and-url"
 						" encoded certificate payload, ignore");
 				this->invalid_hash_and_url = TRUE;
 				return SUCCESS;
