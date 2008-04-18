@@ -312,49 +312,39 @@ struct sadb_protocol {
 #define SADB_X_SAFLAGS_CLEARFLOW	4
 #define SADB_X_SAFLAGS_INFLOW		8
 
-/* not obvious, but these are the same values as used in isakmp,
- * and in freeswan/ipsec_policy.h. If you need to add any, they
- * should be added as according to
- *   http://www.iana.org/assignments/isakmp-registry
- *
- * and if not, then please try to use a private-use value, and
- * consider asking IANA to assign a value.
- */
-#define SADB_AALG_NONE                  0
-#define SADB_AALG_MD5_HMAC		2
-#define SADB_AALG_SHA1_HMAC		3
-#define SADB_AALG_DES_MAC		4
-#define SADB_AALG_SHA2_256_HMAC		5
-#define SADB_AALG_SHA2_384_HMAC		6
-#define SADB_AALG_SHA2_512_HMAC		7
-#define SADB_AALG_RIPEMD_160_HMAC	8
-#define SADB_AALG_AES_XCBC_MAC		9
+/* Authentication algorithms */
+#define SADB_AALG_NONE			0
+#define SADB_AALG_MD5HMAC		2
+#define SADB_AALG_SHA1HMAC		3
+#define SADB_X_AALG_SHA2_256HMAC	5
+#define SADB_X_AALG_SHA2_384HMAC	6
+#define SADB_X_AALG_SHA2_512HMAC	7
+#define SADB_X_AALG_RIPEMD160HMAC	8
+#define SADB_X_AALG_AES_XCBC_MAC	9
 #define SADB_X_AALG_NULL		251	/* kame */
 #define SADB_AALG_MAX			251
 
+/* Encryption algorithms */
 #define SADB_EALG_NONE			0
-#define SADB_EALG_DES_CBC		2
-#define SADB_EALG_3DES_CBC		3
-#define SADB_EALG_RC5_CBC		4
-#define SADB_EALG_IDEA_CBC		5
-#define SADB_EALG_CAST_CBC		6
-#define SADB_EALG_BLOWFISH_CBC		7
+#define SADB_EALG_DESCBC		2
+#define SADB_EALG_3DESCBC		3
+#define SADB_X_EALG_CASTCBC		6
+#define SADB_X_EALG_BLOWFISHCBC		7
 #define SADB_EALG_NULL			11
-#define SADB_EALG_AES_CBC		12
-#define SADB_EALG_AES_CTR		13
-#define SADB_X_EALG_SERPENT_CBC		252
-#define SADB_X_EALG_TWOFISH_CBC		253
-#define SADB_EALG_MAX			253
+#define SADB_X_EALG_AESCBC		12
+#define SADB_X_EALG_CAMELLIACBC		22
+#define SADB_EALG_MAX                   253 /* last EALG */
+/* private allocations should use 249-255 (RFC2407) */
+#define SADB_X_EALG_SERPENTCBC  252     /* draft-ietf-ipsec-ciph-aes-cbc-00 */
+#define SADB_X_EALG_TWOFISHCBC  253     /* draft-ietf-ipsec-ciph-aes-cbc-00 */
 
-#define SADB_X_CALG_NONE          0
-#define SADB_X_CALG_OUI           1
-#define SADB_X_CALG_DEFLATE       2
-#define SADB_X_CALG_LZS           3
-#define SADB_X_CALG_V42BIS        4
-#ifdef KERNEL26_HAS_KAME_DUPLICATES
-#define SADB_X_CALG_LZJH          4
-#endif
-#define SADB_X_CALG_MAX           4
+/* Compression algorithms */
+#define SADB_X_CALG_NONE		0
+#define SADB_X_CALG_OUI			1
+#define SADB_X_CALG_DEFLATE		2
+#define SADB_X_CALG_LZS			3
+#define SADB_X_CALG_LZJH		4
+#define SADB_X_CALG_MAX			4
 
 #define SADB_X_TALG_NONE          0
 #define SADB_X_TALG_IPv4_in_IPv4  1
@@ -363,13 +353,11 @@ struct sadb_protocol {
 #define SADB_X_TALG_IPv6_in_IPv6  4
 #define SADB_X_TALG_MAX           4
 
+/* Identity Extension values */
+#define SADB_IDENTTYPE_RESERVED	0
+#define SADB_IDENTTYPE_PREFIX	1
+#define SADB_IDENTTYPE_FQDN	2
+#define SADB_IDENTTYPE_USERFQDN	3
+#define SADB_IDENTTYPE_MAX	3
 
-#define SADB_IDENTTYPE_RESERVED   0
-#define SADB_IDENTTYPE_PREFIX     1
-#define SADB_IDENTTYPE_FQDN       2
-#define SADB_IDENTTYPE_USERFQDN   3
-#define SADB_X_IDENTTYPE_CONNECTION 4
-#define SADB_IDENTTYPE_MAX        4
-
-#define SADB_KEY_FLAGS_MAX     0
 #endif /* __PFKEY_V2_H */

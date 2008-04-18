@@ -83,12 +83,13 @@ static sparse_names xfrm_type_names = {
 /* Authentication algorithms */
 static sparse_names aalg_list = {
 	{ SADB_X_AALG_NULL, "digest_null" },
-	{ SADB_AALG_MD5_HMAC, "md5" },
-	{ SADB_AALG_SHA1_HMAC, "sha1" },
-	{ SADB_AALG_SHA2_256_HMAC, "sha256" },
-	{ SADB_AALG_SHA2_384_HMAC, "sha384" },
-	{ SADB_AALG_SHA2_512_HMAC, "sha512" },
-	{ SADB_AALG_RIPEMD_160_HMAC, "ripemd160" },
+	{ SADB_AALG_MD5HMAC, "md5" },
+	{ SADB_AALG_SHA1HMAC, "sha1" },
+	{ SADB_X_AALG_SHA2_256HMAC, "sha256" },
+	{ SADB_X_AALG_SHA2_384HMAC, "sha384" },
+	{ SADB_X_AALG_SHA2_512HMAC, "sha512" },
+	{ SADB_X_AALG_RIPEMD160HMAC, "ripemd160" },
+	{ SADB_X_AALG_AES_XCBC_MAC, "aesxcbc"},
 	{ SADB_X_AALG_NULL, "null" },
 	{ 0, sparse_end }
 };
@@ -96,14 +97,14 @@ static sparse_names aalg_list = {
 /* Encryption algorithms */
 static sparse_names ealg_list = {
 	{ SADB_EALG_NULL, "cipher_null" },
-	{ SADB_EALG_DES_CBC, "des" },
-	{ SADB_EALG_3DES_CBC, "des3_ede" },
-	{ SADB_EALG_IDEA_CBC, "idea" },
-	{ SADB_EALG_CAST_CBC, "cast128" },
-	{ SADB_EALG_BLOWFISH_CBC, "blowfish" },
-	{ SADB_EALG_AES_CBC, "aes" },
-	{ SADB_X_EALG_SERPENT_CBC, "serpent" },
-	{ SADB_X_EALG_TWOFISH_CBC, "twofish" },
+	{ SADB_EALG_DESCBC, "des" },
+	{ SADB_EALG_3DESCBC, "des3_ede" },
+	{ SADB_X_EALG_CASTCBC, "cast128" },
+	{ SADB_X_EALG_BLOWFISHCBC, "blowfish" },
+	{ SADB_X_EALG_AESCBC, "aes" },
+	{ SADB_X_EALG_CAMELLIACBC, "camellia" },
+	{ SADB_X_EALG_SERPENTCBC, "serpent" },
+	{ SADB_X_EALG_TWOFISHCBC, "twofish" },
 	{ 0, sparse_end }
 };
 
