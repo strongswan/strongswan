@@ -671,14 +671,15 @@ static status_t find_last(private_linked_list_t *this, linked_list_match_t match
 /**
  * Implementation of linked_list_t.invoke_offset.
  */
-static void invoke_offset(private_linked_list_t *this, size_t offset)
+static void invoke_offset(private_linked_list_t *this, size_t offset,
+		void *d1, void *d2, void *d3, void *d4, void *d5)
 {
 	element_t *current = this->first;
 	
 	while (current)
 	{
-		void (**method)(void*) = current->value + offset;
-		(*method)(current->value);
+		linked_list_invoke_t *method = current->value + offset;
+		(*method)(current->value, d1, d2, d3, d4, d5);
 		current = current->next;
 	}
 }
@@ -686,13 +687,14 @@ static void invoke_offset(private_linked_list_t *this, size_t offset)
 /**
  * Implementation of linked_list_t.invoke_function.
  */
-static void invoke_function(private_linked_list_t *this, void(*fn)(void*))
+static void invoke_function(private_linked_list_t *this, linked_list_invoke_t fn,
+		void *d1, void *d2, void *d3, void *d4, void *d5)
 {
 	element_t *current = this->first;
 	
 	while (current)
 	{
-		fn(current->value);
+		fn(current->value, d1, d2, d3, d4, d5);
 		current = current->next;
 	}
 }
@@ -843,8 +845,8 @@ linked_list_t *linked_list_create()
 	this->public.remove_last = (status_t (*) (linked_list_t *, void **item))remove_last;
 	this->public.remove = (int(*)(linked_list_t*, void *item, bool (*compare)(void *,void*)))remove;
 	this->public.remove_at = (void(*)(linked_list_t*, enumerator_t *enumerator))remove_at;
-	this->public.invoke_offset = (void (*)(linked_list_t*,size_t))invoke_offset;
-	this->public.invoke_function = (void (*)(linked_list_t*,void(*)(void*)))invoke_function;
+	this->public.invoke_offset = (void (*)(linked_list_t*,size_t,...))invoke_offset;
+	this->public.invoke_function = (void (*)(linked_list_t*,linked_list_invoke_t,...))invoke_function;
 	this->public.clone_offset = (linked_list_t * (*)(linked_list_t*,size_t))clone_offset;
 	this->public.clone_function = (linked_list_t * (*)(linked_list_t*,void*(*)(void*)))clone_function;
 	this->public.destroy = (void (*) (linked_list_t *))destroy;

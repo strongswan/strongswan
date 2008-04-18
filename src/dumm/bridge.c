@@ -118,7 +118,7 @@ static void unregister(iface_t *iface)
  */
 static void destroy(private_bridge_t *this)
 {
-	this->ifaces->invoke_function(this->ifaces, (void(*)(void*))unregister);
+	this->ifaces->invoke_function(this->ifaces, (linked_list_invoke_t)unregister);
 	this->ifaces->destroy(this->ifaces);
 	if (br_del_bridge(this->name) != 0)
 	{
