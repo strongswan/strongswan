@@ -233,13 +233,6 @@ do
 @EOF
     fi
 
-    if [ $SUBDIR = "ipv6" ]
-    then
-	IPTABLES="ip6tables"
-    else
-	IPTABLES="iptables"
-    fi
-
     for name in $SUBTESTS
     do
 	let "testnumber += 1"
@@ -252,7 +245,7 @@ do
 	    continue
 	fi
 
-	if [ $name = "rw-psk-ipv6" ]
+	if [ $SUBDIR = "ipv6" -o $name = "rw-psk-ipv6" ]
 	then
 	    IPTABLES="ip6tables"
 	else
