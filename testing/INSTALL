@@ -67,11 +67,11 @@ are required for the strongSwan testing environment:
 
     * A gentoo-based UML file system (compressed size 130 MBytes) found at
 
-      http://download.strongswan.org/uml/gentoo-fs-20071108.tar.bz2
+      http://download.strongswan.org/uml/gentoo-fs-20080407.tar.bz2
 
     * The latest strongSwan distribution
 
-      http://download.strongswan.org/strongswan-4.2.0.tar.gz
+      http://download.strongswan.org/strongswan-4.2.1.tar.bz2
 
 
 3. Creating the environment
