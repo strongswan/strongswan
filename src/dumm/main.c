@@ -555,6 +555,8 @@ int main(int argc, char *argv[])
 {
 	struct sigaction action;
 	char *dir = ".";
+	
+	library_init(STRONGSWAN_CONF);
 
 	while (TRUE)
 	{
@@ -626,6 +628,8 @@ int main(int argc, char *argv[])
 	}
 	dumm->load_template(dumm, NULL);
 	dumm->destroy(dumm);
+	
+	library_deinit();
 	clear_history();
 	return 0;
 }
