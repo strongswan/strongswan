@@ -140,6 +140,9 @@ if USE_SQLITE
   SUBDIRS += plugins/sqlite
 endif
 
+if USE_PADLOCK
+  SUBDIRS += plugins/padlock
+endif
 
 if USE_INTEGRITY_TEST
 # build fips_signer which in turn builds fips_signature.h

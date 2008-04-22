@@ -486,6 +486,16 @@ AC_ARG_ENABLE(
 	tools=true
 )
 
+AC_ARG_ENABLE(
+	[padlock],
+	AS_HELP_STRING([--enable-padlock],[enables VIA Padlock crypto plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		padlock=true
+	 else
+		padlock=false
+	fi],
+)
+
 dnl =========================
 dnl  check required programs
 dnl =========================
@@ -632,6 +642,7 @@ AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_PLUTO_OR_CHARON, test x$pluto = xtrue -o x$charon = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
+AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 
 dnl ==============================
 dnl  set global definitions
@@ -664,6 +675,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile
 	src/libstrongswan/plugins/sqlite/Makefile
+	src/libstrongswan/plugins/padlock/Makefile
 	src/libcrypto/Makefile
 	src/libfreeswan/Makefile
 	src/pluto/Makefile
