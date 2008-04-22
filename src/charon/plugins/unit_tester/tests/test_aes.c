@@ -38,12 +38,12 @@ static bool do_aes_test(u_char *key, int keysize, u_char *iv,
 	crypter->set_key(crypter, chunk_create(key, keysize));
 	crypter->encrypt(crypter,
 					 chunk_create(plain, len), chunk_create(iv, 16), &enc);
-	if (!memeq(enc.ptr, cipher, 16))
+	if (!memeq(enc.ptr, cipher, len))
 	{
 		good = FALSE;
 	}
 	crypter->decrypt(crypter, enc, chunk_create(iv, 16), &dec);
-	if (!memeq(dec.ptr, plain, 16))
+	if (!memeq(dec.ptr, plain, len))
 	{
 		good = FALSE;
 	}
