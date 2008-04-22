@@ -1360,84 +1360,60 @@ static void des_ede3_cbc_encrypt(des_cblock *input, des_cblock *output, long len
 /**
  * Implementation of crypter_t.decrypt for DES.
  */
-static status_t decrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
+static void decrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
+					chunk_t *decrypted)
 {
 	des_cblock ivb;
-	
-	if (data.len % sizeof(des_cblock) != 0 ||
-		iv.len != sizeof(des_cblock))
-	{
-		return INVALID_ARG;
-	}
 	
 	*decrypted = chunk_alloc(data.len);
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
 	des_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)(decrypted->ptr),
 					 data.len, this->ks, &ivb, DES_DECRYPT);
-	return SUCCESS;
 }
 
 
 /**
  * Implementation of crypter_t.decrypt for DES.
  */
-static status_t encrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
+static void encrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
+						chunk_t *encrypted)
 {
 	des_cblock ivb;
-	
-	if (data.len % sizeof(des_cblock) != 0 ||
-		iv.len != sizeof(des_cblock))
-	{
-		return INVALID_ARG;
-	}
 	
 	*encrypted = chunk_alloc(data.len);
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
 	des_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)(encrypted->ptr),
 					 data.len, this->ks, &ivb, DES_ENCRYPT);
-	return SUCCESS;
 }
 
 /**
  * Implementation of crypter_t.decrypt for 3DES.
  */
-static status_t decrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
+static void decrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
+					 chunk_t *decrypted)
 {
 	des_cblock ivb;
-	
-	if (data.len % sizeof(des_cblock) != 0 ||
-		iv.len != sizeof(des_cblock))
-	{
-		return INVALID_ARG;
-	}
 	
 	*decrypted = chunk_alloc(data.len);
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
 	des_ede3_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)(decrypted->ptr),
 						 data.len, this->ks3[0], this->ks3[1], this->ks3[2],
 						 &ivb, DES_DECRYPT);
-	return SUCCESS;
 }
 
 /**
  * Implementation of crypter_t.decrypt for 3DES.
  */
-static status_t encrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
+static void encrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
+					 chunk_t *encrypted)
 {
 	des_cblock ivb;
-	
-	if (data.len % sizeof(des_cblock) != 0 ||
-		iv.len != sizeof(des_cblock))
-	{
-		return INVALID_ARG;
-	}
 	
 	*encrypted = chunk_alloc(data.len);
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
 	des_ede3_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)(encrypted->ptr),
 						  data.len, this->ks3[0], this->ks3[1], this->ks3[2],
 						  &ivb, DES_ENCRYPT);
-	return SUCCESS;
 }
 
 /**
@@ -1459,33 +1435,19 @@ static size_t get_key_size (private_des_crypter_t *this)
 /**
  * Implementation of crypter_t.set_key for DES.
  */
-static status_t set_key(private_des_crypter_t *this, chunk_t key)
+static void set_key(private_des_crypter_t *this, chunk_t key)
 {
-	if (key.len != sizeof(des_cblock))
-	{
-		return INVALID_ARG;
-	}
-	
 	des_set_key((des_cblock*)(key.ptr), &this->ks);
-	
-	return SUCCESS;
 }
 
 /**
  * Implementation of crypter_t.set_key for 3DES.
  */
-static status_t set_key3(private_des_crypter_t *this, chunk_t key)
-{
-	if (key.len != 3 * sizeof(des_cblock))
-	{
-		return INVALID_ARG;
-	}
-	
+static void set_key3(private_des_crypter_t *this, chunk_t key)
+{	
 	des_set_key((des_cblock*)(key.ptr) + 0, &this->ks3[0]);
 	des_set_key((des_cblock*)(key.ptr) + 1, &this->ks3[1]);
 	des_set_key((des_cblock*)(key.ptr) + 2, &this->ks3[2]);
-	
-	return SUCCESS;
 }
 
 /**
@@ -1513,19 +1475,19 @@ des_crypter_t *des_crypter_create(encryption_algorithm_t algo)
 	{
 		case ENCR_DES:
 			this->key_size = sizeof(des_cblock);
-			this->public.crypter_interface.set_key = (status_t (*) (crypter_t *,chunk_t)) set_key;
-			this->public.crypter_interface.encrypt = (status_t (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
-			this->public.crypter_interface.decrypt = (status_t (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
+			this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
+			this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
+			this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
 			break;
 		case ENCR_3DES:
 			this->key_size = 3 * sizeof(des_cblock);
-			this->public.crypter_interface.set_key = (status_t (*) (crypter_t *,chunk_t)) set_key3;
-			this->public.crypter_interface.encrypt = (status_t (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt3;
-			this->public.crypter_interface.decrypt = (status_t (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt3;
+			this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key3;
+			this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt3;
+			this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt3;
 			break;
 		default:
 			free(this);
 			return NULL;
 	}
-	return &(this->public);
+	return &this->public;
 }

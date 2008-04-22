@@ -123,11 +123,14 @@ static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_s
 	/* decrypt blob */
 	crypter = lib->crypto->create_crypter(lib->crypto, alg, key_size);
 	crypter->set_key(crypter, key);
-	if (crypter->decrypt(crypter, *blob, *iv, &decrypted) != SUCCESS)
+	
+	if (iv->len != crypter->get_block_size(crypter) ||
+		blob->len % iv->len)
 	{
 		crypter->destroy(crypter);
 		return "data size is not multiple of block size";
 	}
+	crypter->decrypt(crypter, *blob, *iv, &decrypted);
 	crypter->destroy(crypter);
 	memcpy(blob->ptr, decrypted.ptr, blob->len);
 	chunk_free(&decrypted);

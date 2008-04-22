@@ -322,7 +322,6 @@ static status_t encrypt(private_encryption_payload_t *this)
 {
 	chunk_t iv, padding, to_crypt, result;
 	rng_t *rng;
-	status_t status;
 	size_t block_size;
 	
 	if (this->signer == NULL || this->crypter == NULL)
@@ -366,15 +365,10 @@ static status_t encrypt(private_encryption_payload_t *this)
 	
 	/* encrypt to_crypt chunk */
 	free(this->encrypted.ptr);
-	status = this->crypter->encrypt(this->crypter, to_crypt, iv, &result);
+	this->crypter->encrypt(this->crypter, to_crypt, iv, &result);
 	free(padding.ptr);
 	free(to_crypt.ptr);
-	if (status != SUCCESS)
-	{
-		DBG2(DBG_ENC, "encryption failed");
-		free(iv.ptr);
-		return status;
-	}
+	
 	DBG3(DBG_ENC, "data after encryption %B", &result);
 	
 	/* build encrypted result with iv and signature */
@@ -446,7 +440,6 @@ static status_t decrypt(private_encryption_payload_t *this)
 {
 	chunk_t iv, concatenated;
 	u_int8_t padding_length;
-	status_t status;
 	
 	DBG2(DBG_ENC, "decrypting encryption payload");
 	DBG3(DBG_ENC, "data before decryption with IV and (invalid) signature %B",
@@ -465,12 +458,11 @@ static status_t decrypt(private_encryption_payload_t *this)
 	
 	/* point concatenated to data + padding + padding_length*/
 	concatenated.ptr = this->encrypted.ptr + iv.len;
-	concatenated.len = this->encrypted.len - iv.len - this->signer->get_block_size(this->signer);
+	concatenated.len = this->encrypted.len - iv.len -
+								this->signer->get_block_size(this->signer);
 		
-	/* check the size of input:
-	 * concatenated  must be at least on block_size of crypter
-	 */
-	if (concatenated.len < iv.len)
+	/* concatenated must be a multiple of block_size of crypter */
+	if (concatenated.len < iv.len || concatenated.len % iv.len)
 	{
 		DBG1(DBG_ENC, "could not decrypt, invalid input");
 		return FAILED;
@@ -481,18 +473,14 @@ static status_t decrypt(private_encryption_payload_t *this)
 	
 	DBG3(DBG_ENC, "data before decryption %B", &concatenated);
 	
-	status = this->crypter->decrypt(this->crypter, concatenated, iv, &(this->decrypted));
-	if (status != SUCCESS)
-	{
-		DBG1(DBG_ENC, "could not decrypt, decryption failed");
-		return FAILED;
-	}
+	this->crypter->decrypt(this->crypter, concatenated, iv, &this->decrypted);
+
 	DBG3(DBG_ENC, "data after decryption with padding %B", &this->decrypted);
-	
 	
 	/* get padding length, sits just bevore signature */
 	padding_length = *(this->decrypted.ptr + this->decrypted.len - 1);
-	/* add one byte to the padding length, since the padding_length field is not included */
+	/* add one byte to the padding length, since the padding_length field is 
+	 * not included */
 	padding_length++;
 	this->decrypted.len -= padding_length;
 	

@@ -74,28 +74,6 @@ struct private_aes_crypter_t {
 	* Key size of this AES cypher object.
 	*/
 	u_int32_t    key_size;
-	
-	/**
-	* Decrypts a block.
-	* 
-	* No memory gets allocated.
-	* 
-	* @param this			calling object
-	* @param[in] in_blk	block to decrypt
-	* @param[out] out_blk	decrypted data are written to this location
-	*/
-	void (*decrypt_block) (const private_aes_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[]);
-	
-	/**
-	* Encrypts a block.
-	* 
-	* No memory gets allocated.
-	* 
-	* @param this			calling object
-	* @param[in] in_blk	block to encrypt
-	* @param[out] out_blk	encrypted data are written to this location
-	*/
-	void (*encrypt_block) (const private_aes_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[]);
 };
 
 
@@ -1236,7 +1214,7 @@ switch(nc) \
 #endif
 
 /**
- * Implementation of private_aes_crypter_t.encrypt_block.
+ * Encrypt a single block of data.
  */
 static void encrypt_block(const private_aes_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[])
 {   u_int32_t        locals(b0, b1);
@@ -1297,7 +1275,7 @@ static void encrypt_block(const private_aes_crypter_t *this, const unsigned char
 }
 
 /**
- * Implementation of private_aes_crypter_t.decrypt_block.
+ * Decrypt a single block of data.
  */
 static void decrypt_block(const private_aes_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[])
 {   u_int32_t        locals(b0, b1);
@@ -1360,38 +1338,31 @@ static void decrypt_block(const private_aes_crypter_t *this, const unsigned char
 /**
  * Implementation of crypter_t.decrypt.
  */
-static status_t decrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
+static void decrypt(private_aes_crypter_t *this, chunk_t data, chunk_t iv,
+					chunk_t *decrypted)
 {
-	int ret, pos;
+	int pos;
 	const u_int32_t *iv_i;
 	u_int8_t *in, *out;
 	
-	ret = data.len;
-	if (((data.len) % 16) != 0)
-	{
-		/* data length must be padded to a multiple of blocksize */
-		return INVALID_ARG;
-	}
-	
-	decrypted->ptr = malloc(data.len);
-	if (decrypted->ptr == NULL)
-	{
-		return OUT_OF_RES;
-	}
-	decrypted->len = data.len;
-
+	*decrypted = chunk_alloc(data.len);
 	in = data.ptr;
 	out = decrypted->ptr;
 	
-	pos=data.len-16;
-	in+=pos;
-	out+=pos;
-	while(pos>=0) {
-		this->decrypt_block(this,in,out);
+	pos = data.len-16;
+	in += pos;
+	out += pos;
+	while (pos >= 0)
+	{
+		decrypt_block(this, in, out);
 		if (pos==0)
+		{
 			iv_i=(const u_int32_t*) (iv.ptr);
+		}
 		else
+		{
 			iv_i=(const u_int32_t*) (in-16);
+		}
 		*((u_int32_t *)(&out[ 0])) ^= iv_i[0];
 		*((u_int32_t *)(&out[ 4])) ^= iv_i[1];
 		*((u_int32_t *)(&out[ 8])) ^= iv_i[2];
@@ -1400,34 +1371,20 @@ static status_t decrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv, 
 		out-=16;
 		pos-=16;
 	}
-	
-	return SUCCESS;
 }
 
 
 /**
  * Implementation of crypter_t.decrypt.
  */
-static status_t encrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
+static void encrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv,
+					 chunk_t *encrypted)
 {
-	int ret, pos;
+	int pos;
 	const u_int32_t *iv_i;
 	u_int8_t *in, *out;
 	
-	ret = data.len;
-	if (((data.len) % 16) != 0)
-	{
-		/* data length must be padded to a multiple of blocksize */
-		return INVALID_ARG;
-	}
-	
-	encrypted->ptr = malloc(data.len);
-	if (encrypted->ptr == NULL)
-	{
-		return OUT_OF_RES;
-	}
-	encrypted->len = data.len;
-
+	*encrypted = chunk_alloc(data.len);
 	in = data.ptr;
 	out = encrypted->ptr;
 	
@@ -1435,19 +1392,22 @@ static status_t encrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv, 
 	while(pos<data.len)
 	{
 		if (pos==0)
+		{
 			iv_i=(const u_int32_t*) iv.ptr;
+		}
 		else
+		{
 			iv_i=(const u_int32_t*) (out-16);
+		}
 		*((u_int32_t *)(&out[ 0])) = iv_i[0]^*((const u_int32_t *)(&in[ 0]));
 		*((u_int32_t *)(&out[ 4])) = iv_i[1]^*((const u_int32_t *)(&in[ 4]));
 		*((u_int32_t *)(&out[ 8])) = iv_i[2]^*((const u_int32_t *)(&in[ 8]));
 		*((u_int32_t *)(&out[12])) = iv_i[3]^*((const u_int32_t *)(&in[12]));
-		this->encrypt_block(this,out,out);
+		encrypt_block(this, out, out);
 		in+=16;
 		out+=16;
 		pos+=16;
 	}
-	return SUCCESS;
 }
 
 /**
@@ -1469,15 +1429,10 @@ static size_t get_key_size (private_aes_crypter_t *this)
 /**
  * Implementation of crypter_t.set_key.
  */
-static status_t set_key (private_aes_crypter_t *this, chunk_t key)
+static void set_key (private_aes_crypter_t *this, chunk_t key)
 {
 	u_int32_t    *kf, *kt, rci, f = 0;
 	u_int8_t *in_key = key.ptr;
-	
-	if (key.len != this->key_size)
-	{
-		return INVALID_ARG;
-	}
 	
 	this->aes_Nrnd = (this->aes_Nkey > (nc) ? this->aes_Nkey : (nc)) + 6; 
 	
@@ -1558,8 +1513,6 @@ static status_t set_key (private_aes_crypter_t *this, chunk_t key)
         }
 		cpy(kt, kf);
     }
-
-	return SUCCESS;
 }
 
 /**
@@ -1605,17 +1558,12 @@ aes_crypter_t *aes_crypter_create(encryption_algorithm_t algo, size_t key_size)
 		return NULL;
 	}
 	
-	/* functions of crypter_t interface */	
-	this->public.crypter_interface.encrypt = (status_t (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
-	this->public.crypter_interface.decrypt = (status_t (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
+	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
+	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
 	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
 	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
-	this->public.crypter_interface.set_key = (status_t (*) (crypter_t *,chunk_t)) set_key;
+	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
 	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
-	
-	/* private functions */
-	this->decrypt_block = decrypt_block;
-	this->encrypt_block = encrypt_block;
 	
 	return &(this->public);
 }

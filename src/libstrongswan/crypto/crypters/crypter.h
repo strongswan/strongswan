@@ -61,24 +61,28 @@ struct crypter_t {
 	/**
 	 * Encrypt a chunk of data and allocate space for the encrypted value.
 	 *
+	 * The length of the iv must equal to get_block_size(), while the length
+	 * of data must be a multiple it.
+	 *
 	 * @param data			data to encrypt
 	 * @param iv			initializing vector
-	 * @param encrypted		pointer where the encrypted bytes will be written
-	 * @return				SUCCESS, or INVALID_ARG if size invalid
+	 * @param encrypted		chunk to allocate encrypted data
 	 */
-	status_t (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv,
-						 chunk_t *encrypted);
+	void (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv,
+					 chunk_t *encrypted);
 	
 	/**
 	 * Decrypt a chunk of data and allocate space for the decrypted value.
+	 *
+	 * The length of the iv must equal to get_block_size(), while the length
+	 * of data must be a multiple it.
 	 * 
 	 * @param data			data to decrypt
 	 * @param iv			initializing vector
-	 * @param encrypted		pointer where the decrypted bytes will be written
-	 * @return				SUCCESS, or INVALID_ARG if invalid
+	 * @param encrypted		chunk to allocate decrypted data
 	 */
-	status_t (*decrypt) (crypter_t *this, chunk_t data, chunk_t iv,
-						 chunk_t *decrypted);
+	void (*decrypt) (crypter_t *this, chunk_t data, chunk_t iv,
+					 chunk_t *decrypted);
 
 	/**
 	 * Get the block size of the crypto algorithm.
@@ -96,11 +100,12 @@ struct crypter_t {
 	
 	/**
 	 * Set the key.
-	 * 
+	 *
+	 * The length of the key must match get_key_size().
+	 *
 	 * @param key				key to set
-	 * @return					SUCCESS, or INVALID_ARG if key length invalid
 	 */
-	status_t (*set_key) (crypter_t *this, chunk_t key);
+	void (*set_key) (crypter_t *this, chunk_t key);
 	
 	/**
 	 * Destroys a crypter_t object.
