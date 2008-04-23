@@ -15,11 +15,14 @@
  * $Id$
  */
 
+/* some clibs need it for rwlocks */
+#define _GNU_SOURCE
+#include <pthread.h>
+
 #include "credential_manager.h"
 
 #include <daemon.h>
 #include <utils/linked_list.h>
-#include <utils/mutex.h>
 #include <credentials/sets/cert_cache.h>
 #include <credentials/sets/auth_info_wrapper.h>
 #include <credentials/sets/ocsp_response_wrapper.h>
