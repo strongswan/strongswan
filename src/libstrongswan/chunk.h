@@ -85,9 +85,51 @@ void chunk_split(chunk_t chunk, const char *mode, ...);
 bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force);
 
 /**
- * convert a chunk to an allocated hex string 
+ * Convert a chunk of data to hex encoding.
+ *
+ * The resulting string is '\0' terminated, but the chunk does not include
+ * the '\0'. If buf is supplied, it must hold at least (chunk.len * 2 + 1).
+ *
+ * @param chunk			data to convert
+ * @param buff			buffer to write to, NULL to malloc
+ * @param uppercase		TRUE to use uppercase letters
+ * @return				chunk of encoded data
  */
-char *chunk_to_hex(chunk_t chunk, bool uppercase);
+chunk_t chunk_to_hex(chunk_t chunk, char *buf, bool uppercase);
+
+/**
+ * Convert a hex encoded in a binary chunk.
+ *
+ * If buf is supplied, it must hold at least (hex.len / 2).
+ *
+ * @param hex			hex encoded input data
+ * @param buf			buffer to write decoded data, NULL to malloc
+ * @return				converted data
+ */
+chunk_t chunk_from_hex(chunk_t hex, char *buf);
+
+/**
+ * Convert a chunk of data to its base64 encoding.
+ *
+ * The resulting string is '\0' terminated, but the chunk does not include
+ * the '\0'. If buf is supplied, it must hold at least (chunk.len * 4 / 3 + 1).
+ *
+ * @param chunk			data to convert
+ * @param buff			buffer to write to, NULL to malloc
+ * @return				chunk of encoded data
+ */
+chunk_t chunk_to_base64(chunk_t chunk, char *buf);
+
+/**
+ * Convert a base64 in a binary chunk.
+ *
+ * If buf is supplied, it must hold at least (base64.len / 4 * 3).
+ *
+ * @param base64		base64 encoded input data
+ * @param buf			buffer to write decoded data, NULL to malloc
+ * @return				converted data
+ */
+chunk_t chunk_from_base64(chunk_t base64, char *buf);
 
 /**
  * Free contents of a chunk
@@ -155,12 +197,6 @@ int chunk_compare(chunk_t a, chunk_t b);
  * NULL chunks are never equal.
  */
 bool chunk_equals(chunk_t a, chunk_t b);
-
-/**
- * Compare two chunks for equality,
- * NULL chunks are always equal.
- */
-bool chunk_equals_or_null(chunk_t a, chunk_t b);
 
 /**
  * Get printf hooks for a chunk.

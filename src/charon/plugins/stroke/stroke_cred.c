@@ -26,7 +26,6 @@
 #include <utils/linked_list.h>
 #include <utils/mutex.h>
 #include <utils/lexparser.h>
-#include <asn1/ttodata.h>
 #include <asn1/pem.h>
 #include <daemon.h>
 
@@ -541,15 +540,14 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 		if (add_crl(this, crl))
 		{
 			char buf[256];
-			char *hex;
-			chunk_t chunk;
+			chunk_t chunk, hex;
 			identification_t *id;
 			
 			id = crl->get_authKeyIdentifier(crl);
 			chunk = id->get_encoding(id);
-			hex = chunk_to_hex(chunk, FALSE);
+			hex = chunk_to_hex(chunk, NULL, FALSE);
 			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex);
-			free(hex);
+			free(hex.ptr);
 			
 			chunk = cert->get_encoding(cert);
 			if (chunk_write(chunk, buf, 022, TRUE))
@@ -615,25 +613,23 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 	{	
 		/* treat as an ASCII string */
 		*secret = chunk_clone(raw_secret);
+		return NULL;
 	}
-	else
+	/* treat 0x as hex, 0s as base64 */
+	if (raw_secret.len > 2)
 	{
-		size_t len;
-		err_t ugh;
-
-		/* secret converted to binary form doesn't use more space than the raw_secret */
-		*secret = chunk_alloc(raw_secret.len);
-
-		/* convert from HEX or Base64 to binary */
-		ugh = ttodata(raw_secret.ptr, raw_secret.len, 0, secret->ptr, secret->len, &len);
-
-	    if (ugh != NULL)
+		if (strncasecmp("0x", raw_secret.ptr, 2) == 0)
 		{
-			chunk_clear(secret);
-			return ugh;
+			*secret = chunk_from_hex(chunk_skip(raw_secret, 2), NULL);
+			return NULL;
 		}
-		secret->len = len;
+		if (strncasecmp("0s", raw_secret.ptr, 2) == 0)
+		{
+			*secret = chunk_from_base64(chunk_skip(raw_secret, 2), NULL);
+			return NULL;
+		}
 	}
+	*secret = chunk_clone(raw_secret);
 	return NULL;
 }
 

@@ -195,12 +195,13 @@ static enumerator_t *create_inner_cdp_hashandurl(ca_section_t *section, cdp_data
 	{	
 		if (current->matches(current, data->id))
 		{
-			chunk_t hash = current->get_encoding(current);
-			char *hash_str = chunk_to_hex(hash, FALSE);
-			char *url = malloc(strlen(section->certuribase) + 40 + 1);
+			char *url, *hash;
+			
+			url = malloc(strlen(section->certuribase) + 40 + 1);
 			strcpy(url, section->certuribase);
-			strncat(url, hash_str, 40);
-			free(hash_str);
+			hash = chunk_to_hex(current->get_encoding(current), NULL, FALSE).ptr;
+			strncat(url, hash, 40);
+			free(hash);
 			
 			enumerator = enumerator_create_single(url, free);
 			break;

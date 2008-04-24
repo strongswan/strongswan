@@ -241,6 +241,7 @@ bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force)
 	return good;
 }
 
+
 /** hex conversion digits */
 static char hexdig_upper[] = "0123456789ABCDEF";
 static char hexdig_lower[] = "0123456789abcdef";
@@ -248,10 +249,9 @@ static char hexdig_lower[] = "0123456789abcdef";
 /**
  * Described in header.
  */
-char *chunk_to_hex(chunk_t chunk, bool uppercase)
+chunk_t chunk_to_hex(chunk_t chunk, char *buf, bool uppercase)
 {
-	int i;
-	char *str;
+	int i, len;;
 	char *hexdig = hexdig_lower;
 	
 	if (uppercase)
@@ -259,15 +259,158 @@ char *chunk_to_hex(chunk_t chunk, bool uppercase)
 		hexdig = hexdig_upper;
 	}
 	
-	str = malloc(chunk.len * 2 + 1);
-	str[chunk.len * 2] = '\0';
-	
-	for (i = 0; i < chunk.len; i ++)
+	len = chunk.len * 2;
+	if (!buf)
 	{
-		str[i*2]   = hexdig[(chunk.ptr[i] >> 4) & 0xF];
-		str[i*2+1] = hexdig[(chunk.ptr[i]     ) & 0xF];
+		buf = malloc(len + 1);
 	}
-	return str;
+	buf[len] = '\0';
+	
+	for (i = 0; i < chunk.len; i++)
+	{
+		buf[i*2]   = hexdig[(chunk.ptr[i] >> 4) & 0xF];
+		buf[i*2+1] = hexdig[(chunk.ptr[i]     ) & 0xF];
+	}
+	return chunk_create(buf, len);
+}
+
+/**
+ * convert a signle hex character to its binary value
+ */
+static char hex2bin(char hex)
+{
+	switch (hex)
+	{
+		case '0' ... '9':
+			return hex - '0';
+		case 'A' ... 'F':
+			return hex - 'A' + 10;
+		case 'a' ... 'f':
+			return hex - 'a' + 10;
+		default:
+			return 0;
+	}
+}
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_from_hex(chunk_t hex, char *buf)
+{
+	int i, len;
+	
+	len = hex.len / 2;
+	if (!buf)
+	{
+		buf = malloc(len);
+	}
+	for (i = 0; i < len; i++)
+	{
+		buf[i] =  hex2bin(*hex.ptr++) << 4;
+		buf[i] |= hex2bin(*hex.ptr++);
+	}
+	return chunk_create(buf, len);
+}
+
+/** base 64 conversion digits */
+static char b64digits[] = 
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_to_base64(chunk_t chunk, char *buf)
+{
+	int i, len;
+	char *pos;
+	
+	len = chunk.len + ((3 - chunk.len % 3) % 3);
+	if (!buf)
+	{
+		buf = malloc(len * 4 / 3 + 1);
+	}
+	pos = buf;
+	for (i = 0; i < len; i+=3)
+	{
+		*pos++ = b64digits[chunk.ptr[i] >> 2];
+		if (i+1 >= chunk.len)
+		{
+			*pos++ = b64digits[(chunk.ptr[i] & 0x03) << 4];
+			*pos++ = '=';
+			*pos++ = '=';
+			break;
+		}
+		*pos++ = b64digits[((chunk.ptr[i] & 0x03) << 4) | (chunk.ptr[i+1] >> 4)];
+		if (i+2 >= chunk.len)
+		{
+			*pos++ = b64digits[(chunk.ptr[i+1] & 0x0F) << 2];
+			*pos++ = '=';
+			break;
+		}
+		*pos++ = b64digits[((chunk.ptr[i+1] & 0x0F) << 2) | (chunk.ptr[i+2] >> 6)];
+		*pos++ = b64digits[chunk.ptr[i+2] & 0x3F];
+	}
+	*pos = '\0';
+	return chunk_create(buf, len * 4 / 3);
+}
+
+/**
+ * convert a base 64 digit to its binary form (inversion of b64digits array)
+ */
+static int b642bin(char b64)
+{
+	switch (b64)
+	{
+		case 'A' ... 'Z':
+			return b64 - 'A';
+		case 'a' ... 'z':
+			return ('Z' - 'A' + 1) + b64 - 'a';
+		case '0' ... '9':
+			return ('Z' - 'A' + 1) + ('z' - 'a' + 1) + b64 - '0';
+		case '+':
+		case '-':
+			return 62;
+		case '/':
+		case '_':
+			return 63;
+		case '=':
+			return 0;
+		default:
+			return -1;
+	}
+}
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_from_base64(chunk_t base64, char *buf)
+{
+	u_char *pos, byte[4];
+	int i, j, len, outlen;
+	
+	len = base64.len / 4 * 3;
+	if (!buf)
+	{
+		buf = malloc(len);
+	}
+	pos = base64.ptr;
+	outlen = 0;
+	for (i = 0; i < len; i+=3)
+	{
+		outlen += 3;
+		for (j = 0; j < 4; j++)
+		{
+			if (*pos == '=')
+			{
+				outlen--;
+			}
+			byte[j] = b642bin(*pos++);
+		}
+		buf[i] = (byte[0] << 2) | (byte[1] >> 4);
+		buf[i+1] = (byte[1] << 4) | (byte[2] >> 2);
+		buf[i+2] = (byte[2] << 6) | (byte[3]);
+	}
+	return chunk_create(buf, outlen);
 }
 
 /**
@@ -325,16 +468,6 @@ bool chunk_equals(chunk_t a, chunk_t b)
 {
 	return a.ptr != NULL  && b.ptr != NULL &&
 			a.len == b.len && memeq(a.ptr, b.ptr, a.len);
-}
-
-/**
- * Described in header.
- */
-bool chunk_equals_or_null(chunk_t a, chunk_t b)
-{
-	if (a.ptr == NULL || b.ptr == NULL)
-		return TRUE;
-	return a.len == b.len && memeq(a.ptr, b.ptr, a.len);
 }
 
 /**

@@ -27,7 +27,6 @@
 #include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
-#include <asn1/ttodata.h>
 
 #include <utils/lexparser.h>
 #include <crypto/hashers/hasher.h>
@@ -232,7 +231,6 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 					encrypted = TRUE;
 				else if (match("DEK-Info", &name))
 				{
-					size_t len = 0;
 					chunk_t dek;
 
 					if (!extract_token(&dek, ',', &value))
@@ -262,19 +260,12 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 					{
 						return "encryption algorithm not supported";
 					}
-
 					eat_whitespace(&value);
-					ugh = ttodata(value.ptr, value.len, 16, iv.ptr, 16, &len);
-					if (ugh)
-						return "error in IV";
-
-					iv.len = len;
+					iv = chunk_from_hex(value, iv.ptr);
 				}
 			}
 			else /* state is PEM_BODY */
 			{
-				const char *ugh = NULL;
-				size_t len = 0;
 				chunk_t data;
 				
 				/* remove any trailing whitespace */
@@ -292,18 +283,15 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 					DBG2("  Armor checksum: %.*s", (int)data.len, data.ptr);
 		    		continue;
 				}
-
-				ugh = ttodata(data.ptr, data.len, 64, dst.ptr, blob->len - dst.len, &len);
-				if (ugh)
+				
+				if (blob->len - dst.len < data.len / 4 * 3)
 				{
 					state = PEM_ABORT;
-					break;
 				}
-				else
-				{
-					dst.ptr += len;
-					dst.len += len;
-				}
+				data = chunk_from_base64(data, dst.ptr);
+
+				dst.ptr += data.len;
+				dst.len += data.len;
 			}
 		}
 	}

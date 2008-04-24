@@ -87,7 +87,7 @@ static void create_sid(private_session_t *this, request_t *request)
 	if (rng)
 	{
 		rng->get_bytes(rng, sizeof(buf), buf);
-		this->sid = chunk_to_hex(chunk, FALSE);
+		this->sid = chunk_to_hex(chunk, NULL, FALSE).ptr;
 		request->add_cookie(request, "SID", this->sid);
 		rng->destroy(rng);
 	}
