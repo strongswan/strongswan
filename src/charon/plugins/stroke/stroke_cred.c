@@ -19,6 +19,7 @@
 #include "stroke_shared_key.h"
 
 #include <sys/stat.h>
+#include <limits.h>
 
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>

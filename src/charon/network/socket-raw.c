@@ -17,6 +17,9 @@
  * $Id$
  */
 
+/* for struct in6_pktinfo */
+#define _GNU_SOURCE
+
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
