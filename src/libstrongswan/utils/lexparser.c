@@ -48,6 +48,14 @@ bool extract_token(chunk_t *token, const char termination, chunk_t *src)
 {
 	u_char *eot = memchr(src->ptr, termination, src->len);
 	
+	if (termination == ' ')
+	{
+		u_char *eot_tab = memchr(src->ptr, '\t', src->len);
+
+		/* check if a tab instead of a space terminates the token */
+		eot = ( eot_tab == NULL || (eot && eot < eot_tab) ) ? eot : eot_tab;
+	}
+
 	/* initialize empty token */
 	*token = chunk_empty;
 	
