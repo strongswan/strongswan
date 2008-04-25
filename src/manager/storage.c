@@ -45,7 +45,7 @@ struct private_storage_t {
 static int login(private_storage_t *this, char *username, char *password)
 {
 	hasher_t *hasher;
-	chunk_t hash, data;
+	chunk_t hash, data, hex_str;
 	size_t username_len, password_len;
 	int uid = 0;
 	char *str;
@@ -65,18 +65,18 @@ static int login(private_storage_t *this, char *username, char *password)
 	memcpy(data.ptr + username_len, password, password_len);
 	hasher->get_hash(hasher, data, hash.ptr);
 	hasher->destroy(hasher);
-	str = chunk_to_hex(hash, FALSE);
+	hex_str = chunk_to_hex(hash, NULL, FALSE);
 	
 	enumerator = this->db->query(this->db, 
 			"SELECT oid FROM users WHERE username = ? AND password = ?;",
-			DB_TEXT, username, DB_TEXT, str,
+			DB_TEXT, username, DB_TEXT, hex_str.ptr,
 			DB_INT);
 	if (enumerator)
 	{
 		enumerator->enumerate(enumerator, &uid);
 		enumerator->destroy(enumerator);
 	}
-	free(str);
+	free(hex_str.ptr);
 	return uid;
 }
 

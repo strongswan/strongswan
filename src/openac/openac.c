@@ -37,7 +37,6 @@
 #include <debug.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
-#include <asn1/ttodata.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
 #include <utils/optionsfrom.h>
@@ -115,7 +114,8 @@ static chunk_t read_serial(void)
 	mpz_t number;
 
 	char buf[BUF_LEN], buf1[BUF_LEN];
-	chunk_t last_serial = { buf1, BUF_LEN};
+	chunk_t hex_serial  = { buf, BUF_LEN };
+	chunk_t last_serial = { buf1, BUF_LEN };
 	chunk_t serial;
 
 	FILE *fd = fopen(OPENAC_SERIAL, "r");
@@ -126,15 +126,10 @@ static chunk_t read_serial(void)
 
 	if (fd)
 	{
-		if (fscanf(fd, "%s", buf))
+		if (fscanf(fd, "%s", hex_serial.ptr))
 		{
-			err_t ugh = ttodata(buf, 0, 16, last_serial.ptr, BUF_LEN, &last_serial.len);
-
-			if (ugh != NULL)
-			{
-				DBG1("  error reading serial number from %s: %s",
-		    		 OPENAC_SERIAL, ugh);
-			}
+			hex_serial.len = strlen(hex_serial.ptr);
+			last_serial = chunk_from_hex(hex_serial, last_serial.ptr);
 		}
 		fclose(fd);
 	}
@@ -166,9 +161,13 @@ static void write_serial(chunk_t serial)
 
 	if (fd)
 	{
+		chunk_t hex_serial;
+
 		DBG1("  serial number is %#B", &serial);
-		fprintf(fd, "%#B\n", &serial);
+		hex_serial = chunk_to_hex(serial, NULL, FALSE);
+		fprintf(fd, "%.*s\n", hex_serial.len, hex_serial.ptr);
 		fclose(fd);
+		free(hex_serial.ptr);
 	}
 	else
 	{
