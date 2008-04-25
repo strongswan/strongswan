@@ -127,8 +127,7 @@ struct stroke_end_t {
 	char *address;
 	char *sourceip;
 	int sourceip_size;
-	char *subnet;
-	int subnet_mask;
+	char *subnets;
 	int sendcert;
 	int hostaccess;
 	int tohost;

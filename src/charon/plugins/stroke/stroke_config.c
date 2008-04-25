@@ -472,9 +472,9 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		}
 		if (!vip)
 		{	/* if it is set to something like %poolname, request an address */
-			if (msg->add_conn.me.subnet)
+			if (msg->add_conn.me.subnets)
 			{	/* use the same addreass as in subnet, if any */
-				if (strchr(msg->add_conn.me.subnet, '.'))
+				if (strchr(msg->add_conn.me.subnets, '.'))
 				{
 					vip = host_create_any(AF_INET);
 				}
@@ -620,27 +620,67 @@ static void build_auth_info(private_stroke_config_t *this,
 /**
  * build a traffic selector from a stroke_end
  */
-static traffic_selector_t *build_ts(private_stroke_config_t *this,
-									stroke_end_t *end)
+static void add_ts(private_stroke_config_t *this,
+				   stroke_end_t *end, child_cfg_t *child_cfg, bool local)
 {
+	traffic_selector_t *ts;
+	
 	if (end->tohost)
 	{
-		return traffic_selector_create_dynamic(end->protocol,
+		ts = traffic_selector_create_dynamic(end->protocol,
 					end->port ? end->port : 0, end->port ? end->port : 65535);
+		child_cfg->add_traffic_selector(child_cfg, local, ts);
 	}
 	else
 	{
 		host_t *net;
 		
-		net = host_create_from_string(end->subnet ? end->subnet : end->address,
-									  IKEV2_UDP_PORT);
-		if (!net)
+		if (!end->subnets)
 		{
-			DBG1(DBG_CFG, "invalid subnet: %s", end->subnet);
-			return NULL;
+			net = host_create_from_string(end->address, IKEV2_UDP_PORT);
+			if (net)
+			{
+				ts = traffic_selector_create_from_subnet(net, 0, end->protocol,
+														 end->port);
+				child_cfg->add_traffic_selector(child_cfg, local, ts);
+			}
 		}
-		return traffic_selector_create_from_subnet(net,
-				end->subnet ? end->subnet_mask : 0, end->protocol, end->port);
+		else
+		{
+			char *del, *start, *bits;
+			
+			start = end->subnets;
+			do
+			{
+				int intbits = 0;
+				
+				del = strchr(start, ',');
+				if (del)
+				{
+					*del = '\0';
+				}
+				bits = strchr(start, '/');
+				if (bits)
+				{
+					*bits = '\0';
+					intbits = atoi(bits + 1);
+				}
+				
+				net = host_create_from_string(start, IKEV2_UDP_PORT);
+				if (net)
+				{
+					ts = traffic_selector_create_from_subnet(net, intbits,
+												end->protocol, end->port);
+					child_cfg->add_traffic_selector(child_cfg, local, ts);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "invalid subnet: %s, skipped", start);
+				}
+				start = del + 1;
+			}
+			while (del);
+		}
 	}
 }
 
@@ -651,7 +691,6 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 									stroke_msg_t *msg)
 {
 	child_cfg_t *child_cfg;
-	traffic_selector_t *ts;
 	action_t dpd;
 	
 	switch (msg->add_conn.dpd.action)
@@ -673,21 +712,8 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
 				msg->add_conn.mode, dpd, ACTION_NONE);
 	
-	ts = build_ts(this, &msg->add_conn.me);
-	if (!ts)
-	{
-		child_cfg->destroy(child_cfg);
-		return NULL;
-	}
-	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	
-	ts = build_ts(this, &msg->add_conn.other);
-	if (!ts)
-	{
-		child_cfg->destroy(child_cfg);
-		return NULL;
-	}
-	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+	add_ts(this, &msg->add_conn.me, child_cfg, TRUE);
+	add_ts(this, &msg->add_conn.other, child_cfg, FALSE);
 	
 	add_proposals(this, msg->add_conn.algorithms.esp, NULL, child_cfg);
 	

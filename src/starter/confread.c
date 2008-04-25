@@ -32,7 +32,7 @@
 #include "interfaces.h"
 
 /* strings containing a colon are interpreted as an IPv6 address */
-#define ip_version(string)	(strchr(string, ':') != NULL)? AF_INET6 : AF_INET;
+#define ip_version(string)	(strchr(string, '.') ? AF_INET : AF_INET6)
 
 static const char ike_defaults[] = "aes128-sha-modp2048";
 static const char esp_defaults[] = "aes128-sha1, 3des-md5";
@@ -189,7 +189,6 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			conn->policy |= POLICY_GROUP | POLICY_TUNNEL;
 			anyaddr(conn->addr_family, &end->addr);
 			anyaddr(conn->tunnel_addr_family, &any);
-			initsubnet(&any, 0, '0', &end->subnet);
 			end->has_client = TRUE;
 		}
 		else
@@ -251,22 +250,44 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		}
 		else
 		{
+			ip_subnet net;
+			char *pos;
+			int len = 0;
+			
 			end->has_client = TRUE;
 			conn->tunnel_addr_family = ip_version(value);
-			ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &end->subnet);
+			
+			pos = strchr(value, ',');
+			if (pos)
+			{
+				len = pos - value;
+			}
+			ugh = ttosubnet(value, len, ip_version(value), &net);
 			if (ugh != NULL)
 			{
 				plog("# bad subnet: %s=%s [%s]", name, value, ugh);
 				goto err;
 			}
+			end->subnet = clone_str(value, "subnet");
 		}
 		break;
 	case KW_SUBNETWITHIN:
+	{
+		ip_subnet net;
+		
 		end->has_client = TRUE;
 		end->has_client_wildcard = TRUE;
 		conn->tunnel_addr_family = ip_version(value);
-		ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &end->subnet);
+
+		ugh = ttosubnet(value, 0, ip_version(value), &net);
+		if (ugh != NULL)
+		{
+			plog("# bad subnet: %s=%s [%s]", name, value, ugh);
+			goto err;
+		}
+		end->subnet = clone_str(value, "subnetwithin");
 		break;
+	}
 	case KW_PROTOPORT:
 		ugh = ttoprotoport(value, 0, &end->protocol, &end->port, &has_port_wildcard);
 		end->has_port_wildcard = has_port_wildcard;
@@ -827,6 +848,12 @@ free_also(also_t *head)
 static void
 confread_free_conn(starter_conn_t *conn)
 {
+	pfree(conn->left.subnet);
+	pfree(conn->right.subnet);
+	pfree(conn->left.virt);
+	pfree(conn->right.virt);
+	pfree(conn->left.srcip);
+	pfree(conn->right.srcip);
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->left);
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->right);
 	free_args(KW_CONN_NAME, KW_CONN_LAST, (char *)conn);

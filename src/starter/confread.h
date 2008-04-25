@@ -65,7 +65,7 @@ struct starter_end {
 	char		*iface;
 	ip_address	addr;
 	ip_address	nexthop;
-	ip_subnet	subnet;
+	char 		*subnet;
 	bool		has_client;
 	bool		has_client_wildcard;
 	bool		has_port_wildcard;

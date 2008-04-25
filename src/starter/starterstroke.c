@@ -161,9 +161,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->updown = push_string(msg, conn_end->updown);
 	ip_address2string(&conn_end->addr, buffer, sizeof(buffer));
 	msg_end->address = push_string(msg, buffer);
-	ip_address2string(&conn_end->subnet.addr, buffer, sizeof(buffer));
-	msg_end->subnet = push_string(msg, buffer);
-	msg_end->subnet_mask = conn_end->subnet.maskbits;
+	msg_end->subnets = push_string(msg, conn_end->subnet);
 	msg_end->sendcert = conn_end->sendcert;
 	msg_end->hostaccess = conn_end->hostaccess;
 	msg_end->tohost = !conn_end->has_client;

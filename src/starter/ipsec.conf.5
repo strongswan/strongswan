@@ -646,7 +646,9 @@ private subnet behind the left participant, expressed as
 if omitted, essentially assumed to be \fIleft\fB/32\fR,
 signifying that the left end of the connection goes to the left participant
 only. When using IKEv2, the configured subnet of the peers may differ, the
-protocol narrows it to the greates common subnet.
+protocol narrows it to the greatest common subnet. Further, IKEv2 supports
+multiple subnets separated by commas. IKEv1 only interprets the first subnet
+of such a definition.
 .TP
 .B leftsubnetwithin
 the peer can propose any subnet or single IP address that fits within the

@@ -32,6 +32,8 @@
 #include "confread.h"
 #include "files.h"
 
+#define ip_version(string)	(strchr(string, '.') ? AF_INET : AF_INET6)
+
 static int
 pack_str (char **p, char **next, char **roof)
 {
@@ -153,22 +155,22 @@ set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
     if (end->srcip && end->srcip[0] != '%')
     {
 	int len = 0;
-	char *pos, *v6;
+	char *pos;
 
 	pos = strchr(end->srcip, '/');
-	v6 = strchr(end->srcip, ':');
 	if (pos)
 	{
 	    /* use first address only for pluto */
 	    len = pos - end->srcip;
 	}
 	w->has_srcip = !end->has_natip;
-	ttoaddr(end->srcip, len, v6 ? AF_INET6 : AF_INET, &w->host_srcip);
+	ttoaddr(end->srcip, len, ip_version(end->srcip), &w->host_srcip);
     }
     else
     {
 	anyaddr(AF_INET, &w->host_srcip);	
-    }    
+    }
+    
     w->id                  = end->id;
     w->cert                = end->cert;
     w->ca                  = end->ca;
@@ -183,7 +185,17 @@ set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
     w->host_nexthop        = end->nexthop;
 
     if (w->has_client)
-	w->client          = end->subnet;
+    {
+	char *pos;
+	int len = 0;
+
+	pos = strchr(end->subnet, ',');
+	if (pos)
+	{
+	    len = pos - end->subnet;
+	}
+	ttosubnet(end->subnet, len, ip_version(end->subnet), &w->client);
+    }
     else
 	w->client.addr.u.v4.sin_family = addrtypeof(&w->host_addr);
 

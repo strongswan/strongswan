@@ -140,7 +140,7 @@ static void pop_string(stroke_msg_t *msg, char **string)
 static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 {
 	pop_string(msg, &end->address);
-	pop_string(msg, &end->subnet);
+	pop_string(msg, &end->subnets);
 	pop_string(msg, &end->sourceip);
 	pop_string(msg, &end->id);
 	pop_string(msg, &end->cert);
@@ -149,7 +149,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	pop_string(msg, &end->updown);
 	
 	DBG2(DBG_CFG, "  %s=%s", label, end->address);
-	DBG2(DBG_CFG, "  %ssubnet=%s", label, end->subnet);
+	DBG2(DBG_CFG, "  %ssubnet=%s", label, end->subnets);
 	DBG2(DBG_CFG, "  %ssourceip=%s", label, end->sourceip);
 	DBG2(DBG_CFG, "  %sid=%s", label, end->id);
 	DBG2(DBG_CFG, "  %scert=%s", label, end->cert);

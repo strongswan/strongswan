@@ -100,8 +100,7 @@ static int send_stroke_msg (stroke_msg_t *msg)
 static int add_connection(char *name,
 						  char *my_id, char *other_id, 
 						  char *my_addr, char *other_addr,
-						  char *my_net, char *other_net,
-						  u_int my_netmask, u_int other_netmask)
+						  char *my_nets, char *other_nets)
 {
 	stroke_msg_t msg;
 	
@@ -118,14 +117,12 @@ static int add_connection(char *name,
 	
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);
-	msg.add_conn.me.subnet = push_string(&msg, my_net);
-	msg.add_conn.me.subnet_mask = my_netmask;
+	msg.add_conn.me.subnets = push_string(&msg, my_nets);
 	msg.add_conn.me.sendcert = 1;
 	
 	msg.add_conn.other.id = push_string(&msg, other_id);
 	msg.add_conn.other.address = push_string(&msg, other_addr);
-	msg.add_conn.other.subnet = push_string(&msg, other_net);
-	msg.add_conn.other.subnet_mask = other_netmask;
+	msg.add_conn.other.subnets = push_string(&msg, other_nets);
 	msg.add_conn.other.sendcert = 1;
 	
 	return send_stroke_msg(&msg);
@@ -277,8 +274,7 @@ static void exit_usage(char *error)
 	printf("           MY_NET OTHER_NET MY_NETBITS OTHER_NETBITS\n");
 	printf("    where: ID is any IKEv2 ID \n");
 	printf("           ADDR is a IPv4 address\n");
-	printf("           NET is a IPv4 address of the subnet to tunnel\n");
-	printf("           NETBITS is the size of the subnet, as the \"24\" in 192.168.0.0/24\n");
+	printf("           NET is a IPv4 subnet in CIDR notation\n");
 	printf("  Delete a connection:\n");
 	printf("    stroke delete NAME\n");
 	printf("    where: NAME is a connection name added with \"stroke add\"\n");
@@ -334,8 +330,7 @@ int main(int argc, char *argv[])
 			res = add_connection(argv[2],
 								 argv[3], argv[4], 
 								 argv[5], argv[6], 
-								 argv[7], argv[8], 
-								 atoi(argv[9]), atoi(argv[10]));
+								 argv[7], argv[8]);
 			break;
 		case STROKE_DELETE:
 		case STROKE_DEL:
