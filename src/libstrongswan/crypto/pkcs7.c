@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: pkcs7.c 3488 2008-02-21 15:10:02Z martin $
+ * $Id$
  */
 
 #include <stdlib.h>
@@ -23,13 +23,15 @@
 #include <library.h>
 #include "debug.h"
 
-#include <asn1/asn1.h>
 #include <asn1/oid.h>
-#include <crypto/x509.h>
+#include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
+#include <credentials/certificates/x509.h>
+#include <credentials/keys/public_key.h>
 #include <crypto/pkcs9.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
-#include <crypto/rsa/rsa_public_key.h>
+
 #include <utils/linked_list.h>
 
 #include "pkcs7.h"
@@ -80,100 +82,6 @@ struct private_pkcs7_t {
 	 */
 	linked_list_t *certs;
 };
-
-/**
- * ASN.1 definition of the PKCS#7 ContentInfo type
- */
-static const asn1Object_t contentInfoObjects[] = {
-	{ 0, "contentInfo",		ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
-	{ 1,   "contentType",	ASN1_OID,			ASN1_BODY }, /*  1 */
-	{ 1,   "content",		ASN1_CONTEXT_C_0,	ASN1_OPT |
-												ASN1_BODY }, /*  2 */
-	{ 1,   "end opt",		ASN1_EOC,			ASN1_END  }  /*  3 */
-};
-
-#define PKCS7_INFO_TYPE		1
-#define PKCS7_INFO_CONTENT	2
-#define PKCS7_INFO_ROOF		4
-
-/**
- * ASN.1 definition of the PKCS#7 signedData type
- */
-static const asn1Object_t signedDataObjects[] = {
-	{ 0, "signedData",						ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
-	{ 1,   "version",						ASN1_INTEGER,		ASN1_BODY }, /*  1 */
-	{ 1,   "digestAlgorithms",				ASN1_SET,			ASN1_LOOP }, /*  2 */
-	{ 2,     "algorithm",					ASN1_EOC,			ASN1_RAW  }, /*  3 */
-	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }, /*  4 */
-	{ 1,   "contentInfo",					ASN1_EOC,			ASN1_RAW  }, /*  5 */
-	{ 1,   "certificates",					ASN1_CONTEXT_C_0,	ASN1_OPT |
-																ASN1_LOOP }, /*  6 */
-	{ 2,      "certificate",				ASN1_SEQUENCE,		ASN1_OBJ  }, /*  7 */
-	{ 1,   "end opt or loop",				ASN1_EOC,			ASN1_END  }, /*  8 */
-	{ 1,   "crls",							ASN1_CONTEXT_C_1,	ASN1_OPT |
-																ASN1_LOOP }, /*  9 */
-	{ 2,	    "crl",						ASN1_SEQUENCE,		ASN1_OBJ  }, /* 10 */
-	{ 1,   "end opt or loop",				ASN1_EOC,			ASN1_END  }, /* 11 */
-	{ 1,   "signerInfos",					ASN1_SET,			ASN1_LOOP }, /* 12 */
-	{ 2,     "signerInfo",					ASN1_SEQUENCE,		ASN1_NONE }, /* 13 */
-	{ 3,       "version",					ASN1_INTEGER,		ASN1_BODY }, /* 14 */
-	{ 3,       "issuerAndSerialNumber",		ASN1_SEQUENCE,		ASN1_BODY }, /* 15 */
-	{ 4,         "issuer",					ASN1_SEQUENCE,		ASN1_OBJ  }, /* 16 */
-	{ 4,         "serial",					ASN1_INTEGER,		ASN1_BODY }, /* 17 */
-	{ 3,       "digestAlgorithm",			ASN1_EOC,			ASN1_RAW  }, /* 18 */
-	{ 3,       "authenticatedAttributes",	ASN1_CONTEXT_C_0,	ASN1_OPT |
-																ASN1_OBJ  }, /* 19 */
-	{ 3,       "end opt",					ASN1_EOC,			ASN1_END  }, /* 20 */
-	{ 3,       "digestEncryptionAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /* 21 */
-	{ 3,       "encryptedDigest",			ASN1_OCTET_STRING,	ASN1_BODY }, /* 22 */
-	{ 3,       "unauthenticatedAttributes", ASN1_CONTEXT_C_1,	ASN1_OPT  }, /* 23 */
-	{ 3,       "end opt",					ASN1_EOC,			ASN1_END  }, /* 24 */
-	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }  /* 25 */
-};
-
-#define PKCS7_DIGEST_ALG	 		 3
-#define PKCS7_SIGNED_CONTENT_INFO	 5
-#define PKCS7_SIGNED_CERT	 		 7
-#define PKCS7_SIGNER_INFO			13
-#define PKCS7_SIGNED_ISSUER			16
-#define PKCS7_SIGNED_SERIAL_NUMBER	17
-#define PKCS7_DIGEST_ALGORITHM		18
-#define PKCS7_AUTH_ATTRIBUTES		19
-#define PKCS7_DIGEST_ENC_ALGORITHM	21
-#define PKCS7_ENCRYPTED_DIGEST		22
-#define PKCS7_SIGNED_ROOF			26
-
-/**
- * ASN.1 definition of the PKCS#7 envelopedData type
- */
-static const asn1Object_t envelopedDataObjects[] = {
-	{ 0, "envelopedData",					ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
-	{ 1,   "version",						ASN1_INTEGER, 		ASN1_BODY }, /*  1 */
-	{ 1,   "recipientInfos",				ASN1_SET,    		ASN1_LOOP }, /*  2 */
-	{ 2,     "recipientInfo",				ASN1_SEQUENCE, 		ASN1_BODY }, /*  3 */
-	{ 3,       "version",					ASN1_INTEGER, 		ASN1_BODY }, /*  4 */
-	{ 3,       "issuerAndSerialNumber",		ASN1_SEQUENCE,		ASN1_BODY }, /*  5 */
-	{ 4,         "issuer",					ASN1_SEQUENCE,		ASN1_OBJ  }, /*  6 */
-	{ 4,         "serial",					ASN1_INTEGER,		ASN1_BODY }, /*  7 */
-	{ 3,       "encryptionAlgorithm",		ASN1_EOC,			ASN1_RAW  }, /*  8 */
-	{ 3,       "encryptedKey",				ASN1_OCTET_STRING,	ASN1_BODY }, /*  9 */
-	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }, /* 10 */
-	{ 1,   "encryptedContentInfo",			ASN1_SEQUENCE,		ASN1_OBJ  }, /* 11 */
-	{ 2,     "contentType",					ASN1_OID,			ASN1_BODY }, /* 12 */
-	{ 2,     "contentEncryptionAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /* 13 */
-	{ 2,     "encryptedContent",			ASN1_CONTEXT_S_0, 	ASN1_BODY }  /* 14 */
-};
-
-#define PKCS7_ENVELOPED_VERSION			 1
-#define PKCS7_RECIPIENT_INFO_VERSION	 4
-#define PKCS7_ISSUER					 6
-#define PKCS7_SERIAL_NUMBER				 7
-#define PKCS7_ENCRYPTION_ALG			 8
-#define PKCS7_ENCRYPTED_KEY				 9
-#define PKCS7_CONTENT_TYPE				12
-#define PKCS7_CONTENT_ENC_ALGORITHM		13
-#define PKCS7_ENCRYPTED_CONTENT			14
-#define PKCS7_ENVELOPED_ROOF			15
 
 /**
  * PKCS7 contentInfo OIDs
@@ -299,7 +207,7 @@ static bool parse_data(private_pkcs7_t *this)
 		this->data = chunk_empty;
 		return TRUE;
 	}
-	if (parse_asn1_simple_object(&data, ASN1_OCTET_STRING, this->level, "data"))
+	if (asn1_parse_simple_object(&data, ASN1_OCTET_STRING, this->level, "data"))
 	{
 		this->data = chunk_clone(data);
 		return TRUE;
@@ -311,18 +219,63 @@ static bool parse_data(private_pkcs7_t *this)
 }
 
 /**
+ * ASN.1 definition of the PKCS#7 signedData type
+ */
+static const asn1Object_t signedDataObjects[] = {
+	{ 0, "signedData",						ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
+	{ 1,   "version",						ASN1_INTEGER,		ASN1_BODY }, /*  1 */
+	{ 1,   "digestAlgorithms",				ASN1_SET,			ASN1_LOOP }, /*  2 */
+	{ 2,     "algorithm",					ASN1_EOC,			ASN1_RAW  }, /*  3 */
+	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }, /*  4 */
+	{ 1,   "contentInfo",					ASN1_EOC,			ASN1_RAW  }, /*  5 */
+	{ 1,   "certificates",					ASN1_CONTEXT_C_0,	ASN1_OPT |
+																ASN1_LOOP }, /*  6 */
+	{ 2,      "certificate",				ASN1_SEQUENCE,		ASN1_OBJ  }, /*  7 */
+	{ 1,   "end opt or loop",				ASN1_EOC,			ASN1_END  }, /*  8 */
+	{ 1,   "crls",							ASN1_CONTEXT_C_1,	ASN1_OPT |
+																ASN1_LOOP }, /*  9 */
+	{ 2,	    "crl",						ASN1_SEQUENCE,		ASN1_OBJ  }, /* 10 */
+	{ 1,   "end opt or loop",				ASN1_EOC,			ASN1_END  }, /* 11 */
+	{ 1,   "signerInfos",					ASN1_SET,			ASN1_LOOP }, /* 12 */
+	{ 2,     "signerInfo",					ASN1_SEQUENCE,		ASN1_NONE }, /* 13 */
+	{ 3,       "version",					ASN1_INTEGER,		ASN1_BODY }, /* 14 */
+	{ 3,       "issuerAndSerialNumber",		ASN1_SEQUENCE,		ASN1_BODY }, /* 15 */
+	{ 4,         "issuer",					ASN1_SEQUENCE,		ASN1_OBJ  }, /* 16 */
+	{ 4,         "serial",					ASN1_INTEGER,		ASN1_BODY }, /* 17 */
+	{ 3,       "digestAlgorithm",			ASN1_EOC,			ASN1_RAW  }, /* 18 */
+	{ 3,       "authenticatedAttributes",	ASN1_CONTEXT_C_0,	ASN1_OPT |
+																ASN1_OBJ  }, /* 19 */
+	{ 3,       "end opt",					ASN1_EOC,			ASN1_END  }, /* 20 */
+	{ 3,       "digestEncryptionAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /* 21 */
+	{ 3,       "encryptedDigest",			ASN1_OCTET_STRING,	ASN1_BODY }, /* 22 */
+	{ 3,       "unauthenticatedAttributes", ASN1_CONTEXT_C_1,	ASN1_OPT  }, /* 23 */
+	{ 3,       "end opt",					ASN1_EOC,			ASN1_END  }, /* 24 */
+	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }  /* 25 */
+};
+#define PKCS7_DIGEST_ALG	 		 3
+#define PKCS7_SIGNED_CONTENT_INFO	 5
+#define PKCS7_SIGNED_CERT	 		 7
+#define PKCS7_SIGNER_INFO			13
+#define PKCS7_SIGNED_ISSUER			16
+#define PKCS7_SIGNED_SERIAL_NUMBER	17
+#define PKCS7_DIGEST_ALGORITHM		18
+#define PKCS7_AUTH_ATTRIBUTES		19
+#define PKCS7_DIGEST_ENC_ALGORITHM	21
+#define PKCS7_ENCRYPTED_DIGEST		22
+#define PKCS7_SIGNED_ROOF			26
+
+/**
  * Implements pkcs7_t.parse_signedData.
  */
 static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
-	int objectID = 0;
-
+	int objectID;
 	int digest_alg = OID_UNKNOWN;
 	int enc_alg    = OID_UNKNOWN;
 	int signerInfos = 0;
+	bool success = TRUE;
 
 	chunk_t encrypted_digest = chunk_empty;
 
@@ -331,62 +284,63 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 		return FALSE;
 	}
 
-	asn1_init(&ctx, this->content, this->level, FALSE, FALSE);
+	parser = asn1_parser_create(signedDataObjects, PKCS7_SIGNED_ROOF,
+								this->content);
+	parser->set_top_level(parser, this->level);
 
-	while (objectID < PKCS7_SIGNED_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(signedDataObjects, &objectID, &object, &level, &ctx))
-		{
-			return FALSE;
-		}
+		u_int level = parser->get_level(parser);
 
 		switch (objectID)
 		{
 			case PKCS7_DIGEST_ALG:
-				digest_alg = parse_algorithmIdentifier(object, level, NULL);
+				digest_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case PKCS7_SIGNED_CONTENT_INFO:
-				{
-					chunk_t pureData;
-					pkcs7_t *data = pkcs7_create_from_chunk(object, level+1);
+			{
+				chunk_t pureData;
+				pkcs7_t *data = pkcs7_create_from_chunk(object, level+1);
 
-					if (data == NULL)
-					{
-						return FALSE;
-					}
-					if (!data->parse_data(data))
-					{
-						data->destroy(data);
-						return FALSE;
-					}
-					pureData = data->get_data(data);
-					this->data = (pureData.len)? chunk_clone(pureData) : chunk_empty;
+				if (data == NULL)
+				{
+					success = FALSE;
+					goto end;
+				}
+				if (!data->parse_data(data))
+				{
 					data->destroy(data);
+					success = FALSE;
+					goto end;
 				}
+				pureData = data->get_data(data);
+				this->data = (pureData.len)? chunk_clone(pureData) : chunk_empty;
+				data->destroy(data);
 				break;
+			}
 			case PKCS7_SIGNED_CERT:
-				{
-					x509_t *cert = x509_create_from_chunk(chunk_clone(object), level+1);
+			{
+				x509_t *cert = x509_create_from_chunk(chunk_clone(object), level+1);
 
-					if (cert)
-					{
-						this->certs->insert_last(this->certs, (void*)cert);
-					}
+				if (cert)
+				{
+					this->certs->insert_last(this->certs, (void*)cert);
 				}
 				break;
+			}
 			case PKCS7_SIGNER_INFO:
 				signerInfos++;
 				DBG2("  signer #%d", signerInfos);
 				break;
 			case PKCS7_SIGNED_ISSUER:
-				{
-					identification_t *issuer;
+			{
+				identification_t *issuer;
 
-					issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-					DBG2("  '%D'", issuer);
-					issuer->destroy(issuer);
-				}
+				issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
+				DBG2("  '%D'", issuer);
+				issuer->destroy(issuer);
 				break;
+			}
 			case PKCS7_AUTH_ATTRIBUTES:
 				*object.ptr = ASN1_SET;
 				this->attributes = pkcs9_create_from_chunk(object, level+1);
@@ -401,7 +355,14 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 			case PKCS7_ENCRYPTED_DIGEST:
 				encrypted_digest = object;
 		}
-		objectID++;
+	}
+
+end:
+	success &= parser->success(parser);
+	parser->destroy(parser);
+	if (!success)
+	{
+		return FALSE;
 	}
 
 	/* check the signature only if a cacert is available */
@@ -486,15 +447,46 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 }
 
 /**
+ * ASN.1 definition of the PKCS#7 envelopedData type
+ */
+static const asn1Object_t envelopedDataObjects[] = {
+	{ 0, "envelopedData",					ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
+	{ 1,   "version",						ASN1_INTEGER, 		ASN1_BODY }, /*  1 */
+	{ 1,   "recipientInfos",				ASN1_SET,    		ASN1_LOOP }, /*  2 */
+	{ 2,     "recipientInfo",				ASN1_SEQUENCE, 		ASN1_BODY }, /*  3 */
+	{ 3,       "version",					ASN1_INTEGER, 		ASN1_BODY }, /*  4 */
+	{ 3,       "issuerAndSerialNumber",		ASN1_SEQUENCE,		ASN1_BODY }, /*  5 */
+	{ 4,         "issuer",					ASN1_SEQUENCE,		ASN1_OBJ  }, /*  6 */
+	{ 4,         "serial",					ASN1_INTEGER,		ASN1_BODY }, /*  7 */
+	{ 3,       "encryptionAlgorithm",		ASN1_EOC,			ASN1_RAW  }, /*  8 */
+	{ 3,       "encryptedKey",				ASN1_OCTET_STRING,	ASN1_BODY }, /*  9 */
+	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }, /* 10 */
+	{ 1,   "encryptedContentInfo",			ASN1_SEQUENCE,		ASN1_OBJ  }, /* 11 */
+	{ 2,     "contentType",					ASN1_OID,			ASN1_BODY }, /* 12 */
+	{ 2,     "contentEncryptionAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /* 13 */
+	{ 2,     "encryptedContent",			ASN1_CONTEXT_S_0, 	ASN1_BODY }  /* 14 */
+};
+#define PKCS7_ENVELOPED_VERSION			 1
+#define PKCS7_RECIPIENT_INFO_VERSION	 4
+#define PKCS7_ISSUER					 6
+#define PKCS7_SERIAL_NUMBER				 7
+#define PKCS7_ENCRYPTION_ALG			 8
+#define PKCS7_ENCRYPTED_KEY				 9
+#define PKCS7_CONTENT_TYPE				12
+#define PKCS7_CONTENT_ENC_ALGORITHM		13
+#define PKCS7_ENCRYPTED_CONTENT			14
+#define PKCS7_ENVELOPED_ROOF			15
+
+/**
  * Parse PKCS#7 envelopedData content
  */
 static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 								rsa_private_key_t *key)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
-	int objectID = 0;
+	int objectID;
+	bool success = FALSE;
 
 	chunk_t iv                = chunk_empty;
 	chunk_t symmetric_key     = chunk_empty;
@@ -507,29 +499,26 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 		return FALSE;
 	}
 
-	asn1_init(&ctx, this->content, this->level, FALSE, FALSE);
+	parser = asn1_parser_create(envelopedDataObjects, PKCS7_ENVELOPED_ROOF,
+								this->content);
+	parser->set_top_level(parser, this->level);
 
-	while (objectID < PKCS7_ENVELOPED_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(envelopedDataObjects, &objectID, &object, &level, &ctx))
-		{
-			goto failed;
-		}
-
 		switch (objectID)
 		{
 			case PKCS7_ENVELOPED_VERSION:
 				if (*object.ptr != 0)
 				{
 					DBG1("envelopedData version is not 0");
-					goto failed;
+					goto end;
 				}
 				break;
 			case PKCS7_RECIPIENT_INFO_VERSION:
 				if (*object.ptr != 0)
 				{
 					DBG1("recipient info version is not 0");
-					goto failed;
+					goto end;
 				}
 				break;
 			case PKCS7_ISSUER:
@@ -545,7 +534,7 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 				if (!chunk_equals(serialNumber, object))
 				{
 					DBG1("serial numbers do not match");
-					goto failed;
+					goto end;
 				}
 				break;
 			case PKCS7_ENCRYPTION_ALG:
@@ -555,7 +544,7 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 					if (alg != OID_RSA_ENCRYPTION)
 					{
 						DBG1("only rsa encryption supported");
-						goto failed;
+						goto end;
 					}
 				}
 				break;
@@ -563,7 +552,7 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 				if (key->pkcs1_decrypt(key, object, &symmetric_key) != SUCCESS)
 				{
 					DBG1("symmetric key could not be decrypted with rsa");
-					goto failed;
+					goto end;
 				}
 				DBG4("symmetric key : %B", &symmetric_key);
 				break;
@@ -571,7 +560,7 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 				if (known_oid(object) != OID_PKCS7_DATA)
 				{
 					DBG1("encrypted content not of type pkcs7 data");
-		 			goto failed;
+		 			goto end;
 				}
 				break;
 			case PKCS7_CONTENT_ENC_ALGORITHM:
@@ -588,22 +577,22 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 							break;
 						default:
 							DBG1("Only DES and 3DES supported for symmetric encryption");
-							goto failed;
+							goto end;
 					}
 					if (symmetric_key.len != crypter->get_key_size(crypter))
 					{
 						DBG1("symmetric key has wrong length");
-						goto failed;
+						goto end;
 					}
 					if (!parse_asn1_simple_object(&iv, ASN1_OCTET_STRING, level+1, "IV"))
 					{
 						DBG1("IV could not be parsed");
-						goto failed;
+						goto end;
 					}
 					if (iv.len != crypter->get_block_size(crypter))
 					{
 						DBG1("IV has wrong length");
-						goto failed;
+						goto end;
 					}
 				}
 				break;
@@ -611,7 +600,15 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 				encrypted_content = object;
 				break;
 		}
-		objectID++;
+	}
+	success = TRUE;
+
+end:
+	success &= parser->success(parser);
+	parser->destroy(parser);
+	if (!success)
+	{
+		goto failed;
 	}
 
 	/* decrypt the content */
@@ -887,7 +884,7 @@ bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 		
 			/* take the current time as signingTime */
 			time_t now = time(NULL);
-			chunk_t	signingTime = timetoasn1(&now, ASN1_UTCTIME);
+			chunk_t	signingTime = asn1_from_time(&now, ASN1_UTCTIME);
 
 			chunk_t messageDigest, attributes;
 	
@@ -962,24 +959,34 @@ static void destroy(private_pkcs7_t *this)
 }
 
 /**
+ * ASN.1 definition of the PKCS#7 ContentInfo type
+ */
+static const asn1Object_t contentInfoObjects[] = {
+	{ 0, "contentInfo",		ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
+	{ 1,   "contentType",	ASN1_OID,			ASN1_BODY }, /*  1 */
+	{ 1,   "content",		ASN1_CONTEXT_C_0,	ASN1_OPT |
+												ASN1_BODY }, /*  2 */
+	{ 1,   "end opt",		ASN1_EOC,			ASN1_END  }  /*  3 */
+};
+#define PKCS7_INFO_TYPE		1
+#define PKCS7_INFO_CONTENT	2
+#define PKCS7_INFO_ROOF		4
+
+/**
  * Parse PKCS#7 contentInfo object
  */
 static bool parse_contentInfo(chunk_t blob, u_int level0, private_pkcs7_t *cInfo)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
-	int objectID = 0;
+	int objectID;
+	bool success = TRUE;
 
-	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+	parser = asn1_parser_create(contentInfoObjects, PKCS7_INFO_TYPE, blob);
+	parser->set_top_level(parser, level0);
 
-	while (objectID < PKCS7_INFO_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(contentInfoObjects, &objectID, &object, &level, &ctx))
-		{
-			return FALSE;
-		}
-
 		if (objectID == PKCS7_INFO_TYPE)
 		{
 			cInfo->type = known_oid(object);
@@ -987,16 +994,20 @@ static bool parse_contentInfo(chunk_t blob, u_int level0, private_pkcs7_t *cInfo
 			||  cInfo->type > OID_PKCS7_ENCRYPTED_DATA)
 			{
 				DBG1("unknown pkcs7 content type");
-				return FALSE;
+				success = FALSE;
+				goto end;
 			}
 		}
 		else if (objectID == PKCS7_INFO_CONTENT && object.len > 0)
 		{
 			cInfo->content = chunk_clone(object);
 		}
-		objectID++;
 	}
-	return TRUE;
+
+end:
+	success &= parser->success(parser);
+	parser->destroy(parser);
+	return success;
 }
 
 /**

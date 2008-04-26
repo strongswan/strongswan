@@ -28,9 +28,9 @@
 typedef struct pkcs7_t pkcs7_t;
 
 #include <library.h>
-#include <crypto/x509.h>
+#include <credentials/certificates/x509.h>
+#include <credentials/keys/private_key.h>
 #include <crypto/pkcs9.h>
-#include <crypto/rsa/rsa_private_key.h>
 #include <crypto/crypters/crypter.h>
 #include <utils/iterator.h>
 
@@ -78,10 +78,10 @@ struct pkcs7_t {
 	 * Parse a PKCS#7 envelopedData content.
 	 * 
 	 * @param serialNumber	serialNumber of the request
-	 * @param key			RSA private key used to decrypt the symmetric key
+	 * @param key			private key used to decrypt the symmetric key
 	 * @return				TRUE if parsing was successful
 	 */
-	bool (*parse_envelopedData) (pkcs7_t *this, chunk_t serialNumber, rsa_private_key_t *key);
+	bool (*parse_envelopedData) (pkcs7_t *this, chunk_t serialNumber, private_key_t *key);
 
 	/**
 	 * Returns the parsed data object
@@ -138,11 +138,11 @@ struct pkcs7_t {
 	/**
 	 * Build an signedData object
 	 *
-	 * @param key			signer's RSA private key
+	 * @param key			signer's private key
 	 * @param alg			digest algorithm used for signature
 	 * @return				TRUE if build was successful
 	 */
-	bool (*build_signedData) (pkcs7_t *this, rsa_private_key_t *key,
+	bool (*build_signedData) (pkcs7_t *this, private_key_t *key,
 							  hash_algorithm_t alg);
 
 	/**
