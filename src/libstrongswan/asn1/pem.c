@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2001-2004 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2001-2008 Andreas Steffen
+ *
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

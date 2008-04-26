@@ -16,7 +16,11 @@
 #include <stdio.h>
 
 #include <debug.h>
+#include <library.h>
+
+#include <asn1/oid.h>
 #include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
 #include <utils/lexparser.h>
 
 #include "ietf_attr_list.h"
@@ -220,7 +224,7 @@ void ietfAttr_list_list(linked_list_t *list, FILE *out)
 				break;
 			case IETF_ATTRIBUTE_OID:
 				{
-					int oid = known_oid(attr->value);
+					int oid = asn1_known_oid(attr->value);
 
 					if (oid == OID_UNKNOWN)
 					{
@@ -294,7 +298,6 @@ static const asn1Object_t ietfAttrSyntaxObjects[] =
 	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  9 */
 	{ 1,   "end loop",			ASN1_EOC,			ASN1_END  }  /* 10 */
 };
-
 #define IETF_ATTR_OCTETS	 4
 #define IETF_ATTR_OID		 6
 #define IETF_ATTR_STRING	 8
@@ -305,20 +308,15 @@ static const asn1Object_t ietfAttrSyntaxObjects[] =
  */
 void ietfAttr_list_create_from_chunk(chunk_t chunk, linked_list_t *list, int level0)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
-	int objectID = 0;
+	int objectID;
 
-	asn1_init(&ctx, chunk, level0, FALSE, FALSE);
+	parser = asn1_parser_create(ietfAttrSyntaxObjects, IETF_ATTR_ROOF, chunk);
+	parser->set_top_level(parser, level0);
 
-	while (objectID < IETF_ATTR_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(ietfAttrSyntaxObjects, &objectID, &object, &level, &ctx))
-		{
-			return;
-		}
-
 		switch (objectID)
 		{
 			case IETF_ATTR_OCTETS:
@@ -333,8 +331,8 @@ void ietfAttr_list_create_from_chunk(chunk_t chunk, linked_list_t *list, int lev
 			default:
 				break;
 		}
-		objectID++;
 	}
+	parser->destroy(parser);
 }
 
 /*
@@ -357,7 +355,7 @@ chunk_t ietfAttr_list_encode(linked_list_t *list)
 	}
 	iterator->destroy(iterator);
 
-	pos = build_asn1_object(&ietfAttributes, ASN1_SEQUENCE, size);
+	pos = asn1_build_object(&ietfAttributes, ASN1_SEQUENCE, size);
 
 	iterator = list->create_iterator(list, TRUE);
 	while (iterator->iterate(iterator, (void **)&attr))

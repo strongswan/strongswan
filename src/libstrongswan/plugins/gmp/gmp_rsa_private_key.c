@@ -25,7 +25,9 @@
 #include "gmp_rsa_public_key.h"
 
 #include <debug.h>
+#include <asn1/oid.h>
 #include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
 
 /**
  *  Public exponent to use for key generation.
@@ -109,8 +111,10 @@ struct private_gmp_rsa_private_key_t {
 	refcount_t ref;	
 };
 
-/* ASN.1 definition of a PKCS#1 RSA private key */
-static const asn1Object_t privkey_objects[] = {
+/**
+ * ASN.1 definition of a PKCS#1 RSA private key
+ */
+static const asn1Object_t privkeyObjects[] = {
 	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
 	{ 1,   "version",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
 	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  2 */
@@ -673,10 +677,11 @@ static gmp_rsa_private_key_t *generate(size_t key_size)
  */
 static gmp_rsa_private_key_t *load(chunk_t blob)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
-	int objectID = 0;
+	int objectID ;
+	bool success = TRUE;
+
 	private_gmp_rsa_private_key_t *this = gmp_rsa_private_key_create_empty();
 	
 	mpz_init(this->n);
@@ -688,24 +693,17 @@ static gmp_rsa_private_key_t *load(chunk_t blob)
 	mpz_init(this->exp2);
 	mpz_init(this->coeff);
 	
-	asn1_init(&ctx, blob, 0, FALSE, TRUE);
+	parser = asn1_parser_create(privkeyObjects, PRIV_KEY_ROOF, blob);
+	parser->set_flags(parser, FALSE, TRUE);
 	
-	while (objectID < PRIV_KEY_ROOF) 
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(privkey_objects, &objectID, &object, &level, &ctx))
-		{
-			chunk_clear(&blob);
-			destroy(this);
-			return NULL;
-		}
 		switch (objectID)
 		{
 			case PRIV_KEY_VERSION:
 				if (object.len > 0 && *object.ptr != 0)
 				{
-					chunk_clear(&blob);
-					destroy(this);
-					return NULL;
+					goto end;
 				}
 				break;
 			case PRIV_KEY_MODULUS:
@@ -733,18 +731,28 @@ static gmp_rsa_private_key_t *load(chunk_t blob)
 				mpz_import(this->coeff, object.len, 1, 1, 1, 0, object.ptr);
 				break;
 		}
-		objectID++;
 	}
+
+end:
+	success &= parser->success(parser);
+	parser->destroy(parser);
 	chunk_clear(&blob);
+
+	if (!success)
+	{
+		destroy(this);
+		return NULL;
+	}
 	
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
+
 	if (!gmp_rsa_public_key_build_id(this->n, this->e,
 									 &this->keyid, &this->keyid_info))
 	{
 		destroy(this);
 		return NULL;
 	}
-	
+
 	if (check(this) != SUCCESS)
 	{
 		destroy(this);

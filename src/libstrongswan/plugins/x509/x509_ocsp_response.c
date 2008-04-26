@@ -23,6 +23,7 @@
 
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
 #include <debug.h>
@@ -155,126 +156,6 @@ static const chunk_t ASN1_nonce_oid = chunk_from_buf(ASN1_nonce_oid_str);
 static const chunk_t ASN1_response_oid = chunk_from_buf(ASN1_response_oid_str);
 static const chunk_t ASN1_response_content = chunk_from_buf(ASN1_response_content_str);
 
-/* asn.1 definitions for parsing */
-
-static const asn1Object_t ocspResponseObjects[] = {
-	{ 0, "OCSPResponse",			ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
-	{ 1,   "responseStatus",		ASN1_ENUMERATED,	ASN1_BODY }, /*  1 */
-	{ 1,   "responseBytesContext",	ASN1_CONTEXT_C_0,	ASN1_OPT  }, /*  2 */
-	{ 2,     "responseBytes",		ASN1_SEQUENCE,		ASN1_NONE }, /*  3 */
-	{ 3,       "responseType",		ASN1_OID,			ASN1_BODY }, /*  4 */
-	{ 3,       "response",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  5 */
-	{ 1,   "end opt",				ASN1_EOC,			ASN1_END  }  /*  6 */
-};
-
-#define OCSP_RESPONSE_STATUS	1
-#define OCSP_RESPONSE_TYPE		4
-#define OCSP_RESPONSE			5
-#define OCSP_RESPONSE_ROOF		7
-
-static const asn1Object_t basicResponseObjects[] = {
-	{ 0, "BasicOCSPResponse",				ASN1_SEQUENCE,			ASN1_NONE }, /*  0 */
-	{ 1,   "tbsResponseData",				ASN1_SEQUENCE,			ASN1_OBJ  }, /*  1 */
-	{ 2,     "versionContext",				ASN1_CONTEXT_C_0,		ASN1_NONE |
-																	ASN1_DEF  }, /*  2 */
-	{ 3,       "version",					ASN1_INTEGER,			ASN1_BODY }, /*  3 */
-	{ 2,     "responderIdContext",			ASN1_CONTEXT_C_1,		ASN1_OPT  }, /*  4 */
-	{ 3,       "responderIdByName",			ASN1_SEQUENCE,			ASN1_OBJ  }, /*  5 */
-	{ 2,     "end choice",					ASN1_EOC,				ASN1_END  }, /*  6 */
-	{ 2,     "responderIdContext",			ASN1_CONTEXT_C_2,		ASN1_OPT  }, /*  7 */
-	{ 3,       "responderIdByKey",			ASN1_OCTET_STRING,		ASN1_BODY }, /*  8 */
-	{ 2,     "end choice",					ASN1_EOC,				ASN1_END  }, /*  9 */
-	{ 2,     "producedAt",					ASN1_GENERALIZEDTIME,	ASN1_BODY }, /* 10 */
-	{ 2,     "responses",					ASN1_SEQUENCE,			ASN1_OBJ  }, /* 11 */
-	{ 2,     "responseExtensionsContext",	ASN1_CONTEXT_C_1,		ASN1_OPT  }, /* 12 */
-	{ 3,       "responseExtensions",		ASN1_SEQUENCE,			ASN1_LOOP }, /* 13 */
-	{ 4,         "extension",				ASN1_SEQUENCE,			ASN1_NONE }, /* 14 */
-	{ 5,           "extnID",				ASN1_OID,				ASN1_BODY }, /* 15 */
-	{ 5,           "critical",				ASN1_BOOLEAN,			ASN1_BODY |
-																	ASN1_DEF  }, /* 16 */
-	{ 5,           "extnValue",				ASN1_OCTET_STRING,		ASN1_BODY }, /* 17 */
-	{ 4,         "end loop",				ASN1_EOC,				ASN1_END  }, /* 18 */
-	{ 2,     "end opt",						ASN1_EOC,				ASN1_END  }, /* 19 */
-	{ 1,   "signatureAlgorithm",			ASN1_EOC,				ASN1_RAW  }, /* 20 */
-	{ 1,   "signature",						ASN1_BIT_STRING,		ASN1_BODY }, /* 21 */
-	{ 1,   "certsContext",					ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 22 */
-	{ 2,     "certs",						ASN1_SEQUENCE,			ASN1_LOOP }, /* 23 */
-	{ 3,       "certificate",				ASN1_SEQUENCE,			ASN1_RAW  }, /* 24 */
-	{ 2,     "end loop",					ASN1_EOC,				ASN1_END  }, /* 25 */
-	{ 1,   "end opt",						ASN1_EOC,				ASN1_END  }  /* 26 */
-};
-
-#define BASIC_RESPONSE_TBS_DATA		 1
-#define BASIC_RESPONSE_VERSION		 3
-#define BASIC_RESPONSE_ID_BY_NAME	 5
-#define BASIC_RESPONSE_ID_BY_KEY	 8
-#define BASIC_RESPONSE_PRODUCED_AT	10
-#define BASIC_RESPONSE_RESPONSES	11
-#define BASIC_RESPONSE_EXT_ID		15
-#define BASIC_RESPONSE_CRITICAL		16
-#define BASIC_RESPONSE_EXT_VALUE	17
-#define BASIC_RESPONSE_ALGORITHM	20
-#define BASIC_RESPONSE_SIGNATURE	21
-#define BASIC_RESPONSE_CERTIFICATE	24
-#define BASIC_RESPONSE_ROOF			27
-
-static const asn1Object_t responsesObjects[] = {
-	{ 0, "responses",			ASN1_SEQUENCE,	ASN1_LOOP }, /*  0 */
-	{ 1,   "singleResponse",	ASN1_EOC,		ASN1_RAW  }, /*  1 */
-	{ 0, "end loop",			ASN1_EOC,		ASN1_END  }  /*  2 */
-};
-
-#define RESPONSES_SINGLE_RESPONSE	1
-#define RESPONSES_ROOF				3
-
-static const asn1Object_t singleResponseObjects[] = {
-	{ 0, "singleResponse",				ASN1_SEQUENCE,			ASN1_BODY }, /*  0 */
-	{ 1,   "certID",					ASN1_SEQUENCE,			ASN1_NONE }, /*  1 */
-	{ 2,     "algorithm",				ASN1_EOC,				ASN1_RAW  }, /*  2 */
-	{ 2,     "issuerNameHash",			ASN1_OCTET_STRING,		ASN1_BODY }, /*  3 */
-	{ 2,     "issuerKeyHash",			ASN1_OCTET_STRING,		ASN1_BODY }, /*  4 */
-	{ 2,     "serialNumber",			ASN1_INTEGER,			ASN1_BODY }, /*  5 */
-	{ 1,   "certStatusGood",			ASN1_CONTEXT_S_0,		ASN1_OPT  }, /*  6 */
-	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /*  7 */
-	{ 1,   "certStatusRevoked",			ASN1_CONTEXT_C_1,		ASN1_OPT  }, /*  8 */
-	{ 2,     "revocationTime",			ASN1_GENERALIZEDTIME,	ASN1_BODY }, /*  9 */
-	{ 2,     "revocationReason",		ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 10 */
-	{ 3,       "crlReason",				ASN1_ENUMERATED,		ASN1_BODY }, /* 11 */
-	{ 2,     "end opt",					ASN1_EOC,				ASN1_END  }, /* 12 */
-	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 13 */
-	{ 1,   "certStatusUnknown",			ASN1_CONTEXT_S_2,		ASN1_OPT  }, /* 14 */
-	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 15 */
-	{ 1,   "thisUpdate",				ASN1_GENERALIZEDTIME,	ASN1_BODY }, /* 16 */
-	{ 1,   "nextUpdateContext",			ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 17 */
-	{ 2,     "nextUpdate",				ASN1_GENERALIZEDTIME,	ASN1_BODY }, /* 18 */
-	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 19 */
-	{ 1,   "singleExtensionsContext",	ASN1_CONTEXT_C_1,		ASN1_OPT  }, /* 20 */
-	{ 2,     "singleExtensions",		ASN1_SEQUENCE,			ASN1_LOOP }, /* 21 */
-	{ 3,       "extension",				ASN1_SEQUENCE,			ASN1_NONE }, /* 22 */
-	{ 4,         "extnID",				ASN1_OID,				ASN1_BODY }, /* 23 */
-	{ 4,         "critical",			ASN1_BOOLEAN,			ASN1_BODY |
-																ASN1_DEF  }, /* 24 */
-	{ 4,         "extnValue",			ASN1_OCTET_STRING,		ASN1_BODY }, /* 25 */
-	{ 2,     "end loop",				ASN1_EOC,				ASN1_END  }, /* 26 */
-	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }  /* 27 */
-};
-
-#define SINGLE_RESPONSE_ALGORITHM					 2
-#define SINGLE_RESPONSE_ISSUER_NAME_HASH			 3
-#define SINGLE_RESPONSE_ISSUER_KEY_HASH				 4
-#define SINGLE_RESPONSE_SERIAL_NUMBER				 5
-#define SINGLE_RESPONSE_CERT_STATUS_GOOD			 6
-#define SINGLE_RESPONSE_CERT_STATUS_REVOKED			 8
-#define SINGLE_RESPONSE_CERT_STATUS_REVOCATION_TIME	 9
-#define SINGLE_RESPONSE_CERT_STATUS_CRL_REASON		11
-#define SINGLE_RESPONSE_CERT_STATUS_UNKNOWN			14
-#define SINGLE_RESPONSE_THIS_UPDATE					16
-#define SINGLE_RESPONSE_NEXT_UPDATE					18
-#define SINGLE_RESPONSE_EXT_ID						23
-#define SINGLE_RESPONSE_CRITICAL					24
-#define SINGLE_RESPONSE_EXT_VALUE					25
-#define SINGLE_RESPONSE_ROOF						28
-
 /**
  * Implementaiton of ocsp_response_t.get_status
  */
@@ -370,15 +251,66 @@ static enumerator_t* create_cert_enumerator(private_x509_ocsp_response_t *this)
 }
 
 /**
- * parse a single OCSP response
+ * ASN.1 definition of singleResponse
+ */
+static const asn1Object_t singleResponseObjects[] = {
+	{ 0, "singleResponse",				ASN1_SEQUENCE,			ASN1_BODY }, /*  0 */
+	{ 1,   "certID",					ASN1_SEQUENCE,			ASN1_NONE }, /*  1 */
+	{ 2,     "algorithm",				ASN1_EOC,				ASN1_RAW  }, /*  2 */
+	{ 2,     "issuerNameHash",			ASN1_OCTET_STRING,		ASN1_BODY }, /*  3 */
+	{ 2,     "issuerKeyHash",			ASN1_OCTET_STRING,		ASN1_BODY }, /*  4 */
+	{ 2,     "serialNumber",			ASN1_INTEGER,			ASN1_BODY }, /*  5 */
+	{ 1,   "certStatusGood",			ASN1_CONTEXT_S_0,		ASN1_OPT  }, /*  6 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /*  7 */
+	{ 1,   "certStatusRevoked",			ASN1_CONTEXT_C_1,		ASN1_OPT  }, /*  8 */
+	{ 2,     "revocationTime",			ASN1_GENERALIZEDTIME,	ASN1_BODY }, /*  9 */
+	{ 2,     "revocationReason",		ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 10 */
+	{ 3,       "crlReason",				ASN1_ENUMERATED,		ASN1_BODY }, /* 11 */
+	{ 2,     "end opt",					ASN1_EOC,				ASN1_END  }, /* 12 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 13 */
+	{ 1,   "certStatusUnknown",			ASN1_CONTEXT_S_2,		ASN1_OPT  }, /* 14 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 15 */
+	{ 1,   "thisUpdate",				ASN1_GENERALIZEDTIME,	ASN1_BODY }, /* 16 */
+	{ 1,   "nextUpdateContext",			ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 17 */
+	{ 2,     "nextUpdate",				ASN1_GENERALIZEDTIME,	ASN1_BODY }, /* 18 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 19 */
+	{ 1,   "singleExtensionsContext",	ASN1_CONTEXT_C_1,		ASN1_OPT  }, /* 20 */
+	{ 2,     "singleExtensions",		ASN1_SEQUENCE,			ASN1_LOOP }, /* 21 */
+	{ 3,       "extension",				ASN1_SEQUENCE,			ASN1_NONE }, /* 22 */
+	{ 4,         "extnID",				ASN1_OID,				ASN1_BODY }, /* 23 */
+	{ 4,         "critical",			ASN1_BOOLEAN,			ASN1_BODY |
+																ASN1_DEF  }, /* 24 */
+	{ 4,         "extnValue",			ASN1_OCTET_STRING,		ASN1_BODY }, /* 25 */
+	{ 2,     "end loop",				ASN1_EOC,				ASN1_END  }, /* 26 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }  /* 27 */
+};
+#define SINGLE_RESPONSE_ALGORITHM					 2
+#define SINGLE_RESPONSE_ISSUER_NAME_HASH			 3
+#define SINGLE_RESPONSE_ISSUER_KEY_HASH				 4
+#define SINGLE_RESPONSE_SERIAL_NUMBER				 5
+#define SINGLE_RESPONSE_CERT_STATUS_GOOD			 6
+#define SINGLE_RESPONSE_CERT_STATUS_REVOKED			 8
+#define SINGLE_RESPONSE_CERT_STATUS_REVOCATION_TIME	 9
+#define SINGLE_RESPONSE_CERT_STATUS_CRL_REASON		11
+#define SINGLE_RESPONSE_CERT_STATUS_UNKNOWN			14
+#define SINGLE_RESPONSE_THIS_UPDATE					16
+#define SINGLE_RESPONSE_NEXT_UPDATE					18
+#define SINGLE_RESPONSE_EXT_ID						23
+#define SINGLE_RESPONSE_CRITICAL					24
+#define SINGLE_RESPONSE_EXT_VALUE					25
+#define SINGLE_RESPONSE_ROOF						28
+
+/**
+ * Parse a single OCSP response
  */
 static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 								 chunk_t blob, int level0)
 {
-	u_int level;
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	int objectID = 0;
+	int objectID;
+	bool success;
+
 	single_response_t *response;
 	
 	response = malloc_thing(single_response_t);
@@ -393,18 +325,17 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 	/* if nextUpdate is missing, we give it a short lifetime */
 	response->nextUpdate = this->producedAt + OCSP_DEFAULT_LIFETIME;
 
-	asn1_init(&ctx, blob, level0, FALSE, FALSE);
-	while (objectID < SINGLE_RESPONSE_ROOF)
+	parser = asn1_parser_create(singleResponseObjects, SINGLE_RESPONSE_ROOF,
+								blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(singleResponseObjects, &objectID, &object, &level, &ctx))
-		{
-			free(response);
-			return FALSE;
-		}
 		switch (objectID)
 		{
 			case SINGLE_RESPONSE_ALGORITHM:
-				response->hashAlgorithm = parse_algorithmIdentifier(object, level+1, NULL);
+				response->hashAlgorithm = asn1_parse_algorithmIdentifier(object,
+											parser->get_level(parser)+1, NULL);
 				break;
 			case SINGLE_RESPONSE_ISSUER_NAME_HASH:
 				response->issuerNameHash = object;
@@ -422,7 +353,7 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 				response->status = VALIDATION_REVOKED;
 				break;
 			case SINGLE_RESPONSE_CERT_STATUS_REVOCATION_TIME:
-				response->revocationTime = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				response->revocationTime = asn1_to_time(&object, ASN1_GENERALIZEDTIME);
 				break;
 			case SINGLE_RESPONSE_CERT_STATUS_CRL_REASON:
 				if (object.len == 1)
@@ -434,94 +365,165 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 				response->status = VALIDATION_FAILED;
 				break;
 			case SINGLE_RESPONSE_THIS_UPDATE:
-				response->thisUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				response->thisUpdate = asn1_to_time(&object, ASN1_GENERALIZEDTIME);
 				break;
 			case SINGLE_RESPONSE_NEXT_UPDATE:
-				response->nextUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				response->nextUpdate = asn1_to_time(&object, ASN1_GENERALIZEDTIME);
 				if (response->nextUpdate > this->usableUntil)
 				{
 					this->usableUntil = response->nextUpdate;
 				}
 	    		break;
 		}
-		objectID++;
 	}
-	if (this->usableUntil == UNDEFINED_TIME)
+	success = parser->success(parser);
+	parser->destroy(parser);
+	
+	if (success)
 	{
-		this->usableUntil = this->producedAt + OCSP_DEFAULT_LIFETIME;
+		if (this->usableUntil == UNDEFINED_TIME)
+		{
+			this->usableUntil = this->producedAt + OCSP_DEFAULT_LIFETIME;
+		}
+		this->responses->insert_last(this->responses, response);
 	}
-	this->responses->insert_last(this->responses, response);
-	return TRUE;
+	return success;
 }
 
 /**
- * parse all contained responses
+ * ASN.1 definition of responses
+ */
+static const asn1Object_t responsesObjects[] = {
+	{ 0, "responses",			ASN1_SEQUENCE,	ASN1_LOOP }, /*  0 */
+	{ 1,   "singleResponse",	ASN1_EOC,		ASN1_RAW  }, /*  1 */
+	{ 0, "end loop",			ASN1_EOC,		ASN1_END  }  /*  2 */
+};
+#define RESPONSES_SINGLE_RESPONSE	1
+#define RESPONSES_ROOF				3
+
+/**
+ * Parse all responses
  */
 static bool parse_responses(private_x509_ocsp_response_t *this, 
 							chunk_t blob, int level0)
 {
-	u_int level;
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	int objectID = 0;
+	int objectID;
+	bool success = TRUE;
 	
-	asn1_init(&ctx, blob, level0, FALSE, FALSE);
-	while (objectID < RESPONSES_ROOF)
+	parser = asn1_parser_create(responsesObjects, RESPONSES_ROOF, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(responsesObjects, &objectID, &object, &level, &ctx))
-		{
-			return FALSE;
-		}
 		switch (objectID)
 		{
 			case RESPONSES_SINGLE_RESPONSE:
-				if (!parse_singleResponse(this, object, level+1))
+				if (!parse_singleResponse(this, object,
+										  parser->get_level(parser)+1))
 				{
-					return FALSE;
+					success = FALSE;
+					goto end;
 				}
 				break;
 			default:
 				break;
 		}
-		objectID++;
 	}
-	return TRUE;
+
+end:
+	success &= parser->success(parser);
+	parser->destroy(parser);
+	return success;
 }
 
 /**
- * parse a basicOCSPResponse
+ * ASN.1 definition of basicResponse
+ */
+static const asn1Object_t basicResponseObjects[] = {
+	{ 0, "BasicOCSPResponse",				ASN1_SEQUENCE,			ASN1_NONE }, /*  0 */
+	{ 1,   "tbsResponseData",				ASN1_SEQUENCE,			ASN1_OBJ  }, /*  1 */
+	{ 2,     "versionContext",				ASN1_CONTEXT_C_0,		ASN1_NONE |
+																	ASN1_DEF  }, /*  2 */
+	{ 3,       "version",					ASN1_INTEGER,			ASN1_BODY }, /*  3 */
+	{ 2,     "responderIdContext",			ASN1_CONTEXT_C_1,		ASN1_OPT  }, /*  4 */
+	{ 3,       "responderIdByName",			ASN1_SEQUENCE,			ASN1_OBJ  }, /*  5 */
+	{ 2,     "end choice",					ASN1_EOC,				ASN1_END  }, /*  6 */
+	{ 2,     "responderIdContext",			ASN1_CONTEXT_C_2,		ASN1_OPT  }, /*  7 */
+	{ 3,       "responderIdByKey",			ASN1_OCTET_STRING,		ASN1_BODY }, /*  8 */
+	{ 2,     "end choice",					ASN1_EOC,				ASN1_END  }, /*  9 */
+	{ 2,     "producedAt",					ASN1_GENERALIZEDTIME,	ASN1_BODY }, /* 10 */
+	{ 2,     "responses",					ASN1_SEQUENCE,			ASN1_OBJ  }, /* 11 */
+	{ 2,     "responseExtensionsContext",	ASN1_CONTEXT_C_1,		ASN1_OPT  }, /* 12 */
+	{ 3,       "responseExtensions",		ASN1_SEQUENCE,			ASN1_LOOP }, /* 13 */
+	{ 4,         "extension",				ASN1_SEQUENCE,			ASN1_NONE }, /* 14 */
+	{ 5,           "extnID",				ASN1_OID,				ASN1_BODY }, /* 15 */
+	{ 5,           "critical",				ASN1_BOOLEAN,			ASN1_BODY |
+																	ASN1_DEF  }, /* 16 */
+	{ 5,           "extnValue",				ASN1_OCTET_STRING,		ASN1_BODY }, /* 17 */
+	{ 4,         "end loop",				ASN1_EOC,				ASN1_END  }, /* 18 */
+	{ 2,     "end opt",						ASN1_EOC,				ASN1_END  }, /* 19 */
+	{ 1,   "signatureAlgorithm",			ASN1_EOC,				ASN1_RAW  }, /* 20 */
+	{ 1,   "signature",						ASN1_BIT_STRING,		ASN1_BODY }, /* 21 */
+	{ 1,   "certsContext",					ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 22 */
+	{ 2,     "certs",						ASN1_SEQUENCE,			ASN1_LOOP }, /* 23 */
+	{ 3,       "certificate",				ASN1_SEQUENCE,			ASN1_RAW  }, /* 24 */
+	{ 2,     "end loop",					ASN1_EOC,				ASN1_END  }, /* 25 */
+	{ 1,   "end opt",						ASN1_EOC,				ASN1_END  }  /* 26 */
+};
+#define BASIC_RESPONSE_TBS_DATA		 1
+#define BASIC_RESPONSE_VERSION		 3
+#define BASIC_RESPONSE_ID_BY_NAME	 5
+#define BASIC_RESPONSE_ID_BY_KEY	 8
+#define BASIC_RESPONSE_PRODUCED_AT	10
+#define BASIC_RESPONSE_RESPONSES	11
+#define BASIC_RESPONSE_EXT_ID		15
+#define BASIC_RESPONSE_CRITICAL		16
+#define BASIC_RESPONSE_EXT_VALUE	17
+#define BASIC_RESPONSE_ALGORITHM	20
+#define BASIC_RESPONSE_SIGNATURE	21
+#define BASIC_RESPONSE_CERTIFICATE	24
+#define BASIC_RESPONSE_ROOF			27
+
+/**
+ * Parse a basicOCSPResponse
  */
 static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this, 
 									chunk_t blob, int level0)
 {
-	u_int level, version;
-	asn1_ctx_t ctx;
-	bool critical;
-	chunk_t object, responses = chunk_empty;
-	int objectID = 0;
+	asn1_parser_t *parser;
+	chunk_t object;
+	chunk_t responses = chunk_empty;
+	int objectID;
 	int extn_oid = OID_UNKNOWN;
+	u_int responses_level = level0;
 	certificate_t *cert;
+	bool success = TRUE;
+	bool critical;
 	
-	asn1_init(&ctx, blob, level0, FALSE, FALSE);
-	while (objectID < BASIC_RESPONSE_ROOF)
+	parser = asn1_parser_create(basicResponseObjects, BASIC_RESPONSE_ROOF, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(basicResponseObjects, &objectID, &object, &level, &ctx))
-		{
-			return FALSE;
-		}
 		switch (objectID)
 		{
 			case BASIC_RESPONSE_TBS_DATA:
 				this->tbsResponseData = object;
 				break;
 			case BASIC_RESPONSE_VERSION:
-				version = (object.len)? (1 + (u_int)*object.ptr) : 1;
+			{
+				u_int version = (object.len)? (1 + (u_int)*object.ptr) : 1;
+
 				if (version != OCSP_BASIC_RESPONSE_VERSION)
 				{
 					DBG1("  ocsp ResponseData version %d not supported", version);
-					return FALSE;
+					success = FALSE;
+					goto end;
 				}
 				break;
+			}
 			case BASIC_RESPONSE_ID_BY_NAME:
 				this->responderId = identification_create_from_encoding(
 													ID_DER_ASN1_DN, object);
@@ -533,13 +535,14 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				DBG2("  '%D'", this->responderId);
 				break;
 			case BASIC_RESPONSE_PRODUCED_AT:
-				this->producedAt = asn1totime(&object, ASN1_GENERALIZEDTIME);
+				this->producedAt = asn1_to_time(&object, ASN1_GENERALIZEDTIME);
 				break;
 			case BASIC_RESPONSE_RESPONSES:
 				responses = object;
+				responses_level = parser->get_level(parser)+1;
 				break;
 			case BASIC_RESPONSE_EXT_ID:
-				extn_oid = known_oid(object);
+				extn_oid = asn1_known_oid(object);
 				break;
 			case BASIC_RESPONSE_CRITICAL:
 				critical = object.len && *object.ptr;
@@ -552,8 +555,8 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				}
 				break;
 			case BASIC_RESPONSE_ALGORITHM:
-				this->signatureAlgorithm = parse_algorithmIdentifier(
-														object, level+1, NULL);
+				this->signatureAlgorithm = asn1_parse_algorithmIdentifier(object,
+												parser->get_level(parser)+1, NULL);
 				break;
 			case BASIC_RESPONSE_SIGNATURE:
 				this->signature = object;
@@ -561,7 +564,8 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 			case BASIC_RESPONSE_CERTIFICATE:
 			{
 				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,CERT_X509,
-										  BUILD_BLOB_ASN1_DER, chunk_clone(object),
+										  BUILD_BLOB_ASN1_DER,
+										  chunk_clone(object),
 										  BUILD_END);
 				if (cert)
 				{
@@ -570,34 +574,58 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				break;
 			}
 		}
-		objectID++;
 	}
-	if (!this->responderId)
+
+end:
+	success &= parser->success(parser);
+	parser->destroy(parser);
+
+	if (success)
 	{
-		this->responderId = identification_create_from_encoding(ID_ANY, chunk_empty);
+		if (!this->responderId)
+		{
+			this->responderId = identification_create_from_encoding(ID_ANY,
+									chunk_empty);
+		}
+		success = parse_responses(this, responses, responses_level);
 	}
-	return parse_responses(this, responses, level + 1);
+	return success;
 }
+
+/**
+ * ASN.1 definition of ocspResponse
+ */
+static const asn1Object_t ocspResponseObjects[] = {
+	{ 0, "OCSPResponse",			ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
+	{ 1,   "responseStatus",		ASN1_ENUMERATED,	ASN1_BODY }, /*  1 */
+	{ 1,   "responseBytesContext",	ASN1_CONTEXT_C_0,	ASN1_OPT  }, /*  2 */
+	{ 2,     "responseBytes",		ASN1_SEQUENCE,		ASN1_NONE }, /*  3 */
+	{ 3,       "responseType",		ASN1_OID,			ASN1_BODY }, /*  4 */
+	{ 3,       "response",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  5 */
+	{ 1,   "end opt",				ASN1_EOC,			ASN1_END  }  /*  6 */
+};
+#define OCSP_RESPONSE_STATUS	1
+#define OCSP_RESPONSE_TYPE		4
+#define OCSP_RESPONSE			5
+#define OCSP_RESPONSE_ROOF		7
 
 /**
  * Parse OCSPResponse object
  */
 static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
-	int objectID = 0;
+	int objectID;
 	int responseType = OID_UNKNOWN;
+	bool success = FALSE;
 	ocsp_status_t status;
 
-	asn1_init(&ctx, this->encoding, 0, FALSE, FALSE);
-	while (objectID < OCSP_RESPONSE_ROOF)
+	parser = asn1_parser_create(ocspResponseObjects, OCSP_RESPONSE_ROOF,
+								this->encoding);
+
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(ocspResponseObjects, &objectID, &object, &level, &ctx))
-		{
-	    	return FALSE;
-		}
 		switch (objectID)
 		{
 			case OCSP_RESPONSE_STATUS:
@@ -609,26 +637,29 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 					default:
 						DBG1("  ocsp response status: %N",
 							 ocsp_status_names, status);
-						return FALSE;
+						goto end;
 				}
 	    		break;
 			case OCSP_RESPONSE_TYPE:
-				responseType = known_oid(object);
+				responseType = asn1_known_oid(object);
 				break;
 			case OCSP_RESPONSE:
 				switch (responseType)
 				{
 					case OID_BASIC:
-						return parse_basicOCSPResponse(this, object, level+1);
+						success = parse_basicOCSPResponse(this, object,
+												parser->get_level(parser)+1);
 					default:
 						DBG1("  ocsp response type %#B not supported", &object);
-						return FALSE;
 				}
 				break;
 		}
-		objectID++;
 	}
-	return FALSE;
+
+end:
+	success &= parser->success(parser);
+	parser->destroy(parser);
+	return success;
 }
 
 /**

@@ -18,8 +18,10 @@
 
 #include "gmp_public_key.h"
 
-#include <asn1/asn1.h>
 #include <debug.h>
+#include <asn1/oid.h>
+#include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
 
 /**
  * ASN.1 definition of a subjectPublicKeyInfo structure
@@ -27,67 +29,64 @@
 static const asn1Object_t pkinfoObjects[] = {
 	{ 0, "subjectPublicKeyInfo",ASN1_SEQUENCE,		ASN1_NONE	}, /* 0 */
 	{ 1,   "algorithm",			ASN1_EOC,			ASN1_RAW	}, /* 1 */
-	{ 1,   "subjectPublicKey",	ASN1_BIT_STRING,	ASN1_NONE	}, /* 2 */
-	{ 2,     "publicKey",		ASN1_SEQUENCE,		ASN1_RAW	}, /* 3 */
+	{ 1,   "subjectPublicKey",	ASN1_BIT_STRING,	ASN1_OBJ	}, /* 2 */
 };
-#define PKINFO								0
 #define PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM	1
 #define PKINFO_SUBJECT_PUBLIC_KEY			2
-#define PKINFO_PUBLIC_KEY					3
-#define PKINFO_ROOF							4
+#define PKINFO_ROOF							3
 
 /**
  * Load a public key from an ASN1 encoded blob
  */
 static public_key_t *load(chunk_t blob)
 {
-	asn1_ctx_t ctx;
-	chunk_t object, data = chunk_empty;
-	u_int level;
-	int objectID = 0;
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID;
+	public_key_t *key = NULL;
 	key_type_t type = KEY_ANY;
+
+	parser = asn1_parser_create(pkinfoObjects, PKINFO_ROOF, blob);
 	
-	asn1_init(&ctx, blob, 0, FALSE, FALSE);
-	
-	while (objectID < PKINFO_ROOF) 
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(pkinfoObjects, &objectID, &object, &level, &ctx))
-		{
-			free(blob.ptr);
-			return NULL;
-		}
 		switch (objectID)
 		{
 			case PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM:
-				switch (parse_algorithmIdentifier(object, level, NULL))
+			{
+				int oid = asn1_parse_algorithmIdentifier(object,
+										parser->get_level(parser)+1, NULL);
+				
+				if (oid == OID_RSA_ENCRYPTION)
 				{
-					case OID_RSA_ENCRYPTION:
-						type = KEY_RSA;
-						break;
-					default:
-						break;
+					type = KEY_RSA;
+				}
+				else
+				{
+					/* key type not supported */
+					goto end;
 				}
 				break;
+			}
 			case PKINFO_SUBJECT_PUBLIC_KEY:
-				if (ctx.blobs[2].len > 0 && *ctx.blobs[2].ptr == 0x00)
-				{	/* skip initial bit string octet defining 0 unused bits */
-					ctx.blobs[2].ptr++; ctx.blobs[2].len--;
+				if (object.len > 0 && *object.ptr == 0x00)
+				{
+					/* skip initial bit string octet defining 0 unused bits */
+					object.ptr++;
+					object.len--;				
+					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
+											 BUILD_BLOB_ASN1_DER,
+											 chunk_clone(object),
+											 BUILD_END);
 				}
-				break;
-			case PKINFO_PUBLIC_KEY:
-				data = chunk_clone(object);
 				break;
 		}
-		objectID++;
-	}
+	} 
+	
+end:
+	parser->destroy(parser);
 	free(blob.ptr);
-	if (type == KEY_ANY)
-	{
-		free(data.ptr);
-		return NULL;
-	}
-	return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
-							  BUILD_BLOB_ASN1_DER, data, BUILD_END);
+	return key; 
 }
 
 typedef struct private_builder_t private_builder_t;

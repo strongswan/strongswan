@@ -28,8 +28,6 @@
 #include <stdarg.h>
 
 #include <library.h>
-#include <asn1/oid.h>
-
 
 /**
  * Definition of some primitive ASN1 types
@@ -60,7 +58,6 @@ typedef enum {
     ASN1_CONSTRUCTED =		0x20,
 
     ASN1_SEQUENCE =			0x30,
-
     ASN1_SET =				0x31,
 
     ASN1_CONTEXT_S_0 =		0x80,
@@ -81,61 +78,155 @@ typedef enum {
     ASN1_CONTEXT_C_5 =		0xA5
 } asn1_t;
 
-/* Definition of ASN1 flags */
-#define ASN1_NONE	0x00
-#define ASN1_DEF	0x01
-#define ASN1_OPT	0x02
-#define ASN1_LOOP	0x04
-#define ASN1_END	0x08
-#define ASN1_OBJ	0x10
-#define ASN1_BODY	0x20
-#define ASN1_RAW	0x40
-
 #define ASN1_INVALID_LENGTH	0xffffffff
 
-/* definition of an ASN.1 object */
-typedef struct {
-	u_int   level;
-	const u_char  *name;
-	asn1_t  type;
-	u_char  flags;
-} asn1Object_t;
-
-#define ASN1_MAX_LEVEL	10
-
-typedef struct {
-	bool  implicit;
-	bool  private;
-	u_int level0;
-	u_int loopAddr[ASN1_MAX_LEVEL+1];
-	chunk_t  blobs[ASN1_MAX_LEVEL+2];
-} asn1_ctx_t;
-
-/* some common prefabricated ASN.1 constants */
+/**
+ * Some common prefabricated ASN.1 constants
+ */
 extern const chunk_t ASN1_INTEGER_0;
 extern const chunk_t ASN1_INTEGER_1;
 extern const chunk_t ASN1_INTEGER_2;
 
-/* returns some popular algorithmIdentifiers */
-extern chunk_t asn1_algorithmIdentifier(int oid);
 
-extern int known_oid(chunk_t object);
-extern u_int asn1_length(chunk_t *blob);
-extern bool is_printablestring(chunk_t str);
-extern time_t asn1totime(const chunk_t *utctime, asn1_t type);
-extern chunk_t timetoasn1(const time_t *time, asn1_t type);
-extern void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0, bool implicit, bool private);
-extern bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *object, u_int *level, asn1_ctx_t *ctx);
-extern bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const char* name);
-extern int parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters);
-extern time_t parse_time(chunk_t blob, int level0);
+/** Some ASN.1 analysis functions */
 
-extern bool is_asn1(chunk_t blob);
+/**
+ * Returns some popular algorithmIdentifiers
+ *
+ * @param oid		known OID index
+ * @return			body of the corresponding OID
+ */
+chunk_t asn1_algorithmIdentifier(int oid);
 
-extern void code_asn1_length(size_t length, chunk_t *code);
-extern u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen);
-extern chunk_t asn1_simple_object(asn1_t tag, chunk_t content);
-extern chunk_t asn1_bitstring(const char *mode, chunk_t content);
-extern chunk_t asn1_wrap(asn1_t type, const char *mode, ...);
+/**
+ * Converts an ASN.1 OID into a known OID index
+ *
+ * @param object	body of an OID
+ * @return			index into the oid_names[] table or OID_UNKNOWN  
+ */
+int asn1_known_oid(chunk_t object);
+
+/**
+ * Returns the length of an ASN.1 object
+ * The blob pointer is advanced past the tag length fields
+ *
+ * @param			pointer to an ASN.1 coded blob
+ * @return			length of ASN.1 object
+ */
+u_int asn1_length(chunk_t *blob);
+
+/**
+ * Parses an ASN.1 algorithmIdentifier object
+ *
+ * @param blob		ASN.1 coded blob
+ * @param level0	top-most level offset
+ * @param params	returns optional [ASN.1 coded] parameters
+ * @return			known OID index or OID_UNKNOWN	
+ */
+int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *params);
+
+/**
+ * Parse the top-most level of an ASN.1 object
+ *
+ * @param object	ASN.1 coded object
+ * @param type		Expected ASN.1 type
+ * @param level0	top-most level offset
+ * @param name		descriptive name of object
+ * @return			TRUE if parsing successful
+ */
+bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level0,
+							  const char* name);
+
+/**
+ * Print the value of an ASN.1 simple object
+ *
+ * @param object	ASN.1 object to be printed
+ * @param type		asn1_t type
+ * @param private	ASN.1 data is confidential (use debug level 4)
+ */
+void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private);
+
+/**
+ * Converts an ASN.1 UTCTIME or GENERALIZEDTIME string to time_t
+ *
+ * @param utctime	body of an ASN.1 coded time object
+ * @param type		ASN1_UTCTIME or ASN1_GENERALIZEDTIME
+ * @return			time_t in UTC
+ */
+time_t asn1_to_time(const chunk_t *utctime, asn1_t type);
+
+/**
+ * Converts time_t to an ASN.1 UTCTIME or GENERALIZEDTIME string
+ *
+ * @param time		time_t in UTC
+ * @param type		ASN1_UTCTIME or ASN1_GENERALIZEDTIME
+ * @return			body of an ASN.1 code time object			
+ */
+chunk_t asn1_from_time(const time_t *time, asn1_t type);
+
+/**
+ * Parse an ASN.1 UTCTIME or GENERALIZEDTIME object
+ *
+ * @param blob		ASN.1 coded time object
+ * @param level		top-most level offset
+ * @return			time_t in UTC 	
+ */
+time_t asn1_parse_time(chunk_t blob, int level0);
+
+/**
+ * Determines if a binary blob is ASN.1 coded
+ *
+ * @param blob		blob to be tested
+ * @return			TRUE if blob is ASN.1 coded (SEQUENCE or SET)
+ */
+bool is_asn1(chunk_t blob);
+
+/**
+ * Determines if a character string can be coded as PRINTABLESTRING
+ *
+ * @param str		character string to be tested
+ * @return			TRUE if no special characters are contained
+ */
+bool asn1_is_printablestring(chunk_t str);
+
+
+/** some ASN.1 synthesis functions */
+
+/**
+ * Build an empty ASN.1 object with tag and length fields already filled in
+ *
+ * @param object	returned object - memory is allocated by function
+ * @param type		ASN.1 type to be created
+ * @param datalen	size of the body to be created
+ * @return			points to the first position in the body
+ */
+u_char* asn1_build_object(chunk_t *object, asn1_t type, size_t datalen);
+
+/**
+ * Build a simple ASN.1 object
+ *
+ * @param tag		ASN.1 type to be created
+ * @param content	content of the ASN.1 object
+ * @return			chunk containing the ASN.1 coded object
+ */
+chunk_t asn1_simple_object(asn1_t tag, chunk_t content);
+
+/**
+ * Build an ASN.1 BITSTRING object
+ *
+ * @param mode		'c' for copy or 'm' for move
+ * @param content	content of the BITSTRING
+ * @return			chunk containing the ASN.1 coded BITSTRING
+ */
+chunk_t asn1_bitstring(const char *mode, chunk_t content);
+
+/**
+ * Build an ASN.1 object from a variable number of individual chunks
+ *
+ * @param typ		ASN.1 type to be created
+ * @param mode		for each list member: 'c' for copy or 'm' for move
+ * @return			chunk containing the ASN.1 coded object
+ */
+chunk_t asn1_wrap(asn1_t type, const char *mode, ...);
 
 #endif /* ASN1_H_ @}*/

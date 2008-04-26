@@ -418,7 +418,7 @@ int main(int argc, char **argv)
 				{
 					chunk_t date = { optarg, 15 };
 
-					notBefore = asn1totime(&date, ASN1_GENERALIZEDTIME);
+					notBefore = asn1_to_time(&date, ASN1_GENERALIZEDTIME);
 				}
 				continue;
 
@@ -431,7 +431,7 @@ int main(int argc, char **argv)
 				else
 				{
 					chunk_t date = { optarg, 15 };
-					notAfter = asn1totime(&date, ASN1_GENERALIZEDTIME);
+					notAfter = asn1_to_time(&date, ASN1_GENERALIZEDTIME);
 				}
 				continue;
 

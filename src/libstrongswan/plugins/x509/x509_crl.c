@@ -22,7 +22,9 @@ typedef struct revoked_t revoked_t;
 
 #include <debug.h>
 #include <library.h>
+#include <asn1/oid.h>
 #include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
 #include <asn1/pem.h>
 #include <credentials/certificates/x509.h>
 #include <utils/linked_list.h>
@@ -168,8 +170,7 @@ static const asn1Object_t crlObjects[] = {
 	{ 2,     "end opt",					ASN1_EOC,          ASN1_END  }, /* 26 */
 	{ 1,   "signatureAlgorithm",		ASN1_EOC,          ASN1_RAW  }, /* 27 */
 	{ 1,   "signatureValue",			ASN1_BIT_STRING,   ASN1_BODY }  /* 28 */
- };
-
+};
 #define CRL_OBJ_TBS_CERT_LIST			 1
 #define CRL_OBJ_VERSION					 2
 #define CRL_OBJ_SIG_ALG					 4
@@ -193,26 +194,21 @@ static const asn1Object_t crlObjects[] = {
  */
 static bool parse(private_x509_crl_t *this)
 {
-	asn1_ctx_t ctx;
-	bool critical;
+	asn1_parser_t *parser;
+	chunk_t object;
 	chunk_t extnID;
 	chunk_t userCertificate = chunk_empty;
-	revoked_t *revoked = NULL;
-	chunk_t object;
-	u_int level;
+	int objectID;
 	int sig_alg = OID_UNKNOWN;
-	int objectID = 0;
+	bool success = TRUE;
+	bool critical;
+	revoked_t *revoked = NULL;
 
-	asn1_init(&ctx, this->encoding, 0, FALSE, FALSE);
-	while (objectID < CRL_OBJ_ROOF)
+	parser = asn1_parser_create(crlObjects, CRL_OBJ_ROOF, this->encoding);
+
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(crlObjects, &objectID, &object, &level, &ctx))
-		{
-			return FALSE;
-		}
-
-		/* those objects which will parsed further need the next higher level */
-		level++;
+		u_int level = parser->get_level(parser)+1;
 
 		switch (objectID)
 		{
@@ -224,17 +220,17 @@ static bool parse(private_x509_crl_t *this)
 				DBG2("  v%d", this->version);
 				break;
 			case CRL_OBJ_SIG_ALG:
-				sig_alg = parse_algorithmIdentifier(object, level, NULL);
+				sig_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case CRL_OBJ_ISSUER:
 				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
 				DBG2("  '%D'", this->issuer);
 				break;
 			case CRL_OBJ_THIS_UPDATE:
-				this->thisUpdate = parse_time(object, level);
+				this->thisUpdate = asn1_parse_time(object, level);
 				break;
 			case CRL_OBJ_NEXT_UPDATE:
-				this->nextUpdate = parse_time(object, level);
+				this->nextUpdate = asn1_parse_time(object, level);
 				break;
 			case CRL_OBJ_USER_CERTIFICATE:
 				userCertificate = object;
@@ -242,7 +238,7 @@ static bool parse(private_x509_crl_t *this)
 			case CRL_OBJ_REVOCATION_DATE:
 				revoked = malloc_thing(revoked_t);
 				revoked->serial = userCertificate;
-				revoked->date = parse_time(object, level);
+				revoked->date = asn1_parse_time(object, level);
 				revoked->reason = CRL_UNSPECIFIED;
 				this->revoked->insert_last(this->revoked, (void *)revoked);
 				break;
@@ -258,7 +254,7 @@ static bool parse(private_x509_crl_t *this)
 			case CRL_OBJ_CRL_ENTRY_EXTN_VALUE:
 			case CRL_OBJ_EXTN_VALUE:
 				{
-					int extn_oid = known_oid(extnID);
+					int extn_oid = asn1_known_oid(extnID);
 
 					if (revoked && extn_oid == OID_CRL_REASON_CODE)
 					{
@@ -277,10 +273,11 @@ static bool parse(private_x509_crl_t *this)
 					}
 					else if (extn_oid == OID_CRL_NUMBER)
 					{
-						if (!parse_asn1_simple_object(&object, ASN1_INTEGER,
+						if (!asn1_parse_simple_object(&object, ASN1_INTEGER,
 													  level, "crlNumber"))
 						{
-							return FALSE;
+							success = FALSE;
+							goto end;
 						}
 						this->crlNumber = object;
 					}
@@ -288,11 +285,12 @@ static bool parse(private_x509_crl_t *this)
 				break;
 			case CRL_OBJ_ALGORITHM:
 			{
-				this->algorithm = parse_algorithmIdentifier(object, level, NULL);
+				this->algorithm = asn1_parse_algorithmIdentifier(object, level, NULL);
 				if (this->algorithm != sig_alg)
 				{
 					DBG1("  signature algorithms do not agree");
-					return FALSE;
+					success = FALSE;
+					goto end;
 				}
 				break;
 			}
@@ -302,9 +300,12 @@ static bool parse(private_x509_crl_t *this)
 			default:
 				break;
 		}
-		objectID++;
 	}
-	return TRUE;
+
+end:
+	success &= parser->success(parser);
+	parser->destroy(parser);
+	return success;
 }
 
 /**

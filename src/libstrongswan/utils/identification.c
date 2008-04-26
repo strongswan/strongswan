@@ -27,6 +27,7 @@
 
 #include "identification.h"
 
+#include <asn1/oid.h>
 #include <asn1/asn1.h>
 
 ENUM_BEGIN(id_match_names, ID_MATCH_NONE, ID_MATCH_MAX_WILDCARDS,
@@ -393,7 +394,7 @@ static bool dntoa(chunk_t dn, chunk_t *str)
 		}
 
 		/* print OID */
-		oid_code = known_oid(oid);
+		oid_code = asn1_known_oid(oid);
 		if (oid_code == OID_UNKNOWN)
 		{
 			update_chunk(str, snprintf(str->ptr,str->len,"0x#B", &oid));
@@ -462,7 +463,7 @@ static bool same_dn(chunk_t a, chunk_t b)
 
 		/* printableStrings and email RDNs require uppercase comparison */
 		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
-			(type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
+			(type_a == ASN1_IA5STRING && asn1_known_oid(oid_a) == OID_PKCS9_EMAIL)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
 			{
@@ -538,7 +539,7 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 
 		/* printableStrings and email RDNs require uppercase comparison */
 		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
-			(type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
+			(type_a == ASN1_IA5STRING && asn1_known_oid(oid_a) == OID_PKCS9_EMAIL)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
 			{
@@ -649,7 +650,8 @@ static status_t atodn(char *src, chunk_t *dn)
 				{
 					name.len -= whitespace;
 					rdn_type = (x501rdns[i].type == ASN1_PRINTABLESTRING
-							&& !is_printablestring(name))? ASN1_T61STRING : x501rdns[i].type;
+								&& !asn1_is_printablestring(name))
+								? ASN1_T61STRING : x501rdns[i].type;
 					
 					if (rdn_count < RDN_MAX)
 					{
@@ -679,7 +681,7 @@ static status_t atodn(char *src, chunk_t *dn)
 	/* build the distinguished name sequence */
    {
 		int i;
-		u_char *pos = build_asn1_object(dn, ASN1_SEQUENCE, dn_len);
+		u_char *pos = asn1_build_object(dn, ASN1_SEQUENCE, dn_len);
 
 		for (i = 0; i < rdn_count; i++)
 		{

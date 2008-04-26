@@ -25,35 +25,38 @@
 #include "gmp_rsa_public_key.h"
 
 #include <debug.h>
-#include <crypto/hashers/hasher.h>
+#include <asn1/oid.h>
 #include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
 #include <asn1/pem.h>
+#include <crypto/hashers/hasher.h>
 
 /**
  * defined in gmp_rsa_private_key.c
  */
 extern chunk_t gmp_mpz_to_asn1(const mpz_t value);
 
-
-/* ASN.1 definition of RSApublicKey */
+/**
+ * ASN.1 definition of RSApublicKey
+ */
 static const asn1Object_t pubkeyObjects[] = {
 	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
 	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
 	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  2 */
 };
-
 #define PUB_KEY_RSA_PUBLIC_KEY		0
 #define PUB_KEY_MODULUS				1
 #define PUB_KEY_EXPONENT			2
 #define PUB_KEY_ROOF				3
 
-/* ASN.1 definition of digestInfo */
+/**
+ * ASN.1 definition of digestInfo
+ */
 static const asn1Object_t digestInfoObjects[] = {
 	{ 0, "digestInfo",			ASN1_SEQUENCE,		ASN1_OBJ  }, /*  0 */
 	{ 1,   "digestAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /*  1 */
 	{ 1,   "digest",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  2 */
 };
-
 #define DIGEST_INFO					0
 #define DIGEST_INFO_ALGORITHM		1
 #define DIGEST_INFO_DIGEST			2
@@ -141,7 +144,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 										chunk_t data, chunk_t signature)
 {
 	chunk_t em_ori, em;
-	bool res = FALSE;
+	bool success = FALSE;
 	
 	/* remove any preceding 0-bytes from signature */
 	while (signature.len && *(signature.ptr) == 0x00)
@@ -199,20 +202,15 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 
 	/* parse ASN.1-based digestInfo */
 	{
-		asn1_ctx_t ctx;
+		asn1_parser_t *parser;
 		chunk_t object;
-		u_int level;
-		int objectID = 0;
+		int objectID;
 		hash_algorithm_t hash_algorithm = HASH_UNKNOWN;
 
-		asn1_init(&ctx, em, 0, FALSE, FALSE);
+		parser = asn1_parser_create(digestInfoObjects, DIGEST_INFO_ROOF, em);
 
-		while (objectID < DIGEST_INFO_ROOF)
+		while (parser->iterate(parser, &objectID, &object))
 		{
-			if (!extract_object(digestInfoObjects, &objectID, &object, &level, &ctx))
-			{
-				goto end;
-			}
 			switch (objectID)
 			{
 				case DIGEST_INFO:
@@ -221,20 +219,21 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 					{
 						DBG1("digestInfo field in signature is followed by %u surplus bytes",
 							 em.len - object.len);
-						goto end;
+						goto end_parser;
 					}
 					break;
 				}
 				case DIGEST_INFO_ALGORITHM:
 				{
-					int hash_oid = parse_algorithmIdentifier(object, level+1, NULL);
+					int hash_oid = asn1_parse_algorithmIdentifier(object,
+										 parser->get_level(parser)+1, NULL);
 
 					hash_algorithm = hasher_algorithm_from_oid(hash_oid);
 					if (hash_algorithm == HASH_UNKNOWN ||
 						(algorithm != HASH_UNKNOWN && hash_algorithm != algorithm))
 					{
 						DBG1("wrong hash algorithm used in signature");
-						goto end;
+						goto end_parser;
 					}
 					break;
 				}
@@ -248,7 +247,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 					{
 						DBG1("hash algorithm %N not supported",
 							 hash_algorithm_names, hash_algorithm);
-						goto end;
+						goto end_parser;
 					}
 
 					if (object.len != hasher->get_hash_size(hasher))
@@ -256,26 +255,29 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 						DBG1("hash size in signature is %u bytes instead of %u "
 							 "bytes", object.len, hasher->get_hash_size(hasher));
 						hasher->destroy(hasher);
-						goto end;
+						goto end_parser;
 					}
 
 					/* build our own hash and compare */
 					hasher->allocate_hash(hasher, data, &hash);
 					hasher->destroy(hasher);
-					res = memeq(object.ptr, hash.ptr, hash.len);
+					success = memeq(object.ptr, hash.ptr, hash.len);
 					free(hash.ptr);
 					break;
 				}
 				default:
 					break;
 			}
-			objectID++;
 		}
+
+end_parser:
+		success &= parser->success(parser);
+		parser->destroy(parser);
 	}
 
 end:
 	free(em_ori.ptr);
-	return res;
+	return success;
 }
 
 /**
@@ -465,25 +467,20 @@ gmp_rsa_public_key_t *gmp_rsa_public_key_create_from_n_e(mpz_t n, mpz_t e)
  */
 static gmp_rsa_public_key_t *load(chunk_t blob)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
-	int objectID = 0;
+	int objectID;
+	bool success;
+
 	private_gmp_rsa_public_key_t *this = gmp_rsa_public_key_create_empty();
 
 	mpz_init(this->n);
 	mpz_init(this->e);
 	
-	asn1_init(&ctx, blob, 0, FALSE, FALSE);
+	parser = asn1_parser_create(pubkeyObjects, PUB_KEY_ROOF, blob);
 	
-	while (objectID < PUB_KEY_ROOF) 
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(pubkeyObjects, &objectID, &object, &level, &ctx))
-		{
-			free(blob.ptr);
-			destroy(this);
-			return NULL;
-		}
 		switch (objectID)
 		{
 			case PUB_KEY_MODULUS:
@@ -493,10 +490,20 @@ static gmp_rsa_public_key_t *load(chunk_t blob)
 				mpz_import(this->e, object.len, 1, 1, 1, 0, object.ptr);
 				break;
 		}
-		objectID++;
 	}
+
 	free(blob.ptr);
+	success = parser->success(parser);
+	parser->destroy(parser);
+
+	if (!success)
+	{
+		destroy(this);
+		return NULL;
+	}
+	
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
+
 	if (!gmp_rsa_public_key_build_id(this->n, this->e,
 									 &this->keyid, &this->keyid_info))
 	{

@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2006 Martin Will
  * Copyright (C) 2000-2008 Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,12 +21,16 @@
 #include <string.h>
 #include <time.h>
 
-#include "asn1.h"
-
 #include <library.h>
 #include <debug.h>
 
-/* some common prefabricated ASN.1 constants */
+#include "oid.h"
+#include "asn1.h"
+#include "asn1_parser.h"
+
+/**
+ * some common prefabricated ASN.1 constants
+ */
 static u_char ASN1_INTEGER_0_str[] = { 0x02, 0x00 };
 static u_char ASN1_INTEGER_1_str[] = { 0x02, 0x01, 0x01 };
 static u_char ASN1_INTEGER_2_str[] = { 0x02, 0x01, 0x02 };
@@ -34,7 +39,9 @@ const chunk_t ASN1_INTEGER_0 = chunk_from_buf(ASN1_INTEGER_0_str);
 const chunk_t ASN1_INTEGER_1 = chunk_from_buf(ASN1_INTEGER_1_str);
 const chunk_t ASN1_INTEGER_2 = chunk_from_buf(ASN1_INTEGER_2_str);
 
-/* some popular algorithmIdentifiers */
+/**
+ * some popular algorithmIdentifiers
+ */
 
 static u_char ASN1_md2_id_str[] = {
 	0x30, 0x0c,
@@ -141,19 +148,8 @@ static const chunk_t ASN1_sha256WithRSA_id = chunk_from_buf(ASN1_sha256WithRSA_i
 static const chunk_t ASN1_sha384WithRSA_id = chunk_from_buf(ASN1_sha384WithRSA_id_str);
 static const chunk_t ASN1_sha512WithRSA_id = chunk_from_buf(ASN1_sha512WithRSA_id_str);
 
-/* ASN.1 definiton of an algorithmIdentifier */
-static const asn1Object_t algorithmIdentifierObjects[] = {
-	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE }, /* 0 */
-	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY }, /* 1 */
-	{ 1,   "parameters",		ASN1_EOC,		ASN1_RAW  }  /* 2 */
-};
-
-#define ALGORITHM_ID_ALG		1
-#define ALGORITHM_ID_PARAMETERS	2
-#define ALGORITHM_ID_ROOF		3
-
-/**
- * return the ASN.1 encoded algorithm identifier
+/*
+ * Defined in header.
  */
 chunk_t asn1_algorithmIdentifier(int oid)
 {
@@ -190,11 +186,10 @@ chunk_t asn1_algorithmIdentifier(int oid)
 	}
 }
 
-/**
- * If the oid is listed in the oid_names table then the corresponding
- * position in the oid_names table is returned otherwise -1 is returned
+/*
+ * Defined in header.
  */
-int known_oid(chunk_t object)
+int asn1_known_oid(chunk_t object)
 {
 	int oid = 0;
 	
@@ -222,8 +217,8 @@ int known_oid(chunk_t object)
 	return -1;
 }
 
-/**
- * Decodes the length in bytes of an ASN.1 object
+/*
+ * Defined in header.
  */
 u_int asn1_length(chunk_t *blob)
 {
@@ -270,26 +265,9 @@ u_int asn1_length(chunk_t *blob)
 }
 
 /**
- * determines if a character string is of type ASN.1 printableString
- */
-bool is_printablestring(chunk_t str)
-{
-	const char printablestring_charset[] =
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 '()+,-./:=?";
-	u_int i;
-	
-	for (i = 0; i < str.len; i++)
-	{
-		if (strchr(printablestring_charset, str.ptr[i]) == NULL)
-			return FALSE;
-	}
-	return TRUE;
-}
-
-/**
  * Converts ASN.1 UTCTIME or GENERALIZEDTIME into calender time
  */
-time_t asn1totime(const chunk_t *utctime, asn1_t type)
+time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 {
 	struct tm t;
 	time_t tz_offset;
@@ -364,7 +342,7 @@ time_t asn1totime(const chunk_t *utctime, asn1_t type)
 /**
  *  Convert a date into ASN.1 UTCTIME or GENERALIZEDTIME format
  */
-chunk_t timetoasn1(const time_t *time, asn1_t type)
+chunk_t asn1_from_time(const time_t *time, asn1_t type)
 {
 	int offset;
 	const char *format;
@@ -389,31 +367,17 @@ chunk_t timetoasn1(const time_t *time, asn1_t type)
 	return asn1_simple_object(type, formatted_time);
 }
 
-
-/**
- * Initializes the internal context of the ASN.1 parser
+/*
+ * Defined in header.
  */
-void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0,
-			   bool implicit, bool private)
-{
-	ctx->blobs[0] = blob;
-	ctx->level0   = level0;
-	ctx->implicit = implicit;
-    ctx->private  = private;
-	memset(ctx->loopAddr, '\0', sizeof(ctx->loopAddr));
-}
-
-/**
- * print the value of an ASN.1 simple object
- */
-static void debug_asn1_simple_object(chunk_t object, asn1_t type, bool private)
+void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private)
 {
 	int oid;
 	
 	switch (type)
 	{
 		case ASN1_OID:
-			oid = known_oid(object);
+			oid = asn1_known_oid(object);
 			if (oid != OID_UNKNOWN)
 			{
 				DBG2("  '%s'", oid_names[oid].name);
@@ -430,7 +394,7 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type, bool private)
 		case ASN1_UTCTIME:
 		case ASN1_GENERALIZEDTIME:
 			{
-				time_t time = asn1totime(&object, type);
+				time_t time = asn1_to_time(&object, type);
 
 				DBG2("  '%T'", &time);
 			}
@@ -449,147 +413,9 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type, bool private)
 }
 
 /**
- * Parses and extracts the next ASN.1 object
- */
-bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *object, u_int *level, asn1_ctx_t *ctx)
-{
-	asn1Object_t obj = objects[*objectID];
-	chunk_t *blob;
-	chunk_t *blob1;
-	u_char *start_ptr;
-	
-	*object = chunk_empty;
-	
-	if (obj.flags & ASN1_END)  /* end of loop or option found */
-	{
-		if (ctx->loopAddr[obj.level] && ctx->blobs[obj.level+1].len > 0)
-		{
-			*objectID = ctx->loopAddr[obj.level]; /* another iteration */
-			obj = objects[*objectID];
-		}
-		else
-		{
-			ctx->loopAddr[obj.level] = 0;         /* exit loop or option*/
-			return TRUE;
-		}
-	}
-	
-	*level = ctx->level0 + obj.level;
-	blob = ctx->blobs + obj.level;
-	blob1 = blob + 1;
-	start_ptr = blob->ptr;
-	
-	/* handle ASN.1 defaults values */
-	if ((obj.flags & ASN1_DEF) && (blob->len == 0 || *start_ptr != obj.type) )
-	{
-		/* field is missing */
-		DBG2("L%d - %s:", *level, obj.name);
-		if (obj.type & ASN1_CONSTRUCTED)
-		{
-			(*objectID)++ ;  /* skip context-specific tag */
-		}
-		return TRUE;
-	}
-	
-	/* handle ASN.1 options */
-	
-	if ((obj.flags & ASN1_OPT)
-			&& (blob->len == 0 || *start_ptr != obj.type))
-	{
-		/* advance to end of missing option field */
-		do
-			(*objectID)++;
-		while (!((objects[*objectID].flags & ASN1_END)
-						&& (objects[*objectID].level == obj.level)));
-		return TRUE;
-	}
-		
-	/* an ASN.1 object must possess at least a tag and length field */
-	
-	if (blob->len < 2)
-	{
-		DBG1("L%d - %s:  ASN.1 object smaller than 2 octets", 
-					*level, obj.name);
-		return FALSE;
-	}
-	
-	blob1->len = asn1_length(blob);
-	
-	if (blob1->len == ASN1_INVALID_LENGTH || blob->len < blob1->len)
-	{
-		DBG1("L%d - %s:  length of ASN.1 object invalid or too large", 
-					*level, obj.name);
-		return FALSE;
-	}
-	
-	blob1->ptr = blob->ptr;
-	blob->ptr += blob1->len;
-	blob->len -= blob1->len;
-	
-	/* return raw ASN.1 object without prior type checking */
-	
-	if (obj.flags & ASN1_RAW)
-	{
-		DBG2("L%d - %s:", *level, obj.name);
-		object->ptr = start_ptr;
-		object->len = (size_t)(blob->ptr - start_ptr);
-		return TRUE;
-	}
-
-	if (*start_ptr != obj.type && !(ctx->implicit && *objectID == 0))
-	{
-		DBG1("L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
-					*level, obj.name, obj.type, *start_ptr);
-		DBG3("%b", start_ptr, (u_int)(blob->ptr - start_ptr));
-		return FALSE;
-	}
-	
-	DBG2("L%d - %s:", ctx->level0+obj.level, obj.name);
-	
-	/* In case of "SEQUENCE OF" or "SET OF" start a loop */	
-	if (obj.flags & ASN1_LOOP)
-	{
-		if (blob1->len > 0)
-		{
-			/* at least one item, start the loop */
-			ctx->loopAddr[obj.level] = *objectID + 1;
-		}
-		else
-		{
-			/* no items, advance directly to end of loop */
-			do
-				(*objectID)++;
-			while (!((objects[*objectID].flags & ASN1_END)
-							   && (objects[*objectID].level == obj.level)));
-			return TRUE;
-		}
-	}
-
-	if (obj.flags & ASN1_OBJ)
-	{
-		object->ptr = start_ptr;
-		object->len = (size_t)(blob->ptr - start_ptr);
-		if (ctx->private)
-		{
-			DBG4("%B", object);
-		}
-		else
-		{
-			DBG3("%B", object);
-		}
-	}
-	else if (obj.flags & ASN1_BODY)
-	{
-		*object = *blob1;
-		debug_asn1_simple_object(*object, obj.type, ctx->private);
-	}
-	return TRUE;
-}
-
-/**
  * parse an ASN.1 simple type
  */
-bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const char* name)
+bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level, const char* name)
 {
 	size_t len;
 	
@@ -617,32 +443,42 @@ bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const c
 	}
 	
 	DBG2("L%d - %s:", level, name);
-	debug_asn1_simple_object(*object, type, FALSE);
+	asn1_debug_simple_object(*object, type, FALSE);
 	return TRUE;
 }
 
 /**
- * extracts an algorithmIdentifier
+ * ASN.1 definition of an algorithmIdentifier
  */
-int parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters)
+static const asn1Object_t algorithmIdentifierObjects[] = {
+	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE }, /* 0 */
+	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY }, /* 1 */
+	{ 1,   "parameters",		ASN1_EOC,		ASN1_RAW  }  /* 2 */
+};
+#define ALGORITHM_ID_ALG		1
+#define ALGORITHM_ID_PARAMETERS	2
+#define ALGORITHM_ID_ROOF		3
+
+/*
+ * Defined in header
+ */
+int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
+	int objectID;
 	int alg = OID_UNKNOWN;
-	int objectID = 0;
 	
-	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+	parser = asn1_parser_create(algorithmIdentifierObjects, ALGORITHM_ID_ROOF,
+								blob);
+	parser->set_top_level(parser, level0);
 	
-	while (objectID < ALGORITHM_ID_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(algorithmIdentifierObjects, &objectID, &object, &level, &ctx))
-			return OID_UNKNOWN;
-		
 		switch (objectID)
 		{
 			case ALGORITHM_ID_ALG:
-				alg = known_oid(object);
+				alg = asn1_known_oid(object);
 				break;
 			case ALGORITHM_ID_PARAMETERS:
 				if (parameters != NULL)
@@ -651,8 +487,8 @@ int parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters)
 			default:
 				break;
 		}
-		objectID++;
 	}
+	parser->destroy(parser);
 	return alg;
  }
 
@@ -688,10 +524,27 @@ bool is_asn1(chunk_t blob)
 	return FALSE;
 }
 
+/*
+ * Defined in header.
+ */
+bool asn1_is_printablestring(chunk_t str)
+{
+	const char printablestring_charset[] =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 '()+,-./:=?";
+	u_int i;
+	
+	for (i = 0; i < str.len; i++)
+	{
+		if (strchr(printablestring_charset, str.ptr[i]) == NULL)
+			return FALSE;
+	}
+	return TRUE;
+}
+
 /**
  * codes ASN.1 lengths up to a size of 16'777'215 bytes
  */
-void code_asn1_length(size_t length, chunk_t *code)
+static void asn1_code_length(size_t length, chunk_t *code)
 {
 	if (length < 128)
 	{
@@ -724,14 +577,14 @@ void code_asn1_length(size_t length, chunk_t *code)
 /**
  * build an empty asn.1 object with tag and length fields already filled in
  */
-u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen)
+u_char* asn1_build_object(chunk_t *object, asn1_t type, size_t datalen)
 {
 	u_char length_buf[4];
 	chunk_t length = { length_buf, 0 };
 	u_char *pos;
 	
 	/* code the asn.1 length field */
-	code_asn1_length(datalen, &length);
+	asn1_code_length(datalen, &length);
 	
 	/* allocate memory for the asn.1 TLV object */
 	object->len = 1 + length.len + datalen;
@@ -751,13 +604,13 @@ u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen)
 }
 
 /**
- * build a simple ASN.1 object
+ * Build a simple ASN.1 object
  */
 chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
 {
 	chunk_t object;
 	
-	u_char *pos = build_asn1_object(&object, tag, content.len);
+	u_char *pos = asn1_build_object(&object, tag, content.len);
 	memcpy(pos, content.ptr, content.len); 
 	pos += content.len;
 	
@@ -770,7 +623,7 @@ chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
 chunk_t asn1_bitstring(const char *mode, chunk_t content)
 {
 	chunk_t object;
-	u_char *pos = build_asn1_object(&object, ASN1_BIT_STRING, 1 + content.len);
+	u_char *pos = asn1_build_object(&object, ASN1_BIT_STRING, 1 + content.len);
 
 	*pos++ = 0x00;
 	memcpy(pos, content.ptr, content.len);
@@ -804,7 +657,7 @@ chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
 	va_end(chunks);
 	
 	/* allocate needed memory for construct */
-	pos = build_asn1_object(&construct, type, construct.len);
+	pos = asn1_build_object(&construct, type, construct.len);
 	
 	/* copy or move the chunks */
 	va_start(chunks, mode);
@@ -841,26 +694,24 @@ static const asn1Object_t timeObjects[] = {
 /**
  * extracts and converts a UTCTIME or GENERALIZEDTIME object
  */
-time_t parse_time(chunk_t blob, int level0)
+time_t asn1_parse_time(chunk_t blob, int level0)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
-	int objectID = 0;
+	int objectID;
+	time_t utc_time = 0;
 	
-	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+	parser= asn1_parser_create(timeObjects, TIME_ROOF, blob);
+	parser->set_top_level(parser, level0);
 	
-	while (objectID < TIME_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(timeObjects, &objectID, &object, &level, &ctx))
-			return 0;
-		
 		if (objectID == TIME_UTC || objectID == TIME_GENERALIZED)
 		{
-			return asn1totime(&object, (objectID == TIME_UTC)
-					? ASN1_UTCTIME : ASN1_GENERALIZEDTIME);
+			utc_time = asn1_to_time(&object, (objectID == TIME_UTC)
+									? ASN1_UTCTIME : ASN1_GENERALIZEDTIME);
 		}
-		objectID++;
 	}
-	return 0;
+	parser->destroy(parser);
+	return utc_time;
 }
