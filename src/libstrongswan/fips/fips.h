@@ -16,7 +16,7 @@
  */
  
 /**
- * @defgroup fips fips
+ * @defgroup fips1 fips
  * @{ @ingroup fips
  */
 
