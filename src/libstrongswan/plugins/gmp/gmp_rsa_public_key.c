@@ -36,32 +36,6 @@
  */
 extern chunk_t gmp_mpz_to_asn1(const mpz_t value);
 
-/**
- * ASN.1 definition of RSApublicKey
- */
-static const asn1Object_t pubkeyObjects[] = {
-	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
-	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
-	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  2 */
-};
-#define PUB_KEY_RSA_PUBLIC_KEY		0
-#define PUB_KEY_MODULUS				1
-#define PUB_KEY_EXPONENT			2
-#define PUB_KEY_ROOF				3
-
-/**
- * ASN.1 definition of digestInfo
- */
-static const asn1Object_t digestInfoObjects[] = {
-	{ 0, "digestInfo",			ASN1_SEQUENCE,		ASN1_OBJ  }, /*  0 */
-	{ 1,   "digestAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /*  1 */
-	{ 1,   "digest",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  2 */
-};
-#define DIGEST_INFO					0
-#define DIGEST_INFO_ALGORITHM		1
-#define DIGEST_INFO_DIGEST			2
-#define DIGEST_INFO_ROOF			3
-
 typedef struct private_gmp_rsa_public_key_t private_gmp_rsa_public_key_t;
 
 /**
@@ -135,6 +109,19 @@ static chunk_t rsavp1(private_gmp_rsa_public_key_t *this, chunk_t data)
 {
 	return rsaep(this, data);
 }
+
+/**
+ * ASN.1 definition of digestInfo
+ */
+static const asn1Object_t digestInfoObjects[] = {
+	{ 0, "digestInfo",			ASN1_SEQUENCE,		ASN1_OBJ  }, /*  0 */
+	{ 1,   "digestAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /*  1 */
+	{ 1,   "digest",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  2 */
+};
+#define DIGEST_INFO					0
+#define DIGEST_INFO_ALGORITHM		1
+#define DIGEST_INFO_DIGEST			2
+#define DIGEST_INFO_ROOF			3
 
 /**
  * Verification of an EMPSA PKCS1 signature described in PKCS#1
@@ -463,6 +450,19 @@ gmp_rsa_public_key_t *gmp_rsa_public_key_create_from_n_e(mpz_t n, mpz_t e)
 }
 
 /**
+ * ASN.1 definition of RSApublicKey
+ */
+static const asn1Object_t pubkeyObjects[] = {
+	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
+	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
+	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  2 */
+};
+#define PUB_KEY_RSA_PUBLIC_KEY		0
+#define PUB_KEY_MODULUS				1
+#define PUB_KEY_EXPONENT			2
+#define PUB_KEY_ROOF				3
+
+/**
  * Load a public key from an ASN1 encoded blob
  */
 static gmp_rsa_public_key_t *load(chunk_t blob)
@@ -470,7 +470,7 @@ static gmp_rsa_public_key_t *load(chunk_t blob)
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
-	bool success;
+	bool success = FALSE;
 
 	private_gmp_rsa_public_key_t *this = gmp_rsa_public_key_create_empty();
 
@@ -491,9 +491,8 @@ static gmp_rsa_public_key_t *load(chunk_t blob)
 				break;
 		}
 	}
-
-	free(blob.ptr);
 	success = parser->success(parser);
+	free(blob.ptr);
 	parser->destroy(parser);
 
 	if (!success)

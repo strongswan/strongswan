@@ -309,7 +309,7 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
-	bool success;
+	bool success = FALSE;
 
 	single_response_t *response;
 	
@@ -378,7 +378,6 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 	}
 	success = parser->success(parser);
 	parser->destroy(parser);
-	
 	if (success)
 	{
 		if (this->usableUntil == UNDEFINED_TIME)
@@ -410,7 +409,7 @@ static bool parse_responses(private_x509_ocsp_response_t *this,
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
-	bool success = TRUE;
+	bool success = FALSE;
 	
 	parser = asn1_parser_create(responsesObjects, RESPONSES_ROOF, blob);
 	parser->set_top_level(parser, level0);
@@ -423,7 +422,6 @@ static bool parse_responses(private_x509_ocsp_response_t *this,
 				if (!parse_singleResponse(this, object,
 										  parser->get_level(parser)+1))
 				{
-					success = FALSE;
 					goto end;
 				}
 				break;
@@ -431,9 +429,9 @@ static bool parse_responses(private_x509_ocsp_response_t *this,
 				break;
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	return success;
 }
@@ -499,7 +497,7 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 	int extn_oid = OID_UNKNOWN;
 	u_int responses_level = level0;
 	certificate_t *cert;
-	bool success = TRUE;
+	bool success = FALSE;
 	bool critical;
 	
 	parser = asn1_parser_create(basicResponseObjects, BASIC_RESPONSE_ROOF, blob);
@@ -519,7 +517,6 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				if (version != OCSP_BASIC_RESPONSE_VERSION)
 				{
 					DBG1("  ocsp ResponseData version %d not supported", version);
-					success = FALSE;
 					goto end;
 				}
 				break;
@@ -575,11 +572,10 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 			}
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
-
 	if (success)
 	{
 		if (!this->responderId)
@@ -655,9 +651,9 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 				break;
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	return success;
 }

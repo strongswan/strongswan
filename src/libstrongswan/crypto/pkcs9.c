@@ -399,7 +399,7 @@ static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
 	chunk_t object;
 	int objectID;
 	int oid = OID_UNKNOWN;
-	bool success = TRUE;
+	bool success = FALSE;
 
 	parser = asn1_parser_create(attributesObjects, ATTRIBUTE_OBJ_ROOF, chunk);
 	parser->set_top_level(parser, level0);
@@ -433,16 +433,15 @@ static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
 										parser->get_level(parser)+1,
 										oid_names[oid].name))
 						{
-							success = FALSE;
 							goto end;
 						}
 					}
 				}
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	return success;
 }

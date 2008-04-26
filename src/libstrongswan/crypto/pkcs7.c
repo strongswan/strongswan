@@ -275,7 +275,7 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 	int digest_alg = OID_UNKNOWN;
 	int enc_alg    = OID_UNKNOWN;
 	int signerInfos = 0;
-	bool success = TRUE;
+	bool success = FALSE;
 
 	chunk_t encrypted_digest = chunk_empty;
 
@@ -304,13 +304,11 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 
 				if (data == NULL)
 				{
-					success = FALSE;
 					goto end;
 				}
 				if (!data->parse_data(data))
 				{
 					data->destroy(data);
-					success = FALSE;
 					goto end;
 				}
 				pureData = data->get_data(data);
@@ -356,9 +354,9 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 				encrypted_digest = object;
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	if (!success)
 	{
@@ -601,10 +599,9 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 				break;
 		}
 	}
-	success = TRUE;
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	if (!success)
 	{
@@ -980,7 +977,7 @@ static bool parse_contentInfo(chunk_t blob, u_int level0, private_pkcs7_t *cInfo
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
-	bool success = TRUE;
+	bool success = FALSE;
 
 	parser = asn1_parser_create(contentInfoObjects, PKCS7_INFO_TYPE, blob);
 	parser->set_top_level(parser, level0);
@@ -994,7 +991,6 @@ static bool parse_contentInfo(chunk_t blob, u_int level0, private_pkcs7_t *cInfo
 			||  cInfo->type > OID_PKCS7_ENCRYPTED_DATA)
 			{
 				DBG1("unknown pkcs7 content type");
-				success = FALSE;
 				goto end;
 			}
 		}
@@ -1003,9 +999,9 @@ static bool parse_contentInfo(chunk_t blob, u_int level0, private_pkcs7_t *cInfo
 			cInfo->content = chunk_clone(object);
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	return success;
 }

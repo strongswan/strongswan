@@ -231,7 +231,7 @@ static bool parse_otherName(chunk_t blob, int level0)
 	chunk_t object;
 	int objectID;
 	int oid = OID_UNKNOWN;
-	bool success = TRUE;
+	bool success = FALSE;
 
 	parser = asn1_parser_create(otherNameObjects,ON_OBJ_ROOF, blob);
 	parser->set_top_level(parser, level0);
@@ -249,7 +249,6 @@ static bool parse_otherName(chunk_t blob, int level0)
 					if (!asn1_parse_simple_object(&object, ASN1_UTF8STRING,
 								parser->get_level(parser)+1, "xmppAddr"))
 					{
-						success = FALSE;
 						goto end;
 					}
 				}
@@ -258,9 +257,9 @@ static bool parse_otherName(chunk_t blob, int level0)
 				break;
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	return success;
 }
@@ -736,7 +735,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 	int extn_oid = OID_UNKNOWN;
 	int key_alg  = OID_UNKNOWN;
 	int sig_alg  = OID_UNKNOWN;
-	bool success = TRUE;
+	bool success = FALSE;
 	bool critical;
 	
 	parser = asn1_parser_create(certObjects, X509_OBJ_ROOF, this->encoding);
@@ -795,7 +794,6 @@ static bool parse_certificate(private_x509_cert_t *this)
 							break;
 						default:
 							DBG1("parsing key type %d failed", key_alg);
-							success = FALSE;
 							goto end;
 					}
 				}
@@ -845,7 +843,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 					case OID_NS_COMMENT:
 						if (!asn1_parse_simple_object(&object, ASN1_IA5STRING, 
 											level, oid_names[extn_oid].name))
-							return FALSE;
+						{
+							goto end;
+						}
 						break;
 					default:
 						break;
@@ -857,7 +857,6 @@ static bool parse_certificate(private_x509_cert_t *this)
 				if (this->algorithm != sig_alg)
 				{
 					DBG1("  signature algorithms do not agree");
-					success = FALSE;
 					goto end;
 				}
 				break;
@@ -868,9 +867,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 				break;
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	return success;
 }

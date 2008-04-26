@@ -200,7 +200,7 @@ static bool parse(private_x509_crl_t *this)
 	chunk_t userCertificate = chunk_empty;
 	int objectID;
 	int sig_alg = OID_UNKNOWN;
-	bool success = TRUE;
+	bool success = FALSE;
 	bool critical;
 	revoked_t *revoked = NULL;
 
@@ -276,7 +276,6 @@ static bool parse(private_x509_crl_t *this)
 						if (!asn1_parse_simple_object(&object, ASN1_INTEGER,
 													  level, "crlNumber"))
 						{
-							success = FALSE;
 							goto end;
 						}
 						this->crlNumber = object;
@@ -289,7 +288,6 @@ static bool parse(private_x509_crl_t *this)
 				if (this->algorithm != sig_alg)
 				{
 					DBG1("  signature algorithms do not agree");
-					success = FALSE;
 					goto end;
 				}
 				break;
@@ -301,9 +299,9 @@ static bool parse(private_x509_crl_t *this)
 				break;
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	return success;
 }

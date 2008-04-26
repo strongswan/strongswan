@@ -680,7 +680,7 @@ static gmp_rsa_private_key_t *load(chunk_t blob)
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID ;
-	bool success = TRUE;
+	bool success = FALSE;
 
 	private_gmp_rsa_private_key_t *this = gmp_rsa_private_key_create_empty();
 	
@@ -732,9 +732,9 @@ static gmp_rsa_private_key_t *load(chunk_t blob)
 				break;
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	chunk_clear(&blob);
 

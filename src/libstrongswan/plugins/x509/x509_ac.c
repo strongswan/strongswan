@@ -359,7 +359,7 @@ static bool parse_certificate(private_x509_ac_t *this)
 	int type     = OID_UNKNOWN;
 	int extn_oid = OID_UNKNOWN;
 	int sig_alg  = OID_UNKNOWN;
-	bool success = TRUE;
+	bool success = FALSE;
 	bool critical;
 
 	parser = asn1_parser_create(acObjects, AC_OBJ_ROOF, this->encoding);
@@ -379,14 +379,12 @@ static bool parse_certificate(private_x509_ac_t *this)
 				if (this->version != 2)
 				{
 					DBG1("v%d attribute certificates are not supported", this->version);
-					success = FALSE;
 					goto end;
 				}
 				break;
 			case AC_OBJ_HOLDER_ISSUER:
 				if (!parse_directoryName(object, level, FALSE, &this->holderIssuer))
 				{
-					success = FALSE;
 					goto end;
 				}
 				break;
@@ -396,14 +394,12 @@ static bool parse_certificate(private_x509_ac_t *this)
 			case AC_OBJ_ENTITY_NAME:
 				if (!parse_directoryName(object, level, TRUE, &this->entityName))
 				{
-					success = FALSE;
 					goto end;
 				}
 				break;
 			case AC_OBJ_ISSUER_NAME:
 				if (!parse_directoryName(object, level, FALSE, &this->issuerName))
 				{
-					success = FALSE;
 					goto end;
 				}
 				break;
@@ -492,9 +488,9 @@ static bool parse_certificate(private_x509_ac_t *this)
 				break;
 		}
 	}
+	success = parser->success(parser);
 
 end:
-	success &= parser->success(parser);
 	parser->destroy(parser);
 	return success;
 }
