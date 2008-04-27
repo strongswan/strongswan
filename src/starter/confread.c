@@ -187,6 +187,8 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		if (streq(value, "%modeconfig") || streq(value, "%modecfg") ||
 			streq(value, "%config") || streq(value, "%cfg"))
 		{
+			pfree(end->srcip);
+			end->srcip = NULL;
 			end->modecfg = TRUE;
 		}
 		else
