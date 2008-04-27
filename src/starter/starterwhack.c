@@ -197,7 +197,13 @@ set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
 	ttosubnet(end->subnet, len, ip_version(end->subnet), &w->client);
     }
     else
+    {
+	if (end->has_virt)
+	{
+	    w->virt = end->subnet;
+	}
 	w->client.addr.u.v4.sin_family = addrtypeof(&w->host_addr);
+    }
 
     w->has_client_wildcard = end->has_client_wildcard;
     w->has_port_wildcard   = end->has_port_wildcard;
@@ -210,7 +216,6 @@ set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
     w->host_port           = IKE_UDP_PORT;
     w->port                = end->port;
     w->protocol            = end->protocol;
-    w->virt                = end->virt;
 
     if (w->port != 0)
     {

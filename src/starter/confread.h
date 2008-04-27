@@ -70,6 +70,7 @@ struct starter_end {
 	bool		has_client_wildcard;
 	bool		has_port_wildcard;
 	bool		has_natip;
+	bool		has_virt;
 	bool		modecfg;
 	certpolicy_t	sendcert;
 	bool		firewall;
@@ -79,7 +80,6 @@ struct starter_end {
 	char 		*updown;
 	u_int16_t	port;
 	u_int8_t	protocol;
-	char		*virt;
 	char		*srcip;
 };
 

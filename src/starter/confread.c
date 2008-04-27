@@ -146,17 +146,89 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 	if (!assign_arg(token, KW_END_FIRST, kw, (char *)end, &assigned))
 		goto err;
 
-	if (token == KW_SENDCERT)
+	/* post processing of some keywords that were assigned automatically */
+	switch (token)
 	{
+	case KW_SUBNET:
+		if ((strlen(value) >= 6 && strncmp(value,"vhost:",6) == 0)
+		||  (strlen(value) >= 5 && strncmp(value,"vnet:",5) == 0))
+		{
+			/* used by pluto only */
+			end->has_virt = TRUE;
+		}
+		else
+		{
+			ip_subnet net;
+			char *pos;
+			int len = 0;
+			
+			end->has_client = TRUE;
+			conn->tunnel_addr_family = ip_version(value);
+			
+			pos = strchr(value, ',');
+			if (pos)
+			{
+				len = pos - value;
+			}
+			ugh = ttosubnet(value, len, ip_version(value), &net);
+			if (ugh != NULL)
+			{
+				plog("# bad subnet: %s=%s [%s]", name, value, ugh);
+				goto err;
+			}
+		}
+		break;
+	case KW_SOURCEIP:
+		if (end->has_natip)
+		{
+			plog("# natip and sourceip cannot be defined at the same time");
+			goto err;
+		}
+		if (streq(value, "%modeconfig") || streq(value, "%modecfg") ||
+			streq(value, "%config") || streq(value, "%cfg"))
+		{
+			end->modecfg = TRUE;
+		}
+		else
+		{
+			ip_address addr;
+			ip_subnet net;
+		
+			conn->tunnel_addr_family = ip_version(value);
+			if (strchr(value, '/'))
+			{	/* CIDR notation, address pool */
+				ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &net);
+			}
+			else if (value[0] != '%')
+			{	/* old style fixed srcip, a %poolname otherwise */
+				ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
+			}
+			if (ugh != NULL)
+			{
+				plog("# bad addr: %s=%s [%s]", name, value, ugh);
+				goto err;
+			}
+		}
+		conn->policy |= POLICY_TUNNEL;
+		break;
+	case KW_SENDCERT:
 		if (end->sendcert == CERT_YES_SEND)
+		{
 			end->sendcert = CERT_ALWAYS_SEND;
+		}
 		else if (end->sendcert == CERT_NO_SEND)
+		{
 			end->sendcert = CERT_NEVER_SEND;
+		}
+		break;
+	default:
+		break;
 	}
 
 	if (assigned)
 		return;
 
+	/* individual processing of keywords that were not assigned automatically */
 	switch (token)
 	{
 	case KW_HOST:
@@ -242,35 +314,6 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			goto err;
 		}
 		break;
-	case KW_SUBNET:
-		if ((strlen(value) >= 6 && strncmp(value,"vhost:",6) == 0)
-		||  (strlen(value) >= 5 && strncmp(value,"vnet:",5) == 0))
-		{
-			end->virt = clone_str(value, "virt");
-		}
-		else
-		{
-			ip_subnet net;
-			char *pos;
-			int len = 0;
-			
-			end->has_client = TRUE;
-			conn->tunnel_addr_family = ip_version(value);
-			
-			pos = strchr(value, ',');
-			if (pos)
-			{
-				len = pos - value;
-			}
-			ugh = ttosubnet(value, len, ip_version(value), &net);
-			if (ugh != NULL)
-			{
-				plog("# bad subnet: %s=%s [%s]", name, value, ugh);
-				goto err;
-			}
-			end->subnet = clone_str(value, "subnet");
-		}
-		break;
 	case KW_SUBNETWITHIN:
 	{
 		ip_subnet net;
@@ -291,40 +334,6 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 	case KW_PROTOPORT:
 		ugh = ttoprotoport(value, 0, &end->protocol, &end->port, &has_port_wildcard);
 		end->has_port_wildcard = has_port_wildcard;
-		break;
-	case KW_SOURCEIP:
-		if (end->has_natip)
-		{
-			plog("# natip and sourceip cannot be defined at the same time");
-			goto err;
-		}
-		if (streq(value, "%modeconfig") || streq(value, "%modecfg") ||
-			streq(value, "%config") || streq(value, "%cfg"))
-		{
-			end->modecfg = TRUE;
-		}
-		else
-		{
-			ip_address addr;
-			ip_subnet net;
-		
-			conn->tunnel_addr_family = ip_version(value);
-			if (strchr(value, '/'))
-			{	/* CIDR notation, address pool */
-				ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &net);
-			}
-			else if (value[0] != '%')
-			{	/* old style fixed srcip, a %poolname otherwise */
-				ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
-			}
-			if (ugh != NULL)
-			{
-				plog("# bad addr: %s=%s [%s]", name, value, ugh);
-				goto err;
-			}
-			end->srcip = clone_str(value, "srcip");
-		}
-		conn->policy |= POLICY_TUNNEL;
 		break;
 	case KW_NATIP:
 		if (end->srcip)
@@ -848,12 +857,6 @@ free_also(also_t *head)
 static void
 confread_free_conn(starter_conn_t *conn)
 {
-	pfree(conn->left.subnet);
-	pfree(conn->right.subnet);
-	pfree(conn->left.virt);
-	pfree(conn->right.virt);
-	pfree(conn->left.srcip);
-	pfree(conn->right.srcip);
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->left);
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->right);
 	free_args(KW_CONN_NAME, KW_CONN_LAST, (char *)conn);
