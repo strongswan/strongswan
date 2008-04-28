@@ -43,14 +43,6 @@ struct mconsole_t {
 	bool (*del_iface)(mconsole_t *this, char *guest);
 	
 	/**
-	 * @brief Get the pts device file assigned to a console.
-	 *
-	 * @param con			console number in guest
-	 * @return				allocated device string
-	 */
-	char* (*get_console_pts)(mconsole_t *this, int con);
-	
-	/**
 	 * @brief Destroy the mconsole instance
 	 */
 	void (*destroy) (mconsole_t *this);
@@ -63,9 +55,10 @@ struct mconsole_t {
  * to connect to the mconsole socket supplied in the received notification.
  *
  * @param notify			unix notify socket path
+ * @param idle				idle function to call while waiting for responses
  * @return					mconsole instance, or NULL if failed
  */
-mconsole_t *mconsole_create(char *notify);
+mconsole_t *mconsole_create(char *notify, void(*idle)(void));
 
 #endif /* MCONSOLE_H */
 

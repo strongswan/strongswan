@@ -23,6 +23,7 @@
 #include <errno.h>
 
 #include <debug.h>
+#include <utils/linked_list.h>
 
 #include "dumm.h"
 
@@ -30,11 +31,6 @@
 #define GUEST_DIR "guests"
 #define TEMPLATE_DIR "templates"
 #define TEMPLATE_DIR_DIR "diff"
-
-/**
- * instances of dumm, used to deliver signals
- */
-static linked_list_t *instances = NULL;
 
 typedef struct private_dumm_t private_dumm_t;
 
@@ -74,11 +70,31 @@ static guest_t* create_guest(private_dumm_t *this, char *name, char *kernel,
 }
 
 /**
- * Implementation of dumm_t.create_guest_iterator.
+ * Implementation of dumm_t.create_guest_enumerator.
  */
-static iterator_t* create_guest_iterator(private_dumm_t *this)
+static enumerator_t* create_guest_enumerator(private_dumm_t *this)
 {
-	return this->guests->create_iterator(this->guests, TRUE);
+	return this->guests->create_enumerator(this->guests);
+}
+
+/**
+ * Implementation of dumm_t.delete_guest.
+ */
+static void delete_guest(private_dumm_t *this, guest_t *guest)
+{
+	if (this->guests->remove(this->guests, guest, NULL))
+	{
+		char buf[512];
+		int len;
+		
+		len = snprintf(buf, sizeof(buf), "rm -Rf %s/%s",
+					   this->guest_dir, guest->get_name(guest));
+		guest->destroy(guest);
+		if (len > 8 && len < 512)
+		{
+			system(buf);
+		}
+	}
 }
 
 /**
@@ -97,11 +113,22 @@ static bridge_t* create_bridge(private_dumm_t *this, char *name)
 }
 
 /**
- * Implementation of dumm_t.create_bridge_iterator.
+ * Implementation of dumm_t.create_bridge_enumerator.
  */
-static iterator_t* create_bridge_iterator(private_dumm_t *this)
+static enumerator_t* create_bridge_enumerator(private_dumm_t *this)
 {
-	return this->bridges->create_iterator(this->bridges, TRUE);
+	return this->bridges->create_enumerator(this->bridges);
+}
+
+/**
+ * Implementation of dumm_t.delete_bridge.
+ */
+static void delete_bridge(private_dumm_t *this, bridge_t *bridge)
+{
+	if (this->bridges->remove(this->bridges, bridge, NULL))
+	{
+		bridge->destroy(bridge);
+	}
 }
 
 /**
@@ -109,26 +136,18 @@ static iterator_t* create_bridge_iterator(private_dumm_t *this)
  */
 static void clear_template(private_dumm_t *this)
 {
-	iterator_t *iterator, *ifaces;
+	enumerator_t *enumerator;
 	guest_t *guest;
-	iface_t *iface;
 
 	free(this->template);
 	this->template = NULL;
 
-	iterator = this->guests->create_iterator(this->guests, TRUE);
-	while (iterator->iterate(iterator, (void**)&guest))
+	enumerator = this->guests->create_enumerator(this->guests);
+	while (enumerator->enumerate(enumerator, (void**)&guest))
 	{
 		guest->load_template(guest, NULL);
-		ifaces = guest->create_iface_iterator(guest);
-		while (ifaces->iterate(ifaces, (void**)&iface))
-		{
-			ifaces->remove(ifaces);
-			iface->destroy(iface);
-		}
-		ifaces->destroy(ifaces);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -136,7 +155,7 @@ static void clear_template(private_dumm_t *this)
  */
 static bool load_template(private_dumm_t *this, char *name)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	guest_t *guest;
 	char dir[PATH_MAX];
 	size_t len;
@@ -169,113 +188,18 @@ static bool load_template(private_dumm_t *this, char *name)
 			return FALSE;
 		}
 	}
-	iterator = this->guests->create_iterator(this->guests, TRUE);
-	while (iterator->iterate(iterator, (void**)&guest))
+	enumerator = this->guests->create_enumerator(this->guests);
+	while (enumerator->enumerate(enumerator, (void**)&guest))
 	{
 		if (!guest->load_template(guest, dir))
 		{
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 			clear_template(this);
 			return FALSE;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return TRUE;
-}
-
-/**
- * signal handler 
- */
-void signal_handler(int sig, siginfo_t *info, void *ucontext)
-{
-	if (sig == SIGCHLD)
-	{
-		switch (info->si_code)
-		{
-			case CLD_EXITED:
-			case CLD_KILLED:
-			case CLD_DUMPED:
-			{
-				private_dumm_t *this;
-				guest_t *guest;
-				iterator_t *iterator, *guests;
-				
-				iterator = instances->create_iterator(instances, TRUE);
-				while (iterator->iterate(iterator, (void**)&this))
-				{
-					if (this->destroying)
-					{
-						continue;
-					}
-					guests = this->guests->create_iterator(this->guests, TRUE);
-					while (guests->iterate(guests, (void**)&guest))
-					{
-						if (guest->get_pid(guest) == info->si_pid)
-						{
-							guest->sigchild(guest);
-							break;
-						}
-					}
-					guests->destroy(guests);
-				}
-				iterator->destroy(iterator);
-				break;
-			}
-			default:
-				break;
-		}
-
-	}
-	/* SIGHUP is currently just ignored */
-}
-
-/**
- * add a dumm instance
- */
-static void add_instance(private_dumm_t *this)
-{
-	if (instances == NULL)
-	{
-		struct sigaction action;
-		
-		instances = linked_list_create();
-		
-		memset(&action, 0, sizeof(action));
-		action.sa_sigaction = signal_handler;
-		action.sa_flags = SA_SIGINFO;
-		
-		if (sigaction(SIGCHLD, &action, NULL) != 0 ||
-			sigaction(SIGHUP, &action, NULL) != 0)
-		{
-			DBG1("installing signal handler failed!");
-		}
-	}
-	instances->insert_last(instances, this);
-}
-
-/**
- * remove a dumm instance
- */
-static void remove_instance(private_dumm_t *this)
-{
-	iterator_t *iterator;
-	private_dumm_t *current;
-	
-	iterator = instances->create_iterator(instances, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (current == this)
-		{
-			iterator->remove(iterator);
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	if (instances->get_count(instances) == 0)
-	{
-		instances->destroy(instances);
-		instances = NULL;
-	}
 }
 
 /**
@@ -283,17 +207,17 @@ static void remove_instance(private_dumm_t *this)
  */
 static void destroy(private_dumm_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	guest_t *guest;
 
 	this->bridges->destroy_offset(this->bridges, offsetof(bridge_t, destroy));
 	
-	iterator = this->guests->create_iterator(this->guests, TRUE);
-	while (iterator->iterate(iterator, (void**)&guest))
+	enumerator = this->guests->create_enumerator(this->guests);
+	while (enumerator->enumerate(enumerator, (void**)&guest))
 	{
-		guest->stop(guest);
+		guest->stop(guest, NULL);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	this->destroying = TRUE;
 	this->guests->destroy_offset(this->guests, offsetof(guest_t, destroy));
@@ -301,7 +225,6 @@ static void destroy(private_dumm_t *this)
 	free(this->template_dir);
 	free(this->template);
 	free(this->dir);
-	remove_instance(this);
 	free(this);
 }
 
@@ -329,7 +252,6 @@ static void load_guests(private_dumm_t *this)
 		guest = guest_load(this->guest_dir, ent->d_name);
 		if (guest)
 		{
-			DBG1("loaded guest '%s'", ent->d_name);
 			this->guests->insert_last(this->guests, guest);
 		}
 		else
@@ -349,28 +271,41 @@ dumm_t *dumm_create(char *dir)
 	private_dumm_t *this = malloc_thing(private_dumm_t);
 	
 	this->public.create_guest = (guest_t*(*)(dumm_t*,char*,char*,char*,int))create_guest;
-	this->public.create_guest_iterator = (iterator_t*(*)(dumm_t*))create_guest_iterator;
+	this->public.create_guest_enumerator = (enumerator_t*(*)(dumm_t*))create_guest_enumerator;
+	this->public.delete_guest = (void(*)(dumm_t*,guest_t*))delete_guest;
 	this->public.create_bridge = (bridge_t*(*)(dumm_t*, char *name))create_bridge;
-	this->public.create_bridge_iterator = (iterator_t*(*)(dumm_t*))create_bridge_iterator;
+	this->public.create_bridge_enumerator = (enumerator_t*(*)(dumm_t*))create_bridge_enumerator;
+	this->public.delete_bridge = (void(*)(dumm_t*,bridge_t*))delete_bridge;
 	this->public.load_template = (bool(*)(dumm_t*, char *name))load_template;
 	this->public.destroy = (void(*)(dumm_t*))destroy;
 	
 	this->destroying = FALSE;
-	if (*dir == '/' || getcwd(cwd, sizeof(cwd)) == 0)
+	
+	if (dir && *dir == '/')
 	{
 		this->dir = strdup(dir);
 	}
 	else
 	{
-		asprintf(&this->dir, "%s/%s", cwd, dir);
+	 	if (getcwd(cwd, sizeof(cwd)) == NULL)
+	 	{
+	 		free(this);
+	 		return NULL;
+	 	}
+		if (dir)
+		{
+			asprintf(&this->dir, "%s/%s", cwd, dir);
+		}
+		else
+		{
+			this->dir = strdup(cwd);
+		}
 	}
 	this->template = NULL;
 	asprintf(&this->guest_dir, "%s/%s", this->dir, GUEST_DIR);
 	asprintf(&this->template_dir, "%s/%s", this->dir, TEMPLATE_DIR);
 	this->guests = linked_list_create();
 	this->bridges = linked_list_create();
-	
-	add_instance(this);
 	
 	if (mkdir(this->guest_dir, PERME) < 0 && errno != EEXIST)
 	{

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Martin Willi
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,539 +13,452 @@
  * for more details.
  */
 
-#define _GNU_SOURCE
-
-#include <stdio.h>
-#include <unistd.h>
-#include <getopt.h>
-#include <library.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-#include <dlfcn.h>
-#include <dirent.h>
-
 #include "dumm.h"
 
+#include <utils/linked_list.h>
+
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <glib.h>
+#include <gtk/gtk.h>
+#include <vte/vte.h>
+#include <vte/reaper.h>
+
 /**
- * global set of UMLs guests
+ * notebook page with vte and guest
+ */
+typedef struct {
+	gint num;
+	GtkWidget *vte;
+	guest_t *guest;
+} page_t;
+
+/**
+ * Main window
+ */
+GtkWidget *window;
+
+/**
+ * notebook with guests, vtes
+ */
+GtkWidget *notebook;
+
+/**
+ * dumm context
  */
 dumm_t *dumm;
 
 /**
- * show usage information (program arguments)
+ * pages in notebook, page_t
  */
-static void usage()
+linked_list_t *pages;
+
+/**
+ * handle guest termination, SIGCHILD
+ */
+static void child_exited(VteReaper *vtereaper, gint pid, gint status)
 {
-	printf("Usage:\n");
-	printf("  --dir|-d <path>            set working dir to <path>\n");
-	printf("  --help|-h                  show this help\n");
+	enumerator_t *enumerator;
+	page_t *page;
+	
+	enumerator = pages->create_enumerator(pages);
+	while (enumerator->enumerate(enumerator, (void**)&page))
+	{
+		if (page->guest->get_pid(page->guest) == pid)
+		{
+			page->guest->sigchild(page->guest);
+			vte_terminal_feed(VTE_TERMINAL(page->vte),
+							  "\n\r--- guest terminated ---\n\r", -1);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+static page_t* get_page(int num)
+{
+	enumerator_t *enumerator;
+	page_t *page, *found = NULL;
+	
+	enumerator = pages->create_enumerator(pages);
+	while (enumerator->enumerate(enumerator, (void**)&page))
+	{
+		if (page->num == num)
+		{
+			found = page;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
 }
 
 /**
- * readline() wrapper
+ * Guest invocation callback
  */
-static char* get_line(char *format, ...)
+static pid_t invoke(void *vte, guest_t *guest,
+					char *args[], int argc)
 {
-	char *line = NULL;
-	char *prompt = "";
-	va_list args;
+	args[argc] = "con0=fd:0,fd:1";
+	return vte_terminal_fork_command(VTE_TERMINAL(vte), args[0], args, NULL,
+									 NULL, FALSE, FALSE, FALSE);
+}
+
+void idle(void)
+{
+	gtk_main_iteration_do(FALSE);
+	sched_yield();
+}
+
+static void start_guest()
+{
+	page_t *page;
 	
-	va_start(args, format);
-	vasprintf(&prompt, format, args);
-	va_end(args);
-	
-	while (TRUE)
+	page = get_page(gtk_notebook_get_current_page(GTK_NOTEBOOK(notebook)));
+	if (page && page->guest->get_state(page->guest) == GUEST_STOPPED)
 	{
-		line = readline(prompt);
-		if (line == NULL)
-		{
-			printf("quit\n");
-			dumm->destroy(dumm);
-			clear_history();
-			exit(0);
-		}
-		if (*line == '\0')
-		{
-			free(line);
-			continue;
-		}
-		add_history(line);
-		break;
+		vte_terminal_feed(VTE_TERMINAL(page->vte),
+						  "--- starting guest ---\n\r", -1);
+		page->guest->start(page->guest, invoke, VTE_TERMINAL(page->vte), idle);
 	}
-	free(prompt);
-	return line;
+}
+
+static void start_all_guests()
+{
+	enumerator_t *enumerator;
+	page_t *page;
+	
+	enumerator = pages->create_enumerator(pages);
+	while (enumerator->enumerate(enumerator, (void**)&page))
+	{
+		if (page->guest->get_state(page->guest) == GUEST_STOPPED)
+		{
+			vte_terminal_feed(VTE_TERMINAL(page->vte),
+						  "--- starting all guests ---\n\r", -1);
+			page->guest->start(page->guest, invoke,
+							   VTE_TERMINAL(page->vte), idle);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+static void stop_guest()
+{
+	page_t *page;
+	
+	page = get_page(gtk_notebook_get_current_page(GTK_NOTEBOOK(notebook)));
+	if (page && page->guest->get_state(page->guest) == GUEST_RUNNING)
+	{
+		page->guest->stop(page->guest, idle);
+	}
 }
 
 /**
- * get a guest by name
+ * quit signal handler
  */
-static guest_t* get_guest(char *name)
+static void quit()
 {
-	iterator_t *iterator;
-	guest_t *guest = NULL;
+	enumerator_t *enumerator;
+	page_t *page;
+
+	dumm->load_template(dumm, NULL);
 	
-	iterator = dumm->create_guest_iterator(dumm);
-	while (iterator->iterate(iterator, (void**)&guest))
+	enumerator = pages->create_enumerator(pages);
+	while (enumerator->enumerate(enumerator, &page))
 	{
-		if (streq(guest->get_name(guest), name))
-		{
-			break;
+		if (page->guest->get_state(page->guest) != GUEST_STOPPED)
+		{			
+			page->guest->stop(page->guest, idle);
 		}
-		guest = NULL;
 	}
-	iterator->destroy(iterator);
-	return guest;
+	enumerator->destroy(enumerator);
+    gtk_main_quit();
 }
 
-/**
- * get a bridge by name
- */
-static bridge_t* get_bridge(char *name)
+static void error_dialog(char *msg)
 {
-	iterator_t *iterator;
-	bridge_t *bridge = NULL;
-	
-	iterator = dumm->create_bridge_iterator(dumm);
-	while (iterator->iterate(iterator, (void**)&bridge))
-	{
-		if (streq(bridge->get_name(bridge), name))
-		{
-			break;
-		}
-		bridge = NULL;
-	}
-	iterator->destroy(iterator);
-	return bridge;
+	GtkWidget *error;
+
+	error = gtk_message_dialog_new(GTK_WINDOW(window),
+							  GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR,
+							  GTK_BUTTONS_CLOSE, msg);
+	gtk_dialog_run(GTK_DIALOG(error));
+	gtk_widget_destroy(error);
 }
 
-/**
- * get an interface by guest name
- */
-static iface_t* get_iface(char *name, char *ifname)
+static void create_switch()
 {
-	iterator_t *guests, *ifaces;
-	guest_t *guest;
-	iface_t *iface;
-	
-	guests = dumm->create_guest_iterator(dumm);
-	while (guests->iterate(guests, (void**)&guest))
-	{
-		if (streq(guest->get_name(guest), name))
-		{
-			iface = NULL;
-			ifaces = guest->create_iface_iterator(guest);
-			while (ifaces->iterate(ifaces, (void**)&iface))
-			{
-				if (streq(iface->get_guestif(iface), ifname))
-				{
-					break;
-				}
-				iface = NULL;
-			}
-			ifaces->destroy(ifaces);
-			if (iface)
-			{
-				break;
-			}
-		}
-	}
-	guests->destroy(guests);
-	return iface;
-}
-
-static void guest_addif_menu(guest_t *guest)
-{
-	char *name;
-	
-	name = get_line("interface name: ");
-	
-	if (!guest->create_iface(guest, name))
-	{
-		printf("creating interface failed\n");
-	}
-	free(name);
-}
-
-static void guest_delif_menu(guest_t *guest)
-{
-	char *name;
-	iface_t *iface;
-	iterator_t *iterator;
-	bool found = FALSE;
-	
-	name = get_line("interface name: ");
-	
-	iterator = guest->create_iface_iterator(guest);
-	while (iterator->iterate(iterator, (void**)&iface))
-	{
-		if (streq(iface->get_guestif(iface), name))
-		{
-			iterator->remove(iterator);
-			iface->destroy(iface);
-			found = TRUE;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	if (!found)
-	{
-		printf("interface '%s' not found\n");
-	}
-	free(name);
-}
-
-static void guest_console(guest_t *guest)
-{
-	int con;
-	
-	for (con = 1; con <= 6; con++)
-	{
-		char *pts = guest->get_console(guest, con);
-		if (pts)
-		{
-			printf("%d: %s\n", con, pts);
-			free(pts);
-		}
-	}
-}
-
-static void guest_menu(guest_t *guest)
-{
-	while (TRUE)
-	{
-		char *line = get_line("guest/%s# ", guest->get_name(guest));
-		
-		if (streq(line, "back"))
-		{
-			free(line);
-			break;
-		}
-		else if (streq(line, "start"))
-		{
-			if (guest->start(guest))
-			{
-				printf("guest '%s' is running\n", guest->get_name(guest));
-			}
-			else
-			{
-				printf("failed to start guest '%s'\n", guest->get_name(guest));
-			}
-		}
-		else if (streq(line, "stop"))
-		{
-			printf("stopping guest '%s'...\n", guest->get_name(guest));
-			guest->stop(guest);
-			printf("guest '%s' is down\n", guest->get_name(guest));
-		}
-		else if (streq(line, "addif"))
-		{
-			guest_addif_menu(guest);
-		}
-		else if (streq(line, "delif"))
-		{
-			guest_delif_menu(guest);
-		}
-		else if (streq(line, "console"))
-		{
-			guest_console(guest);
-		}
-		else
-		{
-			printf("back|start|stop|addif|delif|console\n");
-		}
-		free(line);
-	}
-}
-
-static void guest_create_menu()
-{
-	char *name, *kernel, *master, *mem;
-	guest_t *guest;
-	
-	name = get_line("guest name: ");
-	kernel = get_line("kernel image: ");
-	master = get_line("master filesystem: ");
-	mem = get_line("amount of memory in MB: ");
-	
-	guest = dumm->create_guest(dumm, name, kernel, master, atoi(mem));
-	if (guest)
-	{
-		printf("guest '%s' created\n", guest->get_name(guest));
-		guest_menu(guest);
-	}
-	else
-	{
-		printf("failed to create guest '%s'\n", name);
-	}
-	free(name);
-	free(kernel);
-	free(master);
-	free(mem);
-}
-
-static void guest_list_menu()
-{
-	while (TRUE)
-	{
-		iterator_t *iterator;
-		guest_t *guest;
-		char *line = get_line("guest# ");
-		
-		if (streq(line, "back"))
-		{
-			free(line);
-			break;
-		}
-		else if (streq(line, "list"))
-		{
-			iterator = dumm->create_guest_iterator(dumm);
-			while (iterator->iterate(iterator, (void**)&guest))
-			{
-				printf("%s\n", guest->get_name(guest));
-			}
-			iterator->destroy(iterator);
-		}
-		else if (streq(line, "create"))
-		{
-			guest_create_menu();
-		}
-		else
-		{
-			guest = get_guest(line);
-			if (guest)
-			{
-				guest_menu(guest);
-			}
-			else
-			{
-				printf("back|list|create|<guest>\n");
-			}
-		}
-		free(line);
-	}
-}
-
-static void bridge_addif_menu(bridge_t *bridge)
-{
-	char *name, *ifname;
-	iface_t *iface;
-	
-	name = get_line("guest name: ");
-	ifname = get_line("interface name: ");
-	
-	iface = get_iface(name, ifname);
-	if (!iface)
-	{
-		printf("guest '%s' has no interface named '%s'\n", name, ifname);
-	}
-	else if (!bridge->connect_iface(bridge, iface))
-	{
-		printf("failed to add interface '%s' to bridge '%s'\n", ifname,
-			   bridge->get_name(bridge));
-	}
-	free(name);
-	free(ifname);
-}
-
-static void bridge_delif_menu(bridge_t *bridge)
-{
-	char *name, *ifname;
-	iface_t *iface;
-	
-	name = get_line("guest name: ");
-	ifname = get_line("interface name: ");
-	
-	iface = get_iface(name, ifname);
-	if (!iface)
-	{
-		printf("guest '%s' has no interface named '%s'\n", name, ifname);
-	}
-	else if (!bridge->disconnect_iface(bridge, iface))
-	{
-		printf("failed to remove interface '%s' from bridge '%s'\n", ifname,
-			   bridge->get_name(bridge));
-	}
-	free(name);
-	free(ifname);
-}
-
-static void bridge_menu(bridge_t *bridge)
-{
-	while (TRUE)
-	{
-		char *line = get_line("bridge/%s# ", bridge->get_name(bridge));
-		
-		if (streq(line, "back"))
-		{
-			free(line);
-			break;
-		}
-		else if (streq(line, "list"))
-		{
-			iterator_t *iterator;
-			iface_t *iface;
-
-			iterator = bridge->create_iface_iterator(bridge);
-			while (iterator->iterate(iterator, (void**)&iface))
-			{
-				printf("%s (%s)\n", iface->get_guestif(iface), iface->get_hostif(iface));
-			}
-			iterator->destroy(iterator);
-		}
-		else if (streq(line, "addif"))
-		{
-			bridge_addif_menu(bridge);
-		}
-		else if (streq(line, "delif"))
-		{
-			bridge_delif_menu(bridge);
-		}
-		else
-		{
-			printf("back|list|addif|delif\n");
-		}
-		free(line);
-	}
-}
-
-static void bridge_create_menu()
-{
-	char *name;
+	GtkWidget *dialog, *table, *label, *name;
 	bridge_t *bridge;
 	
-	name = get_line("bridge name: ");
+	dialog = gtk_dialog_new_with_buttons("Create new switch", GTK_WINDOW(window),
+							GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+							GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
+							GTK_STOCK_NEW, GTK_RESPONSE_ACCEPT, NULL);
 	
-	bridge = dumm->create_bridge(dumm, name);
-	if (bridge)
-	{
-		printf("bridge '%s' created\n", bridge->get_name(bridge));
-		bridge_menu(bridge);
-	}
-	else
-	{
-		printf("failed to create bridge '%s'\n", name);
-	}
-	free(name);
-}
-
-static void bridge_list_menu()
-{
+	table = gtk_table_new(1, 2, TRUE);
+	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), table);
+	
+	label = gtk_label_new("Switch name");
+	gtk_table_attach(GTK_TABLE(table), label,  0, 1, 0, 1, 0, 0, 0, 0);
+	gtk_widget_show(label);
+	
+	name = gtk_entry_new();
+	gtk_table_attach(GTK_TABLE(table), name, 1, 2, 0, 1,
+					 GTK_FILL | GTK_EXPAND | GTK_SHRINK, 0, 0, 0);
+	gtk_widget_show(name);
+	
+	gtk_widget_show(table);
+	
 	while (TRUE)
 	{
-		iterator_t *iterator;
-		bridge_t *bridge;
-		char *line = get_line("bridge# ");
-		
-		if (streq(line, "back"))
+		switch (gtk_dialog_run(GTK_DIALOG(dialog)))
 		{
-			free(line);
-			break;
-		}
-		else if (streq(line, "list"))
-		{
-			iterator = dumm->create_bridge_iterator(dumm);
-			while (iterator->iterate(iterator, (void**)&bridge))
-			{
-				printf("%s\n", bridge->get_name(bridge));
+			case GTK_RESPONSE_ACCEPT:
+			{			
+				if (streq(gtk_entry_get_text(GTK_ENTRY(name)), ""))
+				{
+					continue;
+				}
+				bridge = dumm->create_bridge(dumm,
+									(char*)gtk_entry_get_text(GTK_ENTRY(name)));
+				if (!bridge)
+				{
+					error_dialog("creating bridge failed!");
+					continue;
+				}
+				break;
 			}
-			iterator->destroy(iterator);
+			default:
+				break;
 		}
-		else if (streq(line, "create"))
-		{
-			bridge_create_menu();
-		}
-		else
-		{
-			bridge = get_bridge(line);
-			if (bridge)
-			{
-				bridge_menu(bridge);
-			}
-			else
-			{
-				printf("back|list|create|<bridge>\n");
-			}
-		}
-		free(line);
+		break;
 	}
+	gtk_widget_destroy(dialog);
 }
 
-static void template_menu()
+static void delete_switch()
 {
-	char *name;
-	
-	name = get_line("template name (or 'none'): ");
-	
-	dumm->load_template(dumm, streq(name, "none") ? NULL : name);
-	
-	free(name);
+
 }
 
-typedef bool (*uml_test_t)(dumm_t *dumm);
-
-static void test_menu()
+static void connect_guest()
 {
-	char *name;
-	void *handle;
-	struct dirent *ent;
-	DIR *dir;
-	uml_test_t test;
+	page_t *page;
+	GtkWidget *dialog, *table, *label, *name, *box;
+	bridge_t *bridge;
+	iface_t *iface;
+	enumerator_t *enumerator;
 	
-	name = get_line("test name: ");
-	
-	dir = opendir("tests");
-	if (dir)
+	page = get_page(gtk_notebook_get_current_page(GTK_NOTEBOOK(notebook)));
+	if (!page || page->guest->get_state(page->guest) != GUEST_RUNNING)
 	{
-		while ((ent = readdir(dir)))
-		{
-			char buf[PATH_MAX];
-			size_t len;
-			
-			len = strlen(ent->d_name);
-			if (strlen(ent->d_name) < 4 || !streq(ent->d_name + len - 3, ".so"))
-			{
-				continue;
-			}
-			
-			snprintf(buf, sizeof(buf), "%s/%s", "tests", ent->d_name);
-			handle = dlopen(buf, RTLD_LAZY);
-			if (!handle)
-			{
-				printf("failed to open test %s\n", ent->d_name);
-				continue;
-			}
-			test = dlsym(handle, "test");
-			if (test && dumm->load_template(dumm, ent->d_name))
-			{
-				printf("running test %s: ", ent->d_name);
-				if (test(dumm))
-				{
-					printf("success\n");
-				}
-				else
-				{
-					printf("failed\n");
-				}
-			}
-			else
-			{
-				printf("failed to open test %s\n", ent->d_name);
-			}
-			dlclose(handle);
-		}
+		return;
 	}
-	free(name);
+	
+	dialog = gtk_dialog_new_with_buttons("Connect guest", GTK_WINDOW(window),
+							GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+							GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
+							GTK_STOCK_NEW, GTK_RESPONSE_ACCEPT, NULL);
+	
+	table = gtk_table_new(2, 2, TRUE);
+	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), table);
+	
+	label = gtk_label_new("Interface name");
+	gtk_table_attach(GTK_TABLE(table), label,  0, 1, 0, 1, 0, 0, 0, 0);
+	gtk_widget_show(label);
+	
+	name = gtk_entry_new();
+	gtk_table_attach(GTK_TABLE(table), name, 1, 2, 0, 1,
+					 GTK_FILL | GTK_EXPAND | GTK_SHRINK, 0, 0, 0);
+	gtk_widget_show(name);
+	
+	label = gtk_label_new("Connected switch");
+	gtk_table_attach(GTK_TABLE(table), label,  0, 1, 1, 2, 0, 0, 0, 0);
+	gtk_widget_show(label);
+	
+	box = gtk_combo_box_new_text();
+	gtk_table_attach(GTK_TABLE(table), box, 1, 2, 1, 2,
+					 GTK_FILL | GTK_EXPAND | GTK_SHRINK, 0, 0, 0);
+	enumerator = dumm->create_bridge_enumerator(dumm);
+	while (enumerator->enumerate(enumerator, &bridge))
+	{
+		gtk_combo_box_append_text(GTK_COMBO_BOX(box), bridge->get_name(bridge));
+	}
+	enumerator->destroy(enumerator);
+	gtk_widget_show(box);
+	
+	gtk_widget_show(table);
+	
+	while (TRUE)
+	{
+		switch (gtk_dialog_run(GTK_DIALOG(dialog)))
+		{
+			case GTK_RESPONSE_ACCEPT:
+			{			
+				if (streq(gtk_entry_get_text(GTK_ENTRY(name)), ""))
+				{
+					continue;
+				}
+				
+				iface = page->guest->create_iface(page->guest,
+									(char*)gtk_entry_get_text(GTK_ENTRY(name)));
+				if (!iface)
+				{
+					error_dialog("creating interface failed!");
+					continue;
+				}
+				enumerator = dumm->create_bridge_enumerator(dumm);
+				while (enumerator->enumerate(enumerator, &bridge))
+				{
+					if (!bridge->connect_iface(bridge, iface))
+					{
+						error_dialog("connecting interface failed!");
+					}
+					break;
+				}
+				enumerator->destroy(enumerator);
+				break;
+			}
+			default:
+				break;
+		}
+		break;
+	}
+	gtk_widget_destroy(dialog);
+}
+
+static void disconnect_guest()
+{
+
+}
+
+static void delete_guest()
+{
+	page_t *page;
+	
+	page = get_page(gtk_notebook_get_current_page(GTK_NOTEBOOK(notebook)));
+	if (page)
+	{
+		page->guest->stop(page->guest, idle);
+		dumm->delete_guest(dumm, page->guest);
+		gtk_notebook_remove_page(GTK_NOTEBOOK(notebook), page->num);
+		pages->remove(pages, page, NULL);
+		g_free(page);
+	}
 }
 
 /**
- * Signal handler 
+ * create a new page for a guest
  */
-void signal_action(int sig, siginfo_t *info, void *ucontext)
+static page_t* create_page(guest_t *guest)
 {
-	dumm->destroy(dumm);
-	clear_history();
-	exit(0);
+	GtkWidget *label;
+	page_t *page;
+	
+	page = g_new(page_t, 1);
+	page->guest = guest;
+	page->vte = vte_terminal_new();
+	label = gtk_label_new(guest->get_name(guest));
+	page->num = gtk_notebook_append_page(GTK_NOTEBOOK(notebook),
+										 page->vte, label);
+	gtk_widget_show(page->vte);
+	pages->insert_last(pages, page);
+	return page;
+}
+
+/**
+ * create a new guest
+ */
+static void create_guest()
+{
+	guest_t *guest;
+	GtkWidget *dialog, *table, *label, *name, *kernel, *master, *memory;
+	
+	dialog = gtk_dialog_new_with_buttons("Create new guest", GTK_WINDOW(window),
+							GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+							GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
+							GTK_STOCK_NEW, GTK_RESPONSE_ACCEPT, NULL);
+	
+	table = gtk_table_new(4, 2, TRUE);
+	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), table);
+	
+	label = gtk_label_new("Guest name");
+	gtk_table_attach(GTK_TABLE(table), label,  0, 1, 0, 1, 0, 0, 0, 0);
+	gtk_widget_show(label);
+	
+	label = gtk_label_new("UML kernel");
+	gtk_table_attach(GTK_TABLE(table), label, 0, 1, 1, 2, 0, 0, 0, 0);
+	gtk_widget_show(label);
+	
+	label = gtk_label_new("Master filesystem");
+	gtk_table_attach(GTK_TABLE(table), label, 0, 1, 2, 3, 0, 0, 0, 0);
+	gtk_widget_show(label);
+	
+	label = gtk_label_new("Memory (MB)");
+	gtk_table_attach(GTK_TABLE(table), label, 0, 1, 3, 4, 0, 0, 0, 0);
+	gtk_widget_show(label);
+	
+	name = gtk_entry_new();
+	gtk_table_attach(GTK_TABLE(table), name, 1, 2, 0, 1,
+					 GTK_FILL | GTK_EXPAND | GTK_SHRINK, 0, 0, 0);
+	gtk_widget_show(name);
+	
+	kernel = gtk_file_chooser_button_new("Select UML kernel image",
+										 GTK_FILE_CHOOSER_ACTION_OPEN);
+	gtk_table_attach(GTK_TABLE(table), kernel, 1, 2, 1, 2,
+					 GTK_FILL | GTK_EXPAND | GTK_SHRINK, 0, 0, 0);
+	gtk_widget_show(kernel);
+	
+	master = gtk_file_chooser_button_new("Select master filesystem",
+										 GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
+	gtk_table_attach(GTK_TABLE(table), master, 1, 2, 2, 3,
+					 GTK_FILL | GTK_EXPAND | GTK_SHRINK, 0, 0, 0);
+	gtk_widget_show(master);
+	
+	memory = gtk_spin_button_new_with_range(1, 4096, 1);
+	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(memory), 0);
+	gtk_table_attach(GTK_TABLE(table), memory, 1, 2, 3, 4,
+					 GTK_FILL | GTK_EXPAND | GTK_SHRINK, 0, 0, 0);
+	gtk_widget_show(memory);
+	
+	gtk_widget_show(table);
+	
+	while (TRUE)
+	{
+		switch (gtk_dialog_run(GTK_DIALOG(dialog)))
+		{
+			case GTK_RESPONSE_ACCEPT:
+			{
+				char *sname, *skernel, *smaster;
+				page_t *page;
+				
+				sname = (char*)gtk_entry_get_text(GTK_ENTRY(name));
+				skernel = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(kernel));
+				smaster = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(master));
+			
+				if (!sname[0] || !skernel || !smaster)
+				{
+					continue;
+				}
+				guest = dumm->create_guest(dumm, sname, skernel, smaster, 
+					   		gtk_spin_button_get_value(GTK_SPIN_BUTTON(memory)));
+				if (!guest)
+				{
+					error_dialog("creating guest failed!");
+					continue;
+				}
+				page = create_page(guest);
+				gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), page->num);
+				break;
+			}
+			default:
+				break;
+		}
+		break;
+	}
+	gtk_widget_destroy(dialog);
 }
 
 /**
@@ -553,84 +466,154 @@ void signal_action(int sig, siginfo_t *info, void *ucontext)
  */
 int main(int argc, char *argv[])
 {
-	struct sigaction action;
-	char *dir = ".";
+	GtkWidget *menubar, *menu, *menuitem, *vbox;
+	GtkWidget *dummMenu, *guestMenu, *switchMenu;
+	enumerator_t *enumerator;
+	guest_t *guest;
 	
-	library_init(STRONGSWAN_CONF);
+	library_init(NULL);
+	gtk_init(&argc, &argv);
+	
+	pages = linked_list_create();
+	dumm = dumm_create(NULL);
 
-	while (TRUE)
-	{
-		struct option options[] = {
-			{"dir", 1, 0, 0},
-			{"help", 0, 0, 0},
-			{0, 0, 0, 0}
-		};
-		
-		switch (getopt_long(argc, argv, "d:h", options, NULL)) 
-		{
-			case -1:
-				break;
-			case 'd':
-				dir = optarg;
-				continue;
-			case 'h':
-				usage();
-				return 0;
-			default:
-				usage();
-				return 1;
-		}
-		break;
-	}
+	/* setup window */
+	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(quit), NULL);
+	gtk_window_set_title(GTK_WINDOW (window), "Dumm");
+	gtk_window_set_default_size(GTK_WINDOW (window), 1000, 500);
+	g_signal_connect(G_OBJECT(vte_reaper_get()), "child-exited",
+					 G_CALLBACK(child_exited), NULL);
 	
-	memset(&action, 0, sizeof(action));
-	action.sa_sigaction = signal_action;
-	action.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGINT, &action, NULL) != 0 ||
-		sigaction(SIGQUIT, &action, NULL) != 0 ||
-		sigaction(SIGTERM, &action, NULL) != 0)
-	{
-		printf("signal handler setup failed: %m.\n");
-		return 1;
-	}
+	/* add vbox with menubar, notebook */
+	vbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(window), vbox);
+	menubar = gtk_menu_bar_new();
+	gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, TRUE, 0);
+	notebook = gtk_notebook_new();
+	g_object_set(G_OBJECT(notebook), "homogeneous", TRUE, NULL);
+	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_BOTTOM);
+    gtk_container_add(GTK_CONTAINER(vbox), notebook);
+
+	/* Dumm menu */
+	menu = gtk_menu_new();
+  	dummMenu = gtk_menu_item_new_with_mnemonic("_Dumm");
+	gtk_menu_bar_append(GTK_MENU_BAR(menubar), dummMenu);
+	gtk_widget_show(dummMenu);
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(dummMenu), menu);
 	
-	dumm = dumm_create(dir);
-	while (TRUE)
+	/* Dumm -> exit */
+	menuitem = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, NULL);
+	g_signal_connect(G_OBJECT(menuitem), "activate",
+					 G_CALLBACK(quit), NULL);
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+
+	/* Guest menu */
+	menu = gtk_menu_new();
+  	guestMenu = gtk_menu_item_new_with_mnemonic("_Guest");
+	gtk_menu_bar_append(GTK_MENU_BAR(menubar), guestMenu);
+	gtk_widget_show(guestMenu);
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(guestMenu), menu);
+	
+	/* Guest -> new */
+	menuitem = gtk_image_menu_item_new_from_stock(GTK_STOCK_NEW, NULL);
+	g_signal_connect(G_OBJECT(menuitem), "activate",
+					 G_CALLBACK(create_guest), NULL);
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+	
+	/* Guest -> delete */
+	menuitem = gtk_image_menu_item_new_from_stock(GTK_STOCK_DELETE, NULL);
+	g_signal_connect(G_OBJECT(menuitem), "activate",
+					 G_CALLBACK(delete_guest), NULL);
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+	
+	menuitem = gtk_separator_menu_item_new();
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+	
+	/* Guest -> start */
+	menuitem = gtk_menu_item_new_with_mnemonic("_Start");
+	g_signal_connect(G_OBJECT(menuitem), "activate",
+					 G_CALLBACK(start_guest), NULL);
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+	
+	/* Guest -> startall */
+	menuitem = gtk_menu_item_new_with_mnemonic("Start _all");
+	g_signal_connect(G_OBJECT(menuitem), "activate",
+					 G_CALLBACK(start_all_guests), NULL);
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+	
+	/* Guest -> stop */
+	menuitem = gtk_image_menu_item_new_from_stock(GTK_STOCK_STOP, NULL);
+	g_signal_connect(G_OBJECT(menuitem), "activate",
+					 G_CALLBACK(stop_guest), NULL);
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+	
+	menuitem = gtk_separator_menu_item_new();
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+	
+	/* Guest -> connect */
+	menuitem = gtk_image_menu_item_new_from_stock(GTK_STOCK_CONNECT, NULL);
+	g_signal_connect(G_OBJECT(menuitem), "activate",
+					 G_CALLBACK(connect_guest), NULL);
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+	
+	/* Guest -> disconnect */
+	menuitem = gtk_image_menu_item_new_from_stock(GTK_STOCK_DISCONNECT, NULL);
+	g_signal_connect(G_OBJECT(menuitem), "activate",
+					 G_CALLBACK(disconnect_guest), NULL);
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+
+	/* Switch menu */
+	menu = gtk_menu_new();
+  	switchMenu = gtk_menu_item_new_with_mnemonic("_Switch");
+	gtk_menu_bar_append(GTK_MENU_BAR(menubar), switchMenu);
+	gtk_widget_show(switchMenu);
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(switchMenu), menu);
+	
+	/* Switch -> new */
+	menuitem = gtk_image_menu_item_new_from_stock(GTK_STOCK_NEW, NULL);
+	g_signal_connect(G_OBJECT(menuitem), "activate",
+					 G_CALLBACK(create_switch), NULL);
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+	
+	/* Switch -> delete */
+	menuitem = gtk_image_menu_item_new_from_stock(GTK_STOCK_DELETE, NULL);
+	g_signal_connect(G_OBJECT(menuitem), "activate",
+					 G_CALLBACK(delete_switch), NULL);
+	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_show(menuitem);
+	
+  	/* show widgets */
+	gtk_widget_show(menubar);
+	gtk_widget_show(notebook);
+	gtk_widget_show(vbox);
+	gtk_widget_show(window);
+	
+	/* fill notebook with guests */
+	enumerator = dumm->create_guest_enumerator(dumm);
+	while (enumerator->enumerate(enumerator, (void**)&guest))
 	{
-		char *line = get_line("# ");
-		
-		if (streq(line, "quit"))
-		{
-			free(line);
-			break;
-		}
-		else if (streq(line, "guest"))
-		{
-			guest_list_menu();
-		}
-		else if (streq(line, "bridge"))
-		{
-			bridge_list_menu();
-		}
-		else if (streq(line, "template"))
-		{
-			template_menu();
-		}
-		else if (streq(line, "test"))
-		{
-			test_menu();
-		}
-		else
-		{
-			printf("quit|guest|bridge|template|test\n");
-		}
-		free(line);
+		create_page(guest);
 	}
-	dumm->load_template(dumm, NULL);
+	enumerator->destroy(enumerator);
+	
+	gtk_main();
+	
 	dumm->destroy(dumm);
+	pages->destroy_function(pages, g_free);
 	
 	library_deinit();
-	clear_history();
 	return 0;
 }
 

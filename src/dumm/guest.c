@@ -63,8 +63,6 @@ struct private_guest_t {
 	int pid;
 	/** state of guest */
 	guest_state_t state;
-	/** log file for console 0 */
-	int bootlog;
 	/** FUSE cowfs instance */
 	cowfs_t *cowfs;
 	/** mconsole to control running UML */
@@ -94,7 +92,7 @@ static char* get_name(private_guest_t *this)
  */
 static iface_t* create_iface(private_guest_t *this, char *name)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	iface_t *iface;
 	
 	if (this->state != GUEST_RUNNING)
@@ -103,17 +101,17 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 		return NULL;
 	}
 	
-	iterator = this->ifaces->create_iterator(this->ifaces, TRUE);
-	while (iterator->iterate(iterator, (void**)&iface))
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, (void**)&iface))
 	{
 		if (streq(name, iface->get_guestif(iface)))
 		{
 			DBG1("guest '%s' already has an interface '%s'", this->name, name);
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 			return NULL;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	iface = iface_create(this->name, name, this->mconsole);
 	if (iface)
@@ -124,11 +122,32 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 }
 
 /**
- * Implementation of guest_t.create_iface_iterator.
+ * Implementation of guest_t.destroy_iface.
  */
-static iterator_t* create_iface_iterator(private_guest_t *this)
+static void destroy_iface(private_guest_t *this, iface_t *iface)
 {
-	return this->ifaces->create_iterator(this->ifaces, TRUE);
+	enumerator_t *enumerator;
+	iface_t *current;
+	
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, (void**)&current))
+	{
+		if (current == iface)
+		{
+			this->ifaces->remove_at(this->ifaces, enumerator);
+			current->destroy(current);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * Implementation of guest_t.create_iface_enumerator.
+ */
+static enumerator_t* create_iface_enumerator(private_guest_t *this)
+{
+	return this->ifaces->create_enumerator(this->ifaces);
 }
 	
 /**
@@ -170,21 +189,9 @@ static char* write_arg(char **pos, size_t *left, char *format, ...)
 }
 
 /**
- * Implementation of get_t.close_console.
- */
-static char* get_console(private_guest_t *this, int console)
-{
-	if (this->state == GUEST_RUNNING)
-	{
-		return this->mconsole->get_console_pts(this->mconsole, console);
-	}
-	return NULL;
-}
-
-/**
  * Implementation of guest_t.stop.
  */
-static void stop(private_guest_t *this)
+static void stop(private_guest_t *this, idle_function_t idle)
 {
 	if (this->state != GUEST_STOPPED)
 	{
@@ -192,22 +199,34 @@ static void stop(private_guest_t *this)
 		this->ifaces->destroy_offset(this->ifaces, offsetof(iface_t, destroy));
 		this->ifaces = linked_list_create();
 		kill(this->pid, SIGINT);
-		waitpid(this->pid, NULL, 0);
-		this->state = GUEST_STOPPED;
+		while (this->state != GUEST_STOPPED)
+		{
+			if (idle)
+			{
+				idle();
+			}
+			else
+			{
+				usleep(50000);
+			}
+		}
 	}
 }
 
 /**
  * Implementation of guest_t.start.
  */
-static bool start(private_guest_t *this)
+static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
+				  idle_function_t idle)
 {
 	char buf[2048];
 	char *notify;
 	char *pos = buf;
-	char *args[16];
+	char *args[32];
 	int i = 0;
 	size_t left = sizeof(buf);
+	
+	memset(args, 0, sizeof(args));
 	
 	if (this->state != GUEST_STOPPED)
 	{
@@ -226,32 +245,20 @@ static bool start(private_guest_t *this)
 	args[i++] = write_arg(&pos, &left, "umid=%s", this->name);
 	args[i++] = write_arg(&pos, &left, "mem=%dM", this->mem);
 	args[i++] = write_arg(&pos, &left, "mconsole=notify:%s", notify);
-	args[i++] = write_arg(&pos, &left, "con=pts");
-	args[i++] = write_arg(&pos, &left, "con0=none,fd:%d", this->bootlog);
-	args[i++] = NULL;
+	args[i++] = write_arg(&pos, &left, "con=null");
 	  
-	this->pid = fork();
-	switch (this->pid)
+	this->pid = invoke(data, &this->public, args, i);
+	if (!this->pid)
 	{
-		case 0: /* child,  */
-			dup2(open("/dev/null", 0), 0);
-			dup2(this->bootlog, 1);
-			dup2(this->bootlog, 2);
-			execvp(args[0], args);
-			DBG1("starting UML kernel '%s' failed: %m", args[0]);
-			exit(1);
-		case -1:
-			this->state = GUEST_STOPPED;
-			return FALSE;
-		default:
-			break;
+		this->state = GUEST_STOPPED;
+		return FALSE;
 	}
 	/* open mconsole */
-	this->mconsole = mconsole_create(notify);
+	this->mconsole = mconsole_create(notify, idle);
 	if (this->mconsole == NULL)
 	{
 		DBG1("opening mconsole at '%s' failed, stopping guest", buf);
-		stop(this);
+		stop(this, NULL);
 		return FALSE;
 	}
 	
@@ -266,6 +273,7 @@ static bool load_template(private_guest_t *this, char *path)
 {
 	char dir[PATH_MAX];
 	size_t len;
+	iface_t *iface;
 	
 	if (path == NULL)
 	{
@@ -285,7 +293,15 @@ static bool load_template(private_guest_t *this, char *path)
 			return FALSE;
 		}
 	}
-	return this->cowfs->set_overlay(this->cowfs, dir);
+	if (!this->cowfs->set_overlay(this->cowfs, dir))
+	{
+		return FALSE;
+	}
+	while (this->ifaces->remove_last(this->ifaces, (void**)&iface) == SUCCESS)
+	{
+		iface->destroy(iface);
+	}
+	return TRUE;
 }
 
 /**
@@ -293,10 +309,6 @@ static bool load_template(private_guest_t *this, char *path)
  */
 static void sigchild(private_guest_t *this)
 {
-	if (this->state != GUEST_STOPPING)
-	{	/* collect zombie if uml crashed */
-		waitpid(this->pid, NULL, WNOHANG);
-	}
 	DESTROY_IF(this->mconsole);
 	this->mconsole = NULL;
 	this->state = GUEST_STOPPED;
@@ -338,22 +350,6 @@ static bool mount_unionfs(private_guest_t *this)
 		}
 	}
 	return FALSE;
-}
-
-/**
- * open logfile for boot messages
- */
-static int open_bootlog(private_guest_t *this)
-{
-	int fd;
-	
-	fd = openat(this->dir, LOG_FILE, O_WRONLY | O_CREAT, PERM);
-	if (fd == -1)
-	{
-		DBG1("opening bootlog failed, using stdout");
-		return 1;
-	}
-	return fd;
 }
 
 /**
@@ -402,12 +398,8 @@ bool savemem(private_guest_t *this, int mem)
  */
 static void destroy(private_guest_t *this)
 {
-	stop(this);
+	stop(this, NULL);
 	umount_unionfs(this);
-	if (this->bootlog > 1)
-	{
-		close(this->bootlog);
-	}
 	if (this->dir > 0)
 	{
 		close(this->dir);
@@ -430,10 +422,10 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->public.get_pid = (pid_t(*)(guest_t*))get_pid;
 	this->public.get_state = (guest_state_t(*)(guest_t*))get_state;
 	this->public.create_iface = (iface_t*(*)(guest_t*,char*))create_iface;
-	this->public.create_iface_iterator = (iterator_t*(*)(guest_t*))create_iface_iterator;
+	this->public.destroy_iface = (void(*)(guest_t*,iface_t*))destroy_iface;
+	this->public.create_iface_enumerator = (enumerator_t*(*)(guest_t*))create_iface_enumerator;
 	this->public.start = (void*)start;
 	this->public.stop = (void*)stop;
-	this->public.get_console = (char*(*)(guest_t*,int))get_console;
 	this->public.load_template = (bool(*)(guest_t*, char *path))load_template;
 	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
@@ -464,7 +456,6 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->mconsole = NULL;
 	this->ifaces = linked_list_create();
 	this->mem = 0;
-	this->bootlog = open_bootlog(this);
 	this->name = strdup(name);
 	this->cowfs = NULL;
 	

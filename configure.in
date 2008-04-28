@@ -20,6 +20,7 @@ AC_INIT(strongSwan,4.2.2)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_C_BIGENDIAN
 AC_SUBST(confdir, '${sysconfdir}')
+PKG_PROG_PKG_CONFIG
 
 dnl =================================
 dnl  check --enable-xxx & --with-xxx
@@ -581,9 +582,15 @@ if test x$curl = xtrue; then
 fi
 
 if test x$xml = xtrue; then
-	PKG_CHECK_MODULES(xml, [libxml-2.0],, AC_MSG_ERROR([No libxml2 package information found]))
+	PKG_CHECK_MODULES(xml, [libxml-2.0])
 	AC_SUBST(xml_CFLAGS)
 	AC_SUBST(xml_LIBS)
+fi
+
+if test x$dumm = xtrue; then
+	PKG_CHECK_MODULES(gtk, [gtk+-2.0 vte])
+	AC_SUBST(gtk_CFLAGS)
+	AC_SUBST(gtk_LIBS)
 fi
 
 if test x$fast = xtrue; then

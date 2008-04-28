@@ -19,7 +19,7 @@
 #include <signal.h>
 
 #include <library.h>
-#include <utils/linked_list.h>
+#include <utils/enumerator.h>
 
 #include "guest.h"
 #include "bridge.h"
@@ -30,8 +30,6 @@ typedef struct dumm_t dumm_t;
  * @brief dumm - Dynamic Uml Mesh Modeler
  *
  * Controls a group of UML guests and their networks.
- * Dumm catches SIGCHD and SIGHUP to trace UML child processes and the FUSE
- * filesystem. Do not overwrite these signal handlers!
  */
 struct dumm_t {
 
@@ -48,11 +46,18 @@ struct dumm_t {
 							  char *master, int mem);
 	
 	/**
-	 * @brief Create an iterator over all guests.
+	 * @brief Create an enumerator over all guests.
 	 *
-	 * @return			iteraotor over guest_t's
+	 * @return			enumerator over guest_t's
 	 */
-	iterator_t* (*create_guest_iterator) (dumm_t *this);
+	enumerator_t* (*create_guest_enumerator) (dumm_t *this);
+	
+	/**
+	 * @brief Delete a guest from disk.
+	 *
+	 * @param guest		guest to destroy
+	 */
+	void (*delete_guest) (dumm_t *this, guest_t *guest);
 	
 	/**
 	 * @brief Create a new bridge.
@@ -63,11 +68,18 @@ struct dumm_t {
 	bridge_t* (*create_bridge)(dumm_t *this, char *name);
 	
 	/**
-	 * @brief Create an iterator over all bridges.
+	 * @brief Create an enumerator over all bridges.
 	 *
-	 * @return			iterator over bridge_t's
+	 * @return			enumerator over bridge_t's
 	 */
-	iterator_t* (*create_bridge_iterator)(dumm_t *this);
+	enumerator_t* (*create_bridge_enumerator)(dumm_t *this);
+	
+	/**
+	 * @brief Delete a bridge.
+	 *
+	 * @param bridge	bridge to destroy
+	 */
+	void (*delete_bridge) (dumm_t *this, bridge_t *bridge);
 	
 	/**
 	 * @brief Loads a template, create a new one if it does not exist.
@@ -86,7 +98,7 @@ struct dumm_t {
 /**
  * @brief Create a group of UML hosts and networks.
  *
- * @param dir			directory to create guests/load from
+ * @param dir			directory to create guests/load from, NULL for cwd
  * @return				created UML group, or NULL if failed.
  */
 dumm_t *dumm_create(char *dir);

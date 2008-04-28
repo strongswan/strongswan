@@ -17,7 +17,7 @@
 #define BRIDGE_H
 
 #include <library.h>
-#include <utils/iterator.h>
+#include <utils/enumerator.h>
 
 typedef struct bridge_t bridge_t;
 
@@ -31,32 +31,32 @@ struct bridge_t {
 	/**
 	 * @brief Get the name of the bridge.
 	 *
-	 * @return				name of the bridge
+	 * @return			name of the bridge
 	 */
 	char* (*get_name)(bridge_t *this);
 	
 	/**
 	 * @brief Add an interface to a bridge.
 	 *
-	 * @param iface			interface to add
-	 * @return				TRUE if interface added
+	 * @param iface		interface to add
+	 * @return			TRUE if interface added
 	 */
 	bool (*connect_iface)(bridge_t *this, iface_t *iface);
 	
 	/**
 	 * @brief Remove an interface from a bridge.
 	 *
-	 * @param iface			interface to remove
-	 * @return				TRUE if interface removed
+	 * @param iface		interface to remove
+	 * @return			TRUE if interface removed
 	 */
 	bool (*disconnect_iface)(bridge_t *this, iface_t *iface);
 	
 	/**
-	 * @brief Create an iterator over all interfaces.
+	 * @brief Create an enumerator over all interfaces.
 	 *
-	 * @return 				iterator over iface_t's
+	 * @return 			enumerator over iface_t's
 	 */
-	iterator_t* (*create_iface_iterator)(bridge_t *this);	
+	enumerator_t* (*create_iface_enumerator)(bridge_t *this);	
 	
 	/**
 	 * @brief Destroy a bridge

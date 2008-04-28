@@ -44,6 +44,8 @@ struct private_mconsole_t {
 	int notify;
 	/** address of uml socket */
 	struct sockaddr_un uml;
+	/** idle function */
+	void (*idle)(void);
 };
 
 /**
@@ -91,7 +93,7 @@ static int request(private_mconsole_t *this, char *command,
 {
 	mconsole_request request;
 	mconsole_reply reply;
-	int len, total = 0;
+	int len, total = 0, flags = 0;
 	
 	memset(&request, 0, sizeof(request));
 	request.magic = MCONSOLE_MAGIC;
@@ -101,19 +103,41 @@ static int request(private_mconsole_t *this, char *command,
 	*buf = '\0';
 	(*size)--;
 
-	if (sendto(this->console, &request, sizeof(request), 0,
-		(struct sockaddr*)&this->uml, sizeof(this->uml)) < 0)
+	if (this->idle)
+	{
+		flags = MSG_DONTWAIT;
+	}
+	do
+	{
+		if (this->idle)
+		{
+			this->idle();
+		}
+		len = sendto(this->console, &request, sizeof(request), flags,
+					 (struct sockaddr*)&this->uml, sizeof(this->uml));
+	}
+	while (len < 0 && (errno == EINTR || errno == EAGAIN));
+	
+	if (len < 0)
 	{
 		snprintf(buf, *size, "sending mconsole command to UML failed: %m");
 		return -1;
 	}
 	do 
 	{
-		len = recv(this->console, &reply, sizeof(reply), 0);
+		len = recv(this->console, &reply, sizeof(reply), flags);
+		if (len < 0 && (errno == EINTR || errno == EAGAIN))
+		{
+			if (this->idle)
+			{
+				this->idle();
+			}
+			continue;
+		}
 		if (len < 0)
 		{
 			snprintf(buf, *size, "receiving from mconsole failed: %m");
-	    	return -1;
+			return -1;
 		}
 		if (len > 0)
 		{
@@ -169,35 +193,6 @@ static bool del_iface(private_mconsole_t *this, char *guest)
 	}
 	return TRUE;
 }
-	
-/**
- * Implementation of mconsole_t.get_console_pts.
- */
-static char* get_console_pts(private_mconsole_t *this, int con)
-{
-	char buf[128];
-	char *pos;
-	int len;
-	
-	len = snprintf(buf, sizeof(buf), "config con%d", con);
-	if (len < 0 || len >= sizeof(buf))
-	{
-		return NULL;
-	}
-	len = sizeof(buf);
-	if (request(this, buf, buf, &len) != 0)
-	{
-		DBG1("getting console pts failed: %.*s", len, buf);
-		return NULL;
-	}
-	pos = memchr(buf, ':', len);
-	if (pos == NULL)
-	{
-		return NULL;
-	}
-	pos++;
-	return strndup(pos, len - (pos - buf));
-}
 
 /**
  * Poll until guest is ready
@@ -220,7 +215,14 @@ static bool wait_bootup(private_mconsole_t *this)
 		{
 			return TRUE;
 		}
-		usleep(50000);
+		if (this->idle)
+		{
+			this->idle();
+		}
+		else
+		{
+			usleep(50000);
+		}
 	}
 }
 
@@ -241,7 +243,7 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 {
 	struct sockaddr_un addr;
 	mconsole_notify notify;
-	int len;
+	int len, flags = 0;
 
 	this->notify = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (this->notify < 0)
@@ -258,10 +260,20 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 		close(this->notify);
 		return FALSE;
 	}
+	if (this->idle)
+	{
+		flags = MSG_DONTWAIT;
+	}
 	do
 	{
-		len = recvfrom(this->notify, &notify, sizeof(notify), 0, NULL, 0);
-	} while (len < 0 && errno == EINTR);
+		if (this->idle)
+		{
+			this->idle();
+		}
+		len = recvfrom(this->notify, &notify, sizeof(notify), flags, NULL, 0);
+	}
+	while (len < 0 && (errno == EINTR || errno == EAGAIN));
+	
 	if (len < 0 || len >= sizeof(notify))
 	{
 		DBG1("reading from mconsole notify socket failed: %m");
@@ -314,14 +326,15 @@ static bool setup_console(private_mconsole_t *this)
 /**
  * create the mconsole instance
  */
-mconsole_t *mconsole_create(char *notify)
+mconsole_t *mconsole_create(char *notify, void(*idle)(void))
 {
 	private_mconsole_t *this = malloc_thing(private_mconsole_t);
 	
 	this->public.add_iface = (bool(*)(mconsole_t*, char *guest, char *host))add_iface;
 	this->public.del_iface = (bool(*)(mconsole_t*, char *guest))del_iface;
-	this->public.get_console_pts = (char*(*)(mconsole_t*, int con))get_console_pts;
 	this->public.destroy = (void*)destroy;
+	
+	this->idle = idle;
 	
 	if (!wait_for_notify(this, notify))
 	{

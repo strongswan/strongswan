@@ -44,6 +44,42 @@ struct private_iface_t {
 };
 
 /**
+ * bring an interface up or down
+ */
+bool iface_control(char *name, bool up)
+{
+	int s;
+	bool good = FALSE;
+	struct ifreq ifr;
+	
+	memset(&ifr, 0, sizeof(struct ifreq));
+	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	
+	s = socket(AF_INET, SOCK_DGRAM, 0);
+	if (!s)
+	{
+		return FALSE;
+	}
+	if (ioctl(s, SIOCGIFFLAGS, &ifr) == 0)
+	{
+		if (up)
+		{
+			ifr.ifr_flags |= IFF_UP;
+		}
+		else
+		{
+			ifr.ifr_flags &= ~IFF_UP;
+		}
+		if (ioctl(s, SIOCSIFFLAGS, &ifr) == 0)
+		{
+			good = TRUE;
+		}
+	}
+	close(s);
+	return good;
+}
+
+/**
  * Implementation of iface_t.get_guestif.
  */
 static char* get_guestif(private_iface_t *this)
@@ -74,7 +110,11 @@ static bool destroy_tap(private_iface_t *this)
 {
 	struct ifreq ifr;
 	int tap;
-
+	
+	if (!iface_control(this->hostif, FALSE))
+	{
+		DBG1("bringing iface down failed: %m");
+	}
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
 	strncpy(ifr.ifr_name, this->hostif, sizeof(ifr.ifr_name) - 1);
@@ -164,6 +204,10 @@ iface_t *iface_create(char *guest, char *guestif, mconsole_t *mconsole)
 		free(this->guestif);
 		free(this);
 		return NULL;
+	}
+	if (!iface_control(this->hostif, TRUE))
+	{
+		DBG1("bringing iface '%s' up failed: %m", this->hostif);
 	}
 	if (!this->mconsole->add_iface(this->mconsole, this->guestif, this->hostif))
 	{

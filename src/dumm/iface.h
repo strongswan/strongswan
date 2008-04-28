@@ -17,7 +17,7 @@
 #define IFACE_H
 
 #include <library.h>
-#include <utils/iterator.h>
+#include <utils/enumerator.h>
 
 #define TAP_DEVICE "/dev/net/tun"
 
@@ -53,10 +53,8 @@ struct iface_t {
 	void (*set_bridge)(iface_t *this, bridge_t *bridge);
 	
 	/*
-	bool (*up) (iface_t *this);
-	bool (*down) (iface_t *this);
 	bool (*add_addr) (iface_t *this, host_t *addr);
-	iterator_t* (*create_addr_iterator) (iface_t *this);
+	enumerator_t* (*create_addr_enumerator) (iface_t *this);
 	*/
 	
 	/**
