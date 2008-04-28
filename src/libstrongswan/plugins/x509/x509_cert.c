@@ -267,25 +267,25 @@ end:
  * ASN.1 definition of generalName 
  */
 static const asn1Object_t generalNameObjects[] = {
-	{ 0,   "otherName",		ASN1_CONTEXT_C_0,  ASN1_OPT|ASN1_BODY	}, /*  0 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  1 */
-	{ 0,   "rfc822Name",	ASN1_CONTEXT_S_1,  ASN1_OPT|ASN1_BODY	}, /*  2 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END 			}, /*  3 */
-	{ 0,   "dnsName",		ASN1_CONTEXT_S_2,  ASN1_OPT|ASN1_BODY	}, /*  4 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  5 */
-	{ 0,   "x400Address",	ASN1_CONTEXT_S_3,  ASN1_OPT|ASN1_BODY	}, /*  6 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  7 */
-	{ 0,   "directoryName",	ASN1_CONTEXT_C_4,  ASN1_OPT|ASN1_BODY	}, /*  8 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  9 */
-	{ 0,   "ediPartyName",	ASN1_CONTEXT_C_5,  ASN1_OPT|ASN1_BODY	}, /* 10 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 11 */
-	{ 0,   "URI",			ASN1_CONTEXT_S_6,  ASN1_OPT|ASN1_BODY	}, /* 12 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 13 */
-	{ 0,   "ipAddress",		ASN1_CONTEXT_S_7,  ASN1_OPT|ASN1_BODY	}, /* 14 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 15 */
-	{ 0,   "registeredID",	ASN1_CONTEXT_S_8,  ASN1_OPT|ASN1_BODY	}, /* 16 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 17 */
-	{ 0,   "exit",			ASN1_EOC,          ASN1_EXIT			}
+	{ 0, "otherName",		ASN1_CONTEXT_C_0,  ASN1_OPT|ASN1_BODY	}, /*  0 */
+	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /*  1 */
+	{ 0, "rfc822Name",		ASN1_CONTEXT_S_1,  ASN1_OPT|ASN1_BODY	}, /*  2 */
+	{ 0, "end choice",		ASN1_EOC,          ASN1_END 			}, /*  3 */
+	{ 0, "dnsName",			ASN1_CONTEXT_S_2,  ASN1_OPT|ASN1_BODY	}, /*  4 */
+	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /*  5 */
+	{ 0, "x400Address",		ASN1_CONTEXT_S_3,  ASN1_OPT|ASN1_BODY	}, /*  6 */
+	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /*  7 */
+	{ 0, "directoryName",	ASN1_CONTEXT_C_4,  ASN1_OPT|ASN1_BODY	}, /*  8 */
+	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /*  9 */
+	{ 0, "ediPartyName",	ASN1_CONTEXT_C_5,  ASN1_OPT|ASN1_BODY	}, /* 10 */
+	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /* 11 */
+	{ 0, "URI",				ASN1_CONTEXT_S_6,  ASN1_OPT|ASN1_BODY	}, /* 12 */
+	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /* 13 */
+	{ 0, "ipAddress",		ASN1_CONTEXT_S_7,  ASN1_OPT|ASN1_BODY	}, /* 14 */
+	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /* 15 */
+	{ 0, "registeredID",	ASN1_CONTEXT_S_8,  ASN1_OPT|ASN1_BODY	}, /* 16 */
+	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /* 17 */
+	{ 0, "exit",			ASN1_EOC,          ASN1_EXIT			}
 };
 #define GN_OBJ_OTHER_NAME	 	 0
 #define GN_OBJ_RFC822_NAME	 	 2
