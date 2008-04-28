@@ -4,8 +4,8 @@
   <head>
     <title><?cs var:title ?> - strongSwan Manager</title>
     <link rel="stylesheet" type="text/css" href="<?cs var:base ?>/static/style.css" />
-    <script type="text/javascript" src="<?cs var:base ?>/static/jquery.js" />
-    <script type="text/javascript" src="<?cs var:base ?>/static/script.js" />
+    <script type="text/javascript" src="<?cs var:base ?>/static/jquery.js"></script>
+    <script type="text/javascript" src="<?cs var:base ?>/static/script.js"></script>
   </head>
   <body>
   	<div class="fleft">
