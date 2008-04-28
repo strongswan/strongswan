@@ -46,11 +46,6 @@ struct private_asn1_parser_t {
 	asn1Object_t const *objects;
 
 	/**
-	 * Total number of syntax definition lines
-	 */
-	int roof;
-
-	/**
 	 * Current syntax definition line
 	 */
 	int line;
@@ -98,12 +93,14 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 	
 	*object = chunk_empty;
 
+	/* Advance to the next object syntax definition line */
+	obj = this->objects[++(this->line)];
+
 	/* Terminate if the end of the object syntax definition has been reached */
-	if (++(this->line) >= this->roof)
+	if (obj.flags & ASN1_EXIT)
 	{
 		return FALSE;
 	}
-	obj = this->objects[this->line];
 		
 	if (obj.flags & ASN1_END)  /* end of loop or option found */
 	{
@@ -284,7 +281,7 @@ static void destroy(private_asn1_parser_t *this)
 /**
  * Defined in header.
  */
-asn1_parser_t* asn1_parser_create(asn1Object_t const *objects, int roof, chunk_t blob)
+asn1_parser_t* asn1_parser_create(asn1Object_t const *objects, chunk_t blob)
 {
 	private_asn1_parser_t *this = malloc_thing(private_asn1_parser_t);
 
@@ -292,7 +289,6 @@ asn1_parser_t* asn1_parser_create(asn1Object_t const *objects, int roof, chunk_t
 	this->objects = objects;
 	this->blobs[0] = blob;
 	this->line = -1;
-	this->roof = roof;
 	this->success = TRUE;
 
 	this->public.iterate = (bool (*)(asn1_parser_t*, int*, chunk_t*))iterate;

@@ -250,7 +250,8 @@ static const asn1Object_t signedDataObjects[] = {
 	{ 3,       "encryptedDigest",			ASN1_OCTET_STRING,	ASN1_BODY }, /* 22 */
 	{ 3,       "unauthenticatedAttributes", ASN1_CONTEXT_C_1,	ASN1_OPT  }, /* 23 */
 	{ 3,       "end opt",					ASN1_EOC,			ASN1_END  }, /* 24 */
-	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }  /* 25 */
+	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }, /* 25 */
+	{ 0, "exit",							ASN1_EOC,			ASN1_EXIT }
 };
 #define PKCS7_DIGEST_ALG	 		 3
 #define PKCS7_SIGNED_CONTENT_INFO	 5
@@ -262,7 +263,6 @@ static const asn1Object_t signedDataObjects[] = {
 #define PKCS7_AUTH_ATTRIBUTES		19
 #define PKCS7_DIGEST_ENC_ALGORITHM	21
 #define PKCS7_ENCRYPTED_DIGEST		22
-#define PKCS7_SIGNED_ROOF			26
 
 /**
  * Implements pkcs7_t.parse_signedData.
@@ -284,8 +284,7 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 		return FALSE;
 	}
 
-	parser = asn1_parser_create(signedDataObjects, PKCS7_SIGNED_ROOF,
-								this->content);
+	parser = asn1_parser_create(signedDataObjects, this->content);
 	parser->set_top_level(parser, this->level);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -462,7 +461,8 @@ static const asn1Object_t envelopedDataObjects[] = {
 	{ 1,   "encryptedContentInfo",			ASN1_SEQUENCE,		ASN1_OBJ  }, /* 11 */
 	{ 2,     "contentType",					ASN1_OID,			ASN1_BODY }, /* 12 */
 	{ 2,     "contentEncryptionAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /* 13 */
-	{ 2,     "encryptedContent",			ASN1_CONTEXT_S_0, 	ASN1_BODY }  /* 14 */
+	{ 2,     "encryptedContent",			ASN1_CONTEXT_S_0, 	ASN1_BODY }, /* 14 */
+	{ 0, "exit",							ASN1_EOC,		 	ASN1_EXIT }
 };
 #define PKCS7_ENVELOPED_VERSION			 1
 #define PKCS7_RECIPIENT_INFO_VERSION	 4
@@ -473,7 +473,6 @@ static const asn1Object_t envelopedDataObjects[] = {
 #define PKCS7_CONTENT_TYPE				12
 #define PKCS7_CONTENT_ENC_ALGORITHM		13
 #define PKCS7_ENCRYPTED_CONTENT			14
-#define PKCS7_ENVELOPED_ROOF			15
 
 /**
  * Parse PKCS#7 envelopedData content
@@ -497,8 +496,7 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 		return FALSE;
 	}
 
-	parser = asn1_parser_create(envelopedDataObjects, PKCS7_ENVELOPED_ROOF,
-								this->content);
+	parser = asn1_parser_create(envelopedDataObjects, this->content);
 	parser->set_top_level(parser, this->level);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -959,15 +957,15 @@ static void destroy(private_pkcs7_t *this)
  * ASN.1 definition of the PKCS#7 ContentInfo type
  */
 static const asn1Object_t contentInfoObjects[] = {
-	{ 0, "contentInfo",		ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
-	{ 1,   "contentType",	ASN1_OID,			ASN1_BODY }, /*  1 */
+	{ 0, "contentInfo",		ASN1_SEQUENCE,		ASN1_NONE }, /* 0 */
+	{ 1,   "contentType",	ASN1_OID,			ASN1_BODY }, /* 1 */
 	{ 1,   "content",		ASN1_CONTEXT_C_0,	ASN1_OPT |
-												ASN1_BODY }, /*  2 */
-	{ 1,   "end opt",		ASN1_EOC,			ASN1_END  }  /*  3 */
+												ASN1_BODY }, /* 2 */
+	{ 1,   "end opt",		ASN1_EOC,			ASN1_END  }, /* 3 */
+	{ 0, "exit",			ASN1_EOC,			ASN1_EXIT }
 };
 #define PKCS7_INFO_TYPE		1
 #define PKCS7_INFO_CONTENT	2
-#define PKCS7_INFO_ROOF		4
 
 /**
  * Parse PKCS#7 contentInfo object
@@ -979,7 +977,7 @@ static bool parse_contentInfo(chunk_t blob, u_int level0, private_pkcs7_t *cInfo
 	int objectID;
 	bool success = FALSE;
 
-	parser = asn1_parser_create(contentInfoObjects, PKCS7_INFO_TYPE, blob);
+	parser = asn1_parser_create(contentInfoObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))

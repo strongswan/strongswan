@@ -282,7 +282,8 @@ static const asn1Object_t singleResponseObjects[] = {
 																ASN1_DEF  }, /* 24 */
 	{ 4,         "extnValue",			ASN1_OCTET_STRING,		ASN1_BODY }, /* 25 */
 	{ 2,     "end loop",				ASN1_EOC,				ASN1_END  }, /* 26 */
-	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }  /* 27 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 27 */
+	{ 0, "exit",						ASN1_EOC,				ASN1_EXIT }
 };
 #define SINGLE_RESPONSE_ALGORITHM					 2
 #define SINGLE_RESPONSE_ISSUER_NAME_HASH			 3
@@ -298,7 +299,6 @@ static const asn1Object_t singleResponseObjects[] = {
 #define SINGLE_RESPONSE_EXT_ID						23
 #define SINGLE_RESPONSE_CRITICAL					24
 #define SINGLE_RESPONSE_EXT_VALUE					25
-#define SINGLE_RESPONSE_ROOF						28
 
 /**
  * Parse a single OCSP response
@@ -325,8 +325,7 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 	/* if nextUpdate is missing, we give it a short lifetime */
 	response->nextUpdate = this->producedAt + OCSP_DEFAULT_LIFETIME;
 
-	parser = asn1_parser_create(singleResponseObjects, SINGLE_RESPONSE_ROOF,
-								blob);
+	parser = asn1_parser_create(singleResponseObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -393,12 +392,12 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
  * ASN.1 definition of responses
  */
 static const asn1Object_t responsesObjects[] = {
-	{ 0, "responses",			ASN1_SEQUENCE,	ASN1_LOOP }, /*  0 */
-	{ 1,   "singleResponse",	ASN1_EOC,		ASN1_RAW  }, /*  1 */
-	{ 0, "end loop",			ASN1_EOC,		ASN1_END  }  /*  2 */
+	{ 0, "responses",			ASN1_SEQUENCE,	ASN1_LOOP }, /* 0 */
+	{ 1,   "singleResponse",	ASN1_EOC,		ASN1_RAW  }, /* 1 */
+	{ 0, "end loop",			ASN1_EOC,		ASN1_END  }, /* 2 */
+	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
 };
 #define RESPONSES_SINGLE_RESPONSE	1
-#define RESPONSES_ROOF				3
 
 /**
  * Parse all responses
@@ -411,7 +410,7 @@ static bool parse_responses(private_x509_ocsp_response_t *this,
 	int objectID;
 	bool success = FALSE;
 	
-	parser = asn1_parser_create(responsesObjects, RESPONSES_ROOF, blob);
+	parser = asn1_parser_create(responsesObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -468,7 +467,8 @@ static const asn1Object_t basicResponseObjects[] = {
 	{ 2,     "certs",						ASN1_SEQUENCE,			ASN1_LOOP }, /* 23 */
 	{ 3,       "certificate",				ASN1_SEQUENCE,			ASN1_RAW  }, /* 24 */
 	{ 2,     "end loop",					ASN1_EOC,				ASN1_END  }, /* 25 */
-	{ 1,   "end opt",						ASN1_EOC,				ASN1_END  }  /* 26 */
+	{ 1,   "end opt",						ASN1_EOC,				ASN1_END  }, /* 26 */
+	{ 0, "exit",							ASN1_EOC,				ASN1_EXIT }
 };
 #define BASIC_RESPONSE_TBS_DATA		 1
 #define BASIC_RESPONSE_VERSION		 3
@@ -482,7 +482,6 @@ static const asn1Object_t basicResponseObjects[] = {
 #define BASIC_RESPONSE_ALGORITHM	20
 #define BASIC_RESPONSE_SIGNATURE	21
 #define BASIC_RESPONSE_CERTIFICATE	24
-#define BASIC_RESPONSE_ROOF			27
 
 /**
  * Parse a basicOCSPResponse
@@ -500,7 +499,7 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 	bool success = FALSE;
 	bool critical;
 	
-	parser = asn1_parser_create(basicResponseObjects, BASIC_RESPONSE_ROOF, blob);
+	parser = asn1_parser_create(basicResponseObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -592,18 +591,18 @@ end:
  * ASN.1 definition of ocspResponse
  */
 static const asn1Object_t ocspResponseObjects[] = {
-	{ 0, "OCSPResponse",			ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
-	{ 1,   "responseStatus",		ASN1_ENUMERATED,	ASN1_BODY }, /*  1 */
-	{ 1,   "responseBytesContext",	ASN1_CONTEXT_C_0,	ASN1_OPT  }, /*  2 */
-	{ 2,     "responseBytes",		ASN1_SEQUENCE,		ASN1_NONE }, /*  3 */
-	{ 3,       "responseType",		ASN1_OID,			ASN1_BODY }, /*  4 */
-	{ 3,       "response",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  5 */
-	{ 1,   "end opt",				ASN1_EOC,			ASN1_END  }  /*  6 */
+	{ 0, "OCSPResponse",			ASN1_SEQUENCE,		ASN1_NONE }, /* 0 */
+	{ 1,   "responseStatus",		ASN1_ENUMERATED,	ASN1_BODY }, /* 1 */
+	{ 1,   "responseBytesContext",	ASN1_CONTEXT_C_0,	ASN1_OPT  }, /* 2 */
+	{ 2,     "responseBytes",		ASN1_SEQUENCE,		ASN1_NONE }, /* 3 */
+	{ 3,       "responseType",		ASN1_OID,			ASN1_BODY }, /* 4 */
+	{ 3,       "response",			ASN1_OCTET_STRING,	ASN1_BODY }, /* 5 */
+	{ 1,   "end opt",				ASN1_EOC,			ASN1_END  }, /* 6 */
+	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT }
 };
 #define OCSP_RESPONSE_STATUS	1
 #define OCSP_RESPONSE_TYPE		4
 #define OCSP_RESPONSE			5
-#define OCSP_RESPONSE_ROOF		7
 
 /**
  * Parse OCSPResponse object
@@ -617,8 +616,7 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 	bool success = FALSE;
 	ocsp_status_t status;
 
-	parser = asn1_parser_create(ocspResponseObjects, OCSP_RESPONSE_ROOF,
-								this->encoding);
+	parser = asn1_parser_create(ocspResponseObjects, this->encoding);
 
 	while (parser->iterate(parser, &objectID, &object))
 	{

@@ -117,11 +117,11 @@ static const asn1Object_t digestInfoObjects[] = {
 	{ 0, "digestInfo",			ASN1_SEQUENCE,		ASN1_OBJ  }, /*  0 */
 	{ 1,   "digestAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /*  1 */
 	{ 1,   "digest",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  2 */
+	{ 0, "exit",				ASN1_EOC,			ASN1_EXIT }
 };
 #define DIGEST_INFO					0
 #define DIGEST_INFO_ALGORITHM		1
 #define DIGEST_INFO_DIGEST			2
-#define DIGEST_INFO_ROOF			3
 
 /**
  * Verification of an EMPSA PKCS1 signature described in PKCS#1
@@ -194,7 +194,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 		int objectID;
 		hash_algorithm_t hash_algorithm = HASH_UNKNOWN;
 
-		parser = asn1_parser_create(digestInfoObjects, DIGEST_INFO_ROOF, em);
+		parser = asn1_parser_create(digestInfoObjects, em);
 
 		while (parser->iterate(parser, &objectID, &object))
 		{
@@ -453,14 +453,14 @@ gmp_rsa_public_key_t *gmp_rsa_public_key_create_from_n_e(mpz_t n, mpz_t e)
  * ASN.1 definition of RSApublicKey
  */
 static const asn1Object_t pubkeyObjects[] = {
-	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
-	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
-	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  2 */
+	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,	ASN1_OBJ  }, /*  0 */
+	{ 1,   "modulus",			ASN1_INTEGER,	ASN1_BODY }, /*  1 */
+	{ 1,   "publicExponent",	ASN1_INTEGER,	ASN1_BODY }, /*  2 */
+	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
 };
 #define PUB_KEY_RSA_PUBLIC_KEY		0
 #define PUB_KEY_MODULUS				1
 #define PUB_KEY_EXPONENT			2
-#define PUB_KEY_ROOF				3
 
 /**
  * Load a public key from an ASN1 encoded blob
@@ -477,7 +477,7 @@ static gmp_rsa_public_key_t *load(chunk_t blob)
 	mpz_init(this->n);
 	mpz_init(this->e);
 	
-	parser = asn1_parser_create(pubkeyObjects, PUB_KEY_ROOF, blob);
+	parser = asn1_parser_create(pubkeyObjects, blob);
 	
 	while (parser->iterate(parser, &objectID, &object))
 	{

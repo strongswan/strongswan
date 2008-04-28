@@ -228,13 +228,13 @@ static bool parse_directoryName(chunk_t blob, int level, bool implicit, identifi
  */
 static const asn1Object_t roleSyntaxObjects[] =
 {
-	{ 0, "roleSyntax",			ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
-	{ 1,   "roleAuthority",		ASN1_CONTEXT_C_0,	ASN1_OPT |
-													ASN1_OBJ  }, /*  1 */
-	{ 1,   "end opt",			ASN1_EOC,			ASN1_END  }, /*  2 */
-	{ 1,   "roleName",			ASN1_CONTEXT_C_1,	ASN1_OBJ  }  /*  3 */
+	{ 0, "roleSyntax",		ASN1_SEQUENCE,		ASN1_NONE }, /* 0 */
+	{ 1,   "roleAuthority",	ASN1_CONTEXT_C_0,	ASN1_OPT |
+												ASN1_OBJ  }, /* 1 */
+	{ 1,   "end opt",		ASN1_EOC,			ASN1_END  }, /* 2 */
+	{ 1,   "roleName",		ASN1_CONTEXT_C_1,	ASN1_OBJ  }, /* 3 */
+	{ 0, "exit",			ASN1_EOC,			ASN1_EXIT }
 };
-#define ROLE_ROOF		4
 
 /**
  * Parses roleSyntax
@@ -245,7 +245,7 @@ static void parse_roleSyntax(chunk_t blob, int level0)
 	chunk_t object;
 	int objectID;
 
-	parser = asn1_parser_create(roleSyntaxObjects, ROLE_ROOF, blob);
+	parser = asn1_parser_create(roleSyntaxObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -326,7 +326,8 @@ static const asn1Object_t acObjects[] =
 	{ 4,         "extnValue",				ASN1_OCTET_STRING,	  ASN1_BODY }, /* 51 */
 	{ 2,     "end loop",					ASN1_EOC,			  ASN1_END  }, /* 52 */
 	{ 1,   "signatureAlgorithm",			ASN1_EOC,			  ASN1_RAW  }, /* 53 */
-	{ 1,   "signatureValue",				ASN1_BIT_STRING,	  ASN1_BODY }  /* 54 */
+	{ 1,   "signatureValue",				ASN1_BIT_STRING,	  ASN1_BODY }, /* 54 */
+	{ 0, "exit",							ASN1_EOC,			  ASN1_EXIT }
 };
 #define AC_OBJ_CERTIFICATE_INFO		 1
 #define AC_OBJ_VERSION				 2
@@ -346,7 +347,6 @@ static const asn1Object_t acObjects[] =
 #define AC_OBJ_EXTN_VALUE			51
 #define AC_OBJ_ALGORITHM			53
 #define AC_OBJ_SIGNATURE			54
-#define AC_OBJ_ROOF					55
 
 /**
  * Parses an X.509 attribute certificate
@@ -362,7 +362,7 @@ static bool parse_certificate(private_x509_ac_t *this)
 	bool success = FALSE;
 	bool critical;
 
-	parser = asn1_parser_create(acObjects, AC_OBJ_ROOF, this->encoding);
+	parser = asn1_parser_create(acObjects, this->encoding);
 
 	while (parser->iterate(parser, &objectID, &object))
 	{

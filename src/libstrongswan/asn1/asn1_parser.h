@@ -40,6 +40,7 @@
 #define ASN1_OBJ	0x10
 #define ASN1_BODY	0x20
 #define ASN1_RAW	0x40
+#define ASN1_EXIT	0x80
 
 typedef struct asn1Object_t asn1Object_t;
 
@@ -110,10 +111,9 @@ struct asn1_parser_t {
  * Create an ASN.1 parser
  *
  * @param objects	syntax definition of the ASN.1 object to be parsed
- * @param roof		number of syntax definition lines
  * @param blob		ASN.1 coded binary blob
  * @return			ASN.1 context
  */
-asn1_parser_t* asn1_parser_create(asn1Object_t const *objects, int roof, chunk_t blob);
+asn1_parser_t* asn1_parser_create(asn1Object_t const *objects, chunk_t blob);
 
 #endif /* ASN1_PARSER_H_ @}*/

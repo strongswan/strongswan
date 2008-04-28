@@ -296,12 +296,12 @@ static const asn1Object_t ietfAttrSyntaxObjects[] =
 	{ 2,     "string",			ASN1_UTF8STRING,	ASN1_OPT |
 													ASN1_BODY }, /*  8 */
 	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  9 */
-	{ 1,   "end loop",			ASN1_EOC,			ASN1_END  }  /* 10 */
+	{ 1,   "end loop",			ASN1_EOC,			ASN1_END  }, /* 10 */
+	{ 0, "exit",				ASN1_EOC,			ASN1_EXIT }
 };
 #define IETF_ATTR_OCTETS	 4
 #define IETF_ATTR_OID		 6
 #define IETF_ATTR_STRING	 8
-#define IETF_ATTR_ROOF		11
 
 /*
  * Described in header.
@@ -312,7 +312,7 @@ void ietfAttr_list_create_from_chunk(chunk_t chunk, linked_list_t *list, int lev
 	chunk_t object;
 	int objectID;
 
-	parser = asn1_parser_create(ietfAttrSyntaxObjects, IETF_ATTR_ROOF, chunk);
+	parser = asn1_parser_create(ietfAttrSyntaxObjects, chunk);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))

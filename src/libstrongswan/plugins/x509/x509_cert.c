@@ -179,10 +179,10 @@ static const asn1Object_t basicConstraintsObjects[] = {
 	{ 0, "basicConstraints",	ASN1_SEQUENCE,	ASN1_NONE			}, /*  0 */
 	{ 1,   "CA",				ASN1_BOOLEAN,	ASN1_DEF|ASN1_BODY	}, /*  1 */
 	{ 1,   "pathLenConstraint",	ASN1_INTEGER,	ASN1_OPT|ASN1_BODY	}, /*  2 */
-	{ 1,   "end opt",			ASN1_EOC,		ASN1_END  			}  /*  3 */
+	{ 1,   "end opt",			ASN1_EOC,		ASN1_END  			}, /*  3 */
+	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT  			}
 };
 #define BASIC_CONSTRAINTS_CA	1
-#define BASIC_CONSTRAINTS_ROOF	4
 
 /**
  * Extracts the basicConstraints extension
@@ -194,8 +194,7 @@ static bool parse_basicConstraints(chunk_t blob, int level0)
 	int objectID;
 	bool isCA = FALSE;
 
-	parser = asn1_parser_create(basicConstraintsObjects, BASIC_CONSTRAINTS_ROOF,
-								blob);
+	parser = asn1_parser_create(basicConstraintsObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -215,12 +214,12 @@ static bool parse_basicConstraints(chunk_t blob, int level0)
  * ASN.1 definition of otherName 
  */
 static const asn1Object_t otherNameObjects[] = {
-	{0, "type-id",	ASN1_OID,			ASN1_BODY	}, /*  0 */
-	{0, "value",	ASN1_CONTEXT_C_0,	ASN1_BODY	}  /*  1 */
+	{0, "type-id",	ASN1_OID,			ASN1_BODY	}, /* 0 */
+	{0, "value",	ASN1_CONTEXT_C_0,	ASN1_BODY	}, /* 1 */
+	{0, "exit",		ASN1_EOC,			ASN1_EXIT	}
 };
 #define ON_OBJ_ID_TYPE		0
 #define ON_OBJ_VALUE		1
-#define ON_OBJ_ROOF			2
 
 /**
  * Extracts an otherName
@@ -233,7 +232,7 @@ static bool parse_otherName(chunk_t blob, int level0)
 	int oid = OID_UNKNOWN;
 	bool success = FALSE;
 
-	parser = asn1_parser_create(otherNameObjects,ON_OBJ_ROOF, blob);
+	parser = asn1_parser_create(otherNameObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -285,7 +284,8 @@ static const asn1Object_t generalNameObjects[] = {
 	{ 0,   "ipAddress",		ASN1_CONTEXT_S_7,  ASN1_OPT|ASN1_BODY	}, /* 14 */
 	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 15 */
 	{ 0,   "registeredID",	ASN1_CONTEXT_S_8,  ASN1_OPT|ASN1_BODY	}, /* 16 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}  /* 17 */
+	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 17 */
+	{ 0,   "exit",			ASN1_EOC,          ASN1_EXIT			}
 };
 #define GN_OBJ_OTHER_NAME	 	 0
 #define GN_OBJ_RFC822_NAME	 	 2
@@ -296,7 +296,6 @@ static const asn1Object_t generalNameObjects[] = {
 #define GN_OBJ_URI				12
 #define GN_OBJ_IP_ADDRESS		14
 #define GN_OBJ_REGISTERED_ID	16
-#define GN_OBJ_ROOF				18
 
 /**
  * Extracts a generalName
@@ -309,7 +308,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 
 	identification_t *gn = NULL;
 
-	parser = asn1_parser_create(generalNameObjects, GN_OBJ_ROOF, blob);
+	parser = asn1_parser_create(generalNameObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -362,12 +361,12 @@ end:
  * ASN.1 definition of generalNames 
  */
 static const asn1Object_t generalNamesObjects[] = {
-	{ 0, "generalNames",	ASN1_SEQUENCE,	ASN1_LOOP }, /*  0 */
-	{ 1,   "generalName",	ASN1_EOC,		ASN1_RAW  }, /*  1 */
-	{ 0, "end loop",		ASN1_EOC,		ASN1_END  }  /*  2 */
+	{ 0, "generalNames",	ASN1_SEQUENCE,	ASN1_LOOP }, /* 0 */
+	{ 1,   "generalName",	ASN1_EOC,		ASN1_RAW  }, /* 1 */
+	{ 0, "end loop",		ASN1_EOC,		ASN1_END  }, /* 2 */
+	{ 0, "exit",			ASN1_EOC,		ASN1_EXIT }
 };
 #define GENERAL_NAMES_GN	1
-#define GENERAL_NAMES_ROOF	3
 
 /**
  * Extracts one or several GNs and puts them into a chained list
@@ -378,7 +377,7 @@ void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_lis
 	chunk_t object;
 	int objectID;
 
-	parser = asn1_parser_create(generalNamesObjects, GENERAL_NAMES_ROOF, blob);
+	parser = asn1_parser_create(generalNamesObjects, blob);
 	parser->set_top_level(parser, level0);
 	parser->set_flags(parser, implicit, FALSE);
 
@@ -398,53 +397,22 @@ void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_lis
 	parser->destroy(parser);
 }
 
-/** 
- * ASN.1 definition of a keyIdentifier 
- */
-static const asn1Object_t keyIdentifierObjects[] = {
-	{ 0,   "keyIdentifier",	ASN1_OCTET_STRING,	ASN1_BODY }  /*  0 */
-};
-#define KEY_ID_ROOF	1
-
-/**
- * Extracts a keyIdentifier
- */
-static chunk_t parse_keyIdentifier(chunk_t blob, int level0, bool implicit)
-{
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-
-	chunk_t keyIdentifier = chunk_empty;
-	
-	parser = asn1_parser_create(keyIdentifierObjects, KEY_ID_ROOF, blob);
-	parser->set_top_level(parser, level0);
-	parser->set_flags(parser, implicit, FALSE);
-
-	if (parser->iterate(parser, &objectID, &object))
-	{
-		keyIdentifier = object;
-	}
-	parser->destroy(parser);
-	return keyIdentifier;
-}
-
 /**
  * ASN.1 definition of a authorityKeyIdentifier extension 
  */
 static const asn1Object_t authKeyIdentifierObjects[] = {
-	{ 0,   "authorityKeyIdentifier",	ASN1_SEQUENCE,		ASN1_NONE 			}, /*  0 */
-	{ 1,     "keyIdentifier",			ASN1_CONTEXT_S_0,	ASN1_OPT|ASN1_OBJ	}, /*  1 */
-	{ 1,     "end opt",					ASN1_EOC,			ASN1_END  			}, /*  2 */
-	{ 1,     "authorityCertIssuer",		ASN1_CONTEXT_C_1,	ASN1_OPT|ASN1_OBJ	}, /*  3 */
-	{ 1,     "end opt",					ASN1_EOC,			ASN1_END  			}, /*  4 */
-	{ 1,     "authorityCertSerialNumber",ASN1_CONTEXT_S_2,  ASN1_OPT|ASN1_BODY	}, /*  5 */
-	{ 1,     "end opt",					ASN1_EOC,			ASN1_END  			}  /*  6 */
+	{ 0, "authorityKeyIdentifier",		ASN1_SEQUENCE,		ASN1_NONE 			}, /* 0 */
+	{ 1,   "keyIdentifier",				ASN1_CONTEXT_S_0,	ASN1_OPT|ASN1_BODY	}, /* 1 */
+	{ 1,   "end opt",					ASN1_EOC,			ASN1_END  			}, /* 2 */
+	{ 1,   "authorityCertIssuer",		ASN1_CONTEXT_C_1,	ASN1_OPT|ASN1_OBJ	}, /* 3 */
+	{ 1,   "end opt",					ASN1_EOC,			ASN1_END  			}, /* 4 */
+	{ 1,   "authorityCertSerialNumber",	ASN1_CONTEXT_S_2,	ASN1_OPT|ASN1_BODY	}, /* 5 */
+	{ 1,   "end opt",					ASN1_EOC,			ASN1_END  			}, /* 6 */
+	{ 0, "exit",						ASN1_EOC,			ASN1_EXIT  			}
 };
 #define AUTH_KEY_ID_KEY_ID			1
 #define AUTH_KEY_ID_CERT_ISSUER		3
 #define AUTH_KEY_ID_CERT_SERIAL		5
-#define AUTH_KEY_ID_ROOF			7
 
 /**
  * Extracts an authoritykeyIdentifier
@@ -459,7 +427,7 @@ identification_t* x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
 
 	*authKeySerialNumber = chunk_empty;
 
-	parser = asn1_parser_create(authKeyIdentifierObjects, AUTH_KEY_ID_ROOF,blob);
+	parser = asn1_parser_create(authKeyIdentifierObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -467,23 +435,12 @@ identification_t* x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
 		switch (objectID) 
 		{
 			case AUTH_KEY_ID_KEY_ID:
-			{
-				chunk_t authKeyID = parse_keyIdentifier(object,
-										parser->get_level(parser)+1, TRUE);
-
-				if (authKeyID.ptr == NULL)
-				{
-					goto end;
-				}
 				authKeyIdentifier = identification_create_from_encoding(
-											ID_PUBKEY_SHA1, authKeyID); 
+												ID_PUBKEY_SHA1, object); 
 				break;
-			}
 			case AUTH_KEY_ID_CERT_ISSUER:
-			{
 				/* TODO: x509_parse_generalNames(object, level+1, TRUE); */
 				break;
-			}
 			case AUTH_KEY_ID_CERT_SERIAL:
 				*authKeySerialNumber = object;
 				break;
@@ -491,8 +448,6 @@ identification_t* x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
 				break;
 		}
 	}
-
-end:
 	parser->destroy(parser);
 	return authKeyIdentifier;
 }
@@ -501,15 +456,15 @@ end:
  * ASN.1 definition of a authorityInfoAccess extension 
  */
 static const asn1Object_t authInfoAccessObjects[] = {
-	{ 0,   "authorityInfoAccess",	ASN1_SEQUENCE,	ASN1_LOOP }, /*  0 */
-	{ 1,     "accessDescription",	ASN1_SEQUENCE,	ASN1_NONE }, /*  1 */
-	{ 2,       "accessMethod",		ASN1_OID,		ASN1_BODY }, /*  2 */
-	{ 2,       "accessLocation",	ASN1_EOC,		ASN1_RAW  }, /*  3 */
-	{ 0,   "end loop",				ASN1_EOC,		ASN1_END  }  /*  4 */
+	{ 0, "authorityInfoAccess",	ASN1_SEQUENCE,	ASN1_LOOP }, /* 0 */
+	{ 1,   "accessDescription",	ASN1_SEQUENCE,	ASN1_NONE }, /* 1 */
+	{ 2,     "accessMethod",	ASN1_OID,		ASN1_BODY }, /* 2 */
+	{ 2,     "accessLocation",	ASN1_EOC,		ASN1_RAW  }, /* 3 */
+	{ 0, "end loop",			ASN1_EOC,		ASN1_END  }, /* 4 */
+	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
 };
 #define AUTH_INFO_ACCESS_METHOD		2
 #define AUTH_INFO_ACCESS_LOCATION	3
-#define AUTH_INFO_ACCESS_ROOF		5
 
 /**
  * Extracts an authorityInfoAcess location
@@ -522,8 +477,7 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0,
 	int objectID;
 	int accessMethod = OID_UNKNOWN;
 	
-	parser = asn1_parser_create(authInfoAccessObjects, AUTH_INFO_ACCESS_ROOF,
-								blob);
+	parser = asn1_parser_create(authInfoAccessObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -578,12 +532,12 @@ end:
  * ASN.1 definition of a extendedKeyUsage extension
  */
 static const asn1Object_t extendedKeyUsageObjects[] = {
-	{ 0, "extendedKeyUsage",	ASN1_SEQUENCE,	ASN1_LOOP }, /*  0 */
-	{ 1,   "keyPurposeID",		ASN1_OID,		ASN1_BODY }, /*  1 */
-	{ 0, "end loop",			ASN1_EOC,		ASN1_END  }, /*  2 */
+	{ 0, "extendedKeyUsage",	ASN1_SEQUENCE,	ASN1_LOOP }, /* 0 */
+	{ 1,   "keyPurposeID",		ASN1_OID,		ASN1_BODY }, /* 1 */
+	{ 0, "end loop",			ASN1_EOC,		ASN1_END  }, /* 2 */
+	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
 };
 #define EXT_KEY_USAGE_PURPOSE_ID	1
-#define EXT_KEY_USAGE_ROOF			3
 
 /**
  * Extracts extendedKeyUsage OIDs - currently only OCSP_SIGING is returned
@@ -595,8 +549,7 @@ static bool parse_extendedKeyUsage(chunk_t blob, int level0)
 	int objectID;
 	bool ocsp_signing = FALSE;
 	
-	parser = asn1_parser_create(extendedKeyUsageObjects, EXT_KEY_USAGE_ROOF,
-								blob);
+	parser = asn1_parser_create(extendedKeyUsageObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -628,10 +581,9 @@ static const asn1Object_t crlDistributionPointsObjects[] = {
 	{ 2,     "crlIssuer",			ASN1_CONTEXT_C_2,	ASN1_OPT|ASN1_BODY	}, /* 10 */
 	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /* 11 */
 	{ 0, "end loop",				ASN1_EOC,			ASN1_END			}, /* 12 */
+	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
 };
 #define CRL_DIST_POINTS_FULLNAME	 3
-#define CRL_DIST_POINTS_ROOF		13
-
 
 /**
  * Extracts one or several crlDistributionPoints into a list
@@ -644,8 +596,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 	int objectID;
 	linked_list_t *list = linked_list_create();
 	
-	parser = asn1_parser_create(crlDistributionPointsObjects,
-								CRL_DIST_POINTS_ROOF, blob);
+	parser = asn1_parser_create(crlDistributionPointsObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -705,7 +656,8 @@ static const asn1Object_t certObjects[] = {
 	{ 3,       "end loop",			ASN1_EOC,			ASN1_END			}, /* 24 */
 	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /* 25 */
 	{ 1,   "signatureAlgorithm",	ASN1_EOC,			ASN1_RAW			}, /* 26 */
-	{ 1,   "signatureValue",		ASN1_BIT_STRING,	ASN1_BODY			}  /* 27 */
+	{ 1,   "signatureValue",		ASN1_BIT_STRING,	ASN1_BODY			}, /* 27 */
+	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
 };
 #define X509_OBJ_TBS_CERTIFICATE				 1
 #define X509_OBJ_VERSION						 3
@@ -722,7 +674,6 @@ static const asn1Object_t certObjects[] = {
 #define X509_OBJ_EXTN_VALUE						23
 #define X509_OBJ_ALGORITHM						26
 #define X509_OBJ_SIGNATURE						27
-#define X509_OBJ_ROOF							28
 
 /**
  * Parses an X.509v3 certificate
@@ -738,7 +689,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 	bool success = FALSE;
 	bool critical;
 	
-	parser = asn1_parser_create(certObjects, X509_OBJ_ROOF, this->encoding);
+	parser = asn1_parser_create(certObjects, this->encoding);
 
 	while (parser->iterate(parser, &objectID, &object))
 	{
@@ -810,10 +761,16 @@ static bool parse_certificate(private_x509_cert_t *this)
 				switch (extn_oid)
 				{
 					case OID_SUBJECT_KEY_ID:
-						this->subjectKeyID = parse_keyIdentifier(object, level, FALSE);
+						if (!asn1_parse_simple_object(&object, ASN1_OCTET_STRING,
+													  level, "keyIdentifier"))
+						{
+							goto end;
+						}
+						this->subjectKeyID = object;
 						break;
 					case OID_SUBJECT_ALT_NAME:
-						x509_parse_generalNames(object, level, FALSE, this->subjectAltNames);
+						x509_parse_generalNames(object, level, FALSE,
+												this->subjectAltNames);
 						break;
 					case OID_BASIC_CONSTRAINTS:
 						if (parse_basicConstraints(object, level))

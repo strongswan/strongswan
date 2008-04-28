@@ -77,21 +77,6 @@ struct attribute_t {
 
 };
 
-/* ASN.1 definition of the X.501 atttribute type */
-
-static const asn1Object_t attributesObjects[] = {
-	{ 0, "attributes",		ASN1_SET,		ASN1_LOOP }, /* 0 */
-	{ 1,   "attribute",		ASN1_SEQUENCE,	ASN1_NONE }, /* 1 */
-	{ 2,     "type",		ASN1_OID,		ASN1_BODY }, /* 2 */
-	{ 2,     "values",		ASN1_SET,		ASN1_LOOP }, /* 3 */
-	{ 3,       "value",		ASN1_EOC,		ASN1_RAW  }, /* 4 */
-	{ 2,     "end loop",	ASN1_EOC,		ASN1_END  }, /* 5 */
-	{ 0, "end loop",		ASN1_EOC,		ASN1_END  }, /* 6 */
-};
-#define ATTRIBUTE_OBJ_TYPE 	2
-#define ATTRIBUTE_OBJ_VALUE	4
-#define ATTRIBUTE_OBJ_ROOF	7
-
 /**
  * PKCS#9 attribute type OIDs
  */
@@ -391,6 +376,22 @@ pkcs9_t *pkcs9_create(void)
 }
 
 /**
+ * ASN.1 definition of the X.501 atttribute type
+ */
+static const asn1Object_t attributesObjects[] = {
+	{ 0, "attributes",		ASN1_SET,		ASN1_LOOP }, /* 0 */
+	{ 1,   "attribute",		ASN1_SEQUENCE,	ASN1_NONE }, /* 1 */
+	{ 2,     "type",		ASN1_OID,		ASN1_BODY }, /* 2 */
+	{ 2,     "values",		ASN1_SET,		ASN1_LOOP }, /* 3 */
+	{ 3,       "value",		ASN1_EOC,		ASN1_RAW  }, /* 4 */
+	{ 2,     "end loop",	ASN1_EOC,		ASN1_END  }, /* 5 */
+	{ 0, "end loop",		ASN1_EOC,		ASN1_END  }, /* 6 */
+	{ 0, "exit",			ASN1_EOC,		ASN1_EXIT }
+};
+#define ATTRIBUTE_OBJ_TYPE 	2
+#define ATTRIBUTE_OBJ_VALUE	4
+
+/**
  * Parse a PKCS#9 attribute list
  */
 static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
@@ -401,7 +402,7 @@ static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
 	int oid = OID_UNKNOWN;
 	bool success = FALSE;
 
-	parser = asn1_parser_create(attributesObjects, ATTRIBUTE_OBJ_ROOF, chunk);
+	parser = asn1_parser_create(attributesObjects, chunk);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))

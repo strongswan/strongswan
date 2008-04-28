@@ -112,40 +112,6 @@ struct private_gmp_rsa_private_key_t {
 };
 
 /**
- * ASN.1 definition of a PKCS#1 RSA private key
- */
-static const asn1Object_t privkeyObjects[] = {
-	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
-	{ 1,   "version",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
-	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  2 */
-	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  3 */
-	{ 1,   "privateExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  4 */
-	{ 1,   "prime1",			ASN1_INTEGER,      ASN1_BODY }, /*  5 */
-	{ 1,   "prime2",			ASN1_INTEGER,      ASN1_BODY }, /*  6 */
-	{ 1,   "exponent1",			ASN1_INTEGER,      ASN1_BODY }, /*  7 */
-	{ 1,   "exponent2",			ASN1_INTEGER,      ASN1_BODY }, /*  8 */
-	{ 1,   "coefficient",		ASN1_INTEGER,      ASN1_BODY }, /*  9 */
-	{ 1,   "otherPrimeInfos",	ASN1_SEQUENCE,     ASN1_OPT |
-												   ASN1_LOOP }, /* 10 */
-	{ 2,     "otherPrimeInfo",	ASN1_SEQUENCE,     ASN1_NONE }, /* 11 */
-	{ 3,       "prime",			ASN1_INTEGER,      ASN1_BODY }, /* 12 */
-	{ 3,       "exponent",		ASN1_INTEGER,      ASN1_BODY }, /* 13 */
-	{ 3,       "coefficient",	ASN1_INTEGER,      ASN1_BODY }, /* 14 */
-	{ 1,   "end opt or loop",	ASN1_EOC,          ASN1_END  }  /* 15 */
-};
-
-#define PRIV_KEY_VERSION		 1
-#define PRIV_KEY_MODULUS		 2
-#define PRIV_KEY_PUB_EXP		 3
-#define PRIV_KEY_PRIV_EXP		 4
-#define PRIV_KEY_PRIME1			 5
-#define PRIV_KEY_PRIME2			 6
-#define PRIV_KEY_EXP1			 7
-#define PRIV_KEY_EXP2			 8
-#define PRIV_KEY_COEFF			 9
-#define PRIV_KEY_ROOF			16
-
-/**
  * shared functions, implemented in gmp_rsa_public_key.c
  */
 bool gmp_rsa_public_key_build_id(mpz_t n, mpz_t e, identification_t **keyid,
@@ -673,6 +639,39 @@ static gmp_rsa_private_key_t *generate(size_t key_size)
 }
 
 /**
+ * ASN.1 definition of a PKCS#1 RSA private key
+ */
+static const asn1Object_t privkeyObjects[] = {
+	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
+	{ 1,   "version",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
+	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  2 */
+	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  3 */
+	{ 1,   "privateExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  4 */
+	{ 1,   "prime1",			ASN1_INTEGER,      ASN1_BODY }, /*  5 */
+	{ 1,   "prime2",			ASN1_INTEGER,      ASN1_BODY }, /*  6 */
+	{ 1,   "exponent1",			ASN1_INTEGER,      ASN1_BODY }, /*  7 */
+	{ 1,   "exponent2",			ASN1_INTEGER,      ASN1_BODY }, /*  8 */
+	{ 1,   "coefficient",		ASN1_INTEGER,      ASN1_BODY }, /*  9 */
+	{ 1,   "otherPrimeInfos",	ASN1_SEQUENCE,     ASN1_OPT |
+												   ASN1_LOOP }, /* 10 */
+	{ 2,     "otherPrimeInfo",	ASN1_SEQUENCE,     ASN1_NONE }, /* 11 */
+	{ 3,       "prime",			ASN1_INTEGER,      ASN1_BODY }, /* 12 */
+	{ 3,       "exponent",		ASN1_INTEGER,      ASN1_BODY }, /* 13 */
+	{ 3,       "coefficient",	ASN1_INTEGER,      ASN1_BODY }, /* 14 */
+	{ 1,   "end opt or loop",	ASN1_EOC,          ASN1_END  }, /* 15 */
+	{ 0, "exit",				ASN1_EOC,          ASN1_EXIT }
+};
+#define PRIV_KEY_VERSION		 1
+#define PRIV_KEY_MODULUS		 2
+#define PRIV_KEY_PUB_EXP		 3
+#define PRIV_KEY_PRIV_EXP		 4
+#define PRIV_KEY_PRIME1			 5
+#define PRIV_KEY_PRIME2			 6
+#define PRIV_KEY_EXP1			 7
+#define PRIV_KEY_EXP2			 8
+#define PRIV_KEY_COEFF			 9
+
+/**
  * load private key from a ASN1 encoded blob
  */
 static gmp_rsa_private_key_t *load(chunk_t blob)
@@ -693,7 +692,7 @@ static gmp_rsa_private_key_t *load(chunk_t blob)
 	mpz_init(this->exp2);
 	mpz_init(this->coeff);
 	
-	parser = asn1_parser_create(privkeyObjects, PRIV_KEY_ROOF, blob);
+	parser = asn1_parser_create(privkeyObjects, blob);
 	parser->set_flags(parser, FALSE, TRUE);
 	
 	while (parser->iterate(parser, &objectID, &object))

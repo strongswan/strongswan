@@ -453,11 +453,11 @@ bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level, const c
 static const asn1Object_t algorithmIdentifierObjects[] = {
 	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE }, /* 0 */
 	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY }, /* 1 */
-	{ 1,   "parameters",		ASN1_EOC,		ASN1_RAW  }  /* 2 */
+	{ 1,   "parameters",		ASN1_EOC,		ASN1_RAW  }, /* 2 */
+	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
 };
-#define ALGORITHM_ID_ALG		1
-#define ALGORITHM_ID_PARAMETERS	2
-#define ALGORITHM_ID_ROOF		3
+#define ALGORITHM_ID_ALG			1
+#define ALGORITHM_ID_PARAMETERS		2
 
 /*
  * Defined in header
@@ -469,8 +469,7 @@ int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters
 	int objectID;
 	int alg = OID_UNKNOWN;
 	
-	parser = asn1_parser_create(algorithmIdentifierObjects, ALGORITHM_ID_ROOF,
-								blob);
+	parser = asn1_parser_create(algorithmIdentifierObjects, blob);
 	parser->set_top_level(parser, level0);
 	
 	while (parser->iterate(parser, &objectID, &object))
@@ -682,14 +681,14 @@ chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
  * ASN.1 definition of time
  */
 static const asn1Object_t timeObjects[] = {
-	{ 0,   "utcTime",		ASN1_UTCTIME,			ASN1_OPT|ASN1_BODY 	}, /*  0 */
-	{ 0,   "end opt",		ASN1_EOC,				ASN1_END  			}, /*  1 */
-	{ 0,   "generalizeTime",ASN1_GENERALIZEDTIME,	ASN1_OPT|ASN1_BODY 	}, /*  2 */
-	{ 0,   "end opt",		ASN1_EOC,				ASN1_END  			}  /*  3 */
+	{ 0, "utcTime",			ASN1_UTCTIME,			ASN1_OPT|ASN1_BODY 	}, /* 0 */
+	{ 0, "end opt",			ASN1_EOC,				ASN1_END  			}, /* 1 */
+	{ 0, "generalizeTime",	ASN1_GENERALIZEDTIME,	ASN1_OPT|ASN1_BODY 	}, /* 2 */
+	{ 0, "end opt",			ASN1_EOC,				ASN1_END  			}, /* 3 */
+	{ 0, "exit",			ASN1_EOC,				ASN1_EXIT  			}
 };
 #define TIME_UTC			0
 #define TIME_GENERALIZED	2
-#define TIME_ROOF			4
 
 /**
  * extracts and converts a UTCTIME or GENERALIZEDTIME object
@@ -701,7 +700,7 @@ time_t asn1_parse_time(chunk_t blob, int level0)
 	int objectID;
 	time_t utc_time = 0;
 	
-	parser= asn1_parser_create(timeObjects, TIME_ROOF, blob);
+	parser= asn1_parser_create(timeObjects, blob);
 	parser->set_top_level(parser, level0);
 	
 	while (parser->iterate(parser, &objectID, &object))

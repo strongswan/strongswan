@@ -169,7 +169,8 @@ static const asn1Object_t crlObjects[] = {
 	{ 3,       "end loop",				ASN1_EOC,          ASN1_END  }, /* 25 */
 	{ 2,     "end opt",					ASN1_EOC,          ASN1_END  }, /* 26 */
 	{ 1,   "signatureAlgorithm",		ASN1_EOC,          ASN1_RAW  }, /* 27 */
-	{ 1,   "signatureValue",			ASN1_BIT_STRING,   ASN1_BODY }  /* 28 */
+	{ 1,   "signatureValue",			ASN1_BIT_STRING,   ASN1_BODY }, /* 28 */
+	{ 0, "exit",						ASN1_EOC,		   ASN1_EXIT }
 };
 #define CRL_OBJ_TBS_CERT_LIST			 1
 #define CRL_OBJ_VERSION					 2
@@ -187,7 +188,6 @@ static const asn1Object_t crlObjects[] = {
 #define CRL_OBJ_EXTN_VALUE				24
 #define CRL_OBJ_ALGORITHM				27
 #define CRL_OBJ_SIGNATURE				28
-#define CRL_OBJ_ROOF					29
 
 /**
  *  Parses an X.509 Certificate Revocation List (CRL)
@@ -204,7 +204,7 @@ static bool parse(private_x509_crl_t *this)
 	bool critical;
 	revoked_t *revoked = NULL;
 
-	parser = asn1_parser_create(crlObjects, CRL_OBJ_ROOF, this->encoding);
+	parser = asn1_parser_create(crlObjects, this->encoding);
 
 	while (parser->iterate(parser, &objectID, &object))
 	{

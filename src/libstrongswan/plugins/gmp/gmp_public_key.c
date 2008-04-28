@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * Copyright (C) 2000-2006 Andreas Steffen
+ * Copyright (C) 2000-2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -30,10 +30,11 @@ static const asn1Object_t pkinfoObjects[] = {
 	{ 0, "subjectPublicKeyInfo",ASN1_SEQUENCE,		ASN1_NONE	}, /* 0 */
 	{ 1,   "algorithm",			ASN1_EOC,			ASN1_RAW	}, /* 1 */
 	{ 1,   "subjectPublicKey",	ASN1_BIT_STRING,	ASN1_OBJ	}, /* 2 */
+	{ 0, "exit",				ASN1_EOC,			ASN1_EXIT	}
 };
 #define PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM	1
 #define PKINFO_SUBJECT_PUBLIC_KEY			2
-#define PKINFO_ROOF							3
+
 
 /**
  * Load a public key from an ASN1 encoded blob
@@ -46,7 +47,7 @@ static public_key_t *load(chunk_t blob)
 	public_key_t *key = NULL;
 	key_type_t type = KEY_ANY;
 
-	parser = asn1_parser_create(pkinfoObjects, PKINFO_ROOF, blob);
+	parser = asn1_parser_create(pkinfoObjects, blob);
 	
 	while (parser->iterate(parser, &objectID, &object))
 	{
