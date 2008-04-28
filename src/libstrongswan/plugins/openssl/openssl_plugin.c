@@ -21,6 +21,7 @@
 
 #include <library.h>
 #include "openssl_crypter.h"
+#include "openssl_hasher.h"
 
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 
@@ -42,6 +43,8 @@ static void destroy(private_openssl_plugin_t *this)
 {
 	lib->crypto->remove_crypter(lib->crypto,
 					(crypter_constructor_t)openssl_crypter_create);
+	lib->crypto->remove_hasher(lib->crypto,
+					(hasher_constructor_t)openssl_hasher_create);
 	
 	EVP_cleanup();
 	
@@ -59,6 +62,7 @@ plugin_t *plugin_create()
 	
 	OpenSSL_add_all_algorithms();
 	
+	/* crypter */
 	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
 					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
@@ -75,6 +79,20 @@ plugin_t *plugin_create()
 					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
 					(crypter_constructor_t)openssl_crypter_create);
+	
+	/* hasher */
+	lib->crypto->add_hasher(lib->crypto, HASH_MD2,
+					(hasher_constructor_t)openssl_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+					(hasher_constructor_t)openssl_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+					(hasher_constructor_t)openssl_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
+					(hasher_constructor_t)openssl_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
+					(hasher_constructor_t)openssl_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
+					(hasher_constructor_t)openssl_hasher_create);
 	
 	return &this->public.plugin;
 }
