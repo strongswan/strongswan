@@ -144,6 +144,10 @@ if USE_PADLOCK
   SUBDIRS += plugins/padlock
 endif
 
+if USE_OPENSSL
+  SUBDIRS += plugins/openssl
+endif
+
 if USE_INTEGRITY_TEST
 # build fips_signer which in turn builds fips_signature.h
 #########################################################
