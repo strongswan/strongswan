@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: asn1.c 3589 2008-03-13 14:14:44Z martin $
+ * $Id$
  */
 
 #include <stdio.h>

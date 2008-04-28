@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: asn1.h 3776 2008-04-07 10:37:14Z martin $
+ * $Id$
  */
  
 /**
@@ -30,7 +30,7 @@
 #include <library.h>
 
 /**
- * Definition of ASN1 flags
+ * Definition of ASN.1 flags
  */
 #define ASN1_NONE	0x00
 #define ASN1_DEF	0x01
