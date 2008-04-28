@@ -111,7 +111,7 @@ struct kernel_algorithm_t {
 /**
  * Algorithms for encryption
  */
-kernel_algorithm_t encryption_algs[] = {
+static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_DES_IV64, 	"***", 			0}, */
 	{ENCR_DES, 			"des", 			64},
 	{ENCR_3DES, 		"des3_ede",		192},
@@ -130,7 +130,7 @@ kernel_algorithm_t encryption_algs[] = {
 /**
  * Algorithms for integrity protection
  */
-kernel_algorithm_t integrity_algs[] = {
+static kernel_algorithm_t integrity_algs[] = {
 	{AUTH_HMAC_MD5_96, 			"md5",			128},
 	{AUTH_HMAC_SHA1_96,			"sha1",			160},
 	{AUTH_HMAC_SHA2_256_128,	"sha256",		256},
@@ -145,7 +145,7 @@ kernel_algorithm_t integrity_algs[] = {
 /**
  * Look up a kernel algorithm name and its key size
  */
-char* lookup_algorithm(kernel_algorithm_t *kernel_algo, 
+static char* lookup_algorithm(kernel_algorithm_t *kernel_algo, 
 					   u_int16_t ikev2_algo, u_int16_t *key_size)
 {
 	while (kernel_algo->ikev2_id != END_OF_LIST)
