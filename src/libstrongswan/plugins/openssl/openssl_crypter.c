@@ -46,7 +46,7 @@ struct private_openssl_crypter_t {
  * Mapping from the algorithms defined in IKEv2 to
  * OpenSSL algorithm names and their key length
  */
-typedef struct {
+static typedef struct {
 	/**
 	 * Identifier specified in IKEv2
 	 */
@@ -90,7 +90,7 @@ static openssl_algorithm_t encryption_algs[] = {
 };
 
 /**
- * Look up an OpenSSL algorithm name and its key size
+ * Look up an OpenSSL algorithm name and validate its key size
  */
 static char* lookup_algorithm(openssl_algorithm_t *openssl_algo, 
 					   u_int16_t ikev2_algo, size_t key_size)
