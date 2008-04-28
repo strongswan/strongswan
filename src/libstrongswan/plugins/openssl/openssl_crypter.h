@@ -26,7 +26,7 @@ typedef struct openssl_crypter_t openssl_crypter_t;
 #include <crypto/crypters/crypter.h>
 
 /**
- * Implementation of AES using OpenSSL.
+ * Implementation of crypters using OpenSSL.
  */
 struct openssl_crypter_t {
 	
@@ -39,7 +39,7 @@ struct openssl_crypter_t {
 /**
  * Constructor to create openssl_crypter_t.
  * 
- * @param algo			algorithm to implement, must be ENCR_AES_CBC
+ * @param algo			algorithm to implement
  * @param key_size		key size in bytes
  * @return				openssl_crypter_t, NULL if not supported
  */
