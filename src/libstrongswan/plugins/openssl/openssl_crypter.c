@@ -46,11 +46,11 @@ struct private_openssl_crypter_t {
  * Mapping from the algorithms defined in IKEv2 to
  * OpenSSL algorithm names and their key length
  */
-static typedef struct {
+typedef struct {
 	/**
 	 * Identifier specified in IKEv2
 	 */
-	u_int16_t ikev2_id;
+	int ikev2_id;
 	
 	/**
 	 * Name of the algorithm, as used in OpenSSL
@@ -176,7 +176,7 @@ static void set_key(private_openssl_crypter_t *this, chunk_t key)
 }
 
 /**
- * Implementation of crypter_t.destroy and aes_crypter_t.destroy.
+ * Implementation of crypter_t.destroy.
  */
 static void destroy (private_openssl_crypter_t *this)
 {
