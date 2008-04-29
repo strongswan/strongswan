@@ -81,11 +81,11 @@ plugin_t *plugin_create()
 					(crypter_constructor_t)openssl_crypter_create);
 	
 	/* hasher */
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_MD2,
 					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
-					(hasher_constructor_t)openssl_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
 					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
 					(hasher_constructor_t)openssl_hasher_create);
