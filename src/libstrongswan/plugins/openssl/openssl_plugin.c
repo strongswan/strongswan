@@ -22,6 +22,7 @@
 #include <library.h>
 #include "openssl_crypter.h"
 #include "openssl_hasher.h"
+#include "openssl_diffie_hellman.h"
 
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 
@@ -45,6 +46,8 @@ static void destroy(private_openssl_plugin_t *this)
 					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->remove_hasher(lib->crypto,
 					(hasher_constructor_t)openssl_hasher_create);
+	lib->crypto->remove_dh(lib->crypto, 
+					(dh_constructor_t)openssl_diffie_hellman_create);
 	
 	EVP_cleanup();
 	
@@ -93,6 +96,24 @@ plugin_t *plugin_create()
 					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
 					(hasher_constructor_t)openssl_hasher_create);
+	
+	/* diffie hellman */
+	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT,
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
 	
 	return &this->public.plugin;
 }
