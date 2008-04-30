@@ -32,14 +32,14 @@ struct private_openssl_hasher_t {
 	openssl_hasher_t public;
 	
 	/**
-	 * data collected to hash
-	 */
-	chunk_t data;
-	
-	/*
 	 * the hasher to use
 	 */
 	const EVP_MD *hasher;
+	
+	/**
+	 * the current digest context 
+	 */
+	EVP_MD_CTX *ctx;
 };
 
 /**
@@ -91,29 +91,6 @@ static char* lookup_algorithm(openssl_algorithm_t *openssl_algo,
 }
 
 /**
- * append data to the to-be-hashed buffer
- */
-static void append_data(private_openssl_hasher_t *this, chunk_t data)
-{
-	this->data.ptr = realloc(this->data.ptr, this->data.len + data.len);
-	memcpy(this->data.ptr + this->data.len, data.ptr, data.len);
-	this->data.len += data.len;
-}
-
-/**
- * hash a buffer of data
- */
-static void hash_data(private_openssl_hasher_t *this, chunk_t data, u_int8_t *digest)
-{
-	EVP_MD_CTX ctx;
-	EVP_MD_CTX_init(&ctx);
-	EVP_DigestInit_ex(&ctx, this->hasher, NULL);
-	EVP_DigestUpdate(&ctx, data.ptr, data.len);
-	EVP_DigestFinal_ex(&ctx, digest, NULL);
-	EVP_MD_CTX_cleanup(&ctx);
-}
-
-/**
  * Implementation of hasher_t.get_hash_size.
  */
 static size_t get_hash_size(private_openssl_hasher_t *this)
@@ -126,7 +103,12 @@ static size_t get_hash_size(private_openssl_hasher_t *this)
  */
 static void reset(private_openssl_hasher_t *this)
 {
-	chunk_free(&this->data);
+	if (this->ctx)
+	{
+		EVP_MD_CTX_destroy(this->ctx);
+	}
+	this->ctx = EVP_MD_CTX_create();
+	EVP_DigestInit_ex(this->ctx, this->hasher, NULL);
 }
 
 /**
@@ -135,22 +117,11 @@ static void reset(private_openssl_hasher_t *this)
 static void get_hash(private_openssl_hasher_t *this, chunk_t chunk,
 					 u_int8_t *hash)
 {
+	EVP_DigestUpdate(this->ctx, chunk.ptr, chunk.len);
 	if (hash)
 	{
-		if (this->data.len)
-		{
-			append_data(this, chunk);
-			hash_data(this, this->data, hash);
-		}
-		else
-		{   /* hash directly if no previous data found */   
-			hash_data(this, chunk, hash);
-		}
+		EVP_DigestFinal_ex(this->ctx, hash, NULL);
 		reset(this);
-	}
-	else
-	{
-		append_data(this, chunk);	
 	}
 }
 
@@ -176,7 +147,10 @@ static void allocate_hash(private_openssl_hasher_t *this, chunk_t chunk,
  */
 static void destroy (private_openssl_hasher_t *this)
 {
-	free(this->data.ptr);
+	if (this->ctx)
+	{
+		EVP_MD_CTX_destroy(this->ctx);
+	}
 	free(this);
 }
 
@@ -210,7 +184,10 @@ openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo)
 	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
 	
-	this->data = chunk_empty;
+	this->ctx = NULL;
+	
+	/* initialize */
+	reset(this);
 	
 	return &this->public;
 }
