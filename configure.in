@@ -258,6 +258,17 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[xcbc],
+	AS_HELP_STRING([--disable-xcbc],[disable xcbc crypto implementation plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		xcbc=true
+	 else
+		xcbc=false
+	fi],
+	xcbc=true
+)
+
+AC_ARG_ENABLE(
 	[mysql],
 	AS_HELP_STRING([--enable-mysql],[enable MySQL database support (default is NO). Requires libmysqlclient_r.]),
 	[if test x$enableval = xyes; then
@@ -635,6 +646,7 @@ AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
 AM_CONDITIONAL(USE_HMAC, test x$hmac = xtrue)
+AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
 AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
@@ -693,6 +705,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/gmp/Makefile
 	src/libstrongswan/plugins/random/Makefile
 	src/libstrongswan/plugins/hmac/Makefile
+	src/libstrongswan/plugins/xcbc/Makefile
 	src/libstrongswan/plugins/x509/Makefile
 	src/libstrongswan/plugins/curl/Makefile
 	src/libstrongswan/plugins/ldap/Makefile

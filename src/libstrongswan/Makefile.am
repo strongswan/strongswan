@@ -120,6 +120,10 @@ if USE_HMAC
   SUBDIRS += plugins/hmac
 endif
 
+if USE_XCBC
+  SUBDIRS += plugins/xcbc
+endif
+
 if USE_X509
   SUBDIRS += plugins/x509
 endif

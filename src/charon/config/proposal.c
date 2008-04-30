@@ -607,7 +607,7 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_AES_XCBC_96, 0);
 		if (this->protocol == PROTO_IKE)
 		{
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, AUTH_AES_XCBC_96, 0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_AES128_CBC, 0);
 		}
 	}
 	else if (strncmp(alg.ptr, "modp768", alg.len) == 0)
@@ -700,11 +700,13 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         192);
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         256);
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,              0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_AES_XCBC_96,       0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_256_128,	0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_384_192,	0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_512_256,	0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_AES128_CBC,         0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_256,      0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1,          0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5,           0);
