@@ -103,11 +103,6 @@ static size_t get_hash_size(private_openssl_hasher_t *this)
  */
 static void reset(private_openssl_hasher_t *this)
 {
-	if (this->ctx)
-	{
-		EVP_MD_CTX_destroy(this->ctx);
-	}
-	this->ctx = EVP_MD_CTX_create();
 	EVP_DigestInit_ex(this->ctx, this->hasher, NULL);
 }
 
@@ -147,10 +142,7 @@ static void allocate_hash(private_openssl_hasher_t *this, chunk_t chunk,
  */
 static void destroy (private_openssl_hasher_t *this)
 {
-	if (this->ctx)
-	{
-		EVP_MD_CTX_destroy(this->ctx);
-	}
+	EVP_MD_CTX_destroy(this->ctx);
 	free(this);
 }
 
@@ -184,9 +176,9 @@ openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo)
 	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
 	
-	this->ctx = NULL;
+	this->ctx = EVP_MD_CTX_create();
 	
-	/* initialize */
+	/* initialization */
 	reset(this);
 	
 	return &this->public;
