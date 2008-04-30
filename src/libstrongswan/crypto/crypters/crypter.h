@@ -63,10 +63,11 @@ struct crypter_t {
 	 *
 	 * The length of the iv must equal to get_block_size(), while the length
 	 * of data must be a multiple it.
+	 * If encrypted is NULL, the encryption is done in-place (overwriting data).
 	 *
 	 * @param data			data to encrypt
 	 * @param iv			initializing vector
-	 * @param encrypted		chunk to allocate encrypted data
+	 * @param encrypted		chunk to allocate encrypted data, or NULL
 	 */
 	void (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv,
 					 chunk_t *encrypted);
@@ -76,10 +77,11 @@ struct crypter_t {
 	 *
 	 * The length of the iv must equal to get_block_size(), while the length
 	 * of data must be a multiple it.
+	 * If decrpyted is NULL, the encryption is done in-place (overwriting data).
 	 * 
 	 * @param data			data to decrypt
 	 * @param iv			initializing vector
-	 * @param encrypted		chunk to allocate decrypted data
+	 * @param encrypted		chunk to allocate decrypted data, or NULL
 	 */
 	void (*decrypt) (crypter_t *this, chunk_t data, chunk_t iv,
 					 chunk_t *decrypted);

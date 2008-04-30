@@ -1345,9 +1345,16 @@ static void decrypt(private_aes_crypter_t *this, chunk_t data, chunk_t iv,
 	const u_int32_t *iv_i;
 	u_int8_t *in, *out;
 	
-	*decrypted = chunk_alloc(data.len);
+	if (decrypted)
+	{
+		*decrypted = chunk_alloc(data.len);
+		out = decrypted->ptr;
+	}
+	else
+	{
+		out = data.ptr;
+	}
 	in = data.ptr;
-	out = decrypted->ptr;
 	
 	pos = data.len-16;
 	in += pos;
@@ -1384,9 +1391,13 @@ static void encrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv,
 	const u_int32_t *iv_i;
 	u_int8_t *in, *out;
 	
-	*encrypted = chunk_alloc(data.len);
 	in = data.ptr;
-	out = encrypted->ptr;
+	out = data.ptr;
+	if (encrypted)
+	{
+		*encrypted = chunk_alloc(data.len);
+		out = encrypted->ptr;
+	}
 	
 	pos=0;
 	while(pos<data.len)

@@ -116,13 +116,20 @@ static void crypt(private_openssl_crypter_t *this, chunk_t data,
 					chunk_t iv, chunk_t *dst, int enc)
 {
 	int len;
+	u_char *out;
+	
+	out = data.ptr;
+	if (dst)
+	{
+		*dst = chunk_alloc(data.len);
+		out = dst->ptr;
+	}
 	EVP_CIPHER_CTX ctx;
 	EVP_CIPHER_CTX_init(&ctx);
 	EVP_CipherInit_ex(&ctx, this->cipher, NULL, this->key.ptr, iv.ptr, enc);
 	EVP_CIPHER_CTX_set_padding(&ctx, 0); /* disable padding */
-	*dst = chunk_alloc(data.len);
-	EVP_CipherUpdate(&ctx, dst->ptr, &len, data.ptr, data.len);
-	EVP_CipherFinal_ex(&ctx, dst->ptr, &len); /* since padding is disabled this does nothing */
+	EVP_CipherUpdate(&ctx, out, &len, data.ptr, data.len);
+	EVP_CipherFinal_ex(&ctx, out, &len); /* since padding is disabled this does nothing */
 	EVP_CIPHER_CTX_cleanup(&ctx);
 }
 

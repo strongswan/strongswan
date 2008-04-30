@@ -1364,10 +1364,15 @@ static void decrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 					chunk_t *decrypted)
 {
 	des_cblock ivb;
+	u_int8_t *out;
 	
-	*decrypted = chunk_alloc(data.len);
+	out = data.ptr;
+	if (decrypted)
+	{
+		*decrypted = chunk_alloc(data.len);
+	}
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
-	des_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)(decrypted->ptr),
+	des_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
 					 data.len, this->ks, &ivb, DES_DECRYPT);
 }
 
@@ -1379,10 +1384,15 @@ static void encrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 						chunk_t *encrypted)
 {
 	des_cblock ivb;
+	u_int8_t *out;
 	
-	*encrypted = chunk_alloc(data.len);
+	out = data.ptr;
+	if (encrypted)
+	{
+		*encrypted = chunk_alloc(data.len);
+	}
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
-	des_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)(encrypted->ptr),
+	des_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
 					 data.len, this->ks, &ivb, DES_ENCRYPT);
 }
 
@@ -1393,10 +1403,15 @@ static void decrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 					 chunk_t *decrypted)
 {
 	des_cblock ivb;
+	u_int8_t *out;
 	
-	*decrypted = chunk_alloc(data.len);
+	out = data.ptr;
+	if (decrypted)
+	{
+		*decrypted = chunk_alloc(data.len);
+	}
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
-	des_ede3_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)(decrypted->ptr),
+	des_ede3_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
 						 data.len, this->ks3[0], this->ks3[1], this->ks3[2],
 						 &ivb, DES_DECRYPT);
 }
@@ -1408,10 +1423,15 @@ static void encrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 					 chunk_t *encrypted)
 {
 	des_cblock ivb;
+	u_int8_t *out;
 	
-	*encrypted = chunk_alloc(data.len);
+	out = data.ptr;
+	if (encrypted)
+	{
+		*encrypted = chunk_alloc(data.len);
+	}
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
-	des_ede3_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)(encrypted->ptr),
+	des_ede3_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
 						  data.len, this->ks3[0], this->ks3[1], this->ks3[2],
 						  &ivb, DES_ENCRYPT);
 }
