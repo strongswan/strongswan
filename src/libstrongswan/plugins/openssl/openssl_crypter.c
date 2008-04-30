@@ -115,21 +115,15 @@ static char* lookup_algorithm(openssl_algorithm_t *openssl_algo,
 static void crypt(private_openssl_crypter_t *this, chunk_t data,
 					chunk_t iv, chunk_t *dst, int enc)
 {
-	int len, finlen;
-	unsigned char buf[data.len + this->cipher->block_size];
+	int len;
 	EVP_CIPHER_CTX ctx;
 	EVP_CIPHER_CTX_init(&ctx);
 	EVP_CipherInit_ex(&ctx, this->cipher, NULL, this->key.ptr, iv.ptr, enc);
 	EVP_CIPHER_CTX_set_padding(&ctx, 0); /* disable padding */
-	EVP_CipherUpdate(&ctx, buf, &len, data.ptr, data.len);
-	EVP_CipherFinal_ex(&ctx, buf + len, &finlen);
-	len += finlen;
-	*dst = chunk_alloc(len);
-	memcpy(dst->ptr, buf, len);
+	*dst = chunk_alloc(data.len);
+	EVP_CipherUpdate(&ctx, dst->ptr, &len, data.ptr, data.len);
+	EVP_CipherFinal_ex(&ctx, dst->ptr, &len); /* since padding is disabled this does nothing */
 	EVP_CIPHER_CTX_cleanup(&ctx);
-	/* TODO: because we don't use padding, we can simplify this a bit because
-	 * EVP_CryptFinal_ex does not do anything but checking if any data is left.
-	 * so we can work without buffer and fill the dst directly */
 }
 
 /**
