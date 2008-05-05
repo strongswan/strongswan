@@ -463,7 +463,7 @@ void free_hook(void *ptr, const void *caller)
 	}
 	
 	install_hooks();
-	pthread_setschedparam(thread_id, oldpolicy, &params);
+	pthread_setschedparam(thread_id, oldpolicy, &oldparams);
 }
 
 /**
