@@ -106,48 +106,49 @@ static int print(FILE *stream, const struct printf_info *info,
 				 const void *const *args)
 {
 	private_host_t *this = *((private_host_t**)(args[0]));
-	char buffer[INET6_ADDRSTRLEN];
-	void *address;
-	u_int16_t port;
+	char buffer[INET6_ADDRSTRLEN + 16];
+	int len;
 	
 	if (this == NULL)
 	{
-		return fprintf(stream, "(null)");
+		len = sprintf(buffer, "(null)");
 	}
-	
-	if (is_anyaddr(this))
+	else if (is_anyaddr(this))
 	{
-		return fprintf(stream, "%%any");
-	}
-	
-	switch (this->address.sa_family)
-	{
-		case AF_INET:
-			address = &this->address4.sin_addr;
-			port = this->address4.sin_port;
-			break;
-		case AF_INET6:
-			address = &this->address6.sin6_addr;
-			port = this->address6.sin6_port;
-			break;
-		default:
-			return fprintf(stream, "(family not supported)");
-	}
-	
-	if (inet_ntop(this->address.sa_family, address,
-				  buffer, sizeof(buffer)) == NULL)
-	{
-		return fprintf(stream, "(address conversion failed)");
-	}
-	
-	if (info->alt)
-	{
-		return fprintf(stream, "%s[%d]", buffer, ntohs(port));
+		len = sprintf(buffer, "%%any");
 	}
 	else
 	{
-		return fprintf(stream, "%s", buffer);
+		void *address;
+		u_int16_t port;
+		
+		address = &this->address6.sin6_addr;
+		port = this->address6.sin6_port;
+		
+		switch (this->address.sa_family)
+		{
+			case AF_INET:
+				address = &this->address4.sin_addr;
+				port = this->address4.sin_port;
+				/* fall */
+			case AF_INET6:
+	
+				if (inet_ntop(this->address.sa_family, address,
+							  buffer, sizeof(buffer)) == NULL)
+				{
+					len = sprintf(buffer, "(address conversion failed)");
+				}
+				else if (info->alt)
+				{
+					len = sprintf(buffer, "%s[%d]", buffer, ntohs(port));
+				}
+				break;
+			default:
+				len = sprintf(buffer, "(family not supported)");
+				break;
+		}
 	}
+	return fprintf(stream, "%*s", info->width, buffer);
 }
 
 
