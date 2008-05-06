@@ -322,15 +322,11 @@ struct peer_cfg_t {
 	bool (*equals)(peer_cfg_t *this, peer_cfg_t *other);
 	
 	/**
-	 * Get a new reference.
+	 * Increase reference count.
 	 *
-	 * Get a new reference to this peer_cfg by increasing
-	 * it's internal reference counter.
-	 * Do not call get_ref or any other function until you
-	 * already have a reference. Otherwise the object may get
-	 * destroyed while calling get_ref(),
+	 * @return				reference to this
 	 */
-	void (*get_ref) (peer_cfg_t *this);
+	peer_cfg_t* (*get_ref) (peer_cfg_t *this);
 	
 	/**
 	 * Destroys the peer_cfg object.

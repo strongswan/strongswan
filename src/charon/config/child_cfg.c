@@ -401,9 +401,10 @@ static diffie_hellman_group_t get_dh_group(private_child_cfg_t *this)
 /**
  * Implementation of child_cfg_t.get_name
  */
-static void get_ref(private_child_cfg_t *this)
+static child_cfg_t* get_ref(private_child_cfg_t *this)
 {
 	ref_get(&this->refcount);
+	return &this->public;
 }
 
 /**
@@ -448,7 +449,7 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.get_close_action = (action_t (*) (child_cfg_t *))get_close_action;
 	this->public.get_lifetime = (u_int32_t (*) (child_cfg_t *,bool))get_lifetime;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(child_cfg_t*)) get_dh_group;
-	this->public.get_ref = (void (*) (child_cfg_t*))get_ref;
+	this->public.get_ref = (child_cfg_t* (*) (child_cfg_t*))get_ref;
 	this->public.destroy = (void (*) (child_cfg_t*))destroy;
 	
 	this->name = strdup(name);

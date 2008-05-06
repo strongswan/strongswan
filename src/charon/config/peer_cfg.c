@@ -266,8 +266,7 @@ static child_cfg_t* select_child_cfg(private_peer_cfg_t *this,
 		if (contains_ts(current, TRUE, my_ts, my_host) &&
 			contains_ts(current, FALSE, other_ts, other_host))
 		{
-			found = current;
-			found->get_ref(found);
+			found = current->get_ref(current);
 			break;
 		}
 	}
@@ -487,9 +486,10 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 /**
  * Implements peer_cfg_t.get_ref.
  */
-static void get_ref(private_peer_cfg_t *this)
+static peer_cfg_t* get_ref(private_peer_cfg_t *this)
 {
 	ref_get(&this->refcount);
+	return &this->public;
 }
 
 /**
@@ -556,7 +556,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_pool = (char*(*)(peer_cfg_t*))get_pool;
 	this->public.get_auth = (auth_info_t*(*)(peer_cfg_t*))get_auth;
 	this->public.equals = (bool(*)(peer_cfg_t*, peer_cfg_t *other))equals;
-	this->public.get_ref = (void(*)(peer_cfg_t *))get_ref;
+	this->public.get_ref = (peer_cfg_t*(*)(peer_cfg_t *))get_ref;
 	this->public.destroy = (void(*)(peer_cfg_t *))destroy;
 #ifdef ME
 	this->public.is_mediation = (bool (*) (peer_cfg_t *))is_mediation;

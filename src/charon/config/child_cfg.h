@@ -214,15 +214,11 @@ struct child_cfg_t {
 	diffie_hellman_group_t (*get_dh_group)(child_cfg_t *this);
 	
 	/**
-	 * Get a new reference.
+	 * Increase the reference count.
 	 *
-	 * Get a new reference to this child_cfg by increasing
-	 * it's internal reference counter.
-	 * Do not call get_ref or any other function until you
-	 * already have a reference. Otherwise the object may get
-	 * destroyed while calling get_ref(),
+	 * @return				reference to this
 	 */
-	void (*get_ref) (child_cfg_t *this);
+	child_cfg_t* (*get_ref) (child_cfg_t *this);
 	
 	/**
 	 * Destroys the child_cfg object.

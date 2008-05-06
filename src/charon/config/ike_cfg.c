@@ -226,9 +226,10 @@ static bool equals(private_ike_cfg_t *this, private_ike_cfg_t *other)
 /**
  * Implementation of ike_cfg_t.get_ref.
  */
-static void get_ref(private_ike_cfg_t *this)
+static ike_cfg_t* get_ref(private_ike_cfg_t *this)
 {
 	ref_get(&this->refcount);
+	return &this->public;
 }
 
 /**
@@ -264,7 +265,7 @@ ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 	this->public.select_proposal = (proposal_t*(*)(ike_cfg_t*,linked_list_t*))select_proposal;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(ike_cfg_t*)) get_dh_group;
 	this->public.equals = (bool(*)(ike_cfg_t*,ike_cfg_t*)) equals;
-	this->public.get_ref = (void(*)(ike_cfg_t*))get_ref;
+	this->public.get_ref = (ike_cfg_t*(*)(ike_cfg_t*))get_ref;
 	this->public.destroy = (void(*)(ike_cfg_t*))destroy;
 	
 	/* private variables */
