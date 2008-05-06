@@ -1115,9 +1115,11 @@ identification_t *identification_create_from_string(char *string)
 		{
 			if (*(string + 1) == '#')
 			{
-				/* TODO: Pluto handles '#' as hex encoded ID_KEY_ID. */
-				free(this);
-				return NULL;
+				string += 2;
+				this->type = ID_KEY_ID;
+				this->encoded = chunk_from_hex(
+									chunk_create(string, strlen(string)), NULL);
+				return &(this->public);
 			}
 			else
 			{
