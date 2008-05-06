@@ -29,7 +29,7 @@
 static const asn1Object_t pkinfoObjects[] = {
 	{ 0, "subjectPublicKeyInfo",ASN1_SEQUENCE,		ASN1_NONE	}, /* 0 */
 	{ 1,   "algorithm",			ASN1_EOC,			ASN1_RAW	}, /* 1 */
-	{ 1,   "subjectPublicKey",	ASN1_BIT_STRING,	ASN1_OBJ	}, /* 2 */
+	{ 1,   "subjectPublicKey",	ASN1_BIT_STRING,	ASN1_BODY	}, /* 2 */
 	{ 0, "exit",				ASN1_EOC,			ASN1_EXIT	}
 };
 #define PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM	1
@@ -73,13 +73,11 @@ static public_key_t *load(chunk_t blob)
 				if (object.len > 0 && *object.ptr == 0x00)
 				{
 					/* skip initial bit string octet defining 0 unused bits */
-					object.ptr++;
-					object.len--;				
-					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
-											 BUILD_BLOB_ASN1_DER,
-											 chunk_clone(object),
-											 BUILD_END);
+					object = chunk_skip(object, 1);
 				}
+				key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
+										 BUILD_BLOB_ASN1_DER, chunk_clone(object),
+										 BUILD_END);
 				break;
 		}
 	} 

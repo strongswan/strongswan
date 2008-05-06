@@ -731,22 +731,19 @@ static bool parse_certificate(private_x509_cert_t *this)
 				if (object.len > 0 && *object.ptr == 0x00)
 				{
 					/* skip initial bit string octet defining 0 unused bits */
-					object.ptr++;
-					object.len--;
-
-					switch (key_alg)
-					{
-						case OID_RSA_ENCRYPTION:
-							this->public_key = lib->creds->create(lib->creds,
-													CRED_PUBLIC_KEY, KEY_RSA,
-													BUILD_BLOB_ASN1_DER,
-													chunk_clone(object),
-													BUILD_END);
-							break;
-						default:
-							DBG1("parsing key type %d failed", key_alg);
-							goto end;
-					}
+					object = chunk_skip(object, 1);
+				}
+				switch (key_alg)
+				{
+					case OID_RSA_ENCRYPTION:
+						this->public_key = lib->creds->create(lib->creds,
+									CRED_PUBLIC_KEY, KEY_RSA,
+									BUILD_BLOB_ASN1_DER, chunk_clone(object),
+									BUILD_END);
+						break;
+					default:
+						DBG1("parsing key type %d failed", key_alg);
+						goto end;
 				}
 				break;
 			case X509_OBJ_EXTN_ID:
