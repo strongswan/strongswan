@@ -18,6 +18,7 @@
 #include "med_db_plugin.h"
 
 #include "med_db_creds.h"
+#include "med_db_config.h"
 
 #include <daemon.h>
 
@@ -42,6 +43,11 @@ struct private_med_db_plugin_t {
 	 * med_db credential set instance
 	 */
 	med_db_creds_t *creds;
+	
+	/**
+	 * med_db config database
+	 */
+	med_db_config_t *config;
 };
 
 /**
@@ -49,7 +55,9 @@ struct private_med_db_plugin_t {
  */
 static void destroy(private_med_db_plugin_t *this)
 {
+	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	charon->credentials->remove_set(charon->credentials, &this->creds->set);
+	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
 	this->db->destroy(this->db);
 	free(this);
@@ -66,7 +74,7 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
 	uri = lib->settings->get_str(lib->settings,
-								 "charon.plugins.med_db.database", NULL);
+								 "medmanager.database", NULL);
 	if (!uri)
 	{
 		DBG1(DBG_CFG, "mediation database URI not defined, skipped");
@@ -83,8 +91,10 @@ plugin_t *plugin_create()
 	}
 	
 	this->creds = med_db_creds_create(this->db);
+	this->config = med_db_config_create(this->db);
 	
 	charon->credentials->add_set(charon->credentials, &this->creds->set);
+	charon->backends->add_backend(charon->backends, &this->config->backend);
 	
 	return &this->public.plugin;
 }
