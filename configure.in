@@ -568,7 +568,7 @@ AC_TRY_COMPILE(
 )
 
 if test x$gmp = xtrue; then
-	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])	
+	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
 	AC_MSG_CHECKING([gmp.h version >= 4.1.4])
 	AC_TRY_COMPILE(
 		[#include "gmp.h"],
@@ -620,9 +620,16 @@ if test x$mysql = xtrue; then
 	AC_CHECK_HEADER([mysql/mysql.h],,[AC_MSG_ERROR([MySQL header mysql/mysql.h not found!])])
 fi
 
-if test x$mysql = xtrue; then
+if test x$sqlite = xtrue; then
 	AC_HAVE_LIBRARY([sqlite3],[LIBS="$LIBS"],[AC_MSG_ERROR([SQLite library sqlite3 not found])])
 	AC_CHECK_HEADER([sqlite3.h],,[AC_MSG_ERROR([SQLite header sqlite3.h not found!])])
+	AC_MSG_CHECKING([sqlite3_prepare_v2])
+	AC_TRY_COMPILE(
+		[#include <sqlite3.h>],
+		[
+			void *test = sqlite3_prepare_v2;
+		], 
+		[AC_MSG_RESULT([yes])]; AC_DEFINE_UNQUOTED(HAVE_SQLITE3_PREPARE_V2, 1), [AC_MSG_RESULT([no])])
 fi
 
 if test x$openssl = xtrue; then

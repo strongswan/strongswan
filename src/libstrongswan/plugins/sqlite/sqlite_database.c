@@ -53,8 +53,12 @@ static sqlite3_stmt* run(private_sqlite_database_t *this, char *sql,
 {
 	sqlite3_stmt *stmt = NULL;
 	int params, i, res = SQLITE_OK;
-	
+
+#ifdef HAVE_SQLITE3_PREPARE_V2
 	if (sqlite3_prepare_v2(this->db, sql, -1, &stmt, NULL) == SQLITE_OK)
+#else
+	if (sqlite3_prepare(this->db, sql, -1, &stmt, NULL) == SQLITE_OK)
+#endif
 	{
 		params = sqlite3_bind_parameter_count(stmt);
 		for (i = 1; i <= params; i++)
