@@ -266,7 +266,13 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 		keep |= (1<<CAP_SETGID);
 	}
 
+	/* we use the old capset version for now. For systems with version 2
+	 * available, we specifiy version 1 excplicitly. */
+#ifdef _LINUX_CAPABILITY_VERSION_1
+	hdr.version = _LINUX_CAPABILITY_VERSION_1;
+#else
 	hdr.version = _LINUX_CAPABILITY_VERSION;
+#endif
 	hdr.pid = 0;
 	data.inheritable = data.effective = data.permitted = keep;
 	
