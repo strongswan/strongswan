@@ -303,7 +303,12 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 	if (state != PEM_POST)
 		return "file coded in unknown format, discarded";
 
-	return (encrypted)? pem_decrypt(blob, alg, key_size, &iv, passphrase) : NULL;
+	if (!encrypted)
+	{
+		return NULL;
+	}
+	return pem_decrypt(blob, alg, key_size, &iv, passphrase);
+	
 }
 
 /* load a coded key or certificate file with autodetection

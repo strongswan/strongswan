@@ -1370,6 +1370,7 @@ static void decrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 	if (decrypted)
 	{
 		*decrypted = chunk_alloc(data.len);
+		out = decrypted->ptr;
 	}
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
 	des_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
@@ -1390,6 +1391,7 @@ static void encrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 	if (encrypted)
 	{
 		*encrypted = chunk_alloc(data.len);
+		out = encrypted->ptr;
 	}
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
 	des_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
@@ -1409,6 +1411,7 @@ static void decrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 	if (decrypted)
 	{
 		*decrypted = chunk_alloc(data.len);
+		out = decrypted->ptr;
 	}
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
 	des_ede3_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
@@ -1429,6 +1432,7 @@ static void encrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 	if (encrypted)
 	{
 		*encrypted = chunk_alloc(data.len);
+		out = encrypted->ptr;
 	}
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
 	des_ede3_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
