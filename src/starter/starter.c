@@ -26,6 +26,8 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include <freeswan.h>
 
@@ -137,6 +139,64 @@ fsig(int signal)
 	    plog("fsig(): unknown signal %d -- investigate", signal);
 	    break;
     }
+}
+
+static void generate_selfcert()
+{
+    struct stat stb;
+    
+	/* if ipsec.secrets file is missing then generate RSA default key pair */
+	if (stat(SECRETS_FILE, &stb) != 0)
+	{
+	    mode_t oldmask;
+	    FILE *f;
+	    uid_t uid = 0;
+	    gid_t gid = 0;
+
+#ifdef IPSEC_GROUP
+		{
+			char buf[1024];
+			struct group group, *grp;
+		
+			if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) == 0 &&
+				grp)
+			{
+				gid = grp->gr_gid;
+			}
+		}
+#endif
+#ifdef IPSEC_USER
+		{
+			char buf[1024];
+			struct passwd passwd, *pwp;
+		
+			if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) == 0 &&
+				pwp)
+			{
+				uid = pwp->pw_uid;
+			}
+		}
+#endif
+	    setegid(gid);
+	    seteuid(uid);
+	    system("ipsec scepclient --out pkcs1 --out cert-self --quiet");
+	    seteuid(0);
+	    setegid(0);
+
+	    /* ipsec.secrets is root readable only */
+	    oldmask = umask(0066);
+
+	    f = fopen(SECRETS_FILE, "w");
+	    if (f)
+	    {
+		fprintf(f, "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n");
+		fprintf(f, "\n");
+		fprintf(f, ": RSA myKey.der\n");
+		fclose(f);
+	    }
+	    chown(SECRETS_FILE, uid, gid);
+	    umask(oldmask);
+	}
 }
 
 static void
@@ -274,6 +334,8 @@ int main (int argc, char **argv)
 	plog("starter is already running (%s exists) -- no fork done", STARTER_PID_FILE);
 	exit(LSB_RC_SUCCESS);
     }
+    
+    generate_selfcert();
 
     /* fork if we're not debugging stuff */
     if (!no_fork)

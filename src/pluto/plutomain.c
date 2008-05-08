@@ -31,6 +31,8 @@
 #include <sys/queue.h>
 #include <linux/capability.h>
 #include <sys/prctl.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include <freeswan.h>
 
@@ -617,19 +619,43 @@ main(int argc, char **argv)
     init_fetch();
 
     /* drop unneeded capabilities and change UID/GID */
+#ifdef _LINUX_CAPABILITY_VERSION_1
+    hdr.version = _LINUX_CAPABILITY_VERSION_1;
+#else
     hdr.version = _LINUX_CAPABILITY_VERSION;
+#endif
     hdr.pid = 0;
     data.inheritable = data.effective = data.permitted = 
 				1<<CAP_NET_ADMIN | 1<<CAP_NET_BIND_SERVICE;
 
     prctl(PR_SET_KEEPCAPS, 1);
+	
+#ifdef IPSEC_GROUP
+    {
+	struct group group, *grp;
+    char buf[1024];
 
-#   if IPSEC_GID
-	setgid(IPSEC_GID);
-#   endif
-#   if IPSEC_UID
-	setuid(IPSEC_UID);
-#   endif
+	if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) != 0 ||
+		grp == NULL || setgid(grp->gr_gid) != 0)
+	{
+	    plog("unable to change daemon group");
+	    abort();
+	}
+    }
+#endif
+#ifdef IPSEC_USER
+    {
+	struct passwd passwd, *pwp;
+    char buf[1024];
+
+	if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) != 0 ||
+		pwp == NULL || setuid(pwp->pw_uid) != 0)
+	{
+	    plog("unable to change daemon user");
+	    abort();
+	}
+	}
+#endif
     if (capset(&hdr, &data))
     {
 	plog("unable to drop root privileges");

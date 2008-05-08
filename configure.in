@@ -118,17 +118,25 @@ AC_ARG_WITH(
 )
 
 AC_ARG_WITH(
-	[uid],
-	AS_HELP_STRING([--with-uid=uid],[change user of the daemons to UID after startup (default is 0).]),
-	[AC_DEFINE_UNQUOTED(IPSEC_UID, $withval) AC_SUBST(ipsecuid, "$withval")],
-	[AC_DEFINE_UNQUOTED(IPSEC_UID, 0) AC_SUBST(ipsecuid, "0")]
+	[uid],,[AC_MSG_ERROR([--with-uid is gone, use --with-user instead!])]
 )
 
 AC_ARG_WITH(
-	[gid],
-	AS_HELP_STRING([--with-gid=gid],[change group of the daemons to GID after startup (default is 0).]),
-	[AC_DEFINE_UNQUOTED(IPSEC_GID, $withval) AC_SUBST(ipsecgid, "$withval")],
-	[AC_DEFINE_UNQUOTED(IPSEC_GID, 0) AC_SUBST(ipsecgid, "0")]
+	[gid],,[AC_MSG_ERROR([--with-gid is gone, use --with-group instead!])]
+)
+
+AC_ARG_WITH(
+	[user],
+	AS_HELP_STRING([--with-user=user],[change user of the daemons to "user" after startup (default is 0).]),
+	[AC_DEFINE_UNQUOTED(IPSEC_USER, "$withval") AC_SUBST(ipsecuser, "$withval")],
+	[AC_SUBST(ipsecuser, "root")]
+)
+
+AC_ARG_WITH(
+	[group],
+	AS_HELP_STRING([--with-group=group],[change group of the daemons to "group" after startup (default is 0).]),
+	[AC_DEFINE_UNQUOTED(IPSEC_GROUP, "$withval") AC_SUBST(ipsecgroup, "$withval")],
+	[AC_SUBST(ipsecgroup, "root")]
 )
 
 AC_ARG_ENABLE(

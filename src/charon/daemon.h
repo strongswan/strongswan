@@ -299,6 +299,16 @@ struct daemon_t {
 #endif /* ME */
 	
 	/**
+	 * User ID the daemon will user after initialization
+	 */
+	uid_t uid;
+
+	/**
+	 * Group ID the daemon will use after initialization
+	 */
+	gid_t gid;
+	
+	/**
 	 * Shut down the daemon.
 	 * 
 	 * @param reason		describtion why it will be killed

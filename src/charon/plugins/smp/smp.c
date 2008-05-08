@@ -728,7 +728,7 @@ plugin_t *plugin_create()
 		return NULL;
 	}
 	umask(old);
-	if (chown(unix_addr.sun_path, IPSEC_UID, IPSEC_GID) != 0)
+	if (chown(unix_addr.sun_path, charon->uid, charon->gid) != 0)
 	{
 		DBG1(DBG_CFG, "changing XML socket permissions failed: %s", strerror(errno));
 	}

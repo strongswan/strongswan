@@ -106,8 +106,8 @@ starter_stop_pluto (void)
 int
 starter_start_pluto (starter_config_t *cfg, bool debug)
 {
-    int i;
     struct stat stb;
+    int i;
     pid_t pid;
     char **l;
     int argc = 2;
@@ -217,34 +217,6 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
 
 	if (cfg->setup.prepluto)
 	    system(cfg->setup.prepluto);
-
-	/* if ipsec.secrets file is missing then generate RSA default key pair */
-	if (stat(SECRETS_FILE, &stb) != 0)
-	{
-	    mode_t oldmask;
-	    FILE *f;
-
-	    plog("no %s file, generating RSA key", SECRETS_FILE);
-	    seteuid(IPSEC_UID);
-	    setegid(IPSEC_GID);
-	    system("ipsec scepclient --out pkcs1 --out cert-self --quiet");
-	    seteuid(0);
-	    setegid(0);
-
-	    /* ipsec.secrets is root readable only */
-	    oldmask = umask(0066);
-
-	    f = fopen(SECRETS_FILE, "w");
-	    if (f)
-	    {
-		fprintf(f, "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n");
-		fprintf(f, "\n");
-		fprintf(f, ": RSA myKey.der\n");
-		fclose(f);
-	    }
-	    chown(SECRETS_FILE, IPSEC_UID, IPSEC_GID);
-	    umask(oldmask);
-	}
 
 	pid = fork();
 	switch (pid)

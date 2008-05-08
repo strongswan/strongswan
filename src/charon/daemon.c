@@ -28,6 +28,8 @@
 #include <string.h>
 #include <getopt.h>
 #include <errno.h>
+#include <pwd.h>
+#include <grp.h>
 #ifdef HAVE_BACKTRACE
 # include <execinfo.h>
 #endif /* HAVE_BACKTRACE */
@@ -207,11 +209,17 @@ static void destroy(private_daemon_t *this)
 static void kill_daemon(private_daemon_t *this, char *reason)
 {
 	/* we send SIGTERM, so the daemon can cleanly shut down */
-	DBG1(DBG_DMN, "killing daemon: %s", reason);
+	if (this->public.bus)
+	{
+		DBG1(DBG_DMN, "killing daemon: %s", reason);
+	}
+	else
+	{
+		fprintf(stderr, "killing daemon: %s\n", reason);
+	}
 	if (this->main_thread_id == pthread_self())
 	{
 		/* initialization failed, terminate daemon */
-		destroy(this);
 		unlink(PID_FILE);
 		exit(-1);
 	}
@@ -237,18 +245,14 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	
 	if (full)
 	{
-#		if IPSEC_GID
-		if (setgid(IPSEC_GID) != 0)
+		if (setgid(charon->gid) != 0)
 		{
-			kill_daemon(this, "changing GID to unprivileged group failed");
+			kill_daemon(this, "change to unprivileged group failed");	
 		}
-#		endif
-#		if IPSEC_UID
-		if (setuid(IPSEC_UID) != 0)
+		if (setuid(charon->uid) != 0)
 		{
-			kill_daemon(this, "changing UID to unprivileged user failed");
+			kill_daemon(this, "change to unprivileged user failed");	
 		}
-#		endif
 	}
 	else
 	{
@@ -280,6 +284,39 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	{
 		kill_daemon(this, "unable to drop daemon capabilities");
 	}
+}
+
+/**
+ * lookup UID and GID 
+ */
+static void lookup_uid_gid(private_daemon_t *this)
+{
+#ifdef IPSEC_USER
+	{
+		char buf[1024];
+		struct passwd passwd, *pwp;
+	
+		if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) != 0 ||
+			pwp == NULL)
+		{
+			kill_daemon(this, "resolving user '"IPSEC_USER"' failed");
+		}
+		charon->uid = pwp->pw_uid;
+	}
+#endif
+#ifdef IPSEC_GROUP
+	{
+		char buf[1024];
+		struct group group, *grp;
+	
+		if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) != 0 ||
+			grp == NULL)
+		{
+			kill_daemon(this, "reslvoing group '"IPSEC_GROUP"' failed");
+		}
+		charon->gid = grp->gr_gid;
+	}
+#endif
 }
 
 /**
@@ -428,6 +465,8 @@ private_daemon_t *daemon_create(void)
 	this->public.outlog = NULL;
 	this->public.syslog = NULL;
 	this->public.authlog = NULL;
+	this->public.uid = 0;
+	this->public.gid = 0;
 	
 	this->main_thread_id = pthread_self();
 	
@@ -495,6 +534,8 @@ int main(int argc, char *argv[])
 								  traffic_selector_get_printf_hooks());
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
+	
+	lookup_uid_gid(private_charon);
 	
 	/* drop the capabilities we won't need for initialization */
 	prctl(PR_SET_KEEPCAPS, 1);
@@ -571,7 +612,7 @@ int main(int argc, char *argv[])
 	if (pid_file)
 	{
 		fprintf(pid_file, "%d\n", getpid());
-		fchown(fileno(pid_file), IPSEC_UID, IPSEC_GID);
+		fchown(fileno(pid_file), charon->uid, charon->gid);
 		fclose(pid_file);
 	}
 	

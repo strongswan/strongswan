@@ -249,6 +249,8 @@ char *whitelist[] = {
 	"getprotobynumber",
 	"getservbyport",
 	"getservbyname",
+	"getpwnam_r",
+	"getgrnam_r",
 	"register_printf_function",
 	"syslog",
 	"vsyslog",
