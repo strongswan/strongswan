@@ -16,7 +16,6 @@
  */
 
 #include "medsrv_creds.h"
-#include "medsrv_pubkey.h"
 
 #include <daemon.h>
 #include <library.h>
@@ -60,6 +59,7 @@ typedef struct {
 static bool cert_enumerator_enumerate(cert_enumerator_t *this,
 									  certificate_t **cert)
 {
+	certificate_t *trusted;
 	public_key_t *public;
 	chunk_t chunk;
 
@@ -73,8 +73,15 @@ static bool cert_enumerator_enumerate(cert_enumerator_t *this,
 		{
 			if (this->type == KEY_ANY || this->type == public->get_type(public))
 			{
-				*cert = this->current = (certificate_t*)medsrv_pubkey_create(public);
-				return TRUE;
+				trusted = lib->creds->create(lib->creds,
+										CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
+										BUILD_PUBLIC_KEY, public, BUILD_END);
+				if (trusted)
+				{
+					*cert = this->current = trusted;
+					return TRUE;
+				}
+				continue;
 			}
 			public->destroy(public);
 		}

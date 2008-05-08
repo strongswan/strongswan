@@ -16,22 +16,21 @@
  */
 
 /**
- * @defgroup medsrv_pubkey medsrv_pubkey
- * @{ @ingroup medsrv
+ * @defgroup pubkey_cert pubkey_cert
+ * @{ @ingroup certificates
  */
 
-#ifndef MEDSRV_PUBKEY_H_
-#define MEDSRV_PUBKEY_H_
+#ifndef PUBKEY_CERT_H_
+#define PUBKEY_CERT_H_
 
-#include <credentials/keys/public_key.h>
 #include <credentials/certificates/certificate.h>
 
-typedef struct medsrv_pubkey_t medsrv_pubkey_t;
+typedef struct pubkey_cert_t pubkey_cert_t;
 
 /**
  * A trusted public key wrapped into certificate of type CERT_TRUSTED_PUBKEY.
  */
-struct medsrv_pubkey_t {
+struct pubkey_cert_t {
 
 	/**
 	 * Implements certificate_t.
@@ -40,13 +39,13 @@ struct medsrv_pubkey_t {
 };
 
 /**
- * Create a wrapped public key instance using a public_key.
+ * Create the builder for a trusted public key.
  *
- * The certifcate uses the public_key ID as subject.
+ * The builders add() function takes BUILD_PUBLIC_KEY to enwrap.
  *
- * @param key		public key to wrap
- * @return			public key implementing certificate interface
+ * @param type		type of the certificate, must be CERT_pubkey_cert
+ * @return 			builder instance
  */
-medsrv_pubkey_t *medsrv_pubkey_create(public_key_t *key);
+builder_t *pubkey_cert_builder(certificate_type_t type);
 
-#endif /* MEDSRV_PUBKEY_H_ @}*/
+#endif /* PUBKEY_CERT_H_ @}*/

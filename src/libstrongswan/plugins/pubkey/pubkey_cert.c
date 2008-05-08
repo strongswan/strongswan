@@ -15,19 +15,21 @@
  * $Id$
  */
 
-#include "medsrv_pubkey.h"
+#include "pubkey_cert.h"
 
-typedef struct private_medsrv_pubkey_t private_medsrv_pubkey_t;
+#include <debug.h>
+
+typedef struct private_pubkey_cert_t private_pubkey_cert_t;
 
 /**
- * private data of medsrv_pubkey
+ * private data of pubkey_cert
  */
-struct private_medsrv_pubkey_t {
+struct private_pubkey_cert_t {
 
 	/**
 	 * public functions
 	 */
-	medsrv_pubkey_t public;
+	pubkey_cert_t public;
 	
 	/**
 	 * wrapped public key
@@ -48,7 +50,7 @@ struct private_medsrv_pubkey_t {
 /**
  * Implementation of certificate_t.get_type
  */
-static certificate_type_t get_type(private_medsrv_pubkey_t *this)
+static certificate_type_t get_type(private_pubkey_cert_t *this)
 {
 	return CERT_TRUSTED_PUBKEY;
 }
@@ -56,7 +58,7 @@ static certificate_type_t get_type(private_medsrv_pubkey_t *this)
 /**
  * Implementation of certificate_t.get_subject
  */
-static identification_t* get_subject(private_medsrv_pubkey_t *this)
+static identification_t* get_subject(private_pubkey_cert_t *this)
 {
 	return this->key->get_id(this->key, ID_PUBKEY_SHA1);
 }
@@ -64,7 +66,7 @@ static identification_t* get_subject(private_medsrv_pubkey_t *this)
 /**
  * Implementation of certificate_t.get_issuer
  */
-static identification_t* get_issuer(private_medsrv_pubkey_t *this)
+static identification_t* get_issuer(private_pubkey_cert_t *this)
 {
 	return this->issuer;
 }
@@ -72,7 +74,7 @@ static identification_t* get_issuer(private_medsrv_pubkey_t *this)
 /**
  * Implementation of certificate_t.has_subject.
  */
-static id_match_t has_subject(private_medsrv_pubkey_t *this,
+static id_match_t has_subject(private_pubkey_cert_t *this,
 							  identification_t *subject)
 {
 	identification_t *id;
@@ -88,7 +90,7 @@ static id_match_t has_subject(private_medsrv_pubkey_t *this,
 /**
  * Implementation of certificate_t.has_subject.
  */
-static id_match_t has_issuer(private_medsrv_pubkey_t *this,
+static id_match_t has_issuer(private_pubkey_cert_t *this,
 							 identification_t *issuer)
 {
 	return ID_MATCH_NONE;
@@ -97,9 +99,9 @@ static id_match_t has_issuer(private_medsrv_pubkey_t *this,
 /**
  * Implementation of certificate_t.equals.
  */
-static bool equals(private_medsrv_pubkey_t *this, certificate_t *other)
+static bool equals(private_pubkey_cert_t *this, certificate_t *other)
 {
-	if (this == (private_medsrv_pubkey_t*)other)
+	if (this == (private_pubkey_cert_t*)other)
 	{
 		return TRUE;
 	}
@@ -113,7 +115,7 @@ static bool equals(private_medsrv_pubkey_t *this, certificate_t *other)
 /**
  * Implementation of certificate_t.issued_by
  */
-static bool issued_by(private_medsrv_pubkey_t *this, certificate_t *issuer)
+static bool issued_by(private_pubkey_cert_t *this, certificate_t *issuer)
 {
 	return equals(this, issuer);
 }
@@ -121,7 +123,7 @@ static bool issued_by(private_medsrv_pubkey_t *this, certificate_t *issuer)
 /**
  * Implementation of certificate_t.get_public_key
  */
-static public_key_t* get_public_key(private_medsrv_pubkey_t *this)
+static public_key_t* get_public_key(private_pubkey_cert_t *this)
 {
 	this->key->get_ref(this->key);
 	return this->key;
@@ -129,7 +131,7 @@ static public_key_t* get_public_key(private_medsrv_pubkey_t *this)
 /**
  * Implementation of certificate_t.get_validity.
  */
-static bool get_validity(private_medsrv_pubkey_t *this, time_t *when,
+static bool get_validity(private_pubkey_cert_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
 {
 	if (not_before)
@@ -154,7 +156,7 @@ static bool is_newer(certificate_t *this, certificate_t *that)
 /**
  * Implementation of certificate_t.get_encoding.
  */
-static chunk_t get_encoding(private_medsrv_pubkey_t *this)
+static chunk_t get_encoding(private_pubkey_cert_t *this)
 {
 	return this->key->get_encoding(this->key);
 }
@@ -162,16 +164,16 @@ static chunk_t get_encoding(private_medsrv_pubkey_t *this)
 /**
  * Implementation of certificate_t.get_ref
  */
-static private_medsrv_pubkey_t* get_ref(private_medsrv_pubkey_t *this)
+static private_pubkey_cert_t* get_ref(private_pubkey_cert_t *this)
 {
 	ref_get(&this->ref);
 	return this;
 }
 
 /**
- * Implementation of medsrv_pubkey_t.destroy
+ * Implementation of pubkey_cert_t.destroy
  */
-static void destroy(private_medsrv_pubkey_t *this)
+static void destroy(private_pubkey_cert_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -184,9 +186,9 @@ static void destroy(private_medsrv_pubkey_t *this)
 /*
  * see header file
  */
-medsrv_pubkey_t *medsrv_pubkey_create(public_key_t *key)
+static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
 {
-	private_medsrv_pubkey_t *this = malloc_thing(private_medsrv_pubkey_t);
+	private_pubkey_cert_t *this = malloc_thing(private_pubkey_cert_t);
 	
 	this->public.interface.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
 	this->public.interface.get_subject = (identification_t* (*)(certificate_t *this))get_subject;
@@ -205,6 +207,77 @@ medsrv_pubkey_t *medsrv_pubkey_create(public_key_t *key)
 	this->ref = 1;
 	this->key = key;
 	this->issuer = identification_create_from_encoding(ID_ANY, chunk_empty);
+	
+	return &this->public;
+}
+
+typedef struct private_builder_t private_builder_t;
+/**
+ * Builder implementation for key loading
+ */
+struct private_builder_t {
+	/** implements the builder interface */
+	builder_t public;
+	/** loaded public key */
+	pubkey_cert_t *key;
+};
+
+/**
+ * Implementation of builder_t.build
+ */
+static pubkey_cert_t *build(private_builder_t *this)
+{
+	pubkey_cert_t *key = this->key;
+	
+	free(this);
+	return key;
+}
+
+/**
+ * Implementation of builder_t.add
+ */
+static void add(private_builder_t *this, builder_part_t part, ...)
+{
+	va_list args;
+	
+	if (this->key)
+	{
+		DBG1("ignoring surplus build part %N", builder_part_names, part);
+		return;
+	}
+	
+	switch (part)
+	{
+		case BUILD_PUBLIC_KEY:
+		{
+			va_start(args, part);
+			this->key = pubkey_cert_create(va_arg(args, public_key_t*));
+			va_end(args);
+			break;
+		}
+		default:
+			DBG1("ignoring unsupported build part %N", builder_part_names, part);
+			break;
+	}
+}
+
+/**
+ * Builder construction function
+ */
+builder_t *pubkey_cert_builder(certificate_type_t type)
+{
+	private_builder_t *this;
+	
+	if (type != CERT_TRUSTED_PUBKEY)
+	{
+		return NULL;
+	}
+	
+	this = malloc_thing(private_builder_t);
+	
+	this->key = NULL;
+	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
+	this->public.build = (void*(*)(builder_t *this))build;
 	
 	return &this->public;
 }

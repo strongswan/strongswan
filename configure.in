@@ -255,6 +255,17 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[pubkey],
+	AS_HELP_STRING([--disable-pubkey],[disable RAW public key support plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		pubkey=true
+	 else
+		pubkey=false
+	fi],
+	pubkey=true
+)
+
+AC_ARG_ENABLE(
 	[hmac],
 	AS_HELP_STRING([--disable-hmac],[disable HMAC crypto implementation plugin. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -660,6 +671,7 @@ AM_CONDITIONAL(USE_FIPS_PRF, test x$fips_prf = xtrue)
 AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
+AM_CONDITIONAL(USE_PUBKEY, test x$pubkey = xtrue)
 AM_CONDITIONAL(USE_HMAC, test x$hmac = xtrue)
 AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
 AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
@@ -722,6 +734,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/hmac/Makefile
 	src/libstrongswan/plugins/xcbc/Makefile
 	src/libstrongswan/plugins/x509/Makefile
+	src/libstrongswan/plugins/pubkey/Makefile
 	src/libstrongswan/plugins/curl/Makefile
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile

@@ -128,6 +128,10 @@ if USE_X509
   SUBDIRS += plugins/x509
 endif
 
+if USE_PUBKEY
+  SUBDIRS += plugins/pubkey
+endif
+
 if USE_CURL
   SUBDIRS += plugins/curl
 endif
