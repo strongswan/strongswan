@@ -48,7 +48,6 @@ static int login(private_storage_t *this, char *username, char *password)
 	chunk_t hash, data, hex_str;
 	size_t username_len, password_len;
 	int uid = 0;
-	char *str;
 	enumerator_t *enumerator;
 	
 	/* hash = SHA1( username | password ) */
