@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
- * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -143,6 +143,17 @@ static kernel_algorithm_t integrity_algs[] = {
 };
 
 /**
+ * Algorithms for IPComp
+ */
+static kernel_algorithm_t compression_algs[] = {
+/*	{IPCOMP_OUI, 			"***",			0}, */
+	{IPCOMP_DEFLATE,		"deflate",		0},
+	{IPCOMP_LZS,			"lzs",			0},
+	{IPCOMP_LZJH,			"lzjh",			0},
+	{END_OF_LIST, 			NULL,			0},
+};
+
+/**
  * Look up a kernel algorithm name and its key size
  */
 static char* lookup_algorithm(kernel_algorithm_t *kernel_algo, 
@@ -153,8 +164,8 @@ static char* lookup_algorithm(kernel_algorithm_t *kernel_algo,
 		if (ikev2_algo == kernel_algo->ikev2_id)
 		{
 			/* match, evaluate key length */
-			if (*key_size == 0)
-			{	/* update key size of not set */
+			if (key_size && *key_size == 0)
+			{	/* update key size if not set */
 				*key_size = kernel_algo->key_size;
 			}
 			return kernel_algo->name;
@@ -518,11 +529,20 @@ static void process_expire(private_kernel_interface_t *this, struct nlmsghdr *hd
 	struct xfrm_user_expire *expire;
 	
 	expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
-	protocol = expire->state.id.proto == KERNEL_ESP ? PROTO_ESP : PROTO_AH;
+	protocol = expire->state.id.proto;
+	protocol = (protocol == KERNEL_ESP) ? PROTO_ESP : (protocol == KERNEL_AH) ? PROTO_AH : protocol;
 	spi = expire->state.id.spi;
 	reqid = expire->state.reqid;
 	
 	DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
+	
+	if (protocol != PROTO_ESP && protocol != PROTO_AH)
+	{
+		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA 0x%x (reqid %d) which is "
+				"not a CHILD_SA", ntohl(spi), reqid);
+		return;
+	}
+	
 	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
 		 expire->hard ? "delete" : "rekey",  protocol_id_names,
 		 protocol, ntohl(spi), reqid);
@@ -1814,12 +1834,11 @@ static status_t del_ip(private_kernel_interface_t *this, host_t *virtual_ip)
 }
 
 /**
- * Implementation of kernel_interface_t.get_spi.
+ * Get an SPI for a specific protocol from the kernel.
  */
-static status_t get_spi(private_kernel_interface_t *this, 
-						host_t *src, host_t *dst, 
-						protocol_id_t protocol, u_int32_t reqid,
-						u_int32_t *spi)
+static status_t get_spi_internal(private_kernel_interface_t *this,
+		host_t *src, host_t *dst, u_int8_t proto, u_int32_t min, u_int32_t max,
+		u_int32_t reqid, u_int32_t *spi)
 {
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *hdr, *out;
@@ -1829,8 +1848,6 @@ static status_t get_spi(private_kernel_interface_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "getting SPI for reqid %d", reqid);
-	
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_ALLOCSPI;
@@ -1839,12 +1856,12 @@ static status_t get_spi(private_kernel_interface_t *this,
 	userspi = (struct xfrm_userspi_info*)NLMSG_DATA(hdr);
 	host2xfrm(src, &userspi->info.saddr);
 	host2xfrm(dst, &userspi->info.id.daddr);
-	userspi->info.id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	userspi->info.id.proto = proto;
 	userspi->info.mode = TRUE; /* tunnel mode */
 	userspi->info.reqid = reqid;
 	userspi->info.family = src->get_family(src);
-	userspi->min = 0xc0000000;
-	userspi->max = 0xcFFFFFFF;
+	userspi->min = min;
+	userspi->max = max;
 	
 	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
@@ -1880,13 +1897,57 @@ static status_t get_spi(private_kernel_interface_t *this,
 	
 	if (received_spi == 0)
 	{
+		return FAILED;
+	}
+	
+	*spi = received_spi;
+	return SUCCESS;
+}
+
+/**
+ * Implementation of kernel_interface_t.get_spi.
+ */
+static status_t get_spi(private_kernel_interface_t *this, 
+						host_t *src, host_t *dst, 
+						protocol_id_t protocol, u_int32_t reqid,
+						u_int32_t *spi)
+{
+	DBG2(DBG_KNL, "getting SPI for reqid %d", reqid);
+	
+	if (get_spi_internal(this, src, dst,
+			(protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH,
+			0xc0000000, 0xcFFFFFFF, reqid, spi) != SUCCESS)
+	{
 		DBG1(DBG_KNL, "unable to get SPI for reqid %d", reqid);
 		return FAILED;
 	}
 	
-	DBG2(DBG_KNL, "got SPI 0x%x for reqid %d", received_spi, reqid);
+	DBG2(DBG_KNL, "got SPI 0x%x for reqid %d", *spi, reqid);
 	
-	*spi = received_spi;
+	return SUCCESS;
+}
+
+/**
+ * Implementation of kernel_interface_t.get_cpi.
+ */
+static status_t get_cpi(private_kernel_interface_t *this, 
+						host_t *src, host_t *dst, 
+						u_int32_t reqid, u_int16_t *cpi)
+{
+	u_int32_t received_spi = 0;
+	DBG2(DBG_KNL, "getting CPI for reqid %d", reqid);
+	
+	if (get_spi_internal(this, src, dst,
+			IPPROTO_COMP, 0x100, 0xEFFF, reqid, &received_spi) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to get CPI for reqid %d", reqid);
+		return FAILED;
+	}
+	
+	*cpi = htons((u_int16_t)ntohl(received_spi));
+	
+	DBG2(DBG_KNL, "got CPI 0x%x for reqid %d", *cpi, reqid);
+	
 	return SUCCESS;
 }
 
@@ -1899,7 +1960,8 @@ static status_t add_sa(private_kernel_interface_t *this,
 					   u_int64_t expire_soft, u_int64_t expire_hard,
 					   u_int16_t enc_alg, u_int16_t enc_size,
 					   u_int16_t int_alg, u_int16_t int_size,
-					   prf_plus_t *prf_plus, mode_t mode, bool encap,
+					   prf_plus_t *prf_plus, mode_t mode,
+					   u_int16_t ipcomp, bool encap,
 					   bool replace)
 {
 	unsigned char request[BUFFER_SIZE];
@@ -1909,7 +1971,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "adding SAD entry with SPI 0x%x", spi);
+	DBG2(DBG_KNL, "adding SAD entry with SPI 0x%x and reqid %d", spi, reqid);
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -1920,10 +1982,10 @@ static status_t add_sa(private_kernel_interface_t *this,
 	host2xfrm(src, &sa->saddr);
 	host2xfrm(dst, &sa->id.daddr);
 	sa->id.spi = spi;
-	sa->id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	sa->id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : (protocol == PROTO_AH) ? KERNEL_AH : protocol;
 	sa->family = src->get_family(src);
 	sa->mode = mode;
-	sa->replay_window = 32;
+	sa->replay_window = (protocol == IPPROTO_COMP) ? 0 : 32;
 	sa->reqid = reqid;
 	/* we currently do not expire SAs by volume/packet count */
 	sa->lft.soft_byte_limit = XFRM_INF;
@@ -1994,7 +2056,32 @@ static status_t add_sa(private_kernel_interface_t *this,
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 	
-	/* TODO: add IPComp here */
+	if (ipcomp != IPCOMP_NONE)
+	{
+		rthdr->rta_type = XFRMA_ALG_COMP;
+		alg_name = lookup_algorithm(compression_algs, ipcomp, NULL);
+		if (alg_name == NULL)
+		{
+			DBG1(DBG_KNL, "algorithm %N not supported by kernel!", 
+				 ipcomp_transform_names, ipcomp);
+			return FAILED;
+		}
+		DBG2(DBG_KNL, "  using compression algorithm %N",
+			 ipcomp_transform_names, ipcomp);
+		
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo));
+		hdr->nlmsg_len += rthdr->rta_len;
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
+		
+		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
+		algo->alg_key_len = 0;
+		strcpy(algo->alg_name, alg_name);
+		
+		rthdr = XFRM_RTA_NEXT(rthdr);
+	}
 	
 	if (encap)
 	{
@@ -2062,7 +2149,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
-	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : (protocol == PROTO_AH) ? KERNEL_AH : protocol;
 	sa_id->family = dst->get_family(dst);
 	
 	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -2190,7 +2277,7 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
-	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : (protocol == PROTO_AH) ? KERNEL_AH : protocol;
 	sa_id->family = dst->get_family(dst);
 	
 	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -2256,7 +2343,7 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
-	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : (protocol == PROTO_AH) ? KERNEL_AH : protocol;
 	sa_id->family = dst->get_family(dst);
 	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
@@ -2276,7 +2363,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
 						   policy_dir_t direction, protocol_id_t protocol,
-						   u_int32_t reqid, bool high_prio, mode_t mode)
+						   u_int32_t reqid, bool high_prio, mode_t mode,
+						   u_int16_t ipcomp)
 {
 	iterator_t *iterator;
 	policy_entry_t *current, *policy;
@@ -2301,7 +2389,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 		{
 			/* use existing policy */
 			current->refcount++;
-			DBG2(DBG_KNL, "policy %R===%R already exists, increasing ",
+			DBG2(DBG_KNL, "policy %R===%R already exists, increasing "
 				 "refcount", src_ts, dst_ts);
 			free(policy);
 			policy = current;
@@ -2348,10 +2436,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 	
 	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_userpolicy_info);
 	rthdr->rta_type = XFRMA_TMPL;
-
-	rthdr->rta_len = sizeof(struct xfrm_user_tmpl);
-	rthdr->rta_len = RTA_LENGTH(rthdr->rta_len);
-
+	rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
+	
 	hdr->nlmsg_len += rthdr->rta_len;
 	if (hdr->nlmsg_len > sizeof(request))
 	{
@@ -2359,6 +2445,30 @@ static status_t add_policy(private_kernel_interface_t *this,
 	}
 	
 	struct xfrm_user_tmpl *tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rthdr);
+	
+	if (ipcomp != IPCOMP_NONE)
+	{
+		tmpl->reqid = reqid;
+		tmpl->id.proto = IPPROTO_COMP;
+		tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
+		tmpl->mode = mode;
+		tmpl->optional = direction != POLICY_OUT;
+		tmpl->family = src->get_family(src);
+		
+		host2xfrm(src, &tmpl->saddr);
+		host2xfrm(dst, &tmpl->id.daddr);
+		
+		/* add an additional xfrm_user_tmpl */
+		rthdr->rta_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
+		hdr->nlmsg_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
+		
+		tmpl++;
+	}
+	
 	tmpl->reqid = reqid;
 	tmpl->id.proto = (protocol == PROTO_AH) ? KERNEL_AH : KERNEL_ESP;
 	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
@@ -2588,11 +2698,12 @@ kernel_interface_t *kernel_interface_create()
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,u_int16_t,u_int16_t,u_int16_t,prf_plus_t*,mode_t,bool,bool))add_sa;
+	this->public.get_cpi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,u_int16_t,u_int16_t,u_int16_t,prf_plus_t*,mode_t,u_int16_t,bool,bool))add_sa;
 	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
 	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
-	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t))add_policy;
+	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t,u_int16_t))add_policy;
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
 	this->public.get_interface = (char*(*)(kernel_interface_t*,host_t*))get_interface_name;

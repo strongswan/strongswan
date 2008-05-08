@@ -20,7 +20,8 @@ CREATE TABLE child_configs (
   hostaccess INTEGER NOT NULL DEFAULT '0',
   mode INTEGER NOT NULL DEFAULT '1',
   dpd_action INTEGER NOT NULL DEFAULT '0',
-  close_action INTEGER NOT NULL DEFAULT '0'
+  close_action INTEGER NOT NULL DEFAULT '0',
+  ipcomp INTEGER NOT NULL DEFAULT '0'
 );
 DROP INDEX IF EXISTS child_configs_name;
 CREATE INDEX child_configs_name ON child_configs (

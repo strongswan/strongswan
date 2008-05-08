@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -33,6 +34,15 @@ ENUM(action_names, ACTION_NONE, ACTION_RESTART,
 	"ACTION_ROUTE",
 	"ACTION_RESTART",
 );
+
+ENUM_BEGIN(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_NONE, 
+	"IPCOMP_NONE");
+ENUM_NEXT(ipcomp_transform_names, IPCOMP_OUI, IPCOMP_LZJH, IPCOMP_NONE,
+	"IPCOMP_OUI",
+	"IPCOMP_DEFLATE",
+	"IPCOMP_LZS",
+	"IPCOMP_LZJH");
+ENUM_END(ipcomp_transform_names, IPCOMP_LZJH);
 
 typedef struct private_child_cfg_t private_child_cfg_t;
 
@@ -111,6 +121,11 @@ struct private_child_cfg_t {
 	 * substracted from rekeytime.
 	 */
 	u_int32_t jitter;
+	
+	/**
+	 * enable IPComp
+	 */
+	bool use_ipcomp;
 };
 
 /**
@@ -399,6 +414,14 @@ static diffie_hellman_group_t get_dh_group(private_child_cfg_t *this)
 }
 
 /**
+ * Implementation of child_cfg_t.use_ipcomp.
+ */
+static bool use_ipcomp(private_child_cfg_t *this)
+{
+	return this->use_ipcomp;
+}
+
+/**
  * Implementation of child_cfg_t.get_name
  */
 static child_cfg_t* get_ref(private_child_cfg_t *this)
@@ -432,7 +455,7 @@ static void destroy(private_child_cfg_t *this)
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
 							  char *updown, bool hostaccess, mode_t mode,
-							  action_t dpd_action, action_t close_action)
+							  action_t dpd_action, action_t close_action, bool ipcomp)
 {
 	private_child_cfg_t *this = malloc_thing(private_child_cfg_t);
 
@@ -449,6 +472,7 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.get_close_action = (action_t (*) (child_cfg_t *))get_close_action;
 	this->public.get_lifetime = (u_int32_t (*) (child_cfg_t *,bool))get_lifetime;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(child_cfg_t*)) get_dh_group;
+	this->public.use_ipcomp = (bool (*) (child_cfg_t *))use_ipcomp;
 	this->public.get_ref = (child_cfg_t* (*) (child_cfg_t*))get_ref;
 	this->public.destroy = (void (*) (child_cfg_t*))destroy;
 	
@@ -461,6 +485,7 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->mode = mode;
 	this->dpd_action = dpd_action;
 	this->close_action = close_action;
+	this->use_ipcomp = ipcomp; 
 	this->refcount = 1;
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();

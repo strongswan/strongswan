@@ -332,6 +332,14 @@ static status_t verify(private_notify_payload_t *this)
 			}
 			break;
 		}
+		case IPCOMP_SUPPORTED:
+		{
+			if (this->notification_data.len != 3)
+			{
+				bad_length = TRUE;
+			}
+			break;
+		}
 		case ME_ENDPOINT:
 			if (this->notification_data.len != 8 &&
 				this->notification_data.len != 12 &&

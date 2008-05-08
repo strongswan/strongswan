@@ -125,15 +125,15 @@ static void add_traffic_selectors(private_sql_config_t *this,
  */
 static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 {
-	int id, lifetime, rekeytime, jitter, hostaccess, mode, dpd, close;
+	int id, lifetime, rekeytime, jitter, hostaccess, mode, dpd, close, ipcomp;
 	char *name, *updown;
 	child_cfg_t *child_cfg;
 	
 	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, 
-						&updown, &hostaccess, &mode, &dpd, &close))
+						&updown, &hostaccess, &mode, &dpd, &close, &ipcomp))
 	{
 		child_cfg = child_cfg_create(name, lifetime, rekeytime, jitter,
-									 updown, hostaccess, mode, dpd, close);
+									 updown, hostaccess, mode, dpd, close, ipcomp);
 		/* TODO: read proposal from db */
 		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 		add_traffic_selectors(this, child_cfg, id);
@@ -152,7 +152,7 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 	
 	e = this->db->query(this->db,
 			"SELECT id, name, lifetime, rekeytime, jitter, "
-			"updown, hostaccess, mode, dpd_action, close_action "
+			"updown, hostaccess, mode, dpd_action, close_action, ipcomp "
 			"FROM child_configs JOIN peer_config_child_config ON id = child_cfg "
 			"WHERE peer_cfg = ?",
 			DB_INT, id,

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -26,6 +27,7 @@
 
 typedef enum mode_t mode_t;
 typedef enum action_t action_t;
+typedef enum ipcomp_transform_t ipcomp_transform_t;
 typedef struct child_cfg_t child_cfg_t;
 
 #include <library.h>
@@ -67,6 +69,22 @@ enum action_t {
  * enum names for action_t.
  */
 extern enum_name_t *action_names;
+
+/**
+ * IPComp transform IDs, as in RFC 4306
+ */
+enum ipcomp_transform_t {
+	IPCOMP_NONE = 241,
+	IPCOMP_OUI = 1,
+	IPCOMP_DEFLATE = 2,
+	IPCOMP_LZS = 3,
+	IPCOMP_LZJH = 4,
+};
+
+/**
+ * enum strings for ipcomp_transform_t.
+ */
+extern enum_name_t *ipcomp_transform_names;
 
 /**
  * A child_cfg_t defines the config template for a CHILD_SA.
@@ -214,6 +232,14 @@ struct child_cfg_t {
 	diffie_hellman_group_t (*get_dh_group)(child_cfg_t *this);
 	
 	/**
+	 * Check whether IPComp should be used, if the other peer supports it.
+	 * 
+	 * @return				TRUE, if IPComp should be used
+	 * 						FALSE, otherwise
+	 */
+	bool (*use_ipcomp)(child_cfg_t *this);
+	
+	/**
 	 * Increase the reference count.
 	 *
 	 * @return				reference to this
@@ -247,12 +273,14 @@ struct child_cfg_t {
  * @param hostaccess		TRUE to allow access to the local host
  * @param mode				mode to propose for CHILD_SA, transport, tunnel or BEET
  * @param dpd_action		DPD action
- * @param close_action		lose action
+ * @param close_action		close action
+ * @param ipcomp			use IPComp, if peer supports it
  * @return 					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
 							  char *updown, bool hostaccess, mode_t mode,
-							  action_t dpd_action, action_t close_action);
+							  action_t dpd_action, action_t close_action,
+							  bool ipcomp);
 
 #endif /* CHILD_CFG_H_ @} */

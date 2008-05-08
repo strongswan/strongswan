@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006-2007 Martin Willi
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -252,6 +253,22 @@ struct child_sa_t {
 	 * @param ip		own virtual IP
 	 */
 	void (*set_virtual_ip) (child_sa_t *this, host_t *ip);
+	
+	/**
+	 * Activate IPComp by setting the transform ID and CPI values.
+	 * 
+	 * @param ipcomp	the IPComp transform to use
+	 * @param other_cpi	other Compression Parameter Index
+	 */
+	void (*activate_ipcomp) (child_sa_t *this, ipcomp_transform_t ipcomp,
+						u_int16_t other_cpi);
+	
+	/**
+	 * Returns the Compression Parameter Index (CPI) allocated from the kernel.
+	 * 
+	 * @return			allocated CPI
+	 */
+	u_int16_t (*get_my_cpi) (child_sa_t *this);
 	
 	/**
 	 * Destroys a child_sa.

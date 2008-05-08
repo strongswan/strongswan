@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -98,6 +99,21 @@ struct private_child_create_t {
 	 * mode the new CHILD_SA uses (transport/tunnel/beet)
 	 */
 	mode_t mode;
+	
+	/**
+	 * IPComp transform to use
+	 */
+	ipcomp_transform_t ipcomp;
+	
+	/**
+	 * IPComp transform proposed or accepted by the other peer
+	 */
+	ipcomp_transform_t ipcomp_received;
+	
+	/**
+	 * Other Compression Parameter Index (CPI)
+	 */
+	u_int16_t other_cpi;
 	
 	/**
 	 * reqid to use if we are rekeying
@@ -326,6 +342,12 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	}
 	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
 	
+	if (this->ipcomp != IPCOMP_NONE)
+	{
+		this->child_sa->activate_ipcomp(this->child_sa, this->ipcomp,
+										this->other_cpi);
+	}
+	
 	if (this->initiator)
 	{
 		status = this->child_sa->update(this->child_sa, this->proposal,
@@ -416,6 +438,36 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 }
 
 /**
+ * Adds an IPCOMP_SUPPORTED notify to the message, if possible
+ */
+static void build_ipcomp_supported_notify(private_child_create_t *this, message_t *message)
+{
+	if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
+	{
+		DBG1(DBG_IKE, "IPComp is not supported if either peer is natted, IPComp is disabled");
+		this->ipcomp = IPCOMP_NONE;
+		return;
+	}
+	
+	u_int16_t cpi = this->child_sa->get_my_cpi(this->child_sa);
+	if (cpi)
+	{
+		chunk_t cpi_chunk, tid_chunk, data;
+		u_int8_t tid = this->ipcomp;
+		cpi_chunk = chunk_from_thing(cpi);
+		tid_chunk = chunk_from_thing(tid);
+		data = chunk_cat("cc", cpi_chunk, tid_chunk);
+		message->add_notify(message, FALSE, IPCOMP_SUPPORTED, data);
+		chunk_free(&data);
+	}
+	else
+	{
+		DBG1(DBG_IKE, "unable to allocate a CPI from kernel, IPComp is disabled");
+		this->ipcomp = IPCOMP_NONE;
+	}
+}
+
+/**
  * Read payloads from message
  */
 static void process_payloads(private_child_create_t *this, message_t *message)
@@ -470,6 +522,25 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 					case USE_BEET_MODE:
 						this->mode = MODE_BEET;
 						break;
+					case IPCOMP_SUPPORTED:
+					{
+						chunk_t data = notify_payload->get_notification_data(notify_payload);
+						u_int16_t cpi = *(u_int16_t*)data.ptr;
+						ipcomp_transform_t ipcomp = (ipcomp_transform_t)(*(data.ptr + 2));
+						switch(ipcomp)
+						{
+							case IPCOMP_DEFLATE:
+								this->other_cpi = cpi;
+								this->ipcomp_received = ipcomp;
+								break;
+							case IPCOMP_LZS:
+							case IPCOMP_LZJH:
+							default:
+								DBG1(DBG_IKE, "received IPCOMP_SUPPORTED notify with a transform"
+										" ID we don't support %N", ipcomp_transform_names, ipcomp);
+								break;
+						}
+					}
 					default:
 						break;
 				}
@@ -574,6 +645,12 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	if (this->dh_group != MODP_NONE)
 	{
 		this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
+	}
+	
+	if (this->config->use_ipcomp(this->config)) {
+		/* IPCOMP_DEFLATE is the only transform we support at the moment */
+		this->ipcomp = IPCOMP_DEFLATE;
+		build_ipcomp_supported_notify(this, message);
 	}
 	
 	build_payloads(this, message);
@@ -693,6 +770,16 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 			this->ike_sa->get_other_id(this->ike_sa), this->config, this->reqid,
 			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
 	
+	if (this->config->use_ipcomp(this->config) && this->ipcomp_received != IPCOMP_NONE)
+	{
+		this->ipcomp = this->ipcomp_received;
+		build_ipcomp_supported_notify(this, message);
+	}
+	else if (this->ipcomp_received != IPCOMP_NONE)
+	{
+		DBG1(DBG_IKE, "received IPCOMP_SUPPORTED notify but IPComp is disabled, ignoring");
+	}
+	
 	switch (select_and_install(this, no_dh))
 	{
 		case SUCCESS:
@@ -799,6 +886,25 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 	
 	process_payloads(this, message);
 	
+	if (this->ipcomp == IPCOMP_NONE && this->ipcomp_received != IPCOMP_NONE)
+	{
+		SIG(CHILD_UP_FAILED, "received an IPCOMP_SUPPORTED notify but we did not "
+					"send one previously, no CHILD_SA built");
+		return SUCCESS;
+	}
+	else if (this->ipcomp != IPCOMP_NONE && this->ipcomp_received == IPCOMP_NONE)
+	{
+		DBG1(DBG_IKE, "peer didn't accept our proposed IPComp transforms, "
+				"IPComp is disabled");
+		this->ipcomp = IPCOMP_NONE;
+	}
+	else if (this->ipcomp != IPCOMP_NONE && this->ipcomp != this->ipcomp_received)
+	{
+		SIG(CHILD_UP_FAILED, "received an IPCOMP_SUPPORTED notify for a transform "
+					"we did not propose, no CHILD_SA built");
+		return SUCCESS;
+	}
+	
 	if (select_and_install(this, no_dh) == SUCCESS)
 	{
 		SIG(CHILD_UP_SUCCESS, "CHILD_SA '%s' established successfully",
@@ -877,6 +983,9 @@ static void migrate(private_child_create_t *this, ike_sa_t *ike_sa)
 	this->dh = NULL;
 	this->child_sa = NULL;
 	this->mode = MODE_TUNNEL;
+	this->ipcomp = IPCOMP_NONE;
+	this->ipcomp_received = IPCOMP_NONE;
+	this->other_cpi = 0;
 	this->reqid = 0;
 	this->established = FALSE;
 }
@@ -950,6 +1059,9 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config)
 	this->dh_group = MODP_NONE;
 	this->child_sa = NULL;
 	this->mode = MODE_TUNNEL;
+	this->ipcomp = IPCOMP_NONE;
+	this->ipcomp_received = IPCOMP_NONE;
+	this->other_cpi = 0;
 	this->reqid = 0;
 	this->established = FALSE;
 	

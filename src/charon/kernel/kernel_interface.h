@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2008 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -78,6 +79,18 @@ struct kernel_interface_t {
 						protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi);
 	
 	/**
+	 * Get a Compression Parameter Index (CPI) from the kernel.
+	 * 
+	 * @param src		source address of SA
+	 * @param dst		destination address of SA
+	 * @param reqid		unique ID for the corresponding SA
+	 * @param cpi		allocated cpi
+	 * @return				SUCCESS if operation completed
+	 */
+	status_t (*get_cpi)(kernel_interface_t *this, host_t *src, host_t *dst, 
+						u_int32_t reqid, u_int16_t *cpi);
+	
+	/**
 	 * Add an SA to the SAD.
 	 * 
 	 * add_sa() may update an already allocated
@@ -101,6 +114,7 @@ struct kernel_interface_t {
 	 * @param int_size		key length of integrity algorithm, if dynamic
 	 * @param prf_plus		PRF to derive keys from
 	 * @param mode			mode of the SA (tunnel, transport)
+	 * @param ipcomp		IPComp transform to use
 	 * @param encap			enable UDP encapsulation for NAT traversal
 	 * @param replace		Should an already installed SA be updated?
 	 * @return				SUCCESS if operation completed
@@ -111,7 +125,8 @@ struct kernel_interface_t {
 						u_int64_t expire_soft, u_int64_t expire_hard,
 					    u_int16_t enc_alg, u_int16_t enc_size,
 					    u_int16_t int_alg, u_int16_t int_size,
-						prf_plus_t *prf_plus, mode_t mode, bool encap,
+						prf_plus_t *prf_plus, mode_t mode,
+						u_int16_t ipcomp, bool encap,
 						bool update);
 	
 	/**
@@ -177,6 +192,7 @@ struct kernel_interface_t {
 	 * @param reqid			uniqe ID of an SA to use to enforce policy
 	 * @param high_prio		if TRUE, uses a higher priority than any with FALSE
 	 * @param mode			mode of SA (tunnel, transport)
+	 * @param ipcomp		the IPComp transform used
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_policy) (kernel_interface_t *this,
@@ -184,7 +200,8 @@ struct kernel_interface_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, protocol_id_t protocol,
-							u_int32_t reqid, bool high_prio, mode_t mode);
+							u_int32_t reqid, bool high_prio, mode_t mode,
+							u_int16_t ipcomp);
 	
 	/**
 	 * Query the use time of a policy.

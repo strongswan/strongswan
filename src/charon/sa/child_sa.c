@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -70,6 +71,8 @@ struct private_child_sa_t {
 		identification_t *id;
 		/** actual used SPI, 0 if unused */
 		u_int32_t spi;
+		/** Compression Parameter Index (CPI) used, 0 if unused */
+		u_int16_t cpi;
 	} me, other;
 	
 	/**
@@ -146,6 +149,16 @@ struct private_child_sa_t {
 	 * Specifies if UDP encapsulation is enabled (NAT traversal)
 	 */
 	bool encap;
+	
+	/**
+	 * Specifies the IPComp transform used (IPCOMP_NONE if disabled)
+	 */
+	ipcomp_transform_t ipcomp;
+	
+	/**
+	 * TRUE if we allocated (or tried to allocate) a CPI
+	 */
+	bool cpi_allocated;
 	
 	/**
 	 * mode this SA uses, tunnel/transport
@@ -570,10 +583,21 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	
 	/* send SA down to the kernel */
 	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
+	
+	if (this->ipcomp != IPCOMP_NONE)
+	{
+		/* we install an additional IPComp SA */
+		u_int32_t cpi = htonl(ntohs(mine ? this->me.cpi : this->other.cpi));
+		status = charon->kernel_interface->add_sa(charon->kernel_interface,
+				src, dst, cpi, IPPROTO_COMP, this->reqid, 0, 0,
+				ENCR_UNDEFINED, 0, AUTH_UNDEFINED, 0, NULL, mode,
+				this->ipcomp, FALSE, mine);
+	}
+	
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 				src, dst, spi, this->protocol, this->reqid, mine ? soft : 0, hard, 
 				this->enc_alg, this->enc_size, this->int_alg, this->int_size,
-				prf_plus, mode, this->encap, mine);
+				prf_plus, mode, IPCOMP_NONE, this->encap, mine);
 					
 	this->install_time = time(NULL);
 	this->rekey_time = this->install_time + soft;
@@ -677,15 +701,15 @@ static status_t add_policies(private_child_sa_t *this,
 			/* install 3 policies: out, in and forward */
 			status = charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->me.addr, this->other.addr, my_ts, other_ts, POLICY_OUT,
-					this->protocol, this->reqid, high_prio, mode);
+					this->protocol, this->reqid, high_prio, mode, this->ipcomp);
 			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr, other_ts, my_ts, POLICY_IN,
-					this->protocol, this->reqid, high_prio, mode);
+					this->protocol, this->reqid, high_prio, mode, this->ipcomp);
 			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr, other_ts, my_ts, POLICY_FWD,
-					this->protocol, this->reqid, high_prio, mode);
+					this->protocol, this->reqid, high_prio, mode, this->ipcomp);
 			
 			if (status != SUCCESS)
 			{
@@ -786,10 +810,20 @@ static status_t update_hosts(private_child_sa_t *this,
 	
 	this->encap = encap;
 	
-	/* update our (initator) SAs */
+	if (this->ipcomp != IPCOMP_NONE)
+	{
+		/* update our (initator) IPComp SA */
+		charon->kernel_interface->update_sa(charon->kernel_interface, htonl(ntohs(this->me.cpi)),
+				IPPROTO_COMP, this->other.addr, this->me.addr, other, me, FALSE);
+		/* update his (responder) IPComp SA */
+		charon->kernel_interface->update_sa(charon->kernel_interface, htonl(ntohs(this->other.cpi)), 
+				IPPROTO_COMP, this->me.addr, this->other.addr, me, other, FALSE);
+	}
+	
+	/* update our (initator) SA */
 	charon->kernel_interface->update_sa(charon->kernel_interface, this->me.spi,
 			this->protocol, this->other.addr, this->me.addr, other, me, encap);
-	/* update his (responder) SAs */
+	/* update his (responder) SA */
 	charon->kernel_interface->update_sa(charon->kernel_interface, this->other.spi, 
 			this->protocol, this->me.addr, this->other.addr, me, other, encap);
 	
@@ -837,13 +871,13 @@ static status_t update_hosts(private_child_sa_t *this,
 			/* reinstall updated policies */
 			charon->kernel_interface->add_policy(charon->kernel_interface,
 					me, other, policy->my_ts, policy->other_ts, POLICY_OUT,
-					this->protocol,	this->reqid, TRUE, this->mode);
+					this->protocol,	this->reqid, TRUE, this->mode, this->ipcomp);
 			charon->kernel_interface->add_policy(charon->kernel_interface, 
 					other, me, policy->other_ts, policy->my_ts, POLICY_IN,
-					this->protocol, this->reqid, TRUE, this->mode);
+					this->protocol, this->reqid, TRUE, this->mode, this->ipcomp);
 			charon->kernel_interface->add_policy(charon->kernel_interface,
 					other, me, policy->other_ts, policy->my_ts, POLICY_FWD,
-					this->protocol, this->reqid, TRUE, this->mode);
+					this->protocol, this->reqid, TRUE, this->mode, this->ipcomp);
 		}
 		iterator->destroy(iterator);
 	}
@@ -872,6 +906,30 @@ static status_t update_hosts(private_child_sa_t *this,
 static void set_virtual_ip(private_child_sa_t *this, host_t *ip)
 {
 	this->virtual_ip = ip->clone(ip);
+}
+
+/**
+ * Implementation of child_sa_t.activate_ipcomp.
+ */
+static void activate_ipcomp(private_child_sa_t *this, ipcomp_transform_t ipcomp,
+		u_int16_t other_cpi)
+{
+	this->ipcomp = ipcomp;
+	this->other.cpi = other_cpi;
+}
+
+/**
+ * Implementation of child_sa_t.get_my_cpi.
+ */
+static u_int16_t get_my_cpi(private_child_sa_t *this)
+{
+	if (!this->cpi_allocated)
+	{
+		charon->kernel_interface->get_cpi(charon->kernel_interface,
+			this->other.addr, this->me.addr, this->reqid, &this->me.cpi);
+		this->cpi_allocated = TRUE;
+	}
+	return this->me.cpi;
 }
 
 /**
@@ -906,6 +964,16 @@ static void destroy(private_child_sa_t *this)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
 										 this->other.addr, this->other.spi, this->protocol);
+	}
+	if (this->me.cpi)
+	{
+		charon->kernel_interface->del_sa(charon->kernel_interface,
+							this->other.addr, htonl(ntohs(this->me.cpi)), IPPROTO_COMP);
+	}
+	if (this->other.cpi)
+	{
+		charon->kernel_interface->del_sa(charon->kernel_interface,
+							this->other.addr, htonl(ntohs(this->other.cpi)), IPPROTO_COMP);
 	}
 	
 	/* delete all policies in the kernel */
@@ -967,6 +1035,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
 	this->public.get_config = (child_cfg_t*(*)(child_sa_t*))get_config;
+	this->public.activate_ipcomp = (void(*)(child_sa_t*,ipcomp_transform_t,u_int16_t))activate_ipcomp;
+	this->public.get_my_cpi = (u_int16_t(*)(child_sa_t*))get_my_cpi;
 	this->public.set_virtual_ip = (void(*)(child_sa_t*,host_t*))set_virtual_ip;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
@@ -976,10 +1046,14 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->me.id = my_id->clone(my_id);
 	this->other.id = other_id->clone(other_id);
 	this->me.spi = 0;
+	this->me.cpi = 0;
 	this->other.spi = 0;
+	this->other.cpi = 0;
 	this->alloc_ah_spi = 0;
 	this->alloc_esp_spi = 0;
 	this->encap = encap;
+	this->cpi_allocated = FALSE;
+	this->ipcomp = IPCOMP_NONE;
 	this->state = CHILD_CREATED;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;

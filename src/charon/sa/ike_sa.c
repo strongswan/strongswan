@@ -1219,7 +1219,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 
 	/* install kernel policies */
 	child_sa = child_sa_create(this->my_host, this->other_host, this->my_id,
-							   this->other_id, child_cfg, FALSE, 0);
+							   this->other_id, child_cfg, 0, FALSE);
 	me = this->my_host;
 	if (this->my_virtual_ip)
 	{

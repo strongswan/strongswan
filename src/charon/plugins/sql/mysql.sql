@@ -22,6 +22,7 @@ CREATE TABLE `child_configs` (
   `mode` tinyint(4) unsigned NOT NULL default '1',
   `dpd_action` tinyint(4) unsigned NOT NULL default '0',
   `close_action` tinyint(4) unsigned NOT NULL default '0',
+  `ipcomp` tinyint(4) unsigned NOT NULL default '0',
   PRIMARY KEY (`id`),
   INDEX (`name`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
