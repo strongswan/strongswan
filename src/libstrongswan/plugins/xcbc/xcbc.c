@@ -53,57 +53,96 @@ struct private_xcbc_t {
 	 * k3
 	 */
 	u_int8_t *k3;
+	
+	/**
+	 * E
+	 */
+	u_int8_t *e;
+	
+	/**
+	 * remaining, unprocessed bytes in append mode
+	 */
+	u_int8_t *remaining;
+	
+	/**
+	 * number of bytes in remaining
+	 */
+	int remaining_bytes;
+	
+	/**
+	 * TRUE if we have zero bytes to xcbc in final()
+	 */
+	bool zero;
 };
 
 /**
- * Implementation of xcbc_t.get_mac.
+ * xcbc supplied data, but do not run final operation
  */
-static void get_mac(private_xcbc_t *this, chunk_t data, u_int8_t *e)
+static void update(private_xcbc_t *this, chunk_t data)
 {
-	int n, i, padding;
-	u_int8_t *m;
 	chunk_t iv;
 	
-	if (e == NULL)
+	if (data.len)
 	{
-		DBG1("XCBC append mode not implemented!");
-		/* TODO: append mode */
+		this->zero = FALSE;
+	}
+	
+	if (this->remaining_bytes + data.len <= this->b)
+	{	/* no complete block, just copy into remaining */
+		memcpy(this->remaining + this->remaining_bytes, data.ptr, data.len);
+		this->remaining_bytes += data.len;
 		return;
 	}
 	
-	n = data.len / this->b;
-	padding = data.len % this->b;
-	if (padding || data.len == 0)
-	{	/* do an additional block if we have padding or zero-length data */
-		n++;
-	}
 	iv = chunk_alloca(this->b);
 	memset(iv.ptr, 0, iv.len);
-	m = data.ptr;
-	
-	/* (2) Define E[0] = 0x00000000000000000000000000000000 */
-	memset(e, 0, this->b);
 	
 	/* (3) For each block M[i], where i = 1 ... n-1:
-     *     XOR M[i] with E[i-1], then encrypt the result with Key K1,
-     *     yielding E[i].
-     */
-	for (i = 1; i < n; i++)
+	 *     XOR M[i] with E[i-1], then encrypt the result with Key K1,
+	 *     yielding E[i].
+	 */
+	
+	/* append data to remaining bytes, process block M[1] */
+	memcpy(this->remaining + this->remaining_bytes, data.ptr,
+		   this->b - this->remaining_bytes);
+	data = chunk_skip(data, this->b - this->remaining_bytes);
+	memxor(this->e, this->remaining, this->b);
+	this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL);
+	
+	/* process blocks M[2] ... M[n-1] */
+	while (data.len > this->b)
 	{
-		memxor(e, m + (i - 1) * this->b, this->b);
-		this->k1->encrypt(this->k1, chunk_create(e, this->b), iv, NULL);
+		memcpy(this->remaining, data.ptr, this->b);
+		data = chunk_skip(data, this->b);
+		memxor(this->e, this->remaining, this->b);
+		this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL);
 	}
 	
+	/* store remaining bytes of block M[n] */
+	memcpy(this->remaining, data.ptr, data.len);
+	this->remaining_bytes = data.len;
+}
+
+/**
+ * run last round, data is in this->e
+ */
+static void final(private_xcbc_t *this, u_int8_t *out)
+{
+	chunk_t iv;
+	
+	iv = chunk_alloca(this->b);
+	memset(iv.ptr, 0, iv.len);
+	
 	/* (4) For block M[n]: */
-	if (data.len && padding == 0)
+	if (this->remaining_bytes == this->b && !this->zero)
 	{
 		/* a) If the blocksize of M[n] is 128 bits:
          *    XOR M[n] with E[n-1] and Key K2, then encrypt the result with
          *    Key K1, yielding E[n].
          */
-		memxor(e, m + (i - 1) * this->b, this->b);
-		memxor(e, this->k2, this->b);
-		this->k1->encrypt(this->k1, chunk_create(e, this->b), iv, NULL);
+		memxor(this->e, this->remaining, this->b);
+		memxor(this->e, this->k2, this->b);
+		this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL);
 	}
 	else
 	{
@@ -113,19 +152,41 @@ static void get_mac(private_xcbc_t *this, chunk_t data, u_int8_t *e)
          *     "0" bits (possibly none) required to increase M[n]'s
          *     blocksize to 128 bits.
          */
-        u_int8_t *mn = alloca(this->b);
-        memcpy(mn, m + (n - 1) * this->b, padding);
-        mn[padding] = 0x80;
-        while (++padding < this->b)
+        if (this->remaining_bytes < this->b)
         {
-	        mn[padding] = 0x00;
+		    this->remaining[this->remaining_bytes] = 0x80;
+		    while (++this->remaining_bytes < this->b)
+		    {
+			    this->remaining[this->remaining_bytes] = 0x00;
+		    }
         }
         /*  ii) XOR M[n] with E[n-1] and Key K3, then encrypt the result
          *      with Key K1, yielding E[n].
          */
-		memxor(e, mn, this->b);
-		memxor(e, this->k3, this->b);
-		this->k1->encrypt(this->k1, chunk_create(e, this->b), iv, NULL);
+		memxor(this->e, this->remaining, this->b);
+		memxor(this->e, this->k3, this->b);
+		this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL);
+	}
+	
+	memcpy(out, this->e, this->b);
+	
+	/* (2) Define E[0] = 0x00000000000000000000000000000000 */
+	memset(this->e, 0, this->b);
+	this->remaining_bytes = 0;
+	this->zero = TRUE;
+}
+
+/**
+ * Implementation of xcbc_t.get_mac.
+ */
+static void get_mac(private_xcbc_t *this, chunk_t data, u_int8_t *out)
+{
+	/* update E, do not process last block */
+	update(this, data);
+	
+	if (out)
+	{	/* if not in append mode, process last block and output result */
+		final(this, out);
 	}
 }
 	
@@ -192,6 +253,8 @@ static void destroy(private_xcbc_t *this)
 	this->k1->destroy(this->k1);
 	free(this->k2);
 	free(this->k3);
+	free(this->e);
+	free(this->remaining);
 	free(this);
 }
 
@@ -225,6 +288,11 @@ xcbc_t *xcbc_create(encryption_algorithm_t algo, size_t key_size)
 	this->k1 = crypter;
 	this->k2 = malloc(this->b);
 	this->k3 = malloc(this->b);
+	this->e = malloc(this->b);
+	memset(this->e, 0, this->b);
+	this->remaining = malloc(this->b);
+	this->remaining_bytes = 0;
+	this->zero = TRUE;
 
 	return &this->xcbc;
 }
