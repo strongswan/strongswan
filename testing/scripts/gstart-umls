@@ -1,5 +1,5 @@
 #!/bin/bash
-# starts the UML instances in an xterm (requires X11R6)
+# starts the UML instances in an gnome-terminal (requires X11R6)
 #
 # Copyright (C) 2004  Eric Marchionni, Patrik Rayo
 # Zuercher Hochschule Winterthur
@@ -63,7 +63,7 @@ do
 	[ -f  $UMLHOSTFS ] || die "!! uml root file system '$UMLHOSTFS' not found"
 
 	cecho-n " * Starting ${host}.."
-	eval gnome-terminal --title=${host} --geometry="+${x0}+${y0}" -show-menubar --execute "$UMLKERNEL \
+	eval gnome-terminal --title=${host} --geometry="+${x0}+${y0}" --show-menubar --execute "$UMLKERNEL \
             umid=${host} \
 	    ubda=$UMLHOSTFS \
 	    \$SWITCH_${host} \
