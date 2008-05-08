@@ -304,10 +304,10 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
-	[med-db],
-	AS_HELP_STRING([--enable-med-db],[enable MySQL mediation database plugin (default is NO).]),
+	[medsrv],
+	AS_HELP_STRING([--enable-medsrv],[enable mediation server configuration database plugin (default is NO).]),
 	[if test x$enableval = xyes; then
-		med_db=true
+		medsrv=true
 	fi]
 )
 
@@ -665,7 +665,7 @@ AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
 AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
-AM_CONDITIONAL(USE_MED_DB, test x$med_db = xtrue)
+AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_SMARTCARD, test x$smartcard = xtrue)
@@ -739,7 +739,7 @@ AC_OUTPUT(
 	src/charon/plugins/eap_sim/Makefile
 	src/charon/plugins/smp/Makefile
 	src/charon/plugins/sql/Makefile
-	src/charon/plugins/med_db/Makefile
+	src/charon/plugins/medsrv/Makefile
 	src/charon/plugins/stroke/Makefile
 	src/charon/plugins/unit_tester/Makefile
 	src/stroke/Makefile

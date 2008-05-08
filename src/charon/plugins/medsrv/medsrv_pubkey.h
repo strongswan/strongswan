@@ -16,22 +16,22 @@
  */
 
 /**
- * @defgroup med_db_pubkey med_db_pubkey
- * @{ @ingroup med_db
+ * @defgroup medsrv_pubkey medsrv_pubkey
+ * @{ @ingroup medsrv
  */
 
-#ifndef MED_DB_PUBKEY_H_
-#define MED_DB_PUBKEY_H_
+#ifndef MEDSRV_PUBKEY_H_
+#define MEDSRV_PUBKEY_H_
 
 #include <credentials/keys/public_key.h>
 #include <credentials/certificates/certificate.h>
 
-typedef struct med_db_pubkey_t med_db_pubkey_t;
+typedef struct medsrv_pubkey_t medsrv_pubkey_t;
 
 /**
  * A trusted public key wrapped into certificate of type CERT_TRUSTED_PUBKEY.
  */
-struct med_db_pubkey_t {
+struct medsrv_pubkey_t {
 
 	/**
 	 * Implements certificate_t.
@@ -47,6 +47,6 @@ struct med_db_pubkey_t {
  * @param key		public key to wrap
  * @return			public key implementing certificate interface
  */
-med_db_pubkey_t *med_db_pubkey_create(public_key_t *key);
+medsrv_pubkey_t *medsrv_pubkey_create(public_key_t *key);
 
-#endif /* MED_DB_PUBKEY_H_ @}*/
+#endif /* MEDSRV_PUBKEY_H_ @}*/

@@ -16,24 +16,24 @@
  */
 
 /**
- * @defgroup med_db med_db
+ * @defgroup medsrv medsrv
  * @ingroup cplugins
  *
- * @defgroup med_db_plugin med_db_plugin
- * @{ @ingroup med_db
+ * @defgroup medsrv_plugin medsrv_plugin
+ * @{ @ingroup medsrv
  */
 
-#ifndef MED_DB_PLUGIN_H_
-#define MED_DB_PLUGIN_H_
+#ifndef MEDSRV_PLUGIN_H_
+#define MEDSRV_PLUGIN_H_
 
 #include <plugins/plugin.h>
 
-typedef struct med_db_plugin_t med_db_plugin_t;
+typedef struct medsrv_plugin_t medsrv_plugin_t;
 
 /**
  * Mediation server database plugin.
  */
-struct med_db_plugin_t {
+struct medsrv_plugin_t {
 
 	/**
 	 * implements plugin interface
@@ -42,8 +42,8 @@ struct med_db_plugin_t {
 };
 
 /**
- * Create a med_db_plugin instance.
+ * Create a medsrv_plugin instance.
  */
 plugin_t *plugin_create();
 
-#endif /* MED_DB_PLUGIN_H_ @}*/
+#endif /* MEDSRV_PLUGIN_H_ @}*/

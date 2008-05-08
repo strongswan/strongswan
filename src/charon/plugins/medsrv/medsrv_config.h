@@ -16,22 +16,22 @@
  */
 
 /**
- * @defgroup med_db_config_i med_db_config
- * @{ @ingroup med_db
+ * @defgroup medsrv_config_i medsrv_config
+ * @{ @ingroup medsrv
  */
 
-#ifndef MED_DB_CONFIG_H_
-#define MED_DB_CONFIG_H_
+#ifndef MEDSRV_CONFIG_H_
+#define MEDSRV_CONFIG_H_
 
 #include <config/backend.h>
 #include <database/database.h>
 
-typedef struct med_db_config_t med_db_config_t;
+typedef struct medsrv_config_t medsrv_config_t;
 
 /**
  * Mediation server configuration backend.
  */
-struct med_db_config_t {
+struct medsrv_config_t {
 
 	/**
 	 * Implements backend_t interface
@@ -41,15 +41,15 @@ struct med_db_config_t {
 	/**
 	 * Destroy the backend.
 	 */
-	void (*destroy)(med_db_config_t *this);	
+	void (*destroy)(medsrv_config_t *this);	
 };
 
 /**
- * Create a med_db_config backend instance.
+ * Create a medsrv_config backend instance.
  *
  * @param db		underlying database
  * @return			backend instance
  */
-med_db_config_t *med_db_config_create(database_t *db);
+medsrv_config_t *medsrv_config_create(database_t *db);
 
-#endif /* MED_DB_CONFIG_H_ @}*/
+#endif /* MEDSRV_CONFIG_H_ @}*/

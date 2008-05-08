@@ -162,7 +162,7 @@ if USE_EAP_AKA
   SUBDIRS += plugins/eap_aka
 endif
 
-if USE_MED_DB
-  SUBDIRS += plugins/med_db
+if USE_MEDSRV
+  SUBDIRS += plugins/medsrv
 endif
 

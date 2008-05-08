@@ -17,21 +17,21 @@
 
 #include <string.h>
 
-#include "med_db_config.h"
+#include "medsrv_config.h"
 
 #include <daemon.h>
 
-typedef struct private_med_db_config_t private_med_db_config_t;
+typedef struct private_medsrv_config_t private_medsrv_config_t;
 
 /**
- * Private data of an med_db_config_t object
+ * Private data of an medsrv_config_t object
  */
-struct private_med_db_config_t {
+struct private_medsrv_config_t {
 
 	/**
 	 * Public part
 	 */
-	med_db_config_t public;
+	medsrv_config_t public;
 	
 	/**
 	 * database connection
@@ -57,7 +57,7 @@ struct private_med_db_config_t {
 /**
  * implements backend_t.get_peer_cfg_by_name.
  */
-static peer_cfg_t *get_peer_cfg_by_name(private_med_db_config_t *this, char *name)
+static peer_cfg_t *get_peer_cfg_by_name(private_medsrv_config_t *this, char *name)
 {
 	return NULL;
 }
@@ -65,7 +65,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_med_db_config_t *this, char *nam
 /**
  * Implementation of backend_t.create_ike_cfg_enumerator.
  */
-static enumerator_t* create_ike_cfg_enumerator(private_med_db_config_t *this,
+static enumerator_t* create_ike_cfg_enumerator(private_medsrv_config_t *this,
 											   host_t *me, host_t *other)
 {
 	return enumerator_create_single(this->ike, NULL);
@@ -74,7 +74,7 @@ static enumerator_t* create_ike_cfg_enumerator(private_med_db_config_t *this,
 /**
  * Implementation of backend_t.create_peer_cfg_enumerator.
  */
-static enumerator_t* create_peer_cfg_enumerator(private_med_db_config_t *this,
+static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 												identification_t *me,
 												identification_t *other)
 {
@@ -115,9 +115,9 @@ static enumerator_t* create_peer_cfg_enumerator(private_med_db_config_t *this,
 }
 
 /**
- * Implementation of med_db_config_t.destroy.
+ * Implementation of medsrv_config_t.destroy.
  */
-static void destroy(private_med_db_config_t *this)
+static void destroy(private_medsrv_config_t *this)
 {
 	this->ike->destroy(this->ike);
 	free(this);
@@ -126,14 +126,14 @@ static void destroy(private_med_db_config_t *this)
 /**
  * Described in header.
  */
-med_db_config_t *med_db_config_create(database_t *db)
+medsrv_config_t *medsrv_config_create(database_t *db)
 {
-	private_med_db_config_t *this = malloc_thing(private_med_db_config_t);
+	private_medsrv_config_t *this = malloc_thing(private_medsrv_config_t);
 
 	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
 	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
 	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
-	this->public.destroy = (void(*)(med_db_config_t*))destroy;
+	this->public.destroy = (void(*)(medsrv_config_t*))destroy;
 	
 	this->db = db;
 	this->rekey = lib->settings->get_int(lib->settings,

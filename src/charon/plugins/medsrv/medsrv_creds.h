@@ -16,22 +16,22 @@
  */
 
 /**
- * @defgroup med_db_creds_i med_db_creds
- * @{ @ingroup med_db
+ * @defgroup medsrv_creds_i medsrv_creds
+ * @{ @ingroup medsrv
  */
 
-#ifndef MED_DB_CREDS_H_
-#define MED_DB_CREDS_H_
+#ifndef MEDSRV_CREDS_H_
+#define MEDSRV_CREDS_H_
 
 #include <credentials/credential_set.h>
 #include <database/database.h>
 
-typedef struct med_db_creds_t med_db_creds_t;
+typedef struct medsrv_creds_t medsrv_creds_t;
 
 /**
  * Mediation credentials database.
  */
-struct med_db_creds_t {
+struct medsrv_creds_t {
 
 	/**
 	 * Implements credential_set_t interface
@@ -41,15 +41,15 @@ struct med_db_creds_t {
 	/**
 	 * Destroy the credentials databse.
 	 */
-	void (*destroy)(med_db_creds_t *this);	
+	void (*destroy)(medsrv_creds_t *this);	
 };
 
 /**
- * Create the med_db credentials db.
+ * Create the medsrv credentials db.
  *
  * @param database		underlying database
  * @return				credential set implementation on that database
  */
-med_db_creds_t *med_db_creds_create(database_t *database);
+medsrv_creds_t *medsrv_creds_create(database_t *database);
 
-#endif /* MED_DB_CREDS_H_ @}*/
+#endif /* MEDSRV_CREDS_H_ @}*/

@@ -15,24 +15,24 @@
  * $Id$
  */
 
-#include "med_db_plugin.h"
+#include "medsrv_plugin.h"
 
-#include "med_db_creds.h"
-#include "med_db_config.h"
+#include "medsrv_creds.h"
+#include "medsrv_config.h"
 
 #include <daemon.h>
 
-typedef struct private_med_db_plugin_t private_med_db_plugin_t;
+typedef struct private_medsrv_plugin_t private_medsrv_plugin_t;
 
 /**
- * private data of med_db plugin
+ * private data of medsrv plugin
  */
-struct private_med_db_plugin_t {
+struct private_medsrv_plugin_t {
 
 	/**
 	 * implements plugin interface
 	 */
-	med_db_plugin_t public;
+	medsrv_plugin_t public;
 	
 	/**
 	 * database connection instance
@@ -40,20 +40,20 @@ struct private_med_db_plugin_t {
 	database_t *db;
 	
 	/**
-	 * med_db credential set instance
+	 * medsrv credential set instance
 	 */
-	med_db_creds_t *creds;
+	medsrv_creds_t *creds;
 	
 	/**
-	 * med_db config database
+	 * medsrv config database
 	 */
-	med_db_config_t *config;
+	medsrv_config_t *config;
 };
 
 /**
  * Implementation of plugin_t.destroy
  */
-static void destroy(private_med_db_plugin_t *this)
+static void destroy(private_medsrv_plugin_t *this)
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	charon->credentials->remove_set(charon->credentials, &this->creds->set);
@@ -69,7 +69,7 @@ static void destroy(private_med_db_plugin_t *this)
 plugin_t *plugin_create()
 {
 	char *uri;
-	private_med_db_plugin_t *this = malloc_thing(private_med_db_plugin_t);
+	private_medsrv_plugin_t *this = malloc_thing(private_medsrv_plugin_t);
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
@@ -90,8 +90,8 @@ plugin_t *plugin_create()
 		return NULL;
 	}
 	
-	this->creds = med_db_creds_create(this->db);
-	this->config = med_db_config_create(this->db);
+	this->creds = medsrv_creds_create(this->db);
+	this->config = medsrv_config_create(this->db);
 	
 	charon->credentials->add_set(charon->credentials, &this->creds->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
