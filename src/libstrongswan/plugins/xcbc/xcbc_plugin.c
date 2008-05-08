@@ -55,7 +55,7 @@ plugin_t *plugin_create()
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
-	lib->crypto->add_prf(lib->crypto, PRF_AES128_CBC, 
+	lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC, 
 						 (prf_constructor_t)xcbc_prf_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_AES_XCBC_96, 
 							(signer_constructor_t)xcbc_signer_create);

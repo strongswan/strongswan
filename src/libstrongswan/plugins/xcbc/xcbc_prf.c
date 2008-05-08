@@ -105,7 +105,7 @@ xcbc_prf_t *xcbc_prf_create(pseudo_random_function_t algo)
 	
 	switch (algo)
 	{
-		case PRF_AES128_CBC:
+		case PRF_AES128_XCBC:
 			xcbc = xcbc_create(ENCR_AES_CBC, 16);
 			break;
 		default:

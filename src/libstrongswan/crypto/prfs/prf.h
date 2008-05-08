@@ -42,7 +42,7 @@ enum pseudo_random_function_t {
 	/** Implemented via hmac_prf_t. */
 	PRF_HMAC_SHA1 = 2,
 	PRF_HMAC_TIGER = 3,
-	PRF_AES128_CBC = 4,
+	PRF_AES128_XCBC = 4,
 	/** Implemented via hmac_prf_t. */
 	PRF_HMAC_SHA2_256 = 5,
 	/** Implemented via hmac_prf_t. */
