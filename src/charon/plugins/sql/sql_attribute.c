@@ -96,9 +96,10 @@ static host_t* get_lease(private_sql_attribute_t *this,
 						"JOIN identities AS i ON l.identity = i.id "
 						"WHERE p.name = ? AND i.type = ? AND i.data = ? "
 						"AND (l.release ISNULL OR p.timeout ISNULL "
-						" OR (l.release < (p.timeout + l.acquire))) "
+						" OR (l.release >= (? - p.timeout))) "
 						"ORDER BY l.acquire LIMIT 1", DB_TEXT, name,
 						DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
+						DB_UINT, time(NULL),
 						DB_INT, DB_BLOB);
 	if (e)
 	{
