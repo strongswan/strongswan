@@ -123,7 +123,7 @@ static void status()
 			}
 			
 			lease = db->query(db, "SELECT COUNT(*) FROM leases "
-							  "WHERE pool = ? AND release ISNULL",
+							  "WHERE pool = ? AND released IS NULL",
 							  DB_UINT, id, DB_INT);
 			if (lease)
 			{
@@ -224,17 +224,15 @@ static void leases(char *name, char *filter)
 	enumerator_t *query;
 	chunk_t address_chunk, identity_chunk;
 	int identity_type;
-	u_int acquire, release, timeout;
+	u_int acquired, released, timeout;
 	host_t *address;
 	identification_t *identity;
 	bool found = FALSE;
 	
 	query = db->query(db, "SELECT name, address, identities.type, "
-					  "identities.data, acquire, release, timeout "
+					  "identities.data, acquired, released, timeout "
 					  "FROM leases JOIN pools ON leases.pool = pools.id "
-					  "JOIN identities ON leases.identity = identities.id "
-					  "WHERE (? or name = ?)",
-					  DB_INT, name == NULL, DB_TEXT, name,
+					  "JOIN identities ON leases.identity = identities.id ",
 					  DB_TEXT, DB_BLOB, DB_INT,
 					  DB_BLOB, DB_UINT, DB_UINT, DB_UINT);
 	if (!query)
@@ -243,7 +241,7 @@ static void leases(char *name, char *filter)
 		exit(-1);
 	}
 	while (query->enumerate(query, &name, &address_chunk, &identity_type,
-							&identity_chunk, &acquire, &release, &timeout))
+							&identity_chunk, &acquired, &released, &timeout))
 	{
 		if (!found)
 		{
@@ -254,16 +252,16 @@ static void leases(char *name, char *filter)
 		address = host_create_from_blob(address_chunk);
 		identity = identification_create_from_encoding(identity_type, identity_chunk);
 		
-		printf("%-8s %15H  %-32D  %T  ", name, address, identity, &acquire);
-		if (release)
+		printf("%-8s %15H  %-32D  %T  ", name, address, identity, &acquired);
+		if (released)
 		{
-			printf("%T  ", &release);
+			printf("%T  ", &released);
 		}
 		else
 		{
 			printf("                          ");
 		}
-		if (release == 0)
+		if (released == 0)
 		{
 			printf("%-7s\n", "online");
 		}
@@ -271,7 +269,7 @@ static void leases(char *name, char *filter)
 		{
 			printf("%-7s\n", "static");
 		}
-		else if (release >= time(NULL) - timeout)
+		else if (released >= time(NULL) - timeout)
 		{
 			printf("%-7s\n", "valid");
 		}
@@ -310,7 +308,7 @@ static void purge(char *name)
 	{
 		purged = db->execute(db, NULL,
 					"DELETE FROM leases WHERE pool = ? "
-					"AND release NOTNULL AND release < ?",
+					"AND released NOTNULL AND released < ?",
 					DB_UINT, id, DB_UINT, time(NULL) - timeout);
 	}
 	query->destroy(query);
@@ -361,7 +359,7 @@ int main(int argc, char *argv[])
 	library_init(STRONGSWAN_CONF);
 	atexit(library_deinit);
 	
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-sqlite");
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
 	
 	uri = lib->settings->get_str(lib->settings, "charon.plugins.sql.database", NULL);
 	if (!uri)

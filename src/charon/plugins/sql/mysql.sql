@@ -151,6 +151,34 @@ CREATE TABLE shared_secret_identity (
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
+DROP TABLE IF EXISTS pools;
+CREATE TABLE pools (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `name` varchar(32) NOT NULL,
+  `start` varbinary(16) NOT NULL,
+  `end` varbinary(16) NOT NULL,
+  `next` varbinary(16) NOT NULL,
+  `timeout` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE (`name`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
+DROP TABLE IF EXISTS leases;
+CREATE TABLE leases (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `pool` int(10) unsigned NOT NULL,
+  `address` varbinary(16) NOT NULL,
+  `identity` int(10) unsigned NOT NULL,
+  `acquired` int(10) unsigned NOT NULL,
+  `released` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  INDEX (`pool`),
+  INDEX (`identity`),
+  INDEX (`released`)
+);
+
+
 DROP TABLE IF EXISTS ike_sas;
 CREATE TABLE ike_sas (
   `local_spi` varbinary(8) NOT NULL,
@@ -164,7 +192,7 @@ CREATE TABLE ike_sas (
   `host_family` tinyint(3) NOT NULL,
   `local_host_data` varbinary(16) NOT NULL,
   `remote_host_data` varbinary(16) NOT NULL,
-  `lastuse` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+  `lastuse` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`local_spi`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
@@ -176,7 +204,7 @@ CREATE TABLE logs (
   `signal` tinyint(3) NOT NULL,
   `level` tinyint(3) NOT NULL,
   `msg` varchar(256) NOT NULL,
-  `time` timestamp NOT NULL default CURRENT_TIMESTAMP,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 

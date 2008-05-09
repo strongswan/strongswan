@@ -151,6 +151,7 @@ CREATE TABLE shared_secret_identity (
   PRIMARY KEY (shared_secret, identity)
 );
 
+
 DROP TABLE IF EXISTS pools;
 CREATE TABLE pools (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -158,12 +159,14 @@ CREATE TABLE pools (
   start BLOB NOT NULL,
   end BLOB NOT NULL,
   next BLOB NOT NULL,
-  timeout INTEGER DEFAULT NULL
+  timeout INTEGER DEFAULT NULL,
+  UNIQUE (name)
 );
 DROP INDEX IF EXISTS pools_name;
 CREATE INDEX pools_name ON pools (
   name
 );
+
 
 DROP TABLE IF EXISTS leases;
 CREATE TABLE leases (
@@ -171,8 +174,8 @@ CREATE TABLE leases (
   pool INTEGER NOT NULL,
   address BLOB NOT NULL,
   identity INTEGER NOT NULL,
-  acquire INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  release INTEGER DEFAULT NULL
+  acquired INTEGER NOT NULL,
+  released INTEGER DEFAULT NULL
 );
 DROP INDEX IF EXISTS leases_pool;
 CREATE INDEX leases_pool ON leases (
@@ -182,10 +185,11 @@ DROP INDEX IF EXISTS leases_identity;
 CREATE INDEX leases_identity ON leases (
   identity
 );
-DROP INDEX IF EXISTS leases_release;
-CREATE INDEX leases_release ON leases (
-  release
+DROP INDEX IF EXISTS leases_released;
+CREATE INDEX leases_released ON leases (
+  released
 );
+
 
 DROP TABLE IF EXISTS ike_sas;
 CREATE TABLE ike_sas (

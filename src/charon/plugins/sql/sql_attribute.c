@@ -95,20 +95,20 @@ static host_t* get_lease(private_sql_attribute_t *this,
 						"JOIN pools AS p ON l.pool = p.id "
 						"JOIN identities AS i ON l.identity = i.id "
 						"WHERE p.name = ? AND i.type = ? AND i.data = ? "
-						"AND (l.release ISNULL OR p.timeout ISNULL "
-						" OR (l.release >= (? - p.timeout))) "
-						"ORDER BY l.acquire LIMIT 1", DB_TEXT, name,
+						"AND (l.released IS NULL OR p.timeout IS NULL "
+						" OR (l.released >= (? - p.timeout))) "
+						"ORDER BY l.acquired LIMIT 1", DB_TEXT, name,
 						DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
 						DB_UINT, time(NULL),
-						DB_INT, DB_BLOB);
+						DB_UINT, DB_BLOB);
 	if (e)
 	{
 		if (e->enumerate(e, &lease, &address))
 		{
 			/* found one, set the lease to active */
 			if (this->db->execute(this->db, NULL,
-						  "UPDATE leases SET release = NULL WHERE id = ?",
-						  DB_INT, lease) > 0)
+						  "UPDATE leases SET released = NULL WHERE id = ?",
+						  DB_UINT, lease) > 0)
 			{
 				ip = ip_from_chunk(address);
 				DBG1(DBG_CFG, "reassigning address from valid lease "
@@ -130,7 +130,7 @@ static host_t* create_lease(private_sql_attribute_t *this,
 	enumerator_t *e;
 	chunk_t address;
 	host_t *ip = NULL;
-	int pool, identity = 0;
+	u_int pool, identity = 0, released, timeout;
 	bool new = FALSE;
 	
 	/* we currently do not use database transactions. While this would be 
@@ -143,22 +143,22 @@ static host_t* create_lease(private_sql_attribute_t *this,
 	
 	/* find an address which has outdated leases only */
 	e = this->db->query(this->db,
-						"SELECT pool, address FROM leases "
+						"SELECT pool, address, released, timeout FROM leases "
 						"JOIN pools ON leases.pool = pools.id "
 						"WHERE name = ? "
-						"GROUP BY address HAVING release NOTNULL "
-						"AND MAX(release) < ? + pools.timeout LIMIT 1",
+						"GROUP BY address HAVING released IS NOT NULL "
+						"AND MAX(released) < (? + timeout) LIMIT 1",
 						DB_TEXT, name, DB_UINT, time(NULL),
-						DB_INT, DB_BLOB);
+						DB_UINT, DB_BLOB, DB_UINT, DB_UINT);
 	
-	if (!e || !e->enumerate(e, &pool, &address))
+	if (!e || !e->enumerate(e, &pool, &address, &released, &timeout))
 	{
 		DESTROY_IF(e);
 		/* no outdated lease found, acquire new address */
 		e = this->db->query(this->db,
 				"SELECT id, next FROM pools WHERE name = ? AND next <= end",
 				DB_TEXT, name,
-				DB_INT, DB_BLOB);
+				DB_UINT, DB_BLOB);
 		if (!e || !e->enumerate(e, &pool, &address))
 		{
 			/* pool seems full */
@@ -175,7 +175,7 @@ static host_t* create_lease(private_sql_attribute_t *this,
 	e = this->db->query(this->db,
 						"SELECT id FROM identities WHERE type = ? AND data = ?",
 						DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
-						DB_INT);
+						DB_UINT);
 	if (!e || !e->enumerate(e, &identity))
 	{
 		DESTROY_IF(e);
@@ -192,18 +192,18 @@ static host_t* create_lease(private_sql_attribute_t *this,
 	if (identity)
 	{
 		if (this->db->execute(this->db, NULL,
-				 "INSERT INTO leases (pool, address, identity, acquire) "
-				 "VALUES (?, ?, ?, ?)",
-				 DB_INT, pool, DB_BLOB, address, DB_INT, identity,
-				 DB_UINT, time(NULL)) > 0)
+				"INSERT INTO leases (pool, address, identity, acquired) "
+				"VALUES (?, ?, ?, ?)",
+				DB_UINT, pool, DB_BLOB, address, DB_UINT, identity,
+				DB_UINT, time(NULL)) > 0)
 		{
 			ip = ip_from_chunk(address);
 			if (new)
 			{	/* update next address, as we have consumed one */
 				increment_chunk(address);
 				this->db->execute(this->db, NULL,
-								  "UPDATE pools set next = ? WHERE id = ?",
-								  DB_BLOB, address, DB_INT, pool);
+								  "UPDATE pools SET next = ? WHERE id = ?",
+								  DB_BLOB, address, DB_UINT, pool);
 				DBG1(DBG_CFG, "assigning lease with new address "
 					 "from pool %s", name);
 			}
@@ -242,9 +242,9 @@ static bool release_address(private_sql_attribute_t *this,
 							char *name, host_t *address)
 {
 	if (this->db->execute(this->db, NULL,
-			"UPDATE leases SET release = ? WHERE "
+			"UPDATE leases SET released = ? WHERE "
 			"pool IN (SELECT id FROM pools WHERE name = ?) AND "
-			"address = ? AND release ISNULL",
+			"address = ? AND released IS NULL",
 			DB_UINT, time(NULL),
 			DB_TEXT, name, DB_BLOB, address->get_address(address)) > 0)
 	{
