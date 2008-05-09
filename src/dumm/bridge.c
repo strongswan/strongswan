@@ -59,7 +59,7 @@ static enumerator_t* create_iface_enumerator(private_bridge_t *this)
 static bool disconnect_iface(private_bridge_t *this, iface_t *iface)
 {
 	enumerator_t *enumerator;
-	iface_t *current;
+	iface_t *current = NULL;
 	bool good = FALSE;
 
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
@@ -75,6 +75,7 @@ static bool disconnect_iface(private_bridge_t *this, iface_t *iface)
 			else
 			{
 				iface->set_bridge(iface, NULL);
+				this->ifaces->remove_at(this->ifaces, enumerator);
 				good = TRUE;
 			}
 			break;
