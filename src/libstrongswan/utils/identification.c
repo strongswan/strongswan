@@ -887,75 +887,58 @@ static int print(FILE *stream, const struct printf_info *info,
 	private_identification_t *this = *((private_identification_t**)(args[0]));
 	char buf[BUF_LEN];
 	chunk_t proper, buf_chunk = chunk_from_buf(buf);
-	int written;
 	
 	if (this == NULL)
 	{
-		return fprintf(stream, "(null)");
+		return fprintf(stream, "%*s", info->width, "(null)");
 	}
 	
 	switch (this->type)
 	{
 		case ID_ANY:
-			return fprintf(stream, "%%any");
+			snprintf(buf, sizeof(buf), "%%any");
+			break;
 		case ID_IPV4_ADDR:
 			if (this->encoded.len < sizeof(struct in_addr) ||
 				inet_ntop(AF_INET, this->encoded.ptr, buf, sizeof(buf)) == NULL)
 			{
-				return fprintf(stream, "(invalid ID_IPV4_ADDR)");
+				snprintf(buf, sizeof(buf), "(invalid ID_IPV4_ADDR)");
 			}
-			else
-			{
-				return fprintf(stream, "%s", buf);
-			}
+			break;
 		case ID_IPV6_ADDR:
 			if (this->encoded.len < sizeof(struct in6_addr) ||
 				inet_ntop(AF_INET6, this->encoded.ptr, buf, INET6_ADDRSTRLEN) == NULL)
 			{
-				return fprintf(stream, "(invalid ID_IPV6_ADDR)");
+				snprintf(buf, sizeof(buf), "(invalid ID_IPV6_ADDR)");
 			}
-			else
-			{
-				return fprintf(stream, "%s", buf);
-			}
+			break;
 		case ID_FQDN:
-		{
-			proper = sanitize_chunk(this->encoded);
-			written = fprintf(stream, "%.*s", proper.len, proper.ptr);
-			chunk_free(&proper);
-			return written;
-		}
 		case ID_RFC822_ADDR:
-		{
+		case ID_DER_ASN1_GN_URI:
 			proper = sanitize_chunk(this->encoded);
-			written = fprintf(stream, "%.*s", proper.len, proper.ptr);
+			snprintf(buf, sizeof(buf), "%.*s", proper.len, proper.ptr);
 			chunk_free(&proper);
-			return written;
-		}
+			break;
 		case ID_DER_ASN1_DN:
-		{
-			snprintf(buf, sizeof(buf), "%.*s", this->encoded.len, this->encoded.ptr);
-			/* TODO: whats returned on failure?*/
-			dntoa(this->encoded, &buf_chunk);
-			return fprintf(stream, "%s", buf);
-		}
+			if (!dntoa(this->encoded, &buf_chunk))
+			{
+				snprintf(buf, sizeof(buf), "(invalid ID_DER_ASN1_DN)");
+			}
+			break;
 		case ID_DER_ASN1_GN:
-			return fprintf(stream, "(ASN.1 general Name");
+			snprintf(buf, sizeof(buf), "(ASN.1 general Name");
+			break;
 		case ID_KEY_ID:
 		case ID_PUBKEY_INFO_SHA1:
 		case ID_PUBKEY_SHA1:
 		case ID_CERT_DER_SHA1:
-			return fprintf(stream, "%#B", &this->encoded);
-		case ID_DER_ASN1_GN_URI:
-		{
-			proper = sanitize_chunk(this->encoded);
-			written = fprintf(stream, "%.*s", proper.len, proper.ptr);
-			chunk_free(&proper);
-			return written;
-		}
+			snprintf(buf, sizeof(buf), "%#B", &this->encoded);
+			break;
 		default:
-			return fprintf(stream, "(unknown ID type: %d)", this->type);
+			snprintf(buf, sizeof(buf), "(unknown ID type: %d)", this->type);
+			break;
 	}
+	return fprintf(stream, "%*s", info->width, buf);
 }
 
 /**

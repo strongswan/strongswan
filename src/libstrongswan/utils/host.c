@@ -107,15 +107,14 @@ static int print(FILE *stream, const struct printf_info *info,
 {
 	private_host_t *this = *((private_host_t**)(args[0]));
 	char buffer[INET6_ADDRSTRLEN + 16];
-	int len;
 	
 	if (this == NULL)
 	{
-		len = sprintf(buffer, "(null)");
+		snprintf(buffer, sizeof(buffer), "(null)");
 	}
 	else if (is_anyaddr(this))
 	{
-		len = sprintf(buffer, "%%any");
+		snprintf(buffer, sizeof(buffer), "%%any");
 	}
 	else
 	{
@@ -136,15 +135,17 @@ static int print(FILE *stream, const struct printf_info *info,
 				if (inet_ntop(this->address.sa_family, address,
 							  buffer, sizeof(buffer)) == NULL)
 				{
-					len = sprintf(buffer, "(address conversion failed)");
+					snprintf(buffer, sizeof(buffer),
+							 "(address conversion failed)");
 				}
 				else if (info->alt)
 				{
-					len = sprintf(buffer, "%s[%d]", buffer, ntohs(port));
+					snprintf(buffer, sizeof(buffer),
+							 "%s[%d]", buffer, ntohs(port));
 				}
 				break;
 			default:
-				len = sprintf(buffer, "(family not supported)");
+				snprintf(buffer, sizeof(buffer), "(family not supported)");
 				break;
 		}
 	}
