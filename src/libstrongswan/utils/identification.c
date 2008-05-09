@@ -938,6 +938,10 @@ static int print(FILE *stream, const struct printf_info *info,
 			snprintf(buf, sizeof(buf), "(unknown ID type: %d)", this->type);
 			break;
 	}
+	if (info->left)
+	{
+		return fprintf(stream, "%-*s", info->width, buf);
+	}
 	return fprintf(stream, "%*s", info->width, buf);
 }
 

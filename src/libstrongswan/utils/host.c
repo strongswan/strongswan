@@ -149,6 +149,10 @@ static int print(FILE *stream, const struct printf_info *info,
 				break;
 		}
 	}
+	if (info->left)
+	{
+		return fprintf(stream, "%-*s", info->width, buffer);
+	}
 	return fprintf(stream, "%*s", info->width, buffer);
 }
 
