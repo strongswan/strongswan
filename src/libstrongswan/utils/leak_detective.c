@@ -243,6 +243,7 @@ char *whitelist[] = {
 	"pthread_setspecific",
 	/* glibc functions */
 	"mktime",
+	"__gmtime_r",
 	"tzset",
 	"inet_ntoa",
 	"strerror",
