@@ -19,6 +19,7 @@
 #include <getopt.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <time.h>
 
 #include <debug.h>
 #include <library.h>
@@ -28,6 +29,11 @@
  * global database handle
  */
 database_t *db;
+
+/**
+ * --start/--end addresses of various subcommands
+ */
+host_t *start = NULL, *end = NULL;
 
 /**
  * create a host from a blob
@@ -44,14 +50,14 @@ static void usage()
 {
 	printf("\
 Usage:\n\
-  ipsec pool --status|--add|--del|--resize [options]\n\
+  ipsec pool --status|--add|--del|--resize|--purge [options]\n\
   \n\
   ipsec pool --status\n\
     Show a list of installed pools with statistics.\n\
   \n\
   ipsec pool --add <name> --start <start> --end <end> --timeout <timeout>\n\
     Add a new pool to the database.\n\
-      name:	   Name of the pool, as used in ipsec.conf rightsourceip=%%name\n\
+      name:    Name of the pool, as used in ipsec.conf rightsourceip=%%name\n\
       start:   Start address of the pool\n\
       end:     End address of the pool\n\
       timeout: Lease time in hours, 0 for static leases\n\
@@ -68,7 +74,11 @@ Usage:\n\
   ipsec pool --leases <name> --filter <filter>\n\
     Show lease information using filters:\n\
       name:   Name of the pool to show leases from\n\
-      filter: Filter stiring:\n\
+      filter: Filter string - unimplemented\n\
+  \n\
+  ipsec pool --purge <name>\n\
+    Delete expired leases of a pool:\n\
+      name:   Name of the pool to purge\n\
   \n");
 	exit(0);
 }
@@ -102,16 +112,6 @@ static void status()
 			
 			start = host_create_from_blob(start_chunk);
 			end = host_create_from_blob(end_chunk);
-			
-			lease = db->query(db, "SELECT COUNT(*) FROM leases "
-							  "WHERE pool = ? AND release = NULL",
-							  DB_UINT, id, DB_INT);
-			if (lease)
-			{
-				lease->enumerate(lease, &online);
-				lease->destroy(lease);
-			}
-
 			printf("%8s %15H %15H ", name, start, end);
 			if (timeout)
 			{
@@ -120,6 +120,15 @@ static void status()
 			else
 			{
 				printf("%8s ", "static");
+			}
+			
+			lease = db->query(db, "SELECT COUNT(*) FROM leases "
+							  "WHERE pool = ? AND release ISNULL",
+							  DB_UINT, id, DB_INT);
+			if (lease)
+			{
+				lease->enumerate(lease, &online);
+				lease->destroy(lease);
 			}
 			printf("%6d\n", online);
 			
@@ -215,37 +224,61 @@ static void leases(char *name, char *filter)
 	enumerator_t *query;
 	chunk_t address_chunk, identity_chunk;
 	int identity_type;
-	u_int acquire, release;
+	u_int acquire, release, timeout;
 	host_t *address;
 	identification_t *identity;
 	bool found = FALSE;
 	
 	query = db->query(db, "SELECT name, address, identities.type, "
-					  "identities.data, acquire, release "
+					  "identities.data, acquire, release, timeout "
 					  "FROM leases JOIN pools ON leases.pool = pools.id "
 					  "JOIN identities ON leases.identity = identities.id "
 					  "WHERE (? or name = ?)",
 					  DB_INT, name == NULL, DB_TEXT, name,
-					  DB_TEXT, DB_BLOB, DB_INT, DB_BLOB, DB_UINT, DB_UINT);
+					  DB_TEXT, DB_BLOB, DB_INT,
+					  DB_BLOB, DB_UINT, DB_UINT, DB_UINT);
 	if (!query)
 	{
 		fprintf(stderr, "querying leases failed.\n");
 		exit(-1);
 	}
-	while (query->enumerate(query, &name, &address_chunk,
-							&identity_type, &identity_chunk, &acquire, &release))
+	while (query->enumerate(query, &name, &address_chunk, &identity_type,
+							&identity_chunk, &acquire, &release, &timeout))
 	{
 		if (!found)
 		{
 			found = TRUE;
-			printf("%8s %15s %20s %16s %16s %7s\n",
+			printf("%-8s %15s  %-33s %-25s %-25s %-7s\n",
 				   "name", "address", "identity", "start", "end", "status");
 		}
 		address = host_create_from_blob(address_chunk);
 		identity = identification_create_from_encoding(identity_type, identity_chunk);
 		
-		printf("%8s %15H %20D %16d %16d, %7s\n",
-			   name, address, identity, acquire, release, "hum");
+		printf("%-8s %15H  %-32D  %T  ", name, address, identity, &acquire);
+		if (release)
+		{
+			printf("%T  ", &release);
+		}
+		else
+		{
+			printf("                          ");
+		}
+		if (release == 0)
+		{
+			printf("%-7s\n", "online");
+		}
+		else if (timeout == 0)
+		{
+			printf("%-7s\n", "static");
+		}
+		else if (release >= time(NULL) - timeout)
+		{
+			printf("%-7s\n", "valid");
+		}
+		else
+		{
+			printf("%-7s\n", "expired");
+		}
 		DESTROY_IF(address);
 		identity->destroy(identity);
 	}
@@ -259,11 +292,39 @@ static void leases(char *name, char *filter)
 }
 
 /**
+ * ipsec pool --purge - delete expired leases
+ */
+static void purge(char *name)
+{
+	enumerator_t *query;
+	u_int id, timeout, purged = 0;
+	
+	query = db->query(db, "SELECT id, timeout FROM pools WHERE name = ?",
+					  DB_TEXT, name, DB_UINT, DB_UINT);
+	if (!query)
+	{
+		fprintf(stderr, "purging pool failed.\n");
+		exit(-1);
+	}
+	if (query->enumerate(query, &id, &timeout))
+	{
+		purged = db->execute(db, NULL,
+					"DELETE FROM leases WHERE pool = ? "
+					"AND release NOTNULL AND release < ?",
+					DB_UINT, id, DB_UINT, time(NULL) - timeout);
+	}
+	query->destroy(query);
+	fprintf(stderr, "purged %d leases in pool '%s'.\n", purged, name);
+	exit(0);
+}
+/**
  * atexit handler to close db on shutdown
  */
-static void close_database(void)
+static void cleanup(void)
 {
 	db->destroy(db);
+	DESTROY_IF(start);
+	DESTROY_IF(end);
 }
 
 /**
@@ -286,7 +347,6 @@ int main(int argc, char *argv[])
 {
 	char *uri, *name = "", *filter = "";
 	int timeout = 0;
-	host_t *start = NULL, *end = NULL;
 	enum {
 		OP_USAGE,
 		OP_STATUS,
@@ -294,6 +354,7 @@ int main(int argc, char *argv[])
 		OP_DEL,
 		OP_RESIZE,
 		OP_LEASES,
+		OP_PURGE,
 	} operation = OP_USAGE;
 
 	dbg = dbg_stderr;
@@ -314,7 +375,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "opening database failed.\n");
 		exit(-1);
 	}
-	atexit(close_database);
+	atexit(cleanup);
 	
 	while (TRUE)
 	{
@@ -328,6 +389,7 @@ int main(int argc, char *argv[])
 			{ "del", required_argument, NULL, 'd' },
 			{ "resize", required_argument, NULL, 'r' },
 			{ "leases", optional_argument, NULL, 'l' },
+			{ "purge", required_argument, NULL, 'p' },
 			
 			{ "start", required_argument, NULL, 's' },
 			{ "end", required_argument, NULL, 'e' },
@@ -360,6 +422,10 @@ int main(int argc, char *argv[])
 				continue;
 			case 'l':
 				operation = OP_LEASES;
+				name = optarg;
+				continue;
+			case 'p':
+				operation = OP_PURGE;
 				name = optarg;
 				continue;
 			case 's':
@@ -428,6 +494,9 @@ int main(int argc, char *argv[])
 			break;
 		case OP_LEASES:
 			leases(name, filter);
+			break;
+		case OP_PURGE:
+			purge(name);
 			break;
 	}
 	exit(0);
