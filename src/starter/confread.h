@@ -174,6 +174,7 @@ struct starter_config {
 		char	 *charondebug;
 		char	 *prepluto;
 		char	 *postpluto;
+		bool	 plutostderrlog;
 		bool	 uniqueids;
 		u_int	 overridemtu;
 		u_int	 crlcheckinterval;

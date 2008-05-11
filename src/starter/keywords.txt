@@ -35,6 +35,7 @@ plutodebug,        KW_PLUTODEBUG
 charondebug,       KW_CHARONDEBUG
 prepluto,          KW_PREPLUTO
 postpluto,         KW_POSTPLUTO
+plutostderrlog,    KW_PLUTOSTDERRLOG
 fragicmp,          KW_FRAGICMP
 packetdefault,     KW_PACKETDEFAULT
 hidetos,           KW_HIDETOS

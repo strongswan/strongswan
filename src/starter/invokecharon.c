@@ -101,7 +101,7 @@ starter_stop_charon (void)
 
 
 int
-starter_start_charon (starter_config_t *cfg, bool debug)
+starter_start_charon (starter_config_t *cfg, bool no_fork)
 {
     struct stat stb;
     int pid, i;
@@ -114,7 +114,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
     };
 
-    if (!debug)
+    if (!no_fork)
     {
 	arg[argc++] = "--use-syslog";
     }

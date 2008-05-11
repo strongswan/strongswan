@@ -104,7 +104,7 @@ starter_stop_pluto (void)
 	}
 
 int
-starter_start_pluto (starter_config_t *cfg, bool debug)
+starter_start_pluto (starter_config_t *cfg, bool no_fork)
 {
     struct stat stb;
     int i;
@@ -121,7 +121,7 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
 
     printf ("starter_start_pluto entered\n");
 
-    if (debug)
+    if (cfg->setup.plutostderrlog || no_fork)
     {
 	arg[argc++] = "--stderrlog";
     }
