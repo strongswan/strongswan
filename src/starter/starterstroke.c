@@ -184,7 +184,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 				msg_end->sourceip_size = atoi(pos + 1);
 			}
 			else
-			{	/* a sigle address */
+			{	/* a single address */
 				msg_end->sourceip = push_string(msg, conn_end->srcip);
 				if (strchr(conn_end->srcip, ':'))
 				{	/* IPv6 */

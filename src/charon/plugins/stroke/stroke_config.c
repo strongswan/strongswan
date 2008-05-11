@@ -473,7 +473,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		if (!vip)
 		{	/* if it is set to something like %poolname, request an address */
 			if (msg->add_conn.me.subnets)
-			{	/* use the same addreass as in subnet, if any */
+			{	/* use the same address as in subnet, if any */
 				if (strchr(msg->add_conn.me.subnets, '.'))
 				{
 					vip = host_create_any(AF_INET);
