@@ -17,7 +17,8 @@ CREATE TABLE child_configs (
   hostaccess INTEGER NOT NULL DEFAULT '0',
   mode INTEGER NOT NULL DEFAULT '1',
   dpd_action INTEGER NOT NULL DEFAULT '0',
-  close_action INTEGER NOT NULL DEFAULT '0'
+  close_action INTEGER NOT NULL DEFAULT '0',
+  ipcomp INTEGER NOT NULL DEFAULT '0'
 );
 DROP INDEX IF EXISTS child_configs_name;
 CREATE INDEX child_configs_name ON child_configs (
@@ -134,6 +135,43 @@ CREATE TABLE shared_secret_identity (
   shared_secret INTEGER NOT NULL,
   identity INTEGER NOT NULL,
   PRIMARY KEY (shared_secret, identity)
+);
+
+DROP TABLE IF EXISTS pools;
+CREATE TABLE pools (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  start BLOB NOT NULL,
+  end BLOB NOT NULL,
+  next BLOB NOT NULL,
+  timeout INTEGER DEFAULT NULL,
+  UNIQUE (name)
+);
+DROP INDEX IF EXISTS pools_name;
+CREATE INDEX pools_name ON pools (
+  name
+);
+
+DROP TABLE IF EXISTS leases;
+CREATE TABLE leases (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  pool INTEGER NOT NULL,
+  address BLOB NOT NULL,
+  identity INTEGER NOT NULL,
+  acquired INTEGER NOT NULL,
+  released INTEGER DEFAULT NULL
+);
+DROP INDEX IF EXISTS leases_pool;
+CREATE INDEX leases_pool ON leases (
+  pool
+);
+DROP INDEX IF EXISTS leases_identity;
+CREATE INDEX leases_identity ON leases (
+  identity
+);
+DROP INDEX IF EXISTS leases_released;
+CREATE INDEX leases_released ON leases (
+  released
 );
 
 DROP TABLE IF EXISTS ike_sas;
