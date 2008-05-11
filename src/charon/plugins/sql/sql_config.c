@@ -157,7 +157,7 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 			"WHERE peer_cfg = ?",
 			DB_INT, id,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT,
-			DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT);
+			DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT);
 	if (e)
 	{
 		while ((child_cfg = build_child_cfg(this, e)))
