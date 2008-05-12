@@ -7,6 +7,6 @@ dave::/etc/init.d/iptables stop 2> /dev/null
 alice::"ip route del fec0:\:/16 via fec1:\:1"
 carol::"ip route del fec1:\:/16 via fec0:\:1"
 dave::"ip route del fec1:\:/16 via fec0:\:1"
-moon::rm /etc/ipsec.d/ipsec.db
-carol::rm /etc/ipsec.d/ipsec.db
-dave::rm /etc/ipsec.d/ipsec.db
+moon::rm /etc/ipsec.d/ipsec.*
+carol::rm /etc/ipsec.d/ipsec.*
+dave::rm /etc/ipsec.d/ipsec.*
