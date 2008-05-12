@@ -1035,6 +1035,10 @@ separated by white space) are enabled;
 for details on available debugging types, see
 .IR pluto (8).
 .TP
+.B plutostderrlog
+Pluto will not use syslog, but rather log to stderr, and redirect stderr
+to the argument file.
+.TP
 .B postpluto
 shell command to run after starting Pluto
 (e.g., to remove a decrypted copy of the
@@ -1060,10 +1064,6 @@ so running interactive commands is difficult unless they use
 .I /dev/tty
 or equivalent for their interaction.
 Default is none.
-.TP
-.B plutostderrlog
-Pluto will not use syslog, but rather log to stderr, and redirect stderr
-to the argument file.
 .TP
 .B virtual_private
 defines private networks using a wildcard notation.
