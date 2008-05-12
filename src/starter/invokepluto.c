@@ -179,13 +179,11 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork)
 	snprintf(buf2, sizeof(buf2), "%u", cfg->setup.keep_alive);
 	arg[argc++] = buf2;
     }
-#ifdef VIRTUAL_IP
     if (cfg->setup.virtual_private)
     {
 	arg[argc++] = "--virtual_private";
 	arg[argc++] = cfg->setup.virtual_private;
     }
-#endif
     if (cfg->setup.pkcs11module)
     {
 	arg[argc++] = "--pkcs11module";
@@ -226,6 +224,21 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork)
 	    return -1;
 	case 0:
 	    /* child */
+	    if (cfg->setup.plutostderrlog)
+	    {
+		int f = creat(cfg->setup.plutostderrlog, 00644);
+
+   		/* redirect stderr to file */
+		if (f < 0)
+		{
+		    plog("couldn't open stderr redirection file '%s'",
+			  cfg->setup.plutostderrlog);
+		}
+		else
+		{
+		    dup2(f, 2);
+		}
+	    }
 	    setsid();
 	    sigprocmask(SIG_SETMASK, 0, NULL);
 	    execv(arg[0], arg);
