@@ -373,11 +373,9 @@ static bool belongs_to(private_gmp_rsa_private_key_t *this, public_key_t *public
  */
 chunk_t gmp_mpz_to_asn1(const mpz_t value)
 {
-	size_t bits = mpz_sizeinbase(value, 2);  /* size in bits */
 	chunk_t n;
 
-	n.len = 1 + bits / 8;  /* size in bytes */	
-	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
+	n.ptr = mpz_export(NULL, &n.len, 1, 1, 1, 0, value);
 
 	return asn1_wrap(ASN1_INTEGER, "m", n);
 }
