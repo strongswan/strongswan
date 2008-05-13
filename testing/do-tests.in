@@ -469,13 +469,8 @@ do
 		    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
 	    done
 
-		if [ $SUBDIR = "sql" ]
-		then
-			scp $HOSTLOGIN:/etc/ipsec.d/ipsec.sql \
-		    	$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
-		else
-			touch $TESTRESULTDIR/${host}.ipsec.sql
-		fi
+	    scp $HOSTLOGIN:/etc/ipsec.d/ipsec.sql \
+	    	$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
 
 	    ssh $HOSTLOGIN ip xfrm policy \
 		    > $TESTRESULTDIR/${host}.ip.policy 2>/dev/null
@@ -485,6 +480,7 @@ do
 		    > $TESTRESULTDIR/${host}.ip.route 2>/dev/null
 	    ssh $HOSTLOGIN $IPTABLES -v -n -L \
 		    > $TESTRESULTDIR/${host}.iptables 2>/dev/null
+	    chmod a+r $TESTRESULTDIR/*
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
     <h3>$host</h3>
       <table border="0" cellspacing="0" width="600">
