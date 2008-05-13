@@ -308,7 +308,7 @@ static void purge(char *name)
 	{
 		purged = db->execute(db, NULL,
 					"DELETE FROM leases WHERE pool = ? "
-					"AND released NOTNULL AND released < ?",
+					"AND released IS NOT NULL AND released < ?",
 					DB_UINT, id, DB_UINT, time(NULL) - timeout);
 	}
 	query->destroy(query);
