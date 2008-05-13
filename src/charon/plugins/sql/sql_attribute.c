@@ -141,13 +141,14 @@ static host_t* create_lease(private_sql_attribute_t *this,
 	 */
 	this->mutex->lock(this->mutex);
 	
-	/* find an address which has outdated leases only */
+	/* find an address which has outdated leases only. The HAVING clause filters
+	 * out leases which are active (released = NULL) or not expired */
 	e = this->db->query(this->db,
 						"SELECT pool, address, released, timeout FROM leases "
 						"JOIN pools ON leases.pool = pools.id "
 						"WHERE name = ? "
-						"GROUP BY address HAVING released IS NOT NULL "
-						"AND MAX(released) < (? + timeout) LIMIT 1",
+						"GROUP BY address HAVING COUNT(released) = COUNT(*) "
+						"AND MAX(released) < (? - timeout) LIMIT 1",
 						DB_TEXT, name, DB_UINT, time(NULL),
 						DB_UINT, DB_BLOB, DB_UINT, DB_UINT);
 	
@@ -275,6 +276,11 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 	
 	this->db = db;
 	this->mutex = mutex_create(MUTEX_DEFAULT);
+	
+	/* close any "online" leases in the case we crashed */
+	this->db->execute(this->db, NULL,
+					  "UPDATE leases SET released = ? WHERE released IS NULL",
+					  DB_UINT, time(NULL));
 	
 	return &this->public;
 }
