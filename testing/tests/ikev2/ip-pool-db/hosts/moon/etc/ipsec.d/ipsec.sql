@@ -1,3 +1,5 @@
+/* strongSwan SQLite database */
+
 DROP TABLE IF EXISTS identities;
 CREATE TABLE identities (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
