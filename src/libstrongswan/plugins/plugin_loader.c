@@ -57,7 +57,7 @@ static int load(private_plugin_loader_t *this, char *path, char *prefix)
 		DBG1("opening plugin directory %s failed", path);
 		return 0;
 	}
-	DBG1("loading plugins from %s", path);
+	DBG2("loading plugins from %s", path);
 	while (enumerator->enumerate(enumerator, &rel, &file, NULL))
 	{
 		plugin_t *plugin;
@@ -92,7 +92,7 @@ static int load(private_plugin_loader_t *this, char *path, char *prefix)
 			dlclose(handle);
 			continue;
 		}
-		DBG1("plugin %s loaded successfully", rel);
+		DBG2("plugin %s loaded successfully", rel);
 		/* insert in front to destroy them in reverse order */
 		this->plugins->insert_last(this->plugins, plugin);
 		/* we do not store or free dlopen() handles, leak_detective requires
