@@ -166,3 +166,7 @@ if USE_MEDSRV
   SUBDIRS += plugins/medsrv
 endif
 
+if USE_MEDCLI
+  SUBDIRS += plugins/medcli
+endif
+
