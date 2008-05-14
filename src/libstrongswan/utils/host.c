@@ -120,6 +120,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	{
 		void *address;
 		u_int16_t port;
+		int len;
 		
 		address = &this->address6.sin6_addr;
 		port = this->address6.sin6_port;
@@ -140,8 +141,9 @@ static int print(FILE *stream, const struct printf_info *info,
 				}
 				else if (info->alt)
 				{
-					snprintf(buffer, sizeof(buffer),
-							 "%s[%d]", buffer, ntohs(port));
+					len = strlen(buffer);
+					snprintf(buffer + len, sizeof(buffer) - len,
+							 "[%d]", ntohs(port));
 				}
 				break;
 			default:
