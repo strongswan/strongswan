@@ -571,6 +571,7 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT(menuitem), "activate",
 					 G_CALLBACK(disconnect_guest), NULL);
 	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_set_sensitive(menuitem, FALSE);
 	gtk_widget_show(menuitem);
 
 	/* Switch menu */
@@ -592,6 +593,7 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT(menuitem), "activate",
 					 G_CALLBACK(delete_switch), NULL);
 	gtk_menu_append(GTK_MENU(menu), menuitem);
+	gtk_widget_set_sensitive(menuitem, FALSE);
 	gtk_widget_show(menuitem);
 	
   	/* show widgets */
