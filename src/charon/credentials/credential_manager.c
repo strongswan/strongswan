@@ -447,7 +447,6 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 	request->destroy(request);
 
 	DBG1(DBG_CFG, "  requesting ocsp status from '%s' ...", url);
-	/* TODO: unlock manager while fetching? */
 	if (lib->fetcher->fetch(lib->fetcher, url, &receive, 
 							FETCH_REQUEST_DATA, send,
 							FETCH_REQUEST_TYPE, "application/ocsp-request",
@@ -682,7 +681,6 @@ static certificate_t* fetch_crl(private_credential_manager_t *this, char *url)
 	certificate_t *crl;
 	chunk_t chunk;
 	
-	/* TODO: unlock the manager while fetching? */
 	DBG1(DBG_CFG, "  fetching crl from '%s' ...", url);
 	if (lib->fetcher->fetch(lib->fetcher, url, &chunk, FETCH_END) != SUCCESS)
 	{
@@ -1424,6 +1422,7 @@ static private_key_t *get_private(private_credential_manager_t *this,
 		{
 			case ID_PUBKEY_SHA1:
 			case ID_PUBKEY_INFO_SHA1:
+			case ID_KEY_ID:
 				return get_private_by_keyid(this, type, id);
 			default:
 				break;

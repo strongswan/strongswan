@@ -104,14 +104,22 @@ static bool private_filter(id_data_t *data,
 						   private_key_t **in, private_key_t **out)
 {
 	identification_t *candidate;
+	id_type_t type;
 	
 	if (data->id == NULL)
 	{
 		*out = *in;
 		return TRUE;
 	}
-	candidate = (*in)->get_id(*in, data->id->get_type(data->id));
-	if (candidate && data->id->equals(data->id, candidate))
+	type = data->id->get_type(data->id);
+	if (type == ID_KEY_ID)
+	{	/* handle ID_KEY_ID as a ID_PUBKEY_SHA1 */
+		type = ID_PUBKEY_SHA1;
+	}
+	candidate = (*in)->get_id(*in, type);
+	if (candidate &&
+		chunk_equals(candidate->get_encoding(candidate),
+					 data->id->get_encoding(data->id)))
 	{
 		*out = *in;
 		return TRUE;
