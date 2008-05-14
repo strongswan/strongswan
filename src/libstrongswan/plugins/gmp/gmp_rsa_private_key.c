@@ -441,8 +441,8 @@ static status_t check(private_gmp_rsa_private_key_t *this)
 	status_t status = SUCCESS;
 	
 	/* PKCS#1 1.5 section 6 requires modulus to have at least 12 octets.
-	* We actually require more (for security).
-	*/
+	 * We actually require more (for security).
+	 */
 	if (this->k < 512/8)
 	{
 		DBG1("key shorter than 512 bits");
@@ -452,7 +452,7 @@ static status_t check(private_gmp_rsa_private_key_t *this)
 	/* we picked a max modulus size to simplify buffer allocation */
 	if (this->k > 8192/8)
 	{
-		DBG1("key larger thant 8192 bits");
+		DBG1("key larger than 8192 bits");
 		return FAILED;
 	}
 	
