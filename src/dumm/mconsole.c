@@ -199,20 +199,20 @@ static bool del_iface(private_mconsole_t *this, char *guest)
  */
 static bool wait_bootup(private_mconsole_t *this)
 {
-	char *cmd, buf[128];
+	char buf[128];
 	int len, res;
 	
-	cmd = "config con0";
 	while (TRUE)
 	{
 		len = sizeof(buf);
-		res = request(this, cmd, buf, &len);
+		res = request(this, "config eth9=mcast", buf, &len);
 		if (res < 0)
 		{
 			return FALSE;
 		}
 		if (res == 0)
 		{
+			request(this, "remove eth9", buf, &len);
 			return TRUE;
 		}
 		if (this->idle)
