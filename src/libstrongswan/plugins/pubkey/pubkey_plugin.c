@@ -40,7 +40,9 @@ struct private_pubkey_plugin_t {
 static void destroy(private_pubkey_plugin_t *this)
 {
 	lib->creds->remove_builder(lib->creds,
-							   (builder_constructor_t)pubkey_cert_builder);
+							(builder_constructor_t)pubkey_cert_builder);
+	lib->creds->remove_builder(lib->creds,
+							(builder_constructor_t)pubkey_public_key_builder);
 	free(this);
 }
 

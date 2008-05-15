@@ -46,8 +46,6 @@ static void destroy(private_gmp_plugin_t *this)
 						(builder_constructor_t)gmp_rsa_private_key_builder);
 	lib->creds->remove_builder(lib->creds,
 						(builder_constructor_t)gmp_rsa_public_key_builder);
-	lib->creds->remove_builder(lib->creds,
-						(builder_constructor_t)gmp_public_key_builder);
 	free(this);
 }
 
