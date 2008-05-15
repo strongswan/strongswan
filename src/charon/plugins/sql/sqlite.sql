@@ -159,7 +159,7 @@ CREATE TABLE pools (
   start BLOB NOT NULL,
   end BLOB NOT NULL,
   next BLOB NOT NULL,
-  timeout INTEGER DEFAULT NULL,
+  timeout INTEGER NOT NULL,
   UNIQUE (name)
 );
 DROP INDEX IF EXISTS pools_name;

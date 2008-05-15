@@ -158,7 +158,7 @@ CREATE TABLE pools (
   `start` varbinary(16) NOT NULL,
   `end` varbinary(16) NOT NULL,
   `next` varbinary(16) NOT NULL,
-  `timeout` int(10) unsigned DEFAULT NULL,
+  `timeout` int(10) unsigned NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE (`name`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

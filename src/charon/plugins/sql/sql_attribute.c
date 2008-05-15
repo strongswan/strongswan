@@ -95,7 +95,7 @@ static host_t* get_lease(private_sql_attribute_t *this,
 						"JOIN pools AS p ON l.pool = p.id "
 						"JOIN identities AS i ON l.identity = i.id "
 						"WHERE p.name = ? AND i.type = ? AND i.data = ? "
-						"AND (l.released IS NULL OR p.timeout IS NULL "
+						"AND (l.released IS NULL OR p.timeout = 0 "
 						" OR (l.released >= (? - p.timeout))) "
 						"ORDER BY l.acquired LIMIT 1", DB_TEXT, name,
 						DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
@@ -146,7 +146,7 @@ static host_t* create_lease(private_sql_attribute_t *this,
 	e = this->db->query(this->db,
 						"SELECT pool, address, released, timeout FROM leases "
 						"JOIN pools ON leases.pool = pools.id "
-						"WHERE name = ? "
+						"WHERE name = ? and timeout > 0 "
 						"GROUP BY address HAVING COUNT(released) = COUNT(*) "
 						"AND MAX(released) < (? - timeout) LIMIT 1",
 						DB_TEXT, name, DB_UINT, time(NULL),
