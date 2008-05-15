@@ -1,3 +1,16 @@
+strongswan-4.2.2
+----------------
+
+- Plugins for libstrongswan and charon are loaded depending on the
+  configration in strongswan.conf. Most components provide a
+  "load = " option followed by a space separated list of plugins to load.
+  Have a look to the distributed strongswan.conf.
+
+- Charons SQL plugin has been extended by a virtual IP address pool.
+  Configurations with rightsourceip=%poolname setting query the database
+  for leases. The "ipsec pool" command helps in administrating the pool
+  database.
+
 strongswan-4.2.1
 ----------------
 
