@@ -19,7 +19,6 @@
 
 #include <library.h>
 #include "gmp_diffie_hellman.h"
-#include "gmp_public_key.h"
 #include "gmp_rsa_private_key.h"
 #include "gmp_rsa_public_key.h"
 
@@ -82,8 +81,6 @@ plugin_t *plugin_create()
 						(builder_constructor_t)gmp_rsa_private_key_builder);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 						(builder_constructor_t)gmp_rsa_public_key_builder);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-						(builder_constructor_t)gmp_public_key_builder);
 	
 	return &this->public.plugin;
 }

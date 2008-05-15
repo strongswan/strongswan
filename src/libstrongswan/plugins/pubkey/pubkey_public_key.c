@@ -16,7 +16,7 @@
  * $Id$
  */
 
-#include "gmp_public_key.h"
+#include "pubkey_public_key.h"
 
 #include <debug.h>
 #include <asn1/oid.h>
@@ -140,7 +140,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 /**
  * Builder construction function
  */
-builder_t *gmp_public_key_builder(key_type_t type)
+builder_t *pubkey_public_key_builder(key_type_t type)
 {
 	private_builder_t *this;
 	

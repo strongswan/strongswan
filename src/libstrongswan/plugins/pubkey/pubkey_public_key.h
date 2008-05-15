@@ -16,12 +16,12 @@
  */
 
 /**
- * @defgroup gmp_public_key gmp_public_key
- * @{ @ingroup gmp_p
+ * @defgroup pubkey_public_key pubkey_public_key
+ * @{ @ingroup pubkey_p
  */
 
-#ifndef GMP_PUBLIC_KEY_H_
-#define GMP_PUBLIC_KEY_H_
+#ifndef PUBKEY_PUBLIC_KEY_H_
+#define PUBKEY_PUBLIC_KEY_H_
 
 #include <credentials/keys/public_key.h>
 
@@ -31,6 +31,6 @@
  * @param type		type of the key, must be KEY_ANY
  * @return 			builder instance
  */
-builder_t *gmp_public_key_builder(key_type_t type);
+builder_t *pubkey_public_key_builder(key_type_t type);
 
-#endif /*GMP_RSA_PUBLIC_KEY_H_ @}*/
+#endif /*PUBKEY_RSA_PUBLIC_KEY_H_ @}*/
