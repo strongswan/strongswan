@@ -212,7 +212,10 @@ static bool wait_bootup(private_mconsole_t *this)
 		}
 		if (res == 0)
 		{
-			request(this, "remove eth9", buf, &len);
+			while (request(this, "remove eth9", buf, &len) != 0)
+			{
+				usleep(50000);
+			}
 			return TRUE;
 		}
 		if (this->idle)
