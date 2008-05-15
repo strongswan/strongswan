@@ -3,9 +3,9 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon ${dbus_C
 
 AM_CFLAGS = -rdynamic
 
-plugin_LTLIBRARIES = libcharon-dbus.la
+plugin_LTLIBRARIES = libstrongswan-dbus.la
 
-libcharon_dbus_la_SOURCES = dbus.h dbus.c
-libcharon_dbus_la_LDFLAGS = -module
-libcharon_dbus_la_LIBADD = ${dbus_LIBS}
+libstrongswan_dbus_la_SOURCES = dbus.h dbus.c
+libstrongswan_dbus_la_LDFLAGS = -module
+libstrongswan_dbus_la_LIBADD = ${dbus_LIBS}
 

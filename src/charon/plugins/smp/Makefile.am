@@ -3,8 +3,8 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon ${xml_CF
 
 AM_CFLAGS = -rdynamic -DIPSEC_PIDDIR=\"${piddir}\"
 
-plugin_LTLIBRARIES = libcharon-smp.la
-libcharon_smp_la_SOURCES = smp.h smp.c
-libcharon_smp_la_LDFLAGS = -module
-libcharon_smp_la_LIBADD = ${xml_LIBS}
+plugin_LTLIBRARIES = libstrongswan-smp.la
+libstrongswan_smp_la_SOURCES = smp.h smp.c
+libstrongswan_smp_la_LDFLAGS = -module
+libstrongswan_smp_la_LIBADD = ${xml_LIBS}
 

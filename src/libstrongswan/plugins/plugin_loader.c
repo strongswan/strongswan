@@ -17,7 +17,11 @@
 
 #include "plugin_loader.h"
 
+#define _GNU_SOURCE
+#include <string.h>
 #include <dlfcn.h>
+#include <limits.h>
+#include <stdio.h>
 
 #include <debug.h>
 #include <utils/linked_list.h>
@@ -42,65 +46,89 @@ struct private_plugin_loader_t {
 };
 
 /**
+ * load a single plugin
+ */
+static plugin_t* load_plugin(private_plugin_loader_t *this,
+							 char *path, char *name)
+{
+	char file[PATH_MAX];
+	void *handle;
+	plugin_t *plugin;
+	plugin_constructor_t constructor;
+	
+	snprintf(file, sizeof(file), "%s/libstrongswan-%s.so", path, name);
+	
+	handle = dlopen(file, RTLD_LAZY);
+	if (handle == NULL)
+	{
+		DBG1("loading plugin '%s' failed: %s", name, dlerror());
+		return NULL;
+	}
+	constructor = dlsym(handle, "plugin_create");
+	if (constructor == NULL)
+	{
+		DBG1("loading plugin '%s' failed: no plugin_create() function", name);
+		dlclose(handle);
+		return NULL;
+	}
+	plugin = constructor();
+	if (plugin == NULL)
+	{
+		DBG1("loading plugin '%s' failed: plugin_create() returned NULL", name);
+		dlclose(handle);
+		return NULL;
+	}
+	DBG2("plugin '%s' loaded successfully", name);
+	
+	/* we do not store or free dlopen() handles, leak_detective requires
+	 * the modules to keep loaded until leak report */
+	return plugin;
+}
+
+/**
  * Implementation of plugin_loader_t.load_plugins.
  */
-static int load(private_plugin_loader_t *this, char *path, char *prefix)
+static int load(private_plugin_loader_t *this, char *path, char *list)
 {
-	enumerator_t *enumerator;
-	char *file, *ending, *rel;
-	void *handle;
+	plugin_t *plugin;
+	char *pos;
 	int count = 0;
 	
-	enumerator = enumerator_create_directory(path);
-	if (!enumerator)
+	list = strdupa(list);
+	while (TRUE)
 	{
-		DBG1("opening plugin directory %s failed", path);
-		return 0;
+		pos = strchr(list, ' ');
+		if (pos)
+		{
+			*pos = '\0';
+		}
+		plugin = load_plugin(this, path, list);
+		if (plugin)
+		{	/* insert in front to destroy them in reverse order */
+			this->plugins->insert_last(this->plugins, plugin);
+			count++;
+		}
+		if (!pos)
+		{
+			break;
+		}
+		list = pos + 1;
 	}
-	DBG2("loading plugins from %s", path);
-	while (enumerator->enumerate(enumerator, &rel, &file, NULL))
-	{
-		plugin_t *plugin;
-		plugin_constructor_t constructor;
-		
-		ending = file + strlen(file) - 3;
-		if (ending <= file || !streq(ending, ".so"))
-		{	/* only process .so libraries */
-			continue;
-		}
-		if (!strneq(prefix, rel, strlen(prefix)))
-		{
-			continue;
-		}
-		handle = dlopen(file, RTLD_LAZY);
-		if (handle == NULL)
-		{
-			DBG1("loading plugin %s failed: %s", rel, dlerror());
-			continue;
-		}
-		constructor = dlsym(handle, "plugin_create");
-		if (constructor == NULL)
-		{
-			DBG1("plugin %s has no plugin_create() function, skipped", rel);
-			dlclose(handle);
-			continue;
-		}
-		plugin = constructor();
-		if (plugin == NULL)
-		{
-			DBG1("plugin %s constructor failed, skipping", rel);
-			dlclose(handle);
-			continue;
-		}
-		DBG2("plugin %s loaded successfully", rel);
-		/* insert in front to destroy them in reverse order */
-		this->plugins->insert_last(this->plugins, plugin);
-		/* we do not store or free dlopen() handles, leak_detective requires
-		 * the modules to keep loaded until leak report */
-		count++;
-	}
-	enumerator->destroy(enumerator);
 	return count;
+}
+
+/**
+ * Implementation of plugin_loader_t.unload
+ */
+static void unload(private_plugin_loader_t *this)
+{
+	plugin_t *plugin;
+	
+	while (this->plugins->remove_first(this->plugins,
+									   (void**)&plugin) == SUCCESS)
+	{
+		plugin->destroy(plugin);
+	}
 }
 
 /**
@@ -120,6 +148,7 @@ plugin_loader_t *plugin_loader_create()
 	private_plugin_loader_t *this = malloc_thing(private_plugin_loader_t);
 	
 	this->public.load = (int(*)(plugin_loader_t*, char *path, char *prefix))load;
+	this->public.unload = (void(*)(plugin_loader_t*))unload;
 	this->public.destroy = (void(*)(plugin_loader_t*))destroy;
 	
 	this->plugins = linked_list_create();

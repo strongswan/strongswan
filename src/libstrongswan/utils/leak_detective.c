@@ -259,6 +259,7 @@ char *whitelist[] = {
 	"setlocale",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
+	"dlerror",
 	/* mysql functions */
 	"mysql_init_character_set",
 	"init_client_errs",

@@ -358,8 +358,9 @@ int main(int argc, char *argv[])
 	dbg = dbg_stderr;
 	library_init(STRONGSWAN_CONF);
 	atexit(library_deinit);
-	
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
+		lib->settings->get_str(lib->settings, "pool.load",
+			"sqlite mysql"));
 	
 	uri = lib->settings->get_str(lib->settings, "charon.plugins.sql.database", NULL);
 	if (!uri)

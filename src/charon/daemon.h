@@ -163,7 +163,6 @@ typedef struct daemon_t daemon_t;
 #include <config/attributes/attribute_manager.h>
 #include <credentials/credential_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
-#include <plugins/plugin_loader.h>
 
 #ifdef ME
 #include <sa/connect_manager.h>
@@ -250,11 +249,6 @@ struct daemon_t {
 	 * The signaling bus.
 	 */
 	bus_t *bus;
-	
-	/**
-	 * plugin loader
-	 */
-	plugin_loader_t *plugins;
 	
 	/**
 	 * A bus listener logging to stdout

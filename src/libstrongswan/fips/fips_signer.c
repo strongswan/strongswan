@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
 	/* initialize library */
 	library_init(STRONGSWAN_CONF);
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "sha1 hmac");
 
 	if (!fips_compute_hmac_signature(hmac_key, hmac_signature))
 	{

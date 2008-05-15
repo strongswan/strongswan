@@ -175,7 +175,8 @@ static void destroy(private_daemon_t *this)
 	{
 		this->public.ike_sa_manager->flush(this->public.ike_sa_manager);
 	}
-	DESTROY_IF(this->public.plugins);
+	/* unload plugins to release threads */
+	lib->plugins->unload(lib->plugins);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
@@ -367,24 +368,28 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 		return FALSE;
 	}
 #endif /* INTEGRITY_TEST */
+
+	/* load secrets, ca certificates and crls */
+	this->public.processor = processor_create();
+	this->public.scheduler = scheduler_create();
+	this->public.credentials = credential_manager_create();
+	this->public.controller = controller_create();
+	this->public.eap = eap_manager_create();
+	this->public.backends = backend_manager_create();
+	this->public.attributes = attribute_manager_create();
+	this->public.kernel_interface = kernel_interface_create();
+	this->public.socket = socket_create();
+	
+	/* load plugins, further infrastructure may need it */
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+		lib->settings->get_str(lib->settings, "charon.load", 
+		   "aes des gmp hmac md5 random sha1 sha2 pubkey x509 xcbc stroke"));
 	
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	if (this->public.ike_sa_manager == NULL)
 	{
 		return FALSE;
 	}
-	this->public.processor = processor_create();
-	this->public.scheduler = scheduler_create();
-
-	/* load secrets, ca certificates and crls */
-	this->public.credentials = credential_manager_create();
-	this->public.controller = controller_create();
-	this->public.eap = eap_manager_create();
-	this->public.backends = backend_manager_create();
-	this->public.attributes = attribute_manager_create();
-	this->public.plugins = plugin_loader_create();
-	this->public.kernel_interface = kernel_interface_create();
-	this->public.socket = socket_create();
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	if (this->public.receiver == NULL)
@@ -400,8 +405,6 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	}
 	this->public.mediation_manager = mediation_manager_create();
 #endif /* ME */
-
-	this->public.plugins->load(this->public.plugins, IPSEC_PLUGINDIR, "libcharon-");
 	
 	return TRUE;
 }
@@ -460,7 +463,6 @@ private_daemon_t *daemon_create(void)
 	this->public.processor = NULL;
 	this->public.controller = NULL;
 	this->public.eap = NULL;
-	this->public.plugins = NULL;
 	this->public.bus = NULL;
 	this->public.outlog = NULL;
 	this->public.syslog = NULL;
@@ -529,7 +531,6 @@ int main(int argc, char *argv[])
 	
 	/* initialize library */
 	library_init(STRONGSWAN_CONF);
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "libstrongswan-");
 	lib->printf_hook->add_handler(lib->printf_hook, 'R',
 								  traffic_selector_get_printf_hooks());
 	private_charon = daemon_create();

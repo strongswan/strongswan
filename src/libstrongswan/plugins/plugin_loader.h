@@ -29,13 +29,18 @@ typedef struct plugin_loader_t plugin_loader_t;
 struct plugin_loader_t {	
 	
 	/**
-	 * Load plugins from a directory.
+	 * Load a list of plugins from a directory.
 	 *
 	 * @param path			path containing loadable plugins
-	 * @param prefix		prefix of plugin libraries to load
+	 * @param list			space separated list of plugins to load
 	 * @return				number of successfully loaded plugins
 	 */
-	int (*load)(plugin_loader_t *this, char *path, char *prefix);
+	int (*load)(plugin_loader_t *this, char *path, char *list);
+	
+	/**
+	 * Unload all loaded plugins.
+	 */
+	void (*unload)(plugin_loader_t *this);
 		
 	/**
      * Unload loaded plugins, destroy plugin_loader instance.
