@@ -1,4 +1,6 @@
-ipsec_PROGRAMS = manager.fcgi
+managerdir = ${ipsecdir}/manager
+
+manager_PROGRAMS = manager.fcgi
 
 manager_fcgi_SOURCES = \
 main.c manager.c manager.h gateway.h gateway.c storage.h storage.c xml.h xml.c \
@@ -15,26 +17,26 @@ AM_CFLAGS = -rdynamic -DIPSECDIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
   -DIPSEC_PLUGINDIR=\"${plugindir}\" -DPLUGINS=\""${libstrongswan_plugins}\""
 
 # Don't forget to add templates to EXTRA_DIST !!! How to automate?
-ipsec_templatesdir = ${ipsecdir}/templates
-ipsec_templates_DATA = templates/header.cs templates/footer.cs templates/error.cs
+manager_templatesdir = ${managerdir}/templates
+manager_templates_DATA = templates/header.cs templates/footer.cs templates/error.cs
 
-ipsec_templates_authdir = ${ipsec_templatesdir}/auth
-ipsec_templates_auth_DATA = templates/auth/login.cs
+manager_templates_authdir = ${manager_templatesdir}/auth
+manager_templates_auth_DATA = templates/auth/login.cs
 
-ipsec_templates_gatewaydir = ${ipsec_templatesdir}/gateway
-ipsec_templates_gateway_DATA = templates/gateway/list.cs
+manager_templates_gatewaydir = ${manager_templatesdir}/gateway
+manager_templates_gateway_DATA = templates/gateway/list.cs
 
-ipsec_templates_ikesadir = ${ipsec_templatesdir}/ikesa
-ipsec_templates_ikesa_DATA = templates/ikesa/list.cs
+manager_templates_ikesadir = ${manager_templatesdir}/ikesa
+manager_templates_ikesa_DATA = templates/ikesa/list.cs
 
-ipsec_templates_controldir = ${ipsec_templatesdir}/control
-ipsec_templates_control_DATA = templates/control/result.cs
+manager_templates_controldir = ${manager_templatesdir}/control
+manager_templates_control_DATA = templates/control/result.cs
 
-ipsec_templates_configdir = ${ipsec_templatesdir}/config
-ipsec_templates_config_DATA = templates/config/list.cs
+manager_templates_configdir = ${manager_templatesdir}/config
+manager_templates_config_DATA = templates/config/list.cs
 
-ipsec_templates_staticdir = ${ipsec_templatesdir}/static
-ipsec_templates_static_DATA = templates/static/style.css templates/static/script.js templates/static/jquery.js \
+manager_templates_staticdir = ${manager_templatesdir}/static
+manager_templates_static_DATA = templates/static/style.css templates/static/script.js templates/static/jquery.js \
 templates/static/pipe.png templates/static/pipe-good.png templates/static/pipe-bad.png \
 templates/static/pipe-thin.png templates/static/pipe-thin-left.png templates/static/pipe-thin-right.png \
 templates/static/pipe-thin-green.png templates/static/pipe-thin-left-green.png templates/static/pipe-thin-right-green.png \
