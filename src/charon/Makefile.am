@@ -153,22 +153,22 @@ endif
 
 if USE_EAP_IDENTITY
   SUBDIRS += plugins/eap_identity
-  PLUGINS += eap-identity
+  PLUGINS += eapidentity
 endif
 
 if USE_EAP_SIM
   SUBDIRS += plugins/eap_sim
-  PLUGINS += eap-sim
+  PLUGINS += eapsim
 endif
 
 if USE_EAP_MD5
   SUBDIRS += plugins/eap_md5
-  PLUGINS += eap-md5
+  PLUGINS += eapmd5
 endif
 
 if USE_EAP_AKA
   SUBDIRS += plugins/eap_aka
-  PLUGINS += eap-aka
+  PLUGINS += eapaka
 endif
 
 if USE_MEDSRV
