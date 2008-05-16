@@ -12,8 +12,8 @@
  */
 typedef union
 {
-	__u32		a4;
-	__u32		a6[4];
+	__be32		a4;
+	__be32		a6[4];
 } xfrm_address_t;
 
 /* Ident of a specific xfrm_state. It is used on input to lookup
@@ -23,7 +23,7 @@ typedef union
 struct xfrm_id
 {
 	xfrm_address_t	daddr;
-	__u32		spi;
+	__be32		spi;
 	__u8		proto;
 };
 
@@ -49,10 +49,10 @@ struct xfrm_selector
 {
 	xfrm_address_t	daddr;
 	xfrm_address_t	saddr;
-	__u16	dport;
-	__u16	dport_mask;
-	__u16	sport;
-	__u16	sport_mask;
+	__be16	dport;
+	__be16	dport_mask;
+	__be16	sport;
+	__be16	sport_mask;
 	__u16	family;
 	__u8	prefixlen_d;
 	__u8	prefixlen_s;
@@ -91,8 +91,15 @@ struct xfrm_replay_state
 };
 
 struct xfrm_algo {
+	char		alg_name[64];
+	unsigned int	alg_key_len;    /* in bits */
+	char		alg_key[0];
+};
+
+struct xfrm_algo_aead {
 	char	alg_name[64];
-	int	alg_key_len;    /* in bits */
+	int	alg_key_len;	/* in bits */
+	int	alg_icv_len;	/* in bits */
 	char	alg_key[0];
 };
 
@@ -104,9 +111,17 @@ struct xfrm_stats {
 
 enum
 {
+	XFRM_POLICY_TYPE_MAIN	= 0,
+	XFRM_POLICY_TYPE_SUB	= 1,
+	XFRM_POLICY_TYPE_MAX	= 2
+};
+
+enum
+{
 	XFRM_POLICY_IN	= 0,
 	XFRM_POLICY_OUT	= 1,
 	XFRM_POLICY_FWD	= 2,
+	XFRM_POLICY_MASK = 3,
 	XFRM_POLICY_MAX	= 3
 };
 
@@ -117,6 +132,13 @@ enum
 	XFRM_SHARE_USER,	/* For this user only */
 	XFRM_SHARE_UNIQUE	/* Use once */
 };
+
+#define XFRM_MODE_TRANSPORT 0
+#define XFRM_MODE_TUNNEL 1
+#define XFRM_MODE_ROUTEOPTIMIZATION 2
+#define XFRM_MODE_IN_TRIGGER 3
+#define XFRM_MODE_BEET 4
+#define XFRM_MODE_MAX 5
 
 /* Netlink configuration messages.  */
 enum {
@@ -160,6 +182,22 @@ enum {
 #define XFRM_MSG_NEWAE XFRM_MSG_NEWAE
 	XFRM_MSG_GETAE,
 #define XFRM_MSG_GETAE XFRM_MSG_GETAE
+
+	XFRM_MSG_REPORT,
+#define XFRM_MSG_REPORT XFRM_MSG_REPORT
+
+	XFRM_MSG_MIGRATE,
+#define XFRM_MSG_MIGRATE XFRM_MSG_MIGRATE
+
+	XFRM_MSG_NEWSADINFO,
+#define XFRM_MSG_NEWSADINFO XFRM_MSG_NEWSADINFO
+	XFRM_MSG_GETSADINFO,
+#define XFRM_MSG_GETSADINFO XFRM_MSG_GETSADINFO
+
+	XFRM_MSG_NEWSPDINFO,
+#define XFRM_MSG_NEWSPDINFO XFRM_MSG_NEWSPDINFO
+	XFRM_MSG_GETSPDINFO,
+#define XFRM_MSG_GETSPDINFO XFRM_MSG_GETSPDINFO
 	__XFRM_MSG_MAX
 };
 #define XFRM_MSG_MAX (__XFRM_MSG_MAX - 1)
@@ -193,8 +231,8 @@ struct xfrm_user_tmpl {
 
 struct xfrm_encap_tmpl {
 	__u16		encap_type;
-	__u16		encap_sport;
-	__u16		encap_dport;
+	__be16		encap_sport;
+	__be16		encap_dport;
 	xfrm_address_t	encap_oa;
 };
 
@@ -213,6 +251,12 @@ enum xfrm_ae_ftype_t {
 #define XFRM_AE_MAX (__XFRM_AE_MAX - 1)
 };
 
+struct xfrm_userpolicy_type {
+	__u8		type;
+	__u16		reserved1;
+	__u8		reserved2;
+};
+
 /* Netlink message attributes.  */
 enum xfrm_attr_type_t {
 	XFRMA_UNSPEC,
@@ -228,9 +272,52 @@ enum xfrm_attr_type_t {
 	XFRMA_REPLAY_VAL,
 	XFRMA_REPLAY_THRESH,
 	XFRMA_ETIMER_THRESH,
+	XFRMA_SRCADDR,		/* xfrm_address_t */
+	XFRMA_COADDR,		/* xfrm_address_t */
+	XFRMA_LASTUSED,
+	XFRMA_POLICY_TYPE,	/* struct xfrm_userpolicy_type */
+	XFRMA_MIGRATE,
+	XFRMA_ALG_AEAD,		/* struct xfrm_algo_aead */
 	__XFRMA_MAX
 
 #define XFRMA_MAX (__XFRMA_MAX - 1)
+};
+
+enum xfrm_sadattr_type_t {
+	XFRMA_SAD_UNSPEC,
+	XFRMA_SAD_CNT,
+	XFRMA_SAD_HINFO,
+	__XFRMA_SAD_MAX
+
+#define XFRMA_SAD_MAX (__XFRMA_SAD_MAX - 1)
+};
+
+struct xfrmu_sadhinfo {
+	__u32 sadhcnt; /* current hash bkts */
+	__u32 sadhmcnt; /* max allowed hash bkts */
+};
+
+enum xfrm_spdattr_type_t {
+	XFRMA_SPD_UNSPEC,
+	XFRMA_SPD_INFO,
+	XFRMA_SPD_HINFO,
+	__XFRMA_SPD_MAX
+
+#define XFRMA_SPD_MAX (__XFRMA_SPD_MAX - 1)
+};
+
+struct xfrmu_spdinfo {
+	__u32 incnt;
+	__u32 outcnt;
+	__u32 fwdcnt;
+	__u32 inscnt;
+	__u32 outscnt;
+	__u32 fwdscnt;
+};
+
+struct xfrmu_spdhinfo {
+	__u32 spdhcnt;
+	__u32 spdhmcnt;
 };
 
 struct xfrm_usersa_info {
@@ -243,24 +330,28 @@ struct xfrm_usersa_info {
 	__u32				seq;
 	__u32				reqid;
 	__u16				family;
-	__u8				mode; /* 0=transport,1=tunnel */
+	__u8				mode;		/* XFRM_MODE_xxx */
 	__u8				replay_window;
 	__u8				flags;
 #define XFRM_STATE_NOECN	1
 #define XFRM_STATE_DECAP_DSCP	2
 #define XFRM_STATE_NOPMTUDISC	4
+#define XFRM_STATE_WILDRECV	8
+#define XFRM_STATE_ICMP		16
 };
 
 struct xfrm_usersa_id {
 	xfrm_address_t			daddr;
-	__u32				spi;
+	__be32				spi;
 	__u16				family;
 	__u8				proto;
 };
 
 struct xfrm_aevent_id {
 	struct xfrm_usersa_id		sa_id;
+	xfrm_address_t			saddr;
 	__u32				flags;
+	__u32				reqid;
 };
 
 struct xfrm_userspi_info {
@@ -281,6 +372,8 @@ struct xfrm_userpolicy_info {
 #define XFRM_POLICY_BLOCK	1
 	__u8				flags;
 #define XFRM_POLICY_LOCALOK	1	/* Allow user to override global policy */
+	/* Automatically expand selector to include matching ICMP payloads. */
+#define XFRM_POLICY_ICMP	2
 	__u8				share;
 };
 
@@ -315,12 +408,31 @@ struct xfrm_usersa_flush {
 	__u8				proto;
 };
 
+struct xfrm_user_report {
+	__u8				proto;
+	struct xfrm_selector		sel;
+};
+
+struct xfrm_user_migrate {
+	xfrm_address_t			old_daddr;
+	xfrm_address_t			old_saddr;
+	xfrm_address_t			new_daddr;
+	xfrm_address_t			new_saddr;
+	__u8				proto;
+	__u8				mode;
+	__u16				reserved;
+	__u32				reqid;
+	__u16				old_family;
+	__u16				new_family;
+};
+
 #ifndef __KERNEL__
 /* backwards compatibility for userspace */
 #define XFRMGRP_ACQUIRE		1
 #define XFRMGRP_EXPIRE		2
 #define XFRMGRP_SA		4
 #define XFRMGRP_POLICY		8
+#define XFRMGRP_REPORT		0x20
 #endif
 
 enum xfrm_nlgroups {
@@ -336,6 +448,10 @@ enum xfrm_nlgroups {
 #define XFRMNLGRP_POLICY	XFRMNLGRP_POLICY
 	XFRMNLGRP_AEVENTS,
 #define XFRMNLGRP_AEVENTS	XFRMNLGRP_AEVENTS
+	XFRMNLGRP_REPORT,
+#define XFRMNLGRP_REPORT	XFRMNLGRP_REPORT
+	XFRMNLGRP_MIGRATE,
+#define XFRMNLGRP_MIGRATE	XFRMNLGRP_MIGRATE
 	__XFRMNLGRP_MAX
 };
 #define XFRMNLGRP_MAX	(__XFRMNLGRP_MAX - 1)
