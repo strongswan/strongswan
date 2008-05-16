@@ -105,6 +105,10 @@ static int load(private_plugin_loader_t *this, char *path, char *list)
 			{
 				pos++;
 			}
+			if (!*pos)
+			{
+				break;
+			}
 		}
 		plugin = load_plugin(this, path, list);
 		if (plugin)
