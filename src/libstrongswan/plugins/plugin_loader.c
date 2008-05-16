@@ -100,7 +100,11 @@ static int load(private_plugin_loader_t *this, char *path, char *list)
 		pos = strchr(list, ' ');
 		if (pos)
 		{
-			*pos = '\0';
+			*pos++ = '\0';
+			while (*pos == ' ')
+			{
+				pos++;
+			}
 		}
 		plugin = load_plugin(this, path, list);
 		if (plugin)
@@ -112,7 +116,7 @@ static int load(private_plugin_loader_t *this, char *path, char *list)
 		{
 			break;
 		}
-		list = pos + 1;
+		list = pos;
 	}
 	return count;
 }

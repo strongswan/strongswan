@@ -268,8 +268,7 @@ int main(int argc, char **argv)
 	/* initialize library */
 	library_init(STRONGSWAN_CONF);
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
-		lib->settings->get_str(lib->settings, "openac.load", 
-		   "gmp hmac md5 random sha1 sha2 pubkey x509"));
+		lib->settings->get_str(lib->settings, "openac.load", PLUGINS));
 
 	/* initialize optionsfrom */
 	options_t *options = options_create();

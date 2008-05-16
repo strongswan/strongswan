@@ -12,7 +12,7 @@ manager_fcgi_LDADD = $(top_builddir)/src/libfast/libfast.la ${xml_LIBS}
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast ${xml_CFLAGS}
 AM_CFLAGS = -rdynamic -DIPSECDIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
-  -DIPSEC_PLUGINDIR=\"${plugindir}\"
+  -DIPSEC_PLUGINDIR=\"${plugindir}\" -DPLUGINS=\""${libstrongswan_plugins}\""
 
 # Don't forget to add templates to EXTRA_DIST !!! How to automate?
 ipsec_templatesdir = ${ipsecdir}/templates

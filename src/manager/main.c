@@ -38,8 +38,7 @@ int main (int arc, char *argv[])
 
 	library_init(STRONGSWAN_CONF);
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
-		lib->settings->get_str(lib->settings, "manager.load",
-			"random sha1 sqlite"));
+		lib->settings->get_str(lib->settings, "manager.load", PLUGINS));
 	
 	socket = lib->settings->get_str(lib->settings, "manager.socket", NULL);
 	debug = lib->settings->get_bool(lib->settings, "manager.debug", FALSE);

@@ -26,7 +26,6 @@ dnl =================================
 dnl  check --enable-xxx & --with-xxx
 dnl =================================
 
-
 AC_ARG_WITH(
 	[default-pkcs11],
 	AS_HELP_STRING([--with-default-pkcs11=lib],[set the default PKCS11 library other than "/usr/lib/opensc-pkcs11.so"]),
@@ -672,10 +671,75 @@ if test x$openssl = xtrue; then
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
+dnl ======================================
+dnl  collect all plugins for libstrongswan
+dnl ======================================
+
+libstrongswan_plugins=
+
+if test x$curl = xtrue; then
+	libstrongswan_plugins+=" curl"
+fi
+if test x$ldap = xtrue; then
+	libstrongswan_plugins+=" ldap"
+fi
+if test x$aes = xtrue; then
+	libstrongswan_plugins+=" aes"
+fi
+if test x$des = xtrue; then
+	libstrongswan_plugins+=" des"
+fi
+if test x$md5 = xtrue; then
+	libstrongswan_plugins+=" md5"
+fi
+if test x$sha1 = xtrue; then
+	libstrongswan_plugins+=" sha1"
+fi
+if test x$sha2 = xtrue; then
+	libstrongswan_plugins+=" sha2"
+fi
+if test x$fips_prf = xtrue; then
+	libstrongswan_plugins+=" fips-prf"
+fi
+if test x$gmp = xtrue; then
+	libstrongswan_plugins+=" gmp"
+fi
+if test x$random = xtrue; then
+	libstrongswan_plugins+=" random"
+fi
+if test x$x509 = xtrue; then
+	libstrongswan_plugins+=" x509"
+fi
+if test x$pubkey = xtrue; then
+	libstrongswan_plugins+=" pubkey"
+fi
+if test x$hmac = xtrue; then
+	libstrongswan_plugins+=" hmac"
+fi
+if test x$xcbc = xtrue; then
+	libstrongswan_plugins+=" xcbc"
+fi
+if test x$mysql = xtrue; then
+	libstrongswan_plugins+=" mysql"
+fi
+if test x$sqlite = xtrue; then
+	libstrongswan_plugins+=" sqlite"
+fi
+if test x$padlock = xtrue; then
+	libstrongswan_plugins+=" padlock"
+fi
+if test x$openssl = xtrue; then
+	libstrongswan_plugins+=" openssl"
+fi
+
+AC_SUBST(libstrongswan_plugins)
+
 dnl =========================
 dnl  set Makefile.am vars
 dnl =========================
 
+dnl libstrongswan plugins
+dnl =====================
 AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
@@ -692,19 +756,27 @@ AM_CONDITIONAL(USE_HMAC, test x$hmac = xtrue)
 AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
 AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
+AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
+AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
+
+dnl charon plugins
+dnl ==============
 AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
-AM_CONDITIONAL(USE_SMARTCARD, test x$smartcard = xtrue)
-AM_CONDITIONAL(USE_CISCO_QUIRKS, test x$cisco_quirks = xtrue)
-AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unittest = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
 AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
 AM_CONDITIONAL(USE_EAP_MD5, test x$eap_md5 = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
+
+dnl other options
+dnl =============
+AM_CONDITIONAL(USE_SMARTCARD, test x$smartcard = xtrue)
+AM_CONDITIONAL(USE_CISCO_QUIRKS, test x$cisco_quirks = xtrue)
+AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
 AM_CONDITIONAL(USE_NAT_TRANSPORT, test x$nat_transport = xtrue)
 AM_CONDITIONAL(USE_VENDORID, test x$vendor_id = xtrue)
 AM_CONDITIONAL(USE_XAUTH_VID, test x$xauth_vid = xtrue)
@@ -720,8 +792,6 @@ AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_PLUTO_OR_CHARON, test x$pluto = xtrue -o x$charon = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
-AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
-AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
 
 dnl ==============================
 dnl  set global definitions

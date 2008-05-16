@@ -5,6 +5,7 @@
 
 static void dbg_stderr(int level, char *fmt, ...)
 {
+	
 }
 
 /**
@@ -18,10 +19,10 @@ int main(int argc, char *argv[])
 	char buf[8096];
 	int read;
 	
-	dbg = dbg_stderr;
+	//dbg = dbg_stderr;
 	
 	library_init(NULL);
-	lib->plugins->load(lib->plugins, "/usr/local/libexec/ipsec/plugins", "libstrongswan-");
+	lib->plugins->load(lib->plugins, "/usr/local/libexec/ipsec/plugins", "gmp pubkey sha1");
 	atexit(library_deinit);
 
 	read = fread(buf, 1, sizeof(buf), stdin);

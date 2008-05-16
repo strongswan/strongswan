@@ -382,8 +382,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	
 	/* load plugins, further infrastructure may need it */
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
-		lib->settings->get_str(lib->settings, "charon.load", 
-		   "aes des gmp hmac md5 random sha1 sha2 pubkey x509 xcbc stroke"));
+		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
 	
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	if (this->public.ike_sa_manager == NULL)

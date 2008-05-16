@@ -129,44 +129,57 @@ endif
 ########################
 
 SUBDIRS = . 
+PLUGINS = ${libstrongswan_plugins}
 
 if USE_UNIT_TESTS
   SUBDIRS += plugins/unit_tester
+  PLUGINS += unit-tester
 endif
 
 if USE_STROKE
   SUBDIRS += plugins/stroke
+  PLUGINS += stroke
 endif
 
 if USE_SMP
   SUBDIRS += plugins/smp
+  PLUGINS += smb
 endif
 
 if USE_SQL
   SUBDIRS += plugins/sql
+  PLUGINS += sql
 endif
 
 if USE_EAP_IDENTITY
   SUBDIRS += plugins/eap_identity
+  PLUGINS += eap-identity
 endif
 
 if USE_EAP_SIM
   SUBDIRS += plugins/eap_sim
+  PLUGINS += eap-sim
 endif
 
 if USE_EAP_MD5
   SUBDIRS += plugins/eap_md5
+  PLUGINS += eap-md5
 endif
 
 if USE_EAP_AKA
   SUBDIRS += plugins/eap_aka
+  PLUGINS += eap-aka
 endif
 
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
+  PLUGINS += medsrv
 endif
 
 if USE_MEDCLI
   SUBDIRS += plugins/medcli
+  PLUGINS += medcli
 endif
+
+AM_CFLAGS += -DPLUGINS=\""${PLUGINS}\""
 
