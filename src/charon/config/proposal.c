@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -264,6 +265,24 @@ static void strip_dh(private_proposal_t *this)
 }
 
 /**
+ * Returns true if the given alg is an authenticated encryption algorithm
+ */
+static bool is_authenticated_encryption(u_int16_t alg)
+{
+	switch(alg)
+	{
+		case ENCR_AES_CCM_ICV8:
+		case ENCR_AES_CCM_ICV12:
+		case ENCR_AES_CCM_ICV16:
+		case ENCR_AES_GCM_ICV8:
+		case ENCR_AES_GCM_ICV12:
+		case ENCR_AES_GCM_ICV16:
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Find a matching alg/keysize in two linked lists
  */
 static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add,
@@ -343,18 +362,21 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 		return NULL;
 	}
 	/* select integrity algorithm */
-	if (select_algo(this->integrity_algos, other->integrity_algos, &add, &algo, &key_size))
+	if (!is_authenticated_encryption(algo))
 	{
-		if (add)
+		if (select_algo(this->integrity_algos, other->integrity_algos, &add, &algo, &key_size))
 		{
-			selected->add_algorithm(selected, INTEGRITY_ALGORITHM, algo, key_size);
+			if (add)
+			{
+				selected->add_algorithm(selected, INTEGRITY_ALGORITHM, algo, key_size);
+			}
 		}
-	}
-	else
-	{
-		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable INTEGRITY_ALGORITHM found, skipping");
-		return NULL;
+		else
+		{
+			selected->destroy(selected);
+			DBG2(DBG_CFG, "  no acceptable INTEGRITY_ALGORITHM found, skipping");
+			return NULL;
+		}
 	}
 	/* select prf algorithm */
 	if (select_algo(this->prf_algos, other->prf_algos, &add, &algo, &key_size))
@@ -519,6 +541,37 @@ static proposal_t *clone_(private_proposal_t *this)
 }
 
 /**
+ * Checks the proposal read from a string.
+ */
+static void check_proposal(private_proposal_t *this)
+{
+	enumerator_t *e;
+	algorithm_t *alg;
+	bool all_aead = TRUE;
+	
+	e = this->encryption_algos->create_enumerator(this->encryption_algos);
+	while (e->enumerate(e, &alg))
+	{
+		if (!is_authenticated_encryption(alg->algorithm))
+		{
+			all_aead = FALSE;
+			break;
+		}
+	}
+	e->destroy(e);
+	
+	if (all_aead)
+	{
+		/* if all encryption algorithms in the proposal are authenticated encryption
+		 * algorithms we MUST NOT propose any integrity algorithms */
+		while(this->integrity_algos->remove_last(this->integrity_algos, (void**)&alg) == SUCCESS)
+		{
+			free(alg);
+		}
+	}
+}
+
+/**
  * add a algorithm identified by a string to the proposal.
  * TODO: we could use gperf here.
  */
@@ -539,6 +592,56 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 	else if (strncmp(alg.ptr, "aes256", alg.len) == 0)
 	{
 		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 256);
+	}
+	else if (strstr(alg.ptr, "ccm"))
+	{
+		u_int16_t key_size, icv_size;
+		if (sscanf(alg.ptr, "aes%huccm%hu", &key_size, &icv_size) == 2)
+		{
+			if (key_size == 128 || key_size == 192 || key_size == 256)
+			{
+				switch(icv_size)
+				{
+					case 8:
+						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV8, key_size);
+						break;
+					case 12:
+						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV12, key_size);
+						break;
+					case 16:
+						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV16, key_size);
+						break;
+					default:
+						/* invalid ICV size */
+						break;
+				}
+			}
+		}
+	}
+	else if (strstr(alg.ptr, "gcm"))
+	{
+		u_int16_t key_size, icv_size;
+		if (sscanf(alg.ptr, "aes%hugcm%hu", &key_size, &icv_size) == 2)
+		{
+			if (key_size == 128 || key_size == 192 || key_size == 256)
+			{
+				switch(icv_size)
+				{
+					case 8:
+						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV8, key_size);
+						break;
+					case 12:
+						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV12, key_size);
+						break;
+					case 16:
+						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, key_size);
+						break;
+					default:
+						/* invalid ICV size */
+						break;
+				}
+			}
+		}
 	}
 	else if (strncmp(alg.ptr, "3des", alg.len) == 0)
 	{
@@ -773,6 +876,8 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 		destroy(this);
 		return NULL;
 	}
+	
+	check_proposal(this);
 	
 	if (protocol == PROTO_AH || protocol == PROTO_ESP)
 	{

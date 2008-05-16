@@ -112,18 +112,24 @@ struct kernel_algorithm_t {
  * Algorithms for encryption
  */
 static kernel_algorithm_t encryption_algs[] = {
-/*	{ENCR_DES_IV64, 	"***", 			0}, */
-	{ENCR_DES, 			"des", 			64},
-	{ENCR_3DES, 		"des3_ede",		192},
-/*	{ENCR_RC5, 			"***", 			0}, */
-/*	{ENCR_IDEA, 		"***",			0}, */
-	{ENCR_CAST, 		"cast128",		0},
-	{ENCR_BLOWFISH, 	"blowfish",		0},
-/*	{ENCR_3IDEA, 		"***",			0}, */
-/*	{ENCR_DES_IV32, 	"***",			0}, */
-	{ENCR_NULL, 		"cipher_null",	0},
-	{ENCR_AES_CBC, 		"aes",			0},
-/*	{ENCR_AES_CTR, 		"***",			0}, */
+/*	{ENCR_DES_IV64, 		"***", 					0}, */
+	{ENCR_DES, 				"des", 					64},
+	{ENCR_3DES, 			"des3_ede",				192},
+/*	{ENCR_RC5, 				"***", 					0}, */
+/*	{ENCR_IDEA, 			"***",					0}, */
+	{ENCR_CAST, 			"cast128",				0},
+	{ENCR_BLOWFISH, 		"blowfish",				0},
+/*	{ENCR_3IDEA, 			"***",					0}, */
+/*	{ENCR_DES_IV32, 		"***",					0}, */
+	{ENCR_NULL, 			"cipher_null",			0},
+	{ENCR_AES_CBC,	 		"aes",					0},
+/*	{ENCR_AES_CTR, 			"***",					0}, */
+	{ENCR_AES_CCM_ICV8,		"rfc4309(ccm(aes))",	64},	/* key_size = ICV size */
+	{ENCR_AES_CCM_ICV12,	"rfc4309(ccm(aes))",	96},	/* key_size = ICV size */
+	{ENCR_AES_CCM_ICV16,	"rfc4309(ccm(aes))",	128},	/* key_size = ICV size */
+	{ENCR_AES_GCM_ICV8,		"rfc4106(gcm(aes))",	64},	/* key_size = ICV size */
+	{ENCR_AES_GCM_ICV12,	"rfc4106(gcm(aes))",	96},	/* key_size = ICV size */
+	{ENCR_AES_GCM_ICV16,	"rfc4106(gcm(aes))",	128},	/* key_size = ICV size */
 	{END_OF_LIST, 		NULL,			0},
 };
 
@@ -1966,6 +1972,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 {
 	unsigned char request[BUFFER_SIZE];
 	char *alg_name;
+	u_int16_t add_keymat = 32; /* additional 4 octets KEYMAT required for AES-GCM as of RFC4106 8.1. */
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
 	
@@ -2000,34 +2007,82 @@ static status_t add_sa(private_kernel_interface_t *this,
 	
 	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_usersa_info);
 	
-	if (enc_alg != ENCR_UNDEFINED)
+	switch (enc_alg)
 	{
-		rthdr->rta_type = XFRMA_ALG_CRYPT;
-		alg_name = lookup_algorithm(encryption_algs, enc_alg, &enc_size);
-		if (alg_name == NULL)
+		case ENCR_UNDEFINED:
+			/* no encryption */
+			break;
+		case ENCR_AES_CCM_ICV8:
+		case ENCR_AES_CCM_ICV12:
+		case ENCR_AES_CCM_ICV16:
+			/* AES-CCM needs only 3 additional octets KEYMAT as of RFC 4309 7.1. */
+			add_keymat = 24;
+			/* fall-through */
+		case ENCR_AES_GCM_ICV8:
+		case ENCR_AES_GCM_ICV12:
+		case ENCR_AES_GCM_ICV16:
 		{
-			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
-				 encryption_algorithm_names, enc_alg);
-			return FAILED;
+			u_int16_t icv_size = 0;
+			rthdr->rta_type = XFRMA_ALG_AEAD;
+			alg_name = lookup_algorithm(encryption_algs, enc_alg, &icv_size);
+			if (alg_name == NULL)
+			{
+				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
+					 encryption_algorithm_names, enc_alg);
+				return FAILED;
+			}
+			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
+				 encryption_algorithm_names, enc_alg, enc_size);
+			
+			/* additional KEYMAT required */
+			enc_size += add_keymat;
+			
+			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) + enc_size / 8);
+			hdr->nlmsg_len += rthdr->rta_len;
+			if (hdr->nlmsg_len > sizeof(request))
+			{
+				return FAILED;
+			}
+			
+			struct xfrm_algo_aead* algo = (struct xfrm_algo_aead*)RTA_DATA(rthdr);
+			algo->alg_key_len = enc_size;
+			algo->alg_icv_len = icv_size;
+			strcpy(algo->alg_name, alg_name);
+			prf_plus->get_bytes(prf_plus, enc_size / 8, algo->alg_key);
+			
+			rthdr = XFRM_RTA_NEXT(rthdr);
+			break;
 		}
-		DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
-			 encryption_algorithm_names, enc_alg, enc_size);
-		
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + enc_size);
-		hdr->nlmsg_len += rthdr->rta_len;
-		if (hdr->nlmsg_len > sizeof(request))
+		default:
 		{
-			return FAILED;
+			rthdr->rta_type = XFRMA_ALG_CRYPT;
+			alg_name = lookup_algorithm(encryption_algs, enc_alg, &enc_size);
+			if (alg_name == NULL)
+			{
+				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
+					 encryption_algorithm_names, enc_alg);
+				return FAILED;
+			}
+			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
+				 encryption_algorithm_names, enc_alg, enc_size);
+			
+			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + enc_size / 8);
+			hdr->nlmsg_len += rthdr->rta_len;
+			if (hdr->nlmsg_len > sizeof(request))
+			{
+				return FAILED;
+			}
+			
+			struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
+			algo->alg_key_len = enc_size;
+			strcpy(algo->alg_name, alg_name);
+			prf_plus->get_bytes(prf_plus, enc_size / 8, algo->alg_key);
+			
+			rthdr = XFRM_RTA_NEXT(rthdr);
+			break;
 		}
-		
-		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
-		algo->alg_key_len = enc_size;
-		strcpy(algo->alg_name, alg_name);
-		prf_plus->get_bytes(prf_plus, enc_size / 8, algo->alg_key);
-		
-		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
-	
+		
 	if (int_alg  != AUTH_UNDEFINED)
 	{
 		rthdr->rta_type = XFRMA_ALG_AUTH;
@@ -2041,7 +2096,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
 			 integrity_algorithm_names, int_alg, int_size);
 		
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + int_size);
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + int_size / 8);
 		hdr->nlmsg_len += rthdr->rta_len;
 		if (hdr->nlmsg_len > sizeof(request))
 		{

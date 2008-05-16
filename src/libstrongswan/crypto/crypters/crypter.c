@@ -30,9 +30,16 @@ ENUM_NEXT(encryption_algorithm_names, ENCR_DES_IV64, ENCR_DES_IV32, ENCR_UNDEFIN
 	"BLOWFISH",
 	"3IDEA",
 	"DES_IV32");
-ENUM_NEXT(encryption_algorithm_names, ENCR_NULL, ENCR_AES_CTR, ENCR_DES_IV32,
+ENUM_NEXT(encryption_algorithm_names, ENCR_NULL, ENCR_AES_CCM_ICV16, ENCR_DES_IV32,
 	"NULL",
 	"AES_CBC",
-	"AES_CTR");
-ENUM_END(encryption_algorithm_names, ENCR_AES_CTR);
+	"AES_CTR",
+	"AES_CCM_8",
+	"AES_CCM_12",
+	"AES_CCM_16");
+ENUM_NEXT(encryption_algorithm_names, ENCR_AES_GCM_ICV8, ENCR_AES_GCM_ICV16, ENCR_AES_CCM_ICV16,
+	"AES_GCM_8",
+	"AES_GCM_12",
+	"AES_GCM_16");
+ENUM_END(encryption_algorithm_names, ENCR_AES_GCM_ICV16);
 

@@ -390,14 +390,28 @@ transform_substructure_t *transform_substructure_create_type(transform_type_t tr
 	transform->set_transform_id(transform,transform_id);
 	
 	/* a keylength attribute is only created for variable length algos */
-	if (transform_type == ENCRYPTION_ALGORITHM &&
-		(transform_id == ENCR_AES_CBC ||
-		 transform_id == ENCR_IDEA ||
-		 transform_id == ENCR_CAST ||
-		 transform_id == ENCR_BLOWFISH))
+	if (transform_type == ENCRYPTION_ALGORITHM)
 	{
-		transform_attribute_t *attribute = transform_attribute_create_key_length(key_length);
-		transform->add_transform_attribute(transform,attribute);
+		switch(transform_id)
+		{
+			case ENCR_AES_CBC:
+			case ENCR_IDEA:
+			case ENCR_CAST:
+			case ENCR_BLOWFISH:
+			case ENCR_AES_CCM_ICV8:
+			case ENCR_AES_CCM_ICV12:
+			case ENCR_AES_CCM_ICV16:
+			case ENCR_AES_GCM_ICV8:
+			case ENCR_AES_GCM_ICV12:
+			case ENCR_AES_GCM_ICV16:
+			{
+				transform_attribute_t *attribute = transform_attribute_create_key_length(key_length);
+				transform->add_transform_attribute(transform,attribute);
+				break;
+			}
+			default:
+				break;
+		}
 	}
 
 	return transform;

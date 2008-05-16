@@ -45,7 +45,13 @@ enum encryption_algorithm_t {
 	ENCR_DES_IV32 = 9,
 	ENCR_NULL = 11,
 	ENCR_AES_CBC = 12,
-	ENCR_AES_CTR = 13
+	ENCR_AES_CTR = 13,
+	ENCR_AES_CCM_ICV8 = 14,
+    ENCR_AES_CCM_ICV12 = 15,
+    ENCR_AES_CCM_ICV16 = 16,
+    ENCR_AES_GCM_ICV8 = 18,
+    ENCR_AES_GCM_ICV12 = 19,
+    ENCR_AES_GCM_ICV16 = 20
 };
 
 /**
