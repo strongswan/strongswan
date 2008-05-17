@@ -596,19 +596,23 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 	else if (strstr(alg.ptr, "ccm"))
 	{
 		u_int16_t key_size, icv_size;
+
 		if (sscanf(alg.ptr, "aes%huccm%hu", &key_size, &icv_size) == 2)
 		{
 			if (key_size == 128 || key_size == 192 || key_size == 256)
 			{
 				switch(icv_size)
 				{
-					case 8:
+					case   8: /* octets */
+					case  64: /* bits */
 						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV8, key_size);
 						break;
-					case 12:
+					case  12: /* octets */
+					case  96: /* bits */
 						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV12, key_size);
 						break;
-					case 16:
+					case  16: /* octets */
+					case 128: /* bits */
 						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV16, key_size);
 						break;
 					default:
@@ -621,19 +625,21 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 	else if (strstr(alg.ptr, "gcm"))
 	{
 		u_int16_t key_size, icv_size;
+
 		if (sscanf(alg.ptr, "aes%hugcm%hu", &key_size, &icv_size) == 2)
 		{
 			if (key_size == 128 || key_size == 192 || key_size == 256)
 			{
-				switch(icv_size)
+				switch (icv_size)
 				{
-					case 8:
+					case   8: /* octets */
+					case  64: /* bits */
 						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV8, key_size);
 						break;
-					case 12:
 						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV12, key_size);
 						break;
-					case 16:
+					case  16: /* octets */
+					case 128: /* bits */
 						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, key_size);
 						break;
 					default:
