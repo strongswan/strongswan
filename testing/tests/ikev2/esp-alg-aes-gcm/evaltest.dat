@@ -1,0 +1,5 @@
+moon::ipsec statusall::rw.*INSTALLED::YES
+carol::ipsec statusall::home.*INSTALLED::YES
+moon::ipsec statusall::AES_GCM_16-256::YES
+carol::ipsec statusall::AES_GCM_16-256::YES
+carol::ping -c 1 -s 120 -p deadbeef 10.1.0.10::128 bytes from 10.1.0.10: icmp_seq=1::YES
