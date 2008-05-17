@@ -125,13 +125,19 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 				{
 					fprintf(out, "-%d", encr_len);
 				}
-				fprintf(out, "/");
+				if (int_alg != AUTH_UNDEFINED)
+				{
+					fprintf(out, "/");
+				}
 			}
 			
-			fprintf(out, "%N", integrity_algorithm_names, int_alg);
-			if (int_len)
+			if (int_alg != AUTH_UNDEFINED)
 			{
-				fprintf(out, "-%d", int_len);
+				fprintf(out, "%N", integrity_algorithm_names, int_alg);
+				if (int_len)
+				{
+					fprintf(out, "-%d", int_len);
+				}
 			}
 			fprintf(out, ", rekeying ");
 			

@@ -112,7 +112,7 @@ static host_t* get_lease(private_sql_attribute_t *this,
 			{
 				ip = ip_from_chunk(address);
 				DBG1(DBG_CFG, "reassigning address from valid lease "
-					 "from pool %s", name);
+					 "from pool '%s'", name);
 			}
 		}
 		e->destroy(e);
@@ -206,12 +206,12 @@ static host_t* create_lease(private_sql_attribute_t *this,
 								  "UPDATE pools SET next = ? WHERE id = ?",
 								  DB_BLOB, address, DB_UINT, pool);
 				DBG1(DBG_CFG, "assigning lease with new address "
-					 "from pool %s", name);
+					 "from pool '%s'", name);
 			}
 			else
 			{
 				DBG1(DBG_CFG, "reassigning address from expired lease "
-					 "from pool %s", name);
+					 "from pool '%s'", name);
 			}
 		}
 	}
