@@ -22,6 +22,12 @@
 #include <utils/mutex.h>
 #include <credentials/certificates/x509.h>
 
+ENUM(credential_type_names, CRED_PRIVATE_KEY, CRED_CERTIFICATE,
+	"CRED_PRIVATE_KEY",
+	"CRED_PUBLIC_KEY",
+	"CRED_CERTIFICATE",
+);
+
 typedef struct private_credential_factory_t private_credential_factory_t;
 
 /**
@@ -183,6 +189,11 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 	
 		return builder->build(builder);
 	}
+	else
+	{
+		DBG1("failed to create a builder for credential type %N,"
+				" subtype (%d)", credential_type_names, type, subtype);
+	}
 	
 	/** shredder all data on failure */
 	va_start(args, subtype);
@@ -198,6 +209,27 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 			{
 				chunk_t chunk = va_arg(args, chunk_t);
 				free(chunk.ptr);
+				continue;
+			}
+			case BUILD_SERIAL:
+			{
+				va_arg(args, chunk_t);
+				continue;
+			}
+			case BUILD_X509_FLAG:
+			{
+				va_arg(args, x509_flag_t);
+				continue;
+			}
+			case BUILD_KEY_SIZE:
+			{
+				va_arg(args, u_int);
+				continue;
+			}
+			case BUILD_NOT_BEFORE_TIME:
+			case BUILD_NOT_AFTER_TIME:
+			{
+				va_arg(args, time_t);
 				continue;
 			}
 			case BUILD_SIGNING_KEY:
@@ -229,9 +261,12 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				cert->destroy(cert);
 				continue;
 			}
-			case BUILD_KEY_SIZE:
-			case BUILD_X509_FLAG:
+			case BUILD_FROM_FILE:
+			case BUILD_IETF_GROUP_ATTR:
+			{
+				va_arg(args, void*);
 				continue;
+			}
 			default:
 				DBG1("builder part %N not supported by factory",
 					 builder_part_names, part);

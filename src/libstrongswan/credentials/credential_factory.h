@@ -42,6 +42,11 @@ enum credential_type_t {
 };
 
 /**
+ * enum names for credential_type_t
+ */
+extern enum_name_t *credential_type_names;
+
+/**
  * Manages credential construction functions and creates instances.
  */
 struct credential_factory_t {
