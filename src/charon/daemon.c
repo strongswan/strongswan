@@ -16,6 +16,11 @@
  * for more details.
  */
 
+#ifdef HAVE_DLADDR
+# define _GNU_SOURCE
+# include <dlfcn.h>
+#endif /* HAVE_DLADDR */
+
 #include <stdio.h>
 #include <linux/capability.h>
 #include <sys/prctl.h>
@@ -427,7 +432,25 @@ static void segv_handler(int signal)
 
 	for (i = 0; i < size; i++)
 	{
-		DBG1(DBG_DMN, "    %s", strings[i]);
+#ifdef HAVE_DLADDR
+		Dl_info info;
+		
+		if (dladdr(array[i], &info))
+		{
+			void *ptr = array[i];
+			if (strstr(info.dli_fname, ".so"))
+			{
+				ptr = (void*)(array[i] - info.dli_fbase);
+			}
+			DBG1(DBG_DMN, "    %s [%p]", info.dli_fname, ptr);
+		}
+		else
+		{
+#endif /* HAVE_DLADDR */
+			DBG1(DBG_DMN, "    %s", strings[i]);
+#ifdef HAVE_DLADDR
+		}
+#endif /* HAVE_DLADDR */
 	}
 	free (strings);
 #else /* !HAVE_BACKTRACE */
