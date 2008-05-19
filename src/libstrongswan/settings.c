@@ -379,6 +379,7 @@ settings_t *settings_create(char *file)
 		fd = fopen(file, "r");
 		if (fd == NULL)
 		{
+			DBG1("'%s' does not exist or is not readable", file);
 			return &this->public;
 		}
 		fseek(fd, 0, SEEK_END);
