@@ -564,7 +564,7 @@ static void check_proposal(private_proposal_t *this)
 	{
 		/* if all encryption algorithms in the proposal are authenticated encryption
 		 * algorithms we MUST NOT propose any integrity algorithms */
-		while(this->integrity_algos->remove_last(this->integrity_algos, (void**)&alg) == SUCCESS)
+		while (this->integrity_algos->remove_last(this->integrity_algos, (void**)&alg) == SUCCESS)
 		{
 			free(alg);
 		}
@@ -601,7 +601,7 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 		{
 			if (key_size == 128 || key_size == 192 || key_size == 256)
 			{
-				switch(icv_size)
+				switch (icv_size)
 				{
 					case   8: /* octets */
 					case  64: /* bits */
@@ -636,6 +636,8 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 					case  64: /* bits */
 						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV8, key_size);
 						break;
+					case  12: /* octets */
+					case  96: /* bits */
 						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV12, key_size);
 						break;
 					case  16: /* octets */
