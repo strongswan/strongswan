@@ -143,7 +143,7 @@ endif
 
 if USE_SMP
   SUBDIRS += plugins/smp
-  PLUGINS += smb
+  PLUGINS += smp
 endif
 
 if USE_SQL
