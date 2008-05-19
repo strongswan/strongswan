@@ -643,13 +643,15 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 					case OID_BASIC:
 						success = parse_basicOCSPResponse(this, object,
 												parser->get_level(parser)+1);
+						break;
 					default:
 						DBG1("  ocsp response type %#B not supported", &object);
+						goto end;
 				}
 				break;
 		}
 	}
-	success = parser->success(parser);
+	success &= parser->success(parser);
 
 end:
 	parser->destroy(parser);
