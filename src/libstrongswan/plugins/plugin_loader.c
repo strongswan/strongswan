@@ -112,7 +112,6 @@ static int load(private_plugin_loader_t *this, char *path, char *list)
 		{
 			*pos++ = '\0';
 		}
-		DBG1("loaded plugin: '%s'", list);
 		plugin = load_plugin(this, path, list);
 		if (plugin)
 		{	/* insert in front to destroy them in reverse order */
