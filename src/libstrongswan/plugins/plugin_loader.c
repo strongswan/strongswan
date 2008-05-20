@@ -97,30 +97,36 @@ static int load(private_plugin_loader_t *this, char *path, char *list)
 	list = strdupa(list);
 	while (TRUE)
 	{
+		/* eat any whitespace in front */
+		while (*list == ' ')
+		{
+			list++;
+		}
+		/* have we reached the end of the list? */
+		if (!*list)
+		{
+			break;
+		}
 		pos = strchr(list, ' ');
 		if (pos)
 		{
 			*pos++ = '\0';
-			while (*pos == ' ')
-			{
-				pos++;
-			}
-			if (!*pos)
-			{
-				break;
-			}
 		}
+		DBG1("loaded plugin: '%s'", list);
 		plugin = load_plugin(this, path, list);
 		if (plugin)
 		{	/* insert in front to destroy them in reverse order */
 			this->plugins->insert_last(this->plugins, plugin);
 			count++;
 		}
-		if (!pos)
+		if (pos)
+		{
+			list = pos;
+		}
+		else
 		{
 			break;
 		}
-		list = pos;
 	}
 	return count;
 }
