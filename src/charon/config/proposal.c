@@ -357,8 +357,19 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	}
 	else
 	{
+		enumerator_t *e;
+		algorithm_t *alg;
+
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable ENCRYPTION_ALGORITHM found, skipping");
+		DBG2(DBG_CFG, "  no acceptable ENCRYPTION_ALGORITHM found");
+		DBG2(DBG_CFG, "  list of received ENCRYPTION_ALGORITHM proposals:");
+		e = other->encryption_algos->create_enumerator(other->encryption_algos);
+		while (e->enumerate(e, &alg))
+		{
+			DBG2(DBG_CFG, "  %N-%d", encryption_algorithm_names,
+									 alg->algorithm, alg->key_size);
+		}
+		e->destroy(e);
 		return NULL;
 	}
 	/* select integrity algorithm */
@@ -373,8 +384,18 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 		}
 		else
 		{
+			enumerator_t *e;
+			algorithm_t *alg;
+
 			selected->destroy(selected);
-			DBG2(DBG_CFG, "  no acceptable INTEGRITY_ALGORITHM found, skipping");
+			DBG2(DBG_CFG, "  no acceptable INTEGRITY_ALGORITHM found");
+			DBG2(DBG_CFG, "  list of received INTEGRITY_ALGORITHM proposals:");
+			e = other->integrity_algos->create_enumerator(other->integrity_algos);
+			while (e->enumerate(e, &alg))
+			{
+				DBG2(DBG_CFG, "  %N", integrity_algorithm_names, alg->algorithm);
+			}
+			e->destroy(e);
 			return NULL;
 		}
 	}
