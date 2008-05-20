@@ -1,15 +1,21 @@
 strongswan-4.2.2
 ----------------
 
-- Plugins for libstrongswan and charon are loaded depending on the
-  configration in strongswan.conf. Most components provide a
+- Plugins for libstrongswan and charon can optionally be loaded according
+  to a configuration in strongswan.conf. Most components provide a
   "load = " option followed by a space separated list of plugins to load.
-  Have a look to the distributed strongswan.conf.
+  This allows e.g. the fallback from a hardware crypto accelerator to
+  to software-based crypto plugins.
 
 - Charons SQL plugin has been extended by a virtual IP address pool.
-  Configurations with rightsourceip=%poolname setting query the database
-  for leases. The "ipsec pool" command helps in administrating the pool
-  database.
+  Configurations with a rightsourceip=%poolname setting query a SQLite or
+  MySQL database for leases. The "ipsec pool" command helps in administrating
+  the pool database. See ipsec pool --help for the available options
+
+- The Authenticated Encryption Algorithms AES-CCM-8/12/16 and AES-GCM-8/12/16
+  for ESP are now supported starting with the Linux 2.6.25 kernel. The 
+  syntax is e.g. esp=aes128ccm12 or esp=aes256gcm16.
+
 
 strongswan-4.2.1
 ----------------
