@@ -219,7 +219,9 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 					if (hash_algorithm == HASH_UNKNOWN ||
 						(algorithm != HASH_UNKNOWN && hash_algorithm != algorithm))
 					{
-						DBG1("wrong hash algorithm used in signature");
+						DBG1("expected hash algorithm %N, but found %N (OID: %#B)",
+							 hash_algorithm_names, algorithm,
+							 hash_algorithm_names, hash_algorithm,  &object);
 						goto end_parser;
 					}
 					break;
