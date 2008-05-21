@@ -990,6 +990,11 @@ static private_x509_ac_t* build(private_builder_t *this)
 
 	free(this);
 
+	if (ac == NULL)
+	{
+		return NULL;
+	}
+
 	/* synthesis if TRUE or analysis if FALSE */
 	if (ac->encoding.ptr == NULL)
 	{
