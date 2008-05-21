@@ -957,7 +957,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				}
 				break;							
 			}
-			case UNKNOWN_PAYLOAD:
+			case UNKNOWN_DATA:
 			{
 				size_t unknown_payload_data_length = payload_length - UNKNOWN_PAYLOAD_HEADER_LENGTH;
 				if (this->parse_chunk(this, rule_number, output + rule->offset, unknown_payload_data_length) != SUCCESS) 
