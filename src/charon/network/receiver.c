@@ -316,7 +316,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 		if (peer_to_aggressive(this, message))
 		{
 			DBG1(DBG_NET, "ignoring IKE_SA setup from %H, "
-				 "peer to aggressive", message->get_source(message));
+				 "peer too aggressive", message->get_source(message));
 			message->destroy(message);
 			return JOB_REQUEUE_DIRECT;
 		}
