@@ -1517,7 +1517,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 							bool initiator, prf_t *child_prf, prf_t *old_prf)
 {
 	prf_plus_t *prf_plus;
-	chunk_t skeyseed, key, nonces, prf_plus_seed;
+	chunk_t skeyseed, key, full_nonce, fixed_nonce, prf_plus_seed;
 	u_int16_t alg, key_size;
 	crypter_t *crypter_i, *crypter_r;
 	signer_t *signer_i, *signer_r;
@@ -1540,12 +1540,28 @@ static status_t derive_keys(private_ike_sa_t *this,
 			 pseudo_random_function_names, alg);
 		return FAILED;
 	}
-	
 	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
-	nonces = chunk_cat("cc", nonce_i, nonce_r);
+	/* full nonce is used as seed for PRF+ ... */
+	full_nonce = chunk_cat("cc", nonce_i, nonce_r);
+	/* but the PRF may need a fixed key which only uses the first bytes of
+	 * the nonces. */
+	switch (alg)
+	{
+		case PRF_AES128_XCBC:
+			/* while rfc4434 defines variable keys for AES-XCBC, rfc3664 does
+			 * not and therefore fixed key semantics apply to XCBC for key
+			 * derivation. */
+			nonce_i.len = min(nonce_i.len, this->prf->get_key_size(this->prf)/2);
+			nonce_r.len = min(nonce_r.len, this->prf->get_key_size(this->prf)/2);
+			break;
+		default:
+			/* all other algorithms use variable key length, full nonce */
+			break;
+	}
+	fixed_nonce = chunk_cat("cc", nonce_i, nonce_r);
 	*((u_int64_t*)spi_i.ptr) = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
 	*((u_int64_t*)spi_r.ptr) = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
-	prf_plus_seed = chunk_cat("ccc", nonces, spi_i, spi_r);
+	prf_plus_seed = chunk_cat("ccc", full_nonce, spi_i, spi_r);
 	
 	/* KEYMAT = prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr) 
 	 *
@@ -1554,7 +1570,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 	if (child_prf == NULL) /* not rekeying */
 	{
 		/* SKEYSEED = prf(Ni | Nr, g^ir) */
-		this->prf->set_key(this->prf, nonces);
+		this->prf->set_key(this->prf, fixed_nonce);
 		this->prf->allocate_bytes(this->prf, secret, &skeyseed);
 		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 		this->prf->set_key(this->prf, skeyseed);
@@ -1566,7 +1582,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 	{
 		/* SKEYSEED = prf(SK_d (old), [g^ir (new)] | Ni | Nr) 
 		 * use OLD SAs PRF functions for both prf_plus and prf */
-		secret = chunk_cat("mc", secret, nonces);
+		secret = chunk_cat("mc", secret, full_nonce);
 		child_prf->allocate_bytes(child_prf, secret, &skeyseed);
 		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 		old_prf->set_key(old_prf, skeyseed);
@@ -1574,7 +1590,8 @@ static status_t derive_keys(private_ike_sa_t *this,
 		chunk_free(&secret);
 		prf_plus = prf_plus_create(old_prf, prf_plus_seed);
 	}
-	chunk_free(&nonces);
+	chunk_free(&full_nonce);
+	chunk_free(&fixed_nonce);
 	chunk_free(&prf_plus_seed);
 	
 	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr */
