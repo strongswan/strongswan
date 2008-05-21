@@ -23,6 +23,7 @@
 #include <sa/tasks/ike_natd.h>
 #include <encoding/payloads/notify_payload.h>
 
+#define COOKIE2_SIZE 16
 
 typedef struct private_ike_mobike_t private_ike_mobike_t;
 
@@ -120,6 +121,12 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 				this->ike_sa->enable_extension(this->ike_sa, EXT_MOBIKE);
 				break;
 			}
+			case COOKIE2:
+			{
+				chunk_free(&this->cookie2);
+				this->cookie2 = chunk_clone(notify->get_notification_data(notify));
+				break;
+			}
 			case ADDITIONAL_IP6_ADDRESS:
 			{
 				family = AF_INET6;
@@ -203,6 +210,23 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 		message->add_notify(message, FALSE, NO_ADDITIONAL_ADDRESSES, chunk_empty);
 	}
 	iterator->destroy(iterator);
+}
+
+/**
+ * build a cookie and add it to the message 
+ */
+static void build_cookie(private_ike_mobike_t *this, message_t *message)
+{
+	rng_t *rng;
+
+	chunk_free(&this->cookie2);
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (rng)
+	{
+		rng->allocate_bytes(rng, COOKIE2_SIZE, &this->cookie2);
+		rng->destroy(rng);
+		message->add_notify(message, FALSE, COOKIE2, this->cookie2);
+	}
 }
 
 /**
@@ -292,6 +316,7 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 		if (this->update)
 		{
 			message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES, chunk_empty);
+			build_cookie(this, message);
 			update_children(this);
 		}
 		if (this->address)
@@ -358,6 +383,11 @@ static status_t build_r(private_ike_mobike_t *this, message_t *message)
 		{
 			this->natd->task.build(&this->natd->task, message);
 		}
+		if (this->cookie2.ptr)
+		{
+			message->add_notify(message, FALSE, COOKIE2, this->cookie2);
+			chunk_free(&this->cookie2);
+		}
 		if (this->update)
 		{
 			update_children(this);
@@ -387,7 +417,25 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 			/* newer update queued, ignore this one */
 			return SUCCESS;
 		}
-		process_payloads(this, message);
+		if (this->cookie2.ptr)
+		{	/* check cookie if we included none */
+			chunk_t cookie2;
+			
+			cookie2 = this->cookie2;
+			this->cookie2 = chunk_empty;
+			process_payloads(this, message);
+			if (!chunk_equals(cookie2, this->cookie2))
+			{
+				chunk_free(&cookie2);
+				DBG1(DBG_IKE, "COOKIE2 mismatch, closing IKE_SA");
+				return FAILED;
+			}
+			chunk_free(&cookie2);
+		}
+		else
+		{
+			process_payloads(this, message);
+		}
 		if (this->natd)
 		{
 			this->natd->task.process(&this->natd->task, message);

@@ -308,6 +308,10 @@ static payload_rule_t informational_i_payload_rules[] = {
  */
 static payload_order_t informational_i_payload_order[] = {
 /*	payload type					notify type */
+	{NOTIFY,						UPDATE_SA_ADDRESSES},
+	{NOTIFY,						NAT_DETECTION_SOURCE_IP},
+	{NOTIFY,						NAT_DETECTION_DESTINATION_IP},
+	{NOTIFY,						COOKIE2},
 	{NOTIFY,						0},
 	{DELETE,						0},
 	{CONFIGURATION,					0},
@@ -329,6 +333,10 @@ static payload_rule_t informational_r_payload_rules[] = {
  */
 static payload_order_t informational_r_payload_order[] = {
 /*	payload type					notify type */
+	{NOTIFY,						UPDATE_SA_ADDRESSES},
+	{NOTIFY,						NAT_DETECTION_SOURCE_IP},
+	{NOTIFY,						NAT_DETECTION_DESTINATION_IP},
+	{NOTIFY,						COOKIE2},
 	{NOTIFY,						0},
 	{DELETE,						0},
 	{CONFIGURATION,					0},
