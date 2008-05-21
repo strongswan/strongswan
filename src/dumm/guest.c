@@ -41,6 +41,7 @@
 #define DIFF_DIR "diff"
 #define UNION_DIR "union"
 #define MEMORY_FILE "mem"
+#define PID_FILE "pid"
 #define KERNEL_FILE "linux"
 #define LOG_FILE "boot.log"
 #define NOTIFY_FILE "notify"
@@ -210,6 +211,23 @@ static void stop(private_guest_t *this, idle_function_t idle)
 				usleep(50000);
 			}
 		}
+		unlinkat(this->dir, PID_FILE, 0);
+	}
+}
+
+/**
+ * save pid in file
+ */
+void savepid(private_guest_t *this)
+{
+	FILE *file;
+	
+	file = fdopen(openat(this->dir, PID_FILE, O_RDWR | O_CREAT | O_TRUNC,
+						 PERM), "w");
+	if (file)
+	{
+		fprintf(file, "%d", this->pid);
+		fclose(file);
 	}
 }
 
@@ -253,6 +271,8 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 		this->state = GUEST_STOPPED;
 		return FALSE;
 	}
+	savepid(this);
+	
 	/* open mconsole */
 	this->mconsole = mconsole_create(notify, idle);
 	if (this->mconsole == NULL)
@@ -450,7 +470,6 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 		free(this);
 		return NULL;
 	}
-	
 	this->pid = 0;
 	this->state = GUEST_STOPPED;
 	this->mconsole = NULL;
