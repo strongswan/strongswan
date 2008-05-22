@@ -48,15 +48,15 @@ AC_ARG_WITH(
 AC_ARG_WITH(
 	[resolv-conf],
 	AS_HELP_STRING([--with-resolv-conf=file],[set the file to store DNS server information other than "sysconfdir/resolv.conf"]),
-	[AC_DEFINE_UNQUOTED(RESOLV_CONF, "$withval")],
-	[AC_DEFINE_UNQUOTED(RESOLV_CONF, "${sysconfdir}/resolv.conf")]
+	[AC_SUBST(resolv_conf, "$withval")],
+	[AC_SUBST(resolv_conf, "${sysconfdir}/resolv.conf")]
 )
 
 AC_ARG_WITH(
 	[strongswan-conf],
 	AS_HELP_STRING([--with-strongswan-conf=file],[strongswan.conf file other than "sysconfdir/strongswan.conf"]),
-	[AC_DEFINE_UNQUOTED(STRONGSWAN_CONF, "$withval")],
-	[AC_DEFINE_UNQUOTED(STRONGSWAN_CONF, "${sysconfdir}/strongswan.conf")]
+	[AC_SUBST(strongswan_conf, "$withval")],
+	[AC_SUBST(strongswan_conf, "${sysconfdir}/strongswan.conf")]
 )
 
 AC_ARG_WITH(
