@@ -25,6 +25,7 @@
 /* warning intervals for list functions */
 #define CERT_WARNING_INTERVAL  30	/* days */
 #define CRL_WARNING_INTERVAL	7	/* days */
+#define AC_WARNING_INTERVAL		1	/* day */
 
 typedef struct private_stroke_list_t private_stroke_list_t;
 
@@ -461,9 +462,45 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 /**
  * list all X.509 attribute certificates
  */
-static void stroke_list_acerts(bool utc, FILE *out)
+static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 {
+	bool first = TRUE;
+	time_t thisUpdate, nextUpdate, now = time(NULL);
+	enumerator_t *enumerator = list->create_enumerator(list);
+	certificate_t *cert;
 
+	while (enumerator->enumerate(enumerator, (void**)&cert))
+	{
+		if (first)
+		{
+			fprintf(out, "\n");
+			fprintf(out, "List of X.509 Attribute Certificates:\n");
+			first = FALSE;
+		}
+		fprintf(out, "\n");
+
+		fprintf(out, "  holder:   \"%D\"\n", cert->get_subject(cert));
+		fprintf(out, "  issuer:   \"%D\"\n", cert->get_issuer(cert));
+
+		/* list validity */
+		cert->get_validity(cert, &now, &thisUpdate, &nextUpdate);
+		fprintf(out, "  updates:   this %#T\n",  &thisUpdate, utc);
+		fprintf(out, "             next %#T, ", &nextUpdate, utc);
+		if (now > nextUpdate)
+		{
+			fprintf(out, "expired (%#V ago)\n", &now, &nextUpdate);
+		}
+		else
+		{
+			fprintf(out, "ok");
+			if (now > nextUpdate - AC_WARNING_INTERVAL * 60 * 60 * 24)
+			{
+				fprintf(out, " (expires in %#V)", &now, &nextUpdate);
+			}
+			fprintf(out, " \n");
+		}
+	}
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -596,7 +633,10 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 	}
 	if (msg->list.flags & LIST_ACERTS)
 	{
-		stroke_list_acerts(msg->list.utc, out);
+		linked_list_t *ac_list = create_unique_cert_list(CERT_X509_AC);
+
+		stroke_list_acerts(ac_list, msg->list.utc, out);
+		ac_list->destroy_offset(ac_list, offsetof(certificate_t, destroy)); 
 	}
 	if (msg->list.flags & LIST_CRLS)
 	{

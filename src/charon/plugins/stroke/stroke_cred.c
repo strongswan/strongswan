@@ -157,8 +157,9 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 	public_key_t *public;
 	identification_t *candidate;
 	certificate_t *cert = *in;
-	
-	if (cert->get_type(cert) == CERT_X509_CRL)
+	certificate_type_t type = cert->get_type(cert);
+
+	if (type == CERT_X509_CRL || type == CERT_X509_AC)
 	{
 		return FALSE;
 	}
@@ -205,6 +206,26 @@ static bool crl_filter(id_data_t *data, certificate_t **in, certificate_t **out)
 }
 
 /**
+ * filter function for attribute certificate enumerator
+ */
+static bool ac_filter(id_data_t *data, certificate_t **in, certificate_t **out)
+{
+	certificate_t *cert = *in;
+	
+	if (cert->get_type(cert) != CERT_X509_AC)
+	{
+		return FALSE;
+	}
+
+	if (data->id == NULL || cert->has_subject(cert, data->id))
+	{
+		*out = *in;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Implements credential_set_t.create_cert_enumerator
  */
 static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
@@ -213,21 +234,20 @@ static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
 {
 	id_data_t *data;
 	
-	if (cert == CERT_X509_CRL)
+	if (cert == CERT_X509_CRL || cert == CERT_X509_AC)
 	{
 		if (trusted)
 		{
 			return NULL;
 		}
-		
 		data = malloc_thing(id_data_t);
 		data->this = this;
 		data->id = id;
 		
 		this->mutex->lock(this->mutex);
 		return enumerator_create_filter(this->certs->create_enumerator(this->certs),
-										(void*)crl_filter, data,
-										(void*)id_data_destroy);
+					(cert == CERT_X509_CRL)? (void*)crl_filter : (void*)ac_filter,
+					data, (void*)id_data_destroy);
 	}
 	if (cert != CERT_X509 && cert != CERT_ANY)
 	{	/* we only have X509 certificates. TODO: ACs? */
@@ -440,6 +460,19 @@ static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
 }
 
 /**
+ * Add X.509 attribute certificate to chain
+ */
+static bool add_ac(private_stroke_cred_t *this, ac_t* ac)
+{
+	certificate_t *cert = &ac->certificate;
+
+	this->mutex->lock(this->mutex);
+	this->certs->insert_last(this->certs, cert);
+	this->mutex->unlock(this->mutex);
+	return TRUE;
+}
+
+/**
  * Implementation of stroke_cred_t.load_peer.
  */
 static certificate_t* load_peer(private_stroke_cred_t *this, char *filename)
@@ -525,7 +558,7 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 										  BUILD_END);
 				if (cert)
 				{
-					cert->destroy(cert);
+					add_ac(this, (ac_t*)cert);
 				}
 				break;
 			default:
