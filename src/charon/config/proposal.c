@@ -766,6 +766,14 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 	{
 		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
 	}
+	else if (strncmp(alg.ptr, "ecp192", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_192_BIT, 0);
+	}
+	else if (strncmp(alg.ptr, "ecp224", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_224_BIT, 0);
+	}
 	else if (strncmp(alg.ptr, "ecp256", alg.len) == 0)
 	{
 		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_256_BIT, 0);

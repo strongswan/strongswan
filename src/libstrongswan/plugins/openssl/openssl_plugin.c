@@ -125,6 +125,10 @@ plugin_t *plugin_create()
 						(dh_constructor_t)openssl_diffie_hellman_create);
 	
 	/* ec diffie hellman */
+	lib->crypto->add_dh(lib->crypto, ECP_192_BIT,
+						(dh_constructor_t)openssl_ec_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, ECP_224_BIT,
+						(dh_constructor_t)openssl_ec_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, ECP_256_BIT,
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, ECP_384_BIT,
