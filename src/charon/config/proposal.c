@@ -409,8 +409,18 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	}
 	else
 	{
+		enumerator_t *e;
+		algorithm_t *alg;
+
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable PSEUDO_RANDOM_FUNCTION found, skipping");
+		DBG2(DBG_CFG, "  no acceptable PSEUDO_RANDOM_FUNCTION found");
+		DBG2(DBG_CFG, "  list of received PSEUDO_RANDOM_FUNCTION proposals:");
+		e = other->prf_algos->create_enumerator(other->prf_algos);
+		while (e->enumerate(e, &alg))
+		{
+			DBG2(DBG_CFG, "  %N", pseudo_random_function_names, alg->algorithm);
+		}
+		e->destroy(e);
 		return NULL;
 	}
 	/* select a DH-group */
@@ -423,8 +433,18 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	}
 	else
 	{
+		enumerator_t *e;
+		algorithm_t *alg;
+
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable DIFFIE_HELLMAN_GROUP found, skipping");
+		DBG2(DBG_CFG, "  no acceptable DIFFIE_HELLMAN_GROUP found");
+		DBG2(DBG_CFG, "  list of received DIFFIE_HELLMAN_GROUP proposals:");
+		e = other->dh_groups->create_enumerator(other->dh_groups);
+		while (e->enumerate(e, &alg))
+		{
+			DBG2(DBG_CFG, "  %N", diffie_hellman_group_names, alg->algorithm);
+		}
+		e->destroy(e);
 		return NULL;
 	}
 	/* select if we use ESNs */
@@ -438,7 +458,7 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	else
 	{
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable EXTENDED_SEQUENCE_NUMBERS found, skipping");
+		DBG2(DBG_CFG, "  no acceptable EXTENDED_SEQUENCE_NUMBERS found");
 		return NULL;
 	}
 	DBG2(DBG_CFG, "  proposal matches");
