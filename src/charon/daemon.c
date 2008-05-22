@@ -489,6 +489,10 @@ private_daemon_t *daemon_create(void)
 	this->public.outlog = NULL;
 	this->public.syslog = NULL;
 	this->public.authlog = NULL;
+#ifdef ME
+	this->public.connect_manager = NULL;
+	this->public.mediation_manager = NULL;
+#endif /* ME */
 	this->public.uid = 0;
 	this->public.gid = 0;
 	
