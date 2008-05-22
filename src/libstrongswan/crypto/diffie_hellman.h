@@ -34,6 +34,8 @@ typedef struct diffie_hellman_t diffie_hellman_t;
  *
  * The modulus (or group) to use for a Diffie-Hellman calculation.
  * See IKEv2 RFC 3.3.2 and RFC 3526.
+ * 
+ * ECP groups are defined in RFC 4753.
  */
 enum diffie_hellman_group_t {
 	MODP_NONE = 0,
@@ -44,7 +46,11 @@ enum diffie_hellman_group_t {
 	MODP_3072_BIT = 15,
 	MODP_4096_BIT = 16,
 	MODP_6144_BIT = 17,
-	MODP_8192_BIT = 18
+	MODP_8192_BIT = 18,
+	ECP_256_BIT = 19,
+	ECP_384_BIT = 20,
+	ECP_521_BIT = 21,
+	
 };
 
 /**
