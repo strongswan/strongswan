@@ -157,14 +157,13 @@ if USE_OPENSSL
 endif
 
 if USE_INTEGRITY_TEST
-# build fips_signer which in turn builds fips_signature.h
-#########################################################
-noinst_PROGRAMS = fips_signer
-fips_signer_SOURCES = fips/fips_signer.c
-fips_signer_LDADD = libstrongswan.la
+  noinst_PROGRAMS = fips_signer
+  fips_signer_SOURCES = fips/fips_signer.c
+  fips_signer_LDADD = libstrongswan.la
 
-BUILT_SOURCES += fips_signature.h
-CLEANFILES = fips_signature.h fips_signer
+  BUILT_SOURCES += fips_signature.h
+  CLEANFILES = fips_signature.h fips_signer
+  AM_CFLAGS += -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
 
 fips_signature.h : fips_signer
 		   ./fips_signer

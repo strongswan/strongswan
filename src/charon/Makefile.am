@@ -94,8 +94,12 @@ credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/credential_set.h
 
 INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
-AM_CFLAGS = -rdynamic -DIPSEC_DIR=\"${ipsecdir}\" \
-	-DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_PLUGINDIR=\"${plugindir}\"
+AM_CFLAGS = -rdynamic \
+  -DIPSEC_DIR=\"${ipsecdir}\" \
+  -DIPSEC_PIDDIR=\"${piddir}\" \
+  -DIPSEC_PLUGINDIR=\"${plugindir}\" \
+  -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
+  -DRESOLV_CONF=\"${resolv_conf}\"
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm -ldl
 
 # compile options
