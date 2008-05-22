@@ -28,7 +28,7 @@ typedef struct openssl_rsa_public_key_t openssl_rsa_public_key_t;
 #include <credentials/keys/public_key.h>
 
 /**
- * public_key_t implementation of RSA algorithm using libgmp.
+ * public_key_t implementation of RSA algorithm using OpenSSL.
  */
 struct openssl_rsa_public_key_t {
 
