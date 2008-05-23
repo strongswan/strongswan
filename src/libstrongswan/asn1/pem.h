@@ -23,7 +23,7 @@
 
 #include <library.h>
 
-err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp);
+bool pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp);
 
 bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
 						chunk_t *blob, bool *pgp);

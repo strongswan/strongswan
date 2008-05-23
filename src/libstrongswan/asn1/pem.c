@@ -84,7 +84,7 @@ static bool find_boundary(const char* tag, chunk_t *line)
 /*
  * decrypts a passphrase protected encrypted data block
  */
-static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_size,
+static bool pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_size,
 						 chunk_t *iv, chunk_t *passphrase)
 {
 	hasher_t *hasher;
@@ -97,14 +97,16 @@ static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_s
 	
 	if (passphrase == NULL || passphrase->len == 0)
 	{
-		return "missing passphrase";
+		DBG1("  missing passphrase");
+		return FALSE;
 	}
 
 	/* build key from passphrase and IV */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 	if (hasher == NULL)
 	{
-		return "MD5 hasher not supported";
+		DBG1("  MD5 hash algorithm not available");
+		return FALSE;
 	}
 	hash.len = hasher->get_hash_size(hasher);
 	hash.ptr = alloca(hash.len);
@@ -123,13 +125,20 @@ static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_s
 	
 	/* decrypt blob */
 	crypter = lib->crypto->create_crypter(lib->crypto, alg, key_size);
+	if (crypter == NULL)
+	{
+		DBG1("  %N encryption algorithm not available",
+			 encryption_algorithm_names, alg);
+		return FALSE;
+	}
 	crypter->set_key(crypter, key);
 	
 	if (iv->len != crypter->get_block_size(crypter) ||
 		blob->len % iv->len)
 	{
 		crypter->destroy(crypter);
-		return "data size is not multiple of block size";
+		DBG1("  data size is not multiple of block size");
+		return FALSE;
 	}
 	crypter->decrypt(crypter, *blob, *iv, &decrypted);
 	crypter->destroy(crypter);
@@ -145,11 +154,14 @@ static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_s
 	while (--last_padding_pos > first_padding_pos)
 	{
 		if (*last_padding_pos != padding)
-			return "invalid passphrase";
+		{
+			DBG1("  invalid passphrase");
+			return FALSE;
+		}
 	}
 	/* remove padding */
 	blob->len -= padding;
-	return NULL;
+	return TRUE;
 }
 
 /*  Converts a PEM encoded file into its binary form
@@ -157,7 +169,7 @@ static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_s
  *  RFC 1421 Privacy Enhancement for Electronic Mail, February 1993
  *  RFC 934 Message Encapsulation, January 1985
  */
-err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
+bool pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 {
 	typedef enum {
 		PEM_PRE    = 0,
@@ -260,7 +272,9 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 					}
 					else
 					{
-						return "encryption algorithm not supported";
+						DBG1("  encryption algorithm '%.s' not supported",
+							 dek.len, dek.ptr);
+						return FALSE;
 					}
 					eat_whitespace(&value);
 					iv = chunk_from_hex(value, iv.ptr);
@@ -282,7 +296,7 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 					*pgp = TRUE;
 					data.ptr++;
 					data.len--;
-					DBG2("  Armor checksum: %.*s", (int)data.len, data.ptr);
+					DBG2("  armor checksum: %.*s", (int)data.len, data.ptr);
 		    		continue;
 				}
 				
@@ -301,11 +315,13 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 	blob->len = dst.len;
 
 	if (state != PEM_POST)
-		return "file coded in unknown format, discarded";
-
+	{
+		DBG1("  file coded in unknown format, discarded");
+		return FALSE;
+	}
 	if (!encrypted)
 	{
-		return NULL;
+		return TRUE;
 	}
 	return pem_decrypt(blob, alg, key_size, &iv, passphrase);
 	
@@ -345,9 +361,7 @@ bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
 			DBG4("  passphrase:", passphrase->ptr, passphrase->len);
 
 		/* try PEM format */
-		ugh = pem_to_bin(blob, passphrase, pgp);
-
-		if (ugh == NULL)
+		if (pem_to_bin(blob, passphrase, pgp))
 		{
 			if (*pgp)
 			{
@@ -359,11 +373,10 @@ bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
 				DBG2("  file coded in PEM format");
 				return TRUE;
 			}
-			ugh = "file coded in unknown format, discarded";
+			DBG1("  file coded in unknown format, discarded");
 		}
 
 		/* a conversion error has occured */
-		DBG1("  %s", ugh);
 		chunk_free(blob);
 	}
 	else
