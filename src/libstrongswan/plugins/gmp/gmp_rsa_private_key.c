@@ -337,7 +337,7 @@ static identification_t* get_id(private_gmp_rsa_private_key_t *this,
 }
 
 /**
- * Implementation of gmp_rsa_private_key.destroy.
+ * Implementation of gmp_rsa_private_key.get_public_key.
  */
 static gmp_rsa_public_key_t* get_public_key(private_gmp_rsa_private_key_t *this)
 {
