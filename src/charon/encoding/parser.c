@@ -685,6 +685,11 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					return PARSE_ERROR;
 				}
 				payload_length = *(u_int16_t*)(output + rule->offset);
+				if (payload_length < UNKNOWN_PAYLOAD_HEADER_LENGTH)
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
 				break;
 			}
 			case HEADER_LENGTH:
@@ -717,8 +722,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case PROPOSALS:
 			{
-				size_t proposals_length = payload_length - SA_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_list(this, rule_number, output + rule->offset, PROPOSAL_SUBSTRUCTURE, proposals_length) != SUCCESS) 
+				if (payload_length < SA_PAYLOAD_HEADER_LENGTH ||
+					this->parse_list(this, rule_number, output + rule->offset, PROPOSAL_SUBSTRUCTURE,
+						payload_length - SA_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -727,8 +733,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case TRANSFORMS:
 			{
-				size_t transforms_length = payload_length - spi_size - PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH;
-				if (this->parse_list(this, rule_number, output + rule->offset, TRANSFORM_SUBSTRUCTURE, transforms_length) != SUCCESS) 
+				if (payload_length < spi_size + PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH ||
+					this->parse_list(this, rule_number, output + rule->offset, TRANSFORM_SUBSTRUCTURE,
+						payload_length - spi_size - PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -737,8 +744,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case TRANSFORM_ATTRIBUTES:
 			{
-				size_t transform_a_length = payload_length - TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
-				if (this->parse_list(this, rule_number, output + rule->offset, TRANSFORM_ATTRIBUTE, transform_a_length) != SUCCESS) 
+				if (payload_length < TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH ||
+					this->parse_list(this, rule_number, output + rule->offset, TRANSFORM_ATTRIBUTE,
+						payload_length - TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -747,8 +755,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case CONFIGURATION_ATTRIBUTES:
 			{
-				size_t configuration_attributes_length = payload_length - CP_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_list(this, rule_number, output + rule->offset, CONFIGURATION_ATTRIBUTE, configuration_attributes_length) != SUCCESS) 
+				if (payload_length < CP_PAYLOAD_HEADER_LENGTH ||
+					this->parse_list(this, rule_number, output + rule->offset, CONFIGURATION_ATTRIBUTE,
+						payload_length - CP_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -809,8 +818,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case NONCE_DATA:
 			{
-				size_t nonce_length = payload_length - NONCE_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, nonce_length) != SUCCESS) 
+				if (payload_length < NONCE_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset, 
+						payload_length - NONCE_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -819,8 +829,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case ID_DATA:
 			{
-				size_t data_length = payload_length - ID_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				if (payload_length < ID_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - ID_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -829,8 +840,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case AUTH_DATA:
 			{
-				size_t data_length = payload_length - AUTH_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				if (payload_length < AUTH_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - AUTH_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -839,8 +851,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case CERT_DATA:
 			{
-				size_t data_length = payload_length - CERT_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				if (payload_length < CERT_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset, 
+						payload_length - CERT_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -849,8 +862,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case CERTREQ_DATA:
 			{
-				size_t data_length = payload_length - CERTREQ_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				if (payload_length < CERTREQ_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset, 
+						payload_length - CERTREQ_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -859,8 +873,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case EAP_DATA:
 			{
-				size_t data_length = payload_length - EAP_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				if (payload_length < EAP_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset, 
+						payload_length - EAP_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -869,8 +884,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case SPIS:
 			{
-				size_t data_length = payload_length - DELETE_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				if (payload_length < DELETE_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - DELETE_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -879,8 +895,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case VID_DATA:
 			{
-				size_t data_length = payload_length - VENDOR_ID_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				if (payload_length < VENDOR_ID_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - VENDOR_ID_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -899,8 +916,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case KEY_EXCHANGE_DATA:
 			{
-				size_t keydata_length = payload_length - KE_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, keydata_length) != SUCCESS) 
+				if (payload_length < KE_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - KE_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -909,8 +927,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case NOTIFICATION_DATA:
 			{
-				size_t notify_length = payload_length - NOTIFY_PAYLOAD_HEADER_LENGTH - spi_size;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, notify_length) != SUCCESS) 
+				if (payload_length < NOTIFY_PAYLOAD_HEADER_LENGTH + spi_size ||
+					this->parse_chunk(this, rule_number, output + rule->offset, 
+						payload_length - NOTIFY_PAYLOAD_HEADER_LENGTH - spi_size) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -919,8 +938,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case ENCRYPTED_DATA:
 			{				
-				size_t data_length = payload_length - ENCRYPTION_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				if (payload_length < ENCRYPTION_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - ENCRYPTION_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -949,8 +969,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case TRAFFIC_SELECTORS:
 			{
-				size_t traffic_selectors_length = payload_length - TS_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_list(this, rule_number, output + rule->offset, TRAFFIC_SELECTOR_SUBSTRUCTURE, traffic_selectors_length) != SUCCESS) 
+				if (payload_length < TS_PAYLOAD_HEADER_LENGTH ||
+					this->parse_list(this, rule_number, output + rule->offset, TRAFFIC_SELECTOR_SUBSTRUCTURE,
+						payload_length - TS_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -959,8 +980,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case UNKNOWN_DATA:
 			{
-				size_t unknown_payload_data_length = payload_length - UNKNOWN_PAYLOAD_HEADER_LENGTH;
-				if (this->parse_chunk(this, rule_number, output + rule->offset, unknown_payload_data_length) != SUCCESS) 
+				if (payload_length < UNKNOWN_PAYLOAD_HEADER_LENGTH ||
+					this->parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - UNKNOWN_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
