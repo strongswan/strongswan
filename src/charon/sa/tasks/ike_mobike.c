@@ -281,6 +281,11 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 											charon->kernel_interface, other);
 		if (me)
 		{
+			if (me->get_family(me) != other->get_family(other))
+			{
+				me->destroy(me);
+				continue;
+			}
 			/* reuse port for an active address, 4500 otherwise */
 			me->set_port(me, me->ip_equals(me, me_old) ?
 						 me_old->get_port(me_old) : IKEV2_NATT_PORT);
