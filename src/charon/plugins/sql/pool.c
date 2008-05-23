@@ -246,9 +246,11 @@ static void leases(char *name, char *filter, bool utc)
 	{
 		if (!found)
 		{
+			int len = utc ? 25 : 21;
+
 			found = TRUE;
-			printf("%-8s %15s  %-33s %-25s %-25s %-7s\n",
-				   "name", "address", "identity", "start", "end", "status");
+			printf("%-8s %15s  %-33s %-*s %-*s %-7s\n",
+				   "name", "address", "identity", len, "start", len, "end", "status");
 		}
 		address = host_create_from_blob(address_chunk);
 		identity = identification_create_from_encoding(identity_type, identity_chunk);
