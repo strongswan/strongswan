@@ -20,6 +20,7 @@
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/certificates/ac.h>
 #include <credentials/certificates/crl.h>
 
 /* warning intervals for list functions */
@@ -471,6 +472,13 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
+		ac_t *ac = (ac_t*)cert;
+		chunk_t serial  = ac->get_serial(ac);
+		chunk_t holderSerial = ac->get_holderSerial(ac);
+		identification_t *holderIssuer = ac->get_holderIssuer(ac);
+		identification_t *authkey = ac->get_authKeyIdentifier(ac);
+		identification_t *entityName = cert->get_subject(cert);
+
 		if (first)
 		{
 			fprintf(out, "\n");
@@ -479,8 +487,20 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 		}
 		fprintf(out, "\n");
 
-		fprintf(out, "  holder:   \"%D\"\n", cert->get_subject(cert));
+		if (entityName)
+		{
+			fprintf(out, "  holder:   \"%D\"\n", entityName);
+		}
+		if (holderIssuer)
+		{
+			fprintf(out, "  hissuer:  \"%D\"\n", holderIssuer);
+		}
+		if (holderSerial.ptr)
+		{
+			fprintf(out, "  hserial:   %#B\n", &holderSerial);
+		}
 		fprintf(out, "  issuer:   \"%D\"\n", cert->get_issuer(cert));
+		fprintf(out, "  serial:    %#B\n", &serial);
 
 		/* list validity */
 		cert->get_validity(cert, &now, &thisUpdate, &nextUpdate);
@@ -498,6 +518,12 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 				fprintf(out, " (expires in %#V)", &now, &nextUpdate);
 			}
 			fprintf(out, " \n");
+		}
+
+		/* list optional authorityKeyIdentifier */
+		if (authkey)
+		{
+			fprintf(out, "  authkey:   %D\n", authkey);
 		}
 	}
 	enumerator->destroy(enumerator);

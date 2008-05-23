@@ -276,14 +276,14 @@ static const asn1Object_t acObjects[] =
 																  ASN1_BODY }, /*  7 */
 	{ 4,         "end opt",					ASN1_EOC,			  ASN1_END  }, /*  8 */
 	{ 3,       "end opt",					ASN1_EOC,			  ASN1_END  }, /*  9 */
-	{ 3,	     "entityName",				ASN1_CONTEXT_C_1,	  ASN1_OPT |
+	{ 3,	   "entityName",				ASN1_CONTEXT_C_1,	  ASN1_OPT |
 																  ASN1_OBJ  }, /* 10 */
 	{ 3,       "end opt",					ASN1_EOC,			  ASN1_END  }, /* 11 */
 	{ 3,	     "objectDigestInfo",		ASN1_CONTEXT_C_2,	  ASN1_OPT  }, /* 12 */
-	{ 4,	       "digestedObjectType",	ASN1_ENUMERATED,	  ASN1_BODY }, /* 13*/
+	{ 4,	       "digestedObjectType",	ASN1_ENUMERATED,	  ASN1_BODY }, /* 13 */
 	{ 4,	       "otherObjectTypeID",		ASN1_OID,			  ASN1_OPT |
 																  ASN1_BODY }, /* 14 */
-	{ 4,         "end opt",					ASN1_EOC,			  ASN1_END  }, /* 15*/
+	{ 4,         "end opt",					ASN1_EOC,			  ASN1_END  }, /* 15 */
 	{ 4,         "digestAlgorithm",			ASN1_EOC,			  ASN1_RAW  }, /* 16 */
 	{ 3,       "end opt",					ASN1_EOC,			  ASN1_END  }, /* 17 */
 	{ 2,	   "v2Form",					ASN1_CONTEXT_C_0,	  ASN1_NONE }, /* 18 */
@@ -649,6 +649,38 @@ static chunk_t build_ac(private_x509_ac_t *this)
 }
 
 /**
+ * Implementation of ac_t.get_serial.
+ */
+static chunk_t get_serial(private_x509_ac_t *this)
+{
+	return this->serialNumber;
+}
+
+/**
+ * Implementation of ac_t.get_holderSerial.
+ */
+static chunk_t get_holderSerial(private_x509_ac_t *this)
+{
+	return this->holderSerial;
+}
+
+/**
+ * Implementation of ac_t.get_holderIssuer.
+ */
+static identification_t* get_holderIssuer(private_x509_ac_t *this)
+{
+	return this->holderIssuer;
+}
+
+/**
+ * Implementation of ac_t.get_authKeyIdentifier.
+ */
+static identification_t* get_authKeyIdentifier(private_x509_ac_t *this)
+{
+	return this->authKeyIdentifier;
+}
+
+/**
  * Implementation of certificate_t.get_type
  */
 static certificate_type_t get_type(private_x509_ac_t *this)
@@ -899,6 +931,10 @@ static private_x509_ac_t *create_empty(void)
 	private_x509_ac_t *this = malloc_thing(private_x509_ac_t);
 	
 	/* public functions */
+	this->public.interface.get_serial = (chunk_t (*)(ac_t*))get_serial;
+	this->public.interface.get_holderSerial = (chunk_t (*)(ac_t*))get_holderSerial;
+	this->public.interface.get_holderIssuer = (identification_t* (*)(ac_t*))get_holderIssuer;
+	this->public.interface.get_authKeyIdentifier = (identification_t* (*)(ac_t*))get_authKeyIdentifier;
 	this->public.interface.certificate.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
 	this->public.interface.certificate.get_subject = (identification_t* (*)(certificate_t *this))get_subject;
 	this->public.interface.certificate.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
@@ -915,6 +951,7 @@ static private_x509_ac_t *create_empty(void)
 
 	/* initialize */
 	this->encoding = chunk_empty;
+	this->holderSerial = chunk_empty;
 	this->holderIssuer = NULL;
 	this->entityName = NULL;
 	this->issuerName = NULL;
