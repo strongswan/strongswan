@@ -1,3 +1,13 @@
+strongswan-4.2.3
+----------------
+
+- Fixed the strongswan.conf path configuration problem that occurred when 
+  --sysconfig was not set explicitly in ./configure.
+
+- Fixed a number of minor bugs that where discovered during the 4th
+  IKEv2 interoperability workshop in San Antonio, TX.
+
+
 strongswan-4.2.2
 ----------------
 
