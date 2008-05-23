@@ -46,7 +46,7 @@ static host_t *host_create_from_blob(chunk_t blob)
 /**
  * print usage info
  */
-static void usage()
+static void usage(void)
 {
 	printf("\
 Usage:\n\
@@ -55,7 +55,7 @@ Usage:\n\
   ipsec pool --status\n\
     Show a list of installed pools with statistics.\n\
   \n\
-  ipsec pool --add <name> --start <start> --end <end> --timeout <timeout>\n\
+  ipsec pool --add <name> --start <start> --end <end> [--timeout <timeout>]\n\
     Add a new pool to the database.\n\
       name:    Name of the pool, as used in ipsec.conf rightsourceip=%%name\n\
       start:   Start address of the pool\n\
@@ -71,10 +71,11 @@ Usage:\n\
       name:   Name of the pool to resize\n\
       end:    New end address for the pool\n\
   \n\
-  ipsec pool --leases <name> --filter <filter>\n\
+  ipsec pool --leases <name> [--filter <filter>] [--utc]\n\
     Show lease information using filters:\n\
       name:   Name of the pool to show leases from\n\
       filter: Filter string - unimplemented\n\
+      utc:    Show times in UTC instead of local time\n\
   \n\
   ipsec pool --purge <name>\n\
     Delete expired leases of a pool:\n\
@@ -86,7 +87,7 @@ Usage:\n\
 /**
  * ipsec pool --status - show pool overview
  */
-static void status()
+static void status(void)
 {
 	enumerator_t *pool, *lease;
 	bool found = FALSE;
@@ -219,7 +220,7 @@ static void resize(char *name, host_t *end)
 /**
  * ipsec pool --leases - show lease information of a pool
  */
-static void leases(char *name, char *filter)
+static void leases(char *name, char *filter, bool utc)
 {
 	enumerator_t *query;
 	chunk_t address_chunk, identity_chunk;
@@ -252,10 +253,10 @@ static void leases(char *name, char *filter)
 		address = host_create_from_blob(address_chunk);
 		identity = identification_create_from_encoding(identity_type, identity_chunk);
 		
-		printf("%-8s %15H  %-32D  %T  ", name, address, identity, &acquired);
+		printf("%-8s %15H  %-32D  %#T  ", name, address, identity, &acquired, utc);
 		if (released)
 		{
-			printf("%T  ", &released);
+			printf("%#T  ", &released, utc);
 		}
 		else
 		{
@@ -345,6 +346,7 @@ int main(int argc, char *argv[])
 {
 	char *uri, *name = "", *filter = "";
 	int timeout = 0;
+	bool utc = FALSE;
 	enum {
 		OP_USAGE,
 		OP_STATUS,
@@ -381,7 +383,8 @@ int main(int argc, char *argv[])
 		
 		struct option long_opts[] = {
 			{ "help", no_argument, NULL, 'h' },
-			
+		
+			{ "utc", no_argument, NULL, 'u' },
 			{ "status", no_argument, NULL, 'w' },
 			{ "add", required_argument, NULL, 'a' },
 			{ "del", required_argument, NULL, 'd' },
@@ -402,6 +405,9 @@ int main(int argc, char *argv[])
 			case EOF:
 	    		break;
 			case 'h':
+				break;
+			case 'u':
+				utc = TRUE;
 				break;
 			case 'w':
 				operation = OP_STATUS;
@@ -491,7 +497,7 @@ int main(int argc, char *argv[])
 			resize(name, end);
 			break;
 		case OP_LEASES:
-			leases(name, filter);
+			leases(name, filter, utc);
 			break;
 		case OP_PURGE:
 			purge(name);
