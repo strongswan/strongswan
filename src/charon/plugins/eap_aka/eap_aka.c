@@ -835,7 +835,6 @@ static status_t server_initiate_challenge(private_eap_aka_t *this, chunk_t sqn,
 										  eap_payload_t **out)
 {
 	rng_t *rng;
-	status_t status;
 	chunk_t mac, ak, autn;
 	
 	mac = chunk_alloca(MAC_LENGTH);

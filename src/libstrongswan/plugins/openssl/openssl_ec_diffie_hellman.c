@@ -185,7 +185,7 @@ error:
 static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this, chunk_t *shared_secret)
 {
 	const BIGNUM *priv_key;
-	EC_POINT *secret;
+	EC_POINT *secret = NULL;
 	bool ret = FALSE;
 	
 	priv_key = EC_KEY_get0_private_key(this->key);
