@@ -740,6 +740,11 @@ static bool parse_certificate(private_x509_cert_t *this)
 									CRED_PUBLIC_KEY, KEY_RSA,
 									BUILD_BLOB_ASN1_DER, chunk_clone(object),
 									BUILD_END);
+						if (this->public_key == NULL)
+						{
+							DBG1("could not create RSA public key");
+							goto end;
+						}
 						break;
 					default:
 						DBG1("parsing key type %d failed", key_alg);
