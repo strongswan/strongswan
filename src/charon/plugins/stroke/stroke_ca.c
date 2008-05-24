@@ -411,7 +411,10 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 		}
 		list_uris(section->crl, "  crluris:     ", out);
 		list_uris(section->ocsp, "  ocspuris:    ", out);
-		fprintf(out, "  certuribase: '%s'\n", section->certuribase);
+		if (section->certuribase)
+		{
+			fprintf(out, "  certuribase: '%s'\n", section->certuribase);
+		}
 	}
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
