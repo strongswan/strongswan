@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.2.3)
+AC_INIT(strongSwan,4.2.4)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_C_BIGENDIAN
 AC_SUBST(confdir, '${sysconfdir}')
