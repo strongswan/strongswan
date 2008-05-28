@@ -150,6 +150,11 @@ then
     echo -n " --enable-eap-sim" >> $INSTALLSHELL
     fi
 
+if [ "$USE_EAP_MD5" = "yes" ]
+then
+    echo -n " --enable-eap-md5" >> $INSTALLSHELL
+    fi
+
 if [ "$USE_SQL" = "yes" ]
 then
     echo -n " --enable-sql --enable-sqlite" >> $INSTALLSHELL
@@ -158,6 +163,11 @@ then
 if [ "$USE_MEDIATION" = "yes" ]
 then
     echo -n " --enable-mediation" >> $INSTALLSHELL
+fi
+
+if [ "$USE_OPENSSL" = "yes" ]
+then
+    echo -n " --enable-openssl" >> $INSTALLSHELL
 fi
     
 if [ "$USE_INTEGRITY_TEST" = "yes" ]
