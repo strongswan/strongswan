@@ -93,15 +93,22 @@ static openssl_algorithm_t encryption_algs[] = {
  * Look up an OpenSSL algorithm name and validate its key size
  */
 static char* lookup_algorithm(openssl_algorithm_t *openssl_algo, 
-					   u_int16_t ikev2_algo, size_t key_size)
+					   u_int16_t ikev2_algo, size_t *key_size)
 {
 	while (openssl_algo->ikev2_id != END_OF_LIST)
 	{
 		if (ikev2_algo == openssl_algo->ikev2_id)
 		{
+			/* set the key size if it is not set */
+			if (*key_size == 0 &&
+				(openssl_algo->key_size_min == openssl_algo->key_size_max))
+			{
+				*key_size = openssl_algo->key_size_min;
+			}
+			
 			/* validate key size */
-			if (key_size < openssl_algo->key_size_min ||
-				key_size > openssl_algo->key_size_max)
+			if (*key_size < openssl_algo->key_size_min ||
+				*key_size > openssl_algo->key_size_max)
 			{
 				return NULL;
 			}
@@ -219,7 +226,7 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 			break;
 		default:
 		{
-			char* name = lookup_algorithm(encryption_algs, algo, key_size);
+			char* name = lookup_algorithm(encryption_algs, algo, &key_size);
 			if (!name)
 			{
 				/* algo unavailable or key_size invalid */
