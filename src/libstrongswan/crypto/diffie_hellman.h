@@ -38,21 +38,20 @@ typedef struct diffie_hellman_t diffie_hellman_t;
  * ECP groups are defined in RFC 4753 and RFC 5114.
  */
 enum diffie_hellman_group_t {
-	MODP_NONE = 0,
-	MODP_768_BIT = 1,
-	MODP_1024_BIT = 2,
-	MODP_1536_BIT = 5,
+	MODP_NONE     =  0,
+	MODP_768_BIT  =  1,
+	MODP_1024_BIT =  2,
+	MODP_1536_BIT =  5,
 	MODP_2048_BIT = 14,
 	MODP_3072_BIT = 15,
 	MODP_4096_BIT = 16,
 	MODP_6144_BIT = 17,
 	MODP_8192_BIT = 18,
-	ECP_256_BIT = 19,
-	ECP_384_BIT = 20,
-	ECP_521_BIT = 21,
-	ECP_192_BIT = 25,
-	ECP_224_BIT = 26,
-	
+	ECP_256_BIT   = 19,
+	ECP_384_BIT   = 20,
+	ECP_521_BIT   = 21,
+	ECP_192_BIT   = 25,
+	ECP_224_BIT   = 26,
 };
 
 /**
