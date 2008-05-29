@@ -186,7 +186,7 @@ struct connection {
 
     char              *log_file_name;       /* name of log file */
     FILE              *log_file;            /* possibly open FILE */
-    CIRCLEQ_ENTRY(connection) log_link;     /* linked list of open conns */
+    TAILQ_ENTRY(connection) log_link;     /* linked list of open conns */
     bool               log_file_err;        /* only bitch once */
 
     struct spd_route spd;

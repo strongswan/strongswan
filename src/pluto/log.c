@@ -65,7 +65,7 @@ const char *base_perpeer_logdir = PERPEERLOGDIR;
 static int perpeer_count = 0;
 
 /* from sys/queue.h */
-static CIRCLEQ_HEAD(,connection) perpeer_list;
+static TAILQ_HEAD(perpeer, connection) perpeer_list;
 
 
 /* Context for logging.
@@ -88,19 +88,19 @@ init_log(const char *program)
     if (log_to_syslog)
 	openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
 
-    CIRCLEQ_INIT(&perpeer_list);
+    TAILQ_INIT(&perpeer_list);
 }
 
 void
 close_peerlog(void)
 {
-    /* end of circular queue is given by pointer to "HEAD"
-     * BUT if the queue is not initialized, this won't be true
-     * so we must guard by test perpeer_list.cqh_first != NULL
-     */
-    if (perpeer_list.cqh_first != NULL)
-	while (perpeer_list.cqh_first != (void *)&perpeer_list)
-	    perpeer_logclose(perpeer_list.cqh_first);
+    /* exit if the queue has not been initialized */
+    if (TAILQ_LAST(&perpeer_list, perpeer) == NULL)
+       return;
+
+    /* end of queue is given by pointer to "HEAD" */
+    while (TAILQ_LAST(&perpeer_list, perpeer) != (void *)&perpeer_list)
+       perpeer_logclose(TAILQ_LAST(&perpeer_list, perpeer));
 }
 
 void
@@ -231,7 +231,7 @@ perpeer_logclose(struct connection *c)
     {
 	passert(perpeer_count > 0);
 
-	CIRCLEQ_REMOVE(&perpeer_list, c, log_link);
+	TAILQ_REMOVE(&perpeer_list, c, log_link);
 	perpeer_count--;
 	fclose(c->log_file);
 	c->log_file=NULL;
@@ -366,13 +366,13 @@ open_peerlog(struct connection *c)
     while (perpeer_count >= MAX_PEERLOG_COUNT)
     {
 	/* can not be NULL because perpeer_count > 0 */
-	passert(perpeer_list.cqh_last != (void *)&perpeer_list);
+	passert(TAILQ_LAST(&perpeer_list, perpeer) != (void *)&perpeer_list);
 
-	perpeer_logclose(perpeer_list.cqh_last);
+	perpeer_logclose(TAILQ_LAST(&perpeer_list, perpeer));
     }
 
     /* insert this into the list */
-    CIRCLEQ_INSERT_HEAD(&perpeer_list, c, log_link);
+    TAILQ_INSERT_HEAD(&perpeer_list, c, log_link);
     passert(c->log_file != NULL);
     perpeer_count++;
 }
@@ -406,8 +406,8 @@ peerlog(const char *prefix, const char *m)
 	fprintf(cur_connection->log_file, "%s %s%s\n", datebuf, prefix, m);
 
 	/* now move it to the front of the list */
-	CIRCLEQ_REMOVE(&perpeer_list, cur_connection, log_link);
-	CIRCLEQ_INSERT_HEAD(&perpeer_list, cur_connection, log_link);
+	TAILQ_REMOVE(&perpeer_list, cur_connection, log_link);
+	TAILQ_INSERT_HEAD(&perpeer_list, cur_connection, log_link);
     }
 }
 
