@@ -101,6 +101,12 @@ rm -f $LOOPDIR/etc/resolv.conf
 cecho " * Copying '$HOSTCONFIGDIR/default/etc/hosts' to the root filesystem"
 cp -fp $HOSTCONFIGDIR/default/etc/hosts $LOOPDIR/etc/hosts
 
+######################################################
+# copying default /etc/ipsec.d/tables.sql to the root filesystem
+#
+cecho " * Copying '$HOSTCONFIGDIR/default/etc/ipsec.d/tables.sql' to the root filesystem"
+cp -fp $HOSTCONFIGDIR/default/etc/ipsec.d/tables.sql $LOOPDIR/etc/ipsec.d/tables.sql
+
 #####################################################
 # extracting strongSwan into the root filesystem
 #
