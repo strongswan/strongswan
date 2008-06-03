@@ -333,8 +333,6 @@ bool pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
 						chunk_t *blob, bool *pgp)
 {
-	err_t ugh = NULL;
-
 	FILE *fd = fopen(filename, "r");
 
 	if (fd)
@@ -385,3 +383,4 @@ bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
 	}
 	return FALSE;
 }
+
