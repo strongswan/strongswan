@@ -150,11 +150,22 @@ static void status(void)
  */
 static void add(char *name, host_t *start, host_t *end, int timeout)
 {
+	chunk_t start_addr, end_addr;
+	
+	start_addr = start->get_address(start);
+	end_addr = end->get_address(end);
+
+	if (start_addr.len != end_addr.len ||
+		memcmp(start_addr.ptr, end_addr.ptr, start_addr.len) > 0)
+	{
+		fprintf(stderr, "invalid start/end pair specified.\n");
+		exit(-1);
+	}
 	if (db->execute(db, NULL,
 			"INSERT INTO pools (name, start, end, next, timeout) "
 			"VALUES (?, ?, ?, ?, ?)",
-			DB_TEXT, name, DB_BLOB, start->get_address(start),
-			DB_BLOB, end->get_address(end), DB_BLOB, start->get_address(start),
+			DB_TEXT, name, DB_BLOB, start_addr,
+			DB_BLOB, end_addr, DB_BLOB, start_addr,
 			DB_INT, timeout*3600) != 1)
 	{
 		fprintf(stderr, "creating pool failed.\n");
@@ -206,10 +217,33 @@ static void del(char *name)
  */
 static void resize(char *name, host_t *end)
 {
-	/* TODO: check for active leases if we are decreasing pool size */
+	enumerator_t *query;
+	chunk_t next_addr, end_addr;
+	
+	end_addr = end->get_address(end);
+	
+	query = db->query(db, "SELECT next FROM pools WHERE name = ?",
+					  DB_TEXT, name, DB_BLOB);
+	if (!query || !query->enumerate(query, &next_addr))
+	{
+		DESTROY_IF(query);
+		fprintf(stderr, "resizing pool failed.\n");
+		exit(-1);
+	}
+	if (next_addr.len != end_addr.len ||
+		memcmp(end_addr.ptr, next_addr.ptr, end_addr.len) < 0)
+	{
+		end = host_create_from_blob(next_addr);
+		fprintf(stderr, "pool addresses up to %H in use, resizing failed.\n", end);
+		end->destroy(end);
+		query->destroy(query);
+		exit(-1);
+	}
+	query->destroy(query);
+
 	if (db->execute(db, NULL,
 			"UPDATE pools SET end = ? WHERE name = ?",
-			DB_BLOB, end->get_address(end), DB_TEXT, name) <= 0)
+			DB_BLOB, end_addr, DB_TEXT, name) <= 0)
 	{
 		fprintf(stderr, "pool '%s' not found.\n", name);
 		exit(-1);
@@ -307,17 +341,24 @@ static void purge(char *name)
 		fprintf(stderr, "purging pool failed.\n");
 		exit(-1);
 	}
+	/* we have to keep one lease if we purge. It wouldn't be reallocateable
+	 * as we move on the "next" address for speedy allocation */
 	if (query->enumerate(query, &id, &timeout))
 	{
+		timeout = time(NULL) - timeout;
 		purged = db->execute(db, NULL,
 					"DELETE FROM leases WHERE pool = ? "
-					"AND released IS NOT NULL AND released < ?",
-					DB_UINT, id, DB_UINT, time(NULL) - timeout);
+					"AND released IS NOT NULL AND released < ? AND id NOT IN ("
+					" SELECT id FROM leases "
+					" WHERE released IS NOT NULL and released < ? "
+					" GROUP BY address)",
+					DB_UINT, id, DB_UINT, timeout, DB_UINT, timeout);
 	}
 	query->destroy(query);
 	fprintf(stderr, "purged %d leases in pool '%s'.\n", purged, name);
 	exit(0);
 }
+
 /**
  * atexit handler to close db on shutdown
  */
