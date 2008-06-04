@@ -44,6 +44,22 @@ static host_t *host_create_from_blob(chunk_t blob)
 }
 
 /**
+ * calculate the size of a pool using start and end address chunk
+ */
+static u_int get_pool_size(chunk_t start, chunk_t end)
+{
+	u_int *start_ptr, *end_ptr;
+
+	if (start.len < sizeof(u_int) || end.len < sizeof(u_int))
+	{
+		return 0;	
+	}
+	start_ptr = (u_int*)(start.ptr + start.len - sizeof(u_int));
+	end_ptr = (u_int*)(end.ptr + end.len - sizeof(u_int));
+	return ntohl(*end_ptr) -  ntohl(*start_ptr) + 1;
+}
+
+/**
  * print usage info
  */
 static void usage(void)
@@ -99,20 +115,21 @@ static void status(void)
 		char *name;
 		chunk_t start_chunk, end_chunk;
 		host_t *start, *end;
-		u_int id, timeout, online = 0;
+		u_int id, timeout, online = 0, used = 0, size = 0;
 	
 		while (pool->enumerate(pool, &id, &name,
 							   &start_chunk, &end_chunk, &timeout))
 		{
 			if (!found)
 			{
-				printf("%8s %15s %15s %8s %6s\n",
-					   "name", "start", "end", "lease", "online");
+				printf("%8s %15s %15s %8s %4s %11s %11s\n",
+					   "name", "start", "end", "timeout", "size", "online", "leases");
 				found = TRUE;
 			}
 			
 			start = host_create_from_blob(start_chunk);
 			end = host_create_from_blob(end_chunk);
+			size = get_pool_size(start_chunk, end_chunk);
 			printf("%8s %15H %15H ", name, start, end);
 			if (timeout)
 			{
@@ -122,7 +139,8 @@ static void status(void)
 			{
 				printf("%8s ", "static");
 			}
-			
+			printf("%4d ", size);
+			/* get number of online hosts */
 			lease = db->query(db, "SELECT COUNT(*) FROM leases "
 							  "WHERE pool = ? AND released IS NULL",
 							  DB_UINT, id, DB_INT);
@@ -131,8 +149,21 @@ static void status(void)
 				lease->enumerate(lease, &online);
 				lease->destroy(lease);
 			}
-			printf("%6d\n", online);
+			printf("%5d (%2d%%) ", online, online*100/size);
+			/* get number of online or valid lieases */
+			lease = db->query(db, "SELECT COUNT(*) FROM leases JOIN pools "
+							  "ON leases.pool = pools.id "
+							  "WHERE pools.id = ? "
+							  "AND (released IS NULL OR released > ? - timeout) ",
+							  DB_UINT, id, DB_UINT, time(NULL), DB_UINT);
+			if (lease)
+			{
+				lease->enumerate(lease, &used);
+				lease->destroy(lease);
+			}
+			printf("%5d (%2d%%) ", used, used*100/size);
 			
+			printf("\n");
 			DESTROY_IF(start);
 			DESTROY_IF(end);
 		}
