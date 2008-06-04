@@ -2094,6 +2094,14 @@ static status_t roam(private_ike_sa_t *this, bool address)
 	host_t *me, *other;
 	ike_mobike_t *mobike;
 	
+	switch (this->state)
+	{
+		case IKE_CREATED:
+		case IKE_DELETING:
+			return SUCCESS;
+		default:
+			break;
+	}
 	/* responder just updates the peer about changed address config */
 	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
 	{
