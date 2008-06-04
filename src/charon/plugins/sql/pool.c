@@ -122,7 +122,7 @@ static void status(void)
 		{
 			if (!found)
 			{
-				printf("%8s %15s %15s %8s %4s %11s %11s\n",
+				printf("%8s %15s %15s %8s %6s %11s %11s\n",
 					   "name", "start", "end", "timeout", "size", "online", "leases");
 				found = TRUE;
 			}
@@ -139,7 +139,7 @@ static void status(void)
 			{
 				printf("%8s ", "static");
 			}
-			printf("%4d ", size);
+			printf("%6d ", size);
 			/* get number of online hosts */
 			lease = db->query(db, "SELECT COUNT(*) FROM leases "
 							  "WHERE pool = ? AND released IS NULL",
