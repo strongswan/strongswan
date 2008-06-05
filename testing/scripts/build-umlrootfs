@@ -101,12 +101,6 @@ rm -f $LOOPDIR/etc/resolv.conf
 cecho " * Copying '$HOSTCONFIGDIR/default/etc/hosts' to the root filesystem"
 cp -fp $HOSTCONFIGDIR/default/etc/hosts $LOOPDIR/etc/hosts
 
-######################################################
-# copying default /etc/ipsec.d/tables.sql to the root filesystem
-#
-cecho " * Copying '$HOSTCONFIGDIR/default/etc/ipsec.d/tables.sql' to the root filesystem"
-cp -fp $HOSTCONFIGDIR/default/etc/ipsec.d/tables.sql $LOOPDIR/etc/ipsec.d/tables.sql
-
 #####################################################
 # extracting strongSwan into the root filesystem
 #
@@ -195,6 +189,12 @@ cecho-n " * Compiling $STRONGSWANVERSION within the root file system as chroot..
 chroot $LOOPDIR /bin/bash /install.sh >> $LOGFILE 2>&1
 rm -f $INSTALLSHELL
 cgecho "done"
+
+######################################################
+# copying default /etc/ipsec.d/tables.sql to the root filesystem
+#
+cecho " * Copying '$HOSTCONFIGDIR/default/etc/ipsec.d/tables.sql' to the root filesystem"
+cp -fp $HOSTCONFIGDIR/default/etc/ipsec.d/tables.sql $LOOPDIR/etc/ipsec.d/tables.sql
 
 ######################################################
 # copying the host's ssh public key
