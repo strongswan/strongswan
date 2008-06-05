@@ -274,7 +274,10 @@ static MYSQL_STMT* run(MYSQL *mysql, char *sql, va_list *args)
 				{
 					bind[i].buffer_type = MYSQL_TYPE_STRING;;
 					bind[i].buffer = va_arg(*args, char*);
-					bind[i].buffer_length = strlen(bind[i].buffer);
+					if (bind[i].buffer)
+					{
+						bind[i].buffer_length = strlen(bind[i].buffer);
+					}
 					break;
 				}
 				case DB_BLOB:
