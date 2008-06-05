@@ -315,14 +315,14 @@ static enumerator_t *create_lease_query(char *filter)
 		NULL
 	};
 	
-	/* if the filter string contains a distinguished name as a ID, we filter
-	 * out ", " and replace them by "; " to not confuse the getsubopt parser */
+	/* if the filter string contains a distinguished name as a ID, we replace
+	 * ", " by "/ " in order to not confuse the getsubopt parser */
 	pos = filter;
 	while ((pos = strchr(pos, ',')))
 	{
 		if (pos[1] == ' ')
 		{
-			pos[0] = ';';
+			pos[0] = '/';
 		}
 		pos++;
 	}
@@ -340,16 +340,6 @@ static enumerator_t *create_lease_query(char *filter)
 			case FIL_ID:
 				if (value)
 				{
-					/* now re-replace the "; " by ", " */
-					pos = value;
-					while ((pos = strchr(pos, ';')))
-					{
-						if (pos[1] == ' ')
-						{
-							pos[0] = ',';
-						}
-						pos++;
-					}
 					id = identification_create_from_string(value);
 				}
 				if (!id)
