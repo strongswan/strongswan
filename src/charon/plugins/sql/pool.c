@@ -90,7 +90,13 @@ Usage:\n\
   ipsec pool --leases <name> [--filter <filter>] [--utc]\n\
     Show lease information using filters:\n\
       name:   Name of the pool to show leases from\n\
-      filter: Filter string - unimplemented\n\
+      filter: Filter string containing comma separated key=value filters,\n\
+              e.g. id=alice@strongswan.org,addr=1.1.1.1\n\
+                  pool:   name of the pool\n\
+                  id:     assigned identity of the lease\n\
+                  addr:   lease IP address\n\
+                  tstamp: UNIX timestamp when lease was valid, as integer\n\
+                  status: status of the lease: online|valid|expired\n\
       utc:    Show times in UTC instead of local time\n\
   \n\
   ipsec pool --purge <name>\n\
@@ -283,24 +289,144 @@ static void resize(char *name, host_t *end)
 }
 
 /**
+ * create the lease query using the filter string
+ */
+static enumerator_t *create_lease_query(char *filter)
+{
+	enumerator_t *query;
+	identification_t *id = NULL;
+	host_t *addr = NULL;
+	u_int tstamp = 0;
+	bool online = FALSE, valid = FALSE, expired = FALSE;
+	char *value, *pool = NULL;
+	enum {
+		FIL_POOL = 0,
+		FIL_ID,
+		FIL_ADDR,
+		FIL_TSTAMP,
+		FIL_STATE,
+	};
+	char *const token[] = {
+		[FIL_POOL] = "pool",
+		[FIL_ID] = "id",
+		[FIL_ADDR] = "addr",
+		[FIL_TSTAMP] = "tstamp",
+		[FIL_STATE] = "status",
+		NULL
+	};
+	
+	while (filter && *filter != '\0')
+	{
+		switch (getsubopt(&filter, token, &value))
+		{
+			case FIL_POOL:
+				if (value)
+				{
+					pool = value;
+				}
+				break;
+			case FIL_ID:
+				if (value)
+				{
+					id = identification_create_from_string(value);
+				}
+				if (!id)
+				{
+					fprintf(stderr, "invalid 'id' in filter string.\n");
+					exit(-1);
+				}
+				break;
+			case FIL_ADDR:
+				if (value)
+				{
+					addr = host_create_from_string(value, 0);
+				}
+				if (!addr)
+				{
+					fprintf(stderr, "invalid 'addr' in filter string.\n");
+					exit(-1);
+				}
+				break;
+			case FIL_TSTAMP:
+				if (value)
+				{
+					tstamp = atoi(value);
+				}
+				if (tstamp == 0)
+				{
+					online = TRUE;
+				}
+				break;
+			case FIL_STATE:
+				if (value)
+				{
+					if (streq(value, "online"))
+					{
+						online = TRUE;
+					}
+					else if (streq(value, "valid"))
+					{
+						valid = TRUE;
+					}
+					else if (streq(value, "expired"))
+					{
+						expired = TRUE;
+					}
+					else
+					{
+						fprintf(stderr, "invalid 'state' in filter string.\n");
+						exit(-1);
+					}
+				}
+				break;
+			default:
+				fprintf(stderr, "invalid filter string.\n");
+				exit(-1);
+				break;
+		}
+	}
+	query = db->query(db,
+				"SELECT name, address, identities.type, "
+				"identities.data, acquired, released, timeout "
+				"FROM leases JOIN pools ON leases.pool = pools.id "
+				"JOIN identities ON leases.identity = identities.id "
+				"WHERE (? OR name = ?) "
+				"AND (? OR (identities.type = ? AND identities.data = ?)) "
+				"AND (? OR address = ?) "
+				"AND (? OR (? >= acquired AND (? <= released OR released IS NULL))) "
+				"AND (? OR released IS NULL) "
+				"AND (? OR released > ? - timeout) "
+				"AND (? OR released < ? - timeout)",
+				DB_INT, pool == NULL, DB_TEXT, pool,
+				DB_INT, id == NULL,
+					DB_INT, id ? id->get_type(id) : 0,
+					DB_BLOB, id ? id->get_encoding(id) : chunk_empty,
+				DB_INT, addr == NULL,
+					DB_BLOB, addr ? addr->get_address(addr) : chunk_empty,
+				DB_INT, tstamp == 0, DB_UINT, tstamp, DB_UINT, tstamp,
+				DB_INT, !online,
+				DB_INT, !valid, DB_INT, time(NULL),
+				DB_INT, !expired, DB_INT, time(NULL),
+				DB_TEXT, DB_BLOB, DB_INT, DB_BLOB, DB_UINT, DB_UINT, DB_UINT);
+	/* id and addr leak but we can't destroy them until query is destroyed. */
+	return query;
+}
+
+/**
  * ipsec pool --leases - show lease information of a pool
  */
-static void leases(char *name, char *filter, bool utc)
+static void leases(char *filter, bool utc)
 {
 	enumerator_t *query;
 	chunk_t address_chunk, identity_chunk;
 	int identity_type;
+	char *name;
 	u_int acquired, released, timeout;
 	host_t *address;
 	identification_t *identity;
 	bool found = FALSE;
 	
-	query = db->query(db, "SELECT name, address, identities.type, "
-					  "identities.data, acquired, released, timeout "
-					  "FROM leases JOIN pools ON leases.pool = pools.id "
-					  "JOIN identities ON leases.identity = identities.id ",
-					  DB_TEXT, DB_BLOB, DB_INT,
-					  DB_BLOB, DB_UINT, DB_UINT, DB_UINT);
+	query = create_lease_query(filter);
 	if (!query)
 	{
 		fprintf(stderr, "querying leases failed.\n");
@@ -327,7 +453,11 @@ static void leases(char *name, char *filter, bool utc)
 		}
 		else
 		{
-			printf("                          ");
+			printf("                      ");
+			if (utc)
+			{
+				printf("    ");
+			}
 		}
 		if (released == 0)
 		{
@@ -463,7 +593,7 @@ int main(int argc, char *argv[])
 			{ "add", required_argument, NULL, 'a' },
 			{ "del", required_argument, NULL, 'd' },
 			{ "resize", required_argument, NULL, 'r' },
-			{ "leases", optional_argument, NULL, 'l' },
+			{ "leases", no_argument, NULL, 'l' },
 			{ "purge", required_argument, NULL, 'p' },
 			
 			{ "start", required_argument, NULL, 's' },
@@ -500,7 +630,6 @@ int main(int argc, char *argv[])
 				continue;
 			case 'l':
 				operation = OP_LEASES;
-				name = optarg;
 				continue;
 			case 'p':
 				operation = OP_PURGE;
@@ -571,7 +700,7 @@ int main(int argc, char *argv[])
 			resize(name, end);
 			break;
 		case OP_LEASES:
-			leases(name, filter, utc);
+			leases(filter, utc);
 			break;
 		case OP_PURGE:
 			purge(name);
