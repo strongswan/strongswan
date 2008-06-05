@@ -1,3 +1,10 @@
+strongswan-4.2.4
+----------------
+
+- Added statistics functions to ip pool --status and ip pool --leases
+  and input validation checks to various ip pool commands.
+
+
 strongswan-4.2.3
 ----------------
 
