@@ -298,7 +298,7 @@ static enumerator_t *create_lease_query(char *filter)
 	host_t *addr = NULL;
 	u_int tstamp = 0;
 	bool online = FALSE, valid = FALSE, expired = FALSE;
-	char *value, *pool = NULL;
+	char *value, *pos, *pool = NULL;
 	enum {
 		FIL_POOL = 0,
 		FIL_ID,
@@ -315,6 +315,18 @@ static enumerator_t *create_lease_query(char *filter)
 		NULL
 	};
 	
+	/* if the filter string contains a distinguished name as a ID, we filter
+	 * out ", " and replace them by "; " to not confuse the getsubopt parser */
+	pos = filter;
+	while ((pos = strchr(pos, ',')))
+	{
+		if (pos[1] == ' ')
+		{
+			pos[0] = ';';
+		}
+		pos++;
+	}
+	
 	while (filter && *filter != '\0')
 	{
 		switch (getsubopt(&filter, token, &value))
@@ -328,6 +340,16 @@ static enumerator_t *create_lease_query(char *filter)
 			case FIL_ID:
 				if (value)
 				{
+					/* now re-replace the "; " by ", " */
+					pos = value;
+					while ((pos = strchr(pos, ';')))
+					{
+						if (pos[1] == ' ')
+						{
+							pos[0] = ',';
+						}
+						pos++;
+					}
 					id = identification_create_from_string(value);
 				}
 				if (!id)
@@ -440,13 +462,31 @@ static void leases(char *filter, bool utc)
 			int len = utc ? 25 : 21;
 
 			found = TRUE;
-			printf("%-8s %15s  %-33s %-*s %-*s %-7s\n",
-				   "name", "address", "identity", len, "start", len, "end", "status");
+			printf("%-8s %-15s %-7s  %-*s %-*s %s\n",
+				   "name", "address", "status", len, "start", len, "end", "identity");
 		}
 		address = host_create_from_blob(address_chunk);
 		identity = identification_create_from_encoding(identity_type, identity_chunk);
 		
-		printf("%-8s %15H  %-32D  %#T  ", name, address, identity, &acquired, utc);
+		printf("%-8s %-15H ", name, address);
+		if (released == 0)
+		{
+			printf("%-7s ", "online");
+		}
+		else if (timeout == 0)
+		{
+			printf("%-7s ", "static");
+		}
+		else if (released >= time(NULL) - timeout)
+		{
+			printf("%-7s ", "valid");
+		}
+		else
+		{
+			printf("%-7s ", "expired");
+		}
+		
+		printf(" %#T  ", &acquired, utc);
 		if (released)
 		{
 			printf("%#T  ", &released, utc);
@@ -459,22 +499,7 @@ static void leases(char *filter, bool utc)
 				printf("    ");
 			}
 		}
-		if (released == 0)
-		{
-			printf("%-7s\n", "online");
-		}
-		else if (timeout == 0)
-		{
-			printf("%-7s\n", "static");
-		}
-		else if (released >= time(NULL) - timeout)
-		{
-			printf("%-7s\n", "valid");
-		}
-		else
-		{
-			printf("%-7s\n", "expired");
-		}
+		printf("%D\n", identity);
 		DESTROY_IF(address);
 		identity->destroy(identity);
 	}
@@ -610,12 +635,12 @@ int main(int argc, char *argv[])
 	    		break;
 			case 'h':
 				break;
-			case 'u':
-				utc = TRUE;
-				break;
 			case 'w':
 				operation = OP_STATUS;
 				break;
+			case 'u':
+				utc = TRUE;
+				continue;
 			case 'a':
 				operation = OP_ADD;
 				name = optarg;
