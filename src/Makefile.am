@@ -19,7 +19,7 @@ if USE_STROKE
   SUBDIRS += stroke
 endif
 
-if USE_PLUTO_OR_CHARON
+if USE_UPDOWN
   SUBDIRS += _updown _updown_espmark
 endif
 

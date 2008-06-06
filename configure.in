@@ -525,6 +525,17 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[updown],
+	AS_HELP_STRING([--disable-updown],[disable installation of firewall scripts. (default is NO).]),
+	[if test x$enableval = xyes; then
+		updown=true
+	 else
+		updown=false
+	fi],
+	updown=true
+)
+
+AC_ARG_ENABLE(
 	[padlock],
 	AS_HELP_STRING([--enable-padlock],[enables VIA Padlock crypto plugin. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -789,7 +800,7 @@ AM_CONDITIONAL(USE_SELF_TEST, test x$self_test = xtrue)
 AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
-AM_CONDITIONAL(USE_PLUTO_OR_CHARON, test x$pluto = xtrue -o x$charon = xtrue)
+AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 
