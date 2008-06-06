@@ -497,64 +497,70 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	ike_cfg_t *ike_cfg;
 	
 	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-	my_host = ike_cfg->get_my_host(ike_cfg);
-	other_host =  ike_cfg->get_other_host(ike_cfg);
 	my_id = peer_cfg->get_my_id(peer_cfg);
 	other_id = peer_cfg->get_other_id(peer_cfg);
+	my_host = host_create_from_dns(ike_cfg->get_my_addr(ike_cfg), 0, 0);
+	other_host = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg), 0, 0);
 	
 	pthread_mutex_lock(&(this->mutex));
 	
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-	while (enumerator->enumerate(enumerator, &entry))
+	if (my_host && other_host)
 	{
-		identification_t *found_my_id, *found_other_id;
-		host_t *found_my_host, *found_other_host;
-		
-		if (!wait_for_entry(this, entry))
+		enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+		while (enumerator->enumerate(enumerator, &entry))
 		{
-			continue;
-		}
+			identification_t *found_my_id, *found_other_id;
+			host_t *found_my_host, *found_other_host;
 		
-		if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
-		{
-			/* skip IKE_SA which are not useable */
-			continue;
-		}
+			if (!wait_for_entry(this, entry))
+			{
+				continue;
+			}
 		
-		found_my_id = entry->ike_sa->get_my_id(entry->ike_sa);
-		found_other_id = entry->ike_sa->get_other_id(entry->ike_sa);
-		found_my_host = entry->ike_sa->get_my_host(entry->ike_sa);
-		found_other_host = entry->ike_sa->get_other_host(entry->ike_sa);
+			if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
+			{
+				/* skip IKE_SA which are not useable */
+				continue;
+			}
 		
-		if (found_my_id->get_type(found_my_id) == ID_ANY &&
-			found_other_id->get_type(found_other_id) == ID_ANY)
-		{
-			/* IKE_SA has no IDs yet, so we can't use it */
-			continue;
+			found_my_id = entry->ike_sa->get_my_id(entry->ike_sa);
+			found_other_id = entry->ike_sa->get_other_id(entry->ike_sa);
+			found_my_host = entry->ike_sa->get_my_host(entry->ike_sa);
+			found_other_host = entry->ike_sa->get_other_host(entry->ike_sa);
+		
+			if (found_my_id->get_type(found_my_id) == ID_ANY &&
+				found_other_id->get_type(found_other_id) == ID_ANY)
+			{
+				/* IKE_SA has no IDs yet, so we can't use it */
+				continue;
+			}
+			DBG2(DBG_MGR, "candidate IKE_SA for \n\t"
+				 "%H[%D]...%H[%D]\n\t%H[%D]...%H[%D]",
+				 my_host, my_id, other_host, other_id,
+				 found_my_host, found_my_id, found_other_host, found_other_id);
+			/* compare ID and hosts. Supplied ID may contain wildcards, and IP
+			 * may be %any. */
+			if ((my_host->is_anyaddr(my_host) ||
+				 my_host->ip_equals(my_host, found_my_host)) &&
+				(other_host->is_anyaddr(other_host) ||
+				 other_host->ip_equals(other_host, found_other_host)) &&
+				found_my_id->matches(found_my_id, my_id) &&
+				found_other_id->matches(found_other_id, other_id) &&
+				streq(peer_cfg->get_name(peer_cfg),
+					  entry->ike_sa->get_name(entry->ike_sa)))
+			{
+				/* looks good, we take this one */
+				DBG2(DBG_MGR, "found an existing IKE_SA for %H[%D]...%H[%D]",
+					 my_host, my_id, other_host, other_id);
+				entry->checked_out = TRUE;
+				ike_sa = entry->ike_sa;
+				break;
+			}
 		}
-		DBG2(DBG_MGR, "candidate IKE_SA for \n\t%H[%D]...%H[%D]\n\t%H[%D]...%H[%D]",
-			 my_host, my_id, other_host, other_id,
-			 found_my_host, found_my_id, found_other_host, found_other_id);
-		/* compare ID and hosts. Supplied ID may contain wildcards, and IP
-		 * may be %any. */
-		if ((my_host->is_anyaddr(my_host) ||
-			 my_host->ip_equals(my_host, found_my_host)) &&
-			(other_host->is_anyaddr(other_host) ||
-			 other_host->ip_equals(other_host, found_other_host)) &&
-			found_my_id->matches(found_my_id, my_id) &&
-			found_other_id->matches(found_other_id, other_id) &&
-			streq(peer_cfg->get_name(peer_cfg),
-				  entry->ike_sa->get_name(entry->ike_sa)))
-		{
-			/* looks good, we take this one */
-			DBG2(DBG_MGR, "found an existing IKE_SA for %H[%D]...%H[%D]",
-				 my_host, my_id, other_host, other_id);
-			entry->checked_out = TRUE;
-			ike_sa = entry->ike_sa;
-			break;
-		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
+	DESTROY_IF(my_host);
+	DESTROY_IF(other_host);
 	
 	if (!ike_sa)
 	{

@@ -410,18 +410,6 @@ static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 		this->ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 		this->ike_cfg->get_ref(this->ike_cfg);
 	}
-	
-	/* apply values, so we are ready to initate/acquire */
-	if (this->my_host->is_anyaddr(this->my_host))
-	{
-		host_t *me = this->ike_cfg->get_my_host(this->ike_cfg);
-		set_my_host(this, me->clone(me));
-	}
-	if (this->other_host->is_anyaddr(this->other_host))
-	{
-		host_t *other = this->ike_cfg->get_other_host(this->ike_cfg);
-		set_other_host(this, other->clone(other));
-	}
 	/* apply IDs if they are not already set */
 	if (this->my_id->contains_wildcards(this->my_id))
 	{
@@ -1042,6 +1030,28 @@ static status_t initiate_mediated(private_ike_sa_t *this, host_t *me, host_t *ot
 #endif /* ME */
 
 /**
+ * Resolve DNS host in configuration
+ */
+static void resolve_hosts(private_ike_sa_t *this)
+{
+	host_t *host;
+	
+	host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg), 0, 
+								IKEV2_UDP_PORT);
+	if (host)
+	{
+		set_my_host(this, host);
+	}
+	host = host_create_from_dns(this->ike_cfg->get_other_addr(this->ike_cfg),
+								this->my_host->get_family(this->my_host),
+								IKEV2_UDP_PORT);
+	if (host)
+	{
+		set_other_host(this, host);
+	}
+}
+
+/**
  * Initiates a CHILD_SA using the appropriate reqid
  */
 static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_cfg, u_int32_t reqid)
@@ -1050,6 +1060,8 @@ static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_c
 	
 	if (this->state == IKE_CREATED)
 	{
+		resolve_hosts(this);
+		
 		if (this->other_host->is_anyaddr(this->other_host)
 #ifdef ME
 			&& !this->peer_cfg->get_mediated_by(this->peer_cfg)
@@ -2516,8 +2528,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* initialize private fields */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->child_sas = linked_list_create();
-	this->my_host = host_create_any(AF_INET);
-	this->other_host = host_create_any(AF_INET);
+	this->my_host = host_create_from_string("0.0.0.0", IKEV2_UDP_PORT);
+	this->other_host = host_create_from_string("0.0.0.0", IKEV2_UDP_PORT);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->extensions = 0;

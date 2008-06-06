@@ -139,8 +139,7 @@ medsrv_config_t *medsrv_config_create(database_t *db)
 	this->rekey = lib->settings->get_int(lib->settings,
 										 "medmanager.rekey", 20) * 60;
 	this->dpd = lib->settings->get_int(lib->settings, "medmanager.dpd", 300);
-	this->ike = ike_cfg_create(FALSE, FALSE, host_create_any(AF_INET),
-							   host_create_any(AF_INET));
+	this->ike = ike_cfg_create(FALSE, FALSE, "0.0.0.0", "0.0.0.0");
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
 	
 	return &this->public;

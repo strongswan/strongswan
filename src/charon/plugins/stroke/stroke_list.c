@@ -229,9 +229,9 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			}
 			
 			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-			fprintf(out, "%12s:  %H[%D]...%H[%D]\n", peer_cfg->get_name(peer_cfg),
-					ike_cfg->get_my_host(ike_cfg), peer_cfg->get_my_id(peer_cfg),
-					ike_cfg->get_other_host(ike_cfg), peer_cfg->get_other_id(peer_cfg));
+			fprintf(out, "%12s:  %s[%D]...%s[%D]\n", peer_cfg->get_name(peer_cfg),
+					ike_cfg->get_my_addr(ike_cfg), peer_cfg->get_my_id(peer_cfg),
+					ike_cfg->get_other_addr(ike_cfg), peer_cfg->get_other_id(peer_cfg));
 			/* TODO: list CAs and groups */
 			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 			while (children->enumerate(children, &child_cfg))

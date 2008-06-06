@@ -160,6 +160,16 @@ struct host_t {
 host_t *host_create_from_string(char *string, u_int16_t port);
 
 /**
+ * Constructor to create a host_t from a DNS name.
+ *
+ * @param string		hostname to resolve
+ * @param family		family to prefer, 0 for first match
+ * @param port			port number
+ * @return 				host_t, NULL lookup failed
+ */
+host_t *host_create_from_dns(char *string, int family, u_int16_t port);
+
+/**
  * Constructor to create a host_t object from an address chunk
  *
  * @param family 		Address family, such as AF_INET or AF_INET6

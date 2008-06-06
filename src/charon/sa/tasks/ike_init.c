@@ -223,7 +223,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	SIG(IKE_UP_START, "initiating IKE_SA '%s' to %H",
 		this->ike_sa->get_name(this->ike_sa),
-		this->config->get_other_host(this->config));
+		this->ike_sa->get_other_host(this->ike_sa));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 	
 	if (this->retry++ >= MAX_RETRIES)

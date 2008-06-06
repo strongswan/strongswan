@@ -18,11 +18,14 @@
  * $Id$
  */
 
+#define _GNU_SOURCE
+#include <netdb.h>
 #include <string.h>
 #include <printf.h>
 
 #include "host.h"
 
+#include <debug.h>
 
 typedef struct private_host_t private_host_t;
 
@@ -446,6 +449,56 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 	}
 	free(this);
 	return NULL;
+}
+
+/*
+ * Described in header.
+ */
+host_t *host_create_from_dns(char *string, int af, u_int16_t port)
+{
+	private_host_t *this;
+	struct hostent host, *ptr;
+	char buf[512];
+	int err, ret;
+	
+	if (af)
+	{	
+		ret = gethostbyname2_r(string, af, &host, buf, sizeof(buf), &ptr, &err);
+	}
+	else
+	{
+		ret = gethostbyname_r(string, &host, buf, sizeof(buf), &ptr, &err);
+	}
+	if (ret != 0)
+	{
+		DBG1("resolving '%s' failed: %s", string, hstrerror(err));
+		return NULL;
+	}
+	if (ptr == NULL)
+	{
+		DBG1("resolving '%s' failed", string);
+	}
+	this = host_create_empty();
+	this->address.sa_family = host.h_addrtype;
+	switch (af)
+	{
+		case AF_INET:
+			memcpy(&this->address4.sin_addr.s_addr,
+				   host.h_addr_list[0], host.h_length);
+			this->address4.sin_port = htons(port);
+			this->socklen = sizeof(struct sockaddr_in);
+			break;
+		case AF_INET6:
+			memcpy(&this->address6.sin6_addr.s6_addr,
+				   host.h_addr_list[0], host.h_length);
+			this->address6.sin6_port = htons(port);
+			this->socklen = sizeof(struct sockaddr_in6);
+			break;
+		default:
+			free(this);
+			return NULL;
+	}
+	return &this->public;
 }
 
 /*

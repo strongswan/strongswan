@@ -138,9 +138,13 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
 		prio = MATCH_NONE;
-		my_candidate = current->get_my_host(current);
-		other_candidate = current->get_other_host(current);
 		
+		my_candidate = host_create_from_dns(current->get_my_addr(current),
+											me->get_family(me), 0);
+		if (!my_candidate)
+		{
+			continue;
+		}
 		if (my_candidate->ip_equals(my_candidate, me))
 		{
 			prio += MATCH_ME;
@@ -148,6 +152,14 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 		else if (my_candidate->is_anyaddr(my_candidate))
 		{
 			prio += MATCH_ANY;
+		}
+		my_candidate->destroy(my_candidate);
+		
+		other_candidate = host_create_from_dns(current->get_other_addr(current),
+											   other->get_family(other), 0);
+		if (!other_candidate)
+		{
+			continue;
 		}
 		if (other_candidate->ip_equals(other_candidate, other))
 		{
@@ -157,9 +169,11 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 		{
 			prio += MATCH_ANY;
 		}
+		other_candidate->destroy(other_candidate);
 		
-		DBG2(DBG_CFG, "  candidate: %H...%H, prio %d",
-			 my_candidate, other_candidate, prio);
+		DBG2(DBG_CFG, "  candidate: %s...%s, prio %d", 
+			 current->get_my_addr(current), current->get_other_addr(current),
+			 prio);
 		
 		/* we require at least two MATCH_ANY */
 		if (prio > best)

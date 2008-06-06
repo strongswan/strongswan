@@ -41,12 +41,12 @@ struct private_ike_cfg_t {
 	/**
 	 * Address of local host
 	 */
-	host_t *my_host;
+	char *me;
 
 	/**
 	 * Address of remote host
 	 */	
-	host_t *other_host;
+	char *other;
 	
 	/**
 	 * should we send a certificate request?
@@ -81,19 +81,19 @@ static bool force_encap_meth(private_ike_cfg_t *this)
 }
 
 /**
- * Implementation of ike_cfg_t.get_my_host.
+ * Implementation of ike_cfg_t.get_my_addr.
  */
-static host_t *get_my_host (private_ike_cfg_t *this)
+static char *get_my_addr(private_ike_cfg_t *this)
 {
-	return this->my_host;
+	return this->me;
 }
 
 /**
- * Implementation of ike_cfg_t.get_other_host.
+ * Implementation of ike_cfg_t.get_other_addr.
  */
-static host_t *get_other_host (private_ike_cfg_t *this)
+static char *get_other_addr(private_ike_cfg_t *this)
 {
-	return this->other_host;
+	return this->other;
 }
 
 /**
@@ -219,8 +219,8 @@ static bool equals(private_ike_cfg_t *this, private_ike_cfg_t *other)
 	return (eq &&
 		this->certreq == other->certreq &&
 		this->force_encap == other->force_encap &&
-		this->my_host->equals(this->my_host, other->my_host) &&
-		this->other_host->equals(this->other_host, other->other_host));
+		streq(this->me, other->me) &&
+		streq(this->other, other->other));
 }
 
 /**
@@ -241,8 +241,8 @@ static void destroy(private_ike_cfg_t *this)
 	{
 		this->proposals->destroy_offset(this->proposals,
 										offsetof(proposal_t, destroy));
-		this->my_host->destroy(this->my_host);
-		this->other_host->destroy(this->other_host);
+		free(this->me);
+		free(this->other);
 		free(this);
 	}
 }
@@ -251,15 +251,15 @@ static void destroy(private_ike_cfg_t *this)
  * Described in header.
  */
 ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
-						  host_t *my_host, host_t *other_host)
+						  char *me, char *other)
 {
 	private_ike_cfg_t *this = malloc_thing(private_ike_cfg_t);
 	
 	/* public functions */
 	this->public.send_certreq = (bool(*)(ike_cfg_t*))send_certreq;
 	this->public.force_encap = (bool (*) (ike_cfg_t *))force_encap_meth;
-	this->public.get_my_host = (host_t*(*)(ike_cfg_t*))get_my_host;
-	this->public.get_other_host = (host_t*(*)(ike_cfg_t*))get_other_host;
+	this->public.get_my_addr = (char*(*)(ike_cfg_t*))get_my_addr;
+	this->public.get_other_addr = (char*(*)(ike_cfg_t*))get_other_addr;
 	this->public.add_proposal = (void(*)(ike_cfg_t*, proposal_t*)) add_proposal;
 	this->public.get_proposals = (linked_list_t*(*)(ike_cfg_t*))get_proposals;
 	this->public.select_proposal = (proposal_t*(*)(ike_cfg_t*,linked_list_t*))select_proposal;
@@ -272,9 +272,8 @@ ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 	this->refcount = 1;
 	this->certreq = certreq;
 	this->force_encap = force_encap;
-	this->my_host = my_host;
-	this->other_host = other_host;
-	
+	this->me = strdup(me);
+	this->other = strdup(other);
 	this->proposals = linked_list_create();
 	
 	return &this->public;

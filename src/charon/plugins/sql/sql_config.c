@@ -179,34 +179,9 @@ static ike_cfg_t *build_ike_cfg(private_sql_config_t *this, enumerator_t *e,
 	
 	while (e->enumerate(e, &certreq, &force_encap, &local, &remote))
 	{
-		host_t *me, *other;
 		ike_cfg_t *ike_cfg;
 		
-		me = host_create_from_string(local, 500);
-		if (!me)
-		{
-			continue;
-		}
-		if (my_host && !me->is_anyaddr(me) &&
-			!me->ip_equals(me, my_host))
-		{
-			me->destroy(me);
-			continue;
-		}
-		other = host_create_from_string(remote, 500);
-		if (!other)
-		{
-			me->destroy(me);
-			continue;
-		}
-		if (other_host && !other->is_anyaddr(other) &&
-			!other->ip_equals(other, other_host))
-		{
-			me->destroy(me);
-			other->destroy(other);
-			continue;
-		}
-		ike_cfg = ike_cfg_create(certreq, force_encap, me, other);
+		ike_cfg = ike_cfg_create(certreq, force_encap, local, remote);
 		/* TODO: read proposal from db */
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 		return ike_cfg;

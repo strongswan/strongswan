@@ -250,6 +250,8 @@ char *whitelist[] = {
 	"getprotobynumber",
 	"getservbyport",
 	"getservbyname",
+	"gethostbyname_r",
+	"gethostbyname2_r",
 	"getpwnam_r",
 	"getgrnam_r",
 	"register_printf_function",

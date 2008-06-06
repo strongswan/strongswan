@@ -139,20 +139,8 @@ static void ike_data_destroy(ike_data_t *data)
  */
 static bool ike_filter(ike_data_t *data, peer_cfg_t **in, ike_cfg_t **out)
 {
-	ike_cfg_t *ike_cfg;
-	host_t *me, *other;
-	
-	ike_cfg = (*in)->get_ike_cfg(*in);
-	
-	me = ike_cfg->get_my_host(ike_cfg);
-	other = ike_cfg->get_other_host(ike_cfg);
-	if ((!data->me || me->is_anyaddr(me) || me->ip_equals(me, data->me)) &&
-		(!data->other || other->is_anyaddr(other) || other->ip_equals(other, data->other)))
-	{
-		*out = ike_cfg;
-		return TRUE;
-	}
-	return FALSE;
+	*out = (*in)->get_ike_cfg(*in);
+	return TRUE;
 }
 
 /**
@@ -296,58 +284,50 @@ static void add_proposals(private_stroke_config_t *this, char *string,
  */
 static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg)
 {
-	host_t *me = NULL, *other = NULL, *tmp;
 	stroke_end_t tmp_end;
 	ike_cfg_t *ike_cfg;
 	char *interface;
-
-	if (msg->add_conn.me.address)
-	{
-		me = host_create_from_string(msg->add_conn.me.address, IKEV2_UDP_PORT);
-	}
-	if (!me)
-	{
-		DBG1(DBG_CFG, "invalid left host: %s", msg->add_conn.me.address);
-		return NULL;
-	}
-	if (msg->add_conn.other.address)
-	{
-		other = host_create_from_string(msg->add_conn.other.address, IKEV2_UDP_PORT);
-	}
-	if (!other)
-	{
-		DBG1(DBG_CFG, "invalid right host: %s", msg->add_conn.other.address);
-		me->destroy(me);
-		return NULL;
-	}
-	interface = charon->kernel_interface->get_interface(
-											charon->kernel_interface, other);
-	if (interface)
-	{
-		DBG2(DBG_CFG, "left is other host, swapping ends");
-		tmp = me;
-		me = other;
-		other = tmp;
-		tmp_end = msg->add_conn.me;
-		msg->add_conn.me = msg->add_conn.other;
-		msg->add_conn.other = tmp_end;
-		free(interface);
-	}
-	else
+	host_t *host;
+	
+	host = host_create_from_dns(msg->add_conn.other.address, 0, 0);
+	if (host)
 	{
 		interface = charon->kernel_interface->get_interface(
-												charon->kernel_interface, me);
-		if (!interface)
+												charon->kernel_interface, host);
+		host->destroy(host);
+		if (interface)
 		{
-			DBG1(DBG_CFG, "left nor right host is our side, assuming left=local");
+			DBG2(DBG_CFG, "left is other host, swapping ends");
+			tmp_end = msg->add_conn.me;
+			msg->add_conn.me = msg->add_conn.other;
+			msg->add_conn.other = tmp_end;
+			free(interface);
 		}
 		else
 		{
-			free(interface);
+			host = host_create_from_dns(msg->add_conn.me.address, 0, 0);
+			if (host)
+			{
+				interface = charon->kernel_interface->get_interface(
+												charon->kernel_interface, host);
+				host->destroy(host);
+				if (!interface)
+				{
+					DBG1(DBG_CFG, "left nor right host is our side, "
+						 "assuming left=local");
+				}
+				else
+				{
+					free(interface);
+				}
+				
+			}
 		}
 	}
 	ike_cfg = ike_cfg_create(msg->add_conn.other.sendcert != CERT_NEVER_SEND,
-							 msg->add_conn.force_encap, me, other);
+							 msg->add_conn.force_encap,
+							 msg->add_conn.me.address,
+							 msg->add_conn.other.address);
 	add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg, NULL);
 	return ike_cfg;					 
 }
@@ -485,8 +465,14 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 			}
 			else
 			{
-				host_t* my_host = ike_cfg->get_my_host(ike_cfg);
-				vip = host_create_any(my_host->get_family(my_host));
+				if (strchr(ike_cfg->get_my_addr(ike_cfg), ':'))
+				{
+					vip = host_create_any(AF_INET6);
+				}
+				else
+				{
+					vip = host_create_any(AF_INET);
+				}
 			}
 		}
 	}
@@ -777,9 +763,9 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 	else
 	{
 		/* add config to backend */
-		DBG1(DBG_CFG, "added configuration '%s': %H[%D]...%H[%D]", msg->add_conn.name,
-			 ike_cfg->get_my_host(ike_cfg), peer_cfg->get_my_id(peer_cfg),
-			 ike_cfg->get_other_host(ike_cfg), peer_cfg->get_other_id(peer_cfg));
+		DBG1(DBG_CFG, "added configuration '%s': %s[%D]...%s[%D]", msg->add_conn.name,
+			 ike_cfg->get_my_addr(ike_cfg), peer_cfg->get_my_id(peer_cfg),
+			 ike_cfg->get_other_addr(ike_cfg), peer_cfg->get_other_id(peer_cfg));
 		this->mutex->lock(this->mutex);
 		this->list->insert_last(this->list, peer_cfg);
 		this->mutex->unlock(this->mutex);

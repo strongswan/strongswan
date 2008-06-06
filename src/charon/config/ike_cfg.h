@@ -43,16 +43,16 @@ struct ike_cfg_t {
 	/**
 	 * Get own address.
 	 * 
-	 * @return		host information as host_t object
+	 * @return		string of address/DNS name
 	 */
-	host_t* (*get_my_host) (ike_cfg_t *this);
+	char* (*get_my_addr) (ike_cfg_t *this);
 
 	/**
 	 * Get peers address.
 	 * 
-	 * @return		host information as host_t object
+	 * @return		string of address/DNS name
 	 */
-	host_t* (*get_other_host) (ike_cfg_t *this);
+	char* (*get_other_addr) (ike_cfg_t *this);
 	
 	/**
 	 * Adds a proposal to the list.
@@ -136,11 +136,11 @@ struct ike_cfg_t {
  * @param name			ike_cfg identifier
  * @param certreq		TRUE to send a certificate request
  * @param force_encap	enforce UDP encapsulation by faking NATD notify
- * @param my_host		host_t representing local address
- * @param other_host	host_t representing remote address
+ * @param me			address/DNS name of local peer
+ * @param other			address/DNS name of remote peer
  * @return 				ike_cfg_t object.
  */
 ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap, 
-						  host_t *my_host, host_t *other_host);
+						  char *me, char *other);
 
 #endif /* IKE_CFG_H_ @} */

@@ -100,7 +100,6 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	child_cfg_t *child_cfg;
 	chunk_t me, other;
 	char *address, *local_net, *remote_net;
-	host_t *med;
 	
 	/* query mediation server config:
 	 * - build ike_cfg/peer_cfg for mediation connection on-the-fly 
@@ -114,14 +113,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 		DESTROY_IF(e);
 		return NULL;
 	}
-	med = host_create_from_string(address, 500);
-	if (!med)
-	{
-		e->destroy(e);
-		return NULL;
-	}
-	ike_cfg = ike_cfg_create(FALSE, FALSE,
-							 host_create_from_string("0.0.0.0", 500), med);
+	ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", address);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	DBG1(DBG_CFG, "mediation server id: %B", &other);
 	med_cfg = peer_cfg_create(
@@ -313,8 +305,7 @@ medcli_config_t *medcli_config_create(database_t *db)
 	this->rekey = lib->settings->get_int(lib->settings,
 										 "medclient.rekey", 20) * 60;
 	this->dpd = lib->settings->get_int(lib->settings, "medclient.dpd", 300);
-	this->ike = ike_cfg_create(FALSE, FALSE, host_create_any(AF_INET),
-							   host_create_any(AF_INET));
+	this->ike = ike_cfg_create(FALSE, FALSE, "0.0.0.0", "0.0.0.0");
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
 	
 	return &this->public;
