@@ -667,7 +667,7 @@ if test x$sqlite = xtrue; then
 fi
 
 if test x$openssl = xtrue; then
-	AC_HAVE_LIBRARY([ssl],[LIBS="$LIBS"],[AC_MSG_ERROR([OpenSSL library ssl not found])])
+	AC_HAVE_LIBRARY([crypto],[LIBS="$LIBS"],[AC_MSG_ERROR([OpenSSL crypto library not found])])
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
