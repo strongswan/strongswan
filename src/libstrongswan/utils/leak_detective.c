@@ -272,6 +272,9 @@ char *whitelist[] = {
 	"xmlInitParserCtxt",
 	/* ClearSilver */
 	"nerr_init",
+	/* OpenSSL */
+	"RSA_new_method",
+	"DH_new_method",
 };
 
 /**
