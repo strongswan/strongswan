@@ -19,10 +19,9 @@
 #include <openssl/objects.h>
 
 #include "openssl_ec_diffie_hellman.h"
+#include "openssl_util.h"
 
 #include <debug.h>
-
-#define COORD_LEN(group) ((EC_GROUP_get_degree(group) + 7) / 8)
 
 typedef struct private_openssl_ec_diffie_hellman_t private_openssl_ec_diffie_hellman_t;
 
@@ -74,7 +73,6 @@ static bool chunk2ecp(const EC_GROUP *group, chunk_t chunk, EC_POINT *point)
 {
 	BN_CTX *ctx;
 	BIGNUM *x, *y;
-	int coord_len;
 	bool ret = FALSE;
 	
 	ctx = BN_CTX_new();
@@ -91,14 +89,7 @@ static bool chunk2ecp(const EC_GROUP *group, chunk_t chunk, EC_POINT *point)
 		goto error;
 	}
 	
-	coord_len = COORD_LEN(group);
-	if (chunk.len != coord_len * 2)
-	{
-		goto error;
-	}
-	
-	if (!BN_bin2bn(chunk.ptr, coord_len, x) ||
-		!BN_bin2bn(chunk.ptr + coord_len, coord_len, y))
+	if (!openssl_bn_split(chunk, x, y))
 	{
 		goto error;
 	}
@@ -123,7 +114,6 @@ static bool ecp2chunk(const EC_GROUP *group, const EC_POINT *point, chunk_t *chu
 {
 	BN_CTX *ctx;
 	BIGNUM *x, *y;
-	int coord_len, offset;
 	bool ret = FALSE;
 	
 	ctx = BN_CTX_new();
@@ -145,22 +135,8 @@ static bool ecp2chunk(const EC_GROUP *group, const EC_POINT *point, chunk_t *chu
 		goto error;
 	}
 	
-	coord_len = COORD_LEN(group);
-	chunk->len = coord_len * 2;
-	chunk->ptr = malloc(chunk->len);
-	memset(chunk->ptr, 0, chunk->len);
-	
-	offset = coord_len - BN_num_bytes(x);
-	if (!BN_bn2bin(x, chunk->ptr + offset))
+	if (!openssl_bn_cat(EC_FIELD_ELEMENT_LEN(group), x, y, chunk))
 	{
-		chunk_free(chunk);
-		goto error;
-	}
-	
-	offset = coord_len - BN_num_bytes(y);
-	if (!BN_bn2bin(y, chunk->ptr + coord_len + offset))
-	{
-		chunk_free(chunk);
 		goto error;
 	}
 	
