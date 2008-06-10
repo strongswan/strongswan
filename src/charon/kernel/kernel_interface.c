@@ -371,6 +371,11 @@ struct private_kernel_interface_t {
 	 * time of the last roam_job
 	 */
 	struct timeval last_roam;
+	
+	/**
+	 * whether to install routes along policies
+	 */
+	bool install_routes;
 };
 
 /**
@@ -2544,9 +2549,11 @@ static status_t add_policy(private_kernel_interface_t *this,
 	 * - this is a forward policy (to just get one for each child)
 	 * - we are in tunnel mode
 	 * - we are not using IPv6 (does not work correctly yet!)
+	 * - routing is not disabled via strongswan.conf
 	 */
 	if (policy->route == NULL && direction == POLICY_FWD &&
-		mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6)
+		mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6 &&
+		this->install_routes)
 	{
 		policy->route = malloc_thing(route_entry_t);
 		if (get_address_by_ts(this, dst_ts, &policy->route->src_ip) == SUCCESS)
@@ -2777,7 +2784,8 @@ kernel_interface_t *kernel_interface_create()
 	pthread_mutex_init(&this->nl_mutex, NULL);
 	pthread_cond_init(&this->cond, NULL);
 	timerclear(&this->last_roam);
-	
+	this->install_routes = lib->settings->get_bool(lib->settings,
+												"charon.install_routes", TRUE);
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 	
