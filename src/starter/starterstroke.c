@@ -38,12 +38,12 @@
 #include "files.h"
 
 /**
- * Authentication mehtods, must be the same as in charon
+ * Authentication methods, must be the same as in charon/config/peer_cfg.h
  */
 enum auth_method_t {
-	AUTH_PUBKEY = 0,
-	AUTH_PSK,
-	AUTH_EAP,
+	AUTH_PUBKEY =	1,
+	AUTH_PSK =		2,
+	AUTH_EAP =		3
 };
 
 static char* push_string(stroke_msg_t *msg, char *string)

@@ -132,8 +132,6 @@ static status_t build(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
 	signature_scheme_t scheme;
 
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
-	DBG1(DBG_IKE, "authentication of '%D' (myself) with public key", my_id);
-	
 	auth = this->ike_sa->get_my_auth(this->ike_sa);
 	private = charon->credentials->get_private(charon->credentials, KEY_ANY,
 											   my_id, auth);
@@ -168,7 +166,8 @@ static status_t build(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
 					auth_method = AUTH_ECDSA_521;
 					break;
 				default:
-					DBG1(DBG_IKE, "ECDSA not supported by private key");
+					DBG1(DBG_IKE, "%d bit ECDSA private key size not supported",
+							private->get_keysize(private));
 					return status;
 			}
 			break;
@@ -177,7 +176,6 @@ static status_t build(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
 					key_type_names, private->get_type(private));
 			return status;
 	}
-	
 	prf = this->ike_sa->get_prf(this->ike_sa);
 	prf->set_key(prf, this->ike_sa->get_skp_build(this->ike_sa));
 	octets = build_tbs_octets(ike_sa_init, other_nonce, my_id, prf);
@@ -190,12 +188,10 @@ static status_t build(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
 		*auth_payload = payload;
 		chunk_free(&auth_data);
 		status = SUCCESS;
-		DBG2(DBG_IKE, "successfully built %N with private key", auth_method_names, auth_method);
 	}
-	else
-	{
-		DBG1(DBG_IKE, "building signature failed");
-	}
+	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N %s", my_id,
+			auth_method_names, auth_method,
+			(status == SUCCESS)? "successful":"failed");
 	chunk_free(&octets);
 	private->destroy(private);
 	

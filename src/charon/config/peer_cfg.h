@@ -86,11 +86,11 @@ extern enum_name_t *unique_policy_names;
  */
 enum config_auth_method_t {
 	/** authentication using public keys (RSA, ECDSA) */
-	CONF_AUTH_PUBKEY = 0,
+	CONF_AUTH_PUBKEY =	1,
 	/** authentication using a pre-shared secret */
-	CONF_AUTH_PSK,
+	CONF_AUTH_PSK = 	2,
 	/** authentication using EAP */
-	CONF_AUTH_EAP,
+	CONF_AUTH_EAP = 	3,
 };
 
 /**
