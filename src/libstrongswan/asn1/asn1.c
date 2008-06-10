@@ -456,6 +456,14 @@ static const asn1Object_t algorithmIdentifierObjects[] = {
 	{ 1,   "parameters",		ASN1_EOC,		ASN1_RAW  }, /* 2 */
 	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
 };
+/* parameters are optional in case of ecdsa-with-SHA1 as algorithm (RFC 3279) */
+static const asn1Object_t algorithmIdentifierObjectsOptional[] = {
+	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE         }, /* 0 */
+	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY         }, /* 1 */
+	{ 1,   "parameters",		ASN1_EOC,		ASN1_RAW|ASN1_OPT }, /* 2 */
+	{ 1,   "end opt",			ASN1_EOC,		ASN1_END  	      }, /* 3 */
+	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT         }
+};
 #define ALGORITHM_ID_ALG			1
 #define ALGORITHM_ID_PARAMETERS		2
 
@@ -468,8 +476,14 @@ int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters
 	chunk_t object;
 	int objectID;
 	int alg = OID_UNKNOWN;
+	const asn1Object_t *objects = algorithmIdentifierObjectsOptional;
 	
-	parser = asn1_parser_create(algorithmIdentifierObjects, blob);
+	if (parameters != NULL)
+	{
+		objects = algorithmIdentifierObjects;
+	}
+	
+	parser = asn1_parser_create(objects, blob);
 	parser->set_top_level(parser, level0);
 	
 	while (parser->iterate(parser, &objectID, &object))
@@ -481,7 +495,9 @@ int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters
 				break;
 			case ALGORITHM_ID_PARAMETERS:
 				if (parameters != NULL)
+				{
 					*parameters = object;
+				}
 				break;
 			default:
 				break;
@@ -489,7 +505,7 @@ int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters
 	}
 	parser->destroy(parser);
 	return alg;
- }
+}
 
 /*
  *  tests if a blob contains a valid ASN.1 set or sequence
