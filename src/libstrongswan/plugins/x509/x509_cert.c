@@ -640,23 +640,21 @@ static const asn1Object_t certObjects[] = {
 	{ 3,       "notBefore",			ASN1_EOC,			ASN1_RAW			}, /*  8 */
 	{ 3,       "notAfter",			ASN1_EOC,			ASN1_RAW			}, /*  9 */
 	{ 2,     "subject",				ASN1_SEQUENCE,		ASN1_OBJ			}, /* 10 */
-	{ 2,     "subjectPublicKeyInfo",ASN1_SEQUENCE,		ASN1_NONE			}, /* 11 */
-	{ 3,       "algorithm",			ASN1_EOC,			ASN1_RAW			}, /* 12 */
-	{ 3,       "subjectPublicKey",	ASN1_BIT_STRING,	ASN1_BODY			}, /* 13 */
-	{ 2,     "issuerUniqueID",		ASN1_CONTEXT_C_1,	ASN1_OPT			}, /* 14 */
+	{ 2,     "subjectPublicKeyInfo",ASN1_SEQUENCE,		ASN1_RAW			}, /* 11 */
+	{ 2,     "issuerUniqueID",		ASN1_CONTEXT_C_1,	ASN1_OPT			}, /* 12 */
+	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /* 13 */
+	{ 2,     "subjectUniqueID",		ASN1_CONTEXT_C_2,	ASN1_OPT			}, /* 14 */
 	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /* 15 */
-	{ 2,     "subjectUniqueID",		ASN1_CONTEXT_C_2,	ASN1_OPT			}, /* 16 */
-	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /* 17 */
-	{ 2,     "optional extensions",	ASN1_CONTEXT_C_3,	ASN1_OPT			}, /* 18 */
-	{ 3,       "extensions",		ASN1_SEQUENCE,		ASN1_LOOP			}, /* 29 */
-	{ 4,         "extension",		ASN1_SEQUENCE,		ASN1_NONE			}, /* 20 */
-	{ 5,           "extnID",		ASN1_OID,			ASN1_BODY			}, /* 21 */
-	{ 5,           "critical",		ASN1_BOOLEAN,		ASN1_DEF|ASN1_BODY	}, /* 22 */
-	{ 5,           "extnValue",		ASN1_OCTET_STRING,	ASN1_BODY			}, /* 23 */
-	{ 3,       "end loop",			ASN1_EOC,			ASN1_END			}, /* 24 */
-	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /* 25 */
-	{ 1,   "signatureAlgorithm",	ASN1_EOC,			ASN1_RAW			}, /* 26 */
-	{ 1,   "signatureValue",		ASN1_BIT_STRING,	ASN1_BODY			}, /* 27 */
+	{ 2,     "optional extensions",	ASN1_CONTEXT_C_3,	ASN1_OPT			}, /* 16 */
+	{ 3,       "extensions",		ASN1_SEQUENCE,		ASN1_LOOP			}, /* 17 */
+	{ 4,         "extension",		ASN1_SEQUENCE,		ASN1_NONE			}, /* 18 */
+	{ 5,           "extnID",		ASN1_OID,			ASN1_BODY			}, /* 19 */
+	{ 5,           "critical",		ASN1_BOOLEAN,		ASN1_DEF|ASN1_BODY	}, /* 20 */
+	{ 5,           "extnValue",		ASN1_OCTET_STRING,	ASN1_BODY			}, /* 21 */
+	{ 3,       "end loop",			ASN1_EOC,			ASN1_END			}, /* 22 */
+	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /* 23 */
+	{ 1,   "signatureAlgorithm",	ASN1_EOC,			ASN1_RAW			}, /* 24 */
+	{ 1,   "signatureValue",		ASN1_BIT_STRING,	ASN1_BODY			}, /* 25 */
 	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
 };
 #define X509_OBJ_TBS_CERTIFICATE				 1
@@ -667,13 +665,12 @@ static const asn1Object_t certObjects[] = {
 #define X509_OBJ_NOT_BEFORE						 8
 #define X509_OBJ_NOT_AFTER						 9
 #define X509_OBJ_SUBJECT						10
-#define X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM	12
-#define X509_OBJ_SUBJECT_PUBLIC_KEY				13
-#define X509_OBJ_EXTN_ID						21
-#define X509_OBJ_CRITICAL						22
-#define X509_OBJ_EXTN_VALUE						23
-#define X509_OBJ_ALGORITHM						26
-#define X509_OBJ_SIGNATURE						27
+#define X509_OBJ_SUBJECT_PUBLIC_KEY_INFO		11
+#define X509_OBJ_EXTN_ID						19
+#define X509_OBJ_CRITICAL						20
+#define X509_OBJ_EXTN_VALUE						21
+#define X509_OBJ_ALGORITHM						24
+#define X509_OBJ_SIGNATURE						25
 
 /**
  * Parses an X.509v3 certificate
@@ -684,7 +681,6 @@ static bool parse_certificate(private_x509_cert_t *this)
 	chunk_t object;
 	int objectID;
 	int extn_oid = OID_UNKNOWN;
-	int key_alg  = OID_UNKNOWN;
 	int sig_alg  = OID_UNKNOWN;
 	bool success = FALSE;
 	bool critical;
@@ -724,31 +720,13 @@ static bool parse_certificate(private_x509_cert_t *this)
 				this->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
 				DBG2("  '%D'", this->subject);
 				break;
-			case X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM:
-				key_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
-				break;
-			case X509_OBJ_SUBJECT_PUBLIC_KEY:
-				if (object.len > 0 && *object.ptr == 0x00)
+			case X509_OBJ_SUBJECT_PUBLIC_KEY_INFO:
+				this->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
+						KEY_ANY, BUILD_BLOB_ASN1_DER, chunk_clone(object), BUILD_END);
+				if (this->public_key == NULL)
 				{
-					/* skip initial bit string octet defining 0 unused bits */
-					object = chunk_skip(object, 1);
-				}
-				switch (key_alg)
-				{
-					case OID_RSA_ENCRYPTION:
-						this->public_key = lib->creds->create(lib->creds,
-									CRED_PUBLIC_KEY, KEY_RSA,
-									BUILD_BLOB_ASN1_DER, chunk_clone(object),
-									BUILD_END);
-						if (this->public_key == NULL)
-						{
-							DBG1("could not create RSA public key");
-							goto end;
-						}
-						break;
-					default:
-						DBG1("parsing key type %d failed", key_alg);
-						goto end;
+					DBG1("could not create public key");
+					goto end;
 				}
 				break;
 			case X509_OBJ_EXTN_ID:
