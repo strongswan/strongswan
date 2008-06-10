@@ -93,6 +93,42 @@
               0x05           "md5"						OID_MD5
             0x03             "encryptionAlgorithm"
               0x07           "3des-ede-cbc"				OID_3DES_EDE_CBC
+      0xCE                   ""
+        0x3D                 "ansi-X9-62"
+          0x02               "id-publicKeyType"
+            0x01             "id-ecPublicKey"			OID_EC_PUBLICKEY
+          0x03               "ellipticCurve"
+            0x00             "c-TwoCurve"
+              0x01           "c2pnb163v1"               OID_C2PNB163V1
+              0x02           "c2pnb163v2"				OID_C2PNB163V2
+              0x03           "c2pnb163v3"				OID_C2PNB163V3
+              0x04           "c2pnb176w1"				OID_C2PNB176W1
+              0x05           "c2tnb191v1"				OID_C2PNB191V1
+              0x06           "c2tnb191v2"				OID_C2PNB191V2
+              0x07           "c2tnb191v3"				OID_C2PNB191V3
+              0x08           "c2onb191v4"				OID_C2PNB191V4
+              0x09           "c2onb191v5"				OID_C2PNB191V5
+              0x0A           "c2pnb208w1"				OID_C2PNB208W1
+              0x0B           "c2tnb239v1"				OID_C2PNB239V1
+              0x0C           "c2tnb239v2"				OID_C2PNB239V2
+              0x0D           "c2tnb239v3"				OID_C2PNB239V3
+              0x0E           "c2onb239v4"				OID_C2PNB239V4
+              0x0F           "c2onb239v5"				OID_C2PNB239V5
+              0x10           "c2pnb272w1"				OID_C2PNB272W1
+              0x11           "c2pnb304w1"				OID_C2PNB304W1
+              0x12           "c2tnb359v1"				OID_C2PNB359V1
+              0x13           "c2pnb368w1"				OID_C2PNB368W1
+              0x14           "c2tnb431r1"				OID_C2PNB431R1
+            0x01             "primeCurve"
+              0x01           "prime192v1"				OID_PRIME192V1
+              0x02           "prime192v2"				OID_PRIME192V2
+              0x03           "prime192v3"				OID_PRIME192V3
+              0x04           "prime239v1"				OID_PRIME239V1
+              0x05           "prime239v2"				OID_PRIME239V2
+              0x06           "prime239v3"				OID_PRIME239V3
+              0x07           "prime256v1"				OID_PRIME256V1
+          0x04               "id-ecSigType"
+            0x01             "ecdsa-with-SHA1"			OID_ECDSA_WITH_SHA1
 0x2B                         ""
   0x06                       "dod"
     0x01                     "internet"
@@ -159,6 +195,40 @@
           0x02               "rsaSigWithripemd160"
           0x03               "rsaSigWithripemd128"
           0x04               "rsaSigWithripemd256"
+  0x81                       ""
+    0x04                     "Certicom"
+      0x00                   "curve"
+        0x01                 "sect163k1"				OID_SECT163K1
+        0x02                 "sect163r1"				OID_SECT163R1
+        0x03                 "sect239k1"				OID_SECT239K1
+        0x04                 "sect113r1"				OID_SECT113R1
+        0x05                 "sect113r2"				OID_SECT113R2
+        0x06                 "secp112r1"				OID_SECT112R1
+        0x07                 "secp112r2"				OID_SECT112R2
+        0x08                 "secp160r1"				OID_SECT160R1
+        0x09                 "secp160k1"				OID_SECT160K1
+        0x0A                 "secp256k1"				OID_SECT256K1
+        0x0F                 "sect163r2"				OID_SECT163R2
+        0x10                 "sect283k1"				OID_SECT283K1
+        0x11                 "sect283r1"				OID_SECT283R1
+        0x16                 "sect131r1"				OID_SECT131R1
+        0x17                 "sect131r2"				OID_SECT131R2
+        0x18                 "sect193r1"				OID_SECT193R1
+        0x19                 "sect193r2"				OID_SECT193R2
+        0x1A                 "sect233k1"				OID_SECT233K1
+        0x1B                 "sect233r1"				OID_SECT233R1
+        0x1C                 "secp128r1"				OID_SECT128R1
+        0x1D                 "secp128r2"				OID_SECT128R2
+        0x1E                 "secp160r2"				OID_SECT160R2
+        0x1F                 "secp192k1"				OID_SECT192K1
+        0x20                 "secp224k1"				OID_SECT224K1
+        0x21                 "secp224r1"				OID_SECT224R1
+        0x22                 "secp384r1"				OID_SECT384R1
+        0x23                 "secp521r1"				OID_SECT521R1
+        0x24                 "sect409k1"				OID_SECT409K1
+        0x25                 "sect409r1"				OID_SECT409R1
+        0x26                 "sect571k1"				OID_SECT571K1
+        0x27                 "sect571r1"				OID_SECT571R1
 0x60                         ""
   0x86                       ""
     0x48                     ""
