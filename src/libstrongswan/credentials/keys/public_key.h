@@ -39,7 +39,9 @@ enum key_type_t {
 	KEY_ANY,
 	/** RSA crypto system as in PKCS#1 */
 	KEY_RSA,
-	/** DSS, ElGamal, ECDSA, ... */
+	/** ECDSA as in ANSI X9.62 */
+	KEY_ECDSA,
+	/** DSS, ElGamal, ... */
 };
 
 /**
@@ -61,11 +63,19 @@ enum signature_scheme_t {
 	/** EMSA-PKCS1 signature as in PKCS#1 standard using SHA1 as hash.  */
 	SIGN_RSA_EMSA_PKCS1_SHA1,
 	/** EMSA-PKCS1 signature as in PKCS#1 standard using SHA256 as hash. */
-	SIGN_RSA_EMSA_PKCS1_SHA256,	
+	SIGN_RSA_EMSA_PKCS1_SHA256,
 	/** EMSA-PKCS1 signature as in PKCS#1 standard using SHA384 as hash. */
-	SIGN_RSA_EMSA_PKCS1_SHA384,	
+	SIGN_RSA_EMSA_PKCS1_SHA384,
 	/** EMSA-PKCS1 signature as in PKCS#1 standard using SHA512 as hash. */
-	SIGN_RSA_EMSA_PKCS1_SHA512,	
+	SIGN_RSA_EMSA_PKCS1_SHA512,
+	/** ECDSA using SHA-1 as hash. */
+	SIGN_ECDSA_WITH_SHA1,
+	/** ECDSA with SHA-256 on the P-256 curve as in RFC 4754 */
+	SIGN_ECDSA_256,
+	/** ECDSA with SHA-384 on the P-384 curve as in RFC 4754 */
+	SIGN_ECDSA_384,
+	/** ECDSA with SHA-512 on the P-521 curve as in RFC 4754 */
+	SIGN_ECDSA_521,
 };
 
 /**

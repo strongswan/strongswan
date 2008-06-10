@@ -135,10 +135,6 @@ static enumerator_t* create_private_enumerator(private_stroke_cred_t *this,
 {
 	id_data_t *data;
 
-	if (type != KEY_RSA && type != KEY_ANY)
-	{	/* we only have RSA keys */
-		return NULL;
-	}
 	data = malloc_thing(id_data_t);
 	data->this = this;
 	data->id = id;
@@ -251,10 +247,6 @@ static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
 	}
 	if (cert != CERT_X509 && cert != CERT_ANY)
 	{	/* we only have X509 certificates. TODO: ACs? */
-		return NULL;
-	}
-	if (key != KEY_RSA && key != KEY_ANY)
-	{	/* we only have RSA keys */
 		return NULL;
 	}
 	data = malloc_thing(id_data_t);
@@ -741,7 +733,7 @@ static void load_secrets(private_stroke_cred_t *this)
 			DBG1(DBG_CFG, "line %d: missing token", line_nr);
 			goto error;
 		}
-		if (match("RSA", &token))
+		if (match("RSA", &token) || match("EC", &token))
 		{
 			char path[PATH_MAX];
 			chunk_t filename;
@@ -749,6 +741,7 @@ static void load_secrets(private_stroke_cred_t *this)
 			private_key_t *key;
 			bool pgp = FALSE;
 			chunk_t chunk = chunk_empty;
+			key_type_t key_type = match("RSA", &token) ? KEY_RSA : KEY_ECDSA;
 
 			err_t ugh = extract_value(&filename, &line);
 
@@ -787,7 +780,7 @@ static void load_secrets(private_stroke_cred_t *this)
 
 			if (pem_asn1_load_file(path, &secret, &chunk, &pgp))
 			{
-				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
 										 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
 				if (key)
 				{
@@ -861,7 +854,7 @@ static void load_secrets(private_stroke_cred_t *this)
 		else
 		{
 			DBG1(DBG_CFG, "line %d: token must be either "
-				 "RSA, PSK, EAP, or PIN", line_nr);
+				 "RSA, EC, PSK, EAP, or PIN", line_nr);
 			goto error;
 		}
 	}

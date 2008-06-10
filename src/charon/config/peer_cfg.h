@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -27,6 +27,7 @@
 
 typedef enum cert_policy_t cert_policy_t;
 typedef enum unique_policy_t unique_policy_t;
+typedef enum config_auth_method_t config_auth_method_t;
 typedef struct peer_cfg_t peer_cfg_t;
 
 #include <library.h>
@@ -79,6 +80,23 @@ enum unique_policy_t {
  * enum strings for unique_policy_t
  */
 extern enum_name_t *unique_policy_names;
+
+/**
+ * Authentication method for this IKE_SA.
+ */
+enum config_auth_method_t {
+	/** authentication using public keys (RSA, ECDSA) */
+	CONF_AUTH_PUBKEY = 0,
+	/** authentication using a pre-shared secret */
+	CONF_AUTH_PSK,
+	/** authentication using EAP */
+	CONF_AUTH_EAP,
+};
+
+/**
+ * enum strings for config_auth_method_t
+ */
+extern enum_name_t *config_auth_method_names;
 
 /**
  * Configuration of a peer, specified by IDs.
@@ -208,7 +226,7 @@ struct peer_cfg_t {
 	 * 
 	 * @return			authentication method
 	 */
-	auth_method_t (*get_auth_method) (peer_cfg_t *this);
+	config_auth_method_t (*get_auth_method) (peer_cfg_t *this);
 	
 	/**
 	 * Get the EAP type to use for peer authentication.
@@ -375,7 +393,7 @@ struct peer_cfg_t {
 peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
 							cert_policy_t cert_policy, unique_policy_t unique,
-							auth_method_t auth_method, eap_type_t eap_type,
+							config_auth_method_t auth_method, eap_type_t eap_type,
 							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,
 							u_int32_t reauth_time, u_int32_t jitter_time,

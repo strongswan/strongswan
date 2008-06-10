@@ -105,7 +105,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 	peer_cfg_t *peer_cfg;
 	
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (peer_cfg && peer_cfg->get_auth_method(peer_cfg) == AUTH_RSA)
+	if (peer_cfg && peer_cfg->get_auth_method(peer_cfg) == CONF_AUTH_PUBKEY)
 	{
 		switch (peer_cfg->get_cert_policy(peer_cfg))
 		{

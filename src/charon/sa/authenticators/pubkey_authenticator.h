@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -16,21 +17,21 @@
  */
 
 /**
- * @defgroup rsa_authenticator rsa_authenticator
+ * @defgroup pubkey_authenticator pubkey_authenticator
  * @{ @ingroup authenticators
  */
 
-#ifndef RSA_AUTHENTICATOR_H_
-#define RSA_AUTHENTICATOR_H_
+#ifndef PUBKEY_AUTHENTICATOR_H_
+#define PUBKEY_AUTHENTICATOR_H_
 
-typedef struct rsa_authenticator_t rsa_authenticator_t;
+typedef struct pubkey_authenticator_t pubkey_authenticator_t;
 
 #include <sa/authenticators/authenticator.h>
 
 /**
- * Implementation of the authenticator_t interface using AUTH_RSA.
+ * Implementation of the authenticator_t interface using AUTH_PUBKEY.
  */
-struct rsa_authenticator_t {
+struct pubkey_authenticator_t {
 
 	/**
 	 * Implemented authenticator_t interface.
@@ -39,11 +40,11 @@ struct rsa_authenticator_t {
 };
 
 /**
- * Creates an authenticator for AUTH_RSA.
+ * Creates an authenticator for AUTH_PUBKEY.
  *
  * @param ike_sa		associated ike_sa
- * @return				rsa_authenticator_t object
+ * @return				pubkey_authenticator_t object
  */
-rsa_authenticator_t *rsa_authenticator_create(ike_sa_t *ike_sa);
+pubkey_authenticator_t *pubkey_authenticator_create(ike_sa_t *ike_sa);
 
-#endif /* RSA_AUTHENTICATOR_H_ @} */
+#endif /* PUBKEY_AUTHENTICATOR_H_ @} */

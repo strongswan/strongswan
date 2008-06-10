@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -28,7 +28,19 @@
 ENUM(cert_policy_names, CERT_ALWAYS_SEND, CERT_NEVER_SEND,
 	"CERT_ALWAYS_SEND",
 	"CERT_SEND_IF_ASKED",
-	"CERT_NEVER_SEND"
+	"CERT_NEVER_SEND",
+);
+
+ENUM(unique_policy_names, UNIQUE_NO, UNIQUE_KEEP,
+	"UNIQUE_NO",
+	"UNIQUE_REPLACE",
+	"UNIQUE_KEEP",
+);
+
+ENUM(config_auth_method_names, CONF_AUTH_PUBKEY, CONF_AUTH_EAP,
+	"CONF_AUTH_PUBKEY",
+	"CONF_AUTH_PSK",
+	"CONF_AUTH_EAP",
 );
 
 typedef struct private_peer_cfg_t private_peer_cfg_t;
@@ -96,7 +108,7 @@ struct private_peer_cfg_t {
 	/**
 	 * Method to use for own authentication data
 	 */
-	auth_method_t auth_method;
+	config_auth_method_t auth_method;
 	
 	/**
 	 * EAP type to use for peer authentication
@@ -307,15 +319,15 @@ static unique_policy_t get_unique_policy(private_peer_cfg_t *this)
 }
 
 /**
- * Implementation of connection_t.auth_method_t.
+ * Implementation of peer_cfg_t.get_auth_method.
  */
-static auth_method_t get_auth_method(private_peer_cfg_t *this)
+static config_auth_method_t get_auth_method(private_peer_cfg_t *this)
 {
 	return this->auth_method;
 }
 
 /**
- * Implementation of connection_t.get_eap_type.
+ * Implementation of peer_cfg_t.get_eap_type.
  */
 static eap_type_t get_eap_type(private_peer_cfg_t *this, u_int32_t *vendor)
 {
@@ -324,7 +336,7 @@ static eap_type_t get_eap_type(private_peer_cfg_t *this, u_int32_t *vendor)
 }
 
 /**
- * Implementation of connection_t.get_keyingtries.
+ * Implementation of peer_cfg_t.get_keyingtries.
  */
 static u_int32_t get_keyingtries(private_peer_cfg_t *this)
 {
@@ -521,7 +533,7 @@ static void destroy(private_peer_cfg_t *this)
 peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
 							cert_policy_t cert_policy, unique_policy_t unique,
-							auth_method_t auth_method, eap_type_t eap_type,
+							config_auth_method_t auth_method, eap_type_t eap_type,
 							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,
 							u_int32_t reauth_time, u_int32_t jitter_time,
@@ -544,7 +556,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_other_id = (identification_t* (*)(peer_cfg_t *))get_other_id;
 	this->public.get_cert_policy = (cert_policy_t (*) (peer_cfg_t *))get_cert_policy;
 	this->public.get_unique_policy = (unique_policy_t (*) (peer_cfg_t *))get_unique_policy;
-	this->public.get_auth_method = (auth_method_t (*) (peer_cfg_t *))get_auth_method;
+	this->public.get_auth_method = (config_auth_method_t (*) (peer_cfg_t *))get_auth_method;
 	this->public.get_eap_type = (eap_type_t (*) (peer_cfg_t *,u_int32_t*))get_eap_type;
 	this->public.get_keyingtries = (u_int32_t (*) (peer_cfg_t *))get_keyingtries;
 	this->public.get_rekey_time = (u_int32_t(*)(peer_cfg_t*))get_rekey_time;

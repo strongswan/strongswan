@@ -535,10 +535,12 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 				/* also handles the cases secret|rsasig and rsasig|secret */
 				for (;;)
 				{
-					if (streq(value, "rsasig"))
+					if (streq(value, "rsa") || streq(value, "rsasig"))
 						conn->policy |= POLICY_RSASIG | POLICY_ENCRYPT;
 					else if (streq(value, "secret") || streq(value, "psk"))
 						conn->policy |= POLICY_PSK | POLICY_ENCRYPT;
+					else if (streq(value, "ecdsa") || streq(value, "ecdsasig"))
+						conn->policy |= POLICY_ECDSASIG | POLICY_ENCRYPT;
 					else if (streq(value, "xauthrsasig"))
 						conn->policy |= POLICY_XAUTH_RSASIG | POLICY_ENCRYPT;
 					else if (streq(value, "xauthpsk"))

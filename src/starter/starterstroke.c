@@ -38,13 +38,12 @@
 #include "files.h"
 
 /**
- * Authentication mehtods, must be the same values as in charon
+ * Authentication mehtods, must be the same as in charon
  */
 enum auth_method_t {
-	AUTH_RSA = 1,
-	AUTH_PSK = 2,
-	AUTH_DSS = 3,
-	AUTH_EAP = 201,
+	AUTH_PUBKEY = 0,
+	AUTH_PSK,
+	AUTH_EAP,
 };
 
 static char* push_string(stroke_msg_t *msg, char *string)
@@ -213,10 +212,10 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.ikev2 = conn->keyexchange == KEY_EXCHANGE_IKEV2;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
 	
-	/* RSA is preferred before PSK and EAP */
-	if (conn->policy & POLICY_RSASIG)
+	/* PUBKEY is preferred to PSK and EAP */
+	if (conn->policy & POLICY_RSASIG || conn->policy & POLICY_ECDSASIG)
 	{
-		msg.add_conn.auth_method = AUTH_RSA;
+		msg.add_conn.auth_method = AUTH_PUBKEY;
 	}
 	else if (conn->policy & POLICY_PSK)
 	{

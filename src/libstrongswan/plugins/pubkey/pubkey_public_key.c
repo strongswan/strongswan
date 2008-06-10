@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Copyright (C) 2000-2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
@@ -61,6 +62,14 @@ static public_key_t *load(chunk_t blob)
 				if (oid == OID_RSA_ENCRYPTION)
 				{
 					type = KEY_RSA;
+				}
+				else if (oid == OID_EC_PUBLICKEY)
+				{
+					/* we need the whole subjectPublicKeyInfo for EC public keys */
+					key = lib->creds->create(lib->creds,
+								CRED_PUBLIC_KEY, KEY_ECDSA, BUILD_BLOB_ASN1_DER,
+								chunk_clone(blob), BUILD_END);
+					goto end;
 				}
 				else
 				{

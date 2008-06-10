@@ -120,7 +120,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 		"mediation", 2, ike_cfg,
 		identification_create_from_encoding(ID_KEY_ID, me),
 		identification_create_from_encoding(ID_KEY_ID, other),
-		CERT_NEVER_SEND, UNIQUE_REPLACE, AUTH_RSA,
+		CERT_NEVER_SEND, UNIQUE_REPLACE, CONF_AUTH_PUBKEY,
 		0, 0, 							/* EAP method, vendor */
 		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
@@ -149,7 +149,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 		name, 2, this->ike->get_ref(this->ike),
 		identification_create_from_encoding(ID_KEY_ID, me),
 		identification_create_from_encoding(ID_KEY_ID, other),
-		CERT_NEVER_SEND, UNIQUE_REPLACE, AUTH_RSA,
+		CERT_NEVER_SEND, UNIQUE_REPLACE, CONF_AUTH_PUBKEY,
 		0, 0, 							/* EAP method, vendor */
 		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3, 	/* jitter, overtime */

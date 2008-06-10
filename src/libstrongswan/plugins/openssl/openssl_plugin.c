@@ -26,6 +26,8 @@
 #include "openssl_ec_diffie_hellman.h"
 #include "openssl_rsa_private_key.h"
 #include "openssl_rsa_public_key.h"
+#include "openssl_ec_private_key.h"
+#include "openssl_ec_public_key.h"
 
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 
@@ -57,6 +59,10 @@ static void destroy(private_openssl_plugin_t *this)
 					(builder_constructor_t)openssl_rsa_private_key_builder);
 	lib->creds->remove_builder(lib->creds,
 					(builder_constructor_t)openssl_rsa_public_key_builder);
+	lib->creds->remove_builder(lib->creds,
+					(builder_constructor_t)openssl_ec_private_key_builder);
+	lib->creds->remove_builder(lib->creds,
+					(builder_constructor_t)openssl_ec_public_key_builder);
 	
 	EVP_cleanup();
 	
@@ -141,6 +147,12 @@ plugin_t *plugin_create()
 						(builder_constructor_t)openssl_rsa_private_key_builder);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 						(builder_constructor_t)openssl_rsa_public_key_builder);
+	
+	/* ec */
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+						(builder_constructor_t)openssl_ec_private_key_builder);
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
+						(builder_constructor_t)openssl_ec_public_key_builder);
 	
 	return &this->public.plugin;
 }

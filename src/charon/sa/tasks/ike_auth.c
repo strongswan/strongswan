@@ -158,7 +158,7 @@ static status_t build_auth(private_ike_auth_t *this, message_t *message)
 	authenticator_t *auth;
 	auth_payload_t *auth_payload;
 	peer_cfg_t *config;
-	auth_method_t method;
+	config_auth_method_t method;
 	status_t status;
 	
 	/* create own authenticator and add auth payload */
@@ -174,7 +174,7 @@ static status_t build_auth(private_ike_auth_t *this, message_t *message)
 	if (auth == NULL)
 	{
 		SIG(IKE_UP_FAILED, "configured authentication method %N not supported",
-			auth_method_names, method);
+			config_auth_method_names, method);
 		return FAILED;
 	}
 	
@@ -243,9 +243,9 @@ static status_t process_auth(private_ike_auth_t *this, message_t *message)
 		/* AUTH payload is missing, client wants to use EAP authentication */
 		return NOT_FOUND;
 	}
-
+	
 	auth_method = auth_payload->get_auth_method(auth_payload);
-	auth = authenticator_create(this->ike_sa, auth_method);
+	auth = authenticator_create_from_auth_payload(this->ike_sa, auth_payload);
 
 	if (auth == NULL)
 	{
@@ -539,7 +539,7 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 	}
 	
 	config = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (config->get_auth_method(config) == AUTH_EAP)
+	if (config->get_auth_method(config) == CONF_AUTH_EAP)
 	{
 		this->eap_auth = eap_authenticator_create(this->ike_sa);
 	}

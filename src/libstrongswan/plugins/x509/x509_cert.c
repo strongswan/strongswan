@@ -923,6 +923,9 @@ static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
 		case OID_SHA512_WITH_RSA:
 			scheme = SIGN_RSA_EMSA_PKCS1_SHA512;
 			break;
+		case OID_ECDSA_WITH_SHA1:
+			scheme = SIGN_ECDSA_WITH_SHA1;
+			break;
 		default:
 			return FALSE;
 	}
