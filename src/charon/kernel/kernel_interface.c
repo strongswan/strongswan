@@ -376,6 +376,16 @@ struct private_kernel_interface_t {
 	 * whether to install routes along policies
 	 */
 	bool install_routes;
+	
+	/**
+	 * routing table to install routes
+	 */
+	int routing_table;
+	
+	/**
+	 * priority of used routing table
+	 */
+	int routing_table_prio;
 };
 
 /**
@@ -1447,11 +1457,10 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 	struct rtmsg *msg;
 	chunk_t chunk;
 
-#if IPSEC_ROUTING_TABLE == 0
 	/* if route is 0.0.0.0/0, we can't install it, as it would
 	 * overwrite the default route. Instead, we add two routes:
 	 * 0.0.0.0/1 and 128.0.0.0/1 */
-	if (route->prefixlen == 0)
+	if (this->routing_table == 0 && route->prefixlen == 0)
 	{
 		route_entry_t half;
 		status_t status;
@@ -1468,7 +1477,6 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 		status = manage_srcroute(this, nlmsg_type, flags, &half);
 		return status;
 	}
-#endif
 	
 	memset(&request, 0, sizeof(request));
 
@@ -1480,7 +1488,7 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 	msg = (struct rtmsg*)NLMSG_DATA(hdr);
 	msg->rtm_family = route->src_ip->get_family(route->src_ip);
 	msg->rtm_dst_len = route->prefixlen;
-	msg->rtm_table = IPSEC_ROUTING_TABLE;
+	msg->rtm_table = this->routing_table;
 	msg->rtm_protocol = RTPROT_STATIC;
 	msg->rtm_type = RTN_UNICAST;
 	msg->rtm_scope = RT_SCOPE_UNIVERSE;
@@ -1642,7 +1650,7 @@ static host_t *get_route(private_kernel_interface_t *this, host_t *dest,
 				 * - is the default route or
 				 * - its destination net contains our destination
 				 */
-				if (msg->rtm_table != IPSEC_ROUTING_TABLE
+				if ((this->routing_table == 0 ||msg->rtm_table != this->routing_table)
 					&&  msg->rtm_dst_len > best
 					&& (msg->rtm_dst_len == 0 || /* default route */
 					(rta_dst.ptr && addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len))))
@@ -2738,7 +2746,11 @@ static status_t del_policy(private_kernel_interface_t *this,
  */
 static void destroy(private_kernel_interface_t *this)
 {
-	manage_rule(this, RTM_DELRULE, IPSEC_ROUTING_TABLE, IPSEC_ROUTING_TABLE_PRIO);
+	if (this->routing_table)
+	{
+		manage_rule(this, RTM_DELRULE, this->routing_table,
+					this->routing_table_prio);
+	}
 
 	this->job->cancel(this->job);
 	close(this->socket_xfrm_events);
@@ -2785,7 +2797,11 @@ kernel_interface_t *kernel_interface_create()
 	pthread_cond_init(&this->cond, NULL);
 	timerclear(&this->last_roam);
 	this->install_routes = lib->settings->get_bool(lib->settings,
-												"charon.install_routes", TRUE);
+					"charon.install_routes", TRUE);
+	this->routing_table = lib->settings->get_int(lib->settings,
+					"charon.routing_table", IPSEC_ROUTING_TABLE);
+	this->routing_table_prio = lib->settings->get_int(lib->settings,
+					"charon.routing_table_prio", IPSEC_ROUTING_TABLE_PRIO);
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 	
@@ -2847,10 +2863,13 @@ kernel_interface_t *kernel_interface_create()
 		charon->kill(charon, "unable to get interface list");
 	}
 	
-	if (manage_rule(this, RTM_NEWRULE, IPSEC_ROUTING_TABLE,
-					IPSEC_ROUTING_TABLE_PRIO) != SUCCESS)
+	if (this->routing_table)
 	{
-		DBG1(DBG_KNL, "unable to create routing table rule");
+		if (manage_rule(this, RTM_NEWRULE, this->routing_table,
+						this->routing_table_prio) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "unable to create routing table rule");
+		}
 	}
 	
 	return &this->public;
