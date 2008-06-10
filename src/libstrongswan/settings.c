@@ -164,7 +164,7 @@ static bool get_bool(private_settings_t *this, char *key, bool def)
 	if (value)
 	{
 		if (strcasecmp(value, "true") == 0 ||
-			strcasecmp(value, "enables") == 0 ||
+			strcasecmp(value, "enabled") == 0 ||
 			strcasecmp(value, "yes") == 0 ||
 			strcasecmp(value, "1") == 0)
 		{
@@ -318,6 +318,7 @@ static section_t* parse_section(char **text, char *name)
 						continue;
 					}
 				}
+				DBG1("matching '}' not found near %s", *text);
 				break;
 			case '=':
 				if (parse(text, "\t ", "\n", NULL, &value))
@@ -328,6 +329,7 @@ static section_t* parse_section(char **text, char *name)
 					section->kv->insert_last(section->kv, kv);
 					continue;
 				}
+				DBG1("parsing value failed near %s", *text);
 				break;
 			case '#':
 				parse(text, "", "\n", NULL, &value);
