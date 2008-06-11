@@ -42,6 +42,8 @@ enum builder_part_t {
 	BUILD_FROM_FILE,
 	/** DER encoded ASN1 blob, chunk_t */
 	BUILD_BLOB_ASN1_DER,
+	/** PEM encoded ASN1 blob, null terminated char* */
+	BUILD_BLOB_ASN1_PEM,
 	/** key size in bits, as used for key generation, u_int */
 	BUILD_KEY_SIZE,
 	/** private key to use for signing, private_key_t* */

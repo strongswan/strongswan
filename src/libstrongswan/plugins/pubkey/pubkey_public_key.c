@@ -20,6 +20,7 @@
 #include "pubkey_public_key.h"
 
 #include <debug.h>
+#include <asn1/pem.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
@@ -131,19 +132,34 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 		DBG1("ignoring surplus build part %N", builder_part_names, part);
 		return;
 	}
+	va_start(args, part);
 	switch (part)
 	{
 		case BUILD_BLOB_ASN1_DER:
 		{
-			va_start(args, part);
 			this->key = load(va_arg(args, chunk_t));
-			va_end(args);
+			break;
+		}
+		case BUILD_BLOB_ASN1_PEM:
+		{
+			bool pgp;
+			char *pem;
+			chunk_t blob;
+			
+			pem = va_arg(args, char *);
+			blob = chunk_clone(chunk_create(pem, strlen(pem)));
+			if (pem_to_bin(&blob, &chunk_empty, &pgp))
+			{
+				this->key = load(chunk_clone(blob));
+			}
+			free(blob.ptr);
 			break;
 		}
 		default:
 			DBG1("ignoring unsupported build part %N", builder_part_names, part);
 			break;
 	}
+	va_end(args);
 }
 
 /**
