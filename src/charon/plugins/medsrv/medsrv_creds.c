@@ -121,7 +121,7 @@ static enumerator_t* create_cert_enumerator(private_medsrv_creds_t *this,
 	e->public.enumerate = (void*)cert_enumerator_enumerate;
 	e->public.destroy = (void*)cert_enumerator_destroy;
 	e->inner = this->db->query(this->db,
-							   "SELECT PublicKey FROM Peer WHERE KeyId = ?",
+							   "SELECT public_key FROM peer WHERE keyid = ?",
 							   DB_BLOB, id->get_encoding(id),
 							   DB_BLOB);
 	if (!e->inner)

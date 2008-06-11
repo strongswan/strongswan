@@ -11,6 +11,7 @@ endif
 if USE_PLUTO
   SUBDIRS += libcrypto pluto whack
 endif
+
 if USE_CHARON
   SUBDIRS += charon
 endif
@@ -37,6 +38,10 @@ endif
 
 if USE_MANAGER
   SUBDIRS += manager
+endif
+
+if USE_MEDSRV
+  SUBDIRS += medsrv
 endif
 
 EXTRA_DIST = strongswan.conf

@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.2.4)
+AC_INIT(strongSwan,4.2.4rc6)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_C_BIGENDIAN
 AC_SUBST(confdir, '${sysconfdir}')
@@ -315,7 +315,7 @@ AC_ARG_ENABLE(
 
 AC_ARG_ENABLE(
 	[medsrv],
-	AS_HELP_STRING([--enable-medsrv],[enable mediation server configuration database plugin (default is NO).]),
+	AS_HELP_STRING([--enable-medsrv],[enable mediation server web frontend and daemon plugin (default is NO).]),
 	[if test x$enableval = xyes; then
 		medsrv=true
 	fi]
@@ -589,6 +589,7 @@ fi
 
 if test x$medsrv = xtrue; then
 	me=true
+	fast=true
 fi
 
 if test x$medcli = xtrue; then
@@ -865,5 +866,6 @@ AC_OUTPUT(
 	src/dumm/Makefile
 	src/libfast/Makefile
 	src/manager/Makefile
+	src/medsrv/Makefile
 	testing/Makefile
 )

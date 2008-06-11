@@ -85,9 +85,9 @@ static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 		return NULL;
 	}
 	e = this->db->query(this->db,
-			"SELECT CONCAT(Peer.Alias, CONCAT('@', User.Login)) FROM "
-			"Peer JOIN User ON Peer.IdUser = User.IdUser "
-			"WHERE Peer.KeyID = ?", DB_BLOB, other->get_encoding(other),
+			"SELECT CONCAT(peer.alias, CONCAT('@', user.login)) FROM "
+			"peer JOIN user ON peer.user = user.id "
+			"WHERE peer.keyid = ?", DB_BLOB, other->get_encoding(other),
 			DB_TEXT);
 	if (e)
 	{
@@ -137,8 +137,8 @@ medsrv_config_t *medsrv_config_create(database_t *db)
 	
 	this->db = db;
 	this->rekey = lib->settings->get_int(lib->settings,
-										 "medmanager.rekey", 20) * 60;
-	this->dpd = lib->settings->get_int(lib->settings, "medmanager.dpd", 300);
+										 "medsrv.rekey", 20) * 60;
+	this->dpd = lib->settings->get_int(lib->settings, "medsrv.dpd", 300);
 	this->ike = ike_cfg_create(FALSE, FALSE, "0.0.0.0", "0.0.0.0");
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
 	
