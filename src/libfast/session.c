@@ -96,22 +96,22 @@ static void create_sid(private_session_t *this, request_t *request)
 /**
  * run all registered filters
  */
-static bool run_filter(private_session_t *this, request_t *request,
-					   controller_t *controller)
+static bool run_filter(private_session_t *this, request_t *request, char *p0,
+					   char *p1, char *p2, char *p3, char *p4, char *p5)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	filter_t *filter;
 	
-	iterator = this->filters->create_iterator(this->filters, TRUE);
-	while (iterator->iterate(iterator, (void**)&filter))
+	enumerator = this->filters->create_enumerator(this->filters);
+	while (enumerator->enumerate(enumerator, &filter))
 	{
-		if (!filter->run(filter, request, controller))
+		if (!filter->run(filter, request, p0, p1, p2, p3, p4, p5))
 		{
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 			return FALSE;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return TRUE;
 }
 
@@ -121,7 +121,7 @@ static bool run_filter(private_session_t *this, request_t *request,
 static void process(private_session_t *this, request_t *request)
 {
 	char *pos, *start, *param[6] = {NULL, NULL, NULL, NULL, NULL, NULL};
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	bool handled = FALSE;
 	controller_t *current;
 	int i = 0;
@@ -134,31 +134,36 @@ static void process(private_session_t *this, request_t *request)
 	start = request->get_path(request);
 	if (start)
 	{
-		if (*start == '/') start++;
+		if (*start == '/')
+		{
+			start++;
+		}
 		while ((pos = strchr(start, '/')) != NULL && i < 5)
 		{
-			param[i++] = strndup(start, pos - start);
+			param[i++] = strndupa(start, pos - start);
 			start = pos + 1;
 		}
-		param[i] = strdup(start);
-		iterator = this->controllers->create_iterator(this->controllers, TRUE);
-		while (iterator->iterate(iterator, (void**)&current))
+		param[i] = strdupa(start);
+		
+		if (run_filter(this, request, param[0], param[1], param[2], param[3], 
+					    param[4], param[5]))
 		{
-			if (streq(current->get_name(current), param[0]))
-			{	
-				if (run_filter(this, request, current))
-				{
+			enumerator = this->controllers->create_enumerator(this->controllers);
+			while (enumerator->enumerate(enumerator, &current))
+			{
+				if (streq(current->get_name(current), param[0]))
+				{	
 					current->handle(current, request, param[1], param[2],
 									param[3], param[4], param[5]);
 					handled = TRUE;
+					break;
 				}
-				break;
 			}
+			enumerator->destroy(enumerator);
 		}
-		iterator->destroy(iterator);
-		for (i = 0; i < 6; i++)
+		else
 		{
-			free(param[i]);
+			handled = TRUE;
 		}
 	}
 	if (!handled)
@@ -186,7 +191,7 @@ static void destroy(private_session_t *this)
 {
 	this->controllers->destroy_offset(this->controllers, offsetof(controller_t, destroy));
 	this->filters->destroy_offset(this->filters, offsetof(filter_t, destroy));
-	if (this->context) this->context->destroy(this->context);
+	DESTROY_IF(this->context);
 	free(this->sid);
 	free(this);
 }

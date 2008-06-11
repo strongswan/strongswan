@@ -43,13 +43,18 @@ typedef filter_t *(*filter_constructor_t)(context_t* context, void *param);
 struct filter_t {
 	
 	/**
-	 * Called before the controller handles the request
+	 * Called before the controller handles the request.
 	 *
 	 * @param request		HTTP request
-	 * @param controller	selected controller, before execution
+	 * @param p1			first parameter
+	 * @param p2			second parameter
+	 * @param p3			third parameter
+	 * @param p4			forth parameter
+	 * @param p5			fifth parameter
 	 * @return				TRUE to continue request handling
 	 */
-	bool (*run)(filter_t *this, request_t *request, controller_t *controller);
+	bool (*run)(filter_t *this, request_t *request,
+				char *p0, char *p1, char *p2, char *p3, char *p4, char *p5);
 	
 	/**
 	 * Destroy the filter instance.
