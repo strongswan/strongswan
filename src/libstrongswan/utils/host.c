@@ -480,7 +480,7 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	}
 	this = host_create_empty();
 	this->address.sa_family = host.h_addrtype;
-	switch (af)
+	switch (this->address.sa_family)
 	{
 		case AF_INET:
 			memcpy(&this->address4.sin_addr.s_addr,
