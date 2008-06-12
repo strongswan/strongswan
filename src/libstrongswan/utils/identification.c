@@ -832,8 +832,8 @@ static id_match_t matches_string(private_identification_t *this,
 		{	/* not better than ID_ANY */
 			return ID_MATCH_ANY;
 		}
-		if (memeq(this->encoded.ptr + this->encoded.len - len, 
-				  other->encoded.ptr + 1, len))
+		if (strncasecmp(this->encoded.ptr + this->encoded.len - len, 
+						other->encoded.ptr + 1, len) == 0)
 		{
 			return ID_MATCH_ONE_WILDCARD;
 		}
