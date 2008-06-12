@@ -20,6 +20,8 @@
 
 #include <string.h>
 
+#include <daemon.h>
+
 
 typedef struct private_ike_cfg_t private_ike_cfg_t;
 
@@ -136,6 +138,7 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
 	stored_iter = this->proposals->create_iterator(this->proposals, TRUE);
 	supplied_iter = proposals->create_iterator(proposals, TRUE);
 	
+	
 	/* compare all stored proposals with all supplied. Stored ones are preferred.*/
 	while (stored_iter->iterate(stored_iter, (void**)&stored))
 	{
@@ -149,6 +152,9 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
 				/* they match, return */
 				stored_iter->destroy(stored_iter);
 				supplied_iter->destroy(supplied_iter);
+				DBG2(DBG_CFG, "received proposals: %#P", proposals);
+				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
+				DBG2(DBG_CFG, "selected proposal: %P", selected);
 				return selected;
 			}
 		}
@@ -156,6 +162,8 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
 	/* no proposal match :-(, will result in a NO_PROPOSAL_CHOSEN... */
 	stored_iter->destroy(stored_iter);
 	supplied_iter->destroy(supplied_iter);
+	DBG1(DBG_CFG, "received proposals: %#P", proposals);
+	DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
 	
 	return NULL;
 }

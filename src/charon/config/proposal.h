@@ -232,4 +232,14 @@ proposal_t *proposal_create_default(protocol_id_t protocol);
  */
 proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs);
 
+/**
+ * Get printf hooks for a proposal.
+ *
+ * Arguments are: 
+ *    proposal_t *proposal
+ * With the #-specifier, arguments are:
+ *    linked_list_t *list containing proposal_t*
+ */
+printf_hook_functions_t proposal_get_printf_hooks();
+
 #endif /* PROPOSAL_H_ @} */

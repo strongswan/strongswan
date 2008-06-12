@@ -193,6 +193,9 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 			selected = stored->select(stored, supplied);
 			if (selected)
 			{
+				DBG2(DBG_CFG, "received proposals: %#P", proposals);
+				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
+				DBG2(DBG_CFG, "selected proposal: %P", selected);
 				break;
 			}
 		}
@@ -206,6 +209,11 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 	}
 	stored_enum->destroy(stored_enum);
 	supplied_enum->destroy(supplied_enum);
+	if (selected == NULL)
+	{
+		DBG1(DBG_CFG, "received proposals: %#P", proposals);
+		DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
+	}
 	return selected;
 }
 

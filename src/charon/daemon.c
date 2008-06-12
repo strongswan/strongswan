@@ -43,6 +43,7 @@
 
 #include <library.h>
 #include <config/traffic_selector.h>
+#include <config/proposal.h>
 
 /* on some distros, a capset definition is missing */
 #ifdef NO_CAPSET_DEFINED
@@ -559,6 +560,8 @@ int main(int argc, char *argv[])
 	library_init(STRONGSWAN_CONF);
 	lib->printf_hook->add_handler(lib->printf_hook, 'R',
 								  traffic_selector_get_printf_hooks());
+	lib->printf_hook->add_handler(lib->printf_hook, 'P',
+								  proposal_get_printf_hooks());
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
 	

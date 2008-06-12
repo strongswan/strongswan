@@ -47,8 +47,8 @@ ENUM_NEXT(transform_type_names, ENCRYPTION_ALGORITHM, EXTENDED_SEQUENCE_NUMBERS,
 ENUM_END(transform_type_names, EXTENDED_SEQUENCE_NUMBERS);
 
 ENUM(extended_sequence_numbers_names, NO_EXT_SEQ_NUMBERS, EXT_SEQ_NUMBERS,
-	"NO_EXT_SEQ_NUMBERS",
-	"EXT_SEQ_NUMBERS",
+	"NO_EXT_SEQ",
+	"EXT_SEQ",
 );
 
 typedef struct private_proposal_t private_proposal_t;
@@ -348,79 +348,57 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	selected = proposal_create(this->protocol);
 	
 	/* select encryption algorithm */
-	if (select_algo(this->encryption_algos, other->encryption_algos, &add, &algo, &key_size))
+	if (select_algo(this->encryption_algos, other->encryption_algos,
+					&add, &algo, &key_size))
 	{
 		if (add)
 		{
-			selected->add_algorithm(selected, ENCRYPTION_ALGORITHM, algo, key_size);
+			selected->add_algorithm(selected, ENCRYPTION_ALGORITHM,
+									algo, key_size);
 		}
 	}
 	else
 	{
-		enumerator_t *e;
-		algorithm_t *alg;
-
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable ENCRYPTION_ALGORITHM found");
-		DBG2(DBG_CFG, "  list of received ENCRYPTION_ALGORITHM proposals:");
-		e = other->encryption_algos->create_enumerator(other->encryption_algos);
-		while (e->enumerate(e, &alg))
-		{
-			DBG2(DBG_CFG, "  %N-%d", encryption_algorithm_names,
-									 alg->algorithm, alg->key_size);
-		}
-		e->destroy(e);
+		DBG2(DBG_CFG, "  no acceptable %N found",
+			 transform_type_names, ENCRYPTION_ALGORITHM);
 		return NULL;
 	}
 	/* select integrity algorithm */
 	if (!is_authenticated_encryption(algo))
 	{
-		if (select_algo(this->integrity_algos, other->integrity_algos, &add, &algo, &key_size))
+		if (select_algo(this->integrity_algos, other->integrity_algos,	
+						&add, &algo, &key_size))
 		{
 			if (add)
 			{
-				selected->add_algorithm(selected, INTEGRITY_ALGORITHM, algo, key_size);
+				selected->add_algorithm(selected, INTEGRITY_ALGORITHM,
+										algo, key_size);
 			}
 		}
 		else
 		{
-			enumerator_t *e;
-			algorithm_t *alg;
-
 			selected->destroy(selected);
-			DBG2(DBG_CFG, "  no acceptable INTEGRITY_ALGORITHM found");
-			DBG2(DBG_CFG, "  list of received INTEGRITY_ALGORITHM proposals:");
-			e = other->integrity_algos->create_enumerator(other->integrity_algos);
-			while (e->enumerate(e, &alg))
-			{
-				DBG2(DBG_CFG, "  %N", integrity_algorithm_names, alg->algorithm);
-			}
-			e->destroy(e);
+			DBG2(DBG_CFG, "  no acceptable %N found",
+				 transform_type_names, INTEGRITY_ALGORITHM);
 			return NULL;
 		}
 	}
 	/* select prf algorithm */
-	if (select_algo(this->prf_algos, other->prf_algos, &add, &algo, &key_size))
+	if (select_algo(this->prf_algos, other->prf_algos,
+					&add, &algo, &key_size))
 	{
 		if (add)
 		{
-			selected->add_algorithm(selected, PSEUDO_RANDOM_FUNCTION, algo, key_size);
+			selected->add_algorithm(selected, PSEUDO_RANDOM_FUNCTION,
+									algo, key_size);
 		}
 	}
 	else
 	{
-		enumerator_t *e;
-		algorithm_t *alg;
-
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable PSEUDO_RANDOM_FUNCTION found");
-		DBG2(DBG_CFG, "  list of received PSEUDO_RANDOM_FUNCTION proposals:");
-		e = other->prf_algos->create_enumerator(other->prf_algos);
-		while (e->enumerate(e, &alg))
-		{
-			DBG2(DBG_CFG, "  %N", pseudo_random_function_names, alg->algorithm);
-		}
-		e->destroy(e);
+		DBG2(DBG_CFG, "  no acceptable %N found",
+			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
 		return NULL;
 	}
 	/* select a DH-group */
@@ -433,18 +411,9 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	}
 	else
 	{
-		enumerator_t *e;
-		algorithm_t *alg;
-
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable DIFFIE_HELLMAN_GROUP found");
-		DBG2(DBG_CFG, "  list of received DIFFIE_HELLMAN_GROUP proposals:");
-		e = other->dh_groups->create_enumerator(other->dh_groups);
-		while (e->enumerate(e, &alg))
-		{
-			DBG2(DBG_CFG, "  %N", diffie_hellman_group_names, alg->algorithm);
-		}
-		e->destroy(e);
+		DBG2(DBG_CFG, "  no acceptable %N found",
+			 transform_type_names, DIFFIE_HELLMAN_GROUP);
 		return NULL;
 	}
 	/* select if we use ESNs */
@@ -458,7 +427,8 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	else
 	{
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable EXTENDED_SEQUENCE_NUMBERS found");
+		DBG2(DBG_CFG, "  no acceptable %N found",
+			 transform_type_names, EXTENDED_SEQUENCE_NUMBERS);
 		return NULL;
 	}
 	DBG2(DBG_CFG, "  proposal matches");
@@ -605,7 +575,8 @@ static void check_proposal(private_proposal_t *this)
 	{
 		/* if all encryption algorithms in the proposal are authenticated encryption
 		 * algorithms we MUST NOT propose any integrity algorithms */
-		while (this->integrity_algos->remove_last(this->integrity_algos, (void**)&alg) == SUCCESS)
+		while (this->integrity_algos->remove_last(this->integrity_algos,
+												  (void**)&alg) == SUCCESS)
 		{
 			free(alg);
 		}
@@ -646,15 +617,18 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 				{
 					case   8: /* octets */
 					case  64: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV8, key_size);
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_CCM_ICV8, key_size);
 						break;
 					case  12: /* octets */
 					case  96: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV12, key_size);
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_CCM_ICV12, key_size);
 						break;
 					case  16: /* octets */
 					case 128: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV16, key_size);
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_CCM_ICV16, key_size);
 						break;
 					default:
 						/* invalid ICV size */
@@ -675,15 +649,18 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 				{
 					case   8: /* octets */
 					case  64: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV8, key_size);
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_GCM_ICV8, key_size);
 						break;
 					case  12: /* octets */
 					case  96: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV12, key_size);
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_GCM_ICV12, key_size);
 						break;
 					case  16: /* octets */
 					case 128: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, key_size);
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_GCM_ICV16, key_size);
 						break;
 					default:
 						/* invalid ICV size */
@@ -814,6 +791,109 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 }
 
 /**
+ * print all algorithms of a kind to stream
+ */
+static int print_alg(private_proposal_t *this, FILE *stream, u_int kind,
+					 void *names, bool *first)
+{
+	enumerator_t *enumerator;
+	size_t written = 0;
+	u_int16_t alg, size;
+	
+	enumerator = create_enumerator(this, kind);
+	while (enumerator->enumerate(enumerator, &alg, &size))
+	{
+		if (*first)
+		{
+			written += fprintf(stream, "%N", names, alg);
+			*first = FALSE;
+		}
+		else
+		{
+			written += fprintf(stream, "/%N", names, alg);
+		}
+		if (size)
+		{
+			written += fprintf(stream, "-%d", size);
+		}
+	}
+	enumerator->destroy(enumerator);
+	return written;
+}
+
+/**
+ * output handler in printf()
+ */
+static int print(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
+{
+	private_proposal_t *this = *((private_proposal_t**)(args[0]));
+	linked_list_t *list = *((linked_list_t**)(args[0]));
+	enumerator_t *enumerator;
+	size_t written = 0;
+	bool first = TRUE;
+	
+	if (this == NULL)
+	{
+		return fprintf(stream, "(null)");
+	}
+	
+	if (info->alt)
+	{
+		enumerator = list->create_enumerator(list);
+		while (enumerator->enumerate(enumerator, &this))
+		{	/* call recursivly */
+			if (first)
+			{
+				written += fprintf(stream, "%P", this);
+				first = FALSE;
+			}
+			else
+			{
+				written += fprintf(stream, ", %P", this);
+			}
+		}
+		enumerator->destroy(enumerator);
+		return written;
+	}
+	
+	written = fprintf(stream, "%N:", protocol_id_names, this->protocol);
+	written += print_alg(this, stream, ENCRYPTION_ALGORITHM,
+						 encryption_algorithm_names, &first);
+	written += print_alg(this, stream, INTEGRITY_ALGORITHM,
+						 integrity_algorithm_names, &first);
+	written += print_alg(this, stream, PSEUDO_RANDOM_FUNCTION,
+						 pseudo_random_function_names, &first);
+	written += print_alg(this, stream, DIFFIE_HELLMAN_GROUP,
+						 diffie_hellman_group_names, &first);
+	written += print_alg(this, stream, EXTENDED_SEQUENCE_NUMBERS,
+						 extended_sequence_numbers_names, &first);
+	return written;
+}
+
+/**
+ * arginfo handler for printf() proposal
+ */
+static int arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * return printf hook functions for a proposal
+ */
+printf_hook_functions_t proposal_get_printf_hooks()
+{
+	printf_hook_functions_t hooks = {print, arginfo};
+	
+	return hooks;
+}
+
+/**
  * Implements proposal_t.destroy.
  */
 static void destroy(private_proposal_t *this)
@@ -873,18 +953,18 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         256);
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,              0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_AES_XCBC_96,       0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_256_128,	0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_256_128, 0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_384_192,	0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_512_256,	0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_384_192, 0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_512_256, 0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_AES128_XCBC,        0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_256,      0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1,          0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5,           0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_384,      0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_512,      0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_2048_BIT, 		    0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_2048_BIT,          0);
 			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1536_BIT,          0);
 			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1024_BIT,          0);
 			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_4096_BIT,          0);
