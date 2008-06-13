@@ -814,8 +814,8 @@ static id_match_t matches_string(private_identification_t *this,
 	{
 		return ID_MATCH_NONE;
 	}
-	/* try a binary comparison first */
-	if (equals_binary(this, other))
+	/* try a equals check first */
+	if (equals_strcasecmp(this, other))
 	{
 		return ID_MATCH_PERFECT;
 	}
