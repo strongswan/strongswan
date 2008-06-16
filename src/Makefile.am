@@ -25,7 +25,7 @@ if USE_UPDOWN
 endif
 
 if USE_TOOLS
-  SUBDIRS += openac scepclient
+  SUBDIRS += libcrypto openac scepclient
 endif
 
 if USE_DUMM
