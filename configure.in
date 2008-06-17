@@ -555,6 +555,14 @@ AC_ARG_ENABLE(
 	fi],
 )
 
+AC_ARG_ENABLE(
+	[uci],
+	AS_HELP_STRING([--enable-uci],[enable OpenWRT UCI configuration plugin (default is NO).]),
+	[if test x$enableval = xyes; then
+		uci=true
+	fi]
+)
+
 dnl =========================
 dnl  check required programs
 dnl =========================
@@ -683,6 +691,11 @@ if test x$openssl = xtrue; then
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
+if test x$uci = xtrue; then
+	AC_HAVE_LIBRARY([uci],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])])
+	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
+fi
+
 dnl ======================================
 dnl  collect all plugins for libstrongswan
 dnl ======================================
@@ -776,6 +789,7 @@ dnl ==============
 AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
+AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unittest = xtrue)
@@ -853,6 +867,7 @@ AC_OUTPUT(
 	src/charon/plugins/sql/Makefile
 	src/charon/plugins/medsrv/Makefile
 	src/charon/plugins/medcli/Makefile
+	src/charon/plugins/uci/Makefile
 	src/charon/plugins/stroke/Makefile
 	src/charon/plugins/unit_tester/Makefile
 	src/stroke/Makefile

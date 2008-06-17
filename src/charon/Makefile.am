@@ -185,5 +185,10 @@ if USE_MEDCLI
   PLUGINS += medcli
 endif
 
+if USE_UCI
+	SUBDIRS += plugins/uci
+	PLUGINS += uci
+endif
+
 AM_CFLAGS += -DPLUGINS=\""${PLUGINS}\""
 
