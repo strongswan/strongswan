@@ -1669,6 +1669,13 @@ static host_t *get_route(private_kernel_interface_t *this, host_t *dest,
 					{
 						DESTROY_IF(src);
 						src = host_create_from_chunk(msg->rtm_family, rta_src, 0);
+						if (get_vip_refcount(this, src))
+						{	/* skip source address if it is installed by us */
+							DESTROY_IF(src);
+							src = NULL;
+							current = NLMSG_NEXT(current, len);
+							continue;
+						}
 					}
 					else
 					{
