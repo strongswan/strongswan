@@ -67,8 +67,17 @@ static proposal_t *create_proposal(char *string, protocol_id_t proto)
 		proposal = proposal_create_from_string(proto, string);
 	}
 	if (!proposal)
-	{
-		proposal = proposal_create_default(proto);
+	{	/* UCI default is aes/sha1 only */
+		if (proto == PROTO_IKE)
+		{
+			proposal = proposal_create_from_string(proto, 
+								"aes128-aes192-aes256-sha1-modp1536-modp2048");
+		}
+		else
+		{
+			proposal = proposal_create_from_string(proto, 
+								"aes128-aes192-aes256-sha1");
+		}
 	}
 	return proposal;
 }
@@ -187,7 +196,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 		child_cfg = child_cfg_create(name,
 					create_rekey(esp_rekey) + 300, create_rekey(ike_rekey), 300,
 					NULL, TRUE,	MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
-		child_cfg->add_proposal(child_cfg, create_proposal(esp_proposal, PROTO_IKE));
+		child_cfg->add_proposal(child_cfg, create_proposal(esp_proposal, PROTO_ESP));
 		child_cfg->add_traffic_selector(child_cfg, TRUE, create_ts(local_net));
 		child_cfg->add_traffic_selector(child_cfg, FALSE, create_ts(remote_net));
 		this->peer_cfg->add_child_cfg(this->peer_cfg, child_cfg);
