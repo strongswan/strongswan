@@ -17,6 +17,9 @@
  * $Id$
  */
 
+#define _GNU_SOURCE
+#include <string.h>
+
 #include "uci_config.h"
 #include "uci_parser.h"
 
@@ -53,43 +56,140 @@ typedef struct {
 } peer_enumerator_t;
 
 /**
+ * create a proposal from a string, with fallback to default
+ */
+static proposal_t *create_proposal(char *string, protocol_id_t proto)
+{
+	proposal_t *proposal = NULL;
+	
+	if (string)
+	{
+		proposal = proposal_create_from_string(proto, string);
+	}
+	if (!proposal)
+	{
+		proposal = proposal_create_default(proto);
+	}
+	return proposal;
+}
+
+/**
+ * create an identity, with fallback to %any
+ */
+static identification_t *create_id(char *string)
+{
+	identification_t *id = NULL;
+	
+	if (string)
+	{
+		id = identification_create_from_string(string);
+	}
+	if (!id)
+	{
+		id = identification_create_from_encoding(ID_ANY, chunk_empty);
+	}
+	return id;
+}
+
+/**
+ * create an traffic selector, fallback to dynamic
+ */
+static traffic_selector_t *create_ts(char *string)
+{
+	if (string)
+	{
+		int netbits = 32;
+		host_t *net;
+		char *pos;
+		
+		string = strdupa(string);
+		pos = strchr(string, '/');
+		if (pos)
+		{
+			*pos++ = '\0';
+			netbits = atoi(pos);
+		}
+		else
+		{
+			if (strchr(string, ':'))
+			{
+				netbits = 128;
+			}
+		}
+		net = host_create_from_string(string, 0);
+		if (net)
+		{
+			return traffic_selector_create_from_subnet(net, netbits, 0, 0);
+		}
+	}
+	return traffic_selector_create_dynamic(0, 0, 65535);
+}
+
+/**
+ * create a rekey time from a string with hours, with fallback
+ */
+static u_int create_rekey(char *string)
+{
+	u_int rekey = 0;
+	
+	if (string)
+	{
+		rekey = atoi(string);
+		if (rekey)
+		{
+			return rekey * 3600;
+		}
+	}
+	/* every 12 hours */
+	return 12 * 3600;
+}
+
+/**
  * Implementation of peer_enumerator_t.public.enumerate
  */
 static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 {
-	char *name, *local_id, *remote_ip;
+	char *name, *ike_proposal, *esp_proposal, *ike_rekey, *esp_rekey;
+	char *local_id, *local_addr, *local_net;
+	char *remote_id, *remote_addr, *remote_net;
 	child_cfg_t *child_cfg;
 	ike_cfg_t *ike_cfg;
 	
 	/* defaults */
 	name = "unnamed";
-	local_id = "%any";
-	remote_ip = "0.0.0.0";
+	local_id = NULL;
+	remote_id = NULL;
+	local_addr = "0.0.0.0";
+	remote_addr = "0.0.0.0";
+	local_net = NULL;
+	remote_net = NULL;
+	ike_proposal = NULL;
+	esp_proposal = NULL;
+	ike_rekey = NULL;
+	esp_rekey = NULL;
 	
-	if (this->inner->enumerate(this->inner, &name, &local_id, &remote_ip))
+	if (this->inner->enumerate(this->inner, &name, &local_id, &remote_id,
+			&local_addr, &remote_addr, &local_net, &remote_net,
+			&ike_proposal, &esp_proposal, &ike_rekey, &esp_rekey))
 	{
 		DESTROY_IF(this->peer_cfg);
-		ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", remote_ip);
-		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+		ike_cfg = ike_cfg_create(FALSE, FALSE, local_addr, remote_addr);
+		ike_cfg->add_proposal(ike_cfg, create_proposal(ike_proposal, PROTO_IKE));
 		this->peer_cfg = peer_cfg_create(
-					name, 2, ike_cfg,
-					identification_create_from_string(local_id),
-					identification_create_from_encoding(ID_ANY, chunk_empty),
+					name, 2, ike_cfg, create_id(local_id), create_id(remote_id),
 					CERT_SEND_IF_ASKED, UNIQUE_NO, CONF_AUTH_PSK,
-					0, 0, 				/* EAP method, vendor */
-					1, 3600*12, 0,  	/* keytries, rekey, reauth */
-					3600, 1800,			/* jitter, overtime */
-					TRUE, 60, 			/* mobike, dpddelay */
-					NULL, NULL, 		/* vip, pool */
-					FALSE, NULL, NULL); /* mediation, med by, peer id */
-		child_cfg = child_cfg_create(
-					name, 3600*4, 3600*3, 360, NULL, TRUE,
-					MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
-		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-		child_cfg->add_traffic_selector(child_cfg, TRUE,
-								traffic_selector_create_dynamic(0, 0, 65535));
-		child_cfg->add_traffic_selector(child_cfg, FALSE,
-								traffic_selector_create_dynamic(0, 0, 65535));
+					0, 0, 							/* EAP method, vendor */
+					1, create_rekey(ike_rekey), 0,  /* keytries, rekey, reauth */
+					1800, 900,						/* jitter, overtime */
+					TRUE, 60, 						/* mobike, dpddelay */
+					NULL, NULL, 					/* vip, pool */
+					FALSE, NULL, NULL); 			/* mediation, med by, peer id */
+		child_cfg = child_cfg_create(name,
+					create_rekey(esp_rekey) + 300, create_rekey(ike_rekey), 300,
+					NULL, TRUE,	MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
+		child_cfg->add_proposal(child_cfg, create_proposal(esp_proposal, PROTO_IKE));
+		child_cfg->add_traffic_selector(child_cfg, TRUE, create_ts(local_net));
+		child_cfg->add_traffic_selector(child_cfg, FALSE, create_ts(remote_net));
 		this->peer_cfg->add_child_cfg(this->peer_cfg, child_cfg);
 		*cfg = this->peer_cfg;
 		return TRUE;
@@ -120,7 +220,9 @@ static enumerator_t* create_peer_cfg_enumerator(private_uci_config_t *this,
 	e->public.destroy = (void*)peer_enumerator_destroy;
 	e->peer_cfg = NULL;
 	e->inner = this->parser->create_section_enumerator(this->parser, 
-										"local_id", "remote_ip", NULL);
+					"local_id", "remote_id", "local_addr", "remote_addr",
+					"local_net", "remote_net", "ike_proposal", "esp_proposal",
+					"ike_rekey", "esp_rekey", NULL);
 	if (!e->inner)
 	{
 		free(e);
@@ -146,18 +248,20 @@ typedef struct {
  */
 static bool ike_enumerator_enumerate(ike_enumerator_t *this, ike_cfg_t **cfg)
 {
-	char *name, *remote_ip;
+	char *local_addr, *remote_addr, *ike_proposal;
 	
 	/* defaults */
-	name = "unnamed";
-	remote_ip = "0.0.0.0";
+	local_addr = "0.0.0.0";
+	remote_addr = "0.0.0.0";
+	ike_proposal = NULL;
 	
-	if (this->inner->enumerate(this->inner, &name, &remote_ip))
+	if (this->inner->enumerate(this->inner, NULL,
+							   &local_addr, &remote_addr, &ike_proposal))
 	{
 		DESTROY_IF(this->ike_cfg);
-		this->ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", remote_ip);
+		this->ike_cfg = ike_cfg_create(FALSE, FALSE, local_addr, remote_addr);
 		this->ike_cfg->add_proposal(this->ike_cfg,
-									proposal_create_default(PROTO_IKE));
+									create_proposal(ike_proposal, PROTO_IKE));
 
 		*cfg = this->ike_cfg;
 		return TRUE;
@@ -187,7 +291,7 @@ static enumerator_t* create_ike_cfg_enumerator(private_uci_config_t *this,
 	e->public.destroy = (void*)ike_enumerator_destroy;
 	e->ike_cfg = NULL;
 	e->inner = this->parser->create_section_enumerator(this->parser, 
-												"remote_ip", NULL);
+							"local_addr", "remote_addr", "ike_proposal", NULL);
 	if (!e->inner)
 	{
 		free(e);

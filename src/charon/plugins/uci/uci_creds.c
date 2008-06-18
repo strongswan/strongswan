@@ -59,16 +59,18 @@ typedef struct {
 static bool shared_enumerator_enumerate(shared_enumerator_t *this,
 						shared_key_t **key, id_match_t *me, id_match_t *other)
 {
-	char *local_id, *psk;
-	identification_t *local;
+	char *local_id, *remote_id, *psk;
+	identification_t *local, *remote;
 
 	while (TRUE)
 	{
 		/* defaults */
 		local_id = "%any";
+		remote_id = "%any";
 		psk = NULL;
 		
-		if (!this->inner->enumerate(this->inner, NULL, &local_id, &psk))
+		if (!this->inner->enumerate(this->inner, NULL,
+									&local_id, &remote_id, &psk))
 		{
 			return FALSE;
 		}
@@ -83,9 +85,25 @@ static bool shared_enumerator_enumerate(shared_enumerator_t *this,
 			{
 				continue;
 			}
-			*me = this->me ? this->me->matches(this->me, local) : ID_MATCH_ANY;
+			*me = this->me ? this->me->matches(this->me, local)
+						   : ID_MATCH_ANY;
 			local->destroy(local);
 			if (!*me)
+			{
+				continue;
+			}
+		}
+		if (other)
+		{
+			remote = identification_create_from_string(remote_id);
+			if (!remote)
+			{
+				continue;
+			}
+			*other = this->other ? this->other->matches(this->other, remote)
+								 : ID_MATCH_ANY;
+			remote->destroy(remote);
+			if (!*other)
 			{
 				continue;
 			}
@@ -96,10 +114,6 @@ static bool shared_enumerator_enumerate(shared_enumerator_t *this,
 	this->current = shared_key_create(SHARED_IKE,
 								chunk_clone(chunk_create(psk, strlen(psk))));
 	*key = this->current;
-	if (other)
-	{
-		*other = ID_MATCH_ANY;
-	}
 	return TRUE;
 }
 
@@ -135,7 +149,7 @@ static enumerator_t* create_shared_enumerator(private_uci_creds_t *this,
 	e->me = me;
 	e->other = other;
 	e->inner = this->parser->create_section_enumerator(this->parser, 
-											"local_id", "psk", NULL);
+								"local_id", "remote_id", "psk", NULL);
 	if (!e->inner)
 	{
 		free(e);
