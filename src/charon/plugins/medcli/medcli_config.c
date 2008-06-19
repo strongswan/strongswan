@@ -21,6 +21,7 @@
 #include "medcli_config.h"
 
 #include <daemon.h>
+#include <processing/jobs/callback_job.h>
 
 typedef struct private_medcli_config_t private_medcli_config_t;
 
@@ -115,7 +116,6 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	}
 	ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", address);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
-	DBG1(DBG_CFG, "mediation server id: %B", &other);
 	med_cfg = peer_cfg_create(
 		"mediation", 2, ike_cfg,
 		identification_create_from_encoding(ID_KEY_ID, me),
@@ -281,6 +281,61 @@ static enumerator_t* create_peer_cfg_enumerator(private_medcli_config_t *this,
 }
 
 /**
+ * initiate a peer config
+ */
+static job_requeue_t initiate_config(peer_cfg_t *peer_cfg)
+{
+	enumerator_t *enumerator;
+	child_cfg_t *child_cfg = NULL;;
+	
+	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+	enumerator->enumerate(enumerator, &child_cfg);
+	if (child_cfg)
+	{
+		child_cfg->get_ref(child_cfg);
+		peer_cfg->get_ref(peer_cfg);
+		enumerator->destroy(enumerator);
+		charon->controller->initiate(charon->controller,
+									 peer_cfg, child_cfg, NULL, NULL);
+	}
+	else
+	{
+		enumerator->destroy(enumerator);
+	}
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * schedule initation of all "active" connections
+ */
+static void schedule_autoinit(private_medcli_config_t *this)
+{
+	enumerator_t *e;
+	char *name;
+	
+	e = this->db->query(this->db, "SELECT Alias FROM Connection WHERE Active",
+						DB_TEXT);
+	if (e)
+	{
+		while (e->enumerate(e, &name))
+		{
+			peer_cfg_t *peer_cfg;
+			
+			peer_cfg = get_peer_cfg_by_name(this, name);
+			if (peer_cfg)
+			{
+				/* schedule asynchronous initiation job */
+				charon->processor->queue_job(charon->processor,
+						(job_t*)callback_job_create(
+									(callback_job_cb_t)initiate_config,
+									peer_cfg, (void*)peer_cfg->destroy, NULL));
+			}
+		}
+		e->destroy(e);
+	}
+}
+
+/**
  * Implementation of medcli_config_t.destroy.
  */
 static void destroy(private_medcli_config_t *this)
@@ -307,6 +362,8 @@ medcli_config_t *medcli_config_create(database_t *db)
 	this->dpd = lib->settings->get_int(lib->settings, "medclient.dpd", 300);
 	this->ike = ike_cfg_create(FALSE, FALSE, "0.0.0.0", "0.0.0.0");
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
+	
+	schedule_autoinit(this);
 	
 	return &this->public;
 }
