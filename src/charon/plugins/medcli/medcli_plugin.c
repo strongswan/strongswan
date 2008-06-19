@@ -19,6 +19,7 @@
 
 #include "medcli_creds.h"
 #include "medcli_config.h"
+#include "medcli_listener.h"
 
 #include <daemon.h>
 
@@ -48,6 +49,11 @@ struct private_medcli_plugin_t {
 	 * medcli config database
 	 */
 	medcli_config_t *config;
+	
+	/**
+	 * Listener to update database connection state
+	 */
+	medcli_listener_t *listener;
 };
 
 /**
@@ -55,8 +61,10 @@ struct private_medcli_plugin_t {
  */
 static void destroy(private_medcli_plugin_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	charon->credentials->remove_set(charon->credentials, &this->creds->set);
+	this->listener->destroy(this->listener);
 	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
 	this->db->destroy(this->db);
@@ -74,7 +82,7 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
 	uri = lib->settings->get_str(lib->settings,
-								 "medclient.database", NULL);
+								 "medcli.database", NULL);
 	if (!uri)
 	{
 		DBG1(DBG_CFG, "mediation client database URI not defined, skipped");
@@ -92,9 +100,11 @@ plugin_t *plugin_create()
 	
 	this->creds = medcli_creds_create(this->db);
 	this->config = medcli_config_create(this->db);
+	this->listener = medcli_listener_create(this->db);
 	
 	charon->credentials->add_set(charon->credentials, &this->creds->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
+	charon->bus->add_listener(charon->bus, &this->listener->listener);
 	
 	return &this->public.plugin;
 }
