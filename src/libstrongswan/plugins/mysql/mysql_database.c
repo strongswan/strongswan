@@ -407,7 +407,6 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 	switch (mysql_stmt_fetch(this->stmt))
 	{
 		case 0:
-		case MYSQL_DATA_TRUNCATED:
 			break;
 		case MYSQL_NO_DATA:
 			return FALSE;
