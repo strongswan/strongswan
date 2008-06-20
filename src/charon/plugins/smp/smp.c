@@ -390,11 +390,35 @@ static void request_control_terminate(xmlTextReaderPtr reader,
 		status_t status;
 	
 		str = xmlTextReaderConstValue(reader);
-		if (str == NULL || !(id = atoi(str)))
+		if (str == NULL)
 		{
 			DBG1(DBG_CFG, "error parsing XML id string");
 			return;
 		}
+		id = atoi(str);
+		if (!id)
+		{
+			enumerator_t *enumerator;
+			ike_sa_t *ike_sa;
+		
+			enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+			while (enumerator->enumerate(enumerator, &ike_sa))
+			{
+				if (streq(str, ike_sa->get_name(ike_sa)))
+				{
+					ike = TRUE;
+					id = ike_sa->get_unique_id(ike_sa);
+					break;
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+		if (!id)
+		{
+			DBG1(DBG_CFG, "error parsing XML id string");
+			return;
+		}
+		
 		DBG1(DBG_CFG, "terminating %s_SA %d", ike ? "IKE" : "CHILD", id);
 		
 		/* <log> */
