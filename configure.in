@@ -703,58 +703,58 @@ dnl ======================================
 libstrongswan_plugins=
 
 if test x$curl = xtrue; then
-	libstrongswan_plugins+=" curl"
+	libstrongswan_plugins=${libstrongswan_plugins}" curl"
 fi
 if test x$ldap = xtrue; then
-	libstrongswan_plugins+=" ldap"
+	libstrongswan_plugins=${libstrongswan_plugins}" ldap"
 fi
 if test x$aes = xtrue; then
-	libstrongswan_plugins+=" aes"
+	libstrongswan_plugins=${libstrongswan_plugins}" aes"
 fi
 if test x$des = xtrue; then
-	libstrongswan_plugins+=" des"
+	libstrongswan_plugins=${libstrongswan_plugins}" des"
 fi
 if test x$md5 = xtrue; then
-	libstrongswan_plugins+=" md5"
+	libstrongswan_plugins=${libstrongswan_plugins}" md5"
 fi
 if test x$sha1 = xtrue; then
-	libstrongswan_plugins+=" sha1"
+	libstrongswan_plugins=${libstrongswan_plugins}" sha1"
 fi
 if test x$sha2 = xtrue; then
-	libstrongswan_plugins+=" sha2"
+	libstrongswan_plugins=${libstrongswan_plugins}" sha2"
 fi
 if test x$fips_prf = xtrue; then
-	libstrongswan_plugins+=" fips-prf"
+	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
 fi
 if test x$gmp = xtrue; then
-	libstrongswan_plugins+=" gmp"
+	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 fi
 if test x$random = xtrue; then
-	libstrongswan_plugins+=" random"
+	libstrongswan_plugins=${libstrongswan_plugins}" random"
 fi
 if test x$x509 = xtrue; then
-	libstrongswan_plugins+=" x509"
+	libstrongswan_plugins=${libstrongswan_plugins}" x509"
 fi
 if test x$pubkey = xtrue; then
-	libstrongswan_plugins+=" pubkey"
+	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
 fi
 if test x$hmac = xtrue; then
-	libstrongswan_plugins+=" hmac"
+	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
 fi
 if test x$xcbc = xtrue; then
-	libstrongswan_plugins+=" xcbc"
+	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
 fi
 if test x$mysql = xtrue; then
-	libstrongswan_plugins+=" mysql"
+	libstrongswan_plugins=${libstrongswan_plugins}" mysql"
 fi
 if test x$sqlite = xtrue; then
-	libstrongswan_plugins+=" sqlite"
+	libstrongswan_plugins=${libstrongswan_plugins}" sqlite"
 fi
 if test x$padlock = xtrue; then
-	libstrongswan_plugins+=" padlock"
+	libstrongswan_plugins=${libstrongswan_plugins}" padlock"
 fi
 if test x$openssl = xtrue; then
-	libstrongswan_plugins+=" openssl"
+	libstrongswan_plugins=${libstrongswan_plugins}" openssl"
 fi
 
 AC_SUBST(libstrongswan_plugins)
