@@ -12,8 +12,8 @@ moon::cat /var/log/daemon.log::peer requested virtual IP %any::YES
 moon::cat /var/log/daemon.log::reassigning address from valid lease from pool.*bigpool::YES
 moon::cat /var/log/daemon.log::assigning virtual IP::YES
 moon::ipsec pool --status::bigpool.*10.3.0.1.*10.3.255.254.*static.*2::YES
-moon::ipsec pool --leases::bigpool.*10.3.0.1.*carol@strongswan.org.*online::YES
-moon::ipsec pool --leases::bigpool.*10.3.0.2.*dave@strongswan.org.*online::YES
+moon::ipsec pool --leases --filter pool=bigpool,addr=10.3.0.1,id=carol@strongswan.org::online::YES
+moon::ipsec pool --leases --filter pool=bigpool,addr=10.3.0.2,id=dave@strongswan.org::online::YES
 moon::ipsec status::rw.*ESTABLISHED.*carol@strongswan.org::YES
 moon::ipsec status::rw.*ESTABLISHED.*dave@strongswan.org::YES
 moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
