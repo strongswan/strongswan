@@ -32,4 +32,7 @@ cd /etc/openssl/sales
 openssl ca -gencrl -crldays 15 -config /etc/openssl/sales/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out sales.crl
 cp sales.crl         /var/www/localhost/htdocs/
-
+cd /etc/openssl/ecdsa
+openssl ca -gencrl -crldays 15 -config /etc/openssl/ecdsa/openssl.cnf -out crl.pem
+openssl crl -in crl.pem -outform der -out strongswan_ec.crl
+cp strongswan_ec.crl /var/www/localhost/htdocs/
