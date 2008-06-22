@@ -267,6 +267,10 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 			oid = OID_SHA1_WITH_RSA;
 			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
 			break;
+		case KEY_ECDSA:
+			oid = OID_ECDSA_WITH_SHA1;
+			scheme = SIGN_ECDSA_WITH_SHA1;
+			break;
 		default:
 			DBG1("unable to sign OCSP request, %N signature not supported",
 				 key_type_names, this->key->get_type(this->key));
