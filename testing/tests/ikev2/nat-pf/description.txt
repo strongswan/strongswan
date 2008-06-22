@@ -1,4 +1,0 @@
-The roadwarrior <b>carol</b> sets up a connection to host <b>alice</b> sitting behind the NAT router <b>moon</b>
-using IKEv2. Port Forwarding is used to publish host <b>alice</b>. UDP encapsulation is used to traverse the NAT router.
-The authentication is based on locally loaded <b>X.509 certificates</b>.
-In order to test the tunnel the roadwarrior <b>carol</b> pings the host <b>alice</b>.
