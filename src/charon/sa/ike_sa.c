@@ -185,6 +185,11 @@ struct private_ike_sa_t {
 	linked_list_t *child_sas;
 	
 	/**
+	 * String describing the selected IKE proposal
+	 */
+	char *selected_proposal;
+
+	/**
 	 * crypter for inbound traffic
 	 */
 	crypter_t *crypter_in;
@@ -1728,6 +1733,23 @@ static status_t derive_keys(private_ike_sa_t *this,
 }
 
 /**
+ * Implementation of ike_sa_t.get_proposal.
+ */
+static char* get_proposal(private_ike_sa_t *this)
+{
+	return this->selected_proposal;
+}
+
+/**
+ * Implementation of ike_sa_t.set_proposal.
+ */
+static void set_proposal(private_ike_sa_t *this, char *proposal)
+{
+	free(this->selected_proposal);
+	this->selected_proposal = strdup(proposal);
+}
+
+/**
  * Implementation of ike_sa_t.add_child_sa.
  */
 static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
@@ -2395,6 +2417,7 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->child_prf);
 	chunk_free(&this->skp_verify);
 	chunk_free(&this->skp_build);
+	free(this->selected_proposal);
 	
 	if (this->my_virtual_ip)
 	{
@@ -2495,6 +2518,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_skp_verify = (chunk_t (*)(ike_sa_t *)) get_skp_verify;
 	this->public.get_skp_build = (chunk_t (*)(ike_sa_t *)) get_skp_build;
 	this->public.derive_keys = (status_t (*)(ike_sa_t *,proposal_t*,chunk_t,chunk_t,chunk_t,bool,prf_t*,prf_t*)) derive_keys;
+	this->public.get_proposal = (char* (*)(ike_sa_t*)) get_proposal;
+	this->public.set_proposal = (void (*)(ike_sa_t*,char*)) set_proposal;
 	this->public.add_child_sa = (void (*)(ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
 	this->public.create_child_sa_iterator = (iterator_t* (*)(ike_sa_t*)) create_child_sa_iterator;
@@ -2534,6 +2559,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->extensions = 0;
 	this->conditions = 0;
+	this->selected_proposal = NULL;
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->signer_in = NULL;

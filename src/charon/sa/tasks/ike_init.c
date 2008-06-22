@@ -424,9 +424,16 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
-	
-	build_payloads(this, message);
 
+	/* Keep the selected IKE proposal for status information purposes */
+	{
+		char buf[BUF_LEN];
+
+		snprintf(buf, BUF_LEN, "%P", this->proposal);
+		this->ike_sa->set_proposal(this->ike_sa, buf+4);
+	}
+
+	build_payloads(this, message);
 	return SUCCESS;
 }
 
@@ -508,7 +515,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
 	{
-		SIG(IKE_UP_FAILED, "peers proposal selection invalid");
+		SIG(IKE_UP_FAILED, "peer's proposal selection invalid");
 		return FAILED;
 	}
 	
@@ -516,7 +523,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		!this->proposal->has_dh_group(this->proposal, this->dh_group) ||
 		this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
 	{
-		SIG(IKE_UP_FAILED, "peers DH group selection invalid");
+		SIG(IKE_UP_FAILED, "peer's DH group selection invalid");
 		return FAILED;
 	}
 	
@@ -548,6 +555,15 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		SIG(IKE_UP_FAILED, "key derivation failed");
 		return FAILED;
 	}
+
+	/* Keep the selected IKE proposal for status information purposes */
+	{
+		char buf[BUF_LEN];
+
+		snprintf(buf, BUF_LEN, "%P", this->proposal);
+		this->ike_sa->set_proposal(this->ike_sa, buf+4);
+	}
+
 	return SUCCESS;
 }
 

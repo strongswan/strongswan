@@ -52,7 +52,6 @@ struct private_stroke_list_t {
 static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 {
 	ike_sa_id_t *id = ike_sa->get_id(ike_sa);
-	u_int32_t rekey, reauth;
 
 	fprintf(out, "%12s[%d]: %N, %H[%D]...%H[%D]\n",
 			ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
@@ -62,26 +61,40 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (all)
 	{
+		char *ike_proposal = ike_sa->get_proposal(ike_sa);
+
 		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
 				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
 	
-		rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY_TIME);
-		reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH_TIME);
-		if (rekey)
+
+		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 		{
-			fprintf(out, ", rekeying in %V", &rekey);
-		}
-		if (reauth)
-		{
-			fprintf(out, ", reauthentication in %V", &reauth);
-		}
-		if (!rekey && !reauth)
-		{
-			fprintf(out, ", rekeying disabled");
+			u_int32_t rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY_TIME);
+			u_int32_t reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH_TIME);
+
+			if (rekey)
+			{
+				fprintf(out, ", rekeying in %V", &rekey);
+			}
+			if (reauth)
+			{
+				fprintf(out, ", reauthentication in %V", &reauth);
+			}
+			if (!rekey && !reauth)
+			{
+				fprintf(out, ", rekeying disabled");
+			}
 		}
 		fprintf(out, "\n");
+
+		if (ike_proposal)
+		{
+			fprintf(out, "%12s[%d]: IKE proposal: %s\n",
+					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
+					ike_proposal);
+		}		
 	}
 }
 
