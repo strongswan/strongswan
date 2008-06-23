@@ -165,15 +165,16 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 {
 	pop_string(msg, &msg->add_conn.name);
 	DBG1(DBG_CFG, "received stroke: add connection '%s'", msg->add_conn.name);
+
 	DBG2(DBG_CFG, "conn %s", msg->add_conn.name);
 	pop_end(msg, "left", &msg->add_conn.me);
 	pop_end(msg, "right", &msg->add_conn.other);
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
-	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
-	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	pop_string(msg, &msg->add_conn.ikeme.mediated_by);
 	pop_string(msg, &msg->add_conn.ikeme.peerid);
+	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
+	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	DBG2(DBG_CFG, "  mediation=%s", msg->add_conn.ikeme.mediation ? "yes" : "no");
 	DBG2(DBG_CFG, "  mediated_by=%s", msg->add_conn.ikeme.mediated_by);
 	DBG2(DBG_CFG, "  me_peerid=%s", msg->add_conn.ikeme.peerid);
@@ -245,13 +246,14 @@ static void stroke_add_ca(private_stroke_socket_t *this,
 						  stroke_msg_t *msg, FILE *out)
 {
 	pop_string(msg, &msg->add_ca.name);
+	DBG1(DBG_CFG, "received stroke: add ca '%s'", msg->add_ca.name);
+
 	pop_string(msg, &msg->add_ca.cacert);
 	pop_string(msg, &msg->add_ca.crluri);
 	pop_string(msg, &msg->add_ca.crluri2);
 	pop_string(msg, &msg->add_ca.ocspuri);
 	pop_string(msg, &msg->add_ca.ocspuri2);
 	pop_string(msg, &msg->add_ca.certuribase);
-
 	DBG2(DBG_CFG, "ca %s",            msg->add_ca.name);
 	DBG2(DBG_CFG, "  cacert=%s",      msg->add_ca.cacert);
 	DBG2(DBG_CFG, "  crluri=%s",      msg->add_ca.crluri);
@@ -259,8 +261,6 @@ static void stroke_add_ca(private_stroke_socket_t *this,
 	DBG2(DBG_CFG, "  ocspuri=%s",     msg->add_ca.ocspuri);
 	DBG2(DBG_CFG, "  ocspuri2=%s",    msg->add_ca.ocspuri2);
 	DBG2(DBG_CFG, "  certuribase=%s", msg->add_ca.certuribase);
-	
-	DBG1(DBG_CFG, "received stroke: add ca '%s'", msg->add_ca.name);
 	
 	this->ca->add(this->ca, msg);
 }
