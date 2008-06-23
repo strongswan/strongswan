@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `peer` (
   PRIMARY KEY  (`id`),
   UNIQUE KEY (`user`,`alias`),
   UNIQUE KEY (`keyid`),
-  KEY `user` (`user`)
+  KEY (`user`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `user` (
