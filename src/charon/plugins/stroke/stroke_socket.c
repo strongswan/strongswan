@@ -370,7 +370,10 @@ static void stroke_config(private_stroke_socket_t *this, stroke_msg_t *msg, FILE
  */
 static void stroke_job_context_destroy(stroke_job_context_t *this)
 {
-	close(this->fd);
+	if (this->fd)
+	{
+		close(this->fd);
+	}
 	free(this);
 }
 
@@ -392,17 +395,15 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 	{
 		DBG1(DBG_CFG, "reading length of stroke message failed: %s",
 			 strerror(errno));
-		close(strokefd);
 		return JOB_REQUEUE_NONE;
 	}
 	
 	/* read message */
-	msg = malloc(msg_length);
+	msg = alloca(msg_length);
 	bytes_read = recv(strokefd, msg, msg_length, 0);
 	if (bytes_read != msg_length)
 	{
 		DBG1(DBG_CFG, "reading stroke message failed: %s", strerror(errno));
-		close(strokefd);
 		return JOB_REQUEUE_NONE;
 	}
 	
@@ -410,17 +411,10 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 	if (out == NULL)
 	{
 		DBG1(DBG_CFG, "opening stroke output channel failed: %s", strerror(errno));
-		close(strokefd);
-		free(msg);
 		return JOB_REQUEUE_NONE;
 	}
 	
 	DBG3(DBG_CFG, "stroke message %b", (void*)msg, msg_length);
-	
-	/* the stroke_* functions are blocking, as they listen on the bus. Add
-	 * cancellation handlers. */
-	pthread_cleanup_push((void*)fclose, out);
-	pthread_cleanup_push(free, msg);
 	
 	switch (msg->type)
 	{
@@ -471,11 +465,11 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			break;
 		default:
 			DBG1(DBG_CFG, "received unknown stroke");
+			break;
 	}
-	/* remove and execute cancellation handlers */
-	pthread_cleanup_pop(1);
-	pthread_cleanup_pop(1);
-	
+	fclose(out);
+	/* fclose() closes underlying FD */
+	ctx->fd = 0;
 	return JOB_REQUEUE_NONE;
 }
 
