@@ -26,6 +26,12 @@
 #include <utils/mutex.h>
 #include <utils/linked_list.h>
 
+/* Older mysql.h headers do not define it, but we need it. It is not returned
+ * in in MySQL 4 by default, but by MySQL 5. To avoid this problem, we catch
+ * it in all cases. */
+#ifdef MYSQL_DATA_TRUNCATED
+#define MYSQL_DATA_TRUNCATED 101
+#endif
 
 typedef struct private_mysql_database_t private_mysql_database_t;
 
@@ -407,6 +413,7 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 	switch (mysql_stmt_fetch(this->stmt))
 	{
 		case 0:
+		case MYSQL_DATA_TRUNCATED:
 			break;
 		case MYSQL_NO_DATA:
 			return FALSE;
