@@ -2195,6 +2195,91 @@ static status_t add_sa(private_kernel_interface_t *this,
 }
 
 /**
+ * Get the replay state (i.e. sequence numbers) of an SA.
+ */
+static status_t get_replay_state(private_kernel_interface_t *this,
+						  u_int32_t spi, protocol_id_t protocol, host_t *dst,
+						  struct xfrm_replay_state *replay)
+{
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *hdr, *out = NULL;
+	struct xfrm_aevent_id *out_aevent = NULL, *aevent_id;
+	size_t len;
+	struct rtattr *rta;
+	size_t rtasize;
+	
+	memset(&request, 0, sizeof(request));
+	
+	DBG2(DBG_KNL, "querying replay state from SAD entry with SPI 0x%x", spi);
+
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = XFRM_MSG_GETAE;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_aevent_id));
+
+	aevent_id = (struct xfrm_aevent_id*)NLMSG_DATA(hdr);
+	aevent_id->flags = XFRM_AE_RVAL;
+	
+	host2xfrm(dst, &aevent_id->sa_id.daddr);
+	aevent_id->sa_id.spi = spi;
+	aevent_id->sa_id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : (protocol == PROTO_AH) ? KERNEL_AH : protocol;
+	aevent_id->sa_id.family = dst->get_family(dst);
+	
+	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
+	{
+		hdr = out;
+		while (NLMSG_OK(hdr, len))
+		{
+			switch (hdr->nlmsg_type)
+			{
+				case XFRM_MSG_NEWAE:
+				{
+					out_aevent = NLMSG_DATA(hdr);
+					break;
+				}
+				case NLMSG_ERROR:
+				{
+					struct nlmsgerr *err = NLMSG_DATA(hdr);
+					DBG1(DBG_KNL, "querying replay state from SAD entry failed: %s (%d)",
+						 strerror(-err->error), -err->error);
+					break;
+				}
+				default:
+					hdr = NLMSG_NEXT(hdr, len);
+					continue;
+				case NLMSG_DONE:
+					break;
+			}
+			break;
+		}
+	}
+	
+	if (out_aevent == NULL)
+	{
+		DBG1(DBG_KNL, "unable to query replay state from SAD entry with SPI 0x%x", spi);
+		free(out);
+		return FAILED;
+	}
+	
+	rta = XFRM_RTA(out, struct xfrm_aevent_id);
+	rtasize = XFRM_PAYLOAD(out, struct xfrm_aevent_id);
+	while(RTA_OK(rta, rtasize))
+	{
+		if (rta->rta_type == XFRMA_REPLAY_VAL)
+		{
+			memcpy(replay, RTA_DATA(rta), rta->rta_len);
+			free(out);
+			return SUCCESS;
+		}
+		rta = RTA_NEXT(rta, rtasize);
+	}
+	
+	DBG1(DBG_KNL, "unable to query replay state from SAD entry with SPI 0x%x", spi);
+	free(out);
+	return FAILED;
+}
+
+/**
  * Implementation of kernel_interface_t.update_sa.
  */
 static status_t update_sa(private_kernel_interface_t *this,
@@ -2210,6 +2295,8 @@ static status_t update_sa(private_kernel_interface_t *this,
 	struct rtattr *rta;
 	size_t rtasize;
 	struct xfrm_encap_tmpl* tmpl = NULL;
+	bool got_replay_state;
+	struct xfrm_replay_state replay;
 	
 	memset(&request, 0, sizeof(request));
 	
@@ -2255,10 +2342,21 @@ static status_t update_sa(private_kernel_interface_t *this,
 			break;
 		}
 	}
-	if (out_sa == NULL ||
-		this->public.del_sa(&this->public, dst, spi, protocol) != SUCCESS)
+	if (out_sa == NULL)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI 0x%x", spi);
+		free(out);
+		return FAILED;
+	}
+	
+	/* try to get the replay state */
+	got_replay_state = (get_replay_state(
+						this, spi, protocol, dst, &replay) == SUCCESS);
+	
+	/* delete the old SA */
+	if (this->public.del_sa(&this->public, dst, spi, protocol) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to delete old SAD entry with SPI 0x%x", spi);
 		free(out);
 		return FAILED;
 	}
@@ -2299,22 +2397,46 @@ static status_t update_sa(private_kernel_interface_t *this,
 				tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
 			}	
 			memcpy(pos, rta, rta->rta_len);
-			pos += rta->rta_len;
-			hdr->nlmsg_len += rta->rta_len;
+			pos += RTA_ALIGN(rta->rta_len);
+			hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
 		}
 		rta = RTA_NEXT(rta, rtasize);
 	}
+	
+	rta = (struct rtattr*)pos;
 	if (tmpl == NULL && encap)
 	{	/* add tmpl if we are enabling it */
-		rta = (struct rtattr*)pos;
 		rta->rta_type = XFRMA_ENCAP;
 		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
+		
 		hdr->nlmsg_len += rta->rta_len;
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
+		
 		tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rta);
 		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
 		tmpl->encap_sport = ntohs(new_src->get_port(new_src));
 		tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
 		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
+		
+		rta = XFRM_RTA_NEXT(rta);
+	}
+	
+	if (got_replay_state)
+	{	/* copy the replay data if available */
+		rta->rta_type = XFRMA_REPLAY_VAL;
+		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state));
+		
+		hdr->nlmsg_len += rta->rta_len;
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
+		memcpy(RTA_DATA(rta), &replay, sizeof(replay));
+		
+		rta = XFRM_RTA_NEXT(rta);
 	}
 	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
