@@ -204,7 +204,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	ike_sa_t *ike_sa;
-	char *name = NULL;
+	char *name = NULL, *plugin;
 	bool found = FALSE;
 	time_t uptime;
 	
@@ -222,6 +222,15 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 				charon->processor->get_job_load(charon->processor));
 		fprintf(out, " scheduled events: %d\n",
 				charon->scheduler->get_job_load(charon->scheduler));
+		fprintf(out, "  loaded plugins: ");
+		enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
+		while (enumerator->enumerate(enumerator, &plugin))
+		{
+			fprintf(out, "%s ", plugin);
+		}
+		enumerator->destroy(enumerator);
+		fprintf(out, "\n");
+		
 		iterator = charon->kernel_interface->create_address_iterator(
 													charon->kernel_interface);
 		fprintf(out, "Listening IP addresses:\n");

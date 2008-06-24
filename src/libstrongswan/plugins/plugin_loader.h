@@ -23,6 +23,8 @@
 
 typedef struct plugin_loader_t plugin_loader_t;
 
+#include <utils/enumerator.h>
+
 /**
  * The plugin_loader loads plugins from a directory and initializes them
  */
@@ -41,7 +43,14 @@ struct plugin_loader_t {
 	 * Unload all loaded plugins.
 	 */
 	void (*unload)(plugin_loader_t *this);
-		
+	
+	/**
+	 * Create an enumerator over all loaded plugin names.
+	 *
+	 * @return				enumerator over char*
+	 */
+	enumerator_t* (*create_plugin_enumerator)(plugin_loader_t *this);
+	
 	/**
      * Unload loaded plugins, destroy plugin_loader instance.
      */

@@ -15,9 +15,9 @@
  * $Id$
  */
 
+#define _GNU_SOURCE
 #include "plugin_loader.h"
 
-#define _GNU_SOURCE
 #include <string.h>
 #include <dlfcn.h>
 #include <limits.h>
@@ -43,6 +43,11 @@ struct private_plugin_loader_t {
 	 * list of loaded plugins
 	 */
 	linked_list_t *plugins;
+	
+	/**
+	 * names of loaded plugins
+	 */
+	linked_list_t *names;
 };
 
 /**
@@ -116,6 +121,7 @@ static int load(private_plugin_loader_t *this, char *path, char *list)
 		if (plugin)
 		{	/* insert in front to destroy them in reverse order */
 			this->plugins->insert_last(this->plugins, plugin);
+			this->names->insert_last(this->names, strdup(list));
 			count++;
 		}
 		if (pos)
@@ -136,13 +142,26 @@ static int load(private_plugin_loader_t *this, char *path, char *list)
 static void unload(private_plugin_loader_t *this)
 {
 	plugin_t *plugin;
+	char *name;
 	
 	while (this->plugins->remove_first(this->plugins,
 									   (void**)&plugin) == SUCCESS)
 	{
 		plugin->destroy(plugin);
 	}
+	while (this->names->remove_first(this->names, (void**)&name) == SUCCESS)
+	{
+		free(name);
+	}
 }
+
+/**
+ * Implementation of plugin_loader_t.create_plugin_enumerator
+ */
+static enumerator_t* create_plugin_enumerator(private_plugin_loader_t *this)
+{
+	return this->names->create_enumerator(this->names);
+}	 
 
 /**
  * Implementation of plugin_loader_t.destroy
@@ -150,6 +169,7 @@ static void unload(private_plugin_loader_t *this)
 static void destroy(private_plugin_loader_t *this)
 {
 	this->plugins->destroy_offset(this->plugins, offsetof(plugin_t, destroy));
+	this->plugins->destroy_function(this->plugins, free);
 	free(this);
 }
 
@@ -162,9 +182,11 @@ plugin_loader_t *plugin_loader_create()
 	
 	this->public.load = (int(*)(plugin_loader_t*, char *path, char *prefix))load;
 	this->public.unload = (void(*)(plugin_loader_t*))unload;
+	this->public.create_plugin_enumerator = (enumerator_t*(*)(plugin_loader_t*))create_plugin_enumerator;
 	this->public.destroy = (void(*)(plugin_loader_t*))destroy;
 	
 	this->plugins = linked_list_create();
+	this->names = linked_list_create();
 	
 	return &this->public;
 }
