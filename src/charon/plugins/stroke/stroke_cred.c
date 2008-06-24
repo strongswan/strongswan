@@ -733,7 +733,7 @@ static void load_secrets(private_stroke_cred_t *this)
 			DBG1(DBG_CFG, "line %d: missing token", line_nr);
 			goto error;
 		}
-		if (match("RSA", &token) || match("EC", &token))
+		if (match("RSA", &token) || match("ECDSA", &token))
 		{
 			char path[PATH_MAX];
 			chunk_t filename;
