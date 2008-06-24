@@ -38,7 +38,7 @@
 #include "files.h"
 
 /**
- * Authentication methods, must be the same as in charon/config/peer_cfg.h
+ * Authentication methods, must be the same as in charons authenticator.h
  */
 enum auth_method_t {
 	AUTH_PUBKEY =	1,
