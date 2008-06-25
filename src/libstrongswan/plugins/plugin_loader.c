@@ -169,7 +169,7 @@ static enumerator_t* create_plugin_enumerator(private_plugin_loader_t *this)
 static void destroy(private_plugin_loader_t *this)
 {
 	this->plugins->destroy_offset(this->plugins, offsetof(plugin_t, destroy));
-	this->plugins->destroy_function(this->plugins, free);
+	this->names->destroy_function(this->names, free);
 	free(this);
 }
 
