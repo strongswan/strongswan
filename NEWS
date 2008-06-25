@@ -4,6 +4,18 @@ strongswan-4.2.4
 - Added statistics functions to ip pool --status and ip pool --leases
   and input validation checks to various ip pool commands.
 
+- ipsec statusall now lists all loaded charon plugins and displays
+  the negotiated IKE cipher suite proposal.
+
+- The openssl plugin supports the elliptic curve Diffie-Hellman groups
+  19, 20, 21, 25, and 26.
+
+- The openssl plugin supports ECDSA authentication using elliptic curve
+  X.509 certificates.
+
+- Fixed a bug in stroke which caused multiple charon threads to close
+  the file descriptors during packet transfers over the stroke socket.
+ 
 
 strongswan-4.2.3
 ----------------
