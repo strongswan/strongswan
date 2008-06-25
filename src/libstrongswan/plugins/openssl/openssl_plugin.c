@@ -16,6 +16,7 @@
  */
 
 #include <openssl/evp.h>
+#include <openssl/engine.h>
 
 #include "openssl_plugin.h"
 
@@ -64,6 +65,7 @@ static void destroy(private_openssl_plugin_t *this)
 	lib->creds->remove_builder(lib->creds,
 					(builder_constructor_t)openssl_ec_public_key_builder);
 	
+	ENGINE_cleanup();
 	EVP_cleanup();
 	
 	free(this);
@@ -79,6 +81,10 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
 	OpenSSL_add_all_algorithms();
+	
+	/* activate support for hardware accelerators */
+	ENGINE_load_builtin_engines();
+	ENGINE_register_all_complete();
 	
 	/* crypter */
 	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
