@@ -2411,6 +2411,8 @@ static void destroy(private_ike_sa_t *this)
 {
 	this->child_sas->destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
 	
+	this->task_manager->destroy(this->task_manager);
+	
 	DESTROY_IF(this->crypter_in);
 	DESTROY_IF(this->crypter_out);
 	DESTROY_IF(this->signer_in);
@@ -2463,7 +2465,6 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->other_auth);
 	
 	this->ike_sa_id->destroy(this->ike_sa_id);
-	this->task_manager->destroy(this->task_manager);
 	free(this);
 }
 
