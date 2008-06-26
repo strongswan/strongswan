@@ -10,7 +10,9 @@ sun::ipsec statusall::ESTABLISHED.*PH_IP_SUN.*PH_IP_ALICE::YES
 alice::ipsec statusall::10.3.0.3/32 === 10.2.0.0/16::YES
 sun::ipsec statusall::10.2.0.0/16 === 10.3.0.3/32::YES
 alice::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
-moon::tcpdump::alice.strongswan.org.*sun.strongswan.org.*: ESP::YES
-moon::tcpdump::sun.strongswan.org.*alice.strongswan.org.*: ESP::YES
+sun::tcpdump::alice1.strongswan.org.*sun.strongswan.org: ESP.*seq=0x1::YES
+sun::tcpdump::sun.strongswan.org.*alice1.strongswan.org: ESP.*seq=0x1::YES
+moon::tcpdump::alice.strongswan.org.*sun.strongswan.org.*: ESP.*seq=0x2::YES
+moon::tcpdump::sun.strongswan.org.*alice.strongswan.org.*: ESP.*seq=0x2::YES
 bob::tcpdump::10.3.0.3.*bob.strongswan.org.*ICMP echo request::YES
 bob::tcpdump::bob.strongswan.org.*10.3.0.3.*ICMP echo reply::YES
