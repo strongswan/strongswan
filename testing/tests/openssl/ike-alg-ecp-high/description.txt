@@ -7,7 +7,7 @@ the Elliptic Curve Diffie-Hellman groups only.
 The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each 
 to gateway <b>moon</b>. The authentication is based on <b>X.509 certificates</b>.
 <b>carol</b> proposes the DH groups ECP_256 and ECP_384 whereas <b>dave</b> proposes
-ECP_256 and ECP_521. Since <b>moon</b> does not support ECP_521 the roadwarriors
+ECP_256 and ECP_521. Since <b>moon</b> does not support ECP_256 the roadwarriors
 fall back to ECP_384 and ECP_521, respectively.
 <p>
 Upon the successful establishment of the IPsec tunnels, <b>leftfirewall=yes</b>
