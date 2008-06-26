@@ -29,7 +29,7 @@
 /* Older mysql.h headers do not define it, but we need it. It is not returned
  * in in MySQL 4 by default, but by MySQL 5. To avoid this problem, we catch
  * it in all cases. */
-#ifdef MYSQL_DATA_TRUNCATED
+#ifndef MYSQL_DATA_TRUNCATED
 #define MYSQL_DATA_TRUNCATED 101
 #endif
 
