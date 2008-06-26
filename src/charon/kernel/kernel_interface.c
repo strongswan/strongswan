@@ -29,6 +29,7 @@
 #include <linux/rtnetlink.h>
 #include <linux/xfrm.h>
 #include <linux/udp.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -54,10 +55,6 @@
 #ifndef IPSEC_ROUTING_TABLE_PRIO
 #define IPSEC_ROUTING_TABLE_PRIO 100
 #endif
-
-/** kernel level protocol identifiers */
-#define KERNEL_ESP 50
-#define KERNEL_AH 51
 
 /** default priority of installed policies */
 #define PRIO_LOW 3000
@@ -389,6 +386,38 @@ struct private_kernel_interface_t {
 };
 
 /**
+ * convert a IKEv2 specific protocol identifier to the kernel one
+ */
+static u_int8_t proto_ike2kernel(protocol_id_t proto)
+{
+	switch (proto)
+	{
+		case PROTO_ESP:
+			return IPPROTO_ESP;
+		case PROTO_AH:
+			return IPPROTO_AH;
+		default:
+			return proto;
+	}
+}
+
+/**
+ * reverse of ike2kernel
+ */
+static protocol_id_t proto_kernel2ike(u_int8_t proto)
+{
+	switch (proto)
+	{
+		case IPPROTO_ESP:
+			return PROTO_ESP;
+		case IPPROTO_AH:
+			return PROTO_AH;
+		default:
+			return proto;
+	}
+}
+
+/**
  * convert a host_t to a struct xfrm_address
  */
 static void host2xfrm(host_t *host, xfrm_address_t *xfrm)
@@ -550,8 +579,7 @@ static void process_expire(private_kernel_interface_t *this, struct nlmsghdr *hd
 	struct xfrm_user_expire *expire;
 	
 	expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
-	protocol = expire->state.id.proto;
-	protocol = (protocol == KERNEL_ESP) ? PROTO_ESP : (protocol == KERNEL_AH) ? PROTO_AH : protocol;
+	protocol = proto_kernel2ike(expire->state.id.proto);
 	spi = expire->state.id.spi;
 	reqid = expire->state.reqid;
 	
@@ -1940,8 +1968,7 @@ static status_t get_spi(private_kernel_interface_t *this,
 {
 	DBG2(DBG_KNL, "getting SPI for reqid %d", reqid);
 	
-	if (get_spi_internal(this, src, dst,
-			(protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH,
+	if (get_spi_internal(this, src, dst, proto_ike2kernel(protocol),
 			0xc0000000, 0xcFFFFFFF, reqid, spi) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to get SPI for reqid %d", reqid);
@@ -1992,7 +2019,8 @@ static status_t add_sa(private_kernel_interface_t *this,
 {
 	unsigned char request[BUFFER_SIZE];
 	char *alg_name;
-	u_int16_t add_keymat = 32; /* additional 4 octets KEYMAT required for AES-GCM as of RFC4106 8.1. */
+	/* additional 4 octets KEYMAT required for AES-GCM as of RFC4106 8.1. */
+	u_int16_t add_keymat = 32; 
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
 	
@@ -2009,7 +2037,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	host2xfrm(src, &sa->saddr);
 	host2xfrm(dst, &sa->id.daddr);
 	sa->id.spi = spi;
-	sa->id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : (protocol == PROTO_AH) ? KERNEL_AH : protocol;
+	sa->id.proto = proto_ike2kernel(protocol);
 	sa->family = src->get_family(src);
 	sa->mode = mode;
 	sa->replay_window = (protocol == IPPROTO_COMP) ? 0 : 32;
@@ -2222,7 +2250,7 @@ static status_t get_replay_state(private_kernel_interface_t *this,
 	
 	host2xfrm(dst, &aevent_id->sa_id.daddr);
 	aevent_id->sa_id.spi = spi;
-	aevent_id->sa_id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : (protocol == PROTO_AH) ? KERNEL_AH : protocol;
+	aevent_id->sa_id.proto = proto_ike2kernel(protocol);
 	aevent_id->sa_id.family = dst->get_family(dst);
 	
 	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -2311,7 +2339,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
-	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : (protocol == PROTO_AH) ? KERNEL_AH : protocol;
+	sa_id->proto = proto_ike2kernel(protocol);
 	sa_id->family = dst->get_family(dst);
 	
 	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -2474,7 +2502,7 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
-	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : (protocol == PROTO_AH) ? KERNEL_AH : protocol;
+	sa_id->proto = proto_ike2kernel(protocol);
 	sa_id->family = dst->get_family(dst);
 	
 	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -2540,7 +2568,7 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
-	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : (protocol == PROTO_AH) ? KERNEL_AH : protocol;
+	sa_id->proto = proto_ike2kernel(protocol);
 	sa_id->family = dst->get_family(dst);
 	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
@@ -2667,7 +2695,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	}
 	
 	tmpl->reqid = reqid;
-	tmpl->id.proto = (protocol == PROTO_AH) ? KERNEL_AH : KERNEL_ESP;
+	tmpl->id.proto = proto_ike2kernel(protocol);
 	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 	tmpl->mode = mode;
 	tmpl->family = src->get_family(src);
