@@ -16,6 +16,9 @@ strongswan-4.2.4
 - Fixed a bug in stroke which caused multiple charon threads to close
   the file descriptors during packet transfers over the stroke socket.
  
+- ESP sequence numbers are now migrated in IPsec SA updates handled by
+  MOBIKE. Works only with Linux kernels >= 2.6.17.
+
 
 strongswan-4.2.3
 ----------------
