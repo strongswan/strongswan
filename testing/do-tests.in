@@ -472,9 +472,9 @@ do
 	    scp $HOSTLOGIN:/etc/ipsec.d/ipsec.sql \
 	    	$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
 
-	    ssh $HOSTLOGIN ip xfrm policy \
+	    ssh $HOSTLOGIN ip -s xfrm policy \
 		    > $TESTRESULTDIR/${host}.ip.policy 2>/dev/null
-	    ssh $HOSTLOGIN ip xfrm state \
+	    ssh $HOSTLOGIN ip -s xfrm state \
 		    > $TESTRESULTDIR/${host}.ip.state 2>/dev/null
 	    ssh $HOSTLOGIN ip route list table $SOURCEIP_ROUTING_TABLE \
 		    > $TESTRESULTDIR/${host}.ip.route 2>/dev/null
@@ -503,8 +503,8 @@ do
       </td>
 	<td valign="top">
 	  <ul>
-	    <li><a href="$host.ip.policy">ip xfrm policy</a></li>
-	    <li><a href="$host.ip.state">ip xfrm state</a></li>
+	    <li><a href="$host.ip.policy">ip -s xfrm policy</a></li>
+	    <li><a href="$host.ip.state">ip -s xfrm state</a></li>
 	    <li><a href="$host.ip.route">ip route list table $SOURCEIP_ROUTING_TABLE</a></li>
 	    <li><a href="$host.iptables">$IPTABLES -L</a></li>
 	  </ul>
