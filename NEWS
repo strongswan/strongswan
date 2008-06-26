@@ -1,11 +1,11 @@
 strongswan-4.2.4
 ----------------
 
-- Added statistics functions to ip pool --status and ip pool --leases
-  and input validation checks to various ip pool commands.
+- Added statistics functions to ipsec pool --status and ipsec pool --leases
+  and input validation checks to various ipsec pool commands.
 
 - ipsec statusall now lists all loaded charon plugins and displays
-  the negotiated IKE cipher suite proposal.
+  the negotiated IKEv2 cipher suite proposals.
 
 - The openssl plugin supports the elliptic curve Diffie-Hellman groups
   19, 20, 21, 25, and 26.
