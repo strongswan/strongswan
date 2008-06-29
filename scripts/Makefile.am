@@ -1,4 +1,5 @@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
+AM_CFLAGS =-DIPSEC_PLUGINDIR=\"${plugindir}\"
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid
 bin2array_SOURCES = bin2array.c

@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 	//dbg = dbg_stderr;
 	
 	library_init(NULL);
-	lib->plugins->load(lib->plugins, "/usr/local/libexec/ipsec/plugins", "gmp pubkey sha1");
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "gmp pubkey sha1");
 	atexit(library_deinit);
 
 	read = fread(buf, 1, sizeof(buf), stdin);
