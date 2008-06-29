@@ -1,4 +1,4 @@
-SUBDIRS = src testing
+SUBDIRS = src testing scripts
 EXTRA_DIST = Doxyfile.in CREDITS
 CLEANFILES = apidoc Doxyfile
 

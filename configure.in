@@ -882,5 +882,6 @@ AC_OUTPUT(
 	src/libfast/Makefile
 	src/manager/Makefile
 	src/medsrv/Makefile
+	scripts/Makefile
 	testing/Makefile
 )
