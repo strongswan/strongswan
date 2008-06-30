@@ -684,6 +684,15 @@ if test x$sqlite = xtrue; then
 			void *test = sqlite3_prepare_v2;
 		], 
 		[AC_MSG_RESULT([yes])]; AC_DEFINE_UNQUOTED(HAVE_SQLITE3_PREPARE_V2, 1), [AC_MSG_RESULT([no])])
+	AC_MSG_CHECKING([sqlite3.h version >= 3.3.1])
+	AC_TRY_COMPILE(
+		[#include <sqlite3.h>],
+		[
+			#if SQLITE_VERSION_NUMBER < 3003001
+				#error bad sqlite
+			#endif
+		], 
+		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([SQLite version >= 3.3.1 required!])])
 fi
 
 if test x$openssl = xtrue; then

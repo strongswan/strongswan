@@ -131,8 +131,8 @@ typedef struct {
 	int count;
 	/** column types */
 	db_type_t *columns;
-	/** reference to db connection */
-	sqlite3 *db;
+	/** back reference to parent */
+	private_sqlite_database_t *database;
 } sqlite_enumerator_t;
 
 /**
@@ -141,6 +141,9 @@ typedef struct {
 static void sqlite_enumerator_destroy(sqlite_enumerator_t *this)
 {
 	sqlite3_finalize(this->stmt);
+#if SQLITE_VERSION_NUMBER < 3005000
+	this->database->mutex->unlock(this->database->mutex);
+#endif
 	free(this->columns);
 	free(this);
 }
@@ -158,7 +161,8 @@ static bool sqlite_enumerator_enumerate(sqlite_enumerator_t *this, ...)
 		case SQLITE_ROW:
 			break;
 		default:
-			DBG1("stepping sqlite statement failed: %s", sqlite3_errmsg(this->db));
+			DBG1("stepping sqlite statement failed: %s",
+				 sqlite3_errmsg(this->database->db));
 			/* fall */
 		case SQLITE_DONE:
 			return FALSE;
@@ -218,6 +222,10 @@ static enumerator_t* query(private_sqlite_database_t *this, char *sql, ...)
 	sqlite_enumerator_t *enumerator = NULL;
 	int i;
 	
+#if SQLITE_VERSION_NUMBER < 3005000
+	/* sqlite connections prior to 3.5 may be used by a single thread only, */
+	this->mutex->lock(this->mutex);
+#endif
 	
 	va_start(args, sql);
 	stmt = run(this, sql, &args);
@@ -229,7 +237,7 @@ static enumerator_t* query(private_sqlite_database_t *this, char *sql, ...)
 		enumerator->stmt = stmt;
 		enumerator->count = sqlite3_column_count(stmt);
 		enumerator->columns = malloc(sizeof(db_type_t) * enumerator->count);
-		enumerator->db = this->db;
+		enumerator->database = this;
 		for (i = 0; i < enumerator->count; i++)
 		{
 			enumerator->columns[i] = va_arg(args, db_type_t);
@@ -306,7 +314,7 @@ sqlite_database_t *sqlite_database_create(char *uri)
 	this->public.db.execute = (int (*)(database_t *this, int *rowid, char *sql, ...))execute;
 	this->public.db.destroy = (void(*)(database_t*))destroy;
 	
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_RECURSIVE);
 	
 	if (sqlite3_open(file, &this->db) != SQLITE_OK)
 	{
