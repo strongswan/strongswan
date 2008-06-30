@@ -66,7 +66,7 @@ static void increment_chunk(chunk_t chunk)
 {
 	int i;
 	
-	for (i = chunk.len - 1; i >= 0; i++)
+	for (i = chunk.len - 1; i >= 0; i--)
 	{
 		if (++chunk.ptr[i] != 0)
 		{
