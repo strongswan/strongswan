@@ -22,6 +22,7 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
 #include <credentials/certificates/crl.h>
+#include <config/peer_cfg.h>
 
 /* warning intervals for list functions */
 #define CERT_WARNING_INTERVAL  30	/* days */
@@ -80,7 +81,12 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 			}
 			if (reauth)
 			{
-				fprintf(out, ", reauthentication in %V", &reauth);
+				peer_cfg_t *peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+
+				fprintf(out, ", %N reauthentication in %V",
+						config_auth_method_names,
+						peer_cfg->get_auth_method(peer_cfg),
+						&reauth);
 			}
 			if (!rekey && !reauth)
 			{
@@ -254,6 +260,8 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			fprintf(out, "%12s:  %s[%D]...%s[%D]\n", peer_cfg->get_name(peer_cfg),
 					ike_cfg->get_my_addr(ike_cfg), peer_cfg->get_my_id(peer_cfg),
 					ike_cfg->get_other_addr(ike_cfg), peer_cfg->get_other_id(peer_cfg));
+			fprintf(out, "%12s:  %N authentication\n",  peer_cfg->get_name(peer_cfg),
+					config_auth_method_names, peer_cfg->get_auth_method(peer_cfg));
 			/* TODO: list CAs and groups */
 			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 			while (children->enumerate(children, &child_cfg))

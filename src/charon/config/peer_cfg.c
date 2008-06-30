@@ -38,9 +38,9 @@ ENUM(unique_policy_names, UNIQUE_NO, UNIQUE_KEEP,
 );
 
 ENUM(config_auth_method_names, CONF_AUTH_PUBKEY, CONF_AUTH_EAP,
-	"CONF_AUTH_PUBKEY",
-	"CONF_AUTH_PSK",
-	"CONF_AUTH_EAP",
+	"PUBKEY",
+	"PSK",
+	"EAP",
 );
 
 typedef struct private_peer_cfg_t private_peer_cfg_t;
