@@ -227,7 +227,8 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 	ike_cfg_match_t best_ike = MATCH_NONE;
 	peer_data_t *data;
 	
-	DBG2(DBG_CFG, "looking for a config for %D...%D", my_id, other_id);
+	DBG2(DBG_CFG, "looking for a config for %H[%D]...%H[%D]",
+		 me, my_id, other, other_id);
 	
 	data = malloc_thing(peer_data_t);
 	data->this = this;
