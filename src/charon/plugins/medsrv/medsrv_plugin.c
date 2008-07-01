@@ -74,7 +74,7 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
 	uri = lib->settings->get_str(lib->settings,
-								 "medmanager.database", NULL);
+								 "medsrv.database", NULL);
 	if (!uri)
 	{
 		DBG1(DBG_CFG, "mediation database URI not defined, skipped");
