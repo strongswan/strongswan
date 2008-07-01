@@ -440,29 +440,30 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 /**
  * Adds an IPCOMP_SUPPORTED notify to the message, if possible
  */
-static void build_ipcomp_supported_notify(private_child_create_t *this, message_t *message)
+static void build_ipcomp_supported_notify(private_child_create_t *this,
+										  message_t *message)
 {
+	u_int16_t cpi;
+	u_int8_t tid;
+
 	if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
 	{
-		DBG1(DBG_IKE, "IPComp is not supported if either peer is natted, IPComp is disabled");
+		DBG1(DBG_IKE, "IPComp is not supported if either peer is natted, "
+			 "IPComp disabled");
 		this->ipcomp = IPCOMP_NONE;
 		return;
 	}
 	
-	u_int16_t cpi = this->child_sa->get_my_cpi(this->child_sa);
+	cpi = this->child_sa->get_my_cpi(this->child_sa);
+	tid = this->ipcomp;
 	if (cpi)
 	{
-		chunk_t cpi_chunk, tid_chunk, data;
-		u_int8_t tid = this->ipcomp;
-		cpi_chunk = chunk_from_thing(cpi);
-		tid_chunk = chunk_from_thing(tid);
-		data = chunk_cat("cc", cpi_chunk, tid_chunk);
-		message->add_notify(message, FALSE, IPCOMP_SUPPORTED, data);
-		chunk_free(&data);
+		message->add_notify(message, FALSE, IPCOMP_SUPPORTED,
+				chunk_cata("cc", chunk_from_thing(cpi), chunk_from_thing(tid)));
 	}
 	else
 	{
-		DBG1(DBG_IKE, "unable to allocate a CPI from kernel, IPComp is disabled");
+		DBG1(DBG_IKE, "unable to allocate a CPI from kernel, IPComp disabled");
 		this->ipcomp = IPCOMP_NONE;
 	}
 }
@@ -724,6 +725,8 @@ static status_t process_r(private_child_create_t *this, message_t *message)
  */
 static status_t build_r(private_child_create_t *this, message_t *message)
 {
+	payload_t *payload;
+	iterator_t *iterator;
 	bool no_dh = TRUE;
 
 	switch (message->get_exchange_type(message))
@@ -763,6 +766,30 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 		return SUCCESS;
 	}
 	
+	/* check if ike_config_t included non-critical error notifies */
+	iterator = message->get_payload_iterator(message);
+	while (iterator->iterate(iterator, (void**)&payload))
+	{
+		if (payload->get_type(payload) == NOTIFY)
+		{
+			notify_payload_t *notify = (notify_payload_t*)payload;
+			
+			switch (notify->get_notify_type(notify))
+			{
+				case INTERNAL_ADDRESS_FAILURE:
+				case FAILED_CP_REQUIRED:
+				{
+					SIG(CHILD_UP_FAILED, "no CHILD_SA built");
+					iterator->destroy(iterator);
+					return SUCCESS;
+				}
+				default:
+					break;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	
 	this->child_sa = child_sa_create(
 			this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa),
@@ -770,14 +797,16 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 			this->ike_sa->get_other_id(this->ike_sa), this->config, this->reqid,
 			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
 	
-	if (this->config->use_ipcomp(this->config) && this->ipcomp_received != IPCOMP_NONE)
+	if (this->config->use_ipcomp(this->config) &&
+		this->ipcomp_received != IPCOMP_NONE)
 	{
 		this->ipcomp = this->ipcomp_received;
 		build_ipcomp_supported_notify(this, message);
 	}
 	else if (this->ipcomp_received != IPCOMP_NONE)
 	{
-		DBG1(DBG_IKE, "received IPCOMP_SUPPORTED notify but IPComp is disabled, ignoring");
+		DBG1(DBG_IKE, "received %N notify but IPComp is disabled, ignoring",
+			 notify_type_names, IPCOMP_SUPPORTED);
 	}
 	
 	switch (select_and_install(this, no_dh))
