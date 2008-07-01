@@ -185,17 +185,17 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 	{
 		match = get_match(current, me, other);
 
-		if (match > MATCH_NONE)
+		if (match)
 		{
 			DBG2(DBG_CFG, "  candidate: %s...%s, prio %d", 
 				 current->get_my_addr(current), current->get_other_addr(current),
 				 match);
 			if (match > best)
 			{
-				best = match;
 				DESTROY_IF(found);
 				found = current;
 				found->get_ref(found);
+				best = match;
 			}
 		}
 	}
@@ -258,11 +258,12 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 		match_peer = m1 + m2;
 		match_ike = get_match(current->get_ike_cfg(current), me, other);
 		
-		if (m1 && m2 && match_ike > MATCH_NONE &&
+		if (m1 && m2 && match_ike && 
 			auth->complies(auth, current->get_auth(current)))
 		{
-			DBG2(DBG_CFG, "  candidate '%s': %D...%D, prio %d",
-			 	 current->get_name(current), my_cand, other_cand, match_peer);
+			DBG2(DBG_CFG, "  candidate '%s': %D...%D, prio %d.%d",
+			 	 current->get_name(current), my_cand, other_cand,
+			 	 match_peer, match_ike);
 			if (match_peer >= best_peer && match_ike > best_ike)
 			{
 				DESTROY_IF(found);
@@ -275,9 +276,9 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 	}
 	if (found)
 	{
-		DBG1(DBG_CFG, "found matching config \"%s\": %D...%D, prio %d",
+		DBG1(DBG_CFG, "found matching config \"%s\": %D...%D, prio %d.%d",
 			 found->get_name(found), found->get_my_id(found),
-			 found->get_other_id(found), best_peer);
+			 found->get_other_id(found), best_peer, best_ike);
 	}
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
