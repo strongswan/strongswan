@@ -29,7 +29,6 @@
 #include <sa/authenticators/eap_authenticator.h>
 
 
-
 typedef struct private_ike_auth_t private_ike_auth_t;
 
 /**
@@ -586,6 +585,8 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 	}
 
 	config = charon->backends->get_peer_cfg(charon->backends,
+									this->ike_sa->get_my_host(this->ike_sa),
+									this->ike_sa->get_other_host(this->ike_sa),
 									this->ike_sa->get_my_id(this->ike_sa),
 									this->ike_sa->get_other_id(this->ike_sa),
 									this->ike_sa->get_other_auth(this->ike_sa));
