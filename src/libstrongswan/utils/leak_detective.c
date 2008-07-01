@@ -277,6 +277,7 @@ char *whitelist[] = {
 	/* OpenSSL */
 	"RSA_new_method",
 	"DH_new_method",
+	"ENGINE_load_builtin_engines",
 };
 
 /**
