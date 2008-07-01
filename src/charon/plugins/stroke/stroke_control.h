@@ -49,6 +49,13 @@ struct stroke_control_t {
 	void (*terminate)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
 	
 	/**
+	 * Terminate a connection by peers virtual IP.
+	 *
+	 * @param msg		stroke message
+	 */
+	void (*terminate_srcip)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
+	
+	/**
 	 * Route a connection.
 	 *
 	 * @param msg		stroke message

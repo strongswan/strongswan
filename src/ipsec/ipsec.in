@@ -116,6 +116,21 @@ down)
 	fi
 	exit "$rc"
 	;;
+down-srcip)
+	shift
+	if [ "$#" -lt 1 ]
+	then
+	    echo "Usage: ipsec down-srcip <start> [<end>]"
+	    exit 2
+	fi
+	rc=7
+	if [ -e $IPSEC_CHARON_PID ]
+	then
+		$IPSEC_STROKE down-srcip $*
+		rc="$?"
+	fi
+	exit "$rc"
+	;;
 listalgs|listpubkeys|\listcards|\rereadgroups)
 	op="$1"
 	shift

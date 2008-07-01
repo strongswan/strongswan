@@ -18,6 +18,7 @@
 #include "stroke_control.h"
 
 #include <daemon.h>
+#include <processing/jobs/delete_ike_sa_job.h>
 
 typedef struct private_stroke_control_t private_stroke_control_t;
 
@@ -240,6 +241,75 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 }
 
 /**
+ * Implementation of stroke_control_t.terminate_srcip.
+ */
+static void terminate_srcip(private_stroke_control_t *this,
+							stroke_msg_t *msg, FILE *out)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	host_t *start = NULL, *end = NULL, *vip;
+	chunk_t chunk_start, chunk_end, chunk_vip;
+	
+	if (msg->terminate_srcip.start)
+	{
+		start = host_create_from_string(msg->terminate_srcip.start, 0);
+	}
+	if (!start)
+	{
+		DBG1(DBG_CFG, "invalid start address: %s", msg->terminate_srcip.start);
+		return;
+	}
+	chunk_start = start->get_address(start);
+	if (msg->terminate_srcip.end)
+	{
+		end = host_create_from_string(msg->terminate_srcip.end, 0);
+		if (!end)
+		{
+			DBG1(DBG_CFG, "invalid end address: %s", msg->terminate_srcip.end);
+			start->destroy(start);
+			return;
+		}
+		chunk_end = end->get_address(end);
+	}
+	
+	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
+		if (!vip)
+		{
+			continue;
+		}
+		if (!end)
+		{
+			if (!vip->ip_equals(vip, start))
+			{
+				continue;
+			}
+		}
+		else
+		{
+			chunk_vip = vip->get_address(vip);
+			if (chunk_vip.len != chunk_start.len ||
+				chunk_vip.len != chunk_end.len ||
+				memcmp(chunk_vip.ptr, chunk_start.ptr, chunk_vip.len) < 0 ||
+				memcmp(chunk_vip.ptr, chunk_end.ptr, chunk_vip.len) > 0)
+			{
+				continue;
+			}
+		}
+
+		/* schedule delete asynchronously */
+		charon->processor->queue_job(charon->processor, (job_t*)
+						delete_ike_sa_job_create(ike_sa->get_id(ike_sa), TRUE));
+	}
+	enumerator->destroy(enumerator);
+	start->destroy(start);
+	DESTROY_IF(end);
+}
+
+/**
  * Implementation of stroke_control_t.route.
  */
 static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
@@ -336,6 +406,7 @@ stroke_control_t *stroke_control_create()
 	
 	this->public.initiate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))initiate;
 	this->public.terminate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate;
+	this->public.terminate_srcip = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate_srcip;
 	this->public.route = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))route;
 	this->public.unroute = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))unroute;
 	this->public.destroy = (void(*)(stroke_control_t*))destroy;

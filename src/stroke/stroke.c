@@ -158,6 +158,17 @@ static int terminate_connection(char *name)
 	return send_stroke_msg(&msg);
 }
 
+static int terminate_connection_srcip(char *start, char *end)
+{
+	stroke_msg_t msg;
+	
+	msg.type = STR_TERMINATE_SRCIP;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.terminate_srcip.start = push_string(&msg, start);
+	msg.terminate_srcip.end = push_string(&msg, end);
+	return send_stroke_msg(&msg);
+}
+
 static int route_connection(char *name)
 {
 	stroke_msg_t msg;
@@ -284,6 +295,9 @@ static void exit_usage(char *error)
 	printf("  Terminate a connection:\n");
 	printf("    stroke down NAME\n");
 	printf("    where: NAME is a connection name added with \"stroke add\"\n");
+	printf("  Terminate a connection by remote srcip:\n");
+	printf("    stroke down-srcip START [END]\n");
+	printf("    where: START and optional END define the clients source IP\n");
 	printf("  Set loglevel for a logging type:\n");
 	printf("    stroke loglevel TYPE LEVEL\n");
 	printf("    where: TYPE is any|dmn|mgr|ike|chd|job|cfg|knl|net|enc|lib\n");
@@ -353,6 +367,13 @@ int main(int argc, char *argv[])
 				exit_usage("\"down\" needs a connection name");
 			}
 			res = terminate_connection(argv[2]);
+			break;
+		case STROKE_DOWNSRCIP:
+			if (argc < 3)
+			{
+				exit_usage("\"down-srcip\" needs start and end address");
+			}
+			res = terminate_connection_srcip(argv[2], argc > 3 ? argv[3] : NULL);
 			break;
 		case STROKE_ROUTE:
 			if (argc < 3)
