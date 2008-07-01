@@ -368,10 +368,10 @@ int main(int argc, char *argv[])
 			}
 			res = terminate_connection(argv[2]);
 			break;
-		case STROKE_DOWNSRCIP:
+		case STROKE_DOWN_SRCIP:
 			if (argc < 3)
 			{
-				exit_usage("\"down-srcip\" needs start and end address");
+				exit_usage("\"down-srcip\" needs start and optional end address");
 			}
 			res = terminate_connection_srcip(argv[2], argc > 3 ? argv[3] : NULL);
 			break;
