@@ -26,6 +26,7 @@
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/notify_payload.h>
+#include <processing/jobs/delete_ike_sa_job.h>
 
 
 typedef struct private_child_create_t private_child_create_t;
@@ -721,6 +722,25 @@ static status_t process_r(private_child_create_t *this, message_t *message)
 }
 
 /**
+ * handle CHILD_SA setup failure
+ */
+static void handle_child_sa_failure(private_child_create_t *this,
+									message_t *message)
+{
+	if (message->get_exchange_type(message) == IKE_AUTH &&
+		lib->settings->get_bool(lib->settings,
+								"charon.close_ike_on_child_failure", FALSE))
+	{
+		/* we delay the delete for 100ms, as the IKE_AUTH response must arrive
+		 * first */
+		DBG1(DBG_IKE, "closing IKE_SA due CHILD_SA setup failure");
+		charon->scheduler->schedule_job(charon->scheduler, (job_t*)
+			delete_ike_sa_job_create(this->ike_sa->get_id(this->ike_sa), TRUE),
+			100);
+	}
+}
+
+/**
  * Implementation of task_t.build for responder
  */
 static status_t build_r(private_child_create_t *this, message_t *message)
@@ -736,7 +756,8 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 		case CREATE_CHILD_SA:
 			if (generate_nonce(&this->my_nonce) != SUCCESS)
 			{
-				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN,
+									chunk_empty);
 				return SUCCESS;
 			}
 			no_dh = FALSE;
@@ -763,6 +784,7 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 		SIG(CHILD_UP_FAILED, "traffic selectors %#R=== %#R inacceptable",
 			this->tsr, this->tsi);
 		message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);
+		handle_child_sa_failure(this, message);
 		return SUCCESS;
 	}
 	
@@ -779,8 +801,10 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 				case INTERNAL_ADDRESS_FAILURE:
 				case FAILED_CP_REQUIRED:
 				{
-					SIG(CHILD_UP_FAILED, "no CHILD_SA built");
+					SIG(CHILD_UP_FAILED, "configuration payload negotation "
+						"failed, no CHILD_SA built");
 					iterator->destroy(iterator);
+					handle_child_sa_failure(this, message);
 					return SUCCESS;
 				}
 				default:
@@ -815,17 +839,20 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 			break;
 		case NOT_FOUND:
 			message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);
+			handle_child_sa_failure(this, message);
 			return SUCCESS;
 		case INVALID_ARG:
 		{
 			u_int16_t group = htons(this->dh_group);
 			message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
 								chunk_from_thing(group));
+			handle_child_sa_failure(this, message);
 			return SUCCESS;
 		}
 		case FAILED:
 		default:
 			message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+			handle_child_sa_failure(this, message);
 			return SUCCESS;
 	}
 	
@@ -887,6 +914,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 					SIG(CHILD_UP_FAILED, "received %N notify, no CHILD_SA built",
 						notify_type_names, type);
 					iterator->destroy(iterator);
+					handle_child_sa_failure(this, message);
 					/* an error in CHILD_SA creation is not critical */
 					return SUCCESS;
 				}
@@ -919,6 +947,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 	{
 		SIG(CHILD_UP_FAILED, "received an IPCOMP_SUPPORTED notify but we did not "
 					"send one previously, no CHILD_SA built");
+		handle_child_sa_failure(this, message);
 		return SUCCESS;
 	}
 	else if (this->ipcomp != IPCOMP_NONE && this->ipcomp_received == IPCOMP_NONE)
@@ -931,6 +960,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 	{
 		SIG(CHILD_UP_FAILED, "received an IPCOMP_SUPPORTED notify for a transform "
 					"we did not propose, no CHILD_SA built");
+		handle_child_sa_failure(this, message);
 		return SUCCESS;
 	}
 	
@@ -938,6 +968,10 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 	{
 		SIG(CHILD_UP_SUCCESS, "CHILD_SA '%s' established successfully",
 							   this->child_sa->get_name(this->child_sa));
+	}
+	else
+	{
+		handle_child_sa_failure(this, message);
 	}
 	return SUCCESS;
 }
