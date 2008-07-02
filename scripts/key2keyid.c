@@ -3,11 +3,6 @@
 #include <library.h>
 #include <debug.h>
 
-static void dbg_stderr(int level, char *fmt, ...)
-{
-	
-}
-
 /**
  * print the keyids of a private or public key
  */
@@ -18,8 +13,6 @@ int main(int argc, char *argv[])
 	chunk_t chunk;
 	char buf[8096];
 	int read;
-	
-	//dbg = dbg_stderr;
 	
 	library_init(NULL);
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "gmp pubkey sha1");
