@@ -6,7 +6,7 @@
  */
 int main(int argc, char *argv[])
 {
-	int i, end = 0;
+	int end = 0;
 	unsigned char byte;
 
 	printf("X'");
