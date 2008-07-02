@@ -96,43 +96,22 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 static int load(private_plugin_loader_t *this, char *path, char *list)
 {
 	plugin_t *plugin;
-	char *pos;
+	enumerator_t *enumerator;
+	char *token;
 	int count = 0;
 	
-	list = strdupa(list);
-	while (TRUE)
+	enumerator = enumerator_create_token(list, " ", " ");
+	while (enumerator->enumerate(enumerator, &token))
 	{
-		/* eat any whitespace in front */
-		while (*list == ' ')
-		{
-			list++;
-		}
-		/* have we reached the end of the list? */
-		if (!*list)
-		{
-			break;
-		}
-		pos = strchr(list, ' ');
-		if (pos)
-		{
-			*pos++ = '\0';
-		}
-		plugin = load_plugin(this, path, list);
+		plugin = load_plugin(this, path, token);
 		if (plugin)
 		{	/* insert in front to destroy them in reverse order */
 			this->plugins->insert_last(this->plugins, plugin);
-			this->names->insert_last(this->names, strdup(list));
+			this->names->insert_last(this->names, strdup(token));
 			count++;
 		}
-		if (pos)
-		{
-			list = pos;
-		}
-		else
-		{
-			break;
-		}
 	}
+	enumerator->destroy(enumerator);
 	return count;
 }
 
