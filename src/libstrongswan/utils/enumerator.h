@@ -98,6 +98,19 @@ enumerator_t *enumerator_create_single(void *item, void (*cleanup)(void *item));
 enumerator_t* enumerator_create_directory(char *path);
 
 /**
+ * Create an enumerator over tokens of a string.
+ *
+ * Tokens are separated by one of the characters in sep and trimmed by the
+ * characters in trim.
+ *
+ * @param string	string to parse
+ * @param sep		separator characters
+ * @param trim		characters to trim from tokens
+ * @return			enumerator over char* tokens
+ */
+enumerator_t* enumerator_create_token(char *string, char *sep, char *trim);
+
+/**
  * Creates an enumerator which enumerates over enumerated enumerators :-).
  * 
  * The variable argument list of enumeration values is limit to 5.

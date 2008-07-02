@@ -154,6 +154,145 @@ enumerator_t* enumerator_create_directory(char *path)
 }
 
 /**
+ * Enumerator implementation for directory enumerator
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** string to parse */
+	char *string;
+	/** current position */
+	char *pos;
+	/** separater chars */
+	char *sep;
+	/** trim chars */
+	char *trim;
+} token_enum_t;
+
+/**
+ * Implementation of enumerator_create_token().destroy
+ */
+static void destroy_token_enum(token_enum_t *this)
+{
+	free(this->string);
+	free(this);
+}
+
+/**
+ * Implementation of enumerator_create_token().enumerate
+ */
+static bool enumerate_token_enum(token_enum_t *this, char **token)
+{
+	char *pos = NULL, *tmp, *sep, *trim;
+	bool last = FALSE;
+	
+	/* trim leading characters/separators */
+	while (*this->pos)
+	{
+		trim = this->trim;
+		while (*trim)
+		{
+			if (*trim == *this->pos)
+			{
+				this->pos++;
+				break;
+			}
+			trim++;
+		}
+		sep = this->sep;
+		while (*sep)
+		{
+			if (*sep == *this->pos)
+			{
+				this->pos++;
+				break;
+			}
+			sep++;
+		}
+		if (!*trim && !*sep)
+		{
+			break;
+		}
+	}
+	
+	/* find separators */
+	sep = this->sep;
+	while (*sep)
+	{
+		tmp = strchr(this->pos, *sep);
+		if (tmp && (pos == NULL || tmp < pos))
+		{
+			pos = tmp;
+		}
+		sep++;
+	}
+	*token = this->pos;
+	if (pos)
+	{
+		*pos = '\0';
+		this->pos = pos + 1;
+	}
+	else
+	{
+		last = TRUE;
+		pos = this->pos = strchr(this->pos, '\0');
+	}
+	
+	/* trim trailing characters/separators */
+	pos--;
+	while (pos >= *token)
+	{
+		trim = this->trim;
+		while (*trim)
+		{
+			if (*trim == *pos)
+			{
+				*(pos--) = '\0';
+				break;
+			}
+			trim++;
+		}
+		sep = this->sep;
+		while (*sep)
+		{
+			if (*sep == *pos)
+			{
+				*(pos--) = '\0';
+				break;
+			}
+			sep++;
+		}
+		if (!*trim && !*sep)
+		{
+			break;
+		}
+	}
+	
+	if (!last || pos > *token)
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * See header
+ */
+enumerator_t* enumerator_create_token(char *string, char *sep, char *trim)
+{
+	token_enum_t *enumerator = malloc_thing(token_enum_t);
+	
+	enumerator->public.enumerate = (void*)enumerate_token_enum;
+	enumerator->public.destroy = (void*)destroy_token_enum;
+	enumerator->string = strdup(string);
+	enumerator->pos = enumerator->string;
+	enumerator->sep = sep;
+	enumerator->trim = trim;
+	
+	return &enumerator->public;
+}
+
+/**
  * enumerator for nested enumerations
  */
 typedef struct {

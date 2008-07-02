@@ -212,3 +212,53 @@ bool test_enumerate_filtered()
 	list->destroy(list);
 	return !bad_data;
 }
+
+/*******************************************************************************
+ * token parser test
+ ******************************************************************************/
+ 
+bool test_enumerate_token()
+{
+	enumerator_t *enumerator;
+	char *token;
+	int i, num;
+	struct {
+		char *string;
+		char *sep;
+		char *trim;
+	} tests[] = {
+		{"abc, cde, efg", ",", " "},
+		{" abc 1:2 cde;3  4efg5.  ", ":;.,", " 12345"},
+		{"abc.cde,efg", ",.", ""},
+		{"  abc   cde  efg  ", " ", " "},
+	};
+	
+	for (num = 0; num < countof(tests); num++)
+	{
+		i = 0;
+		enumerator = enumerator_create_token(
+							tests[num].string, tests[num].sep, tests[num].trim);
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			switch (i)
+			{
+				case 0:
+					if (!streq(token, "abc")) return FALSE;
+					break;
+				case 1:
+					if (!streq(token, "cde")) return FALSE;
+					break;
+				case 2:
+					if (!streq(token, "efg")) return FALSE;
+					break;
+				default:
+					return FALSE;
+			}
+			i++;
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	return TRUE;
+}
+

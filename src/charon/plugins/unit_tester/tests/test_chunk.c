@@ -16,8 +16,6 @@
 #include <library.h>
 #include <daemon.h>
 
-#define countof(array) (sizeof(array)/sizeof(typeof(array[0])))
-
 /*******************************************************************************
  * Base64 encoding/decoding test
  ******************************************************************************/

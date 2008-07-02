@@ -90,6 +90,11 @@
 #define malloc_thing(thing) ((thing*)malloc(sizeof(thing)))
 
 /**
+ * Get the number of elements in an array
+ */
+#define countof(array) (sizeof(array)/sizeof(array[0]))
+
+/**
  * Assign a function as a class method
  */
 #define ASSIGN(method, function) (method = (typeof(method))function)
