@@ -931,8 +931,9 @@ confread_load(const char *file)
 	/* load IPSec configuration file  */
 	cfgp = parser_load_conf(file);
 	if (!cfgp)
+	{
 		return NULL;
-
+	}
 	cfg = (starter_config_t *)alloc_thing(starter_config_t, "starter_config_t");
 
 	/* set default values */
