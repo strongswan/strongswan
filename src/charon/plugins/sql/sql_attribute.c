@@ -226,13 +226,24 @@ static host_t* acquire_address(private_sql_attribute_t *this,
 							   char *name, identification_t *id,
 							   auth_info_t *auth, host_t *requested)
 {
-	host_t *ip;
+	enumerator_t *enumerator;
+	host_t *ip = NULL;
 	
-	ip = get_lease(this, name, id);
-	if (!ip)
+	enumerator = enumerator_create_token(name, ",", " ");
+	while (enumerator->enumerate(enumerator, &name))
 	{
+		ip = get_lease(this, name, id);
+		if (ip)
+		{
+			break;
+		}
 		ip = create_lease(this, name, id);
+		if (ip)
+		{
+			break;
+		}
 	}
+	enumerator->destroy(enumerator);
 	return ip;
 }
 
@@ -242,15 +253,23 @@ static host_t* acquire_address(private_sql_attribute_t *this,
 static bool release_address(private_sql_attribute_t *this,
 							char *name, host_t *address)
 {
-	if (this->db->execute(this->db, NULL,
-			"UPDATE leases SET released = ? WHERE "
-			"pool IN (SELECT id FROM pools WHERE name = ?) AND "
-			"address = ? AND released IS NULL",
-			DB_UINT, time(NULL),
-			DB_TEXT, name, DB_BLOB, address->get_address(address)) > 0)
+	enumerator_t *enumerator;
+	
+	enumerator = enumerator_create_token(name, ",", " ");
+	while (enumerator->enumerate(enumerator, &name))
 	{
-		return TRUE;
+		if (this->db->execute(this->db, NULL,
+				"UPDATE leases SET released = ? WHERE "
+				"pool IN (SELECT id FROM pools WHERE name = ?) AND "
+				"address = ? AND released IS NULL",
+				DB_UINT, time(NULL),
+				DB_TEXT, name, DB_BLOB, address->get_address(address)) > 0)
+		{
+			enumerator->destroy(enumerator);
+			return TRUE;
+		}
 	}
+	enumerator->destroy(enumerator);
 	return FALSE;
 }
 
