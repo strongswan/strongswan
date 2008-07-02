@@ -358,8 +358,8 @@ medcli_config_t *medcli_config_create(database_t *db)
 	
 	this->db = db;
 	this->rekey = lib->settings->get_int(lib->settings,
-										 "medclient.rekey", 20) * 60;
-	this->dpd = lib->settings->get_int(lib->settings, "medclient.dpd", 300);
+										 "medcli.rekey", 20) * 60;
+	this->dpd = lib->settings->get_int(lib->settings, "medcli.dpd", 300);
 	this->ike = ike_cfg_create(FALSE, FALSE, "0.0.0.0", "0.0.0.0");
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
 	
