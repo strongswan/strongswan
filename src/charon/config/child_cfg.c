@@ -30,9 +30,9 @@ ENUM(mode_names, MODE_TRANSPORT, MODE_BEET,
 );
 
 ENUM(action_names, ACTION_NONE, ACTION_RESTART,
-	"ACTION_NONE",
-	"ACTION_ROUTE",
-	"ACTION_RESTART",
+	"clear",
+	"hold",
+	"restart",
 );
 
 ENUM_BEGIN(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_NONE, 

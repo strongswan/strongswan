@@ -212,6 +212,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	ike_sa_t *ike_sa;
 	char *name = NULL, *plugin;
 	bool found = FALSE;
+	u_int32_t dpd;
 	time_t uptime;
 	
 	name = msg->status.name;
@@ -260,19 +261,34 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			fprintf(out, "%12s:  %s[%D]...%s[%D]\n", peer_cfg->get_name(peer_cfg),
 					ike_cfg->get_my_addr(ike_cfg), peer_cfg->get_my_id(peer_cfg),
 					ike_cfg->get_other_addr(ike_cfg), peer_cfg->get_other_id(peer_cfg));
-			fprintf(out, "%12s:  %N authentication\n",  peer_cfg->get_name(peer_cfg),
+			fprintf(out, "%12s:  %N authentication",  peer_cfg->get_name(peer_cfg),
 					config_auth_method_names, peer_cfg->get_auth_method(peer_cfg));
+			dpd = peer_cfg->get_dpd(peer_cfg);
+			if (dpd)
+			{
+				fprintf(out, ", dpddelay=%us", dpd);
+			}
+			fprintf(out, "\n");
+
 			/* TODO: list CAs and groups */
 			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 			while (children->enumerate(children, &child_cfg))
 			{
 				linked_list_t *my_ts, *other_ts;
+
 				my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
 				other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
-				fprintf(out, "%12s:    %#R=== %#R\n", child_cfg->get_name(child_cfg),
+				fprintf(out, "%12s:    %#R=== %#R", child_cfg->get_name(child_cfg),
 						my_ts, other_ts);
 				my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 				other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
+
+				if (dpd)
+				{
+					fprintf(out, ", dpdaction=%N", action_names,
+							child_cfg->get_dpd_action(child_cfg));
+				}
+				fprintf(out, "\n");
 			}
 			children->destroy(children);
 		}
