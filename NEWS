@@ -1,3 +1,13 @@
+strongswan-4.2.5
+----------------
+
+- management of different virtual IP pools for different
+  network interfaces have become possible.
+
+- fixed a bug which prevented the assignment of more than 256 
+  virtual IP addresses from a pool managed by an sql database.
+
+ 
 strongswan-4.2.4
 ----------------
 
