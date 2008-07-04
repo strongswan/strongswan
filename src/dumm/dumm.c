@@ -49,8 +49,6 @@ struct private_dumm_t {
 	linked_list_t *guests;
 	/** list of managed bridges */
 	linked_list_t *bridges;
-	/** do not catch signals if we are destroying */
-	bool destroying;
 };
 
 /**
@@ -219,8 +217,11 @@ static void destroy(private_dumm_t *this)
 	}
 	enumerator->destroy(enumerator);
 	
-	this->destroying = TRUE;
-	this->guests->destroy_offset(this->guests, offsetof(guest_t, destroy));
+	while (this->guests->remove_last(this->guests, (void**)&guest) == SUCCESS)
+	{
+		guest->destroy(guest);
+	}
+	this->guests->destroy(this->guests);
 	free(this->guest_dir);
 	free(this->template_dir);
 	free(this->template);
@@ -278,8 +279,6 @@ dumm_t *dumm_create(char *dir)
 	this->public.delete_bridge = (void(*)(dumm_t*,bridge_t*))delete_bridge;
 	this->public.load_template = (bool(*)(dumm_t*, char *name))load_template;
 	this->public.destroy = (void(*)(dumm_t*))destroy;
-	
-	this->destroying = FALSE;
 	
 	if (dir && *dir == '/')
 	{

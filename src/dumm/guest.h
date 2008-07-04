@@ -19,10 +19,10 @@
 #include <library.h>
 #include <utils/enumerator.h>
 
-#include "iface.h"
-
 typedef enum guest_state_t guest_state_t;
 typedef struct guest_t guest_t;
+
+#include "iface.h"
 
 /**
  * @brief State of a guest (started, stopped, ...)

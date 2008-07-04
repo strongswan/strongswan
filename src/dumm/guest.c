@@ -114,7 +114,7 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 	}
 	enumerator->destroy(enumerator);
 
-	iface = iface_create(this->name, name, this->mconsole);
+	iface = iface_create(name, &this->public, this->mconsole);
 	if (iface)
 	{
 		this->ifaces->insert_last(this->ifaces, iface);

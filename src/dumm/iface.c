@@ -39,6 +39,8 @@ struct private_iface_t {
 	char *hostif;
 	/** bridge this interface is attached to */
 	bridge_t *bridge;
+	/** guest this interface is attached to */
+	guest_t *guest;
 	/** mconsole for guest */
 	mconsole_t *mconsole;
 };
@@ -104,6 +106,22 @@ static void set_bridge(private_iface_t *this, bridge_t *bridge)
 }
 
 /**
+ * Implementation of iface_t.get_bridge
+ */
+static bridge_t *get_bridge(private_iface_t *this)
+{
+	return this->bridge;
+}
+
+/**
+ * Implementation of iface_t.get_guest
+ */
+static guest_t* get_guest(private_iface_t *this)
+{
+	return this->guest;
+}
+	
+/**
  * destroy the tap device
  */
 static bool destroy_tap(private_iface_t *this)
@@ -139,14 +157,15 @@ static bool destroy_tap(private_iface_t *this)
 /**
  * create the tap device
  */
-static char* create_tap(private_iface_t *this, char *guest)
+static char* create_tap(private_iface_t *this)
 {
 	struct ifreq ifr;
 	int tap;
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s-%s", guest, this->guestif);
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s-%s",
+			 this->guest->get_name(this->guest), this->guestif);
 
 	tap = open(TAP_DEVICE, O_RDWR);
 	if (tap < 0)
@@ -185,18 +204,21 @@ static void destroy(private_iface_t *this)
 /**
  * create the iface instance
  */
-iface_t *iface_create(char *guest, char *guestif, mconsole_t *mconsole)
+iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 {
 	private_iface_t *this = malloc_thing(private_iface_t);
 	
 	this->public.get_hostif = (char*(*)(iface_t*))get_hostif;
 	this->public.get_guestif = (char*(*)(iface_t*))get_guestif;
 	this->public.set_bridge = (void(*)(iface_t*, bridge_t*))set_bridge;
+	this->public.get_bridge = (bridge_t*(*)(iface_t*))get_bridge;
+	this->public.get_guest = (guest_t*(*)(iface_t*))get_guest;
 	this->public.destroy = (void*)destroy;
 
 	this->mconsole = mconsole;
-	this->guestif = strdup(guestif);
-	this->hostif = create_tap(this, guest);
+	this->guestif = strdup(name);
+	this->guest = guest;
+	this->hostif = create_tap(this);
 	this->bridge = NULL;
 	if (this->hostif == NULL)
 	{
