@@ -156,21 +156,25 @@ static int request(private_mconsole_t *this, char *command,
  */
 static bool add_iface(private_mconsole_t *this, char *guest, char *host)
 {
-	char buf[128];
-	int len;
+	char in[128], out[128];
+	int len, tries = 0;
 	
-	len = snprintf(buf, sizeof(buf), "config %s=tuntap,%s", guest, host);
-	if (len < 0 || len >= sizeof(buf))
+	len = snprintf(in, sizeof(in), "config %s=tuntap,%s", guest, host);
+	if (len < 0 || len >= sizeof(in))
 	{
 		return FALSE;
 	}
-	len = sizeof(buf);
-	if (request(this, buf, buf, &len) != 0)
+	while (tries++ < 10)
 	{
-		DBG1("adding interface failed: %.*s", len, buf);
-		return FALSE;
+		len = sizeof(in);
+		if (request(this, in, out, &len) == 0)
+		{
+			return TRUE;
+		}
+		usleep(10000 * tries);
 	}
-	return TRUE;
+	DBG1("adding interface failed: %.*s", len, out);
+	return FALSE;
 }
 
 /**
@@ -188,7 +192,6 @@ static bool del_iface(private_mconsole_t *this, char *guest)
 	}
 	if (request(this, buf, buf, &len) != 0)
 	{
-		DBG1("removing interface failed: %.*s", len, buf);
 		return FALSE;
 	}
 	return TRUE;

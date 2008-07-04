@@ -205,10 +205,6 @@ iface_t *iface_create(char *guest, char *guestif, mconsole_t *mconsole)
 		free(this);
 		return NULL;
 	}
-	if (!iface_control(this->hostif, TRUE))
-	{
-		DBG1("bringing iface '%s' up failed: %m", this->hostif);
-	}
 	if (!this->mconsole->add_iface(this->mconsole, this->guestif, this->hostif))
 	{
 		DBG1("creating interface '%s' in guest failed", this->guestif);
@@ -217,6 +213,10 @@ iface_t *iface_create(char *guest, char *guestif, mconsole_t *mconsole)
 		free(this->hostif);
 		free(this);
 		return NULL;
+	}
+	if (!iface_control(this->hostif, TRUE))
+	{
+		DBG1("bringing iface '%s' up failed: %m", this->hostif);
 	}
 	return &this->public;
 }

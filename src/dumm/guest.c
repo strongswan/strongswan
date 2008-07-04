@@ -424,6 +424,7 @@ static void destroy(private_guest_t *this)
 	{
 		close(this->dir);
 	}
+	this->ifaces->destroy(this->ifaces);
 	free(this->dirname);
 	free(this->name);
 	free(this);

@@ -858,13 +858,15 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
     {
     	DBG1("failed to open master filesystem '%s'", master);
     	free(this);
+    	return NULL;
     }
     this->host_fd = open(host, O_RDONLY | O_DIRECTORY);
-	if (this->master_fd < 0)
+	if (this->host_fd < 0)
     {
     	DBG1("failed to open host filesystem '%s'", host);
     	close(this->master_fd);
     	free(this);
+    	return NULL;
     }
 	this->over_fd = -1;
 	
