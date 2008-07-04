@@ -52,7 +52,6 @@ static pid_t invoke(void *null, guest_t *guest, char *args[], int argc)
 			execvp(args[0], args);
 			/* FALL */
 		case -1:
-			rb_raise(rb_eException, "starting guest failed");
 			return 0;
 		default:
 			return pid;
@@ -99,7 +98,7 @@ static VALUE guest_get(VALUE class, VALUE key)
 	enumerator->destroy(enumerator);
 	if (!found)
 	{
-		return Qnil;
+		rb_raise(rb_eRuntimeError, "guest not found");
 	}
 	return Data_Wrap_Struct(class, NULL, NULL, found);
 }
@@ -119,7 +118,7 @@ static VALUE guest_each(int argc, VALUE *argv, VALUE class)
   		rb_yield(Data_Wrap_Struct(class, NULL, NULL, guest));
 	}
 	enumerator->destroy(enumerator);
-	return Qnil;
+	return class;
 }
 
 static VALUE guest_new(VALUE class, VALUE name, VALUE kernel,
@@ -132,7 +131,7 @@ static VALUE guest_new(VALUE class, VALUE name, VALUE kernel,
 							   StringValuePtr(master), FIX2INT(mem));
 	if (!guest)
 	{
-		return Qnil;
+		rb_raise(rb_eRuntimeError, "creating guest failed");
 	}
 	return Data_Wrap_Struct(class, NULL, NULL, guest);
 }
@@ -151,11 +150,11 @@ static VALUE guest_start(VALUE self)
 	
 	Data_Get_Struct(self, guest_t, guest);
 	
-	if (guest->start(guest, invoke, NULL, NULL))
+	if (!guest->start(guest, invoke, NULL, NULL))
 	{
-		return Qtrue;
+		rb_raise(rb_eRuntimeError, "starting guest failed");
 	}
-	return Qfalse;
+	return self;
 }
 
 static VALUE guest_stop(VALUE self)
@@ -164,11 +163,11 @@ static VALUE guest_stop(VALUE self)
 	
 	Data_Get_Struct(self, guest_t, guest);
 	
-	if (guest->stop(guest, NULL))
+	if (!guest->stop(guest, NULL))
 	{
-		return Qtrue;
+		rb_raise(rb_eRuntimeError, "stopping guest failed");
 	}
-	return Qfalse;
+	return self;
 }
 
 static VALUE guest_add_iface(VALUE self, VALUE name)
@@ -178,11 +177,11 @@ static VALUE guest_add_iface(VALUE self, VALUE name)
 	
 	Data_Get_Struct(self, guest_t, guest);
 	iface = guest->create_iface(guest, StringValuePtr(name));
-	if (iface)
+	if (!iface)
 	{
-		return Data_Wrap_Struct(rbc_iface, NULL, NULL, iface);
+		rb_raise(rb_eRuntimeError, "adding interface failed");
 	}
-	return Qnil;
+	return Data_Wrap_Struct(rbc_iface, NULL, NULL, iface);
 }
 
 static VALUE guest_get_iface(VALUE self, VALUE key)
@@ -204,7 +203,7 @@ static VALUE guest_get_iface(VALUE self, VALUE key)
 	enumerator->destroy(enumerator);
 	if (!found)
 	{
-		return Qnil;
+		rb_raise(rb_eRuntimeError, "interface not found");
 	}
 	return Data_Wrap_Struct(rbc_iface, NULL, NULL, iface);
 }
@@ -226,7 +225,7 @@ static VALUE guest_each_iface(int argc, VALUE *argv, VALUE self)
   		rb_yield(Data_Wrap_Struct(rbc_iface, NULL, NULL, iface));
 	}
 	enumerator->destroy(enumerator);
-	return Qnil;
+	return self;
 }
 
 static VALUE guest_delete(VALUE self)
@@ -251,6 +250,8 @@ static void guest_init()
 	rb_define_method(rbc_guest, "[]", guest_get_iface, 1);
 	rb_define_method(rbc_guest, "each", guest_each_iface, -1);
 	rb_define_method(rbc_guest, "delete", guest_delete, 0);
+	rb_include_module(rb_class_of(rbc_guest), rb_mEnumerable);
+	rb_include_module(rbc_guest, rb_mEnumerable);
 }
 
 /**
@@ -273,7 +274,7 @@ static VALUE bridge_get(VALUE class, VALUE key)
 	enumerator->destroy(enumerator);
 	if (!found)
 	{
-		return Qnil;
+		rb_raise(rb_eRuntimeError, "bridgne not found");
 	}
 	return Data_Wrap_Struct(class, NULL, NULL, found);
 }
@@ -293,7 +294,7 @@ static VALUE bridge_each(int argc, VALUE *argv, VALUE class)
   		rb_yield(Data_Wrap_Struct(class, NULL, NULL, bridge));
 	}
 	enumerator->destroy(enumerator);
-	return Qnil;
+	return class;
 }
 
 static VALUE bridge_new(VALUE class, VALUE name)
@@ -304,7 +305,7 @@ static VALUE bridge_new(VALUE class, VALUE name)
 	bridge = dumm->create_bridge(dumm, StringValuePtr(name));
 	if (!bridge)
 	{
-		return Qnil;
+		rb_raise(rb_eRuntimeError, "creating bridge failed");
 	}
 	return Data_Wrap_Struct(class, NULL, NULL, bridge);
 }
@@ -334,7 +335,7 @@ static VALUE bridge_each_iface(int argc, VALUE *argv, VALUE self)
   		rb_yield(Data_Wrap_Struct(rbc_iface, NULL, NULL, iface));
 	}
 	enumerator->destroy(enumerator);
-	return Qnil;
+	return self;
 }
 
 static VALUE bridge_delete(VALUE self)
@@ -355,6 +356,8 @@ static void bridge_init()
 	rb_define_method(rbc_bridge, "to_s", bridge_to_s, 0);
 	rb_define_method(rbc_bridge, "each", bridge_each_iface, -1);
 	rb_define_method(rbc_bridge, "delete", bridge_delete, 0);
+	rb_include_module(rb_class_of(rbc_bridge), rb_mEnumerable);
+	rb_include_module(rbc_bridge, rb_mEnumerable);
 }
 
 /**
@@ -375,11 +378,11 @@ static VALUE iface_connect(VALUE self, VALUE vbridge)
 	
 	Data_Get_Struct(self, iface_t, iface);
 	Data_Get_Struct(vbridge, bridge_t, bridge);
-	if (bridge->connect_iface(bridge, iface))
+	if (!bridge->connect_iface(bridge, iface))
 	{
-		return self;
+		rb_raise(rb_eRuntimeError, "connecting iface failed");
 	}
-	return Qnil;
+	return self;
 }
 
 static VALUE iface_disconnect(VALUE self)
@@ -389,11 +392,11 @@ static VALUE iface_disconnect(VALUE self)
 	
 	Data_Get_Struct(self, iface_t, iface);
 	bridge = iface->get_bridge(iface);
-	if (bridge && bridge->disconnect_iface(bridge, iface))
+	if (!bridge || !bridge->disconnect_iface(bridge, iface))
 	{
-		return self;
+		rb_raise(rb_eRuntimeError, "disconnecting iface failed");
 	}
-	return Qnil;
+	return self;
 }
 
 static VALUE iface_delete(VALUE self)
