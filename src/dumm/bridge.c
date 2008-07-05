@@ -112,19 +112,23 @@ static bool connect_iface(private_bridge_t *this, iface_t *iface)
 static int instances = 0;
 
 /**
- * unregister an interface from bridge
- */
-static void unregister(iface_t *iface)
-{
-	iface->set_bridge(iface, NULL);
-}
-
-/**
  * Implementation of bridge_t.destroy.
  */
 static void destroy(private_bridge_t *this)
 {
-	this->ifaces->invoke_function(this->ifaces, (linked_list_invoke_t)unregister);
+	enumerator_t *enumerator;
+	iface_t *iface;
+
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, (void**)&iface))
+	{
+		if (br_del_interface(this->name, iface->get_hostif(iface)) != 0)
+		{
+			DBG1("disconnecting iface '%s' failed: %m", iface->get_hostif(iface));
+		}
+		iface->set_bridge(iface, NULL);
+	}
+	enumerator->destroy(enumerator);
 	this->ifaces->destroy(this->ifaces);
 	iface_control(this->name, FALSE);
 	if (br_del_bridge(this->name) != 0)
