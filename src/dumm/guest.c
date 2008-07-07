@@ -25,6 +25,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include <termios.h>
+#include <stdarg.h>
 
 #include <debug.h>
 #include <utils/linked_list.h>
@@ -325,6 +326,29 @@ static bool load_template(private_guest_t *this, char *path)
 }
 
 /**
+ * Implementation of gues_t.exec
+ */
+static int exec(private_guest_t *this, char *cmd, ...)
+{
+	char buf[512];
+	size_t len;
+	va_list args;
+
+	if (this->mconsole)
+	{
+		va_start(args, cmd);
+		len = vsnprintf(buf, sizeof(buf), cmd, args);
+		va_end(args);
+	
+		if (len > 0 && len < sizeof(buf))
+		{
+			return this->mconsole->exec(this->mconsole, buf);
+		}
+	}
+	return FALSE;
+}
+
+/**
  * Implementation of guest_t.sigchild.
  */
 static void sigchild(private_guest_t *this)
@@ -448,6 +472,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->public.start = (void*)start;
 	this->public.stop = (void*)stop;
 	this->public.load_template = (bool(*)(guest_t*, char *path))load_template;
+	this->public.exec = (bool(*)(guest_t*, char *cmd, ...))exec;
 	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
 		

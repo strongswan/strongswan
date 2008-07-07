@@ -170,6 +170,18 @@ static VALUE guest_stop(VALUE self)
 	return self;
 }
 
+static VALUE guest_exec(VALUE self, VALUE cmd)
+{
+	guest_t *guest;
+	
+	Data_Get_Struct(self, guest_t, guest);
+	if (!guest->exec(guest, StringValuePtr(cmd)))
+	{
+		rb_raise(rb_eRuntimeError, "executing command failed");
+	}
+	return self;
+}
+
 static VALUE guest_add_iface(VALUE self, VALUE name)
 {
 	guest_t *guest;
@@ -246,6 +258,7 @@ static void guest_init()
 	rb_define_method(rbc_guest, "to_s", guest_to_s, 0);
 	rb_define_method(rbc_guest, "start", guest_start, 0);
 	rb_define_method(rbc_guest, "stop", guest_stop, 0);
+	rb_define_method(rbc_guest, "exec", guest_exec, 1);
 	rb_define_method(rbc_guest, "add", guest_add_iface, 1);
 	rb_define_method(rbc_guest, "[]", guest_get_iface, 1);
 	rb_define_method(rbc_guest, "each", guest_each_iface, -1);
@@ -399,6 +412,62 @@ static VALUE iface_disconnect(VALUE self)
 	return self;
 }
 
+static VALUE iface_add_addr(VALUE self, VALUE name)
+{
+	iface_t *iface;
+	host_t *addr;
+	
+	addr = host_create_from_string(StringValuePtr(name), 0);
+	if (!addr)
+	{
+		rb_raise(rb_eRuntimeError, "invalid IP address");
+	}
+	Data_Get_Struct(self, iface_t, iface);
+	if (!iface->add_address(iface, addr))
+	{
+		rb_raise(rb_eRuntimeError, "adding address failed");
+	}
+	return self;
+}
+
+static VALUE iface_each_addr(int argc, VALUE *argv, VALUE self)
+{
+	enumerator_t *enumerator;
+	iface_t *iface;
+	host_t *addr;
+	char buf[64];
+
+	if (!rb_block_given_p())
+    {
+		rb_raise(rb_eArgError, "must be called with a block");
+	}
+	Data_Get_Struct(self, iface_t, iface);
+	enumerator = iface->create_address_enumerator(iface);
+	while (enumerator->enumerate(enumerator, &addr))
+	{
+		snprintf(buf, sizeof(buf), "%H", addr);
+  		rb_yield(rb_str_new2(buf));
+	}
+	enumerator->destroy(enumerator);
+	return self;
+}
+
+static VALUE iface_del_addr(VALUE self, VALUE vaddr)
+{
+	iface_t *iface;
+	host_t *addr;
+	
+	addr = host_create_from_string(StringValuePtr(vaddr), 0);
+	Data_Get_Struct(self, iface_t, iface);
+	if (!iface->delete_address(iface, addr))
+	{
+		addr->destroy(addr);
+		rb_raise(rb_eRuntimeError, "address not found");
+	}
+	addr->destroy(addr);
+	return self;
+}
+
 static VALUE iface_delete(VALUE self)
 {
 	guest_t *guest;
@@ -416,7 +485,11 @@ static void iface_init()
 	rb_define_method(rbc_iface, "to_s", iface_to_s, 0);
 	rb_define_method(rbc_iface, "connect", iface_connect, 1);
 	rb_define_method(rbc_iface, "disconnect", iface_disconnect, 0);
+	rb_define_method(rbc_iface, "add", iface_add_addr, 1);
+	rb_define_method(rbc_iface, "del", iface_del_addr, 1);
+	rb_define_method(rbc_iface, "each", iface_each_addr, -1);
 	rb_define_method(rbc_iface, "delete", iface_delete, 0);
+	rb_include_module(rbc_iface, rb_mEnumerable);
 }
 
 /**

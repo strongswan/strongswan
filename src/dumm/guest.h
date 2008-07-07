@@ -140,7 +140,16 @@ struct guest_t {
 	 * @return			FALSE if failed
 	 */
 	bool (*load_template)(guest_t *this, char *parent);
-
+	
+	/**
+	 * Execute a command in the guest.
+	 *
+	 * @param cmd		command to execute
+	 * @param ...		printf style argument list for cmd
+	 * @return			TRUE if command executed
+	 */
+	bool (*exec)(guest_t *this, char *cmd, ...);
+	
 	/**
 	 * @brief Called whenever a SIGCHILD for the guests PID is received.
 	 */

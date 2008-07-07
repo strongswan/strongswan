@@ -198,6 +198,27 @@ static bool del_iface(private_mconsole_t *this, char *guest)
 }
 
 /**
+ * Implementation of mconsole_t.exec
+ */
+static bool exec(private_mconsole_t *this, char *cmd)
+{
+	char buf[512];
+	int len;
+	
+	len = snprintf(buf, sizeof(buf), "exec %s", cmd);
+	if (len < 0 || len >= sizeof(buf))
+	{
+		return -1;
+	}
+	if (request(this, buf, buf, &len) != 0)
+	{
+		DBG1("exec failed: %.*s", len, buf);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Poll until guest is ready
  */
 static bool wait_bootup(private_mconsole_t *this)
@@ -338,6 +359,7 @@ mconsole_t *mconsole_create(char *notify, void(*idle)(void))
 	
 	this->public.add_iface = (bool(*)(mconsole_t*, char *guest, char *host))add_iface;
 	this->public.del_iface = (bool(*)(mconsole_t*, char *guest))del_iface;
+	this->public.exec = (bool(*)(mconsole_t*, char *cmd))exec;
 	this->public.destroy = (void*)destroy;
 	
 	this->idle = idle;

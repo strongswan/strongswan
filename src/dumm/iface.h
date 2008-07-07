@@ -18,6 +18,7 @@
 
 #include <library.h>
 #include <utils/enumerator.h>
+#include <utils/host.h>
 
 #define TAP_DEVICE "/dev/net/tun"
 
@@ -45,6 +46,29 @@ struct iface_t {
 	 * @return			host interface (tap device) name
 	 */
 	char* (*get_hostif)(iface_t *this);
+	
+	/**
+	 * Add an address to the interface.
+	 *
+	 * @param addr		address to add to interface
+	 * @return			TRUE if address added
+	 */
+	bool (*add_address)(iface_t *this, host_t *addr);
+	
+	/**
+	 * Create an enumerator over all installed addresses.
+	 *
+	 * @return			enumerator over host_t*
+	 */
+	enumerator_t* (*create_address_enumerator)(iface_t *this);
+	
+	/**
+	 * Remove an address from an interface.
+	 *
+	 * @param addr		address to remove
+	 * @return			TRUE if address removed
+	 */
+	bool (*delete_address)(iface_t *this, host_t *addr);	
 	
 	/**
 	 * @brief Set the bridge this interface is attached to.

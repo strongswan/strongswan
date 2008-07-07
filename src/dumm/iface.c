@@ -25,6 +25,7 @@
 #include <linux/if_tun.h>
 
 #include <debug.h>
+#include <utils/linked_list.h>
 
 #include "iface.h"
 
@@ -43,10 +44,12 @@ struct private_iface_t {
 	guest_t *guest;
 	/** mconsole for guest */
 	mconsole_t *mconsole;
+	/** list of interface addresses */
+	linked_list_t *addresses;
 };
 
 /**
- * bring an interface up or down
+ * bring an interface up or down (host side)
  */
 bool iface_control(char *name, bool up)
 {
@@ -98,10 +101,68 @@ static char* get_hostif(private_iface_t *this)
 }
 
 /**
+ * Implementation of iface_t.add_address
+ */
+static bool add_address(private_iface_t *this, host_t *addr)
+{
+	if (this->guest->exec(this->guest, "ip addr add %H dev %s",
+						  addr, this->guestif))
+	{
+		this->addresses->insert_last(this->addresses, addr);
+		return TRUE;
+	}
+	addr->destroy(addr);
+	return FALSE;
+}
+
+/**
+ * Implementation of iface_t.create_address_enumerator
+ */
+static enumerator_t* create_address_enumerator(private_iface_t *this)
+{
+	return this->addresses->create_enumerator(this->addresses);
+}
+
+/**
+ * Implementation of iface_t.delete_address
+ */
+static bool delete_address(private_iface_t *this, host_t *addr)
+{
+	enumerator_t *enumerator;
+	bool success = FALSE;
+	host_t *current;
+	
+	enumerator = create_address_enumerator(this);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current->ip_equals(current, addr))
+		{
+			if (this->guest->exec(this->guest, "ip addr del %H dev %s",
+								  current, this->guestif))
+			{
+				this->addresses->remove_at(this->addresses, enumerator);
+				success = TRUE;
+			}
+			break;
+		}	
+	}
+	enumerator->destroy(enumerator);
+	return success;
+}
+
+/**
  * Implementation of iface_t.set_bridge.
  */
 static void set_bridge(private_iface_t *this, bridge_t *bridge)
 {
+	if (this->bridge == NULL && bridge)
+	{
+		this->guest->exec(this->guest, "ip link set %s up", this->guestif);
+	}
+	else if (this->bridge && bridge == NULL)
+	{
+		this->guest->exec(this->guest, "ip link set %s down", this->guestif);
+	}
 	this->bridge = bridge;
 }
 
@@ -194,10 +255,13 @@ static void destroy(private_iface_t *this)
 	{
 		this->bridge->disconnect_iface(this->bridge, &this->public);
 	}
+	/* TODO: iface mgmt is not blocking yet, so wait some ticks */
+	usleep(50000);
 	this->mconsole->del_iface(this->mconsole, this->guestif);
 	destroy_tap(this);
 	free(this->guestif);
 	free(this->hostif);
+	this->addresses->destroy(this->addresses);
 	free(this);
 }
 
@@ -210,6 +274,9 @@ iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 	
 	this->public.get_hostif = (char*(*)(iface_t*))get_hostif;
 	this->public.get_guestif = (char*(*)(iface_t*))get_guestif;
+	this->public.add_address = (bool(*)(iface_t*, host_t *addr))add_address;
+	this->public.create_address_enumerator = (enumerator_t*(*)(iface_t*))create_address_enumerator;
+	this->public.delete_address = (bool(*)(iface_t*, host_t *addr))delete_address;
 	this->public.set_bridge = (void(*)(iface_t*, bridge_t*))set_bridge;
 	this->public.get_bridge = (bridge_t*(*)(iface_t*))get_bridge;
 	this->public.get_guest = (guest_t*(*)(iface_t*))get_guest;
@@ -240,6 +307,7 @@ iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 	{
 		DBG1("bringing iface '%s' up failed: %m", this->hostif);
 	}
+	this->addresses = linked_list_create();
 	return &this->public;
 }
 

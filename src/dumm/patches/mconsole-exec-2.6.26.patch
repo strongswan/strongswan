@@ -1,0 +1,63 @@
+--- a/arch/um/drivers/mconsole_kern.c	2008-04-17 04:49:44.000000000 +0200
++++ b/arch/um/drivers/mconsole_kern.c	2008-07-07 13:55:48.000000000 +0200
+@@ -4,6 +4,7 @@
+  * Licensed under the GPL
+  */
+ 
++#include "linux/kmod.h"
+ #include <linux/console.h>
+ #include <linux/ctype.h>
+ #include <linux/interrupt.h>
+@@ -199,6 +200,24 @@
+ }
+ #endif
+ 
++void mconsole_exec(struct mc_request *req)
++{
++	int res;
++
++	char *envp[] = { "HOME=/", "TERM=linux", "PATH=/sbin:/usr/sbin:/bin:/usr/bin", NULL };
++	char *argv[] = { "/bin/sh", "-c", req->request.data + strlen("exec "), NULL };
++	res = call_usermodehelper("/bin/sh", argv, envp, 0);
++
++	if (res < 0) {
++	char buf[60];
++		snprintf(buf, 60, "call_usermodehelper failed in mconsole_exec with error code: %d", -res);
++		mconsole_reply(req, buf, 1, 0);
++		return;
++	}
++
++	mconsole_reply(req, "The command has been started successfully.", 0, 0);
++}
++
+ void mconsole_proc(struct mc_request *req)
+ {
+ 	char path[64];
+@@ -270,6 +289,7 @@
+     stop - pause the UML; it will do nothing until it receives a 'go' \n\
+     go - continue the UML after a 'stop' \n\
+     log <string> - make UML enter <string> into the kernel log\n\
++    exec <string> - pass <string> to /bin/sh -c in guest\n\
+     proc <file> - returns the contents of the UML's /proc/<file>\n\
+     stack <pid> - returns the stack of the specified pid\n\
+ "
+--- a/arch/um/drivers/mconsole_user.c	2008-05-21 18:34:47.000000000 +0200
++++ b/arch/um/drivers/mconsole_user.c	2008-07-07 13:47:13.000000000 +0200
+@@ -32,6 +32,7 @@
+ 	{ "stop", mconsole_stop, MCONSOLE_PROC },
+ 	{ "go", mconsole_go, MCONSOLE_INTR },
+ 	{ "log", mconsole_log, MCONSOLE_INTR },
++	{ "exec", mconsole_exec, MCONSOLE_PROC },
+ 	{ "proc", mconsole_proc, MCONSOLE_PROC },
+ 	{ "stack", mconsole_stack, MCONSOLE_INTR },
+ };
+--- a/arch/um/include/mconsole.h	2008-04-17 04:49:44.000000000 +0200
++++ b/arch/um/include/mconsole.h	2008-07-07 13:46:56.000000000 +0200
+@@ -85,6 +85,7 @@
+ extern void mconsole_stop(struct mc_request *req);
+ extern void mconsole_go(struct mc_request *req);
+ extern void mconsole_log(struct mc_request *req);
++extern void mconsole_exec(struct mc_request *req);
+ extern void mconsole_proc(struct mc_request *req);
+ extern void mconsole_stack(struct mc_request *req);
+ 

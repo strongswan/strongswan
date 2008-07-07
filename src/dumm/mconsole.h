@@ -43,6 +43,11 @@ struct mconsole_t {
 	bool (*del_iface)(mconsole_t *this, char *guest);
 	
 	/**
+	 * Execute a command in the UML host.
+	 */
+	bool (*exec)(mconsole_t *this, char *cmd);
+	
+	/**
 	 * @brief Destroy the mconsole instance
 	 */
 	void (*destroy) (mconsole_t *this);
