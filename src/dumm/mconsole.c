@@ -88,21 +88,21 @@ struct mconsole_notify {
 /**
  * send a request to UML using mconsole
  */
-static int request(private_mconsole_t *this, char *command,
-				   char buf[], size_t *size)
+static int request(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
+				   void *data, char *command, ...)
 {
 	mconsole_request request;
 	mconsole_reply reply;
-	int len, total = 0, flags = 0;
+	int len, flags = 0;
+	va_list args;
 	
 	memset(&request, 0, sizeof(request));
 	request.magic = MCONSOLE_MAGIC;
 	request.version = MCONSOLE_VERSION;
-	request.len = min(strlen(command), sizeof(reply.data) - 1);
-	strncpy(request.data, command, request.len);
-	*buf = '\0';
-	(*size)--;
-
+	va_start(args, command);
+	request.len = vsnprintf(request.data, sizeof(request.data), command, args);
+	va_end(args);
+	
 	if (this->idle)
 	{
 		flags = MSG_DONTWAIT;
@@ -120,7 +120,7 @@ static int request(private_mconsole_t *this, char *command,
 	
 	if (len < 0)
 	{
-		snprintf(buf, *size, "sending mconsole command to UML failed: %m");
+		DBG1("sending mconsole command to UML failed: %m");
 		return -1;
 	}
 	do 
@@ -136,19 +136,33 @@ static int request(private_mconsole_t *this, char *command,
 		}
 		if (len < 0)
 		{
-			snprintf(buf, *size, "receiving from mconsole failed: %m");
+			DBG1("receiving from mconsole failed: %m");
 			return -1;
 		}
 		if (len > 0)
 		{
-			strncat(buf, reply.data, min(reply.len, *size - total));
-			total += reply.len;
+			if (cb)
+			{
+				cb(data, reply.data, reply.len);
+			}
+			else if (reply.err)
+			{
+				DBG1("received mconsole error %d: %*.s",
+					 reply.err, reply.len, reply.data);
+				break;
+			}
 		}
 	}
 	while (reply.more);
 	
-	*size = total;
 	return reply.err;
+}
+
+/**
+ * ignore error message
+ */
+static void ignore(void *data, char *buf, size_t len)
+{
 }
 
 /**
@@ -156,24 +170,16 @@ static int request(private_mconsole_t *this, char *command,
  */
 static bool add_iface(private_mconsole_t *this, char *guest, char *host)
 {
-	char in[128], out[128];
-	int len, tries = 0;
+	int tries = 0;
 	
-	len = snprintf(in, sizeof(in), "config %s=tuntap,%s", guest, host);
-	if (len < 0 || len >= sizeof(in))
+	while (tries++ < 5)
 	{
-		return FALSE;
-	}
-	while (tries++ < 10)
-	{
-		len = sizeof(in);
-		if (request(this, in, out, &len) == 0)
+		if (request(this, ignore, NULL, "config %s=tuntap,%s", guest, host) == 0)
 		{
 			return TRUE;
 		}
-		usleep(10000 * tries);
+		usleep(10000 * tries * tries);
 	}
-	DBG1("adding interface failed: %.*s", len, out);
 	return FALSE;
 }
 
@@ -181,16 +187,8 @@ static bool add_iface(private_mconsole_t *this, char *guest, char *host)
  * Implementation of mconsole_t.del_iface.
  */
 static bool del_iface(private_mconsole_t *this, char *guest)
-{
-	char buf[128];
-	int len;
-	
-	len = snprintf(buf, sizeof(buf), "remove %s", guest);
-	if (len < 0 || len >= sizeof(buf))
-	{
-		return FALSE;
-	}
-	if (request(this, buf, buf, &len) != 0)
+{	
+	if (request(this, NULL, NULL, "remove %s", guest) != 0)
 	{
 		return FALSE;
 	}
@@ -200,22 +198,14 @@ static bool del_iface(private_mconsole_t *this, char *guest)
 /**
  * Implementation of mconsole_t.exec
  */
-static bool exec(private_mconsole_t *this, char *cmd)
+static int exec(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
+				void *data, char *cmd)
 {
-	char buf[512];
-	int len;
-	
-	len = snprintf(buf, sizeof(buf), "exec %s", cmd);
-	if (len < 0 || len >= sizeof(buf))
+	if (request(this, cb, data, "exec %s", cmd) != 0)
 	{
 		return -1;
 	}
-	if (request(this, buf, buf, &len) != 0)
-	{
-		DBG1("exec failed: %.*s", len, buf);
-		return FALSE;
-	}
-	return TRUE;
+	return 0;
 }
 
 /**
@@ -223,20 +213,18 @@ static bool exec(private_mconsole_t *this, char *cmd)
  */
 static bool wait_bootup(private_mconsole_t *this)
 {
-	char buf[128];
-	int len, res;
+	int res;
 	
 	while (TRUE)
 	{
-		len = sizeof(buf);
-		res = request(this, "config eth9=mcast", buf, &len);
+		res = request(this, ignore, NULL, "config eth9=mcast");
 		if (res < 0)
 		{
 			return FALSE;
 		}
 		if (res == 0)
 		{
-			while (request(this, "remove eth9", buf, &len) != 0)
+			while (request(this, ignore, NULL, "remove eth9") != 0)
 			{
 				usleep(50000);
 			}
@@ -359,7 +347,7 @@ mconsole_t *mconsole_create(char *notify, void(*idle)(void))
 	
 	this->public.add_iface = (bool(*)(mconsole_t*, char *guest, char *host))add_iface;
 	this->public.del_iface = (bool(*)(mconsole_t*, char *guest))del_iface;
-	this->public.exec = (bool(*)(mconsole_t*, char *cmd))exec;
+	this->public.exec = (int(*)(mconsole_t*,  void(*cb)(void*,char*,size_t), void *data, char *cmd))exec;
 	this->public.destroy = (void*)destroy;
 	
 	this->idle = idle;

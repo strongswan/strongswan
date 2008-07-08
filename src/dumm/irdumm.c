@@ -123,7 +123,6 @@ static VALUE guest_each(int argc, VALUE *argv, VALUE class)
 
 static VALUE guest_new(VALUE class, VALUE name, VALUE kernel,
 					   VALUE master, VALUE mem)
-
 {
 	guest_t *guest;
 	
@@ -170,12 +169,17 @@ static VALUE guest_stop(VALUE self)
 	return self;
 }
 
+static void cb(void *data, char *buf, size_t len)
+{
+	printf("%.*s", len, buf);
+}
+
 static VALUE guest_exec(VALUE self, VALUE cmd)
 {
 	guest_t *guest;
 	
 	Data_Get_Struct(self, guest_t, guest);
-	if (!guest->exec(guest, StringValuePtr(cmd)))
+	if (guest->exec(guest, cb, NULL, "%s", StringValuePtr(cmd)) != 0)
 	{
 		rb_raise(rb_eRuntimeError, "executing command failed");
 	}

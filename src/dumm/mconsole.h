@@ -44,8 +44,14 @@ struct mconsole_t {
 	
 	/**
 	 * Execute a command in the UML host.
+	 *
+	 * @param cb			callback function to invoke for each line
+	 * @param data			data to pass to callback
+	 * @param cmd			command to invoke
+	 * @return				return value of command
 	 */
-	bool (*exec)(mconsole_t *this, char *cmd);
+	int (*exec)(mconsole_t *this, void(*cb)(void*,char*,size_t), void *data,
+				char *cmd);
 	
 	/**
 	 * @brief Destroy the mconsole instance

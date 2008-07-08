@@ -328,9 +328,10 @@ static bool load_template(private_guest_t *this, char *path)
 /**
  * Implementation of gues_t.exec
  */
-static int exec(private_guest_t *this, char *cmd, ...)
+static int exec(private_guest_t *this, void(*cb)(void*,char*), void *data,
+				char *cmd, ...)
 {
-	char buf[512];
+	char buf[1024];
 	size_t len;
 	va_list args;
 
@@ -342,10 +343,10 @@ static int exec(private_guest_t *this, char *cmd, ...)
 	
 		if (len > 0 && len < sizeof(buf))
 		{
-			return this->mconsole->exec(this->mconsole, buf);
+			return this->mconsole->exec(this->mconsole, cb, data, buf);
 		}
 	}
-	return FALSE;
+	return -1;
 }
 
 /**
@@ -472,7 +473,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->public.start = (void*)start;
 	this->public.stop = (void*)stop;
 	this->public.load_template = (bool(*)(guest_t*, char *path))load_template;
-	this->public.exec = (bool(*)(guest_t*, char *cmd, ...))exec;
+	this->public.exec = (int(*)(guest_t*, void(*cb)(void*,char*,size_t), void *data, char *cmd, ...))exec;
 	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
 		

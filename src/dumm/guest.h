@@ -144,11 +144,14 @@ struct guest_t {
 	/**
 	 * Execute a command in the guest.
 	 *
+	 * @param cb		callback to call for each read block
+	 * @param data		data to pass to callback
 	 * @param cmd		command to execute
 	 * @param ...		printf style argument list for cmd
-	 * @return			TRUE if command executed
+	 * @return			return value
 	 */
-	bool (*exec)(guest_t *this, char *cmd, ...);
+	int (*exec)(guest_t *this, void(*cb)(void*,char*,size_t), void *data,
+				char *cmd, ...);
 	
 	/**
 	 * @brief Called whenever a SIGCHILD for the guests PID is received.

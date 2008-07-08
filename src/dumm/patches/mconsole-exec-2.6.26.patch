@@ -1,5 +1,5 @@
---- a/arch/um/drivers/mconsole_kern.c	2008-04-17 04:49:44.000000000 +0200
-+++ b/arch/um/drivers/mconsole_kern.c	2008-07-07 13:55:48.000000000 +0200
+--- linux-2.6.26rc5-orig/arch/um/drivers/mconsole_kern.c	2008-04-17 04:49:44.000000000 +0200
++++ uml-2.6.26rc5/arch/um/drivers/mconsole_kern.c	2008-07-08 16:00:07.000000000 +0200
 @@ -4,6 +4,7 @@
   * Licensed under the GPL
   */
@@ -8,41 +8,61 @@
  #include <linux/console.h>
  #include <linux/ctype.h>
  #include <linux/interrupt.h>
-@@ -199,6 +200,24 @@
+@@ -18,6 +19,7 @@
+ #include <linux/utsname.h>
+ #include <linux/workqueue.h>
+ #include <linux/mutex.h>
++#include <linux/file.h>
+ #include <asm/uaccess.h>
+ 
+ #include "init.h"
+@@ -199,6 +201,36 @@
  }
  #endif
  
 +void mconsole_exec(struct mc_request *req)
 +{
-+	int res;
++	int res, len;
++	struct file *out;
++	char buf[MCONSOLE_MAX_DATA];
 +
 +	char *envp[] = { "HOME=/", "TERM=linux", "PATH=/sbin:/usr/sbin:/bin:/usr/bin", NULL };
 +	char *argv[] = { "/bin/sh", "-c", req->request.data + strlen("exec "), NULL };
-+	res = call_usermodehelper("/bin/sh", argv, envp, 0);
-+
++	res = call_usermodehelper_pipe("/bin/sh", argv, envp, NULL, &out);
++	
 +	if (res < 0) {
-+	char buf[60];
-+		snprintf(buf, 60, "call_usermodehelper failed in mconsole_exec with error code: %d", -res);
-+		mconsole_reply(req, buf, 1, 0);
++		mconsole_reply(req, "call_usermodehelper_pipe failed", 1, 0);
 +		return;
 +	}
-+
-+	mconsole_reply(req, "The command has been started successfully.", 0, 0);
++	
++	for (;;) {
++		len = out->f_op->read(out, buf, sizeof(buf), 0);
++		if (len < 0) {
++			mconsole_reply(req, "reading output failed", 1, 0);
++			break;
++		}
++		if (len == 0) {
++			mconsole_reply_len(req, buf, len, 0, 0);
++			break;
++		}
++		mconsole_reply_len(req, buf, len, 0, 1);
++	}
++	fput(out);
 +}
 +
  void mconsole_proc(struct mc_request *req)
  {
  	char path[64];
-@@ -270,6 +289,7 @@
+@@ -270,6 +302,7 @@
      stop - pause the UML; it will do nothing until it receives a 'go' \n\
      go - continue the UML after a 'stop' \n\
      log <string> - make UML enter <string> into the kernel log\n\
-+    exec <string> - pass <string> to /bin/sh -c in guest\n\
++    exec <string> - pass <string> to /bin/sh -c synchronously\n\
      proc <file> - returns the contents of the UML's /proc/<file>\n\
      stack <pid> - returns the stack of the specified pid\n\
  "
---- a/arch/um/drivers/mconsole_user.c	2008-05-21 18:34:47.000000000 +0200
-+++ b/arch/um/drivers/mconsole_user.c	2008-07-07 13:47:13.000000000 +0200
+--- linux-2.6.26rc5-orig/arch/um/drivers/mconsole_user.c	2008-05-21 18:34:47.000000000 +0200
++++ uml-2.6.26rc5/arch/um/drivers/mconsole_user.c	2008-07-07 13:47:13.000000000 +0200
 @@ -32,6 +32,7 @@
  	{ "stop", mconsole_stop, MCONSOLE_PROC },
  	{ "go", mconsole_go, MCONSOLE_INTR },
@@ -51,8 +71,8 @@
  	{ "proc", mconsole_proc, MCONSOLE_PROC },
  	{ "stack", mconsole_stack, MCONSOLE_INTR },
  };
---- a/arch/um/include/mconsole.h	2008-04-17 04:49:44.000000000 +0200
-+++ b/arch/um/include/mconsole.h	2008-07-07 13:46:56.000000000 +0200
+--- linux-2.6.26rc5-orig/arch/um/include/mconsole.h	2008-04-17 04:49:44.000000000 +0200
++++ uml-2.6.26rc5/arch/um/include/mconsole.h	2008-07-07 13:46:56.000000000 +0200
 @@ -85,6 +85,7 @@
  extern void mconsole_stop(struct mc_request *req);
  extern void mconsole_go(struct mc_request *req);
@@ -61,3 +81,123 @@
  extern void mconsole_proc(struct mc_request *req);
  extern void mconsole_stack(struct mc_request *req);
  
+--- linux-2.6.26rc5-orig/kernel/kmod.c	2008-05-21 18:34:56.000000000 +0200
++++ uml-2.6.26rc5/kernel/kmod.c	2008-07-08 13:50:37.000000000 +0200
+@@ -125,6 +125,7 @@
+ 	enum umh_wait wait;
+ 	int retval;
+ 	struct file *stdin;
++	struct file *stdout;
+ 	void (*cleanup)(char **argv, char **envp);
+ };
+ 
+@@ -160,8 +161,26 @@
+ 		FD_SET(0, fdt->open_fds);
+ 		FD_CLR(0, fdt->close_on_exec);
+ 		spin_unlock(&f->file_lock);
+-
+-		/* and disallow core files too */
++	}
++	if (sub_info->stdout) {
++		struct files_struct *f = current->files;
++		struct fdtable *fdt;
++		
++		sys_close(1);
++		sys_close(2);
++		get_file(sub_info->stdout);
++		fd_install(1, sub_info->stdout);
++		fd_install(2, sub_info->stdout);
++		spin_lock(&f->file_lock);
++		fdt = files_fdtable(f);
++		FD_SET(1, fdt->open_fds);
++		FD_CLR(1, fdt->close_on_exec);
++		FD_SET(2, fdt->open_fds);
++		FD_CLR(2, fdt->close_on_exec);
++		spin_unlock(&f->file_lock);
++	}
++	if (sub_info->stdin || sub_info->stdout) {
++		/* disallow core files */
+ 		current->signal->rlim[RLIMIT_CORE] = (struct rlimit){0, 0};
+ 	}
+ 
+@@ -433,6 +452,29 @@
+ }
+ EXPORT_SYMBOL(call_usermodehelper_stdinpipe);
+ 
++int call_usermodehelper_stdoutpipe(struct subprocess_info *sub_info,
++				  struct file **filp)
++{
++	struct file *f;
++
++	f = create_write_pipe();
++	if (IS_ERR(f))
++		return PTR_ERR(f);
++	sub_info->stdout = f;
++
++	f = create_read_pipe(f);
++	if (IS_ERR(f)) {
++		free_write_pipe(sub_info->stdout);
++		sub_info->stdout = NULL;
++		return PTR_ERR(f);
++	}
++	*filp = f;
++
++	return 0;
++}
++EXPORT_SYMBOL(call_usermodehelper_stdoutpipe);
++
++
+ /**
+  * call_usermodehelper_exec - start a usermode application
+  * @sub_info: information about the subprocessa
+@@ -489,7 +531,7 @@
+  * lower-level call_usermodehelper_* functions.
+  */
+ int call_usermodehelper_pipe(char *path, char **argv, char **envp,
+-			     struct file **filp)
++			     struct file **in, struct file **out)
+ {
+ 	struct subprocess_info *sub_info;
+ 	int ret;
+@@ -498,9 +540,17 @@
+ 	if (sub_info == NULL)
+ 		return -ENOMEM;
+ 
+-	ret = call_usermodehelper_stdinpipe(sub_info, filp);
+-	if (ret < 0)
+-		goto out;
++	if (in) {
++		ret = call_usermodehelper_stdinpipe(sub_info, in);
++		if (ret < 0)
++			goto out;
++	}
++
++	if (out) {
++		ret = call_usermodehelper_stdoutpipe(sub_info, out);
++		if (ret < 0)
++			goto out;
++	}
+ 
+ 	return call_usermodehelper_exec(sub_info, UMH_WAIT_EXEC);
+ 
+--- linux-2.6.26rc5-orig/include/linux/kmod.h	2008-04-17 04:49:44.000000000 +0200
++++ uml-2.6.26rc5/include/linux/kmod.h	2008-07-08 10:29:29.000000000 +0200
+@@ -93,6 +93,6 @@
+ 
+ struct file;
+ extern int call_usermodehelper_pipe(char *path, char *argv[], char *envp[],
+-				    struct file **filp);
++				    struct file **in, struct file **out);
+ 
+ #endif /* __LINUX_KMOD_H__ */
+--- linux-2.6.26rc5-orig/fs/exec.c	2008-06-05 14:00:42.000000000 +0200
++++ uml-2.6.26rc5/fs/exec.c	2008-07-08 10:28:33.000000000 +0200
+@@ -1737,7 +1737,7 @@
+ 
+ 		/* SIGPIPE can happen, but it's just never processed */
+  		if (call_usermodehelper_pipe(corename+1, helper_argv, NULL,
+-				&file)) {
++				&file, NULL)) {
+  			printk(KERN_INFO "Core dump to %s pipe failed\n",
+ 			       corename);
+  			goto fail_unlock;

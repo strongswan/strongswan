@@ -105,8 +105,8 @@ static char* get_hostif(private_iface_t *this)
  */
 static bool add_address(private_iface_t *this, host_t *addr)
 {
-	if (this->guest->exec(this->guest, "ip addr add %H dev %s",
-						  addr, this->guestif))
+	if (this->guest->exec(this->guest, NULL, NULL, "ip addr add %H dev %s",
+						  addr, this->guestif) == 0)
 	{
 		this->addresses->insert_last(this->addresses, addr);
 		return TRUE;
@@ -137,8 +137,8 @@ static bool delete_address(private_iface_t *this, host_t *addr)
 	{
 		if (current->ip_equals(current, addr))
 		{
-			if (this->guest->exec(this->guest, "ip addr del %H dev %s",
-								  current, this->guestif))
+			if (this->guest->exec(this->guest, NULL, NULL,
+						"ip addr del %H dev %s", current, this->guestif) == 0)
 			{
 				this->addresses->remove_at(this->addresses, enumerator);
 				success = TRUE;
@@ -157,11 +157,13 @@ static void set_bridge(private_iface_t *this, bridge_t *bridge)
 {
 	if (this->bridge == NULL && bridge)
 	{
-		this->guest->exec(this->guest, "ip link set %s up", this->guestif);
+		this->guest->exec(this->guest, NULL, NULL,
+						  "ip link set %s up", this->guestif);
 	}
 	else if (this->bridge && bridge == NULL)
 	{
-		this->guest->exec(this->guest, "ip link set %s down", this->guestif);
+		this->guest->exec(this->guest, NULL, NULL,
+						  "ip link set %s down", this->guestif);
 	}
 	this->bridge = bridge;
 }
