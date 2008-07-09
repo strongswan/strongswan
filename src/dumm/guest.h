@@ -107,9 +107,8 @@ struct guest_t {
 	 * @brief Kill the guest.
 	 *
 	 * @param idle		idle function to call while waiting to termination
-	 * @return			TRUE if guest was running and killed
 	 */
-	bool (*stop) (guest_t *this, idle_function_t idle);
+	void (*stop) (guest_t *this, idle_function_t idle);
 	
 	/**
 	 * @brief Create a new interface in the current scenario.

@@ -709,8 +709,9 @@ static int cowfs_write(const char *path, const char *buf, size_t size,
 
 	rel(&path);
 
-	fd = get_rd(path);
-	if (fd == this->master_fd)
+	fd = get_wr(path);
+	if (fd == this->master_fd ||
+		(this->over_fd > 0 && fd == this->host_fd))
 	{
 		fd = copy(path);
 		if (fd < 0)

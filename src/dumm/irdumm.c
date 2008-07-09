@@ -34,6 +34,7 @@ VALUE rbm_dumm;
 VALUE rbc_guest;
 VALUE rbc_bridge;
 VALUE rbc_iface;
+VALUE rbc_template;
 
 /**
  * Guest invocation callback
@@ -179,11 +180,7 @@ static VALUE guest_stop(VALUE self)
 	guest_t *guest;
 	
 	Data_Get_Struct(self, guest_t, guest);
-	
-	if (!guest->stop(guest, NULL))
-	{
-		rb_raise(rb_eRuntimeError, "stopping guest failed");
-	}
+	guest->stop(guest, NULL);
 	return self;
 }
 
@@ -355,7 +352,7 @@ static VALUE bridge_get(VALUE class, VALUE key)
 	enumerator->destroy(enumerator);
 	if (!found)
 	{
-		rb_raise(rb_eRuntimeError, "bridgne not found");
+		rb_raise(rb_eRuntimeError, "bridge not found");
 	}
 	return Data_Wrap_Struct(class, NULL, NULL, found);
 }
@@ -560,6 +557,31 @@ static void iface_init()
 	rb_include_module(rbc_iface, rb_mEnumerable);
 }
 
+static VALUE template_load(VALUE class, VALUE name)
+{
+	if (!dumm->load_template(dumm, StringValuePtr(name)))
+	{
+		rb_raise(rb_eRuntimeError, "loading template failed");
+	}
+	return class;
+}
+
+static VALUE template_unload(VALUE class)
+{
+	if (!dumm->load_template(dumm, NULL))
+	{
+		rb_raise(rb_eRuntimeError, "unloading template failed");
+	}
+	return class;
+}
+
+static void template_init()
+{
+	rbc_template = rb_define_class_under(rbm_dumm , "Template", rb_cObject);
+	rb_define_singleton_method(rbc_template, "load", template_load, 1);
+	rb_define_singleton_method(rbc_template, "unload", template_unload, 0);
+}
+
 /**
  * main routine, parses args and reads from console
  */
@@ -583,6 +605,7 @@ int main(int argc, char *argv[])
 	guest_init();
 	bridge_init();
 	iface_init();
+	template_init();
 	
 	sigemptyset(&action.sa_mask);
 	action.sa_flags = SA_SIGINFO;
