@@ -1041,18 +1041,28 @@ static void resolve_hosts(private_ike_sa_t *this)
 {
 	host_t *host;
 	
-	host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg), 0, 
-								IKEV2_UDP_PORT);
-	if (host)
-	{
-		set_my_host(this, host);
-	}
 	host = host_create_from_dns(this->ike_cfg->get_other_addr(this->ike_cfg),
-								this->my_host->get_family(this->my_host),
-								IKEV2_UDP_PORT);
+								0, IKEV2_UDP_PORT);
 	if (host)
 	{
 		set_other_host(this, host);
+	}
+	
+	host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg),
+								this->my_host->get_family(this->my_host),
+								IKEV2_UDP_PORT);
+	
+	if (host && host->is_anyaddr(host) &&
+		!this->other_host->is_anyaddr(this->other_host))
+	{
+		host->destroy(host);
+		host = charon->kernel_interface->get_source_addr(
+								charon->kernel_interface, this->other_host);
+		host->set_port(host, IKEV2_UDP_PORT);
+	}
+	if (host)
+	{
+		set_my_host(this, host);
 	}
 }
 
