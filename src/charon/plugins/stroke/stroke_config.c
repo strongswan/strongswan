@@ -209,7 +209,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_stroke_config_t *this, char *nam
  */
 static identification_t *update_peerid(certificate_t *cert, identification_t *id)
 {
-	if (!cert->has_subject(cert, id))
+	if (id->get_type(id) == ID_ANY || !cert->has_subject(cert, id))
 	{
 		DBG1(DBG_CFG, "  peerid %D not confirmed by certificate, "
 			 "defaulting to subject DN", id);
