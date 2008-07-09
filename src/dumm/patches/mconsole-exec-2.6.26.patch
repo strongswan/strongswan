@@ -1,5 +1,5 @@
---- linux-2.6.26rc5-orig/arch/um/drivers/mconsole_kern.c	2008-04-17 04:49:44.000000000 +0200
-+++ uml-2.6.26rc5/arch/um/drivers/mconsole_kern.c	2008-07-08 16:00:07.000000000 +0200
+--- a/arch/um/drivers/mconsole_kern.c	2008-04-17 04:49:44.000000000 +0200
++++ b/arch/um/drivers/mconsole_kern.c	2008-07-09 14:41:42.000000000 +0200
 @@ -4,6 +4,7 @@
   * Licensed under the GPL
   */
@@ -16,7 +16,7 @@
  #include <asm/uaccess.h>
  
  #include "init.h"
-@@ -199,6 +201,36 @@
+@@ -199,6 +201,44 @@
  }
  #endif
  
@@ -26,8 +26,16 @@
 +	struct file *out;
 +	char buf[MCONSOLE_MAX_DATA];
 +
-+	char *envp[] = { "HOME=/", "TERM=linux", "PATH=/sbin:/usr/sbin:/bin:/usr/bin", NULL };
-+	char *argv[] = { "/bin/sh", "-c", req->request.data + strlen("exec "), NULL };
++	char *envp[] = {
++		"HOME=/", "TERM=linux",
++		"PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin",
++		NULL
++	};
++	char *argv[] = {
++		"/bin/sh", "-c",
++		req->request.data + strlen("exec "),
++		NULL
++	};
 +	res = call_usermodehelper_pipe("/bin/sh", argv, envp, NULL, &out);
 +	
 +	if (res < 0) {
@@ -53,7 +61,7 @@
  void mconsole_proc(struct mc_request *req)
  {
  	char path[64];
-@@ -270,6 +302,7 @@
+@@ -270,6 +310,7 @@
      stop - pause the UML; it will do nothing until it receives a 'go' \n\
      go - continue the UML after a 'stop' \n\
      log <string> - make UML enter <string> into the kernel log\n\
@@ -61,8 +69,8 @@
      proc <file> - returns the contents of the UML's /proc/<file>\n\
      stack <pid> - returns the stack of the specified pid\n\
  "
---- linux-2.6.26rc5-orig/arch/um/drivers/mconsole_user.c	2008-05-21 18:34:47.000000000 +0200
-+++ uml-2.6.26rc5/arch/um/drivers/mconsole_user.c	2008-07-07 13:47:13.000000000 +0200
+--- a/arch/um/drivers/mconsole_user.c	2008-05-21 18:34:47.000000000 +0200
++++ b/arch/um/drivers/mconsole_user.c	2008-07-07 13:47:13.000000000 +0200
 @@ -32,6 +32,7 @@
  	{ "stop", mconsole_stop, MCONSOLE_PROC },
  	{ "go", mconsole_go, MCONSOLE_INTR },
@@ -71,8 +79,8 @@
  	{ "proc", mconsole_proc, MCONSOLE_PROC },
  	{ "stack", mconsole_stack, MCONSOLE_INTR },
  };
---- linux-2.6.26rc5-orig/arch/um/include/mconsole.h	2008-04-17 04:49:44.000000000 +0200
-+++ uml-2.6.26rc5/arch/um/include/mconsole.h	2008-07-07 13:46:56.000000000 +0200
+--- a/arch/um/include/mconsole.h	2008-04-17 04:49:44.000000000 +0200
++++ b/arch/um/include/mconsole.h	2008-07-07 13:46:56.000000000 +0200
 @@ -85,6 +85,7 @@
  extern void mconsole_stop(struct mc_request *req);
  extern void mconsole_go(struct mc_request *req);
@@ -81,8 +89,8 @@
  extern void mconsole_proc(struct mc_request *req);
  extern void mconsole_stack(struct mc_request *req);
  
---- linux-2.6.26rc5-orig/kernel/kmod.c	2008-05-21 18:34:56.000000000 +0200
-+++ uml-2.6.26rc5/kernel/kmod.c	2008-07-08 13:50:37.000000000 +0200
+--- a/kernel/kmod.c	2008-05-21 18:34:56.000000000 +0200
++++ b/kernel/kmod.c	2008-07-08 13:50:37.000000000 +0200
 @@ -125,6 +125,7 @@
  	enum umh_wait wait;
  	int retval;
@@ -180,8 +188,8 @@
  
  	return call_usermodehelper_exec(sub_info, UMH_WAIT_EXEC);
  
---- linux-2.6.26rc5-orig/include/linux/kmod.h	2008-04-17 04:49:44.000000000 +0200
-+++ uml-2.6.26rc5/include/linux/kmod.h	2008-07-08 10:29:29.000000000 +0200
+--- a/include/linux/kmod.h	2008-04-17 04:49:44.000000000 +0200
++++ b/include/linux/kmod.h	2008-07-08 10:29:29.000000000 +0200
 @@ -93,6 +93,6 @@
  
  struct file;
@@ -190,8 +198,8 @@
 +				    struct file **in, struct file **out);
  
  #endif /* __LINUX_KMOD_H__ */
---- linux-2.6.26rc5-orig/fs/exec.c	2008-06-05 14:00:42.000000000 +0200
-+++ uml-2.6.26rc5/fs/exec.c	2008-07-08 10:28:33.000000000 +0200
+--- a/fs/exec.c	2008-06-05 14:00:42.000000000 +0200
++++ b/fs/exec.c	2008-07-08 10:28:33.000000000 +0200
 @@ -1737,7 +1737,7 @@
  
  		/* SIGPIPE can happen, but it's just never processed */
