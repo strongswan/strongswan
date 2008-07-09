@@ -587,8 +587,9 @@ static void template_init()
  */
 int main(int argc, char *argv[])
 {	
-	int state;
+	int state, i;
 	struct sigaction action;
+	char buf[512];
 	
 	ruby_init();
 	ruby_init_loadpath();
@@ -616,9 +617,23 @@ int main(int argc, char *argv[])
 	sigaction(SIGTERM, &action, NULL);
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGHUP, &action, NULL);
-
-	rb_require("irb");
+	
 	rb_eval_string_protect("include Dumm", &state);
+	if (state)
+	{
+		rb_p(ruby_errinfo);
+	}
+	for (i = 1; i < argc; i++)
+	{
+		snprintf(buf, sizeof(buf), "load \"%s\"", argv[i]);
+		printf("%s\n", buf);
+		rb_eval_string_protect(buf, &state);
+		if (state)
+		{
+			rb_p(ruby_errinfo);
+		}
+	}
+	rb_require("irb");
 	rb_eval_string_protect("IRB.start", &state);
 	if (state)
 	{
