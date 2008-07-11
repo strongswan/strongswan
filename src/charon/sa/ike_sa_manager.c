@@ -365,6 +365,7 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 	pthread_mutex_unlock(&this->mutex);	
 	DBG2(DBG_MGR, "created IKE_SA, %d IKE_SAs in manager",
 		 this->ike_sa_list->get_count(this->ike_sa_list));
+	charon->bus->set_sa(charon->bus, entry->ike_sa);
 	return entry->ike_sa;
 }
 
