@@ -2,13 +2,21 @@ moon::cat /etc/ipsec.d/tables.sql > /etc/ipsec.d/ipsec.sql
 moon::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
 moon::ipsec pool --add extpool --start 10.3.0.1 --end 10.3.255.254 --timeout 48 
 moon::ipsec pool --add intpool --start 10.4.0.1 --end 10.4.255.254 --timeout  0
+moon::ip route add 10.3.0.0/16 via PH_IP_MOON
+moon::ip route add 10.4.0.0/16 via PH_IP_MOON1
+alice::/etc/init.d/iptables start 2> /dev/null
+venus::/etc/init.d/iptables start 2> /dev/null
 moon::/etc/init.d/iptables start 2> /dev/null
 carol::/etc/init.d/iptables start 2> /dev/null
-alice::/etc/init.d/iptables start 2> /dev/null
-carol::ipsec start
-moon::ipsec start
+dave::/etc/init.d/iptables start 2> /dev/null
 alice::ipsec start
+venus::ipsec start
+carol::ipsec start
+dave::ipsec start
+moon::ipsec start
 carol::sleep 2 
 carol::ipsec up home
+dave::ipsec up home
 alice::ipsec up home
+venus::ipsec up home
 alice::sleep 1
