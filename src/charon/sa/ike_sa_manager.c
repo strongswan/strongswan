@@ -157,6 +157,11 @@ struct private_ike_sa_manager_t {
 	  * SHA1 hasher for IKE_SA_INIT retransmit detection
 	  */
 	 hasher_t *hasher;
+	
+	/**
+	 * reuse existing IKE_SAs in checkout_by_config
+	 */
+	 bool reuse_ikesa;
 };
 
 /**
@@ -365,7 +370,6 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 	pthread_mutex_unlock(&this->mutex);	
 	DBG2(DBG_MGR, "created IKE_SA, %d IKE_SAs in manager",
 		 this->ike_sa_list->get_count(this->ike_sa_list));
-	charon->bus->set_sa(charon->bus, entry->ike_sa);
 	return entry->ike_sa;
 }
 
@@ -505,7 +509,7 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	
 	pthread_mutex_lock(&(this->mutex));
 	
-	if (my_host && other_host)
+	if (my_host && other_host && this->reuse_ikesa)
 	{
 		enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 		while (enumerator->enumerate(enumerator, &entry))
@@ -1010,6 +1014,8 @@ ike_sa_manager_t *ike_sa_manager_create()
 	}
 	this->ike_sa_list = linked_list_create();
 	pthread_mutex_init(&this->mutex, NULL);
+	this->reuse_ikesa = lib->settings->get_bool(lib->settings,
+												"charon.reuse_ikesa", TRUE);
 	return &this->public;
 }
 

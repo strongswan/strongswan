@@ -38,11 +38,6 @@ struct private_controller_t {
 	 * Public part of stroke_t object.
 	 */
 	controller_t public;
-	
-	/**
-	 * should we reuse established IKE_SAs when setting up CHILD_SAs?
-	 */
-	bool reuse_ikesa;
 };
 
 
@@ -108,11 +103,6 @@ struct interface_job_t {
 	 * associated listener 
 	 */
 	interface_bus_listener_t listener;
-	
-	/**
-	 * back reference to controller
-	 */
-	private_controller_t *controller;
 };
 
 /**
@@ -160,16 +150,8 @@ static status_t initiate_execute(interface_job_t *job)
 	interface_bus_listener_t *listener = &job->listener;
 	peer_cfg_t *peer_cfg = listener->peer_cfg;
 	
-	if (job->controller->reuse_ikesa)
-	{
-		ike_sa = charon->ike_sa_manager->checkout_by_config(
-											charon->ike_sa_manager, peer_cfg);
-	}
-	else
-	{
-		ike_sa = charon->ike_sa_manager->checkout_new(
-											charon->ike_sa_manager, TRUE);
-	}
+	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
+														peer_cfg);
 	listener->ike_sa = ike_sa;
 	
 	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
@@ -202,7 +184,6 @@ static status_t initiate(private_controller_t *this,
 	job.listener.status = FAILED;
 	job.listener.child_cfg = child_cfg;
 	job.listener.peer_cfg = peer_cfg;
-	job.controller = this;
 	job.public.execute = (void*)initiate_execute;
 	job.public.destroy = nop;
 
@@ -270,7 +251,7 @@ static status_t terminate_ike_execute(interface_job_t *job)
 /**
  * Implementation of controller_t.terminate_ike.
  */
-static status_t terminate_ike(private_controller_t *this, u_int32_t unique_id, 
+static status_t terminate_ike(controller_t *this, u_int32_t unique_id, 
 							  controller_cb_t callback, void *param)
 {
 	interface_job_t job;
@@ -281,7 +262,6 @@ static status_t terminate_ike(private_controller_t *this, u_int32_t unique_id,
 	job.listener.param = param;
 	job.listener.status = FAILED;
 	job.listener.id = unique_id;
-	job.controller = this;
 	job.public.execute = (void*)terminate_ike_execute;
 	job.public.destroy = nop;
 
@@ -373,7 +353,7 @@ static status_t terminate_child_execute(interface_job_t *job)
 /**
  * Implementation of controller_t.terminate_child.
  */
-static status_t terminate_child(private_controller_t *this, u_int32_t reqid, 
+static status_t terminate_child(controller_t *this, u_int32_t reqid, 
 								controller_cb_t callback, void *param)
 {
 	interface_job_t job;
@@ -384,7 +364,6 @@ static status_t terminate_child(private_controller_t *this, u_int32_t reqid,
 	job.listener.param = param;
 	job.listener.status = FAILED;
 	job.listener.id = reqid;
-	job.controller = this;
 	job.public.execute = (void*)terminate_child_execute;
 	job.public.destroy = nop;
 
@@ -431,17 +410,8 @@ static status_t route_execute(interface_job_t *job)
 	ike_sa_t *ike_sa;
 	interface_bus_listener_t *listener = &job->listener;
 	peer_cfg_t *peer_cfg = listener->peer_cfg;
-	
-	if (job->controller->reuse_ikesa)
-	{
-		ike_sa = charon->ike_sa_manager->checkout_by_config(
-											charon->ike_sa_manager, peer_cfg);
-	}
-	else
-	{
-		ike_sa = charon->ike_sa_manager->checkout_new(
-											charon->ike_sa_manager, TRUE);
-	}
+	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
+														peer_cfg);
 	listener->ike_sa = ike_sa;
 	
 	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
@@ -459,7 +429,7 @@ static status_t route_execute(interface_job_t *job)
 /**
  * Implementation of controller_t.route.
  */
-static status_t route(private_controller_t *this,
+static status_t route(controller_t *this,
 					  peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 					  controller_cb_t callback, void *param)
 {
@@ -472,7 +442,6 @@ static status_t route(private_controller_t *this,
 	job.listener.status = FAILED;
 	job.listener.peer_cfg = peer_cfg;
 	job.listener.child_cfg = child_cfg;
-	job.controller = this;
 	job.public.execute = (void*)route_execute;
 	job.public.destroy = nop;
 
@@ -538,7 +507,7 @@ static status_t unroute_execute(interface_job_t *job)
 /**
  * Implementation of controller_t.unroute.
  */
-static status_t unroute(private_controller_t *this, u_int32_t reqid, 
+static status_t unroute(controller_t *this, u_int32_t reqid, 
 						controller_cb_t callback, void *param)
 {
 	interface_job_t job;
@@ -549,7 +518,6 @@ static status_t unroute(private_controller_t *this, u_int32_t reqid,
 	job.listener.param = param;
 	job.listener.status = FAILED;
 	job.listener.id = reqid;
-	job.controller = this;
 	job.public.execute = (void*)unroute_execute;
 	job.public.destroy = nop;
 
@@ -593,8 +561,6 @@ controller_t *controller_create(void)
 	this->public.unroute = (status_t(*)(controller_t*,u_int32_t,controller_cb_t,void*))unroute;
 	this->public.destroy = (void (*)(controller_t*))destroy;
 	
-	this->reuse_ikesa = lib->settings->get_bool(lib->settings,
-												"charon.reuse_ikesa", TRUE);
 	return &this->public;
 }
 
