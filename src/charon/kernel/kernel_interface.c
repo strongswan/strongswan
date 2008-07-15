@@ -48,6 +48,11 @@
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/roam_job.h>
 
+/** required for Linux 2.6.26 kernel and later */
+#ifndef XFRM_STATE_AF_UNSPEC
+#define XFRM_STATE_AF_UNSPEC	32
+#endif
+
 /** routing table for routes installed by us */
 #ifndef IPSEC_ROUTING_TABLE
 #define IPSEC_ROUTING_TABLE 100
@@ -505,7 +510,7 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
 	struct xfrm_selector sel;
 
 	memset(&sel, 0, sizeof(sel));
-	sel.family = src->get_type(src) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
+	sel.family = (src->get_type(src) == TS_IPV4_ADDR_RANGE) ? AF_INET : AF_INET6;
 	/* src or dest proto may be "any" (0), use more restrictive one */
 	sel.proto = max(src->get_protocol(src), dst->get_protocol(dst));
 	ts2subnet(dst, &sel.daddr, &sel.prefixlen_d);
@@ -2041,6 +2046,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	sa->family = src->get_family(src);
 	sa->mode = mode;
 	sa->replay_window = (protocol == IPPROTO_COMP) ? 0 : 32;
+	sa->flags |= XFRM_STATE_AF_UNSPEC;
 	sa->reqid = reqid;
 	/* we currently do not expire SAs by volume/packet count */
 	sa->lft.soft_byte_limit = XFRM_INF;

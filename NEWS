@@ -1,6 +1,9 @@
 strongswan-4.2.5
 ----------------
 
+- The XFRM_STATE_AF_UNSPEC flag added to xfrm.h allows IPv4-over-IPv6
+  and IPv6-over-IPv6 tunnels with the 2.6.26 and later Linux kernels.
+
 - management of different virtual IP pools for different
   network interfaces have become possible.
 
