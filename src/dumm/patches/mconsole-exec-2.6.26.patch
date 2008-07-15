@@ -1,5 +1,5 @@
---- a/arch/um/drivers/mconsole_kern.c	2008-04-17 04:49:44.000000000 +0200
-+++ b/arch/um/drivers/mconsole_kern.c	2008-07-09 14:41:42.000000000 +0200
+--- a/arch/um/drivers/mconsole_kern.c	2008-07-13 23:51:29.000000000 +0200
++++ b/arch/um/drivers/mconsole_kern.c	2008-07-15 15:41:54.000000000 +0200
 @@ -4,6 +4,7 @@
   * Licensed under the GPL
   */
@@ -69,8 +69,8 @@
      proc <file> - returns the contents of the UML's /proc/<file>\n\
      stack <pid> - returns the stack of the specified pid\n\
  "
---- a/arch/um/drivers/mconsole_user.c	2008-05-21 18:34:47.000000000 +0200
-+++ b/arch/um/drivers/mconsole_user.c	2008-07-07 13:47:13.000000000 +0200
+--- a/arch/um/drivers/mconsole_user.c	2008-07-13 23:51:29.000000000 +0200
++++ b/arch/um/drivers/mconsole_user.c	2008-07-15 15:41:54.000000000 +0200
 @@ -32,6 +32,7 @@
  	{ "stop", mconsole_stop, MCONSOLE_PROC },
  	{ "go", mconsole_go, MCONSOLE_INTR },
@@ -79,8 +79,8 @@
  	{ "proc", mconsole_proc, MCONSOLE_PROC },
  	{ "stack", mconsole_stack, MCONSOLE_INTR },
  };
---- a/arch/um/include/mconsole.h	2008-04-17 04:49:44.000000000 +0200
-+++ b/arch/um/include/mconsole.h	2008-07-07 13:46:56.000000000 +0200
+--- a/arch/um/include/mconsole.h	2008-07-13 23:51:29.000000000 +0200
++++ b/arch/um/include/mconsole.h	2008-07-15 15:41:54.000000000 +0200
 @@ -85,6 +85,7 @@
  extern void mconsole_stop(struct mc_request *req);
  extern void mconsole_go(struct mc_request *req);
@@ -89,8 +89,8 @@
  extern void mconsole_proc(struct mc_request *req);
  extern void mconsole_stack(struct mc_request *req);
  
---- a/kernel/kmod.c	2008-05-21 18:34:56.000000000 +0200
-+++ b/kernel/kmod.c	2008-07-08 13:50:37.000000000 +0200
+--- a/kernel/kmod.c	2008-07-13 23:51:29.000000000 +0200
++++ b/kernel/kmod.c	2008-07-15 15:41:54.000000000 +0200
 @@ -125,6 +125,7 @@
  	enum umh_wait wait;
  	int retval;
@@ -188,8 +188,8 @@
  
  	return call_usermodehelper_exec(sub_info, UMH_WAIT_EXEC);
  
---- a/include/linux/kmod.h	2008-04-17 04:49:44.000000000 +0200
-+++ b/include/linux/kmod.h	2008-07-08 10:29:29.000000000 +0200
+--- a/include/linux/kmod.h	2008-07-13 23:51:29.000000000 +0200
++++ b/include/linux/kmod.h	2008-07-15 15:41:54.000000000 +0200
 @@ -93,6 +93,6 @@
  
  struct file;
@@ -198,9 +198,9 @@
 +				    struct file **in, struct file **out);
  
  #endif /* __LINUX_KMOD_H__ */
---- a/fs/exec.c	2008-06-05 14:00:42.000000000 +0200
-+++ b/fs/exec.c	2008-07-08 10:28:33.000000000 +0200
-@@ -1737,7 +1737,7 @@
+--- a/fs/exec.c	2008-07-13 23:51:29.000000000 +0200
++++ b/fs/exec.c	2008-07-15 15:41:54.000000000 +0200
+@@ -1741,7 +1741,7 @@
  
  		/* SIGPIPE can happen, but it's just never processed */
   		if (call_usermodehelper_pipe(corename+1, helper_argv, NULL,
@@ -209,3 +209,36 @@
   			printk(KERN_INFO "Core dump to %s pipe failed\n",
  			       corename);
   			goto fail_unlock;
+--- a/arch/um/Makefile	2008-07-13 23:51:29.000000000 +0200
++++ b/arch/um/Makefile	2008-07-15 16:27:02.000000000 +0200
+@@ -77,6 +77,7 @@
+ KERNEL_DEFINES = $(strip -Derrno=kernel_errno -Dsigprocmask=kernel_sigprocmask \
+ 			 -Dmktime=kernel_mktime $(ARCH_KERNEL_DEFINES))
+ KBUILD_CFLAGS += $(KERNEL_DEFINES)
++KBUILD_CFLAGS += $(call cc-option,-fno-unit-at-a-time,)
+ 
+ PHONY += linux
+ 
+--- a/arch/um/Makefile-i386	2008-07-13 23:51:29.000000000 +0200
++++ b/arch/um/Makefile-i386	2008-07-15 16:23:57.000000000 +0200
+@@ -32,11 +32,4 @@
+ # an unresolved reference.
+ cflags-y += -ffreestanding
+ 
+-# Disable unit-at-a-time mode on pre-gcc-4.0 compilers, it makes gcc use
+-# a lot more stack due to the lack of sharing of stacklots.  Also, gcc
+-# 4.3.0 needs -funit-at-a-time for extern inline functions.
+-KBUILD_CFLAGS += $(shell if [ $(call cc-version) -lt 0400 ] ; then \
+-			echo $(call cc-option,-fno-unit-at-a-time); \
+-			else echo $(call cc-option,-funit-at-a-time); fi ;)
+-
+ KBUILD_CFLAGS += $(cflags-y)
+--- a/arch/um/Makefile-x86_64	2008-07-13 23:51:29.000000000 +0200
++++ b/arch/um/Makefile-x86_64	2008-07-15 16:24:20.000000000 +0200
+@@ -21,6 +21,3 @@
+ 
+ LINK-$(CONFIG_LD_SCRIPT_DYN) += -Wl,-rpath,/lib64
+ LINK-y += -m64
+-
+-# Do unit-at-a-time unconditionally on x86_64, following the host
+-KBUILD_CFLAGS += $(call cc-option,-funit-at-a-time)
