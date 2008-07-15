@@ -2045,8 +2045,11 @@ static status_t add_sa(private_kernel_interface_t *this,
 	sa->id.proto = proto_ike2kernel(protocol);
 	sa->family = src->get_family(src);
 	sa->mode = mode;
+	if (mode == MODE_TUNNEL)
+	{
+		sa->flags |= XFRM_STATE_AF_UNSPEC;
+	}
 	sa->replay_window = (protocol == IPPROTO_COMP) ? 0 : 32;
-	sa->flags |= XFRM_STATE_AF_UNSPEC;
 	sa->reqid = reqid;
 	/* we currently do not expire SAs by volume/packet count */
 	sa->lft.soft_byte_limit = XFRM_INF;
