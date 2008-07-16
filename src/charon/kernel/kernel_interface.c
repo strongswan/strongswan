@@ -1090,6 +1090,11 @@ static status_t netlink_send_ack(private_kernel_interface_t *this,
 				
 				if (err->error)
 				{
+					if (-err->error == EEXIST)
+					{	/* do not report existing routes */
+						free(out);
+						return ALREADY_DONE;
+					}
 					DBG1(DBG_KNL, "received netlink error: %s (%d)",
 						 strerror(-err->error), -err->error);
 					free(out);
@@ -2737,17 +2742,26 @@ static status_t add_policy(private_kernel_interface_t *this,
 			/* get the nexthop to src (src as we are in POLICY_FWD).*/
 			policy->route->gateway = get_route(this, src, TRUE);
 			policy->route->if_index = get_interface_index(this, dst);
-			policy->route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
-			memcpy(policy->route->dst_net.ptr, &policy->sel.saddr, policy->route->dst_net.len);
+			policy->route->dst_net = chunk_alloc(
+										policy->sel.family == AF_INET ? 4 : 16);
+			memcpy(policy->route->dst_net.ptr, &policy->sel.saddr,
+				   policy->route->dst_net.len);
 			policy->route->prefixlen = policy->sel.prefixlen_s;
 			
-			if (manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
-								policy->route) != SUCCESS)
+			switch (manage_srcroute(this, RTM_NEWROUTE,
+									NLM_F_CREATE | NLM_F_EXCL, policy->route))
 			{
-				DBG1(DBG_KNL, "unable to install source route for %H",
-					 policy->route->src_ip);
-				route_entry_destroy(policy->route);
-				policy->route = NULL;
+				default:
+					DBG1(DBG_KNL, "unable to install source route for %H",
+						 policy->route->src_ip);
+					/* FALL */
+				case ALREADY_DONE:
+					/* route exists, do not uninstall */
+					route_entry_destroy(policy->route);
+					policy->route = NULL;
+					break;
+				case SUCCESS:
+					break;
 			}
 		}
 		else
