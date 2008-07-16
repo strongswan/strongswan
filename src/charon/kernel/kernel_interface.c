@@ -224,9 +224,6 @@ struct policy_entry_t {
 	/** direction of this policy: in, out, forward */
 	u_int8_t direction;
 	
-	/** protocol ID: ESP/AH */
-	protocol_id_t proto;
-	
 	/** reqid of the policy */
 	u_int32_t reqid;
 	
@@ -2617,7 +2614,6 @@ static status_t add_policy(private_kernel_interface_t *this,
 	memset(policy, 0, sizeof(policy_entry_t));
 	policy->sel = ts2selector(src_ts, dst_ts);
 	policy->direction = direction;
-	policy->proto = protocol;
 	
 	/* find the policy, which matches EXACTLY */
 	pthread_mutex_lock(&this->mutex);
@@ -2625,8 +2621,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	while (iterator->iterate(iterator, (void**)&current))
 	{
 		if (memeq(&current->sel, &policy->sel, sizeof(struct xfrm_selector)) &&
-			policy->direction == current->direction &&
-			policy->proto == current->proto)
+			policy->direction == current->direction)
 		{
 			/* use existing policy */
 			current->refcount++;
