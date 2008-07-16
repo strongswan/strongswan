@@ -1,4 +1,4 @@
 #!/bin/bash
 CFLAGS="-Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing -g -O2" ./configure \
---sysconfdir=/etc --disable-tools --disable-pluto --enable-leak-detective --with-random-device=/dev/urandom \
+--sysconfdir=/etc --disable-tools --disable-pluto --enable-leak-detective --enable-dumm \
 $1 $2 $3 $4 $5
