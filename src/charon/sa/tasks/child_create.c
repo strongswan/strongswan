@@ -341,7 +341,6 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	{
 		seed = chunk_cata("cc", nonce_i, nonce_r);
 	}
-	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
 	
 	if (this->ipcomp != IPCOMP_NONE)
 	{
@@ -349,6 +348,15 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 										this->other_cpi);
 	}
 	
+	status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts,
+					this->mode, this->proposal->get_protocol(this->proposal));
+	if (status != SUCCESS)
+	{	
+		SIG(CHILD_UP_FAILED, "unable to install IPsec policies (SPD) in kernel");
+		return NOT_FOUND;
+	}
+	
+	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
 	if (this->initiator)
 	{
 		status = this->child_sa->update(this->child_sa, this->proposal,
@@ -365,15 +373,6 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	{
 		SIG(CHILD_UP_FAILED, "unable to install IPsec SA (SAD) in kernel");
 		return FAILED;
-	}
-	
-	status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts,
-										  this->mode);
-										  
-	if (status != SUCCESS)
-	{	
-		SIG(CHILD_UP_FAILED, "unable to install IPsec policies (SPD) in kernel");
-		return NOT_FOUND;
 	}
 	/* add to IKE_SA, and remove from task */
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);

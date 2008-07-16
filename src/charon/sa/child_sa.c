@@ -662,13 +662,18 @@ static status_t update(private_child_sa_t *this, proposal_t *proposal,
 }
 
 static status_t add_policies(private_child_sa_t *this,
-							 linked_list_t *my_ts_list,
-							 linked_list_t *other_ts_list, mode_t mode)
+					linked_list_t *my_ts_list, linked_list_t *other_ts_list,
+					mode_t mode, protocol_id_t proto)
 {
 	iterator_t *my_iter, *other_iter;
 	traffic_selector_t *my_ts, *other_ts;
 	/* use low prio for ROUTED policies */
 	bool high_prio = (this->state != CHILD_CREATED);
+	
+	if (this->protocol == PROTO_NONE)
+	{	/* update if not set yet */
+		this->protocol = proto;
+	}
 	
 	/* iterate over both lists */
 	my_iter = my_ts_list->create_iterator(my_ts_list, TRUE);
@@ -1029,7 +1034,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))update;
 	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,bool))update_hosts;
-	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,mode_t))add_policies;
+	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,mode_t,protocol_id_t))add_policies;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;

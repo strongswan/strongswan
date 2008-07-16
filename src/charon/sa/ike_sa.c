@@ -1263,7 +1263,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, me);
 	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, other);
 	status = child_sa->add_policies(child_sa, my_ts, other_ts,
-									child_cfg->get_mode(child_cfg));
+									child_cfg->get_mode(child_cfg), PROTO_NONE);
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 	if (status == SUCCESS)

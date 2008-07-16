@@ -203,10 +203,12 @@ struct child_sa_t {
 	 * @param my_ts		traffic selectors for local site
 	 * @param other_ts	traffic selectors for remote site
 	 * @param mode		mode for the SA: tunnel/transport
+	 * @param proto		protocol for policy, ESP/AH
 	 * @return			SUCCESS or FAILED
 	 */	
 	status_t (*add_policies)(child_sa_t *this, linked_list_t *my_ts_list,
-							 linked_list_t *other_ts_list, mode_t mode);
+							 linked_list_t *other_ts_list, mode_t mode,
+							 protocol_id_t proto);
 	
 	/**
 	 * Get the traffic selectors of added policies of local host.
