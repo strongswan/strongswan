@@ -253,46 +253,67 @@ static void set_sa(private_bus_t *this, ike_sa_t *ike_sa)
 	pthread_setspecific(this->thread_sa, ike_sa);
 }
 
-	
+/**
+ * data associated to a signal, passed to callback
+ */
+typedef struct {
+	/** associated IKE_SA */
+	ike_sa_t *ike_sa;
+	/** invoking thread */
+	long thread;
+	/** signal type */
+	signal_t signal;
+	/** signal level */
+	level_t level;
+	/** format string */
+	char *format;
+	/** argument list */
+	va_list args;
+} signal_data_t;
+
+/**
+ * listener invocation as a list remove callback
+ */
+static bool signal_cb(entry_t *entry, signal_data_t *data)
+{
+	if (!entry->listener->signal(entry->listener, data->signal, data->level,
+						data->thread, data->ike_sa, data->format, data->args))
+	{
+		if (entry->blocker)
+		{
+			entry->blocker = FALSE;
+			entry->condvar->signal(entry->condvar);
+		}
+		else
+		{
+			entry_destroy(entry);
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
 /**
  * Implementation of bus_t.vsignal.
  */
 static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 					char* format, va_list args)
 {
-	iterator_t *iterator;
-	entry_t *entry;
-	ike_sa_t *ike_sa;
-	long thread;
+	signal_data_t data;
+	
+	data.ike_sa = pthread_getspecific(this->thread_sa);
+	data.thread = get_thread_number(this);
+	data.signal = signal;
+	data.level = level;
+	data.format = format;
+	va_copy(data.args, args);
 	
 	this->mutex->lock(this->mutex);
-	ike_sa = pthread_getspecific(this->thread_sa);
-	thread = get_thread_number(this);
-	
-	iterator = this->listeners->create_iterator(this->listeners, TRUE);
-	while (iterator->iterate(iterator, (void**)&entry))
-	{
-		va_list args_copy;
-		va_copy(args_copy, args);
-		if (!entry->listener->signal(entry->listener, signal, level, thread, 
-									 ike_sa, format, args_copy))
-		{
-			iterator->remove(iterator);
-			if (entry->blocker)
-			{
-				entry->blocker = FALSE;
-				entry->condvar->signal(entry->condvar);
-			}
-			else
-			{
-				entry_destroy(entry);
-			}
-		}
-		va_end(args_copy);
-	}
-	iterator->destroy(iterator);
-	
+	/* we use the remove() method to invoke all listeners with small overhead */
+	this->listeners->remove(this->listeners, &data, (void*)signal_cb);
 	this->mutex->unlock(this->mutex);
+	
+	va_end(data.args);
 }
 
 /**
