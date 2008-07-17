@@ -1058,7 +1058,10 @@ static void resolve_hosts(private_ike_sa_t *this)
 		host->destroy(host);
 		host = charon->kernel_interface->get_source_addr(
 								charon->kernel_interface, this->other_host);
-		host->set_port(host, IKEV2_UDP_PORT);
+		if (host)
+		{
+			host->set_port(host, IKEV2_UDP_PORT);
+		}
 	}
 	if (host)
 	{
