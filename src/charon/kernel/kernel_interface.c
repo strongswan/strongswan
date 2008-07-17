@@ -547,6 +547,7 @@ static void add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 static void process_acquire(private_kernel_interface_t *this, struct nlmsghdr *hdr)
 {
 	u_int32_t reqid = 0;
+	int proto = 0;
 	job_t *job;
 	struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_user_acquire);
 	size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
@@ -557,7 +558,18 @@ static void process_acquire(private_kernel_interface_t *this, struct nlmsghdr *h
 		{
 			struct xfrm_user_tmpl* tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rtattr);
 			reqid = tmpl->reqid;
+			proto = tmpl->id.proto;
 		}
+	}
+	switch (proto)
+	{
+		case 0:
+		case IPPROTO_ESP:
+		case IPPROTO_AH:
+			break;
+		default:
+			/* acquire for AH/ESP only, not for IPCOMP */
+			return;
 	}
 	if (reqid == 0)
 	{
