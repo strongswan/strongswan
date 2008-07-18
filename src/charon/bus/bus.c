@@ -101,6 +101,11 @@ struct entry_t {
 	bool blocker;
 	
 	/**
+	 * are we currently calling this listener
+	 */
+	bool calling;
+	
+	/**
 	 * condvar where active listeners wait
 	 */
 	condvar_t *condvar;
@@ -115,6 +120,7 @@ static entry_t *entry_create(bus_listener_t *listener, bool blocker)
 	
 	this->listener = listener;
 	this->blocker = blocker;
+	this->calling = FALSE;
 	this->condvar = condvar_create(CONDVAR_DEFAULT);
 	
 	return this;
@@ -276,6 +282,11 @@ typedef struct {
  */
 static bool signal_cb(entry_t *entry, signal_data_t *data)
 {
+	if (entry->calling)
+	{	/* avoid recursive calls */
+		return FALSE;
+	}
+	entry->calling = TRUE;
 	if (!entry->listener->signal(entry->listener, data->signal, data->level,
 						data->thread, data->ike_sa, data->format, data->args))
 	{
@@ -288,8 +299,10 @@ static bool signal_cb(entry_t *entry, signal_data_t *data)
 		{
 			entry_destroy(entry);
 		}
+		entry->calling = FALSE;
 		return TRUE;
 	}
+	entry->calling = FALSE;
 	return FALSE;
 }
 
@@ -355,7 +368,7 @@ bus_t *bus_create()
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_RECURSIVE);
 	pthread_key_create(&this->thread_id, NULL);
 	pthread_key_create(&this->thread_sa, NULL);
 	
