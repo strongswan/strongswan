@@ -277,6 +277,10 @@ then
 	D_PEER_PORT="--dport $PLUTO_PEER_PORT"
 fi
 
+# resolve octal escape sequences
+PLUTO_MY_ID=`printf "$PLUTO_MY_ID"`
+PLUTO_PEER_ID=`printf "$PLUTO_PEER_ID"`
+
 # the big choice
 case "$PLUTO_VERB:$1" in
 prepare-host:*|prepare-client:*)
@@ -333,13 +337,13 @@ up-host:*)
 	    -s $PLUTO_ME $S_MY_PORT \
 	    -d $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $D_PEER_PORT -j ACCEPT
 	#
-	if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/32" ]
+	if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
 	then
 	  logger -t $TAG -p $FAC_PRIO \
-	    "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME"
+	    "+ $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME"
 	else
 	  logger -t $TAG -p $FAC_PRIO \
-	    "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	    "+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
 	fi
 	;;
 down-host:*)
@@ -354,13 +358,13 @@ down-host:*)
 	    -s $PLUTO_ME $S_MY_PORT \
 	    -d $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $D_PEER_PORT -j ACCEPT
 	#
-	if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/32" ]
+	if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
 	then
 	  logger -t $TAG -p $FAC_PRIO -- \
-	    "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME"
+	    "- $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME"
 	else
 	  logger -t $TAG -p $FAC_PRIO -- \
-	  "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	  "- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
 	fi
 	;;
 up-client:)
@@ -374,13 +378,13 @@ up-client:)
 	    -d $PLUTO_MY_CLIENT_NET/$PLUTO_MY_CLIENT_MASK $D_MY_PORT \
 	       $CHECK_MARK -j ACCEPT
 	#
-	if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/32" ]
+	if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
 	then
 	  logger -t $TAG -p $FAC_PRIO \
-	    "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	    "+ $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	else
 	  logger -t $TAG -p $FAC_PRIO \
-	    "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	    "+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	fi
 	;;
 down-client:)
@@ -394,13 +398,13 @@ down-client:)
 	    -d $PLUTO_MY_CLIENT_NET/$PLUTO_MY_CLIENT_MASK $D_MY_PORT \
 	       $CHECK_MARK -j ACCEPT
 	#
-	if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/32" ]
+	if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
 	then
 	  logger -t $TAG -p $FAC_PRIO -- \
-	    "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	    "- $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	else
 	  logger -t $TAG -p $FAC_PRIO -- \
-	    "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	    "- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	fi
 	;;
 up-client:ipfwadm)

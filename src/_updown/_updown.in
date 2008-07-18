@@ -302,6 +302,10 @@ then
 	D_PEER_PORT="--dport $PLUTO_PEER_PORT"
 fi
 
+# resolve octal escape sequences
+PLUTO_MY_ID=`printf "$PLUTO_MY_ID"`
+PLUTO_PEER_ID=`printf "$PLUTO_PEER_ID"`
+
 # the big choice
 case "$PLUTO_VERB:$1" in
 prepare-host:*|prepare-client:*)
@@ -385,13 +389,13 @@ up-host:iptables)
 	# log IPsec host connection setup
 	if [ $VPN_LOGGING ]
 	then
-	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/32" ]
+	  if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
 	  then
 	    logger -t $TAG -p $FAC_PRIO \
-	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME"
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME"
 	  else
 	    logger -t $TAG -p $FAC_PRIO \
-	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
 	  fi
 	fi	
 	;;
@@ -409,13 +413,13 @@ down-host:iptables)
 	# log IPsec host connection teardown
 	if [ $VPN_LOGGING ]
 	then
-	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/32" ]
+	  if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
 	  then
 	    logger -t $TAG -p $FAC_PRIO -- \
-	      "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME"
+	      "- $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME"
 	  else
 	    logger -t $TAG -p $FAC_PRIO -- \
-	    "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	    "- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
 	  fi
 	fi
 	;;
@@ -448,13 +452,13 @@ up-client:iptables)
 	# log IPsec client connection setup
 	if [ $VPN_LOGGING ]
 	then
-	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/32" ]
+	  if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
 	  then
 	    logger -t $TAG -p $FAC_PRIO \
-	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	  else
 	    logger -t $TAG -p $FAC_PRIO \
-	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	  fi
 	fi
 	;;
@@ -491,13 +495,13 @@ down-client:iptables)
 	# log IPsec client connection teardown
 	if [ $VPN_LOGGING ]
 	then
-	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/32" ]
+	  if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
 	  then
 	    logger -t $TAG -p $FAC_PRIO -- \
-	      "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	      "- $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	  else
 	    logger -t $TAG -p $FAC_PRIO -- \
-	      "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	      "- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	  fi
 	fi
 	;;
@@ -544,13 +548,13 @@ up-host-v6:iptables)
 	# log IPsec host connection setup
 	if [ $VPN_LOGGING ]
 	then
-	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/128" ]
+	  if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/128" ]
 	  then
 	    logger -t $TAG -p $FAC_PRIO \
-	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME"
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME"
 	  else
 	    logger -t $TAG -p $FAC_PRIO \
-	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
 	  fi
 	fi	
 	;;
@@ -568,13 +572,13 @@ down-host-v6:iptables)
 	# log IPsec host connection teardown
 	if [ $VPN_LOGGING ]
 	then
-	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/128" ]
+	  if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/128" ]
 	  then
 	    logger -t $TAG -p $FAC_PRIO -- \
-	      "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME"
+	      "- $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME"
 	  else
 	    logger -t $TAG -p $FAC_PRIO -- \
-	    "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	    "- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
 	  fi
 	fi
 	;;
@@ -607,13 +611,13 @@ up-client-v6:iptables)
 	# log IPsec client connection setup
 	if [ $VPN_LOGGING ]
 	then
-	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/128" ]
+	  if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/128" ]
 	  then
 	    logger -t $TAG -p $FAC_PRIO \
-	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	  else
 	    logger -t $TAG -p $FAC_PRIO \
-	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	  fi
 	fi
 	;;
@@ -650,13 +654,13 @@ down-client-v6:iptables)
 	# log IPsec client connection teardown
 	if [ $VPN_LOGGING ]
 	then
-	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/128" ]
+	  if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/128" ]
 	  then
 	    logger -t $TAG -p $FAC_PRIO -- \
-	      "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	      "- $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	  else
 	    logger -t $TAG -p $FAC_PRIO -- \
-	      "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	      "- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	  fi
 	fi
 	;;
