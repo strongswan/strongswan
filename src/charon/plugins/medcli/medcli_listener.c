@@ -51,8 +51,9 @@ struct private_medcli_listener_t {
 /**
  * Implementation of bus_listener_t.signal.
  */
-static bool signal_(private_medcli_listener_t *this, signal_t signal, level_t level,
-					int thread, ike_sa_t* ike_sa, char *format, va_list args)
+static bool signal_(private_medcli_listener_t *this, signal_t signal,
+					level_t level, int thread, ike_sa_t* ike_sa, void *data,
+					char *format, va_list args)
 {
 	mediated_state_t state;
 	
@@ -100,7 +101,7 @@ medcli_listener_t *medcli_listener_create(database_t *db)
 {
 	private_medcli_listener_t *this = malloc_thing(private_medcli_listener_t);
 
-	this->public.listener.signal = (bool(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,char*,va_list))signal_;
+	this->public.listener.signal = (bool(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,void*,char*,va_list))signal_;
 	this->public.destroy = (void (*)(medcli_listener_t*))destroy;
 	
 	this->db = db;

@@ -54,7 +54,8 @@ struct private_sql_logger_t {
  * Implementation of bus_listener_t.signal.
  */
 static bool signal_(private_sql_logger_t *this, signal_t signal, level_t level,
-					int thread, ike_sa_t* ike_sa, char *format, va_list args)
+					int thread, ike_sa_t* ike_sa, void *data,
+					char *format, va_list args)
 {
 	if (this->recursive)
 	{
@@ -133,7 +134,7 @@ sql_logger_t *sql_logger_create(database_t *db)
 {
 	private_sql_logger_t *this = malloc_thing(private_sql_logger_t);
 	
-	this->public.listener.signal = (bool(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,char*,va_list))signal_;
+	this->public.listener.signal = (bool(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,void*,char*,va_list))signal_;
 	this->public.destroy = (void(*)(sql_logger_t*))destroy;
 	
 	this->db = db;

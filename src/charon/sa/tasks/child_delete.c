@@ -207,7 +207,7 @@ static void log_children(private_child_delete_t *this)
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		SIG(CHILD_DOWN_START, "closing CHILD_SA %#R=== %#R",
+		SIG_CHD(DOWN_START, child_sa, "closing CHILD_SA %#R=== %#R",
 			child_sa->get_traffic_selectors(child_sa, TRUE),
 			child_sa->get_traffic_selectors(child_sa, FALSE));
 	}
@@ -234,7 +234,7 @@ static status_t process_i(private_child_delete_t *this, message_t *message)
 	this->child_sas = linked_list_create();
 	
 	process_payloads(this, message);
-	SIG(CHILD_DOWN_SUCCESS, "CHILD_SA closed");
+	SIG_CHD(DOWN_SUCCESS, NULL, "CHILD_SA closed");
 	return destroy_and_reestablish(this);
 }
 
@@ -258,7 +258,7 @@ static status_t build_r(private_child_delete_t *this, message_t *message)
 	{
 		build_payloads(this, message);	
 	}
-	SIG(CHILD_DOWN_SUCCESS, "CHILD_SA closed");
+	SIG_CHD(DOWN_SUCCESS, NULL, "CHILD_SA closed");
 	return destroy_and_reestablish(this);
 }
 

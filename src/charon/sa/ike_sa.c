@@ -1087,8 +1087,8 @@ static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_c
 			)
 		{
 			child_cfg->destroy(child_cfg);
-			SIG(IKE_UP_START, "initiating IKE_SA");
-			SIG(IKE_UP_FAILED, "unable to initiate to %%any");
+			SIG_IKE(UP_START, "initiating IKE_SA");
+			SIG_IKE(UP_FAILED, "unable to initiate to %%any");
 			return DESTROY_ME;
 		}
 		
@@ -1125,7 +1125,7 @@ static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_c
 		/* mediation connection */
 		if (this->state == IKE_ESTABLISHED)
 		{	/* FIXME: we should try to find a better solution to this */
-			SIG(CHILD_UP_SUCCESS, "mediation connection is already up and running");
+			SIG_CHD(UP_SUCCESS, NULL, "mediation connection is already up and running");
 		}
 		DESTROY_IF(child_cfg);
 	}
@@ -1175,8 +1175,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	
 	if (this->state == IKE_DELETING)
 	{
-		SIG(CHILD_UP_START, "acquiring CHILD_SA on kernel request");
-		SIG(CHILD_UP_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+		SIG_CHD(UP_START, NULL, "acquiring CHILD_SA on kernel request");
+		SIG_CHD(UP_FAILED, NULL, "acquiring CHILD_SA (reqid %d) failed: "
 			"IKE_SA is deleting", reqid);
 		return FAILED;
 	}
@@ -1194,8 +1194,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	iterator->destroy(iterator);
 	if (!child_sa)
 	{
-		SIG(CHILD_UP_START, "acquiring CHILD_SA on kernel request");
-		SIG(CHILD_UP_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+		SIG_CHD(UP_START, NULL, "acquiring CHILD_SA on kernel request");
+		SIG_CHD(UP_FAILED, NULL, "acquiring CHILD_SA (reqid %d) failed: "
 			"CHILD_SA not found", reqid);
 		return FAILED;
 	}
@@ -1217,7 +1217,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	host_t *me, *other;
 	status_t status;
 	
-	SIG(CHILD_ROUTE_START, "routing CHILD_SA");
+	SIG_CHD(ROUTE_START, NULL, "routing CHILD_SA");
 	
 	/* check if not already routed*/
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
@@ -1227,7 +1227,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 			streq(child_sa->get_name(child_sa), child_cfg->get_name(child_cfg)))
 		{
 			iterator->destroy(iterator);
-			SIG(CHILD_ROUTE_FAILED, "CHILD_SA with such a config already routed");
+			SIG_CHD(ROUTE_FAILED, child_sa, "CHILD_SA with such a config already routed");
 			return FAILED;
 		}
 	}
@@ -1237,7 +1237,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	{
 		case IKE_DELETING:
 		case IKE_REKEYING:
-			SIG(CHILD_ROUTE_FAILED,
+			SIG_CHD(ROUTE_FAILED, NULL, 
 				"unable to route CHILD_SA, as its IKE_SA gets deleted");
 			return FAILED;
 		case IKE_CREATED:
@@ -1272,11 +1272,11 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	if (status == SUCCESS)
 	{
 		this->child_sas->insert_last(this->child_sas, child_sa);
-		SIG(CHILD_ROUTE_SUCCESS, "CHILD_SA routed");
+		SIG_CHD(ROUTE_SUCCESS, child_sa, "CHILD_SA routed");
 	}
 	else
 	{
-		SIG(CHILD_ROUTE_FAILED, "routing CHILD_SA failed");
+		SIG_CHD(ROUTE_FAILED, child_sa, "routing CHILD_SA failed");
 	}
 	return status;
 }
@@ -1290,7 +1290,7 @@ static status_t unroute(private_ike_sa_t *this, u_int32_t reqid)
 	child_sa_t *child_sa;
 	bool found = FALSE;
 	
-	SIG(CHILD_UNROUTE_START, "unrouting CHILD_SA");
+	SIG_CHD(UNROUTE_START, NULL, "unrouting CHILD_SA");
 	
 	/* find CHILD_SA in ROUTED state */
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
@@ -1300,7 +1300,7 @@ static status_t unroute(private_ike_sa_t *this, u_int32_t reqid)
 			child_sa->get_reqid(child_sa) == reqid)
 		{
 			iterator->remove(iterator);
-			SIG(CHILD_UNROUTE_SUCCESS, "CHILD_SA unrouted");
+			SIG_CHD(UNROUTE_SUCCESS, child_sa, "CHILD_SA unrouted");
 			child_sa->destroy(child_sa);
 			found = TRUE;
 			break;
@@ -1310,7 +1310,7 @@ static status_t unroute(private_ike_sa_t *this, u_int32_t reqid)
 	
 	if (!found)
 	{
-		SIG(CHILD_UNROUTE_FAILED, "CHILD_SA to unroute not found");
+		SIG_CHD(UNROUTE_FAILED, NULL, "CHILD_SA to unroute not found");
 		return FAILED;
 	}
 	/* if we are not established, and we have no more routed childs, remove whole SA */
@@ -1879,10 +1879,10 @@ static status_t delete_(private_ike_sa_t *this)
 			this->task_manager->queue_task(this->task_manager, &ike_delete->task);
 			return this->task_manager->initiate(this->task_manager);
 		case IKE_CREATED:
-			SIG(IKE_DOWN_SUCCESS, "deleting unestablished IKE_SA");
+			SIG_IKE(DOWN_SUCCESS, "deleting unestablished IKE_SA");
 			break;
 		default:
-			SIG(IKE_DOWN_SUCCESS, "destroying IKE_SA in state %N "
+			SIG_IKE(DOWN_SUCCESS, "destroying IKE_SA in state %N "
 				"without notification", ike_sa_state_names, this->state);
 			break;
 	}
@@ -2086,19 +2086,19 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 				this->keyingtry++;
 				if (tries == 0 || tries > this->keyingtry)
 				{
-					SIG(IKE_UP_FAILED, "peer not responding, trying again "
+					SIG_IKE(UP_FAILED, "peer not responding, trying again "
 						"(%d/%d) in background ", this->keyingtry + 1, tries);
 					reset(this);
 					return this->task_manager->initiate(this->task_manager);
 				}
-				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
+				SIG_IKE(UP_FAILED, "establishing IKE_SA failed, peer not responding");
 				break;
 			}
 			case IKE_DELETING:
-				SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
+				SIG_IKE(DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
 				break;
 			case IKE_REKEYING:
-				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
+				SIG_IKE(REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
 				/* FALL */
 			default:
 				reestablish(this);

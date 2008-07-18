@@ -271,6 +271,8 @@ typedef struct {
 	signal_t signal;
 	/** signal level */
 	level_t level;
+	/** signal specific user data */
+	void *user;
 	/** format string */
 	char *format;
 	/** argument list */
@@ -288,7 +290,7 @@ static bool signal_cb(entry_t *entry, signal_data_t *data)
 	}
 	entry->calling = TRUE;
 	if (!entry->listener->signal(entry->listener, data->signal, data->level,
-						data->thread, data->ike_sa, data->format, data->args))
+			data->thread, data->ike_sa, data->user, data->format, data->args))
 	{
 		if (entry->blocker)
 		{
@@ -310,7 +312,7 @@ static bool signal_cb(entry_t *entry, signal_data_t *data)
  * Implementation of bus_t.vsignal.
  */
 static void vsignal(private_bus_t *this, signal_t signal, level_t level,
-					char* format, va_list args)
+					void *user, char* format, va_list args)
 {
 	signal_data_t data;
 	
@@ -318,6 +320,7 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 	data.thread = get_thread_number(this);
 	data.signal = signal;
 	data.level = level;
+	data.user = user;
 	data.format = format;
 	va_copy(data.args, args);
 	
@@ -333,12 +336,12 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
  * Implementation of bus_t.signal.
  */
 static void signal_(private_bus_t *this, signal_t signal, level_t level, 
-					char* format, ...)
+					void* data, char* format, ...)
 {
 	va_list args;
 	
 	va_start(args, format);
-	vsignal(this, signal, level, format, args);
+	vsignal(this, signal, level, data, format, args);
 	va_end(args);
 }
 
@@ -363,8 +366,8 @@ bus_t *bus_create()
 	this->public.remove_listener = (void(*)(bus_t*,bus_listener_t*))remove_listener;
 	this->public.listen = (void(*)(bus_t*, bus_listener_t *listener, job_t *job))listen_;
 	this->public.set_sa = (void(*)(bus_t*,ike_sa_t*))set_sa;
-	this->public.signal = (void(*)(bus_t*,signal_t,level_t,char*,...))signal_;
-	this->public.vsignal = (void(*)(bus_t*,signal_t,level_t,char*,va_list))vsignal;
+	this->public.signal = (void(*)(bus_t*,signal_t,level_t,void*,char*,...))signal_;
+	this->public.vsignal = (void(*)(bus_t*,signal_t,level_t,void*,char*,va_list))vsignal;
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();

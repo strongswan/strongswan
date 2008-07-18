@@ -1160,7 +1160,7 @@ static job_requeue_t initiate_mediated(initiate_data_t *data)
 			ike_sa_t *sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, waiting_sa);
 			if (sa->initiate_mediated(sa, pair->local, pair->remote, checklist->connect_id) != SUCCESS)
 			{
-				SIG(IKE_UP_FAILED, "establishing the mediated connection failed");
+				SIG_IKE(UP_FAILED, "establishing the mediated connection failed");
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, sa);
 			}
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, sa);

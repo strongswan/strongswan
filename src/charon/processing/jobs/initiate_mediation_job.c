@@ -56,10 +56,11 @@ static void destroy(private_initiate_mediation_job_t *this)
 /**
  * Callback to handle initiation of mediation connection
  */
-static bool initiate_callback(private_initiate_mediation_job_t *this, signal_t signal, level_t level,
-					 ike_sa_t *ike_sa, char *format, va_list args)
+static bool initiate_callback(private_initiate_mediation_job_t *this,
+							  signal_t signal, level_t level, ike_sa_t *ike_sa,
+							  void *data, char *format, va_list args)
 {
-	if (signal == CHILD_UP_SUCCESS)
+	if (signal == CHD_UP_SUCCESS)
 	{
 		/* mediation connection is up */
 		this->mediation_sa_id = ike_sa->get_id(ike_sa);
@@ -119,7 +120,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 			mediation_cfg->destroy(mediation_cfg);
 			mediated_cfg->destroy(mediated_cfg);
 			charon->bus->set_sa(charon->bus, mediated_sa);
-			SIG(IKE_UP_FAILED, "mediation failed");
+			SIG_IKE(UP_FAILED, "mediation failed");
 			destroy(this);
 			return;
 		}
@@ -138,7 +139,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, mediation_sa);
 				
 				charon->bus->set_sa(charon->bus, mediated_sa);
-				SIG(IKE_UP_FAILED, "mediation failed");
+				SIG_IKE(UP_FAILED, "mediation failed");
 				destroy(this);
 				return;
 			}
@@ -179,7 +180,7 @@ static void reinitiate(private_initiate_mediation_job_t *this)
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, mediation_sa);
 				
 				charon->bus->set_sa(charon->bus, mediated_sa);
-				SIG(IKE_UP_FAILED, "mediation failed");
+				SIG_IKE(UP_FAILED, "mediation failed");
 				destroy(this);
 				return;
 			}

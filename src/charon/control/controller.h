@@ -37,7 +37,8 @@
  * @return				FALSE to return from invoked function
  */
 typedef bool(*controller_cb_t)(void* param, signal_t signal, level_t level,
-							   ike_sa_t* ike_sa, char* format, va_list args);
+							   ike_sa_t* ike_sa, void *data,
+							   char* format, va_list args);
 
 /**
  * Empty callback function for controller_t functions.
@@ -46,7 +47,8 @@ typedef bool(*controller_cb_t)(void* param, signal_t signal, level_t level,
  * this function to the controllers methods.
  */
 bool controller_cb_empty(void *param, signal_t signal, level_t level,
-								ike_sa_t *ike_sa, char *format, va_list args);
+						 ike_sa_t *ike_sa, void *data,
+						 char *format, va_list args);
 
 typedef struct controller_t controller_t;
 

@@ -360,7 +360,7 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
  * callback which logs to a XML writer
  */
 static bool xml_callback(xmlTextWriterPtr writer, signal_t signal, level_t level,
-						 ike_sa_t* ike_sa, char* format, va_list args)
+						 ike_sa_t* ike_sa, void *data, char* format, va_list args)
 {
 	if (level <= 1)
 	{

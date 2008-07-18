@@ -118,21 +118,22 @@ static enumerator_t* create_ike_sa_enumerator(controller_t *this)
  */
 static bool initiate_listener(interface_bus_listener_t *this, signal_t signal,
 							  level_t level, int thread, ike_sa_t *ike_sa,
-							  char* format, va_list args)
+							  void* data, char* format, va_list args)
 {
 	if (this->ike_sa == ike_sa)
 	{
-		if (!this->callback(this->param, signal, level, ike_sa, format, args))
+		if (!this->callback(this->param, signal, level, ike_sa, data,
+							format, args))
 		{
 			return FALSE;
 		}
 		switch (signal)
 		{
-			case CHILD_UP_SUCCESS:
+			case CHD_UP_SUCCESS:
 				this->status = SUCCESS;
 				return FALSE;
 			case IKE_UP_FAILED:
-			case CHILD_UP_FAILED:
+			case CHD_UP_FAILED:
 				return FALSE;
 			default:
 				break;
@@ -200,11 +201,12 @@ static status_t initiate(private_controller_t *this,
  */
 static bool terminate_ike_listener(interface_bus_listener_t *this, signal_t signal,
 								   level_t level, int thread, ike_sa_t *ike_sa,
-								   char* format, va_list args)
+								   void* data, char* format, va_list args)
 {
 	if (this->ike_sa == ike_sa)
 	{
-		if (!this->callback(this->param, signal, level, ike_sa, format, args))
+		if (!this->callback(this->param, signal, level, ike_sa,
+							data, format, args))
 		{
 			return FALSE;
 		}
@@ -234,7 +236,7 @@ static status_t terminate_ike_execute(interface_job_t *job)
 													listener->id, FALSE);
 	if (ike_sa == NULL)
 	{
-		SIG(IKE_DOWN_FAILED, "unable to terminate, IKE_SA with "
+		SIG_IKE(DOWN_FAILED, "unable to terminate, IKE_SA with "
 			"ID %d not found", listener->id);
 		return NOT_FOUND;
 	}	
@@ -277,22 +279,23 @@ static status_t terminate_ike(controller_t *this, u_int32_t unique_id,
  */
 static bool terminate_child_listener(interface_bus_listener_t *this, signal_t signal,
 									 level_t level, int thread, ike_sa_t *ike_sa,
-									 char* format, va_list args)
+									 void* data, char* format, va_list args)
 {
 	if (this->ike_sa == ike_sa)
 	{
-		if (!this->callback(this->param, signal, level, ike_sa, format, args))
+		if (!this->callback(this->param, signal, level, ike_sa,
+							data, format, args))
 		{
 			return FALSE;
 		}
 		switch (signal)
 		{
-			case CHILD_DOWN_SUCCESS:
+			case CHD_DOWN_SUCCESS:
 			case IKE_DOWN_SUCCESS:
 				this->status = SUCCESS;
 				return FALSE;
 			case IKE_DOWN_FAILED:
-			case CHILD_DOWN_FAILED:
+			case CHD_DOWN_FAILED:
 				return FALSE;
 			default:
 				break;
@@ -315,8 +318,8 @@ static status_t terminate_child_execute(interface_job_t *job)
 													listener->id, TRUE);							
 	if (ike_sa == NULL)
 	{
-		SIG(CHILD_DOWN_FAILED, "unable to terminate, CHILD_SA with "
-			"ID %d not found", listener->id);
+		SIG_CHD(DOWN_FAILED, NULL, "unable to terminate, CHILD_SA with "
+				"ID %d not found", listener->id);
 		return NOT_FOUND;
 	}
 	listener->ike_sa = ike_sa;
@@ -335,8 +338,8 @@ static status_t terminate_child_execute(interface_job_t *job)
 	
 	if (child_sa == NULL)
 	{
-		SIG(CHILD_DOWN_FAILED, "unable to terminate, established CHILD_SA with "
-			"ID %d not found", listener->id);
+		SIG_CHD(DOWN_FAILED, NULL, "unable to terminate, established "
+				"CHILD_SA with ID %d not found", listener->id);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		return NOT_FOUND;
 	}
@@ -380,20 +383,21 @@ static status_t terminate_child(controller_t *this, u_int32_t reqid,
  */
 static bool route_listener(interface_bus_listener_t *this, signal_t signal,
 						   level_t level, int thread, ike_sa_t *ike_sa,
-						   char* format, va_list args)
+						   void* data, char* format, va_list args)
 {
 	if (this->ike_sa == ike_sa)
 	{
-		if (!this->callback(this->param, signal, level, ike_sa, format, args))
+		if (!this->callback(this->param, signal, level, ike_sa,
+							data, format, args))
 		{
 			return FALSE;
 		}
 		switch (signal)
 		{
-			case CHILD_ROUTE_SUCCESS:
+			case CHD_ROUTE_SUCCESS:
 				this->status = SUCCESS;
 				return FALSE;
-			case CHILD_ROUTE_FAILED:
+			case CHD_ROUTE_FAILED:
 				return FALSE;
 			default:
 				break;
@@ -458,20 +462,21 @@ static status_t route(controller_t *this,
  */
 static bool unroute_listener(interface_bus_listener_t *this, signal_t signal,
 						     level_t level, int thread, ike_sa_t *ike_sa,
-						     char* format, va_list args)
+						     void* data, char* format, va_list args)
 {
 	if (this->ike_sa == ike_sa)
 	{
-		if (!this->callback(this->param, signal, level, ike_sa, format, args))
+		if (!this->callback(this->param, signal, level, ike_sa, 
+							data, format, args))
 		{
 			return FALSE;
 		}
 		switch (signal)
 		{
-			case CHILD_UNROUTE_SUCCESS:
+			case CHD_UNROUTE_SUCCESS:
 				this->status = SUCCESS;
 				return FALSE;
-			case CHILD_UNROUTE_FAILED:
+			case CHD_UNROUTE_FAILED:
 				return FALSE;
 			default:
 				break;
@@ -491,8 +496,8 @@ static status_t unroute_execute(interface_job_t *job)
 													listener->id, TRUE);
 	if (ike_sa == NULL)
 	{
-		SIG(CHILD_DOWN_FAILED, "unable to unroute, CHILD_SA with "
-			"ID %d not found", listener->id);
+		SIG_CHD(DOWN_FAILED, NULL, "unable to unroute, CHILD_SA with "
+				"ID %d not found", listener->id);
 		return NOT_FOUND;
 	}
 	listener->ike_sa = ike_sa;
@@ -533,7 +538,7 @@ static status_t unroute(controller_t *this, u_int32_t reqid,
  * See header
  */
 bool controller_cb_empty(void *param, signal_t signal, level_t level,
-								ike_sa_t *ike_sa, char *format, va_list args)
+					ike_sa_t *ike_sa, void *data, char *format, va_list args)
 {
 	return TRUE;
 }
@@ -554,7 +559,7 @@ controller_t *controller_create(void)
 	private_controller_t *this = malloc_thing(private_controller_t);
 	
 	this->public.create_ike_sa_enumerator = (enumerator_t*(*)(controller_t*))create_ike_sa_enumerator;
-	this->public.initiate = (status_t(*)(controller_t*,peer_cfg_t*,child_cfg_t*,bool(*)(void*,signal_t,level_t,ike_sa_t*,char*,va_list),void*))initiate;
+	this->public.initiate = (status_t(*)(controller_t*,peer_cfg_t*,child_cfg_t*,controller_cb_t,void*))initiate;
 	this->public.terminate_ike = (status_t(*)(controller_t*,u_int32_t,controller_cb_t, void*))terminate_ike;
 	this->public.terminate_child = (status_t(*)(controller_t*,u_int32_t,controller_cb_t, void *param))terminate_child;
 	this->public.route = (status_t(*)(controller_t*,peer_cfg_t*, child_cfg_t*,controller_cb_t,void*))route;

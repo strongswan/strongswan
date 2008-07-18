@@ -164,7 +164,7 @@ static status_t build_auth(private_ike_auth_t *this, message_t *message)
 	config = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (!config)
 	{
-		SIG(IKE_UP_FAILED, "unable to authenticate, no peer config found");
+		SIG_IKE(UP_FAILED, "unable to authenticate, no peer config found");
 		return FAILED;
 	}
 	method = config->get_auth_method(config);
@@ -172,7 +172,7 @@ static status_t build_auth(private_ike_auth_t *this, message_t *message)
 	auth = authenticator_create(this->ike_sa, method);
 	if (auth == NULL)
 	{
-		SIG(IKE_UP_FAILED, "configured authentication method %N not supported",
+		SIG_IKE(UP_FAILED, "configured authentication method %N not supported",
 			config_auth_method_names, method);
 		return FAILED;
 	}
@@ -182,7 +182,7 @@ static status_t build_auth(private_ike_auth_t *this, message_t *message)
 	auth->destroy(auth);
 	if (status != SUCCESS)
 	{
-		SIG(IKE_UP_FAILED, "generating authentication data failed");
+		SIG_IKE(UP_FAILED, "generating authentication data failed");
 		return FAILED;
 	}
 	message->add_payload(message, (payload_t*)auth_payload);
@@ -207,7 +207,7 @@ static status_t build_id(private_ike_auth_t *this, message_t *message)
 		me = config->get_my_id(config);
 		if (me->contains_wildcards(me))
 		{
-			SIG(IKE_UP_FAILED, "negotiation of own ID failed");
+			SIG_IKE(UP_FAILED, "negotiation of own ID failed");
 			return FAILED;
 		}
 		this->ike_sa->set_my_id(this->ike_sa, me->clone(me));
@@ -248,7 +248,7 @@ static status_t process_auth(private_ike_auth_t *this, message_t *message)
 
 	if (auth == NULL)
 	{
-		SIG(IKE_UP_FAILED, "authentication method %N used by '%D' not "
+		SIG_IKE(UP_FAILED, "authentication method %N used by '%D' not "
 			"supported", auth_method_names, auth_method,
 			this->ike_sa->get_other_id(this->ike_sa));
 		return NOT_SUPPORTED;
@@ -258,7 +258,7 @@ static status_t process_auth(private_ike_auth_t *this, message_t *message)
 	auth->destroy(auth);
 	if (status != SUCCESS)
 	{
-		SIG(IKE_UP_FAILED, "authentication of '%D' with %N failed",
+		SIG_IKE(UP_FAILED, "authentication of '%D' with %N failed",
 			 this->ike_sa->get_other_id(this->ike_sa), 
 			 auth_method_names, auth_method);	
 		return FAILED;
@@ -279,7 +279,7 @@ static status_t process_id(private_ike_auth_t *this, message_t *message)
 
 	if ((this->initiator && idr == NULL) || (!this->initiator && idi == NULL))
 	{
-		SIG(IKE_UP_FAILED, "ID payload missing in message");
+		SIG_IKE(UP_FAILED, "ID payload missing in message");
 		return FAILED;
 	}
 	
@@ -289,7 +289,7 @@ static status_t process_id(private_ike_auth_t *this, message_t *message)
 		req = this->ike_sa->get_other_id(this->ike_sa);
 		if (!id->matches(id, req))
 		{
-			SIG(IKE_UP_FAILED, "peer ID '%D' unacceptable, '%D' required", id, req);
+			SIG_IKE(UP_FAILED, "peer ID '%D' unacceptable, '%D' required", id, req);
 			id->destroy(id);
 			return FAILED;
 		}
@@ -366,7 +366,7 @@ static status_t build_auth_eap(private_ike_auth_t *this, message_t *message)
 	if (auth->build(auth, this->my_packet->get_data(this->my_packet),
 		this->other_nonce, &auth_payload) != SUCCESS)
 	{
-		SIG(IKE_UP_FAILED, "generating authentication data failed");
+		SIG_IKE(UP_FAILED, "generating authentication data failed");
 		if (!this->initiator)
 		{
 			message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
@@ -377,7 +377,7 @@ static status_t build_auth_eap(private_ike_auth_t *this, message_t *message)
 	if (!this->initiator)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
+		SIG_IKE(UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
 			this->ike_sa->get_name(this->ike_sa),
 			this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_my_id(this->ike_sa), 
@@ -411,7 +411,7 @@ static status_t process_auth_eap(private_ike_auth_t *this, message_t *message)
 
 	if (!this->peer_authenticated)
 	{
-		SIG(IKE_UP_FAILED, "authentication of '%D' with %N failed",
+		SIG_IKE(UP_FAILED, "authentication of '%D' with %N failed",
 			 this->ike_sa->get_other_id(this->ike_sa), 
 			 auth_method_names, AUTH_EAP);
 		if (this->initiator)
@@ -423,7 +423,7 @@ static status_t process_auth_eap(private_ike_auth_t *this, message_t *message)
 	if (this->initiator)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
+		SIG_IKE(UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
 			this->ike_sa->get_name(this->ike_sa),
 			this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_my_id(this->ike_sa), 
@@ -444,7 +444,7 @@ static status_t process_eap_i(private_ike_auth_t *this, message_t *message)
 	eap = (eap_payload_t*)message->get_payload(message, EXTENSIBLE_AUTHENTICATION);
 	if (eap == NULL)
 	{	
-		SIG(IKE_UP_FAILED, "EAP payload missing");
+		SIG_IKE(UP_FAILED, "EAP payload missing");
 		return FAILED;
 	}
 	switch (this->eap_auth->process(this->eap_auth, eap, &eap))
@@ -460,7 +460,7 @@ static status_t process_eap_i(private_ike_auth_t *this, message_t *message)
 			return NEED_MORE;
 		default:
 			this->eap_payload = NULL;
-			SIG(IKE_UP_FAILED, "failed to authenticate against '%D' using EAP",
+			SIG_IKE(UP_FAILED, "failed to authenticate against '%D' using EAP",
 				this->ike_sa->get_other_id(this->ike_sa));
 			return FAILED;
 	}
@@ -495,7 +495,7 @@ static status_t build_eap_r(private_ike_auth_t *this, message_t *message)
 		
 	if (this->eap_payload == NULL)
 	{
-		SIG(IKE_UP_FAILED, "EAP payload missing");
+		SIG_IKE(UP_FAILED, "EAP payload missing");
 		return FAILED;
 	}
 	
@@ -510,7 +510,7 @@ static status_t build_eap_r(private_ike_auth_t *this, message_t *message)
 			this->public.task.process = (status_t(*)(task_t*,message_t*))process_auth_eap;
 			break;
 		default:
-			SIG(IKE_UP_FAILED, "authentication of '%D' with %N failed",
+			SIG_IKE(UP_FAILED, "authentication of '%D' with %N failed",
 				this->ike_sa->get_other_id(this->ike_sa),
 				auth_method_names, AUTH_EAP);
 			status = FAILED;
@@ -625,7 +625,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	config = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (config == NULL)
 	{
-		SIG(IKE_UP_FAILED, "no matching config found for '%D'...'%D'",
+		SIG_IKE(UP_FAILED, "no matching config found for '%D'...'%D'",
 			this->ike_sa->get_my_id(this->ike_sa),
 			this->ike_sa->get_other_id(this->ike_sa));
 		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
@@ -649,7 +649,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	if (this->peer_authenticated)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
+		SIG_IKE(UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
 			this->ike_sa->get_name(this->ike_sa),
 			this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_my_id(this->ike_sa), 
@@ -665,7 +665,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	message->add_payload(message, (payload_t*)eap_payload);
 	if (status != NEED_MORE)
 	{
-		SIG(IKE_UP_FAILED, "unable to initiate EAP authentication");
+		SIG_IKE(UP_FAILED, "unable to initiate EAP authentication");
 		return FAILED;
 	}
 	
@@ -725,7 +725,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				{
 					if (type < 16383)
 					{
-						SIG(IKE_UP_FAILED, "received %N notify error",
+						SIG_IKE(UP_FAILED, "received %N notify error",
 							 notify_type_names, type);
 						iterator->destroy(iterator);
 						return FAILED;	
@@ -757,12 +757,12 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 	auth = this->ike_sa->get_other_auth(this->ike_sa);
 	if (!auth->complies(auth, config->get_auth(config)))
 	{
-		SIG(IKE_UP_FAILED, "authorization of '%D' for config %s failed",
+		SIG_IKE(UP_FAILED, "authorization of '%D' for config %s failed",
 			this->ike_sa->get_other_id(this->ike_sa), config->get_name(config));
 		return FAILED;
 	}
 	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-	SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
+	SIG_IKE(UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...[%D]%H",
 		this->ike_sa->get_name(this->ike_sa),
 		this->ike_sa->get_my_host(this->ike_sa),
 		this->ike_sa->get_my_id(this->ike_sa),

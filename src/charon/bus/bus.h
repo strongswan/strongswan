@@ -97,29 +97,29 @@ enum signal_t {
 	IKE_REKEY_FAILED,
 	
 	/** signals for CHILD_SA establishment */
-	CHILD_UP_START,
-	CHILD_UP_SUCCESS,
-	CHILD_UP_FAILED,
+	CHD_UP_START,
+	CHD_UP_SUCCESS,
+	CHD_UP_FAILED,
 	
 	/** signals for CHILD_SA delete */
-	CHILD_DOWN_START,
-	CHILD_DOWN_SUCCESS,
-	CHILD_DOWN_FAILED,
+	CHD_DOWN_START,
+	CHD_DOWN_SUCCESS,
+	CHD_DOWN_FAILED,
 	
 	/** signals for CHILD_SA rekeying */
-	CHILD_REKEY_START,
-	CHILD_REKEY_SUCCESS,
-	CHILD_REKEY_FAILED,
+	CHD_REKEY_START,
+	CHD_REKEY_SUCCESS,
+	CHD_REKEY_FAILED,
 	
 	/** signals for CHILD_SA routing */
-	CHILD_ROUTE_START,
-	CHILD_ROUTE_SUCCESS,
-	CHILD_ROUTE_FAILED,
+	CHD_ROUTE_START,
+	CHD_ROUTE_SUCCESS,
+	CHD_ROUTE_FAILED,
 	
 	/** signals for CHILD_SA routing */
-	CHILD_UNROUTE_START,
-	CHILD_UNROUTE_SUCCESS,
-	CHILD_UNROUTE_FAILED,
+	CHD_UNROUTE_START,
+	CHD_UNROUTE_SUCCESS,
+	CHD_UNROUTE_FAILED,
 	
 	SIG_MAX
 };
@@ -161,16 +161,16 @@ enum level_t {
  * @param format	printf() style format string
  * @param ...		printf() style agument list
  */
-# define DBG1(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_1, format, ##__VA_ARGS__)
+# define DBG1(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_1, NULL, format, ##__VA_ARGS__)
 #endif /* DEBUG_LEVEL */
 #if DEBUG_LEVEL >= 2
-#define DBG2(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_2, format, ##__VA_ARGS__)
+#define DBG2(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_2, NULL, format, ##__VA_ARGS__)
 #endif /* DEBUG_LEVEL */
 #if DEBUG_LEVEL >= 3
-#define DBG3(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_3, format, ##__VA_ARGS__)
+#define DBG3(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_3, NULL, format, ##__VA_ARGS__)
 #endif /* DEBUG_LEVEL */
 #if DEBUG_LEVEL >= 4
-#define DBG4(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_4, format, ##__VA_ARGS__)
+#define DBG4(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_4, NULL, format, ##__VA_ARGS__)
 #endif /* DEBUG_LEVEL */
 
 #ifndef DBG1
@@ -187,13 +187,22 @@ enum level_t {
 #endif /* DBG4 */
 
 /**
- * Raise a signal for an occured event.
+ * Raise a signal for an IKE_SA event.
  *
  * @param sig		signal_t signal description
  * @param format	printf() style format string
  * @param ...		printf() style agument list
  */
-#define SIG(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_0, format, ##__VA_ARGS__)
+#define SIG_IKE(sig, format, ...) charon->bus->signal(charon->bus, IKE_##sig, LEVEL_0, NULL, format, ##__VA_ARGS__)
+
+/**
+ * Raise a signal for an IKE event.
+ *
+ * @param sig		signal_t signal description
+ * @param format	printf() style format string
+ * @param ...		printf() style agument list
+ */
+#define SIG_CHD(sig, chd, format, ...) charon->bus->signal(charon->bus, CHD_##sig, LEVEL_0, chd, format, ##__VA_ARGS__)
 
 /**
  * Get the type of a signal.
@@ -227,20 +236,21 @@ struct bus_listener_t {
 	 * a "..." parameters to functions is not (cleanly) possible.
 	 * The implementing signal function returns TRUE to stay registered
 	 * to the bus, or FALSE to unregister itself.
-	 * You should not call bus_t.signal() inside of a registered listener,
-	 * as it WILL call itself recursively. If you do so, make shure to 
-	 * avoid infinite recursion. Watch your stack!
+	 * Calling bus_t.signal() inside of a registered listener is possible,
+	 * but the bus does not invoke listeners recursively.
 	 *
 	 * @param singal	kind of the signal (up, down, rekeyed, ...)
 	 * @param level		verbosity level of the signal
 	 * @param thread	ID of the thread raised this signal
 	 * @param ike_sa	IKE_SA associated to the event
+	 * @param data		additional signal specific user data
 	 * @param format	printf() style format string
 	 * @param args		vprintf() style va_list argument list
 	 " @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*signal) (bus_listener_t *this, signal_t signal, level_t level,
-					int thread, ike_sa_t *ike_sa, char* format, va_list args);
+					int thread, ike_sa_t *ike_sa, void *data, 
+					char* format, va_list args);
 };
 
 /**
@@ -310,10 +320,12 @@ struct bus_t {
 	 *
 	 * @param singal	kind of the signal (up, down, rekeyed, ...)
 	 * @param level		verbosity level of the signal
+	 * @param data		additional signal specific user data
 	 * @param format	printf() style format string
 	 * @param ...		printf() style argument list
 	 */
-	void (*signal) (bus_t *this, signal_t signal, level_t level, char* format, ...);
+	void (*signal) (bus_t *this, signal_t signal, level_t level,
+					void *data, char* format, ...);
 	
 	/**
 	 * Send a signal to the bus using va_list arguments.
@@ -322,10 +334,12 @@ struct bus_t {
 	 *
 	 * @param singal	kind of the signal (up, down, rekeyed, ...)
 	 * @param level		verbosity level of the signal
+	 * @param data		additional signal specific user data
 	 * @param format	printf() style format string
 	 * @param args		va_list arguments
 	 */
-	void (*vsignal) (bus_t *this, signal_t signal, level_t level, char* format, va_list args);
+	void (*vsignal) (bus_t *this, signal_t signal, level_t level,
+					 void *data, char* format, va_list args);
 	
 	/**
 	 * Destroy the signal bus.

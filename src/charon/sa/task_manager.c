@@ -159,22 +159,22 @@ static void flush(private_task_manager_t *this)
 		switch (task->get_type(task))
 		{
 			case IKE_AUTH:
-				SIG(IKE_UP_FAILED, "establishing IKE_SA failed");
+				SIG_IKE(UP_FAILED, "establishing IKE_SA failed");
 				break;
 			case IKE_DELETE:
-				SIG(IKE_DOWN_FAILED, "IKE_SA deleted");
+				SIG_IKE(DOWN_FAILED, "IKE_SA deleted");
 				break;
 			case IKE_REKEY:
-				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed");
+				SIG_IKE(REKEY_FAILED, "rekeying IKE_SA failed");
 				break;
 			case CHILD_CREATE:
-				SIG(CHILD_UP_FAILED, "establishing CHILD_SA failed");
+				SIG_CHD(UP_FAILED, NULL, "establishing CHILD_SA failed");
 				break;
 			case CHILD_DELETE:
-				SIG(CHILD_DOWN_FAILED, "deleting CHILD_SA failed");
+				SIG_CHD(DOWN_FAILED, NULL, "deleting CHILD_SA failed");
 				break;
 			case CHILD_REKEY:
-				SIG(IKE_REKEY_FAILED, "rekeying CHILD_SA failed");
+				SIG_IKE(REKEY_FAILED, "rekeying CHILD_SA failed");
 				break;
 			default:
 				break;

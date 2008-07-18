@@ -50,7 +50,8 @@ struct private_sys_logger_t {
  * Implementation of bus_listener_t.signal.
  */
 static bool signal_(private_sys_logger_t *this, signal_t signal, level_t level,
-					int thread, ike_sa_t* ike_sa, char *format, va_list args)
+					int thread, ike_sa_t* ike_sa, void *data, 
+					char *format, va_list args)
 {
 	if (level <= this->levels[SIG_TYPE(signal)])
 	{
@@ -114,7 +115,7 @@ sys_logger_t *sys_logger_create(int facility)
 	private_sys_logger_t *this = malloc_thing(private_sys_logger_t);
 	
 	/* public functions */
-	this->public.listener.signal = (bool(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,char*,va_list))signal_;
+	this->public.listener.signal = (bool(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,void*,char*,va_list))signal_;
 	this->public.set_level = (void(*)(sys_logger_t*,signal_t,level_t))set_level;
 	this->public.destroy = (void(*)(sys_logger_t*))destroy;
 	

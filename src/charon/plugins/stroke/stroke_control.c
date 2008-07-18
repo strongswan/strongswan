@@ -56,7 +56,7 @@ struct stroke_log_info_t {
  * logging to the stroke interface
  */
 static bool stroke_log(stroke_log_info_t *info, signal_t signal, level_t level,
-					   ike_sa_t *ike_sa, char *format, va_list args)
+					   ike_sa_t *ike_sa, void *data, char *format, va_list args)
 {
 	if (level <= info->level)
 	{

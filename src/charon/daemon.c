@@ -95,7 +95,7 @@ static void dbg_bus(int level, char *fmt, ...)
 	va_list args;
 	
 	va_start(args, fmt);
-	charon->bus->vsignal(charon->bus, DBG_LIB, level, fmt, args);
+	charon->bus->vsignal(charon->bus, DBG_LIB, level, NULL, fmt, args);
 	va_end(args);
 }
 

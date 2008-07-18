@@ -461,7 +461,8 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 				this->ike_sa->set_server_reflexive_host(this->ike_sa, endpoint->clone(endpoint));
 			}
 			/* FIXME: what if it failed? e.g. AUTH failure */
-			SIG(CHILD_UP_SUCCESS, "established mediation connection without CHILD_SA successfully");
+			SIG_CHD(UP_SUCCESS, NULL, "established mediation connection "
+					"without CHILD_SA successfully");
 			
 			break;
 		}
@@ -641,7 +642,8 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 			/* FIXME: we actually must delete any existing IKE_SAs with the same remote id */
 			this->ike_sa->act_as_mediation_server(this->ike_sa);
 			
-			SIG(CHILD_UP_SUCCESS, "established mediation connection without CHILD_SA successfully");
+			SIG_CHD(UP_SUCCESS, NULL, "established mediation connection "
+					"without CHILD_SA successfully");
 			
 			break;
 		}
