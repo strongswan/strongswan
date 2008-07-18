@@ -328,7 +328,7 @@ static bool load_template(private_guest_t *this, char *path)
 /**
  * Implementation of gues_t.exec
  */
-static int exec(private_guest_t *this, void(*cb)(void*,char*), void *data,
+static int exec(private_guest_t *this, void(*cb)(void*,char*,size_t), void *data,
 				char *cmd, ...)
 {
 	char buf[1024];
