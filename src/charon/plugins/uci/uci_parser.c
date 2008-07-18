@@ -76,11 +76,18 @@ static bool section_enumerator_enumerate(section_enumerator_t *this, ...)
 	
 	va_start(args, this);
 
-	/* name is first parameter */	
 	value = va_arg(args, char**);
 	if (value)
 	{
-		*value = uci_to_section(this->current)->type;
+		if (uci_lookup(this->ctx, &element, this->package,
+					   this->current->name, "name") == UCI_OK)
+		{	/* use "name" attribute as config name if available ... */
+			*value = uci_to_option(element)->value;
+		}
+		else
+		{	/* ... or the section name becomes config name */
+			*value = uci_to_section(this->current)->type;
+		}
 	}
 	
 	/* followed by keyword parameters */

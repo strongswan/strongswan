@@ -352,9 +352,8 @@ uci_config_t *uci_config_create(uci_parser_t *parser)
 	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
 	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
 	this->public.destroy = (void(*)(uci_config_t*))destroy;
-	
 	this->parser = parser;
-	
+
 	return &this->public;
 }
 

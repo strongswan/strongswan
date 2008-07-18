@@ -18,6 +18,7 @@
 #include "uci_plugin.h"
 #include "uci_config.h"
 #include "uci_creds.h"
+#include "uci_control.h"
 
 #include <daemon.h>
 
@@ -52,6 +53,11 @@ struct private_uci_plugin_t {
 	 * UCI parser wrapper
 	 */
 	uci_parser_t *parser;
+
+	/**
+	 * UCI control interface
+	 */
+	uci_control_t *control;
 };
 
 /**
@@ -64,6 +70,7 @@ static void destroy(private_uci_plugin_t *this)
 	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
 	this->parser->destroy(this->parser);
+	this->control->destroy(this->control);
 	free(this);
 }
 
@@ -75,10 +82,11 @@ plugin_t *plugin_create()
 	private_uci_plugin_t *this = malloc_thing(private_uci_plugin_t);
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-
+	
 	this->parser = uci_parser_create(UCI_PACKAGE);
 	this->config = uci_config_create(this->parser);
 	this->creds = uci_creds_create(this->parser);
+	this->control = uci_control_create();
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->credentials->add_set(charon->credentials, &this->creds->credential_set);
 	
