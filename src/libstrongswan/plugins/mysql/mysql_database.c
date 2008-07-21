@@ -592,6 +592,14 @@ static int execute(private_mysql_database_t *this, int *rowid, char *sql, ...)
 	conn_release(conn);
 	return affected;
 }
+	
+/**
+ * Implementation of database_t.get_driver
+ */
+static db_driver_t get_driver(private_mysql_database_t *this)
+{
+	return DB_MYSQL;
+}
 
 /**
  * Implementation of database_t.destroy
@@ -672,6 +680,7 @@ mysql_database_t *mysql_database_create(char *uri)
 	
 	this->public.db.query = (enumerator_t* (*)(database_t *this, char *sql, ...))query;
 	this->public.db.execute = (int (*)(database_t *this, int *rowid, char *sql, ...))execute;
+	this->public.db.get_driver = (db_driver_t(*)(database_t*))get_driver;
 	this->public.db.destroy = (void(*)(database_t*))destroy;
 	
 	if (!parse_uri(this, uri))

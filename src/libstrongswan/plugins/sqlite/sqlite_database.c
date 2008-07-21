@@ -282,6 +282,14 @@ static int execute(private_sqlite_database_t *this, int *rowid, char *sql, ...)
 }
 
 /**
+ * Implementation of database_t.get_driver
+ */
+static db_driver_t get_driver(private_sqlite_database_t *this)
+{
+	return DB_SQLITE;
+}
+
+/**
  * Implementation of database_t.destroy
  */
 static void destroy(private_sqlite_database_t *this)
@@ -312,6 +320,7 @@ sqlite_database_t *sqlite_database_create(char *uri)
 	
 	this->public.db.query = (enumerator_t* (*)(database_t *this, char *sql, ...))query;
 	this->public.db.execute = (int (*)(database_t *this, int *rowid, char *sql, ...))execute;
+	this->public.db.get_driver = (db_driver_t(*)(database_t*))get_driver;
 	this->public.db.destroy = (void(*)(database_t*))destroy;
 	
 	this->mutex = mutex_create(MUTEX_RECURSIVE);

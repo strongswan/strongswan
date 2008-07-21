@@ -22,6 +22,7 @@
 #define DATABASE_H_
 
 typedef enum db_type_t db_type_t;
+typedef enum db_driver_t db_driver_t;
 typedef struct database_t database_t;
 
 #include <utils/enumerator.h>
@@ -44,6 +45,15 @@ enum db_type_t {
 	DB_NULL,
 };
 
+/**
+ * Database implementation type.
+ */
+enum db_driver_t {
+	/** SQLite database */
+	DB_SQLITE,
+	/** MySQL database */
+	DB_MYSQL,
+};
 
 /**
  * Interface for a database implementation.
@@ -93,6 +103,16 @@ struct database_t {
 	 * @return			number of affected rows, < 0 on failure
 	 */
 	int (*execute)(database_t *this, int *rowid, char *sql, ...);
+	
+	/**
+	 * Get the database implementation type.
+	 *
+	 * To allow driver specific SQL or performance optimizations each database
+	 * implementations can be queried for its type.
+	 *
+	 * @return			database implementation type
+	 */
+	db_driver_t (*get_driver)(database_t *this);
 	
 	/**
      * Destroy a database connection.
