@@ -207,9 +207,12 @@ static void log_children(private_child_delete_t *this)
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		SIG_CHD(DOWN_START, child_sa, "closing CHILD_SA %#R=== %#R",
-			child_sa->get_traffic_selectors(child_sa, TRUE),
-			child_sa->get_traffic_selectors(child_sa, FALSE));
+		SIG_CHD(DOWN_START, child_sa, "closing CHILD_SA '%s{%d}' "
+				"with ts %#R=== %#R",
+				child_sa->get_name(child_sa),
+				child_sa->get_reqid(child_sa),
+				child_sa->get_traffic_selectors(child_sa, TRUE),
+				child_sa->get_traffic_selectors(child_sa, FALSE));
 	}
 	iterator->destroy(iterator);
 }

@@ -590,7 +590,8 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 			break;
 	}
 	
-	SIG_CHD(UP_START, NULL, "establishing CHILD_SA");
+	SIG_CHD(UP_START, NULL, "establishing CHILD_SA '%s'",
+			this->config->get_name(this->config));
 	
 	/* reuse virtual IP if we already have one */
 	me = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
@@ -861,8 +862,12 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 	
 	build_payloads(this, message);
 	
-	SIG_CHD(UP_SUCCESS, this->child_sa, "CHILD_SA '%s' established successfully",
-			this->child_sa->get_name(this->child_sa));
+	SIG_CHD(UP_SUCCESS, this->child_sa, "CHILD_SA '%s{%d}' established "
+			"with ts %#R=== %#R",
+			this->child_sa->get_name(this->child_sa),
+			this->child_sa->get_reqid(this->child_sa),
+			this->child_sa->get_traffic_selectors(this->child_sa, TRUE),
+			this->child_sa->get_traffic_selectors(this->child_sa, FALSE));
 
 	return SUCCESS;
 }
@@ -969,8 +974,12 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 	
 	if (select_and_install(this, no_dh) == SUCCESS)
 	{
-		SIG_CHD(UP_SUCCESS, this->child_sa, "CHILD_SA '%s' established "
-				"successfully", this->child_sa->get_name(this->child_sa));
+		SIG_CHD(UP_SUCCESS, this->child_sa, "CHILD_SA '%s{%d}' established "
+				"with ts %#R=== %#R",
+				this->child_sa->get_name(this->child_sa),
+				this->child_sa->get_reqid(this->child_sa),
+				this->child_sa->get_traffic_selectors(this->child_sa, TRUE),
+				this->child_sa->get_traffic_selectors(this->child_sa, FALSE));
 	}
 	else
 	{

@@ -577,7 +577,7 @@ static void process_acquire(private_kernel_interface_t *this, struct nlmsghdr *h
 		return;
 	}
 	DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
-	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid %d", reqid);
+	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with {reqid %d}", reqid);
 	job = (job_t*)acquire_job_create(reqid);
 	charon->processor->queue_job(charon->processor, job);
 }
@@ -601,12 +601,12 @@ static void process_expire(private_kernel_interface_t *this, struct nlmsghdr *hd
 	
 	if (protocol != PROTO_ESP && protocol != PROTO_AH)
 	{
-		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA 0x%x (reqid %d) which is "
+		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA 0x%x {reqid %d} which is "
 				"not a CHILD_SA", ntohl(spi), reqid);
 		return;
 	}
 	
-	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
+	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x {reqid %d}",
 		 expire->hard ? "delete" : "rekey",  protocol_id_names,
 		 protocol, ntohl(spi), reqid);
 	if (expire->hard)

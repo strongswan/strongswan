@@ -1176,7 +1176,7 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	if (this->state == IKE_DELETING)
 	{
 		SIG_CHD(UP_START, NULL, "acquiring CHILD_SA on kernel request");
-		SIG_CHD(UP_FAILED, NULL, "acquiring CHILD_SA (reqid %d) failed: "
+		SIG_CHD(UP_FAILED, NULL, "acquiring CHILD_SA {reqid %d} failed: "
 			"IKE_SA is deleting", reqid);
 		return FAILED;
 	}
@@ -1195,7 +1195,7 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	if (!child_sa)
 	{
 		SIG_CHD(UP_START, NULL, "acquiring CHILD_SA on kernel request");
-		SIG_CHD(UP_FAILED, NULL, "acquiring CHILD_SA (reqid %d) failed: "
+		SIG_CHD(UP_FAILED, NULL, "acquiring CHILD_SA {reqid %d} failed: "
 			"CHILD_SA not found", reqid);
 		return FAILED;
 	}
@@ -2037,7 +2037,7 @@ static status_t reestablish(private_ike_sa_t *this)
 			switch (action)
 			{
 				case ACTION_RESTART:
-					DBG1(DBG_IKE, "restarting CHILD_SA %s",
+					DBG1(DBG_IKE, "restarting CHILD_SA '%s'",
 						 child_cfg->get_name(child_cfg));
 					child_cfg->get_ref(child_cfg);
 					status = new->initiate(new, child_cfg);
