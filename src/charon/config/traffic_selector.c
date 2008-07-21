@@ -195,21 +195,22 @@ static int print(FILE *stream, const struct printf_info *info,
 		memeq(this->from, from, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16) && 
 		memeq(this->to, to, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16))
 	{
-		return fprintf(stream, "dynamic/%d",
-					   this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
-	}
-	
-	if (this->type == TS_IPV4_ADDR_RANGE)
-	{
-		inet_ntop(AF_INET, &this->from4, addr_str, sizeof(addr_str));
+		written += fprintf(stream, "dynamic/%d",
+						   this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
 	}
 	else
 	{
-		inet_ntop(AF_INET6, &this->from6, addr_str, sizeof(addr_str));
+		if (this->type == TS_IPV4_ADDR_RANGE)
+		{
+			inet_ntop(AF_INET, &this->from4, addr_str, sizeof(addr_str));
+		}
+		else
+		{
+			inet_ntop(AF_INET6, &this->from6, addr_str, sizeof(addr_str));
+		}
+		mask = calc_netbits(this);
+		written += fprintf(stream, "%s/%d", addr_str, mask);
 	}
-	mask = calc_netbits(this);
-	
-	written += fprintf(stream, "%s/%d", addr_str, mask);
 	
 	/* check if we have protocol and/or port selectors */
 	has_proto = this->protocol != 0;
