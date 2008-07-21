@@ -135,11 +135,6 @@ endif
 SUBDIRS = . 
 PLUGINS = ${libstrongswan_plugins}
 
-if USE_UNIT_TESTS
-  SUBDIRS += plugins/unit_tester
-  PLUGINS += unit-tester
-endif
-
 if USE_STROKE
   SUBDIRS += plugins/stroke
   PLUGINS += stroke
@@ -188,6 +183,11 @@ endif
 if USE_UCI
   SUBDIRS += plugins/uci
   PLUGINS += uci
+endif
+
+if USE_UNIT_TESTS
+  SUBDIRS += plugins/unit_tester
+  PLUGINS += unit-tester
 endif
 
 AM_CFLAGS += -DPLUGINS=\""${PLUGINS}\""
