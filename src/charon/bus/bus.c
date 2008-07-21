@@ -371,7 +371,7 @@ bus_t *bus_create()
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	pthread_key_create(&this->thread_id, NULL);
 	pthread_key_create(&this->thread_sa, NULL);
 	
