@@ -284,13 +284,16 @@ typedef struct {
  */
 static bool signal_cb(entry_t *entry, signal_data_t *data)
 {
+	va_list args;
+
 	if (entry->calling)
 	{	/* avoid recursive calls */
 		return FALSE;
 	}
 	entry->calling = TRUE;
+	va_copy(args, data->args);
 	if (!entry->listener->signal(entry->listener, data->signal, data->level,
-			data->thread, data->ike_sa, data->user, data->format, data->args))
+					data->thread, data->ike_sa, data->user, data->format, args))
 	{
 		if (entry->blocker)
 		{
@@ -301,9 +304,11 @@ static bool signal_cb(entry_t *entry, signal_data_t *data)
 		{
 			entry_destroy(entry);
 		}
+		va_end(args);
 		entry->calling = FALSE;
 		return TRUE;
 	}
+	va_end(args);
 	entry->calling = FALSE;
 	return FALSE;
 }
