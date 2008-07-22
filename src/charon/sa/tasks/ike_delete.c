@@ -60,7 +60,9 @@ static status_t build_i(private_ike_delete_t *this, message_t *message)
 	message->add_payload(message, (payload_t*)delete_payload);
 	
 	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
-	
+	DBG1(DBG_IKE, "sending DELETE for IKE_SA %s[%d]",
+			this->ike_sa->get_name(this->ike_sa),
+			this->ike_sa->get_unique_id(this->ike_sa));
 	return NEED_MORE;
 }
 
@@ -83,7 +85,9 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
 	switch (this->ike_sa->get_state(this->ike_sa))
 	{
 		case IKE_ESTABLISHED:
-			DBG1(DBG_IKE, "deleting IKE_SA on request");
+			DBG1(DBG_IKE, "received DELETE for IKE_SA %s[%d]",
+					this->ike_sa->get_name(this->ike_sa),
+					this->ike_sa->get_unique_id(this->ike_sa));
 			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			this->ike_sa->reestablish(this->ike_sa);
 			break;

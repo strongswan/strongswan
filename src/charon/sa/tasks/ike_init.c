@@ -230,8 +230,9 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	SIG_IKE(UP_START, "initiating IKE_SA '%s' to %H",
+	SIG_IKE(UP_START, "initiating IKE_SA %s[%d] to %H",
 		this->ike_sa->get_name(this->ike_sa),
+		this->ike_sa->get_unique_id(this->ike_sa),
 		this->ike_sa->get_other_host(this->ike_sa));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 	

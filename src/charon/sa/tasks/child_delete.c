@@ -54,16 +54,17 @@ struct private_child_delete_t {
  */
 static void build_payloads(private_child_delete_t *this, message_t *message)
 {
-	iterator_t *iterator;
 	delete_payload_t *ah = NULL, *esp = NULL;
-	u_int32_t spi;
+	iterator_t *iterator;
 	child_sa_t *child_sa;
 	
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{	
-		spi = child_sa->get_spi(child_sa, TRUE);
-		switch (child_sa->get_protocol(child_sa))
+		protocol_id_t protocol = child_sa->get_protocol(child_sa);
+		u_int32_t spi = child_sa->get_spi(child_sa, TRUE);
+
+		switch (protocol)
 		{
 			case PROTO_ESP:
 				if (esp == NULL)
@@ -72,6 +73,8 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 					message->add_payload(message, (payload_t*)esp);
 				}
 				esp->add_spi(esp, spi);
+				DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x", 
+							   protocol_id_names, protocol, ntohl(spi));
 				break;
 			case PROTO_AH:
 				if (ah == NULL)
@@ -80,6 +83,8 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 					message->add_payload(message, (payload_t*)ah);
 				}
 				ah->add_spi(ah, spi);
+				DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x", 
+							   protocol_id_names, protocol, ntohl(spi));
 				break;
 			default:
 				break;
@@ -207,10 +212,12 @@ static void log_children(private_child_delete_t *this)
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		SIG_CHD(DOWN_START, child_sa, "closing CHILD_SA '%s{%d}' "
-				"with ts %#R=== %#R",
+		SIG_CHD(DOWN_START, child_sa, "closing CHILD_SA %s{%d} "
+				"with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
 				child_sa->get_name(child_sa),
 				child_sa->get_reqid(child_sa),
+				ntohl(child_sa->get_spi(child_sa, TRUE)),
+				ntohl(child_sa->get_spi(child_sa, FALSE)),
 				child_sa->get_traffic_selectors(child_sa, TRUE),
 				child_sa->get_traffic_selectors(child_sa, FALSE));
 	}
