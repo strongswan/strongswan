@@ -157,15 +157,14 @@ CREATE TABLE pools (
   `name` varchar(32) NOT NULL,
   `start` varbinary(16) NOT NULL,
   `end` varbinary(16) NOT NULL,
-  `next` varbinary(16) NOT NULL,
   `timeout` int(10) unsigned NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE (`name`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
-DROP TABLE IF EXISTS leases;
-CREATE TABLE leases (
+DROP TABLE IF EXISTS addresses;
+CREATE TABLE addresses (
   `id` int(10) unsigned NOT NULL auto_increment,
   `pool` int(10) unsigned NOT NULL,
   `address` varbinary(16) NOT NULL,
@@ -175,7 +174,17 @@ CREATE TABLE leases (
   PRIMARY KEY (`id`),
   INDEX (`pool`),
   INDEX (`identity`),
-  INDEX (`released`)
+  INDEX (`address`)
+);
+
+DROP TABLE IF EXISTS leases;
+CREATE TABLE leases (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `address` int(10) unsigned NOT NULL,
+  `identity` int(10) unsigned NOT NULL,
+  `acquired` int(10) unsigned NOT NULL,
+  `released` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`)
 );
 
 

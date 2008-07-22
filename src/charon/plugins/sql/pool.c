@@ -100,7 +100,7 @@ Usage:\n\
       utc:    Show times in UTC instead of local time\n\
   \n\
   ipsec pool --purge <name>\n\
-    Delete expired leases of a pool:\n\
+    Delete lease history of a pool:\n\
       name:   Name of the pool to purge\n\
   \n");
 	exit(0);
@@ -147,8 +147,8 @@ static void status(void)
 			}
 			printf("%6d ", size);
 			/* get number of online hosts */
-			lease = db->query(db, "SELECT COUNT(*) FROM leases "
-							  "WHERE pool = ? AND released IS NULL",
+			lease = db->query(db, "SELECT COUNT(*) FROM addresses "
+							  "WHERE pool = ? AND acquired != 0 AND released = 0",
 							  DB_UINT, id, DB_INT);
 			if (lease)
 			{
@@ -157,10 +157,10 @@ static void status(void)
 			}
 			printf("%5d (%2d%%) ", online, online*100/size);
 			/* get number of online or valid lieases */
-			lease = db->query(db, "SELECT COUNT(*) FROM leases JOIN pools "
-							  "ON leases.pool = pools.id "
-							  "WHERE pools.id = ? "
-							  "AND (released IS NULL OR released > ? - timeout) ",
+			lease = db->query(db, "SELECT COUNT(*) FROM addresses JOIN pools "
+							  "ON addresses.pool = pools.id "
+							  "WHERE pools.id = ? AND acquired != 0 "
+							  "AND (released = 0 OR released > ? - timeout) ",
 							  DB_UINT, id, DB_UINT, time(NULL), DB_UINT);
 			if (lease)
 			{
@@ -183,14 +183,33 @@ static void status(void)
 }
 
 /**
+ * increment a chunk, as it would reprensent a network order integer
+ */
+static void increment_chunk(chunk_t chunk)
+{
+	int i;
+	
+	for (i = chunk.len - 1; i >= 0; i--)
+	{
+		if (++chunk.ptr[i] != 0)
+		{
+			return;
+		}
+	}
+}
+
+/**
  * ipsec pool --add - add a new pool
  */
 static void add(char *name, host_t *start, host_t *end, int timeout)
 {
-	chunk_t start_addr, end_addr;
+	chunk_t start_addr, end_addr, cur_addr;
+	u_int id, count;
 	
 	start_addr = start->get_address(start);
 	end_addr = end->get_address(end);
+	cur_addr = chunk_clonea(start_addr);
+	count = get_pool_size(start_addr, end_addr);
 
 	if (start_addr.len != end_addr.len ||
 		memcmp(start_addr.ptr, end_addr.ptr, start_addr.len) > 0)
@@ -198,16 +217,36 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 		fprintf(stderr, "invalid start/end pair specified.\n");
 		exit(-1);
 	}
-	if (db->execute(db, NULL,
-			"INSERT INTO pools (name, start, end, next, timeout) "
-			"VALUES (?, ?, ?, ?, ?)",
+	if (db->execute(db, &id,
+			"INSERT INTO pools (name, start, end, timeout) "
+			"VALUES (?, ?, ?, ?)",
 			DB_TEXT, name, DB_BLOB, start_addr,
-			DB_BLOB, end_addr, DB_BLOB, start_addr,
-			DB_INT, timeout*3600) != 1)
+			DB_BLOB, end_addr, DB_INT, timeout*3600) != 1)
 	{
 		fprintf(stderr, "creating pool failed.\n");
 		exit(-1);
 	}
+	printf("allocating %d addresses... ", count);
+	fflush(stdout);
+	if (db->get_driver(db) == DB_SQLITE)
+	{	/* run population in a transaction for sqlite */
+		db->execute(db, NULL, "BEGIN TRANSACTION");
+	}
+	do
+	{
+		db->execute(db, NULL,
+			"INSERT INTO addresses (pool, address, identity, acquired, released) "
+			"VALUES (?, ?, ?, ?, ?)",
+			DB_UINT, id, DB_BLOB, cur_addr,	DB_UINT, 0, DB_UINT, 0, DB_UINT, 1);
+		increment_chunk(cur_addr);
+	}
+	while (!chunk_equals(cur_addr, end_addr));
+	if (db->get_driver(db) == DB_SQLITE)
+	{
+		db->execute(db, NULL, "END TRANSACTION");
+	}
+	printf("done.\n", count);
+	
 	exit(0);
 }
 
@@ -231,9 +270,12 @@ static void del(char *name)
 	{
 		found = TRUE;
 		if (db->execute(db, NULL,
-				"DELETE FROM pools WHERE id = ?", DB_UINT, id) != 1 ||
+				"DELETE FROM leases WHERE address IN ("
+				" SELECT id FROM addresses WHERE pool = ?)", DB_UINT, id) < 0 ||
 			db->execute(db, NULL,
-				"DELETE FROM leases WHERE pool = ?", DB_UINT, id) < 0)
+				"DELETE FROM addresses WHERE pool = ?", DB_UINT, id) < 0 ||
+			db->execute(db, NULL,
+				"DELETE FROM pools WHERE id = ?", DB_UINT, id) < 0)
 		{
 			fprintf(stderr, "deleting pool failed.\n");
 			query->destroy(query);
@@ -255,36 +297,58 @@ static void del(char *name)
 static void resize(char *name, host_t *end)
 {
 	enumerator_t *query;
-	chunk_t next_addr, end_addr;
+	chunk_t old_addr, new_addr, cur_addr;
+	u_int id, count;
 	
-	end_addr = end->get_address(end);
+	new_addr = end->get_address(end);
 	
-	query = db->query(db, "SELECT next FROM pools WHERE name = ?",
-					  DB_TEXT, name, DB_BLOB);
-	if (!query || !query->enumerate(query, &next_addr))
+	query = db->query(db, "SELECT id, end FROM pools WHERE name = ?",
+					  DB_TEXT, name, DB_UINT, DB_BLOB);
+	if (!query || !query->enumerate(query, &id, &old_addr))
 	{
 		DESTROY_IF(query);
 		fprintf(stderr, "resizing pool failed.\n");
 		exit(-1);
 	}
-	if (next_addr.len != end_addr.len ||
-		memcmp(end_addr.ptr, next_addr.ptr, end_addr.len) < 0)
+	if (old_addr.len != new_addr.len ||
+		memcmp(new_addr.ptr, old_addr.ptr, old_addr.len) < 0)
 	{
-		end = host_create_from_blob(next_addr);
-		fprintf(stderr, "pool addresses up to %H in use, resizing failed.\n", end);
-		end->destroy(end);
+		fprintf(stderr, "shrinking of pools not supported.\n");
 		query->destroy(query);
 		exit(-1);
 	}
+	cur_addr = chunk_clonea(old_addr);
+	count = get_pool_size(old_addr, new_addr) - 1;
 	query->destroy(query);
 
 	if (db->execute(db, NULL,
 			"UPDATE pools SET end = ? WHERE name = ?",
-			DB_BLOB, end_addr, DB_TEXT, name) <= 0)
+			DB_BLOB, new_addr, DB_TEXT, name) <= 0)
 	{
 		fprintf(stderr, "pool '%s' not found.\n", name);
 		exit(-1);
 	}
+	
+	printf("allocating %d new addresses... ", count);
+	fflush(stdout);
+	if (db->get_driver(db) == DB_SQLITE)
+	{	/* run population in a transaction for sqlite */
+		db->execute(db, NULL, "BEGIN TRANSACTION");
+	}
+	while (count-- > 0)
+	{
+		increment_chunk(cur_addr);
+		db->execute(db, NULL,
+			"INSERT INTO addresses (pool, address, identity, acquired, released) "
+			"VALUES (?, ?, ?, ?, ?)",
+			DB_UINT, id, DB_BLOB, cur_addr,	DB_UINT, 0, DB_UINT, 0, DB_UINT, 1);
+	}
+	if (db->get_driver(db) == DB_SQLITE)
+	{
+		db->execute(db, NULL, "END TRANSACTION");
+	}
+	printf("done.\n", count);
+	
 	exit(0);
 }
 
@@ -398,17 +462,27 @@ static enumerator_t *create_lease_query(char *filter)
 		}
 	}
 	query = db->query(db,
-				"SELECT name, address, identities.type, "
-				"identities.data, acquired, released, timeout "
-				"FROM leases JOIN pools ON leases.pool = pools.id "
+				"SELECT name, addresses.address, identities.type, "
+				"identities.data, leases.acquired, leases.released, timeout "
+				"FROM leases JOIN addresses ON leases.address = addresses.id "
+				"JOIN pools ON addresses.pool = pools.id "
 				"JOIN identities ON leases.identity = identities.id "
 				"WHERE (? OR name = ?) "
 				"AND (? OR (identities.type = ? AND identities.data = ?)) "
-				"AND (? OR address = ?) "
-				"AND (? OR (? >= acquired AND (? <= released OR released IS NULL))) "
-				"AND (? OR released IS NULL) "
-				"AND (? OR released > ? - timeout) "
-				"AND (? OR released < ? - timeout)",
+				"AND (? OR addresses.address = ?) "
+				"AND (? OR (? >= leases.acquired AND (? <= leases.released))) "
+				"AND (? OR leases.released > ? - timeout) "
+				"AND (? OR leases.released < ? - timeout) "
+				"AND ? "
+				"UNION "
+				"SELECT name, address, identities.type, identities.data, "
+				"acquired, released, timeout FROM addresses "
+				"JOIN pools ON addresses.pool = pools.id "
+				"JOIN identities ON addresses.identity = identities.id "
+				"WHERE ? AND released = 0 "
+				"AND (? OR name = ?) "
+				"AND (? OR (identities.type = ? AND identities.data = ?)) "
+				"AND (? OR address = ?)",
 				DB_INT, pool == NULL, DB_TEXT, pool,
 				DB_INT, id == NULL,
 					DB_INT, id ? id->get_type(id) : 0,
@@ -416,9 +490,18 @@ static enumerator_t *create_lease_query(char *filter)
 				DB_INT, addr == NULL,
 					DB_BLOB, addr ? addr->get_address(addr) : chunk_empty,
 				DB_INT, tstamp == 0, DB_UINT, tstamp, DB_UINT, tstamp,
-				DB_INT, !online,
 				DB_INT, !valid, DB_INT, time(NULL),
 				DB_INT, !expired, DB_INT, time(NULL),
+				DB_INT, !online,
+				/* union */
+				DB_INT, !(valid || expired),
+				DB_INT, pool == NULL, DB_TEXT, pool,
+				DB_INT, id == NULL,
+					DB_INT, id ? id->get_type(id) : 0,
+					DB_BLOB, id ? id->get_encoding(id) : chunk_empty,
+				DB_INT, addr == NULL,
+					DB_BLOB, addr ? addr->get_address(addr) : chunk_empty,
+				/* res */
 				DB_TEXT, DB_BLOB, DB_INT, DB_BLOB, DB_UINT, DB_UINT, DB_UINT);
 	/* id and addr leak but we can't destroy them until query is destroyed. */
 	return query;
@@ -507,30 +590,18 @@ static void leases(char *filter, bool utc)
  */
 static void purge(char *name)
 {
-	enumerator_t *query;
-	u_int id, timeout, purged = 0;
+	int purged = 0;
 	
-	query = db->query(db, "SELECT id, timeout FROM pools WHERE name = ?",
-					  DB_TEXT, name, DB_UINT, DB_UINT);
-	if (!query)
+	purged = db->execute(db, NULL,
+				"DELETE FROM leases WHERE address IN ("
+				" SELECT id FROM addresses WHERE pool IN ("
+				"  SELECT id FROM pools WHERE name = ?))",
+				DB_TEXT, name);
+	if (purged < 0)
 	{
-		fprintf(stderr, "purging pool failed.\n");
+		fprintf(stderr, "purging pool '%s' failed.\n", name);
 		exit(-1);
 	}
-	/* we have to keep one lease if we purge. It wouldn't be reallocateable
-	 * as we move on the "next" address for speedy allocation */
-	if (query->enumerate(query, &id, &timeout))
-	{
-		timeout = time(NULL) - timeout;
-		purged = db->execute(db, NULL,
-					"DELETE FROM leases WHERE pool = ? "
-					"AND released IS NOT NULL AND released < ? AND id NOT IN ("
-					" SELECT id FROM leases "
-					" WHERE released IS NOT NULL and released < ? "
-					" GROUP BY address)",
-					DB_UINT, id, DB_UINT, timeout, DB_UINT, timeout);
-	}
-	query->destroy(query);
 	fprintf(stderr, "purged %d leases in pool '%s'.\n", purged, name);
 	exit(0);
 }
