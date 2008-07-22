@@ -456,7 +456,7 @@ static void build_ipcomp_supported_notify(private_child_create_t *this,
 		return;
 	}
 	
-	cpi = this->child_sa->get_my_cpi(this->child_sa);
+	cpi = this->child_sa->allocate_cpi(this->child_sa);
 	tid = this->ipcomp;
 	if (cpi)
 	{

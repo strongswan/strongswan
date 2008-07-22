@@ -2014,6 +2014,7 @@ static status_t get_cpi(private_kernel_interface_t *this,
 						u_int32_t reqid, u_int16_t *cpi)
 {
 	u_int32_t received_spi = 0;
+
 	DBG2(DBG_KNL, "getting CPI for reqid {%d}", reqid);
 	
 	if (get_spi_internal(this, src, dst,

@@ -127,11 +127,21 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	
 	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
+		u_int16_t my_cpi    = child_sa->get_cpi(child_sa, TRUE);
+		u_int16_t other_cpi = child_sa->get_cpi(child_sa, FALSE);		
+
 		fprintf(out, ", %N SPIs: %.8x_i %.8x_o",
 				protocol_id_names, child_sa->get_protocol(child_sa),
 				ntohl(child_sa->get_spi(child_sa, TRUE)),
 				ntohl(child_sa->get_spi(child_sa, FALSE)));
-		
+
+		/* Is IPcomp installed ? */
+		if (my_cpi && other_cpi)
+		{
+			fprintf(out, ", IPCOMP CPIs: %.4x_i %.4x_o",
+					ntohs(my_cpi), ntohs(other_cpi));
+		}
+
 		if (all)
 		{
 			fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa), 

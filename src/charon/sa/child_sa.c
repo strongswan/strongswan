@@ -210,6 +210,18 @@ u_int32_t get_spi(private_child_sa_t *this, bool inbound)
 }
 
 /**
+ * Implements child_sa_t.get_cpi
+ */
+u_int16_t get_cpi(private_child_sa_t *this, bool inbound)
+{
+	if (inbound)
+	{
+		return this->me.cpi;
+	}
+	return this->other.cpi;
+}
+
+/**
  * Implements child_sa_t.get_protocol
  */
 protocol_id_t get_protocol(private_child_sa_t *this)
@@ -924,9 +936,9 @@ static void activate_ipcomp(private_child_sa_t *this, ipcomp_transform_t ipcomp,
 }
 
 /**
- * Implementation of child_sa_t.get_my_cpi.
+ * Implementation of child_sa_t.allocate_cpi.
  */
-static u_int16_t get_my_cpi(private_child_sa_t *this)
+static u_int16_t allocate_cpi(private_child_sa_t *this)
 {
 	if (!this->cpi_allocated)
 	{
@@ -1028,6 +1040,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_name = (char*(*)(child_sa_t*))get_name;
 	this->public.get_reqid = (u_int32_t(*)(child_sa_t*))get_reqid;
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
+	this->public.get_cpi = (u_int16_t(*)(child_sa_t*, bool))get_cpi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
 	this->public.get_stats = (void(*)(child_sa_t*, mode_t*,encryption_algorithm_t*,size_t*,integrity_algorithm_t*,size_t*,u_int32_t*,u_int32_t*,u_int32_t*,u_int32_t*))get_stats;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
@@ -1041,7 +1054,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
 	this->public.get_config = (child_cfg_t*(*)(child_sa_t*))get_config;
 	this->public.activate_ipcomp = (void(*)(child_sa_t*,ipcomp_transform_t,u_int16_t))activate_ipcomp;
-	this->public.get_my_cpi = (u_int16_t(*)(child_sa_t*))get_my_cpi;
+	this->public.allocate_cpi = (u_int16_t(*)(child_sa_t*))allocate_cpi;
 	this->public.set_virtual_ip = (void(*)(child_sa_t*,host_t*))set_virtual_ip;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 

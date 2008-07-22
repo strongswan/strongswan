@@ -114,10 +114,22 @@ struct child_sa_t {
 	 * FALSE to get those we use for sending packets.
 	 *
 	 * @param inbound	TRUE to get inbound SPI, FALSE for outbound.
-	 * @return 			spi of the CHILD SA
+	 * @return 			SPI of the CHILD SA
 	 */
 	u_int32_t (*get_spi) (child_sa_t *this, bool inbound);
 	
+	/**
+	 * Get the CPI of this CHILD_SA.
+	 * 
+	 * Set the boolean parameter inbound to TRUE to
+	 * get the SPI for which we receive packets, use
+	 * FALSE to get those we use for sending packets.
+	 *
+	 * @param inbound	TRUE to get inbound CPI, FALSE for outbound.
+	 * @return 			CPI of the CHILD SA
+	 */
+	u_int16_t (*get_cpi) (child_sa_t *this, bool inbound);
+
 	/**
 	 * Get the protocol which this CHILD_SA uses to protect traffic.
 	 *
@@ -270,7 +282,7 @@ struct child_sa_t {
 	 * 
 	 * @return			allocated CPI
 	 */
-	u_int16_t (*get_my_cpi) (child_sa_t *this);
+	u_int16_t (*allocate_cpi) (child_sa_t *this);
 	
 	/**
 	 * Destroys a child_sa.
