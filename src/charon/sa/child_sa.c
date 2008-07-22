@@ -973,7 +973,7 @@ static void destroy(private_child_sa_t *this)
 	if (this->me.cpi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-							this->other.addr, htonl(ntohs(this->me.cpi)), IPPROTO_COMP);
+							this->me.addr, htonl(ntohs(this->me.cpi)), IPPROTO_COMP);
 	}
 	if (this->other.cpi)
 	{
