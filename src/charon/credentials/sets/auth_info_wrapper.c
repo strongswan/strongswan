@@ -73,7 +73,7 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator, auth_item_t *type, void
 	certificate_t *cert;
 	
 	DBG1(DBG_CFG, "  fetching certificate from '%s' ...", url);
-	if (lib->fetcher->fetch(lib->fetcher, url, &data) != SUCCESS)
+	if (lib->fetcher->fetch(lib->fetcher, url, &data, FETCH_END) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "  fetching certificate failed");
 		/* we set the item to NULL, so we can skip it */
