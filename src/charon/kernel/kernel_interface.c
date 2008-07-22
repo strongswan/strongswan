@@ -105,6 +105,13 @@ struct kernel_algorithm_t {
 	 */
 	u_int key_size;
 };
+
+ENUM(policy_dir_names, POLICY_IN, POLICY_FWD,
+	"in",
+	"out",
+	"fwd"
+);
+
 #define END_OF_LIST -1
 
 /**
@@ -577,7 +584,7 @@ static void process_acquire(private_kernel_interface_t *this, struct nlmsghdr *h
 		return;
 	}
 	DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
-	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with {reqid %d}", reqid);
+	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid {%d}", reqid);
 	job = (job_t*)acquire_job_create(reqid);
 	charon->processor->queue_job(charon->processor, job);
 }
@@ -601,12 +608,12 @@ static void process_expire(private_kernel_interface_t *this, struct nlmsghdr *hd
 	
 	if (protocol != PROTO_ESP && protocol != PROTO_AH)
 	{
-		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA 0x%x {reqid %d} which is "
-				"not a CHILD_SA", ntohl(spi), reqid);
+		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA with SPI %.8x and reqid {%d} "
+					  "which is not a CHILD_SA", ntohl(spi), reqid);
 		return;
 	}
 	
-	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x {reqid %d}",
+	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA with SPI %.8x and reqid {%d}",
 		 expire->hard ? "delete" : "rekey",  protocol_id_names,
 		 protocol, ntohl(spi), reqid);
 	if (expire->hard)
@@ -1985,16 +1992,16 @@ static status_t get_spi(private_kernel_interface_t *this,
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int32_t *spi)
 {
-	DBG2(DBG_KNL, "getting SPI for reqid %d", reqid);
+	DBG2(DBG_KNL, "getting SPI for reqid {%d}", reqid);
 	
 	if (get_spi_internal(this, src, dst, proto_ike2kernel(protocol),
 			0xc0000000, 0xcFFFFFFF, reqid, spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get SPI for reqid %d", reqid);
+		DBG1(DBG_KNL, "unable to get SPI for reqid {%d}", reqid);
 		return FAILED;
 	}
 	
-	DBG2(DBG_KNL, "got SPI 0x%x for reqid %d", *spi, reqid);
+	DBG2(DBG_KNL, "got SPI %.8x for reqid {%d}", ntohl(*spi), reqid);
 	
 	return SUCCESS;
 }
@@ -2007,18 +2014,18 @@ static status_t get_cpi(private_kernel_interface_t *this,
 						u_int32_t reqid, u_int16_t *cpi)
 {
 	u_int32_t received_spi = 0;
-	DBG2(DBG_KNL, "getting CPI for reqid %d", reqid);
+	DBG2(DBG_KNL, "getting CPI for reqid {%d}", reqid);
 	
 	if (get_spi_internal(this, src, dst,
 			IPPROTO_COMP, 0x100, 0xEFFF, reqid, &received_spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get CPI for reqid %d", reqid);
+		DBG1(DBG_KNL, "unable to get CPI for reqid {%d}", reqid);
 		return FAILED;
 	}
 	
 	*cpi = htons((u_int16_t)ntohl(received_spi));
 	
-	DBG2(DBG_KNL, "got CPI 0x%x for reqid %d", *cpi, reqid);
+	DBG2(DBG_KNL, "got CPI %.4x for reqid {%d}", ntohs(*cpi), reqid);
 	
 	return SUCCESS;
 }
@@ -2045,7 +2052,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "adding SAD entry with SPI 0x%x and reqid %d", spi, reqid);
+	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%d}", ntohl(spi), reqid);
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -2239,7 +2246,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to add SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x", ntohl(spi));
 		return FAILED;
 	}
 	return SUCCESS;
@@ -2261,7 +2268,7 @@ static status_t get_replay_state(private_kernel_interface_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "querying replay state from SAD entry with SPI 0x%x", spi);
+	DBG2(DBG_KNL, "querying replay state from SAD entry with SPI %.8x", ntohl(spi));
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -2307,7 +2314,8 @@ static status_t get_replay_state(private_kernel_interface_t *this,
 	
 	if (out_aevent == NULL)
 	{
-		DBG1(DBG_KNL, "unable to query replay state from SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to query replay state from SAD entry with SPI %.8x",
+					  ntohl(spi));
 		free(out);
 		return FAILED;
 	}
@@ -2325,7 +2333,8 @@ static status_t get_replay_state(private_kernel_interface_t *this,
 		rta = RTA_NEXT(rta, rtasize);
 	}
 	
-	DBG1(DBG_KNL, "unable to query replay state from SAD entry with SPI 0x%x", spi);
+	DBG1(DBG_KNL, "unable to query replay state from SAD entry with SPI %.8x",
+				  ntohl(spi));
 	free(out);
 	return FAILED;
 }
@@ -2351,7 +2360,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "querying SAD entry with SPI 0x%x for update", spi);
+	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x for update", ntohl(spi));
 
 	/* query the exisiting SA first */
 	hdr = (struct nlmsghdr*)request;
@@ -2395,7 +2404,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 	}
 	if (out_sa == NULL)
 	{
-		DBG1(DBG_KNL, "unable to update SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
 		free(out);
 		return FAILED;
 	}
@@ -2407,13 +2416,13 @@ static status_t update_sa(private_kernel_interface_t *this,
 	/* delete the old SA */
 	if (this->public.del_sa(&this->public, dst, spi, protocol) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to delete old SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to delete old SAD entry with SPI %.8x", ntohl(spi));
 		free(out);
 		return FAILED;
 	}
 	
-	DBG2(DBG_KNL, "updating SAD entry with SPI 0x%x from %#H..%#H to %#H..%#H",
-		 spi, src, dst, new_src, new_dst);
+	DBG2(DBG_KNL, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
+		 ntohl(spi), src, dst, new_src, new_dst);
 	
 	/* copy over the SA from out to request */
 	hdr = (struct nlmsghdr*)request;
@@ -2492,7 +2501,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to update SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
 		free(out);
 		return FAILED;
 	}
@@ -2514,7 +2523,7 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	struct xfrm_usersa_info *sa = NULL;
 	size_t len;
 	
-	DBG2(DBG_KNL, "querying SAD entry with SPI 0x%x", spi);
+	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x", ntohl(spi));
 	memset(&request, 0, sizeof(request));
 	
 	hdr = (struct nlmsghdr*)request;
@@ -2559,7 +2568,7 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	
 	if (sa == NULL)
 	{
-		DBG1(DBG_KNL, "unable to query SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
 		free(out);
 		return FAILED;
 	}
@@ -2581,7 +2590,7 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "deleting SAD entry with SPI 0x%x", spi);
+	DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x", ntohl(spi));
 	
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -2596,10 +2605,10 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to delete SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x", ntohl(spi));
 		return FAILED;
 	}
-	DBG2(DBG_KNL, "deleted SAD entry with SPI 0x%x", spi);
+	DBG2(DBG_KNL, "deleted SAD entry with SPI %.8x", ntohl(spi));
 	return SUCCESS;
 }
 
@@ -2637,8 +2646,9 @@ static status_t add_policy(private_kernel_interface_t *this,
 		{
 			/* use existing policy */
 			current->refcount++;
-			DBG2(DBG_KNL, "policy %R===%R already exists, increasing "
-				 "refcount", src_ts, dst_ts);
+			DBG2(DBG_KNL, "policy %R === %R %N already exists, increasing "
+						  "refcount", src_ts, dst_ts,
+						   policy_dir_names, direction);
 			free(policy);
 			policy = current;
 			found = TRUE;
@@ -2652,7 +2662,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 		policy->refcount = 1;
 	}
 	
-	DBG2(DBG_KNL, "adding policy %R===%R", src_ts, dst_ts);
+	DBG2(DBG_KNL, "adding policy %R === %R %N", src_ts, dst_ts,
+				   policy_dir_names, direction);
 	
 	memset(&request, 0, sizeof(request));
 	hdr = (struct nlmsghdr*)request;
@@ -2728,7 +2739,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to add policy %R===%R", src_ts, dst_ts);
+		DBG1(DBG_KNL, "unable to add policy %R === %R %N", src_ts, dst_ts,
+					   policy_dir_names, direction);
 		return FAILED;
 	}
 	
@@ -2797,7 +2809,8 @@ static status_t query_policy(private_kernel_interface_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "querying policy %R===%R", src_ts, dst_ts);
+	DBG2(DBG_KNL, "querying policy %R === %R %N", src_ts, dst_ts,
+				   policy_dir_names, direction);
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -2839,7 +2852,8 @@ static status_t query_policy(private_kernel_interface_t *this,
 	
 	if (policy == NULL)
 	{
-		DBG2(DBG_KNL, "unable to query policy %R===%R", src_ts, dst_ts);
+		DBG2(DBG_KNL, "unable to query policy %R === %R %N", src_ts, dst_ts,
+					   policy_dir_names, direction);
 		free(out);
 		return FAILED;
 	}
@@ -2864,7 +2878,8 @@ static status_t del_policy(private_kernel_interface_t *this,
 	struct xfrm_userpolicy_id *policy_id;
 	iterator_t *iterator;
 	
-	DBG2(DBG_KNL, "deleting policy %R===%R", src_ts, dst_ts);
+	DBG2(DBG_KNL, "deleting policy %R === %R %N", src_ts, dst_ts,
+				   policy_dir_names, direction);
 	
 	/* create a policy */
 	memset(&policy, 0, sizeof(policy_entry_t));
@@ -2894,7 +2909,8 @@ static status_t del_policy(private_kernel_interface_t *this,
 	iterator->destroy(iterator);
 	if (!to_delete)
 	{
-		DBG1(DBG_KNL, "deleting policy %R===%R failed, not found", src_ts, dst_ts);
+		DBG1(DBG_KNL, "deleting policy %R === %R %N failed, not found", src_ts,
+					   dst_ts, policy_dir_names, direction);
 		return NOT_FOUND;
 	}
 	
@@ -2914,7 +2930,8 @@ static status_t del_policy(private_kernel_interface_t *this,
 	
 	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to delete policy %R===%R", src_ts, dst_ts);
+		DBG1(DBG_KNL, "unable to delete policy %R === %R %N", src_ts, dst_ts,
+					   policy_dir_names, direction);
 		return FAILED;
 	}
 
@@ -2923,7 +2940,8 @@ static status_t del_policy(private_kernel_interface_t *this,
 		if (manage_srcroute(this, RTM_DELROUTE, 0, route) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with "
-				 "policy %R===%R", src_ts, dst_ts);
+						  "policy %R === %R %N", src_ts, dst_ts,
+						   policy_dir_names, direction);
 		}		
 		route_entry_destroy(route);
 	}

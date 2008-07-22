@@ -129,8 +129,8 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	{
 		fprintf(out, ", %N SPIs: %.8x_i %.8x_o",
 				protocol_id_names, child_sa->get_protocol(child_sa),
-				htonl(child_sa->get_spi(child_sa, TRUE)),
-				htonl(child_sa->get_spi(child_sa, FALSE)));
+				ntohl(child_sa->get_spi(child_sa, TRUE)),
+				ntohl(child_sa->get_spi(child_sa, FALSE)));
 		
 		if (all)
 		{
