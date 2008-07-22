@@ -135,7 +135,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 				ntohl(child_sa->get_spi(child_sa, TRUE)),
 				ntohl(child_sa->get_spi(child_sa, FALSE)));
 
-		/* Is IPcomp installed ? */
+		/* Is IPCOMP activated ? */
 		if (my_cpi && other_cpi)
 		{
 			fprintf(out, ", IPCOMP CPIs: %.4x_i %.4x_o",

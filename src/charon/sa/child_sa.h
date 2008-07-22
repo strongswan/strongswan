@@ -122,7 +122,7 @@ struct child_sa_t {
 	 * Get the CPI of this CHILD_SA.
 	 * 
 	 * Set the boolean parameter inbound to TRUE to
-	 * get the SPI for which we receive packets, use
+	 * get the CPI for which we receive packets, use
 	 * FALSE to get those we use for sending packets.
 	 *
 	 * @param inbound	TRUE to get inbound CPI, FALSE for outbound.
