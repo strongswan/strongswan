@@ -597,7 +597,7 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	}
 	else
 	{
-		SIG_CHD(UP_START, NULL, "establishing CHILD_SA %s{?}",
+		SIG_CHD(UP_START, NULL, "establishing CHILD_SA %s",
 				this->config->get_name(this->config));
 	}
 	
