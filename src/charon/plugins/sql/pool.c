@@ -148,7 +148,7 @@ static void status(void)
 			printf("%6d ", size);
 			/* get number of online hosts */
 			lease = db->query(db, "SELECT COUNT(*) FROM addresses "
-							  "WHERE pool = ? AND acquired != 0 AND released = 0",
+							  "WHERE pool = ? AND released = 0",
 							  DB_UINT, id, DB_INT);
 			if (lease)
 			{
@@ -159,7 +159,7 @@ static void status(void)
 			/* get number of online or valid lieases */
 			lease = db->query(db, "SELECT COUNT(*) FROM addresses JOIN pools "
 							  "ON addresses.pool = pools.id "
-							  "WHERE pools.id = ? AND acquired != 0 "
+							  "WHERE pools.id = ? "
 							  "AND (released = 0 OR released > ? - timeout) ",
 							  DB_UINT, id, DB_UINT, time(NULL), DB_UINT);
 			if (lease)
