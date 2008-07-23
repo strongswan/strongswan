@@ -56,13 +56,22 @@ static status_t build_i(private_ike_delete_t *this, message_t *message)
 {
 	delete_payload_t *delete_payload;
 
+	SIG_IKE(DOWN_START, "deleting IKE_SA %s[%d] between %H[%D]...%H[%D]",
+			this->ike_sa->get_name(this->ike_sa),
+			this->ike_sa->get_unique_id(this->ike_sa),
+			this->ike_sa->get_my_host(this->ike_sa),
+			this->ike_sa->get_my_id(this->ike_sa),
+			this->ike_sa->get_other_host(this->ike_sa),
+			this->ike_sa->get_other_id(this->ike_sa));
+
 	delete_payload = delete_payload_create(PROTO_IKE);
 	message->add_payload(message, (payload_t*)delete_payload);
-	
 	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
+
 	DBG1(DBG_IKE, "sending DELETE for IKE_SA %s[%d]",
 			this->ike_sa->get_name(this->ike_sa),
 			this->ike_sa->get_unique_id(this->ike_sa));
+
 	return NEED_MORE;
 }
 
@@ -76,18 +85,26 @@ static status_t process_i(private_ike_delete_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.process for initiator
+ * Implementation of task_t.process for responder
  */
 static status_t process_r(private_ike_delete_t *this, message_t *message)
 {
 	/* we don't even scan the payloads, as the message wouldn't have
 	 * come so far without being correct */
+	DBG1(DBG_IKE, "received DELETE for IKE_SA %s[%d]",
+			this->ike_sa->get_name(this->ike_sa),
+			this->ike_sa->get_unique_id(this->ike_sa));
+	SIG_IKE(DOWN_START, "deleting IKE_SA %s[%d] between %H[%D]...%H[%D]",
+			this->ike_sa->get_name(this->ike_sa),
+			this->ike_sa->get_unique_id(this->ike_sa),
+			this->ike_sa->get_my_host(this->ike_sa),
+			this->ike_sa->get_my_id(this->ike_sa),
+			this->ike_sa->get_other_host(this->ike_sa),
+			this->ike_sa->get_other_id(this->ike_sa));
+
 	switch (this->ike_sa->get_state(this->ike_sa))
 	{
 		case IKE_ESTABLISHED:
-			DBG1(DBG_IKE, "received DELETE for IKE_SA %s[%d]",
-					this->ike_sa->get_name(this->ike_sa),
-					this->ike_sa->get_unique_id(this->ike_sa));
 			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			this->ike_sa->reestablish(this->ike_sa);
 			break;
@@ -106,9 +123,11 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
  */
 static status_t build_r(private_ike_delete_t *this, message_t *message)
 {
+	SIG_IKE(DOWN_SUCCESS, "IKE_SA deleted");
+
 	if (this->simultaneous)
 	{
-		/* wait for peers response for our delete request, but set a timeout */
+		/* wait for peer's response for our delete request, but set a timeout */
 		return SUCCESS;
 	}
 	/* completed, delete IKE_SA by returning FAILED */
