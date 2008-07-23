@@ -69,6 +69,7 @@ struct private_ike_rekey_t {
 static status_t build_i(private_ike_rekey_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
+	host_t *other_host;
 	
 	/* create new SA only on first try */
 	if (this->new_sa == NULL)
@@ -77,7 +78,9 @@ static status_t build_i(private_ike_rekey_t *this, message_t *message)
 															TRUE);
 		
 		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		other_host = this->ike_sa->get_other_host(this->ike_sa);
 		this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);
+		this->new_sa->set_other_host(this->new_sa, other_host->clone(other_host));
 		this->ike_init = ike_init_create(this->new_sa, TRUE, this->ike_sa);
 		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 	}
