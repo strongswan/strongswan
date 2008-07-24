@@ -237,35 +237,32 @@ static void process(private_uci_control_t *this, char *message)
  */
 static job_requeue_t receive(private_uci_control_t *this)
 {
-	while (TRUE)
-	{
-		char message[128];
-		int oldstate, len;
-		FILE *in;
+	char message[128];
+	int oldstate, len;
+	FILE *in;
 
-		memset(message, 0, sizeof(message));
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-		in = fopen(FIFO_FILE, "r");
-		pthread_setcancelstate(oldstate, NULL);
-		if (in)
+	memset(message, 0, sizeof(message));
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	in = fopen(FIFO_FILE, "r");
+	pthread_setcancelstate(oldstate, NULL);
+	if (in)
+	{
+		len = fread(message, 1, sizeof(message) - 1, in);
+		fclose(in);
+		if (len > 0)
 		{
-			len = fread(message, 1, sizeof(message) - 1, in);
-			fclose(in);
-			if (len > 0)
-			{
-				process(this, message);
-			}
-			else
-			{
-				DBG1(DBG_DMN, "reading from UCI fifo failed: %s", strerror(errno));
-			}
+			process(this, message);
 		}
 		else
 		{
-			DBG1(DBG_DMN, "opening UCI fifo failed: %s", strerror(errno));
+			DBG1(DBG_DMN, "reading from UCI fifo failed: %s", strerror(errno));
 		}
 	}
-	return JOB_REQUEUE_NONE;
+	else
+	{
+		DBG1(DBG_DMN, "opening UCI fifo failed: %s", strerror(errno));
+	}
+	return JOB_REQUEUE_FAIR;
 }
 
 /**
