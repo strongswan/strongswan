@@ -87,9 +87,8 @@ Usage:\n\
       name:   Name of the pool to resize\n\
       end:    New end address for the pool\n\
   \n\
-  ipsec pool --leases <name> [--filter <filter>] [--utc]\n\
+  ipsec pool --leases [--filter <filter>] [--utc]\n\
     Show lease information using filters:\n\
-      name:   Name of the pool to show leases from\n\
       filter: Filter string containing comma separated key=value filters,\n\
               e.g. id=alice@strongswan.org,addr=1.1.1.1\n\
                   pool:   name of the pool\n\
@@ -128,8 +127,8 @@ static void status(void)
 		{
 			if (!found)
 			{
-				printf("%8s %15s %15s %8s %6s %11s %11s\n",
-					   "name", "start", "end", "timeout", "size", "online", "leases");
+				printf("%8s %15s %15s %8s %6s %11s %11s\n", "name", "start",
+					   "end", "timeout", "size", "online", "usage");
 				found = TRUE;
 			}
 			
@@ -157,11 +156,12 @@ static void status(void)
 			}
 			printf("%5d (%2d%%) ", online, online*100/size);
 			/* get number of online or valid lieases */
-			lease = db->query(db, "SELECT COUNT(*) FROM addresses JOIN pools "
-							  "ON addresses.pool = pools.id "
-							  "WHERE pools.id = ? "
-							  "AND (released = 0 OR released > ? - timeout) ",
-							  DB_UINT, id, DB_UINT, time(NULL), DB_UINT);
+			lease = db->query(db, "SELECT COUNT(*) FROM addresses "
+							  "WHERE addresses.pool = ? "
+							  "AND ((? AND acquired != 0) "
+							  "     OR released = 0 OR released > ?) ",
+							  DB_UINT, id, DB_UINT, !timeout,
+							  DB_UINT, time(NULL) - timeout, DB_UINT);
 			if (lease)
 			{
 				lease->enumerate(lease, &used);
@@ -232,15 +232,18 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 	{	/* run population in a transaction for sqlite */
 		db->execute(db, NULL, "BEGIN TRANSACTION");
 	}
-	do
+	while (TRUE)
 	{
 		db->execute(db, NULL,
 			"INSERT INTO addresses (pool, address, identity, acquired, released) "
 			"VALUES (?, ?, ?, ?, ?)",
 			DB_UINT, id, DB_BLOB, cur_addr,	DB_UINT, 0, DB_UINT, 0, DB_UINT, 1);
+		if (chunk_equals(cur_addr, end_addr))
+		{
+			break;
+		}
 		increment_chunk(cur_addr);
 	}
-	while (!chunk_equals(cur_addr, end_addr));
 	if (db->get_driver(db) == DB_SQLITE)
 	{
 		db->execute(db, NULL, "END TRANSACTION");
