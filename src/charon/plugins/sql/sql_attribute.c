@@ -35,6 +35,11 @@ struct private_sql_attribute_t {
 	 * database connection
 	 */
 	database_t *db;
+	
+	/**
+	 * wheter to record lease history in lease table
+	 */
+	bool history;
 };
 
 /**
@@ -233,13 +238,16 @@ static bool release_address(private_sql_attribute_t *this,
 		pool = get_pool(this, name, &timeout);
 		if (pool)
 		{
-			if (this->db->execute(this->db, NULL,
+			if (this->history)
+			{
+				this->db->execute(this->db, NULL,
 					"INSERT INTO leases (address, identity, acquired, released)"
 					" SELECT id, identity, acquired, ? FROM addresses "
 					" WHERE pool = ? AND address = ?",
 					DB_UINT, now, DB_UINT, pool,
-					DB_BLOB, address->get_address(address)) > 0 &&
-				this->db->execute(this->db, NULL,
+					DB_BLOB, address->get_address(address));
+			}
+			if (this->db->execute(this->db, NULL,
 					"UPDATE addresses SET released = ? WHERE "
 					"pool = ? AND address = ?", DB_UINT, time(NULL),
 					DB_UINT, pool, DB_BLOB, address->get_address(address)) > 0)
@@ -274,12 +282,17 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 	this->public.destroy = (void(*)(sql_attribute_t*))destroy;
 	
 	this->db = db;
+	this->history = lib->settings->get_bool(lib->settings,
+									"charon.plugins.sql.lease_history", TRUE);
 	
 	/* close any "online" leases in the case we crashed */
-	this->db->execute(this->db, NULL,
+	if (this->history)
+	{
+		this->db->execute(this->db, NULL,
 					"INSERT INTO leases (address, identity, acquired, released)"
 					" SELECT id, identity, acquired, ? FROM addresses "
 					" WHERE released = 0", DB_UINT, now);
+	}
 	this->db->execute(this->db, NULL,
 					  "UPDATE addresses SET released = ? WHERE released = 0",
 					  DB_UINT, now);
