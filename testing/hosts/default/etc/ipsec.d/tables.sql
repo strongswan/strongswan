@@ -145,35 +145,42 @@ CREATE TABLE pools (
   name TEXT NOT NULL,
   start BLOB NOT NULL,
   end BLOB NOT NULL,
-  next BLOB NOT NULL,
-  timeout INTEGER DEFAULT NULL,
-  UNIQUE (name)
+  timeout INTEGER NOT NULL
 );
 DROP INDEX IF EXISTS pools_name;
 CREATE INDEX pools_name ON pools (
   name
 );
 
-DROP TABLE IF EXISTS leases;
-CREATE TABLE leases (
+DROP TABLE IF EXISTS addresses;
+CREATE TABLE addresses (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   pool INTEGER NOT NULL,
   address BLOB NOT NULL,
   identity INTEGER NOT NULL,
   acquired INTEGER NOT NULL,
-  released INTEGER DEFAULT NULL
+  released INTEGER NOT NULL
 );
-DROP INDEX IF EXISTS leases_pool;
-CREATE INDEX leases_pool ON leases (
+DROP INDEX IF EXISTS addresses_pool;
+CREATE INDEX addresses_pool ON addresses (
   pool
 );
-DROP INDEX IF EXISTS leases_identity;
-CREATE INDEX leases_identity ON leases (
+DROP INDEX IF EXISTS addresses_address;
+CREATE INDEX addresses_address ON addresses (
+  address
+);
+DROP INDEX IF EXISTS addresses_identity;
+CREATE INDEX addresses_identity ON addresses (
   identity
 );
-DROP INDEX IF EXISTS leases_released;
-CREATE INDEX leases_released ON leases (
-  released
+
+DROP TABLE IF EXISTS leases;
+CREATE TABLE leases (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  address INTEGER NOT NULL,
+  identity INTEGER NOT NULL,
+  acquired INTEGER NOT NULL,
+  released INTEGER NOT NULL
 );
 
 DROP TABLE IF EXISTS ike_sas;
