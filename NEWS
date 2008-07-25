@@ -1,6 +1,14 @@
 strongswan-4.2.5
 ----------------
 
+- Consistent logging of IKE and CHILD SAs at the audit (AUD) level. 
+
+- Improved the performance of the SQL-based virtual IP address pool
+  by introducing an additional addresses table. The leases table
+  storing only history information has become optional and can be
+  disabled by setting charon.plugins.sql.lease_history = no in
+  strongswan.conf.
+
 - The XFRM_STATE_AF_UNSPEC flag added to xfrm.h allows IPv4-over-IPv6
   and IPv6-over-IPv4 tunnels with the 2.6.26 and later Linux kernels.
 
@@ -9,6 +17,8 @@ strongswan-4.2.5
 
 - fixed a bug which prevented the assignment of more than 256 
   virtual IP addresses from a pool managed by an sql database.
+
+- fixed a bug which did not delete own IPCOMP SAs in the kernel.
 
  
 strongswan-4.2.4
