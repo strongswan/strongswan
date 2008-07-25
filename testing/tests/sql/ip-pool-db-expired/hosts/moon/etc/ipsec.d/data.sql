@@ -42,6 +42,12 @@ INSERT INTO identities (
   3, X'64617665407374726f6e677377616e2e6f7267'
  );
 
+INSERT INTO identities (
+  type, data
+) VALUES ( /* alice@strongswan.org */
+  3, X'616c696365407374726f6e677377616e2e6f7267'
+ );
+
 /* Certificates */
 
 INSERT INTO certificates (
@@ -153,19 +159,55 @@ INSERT INTO child_config_traffic_selector (
 /* Pools */
 
 INSERT INTO pools (
-  name, start, end, next, timeout
+  name, start, end, timeout
 ) VALUES (
-  'bigpool', X'0a030001', X'0a03fffe', X'0a030003', 3600 
+  'bigpool', X'0a030001', X'0a030006', 3600 
 );
 
-INSERT INTO leases (
+INSERT INTO addresses (
   pool, address, identity, acquired, released
 ) VALUES (
   1, X'0a030001', 7, 1211299013 , 1211299205
 );
 
-INSERT INTO leases (
+INSERT INTO addresses (
   pool, address, identity, acquired, released
 ) VALUES (
-  1, X'0a030002', 6, 1211299031, 1211299187
+  1, X'0a030002', 8, 1211299031, 1211299187
+);
+
+INSERT INTO addresses (
+  pool, address
+) VALUES (
+  1, X'0a030003'
+);
+
+INSERT INTO addresses (
+  pool, address
+) VALUES (
+  1, X'0a030004'
+);
+
+INSERT INTO addresses (
+  pool, address
+) VALUES (
+  1, X'0a030005'
+);
+
+INSERT INTO addresses (
+  pool, address
+) VALUES (
+  1, X'0a030006'
+);
+
+INSERT INTO leases (
+  address, identity, acquired, released
+) VALUES (
+  1, 7, 1211299013 , 1211299205
+);
+
+INSERT INTO leases (
+  address, identity, acquired, released
+) VALUES (
+  2, 8, 1211299031, 1211299187
 );

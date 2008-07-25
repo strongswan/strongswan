@@ -141,7 +141,43 @@ INSERT INTO child_config_traffic_selector (
 /* Pools */
 
 INSERT INTO pools (
-  name, start, end, next, timeout
+  name, start, end, timeout
 ) VALUES (
-  'bigpool', X'0a030001', X'0a03fffe', X'0a030001', 0 
+  'bigpool', X'0a030001', X'0a030006', 0 
+);
+
+INSERT INTO addresses (
+  pool, address
+) VALUES (
+  1, X'0a030001'
+);
+
+INSERT INTO addresses (
+  pool, address
+) VALUES (
+  1, X'0a030002'
+);
+
+INSERT INTO addresses (
+  pool, address
+) VALUES (
+  1, X'0a030003'
+);
+
+INSERT INTO addresses (
+  pool, address
+) VALUES (
+  1, X'0a030004'
+);
+
+INSERT INTO addresses (
+  pool, address
+) VALUES (
+  1, X'0a030005'
+);
+
+INSERT INTO addresses (
+  pool, address
+) VALUES (
+  1, X'0a030006'
 );

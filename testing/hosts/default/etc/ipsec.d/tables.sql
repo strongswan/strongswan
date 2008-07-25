@@ -157,9 +157,9 @@ CREATE TABLE addresses (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   pool INTEGER NOT NULL,
   address BLOB NOT NULL,
-  identity INTEGER NOT NULL,
-  acquired INTEGER NOT NULL,
-  released INTEGER NOT NULL
+  identity INTEGER NOT NULL DEFAULT 0,
+  acquired INTEGER NOT NULL DEFAULT 0,
+  released INTEGER NOT NULL DEFAULT 1
 );
 DROP INDEX IF EXISTS addresses_pool;
 CREATE INDEX addresses_pool ON addresses (
