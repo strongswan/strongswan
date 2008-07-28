@@ -242,3 +242,13 @@
 -
 -# Do unit-at-a-time unconditionally on x86_64, following the host
 -KBUILD_CFLAGS += $(call cc-option,-funit-at-a-time)
+--- a/arch/um/drivers/line.c	2008-07-13 23:51:29.000000000 +0200
++++ b/arch/um/drivers/line.c	2008-07-28 15:13:19.000000000 +0200
+@@ -876,6 +876,6 @@
+ 		return base;
+ 	}
+ 
+-	snprintf(title, len, "%s (%s)", base, umid);
++	snprintf(title, len, "%s (%s)", umid, base);
+ 	return title;
+ }
