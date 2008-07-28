@@ -2114,24 +2114,29 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
  */
 static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
 {
-	job_t *job;
 	u_int32_t reduction = this->peer_cfg->get_over_time(this->peer_cfg);
+	u_int32_t reauth_time = time(NULL) + lifetime - reduction;
 
-	this->time.reauth = time(NULL) + lifetime - reduction;
-	job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE);
-	
 	if (lifetime < reduction)
 	{
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, starting reauthentication",
 			 lifetime);
-		charon->processor->queue_job(charon->processor, job);
+		charon->processor->queue_job(charon->processor,
+		 			(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE));
+	}
+	else if (this->time.reauth == 0 || this->time.reauth > reauth_time) 
+	{
+		this->time.reauth = reauth_time;
+		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
+			 " in %ds", lifetime, lifetime - reduction);
+		charon->scheduler->schedule_job(charon->scheduler,
+					(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE),
+					(lifetime - reduction) * 1000);
 	}
 	else
 	{
-		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
-			 " in %ds", lifetime, lifetime - reduction);
-		charon->scheduler->schedule_job(charon->scheduler, job,
-								(lifetime - reduction) * 1000);
+		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, reauthentication already "
+			 "scheduled in %ds", lifetime, this->time.reauth - time(NULL));
 	}
 }
 
