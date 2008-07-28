@@ -2669,7 +2669,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	memset(&request, 0, sizeof(request));
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	hdr->nlmsg_type = XFRM_MSG_UPDPOLICY;
+	hdr->nlmsg_type = found ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info));
 
 	policy_info = (struct xfrm_userpolicy_info*)NLMSG_DATA(hdr);
