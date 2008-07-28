@@ -43,7 +43,8 @@ static pid_t invoke(void *null, guest_t *guest, char *args[], int argc)
 {
 	pid_t pid;
 	
-	args[argc] = "con0=xterm";
+	args[argc++] = "con0=xterm";
+	args[argc++] = "xterm=gnome-terminal,-t,-x";
 	
 	pid = fork();
 	switch (pid)
