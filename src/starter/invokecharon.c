@@ -177,15 +177,13 @@ starter_start_charon (starter_config_t *cfg, bool no_fork)
 	default:
 	    /* father */
 		_charon_pid = pid;
-		for (i = 0; i < 50 && _charon_pid; i++)
+		for (i = 0; i < 500 && _charon_pid; i++)
 	    {
-		/* wait for charon */
+		/* wait for charon for a maximum of 500 x 20 ms = 10 s */
 		usleep(20000);
 		if (stat(CHARON_PID_FILE, &stb) == 0)
 		{
-		    DBG(DBG_CONTROL,
-			DBG_log("charon (%d) started", _charon_pid)
-		    )
+		    plog("charon (%d) started after %d ms", _charon_pid, 20*(i+1));
 		    return 0;
 		}
 	    }
