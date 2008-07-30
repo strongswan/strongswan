@@ -185,65 +185,22 @@ static VALUE guest_stop(VALUE self)
 	return self;
 }
 
-typedef struct {
-	char buf[1024];
-	char *top;
-} exec_t;
-
-static void exec_cb(exec_t *exec, char *buf, size_t len)
+static void exec_cb(void *data, char *buf)
 {
-	size_t to_copy;
-	char *nl;
-	
-	while (len)
-	{
-		to_copy = min(len, sizeof(exec->buf) - (exec->top - exec->buf));
-		memcpy(exec->top, buf, to_copy);
-		exec->top += to_copy;
-		len -= to_copy;
-		buf += to_copy;
-		
-		while (TRUE)
-		{
-			nl = memchr(exec->buf, '\n', exec->top - exec->buf);
-			if (!nl)
-			{
-				break;
-			}
-			if (nl > exec->buf)
-			{
-				rb_yield(rb_str_new(exec->buf, nl - exec->buf));
-			}
-			nl++;
-			to_copy = exec->top - nl;
-			memmove(exec->buf, nl, to_copy);
-			exec->top = exec->buf + to_copy;
-		}
-		if (exec->top >= exec->buf + sizeof(exec->buf))
-		{
-			rb_yield(rb_str_new(exec->buf, sizeof(exec->buf)));
-			exec->top = exec->buf;
-		}
-	}
+	rb_yield(rb_str_new2(buf));
 }
 
 static VALUE guest_exec(VALUE self, VALUE cmd)
 {
 	guest_t *guest;
-	exec_t exec;
 	bool block;
 	
 	block = rb_block_given_p();
-	exec.top = exec.buf;
 	Data_Get_Struct(self, guest_t, guest);
-	if (guest->exec(guest, block ? (void*)exec_cb : NULL, &exec,
+	if (guest->exec_str(guest, block ? (void*)exec_cb : NULL, TRUE, NULL,
 					"%s", StringValuePtr(cmd)) != 0)
 	{
 		rb_raise(rb_eRuntimeError, "executing command failed");
-	}
-	if (exec.top != exec.buf && block)
-	{
-		rb_yield(rb_str_new(exec.buf, exec.top - exec.buf));
 	}
 	return self;
 }
@@ -587,7 +544,7 @@ static void template_init()
  * main routine, parses args and reads from console
  */
 int main(int argc, char *argv[])
-{	
+{
 	int state, i;
 	struct sigaction action;
 	char buf[512];
@@ -595,7 +552,7 @@ int main(int argc, char *argv[])
 	ruby_init();
 	ruby_init_loadpath();
 	
-	/* there are to many to report, rubyruby... */
+	/* there are too many to report, rubyruby... */
 	setenv("LEAK_DETECTIVE_DISABLE", "1", 1);
 	
 	library_init(NULL);
@@ -635,6 +592,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	rb_require("irb");
+	rb_require("irb/completion");
 	rb_eval_string_protect("IRB.start", &state);
 	if (state)
 	{
@@ -648,6 +606,7 @@ int main(int argc, char *argv[])
 	sigaction(SIGCHLD, &action, NULL);
 	
 	library_deinit();
+	ruby_finalize();
 	return 0;
 }
 
