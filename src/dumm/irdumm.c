@@ -443,13 +443,14 @@ static VALUE iface_add_addr(VALUE self, VALUE name)
 	addr = host_create_from_string(StringValuePtr(name), 0);
 	if (!addr)
 	{
-		rb_raise(rb_eRuntimeError, "invalid IP address");
+		rb_raise(rb_eArgError, "invalid IP address");
 	}
 	Data_Get_Struct(self, iface_t, iface);
 	if (!iface->add_address(iface, addr))
 	{
 		rb_raise(rb_eRuntimeError, "adding address failed");
 	}
+	addr->destroy(addr);
 	return self;
 }
 
@@ -481,6 +482,10 @@ static VALUE iface_del_addr(VALUE self, VALUE vaddr)
 	host_t *addr;
 	
 	addr = host_create_from_string(StringValuePtr(vaddr), 0);
+	if (!addr)
+	{
+		rb_raise(rb_eArgError, "invalid IP address");
+	}
 	Data_Get_Struct(self, iface_t, iface);
 	if (!iface->delete_address(iface, addr))
 	{

@@ -44,8 +44,6 @@ struct private_iface_t {
 	guest_t *guest;
 	/** mconsole for guest */
 	mconsole_t *mconsole;
-	/** list of interface addresses */
-	linked_list_t *addresses;
 };
 
 /**
@@ -105,14 +103,28 @@ static char* get_hostif(private_iface_t *this)
  */
 static bool add_address(private_iface_t *this, host_t *addr)
 {
-	if (this->guest->exec(this->guest, NULL, NULL, "ip addr add %H dev %s",
-						  addr, this->guestif) == 0)
+	return (this->guest->exec(this->guest, NULL, NULL, "ip addr add %H dev %s",
+						  addr, this->guestif) == 0);
+}
+
+/**
+ * compile a list of the addresses of an interface
+ */
+static void compile_address_list(linked_list_t *list, char *address)
+{
+	host_t *host = host_create_from_string(address, 0);
+	if (host)
 	{
-		this->addresses->insert_last(this->addresses, addr);
-		return TRUE;
+		list->insert_last(list, host);
 	}
-	addr->destroy(addr);
-	return FALSE;
+}
+
+/**
+ * delete the list of addresses
+ */
+static void destroy_address_list(linked_list_t *list)
+{
+	list->destroy_offset(list, offsetof(host_t, destroy));
 }
 
 /**
@@ -120,7 +132,14 @@ static bool add_address(private_iface_t *this, host_t *addr)
  */
 static enumerator_t* create_address_enumerator(private_iface_t *this)
 {
-	return this->addresses->create_enumerator(this->addresses);
+	linked_list_t *addresses = linked_list_create();
+	this->guest->exec_str(this->guest, (void(*)(void*,char*))compile_address_list,
+			TRUE, addresses,
+			"ip addr list dev %s scope global | "
+			"grep '^ \\+\\(inet6\\? \\)' | "
+			"awk -F '( +|/)' '{ print $3 }'", this->guestif);
+	return enumerator_create_cleaner(addresses->create_enumerator(addresses),
+					(void(*)(void*))destroy_address_list, addresses);
 }
 
 /**
@@ -128,26 +147,8 @@ static enumerator_t* create_address_enumerator(private_iface_t *this)
  */
 static bool delete_address(private_iface_t *this, host_t *addr)
 {
-	enumerator_t *enumerator;
-	bool success = FALSE;
-	host_t *current;
-	
-	enumerator = create_address_enumerator(this);
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		if (current->ip_equals(current, addr))
-		{
-			if (this->guest->exec(this->guest, NULL, NULL,
-						"ip addr del %H dev %s", current, this->guestif) == 0)
-			{
-				this->addresses->remove_at(this->addresses, enumerator);
-				success = TRUE;
-			}
-			break;
-		}	
-	}
-	enumerator->destroy(enumerator);
-	return success;
+	return (this->guest->exec(this->guest, NULL, NULL,
+					"ip addr del %H dev %s", addr, this->guestif) == 0);
 }
 
 /**
@@ -263,7 +264,6 @@ static void destroy(private_iface_t *this)
 	destroy_tap(this);
 	free(this->guestif);
 	free(this->hostif);
-	this->addresses->destroy(this->addresses);
 	free(this);
 }
 
@@ -309,7 +309,6 @@ iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 	{
 		DBG1("bringing iface '%s' up failed: %m", this->hostif);
 	}
-	this->addresses = linked_list_create();
 	return &this->public;
 }
 
