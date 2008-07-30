@@ -952,12 +952,12 @@ static job_requeue_t receive_events(private_kernel_interface_t *this)
 				case RTM_NEWADDR:
 				case RTM_DELADDR:
 					process_addr(this, hdr, TRUE);
-					pthread_cond_signal(&this->cond);
+					pthread_cond_broadcast(&this->cond);
 					break;
 				case RTM_NEWLINK:
 				case RTM_DELLINK:
 					process_link(this, hdr, TRUE);
-					pthread_cond_signal(&this->cond);
+					pthread_cond_broadcast(&this->cond);
 					break;
 				case RTM_NEWROUTE:
 				case RTM_DELROUTE:
