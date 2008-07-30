@@ -80,6 +80,16 @@ struct entry_t {
 	host_t *other;
 	
 	/**
+	 * own identity, required for duplicate checking
+	 */
+	identification_t *my_id;
+	
+	/**
+	 * remote identity, required for duplicate checking
+	 */
+	identification_t *other_id;
+	
+	/**
 	 * message ID currently processing, if any
 	 */
 	u_int32_t message_id;
@@ -95,6 +105,8 @@ static status_t entry_destroy(entry_t *this)
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	chunk_free(&this->init_hash);
 	DESTROY_IF(this->other);
+	DESTROY_IF(this->my_id);
+	DESTROY_IF(this->other_id);
 	free(this);
 	return SUCCESS;
 }
@@ -116,6 +128,8 @@ static entry_t *entry_create(ike_sa_id_t *ike_sa_id)
 	this->message_id = -1;
 	this->init_hash = chunk_empty;
 	this->other = NULL;
+	this->my_id = NULL;
+	this->other_id = NULL;
 	
 	/* ike_sa_id is always cloned */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
@@ -726,10 +740,13 @@ static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
 		{	/* self is not a duplicate */
 			continue;
 		}
-		if (wait_for_entry(this, entry))
-		{
-			if (me->equals(me, entry->ike_sa->get_my_id(entry->ike_sa)) &&
-				other->equals(other, entry->ike_sa->get_other_id(entry->ike_sa)))
+		if (entry->my_id && me->equals(me, entry->my_id) &&
+			entry->other_id && other->equals(other, entry->other_id))
+		{	
+			/* we are sure that the other entry is not calling 
+			 * checkout_duplicate here, as the identities in entry would not
+			 * have been set yet. Otherwise we would risk a deadlock. */
+			if (wait_for_entry(this, entry))
 			{
 				duplicate = entry->ike_sa;
 				entry->checked_out = TRUE;
@@ -789,6 +806,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	entry_t *entry;
 	ike_sa_id_t *ike_sa_id;
 	host_t *other;
+	identification_t *my_id, *other_id;
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	
@@ -810,6 +828,21 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		{
 			DESTROY_IF(entry->other);
 			entry->other = other->clone(other);
+		}
+		/* apply identities for diplicate test */
+		my_id = ike_sa->get_my_id(ike_sa);
+		other_id = ike_sa->get_other_id(ike_sa);
+		if (!entry->my_id ||
+			entry->my_id->get_type(entry->my_id) == ID_ANY)
+		{
+			DESTROY_IF(entry->my_id);
+			entry->my_id = my_id->clone(my_id);
+		}
+		if (!entry->other_id ||
+			entry->other_id->get_type(entry->other_id) == ID_ANY)
+		{
+			DESTROY_IF(entry->other_id);
+			entry->other_id = other_id->clone(other_id);
 		}
 		DBG2(DBG_MGR, "check-in of IKE_SA successful.");
 		pthread_cond_signal(&(entry->condvar));
