@@ -326,27 +326,116 @@ static bool load_template(private_guest_t *this, char *path)
 }
 
 /**
- * Implementation of gues_t.exec
+ * Variadic version of the exec function
  */
-static int exec(private_guest_t *this, void(*cb)(void*,char*,size_t), void *data,
-				char *cmd, ...)
+static int vexec(private_guest_t *this, void(*cb)(void*,char*,size_t), void *data,
+				 char *cmd, va_list args)
 {
 	char buf[1024];
 	size_t len;
-	va_list args;
-
+	
 	if (this->mconsole)
 	{
-		va_start(args, cmd);
 		len = vsnprintf(buf, sizeof(buf), cmd, args);
-		va_end(args);
-	
+		
 		if (len > 0 && len < sizeof(buf))
 		{
 			return this->mconsole->exec(this->mconsole, cb, data, buf);
 		}
 	}
 	return -1;
+}
+
+/**
+ * Implementation of guest_t.exec
+ */
+static int exec(private_guest_t *this, void(*cb)(void*,char*,size_t), void *data,
+				char *cmd, ...)
+{
+	int res;
+	va_list args;
+	va_start(args, cmd);
+	res = vexec(this, cb, data, cmd, args);
+	va_end(args);
+	return res;
+}
+
+typedef struct {
+	chunk_t buf;
+	void (*cb)(void*,char*);
+	void *data;
+} exec_str_t;
+
+/**
+ * callback that combines chunks to a string. if a callback is given, the string
+ * is split at newlines and the callback is called for each line.
+ */
+static void exec_str_cb(exec_str_t *data, char *buf, size_t len)
+{
+	if (!data->buf.ptr)
+	{
+		data->buf = chunk_alloc(len + 1);
+		memcpy(data->buf.ptr, buf, len);
+		data->buf.ptr[len] = '\0';
+	}
+	else
+	{
+		size_t newlen = strlen(data->buf.ptr) + len + 1;
+		if (newlen > data->buf.len)
+		{
+			data->buf.ptr = realloc(data->buf.ptr, newlen);
+			data->buf.len = newlen;
+		}
+		strncat(data->buf.ptr, buf, len);
+	}
+	
+	if (data->cb)
+	{
+		char *nl;
+		while ((nl = strchr(data->buf.ptr, '\n')) != NULL)
+		{
+			*nl++ = '\0';
+			data->cb(data->data, data->buf.ptr);
+			memmove(data->buf.ptr, nl, strlen(nl) + 1);
+		}
+	}
+}
+
+/**
+ * Implementation of guest_t.exec_str
+ */
+static int exec_str(private_guest_t *this, void(*cb)(void*,char*), bool lines,
+					void *data, char *cmd, ...)
+{
+	int res;
+	va_list args;
+	va_start(args, cmd);
+	if (cb)
+	{
+		exec_str_t exec = { chunk_empty, NULL, NULL };
+		if (lines)
+		{
+			exec.cb = cb;
+			exec.data = data;
+		}
+		res = vexec(this, (void(*)(void*,char*,size_t))exec_str_cb, &exec, cmd, args);
+		if (exec.buf.ptr)
+		{
+			if (!lines || strlen(exec.buf.ptr) > 0)
+			{
+				/* return the complete string or the remaining stuff in the
+				 * buffer (i.e. when there was no newline at the end) */
+				cb(data, exec.buf.ptr);
+			}
+			chunk_free(&exec.buf);
+		}
+	}
+	else
+	{
+		res = vexec(this, NULL, NULL, cmd, args);
+	}
+	va_end(args);
+	return res;
 }
 
 /**
@@ -473,7 +562,8 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->public.start = (void*)start;
 	this->public.stop = (void*)stop;
 	this->public.load_template = (bool(*)(guest_t*, char *path))load_template;
-	this->public.exec = (int(*)(guest_t*, void(*cb)(void*,char*,size_t), void *data, char *cmd, ...))exec;
+	this->public.exec = (int(*)(guest_t*, void(*cb)(void*,char*,size_t),void*,char*,...))exec;
+	this->public.exec_str = (int(*)(guest_t*, void(*cb)(void*,char*),bool,void*,char*,...))exec_str;
 	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
 		

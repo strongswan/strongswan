@@ -153,6 +153,22 @@ struct guest_t {
 				char *cmd, ...);
 	
 	/**
+	 * Execute a command in the guest and return the output by lines or as combined
+	 * string.
+	 * 
+	 * @note This function does not work with binary output (i.e. containing 0 bytes).
+	 * 
+	 * @param cb		callback to call for each line or for the complete output
+	 * @param lines		TRUE if the callback should be called for each line (instead of for the combined output)
+	 * @param data		data to pass to callback
+	 * @param cmd		command to execute
+	 * @param ...		printf style argument list for cmd
+	 * @return			return value
+	 */
+	int (*exec_str)(guest_t *this, void(*cb)(void*,char*), bool lines,
+				void *data, char *cmd, ...);
+	
+	/**
 	 * @brief Called whenever a SIGCHILD for the guests PID is received.
 	 */
 	void (*sigchild)(guest_t *this);
