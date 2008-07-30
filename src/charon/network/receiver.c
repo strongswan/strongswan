@@ -96,6 +96,11 @@ struct private_receiver_t {
  	 * hasher to use for cookie calculation
  	 */
  	hasher_t *hasher;
+ 	
+ 	/**
+ 	 * use denial of service protection mechanisms (cookies)
+ 	 */
+ 	bool dos_protection;
 };
 
 /**
@@ -282,7 +287,8 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	}
 	
 	if (message->get_request(message) &&
-		message->get_exchange_type(message) == IKE_SA_INIT)
+		message->get_exchange_type(message) == IKE_SA_INIT &&
+		this->dos_protection)
 	{
 		/* check for cookies */
 		if (cookie_required(this, message))
@@ -367,6 +373,8 @@ receiver_t *receiver_create()
 	this->secret_used = 0;
 	this->rng->get_bytes(this->rng, SECRET_LENGTH, this->secret);
 	memcpy(this->secret_old, this->secret, SECRET_LENGTH);
+	this->dos_protection = lib->settings->get_bool(lib->settings,
+												"charon.dos_protection", TRUE);
 
 	this->job = callback_job_create((callback_job_cb_t)receive_packets,
 									this, NULL, NULL);
