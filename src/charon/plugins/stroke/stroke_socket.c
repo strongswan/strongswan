@@ -554,7 +554,7 @@ static bool open_socket(private_stroke_socket_t *this)
 			 strerror(errno));
 	}
 	
-	if (listen(this->socket, 0) < 0)
+	if (listen(this->socket, 10) < 0)
 	{
 		DBG1(DBG_CFG, "could not listen on stroke socket: %s", strerror(errno));
 		close(this->socket);
