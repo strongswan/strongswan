@@ -15,17 +15,18 @@
  * $Id$
  */
 
-#include "stroke_cred.h"
-#include "stroke_shared_key.h"
-
+#define _GNU_SOURCE
+#include <pthread.h>
 #include <sys/stat.h>
 #include <limits.h>
+
+#include "stroke_cred.h"
+#include "stroke_shared_key.h"
 
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
 #include <credentials/certificates/ac.h>
 #include <utils/linked_list.h>
-#include <utils/mutex.h>
 #include <utils/lexparser.h>
 #include <asn1/pem.h>
 #include <daemon.h>
@@ -70,9 +71,9 @@ struct private_stroke_cred_t {
 	linked_list_t *private;
 	
 	/**
-	 * mutex to lock lists above
+	 * read-write lock to lists
 	 */
-	mutex_t *mutex;
+	pthread_rwlock_t lock;
 	
 	/**
 	 * cache CRLs to disk?
@@ -93,7 +94,7 @@ typedef struct {
  */
 static void id_data_destroy(id_data_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	pthread_rwlock_unlock(&data->this->lock);
 	free(data);
 }
 
@@ -139,7 +140,7 @@ static enumerator_t* create_private_enumerator(private_stroke_cred_t *this,
 	data->this = this;
 	data->id = id;
 	
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_rdlock(&this->lock);
 	return enumerator_create_filter(this->private->create_enumerator(this->private),
 									(void*)private_filter, data,
 									(void*)id_data_destroy);
@@ -240,7 +241,7 @@ static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
 		data->this = this;
 		data->id = id;
 		
-		this->mutex->lock(this->mutex);
+		pthread_rwlock_rdlock(&this->lock);
 		return enumerator_create_filter(this->certs->create_enumerator(this->certs),
 					(cert == CERT_X509_CRL)? (void*)crl_filter : (void*)ac_filter,
 					data, (void*)id_data_destroy);
@@ -253,7 +254,7 @@ static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
 	data->this = this;
 	data->id = id;
 	
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_rdlock(&this->lock);
 	return enumerator_create_filter(this->certs->create_enumerator(this->certs),
 									(void*)certs_filter, data,
 									(void*)id_data_destroy);
@@ -271,7 +272,7 @@ typedef struct {
  */
 static void shared_data_destroy(shared_data_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	pthread_rwlock_unlock(&data->this->lock);
 	free(data);
 }
 
@@ -323,7 +324,7 @@ static enumerator_t* create_shared_enumerator(private_stroke_cred_t *this,
 	data->me = me;
 	data->other = other;
 	data->type = type;
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_rdlock(&this->lock);
 	return enumerator_create_filter(this->shared->create_enumerator(this->shared),
 									(void*)shared_filter, data,
 									(void*)shared_data_destroy);
@@ -338,7 +339,7 @@ static certificate_t* add_cert(private_stroke_cred_t *this, certificate_t *cert)
 	enumerator_t *enumerator;
 	bool new = TRUE;	
 
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_rdlock(&this->lock);
 	enumerator = this->certs->create_enumerator(this->certs);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
@@ -357,7 +358,7 @@ static certificate_t* add_cert(private_stroke_cred_t *this, certificate_t *cert)
 	{
 		this->certs->insert_last(this->certs, cert);
 	}
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 	return cert;
 }
 	
@@ -399,7 +400,7 @@ static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
 	enumerator_t *enumerator;
 	bool new = TRUE, found = FALSE;	
 
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_wrlock(&this->lock);
 	enumerator = this->certs->create_enumerator(this->certs);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
@@ -447,7 +448,7 @@ static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
 	{
 		this->certs->insert_last(this->certs, cert);
 	}
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 	return new;
 }
 
@@ -458,9 +459,9 @@ static bool add_ac(private_stroke_cred_t *this, ac_t* ac)
 {
 	certificate_t *cert = &ac->certificate;
 
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_wrlock(&this->lock);
 	this->certs->insert_last(this->certs, cert);
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 	return TRUE;
 }
 
@@ -697,7 +698,7 @@ static void load_secrets(private_stroke_cred_t *this)
 	fclose(fd);
 	src = chunk;
 
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_wrlock(&this->lock);
 	while (this->shared->remove_last(this->shared,
 		 								   (void**)&shared) == SUCCESS)
 	{
@@ -859,7 +860,7 @@ static void load_secrets(private_stroke_cred_t *this)
 		}
 	}
 error:
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 	chunk_clear(&chunk);
 }
 
@@ -940,7 +941,7 @@ static void destroy(private_stroke_cred_t *this)
 	this->certs->destroy_offset(this->certs, offsetof(certificate_t, destroy));
 	this->shared->destroy_offset(this->shared, offsetof(shared_key_t, destroy));
 	this->private->destroy_offset(this->private, offsetof(private_key_t, destroy));
-	this->mutex->destroy(this->mutex);
+	pthread_rwlock_destroy(&this->lock);
 	free(this);
 }
 
@@ -965,7 +966,7 @@ stroke_cred_t *stroke_cred_create()
 	this->certs = linked_list_create();
 	this->shared = linked_list_create();
 	this->private = linked_list_create();
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	pthread_rwlock_init(&this->lock, NULL);
 
 	load_certs(this);
 	load_secrets(this);

@@ -16,10 +16,12 @@
  * $Id$
  */
 
+#define _GNU_SOURCE
+#include <pthread.h>
+
 #include "stroke_ca.h"
 #include "stroke_cred.h"
 
-#include <utils/mutex.h>
 #include <utils/linked_list.h>
 #include <crypto/hashers/hasher.h>
 
@@ -38,9 +40,9 @@ struct private_stroke_ca_t {
 	stroke_ca_t public;
 	
 	/**
-	 * mutex to lock access to list
+	 * read-write lock to lists
 	 */
-	mutex_t *mutex;
+	pthread_rwlock_t lock;
 	
 	/**
 	 * list of starters CA sections and its certificates (ca_section_t)
@@ -134,7 +136,7 @@ typedef struct {
  */
 static void cdp_data_destroy(cdp_data_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	pthread_rwlock_unlock(&data->this->lock);
 	free(data);
 }
 
@@ -234,7 +236,7 @@ static enumerator_t *create_cdp_enumerator(private_stroke_ca_t *this,
 	data->type = type;
 	data->id = id;
 	
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_rdlock(&this->lock);
 	return enumerator_create_nested(this->sections->create_enumerator(this->sections),
 			(type == CERT_X509) ? (void*)create_inner_cdp_hashandurl : (void*)create_inner_cdp,
 			data, (void*)cdp_data_destroy);
@@ -276,9 +278,9 @@ static void add(private_stroke_ca_t *this, stroke_msg_t *msg)
 		{
 			ca->certuribase = strdup(msg->add_ca.certuribase);
 		}
-		this->mutex->lock(this->mutex);
+		pthread_rwlock_wrlock(&this->lock);
 		this->sections->insert_last(this->sections, ca);
-		this->mutex->unlock(this->mutex);
+		pthread_rwlock_unlock(&this->lock);
 		DBG1(DBG_CFG, "added ca '%s'", msg->add_ca.name);
 	}
 }
@@ -291,7 +293,7 @@ static void del(private_stroke_ca_t *this, stroke_msg_t *msg)
 	enumerator_t *enumerator;
 	ca_section_t *ca = NULL;
 	
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_wrlock(&this->lock);
 	enumerator = this->sections->create_enumerator(this->sections);
 	while (enumerator->enumerate(enumerator, &ca))
 	{
@@ -303,7 +305,7 @@ static void del(private_stroke_ca_t *this, stroke_msg_t *msg)
 		ca = NULL;
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 	if (ca == NULL)
 	{
 		DBG1(DBG_CFG, "no ca named '%s' found\n", msg->del_ca.name);
@@ -354,7 +356,7 @@ static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cer
 		return;
 	}
 	
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_wrlock(&this->lock);
 	enumerator = this->sections->create_enumerator(this->sections);
 	while (enumerator->enumerate(enumerator, (void**)&section))
 	{
@@ -370,7 +372,7 @@ static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cer
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 	
 	hasher->destroy(hasher);
 }
@@ -384,7 +386,7 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 	ca_section_t *section;
 	enumerator_t *enumerator;
 	
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_rdlock(&this->lock);
 	enumerator = this->sections->create_enumerator(this->sections);
 	while (enumerator->enumerate(enumerator, (void**)&section))
 	{
@@ -417,7 +419,7 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 }
 
 /**
@@ -426,7 +428,7 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 static void destroy(private_stroke_ca_t *this)
 {
 	this->sections->destroy_function(this->sections, (void*)ca_section_destroy);
-	this->mutex->destroy(this->mutex);
+	pthread_rwlock_destroy(&this->lock);
 	free(this);
 }
 
@@ -449,7 +451,7 @@ stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 	this->public.destroy = (void(*)(stroke_ca_t*))destroy;
 	
 	this->sections = linked_list_create();
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	pthread_rwlock_init(&this->lock, NULL);
 	this->cred = cred;
 	
 	return &this->public;

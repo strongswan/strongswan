@@ -15,11 +15,13 @@
  * $Id$
  */
 
+#define _GNU_SOURCE
+#include <pthread.h>
+
 #include "cert_cache.h"
 
 #include <daemon.h>
 #include <utils/linked_list.h>
-#include <utils/mutex.h>
 
 #define CACHE_SIZE 30
 
@@ -44,7 +46,7 @@ struct private_cert_cache_t {
 	/**
 	 * do we have an active enumerator
 	 */
-	bool enumerating;
+	refcount_t enumerating;
 	
 	/**
 	 * have we increased the cache without a check_cache?
@@ -52,9 +54,9 @@ struct private_cert_cache_t {
 	bool check_required;
 	
 	/**
-	 * mutex to lock relations list
+	 * read-write lock to sets list
 	 */
-	mutex_t *mutex;
+	pthread_rwlock_t lock;
 };
 
 /**
@@ -88,8 +90,8 @@ static void check_cache(private_cert_cache_t *this)
 	{
 		this->check_required = TRUE;
 	}
-	else
-	{
+	else if (pthread_rwlock_trywrlock(&this->lock) == 0)
+	{	/* never blocks, only done if lock is available */
 		while (this->relations->get_count(this->relations) > CACHE_SIZE)
 		{
 			relation_t *oldest = NULL, *current;
@@ -108,6 +110,7 @@ static void check_cache(private_cert_cache_t *this)
 			relation_destroy(oldest);
 		}
 		this->check_required = FALSE;
+		pthread_rwlock_unlock(&this->lock);
 	}
 }
 
@@ -121,7 +124,7 @@ static bool issued_by(private_cert_cache_t *this,
 	enumerator_t *enumerator;
 	
 	/* lookup cache */
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_rdlock(&this->lock);
 	enumerator = this->relations->create_enumerator(this->relations);
 	while (enumerator->enumerate(enumerator, &current))
 	{
@@ -146,7 +149,7 @@ static bool issued_by(private_cert_cache_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 	if (found)
 	{
 		return TRUE;
@@ -161,10 +164,9 @@ static bool issued_by(private_cert_cache_t *this,
 	found->subject = subject->get_ref(subject);
 	found->issuer = issuer->get_ref(issuer);
 	found->last_use = time(NULL);
-	this->mutex->lock(this->mutex);
+	/* insert should be ok without lock */
 	this->relations->insert_last(this->relations, found);
 	check_cache(this);
-	this->mutex->unlock(this->mutex);
 	return TRUE;
 }
 
@@ -230,12 +232,12 @@ static bool certs_filter(cert_data_t *data, relation_t **in, certificate_t **out
  */
 static void certs_destroy(cert_data_t *data)
 {
-	data->this->enumerating--;
+	ref_put(&data->this->enumerating);
+	pthread_rwlock_unlock(&data->this->lock);
 	if (data->this->check_required)
 	{
 		check_cache(data->this);
 	}
-	data->this->mutex->unlock(data->this->mutex);
 	free(data);
 }
 
@@ -258,19 +260,11 @@ static enumerator_t *create_enumerator(private_cert_cache_t *this,
 	data->id = id;
 	data->this = this;
 	
-	this->mutex->lock(this->mutex);
-	this->enumerating++;
+	pthread_rwlock_rdlock(&this->lock);
+	ref_get(&this->enumerating);
 	return enumerator_create_filter(
 							this->relations->create_enumerator(this->relations),
 							(void*)certs_filter, data, (void*)certs_destroy);
-}
-
-/**
- * Implementation of credential_set_t.cache_cert.
- */
-static void cache_cert(private_cert_cache_t *this, certificate_t *cert)
-{
-	/* TODO: implement caching */
 }
 
 /**
@@ -281,7 +275,7 @@ static void flush(private_cert_cache_t *this, certificate_type_t type)
 	enumerator_t *enumerator;
 	relation_t *relation;
 	
-	this->mutex->lock(this->mutex);
+	pthread_rwlock_wrlock(&this->lock);
 	enumerator = this->relations->create_enumerator(this->relations);
 	while (enumerator->enumerate(enumerator, &relation))
 	{
@@ -293,7 +287,7 @@ static void flush(private_cert_cache_t *this, certificate_type_t type)
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	pthread_rwlock_unlock(&this->lock);
 }
 
 /**
@@ -302,7 +296,7 @@ static void flush(private_cert_cache_t *this, certificate_type_t type)
 static void destroy(private_cert_cache_t *this)
 {
 	this->relations->destroy_function(this->relations, (void*)relation_destroy);
-	this->mutex->destroy(this->mutex);
+	pthread_rwlock_destroy(&this->lock);
 	free(this);
 }
 
@@ -317,15 +311,15 @@ cert_cache_t *cert_cache_create()
 	this->public.set.create_cert_enumerator = (void*)create_enumerator;
 	this->public.set.create_shared_enumerator = (void*)return_null;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
-	this->public.set.cache_cert = (void*)cache_cert;
+	this->public.set.cache_cert = (void*)nop;
 	this->public.issued_by = (bool(*)(cert_cache_t*, certificate_t *subject, certificate_t *issuer))issued_by;
 	this->public.flush = (void(*)(cert_cache_t*, certificate_type_t type))flush;
 	this->public.destroy = (void(*)(cert_cache_t*))destroy;
 	
 	this->relations = linked_list_create();
-	this->enumerating = FALSE;
+	this->enumerating = 0;
 	this->check_required = FALSE;
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	pthread_rwlock_init(&this->lock, NULL);
 	
 	return &this->public;
 }

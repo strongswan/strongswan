@@ -61,6 +61,11 @@ struct private_credential_manager_t {
 	cert_cache_t *cache;
 	
 	/**
+	 * certificates queued for persistent caching
+	 */
+	linked_list_t *cache_queue;
+	
+	/**
 	 * read-write lock to sets list
 	 */
 	pthread_rwlock_t lock;
@@ -407,14 +412,48 @@ static void cache_cert(private_credential_manager_t *this, certificate_t *cert)
 	credential_set_t *set;
 	enumerator_t *enumerator;
 	
-	pthread_rwlock_rdlock(&this->lock);
-	enumerator = this->sets->create_enumerator(this->sets);
-	while (enumerator->enumerate(enumerator, &set))
+	if (pthread_rwlock_trywrlock(&this->lock) == 0)
 	{
-		set->cache_cert(set, cert);
+		enumerator = this->sets->create_enumerator(this->sets);
+		while (enumerator->enumerate(enumerator, &set))
+		{
+			set->cache_cert(set, cert);
+		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
+	else
+	{	/* we can't cache now as other threads are active, queue for later */
+		pthread_rwlock_rdlock(&this->lock);
+		this->cache_queue->insert_last(this->cache_queue, cert->get_ref(cert));
+	}
 	pthread_rwlock_unlock(&this->lock);
+}
+
+/**
+ * Try to cache certificates queued for caching
+ */
+static void cache_queue(private_credential_manager_t *this)
+{
+	credential_set_t *set;
+	certificate_t *cert;
+	enumerator_t *enumerator;
+	
+	if (this->cache_queue->get_count(this->cache_queue) > 0 &&
+		pthread_rwlock_trywrlock(&this->lock) == 0)
+	{
+		while (this->cache_queue->remove_last(this->cache_queue,
+											  (void**)&cert) == SUCCESS)
+		{
+			enumerator = this->sets->create_enumerator(this->sets);
+			while (enumerator->enumerate(enumerator, &set))
+			{
+				set->cache_cert(set, cert);
+			}
+			enumerator->destroy(enumerator);
+			cert->destroy(cert);
+		}
+		pthread_rwlock_unlock(&this->lock);
+	}
 }
 
 /**
@@ -1262,6 +1301,9 @@ static void public_destroy(public_enumerator_t *this)
 		this->wrapper->destroy(this->wrapper);
 	}
 	pthread_rwlock_unlock(&this->this->lock);
+	
+	/* check for delayed certificate cache queue */
+	cache_queue(this->this);
 	free(this);
 }
 
@@ -1501,6 +1543,8 @@ static void remove_set(private_credential_manager_t *this, credential_set_t *set
  */
 static void destroy(private_credential_manager_t *this)
 {
+	cache_queue(this);
+	this->cache_queue->destroy(this->cache_queue);
 	this->sets->remove(this->sets, this->cache, NULL);
 	this->sets->destroy(this->sets);
 	pthread_key_delete(this->local_sets);
@@ -1532,6 +1576,7 @@ credential_manager_t *credential_manager_create()
 	this->sets = linked_list_create();
 	pthread_key_create(&this->local_sets, (void*)this->sets->destroy);
 	this->cache = cert_cache_create();
+	this->cache_queue = linked_list_create();
 	this->sets->insert_first(this->sets, this->cache);
 	pthread_rwlock_init(&this->lock, NULL);
 	
