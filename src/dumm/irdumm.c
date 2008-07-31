@@ -194,13 +194,14 @@ static VALUE guest_exec(VALUE self, VALUE cmd)
 {
 	guest_t *guest;
 	bool block;
+	int ret;
 	
 	block = rb_block_given_p();
 	Data_Get_Struct(self, guest_t, guest);
-	if (guest->exec_str(guest, block ? (void*)exec_cb : NULL, TRUE, NULL,
-					"%s", StringValuePtr(cmd)) != 0)
+	if ((ret = guest->exec_str(guest, block ? (void*)exec_cb : NULL, TRUE, NULL,
+					"%s", StringValuePtr(cmd))) != 0)
 	{
-		rb_raise(rb_eRuntimeError, "executing command failed");
+		rb_raise(rb_eRuntimeError, "executing command failed (%d)", ret);
 	}
 	return self;
 }

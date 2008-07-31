@@ -201,11 +201,7 @@ static bool del_iface(private_mconsole_t *this, char *guest)
 static int exec(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 				void *data, char *cmd)
 {
-	if (request(this, cb, data, "exec %s", cmd) != 0)
-	{
-		return -1;
-	}
-	return 0;
+	return request(this, cb, data, "exec %s", cmd);
 }
 
 /**
