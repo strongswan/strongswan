@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2008 Martin Willi
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -11,30 +11,29 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id$
  */
 
 /**
- * @defgroup dbus dbus
+ * @defgroup nm nm
  * @ingroup cplugins
  *
- * @defgroup dbus_i dbus
- * @{ @ingroup dbus
+ * @defgroup nm_plugin nm_plugin
+ * @{ @ingroup nm
  */
 
-#ifndef DBUS_H_
-#define DBUS_H_
+#ifndef NM_PLUGIN_H_
+#define NM_PLUGIN_H_
 
 #include <plugins/plugin.h>
 
-typedef struct dbus_t dbus_t;
+typedef struct nm_plugin_t nm_plugin_t;
 
 /**
- * NetworkManager DBUS control plugin.
- *
- * This plugin uses a DBUS connection. It is designed to work in conjuction
- * with NetworkManager to configure and control the daemon.
+ * NetworkManager integration plugin.
  */
-struct dbus_t {
+struct nm_plugin_t {
 
 	/**
 	 * implements plugin interface
@@ -43,8 +42,8 @@ struct dbus_t {
 };
 
 /**
- * Create a dbus plugin instance.
+ * Create a nm_plugin instance.
  */
 plugin_t *plugin_create();
 
-#endif /* DBUS_H_ @}*/
+#endif /* NM_PLUGIN_H_ @}*/

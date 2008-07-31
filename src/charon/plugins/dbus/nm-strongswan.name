@@ -1,8 +1,0 @@
-[VPN Connection]
-name=strongSwan
-service=org.freedesktop.NetworkManager.strongswan
-program=/usr/local/libexec/ipsec/charon
-
-[GNOME]
-auth-dialog=/home/martin/strongswan/trunk/src/networkmanager/nm_applet_auth
-properties=/home/martin/strongswan/trunk/src/networkmanager/strongswan.so

@@ -180,6 +180,11 @@ if USE_MEDCLI
   PLUGINS += medcli
 endif
 
+if USE_NM
+  SUBDIRS += plugins/nm
+  PLUGINS += nm
+endif
+
 if USE_UCI
   SUBDIRS += plugins/uci
   PLUGINS += uci
