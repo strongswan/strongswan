@@ -225,7 +225,7 @@ static void process(private_uci_control_t *this, char *message)
 		}
 		else
 		{
-			write_fifo(this, "usage: status [<name<] | up <name> | down <name>\n"
+			write_fifo(this, "usage: status [<name>] | up <name> | down <name>\n"
 					   "  status format: name peer-id peer-addr tunnel(s)\n");
 		}
 	}
