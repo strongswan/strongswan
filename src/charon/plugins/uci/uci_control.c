@@ -284,8 +284,8 @@ uci_control_t *uci_control_create()
 
 	this->public.destroy = (void(*)(uci_control_t*))destroy;
 
-	if (access(FIFO_FILE, F_OK) != 0 &&
-		mkfifo(FIFO_FILE, S_IRUSR|S_IWUSR) != 0)
+	unlink(FIFO_FILE);
+	if (mkfifo(FIFO_FILE, S_IRUSR|S_IWUSR) != 0)
 	{
 		DBG1(DBG_CFG, "creating UCI control fifo '%s' failed: %s",
 			 FIFO_FILE, strerror(errno));
