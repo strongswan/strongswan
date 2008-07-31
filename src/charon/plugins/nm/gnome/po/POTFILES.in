@@ -1,0 +1,6 @@
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+properties/nm-strongswan.c
+properties/nm-strongswan-dialog.glade
+
+
