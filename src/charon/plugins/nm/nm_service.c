@@ -172,6 +172,21 @@ static char* get_str(GHashTable *hash, char *key)
 }
 
 /**
+ * Read a boolean from a hash table using a given key
+ */
+static bool get_bool(GHashTable *hash, char *key)
+{
+	GValue *value;
+
+	value = g_hash_table_lookup(hash, key);
+	if (G_VALUE_TYPE (value) == G_TYPE_BOOLEAN)
+	{
+		return g_value_get_boolean(value);
+	}
+	return FALSE;
+}
+
+/**
  * Connect function called from NM via DBUS
  */
 static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
@@ -180,6 +195,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	NMSettingVPNProperties *properties;
 	identification_t *user = NULL;
 	char *address, *str;
+	bool virtual, encap, ipcomp;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -203,15 +219,17 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		 nm_setting_to_string(NM_SETTING(properties)));
 
 	str = get_str(properties->data, "user");
-	if (str)
-	{
-		user = identification_create_from_string(str);
-	}
-	if (!user)
+	if (!str)
 	{
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-				    "Username '%s' invalid.", str);
+				    "Username missing.");
 		return FALSE;
+	}
+	user = identification_create_from_string(str);
+	if (!user)
+	{	/* fallback to ID_KEY_ID for non-qualified usernames */
+		user = identification_create_from_encoding(ID_KEY_ID,
+												chunk_create(str, strlen(str)));
 	}
 	address = get_str(properties->data, "address");
 	if (!address || !*address)
@@ -220,11 +238,14 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 				    "Gateway address missing.");
 		return FALSE;
 	}
+	virtual = get_bool(properties->data, "virtual");
+	encap = get_bool(properties->data, "encap");
+	ipcomp = get_bool(properties->data, "ipcomp");
 	
 	/**
 	 * Set up configurations
 	 */
-	ike_cfg = ike_cfg_create(TRUE, TRUE, "0.0.0.0", address);
+	ike_cfg = ike_cfg_create(TRUE, encap, "0.0.0.0", address);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create(CONFIG_NAME, 2, ike_cfg, user,
 					identification_create_from_encoding(ID_ANY, chunk_empty),
@@ -233,13 +254,13 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 					18000, 0, /* rekey 5h, reauth none */
 					600, 600, /* jitter, over 10min */
 					TRUE, 0, /* mobike, DPD */
-					host_create_from_string("0.0.0.0", 0), /* virtual ip */
+					virtual ? host_create_from_string("0.0.0.0", 0) : NULL,
 					NULL, FALSE, NULL, NULL); /* pool, mediation */
 	child_cfg = child_cfg_create(CONFIG_NAME,
 								 3600, 3000, /* lifetime 1h, rekey 50min */
 								 300, /* jitter 5min */
 								 NULL, TRUE, MODE_TUNNEL, /* updown, hostaccess */
-								 ACTION_NONE, ACTION_NONE, FALSE); /* ipcomp */
+								 ACTION_NONE, ACTION_NONE, ipcomp);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);

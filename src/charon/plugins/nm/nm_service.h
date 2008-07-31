@@ -26,8 +26,6 @@
 #include <glib/gtypes.h>
 #include <glib-object.h>
 #include <nm-vpn-plugin.h>
-#undef TRUE
-#undef FALSE
 
 #define NM_TYPE_STRONGSWAN_PLUGIN            (nm_strongswan_plugin_get_type ())
 #define NM_STRONGSWAN_PLUGIN(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), NM_TYPE_STRONGSWAN_PLUGIN, NMSTRONGSWANPlugin))

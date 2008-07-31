@@ -108,8 +108,12 @@
  * General purpose boolean type.
  */
 typedef int bool;
-#define FALSE 0
-#define TRUE  1
+#ifndef FALSE
+# define FALSE 0
+#endif /* FALSE */
+#ifndef TRUE
+# define TRUE  1
+#endif /* TRUE */
 
 typedef enum status_t status_t;
 
