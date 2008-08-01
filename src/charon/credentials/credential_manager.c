@@ -275,7 +275,7 @@ static enumerator_t *create_private(credential_set_t *set, private_data_t *data)
 }
 
 /**
- * Implementation of credential_manager_t.get_private_by_keyid.
+ * Implementation of credential_manager_t.create_private_enumerator.
  */
 static enumerator_t* create_private_enumerator(
 									private_credential_manager_t *this,
