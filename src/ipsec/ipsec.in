@@ -243,6 +243,9 @@ secrets)
 	;;
 start)
 	shift
+	if [ -d /var/lock/subsys ]; then
+		touch /var/lock/subsys/ipsec
+	fi
 	exec $IPSEC_STARTER "$@"
 	;;
 status|statusall)
@@ -305,6 +308,9 @@ stop)
 		fi
 	else
 	    	echo "Stopping strongSwan IPsec failed: starter is not running" >&2
+	fi
+	if [ -d /var/lock/subsys ]; then
+		rm -f /var/lock/subsys/ipsec
 	fi
 	exit 0
 	;;
