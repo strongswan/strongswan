@@ -95,7 +95,7 @@ void
 close_peerlog(void)
 {
     /* exit if the queue has not been initialized */
-    if (perpeer_list.tqh_last == NULL)
+    if (perpeer_list.tqh_first == NULL)
       return;
 
     /* end of queue is given by pointer to "HEAD" */
