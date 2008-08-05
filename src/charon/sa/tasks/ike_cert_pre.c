@@ -320,11 +320,10 @@ static void add_certreq_payload(message_t *message, certreq_payload_t **reqp,
 static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 {
 	ike_cfg_t *ike_cfg;
+	peer_cfg_t *peer_cfg;
 	enumerator_t *enumerator;
 	certificate_t *cert;
-	auth_info_t *auth;
 	bool restricted = FALSE;
-	auth_item_t item;
 	certreq_payload_t *x509_req = NULL;
 	
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
@@ -332,19 +331,26 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	{
 		return;
 	}
-	auth = this->ike_sa->get_other_auth(this->ike_sa);
 
 	/* check if we require a specific CA for that peer */
-	enumerator = auth->create_item_enumerator(auth);
-	while (enumerator->enumerate(enumerator, &item, &cert))
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer_cfg)
 	{
-		if (item == AUTHN_CA_CERT)
+		auth_item_t item;
+		auth_info_t *auth = peer_cfg->get_auth(peer_cfg);
+
+		enumerator = auth->create_item_enumerator(auth);
+		while (enumerator->enumerate(enumerator, &item, &cert))
 		{
-			restricted = TRUE;
-			add_certreq_payload(message, &x509_req, cert);
+			if (item == AUTHZ_CA_CERT)
+			{
+				restricted = TRUE;
+				add_certreq_payload(message, &x509_req, cert);
+			}
+			/* TODO: handle AUTHZ_CA_CERT_NAME case */
 		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 		
 	if (!restricted)
 	{
