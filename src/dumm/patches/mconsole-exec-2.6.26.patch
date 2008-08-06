@@ -1,5 +1,5 @@
 --- a/arch/um/drivers/mconsole_kern.c	2008-07-13 23:51:29.000000000 +0200
-+++ b/arch/um/drivers/mconsole_kern.c	2008-07-31 14:04:57.000000000 +0200
++++ b/arch/um/drivers/mconsole_kern.c	2008-08-06 09:32:52.000000000 +0200
 @@ -4,6 +4,7 @@
   * Licensed under the GPL
   */
@@ -17,7 +17,7 @@
  #include <asm/uaccess.h>
  
  #include "init.h"
-@@ -199,6 +202,64 @@
+@@ -199,6 +202,65 @@
  }
  #endif
  
@@ -56,6 +56,7 @@
 +	
 +	res = call_usermodehelper_exec(sub_info, UMH_WAIT_EXT);	
 +	if (res < 0) {
++		call_usermodehelper_freeinfo(sub_info);
 +		mconsole_reply(req, "call_usermodehelper_exec failed", 1, 0);
 +		return;
 +	}
@@ -82,7 +83,7 @@
  void mconsole_proc(struct mc_request *req)
  {
  	char path[64];
-@@ -270,6 +331,7 @@
+@@ -270,6 +332,7 @@
      stop - pause the UML; it will do nothing until it receives a 'go' \n\
      go - continue the UML after a 'stop' \n\
      log <string> - make UML enter <string> into the kernel log\n\
