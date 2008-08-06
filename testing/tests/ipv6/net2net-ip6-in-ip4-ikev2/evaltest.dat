@@ -1,0 +1,5 @@
+moon::ipsec status::net-net.*INSTALLED::YES
+sun::ipsec status::net.net.*INSTALLED::YES
+alice::ping6 -c 1 -p deadbeef ip6-bob.strongswan.org::64 bytes from ip6-bob.strongswan.org: icmp_seq=1::YES
+sun::tcpdump::IP moon.strongswan.org > sun.strongswan.org: ESP::YES
+sun::tcpdump::IP sun.strongswan.org > moon.strongswan.org: ESP::YES
