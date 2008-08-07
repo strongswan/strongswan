@@ -248,7 +248,7 @@ static void destroy(private_mconsole_t *this)
 }
 
 /**
- * setup the mconsole notify connection and wait for its readyness
+ * setup the mconsole notify connection and wait for its readiness
  */
 static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 {

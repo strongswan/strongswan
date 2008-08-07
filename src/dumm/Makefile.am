@@ -1,3 +1,5 @@
+EXTRA_DIST = ext/dumm.c ext/extconf.rb ext/README
+
 lib_LTLIBRARIES = libdumm.la
 ipsec_PROGRAMS = dumm irdumm
 
