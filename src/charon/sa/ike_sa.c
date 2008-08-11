@@ -2195,7 +2195,7 @@ static status_t roam(private_ike_sa_t *this, bool address)
 		this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
 		return this->task_manager->initiate(this->task_manager);
 	}
-	DBG1(DBG_IKE, "reauthenticating IKE_SA due address change");
+	DBG1(DBG_IKE, "reauthenticating IKE_SA due to address change");
 	/* ... reauth if not */
 	return reauth(this);
 }
