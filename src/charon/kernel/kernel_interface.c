@@ -961,7 +961,8 @@ static job_requeue_t receive_events(private_kernel_interface_t *this)
 					break;
 				case RTM_NEWROUTE:
 				case RTM_DELROUTE:
-					fire_roam_job(this, FALSE);
+					/* TODO: ignore route changes due to virtual IPs */
+					/* fire_roam_job(this, FALSE); */
 					break;
 				default:
 					break;
