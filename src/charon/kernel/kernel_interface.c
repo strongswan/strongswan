@@ -814,10 +814,10 @@ static void process_addr(private_kernel_interface_t *this,
 					found = TRUE;
 					if (hdr->nlmsg_type == RTM_DELADDR)
 					{
-						changed = TRUE;
 						addrs->remove(addrs);
 						if (!addr->virtual)
 						{
+							changed = TRUE;
 							DBG1(DBG_KNL, "%H disappeared from %s",
 								 host, iface->ifname);
 						}
