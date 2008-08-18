@@ -16,7 +16,6 @@
  */
 
 #include <nm-setting-vpn.h>
-#include <nm-setting-vpn-properties.h>
 #include "nm_service.h"
 
 #include <daemon.h>
@@ -157,42 +156,12 @@ bool listen_bus(bus_listener_t *listener, signal_t signal, level_t level,
 }
 
 /**
- * Read a string from a hash table using a given key
- */
-static char* get_str(GHashTable *hash, char *key)
-{
-	GValue *value;
-
-	value = g_hash_table_lookup(hash, key);
-	if (G_VALUE_TYPE (value) == G_TYPE_STRING)
-	{
-		return (char*)g_value_get_string(value);
-	}
-	return NULL;
-}
-
-/**
- * Read a boolean from a hash table using a given key
- */
-static bool get_bool(GHashTable *hash, char *key)
-{
-	GValue *value;
-
-	value = g_hash_table_lookup(hash, key);
-	if (G_VALUE_TYPE (value) == G_TYPE_BOOLEAN)
-	{
-		return g_value_get_boolean(value);
-	}
-	return FALSE;
-}
-
-/**
  * Connect function called from NM via DBUS
  */
 static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 						 GError **err)
 {
-	NMSettingVPNProperties *properties;
+	NMSettingVPN *settings;
 	identification_t *user = NULL;
 	char *address, *str;
 	bool virtual, encap, ipcomp;
@@ -205,20 +174,12 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	/**
 	 * Read parameters
 	 */
-	properties = NM_SETTING_VPN_PROPERTIES(
-		nm_connection_get_setting(connection, NM_TYPE_SETTING_VPN_PROPERTIES));
-	
-	if (!properties)
-	{
-		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-				    "%s", "Invalid arguments.");
-		return FALSE;
-	}
+	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
+														NM_TYPE_SETTING_VPN));
 	
 	DBG2(DBG_CFG, "received NetworkManager connection: %s",
-		 nm_setting_to_string(NM_SETTING(properties)));
-
-	str = get_str(properties->data, "user");
+		 nm_setting_to_string(NM_SETTING(settings)));
+	str = g_hash_table_lookup(settings->data, "user");
 	if (!str)
 	{
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
@@ -231,16 +192,19 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		user = identification_create_from_encoding(ID_KEY_ID,
 												chunk_create(str, strlen(str)));
 	}
-	address = get_str(properties->data, "address");
+	address = g_hash_table_lookup(settings->data, "address");
 	if (!address || !*address)
 	{
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 				    "Gateway address missing.");
 		return FALSE;
 	}
-	virtual = get_bool(properties->data, "virtual");
-	encap = get_bool(properties->data, "encap");
-	ipcomp = get_bool(properties->data, "ipcomp");
+	str = g_hash_table_lookup(settings->data, "virtual");
+	virtual = str && streq(str, "yes");
+	str = g_hash_table_lookup(settings->data, "encap");
+	encap = str && streq(str, "yes");
+	str = g_hash_table_lookup(settings->data, "ipcomp");
+	ipcomp = str && streq(str, "yes");
 	
 	/**
 	 * Set up configurations

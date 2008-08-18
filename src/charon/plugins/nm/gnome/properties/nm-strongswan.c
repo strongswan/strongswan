@@ -34,7 +34,6 @@
 
 #include <nm-vpn-plugin-ui-interface.h>
 #include <nm-setting-vpn.h>
-#include <nm-setting-vpn-properties.h>
 #include <nm-setting-connection.h>
 #include <nm-setting-ip4-config.h>
 
@@ -52,12 +51,6 @@ static void strongswan_plugin_ui_interface_init (NMVpnPluginUiInterface *iface_c
 G_DEFINE_TYPE_EXTENDED (StrongswanPluginUi, strongswan_plugin_ui, G_TYPE_OBJECT, 0,
 						G_IMPLEMENT_INTERFACE (NM_TYPE_VPN_PLUGIN_UI_INTERFACE,
 											   strongswan_plugin_ui_interface_init))
-
-#define STRONGSWAN_PLUGIN_UI_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), STRONGSWAN_TYPE_PLUGIN_UI, StrongswanPluginUiPrivate))
-
-typedef struct {
-} StrongswanPluginUiPrivate;
-
 
 /************** UI widget class **************/
 
@@ -150,68 +143,58 @@ static gboolean
 init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError **error)
 {
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
-	NMSettingVPNProperties *s_vpn_props;
+	NMSettingVPN *settings;
 	GtkWidget *widget;
-	GValue *value;
+	char *value;
 	gboolean active;
-
-	s_vpn_props = (NMSettingVPNProperties *) nm_connection_get_setting (connection, NM_TYPE_SETTING_VPN_PROPERTIES);
-
-
+	
+	settings = NM_SETTING_VPN(nm_connection_get_setting(connection, NM_TYPE_SETTING_VPN));
+	if (!settings)
+		return FALSE;
 	widget = glade_xml_get_widget (priv->xml, "address-entry");
 	if (!widget)
 		return FALSE;
-	if (s_vpn_props) {
-		value = g_hash_table_lookup (s_vpn_props->data, "address");
-		if (value && G_VALUE_HOLDS_STRING (value))
-			gtk_entry_set_text (GTK_ENTRY (widget), g_value_get_string (value));
-	}
+	value = g_hash_table_lookup (settings->data, "address");
+	if (value)
+		gtk_entry_set_text (GTK_ENTRY (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
 
 	widget = glade_xml_get_widget (priv->xml, "user-entry");
 	if (!widget)
 		return FALSE;
-	if (s_vpn_props) {
-		value = g_hash_table_lookup (s_vpn_props->data, "user");
-		if (value && G_VALUE_HOLDS_STRING (value))
-			gtk_entry_set_text (GTK_ENTRY (widget), g_value_get_string (value));
-	}
+	value = g_hash_table_lookup (settings->data, "user");
+	if (value)
+		gtk_entry_set_text (GTK_ENTRY (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
 	
 	widget = glade_xml_get_widget (priv->xml, "virtual-check");
 	if (!widget)
 		return FALSE;
-	active = TRUE;
-	if (s_vpn_props) {
-		value = g_hash_table_lookup (s_vpn_props->data, "virtual");
-		if (value && G_VALUE_HOLDS_BOOLEAN (value))
-			active = g_value_get_boolean (value);
+	value = g_hash_table_lookup (settings->data, "virtual");
+	if (value && strcmp(value, "yes") == 0)
+	{
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), active);
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (stuff_changed_cb), self);
 	
 	widget = glade_xml_get_widget (priv->xml, "encap-check");
 	if (!widget)
 		return FALSE;
-	active = TRUE;
-	if (s_vpn_props) {
-		value = g_hash_table_lookup (s_vpn_props->data, "encap");
-		if (value && G_VALUE_HOLDS_BOOLEAN (value))
-			active = g_value_get_boolean (value);
+	value = g_hash_table_lookup (settings->data, "encap");
+	if (value && strcmp(value, "yes") == 0)
+	{
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), active);
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (stuff_changed_cb), self);
 	
 	widget = glade_xml_get_widget (priv->xml, "ipcomp-check");
 	if (!widget)
 		return FALSE;
-	active = FALSE;
-	if (s_vpn_props) {
-		value = g_hash_table_lookup (s_vpn_props->data, "ipcomp");
-		if (value && G_VALUE_HOLDS_BOOLEAN (value))
-			active = g_value_get_boolean (value);
+	value = g_hash_table_lookup (settings->data, "ipcomp");
+	if (value && strcmp(value, "yes") == 0)
+	{
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), active);
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (stuff_changed_cb), self);
 
 	return TRUE;
@@ -226,42 +209,6 @@ get_widget (NMVpnPluginUiWidgetInterface *iface)
 	return G_OBJECT (priv->widget);
 }
 
-static GValue *
-str_to_gvalue (const char *str)
-{
-	GValue *value;
-
-	value = g_slice_new0 (GValue);
-	g_value_init (value, G_TYPE_STRING);
-	g_value_set_string (value, str);
-
-	return value;
-}
-
-static GValue *
-bool_to_gvalue (gboolean b)
-{
-	GValue *value;
-
-	value = g_slice_new0 (GValue);
-	g_value_init (value, G_TYPE_BOOLEAN);
-	g_value_set_boolean (value, b);
-
-	return value;
-}
-
-static GValue *
-int_to_gvalue (gint i)
-{
-	GValue *value;
-
-	value = g_slice_new0 (GValue);
-	g_value_init (value, G_TYPE_INT);
-	g_value_set_int (value, i);
-
-	return value;
-}
-
 static gboolean
 update_connection (NMVpnPluginUiWidgetInterface *iface,
                    NMConnection *connection,
@@ -269,8 +216,7 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 {
 	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (iface);
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
-	NMSettingVPN *s_vpn;
-	NMSettingVPNProperties *s_vpn_props;
+	NMSettingVPN *settings;
 	GtkWidget *widget;
 	GValue *value;
 	gboolean active;
@@ -280,45 +226,37 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 
 	if (!check_validity (self, error))
 		return FALSE;
-
-	s_vpn = NM_SETTING_VPN (nm_setting_vpn_new ());
-	s_vpn->service_type = g_strdup (NM_DBUS_SERVICE_STRONGSWAN);
-	nm_connection_add_setting (connection, NM_SETTING (s_vpn));
-
-	s_vpn_props = NM_SETTING_VPN_PROPERTIES (nm_setting_vpn_properties_new ());
+	settings = NM_SETTING_VPN (nm_setting_vpn_new ());
+	settings->service_type = g_strdup (NM_DBUS_SERVICE_STRONGSWAN);
 
 	widget = glade_xml_get_widget (priv->xml, "address-entry");
 	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 	if (str && strlen (str)) {
-		g_hash_table_insert (s_vpn_props->data,
-		                     g_strdup ("address"),
-		                     str_to_gvalue (str));
+		g_hash_table_insert (settings->data, g_strdup ("address"), g_strdup(str));
 	}
 
 	widget = glade_xml_get_widget (priv->xml, "user-entry");
 	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 	if (str && strlen (str)) {
-		g_hash_table_insert (s_vpn_props->data,
-		                     g_strdup ("user"),
-		                     str_to_gvalue (str));
+		g_hash_table_insert (settings->data, g_strdup ("user"), g_strdup(str));
 	}
 
 	widget = glade_xml_get_widget (priv->xml, "virtual-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
-	g_hash_table_insert (s_vpn_props->data, g_strdup ("virtual"),
-	                     bool_to_gvalue(active));
+	g_hash_table_insert (settings->data, g_strdup ("virtual"),
+			             g_strdup(active ? "yes" : "no"));
 	                     
 	widget = glade_xml_get_widget (priv->xml, "encap-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
-	g_hash_table_insert (s_vpn_props->data, g_strdup ("encap"),
-	                     bool_to_gvalue(active));
+	g_hash_table_insert (settings->data, g_strdup ("encap"),
+			             g_strdup(active ? "yes" : "no"));
 	                     
 	widget = glade_xml_get_widget (priv->xml, "ipcomp-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
-	g_hash_table_insert (s_vpn_props->data, g_strdup ("ipcomp"),
-	                     bool_to_gvalue(active));
+	g_hash_table_insert (settings->data, g_strdup ("ipcomp"),
+			             g_strdup(active ? "yes" : "no"));
 
-	nm_connection_add_setting (connection, NM_SETTING (s_vpn_props));
+	nm_connection_add_setting (connection, NM_SETTING (settings));
 	return TRUE;
 }
 
@@ -441,8 +379,6 @@ static void
 strongswan_plugin_ui_class_init (StrongswanPluginUiClass *req_class)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (req_class);
-
-	g_type_class_add_private (req_class, sizeof (StrongswanPluginUiPrivate));
 
 	object_class->get_property = get_property;
 
