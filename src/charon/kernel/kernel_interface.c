@@ -653,6 +653,40 @@ static void fire_roam_job(private_kernel_interface_t *this, bool address)
 }
 
 /**
+ * get the refcount of a virtual ip
+ */
+static int get_vip_refcount(private_kernel_interface_t *this, host_t* ip)
+{
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
+	int refcount = 0;
+	
+	ifaces = this->ifaces->create_iterator(this->ifaces, TRUE);
+	while (ifaces->iterate(ifaces, (void**)&iface))
+	{
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
+		{
+			if (addr->virtual && (iface->flags & IFF_UP) &&
+				ip->ip_equals(ip, addr->ip))
+			{
+				refcount = addr->refcount;
+				break;
+			}
+		}
+		addrs->destroy(addrs);
+		if (refcount)
+		{
+			break;
+		}
+	}
+	ifaces->destroy(ifaces);
+	
+	return refcount;
+}
+
+/**
  * process RTM_NEWLINK/RTM_DELLINK from kernel
  */
 static void process_link(private_kernel_interface_t *this,
@@ -868,6 +902,37 @@ static void process_addr(private_kernel_interface_t *this,
 }
 
 /**
+ * process RTM_NEWROUTE from kernel
+ */
+static void process_route(private_kernel_interface_t *this, struct nlmsghdr *hdr)
+{
+	struct rtmsg* msg = (struct rtmsg*)(NLMSG_DATA(hdr));
+	struct rtattr *rta = RTM_RTA(msg);
+	size_t rtasize = RTM_PAYLOAD(hdr);
+	host_t *host = NULL;
+	
+	while(RTA_OK(rta, rtasize))
+	{
+		switch (rta->rta_type)
+		{
+			case RTA_PREFSRC:
+				host = host_create_from_chunk(msg->rtm_family,
+							chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta)), 0);
+				break;
+		}
+		rta = RTA_NEXT(rta, rtasize);
+	}
+	if (host)
+	{
+		if (!get_vip_refcount(this, host))
+		{	/* ignore routes added for virtual IPs */
+			fire_roam_job(this, FALSE);
+		}
+		host->destroy(host);
+	}
+}
+
+/**
  * Receives events from kernel
  */
 static job_requeue_t receive_events(private_kernel_interface_t *this)
@@ -961,8 +1026,7 @@ static job_requeue_t receive_events(private_kernel_interface_t *this)
 					break;
 				case RTM_NEWROUTE:
 				case RTM_DELROUTE:
-					/* TODO: ignore route changes due to virtual IPs */
-					/* fire_roam_job(this, FALSE); */
+					process_route(this, hdr);
 					break;
 				default:
 					break;
@@ -1431,40 +1495,6 @@ static int get_interface_index(private_kernel_interface_t *this, host_t* ip)
 		DBG1(DBG_KNL, "unable to get interface for %H", ip);
 	}
 	return ifindex;
-}
-
-/**
- * get the refcount of a virtual ip
- */
-static int get_vip_refcount(private_kernel_interface_t *this, host_t* ip)
-{
-	iterator_t *ifaces, *addrs;
-	iface_entry_t *iface;
-	addr_entry_t *addr;
-	int refcount = 0;
-	
-	ifaces = this->ifaces->create_iterator(this->ifaces, TRUE);
-	while (ifaces->iterate(ifaces, (void**)&iface))
-	{
-		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
-		while (addrs->iterate(addrs, (void**)&addr))
-		{
-			if (addr->virtual && (iface->flags & IFF_UP) &&
-				ip->ip_equals(ip, addr->ip))
-			{
-				refcount = addr->refcount;
-				break;
-			}
-		}
-		addrs->destroy(addrs);
-		if (refcount)
-		{
-			break;
-		}
-	}
-	ifaces->destroy(ifaces);
-	
-	return refcount;
 }
 
 /**
