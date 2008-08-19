@@ -52,7 +52,7 @@ extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
 
 #ifdef INTEGRITY_TEST
 #include <fips/fips.h>
-#include <fips_signature.h>
+#include <fips/fips_signature.h>
 #endif /* INTEGRITY_TEST */
 
 typedef struct private_daemon_t private_daemon_t;
@@ -362,19 +362,6 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	
 	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
 
-#ifdef INTEGRITY_TEST
-	DBG1(DBG_DMN, "integrity test of libstrongswan code");
-	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
-	{
-		DBG1(DBG_DMN, "  integrity test passed");
-	}
-	else
-	{
-		DBG1(DBG_DMN, "  integrity test failed");
-		return FALSE;
-	}
-#endif /* INTEGRITY_TEST */
-
 	/* load secrets, ca certificates and crls */
 	this->public.processor = processor_create();
 	this->public.scheduler = scheduler_create();
@@ -390,6 +377,19 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
 	
+#ifdef INTEGRITY_TEST
+	DBG1(DBG_DMN, "integrity test of libstrongswan code");
+	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
+	{
+		DBG1(DBG_DMN, "  integrity test passed");
+	}
+	else
+	{
+		DBG1(DBG_DMN, "  integrity test failed");
+		return FALSE;
+	}
+#endif /* INTEGRITY_TEST */
+
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	if (this->public.ike_sa_manager == NULL)
 	{

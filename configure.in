@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.2.6)
+AC_INIT(strongSwan,4.2.6rc7)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_C_BIGENDIAN
 AC_SUBST(confdir, '${sysconfdir}')
@@ -878,6 +878,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/sqlite/Makefile
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
+	src/libstrongswan/fips/Makefile
 	src/libcrypto/Makefile
 	src/libfreeswan/Makefile
 	src/pluto/Makefile
