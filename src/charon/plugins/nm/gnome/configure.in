@@ -116,5 +116,6 @@ fi
 AC_OUTPUT([
 Makefile
 properties/Makefile
+auth-dialog/Makefile
 po/Makefile.in
 ])

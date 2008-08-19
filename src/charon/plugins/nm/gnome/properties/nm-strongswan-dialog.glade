@@ -78,21 +78,14 @@
                       </packing>
                     </child>
                     <child>
-                      <widget class="GtkButton" id="certificate-button">
+                      <widget class="GtkFileChooserButton" id="certificate-button">
                         <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="receives_default">True</property>
-                        <property name="has_tooltip">True</property>
-                        <property name="tooltip_text">A trusted certificate to use to authenticate the Gateway.</property>
-                        <property name="label" translatable="yes">(none)</property>
-                        <property name="response_id">0</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="right_attach">2</property>
                         <property name="top_attach">1</property>
                         <property name="bottom_attach">2</property>
-                        <property name="y_options"></property>
                       </packing>
                     </child>
                   </widget>
@@ -165,7 +158,6 @@
                     <child>
                       <widget class="GtkComboBox" id="method-combo">
                         <property name="visible">True</property>
-                        <property name="sensitive">False</property>
                         <property name="has_tooltip">True</property>
                         <property name="tooltip_text">Authentication Method to use for authentication against the Gateway. </property>
                         <property name="items"></property>

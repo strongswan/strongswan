@@ -27,6 +27,8 @@
 #include <glib-object.h>
 #include <nm-vpn-plugin.h>
 
+#include "nm_creds.h"
+
 #define NM_TYPE_STRONGSWAN_PLUGIN            (nm_strongswan_plugin_get_type ())
 #define NM_STRONGSWAN_PLUGIN(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), NM_TYPE_STRONGSWAN_PLUGIN, NMSTRONGSWANPlugin))
 #define NM_STRONGSWAN_PLUGIN_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), NM_TYPE_STRONGSWAN_PLUGIN, NMSTRONGSWANPluginClass))
@@ -48,6 +50,6 @@ typedef struct {
 
 GType nm_strongswan_plugin_get_type(void);
 
-NMStrongswanPlugin *nm_strongswan_plugin_new(void);
+NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds);
 
 #endif /* NM_SERVICE_H_ */

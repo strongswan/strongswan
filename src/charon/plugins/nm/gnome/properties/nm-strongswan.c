@@ -159,6 +159,14 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
 
+	widget = glade_xml_get_widget (priv->xml, "certificate-button");
+	if (!widget)
+		return FALSE;
+	value = g_hash_table_lookup (settings->data, "certificate");
+	if (value)
+		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
+	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (stuff_changed_cb), self);
+
 	widget = glade_xml_get_widget (priv->xml, "user-entry");
 	if (!widget)
 		return FALSE;
@@ -166,6 +174,22 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	if (value)
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
+
+	widget = glade_xml_get_widget (priv->xml, "method-combo");
+	if (!widget)
+		return FALSE;
+	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), "EAP");
+	value = g_hash_table_lookup (settings->data, "method");
+	if (value) {
+		if (g_strcasecmp (value, "EAP") == 0) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
+		}
+	}
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
+	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == -1)
+	{	/* default to EAP */	
+		gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
+	}	
 	
 	widget = glade_xml_get_widget (priv->xml, "virtual-check");
 	if (!widget)
@@ -235,12 +259,24 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 		g_hash_table_insert (settings->data, g_strdup ("address"), g_strdup(str));
 	}
 
+	widget = glade_xml_get_widget (priv->xml, "certificate-button");
+	str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
+	if (str) {
+		g_hash_table_insert (settings->data, g_strdup ("certificate"), g_strdup(str));
+	}
+
 	widget = glade_xml_get_widget (priv->xml, "user-entry");
 	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 	if (str && strlen (str)) {
 		g_hash_table_insert (settings->data, g_strdup ("user"), g_strdup(str));
 	}
 
+	widget = glade_xml_get_widget (priv->xml, "method-combo");
+	str = (char *) gtk_combo_box_get_active_text (GTK_COMBO_BOX (widget));
+	if (str) {
+		g_hash_table_insert (settings->data, g_strdup ("method"), g_strdup(str));
+	}
+	
 	widget = glade_xml_get_widget (priv->xml, "virtual-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 	g_hash_table_insert (settings->data, g_strdup ("virtual"),

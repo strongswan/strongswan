@@ -17,6 +17,7 @@
 
 #include "nm_plugin.h"
 #include "nm_service.h"
+#include "nm_creds.h"
 
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
@@ -33,7 +34,15 @@ struct private_nm_plugin_t {
 	 */
 	nm_plugin_t public;
 	
+	/**
+	 * Glib main loop for a thread, handles DBUS calls
+	 */
 	GMainLoop *loop;
+	
+	/**
+	 * credential set registered at the daemon
+	 */
+	nm_creds_t *creds;
 };
 
 /**
@@ -44,7 +53,7 @@ static job_requeue_t run(private_nm_plugin_t *this)
 	NMStrongswanPlugin *plugin;
 	GMainLoop *loop;
 
-	plugin = nm_strongswan_plugin_new();
+	plugin = nm_strongswan_plugin_new(this->creds);
 	
 	this->loop = loop = g_main_loop_new(NULL, FALSE);
 	g_main_loop_run(loop);
@@ -64,6 +73,8 @@ static void destroy(private_nm_plugin_t *this)
 	{
 		g_main_loop_quit(this->loop);
 	}
+	charon->credentials->remove_set(charon->credentials, &this->creds->set);
+	this->creds->destroy(this->creds);
 	free(this);
 }
 
@@ -82,6 +93,9 @@ plugin_t *plugin_create()
 	{
 		g_thread_init(NULL);
 	}
+	
+	this->creds = nm_creds_create();
+	charon->credentials->add_set(charon->credentials, &this->creds->set);
 	
 	charon->processor->queue_job(charon->processor, 
 		 (job_t*)callback_job_create((callback_job_cb_t)run, this, NULL, NULL));

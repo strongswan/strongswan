@@ -36,6 +36,7 @@ typedef struct {
 	bus_listener_t listener;
 	ike_sa_t *ike_sa;
 	NMVPNPlugin *plugin;
+	nm_creds_t *creds;
 } NMStrongswanPluginPrivate;
 
 #define NM_STRONGSWAN_PLUGIN_GET_PRIVATE(o) \
@@ -161,6 +162,7 @@ bool listen_bus(bus_listener_t *listener, signal_t signal, level_t level,
 static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 						 GError **err)
 {
+	nm_creds_t *creds;
 	NMSettingVPN *settings;
 	identification_t *user = NULL;
 	char *address, *str;
@@ -177,7 +179,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
 														NM_TYPE_SETTING_VPN));
 	
-	DBG2(DBG_CFG, "received NetworkManager connection: %s",
+	DBG1(DBG_CFG, "received NetworkManager connection: %s",
 		 nm_setting_to_string(NM_SETTING(settings)));
 	str = g_hash_table_lookup(settings->data, "user");
 	if (!str)
@@ -207,13 +209,33 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	ipcomp = str && streq(str, "yes");
 	
 	/**
+	 * Register credentials
+	 */
+	creds = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->creds;
+	 
+	str = g_hash_table_lookup(settings->data, "certificate");
+	if (str)
+	{
+		certificate_t *cert;
+		
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, str, BUILD_END);
+		creds->set_certificate(creds, cert);
+	}
+	str = g_hash_table_lookup(settings->data, "password");
+	if (str)
+	{
+		creds->set_password(creds, str);
+	}
+	
+	/**
 	 * Set up configurations
 	 */
 	ike_cfg = ike_cfg_create(TRUE, encap, "0.0.0.0", address);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create(CONFIG_NAME, 2, ike_cfg, user,
 					identification_create_from_encoding(ID_ANY, chunk_empty),
-					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, CONF_AUTH_PUBKEY,
+					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, CONF_AUTH_PSK,
 					0, 0, 1, /* EAP method, vendor, keyingtries */
 					18000, 0, /* rekey 5h, reauth none */
 					600, 600, /* jitter, over 10min */
@@ -272,6 +294,15 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 							 char **setting_name, GError **error)
 {
+	NMSettingVPN *settings;
+	
+	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
+														NM_TYPE_SETTING_VPN));
+	if (!g_hash_table_lookup(settings->data, "password"))
+	{
+		*setting_name = NM_SETTING_VPN_SETTING_NAME;
+		return TRUE;
+	}
 	return FALSE;
 }
 
@@ -327,10 +358,15 @@ static void nm_strongswan_plugin_class_init(
 /**
  * Object constructor
  */
-NMStrongswanPlugin *nm_strongswan_plugin_new(void)
+NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds)
 {
-	return (NMStrongswanPlugin *)g_object_new (
-					NM_TYPE_STRONGSWAN_PLUGIN, NM_VPN_PLUGIN_DBUS_SERVICE_NAME,
-					NM_DBUS_SERVICE_STRONGSWAN, NULL);
+	NMStrongswanPlugin *plugin = (NMStrongswanPlugin *)g_object_new (
+					NM_TYPE_STRONGSWAN_PLUGIN,
+					NM_VPN_PLUGIN_DBUS_SERVICE_NAME, NM_DBUS_SERVICE_STRONGSWAN,
+					NULL);
+	
+	NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->creds = creds;
+	
+	return plugin;
 }
 

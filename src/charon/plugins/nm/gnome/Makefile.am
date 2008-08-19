@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-SUBDIRS = properties po
+SUBDIRS = properties auth-dialog po
 
 dbusservicedir = $(sysconfdir)/dbus-1/system.d
 dbusservice_DATA = nm-strongswan-service.conf
