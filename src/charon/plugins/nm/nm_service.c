@@ -142,10 +142,9 @@ bool listen_bus(bus_listener_t *listener, signal_t signal, level_t level,
 				/* FALL */
 			case IKE_UP_FAILED:
 			case CHD_UP_FAILED:
+				/* TODO: NM does not handle this failure!? 
 				nm_vpn_plugin_failure(private->plugin,
-									  NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
-				/* TODO: NM does not react on this failure!? So additionaly
-				 * reset state */
+									  NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED); */
 				nm_vpn_plugin_set_state(private->plugin,
 										NM_VPN_SERVICE_STATE_STOPPED);
 				return FALSE;
@@ -172,6 +171,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
 	ike_sa_t *ike_sa;
+	config_auth_method_t method = CONF_AUTH_EAP;
 	
 	/**
 	 * Read parameters
@@ -207,6 +207,18 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	encap = str && streq(str, "yes");
 	str = g_hash_table_lookup(settings->data, "ipcomp");
 	ipcomp = str && streq(str, "yes");
+	str = g_hash_table_lookup(settings->data, "method");
+	if (str)
+	{
+		if (streq(str, "psk"))
+		{
+			method = CONF_AUTH_PSK;
+		}
+		else if (streq(str, "pubkey"))
+		{
+			method = CONF_AUTH_PUBKEY;
+		}
+	}
 	
 	/**
 	 * Register credentials
@@ -225,7 +237,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	str = g_hash_table_lookup(settings->data, "password");
 	if (str)
 	{
-		creds->set_password(creds, str);
+		creds->set_password(creds, user, str);
 	}
 	
 	/**
@@ -235,7 +247,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create(CONFIG_NAME, 2, ike_cfg, user,
 					identification_create_from_encoding(ID_ANY, chunk_empty),
-					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, CONF_AUTH_PSK,
+					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, method,
 					0, 0, 1, /* EAP method, vendor, keyingtries */
 					18000, 0, /* rekey 5h, reauth none */
 					600, 600, /* jitter, over 10min */

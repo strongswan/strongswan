@@ -40,6 +40,11 @@ struct private_nm_creds_t {
 	certificate_t *cert;
 	
 	/**
+ 	 * User name
+ 	 */
+ 	identification_t *user;
+	
+	/**
 	 * User password
 	 */
 	char *pass;
@@ -57,15 +62,75 @@ static enumerator_t* create_cert_enumerator(private_nm_creds_t *this,
 							certificate_type_t cert, key_type_t key,
 							identification_t *id, bool trusted)
 {
-	if (!this->cert ||
-		(cert != CERT_ANY && cert != this->cert->get_type(this->cert)))
+	if (!this->cert)
 	{
 		return NULL;
 	}
+	if (cert != CERT_ANY && cert != this->cert->get_type(this->cert))
+	{
+		return NULL;
+	}
+	if (id && !this->cert->has_subject(this->cert, id))
+	{
+		return NULL;
+	}
+	if (key != KEY_ANY)
+	{
+		public_key_t *public;
+	
+		public = this->cert->get_public_key(this->cert);
+		if (!public)
+		{
+			return NULL;
+		}
+		if (public->get_type(public) != key)
+		{
+			public->destroy(public);
+			return NULL;
+		}
+		public->destroy(public);
+	}
+	pthread_rwlock_rdlock(&this->lock);
 	return enumerator_create_cleaner(enumerator_create_single(this->cert, NULL),
 									 (void*)pthread_rwlock_unlock, &this->lock);
 }
 
+/**
+ * shared key enumerator implementation
+ */
+typedef struct {
+	enumerator_t public;
+	private_nm_creds_t *this;
+	shared_key_t *key;
+	bool done;
+} shared_enumerator_t;
+
+/**
+ * enumerate function for shared enumerator
+ */
+static bool shared_enumerate(shared_enumerator_t *this, shared_key_t **key,
+							 id_match_t *me, id_match_t *other)
+{
+	if (this->done)
+	{
+		return FALSE;
+	}
+	*key = this->key;
+	*me = ID_MATCH_PERFECT;
+	*other = ID_MATCH_ANY;
+	this->done = TRUE;
+	return TRUE;
+}
+
+/**
+ * Destroy function for shared enumerator
+ */
+static void shared_destroy(shared_enumerator_t *this)
+{
+	this->key->destroy(this->key);
+	pthread_rwlock_unlock(&this->this->lock);
+	free(this);
+}
 /**
  * Implements credential_set_t.create_cert_enumerator
  */
@@ -73,17 +138,31 @@ static enumerator_t* create_shared_enumerator(private_nm_creds_t *this,
 							shared_key_type_t type,	identification_t *me,
 							identification_t *other)
 {
-	shared_key_t *key;
+	shared_enumerator_t *enumerator;
 
-	if (!this->pass || (type != SHARED_EAP && type != SHARED_IKE))
+	if (!this->pass || !this->user)
 	{
 		return NULL;
 	}
-	key = shared_key_create(type, chunk_clone(
-								chunk_create(this->pass, strlen(this->pass))));
-	return enumerator_create_cleaner(
-						enumerator_create_single(key, (void*)key->destroy),
-						(void*)pthread_rwlock_unlock, &this->lock);
+	if (type != SHARED_EAP && type != SHARED_IKE)
+	{
+		return NULL;
+	}
+	if (me && !me->equals(me, this->user))
+	{
+		return NULL;
+	}
+	
+	enumerator = malloc_thing(shared_enumerator_t);
+	enumerator->public.enumerate = (void*)shared_enumerate;
+	enumerator->public.destroy = (void*)shared_destroy;
+	enumerator->this = this;
+	enumerator->done = FALSE;
+	pthread_rwlock_rdlock(&this->lock);
+	enumerator->key = shared_key_create(type,
+										chunk_clone(chunk_create(this->pass,
+													strlen(this->pass))));
+	return &enumerator->public;
 }
 
 /**
@@ -100,9 +179,12 @@ static void set_certificate(private_nm_creds_t *this, certificate_t *cert)
 /**
  * Implementation of nm_creds_t.set_password
  */
-static void set_password(private_nm_creds_t *this, char *password)
+static void set_password(private_nm_creds_t *this, identification_t *id,
+						 char *password)
 {
 	pthread_rwlock_wrlock(&this->lock);
+	DESTROY_IF(this->user);
+	this->user = id->clone(id);
 	free(this->pass);
 	this->pass = strdup(password);
 	pthread_rwlock_unlock(&this->lock);
@@ -114,6 +196,7 @@ static void set_password(private_nm_creds_t *this, char *password)
 static void destroy(private_nm_creds_t *this)
 {
 	DESTROY_IF(this->cert);
+	DESTROY_IF(this->user);
 	free(this->pass);
 	pthread_rwlock_destroy(&this->lock);
 	free(this);
@@ -132,12 +215,13 @@ nm_creds_t *nm_creds_create()
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.set.cache_cert = (void*)nop;
 	this->public.set_certificate = (void(*)(nm_creds_t*, certificate_t *cert))set_certificate;
-	this->public.set_password = (void(*)(nm_creds_t*, char *password))set_password;
+	this->public.set_password = (void(*)(nm_creds_t*, identification_t *id, char *password))set_password;
 	this->public.destroy = (void(*)(nm_creds_t*))destroy;
 	
 	pthread_rwlock_init(&this->lock, NULL);
 	
 	this->cert = NULL;
+	this->user = NULL;
 	this->pass = NULL;
 	
 	return &this->public;

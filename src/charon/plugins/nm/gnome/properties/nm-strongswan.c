@@ -178,11 +178,15 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	widget = glade_xml_get_widget (priv->xml, "method-combo");
 	if (!widget)
 		return FALSE;
-	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), "EAP");
+	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("EAP"));
+	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("PSK (insecure)"));
 	value = g_hash_table_lookup (settings->data, "method");
 	if (value) {
-		if (g_strcasecmp (value, "EAP") == 0) {
+		if (g_strcasecmp (value, "eap") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
+		}
+		if (g_strcasecmp (value, "psk") == 0) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 1);
 		}
 	}
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
@@ -272,10 +276,19 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	}
 
 	widget = glade_xml_get_widget (priv->xml, "method-combo");
-	str = (char *) gtk_combo_box_get_active_text (GTK_COMBO_BOX (widget));
-	if (str) {
-		g_hash_table_insert (settings->data, g_strdup ("method"), g_strdup(str));
+	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
+	{
+		default:
+			str = "eap";
+			break;
+		case 1:
+			str = "psk";
+			break;
+		case 2:
+			str = "pubkey";
+			break;
 	}
+	g_hash_table_insert (settings->data, g_strdup ("method"), g_strdup(str));
 	
 	widget = glade_xml_get_widget (priv->xml, "virtual-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));

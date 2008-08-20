@@ -45,11 +45,12 @@ struct nm_creds_t {
 	void (*set_certificate)(nm_creds_t *this, certificate_t *cert);
 	
 	/**
-	 * Set the users password for authentication.
+	 * Set the username/password for authentication.
 	 *
+	 * @param id		ID of the user
 	 * @param password	password to use for authentication
 	 */
-	void (*set_password)(nm_creds_t *this, char *password);
+	void (*set_password)(nm_creds_t *this, identification_t *id, char *password);
 	
 	/**
      * Destroy a nm_creds instance.
