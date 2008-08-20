@@ -138,7 +138,7 @@ int main (int argc, char *argv[])
 		}
 	}
 	printf("password\n%s\n", pass);
-	printf("\n\n", pass);
+	printf("\n\n");
 	/* flush output, wait for input */
 	fflush(stdout);
 	fread(&buf, 1, sizeof(buf), stdin);
