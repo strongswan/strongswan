@@ -376,9 +376,10 @@ NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds)
 					NM_TYPE_STRONGSWAN_PLUGIN,
 					NM_VPN_PLUGIN_DBUS_SERVICE_NAME, NM_DBUS_SERVICE_STRONGSWAN,
 					NULL);
-	
-	NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->creds = creds;
-	
+	if (plugin)
+	{
+		NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->creds = creds;
+	}
 	return plugin;
 }
 

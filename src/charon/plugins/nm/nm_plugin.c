@@ -35,6 +35,11 @@ struct private_nm_plugin_t {
 	nm_plugin_t public;
 	
 	/**
+	 * NetworkManager service (VPNPlugin)
+	 */
+	NMStrongswanPlugin *plugin;
+	
+	/**
 	 * Glib main loop for a thread, handles DBUS calls
 	 */
 	GMainLoop *loop;
@@ -50,16 +55,9 @@ struct private_nm_plugin_t {
  */
 static job_requeue_t run(private_nm_plugin_t *this)
 {
-	NMStrongswanPlugin *plugin;
-	GMainLoop *loop;
-
-	plugin = nm_strongswan_plugin_new(this->creds);
-	
-	this->loop = loop = g_main_loop_new(NULL, FALSE);
-	g_main_loop_run(loop);
-	
-	g_main_loop_unref(loop);
-	g_object_unref(plugin);
+	this->loop = g_main_loop_new(NULL, FALSE);
+	g_main_loop_run(this->loop);
+	g_main_loop_unref(this->loop);
 	
 	return JOB_REQUEUE_NONE;
 }
@@ -72,6 +70,10 @@ static void destroy(private_nm_plugin_t *this)
 	if (this->loop)
 	{
 		g_main_loop_quit(this->loop);
+	}
+	if (this->plugin)
+	{
+		g_object_unref(this->plugin);
 	}
 	charon->credentials->remove_set(charon->credentials, &this->creds->set);
 	this->creds->destroy(this->creds);
@@ -96,6 +98,13 @@ plugin_t *plugin_create()
 	
 	this->creds = nm_creds_create();
 	charon->credentials->add_set(charon->credentials, &this->creds->set);
+	this->plugin = nm_strongswan_plugin_new(this->creds);
+	if (!this->plugin)
+	{
+		DBG1(DBG_CFG, "DBUS binding failed");
+		destroy(this);
+		return NULL;
+	}
 	
 	charon->processor->queue_job(charon->processor, 
 		 (job_t*)callback_job_create((callback_job_cb_t)run, this, NULL, NULL));
