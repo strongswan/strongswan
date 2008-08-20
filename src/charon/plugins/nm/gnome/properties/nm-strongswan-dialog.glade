@@ -37,29 +37,15 @@
                     <property name="column_spacing">6</property>
                     <property name="row_spacing">6</property>
                     <child>
-                      <widget class="GtkLabel" id="address-label">
+                      <widget class="GtkFileChooserButton" id="certificate-button">
                         <property name="visible">True</property>
-                        <property name="xalign">0</property>
-                        <property name="label" translatable="yes">_Address:</property>
-                        <property name="use_underline">True</property>
-                        <property name="mnemonic_widget">address-entry</property>
-                      </widget>
-                      <packing>
-                        <property name="x_options">GTK_FILL</property>
-                        <property name="y_options"></property>
-                      </packing>
-                    </child>
-                    <child>
-                      <widget class="GtkEntry" id="address-entry">
-                        <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="has_tooltip">True</property>
-                        <property name="tooltip_text">An IP address or hostname the Gateway can be contacted.</property>
+                        <property name="tooltip_text">Gateway or CA certificate to use for gateway authentication.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="right_attach">2</property>
-                        <property name="y_options"></property>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
                       </packing>
                     </child>
                     <child>
@@ -78,14 +64,29 @@
                       </packing>
                     </child>
                     <child>
-                      <widget class="GtkFileChooserButton" id="certificate-button">
+                      <widget class="GtkEntry" id="address-entry">
                         <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="has_tooltip">True</property>
+                        <property name="tooltip_text">An IP address or hostname the Gateway can be contacted.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="right_attach">2</property>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
+                        <property name="y_options"></property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkLabel" id="address-label">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">_Address:</property>
+                        <property name="use_underline">True</property>
+                        <property name="mnemonic_widget">address-entry</property>
+                      </widget>
+                      <packing>
+                        <property name="x_options">GTK_FILL</property>
+                        <property name="y_options"></property>
                       </packing>
                     </child>
                   </widget>
@@ -128,29 +129,14 @@
                     <property name="column_spacing">6</property>
                     <property name="row_spacing">6</property>
                     <child>
-                      <widget class="GtkEntry" id="user-entry">
-                        <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="has_tooltip">True</property>
-                        <property name="tooltip_text">The username (identity) to use for authentication against the gateway.</property>
-                      </widget>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">2</property>
-                        <property name="y_options"></property>
-                      </packing>
-                    </child>
-                    <child>
-                      <widget class="GtkLabel" id="method-label">
+                      <widget class="GtkLabel" id="user-label">
                         <property name="visible">True</property>
                         <property name="xalign">0</property>
-                        <property name="label" translatable="yes">_Method:</property>
+                        <property name="label" translatable="yes">_Username:</property>
                         <property name="use_underline">True</property>
-                        <property name="mnemonic_widget">method-combo</property>
+                        <property name="mnemonic_widget">user-entry</property>
                       </widget>
                       <packing>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
                         <property name="x_options">GTK_FILL</property>
                         <property name="y_options"></property>
                       </packing>
@@ -170,15 +156,30 @@
                       </packing>
                     </child>
                     <child>
-                      <widget class="GtkLabel" id="user-label">
+                      <widget class="GtkLabel" id="method-label">
                         <property name="visible">True</property>
                         <property name="xalign">0</property>
-                        <property name="label" translatable="yes">_Username:</property>
+                        <property name="label" translatable="yes">_Method:</property>
                         <property name="use_underline">True</property>
-                        <property name="mnemonic_widget">user-entry</property>
+                        <property name="mnemonic_widget">method-combo</property>
                       </widget>
                       <packing>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
                         <property name="x_options">GTK_FILL</property>
+                        <property name="y_options"></property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkEntry" id="user-entry">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="has_tooltip">True</property>
+                        <property name="tooltip_text">The username (identity) to use for authentication against the gateway.</property>
+                      </widget>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
                         <property name="y_options"></property>
                       </packing>
                     </child>
