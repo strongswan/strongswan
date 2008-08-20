@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2004 Dan Williams 
+ * Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -60,6 +62,7 @@ int main (int argc, char *argv[])
 	GOptionContext *context;
 	GnomeProgram *program = NULL;
 	int exit_status = 1;
+	char buf;
 	guint32 itemid;
 	GtkWidget *dialog;
 	GOptionEntry entries[] = {
@@ -134,7 +137,11 @@ int main (int argc, char *argv[])
 				break;
 		}
 	}
-	printf("password\n%s\n\n\n", pass);
+	printf("password\n%s\n", pass);
+	printf("\n\n", pass);
+	/* flush output, wait for input */
+	fflush(stdout);
+	fread(&buf, 1, sizeof(buf), stdin);
 	g_object_unref(program);
 	return 0;
 }
