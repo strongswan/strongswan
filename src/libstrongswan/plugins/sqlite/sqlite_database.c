@@ -18,6 +18,7 @@
 #include "sqlite_database.h"
 
 #include <sqlite3.h>
+#include <unistd.h>
 #include <library.h>
 #include <debug.h>
 #include <utils/mutex.h>
@@ -290,6 +291,17 @@ static db_driver_t get_driver(private_sqlite_database_t *this)
 }
 
 /**
+ * Busy handler implementation
+ */
+static int busy_handler(private_sqlite_database_t *this, int count)
+{
+	/* add an sleep, exponentially longer on every try */
+	usleep(count * count * 1000);
+	/* always retry */
+	return 1;
+}
+
+/**
  * Implementation of database_t.destroy
  */
 static void destroy(private_sqlite_database_t *this)
@@ -332,6 +344,8 @@ sqlite_database_t *sqlite_database_create(char *uri)
 		destroy(this);
 		return NULL;
 	}
+	
+	sqlite3_busy_handler(this->db, (void*)busy_handler, this);
 	
 	return &this->public;
 }
