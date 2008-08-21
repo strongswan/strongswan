@@ -1104,12 +1104,14 @@ static status_t netlink_send(private_kernel_interface_t *this,
 			}
 			DBG1(DBG_KNL, "error reading from netlink socket: %s", strerror(errno));
 			pthread_mutex_unlock(&this->nl_mutex);
+			free(result.ptr);
 			return FAILED;
 		}
 		if (!NLMSG_OK(msg, len))
 		{
 			DBG1(DBG_KNL, "received corrupted netlink message");
 			pthread_mutex_unlock(&this->nl_mutex);
+			free(result.ptr);
 			return FAILED;
 		}
 		if (msg->nlmsg_seq != this->seq)
@@ -1120,11 +1122,14 @@ static status_t netlink_send(private_kernel_interface_t *this,
 				continue;
 			}
 			pthread_mutex_unlock(&this->nl_mutex);
+			free(result.ptr);
 			return FAILED;
 		}
 		
 		tmp.len = len;
-		result = chunk_cata("cc", result, tmp);
+		result.ptr = realloc(result.ptr, result.len + tmp.len);
+		memcpy(result.ptr + result.len, tmp.ptr, tmp.len);
+		result.len += tmp.len;
 		
 		/* NLM_F_MULTI flag does not seem to be set correctly, we use sequence
 		 * numbers to detect multi header messages */
@@ -1140,7 +1145,7 @@ static status_t netlink_send(private_kernel_interface_t *this,
 	}
 	
 	*out_len = result.len;
-	*out = (struct nlmsghdr*)clalloc(result.ptr, result.len);
+	*out = (struct nlmsghdr*)result.ptr;
 	
 	pthread_mutex_unlock(&this->nl_mutex);
 	
