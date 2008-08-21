@@ -1790,8 +1790,10 @@ static host_t *get_route(private_kernel_interface_t *this, host_t *dest,
 								while (addrs->iterate(addrs, (void**)&addr))
 								{
 									chunk_t ip = addr->ip->get_address(addr->ip);
-									if (msg->rtm_dst_len == 0
-									||	addr_in_subnet(ip, rta_dst, msg->rtm_dst_len))
+									if ((msg->rtm_dst_len == 0 && 
+										 addr->ip->get_family(addr->ip) ==
+										 	dest->get_family(dest)) ||
+										addr_in_subnet(ip, rta_dst, msg->rtm_dst_len))
 									{
 										DESTROY_IF(src);
 										src = addr->ip->clone(addr->ip);
