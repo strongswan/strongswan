@@ -105,18 +105,26 @@ static int auth_conv(int num_msg, const struct pam_message **msg,
  */
 static bool authenticate(char *service, char *user, char *password)
 {
-    pam_handle_t *pamh;
+    pam_handle_t *pamh = NULL;
 	static struct pam_conv conv;
     int ret;
 	
 	conv.conv = (void*)auth_conv;
 	conv.appdata_ptr = password;
 	
-	if (pam_start(service, user, &conv, &pamh) != PAM_SUCCESS)
+	ret = pam_start(service, user, &conv, &pamh);
+	if (ret != PAM_SUCCESS)
 	{
+		DBG1(DBG_IKE, "EAP-GTC pam_start failed: %s",
+			 pam_strerror(pamh, ret));
 		return FALSE;
 	}
 	ret = pam_authenticate(pamh, 0);
+	if (ret != PAM_SUCCESS)
+	{
+		DBG1(DBG_IKE, "EAP-GTC pam_authenticate failed: %s",
+			 pam_strerror(pamh, ret));
+	}
 	pam_end(pamh, ret);
 	return ret == PAM_SUCCESS;
 }
@@ -154,7 +162,7 @@ static status_t process_peer(private_eap_gtc_t *this,
 	size_t len;
 
 	shared = charon->credentials->get_shared(charon->credentials, SHARED_EAP,
-											 this->server, this->peer);
+											 this->peer, this->server);
 	if (shared == NULL)
 	{
 		DBG1(DBG_IKE, "no EAP key found for '%D' - '%D'",
@@ -163,6 +171,8 @@ static status_t process_peer(private_eap_gtc_t *this,
 	}
 	key = shared->get_key(shared);
 	len = key.len;
+	
+	/* TODO: According to the draft we should "SASLprep" password, RFC4013. */
 
 	res = alloca(sizeof(eap_gtc_header_t) + len);
 	res->length = htons(sizeof(eap_gtc_header_t) + len);
@@ -206,11 +216,8 @@ static status_t process_server(private_eap_gtc_t *this,
 	service = lib->settings->get_str(lib->settings,
 						"charon.plugins.eap_gtc.pam_service", GTC_PAM_SERVICE);
 	
-	/* TODO: According to the draft we should "SASLprep" username and
-	 * passwords... RFC4013 */
 	if (!authenticate(service, user, password))
 	{
-		DBG1(DBG_IKE, "EAP-GTC PAM authentication failed");
 		return FAILED;
 	}
 	return SUCCESS;

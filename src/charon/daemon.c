@@ -50,6 +50,11 @@
 extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
 #endif /* NO_CAPSET_DEFINED */
 
+/* missing on older kernel headers */
+#ifndef CAP_AUDIT_WRITE
+#define CAP_AUDIT_WRITE 29
+#endif /* CAP_AUDIT_WRITE */
+
 #ifdef INTEGRITY_TEST
 #include <fips/fips.h>
 #include <fips/fips_signature.h>
@@ -247,8 +252,10 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	struct __user_cap_header_struct hdr;
 	struct __user_cap_data_struct data;
 	
-	/* CAP_NET_ADMIN is needed to use netlink */
-	u_int32_t keep = (1<<CAP_NET_ADMIN) | (1<<CAP_SYS_NICE);
+	/* CAP_NET_ADMIN is needed to use netlink,
+	 * CAP_AUDIT_WRITE for PAM authentication in EAP-GTC */
+	u_int32_t keep = (1<<CAP_NET_ADMIN) | (1<<CAP_SYS_NICE) |
+					 (1<<CAP_AUDIT_WRITE);
 	
 	if (full)
 	{
