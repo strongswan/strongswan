@@ -392,6 +392,12 @@ struct private_kernel_interface_t {
 	 * priority of used routing table
 	 */
 	int routing_table_prio;
+
+	/**
+	 * whether to react to RTM_NEWROUTE or RTM_DELROUTE events
+	 */
+	bool process_route;
+
 };
 
 /**
@@ -902,7 +908,7 @@ static void process_addr(private_kernel_interface_t *this,
 }
 
 /**
- * process RTM_NEWROUTE from kernel
+ * process RTM_NEWROUTE and RTM_DELROUTE from kernel
  */
 static void process_route(private_kernel_interface_t *this, struct nlmsghdr *hdr)
 {
@@ -911,7 +917,7 @@ static void process_route(private_kernel_interface_t *this, struct nlmsghdr *hdr
 	size_t rtasize = RTM_PAYLOAD(hdr);
 	host_t *host = NULL;
 	
-	while(RTA_OK(rta, rtasize))
+	while (RTA_OK(rta, rtasize))
 	{
 		switch (rta->rta_type)
 		{
@@ -1026,7 +1032,10 @@ static job_requeue_t receive_events(private_kernel_interface_t *this)
 					break;
 				case RTM_NEWROUTE:
 				case RTM_DELROUTE:
-					process_route(this, hdr);
+					if (this->process_route)
+					{
+						process_route(this, hdr);
+					}
 					break;
 				default:
 					break;
@@ -3046,6 +3055,8 @@ kernel_interface_t *kernel_interface_create()
 					"charon.routing_table", IPSEC_ROUTING_TABLE);
 	this->routing_table_prio = lib->settings->get_int(lib->settings,
 					"charon.routing_table_prio", IPSEC_ROUTING_TABLE_PRIO);
+	this->process_route = lib->settings->get_bool(lib->settings,
+					"charon.process_route", TRUE);
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 	
