@@ -588,6 +588,10 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			{
 				conn->eap_type = 4;
 			}
+			else if (streq(kw->value, "gtc"))
+			{
+				conn->eap_type = 6;
+			}
 			else
 			{
 				conn->eap_type = atoi(kw->value);

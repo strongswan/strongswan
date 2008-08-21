@@ -165,6 +165,11 @@ if USE_EAP_MD5
   PLUGINS += eapmd5
 endif
 
+if USE_EAP_GTC
+  SUBDIRS += plugins/eap_gtc
+  PLUGINS += eapgtc
+endif
+
 if USE_EAP_AKA
   SUBDIRS += plugins/eap_aka
   PLUGINS += eapaka

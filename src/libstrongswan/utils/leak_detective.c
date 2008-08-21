@@ -262,6 +262,7 @@ char *whitelist[] = {
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
+	"dlclose",
 	/* mysql functions */
 	"mysql_init_character_set",
 	"init_client_errs",
