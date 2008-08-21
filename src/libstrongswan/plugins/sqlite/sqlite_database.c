@@ -295,7 +295,7 @@ static db_driver_t get_driver(private_sqlite_database_t *this)
  */
 static int busy_handler(private_sqlite_database_t *this, int count)
 {
-	/* add an sleep, exponentially longer on every try */
+	/* add a backoff time, quadratically increasing with every try */
 	usleep(count * count * 1000);
 	/* always retry */
 	return 1;
