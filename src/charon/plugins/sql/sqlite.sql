@@ -155,14 +155,10 @@ CREATE TABLE shared_secret_identity (
 DROP TABLE IF EXISTS pools;
 CREATE TABLE pools (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
+  name TEXT NOT NULL UNIQUE,
   start BLOB NOT NULL,
   end BLOB NOT NULL,
   timeout INTEGER NOT NULL
-);
-DROP INDEX IF EXISTS pools_name;
-CREATE INDEX pools_name ON pools (
-  name
 );
 
 DROP TABLE IF EXISTS addresses;
