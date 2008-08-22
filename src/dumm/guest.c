@@ -257,6 +257,7 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 	
 	notify = write_arg(&pos, &left, "%s/%s", this->dirname, NOTIFY_FILE);
 	
+	args[i++] = write_arg(&pos, &left, "nice");
 	args[i++] = write_arg(&pos, &left, "%s/%s", this->dirname, KERNEL_FILE);
 	args[i++] = write_arg(&pos, &left, "root=/dev/root");
 	args[i++] = write_arg(&pos, &left, "rootfstype=hostfs");
