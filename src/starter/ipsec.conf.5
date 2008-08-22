@@ -366,6 +366,14 @@ in the form
 .B eap=7-12345
 ) can be used to specify vendor specific EAP types.
 .TP
+.B eap_identity
+defines the identity the client uses to reply to a EAP Identity request.
+If defined on the EAP server, the defined identity will be used as peer
+identity during EAP authentication. The special value 
+.B %identity
+uses the EAP Identity method to ask the client for a EAP identity. If not
+defined, the IKEv2 identity will be used as EAP identity.
+.TP
 .B esp
 ESP encryption/authentication algorithm to be used
 for the connection, e.g.

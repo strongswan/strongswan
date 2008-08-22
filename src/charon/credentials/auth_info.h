@@ -60,6 +60,14 @@ enum auth_item_t {
 	 * items provided to authentication process
 	 */
 	
+	/** authentication class to use, value is auth_class_t* */
+	AUTHN_AUTH_CLASS,
+	/** EAP method to request from peer, value is eap_type_t* */
+	AUTHN_EAP_TYPE,
+	/** EAP vendor to used in conjunction with EAP method, value is u_int32_t* */
+	AUTHN_EAP_VENDOR,
+	/** EAP identity to use within EAP-Identity exchange */
+	AUTHN_EAP_IDENTITY,
 	/** CA certificate to use for authentication, value is certificate_t* */
 	AUTHN_CA_CERT,
 	/** Keyid of a CA certificate to use, value is identification_t* */
@@ -83,7 +91,7 @@ enum auth_item_t {
 	AUTHZ_PUBKEY,
 	/** subject has ben authenticated using preshared secrets, value is shared_key_t* */ 
 	AUTHZ_PSK,
-	/** subject has been authenticated using EAP, value is eap_method_t */
+	/** subject has been authenticated using EAP, value is eap_type_t* */
 	AUTHZ_EAP,
 	/** certificate authority, value is certificate_t* */
 	AUTHZ_CA_CERT,

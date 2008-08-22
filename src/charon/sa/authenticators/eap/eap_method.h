@@ -95,6 +95,8 @@ extern enum_name_t *eap_code_names;
  * authentication. Even if a mutual EAP method is used, the traditional
  * AUTH payloads are required. Only these include the nonces and messages from
  * ike_sa_init and therefore prevent man in the middle attacks.
+ * The EAP method must use an initial EAP identifier value != 0, as a preceding
+ * EAP-Identity exchange always uses identifier 0.
  */
 struct eap_method_t {
 	
@@ -148,7 +150,8 @@ struct eap_method_t {
 	/**
 	 * Get the MSK established by this EAP method.
 	 *
-	 * Not all EAP methods establish a shared secret.
+	 * Not all EAP methods establish a shared secret. For implementations of
+	 * the EAP-Identity method, get_msk() returns the received identity.
 	 *
 	 * @param msk		chunk receiving internal stored MSK
 	 * @return
@@ -171,6 +174,8 @@ struct eap_method_t {
  * Constructors for server and peers are identical, to support both roles
  * of a EAP method, a plugin needs register two constructors in the
  * eap_manager_t.
+ * The passed identites are of type ID_EAP and valid only during the
+ * constructor invocation.
  *
  * @param server		ID of the server to use for credential lookup
  * @param peer			ID of the peer to use for credential lookup

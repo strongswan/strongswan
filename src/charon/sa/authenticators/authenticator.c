@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -33,22 +33,27 @@ ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_ECDSA_521, AUTH_DSS,
 	"ECDSA-256 signature",
 	"ECDSA-384 signature",
 	"ECDSA-521 signature");
-ENUM_NEXT(auth_method_names, AUTH_EAP, AUTH_EAP, AUTH_ECDSA_521,
-	"EAP");
-ENUM_END(auth_method_names, AUTH_EAP);
+ENUM_END(auth_method_names, AUTH_ECDSA_521);
+
+ENUM(auth_class_names, AUTH_CLASS_PUBKEY, AUTH_CLASS_EAP,
+	"public key",
+	"pre-shared key",
+	"EAP",
+);
 
 /**
  * Described in header.
  */
-authenticator_t *authenticator_create(ike_sa_t *ike_sa, config_auth_method_t auth_method)
+authenticator_t *authenticator_create_from_class(ike_sa_t *ike_sa,
+												 auth_class_t class)
 {
-	switch (auth_method)
+	switch (class)
 	{
-		case CONF_AUTH_PUBKEY:
+		case AUTH_CLASS_PUBKEY:
 			return (authenticator_t*)pubkey_authenticator_create(ike_sa);
-		case CONF_AUTH_PSK:
+		case AUTH_CLASS_PSK:
 			return (authenticator_t*)psk_authenticator_create(ike_sa);
-		case CONF_AUTH_EAP:
+		case AUTH_CLASS_EAP:
 			return (authenticator_t*)eap_authenticator_create(ike_sa);
 		default:
 			return NULL;
@@ -58,9 +63,10 @@ authenticator_t *authenticator_create(ike_sa_t *ike_sa, config_auth_method_t aut
 /**
  * Described in header.
  */
-authenticator_t *authenticator_create_from_auth_payload(ike_sa_t *ike_sa, auth_payload_t *auth_payload)
+authenticator_t *authenticator_create_from_method(ike_sa_t *ike_sa,
+												  auth_method_t method)
 {
-	switch (auth_payload->get_auth_method(auth_payload))
+	switch (method)
 	{
 		case AUTH_RSA:
 		case AUTH_ECDSA_256:

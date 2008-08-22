@@ -99,8 +99,7 @@ static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 			peer_cfg = peer_cfg_create(
 				name, 2, this->ike->get_ref(this->ike),
 				me->clone(me), other->clone(other),
-				CERT_NEVER_SEND, UNIQUE_REPLACE, CONF_AUTH_PUBKEY,
-				0, 0, 							/* EAP method, vendor */
+				CERT_NEVER_SEND, UNIQUE_REPLACE,
 				1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 				this->rekey*5, this->rekey*3, 	/* jitter, overtime */
 				TRUE, this->dpd, 				/* mobike, dpddelay */

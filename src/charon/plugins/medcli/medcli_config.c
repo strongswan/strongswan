@@ -120,8 +120,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 		"mediation", 2, ike_cfg,
 		identification_create_from_encoding(ID_KEY_ID, me),
 		identification_create_from_encoding(ID_KEY_ID, other),
-		CERT_NEVER_SEND, UNIQUE_REPLACE, CONF_AUTH_PUBKEY,
-		0, 0, 							/* EAP method, vendor */
+		CERT_NEVER_SEND, UNIQUE_REPLACE, 
 		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
 		TRUE, this->dpd, 				/* mobike, dpddelay */
@@ -149,8 +148,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 		name, 2, this->ike->get_ref(this->ike),
 		identification_create_from_encoding(ID_KEY_ID, me),
 		identification_create_from_encoding(ID_KEY_ID, other),
-		CERT_NEVER_SEND, UNIQUE_REPLACE, CONF_AUTH_PUBKEY,
-		0, 0, 							/* EAP method, vendor */
+		CERT_NEVER_SEND, UNIQUE_REPLACE, 
 		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
 		TRUE, this->dpd, 				/* mobike, dpddelay */
@@ -213,8 +211,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 				name, 2, this->ike->get_ref(this->ike),
 				identification_create_from_encoding(ID_KEY_ID, me),
 				identification_create_from_encoding(ID_KEY_ID, other),
-				CERT_NEVER_SEND, UNIQUE_REPLACE, AUTH_RSA,
-				0, 0, 							/* EAP method, vendor */
+				CERT_NEVER_SEND, UNIQUE_REPLACE, 
 				1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 				this->rekey*5, this->rekey*3, 	/* jitter, overtime */
 				TRUE, this->dpd, 				/* mobike, dpddelay */

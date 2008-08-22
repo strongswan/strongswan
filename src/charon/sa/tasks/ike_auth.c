@@ -150,6 +150,44 @@ static bool check_uniqueness(private_ike_auth_t *this)
 }
 
 /**
+ * get the authentication class of a config
+ */
+auth_class_t get_auth_class(peer_cfg_t *config)
+{
+	auth_class_t *class;
+	auth_info_t *auth_info;
+	
+	auth_info = config->get_auth(config);
+	if (auth_info->get_item(auth_info, AUTHN_AUTH_CLASS, (void**)&class))
+	{
+		return *class;
+	}
+	/* fallback to pubkey authentication */
+	return AUTH_CLASS_PUBKEY;
+}
+
+/**
+ * get the eap type/vendor
+ */
+static eap_type_t get_eap_type(peer_cfg_t *config, u_int32_t *vendor)
+{
+	auth_info_t *auth_info;
+	u_int *ptr;
+	
+	*vendor = 0;
+	auth_info = config->get_auth(config);
+	if (auth_info->get_item(auth_info, AUTHN_EAP_VENDOR, (void**)&ptr))
+	{
+		*vendor = *ptr;
+	}
+	if (auth_info->get_item(auth_info, AUTHN_EAP_TYPE, (void**)&ptr))
+	{
+		return *ptr;
+	}
+	return EAP_NAK;
+}
+
+/**
  * build the AUTH payload
  */
 static status_t build_auth(private_ike_auth_t *this, message_t *message)
@@ -157,7 +195,6 @@ static status_t build_auth(private_ike_auth_t *this, message_t *message)
 	authenticator_t *auth;
 	auth_payload_t *auth_payload;
 	peer_cfg_t *config;
-	config_auth_method_t method;
 	status_t status;
 	
 	/* create own authenticator and add auth payload */
@@ -167,13 +204,12 @@ static status_t build_auth(private_ike_auth_t *this, message_t *message)
 		SIG_IKE(UP_FAILED, "unable to authenticate, no peer config found");
 		return FAILED;
 	}
-	method = config->get_auth_method(config);
 	
-	auth = authenticator_create(this->ike_sa, method);
+	auth = authenticator_create_from_class(this->ike_sa, get_auth_class(config));
 	if (auth == NULL)
 	{
-		SIG_IKE(UP_FAILED, "configured authentication method %N not supported",
-			config_auth_method_names, method);
+		SIG_IKE(UP_FAILED, "configured authentication class %N not supported",
+			auth_class_names, get_auth_class(config));
 		return FAILED;
 	}
 	
@@ -244,8 +280,8 @@ static status_t process_auth(private_ike_auth_t *this, message_t *message)
 	}
 	
 	auth_method = auth_payload->get_auth_method(auth_payload);
-	auth = authenticator_create_from_auth_payload(this->ike_sa, auth_payload);
-
+	auth = authenticator_create_from_method(this->ike_sa,
+									auth_payload->get_auth_method(auth_payload));
 	if (auth == NULL)
 	{
 		SIG_IKE(UP_FAILED, "authentication method %N used by '%D' not "
@@ -414,7 +450,7 @@ static status_t process_auth_eap(private_ike_auth_t *this, message_t *message)
 	{
 		SIG_IKE(UP_FAILED, "authentication of '%D' with %N failed",
 			 this->ike_sa->get_other_id(this->ike_sa), 
-			 auth_method_names, AUTH_EAP);
+			 auth_class_names, AUTH_CLASS_EAP);
 		if (this->initiator)
 		{
 			return FAILED;
@@ -514,7 +550,7 @@ static status_t build_eap_r(private_ike_auth_t *this, message_t *message)
 		default:
 			SIG_IKE(UP_FAILED, "authentication of '%D' with %N failed",
 				this->ike_sa->get_other_id(this->ike_sa),
-				auth_method_names, AUTH_EAP);
+				auth_class_names, AUTH_CLASS_EAP);
 			status = FAILED;
 			break;
 	}
@@ -540,7 +576,7 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 	}
 	
 	config = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (config->get_auth_method(config) == CONF_AUTH_EAP)
+	if (get_auth_class(config) == AUTH_CLASS_EAP)
 	{
 		this->eap_auth = eap_authenticator_create(this->ike_sa);
 	}
@@ -580,7 +616,6 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		case NOT_FOUND:
 			/* use EAP if no AUTH payload found */
 			this->ike_sa->set_condition(this->ike_sa, COND_EAP_AUTHENTICATED, TRUE);
-			this->eap_auth = eap_authenticator_create(this->ike_sa);
 			break;
 		default:
 			return NEED_MORE;
@@ -597,7 +632,10 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		this->ike_sa->set_peer_cfg(this->ike_sa, config);
 		config->destroy(config);
 	}
-	
+	if (!this->peer_authenticated)
+	{	
+		this->eap_auth = eap_authenticator_create(this->ike_sa);
+	}
 	return NEED_MORE;
 }
 
@@ -662,7 +700,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	}
 	
 	/* initiate EAP authenitcation */
-	eap_type = config->get_eap_type(config, &eap_vendor);
+	eap_type = get_eap_type(config, &eap_vendor);
 	status = this->eap_auth->initiate(this->eap_auth, eap_type,
 									  eap_vendor, &eap_payload);
 	message->add_payload(message, (payload_t*)eap_payload);

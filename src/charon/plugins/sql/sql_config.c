@@ -267,6 +267,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 		peer_cfg_t *peer_cfg, *mediated_cfg;
 		ike_cfg_t *ike;
 		host_t *vip = NULL;
+		auth_info_t *auth;
 		
 		local_id = identification_create_from_encoding(l_type, l_data);
 		remote_id = identification_create_from_encoding(r_type, r_data);
@@ -291,10 +292,19 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 		{
 			peer_cfg = peer_cfg_create(
 					name, 2, ike, local_id, remote_id, cert_policy, uniqueid,
-					auth_method, eap_type, eap_vendor, keyingtries, 
-					rekeytime, reauthtime, jitter, overtime, mobike,
-					dpd_delay, vip, pool,
+					keyingtries, rekeytime, reauthtime, jitter, overtime,
+					mobike,	dpd_delay, vip, pool,
 					mediation, mediated_cfg, peer_id);
+			auth = peer_cfg->get_auth(peer_cfg);
+			auth->add_item(auth, AUTHN_AUTH_CLASS, &auth_method);
+			if (eap_type)
+			{
+				auth->add_item(auth, AUTHN_EAP_TYPE, &eap_type);
+				if (eap_vendor)
+				{
+					auth->add_item(auth, AUTHN_EAP_VENDOR, &eap_vendor);
+				}
+			}
 			add_child_cfgs(this, peer_cfg, id);
 			return peer_cfg;
 		}

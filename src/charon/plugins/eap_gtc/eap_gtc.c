@@ -253,6 +253,8 @@ static bool is_mutual(private_eap_gtc_t *this)
  */
 static void destroy(private_eap_gtc_t *this)
 {
+	this->peer->destroy(this->peer);
+	this->server->destroy(this->server);
 	free(this);
 }
 
@@ -272,9 +274,9 @@ static private_eap_gtc_t *eap_gtc_create_generic(identification_t *server,
 	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
 	
 	/* private data */
-	this->peer = peer;
-	this->server = server;
-	this->identifier = random();
+	this->peer = peer->clone(peer);
+	this->server = server->clone(server);
+	this->identifier = 0;
 	
 	return this;
 }
@@ -288,6 +290,11 @@ eap_gtc_t *eap_gtc_create_server(identification_t *server, identification_t *pee
 	
 	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_server;
 	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process_server;
+
+	/* generate a non-zero identifier */
+	do {
+		this->identifier = random();
+	} while (!this->identifier);
 
 	return &this->public;
 }

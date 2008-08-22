@@ -202,6 +202,7 @@ static const token_info_t token_info[] =
     { ARG_MISC, 0, NULL  /* KW_AUTH */                                             },
     { ARG_MISC, 0, NULL  /* KW_AUTHBY */                                           },
     { ARG_MISC, 0, NULL  /* KW_EAP */                                              },
+    { ARG_STR,  offsetof(starter_conn_t, eap_identity), NULL                       },
     { ARG_MISC, 0, NULL  /* KW_MOBIKE */                                           },
     { ARG_MISC, 0, NULL  /* KW_FORCEENCAPS */                                      },
     { ARG_TIME, offsetof(starter_conn_t, sa_ike_life_seconds), NULL                },

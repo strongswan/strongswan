@@ -142,6 +142,11 @@ enum id_type_t {
 	 * SHA1 hash of the binary DER encoding of a certificate
 	 */
 	ID_CERT_DER_SHA1,
+	
+	/**
+	 * Generic EAP identity
+	 */
+	ID_EAP,
 };
 
 /**

@@ -330,6 +330,22 @@ struct ike_sa_t {
 	void (*set_other_id) (ike_sa_t *this, identification_t *other);
 	
 	/**
+	 * Get the peers EAP identity.
+	 *
+	 * The EAP identity is exchanged in a EAP-Identity exchange.
+	 * 
+	 * @return				identification, NULL if none set
+	 */
+	identification_t* (*get_eap_identity) (ike_sa_t *this);
+	
+	/**
+	 * Set the peer's EAP identity.
+	 * 
+	 * @param id			identification
+	 */
+	void (*set_eap_identity) (ike_sa_t *this, identification_t *id);
+	
+	/**
 	 * Get the config used to setup this IKE_SA.
 	 * 
 	 * @return				ike_config

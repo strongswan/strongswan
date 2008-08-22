@@ -1016,6 +1016,7 @@ static bool is_mutual(private_eap_sim_t *this)
  */
 static void destroy(private_eap_sim_t *this)
 {
+	this->peer->destroy(this->peer);
 	dlclose(this->handle);
 	DESTROY_IF(this->hasher);
 	DESTROY_IF(this->prf);
@@ -1046,7 +1047,7 @@ eap_sim_t *eap_sim_create_generic(eap_role_t role, identification_t *server,
 	this->get_triplet = NULL;
 	this->nonce = chunk_empty;
 	this->sreses = chunk_empty;
-	this->peer = peer;
+	this->peer = peer->clone(peer);
 	this->tries = MAX_TRIES;
 	this->version.ptr = version;
 	this->version.len = sizeof(version);
@@ -1055,7 +1056,10 @@ eap_sim_t *eap_sim_create_generic(eap_role_t role, identification_t *server,
 	this->k_encr = chunk_empty;
 	this->msk = chunk_empty;
 	this->emsk = chunk_empty;
-	this->identifier = random();
+	/* generate a non-zero identifier */
+	do {
+		this->identifier = random();
+	} while (!this->identifier);
 	
 	this->handle = dlopen(SIM_READER_LIB, RTLD_LAZY);
 	if (this->handle == NULL)

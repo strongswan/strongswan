@@ -298,16 +298,28 @@ static char hex2bin(char hex)
 chunk_t chunk_from_hex(chunk_t hex, char *buf)
 {
 	int i, len;
+	bool odd = FALSE;
 	
-	len = hex.len / 2;
+	len = (hex.len / 2);
+	if (hex.len % 2)
+	{
+		odd = TRUE;
+		len++;
+	}
 	if (!buf)
 	{
 		buf = malloc(len);
 	}
-	for (i = 0; i < len; i++)
+	/* buffer is filled from the right */
+	memset(buf, 0, len);
+	hex.ptr += hex.len;
+	for (i = len - 1; i >= 0; i--)
 	{
-		buf[i] =  hex2bin(*hex.ptr++) << 4;
-		buf[i] |= hex2bin(*hex.ptr++);
+		buf[i] = hex2bin(*(--hex.ptr));
+		if (i > 0 || !odd)
+		{
+			buf[i] |= hex2bin(*(--hex.ptr)) << 4;
+		}
 	}
 	return chunk_create(buf, len);
 }

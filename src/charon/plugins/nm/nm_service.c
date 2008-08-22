@@ -171,7 +171,8 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
 	ike_sa_t *ike_sa;
-	config_auth_method_t method = CONF_AUTH_EAP;
+	auth_info_t *auth;
+	auth_class_t auth_class = AUTH_CLASS_EAP;
 	
 	/**
 	 * Read parameters
@@ -212,11 +213,11 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	{
 		if (streq(str, "psk"))
 		{
-			method = CONF_AUTH_PSK;
+			auth_class = AUTH_CLASS_PSK;
 		}
 		else if (streq(str, "pubkey"))
 		{
-			method = CONF_AUTH_PUBKEY;
+			auth_class = AUTH_CLASS_PUBKEY;
 		}
 	}
 	
@@ -247,13 +248,14 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create(CONFIG_NAME, 2, ike_cfg, user,
 					identification_create_from_encoding(ID_ANY, chunk_empty),
-					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, method,
-					0, 0, 1, /* EAP method, vendor, keyingtries */
+					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 					18000, 0, /* rekey 5h, reauth none */
 					600, 600, /* jitter, over 10min */
 					TRUE, 0, /* mobike, DPD */
 					virtual ? host_create_from_string("0.0.0.0", 0) : NULL,
 					NULL, FALSE, NULL, NULL); /* pool, mediation */
+	auth = peer_cfg->get_auth(peer_cfg);
+	auth->add_item(auth, AUTHN_AUTH_CLASS, &auth_class);
 	child_cfg = child_cfg_create(CONFIG_NAME,
 								 3600, 3000, /* lifetime 1h, rekey 50min */
 								 300, /* jitter 5min */

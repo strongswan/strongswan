@@ -39,6 +39,16 @@ struct eap_identity_t {
 };
 
 /**
+ * Creates the EAP method EAP Identity, acting as server.
+ *
+ * @param server	ID of the EAP server
+ * @param peer		ID of the EAP client
+ * @return			eap_identity_t object
+ */
+eap_identity_t *eap_identity_create_server(identification_t *server,
+										   identification_t *peer);
+
+/**
  * Creates the EAP method EAP Identity, acting as peer.
  *
  * @param server	ID of the EAP server

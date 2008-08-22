@@ -100,7 +100,8 @@ chunk_t chunk_to_hex(chunk_t chunk, char *buf, bool uppercase);
 /**
  * Convert a hex encoded in a binary chunk.
  *
- * If buf is supplied, it must hold at least (hex.len / 2).
+ * If buf is supplied, it must hold at least (hex.len / 2) + (hex.len % 2)
+ * bytes. It is filled by the right to give correct values for short inputs.
  *
  * @param hex			hex encoded input data
  * @param buf			buffer to write decoded data, NULL to malloc
@@ -164,7 +165,7 @@ void chunk_clear(chunk_t *chunk);
 /**
  * Clone a chunk on heap
  */
-#define chunk_clone(chunk) chunk_create_clone(malloc(chunk.len), chunk)
+#define chunk_clone(chunk) chunk_create_clone((chunk).len ? malloc(chunk.len) : NULL, chunk)
 
 /**
  * Clone a chunk on stack

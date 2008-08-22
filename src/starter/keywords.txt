@@ -50,6 +50,7 @@ keep_alive,        KW_KEEP_ALIVE
 force_keepalive,   KW_FORCE_KEEPALIVE
 virtual_private,   KW_VIRTUAL_PRIVATE
 eap,               KW_EAP
+eap_identity,      KW_EAP_IDENTITY
 mobike,	           KW_MOBIKE
 forceencaps,       KW_FORCEENCAPS
 pkcs11module,      KW_PKCS11MODULE

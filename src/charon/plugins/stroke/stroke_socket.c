@@ -169,10 +169,12 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG2(DBG_CFG, "conn %s", msg->add_conn.name);
 	pop_end(msg, "left", &msg->add_conn.me);
 	pop_end(msg, "right", &msg->add_conn.other);
+	pop_string(msg, &msg->add_conn.eap_identity);
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
 	pop_string(msg, &msg->add_conn.ikeme.mediated_by);
 	pop_string(msg, &msg->add_conn.ikeme.peerid);
+	DBG2(DBG_CFG, "  eap_identity=%s", msg->add_conn.eap_identity);
 	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	DBG2(DBG_CFG, "  mediation=%s", msg->add_conn.ikeme.mediation ? "yes" : "no");

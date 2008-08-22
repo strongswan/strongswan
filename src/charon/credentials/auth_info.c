@@ -25,6 +25,10 @@
 #include <credentials/certificates/certificate.h>
 
 ENUM(auth_item_names, AUTHN_CA_CERT, AUTHZ_AC_GROUP,
+	"AUTHN_AUTH_CLASS",
+	"AUTHN_EAP_TYPE",
+	"AUTHN_EAP_VENDOR",
+	"AUTHN_EAP_IDENTITY",
 	"AUTHN_CA_CERT",
 	"AUTHN_CA_CERT_KEYID",
 	"AUTHN_CA_CERT_NAME",
@@ -208,14 +212,18 @@ static void add_item(private_auth_info_t *this, auth_item_t type, void *value)
 			item->value = validation;
 			break;
 		}
+		case AUTHN_AUTH_CLASS:
+		case AUTHN_EAP_TYPE:
+		case AUTHN_EAP_VENDOR:
 		case AUTHZ_EAP:
 		{
-			eap_method_t *method = malloc_thing(eap_method_t);
+			u_int *intval = malloc_thing(u_int);
 
-			*method = *(eap_method_t*)value;
-			item->value = method;
+			*intval = *(u_int*)value;
+			item->value = intval;
 			break;
 		}
+		case AUTHN_EAP_IDENTITY:
 		case AUTHN_CA_CERT_KEYID:
 		case AUTHN_CA_CERT_NAME:
 		case AUTHZ_CA_CERT_NAME:
@@ -246,6 +254,10 @@ static bool complies(private_auth_info_t *this, auth_info_t *constraints)
 	{
 		switch (t1)
 		{
+			case AUTHN_AUTH_CLASS:
+			case AUTHN_EAP_TYPE:
+			case AUTHN_EAP_VENDOR:
+			case AUTHN_EAP_IDENTITY:
 			case AUTHN_CA_CERT_KEYID:
 			case AUTHN_CA_CERT:
 			case AUTHN_CA_CERT_NAME:
@@ -444,6 +456,7 @@ static bool equals(private_auth_info_t *this, private_auth_info_t *other)
 						}
 						continue;
 					}
+					case AUTHN_EAP_IDENTITY:
 					case AUTHN_CA_CERT_KEYID:
 					case AUTHN_CA_CERT_NAME:
 					case AUTHZ_CA_CERT_NAME:
@@ -459,6 +472,16 @@ static bool equals(private_auth_info_t *this, private_auth_info_t *other)
 							break;
 						}
 						continue;
+					}
+					case AUTHN_AUTH_CLASS:
+					case AUTHN_EAP_TYPE:
+					case AUTHN_EAP_VENDOR:
+					{
+						if (*(u_int*)i1->value == *(u_int*)i2->value)
+						{
+							found = TRUE;
+							break;
+						}
 					}
 					case AUTHZ_PUBKEY:
 					case AUTHZ_PSK:
@@ -511,6 +534,9 @@ static void destroy_item_value(item_t *item)
 			cert->destroy(cert);
 			break;
 		}
+		case AUTHN_AUTH_CLASS:
+		case AUTHN_EAP_TYPE:
+		case AUTHN_EAP_VENDOR:
 		case AUTHN_IM_HASH_URL:
 		case AUTHN_SUBJECT_HASH_URL:
 		case AUTHZ_CRL_VALIDATION:
@@ -520,6 +546,7 @@ static void destroy_item_value(item_t *item)
 			free(item->value);
 			break;
 		}
+		case AUTHN_EAP_IDENTITY:
 		case AUTHN_CA_CERT_KEYID:
 		case AUTHN_CA_CERT_NAME:
 		case AUTHZ_CA_CERT_NAME:

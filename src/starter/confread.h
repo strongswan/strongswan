@@ -105,6 +105,7 @@ struct starter_conn {
 	keyexchange_t	keyexchange;
 	u_int32_t	eap_type;
 	u_int32_t	eap_vendor;
+	char		*eap_identity;
 	lset_t 		policy;
 	time_t 		sa_ike_life_seconds;
 	time_t		sa_ipsec_life_seconds;

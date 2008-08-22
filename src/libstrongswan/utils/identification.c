@@ -915,6 +915,7 @@ static int print(FILE *stream, const struct printf_info *info,
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
 		case ID_DER_ASN1_GN_URI:
+		case ID_EAP:
 			proper = sanitize_chunk(this->encoded);
 			snprintf(buf, sizeof(buf), "%.*s", proper.len, proper.ptr);
 			chunk_free(&proper);
@@ -1169,6 +1170,7 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 		case ID_PUBKEY_INFO_SHA1:
 		case ID_PUBKEY_SHA1:
 		case ID_CERT_DER_SHA1:
+		case ID_EAP:
 		default:
 			break;
 	}

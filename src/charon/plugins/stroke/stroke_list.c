@@ -48,6 +48,23 @@ struct private_stroke_list_t {
 };
 
 /**
+ * get the authentication class of a config
+ */
+auth_class_t get_auth_class(peer_cfg_t *config)
+{
+	auth_class_t *class;
+	auth_info_t *auth_info;
+	
+	auth_info = config->get_auth(config);
+	if (auth_info->get_item(auth_info, AUTHN_AUTH_CLASS, (void**)&class))
+	{
+		return *class;
+	}
+	/* fallback to pubkey authentication */
+	return AUTH_CLASS_PUBKEY;
+}
+
+/**
  * log an IKE_SA to out
  */
 static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
@@ -81,12 +98,8 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 			}
 			if (reauth)
 			{
-				peer_cfg_t *peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-
-				fprintf(out, ", %N reauthentication in %V",
-						config_auth_method_names,
-						peer_cfg->get_auth_method(peer_cfg),
-						&reauth);
+				fprintf(out, ", %N reauthentication in %V", auth_class_names,
+						get_auth_class(ike_sa->get_peer_cfg(ike_sa)), &reauth);
 			}
 			if (!rekey && !reauth)
 			{
@@ -272,14 +285,13 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 					ike_cfg->get_my_addr(ike_cfg), peer_cfg->get_my_id(peer_cfg),
 					ike_cfg->get_other_addr(ike_cfg), peer_cfg->get_other_id(peer_cfg));
 			fprintf(out, "%12s:  %N authentication",  peer_cfg->get_name(peer_cfg),
-					config_auth_method_names, peer_cfg->get_auth_method(peer_cfg));
+					auth_class_names, get_auth_class(peer_cfg));
 			dpd = peer_cfg->get_dpd(peer_cfg);
 			if (dpd)
 			{
 				fprintf(out, ", dpddelay=%us", dpd);
 			}
 			fprintf(out, "\n");
-
 			/* TODO: list CAs and groups */
 			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 			while (children->enumerate(children, &child_cfg))

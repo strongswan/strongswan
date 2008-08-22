@@ -499,8 +499,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	 * uses to serve pool addresses. */
 	return peer_cfg_create(msg->add_conn.name,
 		msg->add_conn.ikev2 ? 2 : 1, ike_cfg, me, other,
-		msg->add_conn.me.sendcert, unique, msg->add_conn.auth_method,
-		msg->add_conn.eap_type,	msg->add_conn.eap_vendor,
+		msg->add_conn.me.sendcert, unique, 
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay,
 		vip, msg->add_conn.other.sourceip_size ?
@@ -514,7 +513,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 static void build_auth_info(private_stroke_config_t *this,
 							stroke_msg_t *msg, auth_info_t *auth)
 {
-	identification_t *my_ca = NULL, *other_ca = NULL;
+	identification_t *my_ca = NULL, *other_ca = NULL, *id;
 	bool my_ca_same = FALSE;
 	bool other_ca_same = FALSE;
 	cert_validation_t valid;
@@ -600,6 +599,30 @@ static void build_auth_info(private_stroke_config_t *this,
 			auth->add_item(auth, AUTHN_CA_CERT_NAME, my_ca);
 		}
 		my_ca->destroy(my_ca);
+	}
+	auth->add_item(auth, AUTHN_AUTH_CLASS, &msg->add_conn.auth_method);
+	if (msg->add_conn.eap_type)
+	{
+		auth->add_item(auth, AUTHN_EAP_TYPE, &msg->add_conn.eap_type);
+		if (msg->add_conn.eap_vendor)
+		{
+			auth->add_item(auth, AUTHN_EAP_VENDOR, &msg->add_conn.eap_vendor);
+		}
+	}
+	if (msg->add_conn.eap_identity)
+	{
+		if (streq(msg->add_conn.eap_identity, "%identity"))
+		{
+			id = identification_create_from_encoding(ID_ANY, chunk_empty);
+		}
+		else
+		{
+			id = identification_create_from_encoding(ID_EAP, chunk_create(
+										msg->add_conn.eap_identity,
+										strlen(msg->add_conn.eap_identity)));
+		}
+		auth->add_item(auth, AUTHN_EAP_IDENTITY, id);
+		id->destroy(id);
 	}
 }
 

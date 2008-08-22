@@ -829,6 +829,19 @@ static eap_payload_t *build_aka_payload(private_eap_aka_t *this, eap_code_t code
 }
 
 /**
+ * generate a new non-zero identifier
+ */
+static u_char get_identifier()
+{
+	u_char id;
+	
+	do {
+		id = random();
+	} while (!id);
+	return id;
+}
+
+/**
  * Initiate a AKA-Challenge using SQN
  */
 static status_t server_initiate_challenge(private_eap_aka_t *this, chunk_t sqn,
@@ -900,7 +913,7 @@ static status_t server_initiate_challenge(private_eap_aka_t *this, chunk_t sqn,
 	derive_keys(this, this->peer);
 	
 	/* build payload */
-	*out = build_aka_payload(this, EAP_REQUEST, 0, AKA_CHALLENGE,
+	*out = build_aka_payload(this, EAP_REQUEST, get_identifier(), AKA_CHALLENGE,
 							 AT_RAND, this->rand, AT_AUTN, autn, AT_MAC,
 							 chunk_empty, AT_END);
 	return NEED_MORE;
@@ -1449,6 +1462,8 @@ static bool is_mutual(private_eap_aka_t *this)
  */
 static void destroy(private_eap_aka_t *this)
 {
+	this->server->destroy(this->server);
+	this->peer->destroy(this->peer);
 	DESTROY_IF(this->sha1);
 	DESTROY_IF(this->signer);
 	DESTROY_IF(this->prf);
@@ -1479,8 +1494,8 @@ static private_eap_aka_t *eap_aka_create_generic(identification_t *server,
 	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
 	
 	/* private data */
-	this->server = server;
-	this->peer = peer;
+	this->server = server->clone(server);
+	this->peer = peer->clone(peer);
 	this->k_encr = chunk_empty;
 	this->k_auth = chunk_empty;
 	this->msk = chunk_empty;

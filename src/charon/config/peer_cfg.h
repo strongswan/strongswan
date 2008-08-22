@@ -27,7 +27,6 @@
 
 typedef enum cert_policy_t cert_policy_t;
 typedef enum unique_policy_t unique_policy_t;
-typedef enum config_auth_method_t config_auth_method_t;
 typedef struct peer_cfg_t peer_cfg_t;
 
 #include <library.h>
@@ -80,23 +79,6 @@ enum unique_policy_t {
  * enum strings for unique_policy_t
  */
 extern enum_name_t *unique_policy_names;
-
-/**
- * Authentication method for this IKE_SA.
- */
-enum config_auth_method_t {
-	/** authentication using public keys (RSA, ECDSA) */
-	CONF_AUTH_PUBKEY =	1,
-	/** authentication using a pre-shared secret */
-	CONF_AUTH_PSK = 	2,
-	/** authentication using EAP */
-	CONF_AUTH_EAP = 	3,
-};
-
-/**
- * enum strings for config_auth_method_t
- */
-extern enum_name_t *config_auth_method_names;
 
 /**
  * Configuration of a peer, specified by IDs.
@@ -220,25 +202,6 @@ struct peer_cfg_t {
 	 * @return			unique policy
 	 */
 	unique_policy_t (*get_unique_policy) (peer_cfg_t *this);
-
-	/**
-	 * Get the authentication method to use to authenticate us.
-	 * 
-	 * @return			authentication method
-	 */
-	config_auth_method_t (*get_auth_method) (peer_cfg_t *this);
-	
-	/**
-	 * Get the EAP type to use for peer authentication.
-	 *
-	 * If vendor specific types are used, a vendor ID != 0 is returned to
-	 * to vendor argument. Then the returned type is specific for that 
-	 * vendor ID.
-	 * 
-	 * @param vendor	receives vendor specifier, 0 for predefined EAP types
-	 * @return			authentication method
-	 */
-	eap_type_t (*get_eap_type) (peer_cfg_t *this, u_int32_t *vendor);
 	
 	/**
 	 * Get the max number of retries after timeout.
@@ -372,9 +335,6 @@ struct peer_cfg_t {
  * @param other_id 			identification_t for the remote guy
  * @param cert_policy		should we send a certificate payload?
  * @param unique			uniqueness of an IKE_SA
- * @param auth_method		auth method to use to authenticate us
- * @param eap_type			EAP type to use for peer authentication
- * @param eap_vendor		EAP vendor identifier, if vendor specific type is used
  * @param keyingtries		how many keying tries should be done before giving up
  * @param rekey_time		timeout before starting rekeying
  * @param reauth_time		timeout before starting reauthentication
@@ -393,8 +353,6 @@ struct peer_cfg_t {
 peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
 							cert_policy_t cert_policy, unique_policy_t unique,
-							config_auth_method_t auth_method, eap_type_t eap_type,
-							u_int32_t eap_vendor,
 							u_int32_t keyingtries, u_int32_t rekey_time,
 							u_int32_t reauth_time, u_int32_t jitter_time,
 							u_int32_t over_time, bool mobike, u_int32_t dpd,

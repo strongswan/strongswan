@@ -54,6 +54,21 @@ struct private_eap_authenticator_t {
 	 * MSK used to build and verify auth payload
 	 */
 	chunk_t msk;
+	
+	/**
+	 * should we do a EAP-Identity exchange as server?
+	 */
+	bool do_eap_identity;
+	
+	/**
+	 * saved EAP type if we do eap_identity
+	 */
+	eap_type_t type;
+	
+	/**
+	 * saved vendor id if we do eap_identity
+	 */
+	u_int32_t vendor;
 };
 
 /**
@@ -93,7 +108,7 @@ static status_t verify(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 	chunk_free(&auth_data);
 	
 	DBG1(DBG_IKE, "authentication of '%D' with %N successful",
-		 other_id, auth_method_names, AUTH_EAP);
+		 other_id, auth_class_names, AUTH_CLASS_EAP);
 	return SUCCESS;
 }
 
@@ -107,7 +122,7 @@ static status_t build(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 	identification_t *my_id = this->ike_sa->get_my_id(this->ike_sa);
 	
 	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
-		 my_id, auth_method_names, AUTH_EAP);
+		 my_id, auth_class_names, AUTH_CLASS_EAP);
 
 	if (this->msk.len)
 	{	/* use MSK if EAP method established one... */
@@ -130,6 +145,79 @@ static status_t build(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 }
 
 /**
+ * get the peers identity to use in the EAP method
+ */
+static identification_t *get_peer_id(private_eap_authenticator_t *this)
+{
+	identification_t *id;
+	peer_cfg_t *config;
+	auth_info_t *auth;
+	
+	id = this->ike_sa->get_eap_identity(this->ike_sa);
+	if (!id)
+	{
+		config = this->ike_sa->get_peer_cfg(this->ike_sa);
+		auth = config->get_auth(config);
+		if (!auth->get_item(auth, AUTHN_EAP_IDENTITY, (void**)&id))
+		{
+			if (this->role == EAP_PEER)
+			{
+				id = this->ike_sa->get_my_id(this->ike_sa);
+			}
+			else
+			{
+				id = this->ike_sa->get_other_id(this->ike_sa);
+			}
+		}
+	}
+	if (id->get_type(id) == ID_EAP)
+	{
+		return id->clone(id);
+	}
+	return identification_create_from_encoding(ID_EAP, id->get_encoding(id));
+}
+
+/**
+ * get the servers identity to use in the EAP method
+ */
+static identification_t *get_server_id(private_eap_authenticator_t *this)
+{
+	identification_t *id;
+	
+	if (this->role == EAP_SERVER)
+	{
+		id = this->ike_sa->get_my_id(this->ike_sa);
+	}
+	else
+	{
+		id = this->ike_sa->get_other_id(this->ike_sa);
+	}
+	if (id->get_type(id) == ID_EAP)
+	{
+		return id->clone(id);
+	}
+	return identification_create_from_encoding(ID_EAP, id->get_encoding(id));
+}
+
+/**
+ * load an EAP method using the correct identities
+ */
+static eap_method_t *load_method(private_eap_authenticator_t *this,
+							eap_type_t type, u_int32_t vendor, eap_role_t role)
+{
+	identification_t *server, *peer;
+	eap_method_t *method;
+	
+	server = get_server_id(this);
+	peer = get_peer_id(this);
+	method = charon->eap->create_instance(charon->eap, type, vendor, role,
+										  server, peer);		 
+	server->destroy(server);
+	peer->destroy(peer);
+	return method;
+}
+
+/**
  * Implementation of eap_authenticator_t.initiate
  */
 static status_t initiate(private_eap_authenticator_t *this, eap_type_t type,
@@ -137,6 +225,14 @@ static status_t initiate(private_eap_authenticator_t *this, eap_type_t type,
 {
 	/* if initiate() is called, role is always server */
 	this->role = EAP_SERVER;
+	
+	if (this->do_eap_identity)
+	{	/* do an EAP-Identity request first */
+		this->type = type;
+		this->vendor = vendor;
+		vendor = 0;
+		type = EAP_IDENTITY;
+	}
 	
 	if (type == 0)
 	{
@@ -148,20 +244,23 @@ static status_t initiate(private_eap_authenticator_t *this, eap_type_t type,
 	
 	if (vendor)
 	{
-		DBG1(DBG_IKE, "requesting vendor specific EAP authentication %d-%d",
+		DBG1(DBG_IKE, "requesting vendor specific EAP method %d-%d",
 			 type, vendor);
 	}
 	else
 	{
-		DBG1(DBG_IKE, "requesting %N authentication", eap_type_names, type);
+		DBG1(DBG_IKE, "requesting EAP method %N", eap_type_names, type);
 	}
-	this->method = charon->eap->create_instance(charon->eap, type, vendor,
-						this->role, this->ike_sa->get_my_id(this->ike_sa),
-						this->ike_sa->get_other_id(this->ike_sa));
-	
+	this->method = load_method(this, type, vendor, this->role);
 	if (this->method == NULL)
 	{
-
+		if (vendor == 0 && type == EAP_IDENTITY)
+		{
+			DBG1(DBG_IKE, "skipping %N, no implementation found",
+				 eap_type_names, type);
+			this->do_eap_identity = FALSE;
+			return initiate(this, this->type, this->vendor, out);
+		}
 		DBG1(DBG_IKE, "configured EAP server method not supported, sending %N",
 			 eap_code_names, EAP_FAILURE);
 		*out = eap_payload_create_code(EAP_FAILURE, 0);
@@ -192,10 +291,7 @@ static status_t process_peer(private_eap_authenticator_t *this,
 	{
 		eap_method_t *method;
 		
-		method = charon->eap->create_instance(charon->eap, type, 0, EAP_PEER,
-									this->ike_sa->get_other_id(this->ike_sa),
-									this->ike_sa->get_my_id(this->ike_sa));
-		
+		method = load_method(this, type, 0, EAP_PEER);
 		if (method == NULL || method->process(method, in, out) != SUCCESS)
 		{
 			DBG1(DBG_IKE, "EAP server requested %N, but unable to process",
@@ -203,10 +299,7 @@ static status_t process_peer(private_eap_authenticator_t *this,
 			DESTROY_IF(method);
 			return FAILED;
 		}
-		
-		DBG1(DBG_IKE, "EAP server requested %N, sending IKE identity",
-			 eap_type_names, type);
-			 
+		DBG1(DBG_IKE, "EAP server requested %N", eap_type_names, type);	 
 		method->destroy(method);
 		return NEED_MORE;
 	}
@@ -224,10 +317,7 @@ static status_t process_peer(private_eap_authenticator_t *this,
 			DBG1(DBG_IKE, "EAP server requested %N authentication",
 				 eap_type_names, type);
 		}
-		this->method = charon->eap->create_instance(charon->eap,
-									type, vendor, EAP_PEER,
-									this->ike_sa->get_other_id(this->ike_sa),
-									this->ike_sa->get_my_id(this->ike_sa));
+		this->method = load_method(this, type, vendor, EAP_PEER);
 		if (this->method == NULL)
 		{
 			DBG1(DBG_IKE, "EAP server requested unsupported "
@@ -251,7 +341,7 @@ static status_t process_peer(private_eap_authenticator_t *this,
 			}
 			else
 			{
-				DBG1(DBG_IKE, "EAP method %N succeded", eap_type_names, type);
+				DBG1(DBG_IKE, "EAP method %N succeeded", eap_type_names, type);
 			}
 			return SUCCESS;
 		case FAILED:
@@ -271,6 +361,27 @@ static status_t process_peer(private_eap_authenticator_t *this,
 }
 
 /**
+ * handle an EAP-Identity response on the server
+ */
+static status_t process_eap_identity(private_eap_authenticator_t *this,
+									 eap_payload_t **out)
+{
+	chunk_t data;
+	identification_t *id;
+
+	if (this->method->get_msk(this->method, &data) == SUCCESS)
+	{
+		id = identification_create_from_encoding(ID_EAP, data);
+		DBG1(DBG_IKE, "using EAP Identity '%D'", id);
+		this->ike_sa->set_eap_identity(this->ike_sa, id);
+	}
+	/* restart EAP exchange, but with real method */
+	this->method->destroy(this->method);
+	this->do_eap_identity = FALSE;
+	return initiate(this, this->type, this->vendor, out);
+}
+
+/**
  * Processing method for a server
  */
 static status_t process_server(private_eap_authenticator_t *this,
@@ -286,6 +397,10 @@ static status_t process_server(private_eap_authenticator_t *this,
 		case NEED_MORE:
 			return NEED_MORE;
 		case SUCCESS:
+			if (this->do_eap_identity)
+			{
+				return process_eap_identity(this, out);
+			}
 			if (this->method->get_msk(this->method, &this->msk) == SUCCESS)
 			{
 				this->msk = chunk_clone(this->msk);
@@ -409,6 +524,9 @@ static void destroy(private_eap_authenticator_t *this)
  */
 eap_authenticator_t *eap_authenticator_create(ike_sa_t *ike_sa)
 {
+	peer_cfg_t *config;
+	auth_info_t *auth;
+	identification_t *id;
 	private_eap_authenticator_t *this = malloc_thing(private_eap_authenticator_t);
 	
 	/* public functions */
@@ -425,6 +543,25 @@ eap_authenticator_t *eap_authenticator_create(ike_sa_t *ike_sa)
 	this->role = EAP_PEER;
 	this->method = NULL;
 	this->msk = chunk_empty;
+	this->do_eap_identity = FALSE;
+	this->type = 0;
+	this->vendor = 0;
 	
+	config = ike_sa->get_peer_cfg(ike_sa);
+	if (config)
+	{
+		auth = config->get_auth(config);
+		if (auth->get_item(auth, AUTHN_EAP_IDENTITY, (void**)&id))
+		{
+			if (id->get_type(id) == ID_ANY)
+			{	/* %any as configured EAP identity runs EAP-Identity first */
+				this->do_eap_identity = TRUE;
+			}
+			else
+			{
+				ike_sa->set_eap_identity(ike_sa, id->clone(id));
+			}
+		}
+	}
 	return &this->public;
 }
