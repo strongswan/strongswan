@@ -184,7 +184,9 @@ static void set_password(private_nm_creds_t *this, identification_t *id,
 {
 	pthread_rwlock_wrlock(&this->lock);
 	DESTROY_IF(this->user);
-	this->user = id->clone(id);
+	/* for EAP authentication, we use always use ID_EAP type */
+	this->user = identification_create_from_encoding(ID_EAP,
+													 id->get_encoding(id));
 	free(this->pass);
 	this->pass = strdup(password);
 	pthread_rwlock_unlock(&this->lock);
