@@ -179,7 +179,9 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	if (!widget)
 		return FALSE;
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("EAP"));
-	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Preshared Key"));
+	/* TODO: PSK is disabled until we have the possibility to enforce strong
+	 * secrets. 
+	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Preshared Key")); */
 	value = g_hash_table_lookup (settings->data, "method");
 	if (value) {
 		if (g_strcasecmp (value, "eap") == 0) {
