@@ -32,8 +32,14 @@ INSERT INTO identities (
 
 INSERT INTO identities (
   type, data
-) VALUES ( /* carol@strongswan.org */
-  3, X'6361726f6c407374726f6e677377616e2e6f7267'
+) VALUES ( /* moon.strongswan.org as an EAP identity */
+  205, X'6d6f6f6e2e7374726f6e677377616e2e6f7267'
+ );
+
+INSERT INTO identities (
+  type, data
+) VALUES ( /* carol@strongswan.org as an EAP identity */
+  205, X'6361726f6c407374726f6e677377616e2e6f7267'
  );
 
 /* Certificates */
@@ -105,13 +111,13 @@ INSERT INTO shared_secrets (
 INSERT INTO shared_secret_identity (
   shared_secret, identity
 ) VALUES (
-  1, 3
+  1, 6
 );
 
 INSERT INTO shared_secret_identity (
   shared_secret, identity
 ) VALUES (
-  1, 6
+  1, 7
 );
 
 /* Configurations */
