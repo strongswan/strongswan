@@ -163,7 +163,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 {
 	nm_creds_t *creds;
 	NMSettingVPN *settings;
-	identification_t *user = NULL;
+	identification_t *user = NULL, *gateway;
 	char *address, *str;
 	bool virtual, encap, ipcomp;
 	ike_cfg_t *ike_cfg;
@@ -173,6 +173,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	ike_sa_t *ike_sa;
 	auth_info_t *auth;
 	auth_class_t auth_class = AUTH_CLASS_EAP;
+	certificate_t *cert = NULL;
 	
 	/**
 	 * Read parameters
@@ -229,12 +230,17 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	str = g_hash_table_lookup(settings->data, "certificate");
 	if (str)
 	{
-		certificate_t *cert;
-		
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 								  BUILD_FROM_FILE, str, BUILD_END);
 		creds->set_certificate(creds, cert);
 	}
+	if (!cert)
+	{
+		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+				    "Loading certificate failed.");
+		return FALSE;
+	}
+	gateway = cert->get_subject(cert);
 	str = g_hash_table_lookup(settings->data, "password");
 	if (str)
 	{
@@ -246,8 +252,8 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	 */
 	ike_cfg = ike_cfg_create(TRUE, encap, "0.0.0.0", address);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
-	peer_cfg = peer_cfg_create(CONFIG_NAME, 2, ike_cfg, user,
-					identification_create_from_encoding(ID_ANY, chunk_empty),
+	peer_cfg = peer_cfg_create(CONFIG_NAME, 2, ike_cfg,
+					user, gateway->clone(gateway),
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 					18000, 0, /* rekey 5h, reauth none */
 					600, 600, /* jitter, over 10min */
