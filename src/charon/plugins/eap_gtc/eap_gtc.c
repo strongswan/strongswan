@@ -23,7 +23,7 @@
 
 #include <security/pam_appl.h>
 
-#define GTC_REQUEST_MSG "login"
+#define GTC_REQUEST_MSG "password"
 #define GTC_PAM_SERVICE "login"
 
 typedef struct private_eap_gtc_t private_eap_gtc_t;
@@ -166,7 +166,7 @@ static status_t process_peer(private_eap_gtc_t *this,
 	if (shared == NULL)
 	{
 		DBG1(DBG_IKE, "no EAP key found for '%D' - '%D'",
-			 this->server, this->peer);
+			 this->peer, this->server);
 		return FAILED;
 	}
 	key = shared->get_key(shared);
@@ -195,7 +195,7 @@ static status_t process_server(private_eap_gtc_t *this,
 							   eap_payload_t *in, eap_payload_t **out)
 {
 	chunk_t data, encoding;
-	char *user, *password, *service;
+	char *user, *password, *service, *pos;
 	
 	data = chunk_skip(in->get_data(in), 5);
 	if (this->identifier != in->get_identifier(in) || !data.len)
@@ -205,6 +205,12 @@ static status_t process_server(private_eap_gtc_t *this,
 	}
 	
 	encoding = this->peer->get_encoding(this->peer);
+	/* if a RFC822_ADDR id is provided, we use the username part only */
+	pos = memchr(encoding.ptr, '@', encoding.len);
+	if (pos)
+	{
+		encoding.len = (u_char*)pos - encoding.ptr;
+	}
 	user = alloca(encoding.len + 1);
 	memcpy(user, encoding.ptr, encoding.len);
 	user[encoding.len] = '\0';
