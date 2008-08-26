@@ -372,7 +372,7 @@ static status_t process_eap_identity(private_eap_authenticator_t *this,
 	if (this->method->get_msk(this->method, &data) == SUCCESS)
 	{
 		id = identification_create_from_encoding(ID_EAP, data);
-		DBG1(DBG_IKE, "using EAP Identity '%D'", id);
+		DBG1(DBG_IKE, "using EAP identity '%D'", id);
 		this->ike_sa->set_eap_identity(this->ike_sa, id);
 	}
 	/* restart EAP exchange, but with real method */
