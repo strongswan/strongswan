@@ -279,6 +279,8 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			auth_info_t *auth;
 			enumerator_t *auth_enumerator;
 			identification_t *my_ca = NULL, *other_ca = NULL;
+			identification_t *eap_identity = NULL;
+			u_int32_t *eap_type = NULL;
 
 			if (peer_cfg->get_ike_version(peer_cfg) != 2 ||
 				(name && !streq(name, peer_cfg->get_name(peer_cfg))))
@@ -293,6 +295,12 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			{
 				switch (item)
 				{
+					case AUTHN_EAP_TYPE:
+						eap_type = (u_int32_t *)ptr;
+						break;
+					case AUTHN_EAP_IDENTITY:
+						eap_identity = (identification_t *)ptr;
+						break;
 					case AUTHN_CA_CERT:
 						cert = (certificate_t *)ptr;
 						my_ca = cert->get_subject(cert);
@@ -337,8 +345,18 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 					fprintf(out, "%%any\n");
 				}
 			}
-			fprintf(out, "%12s:  %N authentication",  peer_cfg->get_name(peer_cfg),
+
+			fprintf(out, "%12s:  %N ",  peer_cfg->get_name(peer_cfg),
 					auth_class_names, get_auth_class(peer_cfg));
+			if (eap_type)
+			{
+				fprintf(out, "and %N ", eap_type_names, *eap_type);
+			}
+			fprintf(out, "authentication");
+			if (eap_identity)
+			{
+				fprintf(out, ", EAP identity: '%D'", eap_identity);
+			}
 			dpd = peer_cfg->get_dpd(peer_cfg);
 			if (dpd)
 			{
