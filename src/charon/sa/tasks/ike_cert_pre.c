@@ -336,20 +336,37 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (peer_cfg)
 	{
+		void *ptr;
+		identification_t *id;
 		auth_item_t item;
 		auth_info_t *auth = peer_cfg->get_auth(peer_cfg);
+		enumerator_t *auth_enumerator = auth->create_item_enumerator(auth);
 
-		enumerator = auth->create_item_enumerator(auth);
-		while (enumerator->enumerate(enumerator, &item, &cert))
+		while (auth_enumerator->enumerate(auth_enumerator, &item, &ptr))
 		{
-			if (item == AUTHZ_CA_CERT)
+			switch (item)
 			{
-				restricted = TRUE;
-				add_certreq_payload(message, &x509_req, cert);
+				case AUTHZ_CA_CERT:
+					cert = (certificate_t *)ptr;
+					add_certreq_payload(message, &x509_req, cert);
+					restricted = TRUE;
+					break;
+				case AUTHZ_CA_CERT_NAME:
+					id = (identification_t *)ptr;
+					enumerator = charon->credentials->create_cert_enumerator(
+							charon->credentials, CERT_ANY, KEY_ANY, id, TRUE);
+					while (enumerator->enumerate(enumerator, &cert, TRUE))
+					{
+						add_certreq_payload(message, &x509_req, cert);
+						restricted = TRUE;
+					}
+					enumerator->destroy(enumerator);
+					break;
+				default:
+					break;
 			}
-			/* TODO: handle AUTHZ_CA_CERT_NAME case */
 		}
-		enumerator->destroy(enumerator);
+		auth_enumerator->destroy(auth_enumerator);
 	}
 		
 	if (!restricted)

@@ -335,7 +335,9 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
  * build a peer_cfg from a stroke msg
  */
 static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
-								  stroke_msg_t *msg, ike_cfg_t *ike_cfg)
+								  stroke_msg_t *msg, ike_cfg_t *ike_cfg,
+								  identification_t **my_issuer,
+								  identification_t **other_issuer)
 {
 	identification_t *me, *other, *peer_id = NULL;
 	peer_cfg_t *mediated_by = NULL;
@@ -420,6 +422,9 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		cert = this->cred->load_peer(this->cred, msg->add_conn.me.cert);
 		if (cert)
 		{
+			identification_t *issuer = cert->get_issuer(cert);
+
+			*my_issuer = issuer->clone(issuer); 
 			this->ca->check_for_hash_and_url(this->ca, cert);
 			me = update_peerid(cert, me);
 			cert->destroy(cert);
@@ -430,6 +435,9 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		cert = this->cred->load_peer(this->cred, msg->add_conn.other.cert);
 		if (cert)
 		{
+			identification_t *issuer = cert->get_issuer(cert);
+
+			*other_issuer = issuer->clone(issuer); 
 			other = update_peerid(cert, other);
 			cert->destroy(cert);
 		}
@@ -511,9 +519,11 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
  * fill in auth_info from stroke message
  */
 static void build_auth_info(private_stroke_config_t *this,
-							stroke_msg_t *msg, auth_info_t *auth)
+							stroke_msg_t *msg, auth_info_t *auth,
+							identification_t *my_ca,
+							identification_t *other_ca)
 {
-	identification_t *my_ca = NULL, *other_ca = NULL, *id;
+	identification_t *id;
 	bool my_ca_same = FALSE;
 	bool other_ca_same = FALSE;
 	cert_validation_t valid;
@@ -539,6 +549,11 @@ static void build_auth_info(private_stroke_config_t *this,
 	
 	if (msg->add_conn.me.ca)
 	{
+		if (my_ca)
+		{
+			my_ca->destroy(my_ca);
+			my_ca = NULL;
+		}
 		if (streq(msg->add_conn.me.ca, "%same"))
 		{
 			my_ca_same = TRUE;
@@ -548,8 +563,14 @@ static void build_auth_info(private_stroke_config_t *this,
 			my_ca = identification_create_from_string(msg->add_conn.me.ca);
 		}
 	}
+
 	if (msg->add_conn.other.ca)
 	{
+		if (other_ca)
+		{
+			other_ca->destroy(other_ca);
+			other_ca = NULL;
+		}
 		if (streq(msg->add_conn.other.ca, "%same"))
 		{
 			other_ca_same = TRUE;
@@ -559,6 +580,7 @@ static void build_auth_info(private_stroke_config_t *this,
 			other_ca = identification_create_from_string(msg->add_conn.other.ca);
 		}
 	}
+
 	if (other_ca_same && my_ca)
 	{
 		other_ca = my_ca->clone(my_ca);
@@ -584,6 +606,7 @@ static void build_auth_info(private_stroke_config_t *this,
 		}
 		other_ca->destroy(other_ca);
 	}
+
 	if (my_ca)
 	{
 		DBG2(DBG_CFG, "  my ca:    %D", my_ca);
@@ -737,6 +760,7 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 	ike_cfg_t *ike_cfg, *existing_ike;
 	peer_cfg_t *peer_cfg, *existing;
 	child_cfg_t *child_cfg;
+	identification_t *my_issuer = NULL, *other_issuer = NULL;
 	enumerator_t *enumerator;
 	bool use_existing = FALSE;
 
@@ -745,14 +769,15 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 	{
 		return;
 	}
-	peer_cfg = build_peer_cfg(this, msg, ike_cfg);
+	peer_cfg = build_peer_cfg(this, msg, ike_cfg, &my_issuer, &other_issuer);
 	if (!peer_cfg)
 	{
 		ike_cfg->destroy(ike_cfg);
 		return;
 	}
 	
-	build_auth_info(this, msg, peer_cfg->get_auth(peer_cfg));
+	build_auth_info(this, msg, peer_cfg->get_auth(peer_cfg),
+					my_issuer, other_issuer);
 	enumerator = create_peer_cfg_enumerator(this, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &existing))
 	{

@@ -1181,6 +1181,7 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 				verify_trust_chain(this->this, this->pretrusted, this->auth,
 								   TRUE, this->crl, this->ocsp))
 			{
+				this->auth->add_item(this->auth, AUTHZ_CA_CERT, this->pretrusted);
 				DBG1(DBG_CFG, "  using trusted certificate \"%D\"",
 					 this->pretrusted->get_subject(this->pretrusted));
 				*cert = this->pretrusted;

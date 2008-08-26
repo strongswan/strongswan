@@ -236,7 +236,6 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	
 	if (all)
 	{
-		identification_t *any_issuer = identification_create_from_string("%any");
 		peer_cfg_t *peer_cfg;
 		char *plugin;
 		host_t *host;
@@ -274,11 +273,12 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends);
 		while (enumerator->enumerate(enumerator, (void**)&peer_cfg))
 		{
+			void *ptr;
+			certificate_t *cert;
 			auth_item_t item;
 			auth_info_t *auth;
 			enumerator_t *auth_enumerator;
-			certificate_t *cert;
-			identification_t *my_issuer = NULL, *other_issuer = NULL;
+			identification_t *my_ca = NULL, *other_ca = NULL;
 
 			if (peer_cfg->get_ike_version(peer_cfg) != 2 ||
 				(name && !streq(name, peer_cfg->get_name(peer_cfg))))
@@ -289,15 +289,23 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			/* determine any required CAs */
 			auth = peer_cfg->get_auth(peer_cfg);
 			auth_enumerator = auth->create_item_enumerator(auth);
-			while (auth_enumerator->enumerate(auth_enumerator, &item, &cert))
+			while (auth_enumerator->enumerate(auth_enumerator, &item, &ptr))
 			{
 				switch (item)
 				{
 					case AUTHN_CA_CERT:
-						my_issuer = cert->get_subject(cert);
+						cert = (certificate_t *)ptr;
+						my_ca = cert->get_subject(cert);
+						break;
+					case AUTHN_CA_CERT_NAME:
+						my_ca = (identification_t *)ptr;
 						break;
 					case AUTHZ_CA_CERT:
-						other_issuer = cert->get_subject(cert);
+						cert = (certificate_t *)ptr;
+						other_ca = cert->get_subject(cert);
+						break;
+					case AUTHZ_CA_CERT_NAME:
+						other_ca = (identification_t *)ptr;
 						break;
 					default:
 						break;
@@ -309,11 +317,25 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			fprintf(out, "%12s:  %s[%D]...%s[%D]\n", peer_cfg->get_name(peer_cfg),
 					ike_cfg->get_my_addr(ike_cfg), peer_cfg->get_my_id(peer_cfg),
 					ike_cfg->get_other_addr(ike_cfg), peer_cfg->get_other_id(peer_cfg));
-			if (my_issuer || other_issuer)
+			if (my_ca || other_ca)
 			{
-				fprintf(out, "%12s:  CAs: \"%D\"...\"%D\"\n", peer_cfg->get_name(peer_cfg),
-						my_issuer? my_issuer:any_issuer,
-						other_issuer? other_issuer:any_issuer);				
+				fprintf(out, "%12s:  CAs: ", peer_cfg->get_name(peer_cfg));
+				if (my_ca)
+				{
+					fprintf(out, "\"%D\"...", my_ca);
+				}
+				else
+				{
+					fprintf(out, "%%any...");
+				}
+				if (other_ca)
+				{
+					fprintf(out, "\"%D\"\n", other_ca);
+				}
+				else
+				{
+					fprintf(out, "%%any\n");
+				}
 			}
 			fprintf(out, "%12s:  %N authentication",  peer_cfg->get_name(peer_cfg),
 					auth_class_names, get_auth_class(peer_cfg));
@@ -348,7 +370,6 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			children->destroy(children);
 		}
 		enumerator->destroy(enumerator);
-		any_issuer->destroy(any_issuer);
 	}
 	
 	fprintf(out, "Security Associations:\n");
