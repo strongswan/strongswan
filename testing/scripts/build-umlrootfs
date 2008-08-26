@@ -155,6 +155,11 @@ then
     echo -n " --enable-eap-md5" >> $INSTALLSHELL
     fi
 
+if [ "$USE_EAP_IDENTITY" = "yes" ]
+then
+    echo -n " --enable-eap-identity" >> $INSTALLSHELL
+fi
+
 if [ "$USE_SQL" = "yes" ]
 then
     echo -n " --enable-sql --enable-sqlite" >> $INSTALLSHELL
