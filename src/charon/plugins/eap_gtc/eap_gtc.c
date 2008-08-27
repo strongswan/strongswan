@@ -120,7 +120,16 @@ static bool authenticate(char *service, char *user, char *password)
 		return FALSE;
 	}
 	ret = pam_authenticate(pamh, 0);
-	if (ret != PAM_SUCCESS)
+	if (ret == PAM_SUCCESS)
+	{
+		ret = pam_acct_mgmt(pamh, 0);
+		if (ret != PAM_SUCCESS)
+		{
+			DBG1(DBG_IKE, "EAP-GTC pam_acct_mgmt failed: %s",
+				 pam_strerror(pamh, ret));
+		}
+	}
+	else
 	{
 		DBG1(DBG_IKE, "EAP-GTC pam_authenticate failed: %s",
 			 pam_strerror(pamh, ret));
