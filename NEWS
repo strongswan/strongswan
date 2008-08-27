@@ -1,3 +1,16 @@
+strongswan-4.2.6
+----------------
+
+- The "ipsec statusall" command now lists CA restrictions, EAP
+  authentication types and EAP identities.
+
+- Fixed two multithreading deadlocks occurring when starting up
+  several hundred tunnels concurrently.
+
+- Fixed the --enable-integrity-test configure option which
+  computes a SHA-1 checksum over the libstrongswan library.
+
+
 strongswan-4.2.5
 ----------------
 
