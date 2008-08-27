@@ -1,0 +1,14 @@
+#!/usr/bin/make -f
+  
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/rules/simple-patchsys.mk
+include /usr/share/cdbs/1/class/autotools.mk
+
+makebuilddir/network-manager-vpnc:: debian/stamp-bootstrap
+
+debian/stamp-bootstrap:
+	NOCONFIGURE=1 ./autogen.sh
+	touch debian/stamp-bootstrap
+
+clean::
+	[ ! -f Makefile ] || $(MAKE) clean

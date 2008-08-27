@@ -1,0 +1,6 @@
+network-manager-strongswan (4.2.6-2) hardy; urgency=low
+
+  * new package based on network-manager-vpnc
+
+ -- Martin Willi <martin@strongswan.org>  Tue, 26 Aug 2008 14:40:48 +0200
+

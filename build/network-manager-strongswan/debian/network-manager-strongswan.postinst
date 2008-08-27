@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+	configure)
+		if [ -x "/etc/dbus-1/event.d/25NetworkManager" ]; then
+			/etc/dbus-1/event.d/25NetworkManager restart
+		fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

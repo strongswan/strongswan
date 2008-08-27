@@ -1,0 +1,28 @@
+Source: network-manager-strongswan
+Section: net
+Priority: extra
+Maintainer: Martin Willi <martin@strongswan.org>
+Build-Depends: cdbs,
+	debhelper (>= 5),
+	network-manager-dev (>= 0.7~~svn20080818),
+	libnm-glib-dev (>= 0.7~~svn20080818),
+	automake1.9,
+	gnome-common,
+	intltool,
+	libgnomeui-dev,
+	libdbus-glib-1-dev,
+	patchutils
+Standards-Version: 3.7.3.0
+
+Package: network-manager-strongswan
+Architecture: any
+Depends: strongswan-nm
+Description: network management framework (strongSwan plugin)
+ NetworkManager attempts to keep an active network connection available at
+ all times.  It is intended primarily for laptops where it allows easy
+ switching betwen local wireless networks, it's also useful on desktops
+ with a selection of different interfaces to use.  It is not intended for
+ usage on servers.
+ .
+ This package provides a VPN plugin for strongSwan, providing easy access to
+ IKEv2 IPSec VPN's.
