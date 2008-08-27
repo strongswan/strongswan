@@ -1,6 +1,20 @@
 strongswan-4.2.6
 ----------------
 
+- A NetworkManager plugin allows GUI-based configuration of road-warrior
+  clients in a simple way. It features X509 based gateway authentication
+  and EAP client authentication, tunnel setup/teardown and storing passwords
+  in the Gnome Keyring.
+
+- A new EAP-GTC plugin implements draft-sheffer-ikev2-gtc-00.txt and allows
+  username/password authentication against any PAM service on the gateway.
+  The new EAP method interacts nicely with the NetworkManager plugin and allows 
+  client authentication against e.g. LDAP.
+
+- Improved support for the EAP-Identity method. The new ipsec.conf eap_identity
+  parameter defines an additional identity to pass to the server in EAP
+  authentication.
+
 - The "ipsec statusall" command now lists CA restrictions, EAP
   authentication types and EAP identities.
 
