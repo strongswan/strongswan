@@ -1,4 +1,5 @@
-EXTRA_DIST = ext/dumm.c ext/extconf.rb ext/README
+EXTRA_DIST = ext/dumm.c ext/extconf.rb ext/README \
+  ext/lib/dumm.rb ext/lib/dumm/guest.rb
 
 lib_LTLIBRARIES = libdumm.la
 ipsec_PROGRAMS = dumm irdumm

@@ -87,14 +87,18 @@ static void sigchld_handler(int signal, siginfo_t *info, void* ptr)
 	enumerator->destroy(enumerator);
 }
 
+
+
 /**
  * Guest bindings
  */
-static VALUE guest_get(VALUE class, VALUE key)
+static VALUE guest_find(VALUE class, VALUE key)
 {
 	enumerator_t *enumerator;
 	guest_t *guest, *found = NULL;
-	
+	if (TYPE(key) == T_SYMBOL) {
+		key = rb_convert_type(key, T_STRING, "String", "to_s");
+	}
 	enumerator = dumm->create_guest_enumerator(dumm);
 	while (enumerator->enumerate(enumerator, &guest))
 	{
@@ -107,9 +111,24 @@ static VALUE guest_get(VALUE class, VALUE key)
 	enumerator->destroy(enumerator);
 	if (!found)
 	{
-		rb_raise(rb_eRuntimeError, "guest not found");
+		return Qnil;
 	}
 	return Data_Wrap_Struct(class, NULL, NULL, found);
+}
+
+static VALUE guest_get(VALUE class, VALUE key)
+{
+	VALUE guest = guest_find(class, key);
+	if (NIL_P(guest))
+	{
+		rb_raise(rb_eRuntimeError, "guest not found");
+	}
+	return guest;
+}
+
+static VALUE guest_exist(VALUE class, VALUE key)
+{
+	return NIL_P(guest_find(class, key)) ? Qfalse : Qtrue;
 }
 
 static VALUE guest_each(int argc, VALUE *argv, VALUE class)
@@ -174,6 +193,14 @@ static VALUE guest_stop(VALUE self)
 	return self;
 }
 
+static VALUE guest_running(VALUE self)
+{
+	guest_t *guest;
+	
+	Data_Get_Struct(self, guest_t, guest);
+	return guest->get_pid(guest) ? Qtrue : Qfalse;
+}
+
 static void exec_cb(void *data, char *buf)
 {
 	rb_yield(rb_str_new2(buf));
@@ -209,12 +236,14 @@ static VALUE guest_add_iface(VALUE self, VALUE name)
 	return Data_Wrap_Struct(rbc_iface, NULL, NULL, iface);
 }
 
-static VALUE guest_get_iface(VALUE self, VALUE key)
+static VALUE guest_find_iface(VALUE self, VALUE key)
 {
 	enumerator_t *enumerator;
 	iface_t *iface, *found = NULL;
 	guest_t *guest;
-	
+	if (TYPE(key) == T_SYMBOL) {
+		key = rb_convert_type(key, T_STRING, "String", "to_s");
+	}
 	Data_Get_Struct(self, guest_t, guest);
 	enumerator = guest->create_iface_enumerator(guest);
 	while (enumerator->enumerate(enumerator, &iface))
@@ -228,9 +257,24 @@ static VALUE guest_get_iface(VALUE self, VALUE key)
 	enumerator->destroy(enumerator);
 	if (!found)
 	{
-		rb_raise(rb_eRuntimeError, "interface not found");
+		return Qnil;
 	}
 	return Data_Wrap_Struct(rbc_iface, NULL, NULL, iface);
+}
+
+static VALUE guest_get_iface(VALUE self, VALUE key)
+{
+	VALUE iface = guest_find_iface(self, key);
+	if (NIL_P(iface))
+	{
+		rb_raise(rb_eRuntimeError, "interface not found");
+	}
+	return iface;
+}
+
+static VALUE guest_exist_iface(VALUE self, VALUE key)
+{
+	return NIL_P(guest_find_iface(self, key)) ? Qfalse : Qtrue;
 }
 
 static VALUE guest_each_iface(int argc, VALUE *argv, VALUE self)
@@ -265,19 +309,26 @@ static VALUE guest_delete(VALUE self)
 static void guest_init()
 {
 	rbc_guest = rb_define_class_under(rbm_dumm , "Guest", rb_cObject);
+	rb_include_module(rb_class_of(rbc_guest), rb_mEnumerable);
+	rb_include_module(rbc_guest, rb_mEnumerable);
+	
 	rb_define_singleton_method(rbc_guest, "[]", guest_get, 1);
 	rb_define_singleton_method(rbc_guest, "each", guest_each, -1);
 	rb_define_singleton_method(rbc_guest, "new", guest_new, 4);
+	rb_define_singleton_method(rbc_guest, "include?", guest_exist, 1);
+	rb_define_singleton_method(rbc_guest, "guest?", guest_exist, 1);
+	
 	rb_define_method(rbc_guest, "to_s", guest_to_s, 0);
 	rb_define_method(rbc_guest, "start", guest_start, 0);
 	rb_define_method(rbc_guest, "stop", guest_stop, 0);
+	rb_define_method(rbc_guest, "running?", guest_running, 0);
 	rb_define_method(rbc_guest, "exec", guest_exec, 1);
 	rb_define_method(rbc_guest, "add", guest_add_iface, 1);
 	rb_define_method(rbc_guest, "[]", guest_get_iface, 1);
 	rb_define_method(rbc_guest, "each", guest_each_iface, -1);
+	rb_define_method(rbc_guest, "include?", guest_exist_iface, 1);
+	rb_define_method(rbc_guest, "iface?", guest_exist_iface, 1);
 	rb_define_method(rbc_guest, "delete", guest_delete, 0);
-	rb_include_module(rb_class_of(rbc_guest), rb_mEnumerable);
-	rb_include_module(rbc_guest, rb_mEnumerable);
 }
 
 /**
@@ -376,14 +427,16 @@ static VALUE bridge_delete(VALUE self)
 static void bridge_init()
 {
 	rbc_bridge = rb_define_class_under(rbm_dumm , "Bridge", rb_cObject);
+	rb_include_module(rb_class_of(rbc_bridge), rb_mEnumerable);
+	rb_include_module(rbc_bridge, rb_mEnumerable);
+	
 	rb_define_singleton_method(rbc_bridge, "[]", bridge_get, 1);
 	rb_define_singleton_method(rbc_bridge, "each", bridge_each, -1);
 	rb_define_singleton_method(rbc_bridge, "new", bridge_new, 1);
+	
 	rb_define_method(rbc_bridge, "to_s", bridge_to_s, 0);
 	rb_define_method(rbc_bridge, "each", bridge_each_iface, -1);
 	rb_define_method(rbc_bridge, "delete", bridge_delete, 0);
-	rb_include_module(rb_class_of(rbc_bridge), rb_mEnumerable);
-	rb_include_module(rbc_bridge, rb_mEnumerable);
 }
 
 /**
@@ -438,7 +491,12 @@ static VALUE iface_add_addr(VALUE self, VALUE name)
 	Data_Get_Struct(self, iface_t, iface);
 	if (!iface->add_address(iface, addr))
 	{
+		addr->destroy(addr);
 		rb_raise(rb_eRuntimeError, "adding address failed");
+	}
+	if (rb_block_given_p()) {
+		rb_yield(self);
+		iface->delete_address(iface, addr);
 	}
 	addr->destroy(addr);
 	return self;
@@ -482,6 +540,10 @@ static VALUE iface_del_addr(VALUE self, VALUE vaddr)
 		addr->destroy(addr);
 		rb_raise(rb_eRuntimeError, "address not found");
 	}
+	if (rb_block_given_p()) {
+		rb_yield(self);
+		iface->add_address(iface, addr);
+	}
 	addr->destroy(addr);
 	return self;
 }
@@ -500,6 +562,8 @@ static VALUE iface_delete(VALUE self)
 static void iface_init()
 {
 	rbc_iface = rb_define_class_under(rbm_dumm , "Iface", rb_cObject);
+	rb_include_module(rbc_iface, rb_mEnumerable);
+	
 	rb_define_method(rbc_iface, "to_s", iface_to_s, 0);
 	rb_define_method(rbc_iface, "connect", iface_connect, 1);
 	rb_define_method(rbc_iface, "disconnect", iface_disconnect, 0);
@@ -507,7 +571,6 @@ static void iface_init()
 	rb_define_method(rbc_iface, "del", iface_del_addr, 1);
 	rb_define_method(rbc_iface, "each", iface_each_addr, -1);
 	rb_define_method(rbc_iface, "delete", iface_delete, 0);
-	rb_include_module(rbc_iface, rb_mEnumerable);
 }
 
 static VALUE template_load(VALUE class, VALUE name)
@@ -531,6 +594,7 @@ static VALUE template_unload(VALUE class)
 static void template_init()
 {
 	rbc_template = rb_define_class_under(rbm_dumm , "Template", rb_cObject);
+	
 	rb_define_singleton_method(rbc_template, "load", template_load, 1);
 	rb_define_singleton_method(rbc_template, "unload", template_unload, 0);
 }

@@ -214,6 +214,7 @@ static void stop(private_guest_t *this, idle_function_t idle)
 			}
 		}
 		unlinkat(this->dir, PID_FILE, 0);
+		this->pid = 0;
 	}
 }
 
