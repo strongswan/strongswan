@@ -53,9 +53,9 @@ struct nm_creds_t {
 	void (*set_password)(nm_creds_t *this, identification_t *id, char *password);
 	
 	/**
-     * Destroy a nm_creds instance.
-     */
-    void (*destroy)(nm_creds_t *this);
+	 * Destroy a nm_creds instance.
+	 */
+	void (*destroy)(nm_creds_t *this);
 };
 
 /**
