@@ -750,20 +750,17 @@ fi
 if test x$des = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" des"
 fi
-if test x$md5 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" md5"
-fi
 if test x$sha1 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha1"
 fi
 if test x$sha2 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha2"
 fi
+if test x$md5 = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" md5"
+fi
 if test x$fips_prf = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
-fi
-if test x$gmp = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 fi
 if test x$random = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" random"
@@ -774,11 +771,11 @@ fi
 if test x$pubkey = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
 fi
-if test x$hmac = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
-fi
 if test x$xcbc = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
+fi
+if test x$hmac = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
 fi
 if test x$mysql = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" mysql"
@@ -791,6 +788,9 @@ if test x$padlock = xtrue; then
 fi
 if test x$openssl = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" openssl"
+fi
+if test x$gmp = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 fi
 
 AC_SUBST(libstrongswan_plugins)

@@ -52,9 +52,9 @@ plugin_t *plugin_create()
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
-	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
-							 (crypter_constructor_t)des_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
+							 (crypter_constructor_t)des_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
 							 (crypter_constructor_t)des_crypter_create);
 	
 	return &this->public.plugin;

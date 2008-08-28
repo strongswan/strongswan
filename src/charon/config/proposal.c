@@ -938,6 +938,112 @@ proposal_t *proposal_create(protocol_id_t protocol)
 	return &this->public;
 }
 
+/**
+ * Add supported IKE algorithms to proposal
+ */
+static void proposal_add_supported_ike(private_proposal_t *this)
+{
+	enumerator_t *enumerator;
+	encryption_algorithm_t encryption;
+	integrity_algorithm_t integrity;
+	pseudo_random_function_t prf;
+	diffie_hellman_group_t group;
+	
+	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &encryption))
+	{
+		switch (encryption)
+		{
+			case ENCR_AES_CBC:
+				/* we assume that we support all AES sizes */
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 128);
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 192);
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
+				break;
+			case ENCR_3DES:
+			case ENCR_AES_CTR:
+			case ENCR_AES_CCM_ICV8:
+			case ENCR_AES_CCM_ICV12:
+			case ENCR_AES_CCM_ICV16:
+			case ENCR_AES_GCM_ICV8:
+			case ENCR_AES_GCM_ICV12:
+			case ENCR_AES_GCM_ICV16:
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 0);
+				break;
+			case ENCR_DES:
+				/* no, thanks */
+				break;
+			default:
+				break;
+		}	
+	}
+	enumerator->destroy(enumerator);
+	
+	enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &integrity))
+	{
+		switch (integrity)
+		{
+			case AUTH_HMAC_SHA1_96:
+			case AUTH_HMAC_SHA2_256_128:
+			case AUTH_HMAC_SHA2_384_192:
+			case AUTH_HMAC_SHA2_512_256:
+			case AUTH_HMAC_MD5_96:
+			case AUTH_AES_XCBC_96:
+				add_algorithm(this, INTEGRITY_ALGORITHM, integrity, 0);
+				break;
+			default:
+				break;
+		}	
+	}
+	enumerator->destroy(enumerator);
+	
+	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &prf))
+	{
+		switch (prf)
+		{
+			case PRF_HMAC_SHA1:
+			case PRF_HMAC_SHA2_256:
+			case PRF_HMAC_SHA2_384:
+			case PRF_HMAC_SHA2_512:
+			case PRF_HMAC_MD5:
+			case PRF_AES128_XCBC:
+				add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	
+	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &group))
+	{
+		switch (group)
+		{
+			case MODP_768_BIT:
+				/* weak */
+				break;
+			case MODP_1024_BIT:
+			case MODP_1536_BIT:
+			case MODP_2048_BIT:
+			case MODP_4096_BIT:
+			case MODP_8192_BIT:
+			case ECP_256_BIT:
+			case ECP_384_BIT:
+			case ECP_521_BIT:
+			case ECP_192_BIT:
+			case ECP_224_BIT:
+				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 /*
  * Describtion in header-file
  */
@@ -948,27 +1054,7 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 	switch (protocol)
 	{
 		case PROTO_IKE:
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         128);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         192);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         256);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,              0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_AES_XCBC_96,       0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_256_128, 0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_384_192, 0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_512_256, 0);
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_AES128_XCBC,        0);
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_256,      0);
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1,          0);
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5,           0);
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_384,      0);
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_512,      0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_2048_BIT,          0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1536_BIT,          0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1024_BIT,          0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_4096_BIT,          0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_8192_BIT,          0);
+			proposal_add_supported_ike(this);
 			break;
 		case PROTO_ESP:
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         128);
@@ -990,7 +1076,6 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 		default:
 			break;
 	}
-	
 	return &this->public;
 }
 

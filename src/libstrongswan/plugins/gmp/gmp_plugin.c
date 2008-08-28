@@ -58,13 +58,9 @@ plugin_t *plugin_create()
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
-	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, 
-						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT, 
 						(dh_constructor_t)gmp_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT, 
-						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT, 
 						(dh_constructor_t)gmp_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, 
 						(dh_constructor_t)gmp_diffie_hellman_create);
@@ -73,6 +69,10 @@ plugin_t *plugin_create()
 	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, 
 						(dh_constructor_t)gmp_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, 
+						(dh_constructor_t)gmp_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT,
+						(dh_constructor_t)gmp_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, 
 						(dh_constructor_t)gmp_diffie_hellman_create);
 	
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,

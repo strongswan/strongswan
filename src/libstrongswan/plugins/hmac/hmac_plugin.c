@@ -55,24 +55,24 @@ plugin_t *plugin_create()
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_MD5, 
+	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_256, 
 						 (prf_constructor_t)hmac_prf_create);
 	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA1, 
 						 (prf_constructor_t)hmac_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_256, 
+	lib->crypto->add_prf(lib->crypto, PRF_HMAC_MD5, 
 						 (prf_constructor_t)hmac_prf_create);
 	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_384, 
 						 (prf_constructor_t)hmac_prf_create);
 	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_512, 
 						 (prf_constructor_t)hmac_prf_create);
 	
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_96, 
-							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_96, 
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_128, 
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_128, 
+							(signer_constructor_t)hmac_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_96, 
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_192, 
 							(signer_constructor_t)hmac_signer_create);

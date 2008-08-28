@@ -87,7 +87,7 @@ plugin_t *plugin_create()
 	ENGINE_register_all_complete();
 	
 	/* crypter */
-	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
+	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
 					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
 					(crypter_constructor_t)openssl_crypter_create);
@@ -99,9 +99,9 @@ plugin_t *plugin_create()
 					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_NULL,
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
+	lib->crypto->add_crypter(lib->crypto, ENCR_NULL,
 					(crypter_constructor_t)openssl_crypter_create);
 	
 	/* hasher */
@@ -118,24 +118,6 @@ plugin_t *plugin_create()
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
 					(hasher_constructor_t)openssl_hasher_create);
 	
-	/* diffie hellman */
-	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, 
-						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT,
-						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT, 
-						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT, 
-						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, 
-						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT, 
-						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, 
-						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, 
-						(dh_constructor_t)openssl_diffie_hellman_create);
-	
 	/* ec diffie hellman */
 	lib->crypto->add_dh(lib->crypto, ECP_192_BIT,
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
@@ -147,6 +129,24 @@ plugin_t *plugin_create()
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, ECP_521_BIT,
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
+	
+	/* diffie hellman */
+	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT,
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, 
+						(dh_constructor_t)openssl_diffie_hellman_create);
 	
 	/* rsa */
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
