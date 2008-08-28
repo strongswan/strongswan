@@ -86,6 +86,8 @@ void library_init(char *settings)
 	private_library_t *this = malloc_thing(private_library_t);
 	lib = &this->public;
 	
+	lib->leak_detective = FALSE;
+	
 #ifdef LEAK_DETECTIVE
 	this->detective = leak_detective_create();
 #endif /* LEAK_DETECTIVE */

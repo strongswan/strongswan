@@ -80,6 +80,11 @@ struct private_daemon_t {
 	 * The thread_id of main-thread.
 	 */
 	pthread_t main_thread_id;
+	
+	/**
+	 * capabilities to keep
+	 */
+	u_int32_t keep;
 };
 
 /**
@@ -247,41 +252,20 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 /**
  * drop daemon capabilities
  */
-static void drop_capabilities(private_daemon_t *this, bool full)
+static void drop_capabilities(private_daemon_t *this)
 {
 	struct __user_cap_header_struct hdr;
 	struct __user_cap_data_struct data;
 	
-	/* CAP_NET_ADMIN is needed to use netlink,
-	 * CAP_AUDIT_WRITE for PAM authentication in EAP-GTC */
-	u_int32_t keep = (1<<CAP_NET_ADMIN) | (1<<CAP_SYS_NICE) |
-					 (1<<CAP_AUDIT_WRITE);
-	
-	if (full)
+	prctl(PR_SET_KEEPCAPS, 1);
+
+	if (setgid(charon->gid) != 0)
 	{
-		if (setgid(charon->gid) != 0)
-		{
-			kill_daemon(this, "change to unprivileged group failed");	
-		}
-		if (setuid(charon->uid) != 0)
-		{
-			kill_daemon(this, "change to unprivileged user failed");	
-		}
+		kill_daemon(this, "change to unprivileged group failed");	
 	}
-	else
+	if (setuid(charon->uid) != 0)
 	{
-		/* CAP_NET_BIND_SERVICE to bind services below port 1024 */
-		keep |= (1<<CAP_NET_BIND_SERVICE);
-		/* CAP_NET_RAW to create RAW sockets */
-		keep |= (1<<CAP_NET_RAW);
-		/* CAP_DAC_READ_SEARCH to read ipsec.secrets */
-		keep |= (1<<CAP_DAC_READ_SEARCH);
-		/* CAP_CHOWN to change file permissions (socket permissions) */
-		keep |= (1<<CAP_CHOWN);
-		/* CAP_SETUID to call setuid()  */
-		keep |= (1<<CAP_SETUID);
-		/* CAP_SETGID to call setgid() */
-		keep |= (1<<CAP_SETGID);
+		kill_daemon(this, "change to unprivileged user failed");	
 	}
 
 	/* we use the old capset version for now. For systems with version 2
@@ -292,12 +276,20 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	hdr.version = _LINUX_CAPABILITY_VERSION;
 #endif
 	hdr.pid = 0;
-	data.inheritable = data.effective = data.permitted = keep;
+	data.inheritable = data.effective = data.permitted = this->keep;
 	
 	if (capset(&hdr, &data))
 	{
 		kill_daemon(this, "unable to drop daemon capabilities");
 	}
+}
+
+/**
+ * Implementation of daemon_t.keep_cap
+ */
+static void keep_cap(private_daemon_t *this, u_int cap)
+{
+	this->keep |= 1 << cap;
 }
 
 /**
@@ -479,6 +471,7 @@ private_daemon_t *daemon_create(void)
 		
 	/* assign methods */
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
+	this->public.keep_cap = (void(*)(daemon_t*, u_int cap))keep_cap;
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
@@ -505,6 +498,11 @@ private_daemon_t *daemon_create(void)
 	this->public.gid = 0;
 	
 	this->main_thread_id = pthread_self();
+	this->keep = 1<<CAP_NET_ADMIN;
+	if (lib->leak_detective)
+	{
+		this->keep = 1<<CAP_SYS_NICE;
+	}
 	
 	/* add handler for SEGV and ILL,
 	 * add handler for USR1 (cancellation).
@@ -573,10 +571,6 @@ int main(int argc, char *argv[])
 	charon = (daemon_t*)private_charon;
 	
 	lookup_uid_gid(private_charon);
-	
-	/* drop the capabilities we won't need for initialization */
-	prctl(PR_SET_KEEPCAPS, 1);
-	drop_capabilities(private_charon, FALSE);
 	
 	/* use CTRL loglevel for default */
 	for (signal = 0; signal < DBG_MAX; signal++)
@@ -653,8 +647,8 @@ int main(int argc, char *argv[])
 		fclose(pid_file);
 	}
 	
-	/* drop additional capabilites (bind & root) */
-	drop_capabilities(private_charon, TRUE);
+	/* drop the capabilities we won't need */
+	drop_capabilities(private_charon);
 	
 	/* start the engine, go multithreaded */
 	charon->processor->set_threads(charon->processor,

@@ -560,6 +560,7 @@ leak_detective_t *leak_detective_create()
 	
 	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
 	{
+		lib->leak_detective = TRUE;
 		install_hooks();
 	}
 	return &this->public;

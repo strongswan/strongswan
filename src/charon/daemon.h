@@ -303,6 +303,15 @@ struct daemon_t {
 	gid_t gid;
 	
 	/**
+	 * Do not drop a given capability after initialization.
+	 *
+	 * Some plugins might need additional capabilites. They tell the daemon
+	 * during plugin initialization which one they need, the daemon won't
+	 * drop these.
+	 */
+	void (*keep_cap)(daemon_t *this, u_int cap);
+	
+	/**
 	 * Shut down the daemon.
 	 * 
 	 * @param reason		describtion why it will be killed

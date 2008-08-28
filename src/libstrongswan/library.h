@@ -108,6 +108,11 @@ struct library_t {
 	 * various settings loaded from settings file
 	 */
 	settings_t *settings;
+	
+	/**
+	 * is leak detective running?
+	 */
+	bool leak_detective;
 };
 
 /**

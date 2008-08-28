@@ -21,6 +21,8 @@
 
 #include <daemon.h>
 
+#include <linux/capability.h>
+
 /**
  * Implementation of plugin_t.destroy
  */
@@ -41,6 +43,9 @@ plugin_t *plugin_create()
 	eap_gtc_plugin_t *this = malloc_thing(eap_gtc_plugin_t);
 	
 	this->plugin.destroy = (void(*)(plugin_t*))destroy;
+	
+	/* required for PAM authentication */
+	charon->keep_cap(charon, CAP_AUDIT_WRITE);
 	
 	charon->eap->add_method(charon->eap, EAP_GTC, 0, EAP_SERVER,
 							(eap_constructor_t)eap_gtc_create_server);
