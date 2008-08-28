@@ -19,6 +19,7 @@
 
 #include <library.h>
 #include "sha1_hasher.h"
+#include "sha1_prf.h"
 
 typedef struct private_sha1_plugin_t private_sha1_plugin_t;
 
@@ -41,7 +42,7 @@ static void destroy(private_sha1_plugin_t *this)
 	lib->crypto->remove_hasher(lib->crypto,
 							   (hasher_constructor_t)sha1_hasher_create);
 	lib->crypto->remove_prf(lib->crypto,
-							   (prf_constructor_t)sha1_keyed_prf_create);
+							   (prf_constructor_t)sha1_prf_create);
 	free(this);
 }
 
@@ -57,7 +58,7 @@ plugin_t *plugin_create()
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
 							(hasher_constructor_t)sha1_hasher_create);
 	lib->crypto->add_prf(lib->crypto, PRF_KEYED_SHA1,
-							(prf_constructor_t)sha1_keyed_prf_create);
+							(prf_constructor_t)sha1_prf_create);
 	
 	return &this->public.plugin;
 }

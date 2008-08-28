@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2005-2008 Martin Willi
- * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,34 +14,34 @@
  */
 
 /**
- * @defgroup sha1_hasher sha1_hasher
+ * @defgroup sha1_prf sha1_prf
  * @{ @ingroup sha1_p
  */
 
-#ifndef SHA1_HASHER_H_
-#define SHA1_HASHER_H_
+#ifndef SHA1_PRF_H_
+#define SHA1_PRF_H_
 
-typedef struct sha1_hasher_t sha1_hasher_t;
+typedef struct sha1_prf_t sha1_prf_t;
 
-#include <crypto/hashers/hasher.h>
+#include <crypto/prfs/prf.h>
 
 /**
- * Implementation of hasher_t interface using the SHA1 algorithm.
+ * Implementation of prf_t interface using keyed SHA1 algorithm (used for EAP-AKA).
  */
-struct sha1_hasher_t {
+struct sha1_prf_t {
 	
 	/**
-	 * Implements hasher_t interface.
+	 * Implements prf_t interface.
 	 */
-	hasher_t hasher_interface;
+	prf_t prf_interface;
 };
 
 /**
- * Creates a new sha1_hasher_t.
+ * Creates a new sha1_prf_t.
  *
- * @param algo		algorithm, must be HASH_SHA1
- * @return			sha1_hasher_t object
+ * @param algo		algorithm, must be PRF_KEYED_SHA1
+ * @return			sha1_keyed_prf_tobject
  */
-sha1_hasher_t *sha1_hasher_create(hash_algorithm_t algo);
+sha1_prf_t *sha1_prf_create(pseudo_random_function_t algo);
 
-#endif /*SHA1_HASHER_H_ @}*/
+#endif /*SHA1_PRF_H_ @}*/
