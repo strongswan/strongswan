@@ -311,7 +311,7 @@ static bool load_template(private_guest_t *this, char *path)
 	}
 	if (access(dir, F_OK) != 0)
 	{
-		if (mkdir(dir, PERME) != 0)
+		if (!mkdir_p(dir, PERME))
 		{
 			DBG1("creating overlay for guest '%s' failed: %m", this->name);
 			return FALSE;

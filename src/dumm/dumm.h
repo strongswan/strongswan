@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -84,10 +85,10 @@ struct dumm_t {
 	/**
 	 * @brief Loads a template, create a new one if it does not exist.
 	 *
-	 * @param name		name of the template, NULL to close
+	 * @param name		dir to the template, NULL to close
 	 * @return			FALSE if load/create failed
 	 */
-	bool (*load_template)(dumm_t *this, char *name);
+	bool (*load_template)(dumm_t *this, char *dir);
 	
 	/**
 	 * @brief stop all guests and destroy the modeler

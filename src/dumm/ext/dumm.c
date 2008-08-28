@@ -126,11 +126,6 @@ static VALUE guest_get(VALUE class, VALUE key)
 	return guest;
 }
 
-static VALUE guest_exist(VALUE class, VALUE key)
-{
-	return NIL_P(guest_find(class, key)) ? Qfalse : Qtrue;
-}
-
 static VALUE guest_each(int argc, VALUE *argv, VALUE class)
 {
 	enumerator_t *enumerator;
@@ -272,11 +267,6 @@ static VALUE guest_get_iface(VALUE self, VALUE key)
 	return iface;
 }
 
-static VALUE guest_exist_iface(VALUE self, VALUE key)
-{
-	return NIL_P(guest_find_iface(self, key)) ? Qfalse : Qtrue;
-}
-
 static VALUE guest_each_iface(int argc, VALUE *argv, VALUE self)
 {
 	enumerator_t *enumerator;
@@ -315,8 +305,8 @@ static void guest_init()
 	rb_define_singleton_method(rbc_guest, "[]", guest_get, 1);
 	rb_define_singleton_method(rbc_guest, "each", guest_each, -1);
 	rb_define_singleton_method(rbc_guest, "new", guest_new, 4);
-	rb_define_singleton_method(rbc_guest, "include?", guest_exist, 1);
-	rb_define_singleton_method(rbc_guest, "guest?", guest_exist, 1);
+	rb_define_singleton_method(rbc_guest, "include?", guest_find, 1);
+	rb_define_singleton_method(rbc_guest, "guest?", guest_find, 1);
 	
 	rb_define_method(rbc_guest, "to_s", guest_to_s, 0);
 	rb_define_method(rbc_guest, "start", guest_start, 0);
@@ -326,8 +316,8 @@ static void guest_init()
 	rb_define_method(rbc_guest, "add", guest_add_iface, 1);
 	rb_define_method(rbc_guest, "[]", guest_get_iface, 1);
 	rb_define_method(rbc_guest, "each", guest_each_iface, -1);
-	rb_define_method(rbc_guest, "include?", guest_exist_iface, 1);
-	rb_define_method(rbc_guest, "iface?", guest_exist_iface, 1);
+	rb_define_method(rbc_guest, "include?", guest_find_iface, 1);
+	rb_define_method(rbc_guest, "iface?", guest_find_iface, 1);
 	rb_define_method(rbc_guest, "delete", guest_delete, 0);
 }
 
@@ -573,9 +563,9 @@ static void iface_init()
 	rb_define_method(rbc_iface, "delete", iface_delete, 0);
 }
 
-static VALUE template_load(VALUE class, VALUE name)
+static VALUE template_load(VALUE class, VALUE dir)
 {
-	if (!dumm->load_template(dumm, StringValuePtr(name)))
+	if (!dumm->load_template(dumm, StringValuePtr(dir)))
 	{
 		rb_raise(rb_eRuntimeError, "loading template failed");
 	}
