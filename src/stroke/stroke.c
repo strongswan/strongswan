@@ -209,6 +209,7 @@ static int list_flags[] = {
 	LIST_CAINFOS,
 	LIST_CRLS,
 	LIST_OCSP,
+	LIST_ALGS,
 	LIST_ALL
 };
 
@@ -308,6 +309,8 @@ static void exit_usage(char *error)
 	printf("    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
 	printf("  Show list of end entity certificates, ca info records  and crls:\n");
 	printf("    stroke listcerts|listcainfos|listcrls|listall\n");
+	printf("  Show list of supported algorithms:\n");
+	printf("    stroke listalgs\n");
 	printf("  Reload authority and attribute certificates:\n");
 	printf("    stroke rereadcacerts|rereadocspcerts|rereadaacerts|rereadacerts\n");
 	printf("  Reload secrets and crls:\n");
@@ -408,6 +411,7 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_CAINFOS:
 		case STROKE_LIST_CRLS:
 		case STROKE_LIST_OCSP:
+		case STROKE_LIST_ALGS:
 		case STROKE_LIST_ALL:
 			res = list(token->kw, argc > 2 && strcmp(argv[2], "--utc") == 0);
 			break;

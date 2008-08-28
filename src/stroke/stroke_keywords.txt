@@ -46,6 +46,7 @@ listgroups,      STROKE_LIST_GROUPS
 listcainfos,     STROKE_LIST_CAINFOS
 listcrls,        STROKE_LIST_CRLS
 listocsp,        STROKE_LIST_OCSP
+listalgs,        STROKE_LIST_ALGS
 listall,         STROKE_LIST_ALL
 rereadsecrets,   STROKE_REREAD_SECRETS
 rereadcacerts,   STROKE_REREAD_CACERTS

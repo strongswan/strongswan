@@ -768,6 +768,57 @@ static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 }
 
 /**
+ * List crypto algorithms available
+ */
+static void list_algs(FILE *out)
+{
+	enumerator_t *enumerator;
+	encryption_algorithm_t encryption;
+	integrity_algorithm_t integrity;
+	hash_algorithm_t hash;
+	pseudo_random_function_t prf;
+	diffie_hellman_group_t group;
+	
+	fprintf(out, "Userland algorithms:");
+	fprintf(out, "\n  encryption: ");
+	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &encryption))
+	{
+		fprintf(out, "%N ", encryption_algorithm_names, encryption);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  integrity:  ");
+	enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &integrity))
+	{
+		fprintf(out, "%N ", integrity_algorithm_names, integrity);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  hasher:     ");
+	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &hash))
+	{
+		fprintf(out, "%N ", hash_algorithm_names, hash);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  prf:        ");
+	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &prf))
+	{
+		fprintf(out, "%N ", pseudo_random_function_names, prf);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  dh-group:   ");
+	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &group))
+	{
+		fprintf(out, "%N ", diffie_hellman_group_names, group);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n");
+}
+
+/**
  * Implementation of stroke_list_t.list.
  */
 static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
@@ -817,7 +868,12 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 		linked_list_t *ocsp_list = create_unique_cert_list(CERT_X509_OCSP_RESPONSE);
 
 		stroke_list_ocsp(ocsp_list, msg->list.utc, out);
+		
 		ocsp_list->destroy_offset(ocsp_list, offsetof(certificate_t, destroy)); 
+	}
+	if (msg->list.flags & LIST_ALGS)
+	{
+		list_algs(out);
 	}
 	DESTROY_OFFSET_IF(cert_list, offsetof(certificate_t, destroy));
 }

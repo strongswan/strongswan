@@ -222,6 +222,41 @@ struct crypto_factory_t {
 	void (*remove_dh)(crypto_factory_t *this, dh_constructor_t create);
 	
 	/**
+	 * Create an enumerator over all registered crypter algorithms.
+	 *
+	 * @return				enumerator over encryption_algorithm_t
+	 */
+	enumerator_t* (*create_crypter_enumerator)(crypto_factory_t *this);
+	
+	/**
+	 * Create an enumerator over all registered signer algorithms.
+	 *
+	 * @return				enumerator over integrity_algorithm_t
+	 */
+	enumerator_t* (*create_signer_enumerator)(crypto_factory_t *this);
+	
+	/**
+	 * Create an enumerator over all registered hasher algorithms.
+	 *
+	 * @return				enumerator over hash_algorithm_t
+	 */
+	enumerator_t* (*create_hasher_enumerator)(crypto_factory_t *this);
+	
+	/**
+	 * Create an enumerator over all registered PRFs.
+	 *
+	 * @return				enumerator over pseudo_random_function_t
+	 */
+	enumerator_t* (*create_prf_enumerator)(crypto_factory_t *this);
+	
+	/**
+	 * Create an enumerator over all registered diffie hellman groups.
+	 *
+	 * @return				enumerator over diffie_hellman_group_t
+	 */
+	enumerator_t* (*create_dh_enumerator)(crypto_factory_t *this);
+	
+	/**
      * Destroy a crypto_factory instance.
      */
     void (*destroy)(crypto_factory_t *this);

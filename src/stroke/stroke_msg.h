@@ -61,8 +61,10 @@ enum list_flag_t {
 	LIST_CRLS =			0x0080,
 	/** list all ocsp cache entries */
 	LIST_OCSP =			0x0100,
+	/** list all supported algorithms */
+	LIST_ALGS =			0x0200,
 	/** all list options */
-	LIST_ALL =			0x01FF,
+	LIST_ALL =			0x03FF,
 };
 
 typedef enum reread_flag_t reread_flag_t;
