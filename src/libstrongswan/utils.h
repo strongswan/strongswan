@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -217,6 +218,15 @@ void *clalloc(void *pointer, size_t size);
  * Same as memcpy, but XORs src into dst instead of copy
  */
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
+
+/**
+ * Creates a directory and all required parent directories. 
+ *
+ * @param	path	path to the new directory
+ * @param	mode	permissions of the new directory/directories 
+ * @return			TRUE on success
+ */
+bool mkdir_p(const char *path, mode_t mode);
 
 /**
  * returns null

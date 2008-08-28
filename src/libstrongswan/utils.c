@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -17,11 +18,15 @@
 
 #include "utils.h"
 
+#include <sys/stat.h>
 #include <string.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <dirent.h>
 
 #include <enum.h>
+#include <debug.h>
 
 ENUM(status_names, SUCCESS, DESTROY_ME,
 	"SUCCESS",
@@ -61,6 +66,52 @@ void memxor(u_int8_t dest[], u_int8_t src[], size_t n)
 	{
 		dest[i] ^= src[i];
 	}
+}
+
+/**
+ * Described in header.
+ */
+bool mkdir_p(const char *path, mode_t mode)
+{
+	size_t len;
+	char *pos, full[PATH_MAX];
+	pos = full;
+	if (!path || *path == '\0')
+	{
+		return TRUE;
+	}
+	len = snprintf(full, sizeof(full)-1, "%s", path);
+	if (len < 0 || len >= sizeof(full)-1)
+	{
+		DBG1("path string %s too long", path);
+		return FALSE;
+	}
+	/* ensure that the path ends with a '/' */
+	if (full[len-1] != '/')
+	{
+		full[len++] = '/';
+		full[len] = '\0';
+	}
+	/* skip '/' at the beginning */
+	while (*pos == '/')
+	{
+		pos++;
+	}
+	while ((pos = strchr(pos, '/')))
+	{
+		*pos = '\0';
+		if (access(full, F_OK) < 0)
+		{
+			if (mkdir(full, mode) < 0)
+			{
+				DBG1("failed to create directory %s", full);
+				return FALSE;
+			}
+		}
+		*pos = '/';
+		pos++;
+	}
+	return TRUE;
 }
 
 /**
