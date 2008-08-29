@@ -129,6 +129,11 @@ if USE_SELF_TEST
   AM_CFLAGS += -DSELF_TEST
 endif
 
+if USE_CAPABILITIES
+  charon_LDADD += -lcap
+endif
+
+
 # build optional plugins
 ########################
 

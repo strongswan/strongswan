@@ -21,7 +21,8 @@
 
 #include <daemon.h>
 
-#include <linux/capability.h>
+/* missing in cababilities.h */
+#define CAP_AUDIT_WRITE 29
 
 /**
  * Implementation of plugin_t.destroy

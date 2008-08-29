@@ -29,10 +29,13 @@
 #include <resolv.h>
 #include <arpa/nameser.h>	/* missing from <resolv.h> on old systems */
 #include <sys/queue.h>
-#include <linux/capability.h>
 #include <sys/prctl.h>
 #include <pwd.h>
 #include <grp.h>
+
+#ifdef CAPABILITIES
+#include <sys/capability.h>
+#endif /* CAPABILITIES */
 
 #include <freeswan.h>
 
@@ -67,11 +70,6 @@
 #include "crypto.h"	/* requires sha1.h and md5.h */
 #include "nat_traversal.h"
 #include "virtual.h"
-
-/* on some distros, a capset() definition is missing */
-#ifdef NO_CAPSET_DEFINED
-extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
-#endif /* NO_CAPSET_DEFINED */
 
 static void
 usage(const char *mess)
@@ -236,8 +234,10 @@ main(int argc, char **argv)
     bool force_keepalive = FALSE;
     char *virtual_private = NULL;
     int lockfd;
-    struct __user_cap_header_struct hdr;
-    struct __user_cap_data_struct data;
+#ifdef CAPABILITIES
+    cap_t caps;
+    int keep[] = { CAP_NET_ADMIN, CAP_NET_BIND_SERVICE };
+#endif /* CAPABILITIES */
 
     /* handle arguments */
     for (;;)
@@ -619,14 +619,6 @@ main(int argc, char **argv)
     init_fetch();
 
     /* drop unneeded capabilities and change UID/GID */
-#ifdef _LINUX_CAPABILITY_VERSION_1
-    hdr.version = _LINUX_CAPABILITY_VERSION_1;
-#else
-    hdr.version = _LINUX_CAPABILITY_VERSION;
-#endif
-    hdr.pid = 0;
-    data.inheritable = data.effective = data.permitted = 
-				1<<CAP_NET_ADMIN | 1<<CAP_NET_BIND_SERVICE;
 
     prctl(PR_SET_KEEPCAPS, 1);
 	
@@ -656,11 +648,19 @@ main(int argc, char **argv)
 	}
 	}
 #endif
-    if (capset(&hdr, &data))
+
+#ifdef CAPABILITIES
+    caps = cap_init();
+    cap_set_flag(caps, CAP_EFFECTIVE, 2, keep, CAP_SET);
+    cap_set_flag(caps, CAP_INHERITABLE, 2, keep, CAP_SET);
+    cap_set_flag(caps, CAP_PERMITTED, 2, keep, CAP_SET);
+    if (cap_set_proc(caps) != 0)
     {
-	plog("unable to drop root privileges");
+	plog("unable to drop daemon capabilities");
 	abort();
     }
+    cap_free(caps);
+#endif /* CAPABILITIES */
 
     /* loading X.509 CA certificates */
     load_authcerts("CA cert", CA_CERT_PATH, AUTH_CA);

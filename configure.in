@@ -138,6 +138,14 @@ AC_ARG_WITH(
 	[AC_SUBST(ipsecgroup, "root")]
 )
 
+dnl Will be extended to --with-capabilities=libcap|libcap2
+AC_ARG_WITH(
+	[capabilities],
+	AS_HELP_STRING([--with-capabilities=libcap],[capability dropping using libcap. Currenlty only the value "libcap" is supported (default is NO).]),
+	[capabilities="$withval"],
+	[capabilities=no]
+)
+
 AC_ARG_ENABLE(
 	[curl],
 	AS_HELP_STRING([--enable-curl],[enable CURL fetcher plugin to fetch files via libcurl (default is NO). Requires libcurl.]),
@@ -628,15 +636,6 @@ AC_HAVE_LIBRARY(dl)
 AC_CHECK_FUNCS(backtrace)
 AC_CHECK_FUNCS(dladdr)
 
-AC_MSG_CHECKING([capset() definition])
-AC_TRY_COMPILE(
-	[#include <linux/capset.h>],
-	[
-		void *test = capset;
-	], 
-	[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_DEFINE_UNQUOTED(NO_CAPSET_DEFINED, 1)]
-)
-
 if test x$gmp = xtrue; then
 	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
 	AC_MSG_CHECKING([gmp.h version >= 4.1.4])
@@ -730,6 +729,11 @@ fi
 if test x$eap_gtc = xtrue; then
 	AC_HAVE_LIBRARY([pam],[LIBS="$LIBS"],[AC_MSG_ERROR([PAM library not found])])
 	AC_CHECK_HEADER([security/pam_appl.h],,[AC_MSG_ERROR([PAM header security/pam_appl.h not found!])])
+fi
+
+if test x$capabilities = xlibcap; then
+	AC_HAVE_LIBRARY([cap],[LIBS="$LIBS"],[AC_MSG_ERROR([libcap library not found])])
+	AC_CHECK_HEADER([sys/capability.h],,[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
 fi
 
 dnl ======================================
@@ -850,6 +854,7 @@ AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 AM_CONDITIONAL(USE_ME, test x$me = xtrue)
 AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
 AM_CONDITIONAL(USE_SELF_TEST, test x$self_test = xtrue)
+AM_CONDITIONAL(USE_CAPABILITIES, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
@@ -863,6 +868,9 @@ dnl ==============================
 
 if test x$me = xtrue; then
 	AC_DEFINE(ME)
+fi
+if test x$capabilities = xlibcap; then
+	AC_DEFINE(CAPABILITIES)
 fi
 
 dnl ==============================

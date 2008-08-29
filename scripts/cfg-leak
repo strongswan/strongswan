@@ -1,4 +1,4 @@
 #!/bin/bash
 CFLAGS="-Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing -g -O2" ./configure \
---sysconfdir=/etc --disable-tools --disable-pluto --enable-leak-detective --enable-dumm \
+--sysconfdir=/etc --disable-tools --disable-pluto --enable-leak-detective --enable-dumm --with-capabilities=libcap \
 $1 $2 $3 $4 $5

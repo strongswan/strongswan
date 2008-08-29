@@ -22,7 +22,6 @@
 #endif /* HAVE_DLADDR */
 
 #include <stdio.h>
-#include <linux/capability.h>
 #include <sys/prctl.h>
 #include <signal.h>
 #include <pthread.h>
@@ -38,22 +37,15 @@
 #ifdef HAVE_BACKTRACE
 # include <execinfo.h>
 #endif /* HAVE_BACKTRACE */
+#ifdef CAPABILITIES
+#include <sys/capability.h>
+#endif /* CAPABILITIES */
 
 #include "daemon.h"
 
 #include <library.h>
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
-
-/* on some distros, a capset definition is missing */
-#ifdef NO_CAPSET_DEFINED
-extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
-#endif /* NO_CAPSET_DEFINED */
-
-/* missing on older kernel headers */
-#ifndef CAP_AUDIT_WRITE
-#define CAP_AUDIT_WRITE 29
-#endif /* CAP_AUDIT_WRITE */
 
 #ifdef INTEGRITY_TEST
 #include <fips/fips.h>
@@ -80,11 +72,13 @@ struct private_daemon_t {
 	 * The thread_id of main-thread.
 	 */
 	pthread_t main_thread_id;
-	
+
+#ifdef CAPABILITIES
 	/**
 	 * capabilities to keep
 	 */
-	u_int32_t keep;
+	cap_t caps;
+#endif /* CAPABILITIES */
 };
 
 /**
@@ -193,6 +187,9 @@ static void destroy(private_daemon_t *this)
 	}
 	/* unload plugins to release threads */
 	lib->plugins->unload(lib->plugins);
+#ifdef CAPABILITIES
+	cap_free(this->caps);
+#endif /* CAPABILITIES */
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
@@ -253,10 +250,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
  * drop daemon capabilities
  */
 static void drop_capabilities(private_daemon_t *this)
-{
-	struct __user_cap_header_struct hdr;
-	struct __user_cap_data_struct data;
-	
+{	
 	prctl(PR_SET_KEEPCAPS, 1);
 
 	if (setgid(charon->gid) != 0)
@@ -267,21 +261,13 @@ static void drop_capabilities(private_daemon_t *this)
 	{
 		kill_daemon(this, "change to unprivileged user failed");	
 	}
-
-	/* we use the old capset version for now. For systems with version 2
-	 * available, we specifiy version 1 excplicitly. */
-#ifdef _LINUX_CAPABILITY_VERSION_1
-	hdr.version = _LINUX_CAPABILITY_VERSION_1;
-#else
-	hdr.version = _LINUX_CAPABILITY_VERSION;
-#endif
-	hdr.pid = 0;
-	data.inheritable = data.effective = data.permitted = this->keep;
 	
-	if (capset(&hdr, &data))
+#ifdef CAPABILITIES
+	if (cap_set_proc(this->caps) != 0)
 	{
 		kill_daemon(this, "unable to drop daemon capabilities");
 	}
+#endif /* CAPABILITIES */
 }
 
 /**
@@ -289,7 +275,11 @@ static void drop_capabilities(private_daemon_t *this)
  */
 static void keep_cap(private_daemon_t *this, u_int cap)
 {
-	this->keep |= 1 << cap;
+#ifdef CAPABILITIES
+	cap_set_flag(this->caps, CAP_EFFECTIVE, 1, &cap, CAP_SET);
+	cap_set_flag(this->caps, CAP_INHERITABLE, 1, &cap, CAP_SET);
+	cap_set_flag(this->caps, CAP_PERMITTED, 1, &cap, CAP_SET);
+#endif /* CAPABILITIES */
 }
 
 /**
@@ -498,11 +488,14 @@ private_daemon_t *daemon_create(void)
 	this->public.gid = 0;
 	
 	this->main_thread_id = pthread_self();
-	this->keep = 1<<CAP_NET_ADMIN;
+#ifdef CAPABILITIES
+	this->caps = cap_init();
+	keep_cap(this, CAP_NET_ADMIN);
 	if (lib->leak_detective)
 	{
-		this->keep = 1<<CAP_SYS_NICE;
+		keep_cap(this, CAP_SYS_NICE);
 	}
+#endif /* CAPABILITIES */
 	
 	/* add handler for SEGV and ILL,
 	 * add handler for USR1 (cancellation).
