@@ -768,7 +768,7 @@ static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 }
 
 /**
- * List crypto algorithms available
+ * List of registered cryptographical algorithms
  */
 static void list_algs(FILE *out)
 {
@@ -779,7 +779,8 @@ static void list_algs(FILE *out)
 	pseudo_random_function_t prf;
 	diffie_hellman_group_t group;
 	
-	fprintf(out, "Userland algorithms:");
+	fprintf(out, "\n");
+	fprintf(out, "List of registered IKEv2 Algorithms:\n");
 	fprintf(out, "\n  encryption: ");
 	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &encryption))
