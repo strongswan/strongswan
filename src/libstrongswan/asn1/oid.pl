@@ -26,7 +26,7 @@ print "oid.pl generating oid.h and oid.c\n";
 open(OID_H,  ">oid.h")
     or die "could not open 'oid.h': $!";
 
-print OID_H "/* Object identifiers (OIDs) used by FreeS/WAN\n",
+print OID_H "/* Object identifiers (OIDs) used by strongSwan\n",
 	    " * ", $copyright, "\n",
 	    " * \n",
 	    " * ", $automatic, "\n",
