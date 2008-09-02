@@ -191,6 +191,7 @@ static private_key_t* private_key_create_from_file(char *path, chunk_t *secret)
 	}
 	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 							 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+	free(chunk.ptr);
 	if (key == NULL)
 	{
 		DBG1("  could not parse loaded private key file '%s'", path);
@@ -527,14 +528,15 @@ int main(int argc, char **argv)
 
 		attr_cert = lib->creds->create(lib->creds,
 							CRED_CERTIFICATE, CERT_X509_AC,
-							BUILD_CERT, userCert->get_ref(userCert),
+							BUILD_CERT, userCert,
 							BUILD_NOT_BEFORE_TIME, notBefore,
 							BUILD_NOT_AFTER_TIME, notAfter,
 							BUILD_SERIAL, serial,
 							BUILD_IETF_GROUP_ATTR, groups,
-							BUILD_SIGNING_CERT, signerCert->get_ref(signerCert),
-							BUILD_SIGNING_KEY, signerKey->get_ref(signerKey),
+							BUILD_SIGNING_CERT, signerCert,
+							BUILD_SIGNING_KEY, signerKey,
 							BUILD_END);
+		free(serial.ptr);
 		if (!attr_cert)
 		{
 			goto end;
