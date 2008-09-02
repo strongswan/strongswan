@@ -722,7 +722,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_INFO:
 				this->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
-						KEY_ANY, BUILD_BLOB_ASN1_DER, chunk_clone(object), BUILD_END);
+						KEY_ANY, BUILD_BLOB_ASN1_DER, object, BUILD_END);
 				if (this->public_key == NULL)
 				{
 					DBG1("could not create public key");
@@ -1251,6 +1251,7 @@ static private_x509_cert_t *build(private_builder_t *this)
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
+	chunk_t chunk;
 	
 	va_start(args, part);
 	switch (part)
@@ -1259,13 +1260,19 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			this->cert = create_from_file(va_arg(args, char*));
 			break;
 		case BUILD_BLOB_ASN1_DER:
-			this->cert = create_from_chunk(va_arg(args, chunk_t));
+			chunk = va_arg(args, chunk_t);
+			this->cert = create_from_chunk(chunk_clone(chunk));
 			break;
 		case BUILD_X509_FLAG:
 			this->flags = va_arg(args, x509_flag_t);
 			break;
 		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
+			/* abort if unsupported option */
+			if (this->cert)
+			{
+				destroy(this->cert);
+			}
+			builder_cancel(&this->public);
 			break;
 	}
 	va_end(args);

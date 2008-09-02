@@ -56,6 +56,9 @@ struct credential_factory_t {
 	 *
 	 * The variable argument list takes builder_part_t types followed
 	 * by the type specific value. The list must be terminated using BUILD_END.
+	 * All passed parts get cloned/refcounted by the builder implementations,
+	 * so free up allocated ressources after successful and unsuccessful
+	 * invocations.
 	 *
 	 * @param type			credential type to build
 	 * @param subtype		subtype specific for type of the credential
@@ -66,14 +69,18 @@ struct credential_factory_t {
 					int subtype, ...);
 	
 	/**
-	 * Create a builder instance to build credentials.
+	 * Create an enumerator for a builder type.
+	 *
+	 * The build() method has to be called on each enumerated builder to 
+	 * cleanup associated ressources. 
 	 *
 	 * @param type			type of credentials the builder creates
 	 * @param subtype		type specific subtype, such as certificate_type_t
-	 * @return				builder instance
+	 * @return				enumerator over builder_t
 	 */
-	builder_t* (*create_builder)(credential_factory_t *this,
-								 credential_type_t type, int subtype);
+	enumerator_t* (*create_builder_enumerator)(credential_factory_t *this,
+										credential_type_t type, int subtype);
+	
 	/**
 	 * Register a builder_t constructor function.
 	 *

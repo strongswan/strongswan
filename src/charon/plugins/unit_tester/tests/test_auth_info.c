@@ -85,7 +85,7 @@ bool test_auth_info()
 	auth_item_t type;
 	
 	c1 = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							BUILD_BLOB_ASN1_DER, chunk_clone(certchunk),
+							BUILD_BLOB_ASN1_DER, certchunk,
 							BUILD_END);
 	if (!c1)
 	{

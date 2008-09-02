@@ -229,7 +229,7 @@ static certificate_t *get_cert(private_cert_payload_t *this)
 		return NULL;
 	}
 	return lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							  BUILD_BLOB_ASN1_DER, chunk_clone(this->data),
+							  BUILD_BLOB_ASN1_DER, this->data,
 							  BUILD_END);
 }
 

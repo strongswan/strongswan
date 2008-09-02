@@ -783,6 +783,7 @@ static void load_secrets(private_stroke_cred_t *this)
 			{
 				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
 										 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+				free(chunk.ptr);
 				if (key)
 				{
 					DBG1(DBG_CFG, "  loaded private key file '%s'", path);

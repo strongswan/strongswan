@@ -474,8 +474,8 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 	/* TODO: requestor name, signature */
 	request = lib->creds->create(lib->creds,
 						CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST,
-						BUILD_CA_CERT, issuer->get_ref(issuer),
-						BUILD_CERT, subject->get_ref(subject), BUILD_END);
+						BUILD_CA_CERT, issuer,
+						BUILD_CERT, subject, BUILD_END);
 	if (!request)
 	{
 		DBG1(DBG_CFG, "generating ocsp request failed");
@@ -500,6 +500,7 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 	response = lib->creds->create(lib->creds,
 								  CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE,
 								  BUILD_BLOB_ASN1_DER, receive, BUILD_END);
+	chunk_free(&receive);
 	if (!response)
 	{
 		DBG1(DBG_CFG, "parsing ocsp response failed");

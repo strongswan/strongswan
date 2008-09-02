@@ -238,27 +238,28 @@ static pubkey_cert_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	va_list args;
+	if (!this->key)
+	{
+		va_list args;
 	
+		switch (part)
+		{
+			case BUILD_PUBLIC_KEY:
+			{
+				va_start(args, part);
+				this->key = pubkey_cert_create(va_arg(args, public_key_t*));
+				va_end(args);
+				return;
+			}
+			default:
+				break;
+		}
+	}
 	if (this->key)
 	{
-		DBG1("ignoring surplus build part %N", builder_part_names, part);
-		return;
+		destroy((private_pubkey_cert_t*)this->key);
 	}
-	
-	switch (part)
-	{
-		case BUILD_PUBLIC_KEY:
-		{
-			va_start(args, part);
-			this->key = pubkey_cert_create(va_arg(args, public_key_t*));
-			va_end(args);
-			break;
-		}
-		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
-			break;
-	}
+	builder_cancel(&this->public);
 }
 
 /**

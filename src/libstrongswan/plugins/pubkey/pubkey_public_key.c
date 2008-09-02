@@ -67,9 +67,8 @@ static public_key_t *load(chunk_t blob)
 				else if (oid == OID_EC_PUBLICKEY)
 				{
 					/* we need the whole subjectPublicKeyInfo for EC public keys */
-					key = lib->creds->create(lib->creds,
-								CRED_PUBLIC_KEY, KEY_ECDSA, BUILD_BLOB_ASN1_DER,
-								chunk_clone(blob), BUILD_END);
+					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, 
+								KEY_ECDSA, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
 					goto end;
 				}
 				else
@@ -86,8 +85,7 @@ static public_key_t *load(chunk_t blob)
 					object = chunk_skip(object, 1);
 				}
 				key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
-										 BUILD_BLOB_ASN1_DER, chunk_clone(object),
-										 BUILD_END);
+										 BUILD_BLOB_ASN1_DER, object, BUILD_END);
 				break;
 		}
 	} 
@@ -125,41 +123,43 @@ static public_key_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	va_list args;
-	
-	if (this->key)
+	if (!this->key)
 	{
-		DBG1("ignoring surplus build part %N", builder_part_names, part);
-		return;
-	}
-	va_start(args, part);
-	switch (part)
-	{
-		case BUILD_BLOB_ASN1_DER:
+		va_list args;
+		chunk_t blob;
+		
+		switch (part)
 		{
-			this->key = load(va_arg(args, chunk_t));
-			break;
-		}
-		case BUILD_BLOB_ASN1_PEM:
-		{
-			bool pgp;
-			char *pem;
-			chunk_t blob;
-			
-			pem = va_arg(args, char *);
-			blob = chunk_clone(chunk_create(pem, strlen(pem)));
-			if (pem_to_bin(&blob, &chunk_empty, &pgp))
+			case BUILD_BLOB_ASN1_DER:
 			{
+				va_start(args, part);
+				blob = va_arg(args, chunk_t);
 				this->key = load(chunk_clone(blob));
+				va_end(args);
+				return;
 			}
-			free(blob.ptr);
-			break;
+			case BUILD_BLOB_ASN1_PEM:
+			{
+				bool pgp;
+				char *pem;
+			
+				va_start(args, part);
+				pem = va_arg(args, char *);
+				blob = chunk_clone(chunk_create(pem, strlen(pem)));
+				if (pem_to_bin(&blob, &chunk_empty, &pgp))
+				{
+					this->key = load(chunk_clone(blob));
+				}
+				free(blob.ptr);
+				va_end(args);
+				return;
+			}
+			default:
+				break;
 		}
-		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
-			break;
 	}
-	va_end(args);
+	DESTROY_IF(this->key);
+	builder_cancel(&this->public);
 }
 
 /**

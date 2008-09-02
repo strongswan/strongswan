@@ -1054,6 +1054,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
 	certificate_t *cert;
+	chunk_t chunk;
 
 	va_start(args, part);
 	switch (part)
@@ -1070,7 +1071,8 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			{
 				destroy(this->ac);
 			}
-			this->ac = create_from_chunk(va_arg(args, chunk_t));
+			chunk = va_arg(args, chunk_t);
+			this->ac = create_from_chunk(chunk_clone(chunk));
 			break;
 		case BUILD_NOT_BEFORE_TIME:
 			this->ac->notBefore = va_arg(args, time_t);
@@ -1079,7 +1081,8 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			this->ac->notAfter = va_arg(args, time_t);
 			break;
 		case BUILD_SERIAL:
-			this->ac->serialNumber = va_arg(args, chunk_t);
+			chunk = va_arg(args, chunk_t);
+			this->ac->serialNumber = chunk_clone(chunk);
 			break;
 		case BUILD_IETF_GROUP_ATTR:
 			ietfAttr_list_create_from_string(va_arg(args, char*),
@@ -1089,29 +1092,27 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			cert = va_arg(args, certificate_t*);
 			if (cert->get_type(cert) == CERT_X509)
 			{
-				this->ac->holderCert = cert;
-			}
-			else
-			{
-				cert->destroy(cert);
+				this->ac->holderCert = cert->get_ref(cert);
 			}
 			break;
 		case BUILD_SIGNING_CERT:
 			cert = va_arg(args, certificate_t*);
 			if (cert->get_type(cert) == CERT_X509)
 			{
-				this->ac->signerCert = cert;
-			}
-			else
-			{
-				cert->destroy(cert);
+				this->ac->signerCert = cert->get_ref(cert);
 			}
 			break;
 		case BUILD_SIGNING_KEY:
 			this->ac->signerKey = va_arg(args, private_key_t*);
+			this->ac->signerKey->get_ref(this->ac->signerKey);
 			break;
 		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
+			/* abort if unsupported option */
+			if (this->ac)
+			{
+				destroy(this->ac);
+			}
+			builder_cancel(&this->public);
 			break;
 	}
 	va_end(args);

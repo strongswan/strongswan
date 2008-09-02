@@ -83,6 +83,7 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator, auth_item_t *type, void
 	
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 					  BUILD_BLOB_ASN1_DER, data, BUILD_END);
+	free(data.ptr);
 	
 	if (!cert)
 	{

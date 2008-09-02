@@ -17,6 +17,8 @@ libstrongswan_unit_tester_la_SOURCES = unit_tester.c unit_tester.h tests.h \
   tests/test_med_db.c \
   tests/test_aes.c \
   tests/test_chunk.c \
-  tests/test_pool.c
+  tests/test_pool.c \
+  tests/test_agent.c
+
 libstrongswan_unit_tester_la_LDFLAGS = -module
 

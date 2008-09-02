@@ -97,7 +97,7 @@ bool test_rsa_load_any()
 	public_key_t *public;
 	
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-								BUILD_BLOB_ASN1_DER, chunk_clone(chunk),
+								BUILD_BLOB_ASN1_DER, chunk,
 								BUILD_END);
 	if (!public || public->get_keysize(public) != 256)
 	{

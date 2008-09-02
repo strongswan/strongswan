@@ -387,27 +387,30 @@ static openssl_rsa_public_key_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	va_list args;
+	if (!this->key)
+	{
+		va_list args;
+		chunk_t chunk;
 	
+		switch (part)
+		{
+			case BUILD_BLOB_ASN1_DER:
+			{
+				va_start(args, part);
+				chunk = va_arg(args, chunk_t);
+				this->key = load(chunk_clone(chunk));
+				va_end(args);
+				return;
+			}
+			default:
+				break;
+		}
+	}
 	if (this->key)
 	{
-		DBG1("ignoring surplus build part %N", builder_part_names, part);
-		return;
+		destroy((private_openssl_rsa_public_key_t*)this->key);
 	}
-	
-	switch (part)
-	{
-		case BUILD_BLOB_ASN1_DER:
-		{
-			va_start(args, part);
-			this->key = load(va_arg(args, chunk_t));
-			va_end(args);
-			break;
-		}
-		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
-			break;
-	}
+	builder_cancel(&this->public);
 }
 
 /**

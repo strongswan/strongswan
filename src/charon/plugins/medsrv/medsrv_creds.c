@@ -67,7 +67,7 @@ static bool cert_enumerator_enumerate(cert_enumerator_t *this,
 	while (this->inner->enumerate(this->inner, &chunk))
 	{
 		public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-									BUILD_BLOB_ASN1_DER, chunk_clone(chunk),
+									BUILD_BLOB_ASN1_DER, chunk,
 									BUILD_END);
 		if (public)
 		{
@@ -76,14 +76,17 @@ static bool cert_enumerator_enumerate(cert_enumerator_t *this,
 				trusted = lib->creds->create(lib->creds,
 										CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
 										BUILD_PUBLIC_KEY, public, BUILD_END);
+				public->destroy(public);
 				if (trusted)
 				{
 					*cert = this->current = trusted;
 					return TRUE;
 				}
-				continue;
 			}
-			public->destroy(public);
+			else
+			{
+				public->destroy(public);
+			}
 		}
 	}
 	this->current = NULL;

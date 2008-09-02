@@ -40,6 +40,8 @@ typedef builder_t* (*builder_constructor_t)(int subtype);
 enum builder_part_t {
 	/** path to a file containing an ASN1 blob, char* */
 	BUILD_FROM_FILE,
+	/** unix socket of a ssh/pgp agent, char* */
+	BUILD_AGENT_SOCKET,
 	/** DER encoded ASN1 blob, chunk_t */
 	BUILD_BLOB_ASN1_DER,
 	/** PEM encoded ASN1 blob, null terminated char* */
@@ -94,8 +96,8 @@ struct builder_t {
 	/**
 	 * Add a part to the construct.
 	 *
-	 * Any added parts get owned by the builder/construct, so clone/refcount
-	 * them if needed.
+	 * Any added parts are cloned/refcounted by the builder implementation, a 
+	 * caller may need to free the passed ressources themself.
 	 *
 	 * @param part		kind of part
 	 * @param ...		part specific variable argument
@@ -111,5 +113,11 @@ struct builder_t {
 	 */
 	void* (*build)(builder_t *this);
 };
+
+/**
+ * Helper macro to cancel a build in a builder
+ */
+#define builder_cancel(builder) { (builder)->add = (void*)nop; \
+								  (builder)->build = (void*)free; }
 
 #endif /* BUILDER_H_ @}*/

@@ -547,6 +547,8 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
 	certificate_t *cert;
+	identification_t *subject;
+	private_key_t *private;
 	
 	va_start(args, part);
 	switch (part)
@@ -555,35 +557,36 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			cert = va_arg(args, certificate_t*);
 			if (cert->get_type(cert) == CERT_X509)
 			{
-				this->req->ca = (x509_t*)cert;
-			}
-			else
-			{
-				cert->destroy(cert);
+				this->req->ca = (x509_t*)cert->get_ref(cert);
 			}
 			break;
 		case BUILD_CERT:
 			cert = va_arg(args, certificate_t*);
 			if (cert->get_type(cert) == CERT_X509)
 			{
-				this->req->candidates->insert_last(this->req->candidates, cert);
-			}
-			else
-			{
-				cert->destroy(cert);
+				this->req->candidates->insert_last(this->req->candidates,
+												   cert->get_ref(cert));
 			}
 			break;
 		case BUILD_SIGNING_CERT:
-			this->req->cert = va_arg(args, certificate_t*);
+			cert = va_arg(args, certificate_t*);
+			this->req->cert = cert->get_ref(cert);
 			break;
 		case BUILD_SIGNING_KEY:
-			this->req->key = va_arg(args, private_key_t*);
+			private = va_arg(args, private_key_t*);
+			this->req->key = private->get_ref(private);
 			break;
 		case BUILD_SUBJECT:
-			this->req->requestor = va_arg(args, identification_t*);
+			subject = va_arg(args, identification_t*);
+			this->req->requestor = subject->clone(subject);
 			break;
 		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
+			/* cancel if option not supported */
+			if (this->req)
+			{
+				destroy(this->req);
+			}
+			builder_cancel(&this->public);
 			break;
 	}
 	va_end(args);
