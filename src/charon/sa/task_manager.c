@@ -775,6 +775,8 @@ static status_t process_request(private_task_manager_t *this,
 							case UNACCEPTABLE_ADDRESSES:
 							case UNEXPECTED_NAT_DETECTED:
 							case COOKIE2:
+							case NAT_DETECTION_SOURCE_IP:
+							case NAT_DETECTION_DESTINATION_IP:
 								task = (task_t*)ike_mobike_create(
 														this->ike_sa, FALSE);
 								break;
