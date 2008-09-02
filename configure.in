@@ -572,6 +572,16 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[agent],
+	AS_HELP_STRING([--enable-agent],[enables the ssh-agent signing plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		agent=true
+	 else
+		agent=false
+	fi],
+)
+
+AC_ARG_ENABLE(
 	[uci],
 	AS_HELP_STRING([--enable-uci],[enable OpenWRT UCI configuration plugin (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -793,6 +803,9 @@ fi
 if test x$openssl = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" openssl"
 fi
+if test x$agent = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" agent"
+fi
 if test x$gmp = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 fi
@@ -823,6 +836,7 @@ AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
+AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
 
 dnl charon plugins
 dnl ==============
@@ -900,6 +914,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/sqlite/Makefile
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
+	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/fips/Makefile
 	src/libcrypto/Makefile
 	src/libfreeswan/Makefile

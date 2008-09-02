@@ -156,6 +156,10 @@ if USE_OPENSSL
   SUBDIRS += plugins/openssl
 endif
 
+if USE_AGENT
+  SUBDIRS += plugins/agent
+endif
+
 if USE_INTEGRITY_TEST
   SUBDIRS += fips
 endif
