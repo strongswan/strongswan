@@ -260,6 +260,11 @@ struct private_ike_sa_t {
 	u_int32_t pending_updates;
 
 	/**
+	 * NAT keep alive interval
+	 */
+	u_int32_t keepalive_interval;
+
+	/**
 	 * Timestamps for this IKE_SA
 	 */
 	struct {
@@ -469,7 +474,7 @@ static void send_keepalive(private_ike_sa_t *this)
 	
 	diff = now - last_out;
 	
-	if (diff >= KEEPALIVE_INTERVAL)
+	if (diff >= this->keepalive_interval)
 	{
 		packet_t *packet;
 		chunk_t data;
@@ -487,7 +492,7 @@ static void send_keepalive(private_ike_sa_t *this)
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);
 	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job,
-									(KEEPALIVE_INTERVAL - diff) * 1000);
+									(this->keepalive_interval - diff) * 1000);
 }
 
 /**
@@ -2616,6 +2621,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->skp_build = chunk_empty;
  	this->child_prf = NULL;
 	this->state = IKE_CREATED;
+	this->keepalive_interval = lib->settings->get_int(lib->settings,
+									"charon.keep_alive", KEEPALIVE_INTERVAL);
 	this->time.inbound = this->time.outbound = time(NULL);
 	this->time.established = 0;
 	this->time.rekey = 0;
