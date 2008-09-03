@@ -334,7 +334,7 @@ struct private_kernel_interface_t {
 	linked_list_t *policies;
 	
 	/**
-	 * Cached list of interfaces and its adresses (iface_entry_t)
+	 * Cached list of interfaces and its addresses (iface_entry_t)
 	 */
 	linked_list_t *ifaces;
 	
@@ -1162,7 +1162,7 @@ static status_t netlink_send(private_kernel_interface_t *this,
 }
 
 /**
- * send a netlink message and wait for its acknowlegde
+ * send a netlink message and wait for its acknowledge
  */
 static status_t netlink_send_ack(private_kernel_interface_t *this,
 								 int socket, struct nlmsghdr *in)
@@ -1206,7 +1206,7 @@ static status_t netlink_send_ack(private_kernel_interface_t *this,
 		}
 		break;
 	}
-	DBG1(DBG_KNL, "netlink request not acknowlegded");
+	DBG1(DBG_KNL, "netlink request not acknowledged");
 	free(out);
 	return FAILED;
 }
@@ -1351,7 +1351,7 @@ static iterator_t *create_address_iterator(private_kernel_interface_t *this)
 {
 	iterator_t *iterator;
 	
-	/* This iterator is not only hooked, is is double-hooked. As we have stored
+	/* This iterator is not only hooked, it is double-hooked. As we have stored
 	 * our addresses in iface_entry->addr_entry->ip, we need to iterate the
 	 * entries in each interface we iterate. This does the iface_hook. The
 	 * addr_hook returns the ip instead of the addr_entry. */
@@ -2410,7 +2410,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 	
 	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x for update", ntohl(spi));
 
-	/* query the exisiting SA first */
+	/* query the existing SA first */
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
@@ -3131,4 +3131,3 @@ kernel_interface_t *kernel_interface_create()
 	
 	return &this->public;
 }
-
