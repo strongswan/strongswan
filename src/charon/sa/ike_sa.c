@@ -464,7 +464,7 @@ static void send_keepalive(private_ike_sa_t *this)
 	send_keepalive_job_t *job;
 	time_t last_out, now, diff;
 	
-	if (!(this->conditions & COND_NAT_HERE))
+	if (!(this->conditions & COND_NAT_HERE) || this->keepalive_interval == 0)
 	{	/* disable keep alives if we are not NATed anymore */
 		return;
 	}
