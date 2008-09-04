@@ -37,14 +37,28 @@
                     <property name="column_spacing">6</property>
                     <property name="row_spacing">6</property>
                     <child>
-                      <widget class="GtkLabel" id="address-label">
+                      <widget class="GtkFileChooserButton" id="certificate-button">
                         <property name="visible">True</property>
-                        <property name="xalign">0</property>
-                        <property name="label" translatable="yes">_Address:</property>
-                        <property name="use_underline">True</property>
-                        <property name="mnemonic_widget">address-entry</property>
+                        <property name="tooltip_text">Gateway certificate to use for gateway authentication.</property>
                       </widget>
                       <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkLabel" id="certificate-label">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">C_ertificate:</property>
+                        <property name="use_underline">True</property>
+                        <property name="mnemonic_widget">certificate-button</property>
+                      </widget>
+                      <packing>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
                         <property name="x_options">GTK_FILL</property>
                         <property name="y_options"></property>
                       </packing>
@@ -63,30 +77,16 @@
                       </packing>
                     </child>
                     <child>
-                      <widget class="GtkLabel" id="certificate-label">
+                      <widget class="GtkLabel" id="address-label">
                         <property name="visible">True</property>
                         <property name="xalign">0</property>
-                        <property name="label" translatable="yes">_Certificate:</property>
+                        <property name="label" translatable="yes">_Address:</property>
                         <property name="use_underline">True</property>
-                        <property name="mnemonic_widget">certificate-button</property>
+                        <property name="mnemonic_widget">address-entry</property>
                       </widget>
                       <packing>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
                         <property name="x_options">GTK_FILL</property>
                         <property name="y_options"></property>
-                      </packing>
-                    </child>
-                    <child>
-                      <widget class="GtkFileChooserButton" id="certificate-button">
-                        <property name="visible">True</property>
-                        <property name="tooltip_text">Gateway certificate to use for gateway authentication.</property>
-                      </widget>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">2</property>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
                       </packing>
                     </child>
                   </widget>
@@ -102,14 +102,14 @@
           </packing>
         </child>
         <child>
-          <widget class="GtkVBox" id="authentication-vbox">
+          <widget class="GtkVBox" id="client-vbox">
             <property name="visible">True</property>
             <property name="spacing">6</property>
             <child>
-              <widget class="GtkLabel" id="authentication-label">
+              <widget class="GtkLabel" id="client-label">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">&lt;b&gt;Authentication&lt;/b&gt;</property>
+                <property name="label" translatable="yes">&lt;b&gt;Client&lt;/b&gt;</property>
                 <property name="use_markup">True</property>
               </widget>
               <packing>
@@ -118,16 +118,43 @@
               </packing>
             </child>
             <child>
-              <widget class="GtkAlignment" id="authentication-aligement">
+              <widget class="GtkAlignment" id="client-aligement">
                 <property name="visible">True</property>
                 <property name="left_padding">12</property>
                 <child>
-                  <widget class="GtkTable" id="authentication-table">
+                  <widget class="GtkTable" id="client-table">
                     <property name="visible">True</property>
-                    <property name="n_rows">2</property>
+                    <property name="n_rows">3</property>
                     <property name="n_columns">2</property>
                     <property name="column_spacing">6</property>
                     <property name="row_spacing">6</property>
+                    <child>
+                      <widget class="GtkFileChooserButton" id="usercert-button">
+                        <property name="visible">True</property>
+                        <property name="tooltip_text">Client certificate to use for client authentication.</property>
+                      </widget>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
+                        <property name="top_attach">2</property>
+                        <property name="bottom_attach">3</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkLabel" id="usercert-label">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">Ce_rtificate:</property>
+                        <property name="use_underline">True</property>
+                        <property name="mnemonic_widget">usercert-button</property>
+                      </widget>
+                      <packing>
+                        <property name="top_attach">2</property>
+                        <property name="bottom_attach">3</property>
+                        <property name="x_options">GTK_FILL</property>
+                        <property name="y_options"></property>
+                      </packing>
+                    </child>
                     <child>
                       <widget class="GtkEntry" id="user-entry">
                         <property name="visible">True</property>
@@ -138,6 +165,23 @@
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="right_attach">2</property>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
+                        <property name="y_options"></property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkLabel" id="user-label">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">_Username:</property>
+                        <property name="use_underline">True</property>
+                        <property name="mnemonic_widget">user-entry</property>
+                      </widget>
+                      <packing>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
+                        <property name="x_options">GTK_FILL</property>
                         <property name="y_options"></property>
                       </packing>
                     </child>
@@ -145,13 +189,11 @@
                       <widget class="GtkLabel" id="method-label">
                         <property name="visible">True</property>
                         <property name="xalign">0</property>
-                        <property name="label" translatable="yes">_Method:</property>
+                        <property name="label" translatable="yes">Au_thentication:</property>
                         <property name="use_underline">True</property>
                         <property name="mnemonic_widget">method-combo</property>
                       </widget>
                       <packing>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
                         <property name="x_options">GTK_FILL</property>
                         <property name="y_options"></property>
                       </packing>
@@ -166,21 +208,6 @@
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="right_attach">2</property>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <widget class="GtkLabel" id="user-label">
-                        <property name="visible">True</property>
-                        <property name="xalign">0</property>
-                        <property name="label" translatable="yes">_Username:</property>
-                        <property name="use_underline">True</property>
-                        <property name="mnemonic_widget">user-entry</property>
-                      </widget>
-                      <packing>
-                        <property name="x_options">GTK_FILL</property>
-                        <property name="y_options"></property>
                       </packing>
                     </child>
                   </widget>

@@ -6,6 +6,7 @@ nm_strongswan_auth_dialog_CPPFLAGS = \
 	$(LIBGNOMEUI_CFLAGS) \
 	$(GNOMEKEYRING_CFLAGS) \
 	$(NETWORK_MANAGER_CFLAGS) \
+	$(NM_UTILS_CFLAGS) \
 	-DICONDIR=\""$(datadir)/pixmaps"\" \
 	-DGLADEDIR=\""$(gladedir)"\" \
 	-DBINDIR=\""$(bindir)"\" \

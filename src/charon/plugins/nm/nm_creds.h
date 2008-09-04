@@ -50,8 +50,21 @@ struct nm_creds_t {
 	 * @param id		ID of the user
 	 * @param password	password to use for authentication
 	 */
-	void (*set_password)(nm_creds_t *this, identification_t *id, char *password);
-	
+	void (*set_username_password)(nm_creds_t *this, identification_t *id,
+								  char *password);
+	/**
+	 * Set the certificate and private key to use for client authentication.
+	 *
+	 * @param cert		client certificate
+	 * @param key		associated private key
+	 */
+	void (*set_cert_and_key)(nm_creds_t *this, certificate_t *cert,
+							 private_key_t *key);
+	/**
+	 * Clear the stored credentials.
+	 */
+	void (*clear)(nm_creds_t *this);
+
 	/**
 	 * Destroy a nm_creds instance.
 	 */

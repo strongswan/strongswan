@@ -26,10 +26,17 @@
 #include <gtk/gtk.h>
 #include <gnome-keyring.h>
 #include <libgnomeui/libgnomeui.h>
+#include <gconf/gconf-client.h>
+#include <nm-vpn-plugin.h>
+#include <nm-setting-vpn.h>
+#include <nm-setting-connection.h>
 
-#define NM_DBUS_SERVICE_STRONGSWAN    "org.freedesktop.NetworkManager.strongswan"
+#define NM_DBUS_SERVICE_STRONGSWAN	"org.freedesktop.NetworkManager.strongswan"
 
-static char *lookup(char *name, char *service)
+/**
+ * lookup a password in the keyring
+ */
+static char *lookup_password(char *name, char *service)
 {
 	GList *list;
 	GList *iter;
@@ -55,6 +62,29 @@ static char *lookup(char *name, char *service)
 	return pass;
 }
 
+/**
+ * check if this connection needs a password
+ */
+static gboolean need_password(char *id)
+{
+	GConfClient *client;
+	char *key, *str;
+	gboolean need_password = FALSE;
+
+	client = gconf_client_get_default();
+	key = g_strdup_printf("/system/networking/connections/%s/%s/%s",
+						  id, NM_SETTING_VPN_SETTING_NAME, "method");
+	str = gconf_client_get_string(client, key, NULL);
+	if (str && !strcmp(str, "eap"))
+	{
+		need_password = TRUE;
+	}
+	g_free(str);
+	g_free(key);
+	g_object_unref(client);
+	return need_password;
+}
+
 int main (int argc, char *argv[])
 {
 	static gboolean retry = FALSE;
@@ -62,7 +92,7 @@ int main (int argc, char *argv[])
 	GOptionContext *context;
 	GnomeProgram *program = NULL;
 	int exit_status = 1;
-	char buf;
+	char buf, *agent;
 	guint32 itemid;
 	GtkWidget *dialog;
 	GOptionEntry entries[] = {
@@ -91,8 +121,8 @@ int main (int argc, char *argv[])
 		fprintf (stderr, "Have to supply ID, name, and service\n");
 		g_object_unref (program);
 		return 1;
-	}
-
+	}	
+	
 	if (strcmp(service, NM_DBUS_SERVICE_STRONGSWAN) != 0)
 	{
 		fprintf(stderr, "This dialog only works with the '%s' service\n",
@@ -101,43 +131,66 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 	
-	pass = lookup(name, service);
-	if (!pass || retry)
+	if (need_password(id))
 	{
-		dialog = gnome_password_dialog_new(_("VPN password required"),
-							_("Password required to establish VPN connection:"),
-							NULL, NULL, TRUE);
-		gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
-		gnome_password_dialog_set_show_username(GNOME_PASSWORD_DIALOG(dialog), FALSE);
-		if (pass)
+		pass = lookup_password(name, service);
+		if (!pass || retry)
 		{
-			gnome_password_dialog_set_password(GNOME_PASSWORD_DIALOG(dialog), pass);
+			dialog = gnome_password_dialog_new(_("VPN password required"),
+								_("Password required to establish VPN connection:"),
+								NULL, NULL, TRUE);
+			gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
+			gnome_password_dialog_set_show_username(GNOME_PASSWORD_DIALOG(dialog), FALSE);
+			if (pass)
+			{
+				gnome_password_dialog_set_password(GNOME_PASSWORD_DIALOG(dialog), pass);
+			}
+			if (!gnome_password_dialog_run_and_block(GNOME_PASSWORD_DIALOG(dialog)))
+			{
+				g_object_unref (program);
+				return 1;
+			}
+
+			pass = gnome_password_dialog_get_password(GNOME_PASSWORD_DIALOG(dialog));
+			switch (gnome_password_dialog_get_remember(GNOME_PASSWORD_DIALOG(dialog)))
+			{
+				case GNOME_PASSWORD_DIALOG_REMEMBER_NOTHING:
+					break;
+				case GNOME_PASSWORD_DIALOG_REMEMBER_SESSION:
+					keyring = "session";
+					/* FALL */
+				case GNOME_PASSWORD_DIALOG_REMEMBER_FOREVER:
+					if (gnome_keyring_set_network_password_sync(keyring,
+							g_get_user_name(), NULL, name, "password", service, NULL, 0,
+							pass, &itemid) != GNOME_KEYRING_RESULT_OK)
+					{
+						g_warning ("storing password in keyring failed");
+					}
+					break;
+			}
 		}
-		if (!gnome_password_dialog_run_and_block(GNOME_PASSWORD_DIALOG(dialog)))
+		printf("password\n%s\n", pass);
+	}
+	else
+	{
+		agent = getenv("SSH_AUTH_SOCK");
+		if (agent)
 		{
-			g_object_unref (program);
+			printf("agent\n%s\n", agent);
+		}
+		else
+		{
+			GtkWidget *dialog;
+			
+			dialog = gtk_message_dialog_new(NULL, 0, GTK_MESSAGE_ERROR,
+						  GTK_BUTTONS_OK, 
+						  _("Configuration uses ssh-agent for authentication, "
+						  "but ssh-agent is not running!"));
+			gtk_dialog_run (GTK_DIALOG (dialog));
+			gtk_widget_destroy (dialog);
 			return 1;
 		}
-	
-		pass = gnome_password_dialog_get_password(GNOME_PASSWORD_DIALOG(dialog));
-		switch (gnome_password_dialog_get_remember(GNOME_PASSWORD_DIALOG(dialog)))
-		{
-			case GNOME_PASSWORD_DIALOG_REMEMBER_NOTHING:
-				break;
-			case GNOME_PASSWORD_DIALOG_REMEMBER_SESSION:
-				keyring = "session";
-				/* FALL */
-			case GNOME_PASSWORD_DIALOG_REMEMBER_FOREVER:
-				if (gnome_keyring_set_network_password_sync(keyring,
-						g_get_user_name(), NULL, name, "password", service, NULL, 0,
-						pass, &itemid) != GNOME_KEYRING_RESULT_OK)
-				{
-					g_warning ("storing password in keyring failed");
-				}
-				break;
-		}
 	}
-	printf("password\n%s\n", pass);
 	printf("\n\n");
 	/* flush output, wait for input */
 	fflush(stdout);

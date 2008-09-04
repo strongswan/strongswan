@@ -22,6 +22,8 @@
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
+#define CAP_DAC_OVERRIDE 1
+
 typedef struct private_nm_plugin_t private_nm_plugin_t;
 
 /**
@@ -105,6 +107,9 @@ plugin_t *plugin_create()
 		destroy(this);
 		return NULL;
 	}
+	
+	/* bypass file permissions to read from users ssh-agent */
+	charon->keep_cap(charon, CAP_DAC_OVERRIDE);
 	
 	charon->processor->queue_job(charon->processor, 
 		 (job_t*)callback_job_create((callback_job_cb_t)run, this, NULL, NULL));

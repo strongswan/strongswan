@@ -183,19 +183,6 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	
 	DBG1(DBG_CFG, "received NetworkManager connection: %s",
 		 nm_setting_to_string(NM_SETTING(settings)));
-	str = g_hash_table_lookup(settings->data, "user");
-	if (!str)
-	{
-		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-				    "Username missing.");
-		return FALSE;
-	}
-	user = identification_create_from_string(str);
-	if (!user)
-	{	/* fallback to ID_KEY_ID for non-qualified usernames */
-		user = identification_create_from_encoding(ID_KEY_ID,
-												chunk_create(str, strlen(str)));
-	}
 	address = g_hash_table_lookup(settings->data, "address");
 	if (!address || !*address)
 	{
@@ -216,7 +203,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		{
 			auth_class = AUTH_CLASS_PSK;
 		}
-		else if (streq(str, "pubkey"))
+		else if (streq(str, "agent"))
 		{
 			auth_class = AUTH_CLASS_PUBKEY;
 		}
@@ -226,7 +213,9 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	 * Register credentials
 	 */
 	creds = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->creds;
-	 
+	creds->clear(creds);
+	
+	/* gateway cert */
 	str = g_hash_table_lookup(settings->data, "certificate");
 	if (str)
 	{
@@ -237,14 +226,69 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	if (!cert)
 	{
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-				    "Loading certificate failed.");
+				    "Loading gateway certificate failed.");
 		return FALSE;
 	}
 	gateway = cert->get_subject(cert);
-	str = g_hash_table_lookup(settings->data, "password");
-	if (str)
+	
+	if (auth_class == AUTH_CLASS_EAP)
 	{
-		creds->set_password(creds, user, str);
+		/* username/password authentication ... */
+		str = g_hash_table_lookup(settings->data, "user");
+		if (str)
+		{
+			user = identification_create_from_string(str);
+			str = g_hash_table_lookup(settings->data, "password");
+			creds->set_username_password(creds, user, str);
+		}
+	}
+	
+	if (auth_class == AUTH_CLASS_PUBKEY)
+	{
+		/* ... or certificate/private key authenitcation */
+		str = g_hash_table_lookup(settings->data, "usercert");
+		if (str)
+		{
+			public_key_t *public;
+			private_key_t *private = NULL;
+			
+			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+									  BUILD_FROM_FILE, str, BUILD_END);	  
+			str = g_hash_table_lookup(settings->data, "agent");
+			if (str && cert)
+			{
+				public = cert->get_public_key(cert);
+				if (public)
+				{
+					private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+												 public->get_type(public),
+												 BUILD_AGENT_SOCKET, str,
+												 BUILD_PUBLIC_KEY, public,
+												 BUILD_END);
+					public->destroy(public);
+				}
+			}
+			if (private)
+			{
+				user = cert->get_subject(cert);
+				user = user->clone(user);
+				creds->set_cert_and_key(creds, cert, private);
+			}
+			else
+			{
+				DESTROY_IF(cert);
+				g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+							"Loading user certificate/private key failed.");
+				return FALSE;
+			}
+		}
+	}
+	
+	if (!user)
+	{
+		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+					"Configuration parameters missing.");
+		return FALSE;
 	}
 	
 	/**
@@ -255,7 +299,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	peer_cfg = peer_cfg_create(CONFIG_NAME, 2, ike_cfg,
 					user, gateway->clone(gateway),
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
-					18000, 0, /* rekey 5h, reauth none */
+					36000, 0, /* rekey 10h, reauth none */
 					600, 600, /* jitter, over 10min */
 					TRUE, 0, /* mobike, DPD */
 					virtual ? host_create_from_string("0.0.0.0", 0) : NULL,
@@ -263,10 +307,10 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	auth = peer_cfg->get_auth(peer_cfg);
 	auth->add_item(auth, AUTHN_AUTH_CLASS, &auth_class);
 	child_cfg = child_cfg_create(CONFIG_NAME,
-								 3600, 3000, /* lifetime 1h, rekey 50min */
+								 10800, 10200, /* lifetime 3h, rekey 2h50min */
 								 300, /* jitter 5min */
 								 NULL, TRUE, MODE_TUNNEL, /* updown, hostaccess */
-								 ACTION_NONE, ACTION_NONE, ipcomp);
+								 ACTION_NONE, ACTION_RESTART, ipcomp);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
@@ -315,15 +359,30 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 							 char **setting_name, GError **error)
 {
 	NMSettingVPN *settings;
+	char *method;
 	
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
 														NM_TYPE_SETTING_VPN));
-	if (!g_hash_table_lookup(settings->data, "password"))
+	method = g_hash_table_lookup(settings->data, "method");
+	if (method)
 	{
-		*setting_name = NM_SETTING_VPN_SETTING_NAME;
-		return TRUE;
+		if (streq(method, "eap"))
+		{
+			if (g_hash_table_lookup(settings->data, "password"))
+			{
+				return FALSE;
+			}
+		}
+		else if (streq(method, "agent"))
+		{
+			if (g_hash_table_lookup(settings->data, "agent"))
+			{
+				return FALSE;
+			}
+		}
 	}
-	return FALSE;
+	*setting_name = NM_SETTING_VPN_SETTING_NAME;
+	return TRUE;
 }
 
 /**

@@ -119,23 +119,35 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 		             "address");
 		return FALSE;
 	}
-
-	widget = glade_xml_get_widget (priv->xml, "user-entry");
-	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
-	if (!str || !strlen (str)) {
-		g_set_error (error,
-		             STRONGSWAN_PLUGIN_UI_ERROR,
-		             STRONGSWAN_PLUGIN_UI_ERROR_INVALID_PROPERTY,
-		             "user");
-		return FALSE;
-	}
-
 	return TRUE;
 }
 
 static void
-stuff_changed_cb (GtkWidget *widget, gpointer user_data)
+settings_changed_cb (GtkWidget *widget, gpointer user_data)
 {
+	g_signal_emit_by_name (STRONGSWAN_PLUGIN_UI_WIDGET (user_data), "changed");
+}
+
+static void
+method_changed_cb (GtkWidget *widget, gpointer user_data)
+{
+	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (user_data);
+	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
+	
+	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == 0)
+	{
+		gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-label"));
+		gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-button"));
+		gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-label"));
+		gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-entry"));
+	}
+	else
+	{
+		gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-label"));
+		gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-button"));
+		gtk_widget_show (glade_xml_get_widget (priv->xml, "user-label"));
+		gtk_widget_show (glade_xml_get_widget (priv->xml, "user-entry"));
+	}
 	g_signal_emit_by_name (STRONGSWAN_PLUGIN_UI_WIDGET (user_data), "changed");
 }
 
@@ -149,83 +161,87 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	gboolean active;
 	
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection, NM_TYPE_SETTING_VPN));
-	if (!settings)
-		return FALSE;
 	widget = glade_xml_get_widget (priv->xml, "address-entry");
-	if (!widget)
-		return FALSE;
 	value = g_hash_table_lookup (settings->data, "address");
 	if (value)
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
-	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 	widget = glade_xml_get_widget (priv->xml, "certificate-button");
-	if (!widget)
-		return FALSE;
 	value = g_hash_table_lookup (settings->data, "certificate");
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
-	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (stuff_changed_cb), self);
+	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
 
+	widget = glade_xml_get_widget (priv->xml, "user-label");
+	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = glade_xml_get_widget (priv->xml, "user-entry");
-	if (!widget)
-		return FALSE;
+	gtk_widget_set_no_show_all (widget, TRUE);
 	value = g_hash_table_lookup (settings->data, "user");
 	if (value)
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
-	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 	widget = glade_xml_get_widget (priv->xml, "method-combo");
-	if (!widget)
-		return FALSE;
+	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Certificate/ssh-agent"));
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("EAP"));
-	/* TODO: PSK is disabled until we have the possibility to enforce strong
-	 * secrets. 
-	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Preshared Key")); */
 	value = g_hash_table_lookup (settings->data, "method");
 	if (value) {
-		if (g_strcasecmp (value, "eap") == 0) {
+		if (g_strcasecmp (value, "agent") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 		}
-		if (g_strcasecmp (value, "psk") == 0) {
+		if (g_strcasecmp (value, "eap") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 1);
 		}
 	}
-	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (method_changed_cb), self);
 	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == -1)
-	{	/* default to EAP */	
+	{
 		gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
-	}	
+	}
+	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) != 0)
+	{
+		gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-label"));
+		gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-button"));
+	}
+	else
+	{
+		gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-label"));
+		gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-entry"));
+	}
+	
+	widget = glade_xml_get_widget (priv->xml, "usercert-label");
+	gtk_widget_set_no_show_all (widget, TRUE);
+	widget = glade_xml_get_widget (priv->xml, "usercert-button");
+	gtk_widget_set_no_show_all (widget, TRUE);
+	value = g_hash_table_lookup (settings->data, "usercert");
+	if (value)
+		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
+	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
 	
 	widget = glade_xml_get_widget (priv->xml, "virtual-check");
-	if (!widget)
-		return FALSE;
 	value = g_hash_table_lookup (settings->data, "virtual");
 	if (value && strcmp(value, "yes") == 0)
 	{
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
-	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (stuff_changed_cb), self);
+	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 	
 	widget = glade_xml_get_widget (priv->xml, "encap-check");
-	if (!widget)
-		return FALSE;
 	value = g_hash_table_lookup (settings->data, "encap");
 	if (value && strcmp(value, "yes") == 0)
 	{
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
-	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (stuff_changed_cb), self);
+	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 	
 	widget = glade_xml_get_widget (priv->xml, "ipcomp-check");
-	if (!widget)
-		return FALSE;
 	value = g_hash_table_lookup (settings->data, "ipcomp");
 	if (value && strcmp(value, "yes") == 0)
 	{
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
-	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (stuff_changed_cb), self);
+	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 
 	return TRUE;
 }
@@ -270,24 +286,26 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	if (str) {
 		g_hash_table_insert (settings->data, g_strdup ("certificate"), g_strdup(str));
 	}
-
-	widget = glade_xml_get_widget (priv->xml, "user-entry");
-	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
-	if (str && strlen (str)) {
-		g_hash_table_insert (settings->data, g_strdup ("user"), g_strdup(str));
-	}
-
+	
 	widget = glade_xml_get_widget (priv->xml, "method-combo");
 	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
 	{
+		case 0:
 		default:
-			str = "eap";
+			widget = glade_xml_get_widget (priv->xml, "usercert-button");
+			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
+			if (str) {
+				g_hash_table_insert (settings->data, g_strdup ("usercert"), g_strdup(str));
+			}
+			str = "agent";
 			break;
 		case 1:
-			str = "psk";
-			break;
-		case 2:
-			str = "pubkey";
+			widget = glade_xml_get_widget (priv->xml, "user-entry");
+			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+			if (str && strlen (str)) {
+				g_hash_table_insert (settings->data, g_strdup ("user"), g_strdup(str));
+			}
+			str = "eap";
 			break;
 	}
 	g_hash_table_insert (settings->data, g_strdup ("method"), g_strdup(str));
