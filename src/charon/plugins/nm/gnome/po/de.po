@@ -1,3 +1,19 @@
+#: ../auth-dialog/main.c:139
+msgid "VPN password required"
+msgstr "VPN Passwort notwendig"
+
+#: ../auth-dialog/main.c:140
+msgid "Password required to establish VPN connection:"
+msgstr "Für die Erstellung des VPN-Tunnels ist ein Passwort erforderlich:"
+
+#: ../auth-dialog/main.c:187
+msgid ""
+"Configuration uses ssh-agent for authentication, but ssh-agent is not "
+"running!"
+msgstr ""
+"Die Konfiguration verwendet ssh-agent für die Authentisierung, aber ssh-agent "
+"ist nicht gestartet!"
+
 #: ../properties/nm-strongswan.c:42
 msgid "IPsec/IKEv2 (strongswan)"
 msgstr "IPsec/IKEv2 (strongswan)"
@@ -40,7 +56,7 @@ msgstr "Ze_rtifikat:"
 
 #: ../properties/nm-strongswan-dialog.glade.h:7
 msgid "En_force UDP encapsulation"
-msgstr "_Erzwingen einer zustzlichen Einbettung der Datenpakete in UDP"
+msgstr "_Erzwingen einer zusätzlichen Einbettung der Datenpakete in UDP"
 
 #: ../properties/nm-strongswan-dialog.glade.h:8
 msgid "Request an _inner IP address"
@@ -58,58 +74,43 @@ msgstr "_Adresse:"
 msgid "_Username:"
 msgstr "_Benutzername:"
 
-#: ../auth-dialog/main.c:139
-msgid "VPN password required"
-msgstr "VPN Passwort notwendig"
+msgid "Gateway certificate to use for gateway authentication."
+msgstr "Zertifikat des Gateways für dessen Authentisierung."
 
-#: ../auth-dialog/main.c:140
-msgid "Password required to establish VPN connection:"
-msgstr "Fr die Erstellung des VPN-Tunnles ist ein Passwort erforderlich:"
+msgid "An IP address or hostname the Gateway can be contacted."
+msgstr "Ein IP-Adresse oder einen Rechnernamen des Gateways."
 
-#: ../auth-dialog/main.c:187
+msgid "Client certificate to use for client authentication."
+msgstr "Zertifikat des Clients für dessen Authentisierung."
+
 msgid ""
-"Configuration uses ssh-agent for authentication, but ssh-agent is not "
-"running!"
+"The username (identity) to use for authentication against the gateway."
 msgstr ""
-"Die Konfiguration verwendet ssh-agent fr die Authentisierung, aber ssh-agent "
-"ist nicht gestartet!"
+"Benutzername/Identität für die Authentisierung gegenüber dem Gateway."
 
-#~ msgid "Gateway certificate to use for gateway authentication."
-#~ msgstr "Zertifikat des Gateways fr dessen Authentisierung."
+msgid ""
+"Authentication Method to use for authentication against the Gateway. "
+msgstr "Authentisierungsmethode zur Authentisierung gegenüber dem Gateway."
 
-#~ msgid "An IP address or hostname the Gateway can be contacted."
-#~ msgstr "Ein IP-Adresse oder einen Rechnernamen des Gateways."
+msgid ""
+"The Gateway may provide addresses from a pool to use for communication in "
+"the Gateways network. Check to request such an address."
+msgstr ""
+"Der Gateway kann IP-Adressen bereitstellen, welche der Client für die "
+"Kommunikation im dahinterliegenden Netz verwenden kann. Aktivieren, um "
+"eine solche Adresse zu beziehen."
 
-#~ msgid "Client certificate to use for client authentication."
-#~ msgstr "Zertifikat des Clients fr dessen Authentisierung."
+msgid ""
+"Some firewalls block ESP traffic. Enforcing UDP capsulation even if no "
+"NAT situation is detected might help in such cases."
+msgstr ""
+"Manche Firewalls blockieren Datenverkehr mit dem ESP-Protokoll. Das "
+"erzwingen einer zusätzlichen Einbettung in UDP, auch wenn kein NAT-Router "
+"detektiert wurde, kann in solchen Situationen hilfreich sein."
 
-#~ msgid ""
-#~ "The username (identity) to use for authentication against the gateway."
-#~ msgstr "Benutzername/Identitt fr die Authentisierung gegenber dem Gateway."
-
-#~ msgid ""
-#~ "Authentication Method to use for authentication against the Gateway. "
-#~ msgstr "Authentisierungsmethode zur Authentisierung gegenber dem Gateway."
-
-#~ msgid ""
-#~ "The Gateway may provide addresses from a pool to use for communication in "
-#~ "the Gateways network. Check to request such an address."
-#~ msgstr ""
-#~ "Der Gateway kann IP-Adressen bereitstellen, welche der Client fr die "
-#~ "Kommunikation im dahinterliegenden Netz verwenden kann. Aktivieren, um "
-#~ "eine solche Adresse zu beziehen."
-
-#~ msgid ""
-#~ "Some firewalls block ESP traffic. Enforcing UDP capsulation even if no "
-#~ "NAT situation is detected might help in such cases."
-#~ msgstr ""
-#~ "Manche Firewalls blockieren Datenverkehr mit dem ESP-Protokoll. Das "
-#~ "erzwingen einer zustzlichen einbettung in UDP, auch wenn kein NAT-Router "
-#~ "detektiert wurde, kann in solchen Situationen hilfreich sein."
-
-#~ msgid ""
-#~ "IPComp compresses raw IP packets before they get encrypted. This saves "
-#~ "some bandwith, but uses more processing power."
-#~ msgstr ""
-#~ "IPComp komprimiert IP-Pakete, bevor sie verschlsselt werden. Diese Option "
-#~ "kann Bandbreite sparen, bentigt jedoch zustzliche Rechenleistung."
+msgid ""
+"IPComp compresses raw IP packets before they get encrypted. This saves "
+"some bandwith, but uses more processing power."
+msgstr ""
+"IPComp komprimiert IP-Pakete, bevor sie verschlüsselt werden. Diese Option "
+"kann Bandbreite sparen, benötigt jedoch zusätzliche Rechenleistung."
