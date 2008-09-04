@@ -181,7 +181,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
 														NM_TYPE_SETTING_VPN));
 	
-	DBG1(DBG_CFG, "received NetworkManager connection: %s",
+	DBG4(DBG_CFG, "received NetworkManager connection: %s",
 		 nm_setting_to_string(NM_SETTING(settings)));
 	address = g_hash_table_lookup(settings->data, "address");
 	if (!address || !*address)
