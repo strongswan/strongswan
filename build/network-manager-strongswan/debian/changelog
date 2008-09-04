@@ -1,3 +1,17 @@
+network-manager-strongswan (4.2.6.2-1) hardy; urgency=low
+
+  * new upstream release supporting private key authentication
+  
+  * use --with-charon option to specify charon binary
+  
+ -- Martin Willi <martin@strongswan.org>  Thu, 04 Sep 2008 12:46:52 +0200
+ 
+network-manager-strongswan (4.2.6.1-1) hardy; urgency=low
+ 
+  * fixed path to charon
+   
+ -- Martin Willi <martin@strongswan.org>  Tue, 26 Aug 2008 16:41:00 +0200
+
 network-manager-strongswan (4.2.6-2) hardy; urgency=low
 
   * new package based on network-manager-vpnc

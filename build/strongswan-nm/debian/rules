@@ -19,7 +19,7 @@ build:
 	./configure --disable-aes --disable-des --disable-md5 --disable-sha1 \
 	--disable-sha2 --disable-fips-prf --disable-gmp --disable-stroke \
 	--disable-pluto --disable-tools --disable-updown --enable-openssl \
-	--enable-nm --enable-eap-gtc \
+	--enable-nm --enable-eap-gtc --enable-agent \
 	--sysconfdir=/etc --prefix=/usr --libexecdir=/usr/lib
 	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)"
 	touch build

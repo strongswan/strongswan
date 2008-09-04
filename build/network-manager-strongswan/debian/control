@@ -11,7 +11,6 @@ Build-Depends: cdbs,
 	intltool,
 	libgnomeui-dev,
 	libdbus-glib-1-dev,
-	patchutils
 Standards-Version: 3.7.3.0
 
 Package: network-manager-strongswan

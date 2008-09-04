@@ -1,3 +1,9 @@
+strongswan-nm (4.2.6.2-1) hardy; urgency=low
+
+  * new upstream release supporting private key authentication
+
+ -- Martin Willi <martin@strongswan.org>  Thu, 04 Sep 2008 12:50:25 +0200
+
 strongswan-nm (4.2.6.1-1) hardy; urgency=low
 
   * new upstream sources with GPL code only
