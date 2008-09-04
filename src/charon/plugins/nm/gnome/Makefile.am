@@ -11,7 +11,8 @@ nmvpnservice_DATA = nm-strongswan-service.name
 @INTLTOOL_DESKTOP_RULE@
 
 nm-strongswan-service.name: $(srcdir)/nm-strongswan-service.name.in
-	sed -e 's|[@]LIBEXECDIR[@]|$(libexecdir)|g' $< >$@
+	sed -e 's|[@]LIBEXECDIR[@]|$(libexecdir)|' \
+		-e 's|[@]CHARON[@]|$(charon)|' $< >$@
 
 EXTRA_DIST = nm-strongswan-service.name.in \
              $(dbusservice_DATA)  \

@@ -80,6 +80,13 @@ PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.7.0 libnm-util libnm_glib libnm_
 AC_SUBST(NM_UTILS_CFLAGS)
 AC_SUBST(NM_UTILS_LIBS)
 
+AC_ARG_WITH(
+	[charon],
+	AS_HELP_STRING([--with-charon=file],[path to the strongSwan IKEv2 daemon charon"]),
+	[AC_SUBST(charon, "$withval")],
+	[AC_SUBST(charon, "${libexecdir}/ipsec/charon")]
+)
+
 AC_ARG_ENABLE(more-warnings,
 AC_HELP_STRING([--enable-more-warnings], [Maximum compiler warnings]),
 set_more_warnings="$enableval",[
