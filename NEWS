@@ -1,3 +1,16 @@
+strongswan-4.2.7
+----------------
+
+- The new agent plugin provides a private key implementation on top of an 
+  ssh-agent.
+
+- The NetworkManager plugin has been extended to support certificate client
+  authentication using RSA keys loaded into ssh-agent.
+
+- Daemon capability dropping has been ported to libcap and must be enabled
+  explicitly --with-capabilities=libcap. Future version will support the
+  newer libcap2 library.
+
 strongswan-4.2.6
 ----------------
 
