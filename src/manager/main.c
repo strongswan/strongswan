@@ -42,7 +42,7 @@ int main (int arc, char *argv[])
 	
 	socket = lib->settings->get_str(lib->settings, "manager.socket", NULL);
 	debug = lib->settings->get_bool(lib->settings, "manager.debug", FALSE);
-	timeout = lib->settings->get_int(lib->settings, "manager.timeout", 900);
+	timeout = lib->settings->get_time(lib->settings, "manager.timeout", 900);
 	threads = lib->settings->get_int(lib->settings, "manager.threads", 10);
 	database = lib->settings->get_str(lib->settings, "manager.database", NULL);
 	if (!database)

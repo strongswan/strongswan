@@ -41,7 +41,7 @@ int main(int arc, char *argv[])
 	
 	socket = lib->settings->get_str(lib->settings, "medsrv.socket", NULL);
 	debug = lib->settings->get_bool(lib->settings, "medsrv.debug", FALSE);
-	timeout = lib->settings->get_int(lib->settings, "medsrv.timeout", 900);
+	timeout = lib->settings->get_time(lib->settings, "medsrv.timeout", 900);
 	threads = lib->settings->get_int(lib->settings, "medsrv.threads", 5);
 	uri = lib->settings->get_str(lib->settings, "medsrv.database", NULL);
 	if (uri == NULL)

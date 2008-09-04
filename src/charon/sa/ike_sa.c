@@ -2621,7 +2621,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->skp_build = chunk_empty;
  	this->child_prf = NULL;
 	this->state = IKE_CREATED;
-	this->keepalive_interval = lib->settings->get_int(lib->settings,
+	this->keepalive_interval = lib->settings->get_time(lib->settings,
 									"charon.keep_alive", KEEPALIVE_INTERVAL);
 	this->time.inbound = this->time.outbound = time(NULL);
 	this->time.established = 0;

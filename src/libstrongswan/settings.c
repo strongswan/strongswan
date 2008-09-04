@@ -203,8 +203,44 @@ static int get_int(private_settings_t *this, char *key, int def)
 }
 
 /**
- * destry a section
-*/
+ * Implementation of settings_t.get_time.
+ */
+static u_int32_t get_time(private_settings_t *this, char *key, u_int32_t def)
+{
+	char *value, *endptr;
+	u_int32_t timeval;
+	
+	value = find(this->top, key);
+	if (value)
+	{
+		errno = 0;
+		timeval = strtol(value, &endptr, 10);
+		if (errno == 0 && timeval >= 0)
+		{
+			switch (*endptr)
+			{
+				case 'd':		/* time in days */
+					timeval *= 24 * 3600;
+					break;
+				case 'h':		/* time in hours */
+					timeval *= 3600;
+					break;
+				case 'm':		/* time in minutes */
+					timeval *= 60;
+					break;
+				case 's':		/* time in seconds */
+					default:
+					break;
+			}
+			return timeval;
+		}
+	}
+	return def;
+}
+
+/**
+ * destroy a section
+ */
 static void section_destroy(section_t *this)
 {
 	this->kv->destroy_function(this->kv, free);
@@ -365,7 +401,8 @@ settings_t *settings_create(char *file)
 	private_settings_t *this = malloc_thing(private_settings_t);
 	
 	this->public.get_str = (char*(*)(settings_t*, char *key, char* def))get_str;
-	this->public.get_int = (int(*)(settings_t*, char *key, bool def))get_int;
+	this->public.get_int = (int(*)(settings_t*, char *key, int def))get_int;
+	this->public.get_time = (u_int32_t(*)(settings_t*, char *key, u_int32_t def))get_time;
 	this->public.get_bool = (bool(*)(settings_t*, char *key, bool def))get_bool;
 	this->public.destroy = (void(*)(settings_t*))destroy;
 	

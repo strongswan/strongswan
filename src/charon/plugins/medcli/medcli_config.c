@@ -354,9 +354,8 @@ medcli_config_t *medcli_config_create(database_t *db)
 	this->public.destroy = (void(*)(medcli_config_t*))destroy;
 	
 	this->db = db;
-	this->rekey = lib->settings->get_int(lib->settings,
-										 "medcli.rekey", 20) * 60;
-	this->dpd = lib->settings->get_int(lib->settings, "medcli.dpd", 300);
+	this->rekey = lib->settings->get_time(lib->settings, "medcli.rekey", 1200);
+	this->dpd = lib->settings->get_time(lib->settings, "medcli.dpd", 300);
 	this->ike = ike_cfg_create(FALSE, FALSE, "0.0.0.0", "0.0.0.0");
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
 	

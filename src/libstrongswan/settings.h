@@ -80,8 +80,17 @@ struct settings_t {
 	 * @param def		default value to return if key not found
 	 * @return			value of the key
 	 */
-	int (*get_int)(settings_t *this, char *key, bool def);
+	int (*get_int)(settings_t *this, char *key, int def);
 	
+	/**
+	 * Get a time value.
+	 *
+	 * @param key		key including sections
+	 * @param def		default value to return if key not found
+	 * @return			value of the key
+	 */
+	u_int32_t (*get_time)(settings_t *this, char *key, u_int32_t def);
+
 	/**
      * Destroy a settings instance.
      */
