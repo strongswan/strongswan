@@ -168,10 +168,47 @@ static int open_connection(char *path)
 	return s;
 }
 
+/**
+ * check if the ssh agent key blob matches to our public key
+ */
+static bool matches_pubkey(chunk_t key, public_key_t *pubkey)
+{
+	chunk_t pubkeydata, hash, n, e;
+	hasher_t *hasher;
+	identification_t *id;
+	bool match;
+	
+	if (!pubkey)
+	{
+		return TRUE;
+	}
+	read_string(&key);
+	e = read_string(&key);
+	n = read_string(&key);
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (hasher == NULL)
+	{
+		return FALSE;
+	}
+	pubkeydata = asn1_wrap(ASN1_SEQUENCE, "mm", 
+						asn1_wrap(ASN1_INTEGER, "c", n),
+						asn1_wrap(ASN1_INTEGER, "c", e));
+	hasher->allocate_hash(hasher, pubkeydata, &hash);
+	free(pubkeydata.ptr);
+	id = pubkey->get_id(pubkey, ID_PUBKEY_SHA1);
+	if (!id)
+	{
+		return FALSE;
+	}
+	match = chunk_equals(id->get_encoding(id), hash);
+	free(hash.ptr);
+	return match;
+}
+
 /** 
  * Get the first usable key from the agent
  */
-static bool read_key(private_agent_private_key_t *this)
+static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 {
 	int len, count;
 	char buf[2048];
@@ -203,7 +240,7 @@ static bool read_key(private_agent_private_key_t *this)
 			read_string(&tmp);
 			tmp = read_string(&tmp);
 			if (type.len && strneq("ssh-rsa", type.ptr, type.len) &&
-				tmp.len >= 512/8)
+				tmp.len >= 512/8 && matches_pubkey(key, pubkey))
 			{
 				this->key = chunk_clone(key);
 				this->key_size = tmp.len;
@@ -374,6 +411,7 @@ static bool build_ids(private_agent_private_key_t *this)
 	hasher_t *hasher;
 	
 	key = this->key;
+	read_string(&key);
 	e = read_string(&key);
 	n = read_string(&key);
 	
@@ -383,7 +421,9 @@ static bool build_ids(private_agent_private_key_t *this)
 		DBG1("SHA1 hash algorithm not supported, unable to use RSA");
 		return FALSE;
 	}
-	publicKey = asn1_wrap(ASN1_SEQUENCE, "cc", n, e);
+	publicKey = asn1_wrap(ASN1_SEQUENCE, "mm", 
+					asn1_wrap(ASN1_INTEGER, "c", n),
+					asn1_wrap(ASN1_INTEGER, "c", e));
 	hasher->allocate_hash(hasher, publicKey, &hash);
 	this->keyid = identification_create_from_encoding(ID_PUBKEY_SHA1, hash);
 	chunk_free(&hash);
@@ -435,7 +475,8 @@ static void destroy(private_agent_private_key_t *this)
 /**
  * Internal constructor
  */
-static agent_private_key_t *agent_private_key_create(char *path)
+static agent_private_key_t *agent_private_key_create(char *path,
+													 public_key_t *pubkey)
 {
 	private_agent_private_key_t *this = malloc_thing(private_agent_private_key_t);
 	
@@ -456,10 +497,11 @@ static agent_private_key_t *agent_private_key_create(char *path)
 		free(this);
 		return NULL;
 	}
+	this->key = chunk_empty;
 	this->keyid = NULL;
 	this->keyid_info = NULL;
 	this->ref = 1;
-	if (!read_key(this) || !build_ids(this))
+	if (!read_key(this, pubkey) || !build_ids(this))
 	{
 		destroy(this);
 		return NULL;
@@ -474,8 +516,10 @@ typedef struct private_builder_t private_builder_t;
 struct private_builder_t {
 	/** implements the builder interface */
 	builder_t public;
-	/** loaded/generated private key */
-	agent_private_key_t *key;
+	/** agent unix socket */
+	char *socket;
+	/** matching public key */
+	public_key_t *pubkey;
 };
 
 /**
@@ -483,8 +527,12 @@ struct private_builder_t {
  */
 static agent_private_key_t *build(private_builder_t *this)
 {
-	agent_private_key_t *key = this->key;
+	agent_private_key_t *key = NULL;
 	
+	if (this->socket)
+	{
+		key = agent_private_key_create(this->socket, this->pubkey);
+	}
 	free(this);
 	return key;
 }
@@ -496,25 +544,26 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
 	
-	if (this->key)
-	{
-		DBG1("ignoring surplus build part %N", builder_part_names, part);
-		return;
-	}
-	
 	switch (part)
 	{
 		case BUILD_AGENT_SOCKET:
 		{
 			va_start(args, part);
-			this->key = agent_private_key_create(va_arg(args, char*));
+			this->socket = va_arg(args, char*);
 			va_end(args);
-			break;
+			return;
+		}
+		case BUILD_PUBLIC_KEY:
+		{
+			va_start(args, part);
+			this->pubkey = va_arg(args, public_key_t*);
+			va_end(args);
+			return;
 		}
 		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
 			break;
 	}
+	builder_cancel(&this->public);
 }
 
 /**
@@ -531,7 +580,8 @@ builder_t *agent_private_key_builder(key_type_t type)
 	
 	this = malloc_thing(private_builder_t);
 	
-	this->key = NULL;
+	this->pubkey = NULL;
+	this->socket = NULL;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
 	
