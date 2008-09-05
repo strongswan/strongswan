@@ -63,9 +63,9 @@ static char *lookup_password(char *name, char *service)
 }
 
 /**
- * check if this connection needs a password
+ * get the connection type
  */
-static gboolean need_password(char *id)
+static char* get_connection_type(char *id)
 {
 	GConfClient *client;
 	char *key, *str;
@@ -75,14 +75,9 @@ static gboolean need_password(char *id)
 	key = g_strdup_printf("/system/networking/connections/%s/%s/%s",
 						  id, NM_SETTING_VPN_SETTING_NAME, "method");
 	str = gconf_client_get_string(client, key, NULL);
-	if (str && !strcmp(str, "eap"))
-	{
-		need_password = TRUE;
-	}
-	g_free(str);
 	g_free(key);
 	g_object_unref(client);
-	return need_password;
+	return str;
 }
 
 int main (int argc, char *argv[])
@@ -92,7 +87,7 @@ int main (int argc, char *argv[])
 	GOptionContext *context;
 	GnomeProgram *program = NULL;
 	int exit_status = 1;
-	char buf, *agent;
+	char buf, *agent, *type;
 	guint32 itemid;
 	GtkWidget *dialog;
 	GOptionEntry entries[] = {
@@ -131,14 +126,30 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 	
-	if (need_password(id))
+	type = get_connection_type(id);
+	if (!type)
+	{
+		fprintf(stderr, "Connection lookup failed\n");
+		g_object_unref (program);
+		return 1;
+	}
+	if (!strcmp(type, "eap") || !strcmp(type, "key"))
 	{
 		pass = lookup_password(name, service);
 		if (!pass || retry)
 		{
-			dialog = gnome_password_dialog_new(_("VPN password required"),
-								_("Password required to establish VPN connection:"),
-								NULL, NULL, TRUE);
+			if (!strcmp(type, "eap"))
+			{
+				dialog = gnome_password_dialog_new(_("VPN password required"),
+							_("EAP password required to establish VPN connection:"),
+							NULL, NULL, TRUE);
+			}
+			else
+			{
+				dialog = gnome_password_dialog_new(_("VPN password required"),
+							_("Private key decryption password required to establish VPN connection:"),
+							NULL, NULL, TRUE);
+			}
 			gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
 			gnome_password_dialog_set_show_username(GNOME_PASSWORD_DIALOG(dialog), FALSE);
 			if (pass)

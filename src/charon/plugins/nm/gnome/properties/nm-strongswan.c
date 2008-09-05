@@ -122,31 +122,50 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 	return TRUE;
 }
 
-static void
-settings_changed_cb (GtkWidget *widget, gpointer user_data)
+static void update_layout (GtkWidget *widget, StrongswanPluginUiWidgetPrivate *priv)
 {
-	g_signal_emit_by_name (STRONGSWAN_PLUGIN_UI_WIDGET (user_data), "changed");
+	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
+	{
+		default:
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
+			/* FALL */
+		case 0:
+			gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-label"));
+			gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-button"));
+			gtk_widget_show (glade_xml_get_widget (priv->xml, "userkey-label"));
+			gtk_widget_show (glade_xml_get_widget (priv->xml, "userkey-button"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-label"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-entry"));
+			break;
+		case 1:
+			gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-label"));
+			gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-button"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-label"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-entry"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-label"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-button"));
+			break;
+		case 2:
+			gtk_widget_show (glade_xml_get_widget (priv->xml, "user-label"));
+			gtk_widget_show (glade_xml_get_widget (priv->xml, "user-entry"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-label"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-button"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-label"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-button"));
+			break;
+	}
+
 }
 
 static void
-method_changed_cb (GtkWidget *widget, gpointer user_data)
+settings_changed_cb (GtkWidget *widget, gpointer user_data)
 {
 	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (user_data);
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
 	
-	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == 0)
+	if (widget == glade_xml_get_widget (priv->xml, "method-combo"))
 	{
-		gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-label"));
-		gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-button"));
-		gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-label"));
-		gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-entry"));
-	}
-	else
-	{
-		gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-label"));
-		gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-button"));
-		gtk_widget_show (glade_xml_get_widget (priv->xml, "user-label"));
-		gtk_widget_show (glade_xml_get_widget (priv->xml, "user-entry"));
+		update_layout(glade_xml_get_widget (priv->xml, "method-combo"), priv);
 	}
 	g_signal_emit_by_name (STRONGSWAN_PLUGIN_UI_WIDGET (user_data), "changed");
 }
@@ -183,38 +202,42 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 	widget = glade_xml_get_widget (priv->xml, "method-combo");
+	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Certificate/private key"));
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Certificate/ssh-agent"));
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("EAP"));
 	value = g_hash_table_lookup (settings->data, "method");
 	if (value) {
-		if (g_strcasecmp (value, "agent") == 0) {
+		if (g_strcasecmp (value, "key") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 		}
-		if (g_strcasecmp (value, "eap") == 0) {
+		if (g_strcasecmp (value, "agent") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 1);
 		}
+		if (g_strcasecmp (value, "eap") == 0) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 2);
+		}
 	}
-	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (method_changed_cb), self);
 	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == -1)
 	{
 		gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 	}
-	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) != 0)
-	{
-		gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-label"));
-		gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-button"));
-	}
-	else
-	{
-		gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-label"));
-		gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-entry"));
-	}
+	update_layout (widget, priv);
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 	
 	widget = glade_xml_get_widget (priv->xml, "usercert-label");
 	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = glade_xml_get_widget (priv->xml, "usercert-button");
 	gtk_widget_set_no_show_all (widget, TRUE);
 	value = g_hash_table_lookup (settings->data, "usercert");
+	if (value)
+		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
+	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
+	
+	widget = glade_xml_get_widget (priv->xml, "userkey-label");
+	gtk_widget_set_no_show_all (widget, TRUE);
+	widget = glade_xml_get_widget (priv->xml, "userkey-button");
+	gtk_widget_set_no_show_all (widget, TRUE);
+	value = g_hash_table_lookup (settings->data, "userkey");
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
@@ -290,8 +313,21 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	widget = glade_xml_get_widget (priv->xml, "method-combo");
 	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
 	{
-		case 0:
 		default:
+		case 0:
+			widget = glade_xml_get_widget (priv->xml, "userkey-button");
+			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
+			if (str) {
+				g_hash_table_insert (settings->data, g_strdup ("userkey"), g_strdup(str));
+			}
+			widget = glade_xml_get_widget (priv->xml, "usercert-button");
+			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
+			if (str) {
+				g_hash_table_insert (settings->data, g_strdup ("usercert"), g_strdup(str));
+			}
+			str = "key";
+			break;
+		case 1:
 			widget = glade_xml_get_widget (priv->xml, "usercert-button");
 			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
 			if (str) {
@@ -299,7 +335,7 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 			}
 			str = "agent";
 			break;
-		case 1:
+		case 2:
 			widget = glade_xml_get_widget (priv->xml, "user-entry");
 			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 			if (str && strlen (str)) {

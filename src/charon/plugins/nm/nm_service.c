@@ -19,6 +19,7 @@
 #include "nm_service.h"
 
 #include <daemon.h>
+#include <asn1/pem.h>
 #include <utils/host.h>
 #include <utils/identification.h>
 #include <config/peer_cfg.h>
@@ -174,6 +175,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	auth_info_t *auth;
 	auth_class_t auth_class = AUTH_CLASS_EAP;
 	certificate_t *cert = NULL;
+	bool agent = FALSE;
 	
 	/**
 	 * Read parameters
@@ -204,6 +206,11 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 			auth_class = AUTH_CLASS_PSK;
 		}
 		else if (streq(str, "agent"))
+		{
+			auth_class = AUTH_CLASS_PUBKEY;
+			agent = TRUE;
+		}
+		else if (streq(str, "key"))
 		{
 			auth_class = AUTH_CLASS_PUBKEY;
 		}
@@ -253,9 +260,11 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 			private_key_t *private = NULL;
 			
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-									  BUILD_FROM_FILE, str, BUILD_END);	  
+									  BUILD_FROM_FILE, str, BUILD_END);	
+									  
+			/* try agent */  
 			str = g_hash_table_lookup(settings->data, "agent");
-			if (str && cert)
+			if (agent && str && cert)
 			{
 				public = cert->get_public_key(cert);
 				if (public)
@@ -266,6 +275,25 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 												 BUILD_PUBLIC_KEY, public,
 												 BUILD_END);
 					public->destroy(public);
+				}
+			}
+			/* ... or key file */  
+			str = g_hash_table_lookup(settings->data, "userkey");
+			if (!agent && str && cert)
+			{
+				chunk_t secret, chunk;
+				bool pgp = FALSE;
+				
+				secret.ptr = g_hash_table_lookup(settings->data, "password");
+				if (secret.ptr)
+				{
+					secret.len = strlen(secret.ptr);
+				}
+				if (pem_asn1_load_file(str, &secret, &chunk, &pgp))
+				{
+					private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+								KEY_RSA, BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+					free(chunk.ptr);
 				}
 			}
 			if (private)
@@ -359,7 +387,9 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 							 char **setting_name, GError **error)
 {
 	NMSettingVPN *settings;
-	char *method;
+	char *method, *path;
+	chunk_t secret = chunk_empty, key;
+	bool pgp = FALSE;
 	
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
 														NM_TYPE_SETTING_VPN));
@@ -378,6 +408,23 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 			if (g_hash_table_lookup(settings->data, "agent"))
 			{
 				return FALSE;
+			}
+		}
+		else if (streq(method, "key"))
+		{
+			path = g_hash_table_lookup(settings->data, "userkey");
+			if (path)
+			{
+				secret.ptr = g_hash_table_lookup(settings->data, "password");
+				if (secret.ptr)
+				{
+					secret.len = strlen(secret.ptr);
+				}
+				if (pem_asn1_load_file(path, &secret, &key, &pgp))
+				{
+					free(key.ptr);
+					return FALSE;
+				}
 			}
 		}
 	}
