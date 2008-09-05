@@ -1,3 +1,9 @@
+network-manager-strongswan (4.2.6.3) intrepid; urgency=low
+
+  * new upstream release supportin RSA private key files
+
+ -- Martin Willi <martin@strongswan.org>  Fri, 05 Sep 2008 16:07:18 +0200
+
 network-manager-strongswan (4.2.6.2-1) hardy; urgency=low
 
   * new upstream release supporting private key authentication

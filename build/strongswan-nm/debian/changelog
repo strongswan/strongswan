@@ -1,3 +1,9 @@
+strongswan-nm (4.2.6.3-1) intrepid; urgency=low
+
+  * new upstream release supporting RSA private key files
+
+ -- Martin Willi <martin@strongswan.org>  Fri, 05 Sep 2008 16:05:37 +0200
+
 strongswan-nm (4.2.6.2-1) hardy; urgency=low
 
   * new upstream release supporting private key authentication
