@@ -5,7 +5,7 @@ strongswan-4.2.7
   ssh-agent.
 
 - The NetworkManager plugin has been extended to support certificate client
-  authentication using RSA keys loaded into ssh-agent.
+  authentication using RSA keys loaded from a file or using ssh-agent.
 
 - Daemon capability dropping has been ported to libcap and must be enabled
   explicitly --with-capabilities=libcap. Future version will support the
