@@ -39,6 +39,11 @@
  */
 #define MAX_NOTIFY_PAYLOADS 20
 
+/**
+ * Max number of delete payloads per IKEv2 Message
+ */
+#define MAX_DELETE_PAYLOADS 20
+
 
 typedef struct payload_rule_t payload_rule_t;
 
@@ -299,7 +304,7 @@ static payload_rule_t informational_i_payload_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{DELETE,						0,	1,						TRUE,	FALSE},
+	{DELETE,						0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
 	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
 };
 
@@ -324,7 +329,7 @@ static payload_rule_t informational_r_payload_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{DELETE,						0,	1,						TRUE,	FALSE},
+	{DELETE,						0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
 	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
 };
 
