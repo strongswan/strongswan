@@ -65,25 +65,57 @@ static char *lookup_password(char *name, char *service)
 /**
  * get the connection type
  */
-static char* get_connection_type(char *id)
+static char* get_connection_type(char *uuid)
 {
-	GConfClient *client;
-	char *key, *str;
-	gboolean need_password = FALSE;
+	GConfClient *client = NULL;
+	GSList *list;
+	GSList *iter;
+	char *key, *str, *path, *found = NULL, *method = NULL;
 
 	client = gconf_client_get_default();
-	key = g_strdup_printf("/system/networking/connections/%s/%s/%s",
-						  id, NM_SETTING_VPN_SETTING_NAME, "method");
-	str = gconf_client_get_string(client, key, NULL);
-	g_free(key);
+
+	list = gconf_client_all_dirs(client, "/system/networking/connections", NULL);
+	g_return_val_if_fail(list, NULL);
+
+	for (iter = list; iter; iter = iter->next)
+	{
+		path = (char *) iter->data;
+
+		key = g_strdup_printf("%s/%s/%s", path,
+							  NM_SETTING_CONNECTION_SETTING_NAME,
+							  NM_SETTING_CONNECTION_UUID);
+		str = gconf_client_get_string(client, key, NULL);
+		g_free (key);
+
+		if (str && !strcmp(str, uuid))
+		{
+			found = g_strdup(path);
+		}
+		g_free (str);
+		if (found)
+		{
+			break;
+		}
+	}
+	g_slist_foreach(list, (GFunc)g_free, NULL);
+	g_slist_free(list);
+	
+	if (found)
+	{
+		key = g_strdup_printf ("%s/%s/%s", found,
+			                   NM_SETTING_VPN_SETTING_NAME, "method");
+		method = gconf_client_get_string(client, key, NULL);
+		g_free(found);
+		g_free(key);
+	}
 	g_object_unref(client);
-	return str;
+	return method;
 }
 
 int main (int argc, char *argv[])
 {
-	static gboolean retry = FALSE;
-	static gchar *name = NULL, *id = NULL, *service = NULL, *keyring = NULL, *pass;
+	gboolean retry = FALSE;
+	gchar *name = NULL, *uuid = NULL, *service = NULL, *keyring = NULL, *pass;
 	GOptionContext *context;
 	GnomeProgram *program = NULL;
 	int exit_status = 1;
@@ -92,7 +124,7 @@ int main (int argc, char *argv[])
 	GtkWidget *dialog;
 	GOptionEntry entries[] = {
 		{ "reprompt", 'r', 0, G_OPTION_ARG_NONE, &retry, "Reprompt for passwords", NULL},
-		{ "id", 'i', 0, G_OPTION_ARG_STRING, &id, "ID of VPN connection", NULL},
+		{ "uuid", 'u', 0, G_OPTION_ARG_STRING, &uuid, "UUID of VPN connection", NULL},
 		{ "name", 'n', 0, G_OPTION_ARG_STRING, &name, "Name of VPN connection", NULL},
 		{ "service", 's', 0, G_OPTION_ARG_STRING, &service, "VPN service type", NULL},
 		{ NULL }
@@ -111,12 +143,12 @@ int main (int argc, char *argv[])
 								GNOME_PARAM_GOPTION_CONTEXT, context,
 								GNOME_PARAM_NONE);
 	
-	if (id == NULL || name == NULL || service == NULL)
+	if (uuid == NULL || name == NULL || service == NULL)
 	{
-		fprintf (stderr, "Have to supply ID, name, and service\n");
+		fprintf (stderr, "Have to supply UUID, name, and service\n");
 		g_object_unref (program);
 		return 1;
-	}	
+	}
 	
 	if (strcmp(service, NM_DBUS_SERVICE_STRONGSWAN) != 0)
 	{
@@ -126,7 +158,7 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 	
-	type = get_connection_type(id);
+	type = get_connection_type(uuid);
 	if (!type)
 	{
 		fprintf(stderr, "Connection lookup failed\n");

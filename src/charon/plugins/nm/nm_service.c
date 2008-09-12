@@ -245,7 +245,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		if (str)
 		{
 			user = identification_create_from_string(str);
-			str = g_hash_table_lookup(settings->data, "password");
+			str = g_hash_table_lookup(settings->secrets, "password");
 			creds->set_username_password(creds, user, str);
 		}
 	}
@@ -263,7 +263,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 									  BUILD_FROM_FILE, str, BUILD_END);	
 									  
 			/* try agent */  
-			str = g_hash_table_lookup(settings->data, "agent");
+			str = g_hash_table_lookup(settings->secrets, "agent");
 			if (agent && str && cert)
 			{
 				public = cert->get_public_key(cert);
@@ -284,7 +284,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 				chunk_t secret, chunk;
 				bool pgp = FALSE;
 				
-				secret.ptr = g_hash_table_lookup(settings->data, "password");
+				secret.ptr = g_hash_table_lookup(settings->secrets, "password");
 				if (secret.ptr)
 				{
 					secret.len = strlen(secret.ptr);
@@ -398,14 +398,14 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 	{
 		if (streq(method, "eap"))
 		{
-			if (g_hash_table_lookup(settings->data, "password"))
+			if (g_hash_table_lookup(settings->secrets, "password"))
 			{
 				return FALSE;
 			}
 		}
 		else if (streq(method, "agent"))
 		{
-			if (g_hash_table_lookup(settings->data, "agent"))
+			if (g_hash_table_lookup(settings->secrets, "agent"))
 			{
 				return FALSE;
 			}
@@ -415,7 +415,7 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 			path = g_hash_table_lookup(settings->data, "userkey");
 			if (path)
 			{
-				secret.ptr = g_hash_table_lookup(settings->data, "password");
+				secret.ptr = g_hash_table_lookup(settings->secrets, "password");
 				if (secret.ptr)
 				{
 					secret.len = strlen(secret.ptr);

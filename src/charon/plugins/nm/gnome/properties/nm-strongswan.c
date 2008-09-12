@@ -511,6 +511,7 @@ strongswan_plugin_ui_interface_init (NMVpnPluginUiInterface *iface_class)
 	/* interface implementation */
 	iface_class->ui_factory = ui_factory;
 	iface_class->get_capabilities = get_capabilities;
+	/* TODO: implement delete_connection to purge associated secrets */
 }
 
 
