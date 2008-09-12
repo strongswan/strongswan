@@ -4,8 +4,8 @@ Priority: extra
 Maintainer: Martin Willi <martin@strongswan.org>
 Build-Depends: cdbs,
 	debhelper (>= 5),
-	network-manager-dev (>= 0.7~~svn20080818),
-	libnm-glib-dev (>= 0.7~~svn20080818),
+	network-manager-dev (>= 0.7~~svn20080908),
+	libnm-glib-dev (>= 0.7~~svn20080908),
 	automake1.9,
 	gnome-common,
 	intltool,

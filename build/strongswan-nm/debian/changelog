@@ -1,3 +1,9 @@
+strongswan-nm (4.2.6.4-1) hardy; urgency=low
+
+  * new release to support API changes in NetworkManager (4031/4053)
+
+ -- Martin Willi <martin@strongswan.org>  Fri, 12 Sep 2008 15:45:31 +0200
+
 strongswan-nm (4.2.6.3-2) hardy; urgency=low
 
   * new upstream release supporting RSA private key files
