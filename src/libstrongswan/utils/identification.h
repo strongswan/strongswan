@@ -131,22 +131,27 @@ enum id_type_t {
 	/**
 	 * SHA1 hash over PKCS#1 subjectPublicKeyInfo
 	 */
-	ID_PUBKEY_INFO_SHA1,
+	ID_PUBKEY_INFO_SHA1 = 202,
 	
 	/**
 	 * SHA1 hash over PKCS#1 subjectPublicKey
 	 */
-	ID_PUBKEY_SHA1,
+	ID_PUBKEY_SHA1 = 203,
 	
 	/**
 	 * SHA1 hash of the binary DER encoding of a certificate
 	 */
-	ID_CERT_DER_SHA1,
+	ID_CERT_DER_SHA1 = 204,
 	
 	/**
 	 * Generic EAP identity
 	 */
-	ID_EAP,
+	ID_EAP = 205,
+
+	/**
+	 * IETF Attribute Syntax String (RFC 3281)
+	 */
+	ID_IETF_ATTR_STRING = 206,
 };
 
 /**

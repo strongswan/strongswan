@@ -528,11 +528,6 @@ static void build_auth_info(private_stroke_config_t *this,
 	bool other_ca_same = FALSE;
 	cert_validation_t valid;
 
-	if (msg->add_conn.other.groups)
-	{
-		/* TODO: AC groups */
-	}
-	
 	switch (msg->add_conn.crl_policy)
 	{
 		case CRL_STRICT_YES:
@@ -632,6 +627,7 @@ static void build_auth_info(private_stroke_config_t *this,
 			auth->add_item(auth, AUTHN_EAP_VENDOR, &msg->add_conn.eap_vendor);
 		}
 	}
+
 	if (msg->add_conn.eap_identity)
 	{
 		if (streq(msg->add_conn.eap_identity, "%identity"))
@@ -646,6 +642,41 @@ static void build_auth_info(private_stroke_config_t *this,
 		}
 		auth->add_item(auth, AUTHN_EAP_IDENTITY, id);
 		id->destroy(id);
+	}
+
+	if (msg->add_conn.other.groups)
+	{
+		chunk_t line = { msg->add_conn.other.groups,
+						 strlen(msg->add_conn.other.groups) };
+
+		while (eat_whitespace(&line))
+		{
+			chunk_t group;
+
+			/* extract the next comma-separated group attribute */
+			if (!extract_token(&group, ',', &line))
+			{
+				group = line;
+				line.len = 0;
+			}
+
+			/* remove any trailing spaces */
+			while (group.len > 0 && *(group.ptr + group.len - 1) == ' ')
+			{
+				group.len--;
+			}
+
+			/* add the group attribute to the list */
+			if (group.len > 0)
+			{
+				identification_t *ac_group;
+
+				ac_group = identification_create_from_encoding(
+									ID_IETF_ATTR_STRING, group);
+				auth->add_item(auth, AUTHZ_AC_GROUP, ac_group);
+				ac_group->destroy(ac_group);	
+			}
+		}
 	}
 }
 

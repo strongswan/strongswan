@@ -281,6 +281,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			identification_t *my_ca = NULL, *other_ca = NULL;
 			identification_t *eap_identity = NULL;
 			u_int32_t *eap_type = NULL;
+			bool ac_groups = FALSE;
 
 			if (peer_cfg->get_ike_version(peer_cfg) != 2 ||
 				(name && !streq(name, peer_cfg->get_name(peer_cfg))))
@@ -288,7 +289,9 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 				continue;
 			}
 			
-			/* determine any required CAs */
+			/* determine any required CAs, EAP type, EAP identity,
+			 * and the presence of AC groups
+			 */
 			auth = peer_cfg->get_auth(peer_cfg);
 			auth_enumerator = auth->create_item_enumerator(auth);
 			while (auth_enumerator->enumerate(auth_enumerator, &item, &ptr))
@@ -314,6 +317,9 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 						break;
 					case AUTHZ_CA_CERT_NAME:
 						other_ca = (identification_t *)ptr;
+						break;
+					case AUTHZ_AC_GROUP:
+						ac_groups = TRUE;
 						break;
 					default:
 						break;
@@ -346,6 +352,26 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 				}
 			}
 
+			if (ac_groups)
+			{
+				bool first = TRUE;
+
+				fprintf(out, "%12s:  groups: ",  peer_cfg->get_name(peer_cfg));
+				auth_enumerator = auth->create_item_enumerator(auth);
+				while (auth_enumerator->enumerate(auth_enumerator, &item, &ptr))
+				{
+					if (item == AUTHZ_AC_GROUP)
+					{
+						identification_t *group = (identification_t *)ptr;
+
+						fprintf(out, "%s%D", first? "":", ", group);
+						first = FALSE;
+					}
+				}
+				auth_enumerator->destroy(auth_enumerator);
+				fprintf(out, "\n");
+			}
+
 			fprintf(out, "%12s:  %N ",  peer_cfg->get_name(peer_cfg),
 					auth_class_names, get_auth_class(peer_cfg));
 			if (eap_type)
@@ -363,8 +389,6 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 				fprintf(out, ", dpddelay=%us", dpd);
 			}
 			fprintf(out, "\n");
-
-			/* TODO: list groups */
 
 			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 			while (children->enumerate(children, &child_cfg))
