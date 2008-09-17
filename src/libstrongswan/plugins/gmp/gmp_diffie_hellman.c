@@ -343,7 +343,7 @@ struct private_gmp_diffie_hellman_t {
 	 * Generator value.
 	 */	
 	mpz_t g;
-
+	
 	/**
 	 * My private value.
 	 */
@@ -353,7 +353,7 @@ struct private_gmp_diffie_hellman_t {
 	 * My public value.
 	 */
 	mpz_t ya;
-
+	
 	/**
 	 * Other public value.
 	 */	
@@ -373,7 +373,7 @@ struct private_gmp_diffie_hellman_t {
 	 * Modulus length.
 	 */
 	size_t p_len;
-
+	
 	/**
 	 * True if shared secret is computed and stored in my_public_value.
 	 */
@@ -440,7 +440,11 @@ static status_t get_other_public_value(private_gmp_diffie_hellman_t *this,
 		return FAILED;
 	}
 	value->len = this->p_len;
-    value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->yb);
+	value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->yb);
+	if (value->ptr == NULL)
+	{
+		return FAILED;
+	}
 	return SUCCESS;
 }
 
@@ -451,6 +455,10 @@ static void get_my_public_value(private_gmp_diffie_hellman_t *this,chunk_t *valu
 {
 	value->len = this->p_len;
     value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->ya);
+    if (value->ptr == NULL)
+    {
+    	value->len = 0;
+    }
 }
 
 /**
@@ -463,7 +471,11 @@ static status_t get_shared_secret(private_gmp_diffie_hellman_t *this, chunk_t *s
 		return FAILED;
 	}
 	secret->len = this->p_len;
-    secret->ptr = mpz_export(NULL, NULL, 1, secret->len, 1, 0, this->zz);
+	secret->ptr = mpz_export(NULL, NULL, 1, secret->len, 1, 0, this->zz);
+	if (secret->ptr == NULL)
+	{
+		return FAILED;
+	}
 	return SUCCESS;
 }
 

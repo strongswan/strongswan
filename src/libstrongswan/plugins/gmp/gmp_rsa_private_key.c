@@ -191,6 +191,10 @@ static chunk_t rsadp(private_gmp_rsa_private_key_t *this, chunk_t data)
 	
 	decrypted.len = this->k;
 	decrypted.ptr = mpz_export(NULL, NULL, 1, decrypted.len, 1, 0, t1);
+	if (decrypted.ptr == NULL)
+	{
+		decrypted.len = 0;
+	}
 	
 	mpz_clear_randomized(t1);
 	mpz_clear_randomized(t2);

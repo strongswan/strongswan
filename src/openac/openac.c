@@ -103,6 +103,10 @@ static chunk_t mpz_to_chunk(mpz_t number)
 
 	chunk.len = 1 + mpz_sizeinbase(number, 2)/BITS_PER_BYTE;
 	chunk.ptr = mpz_export(NULL, NULL, 1, chunk.len, 1, 0, number);
+	if (chunk.ptr == NULL)
+	{
+		chunk.len = 0;
+	}
 	return chunk;
 }
 

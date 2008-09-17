@@ -93,11 +93,15 @@ static chunk_t rsaep(private_gmp_rsa_public_key_t *this, chunk_t data)
 	
 	mpz_powm(c, m, this->e, this->n);
 
-    encrypted.len = this->k;
-    encrypted.ptr = mpz_export(NULL, NULL, 1, encrypted.len, 1, 0, c);
+	encrypted.len = this->k;
+	encrypted.ptr = mpz_export(NULL, NULL, 1, encrypted.len, 1, 0, c);
+	if (encrypted.ptr == NULL)
+	{
+		encrypted.len = 0;
+	}
 	
 	mpz_clear(c);
-	mpz_clear(m);	
+	mpz_clear(m);
 	
 	return encrypted;
 }
