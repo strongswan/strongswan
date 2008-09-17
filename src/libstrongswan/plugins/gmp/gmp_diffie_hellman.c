@@ -395,7 +395,7 @@ static void set_other_public_value(private_gmp_diffie_hellman_t *this, chunk_t v
 	/* check public value: 
 	 * 1. 0 or 1 is invalid as 0^a = 0 and 1^a = 1
 	 * 2. a public value larger or equal the modulus is invalid */
-	if (mpz_cmp_ui(this->yb, 1) > 0 ||
+	if (mpz_cmp_ui(this->yb, 1) > 0 &&
 		mpz_cmp(this->yb, p_min_1) < 0)
 	{
 #ifdef EXTENDED_DH_TEST
