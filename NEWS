@@ -1,6 +1,12 @@
 strongswan-4.2.7
 ----------------
 
+- Fixed a Denial-of-Service vulnerability where an IKE_SA_INIT message with
+  a KE payload containing zeroes only can cause a crash of the IKEv2 charon
+  daemon due to a NULL pointer returned by the mpz_export() function of the
+  GNU Multiprecision Library (GMP). Thanks go to Mu Dynamics Research Labs
+  for making us aware of this problem. 
+
 - The new agent plugin provides a private key implementation on top of an 
   ssh-agent.
 
@@ -10,6 +16,10 @@ strongswan-4.2.7
 - Daemon capability dropping has been ported to libcap and must be enabled
   explicitly --with-capabilities=libcap. Future version will support the
   newer libcap2 library.
+
+- ipsec listalgs lists the IKEv2 cryptografic algorithms registered with the
+  charon keying daemon.
+
 
 strongswan-4.2.6
 ----------------
