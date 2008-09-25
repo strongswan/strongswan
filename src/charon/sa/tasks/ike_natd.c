@@ -300,7 +300,7 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 static status_t build_i(private_ike_natd_t *this, message_t *message)
 {
 	notify_payload_t *notify;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	host_t *host;
 	
 	if (this->hasher == NULL)
@@ -339,14 +339,14 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 		}
 		else
 		{	/* 3. */
-			iterator = charon->kernel_interface->create_address_iterator(
-													charon->kernel_interface);
-			while (iterator->iterate(iterator, (void**)&host))
+			enumerator = charon->kernel_interface->create_address_enumerator(
+										charon->kernel_interface, FALSE, FALSE);
+			while (enumerator->enumerate(enumerator, (void**)&host))
 			{
 				notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
 				message->add_payload(message, (payload_t*)notify);
 			}
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 		}
 	}
 	return NEED_MORE;

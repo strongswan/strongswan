@@ -177,15 +177,15 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
  */
 static void build_address_list(private_ike_mobike_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	host_t *host, *me;
 	notify_type_t type;
 	bool additional = FALSE;
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
-	iterator = charon->kernel_interface->create_address_iterator(
-												charon->kernel_interface);
-	while (iterator->iterate(iterator, (void**)&host))
+	enumerator = charon->kernel_interface->create_address_enumerator(
+										charon->kernel_interface, FALSE, FALSE);
+	while (enumerator->enumerate(enumerator, (void**)&host))
 	{
 		if (me->ip_equals(me, host))
 		{	/* "ADDITIONAL" means do not include IKE_SAs host */
@@ -209,7 +209,7 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 	{
 		message->add_notify(message, FALSE, NO_ADDITIONAL_ADDRESSES, chunk_empty);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**

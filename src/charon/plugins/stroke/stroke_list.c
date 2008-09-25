@@ -227,7 +227,6 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all)
 {
 	enumerator_t *enumerator, *children;
-	iterator_t *iterator;
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	ike_sa_t *ike_sa;
@@ -260,14 +259,14 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		enumerator->destroy(enumerator);
 		fprintf(out, "\n");
 		
-		iterator = charon->kernel_interface->create_address_iterator(
-													charon->kernel_interface);
+		enumerator = charon->kernel_interface->create_address_enumerator(
+								charon->kernel_interface, FALSE, FALSE);
 		fprintf(out, "Listening IP addresses:\n");
-		while (iterator->iterate(iterator, (void**)&host))
+		while (enumerator->enumerate(enumerator, (void**)&host))
 		{
 			fprintf(out, "  %H\n", host);
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	
 		fprintf(out, "Connections:\n");
 		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends);

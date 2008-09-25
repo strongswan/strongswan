@@ -19,40 +19,47 @@
  */
 
 /**
- * @defgroup kernel_interface kernel_interface
+ * @defgroup kernel_ipsec kernel_ipsec
  * @{ @ingroup kernel
  */
 
-#ifndef KERNEL_INTERFACE_H_
-#define KERNEL_INTERFACE_H_
+#ifndef KERNEL_IPSEC_H_
+#define KERNEL_IPSEC_H_
 
-typedef struct kernel_interface_t kernel_interface_t;
+typedef enum policy_dir_t policy_dir_t;
+typedef struct kernel_ipsec_t kernel_ipsec_t;
 
 #include <utils/host.h>
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 
-#include <kernel/kernel_ipsec.h>
-#include <kernel/kernel_net.h>
-
 /**
- * Constructor function for ipsec kernel interface
+ * Direction of a policy. These are equal to those
+ * defined in xfrm.h, but we want to stay implementation
+ * neutral here.
  */
-typedef kernel_ipsec_t* (*kernel_ipsec_constructor_t)(void);
+enum policy_dir_t {
+	/** Policy for inbound traffic */
+	POLICY_IN = 0,
+	/** Policy for outbound traffic */
+	POLICY_OUT = 1,
+	/** Policy for forwarded traffic */
+	POLICY_FWD = 2,
+};
 
 /**
- * Constructor function for network kernel interface
- */
-typedef kernel_net_t* (*kernel_net_constructor_t)(void);
-
-/**
- * Manager and wrapper for different kernel interfaces.
+ * Interface to the ipsec subsystem of the kernel.
  * 
- * The kernel interface handles the communication with the kernel
- * for SA and policy management and interface and IP address management.
+ * The kernel ipsec interface handles the communication with the kernel
+ * for SA and policy management. It allows setup of these, and provides 
+ * further the handling of kernel events.
+ * Policy information are cached in the interface. This is necessary to do
+ * reference counting. The Linux kernel does not allow the same policy
+ * installed twice, but we need this as CHILD_SA exist multiple times
+ * when rekeying. Thats why we do reference counting of policies.
  */
-struct kernel_interface_t {
-
+struct kernel_ipsec_t {
+	
 	/**
 	 * Get a SPI from the kernel.
 	 *
@@ -67,7 +74,7 @@ struct kernel_interface_t {
 	 * @param spi		allocated spi
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*get_spi)(kernel_interface_t *this, host_t *src, host_t *dst, 
+	status_t (*get_spi)(kernel_ipsec_t *this, host_t *src, host_t *dst, 
 						protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi);
 	
 	/**
@@ -79,7 +86,7 @@ struct kernel_interface_t {
 	 * @param cpi		allocated cpi
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*get_cpi)(kernel_interface_t *this, host_t *src, host_t *dst, 
+	status_t (*get_cpi)(kernel_ipsec_t *this, host_t *src, host_t *dst, 
 						u_int32_t reqid, u_int16_t *cpi);
 	
 	/**
@@ -111,7 +118,7 @@ struct kernel_interface_t {
 	 * @param replace		Should an already installed SA be updated?
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*add_sa) (kernel_interface_t *this,
+	status_t (*add_sa) (kernel_ipsec_t *this,
 						host_t *src, host_t *dst, u_int32_t spi,
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int64_t expire_soft, u_int64_t expire_hard,
@@ -138,7 +145,7 @@ struct kernel_interface_t {
 	 * @param encap			use UDP encapsulation
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*update_sa)(kernel_interface_t *this,
+	status_t (*update_sa)(kernel_ipsec_t *this,
 						  u_int32_t spi, protocol_id_t protocol,
 						  host_t *src, host_t *dst, 
 						  host_t *new_src, host_t *new_dst, bool encap);
@@ -155,18 +162,18 @@ struct kernel_interface_t {
 	 * @param use_time		pointer receives the time of this SA's last use
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*query_sa) (kernel_interface_t *this, host_t *dst, u_int32_t spi, 
+	status_t (*query_sa) (kernel_ipsec_t *this, host_t *dst, u_int32_t spi, 
 						  protocol_id_t protocol, u_int32_t *use_time);
 	
 	/**
-	 * Delete a previously installed SA from the SAD.
+	 * Delete a previusly installed SA from the SAD.
 	 * 
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
 	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_sa) (kernel_interface_t *this, host_t *dst, u_int32_t spi,
+	status_t (*del_sa) (kernel_ipsec_t *this, host_t *dst, u_int32_t spi,
 						protocol_id_t protocol);
 	
 	/**
@@ -187,7 +194,7 @@ struct kernel_interface_t {
 	 * @param ipcomp		the IPComp transform used
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*add_policy) (kernel_interface_t *this,
+	status_t (*add_policy) (kernel_ipsec_t *this,
 							host_t *src, host_t *dst,
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
@@ -207,7 +214,7 @@ struct kernel_interface_t {
 	 * @param[out] use_time	the time of this SA's last use
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*query_policy) (kernel_interface_t *this,
+	status_t (*query_policy) (kernel_ipsec_t *this,
 							  traffic_selector_t *src_ts, 
 							  traffic_selector_t *dst_ts,
 							  policy_dir_t direction, u_int32_t *use_time);
@@ -225,153 +232,15 @@ struct kernel_interface_t {
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_policy) (kernel_interface_t *this,
+	status_t (*del_policy) (kernel_ipsec_t *this,
 							traffic_selector_t *src_ts, 
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction);
 	
 	/**
-	 * Get our outgoing source address for a destination.
-	 *
-	 * Does a route lookup to get the source address used to reach dest.
-	 * The returned host is allocated and must be destroyed.
-	 *
-	 * @param dest			target destination address
-	 * @return				outgoing source address, NULL if unreachable
+	 * Destroy the implementation.
 	 */
-	host_t* (*get_source_addr)(kernel_interface_t *this, host_t *dest);
-	
-	/**
-	 * Get the next hop for a destination.
-	 *
-	 * Does a route lookup to get the next hop used to reach dest.
-	 * The returned host is allocated and must be destroyed.
-	 *
-	 * @param dest			target destination address
-	 * @return				next hop address, NULL if unreachable
-	 */
-	host_t* (*get_nexthop)(kernel_interface_t *this, host_t *dest);
-	
-	/**
-	 * Get the interface name of a local address.
-	 *
-	 * @param host			address to get interface name from
-	 * @return 				allocated interface name, or NULL if not found
-	 */
-	char* (*get_interface) (kernel_interface_t *this, host_t *host);
-	
-	/**
-	 * Creates an enumerator over all local addresses.
-	 * 
-	 * This function blocks an internal cached address list until the
-	 * enumerator gets destroyed.
-	 * The hosts are read-only, do not modify of free.
-	 * 
-	 * @param include_down_ifaces	TRUE to enumerate addresses from down interfaces
-	 * @param include_virtual_ips	TRUE to enumerate virtual ip addresses
-	 * @return						enumerator over host_t's
-	 */
-	enumerator_t *(*create_address_enumerator) (kernel_interface_t *this,
-						bool include_down_ifaces, bool include_virtual_ips);
-	
-	/**
-	 * Add a virtual IP to an interface.
-	 *
-	 * Virtual IPs are attached to an interface. If an IP is added multiple
-	 * times, the IP is refcounted and not removed until del_ip() was called
-	 * as many times as add_ip().
-	 * The virtual IP is attached to the interface where the iface_ip is found.
-	 *
-	 * @param virtual_ip	virtual ip address to assign
-	 * @param iface_ip		IP of an interface to attach virtual IP
-	 * @return				SUCCESS if operation completed
-	 */
-	status_t (*add_ip) (kernel_interface_t *this, host_t *virtual_ip,
-						host_t *iface_ip);
-	
-	/**
-	 * Remove a virtual IP from an interface.
-	 *
-	 * The kernel interface uses refcounting, see add_ip().
-	 *
-	 * @param virtual_ip	virtual ip address to assign
-	 * @return				SUCCESS if operation completed
-	 */
-	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip);
-	
-	/**
-	 * Add a route.
-	 * 
-	 * @param dst_net		destination net
-	 * @param prefixlen		destination net prefix length
-	 * @param gateway		gateway for this route
-	 * @param src_ip		sourc ip of the route
-	 * @param if_name		name of the interface the route is bound to
-	 * @return				SUCCESS if operation completed
-	 * 						ALREADY_DONE if the route already exists
-	 */
-	status_t (*add_route) (kernel_interface_t *this, chunk_t dst_net, u_int8_t prefixlen,
-								host_t *gateway, host_t *src_ip, char *if_name);
-	
-	/**
-	 * Delete a route.
-	 * 
-	 * @param dst_net		destination net
-	 * @param prefixlen		destination net prefix length
-	 * @param gateway		gateway for this route
-	 * @param src_ip		sourc ip of the route
-	 * @param if_name		name of the interface the route is bound to
-	 * @return				SUCCESS if operation completed
-	 */
-	status_t (*del_route) (kernel_interface_t *this, chunk_t dst_net, u_int8_t prefixlen,
-								host_t *gateway, host_t *src_ip, char *if_name);
-	
-	/**
-	 * manager methods
-	 */
-	
-	/**
-	 * Register an ipsec kernel interface constructor on the manager.
-	 *
-	 * @param create			constructor to register
-	 */
-	void (*add_ipsec_interface)(kernel_interface_t *this, kernel_ipsec_constructor_t create);
-	
-	/**
-	 * Unregister an ipsec kernel interface constructor.
-	 *
-	 * @param create			constructor to unregister
-	 */
-	void (*remove_ipsec_interface)(kernel_interface_t *this, kernel_ipsec_constructor_t create);
-	
-	/**
-	 * Register a network kernel interface constructor on the manager.
-	 *
-	 * @param create			constructor to register
-	 */
-	void (*add_net_interface)(kernel_interface_t *this, kernel_net_constructor_t create);
-	
-	/**
-	 * Unregister a network kernel interface constructor.
-	 *
-	 * @param create			constructor to unregister
-	 */
-	void (*remove_net_interface)(kernel_interface_t *this, kernel_net_constructor_t create);
-	
-	/**
-	 * Create the kernel interfaces classes.
-	 */
-	void (*create_interfaces)(kernel_interface_t *this);
-	
-	/**
-	 * Destroys a kernel_interface_manager_t object.
-	 */
-	void (*destroy) (kernel_interface_t *this);
+	void (*destroy) (kernel_ipsec_t *this);
 };
 
-/**
- * Creates an object of type kernel_interface_t.
- */
-kernel_interface_t *kernel_interface_create(void);
-
-#endif /* KERNEL_INTERFACE_H_ @} */
+#endif /* KERNEL_IPSEC_H_ @} */

@@ -366,6 +366,9 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
 	
+	/* create the kernel interfaces */
+	this->public.kernel_interface->create_interfaces(this->public.kernel_interface);
+	
 #ifdef INTEGRITY_TEST
 	DBG1(DBG_DMN, "integrity test of libstrongswan code");
 	if (fips_verify_hmac_signature(hmac_key, hmac_signature))

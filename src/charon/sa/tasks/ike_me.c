@@ -128,7 +128,7 @@ static void add_endpoints_to_message(message_t *message, linked_list_t *endpoint
  */
 static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	host_t *addr, *host;
 	u_int16_t port;
 	
@@ -136,9 +136,9 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 	host = this->ike_sa->get_my_host(this->ike_sa);
 	port = host->get_port(host);
 	
-	iterator = charon->kernel_interface->create_address_iterator(
-												charon->kernel_interface);
-	while (iterator->iterate(iterator, (void**)&addr))
+	enumerator = charon->kernel_interface->create_address_enumerator(
+										charon->kernel_interface, FALSE, FALSE);
+	while (enumerator->enumerate(enumerator, (void**)&addr))
 	{
 		host = addr->clone(addr);
 		host->set_port(host, port);
@@ -148,7 +148,7 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 		
 		host->destroy(host);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	host = this->ike_sa->get_server_reflexive_host(this->ike_sa);
 	if (host)

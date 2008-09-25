@@ -98,7 +98,7 @@ AC_ARG_WITH(
 AC_ARG_WITH(
 	[linux-headers],
 	AS_HELP_STRING([--with-linux-headers=dir],[use the linux header files in dir instead of the supplied ones in "src/include"]),
-	[AC_SUBST(linuxdir, "$withval")], [AC_SUBST(linuxdir, "../include")]
+	[AC_SUBST(linuxdir, "$withval")], [AC_SUBST(linuxdir, "\${top_srcdir}/src/include")]
 )
 AC_SUBST(LINUX_HEADERS)
 
@@ -926,6 +926,7 @@ AC_OUTPUT(
 	src/charon/plugins/eap_md5/Makefile
 	src/charon/plugins/eap_gtc/Makefile
 	src/charon/plugins/eap_sim/Makefile
+	src/charon/plugins/kernel_netlink/Makefile
 	src/charon/plugins/smp/Makefile
 	src/charon/plugins/sql/Makefile
 	src/charon/plugins/medsrv/Makefile

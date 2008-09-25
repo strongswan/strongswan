@@ -41,6 +41,7 @@ encoding/payloads/ts_payload.c encoding/payloads/ts_payload.h \
 encoding/payloads/unknown_payload.c encoding/payloads/unknown_payload.h \
 encoding/payloads/vendor_id_payload.c encoding/payloads/vendor_id_payload.h \
 kernel/kernel_interface.c kernel/kernel_interface.h \
+kernel/kernel_interface_ipsec.h kernel/kernel_interface_net.h \
 network/packet.c network/packet.h \
 network/receiver.c network/receiver.h \
 network/sender.c network/sender.h \
@@ -139,6 +140,11 @@ endif
 
 SUBDIRS = . 
 PLUGINS = ${libstrongswan_plugins}
+
+#if USE_KERNEL_NETLINK
+  SUBDIRS += plugins/kernel_netlink
+  PLUGINS += kernel-netlink
+#endif
 
 if USE_STROKE
   SUBDIRS += plugins/stroke
