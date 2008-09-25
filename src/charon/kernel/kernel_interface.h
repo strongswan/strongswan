@@ -117,7 +117,7 @@ struct kernel_interface_t {
 						u_int64_t expire_soft, u_int64_t expire_hard,
 					    u_int16_t enc_alg, u_int16_t enc_size,
 					    u_int16_t int_alg, u_int16_t int_size,
-						prf_plus_t *prf_plus, mode_t mode,
+						prf_plus_t *prf_plus, ipsec_mode_t mode,
 						u_int16_t ipcomp, bool encap,
 						bool update);
 	
@@ -192,7 +192,7 @@ struct kernel_interface_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, protocol_id_t protocol,
-							u_int32_t reqid, bool high_prio, mode_t mode,
+							u_int32_t reqid, bool high_prio, ipsec_mode_t mode,
 							u_int16_t ipcomp);
 	
 	/**

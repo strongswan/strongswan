@@ -99,7 +99,7 @@ struct private_child_create_t {
 	/**
 	 * mode the new CHILD_SA uses (transport/tunnel/beet)
 	 */
-	mode_t mode;
+	ipsec_mode_t mode;
 	
 	/**
 	 * IPComp transform to use

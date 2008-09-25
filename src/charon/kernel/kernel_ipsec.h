@@ -26,12 +26,32 @@
 #ifndef KERNEL_IPSEC_H_
 #define KERNEL_IPSEC_H_
 
+typedef enum ipsec_mode_t ipsec_mode_t;
 typedef enum policy_dir_t policy_dir_t;
 typedef struct kernel_ipsec_t kernel_ipsec_t;
 
 #include <utils/host.h>
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
+
+/**
+ * Mode of an CHILD_SA.
+ *
+ * These are equal to those defined in XFRM, so don't change.
+ */
+enum ipsec_mode_t {
+	/** transport mode, no inner address */
+	MODE_TRANSPORT = 0,
+	/** tunnel mode, inner and outer addresses */
+	MODE_TUNNEL = 1,
+	/** BEET mode, tunnel mode but fixed, bound inner addresses */
+	MODE_BEET = 4,
+};
+
+/**
+ * enum names for ipsec_mode_t.
+ */
+extern enum_name_t *ipsec_mode_names;
 
 /**
  * Direction of a policy. These are equal to those
@@ -124,7 +144,7 @@ struct kernel_ipsec_t {
 						u_int64_t expire_soft, u_int64_t expire_hard,
 					    u_int16_t enc_alg, u_int16_t enc_size,
 					    u_int16_t int_alg, u_int16_t int_size,
-						prf_plus_t *prf_plus, mode_t mode,
+						prf_plus_t *prf_plus, ipsec_mode_t mode,
 						u_int16_t ipcomp, bool encap,
 						bool update);
 	
@@ -199,7 +219,7 @@ struct kernel_ipsec_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, protocol_id_t protocol,
-							u_int32_t reqid, bool high_prio, mode_t mode,
+							u_int32_t reqid, bool high_prio, ipsec_mode_t mode,
 							u_int16_t ipcomp);
 	
 	/**

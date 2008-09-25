@@ -163,7 +163,7 @@ struct private_child_sa_t {
 	/**
 	 * mode this SA uses, tunnel/transport
 	 */
-	mode_t mode;
+	ipsec_mode_t mode;
 	
 	/**
 	 * virtual IP assinged to local host
@@ -248,7 +248,7 @@ static child_cfg_t* get_config(private_child_sa_t *this)
 /**
  * Implementation of child_sa_t.get_stats.
  */
-static void get_stats(private_child_sa_t *this, mode_t *mode,
+static void get_stats(private_child_sa_t *this, ipsec_mode_t *mode,
 					  encryption_algorithm_t *encr_algo, size_t *encr_len,
 					  integrity_algorithm_t *int_algo, size_t *int_len,
 					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
@@ -526,7 +526,7 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 }
 
 static status_t install(private_child_sa_t *this, proposal_t *proposal,
-						mode_t mode, prf_plus_t *prf_plus, bool mine)
+						ipsec_mode_t mode, prf_plus_t *prf_plus, bool mine)
 {
 	u_int32_t spi, soft, hard;
 	host_t *src;
@@ -617,7 +617,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 }
 
 static status_t add(private_child_sa_t *this, proposal_t *proposal, 
-					mode_t mode, prf_plus_t *prf_plus)
+					ipsec_mode_t mode, prf_plus_t *prf_plus)
 {
 	u_int32_t outbound_spi, inbound_spi;
 	
@@ -649,7 +649,7 @@ static status_t add(private_child_sa_t *this, proposal_t *proposal,
 }
 
 static status_t update(private_child_sa_t *this, proposal_t *proposal,
-					   mode_t mode, prf_plus_t *prf_plus)
+					   ipsec_mode_t mode, prf_plus_t *prf_plus)
 {
 	u_int32_t inbound_spi;
 	
@@ -675,7 +675,7 @@ static status_t update(private_child_sa_t *this, proposal_t *proposal,
 
 static status_t add_policies(private_child_sa_t *this,
 					linked_list_t *my_ts_list, linked_list_t *other_ts_list,
-					mode_t mode, protocol_id_t proto)
+					ipsec_mode_t mode, protocol_id_t proto)
 {
 	iterator_t *my_iter, *other_iter;
 	traffic_selector_t *my_ts, *other_ts;
@@ -1042,12 +1042,12 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
 	this->public.get_cpi = (u_int16_t(*)(child_sa_t*, bool))get_cpi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
-	this->public.get_stats = (void(*)(child_sa_t*, mode_t*,encryption_algorithm_t*,size_t*,integrity_algorithm_t*,size_t*,u_int32_t*,u_int32_t*,u_int32_t*,u_int32_t*))get_stats;
+	this->public.get_stats = (void(*)(child_sa_t*, ipsec_mode_t*,encryption_algorithm_t*,size_t*,integrity_algorithm_t*,size_t*,u_int32_t*,u_int32_t*,u_int32_t*,u_int32_t*))get_stats;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
-	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))add;
-	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))update;
+	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))add;
+	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))update;
 	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,bool))update_hosts;
-	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,mode_t,protocol_id_t))add_policies;
+	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,ipsec_mode_t,protocol_id_t))add_policies;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;

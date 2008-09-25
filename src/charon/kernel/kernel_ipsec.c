@@ -15,35 +15,12 @@
  * $Id$
  */
 
-/**
- * @defgroup kernel_netlink kernel_netlink
- * @ingroup cplugins
- *
- * @defgroup kernel_netlink_plugin kernel_netlink_plugin
- * @{ @ingroup kernel_netlink
- */
+#include "kernel_ipsec.h"
 
-#ifndef KERNEL_NETLINK_PLUGIN_H_
-#define KERNEL_NETLINK_PLUGIN_H_
-
-#include <plugins/plugin.h>
-
-typedef struct kernel_netlink_plugin_t kernel_netlink_plugin_t;
-
-/**
- * netlink kernel interface plugin
- */
-struct kernel_netlink_plugin_t {
-
-	/**
-	 * implements plugin interface
-	 */
-	plugin_t plugin;
-};
-
-/**
- * Create a kernel_netlink_plugin instance.
- */
-plugin_t *plugin_create();
-
-#endif /* KERNEL_NETLINK_PLUGIN_H_ @} */
+ENUM(ipsec_mode_names, MODE_TRANSPORT, MODE_BEET,
+	"TRANSPORT",
+	"TUNNEL",
+	"2",
+	"3",
+	"BEET",
+);

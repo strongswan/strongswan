@@ -21,14 +21,6 @@
 
 #include <daemon.h>
 
-ENUM(mode_names, MODE_TRANSPORT, MODE_BEET,
-	"TRANSPORT",
-	"TUNNEL",
-	"2",
-	"3",
-	"BEET",
-);
-
 ENUM(action_names, ACTION_NONE, ACTION_RESTART,
 	"clear",
 	"hold",
@@ -94,7 +86,7 @@ struct private_child_cfg_t {
 	/**
 	 * Mode to propose for a initiated CHILD: tunnel/transport
 	 */
-	mode_t mode;
+	ipsec_mode_t mode;
 	
 	/**
 	 * action to take on DPD
@@ -379,7 +371,7 @@ static u_int32_t get_lifetime(private_child_cfg_t *this, bool rekey)
 /**
  * Implementation of child_cfg_t.get_mode
  */
-static mode_t get_mode(private_child_cfg_t *this)
+static ipsec_mode_t get_mode(private_child_cfg_t *this)
 {
 	return this->mode;
 }
@@ -462,7 +454,7 @@ static void destroy(private_child_cfg_t *this)
  */
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
-							  char *updown, bool hostaccess, mode_t mode,
+							  char *updown, bool hostaccess, ipsec_mode_t mode,
 							  action_t dpd_action, action_t close_action, bool ipcomp)
 {
 	private_child_cfg_t *this = malloc_thing(private_child_cfg_t);
@@ -475,7 +467,7 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.select_proposal = (proposal_t* (*) (child_cfg_t*,linked_list_t*,bool))select_proposal;
 	this->public.get_updown = (char* (*) (child_cfg_t*))get_updown;
 	this->public.get_hostaccess = (bool (*) (child_cfg_t*))get_hostaccess;
-	this->public.get_mode = (mode_t (*) (child_cfg_t *))get_mode;
+	this->public.get_mode = (ipsec_mode_t (*) (child_cfg_t *))get_mode;
 	this->public.get_dpd_action = (action_t (*) (child_cfg_t *))get_dpd_action;
 	this->public.get_close_action = (action_t (*) (child_cfg_t *))get_close_action;
 	this->public.get_lifetime = (u_int32_t (*) (child_cfg_t *,bool))get_lifetime;

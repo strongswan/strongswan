@@ -150,7 +150,7 @@ struct child_sa_t {
 	 * @param use_out	time when last traffic was seen going out
 	 * @param use_fwd	time when last traffic was getting forwarded
 	 */
-	void (*get_stats)(child_sa_t *this, mode_t *mode,
+	void (*get_stats)(child_sa_t *this, ipsec_mode_t *mode,
 					  encryption_algorithm_t *encr, size_t *encr_len,
 					  integrity_algorithm_t *int_algo, size_t *int_len,
 					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
@@ -177,7 +177,7 @@ struct child_sa_t {
 	 * @param prf_plus	key material to use for key derivation
 	 * @return			SUCCESS or FAILED
 	 */
-	status_t (*add)(child_sa_t *this, proposal_t *proposal, mode_t mode,
+	status_t (*add)(child_sa_t *this, proposal_t *proposal, ipsec_mode_t mode,
 					prf_plus_t *prf_plus);
 	
 	/**
@@ -190,7 +190,7 @@ struct child_sa_t {
 	 * @param prf_plus	key material to use for key derivation
 	 * @return			SUCCESS or FAILED
 	 */
-	status_t (*update)(child_sa_t *this, proposal_t *proposal, mode_t mode,
+	status_t (*update)(child_sa_t *this, proposal_t *proposal, ipsec_mode_t mode,
 					   prf_plus_t *prf_plus);
 
 	/**
@@ -219,7 +219,7 @@ struct child_sa_t {
 	 * @return			SUCCESS or FAILED
 	 */	
 	status_t (*add_policies)(child_sa_t *this, linked_list_t *my_ts_list,
-							 linked_list_t *other_ts_list, mode_t mode,
+							 linked_list_t *other_ts_list, ipsec_mode_t mode,
 							 protocol_id_t proto);
 	
 	/**

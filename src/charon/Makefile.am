@@ -41,7 +41,8 @@ encoding/payloads/ts_payload.c encoding/payloads/ts_payload.h \
 encoding/payloads/unknown_payload.c encoding/payloads/unknown_payload.h \
 encoding/payloads/vendor_id_payload.c encoding/payloads/vendor_id_payload.h \
 kernel/kernel_interface.c kernel/kernel_interface.h \
-kernel/kernel_interface_ipsec.h kernel/kernel_interface_net.h \
+kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
+kernel/kernel_net.h \
 network/packet.c network/packet.h \
 network/receiver.c network/receiver.h \
 network/sender.c network/sender.h \

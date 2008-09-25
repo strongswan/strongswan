@@ -25,7 +25,6 @@
 #ifndef CHILD_CFG_H_
 #define CHILD_CFG_H_
 
-typedef enum mode_t mode_t;
 typedef enum action_t action_t;
 typedef enum ipcomp_transform_t ipcomp_transform_t;
 typedef struct child_cfg_t child_cfg_t;
@@ -33,25 +32,7 @@ typedef struct child_cfg_t child_cfg_t;
 #include <library.h>
 #include <config/proposal.h>
 #include <config/traffic_selector.h>
-
-/**
- * Mode of an CHILD_SA.
- *
- * These are equal to those defined in XFRM, so don't change.
- */
-enum mode_t {
-	/** transport mode, no inner address */
-	MODE_TRANSPORT = 0,
-	/** tunnel mode, inner and outer addresses */
-	MODE_TUNNEL = 1,
-	/** BEET mode, tunnel mode but fixed, bound inner addresses */
-	MODE_BEET = 4,
-};
-
-/**
- * enum names for mode_t.
- */
-extern enum_name_t *mode_names;
+#include <kernel/kernel_ipsec.h>
 
 /**
  * Action to take when DPD detected/connection gets closed by peer.
@@ -208,7 +189,7 @@ struct child_cfg_t {
 	 * 
 	 * @return				ipsec mode
 	 */
-	mode_t (*get_mode) (child_cfg_t *this);
+	ipsec_mode_t (*get_mode) (child_cfg_t *this);
 	
 	/**
 	 * Action to take on DPD.
@@ -279,7 +260,7 @@ struct child_cfg_t {
  */
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
-							  char *updown, bool hostaccess, mode_t mode,
+							  char *updown, bool hostaccess, ipsec_mode_t mode,
 							  action_t dpd_action, action_t close_action,
 							  bool ipcomp);
 

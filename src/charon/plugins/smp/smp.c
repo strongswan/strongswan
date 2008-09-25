@@ -181,7 +181,7 @@ static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool loca
  */
 static void write_child(xmlTextWriterPtr writer, child_sa_t *child)
 {
-	mode_t mode;
+	ipsec_mode_t mode;
 	encryption_algorithm_t encr;
 	integrity_algorithm_t int_algo;
 	size_t encr_len, int_len;

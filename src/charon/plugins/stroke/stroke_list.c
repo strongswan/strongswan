@@ -127,7 +127,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	encryption_algorithm_t encr_alg;
 	integrity_algorithm_t int_alg;
 	size_t encr_len, int_len;
-	mode_t mode;
+	ipsec_mode_t mode;
 	
 	child_sa->get_stats(child_sa, &mode, &encr_alg, &encr_len,
 						&int_alg, &int_len, &rekey, &use_in, &use_out,
@@ -136,7 +136,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	fprintf(out, "%12s{%d}:  %N, %N", 
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
 			child_sa_state_names, child_sa->get_state(child_sa),
-			mode_names, mode);
+			ipsec_mode_names, mode);
 	
 	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
