@@ -686,8 +686,8 @@ enables the IKEv2 MOBIKE protocol defined by RFC 4555. Accepted values are
 .BR no .
 If set to
 .BR no ,
-the IKEv2 charon daemon will not actively propose MOBIKE but will still
-accept and support the protocol as a responder.
+the IKEv2 charon daemon will not actively propose MOBIKE as initiator and
+ignore the MOBIKE_SUPPORTED notify as responder.
 .TP
 .B modeconfig
 defines which mode is used to assign a virtual IP.

@@ -117,8 +117,19 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 		{
 			case MOBIKE_SUPPORTED:
 			{
-				DBG1(DBG_IKE, "peer supports MOBIKE");
-				this->ike_sa->enable_extension(this->ike_sa, EXT_MOBIKE);
+				peer_cfg_t *peer_cfg;
+				
+				peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+				if (!this->initiator && 
+					peer_cfg && !peer_cfg->use_mobike(peer_cfg))
+				{
+					DBG1(DBG_IKE, "peer supports MOBIKE, but disabled in config");
+				}
+				else
+				{
+					DBG1(DBG_IKE, "peer supports MOBIKE");
+					this->ike_sa->enable_extension(this->ike_sa, EXT_MOBIKE);
+				}
 				break;
 			}
 			case COOKIE2:
