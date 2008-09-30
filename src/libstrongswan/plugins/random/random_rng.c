@@ -63,7 +63,8 @@ struct private_random_rng_t {
 static void get_bytes(private_random_rng_t *this, size_t bytes,
 					  u_int8_t *buffer)
 {
-	size_t done, got;
+	size_t done;
+	ssize_t got;
 	
 	done = 0;
 	
