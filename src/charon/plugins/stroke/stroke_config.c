@@ -773,7 +773,7 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 				msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
 				msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
 				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
-				msg->add_conn.mode, dpd, ACTION_NONE, msg->add_conn.ipcomp);
+				msg->add_conn.mode, dpd, dpd, msg->add_conn.ipcomp);
 	
 	add_ts(this, &msg->add_conn.me, child_cfg, TRUE);
 	add_ts(this, &msg->add_conn.other, child_cfg, FALSE);
