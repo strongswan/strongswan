@@ -44,6 +44,11 @@ struct private_child_delete_t {
 	bool initiator;
 	
 	/**
+ 	 * wheter to enforce delete action policy
+ 	 */
+ 	bool check_delete_action;
+	
+	/**
 	 * CHILD_SAs which get deleted
 	 */
 	linked_list_t *child_sas;
@@ -144,6 +149,11 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 														   protocol, *spi);
 							continue;
 						}
+					case CHILD_INSTALLED:
+						if (!this->initiator)
+						{	/* reestablish installed children if required */
+							this->check_delete_action = TRUE;
+						}
 					default:
 						break;
 				}
@@ -176,7 +186,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 		child_cfg = child_sa->get_config(child_sa);
 		child_cfg->get_ref(child_cfg);
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
-		if (!this->initiator)
+		if (this->check_delete_action)
 		{	/* enforce child_cfg policy if deleted passively */
 			switch (child_cfg->get_close_action(child_cfg))
 			{
@@ -295,6 +305,7 @@ static child_sa_t* get_child(private_child_delete_t *this)
  */
 static void migrate(private_child_delete_t *this, ike_sa_t *ike_sa)
 {
+	this->check_delete_action = FALSE;
 	this->ike_sa = ike_sa;
 	
 	this->child_sas->destroy(this->child_sas);
@@ -323,6 +334,7 @@ child_delete_t *child_delete_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 	this->public.task.destroy = (void(*)(task_t*))destroy;
 	
 	this->ike_sa = ike_sa;
+	this->check_delete_action = FALSE;
 	this->child_sas = linked_list_create();
 	
 	if (child_sa != NULL)
