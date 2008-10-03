@@ -142,10 +142,10 @@ endif
 SUBDIRS = . 
 PLUGINS = ${libstrongswan_plugins}
 
-#if USE_KERNEL_NETLINK
+if USE_KERNEL_NETLINK
   SUBDIRS += plugins/kernel_netlink
   PLUGINS += kernel-netlink
-#endif
+endif
 
 if USE_STROKE
   SUBDIRS += plugins/stroke

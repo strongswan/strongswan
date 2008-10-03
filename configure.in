@@ -426,6 +426,17 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[kernel-netlink],
+	AS_HELP_STRING([--disable-kernel-netlink],[disable the netlink kernel interface. (default is NO).]),
+	[if test x$enableval = xyes; then
+		kernel_netlink=true
+	 else
+		kernel_netlink=false
+	fi],
+	kernel_netlink=true
+)
+
+AC_ARG_ENABLE(
 	[nat-transport],
 	AS_HELP_STRING([--enable-nat-transport],[enable NAT traversal with IPsec transport mode (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -853,6 +864,7 @@ AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
 AM_CONDITIONAL(USE_EAP_MD5, test x$eap_md5 = xtrue)
 AM_CONDITIONAL(USE_EAP_GTC, test x$eap_gtc = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
+AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 
 dnl other options
 dnl =============
