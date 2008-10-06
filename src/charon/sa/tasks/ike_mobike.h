@@ -55,6 +55,11 @@ struct ike_mobike_t {
 	void (*roam)(ike_mobike_t *this, bool address);
 	
 	/**
+	 * Use the task for a DPD check which detects changes in NAT mappings.
+	 */
+	void (*dpd)(ike_mobike_t *this);
+	
+	/**
 	 * Transmision hook, called by task manager.
 	 *
 	 * The task manager calls this hook whenever it transmits a packet. It 

@@ -255,6 +255,11 @@ struct private_ike_sa_t {
 	linked_list_t *additional_addresses;
 	
 	/**
+	 * previously value of received DESTINATION_IP hash
+	 */
+	chunk_t nat_detection_dest;
+	
+	/**
 	 * number pending UPDATE_SA_ADDRESS (MOBIKE)
 	 */
 	u_int32_t pending_updates;
@@ -626,8 +631,20 @@ static status_t send_dpd(private_ike_sa_t *this)
 		{
 			/* to long ago, initiate dead peer detection */
 			task_t *task;
+			ike_mobike_t *mobike;
 			
-			task = (task_t*)ike_dpd_create(TRUE);
+			if (supports_extension(this, EXT_MOBIKE) &&
+				has_condition(this, COND_NAT_HERE))
+			{
+				/* use mobike enabled DPD to detect NAT mapping changes */
+				mobike = ike_mobike_create(&this->public, TRUE);
+				mobike->dpd(mobike);
+				task = &mobike->task;
+			}
+			else
+			{
+				task = (task_t*)ike_dpd_create(TRUE);
+			}
 			diff = 0;
 			DBG1(DBG_IKE, "sending DPD request");
 			
@@ -817,7 +834,26 @@ static iterator_t* create_additional_address_iterator(private_ike_sa_t *this)
 	return this->additional_addresses->create_iterator(
 											this->additional_addresses, TRUE);
 }
-	
+
+/**
+ * Implementation of ike_sa_t.has_mapping_changed
+ */
+static bool has_mapping_changed(private_ike_sa_t *this, chunk_t hash)
+{
+	if (this->nat_detection_dest.ptr == NULL)
+	{
+		this->nat_detection_dest = chunk_clone(hash);
+		return FALSE;
+	}
+	if (chunk_equals(hash, this->nat_detection_dest))
+	{
+		return FALSE;
+	}
+	free(this->nat_detection_dest.ptr);
+	this->nat_detection_dest = chunk_clone(hash);
+	return TRUE;
+}
+
 /**
  * Implementation of ike_sa_t.set_pending_updates.
  */
@@ -2498,6 +2534,7 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->server_reflexive_host);
 	chunk_free(&this->connect_id);
 #endif /* ME */
+	free(this->nat_detection_dest.ptr);
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
@@ -2559,6 +2596,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.is_ike_initiator = (bool (*)(ike_sa_t*))is_ike_initiator;
 	this->public.create_additional_address_iterator = (iterator_t*(*)(ike_sa_t*))create_additional_address_iterator;
 	this->public.add_additional_address = (void(*)(ike_sa_t*, host_t *host))add_additional_address;
+	this->public.has_mapping_changed = (bool(*)(ike_sa_t*, chunk_t hash))has_mapping_changed;
 	this->public.retransmit = (status_t (*)(ike_sa_t *, u_int32_t)) retransmit;
 	this->public.delete = (status_t (*)(ike_sa_t*))delete_;
 	this->public.destroy = (void (*)(ike_sa_t*))destroy;
@@ -2638,6 +2676,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->other_virtual_ip = NULL;
 	this->dns_servers = linked_list_create();
 	this->additional_addresses = linked_list_create();
+	this->nat_detection_dest = chunk_empty;
 	this->pending_updates = 0;
 	this->keyingtry = 0;
 	this->ike_initiator = FALSE;

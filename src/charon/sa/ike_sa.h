@@ -407,6 +407,14 @@ struct ike_sa_t {
 	iterator_t* (*create_additional_address_iterator)(ike_sa_t *this);
 	
 	/**
+	 * Check if mappings have changed on a NAT for our source address.
+	 *
+	 * @param hash			received DESTINATION_IP hash
+	 * @return				TRUE if mappings have changed
+	 */
+	bool (*has_mapping_changed)(ike_sa_t *this, chunk_t hash);
+	
+	/**
 	 * Enable an extension the peer supports.
 	 *
 	 * If support for an IKE extension is detected, this method is called

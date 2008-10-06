@@ -72,6 +72,11 @@ struct private_ike_natd_t {
 	 * Have we found a matching destination address NAT hash?
 	 */
 	bool dst_matched;
+	
+	/**
+	 * whether NAT mappings for our NATed address has changed
+	 */
+	bool mapping_changed;
 };
 
 
@@ -192,14 +197,23 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 			case NAT_DETECTION_DESTINATION_IP:
 			{
 				this->dst_seen = TRUE;
+				hash = notify->get_notification_data(notify);
 				if (!this->dst_matched)
 				{
-					hash = notify->get_notification_data(notify);
 					DBG3(DBG_IKE, "received dst_hash %B", &hash);
 					if (chunk_equals(hash, dst_hash))
 					{
 						this->dst_matched = TRUE;
 					}
+				}
+				/* RFC4555 says we should also compare against IKE_SA_INIT
+				 * NATD payloads, but this does not work: We are running
+				 * there at port 500, but use 4500 afterwards... */
+				if (message->get_exchange_type(message) == INFORMATIONAL &&
+					this->initiator && !this->dst_matched)
+				{
+					this->mapping_changed = this->ike_sa->has_mapping_changed(
+															this->ike_sa, hash);
 				}
 				break;
 			}
@@ -415,6 +429,15 @@ static void migrate(private_ike_natd_t *this, ike_sa_t *ike_sa)
 	this->dst_seen = FALSE;
 	this->src_matched = FALSE;
 	this->dst_matched = FALSE;
+	this->mapping_changed = FALSE;
+}
+
+/**
+ * Implementation of ike_natd_t.has_mapping_changed
+ */
+static bool has_mapping_changed(private_ike_natd_t *this)
+{
+	return this->mapping_changed;
 }
 
 /**
@@ -448,6 +471,8 @@ ike_natd_t *ike_natd_create(ike_sa_t *ike_sa, bool initiator)
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
 	
+	this->public.has_mapping_changed = (bool(*)(ike_natd_t*))has_mapping_changed;
+	
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
@@ -455,6 +480,7 @@ ike_natd_t *ike_natd_create(ike_sa_t *ike_sa, bool initiator)
 	this->dst_seen = FALSE;
 	this->src_matched = FALSE;
 	this->dst_matched = FALSE;
+	this->mapping_changed = FALSE;
 	
 	return &this->public;
 }

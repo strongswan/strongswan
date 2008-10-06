@@ -434,7 +434,7 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 			return SUCCESS;
 		}
 		if (this->cookie2.ptr)
-		{	/* check cookie if we included none */
+		{	/* check cookie if we included one */
 			chunk_t cookie2;
 			
 			cookie2 = this->cookie2;
@@ -455,6 +455,13 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 		if (this->natd)
 		{
 			this->natd->task.process(&this->natd->task, message);
+			if (this->natd->has_mapping_changed(this->natd))
+			{
+				/* force an update if mappings have changed */
+				this->update = this->check = TRUE;
+				DBG1(DBG_IKE, "detected changes in NAT mappings, "
+					 "initiating MOBIKE update");
+			}
 		}
 		if (this->update)
 		{
@@ -502,6 +509,20 @@ static void roam(private_ike_mobike_t *this, bool address)
 {
 	this->check = TRUE;
 	this->address = address;
+	this->ike_sa->set_pending_updates(this->ike_sa, 
+							this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+}
+
+/**
+ * Implementation of ike_mobike_t.dpd
+ */
+static void dpd(private_ike_mobike_t *this)
+{
+	if (!this->natd)
+	{
+		this->natd = ike_natd_create(this->ike_sa, this->initiator);
+	}
+	this->address = FALSE;
 	this->ike_sa->set_pending_updates(this->ike_sa, 
 							this->ike_sa->get_pending_updates(this->ike_sa) + 1);
 }
@@ -556,6 +577,7 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 	private_ike_mobike_t *this = malloc_thing(private_ike_mobike_t);
 
 	this->public.roam = (void(*)(ike_mobike_t*,bool))roam;
+	this->public.dpd = (void(*)(ike_mobike_t*))dpd;
 	this->public.transmit = (void(*)(ike_mobike_t*,packet_t*))transmit;
 	this->public.is_probing = (bool(*)(ike_mobike_t*))is_probing;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
