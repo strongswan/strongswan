@@ -118,6 +118,11 @@ struct builder_t {
  * Helper macro to cancel a build in a builder
  */
 #define builder_cancel(builder) { (builder)->add = (void*)nop; \
-								  (builder)->build = (void*)free; }
+								  (builder)->build = (void*)builder_free; }
+
+/**
+ * Helper function for a cancelled build.
+ */
+void* builder_free(builder_t *this);
 
 #endif /* BUILDER_H_ @}*/
