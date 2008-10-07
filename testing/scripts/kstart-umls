@@ -119,6 +119,7 @@ do
 
     if [ "$host" = "alice" ]
     then
+	sleep 5
 	eval ipv4_${host}="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
 	ssh root@$ipv4_alice /etc/init.d/net.eth1 stop
     fi
