@@ -97,10 +97,10 @@ struct xfrm_algo {
 };
 
 struct xfrm_algo_aead {
-	char	alg_name[64];
-	int	alg_key_len;	/* in bits */
-	int	alg_icv_len;	/* in bits */
-	char	alg_key[0];
+	char		alg_name[64];
+	unsigned int	alg_key_len;	/* in bits */
+	unsigned int	alg_icv_len;	/* in bits */
+	char		alg_key[0];
 };
 
 struct xfrm_stats {
@@ -113,7 +113,8 @@ enum
 {
 	XFRM_POLICY_TYPE_MAIN	= 0,
 	XFRM_POLICY_TYPE_SUB	= 1,
-	XFRM_POLICY_TYPE_MAX	= 2
+	XFRM_POLICY_TYPE_MAX	= 2,
+	XFRM_POLICY_TYPE_ANY	= 255
 };
 
 enum
@@ -198,6 +199,9 @@ enum {
 #define XFRM_MSG_NEWSPDINFO XFRM_MSG_NEWSPDINFO
 	XFRM_MSG_GETSPDINFO,
 #define XFRM_MSG_GETSPDINFO XFRM_MSG_GETSPDINFO
+
+	XFRM_MSG_MAPPING,
+#define XFRM_MSG_MAPPING XFRM_MSG_MAPPING
 	__XFRM_MSG_MAX
 };
 #define XFRM_MSG_MAX (__XFRM_MSG_MAX - 1)
@@ -427,6 +431,15 @@ struct xfrm_user_migrate {
 	__u16				new_family;
 };
 
+struct xfrm_user_mapping {
+	struct xfrm_usersa_id		id;
+	__u32				reqid;
+	xfrm_address_t			old_saddr;
+	xfrm_address_t			new_saddr;
+	__be16				old_sport;
+	__be16				new_sport;
+};
+
 #ifndef __KERNEL__
 /* backwards compatibility for userspace */
 #define XFRMGRP_ACQUIRE		1
@@ -453,6 +466,8 @@ enum xfrm_nlgroups {
 #define XFRMNLGRP_REPORT	XFRMNLGRP_REPORT
 	XFRMNLGRP_MIGRATE,
 #define XFRMNLGRP_MIGRATE	XFRMNLGRP_MIGRATE
+	XFRMNLGRP_MAPPING,
+#define XFRMNLGRP_MAPPING	XFRMNLGRP_MAPPING
 	__XFRMNLGRP_MAX
 };
 #define XFRMNLGRP_MAX	(__XFRMNLGRP_MAX - 1)

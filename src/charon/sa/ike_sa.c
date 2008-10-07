@@ -877,11 +877,6 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 {
 	bool update = FALSE;
 	
-	if (supports_extension(this, EXT_MOBIKE))
-	{	/* if peer speaks mobike, address updates are explicit only */
-		return;
-	}
-	
 	if (me == NULL)
 	{
 		me = this->my_host;
@@ -1461,7 +1456,10 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
 		{
-			update_hosts(this, me, other);
+			if (!supports_extension(this, EXT_MOBIKE))
+			{	/* with MOBIKE, we do no implicit updates */
+				update_hosts(this, me, other);
+			}
 			this->time.inbound = time(NULL);
 		}
 		status = this->task_manager->process_message(this->task_manager, message);

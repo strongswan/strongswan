@@ -41,6 +41,7 @@
 #include <processing/jobs/acquire_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/delete_child_sa_job.h>
+#include <processing/jobs/update_sa_job.h>
 
 /** required for Linux 2.6.26 kernel and later */
 #ifndef XFRM_STATE_AF_UNSPEC
@@ -50,6 +51,11 @@
 /** default priority of installed policies */
 #define PRIO_LOW 3000
 #define PRIO_HIGH 2000
+
+/**
+ * Create ORable bitfield of XFRM NL groups
+ */
+#define XFRMNLGRP(x) (1<<(XFRMNLGRP_##x-1))
 
 /**
  * returns a pointer to the first rtattr following the nlmsghdr *nlh and the 
@@ -312,6 +318,27 @@ static void host2xfrm(host_t *host, xfrm_address_t *xfrm)
 }
 
 /**
+ * convert a struct xfrm_address to a host_t
+ */
+static host_t* xfrm2host(int family, xfrm_address_t *xfrm, u_int16_t port)
+{
+	chunk_t chunk;
+	
+	switch (family)
+	{
+		case AF_INET:
+			chunk = chunk_create((u_char*)&xfrm->a4, sizeof(xfrm->a4));
+			break;
+		case AF_INET6:
+			chunk = chunk_create((u_char*)&xfrm->a6, sizeof(xfrm->a6));
+			break;
+		default:
+			return NULL;
+	}
+	return host_create_from_chunk(family, chunk, ntohs(port));
+}
+
+/**
  * convert a traffic selector address range to subnet and its mask.
  */
 static void ts2subnet(traffic_selector_t* ts, 
@@ -484,6 +511,37 @@ static void process_expire(private_kernel_netlink_ipsec_t *this, struct nlmsghdr
 }
 
 /**
+ * process a XFRM_MSG_MAPPING from kernel
+ */
+static void process_mapping(private_kernel_netlink_ipsec_t *this,
+							struct nlmsghdr *hdr)
+{
+	job_t *job;
+	u_int32_t spi, reqid;
+	struct xfrm_user_mapping *mapping;
+	host_t *host;
+	
+	mapping = (struct xfrm_user_mapping*)NLMSG_DATA(hdr);
+	spi = mapping->id.spi;
+	reqid = mapping->reqid;
+	
+	DBG2(DBG_KNL, "received a XFRM_MSG_MAPPING");
+	
+	if (proto_kernel2ike(mapping->id.proto) == PROTO_ESP)
+	{
+		host = xfrm2host(mapping->id.family, &mapping->new_saddr,
+						 mapping->new_sport);
+		if (host)
+		{
+			DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and "
+				"reqid {%d} changed, queueing update job", ntohl(spi), reqid);
+			job = (job_t*)update_sa_job_create(reqid, host);
+			charon->processor->queue_job(charon->processor, job);
+		}
+	}
+}
+
+/**
  * Receives events from kernel
  */
 static job_requeue_t receive_events(private_kernel_netlink_ipsec_t *this)
@@ -530,6 +588,9 @@ static job_requeue_t receive_events(private_kernel_netlink_ipsec_t *this)
 				break;
 			case XFRM_MSG_EXPIRE:
 				process_expire(this, hdr);
+				break;
+			case XFRM_MSG_MAPPING:
+				process_mapping(this, hdr);
 				break;
 			default:
 				break;
@@ -1686,7 +1747,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	{
 		charon->kill(charon, "unable to create XFRM event socket");
 	}
-	addr.nl_groups = XFRMGRP_ACQUIRE | XFRMGRP_EXPIRE;
+	addr.nl_groups = XFRMNLGRP(ACQUIRE) | XFRMNLGRP(EXPIRE) | XFRMNLGRP(MAPPING);
 	if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		charon->kill(charon, "unable to bind XFRM event socket");
