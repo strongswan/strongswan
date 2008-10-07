@@ -209,31 +209,14 @@ static int exec(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
  */
 static bool wait_bootup(private_mconsole_t *this)
 {
-	int res;
-	
-	while (TRUE)
+	/* wait for init process to appear */
+	while (request(this, ignore, NULL, "exec ps -p 1 > /dev/null"))
 	{
-		res = request(this, ignore, NULL, "config eth9=mcast");
-		if (res < 0)
-		{
-			return FALSE;
-		}
-		if (res == 0)
-		{
-			while (request(this, ignore, NULL, "remove eth9") != 0)
-			{
-				usleep(50000);
-			}
-			return TRUE;
-		}
 		if (this->idle)
 		{
 			this->idle();
 		}
-		else
-		{
-			usleep(50000);
-		}
+		usleep(100000);
 	}
 }
 
