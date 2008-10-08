@@ -65,7 +65,7 @@ static certificate_type_t get_type(private_pubkey_cert_t *this)
  */
 static identification_t* get_subject(private_pubkey_cert_t *this)
 {
-	return this->key->get_id(this->key, ID_PUBKEY_SHA1);
+	return this->key->get_id(this->key, ID_PUBKEY_INFO_SHA1);
 }
 
 /**
