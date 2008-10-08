@@ -39,9 +39,10 @@ static const asn1Object_t pkinfoObjects[] = {
 
 
 /**
- * Load a public key from an ASN1 encoded blob
+ * Load a public key from an ASN.1 encoded blob
+ * Also used by pubkey_cert.c
  */
-static public_key_t *load(chunk_t blob)
+public_key_t *pubkey_public_key_load(chunk_t blob)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
@@ -134,7 +135,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			{
 				va_start(args, part);
 				blob = va_arg(args, chunk_t);
-				this->key = load(chunk_clone(blob));
+				this->key = pubkey_public_key_load(chunk_clone(blob));
 				va_end(args);
 				return;
 			}
@@ -148,7 +149,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 				blob = chunk_clone(chunk_create(pem, strlen(pem)));
 				if (pem_to_bin(&blob, &chunk_empty, &pgp))
 				{
-					this->key = load(chunk_clone(blob));
+					this->key = pubkey_public_key_load(chunk_clone(blob));
 				}
 				free(blob.ptr);
 				va_end(args);

@@ -19,6 +19,11 @@
 
 #include <debug.h>
 
+/**
+ * defined in pubkey_public_key.c
+ */
+extern public_key_t *pubkey_public_key_load(chunk_t blob);
+
 typedef struct private_pubkey_cert_t private_pubkey_cert_t;
 
 /**
@@ -211,6 +216,13 @@ static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
 	return &this->public;
 }
 
+static pubkey_cert_t *pubkey_cert_create_from_chunk(chunk_t blob)
+{
+	public_key_t *key = pubkey_public_key_load(chunk_clone(blob));
+
+	return (key)? pubkey_cert_create(key) : NULL;
+}
+
 typedef struct private_builder_t private_builder_t;
 /**
  * Builder implementation for key loading
@@ -244,6 +256,13 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	
 		switch (part)
 		{
+			case BUILD_BLOB_ASN1_DER:
+			{
+				va_start(args, part);
+				this->key = pubkey_cert_create_from_chunk(va_arg(args, chunk_t));
+				va_end(args);
+				return;
+			}
 			case BUILD_PUBLIC_KEY:
 			{
 				va_start(args, part);
