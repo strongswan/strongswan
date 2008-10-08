@@ -449,6 +449,12 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	size_t rtasize = RTM_PAYLOAD(hdr);
 	host_t *host = NULL;
 	
+	/* ignore routes added by us */
+	if (msg->rtm_table && msg->rtm_table == this->routing_table)
+	{
+		return;
+	}
+	
 	while (RTA_OK(rta, rtasize))
 	{
 		switch (rta->rta_type)
