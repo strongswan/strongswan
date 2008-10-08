@@ -37,6 +37,7 @@ down-srcip,      STROKE_DOWN_SRCIP
 loglevel,        STROKE_LOGLEVEL
 status,          STROKE_STATUS
 statusall,       STROKE_STATUSALL
+listpubkeys,     STROKE_LIST_PUBKEYS
 listcerts,       STROKE_LIST_CERTS
 listcacerts,     STROKE_LIST_CACERTS
 listocspcerts,   STROKE_LIST_OCSPCERTS

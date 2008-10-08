@@ -43,28 +43,30 @@ typedef enum list_flag_t list_flag_t;
 enum list_flag_t {
 	/** don't list anything */
 	LIST_NONE =			0x0000,
+	/** list all raw public keys */
+	LIST_PUBKEYS =		0x0001,
 	/** list all host/user certs */
-	LIST_CERTS =		0x0001,
+	LIST_CERTS =		0x0002,
 	/** list all ca certs */
-	LIST_CACERTS =		0x0002,
+	LIST_CACERTS =		0x0004,
 	/** list all ocsp signer certs */
-	LIST_OCSPCERTS =	0x0004,
+	LIST_OCSPCERTS =	0x0008,
 	/** list all aa certs */
-	LIST_AACERTS =		0x0008,
+	LIST_AACERTS =		0x0010,
 	/** list all attribute certs */
-	LIST_ACERTS =		0x0010,
+	LIST_ACERTS =		0x0020,
 	/** list all access control groups */
-	LIST_GROUPS =		0x0020,
+	LIST_GROUPS =		0x0040,
 	/** list all ca information records */
-	LIST_CAINFOS =		0x0040,
+	LIST_CAINFOS =		0x0080,
 	/** list all crls */
-	LIST_CRLS =			0x0080,
+	LIST_CRLS =			0x0100,
 	/** list all ocsp cache entries */
-	LIST_OCSP =			0x0100,
+	LIST_OCSP =			0x0200,
 	/** list all supported algorithms */
-	LIST_ALGS =			0x0200,
+	LIST_ALGS =			0x0400,
 	/** all list options */
-	LIST_ALL =			0x03FF,
+	LIST_ALL =			0x07FF,
 };
 
 typedef enum reread_flag_t reread_flag_t;

@@ -507,6 +507,53 @@ static linked_list_t* create_unique_cert_list(certificate_type_t type)
 }
 
 /**
+ * list all raw public keys
+ */
+static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
+{
+	bool first = TRUE;
+
+	enumerator_t *enumerator = list->create_enumerator(list);
+	certificate_t *cert;
+
+	while (enumerator->enumerate(enumerator, (void**)&cert))
+	{
+		public_key_t *public = cert->get_public_key(cert);
+
+		if (public)
+		{
+			private_key_t *private = NULL;
+			identification_t *id, *keyid;
+			
+			if (first)
+			{
+				fprintf(out, "\n");
+				fprintf(out, "List of Raw Public Keys:\n");
+				first = FALSE;
+			}
+			fprintf(out, "\n");
+
+			/* list public key information */
+			id    = public->get_id(public, ID_PUBKEY_SHA1);
+			keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
+
+			private = charon->credentials->get_private(
+								charon->credentials, 
+								public->get_type(public), keyid, NULL);
+			fprintf(out, "  pubkey:    %N %d bits%s\n",
+					key_type_names, public->get_type(public),
+					public->get_keysize(public) * 8,
+					private ? ", has private key" : "");
+			fprintf(out, "  keyid:     %D\n", keyid);
+			fprintf(out, "  subjkey:   %D\n", id);
+			DESTROY_IF(private);
+			public->destroy(public);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * list all X.509 certificates matching the flags
  */
 static void stroke_list_certs(linked_list_t *list, char *label, 
@@ -849,6 +896,13 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 {
 	linked_list_t *cert_list = NULL;
 
+	if (msg->list.flags & LIST_PUBKEYS)
+	{
+		linked_list_t *pubkey_list = create_unique_cert_list(CERT_TRUSTED_PUBKEY);
+
+		stroke_list_pubkeys(pubkey_list, msg->list.utc, out);
+		pubkey_list->destroy_offset(pubkey_list, offsetof(certificate_t, destroy)); 
+	}
 	if (msg->list.flags & (LIST_CERTS | LIST_CACERTS | LIST_OCSPCERTS | LIST_AACERTS))
 	{
 		cert_list = create_unique_cert_list(CERT_X509);

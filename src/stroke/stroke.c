@@ -200,6 +200,7 @@ static int show_status(stroke_keyword_t kw, char *connection)
 }
 
 static int list_flags[] = {
+	LIST_PUBKEYS,
 	LIST_CERTS,
 	LIST_CACERTS,
 	LIST_OCSPCERTS,
@@ -403,6 +404,7 @@ int main(int argc, char *argv[])
 		case STROKE_STATUSALL:
 			res = show_status(token->kw, argc > 2 ? argv[2] : NULL);
 			break;
+		case STROKE_LIST_PUBKEYS:
 		case STROKE_LIST_CERTS:
 		case STROKE_LIST_CACERTS:
 		case STROKE_LIST_OCSPCERTS:

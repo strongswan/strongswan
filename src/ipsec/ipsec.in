@@ -131,22 +131,22 @@ down-srcip)
 	fi
 	exit "$rc"
 	;;
-listalgs|listpubkeys|\listcards|\rereadgroups)
+listcards|rereadgroups)
 	op="$1"
-	rc=7
 	shift
 	if [ -e $IPSEC_PLUTO_PID ]
 	then
 		$IPSEC_WHACK "$@" "--$op"
 		rc="$?"
 	fi
-	if [ -e $IPSEC_CHARON_PID ]
-	then
-		$IPSEC_STROKE "$op"
-		rc="$?"
-	fi
-	exit "$rc"
+	if [ -e $IPSEC_CHARON_PID ] 
+	then 
+		exit 3 
+	else 
+		exit 7 
+	fi 
 	;;
+listalgs|\listpubkeys|\
 listcerts|listcacerts|listaacerts|\
 listacerts|listgroups|listocspcerts|\
 listcainfos|listcrls|listocsp|listall|\

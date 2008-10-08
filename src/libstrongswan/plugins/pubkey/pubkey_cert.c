@@ -114,7 +114,7 @@ static bool equals(private_pubkey_cert_t *this, certificate_t *other)
 	{
 		return FALSE;
 	}
-	return other->has_subject(other, this->key->get_id(this->key, ID_PUBKEY_SHA1));
+	return other->has_subject(other, this->key->get_id(this->key, ID_PUBKEY_INFO_SHA1));
 }
 
 /**
