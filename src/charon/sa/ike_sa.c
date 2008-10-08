@@ -1098,7 +1098,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 	{
 		host->destroy(host);
 		host = charon->kernel_interface->get_source_addr(
-								charon->kernel_interface, this->other_host);
+							charon->kernel_interface, this->other_host, NULL);
 		if (host)
 		{
 			host->set_port(host, IKEV2_UDP_PORT);
@@ -2206,7 +2206,7 @@ static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
  */
 static status_t roam(private_ike_sa_t *this, bool address)
 {
-	host_t *me, *other;
+	host_t *src;
 	ike_mobike_t *mobike;
 	
 	switch (this->state)
@@ -2230,21 +2230,21 @@ static status_t roam(private_ike_sa_t *this, bool address)
 		return SUCCESS;
 	}
 	
-	/* get best address pair to use */
-	other = this->other_host;
-	me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
-												   other);
-	
-	if (me)
+	/* keep existing path if possible */
+	src = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+											this->other_host, this->my_host);
+	if (src)
 	{
-		if (me->ip_equals(me, this->my_host) &&
-			other->ip_equals(other, this->other_host))
+		if (src->ip_equals(src, this->my_host))
 		{
-			DBG2(DBG_IKE, "keeping connection path %H - %H", this->other_host, me);
-			me->destroy(me);
+			DBG2(DBG_IKE, "keeping connection path %H - %H",
+				 src, this->other_host);
+			src->destroy(src);
 			return SUCCESS;
 		}
-		me->destroy(me);
+		/* old address is not valid anymore, try with new one */
+		src->set_port(src, this->my_host->get_port(this->my_host));
+		set_my_host(this, src);
 	}
 	
 	/* update addresses with mobike, if supported ... */

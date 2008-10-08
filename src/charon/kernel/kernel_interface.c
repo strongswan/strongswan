@@ -160,9 +160,10 @@ static status_t del_policy(private_kernel_interface_t *this,
 /**
  * Implementation of kernel_interface_t.get_source_addr
  */
-static host_t *get_source_addr(private_kernel_interface_t *this, host_t *dest)
+static host_t *get_source_addr(private_kernel_interface_t *this,
+							   host_t *dest, host_t *src)
 {
-	return this->net->get_source_addr(this->net, dest);
+	return this->net->get_source_addr(this->net, dest, src);
 }
 
 /**
@@ -329,7 +330,7 @@ kernel_interface_t *kernel_interface_create()
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
 	
-	this->public.get_source_addr = (host_t*(*)(kernel_interface_t*, host_t *dest))get_source_addr;
+	this->public.get_source_addr = (host_t*(*)(kernel_interface_t*, host_t *dest, host_t *src))get_source_addr;
 	this->public.get_nexthop = (host_t*(*)(kernel_interface_t*, host_t *dest))get_nexthop;
 	this->public.get_interface = (char*(*)(kernel_interface_t*,host_t*))get_interface;
 	this->public.create_address_enumerator = (enumerator_t*(*)(kernel_interface_t*,bool,bool))create_address_enumerator;

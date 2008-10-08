@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -720,7 +721,7 @@ static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
  * Get a route: If "nexthop", the nexthop is returned. source addr otherwise.
  */
 static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
-						 bool nexthop)
+						 bool nexthop, host_t *candidate)
 {
 	unsigned char request[NETLINK_BUFFER_SIZE];
 	struct nlmsghdr *hdr, *out, *current;
@@ -744,7 +745,12 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	
 	chunk = dest->get_address(dest);
 	netlink_add_attribute(hdr, RTA_DST, chunk, sizeof(request));
-			
+	if (candidate)
+	{
+		chunk = candidate->get_address(candidate);
+		netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
+	}
+	
 	if (this->socket->send(this->socket, hdr, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "getting address to %H failed", dest);
@@ -878,9 +884,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 /**
  * Implementation of kernel_net_t.get_source_addr.
  */
-static host_t* get_source_addr(private_kernel_netlink_net_t *this, host_t *dest)
+static host_t* get_source_addr(private_kernel_netlink_net_t *this,
+							   host_t *dest, host_t *src)
 {
-	return get_route(this, dest, FALSE);
+	return get_route(this, dest, FALSE, src);
 }
 
 /**
@@ -888,7 +895,7 @@ static host_t* get_source_addr(private_kernel_netlink_net_t *this, host_t *dest)
  */
 static host_t* get_nexthop(private_kernel_netlink_net_t *this, host_t *dest)
 {
-	return get_route(this, dest, TRUE);
+	return get_route(this, dest, TRUE, NULL);
 }
 
 /**
@@ -1284,7 +1291,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 	/* public functions */
 	this->public.interface.get_interface = (char*(*)(kernel_net_t*,host_t*))get_interface_name;
 	this->public.interface.create_address_enumerator = (enumerator_t*(*)(kernel_net_t*,bool,bool))create_address_enumerator;
-	this->public.interface.get_source_addr = (host_t*(*)(kernel_net_t*, host_t *dest))get_source_addr;
+	this->public.interface.get_source_addr = (host_t*(*)(kernel_net_t*, host_t *dest, host_t *src))get_source_addr;
 	this->public.interface.get_nexthop = (host_t*(*)(kernel_net_t*, host_t *dest))get_nexthop;
 	this->public.interface.add_ip = (status_t(*)(kernel_net_t*,host_t*,host_t*)) add_ip;
 	this->public.interface.del_ip = (status_t(*)(kernel_net_t*,host_t*)) del_ip;

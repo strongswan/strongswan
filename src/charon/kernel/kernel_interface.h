@@ -235,11 +235,15 @@ struct kernel_interface_t {
 	 *
 	 * Does a route lookup to get the source address used to reach dest.
 	 * The returned host is allocated and must be destroyed.
+	 * An optional src address can be used to check if a route is available
+	 * for given source to dest.
 	 *
 	 * @param dest			target destination address
+	 * @param src			source address to check, or NULL
 	 * @return				outgoing source address, NULL if unreachable
 	 */
-	host_t* (*get_source_addr)(kernel_interface_t *this, host_t *dest);
+	host_t* (*get_source_addr)(kernel_interface_t *this,
+							   host_t *dest, host_t *src);
 	
 	/**
 	 * Get the next hop for a destination.

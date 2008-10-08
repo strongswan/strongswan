@@ -341,9 +341,8 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 	}
 	else
 	{
-		host = charon->kernel_interface->get_source_addr(
-									charon->kernel_interface,
-									this->ike_sa->get_other_host(this->ike_sa));
+		host = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+							this->ike_sa->get_other_host(this->ike_sa), NULL);
 		if (host)
 		{	/* 2. */
 			host->set_port(host, IKEV2_UDP_PORT);

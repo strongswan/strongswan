@@ -277,7 +277,7 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 	other_old = this->ike_sa->get_other_host(this->ike_sa);
 	
 	me = charon->kernel_interface->get_source_addr(
-										charon->kernel_interface, other_old);
+									charon->kernel_interface, other_old, NULL);
 	if (me)
 	{
 		me->set_port(me, me->ip_equals(me, me_old) ?
@@ -289,7 +289,7 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 	while (iterator->iterate(iterator, (void**)&other))
 	{
 		me = charon->kernel_interface->get_source_addr(
-											charon->kernel_interface, other);
+										charon->kernel_interface, other, NULL);
 		if (me)
 		{
 			if (me->get_family(me) != other->get_family(other))
