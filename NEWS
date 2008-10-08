@@ -5,6 +5,11 @@ strongswan-4.2.8
   stored in the SQL database backend. The ipsec listpubkeys command
   lists the available raw public keys via the stroke interface.
 
+- Several MOBIKE improvements: Detect changes in NAT mappings in DPD exchanges,
+  handle events if kernel detects NAT mapping changes in UDP-encapsulated
+  ESP packets (requires kernel patch), reuse old addesses in MOBIKE updates as
+  long as possible and other fixes.
+
 
 strongswan-4.2.7
 ----------------
