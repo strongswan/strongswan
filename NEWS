@@ -1,3 +1,11 @@
+strongswan-4.2.8
+----------------
+
+- IKEv2 charon daemon supportis authentication based on raw public keys
+  stored in the SQL database backend. The ipsec listpubkeys command
+  lists the available raw public keys via the stroke interface.
+
+
 strongswan-4.2.7
 ----------------
 
