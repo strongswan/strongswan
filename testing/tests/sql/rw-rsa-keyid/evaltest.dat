@@ -1,0 +1,11 @@
+moon::ipsec statusall::rw.*ESTABLISHED.*d7:0d:.*:ca:95.*98:5c:.*:d4:82::YES
+moon::ipsec statusall::rw.*ESTABLISHED.*d7:0d:.*:ca:95.*f6:51:.*:ea:25::YES
+carol::ipsec statusall::home.*ESTABLISHED.*98:5c:.*:d4:82.*d7:0d:.*:ca:95::YES
+dave::ipsec statusall::home.*ESTABLISHED.*f6:51:.*:ea:25.*d7:0d:.*:ca:95::YES
+carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
+dave::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
+moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
+moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP::YES
+moon::tcpdump::IP dave.strongswan.org > moon.strongswan.org: ESP::YES
+moon::tcpdump::IP moon.strongswan.org > dave.strongswan.org: ESP::YES
+
