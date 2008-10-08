@@ -695,17 +695,19 @@ static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
 	{
 		return FALSE;
 	}
-	/* scan through all bits, beginning in the front */
+	/* scan through all bits, beginning at the front */
 	for (byte = 0; byte < addr.len; byte++)
 	{
-		for (bit = 7; bit >= 0; bit--)
+		for (bit = 0; bit < 8; bit++)
 		{
+			u_char bitpos = 1 << (7-bit);
+
 			/* check if bits are equal (or we reached the end of the net) */
-			if (bit + byte * 8 > net_len)
+			if (bit + byte * 8 >= net_len)
 			{
 				return TRUE;
 			}
-			if (((1<<bit) & addr.ptr[byte]) != ((1<<bit) & net.ptr[byte]))
+			if ((bitpos & addr.ptr[byte]) != (bitpos & net.ptr[byte]))
 			{
 				return FALSE;
 			}
