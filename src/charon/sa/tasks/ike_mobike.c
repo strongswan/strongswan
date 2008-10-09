@@ -329,6 +329,24 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
+		host_t *old, *new;
+		
+		/* we check if the existing address is still valid */ 
+		old = message->get_source(message);
+		new = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+										message->get_destination(message), old);
+		if (new)
+		{
+			if (!new->ip_equals(new, old))
+			{
+				new->set_port(new, old->get_port(old));
+				message->set_source(message, new);
+			}
+			else
+			{
+				new->destroy(new);
+			}
+		}
 		if (this->update)
 		{
 			message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES, chunk_empty);

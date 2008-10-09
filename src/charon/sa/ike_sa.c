@@ -1451,7 +1451,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			charon->scheduler->schedule_job(charon->scheduler, job,
 											HALF_OPEN_IKE_SA_TIMEOUT);
 		}
-		
+		this->time.inbound = time(NULL);
 		/* check if message is trustworthy, and update host information */
 		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
@@ -1460,7 +1460,6 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			{	/* with MOBIKE, we do no implicit updates */
 				update_hosts(this, me, other);
 			}
-			this->time.inbound = time(NULL);
 		}
 		status = this->task_manager->process_message(this->task_manager, message);
 		if (status != DESTROY_ME)
@@ -2242,9 +2241,7 @@ static status_t roam(private_ike_sa_t *this, bool address)
 			src->destroy(src);
 			return SUCCESS;
 		}
-		/* old address is not valid anymore, try with new one */
-		src->set_port(src, this->my_host->get_port(this->my_host));
-		set_my_host(this, src);
+		src->destroy(src);
 	}
 	
 	/* update addresses with mobike, if supported ... */
