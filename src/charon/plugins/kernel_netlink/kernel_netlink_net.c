@@ -696,28 +696,29 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
  */
 static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
 {
-	int bit, byte;
+	static const u_char mask[] = { 0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
+	int byte = 0;
 
-	if (addr.len != net.len)
+	if (addr.len != net.len || net_len > 8 * net.len )
 	{
 		return FALSE;
 	}
-	/* scan through all bits, beginning at the front */
-	for (byte = 0; byte < addr.len; byte++)
-	{
-		for (bit = 0; bit < 8; bit++)
-		{
-			u_char bitpos = 1 << (7-bit);
 
-			/* check if bits are equal (or we reached the end of the net) */
-			if (bit + byte * 8 >= net_len)
-			{
-				return TRUE;
-			}
-			if ((bitpos & addr.ptr[byte]) != (bitpos & net.ptr[byte]))
+	/* scan through all bytes in network order */
+	while (net_len > 0)
+	{
+		if (net_len < 8)
+		{
+			return (mask[net_len] & addr.ptr[byte]) == (mask[net_len] & net.ptr[byte]);
+		}
+		else
+		{
+			if (addr.ptr[byte] != net.ptr[byte])
 			{
 				return FALSE;
 			}
+			byte++;
+			net_len -= 8;
 		}
 	}
 	return TRUE;
