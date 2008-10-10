@@ -77,22 +77,22 @@ AC_ARG_WITH(
 	[ipsecdir],
 	AS_HELP_STRING([--with-ipsecdir=dir],[installation path for ipsec tools other than "libexecdir/ipsec"]),
 	[AC_SUBST(ipsecdir, "$withval")],
-	[AC_SUBST(ipsecdir, "${libexecdir}/ipsec")]
+	[AC_SUBST(ipsecdir, "${libexecdir%/}/ipsec")]
 )
-AC_SUBST(plugindir, "${ipsecdir}/plugins")
+AC_SUBST(plugindir, "${ipsecdir%/}/plugins")
 
 AC_ARG_WITH(
 	[plugindir],
 	AS_HELP_STRING([--with-plugindir=dir],[installation path for plugins other than "ipsecdir/plugins"]),
 	[AC_SUBST(plugindir, "$withval")],
-	[AC_SUBST(plugindir, "${ipsecdir}/plugins")]
+	[AC_SUBST(plugindir, "${ipsecdir%/}/plugins")]
 )
 
 AC_ARG_WITH(
 	[sim-reader],
 	AS_HELP_STRING([--with-sim-reader=library.so],[library containing the sim_run_alg()/sim_get_triplet() function for EAP-SIM]),
 	[AC_SUBST(simreader, "$withval")],
-	[AC_SUBST(simreader, "${plugindir}/libeapsim-file.so")]
+	[AC_SUBST(simreader, "${plugindir%/}/libeapsim-file.so")]
 )
 
 AC_ARG_WITH(
