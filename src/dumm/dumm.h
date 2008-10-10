@@ -40,11 +40,11 @@ struct dumm_t {
 	 * @param name		name of the guest
 	 * @param kernel	UML kernel to use for guest
 	 * @param master	mounted read only master filesystem
-	 * @param mem		amount of memory for guest, in MB
+	 * @param args		additional args to pass to kernel
 	 * @return			guest if started, NULL if failed
 	 */
 	guest_t* (*create_guest) (dumm_t *this, char *name, char *kernel, 
-							  char *master, int mem);
+							  char *master, char *args);
 	
 	/**
 	 * @brief Create an enumerator over all guests.

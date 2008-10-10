@@ -52,11 +52,11 @@ struct private_dumm_t {
  * Implementation of dumm_t.create_guest.
  */
 static guest_t* create_guest(private_dumm_t *this, char *name, char *kernel, 
-							 char *master, int mem)
+							 char *master, char *args)
 {
 	guest_t *guest;
 	
-	guest = guest_create(this->guest_dir, name, kernel, master, mem);
+	guest = guest_create(this->guest_dir, name, kernel, master, args);
 	if (guest)
 	{
 		this->guests->insert_last(this->guests, guest);
@@ -258,7 +258,7 @@ dumm_t *dumm_create(char *dir)
 	char cwd[PATH_MAX];
 	private_dumm_t *this = malloc_thing(private_dumm_t);
 	
-	this->public.create_guest = (guest_t*(*)(dumm_t*,char*,char*,char*,int))create_guest;
+	this->public.create_guest = (guest_t*(*)(dumm_t*,char*,char*,char*,char*))create_guest;
 	this->public.create_guest_enumerator = (enumerator_t*(*)(dumm_t*))create_guest_enumerator;
 	this->public.delete_guest = (void(*)(dumm_t*,guest_t*))delete_guest;
 	this->public.create_bridge = (bridge_t*(*)(dumm_t*, char *name))create_bridge;

@@ -46,9 +46,6 @@ static pid_t invoke(void *null, guest_t *guest, char *args[], int argc)
 {
 	pid_t pid;
 	
-	args[argc++] = "con0=xterm";
-	args[argc++] = "xterm=gnome-terminal,-t,-x";
-	
 	pid = fork();
 	switch (pid)
 	{
@@ -145,12 +142,12 @@ static VALUE guest_each(int argc, VALUE *argv, VALUE class)
 }
 
 static VALUE guest_new(VALUE class, VALUE name, VALUE kernel,
-					   VALUE master, VALUE mem)
+					   VALUE master, VALUE args)
 {
 	guest_t *guest;
 	
 	guest = dumm->create_guest(dumm, StringValuePtr(name), StringValuePtr(kernel),
-							   StringValuePtr(master), FIX2INT(mem));
+							   StringValuePtr(master), StringValuePtr(args));
 	if (!guest)
 	{
 		rb_raise(rb_eRuntimeError, "creating guest failed");

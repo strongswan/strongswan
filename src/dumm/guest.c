@@ -42,7 +42,7 @@
 #define MASTER_DIR "master"
 #define DIFF_DIR "diff"
 #define UNION_DIR "union"
-#define MEMORY_FILE "mem"
+#define ARGS_FILE "args"
 #define PID_FILE "pid"
 #define KERNEL_FILE "linux"
 #define LOG_FILE "boot.log"
@@ -60,8 +60,8 @@ struct private_guest_t {
 	int dir;
 	/** directory name of guest */
 	char *dirname;
-	/** amount of memory for guest, in MB */
-	int mem;
+	/** additional args to pass to guest */
+	char *args;
 	/** pid of guest child process */
 	int pid;
 	/** state of guest */
@@ -265,9 +265,12 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 	args[i++] = write_arg(&pos, &left, "rootflags=%s/%s", this->dirname, UNION_DIR);
 	args[i++] = write_arg(&pos, &left, "uml_dir=%s", this->dirname);
 	args[i++] = write_arg(&pos, &left, "umid=%s", this->name);
-	args[i++] = write_arg(&pos, &left, "mem=%dM", this->mem);
 	args[i++] = write_arg(&pos, &left, "mconsole=notify:%s", notify);
 	args[i++] = write_arg(&pos, &left, "con=null");
+	if (this->args)
+	{
+		args[i++] = this->args;
+	}
 	  
 	this->pid = invoke(data, &this->public, args, i);
 	if (!this->pid)
@@ -490,38 +493,38 @@ static bool mount_unionfs(private_guest_t *this)
 }
 
 /**
- * load memory configuration from file
+ * load args configuration from file
  */
-int loadmem(private_guest_t *this)
+char *loadargs(private_guest_t *this)
 {
 	FILE *file;
-	int mem = 0;
+	char buf[512], *args = NULL;
 	
-	file = fdopen(openat(this->dir, MEMORY_FILE, O_RDONLY, PERM), "r");
+	file = fdopen(openat(this->dir, ARGS_FILE, O_RDONLY, PERM), "r");
 	if (file)
 	{
-		if (fscanf(file, "%d", &mem) <= 0)
+		if (fgets(buf, sizeof(buf), file))
 		{
-			mem = 0;
+			args = strdup(buf);
 		}
 		fclose(file);
 	}
-	return mem;
+	return args;
 }
 
 /**
- * save memory configuration to file
+ * save args configuration to file
  */
-bool savemem(private_guest_t *this, int mem)
+bool saveargs(private_guest_t *this, char *args)
 {
 	FILE *file;
 	bool retval = FALSE;
 	
-	file = fdopen(openat(this->dir, MEMORY_FILE, O_RDWR | O_CREAT | O_TRUNC,
+	file = fdopen(openat(this->dir, ARGS_FILE, O_RDWR | O_CREAT | O_TRUNC,
 						 PERM), "w");
 	if (file)
 	{
-		if (fprintf(file, "%d", mem) > 0)
+		if (fprintf(file, "%s", args) > 0)
 		{
 			retval = TRUE;
 		}
@@ -543,6 +546,7 @@ static void destroy(private_guest_t *this)
 	}
 	this->ifaces->destroy(this->ifaces);
 	free(this->dirname);
+	free(this->args);
 	free(this->name);
 	free(this);
 }
@@ -594,7 +598,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->state = GUEST_STOPPED;
 	this->mconsole = NULL;
 	this->ifaces = linked_list_create();
-	this->mem = 0;
+	this->args = NULL;
 	this->name = strdup(name);
 	this->cowfs = NULL;
 	
@@ -625,7 +629,7 @@ static bool make_symlink(private_guest_t *this, char *old, char *new)
  * create the guest instance, including required dirs and mounts 
  */
 guest_t *guest_create(char *parent, char *name, char *kernel,
-					  char *master, int mem)
+					  char *master, char *args)
 {
 	private_guest_t *this = guest_create_generic(parent, name, TRUE);
 	
@@ -650,8 +654,8 @@ guest_t *guest_create(char *parent, char *name, char *kernel,
 		return NULL;
 	}
 	
-	this->mem = mem;
-	if (!savemem(this, mem))
+	this->args = args;
+	if (args && !saveargs(this, args))
 	{
 		destroy(this);
 		return NULL;
@@ -678,13 +682,7 @@ guest_t *guest_load(char *parent, char *name)
 		return NULL;
 	}
 	
-	this->mem = loadmem(this);
-	if (this->mem == 0)
-	{
-		DBG1("unable to open memory configuration file: %m", name);
-		destroy(this);
-		return NULL;
-	}
+	this->args = loadargs(this);
 	
 	if (!mount_unionfs(this))
 	{

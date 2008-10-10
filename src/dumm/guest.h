@@ -187,10 +187,11 @@ struct guest_t {
  * @param name		name of the guest to create
  * @param kernel	kernel this guest uses
  * @param master	read-only master filesystem for guest
+ * @param args		additional args to pass to kernel
  * @param mem		amount of memory to give the guest
  */
 guest_t *guest_create(char *parent, char *name, char *kernel,
-					  char *master, int mem);
+					  char *master, char *args);
 
 /**
  * @brief Load a guest created with guest_create().

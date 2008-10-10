@@ -100,7 +100,6 @@ static page_t* get_page(int num)
 static pid_t invoke(void *vte, guest_t *guest,
 					char *args[], int argc)
 {
-	args[argc] = "con0=fd:0,fd:1";
 	return vte_terminal_fork_command(VTE_TERMINAL(vte), args[0], args, NULL,
 									 NULL, FALSE, FALSE, FALSE);
 }
@@ -374,7 +373,7 @@ static page_t* create_page(guest_t *guest)
 static void create_guest()
 {
 	guest_t *guest;
-	GtkWidget *dialog, *table, *label, *name, *kernel, *master, *memory;
+	GtkWidget *dialog, *table, *label, *name, *kernel, *master, *args;
 	
 	dialog = gtk_dialog_new_with_buttons("Create new guest", GTK_WINDOW(window),
 							GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -396,7 +395,7 @@ static void create_guest()
 	gtk_table_attach(GTK_TABLE(table), label, 0, 1, 2, 3, 0, 0, 0, 0);
 	gtk_widget_show(label);
 	
-	label = gtk_label_new("Memory (MB)");
+	label = gtk_label_new("Kernel arguments");
 	gtk_table_attach(GTK_TABLE(table), label, 0, 1, 3, 4, 0, 0, 0, 0);
 	gtk_widget_show(label);
 	
@@ -417,11 +416,10 @@ static void create_guest()
 					 GTK_FILL | GTK_EXPAND | GTK_SHRINK, 0, 0, 0);
 	gtk_widget_show(master);
 	
-	memory = gtk_spin_button_new_with_range(1, 4096, 1);
-	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(memory), 0);
-	gtk_table_attach(GTK_TABLE(table), memory, 1, 2, 3, 4,
+	args = gtk_entry_new();
+	gtk_table_attach(GTK_TABLE(table), args, 1, 2, 3, 4,
 					 GTK_FILL | GTK_EXPAND | GTK_SHRINK, 0, 0, 0);
-	gtk_widget_show(memory);
+	gtk_widget_show(args);
 	
 	gtk_widget_show(table);
 	
@@ -431,19 +429,19 @@ static void create_guest()
 		{
 			case GTK_RESPONSE_ACCEPT:
 			{
-				char *sname, *skernel, *smaster;
+				char *sname, *skernel, *smaster, *sargs;
 				page_t *page;
 				
 				sname = (char*)gtk_entry_get_text(GTK_ENTRY(name));
 				skernel = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(kernel));
 				smaster = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(master));
+				sargs = (char*)gtk_entry_get_text(GTK_ENTRY(args));
 			
 				if (!sname[0] || !skernel || !smaster)
 				{
 					continue;
 				}
-				guest = dumm->create_guest(dumm, sname, skernel, smaster, 
-					   		gtk_spin_button_get_value(GTK_SPIN_BUTTON(memory)));
+				guest = dumm->create_guest(dumm, sname, skernel, smaster, sargs);
 				if (!guest)
 				{
 					error_dialog("creating guest failed!");
