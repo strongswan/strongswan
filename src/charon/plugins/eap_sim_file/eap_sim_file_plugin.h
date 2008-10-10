@@ -16,24 +16,24 @@
  */
 
 /**
- * @defgroup eap_sim eap_sim
+ * @defgroup eap_sim_file eap_sim_file
  * @ingroup cplugins
  *
- * @defgroup eap_sim_plugin eap_sim_plugin
- * @{ @ingroup eap_sim
+ * @defgroup eap_sim_file_plugin eap_sim_file_plugin
+ * @{ @ingroup eap_sim_file
  */
 
-#ifndef EAP_SIM_PLUGIN_H_
-#define EAP_SIM_PLUGIN_H_
+#ifndef EAP_SIM_FILE_PLUGIN_H_
+#define EAP_SIM_FILE_PLUGIN_H_
 
 #include <plugins/plugin.h>
 
-typedef struct eap_sim_plugin_t eap_sim_plugin_t;
+typedef struct eap_sim_file_plugin_t eap_sim_file_plugin_t;
 
 /**
- * EAP-SIM plugin.
+ * Plugin to provide a SIM card/provider on top of a triplet file.
  */
-struct eap_sim_plugin_t {
+struct eap_sim_file_plugin_t {
 
 	/**
 	 * implements plugin interface
@@ -42,8 +42,8 @@ struct eap_sim_plugin_t {
 };
 
 /**
- * Create a eap_sim_plugin instance.
+ * Create a eap_sim_file_plugin instance.
  */
 plugin_t *plugin_create();
 
-#endif /* EAP_SIM_PLUGIN_H_ @}*/
+#endif /* EAP_SIM_FILE_PLUGIN_H_ @}*/

@@ -195,6 +195,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.scheduler);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
+	DESTROY_IF(this->public.sim);
 #ifdef ME
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
@@ -357,6 +358,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.credentials = credential_manager_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
+	this->public.sim = sim_manager_create();
 	this->public.backends = backend_manager_create();
 	this->public.attributes = attribute_manager_create();
 	this->public.kernel_interface = kernel_interface_create();
@@ -479,6 +481,7 @@ private_daemon_t *daemon_create(void)
 	this->public.processor = NULL;
 	this->public.controller = NULL;
 	this->public.eap = NULL;
+	this->public.sim = NULL;
 	this->public.bus = NULL;
 	this->public.outlog = NULL;
 	this->public.syslog = NULL;

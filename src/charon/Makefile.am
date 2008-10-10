@@ -66,6 +66,7 @@ sa/authenticators/authenticator.c sa/authenticators/authenticator.h \
 sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \
 sa/authenticators/eap/eap_manager.c sa/authenticators/eap/eap_manager.h \
+sa/authenticators/eap/sim_manager.c sa/authenticators/eap/sim_manager.h \
 sa/authenticators/psk_authenticator.c sa/authenticators/psk_authenticator.h \
 sa/authenticators/pubkey_authenticator.c sa/authenticators/pubkey_authenticator.h \
 sa/child_sa.c sa/child_sa.h \
@@ -171,6 +172,11 @@ endif
 if USE_EAP_SIM
   SUBDIRS += plugins/eap_sim
   PLUGINS += eapsim
+endif
+
+if USE_EAP_SIM_FILE
+  SUBDIRS += plugins/eap_sim_file
+  PLUGINS += eapsim-file
 endif
 
 if USE_EAP_MD5

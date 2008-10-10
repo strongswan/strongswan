@@ -150,21 +150,6 @@ struct private_eap_sim_t {
 	signer_t *signer;
 	
 	/**
-	 * SIM cardreader function loaded from library
-	 */
-	sim_algo_t alg;
-	
-	/**
-	 * libraries get_triplet() function returning a triplet
-	 */
-	sim_get_triplet_t get_triplet;
-	
-	/**
-	 * handle of the loaded library
-	 */
-	void *handle;
-	
-	/**
 	 * how many times we try to authenticate
 	 */
 	int tries;
@@ -215,7 +200,7 @@ struct private_eap_sim_t {
 	chunk_t msk;
 	
 	/**
-	 * EMSK, extendes MSK for further uses
+	 * EMSK, extended MSK for further uses
 	 */
 	chunk_t emsk;
 };
@@ -557,6 +542,41 @@ static void derive_keys(private_eap_sim_t *this, chunk_t kcs)
 }
 
 /**
+ * Read a triplet from the SIM card
+ */
+static bool get_card_triplet(private_eap_sim_t *this,
+							 char *rand, char *sres, char *kc)
+{
+	enumerator_t *enumerator;
+	sim_card_t *card = NULL, *current;
+	id_match_t match, best = ID_MATCH_NONE;
+	bool success = FALSE;
+	
+	/* find the best matching SIM */
+	enumerator = charon->sim->create_card_enumerator(charon->sim);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		match = this->peer->matches(this->peer, current->get_imsi(current));
+		if (match > best)
+		{
+			card = current;
+			best = match;
+			break;
+		}
+	}
+	if (card)
+	{
+		success = card->get_triplet(card, rand, sres, kc);
+	}
+	enumerator->destroy(enumerator);
+	if (!card)
+	{
+		DBG1(DBG_IKE, "no SIM card found matching '%D'", this->peer);
+	}
+	return success;
+}
+
+/**
  * process an EAP-SIM/Request/Challenge message
  */
 static status_t peer_process_challenge(private_eap_sim_t *this,
@@ -649,11 +669,9 @@ static status_t peer_process_challenge(private_eap_sim_t *this,
 	/* get two or three KCs/SRESes from SIM using RANDs */
 	kcs = kc = chunk_alloca(rands.len / 2);
 	sreses = sres = chunk_alloca(rands.len / 4);
-	while (rands.len > 0)
-	{
-		int kc_len = kc.len, sres_len = sres.len;
-		
-		if (this->alg(rands.ptr, RAND_LEN, sres.ptr, &sres_len, kc.ptr, &kc_len))
+	while (rands.len >= RAND_LEN)
+	{		
+		if (!get_card_triplet(this, rands.ptr, sres.ptr, kc.ptr))
 		{
 			DBG1(DBG_IKE, "unable to get EAP-SIM triplet");
 			*out = build_payload(this, identifier, SIM_CLIENT_ERROR,
@@ -662,9 +680,9 @@ static status_t peer_process_challenge(private_eap_sim_t *this,
 			return NEED_MORE;
 		}
 		DBG3(DBG_IKE, "got triplet for RAND %b\n  Kc %b\n  SRES %b",
-			 rands.ptr, RAND_LEN, sres.ptr, sres_len, kc.ptr, kc_len);
-		kc = chunk_skip(kc, kc_len);
-		sres = chunk_skip(sres, sres_len);
+			 rands.ptr, RAND_LEN, sres.ptr, SRES_LEN, kc.ptr, KC_LEN);
+		kc = chunk_skip(kc, KC_LEN);
+		sres = chunk_skip(sres, SRES_LEN);
 		rands = chunk_skip(rands, RAND_LEN);
 	}
 	
@@ -737,6 +755,32 @@ static status_t server_process_challenge(private_eap_sim_t *this,
 }
 
 /**
+ * Fetch a triplet from a provider
+ */
+static bool get_provider_triplet(private_eap_sim_t *this,
+								 char *rand, char *sres, char *kc)
+{
+	enumerator_t *enumerator;
+	sim_provider_t *provider;
+	int tried = 0;
+	
+	enumerator = charon->sim->create_provider_enumerator(charon->sim);
+	while (enumerator->enumerate(enumerator, &provider))
+	{
+		if (provider->get_triplet(provider, this->peer, rand, sres, kc))
+		{
+			enumerator->destroy(enumerator);
+			return TRUE;
+		}
+		tried++;
+	}
+	enumerator->destroy(enumerator);
+	DBG1(DBG_IKE, "tried %d SIM providers, but none had a triplet for '%D'",
+		 tried, this->peer);
+	return FALSE;
+}
+
+/**
  * process an EAP-SIM/Response/Start message
  */
 static status_t server_process_start(private_eap_sim_t *this,
@@ -746,9 +790,8 @@ static status_t server_process_start(private_eap_sim_t *this,
 	sim_attribute_t attribute;
 	bool supported = FALSE;
 	chunk_t rands, rand, kcs, kc, sreses, sres;
-	char id[64];
-	int len, i, rand_len, kc_len, sres_len;
-	
+	int i;
+		
 	message = in->get_data(in);
 	read_header(&message);
 
@@ -779,11 +822,6 @@ static status_t server_process_start(private_eap_sim_t *this,
 		DBG1(DBG_IKE, "received incomplete EAP-SIM/Response/Start");
 		return FAILED;
 	}
-	len = snprintf(id, sizeof(id), "%D", this->peer);
-	if (len > sizeof(id) || len < 0)
-	{
-		return FAILED;
-	}
 	
 	/* read triplets from provider */
 	rand = rands = chunk_alloca(RAND_LEN * TRIPLET_COUNT);
@@ -794,21 +832,17 @@ static status_t server_process_start(private_eap_sim_t *this,
 	sreses.len = 0;
 	for (i = 0; i < TRIPLET_COUNT; i++)
 	{
-		rand_len = RAND_LEN;
-		kc_len = KC_LEN;
-		sres_len = SRES_LEN;
-		if (this->get_triplet(id, rand.ptr, &rand_len, sres.ptr, &sres_len,
-							  kc.ptr, &kc_len))
+		if (!get_provider_triplet(this, rand.ptr, sres.ptr, kc.ptr))
 		{
 			DBG1(DBG_IKE, "getting EAP-SIM triplet %d failed", i);
 			return FAILED;
 		}
-		rands.len += rand_len;
-		kcs.len += kc_len;
-		sreses.len += sres_len;
-		rand = chunk_skip(rand, rand_len);
-		kc = chunk_skip(kc, kc_len);
-		sres = chunk_skip(sres, sres_len);
+		rands.len += RAND_LEN;
+		sreses.len += SRES_LEN;
+		kcs.len += KC_LEN;
+		rand = chunk_skip(rand, RAND_LEN);
+		sres = chunk_skip(sres, SRES_LEN);
+		kc = chunk_skip(kc, KC_LEN);
 	}
 	derive_keys(this, kcs);
 	
@@ -1017,7 +1051,7 @@ static bool is_mutual(private_eap_sim_t *this)
 static void destroy(private_eap_sim_t *this)
 {
 	this->peer->destroy(this->peer);
-	dlclose(this->handle);
+	this->peer->destroy(this->peer);
 	DESTROY_IF(this->hasher);
 	DESTROY_IF(this->prf);
 	DESTROY_IF(this->signer);
@@ -1037,14 +1071,9 @@ static void destroy(private_eap_sim_t *this)
 eap_sim_t *eap_sim_create_generic(eap_role_t role, identification_t *server,
 								  identification_t *peer)
 {
-	private_eap_sim_t *this;
+	private_eap_sim_t *this = malloc_thing(private_eap_sim_t);
 	rng_t *rng;
-	void *symbol;
-	char *name;
-  	
-  	this = malloc_thing(private_eap_sim_t);
-	this->alg = NULL;
-	this->get_triplet = NULL;
+	
 	this->nonce = chunk_empty;
 	this->sreses = chunk_empty;
 	this->peer = peer->clone(peer);
@@ -1061,46 +1090,16 @@ eap_sim_t *eap_sim_create_generic(eap_role_t role, identification_t *server,
 		this->identifier = random();
 	} while (!this->identifier);
 	
-	this->handle = dlopen(SIM_READER_LIB, RTLD_LAZY);
-	if (this->handle == NULL)
-	{
-		DBG1(DBG_IKE, "unable to open SIM reader '%s'", SIM_READER_LIB);
-		free(this);
-		return NULL;
-	}
-	switch (role)
-	{
-		case EAP_PEER:
-			name = SIM_READER_ALG;
-			break;
-		case EAP_SERVER:
-			name = SIM_READER_GET_TRIPLET;
-			break;
-		default:	
-			free(this);
-			return NULL;
-	}
-	symbol = dlsym(this->handle, name);
-	if (symbol == NULL)
-	{
-		DBG1(DBG_IKE, "unable to open SIM function '%s' in '%s'",
-			 name, SIM_READER_LIB);
-		dlclose(this->handle);
-		free(this);
-		return NULL;
-	}
 	switch (role)
 	{
 		case EAP_SERVER:
 			this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))server_initiate;
 			this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))server_process;
-			this->get_triplet = symbol;
 			this->type = EAP_REQUEST;
 			break;
 		case EAP_PEER:
 			this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))peer_initiate;
 			this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))peer_process;
-			this->alg = symbol;
 			this->type = EAP_RESPONSE;
 			rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 			if (!rng)
