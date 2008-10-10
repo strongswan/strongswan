@@ -183,7 +183,7 @@ reload)
 	if [ -e $IPSEC_STARTER_PID ]
 	then
 		echo "Reloading strongSwan IPsec configuration..." >&2
-		kill -s USR1 `cat $IPSEC_STARTER_PID` 2>/dev/null && rc=0
+		kill -USR1 `cat $IPSEC_STARTER_PID` 2>/dev/null && rc=0
 	else
 		echo "Reloading strongSwan IPsec failed: starter is not running" >&2
 	fi
@@ -296,13 +296,13 @@ stop)
 			kill $spid 2>/dev/null
 			loop=5
 			while [ $loop -gt 0 ] ; do
-				kill -s 0 $spid 2>/dev/null || break
+				kill -0 $spid 2>/dev/null || break
 				sleep 1
 				loop=$(($loop - 1))
 			done
 			if [ $loop -eq 0 ]
 			then
-				kill -s KILL $spid 2>/dev/null
+				kill -KILL $spid 2>/dev/null
 				rm -f $IPSEC_STARTER_PID
 			fi
 		fi
@@ -338,7 +338,7 @@ update)
 	if [ -e $IPSEC_STARTER_PID ]
 	then
 		echo "Updating strongSwan IPsec configuration..." >&2
-		kill -s HUP `cat $IPSEC_STARTER_PID`
+		kill -HUP `cat $IPSEC_STARTER_PID`
 		exit 0
 	else
 		echo "Updating strongSwan IPsec failed: starter is not running" >&2
