@@ -148,6 +148,7 @@ fi
 if [ "$USE_EAP_SIM" = "yes" ]
 then
     echo -n " --enable-eap-sim" >> $INSTALLSHELL
+    echo -n " --enable-eap-sim-file >> $INSTANTSHELL
     fi
 
 if [ "$USE_EAP_MD5" = "yes" ]
@@ -174,7 +175,12 @@ if [ "$USE_OPENSSL" = "yes" ]
 then
     echo -n " --enable-openssl" >> $INSTALLSHELL
 fi
-    
+
+if [ "$USE_KERNEL_PFKEY" = "yes" ]
+then
+    echo -n " --enable-kernel-pfkey" >> $INSTALLSHELL
+fi
+  
 if [ "$USE_INTEGRITY_TEST" = "yes" ]
 then
     echo -n " --enable-integrity-test" >> $INSTALLSHELL
