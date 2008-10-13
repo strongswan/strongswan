@@ -1,7 +1,7 @@
 strongswan-4.2.8
 ----------------
 
-- IKEv2 charon daemon supportis authentication based on raw public keys
+- IKEv2 charon daemon supports authentication based on raw public keys
   stored in the SQL database backend. The ipsec listpubkeys command
   lists the available raw public keys via the stroke interface.
 
@@ -9,6 +9,10 @@ strongswan-4.2.8
   handle events if kernel detects NAT mapping changes in UDP-encapsulated
   ESP packets (requires kernel patch), reuse old addesses in MOBIKE updates as
   long as possible and other fixes.
+
+- Fixed a bug in addr_in_subnet() which caused insertion of wrong source
+  routes for destination subnets having netwmasks not being a multiple of 8 bits.
+  Thanks go to Wolfgang Steudel, TU Ilmenau for reporting this bug.
 
 
 strongswan-4.2.7
