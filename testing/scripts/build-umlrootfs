@@ -148,7 +148,7 @@ fi
 if [ "$USE_EAP_SIM" = "yes" ]
 then
     echo -n " --enable-eap-sim" >> $INSTALLSHELL
-    echo -n " --enable-eap-sim-file >> $INSTANTSHELL
+    echo -n " --enable-eap-sim-file" >> $INSTALLSHELL
     fi
 
 if [ "$USE_EAP_MD5" = "yes" ]
