@@ -85,14 +85,13 @@ static status_t get_cpi(private_kernel_interface_t *this, host_t *src, host_t *d
 static status_t add_sa(private_kernel_interface_t *this, host_t *src, host_t *dst,
 				u_int32_t spi, protocol_id_t protocol, u_int32_t reqid,
 				u_int64_t expire_soft, u_int64_t expire_hard,
-				u_int16_t enc_alg, u_int16_t enc_size,
-				u_int16_t int_alg, u_int16_t int_size,
-				prf_plus_t *prf_plus, ipsec_mode_t mode, u_int16_t ipcomp, bool encap,
-				bool update)
+				u_int16_t enc_alg, chunk_t enc_key,
+				u_int16_t int_alg, chunk_t int_key,
+				ipsec_mode_t mode, u_int16_t ipcomp, bool encap, bool update)
 {
 	return this->ipsec->add_sa(this->ipsec, src, dst, spi, protocol, reqid,
-			expire_soft, expire_hard, enc_alg, enc_size, int_alg, int_size,
-			prf_plus, mode, ipcomp, encap, update);
+			expire_soft, expire_hard, enc_alg, enc_key, int_alg, int_key,
+			mode, ipcomp, encap, update);
 }
 
 /**
@@ -371,7 +370,7 @@ kernel_interface_t *kernel_interface_create()
 	
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.get_cpi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,u_int16_t,u_int16_t,u_int16_t,prf_plus_t*,ipsec_mode_t,u_int16_t,bool,bool))add_sa;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,bool,bool))add_sa;
 	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,ipsec_mode_t,u_int16_t))add_policy;

@@ -1658,8 +1658,8 @@ static status_t derive_keys(private_ike_sa_t *this,
 		this->prf->allocate_bytes(this->prf, secret, &skeyseed);
 		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 		this->prf->set_key(this->prf, skeyseed);
-		chunk_free(&skeyseed);
-		chunk_free(&secret);
+		chunk_clear(&skeyseed);
+		chunk_clear(&secret);
 		prf_plus = prf_plus_create(this->prf, prf_plus_seed);
 	}
 	else
@@ -1670,13 +1670,13 @@ static status_t derive_keys(private_ike_sa_t *this,
 		child_prf->allocate_bytes(child_prf, secret, &skeyseed);
 		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 		old_prf->set_key(old_prf, skeyseed);
-		chunk_free(&skeyseed);
-		chunk_free(&secret);
+		chunk_clear(&skeyseed);
+		chunk_clear(&secret);
 		prf_plus = prf_plus_create(old_prf, prf_plus_seed);
 	}
 	chunk_free(&full_nonce);
 	chunk_free(&fixed_nonce);
-	chunk_free(&prf_plus_seed);
+	chunk_clear(&prf_plus_seed);
 	
 	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr */
 	
@@ -1687,7 +1687,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_d secret %B", &key);
 	this->child_prf->set_key(this->child_prf, key);
-	chunk_free(&key);
+	chunk_clear(&key);
 	
 	/* SK_ai/SK_ar used for integrity protection => signer_in/signer_out */
 	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
@@ -1711,12 +1711,12 @@ static status_t derive_keys(private_ike_sa_t *this,
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_ai secret %B", &key);
 	signer_i->set_key(signer_i, key);
-	chunk_free(&key);
+	chunk_clear(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_ar secret %B", &key);
 	signer_r->set_key(signer_r, key);
-	chunk_free(&key);
+	chunk_clear(&key);
 	
 	if (initiator)
 	{
@@ -1752,12 +1752,12 @@ static status_t derive_keys(private_ike_sa_t *this,
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
 	crypter_i->set_key(crypter_i, key);
-	chunk_free(&key);
+	chunk_clear(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_er secret %B", &key);
 	crypter_r->set_key(crypter_r, key);
-	chunk_free(&key);
+	chunk_clear(&key);
 	
 	if (initiator)
 	{

@@ -182,6 +182,58 @@ struct private_child_sa_t {
 	char *iface;
 };
 
+typedef struct keylen_entry_t keylen_entry_t;
+
+/**
+ * Implicit key length for an algorithm
+ */
+struct keylen_entry_t {
+	/** IKEv2 algorithm identifier */
+	int algo;
+	/** key length in bits */
+	int len;
+};
+
+#define END_OF_LIST -1
+
+/**
+ * Keylen for encryption algos
+ */
+keylen_entry_t keylen_enc[] = {
+	{ENCR_DES, 					 64},
+	{ENCR_3DES, 				192},
+	{END_OF_LIST,				  0}
+};
+
+/**
+ * Keylen for integrity algos
+ */
+keylen_entry_t keylen_int[] = {
+	{AUTH_HMAC_MD5_96, 			128},
+	{AUTH_HMAC_SHA1_96,			160},
+	{AUTH_HMAC_SHA2_256_128,	256},
+	{AUTH_HMAC_SHA2_384_192,	384},
+	{AUTH_HMAC_SHA2_512_256,	512},
+	{AUTH_AES_XCBC_96,			128},
+	{END_OF_LIST,				  0}
+};
+
+/**
+ * Lookup key length of an algorithm
+ */
+static int lookup_keylen(keylen_entry_t *list, int algo)
+{
+	while (list->algo != END_OF_LIST)
+	{
+		if (algo == list->algo)
+		{
+			return list->len;
+		}
+		list++;
+	}
+	return 0;
+}
+
 /**
  * Implementation of child_sa_t.get_name.
  */
@@ -530,10 +582,11 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 static status_t install(private_child_sa_t *this, proposal_t *proposal,
 						ipsec_mode_t mode, prf_plus_t *prf_plus, bool mine)
 {
-	u_int32_t spi, soft, hard;
-	host_t *src;
-	host_t *dst;
+	u_int32_t spi, cpi, soft, hard;
+	host_t *src, *dst;
 	status_t status;
+	chunk_t enc_key = chunk_empty, int_key = chunk_empty;
+	int add_keymat;
 	
 	this->protocol = proposal->get_protocol(proposal);
 	
@@ -549,8 +602,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 			this->me.spi = this->alloc_esp_spi;
 			if (this->alloc_ah_spi)
 			{
-				charon->kernel_interface->del_sa(charon->kernel_interface, this->me.addr, 
-						this->alloc_ah_spi, PROTO_AH);
+				charon->kernel_interface->del_sa(charon->kernel_interface,
+								this->me.addr, this->alloc_ah_spi, PROTO_AH);
 			}
 		}
 		else
@@ -558,8 +611,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 			this->me.spi = this->alloc_ah_spi;
 			if (this->alloc_esp_spi)
 			{
-				charon->kernel_interface->del_sa(charon->kernel_interface, this->me.addr, 
-						this->alloc_esp_spi, PROTO_ESP);
+				charon->kernel_interface->del_sa(charon->kernel_interface,
+								this->me.addr, this->alloc_esp_spi, PROTO_ESP);
 			}
 		}
 		spi = this->me.spi;
@@ -577,23 +630,55 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	DBG2(DBG_CHD, "adding %s %N SA", mine ? "inbound" : "outbound",
 		 protocol_id_names, this->protocol);
 	
-	/* select encryption algo */
+	/* select encryption algo, derive key */
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
 								&this->enc_alg, &this->enc_size))
 	{
 		DBG2(DBG_CHD, "  using %N for encryption", 
 			 encryption_algorithm_names, this->enc_alg);
 	}
+	if (!this->enc_size)
+	{
+		this->enc_size = lookup_keylen(keylen_enc, this->enc_alg);
+	}
+	if (this->enc_size && this->enc_alg != ENCR_UNDEFINED)
+	{
+	 	/* CCM/GCM needs additional keymat */
+		switch (this->enc_alg)
+		{
+			case ENCR_AES_CCM_ICV8:
+			case ENCR_AES_CCM_ICV12:
+			case ENCR_AES_CCM_ICV16:
+				add_keymat = 3;
+				break;		
+			case ENCR_AES_GCM_ICV8:
+			case ENCR_AES_GCM_ICV12:
+			case ENCR_AES_GCM_ICV16:
+				add_keymat = 4;
+				break;
+			default:
+				add_keymat = 0;
+				break;
+		}
+		prf_plus->allocate_bytes(prf_plus, this->enc_size / 8 + add_keymat,
+								 &enc_key);
+	}
 	
-	/* select integrity algo */
+	/* select integrity algo, derive key */
 	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
 								&this->int_alg, &this->int_size))
 	{
 		DBG2(DBG_CHD, "  using %N for integrity",
 			 integrity_algorithm_names, this->int_alg);
 	}
-	soft = this->config->get_lifetime(this->config, TRUE);
-	hard = this->config->get_lifetime(this->config, FALSE);
+	if (!this->int_size)
+	{
+		this->int_size = lookup_keylen(keylen_int, this->int_alg);
+	}
+	if (this->int_size && this->int_alg != AUTH_UNDEFINED)
+	{
+		prf_plus->allocate_bytes(prf_plus, this->int_size / 8, &int_key);
+	}
 	
 	/* send SA down to the kernel */
 	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
@@ -601,18 +686,22 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	if (this->ipcomp != IPCOMP_NONE)
 	{
 		/* we install an additional IPComp SA */
-		u_int32_t cpi = htonl(ntohs(mine ? this->me.cpi : this->other.cpi));
-		status = charon->kernel_interface->add_sa(charon->kernel_interface,
+		cpi = htonl(ntohs(mine ? this->me.cpi : this->other.cpi));
+		charon->kernel_interface->add_sa(charon->kernel_interface,
 				src, dst, cpi, IPPROTO_COMP, this->reqid, 0, 0,
-				ENCR_UNDEFINED, 0, AUTH_UNDEFINED, 0, NULL, mode,
-				this->ipcomp, FALSE, mine);
+				ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
+				mode, this->ipcomp, FALSE, mine);
 	}
 	
+	soft = this->config->get_lifetime(this->config, TRUE);
+	hard = this->config->get_lifetime(this->config, FALSE);
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 				src, dst, spi, this->protocol, this->reqid, mine ? soft : 0, hard, 
-				this->enc_alg, this->enc_size, this->int_alg, this->int_size,
-				prf_plus, mode, IPCOMP_NONE, this->encap, mine);
-					
+				this->enc_alg, enc_key, this->int_alg, int_key,
+				mode, IPCOMP_NONE, this->encap, mine);
+	
+	chunk_clear(&enc_key);
+	chunk_clear(&int_key);
 	this->install_time = time(NULL);
 	this->rekey_time = this->install_time + soft;
 	return status;

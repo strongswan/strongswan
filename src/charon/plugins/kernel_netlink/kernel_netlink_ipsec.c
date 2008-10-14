@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006-2008 Tobias Brunner
- * Copyright (C) 2005-2007 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -76,24 +76,18 @@
 typedef struct kernel_algorithm_t kernel_algorithm_t;
 
 /**
- * Mapping from the algorithms defined in IKEv2 to
- * kernel level algorithm names and their key length
+ * Mapping of IKEv2 kernel identifier to linux crypto API names
  */
 struct kernel_algorithm_t {
 	/**
 	 * Identifier specified in IKEv2
 	 */
-	int ikev2_id;
+	int ikev2;
 	
 	/**
-	 * Name of the algorithm, as used as kernel identifier
+	 * Name of the algorithm in linux crypto API
 	 */
 	char *name;
-	
-	/**
-	 * Key length in bits, if fixed size
-	 */
-	u_int key_size;
 };
 
 #define END_OF_LIST -1
@@ -102,71 +96,65 @@ struct kernel_algorithm_t {
  * Algorithms for encryption
  */
 static kernel_algorithm_t encryption_algs[] = {
-/*	{ENCR_DES_IV64, 		"***", 					0}, */
-	{ENCR_DES, 				"des", 					64},
-	{ENCR_3DES, 			"des3_ede",				192},
-/*	{ENCR_RC5, 				"***", 					0}, */
-/*	{ENCR_IDEA, 			"***",					0}, */
-	{ENCR_CAST, 			"cast128",				0},
-	{ENCR_BLOWFISH, 		"blowfish",				0},
-/*	{ENCR_3IDEA, 			"***",					0}, */
-/*	{ENCR_DES_IV32, 		"***",					0}, */
-	{ENCR_NULL, 			"cipher_null",			0},
-	{ENCR_AES_CBC,	 		"aes",					0},
-/*	{ENCR_AES_CTR, 			"***",					0}, */
-	{ENCR_AES_CCM_ICV8,		"rfc4309(ccm(aes))",	64},	/* key_size = ICV size */
-	{ENCR_AES_CCM_ICV12,	"rfc4309(ccm(aes))",	96},	/* key_size = ICV size */
-	{ENCR_AES_CCM_ICV16,	"rfc4309(ccm(aes))",	128},	/* key_size = ICV size */
-	{ENCR_AES_GCM_ICV8,		"rfc4106(gcm(aes))",	64},	/* key_size = ICV size */
-	{ENCR_AES_GCM_ICV12,	"rfc4106(gcm(aes))",	96},	/* key_size = ICV size */
-	{ENCR_AES_GCM_ICV16,	"rfc4106(gcm(aes))",	128},	/* key_size = ICV size */
-	{END_OF_LIST, 		NULL,			0},
+/*	{ENCR_DES_IV64, 			"***"				}, */
+	{ENCR_DES, 					"des" 				},
+	{ENCR_3DES, 				"des3_ede"			},
+/*	{ENCR_RC5, 					"***" 				}, */
+/*	{ENCR_IDEA, 				"***"				}, */
+	{ENCR_CAST, 				"cast128"			},
+	{ENCR_BLOWFISH, 			"blowfish"			},
+/*	{ENCR_3IDEA, 				"***"				}, */
+/*	{ENCR_DES_IV32, 			"***"				}, */
+	{ENCR_NULL, 				"cipher_null"		},
+	{ENCR_AES_CBC,	 			"aes"				},
+/*	{ENCR_AES_CTR, 				"***"				}, */
+	{ENCR_AES_CCM_ICV8,			"rfc4309(ccm(aes))"	},
+	{ENCR_AES_CCM_ICV12,		"rfc4309(ccm(aes))"	},
+	{ENCR_AES_CCM_ICV16,		"rfc4309(ccm(aes))"	},
+	{ENCR_AES_GCM_ICV8,			"rfc4106(gcm(aes))"	},
+	{ENCR_AES_GCM_ICV12,		"rfc4106(gcm(aes))"	},
+	{ENCR_AES_GCM_ICV16,		"rfc4106(gcm(aes))"	},
+	{END_OF_LIST, 				NULL				},
 };
 
 /**
  * Algorithms for integrity protection
  */
 static kernel_algorithm_t integrity_algs[] = {
-	{AUTH_HMAC_MD5_96, 			"md5",			128},
-	{AUTH_HMAC_SHA1_96,			"sha1",			160},
-	{AUTH_HMAC_SHA2_256_128,	"sha256",		256},
-	{AUTH_HMAC_SHA2_384_192,	"sha384",		384},
-	{AUTH_HMAC_SHA2_512_256,	"sha512",		512},
-/*	{AUTH_DES_MAC,				"***",			0}, */
-/*	{AUTH_KPDK_MD5,				"***",			0}, */
-	{AUTH_AES_XCBC_96,			"xcbc(aes)",	128},
-	{END_OF_LIST, 				NULL,			0},
+	{AUTH_HMAC_MD5_96, 			"md5"				},
+	{AUTH_HMAC_SHA1_96,			"sha1"				},
+	{AUTH_HMAC_SHA2_256_128,	"sha256"			},
+	{AUTH_HMAC_SHA2_384_192,	"sha384"			},
+	{AUTH_HMAC_SHA2_512_256,	"sha512"			},
+/*	{AUTH_DES_MAC,				"***"				}, */
+/*	{AUTH_KPDK_MD5,				"***"				}, */
+	{AUTH_AES_XCBC_96,			"xcbc(aes)"			},
+	{END_OF_LIST, 				NULL				},
 };
 
 /**
  * Algorithms for IPComp
  */
 static kernel_algorithm_t compression_algs[] = {
-/*	{IPCOMP_OUI, 			"***",			0}, */
-	{IPCOMP_DEFLATE,		"deflate",		0},
-	{IPCOMP_LZS,			"lzs",			0},
-	{IPCOMP_LZJH,			"lzjh",			0},
-	{END_OF_LIST, 			NULL,			0},
+/*	{IPCOMP_OUI, 				"***"				}, */
+	{IPCOMP_DEFLATE,			"deflate"			},
+	{IPCOMP_LZS,				"lzs"				},
+	{IPCOMP_LZJH,				"lzjh"				},
+	{END_OF_LIST, 				NULL				},
 };
 
 /**
  * Look up a kernel algorithm name and its key size
  */
-static char* lookup_algorithm(kernel_algorithm_t *kernel_algo, 
-					   u_int16_t ikev2_algo, u_int16_t *key_size)
+static char* lookup_algorithm(kernel_algorithm_t *list, int ikev2)
 {
-	while (kernel_algo->ikev2_id != END_OF_LIST)
+	while (list->ikev2 != END_OF_LIST)
 	{
-		if (ikev2_algo == kernel_algo->ikev2_id)
+		if (list->ikev2 == ikev2)
 		{
-			/* match, evaluate key length */
-			if (key_size && *key_size == 0)
-			{	/* update key size if not set */
-				*key_size = kernel_algo->key_size;
-			}
-			return kernel_algo->name;
+			return list->name;
 		}
-		kernel_algo++;
+		list++;
 	}
 	return NULL;
 }
@@ -688,23 +676,22 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 					   host_t *src, host_t *dst, u_int32_t spi,
 					   protocol_id_t protocol, u_int32_t reqid,
 					   u_int64_t expire_soft, u_int64_t expire_hard,
-					   u_int16_t enc_alg, u_int16_t enc_size,
-					   u_int16_t int_alg, u_int16_t int_size,
-					   prf_plus_t *prf_plus, ipsec_mode_t mode,
-					   u_int16_t ipcomp, bool encap,
+					   u_int16_t enc_alg, chunk_t enc_key,
+					   u_int16_t int_alg, chunk_t int_key,
+					   ipsec_mode_t mode, u_int16_t ipcomp, bool encap,
 					   bool replace)
 {
 	unsigned char request[NETLINK_BUFFER_SIZE];
 	char *alg_name;
-	/* additional 4 octets KEYMAT required for AES-GCM as of RFC4106 8.1. */
-	u_int16_t add_keymat = 32; 
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
+	u_int16_t icv_size = 64;	
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%d}", ntohl(spi), reqid);
-
+	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%d}",
+		 ntohl(spi), reqid);
+	
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = replace ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
@@ -741,19 +728,19 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 		case ENCR_UNDEFINED:
 			/* no encryption */
 			break;
-		case ENCR_AES_CCM_ICV8:
-		case ENCR_AES_CCM_ICV12:
 		case ENCR_AES_CCM_ICV16:
-			/* AES-CCM needs only 3 additional octets KEYMAT as of RFC 4309 7.1. */
-			add_keymat = 24;
-			/* fall-through */
-		case ENCR_AES_GCM_ICV8:
-		case ENCR_AES_GCM_ICV12:
 		case ENCR_AES_GCM_ICV16:
+			icv_size += 32;
+			/* FALL */
+		case ENCR_AES_CCM_ICV12:
+		case ENCR_AES_GCM_ICV12:
+			icv_size += 32;
+			/* FALL */
+		case ENCR_AES_CCM_ICV8:
+		case ENCR_AES_GCM_ICV8:
 		{
-			u_int16_t icv_size = 0;
 			rthdr->rta_type = XFRMA_ALG_AEAD;
-			alg_name = lookup_algorithm(encryption_algs, enc_alg, &icv_size);
+			alg_name = lookup_algorithm(encryption_algs, enc_alg);
 			if (alg_name == NULL)
 			{
 				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
@@ -761,12 +748,9 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 				return FAILED;
 			}
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
-				 encryption_algorithm_names, enc_alg, enc_size);
+				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 			
-			/* additional KEYMAT required */
-			enc_size += add_keymat;
-			
-			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) + enc_size / 8);
+			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) + enc_key.len);
 			hdr->nlmsg_len += rthdr->rta_len;
 			if (hdr->nlmsg_len > sizeof(request))
 			{
@@ -774,10 +758,10 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			}
 			
 			struct xfrm_algo_aead* algo = (struct xfrm_algo_aead*)RTA_DATA(rthdr);
-			algo->alg_key_len = enc_size;
+			algo->alg_key_len = enc_key.len * 8;
 			algo->alg_icv_len = icv_size;
 			strcpy(algo->alg_name, alg_name);
-			prf_plus->get_bytes(prf_plus, enc_size / 8, algo->alg_key);
+			memcpy(algo->alg_key, enc_key.ptr, enc_key.len);
 			
 			rthdr = XFRM_RTA_NEXT(rthdr);
 			break;
@@ -785,7 +769,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 		default:
 		{
 			rthdr->rta_type = XFRMA_ALG_CRYPT;
-			alg_name = lookup_algorithm(encryption_algs, enc_alg, &enc_size);
+			alg_name = lookup_algorithm(encryption_algs, enc_alg);
 			if (alg_name == NULL)
 			{
 				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
@@ -793,9 +777,9 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 				return FAILED;
 			}
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
-				 encryption_algorithm_names, enc_alg, enc_size);
+				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 			
-			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + enc_size / 8);
+			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + enc_key.len);
 			hdr->nlmsg_len += rthdr->rta_len;
 			if (hdr->nlmsg_len > sizeof(request))
 			{
@@ -803,9 +787,9 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			}
 			
 			struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
-			algo->alg_key_len = enc_size;
+			algo->alg_key_len = enc_key.len * 8;
 			strcpy(algo->alg_name, alg_name);
-			prf_plus->get_bytes(prf_plus, enc_size / 8, algo->alg_key);
+			memcpy(algo->alg_key, enc_key.ptr, enc_key.len);
 			
 			rthdr = XFRM_RTA_NEXT(rthdr);
 			break;
@@ -815,7 +799,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	if (int_alg  != AUTH_UNDEFINED)
 	{
 		rthdr->rta_type = XFRMA_ALG_AUTH;
-		alg_name = lookup_algorithm(integrity_algs, int_alg, &int_size);
+		alg_name = lookup_algorithm(integrity_algs, int_alg);
 		if (alg_name == NULL)
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!", 
@@ -823,9 +807,9 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			return FAILED;
 		}
 		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
-			 integrity_algorithm_names, int_alg, int_size);
+			 integrity_algorithm_names, int_alg, int_key.len * 8);
 		
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + int_size / 8);
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + int_key.len);
 		hdr->nlmsg_len += rthdr->rta_len;
 		if (hdr->nlmsg_len > sizeof(request))
 		{
@@ -833,9 +817,9 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 		}
 		
 		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
-		algo->alg_key_len = int_size;
+		algo->alg_key_len = int_key.len * 8;
 		strcpy(algo->alg_name, alg_name);
-		prf_plus->get_bytes(prf_plus, int_size / 8, algo->alg_key);
+		memcpy(algo->alg_key, int_key.ptr, int_key.len);
 		
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
@@ -843,7 +827,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	if (ipcomp != IPCOMP_NONE)
 	{
 		rthdr->rta_type = XFRMA_ALG_COMP;
-		alg_name = lookup_algorithm(compression_algs, ipcomp, NULL);
+		alg_name = lookup_algorithm(compression_algs, ipcomp);
 		if (alg_name == NULL)
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!", 
@@ -1559,7 +1543,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,u_int16_t,u_int16_t,u_int16_t,prf_plus_t*,ipsec_mode_t,u_int16_t,bool,bool))add_sa;
+	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,ipsec_mode_t,u_int16_t))add_policy;

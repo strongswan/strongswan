@@ -384,24 +384,18 @@ static u_int8_t dir2kernel(policy_dir_t dir)
 typedef struct kernel_algorithm_t kernel_algorithm_t;
 
 /**
- * Mapping from the algorithms defined in IKEv2 to
- * kernel level algorithm identifiers and their key length
+ * Mapping of IKEv2 algorithms to PF_KEY algorithms
  */
 struct kernel_algorithm_t {
 	/**
 	 * Identifier specified in IKEv2
 	 */
-	int ikev2_id;
+	int ikev2;
 	
 	/**
 	 * Identifier as defined in pfkeyv2.h
 	 */
-	int kernel_id;
-	
-	/**
-	 * Key length in bits, if fixed size
-	 */
-	u_int key_size;
+	int kernel;
 };
 
 #define END_OF_LIST -1
@@ -410,71 +404,65 @@ struct kernel_algorithm_t {
  * Algorithms for encryption
  */
 static kernel_algorithm_t encryption_algs[] = {
-/*	{ENCR_DES_IV64, 		0,							0},  */
-	{ENCR_DES, 				SADB_EALG_DESCBC,			64},
-	{ENCR_3DES, 			SADB_EALG_3DESCBC,			192},
-/*	{ENCR_RC5, 				0,							0},  */
-/*	{ENCR_IDEA, 			0,							0},  */
-	{ENCR_CAST, 			SADB_X_EALG_CASTCBC,		0},
-	{ENCR_BLOWFISH, 		SADB_X_EALG_BLOWFISHCBC,	0},
-/*	{ENCR_3IDEA, 			0,							0},  */
-/*	{ENCR_DES_IV32, 		0,							0},  */
-	{ENCR_NULL, 			SADB_EALG_NULL,				0},
-	{ENCR_AES_CBC,	 		SADB_X_EALG_AESCBC,			0},
-/*	{ENCR_AES_CTR, 			0,							0},  */
-/*	{ENCR_AES_CCM_ICV8,		0,							64}, */	/* key_size = ICV size */
-/*	{ENCR_AES_CCM_ICV12,	0,							96}, */	/* key_size = ICV size */
-/*	{ENCR_AES_CCM_ICV16,	0,							128},*/	/* key_size = ICV size */
-/*	{ENCR_AES_GCM_ICV8,		0,							64}, */	/* key_size = ICV size */
-/*	{ENCR_AES_GCM_ICV12,	0,							96}, */	/* key_size = ICV size */
-/*	{ENCR_AES_GCM_ICV16,	0,							128},*/	/* key_size = ICV size */
-	{END_OF_LIST, 			0,							0},
+/*	{ENCR_DES_IV64, 			0							}, */
+	{ENCR_DES, 					SADB_EALG_DESCBC			},
+	{ENCR_3DES, 				SADB_EALG_3DESCBC			},
+/*	{ENCR_RC5, 					0							}, */
+/*	{ENCR_IDEA, 				0							}, */
+	{ENCR_CAST, 				SADB_X_EALG_CASTCBC			},
+	{ENCR_BLOWFISH, 			SADB_X_EALG_BLOWFISHCBC		},
+/*	{ENCR_3IDEA, 				0							}, */
+/*	{ENCR_DES_IV32, 			0							}, */
+	{ENCR_NULL, 				SADB_EALG_NULL				},
+	{ENCR_AES_CBC,	 			SADB_X_EALG_AESCBC			},
+/*	{ENCR_AES_CTR, 				0							}, */
+/*	{ENCR_AES_CCM_ICV8,			0							}, */
+/*	{ENCR_AES_CCM_ICV12,		0							}, */
+/*	{ENCR_AES_CCM_ICV16,		0							}, */
+/*	{ENCR_AES_GCM_ICV8,			0							}, */
+/*	{ENCR_AES_GCM_ICV12,		0							}, */
+/*	{ENCR_AES_GCM_ICV16,		0							}, */
+	{END_OF_LIST, 				0							},
 };
 
 /**
  * Algorithms for integrity protection
  */
 static kernel_algorithm_t integrity_algs[] = {
-	{AUTH_HMAC_MD5_96, 			SADB_AALG_MD5HMAC,			128},
-	{AUTH_HMAC_SHA1_96,			SADB_AALG_SHA1HMAC,			160},
-	{AUTH_HMAC_SHA2_256_128,	SADB_X_AALG_SHA2_256HMAC,	256},
-	{AUTH_HMAC_SHA2_384_192,	SADB_X_AALG_SHA2_384HMAC,	384},
-	{AUTH_HMAC_SHA2_512_256,	SADB_X_AALG_SHA2_512HMAC,	512},
-/*	{AUTH_DES_MAC,				0,							0}, */
-/*	{AUTH_KPDK_MD5,				0,							0}, */
-	{AUTH_AES_XCBC_96,			SADB_X_AALG_AES_XCBC_MAC,	128},
-	{END_OF_LIST, 				0,							0},
+	{AUTH_HMAC_MD5_96, 			SADB_AALG_MD5HMAC			},
+	{AUTH_HMAC_SHA1_96,			SADB_AALG_SHA1HMAC			},
+	{AUTH_HMAC_SHA2_256_128,	SADB_X_AALG_SHA2_256HMAC	},
+	{AUTH_HMAC_SHA2_384_192,	SADB_X_AALG_SHA2_384HMAC	},
+	{AUTH_HMAC_SHA2_512_256,	SADB_X_AALG_SHA2_512HMAC	},
+/*	{AUTH_DES_MAC,				0,							}, */
+/*	{AUTH_KPDK_MD5,				0,							}, */
+	{AUTH_AES_XCBC_96,			SADB_X_AALG_AES_XCBC_MAC,	},
+	{END_OF_LIST, 				0,							},
 };
 
 /**
  * Algorithms for IPComp
  */
 static kernel_algorithm_t compression_algs[] = {
-/*	{IPCOMP_OUI, 			0,							0}, */
-	{IPCOMP_DEFLATE,		SADB_X_CALG_DEFLATE,		0},
-	{IPCOMP_LZS,			SADB_X_CALG_LZS,			0},
-	{IPCOMP_LZJH,			SADB_X_CALG_LZJH,			0},
-	{END_OF_LIST, 			0,							0},
+/*	{IPCOMP_OUI, 				0							}, */
+	{IPCOMP_DEFLATE,			SADB_X_CALG_DEFLATE			},
+	{IPCOMP_LZS,				SADB_X_CALG_LZS				},
+	{IPCOMP_LZJH,				SADB_X_CALG_LZJH			},
+	{END_OF_LIST, 				0							},
 };
 
 /**
  * Look up a kernel algorithm ID and its key size
  */
-static int lookup_algorithm(kernel_algorithm_t *kernel_algo, 
-					   u_int16_t ikev2_algo, u_int16_t *key_size)
+static int lookup_algorithm(kernel_algorithm_t *list, int ikev2)
 {
-	while (kernel_algo->ikev2_id != END_OF_LIST)
+	while (list->ikev2 != END_OF_LIST)
 	{
-		if (ikev2_algo == kernel_algo->ikev2_id)
+		if (ikev2 == list->ikev2)
 		{
-			/* match, evaluate key length */
-			if (key_size && *key_size == 0)
-			{	/* update key size if not set */
-				*key_size = kernel_algo->key_size;
-			}
-			return kernel_algo->kernel_id;
+			return list->kernel;
 		}
-		kernel_algo++;
+		list++;
 	}
 	return 0;
 }
@@ -977,10 +965,9 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 					   host_t *src, host_t *dst, u_int32_t spi,
 					   protocol_id_t protocol, u_int32_t reqid,
 					   u_int64_t expire_soft, u_int64_t expire_hard,
-					   u_int16_t enc_alg, u_int16_t enc_size,
-					   u_int16_t int_alg, u_int16_t int_size,
-					   prf_plus_t *prf_plus, ipsec_mode_t mode,
-					   u_int16_t ipcomp, bool encap,
+					   u_int16_t enc_alg, chunk_t enc_key,
+					   u_int16_t int_alg, chunk_t int_key,
+					   ipsec_mode_t mode, u_int16_t ipcomp, bool encap,
 					   bool replace)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
@@ -1007,10 +994,8 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
 	sa->sadb_sa_spi = spi;
 	sa->sadb_sa_replay = (protocol == IPPROTO_COMP) ? 0 : 32;
-	sa->sadb_sa_auth = lookup_algorithm(integrity_algs, 
-								int_alg, &int_size);
-	sa->sadb_sa_encrypt = lookup_algorithm(encryption_algs, 
-								enc_alg, &enc_size);
+	sa->sadb_sa_auth = lookup_algorithm(integrity_algs, int_alg);
+	sa->sadb_sa_encrypt = lookup_algorithm(encryption_algs, enc_alg);
 	PFKEY_EXT_ADD(msg, sa);
 	
 	sa2 = (struct sadb_x_sa2*)PFKEY_EXT_ADD_NEXT(msg);
@@ -1047,17 +1032,17 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 		if (!sa->sadb_sa_encrypt)
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
-					 encryption_algorithm_names, enc_alg);
+				 encryption_algorithm_names, enc_alg);
 			return FAILED;
 		}
 		DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
-				encryption_algorithm_names, enc_alg, enc_size);
+			 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 		
 		key = (struct sadb_key*)PFKEY_EXT_ADD_NEXT(msg);
 		key->sadb_key_exttype = SADB_EXT_KEY_ENCRYPT;
-		key->sadb_key_bits = enc_size;
-		key->sadb_key_len = PFKEY_LEN(sizeof(struct sadb_key) + enc_size / 8);
-		prf_plus->get_bytes(prf_plus, enc_size / 8, (void*)(key + 1));
+		key->sadb_key_bits = enc_key.len * 8;
+		key->sadb_key_len = PFKEY_LEN(sizeof(struct sadb_key) + enc_key.len);
+		memcpy(key + 1, enc_key.ptr, enc_key.len);
 		
 		PFKEY_EXT_ADD(msg, key);
 	}
@@ -1071,13 +1056,13 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 			return FAILED;
 		}
 		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
-			 integrity_algorithm_names, int_alg, int_size);
+			 integrity_algorithm_names, int_alg, int_key.len * 8);
 		
 		key = (struct sadb_key*)PFKEY_EXT_ADD_NEXT(msg);
 		key->sadb_key_exttype = SADB_EXT_KEY_AUTH;
-		key->sadb_key_bits = int_size;
-		key->sadb_key_len = PFKEY_LEN(sizeof(struct sadb_key) + int_size / 8);
-		prf_plus->get_bytes(prf_plus, int_size / 8, (void*)(key + 1));
+		key->sadb_key_bits = int_key.len * 8;
+		key->sadb_key_len = PFKEY_LEN(sizeof(struct sadb_key) + int_key.len);
+		memcpy(key + 1, int_key.ptr, int_key.len);
 		
 		PFKEY_EXT_ADD(msg, key);
 	}
@@ -1765,7 +1750,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,u_int16_t,u_int16_t,u_int16_t,prf_plus_t*,ipsec_mode_t,u_int16_t,bool,bool))add_sa;
+	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,ipsec_mode_t,u_int16_t))add_policy;

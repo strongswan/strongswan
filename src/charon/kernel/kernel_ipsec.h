@@ -133,10 +133,9 @@ struct kernel_ipsec_t {
 	 * @param expire_soft	lifetime in seconds before rekeying
 	 * @param expire_hard	lifetime in seconds before delete
 	 * @param enc_alg		Algorithm to use for encryption (ESP only)
-	 * @param enc_size		key length of encryption algorithm, if dynamic
+	 * @param enc_key		key to use for encryption
 	 * @param int_alg		Algorithm to use for integrity protection
-	 * @param int_size		key length of integrity algorithm, if dynamic
-	 * @param prf_plus		PRF to derive keys from
+	 * @param int_key		key to use for integrity protection
 	 * @param mode			mode of the SA (tunnel, transport)
 	 * @param ipcomp		IPComp transform to use
 	 * @param encap			enable UDP encapsulation for NAT traversal
@@ -147,10 +146,9 @@ struct kernel_ipsec_t {
 						host_t *src, host_t *dst, u_int32_t spi,
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int64_t expire_soft, u_int64_t expire_hard,
-					    u_int16_t enc_alg, u_int16_t enc_size,
-					    u_int16_t int_alg, u_int16_t int_size,
-						prf_plus_t *prf_plus, ipsec_mode_t mode,
-						u_int16_t ipcomp, bool encap,
+					    u_int16_t enc_alg, chunk_t enc_key,
+					    u_int16_t int_alg, chunk_t int_key,
+						ipsec_mode_t mode, u_int16_t ipcomp, bool encap,
 						bool update);
 	
 	/**
