@@ -72,11 +72,11 @@ EXTRA_DIST = asn1/oid.txt asn1/oid.pl
 BUILT_SOURCES = asn1/oid.c asn1/oid.h
 MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h
 
-asn1/oid.c :	asn1/oid.txt asn1/oid.pl
-		cd asn1 && $(PERL) oid.pl
+asn1/oid.c :	asn1/oid.pl asn1/oid.txt
+		(cd `dirname $<` && $(PERL) $<)
 
-asn1/oid.h :	asn1/oid.txt asn1/oid.pl
-		cd asn1 && $(PERL) oid.pl
+asn1/oid.h :	asn1/oid.pl asn1/oid.txt
+		(cd `dirname $<` && $(PERL) $<)
 
 
 # build plugins with their own Makefile

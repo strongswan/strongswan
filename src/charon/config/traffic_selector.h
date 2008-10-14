@@ -191,6 +191,17 @@ struct traffic_selector_t {
 	bool (*includes) (traffic_selector_t *this, host_t *host);
 	
 	/**
+	 * Convert a traffic selector address range to a subnet
+	 * and its net mask.
+	 * If from and to ports of this traffic selector are equal,
+	 * the port of the returned host_t is set to that port.
+	 * 
+	 * @param net		converted subnet (has to be freed)
+	 * @param mask		converted net mask
+	 */
+	void (*to_subnet) (traffic_selector_t *this, host_t **net, u_int8_t *mask);
+	
+	/**
 	 * Destroys the ts object
 	 */
 	void (*destroy) (traffic_selector_t *this);

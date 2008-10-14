@@ -107,15 +107,6 @@ static status_t update_sa(private_kernel_interface_t *this, u_int32_t spi,
 }
 
 /**
- * Implementation of kernel_interface_t.query_sa
- */
-static status_t query_sa(private_kernel_interface_t *this, host_t *dst, u_int32_t spi, 
-				  protocol_id_t protocol, u_int32_t *use_time)
-{
-	return this->ipsec->query_sa(this->ipsec, dst, spi, protocol, use_time);
-}
-
-/**
  * Implementation of kernel_interface_t.del_sa
  */
 static status_t del_sa(private_kernel_interface_t *this, host_t *dst, u_int32_t spi,
@@ -231,6 +222,64 @@ static status_t del_route(private_kernel_interface_t *this, chunk_t dst_net,
 
 
 /**
+ * Implementation of kernel_interface_t.get_address_by_ts
+ */
+static status_t get_address_by_ts(private_kernel_interface_t *this,
+								  traffic_selector_t *ts, host_t **ip)
+{
+	enumerator_t *addrs;
+	host_t *host;
+	int family;
+	bool found = FALSE;
+	
+	DBG2(DBG_KNL, "getting a local address in traffic selector %R", ts);
+	
+	/* if we have a family which includes localhost, we do not
+	 * search for an IP, we use the default */
+	family = ts->get_type(ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
+	
+	if (family == AF_INET)
+	{
+		host = host_create_from_string("127.0.0.1", 0);
+	}
+	else
+	{
+		host = host_create_from_string("::1", 0);
+	}
+	
+	if (ts->includes(ts, host))
+	{
+		*ip = host_create_any(family);
+		host->destroy(host);
+		DBG2(DBG_KNL, "using host %H", *ip);
+		return SUCCESS;
+	}
+	host->destroy(host);
+	
+	addrs = this->public.create_address_enumerator(&this->public, TRUE, TRUE);
+	while (addrs->enumerate(addrs, (void**)&host))
+	{
+		if (ts->includes(ts, host))
+		{
+			found = TRUE;
+			*ip = host->clone(host);
+			break;
+		}
+	}
+	addrs->destroy(addrs);
+	
+	if (!found)
+	{
+		DBG1(DBG_KNL, "no local address found in traffic selector %R", ts);
+		return FAILED;
+	}
+	
+	DBG2(DBG_KNL, "using host %H", *ip);
+	return SUCCESS;
+}
+
+
+/**
  * Implementation of kernel_interface_t.add_ipsec_interface.
  */
 static void add_ipsec_interface(private_kernel_interface_t *this,
@@ -253,7 +302,7 @@ static void remove_ipsec_interface(private_kernel_interface_t *this,
 }
 
 /**
- * Implementation of kernel_interface_t.add_ipsec_interface.
+ * Implementation of kernel_interface_t.add_net_interface.
  */
 static void add_net_interface(private_kernel_interface_t *this,
 		kernel_net_constructor_t *create)
@@ -264,7 +313,7 @@ static void add_net_interface(private_kernel_interface_t *this,
 }
 
 /**
- * Implementation of kernel_interface_t.remove_ipsec_interface.
+ * Implementation of kernel_interface_t.remove_net_interface.
  */
 static void remove_net_interface(private_kernel_interface_t *this,
 		kernel_net_constructor_t *create)
@@ -324,7 +373,6 @@ kernel_interface_t *kernel_interface_create()
 	this->public.get_cpi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
 	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,u_int16_t,u_int16_t,u_int16_t,prf_plus_t*,ipsec_mode_t,u_int16_t,bool,bool))add_sa;
 	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
-	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,ipsec_mode_t,u_int16_t))add_policy;
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
@@ -338,6 +386,8 @@ kernel_interface_t *kernel_interface_create()
 	this->public.del_ip = (status_t(*)(kernel_interface_t*,host_t*)) del_ip;
 	this->public.add_route = (status_t(*)(kernel_interface_t*,chunk_t,u_int8_t,host_t*,host_t*,char*)) add_route;
 	this->public.del_route = (status_t(*)(kernel_interface_t*,chunk_t,u_int8_t,host_t*,host_t*,char*)) del_route;
+	
+	this->public.get_address_by_ts = (status_t(*)(kernel_interface_t*,traffic_selector_t*,host_t**))get_address_by_ts;
 	
 	this->public.add_ipsec_interface = (void(*)(kernel_interface_t*, kernel_ipsec_constructor_t))add_ipsec_interface;
 	this->public.remove_ipsec_interface = (void(*)(kernel_interface_t*, kernel_ipsec_constructor_t))remove_ipsec_interface;

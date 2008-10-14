@@ -7,7 +7,7 @@ exec.h invokecharon.h lex.yy.c loglite.c
 
 INCLUDES = -I$(top_srcdir)/src/libfreeswan -I$(top_srcdir)/src/pluto -I$(top_srcdir)/src/whack -I$(top_srcdir)/src/stroke
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_EAPDIR=\"${eapdir}\" -DDEBUG
-starter_LDADD = defs.o $(top_srcdir)/src/libfreeswan/libfreeswan.a
+starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a
 EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
 dist_man_MANS = ipsec.conf.5 starter.8
 MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
@@ -15,17 +15,17 @@ MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
 PLUTODIR=$(top_srcdir)/src/pluto
 SCEPCLIENTDIR=$(top_srcdir)/src/scepclient
 
-lex.yy.c:	y.tab.c parser.l parser.y parser.h
-		$(LEX) --nounput parser.l 
+lex.yy.c:	parser.l parser.y parser.h y.tab.c
+		$(LEX) --nounput $< 
 
-y.tab.c:	parser.l parser.y parser.h
-		$(YACC) -v -d parser.y
+y.tab.c:	parser.y parser.l parser.h
+		$(YACC) -v -d $<
 
-y.tab.h:	parser.l parser.y parser.h
-		$(YACC) -v -d parser.y
+y.tab.h:	parser.y parser.l parser.h
+		$(YACC) -v -d $<
 
 keywords.c:	keywords.txt keywords.h
-		$(GPERF) -C -G -t < keywords.txt > keywords.c
+		$(GPERF) -C -G -t < $< > $@
 
 defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 		$(COMPILE) -c -o $@ $<

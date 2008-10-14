@@ -96,12 +96,6 @@ struct kernel_algorithm_t {
 	u_int key_size;
 };
 
-ENUM(policy_dir_names, POLICY_IN, POLICY_FWD,
-	"in",
-	"out",
-	"fwd"
-);
-
 #define END_OF_LIST -1
 
 /**
@@ -220,9 +214,6 @@ struct policy_entry_t {
 	
 	/** direction of this policy: in, out, forward */
 	u_int8_t direction;
-	
-	/** reqid of the policy */
-	u_int32_t reqid;
 	
 	/** parameters of installed policy */
 	struct xfrm_selector sel;
@@ -344,41 +335,13 @@ static host_t* xfrm2host(int family, xfrm_address_t *xfrm, u_int16_t port)
 static void ts2subnet(traffic_selector_t* ts, 
 					  xfrm_address_t *net, u_int8_t *mask)
 {
-	/* there is no way to do this cleanly, as the address range may
-	 * be anything else but a subnet. We use from_addr as subnet 
-	 * and try to calculate a usable subnet mask.
-	 */
-	int byte, bit;
-	bool found = FALSE;
-	chunk_t from, to;
-	size_t size = (ts->get_type(ts) == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+	host_t *net_host;
+	chunk_t net_chunk;
 	
-	from = ts->get_from_address(ts);
-	to = ts->get_to_address(ts);
-	
-	*mask = (size * 8);
-	/* go trough all bits of the addresses, beginning in the front.
-	 * as long as they are equal, the subnet gets larger
-	 */
-	for (byte = 0; byte < size; byte++)
-	{
-		for (bit = 7; bit >= 0; bit--)
-		{
-			if ((1<<bit & from.ptr[byte]) != (1<<bit & to.ptr[byte]))
-			{
-				*mask = ((7 - bit) + (byte * 8));
-				found = TRUE;
-				break;
-			}
-		}
-		if (found)
-		{
-			break;
-		}
-	}
-	memcpy(net, from.ptr, from.len);
-	chunk_free(&from);
-	chunk_free(&to);
+	ts->to_subnet(ts, &net_host, mask);
+	net_chunk = net_host->get_address(net_host);
+	memcpy(net, net_chunk.ptr, net_chunk.len);
+	net_host->destroy(net_host);
 }
 
 /**
@@ -534,7 +497,7 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 		if (host)
 		{
 			DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and "
-				"reqid {%d} changed, queueing update job", ntohl(spi), reqid);
+				"reqid {%d} changed, queuing update job", ntohl(spi), reqid);
 			job = (job_t*)update_sa_job_create(reqid, host);
 			charon->processor->queue_job(charon->processor, job);
 		}
@@ -598,64 +561,6 @@ static job_requeue_t receive_events(private_kernel_netlink_ipsec_t *this)
 		hdr = NLMSG_NEXT(hdr, len);
 	}
 	return JOB_REQUEUE_DIRECT;
-}
-
-/**
- * Tries to find an ip address of a local interface that is included in the
- * supplied traffic selector.
- */
-static status_t get_address_by_ts(private_kernel_netlink_ipsec_t *this,
-								  traffic_selector_t *ts, host_t **ip)
-{
-	enumerator_t *addrs;
-	host_t *host;
-	int family;
-	bool found = FALSE;
-	
-	DBG2(DBG_KNL, "getting a local address in traffic selector %R", ts);
-	
-	/* if we have a family which includes localhost, we do not
-	 * search for an IP, we use the default */
-	family = ts->get_type(ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
-	
-	if (family == AF_INET)
-	{
-		host = host_create_from_string("127.0.0.1", 0);
-	}
-	else
-	{
-		host = host_create_from_string("::1", 0);
-	}
-	
-	if (ts->includes(ts, host))
-	{
-		*ip = host_create_any(family);
-		host->destroy(host);
-		DBG2(DBG_KNL, "using host %H", *ip);
-		return SUCCESS;
-	}
-	host->destroy(host);
-	
-	addrs = charon->kernel_interface->create_address_enumerator(
-				charon->kernel_interface, TRUE, TRUE);
-	while (addrs->enumerate(addrs, (void**)&host))
-	{
-		if (ts->includes(ts, host))
-		{
-			found = TRUE;
-			*ip = host->clone(host);
-			break;
-		}
-	}
-	addrs->destroy(addrs);
-	
-	if (!found)
-	{
-		DBG1(DBG_KNL, "no local address found in traffic selector %R", ts);
-		return FAILED;
-	}
-	DBG2(DBG_KNL, "using host %H", *ip);
-	return SUCCESS;
 }
 
 /**
@@ -1257,74 +1162,6 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 }
 
 /**
- * Implementation of kernel_interface_t.query_sa.
- */
-static status_t query_sa(private_kernel_netlink_ipsec_t *this, host_t *dst,
-						 u_int32_t spi, protocol_id_t protocol,
-						 u_int32_t *use_time)
-{
-	unsigned char request[NETLINK_BUFFER_SIZE];
-	struct nlmsghdr *out = NULL, *hdr;
-	struct xfrm_usersa_id *sa_id;
-	struct xfrm_usersa_info *sa = NULL;
-	size_t len;
-	
-	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x", ntohl(spi));
-	memset(&request, 0, sizeof(request));
-	
-	hdr = (struct nlmsghdr*)request;
-	hdr->nlmsg_flags = NLM_F_REQUEST;
-	hdr->nlmsg_type = XFRM_MSG_GETSA;
-	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
-
-	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
-	host2xfrm(dst, &sa_id->daddr);
-	sa_id->spi = spi;
-	sa_id->proto = proto_ike2kernel(protocol);
-	sa_id->family = dst->get_family(dst);
-	
-	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
-	{
-		hdr = out;
-		while (NLMSG_OK(hdr, len))
-		{
-			switch (hdr->nlmsg_type)
-			{
-				case XFRM_MSG_NEWSA:
-				{
-					sa = NLMSG_DATA(hdr);
-					break;
-				}
-				case NLMSG_ERROR:
-				{
-					struct nlmsgerr *err = NLMSG_DATA(hdr);
-					DBG1(DBG_KNL, "querying SAD entry failed: %s (%d)",
-						 strerror(-err->error), -err->error);
-					break;
-				}
-				default:
-					hdr = NLMSG_NEXT(hdr, len);
-					continue;
-				case NLMSG_DONE:
-					break;
-			}
-			break;
-		}
-	}
-	
-	if (sa == NULL)
-	{
-		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
-		free(out);
-		return FAILED;
-	}
-	
-	*use_time = sa->curlft.use_time;
-	free (out);
-	return SUCCESS;
-}
-
-/**
  * Implementation of kernel_interface_t.del_sa.
  */
 static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *dst,
@@ -1503,7 +1340,8 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	{
 		route_entry_t *route = malloc_thing(route_entry_t);
 		
-		if (get_address_by_ts(this, dst_ts, &route->src_ip) == SUCCESS)
+		if (charon->kernel_interface->get_address_by_ts(charon->kernel_interface,
+				dst_ts, &route->src_ip) == SUCCESS)
 		{
 			/* get the nexthop to src (src as we are in POLICY_FWD).*/
 			route->gateway = charon->kernel_interface->get_nexthop(
@@ -1638,7 +1476,7 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 	iterator = this->policies->create_iterator_locked(this->policies, &this->mutex);
 	while (iterator->iterate(iterator, (void**)&current))
 	{
-		if (memcmp(&current->sel, &policy.sel, sizeof(struct xfrm_selector)) == 0 &&
+		if (memeq(&current->sel, &policy.sel, sizeof(struct xfrm_selector)) &&
 			policy.direction == current->direction)
 		{
 			to_delete = current;
@@ -1723,7 +1561,6 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
 	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,u_int16_t,u_int16_t,u_int16_t,prf_plus_t*,ipsec_mode_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
-	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,ipsec_mode_t,u_int16_t))add_policy;
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;

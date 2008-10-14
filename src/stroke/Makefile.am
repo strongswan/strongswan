@@ -7,4 +7,4 @@ MAINTAINERCLEANFILES = stroke_keywords.c
 AM_CFLAGS = -DIPSEC_PIDDIR=\"${piddir}\"
 
 stroke_keywords.c:	stroke_keywords.txt stroke_keywords.h
-		$(GPERF) -C -G -t < stroke_keywords.txt > stroke_keywords.c
+		$(GPERF) -C -G -t < $< > $@

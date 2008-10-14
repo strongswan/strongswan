@@ -49,41 +49,14 @@ typedef struct {
  */
 static u_int ts2subnet(traffic_selector_t* ts, u_int8_t *mask)
 {
-	/* there is no way to do this cleanly, as the address range may
-	 * be anything else but a subnet. We use from_addr as subnet 
-	 * and try to calculate a usable subnet mask.
-	 */
-	int byte, bit, net;
-	bool found = FALSE;
-	chunk_t from, to;
-	size_t size = (ts->get_type(ts) == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+	u_int net;
+	host_t *net_host;
+	chunk_t net_chunk;
 	
-	from = ts->get_from_address(ts);
-	to = ts->get_to_address(ts);
-	
-	*mask = (size * 8);
-	/* go trough all bits of the addresses, beginning in the front.
-	 * as long as they are equal, the subnet gets larger
-	 */
-	for (byte = 0; byte < size; byte++)
-	{
-		for (bit = 7; bit >= 0; bit--)
-		{
-			if ((1<<bit & from.ptr[byte]) != (1<<bit & to.ptr[byte]))
-			{
-				*mask = ((7 - bit) + (byte * 8));
-				found = TRUE;
-				break;
-			}
-		}
-		if (found)
-		{
-			break;
-		}
-	}
-	net = *(u_int32_t*)from.ptr;
-	chunk_free(&from);
-	chunk_free(&to);
+	ts->to_subnet(ts, &net_host, mask);
+	net_chunk = net_host->get_address(net_host);
+	net = *(u_int32_t*)net_chunk.ptr;
+	net_host->destroy(net_host);
 	return net;
 }
 

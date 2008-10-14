@@ -130,7 +130,7 @@ struct linked_list_t {
 	 * If a compare function is given, it is called for each item, where
 	 * the first parameter is the current list item and the second parameter
 	 * is the supplied item parameter.
-	 * If compare is NULL, compare is is done by pointer.
+	 * If compare is NULL, compare is done by pointer.
 	 *
 	 * @param item		item to remove/pass to comparator
 	 * @param compare	compare function, or NULL
@@ -179,10 +179,12 @@ struct linked_list_t {
 	 * If the supplied function returns TRUE this function returns SUCCESS, and
 	 * the current object is returned in the third parameter, otherwise,
 	 * the next item is checked.
+	 *
+	 * If match is NULL, *item and the current object are compared.
 	 * 
 	 * @warning Only use pointers as user supplied data.
 	 *
-	 * @param match			comparison function to call on each object
+	 * @param match			comparison function to call on each object, or NULL
 	 * @param item			the list item, if found
 	 * @param ...			user data to supply to match function (limited to 5 arguments)
 	 * @return				SUCCESS if found, NOT_FOUND otherwise
@@ -198,9 +200,11 @@ struct linked_list_t {
 	 * the current object is returned in the third parameter, otherwise,
 	 * the next item is checked.
 	 * 
+	 * If match is NULL, *item and the current object are compared.
+	 * 
 	 * @warning Only use pointers as user supplied data.
 	 *
-	 * @param match			comparison function to call on each object
+	 * @param match			comparison function to call on each object, or NULL
 	 * @param item			the list item, if found
 	 * @param ...			user data to supply to match function (limited to 5 arguments)
 	 * @return				SUCCESS if found, NOT_FOUND otherwise

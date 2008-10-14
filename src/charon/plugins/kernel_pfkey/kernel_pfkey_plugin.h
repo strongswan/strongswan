@@ -15,19 +15,35 @@
  * $Id$
  */
 
-#include "kernel_ipsec.h"
+/**
+ * @defgroup kernel_pfkey kernel_pfkey
+ * @ingroup cplugins
+ *
+ * @defgroup kernel_pfkey_plugin kernel_pfkey_plugin
+ * @{ @ingroup kernel_pfkey
+ */
 
-ENUM(ipsec_mode_names, MODE_TRANSPORT, MODE_BEET,
-	"TRANSPORT",
-	"TUNNEL",
-	"2",
-	"3",
-	"BEET",
-);
+#ifndef KERNEL_PFKEY_PLUGIN_H_
+#define KERNEL_PFKEY_PLUGIN_H_
 
-ENUM(policy_dir_names, POLICY_IN, POLICY_FWD,
-	"in",
-	"out",
-	"fwd"
-);
+#include <plugins/plugin.h>
 
+typedef struct kernel_pfkey_plugin_t kernel_pfkey_plugin_t;
+
+/**
+ * PF_KEY kernel interface plugin
+ */
+struct kernel_pfkey_plugin_t {
+
+	/**
+	 * implements plugin interface
+	 */
+	plugin_t plugin;
+};
+
+/**
+ * Create a kernel_pfkey_plugin instance.
+ */
+plugin_t *plugin_create();
+
+#endif /* KERNEL_PFKEY_PLUGIN_H_ @} */

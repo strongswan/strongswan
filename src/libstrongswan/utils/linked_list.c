@@ -632,7 +632,8 @@ static status_t find_first(private_linked_list_t *this, linked_list_match_t matc
 	
 	while (current)
 	{
-		if (match(current->value, d1, d2, d3, d4, d5))
+		if ((match && match(current->value, d1, d2, d3, d4, d5)) ||
+			(!match && item && current->value == *item))
 		{
 			if (item != NULL)
 			{
@@ -655,7 +656,8 @@ static status_t find_last(private_linked_list_t *this, linked_list_match_t match
 	
 	while (current)
 	{
-		if (match(current->value, d1, d2, d3, d4, d5))
+		if ((match && match(current->value, d1, d2, d3, d4, d5)) ||
+			(!match && item && current->value == *item))
 		{
 			if (item != NULL)
 			{

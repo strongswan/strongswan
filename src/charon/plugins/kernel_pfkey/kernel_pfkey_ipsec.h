@@ -15,19 +15,34 @@
  * $Id$
  */
 
-#include "kernel_ipsec.h"
+/**
+ * @defgroup kernel_pfkey_ipsec_i kernel_pfkey_ipsec
+ * @{ @ingroup kernel_pfkey
+ */
 
-ENUM(ipsec_mode_names, MODE_TRANSPORT, MODE_BEET,
-	"TRANSPORT",
-	"TUNNEL",
-	"2",
-	"3",
-	"BEET",
-);
+#ifndef KERNEL_PFKEY_IPSEC_H_
+#define KERNEL_PFKEY_IPSEC_H_
 
-ENUM(policy_dir_names, POLICY_IN, POLICY_FWD,
-	"in",
-	"out",
-	"fwd"
-);
+#include <kernel/kernel_ipsec.h>
 
+typedef struct kernel_pfkey_ipsec_t kernel_pfkey_ipsec_t;
+
+/**
+ * Implementation of the kernel ipsec interface using PF_KEY.
+ */
+struct kernel_pfkey_ipsec_t {
+
+	/**
+	 * Implements kernel_ipsec_t interface
+	 */
+	kernel_ipsec_t interface;
+};
+
+/**
+ * Create a PF_KEY kernel ipsec interface instance.
+ *
+ * @return			kernel_pfkey_ipsec_t instance
+ */
+kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create();
+
+#endif /* KERNEL_PFKEY_IPSEC_H_ @} */

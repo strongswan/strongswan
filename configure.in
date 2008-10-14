@@ -445,6 +445,14 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[kernel-pfkey],
+	AS_HELP_STRING([--enable-kernel-pfkey],[enable the PF_KEY kernel interface. (default is NO).]),
+	[if test x$enableval = xyes; then
+		kernel_pfkey=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[nat-transport],
 	AS_HELP_STRING([--enable-nat-transport],[enable NAT traversal with IPsec transport mode (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -874,6 +882,7 @@ AM_CONDITIONAL(USE_EAP_MD5, test x$eap_md5 = xtrue)
 AM_CONDITIONAL(USE_EAP_GTC, test x$eap_gtc = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
+AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 
 dnl other options
 dnl =============
@@ -949,6 +958,7 @@ AC_OUTPUT(
 	src/charon/plugins/eap_sim/Makefile
 	src/charon/plugins/eap_sim_file/Makefile
 	src/charon/plugins/kernel_netlink/Makefile
+	src/charon/plugins/kernel_pfkey/Makefile
 	src/charon/plugins/smp/Makefile
 	src/charon/plugins/sql/Makefile
 	src/charon/plugins/medsrv/Makefile

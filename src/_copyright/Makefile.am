@@ -3,4 +3,4 @@ _copyright_SOURCES = _copyright.c
 dist_man8_MANS = _copyright.8
 
 INCLUDES = -I$(top_srcdir)/src/libfreeswan
-_copyright_LDADD = $(top_srcdir)/src/libfreeswan/libfreeswan.a
+_copyright_LDADD = $(top_builddir)/src/libfreeswan/libfreeswan.a

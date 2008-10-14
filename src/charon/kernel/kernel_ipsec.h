@@ -68,6 +68,11 @@ enum policy_dir_t {
 };
 
 /**
+ * enum names for policy_dir_t.
+ */
+extern enum_name_t *policy_dir_names;
+
+/**
  * Interface to the ipsec subsystem of the kernel.
  * 
  * The kernel ipsec interface handles the communication with the kernel
@@ -169,21 +174,6 @@ struct kernel_ipsec_t {
 						  u_int32_t spi, protocol_id_t protocol,
 						  host_t *src, host_t *dst, 
 						  host_t *new_src, host_t *new_dst, bool encap);
-	
-	/**
-	 * Query the use time of an SA.
-	 *
-	 * The use time of an SA is not the time of the last usage, but 
-	 * the time of the first usage of the SA.
-	 * 
-	 * @param dst			destination address for this SA
-	 * @param spi			SPI allocated by us or remote peer
-	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @param use_time		pointer receives the time of this SA's last use
-	 * @return				SUCCESS if operation completed
-	 */
-	status_t (*query_sa) (kernel_ipsec_t *this, host_t *dst, u_int32_t spi, 
-						  protocol_id_t protocol, u_int32_t *use_time);
 	
 	/**
 	 * Delete a previusly installed SA from the SAD.

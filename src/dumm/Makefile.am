@@ -11,8 +11,8 @@ irdumm_SOURCES = irdumm.c
 
 libdumm_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
   -lbridge -lfuse -lutil
-dumm_LDADD = -ldumm ${gtk_LIBS}
-irdumm_LDADD = -ldumm -lruby1.8
+dumm_LDADD = libdumm.la ${gtk_LIBS}
+irdumm_LDADD = libdumm.la -lruby1.8
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan ${gtk_CFLAGS} \
   -I/usr/lib/ruby/1.8/i486-linux/

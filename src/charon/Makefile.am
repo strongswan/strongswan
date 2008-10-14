@@ -144,6 +144,11 @@ endif
 SUBDIRS = . 
 PLUGINS = ${libstrongswan_plugins}
 
+if USE_KERNEL_PFKEY
+  SUBDIRS += plugins/kernel_pfkey
+  PLUGINS += kernel-pfkey
+endif
+
 if USE_KERNEL_NETLINK
   SUBDIRS += plugins/kernel_netlink
   PLUGINS += kernel-netlink

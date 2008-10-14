@@ -144,21 +144,6 @@ struct kernel_interface_t {
 						  host_t *new_src, host_t *new_dst, bool encap);
 	
 	/**
-	 * Query the use time of an SA.
-	 *
-	 * The use time of an SA is not the time of the last usage, but 
-	 * the time of the first usage of the SA.
-	 * 
-	 * @param dst			destination address for this SA
-	 * @param spi			SPI allocated by us or remote peer
-	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @param use_time		pointer receives the time of this SA's last use
-	 * @return				SUCCESS if operation completed
-	 */
-	status_t (*query_sa) (kernel_interface_t *this, host_t *dst, u_int32_t spi, 
-						  protocol_id_t protocol, u_int32_t *use_time);
-	
-	/**
 	 * Delete a previously installed SA from the SAD.
 	 * 
 	 * @param dst			destination address for this SA
@@ -333,6 +318,17 @@ struct kernel_interface_t {
 	/**
 	 * manager methods
 	 */
+	
+	/**
+	 * Tries to find an ip address of a local interface that is included in the
+	 * supplied traffic selector.
+	 * 
+	 * @param ts			traffic selector
+	 * @param ip			returned ip (has to be destroyed)
+	 * @return				SUCCESS if address found
+	 */
+	status_t (*get_address_by_ts) (kernel_interface_t *this,
+										traffic_selector_t *ts, host_t **ip);
 	
 	/**
 	 * Register an ipsec kernel interface constructor on the manager.
