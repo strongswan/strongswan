@@ -22,10 +22,7 @@
 #include <daemon.h>
 #include <utils/mutex.h>
 
-ENUM(signal_names, SIG_ANY, SIG_MAX,
-	/** should not get printed */
-	"SIG_ANY",
-	/** debugging message types */
+ENUM(debug_names, DBG_DMN, DBG_LIB,
 	"DMN",
 	"MGR",
 	"IKE",
@@ -36,19 +33,6 @@ ENUM(signal_names, SIG_ANY, SIG_MAX,
 	"NET",
 	"ENC",
 	"LIB",
-	/** should not get printed */
-	"SIG_DBG_MAX",
-	/** all level0 signals are AUDIT signals */
-	"AUD", "AUD", "AUD",
-	"AUD", "AUD", "AUD",
-	"AUD", "AUD", "AUD",
-	"AUD", "AUD", "AUD",
-	"AUD", "AUD", "AUD",
-	"AUD", "AUD", "AUD",
-	"AUD", "AUD", "AUD",
-	"AUD", "AUD", "AUD",
-	/** should not get printed */
-	"SIG_MAX",
 );
 
 typedef struct private_bus_t private_bus_t;
@@ -93,7 +77,7 @@ struct entry_t {
 	/**
 	 * registered listener interface
 	 */
-	bus_listener_t *listener;
+	listener_t *listener;
 	
 	/**
 	 * is this a active listen() call with a blocking thread
@@ -114,7 +98,7 @@ struct entry_t {
 /**
  * create a listener entry
  */
-static entry_t *entry_create(bus_listener_t *listener, bool blocker)
+static entry_t *entry_create(listener_t *listener, bool blocker)
 {
 	entry_t *this = malloc_thing(entry_t);
 	
@@ -160,7 +144,7 @@ static int get_thread_number(private_bus_t *this)
 /**
  * Implementation of bus_t.add_listener.
  */
-static void add_listener(private_bus_t *this, bus_listener_t *listener)
+static void add_listener(private_bus_t *this, listener_t *listener)
 {
 	this->mutex->lock(this->mutex);
 	this->listeners->insert_last(this->listeners, entry_create(listener, FALSE));
@@ -170,23 +154,23 @@ static void add_listener(private_bus_t *this, bus_listener_t *listener)
 /**
  * Implementation of bus_t.remove_listener.
  */
-static void remove_listener(private_bus_t *this, bus_listener_t *listener)
+static void remove_listener(private_bus_t *this, listener_t *listener)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	entry_t *entry;
 
 	this->mutex->lock(this->mutex);
-	iterator = this->listeners->create_iterator(this->listeners, TRUE);
-	while (iterator->iterate(iterator, (void**)&entry))
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
 		if (entry->listener == listener)
 		{
-			iterator->remove(iterator);
+			this->listeners->remove_at(this->listeners, enumerator);
 			entry_destroy(entry);
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
 }
 
@@ -207,26 +191,14 @@ struct cleanup_data_t {
  */
 static void listener_cleanup(cleanup_data_t *data)
 {
-	iterator_t *iterator;
-	entry_t *entry;
-
-	iterator = data->this->listeners->create_iterator(data->this->listeners, TRUE);
-	while (iterator->iterate(iterator, (void**)&entry))
-	{
-		if (entry == data->entry)
-		{
-			iterator->remove(iterator);
-			entry_destroy(entry);
-			break;
-		}
-	}
-	iterator->destroy(iterator);
+	data->this->listeners->remove(data->this->listeners, data->entry, NULL);
+	entry_destroy(data->entry);
 }
 
 /**
  * Implementation of bus_t.listen.
  */
-static void listen_(private_bus_t *this, bus_listener_t *listener, job_t *job)
+static void listen_(private_bus_t *this, listener_t *listener, job_t *job)
 {
 	int old;
 	cleanup_data_t data;
@@ -267,33 +239,31 @@ typedef struct {
 	ike_sa_t *ike_sa;
 	/** invoking thread */
 	long thread;
-	/** signal type */
-	signal_t signal;
-	/** signal level */
+	/** debug group */
+	debug_t group;
+	/** debug level */
 	level_t level;
-	/** signal specific user data */
-	void *user;
 	/** format string */
 	char *format;
 	/** argument list */
 	va_list args;
-} signal_data_t;
+} log_data_t;
 
 /**
- * listener invocation as a list remove callback
+ * listener->log() invocation as a list remove callback
  */
-static bool signal_cb(entry_t *entry, signal_data_t *data)
+static bool log_cb(entry_t *entry, log_data_t *data)
 {
 	va_list args;
 
-	if (entry->calling)
+	if (entry->calling || !entry->listener->log)
 	{	/* avoid recursive calls */
 		return FALSE;
 	}
 	entry->calling = TRUE;
 	va_copy(args, data->args);
-	if (!entry->listener->signal(entry->listener, data->signal, data->level,
-					data->thread, data->ike_sa, data->user, data->format, args))
+	if (!entry->listener->log(entry->listener, data->group, data->level,
+							  data->thread, data->ike_sa, data->format, args))
 	{
 		if (entry->blocker)
 		{
@@ -314,40 +284,145 @@ static bool signal_cb(entry_t *entry, signal_data_t *data)
 }
 
 /**
- * Implementation of bus_t.vsignal.
+ * Implementation of bus_t.vlog.
  */
-static void vsignal(private_bus_t *this, signal_t signal, level_t level,
-					void *user, char* format, va_list args)
+static void vlog(private_bus_t *this, debug_t group, level_t level,
+				 char* format, va_list args)
 {
-	signal_data_t data;
+	log_data_t data;
 	
 	data.ike_sa = pthread_getspecific(this->thread_sa);
 	data.thread = get_thread_number(this);
-	data.signal = signal;
+	data.group = group;
 	data.level = level;
-	data.user = user;
 	data.format = format;
 	va_copy(data.args, args);
 	
 	this->mutex->lock(this->mutex);
-	/* we use the remove() method to invoke all listeners with small overhead */
-	this->listeners->remove(this->listeners, &data, (void*)signal_cb);
+	/* We use the remove() method to invoke all listeners. This is cheap and
+	 * does not require an allocation for this performance critical function. */
+	this->listeners->remove(this->listeners, &data, (void*)log_cb);
 	this->mutex->unlock(this->mutex);
 	
 	va_end(data.args);
 }
 
 /**
- * Implementation of bus_t.signal.
+ * Implementation of bus_t.log.
  */
-static void signal_(private_bus_t *this, signal_t signal, level_t level, 
-					void* data, char* format, ...)
+static void log_(private_bus_t *this, debug_t group, level_t level,
+				 char* format, ...)
 {
 	va_list args;
 	
 	va_start(args, format);
-	vsignal(this, signal, level, data, format, args);
+	vlog(this, group, level, format, args);
 	va_end(args);
+}
+
+/**
+ * Implementation of bus_t.ike_state_change
+ */
+static void ike_state_change(private_bus_t *this, ike_sa_t *ike_sa,
+							 ike_sa_state_t state)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->listener->ike_state_change &&
+			!entry->listener->ike_state_change(entry->listener, ike_sa, state))
+		{
+			if (entry->blocker)
+			{
+				entry->blocker = FALSE;
+				entry->condvar->signal(entry->condvar);
+			}
+			else
+			{
+				entry_destroy(entry);
+			}
+			this->listeners->remove_at(this->listeners, enumerator);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Implementation of bus_t.child_state_change
+ */
+static void child_state_change(private_bus_t *this, child_sa_t *child_sa,
+							   child_sa_state_t state)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	
+	ike_sa = pthread_getspecific(this->thread_sa);
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->listener->child_state_change &&
+			!entry->listener->child_state_change(entry->listener, ike_sa,
+												 child_sa, state))
+		{
+			if (entry->blocker)
+			{
+				entry->blocker = FALSE;
+				entry->condvar->signal(entry->condvar);
+			}
+			else
+			{
+				entry_destroy(entry);
+			}
+			this->listeners->remove_at(this->listeners, enumerator);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Implementation of bus_t.message
+ */
+static void message(private_bus_t *this, message_t *message, bool incoming)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	
+	ike_sa = pthread_getspecific(this->thread_sa);
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->listener->message &&
+			!entry->listener->message(entry->listener, ike_sa, message, incoming))
+		{
+			if (entry->blocker)
+			{
+				entry->blocker = FALSE;
+				entry->condvar->signal(entry->condvar);
+			}
+			else
+			{
+				entry_destroy(entry);
+			}
+			this->listeners->remove_at(this->listeners, enumerator);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -367,12 +442,15 @@ bus_t *bus_create()
 {
 	private_bus_t *this = malloc_thing(private_bus_t);
 	
-	this->public.add_listener = (void(*)(bus_t*,bus_listener_t*))add_listener;
-	this->public.remove_listener = (void(*)(bus_t*,bus_listener_t*))remove_listener;
-	this->public.listen = (void(*)(bus_t*, bus_listener_t *listener, job_t *job))listen_;
+	this->public.add_listener = (void(*)(bus_t*,listener_t*))add_listener;
+	this->public.remove_listener = (void(*)(bus_t*,listener_t*))remove_listener;
+	this->public.listen = (void(*)(bus_t*, listener_t *listener, job_t *job))listen_;
 	this->public.set_sa = (void(*)(bus_t*,ike_sa_t*))set_sa;
-	this->public.signal = (void(*)(bus_t*,signal_t,level_t,void*,char*,...))signal_;
-	this->public.vsignal = (void(*)(bus_t*,signal_t,level_t,void*,char*,va_list))vsignal;
+	this->public.log = (void(*)(bus_t*,debug_t,level_t,char*,...))log_;
+	this->public.vlog = (void(*)(bus_t*,debug_t,level_t,char*,va_list))vlog;
+	this->public.ike_state_change = (void(*)(bus_t*,ike_sa_t*,ike_sa_state_t))ike_state_change;
+	this->public.child_state_change = (void(*)(bus_t*,child_sa_t*,child_sa_state_t))child_state_change;
+	this->public.message = (void(*)(bus_t*, message_t *message, bool incoming))message;
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();

@@ -201,6 +201,11 @@ enum ike_sa_state_t {
 	 * IKE_SA is in progress of deletion
 	 */
 	IKE_DELETING,
+	
+	/**
+	 * IKE_SA object gets destroyed
+	 */
+	IKE_DESTROYING,
 };
 
 /**

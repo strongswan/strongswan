@@ -151,38 +151,11 @@ static void flush(private_task_manager_t *this)
 										offsetof(task_t, destroy));
 	this->passive_tasks->destroy_offset(this->passive_tasks,
 										offsetof(task_t, destroy));
-	
-	/* emmit outstanding signals for tasks */
-	while (this->active_tasks->remove_last(this->active_tasks,
-										   (void**)&task) == SUCCESS)
-	{
-		switch (task->get_type(task))
-		{
-			case IKE_AUTH:
-				SIG_IKE(UP_FAILED, "establishing IKE_SA failed");
-				break;
-			case IKE_DELETE:
-				SIG_IKE(DOWN_FAILED, "IKE_SA deleted");
-				break;
-			case IKE_REKEY:
-				SIG_IKE(REKEY_FAILED, "rekeying IKE_SA failed");
-				break;
-			case CHILD_CREATE:
-				SIG_CHD(UP_FAILED, NULL, "establishing CHILD_SA failed");
-				break;
-			case CHILD_DELETE:
-				SIG_CHD(DOWN_FAILED, NULL, "deleting CHILD_SA failed");
-				break;
-			case CHILD_REKEY:
-				SIG_IKE(REKEY_FAILED, "rekeying CHILD_SA failed");
-				break;
-			default:
-				break;
-		}
-		task->destroy(task);
-	}
+	this->active_tasks->destroy_offset(this->active_tasks,
+										offsetof(task_t, destroy));
 	this->queued_tasks = linked_list_create();
 	this->passive_tasks = linked_list_create();
+	this->active_tasks = linked_list_create();
 }
 
 /**
@@ -648,6 +621,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	DESTROY_IF(this->responding.packet);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->responding.packet);
+	charon->bus->message(charon->bus, message, FALSE);
 	message->destroy(message);
 	if (status != SUCCESS)
 	{
@@ -867,6 +841,7 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 	{
 		if (mid == this->responding.mid)
 		{
+			charon->bus->message(charon->bus, msg, TRUE);
 			if (process_request(this, msg) != SUCCESS)
 			{
 				flush(this);

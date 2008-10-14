@@ -222,14 +222,13 @@ static void log_children(private_child_delete_t *this)
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		SIG_CHD(DOWN_START, child_sa, "closing CHILD_SA %s{%d} "
-				"with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
-				child_sa->get_name(child_sa),
-				child_sa->get_reqid(child_sa),
-				ntohl(child_sa->get_spi(child_sa, TRUE)),
-				ntohl(child_sa->get_spi(child_sa, FALSE)),
-				child_sa->get_traffic_selectors(child_sa, TRUE),
-				child_sa->get_traffic_selectors(child_sa, FALSE));
+		DBG0(DBG_IKE, "closing CHILD_SA %s{%d} "
+			 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
+			 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+			 ntohl(child_sa->get_spi(child_sa, TRUE)),
+			 ntohl(child_sa->get_spi(child_sa, FALSE)),
+			 child_sa->get_traffic_selectors(child_sa, TRUE),
+			 child_sa->get_traffic_selectors(child_sa, FALSE));
 	}
 	iterator->destroy(iterator);
 }
@@ -254,7 +253,7 @@ static status_t process_i(private_child_delete_t *this, message_t *message)
 	this->child_sas = linked_list_create();
 	
 	process_payloads(this, message);
-	SIG_CHD(DOWN_SUCCESS, NULL, "CHILD_SA closed");
+	DBG1(DBG_IKE, "CHILD_SA closed");
 	return destroy_and_reestablish(this);
 }
 
@@ -278,7 +277,7 @@ static status_t build_r(private_child_delete_t *this, message_t *message)
 	{
 		build_payloads(this, message);	
 	}
-	SIG_CHD(DOWN_SUCCESS, NULL, "CHILD_SA closed");
+	DBG1(DBG_IKE, "CHILD_SA closed");
 	return destroy_and_reestablish(this);
 }
 

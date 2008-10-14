@@ -230,15 +230,15 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	SIG_IKE(UP_START, "initiating IKE_SA %s[%d] to %H",
-		this->ike_sa->get_name(this->ike_sa),
-		this->ike_sa->get_unique_id(this->ike_sa),
-		this->ike_sa->get_other_host(this->ike_sa));
+	DBG1(DBG_IKE, "initiating IKE_SA %s[%d] to %H",
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa),
+		 this->ike_sa->get_other_host(this->ike_sa));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 	
 	if (this->retry++ >= MAX_RETRIES)
 	{
-		SIG_IKE(UP_FAILED, "giving up after %d retries", MAX_RETRIES);
+		DBG1(DBG_IKE, "giving up after %d retries", MAX_RETRIES);
 		return FAILED;
 	}
 
@@ -249,7 +249,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 		this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
 		if (this->dh == NULL)
 		{
-			SIG_IKE(UP_FAILED, "configured DH group %N not supported",
+			DBG1(DBG_IKE, "configured DH group %N not supported",
 				diffie_hellman_group_names, this->dh_group);
 			return FAILED;
 		}
@@ -261,7 +261,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 		if (!rng)
 		{
-			SIG_IKE(UP_FAILED, "error generating nonce");
+			DBG1(DBG_IKE, "error generating nonce");
 			return FAILED;
 		}
 		rng->allocate_bytes(rng, NONCE_SIZE, &this->my_nonce);
@@ -296,8 +296,7 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	SIG_IKE(UP_START, "%H is initiating an IKE_SA",
-		message->get_source(message));
+	DBG1(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
@@ -376,7 +375,7 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
 	{
-		SIG_IKE(UP_FAILED, "received proposals inacceptable");
+		DBG1(DBG_IKE, "received proposals inacceptable");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
@@ -390,9 +389,9 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
 										  &group, NULL))
 		{
-			SIG_CHD(UP_FAILED, NULL, "DH group %N inacceptable, requesting %N",
-				diffie_hellman_group_names, this->dh_group,
-				diffie_hellman_group_names, group);
+			DBG1(DBG_IKE, "DH group %N inacceptable, requesting %N",
+				 diffie_hellman_group_names, this->dh_group,
+				 diffie_hellman_group_names, group);
 			this->dh_group = group;
 			group = htons(group);
 			message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
@@ -400,7 +399,7 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		}
 		else
 		{
-			SIG_IKE(UP_FAILED, "no acceptable proposal found");
+			DBG1(DBG_IKE, "no acceptable proposal found");
 		}
 		return FAILED;
 	}
@@ -430,7 +429,7 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 	}
 	if (status != SUCCESS)
 	{
-		SIG_IKE(UP_FAILED, "key derivation failed");
+		DBG1(DBG_IKE, "key derivation failed");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
@@ -505,7 +504,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 				{
 					if (type < 16383)
 					{
-						SIG_IKE(UP_FAILED, "received %N notify error",
+						DBG1(DBG_IKE, "received %N notify error",
 							 notify_type_names, type);
 						iterator->destroy(iterator);
 						return FAILED;	
@@ -525,7 +524,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
 	{
-		SIG_IKE(UP_FAILED, "peer's proposal selection invalid");
+		DBG1(DBG_IKE, "peers proposal selection invalid");
 		return FAILED;
 	}
 	
@@ -533,7 +532,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		!this->proposal->has_dh_group(this->proposal, this->dh_group) ||
 		this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
 	{
-		SIG_IKE(UP_FAILED, "peer's DH group selection invalid");
+		DBG1(DBG_IKE, "peer DH group selection invalid");
 		return FAILED;
 	}
 	
@@ -562,7 +561,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 	}
 	if (status != SUCCESS)
 	{
-		SIG_IKE(UP_FAILED, "key derivation failed");
+		DBG1(DBG_IKE, "key derivation failed");
 		return FAILED;
 	}
 

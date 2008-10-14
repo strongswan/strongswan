@@ -99,7 +99,7 @@ static void dbg_bus(int level, char *fmt, ...)
 	va_list args;
 	
 	va_start(args, fmt);
-	charon->bus->vsignal(charon->bus, DBG_LIB, level, NULL, fmt, args);
+	charon->bus->vlog(charon->bus, DBG_LIB, level, fmt, args);
 	va_end(args);
 }
 
@@ -321,7 +321,7 @@ static void lookup_uid_gid(private_daemon_t *this)
  */
 static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 {
-	signal_t signal;
+	debug_t group;
 	
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());
@@ -334,19 +334,19 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.bus->add_listener(this->public.bus, &this->public.syslog->listener);
 	this->public.bus->add_listener(this->public.bus, &this->public.outlog->listener);
 	this->public.bus->add_listener(this->public.bus, &this->public.authlog->listener);
-	this->public.authlog->set_level(this->public.authlog, SIG_ANY, LEVEL_AUDIT);
+	this->public.authlog->set_level(this->public.authlog, DBG_ANY, LEVEL_AUDIT);
 	/* set up hook to log dbg message in library via charons message bus */
 	dbg = dbg_bus;
 	
 	/* apply loglevels */
-	for (signal = 0; signal < DBG_MAX; signal++)
+	for (group = 0; group < DBG_MAX; group++)
 	{
 		this->public.syslog->set_level(this->public.syslog,
-									   signal, levels[signal]);
+									   group, levels[group]);
 		if (!syslog)
 		{
 			this->public.outlog->set_level(this->public.outlog,
-										   signal, levels[signal]);
+										   group, levels[group]);
 		}
 	}
 	
@@ -555,7 +555,7 @@ int main(int argc, char *argv[])
 	FILE *pid_file;
 	struct stat stb;
 	level_t levels[DBG_MAX];
-	int signal;
+	int group;
 	
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_stderr;
@@ -572,9 +572,9 @@ int main(int argc, char *argv[])
 	lookup_uid_gid(private_charon);
 	
 	/* use CTRL loglevel for default */
-	for (signal = 0; signal < DBG_MAX; signal++)
+	for (group = 0; group < DBG_MAX; group++)
 	{
-		levels[signal] = LEVEL_CTRL;
+		levels[group] = LEVEL_CTRL;
 	}
 	
 	/* handle arguments */
@@ -585,16 +585,16 @@ int main(int argc, char *argv[])
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
 			/* TODO: handle "debug-all" */
-			{ "debug-dmn", required_argument, &signal, DBG_DMN },
-			{ "debug-mgr", required_argument, &signal, DBG_MGR },
-			{ "debug-ike", required_argument, &signal, DBG_IKE },
-			{ "debug-chd", required_argument, &signal, DBG_CHD },
-			{ "debug-job", required_argument, &signal, DBG_JOB },
-			{ "debug-cfg", required_argument, &signal, DBG_CFG },
-			{ "debug-knl", required_argument, &signal, DBG_KNL },
-			{ "debug-net", required_argument, &signal, DBG_NET },
-			{ "debug-enc", required_argument, &signal, DBG_ENC },
-			{ "debug-lib", required_argument, &signal, DBG_LIB },
+			{ "debug-dmn", required_argument, &group, DBG_DMN },
+			{ "debug-mgr", required_argument, &group, DBG_MGR },
+			{ "debug-ike", required_argument, &group, DBG_IKE },
+			{ "debug-chd", required_argument, &group, DBG_CHD },
+			{ "debug-job", required_argument, &group, DBG_JOB },
+			{ "debug-cfg", required_argument, &group, DBG_CFG },
+			{ "debug-knl", required_argument, &group, DBG_KNL },
+			{ "debug-net", required_argument, &group, DBG_NET },
+			{ "debug-enc", required_argument, &group, DBG_ENC },
+			{ "debug-lib", required_argument, &group, DBG_LIB },
 			{ 0,0,0,0 }
 		};
 		
@@ -613,8 +613,8 @@ int main(int argc, char *argv[])
 				use_syslog = TRUE;
 				continue;
 			case 0:
-				/* option is in signal */
-				levels[signal] = atoi(optarg);
+				/* option is in group */
+				levels[group] = atoi(optarg);
 				continue;
 			default:
 				usage("");

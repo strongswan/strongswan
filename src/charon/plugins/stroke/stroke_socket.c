@@ -336,9 +336,9 @@ static void stroke_purge(private_stroke_socket_t *this,
 									 CERT_X509_OCSP_RESPONSE);
 }
 
-signal_t get_signal_from_logtype(char *type)
+debug_t get_group_from_name(char *type)
 {
-	if      (strcasecmp(type, "any") == 0) return SIG_ANY;
+	if (strcasecmp(type, "any") == 0) return DBG_ANY;
 	else if (strcasecmp(type, "mgr") == 0) return DBG_MGR;
 	else if (strcasecmp(type, "ike") == 0) return DBG_IKE;
 	else if (strcasecmp(type, "chd") == 0) return DBG_CHD;
@@ -354,29 +354,31 @@ signal_t get_signal_from_logtype(char *type)
 /**
  * set the verbosity debug output
  */
-static void stroke_loglevel(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *out)
+static void stroke_loglevel(private_stroke_socket_t *this,
+							stroke_msg_t *msg, FILE *out)
 {
-	signal_t signal;
+	debug_t group;
 	
 	pop_string(msg, &(msg->loglevel.type));
 	DBG1(DBG_CFG, "received stroke: loglevel %d for %s",
 		 msg->loglevel.level, msg->loglevel.type);
 	
-	signal = get_signal_from_logtype(msg->loglevel.type);
-	if (signal < 0)
+	group = get_group_from_name(msg->loglevel.type);
+	if (group < 0)
 	{
 		fprintf(out, "invalid type (%s)!\n", msg->loglevel.type);
 		return;
 	}
 	
-	charon->outlog->set_level(charon->outlog, signal, msg->loglevel.level);
-	charon->syslog->set_level(charon->syslog, signal, msg->loglevel.level);
+	charon->outlog->set_level(charon->outlog, group, msg->loglevel.level);
+	charon->syslog->set_level(charon->syslog, group, msg->loglevel.level);
 }
 
 /**
  * set various config options
  */
-static void stroke_config(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *out)
+static void stroke_config(private_stroke_socket_t *this,
+						  stroke_msg_t *msg, FILE *out)
 {
 	this->cred->cachecrl(this->cred, msg->config.cachecrl);
 }

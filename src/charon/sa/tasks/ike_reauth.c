@@ -65,7 +65,6 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	
 	/* process delete response first */
 	this->ike_delete->task.process(&this->ike_delete->task, message);
-	SIG_IKE(DOWN_SUCCESS, "IKE_SA deleted");
 
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	

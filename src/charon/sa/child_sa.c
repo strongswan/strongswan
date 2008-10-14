@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006-2008 Tobias Brunner
- * Copyright (C) 2005-2007 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -26,12 +26,13 @@
 
 #include <daemon.h>
 
-ENUM(child_sa_state_names, CHILD_CREATED, CHILD_DELETING,
+ENUM(child_sa_state_names, CHILD_CREATED, CHILD_DESTROYING,
 	"CREATED",
 	"ROUTED",
 	"INSTALLED",
 	"REKEYING",
 	"DELETING",
+	"DESTROYING",
 );
 
 typedef struct sa_policy_t sa_policy_t;
@@ -453,11 +454,12 @@ static void updown(private_child_sa_t *this, bool up)
  */
 static void set_state(private_child_sa_t *this, child_sa_state_t state)
 {
-	this->state = state;
 	if (state == CHILD_INSTALLED)
 	{
 		updown(this, TRUE);
 	}
+	charon->bus->child_state_change(charon->bus, &this->public, state);
+	this->state = state;
 }
 
 /**
@@ -751,7 +753,7 @@ static status_t add_policies(private_child_sa_t *this,
 	/* switch to routed state if no SAD entry set up */
 	if (this->state == CHILD_CREATED)
 	{
-		this->state = CHILD_ROUTED;
+		set_state(this, CHILD_ROUTED);
 	}
 	/* needed to update hosts */
 	this->mode = mode;
@@ -960,6 +962,8 @@ static void destroy(private_child_sa_t *this)
 	{
 		updown(this, FALSE);
 	}
+	
+	set_state(this, CHILD_DESTROYING);
 	
 	/* delete SAs in the kernel, if they are set up */
 	if (this->me.spi)

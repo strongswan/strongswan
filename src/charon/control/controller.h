@@ -29,26 +29,24 @@
  * callback to log things triggered by controller.
  *
  * @param param			echoed parameter supplied when function invoked
- * @param signal		type of signal
+ * @param group			debugging group
  * @param level			verbosity level if log
  * @param ike_sa		associated IKE_SA, if any
  * @param format		printf like format string
  * @param args			list of arguments to use for format
  * @return				FALSE to return from invoked function
  */
-typedef bool(*controller_cb_t)(void* param, signal_t signal, level_t level,
-							   ike_sa_t* ike_sa, void *data,
-							   char* format, va_list args);
+typedef bool(*controller_cb_t)(void* param, debug_t group, level_t level,
+							   ike_sa_t* ike_sa, char* format, va_list args);
 
 /**
  * Empty callback function for controller_t functions.
  *
- * If you wan't to do a syncrhonous call, but don't need a callback, pass
+ * If you want to do a syncrhonous call, but don't need a callback, pass
  * this function to the controllers methods.
  */
-bool controller_cb_empty(void *param, signal_t signal, level_t level,
-						 ike_sa_t *ike_sa, void *data,
-						 char *format, va_list args);
+bool controller_cb_empty(void *param, debug_t group, level_t level,
+						 ike_sa_t *ike_sa, char *format, va_list args);
 
 typedef struct controller_t controller_t;
 

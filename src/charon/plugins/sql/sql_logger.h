@@ -36,7 +36,7 @@ struct sql_logger_t {
 	/**
 	 * Implements bus_listener_t interface
 	 */
-	bus_listener_t listener;
+	listener_t listener;
 	
 	/**
 	 * Destry the backend.

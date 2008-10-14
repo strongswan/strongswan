@@ -49,13 +49,11 @@ struct private_sql_logger_t {
 	bool recursive;
 };
 
-
 /**
- * Implementation of bus_listener_t.signal.
+ * Implementation of bus_listener_t.log.
  */
-static bool signal_(private_sql_logger_t *this, signal_t signal, level_t level,
-					int thread, ike_sa_t* ike_sa, void *data,
-					char *format, va_list args)
+static bool log_(private_sql_logger_t *this, debug_t group, level_t level,
+				 int thread, ike_sa_t* ike_sa, char *format, va_list args)
 {
 	if (this->recursive)
 	{
@@ -111,7 +109,7 @@ static bool signal_(private_sql_logger_t *this, signal_t signal, level_t level,
 						  DB_BLOB, remote_host->get_address(remote_host));
 		this->db->execute(this->db, NULL, "INSERT INTO logs ("
 						  "local_spi, signal, level, msg) VALUES (?, ?, ?, ?)",
-						  DB_BLOB, local_spi, DB_INT, signal, DB_INT, level,
+						  DB_BLOB, local_spi, DB_INT, group, DB_INT, level,
 						  DB_TEXT, buffer);
 	}
 	this->recursive = FALSE;
@@ -134,7 +132,8 @@ sql_logger_t *sql_logger_create(database_t *db)
 {
 	private_sql_logger_t *this = malloc_thing(private_sql_logger_t);
 	
-	this->public.listener.signal = (bool(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,void*,char*,va_list))signal_;
+	memset(&this->public.listener, 0, sizeof(listener_t));
+	this->public.listener.log = (bool(*)(listener_t*,debug_t,level_t,int,ike_sa_t*,char*,va_list))log_;
 	this->public.destroy = (void(*)(sql_logger_t*))destroy;
 	
 	this->db = db;

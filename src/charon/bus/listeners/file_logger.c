@@ -39,20 +39,18 @@ struct private_file_logger_t {
 	FILE *out;
 	
 	/**
-	 * Maximum level to log
+	 * Maximum level to log, for each group
 	 */
 	level_t levels[DBG_MAX];
 };
 
-
 /**
- * Implementation of bus_listener_t.signal.
+ * Implementation of bus_listener_t.log.
  */
-static bool signal_(private_file_logger_t *this, signal_t signal, level_t level,
-					int thread, ike_sa_t* ike_sa, void *data,
-					char *format, va_list args)
+static bool log_(private_file_logger_t *this, debug_t group, level_t level,
+				 int thread, ike_sa_t* ike_sa, char *format, va_list args)
 {
-	if (level <= this->levels[SIG_TYPE(signal)])
+	if (level <= this->levels[group])
 	{
 		char buffer[8192];
 		char *current = buffer, *next;
@@ -68,7 +66,8 @@ static bool signal_(private_file_logger_t *this, signal_t signal, level_t level,
 			{
 				*(next++) = '\0';
 			}
-			fprintf(this->out, "%.2d[%N] %s\n", thread, signal_names, signal, current);
+			fprintf(this->out, "%.2d[%N] %s\n",
+					thread, debug_names, group, current);
 			current = next;
 		}
 	}
@@ -79,20 +78,18 @@ static bool signal_(private_file_logger_t *this, signal_t signal, level_t level,
 /**
  * Implementation of file_logger_t.set_level.
  */
-static void set_level(private_file_logger_t *this, signal_t signal, level_t level)
+static void set_level(private_file_logger_t *this, debug_t group, level_t level)
 {
-	if (signal == SIG_ANY)
+	if (group < DBG_ANY)
 	{
-		int i;
-		for (i = 0; i < DBG_MAX; i++)
-		{
-			this->levels[i] = level;
-		}
+		this->levels[group] = level;
 	}
 	else
 	{
-		
-		this->levels[SIG_TYPE(signal)] = level;
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			this->levels[group] = level;
+		}
 	}
 }
 
@@ -109,16 +106,19 @@ static void destroy(private_file_logger_t *this)
  */
 file_logger_t *file_logger_create(FILE *out)
 {
+	debug_t group;
 	private_file_logger_t *this = malloc_thing(private_file_logger_t);
 	
 	/* public functions */
-	this->public.listener.signal = (bool(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,void*,char*,va_list))signal_;
-	this->public.set_level = (void(*)(file_logger_t*,signal_t,level_t))set_level;
+	memset(&this->public.listener, 0, sizeof(listener_t));
+	this->public.listener.log = (bool(*)(listener_t*,debug_t,level_t,int,ike_sa_t*,char*,va_list))log_;
+	this->public.set_level = (void(*)(file_logger_t*,debug_t,level_t))set_level;
 	this->public.destroy = (void(*)(file_logger_t*))destroy;
 	
 	/* private variables */
 	this->out = out;
-	set_level(this, SIG_ANY, LEVEL_SILENT);
+	set_level(this, DBG_ANY, LEVEL_SILENT);
 	
 	return &this->public;
 }
+

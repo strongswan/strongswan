@@ -30,22 +30,22 @@ typedef struct sys_logger_t sys_logger_t;
 #include <bus/bus.h>
 
 /**
- * Logger for syslog which implements bus_listener_t.
+ * Logger for syslog which implements listener_t.
  */
 struct sys_logger_t {
 	
 	/**
-	 * Implements the bus_listener_t interface.
+	 * Implements the listener_t interface.
 	 */
-	bus_listener_t listener;
+	listener_t listener;
 	
 	/**
-	 * Set the loglevel for a signal type.
+	 * Set the loglevel for a debug group.
 	 *
-	 * @param singal	type of signal
-	 * @param level		max level to log
+	 * @param group		debug group to set
+	 * @param level		max level to log (0..4)
 	 */
-	void (*set_level) (sys_logger_t *this, signal_t signal, level_t level);
+	void (*set_level) (sys_logger_t *this, debug_t group, level_t level);
 	
 	/**
 	 * Destroys a sys_logger_t object.

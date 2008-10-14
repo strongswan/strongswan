@@ -28,22 +28,22 @@ typedef struct file_logger_t file_logger_t;
 #include <bus/bus.h>
 
 /**
- * Logger to files which implements bus_listener_t.
+ * Logger to files which implements listener_t.
  */
 struct file_logger_t {
 	
 	/**
-	 * Implements the bus_listener_t interface.
+	 * Implements the listener_t interface.
 	 */
-	bus_listener_t listener;
+	listener_t listener;
 	
 	/**
-	 * Set the loglevel for a signal type.
+	 * Set the loglevel for a debug group.
 	 *
-	 * @param singal	type of signal
+	 * @param group		debug group to set
 	 * @param level		max level to log (0..4)
 	 */
-	void (*set_level) (file_logger_t *this, signal_t signal, level_t level);
+	void (*set_level) (file_logger_t *this, debug_t group, level_t level);
 	
 	/**
 	 * Destroys a file_logger_t object.

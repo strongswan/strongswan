@@ -34,7 +34,7 @@ G_DEFINE_TYPE(NMStrongswanPlugin, nm_strongswan_plugin, NM_TYPE_VPN_PLUGIN)
  * Private data of NMStrongswanPlugin
  */
 typedef struct {
-	bus_listener_t listener;
+	listener_t listener;
 	ike_sa_t *ike_sa;
 	NMVPNPlugin *plugin;
 	nm_creds_t *creds;
@@ -95,32 +95,54 @@ static void signal_ipv4_config(NMVPNPlugin *plugin, child_sa_t *child_sa)
 }
 
 /**
- * Bus listen function to wait for SA establishing
+ * signal failure to NM, connecting failed
  */
-bool listen_bus(bus_listener_t *listener, signal_t signal, level_t level,
-				int thread, ike_sa_t *ike_sa, void *data, 
-				char* format, va_list args)
+static void signal_failure(NMVPNPlugin *plugin)
+{
+	/* TODO: NM does not handle this failure!? 
+	nm_vpn_plugin_failure(plugin, NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED); */
+	nm_vpn_plugin_set_state(plugin, NM_VPN_SERVICE_STATE_STOPPED);
+}
+
+/**
+ * Implementation of listener_t.ike_state_change
+ */
+static bool ike_state_change(listener_t *listener, ike_sa_t *ike_sa,
+							 ike_sa_state_t state)
 {
 	NMStrongswanPluginPrivate *private = (NMStrongswanPluginPrivate*)listener;
 	
 	if (private->ike_sa == ike_sa)
 	{
-		switch (signal)
+		switch (state)
 		{
-			case CHD_UP_SUCCESS:
-				if (data)
-				{
-					signal_ipv4_config(private->plugin, (child_sa_t*)data);
-					return FALSE;
-				}
-				/* FALL */
-			case IKE_UP_FAILED:
-			case CHD_UP_FAILED:
-				/* TODO: NM does not handle this failure!? 
-				nm_vpn_plugin_failure(private->plugin,
-									  NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED); */
-				nm_vpn_plugin_set_state(private->plugin,
-										NM_VPN_SERVICE_STATE_STOPPED);
+			case IKE_DESTROYING:
+				signal_failure(private->plugin);
+				return FALSE;
+			default:
+				break;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * Implementation of listener_t.child_state_change
+ */
+static bool child_state_change(listener_t *listener, ike_sa_t *ike_sa,
+							   child_sa_t *child_sa, child_sa_state_t state)
+{
+	NMStrongswanPluginPrivate *private = (NMStrongswanPluginPrivate*)listener;
+
+	if (private->ike_sa == ike_sa)
+	{
+		switch (state)
+		{
+			case CHILD_INSTALLED:
+				signal_ipv4_config(private->plugin, child_sa);
+				return FALSE;
+			case CHILD_DESTROYING:
+				signal_failure(private->plugin);
 				return FALSE;
 			default:
 				break;
@@ -435,8 +457,13 @@ static gboolean disconnect(NMVPNPlugin *plugin, GError **err)
  */
 static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 {
-	NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->plugin = NM_VPN_PLUGIN(plugin);
-	NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->listener.signal = listen_bus;
+	NMStrongswanPluginPrivate *private;
+	
+	private = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
+	private->plugin = NM_VPN_PLUGIN(plugin);
+	memset(&private->listener.log, 0, sizeof(listener_t));
+	private->listener.ike_state_change = ike_state_change;
+	private->listener.child_state_change = child_state_change;
 }
 
 /**

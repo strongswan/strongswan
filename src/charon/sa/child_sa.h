@@ -63,6 +63,11 @@ enum child_sa_state_t {
 	 * CHILD_SA in progress of delete
 	 */
 	CHILD_DELETING,
+	
+	/**
+	 * CHILD_SA object gets destroyed
+	 */
+	CHILD_DESTROYING,
 };
 
 /**
