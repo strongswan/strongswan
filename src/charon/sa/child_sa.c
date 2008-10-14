@@ -97,12 +97,12 @@ struct private_child_sa_t {
 	linked_list_t *policies;
 	
 	/**
-	 * Seperate list for local traffic selectors
+	 * Separate list for local traffic selectors
 	 */
 	linked_list_t *my_ts;
 	
 	/**
-	 * Seperate list for remote traffic selectors
+	 * Separate list for remote traffic selectors
 	 */
 	linked_list_t *other_ts;
 	
@@ -137,7 +137,7 @@ struct private_child_sa_t {
 	time_t install_time;
 	
 	/**
-	 * absolute time when rekeying is sceduled
+	 * absolute time when rekeying is scheduled
 	 */
 	time_t rekey_time;
 	
@@ -167,7 +167,7 @@ struct private_child_sa_t {
 	ipsec_mode_t mode;
 	
 	/**
-	 * virtual IP assinged to local host
+	 * virtual IP assigned to local host
 	 */
 	host_t *virtual_ip;
 	
@@ -865,7 +865,7 @@ static status_t update_hosts(private_child_sa_t *this,
 			charon->kernel_interface->del_policy(charon->kernel_interface,
 								policy->other_ts, policy->my_ts, POLICY_FWD);
 		
-			/* check wether we have to update a "dynamic" traffic selector */
+			/* check whether we have to update a "dynamic" traffic selector */
 			if (!me->ip_equals(me, this->me.addr) &&
 				policy->my_ts->is_host(policy->my_ts, this->me.addr))
 			{
@@ -877,7 +877,7 @@ static status_t update_hosts(private_child_sa_t *this,
 				policy->other_ts->set_address(policy->other_ts, other);
 			}
 			
-			/* we reinstall the virtual IP to handle interface romaing
+			/* we reinstall the virtual IP to handle interface roaming
 			 * correctly */
 			if (this->virtual_ip)
 			{
