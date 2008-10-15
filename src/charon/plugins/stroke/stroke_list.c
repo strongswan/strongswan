@@ -126,11 +126,11 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	u_int32_t use_in, use_out, use_fwd;
 	encryption_algorithm_t encr_alg;
 	integrity_algorithm_t int_alg;
-	size_t encr_len, int_len;
+	chunk_t encr_key, int_key;
 	ipsec_mode_t mode;
 	
-	child_sa->get_stats(child_sa, &mode, &encr_alg, &encr_len,
-						&int_alg, &int_len, &rekey, &use_in, &use_out,
+	child_sa->get_stats(child_sa, &mode, &encr_alg, &encr_key,
+						&int_alg, &int_key, &rekey, &use_in, &use_out,
 						&use_fwd);
 	
 	fprintf(out, "%12s{%d}:  %N, %N", 
@@ -160,28 +160,38 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa), 
 					child_sa->get_reqid(child_sa));
 			
-			
 			if (child_sa->get_protocol(child_sa) == PROTO_ESP)
 			{
-				fprintf(out, "%N", encryption_algorithm_names, encr_alg);
-				
-				if (encr_len)
+				switch (encr_alg)
 				{
-					fprintf(out, "-%d", encr_len);
-				}
-				if (int_alg != AUTH_UNDEFINED)
-				{
-					fprintf(out, "/");
+					/* Algorithms with variable key size.
+					 * GCM/CCM keys are actually shorted than their key data. */
+					case ENCR_AES_GCM_ICV8:
+					case ENCR_AES_GCM_ICV12:
+					case ENCR_AES_GCM_ICV16:
+						encr_key.len -= 1;
+						/* FALL */
+					case ENCR_AES_CCM_ICV8:
+					case ENCR_AES_CCM_ICV12:
+					case ENCR_AES_CCM_ICV16:
+						encr_key.len -= 3;
+						/* FALL */
+					case ENCR_AES_CBC:
+						fprintf(out, "%N-%d", encryption_algorithm_names,
+								encr_alg, encr_key.len * 8);
+						break;
+					default:
+						fprintf(out, "%N", encryption_algorithm_names, encr_alg);
+						break;
 				}
 			}
-			
-			if (int_alg != AUTH_UNDEFINED)
+			switch (int_alg)
 			{
-				fprintf(out, "%N", integrity_algorithm_names, int_alg);
-				if (int_len)
-				{
-					fprintf(out, "-%d", int_len);
-				}
+				case AUTH_UNDEFINED:
+					break;
+				default:
+					fprintf(out, "/%N", integrity_algorithm_names, int_alg);
+					break;
 			}
 			fprintf(out, ", rekeying ");
 			

@@ -117,9 +117,9 @@ struct private_child_sa_t {
 	u_int16_t enc_alg;
 	
 	/**
-	 * key size of enc_alg
+	 * Encryption key data
 	 */
-	u_int16_t enc_size;
+	chunk_t enc_key;
 	
 	/**
 	 * integrity protection algorithm used for this SA
@@ -127,9 +127,9 @@ struct private_child_sa_t {
 	u_int16_t int_alg;
 	
 	/**
-	 * key size of int_alg
+	 * integrity key data
 	 */
-	u_int16_t int_size;
+	chunk_t int_key;
 	
 	/**
 	 * time, on which SA was installed
@@ -302,8 +302,8 @@ static child_cfg_t* get_config(private_child_sa_t *this)
  * Implementation of child_sa_t.get_stats.
  */
 static void get_stats(private_child_sa_t *this, ipsec_mode_t *mode,
-					  encryption_algorithm_t *encr_algo, size_t *encr_len,
-					  integrity_algorithm_t *int_algo, size_t *int_len,
+					  encryption_algorithm_t *encr_algo, chunk_t *encr_key,
+					  integrity_algorithm_t *int_algo, chunk_t *int_key,
 					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
 					  u_int32_t *use_fwd)
 {
@@ -335,9 +335,9 @@ static void get_stats(private_child_sa_t *this, ipsec_mode_t *mode,
 
 	*mode = this->mode;
 	*encr_algo = this->enc_alg;
-	*encr_len = this->enc_size;
+	*encr_key = this->enc_key;
 	*int_algo = this->int_alg;
-	*int_len = this->int_size;
+	*int_key = this->int_key;
 	*rekey = this->rekey_time;
 	*use_in = in;
 	*use_out = out;
@@ -585,8 +585,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	u_int32_t spi, cpi, soft, hard;
 	host_t *src, *dst;
 	status_t status;
-	chunk_t enc_key = chunk_empty, int_key = chunk_empty;
 	int add_keymat;
+	u_int16_t enc_size, int_size;
 	
 	this->protocol = proposal->get_protocol(proposal);
 	
@@ -632,52 +632,63 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	
 	/* select encryption algo, derive key */
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
-								&this->enc_alg, &this->enc_size))
+								&this->enc_alg, &enc_size))
 	{
 		DBG2(DBG_CHD, "  using %N for encryption", 
 			 encryption_algorithm_names, this->enc_alg);
 	}
-	if (!this->enc_size)
+	if (this->enc_alg != ENCR_UNDEFINED)
 	{
-		this->enc_size = lookup_keylen(keylen_enc, this->enc_alg);
-	}
-	if (this->enc_size && this->enc_alg != ENCR_UNDEFINED)
-	{
+		if (!enc_size)
+		{
+			enc_size = lookup_keylen(keylen_enc, this->enc_alg);
+		}
+		if (!enc_size)
+		{
+			DBG1(DBG_CHD, "no keylenth defined for %N",
+				 encryption_algorithm_names, this->enc_alg);
+			return FAILED;
+		}
 	 	/* CCM/GCM needs additional keymat */
 		switch (this->enc_alg)
 		{
 			case ENCR_AES_CCM_ICV8:
 			case ENCR_AES_CCM_ICV12:
 			case ENCR_AES_CCM_ICV16:
-				add_keymat = 3;
+				enc_size += 24;
 				break;		
 			case ENCR_AES_GCM_ICV8:
 			case ENCR_AES_GCM_ICV12:
 			case ENCR_AES_GCM_ICV16:
-				add_keymat = 4;
+				enc_size += 32;
 				break;
 			default:
 				add_keymat = 0;
 				break;
 		}
-		prf_plus->allocate_bytes(prf_plus, this->enc_size / 8 + add_keymat,
-								 &enc_key);
+		prf_plus->allocate_bytes(prf_plus, enc_size / 8, &this->enc_key);
 	}
 	
 	/* select integrity algo, derive key */
 	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
-								&this->int_alg, &this->int_size))
+								&this->int_alg, &int_size))
 	{
 		DBG2(DBG_CHD, "  using %N for integrity",
 			 integrity_algorithm_names, this->int_alg);
 	}
-	if (!this->int_size)
+	if (this->int_alg != AUTH_UNDEFINED)
 	{
-		this->int_size = lookup_keylen(keylen_int, this->int_alg);
-	}
-	if (this->int_size && this->int_alg != AUTH_UNDEFINED)
-	{
-		prf_plus->allocate_bytes(prf_plus, this->int_size / 8, &int_key);
+		if (!int_size)
+		{
+			int_size = lookup_keylen(keylen_int, this->int_alg);
+		}
+		if (!enc_size)
+		{
+			DBG1(DBG_CHD, "no keylenth defined for %N",
+				 integrity_algorithm_names, this->int_alg);
+			return FAILED;
+		}
+		prf_plus->allocate_bytes(prf_plus, int_size / 8, &this->int_key);
 	}
 	
 	/* send SA down to the kernel */
@@ -697,11 +708,9 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	hard = this->config->get_lifetime(this->config, FALSE);
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 				src, dst, spi, this->protocol, this->reqid, mine ? soft : 0, hard, 
-				this->enc_alg, enc_key, this->int_alg, int_key,
+				this->enc_alg, this->enc_key, this->int_alg, this->int_key,
 				mode, IPCOMP_NONE, this->encap, mine);
 	
-	chunk_clear(&enc_key);
-	chunk_clear(&int_key);
 	this->install_time = time(NULL);
 	this->rekey_time = this->install_time + soft;
 	return status;
@@ -1107,6 +1116,8 @@ static void destroy(private_child_sa_t *this)
 	}
 	this->policies->destroy(this->policies);
 	
+	chunk_clear(&this->enc_key);
+	chunk_clear(&this->int_key);
 	this->my_ts->destroy(this->my_ts);
 	this->other_ts->destroy(this->other_ts);
 	this->me.addr->destroy(this->me.addr);
@@ -1135,7 +1146,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
 	this->public.get_cpi = (u_int16_t(*)(child_sa_t*, bool))get_cpi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
-	this->public.get_stats = (void(*)(child_sa_t*, ipsec_mode_t*,encryption_algorithm_t*,size_t*,integrity_algorithm_t*,size_t*,u_int32_t*,u_int32_t*,u_int32_t*,u_int32_t*))get_stats;
+	this->public.get_stats = (void(*)(child_sa_t*, ipsec_mode_t*,encryption_algorithm_t*,chunk_t*,integrity_algorithm_t*,chunk_t*,u_int32_t*,u_int32_t*,u_int32_t*,u_int32_t*))get_stats;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))update;
@@ -1169,9 +1180,9 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;
 	this->enc_alg = ENCR_UNDEFINED;
-	this->enc_size = 0;
+	this->enc_key = chunk_empty;
 	this->int_alg = AUTH_UNDEFINED;
-	this->int_size = 0;
+	this->int_key = chunk_empty;
 	this->policies = linked_list_create();
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();
