@@ -35,25 +35,6 @@ ENUM(child_sa_state_names, CHILD_CREATED, CHILD_DESTROYING,
 	"DESTROYING",
 );
 
-typedef struct sa_policy_t sa_policy_t;
-
-/**
- * Struct used to store information for a policy. This
- * is needed since we must provide all this information
- * for deleting a policy...
- */
-struct sa_policy_t {
-	/**
-	 * Traffic selector for us
-	 */
-	traffic_selector_t *my_ts;
-	
-	/**
-	 * Traffic selector for other
-	 */
-	traffic_selector_t *other_ts;
-};
-
 typedef struct private_child_sa_t private_child_sa_t;
 
 /**
@@ -92,11 +73,6 @@ struct private_child_sa_t {
 	protocol_id_t protocol;
 	
 	/**
-	 * List containing sa_policy_t objects 
-	 */
-	linked_list_t *policies;
-	
-	/**
 	 * Separate list for local traffic selectors
 	 */
 	linked_list_t *my_ts;
@@ -117,9 +93,9 @@ struct private_child_sa_t {
 	u_int16_t enc_alg;
 	
 	/**
-	 * Encryption key data
+	 * Encryption key data, inbound and outbound
 	 */
-	chunk_t enc_key;
+	chunk_t enc_key[2];
 	
 	/**
 	 * integrity protection algorithm used for this SA
@@ -127,9 +103,9 @@ struct private_child_sa_t {
 	u_int16_t int_alg;
 	
 	/**
-	 * integrity key data
+	 * integrity key data, inbound and outbound
 	 */
-	chunk_t int_key;
+	chunk_t int_key[2];
 	
 	/**
 	 * time, on which SA was installed
@@ -298,50 +274,133 @@ static child_cfg_t* get_config(private_child_sa_t *this)
 	return this->config;
 }
 
+typedef struct policy_enumerator_t policy_enumerator_t;
+
+/**
+ * Private policy enumerator
+ */
+struct policy_enumerator_t {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** enumerator over own TS */
+	enumerator_t *mine;
+	/** enumerator over others TS */
+	enumerator_t *other;
+	/** list of others TS, to recreate enumerator */
+	linked_list_t *list;
+};
+
+/**
+ * enumerator function of create_policy_enumerator()
+ */
+static bool policy_enumerate(policy_enumerator_t *this,
+				 traffic_selector_t **my_out, traffic_selector_t **other_out)
+{
+	traffic_selector_t *my_ts, *other_ts;
+
+	while (this->mine->enumerate(this->mine, &my_ts))
+	{
+		while (TRUE)
+		{
+			if (!this->other->enumerate(this->other, &other_ts))
+			{	/* end of others list, restart with new of mine */
+				this->other->destroy(this->other);
+				this->other = this->list->create_enumerator(this->list);
+				break;
+			}
+			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
+			{	/* family mismatch */
+				continue;
+			}
+			if (my_ts->get_protocol(my_ts) &&
+				other_ts->get_protocol(other_ts) &&
+				my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts))
+			{	/* protocol mismatch */
+				continue;
+			}
+			*my_out = my_ts;
+			*other_out = other_ts;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * destroy function of create_policy_enumerator()
+ */
+static void policy_destroy(policy_enumerator_t *this)
+{
+	this->mine->destroy(this->mine);
+	this->other->destroy(this->other);
+	free(this);
+}
+
+/**
+ * Implementation of child_sa_t.create_policy_enumerator
+ */
+static enumerator_t* create_policy_enumerator(private_child_sa_t *this)
+{
+	policy_enumerator_t *e = malloc_thing(policy_enumerator_t);
+	
+	e->public.enumerate = (void*)policy_enumerate;
+	e->public.destroy = (void*)policy_destroy;
+	e->mine = this->my_ts->create_enumerator(this->my_ts);
+	e->other = this->other_ts->create_enumerator(this->other_ts);
+	e->list = this->other_ts;
+	
+	return &e->public;
+}
+
 /**
  * Implementation of child_sa_t.get_stats.
  */
 static void get_stats(private_child_sa_t *this, ipsec_mode_t *mode,
-					  encryption_algorithm_t *encr_algo, chunk_t *encr_key,
-					  integrity_algorithm_t *int_algo, chunk_t *int_key,
+					  encryption_algorithm_t *encr_algo,
+					  chunk_t *encr_key_in, chunk_t *encr_key_out,
+					  integrity_algorithm_t *int_algo,
+					  chunk_t *int_key_in, chunk_t *int_key_out,
 					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
 					  u_int32_t *use_fwd)
 {
-	sa_policy_t *policy;
-	iterator_t *iterator;
+	traffic_selector_t *my_ts, *other_ts;
+	enumerator_t *enumerator;
 	u_int32_t in = 0, out = 0, fwd = 0, time;
 	
-	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->iterate(iterator, (void**)&policy))
+	enumerator = create_policy_enumerator(this);
+	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
 
 		if (charon->kernel_interface->query_policy(charon->kernel_interface,
-				policy->other_ts, policy->my_ts, POLICY_IN, &time) == SUCCESS)
+								other_ts, my_ts, POLICY_IN, &time) == SUCCESS)
 		{
 			in = max(in, time);
 		}
 		if (charon->kernel_interface->query_policy(charon->kernel_interface,
-				policy->my_ts, policy->other_ts, POLICY_OUT, &time) == SUCCESS)
+								my_ts, other_ts, POLICY_OUT, &time) == SUCCESS)
 		{
 			out = max(out, time);
 		}
 		if (charon->kernel_interface->query_policy(charon->kernel_interface,
-				policy->other_ts, policy->my_ts, POLICY_FWD, &time) == SUCCESS)
+								other_ts, my_ts, POLICY_FWD, &time) == SUCCESS)
 		{
 			fwd = max(fwd, time);
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
-	*mode = this->mode;
-	*encr_algo = this->enc_alg;
-	*encr_key = this->enc_key;
-	*int_algo = this->int_alg;
-	*int_key = this->int_key;
-	*rekey = this->rekey_time;
-	*use_in = in;
-	*use_out = out;
-	*use_fwd = fwd;
+#define SET_PTR_IF(x, y) if (x) { *x = y; }
+	SET_PTR_IF(mode, this->mode);
+	SET_PTR_IF(encr_algo, this->enc_alg);
+	SET_PTR_IF(encr_key_in, this->enc_key[0]);
+	SET_PTR_IF(encr_key_out, this->enc_key[1]);
+	SET_PTR_IF(int_algo, this->int_alg);
+	SET_PTR_IF(int_key_in, this->int_key[0]);
+	SET_PTR_IF(int_key_out, this->int_key[1]);
+	SET_PTR_IF(rekey, this->rekey_time);
+	SET_PTR_IF(use_in, in);
+	SET_PTR_IF(use_out, out);
+	SET_PTR_IF(use_fwd, fwd);
 }
 
 /**
@@ -349,8 +408,8 @@ static void get_stats(private_child_sa_t *this, ipsec_mode_t *mode,
  */
 static void updown(private_child_sa_t *this, bool up)
 {
-	sa_policy_t *policy;
-	iterator_t *iterator;
+	traffic_selector_t *my_ts, *other_ts;
+	enumerator_t *enumerator;
 	char *script;
 	
 	script = this->config->get_updown(this->config);
@@ -360,8 +419,8 @@ static void updown(private_child_sa_t *this, bool up)
 		return;
 	}
 	
-	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->iterate(iterator, (void**)&policy))
+	enumerator = create_policy_enumerator(this);
+	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
 		char command[1024];
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
@@ -369,7 +428,7 @@ static void updown(private_child_sa_t *this, bool up)
 		FILE *shell;
 
 		/* get subnet/bits from string */
-		asprintf(&my_client, "%R", policy->my_ts);
+		asprintf(&my_client, "%R", my_ts);
 		pos = strchr(my_client, '/');
 		*pos = '\0';
 		my_client_mask = pos + 1;
@@ -378,7 +437,7 @@ static void updown(private_child_sa_t *this, bool up)
 		{
 			*pos = '\0';
 		}
-		asprintf(&other_client, "%R", policy->other_ts);
+		asprintf(&other_client, "%R", other_ts);
 		pos = strchr(other_client, '/');
 		*pos = '\0';
 		other_client_mask = pos + 1;
@@ -435,8 +494,7 @@ static void updown(private_child_sa_t *this, bool up)
 				"%s"
 				"%s",
 				 up ? "up" : "down",
-				 policy->my_ts->is_host(policy->my_ts,
-							this->me.addr) ? "-host" : "-client",
+				 my_ts->is_host(my_ts, this->me.addr) ? "-host" : "-client",
 				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-v6",
 				 this->config->get_name(this->config),
 				 this->iface ? this->iface : "unknown",
@@ -445,14 +503,14 @@ static void updown(private_child_sa_t *this, bool up)
 				 this->me.id,
 				 my_client, my_client_mask,
 				 my_client, my_client_mask,
-				 policy->my_ts->get_from_port(policy->my_ts),
-				 policy->my_ts->get_protocol(policy->my_ts),
+				 my_ts->get_from_port(my_ts),
+				 my_ts->get_protocol(my_ts),
 				 this->other.addr,
 				 this->other.id,
 				 other_client, other_client_mask,
 				 other_client, other_client_mask,
-				 policy->other_ts->get_from_port(policy->other_ts),
-				 policy->other_ts->get_protocol(policy->other_ts),
+				 other_ts->get_from_port(other_ts),
+				 other_ts->get_protocol(other_ts),
 				 virtual_ip,
 				 this->config->get_hostaccess(this->config) ?
 				 	"PLUTO_HOST_ACCESS='1' " : "",
@@ -498,7 +556,7 @@ static void updown(private_child_sa_t *this, bool up)
 		}
 		pclose(shell);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -666,7 +724,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 				add_keymat = 0;
 				break;
 		}
-		prf_plus->allocate_bytes(prf_plus, enc_size / 8, &this->enc_key);
+		prf_plus->allocate_bytes(prf_plus, enc_size / 8, &this->enc_key[!!mine]);
 	}
 	
 	/* select integrity algo, derive key */
@@ -688,7 +746,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 				 integrity_algorithm_names, this->int_alg);
 			return FAILED;
 		}
-		prf_plus->allocate_bytes(prf_plus, int_size / 8, &this->int_key);
+		prf_plus->allocate_bytes(prf_plus, int_size / 8, &this->int_key[!!mine]);
 	}
 	
 	/* send SA down to the kernel */
@@ -706,9 +764,10 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	
 	soft = this->config->get_lifetime(this->config, TRUE);
 	hard = this->config->get_lifetime(this->config, FALSE);
-	status = charon->kernel_interface->add_sa(charon->kernel_interface,
-				src, dst, spi, this->protocol, this->reqid, mine ? soft : 0, hard, 
-				this->enc_alg, this->enc_key, this->int_alg, this->int_key,
+	status = charon->kernel_interface->add_sa(charon->kernel_interface, src, dst,
+				spi, this->protocol, this->reqid, mine ? soft : 0, hard, 
+				this->enc_alg, this->enc_key[!!mine],
+				this->int_alg, this->int_key[!!mine],
 				mode, IPCOMP_NONE, this->encap, mine);
 	
 	this->install_time = time(NULL);
@@ -777,85 +836,69 @@ static status_t add_policies(private_child_sa_t *this,
 					linked_list_t *my_ts_list, linked_list_t *other_ts_list,
 					ipsec_mode_t mode, protocol_id_t proto)
 {
-	iterator_t *my_iter, *other_iter;
+	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
-	/* use low prio for ROUTED policies */
-	bool high_prio = (this->state != CHILD_CREATED);
+	status_t status = SUCCESS;
+	bool high_prio = TRUE;
 	
+	if (this->state == CHILD_CREATED)
+	{	/* use low prio for ROUTED policies */
+		high_prio = FALSE;
+	}
 	if (this->protocol == PROTO_NONE)
 	{	/* update if not set yet */
 		this->protocol = proto;
 	}
 	
-	/* iterate over both lists */
-	my_iter = my_ts_list->create_iterator(my_ts_list, TRUE);
-	other_iter = other_ts_list->create_iterator(other_ts_list, TRUE);
-	while (my_iter->iterate(my_iter, (void**)&my_ts))
+	/* apply traffic selectors */
+	enumerator = my_ts_list->create_enumerator(my_ts_list);
+	while (enumerator->enumerate(enumerator, &my_ts))
 	{
-		other_iter->reset(other_iter);
-		while (other_iter->iterate(other_iter, (void**)&other_ts))
+		this->my_ts->insert_last(this->my_ts, my_ts->clone(my_ts));
+	}
+	enumerator->destroy(enumerator);
+	enumerator = other_ts_list->create_enumerator(other_ts_list);
+	while (enumerator->enumerate(enumerator, &other_ts))
+	{
+		this->other_ts->insert_last(this->other_ts, other_ts->clone(other_ts));
+	}
+	enumerator->destroy(enumerator);
+	
+	/* enumerate pairs of traffic selectors */
+	enumerator = create_policy_enumerator(this);
+	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+	{
+		/* install 3 policies: out, in and forward */
+		status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+				this->me.addr, this->other.addr, my_ts, other_ts, POLICY_OUT,
+				this->protocol, this->reqid, high_prio, mode, this->ipcomp);
+		
+		status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+				this->other.addr, this->me.addr, other_ts, my_ts, POLICY_IN,
+				this->protocol, this->reqid, high_prio, mode, this->ipcomp);
+		
+		status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+				this->other.addr, this->me.addr, other_ts, my_ts, POLICY_FWD,
+				this->protocol, this->reqid, high_prio, mode, this->ipcomp);
+		
+		if (status != SUCCESS)
 		{
-			/* set up policies for every entry in my_ts_list to every entry in other_ts_list */
-			status_t status;
-			sa_policy_t *policy;
-			
-			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
-			{
-				DBG2(DBG_CHD,
-					 "CHILD_SA policy uses two different IP families - ignored");
-				continue;
-			}
-			
-			/* only set up policies if protocol matches, or if one is zero (any) */
-			if (my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts) &&
-				my_ts->get_protocol(my_ts) && other_ts->get_protocol(other_ts))
-			{
-				DBG2(DBG_CHD,
-					 "CHILD_SA policy uses two different protocols - ignored");
-				continue;
-			}
-			
-			/* install 3 policies: out, in and forward */
-			status = charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->me.addr, this->other.addr, my_ts, other_ts, POLICY_OUT,
-					this->protocol, this->reqid, high_prio, mode, this->ipcomp);
-			
-			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->other.addr, this->me.addr, other_ts, my_ts, POLICY_IN,
-					this->protocol, this->reqid, high_prio, mode, this->ipcomp);
-			
-			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->other.addr, this->me.addr, other_ts, my_ts, POLICY_FWD,
-					this->protocol, this->reqid, high_prio, mode, this->ipcomp);
-			
-			if (status != SUCCESS)
-			{
-				my_iter->destroy(my_iter);
-				other_iter->destroy(other_iter);
-				return status;
-			}
-			
-			/* store policy to delete/update them later */
-			policy = malloc_thing(sa_policy_t);
-			policy->my_ts = my_ts->clone(my_ts);
-			policy->other_ts = other_ts->clone(other_ts);
-			this->policies->insert_last(this->policies, policy);
-			/* add to separate list to query them via get_*_traffic_selectors() */
-			this->my_ts->insert_last(this->my_ts, policy->my_ts);
-			this->other_ts->insert_last(this->other_ts, policy->other_ts);
+			break;
 		}
 	}
-	my_iter->destroy(my_iter);
-	other_iter->destroy(other_iter);
+	enumerator->destroy(enumerator);
 	
-	/* switch to routed state if no SAD entry set up */
-	if (this->state == CHILD_CREATED)
+	if (status == SUCCESS)
 	{
-		set_state(this, CHILD_ROUTED);
+		/* switch to routed state if no SAD entry set up */
+		if (this->state == CHILD_CREATED)
+		{
+			set_state(this, CHILD_ROUTED);
+		}
+		/* needed to update hosts */
+		this->mode = mode;
 	}
-	/* needed to update hosts */
-	this->mode = mode;
-	return SUCCESS;
+	return status;
 }
 
 /**
@@ -873,40 +916,38 @@ static linked_list_t *get_traffic_selectors(private_child_sa_t *this, bool local
 /**
  * Implementation of child_sa_t.get_use_time
  */
-static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use_time)
+static status_t get_use_time(private_child_sa_t *this,
+							 bool inbound, time_t *use_time)
 {
-	iterator_t *iterator;
-	sa_policy_t *policy;
+	enumerator_t *enumerator;
+	traffic_selector_t *my_ts, *other_ts;
 	status_t status = FAILED;
 	
 	*use_time = UNDEFINED_TIME;
 
-	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->iterate(iterator, (void**)&policy))
+	enumerator = create_policy_enumerator(this);
+	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
 		if (inbound) 
 		{
 			time_t in = UNDEFINED_TIME, fwd = UNDEFINED_TIME;
 			
 			status = charon->kernel_interface->query_policy(
-									charon->kernel_interface,
-									policy->other_ts, policy->my_ts,
+									charon->kernel_interface, other_ts, my_ts,
 									POLICY_IN, (u_int32_t*)&in);
 			status |= charon->kernel_interface->query_policy(
-									charon->kernel_interface,
-									policy->other_ts, policy->my_ts,
+									charon->kernel_interface, other_ts, my_ts,
 									POLICY_FWD, (u_int32_t*)&fwd);
 			*use_time = max(in, fwd);
 		}
 		else
 		{
 			status = charon->kernel_interface->query_policy(
-									charon->kernel_interface,
-									policy->my_ts, policy->other_ts, 
+									charon->kernel_interface, my_ts, other_ts,
 									POLICY_OUT, (u_int32_t*)use_time);
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return status;
 }
 
@@ -948,31 +989,31 @@ static status_t update_hosts(private_child_sa_t *this,
 	if (!me->ip_equals(me, this->me.addr) ||
 		!other->ip_equals(other, this->other.addr))
 	{
-		iterator_t *iterator;
-		sa_policy_t *policy;
+		enumerator_t *enumerator;
+		traffic_selector_t *my_ts, *other_ts;
 		
 		/* always use high priorities, as hosts getting updated are INSTALLED */
-		iterator = this->policies->create_iterator(this->policies, TRUE);
-		while (iterator->iterate(iterator, (void**)&policy))
+		enumerator = create_policy_enumerator(this);
+		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			/* remove old policies first */
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-								policy->my_ts, policy->other_ts, POLICY_OUT);
+												 my_ts, other_ts, POLICY_OUT);
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-								policy->other_ts, policy->my_ts,  POLICY_IN);
+												 other_ts, my_ts,  POLICY_IN);
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-								policy->other_ts, policy->my_ts, POLICY_FWD);
+												 other_ts, my_ts, POLICY_FWD);
 		
 			/* check whether we have to update a "dynamic" traffic selector */
 			if (!me->ip_equals(me, this->me.addr) &&
-				policy->my_ts->is_host(policy->my_ts, this->me.addr))
+				my_ts->is_host(my_ts, this->me.addr))
 			{
-				policy->my_ts->set_address(policy->my_ts, me);
+				my_ts->set_address(my_ts, me);
 			}
 			if (!other->ip_equals(other, this->other.addr) &&
-				policy->other_ts->is_host(policy->other_ts, this->other.addr))
+				other_ts->is_host(other_ts, this->other.addr))
 			{
-				policy->other_ts->set_address(policy->other_ts, other);
+				other_ts->set_address(other_ts, other);
 			}
 			
 			/* we reinstall the virtual IP to handle interface roaming
@@ -987,16 +1028,16 @@ static status_t update_hosts(private_child_sa_t *this,
 		
 			/* reinstall updated policies */
 			charon->kernel_interface->add_policy(charon->kernel_interface,
-					me, other, policy->my_ts, policy->other_ts, POLICY_OUT,
-					this->protocol,	this->reqid, TRUE, this->mode, this->ipcomp);
+						me, other, my_ts, other_ts, POLICY_OUT, this->protocol,
+						this->reqid, TRUE, this->mode, this->ipcomp);
 			charon->kernel_interface->add_policy(charon->kernel_interface, 
-					other, me, policy->other_ts, policy->my_ts, POLICY_IN,
-					this->protocol, this->reqid, TRUE, this->mode, this->ipcomp);
+						other, me, other_ts, my_ts, POLICY_IN, this->protocol,
+						this->reqid, TRUE, this->mode, this->ipcomp);
 			charon->kernel_interface->add_policy(charon->kernel_interface,
-					other, me, policy->other_ts, policy->my_ts, POLICY_FWD,
-					this->protocol, this->reqid, TRUE, this->mode, this->ipcomp);
+						other, me, other_ts, my_ts, POLICY_FWD, this->protocol,
+						this->reqid, TRUE, this->mode, this->ipcomp);
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	}
 
 	/* apply hosts */
@@ -1054,7 +1095,8 @@ static u_int16_t allocate_cpi(private_child_sa_t *this)
  */
 static void destroy(private_child_sa_t *this)
 {
-	sa_policy_t *policy;
+	enumerator_t *enumerator;
+	traffic_selector_t *my_ts, *other_ts;
 	
 	if (this->state == CHILD_DELETING || this->state == CHILD_INSTALLED)
 	{
@@ -1067,59 +1109,53 @@ static void destroy(private_child_sa_t *this)
 	if (this->me.spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-										 this->me.addr, this->me.spi, this->protocol);
+					this->me.addr, this->me.spi, this->protocol);
 	}
 	if (this->alloc_esp_spi && this->alloc_esp_spi != this->me.spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-										 this->me.addr, this->alloc_esp_spi, PROTO_ESP);
+					this->me.addr, this->alloc_esp_spi, PROTO_ESP);
 	}
 	if (this->alloc_ah_spi && this->alloc_ah_spi != this->me.spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-										 this->me.addr, this->alloc_ah_spi, PROTO_AH);
+					this->me.addr, this->alloc_ah_spi, PROTO_AH);
 	}
 	if (this->other.spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-										 this->other.addr, this->other.spi, this->protocol);
+					this->other.addr, this->other.spi, this->protocol);
 	}
 	if (this->me.cpi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-							this->me.addr, htonl(ntohs(this->me.cpi)), IPPROTO_COMP);
+					this->me.addr, htonl(ntohs(this->me.cpi)), IPPROTO_COMP);
 	}
 	if (this->other.cpi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-							this->other.addr, htonl(ntohs(this->other.cpi)), IPPROTO_COMP);
+					this->other.addr, htonl(ntohs(this->other.cpi)), IPPROTO_COMP);
 	}
 	
 	/* delete all policies in the kernel */
-	while (this->policies->remove_last(this->policies, (void**)&policy) == SUCCESS)
+	enumerator = create_policy_enumerator(this);
+	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
-		/* let rekeyed policies, as they are used by another child_sa */
 		charon->kernel_interface->del_policy(charon->kernel_interface,
-											 policy->my_ts, policy->other_ts,
-											 POLICY_OUT);
-		
+											 my_ts, other_ts, POLICY_OUT);
 		charon->kernel_interface->del_policy(charon->kernel_interface,
-											 policy->other_ts, policy->my_ts,
-											 POLICY_IN);
-		
+											 other_ts, my_ts, POLICY_IN);
 		charon->kernel_interface->del_policy(charon->kernel_interface,
-											 policy->other_ts, policy->my_ts,
-											 POLICY_FWD);
-		policy->my_ts->destroy(policy->my_ts);
-		policy->other_ts->destroy(policy->other_ts);
-		free(policy);
+											 other_ts, my_ts, POLICY_FWD);
 	}
-	this->policies->destroy(this->policies);
+	enumerator->destroy(enumerator);
 	
-	chunk_clear(&this->enc_key);
-	chunk_clear(&this->int_key);
-	this->my_ts->destroy(this->my_ts);
-	this->other_ts->destroy(this->other_ts);
+	chunk_clear(&this->enc_key[0]);
+	chunk_clear(&this->enc_key[1]);
+	chunk_clear(&this->int_key[0]);
+	chunk_clear(&this->int_key[1]);
+	this->my_ts->destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
+	this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
 	this->me.addr->destroy(this->me.addr);
 	this->other.addr->destroy(this->other.addr);
 	this->me.id->destroy(this->me.id);
@@ -1146,13 +1182,14 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
 	this->public.get_cpi = (u_int16_t(*)(child_sa_t*, bool))get_cpi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
-	this->public.get_stats = (void(*)(child_sa_t*, ipsec_mode_t*,encryption_algorithm_t*,chunk_t*,integrity_algorithm_t*,chunk_t*,u_int32_t*,u_int32_t*,u_int32_t*,u_int32_t*))get_stats;
+	this->public.get_stats = (void(*)(child_sa_t*, ipsec_mode_t*,encryption_algorithm_t*,chunk_t*,chunk_t*,integrity_algorithm_t*,chunk_t*,chunk_t*,u_int32_t*,u_int32_t*,u_int32_t*,u_int32_t*))get_stats;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))update;
 	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,bool))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,ipsec_mode_t,protocol_id_t))add_policies;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
+	this->public.create_policy_enumerator = (enumerator_t*(*)(child_sa_t*))create_policy_enumerator;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
@@ -1180,10 +1217,9 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;
 	this->enc_alg = ENCR_UNDEFINED;
-	this->enc_key = chunk_empty;
+	this->enc_key[0] = this->enc_key[1] = chunk_empty;
 	this->int_alg = AUTH_UNDEFINED;
-	this->int_key = chunk_empty;
-	this->policies = linked_list_create();
+	this->int_key[0] = this->int_key[1] = chunk_empty;
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();
 	this->protocol = PROTO_NONE;

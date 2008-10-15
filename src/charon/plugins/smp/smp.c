@@ -181,19 +181,13 @@ static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool loca
  */
 static void write_child(xmlTextWriterPtr writer, child_sa_t *child)
 {
-	ipsec_mode_t mode;
-	encryption_algorithm_t encr;
-	integrity_algorithm_t int_algo;
-	chunk_t encr_key, int_key;
-	u_int32_t rekey, use_in, use_out, use_fwd;
 	child_cfg_t *config;
 	
 	config = child->get_config(child);
-	child->get_stats(child, &mode, &encr, &encr_key, &int_algo, &int_key,
-					 &rekey, &use_in, &use_out, &use_fwd);
 
 	xmlTextWriterStartElement(writer, "childsa");
-	xmlTextWriterWriteFormatElement(writer, "reqid", "%d", child->get_reqid(child));
+	xmlTextWriterWriteFormatElement(writer, "reqid", "%d",
+									child->get_reqid(child));
 	xmlTextWriterWriteFormatElement(writer, "childconfig", "%s", 
 									config->get_name(config));
 	xmlTextWriterStartElement(writer, "local");

@@ -129,9 +129,9 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	chunk_t encr_key, int_key;
 	ipsec_mode_t mode;
 	
-	child_sa->get_stats(child_sa, &mode, &encr_alg, &encr_key,
-						&int_alg, &int_key, &rekey, &use_in, &use_out,
-						&use_fwd);
+	child_sa->get_stats(child_sa, &mode,
+						&encr_alg, &encr_key, NULL, &int_alg, &int_key, NULL,
+						&rekey, &use_in, &use_out, &use_fwd);
 	
 	fprintf(out, "%12s{%d}:  %N, %N", 
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),

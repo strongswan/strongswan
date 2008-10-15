@@ -156,8 +156,10 @@ struct child_sa_t {
 	 * @param use_fwd	time when last traffic was getting forwarded
 	 */
 	void (*get_stats)(child_sa_t *this, ipsec_mode_t *mode,
-					  encryption_algorithm_t *encr, chunk_t *encr_key,
-					  integrity_algorithm_t *int_algo, chunk_t *int_key,
+					  encryption_algorithm_t *encr,
+					  chunk_t *encr_key_in, chunk_t *encr_key_out,
+					  integrity_algorithm_t *int_algo,
+					  chunk_t *int_key_in, chunk_t *int_key_out,
 					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
 					  u_int32_t *use_fwd);
 	
@@ -234,6 +236,13 @@ struct child_sa_t {
 	 * @return			list of traffic selectors
 	 */	
 	linked_list_t* (*get_traffic_selectors) (child_sa_t *this, bool local);
+	
+	/**
+	 * Create an enumerator over installed policies.
+	 *
+	 * @return			enumerator over pairs of traffic selectors.
+	 */
+	enumerator_t* (*create_policy_enumerator)(child_sa_t *this);
 	
 	/**
 	 * Get the time of this child_sa_t's last use (i.e. last use of any of its policies)
