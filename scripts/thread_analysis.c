@@ -33,10 +33,10 @@ enum state_t {
 	STATE_ERROR = 5
 };
 
-typedef enum mode_t mode_t;
+typedef enum print_t print_t;
 
 enum print_t {
-    MODE_ANY	= 0,
+	MODE_ANY	= 0,
 	MODE_ADD	= 1,
 	MODE_DEL	= 2
 };
