@@ -142,7 +142,7 @@ struct guest_t {
 	bool (*load_template)(guest_t *this, char *parent);
 	
 	/**
-	 * Execute a command in the guest.
+	 * Execute a command on the guests mconsole.
 	 *
 	 * @param cb		callback to call for each read block
 	 * @param data		data to pass to callback
@@ -154,20 +154,22 @@ struct guest_t {
 				char *cmd, ...);
 	
 	/**
-	 * Execute a command in the guest and return the output by lines or as combined
-	 * string.
+	 * Execute a command on the guests mconsole, with output formatter.
 	 * 
-	 * @note This function does not work with binary output (i.e. containing 0 bytes).
+	 * If lines is TRUE, callback is invoked for each output line. Otherwise
+	 * the full result is returned in one callback invocation.
+	 * 
+	 * @note This function does not work with binary output.
 	 * 
 	 * @param cb		callback to call for each line or for the complete output
-	 * @param lines		TRUE if the callback should be called for each line (instead of for the combined output)
+	 * @param lines		TRUE if the callback should be called for each line
 	 * @param data		data to pass to callback
 	 * @param cmd		command to execute
 	 * @param ...		printf style argument list for cmd
 	 * @return			return value
 	 */
 	int (*exec_str)(guest_t *this, void(*cb)(void*,char*), bool lines,
-				void *data, char *cmd, ...);
+					void *data, char *cmd, ...);
 	
 	/**
 	 * @brief Called whenever a SIGCHILD for the guests PID is received.

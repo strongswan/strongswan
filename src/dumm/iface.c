@@ -104,8 +104,8 @@ static char* get_hostif(private_iface_t *this)
  */
 static bool add_address(private_iface_t *this, host_t *addr)
 {
-	return (this->guest->exec(this->guest, NULL, NULL, "ip addr add %H dev %s",
-						  addr, this->guestif) == 0);
+	return (this->guest->exec(this->guest, NULL, NULL, 
+				  "exec ip addr add %H dev %s", addr, this->guestif) == 0);
 }
 
 /**
@@ -136,7 +136,7 @@ static enumerator_t* create_address_enumerator(private_iface_t *this)
 	linked_list_t *addresses = linked_list_create();
 	this->guest->exec_str(this->guest, (void(*)(void*,char*))compile_address_list,
 			TRUE, addresses,
-			"ip addr list dev %s scope global | "
+			"exec ip addr list dev %s scope global | "
 			"grep '^ \\+\\(inet6\\? \\)' | "
 			"awk -F '( +|/)' '{ print $3 }'", this->guestif);
 	return enumerator_create_cleaner(addresses->create_enumerator(addresses),
@@ -149,7 +149,7 @@ static enumerator_t* create_address_enumerator(private_iface_t *this)
 static bool delete_address(private_iface_t *this, host_t *addr)
 {
 	return (this->guest->exec(this->guest, NULL, NULL,
-					"ip addr del %H dev %s", addr, this->guestif) == 0);
+					"exec ip addr del %H dev %s", addr, this->guestif) == 0);
 }
 
 /**
@@ -160,12 +160,12 @@ static void set_bridge(private_iface_t *this, bridge_t *bridge)
 	if (this->bridge == NULL && bridge)
 	{
 		this->guest->exec(this->guest, NULL, NULL,
-						  "ip link set %s up", this->guestif);
+						  "exec ip link set %s up", this->guestif);
 	}
 	else if (this->bridge && bridge == NULL)
 	{
 		this->guest->exec(this->guest, NULL, NULL,
-						  "ip link set %s down", this->guestif);
+						  "exec ip link set %s down", this->guestif);
 	}
 	this->bridge = bridge;
 }

@@ -43,7 +43,7 @@ struct mconsole_t {
 	bool (*del_iface)(mconsole_t *this, char *guest);
 	
 	/**
-	 * Execute a command in the UML host.
+	 * Execute a command on the mconsole.
 	 *
 	 * @param cb			callback function to invoke for each line
 	 * @param data			data to pass to callback

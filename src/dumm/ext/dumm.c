@@ -207,6 +207,22 @@ static VALUE guest_exec(VALUE self, VALUE cmd)
 	block = rb_block_given_p();
 	Data_Get_Struct(self, guest_t, guest);
 	if ((ret = guest->exec_str(guest, block ? (void*)exec_cb : NULL, TRUE, NULL,
+					"exec %s", StringValuePtr(cmd))) != 0)
+	{
+		rb_raise(rb_eRuntimeError, "executing command failed (%d)", ret);
+	}
+	return self;
+}
+
+static VALUE guest_mconsole(VALUE self, VALUE cmd)
+{
+	guest_t *guest;
+	bool block;
+	int ret;
+	
+	block = rb_block_given_p();
+	Data_Get_Struct(self, guest_t, guest);
+	if ((ret = guest->exec_str(guest, block ? (void*)exec_cb : NULL, TRUE, NULL,
 					"%s", StringValuePtr(cmd))) != 0)
 	{
 		rb_raise(rb_eRuntimeError, "executing command failed (%d)", ret);
@@ -310,6 +326,7 @@ static void guest_init()
 	rb_define_method(rbc_guest, "stop", guest_stop, 0);
 	rb_define_method(rbc_guest, "running?", guest_running, 0);
 	rb_define_method(rbc_guest, "exec", guest_exec, 1);
+	rb_define_method(rbc_guest, "mconsole", guest_mconsole, 1);
 	rb_define_method(rbc_guest, "add", guest_add_iface, 1);
 	rb_define_method(rbc_guest, "[]", guest_get_iface, 1);
 	rb_define_method(rbc_guest, "each", guest_each_iface, -1);
