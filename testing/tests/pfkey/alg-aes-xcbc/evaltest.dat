@@ -1,0 +1,9 @@
+moon::ipsec statusall::rw.*INSTALLED::YES
+carol::ipsec statusall::home.*INSTALLED::YES
+moon::ipsec statusall::rw.*IKE proposal.*AES_CBC-256/AES_XCBC_96/PRF_AES128_CBC/MODP_2048_BIT::YES
+carol::ipsec statusall::home.*IKE proposal.*AES_CBC-256/AES_XCBC_96/PRF_AES128_CBC/MODP_2048_BIT::YES
+moon::ipsec statusall::rw.*AES_CBC-256/AES_XCBC_96-128,::YES
+carol::ipsec statusall::home.*AES_CBC-256/AES_XCBC_96-128,::YES
+moon::ip xfrm state::auth xcbc(aes)::YES
+carol::ip xfrm state::auth xcbc(aes)::YES
+carol::ping -c 1 -s 120 -p deadbeef 10.1.0.10::128 bytes from 10.1.0.10: icmp_seq=1::YES
