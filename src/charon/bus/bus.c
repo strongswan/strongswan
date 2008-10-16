@@ -18,6 +18,7 @@
 #include "bus.h"
 
 #include <pthread.h>
+#include <stdint.h>
 
 #include <daemon.h>
 #include <utils/mutex.h>
@@ -87,7 +88,7 @@ struct entry_t {
 	/**
 	 * are we currently calling this listener
 	 */
-	bool calling;
+	int calling;
 	
 	/**
 	 * condvar where active listeners wait
@@ -104,7 +105,7 @@ static entry_t *entry_create(listener_t *listener, bool blocker)
 	
 	this->listener = listener;
 	this->blocker = blocker;
-	this->calling = FALSE;
+	this->calling = 0;
 	this->condvar = condvar_create(CONDVAR_DEFAULT);
 	
 	return this;
@@ -124,12 +125,12 @@ static void entry_destroy(entry_t *entry)
  * pthread_self returns large and ugly numbers, use this function
  * for logging; these numbers are incremental starting at 1
  */
-static int get_thread_number(private_bus_t *this)
+static u_int get_thread_number(private_bus_t *this)
 {
-	static long current_num = 0;
-	long stored_num;
+	static uintptr_t current_num = 0;
+	uintptr_t stored_num;
 	
-	stored_num = (long)pthread_getspecific(this->thread_id);
+	stored_num = (uintptr_t)pthread_getspecific(this->thread_id);
 	if (stored_num == 0)
 	{	/* first call of current thread */
 		pthread_setspecific(this->thread_id, (void*)++current_num);
@@ -260,7 +261,7 @@ static bool log_cb(entry_t *entry, log_data_t *data)
 	{	/* avoid recursive calls */
 		return FALSE;
 	}
-	entry->calling = TRUE;
+	entry->calling++;
 	va_copy(args, data->args);
 	if (!entry->listener->log(entry->listener, data->group, data->level,
 							  data->thread, data->ike_sa, data->format, args))
@@ -275,11 +276,11 @@ static bool log_cb(entry_t *entry, log_data_t *data)
 			entry_destroy(entry);
 		}
 		va_end(args);
-		entry->calling = FALSE;
+		entry->calling--;
 		return TRUE;
 	}
 	va_end(args);
-	entry->calling = FALSE;
+	entry->calling--;
 	return FALSE;
 }
 
@@ -320,6 +321,21 @@ static void log_(private_bus_t *this, debug_t group, level_t level,
 	va_end(args);
 }
 
+static void unregister_listener(private_bus_t *this, entry_t *entry,
+								enumerator_t *enumerator)
+{
+	if (entry->blocker)
+	{
+		entry->blocker = FALSE;
+		entry->condvar->signal(entry->condvar);
+	}
+	else
+	{
+		entry_destroy(entry);
+	}
+	this->listeners->remove_at(this->listeners, enumerator);
+}
+
 /**
  * Implementation of bus_t.ike_state_change
  */
@@ -328,24 +344,22 @@ static void ike_state_change(private_bus_t *this, ike_sa_t *ike_sa,
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
+	bool keep;
 	
 	this->mutex->lock(this->mutex);
 	enumerator = this->listeners->create_enumerator(this->listeners);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->listener->ike_state_change &&
-			!entry->listener->ike_state_change(entry->listener, ike_sa, state))
+		if (entry->calling || !entry->listener->ike_state_change)
 		{
-			if (entry->blocker)
-			{
-				entry->blocker = FALSE;
-				entry->condvar->signal(entry->condvar);
-			}
-			else
-			{
-				entry_destroy(entry);
-			}
-			this->listeners->remove_at(this->listeners, enumerator);
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_state_change(entry->listener, ike_sa, state);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
 			break;
 		}
 	}
@@ -362,6 +376,7 @@ static void child_state_change(private_bus_t *this, child_sa_t *child_sa,
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
 	entry_t *entry;
+	bool keep;
 	
 	ike_sa = pthread_getspecific(this->thread_sa);
 	
@@ -369,20 +384,17 @@ static void child_state_change(private_bus_t *this, child_sa_t *child_sa,
 	enumerator = this->listeners->create_enumerator(this->listeners);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->listener->child_state_change &&
-			!entry->listener->child_state_change(entry->listener, ike_sa,
-												 child_sa, state))
+		if (entry->calling || !entry->listener->child_state_change)
 		{
-			if (entry->blocker)
-			{
-				entry->blocker = FALSE;
-				entry->condvar->signal(entry->condvar);
-			}
-			else
-			{
-				entry_destroy(entry);
-			}
-			this->listeners->remove_at(this->listeners, enumerator);
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->child_state_change(entry->listener, ike_sa,
+												   child_sa, state);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
 			break;
 		}
 	}
@@ -398,6 +410,7 @@ static void message(private_bus_t *this, message_t *message, bool incoming)
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
 	entry_t *entry;
+	bool keep;
 	
 	ike_sa = pthread_getspecific(this->thread_sa);
 	
@@ -405,19 +418,17 @@ static void message(private_bus_t *this, message_t *message, bool incoming)
 	enumerator = this->listeners->create_enumerator(this->listeners);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->listener->message &&
-			!entry->listener->message(entry->listener, ike_sa, message, incoming))
+		if (entry->calling || !entry->listener->message)
 		{
-			if (entry->blocker)
-			{
-				entry->blocker = FALSE;
-				entry->condvar->signal(entry->condvar);
-			}
-			else
-			{
-				entry_destroy(entry);
-			}
-			this->listeners->remove_at(this->listeners, enumerator);
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->message(entry->listener, ike_sa,
+										message, incoming);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
 			break;
 		}
 	}
@@ -454,7 +465,7 @@ bus_t *bus_create()
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_RECURSIVE);
 	pthread_key_create(&this->thread_id, NULL);
 	pthread_key_create(&this->thread_sa, NULL);
 	
