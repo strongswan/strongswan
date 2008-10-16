@@ -30,6 +30,7 @@ ENUM(child_sa_state_names, CHILD_CREATED, CHILD_DESTROYING,
 	"CREATED",
 	"ROUTED",
 	"INSTALLED",
+	"UPDATING",
 	"REKEYING",
 	"DELETING",
 	"DESTROYING",
@@ -49,8 +50,6 @@ struct private_child_sa_t {
 	struct {
 		/** address of peer */
 		host_t *addr;
-		/** id of peer */
-		identification_t *id;
 		/** actual used SPI, 0 if unused */
 		u_int32_t spi;
 		/** Compression Parameter Index (CPI) used, 0 if unused */
@@ -143,19 +142,9 @@ struct private_child_sa_t {
 	ipsec_mode_t mode;
 	
 	/**
-	 * virtual IP assigned to local host
-	 */
-	host_t *virtual_ip;
-	
-	/**
 	 * config used to create this child
 	 */
 	child_cfg_t *config;
-	
-	/**
-	 * cached interface name for iptables
-	 */
-	char *iface;
 };
 
 typedef struct keylen_entry_t keylen_entry_t;
@@ -404,170 +393,10 @@ static void get_stats(private_child_sa_t *this, ipsec_mode_t *mode,
 }
 
 /**
- * Run the up/down script
- */
-static void updown(private_child_sa_t *this, bool up)
-{
-	traffic_selector_t *my_ts, *other_ts;
-	enumerator_t *enumerator;
-	char *script;
-	
-	script = this->config->get_updown(this->config);
-	
-	if (script == NULL)
-	{
-		return;
-	}
-	
-	enumerator = create_policy_enumerator(this);
-	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
-	{
-		char command[1024];
-		char *my_client, *other_client, *my_client_mask, *other_client_mask;
-		char *pos, *virtual_ip;
-		FILE *shell;
-
-		/* get subnet/bits from string */
-		asprintf(&my_client, "%R", my_ts);
-		pos = strchr(my_client, '/');
-		*pos = '\0';
-		my_client_mask = pos + 1;
-		pos = strchr(my_client_mask, '[');
-		if (pos)
-		{
-			*pos = '\0';
-		}
-		asprintf(&other_client, "%R", other_ts);
-		pos = strchr(other_client, '/');
-		*pos = '\0';
-		other_client_mask = pos + 1;
-		pos = strchr(other_client_mask, '[');
-		if (pos)
-		{
-			*pos = '\0';
-		}
-
-		if (this->virtual_ip)
-		{
-			asprintf(&virtual_ip, "PLUTO_MY_SOURCEIP='%H' ",
-		        		 this->virtual_ip);
-		}
-		else
-		{
-			asprintf(&virtual_ip, "");
-		}
-
-		/* we cache the iface name, as it may not be available when
-		 * the SA gets deleted */
-		if (up)
-		{
-			free(this->iface); 
-			this->iface = charon->kernel_interface->get_interface(
-								charon->kernel_interface, this->me.addr);
-		}
-		
-		/* build the command with all env variables.
-		 * TODO: PLUTO_PEER_CA and PLUTO_NEXT_HOP are currently missing
-		 */
-		snprintf(command, sizeof(command),
-				 "2>&1 "
-				"PLUTO_VERSION='1.1' "
-				"PLUTO_VERB='%s%s%s' "
-				"PLUTO_CONNECTION='%s' "
-				"PLUTO_INTERFACE='%s' "
-				"PLUTO_REQID='%u' "
-				"PLUTO_ME='%H' "
-				"PLUTO_MY_ID='%D' "
-				"PLUTO_MY_CLIENT='%s/%s' "
-				"PLUTO_MY_CLIENT_NET='%s' "
-				"PLUTO_MY_CLIENT_MASK='%s' "
-				"PLUTO_MY_PORT='%u' "
-				"PLUTO_MY_PROTOCOL='%u' "
-				"PLUTO_PEER='%H' "
-				"PLUTO_PEER_ID='%D' "
-				"PLUTO_PEER_CLIENT='%s/%s' "
-				"PLUTO_PEER_CLIENT_NET='%s' "
-				"PLUTO_PEER_CLIENT_MASK='%s' "
-				"PLUTO_PEER_PORT='%u' "
-				"PLUTO_PEER_PROTOCOL='%u' "
-				"%s"
-				"%s"
-				"%s",
-				 up ? "up" : "down",
-				 my_ts->is_host(my_ts, this->me.addr) ? "-host" : "-client",
-				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-v6",
-				 this->config->get_name(this->config),
-				 this->iface ? this->iface : "unknown",
-				 this->reqid,
-				 this->me.addr,
-				 this->me.id,
-				 my_client, my_client_mask,
-				 my_client, my_client_mask,
-				 my_ts->get_from_port(my_ts),
-				 my_ts->get_protocol(my_ts),
-				 this->other.addr,
-				 this->other.id,
-				 other_client, other_client_mask,
-				 other_client, other_client_mask,
-				 other_ts->get_from_port(other_ts),
-				 other_ts->get_protocol(other_ts),
-				 virtual_ip,
-				 this->config->get_hostaccess(this->config) ?
-				 	"PLUTO_HOST_ACCESS='1' " : "",
-				 script);
-		free(my_client);
-		free(other_client);
-		free(virtual_ip);
-		
-		DBG3(DBG_CHD, "running updown script: %s", command);
-		shell = popen(command, "r");
-
-		if (shell == NULL)
-		{
-			DBG1(DBG_CHD, "could not execute updown script '%s'", script);
-			return;
-		}
-		
-		while (TRUE)
-		{
-			char resp[128];
-			
-			if (fgets(resp, sizeof(resp), shell) == NULL)
-			{
-				if (ferror(shell))
-				{
-					DBG1(DBG_CHD, "error reading output from updown script");
-					return;
-				}
-				else
-				{
-					break;
-				}
-			}
-			else
-			{
-				char *e = resp + strlen(resp);
-				if (e > resp && e[-1] == '\n')
-				{	/* trim trailing '\n' */
-					e[-1] = '\0';
-				}
-				DBG1(DBG_CHD, "updown: %s", resp);
-			}
-		}
-		pclose(shell);
-	}
-	enumerator->destroy(enumerator);
-}
-
-/**
  * Implements child_sa_t.set_state
  */
 static void set_state(private_child_sa_t *this, child_sa_state_t state)
 {
-	if (state == CHILD_INSTALLED)
-	{
-		updown(this, TRUE);
-	}
 	charon->bus->child_state_change(charon->bus, &this->public, state);
 	this->state = state;
 }
@@ -955,27 +784,32 @@ static status_t get_use_time(private_child_sa_t *this,
  * Implementation of child_sa_t.update_hosts.
  */
 static status_t update_hosts(private_child_sa_t *this, 
-							 host_t *me, host_t *other, bool encap) 
+							 host_t *me, host_t *other, host_t *vip, bool encap) 
 {
+	child_sa_state_t old;
+	
 	/* anything changed at all? */
 	if (me->equals(me, this->me.addr) && 
 		other->equals(other, this->other.addr) && this->encap == encap)
 	{
 		return SUCCESS;
 	}
-	/* run updown script to remove iptables rules */
-	updown(this, FALSE);
+	
+	old = this->state;
+	set_state(this, CHILD_UPDATING);
 	
 	this->encap = encap;
 	
 	if (this->ipcomp != IPCOMP_NONE)
 	{
 		/* update our (initator) IPComp SA */
-		charon->kernel_interface->update_sa(charon->kernel_interface, htonl(ntohs(this->me.cpi)),
-				IPPROTO_COMP, this->other.addr, this->me.addr, other, me, FALSE);
+		charon->kernel_interface->update_sa(charon->kernel_interface, 
+							htonl(ntohs(this->me.cpi)),	IPPROTO_COMP,
+							this->other.addr, this->me.addr, other, me, FALSE);
 		/* update his (responder) IPComp SA */
-		charon->kernel_interface->update_sa(charon->kernel_interface, htonl(ntohs(this->other.cpi)), 
-				IPPROTO_COMP, this->me.addr, this->other.addr, me, other, FALSE);
+		charon->kernel_interface->update_sa(charon->kernel_interface,
+							htonl(ntohs(this->other.cpi)), IPPROTO_COMP,
+							this->me.addr, this->other.addr, me, other, FALSE);
 	}
 	
 	/* update our (initator) SA */
@@ -1018,12 +852,10 @@ static status_t update_hosts(private_child_sa_t *this,
 			
 			/* we reinstall the virtual IP to handle interface roaming
 			 * correctly */
-			if (this->virtual_ip)
+			if (vip)
 			{
-				charon->kernel_interface->del_ip(charon->kernel_interface,
-												 this->virtual_ip);
-				charon->kernel_interface->add_ip(charon->kernel_interface,
-												 this->virtual_ip, me);
+				charon->kernel_interface->del_ip(charon->kernel_interface, vip);
+				charon->kernel_interface->add_ip(charon->kernel_interface, vip, me);
 			}
 		
 			/* reinstall updated policies */
@@ -1052,18 +884,9 @@ static status_t update_hosts(private_child_sa_t *this,
 		this->other.addr = other->clone(other);
 	}
 	
-	/* install new iptables rules */
-	updown(this, TRUE);
+	set_state(this, old);
 	
 	return SUCCESS;
-}
-
-/**
- * Implementation of child_sa_t.set_virtual_ip.
- */
-static void set_virtual_ip(private_child_sa_t *this, host_t *ip)
-{
-	this->virtual_ip = ip->clone(ip);
 }
 
 /**
@@ -1097,11 +920,6 @@ static void destroy(private_child_sa_t *this)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
-	
-	if (this->state == CHILD_DELETING || this->state == CHILD_INSTALLED)
-	{
-		updown(this, FALSE);
-	}
 	
 	set_state(this, CHILD_DESTROYING);
 	
@@ -1158,11 +976,7 @@ static void destroy(private_child_sa_t *this)
 	this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
 	this->me.addr->destroy(this->me.addr);
 	this->other.addr->destroy(this->other.addr);
-	this->me.id->destroy(this->me.id);
-	this->other.id->destroy(this->other.id);
 	this->config->destroy(this->config);
-	free(this->iface);
-	DESTROY_IF(this->virtual_ip);
 	free(this);
 }
 
@@ -1170,7 +984,6 @@ static void destroy(private_child_sa_t *this)
  * Described in header.
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other,
-							 identification_t *my_id, identification_t *other_id,
 							 child_cfg_t *config, u_int32_t rekey, bool encap)
 {
 	static u_int32_t reqid = 0;
@@ -1186,7 +999,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))update;
-	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,bool))update_hosts;
+	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,host_t*,bool))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,ipsec_mode_t,protocol_id_t))add_policies;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
 	this->public.create_policy_enumerator = (enumerator_t*(*)(child_sa_t*))create_policy_enumerator;
@@ -1196,14 +1009,11 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_config = (child_cfg_t*(*)(child_sa_t*))get_config;
 	this->public.activate_ipcomp = (void(*)(child_sa_t*,ipcomp_transform_t,u_int16_t))activate_ipcomp;
 	this->public.allocate_cpi = (u_int16_t(*)(child_sa_t*))allocate_cpi;
-	this->public.set_virtual_ip = (void(*)(child_sa_t*,host_t*))set_virtual_ip;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
 	this->me.addr = me->clone(me);
 	this->other.addr = other->clone(other);
-	this->me.id = my_id->clone(my_id);
-	this->other.id = other_id->clone(other_id);
 	this->me.spi = 0;
 	this->me.cpi = 0;
 	this->other.spi = 0;
@@ -1224,10 +1034,9 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->other_ts = linked_list_create();
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
-	this->virtual_ip = NULL;
-	this->iface = NULL;
 	this->config = config;
 	config->get_ref(config);
 	
 	return &this->public;
 }
+

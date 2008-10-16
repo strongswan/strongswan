@@ -254,6 +254,7 @@ static void update_children(private_ike_mobike_t *this)
 		child_sa->update_hosts(child_sa,
 						this->ike_sa->get_my_host(this->ike_sa), 
 						this->ike_sa->get_other_host(this->ike_sa),
+						this->ike_sa->get_virtual_ip(this->ike_sa, TRUE),
 						this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
 	}
 	iterator->destroy(iterator);

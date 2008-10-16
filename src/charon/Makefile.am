@@ -169,6 +169,11 @@ if USE_SQL
   PLUGINS += sql
 endif
 
+if USE_UPDOWN
+  SUBDIRS += plugins/updown
+  PLUGINS += updown
+endif
+
 if USE_EAP_IDENTITY
   SUBDIRS += plugins/eap_identity
   PLUGINS += eapidentity

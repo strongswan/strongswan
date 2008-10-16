@@ -927,7 +927,7 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 		while (iterator->iterate(iterator, (void**)&child_sa))
 		{
 			child_sa->update_hosts(child_sa, this->my_host, this->other_host,
-								   has_condition(this, COND_NAT_ANY));
+						this->my_virtual_ip, has_condition(this, COND_NAT_ANY));
 		}
 		iterator->destroy(iterator);
 	}
@@ -1285,8 +1285,8 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	resolve_hosts(this);
 
 	/* install kernel policies */
-	child_sa = child_sa_create(this->my_host, this->other_host, this->my_id,
-							   this->other_id, child_cfg, 0, FALSE);
+	child_sa = child_sa_create(this->my_host, this->other_host,
+							   child_cfg, 0, FALSE);
 	me = this->my_host;
 	if (this->my_virtual_ip)
 	{
@@ -2480,6 +2480,9 @@ static void destroy(private_ike_sa_t *this)
 	set_state(this, IKE_DESTROYING);
 	
 	this->child_sas->destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
+	
+	/* unset SA after here to avoid usage by the listeners */
+	charon->bus->set_sa(charon->bus, NULL);
 	
 	this->task_manager->destroy(this->task_manager);
 	

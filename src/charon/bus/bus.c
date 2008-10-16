@@ -321,6 +321,9 @@ static void log_(private_bus_t *this, debug_t group, level_t level,
 	va_end(args);
 }
 
+/**
+ * unregister a listener
+ */
 static void unregister_listener(private_bus_t *this, entry_t *entry,
 								enumerator_t *enumerator)
 {

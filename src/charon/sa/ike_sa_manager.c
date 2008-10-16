@@ -880,7 +880,6 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	DBG2(DBG_MGR, "checkin and destroy IKE_SA");
-	charon->bus->set_sa(charon->bus, NULL);
 
 	pthread_mutex_lock(&(this->mutex));
 
@@ -899,6 +898,7 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 		DBG2(DBG_MGR, "tried to check-in and delete nonexisting IKE_SA");
 		retval = NOT_FOUND;
 	}
+	charon->bus->set_sa(charon->bus, NULL);
 	
 	pthread_mutex_unlock(&(this->mutex));
 	return retval;
@@ -981,6 +981,7 @@ static void flush(private_ike_sa_manager_t *this)
 	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
+		charon->bus->set_sa(charon->bus, entry->ike_sa);
 		entry->ike_sa->delete(entry->ike_sa);
 	}
 	enumerator->destroy(enumerator);
@@ -990,8 +991,10 @@ static void flush(private_ike_sa_manager_t *this)
 	while (this->ike_sa_list->remove_last(this->ike_sa_list,
 										  (void**)&entry) == SUCCESS)
 	{
+		charon->bus->set_sa(charon->bus, entry->ike_sa);
 		entry_destroy(entry);
 	}
+	charon->bus->set_sa(charon->bus, NULL);
 	pthread_mutex_unlock(&(this->mutex));
 }
 

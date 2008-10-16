@@ -55,6 +55,11 @@ enum child_sa_state_t {
 	CHILD_INSTALLED,
 	
 	/**
+	 * While updating hosts, in update_hosts()
+	 */
+	CHILD_UPDATING,
+	
+	/**
 	 * CHILD_SA which is rekeying
 	 */
 	CHILD_REKEYING,
@@ -207,11 +212,12 @@ struct child_sa_t {
 	 *
 	 * @param me		the new local host
 	 * @param other		the new remote host
+	 * @param vip		virtual IP, if any
 	 * @param			TRUE to use UDP encapsulation for NAT traversal
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*update_hosts)(child_sa_t *this, host_t *me, host_t *other,
-							 bool encap);
+							 host_t *vip, bool encap);
 	
 	/**
 	 * Install the policies using some traffic selectors.
@@ -273,16 +279,6 @@ struct child_sa_t {
 	child_cfg_t* (*get_config) (child_sa_t *this);
 	
 	/**
-	 * Set the virtual IP used received from IRAS.
-	 *
-	 * To allow proper setup of firewall rules, the virtual IP is required
-	 * for filtering.
-	 *
-	 * @param ip		own virtual IP
-	 */
-	void (*set_virtual_ip) (child_sa_t *this, host_t *ip);
-	
-	/**
 	 * Activate IPComp by setting the transform ID and CPI values.
 	 * 
 	 * @param ipcomp	the IPComp transform to use
@@ -316,8 +312,7 @@ struct child_sa_t {
  * @param encap			TRUE to enable UDP encapsulation (NAT traversal)
  * @return				child_sa_t object
  */
-child_sa_t * child_sa_create(host_t *me, host_t *other,
-							 identification_t *my_id, identification_t* other_id,
-							 child_cfg_t *config, u_int32_t reqid, bool encap);
+child_sa_t * child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
+							 u_int32_t reqid, bool encap);
 
 #endif /*CHILD_SA_H_ @} */
