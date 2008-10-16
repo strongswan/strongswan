@@ -73,10 +73,10 @@ BUILT_SOURCES = asn1/oid.c asn1/oid.h
 MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h
 
 asn1/oid.c :	asn1/oid.pl asn1/oid.txt
-		(cd `dirname $<` && $(PERL) $<)
+		(cd `dirname $<` && $(PERL) `basename $<`)
 
 asn1/oid.h :	asn1/oid.pl asn1/oid.txt
-		(cd `dirname $<` && $(PERL) $<)
+		(cd `dirname $<` && $(PERL) `basename $<`)
 
 
 # build plugins with their own Makefile
