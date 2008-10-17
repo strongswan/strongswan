@@ -80,6 +80,7 @@ static status_t build_i(private_ike_delete_t *this, message_t *message)
  */
 static status_t process_i(private_ike_delete_t *this, message_t *message)
 {
+	DBG0(DBG_IKE, "IKE_SA deleted");
 	/* completed, delete IKE_SA by returning FAILED */
 	return FAILED;
 }
@@ -94,7 +95,7 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
 	DBG1(DBG_IKE, "received DELETE for IKE_SA %s[%d]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa));
-	DBG1(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%D]...%H[%D]",
+	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%D]...%H[%D]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),
@@ -123,7 +124,7 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
  */
 static status_t build_r(private_ike_delete_t *this, message_t *message)
 {
-	DBG1(DBG_IKE, "IKE_SA deleted");
+	DBG0(DBG_IKE, "IKE_SA deleted");
 
 	if (this->simultaneous)
 	{

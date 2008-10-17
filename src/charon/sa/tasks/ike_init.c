@@ -230,7 +230,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	DBG1(DBG_IKE, "initiating IKE_SA %s[%d] to %H",
+	DBG0(DBG_IKE, "initiating IKE_SA %s[%d] to %H",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_other_host(this->ike_sa));
@@ -296,7 +296,7 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	DBG1(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
+	DBG0(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);

@@ -585,12 +585,12 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	
 	if (this->reqid)
 	{
-		DBG1(DBG_IKE, "establishing CHILD_SA %s{%d}",
+		DBG0(DBG_IKE, "establishing CHILD_SA %s{%d}",
 			 this->config->get_name(this->config), this->reqid);
 	}
 	else
 	{
-		DBG1(DBG_IKE, "establishing CHILD_SA %s",
+		DBG0(DBG_IKE, "establishing CHILD_SA %s",
 			 this->config->get_name(this->config));
 	}
 	
