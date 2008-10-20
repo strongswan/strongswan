@@ -199,16 +199,19 @@ static bool child_state_change(listener_t *this, ike_sa_t *ike_sa,
 {
 	child_sa_state_t old;
 	
-	old = child_sa->get_state(child_sa);
-	
-	if ((old == CHILD_INSTALLED && state != CHILD_REKEYING ) ||
-		(old == CHILD_DELETING && state == CHILD_DESTROYING))
+	if (ike_sa)
 	{
-		updown(ike_sa, child_sa, FALSE);
-	}
-	else if (state == CHILD_INSTALLED)
-	{
-		updown(ike_sa, child_sa, TRUE);
+		old = child_sa->get_state(child_sa);
+		
+		if ((old == CHILD_INSTALLED && state != CHILD_REKEYING ) ||
+			(old == CHILD_DELETING && state == CHILD_DESTROYING))
+		{
+			updown(ike_sa, child_sa, FALSE);
+		}
+		else if (state == CHILD_INSTALLED)
+		{
+			updown(ike_sa, child_sa, TRUE);
+		}
 	}
 	return TRUE;
 }

@@ -242,6 +242,8 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 			this->new_sa = other->new_sa;
 			other->new_sa = NULL;
 		}
+		/* set threads active IKE_SA after checkin */
+		charon->bus->set_sa(charon->bus, this->ike_sa);
 	}
 	
 	job = (job_t*)delete_ike_sa_job_create(to_delete, TRUE);
@@ -277,6 +279,8 @@ static void migrate(private_ike_rekey_t *this, ike_sa_t *ike_sa)
 	{
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
 													this->new_sa);
+		/* set threads active IKE_SA after checkin */
+		charon->bus->set_sa(charon->bus, this->ike_sa);
 	}
 	DESTROY_IF(this->collision);
 
@@ -303,6 +307,8 @@ static void destroy(private_ike_rekey_t *this)
 			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
 														this->new_sa);
 		}
+		/* set threads active IKE_SA after checkin */
+		charon->bus->set_sa(charon->bus, this->ike_sa);
 	}
 	if (this->ike_init)
 	{

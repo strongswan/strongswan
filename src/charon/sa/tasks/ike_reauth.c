@@ -104,6 +104,8 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 		{
 			charon->ike_sa_manager->checkin_and_destroy(
 								charon->ike_sa_manager, new);
+			/* set threads active IKE_SA after checkin */
+			charon->bus->set_sa(charon->bus, this->ike_sa);
 			DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
 			return FAILED;
 		}
@@ -131,6 +133,8 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 					iterator->destroy(iterator);
 					charon->ike_sa_manager->checkin_and_destroy(
 										charon->ike_sa_manager, new);
+					/* set threads active IKE_SA after checkin */
+					charon->bus->set_sa(charon->bus, this->ike_sa);
 					DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
 					return FAILED;
 				}
@@ -140,6 +144,8 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	}
 	iterator->destroy(iterator);
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
+	/* set threads active IKE_SA after checkin */
+	charon->bus->set_sa(charon->bus, this->ike_sa);
 	
 	/* we always return failed to delete the obsolete IKE_SA */
 	return FAILED;

@@ -146,6 +146,8 @@ static bool check_uniqueness(private_ike_auth_t *this)
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, duplicate);
 		}
 	}
+	/* set threads active IKE_SA after checkin */
+	charon->bus->set_sa(charon->bus, this->ike_sa);
 	return cancel;
 }
 
