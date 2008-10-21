@@ -386,6 +386,14 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[load-tests],
+	AS_HELP_STRING([--enable-load-tests],[enable load testing plugin for IKEv2 daemon (default is NO).]),
+	[if test x$enableval = xyes; then
+		loadtest=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[eap-sim],
 	AS_HELP_STRING([--enable-eap-sim],[build SIM authenication module for EAP (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -876,6 +884,7 @@ AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unittest = xtrue)
+AM_CONDITIONAL(USE_LOAD_TESTS, test x$loadtest = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM_FILE, test x$eap_sim_file = xtrue)
 AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
@@ -968,6 +977,7 @@ AC_OUTPUT(
 	src/charon/plugins/stroke/Makefile
 	src/charon/plugins/updown/Makefile
 	src/charon/plugins/unit_tester/Makefile
+	src/charon/plugins/load_tester/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile

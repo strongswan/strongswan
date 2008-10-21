@@ -144,6 +144,11 @@ endif
 SUBDIRS = . 
 PLUGINS = ${libstrongswan_plugins}
 
+if USE_LOAD_TESTS
+  SUBDIRS += plugins/load_tester
+  PLUGINS += load-tester
+endif
+
 if USE_KERNEL_PFKEY
   SUBDIRS += plugins/kernel_pfkey
   PLUGINS += kernel-pfkey
