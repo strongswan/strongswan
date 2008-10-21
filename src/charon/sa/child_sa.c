@@ -277,6 +277,8 @@ struct policy_enumerator_t {
 	enumerator_t *other;
 	/** list of others TS, to recreate enumerator */
 	linked_list_t *list;
+	/** currently enumerating TS for "me" side */
+	traffic_selector_t *ts;
 };
 
 /**
@@ -285,32 +287,30 @@ struct policy_enumerator_t {
 static bool policy_enumerate(policy_enumerator_t *this,
 				 traffic_selector_t **my_out, traffic_selector_t **other_out)
 {
-	traffic_selector_t *my_ts, *other_ts;
-
-	while (this->mine->enumerate(this->mine, &my_ts))
+	traffic_selector_t *other_ts;
+	
+	while (this->ts || this->mine->enumerate(this->mine, &this->ts))
 	{
-		while (TRUE)
-		{
-			if (!this->other->enumerate(this->other, &other_ts))
-			{	/* end of others list, restart with new of mine */
-				this->other->destroy(this->other);
-				this->other = this->list->create_enumerator(this->list);
-				break;
-			}
-			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
-			{	/* family mismatch */
-				continue;
-			}
-			if (my_ts->get_protocol(my_ts) &&
-				other_ts->get_protocol(other_ts) &&
-				my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts))
-			{	/* protocol mismatch */
-				continue;
-			}
-			*my_out = my_ts;
-			*other_out = other_ts;
-			return TRUE;
+		if (!this->other->enumerate(this->other, &other_ts))
+		{	/* end of others list, restart with new of mine */
+			this->other->destroy(this->other);
+			this->other = this->list->create_enumerator(this->list);
+			this->ts = NULL;
+			continue;
 		}
+		if (this->ts->get_type(this->ts) != other_ts->get_type(other_ts))
+		{	/* family mismatch */
+			continue;
+		}
+		if (this->ts->get_protocol(this->ts) &&
+			other_ts->get_protocol(other_ts) &&
+			this->ts->get_protocol(this->ts) != other_ts->get_protocol(other_ts))
+		{	/* protocol mismatch */
+			continue;
+		}
+		*my_out = this->ts;
+		*other_out = other_ts;
+		return TRUE;
 	}
 	return FALSE;
 }
@@ -337,6 +337,7 @@ static enumerator_t* create_policy_enumerator(private_child_sa_t *this)
 	e->mine = this->my_ts->create_enumerator(this->my_ts);
 	e->other = this->other_ts->create_enumerator(this->other_ts);
 	e->list = this->other_ts;
+	e->ts = NULL;
 	
 	return &e->public;
 }
