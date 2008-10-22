@@ -104,6 +104,7 @@ static void destroy(private_load_tester_plugin_t *this)
  */
 plugin_t *plugin_create()
 {
+	int initiators;
 	private_load_tester_plugin_t *this = malloc_thing(private_load_tester_plugin_t);
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
@@ -115,8 +116,14 @@ plugin_t *plugin_create()
 	charon->kernel_interface->add_ipsec_interface(charon->kernel_interface, 
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	
-	charon->processor->queue_job(charon->processor, (job_t*)callback_job_create(
-							(callback_job_cb_t)do_load_test, this, NULL, NULL));
+	initiators = lib->settings->get_int(lib->settings,
+						"charon.plugins.load_tester.initiators", 1);
+	while (initiators-- > 0)
+	{
+		charon->processor->queue_job(charon->processor, 
+					(job_t*)callback_job_create((callback_job_cb_t)do_load_test,
+												this, NULL, NULL));
+	}
 	return &this->public.plugin;
 }
 
