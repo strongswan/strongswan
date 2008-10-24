@@ -148,25 +148,45 @@ struct child_sa_t {
 	protocol_id_t (*get_protocol) (child_sa_t *this);
 	
 	/**
-	 * Get info and statistics about this CHILD_SA.
+	 * Get the IPsec mode of this CHILD_SA.
 	 *
-	 * @param mode		mode this IKE_SA uses
-	 * @param encr_algo	encryption algorithm used by this CHILD_SA.
-	 * @param encr_key	encryption key
-	 * @param int_algo	integrity algorithm used by this CHILD_SA
-	 * @param int_key	integrity key
-	 * @param rekey		time when rekeying is scheduled
-	 * @param use_in	time when last traffic was seen coming in
-	 * @param use_out	time when last traffic was seen going out
-	 * @param use_fwd	time when last traffic was getting forwarded
+	 * @return			TUNNEL | TRANSPORT | BEET
 	 */
-	void (*get_stats)(child_sa_t *this, ipsec_mode_t *mode,
-					  encryption_algorithm_t *encr,
-					  chunk_t *encr_key_in, chunk_t *encr_key_out,
-					  integrity_algorithm_t *int_algo,
-					  chunk_t *int_key_in, chunk_t *int_key_out,
-					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
-					  u_int32_t *use_fwd);
+	ipsec_mode_t (*get_mode)(child_sa_t *this);
+	
+	/**
+	 * Get the IPsec encryption key.
+	 *
+	 * @param inbound	TRUE for inbound, FALSE for outbound key
+	 * @param key		chunk where to write key pointer and length
+	 * @return			encryption algorithm
+	 */
+	encryption_algorithm_t (*get_encryption)(child_sa_t *this, bool inbound,
+											 chunk_t *key);
+	/**
+	 * Get the IPsec integrity.
+	 *
+	 * @param inbound	TRUE for inbound, FALSE for outbound key
+	 * @param key		chunk where to write key pointer and length
+	 * @return			integrity algorithm
+	 */
+	integrity_algorithm_t (*get_integrity)(child_sa_t *this, bool inbound,
+										   chunk_t *key);
+	/**
+	 * Get the lifetime of the CHILD_SA.
+	 *
+	 * @param hard		TRUE for hard lifetime, FALSE for soft (rekey) lifetime
+	 * @return			lifetime in seconds
+	 */
+	u_int32_t (*get_lifetime)(child_sa_t *this, bool hard);
+	
+	/**
+	 * Get last use time of the CHILD_SA.
+	 *
+	 * @param inbound	TRUE for inbound traffic, FALSE for outbound
+	 * @return			time of last use in seconds
+	 */
+	u_int32_t (*get_usetime)(child_sa_t *this, bool inbound);
 	
 	/**
 	 * Allocate SPIs for given proposals.
@@ -251,15 +271,6 @@ struct child_sa_t {
 	enumerator_t* (*create_policy_enumerator)(child_sa_t *this);
 	
 	/**
-	 * Get the time of this child_sa_t's last use (i.e. last use of any of its policies)
-	 * 
-	 * @param inbound	query for in- or outbound usage
-	 * @param use_time	the time
-	 * @return			SUCCESS or FAILED
-	 */	
-	status_t (*get_use_time) (child_sa_t *this, bool inbound, time_t *use_time);
-	
-	/**
 	 * Get the state of the CHILD_SA.
 	 */	
 	child_sa_state_t (*get_state) (child_sa_t *this);
@@ -285,7 +296,7 @@ struct child_sa_t {
 	 * @param other_cpi	other Compression Parameter Index
 	 */
 	void (*activate_ipcomp) (child_sa_t *this, ipcomp_transform_t ipcomp,
-						u_int16_t other_cpi);
+							 u_int16_t other_cpi);
 	
 	/**
 	 * Returns the Compression Parameter Index (CPI) allocated from the kernel.

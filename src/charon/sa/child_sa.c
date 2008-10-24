@@ -107,14 +107,14 @@ struct private_child_sa_t {
 	chunk_t int_key[2];
 	
 	/**
-	 * time, on which SA was installed
-	 */
-	time_t install_time;
-	
-	/**
 	 * absolute time when rekeying is scheduled
 	 */
 	time_t rekey_time;
+	
+	/**
+	 * absolute time when the SA expires
+	 */
+	time_t expire_time;
 	
 	/**
 	 * state of the CHILD_SA
@@ -343,54 +343,83 @@ static enumerator_t* create_policy_enumerator(private_child_sa_t *this)
 }
 
 /**
- * Implementation of child_sa_t.get_stats.
+ * Implementation of child_sa_t.get_usetime
  */
-static void get_stats(private_child_sa_t *this, ipsec_mode_t *mode,
-					  encryption_algorithm_t *encr_algo,
-					  chunk_t *encr_key_in, chunk_t *encr_key_out,
-					  integrity_algorithm_t *int_algo,
-					  chunk_t *int_key_in, chunk_t *int_key_out,
-					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
-					  u_int32_t *use_fwd)
+static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
 {
-	traffic_selector_t *my_ts, *other_ts;
 	enumerator_t *enumerator;
-	u_int32_t in = 0, out = 0, fwd = 0, time;
-	
+	traffic_selector_t *my_ts, *other_ts;
+	u_int32_t last_use = 0;
+
 	enumerator = create_policy_enumerator(this);
 	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
-
-		if (charon->kernel_interface->query_policy(charon->kernel_interface,
-								other_ts, my_ts, POLICY_IN, &time) == SUCCESS)
+		u_int32_t in, out, fwd;
+		
+		if (inbound) 
 		{
-			in = max(in, time);
+			if (charon->kernel_interface->query_policy(charon->kernel_interface,
+								other_ts, my_ts, POLICY_IN, &in) == SUCCESS)
+			{
+				last_use = max(last_use, in);
+			}
+			if (charon->kernel_interface->query_policy(charon->kernel_interface,
+								other_ts, my_ts, POLICY_FWD, &fwd) == SUCCESS)
+			{
+				last_use = max(last_use, fwd);
+			}
 		}
-		if (charon->kernel_interface->query_policy(charon->kernel_interface,
-								my_ts, other_ts, POLICY_OUT, &time) == SUCCESS)
+		else
 		{
-			out = max(out, time);
-		}
-		if (charon->kernel_interface->query_policy(charon->kernel_interface,
-								other_ts, my_ts, POLICY_FWD, &time) == SUCCESS)
-		{
-			fwd = max(fwd, time);
+			if (charon->kernel_interface->query_policy(charon->kernel_interface,
+								my_ts, other_ts, POLICY_OUT, &out) == SUCCESS)
+			{
+				last_use = max(last_use, out);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
+	return last_use;
+}
 
-#define SET_PTR_IF(x, y) if (x) { *x = y; }
-	SET_PTR_IF(mode, this->mode);
-	SET_PTR_IF(encr_algo, this->enc_alg);
-	SET_PTR_IF(encr_key_in, this->enc_key[0]);
-	SET_PTR_IF(encr_key_out, this->enc_key[1]);
-	SET_PTR_IF(int_algo, this->int_alg);
-	SET_PTR_IF(int_key_in, this->int_key[0]);
-	SET_PTR_IF(int_key_out, this->int_key[1]);
-	SET_PTR_IF(rekey, this->rekey_time);
-	SET_PTR_IF(use_in, in);
-	SET_PTR_IF(use_out, out);
-	SET_PTR_IF(use_fwd, fwd);
+/**
+ * Implementation of child_sa_t.get_lifetime
+ */
+static u_int32_t get_lifetime(private_child_sa_t *this, bool hard)
+{
+	if (hard)
+	{
+		return this->expire_time;
+	}
+	return this->rekey_time;
+}
+
+/**
+ * Implementation of child_sa_t.get_integrity
+ */
+static integrity_algorithm_t get_integrity(private_child_sa_t *this,
+										   bool inbound, chunk_t *key)
+{
+	*key = this->int_key[!!inbound];
+	return this->int_alg;
+}
+
+/**
+ * Implementation of child_sa_t.get_encryption
+ */
+static encryption_algorithm_t get_encryption(private_child_sa_t *this,
+											 bool inbound, chunk_t *key)
+{
+	*key = this->enc_key[!!inbound];
+	return this->enc_alg;
+}
+
+/**
+ * Implementation of child_sa_t.get_mode
+ */
+static ipsec_mode_t get_mode(private_child_sa_t *this)
+{
+	return this->mode;
 }
 
 /**
@@ -470,7 +499,7 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 static status_t install(private_child_sa_t *this, proposal_t *proposal,
 						ipsec_mode_t mode, prf_plus_t *prf_plus, bool mine)
 {
-	u_int32_t spi, cpi, soft, hard;
+	u_int32_t spi, cpi, soft, hard, now;
 	host_t *src, *dst;
 	status_t status;
 	int add_keymat;
@@ -600,8 +629,9 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 				this->int_alg, this->int_key[!!mine],
 				mode, IPCOMP_NONE, this->encap, mine);
 	
-	this->install_time = time(NULL);
-	this->rekey_time = this->install_time + soft;
+	now = time(NULL);
+	this->rekey_time = now + soft;
+	this->expire_time = now + hard;
 	return status;
 }
 
@@ -741,44 +771,6 @@ static linked_list_t *get_traffic_selectors(private_child_sa_t *this, bool local
 		return this->my_ts;
 	}
 	return this->other_ts;
-}
-
-/**
- * Implementation of child_sa_t.get_use_time
- */
-static status_t get_use_time(private_child_sa_t *this,
-							 bool inbound, time_t *use_time)
-{
-	enumerator_t *enumerator;
-	traffic_selector_t *my_ts, *other_ts;
-	status_t status = FAILED;
-	
-	*use_time = UNDEFINED_TIME;
-
-	enumerator = create_policy_enumerator(this);
-	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
-	{
-		if (inbound) 
-		{
-			time_t in = UNDEFINED_TIME, fwd = UNDEFINED_TIME;
-			
-			status = charon->kernel_interface->query_policy(
-									charon->kernel_interface, other_ts, my_ts,
-									POLICY_IN, (u_int32_t*)&in);
-			status |= charon->kernel_interface->query_policy(
-									charon->kernel_interface, other_ts, my_ts,
-									POLICY_FWD, (u_int32_t*)&fwd);
-			*use_time = max(in, fwd);
-		}
-		else
-		{
-			status = charon->kernel_interface->query_policy(
-									charon->kernel_interface, my_ts, other_ts,
-									POLICY_OUT, (u_int32_t*)use_time);
-		}
-	}
-	enumerator->destroy(enumerator);
-	return status;
 }
 
 /**
@@ -996,7 +988,11 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
 	this->public.get_cpi = (u_int16_t(*)(child_sa_t*, bool))get_cpi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
-	this->public.get_stats = (void(*)(child_sa_t*, ipsec_mode_t*,encryption_algorithm_t*,chunk_t*,chunk_t*,integrity_algorithm_t*,chunk_t*,chunk_t*,u_int32_t*,u_int32_t*,u_int32_t*,u_int32_t*))get_stats;
+	this->public.get_mode = (ipsec_mode_t(*)(child_sa_t*))get_mode;
+	this->public.get_encryption = (encryption_algorithm_t(*)(child_sa_t*, bool, chunk_t*))get_encryption;
+	this->public.get_integrity = (integrity_algorithm_t(*)(child_sa_t*, bool, chunk_t*))get_integrity;
+	this->public.get_lifetime = (u_int32_t(*)(child_sa_t*, bool))get_lifetime;
+	this->public.get_usetime = (u_int32_t(*)(child_sa_t*, bool))get_usetime;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))update;
@@ -1004,7 +1000,6 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,ipsec_mode_t,protocol_id_t))add_policies;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
 	this->public.create_policy_enumerator = (enumerator_t*(*)(child_sa_t*))create_policy_enumerator;
-	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
 	this->public.get_config = (child_cfg_t*(*)(child_sa_t*))get_config;

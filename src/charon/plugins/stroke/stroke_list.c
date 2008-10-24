@@ -123,20 +123,15 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 {
 	u_int32_t rekey, now = time(NULL);
-	u_int32_t use_in, use_out, use_fwd;
+	u_int32_t use_in, use_out;
 	encryption_algorithm_t encr_alg;
 	integrity_algorithm_t int_alg;
 	chunk_t encr_key, int_key;
-	ipsec_mode_t mode;
-	
-	child_sa->get_stats(child_sa, &mode,
-						&encr_alg, &encr_key, NULL, &int_alg, &int_key, NULL,
-						&rekey, &use_in, &use_out, &use_fwd);
 	
 	fprintf(out, "%12s{%d}:  %N, %N", 
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
 			child_sa_state_names, child_sa->get_state(child_sa),
-			ipsec_mode_names, mode);
+			ipsec_mode_names, child_sa->get_mode(child_sa));
 	
 	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
@@ -162,6 +157,8 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			
 			if (child_sa->get_protocol(child_sa) == PROTO_ESP)
 			{
+				encr_alg = child_sa->get_encryption(child_sa, TRUE, &encr_key);
+			
 				switch (encr_alg)
 				{
 					/* Algorithms with variable key size.
@@ -185,6 +182,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 						break;
 				}
 			}
+			int_alg = child_sa->get_integrity(child_sa, TRUE, &int_key);
 			switch (int_alg)
 			{
 				case AUTH_UNDEFINED:
@@ -195,6 +193,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			}
 			fprintf(out, ", rekeying ");
 			
+			rekey = child_sa->get_lifetime(child_sa, FALSE);
 			if (rekey)
 			{
 				fprintf(out, "in %#V", &now, &rekey);
@@ -205,7 +204,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			}
 			
 			fprintf(out, ", last use: ");
-			use_in = max(use_in, use_fwd);
+			use_in = child_sa->get_usetime(child_sa, TRUE);
 			if (use_in)
 			{
 				fprintf(out, "%ds_i ", now - use_in);
@@ -214,6 +213,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			{
 				fprintf(out, "no_i ");
 			}
+			use_out = child_sa->get_usetime(child_sa, FALSE);
 			if (use_out)
 			{
 				fprintf(out, "%ds_o ", now - use_out);

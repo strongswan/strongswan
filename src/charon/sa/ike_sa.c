@@ -304,28 +304,26 @@ struct private_ike_sa_t {
  */
 static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	child_sa_t *child_sa;
-	time_t latest = 0, use_time;
-	
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
-	{
-		if (child_sa->get_use_time(child_sa, inbound, &use_time) == SUCCESS)
-		{
-			latest = max(latest, use_time);
-		}
-	}
-	iterator->destroy(iterator);
+	time_t use_time;
 	
 	if (inbound)
 	{
-		return max(this->time.inbound, latest);
+		use_time = this->time.inbound;
 	}
 	else
 	{
-		return max(this->time.outbound, latest);
+		use_time = this->time.outbound;
 	}
+	enumerator = this->child_sas->create_enumerator(this->child_sas);
+	while (enumerator->enumerate(enumerator, &child_sa))
+	{
+		use_time = max(use_time, child_sa->get_usetime(child_sa, inbound));
+	}
+	enumerator->destroy(enumerator);
+	
+	return use_time;
 }
 
 /**
