@@ -155,6 +155,20 @@ struct child_sa_t {
 	ipsec_mode_t (*get_mode)(child_sa_t *this);
 	
 	/**
+	 * Get the used IPComp algorithm.
+	 *
+	 * @return			IPComp compression algorithm.
+	 */
+	ipcomp_transform_t (*get_ipcomp)(child_sa_t *this);
+	
+	/**
+	 * Check if this CHILD_SA uses UDP encapsulation.
+	 *
+	 * @return			TRUE if SA encapsulates ESP packets
+	 */
+	bool (*has_encap)(child_sa_t *this);
+	
+	/**
 	 * Get the IPsec encryption key.
 	 *
 	 * @param inbound	TRUE for inbound, FALSE for outbound key

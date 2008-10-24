@@ -135,19 +135,17 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	
 	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
-		u_int16_t my_cpi    = child_sa->get_cpi(child_sa, TRUE);
-		u_int16_t other_cpi = child_sa->get_cpi(child_sa, FALSE);		
-
-		fprintf(out, ", %N SPIs: %.8x_i %.8x_o",
+		fprintf(out, ", %N%s SPIs: %.8x_i %.8x_o",
 				protocol_id_names, child_sa->get_protocol(child_sa),
+				child_sa->has_encap(child_sa) ? " in UDP": "",
 				ntohl(child_sa->get_spi(child_sa, TRUE)),
 				ntohl(child_sa->get_spi(child_sa, FALSE)));
 
-		/* Is IPCOMP activated ? */
-		if (my_cpi && other_cpi)
+		if (child_sa->get_ipcomp(child_sa) != IPCOMP_NONE)
 		{
 			fprintf(out, ", IPCOMP CPIs: %.4x_i %.4x_o",
-					ntohs(my_cpi), ntohs(other_cpi));
+					ntohs(child_sa->get_cpi(child_sa, TRUE)),
+					ntohs(child_sa->get_cpi(child_sa, FALSE)));
 		}
 
 		if (all)

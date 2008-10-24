@@ -248,6 +248,22 @@ protocol_id_t get_protocol(private_child_sa_t *this)
 }
 
 /**
+ * Implementation of child_sa_t.has_encap
+ */
+static bool has_encap(private_child_sa_t *this)
+{
+	return this->encap;
+}
+
+/**
+ * Implementation of child_sa_t.get_ipcomp
+ */
+static ipcomp_transform_t get_ipcomp(private_child_sa_t *this)
+{
+	return this->ipcomp;
+}
+
+/**
  * Implements child_sa_t.get_state
  */
 static child_sa_state_t get_state(private_child_sa_t *this)
@@ -989,6 +1005,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_cpi = (u_int16_t(*)(child_sa_t*, bool))get_cpi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
 	this->public.get_mode = (ipsec_mode_t(*)(child_sa_t*))get_mode;
+	this->public.get_ipcomp = (ipcomp_transform_t(*)(child_sa_t*))get_ipcomp;
+	this->public.has_encap = (bool(*)(child_sa_t*))has_encap;
 	this->public.get_encryption = (encryption_algorithm_t(*)(child_sa_t*, bool, chunk_t*))get_encryption;
 	this->public.get_integrity = (integrity_algorithm_t(*)(child_sa_t*, bool, chunk_t*))get_integrity;
 	this->public.get_lifetime = (u_int32_t(*)(child_sa_t*, bool))get_lifetime;
