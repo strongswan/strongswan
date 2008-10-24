@@ -16,6 +16,7 @@
  */
 
 #include "ha_sync_plugin.h"
+#include "ha_sync_child.h"
 
 #include <daemon.h>
 #include <config/child_cfg.h>
@@ -33,35 +34,18 @@ struct private_ha_sync_plugin_t {
 	ha_sync_plugin_t public;
 
 	/**
-	 * Listener interface, listens to CHILD_SA state changes
+	 * CHILD_SA sync
 	 */
-	listener_t listener;
+	ha_sync_child_t *child;
 };
-
-/**
- * Listener implementation
- */
-static bool child_state_change(listener_t *this, ike_sa_t *ike_sa,
-							   child_sa_t *child_sa, child_sa_state_t state)
-{
-	if (state == CHILD_INSTALLED)
-	{
-		chunk_t chunk;
-
-		chunk = child_sa->serialize(child_sa);
-		DBG1(DBG_IKE, "NEW CHILD: %B", &chunk);
-
-		chunk_clear(&chunk);
-	}
-	return TRUE;
-}
 
 /**
  * Implementation of plugin_t.destroy
  */
 static void destroy(private_ha_sync_plugin_t *this)
 {
-	charon->bus->remove_listener(charon->bus, &this->listener);
+	charon->bus->remove_listener(charon->bus, &this->child->listener);
+	this->child->destroy(this->child);
 	free(this);
 }
 
@@ -74,10 +58,8 @@ plugin_t *plugin_create()
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
-	memset(&this->listener, 0, sizeof(listener_t));
-	this->listener.child_state_change = child_state_change;
-
-	charon->bus->add_listener(charon->bus, &this->listener);
+	this->child = ha_sync_child_create();
+	charon->bus->add_listener(charon->bus, &this->child->listener);
 
 	return &this->public.plugin;
 }
