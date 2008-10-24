@@ -143,6 +143,7 @@ ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
 ARG_ENABL_SET([android],        [enable Android specific plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager plugin.])
+ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
 ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 
@@ -809,6 +810,7 @@ AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unit_tests = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
+AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM_FILE, test x$eap_sim_file = xtrue)
 AM_CONDITIONAL(USE_EAP_SIMAKA_PSEUDONYM, test x$eap_simaka_pseudonym = xtrue)
@@ -941,6 +943,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/medcli/Makefile
 	src/libcharon/plugins/nm/Makefile
 	src/libcharon/plugins/uci/Makefile
+	src/libcharon/plugins/ha_sync/Makefile
 	src/libcharon/plugins/android/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/updown/Makefile
