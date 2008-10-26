@@ -282,6 +282,8 @@ static u_int8_t group18_modulus[] = {
 	0x60,0xC9,0x80,0xDD,0x98,0xED,0xD3,0xDF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
 };
 
+#define DH_EXPONENT_ENTROPY		64	/* bytes = 512 bits */
+
 typedef struct modulus_entry_t modulus_entry_t;
 
 /** 
@@ -567,7 +569,7 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 		destroy(this);
 		return NULL;
 	}
-	rng->allocate_bytes(rng, this->p_len, &random);
+	rng->allocate_bytes(rng, DH_EXPONENT_ENTROPY_SIZE / BITS_PER_BYTE, &random);
 	rng->destroy(rng);
 	mpz_import(this->xa, random.len, 1, 1, 1, 0, random.ptr);
 	chunk_free(&random);

@@ -41,6 +41,11 @@
 #define BUF_LEN 512
 
 /**
+ * Entropy in bits of secret Diffie-Hellman exponents
+ */
+#define DH_EXPONENT_ENTROPY_SIZE	512
+
+/**
  * Macro compares two strings for equality
  */
 #define streq(x,y) (strcmp(x, y) == 0)

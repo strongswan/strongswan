@@ -217,6 +217,7 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 		free(this);
 		return NULL;
 	}
+	this->dh->length = DH_EXPONENT_ENTROPY_SIZE;
 	
 	this->group = group;
 	this->computed = FALSE;
