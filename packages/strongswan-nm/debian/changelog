@@ -1,3 +1,9 @@
+strongswan-nm (4.2.8.1-1) hardy; urgency=low
+
+  * setting a faked tundev to make NM happy
+
+ -- Martin Willi <martin@strongswan.org>  Mon, 27 Oct 2008 12:58:57 +0100
+
 strongswan-nm (4.2.6.4-1) hardy; urgency=low
 
   * new release to support API changes in NetworkManager (4031/4053)
@@ -33,4 +39,3 @@ strongswan-nm (4.2.6-2) hardy; urgency=low
   * Initial NetworkManager build
 
  -- Martin Willi <martin@strongswan.org>  Tue, 26 Aug 2008 11:42:52 +0200
-
