@@ -123,19 +123,23 @@ enum ike_condition_t {
 };
 
 /**
- * Information and statistics to query from an SA
+ * Timing information and statistics to query from an SA
  */
 enum statistic_t {
+	/** Timestamp of SA establishement */
+	STAT_ESTABLISHED = 0,
+	/** Timestamp of scheudled rekeying */
+	STAT_REKEY,
+	/** Timestamp of scheudled reauthentication */
+	STAT_REAUTH,
+	/** Timestamp of scheudled delete */
+	STAT_DELETE,
+	/** Timestamp of last inbound IKE packet */
+	STAT_INBOUND,
+	/** Timestamp of last outbound IKE packet */
+	STAT_OUTBOUND,
 	
-	/**
-	 * Relative time for scheduled rekeying
-	 */
-	STAT_REKEY_TIME,
-	
-	/**
-	 * Relative time for scheduled reauthentication
-	 */
-	STAT_REAUTH_TIME,
+	STAT_MAX
 };
 
 /**

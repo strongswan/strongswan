@@ -89,15 +89,20 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 		{
-			u_int32_t rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY_TIME);
-			u_int32_t reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH_TIME);
-
+			u_int32_t rekey, reauth, now;
+			
+			now = time(NULL);
+			rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY);
+			reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH);
+			
 			if (rekey)
 			{
+				rekey -= now;
 				fprintf(out, ", rekeying in %V", &rekey);
 			}
 			if (reauth)
 			{
+				reauth -= reauth;
 				fprintf(out, ", %N reauthentication in %V", auth_class_names,
 						get_auth_class(ike_sa->get_peer_cfg(ike_sa)), &reauth);
 			}

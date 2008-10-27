@@ -269,24 +269,11 @@ struct private_ike_sa_t {
 	 * NAT keep alive interval
 	 */
 	u_int32_t keepalive_interval;
-
+	
 	/**
 	 * Timestamps for this IKE_SA
 	 */
-	struct {
-		/** last IKE message received */
-		u_int32_t inbound;
-		/** last IKE message sent */
-		u_int32_t outbound;
-		/** when IKE_SA became established */
-		u_int32_t established;
-		/** when IKE_SA gets rekeyed */
-		u_int32_t rekey;
-		/** when IKE_SA gets reauthenticated */
-		u_int32_t reauth;
-		/** when IKE_SA gets deleted */
-		u_int32_t delete;
-	} time;
+	u_int32_t stats[STAT_MAX];
 	
 	/**
 	 * how many times we have retried so far (keyingtries)
@@ -310,11 +297,11 @@ static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 	
 	if (inbound)
 	{
-		use_time = this->time.inbound;
+		use_time = this->stats[STAT_INBOUND];
 	}
 	else
 	{
-		use_time = this->time.outbound;
+		use_time = this->stats[STAT_OUTBOUND];
 	}
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, &child_sa))
@@ -351,24 +338,9 @@ static char *get_name(private_ike_sa_t *this)
  */
 static u_int32_t get_statistic(private_ike_sa_t *this, statistic_t kind)
 {
-	time_t now = time(NULL);
-	
-	switch (kind)
+	if (kind < STAT_MAX)
 	{
-		case STAT_REKEY_TIME:
-			if (this->time.rekey > now)
-			{
-				return this->time.rekey - now;
-			}
-			break;
-		case STAT_REAUTH_TIME:
-			if (this->time.reauth > now)
-			{
-				return this->time.reauth - now;
-			}
-			break;
-		default:
-			break;
+		return this->stats[kind];
 	}
 	return 0;
 }
@@ -686,47 +658,48 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 				u_int32_t t;
 			
 				/* calculate rekey, reauth and lifetime */
-				this->time.established = time(NULL);
+				this->stats[STAT_ESTABLISHED] = time(NULL);
 				
 				/* schedule rekeying if we have a time which is smaller than
 				 * an already scheduled rekeying */
 				t = this->peer_cfg->get_rekey_time(this->peer_cfg);
-				if (t && (this->time.rekey == 0 || 
-					(this->time.rekey > t + this->time.established)))
+				if (t && (this->stats[STAT_REKEY] == 0 || 
+					(this->stats[STAT_REKEY] > t + this->stats[STAT_ESTABLISHED])))
 				{
-					this->time.rekey = t + this->time.established;
+					this->stats[STAT_REKEY] = t + this->stats[STAT_ESTABLISHED];
 					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, FALSE);
 					charon->scheduler->schedule_job(charon->scheduler,
 													job, t * 1000);
 					DBG1(DBG_IKE, "scheduling rekeying in %ds", t);
 				}
 				t = this->peer_cfg->get_reauth_time(this->peer_cfg);
-				if (t && (this->time.reauth == 0 || 
-					(this->time.reauth > t + this->time.established)))
+				if (t && (this->stats[STAT_REAUTH] == 0 || 
+					(this->stats[STAT_REAUTH] > t + this->stats[STAT_ESTABLISHED])))
 				{
-					this->time.reauth = t + this->time.established;
+					this->stats[STAT_REAUTH] = t + this->stats[STAT_ESTABLISHED];
 					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE);
 					charon->scheduler->schedule_job(charon->scheduler,
 													job, t * 1000);
 					DBG1(DBG_IKE, "scheduling reauthentication in %ds", t);
 				}
 				t = this->peer_cfg->get_over_time(this->peer_cfg);
-				if (this->time.rekey || this->time.reauth)
+				if (this->stats[STAT_REKEY] || this->stats[STAT_REAUTH])
 				{
-					if (this->time.reauth == 0)
+					if (this->stats[STAT_REAUTH] == 0)
 					{
-						this->time.delete = this->time.rekey;
+						this->stats[STAT_DELETE] = this->stats[STAT_REKEY];
 					}
-					else if (this->time.rekey == 0)
+					else if (this->stats[STAT_REKEY] == 0)
 					{
-						this->time.delete = this->time.reauth;
+						this->stats[STAT_DELETE] = this->stats[STAT_REAUTH];
 					}
 					else
 					{
-						this->time.delete = min(this->time.rekey, this->time.reauth);
+						this->stats[STAT_DELETE] = min(this->stats[STAT_REKEY],
+													   this->stats[STAT_REAUTH]);
 					}
-					this->time.delete += t;
-					t = this->time.delete - this->time.established;
+					this->stats[STAT_DELETE] += t;
+					t = this->stats[STAT_DELETE] - this->stats[STAT_ESTABLISHED];
 					job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
 					charon->scheduler->schedule_job(charon->scheduler, job,
 													t * 1000);
@@ -937,7 +910,7 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 static status_t generate_message(private_ike_sa_t *this, message_t *message,
 								 packet_t **packet)
 {
-	this->time.outbound = time(NULL);
+	this->stats[STAT_OUTBOUND] = time(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
 	return message->generate(message, this->crypter_out, this->signer_out, packet);
 }
@@ -1441,7 +1414,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			charon->scheduler->schedule_job(charon->scheduler, job,
 											HALF_OPEN_IKE_SA_TIMEOUT);
 		}
-		this->time.inbound = time(NULL);
+		this->stats[STAT_INBOUND] = time(NULL);
 		/* check if message is trustworthy, and update host information */
 		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
@@ -1975,7 +1948,8 @@ static status_t reauth(private_ike_sa_t *this)
 		{
 			time_t now = time(NULL);
 			
-			DBG1(DBG_IKE, "IKE_SA will timeout in %#V", &now, &this->time.delete);
+			DBG1(DBG_IKE, "IKE_SA will timeout in %#V",
+				 &now, &this->stats[STAT_DELETE]);
 			return FAILED;
 		}
 		else
@@ -2123,7 +2097,7 @@ static status_t reestablish(private_ike_sa_t *this)
  */
 static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 {
-	this->time.outbound = time(NULL);
+	this->stats[STAT_OUTBOUND] = time(NULL);
 	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
 	{
 		/* send a proper signal to brief interested bus listeners */
@@ -2174,9 +2148,10 @@ static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
 		charon->processor->queue_job(charon->processor,
 		 			(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE));
 	}
-	else if (this->time.reauth == 0 || this->time.reauth > reauth_time) 
+	else if (this->stats[STAT_REAUTH] == 0 ||
+			 this->stats[STAT_REAUTH] > reauth_time) 
 	{
-		this->time.reauth = reauth_time;
+		this->stats[STAT_REAUTH] = reauth_time;
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
 			 " in %ds", lifetime, lifetime - reduction);
 		charon->scheduler->schedule_job(charon->scheduler,
@@ -2186,7 +2161,7 @@ static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
 	else
 	{
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, reauthentication already "
-			 "scheduled in %ds", lifetime, this->time.reauth - time(NULL));
+			 "scheduled in %ds", lifetime, this->stats[STAT_REAUTH] - time(NULL));
 	}
 }
 
@@ -2316,14 +2291,14 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	this->task_manager->adopt_tasks(this->task_manager, other->task_manager);
 	
 	/* reauthentication timeout survives a rekeying */
-	if (other->time.reauth)
+	if (other->stats[STAT_REAUTH])
 	{
 		time_t reauth, delete, now = time(NULL);
 	
-		this->time.reauth = other->time.reauth;
-		reauth = this->time.reauth - now;
+		this->stats[STAT_REAUTH] = other->stats[STAT_REAUTH];
+		reauth = this->stats[STAT_REAUTH] - now;
 		delete = reauth + this->peer_cfg->get_over_time(this->peer_cfg);
-		this->time.delete = this->time.reauth + delete;
+		this->stats[STAT_DELETE] = this->stats[STAT_REAUTH] + delete;
 		DBG1(DBG_IKE, "rescheduling reauthentication in %ds after rekeying, "
 			 "lifetime reduced to %ds", reauth, delete);
 		charon->scheduler->schedule_job(charon->scheduler, 
@@ -2651,11 +2626,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->state = IKE_CREATED;
 	this->keepalive_interval = lib->settings->get_time(lib->settings,
 									"charon.keep_alive", KEEPALIVE_INTERVAL);
-	this->time.inbound = this->time.outbound = time(NULL);
-	this->time.established = 0;
-	this->time.rekey = 0;
-	this->time.reauth = 0;
-	this->time.delete = 0;
+	memset(this->stats, 0, sizeof(this->stats));
+	this->stats[STAT_INBOUND] = this->stats[STAT_OUTBOUND] = time(NULL);
 	this->ike_cfg = NULL;
 	this->peer_cfg = NULL;
 	this->my_auth = auth_info_create();
