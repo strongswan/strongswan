@@ -45,53 +45,37 @@ typedef struct {
 				NM_TYPE_STRONGSWAN_PLUGIN, NMStrongswanPluginPrivate))
 
 /**
- * convert a traffic selector address range to subnet and its mask.
- */
-static u_int ts2subnet(traffic_selector_t* ts, u_int8_t *mask)
-{
-	u_int net;
-	host_t *net_host;
-	chunk_t net_chunk;
-	
-	ts->to_subnet(ts, &net_host, mask);
-	net_chunk = net_host->get_address(net_host);
-	net = *(u_int32_t*)net_chunk.ptr;
-	net_host->destroy(net_host);
-	return net;
-}
-
-/**
  * signal IPv4 config to NM, set connection as established
  */
-static void signal_ipv4_config(NMVPNPlugin *plugin, child_sa_t *child_sa)
+static void signal_ipv4_config(NMVPNPlugin *plugin,
+							   ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
-	linked_list_t *list;
-	traffic_selector_t *ts = NULL;
-	enumerator_t *enumerator;
+	GValue *val;
+	GHashTable *config;
+	host_t *me, *other;
 	
-	list = child_sa->get_traffic_selectors(child_sa, FALSE);
-	enumerator = list->create_enumerator(list);
-	while (enumerator->enumerate(enumerator, &ts))
-	{
-		GValue *val;
-		GHashTable *config;
-		u_int8_t mask;
-		
-		config = g_hash_table_new(g_str_hash, g_str_equal);
-		
-		val = g_slice_new0(GValue);
-		g_value_init(val, G_TYPE_UINT);
-		g_value_set_uint(val, ts2subnet(ts, &mask));
-		g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_ADDRESS, val);
-		
-		val = g_slice_new0(GValue);
-		g_value_init(val, G_TYPE_UINT);
-		g_value_set_uint(val, mask);
-		g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_PREFIX, val);
-		
-		nm_vpn_plugin_set_ip4_config(plugin, config);
-	}
-	enumerator->destroy(enumerator);
+	config = g_hash_table_new(g_str_hash, g_str_equal);
+	me = ike_sa->get_my_host(ike_sa);
+	other = ike_sa->get_other_host(ike_sa);
+	
+	/* NM requires a tundev, but netkey does not use one. Passing an invalid
+	 * iface makes NM complain, but it accepts it without fiddling on eth0. */
+	val = g_slice_new0 (GValue);
+	g_value_init (val, G_TYPE_STRING);
+	g_value_set_string (val, "none");
+	g_hash_table_insert (config, NM_VPN_PLUGIN_IP4_CONFIG_TUNDEV, val);
+	
+	val = g_slice_new0(GValue);
+	g_value_init(val, G_TYPE_UINT);
+	g_value_set_uint(val, *(u_int32_t*)me->get_address(me).ptr);
+	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_ADDRESS, val);
+	
+	val = g_slice_new0(GValue);
+	g_value_init(val, G_TYPE_UINT);
+	g_value_set_uint(val, me->get_address(me).len * 8);
+	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_PREFIX, val);
+	
+	nm_vpn_plugin_set_ip4_config(plugin, config);
 }
 
 /**
@@ -139,7 +123,7 @@ static bool child_state_change(listener_t *listener, ike_sa_t *ike_sa,
 		switch (state)
 		{
 			case CHILD_INSTALLED:
-				signal_ipv4_config(private->plugin, child_sa);
+				signal_ipv4_config(private->plugin, ike_sa, child_sa);
 				return FALSE;
 			case CHILD_DESTROYING:
 				signal_failure(private->plugin);
