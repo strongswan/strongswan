@@ -207,7 +207,7 @@ static int exec(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 /**
  * Poll until guest is ready
  */
-static bool wait_bootup(private_mconsole_t *this)
+static void wait_bootup(private_mconsole_t *this)
 {
 	/* wait for init process to appear */
 	while (request(this, ignore, NULL, "exec ps -p 1 > /dev/null"))
@@ -346,11 +346,7 @@ mconsole_t *mconsole_create(char *notify, void(*idle)(void))
 	}
 	unlink(notify);
 	
-	if (!wait_bootup(this))
-	{
-		destroy(this);
-		return NULL;
-	}
+	wait_bootup(this);
 	
 	return &this->public;
 }

@@ -15,6 +15,9 @@
  * $Id$
  */
 
+#define _GNU_SOURCE
+#include <stdio.h>
+
 #include "updown_plugin.h"
 
 #include <daemon.h>

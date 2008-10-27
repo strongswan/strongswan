@@ -145,8 +145,6 @@ struct private_task_manager_t {
  */
 static void flush(private_task_manager_t *this)
 {
-	task_t *task;
-	
 	this->queued_tasks->destroy_offset(this->queued_tasks, 
 										offsetof(task_t, destroy));
 	this->passive_tasks->destroy_offset(this->passive_tasks,

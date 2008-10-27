@@ -612,6 +612,11 @@ static void to_subnet(private_traffic_selector_t *this, host_t **net, u_int8_t *
 			net_chunk.len = sizeof(this->from6);
 			break;
 		}
+		default:
+		{
+			/* unreachable */
+			return;
+		}
 	}
 	
 	net_chunk.ptr = malloc(net_chunk.len);

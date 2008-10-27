@@ -106,7 +106,6 @@ static void destroy(private_file_logger_t *this)
  */
 file_logger_t *file_logger_create(FILE *out)
 {
-	debug_t group;
 	private_file_logger_t *this = malloc_thing(private_file_logger_t);
 	
 	/* public functions */

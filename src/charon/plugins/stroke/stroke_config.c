@@ -19,6 +19,7 @@
 
 #include <daemon.h>
 #include <utils/mutex.h>
+#include <utils/lexparser.h>
 
 typedef struct private_stroke_config_t private_stroke_config_t;
 
