@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2005-2007 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -196,6 +196,7 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	chunk_t nonce_i, nonce_r, secret, seed;
 	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other, *other_vip, *my_vip;
+	keymat_t *keymat;
 	
 	if (this->proposals == NULL)
 	{
@@ -351,7 +352,8 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		return NOT_FOUND;
 	}
 	
-	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
+	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	prf_plus = prf_plus_create(keymat->get_child_prf(keymat), seed);
 	if (this->initiator)
 	{
 		status = this->child_sa->update(this->child_sa, this->proposal,

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -44,12 +44,6 @@ struct private_pubkey_authenticator_t {
 };
 
 /**
- * Function implemented in psk_authenticator.c
- */
-extern chunk_t build_tbs_octets(chunk_t ike_sa_init, chunk_t nonce,
-								identification_t *id, prf_t *prf);
-
-/**
  * Implementation of authenticator_t.verify.
  */
 static status_t verify(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
@@ -58,15 +52,15 @@ static status_t verify(private_pubkey_authenticator_t *this, chunk_t ike_sa_init
 	public_key_t *public;
 	auth_method_t auth_method;
 	chunk_t auth_data, octets;
-	identification_t *other_id;
-	prf_t *prf;
+	identification_t *id;
 	auth_info_t *auth, *current_auth;
 	enumerator_t *enumerator;
 	key_type_t key_type = KEY_ECDSA;
 	signature_scheme_t scheme;
 	status_t status = FAILED;
+	keymat_t *keymat;
 	
-	other_id = this->ike_sa->get_other_id(this->ike_sa);
+	id = this->ike_sa->get_other_id(this->ike_sa);
 	auth_method = auth_payload->get_auth_method(auth_payload);
 	switch (auth_method)
 	{
@@ -89,19 +83,17 @@ static status_t verify(private_pubkey_authenticator_t *this, chunk_t ike_sa_init
 			return INVALID_ARG;
 	}
 	auth_data = auth_payload->get_data(auth_payload);
-	prf = this->ike_sa->get_prf(this->ike_sa);
-	prf->set_key(prf, this->ike_sa->get_skp_verify(this->ike_sa));
-	octets = build_tbs_octets(ike_sa_init, my_nonce, other_id, prf);
-	
+	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	octets = keymat->get_auth_octets(keymat, TRUE, ike_sa_init, my_nonce, id);
 	auth = this->ike_sa->get_other_auth(this->ike_sa);
 	enumerator = charon->credentials->create_public_enumerator(
-								charon->credentials, key_type, other_id, auth);
+										charon->credentials, key_type, id, auth);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
 		if (public->verify(public, scheme, octets, auth_data))
 		{
 			DBG1(DBG_IKE, "authentication of '%D' with %N successful",
-						   other_id, auth_method_names, auth_method);
+						   id, auth_method_names, auth_method);
 			status = SUCCESS;
 			auth->merge(auth, current_auth);
 			break;
@@ -125,19 +117,19 @@ static status_t build(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
 	chunk_t octets, auth_data;
 	status_t status = FAILED;
 	private_key_t *private;
-	identification_t *my_id;
-	prf_t *prf;
+	identification_t *id;
 	auth_info_t *auth;
 	auth_method_t auth_method;
 	signature_scheme_t scheme;
+	keymat_t *keymat;
 
-	my_id = this->ike_sa->get_my_id(this->ike_sa);
+	id = this->ike_sa->get_my_id(this->ike_sa);
 	auth = this->ike_sa->get_my_auth(this->ike_sa);
 	private = charon->credentials->get_private(charon->credentials, KEY_ANY,
-											   my_id, auth);
+											   id, auth);
 	if (private == NULL)
 	{
-		DBG1(DBG_IKE, "no private key found for '%D'", my_id);
+		DBG1(DBG_IKE, "no private key found for '%D'", id);
 		return NOT_FOUND;
 	}
 	
@@ -176,9 +168,8 @@ static status_t build(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
 					key_type_names, private->get_type(private));
 			return status;
 	}
-	prf = this->ike_sa->get_prf(this->ike_sa);
-	prf->set_key(prf, this->ike_sa->get_skp_build(this->ike_sa));
-	octets = build_tbs_octets(ike_sa_init, other_nonce, my_id, prf);
+	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	octets = keymat->get_auth_octets(keymat, FALSE, ike_sa_init, other_nonce, id);
 	
 	if (private->sign(private, scheme, octets, &auth_data))
 	{
@@ -189,9 +180,9 @@ static status_t build(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
 		chunk_free(&auth_data);
 		status = SUCCESS;
 	}
-	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N %s", my_id,
-			auth_method_names, auth_method,
-			(status == SUCCESS)? "successful":"failed");
+	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N %s", id,
+		 auth_method_names, auth_method, 
+		 (status == SUCCESS)? "successful":"failed");
 	chunk_free(&octets);
 	private->destroy(private);
 	

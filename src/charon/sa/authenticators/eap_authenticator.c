@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -70,36 +70,24 @@ struct private_eap_authenticator_t {
 	 */
 	u_int32_t vendor;
 };
-
-/**
- * reuse shared key signature function from PSK authenticator
- */
-extern chunk_t build_shared_key_signature(chunk_t ike_sa_init, chunk_t nonce,
-										  chunk_t secret, identification_t *id,
-										  chunk_t skp, prf_t *prf);
 /**
  * Implementation of authenticator_t.verify.
  */
 static status_t verify(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 					   chunk_t my_nonce, auth_payload_t *auth_payload)
 {
-	chunk_t auth_data, recv_auth_data, secret;
-	identification_t *other_id = this->ike_sa->get_other_id(this->ike_sa);
+	chunk_t auth_data, recv_auth_data;
+	identification_t *other_id;
+	keymat_t *keymat;
 	
-	if (this->msk.len)
-	{	/* use MSK if EAP method established one... */
-		secret = this->msk;
-	}
-	else
-	{	/* ... or use SKp if not */
-		secret = this->ike_sa->get_skp_verify(this->ike_sa);
-	}
-	auth_data = build_shared_key_signature(ike_sa_init, my_nonce, secret,
-						other_id, this->ike_sa->get_skp_verify(this->ike_sa),
-						this->ike_sa->get_prf(this->ike_sa));
+	other_id = this->ike_sa->get_other_id(this->ike_sa);
+	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	
+	auth_data = keymat->get_psk_sig(keymat, TRUE, ike_sa_init, my_nonce,
+									this->msk, other_id);
 	
 	recv_auth_data = auth_payload->get_data(auth_payload);
-	if (!chunk_equals(auth_data, recv_auth_data))
+	if (!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
 	{
 		DBG1(DBG_IKE, "verification of AUTH payload created from EAP MSK failed");
 		chunk_free(&auth_data);
@@ -118,23 +106,18 @@ static status_t verify(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 static status_t build(private_eap_authenticator_t *this, chunk_t ike_sa_init,
 					  chunk_t other_nonce, auth_payload_t **auth_payload)
 {
-	chunk_t auth_data, secret;
-	identification_t *my_id = this->ike_sa->get_my_id(this->ike_sa);
+	identification_t *my_id;
+	chunk_t auth_data;
+	keymat_t *keymat;
+	
+	my_id = this->ike_sa->get_my_id(this->ike_sa);
+	keymat = this->ike_sa->get_keymat(this->ike_sa);
 	
 	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);
-
-	if (this->msk.len)
-	{	/* use MSK if EAP method established one... */
-		secret = this->msk;
-	}
-	else
-	{	/* ... or use SKp if not */
-		secret = this->ike_sa->get_skp_build(this->ike_sa);
-	}
-	auth_data = build_shared_key_signature(ike_sa_init, other_nonce, secret,
-							my_id, this->ike_sa->get_skp_build(this->ike_sa),
-							this->ike_sa->get_prf(this->ike_sa));
+	
+	auth_data = keymat->get_psk_sig(keymat, FALSE, ike_sa_init, other_nonce,
+									this->msk, my_id);
 	
 	*auth_payload = auth_payload_create();
 	(*auth_payload)->set_auth_method(*auth_payload, AUTH_PSK);

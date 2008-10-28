@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -38,9 +38,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
 #include <sa/tasks/task.h>
-#include <crypto/prfs/prf.h>
-#include <crypto/crypters/crypter.h>
-#include <crypto/signers/signer.h>
+#include <sa/keymat.h>
 #include <config/peer_cfg.h>
 #include <config/ike_cfg.h>
 #include <credentials/auth_info.h>
@@ -714,62 +712,13 @@ struct ike_sa_t {
 	 * was sent.
 	 */
 	void (*send_keepalive) (ike_sa_t *this);
-
+	
 	/**
-	 * Derive all keys and create the transforms for IKE communication.
+	 * Get the keying material of this IKE_SA.
 	 *
-	 * Keys are derived using the diffie hellman secret, nonces and internal
-	 * stored SPIs.
-	 * Key derivation differs when an IKE_SA is set up to replace an
-	 * existing IKE_SA (rekeying). The SK_d key from the old IKE_SA
-	 * is included in the derivation process.
-	 *
-	 * @param proposal		proposal which contains algorithms to use
-	 * @param secret		secret derived from DH exchange, gets freed
-	 * @param nonce_i		initiators nonce
-	 * @param nonce_r		responders nonce
-	 * @param initiator		TRUE if initiator, FALSE otherwise
-	 * @param child_prf		PRF with SK_d key when rekeying, NULL otherwise
-	 * @param old_prf		general purpose PRF of old SA when rekeying
+	 * @return				per IKE_SA keymat instance
 	 */
-	status_t (*derive_keys)(ike_sa_t *this, proposal_t* proposal, chunk_t secret,
-							chunk_t nonce_i, chunk_t nonce_r,
-							bool initiator, prf_t *child_prf, prf_t *old_prf);
-	
-	/**
-	 * Get the selected IKE proposal
-	 *
-	 * @return				selected IKE proposal
-	 */
-	proposal_t* (*get_proposal)(ike_sa_t *this);					
-
-	/**
-	 * Get a multi purpose prf for the negotiated PRF function.
-	 * 
-	 * @return				pointer to prf_t object
-	 */
-	prf_t *(*get_prf) (ike_sa_t *this);
-	
-	/**
-	 * Get the prf-object, which is used to derive keys for child SAs.
-	 * 
-	 * @return				pointer to prf_t object
-	 */
-	prf_t *(*get_child_prf) (ike_sa_t *this);
-	
-	/**
-	 * Get the key to build outgoing authentication data.
-	 * 
-	 * @return				pointer to prf_t object
-	 */
-	chunk_t (*get_skp_build) (ike_sa_t *this);
-	
-	/**
-	 * Get the key to verify incoming authentication data.
-	 * 
-	 * @return				pointer to prf_t object
-	 */
-	chunk_t (*get_skp_verify) (ike_sa_t *this);
+	keymat_t* (*get_keymat)(ike_sa_t *this);
 	
 	/**
 	 * Associates a child SA to this IKE SA

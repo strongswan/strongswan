@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -23,12 +23,6 @@
 #include <daemon.h>
 #include <credentials/auth_info.h>
 
-/**
- * Key pad for the AUTH method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
- */
-#define IKEV2_KEY_PAD "Key Pad for IKEv2"
-#define IKEV2_KEY_PAD_LENGTH 17
-
 
 typedef struct private_psk_authenticator_t private_psk_authenticator_t;
 
@@ -49,55 +43,6 @@ struct private_psk_authenticator_t {
 };
 
 /**
- * Builds the octets to be signed as described in section 2.15 of RFC 4306
- */
-chunk_t build_tbs_octets(chunk_t ike_sa_init, chunk_t nonce,
-						 identification_t *id, prf_t *prf)
-{
-	u_int8_t id_header_buf[] = {0x00, 0x00, 0x00, 0x00};
-	chunk_t id_header = chunk_from_buf(id_header_buf);
-	chunk_t id_with_header, id_prfd, id_encoding;
-	
-	id_header_buf[0] = id->get_type(id);
-	id_encoding = id->get_encoding(id);
-	
-	id_with_header = chunk_cat("cc", id_header, id_encoding);
-	prf->allocate_bytes(prf, id_with_header, &id_prfd);
-	chunk_free(&id_with_header);
-	
-	return chunk_cat("ccm", ike_sa_init, nonce, id_prfd);
-}
-
-/**
- * Creates the AUTH data using auth method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
- */
-chunk_t build_shared_key_signature(chunk_t ike_sa_init, chunk_t nonce,
-								   chunk_t secret, identification_t *id,
-								   chunk_t skp, prf_t *prf)
-{
-	chunk_t key_pad, key, auth_data, octets;
-	
-	prf->set_key(prf, skp);
-	octets = build_tbs_octets(ike_sa_init, nonce, id, prf);
-	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
-	key_pad.ptr = IKEV2_KEY_PAD;
-	key_pad.len = IKEV2_KEY_PAD_LENGTH;
-	prf->set_key(prf, secret);
-	prf->allocate_bytes(prf, key_pad, &key);
-	prf->set_key(prf, key);
-	prf->allocate_bytes(prf, octets, &auth_data);
-	DBG3(DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') %B", &octets);
-	DBG3(DBG_IKE, "secret %B", &secret);
-	DBG3(DBG_IKE, "keypad %B", &key_pad);
-	DBG3(DBG_IKE, "prf(secret, keypad) %B", &key);
-	DBG3(DBG_IKE, "AUTH = prf(prf(secret, keypad), octets) %B", &auth_data);
-	chunk_free(&octets);
-	chunk_free(&key);
-	
-	return auth_data;
-}
-
-/**
  * Implementation of authenticator_t.verify.
  */
 static status_t verify(private_psk_authenticator_t *this, chunk_t ike_sa_init,
@@ -105,25 +50,25 @@ static status_t verify(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 {
 	chunk_t auth_data, recv_auth_data;
 	identification_t *my_id, *other_id;
-	shared_key_t *shared_key;
+	shared_key_t *key;
 	enumerator_t *enumerator;
 	bool authenticated = FALSE;
 	int keys_found = 0;
+	keymat_t *keymat;
 	
+	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	recv_auth_data = auth_payload->get_data(auth_payload);
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	enumerator = charon->credentials->create_shared_enumerator(
 							charon->credentials, SHARED_IKE, my_id, other_id);
-	while (!authenticated && enumerator->enumerate(enumerator, &shared_key, NULL, NULL))
+	while (!authenticated && enumerator->enumerate(enumerator, &key, NULL, NULL))
 	{
 		keys_found++;
-		auth_data = build_shared_key_signature(ike_sa_init, my_nonce,
-									shared_key->get_key(shared_key), other_id,
-									this->ike_sa->get_skp_verify(this->ike_sa),
-									this->ike_sa->get_prf(this->ike_sa));
-		recv_auth_data = auth_payload->get_data(auth_payload);
-		if (auth_data.len == recv_auth_data.len &&
-			memeq(auth_data.ptr, recv_auth_data.ptr, auth_data.len))
+		
+		auth_data = keymat->get_psk_sig(keymat, TRUE, ike_sa_init, my_nonce,
+										key->get_key(key), other_id);
+		if (auth_data.len && chunk_equals(auth_data, recv_auth_data))
 		{
 			DBG1(DBG_IKE, "authentication of '%D' with %N successful",
 				 other_id, auth_method_names, AUTH_PSK);
@@ -153,26 +98,26 @@ static status_t verify(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 static status_t build(private_psk_authenticator_t *this, chunk_t ike_sa_init,
 					  chunk_t other_nonce, auth_payload_t **auth_payload)
 {
-	shared_key_t *shared_key;
-	chunk_t auth_data;
 	identification_t *my_id, *other_id;
+	shared_key_t *key;
+	chunk_t auth_data;
+	keymat_t *keymat;
 	
+	keymat = this->ike_sa->get_keymat(this->ike_sa);
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
 		 my_id, auth_method_names, AUTH_PSK);
-	shared_key = charon->credentials->get_shared(charon->credentials, SHARED_IKE,
-												 my_id, other_id);
-	if (shared_key == NULL)
+	key = charon->credentials->get_shared(charon->credentials, SHARED_IKE,
+										  my_id, other_id);
+	if (key == NULL)
 	{
 		DBG1(DBG_IKE, "no shared key found for '%D' - '%D'", my_id, other_id);
 		return NOT_FOUND;
 	}
-	auth_data = build_shared_key_signature(ike_sa_init, other_nonce,
-									shared_key->get_key(shared_key), my_id,
-									this->ike_sa->get_skp_build(this->ike_sa),
-									this->ike_sa->get_prf(this->ike_sa));
-	shared_key->destroy(shared_key);
+	auth_data = keymat->get_psk_sig(keymat, FALSE, ike_sa_init, other_nonce,
+									key->get_key(key), my_id);
+	key->destroy(key);
 	DBG2(DBG_IKE, "successfully created shared key MAC");
 	*auth_payload = auth_payload_create();
 	(*auth_payload)->set_auth_method(*auth_payload, AUTH_PSK);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2007 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *

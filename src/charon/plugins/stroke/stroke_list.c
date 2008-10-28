@@ -79,14 +79,18 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (all)
 	{
-		proposal_t *ike_proposal = ike_sa->get_proposal(ike_sa);
-
+		keymat_t *keymat;
+		proposal_t *ike_proposal;
+		
+		keymat = ike_sa->get_keymat(ike_sa);
+		ike_proposal = keymat->get_proposal(keymat);
+		
 		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
 				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
-	
-
+		
+		
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 		{
 			u_int32_t rekey, reauth, now;
@@ -112,7 +116,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 			}
 		}
 		fprintf(out, "\n");
-
+		
 		if (ike_proposal)
 		{
 			char buf[BUF_LEN];
@@ -121,7 +125,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 			fprintf(out, "%12s[%d]: IKE proposal: %s\n",
 					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 					buf+4);
-		}		
+		}
 	}
 }
 

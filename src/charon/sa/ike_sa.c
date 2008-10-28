@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -191,49 +191,9 @@ struct private_ike_sa_t {
 	linked_list_t *child_sas;
 	
 	/**
-	 * Selected IKE proposal
+	 * keymat of this IKE_SA
 	 */
-	proposal_t *selected_proposal;
-	
-	/**
-	 * crypter for inbound traffic
-	 */
-	crypter_t *crypter_in;
-	
-	/**
-	 * crypter for outbound traffic
-	 */
-	crypter_t *crypter_out;
-	
-	/**
-	 * Signer for inbound traffic
-	 */
-	signer_t *signer_in;
-	
-	/**
-	 * Signer for outbound traffic
-	 */
-	signer_t *signer_out;
-	
-	/**
-	 * Multi purpose prf, set key, use it, forget it
-	 */
-	prf_t *prf;
-	
-	/**
-	 * Prf function for derivating keymat child SAs
-	 */
-	prf_t *child_prf;
-	
-	/**
-	 * Key to build outging authentication data (SKp)
-	 */
-	chunk_t skp_build;
-
-	/**
-	 * Key to verify incoming authentication data (SKp)
-	 */
-	chunk_t skp_verify;
+	keymat_t *keymat;
 	
 	/**
 	 * Virtual IP on local host, if any
@@ -743,6 +703,14 @@ static void reset(private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of ike_sa_t.get_keymat
+ */
+static keymat_t* get_keymat(private_ike_sa_t *this)
+{
+	return this->keymat;
+}
+
+/**
  * Implementation of ike_sa_t.set_virtual_ip
  */
 static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
@@ -912,7 +880,9 @@ static status_t generate_message(private_ike_sa_t *this, message_t *message,
 {
 	this->stats[STAT_OUTBOUND] = time(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
-	return message->generate(message, this->crypter_out, this->signer_out, packet);
+	return message->generate(message,
+				this->keymat->get_crypter(this->keymat, FALSE),
+				this->keymat->get_signer(this->keymat, FALSE), packet);
 }
 
 /**
@@ -1335,7 +1305,9 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 	
 	is_request = message->get_request(message);
 	
-	status = message->parse_body(message, this->crypter_in, this->signer_in);
+	status = message->parse_body(message,
+								 this->keymat->get_crypter(this->keymat, TRUE),
+								 this->keymat->get_signer(this->keymat, TRUE));
 	if (status != SUCCESS)
 	{
 		
@@ -1473,38 +1445,6 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 }
 
 /**
- * Implementation of ike_sa_t.get_prf.
- */
-static prf_t *get_prf(private_ike_sa_t *this)
-{
-	return this->prf;
-}
-
-/**
- * Implementation of ike_sa_t.get_prf.
- */
-static prf_t *get_child_prf(private_ike_sa_t *this)
-{
-	return this->child_prf;
-}
-
-/**
- * Implementation of ike_sa_t.get_skp_bild
- */
-static chunk_t get_skp_build(private_ike_sa_t *this)
-{
-	return this->skp_build;
-}
-
-/**
- * Implementation of ike_sa_t.get_skp_verify
- */
-static chunk_t get_skp_verify(private_ike_sa_t *this)
-{
-	return this->skp_verify;
-}
-
-/**
  * Implementation of ike_sa_t.get_id.
  */
 static ike_sa_id_t* get_id(private_ike_sa_t *this)
@@ -1561,224 +1501,6 @@ static void set_eap_identity(private_ike_sa_t *this, identification_t *id)
 {
 	DESTROY_IF(this->eap_identity);
 	this->eap_identity = id;
-}
-
-/**
- * Implementation of ike_sa_t.derive_keys.
- */
-static status_t derive_keys(private_ike_sa_t *this,
-							proposal_t *proposal, chunk_t secret,
-							chunk_t nonce_i, chunk_t nonce_r,
-							bool initiator, prf_t *child_prf, prf_t *old_prf)
-{
-	prf_plus_t *prf_plus;
-	chunk_t skeyseed, key, full_nonce, fixed_nonce, prf_plus_seed;
-	u_int16_t alg, key_size;
-	crypter_t *crypter_i, *crypter_r;
-	signer_t *signer_i, *signer_r;
-	u_int8_t spi_i_buf[sizeof(u_int64_t)], spi_r_buf[sizeof(u_int64_t)];
-	chunk_t spi_i = chunk_from_buf(spi_i_buf);
-	chunk_t spi_r = chunk_from_buf(spi_r_buf);
-	
-	/* Create SAs general purpose PRF first, we may use it here */
-	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL))
-	{
-		DBG1(DBG_IKE, "no %N selected",
-			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
-		return FAILED;
-	}
-	this->prf = lib->crypto->create_prf(lib->crypto, alg);
-	if (this->prf == NULL)
-	{
-		DBG1(DBG_IKE, "%N %N not supported!",
-			 transform_type_names, PSEUDO_RANDOM_FUNCTION,
-			 pseudo_random_function_names, alg);
-		return FAILED;
-	}
-	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
-	/* full nonce is used as seed for PRF+ ... */
-	full_nonce = chunk_cat("cc", nonce_i, nonce_r);
-	/* but the PRF may need a fixed key which only uses the first bytes of
-	 * the nonces. */
-	switch (alg)
-	{
-		case PRF_AES128_XCBC:
-			/* while rfc4434 defines variable keys for AES-XCBC, rfc3664 does
-			 * not and therefore fixed key semantics apply to XCBC for key
-			 * derivation. */
-			nonce_i.len = min(nonce_i.len, this->prf->get_key_size(this->prf)/2);
-			nonce_r.len = min(nonce_r.len, this->prf->get_key_size(this->prf)/2);
-			break;
-		default:
-			/* all other algorithms use variable key length, full nonce */
-			break;
-	}
-	fixed_nonce = chunk_cat("cc", nonce_i, nonce_r);
-	*((u_int64_t*)spi_i.ptr) = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
-	*((u_int64_t*)spi_r.ptr) = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
-	prf_plus_seed = chunk_cat("ccc", full_nonce, spi_i, spi_r);
-	
-	/* KEYMAT = prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr) 
-	 *
-	 * if we are rekeying, SKEYSEED is built on another way
-	 */
-	if (child_prf == NULL) /* not rekeying */
-	{
-		/* SKEYSEED = prf(Ni | Nr, g^ir) */
-		this->prf->set_key(this->prf, fixed_nonce);
-		this->prf->allocate_bytes(this->prf, secret, &skeyseed);
-		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
-		this->prf->set_key(this->prf, skeyseed);
-		chunk_clear(&skeyseed);
-		chunk_clear(&secret);
-		prf_plus = prf_plus_create(this->prf, prf_plus_seed);
-	}
-	else
-	{
-		/* SKEYSEED = prf(SK_d (old), [g^ir (new)] | Ni | Nr) 
-		 * use OLD SAs PRF functions for both prf_plus and prf */
-		secret = chunk_cat("mc", secret, full_nonce);
-		child_prf->allocate_bytes(child_prf, secret, &skeyseed);
-		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
-		old_prf->set_key(old_prf, skeyseed);
-		chunk_clear(&skeyseed);
-		chunk_clear(&secret);
-		prf_plus = prf_plus_create(old_prf, prf_plus_seed);
-	}
-	chunk_free(&full_nonce);
-	chunk_free(&fixed_nonce);
-	chunk_clear(&prf_plus_seed);
-	
-	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr */
-	
-	/* SK_d is used for generating CHILD_SA key mat => child_prf */
-	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL);
-	this->child_prf = lib->crypto->create_prf(lib->crypto, alg);
-	key_size = this->child_prf->get_key_size(this->child_prf);
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_d secret %B", &key);
-	this->child_prf->set_key(this->child_prf, key);
-	chunk_clear(&key);
-	
-	/* SK_ai/SK_ar used for integrity protection => signer_in/signer_out */
-	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
-	{
-		DBG1(DBG_IKE, "no %N selected",
-			 transform_type_names, INTEGRITY_ALGORITHM);
-		return FAILED;
-	}
-	signer_i = lib->crypto->create_signer(lib->crypto, alg);
-	signer_r = lib->crypto->create_signer(lib->crypto, alg);
-	if (signer_i == NULL || signer_r == NULL)
-	{
-		DBG1(DBG_IKE, "%N %N not supported!",
-			 transform_type_names, INTEGRITY_ALGORITHM,
-			 integrity_algorithm_names ,alg);
-		prf_plus->destroy(prf_plus);
-		return FAILED;
-	}
-	key_size = signer_i->get_key_size(signer_i);
-	
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_ai secret %B", &key);
-	signer_i->set_key(signer_i, key);
-	chunk_clear(&key);
-	
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_ar secret %B", &key);
-	signer_r->set_key(signer_r, key);
-	chunk_clear(&key);
-	
-	if (initiator)
-	{
-		this->signer_in = signer_r;
-		this->signer_out = signer_i;
-	}
-	else
-	{
-		this->signer_in = signer_i;
-		this->signer_out = signer_r;
-	}
-	
-	/* SK_ei/SK_er used for encryption => crypter_in/crypter_out */
-	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &key_size))
-	{
-		DBG1(DBG_IKE, "no %N selected",
-			 transform_type_names, ENCRYPTION_ALGORITHM);
-		prf_plus->destroy(prf_plus);
-		return FAILED;
-	}
-	crypter_i = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
-	crypter_r = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
-	if (crypter_i == NULL || crypter_r == NULL)
-	{
-		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
-			 transform_type_names, ENCRYPTION_ALGORITHM,
-			 encryption_algorithm_names, alg, key_size);
-		prf_plus->destroy(prf_plus);
-		return FAILED;
-	}
-	key_size = crypter_i->get_key_size(crypter_i);
-	
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
-	crypter_i->set_key(crypter_i, key);
-	chunk_clear(&key);
-	
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_er secret %B", &key);
-	crypter_r->set_key(crypter_r, key);
-	chunk_clear(&key);
-	
-	if (initiator)
-	{
-		this->crypter_in = crypter_r;
-		this->crypter_out = crypter_i;
-	}
-	else
-	{
-		this->crypter_in = crypter_i;
-		this->crypter_out = crypter_r;
-	}
-	
-	/* SK_pi/SK_pr used for authentication => stored for later */	
-	key_size = this->prf->get_key_size(this->prf);
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_pi secret %B", &key);
-	if (initiator)
-	{
-		this->skp_build = key;
-	}
-	else
-	{
-		this->skp_verify = key;
-	}
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_pr secret %B", &key);
-	if (initiator)
-	{
-		this->skp_verify = key;
-	}
-	else
-	{
-		this->skp_build = key;
-	}
-	
-	/* all done, prf_plus not needed anymore */
-	prf_plus->destroy(prf_plus);
-	
-	/* save selected proposal */
-	this->selected_proposal = proposal->clone(proposal);
-	
-	return SUCCESS;
-}
-
-/**
- * Implementation of ike_sa_t.get_proposal.
- */
-static proposal_t* get_proposal(private_ike_sa_t *this)
-{
-	return this->selected_proposal;
 }
 
 /**
@@ -2452,16 +2174,7 @@ static void destroy(private_ike_sa_t *this)
 	charon->bus->set_sa(charon->bus, NULL);
 	
 	this->task_manager->destroy(this->task_manager);
-	
-	DESTROY_IF(this->crypter_in);
-	DESTROY_IF(this->crypter_out);
-	DESTROY_IF(this->signer_in);
-	DESTROY_IF(this->signer_out);
-	DESTROY_IF(this->prf);
-	DESTROY_IF(this->child_prf);
-	chunk_free(&this->skp_verify);
-	chunk_free(&this->skp_build);
-	DESTROY_IF(this->selected_proposal);
+	this->keymat->destroy(this->keymat);
 	
 	if (this->my_virtual_ip)
 	{
@@ -2561,12 +2274,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.destroy = (void (*)(ike_sa_t*))destroy;
 	this->public.send_dpd = (status_t (*)(ike_sa_t*)) send_dpd;
 	this->public.send_keepalive = (void (*)(ike_sa_t*)) send_keepalive;
-	this->public.get_prf = (prf_t* (*)(ike_sa_t*)) get_prf;
-	this->public.get_child_prf = (prf_t* (*)(ike_sa_t *)) get_child_prf;
-	this->public.get_skp_verify = (chunk_t (*)(ike_sa_t *)) get_skp_verify;
-	this->public.get_skp_build = (chunk_t (*)(ike_sa_t *)) get_skp_build;
-	this->public.derive_keys = (status_t (*)(ike_sa_t *,proposal_t*,chunk_t,chunk_t,chunk_t,bool,prf_t*,prf_t*)) derive_keys;
-	this->public.get_proposal = (proposal_t* (*)(ike_sa_t*)) get_proposal;
+	this->public.get_keymat = (keymat_t*(*)(ike_sa_t*))get_keymat;
 	this->public.add_child_sa = (void (*)(ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
 	this->public.create_child_sa_iterator = (iterator_t* (*)(ike_sa_t*)) create_child_sa_iterator;
@@ -2607,15 +2315,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->eap_identity = NULL;
 	this->extensions = 0;
 	this->conditions = 0;
-	this->selected_proposal = NULL;
-	this->crypter_in = NULL;
-	this->crypter_out = NULL;
-	this->signer_in = NULL;
-	this->signer_out = NULL;
-	this->prf = NULL;
-	this->skp_verify = chunk_empty;
-	this->skp_build = chunk_empty;
- 	this->child_prf = NULL;
+	this->keymat = keymat_create(ike_sa_id->is_initiator(ike_sa_id));
 	this->state = IKE_CREATED;
 	this->keepalive_interval = lib->settings->get_time(lib->settings,
 									"charon.keep_alive", KEEPALIVE_INTERVAL);
