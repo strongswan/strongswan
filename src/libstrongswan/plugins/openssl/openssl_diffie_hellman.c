@@ -38,23 +38,28 @@ struct modulus_entry_t {
 	BIGNUM *(*get_prime)(BIGNUM *bn);
 	
 	/* 
+	 * Optimum length of exponent in bits.
+	 */	
+	long opt_exponent_len;
+
+	/* 
 	 * Generator value.
 	 */	
 	u_int16_t generator;
 };
 
 /**
- * All supported modulus values.
+ * All supported modulus values - optimum exponent size according to RFC 3526.
  */
 static modulus_entry_t modulus_entries[] = {
-	{MODP_768_BIT,  get_rfc2409_prime_768,  2},
-	{MODP_1024_BIT, get_rfc2409_prime_1024, 2},
-	{MODP_1536_BIT, get_rfc3526_prime_1536, 2},
-	{MODP_2048_BIT, get_rfc3526_prime_2048, 2},
-	{MODP_3072_BIT, get_rfc3526_prime_3072, 2},
-	{MODP_4096_BIT, get_rfc3526_prime_4096, 2},
-	{MODP_6144_BIT, get_rfc3526_prime_6144, 2},
-	{MODP_8192_BIT, get_rfc3526_prime_8192, 2},
+	{MODP_768_BIT,  get_rfc2409_prime_768,  256, 2},
+	{MODP_1024_BIT, get_rfc2409_prime_1024, 256, 2},
+	{MODP_1536_BIT, get_rfc3526_prime_1536, 256, 2},
+	{MODP_2048_BIT, get_rfc3526_prime_2048, 384, 2},
+	{MODP_3072_BIT, get_rfc3526_prime_3072, 384, 2},
+	{MODP_4096_BIT, get_rfc3526_prime_4096, 512, 2},
+	{MODP_6144_BIT, get_rfc3526_prime_6144, 512, 2},
+	{MODP_8192_BIT, get_rfc3526_prime_8192, 512, 2},
 };
 
 typedef struct private_openssl_diffie_hellman_t private_openssl_diffie_hellman_t;
@@ -83,6 +88,11 @@ struct private_openssl_diffie_hellman_t {
 	 */
 	BIGNUM *pub_key;
 	
+	/* 
+	 * Optimum length of exponent in bits.
+	 */	
+	long opt_exponent_len;
+
 	/**
 	 * Shared secret
 	 */
@@ -180,6 +190,7 @@ static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 			this->dh->p = modulus_entries[i].get_prime(NULL);
 			this->dh->g = BN_new();
 			BN_set_word(this->dh->g, modulus_entries[i].generator);
+			this->opt_exponent_len = modulus_entries[i].opt_exponent_len;
 			return SUCCESS;
 		}
 	}
@@ -202,6 +213,7 @@ static void destroy(private_openssl_diffie_hellman_t *this)
  */
 openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t group)
 {
+	bool ansi_x9_42;
 	private_openssl_diffie_hellman_t *this = malloc_thing(private_openssl_diffie_hellman_t);
 	
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
@@ -217,8 +229,7 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 		free(this);
 		return NULL;
 	}
-	this->dh->length = DH_EXPONENT_ENTROPY_SIZE;
-	
+
 	this->group = group;
 	this->computed = FALSE;
 	
@@ -232,12 +243,17 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 		return NULL;
 	}
 	
+	ansi_x9_42 = lib->settings->get_bool(lib->settings,
+					 "charon.dh_exponent_ansi_x9_42", TRUE);
+	this->dh->length = (ansi_x9_42) ? 0 : this->opt_exponent_len;
+
 	/* generate my public and private values */
 	if (!DH_generate_key(this->dh))
 	{
 		destroy(this);
 		return NULL;
 	}
+	DBG2("size of DH secret exponent: %d bits", BN_num_bits(this->dh->priv_key));
 	
 	return &this->public;
 }

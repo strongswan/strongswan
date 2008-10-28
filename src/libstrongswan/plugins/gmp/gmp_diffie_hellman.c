@@ -304,23 +304,28 @@ struct modulus_entry_t {
 	size_t modulus_len;
 	
 	/* 
+	 * Optimum length of exponent in bytes.
+	 */	
+	size_t opt_exponent_len;
+
+	/* 
 	 * Generator value.
 	 */	
 	u_int16_t generator;
 };
 
 /**
- * All supported modulus values.
+ * All supported modulus values - optimum exponent size according to RFC 3526.
  */
 static modulus_entry_t modulus_entries[] = {
-	{MODP_768_BIT, group1_modulus, sizeof(group1_modulus), 2},
-	{MODP_1024_BIT, group2_modulus, sizeof(group2_modulus), 2},
-	{MODP_1536_BIT, group5_modulus, sizeof(group5_modulus), 2},
-	{MODP_2048_BIT, group14_modulus, sizeof(group14_modulus), 2},
-	{MODP_3072_BIT, group15_modulus, sizeof(group15_modulus), 2},
-	{MODP_4096_BIT, group16_modulus, sizeof(group16_modulus), 2},
-	{MODP_6144_BIT, group17_modulus, sizeof(group17_modulus), 2},
-	{MODP_8192_BIT, group18_modulus, sizeof(group18_modulus), 2},
+	{MODP_768_BIT,  group1_modulus,  sizeof(group1_modulus),  32, 2},
+	{MODP_1024_BIT, group2_modulus,  sizeof(group2_modulus),  32, 2},
+	{MODP_1536_BIT, group5_modulus,  sizeof(group5_modulus),  32, 2},
+	{MODP_2048_BIT, group14_modulus, sizeof(group14_modulus), 48, 2},
+	{MODP_3072_BIT, group15_modulus, sizeof(group15_modulus), 48, 2},
+	{MODP_4096_BIT, group16_modulus, sizeof(group16_modulus), 64, 2},
+	{MODP_6144_BIT, group17_modulus, sizeof(group17_modulus), 64, 2},
+	{MODP_8192_BIT, group18_modulus, sizeof(group18_modulus), 64, 2},
 };
 
 typedef struct private_gmp_diffie_hellman_t private_gmp_diffie_hellman_t;
@@ -374,6 +379,11 @@ struct private_gmp_diffie_hellman_t {
 	 */
 	size_t p_len;
 	
+	/**
+	 * Optimal exponent length.
+	 */
+	size_t opt_exponent_len;
+
 	/**
 	 * True if shared secret is computed and stored in my_public_value.
 	 */
@@ -504,6 +514,7 @@ static status_t set_modulus(private_gmp_diffie_hellman_t *this)
 			chunk.len = modulus_entries[i].modulus_len;
 			mpz_import(this->p, chunk.len, 1, 1, 1, 0, chunk.ptr);
 			this->p_len = chunk.len;
+			this->opt_exponent_len = modulus_entries[i].opt_exponent_len;
 			mpz_set_ui(this->g, modulus_entries[i].generator);
 			status = SUCCESS;
 			break;
@@ -534,6 +545,8 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	private_gmp_diffie_hellman_t *this = malloc_thing(private_gmp_diffie_hellman_t);
 	rng_t *rng;
 	chunk_t random;
+	bool ansi_x9_42;
+	size_t exponent_len;
 
 	/* public functions */
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
@@ -567,11 +580,22 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 		destroy(this);
 		return NULL;
 	}
-	rng->allocate_bytes(rng, DH_EXPONENT_ENTROPY_SIZE / BITS_PER_BYTE, &random);
+
+	ansi_x9_42 = lib->settings->get_int(lib->settings,
+					 "charon.dh_exponent_ansi_x9_42", TRUE);
+	exponent_len = (ansi_x9_42) ? this->p_len : this->opt_exponent_len;	
+	rng->allocate_bytes(rng, exponent_len, &random);
 	rng->destroy(rng);
+
+	if (ansi_x9_42)
+	{
+		/* achieve bitsof(p)-1 by setting MSB to 0 */
+		*random.ptr &= 0x7F;
+	}
 	mpz_import(this->xa, random.len, 1, 1, 1, 0, random.ptr);
 	chunk_free(&random);
-	
+	DBG2("size of DH secret exponent: %u bits", mpz_sizeinbase(this->xa, 2));
+
 	mpz_powm(this->ya, this->g, this->xa, this->p);
 	
 	return &this->public;
