@@ -102,7 +102,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 			}
 			if (reauth)
 			{
-				reauth -= reauth;
+				reauth -= now;
 				fprintf(out, ", %N reauthentication in %V", auth_class_names,
 						get_auth_class(ike_sa->get_peer_cfg(ike_sa)), &reauth);
 			}
