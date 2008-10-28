@@ -433,15 +433,7 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
-
-	/* Keep the selected IKE proposal for status information purposes */
-	{
-		char buf[BUF_LEN];
-
-		snprintf(buf, BUF_LEN, "%P", this->proposal);
-		this->ike_sa->set_proposal(this->ike_sa, buf+4);
-	}
-
+	
 	build_payloads(this, message);
 	return SUCCESS;
 }
@@ -563,14 +555,6 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 	{
 		DBG1(DBG_IKE, "key derivation failed");
 		return FAILED;
-	}
-
-	/* Keep the selected IKE proposal for status information purposes */
-	{
-		char buf[BUF_LEN];
-
-		snprintf(buf, BUF_LEN, "%P", this->proposal);
-		this->ike_sa->set_proposal(this->ike_sa, buf+4);
 	}
 
 	return SUCCESS;

@@ -79,7 +79,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (all)
 	{
-		char *ike_proposal = ike_sa->get_proposal(ike_sa);
+		proposal_t *ike_proposal = ike_sa->get_proposal(ike_sa);
 
 		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
@@ -115,9 +115,12 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 
 		if (ike_proposal)
 		{
+			char buf[BUF_LEN];
+			
+			snprintf(buf, BUF_LEN, "%P", ike_proposal);
 			fprintf(out, "%12s[%d]: IKE proposal: %s\n",
 					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
-					ike_proposal);
+					buf+4);
 		}		
 	}
 }

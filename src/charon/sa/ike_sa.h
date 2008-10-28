@@ -737,19 +737,11 @@ struct ike_sa_t {
 							bool initiator, prf_t *child_prf, prf_t *old_prf);
 	
 	/**
-	 * Get the selected IKE proposal string
+	 * Get the selected IKE proposal
 	 *
-	 * @return				string describing the selected IKE proposal
+	 * @return				selected IKE proposal
 	 */
-	char* (*get_proposal)(ike_sa_t *this);			
-
-	/**
-	 * Set the selected IKE proposal string for status information purposes
-	 * (the "%P" printf format handler is used)
-     *
-	 * @param proposal		string describing the selected IKE proposal
-	 */
-	void (*set_proposal)(ike_sa_t *this, char *proposal);			
+	proposal_t* (*get_proposal)(ike_sa_t *this);					
 
 	/**
 	 * Get a multi purpose prf for the negotiated PRF function.
