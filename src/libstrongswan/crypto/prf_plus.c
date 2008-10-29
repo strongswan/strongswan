@@ -96,9 +96,16 @@ static void get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buffer)
  */	
 static void allocate_bytes(private_prf_plus_t *this, size_t length, chunk_t *chunk)
 {
-	chunk->ptr = malloc(length);
-	chunk->len = length;
-	this->public.get_bytes(&(this->public), length, chunk->ptr);
+	if (length)
+	{
+		chunk->ptr = malloc(length);
+		chunk->len = length;
+		get_bytes(this, length, chunk->ptr);
+	}
+	else
+	{
+		*chunk = chunk_empty;
+	}
 }
 
 /**
