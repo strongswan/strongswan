@@ -37,23 +37,18 @@ typedef struct keymat_t keymat_t;
  * Derivation an management of sensitive keying material.
  */
 struct keymat_t {
-
-	/**
-	 * Set the diffie hellman group to use.
-	 *
-	 * @param group		diffie hellman group to use
-	 * @return			TRUE if group supported
-	 */
-	bool (*set_dh_group)(keymat_t *this, diffie_hellman_group_t group);
 	
 	/**
-	 * Get the diffie hellman key agreement interface.
+	 * Create a diffie hellman object for key agreement.
 	 *
-	 * Call set_dh_group() before acquiring this interface.
+	 * The diffie hellman is either for IKE negotiation/rekeying or
+	 * CHILD_SA rekeying (using PFS). The resulting DH object must be passed
+	 * to derive_ike_keys or to derive_child_keys and destroyed after use
 	 *
-	 * @return			key agreement interface
+	 * @param group			diffie hellman group
+	 * @return				DH object, NULL if group not supported
 	 */
-	diffie_hellman_t* (*get_dh)(keymat_t *this);
+	diffie_hellman_t* (*create_dh)(keymat_t *this, diffie_hellman_group_t group);
 	
 	/**
 	 * Derive keys from the shared secret.
@@ -65,8 +60,9 @@ struct keymat_t {
 	 * @param rekey		keymat of old SA if we are rekeying
 	 * @return			TRUE on success
 	 */
-	bool (*derive_keys)(keymat_t *this, proposal_t *proposal, chunk_t nonce_i,
-						chunk_t nonce_r, ike_sa_id_t *id, keymat_t *rekey);
+	bool (*derive_keys)(keymat_t *this, proposal_t *proposal,
+						diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
+						ike_sa_id_t *id, keymat_t *rekey);
 	/**
 	 * Get a signer to sign/verify IKE messages.
 	 *

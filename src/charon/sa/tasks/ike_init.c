@@ -197,10 +197,8 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
 				if (!this->initiator)
 				{
-					if (this->keymat->set_dh_group(this->keymat, this->dh_group))
-					{
-						this->dh = this->keymat->get_dh(this->keymat);
-					}
+					this->dh = this->keymat->create_dh(this->keymat,
+													   this->dh_group);
 				}
 				if (this->dh)
 				{
@@ -254,13 +252,13 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	if (!this->dh)
 	{
 		this->dh_group = this->config->get_dh_group(this->config);
-		if (!this->keymat->set_dh_group(this->keymat, this->dh_group))
+		this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
+		if (!this->dh)
 		{
 			DBG1(DBG_IKE, "configured DH group %N not supported",
 				diffie_hellman_group_names, this->dh_group);
 			return FAILED;
 		}
-		this->dh = this->keymat->get_dh(this->keymat);
 	}
 	
 	/* generate nonce only when we are trying the first time */
@@ -417,8 +415,8 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		id->set_initiator_spi(id, this->proposal->get_spi(this->proposal));
 		old_keymat = this->old_sa->get_keymat(this->old_sa);
 	}
-	if (!this->keymat->derive_keys(this->keymat, this->proposal, this->other_nonce,
-								   this->my_nonce, id, old_keymat))
+	if (!this->keymat->derive_keys(this->keymat, this->proposal, this->dh,
+							this->other_nonce, this->my_nonce, id, old_keymat))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
@@ -524,8 +522,8 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		id->set_responder_spi(id, this->proposal->get_spi(this->proposal));
 		old_keymat = this->old_sa->get_keymat(this->old_sa);
 	}
-	if (!this->keymat->derive_keys(this->keymat, this->proposal, this->my_nonce,
-								   this->other_nonce, id, old_keymat))
+	if (!this->keymat->derive_keys(this->keymat, this->proposal, this->dh,
+							this->my_nonce, this->other_nonce, id, old_keymat))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
 		return FAILED;
@@ -568,8 +566,8 @@ static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
 	
 	this->ike_sa = ike_sa;
 	this->proposal = NULL;
-	this->keymat->set_dh_group(this->keymat, this->dh_group);
-	this->dh = this->keymat->get_dh(this->keymat);
+	DESTROY_IF(this->dh);
+	this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
 }
 
 /**
@@ -577,6 +575,7 @@ static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
  */
 static void destroy(private_ike_init_t *this)
 {
+	DESTROY_IF(this->dh);
 	DESTROY_IF(this->proposal);
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);

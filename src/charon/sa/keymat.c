@@ -38,11 +38,6 @@ struct private_keymat_t {
  	bool initiator;
 	
 	/**
-	 * diffie hellman key exchange
-	 */
-	diffie_hellman_t *dh;
-	
-	/**
 	 * inbound signer (verify)
 	 */
 	signer_t *signer_in;
@@ -89,29 +84,20 @@ struct private_keymat_t {
 };
 
 /**
- * Implementation of keymat_t.set_dh_group
+ * Implementation of keymat_t.create_dh
  */
-static bool set_dh_group(private_keymat_t *this, diffie_hellman_group_t group)
+static diffie_hellman_t* create_dh(private_keymat_t *this,
+								   diffie_hellman_group_t group)
 {
-	DESTROY_IF(this->dh);
-	this->dh = lib->crypto->create_dh(lib->crypto, group);
-	return this->dh != NULL;
-}
-
-/**
- * Implementation of keymat_t.get_dh
- */
-static diffie_hellman_t* get_dh(private_keymat_t *this)
-{
-	return this->dh;
+	return lib->crypto->create_dh(lib->crypto, group);;
 }
 
 /**
  * Implementation of keymat_t.derive_keys
  */
 static bool derive_keys(private_keymat_t *this, proposal_t *proposal,
-						chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
-						private_keymat_t *rekey)
+						diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
+						ike_sa_id_t *id, private_keymat_t *rekey)
 {
 	chunk_t skeyseed, key, secret, full_nonce, fixed_nonce, prf_plus_seed;
 	chunk_t spi_i, spi_r;
@@ -123,7 +109,7 @@ static bool derive_keys(private_keymat_t *this, proposal_t *proposal,
 	spi_i = chunk_alloca(sizeof(u_int64_t));
 	spi_r = chunk_alloca(sizeof(u_int64_t));
 	
-	if (!this->dh || this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
+	if (dh->get_shared_secret(dh, &secret) != SUCCESS)
 	{
 		return FALSE;
 	}
@@ -420,7 +406,6 @@ static chunk_t get_psk_sig(private_keymat_t *this, bool verify,
  */
 static void destroy(private_keymat_t *this)
 {
-	DESTROY_IF(this->dh);
 	DESTROY_IF(this->signer_in);
 	DESTROY_IF(this->signer_out);
 	DESTROY_IF(this->crypter_in);
@@ -440,9 +425,8 @@ keymat_t *keymat_create(bool initiator)
 {
 	private_keymat_t *this = malloc_thing(private_keymat_t);
 	
-	this->public.set_dh_group = (bool(*)(keymat_t*, diffie_hellman_group_t group))set_dh_group;
-	this->public.get_dh = (diffie_hellman_t*(*)(keymat_t*))get_dh;
-	this->public.derive_keys = (bool(*)(keymat_t*, proposal_t *proposal, chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id, keymat_t *rekey))derive_keys;
+	this->public.create_dh = (diffie_hellman_t*(*)(keymat_t*, diffie_hellman_group_t group))create_dh;
+	this->public.derive_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id, keymat_t *rekey))derive_keys;
 	this->public.get_proposal = (proposal_t*(*)(keymat_t*))get_proposal;
 	this->public.get_signer = (signer_t*(*)(keymat_t*, bool in))get_signer;
 	this->public.get_crypter = (crypter_t*(*)(keymat_t*, bool in))get_crypter;
@@ -453,7 +437,6 @@ keymat_t *keymat_create(bool initiator)
 	
 	this->initiator = initiator;
 	
-	this->dh = NULL;
 	this->signer_in = NULL;
 	this->signer_out = NULL;
 	this->crypter_in = NULL;
