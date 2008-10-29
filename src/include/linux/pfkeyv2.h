@@ -226,6 +226,15 @@ struct sadb_x_sec_ctx {
 } __attribute__((packed));
 /* sizeof(struct sadb_sec_ctx) = 8 */
 
+/* Used by MIGRATE to pass addresses IKE will use to perform
+ * negotiation with the peer */
+struct sadb_x_kmaddress {
+	uint16_t	sadb_x_kmaddress_len;
+	uint16_t	sadb_x_kmaddress_exttype;
+	uint32_t	sadb_x_kmaddress_reserved;
+} __attribute__((packed));
+/* sizeof(struct sadb_x_kmaddress) == 8 */
+
 /* Message types */
 #define SADB_RESERVED		0
 #define SADB_GETSPI		1
@@ -298,6 +307,13 @@ struct sadb_x_sec_ctx {
 #define SADB_X_EALG_BLOWFISHCBC		7
 #define SADB_EALG_NULL			11
 #define SADB_X_EALG_AESCBC		12
+#define SADB_X_EALG_AESCTR		13
+#define SADB_X_EALG_AES_CCM_ICV8	14
+#define SADB_X_EALG_AES_CCM_ICV12	15
+#define SADB_X_EALG_AES_CCM_ICV16	16
+#define SADB_X_EALG_AES_GCM_ICV8	18
+#define SADB_X_EALG_AES_GCM_ICV12	19
+#define SADB_X_EALG_AES_GCM_ICV16	20
 #define SADB_X_EALG_CAMELLIACBC		22
 #define SADB_EALG_MAX                   253 /* last EALG */
 /* private allocations should use 249-255 (RFC2407) */
@@ -339,7 +355,9 @@ struct sadb_x_sec_ctx {
 #define SADB_X_EXT_NAT_T_DPORT		22
 #define SADB_X_EXT_NAT_T_OA		23
 #define SADB_X_EXT_SEC_CTX		24
-#define SADB_EXT_MAX			24
+/* Used with MIGRATE to pass @ to IKE for negotiation */
+#define SADB_X_EXT_KMADDRESS		25
+#define SADB_EXT_MAX			25
 
 /* Identity Extension values */
 #define SADB_IDENTTYPE_RESERVED	0
