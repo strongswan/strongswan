@@ -83,6 +83,58 @@ struct private_keymat_t {
 	proposal_t *proposal;
 };
 
+typedef struct keylen_entry_t keylen_entry_t;
+
+/**
+ * Implicit key length for an algorithm
+ */
+struct keylen_entry_t {
+	/** IKEv2 algorithm identifier */
+	int algo;
+	/** key length in bits */
+	int len;
+};
+
+#define END_OF_LIST -1
+
+/**
+ * Keylen for encryption algos
+ */
+keylen_entry_t keylen_enc[] = {
+	{ENCR_DES, 					 64},
+	{ENCR_3DES, 				192},
+	{END_OF_LIST,				  0}
+};
+
+/**
+ * Keylen for integrity algos
+ */
+keylen_entry_t keylen_int[] = {
+	{AUTH_HMAC_MD5_96, 			128},
+	{AUTH_HMAC_SHA1_96,			160},
+	{AUTH_HMAC_SHA2_256_128,	256},
+	{AUTH_HMAC_SHA2_384_192,	384},
+	{AUTH_HMAC_SHA2_512_256,	512},
+	{AUTH_AES_XCBC_96,			128},
+	{END_OF_LIST,				  0}
+};
+
+/**
+ * Lookup key length of an algorithm
+ */
+static int lookup_keylen(keylen_entry_t *list, int algo)
+{
+	while (list->algo != END_OF_LIST)
+	{
+		if (algo == list->algo)
+		{
+			return list->len;
+		}
+		list++;
+	}
+	return 0;
+}
+
 /**
  * Implementation of keymat_t.create_dh
  */
@@ -95,9 +147,10 @@ static diffie_hellman_t* create_dh(private_keymat_t *this,
 /**
  * Implementation of keymat_t.derive_keys
  */
-static bool derive_keys(private_keymat_t *this, proposal_t *proposal,
-						diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
-						ike_sa_id_t *id, private_keymat_t *rekey)
+static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
+							diffie_hellman_t *dh, chunk_t nonce_i,
+							chunk_t nonce_r, ike_sa_id_t *id,
+							private_keymat_t *rekey)
 {
 	chunk_t skeyseed, key, secret, full_nonce, fixed_nonce, prf_plus_seed;
 	chunk_t spi_i, spi_r;
@@ -308,6 +361,99 @@ static bool derive_keys(private_keymat_t *this, proposal_t *proposal,
 }
 
 /**
+ * Implementation of keymat_t.derive_child_keys
+ */
+static bool derive_child_keys(private_keymat_t *this,
+							  proposal_t *proposal, diffie_hellman_t *dh,
+							  chunk_t nonce_i, chunk_t nonce_r,
+							  chunk_t *encr_i, chunk_t *integ_i,
+							  chunk_t *encr_r, chunk_t *integ_r)
+{
+	u_int16_t enc_alg, int_alg, enc_size, int_size;
+	chunk_t seed, secret = chunk_empty;
+	prf_plus_t *prf_plus;
+	
+	if (dh)
+	{
+		if (dh->get_shared_secret(dh, &secret) != SUCCESS)
+		{
+			return FALSE;
+		}
+		DBG4(DBG_CHD, "DH secret %B", &secret);
+	}
+	seed = chunk_cata("mcc", secret, nonce_i, nonce_r);
+	DBG4(DBG_CHD, "seed %B", &seed);
+	
+	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
+								&enc_alg, &enc_size))
+	{
+		DBG2(DBG_CHD, "  using %N for encryption", 
+			 encryption_algorithm_names, enc_alg);
+		
+		if (!enc_size)
+		{
+			enc_size = lookup_keylen(keylen_enc, enc_alg);
+		}
+		if (!enc_size)
+		{
+			DBG1(DBG_CHD, "no keylenth defined for %N",
+				 encryption_algorithm_names, enc_alg);
+			return FALSE;
+		}
+		/* to bytes */
+		enc_size /= 8;
+		
+	 	/* CCM/GCM needs additional bytes */
+		switch (enc_alg)
+		{
+			case ENCR_AES_CCM_ICV8:
+			case ENCR_AES_CCM_ICV12:
+			case ENCR_AES_CCM_ICV16:
+				enc_size += 3;
+				break;		
+			case ENCR_AES_GCM_ICV8:
+			case ENCR_AES_GCM_ICV12:
+			case ENCR_AES_GCM_ICV16:
+				enc_size += 4;
+				break;
+			default:
+				break;
+		}
+	}
+	
+	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
+								&int_alg, &int_size))
+	{
+		DBG2(DBG_CHD, "  using %N for integrity",
+			 integrity_algorithm_names, int_alg);
+		
+		if (!int_size)
+		{
+			int_size = lookup_keylen(keylen_int, int_alg);
+		}
+		if (!int_size)
+		{
+			DBG1(DBG_CHD, "no keylenth defined for %N",
+				 integrity_algorithm_names, int_alg);
+			return FALSE;
+		}
+		/* to bytes */
+		int_size /= 8;
+	}
+	
+	prf_plus = prf_plus_create(this->child_prf, seed);
+	
+	prf_plus->allocate_bytes(prf_plus, enc_size, encr_i);
+	prf_plus->allocate_bytes(prf_plus, int_size, integ_i);
+	prf_plus->allocate_bytes(prf_plus, enc_size, encr_r);
+	prf_plus->allocate_bytes(prf_plus, int_size, integ_r);
+	
+	prf_plus->destroy(prf_plus);
+	
+	return TRUE;
+}
+
+/**
  * Implementation of keymat_t.get_proposal
  */
 static proposal_t* get_proposal(private_keymat_t *this)
@@ -329,14 +475,6 @@ static signer_t* get_signer(private_keymat_t *this, bool in)
 static crypter_t* get_crypter(private_keymat_t *this, bool in)
 {
 	return in ? this->crypter_in : this->crypter_out;
-}
-
-/**
- * Implementation of keymat_t.get_child_prf
- */
-static prf_t* get_child_prf(private_keymat_t *this)
-{
-	return this->child_prf;
 }
 
 /**
@@ -426,11 +564,11 @@ keymat_t *keymat_create(bool initiator)
 	private_keymat_t *this = malloc_thing(private_keymat_t);
 	
 	this->public.create_dh = (diffie_hellman_t*(*)(keymat_t*, diffie_hellman_group_t group))create_dh;
-	this->public.derive_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id, keymat_t *rekey))derive_keys;
+	this->public.derive_ike_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id, keymat_t *rekey))derive_ike_keys;
+	this->public.derive_child_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i, chunk_t *encr_r, chunk_t *integ_r))derive_child_keys;
 	this->public.get_proposal = (proposal_t*(*)(keymat_t*))get_proposal;
 	this->public.get_signer = (signer_t*(*)(keymat_t*, bool in))get_signer;
 	this->public.get_crypter = (crypter_t*(*)(keymat_t*, bool in))get_crypter;
-	this->public.get_child_prf = (prf_t*(*)(keymat_t*))get_child_prf;
 	this->public.get_auth_octets = (chunk_t(*)(keymat_t *, bool verify, chunk_t ike_sa_init, chunk_t nonce, identification_t *id))get_auth_octets;
 	this->public.get_psk_sig = (chunk_t(*)(keymat_t*, bool verify, chunk_t ike_sa_init, chunk_t nonce, chunk_t secret, identification_t *id))get_psk_sig;
 	this->public.destroy = (void(*)(keymat_t*))destroy;

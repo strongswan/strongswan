@@ -169,24 +169,6 @@ struct child_sa_t {
 	bool (*has_encap)(child_sa_t *this);
 	
 	/**
-	 * Get the IPsec encryption key.
-	 *
-	 * @param inbound	TRUE for inbound, FALSE for outbound key
-	 * @param key		chunk where to write key pointer and length
-	 * @return			encryption algorithm
-	 */
-	encryption_algorithm_t (*get_encryption)(child_sa_t *this, bool inbound,
-											 chunk_t *key);
-	/**
-	 * Get the IPsec integrity.
-	 *
-	 * @param inbound	TRUE for inbound, FALSE for outbound key
-	 * @param key		chunk where to write key pointer and length
-	 * @return			integrity algorithm
-	 */
-	integrity_algorithm_t (*get_integrity)(child_sa_t *this, bool inbound,
-										   chunk_t *key);
-	/**
 	 * Get the lifetime of the CHILD_SA.
 	 *
 	 * @param hard		TRUE for hard lifetime, FALSE for soft (rekey) lifetime
@@ -220,12 +202,15 @@ struct child_sa_t {
 	 *
 	 * @param proposal	proposal for which SPIs are allocated
 	 * @param mode		mode for the CHILD_SA
-	 * @param prf_plus	key material to use for key derivation
+	 * @param integ_in	integrity key for inbound traffic
+	 * @param integ_out	integrity key for outbound traffic
+	 * @param encr_in	encryption key for inbound traffic
+	 * @param enc_out	encryption key for outbound traffic
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*add)(child_sa_t *this, proposal_t *proposal, ipsec_mode_t mode,
-					prf_plus_t *prf_plus);
-	
+					chunk_t integ_in, chunk_t integ_out,
+					chunk_t encr_in, chunk_t encr_out);
 	/**
 	 * Install the kernel SAs for a proposal, after SPIs have been allocated.
 	 *
@@ -233,12 +218,22 @@ struct child_sa_t {
 	 *
 	 * @param proposal	proposal for which SPIs are allocated
 	 * @param mode		mode for the CHILD_SA
-	 * @param prf_plus	key material to use for key derivation
+	 * @param integ_in	integrity key for inbound traffic
+	 * @param integ_out	integrity key for outbound traffic
+	 * @param encr_in	encryption key for inbound traffic
+	 * @param enc_out	encryption key for outbound traffic
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*update)(child_sa_t *this, proposal_t *proposal, ipsec_mode_t mode,
-					   prf_plus_t *prf_plus);
-
+					   chunk_t integ_in, chunk_t integ_out,
+					   chunk_t encr_in, chunk_t encr_out);
+	/**
+	 * Get the selected proposal passed to add()/update().
+	 *
+	 * @return			selected proposal
+	 */
+	proposal_t* (*get_proposal)(child_sa_t *this);
+	
 	/**
 	 * Update the hosts in the kernel SAs and policies.
 	 *

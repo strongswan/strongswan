@@ -97,6 +97,11 @@ struct private_child_create_t {
 	diffie_hellman_group_t dh_group;
 	
 	/**
+	 * IKE_SAs keymat
+	 */
+	keymat_t *keymat;
+	
+	/**
 	 * mode the new CHILD_SA uses (transport/tunnel/beet)
 	 */
 	ipsec_mode_t mode;
@@ -191,12 +196,10 @@ static bool ts_list_is_host(linked_list_t *list, host_t *host)
  */
 static status_t select_and_install(private_child_create_t *this, bool no_dh)
 {
-	prf_plus_t *prf_plus;
 	status_t status;
-	chunk_t nonce_i, nonce_r, secret, seed;
+	chunk_t encr_i, integ_i, encr_r, integ_r;
 	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other, *other_vip, *my_vip;
-	keymat_t *keymat;
 	
 	if (this->proposals == NULL)
 	{
@@ -207,21 +210,6 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	{
 		DBG1(DBG_IKE, "TS payloads missing in message");
 		return NOT_FOUND;
-	}
-	
-	if (this->initiator)
-	{
-		nonce_i = this->my_nonce;
-		nonce_r = this->other_nonce;
-		my_ts = this->tsi;
-		other_ts = this->tsr;
-	}
-	else
-	{
-		nonce_r = this->my_nonce;
-		nonce_i = this->other_nonce;
-		my_ts = this->tsr;
-		other_ts = this->tsi;
 	}
 	
 	me = this->ike_sa->get_my_host(this->ike_sa);
@@ -266,6 +254,16 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		other_vip = other;
 	}
 	
+	if (this->initiator)
+	{
+		my_ts = this->tsi;
+		other_ts = this->tsr;
+	}
+	else
+	{
+		my_ts = this->tsr;
+		other_ts = this->tsi;
+	}
 	my_ts = this->config->get_traffic_selectors(this->config, TRUE, my_ts,
 												my_vip);
 	other_ts = this->config->get_traffic_selectors(this->config, FALSE, other_ts, 
@@ -323,21 +321,6 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		}
 	}
 	
-	if (this->dh)
-	{
-		if (this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
-		{
-			DBG1(DBG_IKE, "DH exchange incomplete");
-			return FAILED;
-		}
-		DBG3(DBG_IKE, "DH secret %B", &secret);
-		seed = chunk_cata("mcc", secret, nonce_i, nonce_r);
-	}
-	else
-	{
-		seed = chunk_cata("cc", nonce_i, nonce_r);
-	}
-	
 	if (this->ipcomp != IPCOMP_NONE)
 	{
 		this->child_sa->activate_ipcomp(this->child_sa, this->ipcomp,
@@ -352,19 +335,32 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		return NOT_FOUND;
 	}
 	
-	keymat = this->ike_sa->get_keymat(this->ike_sa);
-	prf_plus = prf_plus_create(keymat->get_child_prf(keymat), seed);
+	status = FAILED;
 	if (this->initiator)
 	{
-		status = this->child_sa->update(this->child_sa, this->proposal,
-										this->mode, prf_plus);
+		if (this->keymat->derive_child_keys(this->keymat, this->proposal,
+					this->dh, this->my_nonce, this->other_nonce,
+					&encr_i, &integ_i, &encr_r, &integ_r))
+		{
+			status = this->child_sa->update(this->child_sa, this->proposal,
+							this->mode, integ_r, integ_i, encr_r, encr_i);
+		}
 	}
 	else
 	{
-		status = this->child_sa->add(this->child_sa, this->proposal,
-									 this->mode, prf_plus);
+		if (this->keymat->derive_child_keys(this->keymat, this->proposal,
+					this->dh, this->other_nonce, this->my_nonce,
+					&encr_i, &integ_i, &encr_r, &integ_r))
+		{
+			status = this->child_sa->add(this->child_sa, this->proposal,
+							this->mode, integ_i, integ_r, encr_i, encr_r);
+		}
 	}
-	prf_plus->destroy(prf_plus);
+	/* TODO: invoke bus method with key mat */
+	chunk_clear(&integ_i);
+	chunk_clear(&integ_r);
+	chunk_clear(&encr_i);
+	chunk_clear(&encr_r);
 	
 	if (status != SUCCESS)
 	{
@@ -494,7 +490,7 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 				if (!this->initiator)
 				{
 					this->dh_group = ke_payload->get_dh_group_number(ke_payload);
-					this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
+					this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
 				}
 				if (this->dh)
 				{
@@ -648,7 +644,7 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	
 	if (this->dh_group != MODP_NONE)
 	{
-		this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
+		this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
 	}
 	
 	if (this->config->use_ipcomp(this->config)) {
@@ -1131,6 +1127,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config)
 	this->tsr = NULL;
 	this->dh = NULL;
 	this->dh_group = MODP_NONE;
+	this->keymat = ike_sa->get_keymat(ike_sa);
 	this->child_sa = NULL;
 	this->mode = MODE_TUNNEL;
 	this->ipcomp = IPCOMP_NONE;

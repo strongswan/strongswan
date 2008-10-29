@@ -47,14 +47,45 @@ struct private_child_sa_t {
 	 */
 	child_sa_t public;
 	
-	struct {
-		/** address of peer */
-		host_t *addr;
-		/** actual used SPI, 0 if unused */
-		u_int32_t spi;
-		/** Compression Parameter Index (CPI) used, 0 if unused */
-		u_int16_t cpi;
-	} me, other;
+	/**
+	 * address of us
+	 */
+	host_t *my_addr;
+	
+	/**
+	 * address of remote
+	 */
+	host_t *other_addr;
+	
+	/**
+	 * our actually used SPI, 0 if unused
+	 */
+	u_int32_t my_spi;
+	
+	/**
+	 * others used SPI, 0 if unused
+	 */
+	u_int32_t other_spi;
+	
+	/**
+	 * our Compression Parameter Index (CPI) used, 0 if unused
+	 */
+	u_int16_t my_cpi;
+	
+	/**
+	 * others Compression Parameter Index (CPI) used, 0 if unused
+	 */
+	u_int16_t other_cpi;
+	
+	/**
+	 * List for local traffic selectors
+	 */
+	linked_list_t *my_ts;
+	
+	/**
+	 * List for remote traffic selectors
+	 */
+	linked_list_t *other_ts;
 	
 	/**
 	 * Allocated SPI for a ESP proposal candidates
@@ -72,39 +103,9 @@ struct private_child_sa_t {
 	protocol_id_t protocol;
 	
 	/**
-	 * Separate list for local traffic selectors
-	 */
-	linked_list_t *my_ts;
-	
-	/**
-	 * Separate list for remote traffic selectors
-	 */
-	linked_list_t *other_ts;
-	
-	/**
 	 * reqid used for this child_sa
 	 */
 	u_int32_t reqid;
-	
-	/**
-	 * encryption algorithm used for this SA
-	 */
-	u_int16_t enc_alg;
-	
-	/**
-	 * Encryption key data, inbound and outbound
-	 */
-	chunk_t enc_key[2];
-	
-	/**
-	 * integrity protection algorithm used for this SA
-	 */
-	u_int16_t int_alg;
-	
-	/**
-	 * integrity key data, inbound and outbound
-	 */
-	chunk_t int_key[2];
 	
 	/**
 	 * absolute time when rekeying is scheduled
@@ -142,65 +143,18 @@ struct private_child_sa_t {
 	ipsec_mode_t mode;
 	
 	/**
+ 	 * selected proposal
+ 	 */
+ 	proposal_t *proposal;
+	
+	/**
 	 * config used to create this child
 	 */
 	child_cfg_t *config;
 };
 
-typedef struct keylen_entry_t keylen_entry_t;
-
 /**
- * Implicit key length for an algorithm
- */
-struct keylen_entry_t {
-	/** IKEv2 algorithm identifier */
-	int algo;
-	/** key length in bits */
-	int len;
-};
-
-#define END_OF_LIST -1
-
-/**
- * Keylen for encryption algos
- */
-keylen_entry_t keylen_enc[] = {
-	{ENCR_DES, 					 64},
-	{ENCR_3DES, 				192},
-	{END_OF_LIST,				  0}
-};
-
-/**
- * Keylen for integrity algos
- */
-keylen_entry_t keylen_int[] = {
-	{AUTH_HMAC_MD5_96, 			128},
-	{AUTH_HMAC_SHA1_96,			160},
-	{AUTH_HMAC_SHA2_256_128,	256},
-	{AUTH_HMAC_SHA2_384_192,	384},
-	{AUTH_HMAC_SHA2_512_256,	512},
-	{AUTH_AES_XCBC_96,			128},
-	{END_OF_LIST,				  0}
-};
-
-/**
- * Lookup key length of an algorithm
- */
-static int lookup_keylen(keylen_entry_t *list, int algo)
-{
-	while (list->algo != END_OF_LIST)
-	{
-		if (algo == list->algo)
-		{
-			return list->len;
-		}
-		list++;
-	}
-	return 0;
-}
-
-/**
- * Implementation of child_sa_t.get_name.
+ * Implementation of child_sa_t.get_namy_
  */
 static char *get_name(private_child_sa_t *this)
 {
@@ -220,11 +174,7 @@ static u_int32_t get_reqid(private_child_sa_t *this)
  */
 u_int32_t get_spi(private_child_sa_t *this, bool inbound)
 {
-	if (inbound)
-	{
-		return this->me.spi;
-	}
-	return this->other.spi;
+	return inbound ? this->my_spi : this->other_spi;
 }
 
 /**
@@ -232,11 +182,7 @@ u_int32_t get_spi(private_child_sa_t *this, bool inbound)
  */
 u_int16_t get_cpi(private_child_sa_t *this, bool inbound)
 {
-	if (inbound)
-	{
-		return this->me.cpi;
-	}
-	return this->other.cpi;
+	return inbound ? this->my_cpi : this->other_cpi;
 }
 
 /**
@@ -245,6 +191,14 @@ u_int16_t get_cpi(private_child_sa_t *this, bool inbound)
 protocol_id_t get_protocol(private_child_sa_t *this)
 {
 	return this->protocol;
+}
+
+/**
+ * Implementation of child_sa_t.get_mode
+ */
+static ipsec_mode_t get_mode(private_child_sa_t *this)
+{
+	return this->mode;
 }
 
 /**
@@ -403,39 +357,7 @@ static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
  */
 static u_int32_t get_lifetime(private_child_sa_t *this, bool hard)
 {
-	if (hard)
-	{
-		return this->expire_time;
-	}
-	return this->rekey_time;
-}
-
-/**
- * Implementation of child_sa_t.get_integrity
- */
-static integrity_algorithm_t get_integrity(private_child_sa_t *this,
-										   bool inbound, chunk_t *key)
-{
-	*key = this->int_key[!!inbound];
-	return this->int_alg;
-}
-
-/**
- * Implementation of child_sa_t.get_encryption
- */
-static encryption_algorithm_t get_encryption(private_child_sa_t *this,
-											 bool inbound, chunk_t *key)
-{
-	*key = this->enc_key[!!inbound];
-	return this->enc_alg;
-}
-
-/**
- * Implementation of child_sa_t.get_mode
- */
-static ipsec_mode_t get_mode(private_child_sa_t *this)
-{
-	return this->mode;
+	return hard ? this->expire_time : this->rekey_time;
 }
 
 /**
@@ -461,7 +383,7 @@ static status_t alloc_proposal(private_child_sa_t *this, proposal_t *proposal)
 		{
 			if (charon->kernel_interface->get_spi(
 						 charon->kernel_interface, 
-						 this->other.addr, this->me.addr,
+						 this->other_addr, this->my_addr,
 						 PROTO_AH, this->reqid,
 						 &this->alloc_ah_spi) != SUCCESS)
 			{
@@ -477,7 +399,7 @@ static status_t alloc_proposal(private_child_sa_t *this, proposal_t *proposal)
 		{
 			if (charon->kernel_interface->get_spi(
 						 charon->kernel_interface,
-						 this->other.addr, this->me.addr,
+						 this->other_addr, this->my_addr,
 						 PROTO_ESP, this->reqid,
 						 &this->alloc_esp_spi) != SUCCESS)
 			{
@@ -488,7 +410,6 @@ static status_t alloc_proposal(private_child_sa_t *this, proposal_t *proposal)
 	}
 	return SUCCESS;
 }
-
 
 /**
  * Implements child_sa_t.alloc
@@ -512,117 +433,56 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 	return SUCCESS;
 }
 
+/**
+ * Install an SA for one direction
+ */
 static status_t install(private_child_sa_t *this, proposal_t *proposal,
-						ipsec_mode_t mode, prf_plus_t *prf_plus, bool mine)
+						ipsec_mode_t mode, chunk_t integ, chunk_t encr, bool in)
 {
+	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
 	u_int32_t spi, cpi, soft, hard, now;
 	host_t *src, *dst;
 	status_t status;
-	int add_keymat;
-	u_int16_t enc_size, int_size;
 	
-	this->protocol = proposal->get_protocol(proposal);
-	
-	/* now we have to decide which spi to use. Use self allocated, if "mine",
-	 * or the one in the proposal, if not "mine" (others). Additionally,
+	/* now we have to decide which spi to use. Use self allocated, if "in",
+	 * or the one in the proposal, if not "in" (others). Additionally,
 	 * source and dest host switch depending on the role */
-	if (mine)
+	if (in)
 	{
 		/* if we have allocated SPIs for AH and ESP, we must delete the unused
 		 * one. */
 		if (this->protocol == PROTO_ESP)
 		{
-			this->me.spi = this->alloc_esp_spi;
+			this->my_spi = this->alloc_esp_spi;
 			if (this->alloc_ah_spi)
 			{
 				charon->kernel_interface->del_sa(charon->kernel_interface,
-								this->me.addr, this->alloc_ah_spi, PROTO_AH);
+								this->my_addr, this->alloc_ah_spi, PROTO_AH);
 			}
 		}
 		else
 		{
-			this->me.spi = this->alloc_ah_spi;
+			this->my_spi = this->alloc_ah_spi;
 			if (this->alloc_esp_spi)
 			{
 				charon->kernel_interface->del_sa(charon->kernel_interface,
-								this->me.addr, this->alloc_esp_spi, PROTO_ESP);
+								this->my_addr, this->alloc_esp_spi, PROTO_ESP);
 			}
 		}
-		spi = this->me.spi;
-		dst = this->me.addr;
-		src = this->other.addr;
+		spi = this->my_spi;
+		dst = this->my_addr;
+		src = this->other_addr;
 	}
 	else
 	{
-		this->other.spi = proposal->get_spi(proposal);
-		spi = this->other.spi;
-		src = this->me.addr;
-		dst = this->other.addr;
+		this->other_spi = proposal->get_spi(proposal);
+		spi = this->other_spi;
+		src = this->my_addr;
+		dst = this->other_addr;
 	}
 	
-	DBG2(DBG_CHD, "adding %s %N SA", mine ? "inbound" : "outbound",
+	DBG2(DBG_CHD, "adding %s %N SA", in ? "inbound" : "outbound",
 		 protocol_id_names, this->protocol);
-	
-	/* select encryption algo, derive key */
-	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
-								&this->enc_alg, &enc_size))
-	{
-		DBG2(DBG_CHD, "  using %N for encryption", 
-			 encryption_algorithm_names, this->enc_alg);
-	}
-	if (this->enc_alg != ENCR_UNDEFINED)
-	{
-		if (!enc_size)
-		{
-			enc_size = lookup_keylen(keylen_enc, this->enc_alg);
-		}
-		if (!enc_size)
-		{
-			DBG1(DBG_CHD, "no keylenth defined for %N",
-				 encryption_algorithm_names, this->enc_alg);
-			return FAILED;
-		}
-	 	/* CCM/GCM needs additional keymat */
-		switch (this->enc_alg)
-		{
-			case ENCR_AES_CCM_ICV8:
-			case ENCR_AES_CCM_ICV12:
-			case ENCR_AES_CCM_ICV16:
-				enc_size += 24;
-				break;		
-			case ENCR_AES_GCM_ICV8:
-			case ENCR_AES_GCM_ICV12:
-			case ENCR_AES_GCM_ICV16:
-				enc_size += 32;
-				break;
-			default:
-				add_keymat = 0;
-				break;
-		}
-		prf_plus->allocate_bytes(prf_plus, enc_size / 8, &this->enc_key[!!mine]);
-	}
-	
-	/* select integrity algo, derive key */
-	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
-								&this->int_alg, &int_size))
-	{
-		DBG2(DBG_CHD, "  using %N for integrity",
-			 integrity_algorithm_names, this->int_alg);
-	}
-	if (this->int_alg != AUTH_UNDEFINED)
-	{
-		if (!int_size)
-		{
-			int_size = lookup_keylen(keylen_int, this->int_alg);
-		}
-		if (!enc_size)
-		{
-			DBG1(DBG_CHD, "no keylenth defined for %N",
-				 integrity_algorithm_names, this->int_alg);
-			return FAILED;
-		}
-		prf_plus->allocate_bytes(prf_plus, int_size / 8, &this->int_key[!!mine]);
-	}
 	
 	/* send SA down to the kernel */
 	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
@@ -630,20 +490,22 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	if (this->ipcomp != IPCOMP_NONE)
 	{
 		/* we install an additional IPComp SA */
-		cpi = htonl(ntohs(mine ? this->me.cpi : this->other.cpi));
+		cpi = htonl(ntohs(in ? this->my_cpi : this->other_cpi));
 		charon->kernel_interface->add_sa(charon->kernel_interface,
 				src, dst, cpi, IPPROTO_COMP, this->reqid, 0, 0,
 				ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
-				mode, this->ipcomp, FALSE, mine);
+				mode, this->ipcomp, FALSE, in);
 	}
+	
+	proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_alg, &size);
+	proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_alg, &size);
 	
 	soft = this->config->get_lifetime(this->config, TRUE);
 	hard = this->config->get_lifetime(this->config, FALSE);
-	status = charon->kernel_interface->add_sa(charon->kernel_interface, src, dst,
-				spi, this->protocol, this->reqid, mine ? soft : 0, hard, 
-				this->enc_alg, this->enc_key[!!mine],
-				this->int_alg, this->int_key[!!mine],
-				mode, IPCOMP_NONE, this->encap, mine);
+	status = charon->kernel_interface->add_sa(charon->kernel_interface,
+				src, dst, spi, this->protocol, this->reqid,
+				in ? soft : 0, hard, enc_alg, encr, int_alg, integ,
+				mode, IPCOMP_NONE, this->encap, in);
 	
 	now = time(NULL);
 	this->rekey_time = now + soft;
@@ -651,63 +513,70 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	return status;
 }
 
-static status_t add(private_child_sa_t *this, proposal_t *proposal, 
-					ipsec_mode_t mode, prf_plus_t *prf_plus)
+/**
+ * Implementation of child_sa_t.add
+ */
+static status_t add(private_child_sa_t *this, 
+					proposal_t *proposal, ipsec_mode_t mode,
+					chunk_t integ_in, chunk_t integ_out,
+					chunk_t encr_in, chunk_t encr_out)
 {
-	u_int32_t outbound_spi, inbound_spi;
+	this->proposal = proposal->clone(proposal);
+	this->protocol = proposal->get_protocol(proposal);
 	
-	/* backup outbound spi, as alloc overwrites it */
-	outbound_spi = proposal->get_spi(proposal);
-	
-	/* get SPIs inbound SAs */
+	/* get SPIs for inbound SAs, write to proposal */
 	if (alloc_proposal(this, proposal) != SUCCESS)
 	{
 		return FAILED;
 	}
-	inbound_spi = proposal->get_spi(proposal);
-	
-	/* install inbound SAs */
-	if (install(this, proposal, mode, prf_plus, TRUE) != SUCCESS)
+	/* install inbound SAs using allocated SPI */
+	if (install(this, proposal, mode, integ_in, encr_in, TRUE) != SUCCESS)
 	{
 		return FAILED;
 	}
-	
-	/* install outbound SAs, restore spi*/
-	proposal->set_spi(proposal, outbound_spi);
-	if (install(this, proposal, mode, prf_plus, FALSE) != SUCCESS)
+	/* install outbound SAs using received SPI*/
+	if (install(this, this->proposal, mode, integ_out, encr_out, FALSE) != SUCCESS)
 	{
 		return FAILED;
 	}
-	proposal->set_spi(proposal, inbound_spi);
-	
 	return SUCCESS;
 }
 
-static status_t update(private_child_sa_t *this, proposal_t *proposal,
-					   ipsec_mode_t mode, prf_plus_t *prf_plus)
+/**
+ * Implementation of child_sa_t.update
+ */
+static status_t update(private_child_sa_t *this,
+					   proposal_t *proposal, ipsec_mode_t mode,
+					   chunk_t integ_in, chunk_t integ_out,
+					   chunk_t encr_in, chunk_t encr_out)
 {
-	u_int32_t inbound_spi;
-	
-	/* backup received spi, as install() overwrites it */
-	inbound_spi = proposal->get_spi(proposal);
+	this->proposal = proposal->clone(proposal);
+	this->protocol = proposal->get_protocol(proposal);
 	
 	/* install outbound SAs */
-	if (install(this, proposal, mode, prf_plus, FALSE) != SUCCESS)
+	if (install(this, proposal, mode, integ_out, encr_out, FALSE) != SUCCESS)
 	{
 		return FAILED;
 	}
-	
-	/* restore spi */
-	proposal->set_spi(proposal, inbound_spi);
 	/* install inbound SAs */
-	if (install(this, proposal, mode, prf_plus, TRUE) != SUCCESS)
+	if (install(this, proposal, mode, integ_in, encr_in, TRUE) != SUCCESS)
 	{
 		return FAILED;
 	}
-	
 	return SUCCESS;
 }
 
+/**
+ * Implementation of child_sa_t.get_proposal
+ */
+static proposal_t* get_proposal(private_child_sa_t *this)
+{
+	return this->proposal;
+}
+
+/**
+ * Implementation of child_sa_t.add_policies
+ */
 static status_t add_policies(private_child_sa_t *this,
 					linked_list_t *my_ts_list, linked_list_t *other_ts_list,
 					ipsec_mode_t mode, protocol_id_t proto)
@@ -746,15 +615,15 @@ static status_t add_policies(private_child_sa_t *this,
 	{
 		/* install 3 policies: out, in and forward */
 		status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-				this->me.addr, this->other.addr, my_ts, other_ts, POLICY_OUT,
+				this->my_addr, this->other_addr, my_ts, other_ts, POLICY_OUT,
 				this->protocol, this->reqid, high_prio, mode, this->ipcomp);
 		
 		status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-				this->other.addr, this->me.addr, other_ts, my_ts, POLICY_IN,
+				this->other_addr, this->my_addr, other_ts, my_ts, POLICY_IN,
 				this->protocol, this->reqid, high_prio, mode, this->ipcomp);
 		
 		status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-				this->other.addr, this->me.addr, other_ts, my_ts, POLICY_FWD,
+				this->other_addr, this->my_addr, other_ts, my_ts, POLICY_FWD,
 				this->protocol, this->reqid, high_prio, mode, this->ipcomp);
 		
 		if (status != SUCCESS)
@@ -782,11 +651,7 @@ static status_t add_policies(private_child_sa_t *this,
  */
 static linked_list_t *get_traffic_selectors(private_child_sa_t *this, bool local)
 {
-	if (local)
-	{
-		return this->my_ts;
-	}
-	return this->other_ts;
+	return local ? this->my_ts : this->other_ts;
 }
 
 /**
@@ -798,8 +663,8 @@ static status_t update_hosts(private_child_sa_t *this,
 	child_sa_state_t old;
 	
 	/* anything changed at all? */
-	if (me->equals(me, this->me.addr) && 
-		other->equals(other, this->other.addr) && this->encap == encap)
+	if (me->equals(me, this->my_addr) && 
+		other->equals(other, this->other_addr) && this->encap == encap)
 	{
 		return SUCCESS;
 	}
@@ -813,24 +678,24 @@ static status_t update_hosts(private_child_sa_t *this,
 	{
 		/* update our (initator) IPComp SA */
 		charon->kernel_interface->update_sa(charon->kernel_interface, 
-							htonl(ntohs(this->me.cpi)),	IPPROTO_COMP,
-							this->other.addr, this->me.addr, other, me, FALSE);
+							htonl(ntohs(this->my_cpi)),	IPPROTO_COMP,
+							this->other_addr, this->my_addr, other, me, FALSE);
 		/* update his (responder) IPComp SA */
 		charon->kernel_interface->update_sa(charon->kernel_interface,
-							htonl(ntohs(this->other.cpi)), IPPROTO_COMP,
-							this->me.addr, this->other.addr, me, other, FALSE);
+							htonl(ntohs(this->other_cpi)), IPPROTO_COMP,
+							this->my_addr, this->other_addr, me, other, FALSE);
 	}
 	
 	/* update our (initator) SA */
-	charon->kernel_interface->update_sa(charon->kernel_interface, this->me.spi,
-			this->protocol, this->other.addr, this->me.addr, other, me, encap);
+	charon->kernel_interface->update_sa(charon->kernel_interface, this->my_spi,
+			this->protocol, this->other_addr, this->my_addr, other, me, encap);
 	/* update his (responder) SA */
-	charon->kernel_interface->update_sa(charon->kernel_interface, this->other.spi, 
-			this->protocol, this->me.addr, this->other.addr, me, other, encap);
+	charon->kernel_interface->update_sa(charon->kernel_interface, this->other_spi, 
+			this->protocol, this->my_addr, this->other_addr, me, other, encap);
 	
 	/* update policies */
-	if (!me->ip_equals(me, this->me.addr) ||
-		!other->ip_equals(other, this->other.addr))
+	if (!me->ip_equals(me, this->my_addr) ||
+		!other->ip_equals(other, this->other_addr))
 	{
 		enumerator_t *enumerator;
 		traffic_selector_t *my_ts, *other_ts;
@@ -848,13 +713,13 @@ static status_t update_hosts(private_child_sa_t *this,
 												 other_ts, my_ts, POLICY_FWD);
 		
 			/* check whether we have to update a "dynamic" traffic selector */
-			if (!me->ip_equals(me, this->me.addr) &&
-				my_ts->is_host(my_ts, this->me.addr))
+			if (!me->ip_equals(me, this->my_addr) &&
+				my_ts->is_host(my_ts, this->my_addr))
 			{
 				my_ts->set_address(my_ts, me);
 			}
-			if (!other->ip_equals(other, this->other.addr) &&
-				other_ts->is_host(other_ts, this->other.addr))
+			if (!other->ip_equals(other, this->other_addr) &&
+				other_ts->is_host(other_ts, this->other_addr))
 			{
 				other_ts->set_address(other_ts, other);
 			}
@@ -882,15 +747,15 @@ static status_t update_hosts(private_child_sa_t *this,
 	}
 
 	/* apply hosts */
-	if (!me->equals(me, this->me.addr))
+	if (!me->equals(me, this->my_addr))
 	{
-		this->me.addr->destroy(this->me.addr);
-		this->me.addr = me->clone(me);
+		this->my_addr->destroy(this->my_addr);
+		this->my_addr = me->clone(me);
 	}
-	if (!other->equals(other, this->other.addr))
+	if (!other->equals(other, this->other_addr))
 	{
-		this->other.addr->destroy(this->other.addr);
-		this->other.addr = other->clone(other);
+		this->other_addr->destroy(this->other_addr);
+		this->other_addr = other->clone(other);
 	}
 	
 	set_state(this, old);
@@ -905,7 +770,7 @@ static void activate_ipcomp(private_child_sa_t *this, ipcomp_transform_t ipcomp,
 		u_int16_t other_cpi)
 {
 	this->ipcomp = ipcomp;
-	this->other.cpi = other_cpi;
+	this->other_cpi = other_cpi;
 }
 
 /**
@@ -916,10 +781,10 @@ static u_int16_t allocate_cpi(private_child_sa_t *this)
 	if (!this->cpi_allocated)
 	{
 		charon->kernel_interface->get_cpi(charon->kernel_interface,
-			this->other.addr, this->me.addr, this->reqid, &this->me.cpi);
+			this->other_addr, this->my_addr, this->reqid, &this->my_cpi);
 		this->cpi_allocated = TRUE;
 	}
-	return this->me.cpi;
+	return this->my_cpi;
 }
 
 /**
@@ -933,35 +798,35 @@ static void destroy(private_child_sa_t *this)
 	set_state(this, CHILD_DESTROYING);
 	
 	/* delete SAs in the kernel, if they are set up */
-	if (this->me.spi)
+	if (this->my_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->me.addr, this->me.spi, this->protocol);
+					this->my_addr, this->my_spi, this->protocol);
 	}
-	if (this->alloc_esp_spi && this->alloc_esp_spi != this->me.spi)
+	if (this->alloc_esp_spi && this->alloc_esp_spi != this->my_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->me.addr, this->alloc_esp_spi, PROTO_ESP);
+					this->my_addr, this->alloc_esp_spi, PROTO_ESP);
 	}
-	if (this->alloc_ah_spi && this->alloc_ah_spi != this->me.spi)
+	if (this->alloc_ah_spi && this->alloc_ah_spi != this->my_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->me.addr, this->alloc_ah_spi, PROTO_AH);
+					this->my_addr, this->alloc_ah_spi, PROTO_AH);
 	}
-	if (this->other.spi)
+	if (this->other_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->other.addr, this->other.spi, this->protocol);
+					this->other_addr, this->other_spi, this->protocol);
 	}
-	if (this->me.cpi)
+	if (this->my_cpi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->me.addr, htonl(ntohs(this->me.cpi)), IPPROTO_COMP);
+					this->my_addr, htonl(ntohs(this->my_cpi)), IPPROTO_COMP);
 	}
-	if (this->other.cpi)
+	if (this->other_cpi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->other.addr, htonl(ntohs(this->other.cpi)), IPPROTO_COMP);
+					this->other_addr, htonl(ntohs(this->other_cpi)), IPPROTO_COMP);
 	}
 	
 	/* delete all policies in the kernel */
@@ -977,14 +842,11 @@ static void destroy(private_child_sa_t *this)
 	}
 	enumerator->destroy(enumerator);
 	
-	chunk_clear(&this->enc_key[0]);
-	chunk_clear(&this->enc_key[1]);
-	chunk_clear(&this->int_key[0]);
-	chunk_clear(&this->int_key[1]);
 	this->my_ts->destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
 	this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
-	this->me.addr->destroy(this->me.addr);
-	this->other.addr->destroy(this->other.addr);
+	this->my_addr->destroy(this->my_addr);
+	this->other_addr->destroy(this->other_addr);
+	DESTROY_IF(this->proposal);
 	this->config->destroy(this->config);
 	free(this);
 }
@@ -1007,13 +869,12 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_mode = (ipsec_mode_t(*)(child_sa_t*))get_mode;
 	this->public.get_ipcomp = (ipcomp_transform_t(*)(child_sa_t*))get_ipcomp;
 	this->public.has_encap = (bool(*)(child_sa_t*))has_encap;
-	this->public.get_encryption = (encryption_algorithm_t(*)(child_sa_t*, bool, chunk_t*))get_encryption;
-	this->public.get_integrity = (integrity_algorithm_t(*)(child_sa_t*, bool, chunk_t*))get_integrity;
 	this->public.get_lifetime = (u_int32_t(*)(child_sa_t*, bool))get_lifetime;
 	this->public.get_usetime = (u_int32_t(*)(child_sa_t*, bool))get_usetime;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
-	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))add;
-	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,prf_plus_t*))update;
+	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,chunk_t,chunk_t,chunk_t,chunk_t))add;
+	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,ipsec_mode_t,chunk_t,chunk_t,chunk_t,chunk_t))update;
+	this->public.get_proposal = (proposal_t*(*)(child_sa_t*))get_proposal;
 	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,host_t*,bool))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,ipsec_mode_t,protocol_id_t))add_policies;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
@@ -1026,12 +887,12 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
-	this->me.addr = me->clone(me);
-	this->other.addr = other->clone(other);
-	this->me.spi = 0;
-	this->me.cpi = 0;
-	this->other.spi = 0;
-	this->other.cpi = 0;
+	this->my_addr = me->clone(me);
+	this->other_addr = other->clone(other);
+	this->my_spi = 0;
+	this->my_cpi = 0;
+	this->other_spi = 0;
+	this->other_cpi = 0;
 	this->alloc_ah_spi = 0;
 	this->alloc_esp_spi = 0;
 	this->encap = encap;
@@ -1040,14 +901,11 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->state = CHILD_CREATED;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;
-	this->enc_alg = ENCR_UNDEFINED;
-	this->enc_key[0] = this->enc_key[1] = chunk_empty;
-	this->int_alg = AUTH_UNDEFINED;
-	this->int_key[0] = this->int_key[1] = chunk_empty;
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
+	this->proposal = NULL;
 	this->config = config;
 	config->get_ref(config);
 	

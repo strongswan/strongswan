@@ -43,7 +43,7 @@ struct keymat_t {
 	 *
 	 * The diffie hellman is either for IKE negotiation/rekeying or
 	 * CHILD_SA rekeying (using PFS). The resulting DH object must be passed
-	 * to derive_ike_keys or to derive_child_keys and destroyed after use
+	 * to derive_keys or to derive_child_keys and destroyed after use
 	 *
 	 * @param group			diffie hellman group
 	 * @return				DH object, NULL if group not supported
@@ -51,18 +51,45 @@ struct keymat_t {
 	diffie_hellman_t* (*create_dh)(keymat_t *this, diffie_hellman_group_t group);
 	
 	/**
-	 * Derive keys from the shared secret.
+	 * Derive keys for the IKE_SA.
+	 *
+	 * These keys are not handed out, but are used by the associated signers,
+	 * crypters and authentication functions.
 	 *
 	 * @param proposal	selected algorithms
+	 * @param dh		diffie hellman key allocated by create_dh()
 	 * @param nonce_i	initiators nonce value
 	 * @param nonce_r	responders nonce value
 	 * @param id		IKE_SA identifier
 	 * @param rekey		keymat of old SA if we are rekeying
 	 * @return			TRUE on success
 	 */
-	bool (*derive_keys)(keymat_t *this, proposal_t *proposal,
-						diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
-						ike_sa_id_t *id, keymat_t *rekey);
+	bool (*derive_ike_keys)(keymat_t *this, proposal_t *proposal,
+							diffie_hellman_t *dh, chunk_t nonce_i,
+							chunk_t nonce_r, ike_sa_id_t *id, keymat_t *rekey);
+	/**
+	 * Derive keys for a CHILD_SA.
+	 *
+	 * The keys for the CHILD_SA are allocated in the integ and encr chunks.
+	 * An implementation might hand out encrypted keys only, which are
+	 * decrypted in the kernel before use.
+	 * If no PFS is used for the CHILD_SA, dh can be NULL.
+	 *
+	 * @param proposal	selected algorithms
+	 * @param dh		diffie hellman key allocated by create_dh(), or NULL
+	 * @param nonce_i	initiators nonce value
+	 * @param nonce_r	responders nonce value
+	 * @param encr_i	chunk to write initiators encryption key to
+	 * @param integ_i	chunk to write initiators integrity key to
+	 * @param encr_r	chunk to write responders encryption key to
+	 * @param integ_r	chunk to write responders integrity key to
+	 * @return			TRUE on success
+	 */
+	bool (*derive_child_keys)(keymat_t *this, 
+							  proposal_t *proposal, diffie_hellman_t *dh,
+							  chunk_t nonce_i, chunk_t nonce_r,
+							  chunk_t *encr_i, chunk_t *integ_i,
+							  chunk_t *encr_r, chunk_t *integ_r);
 	/**
 	 * Get a signer to sign/verify IKE messages.
 	 *
@@ -80,14 +107,7 @@ struct keymat_t {
 	crypter_t* (*get_crypter)(keymat_t *this, bool in);
 	
 	/**
-	 * Get a keyed PRF to derive keymat for children.
-	 *
-	 * @return	 		PRF to derive CHILD_SA keymat from
-	 */
-	prf_t* (*get_child_prf)(keymat_t *this);
-	
-	/**
-	 * Get the selected proposal passed to derive_keys().
+	 * Get the selected proposal passed to derive_ike_keys().
 	 *
 	 * @return			selected proposal
 	 */

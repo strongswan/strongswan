@@ -415,7 +415,7 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		id->set_initiator_spi(id, this->proposal->get_spi(this->proposal));
 		old_keymat = this->old_sa->get_keymat(this->old_sa);
 	}
-	if (!this->keymat->derive_keys(this->keymat, this->proposal, this->dh,
+	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
 							this->other_nonce, this->my_nonce, id, old_keymat))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
@@ -522,7 +522,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		id->set_responder_spi(id, this->proposal->get_spi(this->proposal));
 		old_keymat = this->old_sa->get_keymat(this->old_sa);
 	}
-	if (!this->keymat->derive_keys(this->keymat, this->proposal, this->dh,
+	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
 							this->my_nonce, this->other_nonce, id, old_keymat))
 	{
 		DBG1(DBG_IKE, "key derivation failed");

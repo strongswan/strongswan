@@ -136,9 +136,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 {
 	u_int32_t rekey, now = time(NULL);
 	u_int32_t use_in, use_out;
-	encryption_algorithm_t encr_alg;
-	integrity_algorithm_t int_alg;
-	chunk_t encr_key, int_key;
+	proposal_t *proposal;
 	
 	fprintf(out, "%12s{%d}:  %N, %N", 
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
@@ -152,54 +150,46 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 				child_sa->has_encap(child_sa) ? " in UDP": "",
 				ntohl(child_sa->get_spi(child_sa, TRUE)),
 				ntohl(child_sa->get_spi(child_sa, FALSE)));
-
+		
 		if (child_sa->get_ipcomp(child_sa) != IPCOMP_NONE)
 		{
 			fprintf(out, ", IPCOMP CPIs: %.4x_i %.4x_o",
 					ntohs(child_sa->get_cpi(child_sa, TRUE)),
 					ntohs(child_sa->get_cpi(child_sa, FALSE)));
 		}
-
+		
 		if (all)
 		{
 			fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa), 
 					child_sa->get_reqid(child_sa));
 			
-			if (child_sa->get_protocol(child_sa) == PROTO_ESP)
+			proposal = child_sa->get_proposal(child_sa);
+			if (proposal)
 			{
-				encr_alg = child_sa->get_encryption(child_sa, TRUE, &encr_key);
-			
-				switch (encr_alg)
+				u_int16_t encr_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED;
+				u_int16_t encr_size = 0, int_size = 0;
+				
+				proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
+										&encr_alg, &encr_size);
+				proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
+										&int_alg, &int_size);
+				
+				if (encr_alg != ENCR_UNDEFINED)
 				{
-					/* Algorithms with variable key size.
-					 * GCM/CCM keys are actually shorted than their key data. */
-					case ENCR_AES_GCM_ICV8:
-					case ENCR_AES_GCM_ICV12:
-					case ENCR_AES_GCM_ICV16:
-						encr_key.len -= 1;
-						/* FALL */
-					case ENCR_AES_CCM_ICV8:
-					case ENCR_AES_CCM_ICV12:
-					case ENCR_AES_CCM_ICV16:
-						encr_key.len -= 3;
-						/* FALL */
-					case ENCR_AES_CBC:
-						fprintf(out, "%N-%d", encryption_algorithm_names,
-								encr_alg, encr_key.len * 8);
-						break;
-					default:
-						fprintf(out, "%N", encryption_algorithm_names, encr_alg);
-						break;
+					fprintf(out, "%N", encryption_algorithm_names, encr_alg);
+					if (encr_size)
+					{
+						fprintf(out, "-%d", encr_size);
+					}
 				}
-			}
-			int_alg = child_sa->get_integrity(child_sa, TRUE, &int_key);
-			switch (int_alg)
-			{
-				case AUTH_UNDEFINED:
-					break;
-				default:
+				if (int_alg != AUTH_UNDEFINED)
+				{
 					fprintf(out, "/%N", integrity_algorithm_names, int_alg);
-					break;
+					if (int_size)
+					{
+						fprintf(out, "-%d", int_size);
+					}
+				}
 			}
 			fprintf(out, ", rekeying ");
 			
