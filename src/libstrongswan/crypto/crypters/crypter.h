@@ -51,7 +51,8 @@ enum encryption_algorithm_t {
     ENCR_AES_CCM_ICV16 = 16,
     ENCR_AES_GCM_ICV8 = 18,
     ENCR_AES_GCM_ICV12 = 19,
-    ENCR_AES_GCM_ICV16 = 20
+    ENCR_AES_GCM_ICV16 = 20,
+	ENCR_CAMELLIA_CBC = 22
 };
 
 /**
