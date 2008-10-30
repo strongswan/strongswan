@@ -129,6 +129,11 @@ struct private_ike_sa_t {
 	auth_info_t *other_auth;
 	
 	/**
+	 * Selected IKE proposal
+	 */
+	proposal_t *proposal;
+	
+	/**
 	 * Juggles tasks to process messages
 	 */
 	task_manager_t *task_manager;
@@ -390,6 +395,23 @@ static auth_info_t* get_my_auth(private_ike_sa_t *this)
 static auth_info_t* get_other_auth(private_ike_sa_t *this)
 {
 	return this->other_auth;
+}
+
+/**
+ * Implementation of ike_sa_t.get_proposal
+ */
+static proposal_t* get_proposal(private_ike_sa_t *this)
+{
+	return this->proposal;
+}
+
+/**
+ * Implementation of ike_sa_t.set_proposal
+ */
+static void set_proposal(private_ike_sa_t *this, proposal_t *proposal)
+{
+	DESTROY_IF(this->proposal);
+	this->proposal = proposal->clone(proposal);
 }
 
 /**
@@ -2218,6 +2240,7 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->peer_cfg);
 	DESTROY_IF(this->my_auth);
 	DESTROY_IF(this->other_auth);
+	DESTROY_IF(this->proposal);
 	
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
@@ -2247,6 +2270,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_peer_cfg = (void (*)(ike_sa_t*,peer_cfg_t*))set_peer_cfg;
 	this->public.get_my_auth = (auth_info_t*(*)(ike_sa_t*))get_my_auth;
 	this->public.get_other_auth = (auth_info_t*(*)(ike_sa_t*))get_other_auth;
+	this->public.get_proposal = (proposal_t*(*)(ike_sa_t*))get_proposal;
+	this->public.set_proposal = (void(*)(ike_sa_t*, proposal_t *proposal))set_proposal;
 	this->public.get_id = (ike_sa_id_t* (*)(ike_sa_t*)) get_id;
 	this->public.get_my_host = (host_t* (*)(ike_sa_t*)) get_my_host;
 	this->public.set_my_host = (void (*)(ike_sa_t*,host_t*)) set_my_host;
@@ -2325,6 +2350,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->peer_cfg = NULL;
 	this->my_auth = auth_info_create();
 	this->other_auth = auth_info_create();
+	this->proposal = NULL;
 	this->task_manager = task_manager_create(&this->public);
 	this->unique_id = ++unique_id;
 	this->my_virtual_ip = NULL;

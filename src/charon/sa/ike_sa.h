@@ -395,6 +395,20 @@ struct ike_sa_t {
 	auth_info_t* (*get_other_auth)(ike_sa_t *this);
 	
 	/**
+	 * Get the selected proposal of this IKE_SA.
+	 *
+	 * @return				selected proposal
+	 */
+	proposal_t* (*get_proposal)(ike_sa_t *this);
+	
+	/**
+	 * Set the proposal selected for this IKE_SA.
+	 *
+	 * @param				selected proposal
+	 */
+	void (*set_proposal)(ike_sa_t *this, proposal_t *proposal);
+	
+	/**
 	 * Add an additional address for the peer.
 	 *
 	 * In MOBIKE, a peer may transmit additional addresses where it is

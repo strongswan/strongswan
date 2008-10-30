@@ -179,7 +179,32 @@ struct listener_t {
 	 */
 	bool (*message)(listener_t *this, ike_sa_t *ike_sa, message_t *message,
 					bool incoming);
-
+	
+	/**
+	 * Hook called with IKE_SA key material.
+	 *
+	 * @param ike_sa	IKE_SA this keymat belongs to
+	 * @param dh		diffie hellman shared secret
+	 * @param nonce_i	initiators nonce
+	 * @param nonce_r	responders nonce
+	 * @param rekey		IKE_SA we are rekeying, if any
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*ike_keys)(listener_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
+					 chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey);
+	
+	/**
+	 * Hook called with CHILD_SA key material.
+	 *
+	 * @param ike_sa	IKE_SA the child sa belongs to
+	 * @param child_sa	CHILD_SA this keymat is used for
+	 * @param dh		diffie hellman shared secret
+	 * @param nonce_i	initiators nonce
+	 * @param nonce_r	responders nonce
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*child_keys)(listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
 };
 
 /**
@@ -262,7 +287,6 @@ struct bus_t {
 	 */
 	void (*vlog)(bus_t *this, debug_t group, level_t level,
 				 char* format, va_list args);
-	
 	/**
 	 * Send a IKE_SA state change event to the bus.
 	 *
@@ -271,7 +295,6 @@ struct bus_t {
 	 */
 	void (*ike_state_change)(bus_t *this, ike_sa_t *ike_sa,
 							 ike_sa_state_t state);
-	
 	/**
 	 * Send a CHILD_SA state change event to the bus.
 	 *
@@ -280,7 +303,6 @@ struct bus_t {
 	 */
 	void (*child_state_change)(bus_t *this, child_sa_t *child_sa,
 							   child_sa_state_t state);
-	
 	/**
 	 * Message send/receive hook.
 	 *
@@ -289,6 +311,27 @@ struct bus_t {
 	 */
 	void (*message)(bus_t *this, message_t *message, bool incoming);
 	
+	/**
+	 * IKE_SA keymat hook.
+	 *
+	 * @param ike_sa	IKE_SA this keymat belongs to
+	 * @param dh		diffie hellman shared secret
+	 * @param nonce_i	initiators nonce
+	 * @param nonce_r	responders nonce
+	 * @param rekey		IKE_SA we are rekeying, if any
+	 */
+	void (*ike_keys)(bus_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
+					 chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey);
+	/**
+	 * CHILD_SA keymat hook.
+	 *
+	 * @param child_sa	CHILD_SA this keymat is used for
+	 * @param dh		diffie hellman shared secret
+	 * @param nonce_i	initiators nonce
+	 * @param nonce_r	responders nonce
+	 */
+	void (*child_keys)(bus_t *this, child_sa_t *child_sa, diffie_hellman_t *dh,
+					   chunk_t nonce_i, chunk_t nonce_r);
 	/**
 	 * Destroy the event bus.
 	 */

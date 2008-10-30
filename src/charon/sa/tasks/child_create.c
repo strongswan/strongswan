@@ -197,7 +197,7 @@ static bool ts_list_is_host(linked_list_t *list, host_t *host)
 static status_t select_and_install(private_child_create_t *this, bool no_dh)
 {
 	status_t status;
-	chunk_t encr_i, integ_i, encr_r, integ_r;
+	chunk_t nonce_i, nonce_r, encr_i, integ_i, encr_r, integ_r;
 	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other, *other_vip, *my_vip;
 	
@@ -256,11 +256,15 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	
 	if (this->initiator)
 	{
+		nonce_i = this->my_nonce;
+		nonce_r = this->other_nonce;
 		my_ts = this->tsi;
 		other_ts = this->tsr;
 	}
 	else
 	{
+		nonce_r = this->my_nonce;
+		nonce_i = this->other_nonce;
 		my_ts = this->tsr;
 		other_ts = this->tsi;
 	}
@@ -336,21 +340,15 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	}
 	
 	status = FAILED;
-	if (this->initiator)
+	if (this->keymat->derive_child_keys(this->keymat, this->proposal,
+			this->dh, nonce_i, nonce_r,	&encr_i, &integ_i, &encr_r, &integ_r))
 	{
-		if (this->keymat->derive_child_keys(this->keymat, this->proposal,
-					this->dh, this->my_nonce, this->other_nonce,
-					&encr_i, &integ_i, &encr_r, &integ_r))
+		if (this->initiator)
 		{
 			status = this->child_sa->update(this->child_sa, this->proposal,
 							this->mode, integ_r, integ_i, encr_r, encr_i);
 		}
-	}
-	else
-	{
-		if (this->keymat->derive_child_keys(this->keymat, this->proposal,
-					this->dh, this->other_nonce, this->my_nonce,
-					&encr_i, &integ_i, &encr_r, &integ_r))
+		else
 		{
 			status = this->child_sa->add(this->child_sa, this->proposal,
 							this->mode, integ_i, integ_r, encr_i, encr_r);
@@ -366,6 +364,10 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		DBG1(DBG_IKE, "unable to install IPsec SA (SAD) in kernel");
 		return FAILED;
 	}
+	
+	charon->bus->child_keys(charon->bus, this->child_sa, this->dh,
+							nonce_i, nonce_r);
+	
 	/* add to IKE_SA, and remove from task */
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);

@@ -107,13 +107,6 @@ struct keymat_t {
 	crypter_t* (*get_crypter)(keymat_t *this, bool in);
 	
 	/**
-	 * Get the selected proposal passed to derive_ike_keys().
-	 *
-	 * @return			selected proposal
-	 */
-	proposal_t* (*get_proposal)(keymat_t *this);
-	
-	/**
 	 * Generate octets to use for authentication procedure (RFC4306 2.15).
 	 *
 	 * This method creates the plain octets and is usually signed by a private

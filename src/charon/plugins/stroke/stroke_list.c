@@ -79,11 +79,9 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (all)
 	{
-		keymat_t *keymat;
 		proposal_t *ike_proposal;
 		
-		keymat = ike_sa->get_keymat(ike_sa);
-		ike_proposal = keymat->get_proposal(keymat);
+		ike_proposal = ike_sa->get_proposal(ike_sa);
 		
 		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),

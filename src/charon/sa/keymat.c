@@ -76,11 +76,6 @@ struct private_keymat_t {
 	 * Key to verify incoming authentication data (SKp)
 	 */
 	chunk_t skp_verify;
-	
-	/**
-	 * Negotiated IKE proposal
-	 */
-	proposal_t *proposal;
 };
 
 typedef struct keylen_entry_t keylen_entry_t;
@@ -350,9 +345,6 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 	/* all done, prf_plus not needed anymore */
 	prf_plus->destroy(prf_plus);
 	
-	/* save selected proposal */
-	this->proposal = proposal->clone(proposal);
-	
 	return TRUE;
 }
 
@@ -451,14 +443,6 @@ static bool derive_child_keys(private_keymat_t *this,
 }
 
 /**
- * Implementation of keymat_t.get_proposal
- */
-static proposal_t* get_proposal(private_keymat_t *this)
-{
-	return this->proposal;
-}
-
-/**
  * Implementation of keymat_t.get_signer
  */
 static signer_t* get_signer(private_keymat_t *this, bool in)
@@ -546,7 +530,6 @@ static void destroy(private_keymat_t *this)
 	DESTROY_IF(this->crypter_in);
 	DESTROY_IF(this->crypter_out);
 	DESTROY_IF(this->prf);
-	DESTROY_IF(this->proposal);
 	chunk_clear(&this->skd);
 	chunk_clear(&this->skp_verify);
 	chunk_clear(&this->skp_build);
@@ -563,7 +546,6 @@ keymat_t *keymat_create(bool initiator)
 	this->public.create_dh = (diffie_hellman_t*(*)(keymat_t*, diffie_hellman_group_t group))create_dh;
 	this->public.derive_ike_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id, keymat_t *rekey))derive_ike_keys;
 	this->public.derive_child_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i, chunk_t *encr_r, chunk_t *integ_r))derive_child_keys;
-	this->public.get_proposal = (proposal_t*(*)(keymat_t*))get_proposal;
 	this->public.get_signer = (signer_t*(*)(keymat_t*, bool in))get_signer;
 	this->public.get_crypter = (crypter_t*(*)(keymat_t*, bool in))get_crypter;
 	this->public.get_auth_octets = (chunk_t(*)(keymat_t *, bool verify, chunk_t ike_sa_init, chunk_t nonce, identification_t *id))get_auth_octets;
@@ -577,7 +559,6 @@ keymat_t *keymat_create(bool initiator)
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->prf = NULL;
-	this->proposal = NULL;
 	this->skd = chunk_empty;
 	this->skp_verify = chunk_empty;
 	this->skp_build = chunk_empty;

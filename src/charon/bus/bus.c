@@ -440,6 +440,74 @@ static void message(private_bus_t *this, message_t *message, bool incoming)
 }
 
 /**
+ * Implementation of bus_t.ike_keys
+ */
+static void ike_keys(private_bus_t *this, ike_sa_t *ike_sa,
+					 diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
+					 ike_sa_t *rekey)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->ike_keys)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_keys(entry->listener, ike_sa, dh,
+										 nonce_i, nonce_r, rekey);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Implementation of bus_t.child_keys
+ */
+static void child_keys(private_bus_t *this, child_sa_t *child_sa,
+					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	bool keep;
+	
+	ike_sa = pthread_getspecific(this->thread_sa);
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->child_keys)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->child_keys(entry->listener, ike_sa, child_sa,
+										   dh, nonce_i, nonce_r);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
  * Implementation of bus_t.destroy.
  */
 static void destroy(private_bus_t *this)
@@ -465,6 +533,8 @@ bus_t *bus_create()
 	this->public.ike_state_change = (void(*)(bus_t*,ike_sa_t*,ike_sa_state_t))ike_state_change;
 	this->public.child_state_change = (void(*)(bus_t*,child_sa_t*,child_sa_state_t))child_state_change;
 	this->public.message = (void(*)(bus_t*, message_t *message, bool incoming))message;
+	this->public.ike_keys = (void(*)(bus_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
+	this->public.child_keys = (void(*)(bus_t*, child_sa_t *child_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r))child_keys;
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();

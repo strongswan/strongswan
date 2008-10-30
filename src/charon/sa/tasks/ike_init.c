@@ -385,6 +385,7 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
+	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 	
 	if (this->dh == NULL ||
 		!this->proposal->has_dh_group(this->proposal, this->dh_group))
@@ -422,6 +423,9 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
+	
+	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh,
+						  this->other_nonce, this->my_nonce, this->old_sa);
 	
 	build_payloads(this, message);
 	return SUCCESS;
@@ -508,6 +512,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		DBG1(DBG_IKE, "peers proposal selection invalid");
 		return FAILED;
 	}
+	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 	
 	if (this->dh == NULL ||
 		!this->proposal->has_dh_group(this->proposal, this->dh_group))
@@ -528,6 +533,9 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		DBG1(DBG_IKE, "key derivation failed");
 		return FAILED;
 	}
+	
+	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh,
+						  this->my_nonce, this->other_nonce, this->old_sa);
 	
 	return SUCCESS;
 }
