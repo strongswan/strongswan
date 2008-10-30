@@ -63,9 +63,9 @@ struct private_keymat_t {
 	prf_t *prf;
 	
 	/**
-	 * PRF for CHILD_SA keymat
+	 * Key to derive key material from for CHILD_SAs, rekeying
 	 */
-	prf_t *child_prf;
+	chunk_t skd;
 	
 	/**
 	 * Key to build outging authentication data (SKp)
@@ -193,8 +193,9 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 			/* while rfc4434 defines variable keys for AES-XCBC, rfc3664 does
 			 * not and therefore fixed key semantics apply to XCBC for key
 			 * derivation. */
-			nonce_i.len = min(nonce_i.len, this->prf->get_key_size(this->prf)/2);
-			nonce_r.len = min(nonce_r.len, this->prf->get_key_size(this->prf)/2);
+			key_size = this->prf->get_key_size(this->prf)/2;
+			nonce_i.len = min(nonce_i.len, key_size);
+			nonce_r.len = min(nonce_r.len, key_size);
 			break;
 		default:
 			/* all other algorithms use variable key length, full nonce */
@@ -214,10 +215,7 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 		/* SKEYSEED = prf(Ni | Nr, g^ir) */
 		this->prf->set_key(this->prf, fixed_nonce);
 		this->prf->allocate_bytes(this->prf, secret, &skeyseed);
-		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 		this->prf->set_key(this->prf, skeyseed);
-		chunk_clear(&skeyseed);
-		chunk_clear(&secret);
 		prf_plus = prf_plus_create(this->prf, prf_plus_seed);
 	}
 	else
@@ -225,27 +223,25 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 		/* SKEYSEED = prf(SK_d (old), [g^ir (new)] | Ni | Nr) 
 		 * use OLD SAs PRF functions for both prf_plus and prf */
 		secret = chunk_cat("mc", secret, full_nonce);
-		rekey->child_prf->allocate_bytes(rekey->child_prf, secret, &skeyseed);
-		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
+		rekey->prf->set_key(rekey->prf, rekey->skd);
+		rekey->prf->allocate_bytes(rekey->prf, secret, &skeyseed);
 		rekey->prf->set_key(rekey->prf, skeyseed);
-		chunk_clear(&skeyseed);
-		chunk_clear(&secret);
 		prf_plus = prf_plus_create(rekey->prf, prf_plus_seed);
 	}
+	DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
+	
+	chunk_clear(&skeyseed);
+	chunk_clear(&secret);
 	chunk_free(&full_nonce);
 	chunk_free(&fixed_nonce);
 	chunk_clear(&prf_plus_seed);
 	
 	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr */
 	
-	/* SK_d is used for generating CHILD_SA key mat => child_prf */
-	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL);
-	this->child_prf = lib->crypto->create_prf(lib->crypto, alg);
-	key_size = this->child_prf->get_key_size(this->child_prf);
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_d secret %B", &key);
-	this->child_prf->set_key(this->child_prf, key);
-	chunk_clear(&key);
+	/* SK_d is used for generating CHILD_SA key mat => store for later use */
+	key_size = this->prf->get_key_size(this->prf);
+	prf_plus->allocate_bytes(prf_plus, key_size, &this->skd);
+	DBG4(DBG_IKE, "Sk_d secret %B", &this->skd);
 	
 	/* SK_ai/SK_ar used for integrity protection => signer_in/signer_out */
 	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
@@ -441,7 +437,8 @@ static bool derive_child_keys(private_keymat_t *this,
 		int_size /= 8;
 	}
 	
-	prf_plus = prf_plus_create(this->child_prf, seed);
+	this->prf->set_key(this->prf, this->skd);
+	prf_plus = prf_plus_create(this->prf, seed);
 	
 	prf_plus->allocate_bytes(prf_plus, enc_size, encr_i);
 	prf_plus->allocate_bytes(prf_plus, int_size, integ_i);
@@ -549,8 +546,8 @@ static void destroy(private_keymat_t *this)
 	DESTROY_IF(this->crypter_in);
 	DESTROY_IF(this->crypter_out);
 	DESTROY_IF(this->prf);
-	DESTROY_IF(this->child_prf);
 	DESTROY_IF(this->proposal);
+	chunk_clear(&this->skd);
 	chunk_clear(&this->skp_verify);
 	chunk_clear(&this->skp_build);
 	free(this);
@@ -580,8 +577,8 @@ keymat_t *keymat_create(bool initiator)
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->prf = NULL;
-	this->child_prf = NULL;
 	this->proposal = NULL;
+	this->skd = chunk_empty;
 	this->skp_verify = chunk_empty;
 	this->skp_build = chunk_empty;
 	

@@ -356,7 +356,6 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 							this->mode, integ_i, integ_r, encr_i, encr_r);
 		}
 	}
-	/* TODO: invoke bus method with key mat */
 	chunk_clear(&integ_i);
 	chunk_clear(&integ_r);
 	chunk_clear(&encr_i);
