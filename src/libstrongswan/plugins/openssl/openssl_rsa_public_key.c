@@ -90,13 +90,6 @@ static bool verify_emsa_pkcs1_signature(private_openssl_rsa_public_key_t *this,
 		goto error;
 	}
 	
-	/* remove any preceding 0-bytes from signature */
-	while (signature.len && *(signature.ptr) == 0x00)
-	{
-		signature.len -= 1;
-		signature.ptr++;
-	}
-	
 	valid = (EVP_VerifyFinal(ctx, signature.ptr, signature.len, key) == 1);
 	
 error:
