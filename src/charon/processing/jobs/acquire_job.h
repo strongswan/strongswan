@@ -26,6 +26,7 @@
 typedef struct acquire_job_t acquire_job_t;
 
 #include <library.h>
+#include <config/traffic_selector.h>
 #include <processing/jobs/job.h>
 
 /**
@@ -46,8 +47,12 @@ struct acquire_job_t {
  * We use the reqid to find the routed CHILD_SA.
  *
  * @param reqid		reqid of the CHILD_SA to acquire
+ * @param src_ts	source traffic selector
+ * @param dst_ts	destination traffic selector
  * @return			acquire_job_t object
  */
-acquire_job_t *acquire_job_create(u_int32_t reqid);
+acquire_job_t *acquire_job_create(u_int32_t reqid,
+								  traffic_selector_t *src_ts,
+								  traffic_selector_t *dst_ts);
 
 #endif /* REKEY_CHILD_SA_JOB_H_ @} */

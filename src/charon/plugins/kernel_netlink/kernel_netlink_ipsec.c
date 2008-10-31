@@ -381,6 +381,53 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
 	return sel;
 }
 
+/**
+ * convert a xfrm_selector to a src|dst traffic_selector 
+ */
+static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
+{
+	ts_type_t type;
+	chunk_t addr;
+	u_int16_t port, port_mask, from_port, to_port;
+
+	if (src)
+	{
+		addr.ptr = (u_char*)&sel->saddr;
+		port = sel->sport;
+		port_mask = sel->sport_mask;
+	}
+    else
+	{
+		addr.ptr = (u_char*)&sel->daddr;
+		port = sel->dport;
+		port_mask = sel->dport_mask;
+	}
+	/* The Linux 2.6 kernel does not set the selector's family field,
+     * so as a kludge we additionally test the prefix length. 
+	 */
+	if (sel->family == AF_INET || sel->prefixlen_d == 32)
+	{
+		type = TS_IPV4_ADDR_RANGE;
+		addr.len = 4;
+	}
+	else
+	{
+		type = TS_IPV6_ADDR_RANGE;
+		addr.len = 16;
+	} 
+	if (port_mask == 0)
+	{
+		from_port = 0;
+		to_port = 65535;
+	}
+	else
+	{
+		from_port = to_port = ntohs(port); 
+	}
+		
+	return traffic_selector_create_from_bytes(sel->proto, type,
+											  addr, from_port, addr, to_port);
+}
 
 /**
  * process a XFRM_MSG_ACQUIRE from kernel
@@ -389,15 +436,22 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 {
 	u_int32_t reqid = 0;
 	int proto = 0;
+	traffic_selector_t *src_ts, *dst_ts;
+	struct xfrm_user_acquire *acquire;
+	struct rtattr *rtattr;
+	size_t rtsize;
 	job_t *job;
-	struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_user_acquire);
-	size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
 	
+	rtattr = XFRM_RTA(hdr, struct xfrm_user_acquire);
+	rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
+
 	if (RTA_OK(rtattr, rtsize))
 	{
 		if (rtattr->rta_type == XFRMA_TMPL)
 		{
-			struct xfrm_user_tmpl* tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rtattr);
+			struct xfrm_user_tmpl* tmpl;
+
+			tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rtattr);
 			reqid = tmpl->reqid;
 			proto = tmpl->id.proto;
 		}
@@ -412,14 +466,14 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 			/* acquire for AH/ESP only, not for IPCOMP */
 			return;
 	}
-	if (reqid == 0)
-	{
-		DBG1(DBG_KNL, "received a XFRM_MSG_ACQUIRE, but no reqid found");
-		return;
-	}
 	DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
-	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid {%d}", reqid);
-	job = (job_t*)acquire_job_create(reqid);
+
+	acquire = (struct xfrm_user_acquire*)NLMSG_DATA(hdr);
+	src_ts = selector2ts(&acquire->sel, TRUE);
+	dst_ts = selector2ts(&acquire->sel, FALSE);
+	DBG1(DBG_KNL, "creating acquire job %R === %R for CHILD_SA with reqid {%d}",
+					src_ts, dst_ts, reqid);
+	job = (job_t*)acquire_job_create(reqid, src_ts, dst_ts);
 	charon->processor->queue_job(charon->processor, job);
 }
 
@@ -459,6 +513,14 @@ static void process_expire(private_kernel_netlink_ipsec_t *this, struct nlmsghdr
 		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
 	}
 	charon->processor->queue_job(charon->processor, job);
+}
+
+/**
+ * process a XFRM_MSG_MIGRATE from kernel
+ */
+static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghdr *hdr)
+{
+	DBG2(DBG_KNL, "received a XFRM_MSG_MIGRATE");
 }
 
 /**
@@ -539,6 +601,9 @@ static job_requeue_t receive_events(private_kernel_netlink_ipsec_t *this)
 				break;
 			case XFRM_MSG_EXPIRE:
 				process_expire(this, hdr);
+				break;
+			case XFRM_MSG_MIGRATE:
+				process_migrate(this, hdr);
 				break;
 			case XFRM_MSG_MAPPING:
 				process_mapping(this, hdr);

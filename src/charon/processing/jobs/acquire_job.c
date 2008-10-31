@@ -35,6 +35,16 @@ struct private_acquire_job_t {
 	 * reqid of the child to rekey
 	 */
 	u_int32_t reqid;
+
+	/**
+	 * acquired source traffic selector
+	 */
+	traffic_selector_t *src_ts;
+
+	/**
+	 * acquired destination traffic selector
+	 */
+	traffic_selector_t *dst_ts;
 };
 
 /**
@@ -42,6 +52,8 @@ struct private_acquire_job_t {
  */
 static void destroy(private_acquire_job_t *this)
 {
+	DESTROY_IF(this->src_ts);
+	DESTROY_IF(this->dst_ts);
 	free(this);
 }
 
@@ -50,13 +62,16 @@ static void destroy(private_acquire_job_t *this)
  */
 static void execute(private_acquire_job_t *this)
 {
-	ike_sa_t *ike_sa;
+	ike_sa_t *ike_sa = NULL;
 	
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													this->reqid, TRUE);
+	if (this->reqid)
+	{
+		ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+														this->reqid, TRUE);
+	}
 	if (ike_sa == NULL)
 	{
-		DBG2(DBG_JOB, "CHILD_SA with reqid %d not found for acquiring",
+		DBG1(DBG_JOB, "acquire job found no CHILD_SA with reqid {%d}",
 			 this->reqid);
 	}
 	else
@@ -71,7 +86,9 @@ static void execute(private_acquire_job_t *this)
 /*
  * Described in header
  */
-acquire_job_t *acquire_job_create(u_int32_t reqid)
+acquire_job_t *acquire_job_create(u_int32_t reqid,
+								  traffic_selector_t *src_ts,
+								  traffic_selector_t *dst_ts)
 {
 	private_acquire_job_t *this = malloc_thing(private_acquire_job_t);
 	
@@ -81,6 +98,8 @@ acquire_job_t *acquire_job_create(u_int32_t reqid)
 	
 	/* private variables */
 	this->reqid = reqid;
+	this->src_ts = src_ts;
+	this->dst_ts = dst_ts;
 	
 	return &this->public;
 }

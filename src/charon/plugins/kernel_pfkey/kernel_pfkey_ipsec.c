@@ -28,6 +28,7 @@
 #include "kernel_pfkey_ipsec.h"
 
 #include <daemon.h>
+#include <utils/host.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
@@ -39,7 +40,7 @@
 #define PRIO_HIGH 2000
 
 /** buffer size for PF_KEY messages */
-#define PFKEY_BUFFER_SIZE 2048
+#define PFKEY_BUFFER_SIZE 4096
 
 /** PF_KEY messages are 64 bit aligned */
 #define PFKEY_ALIGNMENT 8
@@ -289,10 +290,39 @@ struct pfkey_msg_t
 			struct sadb_x_nat_t_port *x_natt_dport;	/* SADB_X_EXT_NAT_T_DPORT */
 			struct sadb_address *x_natt_oa;			/* SADB_X_EXT_NAT_T_OA */
 			struct sadb_x_sec_ctx *x_sec_ctx;		/* SADB_X_EXT_SEC_CTX */
+			struct sadb_x_kmaddress *x_kmaddress;	/* SADB_X_EXT_KMADDRESS */
 		} __attribute__((__packed__));
 	};
 };
 
+ENUM(sadb_ext_type_names, SADB_EXT_RESERVED, SADB_X_EXT_KMADDRESS,
+	"SADB_EXT_RESERVED",
+	"SADB_EXT_SA",
+	"SADB_EXT_LIFETIME_CURRENT",
+	"SADB_EXT_LIFETIME_HARD",
+	"SADB_EXT_LIFETIME_SOFT",
+	"SADB_EXT_ADDRESS_SRC",
+	"SADB_EXT_ADDRESS_DST",
+	"SADB_EXT_ADDRESS_PROXY",
+	"SADB_EXT_KEY_AUTH",
+	"SADB_EXT_KEY_ENCRYPT",
+	"SADB_EXT_IDENTITY_SRC",
+	"SADB_EXT_IDENTITY_DST",
+	"SADB_EXT_SENSITIVITY",
+	"SADB_EXT_PROPOSAL",
+	"SADB_EXT_SUPPORTED_AUTH",
+	"SADB_EXT_SUPPORTED_ENCRYPT",
+	"SADB_EXT_SPIRANGE",
+	"SADB_X_EXT_KMPRIVATE",
+	"SADB_X_EXT_POLICY",
+	"SADB_X_EXT_SA2",
+	"SADB_X_EXT_NAT_T_TYPE",
+	"SADB_X_EXT_NAT_T_SPORT",
+	"SADB_X_EXT_NAT_T_DPORT",
+	"SADB_X_EXT_NAT_T_OA",
+	"SADB_X_EXT_SEC_CTX",
+	"SADB_X_EXT_KMADDRESS"
+);
 /**
  * convert a IKEv2 specific protocol identifier to the PF_KEY sa type
  */
@@ -415,13 +445,13 @@ static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_DES_IV32, 			0							}, */
 	{ENCR_NULL, 				SADB_EALG_NULL				},
 	{ENCR_AES_CBC,	 			SADB_X_EALG_AESCBC			},
-/*	{ENCR_AES_CTR, 				0							}, */
-/*	{ENCR_AES_CCM_ICV8,			0							}, */
-/*	{ENCR_AES_CCM_ICV12,		0							}, */
-/*	{ENCR_AES_CCM_ICV16,		0							}, */
-/*	{ENCR_AES_GCM_ICV8,			0							}, */
-/*	{ENCR_AES_GCM_ICV12,		0							}, */
-/*	{ENCR_AES_GCM_ICV16,		0							}, */
+/*	{ENCR_AES_CTR, 				SADB_X_EALG_AESCTR			}, */
+/*  {ENCR_AES_CCM_ICV8,			SADB_X_EALG_AES_CCM_ICV8	}, */
+/*	{ENCR_AES_CCM_ICV12,		SADB_X_EALG_AES_CCM_ICV12	}, */
+/*	{ENCR_AES_CCM_ICV16,		SADB_X_EALG_AES_CCM_ICV16	}, */
+/*	{ENCR_AES_GCM_ICV8,			SADB_X_EALG_AES_GCM_ICV8	}, */
+/*	{ENCR_AES_GCM_ICV12,		SADB_X_EALG_AES_GCM_ICV12	}, */
+/*	{ENCR_AES_GCM_ICV16,		SADB_X_EALG_AES_GCM_ICV16	}, */
 	{END_OF_LIST, 				0							},
 };
 
@@ -506,6 +536,40 @@ static void add_encap_ext(struct sadb_msg *msg, host_t *src, host_t *dst)
 }
 
 /**
+ * Convert a sadb_address to a traffic_selector
+ */
+static traffic_selector_t* sadb_address2ts(struct sadb_address *address)
+{
+	traffic_selector_t *ts;
+	ts_type_t type;
+	chunk_t addr;
+	host_t *host;
+	u_int16_t port, from_port, to_port;
+
+	/* The Linux 2.6 kernel does not set the protocol and port information
+     * in the src and dst sadb_address extensions of the SADB_ACQUIRE message.
+     */
+	host = host_create_from_sockaddr((sockaddr_t*)&address[1])	;
+	type = (host->get_family(host) == AF_INET) ? TS_IPV4_ADDR_RANGE :
+												 TS_IPV6_ADDR_RANGE;
+	addr = host->get_address(host);
+	port = host->get_port(host);
+	if (port == 0)
+	{
+		from_port = 0;
+		to_port = 65535;
+	}
+	else
+	{
+		from_port = to_port = port; 
+	}
+	ts = traffic_selector_create_from_bytes(address->sadb_address_proto, type,
+											addr, from_port, addr, to_port);
+	host->destroy(host);
+	return ts;
+}
+
+/**
  * Parses a pfkey message received from the kernel
  */
 static status_t parse_pfkey_message(struct sadb_msg *msg, pfkey_msg_t *out)
@@ -523,10 +587,12 @@ static status_t parse_pfkey_message(struct sadb_msg *msg, pfkey_msg_t *out)
 	
 	while (len >= PFKEY_LEN(sizeof(struct sadb_ext)))
 	{
+		DBG2(DBG_KNL, "  %N", sadb_ext_type_names, ext->sadb_ext_type);
 		if (ext->sadb_ext_len < PFKEY_LEN(sizeof(struct sadb_ext)) ||
 			ext->sadb_ext_len > len)
 		{
-			DBG1(DBG_KNL, "length of PF_KEY extension (%d) is invalid", ext->sadb_ext_type);
+			DBG1(DBG_KNL, "length of %N extension is invalid",
+						   sadb_ext_type_names, ext->sadb_ext_type);
 			break;
 		}
 		
@@ -538,7 +604,8 @@ static status_t parse_pfkey_message(struct sadb_msg *msg, pfkey_msg_t *out)
 		
 		if (out->ext[ext->sadb_ext_type])
 		{
-			DBG1(DBG_KNL, "duplicate PF_KEY extension of type (%d)", ext->sadb_ext_type);			
+			DBG1(DBG_KNL, "duplicate %N extension",			
+						   sadb_ext_type_names, ext->sadb_ext_type);
 			break;
 		}
 		
@@ -670,7 +737,8 @@ static status_t pfkey_send(private_kernel_pfkey_ipsec_t *this,
 static void process_acquire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
-	u_int32_t index, reqid;
+	u_int32_t index, reqid = 0;
+	traffic_selector_t *src_ts, *dst_ts;
 	policy_entry_t *policy;
 	job_t *job;
 	
@@ -684,6 +752,7 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 			/* acquire for AH/ESP only */
 			return;
 	}
+	DBG2(DBG_KNL, "received an SADB_ACQUIRE");
 	
 	if (parse_pfkey_message(msg, &response) != SUCCESS)
 	{
@@ -692,22 +761,24 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	}
 	
 	index = response.x_policy->sadb_x_policy_id;
-	DBG2(DBG_KNL, "received an SADB_ACQUIRE, %d", index);
 	pthread_mutex_lock(&this->mutex);
 	if (this->policies->find_first(this->policies,
-			(linked_list_match_t)policy_entry_match_byindex, (void**)&policy, &index) != SUCCESS)
+			(linked_list_match_t)policy_entry_match_byindex, (void**)&policy, &index) == SUCCESS)
 	{
-		DBG1(DBG_KNL, "received an SADB_ACQUIRE, but found no matching policy");
-		pthread_mutex_unlock(&this->mutex);
-		return;
+		reqid = policy->reqid;
 	}
-	reqid = policy->reqid;
-	DBG2(DBG_KNL, "received an SADB_ACQUIRE, %d", reqid);
+	else
+	{
+		DBG1(DBG_KNL, "received an SADB_ACQUIRE with policy id %d but no matching policy found",
+					   index);
+	}
+	src_ts = sadb_address2ts(response.src);
+	dst_ts = sadb_address2ts(response.dst);
 	pthread_mutex_unlock(&this->mutex);
 	
-	DBG2(DBG_KNL, "received an SADB_ACQUIRE");
-	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid {%d}", reqid);
-	job = (job_t*)acquire_job_create(reqid);
+	DBG1(DBG_KNL, "creating acquire job %R === %R for CHILD_SA with reqid {%d}",
+					src_ts, dst_ts, reqid);
+	job = (job_t*)acquire_job_create(reqid, src_ts, dst_ts);
 	charon->processor->queue_job(charon->processor, job);
 }
 
@@ -754,6 +825,22 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* 
 		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
 	}
 	charon->processor->queue_job(charon->processor, job);
+}
+
+/**
+ * Process a SADB_MIGRATE message from the kernel
+ */
+static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* msg)
+{
+	pfkey_msg_t response;
+
+	DBG2(DBG_KNL, "received an SADB_X_MIGRATE");
+
+	if (parse_pfkey_message(msg, &response) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "parsing SADB_X_MIGRATE from kernel failed");
+		return;
+	}
 }
 
 /**
@@ -865,6 +952,9 @@ static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
 			break;
 		case SADB_EXPIRE:
 			process_expire(this, msg);
+			break;
+		case SADB_X_MIGRATE:
+			process_migrate(this, msg);
 			break;
 		case SADB_X_NAT_T_NEW_MAPPING:
 			process_mapping(this, msg);
