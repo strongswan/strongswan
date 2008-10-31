@@ -1627,13 +1627,14 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 	
-	/* create and bind XFRM socket for ACQUIRE & EXPIRE */
+	/* create and bind XFRM socket for ACQUIRE, EXPIRE, MIGRATE & MAPPING */
 	this->socket_xfrm_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
 	if (this->socket_xfrm_events <= 0)
 	{
 		charon->kill(charon, "unable to create XFRM event socket");
 	}
-	addr.nl_groups = XFRMNLGRP(ACQUIRE) | XFRMNLGRP(EXPIRE) | XFRMNLGRP(MAPPING);
+	addr.nl_groups = XFRMNLGRP(ACQUIRE) | XFRMNLGRP(EXPIRE) |
+					 XFRMNLGRP(MIGRATE) | XFRMNLGRP(MAPPING);
 	if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		charon->kill(charon, "unable to bind XFRM event socket");
