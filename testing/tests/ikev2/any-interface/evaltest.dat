@@ -1,5 +1,5 @@
-moon::cat /var/log/daemon.log::creating acquire job for CHILD_SA::YES
-bob::cat /var/log/daemon.log::creating acquire job for CHILD_SA::YES
+moon::cat /var/log/daemon.log::creating acquire job::YES
+bob::cat /var/log/daemon.log::creating acquire job::YES
 moon::ipsec statusall::alice.*INSTALLED, TRANSPORT::YES
 moon::ipsec statusall::sun.*INSTALLED, TRANSPORT::YES
 alice::ipsec statusall::remote.*INSTALLED, TRANSPORT::YES
