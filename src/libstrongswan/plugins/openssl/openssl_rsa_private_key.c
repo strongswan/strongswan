@@ -77,6 +77,7 @@ static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 									   int type, chunk_t data, chunk_t *signature)
 {
 	bool success = FALSE;
+	u_int len;
 	const EVP_MD *hasher = EVP_get_digestbynid(type);
 	if (!hasher)
 	{
@@ -107,10 +108,11 @@ static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 	
 	*signature = chunk_alloc(RSA_size(this->rsa));
 	
-	if (!EVP_SignFinal(ctx, signature->ptr, &signature->len, key))
+	if (!EVP_SignFinal(ctx, signature->ptr, &len, key))
 	{
 		goto error;
 	}
+	signature->len = len;
 	
 	success = TRUE;
 	
