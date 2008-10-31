@@ -90,6 +90,29 @@ struct kernel_algorithm_t {
 	char *name;
 };
 
+ENUM(xfrm_attr_type_names, XFRMA_UNSPEC, XFRMA_KMADDRESS,
+	"XFRMA_UNSPEC",
+	"XFRMA_ALG_AUTH",
+	"XFRMA_ALG_CRYPT",
+	"XFRMA_ALG_COMP",
+	"XFRMA_ENCAP",
+	"XFRMA_TMPL",
+	"XFRMA_SA",
+	"XFRMA_POLICY",
+	"XFRMA_SEC_CTX",
+	"XFRMA_LTIME_VAL",
+	"XFRMA_REPLAY_VAL",
+	"XFRMA_REPLAY_THRESH",
+	"XFRMA_ETIMER_THRESH",
+	"XFRMA_SRCADDR",
+	"XFRMA_COADDR",
+	"XFRMA_LASTUSED",
+	"XFRMA_POLICY_TYPE",
+	"XFRMA_MIGRATE",
+	"XFRMA_ALG_AEAD",
+	"XFRMA_KMADDRESS"
+);
+
 #define END_OF_LIST -1
 
 /**
@@ -402,25 +425,31 @@ static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 		port = sel->dport;
 		port_mask = sel->dport_mask;
 	}
+
 	/* The Linux 2.6 kernel does not set the selector's family field,
      * so as a kludge we additionally test the prefix length. 
 	 */
-	if (sel->family == AF_INET || sel->prefixlen_d == 32)
+	if (sel->family == AF_INET || sel->prefixlen_s == 32)
 	{
 		type = TS_IPV4_ADDR_RANGE;
 		addr.len = 4;
 	}
-	else
+	else if (sel->family == AF_INET6 || sel->prefixlen_s == 128)
 	{
 		type = TS_IPV6_ADDR_RANGE;
 		addr.len = 16;
-	} 
+	}
+	else
+	{
+		return NULL;
+	}
+ 
 	if (port_mask == 0)
 	{
 		from_port = 0;
 		to_port = 65535;
 	}
-	else
+	else 
 	{
 		from_port = to_port = ntohs(port); 
 	}
@@ -438,23 +467,29 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 	int proto = 0;
 	traffic_selector_t *src_ts, *dst_ts;
 	struct xfrm_user_acquire *acquire;
-	struct rtattr *rtattr;
-	size_t rtsize;
+	struct rtattr *rta;
+	size_t rtasize;
 	job_t *job;
 	
-	rtattr = XFRM_RTA(hdr, struct xfrm_user_acquire);
-	rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
+	acquire = (struct xfrm_user_acquire*)NLMSG_DATA(hdr);
+	rta = XFRM_RTA(hdr, struct xfrm_user_acquire);
+	rtasize = XFRM_PAYLOAD(hdr, struct xfrm_user_acquire);
 
-	if (RTA_OK(rtattr, rtsize))
+	DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
+
+	while (RTA_OK(rta, rtasize))
 	{
-		if (rtattr->rta_type == XFRMA_TMPL)
+		DBG2(DBG_KNL, "  %N", xfrm_attr_type_names, rta->rta_type);
+
+		if (rta->rta_type == XFRMA_TMPL)
 		{
 			struct xfrm_user_tmpl* tmpl;
 
-			tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rtattr);
+			tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rta);
 			reqid = tmpl->reqid;
 			proto = tmpl->id.proto;
 		}
+		rta = RTA_NEXT(rta, rtasize);
 	}
 	switch (proto)
 	{
@@ -466,9 +501,6 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 			/* acquire for AH/ESP only, not for IPCOMP */
 			return;
 	}
-	DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
-
-	acquire = (struct xfrm_user_acquire*)NLMSG_DATA(hdr);
 	src_ts = selector2ts(&acquire->sel, TRUE);
 	dst_ts = selector2ts(&acquire->sel, FALSE);
 	DBG1(DBG_KNL, "creating acquire job %R === %R for CHILD_SA with reqid {%d}",
@@ -520,7 +552,19 @@ static void process_expire(private_kernel_netlink_ipsec_t *this, struct nlmsghdr
  */
 static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghdr *hdr)
 {
+	struct rtattr *rta;
+	size_t rtasize;
+
+	rta     = XFRM_RTA(hdr, struct xfrm_userpolicy_id);
+	rtasize = XFRM_PAYLOAD(hdr, struct xfrm_userpolicy_id);
+
 	DBG2(DBG_KNL, "received a XFRM_MSG_MIGRATE");
+
+	while (RTA_OK(rta, rtasize))
+	{
+		DBG2(DBG_KNL, "  %N", xfrm_attr_type_names, rta->rta_type); 
+		rta = RTA_NEXT(rta, rtasize);
+	}
 }
 
 /**
