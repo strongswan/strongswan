@@ -121,7 +121,7 @@ struct private_child_cfg_t {
 };
 
 /**
- * Implementation of child_cfg_t.get_name
+ * Implementation of child_cfg_t.get_name.
  */
 static char *get_name(private_child_cfg_t *this)
 {
@@ -129,7 +129,7 @@ static char *get_name(private_child_cfg_t *this)
 }
 
 /**
- * Implementation of child_cfg_t.add_proposal
+ * Implementation of child_cfg_t.add_proposal.
  */
 static void add_proposal(private_child_cfg_t *this, proposal_t *proposal)
 {
@@ -137,7 +137,7 @@ static void add_proposal(private_child_cfg_t *this, proposal_t *proposal)
 }
 
 /**
- * Implementation of child_cfg_t.get_proposals
+ * Implementation of child_cfg_t.get_proposals.
  */
 static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 {
@@ -161,7 +161,7 @@ static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 }
 
 /**
- * Implementation of child_cfg_t.get_name
+ * Implementation of child_cfg_t.select_proposal.
  */
 static proposal_t* select_proposal(private_child_cfg_t*this,
 								   linked_list_t *proposals, bool strip_dh)
@@ -210,7 +210,7 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 }
 
 /**
- * Implementation of child_cfg_t.get_name
+ * Implementation of child_cfg_t.add_traffic_selector.
  */
 static void add_traffic_selector(private_child_cfg_t *this, bool local,
 								 traffic_selector_t *ts)
@@ -226,7 +226,7 @@ static void add_traffic_selector(private_child_cfg_t *this, bool local,
 }
 
 /**
- * Implementation of child_cfg_t.get_name
+ * Implementation of child_cfg_t.get_traffic_selectors.
  */
 static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool local,
 											linked_list_t *supplied,
@@ -337,7 +337,7 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 }
 
 /**
- * Implementation of child_cfg_t.get_name
+ * Implementation of child_cfg_t.get_updown.
  */
 static char* get_updown(private_child_cfg_t *this)
 {
@@ -345,7 +345,7 @@ static char* get_updown(private_child_cfg_t *this)
 }
 
 /**
- * Implementation of child_cfg_t.get_name
+ * Implementation of child_cfg_t.get_hostaccess.
  */
 static bool get_hostaccess(private_child_cfg_t *this)
 {
@@ -353,7 +353,7 @@ static bool get_hostaccess(private_child_cfg_t *this)
 }
 
 /**
- * Implementation of child_cfg_t.get_name
+ * Implementation of child_cfg_t.get_lifetime.
  */
 static u_int32_t get_lifetime(private_child_cfg_t *this, bool rekey)
 {
@@ -369,7 +369,7 @@ static u_int32_t get_lifetime(private_child_cfg_t *this, bool rekey)
 }
 
 /**
- * Implementation of child_cfg_t.get_mode
+ * Implementation of child_cfg_t.get_mode.
  */
 static ipsec_mode_t get_mode(private_child_cfg_t *this)
 {
@@ -377,7 +377,7 @@ static ipsec_mode_t get_mode(private_child_cfg_t *this)
 }
 
 /**
- * Implementation of child_cfg_t.get_dpd_action
+ * Implementation of child_cfg_t.get_dpd_action.
  */
 static action_t get_dpd_action(private_child_cfg_t *this)
 {
@@ -385,7 +385,7 @@ static action_t get_dpd_action(private_child_cfg_t *this)
 }
 
 /**
- * Implementation of child_cfg_t.get_close_action
+ * Implementation of child_cfg_t.get_close_action.
  */
 static action_t get_close_action(private_child_cfg_t *this)
 {
@@ -422,7 +422,7 @@ static bool use_ipcomp(private_child_cfg_t *this)
 }
 
 /**
- * Implementation of child_cfg_t.get_name
+ * Implementation of child_cfg_t.get_ref.
  */
 static child_cfg_t* get_ref(private_child_cfg_t *this)
 {

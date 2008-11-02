@@ -667,7 +667,7 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.process for initiator
+ * Implementation of task_t.process for responder
  */
 static status_t process_r(private_child_create_t *this, message_t *message)
 {
