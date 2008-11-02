@@ -409,19 +409,24 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
  */
 static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 {
-	ts_type_t type;
+	int family;
 	chunk_t addr;
-	u_int16_t port, port_mask, from_port, to_port;
+	u_int8_t prefixlen;
+	u_int16_t port, port_mask;
+	host_t *host;
+	traffic_selector_t *ts;
 
 	if (src)
 	{
 		addr.ptr = (u_char*)&sel->saddr;
+		prefixlen = sel->prefixlen_s;
 		port = sel->sport;
 		port_mask = sel->sport_mask;
 	}
     else
 	{
 		addr.ptr = (u_char*)&sel->daddr;
+		prefixlen = sel->prefixlen_d;
 		port = sel->dport;
 		port_mask = sel->dport_mask;
 	}
@@ -431,31 +436,24 @@ static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 	 */
 	if (sel->family == AF_INET || sel->prefixlen_s == 32)
 	{
-		type = TS_IPV4_ADDR_RANGE;
+		family = AF_INET;
 		addr.len = 4;
 	}
 	else if (sel->family == AF_INET6 || sel->prefixlen_s == 128)
 	{
-		type = TS_IPV6_ADDR_RANGE;
+		family = AF_INET6;
 		addr.len = 16;
 	}
 	else
 	{
 		return NULL;
 	}
- 
-	if (port_mask == 0)
-	{
-		from_port = 0;
-		to_port = 65535;
-	}
-	else 
-	{
-		from_port = to_port = ntohs(port); 
-	}
-		
-	return traffic_selector_create_from_bytes(sel->proto, type,
-											  addr, from_port, addr, to_port);
+	host = host_create_from_chunk(family, addr, 0);
+	port = (port_mask == 0) ? 0 : ntohs(port); 
+
+	ts = traffic_selector_create_from_subnet(host, prefixlen, sel->proto, port);
+	host->destroy(host); 		
+	return ts;
 }
 
 /**
@@ -552,19 +550,64 @@ static void process_expire(private_kernel_netlink_ipsec_t *this, struct nlmsghdr
  */
 static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghdr *hdr)
 {
+	traffic_selector_t *src_ts, *dst_ts;
+	host_t *local = NULL, *remote = NULL;
+	host_t *old_src = NULL, *old_dst = NULL;
+	host_t *new_src = NULL, *new_dst = NULL;
+	struct xfrm_userpolicy_id *policy_id;
 	struct rtattr *rta;
 	size_t rtasize;
+	u_int32_t reqid = 0;
+	job_t *job;
 
+	policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
 	rta     = XFRM_RTA(hdr, struct xfrm_userpolicy_id);
 	rtasize = XFRM_PAYLOAD(hdr, struct xfrm_userpolicy_id);
 
 	DBG2(DBG_KNL, "received a XFRM_MSG_MIGRATE");
+	
+	src_ts = selector2ts(&policy_id->sel, TRUE);
+	dst_ts = selector2ts(&policy_id->sel, FALSE);
+	DBG2(DBG_KNL, "  policy: %R === %R %N, index %u", src_ts, dst_ts,
+				   policy_dir_names, policy_id->dir, policy_id->index);
 
 	while (RTA_OK(rta, rtasize))
 	{
-		DBG2(DBG_KNL, "  %N", xfrm_attr_type_names, rta->rta_type); 
+		DBG2(DBG_KNL, "  %N", xfrm_attr_type_names, rta->rta_type);
+		if (rta->rta_type == XFRMA_KMADDRESS)
+		{
+			struct xfrm_user_kmaddress *kmaddress;
+
+			kmaddress = (struct xfrm_user_kmaddress*)RTA_DATA(rta);
+			local  = xfrm2host(kmaddress->family, &kmaddress->local, 0);
+			remote = xfrm2host(kmaddress->family, &kmaddress->remote, 0);
+			DBG2(DBG_KNL, "  %H...%H", local, remote);
+			DESTROY_IF(remote);		}
+		else if (rta->rta_type == XFRMA_MIGRATE)
+		{
+			struct xfrm_user_migrate *migrate;
+			protocol_id_t proto;
+
+			migrate = (struct xfrm_user_migrate*)RTA_DATA(rta);
+			old_src = xfrm2host(migrate->old_family, &migrate->old_saddr, 0);
+			old_dst = xfrm2host(migrate->old_family, &migrate->old_daddr, 0);
+			new_src = xfrm2host(migrate->new_family, &migrate->new_saddr, 0);
+			new_dst = xfrm2host(migrate->new_family, &migrate->new_daddr, 0);
+			proto = proto_kernel2ike(migrate->proto);
+			reqid = migrate->reqid;
+			DBG2(DBG_KNL, "  migrate %N %H...%H to %H...%H, reqid {%u}",
+							 protocol_id_names, proto, old_src, old_dst,
+							 new_src, new_src, reqid);
+			DESTROY_IF(old_src);
+			DESTROY_IF(old_dst);
+			DESTROY_IF(new_src);
+			DESTROY_IF(new_dst);
+		}
 		rta = RTA_NEXT(rta, rtasize);
 	}
+	DESTROY_IF(src_ts);
+	DESTROY_IF(dst_ts);
+	DESTROY_IF(local);
 }
 
 /**

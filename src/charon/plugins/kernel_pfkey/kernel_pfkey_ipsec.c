@@ -411,6 +411,23 @@ static u_int8_t dir2kernel(policy_dir_t dir)
 	}
 }
 
+/**
+ * convert the policy direction in ipsec.h to the general one.
+ */
+static policy_dir_t kernel2dir(u_int8_t  dir)
+{
+	switch (dir)
+	{
+		case IPSEC_DIR_INBOUND:
+			return POLICY_IN;
+		case IPSEC_DIR_OUTBOUND:
+			return POLICY_OUT;
+		case IPSEC_DIR_FWD:
+			return POLICY_FWD;
+		default:
+			return dir;
+	}
+}
 typedef struct kernel_algorithm_t kernel_algorithm_t;
 
 /**
@@ -541,30 +558,14 @@ static void add_encap_ext(struct sadb_msg *msg, host_t *src, host_t *dst)
 static traffic_selector_t* sadb_address2ts(struct sadb_address *address)
 {
 	traffic_selector_t *ts;
-	ts_type_t type;
-	chunk_t addr;
 	host_t *host;
-	u_int16_t port, from_port, to_port;
 
 	/* The Linux 2.6 kernel does not set the protocol and port information
      * in the src and dst sadb_address extensions of the SADB_ACQUIRE message.
      */
 	host = host_create_from_sockaddr((sockaddr_t*)&address[1])	;
-	type = (host->get_family(host) == AF_INET) ? TS_IPV4_ADDR_RANGE :
-												 TS_IPV6_ADDR_RANGE;
-	addr = host->get_address(host);
-	port = host->get_port(host);
-	if (port == 0)
-	{
-		from_port = 0;
-		to_port = 65535;
-	}
-	else
-	{
-		from_port = to_port = port; 
-	}
-	ts = traffic_selector_create_from_bytes(address->sadb_address_proto, type,
-											addr, from_port, addr, to_port);
+	ts = traffic_selector_create_from_subnet(host, address->sadb_address_prefixlen,
+ 				address->sadb_address_proto, host->get_port(host));
 	host->destroy(host);
 	return ts;
 }
@@ -833,6 +834,9 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* 
 static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
+	traffic_selector_t *src_ts, *dst_ts;
+	policy_dir_t dir;
+	host_t *local;
 
 	DBG2(DBG_KNL, "received an SADB_X_MIGRATE");
 
@@ -841,6 +845,17 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 		DBG1(DBG_KNL, "parsing SADB_X_MIGRATE from kernel failed");
 		return;
 	}
+	src_ts = sadb_address2ts(response.src);
+	dst_ts = sadb_address2ts(response.dst);
+	local = host_create_from_sockaddr((sockaddr_t*)&response.x_kmaddress[1]);
+	dir = kernel2dir(response.x_policy->sadb_x_policy_dir);
+	DBG2(DBG_KNL, "  policy %R === %R %N, id %u", src_ts, dst_ts,
+					 policy_dir_names, dir, response.x_policy->sadb_x_policy_id);
+	DBG2(DBG_KNL, "  kmaddress: %H", local);
+	
+	src_ts->destroy(src_ts);
+	dst_ts->destroy(dst_ts);
+	local->destroy(local);
 }
 
 /**
