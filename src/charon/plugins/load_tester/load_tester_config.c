@@ -115,7 +115,7 @@ load_tester_config_t *load_tester_config_create()
 	auth = this->peer_cfg->get_auth(this->peer_cfg);
 	class = AUTH_CLASS_PUBKEY;
 	auth->add_item(auth, AUTHN_AUTH_CLASS, &class);
-	child_cfg = child_cfg_create("load-test", 0, 0, 300, NULL, TRUE,
+	child_cfg = child_cfg_create("load-test", 600, 400, 100, NULL, TRUE,
 								 MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
 	proposal = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
 	child_cfg->add_proposal(child_cfg, proposal);

@@ -113,9 +113,13 @@ plugin_t *plugin_create()
 	this->creds = load_tester_creds_create();
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->credentials->add_set(charon->credentials, &this->creds->credential_set);
-	charon->kernel_interface->add_ipsec_interface(charon->kernel_interface, 
-						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	
+	if (lib->settings->get_bool(lib->settings,
+								"charon.plugins.load_tester.fake_kernel", FALSE))
+	{
+		charon->kernel_interface->add_ipsec_interface(charon->kernel_interface, 
+						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
+	}
 	initiators = lib->settings->get_int(lib->settings,
 						"charon.plugins.load_tester.initiators", 1);
 	while (initiators-- > 0)
