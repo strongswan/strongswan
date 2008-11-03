@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: acquire_job.c 4535 2008-10-31 01:43:23Z andreas $
+ * $Id$
  */
 
 #include "migrate_job.h"
@@ -49,9 +49,14 @@ struct private_migrate_job_t {
 	traffic_selector_t *dst_ts;
 
 	/**
-	 * local host address to be used
+	 * local host address to be used for IKE
 	 */
 	host_t *local;
+
+	/**
+	 * remote host address to be used for IKE
+	 */
+	host_t *remote;
 };
 
 /**
@@ -62,6 +67,7 @@ static void destroy(private_migrate_job_t *this)
 	DESTROY_IF(this->src_ts);
 	DESTROY_IF(this->dst_ts);
 	DESTROY_IF(this->local);
+	DESTROY_IF(this->remote);
 	free(this);
 }
 
@@ -140,6 +146,10 @@ static void execute(private_migrate_job_t *this)
 		{
 			ike_sa->set_my_host(ike_sa, this->local->clone(this->local));
 		}
+		if (this->remote)
+		{
+			ike_sa->set_other_host(ike_sa, this->remote->clone(this->remote));
+		}
 		/* add a CHILD_SA for 'found_cfg' with a policy that has already been
          * installed in the kernel
          */
@@ -150,6 +160,10 @@ static void execute(private_migrate_job_t *this)
 		if (this->local)
 		{
 			ike_sa->set_my_host(ike_sa, this->local);
+		}
+		if (this->remote)
+		{
+			ike_sa->set_other_host(ike_sa, this->remote->clone(this->remote));
 		}
 	}
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
@@ -163,7 +177,7 @@ migrate_job_t *migrate_job_create(u_int32_t reqid,
 								  traffic_selector_t *src_ts,
 								  traffic_selector_t *dst_ts,
 								  policy_dir_t dir,
-								  host_t *local)
+								  host_t *local, host_t *remote)
 {
 	private_migrate_job_t *this = malloc_thing(private_migrate_job_t);
 	
@@ -176,6 +190,7 @@ migrate_job_t *migrate_job_create(u_int32_t reqid,
 	this->src_ts = (dir == POLICY_OUT) ? src_ts : dst_ts;
 	this->dst_ts = (dir == POLICY_OUT) ? dst_ts : src_ts;
 	this->local = local;
+	this->remote = remote;
 	
 	return &this->public;
 }

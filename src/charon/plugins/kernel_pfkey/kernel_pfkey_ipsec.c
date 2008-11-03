@@ -858,10 +858,10 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	
 	if (src_ts && dst_ts)
 	{
-		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N "
-					  "with reqid {%u}, kmaddress = %H",
+		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N with reqid {%u}",
 					   src_ts, dst_ts, policy_dir_names, dir, reqid, local);
-		job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, dir, local);
+		job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, dir,
+										 local, NULL);
 		charon->processor->queue_job(charon->processor, job);
 	}
 	else

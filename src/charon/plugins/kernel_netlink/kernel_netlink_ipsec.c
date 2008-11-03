@@ -586,7 +586,7 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 			local  = xfrm2host(kmaddress->family, &kmaddress->local, 0);
 			remote = xfrm2host(kmaddress->family, &kmaddress->remote, 0);
 			DBG2(DBG_KNL, "  %H...%H", local, remote);
-			DESTROY_IF(remote);		}
+		}
 		else if (rta->rta_type == XFRMA_MIGRATE)
 		{
 			struct xfrm_user_migrate *migrate;
@@ -612,10 +612,10 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 
 	if (src_ts && dst_ts)
 	{
-		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N "
-					  "with reqid {%u}, kmaddress = %H",
+		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N with reqid {%u}",
 					   src_ts, dst_ts, policy_dir_names, dir, reqid, local);
-		job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, dir, local);
+		job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, dir,
+										 local, remote);
 		charon->processor->queue_job(charon->processor, job);
 	}
 	else
@@ -623,6 +623,7 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 		DESTROY_IF(src_ts);
 		DESTROY_IF(dst_ts);
 		DESTROY_IF(local);
+		DESTROY_IF(remote);
 	}
 }
 
