@@ -317,6 +317,24 @@ static void lookup_uid_gid(private_daemon_t *this)
 }
 
 /**
+ * Log loaded plugins
+ */
+static void print_plugins()
+{
+	char buf[512], *plugin;
+	int len = 0;
+	enumerator_t *enumerator;
+	
+	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
+	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin))
+	{
+		len += snprintf(&buf[len], sizeof(buf)-len, "%s ", plugin);
+	}
+	enumerator->destroy(enumerator);
+	DBG1(DBG_DMN, "loaded plugins: %s", buf);
+}
+
+/**
  * Initialize the daemon
  */
 static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
@@ -367,6 +385,8 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	/* load plugins, further infrastructure may need it */
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
+	
+	print_plugins();
 	
 	/* create the kernel interfaces */
 	this->public.kernel_interface->create_interfaces(this->public.kernel_interface);
