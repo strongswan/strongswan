@@ -168,7 +168,7 @@ struct traffic_selector_t {
 	 * Compare two traffic selectors for equality.
 	 * 
 	 * @param other		ts to compare with this
-	 * @return 			pointer to a string.
+	 * @return 			TRUE if equal, FALSE otherwise
 	 */
 	bool (*equals) (traffic_selector_t *this, traffic_selector_t *other);
 	
