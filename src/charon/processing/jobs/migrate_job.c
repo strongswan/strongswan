@@ -86,7 +86,6 @@ static void execute(private_migrate_job_t *this)
 		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends);
 		while (enumerator->enumerate(enumerator, (void**)&peer_cfg))
 		{
-			ike_cfg_t *ike_cfg;
 			child_cfg_t *child_cfg;
 
 			if (peer_cfg->get_ike_version(peer_cfg) != 2)
@@ -94,7 +93,6 @@ static void execute(private_migrate_job_t *this)
 				continue;
 			}
 
-			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 			while (children->enumerate(children, &child_cfg))
 			{
@@ -112,23 +110,49 @@ static void execute(private_migrate_job_t *this)
 			}
 		}
 		enumerator->destroy(enumerator);
-		if (found_cfg)
+
+		if (found_cfg == NULL)
 		{
-			DBG1(DBG_JOB, "found matching child_cfg '%s'",
-						   found_cfg->get_name(found_cfg));
+			DBG1(DBG_JOB, "no matching child config found for policy %R === %R",
+						   this->src_ts, this->dst_ts);
+			destroy(this);
+			return;
 		}
-		else
+		DBG1(DBG_JOB, "found matching child config '%s' for policy %R === %R",
+					   found_cfg->get_name(found_cfg),
+					   this->src_ts, this->dst_ts);
+
+		ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
+															peer_cfg);
+		if (ike_sa->get_peer_cfg(ike_sa) == NULL)
 		{
-			DBG1(DBG_JOB, "no matching child_cfg found");
+			host_t *my_host, *other_host;
+			ike_cfg_t *ike_cfg;
+
+			ike_sa->set_peer_cfg(ike_sa, peer_cfg);
+			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+			my_host = host_create_from_dns(ike_cfg->get_my_addr(ike_cfg), 0, 0);
+			other_host = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg), 0, 0);
+			ike_sa->set_my_host(ike_sa, my_host);
+			ike_sa->set_other_host(ike_sa, other_host);
 		}
+		if (this->local)
+		{
+			ike_sa->set_my_host(ike_sa, this->local->clone(this->local));
+		}
+		/* add a CHILD_SA for 'found_cfg' with a policy that has already been
+         * installed in the kernel
+         */
 	}
 	else
 	{
-		DBG1(DBG_JOB, "migrate job found CHILD_SA with reqid {%d}", this->reqid);
-
-		/* set my_host to local */
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		DBG1(DBG_JOB, "found CHILD_SA with reqid {%d}", this->reqid);
+		if (this->local)
+		{
+			ike_sa->set_my_host(ike_sa, this->local);
+		}
 	}
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	destroy(this);
 }
 
