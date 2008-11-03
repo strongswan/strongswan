@@ -52,6 +52,7 @@ processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 processing/jobs/callback_job.c processing/jobs/callback_job.h \
 processing/jobs/delete_child_sa_job.c processing/jobs/delete_child_sa_job.h \
 processing/jobs/delete_ike_sa_job.c processing/jobs/delete_ike_sa_job.h \
+processing/jobs/migrate_job.c processing/jobs/migrate_job.h \
 processing/jobs/process_message_job.c processing/jobs/process_message_job.h \
 processing/jobs/rekey_child_sa_job.c processing/jobs/rekey_child_sa_job.h \
 processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \

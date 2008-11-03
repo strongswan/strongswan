@@ -337,6 +337,31 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 }
 
 /**
+ * Implementation of child_cfg_t.equal_traffic_selectors.
+ */
+bool equal_traffic_selectors(private_child_cfg_t *this, bool local, traffic_selector_t *ts)
+{
+	linked_list_t *list;
+	enumerator_t *enumerator;
+	traffic_selector_t *other_ts;
+	bool result;
+
+	list = (local) ? this->my_ts : this->other_ts;
+
+	if (list->get_count(list) != 1)
+	{
+		return FALSE;
+	}
+	enumerator = list->create_enumerator(list);
+	enumerator->enumerate(enumerator, &other_ts);
+		
+	result = ts->equals(ts, other_ts);
+
+	enumerator->destroy(enumerator);
+	return result;
+}
+
+/**
  * Implementation of child_cfg_t.get_updown.
  */
 static char* get_updown(private_child_cfg_t *this)
@@ -462,6 +487,7 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.get_name = (char* (*) (child_cfg_t*))get_name;
 	this->public.add_traffic_selector = (void (*)(child_cfg_t*,bool,traffic_selector_t*))add_traffic_selector;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_cfg_t*,bool,linked_list_t*,host_t*))get_traffic_selectors;
+	this->public.equal_traffic_selectors = (bool (*)(child_cfg_t*,bool,traffic_selector_t*))equal_traffic_selectors;
 	this->public.add_proposal = (void (*) (child_cfg_t*,proposal_t*))add_proposal;
 	this->public.get_proposals = (linked_list_t* (*) (child_cfg_t*,bool))get_proposals;
 	this->public.select_proposal = (proposal_t* (*) (child_cfg_t*,linked_list_t*,bool))select_proposal;

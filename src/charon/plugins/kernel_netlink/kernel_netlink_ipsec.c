@@ -39,6 +39,7 @@
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>
+#include <processing/jobs/migrate_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/update_sa_job.h>
@@ -501,7 +502,7 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 	}
 	src_ts = selector2ts(&acquire->sel, TRUE);
 	dst_ts = selector2ts(&acquire->sel, FALSE);
-	DBG1(DBG_KNL, "creating acquire job %R === %R for CHILD_SA with reqid {%d}",
+	DBG1(DBG_KNL, "creating acquire job for policy %R === %R with reqid {%u}",
 					src_ts, dst_ts, reqid);
 	job = (job_t*)acquire_job_create(reqid, src_ts, dst_ts);
 	charon->processor->queue_job(charon->processor, job);
@@ -526,7 +527,7 @@ static void process_expire(private_kernel_netlink_ipsec_t *this, struct nlmsghdr
 	
 	if (protocol != PROTO_ESP && protocol != PROTO_AH)
 	{
-		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA with SPI %.8x and reqid {%d} "
+		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA with SPI %.8x and reqid {%u} "
 					  "which is not a CHILD_SA", ntohl(spi), reqid);
 		return;
 	}
@@ -558,6 +559,7 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 	struct rtattr *rta;
 	size_t rtasize;
 	u_int32_t reqid = 0;
+	policy_dir_t dir;
 	job_t *job;
 
 	policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
@@ -568,8 +570,10 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 	
 	src_ts = selector2ts(&policy_id->sel, TRUE);
 	dst_ts = selector2ts(&policy_id->sel, FALSE);
+	dir = (policy_dir_t)policy_id->dir;
+
 	DBG2(DBG_KNL, "  policy: %R === %R %N, index %u", src_ts, dst_ts,
-				   policy_dir_names, policy_id->dir, policy_id->index);
+				   policy_dir_names, dir, policy_id->index);
 
 	while (RTA_OK(rta, rtasize))
 	{
@@ -605,9 +609,21 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 		}
 		rta = RTA_NEXT(rta, rtasize);
 	}
-	DESTROY_IF(src_ts);
-	DESTROY_IF(dst_ts);
-	DESTROY_IF(local);
+
+	if (src_ts && dst_ts)
+	{
+		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N "
+					  "with reqid {%u}, kmaddress = %H",
+					   src_ts, dst_ts, policy_dir_names, dir, reqid, local);
+		job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, dir, local);
+		charon->processor->queue_job(charon->processor, job);
+	}
+	else
+	{
+		DESTROY_IF(src_ts);
+		DESTROY_IF(dst_ts);
+		DESTROY_IF(local);
+	}
 }
 
 /**
@@ -634,7 +650,7 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 		if (host)
 		{
 			DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and "
-				"reqid {%d} changed, queuing update job", ntohl(spi), reqid);
+				"reqid {%u} changed, queuing update job", ntohl(spi), reqid);
 			job = (job_t*)update_sa_job_create(reqid, host);
 			charon->processor->queue_job(charon->processor, job);
 		}
@@ -782,16 +798,16 @@ static status_t get_spi(private_kernel_netlink_ipsec_t *this,
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int32_t *spi)
 {
-	DBG2(DBG_KNL, "getting SPI for reqid {%d}", reqid);
+	DBG2(DBG_KNL, "getting SPI for reqid {%u}", reqid);
 	
 	if (get_spi_internal(this, src, dst, proto_ike2kernel(protocol),
 			0xc0000000, 0xcFFFFFFF, reqid, spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get SPI for reqid {%d}", reqid);
+		DBG1(DBG_KNL, "unable to get SPI for reqid {%u}", reqid);
 		return FAILED;
 	}
 	
-	DBG2(DBG_KNL, "got SPI %.8x for reqid {%d}", ntohl(*spi), reqid);
+	DBG2(DBG_KNL, "got SPI %.8x for reqid {%u}", ntohl(*spi), reqid);
 	
 	return SUCCESS;
 }
@@ -805,18 +821,18 @@ static status_t get_cpi(private_kernel_netlink_ipsec_t *this,
 {
 	u_int32_t received_spi = 0;
 
-	DBG2(DBG_KNL, "getting CPI for reqid {%d}", reqid);
+	DBG2(DBG_KNL, "getting CPI for reqid {%u}", reqid);
 	
 	if (get_spi_internal(this, src, dst,
 			IPPROTO_COMP, 0x100, 0xEFFF, reqid, &received_spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get CPI for reqid {%d}", reqid);
+		DBG1(DBG_KNL, "unable to get CPI for reqid {%u}", reqid);
 		return FAILED;
 	}
 	
 	*cpi = htons((u_int16_t)ntohl(received_spi));
 	
-	DBG2(DBG_KNL, "got CPI %.4x for reqid {%d}", ntohs(*cpi), reqid);
+	DBG2(DBG_KNL, "got CPI %.4x for reqid {%u}", ntohs(*cpi), reqid);
 	
 	return SUCCESS;
 }
@@ -841,7 +857,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%d}",
+	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%u}",
 		 ntohl(spi), reqid);
 	
 	hdr = (struct nlmsghdr*)request;

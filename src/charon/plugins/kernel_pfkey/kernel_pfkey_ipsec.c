@@ -31,6 +31,7 @@
 #include <utils/host.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>
+#include <processing/jobs/migrate_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/update_sa_job.h>
@@ -777,8 +778,8 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	dst_ts = sadb_address2ts(response.dst);
 	pthread_mutex_unlock(&this->mutex);
 	
-	DBG1(DBG_KNL, "creating acquire job %R === %R for CHILD_SA with reqid {%d}",
-					src_ts, dst_ts, reqid);
+	DBG1(DBG_KNL, "creating acquire job for policy %R === %R with reqid {%u}",
+				   src_ts, dst_ts, reqid);
 	job = (job_t*)acquire_job_create(reqid, src_ts, dst_ts);
 	charon->processor->queue_job(charon->processor, job);
 }
@@ -809,12 +810,12 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* 
 	
 	if (protocol != PROTO_ESP && protocol != PROTO_AH)
 	{
-		DBG2(DBG_KNL, "ignoring SADB_EXPIRE for SA with SPI %.8x and reqid {%d} "
+		DBG2(DBG_KNL, "ignoring SADB_EXPIRE for SA with SPI %.8x and reqid {%u} "
 					  "which is not a CHILD_SA", ntohl(spi), reqid);
 		return;
 	}
 	
-	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA with SPI %.8x and reqid {%d}",
+	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA with SPI %.8x and reqid {%u}",
 		 hard ? "delete" : "rekey",  protocol_id_names,
 		 protocol, ntohl(spi), reqid);
 	if (hard)
@@ -836,7 +837,9 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	pfkey_msg_t response;
 	traffic_selector_t *src_ts, *dst_ts;
 	policy_dir_t dir;
+	u_int32_t reqid = 0;
 	host_t *local;
+	job_t *job;
 
 	DBG2(DBG_KNL, "received an SADB_X_MIGRATE");
 
@@ -853,9 +856,20 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 					 policy_dir_names, dir, response.x_policy->sadb_x_policy_id);
 	DBG2(DBG_KNL, "  kmaddress: %H", local);
 	
-	src_ts->destroy(src_ts);
-	dst_ts->destroy(dst_ts);
-	local->destroy(local);
+	if (src_ts && dst_ts)
+	{
+		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N "
+					  "with reqid {%u}, kmaddress = %H",
+					   src_ts, dst_ts, policy_dir_names, dir, reqid, local);
+		job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, dir, local);
+		charon->processor->queue_job(charon->processor, job);
+	}
+	else
+	{
+		DESTROY_IF(src_ts);
+		DESTROY_IF(dst_ts);
+		DESTROY_IF(local);
+	}
 }
 
 /**
@@ -907,7 +921,7 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 		if (host)
 		{
 			DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and "
-				"reqid {%d} changed, queuing update job", ntohl(spi), reqid);
+				"reqid {%u} changed, queuing update job", ntohl(spi), reqid);
 			job = (job_t*)update_sa_job_create(reqid, host);
 			charon->processor->queue_job(charon->processor, job);
 		}
@@ -1086,7 +1100,7 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%d}", ntohl(spi), reqid);
+	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%u}", ntohl(spi), reqid);
 	
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;

@@ -154,6 +154,16 @@ struct child_cfg_t {
 											host_t *host);
 
 	/**
+	 * Checks the [single] traffic selectors for equality 
+	 *
+	 * @param local			TRUE for TS on local side, FALSE for remote
+	 * @param ts			single traffic selector to compare with
+	 * @return				TRUE if TS are equal, FALSE otherwise
+	 */ 
+	bool (*equal_traffic_selectors)(child_cfg_t *this, bool local,
+								   traffic_selector_t *ts);
+
+	/**
 	 * Get the updown script to run for the CHILD_SA.
 	 * 
 	 * @return				path to updown script
