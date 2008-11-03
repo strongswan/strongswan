@@ -88,13 +88,16 @@ load_tester_config_t *load_tester_config_create()
 	traffic_selector_t *ts;
 	auth_info_t *auth;
 	auth_class_t class;
-
+	char *remote;
+	
 	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
 	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
 	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
 	this->public.destroy = (void(*)(load_tester_config_t*))destroy;
-
-	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", "127.0.0.1");
+	
+	remote = lib->settings->get_str(lib->settings, 
+							"charon.plugins.load_tester.remote", "127.0.0.1");
+	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", remote);
 	proposal = proposal_create_from_string(PROTO_IKE,
 			lib->settings->get_str(lib->settings,
 				"charon.plugins.load_tester.proposal", "aes128-sha1-modp768"));
