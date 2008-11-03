@@ -602,7 +602,7 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 			reqid = migrate->reqid;
 			DBG2(DBG_KNL, "  migrate %N %H...%H to %H...%H, reqid {%u}",
 							 protocol_id_names, proto, old_src, old_dst,
-							 new_src, new_src, reqid);
+							 new_src, new_dst, reqid);
 			DESTROY_IF(old_src);
 			DESTROY_IF(old_dst);
 			DESTROY_IF(new_src);
