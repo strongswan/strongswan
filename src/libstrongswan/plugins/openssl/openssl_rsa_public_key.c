@@ -98,7 +98,6 @@ static bool verify_emsa_pkcs1_signature(private_openssl_rsa_public_key_t *this,
 	}
 	
 	valid = (EVP_VerifyFinal(ctx, signature.ptr, signature.len, key) == 1);
-	DBG1("%s sig: %B", valid ? "good" : "bad", &signature);
 	
 error:
 	if (key)
