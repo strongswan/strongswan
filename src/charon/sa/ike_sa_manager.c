@@ -553,8 +553,9 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 				/* IKE_SA has no IDs yet, so we can't use it */
 				continue;
 			}
-			DBG2(DBG_MGR, "candidate IKE_SA for \n\t"
-				 "%H[%D]...%H[%D]\n\t%H[%D]...%H[%D]",
+			DBG2(DBG_MGR, "candidate IKE_SA for \n"
+				 "  %H[%D]...%H[%D]\n"
+				 "  %H[%D]...%H[%D]",
 				 my_host, my_id, other_host, other_id,
 				 found_my_host, found_my_id, found_other_host, found_other_id);
 			/* compare ID and hosts. Supplied ID may contain wildcards, and IP
