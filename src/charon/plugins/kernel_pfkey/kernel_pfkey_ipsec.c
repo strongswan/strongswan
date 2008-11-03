@@ -1005,7 +1005,6 @@ static status_t get_spi(private_kernel_pfkey_ipsec_t *this,
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
-	struct sadb_sa *sa;
 	struct sadb_x_sa2 *sa2;
 	struct sadb_address *addr;
 	struct sadb_spirange *range;
@@ -1817,10 +1816,6 @@ static status_t register_pfkey_socket(private_kernel_pfkey_ipsec_t *this, u_int8
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
-	struct sadb_x_policy *pol;
-	struct sadb_address *addr;
-	policy_entry_t *policy, *found = NULL;
-	pfkey_msg_t response;
 	size_t len;
 	
 	memset(&request, 0, sizeof(request));
