@@ -88,15 +88,23 @@ load_tester_config_t *load_tester_config_create()
 	traffic_selector_t *ts;
 	auth_info_t *auth;
 	auth_class_t class;
-	char *remote;
+	char *remote, *pool;
+	host_t *vip = NULL;
 	
 	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
 	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
 	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
 	this->public.destroy = (void(*)(load_tester_config_t*))destroy;
 	
+	if (lib->settings->get_bool(lib->settings,
+				"charon.plugins.load_tester.request_virtual_ip", FALSE))
+	{
+		vip = host_create_from_string("0.0.0.0", 0);
+	}
+	pool = lib->settings->get_str(lib->settings,
+				"charon.plugins.load_tester.pool", NULL);
 	remote = lib->settings->get_str(lib->settings, 
-							"charon.plugins.load_tester.remote", "127.0.0.1");
+				"charon.plugins.load_tester.remote", "127.0.0.1");
 	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", remote);
 	proposal = proposal_create_from_string(PROTO_IKE,
 			lib->settings->get_str(lib->settings,
@@ -111,7 +119,7 @@ load_tester_config_t *load_tester_config_create()
 			identification_create_from_string("load-test@strongswan.org"),
 			CERT_SEND_IF_ASKED, UNIQUE_NO, 1, 0, 0, /* keytries, rekey, reauth */
 			0, 0, TRUE, 60,	/* jitter, overtime, mobike, dpddelay */
-			NULL, NULL, FALSE, NULL, NULL); 	/* vip, pool, mediation */
+			vip, pool, FALSE, NULL, NULL);
 	auth = this->peer_cfg->get_auth(this->peer_cfg);
 	class = AUTH_CLASS_PUBKEY;
 	auth->add_item(auth, AUTHN_AUTH_CLASS, &class);
