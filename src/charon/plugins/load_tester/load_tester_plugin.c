@@ -20,6 +20,8 @@
 #include "load_tester_creds.h"
 #include "load_tester_ipsec.h"
 
+#include <unistd.h>
+
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
@@ -44,6 +46,21 @@ struct private_load_tester_plugin_t {
 	 * load_tester credential set implementation
 	 */
 	load_tester_creds_t *creds;
+	
+	/**
+	 * number of iterations per thread
+	 */
+	int iterations;
+	
+	/**
+	 * number of threads
+	 */
+	int initiators;
+	
+	/**
+	 * delay between initiations, in ms
+	 */
+	int delay;
 };
 
 /**
@@ -54,11 +71,13 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg = NULL;;
 	enumerator_t *enumerator;
-	int iterations, i;
+	int i, s = 0, ms = 0;
 	
-	iterations = lib->settings->get_int(lib->settings,
-							"charon.plugins.load_tester.iterations", 0);
-	
+	if (this->delay)
+	{
+		s = this->delay / 1000;
+		ms = this->delay % 1000;
+	}
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 													  "load-test");
 	if (peer_cfg)
@@ -72,11 +91,20 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 		
 		if (child_cfg)
 		{
-			for (i = 0; i < iterations; i++)
+			for (i = 0; i < this->iterations; i++)
 			{
 				charon->controller->initiate(charon->controller,
 					peer_cfg->get_ref(peer_cfg), child_cfg->get_ref(child_cfg),
 					NULL, NULL);
+				
+				if (s)
+				{
+					sleep(s);
+				}
+				if (ms)
+				{
+					usleep(ms * 1000);
+				}
 			}
 			child_cfg->destroy(child_cfg);
 		}
@@ -104,8 +132,8 @@ static void destroy(private_load_tester_plugin_t *this)
  */
 plugin_t *plugin_create()
 {
-	int initiators;
 	private_load_tester_plugin_t *this = malloc_thing(private_load_tester_plugin_t);
+	int i;
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
@@ -120,9 +148,13 @@ plugin_t *plugin_create()
 		charon->kernel_interface->add_ipsec_interface(charon->kernel_interface, 
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	}
-	initiators = lib->settings->get_int(lib->settings,
-						"charon.plugins.load_tester.initiators", 1);
-	while (initiators-- > 0)
+	this->delay = lib->settings->get_int(lib->settings,
+								"charon.plugins.load_tester.delay", 0);
+	this->iterations = lib->settings->get_int(lib->settings,
+								"charon.plugins.load_tester.iterations", 0);
+	this->initiators = lib->settings->get_int(lib->settings,
+								"charon.plugins.load_tester.initiators", 1);
+	for (i = 0; i < this->initiators; i++)
 	{
 		charon->processor->queue_job(charon->processor, 
 					(job_t*)callback_job_create((callback_job_cb_t)do_load_test,
