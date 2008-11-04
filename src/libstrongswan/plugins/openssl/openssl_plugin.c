@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -43,7 +44,6 @@ struct private_openssl_plugin_t {
 	 * public functions
 	 */
 	openssl_plugin_t public;
-	
 };
 
 /**

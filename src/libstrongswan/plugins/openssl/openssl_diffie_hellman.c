@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -87,17 +88,12 @@ struct private_openssl_diffie_hellman_t {
 	 * Other public value
 	 */
 	BIGNUM *pub_key;
-	
-	/* 
-	 * Optimum length of exponent in bits.
-	 */	
-	long opt_exponent_len;
 
 	/**
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
-
+	
 	/**
 	 * True if shared secret is computed
 	 */
@@ -107,31 +103,12 @@ struct private_openssl_diffie_hellman_t {
 /**
  * Convert a BIGNUM to a chunk
  */
-static void bn2chunk(BIGNUM *bn, chunk_t *chunk)
+static void bn2chunk(private_openssl_diffie_hellman_t *this,
+					 BIGNUM *bn, chunk_t *chunk)
 {
-	chunk->len = BN_num_bytes(bn);
-	chunk->ptr = malloc(chunk->len);
-	BN_bn2bin(bn, chunk->ptr);
-}
-
-/**
- * Implementation of openssl_diffie_hellman_t.set_other_public_value.
- */
-static void set_other_public_value(private_openssl_diffie_hellman_t *this, chunk_t value)
-{
-	int len;
-	BN_bin2bn(value.ptr, value.len, this->pub_key);
-
-	len = DH_size(this->dh);
-	chunk_free(&this->shared_secret);
-	this->shared_secret = chunk_alloc(len);
-	
-	if (DH_compute_key(this->shared_secret.ptr, this->pub_key, this->dh) < 0) {
-    	DBG1("DH shared secret computation failed");
-    	return;
-    }
-	
-    this->computed = TRUE;
+	*chunk = chunk_alloc(DH_size(this->dh));
+	memset(chunk->ptr, 0, chunk->len);
+	BN_bn2bin(bn, chunk->ptr + chunk->len - BN_num_bytes(bn));
 }
 
 /**
@@ -144,29 +121,59 @@ static status_t get_other_public_value(private_openssl_diffie_hellman_t *this,
 	{
 		return FAILED;
 	}
-	bn2chunk(this->pub_key, value);
+	bn2chunk(this, this->pub_key, value);
 	return SUCCESS;
 }
 
 /**
  * Implementation of openssl_diffie_hellman_t.get_my_public_value.
  */
-static void get_my_public_value(private_openssl_diffie_hellman_t *this,chunk_t *value)
+static void get_my_public_value(private_openssl_diffie_hellman_t *this,
+								chunk_t *value)
 {
-	bn2chunk(this->dh->pub_key, value);
+	bn2chunk(this, this->dh->pub_key, value);
 }
 
 /**
  * Implementation of openssl_diffie_hellman_t.get_shared_secret.
  */
-static status_t get_shared_secret(private_openssl_diffie_hellman_t *this, chunk_t *secret)
+static status_t get_shared_secret(private_openssl_diffie_hellman_t *this,
+								  chunk_t *secret)
 {
 	if (!this->computed)
 	{
 		return FAILED;
 	}
-	*secret = chunk_clone(this->shared_secret);
+	/* shared secret should requires a len according the DH group */
+	*secret = chunk_alloc(DH_size(this->dh));
+	memset(secret->ptr, 0, secret->len);
+	memcpy(secret->ptr + secret->len - this->shared_secret.len, 
+		   this->shared_secret.ptr, this->shared_secret.len);
+
 	return SUCCESS;
+}
+
+
+/**
+ * Implementation of openssl_diffie_hellman_t.set_other_public_value.
+ */
+static void set_other_public_value(private_openssl_diffie_hellman_t *this,
+								   chunk_t value)
+{
+	int len;
+	
+	BN_bin2bn(value.ptr, value.len, this->pub_key);
+	chunk_clear(&this->shared_secret);
+	this->shared_secret.ptr = malloc(DH_size(this->dh));
+	memset(this->shared_secret.ptr, 0xFF, this->shared_secret.len);
+	len = DH_compute_key(this->shared_secret.ptr, this->pub_key, this->dh);
+	if (len < 0)
+	{
+		DBG1("DH shared secret computation failed");
+		return;
+	}
+	this->shared_secret.len = len;
+	this->computed = TRUE;
 }
 
 /**
@@ -183,6 +190,11 @@ static diffie_hellman_group_t get_dh_group(private_openssl_diffie_hellman_t *thi
 static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 {
 	int i;
+	bool ansi_x9_42;
+	
+	ansi_x9_42 = lib->settings->get_bool(lib->settings,
+										 "charon.dh_exponent_ansi_x9_42", TRUE);
+	
 	for (i = 0; i < (sizeof(modulus_entries) / sizeof(modulus_entry_t)); i++)
 	{
 		if (modulus_entries[i].group == this->group)
@@ -190,7 +202,10 @@ static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 			this->dh->p = modulus_entries[i].get_prime(NULL);
 			this->dh->g = BN_new();
 			BN_set_word(this->dh->g, modulus_entries[i].generator);
-			this->opt_exponent_len = modulus_entries[i].opt_exponent_len;
+			if (!ansi_x9_42)
+			{
+				this->dh->length = modulus_entries[i].opt_exponent_len;
+			}
 			return SUCCESS;
 		}
 	}
@@ -204,7 +219,7 @@ static void destroy(private_openssl_diffie_hellman_t *this)
 {
 	BN_clear_free(this->pub_key);
 	DH_free(this->dh);
-	chunk_free(&this->shared_secret);
+	chunk_clear(&this->shared_secret);
 	free(this);
 }
 
@@ -213,7 +228,6 @@ static void destroy(private_openssl_diffie_hellman_t *this)
  */
 openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t group)
 {
-	bool ansi_x9_42;
 	private_openssl_diffie_hellman_t *this = malloc_thing(private_openssl_diffie_hellman_t);
 	
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
@@ -229,10 +243,9 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 		free(this);
 		return NULL;
 	}
-
+	
 	this->group = group;
 	this->computed = FALSE;
-	
 	this->pub_key = BN_new();
 	this->shared_secret = chunk_empty;
 	
@@ -243,10 +256,6 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 		return NULL;
 	}
 	
-	ansi_x9_42 = lib->settings->get_bool(lib->settings,
-					 "charon.dh_exponent_ansi_x9_42", TRUE);
-	this->dh->length = (ansi_x9_42) ? 0 : this->opt_exponent_len;
-
 	/* generate my public and private values */
 	if (!DH_generate_key(this->dh))
 	{
