@@ -217,24 +217,6 @@ static void set_other_public_value(private_openssl_ec_diffie_hellman_t *this, ch
 }
 
 /**
- * Implementation of openssl_ec_diffie_hellman_t.get_other_public_value.
- */
-static status_t get_other_public_value(private_openssl_ec_diffie_hellman_t *this, 
-									   chunk_t *value)
-{
-	if (!this->computed)
-	{
-		return FAILED;
-	}
-	
-	if (!ecp2chunk(this->ec_group, this->pub_key, value))
-	{
-		return FAILED;
-	}
-	return SUCCESS;
-}
-
-/**
  * Implementation of openssl_ec_diffie_hellman_t.get_my_public_value.
  */
 static void get_my_public_value(private_openssl_ec_diffie_hellman_t *this,chunk_t *value)
@@ -283,7 +265,6 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 	
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
 	this->public.dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
-	this->public.dh.get_other_public_value = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_other_public_value;
 	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
 	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
 	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;

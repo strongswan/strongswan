@@ -85,16 +85,6 @@ struct diffie_hellman_t {
 	void (*set_other_public_value) (diffie_hellman_t *this, chunk_t value);
 	
 	/**
-	 * Gets the public value of partner.
-	 * 	
-	 * Space for returned chunk is allocated and must be freed by the caller.
-	 * 
-	 * @param value 	public value of partner is stored at this location
-	 * @return 			SUCCESS, FAILED if other public value not set
-	 */
-	status_t (*get_other_public_value) (diffie_hellman_t *this, chunk_t *value);
-	
-	/**
 	 * Gets the own public value to transmit.
 	 * 	
 	 * Space for returned chunk is allocated and must be freed by the caller.

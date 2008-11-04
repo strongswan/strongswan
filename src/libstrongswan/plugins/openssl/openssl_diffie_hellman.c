@@ -101,37 +101,15 @@ struct private_openssl_diffie_hellman_t {
 };
 
 /**
- * Convert a BIGNUM to a chunk
- */
-static void bn2chunk(private_openssl_diffie_hellman_t *this,
-					 BIGNUM *bn, chunk_t *chunk)
-{
-	*chunk = chunk_alloc(DH_size(this->dh));
-	memset(chunk->ptr, 0, chunk->len);
-	BN_bn2bin(bn, chunk->ptr + chunk->len - BN_num_bytes(bn));
-}
-
-/**
- * Implementation of openssl_diffie_hellman_t.get_other_public_value.
- */
-static status_t get_other_public_value(private_openssl_diffie_hellman_t *this, 
-									   chunk_t *value)
-{
-	if (!this->computed)
-	{
-		return FAILED;
-	}
-	bn2chunk(this, this->pub_key, value);
-	return SUCCESS;
-}
-
-/**
  * Implementation of openssl_diffie_hellman_t.get_my_public_value.
  */
 static void get_my_public_value(private_openssl_diffie_hellman_t *this,
 								chunk_t *value)
 {
-	bn2chunk(this, this->dh->pub_key, value);
+	*value = chunk_alloc(DH_size(this->dh));
+	memset(value->ptr, 0, value->len);
+	BN_bn2bin(this->dh->pub_key,
+			  value->ptr + value->len - BN_num_bytes(this->dh->pub_key));
 }
 
 /**
@@ -232,7 +210,6 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 	
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
 	this->public.dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
-	this->public.dh.get_other_public_value = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_other_public_value;
 	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
 	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
 	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
