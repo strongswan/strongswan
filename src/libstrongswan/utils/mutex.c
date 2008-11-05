@@ -27,6 +27,10 @@
 #include <time.h>
 #include <errno.h>
 
+/**
+ * Do not report mutexes with an overall waiting time smaller than this (in us)
+ */
+#define PROFILE_TRESHHOLD 1000
 
 typedef struct private_mutex_t private_mutex_t;
 typedef struct private_r_mutex_t private_r_mutex_t;
@@ -103,17 +107,18 @@ struct private_condvar_t {
 };
 
 #ifdef LOCK_PROFILER
-
-#include <execinfo.h>
-
 /**
  * Print and cleanup mutex profiler
  */
 static void profiler_cleanup(private_mutex_t *this)
 {
-	fprintf(stderr, "waited %d.%06ds in mutex, created at:",
-			this->waited.tv_sec, this->waited.tv_usec);
-	this->backtrace->log(this->backtrace, stderr);
+	if (this->waited.tv_sec > 0 ||
+		this->waited.tv_usec > PROFILE_TRESHHOLD)
+	{
+		fprintf(stderr, "waited %d.%06ds in mutex, created at:",
+				this->waited.tv_sec, this->waited.tv_usec);
+		this->backtrace->log(this->backtrace, stderr);
+	}
 	this->backtrace->destroy(this->backtrace);
 }
 

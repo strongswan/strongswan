@@ -64,6 +64,10 @@ if USE_LEAK_DETECTIVE
   libstrongswan_la_SOURCES += utils/leak_detective.c utils/leak_detective.h
 endif
 
+if USE_LOCK_PROFILER
+  AM_CFLAGS += -DLOCK_PROFILER
+endif
+
 if USE_INTEGRITY_TEST
   libstrongswan_la_SOURCES += \
   fips/fips_canister_end.c
