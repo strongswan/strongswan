@@ -46,6 +46,23 @@ struct private_mutex_t {
 	 */
 	pthread_mutex_t mutex;
 	
+#ifdef LOCK_PROFILER
+	/**
+	 * how long threads have waited for the lock in this mutex so far
+	 */
+	struct timeval waited;
+	
+	/**
+	 * creator of the mutex
+	 */
+	void *stack[10];
+	
+	/**
+	 * number of pointers in stack
+	 */
+	int stack_size;
+#endif /* LOCK_PROFILER */
+	
 	/**
 	 * is this a recursiv emutex, implementing private_r_mutex_t?
 	 */
@@ -89,6 +106,54 @@ struct private_condvar_t {
 	pthread_cond_t condvar;
 };
 
+#ifdef LOCK_PROFILER
+
+#include <execinfo.h>
+
+/**
+ * print mutex locking statistics
+ */
+static void print_stats(private_mutex_t *this)
+{
+	int i;
+
+	DBG1("waited %d.%06ds in mutex, created at:",
+		 this->waited.tv_sec, this->waited.tv_usec);
+	for (i = 0; i < this->stack_size; i++)
+	{
+		DBG1("  %p", this->stack[i]);
+	}
+}
+
+static void init_stats(private_mutex_t *this)
+{
+	this->stack_size = backtrace(this->stack, countof(this->stack));
+	timerclear(&this->waited);
+}
+
+/**
+ * Implementation of mutex_t.lock.
+ */
+static void lock(private_mutex_t *this)
+{
+	struct timeval start, end, diff;
+
+	gettimeofday(&start, NULL);
+	if (pthread_mutex_lock(&this->mutex))
+	{
+		DBG1("!!!! MUTEX %sLOCK ERROR, your code is buggy !!!", "");
+	}
+	gettimeofday(&end, NULL);
+	
+	timersub(&end, &start, &diff);
+	timeradd(&this->waited, &diff, &this->waited);
+}
+#else /* !LOCK_PROFILER */
+
+/** dummy implementations */
+static void print_stats(private_mutex_t *this) {}
+static void init_stats(private_mutex_t *this) {}
+
 /**
  * Implementation of mutex_t.lock.
  */
@@ -99,6 +164,7 @@ static void lock(private_mutex_t *this)
 		DBG1("!!!! MUTEX %sLOCK ERROR, your code is buggy !!!", "");
 	}
 }
+#endif /* LOCK_PROFILER */
 
 /**
  * Implementation of mutex_t.unlock.
@@ -158,6 +224,7 @@ static void unlock_r(private_r_mutex_t *this)
  */
 static void mutex_destroy(private_mutex_t *this)
 {
+	print_stats(this);
 	pthread_mutex_destroy(&this->mutex);
 	free(this);
 }
@@ -167,6 +234,7 @@ static void mutex_destroy(private_mutex_t *this)
  */
 static void mutex_destroy_r(private_r_mutex_t *this)
 {
+	print_stats(&this->generic);
 	pthread_mutex_destroy(&this->generic.mutex);
 	pthread_key_delete(this->times);
 	free(this);
@@ -190,6 +258,7 @@ mutex_t *mutex_create(mutex_type_t type)
 			pthread_mutex_init(&this->generic.mutex, NULL);
 			pthread_key_create(&this->times, NULL);
 			this->generic.recursive = TRUE;
+			init_stats(&this->generic);
 			this->thread = 0;
 			
 			return &this->generic.public;
@@ -205,6 +274,7 @@ mutex_t *mutex_create(mutex_type_t type)
 			
 			pthread_mutex_init(&this->mutex, NULL);
 			this->recursive = FALSE;
+			init_stats(this);
 			
 			return &this->public;
 		}
