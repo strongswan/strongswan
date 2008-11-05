@@ -2333,8 +2333,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* initialize private fields */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->child_sas = linked_list_create();
-	this->my_host = host_create_from_string("0.0.0.0", IKEV2_UDP_PORT);
-	this->other_host = host_create_from_string("0.0.0.0", IKEV2_UDP_PORT);
+	this->my_host = host_create_from_string("%any", IKEV2_UDP_PORT);
+	this->other_host = host_create_from_string("%any", IKEV2_UDP_PORT);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->eap_identity = NULL;
