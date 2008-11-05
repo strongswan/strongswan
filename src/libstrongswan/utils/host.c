@@ -27,6 +27,9 @@
 
 #include <debug.h>
 
+#define IPV4_LEN	 4
+#define IPV6_LEN	16
+
 typedef struct private_host_t private_host_t;
 
 /**
@@ -83,17 +86,17 @@ static bool is_anyaddr(private_host_t *this)
 	{
 		case AF_INET:
 		{
-			u_int8_t default_route[4];
-			memset(default_route, 0, sizeof(default_route));
-			return memeq(default_route, &(this->address4.sin_addr.s_addr),
-						 sizeof(default_route));
+			u_int8_t zeroes[IPV4_LEN];
+
+			memset(zeroes, 0, IPV4_LEN);
+			return memeq(zeroes, &(this->address4.sin_addr.s_addr), IPV4_LEN);
 		}
 		case AF_INET6:
 		{
-			u_int8_t default_route[16];
-			memset(default_route, 0, sizeof(default_route));
-			return memeq(default_route, &(this->address6.sin6_addr.s6_addr),
-						 sizeof(default_route));
+			u_int8_t zeroes[IPV6_LEN];
+
+			memset(zeroes, 0, IPV6_LEN);
+			return memeq(zeroes, &(this->address6.sin6_addr.s6_addr), IPV6_LEN);
 		}
 		default:
 		{
@@ -196,13 +199,13 @@ static chunk_t get_address(private_host_t *this)
 		case AF_INET:
 		{
 			address.ptr = (char*)&(this->address4.sin_addr.s_addr);
-			address.len = 4;
+			address.len = IPV4_LEN;
 			return address;
 		}
 		case AF_INET6:
 		{
 			address.ptr = (char*)&(this->address6.sin6_addr.s6_addr);
-			address.len = 16;
+			address.len = IPV6_LEN;
 			return address;
 		}
 		default:
@@ -285,33 +288,21 @@ static bool ip_equals(private_host_t *this, private_host_t *other)
 {
 	if (this->address.sa_family != other->address.sa_family)
 	{
-		/* 0.0.0.0 and ::0 are equal */
-		if (is_anyaddr(this) && is_anyaddr(other))
-		{
-			return TRUE;
-		}
-		
-		return FALSE;
+		/* 0.0.0.0 and 0::0 are equal */
+		return (is_anyaddr(this) && is_anyaddr(other));
 	}
 	
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
 		{
-			if (memeq(&this->address4.sin_addr, &other->address4.sin_addr,
-					  sizeof(this->address4.sin_addr)))
-			{
-				return TRUE;
-			}
-			break;
+			return memeq(&this->address4.sin_addr, &other->address4.sin_addr,
+						 sizeof(this->address4.sin_addr));
 		}
 		case AF_INET6:
 		{
-			if (memeq(&this->address6.sin6_addr, &other->address6.sin6_addr,
-					  sizeof(this->address6.sin6_addr)))
-			{
-				return TRUE;
-			}
+			return memeq(&this->address6.sin6_addr, &other->address6.sin6_addr,
+						 sizeof(this->address6.sin6_addr));
 		}
 		default:
 			break;
@@ -340,7 +331,7 @@ static host_diff_t get_differences(host_t *this, host_t *other)
 }
 
 /**
- * Impelements host_t.equals
+ * Implements host_t.equals
  */
 static bool equals(private_host_t *this, private_host_t *other)
 {
@@ -353,19 +344,11 @@ static bool equals(private_host_t *this, private_host_t *other)
 	{
 		case AF_INET:
 		{
-			if (this->address4.sin_port == other->address4.sin_port)
-			{
-				return TRUE;
-			}
-			break;
+			return (this->address4.sin_port == other->address4.sin_port);
 		}
 		case AF_INET6:
 		{
-			if (this->address6.sin6_port == other->address6.sin6_port)
-			{
-				return TRUE;
-			}
-			break;
+			return (this->address6.sin6_port == other->address6.sin6_port);
 		}
 		default:
 			break;
@@ -411,7 +394,12 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 {
 	private_host_t *this = host_create_empty();
 	
-	if (strchr(string, '.'))
+	if (streq(string, "%any"))
+	{
+		string = "0.0.0.0";
+		this->address.sa_family = AF_INET;
+	}
+	else if (strchr(string, '.'))
 	{
 		this->address.sa_family = AF_INET;
 	}
@@ -460,9 +448,9 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	struct hostent host, *ptr;
 	char buf[512];
 	int err, ret;
-	
-	if (af == AF_INET6 || strchr(string, ':'))
-	{	/* gethostbyname does not like IPv6 addresses, fallback */
+
+	if (af == AF_INET6 || strchr(string, ':') || streq(string, "%any"))
+	{/* gethostbyname does not like IPv6 addresses or wildcards - fallback */
 		return host_create_from_string(string, port);
 	}
 	
@@ -518,22 +506,22 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 	{
 		case AF_INET:
 		{
-			if (address.len != 4)
+			if (address.len != IPV4_LEN)
 			{
 				break;
 			}
-			memcpy(&(this->address4.sin_addr.s_addr), address.ptr,4);
+			memcpy(&(this->address4.sin_addr.s_addr), address.ptr, IPV4_LEN);
 			this->address4.sin_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in);
 			return &(this->public);
 		}
 		case AF_INET6:
 		{
-			if (address.len != 16)
+			if (address.len != IPV6_LEN)
 			{
 				break;
 			}
-			memcpy(&(this->address6.sin6_addr.s6_addr), address.ptr, 16);
+			memcpy(&(this->address6.sin6_addr.s6_addr), address.ptr, IPV6_LEN);
 			this->address6.sin6_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in6);
 			return &this->public;

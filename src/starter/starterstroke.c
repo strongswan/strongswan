@@ -37,6 +37,9 @@
 #include "confread.h"
 #include "files.h"
 
+#define IPV4_LEN	 4
+#define IPV6_LEN	16
+
 /**
  * Authentication methods, must be the same as in charons authenticator.h
  */
@@ -126,7 +129,11 @@ static void ip_address2string(ip_address *addr, char *buffer, size_t len)
 		case AF_INET:
 		{
 			struct sockaddr_in* sin = (struct sockaddr_in*)addr;
-			if (inet_ntop(AF_INET, &sin->sin_addr, buffer, len))
+			u_int8_t zeroes[IPV4_LEN];
+
+			memset(zeroes, 0, IPV4_LEN);
+			if (memcmp(zeroes, &(sin->sin_addr.s_addr), IPV4_LEN) &&
+				inet_ntop(AF_INET, &sin->sin_addr, buffer, len))
 			{
 				return;
 			}
@@ -135,7 +142,11 @@ static void ip_address2string(ip_address *addr, char *buffer, size_t len)
 		case AF_INET6:
 		{
 			struct sockaddr_in6* sin6 = (struct sockaddr_in6*)addr;
-			if (inet_ntop(AF_INET6, &sin6->sin6_addr, buffer, len))
+			u_int8_t zeroes[IPV6_LEN];
+
+			memset(zeroes, 0, IPV6_LEN);
+			if (memcmp(zeroes, &(sin6->sin6_addr.s6_addr), IPV6_LEN) &&
+				inet_ntop(AF_INET6, &sin6->sin6_addr, buffer, len))
 			{
 				return;
 			}
@@ -144,8 +155,8 @@ static void ip_address2string(ip_address *addr, char *buffer, size_t len)
 		default:
 			break;
 	}
-	/* failed */
-	snprintf(buffer, len, "0.0.0.0");
+	/* default */
+	snprintf(buffer, len, "%%any");
 }
 
 
