@@ -122,11 +122,11 @@ static void destroy(private_sender_t *this)
 		this->sent->wait(this->sent, this->mutex);
 	}
 	this->mutex->unlock(this->mutex);
+	this->job->cancel(this->job);
+	this->list->destroy(this->list);
 	this->got->destroy(this->got);
 	this->sent->destroy(this->sent);
 	this->mutex->destroy(this->mutex);
-	this->job->cancel(this->job);
-	this->list->destroy(this->list);
 	free(this);
 }
 
