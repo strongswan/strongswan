@@ -14,11 +14,6 @@
  *
  * $Id$
  */
-
-#ifdef HAVE_DLADDR
-# define _GNU_SOURCE
-# include <dlfcn.h>
-#endif /* HAVE_DLADDR */
 	
 #include <stddef.h>
 #include <string.h>
@@ -28,21 +23,18 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <dlfcn.h>
 #include <unistd.h>
 #include <syslog.h>
 #include <pthread.h>
 #include <netdb.h>
 #include <printf.h>
 #include <locale.h>
-#ifdef HAVE_BACKTRACE
-# include <execinfo.h>
-#endif /* HAVE_BACKTRACE */
 
 #include "leak_detective.h"
 
 #include <library.h>
 #include <debug.h>
+#include <utils/backtrace.h>
 
 typedef struct private_leak_detective_t private_leak_detective_t;
 
@@ -106,16 +98,6 @@ struct memory_header_t {
 	u_int bytes;
 	
 	/**
-	 * Stack frames at the time of allocation
-	 */
-	void *stack_frames[STACK_FRAMES_COUNT];
-	
-	/**
-	 * Number of stacks frames obtained in stack_frames
-	 */
-	int stack_frame_count;
-	
-	/**
 	 * Pointer to previous entry in linked list
 	 */
 	memory_header_t *previous;
@@ -124,6 +106,11 @@ struct memory_header_t {
 	 * Pointer to next entry in linked list
 	 */
 	memory_header_t *next;
+	
+	/**
+	 * backtrace taken during (re-)allocation
+	 */
+	backtrace_t *backtrace;
 	
 	/**
 	 * magic bytes to detect bad free or heap underflow, MEMORY_HEADER_MAGIC
@@ -151,7 +138,7 @@ struct memory_tail_t {
 static memory_header_t first_header = {
 	magic: MEMORY_HEADER_MAGIC,
 	bytes: 0,
-	stack_frame_count: 0,
+	backtrace: NULL,
 	previous: NULL,
 	next: NULL
 };
@@ -162,82 +149,14 @@ static memory_header_t first_header = {
 static bool installed = FALSE;
 
 /**
- * log stack frames queried by backtrace()
- * TODO: Dump symbols of static functions. This could be done with
- * the addr2line utility or the GNU BFD Library...
- */
-static void log_stack_frames(void **stack_frames, int stack_frame_count)
-{
-#ifdef HAVE_BACKTRACE
-	size_t i;
-	char **strings;
-	
-	strings = backtrace_symbols(stack_frames, stack_frame_count);
-
-	fprintf(stderr, " dumping %d stack frame addresses:\n", stack_frame_count);
-	for (i = 0; i < stack_frame_count; i++)
-	{
-#ifdef HAVE_DLADDR
-		Dl_info info;
-		
-		if (dladdr(stack_frames[i], &info))
-		{
-			char cmd[1024];
-			FILE *output;
-			char c;
-			void *ptr = stack_frames[i];
-			
-			if (strstr(info.dli_fname, ".so"))
-			{
-				ptr = (void*)(stack_frames[i] - info.dli_fbase);
-			}
-			snprintf(cmd, sizeof(cmd), "addr2line -e %s %p", info.dli_fname, ptr);
-			if (info.dli_sname)
-			{
-				fprintf(stderr, "  \e[33m%s\e[0m @ %p (\e[31m%s\e[0m+0x%x) [%p]\n",
-						info.dli_fname, info.dli_fbase, info.dli_sname,
-						stack_frames[i] - info.dli_saddr, stack_frames[i]);
-			}
-			else
-			{
-				fprintf(stderr, "  \e[33m%s\e[0m @ %p [%p]\n", info.dli_fname,
-						info.dli_fbase, stack_frames[i]);
-			}
-			fprintf(stderr, "    -> \e[32m");
-			output = popen(cmd, "r");
-			if (output)
-			{
-				while (TRUE)
-				{
-					c = getc(output);
-					if (c == '\n' || c == EOF)
-					{
-						break;
-					}
-					fputc(c, stderr);
-				}
-			}
-			else
-			{
-#endif /* HAVE_DLADDR */
-				fprintf(stderr, "    %s\n", strings[i]);
-#ifdef HAVE_DLADDR
-			}
-			fprintf(stderr, "\n\e[0m");
-		}
-#endif /* HAVE_DLADDR */
-	}
-	free (strings);
-#endif /* HAVE_BACKTRACE */
-}
-
-/**
  * Leak report white list
  *
  * List of functions using static allocation buffers or should be suppressed
  * otherwise on leak report. 
  */
 char *whitelist[] = {
+	/* backtraces, including own */
+	"backtrace_create",
 	/* pthread stuff */
 	"pthread_create",
 	"pthread_setspecific",
@@ -284,27 +203,16 @@ char *whitelist[] = {
 /**
  * check if a stack frame contains functions listed above
  */
-static bool is_whitelisted(void **stack_frames, int stack_frame_count)
+static bool is_whitelisted(backtrace_t *backtrace)
 {
-	int i, j;
-	
-#ifdef HAVE_DLADDR
-	for (i=0; i< stack_frame_count; i++)
+	int i;
+	for (i = 0; i < sizeof(whitelist)/sizeof(char*); i++)
 	{
-		Dl_info info;
-		
-		if (dladdr(stack_frames[i], &info) && info.dli_sname)
-		{	
-			for (j = 0; j < sizeof(whitelist)/sizeof(char*); j++)
-			{
-				if (streq(info.dli_sname, whitelist[j]))
-				{
-					return TRUE;
-				}
-			}
+		if (backtrace->contains_function(backtrace, whitelist[i]))
+		{
+			return TRUE;
 		}
 	}
-#endif /* HAVE_DLADDR */
 	return FALSE;
 }
 
@@ -318,7 +226,7 @@ void report_leaks()
 	
 	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 	{
-		if (is_whitelisted(hdr->stack_frames, hdr->stack_frame_count))
+		if (is_whitelisted(hdr->backtrace))
 		{
 			whitelisted++;
 		}
@@ -326,7 +234,7 @@ void report_leaks()
 		{
 			fprintf(stderr, "Leak (%d bytes at %p):\n", hdr->bytes, hdr + 1);
 			/* skip the first frame, contains leak detective logic */
-			log_stack_frames(hdr->stack_frames + 1, hdr->stack_frame_count - 1);
+			hdr->backtrace->log(hdr->backtrace, stderr);
 			leaks++;
 		}
 	}
@@ -403,7 +311,7 @@ void *malloc_hook(size_t bytes, const void *caller)
 	
 	hdr->magic = MEMORY_HEADER_MAGIC;
 	hdr->bytes = bytes;
-	hdr->stack_frame_count = backtrace(hdr->stack_frames, STACK_FRAMES_COUNT);
+	hdr->backtrace = backtrace_create(3);
 	tail->magic = MEMORY_TAIL_MAGIC;
 	install_hooks();
 	
@@ -426,10 +334,9 @@ void *malloc_hook(size_t bytes, const void *caller)
  */
 void free_hook(void *ptr, const void *caller)
 {
-	void *stack_frames[STACK_FRAMES_COUNT];
-	int stack_frame_count;
 	memory_header_t *hdr;
 	memory_tail_t *tail;
+    backtrace_t *backtrace;
 	pthread_t thread_id = pthread_self();
     int oldpolicy;
     struct sched_param oldparams, params;
@@ -455,8 +362,9 @@ void free_hook(void *ptr, const void *caller)
 		fprintf(stderr, "freeing invalid memory (%p): "
 				"header magic 0x%x, tail magic 0x%x:\n",
 				ptr, hdr->magic, tail->magic);
-		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
-		log_stack_frames(stack_frames, stack_frame_count);
+		backtrace = backtrace_create(3);
+		backtrace->log(backtrace, stderr);
+		backtrace->destroy(backtrace);
 	}
 	else
 	{
@@ -466,10 +374,11 @@ void free_hook(void *ptr, const void *caller)
 			hdr->next->previous = hdr->previous;
 		}
 		hdr->previous->next = hdr->next;
-	
+		hdr->backtrace->destroy(hdr->backtrace);
+		
 		/* clear MAGIC, set mem to something remarkable */
 		memset(hdr, MEMORY_FREE_PATTERN, hdr->bytes + sizeof(memory_header_t));
-	
+		
 		free(hdr);
 	}
 	
@@ -483,9 +392,8 @@ void free_hook(void *ptr, const void *caller)
 void *realloc_hook(void *old, size_t bytes, const void *caller)
 {
 	memory_header_t *hdr;
-	void *stack_frames[STACK_FRAMES_COUNT];
-	int stack_frame_count;
 	memory_tail_t *tail;
+	backtrace_t *backtrace;
 	pthread_t thread_id = pthread_self();
     int oldpolicy;
     struct sched_param oldparams, params;
@@ -512,8 +420,9 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 		fprintf(stderr, "reallocating invalid memory (%p): "
 				"header magic 0x%x, tail magic 0x%x:\n",
 				old, hdr->magic, tail->magic);
-		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
-		log_stack_frames(stack_frames, stack_frame_count);
+		backtrace = backtrace_create(3);
+		backtrace->log(backtrace, stderr);
+		backtrace->destroy(backtrace);
 	}
 	/* clear tail magic, allocate, set tail magic */
 	memset(&tail->magic, MEMORY_ALLOC_PATTERN, sizeof(tail->magic));
@@ -523,7 +432,8 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 
 	/* update statistics */
 	hdr->bytes = bytes;
-	hdr->stack_frame_count = backtrace(hdr->stack_frames, STACK_FRAMES_COUNT);
+	hdr->backtrace->destroy(hdr->backtrace);
+	hdr->backtrace = backtrace_create(3);
 
 	/* update header of linked list neighbours */
 	if (hdr->next)

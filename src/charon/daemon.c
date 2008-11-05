@@ -16,11 +16,6 @@
  * for more details.
  */
 
-#ifdef HAVE_DLADDR
-# define _GNU_SOURCE
-# include <dlfcn.h>
-#endif /* HAVE_DLADDR */
-
 #include <stdio.h>
 #include <sys/prctl.h>
 #include <signal.h>
@@ -34,9 +29,6 @@
 #include <errno.h>
 #include <pwd.h>
 #include <grp.h>
-#ifdef HAVE_BACKTRACE
-# include <execinfo.h>
-#endif /* HAVE_BACKTRACE */
 #ifdef CAPABILITIES
 #include <sys/capability.h>
 #endif /* CAPABILITIES */
@@ -44,6 +36,7 @@
 #include "daemon.h"
 
 #include <library.h>
+#include <utils/backtrace.h>
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
 
@@ -433,45 +426,13 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
  */
 static void segv_handler(int signal)
 {
-#ifdef HAVE_BACKTRACE
-	void *array[20];
-	size_t size;
-	char **strings;
-	size_t i;
-
-	size = backtrace(array, 20);
-	strings = backtrace_symbols(array, size);
-
-	DBG1(DBG_JOB, "thread %u received %s. Dumping %d frames from stack:",
-		 pthread_self(), signal == SIGSEGV ? "SIGSEGV" : "SIGILL", size);
-
-	for (i = 0; i < size; i++)
-	{
-#ifdef HAVE_DLADDR
-		Dl_info info;
-		
-		if (dladdr(array[i], &info))
-		{
-			void *ptr = array[i];
-			if (strstr(info.dli_fname, ".so"))
-			{
-				ptr = (void*)(array[i] - info.dli_fbase);
-			}
-			DBG1(DBG_DMN, "    %s [%p]", info.dli_fname, ptr);
-		}
-		else
-		{
-#endif /* HAVE_DLADDR */
-			DBG1(DBG_DMN, "    %s", strings[i]);
-#ifdef HAVE_DLADDR
-		}
-#endif /* HAVE_DLADDR */
-	}
-	free (strings);
-#else /* !HAVE_BACKTRACE */
-	DBG1(DBG_DMN, "thread %u received %s",
-		 pthread_self(), signal == SIGSEGV ? "SIGSEGV" : "SIGILL");
-#endif /* HAVE_BACKTRACE */
+	backtrace_t *backtrace;
+	
+	DBG1(DBG_DMN, "thread %u received %d", pthread_self(), signal);
+	backtrace = backtrace_create(2);
+	backtrace->log(backtrace, stderr);
+	backtrace->destroy(backtrace);
+	
 	DBG1(DBG_DMN, "killing ourself, received critical signal");
 	raise(SIGKILL);
 }
@@ -534,6 +495,7 @@ private_daemon_t *daemon_create(void)
 	sigaddset(&action.sa_mask, SIGHUP);
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
+	sigaction(SIGBUS, &action, NULL);
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &action, NULL);
 	

@@ -50,6 +50,7 @@ utils/linked_list.c utils/linked_list.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
 utils/mutex.c utils/mutex.h \
+utils/backtrace.c utils/backtrace.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
 libstrongswan_la_LIBADD = -lpthread -ldl

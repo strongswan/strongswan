@@ -21,11 +21,6 @@
 #ifndef LEAK_DETECTIVE_H_
 #define LEAK_DETECTIVE_H_
 
-/**
- * Maximum depth stack frames to register
- */
-#define STACK_FRAMES_COUNT 20
-
 typedef struct leak_detective_t leak_detective_t;
 
 /**

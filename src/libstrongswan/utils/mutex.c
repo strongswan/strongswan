@@ -19,6 +19,7 @@
 
 #include <library.h>
 #include <debug.h>
+#include <utils/backtrace.h>
 
 #include <pthread.h>
 #include <sys/time.h>
@@ -53,14 +54,9 @@ struct private_mutex_t {
 	struct timeval waited;
 	
 	/**
-	 * creator of the mutex
+	 * backtrace where mutex has been created
 	 */
-	void *stack[10];
-	
-	/**
-	 * number of pointers in stack
-	 */
-	int stack_size;
+	backtrace_t *backtrace;
 #endif /* LOCK_PROFILER */
 	
 	/**
@@ -111,23 +107,22 @@ struct private_condvar_t {
 #include <execinfo.h>
 
 /**
- * print mutex locking statistics
+ * Print and cleanup mutex profiler
  */
-static void print_stats(private_mutex_t *this)
+static void profiler_cleanup(private_mutex_t *this)
 {
-	int i;
-
-	DBG1("waited %d.%06ds in mutex, created at:",
-		 this->waited.tv_sec, this->waited.tv_usec);
-	for (i = 0; i < this->stack_size; i++)
-	{
-		DBG1("  %p", this->stack[i]);
-	}
+	fprintf(stderr, "waited %d.%06ds in mutex, created at:",
+			this->waited.tv_sec, this->waited.tv_usec);
+	this->backtrace->log(this->backtrace, stderr);
+	this->backtrace->destroy(this->backtrace);
 }
 
-static void init_stats(private_mutex_t *this)
+/**
+ * Initialize mutex profiler
+ */
+static void profiler_init(private_mutex_t *this)
 {
-	this->stack_size = backtrace(this->stack, countof(this->stack));
+	this->backtrace = backtrace_create(3);
 	timerclear(&this->waited);
 }
 
@@ -151,8 +146,8 @@ static void lock(private_mutex_t *this)
 #else /* !LOCK_PROFILER */
 
 /** dummy implementations */
-static void print_stats(private_mutex_t *this) {}
-static void init_stats(private_mutex_t *this) {}
+static void profiler_cleanup(private_mutex_t *this) {}
+static void profiler_init(private_mutex_t *this) {}
 
 /**
  * Implementation of mutex_t.lock.
@@ -224,7 +219,7 @@ static void unlock_r(private_r_mutex_t *this)
  */
 static void mutex_destroy(private_mutex_t *this)
 {
-	print_stats(this);
+	profiler_cleanup(this);
 	pthread_mutex_destroy(&this->mutex);
 	free(this);
 }
@@ -234,7 +229,7 @@ static void mutex_destroy(private_mutex_t *this)
  */
 static void mutex_destroy_r(private_r_mutex_t *this)
 {
-	print_stats(&this->generic);
+	profiler_cleanup(&this->generic);
 	pthread_mutex_destroy(&this->generic.mutex);
 	pthread_key_delete(this->times);
 	free(this);
@@ -258,7 +253,7 @@ mutex_t *mutex_create(mutex_type_t type)
 			pthread_mutex_init(&this->generic.mutex, NULL);
 			pthread_key_create(&this->times, NULL);
 			this->generic.recursive = TRUE;
-			init_stats(&this->generic);
+			profiler_init(&this->generic);
 			this->thread = 0;
 			
 			return &this->generic.public;
@@ -274,7 +269,7 @@ mutex_t *mutex_create(mutex_type_t type)
 			
 			pthread_mutex_init(&this->mutex, NULL);
 			this->recursive = FALSE;
-			init_stats(this);
+			profiler_init(this);
 			
 			return &this->public;
 		}
