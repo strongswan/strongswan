@@ -15,6 +15,7 @@
 
 #include <sys/time.h>
 #include <time.h>
+#include <pthread.h>
 
 #include <library.h>
 #include <daemon.h>

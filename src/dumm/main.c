@@ -19,6 +19,7 @@
 
 #include <sys/types.h>
 #include <unistd.h>
+#include <sched.h>
 
 #include <glib.h>
 #include <gtk/gtk.h>
