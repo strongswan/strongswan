@@ -461,7 +461,7 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	char buf[512];
 	int err, ret;
 	
-	if (strchr(string, ':'))
+	if (af == AF_INET6 || strchr(string, ':'))
 	{	/* gethostbyname does not like IPv6 addresses, fallback */
 		return host_create_from_string(string, port);
 	}
