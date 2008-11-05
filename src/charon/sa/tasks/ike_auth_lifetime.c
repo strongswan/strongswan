@@ -17,6 +17,8 @@
 
 #include "ike_auth_lifetime.h"
 
+#include <time.h>
+
 #include <daemon.h>
 #include <encoding/payloads/notify_payload.h>
 

@@ -17,6 +17,8 @@
 
 #include "load_tester_ipsec.h"
 
+#include <time.h>
+
 typedef struct private_load_tester_ipsec_t private_load_tester_ipsec_t;
 
 /**

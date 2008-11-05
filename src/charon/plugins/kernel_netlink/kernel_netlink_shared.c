@@ -20,6 +20,7 @@
 #include <linux/rtnetlink.h>
 #include <errno.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "kernel_netlink_shared.h"
 

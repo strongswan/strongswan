@@ -17,6 +17,8 @@
  
 #include "callback_job.h"
 
+#include <pthread.h>
+
 #include <daemon.h>
 
 typedef struct private_callback_job_t private_callback_job_t;

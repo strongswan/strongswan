@@ -16,6 +16,7 @@
  */
 
 #define _GNU_SOURCE
+#include <pthread.h>
 
 #include "fetcher_manager.h"
 

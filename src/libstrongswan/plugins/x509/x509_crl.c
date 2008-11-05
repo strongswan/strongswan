@@ -20,6 +20,8 @@
 typedef struct private_x509_crl_t private_x509_crl_t;
 typedef struct revoked_t revoked_t;
 
+#include <time.h>
+
 #include <debug.h>
 #include <library.h>
 #include <asn1/oid.h>

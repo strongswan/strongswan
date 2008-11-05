@@ -25,6 +25,7 @@
 #include <sys/fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include <processing/jobs/callback_job.h>
 #include <daemon.h>

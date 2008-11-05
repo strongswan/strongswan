@@ -21,6 +21,8 @@
 #include "x509_ac.h"
 #include "ietf_attr_list.h"
 
+#include <time.h>
+
 #include <library.h>
 #include <debug.h>
 #include <asn1/oid.h>

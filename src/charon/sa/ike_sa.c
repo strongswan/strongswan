@@ -23,6 +23,7 @@
 #include <printf.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <time.h>
 
 #include "ike_sa.h"
 

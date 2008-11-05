@@ -1623,7 +1623,7 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 	unsigned char request[NETLINK_BUFFER_SIZE];
 	struct nlmsghdr *hdr;
 	struct xfrm_userpolicy_id *policy_id;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	
 	DBG2(DBG_KNL, "deleting policy %R === %R %N", src_ts, dst_ts,
 				   policy_dir_names, direction);
@@ -1634,8 +1634,9 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 	policy.direction = direction;
 	
 	/* find the policy */
-	iterator = this->policies->create_iterator_locked(this->policies, &this->mutex);
-	while (iterator->iterate(iterator, (void**)&current))
+	pthread_mutex_lock(&this->mutex);
+	enumerator = this->policies->create_enumerator(this->policies);
+	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (memeq(&current->sel, &policy.sel, sizeof(struct xfrm_selector)) &&
 			policy.direction == current->direction)
@@ -1645,15 +1646,17 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 			{
 				/* is used by more SAs, keep in kernel */
 				DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
-				iterator->destroy(iterator);
+				pthread_mutex_unlock(&this->mutex);
+				enumerator->destroy(enumerator);
 				return SUCCESS;
 			}
 			/* remove if last reference */
-			iterator->remove(iterator);
+			this->policies->remove_at(this->policies, enumerator);
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	pthread_mutex_unlock(&this->mutex);
+	enumerator->destroy(enumerator);
 	if (!to_delete)
 	{
 		DBG1(DBG_KNL, "deleting policy %R === %R %N failed, not found", src_ts,

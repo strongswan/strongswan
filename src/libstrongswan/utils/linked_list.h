@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007-2008 Tobias Brunner
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -27,12 +27,9 @@
 
 typedef struct linked_list_t linked_list_t;
 
-#include <pthread.h>
-
 #include <library.h>
 #include <utils/iterator.h>
 #include <utils/enumerator.h>
-
 
 /**
  * Method to match elements in a linked list (used in find_* functions)
@@ -79,18 +76,6 @@ struct linked_list_t {
 	 * @return			new iterator_t object
 	 */
 	iterator_t *(*create_iterator) (linked_list_t *this, bool forward);
-	
-	/**
-	 * Creates a iterator, locking a mutex.
-	 *
-	 * The supplied mutex is acquired immediately, and released
-	 * when the iterator gets destroyed.
-	 * 
-	 * @param mutex 	mutex to use for exclusive access
-	 * @return			new iterator_t object
-	 */
-	iterator_t *(*create_iterator_locked) (linked_list_t *this,
-										   pthread_mutex_t *mutex);
 	
 	/**
 	 * Create an enumerator over the list.

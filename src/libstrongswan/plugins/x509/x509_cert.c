@@ -25,6 +25,7 @@
 #include "x509_cert.h"
 
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>

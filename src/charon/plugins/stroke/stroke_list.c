@@ -17,6 +17,8 @@
 
 #include "stroke_list.h"
 
+#include <time.h>
+
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
