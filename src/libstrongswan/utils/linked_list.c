@@ -209,6 +209,7 @@ static bool iterate(private_iterator_t *this, void** value)
 	{
 		return FALSE;
 	}
+	*value = this->current->value;
 	return TRUE;
 }
 
