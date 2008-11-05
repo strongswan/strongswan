@@ -17,10 +17,10 @@
 
 #include "connect_manager.h"
 
-#include <pthread.h>
 #include <math.h>
 
 #include <daemon.h>
+#include <utils/mutex.h>
 #include <utils/linked_list.h>
 #include <crypto/hashers/hasher.h>
 
@@ -59,7 +59,7 @@ struct private_connect_manager_t {
 	 /**
 	  * Lock for exclusivly accessing the manager.
 	  */
-	 pthread_mutex_t mutex;
+	 mutex_t *mutex;
 	 
 	 /**
 	  * Hasher to generate signatures
@@ -845,20 +845,20 @@ static job_requeue_t initiator_finish(callback_data_t *data)
 {
 	private_connect_manager_t *this = data->connect_manager;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 
 	check_list_t *checklist;
 	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't finish connectivity checks",
 				&data->connect_id);
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return JOB_REQUEUE_NONE;
 	}
 	
 	finish_checks(this, checklist);
 	
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	
 	return JOB_REQUEUE_NONE;
 }
@@ -929,14 +929,14 @@ static job_requeue_t retransmit(callback_data_t *data)
 {
 	private_connect_manager_t *this = data->connect_manager;
 	
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 
 	check_list_t *checklist;
 	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't retransmit connectivity check",
 				&data->connect_id);
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return JOB_REQUEUE_NONE;
 	}
 	
@@ -980,7 +980,7 @@ retransmit_end:
 			break;
 	}
 	
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	
 	/* we reschedule it manually */
 	return JOB_REQUEUE_NONE;
@@ -1078,14 +1078,14 @@ static job_requeue_t sender(callback_data_t *data)
 {
 	private_connect_manager_t *this = data->connect_manager;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	
 	check_list_t *checklist;
 	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't send connectivity check",
 				&data->connect_id);
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return JOB_REQUEUE_NONE;
 	}
 	
@@ -1100,7 +1100,7 @@ static job_requeue_t sender(callback_data_t *data)
 		if (checklist->pairs->find_first(checklist->pairs,
 				(linked_list_match_t)match_waiting_pair, (void**)&pair) != SUCCESS)
 		{
-			pthread_mutex_unlock(&(this->mutex));
+			this->mutex->unlock(this->mutex);
 			DBG1(DBG_IKE, "no pairs in waiting state, aborting");
 			return JOB_REQUEUE_NONE;
 		}
@@ -1126,7 +1126,7 @@ static job_requeue_t sender(callback_data_t *data)
 	/* schedule this job again */
 	schedule_checks(this, checklist, ME_INTERVAL);
 	
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	
 	/* we reschedule it manually */
 	return JOB_REQUEUE_NONE;
@@ -1345,7 +1345,7 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 		return;
 	}
 	
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	
 	check_list_t *checklist;
 	if (get_checklist_by_id(this, check->connect_id, &checklist) != SUCCESS)
@@ -1353,7 +1353,7 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 		DBG1(DBG_IKE, "checklist with id '%#B' not found",
 				&check->connect_id);
 		check_destroy(check);
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return;
 	}
 	
@@ -1363,7 +1363,7 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 		DBG1(DBG_IKE, "connectivity check verification failed");
 		check_destroy(check);
 		chunk_free(&sig);
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return;
 	}
 	chunk_free(&sig);
@@ -1377,7 +1377,7 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 		process_response(this, check, checklist);
 	}
 	
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	
 	check_destroy(check);
 }
@@ -1392,7 +1392,7 @@ static bool check_and_register(private_connect_manager_t *this,
 	initiated_t *initiated;
 	bool already_there = TRUE;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 
 	if (get_initiated_by_ids(this, id, peer_id, &initiated) != SUCCESS)
 	{
@@ -1408,7 +1408,7 @@ static bool check_and_register(private_connect_manager_t *this,
 		initiated->mediated->insert_last(initiated->mediated, mediated_sa->clone(mediated_sa));
 	}
 
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 
 	return already_there;
 }
@@ -1421,12 +1421,12 @@ static void check_and_initiate(private_connect_manager_t *this, ike_sa_id_t *med
 {
 	initiated_t *initiated;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 
 	if (get_initiated_by_ids(this, id, peer_id, &initiated) != SUCCESS)
 	{
 		DBG2(DBG_IKE, "no waiting mediated connections with '%D'", peer_id);
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return;
 	}
 	
@@ -1439,7 +1439,7 @@ static void check_and_initiate(private_connect_manager_t *this, ike_sa_id_t *med
 	}
 	iterator->destroy(iterator);
 
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -1451,20 +1451,20 @@ static status_t set_initiator_data(private_connect_manager_t *this,
 {
 	check_list_t *checklist;
 	
-	pthread_mutex_lock(&(this->mutex));	
+	this->mutex->lock(this->mutex);	
 	
 	if (get_checklist_by_id(this, connect_id, NULL) == SUCCESS)
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' already exists, aborting",
 				&connect_id);
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return FAILED;
 	}
 	
 	checklist = check_list_create(initiator, responder, connect_id, key, endpoints, is_initiator);
 	this->checklists->insert_last(this->checklists, checklist);
 	
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	
 	return SUCCESS;
 }
@@ -1477,13 +1477,13 @@ static status_t set_responder_data(private_connect_manager_t *this,
 {
 	check_list_t *checklist;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	
 	if (get_checklist_by_id(this, connect_id, &checklist) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found",
 				&connect_id);
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return NOT_FOUND;
 	}
 	
@@ -1496,7 +1496,7 @@ static status_t set_responder_data(private_connect_manager_t *this,
 	/* send the first check immediately */
 	schedule_checks(this, checklist, 0);
 	
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	
 	return SUCCESS;
 }
@@ -1508,13 +1508,13 @@ static status_t stop_checks(private_connect_manager_t *this, chunk_t connect_id)
 {
 	check_list_t *checklist;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	
 	if (get_checklist_by_id(this, connect_id, &checklist) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found",
 				&connect_id);
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return NOT_FOUND;
 	}
 	
@@ -1523,7 +1523,7 @@ static status_t stop_checks(private_connect_manager_t *this, chunk_t connect_id)
 	remove_checklist(this, checklist);
 	check_list_destroy(checklist);
 	
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	
 	return SUCCESS;
 }
@@ -1533,14 +1533,14 @@ static status_t stop_checks(private_connect_manager_t *this, chunk_t connect_id)
  */
 static void destroy(private_connect_manager_t *this)
 {
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	
 	this->hasher->destroy(this->hasher);
 	this->checklists->destroy_function(this->checklists, (void*)check_list_destroy);
 	this->initiated->destroy_function(this->initiated, (void*)initiated_destroy);
 	
-	pthread_mutex_unlock(&(this->mutex));	
-	pthread_mutex_destroy(&(this->mutex));
+	this->mutex->unlock(this->mutex);	
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -1570,7 +1570,7 @@ connect_manager_t *connect_manager_create()
 	this->checklists = linked_list_create();
 	this->initiated = linked_list_create();
 	
-	pthread_mutex_init(&(this->mutex), NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	
 	return (connect_manager_t*)this;
 }

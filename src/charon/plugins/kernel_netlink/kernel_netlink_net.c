@@ -29,6 +29,7 @@
 #include "kernel_netlink_shared.h"
 
 #include <daemon.h>
+#include <utils/mutex.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/roam_job.h>
@@ -116,12 +117,12 @@ struct private_kernel_netlink_net_t {
 	/**
 	 * mutex to lock access to various lists
 	 */
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 	
 	/**
 	 * condition variable to signal virtual IP add/removal
 	 */
-	pthread_cond_t cond;
+	condvar_t *condvar;
 	
 	/**
 	 * Cached list of interfaces and its addresses (iface_entry_t)
@@ -253,7 +254,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 		name = "(unknown)";
 	}
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	switch (hdr->nlmsg_type)
 	{
 		case RTM_NEWLINK:
@@ -315,7 +316,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 			break;
 		}
 	}
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	/* send an update to all IKE_SAs */
 	if (update && event)
@@ -373,7 +374,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 		return;
 	}
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
@@ -431,7 +432,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 		}
 	}
 	ifaces->destroy(ifaces);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	host->destroy(host);
 	
 	/* send an update to all IKE_SAs */
@@ -470,10 +471,12 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	}
 	if (host)
 	{
+		this->mutex->lock(this->mutex);
 		if (!get_vip_refcount(this, host))
 		{	/* ignore routes added for virtual IPs */
 			fire_roam_job(this, FALSE);
 		}
+		this->mutex->unlock(this->mutex);
 		host->destroy(host);
 	}
 }
@@ -524,12 +527,12 @@ static job_requeue_t receive_events(private_kernel_netlink_net_t *this)
 			case RTM_NEWADDR:
 			case RTM_DELADDR:
 				process_addr(this, hdr, TRUE);
-				pthread_cond_broadcast(&this->cond);
+				this->condvar->broadcast(this->condvar);
 				break;
 			case RTM_NEWLINK:
 			case RTM_DELLINK:
 				process_link(this, hdr, TRUE);
-				pthread_cond_broadcast(&this->cond);
+				this->condvar->broadcast(this->condvar);
 				break;
 			case RTM_NEWROUTE:
 			case RTM_DELROUTE:
@@ -560,7 +563,7 @@ typedef struct {
  */
 static void address_enumerator_destroy(address_enumerator_t *data)
 {
-	pthread_mutex_unlock(&data->this->mutex);
+	data->this->mutex->unlock(data->this->mutex);
 	free(data);
 }
 
@@ -614,7 +617,7 @@ static enumerator_t *create_address_enumerator(private_kernel_netlink_net_t *thi
 	data->include_down_ifaces = include_down_ifaces;
 	data->include_virtual_ips = include_virtual_ips;
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	return enumerator_create_nested(
 				enumerator_create_filter(this->ifaces->create_enumerator(this->ifaces),
 							(void*)filter_interfaces, data, NULL),
@@ -633,7 +636,7 @@ static char *get_interface_name(private_kernel_netlink_net_t *this, host_t* ip)
 	
 	DBG2(DBG_KNL, "getting interface name for %H", ip);
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
@@ -653,7 +656,7 @@ static char *get_interface_name(private_kernel_netlink_net_t *this, host_t* ip)
 		}
 	}
 	ifaces->destroy(ifaces);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	if (name)
 	{
@@ -677,7 +680,7 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 	
 	DBG2(DBG_KNL, "getting iface index for %s", name);
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
@@ -688,7 +691,7 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 		}
 	}
 	ifaces->destroy(ifaces);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 
 	if (ifindex == 0)
 	{
@@ -769,6 +772,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		DBG1(DBG_KNL, "getting address to %H failed", dest);
 		return NULL;
 	}
+	this->mutex->lock(this->mutex);
 	current = out;
 	while (NLMSG_OK(current, len))
 	{
@@ -846,7 +850,6 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					else
 					{
 						/* no source addr, get one from the interfaces */
-						pthread_mutex_lock(&this->mutex);
 						ifaces = this->ifaces->create_enumerator(this->ifaces);
 						while (ifaces->enumerate(ifaces, &iface))
 						{
@@ -870,7 +873,6 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 							}
 						}
 						ifaces->destroy(ifaces);
-						pthread_mutex_unlock(&this->mutex);
 					}
 				}
 				/* FALL through */
@@ -882,6 +884,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		break;
 	}
 	free(out);
+	this->mutex->unlock(this->mutex);
 	
 	if (nexthop)
 	{
@@ -957,7 +960,7 @@ static status_t add_ip(private_kernel_netlink_net_t *this,
 
 	DBG2(DBG_KNL, "adding virtual IP %H", virtual_ip);
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
@@ -977,7 +980,7 @@ static status_t add_ip(private_kernel_netlink_net_t *this,
 					 virtual_ip, iface->ifname);
 				addrs->destroy(addrs);
 				ifaces->destroy(ifaces);
-				pthread_mutex_unlock(&this->mutex);
+				this->mutex->unlock(this->mutex);
 				return SUCCESS;
 			}
 		}
@@ -998,20 +1001,20 @@ static status_t add_ip(private_kernel_netlink_net_t *this,
 			{
 				while (get_vip_refcount(this, virtual_ip) == 0)
 				{	/* wait until address appears */
-					pthread_cond_wait(&this->cond, &this->mutex);
+					this->condvar->wait(this->condvar, this->mutex);
 				}
 				ifaces->destroy(ifaces);
-				pthread_mutex_unlock(&this->mutex);
+				this->mutex->unlock(this->mutex);
 				return SUCCESS;
 			}
 			ifaces->destroy(ifaces);
-			pthread_mutex_unlock(&this->mutex);
+			this->mutex->unlock(this->mutex);
 			DBG1(DBG_KNL, "adding virtual IP %H failed", virtual_ip);
 			return FAILED;
 		}
 	}
 	ifaces->destroy(ifaces);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	DBG1(DBG_KNL, "interface address %H not found, unable to install"
 		 "virtual IP %H", iface_ip, virtual_ip);
@@ -1031,7 +1034,7 @@ static status_t del_ip(private_kernel_netlink_net_t *this, host_t *virtual_ip)
 
 	DBG2(DBG_KNL, "deleting virtual IP %H", virtual_ip);
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
@@ -1049,12 +1052,12 @@ static status_t del_ip(private_kernel_netlink_net_t *this, host_t *virtual_ip)
 					{	/* wait until the address is really gone */
 						while (get_vip_refcount(this, virtual_ip) > 0)
 						{
-							pthread_cond_wait(&this->cond, &this->mutex);
+							this->condvar->wait(this->condvar, this->mutex);
 						}
 					}
 					addrs->destroy(addrs);
 					ifaces->destroy(ifaces);
-					pthread_mutex_unlock(&this->mutex);
+					this->mutex->unlock(this->mutex);
 					return status;
 				}
 				else
@@ -1065,14 +1068,14 @@ static status_t del_ip(private_kernel_netlink_net_t *this, host_t *virtual_ip)
 					 virtual_ip);
 				addrs->destroy(addrs);
 				ifaces->destroy(ifaces);
-				pthread_mutex_unlock(&this->mutex);
+				this->mutex->unlock(this->mutex);
 				return SUCCESS;
 			}
 		}
 		addrs->destroy(addrs);
 	}
 	ifaces->destroy(ifaces);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	DBG2(DBG_KNL, "virtual IP %H not cached, unable to delete", virtual_ip);
 	return FAILED;
@@ -1232,7 +1235,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 	}
 	free(out);
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
@@ -1248,7 +1251,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 		}
 	}
 	ifaces->destroy(ifaces);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	return SUCCESS;
 }
 
@@ -1301,6 +1304,8 @@ static void destroy(private_kernel_netlink_net_t *this)
 	close(this->socket_events);
 	this->socket->destroy(this->socket);
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
+	this->condvar->destroy(this->condvar);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -1325,8 +1330,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 
 	/* private members */
 	this->ifaces = linked_list_create();
-	pthread_mutex_init(&this->mutex, NULL);
-	pthread_cond_init(&this->cond, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_DEFAULT);
 	timerclear(&this->last_roam);
 	this->routing_table = lib->settings->get_int(lib->settings,
 					"charon.routing_table", IPSEC_ROUTING_TABLE);

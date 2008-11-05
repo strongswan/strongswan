@@ -16,7 +16,6 @@
  * $Id$
  */
 
-#include <pthread.h>
 #include <string.h>
 
 #include "ike_sa_manager.h"
@@ -24,6 +23,7 @@
 #include <daemon.h>
 #include <sa/ike_sa_id.h>
 #include <bus/bus.h>
+#include <utils/mutex.h>
 #include <utils/linked_list.h>
 #include <crypto/hashers/hasher.h>
 
@@ -42,7 +42,7 @@ struct entry_t {
 	/**
 	 * Condvar where threads can wait until ike_sa_t object is free for use again.
 	 */
-	pthread_cond_t condvar;
+	condvar_t *condvar;
 	
 	/**
 	 * Is this ike_sa currently checked out?
@@ -107,6 +107,7 @@ static status_t entry_destroy(entry_t *this)
 	DESTROY_IF(this->other);
 	DESTROY_IF(this->my_id);
 	DESTROY_IF(this->other_id);
+	this->condvar->destroy(this->condvar);
 	free(this);
 	return SUCCESS;
 }
@@ -119,7 +120,7 @@ static entry_t *entry_create(ike_sa_id_t *ike_sa_id)
 	entry_t *this = malloc_thing(entry_t);
 	
 	this->waiting_threads = 0;
-	pthread_cond_init(&this->condvar, NULL);
+	this->condvar = condvar_create(CONDVAR_DEFAULT);
 	
 	/* we set checkout flag when we really give it out */
 	this->checked_out = FALSE;
@@ -155,7 +156,7 @@ struct private_ike_sa_manager_t {
 	 /**
 	  * Lock for exclusivly accessing the manager.
 	  */
-	 pthread_mutex_t mutex;
+	 mutex_t *mutex;
 
 	 /**
 	  * Linked list with entries for the ike_sa_t objects.
@@ -278,9 +279,9 @@ static status_t delete_entry(private_ike_sa_manager_t *this, entry_t *entry)
 			while (entry->waiting_threads)
 			{
 				/* wake up all */
-				pthread_cond_broadcast(&(entry->condvar));
+				entry->condvar->broadcast(entry->condvar);
 				/* they will wake us again when their work is done */
-				pthread_cond_wait(&(entry->condvar), &(this->mutex));
+				entry->condvar->wait(entry->condvar, this->mutex);
 			}
 			
 			DBG2(DBG_MGR,  "found entry by pointer, deleting it");
@@ -310,14 +311,14 @@ static bool wait_for_entry(private_ike_sa_manager_t *this, entry_t *entry)
 		/* so wait until we can get it for us.
 		 * we register us as waiting. */
 		entry->waiting_threads++;
-		pthread_cond_wait(&(entry->condvar), &(this->mutex));
+		entry->condvar->wait(entry->condvar, this->mutex);
 		entry->waiting_threads--;
 	}
 	/* hm, a deletion request forbids us to get this SA, get next one */
 	if (entry->driveout_waiting_threads)
 	{
 		/* we must signal here, others may be waiting on it, too */
-		pthread_cond_signal(&(entry->condvar));
+		entry->condvar->signal(entry->condvar);
 		return FALSE;
 	}
 	return TRUE;
@@ -345,7 +346,7 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 	DBG2(DBG_MGR, "checkout IKE_SA, %d IKE_SAs in manager",
 		 this->ike_sa_list->get_count(this->ike_sa_list));
 	
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
 	{
 		if (wait_for_entry(this, entry))
@@ -355,7 +356,7 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 			ike_sa = entry->ike_sa;
 		}
 	}
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
@@ -378,10 +379,10 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 	}
 	entry = entry_create(id);
 	id->destroy(id);
-	pthread_mutex_lock(&this->mutex);	
+	this->mutex->lock(this->mutex);	
 	this->ike_sa_list->insert_last(this->ike_sa_list, entry);
 	entry->checked_out = TRUE;
-	pthread_mutex_unlock(&this->mutex);	
+	this->mutex->unlock(this->mutex);	
 	DBG2(DBG_MGR, "created IKE_SA, %d IKE_SAs in manager",
 		 this->ike_sa_list->get_count(this->ike_sa_list));
 	return entry->ike_sa;
@@ -413,7 +414,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 		this->hasher->allocate_hash(this->hasher, data, &hash);
 		chunk_free(&data);
 		
-		pthread_mutex_lock(&this->mutex);
+		this->mutex->lock(this->mutex);
 		enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 		while (enumerator->enumerate(enumerator, &entry))
 		{
@@ -422,7 +423,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 				if (entry->message_id == 0)
 				{
 					enumerator->destroy(enumerator);
-					pthread_mutex_unlock(&this->mutex);
+					this->mutex->unlock(this->mutex);
 					chunk_free(&hash);
 					id->destroy(id);
 					DBG1(DBG_MGR, "ignoring IKE_SA_INIT, already processing");
@@ -439,7 +440,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 			}
 		}
 		enumerator->destroy(enumerator);
-		pthread_mutex_unlock(&this->mutex);
+		this->mutex->unlock(this->mutex);
 		
 		if (ike_sa == NULL)
 		{
@@ -450,11 +451,11 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 				id->set_responder_spi(id, get_next_spi(this));
 				entry = entry_create(id);
 				
-				pthread_mutex_lock(&this->mutex);
+				this->mutex->lock(this->mutex);
 				this->ike_sa_list->insert_last(this->ike_sa_list, entry);
 				entry->checked_out = TRUE;
 				entry->message_id = message->get_message_id(message);
-				pthread_mutex_unlock(&this->mutex);
+				this->mutex->unlock(this->mutex);
 				entry->init_hash = hash;
 				ike_sa = entry->ike_sa;
 			}
@@ -473,7 +474,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 		return ike_sa;
 	}
 	
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	if (get_entry_by_id(this, id, &entry) == SUCCESS)
 	{
 		/* only check out if we are not processing this request */
@@ -496,7 +497,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 			ike_sa = entry->ike_sa;
 		}
 	}
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	id->destroy(id);
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
@@ -521,7 +522,7 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	my_host = host_create_from_dns(ike_cfg->get_my_addr(ike_cfg), 0, 0);
 	other_host = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg), 0, 0);
 	
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	
 	if (my_host && other_host && this->reuse_ikesa)
 	{
@@ -604,7 +605,7 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 		new_entry->checked_out = TRUE;
 		ike_sa = new_entry->ike_sa;
 	}
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
@@ -621,7 +622,7 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
 	
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	
 	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -658,7 +659,7 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 		}
 	}
 	enumerator->destroy(enumerator);
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
@@ -676,7 +677,7 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
 	
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	
 	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -713,7 +714,7 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 		}
 	}
 	enumerator->destroy(enumerator);
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
@@ -733,7 +734,7 @@ static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
 	me = ike_sa->get_my_id(ike_sa);
 	other = ike_sa->get_other_id(ike_sa);
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -756,7 +757,7 @@ static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	return duplicate;
 }
 
@@ -765,7 +766,7 @@ static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
  */
 static void enumerator_unlock(private_ike_sa_manager_t *this)
 {
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -787,7 +788,7 @@ static bool enumerator_filter(private_ike_sa_manager_t *this,
  */
 static enumerator_t *create_enumerator(private_ike_sa_manager_t* this)
 {
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	return enumerator_create_filter(
 						this->ike_sa_list->create_enumerator(this->ike_sa_list),
 						(void*)enumerator_filter, this, (void*)enumerator_unlock);
@@ -813,7 +814,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	
 	DBG2(DBG_MGR, "checkin IKE_SA");
 	
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 
 	/* look for the entry */
 	if (get_entry_by_sa(this, ike_sa, &entry) == SUCCESS)
@@ -846,7 +847,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 			entry->other_id = other_id->clone(other_id);
 		}
 		DBG2(DBG_MGR, "check-in of IKE_SA successful.");
-		pthread_cond_signal(&(entry->condvar));
+		entry->condvar->signal(entry->condvar);
 	 	retval = SUCCESS;
 	}
 	else
@@ -858,7 +859,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	
 	DBG2(DBG_MGR, "%d IKE_SAs in manager now",
 		 this->ike_sa_list->get_count(this->ike_sa_list));
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	
 	charon->bus->set_sa(charon->bus, NULL);
 	return retval;
@@ -882,7 +883,7 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	DBG2(DBG_MGR, "checkin and destroy IKE_SA");
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 
 	if (get_entry_by_sa(this, ike_sa, &entry) == SUCCESS)
 	{
@@ -901,7 +902,7 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 	}
 	charon->bus->set_sa(charon->bus, NULL);
 	
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	return retval;
 }
 
@@ -914,7 +915,7 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 	entry_t *entry;
 	int count = 0;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -938,7 +939,7 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 	}
 	enumerator->destroy(enumerator);
 	
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 	return count;
 }
 
@@ -951,7 +952,7 @@ static void flush(private_ike_sa_manager_t *this)
 	enumerator_t *enumerator;
 	entry_t *entry;
 	
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	DBG2(DBG_MGR, "going to destroy IKE_SA manager and all managed IKE_SA's");
 	/* Step 1: drive out all waiting threads  */
 	DBG2(DBG_MGR, "set driveout flags for all stored IKE_SA's");
@@ -971,9 +972,9 @@ static void flush(private_ike_sa_manager_t *this)
 		while (entry->waiting_threads)
 		{
 			/* wake up all */
-			pthread_cond_broadcast(&(entry->condvar));
+			entry->condvar->broadcast(entry->condvar);
 			/* go sleeping until they are gone */
-			pthread_cond_wait(&(entry->condvar), &(this->mutex));
+			entry->condvar->wait(entry->condvar, this->mutex);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -996,7 +997,7 @@ static void flush(private_ike_sa_manager_t *this)
 		entry_destroy(entry);
 	}
 	charon->bus->set_sa(charon->bus, NULL);
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -1007,7 +1008,7 @@ static void destroy(private_ike_sa_manager_t *this)
 	this->ike_sa_list->destroy(this->ike_sa_list);
 	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
-	
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -1050,7 +1051,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 		return NULL;
 	}
 	this->ike_sa_list = linked_list_create();
-	pthread_mutex_init(&this->mutex, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	this->reuse_ikesa = lib->settings->get_bool(lib->settings,
 												"charon.reuse_ikesa", TRUE);
 	return &this->public;

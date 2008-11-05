@@ -17,9 +17,8 @@
 
 #include "eap_manager.h"
 
-#include <pthread.h>
-
 #include <utils/linked_list.h>
+#include <utils/mutex.h>
 
 typedef struct private_eap_manager_t private_eap_manager_t;
 typedef struct eap_entry_t eap_entry_t;
@@ -68,7 +67,7 @@ struct private_eap_manager_t {
 	/**
 	 * mutex to lock methods
 	 */
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 };
 
 /**
@@ -85,9 +84,9 @@ static void add_method(private_eap_manager_t *this, eap_type_t type,
 	entry->role = role;
 	entry->constructor = constructor;
 
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	this->methods->insert_last(this->methods, entry);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -98,7 +97,7 @@ static void remove_method(private_eap_manager_t *this, eap_constructor_t constru
 	enumerator_t *enumerator;
 	eap_entry_t *entry;
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	enumerator = this->methods->create_enumerator(this->methods);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -109,7 +108,7 @@ static void remove_method(private_eap_manager_t *this, eap_constructor_t constru
 		}
 	}
 	enumerator->destroy(enumerator);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -124,7 +123,7 @@ static eap_method_t* create_instance(private_eap_manager_t *this,
 	eap_entry_t *entry;
 	eap_method_t *method = NULL;
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	enumerator = this->methods->create_enumerator(this->methods);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -139,7 +138,7 @@ static eap_method_t* create_instance(private_eap_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	return method;
 }
 
@@ -149,6 +148,7 @@ static eap_method_t* create_instance(private_eap_manager_t *this,
 static void destroy(private_eap_manager_t *this)
 {
 	this->methods->destroy_function(this->methods, free);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -165,7 +165,7 @@ eap_manager_t *eap_manager_create()
 	this->public.destroy = (void(*)(eap_manager_t*))destroy;
 	
 	this->methods = linked_list_create();
-	pthread_mutex_init(&this->mutex, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	
 	return &this->public;
 }

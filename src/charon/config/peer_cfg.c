@@ -18,10 +18,10 @@
  */
 
 #include <string.h>
-#include <pthread.h>
 
 #include "peer_cfg.h"
 
+#include <utils/mutex.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
@@ -77,7 +77,7 @@ struct private_peer_cfg_t {
 	/**
 	 * mutex to lock access to list of child_cfgs
 	 */
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 	
 	/**
 	 * id to use to identify us
@@ -197,9 +197,9 @@ static ike_cfg_t* get_ike_cfg(private_peer_cfg_t *this)
  */
 static void add_child_cfg(private_peer_cfg_t *this, child_cfg_t *child_cfg)
 {
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	this->child_cfgs->insert_last(this->child_cfgs, child_cfg);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -207,9 +207,9 @@ static void add_child_cfg(private_peer_cfg_t *this, child_cfg_t *child_cfg)
  */
 static void remove_child_cfg(private_peer_cfg_t *this, enumerator_t *enumerator)
 {
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	this->child_cfgs->remove_at(this->child_cfgs, enumerator);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -219,10 +219,10 @@ static enumerator_t* create_child_cfg_enumerator(private_peer_cfg_t *this)
 {
 	enumerator_t *enumerator;
 
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	enumerator = this->child_cfgs->create_enumerator(this->child_cfgs);
 	return enumerator_create_cleaner(enumerator,
-									 (void*)pthread_mutex_unlock, &this->mutex);
+									 (void*)this->mutex->unlock, this->mutex);
 }
 
 /**
@@ -480,6 +480,7 @@ static void destroy(private_peer_cfg_t *this)
 		DESTROY_IF(this->mediated_by);
 		DESTROY_IF(this->peer_id);
 #endif /* ME */
+		this->mutex->destroy(this->mutex);
 		free(this->name);
 		free(this->pool);
 		free(this);
@@ -536,7 +537,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->ike_version = ike_version;
 	this->ike_cfg = ike_cfg;
 	this->child_cfgs = linked_list_create();
-	pthread_mutex_init(&this->mutex, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	this->my_id = my_id;
 	this->other_id = other_id;
 	this->cert_policy = cert_policy;

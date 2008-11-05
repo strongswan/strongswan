@@ -17,8 +17,8 @@
 
 #include "mediation_manager.h"
 
-#include <pthread.h>
 #include <daemon.h>
+#include <utils/mutex.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/mediation_job.h>
 
@@ -80,7 +80,7 @@ struct private_mediation_manager_t {
 	 /**
 	  * Lock for exclusivly accessing the manager.
 	  */
-	 pthread_mutex_t mutex;
+	 mutex_t *mutex;
 
 	 /**
 	  * Linked list with state entries.
@@ -182,7 +182,7 @@ static void remove_sa(private_mediation_manager_t *this, ike_sa_id_t *ike_sa_id)
 	iterator_t *iterator;
 	peer_t *peer;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	
 	iterator = this->peers->create_iterator(this->peers, TRUE);
 	while (iterator->iterate(iterator, (void**)&peer))
@@ -199,7 +199,7 @@ static void remove_sa(private_mediation_manager_t *this, ike_sa_id_t *ike_sa_id)
 	}
 	iterator->destroy(iterator);
 
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -211,7 +211,7 @@ static void update_sa_id(private_mediation_manager_t *this, identification_t *pe
 	peer_t *peer;
 	bool found = FALSE;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 
 	iterator = this->peers->create_iterator(this->peers, TRUE);
 	while (iterator->iterate(iterator, (void**)&peer))
@@ -244,7 +244,7 @@ static void update_sa_id(private_mediation_manager_t *this, identification_t *pe
 		requester->destroy(requester);
 	}
 	
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -256,17 +256,17 @@ static ike_sa_id_t *check(private_mediation_manager_t *this,
 	peer_t *peer;
 	ike_sa_id_t *ike_sa_id;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 
 	if (get_peer_by_id(this, peer_id, &peer) != SUCCESS)
 	{
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return NULL;
 	}
 
 	ike_sa_id = peer->ike_sa_id;
 
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 
 	return ike_sa_id;
 }
@@ -280,7 +280,7 @@ static ike_sa_id_t *check_and_register(private_mediation_manager_t *this,
 	peer_t *peer;
 	ike_sa_id_t *ike_sa_id;
 
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 
 	if (get_peer_by_id(this, peer_id, &peer) != SUCCESS)
 	{
@@ -294,13 +294,13 @@ static ike_sa_id_t *check_and_register(private_mediation_manager_t *this,
 		/* the peer is not online */
 		DBG2(DBG_IKE, "requested peer '%D' is offline, registering peer '%D'", peer_id, requester);
 		register_peer(peer, requester);
-		pthread_mutex_unlock(&(this->mutex));
+		this->mutex->unlock(this->mutex);
 		return NULL;
 	}
 
 	ike_sa_id = peer->ike_sa_id;
 
-	pthread_mutex_unlock(&(this->mutex));
+	this->mutex->unlock(this->mutex);
 
 	return ike_sa_id;
 }
@@ -310,12 +310,12 @@ static ike_sa_id_t *check_and_register(private_mediation_manager_t *this,
  */
 static void destroy(private_mediation_manager_t *this)
 {
-	pthread_mutex_lock(&(this->mutex));
+	this->mutex->lock(this->mutex);
 	
 	this->peers->destroy_function(this->peers, (void*)peer_destroy);
 	
-	pthread_mutex_unlock(&(this->mutex));	
-	pthread_mutex_destroy(&(this->mutex));
+	this->mutex->unlock(this->mutex);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -333,7 +333,7 @@ mediation_manager_t *mediation_manager_create()
 	this->public.check_and_register = (ike_sa_id_t*(*)(mediation_manager_t*,identification_t*,identification_t*))check_and_register;
 	
 	this->peers = linked_list_create();
-	pthread_mutex_init(&(this->mutex), NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	
 	return (mediation_manager_t*)this;
 }

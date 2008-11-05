@@ -24,6 +24,7 @@
 #include "openssl_plugin.h"
 
 #include <library.h>
+#include <utils/mutex.h>
 #include "openssl_crypter.h"
 #include "openssl_hasher.h"
 #include "openssl_diffie_hellman.h"
@@ -49,7 +50,7 @@ struct private_openssl_plugin_t {
 /**
  * Array of static mutexs, with CRYPTO_num_locks() mutex
  */
-static pthread_mutex_t *mutex;
+static mutex_t **mutex;
 
 /**
  * Locking callback for static locks
@@ -58,11 +59,11 @@ static void locking_function(int mode, int type, const char *file, int line)
 {
 	if (mode & CRYPTO_LOCK)
 	{
-		pthread_mutex_lock(&mutex[type]);
+		mutex[type]->lock(mutex[type]);
 	}
 	else
 	{
-		pthread_mutex_unlock(&mutex[type]);
+		mutex[type]->unlock(mutex[type]);
 	}
 }
 
@@ -70,7 +71,7 @@ static void locking_function(int mode, int type, const char *file, int line)
  * Implementation of dynlock
  */
 struct CRYPTO_dynlock_value {
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 };
 
 /**
@@ -81,7 +82,7 @@ static struct CRYPTO_dynlock_value *create_function(const char *file, int line)
 	struct CRYPTO_dynlock_value *lock;
 	
 	lock = malloc_thing(struct CRYPTO_dynlock_value);
-	pthread_mutex_init(&lock->mutex, NULL);
+	lock->mutex = mutex_create(MUTEX_DEFAULT);
 	return lock;
 }
 
@@ -93,11 +94,11 @@ static void lock_function(int mode, struct CRYPTO_dynlock_value *lock,
 {
 	if (mode & CRYPTO_LOCK)
 	{
-		pthread_mutex_lock(&lock->mutex);
+		lock->mutex->lock(lock->mutex);
 	}
 	else
 	{
-		pthread_mutex_unlock(&lock->mutex);
+		lock->mutex->unlock(lock->mutex);
 	}
 }
 
@@ -107,7 +108,7 @@ static void lock_function(int mode, struct CRYPTO_dynlock_value *lock,
 static void destroy_function(struct CRYPTO_dynlock_value *lock,
 							 const char *file, int line)
 {
-	pthread_mutex_destroy(&lock->mutex);
+	lock->mutex->destroy(lock->mutex);
 	free(lock);
 }
 
@@ -134,10 +135,10 @@ static void threading_init()
 	CRYPTO_set_dynlock_destroy_callback(destroy_function);
 	
 	num_locks = CRYPTO_num_locks();
-	mutex = malloc(sizeof(pthread_mutex_t) * num_locks);
+	mutex = malloc(sizeof(mutex_t*) * num_locks);
 	for (i = 0; i < num_locks; i++)
 	{
-		pthread_mutex_init(&mutex[i], NULL);
+		mutex[i] = mutex_create(MUTEX_DEFAULT);
 	}
 }
 
@@ -151,7 +152,7 @@ static void threading_cleanup()
 	num_locks = CRYPTO_num_locks();
 	for (i = 0; i < num_locks; i++)
 	{
-		pthread_mutex_destroy(&mutex[i]);
+		mutex[i]->destroy(mutex[i]);
 	}
 	free(mutex);
 }
@@ -180,8 +181,6 @@ static void destroy(private_openssl_plugin_t *this)
 	
 	ENGINE_cleanup();
 	EVP_cleanup();
-	
-	threading_cleanup();
 	
 	free(this);
 }

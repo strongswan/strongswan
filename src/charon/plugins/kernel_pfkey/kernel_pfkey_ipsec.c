@@ -30,6 +30,7 @@
 
 #include <daemon.h>
 #include <utils/host.h>
+#include <utils/mutex.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>
 #include <processing/jobs/migrate_job.h>
@@ -83,7 +84,7 @@ struct private_kernel_pfkey_ipsec_t
 	/**
 	 * mutex to lock access to various lists
 	 */
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 	
 	/**
 	 * List of installed policies (policy_entry_t)
@@ -103,20 +104,17 @@ struct private_kernel_pfkey_ipsec_t
 	/**
 	 * mutex to lock access to the PF_KEY socket
 	 */
-	pthread_mutex_t mutex_pfkey;
-	
+	mutex_t *mutex_pfkey;
 	
 	/**
 	 * PF_KEY socket to communicate with the kernel
 	 */
 	int socket;
 	
-	
 	/**
 	 * PF_KEY socket to receive acquire and expire events
 	 */
 	int socket_events;
-	
 	
 	/**
 	 * sequence number for messages sent to the kernel
@@ -635,7 +633,7 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 	struct sadb_msg *msg;
 	int in_len, len;
 	
-	pthread_mutex_lock(&this->mutex_pfkey);
+	this->mutex_pfkey->lock(this->mutex_pfkey);
 
 	in->sadb_msg_seq = ++this->seq;
 	in->sadb_msg_pid = getpid();
@@ -653,7 +651,7 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 				/* interrupted, try again */
 				continue;
 			}
-			pthread_mutex_unlock(&this->mutex_pfkey);
+			this->mutex_pfkey->unlock(this->mutex_pfkey);
 			DBG1(DBG_KNL, "error sending to PF_KEY socket: %s", strerror(errno));
 			return FAILED;
 		}
@@ -675,20 +673,20 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 				continue;
 			}
 			DBG1(DBG_KNL, "error reading from PF_KEY socket: %s", strerror(errno));
-			pthread_mutex_unlock(&this->mutex_pfkey);
+			this->mutex_pfkey->unlock(this->mutex_pfkey);
 			return FAILED;
 		}
 		if (len < sizeof(struct sadb_msg) ||
 			msg->sadb_msg_len < PFKEY_LEN(sizeof(struct sadb_msg)))
 		{
 			DBG1(DBG_KNL, "received corrupted PF_KEY message");
-			pthread_mutex_unlock(&this->mutex_pfkey);
+			this->mutex_pfkey->unlock(this->mutex_pfkey);
 			return FAILED;
 		}
 		if (msg->sadb_msg_len > len / PFKEY_ALIGNMENT)
 		{
 			DBG1(DBG_KNL, "buffer was too small to receive the complete PF_KEY message");
-			pthread_mutex_unlock(&this->mutex_pfkey);
+			this->mutex_pfkey->unlock(this->mutex_pfkey);
 			return FAILED;
 		}
 		if (msg->sadb_msg_pid != in->sadb_msg_pid)
@@ -704,7 +702,7 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 			{
 				continue;
 			}
-			pthread_mutex_unlock(&this->mutex_pfkey);
+			this->mutex_pfkey->unlock(this->mutex_pfkey);
 			return FAILED;
 		}
 		if (msg->sadb_msg_type != in->sadb_msg_type)
@@ -720,7 +718,7 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 	*out = (struct sadb_msg*)malloc(len);
 	memcpy(*out, buf, len);
 		
-	pthread_mutex_unlock(&this->mutex_pfkey);
+	this->mutex_pfkey->unlock(this->mutex_pfkey);
 	
 	return SUCCESS;
 }
@@ -764,7 +762,7 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	}
 	
 	index = response.x_policy->sadb_x_policy_id;
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies,
 			(linked_list_match_t)policy_entry_match_byindex, (void**)&policy, &index) == SUCCESS)
 	{
@@ -777,7 +775,7 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	}
 	src_ts = sadb_address2ts(response.src);
 	dst_ts = sadb_address2ts(response.dst);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	DBG1(DBG_KNL, "creating acquire job for policy %R === %R with reqid {%u}",
 				   src_ts, dst_ts, reqid);
@@ -1428,7 +1426,7 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 	policy = create_policy_entry(src_ts, dst_ts, direction, reqid);
 	
 	/* find a matching policy */
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies,
 			(linked_list_match_t)policy_entry_equals, (void**)&found, policy) == SUCCESS)
 	{
@@ -1507,7 +1505,7 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 	host2ext(policy->dst.net, addr);
 	PFKEY_EXT_ADD(msg, addr);
 	
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
@@ -1531,14 +1529,14 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 		return FAILED;
 	}
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	
 	/* we try to find the policy again and update the kernel index */
 	if (this->policies->find_last(this->policies, NULL, (void**)&policy) != SUCCESS)
 	{
 		DBG2(DBG_KNL, "unable to update index, the policy %R === %R %N is "
 				"already gone, ignoring", src_ts, dst_ts, policy_dir_names, direction);
-		pthread_mutex_unlock(&this->mutex);
+		this->mutex->unlock(this->mutex);
 		free(out);
 		return SUCCESS;
 	}
@@ -1593,7 +1591,7 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 		}
 	}	
 	
-	pthread_mutex_unlock(&this->mutex);	
+	this->mutex->unlock(this->mutex);	
 	
 	return SUCCESS;
 }
@@ -1621,14 +1619,14 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 	policy = create_policy_entry(src_ts, dst_ts, direction, 0);
 	
 	/* find a matching policy */
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies,
 			(linked_list_match_t)policy_entry_equals, (void**)&found, policy) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "querying policy %R === %R %N failed, not found", src_ts,
 					   dst_ts, policy_dir_names, direction);
 		policy_entry_destroy(policy);
-		pthread_mutex_unlock(&this->mutex);
+		this->mutex->unlock(this->mutex);
 		return NOT_FOUND;
 	}
 	policy_entry_destroy(policy);
@@ -1664,7 +1662,7 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 	host2ext(policy->dst.net, addr);
 	PFKEY_EXT_ADD(msg, addr);
 	
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
@@ -1718,7 +1716,7 @@ static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 	policy = create_policy_entry(src_ts, dst_ts, direction, 0);
 	
 	/* find a matching policy */
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies,
 			(linked_list_match_t)policy_entry_equals, (void**)&found, policy) == SUCCESS)
 	{
@@ -1727,7 +1725,7 @@ static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 			/* is used by more SAs, keep in kernel */
 			DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");	
 			policy_entry_destroy(policy);
-			pthread_mutex_unlock(&this->mutex);
+			this->mutex->unlock(this->mutex);
 			return SUCCESS;
 		}
 		/* remove if last reference */
@@ -1740,10 +1738,10 @@ static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 		DBG1(DBG_KNL, "deleting policy %R === %R %N failed, not found", src_ts,
 					   dst_ts, policy_dir_names, direction);
 		policy_entry_destroy(policy);
-		pthread_mutex_unlock(&this->mutex);
+		this->mutex->unlock(this->mutex);
 		return NOT_FOUND;
 	}
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 		
 	memset(&request, 0, sizeof(request));
 	
@@ -1852,6 +1850,8 @@ static void destroy(private_kernel_pfkey_ipsec_t *this)
 	close(this->socket);
 	close(this->socket_events);
 	this->policies->destroy_function(this->policies, (void*)policy_entry_destroy);
+	this->mutex->destroy(this->mutex);
+	this->mutex_pfkey->destroy(this->mutex_pfkey);
 	free(this);
 }
 
@@ -1876,9 +1876,10 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 
 	/* private members */
 	this->policies = linked_list_create();
-	pthread_mutex_init(&this->mutex, NULL);
-	this->install_routes = lib->settings->get_bool(lib->settings, "charon.install_routes", TRUE);
-	pthread_mutex_init(&this->mutex_pfkey, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex_pfkey = mutex_create(MUTEX_DEFAULT);
+	this->install_routes = lib->settings->get_bool(lib->settings,
+												"charon.install_routes", TRUE);
 	this->seq = 0;
 	
 	/* create a PF_KEY socket to communicate with the kernel */

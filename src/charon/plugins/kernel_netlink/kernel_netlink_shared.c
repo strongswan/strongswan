@@ -20,11 +20,11 @@
 #include <linux/rtnetlink.h>
 #include <errno.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "kernel_netlink_shared.h"
 
 #include <daemon.h>
+#include <utils/mutex.h>
 
 typedef struct private_netlink_socket_t private_netlink_socket_t;
 
@@ -40,7 +40,7 @@ struct private_netlink_socket_t {
 	/**
 	 * mutex to lock access to netlink socket
 	 */
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 
 	/**
 	 * current sequence number for netlink request
@@ -64,7 +64,7 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 	chunk_t result = chunk_empty, tmp;
 	struct nlmsghdr *msg, peek;
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	
 	in->nlmsg_seq = ++this->seq;
 	in->nlmsg_pid = getpid();
@@ -86,7 +86,7 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 				/* interrupted, try again */
 				continue;
 			}
-			pthread_mutex_unlock(&this->mutex);
+			this->mutex->unlock(this->mutex);
 			DBG1(DBG_KNL, "error sending to netlink socket: %s", strerror(errno));
 			return FAILED;
 		}
@@ -118,14 +118,14 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 				continue;
 			}
 			DBG1(DBG_KNL, "error reading from netlink socket: %s", strerror(errno));
-			pthread_mutex_unlock(&this->mutex);
+			this->mutex->unlock(this->mutex);
 			free(result.ptr);
 			return FAILED;
 		}
 		if (!NLMSG_OK(msg, len))
 		{
 			DBG1(DBG_KNL, "received corrupted netlink message");
-			pthread_mutex_unlock(&this->mutex);
+			this->mutex->unlock(this->mutex);
 			free(result.ptr);
 			return FAILED;
 		}
@@ -136,7 +136,7 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 			{
 				continue;
 			}
-			pthread_mutex_unlock(&this->mutex);
+			this->mutex->unlock(this->mutex);
 			free(result.ptr);
 			return FAILED;
 		}
@@ -162,7 +162,7 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 	*out_len = result.len;
 	*out = (struct nlmsghdr*)result.ptr;
 	
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	return SUCCESS;
 }
@@ -222,6 +222,7 @@ static status_t netlink_send_ack(private_netlink_socket_t *this, struct nlmsghdr
 static void destroy(private_netlink_socket_t *this)
 {
 	close(this->socket);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -239,7 +240,7 @@ netlink_socket_t *netlink_socket_create(int protocol) {
 
 	/* private members */
 	this->seq = 200;
-	pthread_mutex_init(&this->mutex, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;

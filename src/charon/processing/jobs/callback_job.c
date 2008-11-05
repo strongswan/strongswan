@@ -20,6 +20,7 @@
 #include <pthread.h>
 
 #include <daemon.h>
+#include <utils/mutex.h>
 
 typedef struct private_callback_job_t private_callback_job_t;
 
@@ -51,12 +52,12 @@ struct private_callback_job_t {
 	 * thread ID of the job, if running
 	 */
 	pthread_t thread;
-
+	
 	/**
 	 * mutex to access jobs interna
 	 */
-	pthread_mutex_t mutex;
-
+	mutex_t *mutex;
+	
 	/**
 	 * list of asociated child jobs
 	 */
@@ -78,6 +79,7 @@ static void destroy(private_callback_job_t *this)
 		this->cleanup(this->data);
 	}
 	this->children->destroy(this->children);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -91,7 +93,7 @@ static void unregister(private_callback_job_t *this)
 		iterator_t *iterator;
 		private_callback_job_t *child;
 		
-		pthread_mutex_lock(&this->parent->mutex);
+		this->parent->mutex->lock(this->parent->mutex);
 		iterator = this->parent->children->create_iterator(this->parent->children, TRUE);
 		while (iterator->iterate(iterator, (void**)&child))
 		{
@@ -102,7 +104,7 @@ static void unregister(private_callback_job_t *this)
 			}
 		}
 		iterator->destroy(iterator);
-		pthread_mutex_unlock(&this->parent->mutex);
+		this->parent->mutex->unlock(this->parent->mutex);
 	}
 }
 
@@ -113,12 +115,12 @@ static void cancel(private_callback_job_t *this)
 {
 	pthread_t thread;
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	thread = this->thread;
 	
 	/* terminate its children */
 	this->children->invoke_offset(this->children, offsetof(callback_job_t, cancel));
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	/* terminate thread */
 	if (thread)
@@ -135,9 +137,9 @@ static void execute(private_callback_job_t *this)
 {
 	bool cleanup = FALSE;
 
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	this->thread = pthread_self();
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	pthread_cleanup_push((void*)destroy, this);
 	while (TRUE)
@@ -182,7 +184,7 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 	this->public.cancel = (void(*)(callback_job_t*))cancel;
 
 	/* private variables */
-	pthread_mutex_init(&this->mutex, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	this->callback = cb;
 	this->data = data;
 	this->cleanup = cleanup;
@@ -193,9 +195,9 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 	/* register us at parent */
 	if (parent)
 	{
-		pthread_mutex_lock(&this->parent->mutex);
+		this->parent->mutex->lock(this->parent->mutex);
 		this->parent->children->insert_last(this->parent->children, this);
-		pthread_mutex_unlock(&this->parent->mutex);
+		this->parent->mutex->unlock(this->parent->mutex);
 	}
 	
 	return &this->public;

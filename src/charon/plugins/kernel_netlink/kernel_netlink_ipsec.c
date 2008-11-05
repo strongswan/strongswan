@@ -37,6 +37,7 @@
 #include "kernel_netlink_shared.h"
 
 #include <daemon.h>
+#include <utils/mutex.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>
@@ -252,7 +253,7 @@ struct private_kernel_netlink_ipsec_t {
 	/**
 	 * mutex to lock access to various lists
 	 */
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 	
 	/**
 	 * List of installed policies (policy_entry_t)
@@ -1374,7 +1375,7 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	policy->direction = direction;
 	
 	/* find the policy, which matches EXACTLY */
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->iterate(iterator, (void**)&current))
 	{
@@ -1418,7 +1419,7 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	policy_info->priority -= policy->sel.sport_mask ? 1 : 0;
 	policy_info->action = XFRM_POLICY_ALLOW;
 	policy_info->share = XFRM_SHARE_ANY;
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	
 	/* policies don't expire */
 	policy_info->lft.soft_byte_limit = XFRM_INF;
@@ -1634,7 +1635,7 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 	policy.direction = direction;
 	
 	/* find the policy */
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	enumerator = this->policies->create_enumerator(this->policies);
 	while (enumerator->enumerate(enumerator, &current))
 	{
@@ -1646,7 +1647,7 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 			{
 				/* is used by more SAs, keep in kernel */
 				DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
-				pthread_mutex_unlock(&this->mutex);
+				this->mutex->unlock(this->mutex);
 				enumerator->destroy(enumerator);
 				return SUCCESS;
 			}
@@ -1655,7 +1656,7 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 			break;
 		}
 	}
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	enumerator->destroy(enumerator);
 	if (!to_delete)
 	{
@@ -1709,6 +1710,7 @@ static void destroy(private_kernel_netlink_ipsec_t *this)
 	close(this->socket_xfrm_events);
 	this->socket_xfrm->destroy(this->socket_xfrm);
 	this->policies->destroy(this->policies);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -1733,7 +1735,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 
 	/* private members */
 	this->policies = linked_list_create();
-	pthread_mutex_init(&this->mutex, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	this->install_routes = lib->settings->get_bool(lib->settings,
 					"charon.install_routes", TRUE);
 	
