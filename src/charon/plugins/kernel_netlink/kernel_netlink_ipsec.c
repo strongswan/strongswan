@@ -1506,22 +1506,30 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 			memcpy(route->dst_net.ptr, &policy->sel.saddr, route->dst_net.len);
 			route->prefixlen = policy->sel.prefixlen_s;
 			
-			switch (charon->kernel_interface->add_route(charon->kernel_interface,
-					route->dst_net, route->prefixlen, route->gateway,
-					route->src_ip, route->if_name))
+			if (route->if_name)
+			{			
+				switch (charon->kernel_interface->add_route(
+									charon->kernel_interface, route->dst_net,
+									route->prefixlen, route->gateway,
+									route->src_ip, route->if_name))
+				{
+					default:
+						DBG1(DBG_KNL, "unable to install source route for %H",
+							 route->src_ip);
+						/* FALL */
+					case ALREADY_DONE:
+						/* route exists, do not uninstall */
+						route_entry_destroy(route);
+						break;
+					case SUCCESS:
+						/* cache the installed route */
+						policy->route = route;
+						break;
+				}
+			}
+			else
 			{
-				default:
-					DBG1(DBG_KNL, "unable to install source route for %H",
-						 route->src_ip);
-					/* FALL */
-				case ALREADY_DONE:
-					/* route exists, do not uninstall */
-					route_entry_destroy(route);
-					break;
-				case SUCCESS:
-					/* cache the installed route */
-					policy->route = route;
-					break;
+				route_entry_destroy(route);
 			}
 		}
 		else
@@ -1529,7 +1537,6 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 			free(route);
 		}
 	}
-
 	return SUCCESS;
 }
 
