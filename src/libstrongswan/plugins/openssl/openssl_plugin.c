@@ -50,20 +50,23 @@ struct private_openssl_plugin_t {
 /**
  * Array of static mutexs, with CRYPTO_num_locks() mutex
  */
-static mutex_t **mutex;
+static mutex_t **mutex = NULL;
 
 /**
  * Locking callback for static locks
  */
 static void locking_function(int mode, int type, const char *file, int line)
 {
-	if (mode & CRYPTO_LOCK)
+	if (mutex)
 	{
-		mutex[type]->lock(mutex[type]);
-	}
-	else
-	{
-		mutex[type]->unlock(mutex[type]);
+		if (mode & CRYPTO_LOCK)
+		{
+			mutex[type]->lock(mutex[type]);
+		}
+		else
+		{
+			mutex[type]->unlock(mutex[type]);
+		}
 	}
 }
 
@@ -155,6 +158,7 @@ static void threading_cleanup()
 		mutex[i]->destroy(mutex[i]);
 	}
 	free(mutex);
+	mutex = NULL;
 }
 
 /**
@@ -181,6 +185,8 @@ static void destroy(private_openssl_plugin_t *this)
 	
 	ENGINE_cleanup();
 	EVP_cleanup();
+	
+	threading_cleanup();
 	
 	free(this);
 }
