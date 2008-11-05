@@ -26,43 +26,6 @@
 
 #include <library.h>
 
-typedef enum hook_result_t hook_result_t;
-
-/**
- * Return value of an iterator hook.
- *
- * Returning HOOK_AGAIN is useful to "inject" additional elements in an
- * iteration, HOOK_NEXT is the normal iterator behavior, and HOOK_SKIP may
- * be used to filter elements out.
- */
-enum hook_result_t {
-
-	/**
-	 * A value was placed in out, hook is called again with the same "in"
-	 */
-	HOOK_AGAIN,
-	
-	/**
-	 * A value was placed in out, hook is called again with next "in" (if any)
-	 */
-	HOOK_NEXT,
-	
-	/**
-	 * No value in out, call again with next "in" (if any)
-	 */
-	HOOK_SKIP,
-};
-
-/**
- * Iterator hook function prototype.
- *
- * @param param		user supplied parameter
- * @param in		the value the hook receives from the iterator
- * @param out		the value supplied as a result to the iterator
- * @return			a hook_result_t
- */
-typedef hook_result_t (iterator_hook_t)(void *param, void *in, void **out);
-
 
 typedef struct iterator_t iterator_t;
 
@@ -92,24 +55,6 @@ struct iterator_t {
 	 * @return			TRUE, if there was an element available, FALSE otherwise
 	 */
 	bool (*iterate) (iterator_t *this, void** value);
-	
-	/**
-	 * Hook a function into the iterator.
-	 *
-	 * Sometimes it is useful to hook in an iterator. The hook function is
-	 * called before any successful return of iterate(). It takes the
-	 * iterator value, may manipulate it (or the references object), and returns
-	 * the value that the iterate() function returns. Depending on the hook
-	 * return value, the hook is called again, called with next, or skipped.
-	 * A value of NULL deactivates the iterator hook.
-	 * If an iterator is hooked, only the iterate() method is valid,
-	 * all other methods behave undefined.
-	 * 
-	 * @param hook		iterator hook which manipulates the iterated value
-	 * @param param		user supplied parameter to pass back to the hook
-	 */
-	void (*set_iterator_hook) (iterator_t *this, iterator_hook_t *hook,
-							   void *param);
 	
 	/**
 	 * Inserts a new item before the given iterator position.
