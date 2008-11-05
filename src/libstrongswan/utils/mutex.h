@@ -23,8 +23,10 @@
 
 typedef struct mutex_t mutex_t;
 typedef struct condvar_t condvar_t;
+typedef struct rwlock_t rwlock_t;
 typedef enum mutex_type_t mutex_type_t;
 typedef enum condvar_type_t condvar_type_t;
+typedef enum rwlock_type_t rwlock_type_t;
 
 #include <library.h>
 
@@ -44,6 +46,14 @@ enum mutex_type_t {
 enum condvar_type_t {
 	/** default condvar */
 	CONDVAR_DEFAULT	= 0,
+};
+
+/**
+ * Type of read-write lock.
+ */
+enum rwlock_type_t {
+	/** default condvar */
+	RWLOCK_DEFAULT	= 0,
 };
 
 /**
@@ -105,6 +115,32 @@ struct condvar_t {
 };
 
 /**
+ * Read-Write lock wrapper.
+ */
+struct rwlock_t {
+
+	/**
+	 * Acquire the read lock.
+	 */
+	void (*read_lock)(rwlock_t *this);
+	
+	/**
+	 * Acquire the write lock.
+	 */
+	void (*write_lock)(rwlock_t *this);
+	
+	/**
+	 * Release any acquired lock.
+	 */
+	void (*unlock)(rwlock_t *this);
+	
+	/**
+	 * Destroy the read-write lock.
+	 */
+	void (*destroy)(rwlock_t *this);
+};
+
+/**
  * Create a mutex instance.
  *
  * @param type		type of mutex to create
@@ -119,5 +155,13 @@ mutex_t *mutex_create(mutex_type_t type);
  * @return			condvar instance
  */
 condvar_t *condvar_create(condvar_type_t type);
+
+/**
+ * Create a read-write lock instance.
+ *
+ * @param type		type of rwlock to create
+ * @return			unlocked rwlock instance
+ */
+rwlock_t *rwlock_create(rwlock_type_t type);
 
 #endif /* MUTEX_H_ @}*/

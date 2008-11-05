@@ -19,7 +19,6 @@
 
 #include <library.h>
 #include <debug.h>
-#include <utils/backtrace.h>
 
 #include <pthread.h>
 #include <sys/time.h>
@@ -27,14 +26,77 @@
 #include <time.h>
 #include <errno.h>
 
+typedef struct private_mutex_t private_mutex_t;
+typedef struct private_r_mutex_t private_r_mutex_t;
+typedef struct private_condvar_t private_condvar_t;
+typedef struct private_rwlock_t private_rwlock_t;
+
+#ifdef LOCK_PROFILER
+
 /**
  * Do not report mutexes with an overall waiting time smaller than this (in us)
  */
 #define PROFILE_TRESHHOLD 1000
 
-typedef struct private_mutex_t private_mutex_t;
-typedef struct private_r_mutex_t private_r_mutex_t;
-typedef struct private_condvar_t private_condvar_t;
+#include <utils/backtrace.h>
+
+typedef struct lock_profile_t lock_profile_t;
+
+struct lock_profile_t {
+
+	/**
+	 * how long threads have waited for the lock in this mutex so far
+	 */
+	struct timeval waited;
+	
+	/**
+	 * backtrace where mutex has been created
+	 */
+	backtrace_t *backtrace;
+};
+
+/**
+ * Print and cleanup mutex profiler
+ */
+static void profiler_cleanup(lock_profile_t *profile)
+{
+	if (profile->waited.tv_sec > 0 ||
+		profile->waited.tv_usec > PROFILE_TRESHHOLD)
+	{
+		fprintf(stderr, "%d.%06ds in lock created at:",
+				profile->waited.tv_sec, profile->waited.tv_usec);
+		profile->backtrace->log(profile->backtrace, stderr);
+	}
+	profile->backtrace->destroy(profile->backtrace);
+}
+
+/**
+ * Initialize mutex profiler
+ */
+static void profiler_init(lock_profile_t *profile)
+{
+	profile->backtrace = backtrace_create(3);
+	timerclear(&profile->waited);
+}
+
+#define profiler_start(profile) { \
+	struct timeval _start, _end, _diff; \
+	gettimeofday(&_start, NULL);
+	
+#define profiler_end(profile) \
+	gettimeofday(&_end, NULL); \
+	timersub(&_end, &_start, &_diff); \
+	timeradd(&(profile)->waited, &_diff, &(profile)->waited); }
+
+#else /* !LOCK_PROFILER */
+
+#define lock_profile_t struct {}
+#define profiler_cleanup(...) {}
+#define profiler_init(...) {}
+#define profiler_start(...) {}
+#define profiler_end(...) {}
+
+#endif /* LOCK_PROFILER */
 
 /**
  * private data of mutex
@@ -51,22 +113,15 @@ struct private_mutex_t {
 	 */
 	pthread_mutex_t mutex;
 	
-#ifdef LOCK_PROFILER
-	/**
-	 * how long threads have waited for the lock in this mutex so far
-	 */
-	struct timeval waited;
-	
-	/**
-	 * backtrace where mutex has been created
-	 */
-	backtrace_t *backtrace;
-#endif /* LOCK_PROFILER */
-	
 	/**
 	 * is this a recursiv emutex, implementing private_r_mutex_t?
 	 */
 	bool recursive;
+	
+	/**
+	 * profiling info, if enabled
+	 */
+	lock_profile_t profile;
 };
 
 /**
@@ -106,65 +161,39 @@ struct private_condvar_t {
 	pthread_cond_t condvar;
 };
 
-#ifdef LOCK_PROFILER
 /**
- * Print and cleanup mutex profiler
+ * private data of rwlock
  */
-static void profiler_cleanup(private_mutex_t *this)
-{
-	if (this->waited.tv_sec > 0 ||
-		this->waited.tv_usec > PROFILE_TRESHHOLD)
-	{
-		fprintf(stderr, "waited %d.%06ds in mutex, created at:",
-				this->waited.tv_sec, this->waited.tv_usec);
-		this->backtrace->log(this->backtrace, stderr);
-	}
-	this->backtrace->destroy(this->backtrace);
-}
+struct private_rwlock_t {
 
-/**
- * Initialize mutex profiler
- */
-static void profiler_init(private_mutex_t *this)
-{
-	this->backtrace = backtrace_create(3);
-	timerclear(&this->waited);
-}
-
-/**
- * Implementation of mutex_t.lock.
- */
-static void lock(private_mutex_t *this)
-{
-	struct timeval start, end, diff;
-
-	gettimeofday(&start, NULL);
-	if (pthread_mutex_lock(&this->mutex))
-	{
-		DBG1("!!!! MUTEX %sLOCK ERROR, your code is buggy !!!", "");
-	}
-	gettimeofday(&end, NULL);
+	/**
+	 * public functions
+	 */
+	rwlock_t public;
 	
-	timersub(&end, &start, &diff);
-	timeradd(&this->waited, &diff, &this->waited);
-}
-#else /* !LOCK_PROFILER */
-
-/** dummy implementations */
-static void profiler_cleanup(private_mutex_t *this) {}
-static void profiler_init(private_mutex_t *this) {}
+	/**
+	 * wrapped pthread rwlock
+	 */
+	pthread_rwlock_t rwlock;
+	
+	/**
+	 * profiling info, if enabled
+	 */
+	lock_profile_t profile;
+};
 
 /**
  * Implementation of mutex_t.lock.
  */
 static void lock(private_mutex_t *this)
 {
+	profiler_start(&this->profile);
 	if (pthread_mutex_lock(&this->mutex))
 	{
 		DBG1("!!!! MUTEX %sLOCK ERROR, your code is buggy !!!", "");
 	}
+	profiler_end(&this->profile);
 }
-#endif /* LOCK_PROFILER */
 
 /**
  * Implementation of mutex_t.unlock.
@@ -224,7 +253,7 @@ static void unlock_r(private_r_mutex_t *this)
  */
 static void mutex_destroy(private_mutex_t *this)
 {
-	profiler_cleanup(this);
+	profiler_cleanup(&this->profile);
 	pthread_mutex_destroy(&this->mutex);
 	free(this);
 }
@@ -234,7 +263,7 @@ static void mutex_destroy(private_mutex_t *this)
  */
 static void mutex_destroy_r(private_r_mutex_t *this)
 {
-	profiler_cleanup(&this->generic);
+	profiler_cleanup(&this->generic.profile);
 	pthread_mutex_destroy(&this->generic.mutex);
 	pthread_key_delete(this->times);
 	free(this);
@@ -258,7 +287,7 @@ mutex_t *mutex_create(mutex_type_t type)
 			pthread_mutex_init(&this->generic.mutex, NULL);
 			pthread_key_create(&this->times, NULL);
 			this->generic.recursive = TRUE;
-			profiler_init(&this->generic);
+			profiler_init(&this->generic.profile);
 			this->thread = 0;
 			
 			return &this->generic.public;
@@ -274,7 +303,7 @@ mutex_t *mutex_create(mutex_type_t type)
 			
 			pthread_mutex_init(&this->mutex, NULL);
 			this->recursive = FALSE;
-			profiler_init(this);
+			profiler_init(&this->profile);
 			
 			return &this->public;
 		}
@@ -386,6 +415,69 @@ condvar_t *condvar_create(condvar_type_t type)
 		
 			pthread_cond_init(&this->condvar, NULL);
 		
+			return &this->public;
+		}
+	}
+}
+
+/**
+ * Implementation of rwlock_t.read_lock
+ */
+static void read_lock(private_rwlock_t *this)
+{
+	profiler_start(&this->profile);
+	pthread_rwlock_rdlock(&this->rwlock);
+	profiler_end(&this->profile);
+}
+
+/**
+ * Implementation of rwlock_t.write_lock
+ */
+static void write_lock(private_rwlock_t *this)
+{
+	profiler_start(&this->profile);
+	pthread_rwlock_wrlock(&this->rwlock);
+	profiler_end(&this->profile);
+}
+
+/**
+ * Implementation of rwlock_t.unlock
+ */
+static void rw_unlock(private_rwlock_t *this)
+{
+	pthread_rwlock_unlock(&this->rwlock);
+}
+
+/**
+ * Implementation of rwlock_t.destroy
+ */
+static void rw_destroy(private_rwlock_t *this)
+{
+	pthread_rwlock_destroy(&this->rwlock);
+	profiler_cleanup(&this->profile);
+	free(this);
+}
+
+/*
+ * see header file
+ */
+rwlock_t *rwlock_create(rwlock_type_t type)
+{
+	switch (type)
+	{
+		case RWLOCK_DEFAULT:
+		default:
+		{
+			private_rwlock_t *this = malloc_thing(private_rwlock_t);
+			
+			this->public.read_lock = (void(*)(rwlock_t*))read_lock;
+			this->public.write_lock = (void(*)(rwlock_t*))write_lock;
+			this->public.unlock = (void(*)(rwlock_t*))rw_unlock;
+			this->public.destroy = (void(*)(rwlock_t*))rw_destroy;
+			
+			pthread_rwlock_init(&this->rwlock, NULL);
+			profiler_init(&this->profile);
+			
 			return &this->public;
 		}
 	}
