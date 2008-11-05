@@ -304,12 +304,12 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 					!ts_list_is_host(this->tsr, me))
 				{
 					this->mode = MODE_TUNNEL;
-					DBG1(DBG_IKE, "not using tranport mode, not host-to-host");
+					DBG1(DBG_IKE, "not using transport mode, not host-to-host");
 				}
 				else if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
 				{
 					this->mode = MODE_TUNNEL;
-					DBG1(DBG_IKE, "not using tranport mode, connection NATed");
+					DBG1(DBG_IKE, "not using transport mode, connection NATed");
 				}
 				break;
 			case MODE_BEET:
