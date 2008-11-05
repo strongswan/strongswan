@@ -15,16 +15,17 @@
  * $Id$
  */
 
-#include "mutex.h"
-
-#include <library.h>
-#include <debug.h>
-
+#define _GNU_SOURCE
 #include <pthread.h>
 #include <sys/time.h>
 #include <stdint.h>
 #include <time.h>
 #include <errno.h>
+
+#include "mutex.h"
+
+#include <library.h>
+#include <debug.h>
 
 typedef struct private_mutex_t private_mutex_t;
 typedef struct private_r_mutex_t private_r_mutex_t;
@@ -441,6 +442,14 @@ static void write_lock(private_rwlock_t *this)
 }
 
 /**
+ * Implementation of rwlock_t.try_write_lock
+ */
+static bool try_write_lock(private_rwlock_t *this)
+{
+	return pthread_rwlock_trywrlock(&this->rwlock) == 0;
+}
+
+/**
  * Implementation of rwlock_t.unlock
  */
 static void rw_unlock(private_rwlock_t *this)
@@ -472,6 +481,7 @@ rwlock_t *rwlock_create(rwlock_type_t type)
 			
 			this->public.read_lock = (void(*)(rwlock_t*))read_lock;
 			this->public.write_lock = (void(*)(rwlock_t*))write_lock;
+			this->public.try_write_lock = (bool(*)(rwlock_t*))try_write_lock;
 			this->public.unlock = (void(*)(rwlock_t*))rw_unlock;
 			this->public.destroy = (void(*)(rwlock_t*))rw_destroy;
 			

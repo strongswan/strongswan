@@ -15,12 +15,10 @@
  * $Id$
  */
 
-#define _GNU_SOURCE
-#include <pthread.h>
-
 #include "nm_creds.h"
 
 #include <daemon.h>
+#include <utils/mutex.h>
 
 typedef struct private_nm_creds_t private_nm_creds_t;
 
@@ -62,7 +60,7 @@ struct private_nm_creds_t {
 	/**
 	 * read/write lock
 	 */
-	pthread_rwlock_t lock;
+	rwlock_t *lock;
 };
 
 /**
@@ -91,10 +89,10 @@ static enumerator_t *create_usercert_enumerator(private_nm_creds_t *this,
 		}
 		public->destroy(public);
 	}
-	pthread_rwlock_rdlock(&this->lock);
+	this->lock->read_lock(this->lock);
 	return enumerator_create_cleaner(
 								enumerator_create_single(this->usercert, NULL),
-								(void*)pthread_rwlock_unlock, &this->lock);
+								(void*)this->lock->unlock, this->lock);
 }
 
 /**
@@ -138,9 +136,9 @@ static enumerator_t* create_cert_enumerator(private_nm_creds_t *this,
 		}
 		public->destroy(public);
 	}
-	pthread_rwlock_rdlock(&this->lock);
+	this->lock->read_lock(this->lock);
 	return enumerator_create_cleaner(enumerator_create_single(this->cert, NULL),
-									 (void*)pthread_rwlock_unlock, &this->lock);
+									 (void*)this->lock->unlock, this->lock);
 }
 
 /**
@@ -167,9 +165,9 @@ static enumerator_t* create_private_enumerator(private_nm_creds_t *this,
 			return NULL;
 		}
 	}
-	pthread_rwlock_rdlock(&this->lock);
+	this->lock->read_lock(this->lock);
 	return enumerator_create_cleaner(enumerator_create_single(this->key, NULL),
-									 (void*)pthread_rwlock_unlock, &this->lock);
+									 (void*)this->lock->unlock, this->lock);
 }
 
 /**
@@ -205,7 +203,8 @@ static bool shared_enumerate(shared_enumerator_t *this, shared_key_t **key,
 static void shared_destroy(shared_enumerator_t *this)
 {
 	this->key->destroy(this->key);
-	pthread_rwlock_unlock(&this->this->lock);
+	this->lock->destroy(this->lock);
+	this->this->lock->unlock(this->this->lock);
 	free(this);
 }
 /**
@@ -235,7 +234,7 @@ static enumerator_t* create_shared_enumerator(private_nm_creds_t *this,
 	enumerator->public.destroy = (void*)shared_destroy;
 	enumerator->this = this;
 	enumerator->done = FALSE;
-	pthread_rwlock_rdlock(&this->lock);
+	this->lock->read_lock(this->lock);
 	enumerator->key = shared_key_create(type,
 										chunk_clone(chunk_create(this->pass,
 													strlen(this->pass))));
@@ -247,10 +246,10 @@ static enumerator_t* create_shared_enumerator(private_nm_creds_t *this,
  */
 static void set_certificate(private_nm_creds_t *this, certificate_t *cert)
 {
-	pthread_rwlock_wrlock(&this->lock);
+	this->lock->write_lock(this->lock);
 	DESTROY_IF(this->cert);
 	this->cert = cert;
-	pthread_rwlock_unlock(&this->lock);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -259,14 +258,14 @@ static void set_certificate(private_nm_creds_t *this, certificate_t *cert)
 static void set_username_password(private_nm_creds_t *this, identification_t *id,
 						 char *password)
 {
-	pthread_rwlock_wrlock(&this->lock);
+	this->lock->write_lock(this->lock);
 	DESTROY_IF(this->user);
 	/* for EAP authentication, we use always use ID_EAP type */
 	this->user = identification_create_from_encoding(ID_EAP,
 													 id->get_encoding(id));
 	free(this->pass);
 	this->pass = password ? strdup(password) : NULL;
-	pthread_rwlock_unlock(&this->lock);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -275,12 +274,12 @@ static void set_username_password(private_nm_creds_t *this, identification_t *id
 static void set_cert_and_key(private_nm_creds_t *this, certificate_t *cert,	
 							 private_key_t *key)
 {
-	pthread_rwlock_wrlock(&this->lock);
+	this->lock->write_lock(this->lock);
 	DESTROY_IF(this->key);
 	DESTROY_IF(this->usercert);
 	this->key = key;
 	this->usercert = cert;
-	pthread_rwlock_unlock(&this->lock);
+	this->lock->unlock(this->lock);
 }	
 
 /**
@@ -306,7 +305,7 @@ static void clear(private_nm_creds_t *this)
 static void destroy(private_nm_creds_t *this)
 {
 	clear(this);
-	pthread_rwlock_destroy(&this->lock);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -328,7 +327,7 @@ nm_creds_t *nm_creds_create()
 	this->public.clear = (void(*)(nm_creds_t*))clear;
 	this->public.destroy = (void(*)(nm_creds_t*))destroy;
 	
-	pthread_rwlock_init(&this->lock, NULL);
+	this->lock = rwlock_create(RWLOCK_DEFAULT);
 	
 	this->cert = NULL;
 	this->user = NULL;

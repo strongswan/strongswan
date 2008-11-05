@@ -130,6 +130,15 @@ struct rwlock_t {
 	void (*write_lock)(rwlock_t *this);
 	
 	/**
+	 * Try to acquire the write lock.
+	 *
+	 * Never blocks, but returns FALSE if the lock was already occupied.
+	 *
+	 * @return		TRUE if lock acquired
+	 */
+	bool (*try_write_lock)(rwlock_t *this);	
+	
+	/**
 	 * Release any acquired lock.
 	 */
 	void (*unlock)(rwlock_t *this);
