@@ -103,6 +103,7 @@ static void log_(private_backtrace_t *this, FILE *file)
 					}
 					fputc(c, file);
 				}
+				pclose(output);
 			}
 			else
 			{
@@ -163,12 +164,15 @@ backtrace_t *backtrace_create(int skip)
 {
 	private_backtrace_t *this;
 	void *frames[50];
-	int frame_count;
+	int frame_count = 0;
 	
+#ifdef HAVE_BACKTRACE
 	frame_count = backtrace(frames, countof(frames));
+#endif /* HAVE_BACKTRACE */
+	frame_count = max(frame_count - skip, 0);
 	this = malloc(sizeof(private_backtrace_t) + frame_count * sizeof(void*));
-	this->frame_count = frame_count - skip;
-	memcpy(this->frames, frames + skip, this->frame_count * sizeof(void*));
+	memcpy(this->frames, frames + skip, frame_count * sizeof(void*));
+	this->frame_count = frame_count;
 	
 	this->public.log = (void(*)(backtrace_t*,FILE*))log_;
 	this->public.contains_function = (bool(*)(backtrace_t*, char *function))contains_function;
