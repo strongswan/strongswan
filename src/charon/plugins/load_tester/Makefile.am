@@ -9,7 +9,8 @@ libstrongswan_load_tester_la_SOURCES = \
   load_tester_plugin.c load_tester_plugin.h \
   load_tester_config.c load_tester_config.h \
   load_tester_creds.c load_tester_creds.h \
-  load_tester_ipsec.c load_tester_ipsec.h
+  load_tester_ipsec.c load_tester_ipsec.h \
+  load_tester_listener.c load_tester_listener.h
 
 libstrongswan_load_tester_la_LDFLAGS = -module
 

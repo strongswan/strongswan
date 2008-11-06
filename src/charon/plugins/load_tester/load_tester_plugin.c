@@ -19,6 +19,7 @@
 #include "load_tester_config.h"
 #include "load_tester_creds.h"
 #include "load_tester_ipsec.h"
+#include "load_tester_listener.h"
 
 #include <unistd.h>
 
@@ -46,6 +47,11 @@ struct private_load_tester_plugin_t {
 	 * load_tester credential set implementation
 	 */
 	load_tester_creds_t *creds;
+	
+	/**
+	 * event handler, listens on bus
+	 */
+	load_tester_listener_t *listener;
 	
 	/**
 	 * number of iterations per thread
@@ -122,8 +128,10 @@ static void destroy(private_load_tester_plugin_t *this)
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	charon->credentials->remove_set(charon->credentials, &this->creds->credential_set);
+	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
+	this->listener->destroy(this->listener);
 	free(this);
 }
 
@@ -139,8 +147,10 @@ plugin_t *plugin_create()
 	
 	this->config = load_tester_config_create();
 	this->creds = load_tester_creds_create();
+	this->listener = load_tester_listener_create();
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->credentials->add_set(charon->credentials, &this->creds->credential_set);
+	charon->bus->add_listener(charon->bus, &this->listener->listener);
 	
 	if (lib->settings->get_bool(lib->settings,
 								"charon.plugins.load_tester.fake_kernel", FALSE))
