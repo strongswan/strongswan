@@ -203,7 +203,6 @@ static bool shared_enumerate(shared_enumerator_t *this, shared_key_t **key,
 static void shared_destroy(shared_enumerator_t *this)
 {
 	this->key->destroy(this->key);
-	this->lock->destroy(this->lock);
 	this->this->lock->unlock(this->this->lock);
 	free(this);
 }
