@@ -88,9 +88,50 @@ struct kv_t {
 	char *value;
 };
 
-static char *find(section_t *section, char *key)
+/**
+ * find a section by a given key
+ */
+static section_t *find_section(section_t *section, char *key, va_list args)
 {
-	char *name, *pos, *value = NULL;
+	char name[512], *pos;
+	enumerator_t *enumerator;
+	section_t *current, *found = NULL;
+	
+	if (section == NULL)
+	{
+		return NULL;
+	}
+	if (vsnprintf(name, sizeof(name), key, args) >= sizeof(name))
+	{
+		return NULL;
+	}
+	
+	pos = strchr(name, '.');
+	if (pos)
+	{
+		*pos = '\0';
+		pos++;
+	}
+	enumerator = section->sections->create_enumerator(section->sections);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (streq(current->name, name))
+		{
+			found = current;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (found && pos)
+	{
+		return find_section(found, pos, args);
+	}
+	return found;
+}
+
+static char *find_value(section_t *section, char *key, va_list args)
+{
+	char name[512], *pos, *value = NULL;
 	enumerator_t *enumerator;
 	kv_t *kv;
 	section_t *current, *found = NULL;
@@ -100,7 +141,10 @@ static char *find(section_t *section, char *key)
 		return NULL;
 	}
 	
-	name = strdupa(key);
+	if (vsnprintf(name, sizeof(name), key, args) >= sizeof(name))
+	{
+		return NULL;
+	}
 	
 	pos = strchr(name, '.');
 	if (pos)
@@ -119,7 +163,7 @@ static char *find(section_t *section, char *key)
 		enumerator->destroy(enumerator);
 		if (found)
 		{
-			return find(found, pos);
+			return find_value(found, pos, args);
 		}
 	}
 	else
@@ -141,11 +185,14 @@ static char *find(section_t *section, char *key)
 /**
  * Implementation of settings_t.get.
  */
-static char* get_str(private_settings_t *this, char *key, char *def)
+static char* get_str(private_settings_t *this, char *key, char *def, ...)
 {
 	char *value;
+	va_list args;
 	
-	value = find(this->top, key);
+	va_start(args, def);
+	value = find_value(this->top, key, args);
+	va_end(args);
 	if (value)
 	{
 		return value;
@@ -156,11 +203,14 @@ static char* get_str(private_settings_t *this, char *key, char *def)
 /**
  * Implementation of settings_t.get_bool.
  */
-static bool get_bool(private_settings_t *this, char *key, bool def)
+static bool get_bool(private_settings_t *this, char *key, bool def, ...)
 {
 	char *value;
+	va_list args;
 	
-	value = find(this->top, key);
+	va_start(args, def);
+	value = find_value(this->top, key, args);
+	va_end(args);
 	if (value)
 	{
 		if (strcasecmp(value, "true") == 0 ||
@@ -184,12 +234,15 @@ static bool get_bool(private_settings_t *this, char *key, bool def)
 /**
  * Implementation of settings_t.get_int.
  */
-static int get_int(private_settings_t *this, char *key, int def)
+static int get_int(private_settings_t *this, char *key, int def, ...)
 {
 	char *value;
 	int intval;
+	va_list args;
 	
-	value = find(this->top, key);
+	va_start(args, def);
+	value = find_value(this->top, key, args);
+	va_end(args);
 	if (value)
 	{
 		errno = 0;
@@ -205,12 +258,15 @@ static int get_int(private_settings_t *this, char *key, int def)
 /**
  * Implementation of settings_t.get_time.
  */
-static u_int32_t get_time(private_settings_t *this, char *key, u_int32_t def)
+static u_int32_t get_time(private_settings_t *this, char *key, u_int32_t def, ...)
 {
 	char *value, *endptr;
 	u_int32_t timeval;
+	va_list args;
 	
-	value = find(this->top, key);
+	va_start(args, def);
+	value = find_value(this->top, key, args);
+	va_end(args);
 	if (value)
 	{
 		errno = 0;
@@ -236,6 +292,37 @@ static u_int32_t get_time(private_settings_t *this, char *key, u_int32_t def)
 		}
 	}
 	return def;
+}
+
+/**
+ * Enumerate section names, not sections
+ */
+static bool section_filter(void *null, section_t **in, char **out)
+{
+	*out = (*in)->name;
+	return TRUE;
+}
+
+/**
+ * Implementation of settings_t.create_section_enumerator
+ */
+static enumerator_t* create_section_enumerator(private_settings_t *this,
+											   char *key, ...)
+{
+	section_t *section;
+	va_list args;
+	
+	va_start(args, key);
+	section = find_section(this->top, key, args);
+	va_end(args);
+	
+	if (!section)
+	{	
+		return enumerator_create_empty();
+	}
+	return enumerator_create_filter(
+					section->sections->create_enumerator(section->sections),
+					(void*)section_filter, NULL, NULL);
 }
 
 /**
@@ -400,10 +487,11 @@ settings_t *settings_create(char *file)
 {
 	private_settings_t *this = malloc_thing(private_settings_t);
 	
-	this->public.get_str = (char*(*)(settings_t*, char *key, char* def))get_str;
-	this->public.get_int = (int(*)(settings_t*, char *key, int def))get_int;
-	this->public.get_time = (u_int32_t(*)(settings_t*, char *key, u_int32_t def))get_time;
-	this->public.get_bool = (bool(*)(settings_t*, char *key, bool def))get_bool;
+	this->public.get_str = (char*(*)(settings_t*, char *key, char* def, ...))get_str;
+	this->public.get_int = (int(*)(settings_t*, char *key, int def, ...))get_int;
+	this->public.get_time = (u_int32_t(*)(settings_t*, char *key, u_int32_t def, ...))get_time;
+	this->public.get_bool = (bool(*)(settings_t*, char *key, bool def, ...))get_bool;
+	this->public.create_section_enumerator = (enumerator_t*(*)(settings_t*,char *section, ...))create_section_enumerator;
 	this->public.destroy = (void(*)(settings_t*))destroy;
 	
 	this->top = NULL;

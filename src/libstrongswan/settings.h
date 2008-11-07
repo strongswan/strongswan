@@ -26,11 +26,12 @@
 typedef struct settings_t settings_t;
 
 #include <library.h>
+#include <utils/enumerator.h>
 
 /**
  * Generic configuration options read from a config file.
  *
- * The sytax is quite simple:
+ * The syntax is quite simple:
  *
  * settings := (section|keyvalue)*
  * section  := name { settings }
@@ -38,8 +39,8 @@ typedef struct settings_t settings_t;
  *
  * E.g.:
  * @code
-   a = b
-   section-one {
+  	a = b
+  	section-one {
   		somevalue = asdf
   		subsection {
   			othervalue = xxx
@@ -58,43 +59,56 @@ struct settings_t {
 	/**
 	 * Get a settings value as a string.
 	 *
-	 * @param key		key including sections
+	 * @param key		key including sections, printf style format
 	 * @param def		value returned if key not found
+	 * @param ...		argument list for key
 	 * @return			value pointing to internal string
 	 */
-	char* (*get_str)(settings_t *this, char *key, char *def);
+	char* (*get_str)(settings_t *this, char *key, char *def, ...);
 	
 	/**
 	 * Get a boolean yes|no, true|false value.
 	 *
-	 * @param jey		key including sections
-	 * @param def		default value returned if key not found
+	 * @param key		key including sections, printf style format
+	 * @param def		value returned if key not found
+	 * @param ...		argument list for key
 	 * @return			value of the key
 	 */
-	bool (*get_bool)(settings_t *this, char *key, bool def);
+	bool (*get_bool)(settings_t *this, char *key, bool def, ...);
 	
 	/**
 	 * Get an integer value.
 	 *
-	 * @param key		key including sections
-	 * @param def		default value to return if key not found
+	 * @param key		key including sections, printf style format
+	 * @param def		value returned if key not found
+	 * @param ...		argument list for key
 	 * @return			value of the key
 	 */
-	int (*get_int)(settings_t *this, char *key, int def);
+	int (*get_int)(settings_t *this, char *key, int def, ...);
 	
 	/**
 	 * Get a time value.
 	 *
-	 * @param key		key including sections
-	 * @param def		default value to return if key not found
+	 * @param key		key including sections, printf style format
+	 * @param def		value returned if key not found
+	 * @param ...		argument list for key
 	 * @return			value of the key
 	 */
-	u_int32_t (*get_time)(settings_t *this, char *key, u_int32_t def);
-
+	u_int32_t (*get_time)(settings_t *this, char *key, u_int32_t def, ...);
+	
 	/**
-     * Destroy a settings instance.
-     */
-    void (*destroy)(settings_t *this);
+	 * Create an enumerator over subsection names of a section.
+	 *
+	 * @param section	section including parents, printf style format
+	 * @param ...		argument list for key
+	 * @return			enumerator over subsection names
+	 */
+	enumerator_t* (*create_section_enumerator)(settings_t *this,
+											   char *section, ...);
+	/**
+	 * Destroy a settings instance.
+	 */
+	void (*destroy)(settings_t *this);
 };
 
 /**
