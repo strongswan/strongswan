@@ -834,10 +834,11 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* 
 static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
+	sockaddr_t *local_addr, *remote_addr;
 	traffic_selector_t *src_ts, *dst_ts;
 	policy_dir_t dir;
-	u_int32_t reqid = 0;
-	host_t *local;
+	u_int32_t local_len, reqid = 0;
+	host_t *local, *remote;
 	job_t *job;
 
 	DBG2(DBG_KNL, "received an SADB_X_MIGRATE");
@@ -849,18 +850,23 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	}
 	src_ts = sadb_address2ts(response.src);
 	dst_ts = sadb_address2ts(response.dst);
-	local = host_create_from_sockaddr((sockaddr_t*)&response.x_kmaddress[1]);
+	local_addr  = (sockaddr_t*)&response.x_kmaddress[1];
+	local = host_create_from_sockaddr(local_addr);
+	local_len = (local_addr->sa_family == AF_INET6)?
+				sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
+	remote_addr = (sockaddr_t*)((u_int8_t*)local_addr + local_len);
+	remote = host_create_from_sockaddr(remote_addr);
 	dir = kernel2dir(response.x_policy->sadb_x_policy_dir);
 	DBG2(DBG_KNL, "  policy %R === %R %N, id %u", src_ts, dst_ts,
 					 policy_dir_names, dir, response.x_policy->sadb_x_policy_id);
-	DBG2(DBG_KNL, "  kmaddress: %H", local);
+	DBG2(DBG_KNL, "  kmaddress: %H...%H", local, remote);
 	
 	if (src_ts && dst_ts)
 	{
 		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N with reqid {%u}",
 					   src_ts, dst_ts, policy_dir_names, dir, reqid, local);
 		job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, dir,
-										 local, NULL);
+										 local, remote);
 		charon->processor->queue_job(charon->processor, job);
 	}
 	else
@@ -868,6 +874,7 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 		DESTROY_IF(src_ts);
 		DESTROY_IF(dst_ts);
 		DESTROY_IF(local);
+		DESTROY_IF(remote);
 	}
 }
 

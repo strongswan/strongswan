@@ -587,7 +587,7 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 			kmaddress = (struct xfrm_user_kmaddress*)RTA_DATA(rta);
 			local  = xfrm2host(kmaddress->family, &kmaddress->local, 0);
 			remote = xfrm2host(kmaddress->family, &kmaddress->remote, 0);
-			DBG2(DBG_KNL, "  %H...%H", local, remote);
+			DBG2(DBG_KNL, "  kmaddress: %H...%H", local, remote);
 		}
 		else if (rta->rta_type == XFRMA_MIGRATE)
 		{
