@@ -834,11 +834,10 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* 
 static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
-	sockaddr_t *local_addr, *remote_addr;
 	traffic_selector_t *src_ts, *dst_ts;
 	policy_dir_t dir;
-	u_int32_t local_len, reqid = 0;
-	host_t *local, *remote;
+	u_int32_t reqid = 0;
+	host_t *local = NULL, *remote = NULL;
 	job_t *job;
 
 	DBG2(DBG_KNL, "received an SADB_X_MIGRATE");
@@ -850,16 +849,24 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	}
 	src_ts = sadb_address2ts(response.src);
 	dst_ts = sadb_address2ts(response.dst);
-	local_addr  = (sockaddr_t*)&response.x_kmaddress[1];
-	local = host_create_from_sockaddr(local_addr);
-	local_len = (local_addr->sa_family == AF_INET6)?
-				sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
-	remote_addr = (sockaddr_t*)((u_int8_t*)local_addr + local_len);
-	remote = host_create_from_sockaddr(remote_addr);
 	dir = kernel2dir(response.x_policy->sadb_x_policy_dir);
 	DBG2(DBG_KNL, "  policy %R === %R %N, id %u", src_ts, dst_ts,
 					 policy_dir_names, dir, response.x_policy->sadb_x_policy_id);
-	DBG2(DBG_KNL, "  kmaddress: %H...%H", local, remote);
+	
+	/* SADB_X_EXT_KMADDRESS is not present in unpatched kernels < 2.6.28 */   
+	if (response.x_kmaddress)
+	{
+		sockaddr_t *local_addr, *remote_addr;
+		u_int32_t local_len;
+
+		local_addr  = (sockaddr_t*)&response.x_kmaddress[1];
+		local = host_create_from_sockaddr(local_addr);
+		local_len = (local_addr->sa_family == AF_INET6)?
+					sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
+		remote_addr = (sockaddr_t*)((u_int8_t*)local_addr + local_len);
+		remote = host_create_from_sockaddr(remote_addr);
+		DBG2(DBG_KNL, "  kmaddress: %H...%H", local, remote);
+	}
 	
 	if (src_ts && dst_ts)
 	{
