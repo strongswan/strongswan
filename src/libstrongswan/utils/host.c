@@ -396,8 +396,7 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 	
 	if (streq(string, "%any"))
 	{
-		string = "0.0.0.0";
-		this->address.sa_family = AF_INET;
+		return host_create_any(AF_INET);
 	}
 	else if (strchr(string, '.'))
 	{
@@ -449,8 +448,13 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	char buf[512];
 	int err, ret;
 
-	if (af == AF_INET6 || strchr(string, ':') || streq(string, "%any"))
-	{/* gethostbyname does not like IPv6 addresses or wildcards - fallback */
+	if (streq(string, "%any"))
+	{
+		return host_create_any(af ? af : AF_INET);
+	}
+	else if (strchr(string, ':'))
+	{
+		/* gethostbyname does not like IPv6 addresses - fallback */
 		return host_create_from_string(string, port);
 	}
 	
