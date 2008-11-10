@@ -97,7 +97,7 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 		
 		if (child_cfg)
 		{
-			for (i = 0; i < this->iterations; i++)
+			for (i = 0; this->iterations == 0 || i < this->iterations; i++)
 			{
 				charon->controller->initiate(charon->controller,
 					peer_cfg->get_ref(peer_cfg), child_cfg->get_ref(child_cfg),
@@ -161,9 +161,9 @@ plugin_t *plugin_create()
 	this->delay = lib->settings->get_int(lib->settings,
 								"charon.plugins.load_tester.delay", 0);
 	this->iterations = lib->settings->get_int(lib->settings,
-								"charon.plugins.load_tester.iterations", 0);
+								"charon.plugins.load_tester.iterations", 1);
 	this->initiators = lib->settings->get_int(lib->settings,
-								"charon.plugins.load_tester.initiators", 1);
+								"charon.plugins.load_tester.initiators", 0);
 	for (i = 0; i < this->initiators; i++)
 	{
 		charon->processor->queue_job(charon->processor, 
