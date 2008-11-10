@@ -163,6 +163,7 @@ char *whitelist[] = {
 	/* glibc functions */
 	"mktime",
 	"__gmtime_r",
+	"localtime_r",
 	"tzset",
 	"inet_ntoa",
 	"strerror",
