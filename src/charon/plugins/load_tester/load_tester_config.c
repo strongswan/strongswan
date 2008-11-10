@@ -62,9 +62,14 @@ static enumerator_t* create_ike_cfg_enumerator(private_load_tester_config_t *thi
 /**
  * implements backend_t.get_peer_cfg_by_name.
  */
-static peer_cfg_t *get_peer_cfg_by_name(private_load_tester_config_t *this, char *name)
+static peer_cfg_t *get_peer_cfg_by_name(private_load_tester_config_t *this,
+										char *name)
 {
-	return this->peer_cfg->get_ref(this->peer_cfg);;
+	if (streq(name, "load-test"))
+	{
+		return this->peer_cfg->get_ref(this->peer_cfg);;
+	}
+	return NULL;
 }
 
 /**

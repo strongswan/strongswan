@@ -157,6 +157,10 @@ static char cert[] = {
 static enumerator_t* create_private_enumerator(private_load_tester_creds_t *this,
 							key_type_t type, identification_t *id)
 {
+	if (this->private == NULL)
+	{
+		return NULL;
+	}
 	if (type != KEY_ANY && type != KEY_RSA)
 	{
 		return NULL;
@@ -181,6 +185,10 @@ static enumerator_t* create_cert_enumerator(private_load_tester_creds_t *this,
 							certificate_type_t cert, key_type_t key,
 							identification_t *id, bool trusted)
 {
+	if (this->cert == NULL)
+	{
+		return NULL;
+	}
 	if (cert != CERT_ANY && cert != CERT_X509)
 	{
 		return NULL;
@@ -201,8 +209,8 @@ static enumerator_t* create_cert_enumerator(private_load_tester_creds_t *this,
  */
 static void destroy(private_load_tester_creds_t *this)
 {
-	this->private->destroy(this->private);
-	this->cert->destroy(this->cert);
+	DESTROY_IF(this->private);
+	DESTROY_IF(this->cert);
 	free(this);
 }
 
