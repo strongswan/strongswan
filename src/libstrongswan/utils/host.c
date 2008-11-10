@@ -392,13 +392,15 @@ static private_host_t *host_create_empty(void)
  */
 host_t *host_create_from_string(char *string, u_int16_t port)
 {
-	private_host_t *this = host_create_empty();
+	private_host_t *this;
 	
 	if (streq(string, "%any"))
 	{
 		return host_create_any(AF_INET);
 	}
-	else if (strchr(string, '.'))
+	
+	this = host_create_empty();
+	if (strchr(string, '.'))
 	{
 		this->address.sa_family = AF_INET;
 	}
@@ -406,7 +408,6 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 	{
 		this->address.sa_family = AF_INET6;
 	}
-
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
