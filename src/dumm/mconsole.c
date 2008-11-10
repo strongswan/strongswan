@@ -247,7 +247,7 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 	}
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, nsock, sizeof(addr));
+	strncpy(addr.sun_path, nsock, sizeof(addr.sun_path));
 	if (bind(this->notify, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
 		DBG1("binding mconsole notify socket to '%s' failed: %m", nsock);
@@ -306,7 +306,7 @@ static bool setup_console(private_mconsole_t *this)
 	}
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	snprintf(&addr.sun_path[1], sizeof(addr.sun_path), "%5d-%d",
+	snprintf(&addr.sun_path[1], sizeof(addr.sun_path)-1, "%5d-%d",
 			 getpid(), this->console);
 	if (bind(this->console, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
