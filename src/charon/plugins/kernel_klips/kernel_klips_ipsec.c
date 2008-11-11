@@ -812,8 +812,9 @@ static kernel_algorithm_t integrity_algs[] = {
 	{END_OF_LIST, 				0,							},
 };
 
+#if 0
 /**
- * Algorithms for IPComp
+ * Algorithms for IPComp, unused yet
  */
 static kernel_algorithm_t compression_algs[] = {
 /*	{IPCOMP_OUI, 				0							}, */
@@ -822,6 +823,7 @@ static kernel_algorithm_t compression_algs[] = {
 /*	{IPCOMP_LZJH,				0							}, */
 	{END_OF_LIST, 				0							},
 };
+#endif
 
 /**
  * Look up a kernel algorithm ID and its key size
