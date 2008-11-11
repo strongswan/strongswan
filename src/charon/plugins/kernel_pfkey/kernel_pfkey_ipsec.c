@@ -1879,6 +1879,7 @@ static bool add_bypass_policies(private_kernel_pfkey_ipsec_t *this)
 {
 	int fd, family, port;
 	enumerator_t *sockets;
+	bool status = TRUE;
 	
 	sockets = charon->socket->create_enumerator(charon->socket);
 	while (sockets->enumerate(sockets, &fd, &family, &port))
@@ -1910,17 +1911,20 @@ static bool add_bypass_policies(private_kernel_pfkey_ipsec_t *this)
 		{
 			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
 				 strerror(errno));
-			return FALSE;
+			status = FALSE;
+			break;
 		}
 		policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
 		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 		{
 			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s", 
 				 strerror(errno));
-			return FALSE;
+			status = FALSE;
+			break;
 		}
 	}
-	return TRUE;
+	sockets->destroy(sockets);
+	return status;
 }
 
 /*

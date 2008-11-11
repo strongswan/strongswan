@@ -1756,6 +1756,7 @@ static bool add_bypass_policies()
 {
 	int fd, family, port;
 	enumerator_t *sockets;
+	bool status = TRUE;
 	
 	/* we open an AF_KEY socket to autoload the af_key module. Otherwise
 	 * setsockopt(IPSEC_POLICY) won't work. */
@@ -1797,17 +1798,20 @@ static bool add_bypass_policies()
 		{
 			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
 				 strerror(errno));
-			return FALSE;
+			status = FALSE;
+			break;
 		}
 		policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
 		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 		{
 			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s", 
 				 strerror(errno));
-			return FALSE;
+			status = FALSE;
+			break;
 		}
 	}
-	return TRUE;
+	sockets->destroy(sockets);
+	return status;
 }
 
 /*
