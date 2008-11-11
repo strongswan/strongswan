@@ -23,11 +23,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <stdint.h>
+#include <linux/ipsec.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <linux/xfrm.h>
 #include <linux/udp.h>
-#include <netinet/in.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <errno.h>
@@ -49,6 +50,11 @@
 /** required for Linux 2.6.26 kernel and later */
 #ifndef XFRM_STATE_AF_UNSPEC
 #define XFRM_STATE_AF_UNSPEC	32
+#endif
+
+/** from linux/in.h */
+#ifndef IP_IPSEC_POLICY
+#define IP_IPSEC_POLICY 16
 #endif
 
 /** default priority of installed policies */
@@ -849,14 +855,25 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 					   u_int64_t expire_soft, u_int64_t expire_hard,
 					   u_int16_t enc_alg, chunk_t enc_key,
 					   u_int16_t int_alg, chunk_t int_key,
-					   ipsec_mode_t mode, u_int16_t ipcomp, bool encap,
-					   bool replace)
+					   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
+					   bool encap, bool inbound)
 {
 	unsigned char request[NETLINK_BUFFER_SIZE];
 	char *alg_name;
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
 	u_int16_t icv_size = 64;	
+	
+	/* if IPComp is used, we install an additional IPComp SA. if the cpi is 0
+	 * we are in the recursive call below */
+	if (ipcomp != IPCOMP_NONE && cpi != 0)
+	{
+		this->public.interface.add_sa(&this->public.interface,
+ 				src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, 0, 0,
+ 				ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
+ 				mode, ipcomp, 0, FALSE, inbound);
+		ipcomp = IPCOMP_NONE;
+	}
 	
 	memset(&request, 0, sizeof(request));
 	
@@ -865,7 +882,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	hdr->nlmsg_type = replace ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
+	hdr->nlmsg_type = inbound ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 	
 	sa = (struct xfrm_usersa_info*)NLMSG_DATA(hdr);
@@ -1149,9 +1166,10 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
  * Implementation of kernel_interface_t.update_sa.
  */
 static status_t update_sa(private_kernel_netlink_ipsec_t *this,
-						  u_int32_t spi, protocol_id_t protocol,
+						  u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,
 						  host_t *src, host_t *dst,
-						  host_t *new_src, host_t *new_dst, bool encap)
+						  host_t *new_src, host_t *new_dst,
+						  bool encap, bool new_encap)
 {
 	unsigned char request[NETLINK_BUFFER_SIZE], *pos;
 	struct nlmsghdr *hdr, *out = NULL;
@@ -1163,6 +1181,14 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	struct xfrm_encap_tmpl* tmpl = NULL;
 	bool got_replay_state;
 	struct xfrm_replay_state replay;
+	
+	/* if IPComp is used, we first update the IPComp SA */
+	if (cpi)
+	{
+		this->public.interface.update_sa(&this->public.interface, 
+				htonl(ntohs(cpi)), IPPROTO_COMP, 0,
+				src, dst, new_src, new_dst, FALSE, FALSE);
+	}
 	
 	memset(&request, 0, sizeof(request));
 	
@@ -1219,8 +1245,9 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	got_replay_state = (get_replay_state(
 						this, spi, protocol, dst, &replay) == SUCCESS);
 	
-	/* delete the old SA */
-	if (this->public.interface.del_sa(&this->public.interface, dst, spi, protocol) != SUCCESS)
+	/* delete the old SA (without affecting the IPComp SA) */
+	if (this->public.interface.del_sa(&this->public.interface, dst, spi,
+			protocol, 0) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete old SAD entry with SPI %.8x", ntohl(spi));
 		free(out);
@@ -1320,11 +1347,18 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
  * Implementation of kernel_interface_t.del_sa.
  */
 static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *dst,
-					   u_int32_t spi, protocol_id_t protocol)
+					   u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
 {
 	unsigned char request[NETLINK_BUFFER_SIZE];
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_id *sa_id;
+	
+	/* if IPComp was used, we first delete the additional IPComp SA */
+	if (cpi)
+	{
+		this->public.interface.del_sa(&this->public.interface, dst,
+				htonl(ntohs(cpi)), IPPROTO_COMP, 0);
+	}
 	
 	memset(&request, 0, sizeof(request));
 	
@@ -1357,9 +1391,10 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 						   host_t *src, host_t *dst,
 						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
-						   policy_dir_t direction, protocol_id_t protocol,
-						   u_int32_t reqid, bool high_prio, ipsec_mode_t mode,
-						   u_int16_t ipcomp)
+						   policy_dir_t direction, u_int32_t spi,
+						   protocol_id_t protocol, u_int32_t reqid,
+						   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
+						   bool routed)
 {
 	iterator_t *iterator;
 	policy_entry_t *current, *policy;
@@ -1413,7 +1448,7 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	policy_info->sel = policy->sel;
 	policy_info->dir = policy->direction;
 	/* calculate priority based on source selector size, small size = high prio */
-	policy_info->priority = high_prio ? PRIO_HIGH : PRIO_LOW;
+	policy_info->priority = routed ? PRIO_LOW : PRIO_HIGH;
 	policy_info->priority -= policy->sel.prefixlen_s * 10;
 	policy_info->priority -= policy->sel.proto ? 2 : 0;
 	policy_info->priority -= policy->sel.sport_mask ? 1 : 0;
@@ -1617,7 +1652,7 @@ static status_t query_policy(private_kernel_netlink_ipsec_t *this,
 static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 						   traffic_selector_t *src_ts, 
 						   traffic_selector_t *dst_ts,
-						   policy_dir_t direction)
+						   policy_dir_t direction, bool unrouted)
 {
 	policy_entry_t *current, policy, *to_delete = NULL;
 	route_entry_t *route;
@@ -1714,6 +1749,67 @@ static void destroy(private_kernel_netlink_ipsec_t *this)
 	free(this);
 }
 
+/**
+ * Add bypass policies for IKE on the sockets used by charon
+ */
+static bool add_bypass_policies()
+{
+	int fd, family, port;
+	enumerator_t *sockets;
+	
+	/* we open an AF_KEY socket to autoload the af_key module. Otherwise
+	 * setsockopt(IPSEC_POLICY) won't work. */
+	fd = socket(AF_KEY, SOCK_RAW, PF_KEY_V2);
+	if (fd == 0)
+	{
+		DBG1(DBG_KNL, "could not open AF_KEY socket");
+		return FALSE;
+	}
+	close(fd);
+	
+	sockets = charon->socket->create_enumerator(charon->socket);
+	while (sockets->enumerate(sockets, &fd, &family, &port))
+	{
+		struct sadb_x_policy policy;
+		u_int sol, ipsec_policy;
+		
+		switch (family)
+		{
+			case AF_INET:
+				sol = SOL_IP;
+				ipsec_policy = IP_IPSEC_POLICY;
+				break;
+			case AF_INET6:
+			{
+				sol = SOL_IPV6;
+				ipsec_policy = IPV6_IPSEC_POLICY;
+				break;
+			}
+		}
+		
+		memset(&policy, 0, sizeof(policy));
+		policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
+		policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
+		policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
+	
+		policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
+		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
+		{
+			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
+				 strerror(errno));
+			return FALSE;
+		}
+		policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
+		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
+		{
+			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s", 
+				 strerror(errno));
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 /*
  * Described in header.
  */
@@ -1725,12 +1821,12 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,bool,bool))add_sa;
-	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
-	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
-	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,ipsec_mode_t,u_int16_t))add_policy;
+	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
+	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
+	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
+	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
-	this->public.interface.del_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
+	this->public.interface.del_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,bool))del_policy;
 	this->public.interface.destroy = (void(*)(kernel_ipsec_t*)) destroy;
 
 	/* private members */
@@ -1738,6 +1834,12 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	this->mutex = mutex_create(MUTEX_DEFAULT);
 	this->install_routes = lib->settings->get_bool(lib->settings,
 					"charon.install_routes", TRUE);
+	
+	/* add bypass policies on the sockets used by charon */
+	if (!add_bypass_policies())
+	{
+		charon->kill(charon, "unable to add bypass policies on sockets");
+	}
 	
 	this->socket_xfrm = netlink_socket_create(NETLINK_XFRM);
 	

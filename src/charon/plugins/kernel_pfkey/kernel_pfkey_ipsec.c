@@ -38,6 +38,11 @@
 #include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/update_sa_job.h>
 
+/** from linux/in.h */
+#ifndef IP_IPSEC_POLICY
+#define IP_IPSEC_POLICY 16
+#endif
+
 /** default priority of installed policies */
 #define PRIO_LOW 3000
 #define PRIO_HIGH 2000
@@ -920,12 +925,12 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 			case AF_INET:
 			{
 				struct sockaddr_in *sin = (struct sockaddr_in*)sa;
-				sin->sin_port = response.x_natt_dport->sadb_x_nat_t_port_port;
+				sin->sin_port = htons(response.x_natt_dport->sadb_x_nat_t_port_port);
 			}
 			case AF_INET6:
 			{
 				struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)sa;
-				sin6->sin6_port = response.x_natt_dport->sadb_x_nat_t_port_port;				
+				sin6->sin6_port = htons(response.x_natt_dport->sadb_x_nat_t_port_port);
 			}
 			default:
 				break;
@@ -1098,8 +1103,8 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 					   u_int64_t expire_soft, u_int64_t expire_hard,
 					   u_int16_t enc_alg, chunk_t enc_key,
 					   u_int16_t int_alg, chunk_t int_key,
-					   ipsec_mode_t mode, u_int16_t ipcomp, bool encap,
-					   bool replace)
+					   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
+					   bool encap, bool inbound)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1116,7 +1121,7 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 	
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
-	msg->sadb_msg_type = replace ? SADB_UPDATE : SADB_ADD;
+	msg->sadb_msg_type = inbound ? SADB_UPDATE : SADB_ADD;
 	msg->sadb_msg_satype = proto_ike2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 	
@@ -1229,9 +1234,10 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
  * Implementation of kernel_interface_t.update_sa.
  */
 static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
-						  u_int32_t spi, protocol_id_t protocol,
+						  u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,
 						  host_t *src, host_t *dst,
-						  host_t *new_src, host_t *new_dst, bool encap)
+						  host_t *new_src, host_t *new_dst,
+						  bool encap, bool new_encap)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1239,6 +1245,17 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 	struct sadb_address *addr;
 	pfkey_msg_t response;
 	size_t len;
+	
+	/* we can't update the SA if any of the ip addresses have changed.
+	 * that's because we can't use SADB_UPDATE and by deleting and readding the
+	 * SA the sequence numbers would get lost */
+	if (!src->ip_equals(src, new_src) ||
+		!dst->ip_equals(dst, new_dst))
+	{
+		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x: address changes"
+				" are not supported", ntohl(spi));
+		return NOT_SUPPORTED;
+	}
 	
 	memset(&request, 0, sizeof(request));
 	
@@ -1289,14 +1306,6 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 		return FAILED;
 	}
 	
-	/* delete the old SA */
-	if (this->public.interface.del_sa(&this->public.interface, dst, spi, protocol) != SUCCESS)
-	{
-		DBG1(DBG_KNL, "unable to delete old SAD entry with SPI %.8x", ntohl(spi));
-		free(out);
-		return FAILED;
-	}
-	
 	DBG2(DBG_KNL, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
 		 ntohl(spi), src, dst, new_src, new_dst);
 	
@@ -1304,22 +1313,15 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 	
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
-	msg->sadb_msg_type = SADB_ADD;
+	msg->sadb_msg_type = SADB_UPDATE;
 	msg->sadb_msg_satype = proto_ike2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 	
 	PFKEY_EXT_COPY(msg, response.sa);
 	PFKEY_EXT_COPY(msg, response.x_sa2);
 	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_SRC;
-	host2ext(new_src, addr);
-	PFKEY_EXT_ADD(msg, addr);
-	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_DST;
-	host2ext(new_dst, addr);
-	PFKEY_EXT_ADD(msg, addr);
+	PFKEY_EXT_COPY(msg, response.src);
+	PFKEY_EXT_COPY(msg, response.dst);
 	
 	PFKEY_EXT_COPY(msg, response.lft_soft);
 	PFKEY_EXT_COPY(msg, response.lft_hard);
@@ -1362,7 +1364,7 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
  * Implementation of kernel_interface_t.del_sa.
  */
 static status_t del_sa(private_kernel_pfkey_ipsec_t *this, host_t *dst,
-					   u_int32_t spi, protocol_id_t protocol)
+					   u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1423,9 +1425,10 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 						   host_t *src, host_t *dst,
 						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
-						   policy_dir_t direction, protocol_id_t protocol,
-						   u_int32_t reqid, bool high_prio, ipsec_mode_t mode,
-						   u_int16_t ipcomp)
+						   policy_dir_t direction, u_int32_t spi,
+						   protocol_id_t protocol, u_int32_t reqid,
+						   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
+						   bool routed)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1476,7 +1479,7 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 	pol->sadb_x_policy_id = 0;
 	pol->sadb_x_policy_dir = dir2kernel(direction);
 	/* calculate priority based on source selector size, small size = high prio */
-	pol->sadb_x_policy_priority = high_prio ? PRIO_HIGH : PRIO_LOW;
+	pol->sadb_x_policy_priority = routed ? PRIO_LOW : PRIO_HIGH;
 	pol->sadb_x_policy_priority -= policy->src.mask * 10;
 	pol->sadb_x_policy_priority -= policy->src.proto != IPSEC_PROTO_ANY ? 2 : 0;
 	pol->sadb_x_policy_priority -= policy->src.net->get_port(policy->src.net) ? 1 : 0;
@@ -1713,7 +1716,7 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 						   traffic_selector_t *src_ts, 
 						   traffic_selector_t *dst_ts,
-						   policy_dir_t direction)
+						   policy_dir_t direction, bool unrouted)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1869,6 +1872,57 @@ static void destroy(private_kernel_pfkey_ipsec_t *this)
 	free(this);
 }
 
+/**
+ * Add bypass policies for IKE on the sockets of charon
+ */
+static bool add_bypass_policies(private_kernel_pfkey_ipsec_t *this)
+{
+	int fd, family, port;
+	enumerator_t *sockets;
+	
+	sockets = charon->socket->create_enumerator(charon->socket);
+	while (sockets->enumerate(sockets, &fd, &family, &port))
+	{
+		struct sadb_x_policy policy;
+		u_int sol, ipsec_policy;
+		
+		switch (family)
+		{
+			case AF_INET:
+				sol = SOL_IP;
+				ipsec_policy = IP_IPSEC_POLICY;
+				break;
+			case AF_INET6:
+			{
+				sol = SOL_IPV6;
+				ipsec_policy = IPV6_IPSEC_POLICY;
+				break;
+			}
+		}
+		
+		memset(&policy, 0, sizeof(policy));
+		policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
+		policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
+		policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
+	
+		policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
+		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
+		{
+			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
+				 strerror(errno));
+			return FALSE;
+		}
+		policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
+		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
+		{
+			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s", 
+				 strerror(errno));
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 /*
  * Described in header.
  */
@@ -1879,12 +1933,12 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,bool,bool))add_sa;
-	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
-	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
-	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,ipsec_mode_t,u_int16_t))add_policy;
+	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
+	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
+	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
+	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
-	this->public.interface.del_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
+	this->public.interface.del_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,bool))del_policy;
 	
 	this->public.interface.destroy = (void(*)(kernel_ipsec_t*)) destroy;
 
@@ -1908,6 +1962,12 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 	if (this->socket_events <= 0)
 	{
 		charon->kill(charon, "unable to create PF_KEY event socket");
+	}
+	
+	/* add bypass policies on the sockets used by charon */
+	if (!add_bypass_policies(this))
+	{
+		charon->kill(charon, "unable to add bypass policies on sockets");
 	}
 	
 	/* register the event socket */

@@ -469,6 +469,14 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[kernel-klips],
+	AS_HELP_STRING([--enable-kernel-klips],[enable the KLIPS kernel interface. (default is NO).]),
+	[if test x$enableval = xyes; then
+		kernel_klips=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[nat-transport],
 	AS_HELP_STRING([--enable-nat-transport],[enable NAT traversal with IPsec transport mode (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -901,6 +909,7 @@ AM_CONDITIONAL(USE_EAP_GTC, test x$eap_gtc = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
+AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
 
 dnl other options
 dnl =============
@@ -977,6 +986,7 @@ AC_OUTPUT(
 	src/charon/plugins/eap_sim_file/Makefile
 	src/charon/plugins/kernel_netlink/Makefile
 	src/charon/plugins/kernel_pfkey/Makefile
+	src/charon/plugins/kernel_klips/Makefile
 	src/charon/plugins/smp/Makefile
 	src/charon/plugins/sql/Makefile
 	src/charon/plugins/medsrv/Makefile

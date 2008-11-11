@@ -50,6 +50,11 @@ enum child_sa_state_t {
 	CHILD_ROUTED,
 	
 	/**
+	 * Installing an in-use CHILD_SA
+	 */
+	CHILD_INSTALLING,
+	
+	/**
 	 * Installed an in-use CHILD_SA
 	 */
 	CHILD_INSTALLED,

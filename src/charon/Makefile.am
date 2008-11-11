@@ -156,6 +156,11 @@ if USE_KERNEL_PFKEY
   PLUGINS += kernel-pfkey
 endif
 
+if USE_KERNEL_KLIPS
+  SUBDIRS += plugins/kernel_klips
+  PLUGINS += kernel-klips
+endif
+
 if USE_KERNEL_NETLINK
   SUBDIRS += plugins/kernel_netlink
   PLUGINS += kernel-netlink

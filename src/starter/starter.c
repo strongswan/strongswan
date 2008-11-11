@@ -42,6 +42,7 @@
 #include "invokepluto.h"
 #include "invokecharon.h"
 #include "netkey.h"
+#include "klips.h"
 #include "cmp.h"
 #include "interfaces.h"
 
@@ -324,7 +325,11 @@ int main (int argc, char **argv)
     if (!starter_netkey_init())
     {
 	plog("no netkey IPSec stack detected");
-	exit(LSB_RC_FAILURE);
+	if (!starter_klips_init())
+	{
+	    plog("no KLIPS IPSec stack detected");
+	    exit(LSB_RC_FAILURE);
+	}
     }
 
     last_reload = time(NULL);

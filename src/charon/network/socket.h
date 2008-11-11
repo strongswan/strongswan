@@ -30,7 +30,7 @@ typedef struct socket_t socket_t;
 #include <library.h>
 #include <network/packet.h>
 #include <utils/host.h>
-#include <utils/linked_list.h>
+#include <utils/enumerator.h>
 
 /**
  * Maximum size of a packet.
@@ -83,6 +83,13 @@ struct socket_t {
 	 * 						- FAILED when unable to send
 	 */
 	status_t (*send) (socket_t *this, packet_t *packet);
+	
+	/**
+	 * Enumerate the underlying sockets.
+	 * 
+	 * @return				enumerator_t object
+	 */
+	enumerator_t *(*create_enumerator) (socket_t *this);
 	
 	/**
 	 * Destroy socket.

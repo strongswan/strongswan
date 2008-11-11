@@ -898,8 +898,14 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 		while (iterator->iterate(iterator, (void**)&child_sa))
 		{
-			child_sa->update_hosts(child_sa, this->my_host, this->other_host,
-						this->my_virtual_ip, has_condition(this, COND_NAT_ANY));
+			if (child_sa->update_hosts(child_sa, this->my_host,
+						this->other_host, this->my_virtual_ip,
+						has_condition(this, COND_NAT_ANY)) == NOT_SUPPORTED)
+			{
+				this->public.rekey_child_sa(&this->public,
+						child_sa->get_protocol(child_sa),
+						child_sa->get_spi(child_sa, TRUE));
+			}
 		}
 		iterator->destroy(iterator);
 	}
@@ -1314,6 +1320,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	}
 	else
 	{
+		child_sa->destroy(child_sa);
 		DBG1(DBG_IKE, "routing CHILD_SA failed");
 	}
 	return status;

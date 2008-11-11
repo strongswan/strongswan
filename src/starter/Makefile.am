@@ -1,9 +1,9 @@
 ipsec_PROGRAMS = starter
 starter_SOURCES = y.tab.c netkey.c y.tab.h parser.h args.h netkey.h \
 starterwhack.c starterwhack.h starterstroke.c invokepluto.c confread.c \
-starterstroke.h interfaces.c invokepluto.h confread.h  interfaces.h args.c \
+starterstroke.h interfaces.c invokepluto.h confread.h interfaces.h args.c \
 keywords.c files.h keywords.h cmp.c starter.c cmp.h exec.c invokecharon.c \
-exec.h invokecharon.h lex.yy.c loglite.c
+exec.h invokecharon.h lex.yy.c loglite.c klips.c klips.h
 
 INCLUDES = -I$(top_srcdir)/src/libfreeswan -I$(top_srcdir)/src/pluto -I$(top_srcdir)/src/whack -I$(top_srcdir)/src/stroke
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_EAPDIR=\"${eapdir}\" -DDEBUG

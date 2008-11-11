@@ -30,6 +30,7 @@
 ENUM(child_sa_state_names, CHILD_CREATED, CHILD_DESTROYING,
 	"CREATED",
 	"ROUTED",
+	"INSTALLING",
 	"INSTALLED",
 	"UPDATING",
 	"REKEYING",
@@ -444,7 +445,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 						ipsec_mode_t mode, chunk_t integ, chunk_t encr, bool in)
 {
 	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
-	u_int32_t spi, cpi, soft, hard, now;
+	u_int32_t spi, soft, hard, now;
 	host_t *src, *dst;
 	status_t status;
 	
@@ -461,7 +462,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 			if (this->alloc_ah_spi)
 			{
 				charon->kernel_interface->del_sa(charon->kernel_interface,
-								this->my_addr, this->alloc_ah_spi, PROTO_AH);
+								this->my_addr, this->alloc_ah_spi, 0, PROTO_AH);
 			}
 		}
 		else
@@ -470,7 +471,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 			if (this->alloc_esp_spi)
 			{
 				charon->kernel_interface->del_sa(charon->kernel_interface,
-								this->my_addr, this->alloc_esp_spi, PROTO_ESP);
+								this->my_addr, this->alloc_esp_spi, 0, PROTO_ESP);
 			}
 		}
 		spi = this->my_spi;
@@ -491,16 +492,6 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	/* send SA down to the kernel */
 	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
 	
-	if (this->ipcomp != IPCOMP_NONE)
-	{
-		/* we install an additional IPComp SA */
-		cpi = htonl(ntohs(in ? this->my_cpi : this->other_cpi));
-		charon->kernel_interface->add_sa(charon->kernel_interface,
-				src, dst, cpi, IPPROTO_COMP, this->reqid, 0, 0,
-				ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
-				mode, this->ipcomp, FALSE, in);
-	}
-	
 	proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_alg, &size);
 	proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_alg, &size);
 	
@@ -509,7 +500,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 				src, dst, spi, this->protocol, this->reqid,
 				in ? soft : 0, hard, enc_alg, encr, int_alg, integ,
-				mode, IPCOMP_NONE, this->encap, in);
+				mode, this->ipcomp, in ? this->my_cpi : this->other_cpi,
+				this->encap, in);
 	
 	now = time(NULL);
 	this->rekey_time = now + soft;
@@ -588,12 +580,8 @@ static status_t add_policies(private_child_sa_t *this,
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
 	status_t status = SUCCESS;
-	bool high_prio = TRUE;
+	bool routed = (this->state == CHILD_CREATED);
 	
-	if (this->state == CHILD_CREATED)
-	{	/* use low prio for ROUTED policies */
-		high_prio = FALSE;
-	}
 	if (this->protocol == PROTO_NONE)
 	{	/* update if not set yet */
 		this->protocol = proto;
@@ -622,17 +610,20 @@ static status_t add_policies(private_child_sa_t *this,
 			/* install 3 policies: out, in and forward */
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->my_addr, this->other_addr, my_ts, other_ts, POLICY_OUT,
-					this->protocol, this->reqid, high_prio, mode, this->ipcomp);
-		
+					this->other_spi, this->protocol, this->reqid, mode, this->ipcomp,
+					this->other_cpi, routed);
+			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_IN,
-					this->protocol, this->reqid, high_prio, mode, this->ipcomp);
+					this->my_spi, this->protocol, this->reqid, mode, this->ipcomp,
+					this->my_cpi, routed);
 		
 			if (mode == MODE_TUNNEL)
 			{
 				status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-				this->other_addr, this->my_addr, other_ts, my_ts, POLICY_FWD,
-				this->protocol, this->reqid, high_prio, mode, this->ipcomp);
+					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_FWD,
+					this->my_spi, this->protocol, this->reqid, mode, this->ipcomp,
+					this->my_cpi, routed);
 			}
 		
 			if (status != SUCCESS)
@@ -682,26 +673,23 @@ static status_t update_hosts(private_child_sa_t *this,
 	old = this->state;
 	set_state(this, CHILD_UPDATING);
 	
-	this->encap = encap;
-	
-	if (this->ipcomp != IPCOMP_NONE)
+	/* update our (initator) SA */
+	if (charon->kernel_interface->update_sa(charon->kernel_interface, this->my_spi,
+			this->protocol, this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
+			this->other_addr, this->my_addr, other, me,
+			this->encap, encap) == NOT_SUPPORTED)
 	{
-		/* update our (initator) IPComp SA */
-		charon->kernel_interface->update_sa(charon->kernel_interface, 
-							htonl(ntohs(this->my_cpi)),	IPPROTO_COMP,
-							this->other_addr, this->my_addr, other, me, FALSE);
-		/* update his (responder) IPComp SA */
-		charon->kernel_interface->update_sa(charon->kernel_interface,
-							htonl(ntohs(this->other_cpi)), IPPROTO_COMP,
-							this->my_addr, this->other_addr, me, other, FALSE);
+		return NOT_SUPPORTED;
 	}
 	
-	/* update our (initator) SA */
-	charon->kernel_interface->update_sa(charon->kernel_interface, this->my_spi,
-			this->protocol, this->other_addr, this->my_addr, other, me, encap);
 	/* update his (responder) SA */
-	charon->kernel_interface->update_sa(charon->kernel_interface, this->other_spi, 
-			this->protocol, this->my_addr, this->other_addr, me, other, encap);
+	if (charon->kernel_interface->update_sa(charon->kernel_interface, this->other_spi, 
+			this->protocol, this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
+			this->my_addr, this->other_addr, me, other,
+			this->encap, encap) == NOT_SUPPORTED)
+	{
+		return NOT_SUPPORTED;
+	}
 	
 	if (this->config->install_policy(this->config))
 	{
@@ -718,13 +706,13 @@ static status_t update_hosts(private_child_sa_t *this,
 			{
 				/* remove old policies first */
 				charon->kernel_interface->del_policy(charon->kernel_interface,
-												 my_ts, other_ts, POLICY_OUT);
+												 my_ts, other_ts, POLICY_OUT, FALSE);
 				charon->kernel_interface->del_policy(charon->kernel_interface,
-												 other_ts, my_ts,  POLICY_IN);
+												 other_ts, my_ts,  POLICY_IN, FALSE);
 				if (this->mode == MODE_TUNNEL)
 				{
 					charon->kernel_interface->del_policy(charon->kernel_interface,
-												 other_ts, my_ts, POLICY_FWD);
+												 other_ts, my_ts, POLICY_FWD, FALSE);
 				}
 
 				/* check whether we have to update a "dynamic" traffic selector */
@@ -749,16 +737,19 @@ static status_t update_hosts(private_child_sa_t *this,
 		
 				/* reinstall updated policies */
 				charon->kernel_interface->add_policy(charon->kernel_interface,
-						me, other, my_ts, other_ts, POLICY_OUT, this->protocol,
-						this->reqid, TRUE, this->mode, this->ipcomp);
+						me, other, my_ts, other_ts, POLICY_OUT, this->other_spi,
+						this->protocol, this->reqid, this->mode, this->ipcomp,
+						this->other_cpi, FALSE);
 				charon->kernel_interface->add_policy(charon->kernel_interface, 
-						other, me, other_ts, my_ts, POLICY_IN, this->protocol,
-						this->reqid, TRUE, this->mode, this->ipcomp);
+						other, me, other_ts, my_ts, POLICY_IN, this->my_spi,
+						this->protocol, this->reqid, this->mode, this->ipcomp,
+						this->my_cpi, FALSE);
 				if (this->mode == MODE_TUNNEL)
 				{
 					charon->kernel_interface->add_policy(charon->kernel_interface,
-						other, me, other_ts, my_ts, POLICY_FWD, this->protocol,
-						this->reqid, TRUE, this->mode, this->ipcomp);
+						other, me, other_ts, my_ts, POLICY_FWD, this->my_spi,
+						this->protocol, this->reqid, this->mode, this->ipcomp,
+						this->my_cpi, FALSE);
 				}
 			}
 			enumerator->destroy(enumerator);
@@ -779,6 +770,8 @@ static status_t update_hosts(private_child_sa_t *this,
 			this->other_addr = other->clone(other);
 		}
 	}
+	this->encap = encap;
+	
 	set_state(this, old);
 	
 	return SUCCESS;
@@ -815,6 +808,7 @@ static void destroy(private_child_sa_t *this)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
+	bool unrouted = (this->state == CHILD_ROUTED);
 	
 	set_state(this, CHILD_DESTROYING);
 	
@@ -822,32 +816,24 @@ static void destroy(private_child_sa_t *this)
 	if (this->my_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->my_addr, this->my_spi, this->protocol);
+					this->my_addr, this->my_spi, this->protocol,
+					this->my_cpi);
 	}
 	if (this->alloc_esp_spi && this->alloc_esp_spi != this->my_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->my_addr, this->alloc_esp_spi, PROTO_ESP);
+					this->my_addr, this->alloc_esp_spi, PROTO_ESP, 0);
 	}
 	if (this->alloc_ah_spi && this->alloc_ah_spi != this->my_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->my_addr, this->alloc_ah_spi, PROTO_AH);
+					this->my_addr, this->alloc_ah_spi, PROTO_AH, 0);
 	}
 	if (this->other_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->other_addr, this->other_spi, this->protocol);
-	}
-	if (this->my_cpi)
-	{
-		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->my_addr, htonl(ntohs(this->my_cpi)), IPPROTO_COMP);
-	}
-	if (this->other_cpi)
-	{
-		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->other_addr, htonl(ntohs(this->other_cpi)), IPPROTO_COMP);
+					this->other_addr, this->other_spi, this->protocol,
+					this->other_cpi);
 	}
 	
 	if (this->config->install_policy(this->config))
@@ -857,13 +843,13 @@ static void destroy(private_child_sa_t *this)
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-												 my_ts, other_ts, POLICY_OUT);
+												 my_ts, other_ts, POLICY_OUT, unrouted);
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-												 other_ts, my_ts, POLICY_IN);
+												 other_ts, my_ts, POLICY_IN, unrouted);
 			if (this->mode == MODE_TUNNEL)
 			{
 				charon->kernel_interface->del_policy(charon->kernel_interface,
-												 other_ts, my_ts, POLICY_FWD);
+												 other_ts, my_ts, POLICY_FWD, unrouted);
 			}
 		}
 		enumerator->destroy(enumerator);

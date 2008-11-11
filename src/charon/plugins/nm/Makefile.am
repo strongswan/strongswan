@@ -25,4 +25,4 @@ EXTRA_DIST = gnome/configure gnome/po/LINGUAS gnome/po/POTFILES.in gnome/po/Make
 	gnome/config.sub gnome/missing
 
 gnome/configure :	gnome/configure.in
-					cd gnome && ./autogen.sh; cd ..
+					(cd `dirname $<` && ./autogen.sh)

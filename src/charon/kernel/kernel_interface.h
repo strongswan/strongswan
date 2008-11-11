@@ -56,10 +56,6 @@ struct kernel_interface_t {
 	/**
 	 * Get a SPI from the kernel.
 	 *
-	 * @warning get_spi() implicitly creates an SA with
-	 * the allocated SPI, therefore the replace flag
-	 * in add_sa() must be set when installing this SA.
-	 * 
 	 * @param src		source address of SA
 	 * @param dst		destination address of SA
 	 * @param protocol	protocol for SA (ESP/AH)
@@ -106,8 +102,9 @@ struct kernel_interface_t {
 	 * @param int_key		key to use for integrity protection
 	 * @param mode			mode of the SA (tunnel, transport)
 	 * @param ipcomp		IPComp transform to use
+	 * @param cpi			CPI for IPComp
 	 * @param encap			enable UDP encapsulation for NAT traversal
-	 * @param replace		Should an already installed SA be updated?
+	 * @param inbound		TRUE if this is an inbound SA
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_sa) (kernel_interface_t *this,
@@ -116,8 +113,8 @@ struct kernel_interface_t {
 						u_int64_t expire_soft, u_int64_t expire_hard,
 					    u_int16_t enc_alg, chunk_t enc_key,
 					    u_int16_t int_alg, chunk_t int_key,
-						ipsec_mode_t mode, u_int16_t ipcomp, bool encap,
-						bool update);
+						ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
+						bool encap, bool inbound);
 	
 	/**
 	 * Update the hosts on an installed SA.
@@ -129,17 +126,21 @@ struct kernel_interface_t {
 	 *
 	 * @param spi			SPI of the SA
 	 * @param protocol		protocol for this SA (ESP/AH)
+	 * @param cpi			CPI for IPComp, 0 if no IPComp is used
 	 * @param src			current source address
 	 * @param dst			current destination address
 	 * @param new_src		new source address
 	 * @param new_dst		new destination address
-	 * @param encap			use UDP encapsulation
-	 * @return				SUCCESS if operation completed
+	 * @param encap			current use of UDP encapsulation
+	 * @param new_encap		new use of UDP encapsulation
+	 * @return				SUCCESS if operation completed, NOT_SUPPORTED if
+	 *                      the kernel interface can't update the SA
 	 */
 	status_t (*update_sa)(kernel_interface_t *this,
-						  u_int32_t spi, protocol_id_t protocol,
+						  u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,
 						  host_t *src, host_t *dst, 
-						  host_t *new_src, host_t *new_dst, bool encap);
+						  host_t *new_src, host_t *new_dst,
+						  bool encap, bool new_encap);
 	
 	/**
 	 * Delete a previously installed SA from the SAD.
@@ -147,10 +148,11 @@ struct kernel_interface_t {
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
 	 * @param protocol		protocol for this SA (ESP/AH)
+	 * @param cpi			CPI for IPComp or 0
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_sa) (kernel_interface_t *this, host_t *dst, u_int32_t spi,
-						protocol_id_t protocol);
+						protocol_id_t protocol, u_int16_t cpi);
 	
 	/**
 	 * Add a policy to the SPD.
@@ -163,20 +165,23 @@ struct kernel_interface_t {
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
+	 * @param spi			SPI of SA
 	 * @param protocol		protocol to use to protect traffic (AH/ESP)
 	 * @param reqid			unique ID of an SA to use to enforce policy
-	 * @param high_prio		if TRUE, uses a higher priority than any with FALSE
 	 * @param mode			mode of SA (tunnel, transport)
 	 * @param ipcomp		the IPComp transform used
+	 * @param cpi			CPI for IPComp
+	 * @param routed		TRUE, if this policy is routed in the kernel
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_policy) (kernel_interface_t *this,
 							host_t *src, host_t *dst,
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
-							policy_dir_t direction, protocol_id_t protocol,
-							u_int32_t reqid, bool high_prio, ipsec_mode_t mode,
-							u_int16_t ipcomp);
+							policy_dir_t direction, u_int32_t spi,
+							protocol_id_t protocol, u_int32_t reqid,
+							ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
+							bool routed);
 	
 	/**
 	 * Query the use time of a policy.
@@ -206,12 +211,14 @@ struct kernel_interface_t {
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
+	 * @param unrouted		TRUE, if this policy is unrouted from the kernel
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_policy) (kernel_interface_t *this,
 							traffic_selector_t *src_ts, 
 							traffic_selector_t *dst_ts,
-							policy_dir_t direction);
+							policy_dir_t direction,
+							bool unrouted);
 	
 	/**
 	 * Get our outgoing source address for a destination.

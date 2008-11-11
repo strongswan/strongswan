@@ -19,7 +19,8 @@
 
 #define STARTER_PID_FILE IPSEC_PIDDIR "/starter.pid"
 
-#define PROC_NETKEY	"/proc/net/pfkey"
+#define PROC_NETKEY		"/proc/net/pfkey"
+#define PROC_KLIPS		"/proc/net/pf_key"
 #define PROC_MODULES	"/proc/modules"
 
 #define CONFIG_FILE     IPSEC_CONFDIR "/ipsec.conf"

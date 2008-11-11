@@ -327,18 +327,12 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		}
 	}
 	
+	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
+	
 	if (this->ipcomp != IPCOMP_NONE)
 	{
 		this->child_sa->activate_ipcomp(this->child_sa, this->ipcomp,
 										this->other_cpi);
-	}
-	
-	status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts,
-					this->mode, this->proposal->get_protocol(this->proposal));
-	if (status != SUCCESS)
-	{	
-		DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
-		return NOT_FOUND;
 	}
 	
 	status = FAILED;
@@ -365,6 +359,14 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	{
 		DBG1(DBG_IKE, "unable to install IPsec SA (SAD) in kernel");
 		return FAILED;
+	}
+	
+	status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts,
+					this->mode, this->proposal->get_protocol(this->proposal));
+	if (status != SUCCESS)
+	{	
+		DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
+		return NOT_FOUND;
 	}
 	
 	charon->bus->child_keys(charon->bus, this->child_sa, this->dh,

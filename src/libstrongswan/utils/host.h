@@ -173,7 +173,7 @@ host_t *host_create_from_dns(char *string, int family, u_int16_t port);
  * Constructor to create a host_t object from an address chunk
  *
  * @param family 		Address family, such as AF_INET or AF_INET6
- * @param address		address as chunk_t in networ order
+ * @param address		address as chunk_t in network order
  * @param port			port number
  * @return 				host_t, NULL if family not supported/chunk invalid
  */
