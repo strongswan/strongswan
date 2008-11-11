@@ -118,6 +118,16 @@ struct private_child_cfg_t {
 	 * enable IPComp
 	 */
 	bool use_ipcomp;
+
+	/**
+	 * set up IPsec transport SA in MIPv6 proxy mode
+	 */
+	bool proxy_mode;
+
+	/**
+	 * enable installation and removal of kernel IPsec policies
+	 */
+	bool install_policy;
 };
 
 /**
@@ -339,25 +349,29 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 /**
  * Implementation of child_cfg_t.equal_traffic_selectors.
  */
-bool equal_traffic_selectors(private_child_cfg_t *this, bool local, traffic_selector_t *ts)
+bool equal_traffic_selectors(private_child_cfg_t *this, bool local,
+							 linked_list_t *ts_list, host_t *host)
 {
-	linked_list_t *list;
-	enumerator_t *enumerator;
-	traffic_selector_t *other_ts;
+	linked_list_t *this_list;
+	traffic_selector_t *this_ts, *ts;
 	bool result;
 
-	list = (local) ? this->my_ts : this->other_ts;
+	this_list = (local) ? this->my_ts : this->other_ts;
 
-	if (list->get_count(list) != 1)
+	/* currently equality is established for single traffic selectors only */
+	if (this_list->get_count(this_list) != 1 || ts_list->get_count(ts_list) != 1)
 	{
 		return FALSE;
 	}
-	enumerator = list->create_enumerator(list);
-	enumerator->enumerate(enumerator, &other_ts);
-		
-	result = ts->equals(ts, other_ts);
 
-	enumerator->destroy(enumerator);
+	this_list->get_first(this_list, (void**)&this_ts);
+	this_ts = this_ts->clone(this_ts);
+	this_ts->set_address(this_ts, host);
+	ts_list->get_first(ts_list, (void**)&ts);
+
+	result = ts->equals(ts, this_ts);
+
+	this_ts->destroy(this_ts);
 	return result;
 }
 
@@ -447,6 +461,32 @@ static bool use_ipcomp(private_child_cfg_t *this)
 }
 
 /**
+ * Implementation of child_cfg_t.set_mipv6_options.
+ */
+static void set_mipv6_options(private_child_cfg_t *this, bool proxy_mode,
+														 bool install_policy)
+{
+	this->proxy_mode = proxy_mode;
+	this->install_policy = install_policy;
+}
+
+/**
+ * Implementation of child_cfg_t.use_proxy_mode.
+ */
+static bool use_proxy_mode(private_child_cfg_t *this)
+{
+	return this->proxy_mode;
+}
+
+/**
+ * Implementation of child_cfg_t.install_policy.
+ */
+static bool install_policy(private_child_cfg_t *this)
+{
+	return this->install_policy;
+}
+
+/**
  * Implementation of child_cfg_t.get_ref.
  */
 static child_cfg_t* get_ref(private_child_cfg_t *this)
@@ -487,7 +527,7 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.get_name = (char* (*) (child_cfg_t*))get_name;
 	this->public.add_traffic_selector = (void (*)(child_cfg_t*,bool,traffic_selector_t*))add_traffic_selector;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_cfg_t*,bool,linked_list_t*,host_t*))get_traffic_selectors;
-	this->public.equal_traffic_selectors = (bool (*)(child_cfg_t*,bool,traffic_selector_t*))equal_traffic_selectors;
+	this->public.equal_traffic_selectors = (bool (*)(child_cfg_t*,bool,linked_list_t*,host_t*))equal_traffic_selectors;
 	this->public.add_proposal = (void (*) (child_cfg_t*,proposal_t*))add_proposal;
 	this->public.get_proposals = (linked_list_t* (*) (child_cfg_t*,bool))get_proposals;
 	this->public.select_proposal = (proposal_t* (*) (child_cfg_t*,linked_list_t*,bool))select_proposal;
@@ -498,7 +538,10 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.get_close_action = (action_t (*) (child_cfg_t *))get_close_action;
 	this->public.get_lifetime = (u_int32_t (*) (child_cfg_t *,bool))get_lifetime;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(child_cfg_t*)) get_dh_group;
+	this->public.set_mipv6_options = (void (*) (child_cfg_t*,bool,bool))set_mipv6_options;
 	this->public.use_ipcomp = (bool (*) (child_cfg_t *))use_ipcomp;
+	this->public.use_proxy_mode = (bool (*) (child_cfg_t *))use_proxy_mode;
+	this->public.install_policy = (bool (*) (child_cfg_t *))install_policy;
 	this->public.get_ref = (child_cfg_t* (*) (child_cfg_t*))get_ref;
 	this->public.destroy = (void (*) (child_cfg_t*))destroy;
 	
@@ -512,6 +555,8 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->dpd_action = dpd_action;
 	this->close_action = close_action;
 	this->use_ipcomp = ipcomp; 
+	this->proxy_mode = FALSE;
+	this->install_policy = TRUE; 
 	this->refcount = 1;
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();
