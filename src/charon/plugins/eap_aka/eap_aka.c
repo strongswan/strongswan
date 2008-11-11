@@ -35,6 +35,7 @@
  *   - server_initiate_challenge() - Initiation of AKA-Challenge
  */
 
+#include <limits.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
