@@ -324,7 +324,7 @@ fetch_curl(char *url, chunk_t *blob)
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_buffer);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
-	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, &errorbuffer);
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorbuffer);
 	curl_easy_setopt(curl, CURLOPT_FAILONERROR, TRUE);
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, FETCH_CMD_TIMEOUT);
 
@@ -705,9 +705,9 @@ fetch_ocsp_status(ocsp_location_t* location)
 	curl_easy_setopt(curl, CURLOPT_URL, uri);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_buffer);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.ptr);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (void*)request.ptr);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request.len);
-	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, &errorbuffer);
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorbuffer);
 	curl_easy_setopt(curl, CURLOPT_FAILONERROR, TRUE);
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, FETCH_CMD_TIMEOUT);
 

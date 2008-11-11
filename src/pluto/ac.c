@@ -860,7 +860,7 @@ load_acerts(void)
 	}
     }
     /* restore directory path */
-    chdir(save_dir);
+    ignore_result(chdir(save_dir));
 }
 
 /*

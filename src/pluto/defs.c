@@ -249,6 +249,7 @@ write_chunk(const char *filename, const char *label, chunk_t ch
 {
     mode_t oldmask;
     FILE *fd;
+    size_t written;
 
     if (!force)
     {
@@ -268,8 +269,14 @@ write_chunk(const char *filename, const char *label, chunk_t ch
 
     if (fd)
     {
-	fwrite(ch.ptr, sizeof(u_char), ch.len, fd);
+	written = fwrite(ch.ptr, sizeof(u_char), ch.len, fd);
 	fclose(fd);
+	if (written != ch.len)
+	{
+	    plog("  writing to %s file '%s' failed", label, filename);
+	    umask(oldmask);
+	    return FALSE;
+	}
 	plog("  written %s file '%s' (%d bytes)", label, filename, (int)ch.len);
 	umask(oldmask);
 	return TRUE;

@@ -23,6 +23,7 @@
 
 #define MAX_INCLUDE_DEPTH  20
 
+#define YY_NO_INPUT
 #define YY_NO_UNPUT
 extern void yyerror(const char *);
 extern int yylex (void);

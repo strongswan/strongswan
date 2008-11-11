@@ -2176,7 +2176,7 @@ static void remove_dns_servers(private_ike_sa_t *this)
 		if (!found)
 		{	
 			/* write line untouched back to file */
-			fwrite(orig_line.ptr, orig_line.len, 1, file);
+			ignore_result(fwrite(orig_line.ptr, orig_line.len, 1, file));
 			fprintf(file, "\n");
 		}
 	}
@@ -2230,7 +2230,7 @@ static void add_dns_server(private_ike_sa_t *this, host_t *dns)
 	{
 		this->dns_servers->insert_last(this->dns_servers, dns->clone(dns));
 	}
-	fwrite(contents.ptr, contents.len, 1, file);
+	ignore_result(fwrite(contents.ptr, contents.len, 1, file));
 	
 	fclose(file);	
 }

@@ -17,6 +17,8 @@
 
 #include "sql_attribute.h"
 
+#include <time.h>
+
 #include <daemon.h>
 
 typedef struct private_sql_attribute_t private_sql_attribute_t;

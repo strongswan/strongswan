@@ -719,7 +719,7 @@ int main(int argc, char *argv[])
 	if (pid_file)
 	{
 		fprintf(pid_file, "%d\n", getpid());
-		fchown(fileno(pid_file), charon->uid, charon->gid);
+		ignore_result(fchown(fileno(pid_file), charon->uid, charon->gid));
 		fclose(pid_file);
 	}
 	

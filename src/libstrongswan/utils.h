@@ -96,6 +96,11 @@
 #define countof(array) (sizeof(array)/sizeof(array[0]))
 
 /**
+ * Ignore result of functions tagged with warn_unused_result attributes
+ */
+#define ignore_result(call) { if(call); }
+
+/**
  * Assign a function as a class method
  */
 #define ASSIGN(method, function) (method = (typeof(method))function)

@@ -576,11 +576,22 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 		
 	if (*parent == '/' || getcwd(cwd, sizeof(cwd)) == NULL)
 	{
-		asprintf(&this->dirname, "%s/%s", parent, name);
+		if (asprintf(&this->dirname, "%s/%s", parent, name) < 0)
+		{
+			this->dirname = NULL;
+		}
 	}
 	else
 	{
-		asprintf(&this->dirname, "%s/%s/%s", cwd, parent, name);
+		if (asprintf(&this->dirname, "%s/%s/%s", cwd, parent, name) < 0)
+		{
+			this->dirname = NULL;
+		}
+	}
+	if (this->dirname == NULL)
+	{
+		free(this);
+		return NULL;
 	}
 	if (create)
 	{

@@ -522,7 +522,7 @@ scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op
 	    headers = curl_slist_append(headers, "Content-Type:");
 	    headers = curl_slist_append(headers, "Expect:");
 	    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers); 
-	    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, pkcs7.ptr);
+	    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char*)pkcs7.ptr);
 	    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, pkcs7.len);
 	}
     }

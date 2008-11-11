@@ -446,6 +446,7 @@ bitstomask(
 /* option pickup from files (userland only because of use of FILE) */
 const char *optionsfrom(const char *filename, int *argcp, char ***argvp,
 						int optind, FILE *errorreport);
+#define ignore_result(call) { if (call); }
 #endif
 
 /*

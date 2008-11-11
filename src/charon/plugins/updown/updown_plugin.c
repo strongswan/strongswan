@@ -72,7 +72,10 @@ static void updown(ike_sa_t *ike_sa, child_sa_t *child_sa, bool up)
 		FILE *shell;
 
 		/* get subnet/bits from string */
-		asprintf(&my_client, "%R", my_ts);
+		if (asprintf(&my_client, "%R", my_ts) < 0)
+		{
+			my_client = NULL;
+		}
 		pos = strchr(my_client, '/');
 		*pos = '\0';
 		my_client_mask = pos + 1;
@@ -81,7 +84,10 @@ static void updown(ike_sa_t *ike_sa, child_sa_t *child_sa, bool up)
 		{
 			*pos = '\0';
 		}
-		asprintf(&other_client, "%R", other_ts);
+		if (asprintf(&other_client, "%R", other_ts) < 0)
+		{
+			other_client = NULL;
+		}
 		pos = strchr(other_client, '/');
 		*pos = '\0';
 		other_client_mask = pos + 1;
@@ -93,11 +99,17 @@ static void updown(ike_sa_t *ike_sa, child_sa_t *child_sa, bool up)
 
 		if (vip)
 		{
-			asprintf(&virtual_ip, "PLUTO_MY_SOURCEIP='%H' ", vip);
+			if (asprintf(&virtual_ip, "PLUTO_MY_SOURCEIP='%H' ", vip) < 0)
+			{
+				virtual_ip = NULL;
+			}
 		}
 		else
 		{
-			asprintf(&virtual_ip, "");
+			if (asprintf(&virtual_ip, "") < 0)
+			{
+				virtual_ip = NULL;
+			}
 		}
 		
 		iface = charon->kernel_interface->get_interface(

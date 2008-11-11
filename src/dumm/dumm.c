@@ -87,7 +87,7 @@ static void delete_guest(private_dumm_t *this, guest_t *guest)
 		guest->destroy(guest);
 		if (len > 8 && len < 512)
 		{
-			system(buf);
+			ignore_result(system(buf));
 		}
 	}
 }
@@ -280,7 +280,10 @@ dumm_t *dumm_create(char *dir)
 	 	}
 		if (dir)
 		{
-			asprintf(&this->dir, "%s/%s", cwd, dir);
+			if (asprintf(&this->dir, "%s/%s", cwd, dir) < 0)
+			{
+				this->dir = NULL;
+			}
 		}
 		else
 		{
@@ -288,17 +291,21 @@ dumm_t *dumm_create(char *dir)
 		}
 	}
 	this->template = NULL;
-	asprintf(&this->guest_dir, "%s/%s", this->dir, GUEST_DIR);
+	if (asprintf(&this->guest_dir, "%s/%s", this->dir, GUEST_DIR) < 0)
+	{
+		this->guest_dir = NULL;
+	}
 	this->guests = linked_list_create();
 	this->bridges = linked_list_create();
 	
-	if (mkdir(this->guest_dir, PERME) < 0 && errno != EEXIST)
+	if (this->dir == NULL || this->guest_dir == NULL ||
+		(mkdir(this->guest_dir, PERME) < 0 && errno != EEXIST))
 	{
 		DBG1("creating guest directory '%s' failed: %m", this->guest_dir);
 		destroy(this);
 		return NULL;
 	}
-		
+	
 	load_guests(this);
 	return &this->public;
 }

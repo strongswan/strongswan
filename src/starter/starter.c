@@ -180,7 +180,7 @@ static void generate_selfcert()
 #endif
 	    setegid(gid);
 	    seteuid(uid);
-	    system("ipsec scepclient --out pkcs1 --out cert-self --quiet");
+	    ignore_result(system("ipsec scepclient --out pkcs1 --out cert-self --quiet"));
 	    seteuid(0);
 	    setegid(0);
 
@@ -195,7 +195,7 @@ static void generate_selfcert()
 		fprintf(f, ": RSA myKey.der\n");
 		fclose(f);
 	    }
-	    chown(SECRETS_FILE, uid, gid);
+	    ignore_result(chown(SECRETS_FILE, uid, gid));
 	    umask(oldmask);
 	}
 }

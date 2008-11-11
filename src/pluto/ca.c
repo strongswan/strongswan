@@ -295,7 +295,7 @@ load_authcerts(const char *type, const char *path, u_char auth_flags)
 	}
     }
     /* restore directory path */
-    chdir(save_dir);
+    ignore_result(chdir(save_dir));
 }
 
 /*

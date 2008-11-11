@@ -36,7 +36,7 @@ starter_klips_init(void)
 	/* ipsec module makes the pf_key proc interface visible */
 	if (stat(PROC_MODULES, &stb) == 0)
 	{
-	    system("modprobe -qv ipsec");
+	    ignore_result(system("modprobe -qv ipsec"));
 	}
 
 	/* now test again */
@@ -50,9 +50,9 @@ starter_klips_init(void)
     }
     
     /* load crypto algorithm modules */
-    system("modprobe -qv ipsec_aes");
-    system("modprobe -qv ipsec_blowfish");
-	system("modprobe -qv ipsec_sha2");
+    ignore_result(system("modprobe -qv ipsec_aes"));
+    ignore_result(system("modprobe -qv ipsec_blowfish"));
+    ignore_result(system("modprobe -qv ipsec_sha2"));
 
     DBG(DBG_CONTROL,
 	DBG_log("Found KLIPS IPsec stack")
@@ -64,19 +64,19 @@ starter_klips_init(void)
 void
 starter_klips_cleanup(void)
 {
-	if (system("type eroute > /dev/null 2>&1") == 0)
-	{
-		system("spi --clear");
-        system("eroute --clear");
-	}
+    if (system("type eroute > /dev/null 2>&1") == 0)
+    {
+	ignore_result(system("spi --clear"));
+	ignore_result(system("eroute --clear"));
+    }
 	else if (system("type setkey > /dev/null 2>&1") == 0)
     {
-    	system("setkey -F");
-        system("setkey -FP");
+	ignore_result(system("setkey -F"));
+	ignore_result(system("setkey -FP"));
     }
     else
     {
-        plog("WARNING: cannot flush IPsec state/policy database");
+	plog("WARNING: cannot flush IPsec state/policy database");
     }
 }
 

@@ -215,9 +215,13 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 	chunk_t blob = chunk_from_buf(buf), key, type, tmp;
 	
 	len = htonl(1);
-	write(this->socket, &len, sizeof(len));
 	buf[0] = SSH_AGENT_ID_REQUEST;
-	write(this->socket, &buf, 1);
+	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
+		write(this->socket, &buf, 1) != 1)
+	{
+		DBG1("writing to ssh-agent failed");
+		return FALSE;
+	}
 	
 	blob.len = read(this->socket, blob.ptr, blob.len);
 	
@@ -275,20 +279,36 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 	}
 	
 	len = htonl(1 + sizeof(u_int32_t) * 3 + this->key.len + data.len);
-	write(this->socket, &len, sizeof(len));
 	buf[0] = SSH_AGENT_SIGN_REQUEST;
-	write(this->socket, &buf, 1);
+	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
+		write(this->socket, &buf, 1) != 1)
+	{
+		DBG1("writing to ssh-agent failed");
+		return FALSE;
+	}
 	
 	len = htonl(this->key.len);
-	write(this->socket, &len, sizeof(len));
-	write(this->socket, this->key.ptr, this->key.len);
+	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
+		write(this->socket, this->key.ptr, this->key.len) != this->key.len)
+	{
+		DBG1("writing to ssh-agent failed");
+		return FALSE;
+	}
 	
 	len = htonl(data.len);
-	write(this->socket, &len, sizeof(len));
-	write(this->socket, data.ptr, data.len);
+	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
+		write(this->socket, data.ptr, data.len) != data.len)
+	{
+		DBG1("writing to ssh-agent failed");
+		return FALSE;
+	}
 	
 	flags = htonl(0);
-	write(this->socket, &flags, sizeof(flags));
+	if (write(this->socket, &flags, sizeof(flags)) != sizeof(flags))
+	{
+		DBG1("writing to ssh-agent failed");
+		return FALSE;
+	}
 	
 	blob.len = read(this->socket, blob.ptr, blob.len);
 	if (blob.len < sizeof(u_int32_t) + sizeof(u_char) ||

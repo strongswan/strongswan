@@ -123,7 +123,7 @@ static bool set_option(private_curl_fetcher_t *this, fetcher_option_t option, ..
 		case FETCH_REQUEST_DATA:
 		{
 			chunk_t data = va_arg(args, chunk_t);
-			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDS, data.ptr);
+			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDS, (char*)data.ptr);
 			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDSIZE, data.len);
 			return TRUE;
 		}

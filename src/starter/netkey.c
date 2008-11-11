@@ -36,7 +36,7 @@ starter_netkey_init(void)
 	/* af_key module makes the netkey proc interface visible */
 	if (stat(PROC_MODULES, &stb) == 0)
 	{
-	    system("modprobe -qv af_key");
+	    ignore_result(system("modprobe -qv af_key"));
 	}
 
 	/* now test again */
@@ -52,11 +52,11 @@ starter_netkey_init(void)
     /* make sure that all required IPsec modules are loaded */
     if (stat(PROC_MODULES, &stb) == 0)
     {
-	system("modprobe -qv ah4");
-	system("modprobe -qv esp4");
-	system("modprobe -qv ipcomp");
-	system("modprobe -qv xfrm4_tunnel");
-	system("modprobe -qv xfrm_user");
+	ignore_result(system("modprobe -qv ah4"));
+	ignore_result(system("modprobe -qv esp4"));
+	ignore_result(system("modprobe -qv ipcomp"));
+	ignore_result(system("modprobe -qv xfrm4_tunnel"));
+	ignore_result(system("modprobe -qv xfrm_user"));
     }
 
     DBG(DBG_CONTROL,
@@ -70,13 +70,13 @@ starter_netkey_cleanup(void)
 {
     if (system("ip xfrm state > /dev/null 2>&1") == 0)
     {
-	system("ip xfrm state flush");
-	system("ip xfrm policy flush");
+	ignore_result(system("ip xfrm state flush"));
+	ignore_result(system("ip xfrm policy flush"));
     }
     else if (system("type setkey > /dev/null 2>&1") == 0)
     {
-	system("setkey -F");
-        system("setkey -FP");
+	ignore_result(system("setkey -F"));
+	ignore_result(system("setkey -FP"));
     }
     else
     {
