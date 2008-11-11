@@ -51,36 +51,55 @@ struct private_medcli_listener_t {
 /**
  * Implementation of bus_listener_t.signal.
  */
-static bool signal_(private_medcli_listener_t *this, signal_t signal,
-					level_t level, int thread, ike_sa_t* ike_sa, void *data,
-					char *format, va_list args)
+static void set_state(private_medcli_listener_t *this, char *alias,
+					  mediated_state_t state)
 {
-	mediated_state_t state;
-	
-	if (!ike_sa)
-	{
-		return TRUE;
-	}
-
-	switch (signal)
-	{
-		case IKE_UP_START:
-			state = STATE_CONNECTING;
-			break;
-		case IKE_UP_FAILED:
-		case IKE_DOWN_SUCCESS:
-		case IKE_DOWN_FAILED:
-			state = STATE_DOWN;
-			break;
-		case IKE_UP_SUCCESS:
-			state = STATE_UP;
-			break;
-		default:
-			return TRUE;
-	}
 	this->db->execute(this->db, NULL,
 					  "UPDATE Connection SET Status = ? WHERE Alias = ?",
-					  DB_UINT, state, DB_TEXT, ike_sa->get_name(ike_sa));
+					  DB_UINT, state, DB_TEXT, alias);
+}
+/**
+ * Implementation of listener_t.ike_state_change
+ */
+static bool ike_state_change(private_medcli_listener_t *this,
+							 ike_sa_t *ike_sa, ike_sa_state_t state)
+{
+	if (ike_sa)
+	{
+		switch (state)
+		{
+			case IKE_CONNECTING:
+				set_state(this, ike_sa->get_name(ike_sa), STATE_CONNECTING);
+				break;
+			case IKE_DESTROYING:
+				set_state(this, ike_sa->get_name(ike_sa), STATE_DOWN);
+			default:
+				break;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * Implementation of listener_t.child_state_change
+ */
+static bool child_state_change(private_medcli_listener_t *this,
+				ike_sa_t *ike_sa, child_sa_t *child_sa, child_sa_state_t state)
+{
+	if (ike_sa && child_sa)
+	{
+		switch (state)
+		{
+			case CHILD_INSTALLED:
+				set_state(this, child_sa->get_name(child_sa), STATE_UP);
+				break;
+			case CHILD_DESTROYING:
+				set_state(this, child_sa->get_name(child_sa), STATE_DOWN);
+				break;
+			default:
+				break;
+		}
+	}
 	return TRUE;
 }
 
@@ -91,7 +110,7 @@ static void destroy(private_medcli_listener_t *this)
 {
 	this->db->execute(this->db, NULL, "UPDATE Connection SET Status = ?",
 					  DB_UINT, STATE_DOWN);
-    free(this);
+	free(this);
 }
 
 /**
@@ -100,8 +119,11 @@ static void destroy(private_medcli_listener_t *this)
 medcli_listener_t *medcli_listener_create(database_t *db)
 {
 	private_medcli_listener_t *this = malloc_thing(private_medcli_listener_t);
-
-	this->public.listener.signal = (bool(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,void*,char*,va_list))signal_;
+	
+	memset(&this->public.listener, 0, sizeof(listener_t));
+	
+	this->public.listener.ike_state_change = (void*)ike_state_change;
+	this->public.listener.child_state_change = (void*)child_state_change;
 	this->public.destroy = (void (*)(medcli_listener_t*))destroy;
 	
 	this->db = db;

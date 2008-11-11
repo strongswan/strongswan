@@ -36,7 +36,7 @@ struct medcli_listener_t {
 	/**
 	 * Implements bus_listener_t interface
 	 */
-	bus_listener_t listener;
+	listener_t listener;
 	
 	/**
 	 * Destroy the credentials databse.
