@@ -9,7 +9,7 @@ strongswan-4.2.9
   use of the OpenSSL plugin.
 
 - Added profiling code to synchronization primitives to find bottlenecks if
-  running on multiple cores. Found and fixes an issue where parts of the
+  running on multiple cores. Found and fixed an issue where parts of the
   Diffie-Hellman calculation acquired an exclusive lock. This greatly improves
   parallelization to multiple cores.
 
@@ -17,8 +17,11 @@ strongswan-4.2.9
   slim down the daemon core.
 
 - separated IKE_SA/CHILD_SA key derivation process into a closed system,
-  allowing future impelementations to use a secured environment in e.g. kernel
+  allowing future implementations to use a secured environment in e.g. kernel
   memory or hardware.
+
+- The kernel interface of charon has been modularized. Plugins for the native
+  IPsec stack of the Linux 2.6 kernel and the KLIPS IPsec stack are provided.
 
 
 strongswan-4.2.8
