@@ -212,6 +212,9 @@ struct stroke_msg_t {
 			int mobike;
 			int force_encap;
 			int ipcomp;
+			int install_policy;
+			int proxy;
+
 			crl_policy_t crl_policy;
 			int unique;
 			struct {

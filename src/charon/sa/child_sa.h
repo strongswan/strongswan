@@ -323,14 +323,16 @@ struct child_sa_t {
 /**
  * Constructor to create a new child_sa_t.
  *
- * @param me			own address
- * @param other			remote address
- * @param my_id			id of own peer
- * @param other_id		id of remote peer
- * @param config		config to use for this CHILD_SA
- * @param reqid			reqid of old CHILD_SA when rekeying, 0 otherwise
- * @param encap			TRUE to enable UDP encapsulation (NAT traversal)
- * @return				child_sa_t object
+ * @param me				own address
+ * @param other				remote address
+ * @param my_id				id of own peer
+ * @param other_id			id of remote peer
+ * @param config			config to use for this CHILD_SA
+ * @param reqid				reqid of old CHILD_SA when rekeying, 0 otherwise
+ * @param encap				TRUE to enable UDP encapsulation (NAT traversal)
+ * @param proxy				TRUE if IPsec transport SA is to be set up in proxy mode
+ * @param install_policy	TRUE if kernel policies are to be installed
+ * @return					child_sa_t object
  */
 child_sa_t * child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 							 u_int32_t reqid, bool encap);

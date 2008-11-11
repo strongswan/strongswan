@@ -68,6 +68,7 @@ typedef enum {
     KW_TYPE,
     KW_PFS,
     KW_COMPRESS,
+	KW_INSTALLPOLICY,
     KW_AUTH,
     KW_AUTHBY,
     KW_EAP,

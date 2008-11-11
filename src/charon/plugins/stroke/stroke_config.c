@@ -775,7 +775,8 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 				msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
 				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
 				msg->add_conn.mode, dpd, dpd, msg->add_conn.ipcomp);
-	
+	child_cfg->set_mipv6_options(child_cfg, msg->add_conn.proxy,
+											msg->add_conn.install_policy);
 	add_ts(this, &msg->add_conn.me, child_cfg, TRUE);
 	add_ts(this, &msg->add_conn.other, child_cfg, FALSE);
 	

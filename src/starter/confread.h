@@ -114,7 +114,7 @@ struct starter_conn {
 	unsigned long	sa_rekey_fuzz;
 	sa_family_t	addr_family;
 	sa_family_t	tunnel_addr_family;
-	
+	bool		install_policy;
 	starter_end_t	left, right;
 
 	unsigned long	id;

@@ -865,6 +865,17 @@ struct ike_sa_t {
 	void (*add_dns_server) (ike_sa_t *this, host_t *dns);
 	
 	/**
+	 * Set local and remote host addresses to be used for IKE.
+	 *
+	 * These addresses are communicated via the KMADDRESS field of a MIGRATE
+	 * message sent via the NETLINK or PF _KEY kernel socket interface.
+	 *
+	 * @param local			local kmaddress
+	 * @param remote		remote kmaddress
+	 */
+	void (*set_kmaddress) (ike_sa_t *this, host_t *local, host_t *remote);
+
+	/**
 	 * Inherit all attributes of other to this after rekeying.
 	 *
 	 * When rekeying is completed, all CHILD_SAs, the virtual IP and all

@@ -79,6 +79,7 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.sa_keying_tries       = SA_REPLACEMENT_RETRIES_DEFAULT;
 	cfg->conn_default.addr_family           = AF_INET;
 	cfg->conn_default.tunnel_addr_family    = AF_INET;
+	cfg->conn_default.install_policy	= TRUE;
 	cfg->conn_default.dpd_delay		=  30; /* seconds */
 	cfg->conn_default.dpd_timeout		= 150; /* seconds */
 
@@ -497,15 +498,29 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 		case KW_TYPE:
 			conn->policy &= ~(POLICY_TUNNEL | POLICY_SHUNT_MASK);
 			if (streq(kw->value, "tunnel"))
+			{
 				conn->policy |= POLICY_TUNNEL;
+			}
 			else if (streq(kw->value, "beet"))
+			{
 				conn->policy |= POLICY_BEET;
+			}
+			else if (streq(kw->value, "transport_proxy"))
+			{
+				conn->policy |= POLICY_PROXY;			
+			}	
 			else if (streq(kw->value, "passthrough") || streq(kw->value, "pass"))
+			{
 				conn->policy |= POLICY_SHUNT_PASS;
+			}
 			else if (streq(kw->value, "drop"))
+			{
 				conn->policy |= POLICY_SHUNT_DROP;
+			}
 			else if (streq(kw->value, "reject"))
+			{
 				conn->policy |= POLICY_SHUNT_REJECT;
+			}
 			else if (strcmp(kw->value, "transport") != 0)
 			{
 				plog("# bad policy value: %s=%s", kw->entry->name, kw->value);
@@ -530,21 +545,33 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 				char *second = strchr(kw->value, '|');
 
 				if (second != NULL)
+				{
 					*second = '\0';
+				}
 
 				/* also handles the cases secret|rsasig and rsasig|secret */
 				for (;;)
 				{
 					if (streq(value, "rsa") || streq(value, "rsasig"))
+					{
 						conn->policy |= POLICY_RSASIG | POLICY_ENCRYPT;
+					}
 					else if (streq(value, "secret") || streq(value, "psk"))
+					{
 						conn->policy |= POLICY_PSK | POLICY_ENCRYPT;
+					}
 					else if (streq(value, "ecdsa") || streq(value, "ecdsasig"))
+					{
 						conn->policy |= POLICY_ECDSASIG | POLICY_ENCRYPT;
+					}
 					else if (streq(value, "xauthrsasig"))
+					{
 						conn->policy |= POLICY_XAUTH_RSASIG | POLICY_ENCRYPT;
+					}
 					else if (streq(value, "xauthpsk"))
+					{
 						conn->policy |= POLICY_XAUTH_PSK | POLICY_ENCRYPT;
+					}
 					else
 					{
 						plog("# bad policy value: %s=%s", kw->entry->name, kw->value);
@@ -552,7 +579,9 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 						break;
 					}
 					if (second == NULL)
+					{
 						break;
+					}
 					value = second;
 					second = NULL; /* traverse the loop no more than twice */
 				}

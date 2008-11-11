@@ -61,6 +61,7 @@ keyexchange,       KW_KEYEXCHANGE
 type,              KW_TYPE
 pfs,               KW_PFS
 compress,          KW_COMPRESS
+installpolicy,     KW_INSTALLPOLICY
 auth,              KW_AUTH
 authby,            KW_AUTHBY
 keylife,           KW_KEYLIFE

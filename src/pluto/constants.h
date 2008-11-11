@@ -877,7 +877,8 @@ extern const char *prettypolicy(lset_t policy);
 #define POLICY_BEET		LELEM(22)	/* bound end2end tunnel, IKEv2 */
 #define POLICY_MOBIKE		LELEM(23)	/* enable MOBIKE for IKEv2  */
 #define POLICY_FORCE_ENCAP	LELEM(24)	/* force UDP encapsulation (IKEv2)  */
-#define POLICY_ECDSASIG	LELEM(25)   /* ecdsa signature (IKEv2) */
+#define POLICY_ECDSASIG		LELEM(25)	/* ECDSA signature (IKEv2) */
+#define POLICY_PROXY		LELEM(26)	/* proxy transport mode (MIPv6) */
 
 /* Any IPsec policy?  If not, a connection description
  * is only for ISAKMP SA, not IPSEC SA.  (A pun, I admit.)

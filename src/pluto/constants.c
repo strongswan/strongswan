@@ -517,6 +517,8 @@ const char *const sa_policy_bit_names[] = {
 	"DONTREAUTH",
 	"BEET",
 	"MOBIKE",
+	"ECDSA",
+	"PROXY",
 	NULL
     };
 

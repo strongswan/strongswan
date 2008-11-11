@@ -83,90 +83,16 @@ static void execute(private_migrate_job_t *this)
 		ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
 														this->reqid, TRUE);
 	}
-	if (ike_sa == NULL)
+	if (ike_sa)
 	{
-		enumerator_t *enumerator, *children;
-		peer_cfg_t *peer_cfg;
-		child_cfg_t *found_cfg = NULL;
-				
-		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends);
-		while (enumerator->enumerate(enumerator, (void**)&peer_cfg))
-		{
-			child_cfg_t *child_cfg;
-
-			if (peer_cfg->get_ike_version(peer_cfg) != 2)
-			{
-				continue;
-			}
-
-			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
-			while (children->enumerate(children, &child_cfg))
-			{
-				if (child_cfg->equal_traffic_selectors(child_cfg, TRUE, this->src_ts) &&
-					child_cfg->equal_traffic_selectors(child_cfg, FALSE, this->dst_ts))
-				{
-					found_cfg = child_cfg;
-					break;
-				}
-			}
-			children->destroy(children);
-			if (found_cfg)
-			{
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-
-		if (found_cfg == NULL)
-		{
-			DBG1(DBG_JOB, "no matching child config found for policy %R === %R",
-						   this->src_ts, this->dst_ts);
-			destroy(this);
-			return;
-		}
-		DBG1(DBG_JOB, "found matching child config '%s' for policy %R === %R",
-					   found_cfg->get_name(found_cfg),
-					   this->src_ts, this->dst_ts);
-
-		ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
-															peer_cfg);
-		if (ike_sa->get_peer_cfg(ike_sa) == NULL)
-		{
-			host_t *my_host, *other_host;
-			ike_cfg_t *ike_cfg;
-
-			ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-			my_host = host_create_from_dns(ike_cfg->get_my_addr(ike_cfg), 0, 0);
-			other_host = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg), 0, 0);
-			ike_sa->set_my_host(ike_sa, my_host);
-			ike_sa->set_other_host(ike_sa, other_host);
-		}
-		if (this->local)
-		{
-			ike_sa->set_my_host(ike_sa, this->local->clone(this->local));
-		}
-		if (this->remote)
-		{
-			ike_sa->set_other_host(ike_sa, this->remote->clone(this->remote));
-		}
-		/* add a CHILD_SA for 'found_cfg' with a policy that has already been
-         * installed in the kernel
-         */
+		DBG2(DBG_JOB, "found CHILD_SA with reqid {%d}", this->reqid);
+		ike_sa->set_kmaddress(ike_sa, this->local, this->remote);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	else
 	{
-		DBG1(DBG_JOB, "found CHILD_SA with reqid {%d}", this->reqid);
-		if (this->local)
-		{
-			ike_sa->set_my_host(ike_sa, this->local);
-		}
-		if (this->remote)
-		{
-			ike_sa->set_other_host(ike_sa, this->remote->clone(this->remote));
-		}
+		DBG1(DBG_JOB, "no CHILD_SA found with reqid {%d}", this->reqid);
 	}
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	destroy(this);
 }
 

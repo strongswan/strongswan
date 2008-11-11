@@ -250,6 +250,16 @@ struct private_ike_sa_t {
 	 * are we the initiator of this IKE_SA (rekeying does not affect this flag)
 	 */
 	bool ike_initiator;
+
+	/**
+	 * local host address to be used for IKE, set via MIGRATE kernel message
+	 */
+	host_t *local_host;
+
+	/**
+	 * remote host address to be used for IKE, set via MIGRATE kernel message
+	 */
+	host_t *remote_host;
 };
 
 /**
@@ -943,6 +953,17 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 	response->destroy(response);
 }
 
+/**
+ * Implementation of ike_sa_t.set_kmaddress.
+ */
+static void set_kmaddress(private_ike_sa_t *this, host_t *local, host_t *remote)
+{
+	DESTROY_IF(this->local_host);
+	DESTROY_IF(this->remote_host);
+	this->local_host = local->clone(local);
+	this->remote_host = remote->clone(remote);
+}
+
 #ifdef ME
 /**
  * Implementation of ike_sa_t.act_as_mediation_server.
@@ -1047,26 +1068,42 @@ static void resolve_hosts(private_ike_sa_t *this)
 {
 	host_t *host;
 	
-	host = host_create_from_dns(this->ike_cfg->get_other_addr(this->ike_cfg),
-								0, IKEV2_UDP_PORT);
+	if (this->remote_host)
+	{
+		host = this->remote_host->clone(this->remote_host);
+		host->set_port(host, IKEV2_UDP_PORT);
+	}
+	else
+	{
+		host = host_create_from_dns(this->ike_cfg->get_other_addr(this->ike_cfg),
+									0, IKEV2_UDP_PORT);
+	}
 	if (host)
 	{
 		set_other_host(this, host);
 	}
 	
-	host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg),
-								this->my_host->get_family(this->my_host),
-								IKEV2_UDP_PORT);
-	
-	if (host && host->is_anyaddr(host) &&
-		!this->other_host->is_anyaddr(this->other_host))
+	if (this->local_host)
 	{
-		host->destroy(host);
-		host = charon->kernel_interface->get_source_addr(
-							charon->kernel_interface, this->other_host, NULL);
-		if (host)
+		host = this->local_host->clone(this->local_host);
+		host->set_port(host, IKEV2_UDP_PORT);
+	}
+	else
+	{
+		host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg),
+									this->my_host->get_family(this->my_host),
+									IKEV2_UDP_PORT);
+	
+		if (host && host->is_anyaddr(host) &&
+			!this->other_host->is_anyaddr(this->other_host))
 		{
-			host->set_port(host, IKEV2_UDP_PORT);
+			host->destroy(host);
+			host = charon->kernel_interface->get_source_addr(
+							charon->kernel_interface, this->other_host, NULL);
+			if (host)
+			{
+				host->set_port(host, IKEV2_UDP_PORT);
+			}
 		}
 	}
 	if (host)
@@ -1264,8 +1301,10 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	
 	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, me);
 	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, other);
+
 	status = child_sa->add_policies(child_sa, my_ts, other_ts,
-									child_cfg->get_mode(child_cfg), PROTO_NONE);
+							child_cfg->get_mode(child_cfg),	PROTO_NONE);
+
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 	if (status == SUCCESS)
@@ -1318,6 +1357,7 @@ static status_t unroute(private_ike_sa_t *this, u_int32_t reqid)
 	}
 	return SUCCESS;
 }
+
 /**
  * Implementation of ike_sa_t.process_message.
  */
@@ -1389,7 +1429,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		
 		me = message->get_destination(message);
 		other = message->get_source(message);
-	
+
 		/* if this IKE_SA is virgin, we check for a config */
 		if (this->ike_cfg == NULL)
 		{
@@ -2235,6 +2275,8 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->other_host);
 	DESTROY_IF(this->my_id);
 	DESTROY_IF(this->other_id);
+	DESTROY_IF(this->local_host);
+	DESTROY_IF(this->remote_host);
 	DESTROY_IF(this->eap_identity);
 	
 	DESTROY_IF(this->ike_cfg);
@@ -2319,6 +2361,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_virtual_ip = (void (*)(ike_sa_t*,bool,host_t*))set_virtual_ip;
 	this->public.get_virtual_ip = (host_t* (*)(ike_sa_t*,bool))get_virtual_ip;
 	this->public.add_dns_server = (void (*)(ike_sa_t*,host_t*))add_dns_server;
+	this->public.set_kmaddress = (void (*)(ike_sa_t*,host_t*,host_t*))set_kmaddress;
 #ifdef ME
 	this->public.act_as_mediation_server = (void (*)(ike_sa_t*)) act_as_mediation_server;
 	this->public.get_server_reflexive_host = (host_t* (*)(ike_sa_t*)) get_server_reflexive_host;
@@ -2334,8 +2377,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* initialize private fields */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->child_sas = linked_list_create();
-	this->my_host = host_create_from_string("%any", IKEV2_UDP_PORT);
-	this->other_host = host_create_from_string("%any", IKEV2_UDP_PORT);
+	this->my_host = host_create_any(AF_INET);
+	this->other_host = host_create_any(AF_INET);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->eap_identity = NULL;
@@ -2362,6 +2405,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->pending_updates = 0;
 	this->keyingtry = 0;
 	this->ike_initiator = FALSE;
+	this->local_host = NULL;
+	this->remote_host = NULL;
 #ifdef ME
 	this->is_mediation_server = FALSE;
 	this->server_reflexive_host = NULL;

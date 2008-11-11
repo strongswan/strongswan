@@ -155,7 +155,7 @@ struct private_child_sa_t {
 };
 
 /**
- * Implementation of child_sa_t.get_namy_
+ * Implementation of child_sa_t.get_name
  */
 static char *get_name(private_child_sa_t *this)
 {
@@ -334,10 +334,13 @@ static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
 			{
 				last_use = max(last_use, in);
 			}
-			if (charon->kernel_interface->query_policy(charon->kernel_interface,
-								other_ts, my_ts, POLICY_FWD, &fwd) == SUCCESS)
+			if (this->mode == MODE_TUNNEL)
 			{
-				last_use = max(last_use, fwd);
+				if (charon->kernel_interface->query_policy(charon->kernel_interface,
+								other_ts, my_ts, POLICY_FWD, &fwd) == SUCCESS)
+				{
+					last_use = max(last_use, fwd);
+				}
 			}
 		}
 		else
@@ -595,7 +598,7 @@ static status_t add_policies(private_child_sa_t *this,
 	{	/* update if not set yet */
 		this->protocol = proto;
 	}
-	
+
 	/* apply traffic selectors */
 	enumerator = my_ts_list->create_enumerator(my_ts_list);
 	while (enumerator->enumerate(enumerator, &my_ts))
@@ -610,30 +613,36 @@ static status_t add_policies(private_child_sa_t *this,
 	}
 	enumerator->destroy(enumerator);
 	
-	/* enumerate pairs of traffic selectors */
-	enumerator = create_policy_enumerator(this);
-	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+	if (this->config->install_policy(this->config))
 	{
-		/* install 3 policies: out, in and forward */
-		status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-				this->my_addr, this->other_addr, my_ts, other_ts, POLICY_OUT,
-				this->protocol, this->reqid, high_prio, mode, this->ipcomp);
+		/* enumerate pairs of traffic selectors */
+		enumerator = create_policy_enumerator(this);
+		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+		{
+			/* install 3 policies: out, in and forward */
+			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+					this->my_addr, this->other_addr, my_ts, other_ts, POLICY_OUT,
+					this->protocol, this->reqid, high_prio, mode, this->ipcomp);
 		
-		status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-				this->other_addr, this->my_addr, other_ts, my_ts, POLICY_IN,
-				this->protocol, this->reqid, high_prio, mode, this->ipcomp);
+			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_IN,
+					this->protocol, this->reqid, high_prio, mode, this->ipcomp);
 		
-		status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+			if (mode == MODE_TUNNEL)
+			{
+				status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 				this->other_addr, this->my_addr, other_ts, my_ts, POLICY_FWD,
 				this->protocol, this->reqid, high_prio, mode, this->ipcomp);
+			}
 		
-		if (status != SUCCESS)
-		{
-			break;
+			if (status != SUCCESS)
+			{
+				break;
+			}
 		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
-	
+
 	if (status == SUCCESS)
 	{
 		/* switch to routed state if no SAD entry set up */
@@ -694,71 +703,82 @@ static status_t update_hosts(private_child_sa_t *this,
 	charon->kernel_interface->update_sa(charon->kernel_interface, this->other_spi, 
 			this->protocol, this->my_addr, this->other_addr, me, other, encap);
 	
-	/* update policies */
-	if (!me->ip_equals(me, this->my_addr) ||
-		!other->ip_equals(other, this->other_addr))
+	if (this->config->install_policy(this->config))
 	{
-		enumerator_t *enumerator;
-		traffic_selector_t *my_ts, *other_ts;
-		
-		/* always use high priorities, as hosts getting updated are INSTALLED */
-		enumerator = create_policy_enumerator(this);
-		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+		/* update policies */
+		if (!me->ip_equals(me, this->my_addr) ||
+			!other->ip_equals(other, this->other_addr))
 		{
-			/* remove old policies first */
-			charon->kernel_interface->del_policy(charon->kernel_interface,
+			enumerator_t *enumerator;
+			traffic_selector_t *my_ts, *other_ts;
+		
+			/* always use high priorities, as hosts getting updated are INSTALLED */
+			enumerator = create_policy_enumerator(this);
+			while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+			{
+				/* remove old policies first */
+				charon->kernel_interface->del_policy(charon->kernel_interface,
 												 my_ts, other_ts, POLICY_OUT);
-			charon->kernel_interface->del_policy(charon->kernel_interface,
+				charon->kernel_interface->del_policy(charon->kernel_interface,
 												 other_ts, my_ts,  POLICY_IN);
-			charon->kernel_interface->del_policy(charon->kernel_interface,
+				if (this->mode == MODE_TUNNEL)
+				{
+					charon->kernel_interface->del_policy(charon->kernel_interface,
 												 other_ts, my_ts, POLICY_FWD);
-		
-			/* check whether we have to update a "dynamic" traffic selector */
-			if (!me->ip_equals(me, this->my_addr) &&
-				my_ts->is_host(my_ts, this->my_addr))
-			{
-				my_ts->set_address(my_ts, me);
-			}
-			if (!other->ip_equals(other, this->other_addr) &&
-				other_ts->is_host(other_ts, this->other_addr))
-			{
-				other_ts->set_address(other_ts, other);
-			}
+				}
+
+				/* check whether we have to update a "dynamic" traffic selector */
+				if (!me->ip_equals(me, this->my_addr) &&
+					my_ts->is_host(my_ts, this->my_addr))
+				{
+					my_ts->set_address(my_ts, me);
+				}
+				if (!other->ip_equals(other, this->other_addr) &&
+					other_ts->is_host(other_ts, this->other_addr))
+				{
+					other_ts->set_address(other_ts, other);
+				}
 			
-			/* we reinstall the virtual IP to handle interface roaming
-			 * correctly */
-			if (vip)
-			{
-				charon->kernel_interface->del_ip(charon->kernel_interface, vip);
-				charon->kernel_interface->add_ip(charon->kernel_interface, vip, me);
-			}
+				/* we reinstall the virtual IP to handle interface roaming
+				 * correctly */
+				if (vip)
+				{
+					charon->kernel_interface->del_ip(charon->kernel_interface, vip);
+					charon->kernel_interface->add_ip(charon->kernel_interface, vip, me);
+				}
 		
-			/* reinstall updated policies */
-			charon->kernel_interface->add_policy(charon->kernel_interface,
+				/* reinstall updated policies */
+				charon->kernel_interface->add_policy(charon->kernel_interface,
 						me, other, my_ts, other_ts, POLICY_OUT, this->protocol,
 						this->reqid, TRUE, this->mode, this->ipcomp);
-			charon->kernel_interface->add_policy(charon->kernel_interface, 
+				charon->kernel_interface->add_policy(charon->kernel_interface, 
 						other, me, other_ts, my_ts, POLICY_IN, this->protocol,
 						this->reqid, TRUE, this->mode, this->ipcomp);
-			charon->kernel_interface->add_policy(charon->kernel_interface,
+				if (this->mode == MODE_TUNNEL)
+				{
+					charon->kernel_interface->add_policy(charon->kernel_interface,
 						other, me, other_ts, my_ts, POLICY_FWD, this->protocol,
 						this->reqid, TRUE, this->mode, this->ipcomp);
+				}
+			}
+			enumerator->destroy(enumerator);
 		}
-		enumerator->destroy(enumerator);
 	}
 
 	/* apply hosts */
-	if (!me->equals(me, this->my_addr))
+	if (!this->config->use_proxy_mode(this->config) || this->mode != MODE_TRANSPORT)
 	{
-		this->my_addr->destroy(this->my_addr);
-		this->my_addr = me->clone(me);
+		if (!me->equals(me, this->my_addr))
+		{
+			this->my_addr->destroy(this->my_addr);
+			this->my_addr = me->clone(me);
+		}
+		if (!other->equals(other, this->other_addr))
+		{
+			this->other_addr->destroy(this->other_addr);
+			this->other_addr = other->clone(other);
+		}
 	}
-	if (!other->equals(other, this->other_addr))
-	{
-		this->other_addr->destroy(this->other_addr);
-		this->other_addr = other->clone(other);
-	}
-	
 	set_state(this, old);
 	
 	return SUCCESS;
@@ -830,19 +850,25 @@ static void destroy(private_child_sa_t *this)
 					this->other_addr, htonl(ntohs(this->other_cpi)), IPPROTO_COMP);
 	}
 	
-	/* delete all policies in the kernel */
-	enumerator = create_policy_enumerator(this);
-	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+	if (this->config->install_policy(this->config))
 	{
-		charon->kernel_interface->del_policy(charon->kernel_interface,
-											 my_ts, other_ts, POLICY_OUT);
-		charon->kernel_interface->del_policy(charon->kernel_interface,
-											 other_ts, my_ts, POLICY_IN);
-		charon->kernel_interface->del_policy(charon->kernel_interface,
-											 other_ts, my_ts, POLICY_FWD);
+		/* delete all policies in the kernel */
+		enumerator = create_policy_enumerator(this);
+		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+		{
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+												 my_ts, other_ts, POLICY_OUT);
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+												 other_ts, my_ts, POLICY_IN);
+			if (this->mode == MODE_TUNNEL)
+			{
+				charon->kernel_interface->del_policy(charon->kernel_interface,
+												 other_ts, my_ts, POLICY_FWD);
+			}
+		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
-	
+
 	this->my_ts->destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
 	this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
 	this->my_addr->destroy(this->my_addr);
@@ -909,6 +935,63 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->proposal = NULL;
 	this->config = config;
 	config->get_ref(config);
+
+	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */	
+	if (config->get_mode(config) == MODE_TRANSPORT &&
+	    config->use_proxy_mode(config))
+	{
+		ts_type_t type;
+		int family;
+		chunk_t addr;
+		host_t *host;
+		enumerator_t *enumerator;
+		linked_list_t *my_ts_list, *other_ts_list;
+		traffic_selector_t *my_ts, *other_ts;
+
+		this->mode = MODE_TRANSPORT;
+
+		my_ts_list = config->get_traffic_selectors(config, TRUE, NULL, me);
+		enumerator = my_ts_list->create_enumerator(my_ts_list);
+		if (enumerator->enumerate(enumerator, &my_ts))
+		{
+			if (my_ts->is_host(my_ts, NULL) &&
+			   !my_ts->is_host(my_ts, this->my_addr))
+			{
+				type = my_ts->get_type(my_ts);
+				family = (type == TS_IPV4_ADDR_RANGE) ? AF_INET : AF_INET6;
+				addr = my_ts->get_from_address(my_ts);
+				host = host_create_from_chunk(family, addr, 0);
+				free(addr.ptr);
+				DBG1(DBG_CHD, "my address: %H is a transport mode proxy for %H",
+							   this->my_addr, host); 
+				this->my_addr->destroy(this->my_addr);
+				this->my_addr = host;
+			}
+		}
+		enumerator->destroy(enumerator);
+		my_ts_list->destroy_offset(my_ts_list, offsetof(traffic_selector_t, destroy));
+
+		other_ts_list = config->get_traffic_selectors(config, FALSE, NULL, other);
+		enumerator = other_ts_list->create_enumerator(other_ts_list);
+		if (enumerator->enumerate(enumerator, &other_ts))
+		{
+			if (other_ts->is_host(other_ts, NULL) &&
+			   !other_ts->is_host(other_ts, this->other_addr))
+			{
+				type = other_ts->get_type(other_ts);
+				family = (type == TS_IPV4_ADDR_RANGE) ? AF_INET : AF_INET6;
+				addr = other_ts->get_from_address(other_ts);
+				host = host_create_from_chunk(family, addr, 0);
+				free(addr.ptr);
+				DBG1(DBG_CHD, "other address: %H is a transport mode proxy for %H",
+							   this->other_addr, host); 
+				this->other_addr->destroy(this->other_addr);
+				this->other_addr = host;
+			}
+		}
+		enumerator->destroy(enumerator);
+		other_ts_list->destroy_offset(other_ts_list, offsetof(traffic_selector_t, destroy));
+	}
 	
 	return &this->public;
 }

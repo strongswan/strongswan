@@ -300,8 +300,10 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		switch (this->mode)
 		{
 			case MODE_TRANSPORT:
-				if (!ts_list_is_host(this->tsi, other) ||
-					!ts_list_is_host(this->tsr, me))
+				if (!this->config->use_proxy_mode(this->config) &&
+					   (!ts_list_is_host(this->tsi, other) ||
+						!ts_list_is_host(this->tsr, me))
+				   )
 				{
 					this->mode = MODE_TUNNEL;
 					DBG1(DBG_IKE, "not using transport mode, not host-to-host");
