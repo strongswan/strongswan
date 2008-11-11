@@ -42,7 +42,7 @@ typedef bool(*controller_cb_t)(void* param, debug_t group, level_t level,
 /**
  * Empty callback function for controller_t functions.
  *
- * If you want to do a syncrhonous call, but don't need a callback, pass
+ * If you want to do a synchronous call, but don't need a callback, pass
  * this function to the controllers methods.
  */
 bool controller_cb_empty(void *param, debug_t group, level_t level,
@@ -57,7 +57,7 @@ typedef struct controller_t controller_t;
  * evaluate the result of the operation by listening on the bus.
  *
  * Passing NULL as callback to the managers function calls them asynchronously.
- * If a callback is specified, they are called synchronoulsy. There is a default
+ * If a callback is specified, they are called synchronously. There is a default
  * callback "controller_cb_empty" if you wan't to call a function
  * synchronously, but don't need a callback.
  */
@@ -76,7 +76,7 @@ struct controller_t {
 	/**
 	 * Initiate a CHILD_SA, and if required, an IKE_SA.
 	 *
-	 * The inititate() function is synchronous and thus blocks until the
+	 * The initiate() function is synchronous and thus blocks until the
 	 * IKE_SA is established or failed. Because of this, the initiate() function
 	 * contains a thread cancellation point.
 	 *

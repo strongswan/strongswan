@@ -59,7 +59,7 @@ struct ike_sa_manager_t {
 	 * Create and check out a new IKE_SA.
 	 * 
 	 * @param initiator			TRUE for initiator, FALSE otherwise
-	 * @returns 				created andchecked out IKE_SA
+	 * @returns 				created and checked out IKE_SA
 	 */
 	ike_sa_t* (*checkout_new) (ike_sa_manager_t* this, bool initiator);
 	
@@ -67,13 +67,13 @@ struct ike_sa_manager_t {
 	 * Checkout an IKE_SA by a message.
 	 * 
 	 * In some situations, it is necessary that the manager knows the
-	 * message to use for the checkout. This has the folloing reasons:
+	 * message to use for the checkout. This has the following reasons:
 	 * 
 	 * 1. If the targeted IKE_SA is already processing a message, we do not
 	 *    check it out if the message ID is the same.
 	 * 2. If it is an IKE_SA_INIT request, we have to check if it is a 
 	 *    retransmission. If so, we have to drop the message, we would
-	 *    create another unneded IKE_SA for each retransmitted packet.
+	 *    create another unneeded IKE_SA for each retransmitted packet.
 	 *
 	 * A call to checkout_by_message() returns a (maybe new created) IKE_SA.
 	 * If processing the message does not make sense (for the reasons above),
