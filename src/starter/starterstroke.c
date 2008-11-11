@@ -252,7 +252,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	else if (conn->policy & POLICY_PROXY)
 	{
 		msg.add_conn.mode = XFRM_MODE_TRANSPORT;
-		msg.add_conn.proxy = TRUE;
+		msg.add_conn.proxy_mode = TRUE;
 	} 
 	else
 	{
