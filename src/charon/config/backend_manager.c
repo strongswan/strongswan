@@ -175,7 +175,7 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 	data->me = me;
 	data->other = other;
 	
-	DBG2(DBG_CFG, "looking for a config for %H...%H", me, other);
+	DBG2(DBG_CFG, "looking for an ike config for %H...%H", me, other);
 	
 	this->mutex->lock(this->mutex);
 	enumerator = enumerator_create_nested(
@@ -188,8 +188,8 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 		if (match)
 		{
 			DBG2(DBG_CFG, "  candidate: %s...%s, prio %d", 
-				 current->get_my_addr(current), current->get_other_addr(current),
-				 match);
+				 current->get_my_addr(current), 
+				 current->get_other_addr(current), match);
 			if (match > best)
 			{
 				DESTROY_IF(found);
@@ -201,6 +201,11 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
+	if (found)
+	{
+		DBG2(DBG_CFG, "found matching ike config: %s...%s with prio %d", 
+			 found->get_my_addr(found), found->get_other_addr(found), best);
+	}
 	return found;
 }
 
@@ -227,7 +232,7 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 	ike_cfg_match_t best_ike = MATCH_NONE;
 	peer_data_t *data;
 	
-	DBG2(DBG_CFG, "looking for a config for %H[%D]...%H[%D]",
+	DBG2(DBG_CFG, "looking for a peer config for %H[%D]...%H[%D]",
 		 me, my_id, other, other_id);
 	
 	data = malloc_thing(peer_data_t);
@@ -262,7 +267,7 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 		if (m1 && m2 && match_ike && 
 			auth->complies(auth, current->get_auth(current)))
 		{
-			DBG2(DBG_CFG, "  candidate '%s': %D...%D, prio %d.%d",
+			DBG2(DBG_CFG, "  candidate \"%s\": %D...%D with prio %d.%d",
 			 	 current->get_name(current), my_cand, other_cand,
 			 	 match_peer, match_ike);
 			if (match_peer >= best_peer && match_ike > best_ike)
@@ -277,7 +282,7 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 	}
 	if (found)
 	{
-		DBG1(DBG_CFG, "found matching config \"%s\": %D...%D, prio %d.%d",
+		DBG1(DBG_CFG, "found matching peer config \"%s\": %D...%D with prio %d.%d",
 			 found->get_name(found), found->get_my_id(found),
 			 found->get_other_id(found), best_peer, best_ike);
 	}
