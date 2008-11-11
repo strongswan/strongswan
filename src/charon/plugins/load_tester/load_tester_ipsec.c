@@ -97,13 +97,14 @@ static status_t del_sa(private_load_tester_ipsec_t *this, host_t *dst,
 /**
  * Implementation of kernel_interface_t.add_policy.
  */
-static status_t add_policy(private_load_tester_ipsec_t *this, 
+static status_t add_policy(private_load_tester_ipsec_t *this,
 						   host_t *src, host_t *dst,
 						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
-						   policy_dir_t direction, protocol_id_t protocol,
-						   u_int32_t reqid, ipsec_mode_t mode, u_int16_t ipcomp,
-						   u_int16_t cpi, bool routed)
+						   policy_dir_t direction, u_int32_t spi,
+						   protocol_id_t protocol, u_int32_t reqid,
+						   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
+						   bool routed)
 {
 	return SUCCESS;
 }
@@ -152,7 +153,7 @@ load_tester_ipsec_t *load_tester_ipsec_create()
 	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
-	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
+	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t *this,host_t *, host_t *,traffic_selector_t *,traffic_selector_t *,policy_dir_t, u_int32_t,protocol_id_t, u_int32_t,ipsec_mode_t, u_int16_t, u_int16_t,bool))add_policy;
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.interface.del_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,bool))del_policy;
 	this->public.interface.destroy = (void(*)(kernel_ipsec_t*)) destroy;
