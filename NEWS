@@ -1,3 +1,26 @@
+strongswan-4.2.9
+----------------
+
+- Flexible configuration of logging subsystem to different syslog facilities
+  or files using fine-grained log levels for each target.
+
+- Load testing plugin to do stress testing of the IKEv2 daemon against self
+  or another host. Found and fixed issues during tests in the multi-threaded
+  use of the OpenSSL plugin.
+
+- Added profiling code to synchronization primitives to find bottlenecks if
+  running on multiple cores. Found and fixes an issue where parts of the
+  Diffie-Hellman calculation acquired an exclusive lock. This greatly improves
+  parallelization to multiple cores.
+
+- updown script invocation has been separated in an own plugin to further
+  slim down the daemon core.
+
+- separated IKE_SA/CHILD_SA key derivation process into a closed system,
+  allowing future impelementations to use a secured environment in e.g. kernel
+  memory or hardware.
+
+
 strongswan-4.2.8
 ----------------
 
