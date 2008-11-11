@@ -1169,10 +1169,14 @@ static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_c
 
 #ifdef ME
 	if (this->peer_cfg->is_mediation(this->peer_cfg))
-	{	/* mediation connection is already established, retrigger state change
-		 * to notify bus listeners */
-		DBG1(DBG_IKE, "mediation connection is already up");
-		set_state(this, IKE_ESTABLISHED);
+	{
+		if (this->state == IKE_ESTABLISHED)
+		{
+			/* mediation connection is already established, retrigger state change
+			 * to notify bus listeners */
+			DBG1(DBG_IKE, "mediation connection is already up");
+			set_state(this, IKE_ESTABLISHED);
+		}
 		DESTROY_IF(child_cfg);
 	}
 	else

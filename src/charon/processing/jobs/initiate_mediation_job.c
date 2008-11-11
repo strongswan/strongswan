@@ -54,6 +54,21 @@ static void destroy(private_initiate_mediation_job_t *this)
 }
 
 /**
+ * Callback to handle initiation of mediation connection
+ */
+static bool initiate_callback(private_initiate_mediation_job_t *this,
+			debug_t group, level_t level, ike_sa_t *ike_sa,
+			char *format, va_list args)
+{
+	if (ike_sa && !this->mediation_sa_id)
+	{
+		this->mediation_sa_id = ike_sa->get_id(ike_sa);
+		this->mediation_sa_id = this->mediation_sa_id->clone(this->mediation_sa_id);
+	}
+	return TRUE;
+}
+
+/**
  * Implementation of job_t.execute.
  */ 
 static void initiate(private_initiate_mediation_job_t *this)
@@ -96,13 +111,8 @@ static void initiate(private_initiate_mediation_job_t *this)
 		/* we need an additional reference because initiate consumes one */
 		mediation_cfg->get_ref(mediation_cfg); 
 
-		/* this function call blocks until the connection is up or failed
-		 * we do not check the status, but NEED_MORE would be returned on success
-		 * because the registered callback returns FALSE then
-		 * this->mediation_sa_id is set in the callback */
-		charon->controller->initiate(charon->controller, mediation_cfg, NULL,
-									 controller_cb_empty, this);
-		if (!this->mediation_sa_id)
+		if (charon->controller->initiate(charon->controller, mediation_cfg,
+					NULL, (controller_cb_t)initiate_callback, this) != SUCCESS)
 		{
 			mediation_cfg->destroy(mediation_cfg);
 			mediated_cfg->destroy(mediated_cfg);
