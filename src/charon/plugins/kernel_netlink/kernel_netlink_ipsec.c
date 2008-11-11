@@ -1781,11 +1781,11 @@ static bool add_bypass_policies()
 				ipsec_policy = IP_IPSEC_POLICY;
 				break;
 			case AF_INET6:
-			{
 				sol = SOL_IPV6;
 				ipsec_policy = IPV6_IPSEC_POLICY;
 				break;
-			}
+			default:
+				continue;
 		}
 		
 		memset(&policy, 0, sizeof(policy));
