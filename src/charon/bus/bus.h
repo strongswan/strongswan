@@ -70,6 +70,11 @@ enum debug_t {
 extern enum_name_t *debug_names;
 
 /**
+ * short names of debug message group, lower case.
+ */
+extern enum_name_t *debug_lower_names;
+
+/**
  * Debug levels used to control output verbosity.
  */
 enum level_t {

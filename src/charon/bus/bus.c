@@ -36,6 +36,19 @@ ENUM(debug_names, DBG_DMN, DBG_LIB,
 	"LIB",
 );
 
+ENUM(debug_lower_names, DBG_DMN, DBG_LIB,
+	"dmn",
+	"mgr",
+	"ike",
+	"chd",
+	"job",
+	"cfg",
+	"knl",
+	"net",
+	"enc",
+	"lib",
+);
+
 typedef struct private_bus_t private_bus_t;
 
 /**

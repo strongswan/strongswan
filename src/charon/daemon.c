@@ -205,9 +205,10 @@ static void destroy(private_daemon_t *this)
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_stderr;
 	DESTROY_IF(this->public.bus);
-	DESTROY_IF(this->public.outlog);
-	DESTROY_IF(this->public.syslog);
-	DESTROY_IF(this->public.authlog);
+	this->public.file_loggers->destroy_offset(this->public.file_loggers,
+											offsetof(file_logger_t, destroy));
+	this->public.sys_loggers->destroy_offset(this->public.sys_loggers,
+											offsetof(sys_logger_t, destroy));
 	free(this);
 }
 
@@ -328,38 +329,133 @@ static void print_plugins()
 }
 
 /**
+ * Initialize logging
+ */
+static void initialize_loggers(private_daemon_t *this, bool use_stderr,
+							   level_t levels[])
+{
+	sys_logger_t *sys_logger;
+	file_logger_t *file_logger;
+	enumerator_t *enumerator;
+	char *facility, *filename;
+	int loggers_defined = 0;
+	debug_t group;
+	level_t  def;
+	bool append;
+	FILE *file;
+	
+	/* setup sysloggers */
+	enumerator = lib->settings->create_section_enumerator(lib->settings,
+														  "charon.syslog");
+	while (enumerator->enumerate(enumerator, &facility))
+	{
+		loggers_defined++;
+		if (streq(facility, "daemon"))
+		{
+			sys_logger = sys_logger_create(LOG_DAEMON);
+		}
+		else if (streq(facility, "auth"))
+		{
+			sys_logger = sys_logger_create(LOG_AUTHPRIV);
+		}
+		else
+		{
+			continue;
+		}
+		def = lib->settings->get_int(lib->settings,
+									 "charon.syslog.%s.default", 1, facility);
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			sys_logger->set_level(sys_logger, group,
+				lib->settings->get_int(lib->settings,
+									   "charon.syslog.%s.%N", def,
+									   facility, debug_lower_names, group));
+		}
+		this->public.sys_loggers->insert_last(this->public.sys_loggers,
+											  sys_logger);
+		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
+	}
+	enumerator->destroy(enumerator);
+	
+	/* and file loggers */
+	enumerator = lib->settings->create_section_enumerator(lib->settings,
+														  "charon.filelog");
+	while (enumerator->enumerate(enumerator, &filename))
+	{
+		loggers_defined++;
+		if (streq(filename, "stderr"))
+		{
+			file = stderr;
+		}
+		else if (streq(filename, "stdout"))
+		{
+			file = stdout;
+		}
+		else
+		{
+			append = lib->settings->get_bool(lib->settings,
+									"charon.filelog.%s.append", TRUE, filename);
+			file = fopen(filename, append ? "a" : "w");
+			if (file == NULL)
+			{
+				DBG1(DBG_DMN, "opening file %s for logging failed: %s",
+					 filename, strerror(errno));
+				continue;
+			}
+		}
+		file_logger = file_logger_create(file);
+		def = lib->settings->get_int(lib->settings,
+									 "charon.filelog.%s.default", 1, filename);
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			file_logger->set_level(file_logger, group,
+				lib->settings->get_int(lib->settings,
+									   "charon.filelog.%s.%N", def,
+									   filename, debug_lower_names, group));
+		}
+		this->public.file_loggers->insert_last(this->public.file_loggers,
+											   file_logger);
+		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
+	
+	}
+	enumerator->destroy(enumerator);
+	
+	/* setup legacy style default loggers provided via command-line */
+	if (!loggers_defined)
+	{
+		file_logger = file_logger_create(stdout);
+		sys_logger = sys_logger_create(LOG_DAEMON);
+		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
+		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
+		this->public.file_loggers->insert_last(this->public.file_loggers,
+											   file_logger);
+		this->public.sys_loggers->insert_last(this->public.sys_loggers,
+											  sys_logger);
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			sys_logger->set_level(sys_logger, group, levels[group]);
+			if (use_stderr)
+			{
+				file_logger->set_level(file_logger, group, levels[group]);
+			}
+		}
+	}
+}
+
+/**
  * Initialize the daemon
  */
 static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 {
-	debug_t group;
-	
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());
 	
 	/* setup bus and it's listeners first to enable log output */
 	this->public.bus = bus_create();
-	this->public.outlog = file_logger_create(stdout);
-	this->public.syslog = sys_logger_create(LOG_DAEMON);
-	this->public.authlog = sys_logger_create(LOG_AUTHPRIV);
-	this->public.bus->add_listener(this->public.bus, &this->public.syslog->listener);
-	this->public.bus->add_listener(this->public.bus, &this->public.outlog->listener);
-	this->public.bus->add_listener(this->public.bus, &this->public.authlog->listener);
-	this->public.authlog->set_level(this->public.authlog, DBG_ANY, LEVEL_AUDIT);
 	/* set up hook to log dbg message in library via charons message bus */
 	dbg = dbg_bus;
 	
-	/* apply loglevels */
-	for (group = 0; group < DBG_MAX; group++)
-	{
-		this->public.syslog->set_level(this->public.syslog,
-									   group, levels[group]);
-		if (!syslog)
-		{
-			this->public.outlog->set_level(this->public.outlog,
-										   group, levels[group]);
-		}
-	}
+	initialize_loggers(this, !syslog, levels);
 	
 	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
 
@@ -464,9 +560,8 @@ private_daemon_t *daemon_create(void)
 	this->public.eap = NULL;
 	this->public.sim = NULL;
 	this->public.bus = NULL;
-	this->public.outlog = NULL;
-	this->public.syslog = NULL;
-	this->public.authlog = NULL;
+	this->public.file_loggers = linked_list_create();
+	this->public.sys_loggers = linked_list_create();
 #ifdef ME
 	this->public.connect_manager = NULL;
 	this->public.mediation_manager = NULL;

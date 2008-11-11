@@ -98,6 +98,10 @@ static void set_level(private_file_logger_t *this, debug_t group, level_t level)
  */
 static void destroy(private_file_logger_t *this)
 {
+	if (this->out != stdout && this->out != stderr)
+	{
+		fclose(this->out);
+	}
 	free(this);
 }
 
