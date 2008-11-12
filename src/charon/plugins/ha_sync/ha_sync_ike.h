@@ -16,23 +16,23 @@
  */
 
 /**
- * @defgroup ha_sync_child ha_sync_child
+ * @defgroup ha_sync_ike ha_sync_ike
  * @{ @ingroup ha_sync
  */
 
-#ifndef HA_SYNC_CHILD_H_
-#define HA_SYNC_CHILD_H_
+#ifndef HA_SYNC_IKE_H_
+#define HA_SYNC_IKE_H_
 
 #include "ha_sync_socket.h"
 
 #include <daemon.h>
 
-typedef struct ha_sync_child_t ha_sync_child_t;
+typedef struct ha_sync_ike_t ha_sync_ike_t;
 
 /**
- * Synchronize CHILD_SAs.
+ * Synchronize IKE_SAs.
  */
-struct ha_sync_child_t {
+struct ha_sync_ike_t {
 
 	/**
 	 * Implements bus listener interface.
@@ -40,16 +40,16 @@ struct ha_sync_child_t {
 	listener_t listener;
 
 	/**
-	 * Destroy a ha_sync_child_t.
+	 * Destroy a ha_sync_ike_t.
 	 */
-	void (*destroy)(ha_sync_child_t *this);
+	void (*destroy)(ha_sync_ike_t *this);
 };
 
 /**
- * Create a ha_sync_child instance.
+ * Create a ha_sync_ike instance.
  *
  * @param socket		socket to use for sending synchronization messages
  */
-ha_sync_child_t *ha_sync_child_create(ha_sync_socket_t *socket);
+ha_sync_ike_t *ha_sync_ike_create(ha_sync_socket_t *socket);
 
-#endif /* HA_SYNC_CHILD_ @}*/
+#endif /* HA_SYNC_IKE_ @}*/

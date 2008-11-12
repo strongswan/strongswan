@@ -16,7 +16,9 @@
  */
 
 #include "ha_sync_plugin.h"
+#include "ha_sync_ike.h"
 #include "ha_sync_child.h"
+#include "ha_sync_socket.h"
 
 #include <daemon.h>
 #include <config/child_cfg.h>
@@ -34,7 +36,17 @@ struct private_ha_sync_plugin_t {
 	ha_sync_plugin_t public;
 
 	/**
-	 * CHILD_SA sync
+	 * Communication socket
+	 */
+	ha_sync_socket_t *socket;
+
+	/**
+	 * IKE_SA synchronization
+	 */
+	ha_sync_ike_t *ike;
+
+	/**
+	 * CHILD_SA synchronization
 	 */
 	ha_sync_child_t *child;
 };
@@ -44,8 +56,11 @@ struct private_ha_sync_plugin_t {
  */
 static void destroy(private_ha_sync_plugin_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->ike->listener);
 	charon->bus->remove_listener(charon->bus, &this->child->listener);
+	this->ike->destroy(this->ike);
 	this->child->destroy(this->child);
+	this->socket->destroy(this->socket);
 	free(this);
 }
 
@@ -58,7 +73,15 @@ plugin_t *plugin_create()
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
-	this->child = ha_sync_child_create();
+	this->socket = ha_sync_socket_create();
+	if (!this->socket)
+	{
+		free(this);
+		return NULL;
+	}
+	this->ike = ha_sync_ike_create(this->socket);
+	this->child = ha_sync_child_create(this->socket);
+	charon->bus->add_listener(charon->bus, &this->ike->listener);
 	charon->bus->add_listener(charon->bus, &this->child->listener);
 
 	return &this->public.plugin;

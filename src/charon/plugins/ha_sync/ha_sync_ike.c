@@ -15,19 +15,19 @@
  * $Id$
  */
 
-#include "ha_sync_child.h"
+#include "ha_sync_ike.h"
 
-typedef struct private_ha_sync_child_t private_ha_sync_child_t;
+typedef struct private_ha_sync_ike_t private_ha_sync_ike_t;
 
 /**
- * Private data of an ha_sync_child_t object.
+ * Private data of an ha_sync_ike_t object.
  */
-struct private_ha_sync_child_t {
+struct private_ha_sync_ike_t {
 
 	/**
-	 * Public ha_sync_child_t interface.
+	 * Public ha_sync_ike_t interface.
 	 */
-	ha_sync_child_t public;
+	ha_sync_ike_t public;
 
 	/**
 	 * socket we use for syncing
@@ -36,19 +36,19 @@ struct private_ha_sync_child_t {
 };
 
 /**
- * Implementation of listener_t.child_keys
+ * Implementation of listener_t.ike_keys
  */
-static bool child_keys(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
-					   child_sa_t *child_sa, diffie_hellman_t *dh,
-					   chunk_t nonce_i, chunk_t nonce_r)
+static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
+					 diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
+					 ike_sa_t *rekey)
 {
 	return TRUE;
 }
 
 /**
- * Implementation of ha_sync_child_t.destroy.
+ * Implementation of ha_sync_ike_t.destroy.
  */
-static void destroy(private_ha_sync_child_t *this)
+static void destroy(private_ha_sync_ike_t *this)
 {
 	free(this);
 }
@@ -56,13 +56,13 @@ static void destroy(private_ha_sync_child_t *this)
 /**
  * See header
  */
-ha_sync_child_t *ha_sync_child_create(ha_sync_socket_t *socket)
+ha_sync_ike_t *ha_sync_ike_create(ha_sync_socket_t *socket)
 {
-	private_ha_sync_child_t *this = malloc_thing(private_ha_sync_child_t);
+	private_ha_sync_ike_t *this = malloc_thing(private_ha_sync_ike_t);
 
 	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.child_keys = (bool(*)(listener_t*, ike_sa_t *ike_sa, child_sa_t *child_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r))child_keys;
-	this->public.destroy = (void(*)(ha_sync_child_t*))destroy;
+	this->public.listener.ike_keys = (bool(*)(listener_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh,chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
+	this->public.destroy = (void(*)(ha_sync_ike_t*))destroy;
 
 	this->socket = socket;
 
