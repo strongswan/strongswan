@@ -357,7 +357,7 @@ static bool derive_child_keys(private_keymat_t *this,
 							  chunk_t *encr_i, chunk_t *integ_i,
 							  chunk_t *encr_r, chunk_t *integ_r)
 {
-	u_int16_t enc_alg, int_alg, enc_size, int_size;
+	u_int16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
 	chunk_t seed, secret = chunk_empty;
 	prf_plus_t *prf_plus;
 	
