@@ -92,7 +92,7 @@ struct traffic_selector_t {
 	/**
 	 * Get starting address of this ts as a chunk.
 	 *
-	 * Chunk is in network and points to internal data.
+	 * Chunk is in network order and points to internal data.
 	 *
 	 * @return			chunk containing the address
 	 */
@@ -101,7 +101,7 @@ struct traffic_selector_t {
 	/**
 	 * Get ending address of this ts as a chunk.
 	 *
-	 * Chunk is in network and points to internal data.
+	 * Chunk is in network order and points to internal data.
 	 *
 	 * @return			chunk containing the address
 	 */
