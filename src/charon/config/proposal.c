@@ -212,6 +212,10 @@ static bool get_algorithm(private_proposal_t *this, transform_type_t type,
 	enumerator_t *enumerator;
 	bool found = FALSE;
 	
+	if (key_size)
+	{
+		*key_size = 0; /* Just in case no algorithm is found */
+	}
 	enumerator = create_enumerator(this, type);
 	if (enumerator->enumerate(enumerator, alg, key_size))
 	{
