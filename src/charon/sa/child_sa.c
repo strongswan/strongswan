@@ -335,7 +335,7 @@ static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
 			{
 				last_use = max(last_use, in);
 			}
-			if (this->mode == MODE_TUNNEL)
+			if (this->mode != MODE_TRANSPORT)
 			{
 				if (charon->kernel_interface->query_policy(charon->kernel_interface,
 								other_ts, my_ts, POLICY_FWD, &fwd) == SUCCESS)
@@ -618,7 +618,7 @@ static status_t add_policies(private_child_sa_t *this,
 					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_IN,
 					this->my_spi, this->protocol, this->reqid, mode, this->ipcomp,
 					this->my_cpi, routed);
-			if (mode == MODE_TUNNEL)
+			if (mode != MODE_TRANSPORT)
 			{
 				status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_FWD,
@@ -705,13 +705,13 @@ static status_t update_hosts(private_child_sa_t *this,
 			{
 				/* remove old policies first */
 				charon->kernel_interface->del_policy(charon->kernel_interface,
-												 my_ts, other_ts, POLICY_OUT, FALSE);
+											my_ts, other_ts, POLICY_OUT, FALSE);
 				charon->kernel_interface->del_policy(charon->kernel_interface,
-												 other_ts, my_ts,  POLICY_IN, FALSE);
-				if (this->mode == MODE_TUNNEL)
+											other_ts, my_ts,  POLICY_IN, FALSE);
+				if (this->mode != MODE_TRANSPORT)
 				{
 					charon->kernel_interface->del_policy(charon->kernel_interface,
-												 other_ts, my_ts, POLICY_FWD, FALSE);
+											other_ts, my_ts, POLICY_FWD, FALSE);
 				}
 				
 				/* check whether we have to update a "dynamic" traffic selector */
@@ -743,7 +743,7 @@ static status_t update_hosts(private_child_sa_t *this,
 						other, me, other_ts, my_ts, POLICY_IN, this->my_spi,
 						this->protocol, this->reqid, this->mode, this->ipcomp,
 						this->my_cpi, FALSE);
-				if (this->mode == MODE_TUNNEL)
+				if (this->mode != MODE_TRANSPORT)
 				{
 					charon->kernel_interface->add_policy(charon->kernel_interface,
 						other, me, other_ts, my_ts, POLICY_FWD, this->my_spi,
@@ -842,13 +842,13 @@ static void destroy(private_child_sa_t *this)
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-												 my_ts, other_ts, POLICY_OUT, unrouted);
+										my_ts, other_ts, POLICY_OUT, unrouted);
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-												 other_ts, my_ts, POLICY_IN, unrouted);
-			if (this->mode == MODE_TUNNEL)
+										other_ts, my_ts, POLICY_IN, unrouted);
+			if (this->mode != MODE_TRANSPORT)
 			{
 				charon->kernel_interface->del_policy(charon->kernel_interface,
-												 other_ts, my_ts, POLICY_FWD, unrouted);
+										other_ts, my_ts, POLICY_FWD, unrouted);
 			}
 		}
 		enumerator->destroy(enumerator);
