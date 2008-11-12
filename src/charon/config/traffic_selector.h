@@ -92,7 +92,7 @@ struct traffic_selector_t {
 	/**
 	 * Get starting address of this ts as a chunk.
 	 *
-	 * Chunk is in network order gets allocated.
+	 * Chunk is in network and points to internal data.
 	 *
 	 * @return			chunk containing the address
 	 */
@@ -101,7 +101,7 @@ struct traffic_selector_t {
 	/**
 	 * Get ending address of this ts as a chunk.
 	 *
-	 * Chunk is in network order gets allocated.
+	 * Chunk is in network and points to internal data.
 	 *
 	 * @return			chunk containing the address
 	 */
@@ -153,6 +153,13 @@ struct traffic_selector_t {
 	 * @param host		host_t specifying the address range
 	 */
 	bool (*is_host) (traffic_selector_t *this, host_t* host);
+	
+	/**
+	 * Check if a traffic selector has been created by create_dynamic().
+	 *
+	 * @return			TRUE if TS is dynamic
+	 */
+	bool (*is_dynamic)(traffic_selector_t *this);
 	
 	/**
 	 * Update the address of a traffic selector.

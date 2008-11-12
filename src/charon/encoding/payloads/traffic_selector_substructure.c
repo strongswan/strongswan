@@ -269,8 +269,8 @@ traffic_selector_substructure_t *traffic_selector_substructure_create_from_traff
 	this->ip_protocol_id = traffic_selector->get_protocol(traffic_selector);
 	this->start_port = traffic_selector->get_from_port(traffic_selector);
 	this->end_port = traffic_selector->get_to_port(traffic_selector);
-	this->starting_address = traffic_selector->get_from_address(traffic_selector);
-	this->ending_address = traffic_selector->get_to_address(traffic_selector);
+	this->starting_address = chunk_clone(traffic_selector->get_from_address(traffic_selector));
+	this->ending_address = chunk_clone(traffic_selector->get_to_address(traffic_selector));
 	
 	compute_length(this);
 	

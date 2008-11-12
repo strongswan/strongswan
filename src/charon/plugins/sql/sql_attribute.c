@@ -45,22 +45,6 @@ struct private_sql_attribute_t {
 };
 
 /**
- * read a host_t address from the addresses table
- */
-static host_t *host_from_chunk(chunk_t chunk)
-{
-	switch (chunk.len)
-	{
-		case 4:
-			return host_create_from_chunk(AF_INET, chunk, 0);
-		case 16:
-			return host_create_from_chunk(AF_INET6, chunk, 0);
-		default:
-			return NULL;
-	}
-}
-
-/**
  * lookup/insert an identity
  */
 static u_int get_identity(private_sql_attribute_t *this, identification_t *id)
@@ -145,7 +129,7 @@ static host_t *get_address(private_sql_attribute_t *this, char *name,
 				"WHERE id = ? AND identity = ? AND released != 0",
 				DB_UINT, now, DB_UINT, id, DB_UINT, identity) > 0)
 		{
-			host = host_from_chunk(address);
+			host = host_create_from_chunk(AF_UNSPEC, address, 0);
 			if (host)
 			{
 				DBG1(DBG_CFG, "acquired existing lease "
@@ -177,7 +161,7 @@ static host_t *get_address(private_sql_attribute_t *this, char *name,
 				DB_UINT, now, DB_UINT, identity,
 				DB_UINT, id, DB_UINT, now - timeout) > 0)
 		{
-			host = host_from_chunk(address);
+			host = host_create_from_chunk(AF_UNSPEC, address, 0);
 			if (host)
 			{
 				DBG1(DBG_CFG, "acquired new lease "

@@ -497,6 +497,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	
 	soft = this->config->get_lifetime(this->config, TRUE);
 	hard = this->config->get_lifetime(this->config, FALSE);
+
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 				src, dst, spi, this->protocol, this->reqid,
 				in ? soft : 0, hard, enc_alg, encr, int_alg, integ,
@@ -617,7 +618,6 @@ static status_t add_policies(private_child_sa_t *this,
 					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_IN,
 					this->my_spi, this->protocol, this->reqid, mode, this->ipcomp,
 					this->my_cpi, routed);
-		
 			if (mode == MODE_TUNNEL)
 			{
 				status |= charon->kernel_interface->add_policy(charon->kernel_interface,
@@ -625,7 +625,7 @@ static status_t add_policies(private_child_sa_t *this,
 					this->my_spi, this->protocol, this->reqid, mode, this->ipcomp,
 					this->my_cpi, routed);
 			}
-		
+			
 			if (status != SUCCESS)
 			{
 				break;
@@ -633,7 +633,7 @@ static status_t add_policies(private_child_sa_t *this,
 		}
 		enumerator->destroy(enumerator);
 	}
-
+	
 	if (status == SUCCESS)
 	{
 		/* switch to routed state if no SAD entry set up */
@@ -681,7 +681,6 @@ static status_t update_hosts(private_child_sa_t *this,
 	{
 		return NOT_SUPPORTED;
 	}
-	
 	/* update his (responder) SA */
 	if (charon->kernel_interface->update_sa(charon->kernel_interface, this->other_spi, 
 			this->protocol, this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
@@ -699,7 +698,7 @@ static status_t update_hosts(private_child_sa_t *this,
 		{
 			enumerator_t *enumerator;
 			traffic_selector_t *my_ts, *other_ts;
-		
+			
 			/* always use high priorities, as hosts getting updated are INSTALLED */
 			enumerator = create_policy_enumerator(this);
 			while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
@@ -714,7 +713,7 @@ static status_t update_hosts(private_child_sa_t *this,
 					charon->kernel_interface->del_policy(charon->kernel_interface,
 												 other_ts, my_ts, POLICY_FWD, FALSE);
 				}
-
+				
 				/* check whether we have to update a "dynamic" traffic selector */
 				if (!me->ip_equals(me, this->my_addr) &&
 					my_ts->is_host(my_ts, this->my_addr))
@@ -726,7 +725,7 @@ static status_t update_hosts(private_child_sa_t *this,
 				{
 					other_ts->set_address(other_ts, other);
 				}
-			
+				
 				/* we reinstall the virtual IP to handle interface roaming
 				 * correctly */
 				if (vip)
@@ -734,7 +733,7 @@ static status_t update_hosts(private_child_sa_t *this,
 					charon->kernel_interface->del_ip(charon->kernel_interface, vip);
 					charon->kernel_interface->add_ip(charon->kernel_interface, vip, me);
 				}
-		
+				
 				/* reinstall updated policies */
 				charon->kernel_interface->add_policy(charon->kernel_interface,
 						me, other, my_ts, other_ts, POLICY_OUT, this->other_spi,
@@ -755,7 +754,7 @@ static status_t update_hosts(private_child_sa_t *this,
 			enumerator->destroy(enumerator);
 		}
 	}
-
+	
 	/* apply hosts */
 	if (!this->config->use_proxy_mode(this->config) || this->mode != MODE_TRANSPORT)
 	{
@@ -854,7 +853,7 @@ static void destroy(private_child_sa_t *this)
 		}
 		enumerator->destroy(enumerator);
 	}
-
+	
 	this->my_ts->destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
 	this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
 	this->my_addr->destroy(this->my_addr);
@@ -981,4 +980,3 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	
 	return &this->public;
 }
-

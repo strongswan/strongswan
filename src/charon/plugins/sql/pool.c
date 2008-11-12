@@ -36,14 +36,6 @@ database_t *db;
 host_t *start = NULL, *end = NULL;
 
 /**
- * create a host from a blob
- */
-static host_t *host_create_from_blob(chunk_t blob)
-{
-	return host_create_from_chunk(blob.len == 4 ? AF_INET : AF_INET6, blob, 0);
-}
-
-/**
  * calculate the size of a pool using start and end address chunk
  */
 static u_int get_pool_size(chunk_t start, chunk_t end)
@@ -132,8 +124,8 @@ static void status(void)
 				found = TRUE;
 			}
 			
-			start = host_create_from_blob(start_chunk);
-			end = host_create_from_blob(end_chunk);
+			start = host_create_from_chunk(AF_UNSPEC, start_chunk, 0);
+			end = host_create_from_chunk(AF_UNSPEC, end_chunk, 0);
 			size = get_pool_size(start_chunk, end_chunk);
 			printf("%8s %15H %15H ", name, start, end);
 			if (timeout)
@@ -541,7 +533,7 @@ static void leases(char *filter, bool utc)
 			printf("%-8s %-15s %-7s  %-*s %-*s %s\n",
 				   "name", "address", "status", len, "start", len, "end", "identity");
 		}
-		address = host_create_from_blob(address_chunk);
+		address = host_create_from_chunk(AF_UNSPEC, address_chunk, 0);
 		identity = identification_create_from_encoding(identity_type, identity_chunk);
 		
 		printf("%-8s %-15H ", name, address);

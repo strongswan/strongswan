@@ -406,26 +406,15 @@ static bool equals(private_traffic_selector_t *this, private_traffic_selector_t 
  */
 static chunk_t get_from_address(private_traffic_selector_t *this)
 {
-	chunk_t from = chunk_empty;
-	
 	switch (this->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
-		{
-			from.len = sizeof(this->from4);
-			from.ptr = malloc(from.len);
-			memcpy(from.ptr, this->from4, from.len);
-			break;
-		}
+			return chunk_create(this->from, sizeof(this->from4));
 		case TS_IPV6_ADDR_RANGE:
-		{
-			from.len = sizeof(this->from6);
-			from.ptr = malloc(from.len);
-			memcpy(from.ptr, this->from6, from.len);
-			break;
-		}
+			return chunk_create(this->from, sizeof(this->from6));
+		default:
+			return chunk_empty;
 	}
-	return from;
 }
 	
 /**
@@ -433,26 +422,15 @@ static chunk_t get_from_address(private_traffic_selector_t *this)
  */
 static chunk_t get_to_address(private_traffic_selector_t *this)
 {
-	chunk_t to = chunk_empty;
-	
 	switch (this->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
-		{
-			to.len = sizeof(this->to4);
-			to.ptr = malloc(to.len);
-			memcpy(to.ptr, this->to4, to.len);
-			break;
-		}
+			return chunk_create(this->to, sizeof(this->to4));
 		case TS_IPV6_ADDR_RANGE:
-		{
-			to.len = sizeof(this->to6);
-			to.ptr = malloc(to.len);
-			memcpy(to.ptr, this->to6, to.len);
-			break;
-		}
+			return chunk_create(this->to, sizeof(this->to6));
+		default:
+			return chunk_empty;
 	}
-	return to;
 }
 	
 /**
@@ -523,6 +501,14 @@ static bool is_host(private_traffic_selector_t *this, host_t *host)
 		}
 	}
 	return FALSE;
+}
+
+/**
+ * Implementation of traffic_selector_t.is_dynamic
+ */
+static bool is_dynamic(private_traffic_selector_t *this)
+{
+	return this->dynamic;
 }
 
 /**
@@ -869,6 +855,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 	this->public.get_type = (ts_type_t(*)(traffic_selector_t*))get_type;
 	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
 	this->public.is_host = (bool(*)(traffic_selector_t*,host_t*))is_host;
+	this->public.is_dynamic = (bool(*)(traffic_selector_t*))is_dynamic;
 	this->public.is_contained_in = (bool(*)(traffic_selector_t*,traffic_selector_t*))is_contained_in;
 	this->public.includes = (bool(*)(traffic_selector_t*,host_t*))includes;
 	this->public.set_address = (void(*)(traffic_selector_t*,host_t*))set_address;

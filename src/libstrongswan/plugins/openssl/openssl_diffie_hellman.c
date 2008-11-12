@@ -42,7 +42,7 @@ struct modulus_entry_t {
 	 * Optimum length of exponent in bits.
 	 */	
 	long opt_exponent_len;
-
+	
 	/* 
 	 * Generator value.
 	 */	
@@ -88,7 +88,7 @@ struct private_openssl_diffie_hellman_t {
 	 * Other public value
 	 */
 	BIGNUM *pub_key;
-
+	
 	/**
 	 * Shared secret
 	 */
