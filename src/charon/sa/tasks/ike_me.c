@@ -785,7 +785,7 @@ ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator)
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
 	
-	if (ike_sa->is_ike_initiator(ike_sa))
+	if (ike_sa->has_condition(ike_sa, COND_ORIGINAL_INITIATOR))
 	{
 		if (initiator)
 		{

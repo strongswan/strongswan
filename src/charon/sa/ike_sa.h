@@ -108,16 +108,21 @@ enum ike_condition_t {
 	 * Faking NAT to enforce UDP encapsulation
 	 */
 	COND_NAT_FAKE = (1<<3),
-
+	
 	/**
 	 * peer has ben authenticated using EAP
 	 */
 	COND_EAP_AUTHENTICATED = (1<<4),
-
+	
 	/**
 	 * received a certificate request from the peer
 	 */
 	COND_CERTREQ_SEEN = (1<<5),
+	
+	/**
+	 * Local peer is the "original" IKE initiator. Unaffected from rekeying.
+	 */
+	COND_ORIGINAL_INITIATOR = (1<<6),
 };
 
 /**
@@ -483,13 +488,6 @@ struct ike_sa_t {
 	 */
 	void (*set_pending_updates)(ike_sa_t *this, u_int32_t updates);
 	
-	/**
-	 * Check if we are the original initiator of this IKE_SA (rekeying does not
-	 * change this flag).
-	 */
-	bool (*is_ike_initiator)(ike_sa_t *this);
-	
-
 #ifdef ME
 	/**
 	 * Activate mediation server functionality for this IKE_SA.

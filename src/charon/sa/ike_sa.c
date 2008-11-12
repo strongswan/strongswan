@@ -245,11 +245,6 @@ struct private_ike_sa_t {
 	 * how many times we have retried so far (keyingtries)
 	 */
 	u_int32_t keyingtry;
-	
-	/**
-	 * are we the initiator of this IKE_SA (rekeying does not affect this flag)
-	 */
-	bool ike_initiator;
 
 	/**
 	 * local host address to be used for IKE, set via MIGRATE kernel message
@@ -479,14 +474,6 @@ static void set_ike_cfg(private_ike_sa_t *this, ike_cfg_t *ike_cfg)
 {
 	ike_cfg->get_ref(ike_cfg);
 	this->ike_cfg = ike_cfg;
-}
-
-/**
- * Implementation of ike_sa_t.is_ike_initiator
- */
-static bool is_ike_initiator(private_ike_sa_t *this)
-{
-	return this->ike_initiator;
 }
 
 /**
@@ -1140,7 +1127,7 @@ static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_c
 			return DESTROY_ME;
 		}
 		
-		this->ike_initiator = TRUE;
+		set_condition(this, COND_ORIGINAL_INITIATOR, TRUE);
 		
 		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
 		this->task_manager->queue_task(this->task_manager, task);
@@ -1725,7 +1712,7 @@ static status_t reauth(private_ike_sa_t *this)
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
 	 * If the peer does not support RFC4478, there is no way to keep the
 	 * IKE_SA up. */
-	if (!this->ike_initiator)
+	if (!has_condition(this, COND_ORIGINAL_INITIATOR))
 	{
 		DBG1(DBG_IKE, "initiator did not reauthenticate as requested");
 		if (this->other_virtual_ip != NULL ||
@@ -1803,7 +1790,7 @@ static status_t reestablish(private_ike_sa_t *this)
 	}
 	
 	/* check if we are able to reestablish this IKE_SA */
-	if (!this->ike_initiator &&
+	if (!has_condition(this, COND_ORIGINAL_INITIATOR) &&
 		(this->other_virtual_ip != NULL ||
 		 has_condition(this, COND_EAP_AUTHENTICATED)
 #ifdef ME
@@ -2030,7 +2017,6 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	this->other_host = other->other_host->clone(other->other_host);
 	this->my_id = other->my_id->clone(other->my_id);
 	this->other_id = other->other_id->clone(other->other_id);
-	this->ike_initiator = other->ike_initiator;
 	
 	/* apply virtual assigned IPs... */
 	if (other->my_virtual_ip)
@@ -2051,7 +2037,7 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 		this->dns_servers->insert_first(this->dns_servers, ip);
 	}
 
-	/* inherit NAT-T conditions */
+	/* inherit all conditions */
 	this->conditions = other->conditions;
 	if (this->conditions & COND_NAT_HERE)
 	{
@@ -2344,7 +2330,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.has_condition = (bool (*)(ike_sa_t*,ike_condition_t)) has_condition;
 	this->public.set_pending_updates = (void(*)(ike_sa_t*, u_int32_t updates))set_pending_updates;
 	this->public.get_pending_updates = (u_int32_t(*)(ike_sa_t*))get_pending_updates;
-	this->public.is_ike_initiator = (bool (*)(ike_sa_t*))is_ike_initiator;
 	this->public.create_additional_address_iterator = (iterator_t*(*)(ike_sa_t*))create_additional_address_iterator;
 	this->public.add_additional_address = (void(*)(ike_sa_t*, host_t *host))add_additional_address;
 	this->public.has_mapping_changed = (bool(*)(ike_sa_t*, chunk_t hash))has_mapping_changed;
@@ -2415,7 +2400,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->nat_detection_dest = chunk_empty;
 	this->pending_updates = 0;
 	this->keyingtry = 0;
-	this->ike_initiator = FALSE;
 	this->local_host = NULL;
 	this->remote_host = NULL;
 #ifdef ME
