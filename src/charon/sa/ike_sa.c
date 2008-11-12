@@ -31,17 +31,6 @@
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
-#include <crypto/diffie_hellman.h>
-#include <crypto/prf_plus.h>
-#include <crypto/crypters/crypter.h>
-#include <crypto/hashers/hasher.h>
-#include <encoding/payloads/sa_payload.h>
-#include <encoding/payloads/nonce_payload.h>
-#include <encoding/payloads/ke_payload.h>
-#include <encoding/payloads/delete_payload.h>
-#include <encoding/payloads/transform_substructure.h>
-#include <encoding/payloads/transform_attribute.h>
-#include <encoding/payloads/ts_payload.h>
 #include <sa/task_manager.h>
 #include <sa/tasks/ike_init.h>
 #include <sa/tasks/ike_natd.h>
