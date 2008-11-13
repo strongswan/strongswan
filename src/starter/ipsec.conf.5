@@ -397,6 +397,15 @@ may be included, such as
 how long the keying channel of a connection ('ISAKMP/IKE SA')
 should last before being renegotiated.
 .TP
+.B installpolicy
+decides whether IPsec policies are installed in the kernel by the IKEv2
+charon daemon for a given connection. Allows peaceful co-existence e.g. with
+the Mobile IPv6 daemon mip6d who wants to control the kernel policies.
+Acceptable values are
+.B yes
+(the default) and
+.BR no .
+.TP
 .B keyexchange
 method of key exchange;
 which protocol should be used to initialize the connection. Connections marked with
@@ -782,17 +791,20 @@ are
 signifying a host-to-host, host-to-subnet, or subnet-to-subnet tunnel;
 .BR transport ,
 signifying host-to-host transport mode;
+.BR transport_proxy ,
+signifying the special Mobile IPv6 transport proxy mode;
 .BR passthrough ,
 signifying that no IPsec processing should be done at all;
 .BR drop ,
 signifying that packets should be discarded; and
 .BR reject ,
 signifying that packets should be discarded and a diagnostic ICMP returned.
-Charon currently supports only 
-.BR tunnel
+Charon currently supports
+.BR tunnel ,
+.BR transport ,
 and
-.BR transport
-connection types.
+.BR tunnel_proxy
+connection types, only .
 .TP
 .B xauth
 specifies the role in the XAUTH protocol if activated by
