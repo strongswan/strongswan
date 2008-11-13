@@ -24,6 +24,9 @@
 #define HA_SYNC_MESSAGE_H_
 
 #include <library.h>
+#include <utils/host.h>
+#include <utils/identification.h>
+#include <sa/ike_sa_id.h>
 
 /**
  * Protocol version of this implementation
@@ -39,32 +42,56 @@ typedef union ha_sync_message_value_t ha_sync_message_value_t;
  * Type of a sync message
  */
 enum ha_sync_message_type_t {
-	HA_SYNC_CHILD_SA = 0,
-	HA_SYNC_IKE_SA,
-	HA_SYNC_IKE_MID,
+	/** add a completely new IKE_SA */
+	HA_SYNC_IKE_ADD = 1,
+	/** update an existing IKE_SA (message IDs, address update, ...) */
+	HA_SYNC_IKE_UPDATE,
+	/** delete an existing IKE_SA */
+	HA_SYNC_IKE_DELETE,
+	/** rekeying an existing IKE_SA, transferring CHILD_SAs to a new one */
+	HA_SYNC_IKE_REKEY,
+	/** add a new CHILD_SA */
+	HA_SYNC_CHILD_ADD,
+	/** delete an existing CHILD_SA */
+	HA_SYNC_CHILD_DELETE,
 };
 
 /**
  * Type of attributes contained in a message
  */
 enum ha_sync_message_attribute_t {
-	HA_SYNC_CONFIG_STR = 0,
-	HA_SYNC_IPV4_L_CHNK,
-	HA_SYNC_IPV4_R_CHNK,
-	HA_SYNC_PORT_L_U16,
-	HA_SYNC_PORT_R_U16,
-	HA_SYNC_SPI_L_U32,
-	HA_SYNC_SPI_R_U32,
-	HA_SYNC_CPI_L_U16,
-	HA_SYNC_CPI_R_U16,
-	HA_SYNC_ENCAP_U8,
-	HA_SYNC_MODE_U8,
-	HA_SYNC_IPCOMP_U8,
-	HA_SYNC_NONCE_I_CHNK,
-	HA_SYNC_NONCE_R_CHNK,
-	HA_SYNC_SECRET_CHNK,
-	HA_SYNC_ALG_INTEG_U16,
-	HA_SYNC_ALG_ENC_U16,
+	/** ike_sa_id_t*, to identify IKE_SA */
+	HA_SYNC_IKE_ID = 1,
+	/** ike_Sa_id_t*, identifies IKE_SA which gets rekeyed */
+	HA_SYNC_IKE_REKEY_ID,
+	/** identification_t*, local identity */
+	HA_SYNC_LOCAL_ID,
+	/** identification_t*, remote identity */
+	HA_SYNC_REMOTE_ID,
+	/** identification_t*, EAP identity */
+	HA_SYNC_EAP_ID,
+	/** host_t*, local address */
+	HA_SYNC_LOCAL_ADDR,
+	/** host_t*, remote address */
+	HA_SYNC_REMOTE_ADDR,
+	/** char*, name of configuration */
+	HA_SYNC_CONFIG_NAME,
+	/** u_int32_t, bitset of ike_condition_t */
+	HA_SYNC_CONDITIONS,
+	/** u_int32_t, bitset of ike_extension_t */
+	HA_SYNC_EXTENSIONS,
+	/** host_t*, local virtual IP */
+	HA_SYNC_LOCAL_VIP,
+	/** host_t*, remote virtual IP */
+	HA_SYNC_REMOTE_VIP,
+	/** host_t*, additional MOBIKE peer address */
+	HA_SYNC_ADDITIONAL_ADDR,
+	/** chunk_t, initiators nonce */
+	HA_SYNC_NONCE_I,
+	/** chunk_t, responders nonce */
+	HA_SYNC_NONCE_R,
+	/** chunk_t, diffie hellman shared secret */
+	HA_SYNC_SECRET,
 };
 
 /**
@@ -75,6 +102,9 @@ union ha_sync_message_value_t {
 	u_int32_t u32;
 	u_int16_t u16;
 	chunk_t chnk;
+	host_t *host;
+	identification_t *id;
+	ike_sa_id_t *ike_sa_id;
 	char *str;
 };
 

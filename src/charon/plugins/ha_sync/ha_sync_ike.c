@@ -36,12 +36,114 @@ struct private_ha_sync_ike_t {
 };
 
 /**
+ * Return condition if it is set on ike_sa
+ */
+static ike_condition_t copy_condition(ike_sa_t *ike_sa, ike_condition_t cond)
+{
+	if (ike_sa->has_condition(ike_sa, cond))
+	{
+		return cond;
+	}
+	return 0;
+}
+
+/**
+ * Return extension if it is supported by peers IKE_SA
+ */
+static ike_extension_t copy_extension(ike_sa_t *ike_sa, ike_extension_t ext)
+{
+	if (ike_sa->supports_extension(ike_sa, ext))
+	{
+		return ext;
+	}
+	return 0;
+}
+
+/**
  * Implementation of listener_t.ike_keys
  */
 static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 					 diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
 					 ike_sa_t *rekey)
 {
+	iterator_t *iterator;
+	ha_sync_message_t *m;
+	peer_cfg_t *peer_cfg;
+	u_int32_t extension, condition;
+	host_t *local_vip, *remote_vip, *addr;
+	identification_t *eap_id;
+	chunk_t secret;
+
+	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+
+	condition = copy_condition(ike_sa, COND_NAT_ANY)
+			  | copy_condition(ike_sa, COND_NAT_HERE)
+			  | copy_condition(ike_sa, COND_NAT_THERE)
+			  | copy_condition(ike_sa, COND_NAT_FAKE)
+			  | copy_condition(ike_sa, COND_EAP_AUTHENTICATED)
+			  | copy_condition(ike_sa, COND_CERTREQ_SEEN)
+			  | copy_condition(ike_sa, COND_ORIGINAL_INITIATOR);
+
+	extension = copy_extension(ike_sa, EXT_NATT)
+			  | copy_extension(ike_sa, EXT_MOBIKE)
+			  | copy_extension(ike_sa, EXT_HASH_AND_URL);
+
+	local_vip = ike_sa->get_virtual_ip(ike_sa, TRUE);
+	remote_vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
+	eap_id = ike_sa->get_eap_identity(ike_sa);
+
+	if (dh->get_shared_secret(dh, &secret) != SUCCESS)
+	{
+		return TRUE;
+	}
+
+	if (rekey == NULL)
+	{
+		m = ha_sync_message_create(HA_SYNC_IKE_ADD);
+
+		m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+		m->add_attribute(m, HA_SYNC_LOCAL_ID, ike_sa->get_my_id(ike_sa));
+		m->add_attribute(m, HA_SYNC_REMOTE_ID, ike_sa->get_other_id(ike_sa));
+		m->add_attribute(m, HA_SYNC_LOCAL_ADDR, ike_sa->get_my_host(ike_sa));
+		m->add_attribute(m, HA_SYNC_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
+		m->add_attribute(m, HA_SYNC_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
+		m->add_attribute(m, HA_SYNC_CONDITIONS, condition);
+		m->add_attribute(m, HA_SYNC_EXTENSIONS, extension);
+		if (local_vip)
+		{
+			m->add_attribute(m, HA_SYNC_LOCAL_VIP, local_vip);
+		}
+		if (remote_vip)
+		{
+			m->add_attribute(m, HA_SYNC_REMOTE_VIP, remote_vip);
+		}
+		if (eap_id)
+		{
+			m->add_attribute(m, HA_SYNC_EAP_ID, eap_id);
+		}
+		iterator = ike_sa->create_additional_address_iterator(ike_sa);
+		while (iterator->iterate(iterator, (void**)&addr))
+		{
+			m->add_attribute(m, HA_SYNC_ADDITIONAL_ADDR, addr);
+		}
+		iterator->destroy(iterator);
+	}
+	else
+	{
+		m = ha_sync_message_create(HA_SYNC_IKE_REKEY);
+
+		m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+		m->add_attribute(m, HA_SYNC_IKE_REKEY_ID, rekey->get_id(rekey));
+	}
+
+	m->add_attribute(m, HA_SYNC_NONCE_I, nonce_i);
+	m->add_attribute(m, HA_SYNC_NONCE_R, nonce_r);
+	m->add_attribute(m, HA_SYNC_SECRET, secret);
+	chunk_clear(&secret);
+
+	this->socket->push(this->socket, m);
+	m->destroy(m);
+
 	return TRUE;
 }
 

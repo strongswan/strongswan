@@ -21,6 +21,8 @@
 
 #include <daemon.h>
 
+#define ALLOCATION_BLOCK 64
+
 typedef struct private_ha_sync_message_t private_ha_sync_message_t;
 
 /**
@@ -34,7 +36,7 @@ struct private_ha_sync_message_t {
 	ha_sync_message_t public;
 
 	/**
-	 * Number of bytes allocted in buffer
+	 * Allocated size of buf
 	 */
 	size_t allocated;
 
@@ -43,6 +45,39 @@ struct private_ha_sync_message_t {
 	 */
 	chunk_t buf;
 };
+
+typedef struct ike_sa_id_encoding_t ike_sa_id_encoding_t;
+
+/**
+ * Encoding if an ike_sa_id_t
+ */
+struct ike_sa_id_encoding_t {
+	u_int64_t initiator_spi;
+	u_int64_t responder_spi;
+	u_int8_t initiator;
+} __attribute__((packed));
+
+typedef struct identification_encoding_t identification_encoding_t;
+
+/**
+ * Encoding of a identification_t
+ */
+struct identification_encoding_t {
+	u_int8_t type;
+	u_int8_t len;
+	char encoding[];
+} __attribute__((packed));
+
+typedef struct host_encoding_t host_encoding_t;
+
+/**
+ * encoding of a host_t
+ */
+struct host_encoding_t {
+	u_int16_t port;
+	u_int8_t family;
+	char encoding[];
+} __attribute__((packed));
 
 /**
  * Implementation of ha_sync_message_t.get_type
@@ -57,9 +92,15 @@ static ha_sync_message_type_t get_type(private_ha_sync_message_t *this)
  */
 static void check_buf(private_ha_sync_message_t *this, size_t len)
 {
+	int increased = 0;
+
 	while (this->buf.len + len > this->allocated)
 	{	/* double size */
-		this->allocated = this->allocated * 2;
+		this->allocated += ALLOCATION_BLOCK;
+		increased++;
+	}
+	if (increased)
+	{
 		this->buf.ptr = realloc(this->buf.ptr, this->allocated);
 	}
 }
@@ -68,60 +109,119 @@ static void check_buf(private_ha_sync_message_t *this, size_t len)
  * Implementation of ha_sync_message_t.add_attribute
  */
 static void add_attribute(private_ha_sync_message_t *this,
-						  ha_sync_message_attribute_t attribute,
-						  ha_sync_message_value_t value)
+						  ha_sync_message_attribute_t attribute, ...)
 {
 	size_t len;
+	va_list args;
 
 	check_buf(this, sizeof(u_int8_t));
 	this->buf.ptr[this->buf.len] = attribute;
 	this->buf.len += sizeof(u_int8_t);
 
+	va_start(args, attribute);
 	switch (attribute)
 	{
-		case HA_SYNC_ENCAP_U8:
-		case HA_SYNC_MODE_U8:
-		case HA_SYNC_IPCOMP_U8:
-			check_buf(this, sizeof(value.u8));
-			this->buf.ptr[this->buf.len] = value.u8;
-			this->buf.len += sizeof(value.u8);
+		/* ike_sa_id_t* */
+		case HA_SYNC_IKE_ID:
+		case HA_SYNC_IKE_REKEY_ID:
+		{
+			ike_sa_id_encoding_t *enc;
+			ike_sa_id_t *id;
+
+			id = va_arg(args, ike_sa_id_t*);
+			check_buf(this, sizeof(ike_sa_id_encoding_t));
+			enc = (ike_sa_id_encoding_t*)(this->buf.ptr + this->buf.len);
+			this->buf.len += sizeof(ike_sa_id_encoding_t);
+			enc->initiator = id->is_initiator(id);
+			enc->initiator_spi = id->get_initiator_spi(id);
+			enc->responder_spi = id->get_responder_spi(id);
 			break;
-		case HA_SYNC_PORT_L_U16:
-		case HA_SYNC_PORT_R_U16:
-		case HA_SYNC_CPI_L_U16:
-		case HA_SYNC_CPI_R_U16:
-		case HA_SYNC_ALG_INTEG_U16:
-		case HA_SYNC_ALG_ENC_U16:
-			check_buf(this, sizeof(value.u16));
-			this->buf.ptr[this->buf.len] = htons(value.u16);
-			this->buf.len += sizeof(value.u16);
+		}
+		/* identification_t* */
+		case HA_SYNC_LOCAL_ID:
+		case HA_SYNC_REMOTE_ID:
+		case HA_SYNC_EAP_ID:
+		{
+			identification_encoding_t *enc;
+			identification_t *id;
+			chunk_t data;
+
+			id = va_arg(args, identification_t*);
+			data = id->get_encoding(id);
+			check_buf(this, sizeof(identification_encoding_t) + data.len);
+			enc = (identification_encoding_t*)(this->buf.ptr + this->buf.len);
+			this->buf.len += sizeof(identification_encoding_t) + data.len;
+			enc->type = id->get_type(id);
+			enc->len = data.len;
+			memcpy(enc->encoding, data.ptr, data.len);
 			break;
-		case HA_SYNC_SPI_L_U32:
-		case HA_SYNC_SPI_R_U32:
-			check_buf(this, sizeof(value.u32));
-			this->buf.ptr[this->buf.len] = htonl(value.u32);
-			this->buf.len += sizeof(value.u32);
+		}
+		/* host_t* */
+		case HA_SYNC_LOCAL_ADDR:
+		case HA_SYNC_REMOTE_ADDR:
+		case HA_SYNC_LOCAL_VIP:
+		case HA_SYNC_REMOTE_VIP:
+		case HA_SYNC_ADDITIONAL_ADDR:
+		{
+			host_encoding_t *enc;
+			host_t *host;
+			chunk_t data;
+
+			host = va_arg(args, host_t*);
+			data = host->get_address(host);
+			check_buf(this, sizeof(host_encoding_t) + data.len);
+			enc = (host_encoding_t*)(this->buf.ptr + this->buf.len);
+			this->buf.len += sizeof(host_encoding_t) + data.len;
+			enc->family = host->get_family(host);
+			enc->port = htons(host->get_port(host));
+			memcpy(enc->encoding, data.ptr, data.len);
 			break;
-		case HA_SYNC_IPV4_L_CHNK:
-		case HA_SYNC_IPV4_R_CHNK:
-		case HA_SYNC_NONCE_I_CHNK:
-		case HA_SYNC_NONCE_R_CHNK:
-		case HA_SYNC_SECRET_CHNK:
-			check_buf(this, value.chnk.len);
-			memcpy(this->buf.ptr + this->buf.len, value.chnk.ptr, value.chnk.len);
-			this->buf.len += value.chnk.len;
-			break;
-		case HA_SYNC_CONFIG_STR:
-			len = strlen(value.str) + 1;
+		}
+		/* char* */
+		case HA_SYNC_CONFIG_NAME:
+		{
+			char *str;
+
+			str = va_arg(args, char*);
+			len = strlen(str) + 1;
 			check_buf(this, len);
-			memcpy(this->buf.ptr + this->buf.len, value.str, len);
+			memcpy(this->buf.ptr + this->buf.len, str, len);
 			this->buf.len += len;
 			break;
+		}
+		/** u_int32_t */
+		case HA_SYNC_CONDITIONS:
+		case HA_SYNC_EXTENSIONS:
+		{
+			u_int32_t val;
+
+			val = va_arg(args, u_int32_t);
+			check_buf(this, sizeof(val));
+			this->buf.ptr[this->buf.len] = htonl(val);
+			this->buf.len += sizeof(val);
+			break;
+		}
+		/** chunk_t */
+		case HA_SYNC_NONCE_I:
+		case HA_SYNC_NONCE_R:
+		case HA_SYNC_SECRET:
+		{
+			chunk_t chunk;
+
+			chunk = va_arg(args, chunk_t);
+			check_buf(this, chunk.len);
+			memcpy(this->buf.ptr + this->buf.len, chunk.ptr, chunk.len);
+			this->buf.len += chunk.len;
+			break;
+		}
 		default:
+		{
 			DBG1(DBG_CFG, "unable to encode, attribute %d unknown", attribute);
 			this->buf.len -= sizeof(u_int8_t);
 			break;
+		}
 	}
+	va_end(args);
 }
 
 /**
@@ -170,7 +270,7 @@ ha_sync_message_t *ha_sync_message_create(ha_sync_message_type_t type)
 {
 	private_ha_sync_message_t *this = ha_sync_message_create_generic();
 
-	this->allocated = 64;
+	this->allocated = ALLOCATION_BLOCK;
 	this->buf.ptr = malloc(this->allocated);
 	this->buf.len = 2;
 	this->buf.ptr[0] = HA_SYNC_MESSAGE_VERSION;
