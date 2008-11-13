@@ -1,8 +1,8 @@
 strongswan-4.2.9
 ----------------
 
-- Flexible configuration of logging subsystem to different syslog facilities
-  or files using fine-grained log levels for each target.
+- Flexible configuration of logging subsystem allowing to log to multiple
+  syslog facilities or to files using fine-grained log levels for each target.
 
 - Load testing plugin to do stress testing of the IKEv2 daemon against self
   or another host. Found and fixed issues during tests in the multi-threaded
@@ -13,15 +13,24 @@ strongswan-4.2.9
   Diffie-Hellman calculation acquired an exclusive lock. This greatly improves
   parallelization to multiple cores.
 
-- updown script invocation has been separated in an own plugin to further
-  slim down the daemon core.
+- updown script invocation has been separated into a plugin of its own to
+  further slim down the daemon core.
 
-- separated IKE_SA/CHILD_SA key derivation process into a closed system,
+- Separated IKE_SA/CHILD_SA key derivation process into a closed system,
   allowing future implementations to use a secured environment in e.g. kernel
   memory or hardware.
 
-- The kernel interface of charon has been modularized. Plugins for the native
-  IPsec stack of the Linux 2.6 kernel and the KLIPS IPsec stack are provided.
+- The kernel interface of charon has been modularized. XFRM NETLINK (default)
+  and PFKEY (--enable-kernel-pfkey) interface plugins for the native IPsec
+  stack of the Linux 2.6 kernel as well as a PFKEY interface for the KLIPS
+  IPsec stack (--enable-kernel-klips) are provided.
+
+- Basic Mobile IPv6 support has been introduced, securing Binding Update
+  messages as well as tunneled traffic between Mobile Node and Home Agent.
+  The installpolicy=no option allows peaceful cooperation with a dominant
+  mip6d daemon and the new type=transport_proxy implements the special MIPv6
+  IPsec transport proxy mode where the IKEv2 daemon uses the Care-of-Address
+  but the IPsec SA is set up for the Home Adress.
 
 
 strongswan-4.2.8
