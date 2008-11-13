@@ -97,18 +97,6 @@ struct private_socket_t {
 };
 
 /**
- * enumerator for underlying sockets
- */
-typedef struct {
-	/** implements enumerator_t */
-	enumerator_t public;
-	/** sockets we enumerate */
-	private_socket_t *socket;
-	/** counter */
-	u_int8_t index;
-} socket_enumerator_t;
-
-/**
  * implementation of socket_t.receive
  */
 static status_t receiver(private_socket_t *this, packet_t **packet)
@@ -483,6 +471,18 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 }
 
 /**
+ * enumerator for underlying sockets
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** sockets we enumerate */
+	private_socket_t *socket;
+	/** counter */
+	int index;
+} socket_enumerator_t;
+
+/**
  * enumerate function for socket_enumerator_t
  */
 static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port)
@@ -492,14 +492,13 @@ static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port
 		int family;
 		int port;
 	} sockets[] = {
-		{ 0, 0, 0 },
 		{ offsetof(private_socket_t, ipv4), AF_INET, IKEV2_UDP_PORT },
 		{ offsetof(private_socket_t, ipv6), AF_INET6, IKEV2_UDP_PORT },
 		{ offsetof(private_socket_t, ipv4_natt), AF_INET, IKEV2_NATT_PORT },
 		{ offsetof(private_socket_t, ipv6_natt), AF_INET6, IKEV2_NATT_PORT }
 	};
 	
-	while(++this->index <= 4)
+	while(++this->index < countof(sockets))
 	{
 		int sock = *(int*)((char*)this->socket + sockets[this->index].fd_offset);
 		if (!sock)
@@ -522,7 +521,7 @@ static enumerator_t *create_enumerator(private_socket_t *this)
 	socket_enumerator_t *enumerator;
 	
 	enumerator = malloc_thing(socket_enumerator_t);
-	enumerator->index = 0;
+	enumerator->index = -1;
 	enumerator->socket = this;
 	enumerator->public.enumerate = (void*)enumerate;
 	enumerator->public.destroy = (void*)free;

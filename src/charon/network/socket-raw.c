@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -33,7 +33,7 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/udp.h>
-#include <linux/ipsec.h>
+#include <linux/types.h>
 #include <linux/filter.h>
 #include <net/if.h>
 
@@ -53,11 +53,6 @@
 #define IKE_VERSION_OFFSET 17
 #define IKE_LENGTH_OFFSET 24
 
-/* from linux/in.h */
-#ifndef IP_IPSEC_POLICY
-#define IP_IPSEC_POLICY 16
-#endif /*IP_IPSEC_POLICY*/
-
 /* from linux/udp.h */
 #ifndef UDP_ENCAP
 #define UDP_ENCAP 100
@@ -71,11 +66,6 @@
 #ifndef IPV6_2292PKTINFO
 #define IPV6_2292PKTINFO 2
 #endif /*IPV6_2292PKTINFO*/
-
-/* missing on uclibc */
-#ifndef IPV6_IPSEC_POLICY
-#define IPV6_IPSEC_POLICY 34
-#endif /*IPV6_IPSEC_POLICY*/
 
 typedef struct private_socket_t private_socket_t;
 
@@ -440,8 +430,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	int on = TRUE;
 	int type = UDP_ENCAP_ESPINUDP;
 	struct sockaddr_storage addr;
-	u_int sol, ipsec_policy;
-	struct sadb_x_policy policy;
+	u_int sol;
 	int skt;
 	
 	memset(&addr, 0, sizeof(addr));
@@ -455,7 +444,6 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 			sin->sin_addr.s_addr = INADDR_ANY;
 			sin->sin_port = htons(port);
 			sol = SOL_IP;
-			ipsec_policy = IP_IPSEC_POLICY;
 			break;
 		}
 		case AF_INET6:
@@ -465,7 +453,6 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 			memcpy(&sin6->sin6_addr, &in6addr_any, sizeof(in6addr_any));
 			sin6->sin6_port = htons(port);
 			sol = SOL_IPV6;
-			ipsec_policy = IPV6_IPSEC_POLICY;
 			break;
 		}
 		default:
@@ -482,32 +469,6 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	if (setsockopt(skt, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
 	{
 		DBG1(DBG_NET, "unable to set SO_REUSEADDR on send socket: %s",
-			 strerror(errno));
-		close(skt);
-		return 0;
-	}
-	
-	/* bypass outgoung IKE traffic on send socket */
-	memset(&policy, 0, sizeof(policy));
-	policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
-	policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
-	policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
-	policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
-	
-	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
-	{
-		DBG1(DBG_NET, "unable to set IPSEC_POLICY on send socket: %s",
-			 strerror(errno));
-		close(skt);
-		return 0;
-	}
-	
-	/* We don't receive packets on the send socket, but we need a INBOUND policy.
-	 * Otherwise, UDP decapsulation does not work!!! */
-	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
-	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
-	{
-		DBG1(DBG_NET, "unable to set IPSEC_POLICY on send socket: %s", 
 			 strerror(errno));
 		close(skt);
 		return 0;
@@ -542,8 +503,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 {
 	int skt;
 	int on = TRUE;
-	u_int proto_offset, ip_len, sol, ipsec_policy, udp_header, ike_header;
-	struct sadb_x_policy policy;
+	u_int proto_offset, ip_len, sol, udp_header, ike_header;
 	
 	/* precalculate constants depending on address family */
 	switch (family)
@@ -552,13 +512,11 @@ static int open_recv_socket(private_socket_t *this, int family)
 			proto_offset = IP_PROTO_OFFSET;
 			ip_len = IP_LEN;
 			sol = SOL_IP;
-			ipsec_policy = IP_IPSEC_POLICY;
 			break;
 		case AF_INET6:
 			proto_offset = IP6_PROTO_OFFSET;
 			ip_len = 0; /* IPv6 raw sockets contain no IP header */
 			sol = SOL_IPV6;
-			ipsec_policy = IPV6_IPSEC_POLICY;
 			break;
 		default:
 			return 0;
@@ -633,22 +591,67 @@ static int open_recv_socket(private_socket_t *this, int family)
 		return 0;
 	}
 	
-	/* bypass incomining IKE traffic on this socket */
-	memset(&policy, 0, sizeof(policy));
-	policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
-	policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
-	policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
-	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
-	
-	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
-	{
-		DBG1(DBG_NET, "unable to set IPSEC_POLICY on raw socket: %s",
-			 strerror(errno));
-		close(skt);
-		return 0;
-	}
-	
 	return skt;
+}
+
+/**
+ * enumerator for underlying sockets
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** sockets we enumerate */
+	private_socket_t *socket;
+	/** counter */
+	int index;
+} socket_enumerator_t;
+
+/**
+ * enumerate function for socket_enumerator_t
+ */
+static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port)
+{
+	static const struct {
+		int fd_offset;
+		int family;
+		int port;
+	} sockets[] = {
+		{ offsetof(private_socket_t, recv4), AF_INET, IKEV2_UDP_PORT },
+		{ offsetof(private_socket_t, recv6), AF_INET6, IKEV2_UDP_PORT },
+		{ offsetof(private_socket_t, send4), AF_INET, IKEV2_UDP_PORT },
+		{ offsetof(private_socket_t, send6), AF_INET6, IKEV2_UDP_PORT },
+		{ offsetof(private_socket_t, send4_natt), AF_INET, IKEV2_NATT_PORT },
+		{ offsetof(private_socket_t, send6_natt), AF_INET6, IKEV2_NATT_PORT }
+	};
+	
+	while(++this->index < countof(sockets))
+	{
+		int sock = *(int*)((char*)this->socket + sockets[this->index].fd_offset);
+		if (!sock)
+		{
+			continue;
+		}
+		*fd = sock;
+		*family = sockets[this->index].family;
+		*port = sockets[this->index].port;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * implementation of socket_t.create_enumerator
+ */
+static enumerator_t *create_enumerator(private_socket_t *this)
+{
+	socket_enumerator_t *enumerator;
+	
+	enumerator = malloc_thing(socket_enumerator_t);
+	enumerator->index = -1;
+	enumerator->socket = this;
+	enumerator->public.enumerate = (void*)enumerate;
+	enumerator->public.destroy = (void*)free;
+	return &enumerator->public;
 }
 
 /**
@@ -688,12 +691,12 @@ static void destroy(private_socket_t *this)
  */
 socket_t *socket_create()
 {
-	int key;
 	private_socket_t *this = malloc_thing(private_socket_t);
-
+	
 	/* public functions */
 	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
+	this->public.create_enumerator = (enumerator_t*(*)(socket_t*))create_enumerator;
 	this->public.destroy = (void(*)(socket_t*)) destroy;
 	
 	this->recv4 = 0;
@@ -702,15 +705,6 @@ socket_t *socket_create()
 	this->send6 = 0;
 	this->send4_natt = 0;
 	this->send6_natt = 0;
-	
-	/* we open a AF_KEY socket to autoload the af_key module. Otherwise
-	 * setsockopt(IPSEC_POLICY) won't work. */
-	key = socket(AF_KEY, SOCK_RAW, PF_KEY_V2);
-	if (key == 0)
-	{
-		charon->kill(charon, "could not open AF_KEY socket");
-	}
-	close(key);
 	
 	this->recv4 = open_recv_socket(this, AF_INET);
 	if (this->recv4 == 0)
