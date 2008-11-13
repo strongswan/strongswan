@@ -98,14 +98,12 @@ enum ha_sync_message_attribute_t {
  * Union to enumerate typed attributes in a message
  */
 union ha_sync_message_value_t {
-	u_int8_t u8;
 	u_int32_t u32;
-	u_int16_t u16;
-	chunk_t chnk;
-	host_t *host;
-	identification_t *id;
-	ike_sa_id_t *ike_sa_id;
 	char *str;
+	chunk_t chunk;
+	ike_sa_id_t *ike_sa_id;
+	identification_t *id;
+	host_t *host;
 };
 
 /**

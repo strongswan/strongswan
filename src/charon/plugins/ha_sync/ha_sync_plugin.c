@@ -19,6 +19,7 @@
 #include "ha_sync_ike.h"
 #include "ha_sync_child.h"
 #include "ha_sync_socket.h"
+#include "ha_sync_dispatcher.h"
 
 #include <daemon.h>
 #include <config/child_cfg.h>
@@ -49,6 +50,11 @@ struct private_ha_sync_plugin_t {
 	 * CHILD_SA synchronization
 	 */
 	ha_sync_child_t *child;
+
+	/**
+	 * Dispatcher to process incoming messages
+	 */
+	ha_sync_dispatcher_t *dispatcher;
 };
 
 /**
@@ -60,6 +66,7 @@ static void destroy(private_ha_sync_plugin_t *this)
 	charon->bus->remove_listener(charon->bus, &this->child->listener);
 	this->ike->destroy(this->ike);
 	this->child->destroy(this->child);
+	this->dispatcher->destroy(this->dispatcher);
 	this->socket->destroy(this->socket);
 	free(this);
 }
@@ -79,6 +86,7 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
+	this->dispatcher = ha_sync_dispatcher_create(this->socket);
 	this->ike = ha_sync_ike_create(this->socket);
 	this->child = ha_sync_child_create(this->socket);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);

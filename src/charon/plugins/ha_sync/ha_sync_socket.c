@@ -21,6 +21,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include <daemon.h>
 #include <utils/host.h>
@@ -66,9 +67,12 @@ static ha_sync_message_t *pull(private_ha_sync_socket_t *this)
 	{
 		ha_sync_message_t *message;
 		char buf[1024];
+		int oldstate;
 		ssize_t len;
 
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 		len = recv(this->fd, buf, sizeof(buf), 0);
+		pthread_setcancelstate(oldstate, NULL);
 		if (len <= 0)
 		{
 			if (errno != EINTR)

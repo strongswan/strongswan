@@ -106,7 +106,6 @@ static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 		m->add_attribute(m, HA_SYNC_REMOTE_ID, ike_sa->get_other_id(ike_sa));
 		m->add_attribute(m, HA_SYNC_LOCAL_ADDR, ike_sa->get_my_host(ike_sa));
 		m->add_attribute(m, HA_SYNC_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
-		m->add_attribute(m, HA_SYNC_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
 		m->add_attribute(m, HA_SYNC_CONDITIONS, condition);
 		m->add_attribute(m, HA_SYNC_EXTENSIONS, extension);
 		if (local_vip)

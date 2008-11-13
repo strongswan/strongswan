@@ -15,9 +15,11 @@
  * $Id$
  */
 
-#include "ha_sync_message.h"
-
+#define _GNU_SOURCE
+#include <string.h>
 #include <arpa/inet.h>
+
+#include "ha_sync_message.h"
 
 #include <daemon.h>
 
@@ -209,9 +211,11 @@ static void add_attribute(private_ha_sync_message_t *this,
 			chunk_t chunk;
 
 			chunk = va_arg(args, chunk_t);
-			check_buf(this, chunk.len);
-			memcpy(this->buf.ptr + this->buf.len, chunk.ptr, chunk.len);
-			this->buf.len += chunk.len;
+			check_buf(this, chunk.len + sizeof(u_int16_t));
+			*(u_int16_t*)(this->buf.ptr + this->buf.len) = htons(chunk.len);
+			memcpy(this->buf.ptr + this->buf.len + sizeof(u_int16_t),
+				   chunk.ptr, chunk.len);
+			this->buf.len += chunk.len + sizeof(u_int16_t);;
 			break;
 		}
 		default:
@@ -225,11 +229,196 @@ static void add_attribute(private_ha_sync_message_t *this,
 }
 
 /**
+ * Attribute enumerator implementation
+ */
+typedef struct {
+	/** implementes enumerator_t */
+	enumerator_t public;
+	/** position in message */
+	chunk_t buf;
+	/** cleanup handler of current element, if any */
+	void (*cleanup)(void* data);
+	/** data to pass to cleanup handler */
+	void *cleanup_data;
+} attribute_enumerator_t;
+
+/**
+ * Implementation of create_attribute_enumerator().enumerate
+ */
+static bool attribute_enumerate(attribute_enumerator_t *this,
+								ha_sync_message_attribute_t *attr_out,
+								ha_sync_message_value_t *value)
+{
+	ha_sync_message_attribute_t attr;
+
+	if (this->cleanup)
+	{
+		this->cleanup(this->cleanup_data);
+		this->cleanup = NULL;
+	}
+	if (this->buf.len < 1)
+	{
+		return FALSE;
+	}
+	attr = this->buf.ptr[0];
+	this->buf = chunk_skip(this->buf, 1);
+	switch (attr)
+	{
+		/* ike_sa_id_t* */
+		case HA_SYNC_IKE_ID:
+		case HA_SYNC_IKE_REKEY_ID:
+		{
+			ike_sa_id_encoding_t *enc;
+
+			if (this->buf.len < sizeof(ike_sa_id_encoding_t))
+			{
+				return FALSE;
+			}
+			enc = (ike_sa_id_encoding_t*)(this->buf.ptr);
+			value->ike_sa_id = ike_sa_id_create(enc->initiator_spi,
+											enc->responder_spi, enc->initiator);
+			*attr_out = attr;
+			this->cleanup = (void*)value->ike_sa_id->destroy;
+			this->cleanup_data = value->ike_sa_id;
+			this->buf = chunk_skip(this->buf, sizeof(ike_sa_id_encoding_t));
+			return TRUE;
+		}
+		/* identification_t* */
+		case HA_SYNC_LOCAL_ID:
+		case HA_SYNC_REMOTE_ID:
+		case HA_SYNC_EAP_ID:
+		{
+			identification_encoding_t *enc;
+
+			enc = (identification_encoding_t*)(this->buf.ptr);
+			if (this->buf.len < sizeof(identification_encoding_t) ||
+				this->buf.len < sizeof(identification_encoding_t) + enc->len)
+			{
+				return FALSE;
+			}
+			value->id = identification_create_from_encoding(enc->type,
+										chunk_create(enc->encoding, enc->len));
+			*attr_out = attr;
+			this->cleanup = (void*)value->id->destroy;
+			this->cleanup_data = value->id;
+			this->buf = chunk_skip(this->buf,
+								sizeof(identification_encoding_t) + enc->len);
+			return TRUE;
+		}
+		/* host_t* */
+		case HA_SYNC_LOCAL_ADDR:
+		case HA_SYNC_REMOTE_ADDR:
+		case HA_SYNC_LOCAL_VIP:
+		case HA_SYNC_REMOTE_VIP:
+		case HA_SYNC_ADDITIONAL_ADDR:
+		{
+			host_encoding_t *enc;
+
+			enc = (host_encoding_t*)(this->buf.ptr);
+			if (this->buf.len < sizeof(host_encoding_t))
+			{
+				return FALSE;
+			}
+			value->host = host_create_from_chunk(enc->family,
+									chunk_create(enc->encoding,
+										this->buf.len - sizeof(host_encoding_t)),
+									ntohs(enc->port));
+			if (!value->host)
+			{
+				return FALSE;
+			}
+			*attr_out = attr;
+			this->cleanup = (void*)value->host->destroy;
+			this->cleanup_data = value->host;
+			this->buf = chunk_skip(this->buf, sizeof(host_encoding_t) +
+								   value->host->get_address(value->host).len);
+			return TRUE;
+		}
+		/* char* */
+		case HA_SYNC_CONFIG_NAME:
+		{
+			size_t len;
+
+			len = strnlen(this->buf.ptr, this->buf.len);
+			if (len >= this->buf.len)
+			{
+				return FALSE;
+			}
+			value->str = this->buf.ptr;
+			*attr_out = attr;
+			this->buf = chunk_skip(this->buf, len + 1);
+			return TRUE;
+		}
+		/** u_int32_t */
+		case HA_SYNC_CONDITIONS:
+		case HA_SYNC_EXTENSIONS:
+		{
+			if (this->buf.len < sizeof(u_int32_t))
+			{
+				return FALSE;
+			}
+			value->u32 = ntohl(*(u_int32_t*)this->buf.ptr);
+			*attr_out = attr;
+			this->buf = chunk_skip(this->buf, sizeof(u_int32_t));
+			return TRUE;
+		}
+		/** chunk_t */
+		case HA_SYNC_NONCE_I:
+		case HA_SYNC_NONCE_R:
+		case HA_SYNC_SECRET:
+		{
+			size_t len;
+
+			if (this->buf.len < sizeof(u_int16_t))
+			{
+				return FALSE;
+			}
+			len = ntohs(*(u_int16_t*)this->buf.ptr);
+			this->buf = chunk_skip(this->buf, sizeof(u_int16_t));
+			if (this->buf.len < len)
+			{
+				return FALSE;
+			}
+			value->chunk.len = len;
+			value->chunk.ptr = this->buf.ptr;
+			*attr_out = attr;
+			this->buf = chunk_skip(this->buf, len);
+			return TRUE;
+		}
+		default:
+		{
+			return FALSE;
+		}
+	}
+}
+
+/**
+ * Implementation of create_attribute_enumerator().destroy
+ */
+static void enum_destroy(attribute_enumerator_t *this)
+{
+	if (this->cleanup)
+	{
+		this->cleanup(this->cleanup_data);
+	}
+	free(this);
+}
+
+/**
  * Implementation of ha_sync_message_t.create_attribute_enumerator
  */
 static enumerator_t* create_attribute_enumerator(private_ha_sync_message_t *this)
 {
-	return enumerator_create_empty();
+	attribute_enumerator_t *e = malloc_thing(attribute_enumerator_t);
+
+	e->public.enumerate = (void*)attribute_enumerate;
+	e->public.destroy = (void*)enum_destroy;
+
+	e->buf = chunk_skip(this->buf, 2);
+	e->cleanup = NULL;
+	e->cleanup_data = NULL;
+
+	return &e->public;
 }
 
 /**
