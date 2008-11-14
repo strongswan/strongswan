@@ -158,7 +158,7 @@ struct private_kernel_netlink_net_t {
 	 * priority of used routing table
 	 */
 	int routing_table_prio;
-
+	
 	/**
 	 * whether to react to RTM_NEWROUTE or RTM_DELROUTE events
 	 */
@@ -207,7 +207,7 @@ static int get_vip_refcount(private_kernel_netlink_net_t *this, host_t* ip)
 static void fire_roam_job(private_kernel_netlink_net_t *this, bool address)
 {
 	struct timeval now;
-		
+	
 	if (gettimeofday(&now, NULL) == 0)
 	{
 		if (timercmp(&now, &this->last_roam, >))
@@ -701,6 +701,28 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 }
 
 /**
+ * Check if an interface with a given index is up
+ */
+static bool is_interface_up(private_kernel_netlink_net_t *this, int index)
+{
+	enumerator_t *ifaces;
+	iface_entry_t *iface;
+	bool up = FALSE;
+	
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (ifaces->enumerate(ifaces, &iface))
+	{
+		if (iface->ifindex == index)
+		{
+			up = iface->flags & IFF_UP;
+			break;
+		}
+	}
+	ifaces->destroy(ifaces);
+	return up;
+}
+
+/**
  * check if an address (chunk) addr is in subnet (net with net_len net bits)
  */
 static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
@@ -786,6 +808,9 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				size_t rtasize;
 				chunk_t rta_gtw, rta_src, rta_dst;
 				u_int32_t rta_oif = 0;
+				enumerator_t *ifaces, *addrs;
+				iface_entry_t *iface;
+				addr_entry_t *addr;
 				
 				rta_gtw = rta_src = rta_dst = chunk_empty;
 				msg = (struct rtmsg*)(NLMSG_DATA(current));
@@ -813,71 +838,73 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					}
 					rta = RTA_NEXT(rta, rtasize);
 				}
+				if (rta_oif && !is_interface_up(this, rta_oif))
+				{	/* interface is down */
+					goto next;
+				}
+				if (this->routing_table != 0 &&
+					msg->rtm_table == this->routing_table)
+				{	/* route is from our own ipsec routing table */
+					goto next;
+				}
+				if (msg->rtm_dst_len <= best)
+				{	/* not better than a previous one */
+					goto next;
+				}
+				if (msg->rtm_dst_len != 0 &&
+					(!rta_dst.ptr ||
+					 !addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len)))
+				{	/* is not the default route and not contained in our dst */
+					goto next;
+				}
 				
-				/* apply the route if:
-				 * - it is not from our own ipsec routing table
-				 * - is better than a previous one
-				 * - is the default route or
-				 * - its destination net contains our destination
-				 */
-				if ((this->routing_table == 0 ||msg->rtm_table != this->routing_table)
-					&&  msg->rtm_dst_len > best
-					&& (msg->rtm_dst_len == 0 || /* default route */
-					(rta_dst.ptr && addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len))))
+				best = msg->rtm_dst_len;
+				if (nexthop)
 				{
-					enumerator_t *ifaces, *addrs;
-					iface_entry_t *iface;
-					addr_entry_t *addr;
-					
-					best = msg->rtm_dst_len;
-					if (nexthop)
-					{
-						DESTROY_IF(gtw);
-						gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
-					}
-					else if (rta_src.ptr)
-					{
+					DESTROY_IF(gtw);
+					gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
+					goto next;
+				}
+				if (rta_src.ptr)
+				{
+					DESTROY_IF(src);
+					src = host_create_from_chunk(msg->rtm_family, rta_src, 0);
+					if (get_vip_refcount(this, src))
+					{	/* skip source address if it is installed by us */
 						DESTROY_IF(src);
-						src = host_create_from_chunk(msg->rtm_family, rta_src, 0);
-						if (get_vip_refcount(this, src))
-						{	/* skip source address if it is installed by us */
-							DESTROY_IF(src);
-							src = NULL;
-							current = NLMSG_NEXT(current, len);
-							continue;
-						}
+						src = NULL;
 					}
-					else
+					goto next;
+				}
+				/* no source addr, get one from the interfaces */
+				ifaces = this->ifaces->create_enumerator(this->ifaces);
+				while (ifaces->enumerate(ifaces, &iface))
+				{
+					if (iface->ifindex == rta_oif && 
+						iface->flags & IFF_UP)
 					{
-						/* no source addr, get one from the interfaces */
-						ifaces = this->ifaces->create_enumerator(this->ifaces);
-						while (ifaces->enumerate(ifaces, &iface))
+						addrs = iface->addrs->create_enumerator(iface->addrs);
+						while (addrs->enumerate(addrs, &addr))
 						{
-							if (iface->ifindex == rta_oif)
+							chunk_t ip = addr->ip->get_address(addr->ip);
+							if ((msg->rtm_dst_len == 0 && 
+								 addr->ip->get_family(addr->ip) ==
+								 	dest->get_family(dest)) ||
+								addr_in_subnet(ip, rta_dst, msg->rtm_dst_len))
 							{
-								addrs = iface->addrs->create_enumerator(iface->addrs);
-								while (addrs->enumerate(addrs, &addr))
-								{
-									chunk_t ip = addr->ip->get_address(addr->ip);
-									if ((msg->rtm_dst_len == 0 && 
-										 addr->ip->get_family(addr->ip) ==
-										 	dest->get_family(dest)) ||
-										addr_in_subnet(ip, rta_dst, msg->rtm_dst_len))
-									{
-										DESTROY_IF(src);
-										src = addr->ip->clone(addr->ip);
-										break;
-									}
-								}
-								addrs->destroy(addrs);
+								DESTROY_IF(src);
+								src = addr->ip->clone(addr->ip);
+								break;
 							}
 						}
-						ifaces->destroy(ifaces);
+						addrs->destroy(addrs);
 					}
 				}
-				/* FALL through */
+				ifaces->destroy(ifaces);
+				goto next;
 			}
 			default:
+			next:
 				current = NLMSG_NEXT(current, len);
 				continue;
 		}

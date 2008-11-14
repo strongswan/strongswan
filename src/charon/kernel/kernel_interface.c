@@ -256,7 +256,7 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
 	}
 	host->destroy(host);
 	
-	addrs = this->public.create_address_enumerator(&this->public, TRUE, TRUE);
+	addrs = create_address_enumerator(this, TRUE, TRUE);
 	while (addrs->enumerate(addrs, (void**)&host))
 	{
 		if (ts->includes(ts, host))
