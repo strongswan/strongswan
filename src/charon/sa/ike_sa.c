@@ -2215,6 +2215,8 @@ static void add_dns_server(private_ike_sa_t *this, host_t *dns)
  */
 static void destroy(private_ike_sa_t *this)
 {
+	charon->bus->set_sa(charon->bus, &this->public);
+	
 	set_state(this, IKE_DESTROYING);
 	
 	this->child_sas->destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
