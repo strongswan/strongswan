@@ -1209,7 +1209,7 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 						  u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,
 						  host_t *src, host_t *dst,
 						  host_t *new_src, host_t *new_dst,
-						  bool encap, bool new_encap)
+						  bool old_encap, bool new_encap)
 {
 	unsigned char request[NETLINK_BUFFER_SIZE], *pos;
 	struct nlmsghdr *hdr, *out = NULL;
@@ -1320,7 +1320,7 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	while(RTA_OK(rta, rtasize))
 	{
 		/* copy all attributes, but not XFRMA_ENCAP if we are disabling it */
-		if (rta->rta_type != XFRMA_ENCAP || encap)
+		if (rta->rta_type != XFRMA_ENCAP || new_encap)
 		{
 			if (rta->rta_type == XFRMA_ENCAP)
 			{	/* update encap tmpl */
@@ -1336,7 +1336,7 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	}
 	
 	rta = (struct rtattr*)pos;
-	if (tmpl == NULL && encap)
+	if (tmpl == NULL && new_encap)
 	{	/* add tmpl if we are enabling it */
 		rta->rta_type = XFRMA_ENCAP;
 		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
