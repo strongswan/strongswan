@@ -735,7 +735,7 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 		host_t *src, host_t *dst, u_int8_t proto, u_int32_t min, u_int32_t max,
 		u_int32_t reqid, u_int32_t *spi)
 {
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out;
 	struct xfrm_userspi_info *userspi;
 	u_int32_t received_spi = 0;
@@ -858,7 +858,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 					   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
 					   bool encap, bool inbound)
 {
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	char *alg_name;
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
@@ -1081,7 +1081,7 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 						  u_int32_t spi, protocol_id_t protocol, host_t *dst,
 						  struct xfrm_replay_state *replay)
 {
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out = NULL;
 	struct xfrm_aevent_id *out_aevent = NULL, *aevent_id;
 	size_t len;
@@ -1168,7 +1168,7 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *dst,
 					   u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
 {
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_id *sa_id;
 	
@@ -1211,7 +1211,8 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 						  host_t *new_src, host_t *new_dst,
 						  bool old_encap, bool new_encap)
 {
-	unsigned char request[NETLINK_BUFFER_SIZE], *pos;
+	netlink_buf_t request;
+	u_char *pos;
 	struct nlmsghdr *hdr, *out = NULL;
 	struct xfrm_usersa_id *sa_id;
 	struct xfrm_usersa_info *out_sa = NULL, *sa;
@@ -1397,7 +1398,7 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	iterator_t *iterator;
 	policy_entry_t *current, *policy;
 	bool found = FALSE;
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct xfrm_userpolicy_info *policy_info;
 	struct nlmsghdr *hdr;
 	
@@ -1582,7 +1583,7 @@ static status_t query_policy(private_kernel_netlink_ipsec_t *this,
 							 traffic_selector_t *dst_ts,
 							 policy_dir_t direction, u_int32_t *use_time)
 {
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
 	struct xfrm_userpolicy_id *policy_id;
 	struct xfrm_userpolicy_info *policy = NULL;
@@ -1654,7 +1655,7 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 {
 	policy_entry_t *current, policy, *to_delete = NULL;
 	route_entry_t *route;
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct xfrm_userpolicy_id *policy_id;
 	enumerator_t *enumerator;

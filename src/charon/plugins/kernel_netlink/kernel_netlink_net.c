@@ -761,7 +761,7 @@ static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
 static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 						 bool nexthop, host_t *candidate)
 {
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out, *current;
 	struct rtmsg *msg;
 	chunk_t chunk;
@@ -948,7 +948,7 @@ static host_t* get_nexthop(private_kernel_netlink_net_t *this, host_t *dest)
 static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type,
 							  int flags, int if_index, host_t *ip)
 {
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct ifaddrmsg *msg;
 	chunk_t chunk;
@@ -1116,7 +1116,7 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this, int nlmsg_ty
 								int flags, chunk_t dst_net, u_int8_t prefixlen,
 								host_t *gateway, host_t *src_ip, char *if_name)
 {
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct rtmsg *msg;
 	int ifindex;
@@ -1196,7 +1196,7 @@ status_t del_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
  */
 static status_t init_address_list(private_kernel_netlink_net_t *this)
 {
-	char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct nlmsghdr *out, *current, *in;
 	struct rtgenmsg *msg;
 	size_t len;
@@ -1288,7 +1288,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 							u_int32_t table, u_int32_t prio)
 {
-	unsigned char request[NETLINK_BUFFER_SIZE];
+	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct rtmsg *msg;
 	chunk_t chunk;

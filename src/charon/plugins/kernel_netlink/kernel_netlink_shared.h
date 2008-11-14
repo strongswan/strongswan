@@ -20,7 +20,15 @@
 
 #include <library.h>
 
-#define NETLINK_BUFFER_SIZE 1024
+#include <linux/rtnetlink.h>
+
+/**
+ * General purpose netlink buffer.
+ *
+ * 1024 byte is currently sufficient for all operations. Some platform
+ * require an enforced aligment to four bytes (e.g. ARM).
+ */
+typedef u_char netlink_buf_t[1024] __attribute__((aligned(RTA_ALIGNTO)));
 
 typedef struct netlink_socket_t netlink_socket_t;
 
