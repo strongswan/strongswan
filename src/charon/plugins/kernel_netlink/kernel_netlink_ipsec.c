@@ -868,10 +868,9 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	 * we are in the recursive call below */
 	if (ipcomp != IPCOMP_NONE && cpi != 0)
 	{
-		this->public.interface.add_sa(&this->public.interface,
- 				src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, 0, 0,
- 				ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
- 				mode, ipcomp, 0, FALSE, inbound);
+		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, 0, 0,
+ 			   ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
+ 			   mode, ipcomp, 0, FALSE, inbound);
 		ipcomp = IPCOMP_NONE;
 	}
 	
@@ -1097,7 +1096,7 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETAE;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_aevent_id));
-
+	
 	aevent_id = (struct xfrm_aevent_id*)NLMSG_DATA(hdr);
 	aevent_id->flags = XFRM_AE_RVAL;
 	
@@ -1163,6 +1162,46 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 }
 
 /**
+ * Implementation of kernel_interface_t.del_sa.
+ */
+static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *dst,
+					   u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
+{
+	unsigned char request[NETLINK_BUFFER_SIZE];
+	struct nlmsghdr *hdr;
+	struct xfrm_usersa_id *sa_id;
+	
+	/* if IPComp was used, we first delete the additional IPComp SA */
+	if (cpi)
+	{
+		del_sa(this, dst, htonl(ntohs(cpi)), IPPROTO_COMP, 0);
+	}
+	
+	memset(&request, 0, sizeof(request));
+	
+	DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x", ntohl(spi));
+	
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = XFRM_MSG_DELSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
+	
+	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	host2xfrm(dst, &sa_id->daddr);
+	sa_id->spi = spi;
+	sa_id->proto = proto_ike2kernel(protocol);
+	sa_id->family = dst->get_family(dst);
+	
+	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x", ntohl(spi));
+		return FAILED;
+	}
+	DBG2(DBG_KNL, "deleted SAD entry with SPI %.8x", ntohl(spi));
+	return SUCCESS;
+}
+
+/**
  * Implementation of kernel_interface_t.update_sa.
  */
 static status_t update_sa(private_kernel_netlink_ipsec_t *this,
@@ -1179,27 +1218,26 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	struct rtattr *rta;
 	size_t rtasize;
 	struct xfrm_encap_tmpl* tmpl = NULL;
-	bool got_replay_state;
+	bool got_replay_state = FALSE;
 	struct xfrm_replay_state replay;
 	
 	/* if IPComp is used, we first update the IPComp SA */
 	if (cpi)
 	{
-		this->public.interface.update_sa(&this->public.interface, 
-				htonl(ntohs(cpi)), IPPROTO_COMP, 0,
-				src, dst, new_src, new_dst, FALSE, FALSE);
+		update_sa(this, htonl(ntohs(cpi)), IPPROTO_COMP, 0,
+				  src, dst, new_src, new_dst, FALSE, FALSE);
 	}
 	
 	memset(&request, 0, sizeof(request));
 	
 	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x for update", ntohl(spi));
-
+	
 	/* query the existing SA first */
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
-
+	
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
@@ -1242,12 +1280,13 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	}
 	
 	/* try to get the replay state */
-	got_replay_state = (get_replay_state(
-						this, spi, protocol, dst, &replay) == SUCCESS);
+	if (get_replay_state(this, spi, protocol, dst, &replay) == SUCCESS)
+	{
+		got_replay_state = TRUE;
+	}
 	
 	/* delete the old SA (without affecting the IPComp SA) */
-	if (this->public.interface.del_sa(&this->public.interface, dst, spi,
-			protocol, 0) != SUCCESS)
+	if (del_sa(this, dst, spi, protocol, 0) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete old SAD entry with SPI %.8x", ntohl(spi));
 		free(out);
@@ -1256,7 +1295,6 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	
 	DBG2(DBG_KNL, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
 		 ntohl(spi), src, dst, new_src, new_dst);
-	
 	/* copy over the SA from out to request */
 	hdr = (struct nlmsghdr*)request;
 	memcpy(hdr, out, min(out->nlmsg_len, sizeof(request)));
@@ -1340,47 +1378,6 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	}
 	free(out);
 	
-	return SUCCESS;
-}
-
-/**
- * Implementation of kernel_interface_t.del_sa.
- */
-static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *dst,
-					   u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
-{
-	unsigned char request[NETLINK_BUFFER_SIZE];
-	struct nlmsghdr *hdr;
-	struct xfrm_usersa_id *sa_id;
-	
-	/* if IPComp was used, we first delete the additional IPComp SA */
-	if (cpi)
-	{
-		this->public.interface.del_sa(&this->public.interface, dst,
-				htonl(ntohs(cpi)), IPPROTO_COMP, 0);
-	}
-	
-	memset(&request, 0, sizeof(request));
-	
-	DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x", ntohl(spi));
-	
-	hdr = (struct nlmsghdr*)request;
-	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	hdr->nlmsg_type = XFRM_MSG_DELSA;
-	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
-	
-	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
-	host2xfrm(dst, &sa_id->daddr);
-	sa_id->spi = spi;
-	sa_id->proto = proto_ike2kernel(protocol);
-	sa_id->family = dst->get_family(dst);
-	
-	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
-	{
-		DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x", ntohl(spi));
-		return FAILED;
-	}
-	DBG2(DBG_KNL, "deleted SAD entry with SPI %.8x", ntohl(spi));
 	return SUCCESS;
 }
 
