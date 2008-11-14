@@ -1338,7 +1338,7 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 		PFKEY_EXT_COPY(msg, response.key_auth);
 	}
 	
-	if (encap)
+	if (new_encap)
 	{
 		add_encap_ext(msg, new_src, new_dst);
 	}
