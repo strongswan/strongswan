@@ -144,7 +144,7 @@ static status_t build_r(private_ike_rekey_t *this, message_t *message)
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return SUCCESS;
 	}
-
+	
 	if (this->ike_init->task.build(&this->ike_init->task, message) == FAILED)
 	{
 		return SUCCESS;
@@ -170,7 +170,33 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 {
 	job_t *job;
 	ike_sa_id_t *to_delete;
+	iterator_t *iterator;
+	payload_t *payload;
 
+	/* handle NO_ADDITIONAL_SAS notify */
+	iterator = message->get_payload_iterator(message);
+	while (iterator->iterate(iterator, (void**)&payload))
+	{
+		if (payload->get_type(payload) == NOTIFY)
+		{
+			notify_payload_t *notify = (notify_payload_t*)payload;
+			notify_type_t type = notify->get_notify_type(notify);
+			
+			if (type == NO_ADDITIONAL_SAS)
+			{
+				DBG1(DBG_IKE, "peer seems to not support IKE rekeying, "
+					 "starting reauthentication");
+				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+				charon->processor->queue_job(charon->processor,
+						(job_t*)rekey_ike_sa_job_create(
+									this->ike_sa->get_id(this->ike_sa), TRUE));
+				iterator->destroy(iterator);
+				return SUCCESS;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	
 	switch (this->ike_init->task.process(&this->ike_init->task, message))
 	{
 		case FAILED:
