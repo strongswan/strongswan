@@ -180,9 +180,8 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 		if (payload->get_type(payload) == NOTIFY)
 		{
 			notify_payload_t *notify = (notify_payload_t*)payload;
-			notify_type_t type = notify->get_notify_type(notify);
 			
-			if (type == NO_ADDITIONAL_SAS)
+			if (notify->get_notify_type(notify) == NO_ADDITIONAL_SAS)
 			{
 				DBG1(DBG_IKE, "peer seems to not support IKE rekeying, "
 					 "starting reauthentication");
