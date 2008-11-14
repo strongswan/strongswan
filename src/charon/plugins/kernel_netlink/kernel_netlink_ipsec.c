@@ -1146,9 +1146,10 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 	rtasize = XFRM_PAYLOAD(out, struct xfrm_aevent_id);
 	while(RTA_OK(rta, rtasize))
 	{
-		if (rta->rta_type == XFRMA_REPLAY_VAL)
+		if (rta->rta_type == XFRMA_REPLAY_VAL &&
+			RTA_PAYLOAD(rta) == sizeof(struct xfrm_replay_state))
 		{
-			memcpy(replay, RTA_DATA(rta), rta->rta_len);
+			memcpy(replay, RTA_DATA(rta), RTA_PAYLOAD(rta));
 			free(out);
 			return SUCCESS;
 		}
