@@ -858,7 +858,7 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	dst_ts = sadb_address2ts(response.dst);
 	dir = kernel2dir(response.x_policy->sadb_x_policy_dir);
 	DBG2(DBG_KNL, "  policy %R === %R %N, id %u", src_ts, dst_ts,
-					 policy_dir_names, dir, response.x_policy->sadb_x_policy_id);
+					 policy_dir_names, dir);
 	
 	/* SADB_X_EXT_KMADDRESS is not present in unpatched kernels < 2.6.28 */   
 	if (response.x_kmaddress)
@@ -875,7 +875,7 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 		DBG2(DBG_KNL, "  kmaddress: %H...%H", local, remote);
 	}
 	
-	if (src_ts && dst_ts)
+	if (src_ts && dst_ts && local && remote)
 	{
 		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N with reqid {%u}",
 					   src_ts, dst_ts, policy_dir_names, dir, reqid, local);

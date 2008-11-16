@@ -580,8 +580,7 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 	dst_ts = selector2ts(&policy_id->sel, FALSE);
 	dir = (policy_dir_t)policy_id->dir;
 
-	DBG2(DBG_KNL, "  policy: %R === %R %N, index %u", src_ts, dst_ts,
-				   policy_dir_names, dir, policy_id->index);
+	DBG2(DBG_KNL, "  policy: %R === %R %N", src_ts, dst_ts, policy_dir_names);
 
 	while (RTA_OK(rta, rtasize))
 	{
@@ -618,7 +617,7 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 		rta = RTA_NEXT(rta, rtasize);
 	}
 
-	if (src_ts && dst_ts)
+	if (src_ts && dst_ts && local && remote)
 	{
 		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N with reqid {%u}",
 					   src_ts, dst_ts, policy_dir_names, dir, reqid, local);

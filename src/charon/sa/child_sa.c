@@ -673,21 +673,45 @@ static status_t update_hosts(private_child_sa_t *this,
 	old = this->state;
 	set_state(this, CHILD_UPDATING);
 	
-	/* update our (initator) SA */
-	if (charon->kernel_interface->update_sa(charon->kernel_interface, this->my_spi,
-			this->protocol, this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
-			this->other_addr, this->my_addr, other, me,
-			this->encap, encap) == NOT_SUPPORTED)
+	if (!this->config->use_proxy_mode(this->config) || this->mode != MODE_TRANSPORT)
 	{
-		return NOT_SUPPORTED;
-	}
-	/* update his (responder) SA */
-	if (charon->kernel_interface->update_sa(charon->kernel_interface, this->other_spi, 
-			this->protocol, this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
-			this->my_addr, this->other_addr, me, other,
-			this->encap, encap) == NOT_SUPPORTED)
-	{
-		return NOT_SUPPORTED;
+		/* update our (initator) SA */
+		if (this->my_spi)
+		{
+			if (charon->kernel_interface->update_sa(charon->kernel_interface,
+							this->my_spi, this->protocol,
+							this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
+							this->other_addr, this->my_addr, other, me,
+							this->encap, encap) == NOT_SUPPORTED)
+			{
+				return NOT_SUPPORTED;
+			}
+		}
+		
+		/* update his (responder) SA */
+		if (this->other_spi)
+		{
+			if (charon->kernel_interface->update_sa(charon->kernel_interface,
+							this->other_spi, this->protocol,
+					 		this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
+							this->my_addr, this->other_addr, me, other,
+							this->encap, encap) == NOT_SUPPORTED)
+			{
+				return NOT_SUPPORTED;
+			}
+		}
+
+		/* apply hosts */
+		if (!me->equals(me, this->my_addr))
+		{
+			this->my_addr->destroy(this->my_addr);
+			this->my_addr = me->clone(me);
+		}
+		if (!other->equals(other, this->other_addr))
+		{
+			this->other_addr->destroy(this->other_addr);
+			this->other_addr = other->clone(other);
+		}
 	}
 	
 	if (this->config->install_policy(this->config))
@@ -754,25 +778,10 @@ static status_t update_hosts(private_child_sa_t *this,
 			enumerator->destroy(enumerator);
 		}
 	}
-	
-	/* apply hosts */
-	if (!this->config->use_proxy_mode(this->config) || this->mode != MODE_TRANSPORT)
-	{
-		if (!me->equals(me, this->my_addr))
-		{
-			this->my_addr->destroy(this->my_addr);
-			this->my_addr = me->clone(me);
-		}
-		if (!other->equals(other, this->other_addr))
-		{
-			this->other_addr->destroy(this->other_addr);
-			this->other_addr = other->clone(other);
-		}
-	}
+
 	this->encap = encap;
-	
 	set_state(this, old);
-	
+
 	return SUCCESS;
 }
 

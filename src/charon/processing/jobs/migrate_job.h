@@ -51,6 +51,7 @@ struct migrate_job_t {
  * @param reqid		reqid of the CHILD_SA to acquire
  * @param src_ts	source traffic selector to be used in the policy
  * @param dst_ts	destination traffic selector to be used in the policy
+ * @param dir       direction of the policy (in|out)
  * @param local     local host address to be used in the IKE_SA
  * @param remote    remote host address to be used in the IKE_SA
  * @return			migrate_job_t object

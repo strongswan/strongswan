@@ -85,8 +85,38 @@ static void execute(private_migrate_job_t *this)
 	}
 	if (ike_sa)
 	{
+		iterator_t *children;
+		child_sa_t *child_sa;
+		host_t *host;
+
+		children = ike_sa->create_child_sa_iterator(ike_sa);
+		while (children->iterate(children, (void**)&child_sa))
+		{
+			if (child_sa->get_reqid(child_sa) == this->reqid)
+			{
+				break;
+			}
+		}
+		children->destroy(children);
 		DBG2(DBG_JOB, "found CHILD_SA with reqid {%d}", this->reqid);
+
 		ike_sa->set_kmaddress(ike_sa, this->local, this->remote);
+
+		host = this->local->clone(this->local);
+		host->set_port(host, IKEV2_UDP_PORT);
+		ike_sa->set_my_host(ike_sa, host);
+
+		host = this->remote->clone(this->remote);
+		host->set_port(host, IKEV2_UDP_PORT);
+		ike_sa->set_other_host(ike_sa, host);
+
+		if (child_sa->update_hosts(child_sa, this->local, this->remote,
+				ike_sa->get_virtual_ip(ike_sa, TRUE),
+			 	ike_sa->has_condition(ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
+		{
+			ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
+								   child_sa->get_spi(child_sa, TRUE));
+		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	else
