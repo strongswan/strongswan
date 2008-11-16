@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	/* threads 1..5 and 9 are always busy */
 	for (th = 1; th <= THREADS; th++)
 	{
-		state[th] = (th <= 5 || th == 9 )? STATE_BUSY : STATE_IDLE;
+		state[th] = (th <= 7 && th != 3)? STATE_BUSY : STATE_IDLE;
 	}
   
 	/* open the log file */

@@ -32,6 +32,10 @@ strongswan-4.2.9
   IPsec transport proxy mode where the IKEv2 daemon uses the Care-of-Address
   but the IPsec SA is set up for the Home Adress.
 
+- Implemented migration of Mobile IPv6 connections using the KMADDRESS
+  field contained in XFRM_MSG_MIGRATE messages sent by the mip6d daemon
+  via the Linux 2.6.28 (or appropriately patched) kernel.
+
 
 strongswan-4.2.8
 ----------------
