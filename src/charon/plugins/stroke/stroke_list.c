@@ -137,17 +137,19 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	u_int32_t rekey, now = time(NULL);
 	u_int32_t use_in, use_out;
 	proposal_t *proposal;
+	child_cfg_t *config = child_sa->get_config(child_sa);
 	
-	fprintf(out, "%12s{%d}:  %N, %N", 
+	fprintf(out, "%12s{%d}:  %N, %N%s", 
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
 			child_sa_state_names, child_sa->get_state(child_sa),
-			ipsec_mode_names, child_sa->get_mode(child_sa));
+			ipsec_mode_names, child_sa->get_mode(child_sa),
+			config->use_proxy_mode(config) ? "_PROXY" : "");
 	
 	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
 		fprintf(out, ", %N%s SPIs: %.8x_i %.8x_o",
 				protocol_id_names, child_sa->get_protocol(child_sa),
-				child_sa->has_encap(child_sa) ? " in UDP": "",
+				child_sa->has_encap(child_sa) ? " in UDP" : "",
 				ntohl(child_sa->get_spi(child_sa, TRUE)),
 				ntohl(child_sa->get_spi(child_sa, FALSE)));
 		
