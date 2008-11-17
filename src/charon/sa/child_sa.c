@@ -662,6 +662,7 @@ static status_t update_hosts(private_child_sa_t *this,
 							 host_t *me, host_t *other, host_t *vip, bool encap) 
 {
 	child_sa_state_t old;
+	bool transport_proxy_mode;
 	
 	/* anything changed at all? */
 	if (me->equals(me, this->my_addr) && 
@@ -672,8 +673,10 @@ static status_t update_hosts(private_child_sa_t *this,
 	
 	old = this->state;
 	set_state(this, CHILD_UPDATING);
+	transport_proxy_mode = this->config->use_proxy_mode(this->config) &&
+						   this->mode == MODE_TRANSPORT;
 	
-	if (!this->config->use_proxy_mode(this->config) || this->mode != MODE_TRANSPORT)
+	if (!transport_proxy_mode)
 	{
 		/* update our (initator) SA */
 		if (this->my_spi)
@@ -699,18 +702,6 @@ static status_t update_hosts(private_child_sa_t *this,
 			{
 				return NOT_SUPPORTED;
 			}
-		}
-
-		/* apply hosts */
-		if (!me->equals(me, this->my_addr))
-		{
-			this->my_addr->destroy(this->my_addr);
-			this->my_addr = me->clone(me);
-		}
-		if (!other->equals(other, this->other_addr))
-		{
-			this->other_addr->destroy(this->other_addr);
-			this->other_addr = other->clone(other);
 		}
 	}
 	
@@ -776,6 +767,21 @@ static status_t update_hosts(private_child_sa_t *this,
 				}
 			}
 			enumerator->destroy(enumerator);
+		}
+	}
+
+	if (!transport_proxy_mode)
+	{
+		/* apply hosts */
+		if (!me->equals(me, this->my_addr))
+		{
+			this->my_addr->destroy(this->my_addr);
+			this->my_addr = me->clone(me);
+		}
+		if (!other->equals(other, this->other_addr))
+		{
+			this->other_addr->destroy(this->other_addr);
+			this->other_addr = other->clone(other);
 		}
 	}
 
