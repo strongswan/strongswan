@@ -92,6 +92,14 @@ enum ha_sync_message_attribute_t {
 	HA_SYNC_NONCE_R,
 	/** chunk_t, diffie hellman shared secret */
 	HA_SYNC_SECRET,
+	/** u_int16_t, pseudo random function */
+	HA_SYNC_ALG_PRF,
+	/** u_int16_t, encryption algorithm */
+	HA_SYNC_ALG_ENCR,
+	/** u_int16_t, encryption key size in bytes */
+	HA_SYNC_ALG_ENCR_LEN,
+	/** u_int16_t, integrity protection algorithm */
+	HA_SYNC_ALG_INTEG,
 };
 
 /**
@@ -99,6 +107,7 @@ enum ha_sync_message_attribute_t {
  */
 union ha_sync_message_value_t {
 	u_int32_t u32;
+	u_int16_t u16;
 	char *str;
 	chunk_t chunk;
 	ike_sa_id_t *ike_sa_id;

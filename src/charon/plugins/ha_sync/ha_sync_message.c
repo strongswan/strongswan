@@ -191,6 +191,20 @@ static void add_attribute(private_ha_sync_message_t *this,
 			this->buf.len += len;
 			break;
 		}
+		/* u_int16_t */
+		case HA_SYNC_ALG_PRF:
+		case HA_SYNC_ALG_ENCR:
+		case HA_SYNC_ALG_ENCR_LEN:
+		case HA_SYNC_ALG_INTEG:
+		{
+			u_int16_t val;
+
+			val = (u_int16_t)va_arg(args, u_int32_t);
+			check_buf(this, sizeof(val));
+			*(u_int16_t*)(this->buf.ptr + this->buf.len) = htons(val);
+			this->buf.len += sizeof(val);
+			break;
+		}
 		/** u_int32_t */
 		case HA_SYNC_CONDITIONS:
 		case HA_SYNC_EXTENSIONS:
@@ -199,7 +213,7 @@ static void add_attribute(private_ha_sync_message_t *this,
 
 			val = va_arg(args, u_int32_t);
 			check_buf(this, sizeof(val));
-			this->buf.ptr[this->buf.len] = htonl(val);
+			*(u_int32_t*)(this->buf.ptr + this->buf.len) = htonl(val);
 			this->buf.len += sizeof(val);
 			break;
 		}
@@ -347,6 +361,21 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			value->str = this->buf.ptr;
 			*attr_out = attr;
 			this->buf = chunk_skip(this->buf, len + 1);
+			return TRUE;
+		}
+		/** u_int16_t */
+		case HA_SYNC_ALG_PRF:
+		case HA_SYNC_ALG_ENCR:
+		case HA_SYNC_ALG_ENCR_LEN:
+		case HA_SYNC_ALG_INTEG:
+		{
+			if (this->buf.len < sizeof(u_int16_t))
+			{
+				return FALSE;
+			}
+			value->u16 = ntohs(*(u_int16_t*)this->buf.ptr);
+			*attr_out = attr;
+			this->buf = chunk_skip(this->buf, sizeof(u_int16_t));
 			return TRUE;
 		}
 		/** u_int32_t */

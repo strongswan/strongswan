@@ -20,6 +20,7 @@
 #include "ha_sync_child.h"
 #include "ha_sync_socket.h"
 #include "ha_sync_dispatcher.h"
+#include "ha_sync_cache.h"
 
 #include <daemon.h>
 #include <config/child_cfg.h>
@@ -55,6 +56,11 @@ struct private_ha_sync_plugin_t {
 	 * Dispatcher to process incoming messages
 	 */
 	ha_sync_dispatcher_t *dispatcher;
+
+	/**
+	 * Local cache of a nodes synced SAs
+	 */
+	ha_sync_cache_t *cache;
 };
 
 /**
@@ -67,6 +73,7 @@ static void destroy(private_ha_sync_plugin_t *this)
 	this->ike->destroy(this->ike);
 	this->child->destroy(this->child);
 	this->dispatcher->destroy(this->dispatcher);
+	this->cache->destroy(this->cache);
 	this->socket->destroy(this->socket);
 	free(this);
 }
@@ -86,7 +93,8 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	this->dispatcher = ha_sync_dispatcher_create(this->socket);
+	this->cache = ha_sync_cache_create();
+	this->dispatcher = ha_sync_dispatcher_create(this->socket, this->cache);
 	this->ike = ha_sync_ike_create(this->socket);
 	this->child = ha_sync_child_create(this->socket);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);
