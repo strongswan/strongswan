@@ -42,6 +42,85 @@ static bool child_keys(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 					   child_sa_t *child_sa, diffie_hellman_t *dh,
 					   chunk_t nonce_i, chunk_t nonce_r)
 {
+	ha_sync_message_t *m;
+	chunk_t secret;
+	proposal_t *proposal;
+	u_int16_t alg, len;
+	linked_list_t *list;
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+
+	m = ha_sync_message_create(HA_SYNC_CHILD_ADD);
+
+	m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+	m->add_attribute(m, HA_SYNC_INBOUND_SPI, child_sa->get_spi(child_sa, TRUE));
+	m->add_attribute(m, HA_SYNC_OUTBOUND_SPI, child_sa->get_spi(child_sa, FALSE));
+	m->add_attribute(m, HA_SYNC_INBOUND_CPI, child_sa->get_cpi(child_sa, TRUE));
+	m->add_attribute(m, HA_SYNC_OUTBOUND_CPI, child_sa->get_cpi(child_sa, FALSE));
+	m->add_attribute(m, HA_SYNC_IPSEC_MODE, child_sa->get_mode(child_sa));
+	m->add_attribute(m, HA_SYNC_IPCOMP, child_sa->get_ipcomp(child_sa));
+	m->add_attribute(m, HA_SYNC_CONFIG_NAME, child_sa->get_name(child_sa));
+
+	proposal = child_sa->get_proposal(child_sa);
+	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &len))
+	{
+		m->add_attribute(m, HA_SYNC_ALG_ENCR, alg);
+		if (len)
+		{
+			m->add_attribute(m, HA_SYNC_ALG_ENCR_LEN, len);
+		}
+	}
+	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
+	{
+		m->add_attribute(m, HA_SYNC_ALG_INTEG, alg);
+	}
+	m->add_attribute(m, HA_SYNC_NONCE_I, nonce_i);
+	m->add_attribute(m, HA_SYNC_NONCE_R, nonce_r);
+	if (dh && dh->get_shared_secret(dh, &secret) == SUCCESS)
+	{
+		m->add_attribute(m, HA_SYNC_SECRET, secret);
+		chunk_clear(&secret);
+	}
+
+	list = child_sa->get_traffic_selectors(child_sa, TRUE);
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		m->add_attribute(m, HA_SYNC_LOCAL_TS, ts);
+	}
+	enumerator->destroy(enumerator);
+	list = child_sa->get_traffic_selectors(child_sa, FALSE);
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		m->add_attribute(m, HA_SYNC_REMOTE_TS, ts);
+	}
+	enumerator->destroy(enumerator);
+
+	this->socket->push(this->socket, m);
+	m->destroy(m);
+
+	return TRUE;
+}
+
+/**
+ * Implementation of listener_t.child_state_change
+ */
+static bool child_state_change(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
+							   child_sa_t *child_sa, child_sa_state_t state)
+{
+	if (state == CHILD_DESTROYING)
+	{
+		ha_sync_message_t *m;
+
+		m = ha_sync_message_create(HA_SYNC_CHILD_DELETE);
+
+		m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+		m->add_attribute(m, HA_SYNC_INBOUND_SPI,
+						 child_sa->get_spi(child_sa, TRUE));
+		this->socket->push(this->socket, m);
+		m->destroy(m);
+	}
 	return TRUE;
 }
 
@@ -62,6 +141,7 @@ ha_sync_child_t *ha_sync_child_create(ha_sync_socket_t *socket)
 
 	memset(&this->public.listener, 0, sizeof(listener_t));
 	this->public.listener.child_keys = (bool(*)(listener_t*, ike_sa_t *ike_sa, child_sa_t *child_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r))child_keys;
+	this->public.listener.child_state_change = (bool(*)(listener_t*,ike_sa_t *ike_sa, child_sa_t *child_sa, child_sa_state_t state))child_state_change;
 	this->public.destroy = (void(*)(ha_sync_child_t*))destroy;
 
 	this->socket = socket;

@@ -81,6 +81,20 @@ struct host_encoding_t {
 	char encoding[];
 } __attribute__((packed));
 
+typedef struct ts_encoding_t ts_encoding_t;
+
+/**
+ * encoding of a traffic_selector_t
+ */
+struct ts_encoding_t {
+	u_int8_t type;
+	u_int8_t protocol;
+	u_int16_t from_port;
+	u_int16_t to_port;
+	u_int8_t dynamic;
+	char encoding[];
+} __attribute__((packed));
+
 /**
  * Implementation of ha_sync_message_t.get_type
  */
@@ -191,11 +205,25 @@ static void add_attribute(private_ha_sync_message_t *this,
 			this->buf.len += len;
 			break;
 		}
+		/* u_int8_t */
+		case HA_SYNC_IPSEC_MODE:
+		case HA_SYNC_IPCOMP:
+		{
+			u_int8_t val;
+
+			val = (u_int8_t)va_arg(args, u_int32_t);
+			check_buf(this, sizeof(val));
+			this->buf.ptr[this->buf.len] = val;
+			this->buf.len += sizeof(val);
+			break;
+		}
 		/* u_int16_t */
 		case HA_SYNC_ALG_PRF:
 		case HA_SYNC_ALG_ENCR:
 		case HA_SYNC_ALG_ENCR_LEN:
 		case HA_SYNC_ALG_INTEG:
+		case HA_SYNC_INBOUND_CPI:
+		case HA_SYNC_OUTBOUND_CPI:
 		{
 			u_int16_t val;
 
@@ -208,6 +236,8 @@ static void add_attribute(private_ha_sync_message_t *this,
 		/** u_int32_t */
 		case HA_SYNC_CONDITIONS:
 		case HA_SYNC_EXTENSIONS:
+		case HA_SYNC_INBOUND_SPI:
+		case HA_SYNC_OUTBOUND_SPI:
 		{
 			u_int32_t val;
 
@@ -230,6 +260,28 @@ static void add_attribute(private_ha_sync_message_t *this,
 			memcpy(this->buf.ptr + this->buf.len + sizeof(u_int16_t),
 				   chunk.ptr, chunk.len);
 			this->buf.len += chunk.len + sizeof(u_int16_t);;
+			break;
+		}
+		/** traffic_selector_t */
+		case HA_SYNC_LOCAL_TS:
+		case HA_SYNC_REMOTE_TS:
+		{
+			ts_encoding_t *enc;
+			traffic_selector_t *ts;
+			chunk_t data;
+
+			ts = va_arg(args, traffic_selector_t*);
+			data = chunk_cata("cc", ts->get_from_address(ts),
+							  ts->get_to_address(ts));
+			check_buf(this, sizeof(ts_encoding_t) + data.len);
+			enc = (ts_encoding_t*)(this->buf.ptr + this->buf.len);
+			this->buf.len += sizeof(ts_encoding_t) + data.len;
+			enc->type = ts->get_type(ts);
+			enc->protocol = ts->get_protocol(ts);
+			enc->from_port = htons(ts->get_from_port(ts));
+			enc->to_port = htons(ts->get_to_port(ts));
+			enc->dynamic = ts->is_dynamic(ts);
+			memcpy(enc->encoding, data.ptr, data.len);
 			break;
 		}
 		default:
@@ -363,11 +415,26 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			this->buf = chunk_skip(this->buf, len + 1);
 			return TRUE;
 		}
+		/* u_int8_t */
+		case HA_SYNC_IPSEC_MODE:
+		case HA_SYNC_IPCOMP:
+		{
+			if (this->buf.len < sizeof(u_int8_t))
+			{
+				return FALSE;
+			}
+			value->u8 = *(u_int8_t*)this->buf.ptr;
+			*attr_out = attr;
+			this->buf = chunk_skip(this->buf, sizeof(u_int8_t));
+			return TRUE;
+		}
 		/** u_int16_t */
 		case HA_SYNC_ALG_PRF:
 		case HA_SYNC_ALG_ENCR:
 		case HA_SYNC_ALG_ENCR_LEN:
 		case HA_SYNC_ALG_INTEG:
+		case HA_SYNC_INBOUND_CPI:
+		case HA_SYNC_OUTBOUND_CPI:
 		{
 			if (this->buf.len < sizeof(u_int16_t))
 			{
@@ -381,6 +448,8 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 		/** u_int32_t */
 		case HA_SYNC_CONDITIONS:
 		case HA_SYNC_EXTENSIONS:
+		case HA_SYNC_INBOUND_SPI:
+		case HA_SYNC_OUTBOUND_SPI:
 		{
 			if (this->buf.len < sizeof(u_int32_t))
 			{
@@ -412,6 +481,69 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			value->chunk.ptr = this->buf.ptr;
 			*attr_out = attr;
 			this->buf = chunk_skip(this->buf, len);
+			return TRUE;
+		}
+		case HA_SYNC_LOCAL_TS:
+		case HA_SYNC_REMOTE_TS:
+		{
+			ts_encoding_t *enc;
+			host_t *host;
+			int addr_len;
+
+			enc = (ts_encoding_t*)(this->buf.ptr);
+			if (this->buf.len < sizeof(ts_encoding_t))
+			{
+				return FALSE;
+			}
+			switch (enc->type)
+			{
+				case TS_IPV4_ADDR_RANGE:
+					addr_len = 4;
+					if (this->buf.len < sizeof(ts_encoding_t) + 2 * addr_len)
+					{
+						return FALSE;
+					}
+					break;
+				case TS_IPV6_ADDR_RANGE:
+					addr_len = 16;
+					if (this->buf.len < sizeof(ts_encoding_t) + 2 * addr_len)
+					{
+						return FALSE;
+					}
+					break;
+				default:
+					return FALSE;
+			}
+			if (enc->dynamic)
+			{
+				host = host_create_from_chunk(0,
+									chunk_create(enc->encoding, addr_len), 0);
+				if (!host)
+				{
+					return FALSE;
+				}
+				value->ts = traffic_selector_create_dynamic(enc->protocol,
+									ntohs(enc->from_port), ntohs(enc->to_port));
+				value->ts->set_address(value->ts, host);
+				host->destroy(host);
+			}
+			else
+			{
+				value->ts = traffic_selector_create_from_bytes(enc->protocol,
+								enc->type, chunk_create(enc->encoding, addr_len),
+								ntohs(enc->from_port),
+								chunk_create(enc->encoding + addr_len, addr_len),
+								ntohs(enc->to_port));
+				if (!value->ts)
+				{
+					return FALSE;
+				}
+			}
+			*attr_out = attr;
+			this->cleanup = (void*)value->ts->destroy;
+			this->cleanup_data = value->ts;
+			this->buf = chunk_skip(this->buf, sizeof(ts_encoding_t)
+										+ addr_len * 2);
 			return TRUE;
 		}
 		default:

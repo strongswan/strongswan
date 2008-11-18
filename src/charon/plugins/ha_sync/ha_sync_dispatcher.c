@@ -271,6 +271,28 @@ static void process_ike_delete(private_ha_sync_dispatcher_t *this,
 }
 
 /**
+ * Process messages of type CHILD_ADD
+ */
+static void process_child_add(private_ha_sync_dispatcher_t *this,
+							  ha_sync_message_t *message)
+{
+	chunk_t chunk = message->get_encoding(message);
+
+	DBG1(DBG_CHD, "CHILD_ADD: %B", &chunk);
+}
+
+/**
+ * Process messages of type CHILD_DELETE
+ */
+static void process_child_delete(private_ha_sync_dispatcher_t *this,
+								 ha_sync_message_t *message)
+{
+	chunk_t chunk = message->get_encoding(message);
+
+	DBG1(DBG_CHD, "CHILD_DELETE: %B", &chunk);
+}
+
+/**
  * Dispatcher job function
  */
 static job_requeue_t dispatch(private_ha_sync_dispatcher_t *this)
@@ -292,8 +314,10 @@ static job_requeue_t dispatch(private_ha_sync_dispatcher_t *this)
 		case HA_SYNC_IKE_REKEY:
 			break;
 		case HA_SYNC_CHILD_ADD:
+			process_child_add(this, message);
 			break;
 		case HA_SYNC_CHILD_DELETE:
+			process_child_delete(this, message);
 			break;
 		default:
 			DBG1(DBG_CFG, "received unknown HA sync message type %d",

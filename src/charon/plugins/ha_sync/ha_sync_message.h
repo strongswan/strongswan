@@ -27,6 +27,7 @@
 #include <utils/host.h>
 #include <utils/identification.h>
 #include <sa/ike_sa_id.h>
+#include <config/traffic_selector.h>
 
 /**
  * Protocol version of this implementation
@@ -100,19 +101,37 @@ enum ha_sync_message_attribute_t {
 	HA_SYNC_ALG_ENCR_LEN,
 	/** u_int16_t, integrity protection algorithm */
 	HA_SYNC_ALG_INTEG,
+	/** u_int8_t, IPsec mode, TUNNEL|TRANSPORT|... */
+	HA_SYNC_IPSEC_MODE,
+	/** u_int8_t, IPComp protocol */
+	HA_SYNC_IPCOMP,
+	/** u_int32_t, inbound security parameter index */
+	HA_SYNC_INBOUND_SPI,
+	/** u_int32_t, outbound security parameter index */
+	HA_SYNC_OUTBOUND_SPI,
+	/** u_int16_t, inbound security parameter index */
+	HA_SYNC_INBOUND_CPI,
+	/** u_int16_t, outbound security parameter index */
+	HA_SYNC_OUTBOUND_CPI,
+	/** traffic_selector_t*, local traffic selector */
+	HA_SYNC_LOCAL_TS,
+	/** traffic_selector_t*, remote traffic selector */
+	HA_SYNC_REMOTE_TS,
 };
 
 /**
  * Union to enumerate typed attributes in a message
  */
 union ha_sync_message_value_t {
-	u_int32_t u32;
+	u_int8_t u8;
 	u_int16_t u16;
+	u_int32_t u32;
 	char *str;
 	chunk_t chunk;
 	ike_sa_id_t *ike_sa_id;
 	identification_t *id;
 	host_t *host;
+	traffic_selector_t *ts;
 };
 
 /**
