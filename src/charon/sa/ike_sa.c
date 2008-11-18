@@ -2365,6 +2365,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->child_sas = linked_list_create();
 	this->my_host = host_create_any(AF_INET);
+	this->my_host->set_port(this->my_host, IKEV2_UDP_PORT);
 	this->other_host = host_create_any(AF_INET);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
