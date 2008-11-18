@@ -707,7 +707,8 @@ static bool is_interface_up(private_kernel_netlink_net_t *this, int index)
 {
 	enumerator_t *ifaces;
 	iface_entry_t *iface;
-	bool up = FALSE;
+	/* default to TRUE for interface we do not monitor (e.g. lo) */
+	bool up = TRUE;
 	
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
