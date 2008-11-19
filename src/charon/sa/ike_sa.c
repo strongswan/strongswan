@@ -874,7 +874,7 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 		while (iterator->iterate(iterator, (void**)&child_sa))
 		{
-			if (child_sa->update_hosts(child_sa, this->my_host,
+			if (child_sa->update(child_sa, this->my_host,
 						this->other_host, this->my_virtual_ip,
 						has_condition(this, COND_NAT_ANY)) == NOT_SUPPORTED)
 			{
@@ -1288,8 +1288,8 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, me);
 	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, other);
 
-	status = child_sa->add_policies(child_sa, my_ts, other_ts,
-							child_cfg->get_mode(child_cfg),	PROTO_NONE);
+	child_sa->set_mode(child_sa, child_cfg->get_mode(child_cfg));
+	status = child_sa->add_policies(child_sa, my_ts, other_ts);
 
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));

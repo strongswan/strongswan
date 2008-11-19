@@ -251,7 +251,7 @@ static void update_children(private_ike_mobike_t *this)
 	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		if (child_sa->update_hosts(child_sa,
+		if (child_sa->update(child_sa,
 				this->ike_sa->get_my_host(this->ike_sa), 
 				this->ike_sa->get_other_host(this->ike_sa),
 				this->ike_sa->get_virtual_ip(this->ike_sa, TRUE),

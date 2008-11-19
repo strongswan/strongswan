@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006-2008 Tobias Brunner
- * Copyright (C) 2006-2007 Martin Willi
+ * Copyright (C) 2006-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Hochschule fuer Technik Rapperswil
  *
@@ -93,12 +93,13 @@ extern enum_name_t *child_sa_state_names;
  * SAs and the policies have the same reqid.
  * 
  * The procedure for child sa setup is as follows:
- * - A gets SPIs for a proposal via child_sa_t.alloc
- * - A send the updated proposal to B
+ * - A gets SPIs for a all protocols in its proposals via child_sa_t.alloc
+ * - A send the proposals with the allocated SPIs to B
  * - B selects a suitable proposal
- * - B calls child_sa_t.add to add and update the selected proposal
- * - B sends the updated proposal to A
- * - A calls child_sa_t.update to update the already allocated SPIs with the chosen proposal
+ * - B allocates an SPI for the selected protocol
+ * - B calls child_sa_t.install for both, the allocated and received SPI
+ * - B sends the proposal with the allocated SPI to A
+ * - A calls child_sa_t.install for both, the allocated and recevied SPI
  * 
  * Once SAs are set up, policies can be added using add_policies.
  */
@@ -120,6 +121,27 @@ struct child_sa_t {
 	 * @return 			reqid of the CHILD SA
 	 */
 	u_int32_t (*get_reqid)(child_sa_t *this);
+	
+	/**
+	 * Get the config used to set up this child sa.
+	 *
+	 * @return			child_cfg
+	 */
+	child_cfg_t* (*get_config) (child_sa_t *this);
+	
+	/**
+	 * Get the state of the CHILD_SA.
+	 *
+	 * @return 			CHILD_SA state
+	 */	
+	child_sa_state_t (*get_state) (child_sa_t *this);
+	
+	/**
+	 * Set the state of the CHILD_SA.
+	 *
+	 * @param state		state to set on CHILD_SA
+	 */	
+	void (*set_state) (child_sa_t *this, child_sa_state_t state);
 	
 	/**
 	 * Get the SPI of this CHILD_SA.
@@ -153,6 +175,13 @@ struct child_sa_t {
 	protocol_id_t (*get_protocol) (child_sa_t *this);
 	
 	/**
+	 * Set the negotiated protocol to use for this CHILD_SA.
+	 *
+	 * @param protocol	AH | ESP
+	 */
+	void (*set_protocol)(child_sa_t *this, protocol_id_t protocol);
+	
+	/**
 	 * Get the IPsec mode of this CHILD_SA.
 	 *
 	 * @return			TUNNEL | TRANSPORT | BEET
@@ -160,11 +189,39 @@ struct child_sa_t {
 	ipsec_mode_t (*get_mode)(child_sa_t *this);
 	
 	/**
+	 * Set the negotiated IPsec mode to use.
+	 *
+	 * @param mode		TUNNEL | TRANPORT | BEET
+	 */
+	void (*set_mode)(child_sa_t *this, ipsec_mode_t mode);
+	
+	/**
 	 * Get the used IPComp algorithm.
 	 *
 	 * @return			IPComp compression algorithm.
 	 */
 	ipcomp_transform_t (*get_ipcomp)(child_sa_t *this);
+	
+	/**
+	 * Set the IPComp algorithm to use.
+	 * 
+	 * @param ipcomp	the IPComp transform to use
+	 */
+	void (*set_ipcomp)(child_sa_t *this, ipcomp_transform_t ipcomp);
+	
+	/**
+	 * Get the selected proposal.
+	 *
+	 * @return			selected proposal
+	 */
+	proposal_t* (*get_proposal)(child_sa_t *this);
+	
+	/**
+	 * Set the negotiated proposal.
+	 *
+	 * @param proposal	selected proposal
+	 */
+	void (*set_proposal)(child_sa_t *this, proposal_t *proposal);	
 	
 	/**
 	 * Check if this CHILD_SA uses UDP encapsulation.
@@ -190,87 +247,7 @@ struct child_sa_t {
 	u_int32_t (*get_usetime)(child_sa_t *this, bool inbound);
 	
 	/**
-	 * Allocate SPIs for given proposals.
-	 * 
-	 * Since the kernel manages SPIs for us, we need
-	 * to allocate them. If a proposal contains more
-	 * than one protocol, for each protocol an SPI is
-	 * allocated. SPIs are stored internally and written
-	 * back to the proposal.
-	 *
-	 * @param proposals	list of proposals for which SPIs are allocated
-	 */
-	status_t (*alloc)(child_sa_t *this, linked_list_t* proposals);
-	
-	/**
-	 * Install the kernel SAs for a proposal, without previous SPI allocation.
-	 *
-	 * @param proposal	proposal for which SPIs are allocated
-	 * @param mode		mode for the CHILD_SA
-	 * @param integ_in	integrity key for inbound traffic
-	 * @param integ_out	integrity key for outbound traffic
-	 * @param encr_in	encryption key for inbound traffic
-	 * @param enc_out	encryption key for outbound traffic
-	 * @return			SUCCESS or FAILED
-	 */
-	status_t (*add)(child_sa_t *this, proposal_t *proposal, ipsec_mode_t mode,
-					chunk_t integ_in, chunk_t integ_out,
-					chunk_t encr_in, chunk_t encr_out);
-	/**
-	 * Install the kernel SAs for a proposal, after SPIs have been allocated.
-	 *
-	 * Updates an SA, for which SPIs are already allocated via alloc().
-	 *
-	 * @param proposal	proposal for which SPIs are allocated
-	 * @param mode		mode for the CHILD_SA
-	 * @param integ_in	integrity key for inbound traffic
-	 * @param integ_out	integrity key for outbound traffic
-	 * @param encr_in	encryption key for inbound traffic
-	 * @param enc_out	encryption key for outbound traffic
-	 * @return			SUCCESS or FAILED
-	 */
-	status_t (*update)(child_sa_t *this, proposal_t *proposal, ipsec_mode_t mode,
-					   chunk_t integ_in, chunk_t integ_out,
-					   chunk_t encr_in, chunk_t encr_out);
-	/**
-	 * Get the selected proposal passed to add()/update().
-	 *
-	 * @return			selected proposal
-	 */
-	proposal_t* (*get_proposal)(child_sa_t *this);
-	
-	/**
-	 * Update the hosts in the kernel SAs and policies.
-	 *
-	 * The CHILD must be INSTALLED to do this update.
-	 *
-	 * @param me		the new local host
-	 * @param other		the new remote host
-	 * @param vip		virtual IP, if any
-	 * @param			TRUE to use UDP encapsulation for NAT traversal
-	 * @return			SUCCESS or FAILED
-	 */
-	status_t (*update_hosts)(child_sa_t *this, host_t *me, host_t *other,
-							 host_t *vip, bool encap);
-	
-	/**
-	 * Install the policies using some traffic selectors.
-	 *
-	 * Supplied lists of traffic_selector_t's specify the policies
-	 * to use for this child sa.
-	 *
-	 * @param my_ts		traffic selectors for local site
-	 * @param other_ts	traffic selectors for remote site
-	 * @param mode		mode for the SA: tunnel/transport
-	 * @param proto		protocol for policy, ESP/AH
-	 * @return			SUCCESS or FAILED
-	 */	
-	status_t (*add_policies)(child_sa_t *this, linked_list_t *my_ts_list,
-							 linked_list_t *other_ts_list, ipsec_mode_t mode,
-							 protocol_id_t proto);
-	
-	/**
-	 * Get the traffic selectors of added policies of local host.
+	 * Get the traffic selectors list added for one side.
 	 *
 	 * @param local		TRUE for own traffic selectors, FALSE for remote
 	 * @return			list of traffic selectors
@@ -285,40 +262,56 @@ struct child_sa_t {
 	enumerator_t* (*create_policy_enumerator)(child_sa_t *this);
 	
 	/**
-	 * Get the state of the CHILD_SA.
-	 */	
-	child_sa_state_t (*get_state) (child_sa_t *this);
-	
-	/**
-	 * Set the state of the CHILD_SA.
+	 * Allocate an SPI to include in a proposal.
 	 *
-	 * @param state		state to set on CHILD_SA
-	 */	
-	void (*set_state) (child_sa_t *this, child_sa_state_t state);
+	 * @param protocol	protocol to allocate SPI for (ESP|AH)
+	 * @param spi		SPI output pointer
+	 * @return			SPI, 0 on failure
+	 */
+	u_int32_t (*alloc_spi)(child_sa_t *this, protocol_id_t protocol);
 	
 	/**
-	 * Get the config used to set up this child sa.
+	 * Allocate a CPI to use for IPComp.
 	 *
-	 * @return			child_cfg
+	 * @return			CPI, 0 on failure
 	 */
-	child_cfg_t* (*get_config) (child_sa_t *this);
+	u_int16_t (*alloc_cpi)(child_sa_t *this);
 	
 	/**
-	 * Activate IPComp by setting the transform ID and CPI values.
-	 * 
-	 * @param ipcomp	the IPComp transform to use
-	 * @param other_cpi	other Compression Parameter Index
+	 * Install an IPsec SA for one direction.
+	 *
+	 * @param encr		encryption key, if any
+	 * @param integ		integrity key
+	 * @param spi		SPI to use, allocated for inbound
+	 * @param cpi		CPI to use, allocated for outbound
+	 * @param inbound	TRUE to install an inbound SA, FALSE for outbound
+	 * @return			SUCCESS or FAILED
 	 */
-	void (*activate_ipcomp) (child_sa_t *this, ipcomp_transform_t ipcomp,
-							 u_int16_t other_cpi);
-	
+	status_t (*install)(child_sa_t *this, chunk_t encr, chunk_t integ,
+						u_int32_t spi, u_int16_t cpi, bool inbound);
 	/**
-	 * Returns the Compression Parameter Index (CPI) allocated from the kernel.
-	 * 
-	 * @return			allocated CPI
+	 * Install the policies using some traffic selectors.
+	 *
+	 * Supplied lists of traffic_selector_t's specify the policies
+	 * to use for this child sa.
+	 *
+	 * @param my_ts		traffic selectors for local site
+	 * @param other_ts	traffic selectors for remote site
+	 * @return			SUCCESS or FAILED
+	 */	
+	status_t (*add_policies)(child_sa_t *this, linked_list_t *my_ts_list,
+							 linked_list_t *other_ts_list);
+	/**
+	 * Update hosts and ecapulation mode in the kernel SAs and policies.
+	 *
+	 * @param me		the new local host
+	 * @param other		the new remote host
+	 * @param vip		virtual IP, if any
+	 * @param			TRUE to use UDP encapsulation for NAT traversal
+	 * @return			SUCCESS or FAILED
 	 */
-	u_int16_t (*allocate_cpi) (child_sa_t *this);
-	
+	status_t (*update)(child_sa_t *this, host_t *me, host_t *other,
+					   host_t *vip, bool encap);
 	/**
 	 * Destroys a child_sa.
 	 */

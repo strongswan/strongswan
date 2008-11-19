@@ -117,7 +117,22 @@ struct private_child_create_t {
 	ipcomp_transform_t ipcomp_received;
 	
 	/**
-	 * Other Compression Parameter Index (CPI)
+	 * Own allocated SPI
+	 */
+	u_int32_t my_spi;
+	
+	/**
+	 * SPI received in proposal
+	 */
+	u_int32_t other_spi;
+	
+	/**
+	 * Own allocated Compression Parameter Index (CPI)
+	 */
+	u_int16_t my_cpi;
+	
+	/**
+	 * Other Compression Parameter Index (CPI), received via IPCOMP_SUPPORTED
 	 */
 	u_int16_t other_cpi;
 	
@@ -189,6 +204,36 @@ static bool ts_list_is_host(linked_list_t *list, host_t *host)
 }
 
 /**
+ * Allocate SPIs and update proposals
+ */
+static bool allocate_spi(private_child_create_t *this)
+{
+	enumerator_t *enumerator;
+	proposal_t *proposal;
+	
+	/* TODO: allocate additional SPI for AH if we have such proposals */ 
+	this->my_spi = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
+	if (this->my_spi)
+	{
+		if (this->initiator)
+		{
+			enumerator = this->proposals->create_enumerator(this->proposals);
+			while (enumerator->enumerate(enumerator, &proposal))
+			{
+				proposal->set_spi(proposal, this->my_spi);
+			}
+			enumerator->destroy(enumerator);
+		}
+		else
+		{
+			this->proposal->set_spi(this->proposal, this->my_spi);
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Install a CHILD_SA for usage, return value:
  * - FAILED: no acceptable proposal
  * - INVALID_ARG: diffie hellman group inacceptable
@@ -216,7 +261,7 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	other = this->ike_sa->get_other_host(this->ike_sa);
 	my_vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
 	other_vip = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
-
+	
 	this->proposal = this->config->select_proposal(this->config, this->proposals,
 												   no_dh);
 	if (this->proposal == NULL)
@@ -224,6 +269,14 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		DBG1(DBG_IKE, "no acceptable proposal found");
 		return FAILED;
 	}
+	this->other_spi = this->proposal->get_spi(this->proposal);
+	
+	if (!this->initiator && !allocate_spi(this))
+	{	/* responder has no SPI allocated yet */
+		DBG1(DBG_IKE, "allocating SPI failed");
+		return FAILED;
+	}
+	this->child_sa->set_proposal(this->child_sa, this->proposal);
 	
 	if (!this->proposal->has_dh_group(this->proposal, this->dh_group))
 	{
@@ -328,26 +381,33 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	}
 	
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
+	this->child_sa->set_ipcomp(this->child_sa, this->ipcomp);
+	this->child_sa->set_mode(this->child_sa, this->mode);
+	this->child_sa->set_protocol(this->child_sa,
+								 this->proposal->get_protocol(this->proposal));
 	
-	if (this->ipcomp != IPCOMP_NONE)
+	if (this->my_cpi == 0 || this->other_cpi == 0 || this->ipcomp == IPCOMP_NONE)
 	{
-		this->child_sa->activate_ipcomp(this->child_sa, this->ipcomp,
-										this->other_cpi);
+		this->my_cpi = this->other_cpi = 0;
+		this->ipcomp = IPCOMP_NONE;
 	}
-	
 	status = FAILED;
 	if (this->keymat->derive_child_keys(this->keymat, this->proposal,
 			this->dh, nonce_i, nonce_r,	&encr_i, &integ_i, &encr_r, &integ_r))
 	{
 		if (this->initiator)
 		{
-			status = this->child_sa->update(this->child_sa, this->proposal,
-							this->mode, integ_r, integ_i, encr_r, encr_i);
+			status = this->child_sa->install(this->child_sa, encr_r, integ_r,
+										this->my_spi, this->my_cpi, TRUE);
+			status = this->child_sa->install(this->child_sa, encr_i, integ_i,
+										this->other_spi, this->other_cpi, FALSE);
 		}
 		else
 		{
-			status = this->child_sa->add(this->child_sa, this->proposal,
-							this->mode, integ_i, integ_r, encr_i, encr_r);
+			status = this->child_sa->install(this->child_sa, encr_i, integ_i,
+										this->my_spi, this->my_cpi, TRUE);
+			status = this->child_sa->install(this->child_sa, encr_r, integ_r,
+										this->other_spi, this->other_cpi, FALSE);
 		}
 	}
 	chunk_clear(&integ_i);
@@ -361,8 +421,7 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		return FAILED;
 	}
 	
-	status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts,
-					this->mode, this->proposal->get_protocol(this->proposal));
+	status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts);
 	if (status != SUCCESS)
 	{	
 		DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
@@ -436,33 +495,71 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 }
 
 /**
- * Adds an IPCOMP_SUPPORTED notify to the message, if possible
+ * Adds an IPCOMP_SUPPORTED notify to the message, allocating a CPI
  */
-static void build_ipcomp_supported_notify(private_child_create_t *this,
-										  message_t *message)
+static void add_ipcomp_notify(private_child_create_t *this,
+								  message_t *message, u_int8_t ipcomp)
 {
-	u_int16_t cpi;
-	u_int8_t tid;
-
 	if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
 	{
 		DBG1(DBG_IKE, "IPComp is not supported if either peer is natted, "
 			 "IPComp disabled");
-		this->ipcomp = IPCOMP_NONE;
 		return;
 	}
 	
-	cpi = this->child_sa->allocate_cpi(this->child_sa);
-	tid = this->ipcomp;
-	if (cpi)
+	this->my_cpi = this->child_sa->alloc_cpi(this->child_sa);
+	if (this->my_cpi)
 	{
-		message->add_notify(message, FALSE, IPCOMP_SUPPORTED,
-				chunk_cata("cc", chunk_from_thing(cpi), chunk_from_thing(tid)));
+		this->ipcomp = ipcomp;
+		message->add_notify(message, FALSE, IPCOMP_SUPPORTED, 
+							chunk_cata("cc", chunk_from_thing(this->my_cpi),
+									   chunk_from_thing(ipcomp)));
 	}
 	else
 	{
 		DBG1(DBG_IKE, "unable to allocate a CPI from kernel, IPComp disabled");
-		this->ipcomp = IPCOMP_NONE;
+	}
+}
+
+/**
+ * handle a received notify payload
+ */
+static void handle_notify(private_child_create_t *this, notify_payload_t *notify)
+{
+	switch (notify->get_notify_type(notify))
+	{
+		case USE_TRANSPORT_MODE:
+			this->mode = MODE_TRANSPORT;
+			break;
+		case USE_BEET_MODE:
+			this->mode = MODE_BEET;
+			break;
+		case IPCOMP_SUPPORTED:
+		{
+			ipcomp_transform_t ipcomp;
+			u_int16_t cpi;
+			chunk_t data;
+			
+			data = notify->get_notification_data(notify);
+			cpi = *(u_int16_t*)data.ptr;
+			ipcomp = (ipcomp_transform_t)(*(data.ptr + 2));
+			switch (ipcomp)
+			{
+				case IPCOMP_DEFLATE:
+					this->other_cpi = cpi;
+					this->ipcomp_received = ipcomp;
+					break;
+				case IPCOMP_LZS:
+				case IPCOMP_LZJH:
+				default:
+					DBG1(DBG_IKE, "received IPCOMP_SUPPORTED notify with a "
+						 "transform ID we don't support %N",
+						 ipcomp_transform_names, ipcomp);
+					break;
+			}
+		}
+		default:
+			break;
 	}
 }
 
@@ -476,7 +573,6 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 	sa_payload_t *sa_payload;
 	ke_payload_t *ke_payload;
 	ts_payload_t *ts_payload;
-	notify_payload_t *notify_payload;
 	
 	/* defaults to TUNNEL mode */
 	this->mode = MODE_TUNNEL;
@@ -512,37 +608,7 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 				this->tsr = ts_payload->get_traffic_selectors(ts_payload);
 				break;
 			case NOTIFY:
-				notify_payload = (notify_payload_t*)payload;
-				switch (notify_payload ->get_notify_type(notify_payload ))
-				{
-					case USE_TRANSPORT_MODE:
-						this->mode = MODE_TRANSPORT;
-						break;
-					case USE_BEET_MODE:
-						this->mode = MODE_BEET;
-						break;
-					case IPCOMP_SUPPORTED:
-					{
-						chunk_t data = notify_payload->get_notification_data(notify_payload);
-						u_int16_t cpi = *(u_int16_t*)data.ptr;
-						ipcomp_transform_t ipcomp = (ipcomp_transform_t)(*(data.ptr + 2));
-						switch(ipcomp)
-						{
-							case IPCOMP_DEFLATE:
-								this->other_cpi = cpi;
-								this->ipcomp_received = ipcomp;
-								break;
-							case IPCOMP_LZS:
-							case IPCOMP_LZJH:
-							default:
-								DBG1(DBG_IKE, "received IPCOMP_SUPPORTED notify with a transform"
-										" ID we don't support %N", ipcomp_transform_names, ipcomp);
-								break;
-						}
-					}
-					default:
-						break;
-				}
+				handle_notify(this, (notify_payload_t*)payload);
 				break;
 			default:
 				break;
@@ -559,7 +625,7 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	host_t *me, *other, *vip;
 	bool propose_all = FALSE;
 	peer_cfg_t *peer_cfg;
-
+	
 	switch (message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
@@ -641,7 +707,7 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
 			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
 	
-	if (this->child_sa->alloc(this->child_sa, this->proposals) != SUCCESS)
+	if (!allocate_spi(this))
 	{
 		DBG1(DBG_IKE, "unable to allocate SPIs from kernel");
 		return FAILED;
@@ -652,10 +718,10 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 		this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
 	}
 	
-	if (this->config->use_ipcomp(this->config)) {
+	if (this->config->use_ipcomp(this->config))
+	{
 		/* IPCOMP_DEFLATE is the only transform we support at the moment */
-		this->ipcomp = IPCOMP_DEFLATE;
-		build_ipcomp_supported_notify(this, message);
+		add_ipcomp_notify(this, message, IPCOMP_DEFLATE);
 	}
 	
 	build_payloads(this, message);
@@ -821,16 +887,17 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
 			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
 	
-	if (this->config->use_ipcomp(this->config) &&
-		this->ipcomp_received != IPCOMP_NONE)
+	if (this->ipcomp_received != IPCOMP_NONE)
 	{
-		this->ipcomp = this->ipcomp_received;
-		build_ipcomp_supported_notify(this, message);
-	}
-	else if (this->ipcomp_received != IPCOMP_NONE)
-	{
-		DBG1(DBG_IKE, "received %N notify but IPComp is disabled, ignoring",
-			 notify_type_names, IPCOMP_SUPPORTED);
+		if (this->config->use_ipcomp(this->config))
+		{
+			add_ipcomp_notify(this, message, this->ipcomp_received);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "received %N notify but IPComp is disabled, ignoring",
+				 notify_type_names, IPCOMP_SUPPORTED);
+		}
 	}
 	
 	switch (select_and_install(this, no_dh))
@@ -1137,6 +1204,9 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config)
 	this->mode = MODE_TUNNEL;
 	this->ipcomp = IPCOMP_NONE;
 	this->ipcomp_received = IPCOMP_NONE;
+	this->my_spi = 0;
+	this->other_spi = 0;
+	this->my_cpi = 0;
 	this->other_cpi = 0;
 	this->reqid = 0;
 	this->established = FALSE;
