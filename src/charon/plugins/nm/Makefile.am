@@ -20,7 +20,7 @@ EXTRA_DIST = gnome/configure gnome/po/LINGUAS gnome/po/POTFILES.in gnome/po/Make
 	gnome/properties/Makefile.am gnome/properties/nm-strongswan.c \
 	gnome/properties/nm-strongswan.h gnome/intltool-update.in gnome/config.guess \
 	gnome/nm-strongswan-service.name.in gnome/nm-strongswan-service.conf \
-	gnome/mkinstalldirs gnome/auth-dialog gnome/auth-dialog/Makefile.in \
+	gnome/mkinstalldirs gnome/auth-dialog/Makefile.in \
 	gnome/auth-dialog/Makefile.am gnome/auth-dialog/main.c gnome/intltool-extract.in \
 	gnome/config.sub gnome/missing
 
