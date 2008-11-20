@@ -27,6 +27,15 @@
 #include <utils/linked_list.h>
 #include <crypto/hashers/hasher.h>
 
+/* the default size of the hash table (MUST be a power of 2) */
+#define DEFAULT_HASHTABLE_SIZE 1
+
+/* the maximum size of the hash table (MUST be a power of 2) */
+#define MAX_HASHTABLE_SIZE (1 << 30)
+
+/* the default number of segments (MUST be a power of 2) */
+#define DEFAULT_SEGMENT_COUNT 1
+
 typedef struct entry_t entry_t;
 
 /**
@@ -60,7 +69,7 @@ struct entry_t {
 	bool driveout_waiting_threads;
 	
 	/**
-	 * Identifiaction of an IKE_SA (SPIs).
+	 * Identification of an IKE_SA (SPIs).
 	 */
 	ike_sa_id_t *ike_sa_id;
 	
@@ -141,6 +150,66 @@ static entry_t *entry_create(ike_sa_id_t *ike_sa_id)
 	return this;
 }
 
+/**
+ * Function that matches entry_t objects by initiator SPI and the hash of the
+ * IKE_SA_INIT message.
+ */
+static bool entry_match_by_hash(entry_t *entry, ike_sa_id_t *id, chunk_t *hash)
+{
+	return id->get_responder_spi(id) == 0 &&
+		id->is_initiator(id) == entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
+		id->get_initiator_spi(id) == entry->ike_sa_id->get_initiator_spi(entry->ike_sa_id) &&
+		chunk_equals(*hash, entry->init_hash);
+}
+
+/**
+ * Function that matches entry_t objects by ike_sa_id_t.
+ */
+static bool entry_match_by_id(entry_t *entry, ike_sa_id_t *id)
+{
+	if (id->equals(id, entry->ike_sa_id))
+	{
+		return TRUE;
+	}	
+	if (entry->ike_sa_id->get_responder_spi(entry->ike_sa_id) == 0 &&
+		id->is_initiator(id) == entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
+		id->get_initiator_spi(id) == entry->ike_sa_id->get_initiator_spi(entry->ike_sa_id))
+	{
+		/* this is TRUE for IKE_SAs that we initiated but have not yet received a response */
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Function that matches entry_t objects by ike_sa_t pointers.
+ */
+static bool entry_match_by_sa(entry_t *entry, ike_sa_t *ike_sa)
+{
+	return entry->ike_sa == ike_sa;
+}
+
+/**
+ * Hash function for ike_sa_id_t objects.
+ */
+static u_int ike_sa_id_hash(ike_sa_id_t *ike_sa_id)
+{
+	/* we always use initiator spi as key */
+	return ike_sa_id->get_initiator_spi(ike_sa_id);
+}
+
+typedef struct segment_t segment_t;
+
+/**
+ * Struct to manage segments of the hash table.
+ */
+struct segment_t {
+	/* mutex to access a segment exclusively */
+	mutex_t *mutex;
+	
+	/* the number of items in this segment */
+	u_int count;
+};
 
 typedef struct private_ike_sa_manager_t private_ike_sa_manager_t;
 
@@ -154,14 +223,34 @@ struct private_ike_sa_manager_t {
 	 ike_sa_manager_t public;
 	
 	 /**
-	  * Lock for exclusivly accessing the manager.
+	  * Hash table with entries for the ike_sa_t objects.
 	  */
-	 mutex_t *mutex;
-
+	 linked_list_t **ike_sa_table;
+	 
 	 /**
-	  * Linked list with entries for the ike_sa_t objects.
+	  * The size of the hash table.
 	  */
-	 linked_list_t *ike_sa_list;
+	 u_int table_size;
+	 
+	 /**
+	  * Mask to map the hashes to table rows.
+	  */
+	 u_int table_mask;
+	 
+	 /**
+	  * Segments of the hash table.
+	  */
+	 segment_t *segments;
+	 
+	 /**
+	  * The number of segments.
+	  */
+	 u_int segment_count;
+	 
+	 /**
+	  * Mask to map a table row to a segment.
+	  */
+	 u_int segment_mask;
 	 
 	 /**
 	  * RNG to get random SPIs for our side
@@ -179,127 +268,283 @@ struct private_ike_sa_manager_t {
 	 bool reuse_ikesa;
 };
 
-/**
- * Implementation of private_ike_sa_manager_t.get_entry_by_id.
- */
-static status_t get_entry_by_id(private_ike_sa_manager_t *this,
-								ike_sa_id_t *ike_sa_id, entry_t **entry)
-{
-	enumerator_t *enumerator;
-	entry_t *current;
-	status_t status;
-	
-	/* create enumerator over list of ike_sa's */
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
 
-	/* default status */
-	status = NOT_FOUND;
-	
-	while (enumerator->enumerate(enumerator, &current))
+/**
+ * Acquire a lock to access the segment of the table row with the given index.
+ * It also works with the segment index directly.
+ */
+static void lock_single_segment(private_ike_sa_manager_t *this, u_int index)
+{
+	mutex_t *lock = this->segments[index & this->segment_mask].mutex;
+	lock->lock(lock);
+}
+
+/**
+ * Release the lock required to access the segment of the table row with the given index.
+ * It also works with the segment index directly.
+ */
+static void unlock_single_segment(private_ike_sa_manager_t *this, u_int index)
+{
+	mutex_t *lock = this->segments[index & this->segment_mask].mutex;
+	lock->unlock(lock);
+}
+
+/**
+ * Lock all segments
+ */
+static void lock_all_segments(private_ike_sa_manager_t *this)
+{
+	u_int i;
+	for (i = 0; i < this->segment_count; ++i)
 	{
-		if (current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id))
+		this->segments[i].mutex->lock(this->segments[i].mutex);
+	}
+}
+
+/**
+ * Unlock all segments
+ */
+static void unlock_all_segments(private_ike_sa_manager_t *this)
+{
+	u_int i;
+	for (i = 0; i < this->segment_count; ++i)
+	{
+		this->segments[i].mutex->unlock(this->segments[i].mutex);
+	}
+}
+
+typedef struct private_enumerator_t private_enumerator_t;
+
+/**
+ * hash table enumerator implementation
+ */
+struct private_enumerator_t {
+
+	/**
+	 * implements enumerator interface
+	 */
+	enumerator_t enumerator;
+	
+	/**
+	 * associated ike_sa_manager_t
+	 */
+	private_ike_sa_manager_t *manager;
+	
+	/**
+	 * current segment index
+	 */
+	u_int segment;
+	
+	/**
+	 * current table row index
+	 */
+	u_int row;
+	
+	/**
+	 * enumerator for the current table row
+	 */
+	enumerator_t *current;
+};
+
+/**
+ * Implementation of private_enumerator_t.enumerator.enumerate.
+ */
+static bool enumerate(private_enumerator_t *this, entry_t **entry, u_int *segment)
+{
+	while (this->segment < this->manager->segment_count)
+	{
+		while (this->row < this->manager->table_size)
 		{
-			DBG2(DBG_MGR,  "found entry by both SPIs");
-			*entry = current;
-			status = SUCCESS;
-			break;
-		}
-		if (ike_sa_id->get_responder_spi(ike_sa_id) == 0 ||
-			current->ike_sa_id->get_responder_spi(current->ike_sa_id) == 0)
-		{
-			/* seems to be a half ready ike_sa */
-			if ((current->ike_sa_id->get_initiator_spi(current->ike_sa_id) ==
-						  ike_sa_id->get_initiator_spi(ike_sa_id)) &&
-				(current->ike_sa_id->is_initiator(ike_sa_id) ==
-						  ike_sa_id->is_initiator(current->ike_sa_id)))
+			if (this->current)
 			{
-				DBG2(DBG_MGR, "found entry by initiator SPI");
-				*entry = current;
-				status = SUCCESS;
+				entry_t *item;
+				if (this->current->enumerate(this->current, (void**)&item))
+				{
+					*entry = item;
+					*segment = this->segment;
+					return TRUE;
+				}
+				this->current->destroy(this->current);
+				this->current = NULL;
+				unlock_single_segment(this->manager, this->segment);
+			}
+			else
+			{
+				linked_list_t *list;
+				lock_single_segment(this->manager, this->segment);
+				if ((list = this->manager->ike_sa_table[this->row]) != NULL &&
+					 list->get_count(list))
+				{
+					this->current = list->create_enumerator(list);
+					continue;
+				}
+				unlock_single_segment(this->manager, this->segment);
+			}
+			this->row += this->manager->segment_count;
+		}
+		this->segment++;
+		this->row = this->segment;
+	}
+	return FALSE;
+}
+
+/**
+ * Implementation of private_enumerator_t.enumerator.destroy.
+ */
+static void enumerator_destroy(private_enumerator_t *this)
+{
+	if (this->current)
+	{
+		this->current->destroy(this->current);
+		unlock_single_segment(this->manager, this->segment);
+	}
+	free(this);
+}
+
+/**
+ * Creates an enumerator to enumerate the entries in the hash table.
+ */
+static enumerator_t* create_table_enumerator(private_ike_sa_manager_t *this)
+{
+	private_enumerator_t *enumerator = malloc_thing(private_enumerator_t);
+	
+	enumerator->enumerator.enumerate = (void*)enumerate;
+	enumerator->enumerator.destroy = (void*)enumerator_destroy;
+	enumerator->manager = this;
+	enumerator->segment = 0;
+	enumerator->row = 0;
+	enumerator->current = NULL;
+	
+	return &enumerator->enumerator;
+}
+
+/**
+ * Put an entry into the hash table.
+ * Note: The caller has to unlock the returned segment.
+ */
+static u_int put_entry(private_ike_sa_manager_t *this, entry_t *entry)
+{
+	linked_list_t *list;
+	u_int row = ike_sa_id_hash(entry->ike_sa_id) & this->table_mask;
+	u_int segment = row & this->segment_mask;
+	
+	lock_single_segment(this, segment);
+	if ((list = this->ike_sa_table[row]) == NULL)
+	{
+		list = this->ike_sa_table[row] = linked_list_create();
+	}
+	list->insert_last(list, entry);
+	this->segments[segment].count++;
+	return segment;
+}
+
+/**
+ * Remove an entry from the hash table.
+ * Note: The caller MUST have a lock on the segment of this entry.
+ */
+static void remove_entry(private_ike_sa_manager_t *this, entry_t *entry)
+{
+	linked_list_t *list;
+	u_int row = ike_sa_id_hash(entry->ike_sa_id) & this->table_mask;
+	u_int segment = row & this->segment_mask;
+	
+	if ((list = this->ike_sa_table[row]) != NULL)
+	{
+		entry_t *current;
+		enumerator_t *enumerator = list->create_enumerator(list);
+		while (enumerator->enumerate(enumerator, &current))
+		{
+			if (current == entry)
+			{
+				list->remove_at(list, enumerator);
+				this->segments[segment].count--;
 				break;
 			}
 		}
+		enumerator->destroy(enumerator);
 	}
-	
-	enumerator->destroy(enumerator);
-	return status;
 }
 
 /**
- * Implementation of private_ike_sa_manager_t.get_entry_by_sa.
+ * Remove the entry at the current enumerator position.
+ */
+static void remove_entry_at(private_enumerator_t *this)
+{
+	if (this->current)
+	{
+		linked_list_t *list = this->manager->ike_sa_table[this->row];
+		list->remove_at(list, this->current);
+		this->manager->segments[this->segment].count--;
+	}
+}
+
+/**
+ * Find an entry using the provided match function to compare the entries for
+ * equality.
+ */
+static status_t get_entry_by_match_function(private_ike_sa_manager_t *this,
+					ike_sa_id_t *ike_sa_id, entry_t **entry, u_int *segment,
+					linked_list_match_t match, void *p1, void *p2)
+{
+	entry_t *current;
+	linked_list_t *list;
+	u_int row = ike_sa_id_hash(ike_sa_id) & this->table_mask;
+	u_int seg = row & this->segment_mask;
+	
+	lock_single_segment(this, seg);
+	if ((list = this->ike_sa_table[row]) != NULL)
+	{
+		if (list->find_first(list, match, (void**)&current, p1, p2) == SUCCESS)
+		{
+			*entry = current;
+			*segment = seg;
+			/* the locked segment has to be unlocked by the caller */
+			return SUCCESS;
+		}
+	}
+	unlock_single_segment(this, seg);
+	return NOT_FOUND;
+}
+
+/**
+ * Find an entry by ike_sa_id_t.
+ * Note: On SUCCESS, the caller has to unlock the segment.
+ */
+static status_t get_entry_by_id(private_ike_sa_manager_t *this,
+						ike_sa_id_t *ike_sa_id, entry_t **entry, u_int *segment)
+{
+	return get_entry_by_match_function(this, ike_sa_id, entry, segment, 
+				(linked_list_match_t)entry_match_by_id, ike_sa_id, NULL);
+}
+
+/**
+ * Find an entry by initiator SPI and IKE_SA_INIT hash.
+ * Note: On SUCCESS, the caller has to unlock the segment.
+ */
+static status_t get_entry_by_hash(private_ike_sa_manager_t *this,
+			ike_sa_id_t *ike_sa_id, chunk_t hash, entry_t **entry, u_int *segment)
+{
+	return get_entry_by_match_function(this, ike_sa_id, entry, segment,
+				(linked_list_match_t)entry_match_by_hash, ike_sa_id, &hash);
+}
+
+/**
+ * Find an entry by IKE_SA pointer.
+ * Note: On SUCCESS, the caller has to unlock the segment.
  */
 static status_t get_entry_by_sa(private_ike_sa_manager_t *this,
-								ike_sa_t *ike_sa, entry_t **entry)
+			ike_sa_id_t *ike_sa_id, ike_sa_t *ike_sa, entry_t **entry, u_int *segment)
 {
-	enumerator_t *enumerator;
-	entry_t *current;
-	status_t status;
-	
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-	
-	/* default status */
-	status = NOT_FOUND;
-	
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		/* only pointers are compared */
-		if (current->ike_sa == ike_sa)
-		{
-			DBG2(DBG_MGR, "found entry by pointer");
-			*entry = current;
-			status = SUCCESS;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	
-	return status;
-}
-
-/**
- * Implementation of private_ike_sa_manager_s.delete_entry.
- */
-static status_t delete_entry(private_ike_sa_manager_t *this, entry_t *entry)
-{
-	enumerator_t *enumerator;
-	entry_t *current;
-	status_t status;
-	
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-
-	status = NOT_FOUND;
-	
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		if (current == entry)
-		{
-			/* mark it, so now new threads can get this entry */
-			entry->driveout_new_threads = TRUE;
-			/* wait until all workers have done their work */
-			while (entry->waiting_threads)
-			{
-				/* wake up all */
-				entry->condvar->broadcast(entry->condvar);
-				/* they will wake us again when their work is done */
-				entry->condvar->wait(entry->condvar, this->mutex);
-			}
-			
-			DBG2(DBG_MGR,  "found entry by pointer, deleting it");
-			this->ike_sa_list->remove_at(this->ike_sa_list, enumerator);
-			entry_destroy(entry);
-			status = SUCCESS;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return status;
+	return get_entry_by_match_function(this, ike_sa_id, entry, segment,
+				(linked_list_match_t)entry_match_by_sa, ike_sa, NULL);
 }
 
 /**
  * Wait until no other thread is using an IKE_SA, return FALSE if entry not
- * acquireable
+ * acquirable.
  */
-static bool wait_for_entry(private_ike_sa_manager_t *this, entry_t *entry)
+static bool wait_for_entry(private_ike_sa_manager_t *this, entry_t *entry,
+						   u_int segment)
 {
 	if (entry->driveout_new_threads)
 	{
@@ -311,7 +556,7 @@ static bool wait_for_entry(private_ike_sa_manager_t *this, entry_t *entry)
 		/* so wait until we can get it for us.
 		 * we register us as waiting. */
 		entry->waiting_threads++;
-		entry->condvar->wait(entry->condvar, this->mutex);
+		entry->condvar->wait(entry->condvar, this->segments[segment].mutex);
 		entry->waiting_threads--;
 	}
 	/* hm, a deletion request forbids us to get this SA, get next one */
@@ -342,21 +587,20 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 {
 	ike_sa_t *ike_sa = NULL;
 	entry_t *entry;
+	u_int segment;
 	
-	DBG2(DBG_MGR, "checkout IKE_SA, %d IKE_SAs in manager",
-		 this->ike_sa_list->get_count(this->ike_sa_list));
+	DBG2(DBG_MGR, "checkout IKE_SA");
 	
-	this->mutex->lock(this->mutex);
-	if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
+	if (get_entry_by_id(this, ike_sa_id, &entry, &segment) == SUCCESS)
 	{
-		if (wait_for_entry(this, entry))
+		if (wait_for_entry(this, entry, segment))
 		{
 			DBG2(DBG_MGR, "IKE_SA successfully checked out");
 			entry->checked_out = TRUE;
 			ike_sa = entry->ike_sa;
 		}
+		unlock_single_segment(this, segment);
 	}
-	this->mutex->unlock(this->mutex);
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
@@ -368,6 +612,7 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 {
 	entry_t *entry;
 	ike_sa_id_t *id;
+	u_int segment;
 	
 	if (initiator)
 	{
@@ -379,12 +624,12 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 	}
 	entry = entry_create(id);
 	id->destroy(id);
-	this->mutex->lock(this->mutex);	
-	this->ike_sa_list->insert_last(this->ike_sa_list, entry);
+	
+	segment = put_entry(this, entry); 
 	entry->checked_out = TRUE;
-	this->mutex->unlock(this->mutex);	
-	DBG2(DBG_MGR, "created IKE_SA, %d IKE_SAs in manager",
-		 this->ike_sa_list->get_count(this->ike_sa_list));
+	unlock_single_segment(this, segment);
+	
+	DBG2(DBG_MGR, "created IKE_SA");
 	return entry->ike_sa;
 }
 
@@ -394,53 +639,44 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 									 message_t *message)
 {
+	u_int segment;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	ike_sa_id_t *id = message->get_ike_sa_id(message);
 	id = id->clone(id);
 	id->switch_initiator(id);
 	
-	DBG2(DBG_MGR, "checkout IKE_SA by message, %d IKE_SAs in manager",
-		 this->ike_sa_list->get_count(this->ike_sa_list));
+	DBG2(DBG_MGR, "checkout IKE_SA by message");
 	
 	if (message->get_request(message) &&
 		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		/* IKE_SA_INIT request. Check for an IKE_SA with such a message hash. */
-		enumerator_t *enumerator;
 		chunk_t data, hash;
-		
+			
 		data = message->get_packet_data(message);
 		this->hasher->allocate_hash(this->hasher, data, &hash);
 		chunk_free(&data);
 		
-		this->mutex->lock(this->mutex);
-		enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-		while (enumerator->enumerate(enumerator, &entry))
+		if (get_entry_by_hash(this, id, hash, &entry, &segment) == SUCCESS)
 		{
-			if (chunk_equals(hash, entry->init_hash))
+			if (entry->message_id == 0)
 			{
-				if (entry->message_id == 0)
-				{
-					enumerator->destroy(enumerator);
-					this->mutex->unlock(this->mutex);
-					chunk_free(&hash);
-					id->destroy(id);
-					DBG1(DBG_MGR, "ignoring IKE_SA_INIT, already processing");
-					return NULL;
-				}
-				else if (wait_for_entry(this, entry))
-				{
-					DBG2(DBG_MGR, "IKE_SA checked out by hash");
-					entry->checked_out = TRUE;
-					entry->message_id = message->get_message_id(message);
-					ike_sa = entry->ike_sa;
-				}
-				break;
+				unlock_single_segment(this, segment);
+				chunk_free(&hash);
+				id->destroy(id);
+				DBG1(DBG_MGR, "ignoring IKE_SA_INIT, already processing");
+				return NULL;
 			}
+			else if (wait_for_entry(this, entry, segment))
+			{
+				DBG2(DBG_MGR, "IKE_SA checked out by hash");
+				entry->checked_out = TRUE;
+				entry->message_id = message->get_message_id(message);
+				ike_sa = entry->ike_sa;
+			}
+			unlock_single_segment(this, segment);
 		}
-		enumerator->destroy(enumerator);
-		this->mutex->unlock(this->mutex);
 		
 		if (ike_sa == NULL)
 		{
@@ -451,13 +687,15 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 				id->set_responder_spi(id, get_next_spi(this));
 				entry = entry_create(id);
 				
-				this->mutex->lock(this->mutex);
-				this->ike_sa_list->insert_last(this->ike_sa_list, entry);
+				segment = put_entry(this, entry);
 				entry->checked_out = TRUE;
-				entry->message_id = message->get_message_id(message);
-				this->mutex->unlock(this->mutex);
+				unlock_single_segment(this, segment);
+				
+				entry->message_id = message->get_message_id(message);				
 				entry->init_hash = hash;
 				ike_sa = entry->ike_sa;
+				
+				DBG2(DBG_MGR, "created IKE_SA");
 			}
 			else
 			{
@@ -474,8 +712,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 		return ike_sa;
 	}
 	
-	this->mutex->lock(this->mutex);
-	if (get_entry_by_id(this, id, &entry) == SUCCESS)
+	if (get_entry_by_id(this, id, &entry, &segment) == SUCCESS)
 	{
 		/* only check out if we are not processing this request */
 		if (message->get_request(message) &&
@@ -484,7 +721,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 			DBG1(DBG_MGR, "ignoring request with ID %d, already processing",
 				 entry->message_id);
 		}
-		else if (wait_for_entry(this, entry))
+		else if (wait_for_entry(this, entry, segment))
 		{
 			ike_sa_id_t *ike_id = entry->ike_sa->get_id(entry->ike_sa);
 			DBG2(DBG_MGR, "IKE_SA successfully checked out");
@@ -496,8 +733,8 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 			}
 			ike_sa = entry->ike_sa;
 		}
+		unlock_single_segment(this, segment);
 	}
-	this->mutex->unlock(this->mutex);
 	id->destroy(id);
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
@@ -515,6 +752,7 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	identification_t *my_id, *other_id;
 	host_t *my_host, *other_host;
 	ike_cfg_t *ike_cfg;
+	u_int segment;
 	
 	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 	my_id = peer_cfg->get_my_id(peer_cfg);
@@ -522,24 +760,22 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	my_host = host_create_from_dns(ike_cfg->get_my_addr(ike_cfg), 0, 0);
 	other_host = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg), 0, 0);
 	
-	this->mutex->lock(this->mutex);
-	
 	if (my_host && other_host && this->reuse_ikesa)
 	{
-		enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-		while (enumerator->enumerate(enumerator, &entry))
+		enumerator = create_table_enumerator(this);
+		while (enumerator->enumerate(enumerator, &entry, &segment))
 		{
 			identification_t *found_my_id, *found_other_id;
 			host_t *found_my_host, *found_other_host;
 		
-			if (!wait_for_entry(this, entry))
+			if (!wait_for_entry(this, entry, segment))
 			{
 				continue;
 			}
 		
 			if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
 			{
-				/* skip IKE_SA which are not useable */
+				/* skip IKE_SAs which are not usable */
 				continue;
 			}
 		
@@ -585,27 +821,23 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	
 	if (!ike_sa)
 	{
-		u_int64_t initiator_spi;
 		entry_t *new_entry;
 		ike_sa_id_t *new_ike_sa_id;
 		
-		initiator_spi = get_next_spi(this);
-		new_ike_sa_id = ike_sa_id_create(0, 0, TRUE);
-		new_ike_sa_id->set_initiator_spi(new_ike_sa_id, initiator_spi);
+		new_ike_sa_id = ike_sa_id_create(get_next_spi(this), 0, TRUE);
 		
 		/* create entry */
 		new_entry = entry_create(new_ike_sa_id);
-		DBG2(DBG_MGR, "created IKE_SA");
 		new_ike_sa_id->destroy(new_ike_sa_id);
 		
-		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
+		segment = put_entry(this, new_entry);
 		
 		/* check ike_sa out */
 		DBG2(DBG_MGR, "new IKE_SA created for IDs [%D]...[%D]", my_id, other_id);
 		new_entry->checked_out = TRUE;
 		ike_sa = new_entry->ike_sa;
+		unlock_single_segment(this, segment);
 	}
-	this->mutex->unlock(this->mutex);
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
@@ -621,13 +853,12 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
+	u_int segment;
 	
-	this->mutex->lock(this->mutex);
-	
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-	while (enumerator->enumerate(enumerator, &entry))
+	enumerator = create_table_enumerator(this);
+	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
-		if (wait_for_entry(this, entry))
+		if (wait_for_entry(this, entry, segment))
 		{
 			/* look for a child with such a reqid ... */
 			if (child)
@@ -659,7 +890,6 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
 	
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
@@ -676,13 +906,12 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
+	u_int segment;
 	
-	this->mutex->lock(this->mutex);
-	
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-	while (enumerator->enumerate(enumerator, &entry))
+	enumerator = create_table_enumerator(this);
+	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
-		if (wait_for_entry(this, entry))
+		if (wait_for_entry(this, entry, segment))
 		{
 			/* look for a child with such a policy name ... */
 			if (child)
@@ -714,7 +943,6 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
 	
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
@@ -730,13 +958,13 @@ static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
 	entry_t *entry;
 	ike_sa_t *duplicate = NULL;
 	identification_t *me, *other;
+	u_int segment;
 	
 	me = ike_sa->get_my_id(ike_sa);
 	other = ike_sa->get_other_id(ike_sa);
 	
-	this->mutex->lock(this->mutex);
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-	while (enumerator->enumerate(enumerator, &entry))
+	enumerator = create_table_enumerator(this);
+	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
 		if (entry->ike_sa == ike_sa)
 		{	/* self is not a duplicate */
@@ -748,7 +976,7 @@ static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
 			/* we are sure that the other entry is not calling 
 			 * checkout_duplicate here, as the identities in entry would not
 			 * have been set yet. Otherwise we would risk a deadlock. */
-			if (wait_for_entry(this, entry))
+			if (wait_for_entry(this, entry, segment))
 			{
 				duplicate = entry->ike_sa;
 				entry->checked_out = TRUE;
@@ -757,25 +985,16 @@ static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
 	return duplicate;
-}
-
-/**
- * enumerator cleanup function
- */
-static void enumerator_unlock(private_ike_sa_manager_t *this)
-{
-	this->mutex->unlock(this->mutex);
 }
 
 /**
  * enumerator filter function 
  */
 static bool enumerator_filter(private_ike_sa_manager_t *this,
-							  entry_t **in, ike_sa_t **out)
+							  entry_t **in, ike_sa_t **out, u_int *segment)
 {
-	if (wait_for_entry(this, *in))
+	if (wait_for_entry(this, *in, *segment))
 	{
 		*out = (*in)->ike_sa;
 		return TRUE;
@@ -784,14 +1003,13 @@ static bool enumerator_filter(private_ike_sa_manager_t *this,
 }
 
 /**
- * Implementation of ike_sa_manager_t.create_iterator.
+ * Implementation of ike_sa_manager_t.create_enumerator.
  */
 static enumerator_t *create_enumerator(private_ike_sa_manager_t* this)
 {
-	this->mutex->lock(this->mutex);
 	return enumerator_create_filter(
-						this->ike_sa_list->create_enumerator(this->ike_sa_list),
-						(void*)enumerator_filter, this, (void*)enumerator_unlock);
+						create_table_enumerator(this),
+						(void*)enumerator_filter, this, NULL);
 }
 
 /**
@@ -801,23 +1019,23 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 {
 	/* to check the SA back in, we look for the pointer of the ike_sa
 	 * in all entries.
-	 * We can't search by SPI's since the MAY have changed (e.g. on reception
-	 * of a IKE_SA_INIT response). Updating of the SPI MAY be necessary...
+	 * The lookup is done by initiator SPI, so even if the SPI has changed (e.g.
+	 * on reception of a IKE_SA_INIT response) the lookup will work but
+	 * updating of the SPI MAY be necessary...
 	 */
 	status_t retval;
 	entry_t *entry;
 	ike_sa_id_t *ike_sa_id;
 	host_t *other;
 	identification_t *my_id, *other_id;
+	u_int segment;
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	
 	DBG2(DBG_MGR, "checkin IKE_SA");
 	
-	this->mutex->lock(this->mutex);
-
 	/* look for the entry */
-	if (get_entry_by_sa(this, ike_sa, &entry) == SUCCESS)
+	if (get_entry_by_sa(this, ike_sa_id, ike_sa, &entry, &segment) == SUCCESS)
 	{
 		/* ike_sa_id must be updated */
 		entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa->get_id(ike_sa));
@@ -831,7 +1049,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 			DESTROY_IF(entry->other);
 			entry->other = other->clone(other);
 		}
-		/* apply identities for diplicate test */
+		/* apply identities for duplicate test */
 		my_id = ike_sa->get_my_id(ike_sa);
 		other_id = ike_sa->get_other_id(ike_sa);
 		if (!entry->my_id ||
@@ -849,6 +1067,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		DBG2(DBG_MGR, "check-in of IKE_SA successful.");
 		entry->condvar->signal(entry->condvar);
 	 	retval = SUCCESS;
+	 	unlock_single_segment(this, segment);
 	}
 	else
 	{
@@ -856,10 +1075,6 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		/* this SA is no more, this REALLY should not happen */
 		retval = NOT_FOUND;
 	}
-	
-	DBG2(DBG_MGR, "%d IKE_SAs in manager now",
-		 this->ike_sa_list->get_count(this->ike_sa_list));
-	this->mutex->unlock(this->mutex);
 	
 	charon->bus->set_sa(charon->bus, NULL);
 	return retval;
@@ -871,26 +1086,38 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
  */
 static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 {
-	/* deletion is a bit complex, we must garant that no thread is waiting for
+	/* deletion is a bit complex, we must ensure that no thread is waiting for
 	 * this SA.
-	 * We take this SA from the list, and start signaling while threads
+	 * We take this SA from the table, and start signaling while threads
 	 * are in the condvar.
 	 */
 	entry_t *entry;
 	status_t retval;
 	ike_sa_id_t *ike_sa_id;
+	u_int segment;
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
+	
 	DBG2(DBG_MGR, "checkin and destroy IKE_SA");
 
-	this->mutex->lock(this->mutex);
-
-	if (get_entry_by_sa(this, ike_sa, &entry) == SUCCESS)
+	if (get_entry_by_sa(this, ike_sa_id, ike_sa, &entry, &segment) == SUCCESS)
 	{
 		/* drive out waiting threads, as we are in hurry */
 		entry->driveout_waiting_threads = TRUE;
-		
-		delete_entry(this, entry);
+		/* mark it, so no new threads can get this entry */
+		entry->driveout_new_threads = TRUE;
+		/* wait until all workers have done their work */
+		while (entry->waiting_threads)
+		{
+			/* wake up all */
+			entry->condvar->broadcast(entry->condvar);
+			/* they will wake us again when their work is done */
+			entry->condvar->wait(entry->condvar, this->segments[segment].mutex);
+		}
+	
+		remove_entry(this, entry);
+		entry_destroy(entry);
+		unlock_single_segment(this, segment);
 		
 		DBG2(DBG_MGR, "check-in and destroy of IKE_SA successful");
 		retval = SUCCESS;
@@ -901,8 +1128,6 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 		retval = NOT_FOUND;
 	}
 	charon->bus->set_sa(charon->bus, NULL);
-	
-	this->mutex->unlock(this->mutex);
 	return retval;
 }
 
@@ -915,8 +1140,7 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 	entry_t *entry;
 	int count = 0;
 
-	this->mutex->lock(this->mutex);
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
+	enumerator = create_table_enumerator(this);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
 		/* we check if we have a responder CONNECTING IKE_SA without checkout */
@@ -939,7 +1163,6 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 	}
 	enumerator->destroy(enumerator);
 	
-	this->mutex->unlock(this->mutex);
 	return count;
 }
 
@@ -951,13 +1174,14 @@ static void flush(private_ike_sa_manager_t *this)
 	/* destroy all list entries */
 	enumerator_t *enumerator;
 	entry_t *entry;
+	u_int segment;
 	
-	this->mutex->lock(this->mutex);
+	lock_all_segments(this);
 	DBG2(DBG_MGR, "going to destroy IKE_SA manager and all managed IKE_SA's");
 	/* Step 1: drive out all waiting threads  */
 	DBG2(DBG_MGR, "set driveout flags for all stored IKE_SA's");
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-	while (enumerator->enumerate(enumerator, &entry))
+	enumerator = create_table_enumerator(this);
+	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
 		/* do not accept new threads, drive out waiting threads */
 		entry->driveout_new_threads = TRUE;
@@ -966,22 +1190,22 @@ static void flush(private_ike_sa_manager_t *this)
 	enumerator->destroy(enumerator);
 	DBG2(DBG_MGR, "wait for all threads to leave IKE_SA's");
 	/* Step 2: wait until all are gone */
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-	while (enumerator->enumerate(enumerator, &entry))
+	enumerator = create_table_enumerator(this);
+	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
 		while (entry->waiting_threads)
 		{
 			/* wake up all */
 			entry->condvar->broadcast(entry->condvar);
 			/* go sleeping until they are gone */
-			entry->condvar->wait(entry->condvar, this->mutex);
+			entry->condvar->wait(entry->condvar, this->segments[segment].mutex);
 		}
 	}
 	enumerator->destroy(enumerator);
 	DBG2(DBG_MGR, "delete all IKE_SA's");
 	/* Step 3: initiate deletion of all IKE_SAs */
-	enumerator = this->ike_sa_list->create_enumerator(this->ike_sa_list);
-	while (enumerator->enumerate(enumerator, &entry))
+	enumerator = create_table_enumerator(this);
+	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
 		charon->bus->set_sa(charon->bus, entry->ike_sa);
 		entry->ike_sa->delete(entry->ike_sa);
@@ -990,14 +1214,16 @@ static void flush(private_ike_sa_manager_t *this)
 	
 	DBG2(DBG_MGR, "destroy all entries");
 	/* Step 4: destroy all entries */
-	while (this->ike_sa_list->remove_last(this->ike_sa_list,
-										  (void**)&entry) == SUCCESS)
+	enumerator = create_table_enumerator(this);
+	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
 		charon->bus->set_sa(charon->bus, entry->ike_sa);
+		remove_entry_at((private_enumerator_t*)enumerator);
 		entry_destroy(entry);
 	}
+	enumerator->destroy(enumerator);
 	charon->bus->set_sa(charon->bus, NULL);
-	this->mutex->unlock(this->mutex);
+	unlock_all_segments(this);
 }
 
 /**
@@ -1005,11 +1231,41 @@ static void flush(private_ike_sa_manager_t *this)
  */
 static void destroy(private_ike_sa_manager_t *this)
 {
-	this->ike_sa_list->destroy(this->ike_sa_list);
+	u_int i;
+	for (i = 0; i < this->table_size; ++i)
+	{
+		linked_list_t *list;
+		if ((list = this->ike_sa_table[i]) != NULL)
+		{
+			list->destroy(list);
+		}
+	}
+	free(this->ike_sa_table);
+	for (i = 0; i < this->segment_count; ++i)
+	{
+		this->segments[i].mutex->destroy(this->segments[i].mutex);
+	}
+	free(this->segments);
 	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
-	this->mutex->destroy(this->mutex);
 	free(this);
+}
+
+/**
+ * This function returns the next-highest power of two for the given number.
+ * The algorithm works by setting all bits on the right-hand side of the most
+ * significant 1 to 1 and then increments the whole number so it rolls over
+ * to the nearest power of two. Note: returns 0 for n == 0
+ */
+static u_int get_nearest_powerof2(u_int n)
+{
+	u_int i;
+	--n;
+	for (i = 1; i < sizeof(u_int) * 8; i <<= 1)
+	{
+		n |= n >> i;
+	}
+	return ++n;
 }
 
 /*
@@ -1017,6 +1273,7 @@ static void destroy(private_ike_sa_manager_t *this)
  */
 ike_sa_manager_t *ike_sa_manager_create()
 {
+	u_int i;
 	private_ike_sa_manager_t *this = malloc_thing(private_ike_sa_manager_t);
 
 	/* assign public functions */
@@ -1050,10 +1307,29 @@ ike_sa_manager_t *ike_sa_manager_create()
 		free(this);
 		return NULL;
 	}
-	this->ike_sa_list = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->table_size = get_nearest_powerof2(lib->settings->get_int(lib->settings,
+											  "charon.ikesa_table_size",
+											  DEFAULT_HASHTABLE_SIZE));
+	this->table_size = max(1, min(this->table_size, MAX_HASHTABLE_SIZE));
+	this->table_mask = this->table_size - 1;
+	
+	this->segment_count = get_nearest_powerof2(lib->settings->get_int(lib->settings,
+												"charon.ikesa_table_segments",
+												DEFAULT_SEGMENT_COUNT));
+	this->segment_count = max(1, min(this->segment_count, this->table_size));
+	this->segment_mask = this->segment_count - 1;
+	
+	this->ike_sa_table = (linked_list_t**)calloc(this->table_size, sizeof(linked_list_t*));
+	memset(this->ike_sa_table, 0, this->table_size * sizeof(linked_list_t*));
+	
+	this->segments = (segment_t*)calloc(this->segment_count, sizeof(segment_t));
+	for (i = 0; i < this->segment_count; ++i)
+	{
+		this->segments[i].mutex = mutex_create(MUTEX_RECURSIVE);
+		this->segments[i].count = 0;
+	}
+	
 	this->reuse_ikesa = lib->settings->get_bool(lib->settings,
 												"charon.reuse_ikesa", TRUE);
 	return &this->public;
 }
-
