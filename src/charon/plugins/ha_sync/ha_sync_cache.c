@@ -65,6 +65,28 @@ static ike_sa_t* get_ike_sa(private_ha_sync_cache_t *this, ike_sa_id_t *id)
 }
 
 /**
+ * Implementation of ha_sync_cache_t.has_ike_sa
+ */
+static bool has_ike_sa(private_ha_sync_cache_t *this, ike_sa_id_t *id)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	bool found = FALSE;
+
+	enumerator = this->list->create_enumerator(this->list);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		if (id->equals(id, ike_sa->get_id(ike_sa)))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
+
+/**
  * Implementation of ha_sync_cache_t.delete_ike_sa
  */
 static void delete_ike_sa(private_ha_sync_cache_t *this, ike_sa_id_t *id)
@@ -96,6 +118,7 @@ static void activate_segment(private_ha_sync_cache_t *this, u_int segment)
 	while (this->list->remove_last(this->list, (void**)&ike_sa) == SUCCESS)
 	{
 		/* TODO: fix checkin of inexisting IKE_SA in manager */
+		/* TODO: do not activate SAs not in state CONNECTING */
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 }
@@ -117,6 +140,7 @@ ha_sync_cache_t *ha_sync_cache_create()
 	private_ha_sync_cache_t *this = malloc_thing(private_ha_sync_cache_t);
 
 	this->public.get_ike_sa = (ike_sa_t*(*)(ha_sync_cache_t*, ike_sa_id_t *id))get_ike_sa;
+	this->public.has_ike_sa = (bool(*)(ha_sync_cache_t*, ike_sa_id_t *id))has_ike_sa;
 	this->public.delete_ike_sa = (void(*)(ha_sync_cache_t*, ike_sa_id_t *id))delete_ike_sa;
 	this->public.activate_segment = (void(*)(ha_sync_cache_t*, u_int segment))activate_segment;
 	this->public.destroy = (void(*)(ha_sync_cache_t*))destroy;

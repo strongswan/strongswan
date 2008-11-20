@@ -77,6 +77,10 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 		{
 			case HA_SYNC_IKE_ID:
 				ike_sa = this->cache->get_ike_sa(this->cache, value.ike_sa_id);
+				DBG2(DBG_IKE, "got HA_SYNC_IKE_ADD: %llx:%llx - %p",
+					 value.ike_sa_id->get_initiator_spi(value.ike_sa_id),
+					 value.ike_sa_id->get_responder_spi(value.ike_sa_id),
+					 ike_sa);
 				break;
 			case HA_SYNC_IKE_REKEY_ID:
 				DBG1(DBG_IKE, "TODO: rekey HA sync");
@@ -131,11 +135,13 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 		{
 			proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, prf, 0);
 		}
+		charon->bus->set_sa(charon->bus, ike_sa);
 		if (!keymat->derive_ike_keys(keymat, proposal, &dh, nonce_i, nonce_r,
-									ike_sa->get_id(ike_sa), NULL))
+									 ike_sa->get_id(ike_sa), NULL))
 		{
 			DBG1(DBG_IKE, "HA sync keymat derivation failed");
 		}
+		charon->bus->set_sa(charon->bus, NULL);
 		proposal->destroy(proposal);
 	}
 }
@@ -185,6 +191,10 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 		{
 			case HA_SYNC_IKE_ID:
 				ike_sa = this->cache->get_ike_sa(this->cache, value.ike_sa_id);
+				DBG2(DBG_IKE, "got HA_SYNC_IKE_UPDATE: %llx:%llx - %p",
+					 value.ike_sa_id->get_initiator_spi(value.ike_sa_id),
+					 value.ike_sa_id->get_responder_spi(value.ike_sa_id),
+					 ike_sa);
 				break;
 			case HA_SYNC_LOCAL_ID:
 				ike_sa->set_my_id(ike_sa, value.id->clone(value.id));
@@ -238,10 +248,16 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 	{
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
 		peer_cfg->destroy(peer_cfg);
+
+		charon->bus->set_sa(charon->bus, ike_sa);
+		/* we use the CONNECTING state to indicate sync is complete. */
+		/* TODO: add an additional HOT_COPY state? */
+		ike_sa->set_state(ike_sa, IKE_CONNECTING);
+		charon->bus->set_sa(charon->bus, NULL);
 	}
 	else
 	{
-		DBG1(DBG_IKE, "HA sync is missing nodes configuration");
+		DBG1(DBG_IKE, "HA sync is missing nodes peer configuration");
 	}
 }
 
@@ -261,6 +277,9 @@ static void process_ike_delete(private_ha_sync_dispatcher_t *this,
 		switch (attribute)
 		{
 			case HA_SYNC_IKE_ID:
+				DBG2(DBG_IKE, "got HA_SYNC_IKE_DELETE: %llx:%llx",
+					 value.ike_sa_id->get_initiator_spi(value.ike_sa_id),
+					 value.ike_sa_id->get_responder_spi(value.ike_sa_id));
 				this->cache->delete_ike_sa(this->cache, value.ike_sa_id);
 				break;
 			default:
@@ -270,15 +289,222 @@ static void process_ike_delete(private_ha_sync_dispatcher_t *this,
 	enumerator->destroy(enumerator);
 }
 
+
+/**
+ * get the child_cfg with the same name as the peer cfg
+ */
+static child_cfg_t* find_child_cfg(char *name)
+{
+	peer_cfg_t *peer_cfg;
+	child_cfg_t *current, *found = NULL;
+	enumerator_t *enumerator;
+
+	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends, name);
+	if (peer_cfg)
+	{
+		enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+		while (enumerator->enumerate(enumerator, &current))
+		{
+			if (streq(current->get_name(current), name))
+			{
+				found = current;
+				found->get_ref(found);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+		peer_cfg->destroy(peer_cfg);
+	}
+	return found;
+}
+
 /**
  * Process messages of type CHILD_ADD
  */
 static void process_child_add(private_ha_sync_dispatcher_t *this,
 							  ha_sync_message_t *message)
 {
-	chunk_t chunk = message->get_encoding(message);
+	ha_sync_message_attribute_t attribute;
+	ha_sync_message_value_t value;
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa = NULL;
+	child_cfg_t *config = NULL;
+	child_sa_t *child_sa;
+	proposal_t *proposal;
+	keymat_t *keymat;
+	bool initiator, failed = FALSE;
+	u_int32_t inbound_spi = 0, outbound_spi = 0;
+	u_int16_t inbound_cpi = 0, outbound_cpi = 0;
+	u_int8_t mode = MODE_TUNNEL, ipcomp = 0;
+	u_int16_t encr = ENCR_UNDEFINED, integ = AUTH_UNDEFINED, len = 0;
+	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty, secret = chunk_empty;
+	chunk_t encr_i, integ_i, encr_r, integ_r;
+	linked_list_t *local_ts, *remote_ts;
+	/* quick and dirty hack of a DH implementation */
+	diffie_hellman_t dh = { .get_shared_secret = get_shared_secret,
+							.destroy = (void*)&secret };
 
-	DBG1(DBG_CHD, "CHILD_ADD: %B", &chunk);
+	enumerator = message->create_attribute_enumerator(message);
+	while (enumerator->enumerate(enumerator, &attribute, &value))
+	{
+		switch (attribute)
+		{
+			case HA_SYNC_IKE_ID:
+				ike_sa = this->cache->get_ike_sa(this->cache, value.ike_sa_id);
+				initiator = value.ike_sa_id->is_initiator(value.ike_sa_id);
+				DBG2(DBG_CHD, "got HA_SYNC_CHILD_ADD: %llx:%llx - %p",
+					 value.ike_sa_id->get_initiator_spi(value.ike_sa_id),
+					 value.ike_sa_id->get_responder_spi(value.ike_sa_id),
+					 ike_sa);
+				break;
+			case HA_SYNC_CONFIG_NAME:
+				config = find_child_cfg(value.str);
+				break;
+			case HA_SYNC_INBOUND_SPI:
+				inbound_spi = value.u32;
+				break;
+			case HA_SYNC_OUTBOUND_SPI:
+				outbound_spi = value.u32;
+				break;
+			case HA_SYNC_INBOUND_CPI:
+				inbound_cpi = value.u32;
+				break;
+			case HA_SYNC_OUTBOUND_CPI:
+				outbound_cpi = value.u32;
+				break;
+			case HA_SYNC_IPSEC_MODE:
+				mode = value.u8;
+				break;
+			case HA_SYNC_IPCOMP:
+				ipcomp = value.u8;
+				break;
+			case HA_SYNC_ALG_ENCR:
+				encr = value.u16;
+				break;
+			case HA_SYNC_ALG_ENCR_LEN:
+				len = value.u16;
+				break;
+			case HA_SYNC_ALG_INTEG:
+				integ = value.u16;
+				break;
+			case HA_SYNC_NONCE_I:
+				nonce_i = value.chunk;
+				break;
+			case HA_SYNC_NONCE_R:
+				nonce_r = value.chunk;
+				break;
+			case HA_SYNC_SECRET:
+				secret = value.chunk;
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!config)
+	{
+		DBG1(DBG_CHD, "HA sync is missing nodes child configuration");
+		return;
+	}
+	if (!ike_sa)
+	{
+		config->destroy(config);
+		DBG1(DBG_CHD, "IKE_SA for HA sync CHILD_SA not found");
+		return;
+	}
+	charon->bus->set_sa(charon->bus, ike_sa);
+	child_sa = child_sa_create(ike_sa->get_my_host(ike_sa),
+							   ike_sa->get_other_host(ike_sa), config, 0,
+							   ike_sa->has_condition(ike_sa, COND_NAT_ANY));
+	config->destroy(config);
+	child_sa->set_mode(child_sa, mode);
+	child_sa->set_protocol(child_sa, PROTO_ESP);
+	child_sa->set_ipcomp(child_sa, ipcomp);
+
+	proposal = proposal_create(PROTO_ESP);
+	if (integ)
+	{
+		proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, integ, 0);
+	}
+	if (encr)
+	{
+		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr, len);
+	}
+	keymat = ike_sa->get_keymat(ike_sa);
+
+	if (!keymat->derive_child_keys(keymat, proposal, secret.ptr ? &dh : NULL,
+					nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r))
+	{
+		DBG1(DBG_CHD, "HA sync CHILD_SA key derivation failed");
+		child_sa->destroy(child_sa);
+		proposal->destroy(proposal);
+		charon->bus->set_sa(charon->bus, NULL);
+		return;
+	}
+	child_sa->set_proposal(child_sa, proposal);
+	child_sa->set_state(child_sa, CHILD_INSTALLING);
+	proposal->destroy(proposal);
+
+	if (initiator)
+	{
+		if (child_sa->install(child_sa, encr_r, integ_r,
+							  inbound_spi, inbound_cpi, TRUE) != SUCCESS ||
+			child_sa->install(child_sa, encr_i, integ_i,
+							  outbound_spi, outbound_cpi, FALSE) != SUCCESS)
+		{
+			failed = TRUE;
+		}
+	}
+	else
+	{
+		if (child_sa->install(child_sa, encr_i, integ_i,
+							  inbound_spi, inbound_cpi, TRUE) != SUCCESS ||
+			child_sa->install(child_sa, encr_r, integ_r,
+							  outbound_spi, outbound_cpi, FALSE) != SUCCESS)
+		{
+			failed = TRUE;
+		}
+	}
+	chunk_clear(&encr_i);
+	chunk_clear(&integ_i);
+	chunk_clear(&encr_r);
+	chunk_clear(&integ_r);
+
+	if (failed)
+	{
+		DBG1(DBG_CHD, "HA sync CHILD_SA installation failed");
+		child_sa->destroy(child_sa);
+		charon->bus->set_sa(charon->bus, NULL);
+		return;
+	}
+
+	/* TODO: Change CHILD_SA API to avoid cloning twice */
+	local_ts = linked_list_create();
+	remote_ts = linked_list_create();
+	enumerator = message->create_attribute_enumerator(message);
+	while (enumerator->enumerate(enumerator, &attribute, &value))
+	{
+		switch (attribute)
+		{
+			case HA_SYNC_LOCAL_TS:
+				local_ts->insert_last(local_ts, value.ts->clone(value.ts));
+				break;
+			case HA_SYNC_REMOTE_TS:
+				remote_ts->insert_last(remote_ts, value.ts->clone(value.ts));
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	child_sa->add_policies(child_sa, local_ts, remote_ts);
+	local_ts->destroy_offset(local_ts, offsetof(traffic_selector_t, destroy));
+	remote_ts->destroy_offset(remote_ts, offsetof(traffic_selector_t, destroy));
+
+	child_sa->set_state(child_sa, CHILD_INSTALLED);
+	ike_sa->add_child_sa(ike_sa, child_sa);
+	charon->bus->set_sa(charon->bus, NULL);
 }
 
 /**
@@ -287,9 +513,41 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 static void process_child_delete(private_ha_sync_dispatcher_t *this,
 								 ha_sync_message_t *message)
 {
-	chunk_t chunk = message->get_encoding(message);
+	ha_sync_message_attribute_t attribute;
+	ha_sync_message_value_t value;
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa = NULL;
 
-	DBG1(DBG_CHD, "CHILD_DELETE: %B", &chunk);
+	enumerator = message->create_attribute_enumerator(message);
+	while (enumerator->enumerate(enumerator, &attribute, &value))
+	{
+		switch (attribute)
+		{
+			case HA_SYNC_IKE_ID:
+				if (this->cache->has_ike_sa(this->cache, value.ike_sa_id))
+				{
+					ike_sa = this->cache->get_ike_sa(this->cache, value.ike_sa_id);
+					DBG2(DBG_CHD, "got HA_SYNC_CHILD_DELETE: %llx:%llx - %p",
+						 value.ike_sa_id->get_initiator_spi(value.ike_sa_id),
+						 value.ike_sa_id->get_responder_spi(value.ike_sa_id),
+						 ike_sa);
+					continue;
+				}
+				break;
+			case HA_SYNC_INBOUND_SPI:
+				if (!ike_sa || ike_sa->destroy_child_sa(ike_sa, PROTO_ESP,
+												value.u32) != SUCCESS)
+				{
+					DBG1(DBG_CHD, "HA sync CHILD_SA 0x%lx delete failed (%p)",
+						 value.u32, ike_sa);
+				}
+				break;
+			default:
+				break;
+		}
+		break;
+	}
+	enumerator->destroy(enumerator);
 }
 
 /**

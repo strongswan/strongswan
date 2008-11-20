@@ -95,8 +95,8 @@ plugin_t *plugin_create()
 	}
 	this->cache = ha_sync_cache_create();
 	this->dispatcher = ha_sync_dispatcher_create(this->socket, this->cache);
-	this->ike = ha_sync_ike_create(this->socket);
-	this->child = ha_sync_child_create(this->socket);
+	this->ike = ha_sync_ike_create(this->socket, this->cache);
+	this->child = ha_sync_child_create(this->socket, this->cache);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);
 	charon->bus->add_listener(charon->bus, &this->child->listener);
 

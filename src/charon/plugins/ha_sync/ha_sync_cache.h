@@ -43,6 +43,14 @@ struct ha_sync_cache_t {
 	ike_sa_t* (*get_ike_sa)(ha_sync_cache_t *this, ike_sa_id_t *id);
 
 	/**
+	 * Check if an IKE_SA is in the cache.
+	 *
+	 * @param id		IKE_SA identifier of cached SA.
+	 * @return			TRUE if IKE_SA found
+	 */
+	bool (*has_ike_sa)(ha_sync_cache_t *this, ike_sa_id_t *id);
+
+	/**
 	 * Delete a synced and cached IKE_SA entry.
 	 *
 	 * @param id		IKE_SA identifier of cached SA to delete.

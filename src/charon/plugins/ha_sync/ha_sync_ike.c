@@ -33,6 +33,11 @@ struct private_ha_sync_ike_t {
 	 * socket we use for syncing
 	 */
 	ha_sync_socket_t *socket;
+
+	/**
+	 * Synced and cached SAs
+	 */
+	ha_sync_cache_t *cache;
 };
 
 /**
@@ -70,6 +75,11 @@ static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 	chunk_t secret;
 	proposal_t *proposal;
 	u_int16_t alg, len;
+
+	if (this->cache->has_ike_sa(this->cache, ike_sa->get_id(ike_sa)))
+	{	/* IKE_SA is cached, do not sync */
+		return TRUE;
+	}
 
 	if (dh->get_shared_secret(dh, &secret) != SUCCESS)
 	{
@@ -125,6 +135,11 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 							 ike_sa_state_t state)
 {
 	ha_sync_message_t *m;
+
+	if (this->cache->has_ike_sa(this->cache, ike_sa->get_id(ike_sa)))
+	{	/* IKE_SA is cached, do not sync */
+		return TRUE;
+	}
 
 	switch (state)
 	{
@@ -208,7 +223,8 @@ static void destroy(private_ha_sync_ike_t *this)
 /**
  * See header
  */
-ha_sync_ike_t *ha_sync_ike_create(ha_sync_socket_t *socket)
+ha_sync_ike_t *ha_sync_ike_create(ha_sync_socket_t *socket,
+								  ha_sync_cache_t *cache)
 {
 	private_ha_sync_ike_t *this = malloc_thing(private_ha_sync_ike_t);
 
@@ -218,6 +234,7 @@ ha_sync_ike_t *ha_sync_ike_create(ha_sync_socket_t *socket)
 	this->public.destroy = (void(*)(ha_sync_ike_t*))destroy;
 
 	this->socket = socket;
+	this->cache = cache;
 
 	return &this->public;
 }

@@ -24,13 +24,14 @@
 #define HA_SYNC_CHILD_H_
 
 #include "ha_sync_socket.h"
+#include "ha_sync_cache.h"
 
 #include <daemon.h>
 
 typedef struct ha_sync_child_t ha_sync_child_t;
 
 /**
- * Synchronize CHILD_SAs.
+ * Listener to synchronize CHILD_SAs.
  */
 struct ha_sync_child_t {
 
@@ -49,7 +50,10 @@ struct ha_sync_child_t {
  * Create a ha_sync_child instance.
  *
  * @param socket		socket to use for sending synchronization messages
+ * @param cache			synced and cached SAs
+ * @return				CHILD listener
  */
-ha_sync_child_t *ha_sync_child_create(ha_sync_socket_t *socket);
+ha_sync_child_t *ha_sync_child_create(ha_sync_socket_t *socket,
+									  ha_sync_cache_t *cache);
 
 #endif /* HA_SYNC_CHILD_ @}*/

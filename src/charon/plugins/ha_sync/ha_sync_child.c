@@ -33,6 +33,11 @@ struct private_ha_sync_child_t {
 	 * socket we use for syncing
 	 */
 	ha_sync_socket_t *socket;
+
+	/**
+	 * synced and cached IKE_SA state
+	 */
+	ha_sync_cache_t *cache;
 };
 
 /**
@@ -49,6 +54,11 @@ static bool child_keys(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 	linked_list_t *list;
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
+
+	if (this->cache->has_ike_sa(this->cache, ike_sa->get_id(ike_sa)))
+	{	/* IKE_SA is cached, do not sync */
+		return TRUE;
+	}
 
 	m = ha_sync_message_create(HA_SYNC_CHILD_ADD);
 
@@ -109,6 +119,11 @@ static bool child_keys(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 static bool child_state_change(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 							   child_sa_t *child_sa, child_sa_state_t state)
 {
+	if (this->cache->has_ike_sa(this->cache, ike_sa->get_id(ike_sa)))
+	{	/* IKE_SA is cached, do not sync */
+		return TRUE;
+	}
+
 	if (state == CHILD_DESTROYING)
 	{
 		ha_sync_message_t *m;
@@ -135,7 +150,8 @@ static void destroy(private_ha_sync_child_t *this)
 /**
  * See header
  */
-ha_sync_child_t *ha_sync_child_create(ha_sync_socket_t *socket)
+ha_sync_child_t *ha_sync_child_create(ha_sync_socket_t *socket,
+									  ha_sync_cache_t *cache)
 {
 	private_ha_sync_child_t *this = malloc_thing(private_ha_sync_child_t);
 
@@ -145,6 +161,7 @@ ha_sync_child_t *ha_sync_child_create(ha_sync_socket_t *socket)
 	this->public.destroy = (void(*)(ha_sync_child_t*))destroy;
 
 	this->socket = socket;
+	this->cache = cache;
 
 	return &this->public;
 }
