@@ -132,7 +132,7 @@ chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...)
 void chunk_split(chunk_t chunk, const char *mode, ...)
 {
 	va_list chunks;
-	size_t len;
+	u_int len;
 	chunk_t *ch;
 	
 	va_start(chunks, mode);
@@ -142,7 +142,7 @@ void chunk_split(chunk_t chunk, const char *mode, ...)
 		{
 			break;
 		}
-		len = va_arg(chunks, size_t);
+		len = va_arg(chunks, u_int);
 		ch = va_arg(chunks, chunk_t*);
 		/* a null chunk means skip len bytes */
 		if (ch == NULL)
