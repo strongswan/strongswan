@@ -52,6 +52,8 @@ enum diffie_hellman_group_t {
 	ECP_521_BIT   = 21,
 	ECP_192_BIT   = 25,
 	ECP_224_BIT   = 26,
+	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
+	MODP_NULL = 1024,
 };
 
 /**

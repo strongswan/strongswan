@@ -20,6 +20,7 @@
 #include "load_tester_creds.h"
 #include "load_tester_ipsec.h"
 #include "load_tester_listener.h"
+#include "load_tester_diffie_hellman.h"
 
 #include <unistd.h>
 
@@ -132,6 +133,8 @@ static void destroy(private_load_tester_plugin_t *this)
 	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
 	this->listener->destroy(this->listener);
+	lib->crypto->remove_dh(lib->crypto,
+						(dh_constructor_t)load_tester_diffie_hellman_create);
 	free(this);
 }
 
@@ -144,6 +147,9 @@ plugin_t *plugin_create()
 	int i;
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	
+	lib->crypto->add_dh(lib->crypto, MODP_NULL, 
+						(dh_constructor_t)load_tester_diffie_hellman_create);
 	
 	this->config = load_tester_config_create();
 	this->creds = load_tester_creds_create();

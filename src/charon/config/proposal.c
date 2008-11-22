@@ -739,6 +739,10 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_AES128_XCBC, 0);
 		}
 	}
+	else if (strncmp(alg.ptr, "modpnull", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_NULL, 0);
+	}
 	else if (strncmp(alg.ptr, "modp768", alg.len) == 0)
 	{
 		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_768_BIT, 0);
@@ -1030,6 +1034,9 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 	{
 		switch (group)
 		{
+			case MODP_NULL:
+				/* only for testing purposes */
+				break;
 			case MODP_768_BIT:
 				/* weak */
 				break;

@@ -36,5 +36,7 @@ ENUM_NEXT(diffie_hellman_group_names, MODP_2048_BIT, ECP_521_BIT, MODP_1536_BIT,
 ENUM_NEXT(diffie_hellman_group_names, ECP_192_BIT, ECP_224_BIT, ECP_521_BIT,
 	"ECP_192_BIT",
 	"ECP_224_BIT");
-ENUM_END(diffie_hellman_group_names, ECP_224_BIT);
+ENUM_NEXT(diffie_hellman_group_names, MODP_NULL, MODP_NULL, ECP_224_BIT,
+	"MODP_NULL");
+ENUM_END(diffie_hellman_group_names, MODP_NULL);
 
