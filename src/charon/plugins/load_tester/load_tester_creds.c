@@ -41,6 +41,16 @@ struct private_load_tester_creds_t {
 	 * Trusted certificate to verify signatures
 	 */
 	certificate_t *cert;
+	
+	/**
+	 * Preshared key
+	 */
+	shared_key_t *shared;
+	
+	/**
+	 * Identification for shared key
+	 */
+	identification_t *id;
 };
 
 /**
@@ -152,6 +162,13 @@ static char cert[] = {
 };
 
 /**
+ * A preshared key
+ */
+static char psk[] = {
+  0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08
+};
+
+/**
  * Implements credential_set_t.create_private_enumerator
  */
 static enumerator_t* create_private_enumerator(private_load_tester_creds_t *this,
@@ -205,12 +222,36 @@ static enumerator_t* create_cert_enumerator(private_load_tester_creds_t *this,
 }
 
 /**
+ * Implements credential_set_t.create_shared_enumerator
+ */
+static enumerator_t* create_shared_enumerator(private_load_tester_creds_t *this, 
+							shared_key_type_t type,	identification_t *me,
+							identification_t *other)
+{
+	if (type != SHARED_ANY && type != SHARED_IKE)
+	{
+		return NULL;
+	}
+	if (me && !this->id->matches(this->id, me))
+	{
+		return NULL;
+	}
+	if (other && !this->id->matches(this->id, other))
+	{
+		return NULL;
+	}
+	return enumerator_create_single(this->shared, NULL);
+}
+
+/**
  * Implementation of load_tester_creds_t.destroy
  */
 static void destroy(private_load_tester_creds_t *this)
 {
 	DESTROY_IF(this->private);
 	DESTROY_IF(this->cert);
+	this->shared->destroy(this->shared);
+	this->id->destroy(this->id);
 	free(this);
 }
 
@@ -218,7 +259,7 @@ load_tester_creds_t *load_tester_creds_create()
 {
 	private_load_tester_creds_t *this = malloc_thing(private_load_tester_creds_t);
 
-	this->public.credential_set.create_shared_enumerator = (enumerator_t*(*)(credential_set_t*, shared_key_type_t, identification_t*, identification_t*))return_null;
+	this->public.credential_set.create_shared_enumerator = (enumerator_t*(*)(credential_set_t*, shared_key_type_t, identification_t*, identification_t*))create_shared_enumerator;
 	this->public.credential_set.create_private_enumerator = (enumerator_t*(*) (credential_set_t*, key_type_t, identification_t*))create_private_enumerator;
 	this->public.credential_set.create_cert_enumerator = (enumerator_t*(*) (credential_set_t*,	certificate_type_t, key_type_t,identification_t *, bool))create_cert_enumerator;
 	this->public.credential_set.create_cdp_enumerator  = (enumerator_t*(*) (credential_set_t *,certificate_type_t, identification_t *))return_null;
@@ -231,6 +272,9 @@ load_tester_creds_t *load_tester_creds_create()
 	this->cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 		BUILD_BLOB_ASN1_DER, chunk_create(cert, sizeof(cert)), BUILD_END);			   
 	
+	this->shared = shared_key_create(SHARED_IKE, 
+									 chunk_clone(chunk_create(psk, sizeof(psk))));
+	this->id = identification_create_from_string("load-test@strongswan.org");
 	return &this->public;
 }
 

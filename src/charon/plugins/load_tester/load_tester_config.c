@@ -67,7 +67,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_load_tester_config_t *this,
 {
 	if (streq(name, "load-test"))
 	{
-		return this->peer_cfg->get_ref(this->peer_cfg);;
+		return this->peer_cfg->get_ref(this->peer_cfg);
 	}
 	return NULL;
 }
@@ -93,7 +93,7 @@ load_tester_config_t *load_tester_config_create()
 	traffic_selector_t *ts;
 	auth_info_t *auth;
 	auth_class_t class;
-	char *remote, *pool;
+	char *remote, *pool, *authstr;
 	host_t *vip = NULL;
 	
 	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
@@ -126,7 +126,16 @@ load_tester_config_t *load_tester_config_create()
 			0, 0, TRUE, 60,	/* jitter, overtime, mobike, dpddelay */
 			vip, pool, FALSE, NULL, NULL);
 	auth = this->peer_cfg->get_auth(this->peer_cfg);
-	class = AUTH_CLASS_PUBKEY;
+	authstr = lib->settings->get_str(lib->settings,
+								"charon.plugins.load_tester.auth", "pubkey");
+	if (streq(authstr, "psk"))
+	{
+		class = AUTH_CLASS_PSK;
+	}
+	else
+	{
+		class = AUTH_CLASS_PUBKEY;
+	}
 	auth->add_item(auth, AUTHN_AUTH_CLASS, &class);
 	child_cfg = child_cfg_create("load-test", 600, 400, 100, NULL, TRUE,
 								 MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
