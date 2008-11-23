@@ -26,6 +26,7 @@
 
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
+#include <utils/mutex.h>
 
 typedef struct private_load_tester_plugin_t private_load_tester_plugin_t;
 
@@ -60,14 +61,29 @@ struct private_load_tester_plugin_t {
 	int iterations;
 	
 	/**
-	 * number of threads
+	 * number desired initiator threads
 	 */
 	int initiators;
+	
+	/**
+	 * currenly running initiators
+	 */
+	int running;
 	
 	/**
 	 * delay between initiations, in ms
 	 */
 	int delay;
+	
+	/**
+	 * mutex to lock running field
+	 */
+	mutex_t *mutex;
+	
+	/**
+	 * condvar to wait for initiators
+	 */
+	condvar_t *condvar;
 };
 
 /**
@@ -80,6 +96,12 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 	enumerator_t *enumerator;
 	int i, s = 0, ms = 0;
 	
+	this->mutex->lock(this->mutex);
+	if (!this->running)
+	{
+		this->running = this->initiators;
+	}
+	this->mutex->unlock(this->mutex);
 	if (this->delay)
 	{
 		s = this->delay / 1000;
@@ -117,6 +139,10 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 		}
 		peer_cfg->destroy(peer_cfg);
 	}
+	this->mutex->lock(this->mutex);
+	this->running--;
+	this->mutex->unlock(this->mutex);
+	this->condvar->signal(this->condvar);
 	return JOB_REQUEUE_NONE;
 }
 
@@ -125,6 +151,13 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
  */
 static void destroy(private_load_tester_plugin_t *this)
 {
+	this->iterations = -1;
+	this->mutex->lock(this->mutex);
+	while (this->running)
+	{
+		this->condvar->wait(this->condvar, this->mutex);
+	}
+	this->mutex->unlock(this->mutex);
 	charon->kernel_interface->remove_ipsec_interface(charon->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
@@ -135,6 +168,8 @@ static void destroy(private_load_tester_plugin_t *this)
 	this->listener->destroy(this->listener);
 	lib->crypto->remove_dh(lib->crypto,
 						(dh_constructor_t)load_tester_diffie_hellman_create);
+	this->mutex->destroy(this->mutex);
+	this->condvar->destroy(this->condvar);
 	free(this);
 }
 
@@ -151,6 +186,8 @@ plugin_t *plugin_create()
 	lib->crypto->add_dh(lib->crypto, MODP_NULL, 
 						(dh_constructor_t)load_tester_diffie_hellman_create);
 	
+	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_DEFAULT);
 	this->config = load_tester_config_create();
 	this->creds = load_tester_creds_create();
 	this->listener = load_tester_listener_create();
@@ -170,6 +207,7 @@ plugin_t *plugin_create()
 								"charon.plugins.load_tester.iterations", 1);
 	this->initiators = lib->settings->get_int(lib->settings,
 								"charon.plugins.load_tester.initiators", 0);
+	this->running = 0;
 	for (i = 0; i < this->initiators; i++)
 	{
 		charon->processor->queue_job(charon->processor, 
