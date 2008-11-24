@@ -59,11 +59,6 @@
 #define IPV6_2292PKTINFO 2
 #endif /*IPV6_2292PKTINFO*/
 
-/* missing on uclibc */
-#ifndef IPV6_IPSEC_POLICY
-#define IPV6_IPSEC_POLICY 34
-#endif /*IPV6_IPSEC_POLICY*/
-
 typedef struct private_socket_t private_socket_t;
 
 /**

@@ -57,6 +57,11 @@
 #define IP_IPSEC_POLICY 16
 #endif
 
+/* missing on uclibc */
+#ifndef IPV6_IPSEC_POLICY
+#define IPV6_IPSEC_POLICY 34
+#endif /*IPV6_IPSEC_POLICY*/
+
 /** default priority of installed policies */
 #define PRIO_LOW 3000
 #define PRIO_HIGH 2000
