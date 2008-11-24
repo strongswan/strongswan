@@ -48,12 +48,12 @@ typedef struct exchange_t exchange_t;
  * An exchange in the air, used do detect and handle retransmission
  */
 struct exchange_t {
-
+	
 	/**
 	 * Message ID used for this transaction
 	 */
 	u_int32_t mid;
-
+	
 	/**
 	 * generated packet for retransmission
 	 */
@@ -66,17 +66,17 @@ typedef struct private_task_manager_t private_task_manager_t;
  * private data of the task manager
  */
 struct private_task_manager_t {
-
+	
 	/**
 	 * public functions
 	 */
 	task_manager_t public;
-
+	
 	/**
 	 * associated IKE_SA we are serving
 	 */
 	ike_sa_t *ike_sa;
-
+	
 	/**
 	 * Exchange we are currently handling as responder
 	 */
@@ -85,14 +85,14 @@ struct private_task_manager_t {
 		 * Message ID of the exchange
 		 */
 		u_int32_t mid;
-
+		
 		/**
 		 * packet for retransmission
 		 */
 		packet_t *packet;
 		
 	} responding;
-
+	
 	/**
 	 * Exchange we are currently handling as initiator
 	 */
@@ -118,17 +118,17 @@ struct private_task_manager_t {
 		exchange_type_t type;
 	
 	} initiating;
-
+	
 	/**
 	 * List of queued tasks not yet in action
 	 */
 	linked_list_t *queued_tasks;
-
+	
 	/**
 	 * List of active tasks, initiated by ourselve
 	 */
 	linked_list_t *active_tasks;
-
+	
 	/**
 	 * List of tasks initiated by peer
 	 */
@@ -421,38 +421,41 @@ static status_t build_request(private_task_manager_t *this)
 	iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
 	while (iterator->iterate(iterator, (void*)&task))
 	{
-	    switch (task->build(task, message))
-	    {
-	        case SUCCESS:
-	            /* task completed, remove it */
-	            iterator->remove(iterator);
-	            task->destroy(task);
-	            break;
-	        case NEED_MORE:
-	            /* processed, but task needs another exchange */
-	            break;
-	        case FAILED:
-	        default:
-	            /* critical failure, destroy IKE_SA */
-	            iterator->destroy(iterator);
+		switch (task->build(task, message))
+		{
+			case SUCCESS:
+				/* task completed, remove it */
+				iterator->remove(iterator);
+				task->destroy(task);
+				break;
+			case NEED_MORE:
+				/* processed, but task needs another exchange */
+				break;
+			case FAILED:
+			default:
+				/* critical failure, destroy IKE_SA */
+				iterator->destroy(iterator);
 				message->destroy(message);
 				flush(this);
-	            return DESTROY_ME;
-	    }
+				return DESTROY_ME;
+		}
 	}
 	iterator->destroy(iterator);
-
+	
 	DESTROY_IF(this->initiating.packet);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->initiating.packet);
-	message->destroy(message);
 	if (status != SUCCESS)
 	{
-	    /* message generation failed. There is nothing more to do than to
+		/* message generation failed. There is nothing more to do than to
 		 * close the SA */
+		message->destroy(message);
 		flush(this);
-	    return DESTROY_ME;
+		return DESTROY_ME;
 	}
+	
+	charon->bus->message(charon->bus, message, FALSE);
+	message->destroy(message);
 	
 	return retransmit(this, this->initiating.mid);
 }
@@ -473,32 +476,32 @@ static status_t process_response(private_task_manager_t *this,
 			 exchange_type_names, this->initiating.type);
 		return DESTROY_ME;
 	}
-
+	
 	/* catch if we get resetted while processing */
 	this->reset = FALSE;
 	iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
 	while (iterator->iterate(iterator, (void*)&task))
 	{
-	    switch (task->process(task, message))
-	    {
-	        case SUCCESS:
-	            /* task completed, remove it */
-	            iterator->remove(iterator);
-	            task->destroy(task);
-	            break;
-	        case NEED_MORE:
-	            /* processed, but task needs another exchange */
-	            break;
-	        case FAILED:
-	        default:
-	            /* critical failure, destroy IKE_SA */
-	            iterator->destroy(iterator);
-	            return DESTROY_ME;
-	    }
-	    if (this->reset)
-	    {	/* start all over again if we were reset */
-	    	this->reset = FALSE;
-	    	iterator->destroy(iterator);
+		switch (task->process(task, message))
+		{
+			case SUCCESS:
+				/* task completed, remove it */
+				iterator->remove(iterator);
+				task->destroy(task);
+				break;
+			case NEED_MORE:
+				/* processed, but task needs another exchange */
+				break;
+			case FAILED:
+			default:
+				/* critical failure, destroy IKE_SA */
+				iterator->destroy(iterator);
+				return DESTROY_ME;
+		}
+		if (this->reset)
+		{	/* start all over again if we were reset */
+			this->reset = FALSE;
+			iterator->destroy(iterator);
 			return build_request(this);
 		}	
 	}
@@ -506,7 +509,7 @@ static status_t process_response(private_task_manager_t *this,
 	
 	this->initiating.mid++;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-
+	
 	return build_request(this);
 }
 
@@ -525,34 +528,34 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 	if (type == IKE_REKEY || type == CHILD_REKEY ||
 		type == CHILD_DELETE || type == IKE_DELETE || type == IKE_REAUTH)
 	{
-	    /* find an exchange collision, and notify these tasks */
-	    iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
-	    while (iterator->iterate(iterator, (void**)&active))
-	    {
-	    	switch (active->get_type(active))
-	    	{
-	    		case IKE_REKEY:
-	    			if (type == IKE_REKEY || type == IKE_DELETE ||
-	    				type == IKE_REAUTH)
-	    			{
-	    				ike_rekey_t *rekey = (ike_rekey_t*)active;
-	    				rekey->collide(rekey, task);
-	    				break;
-	    			}
-	    			continue;
-	    		case CHILD_REKEY:
-	    			if (type == CHILD_REKEY || type == CHILD_DELETE)
-	    			{
-	    				child_rekey_t *rekey = (child_rekey_t*)active;
-	    				rekey->collide(rekey, task);
-	    				break;
-	    			}
-	    			continue;
-	    		default:
-	    			continue;
-	    	}
-		    iterator->destroy(iterator);
-	    	return;
+		/* find an exchange collision, and notify these tasks */
+		iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
+		while (iterator->iterate(iterator, (void**)&active))
+		{
+			switch (active->get_type(active))
+			{
+				case IKE_REKEY:
+					if (type == IKE_REKEY || type == IKE_DELETE ||
+						type == IKE_REAUTH)
+					{
+						ike_rekey_t *rekey = (ike_rekey_t*)active;
+						rekey->collide(rekey, task);
+						break;
+					}
+					continue;
+				case CHILD_REKEY:
+					if (type == CHILD_REKEY || type == CHILD_DELETE)
+					{
+						child_rekey_t *rekey = (child_rekey_t*)active;
+						rekey->collide(rekey, task);
+						break;
+					}
+					continue;
+				default:
+					continue;
+			}
+			iterator->destroy(iterator);
+			return;
 		}
 		iterator->destroy(iterator);
 	}
@@ -571,10 +574,10 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	host_t *me, *other;
 	bool delete = FALSE;
 	status_t status;
-
+	
 	me = request->get_destination(request);
 	other = request->get_source(request);
-
+	
 	message = message_create();
 	message->set_exchange_type(message, request->get_exchange_type(request));
 	/* send response along the path the request came in */
@@ -582,29 +585,29 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	message->set_destination(message, other->clone(other));
 	message->set_message_id(message, this->responding.mid);
 	message->set_request(message, FALSE);
-
+	
 	iterator = this->passive_tasks->create_iterator(this->passive_tasks, TRUE);
 	while (iterator->iterate(iterator, (void*)&task))
 	{
-	    switch (task->build(task, message))
-	    {
-	        case SUCCESS:
-	            /* task completed, remove it */
-	            iterator->remove(iterator);
+		switch (task->build(task, message))
+		{
+			case SUCCESS:
+				/* task completed, remove it */
+				iterator->remove(iterator);
 				handle_collisions(this, task);
-	        case NEED_MORE:
-	            /* processed, but task needs another exchange */
-	            break;
-	        case FAILED:
-	        default:
-	            /* destroy IKE_SA, but SEND response first */
-	            delete = TRUE;
-	            break;
-	    }
-	    if (delete)
-	    {
-	    	break;
-	    }
+			case NEED_MORE:
+				/* processed, but task needs another exchange */
+				break;
+			case FAILED:
+			default:
+				/* destroy IKE_SA, but SEND response first */
+				delete = TRUE;
+				break;
+		}
+		if (delete)
+		{
+			break;
+		}
 	}
 	iterator->destroy(iterator);
 	
@@ -614,7 +617,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 		ike_sa_id_t *id = this->ike_sa->get_id(this->ike_sa);
 		id->set_responder_spi(id, 0);
 	}
-
+	
 	/* message complete, send it */
 	DESTROY_IF(this->responding.packet);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
@@ -623,7 +626,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	message->destroy(message);
 	if (status != SUCCESS)
 	{
-	    return DESTROY_ME;
+		return DESTROY_ME;
 	}
 	
 	charon->sender->send(charon->sender,
@@ -646,7 +649,7 @@ static status_t process_request(private_task_manager_t *this,
 	payload_t *payload;
 	notify_payload_t *notify;
 	delete_payload_t *delete;
-
+	
 	/* create tasks depending on request type */
 	switch (message->get_exchange_type(message))
 	{
@@ -801,30 +804,30 @@ static status_t process_request(private_task_manager_t *this,
 		default:
 			break;
 	}
-
+	
 	/* let the tasks process the message */
 	iterator = this->passive_tasks->create_iterator(this->passive_tasks, TRUE);
 	while (iterator->iterate(iterator, (void*)&task))
 	{
-	    switch (task->process(task, message))
-	    {
-	        case SUCCESS:
-	            /* task completed, remove it */
-	            iterator->remove(iterator);
-	            task->destroy(task);
-	            break;
-	        case NEED_MORE:
-	            /* processed, but task needs at least another call to build() */
-	            break;
-	        case FAILED:
-	        default:
-	            /* critical failure, destroy IKE_SA */
-	            iterator->destroy(iterator);
-	            return DESTROY_ME;
-	    }
+		switch (task->process(task, message))
+		{
+			case SUCCESS:
+				/* task completed, remove it */
+				iterator->remove(iterator);
+				task->destroy(task);
+				break;
+			case NEED_MORE:
+				/* processed, but task needs at least another call to build() */
+				break;
+			case FAILED:
+			default:
+				/* critical failure, destroy IKE_SA */
+				iterator->destroy(iterator);
+				return DESTROY_ME;
+		}
 	}
 	iterator->destroy(iterator);
-
+	
 	return build_response(this, message);
 }
 
@@ -834,7 +837,7 @@ static status_t process_request(private_task_manager_t *this,
 static status_t process_message(private_task_manager_t *this, message_t *msg)
 {
 	u_int32_t mid = msg->get_message_id(msg);
-
+	
 	if (msg->get_request(msg))
 	{
 		if (mid == this->responding.mid)
@@ -919,7 +922,7 @@ static void queue_task(private_task_manager_t *this, task_t *task)
 static void adopt_tasks(private_task_manager_t *this, private_task_manager_t *other)
 {
 	task_t *task;
-
+	
 	/* move queued tasks from other to this */
 	while (other->queued_tasks->remove_last(other->queued_tasks,
 												(void**)&task) == SUCCESS)
@@ -1003,7 +1006,7 @@ static void destroy(private_task_manager_t *this)
 task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 {
 	private_task_manager_t *this = malloc_thing(private_task_manager_t);
-
+	
 	this->public.process_message = (status_t(*)(task_manager_t*,message_t*))process_message;
 	this->public.queue_task = (void(*)(task_manager_t*,task_t*))queue_task;
 	this->public.initiate = (status_t(*)(task_manager_t*))build_request;
@@ -1012,7 +1015,7 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	this->public.adopt_tasks = (void(*)(task_manager_t*,task_manager_t*))adopt_tasks;
 	this->public.busy = (bool(*)(task_manager_t*))busy;
 	this->public.destroy = (void(*)(task_manager_t*))destroy;
-
+	
 	this->ike_sa = ike_sa;
 	this->responding.packet = NULL;
 	this->initiating.packet = NULL;
@@ -1023,6 +1026,6 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	this->active_tasks = linked_list_create();
 	this->passive_tasks = linked_list_create();
 	this->reset = FALSE;
-
+	
 	return &this->public;
 }

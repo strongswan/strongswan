@@ -416,11 +416,11 @@ static void set_message_id(private_ike_sa_t *this, bool initiate, u_int32_t mid)
 {
 	if (initiate)
 	{
-		this->task_manager->reset(this->task_manager, UINT_MAX, mid);
+		this->task_manager->reset(this->task_manager, mid, UINT_MAX);
 	}
 	else
 	{
-		this->task_manager->reset(this->task_manager, mid, UINT_MAX);
+		this->task_manager->reset(this->task_manager, UINT_MAX, mid);
 	}
 }
 
