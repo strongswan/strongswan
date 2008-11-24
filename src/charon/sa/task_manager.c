@@ -950,7 +950,8 @@ static bool busy(private_task_manager_t *this)
 /**
  * Implementation of task_manager_t.reset
  */
-static void reset(private_task_manager_t *this)
+static void reset(private_task_manager_t *this,
+				  u_int32_t initiate, u_int32_t respond)
 {
 	task_t *task;
 	
@@ -959,8 +960,14 @@ static void reset(private_task_manager_t *this)
 	DESTROY_IF(this->initiating.packet);
 	this->responding.packet = NULL;
 	this->initiating.packet = NULL;
-	this->responding.mid = 0;
-	this->initiating.mid = 0;
+	if (initiate != UINT_MAX)
+	{
+		this->initiating.mid = initiate;
+	}
+	if (respond != UINT_MAX)
+	{
+		this->responding.mid = respond;
+	}
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	
 	/* reset active tasks */
@@ -1001,7 +1008,7 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	this->public.queue_task = (void(*)(task_manager_t*,task_t*))queue_task;
 	this->public.initiate = (status_t(*)(task_manager_t*))build_request;
 	this->public.retransmit = (status_t(*)(task_manager_t*,u_int32_t))retransmit;
-	this->public.reset = (void(*)(task_manager_t*))reset;
+	this->public.reset = (void(*)(task_manager_t*,u_int32_t,u_int32_t))reset;
 	this->public.adopt_tasks = (void(*)(task_manager_t*,task_manager_t*))adopt_tasks;
 	this->public.busy = (bool(*)(task_manager_t*))busy;
 	this->public.destroy = (void(*)(task_manager_t*))destroy;

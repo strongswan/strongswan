@@ -25,6 +25,8 @@
 
 typedef struct task_manager_t task_manager_t;
 
+#include <limits.h>
+
 #include <library.h>
 #include <encoding/message.h>
 #include <sa/ike_sa.h>
@@ -125,7 +127,7 @@ struct task_manager_t {
 	 *						- SUCCESS if retransmission sent
 	 */
 	status_t (*retransmit) (task_manager_t *this, u_int32_t message_id);
-
+	
 	/**
 	 * Migrate all tasks from other to this.
 	 *
@@ -143,10 +145,12 @@ struct task_manager_t {
 	 * reset to zero (INVALID_KE_PAYLOAD, COOKIES, ...). The reset() method
 	 * resets the message IDs and resets all active tasks using the migrate()
 	 * method.
-	 * 
-	 * @param other			manager which gives away its tasks
+	 * Use a value of UINT_MAX to keep the current message ID.
+	 *
+	 * @param initiate		message ID to initiate exchanges (send)
+	 * @param respond		message ID to respond to exchanges (expect)
 	 */
-	void (*reset) (task_manager_t *this);
+	void (*reset) (task_manager_t *this, u_int32_t initiate, u_int32_t respond);
 	
 	/**
 	 * Check if we are currently waiting for a reply.

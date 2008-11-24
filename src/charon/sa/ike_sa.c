@@ -410,6 +410,21 @@ static void set_proposal(private_ike_sa_t *this, proposal_t *proposal)
 }
 
 /**
+ * Implementation of ike_sa_t.set_message_id
+ */
+static void set_message_id(private_ike_sa_t *this, bool initiate, u_int32_t mid)
+{
+	if (initiate)
+	{
+		this->task_manager->reset(this->task_manager, UINT_MAX, mid);
+	}
+	else
+	{
+		this->task_manager->reset(this->task_manager, mid, UINT_MAX);
+	}
+}
+
+/**
  * Implementation of ike_sa_t.send_keepalive
  */
 static void send_keepalive(private_ike_sa_t *this)
@@ -708,7 +723,7 @@ static void reset(private_ike_sa_t *this)
 	
 	set_state(this, IKE_CREATED);
 	
-	this->task_manager->reset(this->task_manager);
+	this->task_manager->reset(this->task_manager, 0, 0);
 }
 
 /**
@@ -2308,6 +2323,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_my_host = (void (*)(ike_sa_t*,host_t*)) set_my_host;
 	this->public.get_other_host = (host_t* (*)(ike_sa_t*)) get_other_host;
 	this->public.set_other_host = (void (*)(ike_sa_t*,host_t*)) set_other_host;
+	this->public.set_message_id = (void(*)(ike_sa_t*, bool inbound, u_int32_t mid))set_message_id;
 	this->public.update_hosts = (void(*)(ike_sa_t*, host_t *me, host_t *other))update_hosts;
 	this->public.get_my_id = (identification_t* (*)(ike_sa_t*)) get_my_id;
 	this->public.set_my_id = (void (*)(ike_sa_t*,identification_t*)) set_my_id;

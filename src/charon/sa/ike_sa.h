@@ -414,6 +414,17 @@ struct ike_sa_t {
 	void (*set_proposal)(ike_sa_t *this, proposal_t *proposal);
 	
 	/**
+	 * Set the message id of the IKE_SA.
+	 *
+	 * The IKE_SA stores two message IDs, one for initiating exchanges (send)
+	 * and one to respond to exchanges (expect).
+	 *
+	 * @param initiate		TRUE to set message ID for initiating
+	 * @param mid			message id to set
+	 */
+	void (*set_message_id)(ike_sa_t *this, bool initiate, u_int32_t mid);
+	
+	/**
 	 * Add an additional address for the peer.
 	 *
 	 * In MOBIKE, a peer may transmit additional addresses where it is
