@@ -17,6 +17,10 @@ start() {
 	/sbin/iptables -P OUTPUT DROP
 	/sbin/iptables -P FORWARD DROP
 
+        # allow IPsec tunnel traffic
+        iptables -A INPUT  -m policy --dir in  --pol ipsec --proto esp -j ACCEPT
+        iptables -A OUTPUT -m policy --dir out --pol ipsec --proto esp -j ACCEPT
+
 	# allow esp
 	iptables -A INPUT  -i eth0 -p 50 -j ACCEPT
 	iptables -A INPUT  -i eth1 -p 50 -j ACCEPT
