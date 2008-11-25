@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -11,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ * 
+ * $Id$
  */
 
 /**
@@ -97,6 +100,15 @@ struct condvar_t {
 	 * @return				TRUE if timed out, FALSE otherwise
 	 */
 	bool (*timed_wait)(condvar_t *this, mutex_t *mutex, u_int timeout);
+	
+	/**
+	 * Wait on a condvar until it gets signalized, or times out.
+	 * 
+	 * @param mutex			mutex to release while waiting
+	 * @param time			absolute time until timeout
+	 * @return				TRUE if timed out, FALSE otherwise
+	 */
+	bool (*timed_wait_abs)(condvar_t *this, mutex_t *mutex, timeval_t timeout);
 	
 	/**
 	 * Wake up a single thread in a condvar.

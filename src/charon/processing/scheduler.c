@@ -25,6 +25,7 @@
 #include <daemon.h>
 #include <processing/processor.h>
 #include <processing/jobs/callback_job.h>
+#include <utils/mutex.h>
 
 typedef struct event_t event_t;
 
@@ -76,14 +77,12 @@ struct private_scheduler_t {
 	/**
 	 * Exclusive access to list
 	 */
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 
 	/**
 	 * Condvar to wait for next job.
 	 */
-	pthread_cond_t condvar;
-	
-	bool cancelled;
+	condvar_t *condvar;
 };
 
 /**
@@ -104,7 +103,6 @@ static long time_difference(timeval_t *end, timeval_t *start)
  */
 static job_requeue_t schedule(private_scheduler_t * this)
 {
-	timespec_t timeout;
 	timeval_t now;
 	event_t *event;
 	long difference;
@@ -112,7 +110,7 @@ static job_requeue_t schedule(private_scheduler_t * this)
 	bool timed = FALSE;
 	
 	DBG2(DBG_JOB, "waiting for next event...");
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	
 	gettimeofday(&now, NULL);
 	
@@ -122,27 +120,25 @@ static job_requeue_t schedule(private_scheduler_t * this)
 		difference = time_difference(&now, &event->time);
 		if (difference > 0)
 		{
-			DBG2(DBG_JOB, "got event, queueing job for execution");
 			this->list->remove_first(this->list, (void **)&event);	
-			pthread_mutex_unlock(&this->mutex);
+			this->mutex->unlock(this->mutex);
+			DBG2(DBG_JOB, "got event, queueing job for execution");
 			charon->processor->queue_job(charon->processor, event->job);
 			free(event);
 			return JOB_REQUEUE_DIRECT;
 		}
-		timeout.tv_sec = event->time.tv_sec;
-		timeout.tv_nsec = event->time.tv_usec * 1000;
 		timed = TRUE;
 	}
-	pthread_cleanup_push((void*)pthread_mutex_unlock, &this->mutex);
+	pthread_cleanup_push((void*)this->mutex->unlock, this->mutex);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	
 	if (timed)
 	{
-		pthread_cond_timedwait(&this->condvar, &this->mutex, &timeout);
+		this->condvar->timed_wait_abs(this->condvar, this->mutex, event->time);
 	}
 	else
 	{
-		pthread_cond_wait(&this->condvar, &this->mutex);
+		this->condvar->wait(this->condvar, this->mutex);
 	}
 	pthread_setcancelstate(oldstate, NULL);
 	pthread_cleanup_pop(TRUE);
@@ -155,9 +151,9 @@ static job_requeue_t schedule(private_scheduler_t * this)
 static u_int get_job_load(private_scheduler_t *this)
 {
 	int count;
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	count = this->list->get_count(this->list);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 	return count;
 }
 
@@ -182,7 +178,7 @@ static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t time)
 	event->time.tv_usec = (now.tv_usec + us) % 1000000;
 	event->time.tv_sec = now.tv_sec + (now.tv_usec + us)/1000000 + s;
 	
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	while(TRUE)
 	{
 		if (this->list->get_count(this->list) == 0)
@@ -220,8 +216,8 @@ static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t time)
 		iterator->destroy(iterator);
 		break;
 	}
-	pthread_cond_signal(&this->condvar);
-	pthread_mutex_unlock(&this->mutex);
+	this->condvar->signal(this->condvar);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -229,8 +225,9 @@ static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t time)
  */
 static void destroy(private_scheduler_t *this)
 {
-	this->cancelled = TRUE;
 	this->job->cancel(this->job);
+	this->condvar->destroy(this->condvar);
+	this->mutex->destroy(this->mutex);
 	this->list->destroy_function(this->list, (void*)event_destroy);
 	free(this);
 }
@@ -247,9 +244,8 @@ scheduler_t * scheduler_create()
 	this->public.destroy = (void(*)(scheduler_t*)) destroy;
 	
 	this->list = linked_list_create();
-	this->cancelled = FALSE;
-	pthread_mutex_init(&this->mutex, NULL);
-	pthread_cond_init(&this->condvar, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_DEFAULT);
 	
 	this->job = callback_job_create((callback_job_cb_t)schedule, this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);

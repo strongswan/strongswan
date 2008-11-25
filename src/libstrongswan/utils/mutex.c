@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -332,28 +333,17 @@ static void wait(private_condvar_t *this, private_mutex_t *mutex)
 }
 
 /**
- * Implementation of condvar_t.timed_wait.
+ * Implementation of condvar_t.timed_wait_abs.
  */
-static bool timed_wait(private_condvar_t *this, private_mutex_t *mutex,
-					   u_int timeout)
+static bool timed_wait_abs(private_condvar_t *this, private_mutex_t *mutex,
+						   timeval_t time)
 {
 	struct timespec ts;
-	struct timeval tv;
-	u_int s, ms;
 	bool timed_out;
 	
-	gettimeofday(&tv, NULL);
+	ts.tv_sec = time.tv_sec;
+	ts.tv_nsec = time.tv_usec * 1000;
 	
-	s = timeout / 1000;
-	ms = timeout % 1000;
-	
-	ts.tv_sec = tv.tv_sec + s;
-	ts.tv_nsec = tv.tv_usec * 1000 + ms * 1000000;
-	if (ts.tv_nsec > 1000000000 /* 1s */)
-	{
-		ts.tv_nsec -= 1000000000;
-		ts.tv_sec++;
-	}
 	if (mutex->recursive)
 	{
 		private_r_mutex_t* recursive = (private_r_mutex_t*)mutex;
@@ -369,6 +359,31 @@ static bool timed_wait(private_condvar_t *this, private_mutex_t *mutex,
 										   &ts) == ETIMEDOUT;
 	}
 	return timed_out;
+}
+
+/**
+ * Implementation of condvar_t.timed_wait.
+ */
+static bool timed_wait(private_condvar_t *this, private_mutex_t *mutex,
+					   u_int timeout)
+{
+	timeval_t tv;
+	u_int s, ms;
+	
+	gettimeofday(&tv, NULL);
+	
+	s = timeout / 1000;
+	ms = timeout % 1000;
+	
+	tv.tv_sec += s;
+	tv.tv_usec += ms * 1000;
+	
+	if (tv.tv_usec > 1000000 /* 1s */)
+	{
+		tv.tv_usec -= 1000000;
+		tv.tv_sec++;
+	}
+	return timed_wait_abs(this, mutex, tv);
 }
 
 /**
@@ -410,6 +425,7 @@ condvar_t *condvar_create(condvar_type_t type)
 		
 			this->public.wait = (void(*)(condvar_t*, mutex_t *mutex))wait;
 			this->public.timed_wait = (bool(*)(condvar_t*, mutex_t *mutex, u_int timeout))timed_wait;
+			this->public.timed_wait_abs = (bool(*)(condvar_t*, mutex_t *mutex, timeval_t time))timed_wait_abs;
 			this->public.signal = (void(*)(condvar_t*))signal;
 			this->public.broadcast = (void(*)(condvar_t*))broadcast;
 			this->public.destroy = (void(*)(condvar_t*))condvar_destroy;
