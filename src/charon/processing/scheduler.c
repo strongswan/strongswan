@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -26,6 +27,9 @@
 #include <processing/processor.h>
 #include <processing/jobs/callback_job.h>
 #include <utils/mutex.h>
+
+/* the initial size of the heap */
+#define HEAP_SIZE_DEFAULT 64
 
 typedef struct event_t event_t;
 
@@ -65,14 +69,24 @@ struct private_scheduler_t {
 	 scheduler_t public;
 
 	/**
-	 * Job wich schedules
+	 * Job which queues scheduled jobs to the processor.
 	 */
 	callback_job_t *job;
+		
+	/**
+	 * The heap in which the events are stored.
+	 */
+	event_t **heap;
 	
 	/**
-	 * The jobs are scheduled in a list.
+	 * The size of the heap.
 	 */
-	linked_list_t *list;
+	u_int heap_size;
+	
+	/**
+	 * The number of scheduled events.
+	 */
+	u_int event_count;
 
 	/**
 	 * Exclusive access to list
@@ -99,6 +113,62 @@ static long time_difference(timeval_t *end, timeval_t *start)
 }
 
 /**
+ * Returns the top event without removing it. Returns NULL if the heap is empty.
+ */
+static event_t *peek_event(private_scheduler_t *this)
+{
+	return this->event_count > 0 ? this->heap[1] : NULL;
+}
+
+/**
+ * Removes the top event from the heap and returns it. Returns NULL if the heap
+ * is empty.
+ */
+static event_t *remove_event(private_scheduler_t *this)
+{
+	event_t *event, *top;
+	if (!this->event_count)
+	{
+		return NULL;
+	}
+	
+	/* store the value to return */
+	event = this->heap[1];
+	/* move the bottom event to the top */
+	top = this->heap[1] = this->heap[this->event_count];
+		
+	if (--this->event_count > 1)
+	{
+		/* seep down the top event */
+		u_int position = 1;
+		while ((position << 1) <= this->event_count)
+		{
+			u_int child = position << 1;
+			
+			if ((child + 1) <= this->event_count &&
+				time_difference(&this->heap[child + 1]->time,
+								&this->heap[child]->time) < 0)
+			{
+				/* the "right" child is smaller */
+				child++;
+			}
+			
+			if (time_difference(&top->time, &this->heap[child]->time) <= 0)
+			{
+				/* the top event fires before the smaller of the two children, stop */
+				break;
+			}
+			
+			/* exchange with the smaller child */
+			this->heap[position] = this->heap[child];
+			position = child;
+		}
+		this->heap[position] = top;
+	}
+	return event;
+}
+
+/**
  * Get events from the queue and pass it to the processor
  */
 static job_requeue_t schedule(private_scheduler_t * this)
@@ -114,15 +184,14 @@ static job_requeue_t schedule(private_scheduler_t * this)
 	
 	gettimeofday(&now, NULL);
 	
-	if (this->list->get_count(this->list) > 0)
+	if ((event = peek_event(this)) != NULL)
 	{
-		this->list->get_first(this->list, (void **)&event);
 		difference = time_difference(&now, &event->time);
 		if (difference > 0)
 		{
-			this->list->remove_first(this->list, (void **)&event);	
+			remove_event(this);
 			this->mutex->unlock(this->mutex);
-			DBG2(DBG_JOB, "got event, queueing job for execution");
+			DBG2(DBG_JOB, "got event, queuing job for execution");
 			charon->processor->queue_job(charon->processor, event->job);
 			free(event);
 			return JOB_REQUEUE_DIRECT;
@@ -152,7 +221,7 @@ static u_int get_job_load(private_scheduler_t *this)
 {
 	int count;
 	this->mutex->lock(this->mutex);
-	count = this->list->get_count(this->list);
+	count = this->event_count;
 	this->mutex->unlock(this->mutex);
 	return count;
 }
@@ -163,8 +232,8 @@ static u_int get_job_load(private_scheduler_t *this)
 static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t time)
 {
 	timeval_t now;
-	event_t *event, *current;
-	iterator_t *iterator;
+	event_t *event;
+	u_int position;
 	time_t s;
 	suseconds_t us;
 	
@@ -179,43 +248,27 @@ static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t time)
 	event->time.tv_sec = now.tv_sec + (now.tv_usec + us)/1000000 + s;
 	
 	this->mutex->lock(this->mutex);
-	while(TRUE)
+	
+	this->event_count++;
+	if (this->event_count > this->heap_size)
 	{
-		if (this->list->get_count(this->list) == 0)
-		{
-			this->list->insert_first(this->list,event);
-			break;
-		}
-
-		this->list->get_last(this->list, (void**)&current);
-		if (time_difference(&event->time, &current->time) >= 0)
-		{	/* new event has to be fired after the last event in list */
-			this->list->insert_last(this->list, event);
-			break;
-		}
-
-		this->list->get_first(this->list, (void**)&current);
-		if (time_difference(&event->time, &current->time) < 0)
-		{	/* new event has to be fired before the first event in list */
-			this->list->insert_first(this->list, event);
-			break;
-		}
-		
-		iterator = this->list->create_iterator(this->list, TRUE);
-		/* first element has not to be checked (already done) */
-		iterator->iterate(iterator, (void**)&current);
-		while(iterator->iterate(iterator, (void**)&current))
-		{
-			if (time_difference(&event->time, &current->time) <= 0)
-			{
-				/* new event has to be fired before the current event in list */
-				iterator->insert_before(iterator, event);
-				break;
-			}
-		}
-		iterator->destroy(iterator);
-		break;
+		/* double the size of the heap */
+		this->heap_size <<= 1;
+		this->heap = (event_t**)realloc(this->heap, (this->heap_size + 1) * sizeof(event_t*));
 	}
+	/* "put" the event to the bottom */
+	position = this->event_count;
+	
+	/* then bubble it up */
+	while (position > 1 && time_difference(&this->heap[position >> 1]->time,
+										   &event->time) > 0)
+	{
+		/* parent has to be fired after the new event, move up */
+		this->heap[position] = this->heap[position >> 1];
+		position >>= 1;
+	}
+	this->heap[position] = event;
+	
 	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
 }
@@ -225,10 +278,15 @@ static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t time)
  */
 static void destroy(private_scheduler_t *this)
 {
+	event_t *event;
 	this->job->cancel(this->job);
 	this->condvar->destroy(this->condvar);
 	this->mutex->destroy(this->mutex);
-	this->list->destroy_function(this->list, (void*)event_destroy);
+	while ((event = remove_event(this)) != NULL)
+	{
+		event_destroy(event);
+	}
+	free(this->heap);
 	free(this);
 }
 
@@ -243,7 +301,11 @@ scheduler_t * scheduler_create()
 	this->public.schedule_job = (void (*) (scheduler_t *this, job_t *job, u_int32_t ms)) schedule_job;
 	this->public.destroy = (void(*)(scheduler_t*)) destroy;
 	
-	this->list = linked_list_create();
+	/* Note: the root of the heap is at index 1 */
+	this->event_count = 0;
+	this->heap_size = HEAP_SIZE_DEFAULT;
+	this->heap = (event_t**)calloc(this->heap_size + 1, sizeof(event_t*));
+	
 	this->mutex = mutex_create(MUTEX_DEFAULT);
 	this->condvar = condvar_create(CONDVAR_DEFAULT);
 	
