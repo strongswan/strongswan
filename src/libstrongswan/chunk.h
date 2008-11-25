@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -198,6 +199,12 @@ int chunk_compare(chunk_t a, chunk_t b);
  * NULL chunks are never equal.
  */
 bool chunk_equals(chunk_t a, chunk_t b);
+
+/**
+ * Computes a 32 bit hash of the given chunk.
+ * Note: This hash is only intended for hash tables not for cryptographic purposes.
+ */
+u_int32_t chunk_hash(chunk_t chunk);
 
 /**
  * Get printf hooks for a chunk.

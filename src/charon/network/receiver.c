@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -34,10 +35,10 @@
 #define COOKIE_LIFETIME 10
 /** how many times to reuse the secret */
 #define COOKIE_REUSE 10000
-/** require cookies after half open IKE_SAs */
-#define COOKIE_TRESHOLD 10
-/** how many half open IKE_SAs per peer before blocking */
-#define BLOCK_TRESHOLD 5
+/** default value for private_receiver_t.cookie_threshold */
+#define COOKIE_THRESHOLD_DEFAULT 10
+/** default value for private_receiver_t.block_threshold */
+#define BLOCK_THRESHOLD_DEFAULT 5
 /** length of the secret to use for cookie calculation */
 #define SECRET_LENGTH 16
 
@@ -98,9 +99,14 @@ struct private_receiver_t {
  	hasher_t *hasher;
  	
  	/**
- 	 * use denial of service protection mechanisms (cookies)
+ 	 * require cookies after this many half open IKE_SAs
  	 */
- 	bool dos_protection;
+ 	u_int32_t cookie_threshold;
+ 	
+ 	/**
+ 	 * how many half open IKE_SAs per peer before blocking
+ 	 */
+ 	u_int32_t block_threshold;
 };
 
 /**
@@ -204,12 +210,12 @@ static bool cookie_required(private_receiver_t *this, message_t *message)
 	bool failed = FALSE;
 		
 	if (charon->ike_sa_manager->get_half_open_count(charon->ike_sa_manager,
-													NULL) >= COOKIE_TRESHOLD)
+												NULL) >= this->cookie_threshold)
 	{
 		/* check for a cookie. We don't use our parser here and do it
 		 * quick and dirty for performance reasons. 
-		 * we assume to cookie is the first payload (which is a MUST), and 
-		 * the cookies SPI length is zero. */
+		 * we assume the cookie is the first payload (which is a MUST), and 
+		 * the cookie's SPI length is zero. */
 		packet_t *packet = message->get_packet(message);
 		chunk_t data = packet->get_data(packet);
 		if (data.len < 
@@ -242,7 +248,7 @@ static bool cookie_required(private_receiver_t *this, message_t *message)
 static bool peer_to_aggressive(private_receiver_t *this, message_t *message)
 {
 	if (charon->ike_sa_manager->get_half_open_count(charon->ike_sa_manager,
-								message->get_source(message)) >= BLOCK_TRESHOLD)
+						message->get_source(message)) >= this->block_threshold)
 	{
 		return TRUE;
 	}
@@ -287,11 +293,10 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	}
 	
 	if (message->get_request(message) &&
-		message->get_exchange_type(message) == IKE_SA_INIT &&
-		this->dos_protection)
+		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		/* check for cookies */
-		if (cookie_required(this, message))
+		if (this->cookie_threshold && cookie_required(this, message))
 		{
 			u_int32_t now = time(NULL);
 			chunk_t cookie = cookie_build(this, message, now - this->secret_offset,
@@ -319,7 +324,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 		}
 		
 		/* check if peer has not too many IKE_SAs half open */
-		if (peer_to_aggressive(this, message))
+		if (this->block_threshold && peer_to_aggressive(this, message))
 		{
 			DBG1(DBG_NET, "ignoring IKE_SA setup from %H, "
 				 "peer too aggressive", message->get_source(message));
@@ -373,8 +378,10 @@ receiver_t *receiver_create()
 	this->secret_used = 0;
 	this->rng->get_bytes(this->rng, SECRET_LENGTH, this->secret);
 	memcpy(this->secret_old, this->secret, SECRET_LENGTH);
-	this->dos_protection = lib->settings->get_bool(lib->settings,
-												"charon.dos_protection", TRUE);
+	this->cookie_threshold = lib->settings->get_int(lib->settings,
+									"charon.cookie_threshold", COOKIE_THRESHOLD_DEFAULT);
+	this->block_threshold = lib->settings->get_int(lib->settings,
+									"charon.block_threshold", BLOCK_THRESHOLD_DEFAULT);
 
 	this->job = callback_job_create((callback_job_cb_t)receive_packets,
 									this, NULL, NULL);

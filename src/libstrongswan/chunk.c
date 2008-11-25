@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -25,6 +26,16 @@
 
 #include <debug.h>
 #include <printf_hook.h>
+
+/* required for chunk_hash */
+#undef get16bits
+#if (defined(__GNUC__) && defined(__i386__))
+#define get16bits(d) (*((const u_int16_t*)(d)))
+#endif
+#if !defined (get16bits)
+#define get16bits(d) ((((u_int32_t)(((const u_int8_t*)(d))[1])) << 8)\
+                      + (u_int32_t)(((const u_int8_t*)(d))[0]) )
+#endif
 
 /**
  * Empty chunk.
@@ -251,7 +262,7 @@ static char hexdig_lower[] = "0123456789abcdef";
  */
 chunk_t chunk_to_hex(chunk_t chunk, char *buf, bool uppercase)
 {
-	int i, len;;
+	int i, len;
 	char *hexdig = hexdig_lower;
 	
 	if (uppercase)
@@ -480,6 +491,75 @@ bool chunk_equals(chunk_t a, chunk_t b)
 {
 	return a.ptr != NULL  && b.ptr != NULL &&
 			a.len == b.len && memeq(a.ptr, b.ptr, a.len);
+}
+
+/**
+ * Described in header.
+ * 
+ * The implementation is based on Paul Hsieh's SuperFastHash:
+ * 	 http://www.azillionmonkeys.com/qed/hash.html
+ */
+u_int32_t chunk_hash(chunk_t chunk)
+{
+	u_char *data = chunk.ptr;
+	size_t len = chunk.len;
+	u_int32_t hash = len, tmp;
+	int rem;
+	
+	if (!len || data == NULL)
+	{
+		return 0;
+	}
+	
+	rem = len & 3;
+	len >>= 2;
+	
+	/* Main loop */
+	for (; len > 0; --len)
+	{
+		hash += get16bits(data);
+		tmp   = (get16bits(data + 2) << 11) ^ hash;
+		hash  = (hash << 16) ^ tmp;
+		data += 2 * sizeof(u_int16_t);
+		hash += hash >> 11;
+	}
+	
+	/* Handle end cases */
+	switch (rem)
+	{
+		case 3:
+		{
+			hash += get16bits(data);
+			hash ^= hash << 16;
+			hash ^= data[sizeof(u_int16_t)] << 18;
+			hash += hash >> 11;
+			break;
+		}
+		case 2:
+		{
+			hash += get16bits(data);
+			hash ^= hash << 11;
+			hash += hash >> 17;
+			break;
+		}
+		case 1:
+		{
+			hash += *data;
+			hash ^= hash << 10;
+			hash += hash >> 1;
+			break;
+		}
+	}
+	
+	/* Force "avalanching" of final 127 bits */
+	hash ^= hash << 3;
+	hash += hash >> 5;
+	hash ^= hash << 4;
+	hash += hash >> 17;
+	hash ^= hash << 25;
+	hash += hash >> 6;
+	
+	return hash;
 }
 
 /**

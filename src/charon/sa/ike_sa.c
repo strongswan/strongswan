@@ -1381,7 +1381,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			switch (status)
 			{
 				case NOT_SUPPORTED:
-					DBG1(DBG_IKE, "ciritcal unknown payloads found");
+					DBG1(DBG_IKE, "critical unknown payloads found");
 					if (is_request)
 					{
 						send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
