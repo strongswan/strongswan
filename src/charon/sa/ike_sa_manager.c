@@ -276,6 +276,7 @@ struct private_ike_sa_manager_t {
 static void lock_single_segment(private_ike_sa_manager_t *this, u_int index)
 {
 	mutex_t *lock = this->segments[index & this->segment_mask].mutex;
+
 	lock->lock(lock);
 }
 
@@ -286,6 +287,7 @@ static void lock_single_segment(private_ike_sa_manager_t *this, u_int index)
 static void unlock_single_segment(private_ike_sa_manager_t *this, u_int index)
 {
 	mutex_t *lock = this->segments[index & this->segment_mask].mutex;
+
 	lock->unlock(lock);
 }
 
@@ -295,6 +297,7 @@ static void unlock_single_segment(private_ike_sa_manager_t *this, u_int index)
 static void lock_all_segments(private_ike_sa_manager_t *this)
 {
 	u_int i;
+
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->segments[i].mutex->lock(this->segments[i].mutex);
@@ -307,6 +310,7 @@ static void lock_all_segments(private_ike_sa_manager_t *this)
 static void unlock_all_segments(private_ike_sa_manager_t *this)
 {
 	u_int i;
+
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->segments[i].mutex->unlock(this->segments[i].mutex);
@@ -358,6 +362,7 @@ static bool enumerate(private_enumerator_t *this, entry_t **entry, u_int *segmen
 			if (this->current)
 			{
 				entry_t *item;
+
 				if (this->current->enumerate(this->current, (void**)&item))
 				{
 					*entry = item;
@@ -371,6 +376,7 @@ static bool enumerate(private_enumerator_t *this, entry_t **entry, u_int *segmen
 			else
 			{
 				linked_list_t *list;
+
 				lock_single_segment(this->manager, this->segment);
 				if ((list = this->manager->ike_sa_table[this->row]) != NULL &&
 					 list->get_count(list))
@@ -451,6 +457,7 @@ static void remove_entry(private_ike_sa_manager_t *this, entry_t *entry)
 	if ((list = this->ike_sa_table[row]) != NULL)
 	{
 		entry_t *current;
+
 		enumerator_t *enumerator = list->create_enumerator(list);
 		while (enumerator->enumerate(enumerator, &current))
 		{
@@ -643,6 +650,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	ike_sa_id_t *id = message->get_ike_sa_id(message);
+
 	id = id->clone(id);
 	id->switch_initiator(id);
 	
@@ -1138,10 +1146,11 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
+	u_int segment;
 	int count = 0;
 
 	enumerator = create_table_enumerator(this);
-	while (enumerator->enumerate(enumerator, &entry))
+	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
 		/* we check if we have a responder CONNECTING IKE_SA without checkout */
 		if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
@@ -1232,9 +1241,11 @@ static void flush(private_ike_sa_manager_t *this)
 static void destroy(private_ike_sa_manager_t *this)
 {
 	u_int i;
+
 	for (i = 0; i < this->table_size; ++i)
 	{
 		linked_list_t *list;
+
 		if ((list = this->ike_sa_table[i]) != NULL)
 		{
 			list->destroy(list);
@@ -1260,6 +1271,7 @@ static void destroy(private_ike_sa_manager_t *this)
 static u_int get_nearest_powerof2(u_int n)
 {
 	u_int i;
+
 	--n;
 	for (i = 1; i < sizeof(u_int) * 8; i <<= 1)
 	{
