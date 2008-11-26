@@ -235,12 +235,13 @@ static status_t initiate_execute(interface_job_t *job)
 	}
 	peer_cfg->destroy(peer_cfg);
 	
-	if (ike_sa->initiate(ike_sa, listener->child_cfg) != SUCCESS)
+	if (ike_sa->initiate(ike_sa, listener->child_cfg) == SUCCESS)
 	{
-		return charon->ike_sa_manager->checkin_and_destroy(
-												charon->ike_sa_manager, ike_sa);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		return SUCCESS;
 	}
-	return charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+	return FAILED;
 }
 
 /**
@@ -285,12 +286,15 @@ static status_t terminate_ike_execute(interface_job_t *job)
 	ike_sa_t *ike_sa = listener->ike_sa;
 	
 	charon->bus->set_sa(charon->bus, ike_sa);
-	if (ike_sa->delete(ike_sa) == DESTROY_ME)
+	
+	if (ike_sa->delete(ike_sa) != DESTROY_ME)
 	{
-		return charon->ike_sa_manager->checkin_and_destroy(
-												charon->ike_sa_manager, ike_sa);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		/* delete failed */
+		return FAILED;
 	}
-	return charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+	return SUCCESS;
 }
 
 /**
@@ -346,12 +350,13 @@ static status_t terminate_child_execute(interface_job_t *job)
 	
 	charon->bus->set_sa(charon->bus, ike_sa);
 	if (ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
-								child_sa->get_spi(child_sa, TRUE)) == DESTROY_ME)
+								child_sa->get_spi(child_sa, TRUE)) != DESTROY_ME)
 	{
-		return charon->ike_sa_manager->checkin_and_destroy(
-												charon->ike_sa_manager, ike_sa);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		return SUCCESS;
 	}
-	return charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+	return FAILED;
 }
 
 /**
@@ -429,12 +434,13 @@ static status_t route_execute(interface_job_t *job)
 	ike_sa_t *ike_sa = listener->ike_sa;
 	
 	charon->bus->set_sa(charon->bus, ike_sa);
-	if (ike_sa->route(ike_sa, listener->child_cfg) == DESTROY_ME)
+	if (ike_sa->route(ike_sa, listener->child_cfg) != DESTROY_ME)
 	{
-		return charon->ike_sa_manager->checkin_and_destroy(
-												charon->ike_sa_manager, ike_sa);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		return SUCCESS;
 	}
-	return charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+	return FAILED;
 }
 
 /**
@@ -487,12 +493,13 @@ static status_t unroute_execute(interface_job_t *job)
 	interface_listener_t *listener = &job->listener;
 	ike_sa_t *ike_sa = listener->ike_sa;
 	
-	if (ike_sa->unroute(ike_sa, listener->id) == DESTROY_ME)
+	if (ike_sa->unroute(ike_sa, listener->id) != DESTROY_ME)
 	{
-		return charon->ike_sa_manager->checkin_and_destroy(
-												charon->ike_sa_manager, ike_sa);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		return SUCCESS;
 	}
-	return charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+	return SUCCESS;
 }
 
 /**

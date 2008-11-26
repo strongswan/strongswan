@@ -157,14 +157,12 @@ struct ike_sa_manager_t {
 	 * 
 	 * @warning the SA pointer MUST NOT be used after checkin! 
 	 * The SA must be checked out again!
+	 * If the IKE_SA is not registered in the manager, a new entry is created.
 	 *  
 	 * @param ike_sa_id			the SA identifier, will be updated
 	 * @param ike_sa			checked out SA
-	 * @returns 				
-	 * 							- SUCCESS if checked in
-	 * 							- NOT_FOUND when not found (shouldn't happen!)
 	 */
-	status_t (*checkin) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
+	void (*checkin) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 	
 	/**
 	 * Destroy a checked out SA.
@@ -177,11 +175,8 @@ struct ike_sa_manager_t {
 	 * risk that another thread can get the SA.
 	 *
 	 * @param ike_sa			SA to delete
-	 * @returns 				
-	 * 							- SUCCESS if found
-	 * 							- NOT_FOUND when no such SA is available
 	 */
-	status_t (*checkin_and_destroy) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
+	void (*checkin_and_destroy) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 	
 	/**
 	 * Get the number of IKE_SAs which are in the connecting state.

@@ -130,7 +130,7 @@ static status_t entry_destroy(entry_t *this)
 /**
  * Creates a new entry for the ike_sa_t list.
  */
-static entry_t *entry_create(ike_sa_id_t *ike_sa_id)
+static entry_t *entry_create()
 {
 	entry_t *this = malloc_thing(entry_t);
 	
@@ -147,13 +147,9 @@ static entry_t *entry_create(ike_sa_id_t *ike_sa_id)
 	this->half_open = FALSE;
 	this->my_id = NULL;
 	this->other_id = NULL;
+	this->ike_sa_id = NULL;
+	this->ike_sa = NULL;
 	
-	/* ike_sa_id is always cloned */
-	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-
-	/* create new ike_sa */
-	this->ike_sa = ike_sa_create(ike_sa_id);
-
 	return this;
 }
 
@@ -328,7 +324,7 @@ struct private_ike_sa_manager_t {
 static void lock_single_segment(private_ike_sa_manager_t *this, u_int index)
 {
 	mutex_t *lock = this->segments[index & this->segment_mask].mutex;
-
+	
 	lock->lock(lock);
 }
 
@@ -339,7 +335,7 @@ static void lock_single_segment(private_ike_sa_manager_t *this, u_int index)
 static void unlock_single_segment(private_ike_sa_manager_t *this, u_int index)
 {
 	mutex_t *lock = this->segments[index & this->segment_mask].mutex;
-
+	
 	lock->unlock(lock);
 }
 
@@ -349,7 +345,7 @@ static void unlock_single_segment(private_ike_sa_manager_t *this, u_int index)
 static void lock_all_segments(private_ike_sa_manager_t *this)
 {
 	u_int i;
-
+	
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->segments[i].mutex->lock(this->segments[i].mutex);
@@ -362,7 +358,7 @@ static void lock_all_segments(private_ike_sa_manager_t *this)
 static void unlock_all_segments(private_ike_sa_manager_t *this)
 {
 	u_int i;
-
+	
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->segments[i].mutex->unlock(this->segments[i].mutex);
@@ -752,19 +748,18 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 {
 	entry_t *entry;
-	ike_sa_id_t *id;
 	u_int segment;
 	
+	entry = entry_create();
 	if (initiator)
 	{
-		id = ike_sa_id_create(get_next_spi(this), 0, TRUE);
+		entry->ike_sa_id = ike_sa_id_create(get_next_spi(this), 0, TRUE);
 	}
 	else
 	{
-		id = ike_sa_id_create(0, get_next_spi(this), FALSE);
+		entry->ike_sa_id = ike_sa_id_create(0, get_next_spi(this), FALSE);
 	}
-	entry = entry_create(id);
-	id->destroy(id);
+	entry->ike_sa = ike_sa_create(entry->ike_sa_id);
 	
 	segment = put_entry(this, entry); 
 	entry->checked_out = TRUE;
@@ -827,7 +822,9 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 			{
 				/* no IKE_SA found, create a new one */
 				id->set_responder_spi(id, get_next_spi(this));
-				entry = entry_create(id);
+				entry = entry_create();
+				entry->ike_sa = ike_sa_create(id);
+				entry->ike_sa_id = id->clone(id);
 				
 				segment = put_entry(this, entry);
 				entry->checked_out = TRUE;
@@ -963,21 +960,16 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	
 	if (!ike_sa)
 	{
-		entry_t *new_entry;
-		ike_sa_id_t *new_ike_sa_id;
+		entry = entry_create();
+		entry->ike_sa_id = ike_sa_id_create(get_next_spi(this), 0, TRUE);
+		entry->ike_sa = ike_sa_create(entry->ike_sa_id);
 		
-		new_ike_sa_id = ike_sa_id_create(get_next_spi(this), 0, TRUE);
-		
-		/* create entry */
-		new_entry = entry_create(new_ike_sa_id);
-		new_ike_sa_id->destroy(new_ike_sa_id);
-		
-		segment = put_entry(this, new_entry);
+		segment = put_entry(this, entry);
 		
 		/* check ike_sa out */
 		DBG2(DBG_MGR, "new IKE_SA created for IDs [%D]...[%D]", my_id, other_id);
-		new_entry->checked_out = TRUE;
-		ike_sa = new_entry->ike_sa;
+		entry->checked_out = TRUE;
+		ike_sa = entry->ike_sa;
 		unlock_single_segment(this, segment);
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
@@ -1157,7 +1149,7 @@ static enumerator_t *create_enumerator(private_ike_sa_manager_t* this)
 /**
  * Implementation of ike_sa_manager_t.checkin.
  */
-static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
+static void checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 {
 	/* to check the SA back in, we look for the pointer of the ike_sa
 	 * in all entries.
@@ -1165,7 +1157,6 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	 * on reception of a IKE_SA_INIT response) the lookup will work but
 	 * updating of the SPI MAY be necessary...
 	 */
-	status_t retval;
 	entry_t *entry;
 	ike_sa_id_t *ike_sa_id;
 	host_t *other;
@@ -1173,6 +1164,9 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	u_int segment;
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
+	my_id = ike_sa->get_my_id(ike_sa);
+	other_id = ike_sa->get_other_id(ike_sa);
+	other = ike_sa->get_other_host(ike_sa);
 	
 	DBG2(DBG_MGR, "checkin IKE_SA");
 	
@@ -1185,7 +1179,6 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		entry->checked_out = FALSE;
 		entry->message_id = -1;
 		/* check if this SA is half-open */
-		other = ike_sa->get_other_host(ike_sa);
 		if (entry->half_open && ike_sa->get_state(ike_sa) != IKE_CONNECTING)
 		{
 			/* not half open anymore */
@@ -1210,8 +1203,6 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 			put_half_open(this, entry);
 		}
 		/* apply identities for duplicate test */
-		my_id = ike_sa->get_my_id(ike_sa);
-		other_id = ike_sa->get_other_id(ike_sa);
 		if (!entry->my_id ||
 			entry->my_id->get_type(entry->my_id) == ID_ANY)
 		{
@@ -1226,25 +1217,26 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		}
 		DBG2(DBG_MGR, "check-in of IKE_SA successful.");
 		entry->condvar->signal(entry->condvar);
-	 	retval = SUCCESS;
 	 	unlock_single_segment(this, segment);
 	}
 	else
 	{
-		DBG2(DBG_MGR, "tried to check in nonexisting IKE_SA");
-		/* this SA is no more, this REALLY should not happen */
-		retval = NOT_FOUND;
+		entry = entry_create();
+		entry->ike_sa_id = ike_sa_id->clone(ike_sa_id);
+		entry->ike_sa = ike_sa;
+		entry->my_id = my_id->clone(my_id);
+		entry->other_id = other_id->clone(other_id);
+		
+		unlock_single_segment(this, put_entry(this, entry));
 	}
 	
 	charon->bus->set_sa(charon->bus, NULL);
-	return retval;
 }
-
 
 /**
  * Implementation of ike_sa_manager_t.checkin_and_destroy.
  */
-static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
+static void checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 {
 	/* deletion is a bit complex, we must ensure that no thread is waiting for
 	 * this SA.
@@ -1252,14 +1244,13 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 	 * are in the condvar.
 	 */
 	entry_t *entry;
-	status_t retval;
 	ike_sa_id_t *ike_sa_id;
 	u_int segment;
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	
 	DBG2(DBG_MGR, "checkin and destroy IKE_SA");
-
+	
 	if (get_entry_by_sa(this, ike_sa_id, ike_sa, &entry, &segment) == SUCCESS)
 	{
 		/* drive out waiting threads, as we are in hurry */
@@ -1279,21 +1270,19 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 		{
 			remove_half_open(this, entry);
 		}
-	
+		
 		remove_entry(this, entry);
 		entry_destroy(entry);
 		unlock_single_segment(this, segment);
 		
 		DBG2(DBG_MGR, "check-in and destroy of IKE_SA successful");
-		retval = SUCCESS;
 	}
 	else
 	{
-		DBG2(DBG_MGR, "tried to check-in and delete nonexisting IKE_SA");
-		retval = NOT_FOUND;
+		DBG1(DBG_MGR, "tried to check-in and delete nonexisting IKE_SA");
+		ike_sa->destroy(ike_sa);
 	}
 	charon->bus->set_sa(charon->bus, NULL);
-	return retval;
 }
 
 /**
@@ -1315,6 +1304,7 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 		if ((list = this->half_open_table[row]) != NULL)
 		{
 			half_open_t *current;
+			
 			if (list->find_first(list, (linked_list_match_t)half_open_match,
 								 (void**)&current, &addr) == SUCCESS)
 			{
@@ -1326,6 +1316,7 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 	else
 	{
 		u_int segment;
+		
 		for (segment = 0; segment < this->segment_count; ++segment)
 		{
 			rwlock_t *lock;
@@ -1447,7 +1438,7 @@ static void destroy(private_ike_sa_manager_t *this)
 static u_int get_nearest_powerof2(u_int n)
 {
 	u_int i;
-
+	
 	--n;
 	for (i = 1; i < sizeof(u_int) * 8; i <<= 1)
 	{
@@ -1475,8 +1466,8 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.checkout_by_name = (ike_sa_t*(*)(ike_sa_manager_t*,char*,bool))checkout_by_name;
 	this->public.checkout_duplicate = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_t *ike_sa))checkout_duplicate;
 	this->public.create_enumerator = (enumerator_t*(*)(ike_sa_manager_t*))create_enumerator;
-	this->public.checkin = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
-	this->public.checkin_and_destroy = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;
+	this->public.checkin = (void(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
+	this->public.checkin_and_destroy = (void(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;
 	this->public.get_half_open_count = (int(*)(ike_sa_manager_t*,host_t*))get_half_open_count;
 	
 	/* initialize private variables */
