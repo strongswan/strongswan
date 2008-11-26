@@ -61,10 +61,18 @@ void *clalloc(void * pointer, size_t size)
  */
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n)
 {
-	size_t i;
-	for (i = 0; i < n; i++)
+	int i = 0, m;
+	
+	m = n - sizeof(long);
+	while (i < m)
+	{
+		*(long*)(dest + i) ^= *(long*)(src + i);
+		i += sizeof(long);
+	}
+	while (i < n)
 	{
 		dest[i] ^= src[i];
+		i++;
 	}
 }
 
