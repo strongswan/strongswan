@@ -45,15 +45,6 @@ chunk_t chunk_empty = { NULL, 0 };
 /**
  * Described in header.
  */
-chunk_t chunk_create(u_char *ptr, size_t len)
-{
-	chunk_t chunk = {ptr, len};
-	return chunk;
-}
-
-/**
- * Described in header.
- */
 chunk_t chunk_create_clone(u_char *ptr, chunk_t chunk)
 {
 	chunk_t clone = chunk_empty;
@@ -439,39 +430,6 @@ chunk_t chunk_from_base64(chunk_t base64, char *buf)
 /**
  * Described in header.
  */
-void chunk_free(chunk_t *chunk)
-{
-	free(chunk->ptr);
-	chunk->ptr = NULL;
-	chunk->len = 0;
-}
-
-/**
- * Described in header.
- */
-void chunk_clear(chunk_t *chunk)
-{
-	memset(chunk->ptr, 0, chunk->len);
-	chunk_free(chunk);
-}
-
-/**
- * Described in header.
- */
-chunk_t chunk_skip(chunk_t chunk, size_t bytes)
-{
-	if (chunk.len > bytes)
-	{
-		chunk.ptr += bytes;
-		chunk.len -= bytes;
-		return chunk;
-	}
-	return chunk_empty;
-}
-
-/**
- * Described in header.
- */
 int chunk_compare(chunk_t a, chunk_t b)
 {
 	int compare_len = a.len - b.len;
@@ -483,15 +441,6 @@ int chunk_compare(chunk_t a, chunk_t b)
 	}
 	return memcmp(a.ptr, b.ptr, len);
 };
-
-/**
- * Described in header.
- */
-bool chunk_equals(chunk_t a, chunk_t b)
-{
-	return a.ptr != NULL  && b.ptr != NULL &&
-			a.len == b.len && memeq(a.ptr, b.ptr, a.len);
-}
 
 /**
  * Described in header.
