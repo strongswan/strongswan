@@ -382,6 +382,11 @@ receiver_t *receiver_create()
 									"charon.cookie_threshold", COOKIE_THRESHOLD_DEFAULT);
 	this->block_threshold = lib->settings->get_int(lib->settings,
 									"charon.block_threshold", BLOCK_THRESHOLD_DEFAULT);
+	if (!lib->settings->get_bool(lib->settings, "charon.dos_protection", TRUE))
+	{
+		this->cookie_threshold = 0;
+		this->block_threshold = 0;
+	}
 
 	this->job = callback_job_create((callback_job_cb_t)receive_packets,
 									this, NULL, NULL);
