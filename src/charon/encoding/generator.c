@@ -56,125 +56,6 @@ struct private_generator_t {
 	 * Public part of a generator_t object.
 	 */
 	 generator_t public;
-	 
-	/**
-	 * Generates a U_INT-Field type and writes it to buffer.
-	 *
-	 * @param this 					private_generator_t object
-	 * @param int_type 				type of U_INT field (U_INT_4, U_INT_8, etc.)
-	 * 								ATTRIBUTE_TYPE is also generated in this function
-	 * @param offset 				offset of value in data struct
-	 * @param generator_contexts	generator_contexts_t object where the context is written or read from
-	 * @return
-	 *  							- SUCCESS
-	 * 								- FAILED if allignment is wrong
-	 */
-	void (*generate_u_int_type) (private_generator_t *this,encoding_type_t int_type,u_int32_t offset);
-
-	/**
-	 * Get size of current buffer in bytes.
-	 *
-	 * @param this 					private_generator_t object
-	 * @return 						Size of buffer in bytes
-	 */
-	size_t (*get_current_buffer_size) (private_generator_t *this);
-	
-	/**
-	 * Get free space of current buffer in bytes.
-	 *
-	 * @param this 					private_generator_t object
-	 * @return 						space in buffer in bytes
-	 */
-	size_t (*get_current_buffer_space) (private_generator_t *this);
-
-	/**
-	 * Get length of data in buffer (in bytes).
-	 *
-	 * @param this 					private_generator_t object
-	 * @return 						length of data in bytes
-	 */	
-	size_t (*get_current_data_length) (private_generator_t *this);
-
-	/**
-	 * Get current offset in buffer (in bytes).
-	 *
-	 * @param this 					private_generator_t object
-	 * @return 						offset in bytes
-	 */	
-	u_int32_t (*get_current_buffer_offset) (private_generator_t *this);
-	
-	/**
-	 * Generates a RESERVED BIT field or a RESERVED BYTE field and writes 
-	 * it to the buffer.
-	 *
-	 * @param this 					private_generator_t object
-	 * @param generator_contexts	generator_contexts_t object where the context is written or read from
-	 * @param bits 					number of bits to generate
-	 */
-	void (*generate_reserved_field) (private_generator_t *this,int bits);
-	
-	/**
-	 * Generates a FLAG field.
-	 *
-	 * @param this 					private_generator_t object
-	 * @param generator_contexts	generator_contexts_t object where the context is written or read from
-	 * @param offset				offset of flag value in data struct
-	 */
-	void (*generate_flag) (private_generator_t *this,u_int32_t offset);
-	
-	/**
-	 * Writes the current buffer content into a chunk_t.
-	 * 
-	 * Memory of specific chunk_t gets allocated.
-	 *
- 	 * @param this				calling private_generator_t object
-	 * @param data				pointer of chunk_t to write to
-	 */
-	void (*write_chunk) (private_generator_t *this,chunk_t *data);
-	
-	/**
-	 * Generates a bytestream from a chunk_t.
-	 *
-	 * @param this 				private_generator_t object
-	 * @param offset			offset of chunk_t value in data struct
-	 */
-	void (*generate_from_chunk) (private_generator_t *this,u_int32_t offset);	
-
-	/**
-	 * Makes sure enough space is available in buffer to store amount of bits.
-     *
-	 * If buffer is to small to hold the specific amount of bits it 
-	 * is increased using reallocation function of allocator.
-	 *
- 	 * @param this 				calling private_generator_t object
-	 * @param bits 				number of bits to make available in buffer
-	 */
-	void (*make_space_available) (private_generator_t *this,size_t bits);
-
-	/**
-	 * Writes a specific amount of byte into the buffer.
-	 * 
-	 * If buffer is to small to hold the specific amount of bytes it 
-	 * is increased.
-	 *
- 	 * @param this				calling private_generator_t object
-	 * @param bytes 			pointer to bytes to write
-	 * @param number_of_bytes	number of bytes to write into buffer
-	 */
-	void (*write_bytes_to_buffer) (private_generator_t *this,void * bytes,size_t number_of_bytes);
-	
-	
-	/**
-	 * Writes a specific amount of byte into the buffer at a specific offset.
-	 * 
-	 * @warning buffer size is not check to hold the data if offset is to large.
-	 *
- 	 * @param this				calling private_generator_t object
-	 * @param bytes 			pointer to bytes to write
-	 * @param number_of_bytes	number of bytes to write into buffer
-	 * @param offset			offset to write the data into
-	 */
-	void (*write_bytes_to_buffer_at_offset) (private_generator_t *this,void * bytes,size_t number_of_bytes,u_int32_t offset);
 	
 	/**
 	 * Buffer used to generate the data into.
@@ -232,43 +113,116 @@ struct private_generator_t {
 };
 
 /**
- * Implementation of private_generator_t.get_current_buffer_size.
+ * Get size of current buffer in bytes.
  */
-static size_t get_current_buffer_size (private_generator_t *this)
+static size_t get_current_buffer_size(private_generator_t *this)
 {
-	return ((this->roof_position) - (this->buffer));
+	return this->roof_position - this->buffer;
 }
 
 /**
- * Implementation of private_generator_t.get_current_buffer_space.
+ * Get free space of current buffer in bytes.
  */
-static size_t get_current_buffer_space (private_generator_t *this)
+static size_t get_current_buffer_space(private_generator_t *this)
 {
-	/* we know, one byte more */
-	size_t space = (this->roof_position) - (this->out_position);
-	return (space);
+	return this->roof_position - this->out_position;
 }
 
 /**
- * Implementation of private_generator_t.get_current_data_length.
+ * Get length of data in buffer (in bytes).
  */
-static size_t get_current_data_length (private_generator_t *this)
+static size_t get_current_data_length(private_generator_t *this)
 {
-	return (this->out_position - this->buffer);
+	return this->out_position - this->buffer;
 }
 
 /**
- * Implementation of private_generator_t.get_current_buffer_offset.
+ * Get current offset in buffer (in bytes).
  */
-static u_int32_t get_current_buffer_offset (private_generator_t *this)
+static u_int32_t get_current_buffer_offset(private_generator_t *this)
 {
-	return (this->out_position - this->buffer);
+	return this->out_position - this->buffer;
 }
 
 /**
- * Implementation of private_generator_t.generate_u_int_type.
+ * Makes sure enough space is available in buffer to store amount of bits.
  */
-static void generate_u_int_type (private_generator_t *this,encoding_type_t int_type,u_int32_t offset)
+static void make_space_available (private_generator_t *this, size_t bits)
+{
+	while ((get_current_buffer_space(this) * 8 - this->current_bit) < bits)
+	{
+		/* must increase buffer */
+		size_t old_buffer_size = get_current_buffer_size(this);
+		size_t new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
+		size_t out_position_offset = ((this->out_position) - (this->buffer));
+
+		DBG2(DBG_ENC, "increased gen buffer from %d to %d byte", 
+			 old_buffer_size, new_buffer_size);
+		
+		/* Reallocate space for new buffer */
+		this->buffer = realloc(this->buffer,new_buffer_size);
+
+		this->out_position = (this->buffer + out_position_offset);
+		this->roof_position = (this->buffer + new_buffer_size);
+	}
+}
+
+/**
+ * Writes a specific amount of byte into the buffer.
+ */
+static void write_bytes_to_buffer(private_generator_t *this, void * bytes,
+								  size_t number_of_bytes)
+{
+	int i;
+	u_int8_t *read_position = (u_int8_t *) bytes;
+	
+	make_space_available(this, number_of_bytes * 8);
+	
+	for (i = 0; i < number_of_bytes; i++)
+	{
+		*(this->out_position) = *(read_position);
+		read_position++;
+		this->out_position++;
+	}
+}
+
+/**
+ * Writes a specific amount of byte into the buffer at a specific offset.
+ */
+static void write_bytes_to_buffer_at_offset (private_generator_t *this,
+						void *bytes, size_t number_of_bytes, u_int32_t offset)
+{
+	int i;
+	u_int8_t *read_position = (u_int8_t *) bytes;
+	u_int8_t *write_position;
+	u_int32_t free_space_after_offset = get_current_buffer_size(this) - offset;
+
+	/* check first if enough space for new data is available */	
+	if (number_of_bytes > free_space_after_offset)
+	{
+		make_space_available(this, (number_of_bytes - free_space_after_offset) * 8);
+	}
+	
+	write_position = this->buffer + offset;
+	for (i = 0; i < number_of_bytes; i++)
+	{
+		*write_position = *read_position;
+		read_position++;
+		write_position++;
+	}
+}
+
+/**
+ * Generates a U_INT-Field type and writes it to buffer.
+ *
+ * @param this 					private_generator_t object
+ * @param int_type 				type of U_INT field (U_INT_4, U_INT_8, etc.)
+ * 								ATTRIBUTE_TYPE is also generated in this function
+ * @param offset 				offset of value in data struct
+ * @param generator_contexts	generator_contexts_t object where the context is written or read from
+ */
+static void generate_u_int_type(private_generator_t *this,
+								encoding_type_t int_type,u_int32_t offset)
 {
 	size_t number_of_bits = 0;
 
@@ -316,7 +270,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 	}
 	
 	/* make sure enough space is available in buffer */
-	this->make_space_available(this,number_of_bits);
+	make_space_available(this, number_of_bits);
 	/* now handle each u int type differently */
 	switch (int_type)
 	{
@@ -386,7 +340,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			int16_val = htons(int16_val);
 			DBG3(DBG_ENC, "   => %d", int16_val);
 			/* write bytes to buffer (set bit is overwritten)*/				
-			this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
+			write_bytes_to_buffer(this, &int16_val, sizeof(u_int16_t));
 			this->current_bit = 0;
 			break;
 			
@@ -396,14 +350,14 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 		{
 			u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
 			DBG3(DBG_ENC, "   => %b", (void*)&int16_val, sizeof(int16_val));
-			this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
+			write_bytes_to_buffer(this, &int16_val, sizeof(u_int16_t));
 			break;
 		}
 		case U_INT_32:
 		{
 			u_int32_t int32_val = htonl(*((u_int32_t*)(this->data_struct + offset)));
 			DBG3(DBG_ENC, "   => %b", (void*)&int32_val, sizeof(int32_val));
-			this->write_bytes_to_buffer(this,&int32_val,sizeof(u_int32_t));
+			write_bytes_to_buffer(this, &int32_val, sizeof(u_int32_t));
 			break;
 		}
 		case U_INT_64:
@@ -415,15 +369,15 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 				 (void*)&int32_val_low, sizeof(int32_val_low),
 				 (void*)&int32_val_high, sizeof(int32_val_high));
 			/* TODO add support for big endian machines */
-			this->write_bytes_to_buffer(this,&int32_val_high,sizeof(u_int32_t));
-			this->write_bytes_to_buffer(this,&int32_val_low,sizeof(u_int32_t));
+			write_bytes_to_buffer(this, &int32_val_high, sizeof(u_int32_t));
+			write_bytes_to_buffer(this, &int32_val_low, sizeof(u_int32_t));
 			break;
 		}
 		
 		case IKE_SPI:
 		{
 			/* 64 bit are written as they come :-) */
-			this->write_bytes_to_buffer(this,(this->data_struct + offset),sizeof(u_int64_t));
+			write_bytes_to_buffer(this, this->data_struct + offset, sizeof(u_int64_t));
 			DBG3(DBG_ENC, "   => %b", (void*)(this->data_struct + offset), sizeof(u_int64_t));
 			break;
 		}
@@ -437,9 +391,9 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 }
 
 /**
- * Implementation of private_generator_t.generate_reserved_field.
+ * Generate a reserved bit or byte
  */
-static void generate_reserved_field(private_generator_t *this,int bits)
+static void generate_reserved_field(private_generator_t *this, int bits)
 {
 	/* only one bit or 8 bit fields are supported */
 	if ((bits != 1) && (bits != 8))
@@ -448,7 +402,7 @@ static void generate_reserved_field(private_generator_t *this,int bits)
 		return ;
 	}
 	/* make sure enough space is available in buffer */
-	this->make_space_available(this,bits);
+	make_space_available(this, bits);
 	
 	if (bits == 1)
 	{	
@@ -460,8 +414,6 @@ static void generate_reserved_field(private_generator_t *this,int bits)
 			/* memory must be zero */
 			*(this->out_position) = 0x00;
 		}
-
-
 		this->current_bit++;
 		if (this->current_bit >= 8)
 		{
@@ -484,9 +436,9 @@ static void generate_reserved_field(private_generator_t *this,int bits)
 }
 
 /**
- * Implementation of private_generator_t.generate_flag.
+ * Generate a FLAG filed
  */
-static void generate_flag (private_generator_t *this,u_int32_t offset)
+static void generate_flag(private_generator_t *this, u_int32_t offset)
 {
 	/* value of current flag */
 	u_int8_t flag_value;
@@ -499,7 +451,7 @@ static void generate_flag (private_generator_t *this,u_int32_t offset)
 	flag = (flag_value << (7 - this->current_bit));
 	
 	/* make sure one bit is available in buffer */
-	this->make_space_available(this,1);
+	make_space_available(this, 1);
 	if (this->current_bit == 0)
 	{
 		/* memory must be zero */
@@ -520,9 +472,9 @@ static void generate_flag (private_generator_t *this,u_int32_t offset)
 }
 
 /**
- * Implementation of private_generator_t.generate_from_chunk.
+ * Generates a bytestream from a chunk_t.
  */
-static void generate_from_chunk (private_generator_t *this,u_int32_t offset)
+static void generate_from_chunk(private_generator_t *this, u_int32_t offset)
 {
 	if (this->current_bit != 0)
 	{
@@ -536,73 +488,7 @@ static void generate_from_chunk (private_generator_t *this,u_int32_t offset)
 	DBG3(DBG_ENC, "   => %B", attribute_value);
 	
 	/* use write_bytes_to_buffer function to do the job */
-	this->write_bytes_to_buffer(this,attribute_value->ptr,attribute_value->len);
-}
-
-/**
- * Implementation of private_generator_t.make_space_available.
- */
-static void make_space_available (private_generator_t *this, size_t bits)
-{
-	while (((this->get_current_buffer_space(this) * 8) - this->current_bit) < bits)
-	{
-		/* must increase buffer */
-		size_t old_buffer_size = this->get_current_buffer_size(this);
-		size_t new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
-		size_t out_position_offset = ((this->out_position) - (this->buffer));
-
-		DBG2(DBG_ENC, "increased gen buffer from %d to %d byte", 
-			 old_buffer_size, new_buffer_size);
-		
-		/* Reallocate space for new buffer */
-		this->buffer = realloc(this->buffer,new_buffer_size);
-
-		this->out_position = (this->buffer + out_position_offset);
-		this->roof_position = (this->buffer + new_buffer_size);
-	}
-}
-
-/**
- * Implementation of private_generator_t.write_bytes_to_buffer.
- */
-static void write_bytes_to_buffer (private_generator_t *this,void * bytes, size_t number_of_bytes)
-{
-	int i;
-	u_int8_t *read_position = (u_int8_t *) bytes;
-	
-	this->make_space_available(this,number_of_bytes * 8);
-
-	for (i = 0; i < number_of_bytes; i++)
-	{
-		*(this->out_position) = *(read_position);
-		read_position++;
-		this->out_position++;
-	}
-}
-
-/**
- * Implementation of private_generator_t.write_bytes_to_buffer_at_offset.
- */
-static void write_bytes_to_buffer_at_offset (private_generator_t *this,void * bytes,size_t number_of_bytes,u_int32_t offset)
-{
-	int i;
-	u_int8_t *read_position = (u_int8_t *) bytes;
-	u_int8_t *write_position;
-	u_int32_t free_space_after_offset = (this->get_current_buffer_size(this) - offset);
-
-	/* check first if enough space for new data is available */	
-	if (number_of_bytes > free_space_after_offset)
-	{
-		this->make_space_available(this,(number_of_bytes - free_space_after_offset) * 8);
-	}
-	
-	write_position = this->buffer + offset;
-	for (i = 0; i < number_of_bytes; i++)
-	{
-		*(write_position) = *(read_position);
-		read_position++;
-		write_position++;
-	}
+	write_bytes_to_buffer(this, attribute_value->ptr, attribute_value->len);
 }
 
 /**
@@ -610,14 +496,15 @@ static void write_bytes_to_buffer_at_offset (private_generator_t *this,void * by
  */
 static void write_to_chunk (private_generator_t *this,chunk_t *data)
 {
-	size_t data_length = this->get_current_data_length(this);
+	size_t data_length = get_current_data_length(this);
 	u_int32_t header_length_field = data_length;
 	
 	/* write length into header length field */
 	if (this->header_length_position_offset > 0)
 	{
 		u_int32_t int32_val = htonl(header_length_field);
-		this->write_bytes_to_buffer_at_offset(this,&int32_val,sizeof(u_int32_t),this->header_length_position_offset);
+		write_bytes_to_buffer_at_offset(this, &int32_val, sizeof(u_int32_t),
+										this->header_length_position_offset);
 	}
 
 	if (this->current_bit > 0)
@@ -660,7 +547,6 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			 i, encoding_type_names, rules[i].type);
 		switch (rules[i].type)
 		{
-			/* all u int values, IKE_SPI,TS_TYPE and ATTRIBUTE_TYPE are generated in generate_u_int_type */
 			case U_INT_4:
 			case U_INT_8:
 			case U_INT_16:
@@ -671,56 +557,56 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			case ATTRIBUTE_TYPE:
 			case CONFIGURATION_ATTRIBUTE_LENGTH:
 			{
-				this->generate_u_int_type(this,rules[i].type,rules[i].offset);
+				generate_u_int_type(this, rules[i].type,rules[i].offset);
 				break;
 			}
 			case RESERVED_BIT:
 			{
-				this->generate_reserved_field(this,1);
+				generate_reserved_field(this, 1);
 				break;
 			}
 			case RESERVED_BYTE:
 			{
-				this->generate_reserved_field(this,8);
+				generate_reserved_field(this, 8);
 				break;
 			} 
 			case FLAG:
 			{
-				this->generate_flag(this,rules[i].offset);
+				generate_flag(this, rules[i].offset);
 				break;
 			}
 			case PAYLOAD_LENGTH:
 			{
 				/* position of payload lenght field is temporary stored */
-				this->last_payload_length_position_offset = this->get_current_buffer_offset(this);
+				this->last_payload_length_position_offset = get_current_buffer_offset(this);
 				/* payload length is generated like an U_INT_16 */
-				this->generate_u_int_type(this,U_INT_16,rules[i].offset);
+				generate_u_int_type(this, U_INT_16,rules[i].offset);
 				break;
 			}
 			case HEADER_LENGTH:
 			{
 				/* position of header length field is temporary stored */			
-				this->header_length_position_offset = this->get_current_buffer_offset(this);	
+				this->header_length_position_offset = get_current_buffer_offset(this);	
 				/* header length is generated like an U_INT_32 */
-				this->generate_u_int_type(this,U_INT_32,rules[i].offset);
+				generate_u_int_type(this ,U_INT_32, rules[i].offset);
 				break;
 			}
 			case SPI_SIZE:
 				/* spi size is handled as 8 bit unsigned integer */
-				this->generate_u_int_type(this,U_INT_8,rules[i].offset);
+				generate_u_int_type(this, U_INT_8, rules[i].offset);
 				/* last spi size is temporary stored */
 				this->last_spi_size = *((u_int8_t *)(this->data_struct + rules[i].offset));
 				break;
 			case ADDRESS:
 			{
 				/* the Address value is generated from chunk */
-				this->generate_from_chunk(this,rules[i].offset);
+				generate_from_chunk(this, rules[i].offset);
 				break;
 			}
 			case SPI:
 			{
 				/* the SPI value is generated from chunk */
-				this->generate_from_chunk(this,rules[i].offset);
+				generate_from_chunk(this, rules[i].offset);
 				break;
 			}
 			case KEY_EXCHANGE_DATA:
@@ -780,16 +666,17 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				}
 				
 				/* the data value is generated from chunk */
-				this->generate_from_chunk(this,rules[i].offset);
-
+				generate_from_chunk(this, rules[i].offset);
+				
 				payload_length_position_offset = this->last_payload_length_position_offset;
 				
 				
 				/* Length of payload is calculated */
 				length_of_payload = header_length + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
-
+				
 				length_in_network_order = htons(length_of_payload);			
-				this->write_bytes_to_buffer_at_offset(this,&length_in_network_order,sizeof(u_int16_t),payload_length_position_offset);
+				write_bytes_to_buffer_at_offset(this, &length_in_network_order,
+							sizeof(u_int16_t),payload_length_position_offset);
 				break;
 			}
 			case PROPOSALS:
@@ -812,9 +699,9 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
 					
-					before_generate_position_offset = this->get_current_buffer_offset(this);
+					before_generate_position_offset = get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_proposal);
-					after_generate_position_offset = this->get_current_buffer_offset(this);
+					after_generate_position_offset = get_current_buffer_offset(this);
 					
 					/* increase size of transform */
 					length_of_sa_payload += (after_generate_position_offset - before_generate_position_offset);
@@ -822,7 +709,8 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				iterator->destroy(iterator);
 				
 				int16_val = htons(length_of_sa_payload);
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
+				write_bytes_to_buffer_at_offset(this, &int16_val,
+							sizeof(u_int16_t),payload_length_position_offset);
 				break;
 			}
 			case TRANSFORMS:
@@ -842,9 +730,9 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
 					
-					before_generate_position_offset = this->get_current_buffer_offset(this);
+					before_generate_position_offset = get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_transform);
-					after_generate_position_offset = this->get_current_buffer_offset(this);
+					after_generate_position_offset = get_current_buffer_offset(this);
 					
 					/* increase size of transform */
 					length_of_proposal += (after_generate_position_offset - before_generate_position_offset);
@@ -853,7 +741,8 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				iterator->destroy(iterator);
 				
 				int16_val = htons(length_of_proposal);
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
+				write_bytes_to_buffer_at_offset(this, &int16_val,
+							sizeof(u_int16_t), payload_length_position_offset);
 				
 				break;
 			}	
@@ -874,9 +763,9 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
 					
-					before_generate_position_offset = this->get_current_buffer_offset(this);
+					before_generate_position_offset = get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_attribute);
-					after_generate_position_offset = this->get_current_buffer_offset(this);
+					after_generate_position_offset = get_current_buffer_offset(this);
 					
 					/* increase size of transform */
 					length_of_transform += (after_generate_position_offset - before_generate_position_offset);
@@ -885,7 +774,8 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				iterator->destroy(iterator);
 				
 				int16_val = htons(length_of_transform);
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),transform_length_position_offset);
+				write_bytes_to_buffer_at_offset(this, &int16_val, 
+							sizeof(u_int16_t),transform_length_position_offset);
 				
 				break;
 			}
@@ -906,9 +796,9 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
 					
-					before_generate_position_offset = this->get_current_buffer_offset(this);
+					before_generate_position_offset = get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_attribute);
-					after_generate_position_offset = this->get_current_buffer_offset(this);
+					after_generate_position_offset = get_current_buffer_offset(this);
 					
 					/* increase size of transform */
 					length_of_configurations += (after_generate_position_offset - before_generate_position_offset);
@@ -917,13 +807,14 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				iterator->destroy(iterator);
 				
 				int16_val = htons(length_of_configurations);
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),configurations_length_position_offset);
+				write_bytes_to_buffer_at_offset(this, &int16_val, 
+					 sizeof(u_int16_t),configurations_length_position_offset);
 				
 				break;
 			}	
 			case ATTRIBUTE_FORMAT:
 			{
-				this->generate_flag(this,rules[i].offset);
+				generate_flag(this, rules[i].offset);
 				/* Attribute format is a flag which is stored in context*/
 				this->attribute_format = *((bool *) (this->data_struct + rules[i].offset));
 				break;
@@ -933,13 +824,13 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			{
 				if (this->attribute_format == FALSE)
 				{
-					this->generate_u_int_type(this,U_INT_16,rules[i].offset);
+					generate_u_int_type(this, U_INT_16, rules[i].offset);
 					/* this field hold the length of the attribute */
 					this->attribute_length = *((u_int16_t *)(this->data_struct + rules[i].offset));
 				}
 				else
 				{
-					this->generate_u_int_type(this,U_INT_16,rules[i].offset);
+					generate_u_int_type(this, U_INT_16, rules[i].offset);
 				}
 				break;
 			}
@@ -949,7 +840,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				{
 					DBG2(DBG_ENC, "attribute value has not fixed size");
 					/* the attribute value is generated */
-					this->generate_from_chunk(this,rules[i].offset);
+					generate_from_chunk(this, rules[i].offset);
 				}
 				break;
 			}
@@ -973,9 +864,9 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
 
-					before_generate_position_offset = this->get_current_buffer_offset(this);
+					before_generate_position_offset = get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_traffic_selector_substructure);
-					after_generate_position_offset = this->get_current_buffer_offset(this);
+					after_generate_position_offset = get_current_buffer_offset(this);
 					
 					/* increase size of transform */
 					length_of_ts_payload += (after_generate_position_offset - before_generate_position_offset);
@@ -983,13 +874,14 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				iterator->destroy(iterator);
 				
 				int16_val = htons(length_of_ts_payload);
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
+				write_bytes_to_buffer_at_offset(this, &int16_val,
+							sizeof(u_int16_t),payload_length_position_offset);
 				break;
 			}	
 			
 			case ENCRYPTED_DATA:
 			{
-				this->generate_from_chunk(this, rules[i].offset);
+				generate_from_chunk(this, rules[i].offset);
 				break;
 			}
 			default:
@@ -1028,24 +920,9 @@ generator_t *generator_create()
 	this->public.destroy = (void(*)(generator_t*)) destroy;
 	this->public.write_to_chunk = (void (*) (generator_t *,chunk_t *)) write_to_chunk;
 	
-	
-	/* initiate private functions */
-	this->get_current_buffer_size = get_current_buffer_size;
-	this->get_current_buffer_space = get_current_buffer_space;
-	this->get_current_data_length = get_current_data_length;
-	this->get_current_buffer_offset = get_current_buffer_offset;
-	this->generate_u_int_type = generate_u_int_type;
-	this->generate_reserved_field = generate_reserved_field;
-	this->generate_flag = generate_flag;
-	this->generate_from_chunk = generate_from_chunk;
-	this->make_space_available = make_space_available;
-	this->write_bytes_to_buffer = write_bytes_to_buffer;
-	this->write_bytes_to_buffer_at_offset = write_bytes_to_buffer_at_offset;
-
-
 	/* allocate memory for buffer */
 	this->buffer = malloc(GENERATOR_DATA_BUFFER_SIZE);
-
+	
 	/* initiate private variables */
 	this->out_position = this->buffer;
 	this->roof_position = this->buffer + GENERATOR_DATA_BUFFER_SIZE;
@@ -1053,6 +930,7 @@ generator_t *generator_create()
 	this->current_bit = 0;
 	this->last_payload_length_position_offset = 0;
 	this->header_length_position_offset = 0;
-
+	
 	return &(this->public);
 }
+
