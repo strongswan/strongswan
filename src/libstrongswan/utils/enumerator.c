@@ -268,7 +268,7 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 		}
 	}
 	
-	if (!last || pos > *token)
+	if (!last || pos >= *token)
 	{
 		return TRUE;
 	}

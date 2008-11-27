@@ -226,18 +226,24 @@ bool test_enumerate_token()
 		char *string;
 		char *sep;
 		char *trim;
-	} tests[] = {
+	} tests1[] = {
 		{"abc, cde, efg", ",", " "},
 		{" abc 1:2 cde;3  4efg5.  ", ":;.,", " 12345"},
 		{"abc.cde,efg", ",.", ""},
 		{"  abc   cde  efg  ", " ", " "},
+	}, tests2[] = {
+		{"a, b, c", ",", " "},
+		{"a,b,c", ",", " "},
+		{" a 1:2 b;3  4c5.  ", ":;.,", " 12345"},
+		{"a.b,c", ",.", ""},
+		{"  a   b  c  ", " ", " "},
 	};
 	
-	for (num = 0; num < countof(tests); num++)
+	for (num = 0; num < countof(tests1); num++)
 	{
 		i = 0;
-		enumerator = enumerator_create_token(
-							tests[num].string, tests[num].sep, tests[num].trim);
+		enumerator = enumerator_create_token(tests1[num].string,
+											 tests1[num].sep, tests1[num].trim);
 		while (enumerator->enumerate(enumerator, &token))
 		{
 			switch (i)
@@ -256,9 +262,43 @@ bool test_enumerate_token()
 			}
 			i++;
 		}
+		if (i != 3)
+		{
+			return FALSE;
+		}
 		enumerator->destroy(enumerator);
 	}
-
+	
+	for (num = 0; num < countof(tests2); num++)
+	{
+		i = 0;
+		enumerator = enumerator_create_token(tests2[num].string,
+											 tests2[num].sep, tests2[num].trim);
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			switch (i)
+			{
+				case 0:
+					if (!streq(token, "a")) return FALSE;
+					break;
+				case 1:
+					if (!streq(token, "b")) return FALSE;
+					break;
+				case 2:
+					if (!streq(token, "c")) return FALSE;
+					break;
+				default:
+					return FALSE;
+			}
+			i++;
+		}
+		if (i != 3)
+		{
+			return FALSE;
+		}
+		enumerator->destroy(enumerator);
+	}
+	
 	return TRUE;
 }
 
