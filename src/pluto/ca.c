@@ -33,6 +33,7 @@
 #include "certs.h"
 #include "whack.h"
 #include "fetch.h"
+#include "smartcard.h"
 
 /* chained list of X.509 authority certificates (ca, aa, and ocsp) */
 

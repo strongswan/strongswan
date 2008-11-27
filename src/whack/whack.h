@@ -19,7 +19,16 @@
 
 #include <freeswan.h>
 
-#include <smartcard.h>
+/* copy of smartcard operations, defined in smartcard.h */
+#ifndef SC_OP_T
+#define SC_OP_T
+typedef enum {
+    SC_OP_NONE =    0,
+    SC_OP_ENCRYPT = 1,
+    SC_OP_DECRYPT = 2,
+    SC_OP_SIGN =    3,
+} sc_op_t;
+#endif /* SC_OP_T */
 
 /* Since the message remains on one host, native representation is used.
  * Think of this as horizontal microcode: all selected operations are

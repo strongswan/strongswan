@@ -25,14 +25,17 @@
 #define SCX_CERT_CACHE_INTERVAL	  60 /* seconds */
 #define SCX_MAX_PIN_TRIALS	  3
 
-/* smartcard operations */
+/* smartcard operations, update copy in whack.h */
 
+#ifndef SC_OP_T
+#define SC_OP_T
 typedef enum {
     SC_OP_NONE =    0,
     SC_OP_ENCRYPT = 1,
     SC_OP_DECRYPT = 2,
     SC_OP_SIGN =    3,
 } sc_op_t;
+#endif /* SC_OP_T */
 
 /* smartcard record */
 
