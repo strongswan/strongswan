@@ -68,8 +68,8 @@ rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 _pluto_adns_SOURCES = adns.c adns.h
 
 LIBSTRONGSWANDIR=$(top_srcdir)/src/libstrongswan
-LIBFREESWANDIR=$(top_srcdir)/src/libfreeswan
-LIBCRYPTODIR=$(top_srcdir)/src/libcrypto
+LIBFREESWANDIR=$(top_builddir)/src/libfreeswan
+LIBCRYPTODIR=$(top_builddir)/src/libcrypto
 
 
 INCLUDES = \
