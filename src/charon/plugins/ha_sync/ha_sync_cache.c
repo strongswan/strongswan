@@ -19,6 +19,13 @@
 
 #include <utils/linked_list.h>
 
+typedef u_int32_t u32;
+typedef u_int8_t u8;
+
+#include <linux/jhash.h>
+
+#define MAX_SEGMENTS 16
+
 typedef struct private_ha_sync_cache_t private_ha_sync_cache_t;
 
 /**
@@ -35,6 +42,21 @@ struct private_ha_sync_cache_t {
 	 * Linked list of IKE_SAs, ike_sa_t
 	 */
 	linked_list_t *list;
+
+	/**
+	 * Init value for jhash
+	 */
+	u_int initval;
+
+	/**
+	 * Total number of ClusterIP segments
+	 */
+	u_int segment_count;
+
+	/**
+	 * mask of active segments
+	 */
+	u_int16_t active;
 };
 
 /**
@@ -108,18 +130,98 @@ static void delete_ike_sa(private_ha_sync_cache_t *this, ike_sa_id_t *id)
 }
 
 /**
- * Implementation of ha_sync_cache_t.activate_segment
+ * Check if a host address is in the CLUSTERIP segment
  */
-static void activate_segment(private_ha_sync_cache_t *this, u_int segment)
+static bool in_segment(private_ha_sync_cache_t *this,
+					   host_t *host, u_int segment)
+{
+	if (host->get_family(host) == AF_INET)
+	{
+		unsigned long hash;
+		u_int32_t addr;
+
+		addr = *(u_int32_t*)host->get_address(host).ptr;
+		hash = jhash_1word(ntohl(addr), this->initval);
+
+		if ((((u_int64_t)hash * this->segment_count) >> 32) + 1 == segment)
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Log currently active segments
+ */
+static void log_segments(private_ha_sync_cache_t *this, bool activated,
+						 u_int segment)
+{
+	char buf[64], *pos = buf;
+	int i;
+	bool first = TRUE;
+
+	for (i = 0; i < this->segment_count; i++)
+	{
+		if (this->active & 0x01 << i)
+		{
+			if (first)
+			{
+				first = FALSE;
+			}
+			else
+			{
+				pos += snprintf(pos, buf + sizeof(buf) - pos, ",");
+			}
+			pos += snprintf(pos, buf + sizeof(buf) - pos, "%d", i+1);
+		}
+	}
+	DBG1(DBG_CFG, "HA sync segments %d %sactivated, now active: %s",
+		 segment, activated ? "" : "de", buf);
+}
+
+/**
+ * Implementation of ha_sync_cache_t.activate
+ */
+static void activate(private_ha_sync_cache_t *this, u_int segment)
 {
 	ike_sa_t *ike_sa;
+	enumerator_t *enumerator;
+	u_int16_t mask = 0x01 << (segment - 1);
 
-	/* TODO: activate only segment, not all */
-	while (this->list->remove_last(this->list, (void**)&ike_sa) == SUCCESS)
+	DBG1(DBG_CFG, "activating segment %d", segment);
+
+	if (segment > 0 && segment <= this->segment_count && !(this->active & mask))
 	{
-		/* TODO: fix checkin of inexisting IKE_SA in manager */
-		/* TODO: do not activate SAs not in state CONNECTING */
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		this->active |= mask;
+
+		enumerator = this->list->create_enumerator(this->list);
+		while (enumerator->enumerate(enumerator, &ike_sa))
+		{
+			if (ike_sa->get_state(ike_sa) == IKE_CONNECTING &&
+				in_segment(this, ike_sa->get_other_host(ike_sa), segment))
+			{
+				this->list->remove_at(this->list, enumerator);
+				ike_sa->set_state(ike_Sa, IKE_ESTABLISHED);
+				charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+			}
+		}
+		enumerator->destroy(enumerator);
+		log_segments(this, TRUE, segment);
+	}
+}
+
+/**
+ * Implementation of ha_sync_cache_t.deactivate
+ */
+static void deactivate(private_ha_sync_cache_t *this, u_int segment)
+{
+	u_int16_t mask = 0x01 << (segment - 1);
+
+	if (segment > 0 && segment <= this->segment_count && (this->active & mask))
+	{
+		this->active &= ~mask;
+		log_segments(this, FALSE, segment);
 	}
 }
 
@@ -138,14 +240,35 @@ static void destroy(private_ha_sync_cache_t *this)
 ha_sync_cache_t *ha_sync_cache_create()
 {
 	private_ha_sync_cache_t *this = malloc_thing(private_ha_sync_cache_t);
+	enumerator_t *enumerator;
+	u_int segment;
+	char *str;
 
 	this->public.get_ike_sa = (ike_sa_t*(*)(ha_sync_cache_t*, ike_sa_id_t *id))get_ike_sa;
 	this->public.has_ike_sa = (bool(*)(ha_sync_cache_t*, ike_sa_id_t *id))has_ike_sa;
 	this->public.delete_ike_sa = (void(*)(ha_sync_cache_t*, ike_sa_id_t *id))delete_ike_sa;
-	this->public.activate_segment = (void(*)(ha_sync_cache_t*, u_int segment))activate_segment;
+	this->public.activate = (void(*)(ha_sync_cache_t*, u_int segment))activate;
+	this->public.deactivate = (void(*)(ha_sync_cache_t*, u_int segment))deactivate;
 	this->public.destroy = (void(*)(ha_sync_cache_t*))destroy;
 
 	this->list = linked_list_create();
+	this->initval = 0;
+	this->active = 0;
+	this->segment_count = lib->settings->get_int(lib->settings,
+								"charon.plugins.ha_sync.segment_count", 1);
+	this->segment_count = min(this->segment_count, MAX_SEGMENTS);
+	str = lib->settings->get_str(lib->settings,
+								"charon.plugins.ha_sync.active_segments", "1");
+	enumerator = enumerator_create_token(str, ",", " ");
+	while (enumerator->enumerate(enumerator, &str))
+	{
+		segment = atoi(str);
+		if (segment && segment < MAX_SEGMENTS)
+		{
+			this->active |= 0x01 << (segment - 1);
+		}
+	}
+	enumerator->destroy(enumerator);
 
 	return &this->public;
 }

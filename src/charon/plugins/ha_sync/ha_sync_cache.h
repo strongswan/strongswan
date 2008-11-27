@@ -66,7 +66,14 @@ struct ha_sync_cache_t {
 	 *
 	 * @param segment	numerical segment to takeover
 	 */
-	void (*activate_segment)(ha_sync_cache_t *this, u_int segment);
+	void (*activate)(ha_sync_cache_t *this, u_int segment);
+
+	/**
+	 * Deactivate a set of IKE_SAs identified by a segment.
+	 *
+	 * @param segment	numerical segment to takeover
+	 */
+	void (*deactivate)(ha_sync_cache_t *this, u_int segment);
 
 	/**
 	 * Destroy a ha_sync_cache_t.
