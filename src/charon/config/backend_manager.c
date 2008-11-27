@@ -43,9 +43,9 @@ struct private_backend_manager_t {
 	linked_list_t *backends;
 	
 	/**
-	 * locking mutex
+	 * rwlock for backends
 	 */
-	mutex_t *mutex;
+	rwlock_t *lock;
 };
 
 /**
@@ -81,7 +81,7 @@ typedef struct {
  */
 static void ike_enum_destroy(ike_data_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	data->this->lock->unlock(data->this->lock);
 	free(data);
 }
 
@@ -90,7 +90,7 @@ static void ike_enum_destroy(ike_data_t *data)
  */
 static void peer_enum_destroy(peer_data_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	data->this->lock->unlock(data->this->lock);
 	free(data);
 }
 
@@ -177,7 +177,7 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 	
 	DBG2(DBG_CFG, "looking for an ike config for %H...%H", me, other);
 	
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = enumerator_create_nested(
 						this->backends->create_enumerator(this->backends),
 						(void*)ike_enum_create, data, (void*)ike_enum_destroy);
@@ -200,7 +200,7 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	if (found)
 	{
 		DBG2(DBG_CFG, "found matching ike config: %s...%s with prio %d", 
@@ -212,11 +212,11 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 
 static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(
 							this->backends->create_enumerator(this->backends),
-							(void*)peer_enum_create_all, this->mutex,
-							(void*)this->mutex->unlock);
+							(void*)peer_enum_create_all, this->lock,
+							(void*)this->lock->unlock);
 }
 
 /**
@@ -240,7 +240,7 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 	data->me = my_id;
 	data->other = other_id;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = enumerator_create_nested(
 						this->backends->create_enumerator(this->backends),
 						(void*)peer_enum_create, data, (void*)peer_enum_destroy);
@@ -287,7 +287,7 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 			 found->get_other_id(found), best_peer, best_ike);
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return found;
 }
 
@@ -300,14 +300,14 @@ static peer_cfg_t *get_peer_cfg_by_name(private_backend_manager_t *this, char *n
 	peer_cfg_t *config = NULL;
 	enumerator_t *enumerator;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = this->backends->create_enumerator(this->backends);
 	while (config == NULL && enumerator->enumerate(enumerator, (void**)&backend))
 	{
 		config = backend->get_peer_cfg_by_name(backend, name);
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return config;
 }
 
@@ -316,9 +316,9 @@ static peer_cfg_t *get_peer_cfg_by_name(private_backend_manager_t *this, char *n
  */
 static void remove_backend(private_backend_manager_t *this, backend_t *backend)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	this->backends->remove(this->backends, backend, NULL);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -326,9 +326,9 @@ static void remove_backend(private_backend_manager_t *this, backend_t *backend)
  */
 static void add_backend(private_backend_manager_t *this, backend_t *backend)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	this->backends->insert_last(this->backends, backend);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -337,7 +337,7 @@ static void add_backend(private_backend_manager_t *this, backend_t *backend)
 static void destroy(private_backend_manager_t *this)
 {
 	this->backends->destroy(this->backends);
-	this->mutex->destroy(this->mutex);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -357,7 +357,7 @@ backend_manager_t *backend_manager_create()
 	this->public.destroy = (void (*)(backend_manager_t*))destroy;
 	
 	this->backends = linked_list_create();
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	this->lock = rwlock_create(RWLOCK_DEFAULT);
 	
 	return &this->public;
 }
