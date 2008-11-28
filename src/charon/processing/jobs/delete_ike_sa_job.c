@@ -63,6 +63,11 @@ static void execute(private_delete_ike_sa_job_t *this)
 											  this->ike_sa_id);
 	if (ike_sa)
 	{
+		if (ike_sa->get_state(ike_sa) == IKE_PASSIVE)
+		{
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+			return destroy(this);
+		}
 		if (this->delete_if_established)
 		{
 			if (ike_sa->delete(ike_sa) == DESTROY_ME)
