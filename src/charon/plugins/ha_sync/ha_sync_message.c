@@ -219,6 +219,7 @@ static void add_attribute(private_ha_sync_message_t *this,
 		}
 		/* u_int16_t */
 		case HA_SYNC_ALG_PRF:
+		case HA_SYNC_ALG_OLD_PRF:
 		case HA_SYNC_ALG_ENCR:
 		case HA_SYNC_ALG_ENCR_LEN:
 		case HA_SYNC_ALG_INTEG:
@@ -251,6 +252,7 @@ static void add_attribute(private_ha_sync_message_t *this,
 		case HA_SYNC_NONCE_I:
 		case HA_SYNC_NONCE_R:
 		case HA_SYNC_SECRET:
+		case HA_SYNC_OLD_SKD:
 		{
 			chunk_t chunk;
 
@@ -430,6 +432,7 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 		}
 		/** u_int16_t */
 		case HA_SYNC_ALG_PRF:
+		case HA_SYNC_ALG_OLD_PRF:
 		case HA_SYNC_ALG_ENCR:
 		case HA_SYNC_ALG_ENCR_LEN:
 		case HA_SYNC_ALG_INTEG:
@@ -464,6 +467,7 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 		case HA_SYNC_NONCE_I:
 		case HA_SYNC_NONCE_R:
 		case HA_SYNC_SECRET:
+		case HA_SYNC_OLD_SKD:
 		{
 			size_t len;
 

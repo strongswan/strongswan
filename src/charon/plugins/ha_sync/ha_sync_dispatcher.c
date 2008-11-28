@@ -66,9 +66,10 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 	ha_sync_message_attribute_t attribute;
 	ha_sync_message_value_t value;
 	enumerator_t *enumerator;
-	ike_sa_t *ike_sa = NULL;
-	u_int16_t encr = 0, len = 0, integ = 0, prf = 0;
-	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty, secret = chunk_empty;
+	ike_sa_t *ike_sa = NULL, *old_sa = NULL;
+	u_int16_t encr = 0, len = 0, integ = 0, prf = 0, old_prf = PRF_UNDEFINED;
+	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty;
+	chunk_t secret = chunk_empty, old_skd = chunk_empty;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -83,7 +84,7 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 					 ike_sa);
 				break;
 			case HA_SYNC_IKE_REKEY_ID:
-				DBG1(DBG_IKE, "TODO: rekey HA sync");
+				old_sa = this->cache->get_ike_sa(this->cache, value.ike_sa_id);
 				break;
 			case HA_SYNC_NONCE_I:
 				nonce_i = value.chunk;
@@ -93,6 +94,9 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 				break;
 			case HA_SYNC_SECRET:
 				secret = value.chunk;
+				break;
+			case HA_SYNC_OLD_SKD:
+				old_skd = value.chunk;
 				break;
 			case HA_SYNC_ALG_ENCR:
 				encr = value.u16;
@@ -106,12 +110,14 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 			case HA_SYNC_ALG_PRF:
 				prf = value.u16;
 				break;
+			case HA_SYNC_ALG_OLD_PRF:
+				old_prf = value.u16;
+				break;
 			default:
 				break;
 		}
 	}
 	enumerator->destroy(enumerator);
-
 
 	if (ike_sa)
 	{
@@ -137,12 +143,18 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 		}
 		charon->bus->set_sa(charon->bus, ike_sa);
 		if (!keymat->derive_ike_keys(keymat, proposal, &dh, nonce_i, nonce_r,
-									 ike_sa->get_id(ike_sa), NULL))
+									 ike_sa->get_id(ike_sa), old_prf, old_skd))
 		{
 			DBG1(DBG_IKE, "HA sync keymat derivation failed");
 		}
 		charon->bus->set_sa(charon->bus, NULL);
 		proposal->destroy(proposal);
+
+		if (old_sa)
+		{
+			ike_sa->inherit(ike_sa, old_sa);
+			this->cache->delete_ike_sa(this->cache, old_sa->get_id(old_sa));
+		}
 	}
 }
 
@@ -568,8 +580,6 @@ static job_requeue_t dispatch(private_ha_sync_dispatcher_t *this)
 			break;
 		case HA_SYNC_IKE_DELETE:
 			process_ike_delete(this, message);
-			break;
-		case HA_SYNC_IKE_REKEY:
 			break;
 		case HA_SYNC_CHILD_ADD:
 			process_child_add(this, message);

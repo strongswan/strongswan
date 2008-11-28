@@ -202,7 +202,7 @@ static void activate(private_ha_sync_cache_t *this, u_int segment)
 				in_segment(this, ike_sa->get_other_host(ike_sa), segment))
 			{
 				this->list->remove_at(this->list, enumerator);
-				ike_sa->set_state(ike_Sa, IKE_ESTABLISHED);
+				ike_sa->set_state(ike_sa, IKE_ESTABLISHED);
 				charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 			}
 		}

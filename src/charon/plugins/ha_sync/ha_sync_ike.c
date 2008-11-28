@@ -86,18 +86,18 @@ static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 		return TRUE;
 	}
 
-	if (rekey == NULL)
-	{
-		m = ha_sync_message_create(HA_SYNC_IKE_ADD);
+	m = ha_sync_message_create(HA_SYNC_IKE_ADD);
+	m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
 
-		m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
-	}
-	else
+	if (rekey)
 	{
-		m = ha_sync_message_create(HA_SYNC_IKE_REKEY);
+		chunk_t skd;
+		keymat_t *keymat;
 
-		m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+		keymat = rekey->get_keymat(rekey);
 		m->add_attribute(m, HA_SYNC_IKE_REKEY_ID, rekey->get_id(rekey));
+		m->add_attribute(m, HA_SYNC_ALG_OLD_PRF, keymat->get_skd(keymat, &skd));
+		m->add_attribute(m, HA_SYNC_OLD_SKD, skd);
 	}
 
 	proposal = ike_sa->get_proposal(ike_sa);

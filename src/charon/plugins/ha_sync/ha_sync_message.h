@@ -49,8 +49,6 @@ enum ha_sync_message_type_t {
 	HA_SYNC_IKE_UPDATE,
 	/** delete an existing IKE_SA */
 	HA_SYNC_IKE_DELETE,
-	/** rekeying an existing IKE_SA, transferring CHILD_SAs to a new one */
-	HA_SYNC_IKE_REKEY,
 	/** add a new CHILD_SA */
 	HA_SYNC_CHILD_ADD,
 	/** delete an existing CHILD_SA */
@@ -93,8 +91,12 @@ enum ha_sync_message_attribute_t {
 	HA_SYNC_NONCE_R,
 	/** chunk_t, diffie hellman shared secret */
 	HA_SYNC_SECRET,
+	/** chunk_t, SKd of old SA if rekeying */
+	HA_SYNC_OLD_SKD,
 	/** u_int16_t, pseudo random function */
 	HA_SYNC_ALG_PRF,
+	/** u_int16_t, old pseudo random function if rekeying */
+	HA_SYNC_ALG_OLD_PRF,
 	/** u_int16_t, encryption algorithm */
 	HA_SYNC_ALG_ENCR,
 	/** u_int16_t, encryption key size in bytes */
