@@ -61,12 +61,15 @@ struct keymat_t {
 	 * @param nonce_i	initiators nonce value
 	 * @param nonce_r	responders nonce value
 	 * @param id		IKE_SA identifier
-	 * @param rekey		keymat of old SA if we are rekeying
+	 * @param rekey_prf	PRF of old SA if rekeying, PRF_UNDEFINED otherwise
+	 * @param rekey_sdk	SKd of old SA if rekeying
 	 * @return			TRUE on success
 	 */
 	bool (*derive_ike_keys)(keymat_t *this, proposal_t *proposal,
 							diffie_hellman_t *dh, chunk_t nonce_i,
-							chunk_t nonce_r, ike_sa_id_t *id, keymat_t *rekey);
+							chunk_t nonce_r, ike_sa_id_t *id,
+							pseudo_random_function_t rekey_function,
+							chunk_t rekey_skd);
 	/**
 	 * Derive keys for a CHILD_SA.
 	 *
@@ -90,6 +93,14 @@ struct keymat_t {
 							  chunk_t nonce_i, chunk_t nonce_r,
 							  chunk_t *encr_i, chunk_t *integ_i,
 							  chunk_t *encr_r, chunk_t *integ_r);
+	/**
+	 * Get SKd to pass to derive_ikey_keys() during rekeying.
+	 *
+	 * @param skd		chunk to write SKd to (internal data)
+	 * @return			PRF function to derive keymat
+	 */
+	pseudo_random_function_t (*get_skd)(keymat_t *this, chunk_t *skd);
+	
 	/**
 	 * Get a signer to sign/verify IKE messages.
 	 *

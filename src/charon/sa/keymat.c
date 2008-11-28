@@ -63,6 +63,11 @@ struct private_keymat_t {
 	prf_t *prf;
 	
 	/**
+	 * Negotiated PRF algorithm
+	 */
+	pseudo_random_function_t prf_alg;
+	
+	/**
 	 * Key to derive key material from for CHILD_SAs, rekeying
 	 */
 	chunk_t skd;
@@ -145,7 +150,8 @@ static diffie_hellman_t* create_dh(private_keymat_t *this,
 static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 							diffie_hellman_t *dh, chunk_t nonce_i,
 							chunk_t nonce_r, ike_sa_id_t *id,
-							private_keymat_t *rekey)
+							pseudo_random_function_t rekey_function,
+							chunk_t rekey_skd)
 {
 	chunk_t skeyseed, key, secret, full_nonce, fixed_nonce, prf_plus_seed;
 	chunk_t spi_i, spi_r;
@@ -153,6 +159,7 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 	signer_t *signer_i, *signer_r;
 	prf_plus_t *prf_plus;
 	u_int16_t alg, key_size;
+	prf_t *rekey_prf = NULL;
 	
 	spi_i = chunk_alloca(sizeof(u_int64_t));
 	spi_r = chunk_alloca(sizeof(u_int64_t));
@@ -169,6 +176,7 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
 		return FALSE;
 	}
+	this->prf_alg = alg;
 	this->prf = lib->crypto->create_prf(lib->crypto, alg);
 	if (this->prf == NULL)
 	{
@@ -205,7 +213,7 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 	 *
 	 * if we are rekeying, SKEYSEED is built on another way
 	 */
-	if (rekey == NULL) /* not rekeying */
+	if (rekey_function == PRF_UNDEFINED) /* not rekeying */
 	{
 		/* SKEYSEED = prf(Ni | Nr, g^ir) */
 		this->prf->set_key(this->prf, fixed_nonce);
@@ -217,11 +225,21 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 	{
 		/* SKEYSEED = prf(SK_d (old), [g^ir (new)] | Ni | Nr) 
 		 * use OLD SAs PRF functions for both prf_plus and prf */
+		rekey_prf = lib->crypto->create_prf(lib->crypto, rekey_function);
+		if (!rekey_prf)
+		{
+			DBG1(DBG_IKE, "PRF of old SA %N not supported!",
+				 pseudo_random_function_names, rekey_function);
+			chunk_free(&full_nonce);
+			chunk_free(&fixed_nonce);
+			chunk_clear(&prf_plus_seed);
+			return FALSE;
+		}
 		secret = chunk_cat("mc", secret, full_nonce);
-		rekey->prf->set_key(rekey->prf, rekey->skd);
-		rekey->prf->allocate_bytes(rekey->prf, secret, &skeyseed);
-		rekey->prf->set_key(rekey->prf, skeyseed);
-		prf_plus = prf_plus_create(rekey->prf, prf_plus_seed);
+		rekey_prf->set_key(rekey_prf, rekey_skd);
+		rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed);
+		rekey_prf->set_key(rekey_prf, skeyseed);
+		prf_plus = prf_plus_create(rekey_prf, prf_plus_seed);
 	}
 	DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 	
@@ -243,6 +261,8 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 	{
 		DBG1(DBG_IKE, "no %N selected",
 			 transform_type_names, INTEGRITY_ALGORITHM);
+		prf_plus->destroy(prf_plus);
+		DESTROY_IF(rekey_prf);
 		return FALSE;
 	}
 	signer_i = lib->crypto->create_signer(lib->crypto, alg);
@@ -253,6 +273,7 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 			 transform_type_names, INTEGRITY_ALGORITHM,
 			 integrity_algorithm_names ,alg);
 		prf_plus->destroy(prf_plus);
+		DESTROY_IF(rekey_prf);
 		return FALSE;
 	}
 	key_size = signer_i->get_key_size(signer_i);
@@ -284,6 +305,7 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 		DBG1(DBG_IKE, "no %N selected",
 			 transform_type_names, ENCRYPTION_ALGORITHM);
 		prf_plus->destroy(prf_plus);
+		DESTROY_IF(rekey_prf);
 		return FALSE;
 	}
 	crypter_i = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
@@ -294,6 +316,7 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 			 transform_type_names, ENCRYPTION_ALGORITHM,
 			 encryption_algorithm_names, alg, key_size);
 		prf_plus->destroy(prf_plus);
+		DESTROY_IF(rekey_prf);
 		return FALSE;
 	}
 	key_size = crypter_i->get_key_size(crypter_i);
@@ -344,6 +367,7 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 	
 	/* all done, prf_plus not needed anymore */
 	prf_plus->destroy(prf_plus);
+	DESTROY_IF(rekey_prf);
 	
 	return TRUE;
 }
@@ -440,6 +464,15 @@ static bool derive_child_keys(private_keymat_t *this,
 	prf_plus->destroy(prf_plus);
 	
 	return TRUE;
+}
+
+/**
+ * Implementation of keymat_t.get_skd
+ */
+static pseudo_random_function_t get_skd(private_keymat_t *this, chunk_t *skd)
+{
+	*skd = this->skd;
+	return this->prf_alg;
 }
 
 /**
@@ -544,8 +577,9 @@ keymat_t *keymat_create(bool initiator)
 	private_keymat_t *this = malloc_thing(private_keymat_t);
 	
 	this->public.create_dh = (diffie_hellman_t*(*)(keymat_t*, diffie_hellman_group_t group))create_dh;
-	this->public.derive_ike_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id, keymat_t *rekey))derive_ike_keys;
+	this->public.derive_ike_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id, pseudo_random_function_t,chunk_t))derive_ike_keys;
 	this->public.derive_child_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i, chunk_t *encr_r, chunk_t *integ_r))derive_child_keys;
+	this->public.get_skd = (pseudo_random_function_t(*)(keymat_t*, chunk_t *skd))get_skd;
 	this->public.get_signer = (signer_t*(*)(keymat_t*, bool in))get_signer;
 	this->public.get_crypter = (crypter_t*(*)(keymat_t*, bool in))get_crypter;
 	this->public.get_auth_octets = (chunk_t(*)(keymat_t *, bool verify, chunk_t ike_sa_init, chunk_t nonce, identification_t *id))get_auth_octets;
@@ -559,6 +593,7 @@ keymat_t *keymat_create(bool initiator)
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->prf = NULL;
+	this->prf_alg = PRF_UNDEFINED;
 	this->skd = chunk_empty;
 	this->skp_verify = chunk_empty;
 	this->skp_build = chunk_empty;

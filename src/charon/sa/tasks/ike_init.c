@@ -370,13 +370,46 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 }
 
 /**
+ * Derive the keymat for the IKE_SA
+ */
+static bool derive_keys(private_ike_init_t *this,
+						chunk_t nonce_i, chunk_t nonce_r)
+{
+	keymat_t *old_keymat;
+	pseudo_random_function_t prf_alg = PRF_UNDEFINED;
+	chunk_t skd = chunk_empty;
+	ike_sa_id_t *id;
+	
+	id = this->ike_sa->get_id(this->ike_sa);
+	if (this->old_sa)
+	{
+		/* rekeying: Include old SKd, use old PRF, apply SPI */
+		old_keymat = this->old_sa->get_keymat(this->old_sa);
+		prf_alg = old_keymat->get_skd(old_keymat, &skd);
+		if (this->initiator)
+		{
+			id->set_responder_spi(id, this->proposal->get_spi(this->proposal));
+		}
+		else
+		{
+			id->set_initiator_spi(id, this->proposal->get_spi(this->proposal));
+		}
+	}
+	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
+									   nonce_i, nonce_r, id, prf_alg, skd))
+	{
+		return FALSE;
+	}
+	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh,
+						  nonce_i, nonce_r, this->old_sa);
+	return TRUE;
+}
+
+/**
  * Implementation of task_t.build for responder
  */
 static status_t build_r(private_ike_init_t *this, message_t *message)
 {
-	keymat_t *old_keymat = NULL;
-	ike_sa_id_t *id;
-	
 	/* check if we have everything we need */
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
@@ -410,23 +443,12 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		return FAILED;
 	}
 	
-	id = this->ike_sa->get_id(this->ike_sa);
-	if (this->old_sa)
-	{	/* rekeying: Apply SPI, include keymat from old SA in key derivation */
-		id->set_initiator_spi(id, this->proposal->get_spi(this->proposal));
-		old_keymat = this->old_sa->get_keymat(this->old_sa);
-	}
-	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
-							this->other_nonce, this->my_nonce, id, old_keymat))
+	if (!derive_keys(this, this->other_nonce, this->my_nonce))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
-	
-	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh,
-						  this->other_nonce, this->my_nonce, this->old_sa);
-	
 	build_payloads(this, message);
 	return SUCCESS;
 }
@@ -436,8 +458,6 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
  */
 static status_t process_i(private_ike_init_t *this, message_t *message)
 {
-	keymat_t *old_keymat = NULL;
-	ike_sa_id_t *id;
 	iterator_t *iterator;
 	payload_t *payload;
 
@@ -521,22 +541,11 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		return FAILED;
 	}
 	
-	id = this->ike_sa->get_id(this->ike_sa);
-	if (this->old_sa)
-	{	/* rekeying: Apply SPI, include keymat from old SA in key derivation */
-		id->set_responder_spi(id, this->proposal->get_spi(this->proposal));
-		old_keymat = this->old_sa->get_keymat(this->old_sa);
-	}
-	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
-							this->my_nonce, this->other_nonce, id, old_keymat))
+	if (!derive_keys(this, this->my_nonce, this->other_nonce))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
 		return FAILED;
 	}
-	
-	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh,
-						  this->my_nonce, this->other_nonce, this->old_sa);
-	
 	return SUCCESS;
 }
 
