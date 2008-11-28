@@ -77,24 +77,6 @@ typedef struct {
 } peer_data_t;
 
 /**
- * destroy IKE enumerator data and unlock list
- */
-static void ike_enum_destroy(ike_data_t *data)
-{
-	data->this->lock->unlock(data->this->lock);
-	free(data);
-}
-
-/**
- * destroy PEER enumerator data and unlock list
- */
-static void peer_enum_destroy(peer_data_t *data)
-{
-	data->this->lock->unlock(data->this->lock);
-	free(data);
-}
-
-/**
  * inner enumerator constructor for IKE cfgs
  */
 static enumerator_t *ike_enum_create(backend_t *backend, ike_data_t *data)
@@ -180,11 +162,11 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 	this->lock->read_lock(this->lock);
 	enumerator = enumerator_create_nested(
 						this->backends->create_enumerator(this->backends),
-						(void*)ike_enum_create, data, (void*)ike_enum_destroy);
+						(void*)ike_enum_create, data, (void*)free);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
 		match = get_match(current, me, other);
-
+		
 		if (match)
 		{
 			DBG2(DBG_CFG, "  candidate: %s...%s, prio %d", 
@@ -243,13 +225,13 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 	this->lock->read_lock(this->lock);
 	enumerator = enumerator_create_nested(
 						this->backends->create_enumerator(this->backends),
-						(void*)peer_enum_create, data, (void*)peer_enum_destroy);
+						(void*)peer_enum_create, data, (void*)free);
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		identification_t *my_cand, *other_cand;
 		id_match_t m1, m2, match_peer;
 		ike_cfg_match_t match_ike;
-
+		
 		my_cand = current->get_my_id(current);
 		other_cand = current->get_other_id(current);
 		
