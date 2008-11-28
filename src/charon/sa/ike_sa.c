@@ -66,6 +66,7 @@ ENUM(ike_sa_state_names, IKE_CREATED, IKE_DESTROYING,
 	"CREATED",
 	"CONNECTING",
 	"ESTABLISHED",
+	"PASSIVE",
 	"REKEYING",
 	"DELETING",
 	"DESTROYING",
@@ -1214,11 +1215,17 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	iterator_t *iterator;
 	child_sa_t *current, *child_sa = NULL;
 	
-	if (this->state == IKE_DELETING)
+	switch (this->state)
 	{
-		DBG1(DBG_IKE, "acquiring CHILD_SA {reqid %d} failed: "
-			 "IKE_SA is deleting", reqid);
-		return FAILED;
+		case IKE_DELETING:
+			DBG1(DBG_IKE, "acquiring CHILD_SA {reqid %d} failed: "
+				 "IKE_SA is deleting", reqid);
+			return FAILED;
+		case IKE_PASSIVE:
+			/* do not process acquires if passive */
+			return FAILED;
+		default:
+			break;
 	}
 	
 	/* find CHILD_SA */
@@ -1280,6 +1287,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		case IKE_CREATED:
 		case IKE_CONNECTING:
 		case IKE_ESTABLISHED:
+		case IKE_PASSIVE:
 		default:
 			break;
 	}
@@ -1367,6 +1375,11 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 {
 	status_t status;
 	bool is_request;
+	
+	if (this->state == IKE_PASSIVE)
+	{	/* do not handle messages in passive state */
+		return FAILED;
+	}
 	
 	is_request = message->get_request(message);
 	
@@ -1685,6 +1698,8 @@ static status_t delete_(private_ike_sa_t *this)
 		case IKE_CREATED:
 			DBG1(DBG_IKE, "deleting unestablished IKE_SA");
 			break;
+		case IKE_PASSIVE:
+			break;
 		default:
 			DBG1(DBG_IKE, "destroying IKE_SA in state %N "
 				"without notification", ike_sa_state_names, this->state);
@@ -1958,6 +1973,7 @@ static status_t roam(private_ike_sa_t *this, bool address)
 	{
 		case IKE_CREATED:
 		case IKE_DELETING:
+		case IKE_PASSIVE:
 			return SUCCESS;
 		default:
 			break;

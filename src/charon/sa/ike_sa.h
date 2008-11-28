@@ -200,6 +200,11 @@ enum ike_sa_state_t {
 	IKE_ESTABLISHED,
 	
 	/**
+	 * IKE_SA is managed externally and does not process messages
+	 */
+	IKE_PASSIVE,
+	
+	/**
 	 * IKE_SA rekeying in progress
 	 */
 	IKE_REKEYING,
