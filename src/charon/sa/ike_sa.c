@@ -637,7 +637,8 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 	{
 		case IKE_ESTABLISHED:
 		{
-			if (this->state == IKE_CONNECTING)
+			if (this->state == IKE_CONNECTING ||
+				this->state == IKE_PASSIVE)
 			{
 				job_t *job;
 				u_int32_t t;
