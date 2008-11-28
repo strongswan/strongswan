@@ -24,7 +24,6 @@
 #define HA_SYNC_DISPATCHER_H_
 
 #include "ha_sync_socket.h"
-#include "ha_sync_cache.h"
 
 typedef struct ha_sync_dispatcher_t ha_sync_dispatcher_t;
 
@@ -43,10 +42,8 @@ struct ha_sync_dispatcher_t {
  * Create a ha_sync_dispatcher instance pulling from socket.
  *
  * @param socket		socket to pull messages from
- * @param cache			cache to push synced SAs to
  * @return				dispatcher object
  */
-ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket,
-												ha_sync_cache_t *cache);
+ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket);
 
 #endif /* HA_SYNC_DISPATCHER_ @}*/

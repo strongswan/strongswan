@@ -119,6 +119,10 @@ enum ha_sync_message_attribute_t {
 	HA_SYNC_LOCAL_TS,
 	/** traffic_selector_t*, remote traffic selector */
 	HA_SYNC_REMOTE_TS,
+	/** u_int32_t, initiating message ID */
+	HA_SYNC_INITIATE_MID,
+	/** u_int32_t, responding message ID */
+	HA_SYNC_RESPOND_MID,
 };
 
 /**

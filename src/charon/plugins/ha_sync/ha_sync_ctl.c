@@ -42,9 +42,9 @@ struct private_ha_sync_ctl_t {
 	ha_sync_ctl_t public;
 
 	/**
-	 * Cache to control
+	 * Segments to control
 	 */
-	ha_sync_cache_t *cache;
+	ha_sync_segments_t *segments;
 
 	/**
 	 * FIFO reader thread
@@ -80,10 +80,10 @@ static job_requeue_t dispatch_fifo(private_ha_sync_ctl_t *this)
 			switch (buf[0])
 			{
 				case '+':
-					this->cache->activate(this->cache, segment);
+					this->segments->activate(this->segments, segment);
 					break;
 				case '-':
-					this->cache->deactivate(this->cache, segment);
+					this->segments->deactivate(this->segments, segment);
 					break;
 				default:
 					break;
@@ -107,7 +107,7 @@ static void destroy(private_ha_sync_ctl_t *this)
 /**
  * See header
  */
-ha_sync_ctl_t *ha_sync_ctl_create(ha_sync_cache_t *cache)
+ha_sync_ctl_t *ha_sync_ctl_create(ha_sync_segments_t *segments)
 {
 	private_ha_sync_ctl_t *this = malloc_thing(private_ha_sync_ctl_t);
 
@@ -122,7 +122,7 @@ ha_sync_ctl_t *ha_sync_ctl_create(ha_sync_cache_t *cache)
 		}
 	}
 
-	this->cache = cache;
+	this->segments = segments;
 	this->job = callback_job_create((callback_job_cb_t)dispatch_fifo,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);

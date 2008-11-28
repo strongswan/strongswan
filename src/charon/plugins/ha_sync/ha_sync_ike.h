@@ -24,7 +24,7 @@
 #define HA_SYNC_IKE_H_
 
 #include "ha_sync_socket.h"
-#include "ha_sync_cache.h"
+#include "ha_sync_segments.h"
 
 #include <daemon.h>
 
@@ -50,10 +50,8 @@ struct ha_sync_ike_t {
  * Create a ha_sync_ike instance.
  *
  * @param socket		socket to use for sending synchronization messages
- * @param cache			synced and cached SAs
  * @return				IKE listener
  */
-ha_sync_ike_t *ha_sync_ike_create(ha_sync_socket_t *socket,
-								  ha_sync_cache_t *cache);
+ha_sync_ike_t *ha_sync_ike_create(ha_sync_socket_t *socket);
 
 #endif /* HA_SYNC_IKE_ @}*/

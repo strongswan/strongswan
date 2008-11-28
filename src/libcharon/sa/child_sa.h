@@ -322,7 +322,7 @@ struct child_sa_t {
 };
 
 /**
- * Constructor to create a new child_sa_t.
+ * Constructor to create a child SA negotiated with IKE.
  *
  * @param me				own address
  * @param other				remote address

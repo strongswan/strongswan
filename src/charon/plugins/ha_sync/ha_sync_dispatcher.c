@@ -38,11 +38,6 @@ struct private_ha_sync_dispatcher_t {
 	ha_sync_socket_t *socket;
 
 	/**
-	 * Synced SA state cache
-	 */
-	ha_sync_cache_t *cache;
-
-	/**
 	 * Dispatcher job
 	 */
 	callback_job_t *job;
@@ -77,14 +72,11 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 		switch (attribute)
 		{
 			case HA_SYNC_IKE_ID:
-				ike_sa = this->cache->get_ike_sa(this->cache, value.ike_sa_id);
-				DBG2(DBG_IKE, "got HA_SYNC_IKE_ADD: %llx:%llx - %p",
-					 value.ike_sa_id->get_initiator_spi(value.ike_sa_id),
-					 value.ike_sa_id->get_responder_spi(value.ike_sa_id),
-					 ike_sa);
+				ike_sa = ike_sa_create(value.ike_sa_id);
 				break;
 			case HA_SYNC_IKE_REKEY_ID:
-				old_sa = this->cache->get_ike_sa(this->cache, value.ike_sa_id);
+				old_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+														  value.ike_sa_id);
 				break;
 			case HA_SYNC_NONCE_I:
 				nonce_i = value.chunk;
@@ -142,19 +134,30 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 			proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, prf, 0);
 		}
 		charon->bus->set_sa(charon->bus, ike_sa);
-		if (!keymat->derive_ike_keys(keymat, proposal, &dh, nonce_i, nonce_r,
+		if (keymat->derive_ike_keys(keymat, proposal, &dh, nonce_i, nonce_r,
 									 ike_sa->get_id(ike_sa), old_prf, old_skd))
 		{
+			if (old_sa)
+			{
+				ike_sa->inherit(ike_sa, old_sa);
+				charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, old_sa);
+				old_sa = NULL;
+			}
+			ike_sa->set_state(ike_sa, IKE_CONNECTING);
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		}
+		else
+		{
 			DBG1(DBG_IKE, "HA sync keymat derivation failed");
+			ike_sa->destroy(ike_sa);
 		}
 		charon->bus->set_sa(charon->bus, NULL);
 		proposal->destroy(proposal);
-
-		if (old_sa)
-		{
-			ike_sa->inherit(ike_sa, old_sa);
-			this->cache->delete_ike_sa(this->cache, old_sa->get_id(old_sa));
-		}
+	}
+	if (old_sa)
+	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, old_sa);
 	}
 }
 
@@ -196,17 +199,14 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 	{
 		if (attribute != HA_SYNC_IKE_ID && ike_sa == NULL)
 		{
-			DBG1(DBG_IKE, "HA_SYNC_IKE_ID must be first attribute");
+			/* must be first attribute */
 			break;
 		}
 		switch (attribute)
 		{
 			case HA_SYNC_IKE_ID:
-				ike_sa = this->cache->get_ike_sa(this->cache, value.ike_sa_id);
-				DBG2(DBG_IKE, "got HA_SYNC_IKE_UPDATE: %llx:%llx - %p",
-					 value.ike_sa_id->get_initiator_spi(value.ike_sa_id),
-					 value.ike_sa_id->get_responder_spi(value.ike_sa_id),
-					 ike_sa);
+				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+														  value.ike_sa_id);
 				break;
 			case HA_SYNC_LOCAL_ID:
 				ike_sa->set_my_id(ike_sa, value.id->clone(value.id));
@@ -235,6 +235,15 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 			case HA_SYNC_CONFIG_NAME:
 				peer_cfg = charon->backends->get_peer_cfg_by_name(
 												charon->backends, value.str);
+				if (peer_cfg)
+				{
+					ike_sa->set_peer_cfg(ike_sa, peer_cfg);
+					peer_cfg->destroy(peer_cfg);
+				}
+				else
+				{
+					DBG1(DBG_IKE, "HA sync is missing nodes peer configuration");
+				}
 				break;
 			case HA_SYNC_CONDITIONS:
 				set_condition(ike_sa, value.u32, EXT_NATT);
@@ -250,26 +259,26 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 				set_extension(ike_sa, value.u32, COND_CERTREQ_SEEN);
 				set_extension(ike_sa, value.u32, COND_ORIGINAL_INITIATOR);
 				break;
+			case HA_SYNC_INITIATE_MID:
+				ike_sa->set_message_id(ike_sa, TRUE, value.u32);
+				break;
+			case HA_SYNC_RESPOND_MID:
+				ike_sa->set_message_id(ike_sa, FALSE, value.u32);
+				break;
 			default:
 				break;
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (peer_cfg)
+	if (ike_sa)
 	{
-		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-		peer_cfg->destroy(peer_cfg);
-
-		charon->bus->set_sa(charon->bus, ike_sa);
-		/* we use the CONNECTING state to indicate sync is complete. */
-		/* TODO: add an additional HOT_COPY state? */
-		ike_sa->set_state(ike_sa, IKE_CONNECTING);
-		charon->bus->set_sa(charon->bus, NULL);
-	}
-	else
-	{
-		DBG1(DBG_IKE, "HA sync is missing nodes peer configuration");
+		if (ike_sa->get_state(ike_sa) == IKE_CONNECTING &&
+			ike_sa->get_peer_cfg(ike_sa))
+		{
+			ike_sa->set_state(ike_sa, IKE_PASSIVE);
+		}
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 }
 
@@ -282,6 +291,7 @@ static void process_ike_delete(private_ha_sync_dispatcher_t *this,
 	ha_sync_message_attribute_t attribute;
 	ha_sync_message_value_t value;
 	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -289,10 +299,13 @@ static void process_ike_delete(private_ha_sync_dispatcher_t *this,
 		switch (attribute)
 		{
 			case HA_SYNC_IKE_ID:
-				DBG2(DBG_IKE, "got HA_SYNC_IKE_DELETE: %llx:%llx",
-					 value.ike_sa_id->get_initiator_spi(value.ike_sa_id),
-					 value.ike_sa_id->get_responder_spi(value.ike_sa_id));
-				this->cache->delete_ike_sa(this->cache, value.ike_sa_id);
+				ike_sa = charon->ike_sa_manager->checkout(
+									charon->ike_sa_manager, value.ike_sa_id);
+				if (ike_sa)
+				{
+					charon->ike_sa_manager->checkin_and_destroy(
+									charon->ike_sa_manager, ike_sa);
+				}
 				break;
 			default:
 				break;
@@ -301,17 +314,16 @@ static void process_ike_delete(private_ha_sync_dispatcher_t *this,
 	enumerator->destroy(enumerator);
 }
 
-
 /**
- * get the child_cfg with the same name as the peer cfg
+ * Lookup a child cfg from the peer cfg by name
  */
-static child_cfg_t* find_child_cfg(char *name)
+static child_cfg_t* find_child_cfg(ike_sa_t *ike_sa, char *name)
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *current, *found = NULL;
 	enumerator_t *enumerator;
 
-	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends, name);
+	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 	if (peer_cfg)
 	{
 		enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
@@ -320,12 +332,10 @@ static child_cfg_t* find_child_cfg(char *name)
 			if (streq(current->get_name(current), name))
 			{
 				found = current;
-				found->get_ref(found);
 				break;
 			}
 		}
 		enumerator->destroy(enumerator);
-		peer_cfg->destroy(peer_cfg);
 	}
 	return found;
 }
@@ -340,6 +350,7 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 	ha_sync_message_value_t value;
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL;
+	char *config_name;
 	child_cfg_t *config = NULL;
 	child_sa_t *child_sa;
 	proposal_t *proposal;
@@ -362,15 +373,12 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 		switch (attribute)
 		{
 			case HA_SYNC_IKE_ID:
-				ike_sa = this->cache->get_ike_sa(this->cache, value.ike_sa_id);
+				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+														  value.ike_sa_id);
 				initiator = value.ike_sa_id->is_initiator(value.ike_sa_id);
-				DBG2(DBG_CHD, "got HA_SYNC_CHILD_ADD: %llx:%llx - %p",
-					 value.ike_sa_id->get_initiator_spi(value.ike_sa_id),
-					 value.ike_sa_id->get_responder_spi(value.ike_sa_id),
-					 ike_sa);
 				break;
 			case HA_SYNC_CONFIG_NAME:
-				config = find_child_cfg(value.str);
+				config_name = value.str;
 				break;
 			case HA_SYNC_INBOUND_SPI:
 				inbound_spi = value.u32;
@@ -414,22 +422,22 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	if (!config)
-	{
-		DBG1(DBG_CHD, "HA sync is missing nodes child configuration");
-		return;
-	}
 	if (!ike_sa)
 	{
-		config->destroy(config);
 		DBG1(DBG_CHD, "IKE_SA for HA sync CHILD_SA not found");
 		return;
 	}
-	charon->bus->set_sa(charon->bus, ike_sa);
+	config = find_child_cfg(ike_sa, config_name);
+	if (!config)
+	{
+		DBG1(DBG_CHD, "HA sync is missing nodes child configuration");
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		return;
+	}
+
 	child_sa = child_sa_create(ike_sa->get_my_host(ike_sa),
 							   ike_sa->get_other_host(ike_sa), config, 0,
 							   ike_sa->has_condition(ike_sa, COND_NAT_ANY));
-	config->destroy(config);
 	child_sa->set_mode(child_sa, mode);
 	child_sa->set_protocol(child_sa, PROTO_ESP);
 	child_sa->set_ipcomp(child_sa, ipcomp);
@@ -451,7 +459,7 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 		DBG1(DBG_CHD, "HA sync CHILD_SA key derivation failed");
 		child_sa->destroy(child_sa);
 		proposal->destroy(proposal);
-		charon->bus->set_sa(charon->bus, NULL);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		return;
 	}
 	child_sa->set_proposal(child_sa, proposal);
@@ -487,7 +495,7 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 	{
 		DBG1(DBG_CHD, "HA sync CHILD_SA installation failed");
 		child_sa->destroy(child_sa);
-		charon->bus->set_sa(charon->bus, NULL);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		return;
 	}
 
@@ -516,7 +524,7 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 
 	child_sa->set_state(child_sa, CHILD_INSTALLED);
 	ike_sa->add_child_sa(ike_sa, child_sa);
-	charon->bus->set_sa(charon->bus, NULL);
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 }
 
 /**
@@ -536,15 +544,8 @@ static void process_child_delete(private_ha_sync_dispatcher_t *this,
 		switch (attribute)
 		{
 			case HA_SYNC_IKE_ID:
-				if (this->cache->has_ike_sa(this->cache, value.ike_sa_id))
-				{
-					ike_sa = this->cache->get_ike_sa(this->cache, value.ike_sa_id);
-					DBG2(DBG_CHD, "got HA_SYNC_CHILD_DELETE: %llx:%llx - %p",
-						 value.ike_sa_id->get_initiator_spi(value.ike_sa_id),
-						 value.ike_sa_id->get_responder_spi(value.ike_sa_id),
-						 ike_sa);
-					continue;
-				}
+				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+														  value.ike_sa_id);
 				break;
 			case HA_SYNC_INBOUND_SPI:
 				if (!ike_sa || ike_sa->destroy_child_sa(ike_sa, PROTO_ESP,
@@ -558,6 +559,10 @@ static void process_child_delete(private_ha_sync_dispatcher_t *this,
 				break;
 		}
 		break;
+	}
+	if (ike_sa)
+	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	enumerator->destroy(enumerator);
 }
@@ -609,15 +614,13 @@ static void destroy(private_ha_sync_dispatcher_t *this)
 /**
  * See header
  */
-ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket,
-												ha_sync_cache_t *cache)
+ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket)
 {
 	private_ha_sync_dispatcher_t *this = malloc_thing(private_ha_sync_dispatcher_t);
 
 	this->public.destroy = (void(*)(ha_sync_dispatcher_t*))destroy;
 
 	this->socket = socket;
-	this->cache = cache;
 	this->job = callback_job_create((callback_job_cb_t)dispatch,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);

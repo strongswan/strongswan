@@ -211,7 +211,7 @@ static void add_attribute(private_ha_sync_message_t *this,
 		{
 			u_int8_t val;
 
-			val = (u_int8_t)va_arg(args, u_int32_t);
+			val = va_arg(args, u_int);
 			check_buf(this, sizeof(val));
 			this->buf.ptr[this->buf.len] = val;
 			this->buf.len += sizeof(val);
@@ -228,7 +228,7 @@ static void add_attribute(private_ha_sync_message_t *this,
 		{
 			u_int16_t val;
 
-			val = (u_int16_t)va_arg(args, u_int32_t);
+			val = va_arg(args, u_int);
 			check_buf(this, sizeof(val));
 			*(u_int16_t*)(this->buf.ptr + this->buf.len) = htons(val);
 			this->buf.len += sizeof(val);
@@ -239,10 +239,12 @@ static void add_attribute(private_ha_sync_message_t *this,
 		case HA_SYNC_EXTENSIONS:
 		case HA_SYNC_INBOUND_SPI:
 		case HA_SYNC_OUTBOUND_SPI:
+		case HA_SYNC_INITIATE_MID:
+		case HA_SYNC_RESPOND_MID:
 		{
 			u_int32_t val;
 
-			val = va_arg(args, u_int32_t);
+			val = va_arg(args, u_int);
 			check_buf(this, sizeof(val));
 			*(u_int32_t*)(this->buf.ptr + this->buf.len) = htonl(val);
 			this->buf.len += sizeof(val);
@@ -453,6 +455,8 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 		case HA_SYNC_EXTENSIONS:
 		case HA_SYNC_INBOUND_SPI:
 		case HA_SYNC_OUTBOUND_SPI:
+		case HA_SYNC_INITIATE_MID:
+		case HA_SYNC_RESPOND_MID:
 		{
 			if (this->buf.len < sizeof(u_int32_t))
 			{

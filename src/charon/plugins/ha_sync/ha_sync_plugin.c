@@ -20,7 +20,7 @@
 #include "ha_sync_child.h"
 #include "ha_sync_socket.h"
 #include "ha_sync_dispatcher.h"
-#include "ha_sync_cache.h"
+#include "ha_sync_segments.h"
 #include "ha_sync_ctl.h"
 
 #include <daemon.h>
@@ -59,9 +59,9 @@ struct private_ha_sync_plugin_t {
 	ha_sync_dispatcher_t *dispatcher;
 
 	/**
-	 * Local cache of a nodes synced SAs
+	 * Active/Passive segment management
 	 */
-	ha_sync_cache_t *cache;
+	ha_sync_segments_t *segments;
 
 	/**
 	 * Segment control interface via FIFO
@@ -80,7 +80,7 @@ static void destroy(private_ha_sync_plugin_t *this)
 	this->child->destroy(this->child);
 	this->dispatcher->destroy(this->dispatcher);
 	this->ctl->destroy(this->ctl);
-	this->cache->destroy(this->cache);
+	this->segments->destroy(this->segments);
 	this->socket->destroy(this->socket);
 	free(this);
 }
@@ -100,11 +100,11 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	this->cache = ha_sync_cache_create();
-	this->ctl = ha_sync_ctl_create(this->cache);
-	this->dispatcher = ha_sync_dispatcher_create(this->socket, this->cache);
-	this->ike = ha_sync_ike_create(this->socket, this->cache);
-	this->child = ha_sync_child_create(this->socket, this->cache);
+	this->segments = ha_sync_segments_create();
+	this->ctl = ha_sync_ctl_create(this->segments);
+	this->dispatcher = ha_sync_dispatcher_create(this->socket);
+	this->ike = ha_sync_ike_create(this->socket);
+	this->child = ha_sync_child_create(this->socket);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);
 	charon->bus->add_listener(charon->bus, &this->child->listener);
 

@@ -23,7 +23,7 @@
 #ifndef HA_SYNC_CTL_H_
 #define HA_SYNC_CTL_H_
 
-#include "ha_sync_cache.h"
+#include "ha_sync_segments.h"
 
 typedef struct ha_sync_ctl_t ha_sync_ctl_t;
 
@@ -41,9 +41,9 @@ struct ha_sync_ctl_t {
 /**
  * Create a ha_sync_ctl instance.
  *
- * @param cache		cache to control in this socket
+ * @param segments	segments to control
  * @return			HA sync control interface
  */
-ha_sync_ctl_t *ha_sync_ctl_create(ha_sync_cache_t *cache);
+ha_sync_ctl_t *ha_sync_ctl_create(ha_sync_segments_t *segments);
 
 #endif /* HA_SYNC_CTL_ @}*/

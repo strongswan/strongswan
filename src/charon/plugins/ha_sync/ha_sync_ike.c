@@ -33,11 +33,6 @@ struct private_ha_sync_ike_t {
 	 * socket we use for syncing
 	 */
 	ha_sync_socket_t *socket;
-
-	/**
-	 * Synced and cached SAs
-	 */
-	ha_sync_cache_t *cache;
 };
 
 /**
@@ -75,11 +70,6 @@ static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 	chunk_t secret;
 	proposal_t *proposal;
 	u_int16_t alg, len;
-
-	if (this->cache->has_ike_sa(this->cache, ike_sa->get_id(ike_sa)))
-	{	/* IKE_SA is cached, do not sync */
-		return TRUE;
-	}
 
 	if (dh->get_shared_secret(dh, &secret) != SUCCESS)
 	{
@@ -136,8 +126,8 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 {
 	ha_sync_message_t *m;
 
-	if (this->cache->has_ike_sa(this->cache, ike_sa->get_id(ike_sa)))
-	{	/* IKE_SA is cached, do not sync */
+	if (ike_sa->get_state(ike_sa) == IKE_PASSIVE)
+	{	/* only sync active IKE_SAs */
 		return TRUE;
 	}
 
@@ -148,8 +138,9 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 			iterator_t *iterator;
 			peer_cfg_t *peer_cfg;
 			u_int32_t extension, condition;
-			host_t *local_vip, *remote_vip, *addr;
+			host_t *addr;
 			identification_t *eap_id;
+			ike_sa_id_t *id;
 
 			peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 
@@ -165,12 +156,11 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 					  | copy_extension(ike_sa, EXT_MOBIKE)
 					  | copy_extension(ike_sa, EXT_HASH_AND_URL);
 
-			local_vip = ike_sa->get_virtual_ip(ike_sa, TRUE);
-			remote_vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
 			eap_id = ike_sa->get_eap_identity(ike_sa);
+			id = ike_sa->get_id(ike_sa);
 
 			m = ha_sync_message_create(HA_SYNC_IKE_UPDATE);
-			m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+			m->add_attribute(m, HA_SYNC_IKE_ID, id);
 			m->add_attribute(m, HA_SYNC_LOCAL_ID, ike_sa->get_my_id(ike_sa));
 			m->add_attribute(m, HA_SYNC_REMOTE_ID, ike_sa->get_other_id(ike_sa));
 			m->add_attribute(m, HA_SYNC_LOCAL_ADDR, ike_sa->get_my_host(ike_sa));
@@ -178,14 +168,6 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 			m->add_attribute(m, HA_SYNC_CONDITIONS, condition);
 			m->add_attribute(m, HA_SYNC_EXTENSIONS, extension);
 			m->add_attribute(m, HA_SYNC_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
-			if (local_vip)
-			{
-				m->add_attribute(m, HA_SYNC_LOCAL_VIP, local_vip);
-			}
-			if (remote_vip)
-			{
-				m->add_attribute(m, HA_SYNC_REMOTE_VIP, remote_vip);
-			}
 			if (eap_id)
 			{
 				m->add_attribute(m, HA_SYNC_EAP_ID, eap_id);
@@ -213,6 +195,54 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 }
 
 /**
+ * Implementation of listener_t.message
+ */
+static bool message_hook(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
+						 message_t *message, bool incoming)
+{
+	if (message->get_exchange_type(message) != IKE_SA_INIT &&
+		message->get_request(message))
+	{	/* we sync on requests, but skip it on IKE_SA_INIT */
+		ha_sync_message_t *m;
+		u_int32_t mid;
+
+		m = ha_sync_message_create(HA_SYNC_IKE_UPDATE);
+		m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+		mid = message->get_message_id(message) + 1;
+		if (incoming)
+		{
+			m->add_attribute(m, HA_SYNC_RESPOND_MID, mid);
+		}
+		else
+		{
+			m->add_attribute(m, HA_SYNC_INITIATE_MID, mid);
+		}
+		this->socket->push(this->socket, m);
+		m->destroy(m);
+	}
+	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
+		message->get_exchange_type(message) == IKE_AUTH &&
+		!message->get_request(message))
+	{	/* After IKE_SA has been established, sync peers virtual IP.
+		 * We cannot sync it in the state_change hook, it is installed later.
+		 * TODO: where to sync local VIP? */
+		ha_sync_message_t *m;
+		host_t *vip;
+
+		vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
+		if (vip)
+		{
+			m = ha_sync_message_create(HA_SYNC_IKE_UPDATE);
+			m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+			m->add_attribute(m, HA_SYNC_REMOTE_VIP, vip);
+			this->socket->push(this->socket, m);
+			m->destroy(m);
+		}
+	}
+	return TRUE;
+}
+
+/**
  * Implementation of ha_sync_ike_t.destroy.
  */
 static void destroy(private_ha_sync_ike_t *this)
@@ -223,18 +253,17 @@ static void destroy(private_ha_sync_ike_t *this)
 /**
  * See header
  */
-ha_sync_ike_t *ha_sync_ike_create(ha_sync_socket_t *socket,
-								  ha_sync_cache_t *cache)
+ha_sync_ike_t *ha_sync_ike_create(ha_sync_socket_t *socket)
 {
 	private_ha_sync_ike_t *this = malloc_thing(private_ha_sync_ike_t);
 
 	memset(&this->public.listener, 0, sizeof(listener_t));
 	this->public.listener.ike_keys = (bool(*)(listener_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh,chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
 	this->public.listener.ike_state_change = (bool(*)(listener_t*,ike_sa_t *ike_sa, ike_sa_state_t state))ike_state_change;
+	this->public.listener.message = (bool(*)(listener_t*, ike_sa_t *, message_t *,bool))message_hook;
 	this->public.destroy = (void(*)(ha_sync_ike_t*))destroy;
 
 	this->socket = socket;
-	this->cache = cache;
 
 	return &this->public;
 }
