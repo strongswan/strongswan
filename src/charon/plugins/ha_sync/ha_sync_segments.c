@@ -101,7 +101,7 @@ static void log_segments(private_ha_sync_segments_t *this, bool activated,
 			pos += snprintf(pos, buf + sizeof(buf) - pos, "%d", i+1);
 		}
 	}
-	DBG1(DBG_CFG, "HA sync segments %d %sactivated, now active: %s",
+	DBG1(DBG_CFG, "HA sync segment %d %sactivated, now active: %s",
 		 segment, activated ? "" : "de", buf);
 }
 
@@ -113,8 +113,6 @@ static void activate(private_ha_sync_segments_t *this, u_int segment)
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
 	u_int16_t mask = 0x01 << (segment - 1);
-
-	DBG1(DBG_CFG, "activating segment %d", segment);
 
 	if (segment > 0 && segment <= this->segment_count && !(this->active & mask))
 	{
@@ -164,6 +162,88 @@ static void deactivate(private_ha_sync_segments_t *this, u_int segment)
 }
 
 /**
+ * Rekey all children of an IKE_SA
+ */
+static status_t rekey_children(ike_sa_t *ike_sa)
+{
+	iterator_t *iterator;
+	child_sa_t *child_sa;
+	status_t status = SUCCESS;
+
+	iterator = ike_sa->create_child_sa_iterator(ike_sa);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		DBG1(DBG_CFG, "resyncing CHILD_SA");
+		status = ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
+										child_sa->get_spi(child_sa, TRUE));
+		if (status == DESTROY_ME)
+		{
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	return status;
+}
+
+/**
+ * Implementation of ha_sync_segments_t.resync
+ */
+static void resync(private_ha_sync_segments_t *this, u_int segment)
+{
+	ike_sa_t *ike_sa;
+	enumerator_t *enumerator;
+	linked_list_t *list;
+	ike_sa_id_t *id;
+	u_int16_t mask = 0x01 << (segment - 1);
+
+
+	if (segment > 0 && segment <= this->segment_count && (this->active & mask))
+	{
+		this->active &= ~mask;
+		list = linked_list_create();
+
+		DBG1(DBG_CFG, "resyncing HA sync segment %d", segment);
+
+		/* we do the actual rekeying in a seperate loop to avoid rekeying
+		 * an SA twice. */
+		enumerator = charon->ike_sa_manager->create_enumerator(
+													charon->ike_sa_manager);
+		while (enumerator->enumerate(enumerator, &ike_sa))
+		{
+			if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
+				in_segment(this, ike_sa->get_other_host(ike_sa), segment))
+			{
+				id = ike_sa->get_id(ike_sa);
+				list->insert_last(list, id->clone(id));
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		while (list->remove_last(list, (void**)&id) == SUCCESS)
+		{
+			ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
+			id->destroy(id);
+			if (ike_sa)
+			{
+				DBG1(DBG_CFG, "resyncing IKE_SA");
+				if (ike_sa->rekey(ike_sa) != DESTROY_ME)
+				{
+					if (rekey_children(ike_sa) != DESTROY_ME)
+					{
+						charon->ike_sa_manager->checkin(
+											charon->ike_sa_manager, ike_sa);
+						continue;
+					}
+				}
+				charon->ike_sa_manager->checkin_and_destroy(
+											charon->ike_sa_manager, ike_sa);
+			}
+		}
+		list->destroy(list);
+	}
+}
+
+/**
  * Implementation of ha_sync_segments_t.destroy.
  */
 static void destroy(private_ha_sync_segments_t *this)
@@ -183,6 +263,7 @@ ha_sync_segments_t *ha_sync_segments_create()
 
 	this->public.activate = (void(*)(ha_sync_segments_t*, u_int segment))activate;
 	this->public.deactivate = (void(*)(ha_sync_segments_t*, u_int segment))deactivate;
+	this->public.resync = (void(*)(ha_sync_segments_t*, u_int segment))resync;
 	this->public.destroy = (void(*)(ha_sync_segments_t*))destroy;
 
 	this->initval = 0;
@@ -196,7 +277,7 @@ ha_sync_segments_t *ha_sync_segments_create()
 	while (enumerator->enumerate(enumerator, &str))
 	{
 		segment = atoi(str);
-		if (segment && segment < MAX_SEGMENTS)
+		if (segment > 0 && segment < MAX_SEGMENTS)
 		{
 			this->active |= 0x01 << (segment - 1);
 		}

@@ -39,16 +39,28 @@ struct ha_sync_segments_t {
 	 * This involves moving all SAs to the daemons IKE_SA manager and handle
 	 * them actively now.
 	 *
-	 * @param segments	numerical segments to takeover
+	 * @param segment	numerical segments to takeover
 	 */
-	void (*activate)(ha_sync_segments_t *this, u_int segments);
+	void (*activate)(ha_sync_segments_t *this, u_int segment);
 
 	/**
 	 * Deactivate a set of IKE_SAs identified by a segments.
 	 *
-	 * @param segments	numerical segments to takeover
+	 * @param segment	numerical segments to takeover
 	 */
-	void (*deactivate)(ha_sync_segments_t *this, u_int segments);
+	void (*deactivate)(ha_sync_segments_t *this, u_int segment);
+
+	/**
+	 * Resync an active segment.
+	 *
+	 * To reintegrade a node into the cluster, resynchronization is reqired.
+	 * IKE_SAs and CHILD_SAs are synced automatically during rekeying. A call
+	 * to this method enforces a rekeying immediately sync all state of a
+	 * segment.
+	 *
+	 * @param segment	segment to resync
+	 */
+	void (*resync)(ha_sync_segments_t *this, u_int segment);
 
 	/**
 	 * Destroy a ha_sync_segments_t.
