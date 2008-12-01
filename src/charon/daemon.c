@@ -420,15 +420,17 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	}
 	enumerator->destroy(enumerator);
 	
-	/* setup legacy style default loggers provided via command-line */
+	/* set up legacy style default loggers provided via command-line */
 	if (!loggers_defined)
 	{
+		/* set up default stdout file_logger */
 		file_logger = file_logger_create(stdout);
-		sys_logger = sys_logger_create(LOG_DAEMON);
 		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
 		this->public.file_loggers->insert_last(this->public.file_loggers,
 											   file_logger);
+		/* set up default daemon sys_logger */
+		sys_logger = sys_logger_create(LOG_DAEMON);
+		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
 		this->public.sys_loggers->insert_last(this->public.sys_loggers,
 											  sys_logger);
 		for (group = 0; group < DBG_MAX; group++)
@@ -438,6 +440,16 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 			{
 				file_logger->set_level(file_logger, group, levels[group]);
 			}
+		}
+
+		/* set up default auth sys_logger */
+		sys_logger = sys_logger_create(LOG_AUTHPRIV);
+		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
+		this->public.sys_loggers->insert_last(this->public.sys_loggers,
+											  sys_logger);
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			sys_logger->set_level(sys_logger, group, LEVEL_AUDIT);
 		}
 	}
 }
