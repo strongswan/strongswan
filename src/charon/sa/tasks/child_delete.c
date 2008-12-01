@@ -44,9 +44,19 @@ struct private_child_delete_t {
 	bool initiator;
 	
 	/**
- 	 * wheter to enforce delete action policy
- 	 */
- 	bool check_delete_action;
+	 * Protocol of CHILD_SA to delete
+	 */
+	protocol_id_t protocol;
+	
+	/**
+	 * Inbound SPI of CHILD_SA to delete
+	 */
+	u_int32_t spi;
+	
+	/**
+	 * wheter to enforce delete action policy
+	 */
+	bool check_delete_action;
 	
 	/**
 	 * CHILD_SAs which get deleted
@@ -238,6 +248,16 @@ static void log_children(private_child_delete_t *this)
  */
 static status_t build_i(private_child_delete_t *this, message_t *message)
 {
+	child_sa_t *child_sa;
+	
+	child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
+										  this->spi, TRUE);
+	if (!child_sa)
+	{	/* child does not exist anymore */
+		return SUCCESS;
+	}
+	this->child_sas->insert_last(this->child_sas, child_sa);
+	
 	log_children(this);
 	build_payloads(this, message);
 	return NEED_MORE;
@@ -323,7 +343,8 @@ static void destroy(private_child_delete_t *this)
 /*
  * Described in header.
  */
-child_delete_t *child_delete_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
+child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
+									u_int32_t spi)
 {
 	private_child_delete_t *this = malloc_thing(private_child_delete_t);
 
@@ -335,13 +356,14 @@ child_delete_t *child_delete_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 	this->ike_sa = ike_sa;
 	this->check_delete_action = FALSE;
 	this->child_sas = linked_list_create();
+	this->protocol = protocol;
+	this->spi = spi;
 	
-	if (child_sa != NULL)
+	if (protocol != PROTO_NONE)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
 		this->initiator = TRUE;
-		this->child_sas->insert_last(this->child_sas, child_sa);
 	}
 	else
 	{

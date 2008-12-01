@@ -49,9 +49,24 @@ struct private_child_rekey_t {
 	bool initiator;
 	
 	/**
+	 * Protocol of CHILD_SA to rekey
+	 */
+	protocol_id_t protocol;
+	
+	/**
+	 * Inbound SPI of CHILD_SA to rekey
+	 */
+	u_int32_t spi;
+	
+	/**
 	 * the CHILD_CREATE task which is reused to simplify rekeying
 	 */
 	child_create_t *child_create;
+	
+	/**
+	 * the CHILD_DELETE task to delete rekeyed CHILD_SA
+	 */
+	child_delete_t *child_delete;
 	
 	/**
 	 * CHILD_SA which gets rekeyed
@@ -63,6 +78,25 @@ struct private_child_rekey_t {
 	 */
 	task_t *collision;
 };
+
+/**
+ * Implementation of task_t.build for initiator, after rekeying
+ */
+static status_t build_i_delete(private_child_rekey_t *this, message_t *message)
+{
+	/* update exchange type to INFORMATIONAL for the delete */
+	message->set_exchange_type(message, INFORMATIONAL);
+	
+	return this->child_delete->task.build(&this->child_delete->task, message);
+}
+
+/**
+ * Implementation of task_t.process for initiator, after rekeying
+ */
+static status_t process_i_delete(private_child_rekey_t *this, message_t *message)
+{
+	return this->child_delete->task.process(&this->child_delete->task, message);
+}
 
 /**
  * find a child using the REKEY_SA notify
@@ -104,25 +138,33 @@ static void find_child(private_child_rekey_t *this, message_t *message)
  * Implementation of task_t.build for initiator
  */
 static status_t build_i(private_child_rekey_t *this, message_t *message)
-{	
+{
 	notify_payload_t *notify;
-	protocol_id_t protocol;
-	u_int32_t spi, reqid;
+	u_int32_t reqid;
+	child_cfg_t *config;
+	
+	this->child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
+												this->spi, TRUE);
+	if (!this->child_sa)
+	{	/* CHILD_SA is gone, unable to rekey */
+		return SUCCESS;
+	}
+	config = this->child_sa->get_config(this->child_sa);
 	
 	/* we just need the rekey notify ... */
-	protocol = this->child_sa->get_protocol(this->child_sa);
-	spi = this->child_sa->get_spi(this->child_sa, TRUE);
-	notify = notify_payload_create_from_protocol_and_type(protocol, REKEY_SA);
-	notify->set_spi(notify, spi);
+	notify = notify_payload_create_from_protocol_and_type(this->protocol,
+														  REKEY_SA);
+	notify->set_spi(notify, this->spi);
 	message->add_payload(message, (payload_t*)notify);
-
+	
 	/* ... our CHILD_CREATE task does the hard work for us. */
 	reqid = this->child_sa->get_reqid(this->child_sa);
+	this->child_create = child_create_create(this->ike_sa, config);
 	this->child_create->use_reqid(this->child_create, reqid);
 	this->child_create->task.build(&this->child_create->task, message);
 	
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
-
+	
 	return NEED_MORE;
 }
 
@@ -133,7 +175,7 @@ static status_t process_r(private_child_rekey_t *this, message_t *message)
 {
 	/* let the CHILD_CREATE task process the message */
 	this->child_create->task.process(&this->child_create->task, message);
-
+	
 	find_child(this, message);
 	
 	return NEED_MORE;
@@ -265,11 +307,13 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 	
 	spi = to_delete->get_spi(to_delete, TRUE);
 	protocol = to_delete->get_protocol(to_delete);
-	if (this->ike_sa->delete_child_sa(this->ike_sa, protocol, spi) != SUCCESS)
-	{
-		return FAILED;
-	}
-	return SUCCESS;
+	
+	/* rekeying done, delete the obsolete CHILD_SA using a subtask */
+	this->child_delete = child_delete_create(this->ike_sa, protocol, spi);
+	this->public.task.build = (status_t(*)(task_t*,message_t*))build_i_delete;
+	this->public.task.process = (status_t(*)(task_t*,message_t*))process_i_delete;
+	
+	return NEED_MORE;
 }
 
 /**
@@ -319,9 +363,16 @@ static void collide(private_child_rekey_t *this, task_t *other)
  */
 static void migrate(private_child_rekey_t *this, ike_sa_t *ike_sa)
 {	
-	this->child_create->task.migrate(&this->child_create->task, ike_sa);
+	if (this->child_create)
+	{
+		this->child_create->task.migrate(&this->child_create->task, ike_sa);
+	}
+	if (this->child_delete)
+	{
+		this->child_delete->task.migrate(&this->child_delete->task, ike_sa);
+	}
 	DESTROY_IF(this->collision);
-
+	
 	this->ike_sa = ike_sa;
 	this->collision = NULL;
 }
@@ -331,7 +382,14 @@ static void migrate(private_child_rekey_t *this, ike_sa_t *ike_sa)
  */
 static void destroy(private_child_rekey_t *this)
 {
-	this->child_create->task.destroy(&this->child_create->task);
+	if (this->child_create)
+	{
+		this->child_create->task.destroy(&this->child_create->task);
+	}
+	if (this->child_delete)
+	{
+		this->child_delete->task.destroy(&this->child_delete->task);
+	}
 	DESTROY_IF(this->collision);
 	free(this);
 }
@@ -339,22 +397,21 @@ static void destroy(private_child_rekey_t *this)
 /*
  * Described in header.
  */
-child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
+child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
+								  u_int32_t spi)
 {
-	child_cfg_t *config;
 	private_child_rekey_t *this = malloc_thing(private_child_rekey_t);
-
+	
 	this->public.collide = (void (*)(child_rekey_t*,task_t*))collide;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	if (child_sa != NULL)
+	if (protocol != PROTO_NONE)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
 		this->initiator = TRUE;
-		config = child_sa->get_config(child_sa);
-		this->child_create = child_create_create(ike_sa, config);
+		this->child_create = NULL;
 	}
 	else
 	{
@@ -365,8 +422,11 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 	}
 	
 	this->ike_sa = ike_sa;
-	this->child_sa = child_sa;
+	this->child_sa = NULL;
+	this->protocol = protocol;
+	this->spi = spi;
 	this->collision = NULL;
+	this->child_delete = NULL;
 	
 	return &this->public;
 }

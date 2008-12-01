@@ -1623,37 +1623,27 @@ static iterator_t* create_child_sa_iterator(private_ike_sa_t *this)
 /**
  * Implementation of ike_sa_t.rekey_child_sa.
  */
-static status_t rekey_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
+static status_t rekey_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
+							   u_int32_t spi)
 {
-	child_sa_t *child_sa;
 	child_rekey_t *child_rekey;
 	
-	child_sa = get_child_sa(this, protocol, spi, TRUE);
-	if (child_sa)
-	{
-		child_rekey = child_rekey_create(&this->public, child_sa);
-		this->task_manager->queue_task(this->task_manager, &child_rekey->task);
-		return this->task_manager->initiate(this->task_manager);
-	}
-	return FAILED;
+	child_rekey = child_rekey_create(&this->public, protocol, spi);
+	this->task_manager->queue_task(this->task_manager, &child_rekey->task);
+	return this->task_manager->initiate(this->task_manager);
 }
 
 /**
  * Implementation of ike_sa_t.delete_child_sa.
  */
-static status_t delete_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
+static status_t delete_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
+								u_int32_t spi)
 {
-	child_sa_t *child_sa;
 	child_delete_t *child_delete;
 	
-	child_sa = get_child_sa(this, protocol, spi, TRUE);
-	if (child_sa)
-	{
-		child_delete = child_delete_create(&this->public, child_sa);
-		this->task_manager->queue_task(this->task_manager, &child_delete->task);
-		return this->task_manager->initiate(this->task_manager);
-	}
-	return FAILED;
+	child_delete = child_delete_create(&this->public, protocol, spi);
+	this->task_manager->queue_task(this->task_manager, &child_delete->task);
+	return this->task_manager->initiate(this->task_manager);
 }
 
 /**

@@ -1119,6 +1119,8 @@ static void migrate(private_child_create_t *this, ike_sa_t *ike_sa)
 	}
 	
 	this->ike_sa = ike_sa;
+	this->keymat = ike_sa->get_keymat(ike_sa);
+	this->proposal = NULL;
 	this->proposals = NULL;
 	this->tsi = NULL;
 	this->tsr = NULL;

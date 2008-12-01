@@ -417,7 +417,7 @@ static status_t build_request(private_task_manager_t *this)
 	message->set_exchange_type(message, exchange);
 	this->initiating.type = exchange;
 	this->initiating.retransmitted = 0;
-
+	
 	iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
 	while (iterator->iterate(iterator, (void*)&task))
 	{
@@ -441,6 +441,9 @@ static status_t build_request(private_task_manager_t *this)
 		}
 	}
 	iterator->destroy(iterator);
+	
+	/* update exchange type if a task changed it */
+	this->initiating.type = message->get_exchange_type(message);
 	
 	DESTROY_IF(this->initiating.packet);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
@@ -495,7 +498,9 @@ static status_t process_response(private_task_manager_t *this,
 			case FAILED:
 			default:
 				/* critical failure, destroy IKE_SA */
+				iterator->remove(iterator);
 				iterator->destroy(iterator);
+				task->destroy(task);
 				return DESTROY_ME;
 		}
 		if (this->reset)
@@ -716,7 +721,8 @@ static status_t process_request(private_task_manager_t *this,
 			{
 				if (notify_found)
 				{
-					task = (task_t*)child_rekey_create(this->ike_sa, NULL);
+					task = (task_t*)child_rekey_create(this->ike_sa,
+													   PROTO_NONE, 0);
 				}
 				else
 				{
@@ -773,7 +779,8 @@ static status_t process_request(private_task_manager_t *this,
 						}
 						else
 						{
-							task = (task_t*)child_delete_create(this->ike_sa, NULL);
+							task = (task_t*)child_delete_create(this->ike_sa,
+																PROTO_NONE, 0);
 						}
 						break;
 					}
@@ -822,7 +829,9 @@ static status_t process_request(private_task_manager_t *this,
 			case FAILED:
 			default:
 				/* critical failure, destroy IKE_SA */
+				iterator->remove(iterator);
 				iterator->destroy(iterator);
+				task->destroy(task);
 				return DESTROY_ME;
 		}
 	}

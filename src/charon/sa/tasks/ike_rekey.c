@@ -21,6 +21,7 @@
 #include <daemon.h>
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/ike_init.h>
+#include <sa/tasks/ike_delete.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
 
@@ -58,10 +59,34 @@ struct private_ike_rekey_t {
 	ike_init_t *ike_init;
 	
 	/**
+	 * IKE_DELETE task to delete the old IKE_SA after rekeying was successful
+	 */
+	ike_delete_t *ike_delete;
+	
+	/**
 	 * colliding task detected by the task manager
 	 */
 	task_t *collision;
 };
+
+/**
+ * Implementation of task_t.build for initiator, after rekeying
+ */
+static status_t build_i_delete(private_ike_rekey_t *this, message_t *message)
+{
+	/* update exchange type to INFORMATIONAL for the delete */
+	message->set_exchange_type(message, INFORMATIONAL);
+	
+	return this->ike_delete->task.build(&this->ike_delete->task, message);
+}
+
+/**
+ * Implementation of task_t.process for initiator, after rekeying
+ */
+static status_t process_i_delete(private_ike_rekey_t *this, message_t *message)
+{
+	return this->ike_delete->task.process(&this->ike_delete->task, message);
+}
 
 /**
  * Implementation of task_t.build for initiator
@@ -168,7 +193,6 @@ static status_t build_r(private_ike_rekey_t *this, message_t *message)
  */
 static status_t process_i(private_ike_rekey_t *this, message_t *message)
 {
-	job_t *job;
 	ike_sa_id_t *to_delete;
 	iterator_t *iterator;
 	payload_t *payload;
@@ -271,10 +295,12 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 		charon->bus->set_sa(charon->bus, this->ike_sa);
 	}
 	
-	job = (job_t*)delete_ike_sa_job_create(to_delete, TRUE);
-	charon->processor->queue_job(charon->processor, job);	
+	/* rekeying successful, delete the IKE_SA using a subtask */
+	this->ike_delete = ike_delete_create(this->ike_sa, TRUE);
+	this->public.task.build = (status_t(*)(task_t*,message_t*))build_i_delete;
+	this->public.task.process = (status_t(*)(task_t*,message_t*))process_i_delete;
 	
-	return SUCCESS;
+	return NEED_MORE;
 }
 
 /**
@@ -300,6 +326,10 @@ static void migrate(private_ike_rekey_t *this, ike_sa_t *ike_sa)
 	{
 		this->ike_init->task.destroy(&this->ike_init->task);
 	}
+	if (this->ike_delete)
+	{
+		this->ike_delete->task.destroy(&this->ike_delete->task);
+	}
 	if (this->new_sa)
 	{
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
@@ -308,11 +338,12 @@ static void migrate(private_ike_rekey_t *this, ike_sa_t *ike_sa)
 		charon->bus->set_sa(charon->bus, this->ike_sa);
 	}
 	DESTROY_IF(this->collision);
-
+	
 	this->collision = NULL;
 	this->ike_sa = ike_sa;
 	this->new_sa = NULL;
 	this->ike_init = NULL;
+	this->ike_delete = NULL;
 }
 
 /**
@@ -338,6 +369,10 @@ static void destroy(private_ike_rekey_t *this)
 	if (this->ike_init)
 	{
 		this->ike_init->task.destroy(&this->ike_init->task);
+	}
+	if (this->ike_delete)
+	{
+		this->ike_delete->task.destroy(&this->ike_delete->task);
 	}
 	DESTROY_IF(this->collision);
 	free(this);
@@ -368,6 +403,7 @@ ike_rekey_t *ike_rekey_create(ike_sa_t *ike_sa, bool initiator)
 	this->ike_sa = ike_sa;
 	this->new_sa = NULL;
 	this->ike_init = NULL;
+	this->ike_delete = NULL;
 	this->initiator = initiator;
 	this->collision = NULL;
 	

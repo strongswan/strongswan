@@ -52,9 +52,11 @@ struct child_delete_t {
  * Create a new child_delete task.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param child_sa		CHILD_SA to delete, or NULL as responder
+ * @param protocol		protocol of CHILD_SA to delete, PROTO_NONE as responder
+ * @param spi			inbound SPI of CHILD_SA to delete
  * @return				child_delete task to handle by the task_manager
  */
-child_delete_t *child_delete_create(ike_sa_t *ike_sa, child_sa_t *child_sa);
+child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
+									u_int32_t spi);
 
 #endif /* CHILD_DELETE_H_ @} */
