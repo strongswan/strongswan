@@ -441,16 +441,13 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 				file_logger->set_level(file_logger, group, levels[group]);
 			}
 		}
-
+		
 		/* set up default auth sys_logger */
 		sys_logger = sys_logger_create(LOG_AUTHPRIV);
 		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
 		this->public.sys_loggers->insert_last(this->public.sys_loggers,
 											  sys_logger);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			sys_logger->set_level(sys_logger, group, LEVEL_AUDIT);
-		}
+		sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
 	}
 }
 
