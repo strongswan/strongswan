@@ -554,17 +554,14 @@ static void process_child_delete(private_ha_sync_dispatcher_t *this,
 														  value.ike_sa_id);
 				break;
 			case HA_SYNC_INBOUND_SPI:
-				if (!ike_sa || ike_sa->destroy_child_sa(ike_sa, PROTO_ESP,
-												value.u32) != SUCCESS)
+				if (ike_sa)
 				{
-					DBG1(DBG_CHD, "HA sync CHILD_SA 0x%lx delete failed (%p)",
-						 value.u32, ike_sa);
+					ike_sa->destroy_child_sa(ike_sa, PROTO_ESP, value.u32);
 				}
 				break;
 			default:
 				break;
 		}
-		break;
 	}
 	if (ike_sa)
 	{
