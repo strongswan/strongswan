@@ -85,7 +85,7 @@ AM_CFLAGS = \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
--DPLUTO -DKLIPS -DDEBUG -DTHREADS
+-DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \
 oid.o \
@@ -143,3 +143,6 @@ if USE_CAPABILITIES
   pluto_LDADD += -lcap
 endif
 
+if USE_THREADS
+  AM_CFLAGS += -DTHREADS
+endif

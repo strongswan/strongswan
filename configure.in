@@ -570,6 +570,17 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[threads],
+	AS_HELP_STRING([--disable-threads],[disable the use of threads in pluto. Charon always uses threads. (default is NO).]),
+	[if test x$enableval = xyes; then
+		threads=true
+	 else
+		threads=false
+	fi],
+	threads=true
+)
+
+AC_ARG_ENABLE(
 	[charon],
 	AS_HELP_STRING([--disable-charon],[disable the IKEv2 keying daemon charon. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -928,6 +939,7 @@ AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
 AM_CONDITIONAL(USE_SELF_TEST, test x$self_test = xtrue)
 AM_CONDITIONAL(USE_CAPABILITIES, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
+AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue)
