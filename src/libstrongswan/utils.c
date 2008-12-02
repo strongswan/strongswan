@@ -20,7 +20,6 @@
 
 #include <sys/stat.h>
 #include <string.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <dirent.h>
@@ -138,19 +137,16 @@ void nop()
 {
 }
 
+#ifndef HAVE_GCC_ATOMIC_OPERATIONS
+#include <pthread.h>
+
 /**
- * We use a single mutex for all refcount variables. This
- * is not optimal for performance, but the critical section
- * is not that long...
- * TODO: Consider to include a mutex in each refcount_t variable.
+ * We use a single mutex for all refcount variables. 
  */
 static pthread_mutex_t ref_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
- * Described in header.
- * 
- * TODO: May be implemented with atomic CPU instructions
- * instead of a mutex.
+ * Increase refcount
  */
 void ref_get(refcount_t *ref)
 {
@@ -160,10 +156,7 @@ void ref_get(refcount_t *ref)
 }
 
 /**
- * Described in header.
- * 
- * TODO: May be implemented with atomic CPU instructions
- * instead of a mutex.
+ * Decrease refcount
  */
 bool ref_put(refcount_t *ref)
 {
@@ -174,6 +167,7 @@ bool ref_put(refcount_t *ref)
 	pthread_mutex_unlock(&ref_mutex);
 	return !more_refs;
 }
+#endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 
 /**
  * output handler in printf() for time_t

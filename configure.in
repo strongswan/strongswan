@@ -708,6 +708,21 @@ AC_HAVE_LIBRARY(dl)
 AC_CHECK_FUNCS(backtrace)
 AC_CHECK_FUNCS(dladdr)
 
+AC_MSG_CHECKING([for gcc atomic operations])
+AC_TRY_RUN(
+[
+	int main() {
+		volatile int ref = 1;
+		__sync_fetch_and_add (&ref, 1);
+		__sync_sub_and_fetch (&ref, 1);
+		/* Make sure test fails if operations are not supported */
+		__sync_val_compare_and_swap(&ref, 1, 0);
+		return ref;
+	}
+],
+[AC_MSG_RESULT([yes]); AC_DEFINE(HAVE_GCC_ATOMIC_OPERATIONS)],
+[AC_MSG_RESULT([no])])
+
 if test x$gmp = xtrue; then
 	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
 	AC_MSG_CHECKING([gmp.h version >= 4.1.4])
