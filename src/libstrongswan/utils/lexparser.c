@@ -76,6 +76,33 @@ bool extract_token(chunk_t *token, const char termination, chunk_t *src)
 }
 
 /**
+ * extracts a token ending with the first occurrence of a given null-terminated string
+ */
+bool extract_token_str(chunk_t *token, const char *termination, chunk_t *src)
+{
+	u_char *eot = memstr(src->ptr, termination, src->len);
+	size_t l = strlen(termination);
+	
+	/* initialize empty token */
+	*token = chunk_empty;
+	
+	if (eot == NULL) /* termination string not found */
+	{
+		return FALSE;
+	}
+	
+	/* extract token */
+	token->ptr = src->ptr;
+	token->len = (u_int)(eot - src->ptr);
+	
+	/* advance src pointer after termination string */
+	src->ptr = eot + l;
+	src->len -= (token->len + l);
+	
+	return TRUE;
+}
+
+/**
  * extracts a token ending with the last occurrence of a given termination symbol
  */
 bool extract_last_token(chunk_t *token, const char termination, chunk_t *src)

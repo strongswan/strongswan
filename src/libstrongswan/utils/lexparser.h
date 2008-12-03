@@ -37,12 +37,17 @@ bool eat_whitespace(chunk_t *src);
 bool match(const char *pattern, const chunk_t *ch);
 
 /**
- * Extracts a token ending with the first occurence a given termination symbol
+ * Extracts a token ending with the first occurrence of a given termination symbol
  */
 bool extract_token(chunk_t *token, const char termination, chunk_t *src);
 
 /**
- * Extracts a token ending with the last occurence a given termination symbol
+ * Extracts a token ending with the first occurrence of a given null-terminated string
+ */
+bool extract_token_str(chunk_t *token, const char *termination, chunk_t *src);
+
+/**
+ * Extracts a token ending with the last occurrence of a given termination symbol
  */
 bool extract_last_token(chunk_t *token, const char termination, chunk_t *src);
 

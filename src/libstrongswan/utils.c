@@ -79,6 +79,23 @@ void memxor(u_int8_t dest[], u_int8_t src[], size_t n)
 /**
  * Described in header.
  */
+void *memstr(const void *haystack, const char *needle, size_t n)
+{
+	unsigned const char *pos = haystack;
+	size_t l = strlen(needle);
+	for (; n >= l; ++pos, --n)
+	{
+		if (memeq(pos, needle, l))
+		{
+			return (void*)pos;
+		}
+	}
+	return NULL;
+}
+
+/**
+ * Described in header.
+ */
 bool mkdir_p(const char *path, mode_t mode)
 {
 	size_t len;

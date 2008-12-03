@@ -225,6 +225,12 @@ void *clalloc(void *pointer, size_t size);
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 
 /**
+ * A variant of strstr with the characteristics of memchr, where haystack is not
+ * a null-terminated string but simply a memory area of length n.
+ */
+void *memstr(const void *haystack, const char *needle, size_t n);
+
+/**
  * Creates a directory and all required parent directories. 
  *
  * @param	path	path to the new directory
