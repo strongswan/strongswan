@@ -423,51 +423,48 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
  */
 static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 {
-	int family;
-	chunk_t addr;
+	u_char *addr;
 	u_int8_t prefixlen;
-	u_int16_t port, port_mask;
-	host_t *host;
-	traffic_selector_t *ts;
-
+	u_int16_t port = 0;
+	host_t *host = NULL;
+	
 	if (src)
 	{
-		addr.ptr = (u_char*)&sel->saddr;
+		addr = (u_char*)&sel->saddr;
 		prefixlen = sel->prefixlen_s;
-		port = sel->sport;
-		port_mask = sel->sport_mask;
-	}
-    else
-	{
-		addr.ptr = (u_char*)&sel->daddr;
-		prefixlen = sel->prefixlen_d;
-		port = sel->dport;
-		port_mask = sel->dport_mask;
-	}
-
-	/* The Linux 2.6 kernel does not set the selector's family field,
-     * so as a kludge we additionally test the prefix length. 
-	 */
-	if (sel->family == AF_INET || sel->prefixlen_s == 32)
-	{
-		family = AF_INET;
-		addr.len = 4;
-	}
-	else if (sel->family == AF_INET6 || sel->prefixlen_s == 128)
-	{
-		family = AF_INET6;
-		addr.len = 16;
+		if (sel->sport_mask)
+		{
+			port = htons(sel->sport);
+		}
 	}
 	else
 	{
-		return NULL;
+		addr = (u_char*)&sel->daddr;
+		prefixlen = sel->prefixlen_d;
+		if (sel->dport_mask)
+		{
+			port = htons(sel->dport);
+		}
 	}
-	host = host_create_from_chunk(family, addr, 0);
-	port = (port_mask == 0) ? 0 : ntohs(port); 
-
-	ts = traffic_selector_create_from_subnet(host, prefixlen, sel->proto, port);
-	host->destroy(host); 		
-	return ts;
+	
+	/* The Linux 2.6 kernel does not set the selector's family field,
+	 * so as a kludge we additionally test the prefix length. 
+	 */
+	if (sel->family == AF_INET || sel->prefixlen_s == 32)
+	{
+		host = host_create_from_chunk(AF_INET, chunk_create(addr, 4), 0);
+	}
+	else if (sel->family == AF_INET6 || sel->prefixlen_s == 128)
+	{
+		host = host_create_from_chunk(AF_INET6, chunk_create(addr, 16), 0);
+	}
+	
+	if (host)
+	{
+		return traffic_selector_create_from_subnet(host, prefixlen,
+												   sel->proto, port);
+	}
+	return NULL;
 }
 
 /**
