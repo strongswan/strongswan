@@ -231,6 +231,8 @@ bool test_enumerate_token()
 		{" abc 1:2 cde;3  4efg5.  ", ":;.,", " 12345"},
 		{"abc.cde,efg", ",.", ""},
 		{"  abc   cde  efg  ", " ", " "},
+		{"a'abc' c 'cde' cefg", " ", " abcd"},
+		{"'abc' abc 'cde'd 'efg'", " ", " abcd"},
 	}, tests2[] = {
 		{"a, b, c", ",", " "},
 		{"a,b,c", ",", " "},

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -215,27 +216,48 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 		}
 	}
 	
-	/* find separators */
-	sep = this->sep;
-	while (*sep)
+	switch (*this->pos)
 	{
-		tmp = strchr(this->pos, *sep);
-		if (tmp && (pos == NULL || tmp < pos))
+		case '"':
+		case '\'':
 		{
-			pos = tmp;
+			/* read quoted token */
+			tmp = strchr(this->pos + 1, *this->pos);
+			if (tmp)
+			{
+				*token = this->pos + 1;
+				*tmp = '\0';
+				this->pos = tmp + 1;
+				return TRUE;
+			}
+			/* unterminated string, FALL-THROUGH */
 		}
-		sep++;
-	}
-	*token = this->pos;
-	if (pos)
-	{
-		*pos = '\0';
-		this->pos = pos + 1;
-	}
-	else
-	{
-		last = TRUE;
-		pos = this->pos = strchr(this->pos, '\0');
+		default:
+		{
+			/* find nearest separator */
+			sep = this->sep;
+			while (*sep)
+			{
+				tmp = strchr(this->pos, *sep);
+				if (tmp && (pos == NULL || tmp < pos))
+				{
+					pos = tmp;
+				}
+				sep++;
+			}
+			*token = this->pos;
+			if (pos)
+			{
+				*pos = '\0';
+				this->pos = pos + 1;
+			}
+			else
+			{
+				last = TRUE;
+				pos = this->pos = strchr(this->pos, '\0');
+			}
+			break;
+		}
 	}
 	
 	/* trim trailing characters/separators */
