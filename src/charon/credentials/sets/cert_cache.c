@@ -232,7 +232,7 @@ static bool certs_filter(cert_data_t *data, relation_t **in, certificate_t **out
  */
 static void certs_destroy(cert_data_t *data)
 {
-	ref_put(&data->this->enumerating);
+	ignore_result(ref_put(&data->this->enumerating));
 	data->this->lock->unlock(data->this->lock);
 	if (data->this->check_required)
 	{
