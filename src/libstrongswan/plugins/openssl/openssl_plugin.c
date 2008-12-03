@@ -16,6 +16,7 @@
  * $Id$
  */
 
+#include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/engine.h>
 #include <openssl/crypto.h>
@@ -185,6 +186,7 @@ static void destroy(private_openssl_plugin_t *this)
 	
 	ENGINE_cleanup();
 	EVP_cleanup();
+	CONF_modules_free();
 	
 	threading_cleanup();
 	
@@ -202,6 +204,7 @@ plugin_t *plugin_create()
 	
 	threading_init();
 	
+	OPENSSL_config(NULL);
 	OpenSSL_add_all_algorithms();
 	
 	/* activate support for hardware accelerators */

@@ -76,6 +76,10 @@ enum builder_part_t {
 	BUILD_CERT,
 	/** enforce an additional X509 flag, x509_flag_t */
 	BUILD_X509_FLAG,
+	/** key ID of a key on a smartcard, null terminated char* ([slot:]keyid) */
+	BUILD_SMARTCARD_KEYID,
+	/** pin to access a key on a smartcard, null terminated char* */
+	BUILD_SMARTCARD_PIN,
 	/** end of variable argument builder list */
 	BUILD_END,
 };

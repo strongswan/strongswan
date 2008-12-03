@@ -22,6 +22,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
+#include <openssl/engine.h>
 
 /**
  *  Public exponent to use for key generation.
@@ -43,6 +44,11 @@ struct private_openssl_rsa_private_key_t {
 	 * RSA object from OpenSSL
 	 */
 	RSA *rsa;
+	
+	/**
+	 * TRUE if the key is from an OpenSSL ENGINE and might not be readable
+	 */
+	bool engine;
 
 	/**
 	 * Keyid formed as a SHA-1 hash of a privateKey object
@@ -238,9 +244,13 @@ static bool belongs_to(private_openssl_rsa_private_key_t *this, public_key_t *pu
  */
 static chunk_t get_encoding(private_openssl_rsa_private_key_t *this)
 {
-	chunk_t enc = chunk_alloc(i2d_RSAPrivateKey(this->rsa, NULL));
-	u_char *p = enc.ptr;
-	i2d_RSAPrivateKey(this->rsa, &p);
+	chunk_t enc = chunk_empty;
+	if (!this->engine)
+	{
+		enc = chunk_alloc(i2d_RSAPrivateKey(this->rsa, NULL));
+		u_char *p = enc.ptr;
+		i2d_RSAPrivateKey(this->rsa, &p);
+	}
 	return enc;
 }
 
@@ -289,6 +299,7 @@ static private_openssl_rsa_private_key_t *openssl_rsa_private_key_create_empty(v
 	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
 	
+	this->engine = FALSE;
 	this->keyid = NULL;
 	this->keyid_info = NULL;
 	this->ref = 1;
@@ -347,6 +358,61 @@ static openssl_rsa_private_key_t *load(chunk_t blob)
 	return &this->public;
 }
 
+/**
+ * load private key from a smart card
+ */
+static openssl_rsa_private_key_t *load_from_smartcard(char *keyid, char *pin)
+{
+	private_openssl_rsa_private_key_t *this = NULL;
+	EVP_PKEY *key;
+	char *engine_id = lib->settings->get_str(lib->settings,
+								"library.plugins.openssl.engine_id", "pkcs11");
+	
+	ENGINE *engine = ENGINE_by_id(engine_id);
+	if (!engine)
+	{
+		DBG1("engine '%s' is not available", engine_id);
+		return NULL;
+	}
+	
+	if (!ENGINE_init(engine))
+	{
+		DBG1("failed to initialize engine '%s'", engine_id);
+		goto error;
+	}
+	
+	if (!ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
+	{
+		DBG1("failed to set PIN on engine '%s'", engine_id);
+		goto error;
+	}
+	
+	key = ENGINE_load_private_key(engine, keyid, NULL, NULL);
+	
+	if (!key)
+	{
+		DBG1("failed to load private key with ID '%s' from engine '%s'", keyid,
+				engine_id);
+		goto error;
+	}
+	ENGINE_free(engine);
+	
+	this = openssl_rsa_private_key_create_empty();
+	this->rsa = EVP_PKEY_get1_RSA(key);
+	this->engine = TRUE;
+	
+	if (!openssl_rsa_public_key_build_id(this->rsa, &this->keyid, &this->keyid_info))
+	{
+		destroy(this);
+		return NULL;
+	}
+	return &this->public;
+	
+error:
+	ENGINE_free(engine);
+	return NULL;
+}
+
 typedef struct private_builder_t private_builder_t;
 /**
  * Builder implementation for key loading/generation
@@ -356,6 +422,10 @@ struct private_builder_t {
 	builder_t public;
 	/** loaded/generated private key */
 	openssl_rsa_private_key_t *key;
+	/** temporary stored smartcard key ID */
+	char *keyid;
+	/** temporary stored smartcard pin */
+	char *pin;
 };
 
 /**
@@ -365,6 +435,10 @@ static openssl_rsa_private_key_t *build(private_builder_t *this)
 {
 	openssl_rsa_private_key_t *key = this->key;
 	
+	if (this->keyid && this->pin)
+	{
+		key = load_from_smartcard(this->keyid, this->pin);
+	}
 	free(this);
 	return key;
 }
@@ -396,6 +470,20 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 				va_end(args);
 				return;
 			}
+			case BUILD_SMARTCARD_KEYID:
+			{
+				va_start(args, part);
+				this->keyid = va_arg(args, char*);
+				va_end(args);
+				return;
+			}
+			case BUILD_SMARTCARD_PIN:
+			{
+				va_start(args, part);
+				this->pin = va_arg(args, char*);
+				va_end(args);
+				return;
+			}
 			default:
 				break;
 		}
@@ -424,6 +512,8 @@ builder_t *openssl_rsa_private_key_builder(key_type_t type)
 	this->key = NULL;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
+	this->keyid = NULL;
+	this->pin = NULL;
 	
 	return &this->public;
 }

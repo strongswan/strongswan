@@ -184,6 +184,8 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_CA_CERT:
 				case BUILD_CERT:
 				case BUILD_IETF_GROUP_ATTR:
+				case BUILD_SMARTCARD_KEYID:
+				case BUILD_SMARTCARD_PIN:
 					builder->add(builder, part, va_arg(args, void*));
 					continue;
 				/* no default to get a compiler warning */

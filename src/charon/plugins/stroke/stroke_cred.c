@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -720,13 +721,23 @@ static void load_secrets(private_stroke_cred_t *this)
 		{
 			continue;
 		}
-		if (!extract_last_token(&ids, ':', &line))
+		if (line.len > 2 && strneq(": ", line.ptr, 2))
 		{
-			DBG1(DBG_CFG, "line %d: missing ':' separator", line_nr);
+			/* no ids, skip the ':' */
+			ids = chunk_empty;
+			line.ptr++;
+			line.len--;
+		}
+		else if (extract_token_str(&ids, " : ", &line))
+		{
+			/* NULL terminate the extracted id string */
+			*(ids.ptr + ids.len) = '\0';
+		}
+		else
+		{
+			DBG1(DBG_CFG, "line %d: missing ' : ' separator", line_nr);
 			goto error;
 		}
-		/* NULL terminate the ids string by replacing the : separator */
-		*(ids.ptr + ids.len) = '\0';
 
 		if (!eat_whitespace(&line) || !extract_token(&token, ' ', &line))
 		{
@@ -791,10 +802,75 @@ static void load_secrets(private_stroke_cred_t *this)
 			}
 			chunk_clear(&secret);
 		}
+		else if (match("PIN", &token))
+		{
+			chunk_t sc = chunk_empty;
+			char smartcard[32], keyid[22], pin[32];
+			private_key_t *key;
+			u_int slot;
+			
+			err_t ugh = extract_value(&sc, &line);
+			
+			if (ugh != NULL)
+			{
+				DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
+				goto error;
+			}
+			if (sc.len == 0)
+			{
+				DBG1(DBG_CFG, "line %d: expected %%smartcard specifier", line_nr);
+				goto error;
+			}
+			snprintf(smartcard, sizeof(smartcard), "%.*s", sc.len, sc.ptr);
+			smartcard[sizeof(smartcard) - 1] = '\0';
+			
+			/* parse slot and key id. only two formats are supported.
+			 * first try %smartcard<slot>:<keyid> */
+			if (sscanf(smartcard, "%%smartcard%u:%s", &slot, keyid) == 2)
+			{
+				snprintf(smartcard, sizeof(smartcard), "%u:%s", slot, keyid);
+			}
+			/* then try %smartcard:<keyid> */
+			else if (sscanf(smartcard, "%%smartcard:%s", keyid) == 1)
+			{
+				snprintf(smartcard, sizeof(smartcard), "%s", keyid);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "line %d: the given %%smartcard specifier is not"
+						" supported or invalid", line_nr);
+				goto error;
+			}
+			
+			if (!eat_whitespace(&line))
+			{
+				DBG1(DBG_CFG, "line %d: expected PIN", line_nr);
+				goto error;
+			}
+			ugh = extract_secret(&chunk, &line);
+			if (ugh != NULL)
+			{
+				DBG1(DBG_CFG, "line %d: malformed PIN: %s", line_nr, ugh);
+				goto error;
+			}
+			snprintf(pin, sizeof(pin), "%.*s", chunk.len, chunk.ptr);
+			pin[sizeof(pin) - 1] = '\0';
+			
+			/* we assume an RSA key */
+			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+									 BUILD_SMARTCARD_KEYID, smartcard,
+									 BUILD_SMARTCARD_PIN, pin, BUILD_END);
+			
+			if (key)
+			{
+				DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);
+				this->private->insert_last(this->private, key);
+			}
+			memset(pin, 0, sizeof(pin));
+		}
 		else if ((match("PSK", &token) && (type = SHARED_IKE)) ||
 				 (match("EAP", &token) && (type = SHARED_EAP)) ||
-				 (match("XAUTH", &token) && (type = SHARED_EAP)) ||
-				 (match("PIN", &token) && (type = SHARED_PIN)))
+				 (match("XAUTH", &token) && (type = SHARED_EAP)))
 		{
 			stroke_shared_key_t *shared_key;
 			chunk_t secret = chunk_empty;
@@ -862,7 +938,7 @@ static void load_secrets(private_stroke_cred_t *this)
 		else
 		{
 			DBG1(DBG_CFG, "line %d: token must be either "
-				 "RSA, EC, PSK, EAP, or PIN", line_nr);
+				 "RSA, ECDSA, PSK, EAP, XAUTH or PIN", line_nr);
 			goto error;
 		}
 	}
