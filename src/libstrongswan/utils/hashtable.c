@@ -152,7 +152,7 @@ static u_int get_nearest_powerof2(u_int n)
 {
 	u_int i;
 	--n;
-	for (--n, i = 1; i < sizeof(u_int) * 8; i <<= 1)
+	for (i = 1; i < sizeof(u_int) * 8; i <<= 1)
 	{
 		n |= n >> i;
 	}
