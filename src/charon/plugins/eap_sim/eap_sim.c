@@ -1051,7 +1051,6 @@ static bool is_mutual(private_eap_sim_t *this)
 static void destroy(private_eap_sim_t *this)
 {
 	this->peer->destroy(this->peer);
-	this->peer->destroy(this->peer);
 	DESTROY_IF(this->hasher);
 	DESTROY_IF(this->prf);
 	DESTROY_IF(this->signer);
