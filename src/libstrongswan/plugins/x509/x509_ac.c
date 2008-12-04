@@ -409,7 +409,7 @@ static bool parse_certificate(private_x509_ac_t *this)
 				sig_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case AC_OBJ_SERIAL_NUMBER:
-				this->serialNumber = object;
+				this->serialNumber = chunk_clone(object);
 				break;
 			case AC_OBJ_NOT_BEFORE:
 				this->notBefore = asn1_to_time(&object, ASN1_GENERALIZEDTIME);
@@ -923,6 +923,7 @@ static void destroy(private_x509_ac_t *this)
 
 		ietfAttr_list_destroy(this->charging);
 		ietfAttr_list_destroy(this->groups);
+		free(this->serialNumber.ptr);
 		free(this->encoding.ptr);
 		free(this);
 	}
@@ -956,6 +957,7 @@ static private_x509_ac_t *create_empty(void)
 
 	/* initialize */
 	this->encoding = chunk_empty;
+	this->serialNumber = chunk_empty;
 	this->holderSerial = chunk_empty;
 	this->holderIssuer = NULL;
 	this->entityName = NULL;

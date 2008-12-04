@@ -540,7 +540,6 @@ int main(int argc, char **argv)
 							BUILD_SIGNING_CERT, signerCert,
 							BUILD_SIGNING_KEY, signerKey,
 							BUILD_END);
-		free(serial.ptr);
 		if (!attr_cert)
 		{
 			goto end;
