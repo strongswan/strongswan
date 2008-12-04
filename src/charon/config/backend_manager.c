@@ -252,7 +252,7 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 			DBG2(DBG_CFG, "  candidate \"%s\": %D...%D with prio %d.%d",
 			 	 current->get_name(current), my_cand, other_cand,
 			 	 match_peer, match_ike);
-			if (match_peer >= best_peer && match_ike > best_ike)
+			if (match_peer > best_peer && match_ike >= best_ike)
 			{
 				DESTROY_IF(found);
 				found = current;
