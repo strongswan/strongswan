@@ -360,6 +360,7 @@ static status_t process_eap_identity(private_eap_authenticator_t *this,
 	}
 	/* restart EAP exchange, but with real method */
 	this->method->destroy(this->method);
+	this->method = NULL;
 	this->do_eap_identity = FALSE;
 	return initiate(this, this->type, this->vendor, out);
 }
