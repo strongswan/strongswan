@@ -6,12 +6,12 @@ moon::ipsec status::ext.*ESTABLISHED.*carol@strongswan.org::YES
 moon::ipsec status::ext.*ESTABLISHED.*dave@strongswan.org::YES
 moon::ipsec status::int.*ESTABLISHED.*alice@strongswan.org::YES
 moon::ipsec status::int.*ESTABLISHED.*venus.strongswan.org::YES
-moon::ipsec pool --status::extpool.*10.3.0.1.*10.3.255.254.*48h.*2::YES
-moon::ipsec pool --status::intpool.*10.4.0.1.*10.4.255.254.*static.*2::YES
-moon::ipsec pool --leases --filter pool=extpool,addr=10.3.0.1,id=carol@strongswan.org::online::YES
-moon::ipsec pool --leases --filter pool=extpool,addr=10.3.0.2,id=dave@strongswan.org::online::YES
-moon::ipsec pool --leases --filter pool=intpool,addr=10.4.0.1,id=alice@strongswan.org::online::YES
-moon::ipsec pool --leases --filter pool=intpool,addr=10.4.0.2,id=venus.strongswan.org::online::YES
+moon::ipsec pool --status 2> /dev/null::extpool.*10.3.0.1.*10.3.1.244.*48h.*2::YES
+moon::ipsec pool --status 2> /dev/null::intpool.*10.4.0.1.*10.4.1.244.*static.*2::YES
+moon::ipsec pool --leases --filter pool=extpool,addr=10.3.0.1,id=carol@strongswan.org 2> /dev/null::online::YES
+moon::ipsec pool --leases --filter pool=extpool,addr=10.3.0.2,id=dave@strongswan.org 2> /dev/null::online::YES
+moon::ipsec pool --leases --filter pool=intpool,addr=10.4.0.1,id=alice@strongswan.org 2> /dev/null::online::YES
+moon::ipsec pool --leases --filter pool=intpool,addr=10.4.0.2,id=venus.strongswan.org 2> /dev/null::online::YES
 carol::cat /var/log/daemon.log::installing new virtual IP 10.3.0.1::YES
 dave::cat /var/log/daemon.log::installing new virtual IP 10.3.0.2::YES
 alice::cat /var/log/daemon.log::installing new virtual IP 10.4.0.1::YES

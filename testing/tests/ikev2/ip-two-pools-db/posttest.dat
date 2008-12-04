@@ -11,6 +11,6 @@ dave::/etc/init.d/iptables stop 2> /dev/null
 moon::ip route del 10.3.0.0/16 via PH_IP_MOON
 moon::ip route del 10.4.0.0/16 via PH_IP_MOON1
 moon::conntrack -F
-moon::ipsec pool --del extpool
-moon::ipsec pool --del intpool
+moon::ipsec pool --del extpool 2> /dev/null
+moon::ipsec pool --del intpool 2> /dev/null
 moon::rm /etc/ipsec.d/ipsec.*
