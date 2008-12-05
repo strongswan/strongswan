@@ -52,9 +52,9 @@ typedef bool (*hashtable_equals_t)(void *key, void *other_key);
 struct hashtable_t {
 	
 	/**
-	 * Create an enumerator over the hash table.
+	 * Create an enumerator over the hash table key/value pairs.
 	 * 
-	 * @return			enumerator over hash table entries
+	 * @return			enumerator over (void *key, void *value)
 	 */
 	enumerator_t *(*create_enumerator) (hashtable_t *this);
 	

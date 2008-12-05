@@ -322,16 +322,18 @@ static u_int get_count(private_hashtable_t *this)
 /**
  * Implementation of private_enumerator_t.enumerator.enumerate.
  */
-static bool enumerate(private_enumerator_t *this, void **item)
+static bool enumerate(private_enumerator_t *this, void **key, void **value)
 {
 	while (this->row < this->table->capacity)
 	{
 		if (this->current)
 		{
 			pair_t *pair;
-			if (this->current->enumerate(this->current, (void**)&pair))
+			
+			if (this->current->enumerate(this->current, &pair))
 			{
-				*item = pair->value;
+				*key = pair->key;
+				*value = pair->value;
 				return TRUE;
 			}
 			this->current->destroy(this->current);
@@ -340,6 +342,7 @@ static bool enumerate(private_enumerator_t *this, void **item)
 		else
 		{
 			linked_list_t *list;
+			
 			if ((list = this->table->table[this->row]) != NULL)
 			{
 				this->current = list->create_enumerator(list);

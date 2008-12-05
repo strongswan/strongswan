@@ -1751,7 +1751,7 @@ static void destroy(private_kernel_netlink_ipsec_t *this)
 	close(this->socket_xfrm_events);
 	this->socket_xfrm->destroy(this->socket_xfrm);
 	enumerator = this->policies->create_enumerator(this->policies);
-	while (enumerator->enumerate(enumerator, (void**)&policy))
+	while (enumerator->enumerate(enumerator, &policy, &policy))
 	{
 		free(policy);
 	}
