@@ -332,8 +332,14 @@ static bool enumerate(private_enumerator_t *this, void **key, void **value)
 			
 			if (this->current->enumerate(this->current, &pair))
 			{
-				*key = pair->key;
-				*value = pair->value;
+				if (key)
+				{
+					*key = pair->key;
+				}
+				if (value)
+				{
+					*value = pair->value;
+				}
 				return TRUE;
 			}
 			this->current->destroy(this->current);
