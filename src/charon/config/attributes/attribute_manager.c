@@ -74,7 +74,7 @@ static host_t* acquire_address(private_attribute_manager_t *this,
  * Implementation of attribute_manager_t.release_address.
  */
 static void release_address(private_attribute_manager_t *this,
-							char *pool, host_t *address)
+							char *pool, host_t *address, identification_t *id)
 {
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
@@ -83,7 +83,7 @@ static void release_address(private_attribute_manager_t *this,
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current->release_address(current, pool, address))
+		if (current->release_address(current, pool, address, id))
 		{
 			break;
 		}
@@ -132,7 +132,7 @@ attribute_manager_t *attribute_manager_create()
 	private_attribute_manager_t *this = malloc_thing(private_attribute_manager_t);
 	
 	this->public.acquire_address = (host_t*(*)(attribute_manager_t*, char*, identification_t*,auth_info_t*,host_t*))acquire_address;
-	this->public.release_address = (void(*)(attribute_manager_t*, char *, host_t*))release_address;
+	this->public.release_address = (void(*)(attribute_manager_t*, char *, host_t*, identification_t*))release_address;
 	this->public.add_provider = (void(*)(attribute_manager_t*, attribute_provider_t *provider))add_provider;
 	this->public.remove_provider = (void(*)(attribute_manager_t*, attribute_provider_t *provider))remove_provider;
 	this->public.destroy = (void(*)(attribute_manager_t*))destroy;

@@ -203,7 +203,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
  * Implementation of attribute_provider_t.release_address
  */
 static bool release_address(private_stroke_attribute_t *this,
-							char *name, host_t *address)
+							char *name, host_t *address, identification_t *id)
 {
 	pool_t *pool;
 	bool found = FALSE;
@@ -327,7 +327,7 @@ stroke_attribute_t *stroke_attribute_create()
 	private_stroke_attribute_t *this = malloc_thing(private_stroke_attribute_t);
 	
 	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *,auth_info_t *, host_t *))acquire_address;
-	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *))release_address;
+	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
 	this->public.add_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))add_pool;
 	this->public.del_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))del_pool;
 	this->public.destroy = (void(*)(stroke_attribute_t*))destroy;

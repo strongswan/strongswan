@@ -210,7 +210,7 @@ static host_t* acquire_address(private_sql_attribute_t *this,
  * Implementation of attribute_provider_t.release_address
  */
 static bool release_address(private_sql_attribute_t *this,
-							char *name, host_t *address)
+							char *name, host_t *address, identification_t *id)
 {
 	enumerator_t *enumerator;
 	bool found = FALSE;
@@ -264,7 +264,7 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 	time_t now = time(NULL);
 	
 	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *,auth_info_t *, host_t *))acquire_address;
-	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *))release_address;
+	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
 	this->public.destroy = (void(*)(sql_attribute_t*))destroy;
 	
 	this->db = db;

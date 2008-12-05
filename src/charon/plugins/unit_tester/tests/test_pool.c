@@ -60,7 +60,7 @@ static void* testing(void *thread)
 	/* release addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
-		charon->attributes->release_address(charon->attributes, "test", addr[i]);
+		charon->attributes->release_address(charon->attributes, "test", addr[i], id[i]);
 	}
 	
 	/* cleanup */

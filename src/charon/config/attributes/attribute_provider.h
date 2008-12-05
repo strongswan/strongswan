@@ -51,10 +51,11 @@ struct attribute_provider_t {
 	 *
 	 * @param pool			name of the pool this address was acquired from
 	 * @param address		address to release
+	 * @param id			peer ID
 	 * @return				TRUE if the address has been released by the provider
 	 */
 	bool (*release_address)(attribute_provider_t *this,
-							char *pool, host_t *address);
+							char *pool, host_t *address, identification_t *id);
 };
 
 #endif /* ATTRIBUTE_PROVIDER_H_ @}*/

@@ -2261,7 +2261,7 @@ static void destroy(private_ike_sa_t *this)
 		{
 			charon->attributes->release_address(charon->attributes,
 									this->peer_cfg->get_pool(this->peer_cfg),
-									this->other_virtual_ip);
+									this->other_virtual_ip, this->other_id);
 		}
 		this->other_virtual_ip->destroy(this->other_virtual_ip);
 	}

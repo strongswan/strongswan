@@ -50,9 +50,10 @@ struct attribute_manager_t {
 	 *
 	 * @param pool			pool name from which the address was acquired
 	 * @param address		address to release
+	 * @param id			peer identity to get address for
 	 */
 	void (*release_address)(attribute_manager_t *this,
-							char *pool, host_t *address);
+							char *pool, host_t *address, identification_t *id);
 	
 	/**
 	 * Register an attribute provider to the manager.
