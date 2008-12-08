@@ -160,6 +160,7 @@ char *whitelist[] = {
 	/* pthread stuff */
 	"pthread_create",
 	"pthread_setspecific",
+	"__pthread_setspecific",
 	/* glibc functions */
 	"mktime",
 	"__gmtime_r",
