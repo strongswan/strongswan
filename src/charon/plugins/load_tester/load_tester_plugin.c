@@ -91,9 +91,6 @@ struct private_load_tester_plugin_t {
  */
 static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 {
-	peer_cfg_t *peer_cfg;
-	child_cfg_t *child_cfg = NULL;;
-	enumerator_t *enumerator;
 	int i, s = 0, ms = 0;
 	
 	this->mutex->lock(this->mutex);
@@ -107,37 +104,38 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 		s = this->delay / 1000;
 		ms = this->delay % 1000;
 	}
-	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
-													  "load-test");
-	if (peer_cfg)
+	
+	for (i = 0; this->iterations == 0 || i < this->iterations; i++)
 	{
-		enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
-		if (enumerator->enumerate(enumerator, &child_cfg))
+		peer_cfg_t *peer_cfg;
+		child_cfg_t *child_cfg = NULL;
+		enumerator_t *enumerator;
+	
+		peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+														  "load-test");
+		if (!peer_cfg)
 		{
-			child_cfg->get_ref(child_cfg);
+			break;
+		}
+		enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+		if (!enumerator->enumerate(enumerator, &child_cfg))
+		{
+			enumerator->destroy(enumerator);
+			break;
 		}
 		enumerator->destroy(enumerator);
 		
-		if (child_cfg)
-		{
-			for (i = 0; this->iterations == 0 || i < this->iterations; i++)
-			{
-				charon->controller->initiate(charon->controller,
-					peer_cfg->get_ref(peer_cfg), child_cfg->get_ref(child_cfg),
+		charon->controller->initiate(charon->controller,
+					peer_cfg, child_cfg->get_ref(child_cfg),
 					NULL, NULL);
-				
-				if (s)
-				{
-					sleep(s);
-				}
-				if (ms)
-				{
-					usleep(ms * 1000);
-				}
-			}
-			child_cfg->destroy(child_cfg);
+		if (s)
+		{
+			sleep(s);
 		}
-		peer_cfg->destroy(peer_cfg);
+		if (ms)
+		{
+			usleep(ms * 1000);
+		}
 	}
 	this->mutex->lock(this->mutex);
 	this->running--;
