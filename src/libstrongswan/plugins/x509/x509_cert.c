@@ -900,12 +900,10 @@ static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
 	{
 		if (issuer->get_type(issuer) != CERT_X509)
 		{
-			POS;
 			return FALSE;
 		}
 		if (!(x509->get_flags(x509) & X509_CA))
 		{
-			POS;
 			return FALSE;
 		}
 	}
@@ -935,13 +933,11 @@ static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
 			scheme = SIGN_ECDSA_WITH_SHA1;
 			break;
 		default:
-			POS;
 			return FALSE;
 	}
 	key = issuer->get_public_key(issuer);
 	if (key == NULL)
 	{
-		POS;
 		return FALSE;
 	}
 	/* TODO: add a lightweight check option (comparing auth/subject keyids only) */
