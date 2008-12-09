@@ -560,9 +560,9 @@ static void destroy_item_value(item_t *item)
 }
 
 /**
- * Implementation of auth_info_t.destroy
+ * Implementation of auth_info_t.purge
  */
-static void destroy(private_auth_info_t *this)
+static void purge(private_auth_info_t *this)
 {
 	item_t *item;
 	
@@ -571,6 +571,14 @@ static void destroy(private_auth_info_t *this)
 		destroy_item_value(item);
 		free(item);
 	}
+}
+
+/**
+ * Implementation of auth_info_t.destroy
+ */
+static void destroy(private_auth_info_t *this)
+{
+	purge(this);
 	this->items->destroy(this->items);
 	free(this);
 }
@@ -588,6 +596,7 @@ auth_info_t *auth_info_create()
 	this->public.create_item_enumerator = (enumerator_t*(*)(auth_info_t*))create_item_enumerator;
 	this->public.complies = (bool(*)(auth_info_t*, auth_info_t *))complies;
 	this->public.merge = (void(*)(auth_info_t*, auth_info_t *other))merge;
+	this->public.purge = (void(*)(auth_info_t*))purge;
 	this->public.equals = (bool(*)(auth_info_t*, auth_info_t *other))equals;
 	this->public.destroy = (void(*)(auth_info_t*))destroy;
 	

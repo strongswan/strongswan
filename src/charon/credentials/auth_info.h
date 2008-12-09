@@ -172,6 +172,11 @@ struct auth_info_t {
 	void (*merge)(auth_info_t *this, auth_info_t *other);
 	
 	/**
+	 * Purge all items in auth_info.
+	 */
+	void (*purge)(auth_info_t *this);
+	
+	/**
 	 * Check two auth_infos for equality.
 	 *
 	 * @param other		other item to compaire against this
