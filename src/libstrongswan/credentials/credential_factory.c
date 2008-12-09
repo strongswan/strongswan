@@ -46,9 +46,9 @@ struct private_credential_factory_t {
 	linked_list_t *constructors;
 	
 	/**
-	 * mutex to lock access to modules
+	 * lock access to builders
 	 */
-	mutex_t *mutex;
+	rwlock_t *lock;
 };
 
 typedef struct entry_t entry_t;
@@ -86,12 +86,12 @@ static enumerator_t* create_builder_enumerator(
 	data->type = type;
 	data->subtype = subtype;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	return enumerator_create_cleaner(
 				enumerator_create_filter(
 					this->constructors->create_enumerator(this->constructors),
 					(void*)builder_filter, data, free), 
-				(void*)this->mutex->unlock, this->mutex);
+				(void*)this->lock->unlock, this->lock);
 }
 
 /**
@@ -106,9 +106,9 @@ static void add_builder(private_credential_factory_t *this,
 	entry->type = type;
 	entry->subtype = subtype;
 	entry->constructor = constructor;
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	this->constructors->insert_last(this->constructors, entry);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -120,7 +120,7 @@ static void remove_builder(private_credential_factory_t *this,
 	enumerator_t *enumerator;
 	entry_t *entry;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	enumerator = this->constructors->create_enumerator(this->constructors);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -131,7 +131,7 @@ static void remove_builder(private_credential_factory_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -215,7 +215,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 static void destroy(private_credential_factory_t *this)
 {
 	this->constructors->destroy_function(this->constructors, free);
-	this->mutex->destroy(this->mutex);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -234,7 +234,7 @@ credential_factory_t *credential_factory_create()
 	
 	this->constructors = linked_list_create();
 	
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	this->lock = rwlock_create(RWLOCK_DEFAULT);
 	
 	return &this->public;
 }
