@@ -165,7 +165,6 @@ static u_int get_nearest_powerof2(u_int n)
 static void init_hashtable(private_hashtable_t *this, u_int capacity)
 {
 	capacity = max(1, min(capacity, MAX_CAPACITY));
-	this->count = 0;
 	this->capacity = get_nearest_powerof2(capacity);
 	this->mask = this->capacity - 1;
 	this->load_factor = 0.75;
