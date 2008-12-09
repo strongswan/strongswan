@@ -24,6 +24,7 @@
 #include <encoding/payloads/notify_payload.h>
 
 #define COOKIE2_SIZE 16
+#define MAX_ADDITIONAL_ADDRS 8
 
 typedef struct private_ike_mobike_t private_ike_mobike_t;
 
@@ -191,8 +192,8 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 	enumerator_t *enumerator;
 	host_t *host, *me;
 	notify_type_t type;
-	bool additional = FALSE;
-
+	int added = 0;
+	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	enumerator = charon->kernel_interface->create_address_enumerator(
 										charon->kernel_interface, FALSE, FALSE);
@@ -214,9 +215,13 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 				continue;
 		}
 		message->add_notify(message, FALSE, type, host->get_address(host));
-		additional = TRUE;
+		if (++added >= MAX_ADDITIONAL_ADDRS)
+		{	/* limit number of notifys, some implementations do not like too
+			 * many of them (f.e. strongSwan ;-) */
+			break;
+		}
 	}
-	if (!additional)
+	if (!added)
 	{
 		message->add_notify(message, FALSE, NO_ADDITIONAL_ADDRESSES, chunk_empty);
 	}
