@@ -280,11 +280,11 @@ static enumerator_t* create_shared_enumerator(private_load_tester_creds_t *this,
 	{
 		return NULL;
 	}
-	if (me && !this->id->matches(this->id, me))
+	if (me && !me->matches(me, this->id))
 	{
 		return NULL;
 	}
-	if (other && !this->id->matches(this->id, other))
+	if (other && !other->matches(other, this->id))
 	{
 		return NULL;
 	}
