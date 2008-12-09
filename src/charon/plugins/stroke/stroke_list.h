@@ -23,6 +23,8 @@
 #ifndef STROKE_LIST_H_
 #define STROKE_LIST_H_
 
+#include "stroke_attribute.h"
+
 #include <stroke_msg.h>
 #include <library.h>
 
@@ -58,7 +60,9 @@ struct stroke_list_t {
 
 /**
  * Create a stroke_list instance.
+ *
+ * @param attribute		strokes attribute provider
  */
-stroke_list_t *stroke_list_create();
+stroke_list_t *stroke_list_create(stroke_attribute_t *attribute);
 
 #endif /* STROKE_LIST_H_ @}*/

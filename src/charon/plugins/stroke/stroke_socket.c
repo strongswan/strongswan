@@ -621,7 +621,7 @@ stroke_socket_t *stroke_socket_create()
 	this->ca = stroke_ca_create(this->cred);
 	this->config = stroke_config_create(this->ca, this->cred);
 	this->control = stroke_control_create();
-	this->list = stroke_list_create();
+	this->list = stroke_list_create(this->attribute);
 	
 	charon->credentials->add_set(charon->credentials, &this->ca->set);
 	charon->credentials->add_set(charon->credentials, &this->cred->set);

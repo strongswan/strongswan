@@ -47,6 +47,11 @@ struct private_stroke_list_t {
 	 * timestamp of daemon start
 	 */
 	time_t uptime;
+	
+	/**
+	 * strokes attribute provider
+	 */
+	stroke_attribute_t *attribute;
 };
 
 /**
@@ -248,11 +253,13 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	if (all)
 	{
 		peer_cfg_t *peer_cfg;
-		char *plugin;
+		char *plugin, *name;
 		host_t *host;
 		u_int32_t dpd;
 		time_t uptime = time(NULL) - this->uptime;
-
+		bool first = TRUE;
+		u_int size, online, offline;
+		
 		fprintf(out, "Performance:\n");
 		fprintf(out, "  uptime: %V, since %#T\n", &uptime, &this->uptime, FALSE);
 		fprintf(out, "  worker threads: %d idle of %d,",
@@ -270,6 +277,18 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		}
 		enumerator->destroy(enumerator);
 		fprintf(out, "\n");
+		
+		enumerator = this->attribute->create_pool_enumerator(this->attribute);
+		while (enumerator->enumerate(enumerator, &name, &size, &online, &offline))
+		{
+			if (first)
+			{
+				first = FALSE;
+				fprintf(out, "Virtual IP pools (size/online/offline):\n");
+			}
+			fprintf(out, "  %s: %lu/%lu/%lu\n", name, size, online, offline);
+		}
+		enumerator->destroy(enumerator);
 		
 		enumerator = charon->kernel_interface->create_address_enumerator(
 								charon->kernel_interface, FALSE, FALSE);
@@ -979,7 +998,7 @@ static void destroy(private_stroke_list_t *this)
 /*
  * see header file
  */
-stroke_list_t *stroke_list_create()
+stroke_list_t *stroke_list_create(stroke_attribute_t *attribute)
 {
 	private_stroke_list_t *this = malloc_thing(private_stroke_list_t);
 	
@@ -988,6 +1007,7 @@ stroke_list_t *stroke_list_create()
 	this->public.destroy = (void(*)(stroke_list_t*))destroy;
 	
 	this->uptime = time(NULL);
+	this->attribute = attribute;
 	
 	return &this->public;
 }
