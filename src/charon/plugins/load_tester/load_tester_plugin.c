@@ -176,9 +176,17 @@ static void destroy(private_load_tester_plugin_t *this)
  */
 plugin_t *plugin_create()
 {
-	private_load_tester_plugin_t *this = malloc_thing(private_load_tester_plugin_t);
+	private_load_tester_plugin_t *this;
 	int i;
 	
+	if (!lib->settings->get_bool(lib->settings,
+								 "charon.plugins.load_tester.enable", FALSE))
+	{
+		DBG1(DBG_CFG, "disabling load-tester plugin, not configured");
+		return NULL;
+	}
+	
+	this = malloc_thing(private_load_tester_plugin_t);
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
 	lib->crypto->add_dh(lib->crypto, MODP_NULL, 
