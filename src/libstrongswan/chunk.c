@@ -448,11 +448,11 @@ int chunk_compare(chunk_t a, chunk_t b)
  * The implementation is based on Paul Hsieh's SuperFastHash:
  * 	 http://www.azillionmonkeys.com/qed/hash.html
  */
-u_int32_t chunk_hash(chunk_t chunk)
+u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 {
 	u_char *data = chunk.ptr;
 	size_t len = chunk.len;
-	u_int32_t hash = len, tmp;
+	u_int32_t tmp;
 	int rem;
 	
 	if (!len || data == NULL)
@@ -509,6 +509,14 @@ u_int32_t chunk_hash(chunk_t chunk)
 	hash += hash >> 6;
 	
 	return hash;
+}
+
+/**
+ * Described in header.
+ */
+u_int32_t chunk_hash(chunk_t chunk)
+{
+	return chunk_hash_inc(chunk, chunk.len);
 }
 
 /**

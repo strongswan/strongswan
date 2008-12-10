@@ -232,6 +232,11 @@ static inline bool chunk_equals(chunk_t a, chunk_t b)
 u_int32_t chunk_hash(chunk_t chunk);
 
 /**
+ * Incremental version of chunk_hash. Use this to hash two or more chunks.
+ */
+u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
+
+/**
  * Get printf hooks for a chunk.
  *
  * Arguments are: 
