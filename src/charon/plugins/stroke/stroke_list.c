@@ -77,10 +77,23 @@ auth_class_t get_auth_class(peer_cfg_t *config)
 static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 {
 	ike_sa_id_t *id = ike_sa->get_id(ike_sa);
-
-	fprintf(out, "%12s[%d]: %N, %H[%D]...%H[%D]\n",
+	u_int32_t now;
+	
+	now = time(NULL);
+	
+	fprintf(out, "%12s[%d]: %N",
 			ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
-			ike_sa_state_names, ike_sa->get_state(ike_sa),
+			ike_sa_state_names, ike_sa->get_state(ike_sa));
+	
+	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
+	{
+		u_int32_t established;
+		
+		established = now - ike_sa->get_statistic(ike_sa, STAT_ESTABLISHED);
+		fprintf(out, " %V", &established);
+	}
+	
+	fprintf(out, ", %H[%D]...%H[%D]\n",
 			ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
 			ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
 	
@@ -98,9 +111,8 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 		
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 		{
-			u_int32_t rekey, reauth, now;
+			u_int32_t rekey, reauth;
 			
-			now = time(NULL);
 			rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY);
 			reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH);
 			
