@@ -201,29 +201,16 @@ static u_int ike_sa_id_hash(ike_sa_id_t *ike_sa_id)
 	return ike_sa_id->get_initiator_spi(ike_sa_id);
 }
 
-typedef struct segment_t segment_t;
-
-/**
- * Struct to manage segments of the hash table.
- */
-struct segment_t {
-	/* mutex to access a segment exclusively */
-	mutex_t *mutex;
-	
-	/* the number of entries in this segment */
-	u_int count;
-};
-
 typedef struct half_open_t half_open_t;
 
 /**
  * Struct to manage half-open IKE_SAs per peer.
  */
 struct half_open_t {
-	/* chunk of remote host address */
+	/** chunk of remote host address */
 	chunk_t other;
 	
-	/* the number of half-open IKE_SAs with that host */
+	/** the number of half-open IKE_SAs with that host */
 	u_int count;
 };
 
@@ -236,17 +223,69 @@ static void half_open_destroy(half_open_t *this)
 	free(this);
 }
 
-typedef struct half_open_segment_t half_open_segment_t;
+/**
+ * Function that matches half_open_t objects by the given IP address chunk.
+ */
+static bool half_open_match(half_open_t *half_open, chunk_t *addr)
+{
+	return chunk_equals(*addr, half_open->other);
+}
+
+typedef struct connected_peers_t connected_peers_t;
+
+struct connected_peers_t {
+	/** own identity */
+	identification_t *my_id;
+	
+	/** remote identity */
+	identification_t *other_id;
+	
+	/** list of ike_sa_id_t objects of IKE_SAs between the two identities */
+	linked_list_t *sas;
+};
+
+static void connected_peers_destroy(connected_peers_t *this)
+{
+	this->my_id->destroy(this->my_id);
+	this->other_id->destroy(this->other_id);
+	this->sas->destroy(this->sas);
+	free(this);
+}
 
 /**
- * Struct to manage segments of the "half-open" hash table.
+ * Function that matches connected_peers_t objects by the given ids.
  */
-struct half_open_segment_t {
-	/* rwlock to access a segment exclusively */
+static bool connected_peers_match(connected_peers_t *connected_peers,
+							identification_t *my_id, identification_t *other_id)
+{
+	return my_id->equals(my_id, connected_peers->my_id) &&
+		   other_id->equals(other_id, connected_peers->other_id);
+}
+
+typedef struct segment_t segment_t;
+
+/**
+ * Struct to manage segments of the hash table.
+ */
+struct segment_t {
+	/** mutex to access a segment exclusively */
+	mutex_t *mutex;
+	
+	/** the number of entries in this segment */
+	u_int count;
+};
+
+typedef struct shareable_segment_t shareable_segment_t;
+
+/**
+ * Struct to manage segments of the "half-open" and "connected peers" hash tables.
+ */
+struct shareable_segment_t {
+	/** rwlock to access a segment non-/exclusively */
 	rwlock_t *lock;
 	
-	/* the number of half-open IKE_SAs in this segment (i.e. the sum of all
-	 * half_open_t.count in a segment) */
+	/** the number of entries in this segment - in case of the "half-open table"
+	 * it's the sum of all half_open_t.count in a segment. */
 	u_int count;
 };
 
@@ -299,7 +338,17 @@ struct private_ike_sa_manager_t {
 	 /**
 	  * Segments of the "half-open" hash table.
 	  */
-	 half_open_segment_t *half_open_segments;
+	 shareable_segment_t *half_open_segments;
+	 
+	 /**
+	  * Hash table with connected_peers_t objects.
+	  */
+	 linked_list_t **connected_peers_table;
+	 
+	 /**
+	  * Segments of the "connected peers" hash table.
+	  */
+	 shareable_segment_t *connected_peers_segments;
 	 
 	 /**
 	  * RNG to get random SPIs for our side
@@ -625,14 +674,6 @@ static bool wait_for_entry(private_ike_sa_manager_t *this, entry_t *entry,
 }
 
 /**
- * Function that matches half_open_t objects by the given IP address chunk.
- */
-static bool half_open_match(half_open_t *half_open, chunk_t *addr)
-{
-	return chunk_equals(*addr, half_open->other);
-}
-
-/**
  * Put a half-open SA into the hash table.
  */
 static void put_half_open(private_ike_sa_manager_t *this, entry_t *entry)
@@ -643,7 +684,7 @@ static void put_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 	u_int row = chunk_hash(addr) & this->table_mask;
 	u_int segment = row & this->segment_mask;
 	
-	rwlock_t *lock = this->half_open_segments[segment & this->segment_mask].lock;
+	rwlock_t *lock = this->half_open_segments[segment].lock;
 	lock->write_lock(lock);
 	if ((list = this->half_open_table[row]) == NULL)
 	{
@@ -682,7 +723,7 @@ static void remove_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 	u_int row = chunk_hash(addr) & this->table_mask;
 	u_int segment = row & this->segment_mask;
 	
-	rwlock_t *lock = this->half_open_segments[segment & this->segment_mask].lock;
+	rwlock_t *lock = this->half_open_segments[segment].lock;
 	lock->write_lock(lock);
 	if ((list = this->half_open_table[row]) != NULL)
 	{
@@ -698,6 +739,102 @@ static void remove_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 					half_open_destroy(current);
 				}
 				this->half_open_segments[segment].count--;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	lock->unlock(lock);
+}
+
+/**
+ * Put an SA between two peers into the hash table.
+ */
+static void put_connected_peers(private_ike_sa_manager_t *this, entry_t *entry)
+{
+	linked_list_t *list;
+	connected_peers_t *connected_peers = NULL;
+	chunk_t my_id = entry->my_id->get_encoding(entry->my_id),
+			other_id = entry->other_id->get_encoding(entry->other_id);
+	u_int row = chunk_hash_inc(other_id, chunk_hash(my_id)) & this->table_mask;
+	u_int segment = row & this->segment_mask;
+	
+	rwlock_t *lock = this->connected_peers_segments[segment].lock;
+	lock->write_lock(lock);
+	if ((list = this->connected_peers_table[row]) == NULL)
+	{
+		list = this->connected_peers_table[row] = linked_list_create();
+	}
+	else
+	{
+		connected_peers_t *current;
+		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
+					(void**)&current, entry->my_id, entry->other_id) == SUCCESS)
+		{
+			connected_peers = current;
+			if (connected_peers->sas->find_first(connected_peers->sas,
+					(linked_list_match_t)entry->ike_sa_id->equals,
+					NULL, entry->ike_sa_id) == SUCCESS)
+			{
+				lock->unlock(lock);
+				return;
+			}
+		}
+	}
+	
+	if (!connected_peers)
+	{
+		connected_peers = malloc_thing(connected_peers_t);
+		connected_peers->my_id = entry->my_id->clone(entry->my_id);
+		connected_peers->other_id = entry->other_id->clone(entry->other_id);
+		connected_peers->sas = linked_list_create();
+		list->insert_last(list, connected_peers);
+	}
+	connected_peers->sas->insert_last(connected_peers->sas,
+									  entry->ike_sa_id->clone(entry->ike_sa_id));
+	this->connected_peers_segments[segment].count++;
+	lock->unlock(lock);
+}
+
+/**
+ * Remove an SA between two peers from the hash table.
+ */
+static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entry)
+{
+	linked_list_t *list;
+	chunk_t my_id = entry->my_id->get_encoding(entry->my_id),
+			other_id = entry->other_id->get_encoding(entry->other_id);
+	u_int row = chunk_hash_inc(other_id, chunk_hash(my_id)) & this->table_mask;
+	u_int segment = row & this->segment_mask;
+	
+	rwlock_t *lock = this->connected_peers_segments[segment].lock;
+	lock->write_lock(lock);
+	if ((list = this->connected_peers_table[row]) != NULL)
+	{
+		connected_peers_t *current;
+		enumerator_t *enumerator = list->create_enumerator(list);
+		while (enumerator->enumerate(enumerator, &current))
+		{
+			if (connected_peers_match(current, entry->my_id, entry->other_id))
+			{
+				ike_sa_id_t *ike_sa_id;
+				enumerator_t *inner = current->sas->create_enumerator(current->sas);
+				while (inner->enumerate(inner, &ike_sa_id))
+				{
+					if (ike_sa_id->equals(ike_sa_id, entry->ike_sa_id))
+					{
+						current->sas->remove_at(current->sas, inner);
+						ike_sa_id->destroy(ike_sa_id);
+						this->connected_peers_segments[segment].count--;
+						break;
+					}
+				}
+				inner->destroy(inner);
+				if (current->sas->get_count(current->sas) == 0)
+				{
+					list->remove_at(list, enumerator);
+					connected_peers_destroy(current);
+				}
 				break;
 			}
 		}
@@ -1088,37 +1225,47 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
 									ike_sa_t *ike_sa)
 {
-	enumerator_t *enumerator;
+	linked_list_t *list;
 	entry_t *entry;
+	ike_sa_id_t *duplicate_id = NULL;
 	ike_sa_t *duplicate = NULL;
 	identification_t *me, *other;
-	u_int segment;
+	u_int row, segment;
+	rwlock_t *lock; 
 	
 	me = ike_sa->get_my_id(ike_sa);
 	other = ike_sa->get_other_id(ike_sa);
+		
+	row = chunk_hash_inc(other->get_encoding(other),
+						 chunk_hash(me->get_encoding(me))) & this->table_mask;
+	segment = row & this->segment_mask;
 	
-	enumerator = create_table_enumerator(this);
-	while (enumerator->enumerate(enumerator, &entry, &segment))
+	lock = this->connected_peers_segments[segment & this->segment_mask].lock;
+	lock->read_lock(lock);
+	if ((list = this->connected_peers_table[row]) != NULL)
 	{
-		if (entry->ike_sa == ike_sa)
-		{	/* self is not a duplicate */
-			continue;
+		connected_peers_t *current;
+		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
+								 (void**)&current, me, other) == SUCCESS)
+		{
+			/* we just return the first ike_sa_id we have cached for these ids */
+			current->sas->get_first(current->sas, (void**)&duplicate_id);
 		}
-		if (entry->my_id && me->equals(me, entry->my_id) &&
-			entry->other_id && other->equals(other, entry->other_id))
-		{	
-			/* we are sure that the other entry is not calling 
-			 * checkout_duplicate here, as the identities in entry would not
-			 * have been set yet. Otherwise we would risk a deadlock. */
+	}
+	lock->unlock(lock);
+	
+	if (duplicate_id)
+	{
+		if (get_entry_by_id(this, duplicate_id, &entry, &segment) == SUCCESS)
+		{
 			if (wait_for_entry(this, entry, segment))
 			{
 				duplicate = entry->ike_sa;
 				entry->checked_out = TRUE;
-				break;
 			}
+			unlock_single_segment(this, segment);
 		}
 	}
-	enumerator->destroy(enumerator);
 	return duplicate;
 }
 
@@ -1202,33 +1349,36 @@ static void checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 			entry->other = other->clone(other);
 			put_half_open(this, entry);
 		}
-		/* apply identities for duplicate test */
-		if (!entry->my_id ||
-			entry->my_id->get_type(entry->my_id) == ID_ANY)
-		{
-			DESTROY_IF(entry->my_id);
-			entry->my_id = my_id->clone(my_id);
-		}
-		if (!entry->other_id ||
-			entry->other_id->get_type(entry->other_id) == ID_ANY)
-		{
-			DESTROY_IF(entry->other_id);
-			entry->other_id = other_id->clone(other_id);
-		}
 		DBG2(DBG_MGR, "check-in of IKE_SA successful.");
 		entry->condvar->signal(entry->condvar);
-	 	unlock_single_segment(this, segment);
 	}
 	else
 	{
 		entry = entry_create();
 		entry->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 		entry->ike_sa = ike_sa;
-		entry->my_id = my_id->clone(my_id);
-		entry->other_id = other_id->clone(other_id);
-		
-		unlock_single_segment(this, put_entry(this, entry));
+		segment = put_entry(this, entry);
 	}
+	
+	/* apply identities for duplicate test (only as responder) */
+	if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
+			(!entry->my_id || !entry->other_id))
+	{
+		if (!entry->my_id && my_id->get_type(my_id) != ID_ANY)
+		{
+			entry->my_id = my_id->clone(my_id);
+		}
+		if (!entry->other_id && other_id->get_type(other_id) != ID_ANY)
+		{
+			entry->other_id = other_id->clone(other_id);
+		}
+		if (entry->my_id && entry->other_id)
+		{
+			put_connected_peers(this, entry);
+		}
+	}
+	
+	unlock_single_segment(this, segment);
 	
 	charon->bus->set_sa(charon->bus, NULL);
 }
@@ -1269,6 +1419,11 @@ static void checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 		if (entry->half_open)
 		{
 			remove_half_open(this, entry);
+		}
+		if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
+			entry->my_id && entry->other_id)
+		{
+			remove_connected_peers(this, entry);
 		}
 		
 		remove_entry(this, entry);
@@ -1386,6 +1541,11 @@ static void flush(private_ike_sa_manager_t *this)
 		{
 			remove_half_open(this, entry);
 		}
+		if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
+			entry->my_id && entry->other_id)
+		{
+			remove_connected_peers(this, entry);
+		}
 		remove_entry_at((private_enumerator_t*)enumerator);
 		entry_destroy(entry);
 	}
@@ -1413,16 +1573,23 @@ static void destroy(private_ike_sa_manager_t *this)
 		{
 			list->destroy(list);
 		}
+		if ((list = this->connected_peers_table[i]) != NULL)
+		{
+			list->destroy(list);
+		}
 	}
 	free(this->ike_sa_table);
 	free(this->half_open_table);
+	free(this->connected_peers_table);
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->segments[i].mutex->destroy(this->segments[i].mutex);
 		this->half_open_segments[i].lock->destroy(this->half_open_segments[i].lock);
+		this->connected_peers_segments[i].lock->destroy(this->connected_peers_segments[i].lock);
 	}
 	free(this->segments);
 	free(this->half_open_segments);
+	free(this->connected_peers_segments);
 	
 	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
@@ -1512,11 +1679,22 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->half_open_table = (linked_list_t**)calloc(this->table_size, sizeof(linked_list_t*));
 	memset(this->half_open_table, 0, this->table_size * sizeof(linked_list_t*));
 	
-	this->half_open_segments = (half_open_segment_t*)calloc(this->segment_count, sizeof(half_open_segment_t));
+	this->half_open_segments = (shareable_segment_t*)calloc(this->segment_count, sizeof(shareable_segment_t));
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->half_open_segments[i].lock = rwlock_create(RWLOCK_DEFAULT);
 		this->half_open_segments[i].count = 0;
+	}
+	
+	/* also for the hash table used for duplicate tests */
+	this->connected_peers_table = (linked_list_t**)calloc(this->table_size, sizeof(linked_list_t*));
+	memset(this->connected_peers_table, 0, this->table_size * sizeof(linked_list_t*));
+	
+	this->connected_peers_segments = (shareable_segment_t*)calloc(this->segment_count, sizeof(shareable_segment_t));
+	for (i = 0; i < this->segment_count; ++i)
+	{
+		this->connected_peers_segments[i].lock = rwlock_create(RWLOCK_DEFAULT);
+		this->connected_peers_segments[i].count = 0;
 	}
 	
 	this->reuse_ikesa = lib->settings->get_bool(lib->settings,
