@@ -413,6 +413,92 @@ static enumerator_t* create_pool_enumerator(private_stroke_attribute_t *this)
 }
 
 /**
+ * lease enumerator
+ */
+typedef struct {
+	/** implemented enumerator interface */
+	enumerator_t public;
+	/** inner hash-table enumerator */
+	enumerator_t *inner;
+	/** enumerated pool */
+	pool_t *pool;
+	/** mutex to unlock on destruction */
+	mutex_t *mutex;
+	/** currently enumerated lease address */
+	host_t *current;
+} lease_enumerator_t;
+
+/**
+ * Implementation of lease_enumerator_t.enumerate
+ */
+static bool lease_enumerate(lease_enumerator_t *this, identification_t **id_out,
+							host_t **addr_out, bool *online)
+{
+	identification_t *id;
+	uintptr_t offset;
+	
+	DESTROY_IF(this->current);
+	this->current = NULL;
+	
+	if (this->inner->enumerate(this->inner, &id, NULL))
+	{
+		offset = (uintptr_t)this->pool->online->get(this->pool->online, id);
+		if (offset)
+		{
+			*id_out = id;
+			*addr_out = this->current = offset2host(this->pool, offset);
+			*online = TRUE;
+			return TRUE;
+		}
+		offset = (uintptr_t)this->pool->offline->get(this->pool->offline, id);
+		if (offset)
+		{
+			*id_out = id;
+			*addr_out = this->current = offset2host(this->pool, offset);
+			*online = FALSE;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Implementation of lease_enumerator_t.destroy
+ */
+static void lease_enumerator_destroy(lease_enumerator_t *this)
+{
+	DESTROY_IF(this->current);
+	this->inner->destroy(this->inner);
+	this->mutex->unlock(this->mutex);
+	free(this);
+}
+
+/**
+ * Implementation of stroke_attribute_t.create_lease_enumerator
+ */
+static enumerator_t* create_lease_enumerator(private_stroke_attribute_t *this,
+											 char *pool)
+{
+	lease_enumerator_t *enumerator;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = malloc_thing(lease_enumerator_t);
+	enumerator->pool = find_pool(this, pool);
+	if (!enumerator->pool)
+	{
+		this->mutex->unlock(this->mutex);
+		free(enumerator);
+		return NULL;
+	}
+	enumerator->public.enumerate = (void*)lease_enumerate;
+	enumerator->public.destroy = (void*)lease_enumerator_destroy;
+	enumerator->inner = enumerator->pool->ids->create_enumerator(enumerator->pool->ids);
+	enumerator->mutex = this->mutex;
+	enumerator->current = NULL;
+	return &enumerator->public;
+}
+
+/**
  * Implementation of stroke_attribute_t.destroy
  */
 static void destroy(private_stroke_attribute_t *this)
@@ -434,10 +520,11 @@ stroke_attribute_t *stroke_attribute_create()
 	this->public.add_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))add_pool;
 	this->public.del_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))del_pool;
 	this->public.create_pool_enumerator = (enumerator_t*(*)(stroke_attribute_t*))create_pool_enumerator;
+	this->public.create_lease_enumerator = (enumerator_t*(*)(stroke_attribute_t*, char *pool))create_lease_enumerator;
 	this->public.destroy = (void(*)(stroke_attribute_t*))destroy;
 	
 	this->pools = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_RECURSIVE);
 	
 	return &this->public;
 }

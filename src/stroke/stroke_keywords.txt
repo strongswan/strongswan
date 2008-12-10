@@ -52,8 +52,9 @@ listall,         STROKE_LIST_ALL
 rereadsecrets,   STROKE_REREAD_SECRETS
 rereadcacerts,   STROKE_REREAD_CACERTS
 rereadocspcerts, STROKE_REREAD_OCSPCERTS
-rereadaacerts,   STROKE_REREAD_AACERTS,
-rereadacerts,    STROKE_REREAD_ACERTS,
+rereadaacerts,   STROKE_REREAD_AACERTS
+rereadacerts,    STROKE_REREAD_ACERTS
 rereadcrls,      STROKE_REREAD_CRLS
 rereadall,       STROKE_REREAD_ALL
 purgeocsp,       STROKE_PURGE_OCSP
+leases,          STROKE_LEASES

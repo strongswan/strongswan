@@ -63,6 +63,7 @@ case "$1" in
 	echo "	listcacerts|listaacerts|listocspcerts [--utc]"
 	echo "	listacerts|listgroups|listcainfos [--utc]"
 	echo "	listcrls|listocsp|listcards|listall [--utc]"
+	echo "	listpool [<poolname> [<address>]]"
 	echo "	rereadsecrets|rereadgroups"
 	echo "	rereadcacerts|rereadaacerts|rereadocspcerts"
 	echo "	rereadacerts|rereadcrls|rereadall"
@@ -145,6 +146,21 @@ listcards|rereadgroups)
 	else 
 		exit 7 
 	fi 
+	;;
+leases)
+	op="$1"
+	rc=7
+	shift
+	if [ -e $IPSEC_CHARON_PID ]
+	then
+		case "$#" in
+		0) $IPSEC_STROKE "$op" ;;
+		1) $IPSEC_STROKE "$op" "$1" ;;
+		*) $IPSEC_STROKE "$op" "$1" "$2" ;;
+		esac
+		rc="$?"
+	fi
+	exit "$rc"
 	;;
 listalgs|\listpubkeys|\
 listcerts|listcacerts|listaacerts|\

@@ -53,9 +53,17 @@ struct stroke_list_t {
 	void (*status)(stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all);
 	
 	/**
-     * Destroy a stroke_list instance.
-     */
-    void (*destroy)(stroke_list_t *this);
+	 * Log pool leases to stroke console.
+	 *
+	 * @param msg		stroke message
+	 * @param out		stroke console stream
+	 */
+	void (*leases)(stroke_list_t *this, stroke_msg_t *msg, FILE *out);
+	
+	/**
+	 * Destroy a stroke_list instance.
+	 */
+	void (*destroy)(stroke_list_t *this);
 };
 
 /**

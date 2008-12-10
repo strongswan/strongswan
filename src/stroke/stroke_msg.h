@@ -181,7 +181,9 @@ struct stroke_msg_t {
 		/* reread various objects */
 		STR_REREAD,
 		/* purge various objects */
-		STR_PURGE
+		STR_PURGE,
+		/* show pool leases */
+		STR_LEASES,
 		/* more to come */
 	} type;
 	
@@ -278,6 +280,12 @@ struct stroke_msg_t {
 		struct {
 			purge_flag_t flags;
 		} purge;
+
+		/* data for STR_LEASES */
+		struct {
+			char *pool;
+			char *address;
+		} leases;
 	};
 	char buffer[STROKE_BUF_LEN];
 };

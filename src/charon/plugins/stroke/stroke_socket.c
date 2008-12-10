@@ -337,6 +337,18 @@ static void stroke_purge(private_stroke_socket_t *this,
 									 CERT_X509_OCSP_RESPONSE);
 }
 
+/**
+ * list pool leases
+ */
+static void stroke_leases(private_stroke_socket_t *this,
+						  stroke_msg_t *msg, FILE *out)
+{
+	pop_string(msg, &msg->leases.pool);
+	pop_string(msg, &msg->leases.address);
+	
+	this->list->leases(this->list, msg, out);
+}
+
 debug_t get_group_from_name(char *type)
 {
 	if (strcasecmp(type, "any") == 0) return DBG_ANY;
@@ -497,6 +509,9 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			break;
 		case STR_PURGE:
 			stroke_purge(this, msg, out);
+			break;
+		case STR_LEASES:
+			stroke_leases(this, msg, out);
 			break;
 		default:
 			DBG1(DBG_CFG, "received unknown stroke");

@@ -64,6 +64,17 @@ struct stroke_attribute_t {
 	enumerator_t* (*create_pool_enumerator)(stroke_attribute_t *this);
 	
 	/**
+	 * Create an enumerator over the leases of a pool.
+	 *
+	 * Enumerator enumerates over
+	 * identification_t *id, host_t *address, bool online
+	 *
+	 * @param pool		name of the pool to enumerate
+	 * @return 			enumerator, NULL if pool not found
+	 */
+	enumerator_t* (*create_lease_enumerator)(stroke_attribute_t *this,
+											 char *pool);
+	/**
 	 * Destroy a stroke_attribute instance.
 	 */
 	void (*destroy)(stroke_attribute_t *this);
