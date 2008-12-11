@@ -63,7 +63,7 @@ case "$1" in
 	echo "	listcacerts|listaacerts|listocspcerts [--utc]"
 	echo "	listacerts|listgroups|listcainfos [--utc]"
 	echo "	listcrls|listocsp|listcards|listall [--utc]"
-	echo "	listpool [<poolname> [<address>]]"
+	echo "	leases [<poolname> [<address>]]"
 	echo "	rereadsecrets|rereadgroups"
 	echo "	rereadcacerts|rereadaacerts|rereadocspcerts"
 	echo "	rereadacerts|rereadcrls|rereadall"
