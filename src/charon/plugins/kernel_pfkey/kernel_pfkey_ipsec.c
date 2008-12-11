@@ -538,6 +538,35 @@ static void host2ext(host_t *host, struct sadb_address *ext)
 }
 
 /**
+ * add a host to the given sadb_msg
+ */
+static void add_addr_ext(struct sadb_msg *msg, host_t *host, u_int16_t type,
+						 u_int8_t proto, u_int8_t prefixlen)
+{
+	struct sadb_address *addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
+	addr->sadb_address_exttype = type;
+	addr->sadb_address_proto = proto;
+	addr->sadb_address_prefixlen = prefixlen;
+	host2ext(host, addr);
+	PFKEY_EXT_ADD(msg, addr);
+}
+
+/**
+ * adds an empty address extension to the given sadb_msg
+ */
+static void add_anyaddr_ext(struct sadb_msg *msg, int family, u_int8_t type)
+{
+	socklen_t len = (family == AF_INET) ? sizeof(struct sockaddr_in) :
+										  sizeof(struct sockaddr_in6);
+	struct sadb_address *addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
+	addr->sadb_address_exttype = type;
+	sockaddr_t *saddr = (sockaddr_t*)(addr + 1);
+	saddr->sa_family = family;
+ 	addr->sadb_address_len = PFKEY_LEN(sizeof(*addr) + len);
+	PFKEY_EXT_ADD(msg, addr);
+}
+
+/**
  * add udp encap extensions to a sadb_msg
  */
 static void add_encap_ext(struct sadb_msg *msg, host_t *src, host_t *dst)
@@ -1030,7 +1059,6 @@ static status_t get_spi(private_kernel_pfkey_ipsec_t *this,
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	struct sadb_x_sa2 *sa2;
-	struct sadb_address *addr;
 	struct sadb_spirange *range;
 	pfkey_msg_t response;
 	u_int32_t received_spi = 0;
@@ -1050,15 +1078,8 @@ static status_t get_spi(private_kernel_pfkey_ipsec_t *this,
 	sa2->sadb_x_sa2_reqid = reqid;
 	PFKEY_EXT_ADD(msg, sa2);
 	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_SRC;
-	host2ext(src, addr);
-	PFKEY_EXT_ADD(msg, addr);
-	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_DST;
-	host2ext(dst, addr);
-	PFKEY_EXT_ADD(msg, addr);
+	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
 	
 	range = (struct sadb_spirange*)PFKEY_EXT_ADD_NEXT(msg);
 	range->sadb_spirange_exttype = SADB_EXT_SPIRANGE;
@@ -1116,7 +1137,6 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 	struct sadb_msg *msg, *out;
 	struct sadb_sa *sa;
 	struct sadb_x_sa2 *sa2;
-	struct sadb_address *addr;
 	struct sadb_lifetime *lft;
 	struct sadb_key *key;
 	size_t len;
@@ -1147,15 +1167,8 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 	sa2->sadb_x_sa2_reqid = reqid;
 	PFKEY_EXT_ADD(msg, sa2);
 	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_SRC;
-	host2ext(src, addr);
-	PFKEY_EXT_ADD(msg, addr);
-	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_DST;
-	host2ext(dst, addr);
-	PFKEY_EXT_ADD(msg, addr);
+	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
 	
 	lft = (struct sadb_lifetime*)PFKEY_EXT_ADD_NEXT(msg);
 	lft->sadb_lifetime_exttype = SADB_EXT_LIFETIME_SOFT;
@@ -1248,7 +1261,6 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	struct sadb_sa *sa;
-	struct sadb_address *addr;
 	pfkey_msg_t response;
 	size_t len;
 	
@@ -1280,16 +1292,9 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 	PFKEY_EXT_ADD(msg, sa);
 	
 	/* the kernel wants a SADB_EXT_ADDRESS_SRC to be present even though
-	 * it is not used for anything, so we just send dst twice */
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_SRC;
-	host2ext(dst, addr);
-	PFKEY_EXT_ADD(msg, addr);
-	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_DST;
-	host2ext(dst, addr);
-	PFKEY_EXT_ADD(msg, addr);
+	 * it is not used for anything. */
+	add_anyaddr_ext(msg, dst->get_family(dst), SADB_EXT_ADDRESS_SRC);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
 	
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
@@ -1375,7 +1380,6 @@ static status_t del_sa(private_kernel_pfkey_ipsec_t *this, host_t *dst,
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	struct sadb_sa *sa;
-	struct sadb_address *addr;
 	size_t len;
 	
 	memset(&request, 0, sizeof(request));
@@ -1395,16 +1399,9 @@ static status_t del_sa(private_kernel_pfkey_ipsec_t *this, host_t *dst,
 	PFKEY_EXT_ADD(msg, sa);
 	
 	/* the kernel wants a SADB_EXT_ADDRESS_SRC to be present even though
-	 * it is not used for anything, so we just send dst twice */
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_SRC;
-	host2ext(dst, addr);
-	PFKEY_EXT_ADD(msg, addr);
-	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_DST;
-	host2ext(dst, addr);
-	PFKEY_EXT_ADD(msg, addr);
+	 * it is not used for anything. */
+	add_anyaddr_ext(msg, dst->get_family(dst), SADB_EXT_ADDRESS_SRC);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
 	
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
@@ -1439,7 +1436,6 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	struct sadb_x_policy *pol;
-	struct sadb_address *addr;
 	struct sadb_x_ipsecrequest *req;
 	policy_entry_t *policy, *found = NULL;
 	pfkey_msg_t response;
@@ -1514,19 +1510,10 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 	pol->sadb_x_policy_len += PFKEY_LEN(req->sadb_x_ipsecrequest_len);
 	PFKEY_EXT_ADD(msg, pol);
 	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_SRC;
-	addr->sadb_address_proto = policy->src.proto;
-	addr->sadb_address_prefixlen = policy->src.mask;
-	host2ext(policy->src.net, addr);
-	PFKEY_EXT_ADD(msg, addr);
-	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_DST;
-	addr->sadb_address_proto = policy->dst.proto;
-	addr->sadb_address_prefixlen = policy->dst.mask;
-	host2ext(policy->dst.net, addr);
-	PFKEY_EXT_ADD(msg, addr);
+	add_addr_ext(msg, policy->src.net, SADB_EXT_ADDRESS_SRC, policy->src.proto,
+				 policy->src.mask);
+	add_addr_ext(msg, policy->dst.net, SADB_EXT_ADDRESS_DST, policy->dst.proto,
+				 policy->dst.mask);
 	
 	this->mutex->unlock(this->mutex);
 	
@@ -1630,7 +1617,6 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	struct sadb_x_policy *pol;
-	struct sadb_address *addr;
 	policy_entry_t *policy, *found = NULL;
 	pfkey_msg_t response;
 	size_t len;
@@ -1671,19 +1657,10 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 	pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
 	PFKEY_EXT_ADD(msg, pol);
 	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_SRC;
-	addr->sadb_address_proto = policy->src.proto;
-	addr->sadb_address_prefixlen = policy->src.mask;
-	host2ext(policy->src.net, addr);
-	PFKEY_EXT_ADD(msg, addr);
-	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_DST;
-	addr->sadb_address_proto = policy->dst.proto;
-	addr->sadb_address_prefixlen = policy->dst.mask;
-	host2ext(policy->dst.net, addr);
-	PFKEY_EXT_ADD(msg, addr);
+	add_addr_ext(msg, policy->src.net, SADB_EXT_ADDRESS_SRC, policy->src.proto,
+				 policy->src.mask);
+	add_addr_ext(msg, policy->dst.net, SADB_EXT_ADDRESS_DST, policy->dst.proto,
+				 policy->dst.mask);
 	
 	this->mutex->unlock(this->mutex);
 	
@@ -1727,7 +1704,6 @@ static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	struct sadb_x_policy *pol;
-	struct sadb_address *addr;
 	policy_entry_t *policy, *found = NULL;
 	route_entry_t *route;
 	size_t len;
@@ -1781,19 +1757,10 @@ static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 	pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
 	PFKEY_EXT_ADD(msg, pol);
 	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_SRC;
-	addr->sadb_address_proto = policy->src.proto;
-	addr->sadb_address_prefixlen = policy->src.mask;
-	host2ext(policy->src.net, addr);
-	PFKEY_EXT_ADD(msg, addr);
-	
-	addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = SADB_EXT_ADDRESS_DST;
-	addr->sadb_address_proto = policy->dst.proto;
-	addr->sadb_address_prefixlen = policy->dst.mask;
-	host2ext(policy->dst.net, addr);
-	PFKEY_EXT_ADD(msg, addr);
+	add_addr_ext(msg, policy->src.net, SADB_EXT_ADDRESS_SRC, policy->src.proto,
+				 policy->src.mask);
+	add_addr_ext(msg, policy->dst.net, SADB_EXT_ADDRESS_DST, policy->dst.proto,
+				 policy->dst.mask);
 	
 	route = policy->route;
 	policy->route = NULL;

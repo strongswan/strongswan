@@ -853,7 +853,7 @@ static void host2ext(host_t *host, struct sadb_address *ext)
 }
 
 /**
- * add a host behind a sadb_address extension
+ * add a host to the given sadb_msg
  */
 static void add_addr_ext(struct sadb_msg *msg, host_t *host, u_int16_t type)
 {
