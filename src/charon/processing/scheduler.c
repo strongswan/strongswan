@@ -179,7 +179,6 @@ static job_requeue_t schedule(private_scheduler_t * this)
 	int oldstate;
 	bool timed = FALSE;
 	
-	DBG2(DBG_JOB, "waiting for next event...");
 	this->mutex->lock(this->mutex);
 	
 	gettimeofday(&now, NULL);
@@ -187,7 +186,7 @@ static job_requeue_t schedule(private_scheduler_t * this)
 	if ((event = peek_event(this)) != NULL)
 	{
 		difference = time_difference(&now, &event->time);
-		if (difference > 0)
+		if (difference >= 0)
 		{
 			remove_event(this);
 			this->mutex->unlock(this->mutex);
@@ -196,6 +195,7 @@ static job_requeue_t schedule(private_scheduler_t * this)
 			free(event);
 			return JOB_REQUEUE_DIRECT;
 		}
+		DBG2(DBG_JOB, "next event in %ldms, waiting", -difference);
 		timed = TRUE;
 	}
 	pthread_cleanup_push((void*)this->mutex->unlock, this->mutex);
@@ -207,6 +207,7 @@ static job_requeue_t schedule(private_scheduler_t * this)
 	}
 	else
 	{
+		DBG2(DBG_JOB, "no events, waiting");
 		this->condvar->wait(this->condvar, this->mutex);
 	}
 	pthread_setcancelstate(oldstate, NULL);
