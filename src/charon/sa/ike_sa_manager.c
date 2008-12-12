@@ -1413,6 +1413,8 @@ static void checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 			/* they will wake us again when their work is done */
 			entry->condvar->wait(entry->condvar, this->segments[segment].mutex);
 		}
+		remove_entry(this, entry);
+		unlock_single_segment(this, segment);
 		
 		if (entry->half_open)
 		{
@@ -1424,9 +1426,7 @@ static void checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 			remove_connected_peers(this, entry);
 		}
 		
-		remove_entry(this, entry);
 		entry_destroy(entry);
-		unlock_single_segment(this, segment);
 		
 		DBG2(DBG_MGR, "check-in and destroy of IKE_SA successful");
 	}
