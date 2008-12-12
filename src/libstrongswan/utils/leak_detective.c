@@ -15,6 +15,8 @@
  * $Id$
  */
 	
+#define _GNU_SOURCE
+#include <sched.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
@@ -473,6 +475,16 @@ leak_detective_t *leak_detective_create()
 	
 	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
 	{
+		cpu_set_t mask;
+		
+		CPU_ZERO(&mask);
+		CPU_SET(0, &mask);
+		
+		if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0)
+		{
+			fprintf(stderr, "setting CPU affinity failed: %m");
+		}
+	
 		lib->leak_detective = TRUE;
 		install_hooks();
 	}
