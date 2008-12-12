@@ -177,7 +177,7 @@ static void destroy(private_load_tester_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_load_tester_plugin_t *this;
-	int i;
+	u_int i, shutdown_on = 0;
 	
 	if (!lib->settings->get_bool(lib->settings,
 								 "charon.plugins.load_tester.enable", FALSE))
@@ -192,27 +192,33 @@ plugin_t *plugin_create()
 	lib->crypto->add_dh(lib->crypto, MODP_NULL, 
 						(dh_constructor_t)load_tester_diffie_hellman_create);
 	
+	this->delay = lib->settings->get_int(lib->settings,
+					"charon.plugins.load_tester.delay", 0);
+	this->iterations = lib->settings->get_int(lib->settings,
+					"charon.plugins.load_tester.iterations", 1);
+	this->initiators = lib->settings->get_int(lib->settings,
+					"charon.plugins.load_tester.initiators", 0);
+	if (lib->settings->get_bool(lib->settings,
+					"charon.plugins.load_tester.shutdown_when_complete", 0))
+	{
+		shutdown_on = this->iterations * this->initiators;
+	}
+	
 	this->mutex = mutex_create(MUTEX_DEFAULT);
 	this->condvar = condvar_create(CONDVAR_DEFAULT);
 	this->config = load_tester_config_create();
 	this->creds = load_tester_creds_create();
-	this->listener = load_tester_listener_create();
+	this->listener = load_tester_listener_create(shutdown_on);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->credentials->add_set(charon->credentials, &this->creds->credential_set);
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 	
 	if (lib->settings->get_bool(lib->settings,
-								"charon.plugins.load_tester.fake_kernel", FALSE))
+					"charon.plugins.load_tester.fake_kernel", FALSE))
 	{
 		charon->kernel_interface->add_ipsec_interface(charon->kernel_interface, 
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	}
-	this->delay = lib->settings->get_int(lib->settings,
-								"charon.plugins.load_tester.delay", 0);
-	this->iterations = lib->settings->get_int(lib->settings,
-								"charon.plugins.load_tester.iterations", 1);
-	this->initiators = lib->settings->get_int(lib->settings,
-								"charon.plugins.load_tester.initiators", 0);
 	this->running = 0;
 	for (i = 0; i < this->initiators; i++)
 	{

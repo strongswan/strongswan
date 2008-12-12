@@ -17,6 +17,8 @@
 
 #include "load_tester_listener.h"
 
+#include <signal.h>
+
 #include <daemon.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 
@@ -35,6 +37,16 @@ struct private_load_tester_listener_t {
 	 * Delete IKE_SA after it has been established
 	 */
 	bool delete_after_established;
+
+	/**
+	 * Number of established SAs
+	 */
+	u_int established;
+	
+	/**
+	 * Shutdown the daemon if we have established this SA count
+	 */
+	u_int shutdown_on;
 };
 
 /**
@@ -43,10 +55,24 @@ struct private_load_tester_listener_t {
 static bool ike_state_change(private_load_tester_listener_t *this,
 							 ike_sa_t *ike_sa, ike_sa_state_t state)
 {
-	if (this->delete_after_established && state == IKE_ESTABLISHED)
+	if (state == IKE_ESTABLISHED)
 	{
-		charon->processor->queue_job(charon->processor,
-				(job_t*)delete_ike_sa_job_create(ike_sa->get_id(ike_sa), TRUE));
+		ike_sa_id_t *id = ike_sa->get_id(ike_sa);
+	
+		if (this->delete_after_established)
+		{
+			charon->processor->queue_job(charon->processor,
+									(job_t*)delete_ike_sa_job_create(id, TRUE));
+		}
+		
+		if (id->is_initiator(id))
+		{
+			if (this->shutdown_on == ++this->established)
+			{
+				DBG1(DBG_CFG, "load-test complete, raising SIGTERM");
+				pthread_kill(charon->main_thread_id, SIGTERM);
+			}
+		}
 	}
 	return TRUE;
 }
@@ -59,7 +85,7 @@ static void destroy(private_load_tester_listener_t *this)
 	free(this);
 }
 
-load_tester_listener_t *load_tester_listener_create()
+load_tester_listener_t *load_tester_listener_create(u_int shutdown_on)
 {
 	private_load_tester_listener_t *this = malloc_thing(private_load_tester_listener_t);
 	
@@ -69,6 +95,9 @@ load_tester_listener_t *load_tester_listener_create()
 	
 	this->delete_after_established = lib->settings->get_bool(lib->settings,
 				"charon.plugins.load_tester.delete_after_established", FALSE);
+	
+	this->shutdown_on = shutdown_on;
+	this->established = 0;
 	
 	return &this->public;
 }

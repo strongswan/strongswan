@@ -46,8 +46,9 @@ struct load_tester_listener_t {
 /**
  * Create a listener to handle special events during load test
  *
- * @return			listener
+ * @param shutdown_on	shut down the daemon after this many SAs are established
+ * @return				listener
  */
-load_tester_listener_t *load_tester_listener_create();
+load_tester_listener_t *load_tester_listener_create(u_int shutdown_on);
 
 #endif /* LOAD_TESTER_LISTENER_H_ @}*/
