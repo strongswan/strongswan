@@ -60,11 +60,6 @@ struct private_daemon_t {
 	 * Signal set used for signal handling.
 	 */
 	sigset_t signal_set;
-	
-	/** 
-	 * The thread_id of main-thread.
-	 */
-	pthread_t main_thread_id;
 
 #ifdef CAPABILITIES
 	/**
@@ -226,7 +221,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	{
 		fprintf(stderr, "killing daemon: %s\n", reason);
 	}
-	if (this->main_thread_id == pthread_self())
+	if (this->public.main_thread_id == pthread_self())
 	{
 		/* initialization failed, terminate daemon */
 		unlink(PID_FILE);
@@ -235,7 +230,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	else
 	{
 		DBG1(DBG_DMN, "sending SIGTERM to ourself");
-		raise(SIGTERM);
+		pthread_kill(this->public.main_thread_id, SIGTERM);
 		/* thread must die, since he produced a ciritcal failure and can't continue */
 		pthread_exit(NULL);
 	}
@@ -578,7 +573,7 @@ private_daemon_t *daemon_create(void)
 	this->public.uid = 0;
 	this->public.gid = 0;
 	
-	this->main_thread_id = pthread_self();
+	this->public.main_thread_id = pthread_self();
 #ifdef CAPABILITIES
 	this->caps = cap_init();
 	keep_cap(this, CAP_NET_ADMIN);
