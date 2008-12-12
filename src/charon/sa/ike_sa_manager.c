@@ -1031,13 +1031,20 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	ike_cfg_t *ike_cfg;
 	u_int segment;
 	
+	if (!this->reuse_ikesa)
+	{	/* IKE_SA reuse disable by config */
+		ike_sa = checkout_new(this, TRUE);	
+		charon->bus->set_sa(charon->bus, ike_sa);
+		return ike_sa;
+	}
+	
 	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 	my_id = peer_cfg->get_my_id(peer_cfg);
 	other_id = peer_cfg->get_other_id(peer_cfg);
 	my_host = host_create_from_dns(ike_cfg->get_my_addr(ike_cfg), 0, 0);
 	other_host = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg), 0, 0);
 	
-	if (my_host && other_host && this->reuse_ikesa)
+	if (my_host && other_host)
 	{
 		enumerator = create_table_enumerator(this);
 		while (enumerator->enumerate(enumerator, &entry, &segment))
@@ -1097,18 +1104,8 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	DESTROY_IF(other_host);
 	
 	if (!ike_sa)
-	{
-		entry = entry_create();
-		entry->ike_sa_id = ike_sa_id_create(get_next_spi(this), 0, TRUE);
-		entry->ike_sa = ike_sa_create(entry->ike_sa_id);
-		
-		segment = put_entry(this, entry);
-		
-		/* check ike_sa out */
-		DBG2(DBG_MGR, "new IKE_SA created for IDs [%D]...[%D]", my_id, other_id);
-		entry->checked_out = TRUE;
-		ike_sa = entry->ike_sa;
-		unlock_single_segment(this, segment);
+	{	/* no IKE_SA using such a config, hand out a new */
+		ike_sa = checkout_new(this, TRUE);	
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
