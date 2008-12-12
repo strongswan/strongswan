@@ -1513,7 +1513,7 @@ static void flush(private_ike_sa_manager_t *this)
 	enumerator = create_table_enumerator(this);
 	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
-		while (entry->waiting_threads)
+		while (entry->waiting_threads || entry->checked_out)
 		{
 			/* wake up all */
 			entry->condvar->broadcast(entry->condvar);
