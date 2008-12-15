@@ -18,99 +18,119 @@
 #include "cert_cache.h"
 
 #include <time.h>
+#include <sched.h>
 
 #include <daemon.h>
 #include <utils/mutex.h>
 #include <utils/linked_list.h>
 
-#define CACHE_SIZE 30
+/** cache size, a power of 2 for fast modulo */
+#define CACHE_SIZE 32
+
+/** attempts to acquire a cache lock */
+#define REPLACE_TRIES 5
 
 typedef struct private_cert_cache_t private_cert_cache_t;
 typedef struct relation_t relation_t;
 
 /**
+ * A trusted relation between subject and issuer
+ */
+struct relation_t {
+	
+	/**
+	 * subject of this relation
+	 */
+	certificate_t *subject;
+	
+	/**
+	 * issuer of this relation
+	 */
+	certificate_t *issuer;
+	
+	/**
+	 * Cache hits
+	 */
+	u_int hits;
+	
+	/**
+	 * Lock for this relation
+	 */
+	rwlock_t *lock;
+};
+
+/**
  * private data of cert_cache
  */
 struct private_cert_cache_t {
-
+	
 	/**
 	 * public functions
 	 */
 	cert_cache_t public;
 	
 	/**
-	 * list of trusted subject-issuer relations, as relation_t
+	 * array of trusted subject-issuer relations
 	 */
-	linked_list_t *relations;
-	
-	/**
-	 * do we have an active enumerator
-	 */
-	refcount_t enumerating;
-	
-	/**
-	 * have we increased the cache without a check_cache?
-	 */
-	bool check_required;
-	
-	/**
-	 * read-write lock to sets list
-	 */
-	rwlock_t *lock;
+	relation_t relations[CACHE_SIZE];
 };
 
 /**
- * A trusted relation between subject and issuer
+ * Cache relation in a free slot/replace an other
  */
-struct relation_t {
-	/** subject of this relation */
-	certificate_t *subject;
-	/** issuer of this relation */
-	certificate_t *issuer;
-	/** time of last use */
-	time_t last_use;
-};
-
-/**
- * destroy a relation_t structure
- */
-static void relation_destroy(relation_t *this)
+static void cache(private_cert_cache_t *this,
+				  certificate_t *subject, certificate_t *issuer)
 {
-	this->subject->destroy(this->subject);
-	this->issuer->destroy(this->issuer);
-	free(this);
-}
-
-/**
- * check the cache for oversize
- */
-static void check_cache(private_cert_cache_t *this)
-{
-	if (this->enumerating)
+	relation_t *rel;
+	int i, offset, try;
+	u_int total_hits = 0;
+	
+	/* check for a unused relation slot first */
+	for (i = 0; i < CACHE_SIZE; i++)
 	{
-		this->check_required = TRUE;
-	}
-	else if (this->lock->try_write_lock(this->lock))
-	{	/* never blocks, only done if lock is available */
-		while (this->relations->get_count(this->relations) > CACHE_SIZE)
+		rel = &this->relations[i];
+		
+		if (!rel->subject && rel->lock->try_write_lock(rel->lock))
 		{
-			relation_t *oldest = NULL, *current;
-			enumerator_t *enumerator;
-			
-			enumerator = this->relations->create_enumerator(this->relations);
-			while (enumerator->enumerate(enumerator, &current))
+			/* double-check having lock */
+			if (!rel->subject)
 			{
-				if (oldest == NULL || oldest->last_use <= current->last_use)
-				{
-					oldest = current;
-				}
+				rel->subject = subject->get_ref(subject);
+				rel->issuer = issuer->get_ref(issuer);
+				return rel->lock->unlock(rel->lock);
 			}
-			enumerator->destroy(enumerator);
-			this->relations->remove(this->relations, oldest, NULL);
-			relation_destroy(oldest);
+			rel->lock->unlock(rel->lock);
 		}
-		this->check_required = FALSE;
-		this->lock->unlock(this->lock);
+		total_hits += rel->hits;
+	}
+	/* run several attempts to replace a random slot, never block. */
+	for (try = 0; try < REPLACE_TRIES; try++)
+	{
+		/* replace a random relation */
+		offset = random();
+		for (i = 0; i < CACHE_SIZE; i++)
+		{
+			rel = &this->relations[(i + offset) % CACHE_SIZE];
+			
+			if (rel->hits > total_hits / CACHE_SIZE)
+			{	/* skip often used slots */
+				continue;
+			}
+			if (rel->lock->try_write_lock(rel->lock))
+			{
+				if (rel->subject)
+				{
+					rel->subject->destroy(rel->subject);
+					rel->issuer->destroy(rel->issuer);
+				}
+				rel->subject = subject->get_ref(subject);
+				rel->issuer = issuer->get_ref(issuer);
+				rel->hits = 0;
+				return rel->lock->unlock(rel->lock);
+			}
+		}
+		/* give other threads a chance to release locks */
+		sched_yield();
 	}
 }
 
@@ -121,108 +141,118 @@ static bool issued_by(private_cert_cache_t *this,
 					  certificate_t *subject, certificate_t *issuer)
 {
 	relation_t *found = NULL, *current;
-	enumerator_t *enumerator;
+	int i;
 	
-	/* lookup cache */
-	this->lock->read_lock(this->lock);
-	enumerator = this->relations->create_enumerator(this->relations);
-	while (enumerator->enumerate(enumerator, &current))
+	for (i = 0; i < CACHE_SIZE; i++)
 	{
-		bool match = FALSE;
-	
-		/* check for equal certificates */
-		if (subject->equals(subject, current->subject))
+		current = &this->relations[i];
+		
+		current->lock->read_lock(current->lock);
+		if (current->subject)
 		{
-			match = TRUE;
-			subject = current->subject;
-		}
-		if (issuer->equals(issuer, current->issuer))
-		{
-			issuer = current->issuer;
-			/* if both certs match, we already have a relation */
-			if (match)
+			/* check for equal issuer */
+			if (issuer->equals(issuer, current->issuer))
 			{
-				current->last_use = time(NULL);
-				found = current;
-				break;
+				/* reuse issuer instance in cache() */
+				issuer = current->issuer;
+				if (subject->equals(subject, current->subject))
+				{
+					/* write hit counter is not locked, but not critical */
+					current->hits++;
+					found = current;
+				}
 			}
 		}
+		current->lock->unlock(current->lock);
+		if (found)
+		{
+			return TRUE;
+		}
 	}
-	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
-	if (found)
+	/* no cache hit, check and cache signature */
+	if (subject->issued_by(subject, issuer))
 	{
+		cache(this, subject, issuer);
 		return TRUE;
 	}
-	/* no cache hit, check signature */
-	if (!subject->issued_by(subject, issuer))
-	{
-		return FALSE;
-	}
-	/* cache if good, respect cache limit */
-	found = malloc_thing(relation_t);
-	found->subject = subject->get_ref(subject);
-	found->issuer = issuer->get_ref(issuer);
-	found->last_use = time(NULL);
-	/* insert should be ok without lock */
-	this->relations->insert_last(this->relations, found);
-	check_cache(this);
-	return TRUE;
+	return FALSE;
 }
 
 /**
- * data associated to a cert enumeration 
+ * certificate enumerator implemenation
  */
 typedef struct {
+	/** implements enumerator_t interface */
+	enumerator_t public;
 	/** type of requested certificate */
 	certificate_type_t cert;
 	/** type of requested key */
 	key_type_t key;
-	/** ID to get a cert from */
+	/** ID to get a cert for */
 	identification_t *id;
-	/** reverse pointer to cache */
-	private_cert_cache_t *this;
-} cert_data_t;
+	/** cache */
+	relation_t *relations;
+	/** current position in array cache */
+	int index;
+	/** currently locked relation */
+	int locked;
+} cert_enumerator_t;
 
 /**
  * filter function for certs enumerator
  */
-static bool certs_filter(cert_data_t *data, relation_t **in, certificate_t **out)
+static bool cert_enumerate(cert_enumerator_t *this, certificate_t **out)
 {
 	public_key_t *public;
-	certificate_t *cert;
+	relation_t *rel;
 	
-	cert = (*in)->subject;
-	if (data->key == KEY_ANY && data->id && 
-		(data->cert == CERT_ANY || data->cert == CERT_X509_CRL) &&
-		cert->get_type(cert) == CERT_X509_CRL)
-	{	/* CRL lookup is done using issuer/authkeyidentifier */
-		if (cert->has_issuer(cert, data->id))
-		{
-			*out = cert;
-			return TRUE;
-		}
+	if (this->locked >= 0)
+	{
+		rel = &this->relations[this->locked];
+		rel->lock->unlock(rel->lock);
+		this->locked = -1;
 	}
 	
-	if ((data->cert == CERT_ANY || cert->get_type(cert) == data->cert) &&
-		(!data->id || cert->has_subject(cert, data->id)))
+	while (++this->index < CACHE_SIZE)
 	{
-		if (data->key == KEY_ANY)
+		rel = &this->relations[this->index];
+		rel->lock->read_lock(rel->lock);
+		this->locked = this->index;
+		if (rel->subject)
 		{
-			*out = cert;
-			return TRUE;
-		}
-		public = cert->get_public_key(cert);
-		if (public)
-		{
-			if (public->get_type(public) == data->key)
+			/* CRL lookup is done using issuer/authkeyidentifier */
+			if (this->key == KEY_ANY && this->id && 
+				(this->cert == CERT_ANY || this->cert == CERT_X509_CRL) &&
+				rel->subject->get_type(rel->subject) == CERT_X509_CRL &&
+				rel->subject->has_issuer(rel->subject, this->id))
 			{
-				public->destroy(public);
-				*out = cert;
+				*out = rel->subject;
 				return TRUE;
 			}
-			public->destroy(public);
+			if ((this->cert == CERT_ANY ||
+				 rel->subject->get_type(rel->subject) == this->cert) &&
+				(!this->id || rel->subject->has_subject(rel->subject, this->id)))
+			{
+				if (this->key == KEY_ANY)
+				{
+					*out = rel->subject;
+					return TRUE;
+				}
+				public = rel->subject->get_public_key(rel->subject);
+				if (public)
+				{
+					if (public->get_type(public) == this->key)
+					{
+						public->destroy(public);
+						*out = rel->subject;
+						return TRUE;
+					}
+					public->destroy(public);
+				}
+			}
 		}
+		this->locked = -1;
+		rel->lock->unlock(rel->lock);
 	}
 	return FALSE;
 }
@@ -230,15 +260,16 @@ static bool certs_filter(cert_data_t *data, relation_t **in, certificate_t **out
 /**
  * clean up enumeration data
  */
-static void certs_destroy(cert_data_t *data)
+static void cert_enumerator_destroy(cert_enumerator_t *this)
 {
-	ignore_result(ref_put(&data->this->enumerating));
-	data->this->lock->unlock(data->this->lock);
-	if (data->this->check_required)
+	relation_t *rel;
+	
+	if (this->locked >= 0)
 	{
-		check_cache(data->this);
+		rel = &this->relations[this->locked];
+		rel->lock->unlock(rel->lock);
 	}
-	free(data);
+	free(this);
 }
 
 /**
@@ -248,23 +279,23 @@ static enumerator_t *create_enumerator(private_cert_cache_t *this,
 									   certificate_type_t cert, key_type_t key, 
 									   identification_t *id, bool trusted)
 {
-	cert_data_t *data;
+	cert_enumerator_t *enumerator;
 	
 	if (trusted)
 	{
 		return NULL;
 	}
-	data = malloc_thing(cert_data_t);
-	data->cert = cert;
-	data->key = key;
-	data->id = id;
-	data->this = this;
+	enumerator = malloc_thing(cert_enumerator_t);
+	enumerator->public.enumerate = (void*)cert_enumerate;
+	enumerator->public.destroy = (void*)cert_enumerator_destroy;
+	enumerator->cert = cert;
+	enumerator->key = key;
+	enumerator->id = id;
+	enumerator->relations = this->relations;
+	enumerator->index = -1;
+	enumerator->locked = -1;
 	
-	this->lock->read_lock(this->lock);
-	ref_get(&this->enumerating);
-	return enumerator_create_filter(
-							this->relations->create_enumerator(this->relations),
-							(void*)certs_filter, data, (void*)certs_destroy);
+	return &enumerator->public;
 }
 
 /**
@@ -272,22 +303,42 @@ static enumerator_t *create_enumerator(private_cert_cache_t *this,
  */
 static void flush(private_cert_cache_t *this, certificate_type_t type)
 {
-	enumerator_t *enumerator;
-	relation_t *relation;
+	relation_t *rel;
+	int i;
 	
-	this->lock->write_lock(this->lock);
-	enumerator = this->relations->create_enumerator(this->relations);
-	while (enumerator->enumerate(enumerator, &relation))
+	for (i = 0; i < CACHE_SIZE; i++)
 	{
-		if (type == CERT_ANY ||
-			type == relation->subject->get_type(relation->subject))
+		rel = &this->relations[i];
+		if (!rel->subject)
 		{
-			this->relations->remove_at(this->relations, enumerator);
-			relation_destroy(relation);
+			continue;
 		}
+		/* check with cheap read lock first */
+		if (type != CERT_ANY)
+		{
+			rel->lock->read_lock(rel->lock);
+			if (!rel->subject || type != rel->subject->get_type(rel->subject))
+			{
+				rel->lock->unlock(rel->lock);
+				continue;
+			}
+			rel->lock->unlock(rel->lock);
+		}
+		/* double check in write lock */
+		rel->lock->write_lock(rel->lock);
+		if (rel->subject)
+		{
+			if (type == CERT_ANY || type == rel->subject->get_type(rel->subject))
+			{
+				rel->subject->destroy(rel->subject);
+				rel->issuer->destroy(rel->issuer);
+				rel->subject = NULL;
+				rel->issuer = NULL;
+				rel->hits = 0;
+			}
+		}
+		rel->lock->unlock(rel->lock);
 	}
-	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
 }
 
 /**
@@ -295,8 +346,19 @@ static void flush(private_cert_cache_t *this, certificate_type_t type)
  */
 static void destroy(private_cert_cache_t *this)
 {
-	this->relations->destroy_function(this->relations, (void*)relation_destroy);
-	this->lock->destroy(this->lock);
+	relation_t *rel;
+	int i;
+	
+	for (i = 0; i < CACHE_SIZE; i++)
+	{
+		rel = &this->relations[i];
+		if (rel->subject)
+		{
+			rel->subject->destroy(rel->subject);
+			rel->issuer->destroy(rel->issuer);
+		}
+		rel->lock->destroy(rel->lock);
+	}
 	free(this);
 }
 
@@ -305,8 +367,10 @@ static void destroy(private_cert_cache_t *this)
  */
 cert_cache_t *cert_cache_create()
 {
-	private_cert_cache_t *this = malloc_thing(private_cert_cache_t);
+	private_cert_cache_t *this;
+	int i;
 	
+	this = malloc_thing(private_cert_cache_t);
 	this->public.set.create_private_enumerator = (void*)return_null;
 	this->public.set.create_cert_enumerator = (void*)create_enumerator;
 	this->public.set.create_shared_enumerator = (void*)return_null;
@@ -316,11 +380,13 @@ cert_cache_t *cert_cache_create()
 	this->public.flush = (void(*)(cert_cache_t*, certificate_type_t type))flush;
 	this->public.destroy = (void(*)(cert_cache_t*))destroy;
 	
-	this->relations = linked_list_create();
-	this->enumerating = 0;
-	this->check_required = FALSE;
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
-	
+	for (i = 0; i < CACHE_SIZE; i++)
+	{
+		this->relations[i].subject = NULL;
+		this->relations[i].issuer = NULL;
+		this->relations[i].hits = 0;
+		this->relations[i].lock = rwlock_create(RWLOCK_DEFAULT);
+	}
 	return &this->public;
 }
 
