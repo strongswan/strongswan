@@ -438,6 +438,11 @@ struct private_enumerator_t {
 	u_int segment;
 	
 	/**
+	 * currently enumerating entry
+	 */
+	entry_t *entry;
+	
+	/**
 	 * current table row index
 	 */
 	u_int row;
@@ -453,6 +458,11 @@ struct private_enumerator_t {
  */
 static bool enumerate(private_enumerator_t *this, entry_t **entry, u_int *segment)
 {
+	if (this->entry)
+	{
+		this->entry->condvar->signal(this->entry->condvar);
+		this->entry = NULL;
+	}
 	while (this->segment < this->manager->segment_count)
 	{
 		while (this->row < this->manager->table_size)
@@ -460,10 +470,10 @@ static bool enumerate(private_enumerator_t *this, entry_t **entry, u_int *segmen
 			if (this->current)
 			{
 				entry_t *item;
-
+				
 				if (this->current->enumerate(this->current, (void**)&item))
 				{
-					*entry = item;
+					*entry = this->entry = item;
 					*segment = this->segment;
 					return TRUE;
 				}
@@ -474,7 +484,7 @@ static bool enumerate(private_enumerator_t *this, entry_t **entry, u_int *segmen
 			else
 			{
 				linked_list_t *list;
-
+				
 				lock_single_segment(this->manager, this->segment);
 				if ((list = this->manager->ike_sa_table[this->row]) != NULL &&
 					 list->get_count(list))
@@ -497,6 +507,10 @@ static bool enumerate(private_enumerator_t *this, entry_t **entry, u_int *segmen
  */
 static void enumerator_destroy(private_enumerator_t *this)
 {
+	if (this->entry)
+	{
+		this->entry->condvar->signal(this->entry->condvar);
+	}
 	if (this->current)
 	{
 		this->current->destroy(this->current);
@@ -516,6 +530,7 @@ static enumerator_t* create_table_enumerator(private_ike_sa_manager_t *this)
 	enumerator->enumerator.destroy = (void*)enumerator_destroy;
 	enumerator->manager = this;
 	enumerator->segment = 0;
+	enumerator->entry = NULL;
 	enumerator->row = 0;
 	enumerator->current = NULL;
 	
@@ -575,6 +590,7 @@ static void remove_entry(private_ike_sa_manager_t *this, entry_t *entry)
  */
 static void remove_entry_at(private_enumerator_t *this)
 {
+	this->entry = NULL;
 	if (this->current)
 	{
 		linked_list_t *list = this->manager->ike_sa_table[this->row];
