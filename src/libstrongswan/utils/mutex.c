@@ -77,7 +77,7 @@ static void profiler_cleanup(lock_profile_t *profile)
  */
 static void profiler_init(lock_profile_t *profile)
 {
-	profile->backtrace = backtrace_create(3);
+	profile->backtrace = backtrace_create(2);
 	timerclear(&profile->waited);
 }
 
