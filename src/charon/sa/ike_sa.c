@@ -709,12 +709,6 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 			break;
 	}
 	charon->bus->ike_state_change(charon->bus, &this->public, state);
-	if (state == IKE_ESTABLISHED)
-	{	/* purge auth items after hook invocation, as they contain certs
-		 * and other memory wasting elements */
-		this->my_auth->purge(this->my_auth);
-		this->other_auth->purge(this->other_auth);
-	}
 	this->state = state;
 }
 
@@ -1484,6 +1478,14 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		status = this->task_manager->process_message(this->task_manager, message);
 		if (status != DESTROY_ME)
 		{
+			if (message->get_exchange_type(message) == IKE_AUTH &&
+				this->state == IKE_ESTABLISHED)
+			{
+				/* purge auth items if SA is up, as they contain certs
+				 * and other memory wasting elements */
+				this->my_auth->purge(this->my_auth);
+				this->other_auth->purge(this->other_auth);
+			}
 			return status;
 		}
 		/* if IKE_SA gets closed for any reasons, reroute routed children */
