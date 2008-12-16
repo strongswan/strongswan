@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -103,12 +104,17 @@ struct ike_sa_manager_t {
 								 	 peer_cfg_t *peer_cfg);
 	
 	/**
-	 * Check out a duplicate if ike_sa to do uniqueness tests.
-	 *
-	 * @param ike_sa			ike_sa to get a duplicate from
-	 * @return					checked out duplicate
+	 * Check for duplicates of the given IKE_SA.
+	 * 
+	 * Measures are taken according to the uniqueness policy of the IKE_SA.
+	 * The return value indicates whether duplicates have been found and if
+	 * further measures should be taken (e.g. cancelling an IKE_AUTH exchange).
+	 * 
+	 * @param ike_sa			ike_sa to check
+	 * @return					TRUE, if the given IKE_SA has duplicates and
+	 * 							should be deleted
 	 */
-	ike_sa_t* (*checkout_duplicate)(ike_sa_manager_t *this, ike_sa_t *ike_sa);
+	bool (*check_uniqueness)(ike_sa_manager_t *this, ike_sa_t *ike_sa);
 	
 	/**
 	 * Check out an IKE_SA a unique ID.

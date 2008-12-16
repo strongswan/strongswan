@@ -1234,18 +1234,23 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 }
 	
 /**
- * Implementation of ike_sa_manager_t.checkout_duplicate.
+ * Implementation of ike_sa_manager_t.check_uniqueness.
  */
-static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
-									ike_sa_t *ike_sa)
+static bool check_uniqueness(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 {
-	linked_list_t *list;
-	entry_t *entry;
+	bool cancel = FALSE;
+	peer_cfg_t *peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+	unique_policy_t policy = peer_cfg->get_unique_policy(peer_cfg);
+	linked_list_t *list, *duplicate_ids = NULL;
 	ike_sa_id_t *duplicate_id = NULL;
-	ike_sa_t *duplicate = NULL;
 	identification_t *me, *other;
 	u_int row, segment;
-	rwlock_t *lock; 
+	rwlock_t *lock;
+	
+	if (policy == UNIQUE_NO)
+	{
+		return FALSE;
+	}
 	
 	me = ike_sa->get_my_id(ike_sa);
 	other = ike_sa->get_other_id(ike_sa);
@@ -1262,25 +1267,70 @@ static ike_sa_t* checkout_duplicate(private_ike_sa_manager_t *this,
 		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
 								 (void**)&current, me, other) == SUCCESS)
 		{
-			/* we just return the first ike_sa_id we have cached for these ids */
-			current->sas->get_first(current->sas, (void**)&duplicate_id);
+			/* clone the list, so we can release the lock */
+			duplicate_ids = current->sas->clone_offset(current->sas,
+									offsetof(ike_sa_id_t, clone));
 		}
 	}
 	lock->unlock(lock);
 	
-	if (duplicate_id)
+	if (!duplicate_ids)
 	{
-		if (get_entry_by_id(this, duplicate_id, &entry, &segment) == SUCCESS)
-		{
-			if (wait_for_entry(this, entry, segment))
-			{
-				duplicate = entry->ike_sa;
-				entry->checked_out = TRUE;
-			}
-			unlock_single_segment(this, segment);
-		}
+		return FALSE;
 	}
-	return duplicate;
+	
+	enumerator_t *enumerator = duplicate_ids->create_enumerator(duplicate_ids);
+	while (enumerator->enumerate(enumerator, (void**)&duplicate_id))
+	{
+		status_t status = SUCCESS;
+		ike_sa_t *duplicate = checkout(this, duplicate_id);
+		if (!duplicate)
+		{
+			continue;
+		}
+		peer_cfg = duplicate->get_peer_cfg(duplicate);
+		if (peer_cfg && peer_cfg->equals(peer_cfg, ike_sa->get_peer_cfg(ike_sa)))
+		{
+			switch (duplicate->get_state(duplicate))
+			{
+				case IKE_ESTABLISHED:
+				case IKE_REKEYING:
+					switch (policy)
+					{
+						case UNIQUE_REPLACE:
+							DBG1(DBG_IKE, "deleting duplicate IKE_SA due"
+									" uniqueness policy");
+							status = duplicate->delete(duplicate);
+							break;
+						case UNIQUE_KEEP:
+							cancel = TRUE;
+							/* we keep the first IKE_SA and delete all
+							 * other duplicates that might exist */
+							policy = UNIQUE_REPLACE;
+							break;
+						default:
+							break;
+					}
+					break;
+				default:
+					break;
+			}
+		}
+		if (status == DESTROY_ME)
+		{
+			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+														duplicate);
+		}
+		else
+		{
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, duplicate);
+		}
+		/* reset thread's current IKE_SA after checkin */
+		charon->bus->set_sa(charon->bus, ike_sa);
+	}
+	enumerator->destroy(enumerator);
+	duplicate_ids->destroy_offset(duplicate_ids, offsetof(ike_sa_id_t, destroy));
+	return cancel;
 }
 
 /**
@@ -1645,7 +1695,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.checkout_by_config = (ike_sa_t*(*)(ike_sa_manager_t*,peer_cfg_t*))checkout_by_config;
 	this->public.checkout_by_id = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t,bool))checkout_by_id;
 	this->public.checkout_by_name = (ike_sa_t*(*)(ike_sa_manager_t*,char*,bool))checkout_by_name;
-	this->public.checkout_duplicate = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_t *ike_sa))checkout_duplicate;
+	this->public.check_uniqueness = (bool(*)(ike_sa_manager_t*, ike_sa_t *ike_sa))check_uniqueness;
 	this->public.create_enumerator = (enumerator_t*(*)(ike_sa_manager_t*))create_enumerator;
 	this->public.checkin = (void(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
 	this->public.checkin_and_destroy = (void(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;

@@ -657,9 +657,9 @@ struct ike_sa_t {
 	 * 
 	 * @return
 	 * 						- SUCCESS if deletion is initialized
-	 * 						- INVALID_STATE, if the IKE_SA is not in 
+	 * 						- DESTROY_ME, if the IKE_SA is not in 
 	 * 						  an established state and can not be
-	 * 						  delete (but destroyed).
+	 * 						  deleted (but destroyed).
 	 */
 	status_t (*delete) (ike_sa_t *this);
 	
