@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -33,16 +33,11 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
 #include <config/peer_cfg.h>
 
 /**
- * The IKE_SA-Manager is responsible for managing all initiated and responded IKE_SA's.
+ * Manages and synchronizes access to all IKE_SAs.
  *
- * To avoid access from multiple threads, IKE_SAs must be checked out from
- * the manager, and checked in after usage. 
- * The manager also handles deletion of SAs.
- *
- * @todo checking of double-checkouts from the same threads would be nice.
- * This could be done by comparing thread-ids via pthread_self()...
- * 
- * @todo Managing of ike_sa_t objects in a hash table instead of linked list.
+ * To synchronize access to thread-unsave IKE_SAs, they are checked out for
+ * use and checked in afterwards. A checked out SA is exclusively accessible
+ * by the owning thread.
  */
 struct ike_sa_manager_t {
 	
@@ -58,7 +53,7 @@ struct ike_sa_manager_t {
 	
 	/**
 	 * Create and check out a new IKE_SA.
-	 * 
+	 *
 	 * @param initiator			TRUE for initiator, FALSE otherwise
 	 * @returns 				created and checked out IKE_SA
 	 */
@@ -109,6 +104,8 @@ struct ike_sa_manager_t {
 	 * Measures are taken according to the uniqueness policy of the IKE_SA.
 	 * The return value indicates whether duplicates have been found and if
 	 * further measures should be taken (e.g. cancelling an IKE_AUTH exchange).
+	 * check_uniqueness() must be called before the IKE_SA is complete,
+	 * deadlocks occur otherwise.
 	 * 
 	 * @param ike_sa			ike_sa to check
 	 * @return					TRUE, if the given IKE_SA has duplicates and
@@ -136,8 +133,8 @@ struct ike_sa_manager_t {
 	/**
 	 * Check out an IKE_SA by the policy/connection name.
 	 *
-	 * Check out the IKE_SA by the connections name or by a CHILD_SAs policy
-	 * name.
+	 * Check out the IKE_SA by the configuration name, either from the IKE- or
+	 * one of its CHILD_SAs.
 	 *
 	 * @param name				name of the connection/policy
 	 * @param child				TRUE to use policy name, FALSE to use conn name
@@ -151,8 +148,8 @@ struct ike_sa_manager_t {
 	/**
 	 * Create an enumerator over all stored IKE_SAs.
 	 *
-	 * The avoid synchronization issues, the enumerator locks access
-	 * to the manager exclusively, until it gets destroyed.
+	 * While enumerating an IKE_SA, it is temporarily checked out and
+	 * automatically checked in after the current enumeration step.
 	 *
 	 * @return					enumerator over all IKE_SAs.
 	 */
@@ -160,11 +157,9 @@ struct ike_sa_manager_t {
 	
 	/**
 	 * Checkin the SA after usage.
-	 * 
-	 * @warning the SA pointer MUST NOT be used after checkin! 
-	 * The SA must be checked out again!
+	 *
 	 * If the IKE_SA is not registered in the manager, a new entry is created.
-	 *  
+	 *
 	 * @param ike_sa_id			the SA identifier, will be updated
 	 * @param ike_sa			checked out SA
 	 */
@@ -215,7 +210,7 @@ struct ike_sa_manager_t {
 };
 
 /**
- * Create a manager.
+ * Create the IKE_SA manager.
  * 
  * @returns 	ike_sa_manager_t object, NULL if initialization fails
  */

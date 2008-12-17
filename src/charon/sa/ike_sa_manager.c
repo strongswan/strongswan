@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -471,7 +471,7 @@ static bool enumerate(private_enumerator_t *this, entry_t **entry, u_int *segmen
 			{
 				entry_t *item;
 				
-				if (this->current->enumerate(this->current, (void**)&item))
+				if (this->current->enumerate(this->current, &item))
 				{
 					*entry = this->entry = item;
 					*segment = this->segment;
@@ -1232,106 +1232,6 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
-	
-/**
- * Implementation of ike_sa_manager_t.check_uniqueness.
- */
-static bool check_uniqueness(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
-{
-	bool cancel = FALSE;
-	peer_cfg_t *peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-	unique_policy_t policy = peer_cfg->get_unique_policy(peer_cfg);
-	linked_list_t *list, *duplicate_ids = NULL;
-	ike_sa_id_t *duplicate_id = NULL;
-	identification_t *me, *other;
-	u_int row, segment;
-	rwlock_t *lock;
-	
-	if (policy == UNIQUE_NO)
-	{
-		return FALSE;
-	}
-	
-	me = ike_sa->get_my_id(ike_sa);
-	other = ike_sa->get_other_id(ike_sa);
-		
-	row = chunk_hash_inc(other->get_encoding(other),
-						 chunk_hash(me->get_encoding(me))) & this->table_mask;
-	segment = row & this->segment_mask;
-	
-	lock = this->connected_peers_segments[segment & this->segment_mask].lock;
-	lock->read_lock(lock);
-	if ((list = this->connected_peers_table[row]) != NULL)
-	{
-		connected_peers_t *current;
-		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
-								 (void**)&current, me, other) == SUCCESS)
-		{
-			/* clone the list, so we can release the lock */
-			duplicate_ids = current->sas->clone_offset(current->sas,
-									offsetof(ike_sa_id_t, clone));
-		}
-	}
-	lock->unlock(lock);
-	
-	if (!duplicate_ids)
-	{
-		return FALSE;
-	}
-	
-	enumerator_t *enumerator = duplicate_ids->create_enumerator(duplicate_ids);
-	while (enumerator->enumerate(enumerator, (void**)&duplicate_id))
-	{
-		status_t status = SUCCESS;
-		ike_sa_t *duplicate = checkout(this, duplicate_id);
-		if (!duplicate)
-		{
-			continue;
-		}
-		peer_cfg = duplicate->get_peer_cfg(duplicate);
-		if (peer_cfg && peer_cfg->equals(peer_cfg, ike_sa->get_peer_cfg(ike_sa)))
-		{
-			switch (duplicate->get_state(duplicate))
-			{
-				case IKE_ESTABLISHED:
-				case IKE_REKEYING:
-					switch (policy)
-					{
-						case UNIQUE_REPLACE:
-							DBG1(DBG_IKE, "deleting duplicate IKE_SA due"
-									" uniqueness policy");
-							status = duplicate->delete(duplicate);
-							break;
-						case UNIQUE_KEEP:
-							cancel = TRUE;
-							/* we keep the first IKE_SA and delete all
-							 * other duplicates that might exist */
-							policy = UNIQUE_REPLACE;
-							break;
-						default:
-							break;
-					}
-					break;
-				default:
-					break;
-			}
-		}
-		if (status == DESTROY_ME)
-		{
-			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
-														duplicate);
-		}
-		else
-		{
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, duplicate);
-		}
-		/* reset thread's current IKE_SA after checkin */
-		charon->bus->set_sa(charon->bus, ike_sa);
-	}
-	enumerator->destroy(enumerator);
-	duplicate_ids->destroy_offset(duplicate_ids, offsetof(ike_sa_id_t, destroy));
-	return cancel;
-}
 
 /**
  * enumerator filter function 
@@ -1502,6 +1402,112 @@ static void checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 		ike_sa->destroy(ike_sa);
 	}
 	charon->bus->set_sa(charon->bus, NULL);
+}
+
+	
+/**
+ * Implementation of ike_sa_manager_t.check_uniqueness.
+ */
+static bool check_uniqueness(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
+{
+	bool cancel = FALSE;
+	peer_cfg_t *peer_cfg;
+	unique_policy_t policy;
+	linked_list_t *list, *duplicate_ids = NULL;
+	enumerator_t *enumerator;
+	ike_sa_id_t *duplicate_id = NULL;
+	identification_t *me, *other;
+	u_int row, segment;
+	rwlock_t *lock;
+	
+	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+	policy = peer_cfg->get_unique_policy(peer_cfg);
+	if (policy == UNIQUE_NO)
+	{
+		return FALSE;
+	}
+	
+	me = ike_sa->get_my_id(ike_sa);
+	other = ike_sa->get_other_id(ike_sa);
+	
+	row = chunk_hash_inc(other->get_encoding(other),
+						 chunk_hash(me->get_encoding(me))) & this->table_mask;
+	segment = row & this->segment_mask;
+	
+	lock = this->connected_peers_segments[segment & this->segment_mask].lock;
+	lock->read_lock(lock);
+	if ((list = this->connected_peers_table[row]) != NULL)
+	{
+		connected_peers_t *current;
+		
+		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
+							 (void**)&current, me, other) == SUCCESS)
+		{
+			/* clone the list, so we can release the lock */
+			duplicate_ids = current->sas->clone_offset(current->sas,
+												offsetof(ike_sa_id_t, clone));
+		}
+	}
+	lock->unlock(lock);
+	
+	if (!duplicate_ids)
+	{
+		return FALSE;
+	}
+	
+	enumerator = duplicate_ids->create_enumerator(duplicate_ids);
+	while (enumerator->enumerate(enumerator, &duplicate_id))
+	{
+		status_t status = SUCCESS;
+		ike_sa_t *duplicate;
+		
+		duplicate = checkout(this, duplicate_id);
+		if (!duplicate)
+		{
+			continue;
+		}
+		peer_cfg = duplicate->get_peer_cfg(duplicate);
+		if (peer_cfg && peer_cfg->equals(peer_cfg, ike_sa->get_peer_cfg(ike_sa)))
+		{
+			switch (duplicate->get_state(duplicate))
+			{
+				case IKE_ESTABLISHED:
+				case IKE_REKEYING:
+					switch (policy)
+					{
+						case UNIQUE_REPLACE:
+							DBG1(DBG_IKE, "deleting duplicate IKE_SA due"
+									" uniqueness policy");
+							status = duplicate->delete(duplicate);
+							break;
+						case UNIQUE_KEEP:
+							cancel = TRUE;
+							/* we keep the first IKE_SA and delete all
+							 * other duplicates that might exist */
+							policy = UNIQUE_REPLACE;
+							break;
+						default:
+							break;
+					}
+					break;
+				default:
+					break;
+			}
+		}
+		if (status == DESTROY_ME)
+		{
+			checkin_and_destroy(this, duplicate);
+		}
+		else
+		{
+			checkin(this, duplicate);
+		}
+	}
+	enumerator->destroy(enumerator);
+	duplicate_ids->destroy_offset(duplicate_ids, offsetof(ike_sa_id_t, destroy));
+	/* reset thread's current IKE_SA after checkin */
+	charon->bus->set_sa(charon->bus, ike_sa);
+	return cancel;
 }
 
 /**
@@ -1718,19 +1724,16 @@ ike_sa_manager_t *ike_sa_manager_create()
 		return NULL;
 	}
 	this->table_size = get_nearest_powerof2(lib->settings->get_int(lib->settings,
-											  "charon.ikesa_table_size",
-											  DEFAULT_HASHTABLE_SIZE));
+						"charon.ikesa_table_size", DEFAULT_HASHTABLE_SIZE));
 	this->table_size = max(1, min(this->table_size, MAX_HASHTABLE_SIZE));
 	this->table_mask = this->table_size - 1;
 	
 	this->segment_count = get_nearest_powerof2(lib->settings->get_int(lib->settings,
-												"charon.ikesa_table_segments",
-												DEFAULT_SEGMENT_COUNT));
+						"charon.ikesa_table_segments", DEFAULT_SEGMENT_COUNT));
 	this->segment_count = max(1, min(this->segment_count, this->table_size));
 	this->segment_mask = this->segment_count - 1;
 	
-	this->ike_sa_table = (linked_list_t**)calloc(this->table_size, sizeof(linked_list_t*));
-	memset(this->ike_sa_table, 0, this->table_size * sizeof(linked_list_t*));
+	this->ike_sa_table = calloc(this->table_size, sizeof(linked_list_t*));
 	
 	this->segments = (segment_t*)calloc(this->segment_count, sizeof(segment_t));
 	for (i = 0; i < this->segment_count; ++i)
@@ -1739,11 +1742,9 @@ ike_sa_manager_t *ike_sa_manager_create()
 		this->segments[i].count = 0;
 	}
 	
-	/* we use the same parameters as above for the hash table to track half-open SAs */
-	this->half_open_table = (linked_list_t**)calloc(this->table_size, sizeof(linked_list_t*));
-	memset(this->half_open_table, 0, this->table_size * sizeof(linked_list_t*));
-	
-	this->half_open_segments = (shareable_segment_t*)calloc(this->segment_count, sizeof(shareable_segment_t));
+	/* we use the same table parameters for the table to track half-open SAs */
+	this->half_open_table = calloc(this->table_size, sizeof(linked_list_t*));
+	this->half_open_segments = calloc(this->segment_count, sizeof(shareable_segment_t));
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->half_open_segments[i].lock = rwlock_create(RWLOCK_DEFAULT);
@@ -1751,10 +1752,8 @@ ike_sa_manager_t *ike_sa_manager_create()
 	}
 	
 	/* also for the hash table used for duplicate tests */
-	this->connected_peers_table = (linked_list_t**)calloc(this->table_size, sizeof(linked_list_t*));
-	memset(this->connected_peers_table, 0, this->table_size * sizeof(linked_list_t*));
-	
-	this->connected_peers_segments = (shareable_segment_t*)calloc(this->segment_count, sizeof(shareable_segment_t));
+	this->connected_peers_table = calloc(this->table_size, sizeof(linked_list_t*));
+	this->connected_peers_segments = calloc(this->segment_count, sizeof(shareable_segment_t));
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->connected_peers_segments[i].lock = rwlock_create(RWLOCK_DEFAULT);
