@@ -169,8 +169,7 @@ static void init_hashtable(private_hashtable_t *this, u_int capacity)
 	this->mask = this->capacity - 1;
 	this->load_factor = 0.75;
 	
-	this->table = (linked_list_t**)calloc(this->capacity, sizeof(linked_list_t*));
-	memset(this->table, 0, this->capacity * sizeof(linked_list_t*));
+	this->table = calloc(this->capacity, sizeof(linked_list_t*));
 }
 
 /**
