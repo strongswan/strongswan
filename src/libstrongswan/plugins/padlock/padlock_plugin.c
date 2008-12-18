@@ -18,6 +18,7 @@
 #include "padlock_plugin.h"
 #include "padlock_aes_crypter.h"
 #include "padlock_sha1_hasher.h"
+#include "padlock_rng.h"
 
 #include <stdio.h>
 
@@ -107,6 +108,15 @@ static padlock_feature_t get_padlock_features()
  */
 static void destroy(private_padlock_plugin_t *this)
 {
+	if (this->features & PADLOCK_RNG_ENABLED)
+	{
+		lib->crypto->remove_rng(lib->crypto,
+							(rng_constructor_t)padlock_rng_create);
+		lib->crypto->remove_rng(lib->crypto,
+							(rng_constructor_t)padlock_rng_create);
+		lib->crypto->remove_rng(lib->crypto,
+							(rng_constructor_t)padlock_rng_create);
+	}
 	if (this->features & PADLOCK_ACE2_ENABLED)
 	{
 		lib->crypto->remove_crypter(lib->crypto,
@@ -147,6 +157,15 @@ plugin_t *plugin_create()
 		 this->features & PADLOCK_PHE_ENABLED ? " PHE" : "",
 		 this->features & PADLOCK_PMM_ENABLED ? " PMM" : "");
 	
+	if (this->features & PADLOCK_RNG_ENABLED)
+	{
+		lib->crypto->add_rng(lib->crypto, RNG_REAL,
+						(rng_constructor_t)padlock_rng_create);
+		lib->crypto->add_rng(lib->crypto, RNG_STRONG,
+						(rng_constructor_t)padlock_rng_create);
+		lib->crypto->add_rng(lib->crypto, RNG_WEAK,
+						(rng_constructor_t)padlock_rng_create);
+	}
 	if (this->features & PADLOCK_ACE2_ENABLED)
 	{
 		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
