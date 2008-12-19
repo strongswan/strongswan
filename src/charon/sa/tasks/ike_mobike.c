@@ -521,6 +521,10 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 				/* start the update with the same task */
 				this->check = FALSE;
 				this->address = FALSE;
+				if (this->natd)
+				{
+					this->natd->task.destroy(&this->natd->task);
+				}
 				this->natd = ike_natd_create(this->ike_sa, this->initiator);
 				this->ike_sa->set_pending_updates(this->ike_sa, 1);
 				return NEED_MORE;
