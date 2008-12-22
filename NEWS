@@ -1,3 +1,27 @@
+strongswan-4.2.10
+-----------------
+
+- Several performance improvements to handle thousands of tunnels with almost
+  linear upscaling. All relevant data structures have been replaced by faster
+  counterparts with better lookup times.
+
+- Better parallelization to run charon on multiple cores. Due to improved
+  ressource locking and other optimizations the daemon can take full
+  advantage of 16 or even more cores.
+
+- The load-tester plugin can use a NULL Diffie-Hellman group and simulate
+  unique identities and certificates by signing peer certificates using a CA
+  on the fly.
+
+- The redesigned stroke in-memory IP pool handles leases. The "ipsec leases"
+  command queries assigned leases.
+
+- Added support for smartcards in charon by using the ENGINE API provided by
+  OpenSSL, based on patches by Michael Roßberg.
+
+- The Padlock plugin supports the hardware RNG found on VIA CPUs to provide a
+  reliable source of randomness.
+
 strongswan-4.2.9
 ----------------
 
