@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 	fd = fopen(LOGFILE, "r");
 	if (!fd)
 	{
-		printf("could not open log file '%s'\n");
+		printf("could not open log file '%s'\n", LOGFILE);
 		return 1;
 	}
 
