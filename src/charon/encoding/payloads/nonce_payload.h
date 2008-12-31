@@ -32,7 +32,7 @@ typedef struct nonce_payload_t nonce_payload_t;
 /**
  * Nonce size in bytes for nonces sending to other peer.
  */
-#define NONCE_SIZE 16
+#define NONCE_SIZE 32
 
 /**
  * Length of a nonce payload without a nonce in bytes.
