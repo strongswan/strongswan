@@ -194,7 +194,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 							   auth_info_t *auth, host_t *requested)
 {
 	pool_t *pool;
-	uintptr_t offset;
+	uintptr_t offset = 0;
 	enumerator_t *enumerator;
 	identification_t *old_id;
 	
@@ -202,6 +202,13 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 	pool = find_pool(this, name);
 	while (pool)
 	{
+		/* handle %config case by mirroring requested address */
+		if (pool->size == 0)
+		{
+			this->mutex->unlock(this->mutex);
+			return requested->clone(requested);
+		}
+
 		/* check for a valid offline lease, refresh */
 		offset = (uintptr_t)pool->offline->remove(pool->offline, id);
 		if (offset)
@@ -291,7 +298,7 @@ static bool release_address(private_stroke_attribute_t *this,
 				id = pool->ids->get(pool->ids, id);
 				if (id)
 				{
-					DBG1(DBG_CFG, "lease %H of %D gone offline", address, id);
+					DBG1(DBG_CFG, "lease %H to %D went offline", address, id);
 					pool->offline->put(pool->offline, id, (void*)offset);
 				}
 			}
