@@ -108,9 +108,9 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 
 	if (this->protocol == NETLINK_XFRM)
 	{
-		chunk_t hdr = { (u_char*)in, in->nlmsg_len };
+		chunk_t in_chunk = { (u_char*)in, in->nlmsg_len };
 
-		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, in->nlmsg_type, &hdr);
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, in->nlmsg_type, &in_chunk);
 	}
 
 	while (TRUE)
