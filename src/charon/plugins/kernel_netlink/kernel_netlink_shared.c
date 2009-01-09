@@ -18,7 +18,6 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <linux/xfrm.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -59,31 +58,10 @@ struct private_netlink_socket_t {
 	int socket;
 };
 
-ENUM(xfrm_msg_names, XFRM_MSG_NEWSA, XFRM_MSG_MAPPING,
-	"XFRM_MSG_NEWSA",
-	"XFRM_MSG_DELSA",
-	"XFRM_MSG_GETSA",
-	"XFRM_MSG_NEWPOLICY",
-	"XFRM_MSG_DELPOLICY",
-	"XFRM_MSG_GETPOLICY",
-	"XFRM_MSG_ALLOCSPI",
-	"XFRM_MSG_ACQUIRE",
-	"XFRM_MSG_EXPIRE",
-	"XFRM_MSG_UPDPOLICY",
-	"XFRM_MSG_UPDSA",
-	"XFRM_MSG_POLEXPIRE",
-	"XFRM_MSG_FLUSHSA",
-	"XFRM_MSG_FLUSHPOLICY",
-	"XFRM_MSG_NEWAE",
-	"XFRM_MSG_GETAE",
-	"XFRM_MSG_REPORT",
-	"XFRM_MSG_MIGRATE",
-	"XFRM_MSG_NEWSADINFO",
-	"XFRM_MSG_GETSADINFO",
-	"XFRM_MSG_NEWSPDINFO",
-	"XFRM_MSG_GETSPDINFO",
-	"XFRM_MSG_MAPPING"
-);
+/**
+ * Imported from kernel_netlink_ipsec.c
+ */
+extern enum_name_t *xfrm_msg_names;
 
 /**
  * Implementation of netlink_socket_t.send
