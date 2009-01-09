@@ -58,6 +58,7 @@ static const char *const response_status_names[] = {
     "malformed request",
     "internal error",
     "try later",
+    "status #4",
     "signature required",
     "unauthorized"
 };
