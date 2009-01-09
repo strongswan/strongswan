@@ -97,12 +97,38 @@ struct kernel_algorithm_t {
 	 * Identifier specified in IKEv2
 	 */
 	int ikev2;
-	
+		
 	/**
 	 * Name of the algorithm in linux crypto API
 	 */
 	char *name;
 };
+
+ENUM(xfrm_msg_names, XFRM_MSG_NEWSA, XFRM_MSG_MAPPING,
+	"XFRM_MSG_NEWSA",
+	"XFRM_MSG_DELSA",
+	"XFRM_MSG_GETSA",
+	"XFRM_MSG_NEWPOLICY",
+	"XFRM_MSG_DELPOLICY",
+	"XFRM_MSG_GETPOLICY",
+	"XFRM_MSG_ALLOCSPI",
+	"XFRM_MSG_ACQUIRE",
+	"XFRM_MSG_EXPIRE",
+	"XFRM_MSG_UPDPOLICY",
+	"XFRM_MSG_UPDSA",
+	"XFRM_MSG_POLEXPIRE",
+	"XFRM_MSG_FLUSHSA",
+	"XFRM_MSG_FLUSHPOLICY",
+	"XFRM_MSG_NEWAE",
+	"XFRM_MSG_GETAE",
+	"XFRM_MSG_REPORT",
+	"XFRM_MSG_MIGRATE",
+	"XFRM_MSG_NEWSADINFO",
+	"XFRM_MSG_GETSADINFO",
+	"XFRM_MSG_NEWSPDINFO",
+	"XFRM_MSG_GETSPDINFO",
+	"XFRM_MSG_MAPPING"
+);
 
 ENUM(xfrm_attr_type_names, XFRMA_UNSPEC, XFRMA_KMADDRESS,
 	"XFRMA_UNSPEC",
@@ -777,6 +803,11 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 	userspi->min = min;
 	userspi->max = max;
 	
+	{
+		chunk_t chunk = { (u_char*)hdr, hdr->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, hdr->nlmsg_type, &chunk);
+	}
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
 		hdr = out;
@@ -1084,7 +1115,12 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 		 * the IPsec checks it marks them "checksum ok" so OA isn't needed. */
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
-	
+
+	{
+		chunk_t chunk = { (u_char*)hdr, hdr->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, hdr->nlmsg_type, &chunk);
+	}
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x", ntohl(spi));
@@ -1124,6 +1160,11 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 	aevent_id->sa_id.proto = proto_ike2kernel(protocol);
 	aevent_id->sa_id.family = dst->get_family(dst);
 	
+	{
+		chunk_t chunk = { (u_char*)hdr, hdr->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, hdr->nlmsg_type, &chunk);
+	}
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
 		hdr = out;
@@ -1212,6 +1253,11 @@ static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *dst,
 	sa_id->proto = proto_ike2kernel(protocol);
 	sa_id->family = dst->get_family(dst);
 	
+	{
+		chunk_t chunk = { (u_char*)hdr, hdr->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, hdr->nlmsg_type, &chunk);
+	}
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x", ntohl(spi));
@@ -1265,6 +1311,11 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	sa_id->proto = proto_ike2kernel(protocol);
 	sa_id->family = dst->get_family(dst);
 	
+	{
+		chunk_t chunk = { (u_char*)hdr, hdr->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, hdr->nlmsg_type, &chunk);
+	}
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
 		hdr = out;
@@ -1390,7 +1441,12 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 		
 		rta = XFRM_RTA_NEXT(rta);
 	}
-	
+
+	{
+		chunk_t chunk = { (u_char*)hdr, hdr->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, hdr->nlmsg_type, &chunk);
+	}
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
@@ -1521,6 +1577,11 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	host2xfrm(src, &tmpl->saddr);
 	host2xfrm(dst, &tmpl->id.daddr);
 	
+	{
+		chunk_t chunk = { (u_char*)hdr, hdr->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, hdr->nlmsg_type, &chunk);
+	}
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to add policy %R === %R %N", src_ts, dst_ts,
@@ -1615,6 +1676,11 @@ static status_t query_policy(private_kernel_netlink_ipsec_t *this,
 	policy_id->sel = ts2selector(src_ts, dst_ts);
 	policy_id->dir = direction;
 	
+	{
+		chunk_t chunk = { (u_char*)hdr, hdr->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, hdr->nlmsg_type, &chunk);
+	}
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
 		hdr = out;
@@ -1717,6 +1783,11 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 	route = to_delete->route;
 	free(to_delete);
 	
+	{
+		chunk_t chunk = { (u_char*)hdr, hdr->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, hdr->nlmsg_type, &chunk);
+	}
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete policy %R === %R %N", src_ts, dst_ts,
