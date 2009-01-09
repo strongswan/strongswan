@@ -18,6 +18,7 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#include <linux/xfrm.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -46,12 +47,43 @@ struct private_netlink_socket_t {
 	 * current sequence number for netlink request
 	 */
 	int seq;
-	
+
+	/**
+	 * netlink socket protocol 
+	 */
+	int protocol;
+
 	/**
 	 * netlink socket 
 	 */
 	int socket;
 };
+
+ENUM(xfrm_msg_names, XFRM_MSG_NEWSA, XFRM_MSG_MAPPING,
+	"XFRM_MSG_NEWSA",
+	"XFRM_MSG_DELSA",
+	"XFRM_MSG_GETSA",
+	"XFRM_MSG_NEWPOLICY",
+	"XFRM_MSG_DELPOLICY",
+	"XFRM_MSG_GETPOLICY",
+	"XFRM_MSG_ALLOCSPI",
+	"XFRM_MSG_ACQUIRE",
+	"XFRM_MSG_EXPIRE",
+	"XFRM_MSG_UPDPOLICY",
+	"XFRM_MSG_UPDSA",
+	"XFRM_MSG_POLEXPIRE",
+	"XFRM_MSG_FLUSHSA",
+	"XFRM_MSG_FLUSHPOLICY",
+	"XFRM_MSG_NEWAE",
+	"XFRM_MSG_GETAE",
+	"XFRM_MSG_REPORT",
+	"XFRM_MSG_MIGRATE",
+	"XFRM_MSG_NEWSADINFO",
+	"XFRM_MSG_GETSADINFO",
+	"XFRM_MSG_NEWSPDINFO",
+	"XFRM_MSG_GETSPDINFO",
+	"XFRM_MSG_MAPPING"
+);
 
 /**
  * Implementation of netlink_socket_t.send
@@ -73,6 +105,13 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid = 0;
 	addr.nl_groups = 0;
+
+	if (this->protocol == NETLINK_XFRM)
+	{
+		chunk_t hdr = { (u_char*)in, in->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, in->nlmsg_type, &hdr);
+	}
 
 	while (TRUE)
 	{
@@ -245,6 +284,7 @@ netlink_socket_t *netlink_socket_create(int protocol) {
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 	
+	this->protocol = protocol;
 	this->socket = socket(AF_NETLINK, SOCK_RAW, protocol);
 	if (this->socket <= 0)
 	{
