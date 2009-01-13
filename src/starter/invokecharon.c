@@ -130,10 +130,9 @@ starter_start_charon (starter_config_t *cfg, bool no_fork)
     /* parse debug string */
     {
 	int level;
-	char *pos, *buf_pos, type[4];
-
-	pos = cfg->setup.charondebug;
-	buf_pos = buffer;
+	char type[4];
+	char *pos = cfg->setup.charondebug;
+	char *buf_pos = buffer;
 
 	while (pos && sscanf(pos, "%4s %d,", type, &level) == 2)
 	{
