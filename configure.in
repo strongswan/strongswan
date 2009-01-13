@@ -722,6 +722,7 @@ AC_TRY_RUN(
 	}
 ],
 [AC_MSG_RESULT([yes]); AC_DEFINE(HAVE_GCC_ATOMIC_OPERATIONS)],
+[AC_MSG_RESULT([no])],
 [AC_MSG_RESULT([no])])
 
 if test x$gmp = xtrue; then
