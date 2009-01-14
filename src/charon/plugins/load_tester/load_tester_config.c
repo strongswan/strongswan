@@ -96,11 +96,11 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 										"CN=*, OU=load-test, O=strongSwan");
 	}
 	
-	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", this->remote);
+	ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", this->remote);
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
 	peer_cfg = peer_cfg_create("load-test", 2, ike_cfg, local, remote,
 			CERT_SEND_IF_ASKED, UNIQUE_NO, 1, 0, 0, /* keytries, rekey, reauth */
-			0, 0, TRUE, 60,	/* jitter, overtime, mobike, dpddelay */
+			0, 0, TRUE, 0,	/* jitter, overtime, mobike, dpddelay */
 			this->vip ? this->vip->clone(this->vip) : NULL,
 			this->pool, FALSE, NULL, NULL);
 	auth = peer_cfg->get_auth(peer_cfg);
