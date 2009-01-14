@@ -265,7 +265,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	if (all)
 	{
 		peer_cfg_t *peer_cfg;
-		char *plugin, *name;
+		char *plugin, *pool;
 		host_t *host;
 		u_int32_t dpd;
 		time_t uptime = time(NULL) - this->uptime;
@@ -291,14 +291,14 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		fprintf(out, "\n");
 		
 		enumerator = this->attribute->create_pool_enumerator(this->attribute);
-		while (enumerator->enumerate(enumerator, &name, &size, &online, &offline))
+		while (enumerator->enumerate(enumerator, &pool, &size, &online, &offline))
 		{
 			if (first)
 			{
 				first = FALSE;
 				fprintf(out, "Virtual IP pools (size/online/offline):\n");
 			}
-			fprintf(out, "  %s: %lu/%lu/%lu\n", name, size, online, offline);
+			fprintf(out, "  %s: %lu/%lu/%lu\n", pool, size, online, offline);
 		}
 		enumerator->destroy(enumerator);
 		
