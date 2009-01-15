@@ -406,9 +406,9 @@ static bool derive_child_keys(private_keymat_t *this,
 		{
 			enc_size = lookup_keylen(keylen_enc, enc_alg);
 		}
-		if (!enc_size)
+		if (enc_alg != ENCR_NULL && !enc_size)
 		{
-			DBG1(DBG_CHD, "no keylenth defined for %N",
+			DBG1(DBG_CHD, "no keylength defined for %N",
 				 encryption_algorithm_names, enc_alg);
 			return FALSE;
 		}
@@ -445,7 +445,7 @@ static bool derive_child_keys(private_keymat_t *this,
 		}
 		if (!int_size)
 		{
-			DBG1(DBG_CHD, "no keylenth defined for %N",
+			DBG1(DBG_CHD, "no keylength defined for %N",
 				 integrity_algorithm_names, int_alg);
 			return FALSE;
 		}
