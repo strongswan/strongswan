@@ -151,8 +151,11 @@ static inline void chunk_free(chunk_t *chunk)
  */
 static inline void chunk_clear(chunk_t *chunk)
 {
-	memset(chunk->ptr, 0, chunk->len);
-	chunk_free(chunk);
+	if (chunk->ptr)
+	{
+		memset(chunk->ptr, 0, chunk->len);
+		chunk_free(chunk);
+	}
 }
 
 /**

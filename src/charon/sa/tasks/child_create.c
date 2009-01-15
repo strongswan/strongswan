@@ -242,7 +242,9 @@ static bool allocate_spi(private_child_create_t *this)
 static status_t select_and_install(private_child_create_t *this, bool no_dh)
 {
 	status_t status;
-	chunk_t nonce_i, nonce_r, encr_i, integ_i, encr_r, integ_r;
+	chunk_t nonce_i, nonce_r;
+	chunk_t encr_i = chunk_empty, encr_r = chunk_empty;
+	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
 	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other, *other_vip, *my_vip;
 	
