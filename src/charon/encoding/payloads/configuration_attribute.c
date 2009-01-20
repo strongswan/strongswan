@@ -69,7 +69,10 @@ ENUM_NEXT(configuration_attribute_type_names, INTERNAL_IP6_DNS, INTERNAL_IP6_SUB
 	"INTERNAL_IP4_SUBNET",
 	"SUPPORTED_ATTRIBUTES",
 	"INTERNAL_IP6_SUBNET");
-ENUM_END(configuration_attribute_type_names, INTERNAL_IP6_SUBNET);
+ENUM_NEXT(configuration_attribute_type_names, INTERNAL_IP4_SERVER, INTERNAL_IP6_SERVER, INTERNAL_IP6_SUBNET,
+	"INTERNAL_IP4_SERVER",
+	"INTERNAL_IP6_SERVER");
+ENUM_END(configuration_attribute_type_names, INTERNAL_IP6_SERVER);
 
 /**
  * Encoding rules to parse or generate a configuration attribute.
