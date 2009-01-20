@@ -1,7 +1,11 @@
 strongswan-4.2.11
 -----------------
 
--
+- Fixed ESP NULL encryption broken by the refactoring of keymat.c.
+  Also introduced proper initialization and disposal of keying material.
+
+- Fixed the missing listing of connection definitions in ipsec statusall
+  broken by an unfortunate local variable overload.
 
 
 strongswan-4.2.10
