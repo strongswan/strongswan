@@ -127,6 +127,7 @@ enum known_vendorid {
   VID_STRONGSWAN_4_2_8		=108,
   VID_STRONGSWAN_4_2_9		=109,
   VID_STRONGSWAN_4_2_10		=110,
+  VID_STRONGSWAN_4_2_11		=111,
 
   /* 101 - 200 : NAT-Traversal */
   VID_NATT_STENBERG_01		=151,
