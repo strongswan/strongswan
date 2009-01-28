@@ -265,7 +265,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 		}
 		enumerator->destroy(enumerator);
 		
-		DBG1(DBG_CFG, "pool %s is full, unable to assign address", pool);
+		DBG1(DBG_CFG, "pool '%s' is full, unable to assign address", pool->name);
 		break;
 	}
 	this->mutex->unlock(this->mutex);
