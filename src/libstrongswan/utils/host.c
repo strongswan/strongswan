@@ -453,6 +453,10 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	{
 		return host_create_any(af ? af : AF_INET);
 	}
+	if (streq(string, "%any6"))
+	{
+		return host_create_any(af ? af : AF_INET6);
+	}
 	else if (strchr(string, ':'))
 	{
 		/* gethostbyname does not like IPv6 addresses - fallback */

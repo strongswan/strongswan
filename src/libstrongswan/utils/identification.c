@@ -1046,6 +1046,7 @@ identification_t *identification_create_from_string(char *string)
 	else if (strchr(string, '@') == NULL)
 	{
 		if (streq(string, "%any")
+		||  streq(string, "%any6")
 		||	streq(string, "0.0.0.0")
 		||	streq(string, "*")
 		||	streq(string, "::")

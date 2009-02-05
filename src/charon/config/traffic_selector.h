@@ -281,6 +281,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(
  * 
  * 
  * @param protocol		upper layer protocl to allow
+ * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
  * @param from_port		start of allowed port range
  * @param to_port		end of range
  * @return
@@ -288,6 +289,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(
  * 						- NULL if type not supported
  */
 traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
+									ts_type_t type,
 									u_int16_t from_port, u_int16_t to_port);
 
 /**

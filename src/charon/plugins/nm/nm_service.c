@@ -319,7 +319,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 								 NULL, TRUE, MODE_TUNNEL, /* updown, hostaccess */
 								 ACTION_NONE, ACTION_RESTART, ipcomp);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-	ts = traffic_selector_create_dynamic(0, 0, 65535);
+	ts = traffic_selector_create_dynamic(0, TS_IPV4_ADDR_RANGE, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
 											 "0.0.0.0", 0,

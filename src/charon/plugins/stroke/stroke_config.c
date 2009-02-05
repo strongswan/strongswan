@@ -691,7 +691,10 @@ static void add_ts(private_stroke_config_t *this,
 	
 	if (end->tohost)
 	{
+		bool is_ipv6 = strchr(end->address, ':') || streq(end->address, "%any6");
+
 		ts = traffic_selector_create_dynamic(end->protocol,
+					is_ipv6? TS_IPV6_ADDR_RANGE:TS_IPV4_ADDR_RANGE,
 					end->port ? end->port : 0, end->port ? end->port : 65535);
 		child_cfg->add_traffic_selector(child_cfg, local, ts);
 	}

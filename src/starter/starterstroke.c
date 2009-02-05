@@ -127,19 +127,6 @@ static void ip_address2string(ip_address *addr, char *buffer, size_t len)
 {
 	switch (((struct sockaddr*)addr)->sa_family)
 	{
-		case AF_INET:
-		{
-			struct sockaddr_in* sin = (struct sockaddr_in*)addr;
-			u_int8_t zeroes[IPV4_LEN];
-
-			memset(zeroes, 0, IPV4_LEN);
-			if (memcmp(zeroes, &(sin->sin_addr.s_addr), IPV4_LEN) &&
-				inet_ntop(AF_INET, &sin->sin_addr, buffer, len))
-			{
-				return;
-			}
-			break;
-		}
 		case AF_INET6:
 		{
 			struct sockaddr_in6* sin6 = (struct sockaddr_in6*)addr;
@@ -151,15 +138,27 @@ static void ip_address2string(ip_address *addr, char *buffer, size_t len)
 			{
 				return;
 			}
+			snprintf(buffer, len, "%%any6");
 			break;
 		}
+		case AF_INET:
+		{
+			struct sockaddr_in* sin = (struct sockaddr_in*)addr;
+			u_int8_t zeroes[IPV4_LEN];
+
+			memset(zeroes, 0, IPV4_LEN);
+			if (memcmp(zeroes, &(sin->sin_addr.s_addr), IPV4_LEN) &&
+				inet_ntop(AF_INET, &sin->sin_addr, buffer, len))
+			{
+				return;
+			}
+			/* fall through to default */
+		}
 		default:
+			snprintf(buffer, len, "%%any");
 			break;
 	}
-	/* default */
-	snprintf(buffer, len, "%%any");
 }
-
 
 static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, starter_end_t *conn_end)
 {

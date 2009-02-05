@@ -823,11 +823,12 @@ traffic_selector_t *traffic_selector_create_from_string(
 /*
  * see header
  */
-traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol, 
+traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
+									ts_type_t type, 
 									u_int16_t from_port, u_int16_t to_port)
 {
 	private_traffic_selector_t *this = traffic_selector_create(
-							protocol, TS_IPV4_ADDR_RANGE, from_port, to_port);
+							protocol, type, from_port, to_port);
 	
 	memset(this->from6, 0, sizeof(this->from6));
 	memset(this->to6, 0xFF, sizeof(this->to6));
