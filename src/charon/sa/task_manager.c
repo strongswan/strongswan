@@ -445,7 +445,6 @@ static status_t build_request(private_task_manager_t *this)
 	/* update exchange type if a task changed it */
 	this->initiating.type = message->get_exchange_type(message);
 	
-	DESTROY_IF(this->initiating.packet);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->initiating.packet);
 	if (status != SUCCESS)
@@ -514,6 +513,8 @@ static status_t process_response(private_task_manager_t *this,
 	
 	this->initiating.mid++;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
+	this->initiating.packet->destroy(this->initiating.packet);
+	this->initiating.packet = NULL;
 	
 	return build_request(this);
 }
