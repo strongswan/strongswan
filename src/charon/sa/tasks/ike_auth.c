@@ -336,6 +336,12 @@ static status_t build_auth_eap(private_ike_auth_t *this, message_t *message)
 	authenticator_t *auth;
 	auth_payload_t *auth_payload;
 	
+	if (!this->initiator && !this->peer_authenticated)
+	{
+		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
+		return FAILED;
+	}
+	
 	auth = (authenticator_t*)this->eap_auth;
 	if (auth->build(auth, this->my_packet->get_data(this->my_packet),
 		this->other_nonce, &auth_payload) != SUCCESS)
