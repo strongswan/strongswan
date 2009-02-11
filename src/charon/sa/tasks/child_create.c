@@ -625,7 +625,6 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 static status_t build_i(private_child_create_t *this, message_t *message)
 {
 	host_t *me, *other, *vip;
-	bool propose_all = FALSE;
 	peer_cfg_t *peer_cfg;
 	
 	switch (message->get_exchange_type(message))
@@ -678,23 +677,18 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	}
 	
 	/* check if we want a virtual IP, but don't have one */
-	if (!this->reqid)
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	vip = peer_cfg->get_virtual_ip(peer_cfg);
+	if (!this->reqid && vip)
 	{
-		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-		vip = peer_cfg->get_virtual_ip(peer_cfg);
-		if (vip)
-		{
-			propose_all = TRUE;
-		}
-	}
-	
-	if (propose_all)
-	{	/* propose a 0.0.0.0/0 subnet when we use virtual ip */
+		/* propose a 0.0.0.0/0 or ::/0 subnet when we use virtual ip */
+		vip = host_create_any(vip->get_family(vip));
 		this->tsi = this->config->get_traffic_selectors(this->config, TRUE,
-														NULL, NULL);
+														NULL, vip);
+		vip->destroy(vip);
 	}
 	else
-	{	/* but shorten a 0.0.0.0/0 subnet for host2host/we already have a vip */
+	{	/* but narrow it for host2host / if we already have a vip */
 		this->tsi = this->config->get_traffic_selectors(this->config, TRUE,
 														NULL, me);
 	}

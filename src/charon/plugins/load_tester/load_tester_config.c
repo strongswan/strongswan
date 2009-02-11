@@ -109,9 +109,9 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 								 MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
 	proposal = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
 	child_cfg->add_proposal(child_cfg, proposal);
-	ts = traffic_selector_create_dynamic(0, TS_IPV4_ADDR_RANGE, 0, 65535);
+	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	ts = traffic_selector_create_dynamic(0, TS_IPV4_ADDR_RANGE, 0, 65535);
+	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 	return peer_cfg;

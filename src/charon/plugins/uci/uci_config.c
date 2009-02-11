@@ -131,7 +131,7 @@ static traffic_selector_t *create_ts(char *string)
 			return traffic_selector_create_from_subnet(net, netbits, 0, 0);
 		}
 	}
-	return traffic_selector_create_dynamic(0, TS_IPV4_ADDR_RANGE, 0, 65535);
+	return traffic_selector_create_dynamic(0, 0, 65535);
 }
 
 /**

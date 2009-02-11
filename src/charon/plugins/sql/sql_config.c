@@ -78,7 +78,7 @@ static traffic_selector_t *build_traffic_selector(private_sql_config_t *this,
 				*local = TRUE;
 				/* FALL */
 			case TS_REMOTE_DYNAMIC:
-				ts = traffic_selector_create_dynamic(protocol, type,
+				ts = traffic_selector_create_dynamic(protocol,
 								start_port, end_port);
 				break;
 			default:
