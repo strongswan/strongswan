@@ -77,9 +77,7 @@ auth_class_t get_auth_class(peer_cfg_t *config)
 static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 {
 	ike_sa_id_t *id = ike_sa->get_id(ike_sa);
-	u_int32_t now;
-	
-	now = time(NULL);
+	time_t now = time(NULL);
 	
 	fprintf(out, "%12s[%d]: %N",
 			ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
@@ -87,10 +85,10 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 	{
-		u_int32_t established;
+		time_t established;
 		
-		established = now - ike_sa->get_statistic(ike_sa, STAT_ESTABLISHED);
-		fprintf(out, " %V", &established);
+		established = ike_sa->get_statistic(ike_sa, STAT_ESTABLISHED);
+		fprintf(out, " %#V ago", &now, &established);
 	}
 	
 	fprintf(out, ", %H[%D]...%H[%D]\n",
@@ -111,21 +109,20 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 		
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 		{
-			u_int32_t rekey, reauth;
+			time_t rekey, reauth;
 			
 			rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY);
 			reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH);
 			
 			if (rekey)
 			{
-				rekey -= now;
-				fprintf(out, ", rekeying in %V", &rekey);
+				fprintf(out, ", rekeying in %#V", &rekey, &now);
 			}
 			if (reauth)
 			{
-				reauth -= now;
-				fprintf(out, ", %N reauthentication in %V", auth_class_names,
-						get_auth_class(ike_sa->get_peer_cfg(ike_sa)), &reauth);
+				fprintf(out, ", %N reauthentication in %#V", auth_class_names,
+						get_auth_class(ike_sa->get_peer_cfg(ike_sa)),
+						&reauth, &now);
 			}
 			if (!rekey && !reauth)
 			{
