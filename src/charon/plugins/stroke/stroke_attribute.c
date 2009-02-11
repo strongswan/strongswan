@@ -202,13 +202,6 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 	pool = find_pool(this, name);
 	while (pool)
 	{
-		if (requested->get_family(requested) !=
-			pool->base->get_family(pool->base))
-		{
-			DBG1(DBG_CFG, "IP pool address family mismatch");
-			break;
-		}
-		
 		/* handle %config case by mirroring requested address */
 		if (pool->size == 0)
 		{
@@ -216,6 +209,13 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			return requested->clone(requested);
 		}
 
+		if (requested->get_family(requested) !=
+			pool->base->get_family(pool->base))
+		{
+			DBG1(DBG_CFG, "IP pool address family mismatch");
+			break;
+		}
+		
 		/* check for a valid offline lease, refresh */
 		offset = (uintptr_t)pool->offline->remove(pool->offline, id);
 		if (offset)
@@ -272,7 +272,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 		}
 		enumerator->destroy(enumerator);
 		
-		DBG1(DBG_CFG, "pool '%s' is full, unable to assign address", pool->name);
+		DBG1(DBG_CFG, "pool '%s' is full, unable to assign address", name);
 		break;
 	}
 	this->mutex->unlock(this->mutex);
