@@ -301,7 +301,7 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 				else
 				{
 					DBG2(DBG_CFG, " config: %R, received: %R => no match",
-						 ts1, ts2, selected);
+						 ts1, ts2);
 				}
 			}
 			e2->destroy(e2);
