@@ -21,6 +21,9 @@
 #include <daemon.h>
 #include <encoding/payloads/cp_payload.h>
 
+#define DNS_SERVER_MAX		2
+#define NBNS_SERVER_MAX		2
+
 typedef struct private_ike_config_t private_ike_config_t;
 
 /**
@@ -351,7 +354,7 @@ static status_t process_i(private_ike_config_t *this, message_t *message)
 		process_payloads(this, message);
 		
 		if (this->virtual_ip == NULL)
-		{	/* force a configured virtual IP, even server didn't return one */
+		{	/* force a configured virtual IP, even if server didn't return one */
 			config = this->ike_sa->get_peer_cfg(this->ike_sa);
 			this->virtual_ip = config->get_virtual_ip(config);
 			if (this->virtual_ip)
@@ -420,6 +423,11 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
 	
+	this->initiator = initiator;
+	this->ike_sa = ike_sa;
+	this->virtual_ip = NULL;
+	this->dns = linked_list_create();
+
 	if (initiator)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
@@ -427,13 +435,28 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 	}
 	else
 	{
+		int i;
+
+		for (i = 1; i <= DNS_SERVER_MAX; i++)
+		{
+			char dns_key[12], *dns_str;
+
+			snprintf(dns_key, sizeof(dns_key), "charon.dns%d", i);
+			dns_str = lib->settings->get_str(lib->settings, dns_key, NULL);
+			if (dns_str)
+			{
+				host_t *dns = host_create_from_string(dns_str, 0);
+
+				if (dns)
+				{
+					DBG2(DBG_CFG, "assigning DNS server %H to peer", dns);
+					this->dns->insert_last(this->dns, dns);
+				}
+			}
+		}
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
-	this->initiator = initiator;
-	this->ike_sa = ike_sa;
-	this->virtual_ip = NULL;
-	this->dns = linked_list_create();
-	
+
 	return &this->public;
 }
