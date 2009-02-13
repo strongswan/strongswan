@@ -55,6 +55,11 @@ struct private_ike_config_t {
 	 * list of DNS servers
 	 */
 	linked_list_t *dns;
+
+	/**
+	 * list of WINS servers
+	 */
+	linked_list_t *nbns;
 };
 
 /**
@@ -124,7 +129,10 @@ static void build_payloads(private_ike_config_t *this, message_t *message,
 	else
 	{
 		host_t *ip;
-		iterator_t *iterator = this->dns->create_iterator(this->dns, TRUE);
+		iterator_t *iterator;
+
+		/* Add internal DNS servers */
+		iterator = this->dns->create_iterator(this->dns, TRUE);
 		while (iterator->iterate(iterator, (void**)&ip))
 		{
 			ca = configuration_attribute_create();
@@ -135,6 +143,25 @@ static void build_payloads(private_ike_config_t *this, message_t *message,
 			else
 			{
 				ca->set_type(ca, INTERNAL_IP6_DNS);
+			}
+			chunk = ip->get_address(ip);
+			ca->set_value(ca, chunk);
+			cp->add_configuration_attribute(cp, ca);
+		}
+		iterator->destroy(iterator);
+
+		/* Add internal WINS servers */
+		iterator = this->nbns->create_iterator(this->nbns, TRUE);
+		while (iterator->iterate(iterator, (void**)&ip))
+		{
+			ca = configuration_attribute_create();
+			if (ip->get_family(ip) == AF_INET)
+			{
+				ca->set_type(ca, INTERNAL_IP4_NBNS);
+			}
+			else
+			{
+				ca->set_type(ca, INTERNAL_IP6_NBNS);
 			}
 			chunk = ip->get_address(ip);
 			ca->set_value(ca, chunk);
@@ -204,7 +231,22 @@ static void process_attribute(private_ike_config_t *this,
 		}
 		case INTERNAL_IP4_NBNS:
 		case INTERNAL_IP6_NBNS:
-			/* TODO */
+		{
+			addr = ca->get_value(ca);
+			if (addr.len == 0)
+			{
+				ip = host_create_any(family);
+			}
+			else
+			{
+				ip = host_create_from_chunk(family, addr, 0);
+			}
+			if (ip)
+			{
+				this->nbns->insert_last(this->nbns, ip);
+			}
+			break;
+		}
 		default:
 			DBG1(DBG_IKE, "ignoring %N config attribute", 
 	 			 configuration_attribute_type_names,
@@ -409,6 +451,7 @@ static void destroy(private_ike_config_t *this)
 {
 	DESTROY_IF(this->virtual_ip);
 	this->dns->destroy_offset(this->dns, offsetof(host_t, destroy));
+	this->nbns->destroy_offset(this->nbns, offsetof(host_t, destroy));
 	free(this);
 }
 
@@ -427,6 +470,7 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 	this->ike_sa = ike_sa;
 	this->virtual_ip = NULL;
 	this->dns = linked_list_create();
+	this->nbns = linked_list_create();
 
 	if (initiator)
 	{
@@ -437,9 +481,10 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 	{
 		int i;
 
+		/* assign DNS servers */
 		for (i = 1; i <= DNS_SERVER_MAX; i++)
 		{
-			char dns_key[12], *dns_str;
+			char dns_key[16], *dns_str;
 
 			snprintf(dns_key, sizeof(dns_key), "charon.dns%d", i);
 			dns_str = lib->settings->get_str(lib->settings, dns_key, NULL);
@@ -454,6 +499,26 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 				}
 			}
 		}
+
+		/* assign WINS servers */
+		for (i = 1; i <= NBNS_SERVER_MAX; i++)
+		{
+			char nbns_key[16], *nbns_str;
+
+			snprintf(nbns_key, sizeof(nbns_key), "charon.nbns%d", i);
+			nbns_str = lib->settings->get_str(lib->settings, nbns_key, NULL);
+			if (nbns_str)
+			{
+				host_t *nbns = host_create_from_string(nbns_str, 0);
+
+				if (nbns)
+				{
+					DBG2(DBG_CFG, "assigning NBNS server %H to peer", nbns);
+					this->nbns->insert_last(this->nbns, nbns);
+				}
+			}
+		}
+
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
