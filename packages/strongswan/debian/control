@@ -108,7 +108,7 @@ Description: strongSwan standalone crypto plugins
  implementation based on the GNU Multi Precision library.
 
 Package: strongswan-padlock
-Architecture: any
+Architecture: i386
 Depends: ${shlibs:Depends}
 Description: strongSwan VIA padlock support
  This package allows libstrongswan and charon to use the VIA padlock crypto

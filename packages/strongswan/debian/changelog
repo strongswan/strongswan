@@ -1,3 +1,9 @@
+strongswan (4.2.11-3~ppa1~intrepid1) intrepid; urgency=low
+
+  * build strongswan-padlock on i386 only
+
+ -- Martin Willi <martin@strongswan.org>  Mon, 16 Feb 2009 17:28:20 +0100
+
 strongswan (4.2.11-1~ppa1~intrepid1) intrepid; urgency=low
 
   * New modular strongSwan packages
