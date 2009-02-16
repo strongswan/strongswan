@@ -3,7 +3,7 @@
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/autotools.mk
 
-DEB_CONFIGURE_EXTRA_FLAGS := --with-charon=/usr/lib/ipsec/charon
+DEB_CONFIGURE_EXTRA_FLAGS := --with-charon=/usr/lib/strongswan/charon
 
 makebuilddir/network-manager-vpnc:: debian/stamp-bootstrap
 

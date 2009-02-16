@@ -1,0 +1,64 @@
+#!/usr/bin/make -f
+
+#export DH_VERBOSE=1
+
+CC = gcc
+CFLAGS = -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing -g
+INSTALL_PROGRAM = install
+
+ifeq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -O2
+endif
+ifeq (,$(filter nostrip,$(DEB_BUILD_OPTIONS)))
+	INSTALL_PROGRAM += -s
+endif
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+	NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+	MAKEFLAGS += -j$(NUMJOBS)
+endif
+
+build:
+	dh_testdir
+	./configure --disable-fips-prf --enable-openssl --enable-nm --enable-ldap \
+	--enable-eap-gtc --enable-eap-md5 --enable-agent --enable-curl \
+	--enable-padlock --sysconfdir=/etc --prefix=/usr --libexecdir=/usr/lib \
+	--with-ipsecdir=/usr/lib/strongswan
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)"
+	touch build
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build
+	[ ! -f Makefile ] || $(MAKE) clean
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean
+	dh_installdirs
+	$(MAKE) DESTDIR=$(CURDIR)/debian/tmp install
+
+binary-indep: build install
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs NEWS
+	dh_installdocs README
+	dh_installinit --name=ipsec
+	dh_install
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d
+	dh_makeshlibs
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install
+

@@ -1,7 +1,9 @@
 Format-Specification: http://wiki.debian.org/Proposals/CopyrightFormat?action=recall&rev=437
 Upstream-Name: strongSwan
 Upstream-Source: http://download.strongswan.org
-Files: *
+Files: src/_updown/*
+Files: src/_updown_espmark/*
+Files: src/charon/plugins/updown/*
 License: GPL-2
  On Debian systems the full text of the GNU General Public License can be found
  in the `/usr/share/common-licenses/GPL-2' file.

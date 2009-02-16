@@ -1,0 +1,5 @@
+usr/lib/strongswan/pluto		usr/lib/strongswan/
+usr/lib/strongswan/_pluto_adns	usr/lib/strongswan/
+usr/lib/strongswan/whack		usr/lib/strongswan/
+usr/share/man/man8/pluto.8		usr/share/man/man8/
+

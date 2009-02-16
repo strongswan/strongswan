@@ -1,0 +1,166 @@
+Source: strongswan
+Section: net
+Priority: extra
+Maintainer: Martin Willi <martin@strongswan.org>
+Standards-Version: 3.8.0
+Build-Depends: debhelper (>= 7.0.0), libssl-dev (>= 0.9.8), network-manager-dev (>= 0.7~~svn20080818), libnm-glib-dev (>= 0.7~~svn20080818), libpam0g-dev, libcurl4-gnutls-dev, libldap2-dev, libgmp3-dev
+Homepage: http://www.strongswan.org
+
+Package: strongswan
+Architecture: all
+Depends: strongswan-pluto, strongswan-charon, strongswan-stroke, strongswan-crypto-plugins|strongswan-openssl, strongswan-ldap, strongswan-curl
+Description: IPsec VPN solution metapackage.
+ strongSwan is a IPsec based VPN solution for the Linux kernel. It uses the
+ native IPsec stack and runs on any recent 2.6 kernel (no patching required).
+ It supports both, the IKEv1 and the newer IKEv2 protocols.
+ .
+ This metapackage has dependencies to the IKEv1 daemon pluto and IKEv2 daemon
+ charon. It installs the required packages to run IKEv1 and IKEv2 connections
+ using a ipsec.conf/ipsec.secrets based configuration.
+
+Package: strongswan-charon
+Architecture: any
+Depends: ${shlibs:Depends}
+Conflicts: freeswan, openswan
+Description: strongSwan IKEv2 keying daemon
+ Charon is the IPsec IKEv2 keying daemon of the strongSwan project. It is
+ written from scratch using a fully multi-threaded design and a modular
+ architecture. Various plugins provide additional functionality.
+ .
+ This build of charon can run in parallel with pluto, the IKEv1 daemon.
+
+Package: strongswan-pluto
+Architecture: any
+Depends: ${shlibs:Depends}, strongswan-starter, strongswan-updown
+Conflicts: freeswan, openswan
+Replaces: strongswan
+Description: strongSwan IKEv1 keying daemon
+ Pluto is a IPsec IKEv1 keying daemon. It was inherited from the FreeS/WAN
+ project, but provides improved X.509 certificate support and other features.
+ .
+ Pluto can run in parallel with charon, the newer IKEv2 daemon.
+
+Package: libstrongswan
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: strongSwan utility and crypto library
+ libstrongswan is the underlying library of charon and other strongSwan
+ components. It is built in a modular way and is extendable through various
+ plugins.
+ .
+ This package contains a set of default plugins for the library, namely:
+ x509, pubkey, hmac, xcbc and random.
+
+Package: strongswan-starter
+Architecture: any
+Depends: ${shlibs:Depends}, strongswan-tools
+Conflicts: freeswan, openswan
+Description: strongSwan daemon starter and configuration file parser
+ The starter and the associated "ipsec" script control both pluto and charon
+ from the command line. It parses ipsec.conf and loads the configurations to
+ the daemons.
+ .
+ To use starter with the IKEv2 daemon charon, you'll need the stroke plugin of
+ the daemon. While the IKEv2 daemon can use other configuration backends, the
+ IKEv1 daemon is limited to configurations from ipsec.conf.
+
+Package: strongswan-stroke
+Architecture: any
+Depends: ${shlibs:Depends}, strongswan-charon, strongswan-starter
+Description: strongSwan command line interface
+ This package provides the stroke command line interface for the IKEv2 daemon
+ charon and the associated daemon plugin. It allows charon to use the same
+ configuration system as the IKEv1 daemon pluto, allowing smooth migration
+ between IKEv1 and IKEv2 or to run both daemons in parallel.
+ .
+ Thisplugin is required if you want to configure IKEv2 connections through
+ ipsec.conf.
+
+Package: strongswan-updown
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: strongSwan updown script
+ The keying daemons use a shell script to install firewall rules dynamically.
+ This packages provides the required script files and the plugin for charon to
+ invoke it.
+
+Package: strongswan-tools
+Architecture: any
+Depends: ${shlibs:Depends}, strongswan-crypto-plugins|strongswan-openssl
+Description: Additional command line tools for strongSwan.
+ This packages provides the scepclient and openac utilities.
+
+Package: strongswan-openssl
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: strongSwan wrapper to OpenSSL crypto library
+ This crypto wrapper allows libstrongswan and charon to use OpenSSL as crypto
+ library. It provides various hash functions, encryption algorithms, RSA/ECDSA
+ signatures and (elliptic curve) Diffie-Hellman operations.
+
+Package: strongswan-crypto-plugins
+Architecture: any
+Depends: ${shlibs:Depends}, libgmp3c2 (>= 4.1.4)
+Description: strongSwan standalone crypto plugins
+ This package contains a set of crypto plugins for libstrongswan, all
+ implemented in software. It provides SHA1/SHA2/MD5 hash implementations,
+ AES, single and tripple DES encryption algorithms and a RSA and Diffie-Hellman
+ implementation based on the GNU Multi Precision library.
+
+Package: strongswan-padlock
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: strongSwan VIA padlock support
+ This package allows libstrongswan and charon to use the VIA padlock crypto
+ accelerator. It features a hardware random number generator found on the C3
+ and additional AES-128 and SHA1 support on the C7 Esther.
+ .
+ This package provides Padlock support in userland only. To use hardware
+ acceleration for IPsec ESP packet processing, make sure to have installed
+ the appropriate kernel modules.
+
+Package: strongswan-ldap
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: LDAP fetching plugin for libstrongswan
+ This plugin allows the IKEv2 keying daemon charon to fetch CRLs from an
+ LDAP server.
+
+Package: strongswan-curl
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: HTTP/FTP fetching plugin for libstrongswan
+ This plugin allows the IKEv2 keying daemon charon to fetch CRLs and
+ certificates from a remote server using HTTP, FTP and other protocols
+ supported by cURL.
+
+Package: strongswan-agent
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: strongSwan plugin to create signatures using SSH agent
+ This plugin for libstrongswan can use a SSH agent to create RSA signatures.
+
+Package: strongswan-eap-gtc
+Architecture: any
+Depends: ${shlibs:Depends}, strongswan-charon
+Description: strongSwan EAP plugin implementing the GTC method
+ The EAP-GTC method allows simple but secure username/password authentication
+ with the IKEv2 keying daemon charon. Credentials are verifyied using any PAM
+ service on the gateway.
+
+Package: strongswan-eap-md5
+Architecture: any
+Depends: ${shlibs:Depends}, strongswan-charon
+Description: strongSwan EAP plugin implementing the MD5 (CHAP) method
+ The EAP-MD5 method allows username/password authentication with the IKEv2
+ keying daemon charon.
+
+Package: strongswan-nm
+Architecture: any
+Depends: ${shlibs:Depends}, strongswan-charon, network-manager (>= 0.7~~svn20080818)
+Description: strongSwan plugin to interact with NetworkManager
+ This plugin provides an interface which allows NetworkManager to configure
+ and control the IKEv2 daemon directly through DBUS. It is designed to work
+ in conjunction with the network-manager-strongswan package, providing
+ a simple graphical frontend to configure IPsec based VPNs.
+

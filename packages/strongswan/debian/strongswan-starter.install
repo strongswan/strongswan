@@ -1,0 +1,9 @@
+usr/lib/strongswan/starter				usr/lib/strongswan/
+usr/lib/strongswan/_copyright			usr/lib/strongswan/
+usr/sbin/ipsec							usr/sbin/
+etc/ipsec.d								etc/
+etc/ipsec.conf							etc/
+usr/share/man/man8/ipsec.8				usr/share/man/man8/
+usr/share/man/man8/_copyright.8			usr/share/man/man8/
+usr/share/man/man5/ipsec.conf.5			usr/share/man/man5/
+usr/share/man/man5/ipsec.secrets.5		usr/share/man/man5/

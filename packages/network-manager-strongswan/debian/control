@@ -3,7 +3,7 @@ Section: net
 Priority: extra
 Maintainer: Martin Willi <martin@strongswan.org>
 Build-Depends: cdbs,
-	debhelper (>= 5),
+	debhelper (>= 7),
 	network-manager-dev (>= 0.7~~svn20080908),
 	libnm-glib-dev (>= 0.7~~svn20080908),
 	automake1.9,
@@ -11,11 +11,11 @@ Build-Depends: cdbs,
 	intltool,
 	libgnomeui-dev,
 	libdbus-glib-1-dev,
-Standards-Version: 3.7.3.0
+Standards-Version: 3.8.0
 
 Package: network-manager-strongswan
 Architecture: any
-Depends: strongswan-nm
+Depends: strongswan-nm, strongswan-eap-gtc, strongswan-agent, strongswan-openssl|strongswan-crypto-plugins
 Description: network management framework (strongSwan plugin)
  NetworkManager attempts to keep an active network connection available at
  all times.  It is intended primarily for laptops where it allows easy

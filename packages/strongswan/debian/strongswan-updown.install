@@ -1,0 +1,6 @@
+usr/lib/strongswan/plugins/libstrongswan-updown.so*	usr/lib/strongswan/plugins/
+usr/lib/strongswan/_updown							usr/lib/strongswan/
+usr/lib/strongswan/_updown_espmark					usr/lib/strongswan/
+usr/share/man/man8/_updown.8						usr/share/man/man8/
+usr/share/man/man8/_updown_espmark.8				usr/share/man/man8/
+

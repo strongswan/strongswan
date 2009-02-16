@@ -1,0 +1,7 @@
+usr/lib/libstrongswan.so*							usr/lib/
+usr/lib/strongswan/plugins/libstrongswan-x509.so*	usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-pubkey.so*	usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-hmac.so*	usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-xcbc.so*	usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-random.so*	usr/lib/strongswan/plugins/
+etc/strongswan.conf									etc/

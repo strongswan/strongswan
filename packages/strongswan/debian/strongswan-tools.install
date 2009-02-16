@@ -1,0 +1,4 @@
+usr/lib/strongswan/scepclient		usr/lib/strongswan/
+usr/lib/strongswan/openac			usr/lib/strongswan/
+usr/share/man/man8/scepclient.8		usr/share/man/man8/
+usr/share/man/man8/openac.8			usr/share/man/man8/

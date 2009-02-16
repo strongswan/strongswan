@@ -1,32 +1,6 @@
-network-manager-strongswan (4.2.6.4-1) hardy; urgency=low
+network-manager-strongswan (4.2.11-1) intrepid; urgency=medium
 
-  * new release supporting NetworkManager API changes (4031/4053)
+  * new build based on modular strongSwan packages
 
- -- Martin Willi <martin@strongswan.org>  Fri, 12 Sep 2008 15:47:54 +0200
-
-network-manager-strongswan (4.2.6.3-2) hardy; urgency=low
-
-  * new upstream release supporting RSA private key files
-
- -- Martin Willi <martin@strongswan.org>  Fri, 05 Sep 2008 16:07:18 +0200
-
-network-manager-strongswan (4.2.6.2-1) hardy; urgency=low
-
-  * new upstream release supporting private key authentication
-  
-  * use --with-charon option to specify charon binary
-  
- -- Martin Willi <martin@strongswan.org>  Thu, 04 Sep 2008 12:46:52 +0200
- 
-network-manager-strongswan (4.2.6.1-1) hardy; urgency=low
- 
-  * fixed path to charon
-   
- -- Martin Willi <martin@strongswan.org>  Tue, 26 Aug 2008 16:41:00 +0200
-
-network-manager-strongswan (4.2.6-2) hardy; urgency=low
-
-  * new package based on network-manager-vpnc
-
- -- Martin Willi <martin@strongswan.org>  Tue, 26 Aug 2008 14:40:48 +0200
+ -- Martin Willi <martin@strongswan.org>  Mon, 16 Feb 2009 13:27:00 +0100
 
