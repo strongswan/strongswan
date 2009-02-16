@@ -1,5 +1,5 @@
-strongswan (4.2.11-1) intrepid; urgency=medium
+strongswan (4.2.11-1~ppa1~intrepid1) intrepid; urgency=low
 
   * New modular strongSwan packages
 
- -- Martin Willi <martin@strongswan.org>  Wed, 11 Feb 2009 15:45:00 +0100
+ -- Martin Willi <martin@strongswan.org>  Mon, 16 Feb 2009 16:37:39 +0100

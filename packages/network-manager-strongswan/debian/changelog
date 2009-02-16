@@ -1,6 +1,5 @@
-network-manager-strongswan (4.2.11-1) intrepid; urgency=medium
+network-manager-strongswan (1.0.0-1~ppa1~intrepid1) intrepid; urgency=low
 
   * new build based on modular strongSwan packages
 
- -- Martin Willi <martin@strongswan.org>  Mon, 16 Feb 2009 13:27:00 +0100
-
+ -- Martin Willi <martin@strongswan.org>  Mon, 16 Feb 2009 16:15:46 +0100
