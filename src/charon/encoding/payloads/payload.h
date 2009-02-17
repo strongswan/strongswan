@@ -86,7 +86,7 @@ enum payload_type_t{
 	NONCE = 40,
 
 	/**
-	 * Notif paylaod (N).
+	 * Notify paylaod (N).
 	 */
 	NOTIFY = 41,
 
