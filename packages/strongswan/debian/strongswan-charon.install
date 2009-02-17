@@ -1,1 +1,2 @@
 usr/lib/strongswan/charon	usr/lib/strongswan/
+usr/lib/strongswan/plugins/libstrongswan-kernel-netlink.so*	usr/lib/strongswan/plugins/

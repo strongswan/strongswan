@@ -1,3 +1,11 @@
+strongswan (4.2.11-4~ppa1~intrepid1) intrepid; urgency=low
+
+  * fixed build on non-i386 architectures
+
+  * added missing kernel-netlink plugin
+
+ -- Martin Willi <martin@strongswan.org>  Tue, 17 Feb 2009 10:25:53 +0100
+
 strongswan (4.2.11-3~ppa1~intrepid1) intrepid; urgency=low
 
   * build strongswan-padlock on i386 only
