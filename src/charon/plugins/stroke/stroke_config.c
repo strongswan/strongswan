@@ -374,6 +374,12 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		return NULL;
 	}
 	
+	if (msg->add_conn.ikeme.mediation)
+	{
+		/* force unique connections for mediation connections */
+		msg->add_conn.unique = 1;
+	}
+	
 	if (msg->add_conn.ikeme.mediated_by)
 	{
 		mediated_by = charon->backends->get_peer_cfg_by_name(charon->backends,
