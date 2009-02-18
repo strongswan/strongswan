@@ -224,6 +224,9 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 					return NULL;
 			}
 			break;
+		case ENCR_DES_ECB:
+			this->cipher = EVP_des_ecb();
+			break;
 		default:
 		{
 			char* name = lookup_algorithm(encryption_algs, algo, &key_size);

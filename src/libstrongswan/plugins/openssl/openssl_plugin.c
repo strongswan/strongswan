@@ -226,6 +226,8 @@ plugin_t *plugin_create()
 					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
 					(crypter_constructor_t)openssl_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB,
+					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_NULL,
 					(crypter_constructor_t)openssl_crypter_create);
 	
@@ -233,6 +235,8 @@ plugin_t *plugin_create()
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
 					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_MD2,
+					(hasher_constructor_t)openssl_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
 					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
 					(hasher_constructor_t)openssl_hasher_create);
