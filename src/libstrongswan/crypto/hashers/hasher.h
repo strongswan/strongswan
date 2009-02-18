@@ -44,9 +44,11 @@ enum hash_algorithm_t {
 	HASH_SHA256 		= 5,
 	HASH_SHA384 		= 6,
 	HASH_SHA512 		= 7,
+	HASH_MD4			= 8,
 };
 
 #define HASH_SIZE_MD2		16
+#define HASH_SIZE_MD4		16
 #define HASH_SIZE_MD5		16
 #define HASH_SIZE_SHA1		20
 #define HASH_SIZE_SHA256	32

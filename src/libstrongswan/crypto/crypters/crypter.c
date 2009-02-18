@@ -41,5 +41,7 @@ ENUM_NEXT(encryption_algorithm_names, ENCR_AES_GCM_ICV8, ENCR_AES_GCM_ICV16, ENC
 	"AES_GCM_8",
 	"AES_GCM_12",
 	"AES_GCM_16");
-ENUM_END(encryption_algorithm_names, ENCR_AES_GCM_ICV16);
+ENUM_NEXT(encryption_algorithm_names, ENCR_DES_ECB, ENCR_DES_ECB, ENCR_AES_GCM_ICV16,
+	"DES_ECB");
+ENUM_END(encryption_algorithm_names, ENCR_DES_ECB);
 

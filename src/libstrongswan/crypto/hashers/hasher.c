@@ -21,7 +21,7 @@
 
 #include <asn1/oid.h>
 
-ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
+ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_MD4,
 	"HASH_UNKNOWN",
 	"HASH_PREFERRED",
 	"HASH_MD2",
@@ -29,7 +29,8 @@ ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
 	"HASH_SHA1",
 	"HASH_SHA256",
 	"HASH_SHA384",
-	"HASH_SHA512"
+	"HASH_SHA512",
+	"HASH_MD4"
 );
 
 /*
