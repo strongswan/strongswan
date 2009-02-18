@@ -216,6 +216,11 @@ if USE_EAP_AKA
   PLUGINS += eapaka
 endif
 
+if USE_EAP_MSCHAPV2
+  SUBDIRS += plugins/eap_mschapv2
+  PLUGINS += eapmschapv2
+endif
+
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
   PLUGINS += medsrv

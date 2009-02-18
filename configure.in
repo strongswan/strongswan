@@ -450,6 +450,14 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[eap-mschapv2],
+	AS_HELP_STRING([--enable-eap-mschapv2],[build MS-CHAPv2 authenication module for EAP (default is NO).]),
+	[if test x$enableval = xyes; then
+		eap_mschapv2=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[kernel-netlink],
 	AS_HELP_STRING([--disable-kernel-netlink],[disable the netlink kernel interface. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -934,6 +942,7 @@ AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
 AM_CONDITIONAL(USE_EAP_MD5, test x$eap_md5 = xtrue)
 AM_CONDITIONAL(USE_EAP_GTC, test x$eap_gtc = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
+AM_CONDITIONAL(USE_EAP_MSCHAPV2, test x$eap_mschapv2 = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
@@ -1012,6 +1021,7 @@ AC_OUTPUT(
 	src/charon/plugins/eap_gtc/Makefile
 	src/charon/plugins/eap_sim/Makefile
 	src/charon/plugins/eap_sim_file/Makefile
+	src/charon/plugins/eap_mschapv2/Makefile
 	src/charon/plugins/kernel_netlink/Makefile
 	src/charon/plugins/kernel_pfkey/Makefile
 	src/charon/plugins/kernel_klips/Makefile
