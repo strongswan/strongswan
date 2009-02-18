@@ -47,11 +47,6 @@ bool extract_token(chunk_t *token, const char termination, chunk_t *src);
 bool extract_token_str(chunk_t *token, const char *termination, chunk_t *src);
 
 /**
- * Extracts a token ending with the last occurrence of a given termination symbol
- */
-bool extract_last_token(chunk_t *token, const char termination, chunk_t *src);
-
-/**
  *  Fetches a new text line terminated by \n or \r\n
  */
 bool fetchline(chunk_t *src, chunk_t *line);

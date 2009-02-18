@@ -47,7 +47,6 @@ utils/identification.c utils/identification.h \
 utils/iterator.h \
 utils/lexparser.c utils/lexparser.h \
 utils/linked_list.c utils/linked_list.h \
-utils/memrchr.c \
 utils/hashtable.c utils/hashtable.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \

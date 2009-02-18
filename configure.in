@@ -707,7 +707,6 @@ dnl ==========================================
 AC_HAVE_LIBRARY(dl)
 AC_CHECK_FUNCS(backtrace)
 AC_CHECK_FUNCS(dladdr)
-AC_REPLACE_FUNCS(memrchr)
 
 AC_MSG_CHECKING([for gcc atomic operations])
 AC_TRY_RUN(
