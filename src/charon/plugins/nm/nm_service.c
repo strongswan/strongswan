@@ -223,7 +223,8 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		str = g_hash_table_lookup(settings->data, "user");
 		if (str)
 		{
-			user = identification_create_from_string(str);
+			user = identification_create_from_encoding(ID_KEY_ID,
+											chunk_create(str, strlen(str)));
 			str = g_hash_table_lookup(settings->secrets, "password");
 			creds->set_username_password(creds, user, str);
 		}
