@@ -1,4 +1,6 @@
-/* Copyright (C) 2006 Martin Willi
+/*
+ * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * Derived from Plutos DES library by Eric Young.
@@ -1107,6 +1109,65 @@ static void des_cbc_encrypt(des_cblock *input, des_cblock *output, long length,
 	tin[0]=tin[1]=0;
 }
 
+/**
+ * DES ECB encrypt decrypt routine
+ */
+static void des_ecb_encrypt(des_cblock *input, des_cblock *output, long length, 
+						    des_key_schedule schedule, int enc)
+{
+	register DES_LONG tin0,tin1;
+	register DES_LONG tout0,tout1;
+	register unsigned char *in,*out;
+	register long l=length;
+	DES_LONG tin[2];
+
+	in=(unsigned char *)input;
+	out=(unsigned char *)output;
+
+	if (enc)
+	{
+		for (l-=8; l>=0; l-=8)
+		{
+			c2l(in,tin0);
+			c2l(in,tin1);
+			tin[0]=tin0;
+			tin[1]=tin1;
+			des_encrypt((DES_LONG *)tin,schedule,DES_ENCRYPT);
+			tout0=tin[0]; l2c(tout0,out);
+			tout1=tin[1]; l2c(tout1,out);
+		}
+		if (l != -8)
+		{
+			c2ln(in,tin0,tin1,l+8);
+			tin[0]=tin0;
+			tin[1]=tin1;
+			des_encrypt((DES_LONG *)tin,schedule,DES_ENCRYPT);
+			tout0=tin[0]; l2c(tout0,out);
+			tout1=tin[1]; l2c(tout1,out);
+		}
+	}
+	else
+	{
+		for (l-=8; l>=0; l-=8)
+		{
+			c2l(in,tin0); tin[0]=tin0;
+			c2l(in,tin1); tin[1]=tin1;
+			des_encrypt((DES_LONG *)tin,schedule,DES_DECRYPT);
+			l2c(tout0,out);
+			l2c(tout1,out);
+		}
+		if (l != -8)
+		{
+			c2l(in,tin0); tin[0]=tin0;
+			c2l(in,tin1); tin[1]=tin1;
+			des_encrypt((DES_LONG *)tin,schedule,DES_DECRYPT);
+			l2cn(tout0,tout1,out,l+8);
+		}
+	}
+	tin0=tin1=tout0=tout1=0;
+	tin[0]=tin[1]=0;
+}
+
 static void des_encrypt2(DES_LONG *data, des_key_schedule ks, int enc)
 {
 	register DES_LONG l,r,t,u;
@@ -1399,6 +1460,42 @@ static void encrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 }
 
 /**
+ * Implementation of crypter_t.decrypt for DES (ECB).
+ */
+static void decrypt_ecb(private_des_crypter_t *this, chunk_t data, chunk_t iv,
+						chunk_t *decrypted)
+{
+	u_int8_t *out;
+	
+	out = data.ptr;
+	if (decrypted)
+	{
+		*decrypted = chunk_alloc(data.len);
+		out = decrypted->ptr;
+	}
+	des_ecb_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
+					 data.len, this->ks, DES_DECRYPT);
+}
+
+/**
+ * Implementation of crypter_t.decrypt for DES (ECB).
+ */
+static void encrypt_ecb(private_des_crypter_t *this, chunk_t data, chunk_t iv,
+						chunk_t *encrypted)
+{
+	u_int8_t *out;
+	
+	out = data.ptr;
+	if (encrypted)
+	{
+		*encrypted = chunk_alloc(data.len);
+		out = encrypted->ptr;
+	}
+	des_ecb_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
+					 data.len, this->ks, DES_ENCRYPT);
+}
+
+/**
  * Implementation of crypter_t.decrypt for 3DES.
  */
 static void decrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
@@ -1508,6 +1605,12 @@ des_crypter_t *des_crypter_create(encryption_algorithm_t algo)
 			this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key3;
 			this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt3;
 			this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt3;
+			break;
+		case ENCR_DES_ECB:
+			this->key_size = sizeof(des_cblock);
+			this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
+			this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt_ecb;
+			this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt_ecb;
 			break;
 		default:
 			free(this);
