@@ -318,7 +318,7 @@ static status_t ChallengeResponse(chunk_t challenge_hash, chunk_t password_hash,
 	int i;
 	crypter_t *crypter;
 	chunk_t keys[3], z_password_hash;
-	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_DES_ECB, 64);
+	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_DES_ECB, 8);
 	if (crypter == NULL)
 	{
 		DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed, DES-ECB not supported");
@@ -339,6 +339,7 @@ static status_t ChallengeResponse(chunk_t challenge_hash, chunk_t password_hash,
 		crypter->set_key(crypter, expanded);
 		crypter->encrypt(crypter, challenge_hash, chunk_empty, &encrypted);
 		memcpy(&response->ptr[i * 8], encrypted.ptr, encrypted.len);
+		chunk_clear(&encrypted);
 		chunk_clear(&expanded);
 	}
 	crypter->destroy(crypter);
@@ -709,9 +710,9 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 		return FAILED;
 	}
 	
-	message_len = data.len - HEADER_LEN + 1; /* + null byte */
-	message = malloc(message_len);
-	memcpy(message, eap->data, message_len - 1);
+	message_len = data.len - HEADER_LEN;
+	message = malloc(message_len + 1);
+	memcpy(message, eap->data, message_len);
 	message[message_len] = '\0';
 	
 	/* S=<auth_string> M=<msg> */
@@ -838,18 +839,19 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 	DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed with error %N: '%s'", mschapv2_error_names, error, msg);
 			
 	/**
-	 * at this point, if the error is retryable, we MAY retry the
-	 * authentication or MAY send a Change Password packet.
+	 * at this point, if the error is retryable, we MAY retry the authentication
+	 * or MAY send a Change Password packet.
 	 * 
-	 * if the error is not retryable (or if we do neither of the
-	 * above), we SHOULD send a Failure Response packet.
-	 * windows clients don't do that, and since windows server 2008 r2
-	 * behaves pretty odd if we do send a Failure Response, we just
-	 * don't send one either.
+	 * if the error is not retryable (or if we do neither of the above), we
+	 * SHOULD send a Failure Response packet.
+	 * windows clients don't do that, and since windows server 2008 r2 behaves
+	 * pretty odd if we do send a Failure Response, we just don't send one
+	 * either. windows 7 actually sends a delete notify (which, according to the
+	 * logs, results in an error on windows server 2008 r2). 
 	 * 
-	 * btw, windows server 2008 r2 does not send non-retryable errors
-	 * for e.g. a disabled account but returns the windows error code in
-	 * a notify payload of type 12345.
+	 * btw, windows server 2008 r2 does not send non-retryable errors for e.g.
+	 * a disabled account but returns the windows error code in a notify payload
+	 * of type 12345.
 	 */
 	
 	status = FAILED;
@@ -914,7 +916,7 @@ static status_t process_server_retry(private_eap_mschapv2_t *this,
 	rng_t *rng;
 	chunk_t hex;
 	char msg[FAILURE_MESSAGE_LEN];
-	u_int16_t len = HEADER_LEN + FAILURE_MESSAGE_LEN - 1;
+	u_int16_t len = HEADER_LEN + FAILURE_MESSAGE_LEN - 1; /* no null byte */
 	
 	if (++this->retries > MAX_RETRIES)
 	{
@@ -938,6 +940,10 @@ static status_t process_server_retry(private_eap_mschapv2_t *this,
 	rng->get_bytes(rng, CHALLENGE_LEN, this->challenge.ptr);
 	rng->destroy(rng);
 	
+	chunk_free(&this->nt_response);
+	chunk_free(&this->auth_response);
+	chunk_free(&this->msk);
+	
 	eap = alloca(len);
 	eap->code = EAP_REQUEST;
 	eap->identifier = ++this->identifier;
@@ -950,7 +956,7 @@ static status_t process_server_retry(private_eap_mschapv2_t *this,
 	hex = chunk_to_hex(this->challenge, NULL, TRUE);
 	snprintf(msg, FAILURE_MESSAGE_LEN, "%s%s", FAILURE_MESSAGE, hex.ptr);
 	chunk_free(&hex);
-	memcpy(eap->data, msg, FAILURE_MESSAGE_LEN - 1);
+	memcpy(eap->data, msg, FAILURE_MESSAGE_LEN - 1); /* no null byte */
 	*out = eap_payload_create_data(chunk_create((void*) eap, len));
 	
 	/* delay the response for some time to make brute-force attacks harder */
@@ -1002,6 +1008,7 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	 	 * thus, we could actually fail here, because retries do not make much
 	 	 * sense. on the other hand, an attacker could guess usernames, if the
 	 	 * error messages were different. */
+		userid->destroy(userid);
 		return process_server_retry(this, out);
 	}
 	
@@ -1011,9 +1018,11 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	if (GenerateStuff(this, this->challenge, peer_challenge, username, password) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "EAP-MS-CHAPv2 verification failed");	
+		userid->destroy(userid);
 		chunk_clear(&password);
 		return FAILED;
 	}
+	userid->destroy(userid);
 	chunk_clear(&password);
 	
 	if (memeq(res->response.nt_response, this->nt_response.ptr, this->nt_response.len))
