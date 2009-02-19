@@ -298,7 +298,7 @@ static void lookup_uid_gid(private_daemon_t *this)
 		if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) != 0 ||
 			grp == NULL)
 		{
-			kill_daemon(this, "reslvoing group '"IPSEC_GROUP"' failed");
+			kill_daemon(this, "resolving group '"IPSEC_GROUP"' failed");
 		}
 		charon->gid = grp->gr_gid;
 	}
