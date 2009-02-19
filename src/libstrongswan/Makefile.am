@@ -98,6 +98,10 @@ if USE_DES
   SUBDIRS += plugins/des
 endif
 
+if USE_MD4
+  SUBDIRS += plugins/md4
+endif
+
 if USE_MD5
   SUBDIRS += plugins/md5
 endif

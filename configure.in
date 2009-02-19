@@ -185,6 +185,14 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[md4],
+	AS_HELP_STRING([--enable-md4],[enable MD4 software implementation plugin (default is NO).]),
+	[if test x$enableval = xyes; then
+		md4=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[md5],
 	AS_HELP_STRING([--disable-md5],[disable own MD5 software implementation plugin. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -856,6 +864,9 @@ fi
 if test x$sha2 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha2"
 fi
+if test x$md4 = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" md4"
+fi
 if test x$md5 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" md5"
 fi
@@ -908,6 +919,7 @@ AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
 AM_CONDITIONAL(USE_DES, test x$des = xtrue)
+AM_CONDITIONAL(USE_MD4, test x$md4 = xtrue)
 AM_CONDITIONAL(USE_MD5, test x$md5 = xtrue)
 AM_CONDITIONAL(USE_SHA1, test x$sha1 = xtrue)
 AM_CONDITIONAL(USE_SHA2, test x$sha2 = xtrue)
@@ -992,6 +1004,7 @@ AC_OUTPUT(
 	src/libstrongswan/Makefile
 	src/libstrongswan/plugins/aes/Makefile
 	src/libstrongswan/plugins/des/Makefile
+	src/libstrongswan/plugins/md4/Makefile
 	src/libstrongswan/plugins/md5/Makefile
 	src/libstrongswan/plugins/sha1/Makefile
 	src/libstrongswan/plugins/sha2/Makefile
