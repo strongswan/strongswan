@@ -149,12 +149,18 @@ if [ "$USE_EAP_SIM" = "yes" ]
 then
     echo -n " --enable-eap-sim" >> $INSTALLSHELL
     echo -n " --enable-eap-sim-file" >> $INSTALLSHELL
-    fi
+fi
 
 if [ "$USE_EAP_MD5" = "yes" ]
 then
     echo -n " --enable-eap-md5" >> $INSTALLSHELL
-    fi
+fi
+
+if [ "$USE_EAP_MSCHAPV2" = "yes" ]
+then
+    echo -n " --enable-md4" >> $INSTALLSHELL
+    echo -n " --enable-eap-mschapv2" >> $INSTALLSHELL
+fi
 
 if [ "$USE_EAP_IDENTITY" = "yes" ]
 then
@@ -189,6 +195,11 @@ fi
 if [ "$USE_LEAK_DETECTIVE" = "yes" ]
 then
     echo -n " --enable-leak-detective" >> $INSTALLSHELL
+fi
+
+if [ "$USE_LOAD_TESTS" = "yes" ]
+then
+    echo -n " --enable-load-tests" >> $INSTALLSHELL
 fi
 
 echo "" >> $INSTALLSHELL
