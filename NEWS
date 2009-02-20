@@ -1,3 +1,18 @@
+strongswan-4.2.12
+'----------------
+
+- Support of the EAP-MSCHAPv2 protocol enabled by the option
+  --enable-eap-mschapv2. Requires the MD4 hash algorithm enabled
+  either by --enable-md4 or --enable-openssl.
+
+- Assignment of up to two DNS and up to two WINS servers to peers via
+  the IKEv2 Configuration Payload (CP). The IPv4 or IPv6 nameserver 
+  addresses are defined in strongswan.conf.
+
+- The strongSwan applet for the Gnome NetworkManager is now built and
+  distributed as a separate tarball under the name NetworkManager-strongswan.
+
+ 
 strongswan-4.2.11
 -----------------
 
