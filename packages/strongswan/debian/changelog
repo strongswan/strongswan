@@ -1,3 +1,9 @@
+strongswan (4.2.12-4~ppa1~intrepid1) intrepid; urgency=low
+
+  * added support for MSCHAPv2 EAP method
+
+ -- Martin Willi <martin@strongswan.org>  Mon, 23 Feb 2009 14:23:03 +0100
+
 strongswan (4.2.11-9~ppa1~intrepid1) intrepid; urgency=low
 
   * added missing kernel-netlink plugin

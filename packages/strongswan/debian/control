@@ -103,7 +103,7 @@ Architecture: any
 Depends: ${shlibs:Depends}, libgmp3c2 (>= 4.1.4)
 Description: strongSwan standalone crypto plugins
  This package contains a set of crypto plugins for libstrongswan, all
- implemented in software. It provides SHA1/SHA2/MD5 hash implementations,
+ implemented in software. It provides SHA1/SHA2/MD5/MD4 hash implementations,
  AES, single and tripple DES encryption algorithms and a RSA and Diffie-Hellman
  implementation based on the GNU Multi Precision library.
 
@@ -154,6 +154,14 @@ Depends: ${shlibs:Depends}, strongswan-charon
 Description: strongSwan EAP plugin implementing the MD5 (CHAP) method
  The EAP-MD5 method allows username/password authentication with the IKEv2
  keying daemon charon.
+
+Package: strongswan-eap-mschapv2
+Architecture: any
+Depends: ${shlibs:Depends}, strongswan-charon
+Description: strongSwan EAP plugin implementing the MSCHAPv2 method
+ The EAP-MSCHAPv2 method allows username/password authentication with the IKEv2
+ keying daemon charon. It is designed work in conjunction with Windows 7
+ Agile VPN clients or with Windows 2008 R2 Servers.
 
 Package: strongswan-nm
 Architecture: any

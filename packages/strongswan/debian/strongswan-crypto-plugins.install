@@ -1,6 +1,7 @@
 usr/lib/strongswan/plugins/libstrongswan-sha1.so*	usr/lib/strongswan/plugins/
 usr/lib/strongswan/plugins/libstrongswan-sha2.so*	usr/lib/strongswan/plugins/
 usr/lib/strongswan/plugins/libstrongswan-md5.so*	usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-md4.so*	usr/lib/strongswan/plugins/
 usr/lib/strongswan/plugins/libstrongswan-aes.so*	usr/lib/strongswan/plugins/
 usr/lib/strongswan/plugins/libstrongswan-des.so*	usr/lib/strongswan/plugins/
 usr/lib/strongswan/plugins/libstrongswan-gmp.so*	usr/lib/strongswan/plugins/

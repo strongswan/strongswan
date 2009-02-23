@@ -5,10 +5,10 @@
 CC = gcc
 CFLAGS = -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing -g
 CONFIGURE_ARGS = \
-	--disable-fips-prf --enable-openssl --enable-nm --enable-ldap \
-	--enable-eap-gtc --enable-eap-md5 --enable-agent --enable-curl \
-	--sysconfdir=/etc --prefix=/usr --libexecdir=/usr/lib \
-	--with-ipsecdir=/usr/lib/strongswan
+	--disable-fips-prf --enable-openssl --enable-md4 --enable-nm \
+	--enable-agent --enable-eap-gtc --enable-eap-md5 --enable-eap-mschapv2 \
+	--enable-ldap --enable-curl --sysconfdir=/etc --prefix=/usr \
+	--libexecdir=/usr/lib --with-ipsecdir=/usr/lib/strongswan
 
 ifeq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O2

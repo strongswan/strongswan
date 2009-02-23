@@ -1,3 +1,9 @@
+network-manager-strongswan (1.0.0-2~ppa1~intrepid1) intrepid; urgency=low
+
+  * depend on EAP-MD5 and EAP-MSCHAPv2 plugins
+
+ -- Martin Willi <martin@strongswan.org>  Mon, 23 Feb 2009 14:28:56 +0100
+
 network-manager-strongswan (1.0.0-1~ppa1~intrepid1) intrepid; urgency=low
 
   * new build based on modular strongSwan packages
