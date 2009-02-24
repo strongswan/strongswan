@@ -1,3 +1,9 @@
+strongswan (4.2.12-6~ppa1~intrepid1) intrepid; urgency=low
+
+  * fixed MSCHAPv2 password lookup
+
+ -- Martin Willi <martin@strongswan.org>  Tue, 24 Feb 2009 12:57:45 +0100
+
 strongswan (4.2.12-5~ppa1~intrepid1) intrepid; urgency=low
 
   * added EAP-Identity package

@@ -643,7 +643,7 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	rng->destroy(rng);
 			
 	shared = charon->credentials->get_shared(charon->credentials,
-											 SHARED_EAP, this->server, this->peer);
+											 SHARED_EAP, this->peer, this->server);
 	if (shared == NULL)
 	{
 		DBG1(DBG_IKE, "no EAP key found for hosts '%D' - '%D'",
