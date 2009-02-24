@@ -1,3 +1,9 @@
+network-manager-strongswan (1.0.0-3~ppa1~intrepid1) intrepid; urgency=low
+
+  * depend on EAP-Identity plugin
+
+ -- Martin Willi <martin@strongswan.org>  Tue, 24 Feb 2009 11:31:19 +0100
+
 network-manager-strongswan (1.0.0-2~ppa1~intrepid1) intrepid; urgency=low
 
   * depend on EAP-MD5 and EAP-MSCHAPv2 plugins

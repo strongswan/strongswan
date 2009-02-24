@@ -140,6 +140,13 @@ Depends: ${shlibs:Depends}
 Description: strongSwan plugin to create signatures using SSH agent
  This plugin for libstrongswan can use a SSH agent to create RSA signatures.
 
+Package: strongswan-eap-identity
+Architecture: any
+Depends: ${shlibs:Depends}, strongswan-charon
+Description: strongSwan plugin implementing EAP identity exchange
+ The EAP-Identity method allows an additional identity exchange before
+ doing the actual EAP authentication.
+
 Package: strongswan-eap-gtc
 Architecture: any
 Depends: ${shlibs:Depends}, strongswan-charon
