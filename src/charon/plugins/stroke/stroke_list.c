@@ -290,6 +290,10 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		enumerator = this->attribute->create_pool_enumerator(this->attribute);
 		while (enumerator->enumerate(enumerator, &pool, &size, &online, &offline))
 		{
+			if (name && !streq(name, pool))
+			{
+				continue;
+			}
 			if (first)
 			{
 				first = FALSE;
