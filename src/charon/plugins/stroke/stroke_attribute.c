@@ -307,6 +307,7 @@ static bool release_address(private_stroke_attribute_t *this,
 				{
 					DBG1(DBG_CFG, "lease %H of %D went offline", address, id);
 					pool->offline->put(pool->offline, id, (void*)offset);
+					found = TRUE;
 				}
 			}
 		}
