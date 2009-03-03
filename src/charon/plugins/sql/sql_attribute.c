@@ -89,7 +89,7 @@ static u_int get_pool(private_sql_attribute_t *this, char *name, u_int *timeout)
 		e->destroy(e);
 		return pool;
 	}
-	DBG1(DBG_CFG, "ip pool '%s' not found");
+	DESTROY_IF(e);
 	return 0;
 }
 

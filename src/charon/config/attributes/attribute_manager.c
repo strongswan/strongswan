@@ -17,6 +17,7 @@
 
 #include "attribute_manager.h"
 
+#include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/mutex.h>
 
@@ -53,7 +54,7 @@ static host_t* acquire_address(private_attribute_manager_t *this,
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
 	host_t *host = NULL;
-
+	
 	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
@@ -67,6 +68,10 @@ static host_t* acquire_address(private_attribute_manager_t *this,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 	
+	if (!host)
+	{
+		DBG1(DBG_CFG, "acquiring address from pool '%s' failed", pool);
+	}
 	return host;
 }
 
@@ -78,18 +83,25 @@ static void release_address(private_attribute_manager_t *this,
 {
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
-
+	bool found = FALSE;
+	
 	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (current->release_address(current, pool, address, id))
 		{
+			found = TRUE;
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
+	
+	if (!found)
+	{
+		DBG1(DBG_CFG, "releasing address to pool '%s' failed", pool);
+	}
 }
 
 /**
