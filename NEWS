@@ -1,5 +1,15 @@
+strongswan-4.2.13
+-----------------
+
+- Fixed a use-after-free bug in the DPD timeout section of the
+  IKEv1 pluto daemon which sporadically caused a segfault.
+
+- Fixed a crash in the IKEv2 charon daemon occuring with
+  mixed RAM-based and SQL-based virtual IP address pools. 
+
+
 strongswan-4.2.12
-'----------------
+-----------------
 
 - Support of the EAP-MSCHAPv2 protocol enabled by the option
   --enable-eap-mschapv2. Requires the MD4 hash algorithm enabled
