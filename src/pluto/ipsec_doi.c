@@ -5592,6 +5592,7 @@ dpd_timeout(struct state *st)
     struct state *newest_phase1_st;
     struct connection *c = st->st_connection;
     int action = st->st_connection->dpd_action;
+    char cname[BUF_LEN];
 
     passert(action == DPD_ACTION_HOLD
 	 || action == DPD_ACTION_CLEAR
@@ -5622,20 +5623,30 @@ dpd_timeout(struct state *st)
 	 * leak traffic.  Also, being in %trap means new packets will
 	 * force an initiation of the conn again.
 	 */
-	loglog(RC_LOG_SERIOUS, "DPD: Putting connection into %%trap");
+	loglog(RC_LOG_SERIOUS, "DPD: Putting connection \"%s\" into %%trap", c->name);
+	if (c->kind == CK_INSTANCE)
+	    delete_connection(c, TRUE);
 	break;
     case DPD_ACTION_CLEAR:
 	/* dpdaction=clear - Wipe the SA & eroute - everything */
-        loglog(RC_LOG_SERIOUS, "DPD: Clearing connection");
+        loglog(RC_LOG_SERIOUS, "DPD: Clearing connection \"%s\"", c->name);
         unroute_connection(c);
+	if (c->kind == CK_INSTANCE)
+	    delete_connection(c, TRUE);
 	break;
     case DPD_ACTION_RESTART:
 	/* dpdaction=restart - Restart connection,
 	 * except if roadwarrior connection
 	 */
-	loglog(RC_LOG_SERIOUS, "DPD: Restarting connection");
+	loglog(RC_LOG_SERIOUS, "DPD: Restarting connection \"%s\"", c->name);
 	unroute_connection(c);
-	initiate_connection(c->name, NULL_FD);
+
+	/* caching the connection name before deletion */
+	strncpy(cname, c->name, BUF_LEN);
+
+	if (c->kind == CK_INSTANCE)
+	    delete_connection(c, TRUE);
+	initiate_connection(cname, NULL_FD);
 	break;
     default:
 	loglog(RC_LOG_SERIOUS, "DPD: unknown action");

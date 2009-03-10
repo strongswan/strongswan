@@ -2995,6 +2995,8 @@ terminate_connection(const char *nm)
 	    c->policy &= ~POLICY_UP;
 	    flush_pending_by_connection(c);
 	    delete_states_by_connection(c, FALSE);
+	    if (c->kind == CK_INSTANCE)
+		delete_connection(c, FALSE);
 	    reset_cur_connection();
 	}
 	c = n;

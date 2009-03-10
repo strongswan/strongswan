@@ -464,12 +464,7 @@ delete_states_by_connection(struct connection *c, bool relations)
 	passert(sr->routing != RT_ROUTED_TUNNEL);
 	sr = sr->next;
     }
-
-    if (ck == CK_INSTANCE)
-    {
-	c->kind = ck;
-	delete_connection(c, relations);
-    }
+    c->kind = ck;
 }
 
 /* Walk through the state table, and delete each state whose phase 1 (IKE)
@@ -506,6 +501,8 @@ delete_states_by_peer(ip_address *peer)
 			 , peerstr
 			 , c->name);
 		    delete_states_by_connection(c, TRUE);
+		    if (c->kind == CK_INSTANCE)
+	    		delete_connection(c, TRUE);
 		    break;	/* can only delete it once */
 		}
 	    }
