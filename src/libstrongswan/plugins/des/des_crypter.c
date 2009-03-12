@@ -1128,10 +1128,8 @@ static void des_ecb_encrypt(des_cblock *input, des_cblock *output, long length,
 	{
 		for (l-=8; l>=0; l-=8)
 		{
-			c2l(in,tin0);
-			c2l(in,tin1);
-			tin[0]=tin0;
-			tin[1]=tin1;
+			c2l(in,tin0); tin[0]=tin0;
+			c2l(in,tin1); tin[1]=tin1;
 			des_encrypt((DES_LONG *)tin,schedule,DES_ENCRYPT);
 			tout0=tin[0]; l2c(tout0,out);
 			tout1=tin[1]; l2c(tout1,out);
@@ -1153,14 +1151,16 @@ static void des_ecb_encrypt(des_cblock *input, des_cblock *output, long length,
 			c2l(in,tin0); tin[0]=tin0;
 			c2l(in,tin1); tin[1]=tin1;
 			des_encrypt((DES_LONG *)tin,schedule,DES_DECRYPT);
-			l2c(tout0,out);
-			l2c(tout1,out);
+			tout0=tin[0]; l2c(tout0,out);
+			tout1=tin[1]; l2c(tout1,out);
 		}
 		if (l != -8)
 		{
 			c2l(in,tin0); tin[0]=tin0;
 			c2l(in,tin1); tin[1]=tin1;
 			des_encrypt((DES_LONG *)tin,schedule,DES_DECRYPT);
+			tout0=tin[0];
+			tout1=tin[1];
 			l2cn(tout0,tout1,out,l+8);
 		}
 	}
