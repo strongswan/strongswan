@@ -804,7 +804,7 @@ static void load_secrets(private_stroke_cred_t *this)
 		}
 		else if (match("PIN", &token))
 		{
-			chunk_t sc = chunk_empty;
+			chunk_t sc = chunk_empty, secret = chunk_empty;
 			char smartcard[32], keyid[22], pin[32];
 			private_key_t *key;
 			u_int slot;
@@ -847,13 +847,13 @@ static void load_secrets(private_stroke_cred_t *this)
 				DBG1(DBG_CFG, "line %d: expected PIN", line_nr);
 				goto error;
 			}
-			ugh = extract_secret(&chunk, &line);
+			ugh = extract_secret(&secret, &line);
 			if (ugh != NULL)
 			{
 				DBG1(DBG_CFG, "line %d: malformed PIN: %s", line_nr, ugh);
 				goto error;
 			}
-			snprintf(pin, sizeof(pin), "%.*s", chunk.len, chunk.ptr);
+			snprintf(pin, sizeof(pin), "%.*s", secret.len, secret.ptr);
 			pin[sizeof(pin) - 1] = '\0';
 			
 			/* we assume an RSA key */
@@ -867,6 +867,7 @@ static void load_secrets(private_stroke_cred_t *this)
 				this->private->insert_last(this->private, key);
 			}
 			memset(pin, 0, sizeof(pin));
+			chunk_clear(&secret);
 		}
 		else if ((match("PSK", &token) && (type = SHARED_IKE)) ||
 				 (match("EAP", &token) && (type = SHARED_EAP)) ||
