@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2009 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -21,7 +21,6 @@
 #include <string.h>
 #include <netdb.h>
 #include <stdio.h>
-#include <printf.h>
 
 #include "traffic_selector.h"
 
@@ -157,10 +156,10 @@ static u_int8_t calc_netbits(private_traffic_selector_t *this)
 static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts_type_t type, u_int16_t from_port, u_int16_t to_port);
 
 /**
- * output handler in printf()
+ * Described in header.
  */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
+int traffic_selector_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+								 const void *const *args)
 {
 	private_traffic_selector_t *this = *((private_traffic_selector_t**)(args[0]));
 	linked_list_t *list = *((linked_list_t**)(args[0]));
@@ -175,16 +174,16 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	if (this == NULL)
 	{
-		return fprintf(stream, "(null)");
+		return print_in_hook(dst, len, "(null)");
 	}
 	
-	if (info->alt)
+	if (spec->hash)
 	{
 		iterator = list->create_iterator(list, TRUE);
 		while (iterator->iterate(iterator, (void**)&this))
 		{
 			/* call recursivly */
-			written += fprintf(stream, "%R ", this);
+			written += print_in_hook(dst, len, "%R ", this);
 		}
 		iterator->destroy(iterator);
 		return written;
@@ -196,7 +195,7 @@ static int print(FILE *stream, const struct printf_info *info,
 		memeq(this->from, from, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16) && 
 		memeq(this->to, to, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16))
 	{
-		written += fprintf(stream, "dynamic");
+		written += print_in_hook(dst, len, "dynamic");
 	}
 	else
 	{
@@ -209,7 +208,7 @@ static int print(FILE *stream, const struct printf_info *info,
 			inet_ntop(AF_INET6, &this->from6, addr_str, sizeof(addr_str));
 		}
 		mask = calc_netbits(this);
-		written += fprintf(stream, "%s/%d", addr_str, mask);
+		written += print_in_hook(dst, len, "%s/%d", addr_str, mask);
 	}
 	
 	/* check if we have protocol and/or port selectors */
@@ -221,7 +220,7 @@ static int print(FILE *stream, const struct printf_info *info,
 		return written;
 	}
 
-	written += fprintf(stream, "[");
+	written += print_in_hook(dst, len, "[");
 
 	/* build protocol string */
 	if (has_proto)
@@ -230,18 +229,18 @@ static int print(FILE *stream, const struct printf_info *info,
 
 		if (proto)
 		{
-			written += fprintf(stream, "%s", proto->p_name);
+			written += print_in_hook(dst, len, "%s", proto->p_name);
 			serv_proto = proto->p_name;
 		}
 		else
 		{
-			written += fprintf(stream, "%d", this->protocol);
+			written += print_in_hook(dst, len, "%d", this->protocol);
 		}
 	}
 	
 	if (has_proto && has_ports)
 	{
-		written += fprintf(stream, "/");
+		written += print_in_hook(dst, len, "/");
 	}
 
 	/* build port string */
@@ -253,44 +252,22 @@ static int print(FILE *stream, const struct printf_info *info,
 
 			if (serv)
 			{
-				written += fprintf(stream, "%s", serv->s_name);
+				written += print_in_hook(dst, len, "%s", serv->s_name);
 			}
 			else
 			{
-				written += fprintf(stream, "%d", this->from_port);
+				written += print_in_hook(dst, len, "%d", this->from_port);
 			}
 		}
 		else
 		{
-			written += fprintf(stream, "%d-%d", this->from_port, this->to_port);
+			written += print_in_hook(dst, len, "%d-%d", this->from_port, this->to_port);
 		}
 	}
 	
-	written += fprintf(stream, "]");
+	written += print_in_hook(dst, len, "]");
 
 	return written;
-}
-
-/**
- * arginfo handler for printf() traffic selector
- */
-static int arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
- * return printf hook functions for a chunk
- */
-printf_hook_functions_t traffic_selector_get_printf_hooks()
-{
-	printf_hook_functions_t hooks = {print, arginfo};
-	
-	return hooks;
 }
 
 /**

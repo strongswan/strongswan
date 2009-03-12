@@ -740,6 +740,14 @@ AC_TRY_RUN(
 [AC_MSG_RESULT([no])],
 [AC_MSG_RESULT([no])])
 
+AC_CHECK_FUNC(
+	[register_printf_function],
+	[AC_DEFINE(HAVE_PRINTF_HOOKS)],
+	[
+		AC_MSG_NOTICE([printf does not support custom format specifiers!])
+		AC_HAVE_LIBRARY([vstr],[LIBS="$LIBS"]; vstr=true,[AC_MSG_ERROR([Vstr string library not found])])
+	])
+
 if test x$gmp = xtrue; then
 	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
 	AC_MSG_CHECKING([gmp.h version >= 4.1.4])
@@ -981,6 +989,7 @@ AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
+AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 
 dnl ==============================
 dnl  set global definitions

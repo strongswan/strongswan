@@ -282,7 +282,7 @@ static void *get(private_hashtable_t *this, void *key)
 /**
  * Implementation of hashtable_t.remove
  */
-static void *remove(private_hashtable_t *this, void *key)
+static void *remove_(private_hashtable_t *this, void *key)
 {
 	void *value = NULL;
 	linked_list_t *list;
@@ -414,7 +414,7 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 
 	this->public.put = (void*(*)(hashtable_t*,void*,void*))put;
 	this->public.get = (void*(*)(hashtable_t*,void*))get; 
-	this->public.remove = (void*(*)(hashtable_t*,void*))remove;
+	this->public.remove = (void*(*)(hashtable_t*,void*))remove_;
 	this->public.get_count = (u_int(*)(hashtable_t*))get_count;
 	this->public.create_enumerator = (enumerator_t*(*)(hashtable_t*))create_enumerator;
 	this->public.destroy = (void(*)(hashtable_t*))destroy;

@@ -870,7 +870,7 @@ static bool is_newer(private_x509_ac_t *this, ac_t *that)
 	this_cert->get_validity(this_cert, &now, &this_update, NULL);
 	that_cert->get_validity(that_cert, &now, &that_update, NULL);
 	new = this_update > that_update;
-	DBG1("  attr cert from %#T is %s - existing attr_cert from %#T %s",
+	DBG1("  attr cert from %T is %s - existing attr_cert from %T %s",
 			&this_update, FALSE, new ? "newer":"not newer",
 			&that_update, FALSE, new ? "replaced":"retained");
 	return new;

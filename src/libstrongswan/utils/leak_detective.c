@@ -29,7 +29,6 @@
 #include <syslog.h>
 #include <pthread.h>
 #include <netdb.h>
-#include <printf.h>
 #include <locale.h>
 
 #include "leak_detective.h"

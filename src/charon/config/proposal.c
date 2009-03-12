@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -803,10 +803,10 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 }
 
 /**
- * print all algorithms of a kind to stream
+ * print all algorithms of a kind to buffer
  */
-static int print_alg(private_proposal_t *this, FILE *stream, u_int kind,
-					 void *names, bool *first)
+static int print_alg(private_proposal_t *this, char **dst, int *len,
+					 u_int kind, void *names, bool *first)
 {
 	enumerator_t *enumerator;
 	size_t written = 0;
@@ -817,16 +817,16 @@ static int print_alg(private_proposal_t *this, FILE *stream, u_int kind,
 	{
 		if (*first)
 		{
-			written += fprintf(stream, "%N", names, alg);
+			written += print_in_hook(*dst, *len, "%N", names, alg);
 			*first = FALSE;
 		}
 		else
 		{
-			written += fprintf(stream, "/%N", names, alg);
+			written += print_in_hook(*dst, *len, "/%N", names, alg);
 		}
 		if (size)
 		{
-			written += fprintf(stream, "-%d", size);
+			written += print_in_hook(*dst, *len, "-%d", size);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -834,10 +834,10 @@ static int print_alg(private_proposal_t *this, FILE *stream, u_int kind,
 }
 
 /**
- * output handler in printf()
+ * Described in header.
  */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
+int proposal_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+						 const void *const *args)
 {
 	private_proposal_t *this = *((private_proposal_t**)(args[0]));
 	linked_list_t *list = *((linked_list_t**)(args[0]));
@@ -847,62 +847,40 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	if (this == NULL)
 	{
-		return fprintf(stream, "(null)");
+		return print_in_hook(dst, len, "(null)");
 	}
 	
-	if (info->alt)
+	if (spec->hash)
 	{
 		enumerator = list->create_enumerator(list);
 		while (enumerator->enumerate(enumerator, &this))
 		{	/* call recursivly */
 			if (first)
 			{
-				written += fprintf(stream, "%P", this);
+				written += print_in_hook(dst, len, "%P", this);
 				first = FALSE;
 			}
 			else
 			{
-				written += fprintf(stream, ", %P", this);
+				written += print_in_hook(dst, len, ", %P", this);
 			}
 		}
 		enumerator->destroy(enumerator);
 		return written;
 	}
 	
-	written = fprintf(stream, "%N:", protocol_id_names, this->protocol);
-	written += print_alg(this, stream, ENCRYPTION_ALGORITHM,
+	written = print_in_hook(dst, len, "%N:", protocol_id_names, this->protocol);
+	written += print_alg(this, &dst, &len, ENCRYPTION_ALGORITHM,
 						 encryption_algorithm_names, &first);
-	written += print_alg(this, stream, INTEGRITY_ALGORITHM,
+	written += print_alg(this, &dst, &len, INTEGRITY_ALGORITHM,
 						 integrity_algorithm_names, &first);
-	written += print_alg(this, stream, PSEUDO_RANDOM_FUNCTION,
+	written += print_alg(this, &dst, &len, PSEUDO_RANDOM_FUNCTION,
 						 pseudo_random_function_names, &first);
-	written += print_alg(this, stream, DIFFIE_HELLMAN_GROUP,
+	written += print_alg(this, &dst, &len, DIFFIE_HELLMAN_GROUP,
 						 diffie_hellman_group_names, &first);
-	written += print_alg(this, stream, EXTENDED_SEQUENCE_NUMBERS,
+	written += print_alg(this, &dst, &len, EXTENDED_SEQUENCE_NUMBERS,
 						 extended_sequence_numbers_names, &first);
 	return written;
-}
-
-/**
- * arginfo handler for printf() proposal
- */
-static int arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
- * return printf hook functions for a proposal
- */
-printf_hook_functions_t proposal_get_printf_hooks()
-{
-	printf_hook_functions_t hooks = {print, arginfo};
-	
-	return hooks;
 }
 
 /**

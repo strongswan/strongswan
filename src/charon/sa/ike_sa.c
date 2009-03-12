@@ -20,7 +20,6 @@
 
 #include <sys/time.h>
 #include <string.h>
-#include <printf.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <time.h>
@@ -1743,7 +1742,7 @@ static status_t reauth(private_ike_sa_t *this)
 		{
 			time_t now = time(NULL);
 			
-			DBG1(DBG_IKE, "IKE_SA will timeout in %#V",
+			DBG1(DBG_IKE, "IKE_SA will timeout in %V",
 				 &now, &this->stats[STAT_DELETE]);
 			return FAILED;
 		}

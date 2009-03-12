@@ -397,7 +397,7 @@ void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private)
 			{
 				time_t time = asn1_to_time(&object, type);
 
-				DBG2("  '%T'", &time);
+				DBG2("  '%T'", &time, TRUE);
 			}
 			return;
 		default:

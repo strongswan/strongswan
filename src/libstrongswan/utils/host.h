@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 Martin Willi
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2009 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -198,12 +198,13 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr);
 host_t *host_create_any(int family);
 
 /**
- * Get printf hooks for a host.
+ * printf hook function for host_t.
  *
  * Arguments are: 
  *    host_t *host
  * Use #-modifier to include port number
  */
-printf_hook_functions_t host_get_printf_hooks();
+int host_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+					 const void *const *args);
 
 #endif /* HOST_H_ @}*/

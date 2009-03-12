@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -23,7 +24,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <printf.h>
 
 #include "identification.h"
 
@@ -879,10 +879,10 @@ static id_match_t matches_dn(private_identification_t *this,
 }
 
 /**
- * output handler in printf()
+ * Described in header.
  */
-static int print(FILE *stream, const struct printf_info *info,
-						 const void *const *args)
+int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+							   const void *const *args)
 {
 	private_identification_t *this = *((private_identification_t**)(args[0]));
 	char buf[BUF_LEN];
@@ -890,7 +890,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	if (this == NULL)
 	{
-		return fprintf(stream, "%*s", info->width, "(null)");
+		return print_in_hook(dst, len, "%*s", spec->width, "(null)");
 	}
 	
 	switch (this->type)
@@ -940,33 +940,11 @@ static int print(FILE *stream, const struct printf_info *info,
 			snprintf(buf, sizeof(buf), "(unknown ID type: %d)", this->type);
 			break;
 	}
-	if (info->left)
+	if (spec->minus)
 	{
-		return fprintf(stream, "%-*s", info->width, buf);
+		return print_in_hook(dst, len, "%-*s", spec->width, buf);
 	}
-	return fprintf(stream, "%*s", info->width, buf);
-}
-
-/**
- * arginfo handler
- */
-static int arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
- * Get printf hook functions
- */
-printf_hook_functions_t identification_get_printf_hooks()
-{
-	printf_hook_functions_t hook = {print, arginfo};
-	
-	return hook;
+	return print_in_hook(dst, len, "%*s", spec->width, buf);
 }
 
 /**

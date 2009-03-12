@@ -554,10 +554,10 @@ static void leases(char *filter, bool utc)
 			printf("%-7s ", "expired");
 		}
 		
-		printf(" %#T  ", &acquired, utc);
+		printf(" %T  ", &acquired, utc);
 		if (released)
 		{
-			printf("%#T  ", &released, utc);
+			printf("%T  ", &released, utc);
 		}
 		else
 		{

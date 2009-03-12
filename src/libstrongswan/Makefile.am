@@ -74,6 +74,10 @@ if USE_INTEGRITY_TEST
   fips/fips_canister_end.c
 endif
 
+if USE_VSTR
+  libstrongswan_la_LIBADD += -lvstr
+endif
+
 EXTRA_DIST = asn1/oid.txt asn1/oid.pl
 BUILT_SOURCES = asn1/oid.c asn1/oid.h
 MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h

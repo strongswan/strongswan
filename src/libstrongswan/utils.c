@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -187,27 +187,23 @@ bool ref_put(refcount_t *ref)
 #endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 
 /**
- * output handler in printf() for time_t
+ * Described in header.
  */
-static int time_print(FILE *stream, const struct printf_info *info,
-					  const void *const *args)
+int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+					 const void *const *args)
 {
 	static const char* months[] = {
 		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 	};
 	time_t *time = *((time_t**)(args[0]));
-	bool utc = TRUE;
+	bool utc = *((bool*)(args[1]));;
 	struct tm t;
 	
-	if (info->alt)
-	{
-		utc = *((bool*)(args[1]));
-	}
 	if (time == UNDEFINED_TIME)
 	{
-		return fprintf(stream, "--- -- --:--:--%s----",
-					   info->alt ? " UTC " : " ");
+		return print_in_hook(dst, len, "--- -- --:--:--%s----",
+							 utc ? " UTC " : " ");
 	}
 	if (utc)
 	{
@@ -217,54 +213,22 @@ static int time_print(FILE *stream, const struct printf_info *info,
 	{
 		localtime_r(time, &t);
 	}
-	return fprintf(stream, "%s %02d %02d:%02d:%02d%s%04d",
-				   months[t.tm_mon], t.tm_mday, t.tm_hour, t.tm_min,
-				   t.tm_sec, utc ? " UTC " : " ", t.tm_year + 1900);
+	return print_in_hook(dst, len, "%s %02d %02d:%02d:%02d%s%04d",
+						 months[t.tm_mon], t.tm_mday, t.tm_hour, t.tm_min,
+						 t.tm_sec, utc ? " UTC " : " ", t.tm_year + 1900);
 }
 
 /**
- * arginfo handler for printf() time
+ * Described in header.
  */
-static int time_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (info->alt)
-	{
-		if (n > 1)
-		{
-			argtypes[0] = PA_POINTER;
-			argtypes[1] = PA_INT;
-		}
-		return 2;
-	}
-	
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
- * output handler in printf() for time deltas
- */
-static int time_delta_print(FILE *stream, const struct printf_info *info,
-							const void *const *args)
+int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+						   const void *const *args)
 {
 	char* unit = "second";
-	time_t *arg1, *arg2;
-	time_t delta;
+	time_t *arg1 = *((time_t**)(args[0]));
+	time_t *arg2 = *((time_t**)(args[1]));
+	time_t delta = abs(*arg1 - *arg2);
 	
-	arg1 = *((time_t**)(args[0]));
-	if (info->alt)
-	{
-		arg2 = *((time_t**)(args[1]));
-		delta = abs(*arg1 - *arg2);
-	}
-	else
-	{
-		delta = *arg1;
-	}
-
 	if (delta > 2 * 60 * 60 * 24)
 	{
 		delta /= 60 * 60 * 24;
@@ -280,29 +244,7 @@ static int time_delta_print(FILE *stream, const struct printf_info *info,
 		delta /= 60;
 		unit = "minute";
 	}
-	return fprintf(stream, "%d %s%s", delta, unit, (delta == 1)? "":"s");
-}
-
-/**
- * arginfo handler for printf() time deltas
- */
-int time_delta_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (info->alt)
-	{
-		if (n > 1)
-		{
-			argtypes[0] = PA_POINTER;
-			argtypes[1] = PA_POINTER;
-		}
-		return 2;
-	}
-	
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
+	return print_in_hook(dst, len, "%d %s%s", delta, unit, (delta == 1)? "":"s");
 }
 
 /**
@@ -313,10 +255,10 @@ int time_delta_arginfo(const struct printf_info *info, size_t n, int *argtypes)
 static char hexdig_upper[] = "0123456789ABCDEF";
 
 /**
- * output handler in printf() for mem ranges
+ * Described in header.
  */
-static int mem_print(FILE *stream, const struct printf_info *info,
-					 const void *const *args)
+int mem_printf_hook(char *dst, size_t dstlen,
+					printf_hook_spec_t *spec, const void *const *args)
 {
 	char *bytes = *((void**)(args[0]));
 	int len = *((size_t*)(args[1]));
@@ -330,7 +272,7 @@ static int mem_print(FILE *stream, const struct printf_info *info,
 	int i = 0;
 	int written = 0;
 	
-	written += fprintf(stream, "=> %d bytes @ %p", len, bytes);
+	written += print_in_hook(dst, dstlen, "=> %d bytes @ %p", len, bytes);
 	
 	while (bytes_pos < bytes_roof)
 	{
@@ -343,7 +285,6 @@ static int mem_print(FILE *stream, const struct printf_info *info,
 		if (++bytes_pos == bytes_roof || i == BYTES_PER_LINE) 
 		{
 			int padding = 3 * (BYTES_PER_LINE - i);
-			int written;
 			
 			while (padding--)
 			{
@@ -352,9 +293,8 @@ static int mem_print(FILE *stream, const struct printf_info *info,
 			*buffer_pos++ = '\0';
 			ascii_buffer[i] = '\0';
 			
-			written += fprintf(stream, "\n%4d: %s  %s",
-							   line_start, buffer, ascii_buffer);
-
+			written += print_in_hook(dst, dstlen, "\n%4d: %s  %s",
+								     line_start, buffer, ascii_buffer);
 			
 			buffer_pos = buffer;
 			line_start += BYTES_PER_LINE;
@@ -367,47 +307,3 @@ static int mem_print(FILE *stream, const struct printf_info *info,
 	}
 	return written;
 }
-
-/**
- * arginfo handler for printf() mem ranges
- */
-int mem_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 1)
-	{
-		argtypes[0] = PA_POINTER;
-		argtypes[1] = PA_INT;
-	}
-	return 2;
-}
-
-/**
- * return printf hook functions for a time
- */
-printf_hook_functions_t time_get_printf_hooks()
-{
-	printf_hook_functions_t hooks = {time_print, time_arginfo};
-	
-	return hooks;
-}
-
-/**
- * return printf hook functions for a time delta
- */
-printf_hook_functions_t time_delta_get_printf_hooks()
-{
-	printf_hook_functions_t hooks = {time_delta_print, time_delta_arginfo};
-	
-	return hooks;
-}
-
-/**
- * return printf hook functions for mem ranges
- */
-printf_hook_functions_t mem_get_printf_hooks()
-{
-	printf_hook_functions_t hooks = {mem_print, mem_arginfo};
-	
-	return hooks;
-}
-

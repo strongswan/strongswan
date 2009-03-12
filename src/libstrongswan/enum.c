@@ -20,8 +20,6 @@
 
 #include "enum.h"
 
-#include <printf_hook.h>
-
 /**
  * get the name of an enum value in a enum_name_t list
  */
@@ -39,10 +37,10 @@ static char *enum_name(enum_name_t *e, int val)
 }
 
 /**
- * output handler in printf() for enum names
+ * Described in header.
  */
-static int print(FILE *stream, const struct printf_info *info,
-					  const void *const *args)
+int enum_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+					 const void *const *args)
 {
 	enum_name_t *ed = *((enum_name_t**)(args[0]));
 	int val = *((int*)(args[1]));
@@ -51,34 +49,10 @@ static int print(FILE *stream, const struct printf_info *info,
 
 	if (name == NULL)
 	{
-		return fprintf(stream, "(%d)", val);
+		return print_in_hook(dst, len, "(%d)", val);
 	}
 	else
 	{
-		return fprintf(stream, "%s", name);
+		return print_in_hook(dst, len, "%s", name);
 	}
 }
-
-/**
- * arginfo handler for printf() hook
- */
-static int arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 1)
-	{
-		argtypes[0] = PA_POINTER;
-		argtypes[1] = PA_INT;
-	}
-	return 2;
-}
-
-/**
- * return printf hook functions
- */
-printf_hook_functions_t enum_get_printf_hooks()
-{
-	printf_hook_functions_t hooks = {print, arginfo};
-	
-	return hooks;
-}
-

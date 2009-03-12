@@ -57,10 +57,10 @@
 #ifndef LIBRARY_H_
 #define LIBRARY_H_
 
+#include <printf_hook.h>
 #include <utils.h>
 #include <chunk.h>
 #include <settings.h>
-#include <printf_hook.h>
 #include <plugins/plugin_loader.h>
 #include <crypto/crypto_factory.h>
 #include <credentials/credential_factory.h>

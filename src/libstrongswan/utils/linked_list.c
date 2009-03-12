@@ -224,7 +224,7 @@ static void iterator_reset(private_iterator_t *this)
 /**
  * Implementation of iterator_t.remove.
  */
-static status_t remove_(private_iterator_t *this)
+static status_t iterator_remove(private_iterator_t *this)
 {
 	element_t *new_current;
 
@@ -514,8 +514,8 @@ static status_t remove_last(private_linked_list_t *this, void **item)
 /**
  * Implementation of linked_list_t.remove.
  */
-static int remove(private_linked_list_t *this, void *item,
-				  bool (*compare)(void *,void*))
+static int remove_(private_linked_list_t *this, void *item,
+				   bool (*compare)(void *,void*))
 {
 	element_t *current = this->first;
 	int removed = 0;
@@ -727,7 +727,7 @@ static iterator_t *create_iterator(private_linked_list_t *linked_list, bool forw
 	this->public.insert_before = (void (*) (iterator_t*, void *item)) insert_before;
 	this->public.insert_after = (void (*) (iterator_t*, void *item)) insert_after;
 	this->public.replace = (status_t (*) (iterator_t*, void **, void *)) replace;
-	this->public.remove = (status_t (*) (iterator_t*)) remove_;
+	this->public.remove = (status_t (*) (iterator_t*)) iterator_remove;
 	this->public.reset = (void (*) (iterator_t*)) iterator_reset;
 	this->public.destroy = (void (*) (iterator_t*)) iterator_destroy;
 	
@@ -756,7 +756,7 @@ linked_list_t *linked_list_create()
 	this->public.insert_last = (void (*) (linked_list_t *, void *item))insert_last;
 	this->public.remove_first = (status_t (*) (linked_list_t *, void **item))remove_first;
 	this->public.remove_last = (status_t (*) (linked_list_t *, void **item))remove_last;
-	this->public.remove = (int(*)(linked_list_t*, void *item, bool (*compare)(void *,void*)))remove;
+	this->public.remove = (int(*)(linked_list_t*, void *item, bool (*compare)(void *,void*)))remove_;
 	this->public.remove_at = (void(*)(linked_list_t*, enumerator_t *enumerator))remove_at;
 	this->public.invoke_offset = (void (*)(linked_list_t*,size_t,...))invoke_offset;
 	this->public.invoke_function = (void (*)(linked_list_t*,linked_list_invoke_t,...))invoke_function;

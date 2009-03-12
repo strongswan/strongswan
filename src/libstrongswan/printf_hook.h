@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Tobias Brunner
  * Copyright (C) 2006-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -24,30 +25,103 @@
 #define PRINTF_HOOK_H_
 
 typedef struct printf_hook_t printf_hook_t;
-typedef struct printf_hook_functions_t printf_hook_functions_t;
+typedef struct printf_hook_spec_t printf_hook_spec_t;
+typedef enum printf_hook_argtype_t printf_hook_argtype_t;
+
+#ifdef HAVE_PRINTF_HOOKS
 
 #include <printf.h>
 
-/**
- * Printf hook function set.
- *
- * A printf hook has two functions, one to print the string, one to read
- * in the number of arguments. See <printf.h>.
- */
-struct printf_hook_functions_t {
+enum printf_hook_argtype_t {
+	PRINTF_HOOK_ARGTYPE_END = PA_LAST,
+	PRINTF_HOOK_ARGTYPE_INT = PA_INT,
+	PRINTF_HOOK_ARGTYPE_POINTER = PA_POINTER,
+};
 
+#else
+
+#include <vstr.h>
+
+enum printf_hook_argtype_t {
+	PRINTF_HOOK_ARGTYPE_END = VSTR_TYPE_FMT_END,
+	PRINTF_HOOK_ARGTYPE_INT = VSTR_TYPE_FMT_INT,
+	PRINTF_HOOK_ARGTYPE_POINTER = VSTR_TYPE_FMT_PTR_VOID,
+};
+
+/**
+ * Redefining printf and alike
+ */
+#include <stdio.h>
+#include <stdarg.h>
+
+int vstr_wrapper_printf(const char *format, ...);
+int vstr_wrapper_fprintf(FILE *stream, const char *format, ...);
+int vstr_wrapper_sprintf(char *str, const char *format, ...);
+int vstr_wrapper_snprintf(char *str, size_t size, const char *format, ...);
+
+int vstr_wrapper_vprintf(const char *format, va_list ap);
+int vstr_wrapper_vfprintf(FILE *stream, const char *format, va_list ap);
+int vstr_wrapper_vsprintf(char *str, const char *format, va_list ap);
+int vstr_wrapper_vsnprintf(char *str, size_t size, const char *format, va_list ap);
+
+#define printf vstr_wrapper_printf
+#define fprintf vstr_wrapper_fprintf
+#define sprintf vstr_wrapper_sprintf
+#define snprintf vstr_wrapper_snprintf
+
+#define vprintf vstr_wrapper_vprintf
+#define vfprintf vstr_wrapper_vfprintf
+#define vsprintf vstr_wrapper_vsprintf
+#define vsnprintf vstr_wrapper_vsnprintf
+
+#endif
+
+/**
+ * Callback function type for printf hooks.
+ * 
+ * @param dst		destination buffer
+ * @param len		length of the buffer
+ * @param spec		format specifier
+ * @param args		arguments array
+ * @return 			number of characters written
+ */
+typedef int (*printf_hook_function_t)(char *dst, size_t len,
+									  printf_hook_spec_t *spec,
+									  const void *const *args);
+
+/**
+ * Helper macro to be used in printf hook callbacks.
+ * buf and buflen get modified.
+ */
+#define print_in_hook(buf, buflen, fmt, ...) ({\
+	int _written = snprintf(buf, buflen, fmt, ##__VA_ARGS__);\
+	if (_written < 0 || _written >= buflen)\
+	{\
+		_written = buflen - 1;\
+	}\
+	buf += _written;\
+	buflen -= _written;\
+	_written;\
+})
+
+/**
+ * Properties of the format specifier
+ */
+struct printf_hook_spec_t {
 	/**
-	 * Printf hook print function. This is actually of type "printf_function",
-	 * however glibc does it typedef to function, but uclibc to a pointer.
-	 * So we redefine it here.
+	 * TRUE if a '#' was used in the format specifier
 	 */
-	int (*print)(FILE *, const struct printf_info *info, const void *const *args);
+	int hash;
 	
 	/**
-	 * Printf hook arginfo function, which is actually of type
-	 * "printf_arginfo_function".
+	 * TRUE if a '-' was used in the format specifier
 	 */
-	int (*arginfo)(const struct printf_info *info, size_t n, int *argtypes);
+	int minus;
+	
+	/**
+	 * The width as given in the format specifier.
+	 */
+	int width;
 };
 
 /**
@@ -59,10 +133,11 @@ struct printf_hook_t {
 	 * Register a printf handler.
 	 *
 	 * @param spec		printf hook format character
-	 * @param hook		hook functions
+	 * @param hook		hook function
+	 * @param ...		list of PRINTF_HOOK_ARGTYPE_*, MUST end with PRINTF_HOOK_ARGTYPE_END
 	 */
 	void (*add_handler)(printf_hook_t *this, char spec,
-						printf_hook_functions_t hook);
+						printf_hook_function_t hook, ...);
 	
 	/**
      * Destroy a printf_hook instance.

@@ -88,7 +88,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 		time_t established;
 		
 		established = ike_sa->get_statistic(ike_sa, STAT_ESTABLISHED);
-		fprintf(out, " %#V ago", &now, &established);
+		fprintf(out, " %V ago", &now, &established);
 	}
 	
 	fprintf(out, ", %H[%D]...%H[%D]\n",
@@ -116,11 +116,11 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 			
 			if (rekey)
 			{
-				fprintf(out, ", rekeying in %#V", &rekey, &now);
+				fprintf(out, ", rekeying in %V", &rekey, &now);
 			}
 			if (reauth)
 			{
-				fprintf(out, ", %N reauthentication in %#V", auth_class_names,
+				fprintf(out, ", %N reauthentication in %V", auth_class_names,
 						get_auth_class(ike_sa->get_peer_cfg(ike_sa)),
 						&reauth, &now);
 			}
@@ -212,7 +212,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			rekey = child_sa->get_lifetime(child_sa, FALSE);
 			if (rekey)
 			{
-				fprintf(out, "in %#V", &now, &rekey);
+				fprintf(out, "in %V", &now, &rekey);
 			}
 			else
 			{
@@ -265,12 +265,12 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		char *plugin, *pool;
 		host_t *host;
 		u_int32_t dpd;
-		time_t uptime = time(NULL) - this->uptime;
+		time_t now = time(NULL);
 		bool first = TRUE;
 		u_int size, online, offline;
 		
 		fprintf(out, "Performance:\n");
-		fprintf(out, "  uptime: %V, since %#T\n", &uptime, &this->uptime, FALSE);
+		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &this->uptime, FALSE);
 		fprintf(out, "  worker threads: %d idle of %d,",
 				charon->processor->get_idle_threads(charon->processor),
 				charon->processor->get_total_threads(charon->processor));
@@ -659,26 +659,26 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 
 			/* list validity */
 			cert->get_validity(cert, &now, &notBefore, &notAfter);
-			fprintf(out, "  validity:  not before %#T, ", &notBefore, utc);
+			fprintf(out, "  validity:  not before %T, ", &notBefore, utc);
 			if (now < notBefore)
 			{
-				fprintf(out, "not valid yet (valid in %#V)\n", &now, &notBefore);
+				fprintf(out, "not valid yet (valid in %V)\n", &now, &notBefore);
 			}
 			else
 			{
 				fprintf(out, "ok\n");
 			}
-			fprintf(out, "             not after  %#T, ", &notAfter, utc);
+			fprintf(out, "             not after  %T, ", &notAfter, utc);
 			if (now > notAfter)
 			{
-				fprintf(out, "expired (%#V ago)\n", &now, &notAfter);
+				fprintf(out, "expired (%V ago)\n", &now, &notAfter);
 			}
 			else
 			{
 				fprintf(out, "ok");
 				if (now > notAfter - CERT_WARNING_INTERVAL * 60 * 60 * 24)
 				{
-					fprintf(out, " (expires in %#V)", &now, &notAfter);
+					fprintf(out, " (expires in %V)", &now, &notAfter);
 				}
 				fprintf(out, " \n");
 			}
@@ -759,18 +759,18 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 
 		/* list validity */
 		cert->get_validity(cert, &now, &thisUpdate, &nextUpdate);
-		fprintf(out, "  updates:   this %#T\n",  &thisUpdate, utc);
-		fprintf(out, "             next %#T, ", &nextUpdate, utc);
+		fprintf(out, "  updates:   this %T\n",  &thisUpdate, utc);
+		fprintf(out, "             next %T, ", &nextUpdate, utc);
 		if (now > nextUpdate)
 		{
-			fprintf(out, "expired (%#V ago)\n", &now, &nextUpdate);
+			fprintf(out, "expired (%V ago)\n", &now, &nextUpdate);
 		}
 		else
 		{
 			fprintf(out, "ok");
 			if (now > nextUpdate - AC_WARNING_INTERVAL * 60 * 60 * 24)
 			{
-				fprintf(out, " (expires in %#V)", &now, &nextUpdate);
+				fprintf(out, " (expires in %V)", &now, &nextUpdate);
 			}
 			fprintf(out, " \n");
 		}
@@ -832,18 +832,18 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 
 		/* list validity */
 		cert->get_validity(cert, &now, &thisUpdate, &nextUpdate);
-		fprintf(out, "  updates:   this %#T\n",  &thisUpdate, utc);
-		fprintf(out, "             next %#T, ", &nextUpdate, utc);
+		fprintf(out, "  updates:   this %T\n",  &thisUpdate, utc);
+		fprintf(out, "             next %T, ", &nextUpdate, utc);
 		if (now > nextUpdate)
 		{
-			fprintf(out, "expired (%#V ago)\n", &now, &nextUpdate);
+			fprintf(out, "expired (%V ago)\n", &now, &nextUpdate);
 		}
 		else
 		{
 			fprintf(out, "ok");
 			if (now > nextUpdate - CRL_WARNING_INTERVAL * 60 * 60 * 24)
 			{
-				fprintf(out, " (expires in %#V)", &now, &nextUpdate);
+				fprintf(out, " (expires in %V)", &now, &nextUpdate);
 			}
 			fprintf(out, " \n");
 		}

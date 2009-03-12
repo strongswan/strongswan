@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -274,10 +275,12 @@ identification_t * identification_create_from_string(char *string);
 identification_t * identification_create_from_encoding(id_type_t type, chunk_t encoded);
 
 /**
- * Get the printf hook functions.
- * 
- * @return			printf hook functions
+ * printf hook function for identification_t.
+ *
+ * Arguments are: 
+ *    identification_t *identification
  */
-printf_hook_functions_t identification_get_printf_hooks();
+int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+							   const void *const *args);
 
 #endif /* IDENTIFICATION_H_ @} */

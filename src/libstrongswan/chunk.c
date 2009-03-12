@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -25,7 +25,6 @@
 #include "chunk.h"
 
 #include <debug.h>
-#include <printf_hook.h>
 
 /* required for chunk_hash */
 #undef get16bits
@@ -520,21 +519,20 @@ u_int32_t chunk_hash(chunk_t chunk)
 }
 
 /**
- * output handler in printf() for chunks
+ * Described in header.
  */
-static int chunk_print(FILE *stream, const struct printf_info *info,
-					   const void *const *args)
+int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+					  const void *const *args)
 {
 	chunk_t *chunk = *((chunk_t**)(args[0]));
 	bool first = TRUE;
 	chunk_t copy = *chunk;
 	int written = 0;
-	printf_hook_functions_t mem = mem_get_printf_hooks();
 	
-	if (!info->alt)
+	if (!spec->hash)
 	{
 		const void *new_args[] = {&chunk->ptr, &chunk->len};
-		return mem.print(stream, info, new_args);
+		return mem_printf_hook(dst, len, spec, new_args);
 	}
 	
 	while (copy.len > 0)
@@ -545,33 +543,10 @@ static int chunk_print(FILE *stream, const struct printf_info *info,
 		}
 		else
 		{
-			written += fprintf(stream, ":");
+			written += print_in_hook(dst, len, ":");
 		}
-		written += fprintf(stream, "%02x", *copy.ptr++);
+		written += print_in_hook(dst, len, "%02x", *copy.ptr++);
 		copy.len--;
 	}
 	return written;
 }
-
-/**
- * arginfo handler for printf() mem ranges
- */
-static int chunk_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
- * return printf hook functions for a chunk
- */
-printf_hook_functions_t chunk_get_printf_hooks()
-{
-	printf_hook_functions_t hooks = {chunk_print, chunk_arginfo};
-	
-	return hooks;
-}
-

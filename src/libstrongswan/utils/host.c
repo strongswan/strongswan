@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2009 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -21,7 +21,6 @@
 #define _GNU_SOURCE
 #include <netdb.h>
 #include <string.h>
-#include <printf.h>
 
 #include "host.h"
 
@@ -106,10 +105,10 @@ static bool is_anyaddr(private_host_t *this)
 }
 
 /**
- * output handler in printf()
+ * Described in header.
  */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
+int host_printf_hook(char *dst, size_t dstlen, printf_hook_spec_t *spec,
+					 const void *const *args)
 {
 	private_host_t *this = *((private_host_t**)(args[0]));
 	char buffer[INET6_ADDRSTRLEN + 16];
@@ -145,7 +144,7 @@ static int print(FILE *stream, const struct printf_info *info,
 					snprintf(buffer, sizeof(buffer),
 							 "(address conversion failed)");
 				}
-				else if (info->alt)
+				else if (spec->hash)
 				{
 					len = strlen(buffer);
 					snprintf(buffer + len, sizeof(buffer) - len,
@@ -157,34 +156,11 @@ static int print(FILE *stream, const struct printf_info *info,
 				break;
 		}
 	}
-	if (info->left)
+	if (spec->minus)
 	{
-		return fprintf(stream, "%-*s", info->width, buffer);
+		return print_in_hook(dst, dstlen, "%-*s", spec->width, buffer);
 	}
-	return fprintf(stream, "%*s", info->width, buffer);
-}
-
-
-/**
- * arginfo handler for printf() hosts
- */
-int arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
- * return printf hook functions for a host
- */
-printf_hook_functions_t host_get_printf_hooks()
-{
-	printf_hook_functions_t hooks = {print, arginfo};
-	
-	return hooks;
+	return print_in_hook(dst, dstlen, "%*s", spec->width, buffer);
 }
 
 /**

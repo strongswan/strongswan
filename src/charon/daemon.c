@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2009 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -644,9 +644,13 @@ int main(int argc, char *argv[])
 	/* initialize library */
 	library_init(STRONGSWAN_CONF);
 	lib->printf_hook->add_handler(lib->printf_hook, 'R',
-								  traffic_selector_get_printf_hooks());
+								  traffic_selector_printf_hook,
+								  PRINTF_HOOK_ARGTYPE_POINTER,
+								  PRINTF_HOOK_ARGTYPE_END);
 	lib->printf_hook->add_handler(lib->printf_hook, 'P',
-								  proposal_get_printf_hooks());
+								  proposal_printf_hook,
+								  PRINTF_HOOK_ARGTYPE_POINTER,
+								  PRINTF_HOOK_ARGTYPE_END);
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
 	

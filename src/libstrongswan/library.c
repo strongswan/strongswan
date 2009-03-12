@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -95,13 +96,24 @@ void library_init(char *settings)
 	pfh = printf_hook_create();
 	this->public.printf_hook = pfh;
 	
-	pfh->add_handler(pfh, 'b', mem_get_printf_hooks());
-	pfh->add_handler(pfh, 'B', chunk_get_printf_hooks());
-	pfh->add_handler(pfh, 'D', identification_get_printf_hooks());
-	pfh->add_handler(pfh, 'H', host_get_printf_hooks());
-	pfh->add_handler(pfh, 'N', enum_get_printf_hooks());
-	pfh->add_handler(pfh, 'T', time_get_printf_hooks());
-	pfh->add_handler(pfh, 'V', time_delta_get_printf_hooks());
+	pfh->add_handler(pfh, 'b', mem_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_INT,
+					 PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'B', chunk_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'D', identification_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'H', host_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'N', enum_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_INT,
+					 PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'T', time_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_INT,
+					 PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'V', time_delta_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_POINTER,
+					 PRINTF_HOOK_ARGTYPE_END);
 	
 	this->public.crypto = crypto_factory_create();
 	this->public.creds = credential_factory_create();
