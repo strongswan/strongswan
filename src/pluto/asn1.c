@@ -723,7 +723,7 @@ parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters)
     while (objectID < ALGORITHM_ID_ROOF)
     {
 	if (!extract_object(algorithmIdentifierObjects, &objectID, &object, &level, &ctx))
-	     return OID_UNKNOWN;
+	     return alg;
 
 	switch (objectID)
 	{
