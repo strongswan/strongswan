@@ -75,17 +75,19 @@ const chunk_t ASN1_rsaEncryption_id = strchunk(ASN1_rsaEncryption_id_str);
 const chunk_t ASN1_md5WithRSA_id = strchunk(ASN1_md5WithRSA_id_str);
 const chunk_t ASN1_sha1WithRSA_id = strchunk(ASN1_sha1WithRSA_id_str);
 
-/* ASN.1 definiton of an algorithmIdentifier */
+/* ASN.1 definition of an algorithmIdentifier */
 
 static const asn1Object_t algorithmIdentifierObjects[] = {
-  { 0, "algorithmIdentifier",	ASN1_SEQUENCE,	   ASN1_NONE }, /* 0 */
-  { 1,   "algorithm",		ASN1_OID,	   ASN1_BODY }, /* 1 */
-  { 1,   "parameters",		ASN1_EOC,	   ASN1_RAW  }  /* 2 */
+  { 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE }, /* 0 */
+  { 1,   "algorithm",		ASN1_OID,	ASN1_BODY }, /* 1 */
+  { 1,   "parameters",		ASN1_EOC,	ASN1_OPT |
+						ASN1_RAW  }, /* 2 */
+  { 1,   "end opt",		ASN1_EOC,	ASN1_END  }  /* 3 */
 };
 
 #define ALGORITHM_ID_ALG		1
 #define ALGORITHM_ID_PARAMETERS		2
-#define ALGORITHM_ID_ROOF		3
+#define ALGORITHM_ID_ROOF		4
 
 /*
  * return the ASN.1 encoded algorithm identifier
