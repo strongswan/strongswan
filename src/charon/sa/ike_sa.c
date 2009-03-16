@@ -1102,6 +1102,12 @@ static void resolve_hosts(private_ike_sa_t *this)
 			{
 				host->set_port(host, IKEV2_UDP_PORT);
 			}
+			else
+			{	/* fallback to address family specific %any(6), if configured */
+				host = host_create_from_dns(
+									this->ike_cfg->get_my_addr(this->ike_cfg),
+									0, IKEV2_UDP_PORT);
+			}
 		}
 	}
 	if (host)

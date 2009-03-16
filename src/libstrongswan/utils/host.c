@@ -374,6 +374,10 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 	{
 		return host_create_any(AF_INET);
 	}
+	if (streq(string, "%any6"))
+	{
+		return host_create_any(AF_INET6);
+	}
 	
 	this = host_create_empty();
 	if (strchr(string, '.'))
