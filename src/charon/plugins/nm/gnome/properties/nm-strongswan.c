@@ -176,18 +176,18 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
 	NMSettingVPN *settings;
 	GtkWidget *widget;
-	char *value;
+	const char *value;
 	gboolean active;
 	
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection, NM_TYPE_SETTING_VPN));
 	widget = glade_xml_get_widget (priv->xml, "address-entry");
-	value = g_hash_table_lookup (settings->data, "address");
+	value = nm_setting_vpn_get_data_item (settings, "address");
 	if (value)
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 	widget = glade_xml_get_widget (priv->xml, "certificate-button");
-	value = g_hash_table_lookup (settings->data, "certificate");
+	value = nm_setting_vpn_get_data_item (settings, "certificate");
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
@@ -196,7 +196,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = glade_xml_get_widget (priv->xml, "user-entry");
 	gtk_widget_set_no_show_all (widget, TRUE);
-	value = g_hash_table_lookup (settings->data, "user");
+	value = nm_setting_vpn_get_data_item (settings, "user");
 	if (value)
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
@@ -205,7 +205,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Certificate/private key"));
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Certificate/ssh-agent"));
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("EAP"));
-	value = g_hash_table_lookup (settings->data, "method");
+	value = nm_setting_vpn_get_data_item (settings, "method");
 	if (value) {
 		if (g_strcasecmp (value, "key") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
@@ -228,7 +228,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = glade_xml_get_widget (priv->xml, "usercert-button");
 	gtk_widget_set_no_show_all (widget, TRUE);
-	value = g_hash_table_lookup (settings->data, "usercert");
+	value = nm_setting_vpn_get_data_item (settings, "usercert");
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
@@ -237,13 +237,13 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = glade_xml_get_widget (priv->xml, "userkey-button");
 	gtk_widget_set_no_show_all (widget, TRUE);
-	value = g_hash_table_lookup (settings->data, "userkey");
+	value = nm_setting_vpn_get_data_item (settings, "userkey");
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
 	
 	widget = glade_xml_get_widget (priv->xml, "virtual-check");
-	value = g_hash_table_lookup (settings->data, "virtual");
+	value = nm_setting_vpn_get_data_item (settings, "virtual");
 	if (value && strcmp(value, "yes") == 0)
 	{
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
@@ -251,7 +251,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 	
 	widget = glade_xml_get_widget (priv->xml, "encap-check");
-	value = g_hash_table_lookup (settings->data, "encap");
+	value = nm_setting_vpn_get_data_item (settings, "encap");
 	if (value && strcmp(value, "yes") == 0)
 	{
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
@@ -259,7 +259,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 	
 	widget = glade_xml_get_widget (priv->xml, "ipcomp-check");
-	value = g_hash_table_lookup (settings->data, "ipcomp");
+	value = nm_setting_vpn_get_data_item (settings, "ipcomp");
 	if (value && strcmp(value, "yes") == 0)
 	{
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
@@ -296,18 +296,20 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	if (!check_validity (self, error))
 		return FALSE;
 	settings = NM_SETTING_VPN (nm_setting_vpn_new ());
-	settings->service_type = g_strdup (NM_DBUS_SERVICE_STRONGSWAN);
+	
+	g_object_set (settings, NM_SETTING_VPN_SERVICE_TYPE,
+				  NM_DBUS_SERVICE_STRONGSWAN, NULL);
 
 	widget = glade_xml_get_widget (priv->xml, "address-entry");
 	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 	if (str && strlen (str)) {
-		g_hash_table_insert (settings->data, g_strdup ("address"), g_strdup(str));
+		nm_setting_vpn_add_data_item (settings, "address", str);
 	}
 
 	widget = glade_xml_get_widget (priv->xml, "certificate-button");
 	str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
 	if (str) {
-		g_hash_table_insert (settings->data, g_strdup ("certificate"), g_strdup(str));
+		nm_setting_vpn_add_data_item (settings, "certificate", str);
 	}
 	
 	widget = glade_xml_get_widget (priv->xml, "method-combo");
@@ -318,12 +320,12 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 			widget = glade_xml_get_widget (priv->xml, "userkey-button");
 			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
 			if (str) {
-				g_hash_table_insert (settings->data, g_strdup ("userkey"), g_strdup(str));
+				nm_setting_vpn_add_data_item (settings, "userkey", str);
 			}
 			widget = glade_xml_get_widget (priv->xml, "usercert-button");
 			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
 			if (str) {
-				g_hash_table_insert (settings->data, g_strdup ("usercert"), g_strdup(str));
+				nm_setting_vpn_add_data_item (settings, "usercert", str);
 			}
 			str = "key";
 			break;
@@ -331,7 +333,7 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 			widget = glade_xml_get_widget (priv->xml, "usercert-button");
 			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
 			if (str) {
-				g_hash_table_insert (settings->data, g_strdup ("usercert"), g_strdup(str));
+				nm_setting_vpn_add_data_item (settings, "usercert", str);
 			}
 			str = "agent";
 			break;
@@ -339,27 +341,24 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 			widget = glade_xml_get_widget (priv->xml, "user-entry");
 			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 			if (str && strlen (str)) {
-				g_hash_table_insert (settings->data, g_strdup ("user"), g_strdup(str));
+				nm_setting_vpn_add_data_item (settings, "user", str);
 			}
 			str = "eap";
 			break;
 	}
-	g_hash_table_insert (settings->data, g_strdup ("method"), g_strdup(str));
+	nm_setting_vpn_add_data_item (settings, "method", str);
 	
 	widget = glade_xml_get_widget (priv->xml, "virtual-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
-	g_hash_table_insert (settings->data, g_strdup ("virtual"),
-			             g_strdup(active ? "yes" : "no"));
+	nm_setting_vpn_add_data_item (settings, "virtual", active ? "yes" : "no");
 	                     
 	widget = glade_xml_get_widget (priv->xml, "encap-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
-	g_hash_table_insert (settings->data, g_strdup ("encap"),
-			             g_strdup(active ? "yes" : "no"));
+	nm_setting_vpn_add_data_item (settings, "encap", active ? "yes" : "no");
 	                     
 	widget = glade_xml_get_widget (priv->xml, "ipcomp-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
-	g_hash_table_insert (settings->data, g_strdup ("ipcomp"),
-			             g_strdup(active ? "yes" : "no"));
+	nm_setting_vpn_add_data_item (settings, "ipcomp", active ? "yes" : "no");
 
 	nm_connection_add_setting (connection, NM_SETTING (settings));
 	return TRUE;

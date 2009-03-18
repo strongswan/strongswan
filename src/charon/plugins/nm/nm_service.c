@@ -83,8 +83,8 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
  */
 static void signal_failure(NMVPNPlugin *plugin)
 {
-	/* TODO: NM does not handle this failure!? 
-	nm_vpn_plugin_failure(plugin, NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED); */
+	/* TODO: NM does not handle this failure!? */
+	nm_vpn_plugin_failure(plugin, NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED); 
 	nm_vpn_plugin_set_state(plugin, NM_VPN_SERVICE_STATE_STOPPED);
 }
 
@@ -144,7 +144,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	nm_creds_t *creds;
 	NMSettingVPN *settings;
 	identification_t *user = NULL, *gateway;
-	char *address, *str;
+	const char *address, *str;
 	bool virtual, encap, ipcomp;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
@@ -164,20 +164,20 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	
 	DBG4(DBG_CFG, "received NetworkManager connection: %s",
 		 nm_setting_to_string(NM_SETTING(settings)));
-	address = g_hash_table_lookup(settings->data, "address");
+	address = nm_setting_vpn_get_data_item(settings, "address");
 	if (!address || !*address)
 	{
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 				    "Gateway address missing.");
 		return FALSE;
 	}
-	str = g_hash_table_lookup(settings->data, "virtual");
+	str = nm_setting_vpn_get_data_item(settings, "virtual");
 	virtual = str && streq(str, "yes");
-	str = g_hash_table_lookup(settings->data, "encap");
+	str = nm_setting_vpn_get_data_item(settings, "encap");
 	encap = str && streq(str, "yes");
-	str = g_hash_table_lookup(settings->data, "ipcomp");
+	str = nm_setting_vpn_get_data_item(settings, "ipcomp");
 	ipcomp = str && streq(str, "yes");
-	str = g_hash_table_lookup(settings->data, "method");
+	str = nm_setting_vpn_get_data_item(settings, "method");
 	if (str)
 	{
 		if (streq(str, "psk"))
@@ -202,7 +202,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	creds->clear(creds);
 	
 	/* gateway cert */
-	str = g_hash_table_lookup(settings->data, "certificate");
+	str = nm_setting_vpn_get_data_item(settings, "certificate");
 	if (str)
 	{
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
@@ -220,20 +220,20 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	if (auth_class == AUTH_CLASS_EAP)
 	{
 		/* username/password authentication ... */
-		str = g_hash_table_lookup(settings->data, "user");
+		str = nm_setting_vpn_get_data_item(settings, "user");
 		if (str)
 		{
 			user = identification_create_from_encoding(ID_KEY_ID,
 											chunk_create(str, strlen(str)));
-			str = g_hash_table_lookup(settings->secrets, "password");
-			creds->set_username_password(creds, user, str);
+			str = nm_setting_vpn_get_secret(settings, "password");
+			creds->set_username_password(creds, user, (char*)str);
 		}
 	}
 	
 	if (auth_class == AUTH_CLASS_PUBKEY)
 	{
 		/* ... or certificate/private key authenitcation */
-		str = g_hash_table_lookup(settings->data, "usercert");
+		str = nm_setting_vpn_get_data_item(settings, "usercert");
 		if (str)
 		{
 			public_key_t *public;
@@ -241,10 +241,16 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 			
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 									  BUILD_FROM_FILE, str, BUILD_END);	
-									  
+			if (!cert)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+							"Loading peer certificate failed.");
+				return FALSE;
+			}
 			/* try agent */  
-			str = g_hash_table_lookup(settings->secrets, "agent");
-			if (agent && str && cert)
+			str = nm_setting_vpn_get_secret(settings, "agent");
+			if (agent && str)
 			{
 				public = cert->get_public_key(cert);
 				if (public)
@@ -256,24 +262,37 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 												 BUILD_END);
 					public->destroy(public);
 				}
+				if (!private)
+				{
+					g_set_error(err, NM_VPN_PLUGIN_ERROR,
+								NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+								"Connecting to SSH agent failed.");
+				}
 			}
 			/* ... or key file */  
-			str = g_hash_table_lookup(settings->data, "userkey");
-			if (!agent && str && cert)
+			str = nm_setting_vpn_get_data_item(settings, "userkey");
+			if (!agent && str)
 			{
 				chunk_t secret, chunk;
 				bool pgp = FALSE;
 				
-				secret.ptr = g_hash_table_lookup(settings->secrets, "password");
+				secret.ptr = (char*)nm_setting_vpn_get_secret(settings,
+																 "password");
 				if (secret.ptr)
 				{
 					secret.len = strlen(secret.ptr);
 				}
-				if (pem_asn1_load_file(str, &secret, &chunk, &pgp))
+				if (pem_asn1_load_file((char*)str, &secret, &chunk, &pgp))
 				{
 					private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
 								KEY_RSA, BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
 					free(chunk.ptr);
+				}
+				if (!private)
+				{
+					g_set_error(err, NM_VPN_PLUGIN_ERROR,
+								NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+								"Loading private key failed.");
 				}
 			}
 			if (private)
@@ -285,8 +304,6 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 			else
 			{
 				DESTROY_IF(cert);
-				g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-							"Loading user certificate/private key failed.");
 				return FALSE;
 			}
 		}
@@ -302,7 +319,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	/**
 	 * Set up configurations
 	 */
-	ike_cfg = ike_cfg_create(TRUE, encap, "0.0.0.0", address);
+	ike_cfg = ike_cfg_create(TRUE, encap, "0.0.0.0", (char*)address);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create(CONFIG_NAME, 2, ike_cfg,
 					user, gateway->clone(gateway),
@@ -367,40 +384,40 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 							 char **setting_name, GError **error)
 {
 	NMSettingVPN *settings;
-	char *method, *path;
+	const char *method, *path;
 	chunk_t secret = chunk_empty, key;
 	bool pgp = FALSE;
 	
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
 														NM_TYPE_SETTING_VPN));
-	method = g_hash_table_lookup(settings->data, "method");
+	method = nm_setting_vpn_get_data_item(settings, "method");
 	if (method)
 	{
 		if (streq(method, "eap"))
 		{
-			if (g_hash_table_lookup(settings->secrets, "password"))
+			if (nm_setting_vpn_get_secret(settings, "password"))
 			{
 				return FALSE;
 			}
 		}
 		else if (streq(method, "agent"))
 		{
-			if (g_hash_table_lookup(settings->secrets, "agent"))
+			if (nm_setting_vpn_get_secret(settings, "agent"))
 			{
 				return FALSE;
 			}
 		}
 		else if (streq(method, "key"))
 		{
-			path = g_hash_table_lookup(settings->data, "userkey");
+			path = nm_setting_vpn_get_data_item(settings, "userkey");
 			if (path)
 			{
-				secret.ptr = g_hash_table_lookup(settings->secrets, "password");
+				secret.ptr = (char*)nm_setting_vpn_get_secret(settings, "password");
 				if (secret.ptr)
 				{
 					secret.len = strlen(secret.ptr);
 				}
-				if (pem_asn1_load_file(path, &secret, &key, &pgp))
+				if (pem_asn1_load_file((char*)path, &secret, &key, &pgp))
 				{
 					free(key.ptr);
 					return FALSE;
@@ -434,6 +451,9 @@ static gboolean disconnect(NMVPNPlugin *plugin, GError **err)
 		}
 	}
 	enumerator->destroy(enumerator);
+	
+	g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_GENERAL,
+				"Connection not found.");
 	return FALSE;
 }
 
