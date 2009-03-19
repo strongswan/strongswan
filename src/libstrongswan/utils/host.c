@@ -119,7 +119,8 @@ int host_printf_hook(char *dst, size_t dstlen, printf_hook_spec_t *spec,
 	}
 	else if (is_anyaddr(this))
 	{
-		snprintf(buffer, sizeof(buffer), "%%any");
+		snprintf(buffer, sizeof(buffer), "%%any%s",
+				 this->address.sa_family == AF_INET6 ? "6" : "");
 	}
 	else
 	{
