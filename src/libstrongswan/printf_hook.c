@@ -99,7 +99,7 @@ static int custom_print(FILE *stream, const struct printf_info *info,
 	written = handler->hook(buf, sizeof(buf), &spec, args);
 	if (written > 0)
 	{
-		fwrite(buf, 1, written, stream);
+		ignore_result(fwrite(buf, 1, written, stream));
 	}
 	return written;
 }
