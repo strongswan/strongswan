@@ -365,6 +365,18 @@ static private_host_t *host_create_empty(void)
 }
 
 /*
+ * Create a %any host with port
+ */
+static host_t *host_create_any_port(int family, u_int16_t port)
+{
+	host_t *this;
+	
+	this = host_create_any(family);
+	this->set_port(this, port);
+	return this;
+}
+
+/*
  * Described in header.
  */
 host_t *host_create_from_string(char *string, u_int16_t port)
@@ -373,11 +385,11 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 	
 	if (streq(string, "%any"))
 	{
-		return host_create_any(AF_INET);
+		return host_create_any_port(AF_INET, port);
 	}
 	if (streq(string, "%any6"))
 	{
-		return host_create_any(AF_INET6);
+		return host_create_any_port(AF_INET6, port);
 	}
 	
 	this = host_create_empty();
@@ -432,11 +444,11 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 
 	if (streq(string, "%any"))
 	{
-		return host_create_any(af ? af : AF_INET);
+		return host_create_any_port(af ? af : AF_INET, port);
 	}
 	if (streq(string, "%any6"))
 	{
-		return host_create_any(af ? af : AF_INET6);
+		return host_create_any_port(af ? af : AF_INET6, port);
 	}
 	else if (strchr(string, ':'))
 	{
