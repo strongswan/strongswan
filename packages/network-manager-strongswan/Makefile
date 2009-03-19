@@ -1,6 +1,6 @@
 
 SOURCE:=../../src/charon/plugins/nm/gnome
-VERSION:=1.0.0
+VERSION:=1.1.0rc1
 
 source:	prepare
 	cd build/NetworkManager-strongswan-$(VERSION) && debuild -S

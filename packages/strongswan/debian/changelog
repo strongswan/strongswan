@@ -1,3 +1,9 @@
+strongswan (4.2.13rc1-1~ppa1~jaunty1) jaunty; urgency=low
+
+  * ported nm plugin to NetworkManager 7.1
+
+ -- Martin Willi <martin@strongswan.org>  Thu, 19 Mar 2009 10:22:35 +0100
+
 strongswan (4.2.12-6~ppa1~intrepid1) intrepid; urgency=low
 
   * fixed MSCHAPv2 password lookup

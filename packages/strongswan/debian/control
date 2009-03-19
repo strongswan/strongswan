@@ -3,7 +3,7 @@ Section: net
 Priority: extra
 Maintainer: Martin Willi <martin@strongswan.org>
 Standards-Version: 3.8.0
-Build-Depends: debhelper (>= 7.0.0), libssl-dev (>= 0.9.8), network-manager-dev (>= 0.7~~svn20080818), libnm-glib-dev (>= 0.7~~svn20080818), libpam0g-dev, libcurl4-gnutls-dev, libldap2-dev, libgmp3-dev
+Build-Depends: debhelper (>= 7.0.0), libssl-dev (>= 0.9.8), network-manager-dev (>= 0.7.1~rc1), libnm-glib-dev (>= 0.7.1~rc1), libpam0g-dev, libcurl4-gnutls-dev, libldap2-dev, libgmp3-dev
 Homepage: http://www.strongswan.org
 
 Package: strongswan
@@ -172,7 +172,7 @@ Description: strongSwan EAP plugin implementing the MSCHAPv2 method
 
 Package: strongswan-nm
 Architecture: any
-Depends: ${shlibs:Depends}, strongswan-charon, network-manager (>= 0.7~~svn20080818)
+Depends: ${shlibs:Depends}, strongswan-charon, network-manager (>= 0.7.1~rc1)
 Description: strongSwan plugin to interact with NetworkManager
  This plugin provides an interface which allows NetworkManager to configure
  and control the IKEv2 daemon directly through DBUS. It is designed to work
