@@ -7,6 +7,8 @@ strongswan-4.2.13
 - Fixed a crash in the IKEv2 charon daemon occuring with
   mixed RAM-based and SQL-based virtual IP address pools. 
 
+- Ported nm plugin to NetworkManager 7.1.
+
 
 strongswan-4.2.12
 -----------------
