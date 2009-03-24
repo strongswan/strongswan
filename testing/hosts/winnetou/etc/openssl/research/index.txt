@@ -1,4 +1,4 @@
 V	100322070423Z		01	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=carol@strongswan.org
 V	100615195710Z		02	unknown	/C=CH/O=Linux strongSwan/OU=Sales/CN=Sales CA
 V	120323210330Z		03	unknown	/C=CH/O=Linux strongSwan/OU=Research OCSP Signing Authority/CN=ocsp.research.strongswan.org
-V	120418092554Z		04	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=carol@strongswan.org
+V	140323203747Z		04	unknown	/C=CH/O=Linux strongSwan/OU=Research no CDP/CN=carol@strongswan.org
