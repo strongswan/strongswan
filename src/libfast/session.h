@@ -77,4 +77,4 @@ struct session_t {
  */
 session_t *session_create(context_t *context);
 
-#endif /* SESSION_H_ @} */
+#endif /** SESSION_H_ @}*/

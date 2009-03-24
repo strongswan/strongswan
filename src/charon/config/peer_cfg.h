@@ -340,7 +340,6 @@ struct peer_cfg_t {
  * @param reauth_time		timeout before starting reauthentication
  * @param jitter_time		timerange to randomly substract from rekey/reauth time
  * @param over_time			maximum overtime before closing a rekeying/reauth SA
- * @param reauth			sould be done reauthentication instead of rekeying?
  * @param mobike			use MOBIKE (RFC4555) if peer supports it
  * @param dpd				DPD check interval, 0 to disable
  * @param virtual_ip		virtual IP for local host, or NULL
@@ -350,7 +349,7 @@ struct peer_cfg_t {
  * @param peer_id			ID that identifies our peer at the mediation server
  * @return 					peer_cfg_t object
  */
-peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
+peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
 							cert_policy_t cert_policy, unique_policy_t unique,
 							u_int32_t keyingtries, u_int32_t rekey_time,
@@ -360,4 +359,4 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id);
 
-#endif /* PEER_CFG_H_ @} */
+#endif /** PEER_CFG_H_ @}*/

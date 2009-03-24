@@ -350,4 +350,4 @@ struct bus_t {
  */
 bus_t *bus_create();
 
-#endif /* BUS_H_ @} */
+#endif /** BUS_H_ @}*/

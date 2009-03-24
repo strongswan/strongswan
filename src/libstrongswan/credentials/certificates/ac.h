@@ -82,5 +82,4 @@ struct ac_t {
 	bool (*equals_holder) (ac_t *this, ac_t *other);
 };
 
-#endif /* AC_H_ @}*/
-
+#endif /** AC_H_ @}*/

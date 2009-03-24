@@ -207,4 +207,4 @@ host_t *host_create_any(int family);
 int host_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					 const void *const *args);
 
-#endif /* HOST_H_ @}*/
+#endif /** HOST_H_ @}*/

@@ -121,4 +121,4 @@ id_payload_t *id_payload_create(payload_type_t payload_type);
 id_payload_t *id_payload_create_from_identification(payload_type_t payload_type,
 											identification_t *identification);
 
-#endif /* ID_PAYLOAD_H_ @} */
+#endif /** ID_PAYLOAD_H_ @}*/

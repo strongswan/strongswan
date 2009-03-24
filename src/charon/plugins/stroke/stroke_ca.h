@@ -79,4 +79,4 @@ struct stroke_ca_t {
  */
 stroke_ca_t *stroke_ca_create(stroke_cred_t *cred);
 
-#endif /* STROKE_CA_H_ @}*/
+#endif /** STROKE_CA_H_ @}*/

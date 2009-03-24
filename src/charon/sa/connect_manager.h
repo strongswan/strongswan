@@ -120,4 +120,4 @@ struct connect_manager_t {
  */
 connect_manager_t *connect_manager_create(void);
 
-#endif /*CONNECT_MANAGER_H_ @} */
+#endif /** CONNECT_MANAGER_H_ @}*/

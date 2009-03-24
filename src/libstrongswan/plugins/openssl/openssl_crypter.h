@@ -48,4 +48,4 @@ struct openssl_crypter_t {
 openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 												  size_t key_size);
 
-#endif /* OPENSSL_CRYPTER_H_ @}*/
+#endif /** OPENSSL_CRYPTER_H_ @}*/

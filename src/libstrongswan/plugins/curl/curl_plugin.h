@@ -44,4 +44,4 @@ struct curl_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* CURL_PLUGIN_H_ @}*/
+#endif /** CURL_PLUGIN_H_ @}*/

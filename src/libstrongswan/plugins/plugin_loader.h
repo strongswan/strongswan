@@ -64,4 +64,4 @@ struct plugin_loader_t {
  */
 plugin_loader_t *plugin_loader_create();
 
-#endif /* PLUGIN_LOADER_H_ @}*/
+#endif /** PLUGIN_LOADER_H_ @}*/

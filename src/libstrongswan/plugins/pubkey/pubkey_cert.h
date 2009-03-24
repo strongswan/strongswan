@@ -48,4 +48,4 @@ struct pubkey_cert_t {
  */
 builder_t *pubkey_cert_builder(certificate_type_t type);
 
-#endif /* PUBKEY_CERT_H_ @}*/
+#endif /** PUBKEY_CERT_H_ @}*/

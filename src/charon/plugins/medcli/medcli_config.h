@@ -52,4 +52,4 @@ struct medcli_config_t {
  */
 medcli_config_t *medcli_config_create(database_t *db);
 
-#endif /* MEDCLI_CONFIG_H_ @}*/
+#endif /** MEDCLI_CONFIG_H_ @}*/

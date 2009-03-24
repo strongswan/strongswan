@@ -45,4 +45,4 @@ struct x509_crl_t {
  */
 builder_t *x509_crl_builder(certificate_type_t type);
 
-#endif /* X509_CRL_H_ @}*/
+#endif /** X509_CRL_H_ @}*/

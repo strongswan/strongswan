@@ -48,4 +48,4 @@ struct process_message_job_t {
  */
 process_message_job_t *process_message_job_create(message_t *message);
 
-#endif /*PROCESS_MESSAGE_JOB_H_ @} */
+#endif /** PROCESS_MESSAGE_JOB_H_ @}*/

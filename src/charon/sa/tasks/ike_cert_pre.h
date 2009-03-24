@@ -52,4 +52,4 @@ struct ike_cert_pre_t {
  */
 ike_cert_pre_t *ike_cert_pre_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_CERT_PRE_H_ @} */
+#endif /** IKE_CERT_PRE_H_ @}*/

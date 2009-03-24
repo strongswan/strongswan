@@ -78,4 +78,4 @@ struct unknown_payload_t {
  */
 unknown_payload_t *unknown_payload_create(void);
 
-#endif /* UNKNOWN_PAYLOAD_H_ @} */
+#endif /** UNKNOWN_PAYLOAD_H_ @}*/

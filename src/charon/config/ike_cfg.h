@@ -133,7 +133,6 @@ struct ike_cfg_t {
  *
  * Supplied hosts become owned by ike_cfg, the name gets cloned.
  *
- * @param name			ike_cfg identifier
  * @param certreq		TRUE to send a certificate request
  * @param force_encap	enforce UDP encapsulation by faking NATD notify
  * @param me			address/DNS name of local peer
@@ -143,4 +142,4 @@ struct ike_cfg_t {
 ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap, 
 						  char *me, char *other);
 
-#endif /* IKE_CFG_H_ @} */
+#endif /** IKE_CFG_H_ @}*/

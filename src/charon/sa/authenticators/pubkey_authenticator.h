@@ -47,4 +47,4 @@ struct pubkey_authenticator_t {
  */
 pubkey_authenticator_t *pubkey_authenticator_create(ike_sa_t *ike_sa);
 
-#endif /* PUBKEY_AUTHENTICATOR_H_ @} */
+#endif /** PUBKEY_AUTHENTICATOR_H_ @}*/

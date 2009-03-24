@@ -33,4 +33,4 @@
  */
 builder_t *pubkey_public_key_builder(key_type_t type);
 
-#endif /*PUBKEY_RSA_PUBLIC_KEY_H_ @}*/
+#endif /** PUBKEY_RSA_PUBLIC_KEY_H_ @}*/

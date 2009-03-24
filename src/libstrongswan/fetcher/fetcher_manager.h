@@ -71,4 +71,4 @@ struct fetcher_manager_t {
  */
 fetcher_manager_t *fetcher_manager_create();
 
-#endif /* FETCHER_MANAGER_H_ @}*/
+#endif /** FETCHER_MANAGER_H_ @}*/

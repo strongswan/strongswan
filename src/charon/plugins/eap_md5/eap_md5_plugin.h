@@ -46,4 +46,4 @@ struct eap_md5_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* EAP_MD5_PLUGIN_H_ @}*/
+#endif /** EAP_MD5_PLUGIN_H_ @}*/

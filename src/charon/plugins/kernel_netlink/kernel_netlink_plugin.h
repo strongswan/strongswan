@@ -46,4 +46,4 @@ struct kernel_netlink_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* KERNEL_NETLINK_PLUGIN_H_ @} */
+#endif /** KERNEL_NETLINK_PLUGIN_H_ @}*/

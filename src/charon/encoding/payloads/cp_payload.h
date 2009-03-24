@@ -110,4 +110,4 @@ struct cp_payload_t {
  */
 cp_payload_t *cp_payload_create(void);
 
-#endif /*CP_PAYLOAD_H_ @} */
+#endif /** CP_PAYLOAD_H_ @}*/

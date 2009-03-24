@@ -234,10 +234,10 @@ struct child_cfg_t {
 	/**
 	 * Sets two options needed for Mobile IPv6 interoperability
 	 * 
-	 * @proxy_mode			use IPsec transport proxy mode (default FALSE)
-	 * @install_policy		install IPsec kernel policies (default TRUE)
+	 * @param proxy_mode	use IPsec transport proxy mode (default FALSE)
+	 * @param install_policy install IPsec kernel policies (default TRUE)
 	 */
-	void (*set_mipv6_options)(child_cfg_t *this, bool proxy_mod,
+	void (*set_mipv6_options)(child_cfg_t *this, bool proxy_mode,
 												 bool install_policy);
 
 	/**
@@ -299,4 +299,4 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  char *updown, bool hostaccess, ipsec_mode_t mode,
 							  action_t dpd_action, action_t close_action, bool ipcomp);
 
-#endif /* CHILD_CFG_H_ @} */
+#endif /** CHILD_CFG_H_ @}*/

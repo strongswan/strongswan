@@ -145,4 +145,4 @@ struct task_t {
 	void (*destroy) (task_t *this);
 };
 
-#endif /* TASK_H_ @} */
+#endif /** TASK_H_ @}*/

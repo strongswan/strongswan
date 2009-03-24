@@ -54,4 +54,4 @@ struct retransmit_job_t {
 retransmit_job_t *retransmit_job_create(u_int32_t message_id,
 										ike_sa_id_t *ike_sa_id);
 
-#endif /* RETRANSMIT_JOB_H_ @} */
+#endif /** RETRANSMIT_JOB_H_ @}*/

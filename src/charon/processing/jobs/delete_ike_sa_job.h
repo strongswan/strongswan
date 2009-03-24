@@ -56,4 +56,4 @@ struct delete_ike_sa_job_t {
 delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id,
 											  bool delete_if_established);
 
-#endif /* DELETE_IKE_SA_JOB_H_ @} */
+#endif /** DELETE_IKE_SA_JOB_H_ @}*/

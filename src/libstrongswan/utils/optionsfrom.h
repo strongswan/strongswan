@@ -56,4 +56,4 @@ struct options_t {
  */
 options_t *options_create(void);
 
-#endif /*OPTIONSFROM_H_ @} */
+#endif /** OPTIONSFROM_H_ @}*/

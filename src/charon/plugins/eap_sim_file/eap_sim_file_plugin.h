@@ -46,4 +46,4 @@ struct eap_sim_file_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* EAP_SIM_FILE_PLUGIN_H_ @}*/
+#endif /** EAP_SIM_FILE_PLUGIN_H_ @}*/

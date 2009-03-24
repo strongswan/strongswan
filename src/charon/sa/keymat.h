@@ -162,4 +162,4 @@ struct keymat_t {
  */
 keymat_t *keymat_create(bool initiator);
 
-#endif /* KEYMAT_ @}*/
+#endif /** KEYMAT_ @}*/

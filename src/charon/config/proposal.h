@@ -243,4 +243,4 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 int proposal_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 						 const void *const *args);
 
-#endif /* PROPOSAL_H_ @} */
+#endif /** PROPOSAL_H_ @}*/

@@ -187,4 +187,4 @@ struct eap_method_t {
 typedef eap_method_t *(*eap_constructor_t)(identification_t *server,
 										   identification_t *peer);
 
-#endif /* EAP_METHOD_H_ @} */
+#endif /** EAP_METHOD_H_ @}*/

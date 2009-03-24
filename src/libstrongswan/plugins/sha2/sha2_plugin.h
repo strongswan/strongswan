@@ -44,4 +44,4 @@ struct sha2_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* SHA2_PLUGIN_H_ @}*/
+#endif /** SHA2_PLUGIN_H_ @}*/

@@ -330,4 +330,4 @@ struct daemon_t {
  */
 extern daemon_t *charon;
 
-#endif /*DAEMON_H_ @} */
+#endif /** DAEMON_H_ @}*/

@@ -46,4 +46,4 @@ struct eap_mschapv2_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* EAP_MSCHAPV2_PLUGIN_H_ @}*/
+#endif /** EAP_MSCHAPV2_PLUGIN_H_ @}*/

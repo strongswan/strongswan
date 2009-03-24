@@ -132,4 +132,4 @@ void library_deinit();
  */
 extern library_t *lib;
 
-#endif /* LIBRARY_H_ @}*/
+#endif /** LIBRARY_H_ @}*/

@@ -44,4 +44,4 @@ struct des_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* DES_PLUGIN_H_ @}*/
+#endif /** DES_PLUGIN_H_ @}*/

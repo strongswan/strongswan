@@ -47,4 +47,4 @@ struct padlock_aes_crypter_t {
 padlock_aes_crypter_t *padlock_aes_crypter_create(encryption_algorithm_t algo,
 												  size_t key_size);
 
-#endif /* PADLOCK_AES_CRYPTER_H_ @}*/
+#endif /** PADLOCK_AES_CRYPTER_H_ @}*/

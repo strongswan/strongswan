@@ -81,4 +81,4 @@ struct ocsp_response_t {
 	enumerator_t* (*create_cert_enumerator)(ocsp_response_t *this);	
 };
 
-#endif /* OCSP_RESPONSE_H_ @}*/
+#endif /** OCSP_RESPONSE_H_ @}*/

@@ -52,4 +52,4 @@ struct auth_info_wrapper_t {
  */
 auth_info_wrapper_t *auth_info_wrapper_create(auth_info_t *auth);
 
-#endif /* AUTH_INFO_WRAPPER_H_ @}*/
+#endif /** AUTH_INFO_WRAPPER_H_ @}*/

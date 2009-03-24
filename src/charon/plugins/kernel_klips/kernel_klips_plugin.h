@@ -46,4 +46,4 @@ struct kernel_klips_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* KERNEL_KLIPS_PLUGIN_H_ @} */
+#endif /** KERNEL_KLIPS_PLUGIN_H_ @}*/

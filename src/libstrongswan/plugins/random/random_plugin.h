@@ -44,4 +44,4 @@ struct random_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* RANDOM_PLUGIN_H_ @}*/
+#endif /** RANDOM_PLUGIN_H_ @}*/

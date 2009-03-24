@@ -81,4 +81,4 @@ struct eap_manager_t {
  */
 eap_manager_t *eap_manager_create();
 
-#endif /* EAP_MANAGER_H_ @}*/
+#endif /** EAP_MANAGER_H_ @}*/

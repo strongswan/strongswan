@@ -92,11 +92,11 @@ bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force);
 /**
  * Convert a chunk of data to hex encoding.
  *
- * The resulting string is '\0' terminated, but the chunk does not include
- * the '\0'. If buf is supplied, it must hold at least (chunk.len * 2 + 1).
+ * The resulting string is '\\0' terminated, but the chunk does not include
+ * the '\\0'. If buf is supplied, it must hold at least (chunk.len * 2 + 1).
  *
  * @param chunk			data to convert
- * @param buff			buffer to write to, NULL to malloc
+ * @param buf			buffer to write to, NULL to malloc
  * @param uppercase		TRUE to use uppercase letters
  * @return				chunk of encoded data
  */
@@ -117,11 +117,11 @@ chunk_t chunk_from_hex(chunk_t hex, char *buf);
 /**
  * Convert a chunk of data to its base64 encoding.
  *
- * The resulting string is '\0' terminated, but the chunk does not include
- * the '\0'. If buf is supplied, it must hold at least (chunk.len * 4 / 3 + 1).
+ * The resulting string is '\\0' terminated, but the chunk does not include
+ * the '\\0'. If buf is supplied, it must hold at least (chunk.len * 4 / 3 + 1).
  *
  * @param chunk			data to convert
- * @param buff			buffer to write to, NULL to malloc
+ * @param buf			buffer to write to, NULL to malloc
  * @return				chunk of encoded data
  */
 chunk_t chunk_to_base64(chunk_t chunk, char *buf);
@@ -249,4 +249,4 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
 int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					  const void *const *args);
 
-#endif /* CHUNK_H_ @}*/
+#endif /** CHUNK_H_ @}*/

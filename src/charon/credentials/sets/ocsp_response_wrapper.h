@@ -52,4 +52,4 @@ struct ocsp_response_wrapper_t {
  */
 ocsp_response_wrapper_t *ocsp_response_wrapper_create(ocsp_response_t *response);
 
-#endif /* OCSP_RESPONSE_WRAPPER_H_ @}*/
+#endif /** OCSP_RESPONSE_WRAPPER_H_ @}*/

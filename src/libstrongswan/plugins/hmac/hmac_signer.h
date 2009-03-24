@@ -52,4 +52,4 @@ struct hmac_signer_t {
  */
 hmac_signer_t *hmac_signer_create(integrity_algorithm_t algo);
 
-#endif /*HMAC_SIGNER_H_ @}*/
+#endif /** HMAC_SIGNER_H_ @}*/

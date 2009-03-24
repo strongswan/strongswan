@@ -59,4 +59,4 @@ struct child_delete_t {
 child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 									u_int32_t spi);
 
-#endif /* CHILD_DELETE_H_ @} */
+#endif /** CHILD_DELETE_H_ @}*/

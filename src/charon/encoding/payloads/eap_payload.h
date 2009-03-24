@@ -128,4 +128,4 @@ eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier);
  */
 eap_payload_t *eap_payload_create_nak(u_int8_t identifier);
 
-#endif /* EAP_PAYLOAD_H_ @} */
+#endif /** EAP_PAYLOAD_H_ @}*/

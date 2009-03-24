@@ -56,4 +56,4 @@ struct ike_auth_t {
  */
 ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_AUTH_H_ @} */
+#endif /** IKE_AUTH_H_ @}*/

@@ -44,4 +44,4 @@ struct control_controller_t {
  */
 controller_t *control_controller_create(context_t *context, void *param);
 
-#endif /* CONTROL_CONTROLLER_H_ */
+#endif /** CONTROL_CONTROLLER_H_ @}*/

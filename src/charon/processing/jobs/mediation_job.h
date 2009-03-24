@@ -73,4 +73,4 @@ mediation_job_t *mediation_job_create(identification_t *peer_id,
 mediation_job_t *mediation_callback_job_create(identification_t *requester,
 		identification_t *peer_id);
 
-#endif /*MEDIATION_JOB_H_ @} */
+#endif /** MEDIATION_JOB_H_ @}*/

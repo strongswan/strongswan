@@ -353,4 +353,4 @@ message_t * message_create_from_packet(packet_t *packet);
  */
 message_t * message_create(void);
 
-#endif /*MESSAGE_H_ @} */
+#endif /** MESSAGE_H_ @}*/

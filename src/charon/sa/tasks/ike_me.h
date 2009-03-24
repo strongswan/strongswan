@@ -97,4 +97,4 @@ struct ike_me_t {
  */
 ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /*IKE_ME_H_ @} */
+#endif /** IKE_ME_H_ @}*/

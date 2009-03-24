@@ -44,4 +44,4 @@ struct aes_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* AES_PLUGIN_H_ @}*/
+#endif /** AES_PLUGIN_H_ @}*/

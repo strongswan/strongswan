@@ -58,5 +58,4 @@ struct uci_parser_t {
  */
 uci_parser_t *uci_parser_create(char *package);
 
-#endif /* UCI_PARSER_H_ @}*/
-
+#endif /** UCI_PARSER_H_ @}*/

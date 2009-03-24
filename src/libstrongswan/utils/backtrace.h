@@ -59,5 +59,4 @@ struct backtrace_t {
  */
 backtrace_t *backtrace_create(int skip);
 
-#endif /* BACKTRACE_H_ @}*/
-
+#endif /** BACKTRACE_H_ @}*/

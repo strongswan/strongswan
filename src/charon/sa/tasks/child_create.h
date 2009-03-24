@@ -77,4 +77,4 @@ struct child_create_t {
  */
 child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config);
 
-#endif /* CHILD_CREATE_H_ @} */
+#endif /** CHILD_CREATE_H_ @}*/

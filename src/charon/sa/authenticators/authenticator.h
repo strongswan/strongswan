@@ -162,4 +162,4 @@ authenticator_t *authenticator_create_from_class(ike_sa_t *ike_sa,
 authenticator_t *authenticator_create_from_method(ike_sa_t *ike_sa,	
 												  auth_method_t method);
 
-#endif /* AUTHENTICATOR_H_ @} */
+#endif /** AUTHENTICATOR_H_ @}*/

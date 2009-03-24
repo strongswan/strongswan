@@ -66,4 +66,4 @@ struct scheduler_t {
  */
 scheduler_t *scheduler_create(void);
 
-#endif /*SCHEDULER_H_ @} */
+#endif /** SCHEDULER_H_ @}*/

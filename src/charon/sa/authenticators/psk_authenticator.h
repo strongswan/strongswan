@@ -46,4 +46,4 @@ struct psk_authenticator_t {
  */
 psk_authenticator_t *psk_authenticator_create(ike_sa_t *ike_sa);
 
-#endif /* PSK_AUTHENTICATOR_H_ @} */
+#endif /** PSK_AUTHENTICATOR_H_ @}*/

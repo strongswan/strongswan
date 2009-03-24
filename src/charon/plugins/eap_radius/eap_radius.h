@@ -47,4 +47,4 @@ struct eap_radius_t {
  */
 eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer);
 
-#endif /* EAP_RADIUS_H_ @}*/
+#endif /** EAP_RADIUS_H_ @}*/

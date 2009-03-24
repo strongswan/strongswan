@@ -120,4 +120,4 @@ struct database_t {
     void (*destroy)(database_t *this);
 };
 
-#endif /* DATABASE_H_ @}*/
+#endif /** DATABASE_H_ @}*/

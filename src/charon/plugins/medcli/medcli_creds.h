@@ -52,4 +52,4 @@ struct medcli_creds_t {
  */
 medcli_creds_t *medcli_creds_create(database_t *database);
 
-#endif /* MEDCLI_CREDS_H_ @}*/
+#endif /** MEDCLI_CREDS_H_ @}*/

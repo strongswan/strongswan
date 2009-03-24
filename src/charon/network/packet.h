@@ -114,4 +114,4 @@ struct packet_t {
  */
 packet_t *packet_create(void);
 
-#endif /*PACKET_H_ @} */
+#endif /** PACKET_H_ @}*/

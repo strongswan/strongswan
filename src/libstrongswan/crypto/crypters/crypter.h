@@ -122,4 +122,4 @@ struct crypter_t {
 	void (*destroy) (crypter_t *this);
 };
 
-#endif /*CRYPTER_H_ @} */
+#endif /** CRYPTER_H_ @}*/

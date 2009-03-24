@@ -52,4 +52,4 @@ struct sql_cred_t {
  */
 sql_cred_t *sql_cred_create(database_t *db);
 
-#endif /* SQL_CRED_H_ @}*/
+#endif /** SQL_CRED_H_ @}*/

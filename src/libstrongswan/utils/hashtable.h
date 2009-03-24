@@ -113,4 +113,4 @@ struct hashtable_t {
 hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 							  u_int capacity);
 
-#endif /* HASHTABLE_H_ @} */
+#endif /** HASHTABLE_H_ @}*/

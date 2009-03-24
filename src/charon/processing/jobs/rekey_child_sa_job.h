@@ -56,4 +56,4 @@ struct rekey_child_sa_job_t {
 rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid, 
 												protocol_id_t protocol,
 												u_int32_t spi);
-#endif /* REKEY_CHILD_SA_JOB_H_ @} */
+#endif /** REKEY_CHILD_SA_JOB_H_ @}*/

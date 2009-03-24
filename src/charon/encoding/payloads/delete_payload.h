@@ -83,4 +83,4 @@ struct delete_payload_t {
  */
 delete_payload_t *delete_payload_create(protocol_id_t protocol_id);
 
-#endif /* DELETE_PAYLOAD_H_ @} */
+#endif /** DELETE_PAYLOAD_H_ @}*/

@@ -69,4 +69,4 @@ struct receiver_t {
  */
 receiver_t * receiver_create(void);
 
-#endif /*RECEIVER_H_ @} */
+#endif /** RECEIVER_H_ @}*/

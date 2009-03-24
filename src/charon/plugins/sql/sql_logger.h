@@ -52,4 +52,4 @@ struct sql_logger_t {
  */
 sql_logger_t *sql_logger_create(database_t *db);
 
-#endif /* SQL_LOGGER_H_ @}*/
+#endif /** SQL_LOGGER_H_ @}*/

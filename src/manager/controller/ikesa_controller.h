@@ -44,4 +44,4 @@ struct ikesa_controller_t {
  */
 controller_t *ikesa_controller_create(context_t *context, void *param);
 
-#endif /* IKESA_CONTROLLER_H_ @} */
+#endif /** IKESA_CONTROLLER_H_ @}*/

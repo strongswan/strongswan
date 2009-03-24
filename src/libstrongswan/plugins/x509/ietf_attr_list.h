@@ -77,5 +77,5 @@ chunk_t ietfAttr_list_encode(linked_list_t *list);
  */
 void ietfAttr_list_destroy(linked_list_t *list);
 
-#endif /* IETF_ATTR_LIST_H_ @}*/
+#endif /** IETF_ATTR_LIST_H_ @}*/
 

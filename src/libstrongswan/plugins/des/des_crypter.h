@@ -46,4 +46,4 @@ struct des_crypter_t {
 des_crypter_t *des_crypter_create(encryption_algorithm_t algo);
 
 
-#endif /* DES_CRYPTER_H_ @}*/
+#endif /** DES_CRYPTER_H_ @}*/

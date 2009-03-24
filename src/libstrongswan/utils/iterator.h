@@ -113,4 +113,4 @@ struct iterator_t {
 	void (*destroy) (iterator_t *this);
 };
 
-#endif /*ITERATOR_H_ @} */
+#endif /** ITERATOR_H_ @}*/

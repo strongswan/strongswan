@@ -86,4 +86,4 @@ struct vendor_id_payload_t {
  */
 vendor_id_payload_t *vendor_id_payload_create(void);
 
-#endif /* VENDOR_ID_PAYLOAD_H_ @} */
+#endif /** VENDOR_ID_PAYLOAD_H_ @}*/

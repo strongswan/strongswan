@@ -51,4 +51,4 @@ struct x509_ocsp_request_t {
  */
 builder_t *x509_ocsp_request_builder(certificate_type_t type);
 
-#endif /* X509_OCSP_REQUEST_H_ @}*/
+#endif /** X509_OCSP_REQUEST_H_ @}*/

@@ -48,4 +48,4 @@ struct hmac_prf_t {
  */
 hmac_prf_t *hmac_prf_create(pseudo_random_function_t algo);
 
-#endif /*PRF_HMAC_SHA1_H_ @}*/
+#endif /** PRF_HMAC_SHA1_H_ @}*/

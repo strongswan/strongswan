@@ -920,4 +920,4 @@ struct ike_sa_t {
  */
 ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id);
 
-#endif /* IKE_SA_H_ @} */
+#endif /** IKE_SA_H_ @}*/

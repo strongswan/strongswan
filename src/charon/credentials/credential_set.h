@@ -107,4 +107,4 @@ struct credential_set_t {
 	void (*cache_cert)(credential_set_t *this, certificate_t *cert);	
 };
 
-#endif /* CREDENTIAL_SET_H_ @} */
+#endif /** CREDENTIAL_SET_H_ @}*/

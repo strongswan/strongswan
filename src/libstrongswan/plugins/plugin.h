@@ -46,4 +46,4 @@ struct plugin_t {
  */
 typedef plugin_t *(*plugin_constructor_t)(void);
 
-#endif /* PLUGIN_H_ @}*/
+#endif /** PLUGIN_H_ @}*/

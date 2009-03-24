@@ -50,4 +50,4 @@ struct ike_dpd_t {
  */
 ike_dpd_t *ike_dpd_create(bool initiator);
 
-#endif /* IKE_DPD_H_ @} */
+#endif /** IKE_DPD_H_ @}*/

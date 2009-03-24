@@ -48,4 +48,4 @@ struct unit_tester_t {
  */
 plugin_t *plugin_create();
 
-#endif /* UNIT_TESTER_H_ @}*/
+#endif /** UNIT_TESTER_H_ @}*/

@@ -49,4 +49,4 @@ struct eap_radius_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* EAP_RADIUS_PLUGIN_H_ @}*/
+#endif /** EAP_RADIUS_PLUGIN_H_ @}*/

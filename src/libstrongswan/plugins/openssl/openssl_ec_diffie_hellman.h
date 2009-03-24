@@ -46,5 +46,5 @@ struct openssl_ec_diffie_hellman_t {
  */
 openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_group_t group);
 
-#endif /*OPENSSL_EC_DIFFIE_HELLMAN_H_ @}*/
+#endif /** OPENSSL_EC_DIFFIE_HELLMAN_H_ @}*/
 

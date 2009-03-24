@@ -272,4 +272,4 @@ struct linked_list_t {
  */
 linked_list_t *linked_list_create(void);
 
-#endif /*LINKED_LIST_H_ @} */
+#endif /** LINKED_LIST_H_ @}*/

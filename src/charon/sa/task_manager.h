@@ -87,7 +87,7 @@ typedef struct task_manager_t task_manager_t;
    4s * (1.8 ** 4) =   42s        89s
    4s * (1.8 ** 5) =   76s       165s
  
-   @endberbatim
+   @endverbatim
  * The peer is considered dead after 2min 45s when no reply comes in.
  */
 struct task_manager_t {
@@ -172,4 +172,4 @@ struct task_manager_t {
  */
 task_manager_t *task_manager_create(ike_sa_t *ike_sa);
 
-#endif /* TASK_MANAGER_H_ @} */
+#endif /** TASK_MANAGER_H_ @}*/

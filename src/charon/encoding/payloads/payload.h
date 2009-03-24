@@ -271,4 +271,4 @@ struct payload_t {
  */
 payload_t *payload_create(payload_type_t type);
 
-#endif /*PAYLOAD_H_ @} */
+#endif /** PAYLOAD_H_ @}*/

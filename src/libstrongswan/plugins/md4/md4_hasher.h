@@ -45,4 +45,4 @@ struct md4_hasher_t {
  */
 md4_hasher_t *md4_hasher_create(hash_algorithm_t algo);
 
-#endif /*MD4_HASHER_H_@}*/
+#endif /** MD4_HASHER_H_ @}*/

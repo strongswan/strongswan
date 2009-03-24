@@ -80,4 +80,4 @@ struct stroke_cred_t {
  */
 stroke_cred_t *stroke_cred_create();
 
-#endif /* STROKE_CRED_H_ @}*/
+#endif /** STROKE_CRED_H_ @}*/

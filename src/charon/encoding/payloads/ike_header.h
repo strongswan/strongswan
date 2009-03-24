@@ -227,4 +227,4 @@ struct ike_header_t {
  */
 ike_header_t *ike_header_create(void);
 
-#endif /*IKE_HEADER_H_ @} */
+#endif /** IKE_HEADER_H_ @}*/

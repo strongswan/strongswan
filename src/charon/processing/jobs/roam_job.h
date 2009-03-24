@@ -51,4 +51,4 @@ struct roam_job_t {
  */
 roam_job_t *roam_job_create(bool address);
 
-#endif /*ROAM_JOB_H_ @} */
+#endif /** ROAM_JOB_H_ @}*/

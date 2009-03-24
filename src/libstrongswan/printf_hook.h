@@ -150,4 +150,4 @@ struct printf_hook_t {
  */
 printf_hook_t *printf_hook_create();
 
-#endif /* PRINTF_HOOK_H_ @}*/
+#endif /** PRINTF_HOOK_H_ @}*/

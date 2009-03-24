@@ -48,4 +48,4 @@ struct sql_attribute_t {
  */
 sql_attribute_t *sql_attribute_create(database_t *db);
 
-#endif /* SQL_ATTRIBUTE_H_ @}*/
+#endif /** SQL_ATTRIBUTE_H_ @}*/

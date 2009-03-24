@@ -43,4 +43,4 @@ struct sqlite_database_t {
  */
 sqlite_database_t *sqlite_database_create(char *uri);
 
-#endif /* SQLITE_DATABASE_H_ @}*/
+#endif /** SQLITE_DATABASE_H_ @}*/

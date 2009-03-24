@@ -267,4 +267,4 @@ struct crypto_factory_t {
  */
 crypto_factory_t *crypto_factory_create();
 
-#endif /* CRYPTO_FACTORY_H_ @}*/
+#endif /** CRYPTO_FACTORY_H_ @}*/

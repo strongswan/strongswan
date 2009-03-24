@@ -114,4 +114,4 @@ sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals);
  */
 sa_payload_t *sa_payload_create_from_proposal(proposal_t *proposal);
 
-#endif /*SA_PAYLOAD_H_ @} */
+#endif /** SA_PAYLOAD_H_ @}*/

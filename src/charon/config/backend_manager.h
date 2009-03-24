@@ -119,5 +119,4 @@ struct backend_manager_t {
  */
 backend_manager_t* backend_manager_create(void);
 
-#endif /*BACKEND_MANAGER_H_ @} */
-
+#endif /** BACKEND_MANAGER_H_ @}*/

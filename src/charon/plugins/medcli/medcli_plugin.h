@@ -46,4 +46,4 @@ struct medcli_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* MEDCLI_PLUGIN_H_ @}*/
+#endif /** MEDCLI_PLUGIN_H_ @}*/

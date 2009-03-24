@@ -51,4 +51,4 @@ struct load_tester_listener_t {
  */
 load_tester_listener_t *load_tester_listener_create(u_int shutdown_on);
 
-#endif /* LOAD_TESTER_LISTENER_H_ @}*/
+#endif /** LOAD_TESTER_LISTENER_H_ @}*/

@@ -195,4 +195,4 @@ struct auth_info_t {
  */
 auth_info_t *auth_info_create();
 
-#endif /* AUTH_INFO_H_ @}*/
+#endif /** AUTH_INFO_H_ @}*/

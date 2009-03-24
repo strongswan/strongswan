@@ -44,4 +44,4 @@ struct x509_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* X509_PLUGIN_H_ @}*/
+#endif /** X509_PLUGIN_H_ @}*/

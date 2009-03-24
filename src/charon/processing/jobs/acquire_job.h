@@ -55,4 +55,4 @@ acquire_job_t *acquire_job_create(u_int32_t reqid,
 								  traffic_selector_t *src_ts,
 								  traffic_selector_t *dst_ts);
 
-#endif /* REKEY_CHILD_SA_JOB_H_ @} */
+#endif /** REKEY_CHILD_SA_JOB_H_ @}*/

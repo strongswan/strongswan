@@ -85,4 +85,4 @@ struct stroke_attribute_t {
  */
 stroke_attribute_t *stroke_attribute_create();
 
-#endif /* STROKE_ATTRIBUTE_H_ @}*/
+#endif /** STROKE_ATTRIBUTE_H_ @}*/

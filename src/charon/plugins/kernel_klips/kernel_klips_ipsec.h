@@ -45,4 +45,4 @@ struct kernel_klips_ipsec_t {
  */
 kernel_klips_ipsec_t *kernel_klips_ipsec_create();
 
-#endif /* KERNEL_KLIPS_IPSEC_H_ @} */
+#endif /** KERNEL_KLIPS_IPSEC_H_ @}*/

@@ -185,4 +185,4 @@ condvar_t *condvar_create(condvar_type_t type);
  */
 rwlock_t *rwlock_create(rwlock_type_t type);
 
-#endif /* MUTEX_H_ @}*/
+#endif /** MUTEX_H_ @}*/

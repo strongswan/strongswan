@@ -76,4 +76,4 @@ struct nm_creds_t {
  */
 nm_creds_t *nm_creds_create();
 
-#endif /* NM_CREDS_H_ @}*/
+#endif /** NM_CREDS_H_ @}*/

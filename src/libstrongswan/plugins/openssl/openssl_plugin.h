@@ -46,4 +46,4 @@ struct openssl_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* OPENSSL_PLUGIN_H_ @}*/
+#endif /** OPENSSL_PLUGIN_H_ @}*/

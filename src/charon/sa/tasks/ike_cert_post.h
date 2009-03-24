@@ -52,4 +52,4 @@ struct ike_cert_post_t {
  */
 ike_cert_post_t *ike_cert_post_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /*  IKE_CERT_POST_H_ @} */
+#endif /** IKE_CERT_POST_H_ @}*/

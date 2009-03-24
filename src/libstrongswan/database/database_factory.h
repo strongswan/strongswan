@@ -70,4 +70,4 @@ struct database_factory_t {
  */
 database_factory_t *database_factory_create();
 
-#endif /* DATABASE_FACTORY_H_ @}*/
+#endif /** DATABASE_FACTORY_H_ @}*/

@@ -80,4 +80,4 @@ struct attribute_manager_t {
  */
 attribute_manager_t *attribute_manager_create();
 
-#endif /* ATTRIBUTE_MANAGER_H_ @}*/
+#endif /** ATTRIBUTE_MANAGER_H_ @}*/

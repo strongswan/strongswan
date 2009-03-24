@@ -101,4 +101,4 @@ struct auth_payload_t {
  */
 auth_payload_t *auth_payload_create(void);
 
-#endif /* AUTH_PAYLOAD_H_ @} */
+#endif /** AUTH_PAYLOAD_H_ @}*/

@@ -183,4 +183,4 @@ struct request_t {
  */
 request_t *request_create(int fd, bool debug);
 
-#endif /* REQUEST_H_ @} */
+#endif /** REQUEST_H_ @}*/

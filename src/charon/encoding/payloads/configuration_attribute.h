@@ -127,4 +127,4 @@ struct configuration_attribute_t {
  */
 configuration_attribute_t *configuration_attribute_create(void);
 
-#endif /* CONFIGURATION_ATTRIBUTE_H_ @} */
+#endif /** CONFIGURATION_ATTRIBUTE_H_ @}*/

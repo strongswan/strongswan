@@ -74,9 +74,9 @@ struct gateway_t {
 	enumerator_t* (*initiate)(gateway_t *this, bool ike, char *name);
 	
 	/**
-     * Destroy a gateway instance.
-     */
-    void (*destroy)(gateway_t *this);
+	 * Destroy a gateway instance.
+	 */
+	void (*destroy)(gateway_t *this);
 };
 
 /**
@@ -84,7 +84,7 @@ struct gateway_t {
  *
  * @param name			name of the gateway
  * @param host			gateway connection endpoint
- * @param 
+ * @return				gateway connection
  */
 gateway_t *gateway_create_tcp(char *name, host_t *host);
 
@@ -92,8 +92,8 @@ gateway_t *gateway_create_tcp(char *name, host_t *host);
  * Create a gateway instance using a UNIX socket.
  *
  * @param name			name of the gateway
- * @param 
+ * @return				gateway connection
  */
 gateway_t *gateway_create_unix(char *name);
 
-#endif /* GATEWAY_H_ @} */
+#endif /** GATEWAY_H_ @}*/

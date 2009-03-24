@@ -95,4 +95,4 @@ struct manager_t {
  */
 manager_t *manager_create(storage_t *storage);
 
-#endif /* MANAGER_H_ @} */
+#endif /** MANAGER_H_ @}*/

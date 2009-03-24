@@ -50,4 +50,4 @@ struct ike_config_t {
  */
 ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_CONFIG_H_ @} */
+#endif /** IKE_CONFIG_H_ @}*/

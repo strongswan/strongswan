@@ -77,4 +77,4 @@ struct prf_plus_t {
  */
 prf_plus_t *prf_plus_create(prf_t *prf, chunk_t seed);
 
-#endif /*PRF_PLUS_H_ @} */
+#endif /** PRF_PLUS_H_ @}*/

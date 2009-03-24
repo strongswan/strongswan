@@ -44,4 +44,4 @@ struct curl_fetcher_t {
  */
 curl_fetcher_t *curl_fetcher_create();
 
-#endif /* CURL_FETCHER_H_ @}*/
+#endif /** CURL_FETCHER_H_ @}*/

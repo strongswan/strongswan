@@ -90,4 +90,4 @@ struct hmac_t {
  */
 hmac_t *hmac_create(hash_algorithm_t hash_algorithm);
 
-#endif /*HMAC_H_ @}*/
+#endif /** HMAC_H_ @}*/

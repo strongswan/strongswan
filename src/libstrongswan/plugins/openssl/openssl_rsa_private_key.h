@@ -46,4 +46,4 @@ struct openssl_rsa_private_key_t {
  */
 builder_t *openssl_rsa_private_key_builder(key_type_t type);
 
-#endif /*OPENSSL_RSA_PRIVATE_KEY_H_ @}*/
+#endif /** OPENSSL_RSA_PRIVATE_KEY_H_ @}*/

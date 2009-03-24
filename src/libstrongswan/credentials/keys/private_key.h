@@ -111,4 +111,4 @@ struct private_key_t {
     void (*destroy)(private_key_t *this);
 };
 
-#endif /* PRIVATE_KEY_H_ @} */
+#endif /** PRIVATE_KEY_H_ @}*/

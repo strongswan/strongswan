@@ -109,4 +109,4 @@ struct credential_factory_t {
  */
 credential_factory_t *credential_factory_create();
 
-#endif /* CREDENTIAL_FACTORY_H_ @}*/
+#endif /** CREDENTIAL_FACTORY_H_ @}*/

@@ -59,4 +59,4 @@ struct file_logger_t {
  */
 file_logger_t *file_logger_create(FILE *out);
 
-#endif /* FILE_LOGGER_H_ @} */
+#endif /** FILE_LOGGER_H_ @}*/

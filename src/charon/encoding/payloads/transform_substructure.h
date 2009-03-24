@@ -173,4 +173,4 @@ transform_substructure_t *transform_substructure_create_type(
 						transform_type_t transform_type, u_int16_t transform_id,
 						u_int16_t key_length);
 
-#endif /*TRANSFORM_SUBSTRUCTURE_H_ @} */
+#endif /** TRANSFORM_SUBSTRUCTURE_H_ @}*/

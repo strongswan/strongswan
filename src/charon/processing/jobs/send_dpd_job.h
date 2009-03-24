@@ -51,4 +51,4 @@ struct send_dpd_job_t {
  */
 send_dpd_job_t *send_dpd_job_create(ike_sa_id_t *ike_sa_id);
 
-#endif /*SEND_DPD_JOB_H_ @} */
+#endif /** SEND_DPD_JOB_H_ @}*/

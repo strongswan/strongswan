@@ -50,4 +50,4 @@ struct ike_reauth_t {
  */
 ike_reauth_t *ike_reauth_create(ike_sa_t *ike_sa);
 
-#endif /* IKE_REAUTH_H_ @} */
+#endif /** IKE_REAUTH_H_ @}*/

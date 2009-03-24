@@ -129,4 +129,4 @@ struct builder_t {
  */
 void* builder_free(builder_t *this);
 
-#endif /* BUILDER_H_ @}*/
+#endif /** BUILDER_H_ @}*/

@@ -48,4 +48,4 @@ struct updown_listener_t {
  */
 updown_listener_t *updown_listener_create();
 
-#endif /* UPDOWN_LISTENER_ @}*/
+#endif /** UPDOWN_LISTENER_ @}*/

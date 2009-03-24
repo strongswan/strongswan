@@ -45,4 +45,4 @@ struct kernel_netlink_net_t {
  */
 kernel_netlink_net_t *kernel_netlink_net_create();
 
-#endif /* KERNEL_NETLINK_NET_H_ @} */
+#endif /** KERNEL_NETLINK_NET_H_ @}*/

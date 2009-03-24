@@ -44,5 +44,5 @@ struct agent_private_key_t {
  */
 builder_t *agent_private_key_builder(key_type_t type);
 
-#endif /*AGENT_PRIVATE_KEY_H_ @}*/
+#endif /** AGENT_PRIVATE_KEY_H_ @}*/
 

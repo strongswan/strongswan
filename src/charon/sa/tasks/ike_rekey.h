@@ -60,4 +60,4 @@ struct ike_rekey_t {
  */
 ike_rekey_t *ike_rekey_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_REKEY_H_ @} */
+#endif /** IKE_REKEY_H_ @}*/

@@ -17,7 +17,7 @@
  
 /**
  * @defgroup random_rng random_rng
- * @{ @ingroup utils
+ * @{ @ingroup random_p
  */
 
 #ifndef RANDOM_RNG_H_
@@ -46,4 +46,4 @@ struct random_rng_t {
  */
 random_rng_t *random_rng_create(rng_quality_t quality);
 
-#endif /*RANDOM_RNG_H_ @} */
+#endif /** RANDOM_RNG_H_ @} */

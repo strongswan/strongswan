@@ -59,4 +59,4 @@ struct ike_init_t {
  */
 ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa);
 
-#endif /* IKE_INIT_H_ @} */
+#endif /** IKE_INIT_H_ @}*/

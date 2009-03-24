@@ -152,4 +152,4 @@ struct public_key_t {
 	void (*destroy)(public_key_t *this);
 };
 
-#endif /* PUBLIC_KEY_H_ @} */
+#endif /** PUBLIC_KEY_H_ @}*/

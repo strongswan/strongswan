@@ -52,4 +52,4 @@ struct ike_auth_lifetime_t {
  */
 ike_auth_lifetime_t *ike_auth_lifetime_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_MOBIKE_H_ @} */
+#endif /** IKE_MOBIKE_H_ @}*/

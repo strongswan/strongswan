@@ -46,4 +46,4 @@ struct nm_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* NM_PLUGIN_H_ @}*/
+#endif /** NM_PLUGIN_H_ @}*/

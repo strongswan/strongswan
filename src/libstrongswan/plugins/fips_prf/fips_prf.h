@@ -56,4 +56,4 @@ struct fips_prf_t {
  */
 fips_prf_t *fips_prf_create(pseudo_random_function_t algo);
 
-#endif /* FIPS_PRF_H_ @}*/
+#endif /** FIPS_PRF_H_ @}*/

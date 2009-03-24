@@ -80,4 +80,4 @@ struct stroke_control_t {
  */
 stroke_control_t *stroke_control_create();
 
-#endif /* STROKE_CONTROL_H_ @}*/
+#endif /** STROKE_CONTROL_H_ @}*/

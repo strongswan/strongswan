@@ -41,4 +41,4 @@ struct stroke_socket_t {
  */
 stroke_socket_t *stroke_socket_create();
 
-#endif /* STROKE_SOCKET_H_ @}*/
+#endif /** STROKE_SOCKET_H_ @}*/

@@ -101,4 +101,4 @@ struct socket_t {
  */
 socket_t *socket_create();
 
-#endif /*SOCKET_H_ @} */
+#endif /** SOCKET_H_ @}*/

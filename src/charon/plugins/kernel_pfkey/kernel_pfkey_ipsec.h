@@ -45,4 +45,4 @@ struct kernel_pfkey_ipsec_t {
  */
 kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create();
 
-#endif /* KERNEL_PFKEY_IPSEC_H_ @} */
+#endif /** KERNEL_PFKEY_IPSEC_H_ @}*/

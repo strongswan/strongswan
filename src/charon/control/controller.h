@@ -171,4 +171,4 @@ struct controller_t {
  */
 controller_t *controller_create(void);
 
-#endif /* CONTROLLER_H_ @} */
+#endif /** CONTROLLER_H_ @}*/

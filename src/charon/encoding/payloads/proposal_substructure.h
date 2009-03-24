@@ -172,4 +172,4 @@ proposal_substructure_t *proposal_substructure_create(void);
 proposal_substructure_t *proposal_substructure_create_from_proposal(
 														proposal_t *proposal);
 
-#endif /*PROPOSAL_SUBSTRUCTURE_H_ @} */
+#endif /** PROPOSAL_SUBSTRUCTURE_H_ @}*/

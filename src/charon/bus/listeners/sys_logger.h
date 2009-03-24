@@ -61,4 +61,4 @@ struct sys_logger_t {
  */
 sys_logger_t *sys_logger_create(int facility);
 
-#endif /* SYS_LOGGER_H_ @} */
+#endif /** SYS_LOGGER_H_ @}*/

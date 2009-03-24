@@ -311,4 +311,4 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 int mem_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					const void *const *args);
 
-#endif /* UTILS_H_ @}*/
+#endif /** UTILS_H_ @}*/

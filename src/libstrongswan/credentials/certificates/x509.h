@@ -104,4 +104,4 @@ struct x509_t {
 	enumerator_t* (*create_ocsp_uri_enumerator)(x509_t *this);
 };
 
-#endif /* X509_H_ @}*/
+#endif /** X509_H_ @}*/

@@ -59,4 +59,4 @@ eap_gtc_t *eap_gtc_create_server(identification_t *server, identification_t *pee
  */
 eap_gtc_t *eap_gtc_create_peer(identification_t *server, identification_t *peer);
 
-#endif /* EAP_GTC_H_ @}*/
+#endif /** EAP_GTC_H_ @}*/

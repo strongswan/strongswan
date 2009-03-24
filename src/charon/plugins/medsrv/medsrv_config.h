@@ -52,4 +52,4 @@ struct medsrv_config_t {
  */
 medsrv_config_t *medsrv_config_create(database_t *db);
 
-#endif /* MEDSRV_CONFIG_H_ @}*/
+#endif /** MEDSRV_CONFIG_H_ @}*/

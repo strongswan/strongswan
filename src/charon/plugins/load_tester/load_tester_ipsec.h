@@ -45,4 +45,4 @@ struct load_tester_ipsec_t {
  */
 load_tester_ipsec_t *load_tester_ipsec_create();
 
-#endif /* LOAD_TESTER_IPSEC_H_ @} */
+#endif /** LOAD_TESTER_IPSEC_H_ @}*/

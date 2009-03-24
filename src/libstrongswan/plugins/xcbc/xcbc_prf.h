@@ -47,4 +47,4 @@ struct xcbc_prf_t {
  */
 xcbc_prf_t *xcbc_prf_create(pseudo_random_function_t algo);
 
-#endif /*PRF_XCBC_SHA1_H_ @}*/
+#endif /** PRF_XCBC_SHA1_H_ @}*/

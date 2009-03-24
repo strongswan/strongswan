@@ -102,4 +102,4 @@ struct fetcher_t {
 	void (*destroy)(fetcher_t *this);	
 };
 
-#endif /* FETCHER_H_ @}*/
+#endif /** FETCHER_H_ @}*/

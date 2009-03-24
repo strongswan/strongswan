@@ -88,4 +88,4 @@ struct mediation_manager_t {
  */
 mediation_manager_t *mediation_manager_create(void);
 
-#endif /*MEDIATION_MANAGER_H_ @} */
+#endif /** MEDIATION_MANAGER_H_ @}*/

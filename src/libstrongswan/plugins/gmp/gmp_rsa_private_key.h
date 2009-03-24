@@ -44,5 +44,5 @@ struct gmp_rsa_private_key_t {
  */
 builder_t *gmp_rsa_private_key_builder(key_type_t type);
 
-#endif /*GMP_RSA_PRIVATE_KEY_H_ @}*/
+#endif /** GMP_RSA_PRIVATE_KEY_H_ @}*/
 

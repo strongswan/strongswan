@@ -67,4 +67,4 @@ bool openssl_bn_cat(int len, BIGNUM *a, BIGNUM *b, chunk_t *chunk);
  */
 bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b);
 
-#endif /*OPENSSL_UTIL_H_ @}*/
+#endif /** OPENSSL_UTIL_H_ @}*/

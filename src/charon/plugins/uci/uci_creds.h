@@ -54,4 +54,4 @@ struct uci_creds_t {
  */
 uci_creds_t *uci_creds_create(uci_parser_t *parser);
 
-#endif /* UCI_CREDS_H_ @}*/
+#endif /** UCI_CREDS_H_ @}*/

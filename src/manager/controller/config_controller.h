@@ -44,4 +44,4 @@ struct config_controller_t {
  */
 controller_t *config_controller_create(context_t *context, void *param);
 
-#endif /* CONFIG_CONTROLLER_H_ @} */
+#endif /** CONFIG_CONTROLLER_H_ @}*/

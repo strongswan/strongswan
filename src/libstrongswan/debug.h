@@ -60,4 +60,4 @@ extern void (*dbg) (int level, char *fmt, ...);
 /** default logging function, prints to stderr */
 void dbg_default(int level, char *fmt, ...);
 
-#endif /* DEBUG_H_ @} */
+#endif /** DEBUG_H_ @}*/

@@ -70,4 +70,4 @@ struct cert_cache_t {
  */
 cert_cache_t *cert_cache_create();
 
-#endif /* CERT_CACHE_H_ @}*/
+#endif /** CERT_CACHE_H_ @}*/

@@ -49,4 +49,4 @@ struct update_sa_job_t {
  */
 update_sa_job_t *update_sa_job_create(u_int32_t reqid, host_t *new);
 
-#endif /*UPDATE_SA_JOB_H_ @} */
+#endif /** UPDATE_SA_JOB_H_ @}*/

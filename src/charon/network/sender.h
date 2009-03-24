@@ -61,4 +61,4 @@ struct sender_t {
  */
 sender_t * sender_create(void);
 
-#endif /*SENDER_H_ @} */
+#endif /** SENDER_H_ @}*/

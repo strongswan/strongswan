@@ -84,4 +84,4 @@ struct generator_t {
  */
 generator_t *generator_create(void);
 
-#endif /*GENERATOR_H_ @} */
+#endif /** GENERATOR_H_ @}*/

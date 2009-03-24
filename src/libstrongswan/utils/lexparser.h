@@ -47,7 +47,7 @@ bool extract_token(chunk_t *token, const char termination, chunk_t *src);
 bool extract_token_str(chunk_t *token, const char *termination, chunk_t *src);
 
 /**
- *  Fetches a new text line terminated by \n or \r\n
+ *  Fetches a new text line terminated by \\n or \\r\\n
  */
 bool fetchline(chunk_t *src, chunk_t *line);
 
@@ -66,4 +66,4 @@ err_t extract_name_value(chunk_t *name, chunk_t *value, chunk_t *line);
  */
 err_t extract_parameter_value(chunk_t *name, chunk_t *value, chunk_t *line);
 
-#endif /* LEXPARSER_H_ @} */
+#endif /** LEXPARSER_H_ @}*/

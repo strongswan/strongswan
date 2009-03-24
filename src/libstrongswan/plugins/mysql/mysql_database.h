@@ -39,7 +39,7 @@ struct mysql_database_t {
 /**
  * Create a mysql_database instance.
  *
- * @param uri			connection URI, mysql://user:pass@host:port/database
+ * @param uri			connection URI, mysql://user:pass@example.com:port/database
  */
 mysql_database_t *mysql_database_create(char *uri);
 
@@ -55,4 +55,4 @@ bool mysql_database_init();
  */
 void mysql_database_deinit();
 
-#endif /* MYSQL_DATABASE_H_ @}*/
+#endif /** MYSQL_DATABASE_H_ @}*/

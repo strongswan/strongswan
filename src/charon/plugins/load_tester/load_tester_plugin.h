@@ -48,4 +48,4 @@ struct load_tester_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* LOAD_TESTER_PLUGIN_H_ @}*/
+#endif /** LOAD_TESTER_PLUGIN_H_ @}*/

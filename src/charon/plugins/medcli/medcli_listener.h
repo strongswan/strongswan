@@ -52,4 +52,4 @@ struct medcli_listener_t {
  */
 medcli_listener_t *medcli_listener_create(database_t *database);
 
-#endif /* MEDCLI_LISTENER_H_ @}*/
+#endif /** MEDCLI_LISTENER_H_ @}*/

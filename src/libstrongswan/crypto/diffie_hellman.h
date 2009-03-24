@@ -108,4 +108,4 @@ struct diffie_hellman_t {
 	void (*destroy) (diffie_hellman_t *this);
 };
 
-#endif /*DIFFIE_HELLMAN_H_ @} */
+#endif /** DIFFIE_HELLMAN_H_ @}*/

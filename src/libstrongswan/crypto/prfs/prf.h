@@ -115,4 +115,4 @@ struct prf_t {
 	void (*destroy) (prf_t *this);
 };
 
-#endif /*PRF_H_ @} */
+#endif /** PRF_H_ @}*/

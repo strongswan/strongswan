@@ -45,5 +45,5 @@ struct gmp_diffie_hellman_t {
  */
 gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group);
 
-#endif /*GMP_DIFFIE_HELLMAN_H_ @}*/
+#endif /** GMP_DIFFIE_HELLMAN_H_ @}*/
 

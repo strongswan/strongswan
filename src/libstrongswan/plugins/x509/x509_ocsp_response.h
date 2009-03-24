@@ -44,4 +44,4 @@ struct x509_ocsp_response_t {
  */
 builder_t *x509_ocsp_response_builder(certificate_type_t type);
 
-#endif /* X509_OCSP_RESPONSE_H_ @}*/
+#endif /** X509_OCSP_RESPONSE_H_ @}*/

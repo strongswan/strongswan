@@ -89,4 +89,4 @@ bool radius_client_init();
  */
 void radius_client_cleanup();
 
-#endif /* radius_client_H_ @}*/
+#endif /** RADIUS_CLIENT_H_ @}*/

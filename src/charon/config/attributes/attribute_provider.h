@@ -58,4 +58,4 @@ struct attribute_provider_t {
 							char *pool, host_t *address, identification_t *id);
 };
 
-#endif /* ATTRIBUTE_PROVIDER_H_ @}*/
+#endif /** ATTRIBUTE_PROVIDER_H_ @}*/

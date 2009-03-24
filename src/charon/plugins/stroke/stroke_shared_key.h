@@ -59,4 +59,4 @@ struct stroke_shared_key_t {
  */
 stroke_shared_key_t *stroke_shared_key_create(shared_key_type_t type, chunk_t key);
 
-#endif /* STROKE_SHARED_KEY_H_ @}*/
+#endif /** STROKE_SHARED_KEY_H_ @}*/

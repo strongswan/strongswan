@@ -16,7 +16,7 @@
 
 /**
  * @defgroup sha1_hasher sha1_hasher
- * @{ @ingroup sha1_p
+ * @{ @ingroup padlock_p
  */
 
 #ifndef PADLOCK_SHA1_HASHER_H_
@@ -45,4 +45,4 @@ struct padlock_sha1_hasher_t {
  */
 padlock_sha1_hasher_t *padlock_sha1_hasher_create(hash_algorithm_t algo);
 
-#endif /*SHA1_HASHER_H_ @}*/
+#endif /** SHA1_HASHER_H_ @}*/

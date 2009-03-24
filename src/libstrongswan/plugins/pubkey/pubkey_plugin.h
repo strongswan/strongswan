@@ -44,4 +44,4 @@ struct pubkey_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* PUBKEY_PLUGIN_H_ @}*/
+#endif /** PUBKEY_PLUGIN_H_ @}*/

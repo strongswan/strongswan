@@ -41,4 +41,4 @@ struct context_t {
 	void (*destroy) (context_t *this);
 };
 
-#endif /* CONTEXT_H_ @}*/
+#endif /** CONTEXT_H_ @}*/

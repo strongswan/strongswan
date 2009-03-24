@@ -49,4 +49,4 @@ struct ike_delete_t {
  */
 ike_delete_t *ike_delete_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_DELETE_H_ @} */
+#endif /** IKE_DELETE_H_ @}*/

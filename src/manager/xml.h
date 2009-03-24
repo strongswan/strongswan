@@ -60,4 +60,4 @@ struct xml_t {
  */
 xml_t *xml_create(char *xml);
 
-#endif /* XML_H_ @} */
+#endif /** XML_H_ @}*/

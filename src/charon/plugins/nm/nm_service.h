@@ -52,4 +52,4 @@ GType nm_strongswan_plugin_get_type(void);
 
 NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds);
 
-#endif /* NM_SERVICE_H_ */
+#endif /** NM_SERVICE_H_ @}*/

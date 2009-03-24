@@ -58,4 +58,4 @@ eap_sim_t *eap_sim_create_server(identification_t *server, identification_t *pee
  */
 eap_sim_t *eap_sim_create_peer(identification_t *server, identification_t *peer);
 
-#endif /* EAP_SIM_H_ @}*/
+#endif /** EAP_SIM_H_ @}*/

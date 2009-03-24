@@ -116,4 +116,4 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 									callback_job_cleanup_t cleanup,
 									callback_job_t *parent);
 
-#endif /* CALLBACK_JOB_H_ @} */
+#endif /** CALLBACK_JOB_H_ @}*/

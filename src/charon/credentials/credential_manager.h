@@ -204,4 +204,4 @@ struct credential_manager_t {
  */
 credential_manager_t *credential_manager_create();
 
-#endif /* CREDENTIAL_MANAGER_H_ @} */
+#endif /** CREDENTIAL_MANAGER_H_ @}*/

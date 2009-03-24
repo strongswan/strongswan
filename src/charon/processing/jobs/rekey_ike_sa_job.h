@@ -50,4 +50,4 @@ struct rekey_ike_sa_job_t {
  */
 rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id, bool reauth);
 
-#endif /* REKEY_IKE_SA_JOB_H_ @} */
+#endif /** REKEY_IKE_SA_JOB_H_ @}*/

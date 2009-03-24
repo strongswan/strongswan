@@ -17,7 +17,7 @@
 
 /**
  * @defgroup padlock_rng padlock_rng
- * @{ @ingroup padlock
+ * @{ @ingroup padlock_p
  */
 
 #ifndef PADLOCK_RNG_H_
@@ -46,4 +46,4 @@ struct padlock_rng_t {
  */
 padlock_rng_t *padlock_rng_create(rng_quality_t quality);
 
-#endif /* PADLOCK_RNG_ @}*/
+#endif /** PADLOCK_RNG_ @}*/

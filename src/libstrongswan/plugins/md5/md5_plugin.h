@@ -44,4 +44,4 @@ struct md5_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* MD5_PLUGIN_H_ @}*/
+#endif /** MD5_PLUGIN_H_ @}*/

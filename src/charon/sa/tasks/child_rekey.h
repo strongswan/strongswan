@@ -63,4 +63,4 @@ struct child_rekey_t {
 child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 								  u_int32_t spi);
 
-#endif /* CHILD_REKEY_H_ @} */
+#endif /** CHILD_REKEY_H_ @}*/

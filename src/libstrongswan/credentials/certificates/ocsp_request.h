@@ -38,4 +38,4 @@ struct ocsp_request_t {
 	certificate_t interface;
 };
 
-#endif /* OCSP_REQUEST_H_ @}*/
+#endif /** OCSP_REQUEST_H_ @}*/

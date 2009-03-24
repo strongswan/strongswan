@@ -92,9 +92,8 @@ pkcs9_t *pkcs9_create_from_chunk(chunk_t chunk, u_int level);
 /**
  * Create an empty PKCS#9 attribute list
  * 
- * @param chunk			chunk containing data
  * @return 				created pkcs9 attribute list.
  */
 pkcs9_t *pkcs9_create(void);
 
-#endif /* PKCS9_H_ @} */
+#endif /** PKCS9_H_ @}*/

@@ -44,4 +44,4 @@ struct agent_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* AGENT_PLUGIN_H_ @}*/
+#endif /** AGENT_PLUGIN_H_ @}*/

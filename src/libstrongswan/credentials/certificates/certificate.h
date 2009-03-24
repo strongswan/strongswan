@@ -189,4 +189,4 @@ struct certificate_t {
     void (*destroy)(certificate_t *this);
 };
 
-#endif /* CERTIFICATE_H_ @}*/
+#endif /** CERTIFICATE_H_ @}*/

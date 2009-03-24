@@ -72,4 +72,4 @@ struct rng_t {
 	void (*destroy) (rng_t *this);
 };
 
-#endif /*RNG_H_ @} */
+#endif /** RNG_H_ @}*/

@@ -93,4 +93,4 @@ struct processor_t {
  */
 processor_t *processor_create();
 
-#endif /*PROCESSOR_H_ @} */
+#endif /** PROCESSOR_H_ @}*/

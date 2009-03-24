@@ -58,4 +58,4 @@ struct ike_natd_t {
  */
 ike_natd_t *ike_natd_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_NATD_H_ @} */
+#endif /** IKE_NATD_H_ @}*/

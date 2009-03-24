@@ -216,4 +216,4 @@ struct ike_sa_manager_t {
  */
 ike_sa_manager_t *ike_sa_manager_create(void);
 
-#endif /*IKE_SA_MANAGER_H_ @} */
+#endif /** IKE_SA_MANAGER_H_ @}*/

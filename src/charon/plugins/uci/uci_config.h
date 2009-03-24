@@ -54,4 +54,4 @@ struct uci_config_t {
  */
 uci_config_t *uci_config_create(uci_parser_t *parser);
 
-#endif /* UCI_CONFIG_H_ @}*/
+#endif /** UCI_CONFIG_H_ @}*/

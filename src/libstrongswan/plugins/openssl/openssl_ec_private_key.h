@@ -46,4 +46,4 @@ struct openssl_ec_private_key_t {
  */
 builder_t *openssl_ec_private_key_builder(key_type_t type);
 
-#endif /*OPENSSL_EC_PRIVATE_KEY_H_ @}*/
+#endif /** OPENSSL_EC_PRIVATE_KEY_H_ @}*/

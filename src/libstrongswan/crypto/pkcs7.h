@@ -22,8 +22,8 @@
  * @{ @ingroup crypto
  */
 
-#ifndef _PKCS7_H_
-#define _PKCS7_H_
+#ifndef PKCS7_H_
+#define PKCS7_H_
 
 typedef struct pkcs7_t pkcs7_t;
 
@@ -163,7 +163,7 @@ pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level);
 /**
  * Create a PKCS#7 contentInfo object
  * 
- * @param chunk			chunk containing data
+ * @param data			chunk containing data
  * @return 				created pkcs7_contentInfo object.
  */
 pkcs7_t *pkcs7_create_from_data(chunk_t data);
@@ -177,4 +177,4 @@ pkcs7_t *pkcs7_create_from_data(chunk_t data);
  */
 pkcs7_t *pkcs7_create_from_file(const char *filename, const char *label);
 
-#endif /* _PKCS7_H_ @} */
+#endif /** PKCS7_H_ @}*/

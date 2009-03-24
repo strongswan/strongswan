@@ -65,4 +65,4 @@ struct stroke_config_t {
  */
 stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred);
 
-#endif /* STROKE_CONFIG_H_ @}*/
+#endif /** STROKE_CONFIG_H_ @}*/

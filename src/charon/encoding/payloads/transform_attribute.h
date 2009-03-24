@@ -131,4 +131,4 @@ transform_attribute_t *transform_attribute_create(void);
  */
 transform_attribute_t *transform_attribute_create_key_length(u_int16_t key_length);
 
-#endif /*TRANSFORM_ATTRIBUTE_H_ @} */
+#endif /** TRANSFORM_ATTRIBUTE_H_ @}*/

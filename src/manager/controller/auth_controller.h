@@ -44,4 +44,4 @@ struct auth_controller_t {
  */
 controller_t *auth_controller_create(context_t *context, void *param);
 
-#endif /* AUTH_CONTROLLER_H_ @} */
+#endif /** AUTH_CONTROLLER_H_ @}*/

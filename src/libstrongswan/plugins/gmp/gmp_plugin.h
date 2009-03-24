@@ -44,4 +44,4 @@ struct gmp_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* GMP_PLUGIN_H_ @}*/
+#endif /** GMP_PLUGIN_H_ @}*/

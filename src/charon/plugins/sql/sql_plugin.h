@@ -46,4 +46,4 @@ struct sql_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* SQL_PLUGIN_H_ @}*/
+#endif /** SQL_PLUGIN_H_ @}*/

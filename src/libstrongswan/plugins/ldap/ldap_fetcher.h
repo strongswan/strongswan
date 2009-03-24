@@ -39,4 +39,4 @@ struct ldap_fetcher_t {
  */
 ldap_fetcher_t *ldap_fetcher_create();
 
-#endif /* LDAP_FETCHER_H_ @}*/
+#endif /** LDAP_FETCHER_H_ @}*/

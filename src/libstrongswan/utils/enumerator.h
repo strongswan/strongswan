@@ -122,7 +122,7 @@ enumerator_t* enumerator_create_token(char *string, char *sep, char *trim);
  * @return						the nested enumerator
  */
 enumerator_t *enumerator_create_nested(enumerator_t *outer,
-					enumerator_t *(inner_constructor)(void *outer, void *data),
+					enumerator_t *(*inner_constructor)(void *outer, void *data),
 					void *data, void (*destroy_data)(void *data));
 
 /**
@@ -157,4 +157,4 @@ enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
 enumerator_t *enumerator_create_cleaner(enumerator_t *wrapped,
 					void (*cleanup)(void *data), void *data);
 
-#endif /* ENUMERATOR_H_ @} */
+#endif /** ENUMERATOR_H_ @}*/

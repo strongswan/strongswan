@@ -116,4 +116,4 @@ struct asn1_parser_t {
  */
 asn1_parser_t* asn1_parser_create(asn1Object_t const *objects, chunk_t blob);
 
-#endif /* ASN1_PARSER_H_ @}*/
+#endif /** ASN1_PARSER_H_ @}*/

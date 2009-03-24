@@ -50,4 +50,4 @@ struct load_tester_creds_t {
  */
 load_tester_creds_t *load_tester_creds_create();
 
-#endif /* LOAD_TESTER_CREDS_H_ @}*/
+#endif /** LOAD_TESTER_CREDS_H_ @}*/

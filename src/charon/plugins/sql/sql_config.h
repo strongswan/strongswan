@@ -52,4 +52,4 @@ struct sql_config_t {
  */
 sql_config_t *sql_config_create(database_t *db);
 
-#endif /* SQL_CONFIG_H_ @}*/
+#endif /** SQL_CONFIG_H_ @}*/

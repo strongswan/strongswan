@@ -44,4 +44,4 @@ struct gateway_controller_t {
  */
 controller_t *gateway_controller_create(context_t *context, void *param);
 
-#endif /* GATEWAY_CONTROLLER_H_ @} */
+#endif /** GATEWAY_CONTROLLER_H_ @}*/

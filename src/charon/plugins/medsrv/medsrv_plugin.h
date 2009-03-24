@@ -46,4 +46,4 @@ struct medsrv_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* MEDSRV_PLUGIN_H_ @}*/
+#endif /** MEDSRV_PLUGIN_H_ @}*/

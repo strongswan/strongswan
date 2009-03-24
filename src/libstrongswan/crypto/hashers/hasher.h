@@ -133,4 +133,4 @@ int hasher_algorithm_to_oid(hash_algorithm_t alg);
  */
 int hasher_signature_algorithm_to_oid(hash_algorithm_t alg);
 
-#endif /* HASHER_H_ @} */
+#endif /** HASHER_H_ @}*/

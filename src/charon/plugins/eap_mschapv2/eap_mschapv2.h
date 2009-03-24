@@ -56,4 +56,4 @@ eap_mschapv2_t *eap_mschapv2_create_server(identification_t *server, identificat
  */
 eap_mschapv2_t *eap_mschapv2_create_peer(identification_t *server, identification_t *peer);
 
-#endif /* EAP_MSCHAPV2_H_ @}*/
+#endif /** EAP_MSCHAPV2_H_ @}*/

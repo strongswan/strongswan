@@ -44,4 +44,4 @@ struct mysql_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* MYSQL_PLUGIN_H_ @}*/
+#endif /** MYSQL_PLUGIN_H_ @}*/

@@ -110,7 +110,7 @@ int asn1_known_oid(chunk_t object);
  * Returns the length of an ASN.1 object
  * The blob pointer is advanced past the tag length fields
  *
- * @param			pointer to an ASN.1 coded blob
+ * @param blob		pointer to an ASN.1 coded blob
  * @return			length of ASN.1 object
  */
 u_int asn1_length(chunk_t *blob);
@@ -168,7 +168,7 @@ chunk_t asn1_from_time(const time_t *time, asn1_t type);
  * Parse an ASN.1 UTCTIME or GENERALIZEDTIME object
  *
  * @param blob		ASN.1 coded time object
- * @param level		top-most level offset
+ * @param level0	top-most level offset
  * @return			time_t in UTC 	
  */
 time_t asn1_parse_time(chunk_t blob, int level0);
@@ -223,10 +223,10 @@ chunk_t asn1_bitstring(const char *mode, chunk_t content);
 /**
  * Build an ASN.1 object from a variable number of individual chunks
  *
- * @param typ		ASN.1 type to be created
+ * @param type		ASN.1 type to be created
  * @param mode		for each list member: 'c' for copy or 'm' for move
  * @return			chunk containing the ASN.1 coded object
  */
 chunk_t asn1_wrap(asn1_t type, const char *mode, ...);
 
-#endif /* ASN1_H_ @}*/
+#endif /** ASN1_H_ @}*/

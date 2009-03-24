@@ -44,5 +44,5 @@ struct leak_detective_t {
  */
 leak_detective_t *leak_detective_create();
 
-#endif /* LEAK_DETECTIVE_H_ @}*/
+#endif /** LEAK_DETECTIVE_H_ @}*/
 

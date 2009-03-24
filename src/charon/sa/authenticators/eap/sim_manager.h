@@ -133,4 +133,4 @@ struct sim_manager_t {
  */
 sim_manager_t *sim_manager_create();
 
-#endif /* SIM_MANAGER_H_ @}*/
+#endif /** SIM_MANAGER_H_ @}*/

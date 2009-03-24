@@ -136,4 +136,4 @@ struct dispatcher_t {
 dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
 								context_constructor_t constructor, void *param);
 
-#endif /* DISPATCHER_H_ @} */
+#endif /** DISPATCHER_H_ @}*/

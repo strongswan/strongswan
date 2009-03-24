@@ -43,4 +43,4 @@ bool fips_compute_hmac_signature(const char *key, char *signature);
  */
 bool fips_verify_hmac_signature(const char *key, const char *signature);
 
-#endif /*FIPS_H_ @} */
+#endif /** FIPS_H_ @}*/

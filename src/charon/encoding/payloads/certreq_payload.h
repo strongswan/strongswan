@@ -89,4 +89,4 @@ certreq_payload_t *certreq_payload_create(void);
  */
 certreq_payload_t *certreq_payload_create_type(certificate_type_t type);
 
-#endif /* CERTREQ_PAYLOAD_H_ @} */
+#endif /** CERTREQ_PAYLOAD_H_ @}*/

@@ -46,4 +46,4 @@ struct updown_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* UPDOWN_PLUGIN_H_ @}*/
+#endif /** UPDOWN_PLUGIN_H_ @}*/

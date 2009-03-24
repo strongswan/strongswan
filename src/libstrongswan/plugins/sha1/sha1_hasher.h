@@ -45,4 +45,4 @@ struct sha1_hasher_t {
  */
 sha1_hasher_t *sha1_hasher_create(hash_algorithm_t algo);
 
-#endif /*SHA1_HASHER_H_ @}*/
+#endif /** SHA1_HASHER_H_ @}*/

@@ -50,4 +50,4 @@ struct load_tester_config_t {
  */
 load_tester_config_t *load_tester_config_create();
 
-#endif /* LOAD_TESTER_CONFIG_H_ @}*/
+#endif /** LOAD_TESTER_CONFIG_H_ @}*/

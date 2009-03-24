@@ -263,7 +263,6 @@ struct radius_message_t {
 /**
  * Create an empty RADIUS request message (RMT_ACCESS_REQUEST).
  *
- * @param identifier	RADIUS message identifier
  * @return				radius_message_t object
  */
 radius_message_t *radius_message_create_request();
@@ -276,4 +275,4 @@ radius_message_t *radius_message_create_request();
  */
 radius_message_t *radius_message_parse_response(chunk_t data);
 
-#endif /* RADIUS_MESSAGE_H_ @}*/
+#endif /** RADIUS_MESSAGE_H_ @}*/

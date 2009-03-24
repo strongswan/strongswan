@@ -49,4 +49,4 @@ struct smp_t {
  */
 plugin_t *plugin_create();
 
-#endif /* XML_H_ @}*/
+#endif /** XML_H_ @}*/

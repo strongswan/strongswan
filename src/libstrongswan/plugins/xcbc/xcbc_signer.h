@@ -18,8 +18,8 @@
  * @{ @ingroup xcbc_p
  */
 
-#ifndef xcbc_SIGNER_H_
-#define xcbc_SIGNER_H_
+#ifndef XCBC_SIGNER_H_
+#define XCBC_SIGNER_H_
 
 typedef struct xcbc_signer_t xcbc_signer_t;
 
@@ -44,4 +44,4 @@ struct xcbc_signer_t {
  */
 xcbc_signer_t *xcbc_signer_create(integrity_algorithm_t algo);
 
-#endif /*xcbc_SIGNER_H_ @}*/
+#endif /** XCBC_SIGNER_H_ @}*/

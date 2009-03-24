@@ -122,4 +122,4 @@ struct signer_t {
 	void (*destroy) (signer_t *this);
 };
 
-#endif /*SIGNER_H_ @} */
+#endif /** SIGNER_H_ @}*/

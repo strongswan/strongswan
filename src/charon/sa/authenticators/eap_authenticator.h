@@ -144,4 +144,4 @@ struct eap_authenticator_t {
  */
 eap_authenticator_t *eap_authenticator_create(ike_sa_t *ike_sa);
 
-#endif /* EAP_AUTHENTICATOR_H_ @} */
+#endif /** EAP_AUTHENTICATOR_H_ @}*/

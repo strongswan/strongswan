@@ -197,8 +197,8 @@ struct identification_t {
 	 * Check if an ID matches a wildcard ID.
 	 * 
 	 * An identification_t may contain wildcards, such as
-	 * *@strongswan.org. This call checks if a given ID
-	 * (e.g. tester@strongswan.org) belongs to a such wildcard
+	 * *.strongswan.org. This call checks if a given ID
+	 * (e.g. tester.strongswan.org) belongs to a such wildcard
 	 * ID. Returns > 0 if
 	 * - IDs are identical
 	 * - other is of type ID_ANY
@@ -243,7 +243,7 @@ struct identification_t {
  * The input string may be e.g. one of the following:
  * - ID_IPV4_ADDR:		192.168.0.1
  * - ID_IPV6_ADDR:		2001:0db8:85a3:08d3:1319:8a2e:0370:7345
- * - ID_FQDN:			@www.strongswan.org (@indicates FQDN)
+ * - ID_FQDN:			www.strongswan.org (optionally with a prepended @)
  * - ID_RFC822_ADDR:	alice@wonderland.org
  * - ID_DER_ASN1_DN:	C=CH, O=Linux strongSwan, CN=bob
  *
@@ -283,4 +283,4 @@ identification_t * identification_create_from_encoding(id_type_t type, chunk_t e
 int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 							   const void *const *args);
 
-#endif /* IDENTIFICATION_H_ @} */
+#endif /** IDENTIFICATION_H_ @}*/

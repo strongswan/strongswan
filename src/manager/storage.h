@@ -66,4 +66,4 @@ struct storage_t {
  */
 storage_t *storage_create(char *uri);
 
-#endif /* STORAGE_H_ @} */
+#endif /** STORAGE_H_ @}*/

@@ -49,4 +49,4 @@ struct stroke_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* STROKE_PLUGIN_H_ @}*/
+#endif /** STROKE_PLUGIN_H_ @}*/

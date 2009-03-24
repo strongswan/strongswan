@@ -379,4 +379,4 @@ struct kernel_interface_t {
  */
 kernel_interface_t *kernel_interface_create(void);
 
-#endif /* KERNEL_INTERFACE_H_ @} */
+#endif /** KERNEL_INTERFACE_H_ @}*/

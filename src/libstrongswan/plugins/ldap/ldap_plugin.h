@@ -44,4 +44,4 @@ struct ldap_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* LDAP_PLUGIN_H_ @}*/
+#endif /** LDAP_PLUGIN_H_ @}*/

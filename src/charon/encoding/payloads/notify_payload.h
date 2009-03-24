@@ -215,4 +215,4 @@ notify_payload_t *notify_payload_create(void);
 notify_payload_t *notify_payload_create_from_protocol_and_type(
 								protocol_id_t protocol_id, notify_type_t type);
 
-#endif /*NOTIFY_PAYLOAD_H_ @} */
+#endif /** NOTIFY_PAYLOAD_H_ @}*/

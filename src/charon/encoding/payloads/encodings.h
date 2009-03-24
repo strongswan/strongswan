@@ -527,4 +527,4 @@ struct encoding_rule_t {
 	u_int32_t offset;
 };
 
-#endif /*ENCODINGS_H_ @} */
+#endif /** ENCODINGS_H_ @}*/

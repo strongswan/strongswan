@@ -44,4 +44,4 @@ struct padlock_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* PADLOCK_PLUGIN_H_ @}*/
+#endif /** PADLOCK_PLUGIN_H_ @}*/

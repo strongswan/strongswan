@@ -56,4 +56,4 @@ struct x509_ac_t {
  */
 builder_t *x509_ac_builder(certificate_type_t type);
 
-#endif /* X509_AC_H_ @}*/
+#endif /** X509_AC_H_ @}*/

@@ -44,4 +44,4 @@ struct sqlite_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* SQLITE_PLUGIN_H_ @}*/
+#endif /** SQLITE_PLUGIN_H_ @}*/

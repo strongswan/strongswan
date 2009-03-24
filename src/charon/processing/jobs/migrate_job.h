@@ -62,4 +62,4 @@ migrate_job_t *migrate_job_create(u_int32_t reqid,
 								  policy_dir_t dir,
 								  host_t *local, host_t *remote);
 
-#endif /* MIGRATE_JOB_H_ @} */
+#endif /** MIGRATE_JOB_H_ @}*/

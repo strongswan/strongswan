@@ -116,4 +116,4 @@ struct settings_t {
  */
 settings_t *settings_create(char *file);
 
-#endif /* SETTINGS_H_ @}*/
+#endif /** SETTINGS_H_ @}*/

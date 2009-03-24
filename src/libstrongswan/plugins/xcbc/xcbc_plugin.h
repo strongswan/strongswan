@@ -44,4 +44,4 @@ struct xcbc_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* XCBC_PLUGIN_H_ @}*/
+#endif /** XCBC_PLUGIN_H_ @}*/

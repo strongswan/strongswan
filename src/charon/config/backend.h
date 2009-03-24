@@ -72,4 +72,4 @@ struct backend_t {
 	peer_cfg_t *(*get_peer_cfg_by_name)(backend_t *this, char *name);
 };
 
-#endif /* BACKEND_H_ @} */
+#endif /** BACKEND_H_ @}*/

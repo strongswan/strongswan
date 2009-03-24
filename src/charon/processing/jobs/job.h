@@ -51,4 +51,4 @@ struct job_t {
 	void (*destroy) (job_t *job);
 };
 
-#endif /* JOB_H_ @} */
+#endif /** JOB_H_ @}*/

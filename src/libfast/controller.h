@@ -76,4 +76,4 @@ struct controller_t {
 	void (*destroy) (controller_t *this);
 };
 
-#endif /* CONTROLLER_H_ @} */
+#endif /** CONTROLLER_H_ @}*/

@@ -87,4 +87,4 @@ struct ike_mobike_t {
  */
 ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_MOBIKE_H_ @} */
+#endif /** IKE_MOBIKE_H_ @}*/

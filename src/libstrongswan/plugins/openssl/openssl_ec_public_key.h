@@ -46,4 +46,4 @@ struct openssl_ec_public_key_t {
  */
 builder_t *openssl_ec_public_key_builder(key_type_t type);
 
-#endif /*OPENSSL_EC_PUBLIC_KEY_H_ @}*/
+#endif /** OPENSSL_EC_PUBLIC_KEY_H_ @}*/

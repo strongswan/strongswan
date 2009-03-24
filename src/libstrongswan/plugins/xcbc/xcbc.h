@@ -75,4 +75,4 @@ struct xcbc_t {
  */
 xcbc_t *xcbc_create(encryption_algorithm_t algo, size_t key_size);
 
-#endif /*xcbc_H_ @}*/
+#endif /** XCBC_H_ @}*/

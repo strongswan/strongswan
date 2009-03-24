@@ -258,4 +258,4 @@ struct kernel_ipsec_t {
 	void (*destroy) (kernel_ipsec_t *this);
 };
 
-#endif /* KERNEL_IPSEC_H_ @} */
+#endif /** KERNEL_IPSEC_H_ @}*/

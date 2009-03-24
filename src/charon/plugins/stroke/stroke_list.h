@@ -73,4 +73,4 @@ struct stroke_list_t {
  */
 stroke_list_t *stroke_list_create(stroke_attribute_t *attribute);
 
-#endif /* STROKE_LIST_H_ @}*/
+#endif /** STROKE_LIST_H_ @}*/

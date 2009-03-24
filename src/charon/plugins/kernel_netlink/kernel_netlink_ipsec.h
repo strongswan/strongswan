@@ -45,4 +45,4 @@ struct kernel_netlink_ipsec_t {
  */
 kernel_netlink_ipsec_t *kernel_netlink_ipsec_create();
 
-#endif /* KERNEL_NETLINK_IPSEC_H_ @} */
+#endif /** KERNEL_NETLINK_IPSEC_H_ @}*/

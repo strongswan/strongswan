@@ -78,4 +78,4 @@ struct parser_t {
  */
 parser_t *parser_create(chunk_t data);
 
-#endif /*PARSER_H_ @} */
+#endif /** PARSER_H_ @}*/

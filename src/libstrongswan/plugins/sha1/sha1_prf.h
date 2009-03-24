@@ -44,4 +44,4 @@ struct sha1_prf_t {
  */
 sha1_prf_t *sha1_prf_create(pseudo_random_function_t algo);
 
-#endif /*SHA1_PRF_H_ @}*/
+#endif /** SHA1_PRF_H_ @}*/

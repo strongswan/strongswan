@@ -47,4 +47,4 @@ struct uci_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* UCI_PLUGIN_H_ @}*/
+#endif /** UCI_PLUGIN_H_ @}*/

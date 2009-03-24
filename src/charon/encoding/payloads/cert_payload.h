@@ -115,7 +115,6 @@ struct cert_payload_t {
 /**
  * Creates an empty certificate payload.
  * 
- * @param cert				certificate to embed
  * @return					cert_payload_t object
  */
 cert_payload_t *cert_payload_create(void);
@@ -137,4 +136,4 @@ cert_payload_t *cert_payload_create_from_cert(certificate_t *cert);
  */
 cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url);
 
-#endif /* CERT_PAYLOAD_H_ @} */
+#endif /** CERT_PAYLOAD_H_ @}*/

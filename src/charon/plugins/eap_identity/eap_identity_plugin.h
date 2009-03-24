@@ -46,4 +46,4 @@ struct eap_identity_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* EAP_IDENTITY_PLUGIN_H_ @}*/
+#endif /** EAP_IDENTITY_PLUGIN_H_ @}*/

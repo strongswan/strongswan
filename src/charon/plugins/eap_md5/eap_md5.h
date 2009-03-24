@@ -56,4 +56,4 @@ eap_md5_t *eap_md5_create_server(identification_t *server, identification_t *pee
  */
 eap_md5_t *eap_md5_create_peer(identification_t *server, identification_t *peer);
 
-#endif /* EAP_MD5_H_ @}*/
+#endif /** EAP_MD5_H_ @}*/

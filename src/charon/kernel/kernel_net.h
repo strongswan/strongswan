@@ -142,4 +142,4 @@ struct kernel_net_t {
 	void (*destroy) (kernel_net_t *this);
 };
 
-#endif /* KERNEL_NET_H_ @} */
+#endif /** KERNEL_NET_H_ @}*/
