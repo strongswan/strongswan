@@ -940,9 +940,11 @@ and
 whether to start the IKEv2 Charon daemon or not.
 Accepted values are
 .B yes
-(the default)
 or
 .BR no .
+The default is 
+.B yes
+if starter was compiled with IKEv2 support.
 .TP
 .B dumpdir
 in what directory should things started by \fBipsec starter\fR
@@ -955,9 +957,11 @@ This feature is currently not yet supported by \fBipsec starter\fR.
 whether to start the IKEv1 Pluto daemon or not.
 Accepted values are
 .B yes
-(the default)
 or
 .BR no .
+The default is 
+.B yes
+if starter was compiled with IKEv1 support.
 .TP
 .B strictcrlpolicy
 defines if a fresh CRL must be available in order for the peer authentication based

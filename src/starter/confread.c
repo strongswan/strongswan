@@ -61,8 +61,13 @@ static void default_values(starter_config_t *cfg)
 	cfg->setup.hidetos     = TRUE;
 	cfg->setup.uniqueids   = TRUE;
 	cfg->setup.interfaces  = new_list("%defaultroute");
+
+#ifdef START_CHARON
 	cfg->setup.charonstart = TRUE;
+#endif
+#ifdef START_PLUTO
 	cfg->setup.plutostart  = TRUE;
+#endif
 
 	cfg->conn_default.seen    = LEMPTY;
 	cfg->conn_default.startup = STARTUP_NO;

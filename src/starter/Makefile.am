@@ -15,6 +15,14 @@ MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
 PLUTODIR=$(top_srcdir)/src/pluto
 SCEPCLIENTDIR=$(top_srcdir)/src/scepclient
 
+if USE_PLUTO
+  AM_CFLAGS += -DSTART_PLUTO
+endif
+
+if USE_CHARON
+  AM_CFLAGS += -DSTART_CHARON
+endif
+
 lex.yy.c:	parser.l parser.y parser.h y.tab.c
 		$(LEX) --nounput $< 
 
