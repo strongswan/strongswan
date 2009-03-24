@@ -51,6 +51,8 @@ enum integrity_algorithm_t {
 	AUTH_HMAC_SHA2_512_256 = 14,
 	/** Implemented via hmac_signer_t */
 	AUTH_HMAC_SHA1_128 = 1025,
+	/** Implemented via hmac_signer_t */
+	AUTH_HMAC_MD5_128 = 1026,
 };
 
 /**

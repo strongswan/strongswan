@@ -159,6 +159,10 @@ hmac_signer_t *hmac_signer_create(integrity_algorithm_t algo)
 			hash = HASH_MD5;
 			trunc = 12;
 			break;
+		case AUTH_HMAC_MD5_128:
+			hash = HASH_MD5;
+			trunc = 16;
+			break;
 		case AUTH_HMAC_SHA2_256_128:
 			hash = HASH_SHA256;
 			trunc = 16;

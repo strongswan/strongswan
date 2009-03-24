@@ -221,6 +221,11 @@ if USE_EAP_MSCHAPV2
   PLUGINS += eapmschapv2
 endif
 
+if USE_EAP_RADIUS
+  SUBDIRS += plugins/eap_radius
+  PLUGINS += eapradius
+endif
+
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
   PLUGINS += medsrv
