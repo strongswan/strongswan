@@ -167,6 +167,11 @@ then
     echo -n " --enable-eap-identity" >> $INSTALLSHELL
 fi
 
+if [ "$USE_EAP_RADIUS" = "yes" ]
+then
+    echo -n " --enable-eap-radius" >> $INSTALLSHELL
+fi
+
 if [ "$USE_SQL" = "yes" ]
 then
     echo -n " --enable-sql --enable-sqlite" >> $INSTALLSHELL
