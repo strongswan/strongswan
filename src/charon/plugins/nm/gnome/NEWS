@@ -1,0 +1,12 @@
+NetworkManager-strongswan-1.1.0
+-------------------------------
+
+- updated to NetworkManager 7.1 API
+
+- requires >= strongswan-4.1.13
+
+
+NetworkManager-strongswan-1.0.0
+-------------------------------
+
+- First release
