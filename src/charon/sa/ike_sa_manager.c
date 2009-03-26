@@ -1476,8 +1476,8 @@ static bool check_uniqueness(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 					switch (policy)
 					{
 						case UNIQUE_REPLACE:
-							DBG1(DBG_IKE, "deleting duplicate IKE_SA due"
-									" uniqueness policy");
+							DBG1(DBG_IKE, "deleting duplicate IKE_SA for peer "
+									"'%D' due to uniqueness policy", other);
 							status = duplicate->delete(duplicate);
 							break;
 						case UNIQUE_KEEP:
