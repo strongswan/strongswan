@@ -413,7 +413,7 @@ static status_t process_server(private_eap_authenticator_t *this,
 			}
 			else
 			{
-				DBG1(DBG_IKE, "EAP method %N failed for peer %D",
+				DBG1(DBG_IKE, "EAP method %N failed for peer '%D'",
 					 eap_type_names, type,
 					 this->ike_sa->get_other_id(this->ike_sa));
 			}
