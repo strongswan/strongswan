@@ -716,6 +716,37 @@ static id_type_t get_type(private_identification_t *this)
 }
 
 /**
+ * Implementation of identification_t.contains_wildcards fro ID_DER_ASN1_DN.
+ */
+static bool contains_wildcards_dn(private_identification_t *this)
+{
+	chunk_t rdn, attribute;
+	chunk_t oid, value;
+	asn1_t type;
+	bool next;
+	
+	if (!init_rdn(this->encoded, &rdn, &attribute, &next))
+	{
+		return FALSE;
+	}	
+	/* fetch next RDN */
+	while (next)
+	{
+		/* parse next RDN and check for errors */
+		if (!get_next_rdn(&rdn, &attribute, &oid, &value, &type, &next))
+		{
+			return FALSE;
+		}
+		/* check if RDN is a wildcard */
+		if (value.len == 1 && *value.ptr == '*')
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
  * Implementation of identification_t.contains_wildcards.
  */
 static bool contains_wildcards(private_identification_t *this)
@@ -728,10 +759,9 @@ static bool contains_wildcards(private_identification_t *this)
 		case ID_RFC822_ADDR:
 			return memchr(this->encoded.ptr, '*', this->encoded.len) != NULL;
 		case ID_DER_ASN1_DN:
-			/* TODO */
+			return contains_wildcards_dn(this);
 		default:
 			return FALSE;
-		
 	}
 }
 
