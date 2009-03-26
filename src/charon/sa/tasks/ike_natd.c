@@ -356,7 +356,11 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 										charon->kernel_interface, FALSE, FALSE);
 			while (enumerator->enumerate(enumerator, (void**)&host))
 			{
+				/* apply port 500 to host, but work on a copy */
+				host = host->clone(host);
+				host->set_port(host, IKEV2_UDP_PORT);
 				notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
+				host->destroy(host);
 				message->add_payload(message, (payload_t*)notify);
 			}
 			enumerator->destroy(enumerator);
