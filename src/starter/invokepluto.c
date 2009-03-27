@@ -62,33 +62,49 @@ starter_pluto_sigchild(pid_t pid)
 int
 starter_stop_pluto (void)
 {
-    pid_t pid;
     int i;
+    pid_t pid = _pluto_pid;
 
-    pid = _pluto_pid;
     if (pid)
     {
 	_stop_requested = 1;
+
 	if (starter_whack_shutdown() == 0)
 	{
-	    for (i = 0; i < 20; i++)
+	    for (i = 0; i < 400; i++)
 	    {
-		usleep(20000);
+		usleep(20000); /* sleep for 20 ms */
 		if (_pluto_pid == 0)
+		{
+		    plog("pluto stopped after %d ms", 20*(i+1));
 		    return 0;
+		}
 	    }
 	}
 	/* be more and more aggressive */
 	for (i = 0; i < 20 && (pid = _pluto_pid) != 0; i++)
 	{
+	    
 	    if (i < 10)
+	    {
 		kill(pid, SIGTERM);
-	    else
+	    }
+	    if (i == 10)
+	    {
 		kill(pid, SIGKILL);
-	    usleep(20000);
+		plog("starter_stop_pluto(): pluto does not respond, sending KILL");
+	    }		
+	    else
+	    {
+		kill(pid, SIGKILL);
+	    }
+	    usleep(100000); /* sleep for 100 ms */
 	}
 	if (_pluto_pid == 0)
+	{
+	    plog("pluto stopped after %d ms", 8000 + 100*i);
 	    return 0;
+	}
 	plog("starter_stop_pluto(): can't stop pluto !!!");
 	return -1;
     }
@@ -248,17 +264,17 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork)
 	default:
 	    /* father */
 	    _pluto_pid = pid;
-	    for (i = 0; i < 50 && _pluto_pid; i++)
+	    for (i = 0; i < 500 && _pluto_pid; i++)
 	    {
-		/* wait for pluto */
+		/* wait for pluto for a maximum of 500 x 20 ms = 10 s */
 		usleep(20000);
 		if (stat(PLUTO_CTL_FILE, &stb) == 0)
 		{
-		    DBG(DBG_CONTROL,
-			DBG_log("pluto (%d) started", _pluto_pid)
-		    )
+		    plog("pluto (%d) started after %d ms", _pluto_pid, 20*(i+1));
 		    if (cfg->setup.postpluto)
+		    {
 			ignore_result(system(cfg->setup.postpluto));
+		    }
 		    return 0;
 		}
 	    }
@@ -269,10 +285,14 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork)
 		for (i = 0; i < 20 && (pid = _pluto_pid) != 0; i++)
 		{
 		    if (i < 10)
+		    {
 			kill(pid, SIGTERM);
+		    }
 		    else
+		    {
 			kill(pid, SIGKILL);
-		    usleep(20000);
+		    }
+		    usleep(20000); /* sleep for 20 ms */
 		}
 	    }
 	    else

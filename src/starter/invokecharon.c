@@ -216,7 +216,7 @@ starter_start_charon (starter_config_t *cfg, bool no_fork)
 		    {
 			kill(pid, SIGKILL);
 		    }
-		    usleep(20000);
+		    usleep(20000); /* sleep for 20 ms */
 		}
 	    }
 	    else
