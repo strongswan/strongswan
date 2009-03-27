@@ -1,7 +1,17 @@
 strongswan-4.2.14
 -----------------
 
--
+- The new server-side EAP RADIUS plugin (--enable-eap-radius)
+  relays EAP messages to and from a RADIUS server. Succesfully
+  tested with with a freeradius server using EAP-MD5 and EAP-SIM.
+
+- ASN.1 to time_t conversion caused a time wrap-around for
+  dates after Jan 18 03:14:07 UTC 2038 on 32-bit platforms.
+  As a workaround such dates are set to the maximum representable
+  time, i.e. Jan 19 03:14:07 UTC 2038.
+
+- Distinguished Names containing wildcards (*) are not sent in the
+  IDr payload anymore. 
 
 
 strongswan-4.2.13
