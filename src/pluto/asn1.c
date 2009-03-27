@@ -348,6 +348,8 @@ is_printablestring(chunk_t str)
     return TRUE;
 }
 
+#define TIME_MAX	0x7fffffff
+
 /*
  *  Converts ASN.1 UTCTIME or GENERALIZEDTIME into calender time
  */
@@ -355,7 +357,7 @@ time_t
 asn1totime(const chunk_t *utctime, asn1_t type)
 {
     struct tm t;
-    time_t tz_offset;
+    time_t tc, tz_offset;
     u_char *eot = NULL;
 
     if ((eot = memchr(utctime->ptr, 'Z', utctime->len)) != NULL)
@@ -381,6 +383,7 @@ asn1totime(const chunk_t *utctime, asn1_t type)
 	return 0; /* error in time format */
     }
 
+    /* parse ASN.1 time string */
     {
 	const char* format = (type == ASN1_UTCTIME)? "%2d%2d%2d%2d%2d":
 						     "%4d%2d%2d%2d%2d";
@@ -419,9 +422,11 @@ asn1totime(const chunk_t *utctime, asn1_t type)
     /* set daylight saving time to off */
     t.tm_isdst = 0;
 
-    /* compensate timezone */
+    /* convert to time_t */
+    tc = mktime(&t);
 
-    return mktime(&t) - timezone - tz_offset;
+    /* if no conversion overflow occurred, compensate timezone */
+    return (tc == -1) ? TIME_MAX : tc - timezone - tz_offset;
 }
 
 /*

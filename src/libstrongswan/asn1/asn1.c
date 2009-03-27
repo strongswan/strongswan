@@ -264,13 +264,15 @@ u_int asn1_length(chunk_t *blob)
 	return len;
 }
 
+#define TIME_MAX	0x7fffffff
+
 /**
  * Converts ASN.1 UTCTIME or GENERALIZEDTIME into calender time
  */
 time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 {
 	struct tm t;
-	time_t tz_offset;
+	time_t tc, tz_offset;
 	u_char *eot = NULL;
 	
 	if ((eot = memchr(utctime->ptr, 'Z', utctime->len)) != NULL)
@@ -296,12 +298,13 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 		return 0; /* error in time format */
 	}
 	
+	/* parse ASN.1 time string */
 	{
-	const char* format = (type == ASN1_UTCTIME)? "%2d%2d%2d%2d%2d":
-			"%4d%2d%2d%2d%2d";
+		const char* format = (type == ASN1_UTCTIME)? "%2d%2d%2d%2d%2d":
+													 "%4d%2d%2d%2d%2d";
 	
-	sscanf(utctime->ptr, format, &t.tm_year, &t.tm_mon, &t.tm_mday,
-		   &t.tm_hour, &t.tm_min);
+		sscanf(utctime->ptr, format, &t.tm_year, &t.tm_mon, &t.tm_mday,
+			   						 &t.tm_hour, &t.tm_min);
 	}
 	
 	/* is there a seconds field? */
@@ -334,9 +337,11 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	/* set daylight saving time to off */
 	t.tm_isdst = 0;
 	
-	/* compensate timezone */
-	
-	return mktime(&t) - timezone - tz_offset;
+	/* convert to time_t */
+	tc = mktime(&t);
+
+	/* if no conversion overflow occurred, compensate timezone */
+	return (tc == -1) ? TIME_MAX : tc - timezone - tz_offset;
 }
 
 /**
