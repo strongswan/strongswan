@@ -426,7 +426,7 @@ asn1totime(const chunk_t *utctime, asn1_t type)
     tc = mktime(&t);
 
     /* if no conversion overflow occurred, compensate timezone */
-    return (tc == -1) ? TIME_MAX : tc - timezone - tz_offset;
+    return (tc == -1) ? TIME_MAX : (tc - timezone - tz_offset);
 }
 
 /*
