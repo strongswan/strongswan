@@ -31,10 +31,8 @@ typedef struct radius_client_t radius_client_t;
  * RADIUS client functionality.
  *
  * To communicate with a RADIUS server, create a client and send messages over
- * it. All instances share a fixed size pool of sockets. During construction,
- * one sockets gets reserved for the client, so each client uses a different
- * but fixed port during its lifetime. On destruction, the socket is restored
- * to the pool.
+ * it. All instances share a fixed size pool of sockets. The client reserves
+ * a socket during request() and releases it afterwards.
  */
 struct radius_client_t {
 	

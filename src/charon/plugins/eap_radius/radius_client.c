@@ -72,11 +72,6 @@ struct private_radius_client_t {
 	radius_client_t public;
 	
 	/**
-	 * The clients socket from the pool
-	 */
-	entry_t *socket;
-	
-	/**
 	 * RADIUS servers State attribute
 	 */
 	chunk_t state;
@@ -165,7 +160,7 @@ bool radius_client_init()
 		return FALSE;
 	}
 	count = lib->settings->get_int(lib->settings,
-					"charon.plugins.eap_radius.sockets", 5);
+					"charon.plugins.eap_radius.sockets", 1);
 	
 	sockets = linked_list_create();
 	mutex = mutex_create(MUTEX_DEFAULT);
@@ -274,13 +269,14 @@ static radius_message_t* request(private_radius_client_t *this,
 								 radius_message_t *req)
 {
 	char virtual[] = {0x00,0x00,0x00,0x05};
-	radius_message_t *response;
+	entry_t *socket;
 	chunk_t data;
-	fd_set fds;
-	int  i;
+	int i;
+	
+	socket = get_socket();
 	
 	/* set Message Identifier */
-	req->set_identifier(req, this->socket->identifier++);
+	req->set_identifier(req, socket->identifier++);
 	/* we add the "Virtual" NAS-Port-Type, as we SHOULD include one */
 	req->add(req, RAT_NAS_PORT_TYPE, chunk_create(virtual, sizeof(virtual)));
 	/* add our NAS-Identifier */
@@ -291,30 +287,34 @@ static radius_message_t* request(private_radius_client_t *this,
 		req->add(req, RAT_STATE, this->state);
 	}
 	/* sign the request */
-	req->sign(req, this->socket->rng, this->socket->signer);
+	req->sign(req, socket->rng, socket->signer);
 	
 	data = req->get_encoding(req);
-	FD_ZERO(&fds);
-	FD_SET(this->socket->fd, &fds);
 	/* timeout after 2, 3, 4, 5 seconds */
 	for (i = 2; i <= 5; i++)
 	{
+		radius_message_t *response;
 		bool retransmit = FALSE;
 		struct timeval tv;
 		char buf[1024];
-		int res, retry = 0;
+		fd_set fds;
+		int res;
 		
-		if (send(this->socket->fd, data.ptr, data.len, 0) != data.len)
+		if (send(socket->fd, data.ptr, data.len, 0) != data.len)
 		{
 			DBG1(DBG_CFG, "sending RADIUS message failed: %s", strerror(errno));
+			put_socket(socket);
 			return NULL;
 		}
+		tv.tv_sec = i;
+		tv.tv_usec = 0;
+		
 		while (TRUE)
 		{
-			tv.tv_sec = i;
-			tv.tv_usec = 0;
-			
-			res = select(this->socket->fd + 1, &fds, NULL, NULL, &tv);
+			FD_ZERO(&fds);
+			FD_SET(socket->fd, &fds);
+			res = select(socket->fd + 1, &fds, NULL, NULL, &tv);
+			/* TODO: updated tv to time not waited. Linux does this for us. */
 			if (res < 0)
 			{	/* failed */
 				DBG1(DBG_CFG, "waiting for RADIUS message failed: %s",
@@ -327,7 +327,7 @@ static radius_message_t* request(private_radius_client_t *this,
 				retransmit = TRUE;
 				break;
 			}
-			res = recv(this->socket->fd, buf, sizeof(buf), MSG_DONTWAIT);
+			res = recv(socket->fd, buf, sizeof(buf), MSG_DONTWAIT);
 			if (res <= 0)
 			{
 				DBG1(DBG_CFG, "receiving RADIUS message failed: %s",
@@ -338,20 +338,15 @@ static radius_message_t* request(private_radius_client_t *this,
 			if (response)
 			{	
 				if (response->verify(response, req->get_authenticator(req),
-							secret, this->socket->hasher, this->socket->signer))
+							secret, socket->hasher, socket->signer))
 				{
 					save_state(this, response);
+					put_socket(socket);
 					return response;
 				}
 				response->destroy(response);
 			}
-			/* might be a maliciously injected packet, read onother one.
-			 * Limit the number of retries, an attacker could us trick into
-			 * a loop otherwise. */
-			if (retry++ > 5)
-			{
-				break;
-			}
+			DBG1(DBG_CFG, "received invalid RADIUS message, ignored");
 		}
 		if (!retransmit)
 		{
@@ -359,6 +354,7 @@ static radius_message_t* request(private_radius_client_t *this,
 		}
 	}
 	DBG1(DBG_CFG, "RADIUS server is not responding");
+	put_socket(socket);
 	return NULL;
 }
 
@@ -370,6 +366,7 @@ static chunk_t decrypt_mppe_key(private_radius_client_t *this, u_int16_t salt,
 {
 	chunk_t A, R, P, seed;
 	u_char *c, *p;
+	hasher_t *hasher;
 	
 	/**
 	 * From RFC2548 (encryption):
@@ -380,6 +377,12 @@ static chunk_t decrypt_mppe_key(private_radius_client_t *this, u_int16_t salt,
 	 */
 	
 	if (C.len % HASH_SIZE_MD5 || C.len < HASH_SIZE_MD5)
+	{
+		return chunk_empty;
+	}
+	
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
+	if (!hasher)
 	{
 		return chunk_empty;
 	}
@@ -395,8 +398,8 @@ static chunk_t decrypt_mppe_key(private_radius_client_t *this, u_int16_t salt,
 	while (c < C.ptr + C.len)
 	{
 		/* b(i) = MD5(S + c(i-1)) */
-		this->socket->hasher->get_hash(this->socket->hasher, secret, NULL);
-		this->socket->hasher->get_hash(this->socket->hasher, seed, p);
+		hasher->get_hash(hasher, secret, NULL);
+		hasher->get_hash(hasher, seed, p);
 		
 		/* p(i) = b(i) xor c(1) */
 		memxor(p, c, HASH_SIZE_MD5);
@@ -406,6 +409,7 @@ static chunk_t decrypt_mppe_key(private_radius_client_t *this, u_int16_t salt,
 		c += HASH_SIZE_MD5;
 		p += HASH_SIZE_MD5;
 	}
+	hasher->destroy(hasher);
 	
 	/* remove truncation, first byte is key length */
 	if (*P.ptr >= P.len)
@@ -469,7 +473,6 @@ static chunk_t decrypt_msk(private_radius_client_t *this,
  */
 static void destroy(private_radius_client_t *this)
 {
-	put_socket(this->socket);
 	free(this->state.ptr);
 	free(this);
 }
@@ -485,7 +488,6 @@ radius_client_t *radius_client_create()
 	this->public.decrypt_msk = (chunk_t(*)(radius_client_t*, radius_message_t *, radius_message_t *))decrypt_msk;
 	this->public.destroy = (void(*)(radius_client_t*))destroy;
 	
-	this->socket = get_socket();
 	this->state = chunk_empty;
 	
 	return &this->public;
