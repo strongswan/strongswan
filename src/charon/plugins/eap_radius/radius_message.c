@@ -308,6 +308,7 @@ static bool verify(private_radius_message_t *this, u_int8_t *req_auth,
 	enumerator_t *enumerator;
 	int type;
 	chunk_t data, msg;
+	bool has_eap = FALSE, has_auth = FALSE;
 	
 	/* replace Response by Request Authenticator for verification */
 	memcpy(res_auth, this->msg->authenticator, HASH_SIZE_MD5);
@@ -339,11 +340,11 @@ static bool verify(private_radius_message_t *this, u_int8_t *req_auth,
 			memset(data.ptr, 0, data.len);
 			if (signer->verify_signature(signer, msg,
 										 chunk_create(buf, sizeof(buf))))
-			{	/* good, restore Authenticators */
-				memcpy(this->msg->authenticator, res_auth, HASH_SIZE_MD5);
+			{
+				/* restore Message-Authenticator */
 				memcpy(data.ptr, buf, data.len);
-				enumerator->destroy(enumerator);
-				return TRUE;
+				has_auth = TRUE;
+				break;
 			}
 			else
 			{
@@ -352,10 +353,21 @@ static bool verify(private_radius_message_t *this, u_int8_t *req_auth,
 				return FALSE;
 			}
 		}
+		else if (type == RAT_EAP_MESSAGE)
+		{
+			has_eap = TRUE;
+		}
 	}
 	enumerator->destroy(enumerator);
-	DBG1(DBG_CFG, "RADIUS Message-Authenticator attribute missing");
-	return FALSE;
+	/* restore Response-Authenticator */
+	memcpy(this->msg->authenticator, res_auth, HASH_SIZE_MD5);
+	
+	if (has_eap && !has_auth)
+	{	/* Message-Authenticator is required if we have an EAP-Message */
+		DBG1(DBG_CFG, "RADIUS Message-Authenticator attribute missing");
+		return FALSE;
+	}
+	return TRUE;
 }
 
 /**
