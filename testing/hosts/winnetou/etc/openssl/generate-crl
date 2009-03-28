@@ -36,3 +36,8 @@ cd /etc/openssl/ecdsa
 openssl ca -gencrl -crldays 15 -config /etc/openssl/ecdsa/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out strongswan_ec.crl
 cp strongswan_ec.crl /var/www/localhost/htdocs/
+cd /etc/openssl/monster
+openssl ca -gencrl -crldays 15 -config /etc/openssl/monster/openssl.cnf -out crl.pem
+openssl crl -in crl.pem -outform der -out strongswan-monster.crl
+cp strongswan-monster.crl /var/www/localhost/htdocs/
+
