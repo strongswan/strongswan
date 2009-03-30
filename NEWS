@@ -5,6 +5,16 @@ strongswan-4.2.14
   relays EAP messages to and from a RADIUS server. Succesfully
   tested with with a freeradius server using EAP-MD5 and EAP-SIM.
 
+- A vulnerability in the Dead Peer Detection (RFC 3706) code was found by
+  Gerd v. Egidy <gerd.von.egidy@intra2net.com> of Intra2net AG affecting
+  all Openswan and strongSwan releases. A malicious (or expired ISAKMP)
+  R_U_THERE or R_U_THERE_ACK Dead Peer Detection packet can cause the
+  pluto IKE daemon to crash and restart. No authentication or encryption
+  is required to trigger this bug. One spoofed UDP packet can cause the
+  pluto IKE daemon to restart and be unresponsive for a few seconds while
+  restarting. This DPD null state vulnerability has been officially
+  registered as CVE-2009-0790 and is fixed by this release.
+
 - ASN.1 to time_t conversion caused a time wrap-around for
   dates after Jan 18 03:14:07 UTC 2038 on 32-bit platforms.
   As a workaround such dates are set to the maximum representable

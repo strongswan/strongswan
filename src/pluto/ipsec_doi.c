@@ -5446,9 +5446,9 @@ dpd_inI_outR(struct state *st, struct isakmp_notification *const n, pb_stream *p
    time_t tm = now();
     u_int32_t seqno;
 
-    if (!IS_ISAKMP_SA_ESTABLISHED(st->st_state))
+    if (st == NULL || !IS_ISAKMP_SA_ESTABLISHED(st->st_state))
     {
-        loglog(RC_LOG_SERIOUS, "DPD: Received R_U_THERE for unestablished ISKAMP SA");
+        loglog(RC_LOG_SERIOUS, "DPD: Received R_U_THERE for unestablished ISAKMP SA");
         return STF_IGNORE;
     }
     if (n->isan_spisize != COOKIE_SIZE * 2 || pbs_left(pbs) < COOKIE_SIZE * 2)
@@ -5516,10 +5516,10 @@ dpd_inR(struct state *st, struct isakmp_notification *const n, pb_stream *pbs)
 {
     u_int32_t seqno;
 
-    if (!IS_ISAKMP_SA_ESTABLISHED(st->st_state))
+    if (st == NULL || !IS_ISAKMP_SA_ESTABLISHED(st->st_state))
     {
         loglog(RC_LOG_SERIOUS
-	    , "DPD: Received R_U_THERE_ACK for unestablished ISKAMP SA");
+	    , "DPD: Received R_U_THERE_ACK for unestablished ISAKMP SA");
         return STF_FAIL;
     }
 
