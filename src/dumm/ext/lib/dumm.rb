@@ -18,4 +18,17 @@
 require 'dumm.so'
 require 'dumm/guest'
 
+module Dumm
+  # unload templates, reset all guests and delete bridges
+  def reset
+    Template.unload
+    Guest.each { |guest|
+      guest.reset if guest.running?
+    }
+    Bridge.each { |bridge|
+      bridge.delete
+    }
+  end
+end
+
 # vim:sw=2 ts=2 et
