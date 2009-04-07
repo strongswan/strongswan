@@ -28,6 +28,7 @@ module Dumm
     Bridge.each { |bridge|
       bridge.delete
     }
+    return nil
   end
 end
 

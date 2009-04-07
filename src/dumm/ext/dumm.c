@@ -124,6 +124,7 @@ static VALUE guest_get(VALUE class, VALUE key)
 
 static VALUE guest_each(int argc, VALUE *argv, VALUE class)
 {
+	linked_list_t *list;
 	enumerator_t *enumerator;
 	guest_t *guest;
 	
@@ -131,12 +132,18 @@ static VALUE guest_each(int argc, VALUE *argv, VALUE class)
 	{
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
+	list = linked_list_create();
 	enumerator = dumm->create_guest_enumerator(dumm);
 	while (enumerator->enumerate(enumerator, &guest))
 	{
-		rb_yield(Data_Wrap_Struct(class, NULL, NULL, guest));
+		list->insert_last(list, guest);
 	}
 	enumerator->destroy(enumerator);
+	while (list->remove_first(list, (void**)&guest) == SUCCESS)
+	{
+		rb_yield(Data_Wrap_Struct(class, NULL, NULL, guest));
+	}
+	list->destroy(list);
 	return class;
 }
 
@@ -282,6 +289,7 @@ static VALUE guest_get_iface(VALUE self, VALUE key)
 static VALUE guest_each_iface(int argc, VALUE *argv, VALUE self)
 {
 	enumerator_t *enumerator;
+	linked_list_t *list;
 	guest_t *guest;
 	iface_t *iface;
 	
@@ -290,27 +298,6 @@ static VALUE guest_each_iface(int argc, VALUE *argv, VALUE self)
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
 	Data_Get_Struct(self, guest_t, guest);
-	enumerator = guest->create_iface_enumerator(guest);
-	while (enumerator->enumerate(enumerator, &iface))
-	{
-		rb_yield(Data_Wrap_Struct(rbc_iface, NULL, NULL, iface));
-	}
-	enumerator->destroy(enumerator);
-	return self;
-}
-
-static VALUE guest_reset(VALUE self)
-{
-	linked_list_t *list;
-	enumerator_t *enumerator;
-	guest_t *guest;
-	iface_t *iface;
-	
-	Data_Get_Struct(self, guest_t, guest);
-	if (!guest->get_pid(guest))
-	{
-		rb_raise(rb_eRuntimeError, "guest is not running");
-	}
 	list = linked_list_create();
 	enumerator = guest->create_iface_enumerator(guest);
 	while (enumerator->enumerate(enumerator, &iface))
@@ -318,9 +305,9 @@ static VALUE guest_reset(VALUE self)
 		list->insert_last(list, iface);
 	}
 	enumerator->destroy(enumerator);
-	while (list->remove_last(list, (void**)&iface) == SUCCESS)
+	while (list->remove_first(list, (void**)&iface) == SUCCESS)
 	{
-		guest->destroy_iface(guest, iface);
+		rb_yield(Data_Wrap_Struct(rbc_iface, NULL, NULL, iface));
 	}
 	list->destroy(list);
 	return self;
@@ -362,7 +349,6 @@ static void guest_init()
 	rb_define_method(rbc_guest, "each", guest_each_iface, -1);
 	rb_define_method(rbc_guest, "include?", guest_find_iface, 1);
 	rb_define_method(rbc_guest, "iface?", guest_find_iface, 1);
-	rb_define_method(rbc_guest, "reset", guest_reset, 0);
 	rb_define_method(rbc_guest, "delete", guest_delete, 0);
 }
 
@@ -394,18 +380,25 @@ static VALUE bridge_get(VALUE class, VALUE key)
 static VALUE bridge_each(int argc, VALUE *argv, VALUE class)
 {
 	enumerator_t *enumerator;
+	linked_list_t *list;
 	bridge_t *bridge;
 	
 	if (!rb_block_given_p())
 	{
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
+	list = linked_list_create();
 	enumerator = dumm->create_bridge_enumerator(dumm);
 	while (enumerator->enumerate(enumerator, &bridge))
 	{
-		rb_yield(Data_Wrap_Struct(class, NULL, NULL, bridge));
+		list->insert_last(list, bridge);
 	}
 	enumerator->destroy(enumerator);
+	while (list->remove_first(list, (void**)&bridge) == SUCCESS)
+	{
+		rb_yield(Data_Wrap_Struct(class, NULL, NULL, bridge));
+	}
+	list->destroy(list);
 	return class;
 }
 
@@ -433,6 +426,7 @@ static VALUE bridge_to_s(VALUE self)
 static VALUE bridge_each_iface(int argc, VALUE *argv, VALUE self)
 {
 	enumerator_t *enumerator;
+	linked_list_t *list;
 	bridge_t *bridge;
 	iface_t *iface;
 	
@@ -441,12 +435,18 @@ static VALUE bridge_each_iface(int argc, VALUE *argv, VALUE self)
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
 	Data_Get_Struct(self, bridge_t, bridge);
+	list = linked_list_create();
 	enumerator = bridge->create_iface_enumerator(bridge);
 	while (enumerator->enumerate(enumerator, &iface))
 	{
-		rb_yield(Data_Wrap_Struct(rbc_iface, NULL, NULL, iface));
+		list->insert_last(list, iface);
 	}
 	enumerator->destroy(enumerator);
+	while (list->remove_first(list, (void**)&iface) == SUCCESS)
+	{
+		rb_yield(Data_Wrap_Struct(rbc_iface, NULL, NULL, iface));
+	}
+	list->destroy(list);
 	return self;
 }
 
@@ -540,6 +540,7 @@ static VALUE iface_add_addr(VALUE self, VALUE name)
 static VALUE iface_each_addr(int argc, VALUE *argv, VALUE self)
 {
 	enumerator_t *enumerator;
+	linked_list_t *list;
 	iface_t *iface;
 	host_t *addr;
 	char buf[64];
@@ -552,10 +553,16 @@ static VALUE iface_each_addr(int argc, VALUE *argv, VALUE self)
 	enumerator = iface->create_address_enumerator(iface);
 	while (enumerator->enumerate(enumerator, &addr))
 	{
-		snprintf(buf, sizeof(buf), "%H", addr);
-		rb_yield(rb_str_new2(buf));
+		list->insert_last(list, addr->clone(addr));
 	}
 	enumerator->destroy(enumerator);
+	while (list->remove_first(list, (void**)&addr) == SUCCESS)
+	{
+		snprintf(buf, sizeof(buf), "%H", addr);
+		addr->destroy(addr);
+		rb_yield(rb_str_new2(buf));
+	}
+	list->destroy(list);
 	return self;
 }
 

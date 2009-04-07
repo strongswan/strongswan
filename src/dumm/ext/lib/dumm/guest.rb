@@ -34,6 +34,13 @@ module Dumm
       end
       self[id]
     end
+    
+    # delete all interfaces
+    def reset
+      each {|i|
+        i.delete
+      }
+    end
   end
 end
 
