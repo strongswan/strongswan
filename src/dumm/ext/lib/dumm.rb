@@ -19,6 +19,18 @@ require 'dumm.so'
 require 'dumm/guest'
 
 module Dumm
+  
+  # use guest/bridge indentifiers directly
+  def method_missing(id, *args)
+    if Guest.guest? id
+      return Guest[id]
+    end
+    if Bridge.bridge? id
+      return Bridge[id]
+    end
+    super(id, *args)
+  end
+  
   # unload templates, reset all guests and delete bridges
   def reset
     Template.unload

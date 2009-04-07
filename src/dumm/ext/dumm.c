@@ -92,7 +92,9 @@ static VALUE guest_find(VALUE class, VALUE key)
 {
 	enumerator_t *enumerator;
 	guest_t *guest, *found = NULL;
-	if (TYPE(key) == T_SYMBOL) {
+	
+	if (TYPE(key) == T_SYMBOL)
+	{
 		key = rb_convert_type(key, T_STRING, "String", "to_s");
 	}
 	enumerator = dumm->create_guest_enumerator(dumm);
@@ -255,7 +257,9 @@ static VALUE guest_find_iface(VALUE self, VALUE key)
 	enumerator_t *enumerator;
 	iface_t *iface, *found = NULL;
 	guest_t *guest;
-	if (TYPE(key) == T_SYMBOL) {
+	
+	if (TYPE(key) == T_SYMBOL)
+	{
 		key = rb_convert_type(key, T_STRING, "String", "to_s");
 	}
 	Data_Get_Struct(self, guest_t, guest);
@@ -355,11 +359,15 @@ static void guest_init()
 /**
  * Bridge binding
  */
-static VALUE bridge_get(VALUE class, VALUE key)
+static VALUE bridge_find(VALUE class, VALUE key)
 {
 	enumerator_t *enumerator;
 	bridge_t *bridge, *found = NULL;
 	
+	if (TYPE(key) == T_SYMBOL)
+	{
+		key = rb_convert_type(key, T_STRING, "String", "to_s");
+	}
 	enumerator = dumm->create_bridge_enumerator(dumm);
 	while (enumerator->enumerate(enumerator, &bridge))
 	{
@@ -372,9 +380,19 @@ static VALUE bridge_get(VALUE class, VALUE key)
 	enumerator->destroy(enumerator);
 	if (!found)
 	{
-		rb_raise(rb_eRuntimeError, "bridge not found");
+		return Qnil;
 	}
 	return Data_Wrap_Struct(class, NULL, NULL, found);
+}
+
+static VALUE bridge_get(VALUE class, VALUE key)
+{
+	VALUE bridge = bridge_find(class, key);
+	if (NIL_P(bridge))
+	{
+		rb_raise(rb_eRuntimeError, "bridge not found");
+	}
+	return bridge;
 }
 
 static VALUE bridge_each(int argc, VALUE *argv, VALUE class)
@@ -468,6 +486,8 @@ static void bridge_init()
 	rb_define_singleton_method(rbc_bridge, "[]", bridge_get, 1);
 	rb_define_singleton_method(rbc_bridge, "each", bridge_each, -1);
 	rb_define_singleton_method(rbc_bridge, "new", bridge_new, 1);
+	rb_define_singleton_method(rbc_bridge, "include?", bridge_find, 1);
+	rb_define_singleton_method(rbc_bridge, "bridge?", bridge_find, 1);
 	
 	rb_define_method(rbc_bridge, "to_s", bridge_to_s, 0);
 	rb_define_method(rbc_bridge, "each", bridge_each_iface, -1);
