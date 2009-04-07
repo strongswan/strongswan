@@ -30,6 +30,7 @@
 
 #define PERME (S_IRWXU | S_IRWXG)
 #define GUEST_DIR "guests"
+#define TEMPLATE_DIR "templates"
 
 typedef struct private_dumm_t private_dumm_t;
 
@@ -165,7 +166,11 @@ static bool load_template(private_dumm_t *this, char *dir)
 		return FALSE;
 	}
 	
-	this->template = strdup(dir);
+	if (asprintf(&this->template, "%s/%s", TEMPLATE_DIR, dir) < 0)
+	{
+		this->template = NULL;
+		return FALSE;
+	}
 	if (access(this->template, F_OK) != 0)
 	{	/* does not exist, create template */
 		if (!mkdir_p(this->template, PERME))
