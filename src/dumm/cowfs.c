@@ -96,7 +96,7 @@ static void rel(const char **path)
 static int get_rd(const char *path)
 {
 	private_cowfs_t *this = get_this();
-
+	
 	if (this->over_fd > 0 && faccessat(this->over_fd, path, F_OK, 0) == 0)
 	{
 		return this->over_fd;
@@ -223,7 +223,7 @@ static int copy(const char *path)
 static int cowfs_getattr(const char *path, struct stat *stbuf)
 {
 	rel(&path);
-
+	
 	if (fstatat(get_rd(path), path, stbuf, AT_SYMLINK_NOFOLLOW) < 0)
 	{
 		return -errno;
@@ -242,7 +242,7 @@ static int cowfs_access(const char *path, int mask)
 	{
 		return -errno;
 	}
-    return 0;
+	return 0;
 }
 
 /**
@@ -251,16 +251,16 @@ static int cowfs_access(const char *path, int mask)
 static int cowfs_readlink(const char *path, char *buf, size_t size)
 {
 	int res;
-
+	
 	rel(&path);
 	
 	res = readlinkat(get_rd(path), path, buf, size - 1);
-    if (res < 0)
-    {
-        return -errno;
+	if (res < 0)
+	{
+		return -errno;
 	}
-    buf[res] = '\0';
-    return 0;
+	buf[res] = '\0';
+	return 0;
 }
 
 /**
@@ -329,7 +329,7 @@ static int cowfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			{
 				st.st_ino = ent->d_ino;
 				st.st_mode = ent->d_type << 12;
-	        	filler(buf, ent->d_name, &st, 0);
+				filler(buf, ent->d_name, &st, 0);
 			}
 		}
 		closedir(d1);
@@ -343,7 +343,7 @@ static int cowfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			{
 				st.st_ino = ent->d_ino;
 				st.st_mode = ent->d_type << 12;
-	        	filler(buf, ent->d_name, &st, 0);
+				filler(buf, ent->d_name, &st, 0);
 			}
 		}
 		closedir(d2);
@@ -355,11 +355,11 @@ static int cowfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		{
 			st.st_ino = ent->d_ino;
 			st.st_mode = ent->d_type << 12;
-        	filler(buf, ent->d_name, &st, 0);
+			filler(buf, ent->d_name, &st, 0);
 		}
 		closedir(d3);
 	}
-    return 0;
+	return 0;
 }
 
 /**
@@ -369,13 +369,13 @@ static int cowfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
 	int fd;
 	rel(&path);
-
+	
 	fd = get_wr(path);
 	if (!clone_path(get_rd(path), fd, path))
 	{
 		return -errno;
 	}
-
+	
 	if (mknodat(fd, path, mode, rdev) < 0)
 	{
 		return -errno;
@@ -390,7 +390,7 @@ static int cowfs_mkdir(const char *path, mode_t mode)
 {
 	int fd;
 	rel(&path);
-
+	
 	fd = get_wr(path);
 	if (!clone_path(get_rd(path), fd, path))
 	{
@@ -415,7 +415,7 @@ static int cowfs_unlink(const char *path)
 	{
 		return -errno;
 	}
-    return 0;
+	return 0;
 }
 
 /**
@@ -430,7 +430,7 @@ static int cowfs_rmdir(const char *path)
 	{
 		return -errno;
 	}
-    return 0;
+	return 0;
 }
 
 /**
@@ -440,10 +440,10 @@ static int cowfs_symlink(const char *from, const char *to)
 {
 	int fd;
 	const char *fromrel = from;
-
+	
 	rel(&to);
 	rel(&fromrel);
-
+	
 	fd = get_wr(to);
 	if (!clone_path(get_rd(fromrel), fd, fromrel))
 	{
@@ -462,24 +462,18 @@ static int cowfs_symlink(const char *from, const char *to)
 static int cowfs_rename(const char *from, const char *to)
 {
 	int fd;
-	private_cowfs_t *this = get_this();
-
+	
 	rel(&from);
 	rel(&to);
-
-	fd = get_rd(from);
-	if (fd == this->master_fd)
-	{
-		fd = copy(from);
-		if (fd < 0)
-		{
-			return -errno;
-		}
-	}
 	
+	fd = copy(from);
+	if (fd < 0)
+	{
+		return -errno;
+	}
 	if (renameat(fd, from, get_wr(to), to) < 0)
 	{
-	    return -errno;
+		return -errno;
 	}
 	return 0;
 }
@@ -490,7 +484,7 @@ static int cowfs_rename(const char *from, const char *to)
 static int cowfs_link(const char *from, const char *to)
 {
 	int rd, wr;
-
+	
 	rel(&from);
 	rel(&to);
 	
@@ -502,12 +496,12 @@ static int cowfs_link(const char *from, const char *to)
 		DBG1("cloning path '%s' failed", to);
 		return -errno;
 	}
-    if (linkat(rd, from, wr, to, 0) < 0)
-    {
+	if (linkat(rd, from, wr, to, 0) < 0)
+	{
 		DBG1("linking '%s' to '%s' failed", from, to);
-    	return -errno;
+		return -errno;
 	}
-    return 0;
+	return 0;
 }
 
 /**
@@ -517,25 +511,21 @@ static int cowfs_chmod(const char *path, mode_t mode)
 {
 	int fd;
 	struct stat st;
-	private_cowfs_t *this = get_this();
 	
 	rel(&path);
 	fd = get_rd(path);
-	if (fd == this->master_fd)
+	if (fstatat(fd, path, &st, 0) < 0)
 	{
-		if (fstatat(fd, path, &st, 0) < 0)
-		{
-			return -errno;
-		}
-		if (st.st_mode == mode)
-		{
-			return 0;
-		}
-		fd = copy(path);
-		if (fd < 0)
-		{
-			return -errno;
-		}
+		return -errno;
+	}
+	if (st.st_mode == mode)
+	{
+		return 0;
+	}
+	fd = copy(path);
+	if (fd < 0)
+	{
+		return -errno;
 	}
 	if (fchmodat(fd, path, mode, 0) < 0)
 	{
@@ -551,25 +541,21 @@ static int cowfs_chown(const char *path, uid_t uid, gid_t gid)
 {
 	int fd;
 	struct stat st;
-	private_cowfs_t *this = get_this();
 	
 	rel(&path);
 	fd = get_rd(path);
-	if (fd == this->master_fd)
+	if (fstatat(fd, path, &st, 0) < 0)
 	{
-		if (fstatat(fd, path, &st, 0) < 0)
-		{
-			return -errno;
-		}
-		if (st.st_uid == uid && st.st_gid == gid)
-		{
-			return 0;
-		}
-		fd = copy(path);
-		if (fd < 0)
-		{
-			return -errno;
-		}
+		return -errno;
+	}
+	if (st.st_uid == uid && st.st_gid == gid)
+	{
+		return 0;
+	}
+	fd = copy(path);
+	if (fd < 0)
+	{
+		return -errno;
 	}
 	if (fchownat(fd, path, uid, gid, AT_SYMLINK_NOFOLLOW) < 0)
 	{
@@ -586,25 +572,20 @@ static int cowfs_truncate(const char *path, off_t size)
 	int fd;
 	struct stat st;
 	
-	private_cowfs_t *this = get_this();
-
 	rel(&path);
 	fd = get_rd(path);
-	if (fd == this->master_fd)
+	if (fstatat(fd, path, &st, 0) < 0)
 	{
-		if (fstatat(fd, path, &st, 0) < 0)
-		{
-			return -errno;
-		}
-		if (st.st_size == size)
-		{
-			return 0;
-		}
-		fd = copy(path);
-		if (fd < 0)
-		{
-			return -errno;
-		}
+		return -errno;
+	}
+	if (st.st_size == size)
+	{
+		return 0;
+	}
+	fd = copy(path);
+	if (fd < 0)
+	{
+		return -errno;
 	}
 	fd = openat(fd, path, O_WRONLY);
 	if (fd < 0)
@@ -627,24 +608,19 @@ static int cowfs_utimens(const char *path, const struct timespec ts[2])
 {
 	struct timeval tv[2];
 	int fd;
-	private_cowfs_t *this = get_this();
-
+	
 	rel(&path);
-	fd = get_rd(path);
-	if (fd == this->master_fd)
+	fd = copy(path);
+	if (fd < 0)
 	{
-		fd = copy(path);
-		if (fd < 0)
-		{
-			return -errno;
-		}
+		return -errno;
 	}
-
+	
 	tv[0].tv_sec = ts[0].tv_sec;
 	tv[0].tv_usec = ts[0].tv_nsec / 1000;
 	tv[1].tv_sec = ts[1].tv_sec;
 	tv[1].tv_usec = ts[1].tv_nsec / 1000;
-
+	
 	if (futimesat(fd, path, tv) < 0)
 	{
 		return -errno;
@@ -658,10 +634,10 @@ static int cowfs_utimens(const char *path, const struct timespec ts[2])
 static int cowfs_open(const char *path, struct fuse_file_info *fi)
 {
 	int fd;
-
+	
 	rel(&path);
 	fd = get_rd(path);
-
+	
 	fd = openat(fd, path, fi->flags);
 	if (fd < 0)
 	{
@@ -678,11 +654,11 @@ static int cowfs_read(const char *path, char *buf, size_t size, off_t offset,
 					  struct fuse_file_info *fi)
 {
 	int file, fd, res;
-
+	
 	rel(&path);
-
+	
 	fd = get_rd(path);
-
+	
 	file = openat(fd, path, O_RDONLY);
 	if (file < 0)
 	{
@@ -704,20 +680,14 @@ static int cowfs_read(const char *path, char *buf, size_t size, off_t offset,
 static int cowfs_write(const char *path, const char *buf, size_t size,
 					   off_t offset, struct fuse_file_info *fi)
 {
-	private_cowfs_t *this = get_this();
 	int file, fd, res;
-
+	
 	rel(&path);
-
-	fd = get_wr(path);
-	if (fd == this->master_fd ||
-		(this->over_fd > 0 && fd == this->host_fd))
+	
+	fd = copy(path);
+	if (fd < 0)
 	{
-		fd = copy(path);
-		if (fd < 0)
-		{
-			return -errno;
-		}
+		return -errno;
 	}
 	file = openat(fd, path, O_WRONLY);
 	if (file < 0)
@@ -746,13 +716,13 @@ static int cowfs_statfs(const char *path, struct statvfs *stbuf)
 	{
 		fd = this->over_fd;
 	}
-
+	
 	if (fstatvfs(fd, stbuf) < 0)
 	{
 		return -errno;
 	}
 	
-    return 0;
+	return 0;
 }
 
 /** 
@@ -771,26 +741,26 @@ static void *cowfs_init(struct fuse_conn_info *conn)
  * FUSE method vectors
  */
 static struct fuse_operations cowfs_operations = {
-    .getattr	= cowfs_getattr,
-    .access		= cowfs_access,
-    .readlink	= cowfs_readlink,
-    .readdir	= cowfs_readdir,
-    .mknod		= cowfs_mknod,
-    .mkdir		= cowfs_mkdir,
-    .symlink	= cowfs_symlink,
-    .unlink		= cowfs_unlink,
-    .rmdir		= cowfs_rmdir,
-    .rename		= cowfs_rename,
-    .link		= cowfs_link,
-    .chmod		= cowfs_chmod,
-    .chown		= cowfs_chown,
-    .truncate	= cowfs_truncate,
-    .utimens	= cowfs_utimens,
-    .open		= cowfs_open,
-    .read		= cowfs_read,
-    .write		= cowfs_write,
-    .statfs		= cowfs_statfs,
-    .init		= cowfs_init,
+	.getattr	= cowfs_getattr,
+	.access		= cowfs_access,
+	.readlink	= cowfs_readlink,
+	.readdir	= cowfs_readdir,
+	.mknod		= cowfs_mknod,
+	.mkdir		= cowfs_mkdir,
+	.symlink	= cowfs_symlink,
+	.unlink		= cowfs_unlink,
+	.rmdir		= cowfs_rmdir,
+	.rename		= cowfs_rename,
+	.link		= cowfs_link,
+	.chmod		= cowfs_chmod,
+	.chown		= cowfs_chown,
+	.truncate	= cowfs_truncate,
+	.utimens	= cowfs_utimens,
+	.open		= cowfs_open,
+	.read		= cowfs_read,
+	.write		= cowfs_write,
+	.statfs		= cowfs_statfs,
+	.init		= cowfs_init,
 };
 
 /**
@@ -854,63 +824,63 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 	this->public.set_overlay = (bool(*)(cowfs_t*, char *path))set_overlay;
 	this->public.destroy = (void(*)(cowfs_t*))destroy;
 	
-    this->master_fd = open(master, O_RDONLY | O_DIRECTORY);
-    if (this->master_fd < 0)
-    {
-    	DBG1("failed to open master filesystem '%s'", master);
-    	free(this);
-    	return NULL;
-    }
-    this->host_fd = open(host, O_RDONLY | O_DIRECTORY);
+	this->master_fd = open(master, O_RDONLY | O_DIRECTORY);
+	if (this->master_fd < 0)
+	{
+		DBG1("failed to open master filesystem '%s'", master);
+		free(this);
+		return NULL;
+	}
+	this->host_fd = open(host, O_RDONLY | O_DIRECTORY);
 	if (this->host_fd < 0)
-    {
-    	DBG1("failed to open host filesystem '%s'", host);
-    	close(this->master_fd);
-    	free(this);
-    	return NULL;
-    }
+	{
+		DBG1("failed to open host filesystem '%s'", host);
+		close(this->master_fd);
+		free(this);
+		return NULL;
+	}
 	this->over_fd = -1;
 	
-    this->chan = fuse_mount(mount, &args);
-    if (this->chan == NULL)
-    {
-    	DBG1("mounting cowfs FUSE on '%s' failed", mount);
-    	close(this->master_fd);
-    	close(this->host_fd);
-    	free(this);
-    	return NULL;
-    }
-    
-    this->fuse = fuse_new(this->chan, &args, &cowfs_operations,
-    					  sizeof(cowfs_operations), this);
-    if (this->fuse == NULL)
-    {
-    	DBG1("creating cowfs FUSE handle failed");
-    	close(this->master_fd);
-    	close(this->host_fd);
-    	fuse_unmount(mount, this->chan);
-    	free(this);
-    	return NULL;
-    }
-    
-    this->mount = strdup(mount);
-    this->master = strdup(master);
-    this->host = strdup(host);
-    this->over = NULL;
+	this->chan = fuse_mount(mount, &args);
+	if (this->chan == NULL)
+	{
+		DBG1("mounting cowfs FUSE on '%s' failed", mount);
+		close(this->master_fd);
+		close(this->host_fd);
+		free(this);
+		return NULL;
+	}
+	
+	this->fuse = fuse_new(this->chan, &args, &cowfs_operations,
+						  sizeof(cowfs_operations), this);
+	if (this->fuse == NULL)
+	{
+		DBG1("creating cowfs FUSE handle failed");
+		close(this->master_fd);
+		close(this->host_fd);
+		fuse_unmount(mount, this->chan);
+		free(this);
+		return NULL;
+	}
+	
+	this->mount = strdup(mount);
+	this->master = strdup(master);
+	this->host = strdup(host);
+	this->over = NULL;
 	
 	if (pthread_create(&this->thread, NULL, (void*)fuse_loop, this->fuse) != 0)
 	{
-    	DBG1("creating thread to handle FUSE failed");
-    	fuse_unmount(mount, this->chan);
-    	free(this->mount);
-    	free(this->master);
-    	free(this->host);
-    	close(this->master_fd);
-    	close(this->host_fd);
-    	free(this);
-    	return NULL;
+		DBG1("creating thread to handle FUSE failed");
+		fuse_unmount(mount, this->chan);
+		free(this->mount);
+		free(this->master);
+		free(this->host);
+		close(this->master_fd);
+		close(this->host_fd);
+		free(this);
+		return NULL;
 	}
-    
-    return &this->public;
+	
+	return &this->public;
 }
 
