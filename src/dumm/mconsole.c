@@ -147,8 +147,11 @@ static int request(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 			}
 			else if (reply.err)
 			{
-				DBG1("received mconsole error %d: %*.s",
-					 reply.err, reply.len, reply.data);
+				if (reply.len && *reply.data)
+				{
+					DBG1("received mconsole error %d: %*.s",
+						 reply.err, reply.len, reply.data);
+				}
 				break;
 			}
 		}

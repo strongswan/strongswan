@@ -41,6 +41,23 @@ module Dumm
         i.delete
       }
     end
+    
+    # has the guest booted up?
+    def booted?
+      begin
+        exec("pgrep getty")
+      rescue
+        return false
+      end
+      return true
+    end
+    
+    # wait until the guest has booted
+    def boot
+      while not booted?
+        sleep(1)
+      end
+    end
   end
 end
 

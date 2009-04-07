@@ -28,7 +28,15 @@ module Dumm
     Bridge.each { |bridge|
       bridge.delete
     }
-    return nil
+    return Dumm
+  end
+  
+  # wait until all running guests have booted up
+  def boot
+    Guest.each {|g|
+	    g.boot if g.running?
+    }
+    return Dumm
   end
 end
 
