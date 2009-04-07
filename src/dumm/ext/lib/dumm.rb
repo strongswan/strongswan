@@ -31,6 +31,11 @@ module Dumm
     super(id, *args)
   end
   
+  # shortcut for Template loading
+  def template(name)
+    Template.load name
+  end
+  
   # unload templates, reset all guests and delete bridges
   def reset
     Template.unload
