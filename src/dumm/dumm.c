@@ -238,8 +238,8 @@ static void load_guests(private_dumm_t *this)
 	
 	while ((ent = readdir(dir)))
 	{
-		if (streq(ent->d_name, ".") ||  streq(ent->d_name, ".."))
-		{
+		if (*ent->d_name == '.')
+		{	/* skip ".", ".." and hidden files (such as ".svn") */
 			continue;
 		}
 		guest = guest_load(this->guest_dir, ent->d_name);
