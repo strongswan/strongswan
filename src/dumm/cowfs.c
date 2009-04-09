@@ -708,15 +708,9 @@ static int cowfs_write(const char *path, const char *buf, size_t size,
  */
 static int cowfs_statfs(const char *path, struct statvfs *stbuf)
 {
-	private_cowfs_t *this = get_this();
 	int fd;
 	
-	fd = this->host_fd;
-	if (this->over_fd > 0)
-	{
-		fd = this->over_fd;
-	}
-	
+	fd = get_rd(path);
 	if (fstatvfs(fd, stbuf) < 0)
 	{
 		return -errno;
