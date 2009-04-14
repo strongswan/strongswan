@@ -4,7 +4,7 @@
       0x01                   "Deutsche Telekom AG"
         0x0A                 ""
           0x07               ""
-            0x14             "ND"
+            0x14             "ND"						OID_NAME_DISTINGUISHER
 0x09                         "data"
   0x92                       ""
     0x26                     ""
@@ -14,25 +14,25 @@
             0x2C             ""
               0x64           "pilot"
                 0x01         "pilotAttributeType"
-                  0x01       "UID"
-                  0x19       "DC"
+                  0x01       "UID"						OID_PILOT_USERID
+                  0x19       "DC"						OID_PILOT_DOMAIN_COMPONENT
 0x55                         "X.500"
   0x04                       "X.509"
-    0x03                     "CN"
-    0x04                     "S"
-    0x05                     "SN"
-    0x06                     "C"
-    0x07                     "L"
-    0x08                     "ST"
-    0x0A                     "O"
-    0x0B                     "OU"
-    0x0C                     "T"
-    0x0D                     "D"
-    0x24                     "userCertificate"
-    0x29                     "N"
-    0x2A                     "G"
-    0x2B                     "I"
-    0x2D                     "ID"
+    0x03                     "CN"						OID_COMMON_NAME
+    0x04                     "S"						OID_SURNAME
+    0x05                     "SN"						OID_SERIAL_NUMBER
+    0x06                     "C"						OID_COUNTRY
+    0x07                     "L"						OID_LOCALITY
+    0x08                     "ST"						OID_STATE_OR_PROVINCE
+    0x0A                     "O"						OID_ORGANIZATION
+    0x0B                     "OU"						OID_ORGANIZATION_UNIT
+    0x0C                     "T"						OID_TITLE
+    0x0D                     "D"						OID_DESCRIPTION
+    0x24                     "userCertificate"			OID_USER_CERTIFICATE
+    0x29                     "N"						OID_NAME
+    0x2A                     "G"						OID_GIVEN_NAME
+    0x2B                     "I"						OID_INITIALS
+    0x2D                     "ID"						OID_UNIQUE_IDENTIFIER
     0x48                     "role"						OID_ROLE
   0x1D                       "id-ce"
     0x09                     "subjectDirectoryAttrs"
@@ -149,7 +149,7 @@
                 0x01         ""
                   0x02       ""
                     0x02     ""
-                    0x4B     "TCGID"
+                    0x4B     "TCGID"					OID_TCGID
       0x05                   "security"
         0x05                 "mechanisms"
           0x07               "id-pkix"
@@ -251,7 +251,7 @@
                 0x0d         "nsComment"				OID_NS_COMMENT
               0x03           "directory"
                 0x01         ""
-                  0x03       "employeeNumber"
+                  0x03       "employeeNumber"			OID_EMPLOYEE_NUMBER
               0x04           "policy"
                 0x01         "nsSGC"
             0x45             "verisign"
@@ -264,3 +264,10 @@
                   0x06       "recipientNonce"			OID_PKI_RECIPIENT_NONCE
                   0x07       "transID"					OID_PKI_TRANS_ID
                   0x08       "extensionReq"
+      0x86                   "old-netscape"
+        0xF7                 ""
+          0x0D               ""
+            0x01             ""
+              0x09           ""
+                0x01         "emailAddress"				OID_EMAIL_ADDRESS
+                0x02         "unstructuredName"			OID_UNSTRUCTURED_NAME
