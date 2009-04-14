@@ -112,7 +112,7 @@ EXTRA_DIST = config/proposal_keywords.txt
 MAINTAINERCLEANFILES = config/proposal_keywords.c
 
 config/proposal_keywords.c:	config/proposal_keywords.txt config/proposal_keywords.h
-		$(GPERF) -C -G -c -t < $< > $@
+		(cd `dirname $<` && $(GPERF) -C -G -c -t < `basename $<` > `basename $@` )
 
 # compile options
 #################
