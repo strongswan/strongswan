@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <errno.h>
+#include <string.h>
 
 #include <debug.h>
 
