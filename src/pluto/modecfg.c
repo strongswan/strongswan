@@ -552,6 +552,10 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 {
     struct isakmp_attribute attr;
     pb_stream strattr;
+    err_t ugh;
+    char buf[BUF_LEN];
+    int dns_idx = 0;
+    int nbns_idx = 0;
 
     while (pbs_left(attrs) >= sizeof(struct isakmp_attribute))
     {
@@ -570,19 +574,88 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 	case INTERNAL_IP4_ADDRESS:
 	    if (attr_len == 4)
 	    {
-		initaddr((char *)(strattr.cur), 4, AF_INET, &ia->ipaddr);
+		ugh = initaddr((char *)(strattr.cur), 4, AF_INET, &ia->ipaddr);
+		if (ugh != NULL)
+		{
+		    plog("received invalid virtual IPv4 address: %s", ugh);
+		}
 	    }
-	    /* fall through to set attribute flag */
-	case INTERNAL_IP4_NETMASK:
+	    ia->attr_set |= LELEM(attr_type);
+	    break;
 	case INTERNAL_IP4_DNS:
-	case INTERNAL_IP4_SUBNET:
+	    if (attr_len == 4 && dns_idx < DNS_SERVER_MAX)
+	    {
+		ugh = initaddr((char *)(strattr.cur), 4, AF_INET, &ia->dns[dns_idx]);
+		if (ugh != NULL)
+		{
+		    plog("received invalid IPv4 DNS server address: %s", ugh);
+		}
+		else
+		{
+		    addrtot(&ia->dns[dns_idx], 0, buf, BUF_LEN);
+		    plog("received IPv4 DNS server address %s", buf);
+		    dns_idx++;
+		}
+	    }
+	    ia->attr_set |= LELEM(attr_type);
+	    break;
 	case INTERNAL_IP4_NBNS:
+	    if (attr_len == 4 && nbns_idx < NBNS_SERVER_MAX)
+	    {
+		ugh = initaddr((char *)(strattr.cur), 4, AF_INET, &ia->nbns[nbns_idx]);
+		if (ugh != NULL)
+		{
+		    plog("received invalid IPv4 WINS server address: %s", ugh);
+		}
+		else
+		{
+		    addrtot(&ia->nbns[nbns_idx], 0, buf, BUF_LEN);
+		    plog("received IPv4 WINS server address %s", buf);
+		    nbns_idx++;
+		}
+	    }
+	    ia->attr_set |= LELEM(attr_type);
+	    break;
+	case INTERNAL_IP6_DNS:
+	    if (attr_len == 16 && dns_idx < DNS_SERVER_MAX)
+	    {
+		ugh = initaddr((char *)(strattr.cur), 16, AF_INET6, &ia->dns[dns_idx]);
+		if (ugh != NULL)
+		{
+		    plog("received invalid IPv6 DNS server address: %s", ugh);
+		}
+		else
+		{
+		    addrtot(&ia->dns[dns_idx], 0, buf, BUF_LEN);
+		    plog("received IPv6 DNS server address %s", buf);
+		    dns_idx++;
+		}
+	    }
+	    ia->attr_set |= LELEM(attr_type);
+	    break;
+	case INTERNAL_IP6_NBNS:
+	    if (attr_len == 16 && nbns_idx < NBNS_SERVER_MAX)
+	    {
+		ugh = initaddr((char *)(strattr.cur), 16, AF_INET6, &ia->nbns[nbns_idx]);
+		if (ugh != NULL)
+		{
+		    plog("received invalid IPv6 WINS server address: %s", ugh);
+		}
+		else
+		{
+		    addrtot(&ia->nbns[nbns_idx], 0, buf, BUF_LEN);
+		    plog("received IPv6 WINS server address %s", buf);
+		    nbns_idx++;
+		}
+	    }
+	    ia->attr_set |= LELEM(attr_type);
+	    break;
+	case INTERNAL_IP4_NETMASK:
+	case INTERNAL_IP4_SUBNET:
 	case INTERNAL_ADDRESS_EXPIRY:
 	case INTERNAL_IP4_DHCP:
 	case INTERNAL_IP6_ADDRESS:
 	case INTERNAL_IP6_NETMASK:
-	case INTERNAL_IP6_DNS:
-	case INTERNAL_IP6_NBNS:
 	case INTERNAL_IP6_DHCP:
 	case SUPPORTED_ATTRIBUTES:
 	case INTERNAL_IP6_SUBNET:
