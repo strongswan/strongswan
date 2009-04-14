@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -36,14 +36,13 @@ struct attribute_manager_t {
 	 * Acquire a virtual IP address to assign to a peer.
 	 *
 	 * @param pool			pool name to acquire address from
-	 * @param id			peer identity to get address for
-	 * @param auth			authorization infos of peer
+	 * @param id			peer identity to get address forua
 	 * @param requested		IP in configuration request
 	 * @return				allocated address, NULL to serve none
 	 */
 	host_t* (*acquire_address)(attribute_manager_t *this,
 							   char *pool, identification_t *id,
-							   auth_info_t *auth, host_t *requested);
+							   host_t *requested);
 	
 	/**
 	 * Release a previously acquired address.

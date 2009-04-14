@@ -54,11 +54,11 @@ _read_subnet(const char *src, size_t len, ip_subnet *dst, ip_subnet *dstko,
     bool ok;
     int af;
 
-    if ((len > 4) && (strncmp(src, "%v4:", 4)==0))
+    if ((len > 4) && (strneq(src, "%v4:", 4)))
     {
 	af = AF_INET;
     }
-    else if ((len > 4) && (strncmp(src, "%v6:", 4)==0))
+    else if ((len > 4) && (strneq(src, "%v6:", 4)))
     {
 	af = AF_INET6;
     }
@@ -196,12 +196,12 @@ struct virtual_t
     if (!string || string[0] == '\0')
 	return NULL;
 
-    if (strlen(string) >= 6 && strncmp(string,"vhost:",6) == 0)
+    if (strlen(string) >= 6 && strneq(string,"vhost:",6))
     {
 	flags |= F_VIRTUAL_HOST;
 	str += 6;
     }
-    else if (strlen(string) >= 5 && strncmp(string,"vnet:",5) == 0)
+    else if (strlen(string) >= 5 && strneq(string,"vnet:",5))
 	str += 5;
     else
 	goto fail;
@@ -213,17 +213,17 @@ struct virtual_t
     {
 	next = strchr(str,',');
 	if (!next) next = str + strlen(str);
-	if (next-str == 3 && strncmp(str, "%no", 3) == 0)
+	if (next-str == 3 && strneq(str, "%no", 3))
 	    flags |= F_VIRTUAL_NO;
 #if 0
-	else if (next-str == 4 && strncmp(str, "%ike", 4) == 0)
+	else if (next-str == 4 && strneq(str, "%ike", 4))
 	    flags |= F_VIRTUAL_IKE_CONFIG;
-	else if (next-str == 5 && strncmp(str, "%dhcp", 5) == 0)
+	else if (next-str == 5 && strneq(str, "%dhcp", 5))
 	    flags |= F_VIRTUAL_DHCP;
 #endif
-	else if (next-str == 5 && strncmp(str, "%priv", 5) == 0)
+	else if (next-str == 5 && strneq(str, "%priv", 5))
 	    flags |= F_VIRTUAL_PRIVATE;
-	else if (next-str == 4 && strncmp(str, "%all", 4) == 0)
+	else if (next-str == 4 && strneq(str, "%all", 4))
 	    flags |= F_VIRTUAL_ALL;
 	else if (_read_subnet(str, next-str, &sub, NULL, NULL))
 	{

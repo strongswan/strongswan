@@ -1,5 +1,4 @@
 moon::cat /var/log/daemon.log::certificate was revoked::YES
-moon::cat /var/log/daemon.log::authentication of.*carol@strongswan.org.*failed::YES
 carol::cat /var/log/daemon.log::received AUTHENTICATION_FAILED notify error::YES
 moon::ipsec status::alice.*ESTABLISHED::NO
 carol::ipsec status::home.*INSTALLED::NO

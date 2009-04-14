@@ -45,7 +45,7 @@ present(const char* pattern, chunk_t* ch)
 {
     u_int pattern_len = strlen(pattern);
 
-    if (ch->len >= pattern_len && strncmp(ch->ptr, pattern, pattern_len) == 0)
+    if (ch->len >= pattern_len && strneq(ch->ptr, pattern, pattern_len))
     {
 	ch->ptr += pattern_len;
 	ch->len -= pattern_len;
@@ -60,8 +60,7 @@ present(const char* pattern, chunk_t* ch)
 static bool
 match(const char *pattern, const chunk_t *ch)
 {
-    return ch->len == strlen(pattern) &&
-	   strncmp(pattern, ch->ptr, ch->len) == 0;
+    return ch->len == strlen(pattern) && strneq(pattern, ch->ptr, ch->len);
 }
 
 /*

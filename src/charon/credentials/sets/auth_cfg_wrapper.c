@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2008-2009 Martin Willi
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,36 +18,36 @@
 
 #include <daemon.h>
 
-#include "auth_info_wrapper.h"
+#include "auth_cfg_wrapper.h"
 
-typedef struct private_auth_info_wrapper_t private_auth_info_wrapper_t;
+typedef struct private_auth_cfg_wrapper_t private_auth_cfg_wrapper_t;
 
 /**
- * private data of auth_info_wrapper
+ * private data of auth_cfg_wrapper
  */
-struct private_auth_info_wrapper_t {
+struct private_auth_cfg_wrapper_t {
 
 	/**
 	 * public functions
 	 */
-	auth_info_wrapper_t public;
+	auth_cfg_wrapper_t public;
 	
 	/**
 	 * wrapped auth info
 	 */
-	auth_info_t *auth;
+	auth_cfg_t *auth;
 };
 
 /**
- * enumerator for auth_info_wrapper_t.create_cert_enumerator()
+ * enumerator for auth_cfg_wrapper_t.create_cert_enumerator()
  */
 typedef struct {
 	/** implements enumerator_t */
 	enumerator_t public;
-	/** inner enumerator from auth_info */
+	/** inner enumerator from auth_cfg */
 	enumerator_t *inner;
-	/** wrapped auth info */
-	auth_info_t *auth;
+	/** wrapped auth round */
+	auth_cfg_t *auth;
 	/** enumerated cert type */
 	certificate_type_t cert;
 	/** enumerated key type */
@@ -57,10 +57,11 @@ typedef struct {
 } wrapper_enumerator_t;
 
 /**
- * Tries to fetch a certificate that was supplied as "Hash and URL" (replaces the
- * item's type and value in place).
+ * Tries to fetch a certificate that was supplied as "Hash and URL"
+ * (replaces rule type and value in place).
  */
-static bool fetch_cert(wrapper_enumerator_t *enumerator, auth_item_t *type, void **value)
+static bool fetch_cert(wrapper_enumerator_t *enumerator,
+					   auth_rule_t *rule, void **value)
 {
 	char *url = (char*)*value;
 	if (!url)
@@ -77,29 +78,38 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator, auth_item_t *type, void
 	{
 		DBG1(DBG_CFG, "  fetching certificate failed");
 		/* we set the item to NULL, so we can skip it */
-		enumerator->auth->replace_item(enumerator->inner, *type, NULL);
+		enumerator->auth->replace(enumerator->auth, enumerator->inner,
+								  *rule, NULL);
 		return FALSE;
 	}
 	
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-					  BUILD_BLOB_ASN1_DER, data, BUILD_END);
+							  BUILD_BLOB_ASN1_DER, data, BUILD_END);
 	free(data.ptr);
 	
 	if (!cert)
 	{
 		DBG1(DBG_CFG, "  parsing fetched certificate failed");
 		/* we set the item to NULL, so we can skip it */
-		enumerator->auth->replace_item(enumerator->inner, *type, NULL);
+		enumerator->auth->replace(enumerator->auth, enumerator->inner,
+								  *rule, NULL);
 		return FALSE;
 	}
 	
 	DBG1(DBG_CFG, "  fetched certificate \"%D\"", cert->get_subject(cert));
 	charon->credentials->cache_cert(charon->credentials, cert);
 	
-	*type = (*type == AUTHN_IM_HASH_URL) ? AUTHN_IM_CERT : AUTHN_SUBJECT_CERT;
+	if (*rule == AUTH_HELPER_IM_HASH_URL)
+	{
+		*rule = AUTH_HELPER_IM_CERT;
+	}
+	else
+	{
+		*rule = AUTH_HELPER_SUBJECT_CERT;
+	}
 	*value = cert;
-	enumerator->auth->replace_item(enumerator->inner, *type, cert);
-	
+	enumerator->auth->replace(enumerator->auth, enumerator->inner,
+							  *rule, cert->get_ref(cert));
 	return TRUE;
 }
 
@@ -108,26 +118,25 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator, auth_item_t *type, void
  */
 static bool enumerate(wrapper_enumerator_t *this, certificate_t **cert)
 {
-	auth_item_t type;
+	auth_rule_t rule;
 	certificate_t *current;
 	public_key_t *public;
 
-	while (this->inner->enumerate(this->inner, &type, &current))
+	while (this->inner->enumerate(this->inner, &rule, &current))
 	{
-		if (type == AUTHN_IM_HASH_URL ||
-			type == AUTHN_SUBJECT_HASH_URL)
-		{
-			if (!fetch_cert(this, &type, (void**)&current))
+		if (rule == AUTH_HELPER_IM_HASH_URL ||
+			rule == AUTH_HELPER_SUBJECT_HASH_URL)
+		{	/* on-demand fetching of hash and url certificates */
+			if (!fetch_cert(this, &rule, (void**)&current))
 			{
 				continue;
 			}
 		}
-		else if (type != AUTHN_SUBJECT_CERT && 
-				 type != AUTHN_IM_CERT)
-		{
+		else if (rule != AUTH_HELPER_SUBJECT_CERT &&
+				 rule != AUTH_HELPER_IM_CERT)
+		{	/* handle only HELPER certificates */
 			continue;
 		}
-
 		if (this->cert != CERT_ANY && this->cert != current->get_type(current))
 		{	/* CERT type requested, but does not match */
 			continue;
@@ -164,9 +173,9 @@ static void wrapper_enumerator_destroy(wrapper_enumerator_t *this)
 }
 
 /**
- * implementation of auth_info_wrapper_t.set.create_cert_enumerator
+ * implementation of auth_cfg_wrapper_t.set.create_cert_enumerator
  */
-static enumerator_t *create_enumerator(private_auth_info_wrapper_t *this,
+static enumerator_t *create_enumerator(private_auth_cfg_wrapper_t *this,
 									   certificate_type_t cert, key_type_t key, 
 									   identification_t *id, bool trusted)
 {
@@ -181,16 +190,16 @@ static enumerator_t *create_enumerator(private_auth_info_wrapper_t *this,
 	enumerator->cert = cert;
 	enumerator->key = key;
 	enumerator->id = id;
-	enumerator->inner = this->auth->create_item_enumerator(this->auth);
+	enumerator->inner = this->auth->create_enumerator(this->auth);
 	enumerator->public.enumerate = (void*)enumerate;
 	enumerator->public.destroy = (void*)wrapper_enumerator_destroy;
 	return &enumerator->public;
 }
 
 /**
- * Implementation of auth_info_wrapper_t.destroy
+ * Implementation of auth_cfg_wrapper_t.destroy
  */
-static void destroy(private_auth_info_wrapper_t *this)
+static void destroy(private_auth_cfg_wrapper_t *this)
 {
 	free(this);
 }
@@ -198,16 +207,16 @@ static void destroy(private_auth_info_wrapper_t *this)
 /*
  * see header file
  */
-auth_info_wrapper_t *auth_info_wrapper_create(auth_info_t *auth)
+auth_cfg_wrapper_t *auth_cfg_wrapper_create(auth_cfg_t *auth)
 {
-	private_auth_info_wrapper_t *this = malloc_thing(private_auth_info_wrapper_t);
+	private_auth_cfg_wrapper_t *this = malloc_thing(private_auth_cfg_wrapper_t);
 	
 	this->public.set.create_private_enumerator = (void*)return_null;
 	this->public.set.create_cert_enumerator = (void*)create_enumerator;
 	this->public.set.create_shared_enumerator = (void*)return_null;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.set.cache_cert = (void*)nop;
-	this->public.destroy = (void(*)(auth_info_wrapper_t*))destroy;
+	this->public.destroy = (void(*)(auth_cfg_wrapper_t*))destroy;
 	
 	this->auth = auth;
 	

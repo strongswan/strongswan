@@ -523,17 +523,16 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 {
 	int i;
 	this->data_struct = payload;
-	size_t rule_count;
+	size_t rule_count, offset_start;
 	encoding_rule_t *rules;
 	payload_type_t payload_type;
-	u_int8_t *payload_start;
 	
 	/* get payload type */
 	payload_type = payload->get_type(payload);
 	/* spi size has to get reseted */
 	this->last_spi_size = 0;
 	
-	payload_start = this->out_position;
+	offset_start = this->out_position - this->buffer;
 	
 	DBG2(DBG_ENC, "generating payload of type %N",
 		 payload_type_names, payload_type);
@@ -893,7 +892,8 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 	DBG2(DBG_ENC, "generating %N payload finished",
 		 payload_type_names, payload_type);
 	DBG3(DBG_ENC, "generated data for this payload %b",
-		 payload_start, this->out_position-payload_start);
+		 this->buffer + offset_start,
+		 this->out_position - this->buffer - offset_start);
 }
 
 /**

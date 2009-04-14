@@ -170,11 +170,11 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
  */
 static void process_payloads(private_ike_init_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
-
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		switch (payload->get_type(payload))
 		{
@@ -182,7 +182,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
 				linked_list_t *proposal_list;
-	
+				
 				proposal_list = sa_payload->get_proposals(sa_payload);
 				this->proposal = this->config->select_proposal(this->config,
 															   proposal_list);
@@ -225,7 +225,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -317,12 +317,12 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 #ifdef ME
 	{
 		chunk_t connect_id = chunk_empty;
-		iterator_t *iterator;
+		enumerator_t *enumerator;
 		payload_t *payload;
-	
+		
 		/* check for a ME_CONNECTID notify */
-		iterator = message->get_payload_iterator(message);
-		while (iterator->iterate(iterator, (void**)&payload))
+		enumerator = message->create_payload_enumerator(message);
+		while (enumerator->enumerate(enumerator, &payload))
 		{
 			if (payload->get_type(payload) == NOTIFY)
 			{
@@ -353,7 +353,7 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 				}
 			}
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 		
 		if (connect_id.ptr)
 		{
@@ -458,12 +458,12 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
  */
 static status_t process_i(private_ike_init_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
-
+	
 	/* check for erronous notifies */
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) == NOTIFY)
 		{
@@ -489,19 +489,22 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 						this->ike_sa->reset(this->ike_sa);
 					}
 					
-					iterator->destroy(iterator);
+					enumerator->destroy(enumerator);
 					return NEED_MORE;
 				}
 				case NAT_DETECTION_SOURCE_IP:
 				case NAT_DETECTION_DESTINATION_IP:
 					/* skip, handled in ike_natd_t */
 					break;
+				case MULTIPLE_AUTH_SUPPORTED:
+					/* handled in ike_auth_t */
+					break;
 				case COOKIE:
 				{
 					chunk_free(&this->cookie);
 					this->cookie = chunk_clone(notify->get_notification_data(notify));
 					this->ike_sa->reset(this->ike_sa);
-					iterator->destroy(iterator);
+					enumerator->destroy(enumerator);
 					DBG2(DBG_IKE, "received %N notify", notify_type_names, type);
 					return NEED_MORE;
 				}
@@ -511,7 +514,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					{
 						DBG1(DBG_IKE, "received %N notify error",
 							 notify_type_names, type);
-						iterator->destroy(iterator);
+						enumerator->destroy(enumerator);
 						return FAILED;	
 					}
 					DBG2(DBG_IKE, "received %N notify",
@@ -521,7 +524,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	process_payloads(this, message);
 

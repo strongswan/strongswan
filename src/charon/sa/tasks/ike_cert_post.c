@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2006-2008 Martin Willi
+ * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -98,70 +98,68 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this, certifi
 }
 
 /**
- * from ike_auth.c
- */
-auth_class_t get_auth_class(peer_cfg_t *config);
-
-/**
  * add certificates to message
  */
 static void build_certs(private_ike_cert_post_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
+	auth_cfg_t *auth;
 	
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (peer_cfg && get_auth_class(peer_cfg) == AUTH_CLASS_PUBKEY)
+	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
+	if (!peer_cfg ||
+		(uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS) != AUTH_CLASS_PUBKEY)
 	{
-		switch (peer_cfg->get_cert_policy(peer_cfg))
-		{
-			case CERT_NEVER_SEND:
-				break;
-			case CERT_SEND_IF_ASKED:
-				if (!this->ike_sa->has_condition(this->ike_sa, COND_CERTREQ_SEEN))
-				{
-					break;
-				}
-				/* FALL */
-			case CERT_ALWAYS_SEND:
+		return;
+	}
+	switch (peer_cfg->get_cert_policy(peer_cfg))
+	{
+		case CERT_NEVER_SEND:
+			break;
+		case CERT_SEND_IF_ASKED:
+			if (!this->ike_sa->has_condition(this->ike_sa, COND_CERTREQ_SEEN))
 			{
-				cert_payload_t *payload;
-				enumerator_t *enumerator;
-				certificate_t *cert;
-				auth_info_t *auth;
-				auth_item_t item;
-				
-				auth = this->ike_sa->get_my_auth(this->ike_sa);
-				/* get subject cert first, then issuing certificates */
-				if (!auth->get_item(auth, AUTHZ_SUBJECT_CERT, (void**)&cert))
+				break;
+			}
+			/* FALL */
+		case CERT_ALWAYS_SEND:
+		{
+			cert_payload_t *payload;
+			enumerator_t *enumerator;
+			certificate_t *cert;
+			auth_rule_t type;
+			
+			/* get subject cert first, then issuing certificates */
+			cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+			if (!cert)
+			{
+				break;
+			}
+			payload = build_cert_payload(this, cert);
+			if (!payload)
+			{
+				break;
+			}
+			DBG1(DBG_IKE, "sending end entity cert \"%D\"",
+				 cert->get_subject(cert));
+			message->add_payload(message, (payload_t*)payload);
+			
+			enumerator = auth->create_enumerator(auth);
+			while (enumerator->enumerate(enumerator, &type, &cert))
+			{
+				if (type == AUTH_RULE_IM_CERT)
 				{
-					break;
-				}
-				payload = build_cert_payload(this, cert);
-				if (!payload)
-				{
-					break;
-				}
-				DBG1(DBG_IKE, "sending end entity cert \"%D\"",
-					 cert->get_subject(cert));
-				message->add_payload(message, (payload_t*)payload);
-				
-				enumerator = auth->create_item_enumerator(auth);
-				while (enumerator->enumerate(enumerator, &item, &cert))
-				{
-					if (item == AUTHZ_IM_CERT)
+					payload = cert_payload_create_from_cert(cert);
+					if (payload)
 					{
-						payload = cert_payload_create_from_cert(cert);
-						if (payload)
-						{
-							DBG1(DBG_IKE, "sending issuer cert \"%D\"",
-								 cert->get_subject(cert));
-							message->add_payload(message, (payload_t*)payload);
-						}
+						DBG1(DBG_IKE, "sending issuer cert \"%D\"",
+							 cert->get_subject(cert));
+						message->add_payload(message, (payload_t*)payload);
 					}
 				}
-				enumerator->destroy(enumerator);
-			}	
-		}
+			}
+			enumerator->destroy(enumerator);
+		}	
 	}
 }
 
@@ -170,12 +168,11 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
  */
 static status_t build_i(private_ike_cert_post_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_SA_INIT)
-	{
-		return NEED_MORE;
+	if (message->get_payload(message, AUTHENTICATION))
+	{	/* CERT payloads are sended along AUTH payloads */
+		build_certs(this, message);
 	}
-	build_certs(this, message);
-	return SUCCESS;
+	return NEED_MORE;
 }
 
 /**
@@ -191,11 +188,14 @@ static status_t process_r(private_ike_cert_post_t *this, message_t *message)
  */
 static status_t build_r(private_ike_cert_post_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_SA_INIT)
-	{
+	if (message->get_payload(message, AUTHENTICATION))
+	{	/* CERT payloads are sended along AUTH payloads */
+		build_certs(this, message);
+	}
+	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+	{	/* stay alive, we might have additional rounds with certs */
 		return NEED_MORE;
 	}
-	build_certs(this, message);
 	return SUCCESS;
 }
 
@@ -204,8 +204,8 @@ static status_t build_r(private_ike_cert_post_t *this, message_t *message)
  */
 static status_t process_i(private_ike_cert_post_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_SA_INIT)
-	{
+	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+	{	/* stay alive, we might have additional rounds with CERTS */
 		return NEED_MORE;
 	}
 	return SUCCESS;

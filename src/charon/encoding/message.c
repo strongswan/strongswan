@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -208,7 +208,7 @@ static payload_rule_t ike_auth_i_payload_rules[] = {
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
 	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
-	{ID_INITIATOR,					1,	1,						TRUE,	FALSE},
+	{ID_INITIATOR,					0,	1,						TRUE,	FALSE},
 	{CERTIFICATE,					0,	4,						TRUE,	FALSE},
 	{CERTIFICATE_REQUEST,			0,	1,						TRUE,	FALSE},
 	{ID_RESPONDER,					0,	1,						TRUE,	FALSE},
@@ -217,9 +217,9 @@ static payload_rule_t ike_auth_i_payload_rules[] = {
 	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
 #else
-	{SECURITY_ASSOCIATION,			1,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,	1,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,	1,	1,						TRUE,	FALSE},
+	{SECURITY_ASSOCIATION,			0,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
 #endif /* ME */
 	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
 	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
@@ -261,9 +261,9 @@ static payload_rule_t ike_auth_r_payload_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
 	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
+	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
 	{CERTIFICATE,					0,	4,						TRUE,	FALSE},
 	{ID_RESPONDER,					0,	1,						TRUE,	FALSE},
-	{AUTHENTICATION,				0,	1,						TRUE,	FALSE},
 	{SECURITY_ASSOCIATION,			0,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
@@ -846,11 +846,11 @@ static host_t * get_destination(private_message_t *this)
 }
 
 /**
- * Implementation of message_t.get_payload_iterator.
+ * Implementation of message_t.create_payload_enumerator.
  */
-static iterator_t *get_payload_iterator(private_message_t *this)
+static enumerator_t *create_payload_enumerator(private_message_t *this)
 {
-	return this->payloads->create_iterator(this->payloads, TRUE);
+	return this->payloads->create_enumerator(this->payloads);
 }
 
 /**
@@ -859,10 +859,10 @@ static iterator_t *get_payload_iterator(private_message_t *this)
 static payload_t *get_payload(private_message_t *this, payload_type_t type)
 {
 	payload_t *current, *found = NULL;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	
-	iterator = this->payloads->create_iterator(this->payloads, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	enumerator = create_payload_enumerator(this);
+	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (current->get_type(current) == type)
 		{
@@ -870,8 +870,34 @@ static payload_t *get_payload(private_message_t *this, payload_type_t type)
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return found;
+}
+
+/**
+ * Implementation of message_t.get_notify
+ */
+static notify_payload_t* get_notify(private_message_t *this, notify_type_t type)
+{
+	enumerator_t *enumerator;
+	notify_payload_t *notify = NULL;
+	payload_t *payload;
+	
+	enumerator = create_payload_enumerator(this);
+	while (enumerator->enumerate(enumerator, &payload))
+	{
+		if (payload->get_type(payload) == NOTIFY)
+		{
+			notify = (notify_payload_t*)payload;
+			if (notify->get_notify_type(notify) == type)
+			{
+				break;
+			}
+			notify = NULL;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return notify;
 }
 
 /**
@@ -879,7 +905,7 @@ static payload_t *get_payload(private_message_t *this, payload_type_t type)
  */
 static char* get_string(private_message_t *this, char *buf, int len)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 	int written;
 	char *pos = buf;
@@ -898,8 +924,8 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	pos += written;
 	len -= written;
 	
-	iterator = this->payloads->create_iterator(this->payloads, TRUE);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = create_payload_enumerator(this);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		written = snprintf(pos, len, " %N", payload_type_short_names,
 				  		   payload->get_type(payload));
@@ -922,7 +948,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 			len -= written;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	/* remove last space */
 	snprintf(pos, len, " ]");
@@ -1076,7 +1102,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter,
 	generator_t *generator;
 	ike_header_t *ike_header;
 	payload_t *payload, *next_payload;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	status_t status;
 	chunk_t packet_data;
 	char str[256];
@@ -1131,21 +1157,20 @@ static status_t generate(private_message_t *this, crypter_t *crypter,
 	ike_header->set_initiator_flag(ike_header, this->ike_sa_id->is_initiator(this->ike_sa_id));
 	ike_header->set_initiator_spi(ike_header, this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
 	ike_header->set_responder_spi(ike_header, this->ike_sa_id->get_responder_spi(this->ike_sa_id));
-
+	
 	generator = generator_create();
 	
 	payload = (payload_t*)ike_header;
-
 	
 	/* generate every payload expect last one, this is done later*/
-	iterator = this->payloads->create_iterator(this->payloads, TRUE);
-	while(iterator->iterate(iterator, (void**)&next_payload))
+	enumerator = create_payload_enumerator(this);
+	while (enumerator->enumerate(enumerator, &next_payload))
 	{
 		payload->set_next_type(payload, next_payload->get_type(next_payload));
 		generator->generate_payload(generator, payload);
 		payload = next_payload;
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	/* last payload has no next payload*/
 	payload->set_next_type(payload, NO_PAYLOAD);
@@ -1411,72 +1436,78 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 static status_t verify(private_message_t *this)
 {
 	int i;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *current_payload;
 	size_t total_found_payloads = 0;
 	
 	DBG2(DBG_ENC, "verifying message structure");
 	
-	iterator = this->payloads->create_iterator(this->payloads,TRUE);
 	/* check for payloads with wrong count*/
-	for (i = 0; i < this->message_rule->payload_rule_count;i++)
+	for (i = 0; i < this->message_rule->payload_rule_count; i++)
 	{
 		size_t found_payloads = 0;
-	
-		/* check all payloads for specific rule */
-		iterator->reset(iterator);
+		payload_rule_t *rule;
 		
-		while(iterator->iterate(iterator,(void **)&current_payload))
+		rule = &this->message_rule->payload_rules[i];
+		enumerator = create_payload_enumerator(this);
+		
+		/* check all payloads for specific rule */
+		while (enumerator->enumerate(enumerator, &current_payload))
 		{
 			payload_type_t current_payload_type;
+			unknown_payload_t *unknown_payload;
 			
 			current_payload_type = current_payload->get_type(current_payload);
 			if (current_payload_type == UNKNOWN_PAYLOAD)
 			{
 				/* unknown payloads are ignored, IF they are not critical */
-				unknown_payload_t *unknown_payload = (unknown_payload_t*)current_payload;
+				unknown_payload = (unknown_payload_t*)current_payload;
 				if (unknown_payload->is_critical(unknown_payload))
 				{
 					DBG1(DBG_ENC, "%N is not supported, but its critical!",
 						 payload_type_names, current_payload_type);
-					iterator->destroy(iterator);
+					enumerator->destroy(enumerator);
 					return NOT_SUPPORTED;	
 				}
 			}
-			else if (current_payload_type == this->message_rule->payload_rules[i].payload_type)
+			else if (current_payload_type == rule->payload_type)
 			{
 				found_payloads++;
 				total_found_payloads++;
-				DBG2(DBG_ENC, "found payload of type %N",
-					 payload_type_names, this->message_rule->payload_rules[i].payload_type);
+				DBG2(DBG_ENC, "found payload of type %N", payload_type_names,
+					 rule->payload_type);
 				
-				/* as soon as ohe payload occures more then specified, the verification fails */
-				if (found_payloads > this->message_rule->payload_rules[i].max_occurence)
+				/* as soon as ohe payload occures more then specified, 
+				 * the verification fails */
+				if (found_payloads >
+					rule->max_occurence)
 				{
-					DBG1(DBG_ENC, "payload of type %N more than %d times (%d) occured in current message",
-						 payload_type_names, current_payload_type,
-						 this->message_rule->payload_rules[i].max_occurence, found_payloads);
-					iterator->destroy(iterator);
+					DBG1(DBG_ENC, "payload of type %N more than %d times (%d) "
+						 "occured in current message", payload_type_names,
+						 current_payload_type, rule->max_occurence,
+						 found_payloads);
+					enumerator->destroy(enumerator);
 					return VERIFY_ERROR;
 				}
 			}
 		}
 		
-		if (found_payloads < this->message_rule->payload_rules[i].min_occurence)
+		if (found_payloads < rule->min_occurence)
 		{
 			DBG1(DBG_ENC, "payload of type %N not occured %d times (%d)",
-				 payload_type_names, this->message_rule->payload_rules[i].payload_type,
-				 this->message_rule->payload_rules[i].min_occurence, found_payloads);
-			iterator->destroy(iterator);
+				 payload_type_names, rule->payload_type, rule->min_occurence,
+				 found_payloads);
+			enumerator->destroy(enumerator);
 			return VERIFY_ERROR;
 		}
-		if ((this->message_rule->payload_rules[i].sufficient) && (this->payloads->get_count(this->payloads) == total_found_payloads))
+		if (rule->sufficient &&
+			this->payloads->get_count(this->payloads) == total_found_payloads)
 		{
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 			return SUCCESS;	
 		}
+		enumerator->destroy(enumerator);
 	}
-	iterator->destroy(iterator);
 	return SUCCESS;
 }
 
@@ -1604,8 +1635,9 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_source = (host_t * (*) (message_t*)) get_source;
 	this->public.set_destination = (void (*) (message_t*,host_t*)) set_destination;
 	this->public.get_destination = (host_t * (*) (message_t*)) get_destination;
-	this->public.get_payload_iterator = (iterator_t * (*) (message_t *)) get_payload_iterator;
+	this->public.create_payload_enumerator = (enumerator_t * (*) (message_t *)) create_payload_enumerator;
 	this->public.get_payload = (payload_t * (*) (message_t *, payload_type_t)) get_payload;
+	this->public.get_notify = (notify_payload_t*(*)(message_t*, notify_type_t type))get_notify;
 	this->public.parse_header = (status_t (*) (message_t *)) parse_header;
 	this->public.parse_body = (status_t (*) (message_t *,crypter_t*,signer_t*)) parse_body;
 	this->public.get_packet = (packet_t * (*) (message_t*)) get_packet;

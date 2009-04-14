@@ -123,9 +123,15 @@ typedef struct stroke_end_t stroke_end_t;
  * definition of a peer in a stroke message
  */
 struct stroke_end_t {
+	char *auth;
+	char *auth2;
 	char *id;
+	char *id2;
+	char *eap_id;
 	char *cert;
+	char *cert2;
 	char *ca;
+	char *ca2;
 	char *groups;
 	char *updown;
 	char *address;
@@ -206,6 +212,7 @@ struct stroke_msg_t {
 		struct {
 			char *name;
 			int ikev2;
+			/* next three are deprecated, use stroke_end_t.auth instead */
 			int auth_method;
 			u_int32_t eap_type;
 			u_int32_t eap_vendor;

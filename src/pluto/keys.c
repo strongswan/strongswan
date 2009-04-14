@@ -253,7 +253,7 @@ get_secret(const struct connection *c, enum PrivateKeyKind kind, bool asym)
 		    {
 		    case PPK_PSK:
 			same = s->u.preshared_secret.len == best->u.preshared_secret.len
-			    && memcmp(s->u.preshared_secret.ptr, best->u.preshared_secret.ptr, s->u.preshared_secret.len) == 0;
+			    && memeq(s->u.preshared_secret.ptr, best->u.preshared_secret.ptr, s->u.preshared_secret.len);
 			break;
 		    case PPK_RSA:
 			/* Dirty trick: since we have code to compare

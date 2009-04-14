@@ -171,12 +171,15 @@ static int
 ealg_getbyname_esp(const char *const str, int len)
 {
     if (!str || !*str)
+    {
 	return -1;
+    }
 
     /* leave special case for eg:  "id248" string */
-    if (strcmp("id", str) == 0)
+    if (streq("id", str))
+    {
 	return ESP_MAGIC_ID;
-
+    }
     return enum_search_prefix(&esp_transformid_names, "ESP_", str, len);
 }
 

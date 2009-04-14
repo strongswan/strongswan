@@ -20,7 +20,6 @@
 
 #ifndef _FREESWAN_H
 #include <freeswan.h>
-#include "../pluto/constants.h"
 #endif
 
 #include "parser.h"
@@ -57,10 +56,15 @@ typedef struct starter_end starter_end_t;
 
 struct starter_end {
 	lset_t		seen;
+	char		*auth;
+	char		*auth2;
 	char		*id;
+	char		*id2;
 	char		*rsakey;
 	char		*cert;
+	char		*cert2;
 	char		*ca;
+	char		*ca2;
 	char		*groups;
 	char		*iface;
 	ip_address	addr;

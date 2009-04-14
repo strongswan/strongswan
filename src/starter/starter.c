@@ -224,6 +224,7 @@ int main (int argc, char **argv)
     unsigned long auto_update = 0;
     time_t last_reload;
     bool no_fork = FALSE;
+    bool attach_gdb = FALSE;
 
     /* global variables defined in log.h */
     log_to_stderr = TRUE;
@@ -247,6 +248,11 @@ int main (int argc, char **argv)
 	else if (streq(argv[i], "--nofork"))
 	{
 	    no_fork = TRUE;
+	}
+	else if (streq(argv[i], "--attach-gdb"))
+	{
+	    no_fork = TRUE;
+	    attach_gdb = TRUE;
 	}
 	else if (streq(argv[i], "--auto-update") && i+1 < argc)
 	{
@@ -571,7 +577,7 @@ int main (int argc, char **argv)
 		    DBG_log("Attempting to start pluto...")
 		   );
 
-		if (starter_start_pluto(cfg, no_fork) == 0)
+		if (starter_start_pluto(cfg, no_fork, attach_gdb) == 0)
 		{
 		    starter_whack_listen();
 		}
@@ -606,7 +612,7 @@ int main (int argc, char **argv)
 		DBG(DBG_CONTROL,
 		    DBG_log("Attempting to start charon...")
 		   );
-		if (starter_start_charon(cfg, no_fork))
+		if (starter_start_charon(cfg, no_fork, attach_gdb))
 		{
 		    /* schedule next try */
 		    alarm(PLUTO_RESTART_DELAY);

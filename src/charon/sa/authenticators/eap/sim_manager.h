@@ -39,7 +39,7 @@ struct sim_card_t {
 	 * The returned identity owned by the sim_card and not destroyed outside.
 	 * The SIM card may return ID_ANY if it does not support/use an IMSI.
 	 *
-	 * @return		identity of type ID_EAP/ID_ANY
+	 * @return		identity
 	 */
 	identification_t* (*get_imsi)(sim_card_t *this);
 	
@@ -63,7 +63,7 @@ struct sim_provider_t {
 	/**
 	 * Get a single triplet to authenticate a EAP client.
 	 *
-	 * @param imsi	client identity of type ID_EAP
+	 * @param imsi	client identity
 	 * @param rand	RAND output buffer, fixed size 16 bytes
 	 * @param sres	SRES output buffer, fixed size 4 byte
 	 * @param kc	KC output buffer, fixed size 8 bytes

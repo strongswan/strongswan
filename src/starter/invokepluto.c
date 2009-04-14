@@ -121,7 +121,7 @@ starter_stop_pluto (void)
 	}
 
 int
-starter_start_pluto (starter_config_t *cfg, bool no_fork)
+starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 {
     struct stat stb;
     int i;
@@ -137,7 +137,15 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork)
 	};
 
     printf ("starter_start_pluto entered\n");
-
+    
+    if (attach_gdb)
+    {
+	argc = 0;
+	arg[argc++] = "/usr/bin/gdb";
+	arg[argc++] = "--args";
+	arg[argc++] = PLUTO_CMD;
+	arg[argc++] = "--nofork";
+	}
     if (cfg->setup.plutostderrlog || no_fork)
     {
 	arg[argc++] = "--stderrlog";

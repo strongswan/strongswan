@@ -423,7 +423,7 @@ same_id(const struct id *a, const struct id *b)
 
     case ID_KEY_ID:
 	return a->name.len == b->name.len
-	    && memcmp(a->name.ptr, b->name.ptr, a->name.len) == 0;
+	    && memeq(a->name.ptr, b->name.ptr, a->name.len);
 
     default:
 	bad_case(a->kind);

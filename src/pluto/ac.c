@@ -321,7 +321,7 @@ static bool
 same_attribute(const ietfAttr_t *a, const ietfAttr_t *b)
 {
     return (a->kind == b->kind && a->value.len == b->value.len
-	   && memcmp(a->value.ptr, b->value.ptr, b->value.len) == 0);
+	   && memeq(a->value.ptr, b->value.ptr, b->value.len));
 }
 
 bool

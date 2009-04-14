@@ -787,7 +787,7 @@ scx_finalize(void)
 bool
 scx_on_smartcard(const char *filename)
 {
-    return strncmp(filename, SCX_TOKEN, strlen(SCX_TOKEN)) == 0;
+    return strneq(filename, SCX_TOKEN, strlen(SCX_TOKEN));
 }
 
 #ifdef SMARTCARD
@@ -1619,7 +1619,7 @@ scx_op_via_whack(const char* msg, int inbase, int outbase, sc_op_t op
 
     if (keyid != NULL)
     {
-	number_slot_id = (strncmp(keyid, SCX_TOKEN, strlen(SCX_TOKEN)) == 0)
+	number_slot_id = (strneq(keyid, SCX_TOKEN, strlen(SCX_TOKEN)))
 			 ? keyid + strlen(SCX_TOKEN) : keyid;
     }
 

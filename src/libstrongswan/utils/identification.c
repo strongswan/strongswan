@@ -208,34 +208,22 @@ static void update_chunk(chunk_t *ch, int n)
  * Remove any malicious characters from a chunk. We are very restrictive, but
  * whe use these strings only to present it to the user.
  */
-static chunk_t sanitize_chunk(chunk_t chunk)
+static bool sanitize_chunk(chunk_t chunk, chunk_t *clone)
 {
 	char *pos;
-	chunk_t clone = chunk_clone(chunk);
+	bool all_printable = TRUE;
 	
-	for (pos = clone.ptr; pos < (char*)(clone.ptr + clone.len); pos++)
+	*clone = chunk_clone(chunk);
+	
+	for (pos = clone->ptr; pos < (char*)(clone->ptr + clone->len); pos++)
 	{
-		switch (*pos)
+		if (!isprint(*pos))
 		{
-			case '\0':
-			case ' ':
-			case '*':
-			case '-':
-			case '.':
-			case '/':
-			case '0' ... '9':
-			case ':':
-			case '=':
-			case '@':
-			case 'A' ... 'Z':
-			case '_':
-			case 'a' ... 'z':
-				break;
-			default:
-				*pos = '?';
+			*pos = '?';
+			all_printable = FALSE;
 		}
 	}
-	return clone;
+	return all_printable;
 }
 
 /**
@@ -404,7 +392,7 @@ static bool dntoa(chunk_t dn, chunk_t *str)
 			update_chunk(str, snprintf(str->ptr,str->len,"%s", oid_names[oid_code].name));
 		}
 		/* print value */
-		proper = sanitize_chunk(value);
+		sanitize_chunk(value, &proper);
 		update_chunk(str, snprintf(str->ptr,str->len,"=%.*s", (int)proper.len, proper.ptr));
 		chunk_free(&proper);
 	}
@@ -945,9 +933,8 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
 		case ID_DER_ASN1_GN_URI:
-		case ID_EAP:
 		case ID_IETF_ATTR_STRING:
-			proper = sanitize_chunk(this->encoded);
+			sanitize_chunk(this->encoded, &proper);
 			snprintf(buf, sizeof(buf), "%.*s", proper.len, proper.ptr);
 			chunk_free(&proper);
 			break;
@@ -961,6 +948,16 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 			snprintf(buf, sizeof(buf), "(ASN.1 general Name");
 			break;
 		case ID_KEY_ID:
+			if (sanitize_chunk(this->encoded, &proper))
+			{	/* fully printable, use ascii version */
+				snprintf(buf, sizeof(buf), "%.*s", proper.len, proper.ptr);
+			}
+			else
+			{	/* not printable, hex dump */
+				snprintf(buf, sizeof(buf), "%#B", &this->encoded);
+			}
+			chunk_free(&proper);
+			break;
 		case ID_PUBKEY_INFO_SHA1:
 		case ID_PUBKEY_SHA1:
 		case ID_CERT_DER_SHA1:
@@ -1043,8 +1040,9 @@ identification_t *identification_create_from_string(char *string)
 		 */
 		if (atodn(string, &this->encoded) != SUCCESS)
 		{
-			free(this);
-			return NULL;
+			this->type = ID_KEY_ID;
+			this->encoded = chunk_clone(chunk_create(string, strlen(string)));
+			return &this->public;
 		}
 		this->type = ID_DER_ASN1_DN;
 		this->public.equals = (bool (*) (identification_t*,identification_t*))equals_dn;
@@ -1084,11 +1082,11 @@ identification_t *identification_create_from_string(char *string)
 						(identification_t*,identification_t*))matches_string;
 					this->public.equals = (bool (*)
 						(identification_t*,identification_t*))equals_strcasecmp;
-					return &(this->public);
+					return &this->public;
 				}
 				this->encoded = chunk_clone(chunk);
 				this->type = ID_IPV4_ADDR;
-				return &(this->public);
+				return &this->public;
 			}
 			else
 			{
@@ -1098,12 +1096,14 @@ identification_t *identification_create_from_string(char *string)
 				
 				if (inet_pton(AF_INET6, string, &address) <= 0)
 				{
-					free(this);
-					return NULL;
+					this->type = ID_KEY_ID;
+					this->encoded = chunk_clone(chunk_create(string,
+															 strlen(string)));
+					return &this->public;
 				}
 				this->encoded = chunk_clone(chunk);
 				this->type = ID_IPV6_ADDR;
-				return &(this->public);
+				return &this->public;
 			}
 		}
 	}
@@ -1117,7 +1117,7 @@ identification_t *identification_create_from_string(char *string)
 				this->type = ID_KEY_ID;
 				this->encoded = chunk_from_hex(
 									chunk_create(string, strlen(string)), NULL);
-				return &(this->public);
+				return &this->public;
 			}
 			else
 			{
@@ -1128,7 +1128,7 @@ identification_t *identification_create_from_string(char *string)
 						(identification_t*,identification_t*))matches_string;
 				this->public.equals = (bool (*)
 							(identification_t*,identification_t*))equals_strcasecmp;
-				return &(this->public);
+				return &this->public;
 			}
 		}
 		else
@@ -1140,7 +1140,7 @@ identification_t *identification_create_from_string(char *string)
 					(identification_t*,identification_t*))matches_string;
 			this->public.equals = (bool (*)
 						(identification_t*,identification_t*))equals_strcasecmp;
-			return &(this->public);
+			return &this->public;
 		}
 	}
 }
@@ -1180,7 +1180,6 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 		case ID_PUBKEY_INFO_SHA1:
 		case ID_PUBKEY_SHA1:
 		case ID_CERT_DER_SHA1:
-		case ID_EAP:
 		case ID_IETF_ATTR_STRING:
 		default:
 			break;

@@ -164,9 +164,14 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 {
 	char buffer[INET6_ADDRSTRLEN];
 	
+	msg_end->auth = push_string(msg, conn_end->auth);
+	msg_end->auth2 = push_string(msg, conn_end->auth2);
 	msg_end->id = push_string(msg, conn_end->id);
+	msg_end->id2 = push_string(msg, conn_end->id2);
 	msg_end->cert = push_string(msg, conn_end->cert);
+	msg_end->cert2 = push_string(msg, conn_end->cert2);
 	msg_end->ca = push_string(msg, conn_end->ca);
+	msg_end->ca2 = push_string(msg, conn_end->ca2);
 	msg_end->groups = push_string(msg, conn_end->groups);
 	msg_end->updown = push_string(msg, conn_end->updown);
 	ip_address2string(&conn_end->addr, buffer, sizeof(buffer));

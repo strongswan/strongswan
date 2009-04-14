@@ -38,6 +38,7 @@
 #endif /* CAPABILITIES */
 
 #include <freeswan.h>
+#include <settings.h>
 
 #include <pfkeyv2.h>
 #include <pfkey.h>
@@ -197,6 +198,9 @@ delete_lock(void)
     }
 }
 
+/* settings defined by strongswan.conf */
+settings_t *settings;
+
 /* by default pluto sends certificate requests to its peers */
 bool no_cr_send = FALSE;
 
@@ -238,6 +242,9 @@ main(int argc, char **argv)
     cap_t caps;
     int keep[] = { CAP_NET_ADMIN, CAP_NET_BIND_SERVICE };
 #endif /* CAPABILITIES */
+
+    /* getting settings from strongswan.conf */
+    settings = settings_create(STRONGSWAN_CONF);
 
     /* handle arguments */
     for (;;)
@@ -703,6 +710,7 @@ exit_pluto(int status)
     free_ifaces();
     scx_finalize();		/* finalize and unload PKCS #11 module */
     xauth_finalize();		/* finalize and unload XAUTH module */
+    settings->destroy(settings);
     stop_adns();
     free_md_pool();
     delete_lock();

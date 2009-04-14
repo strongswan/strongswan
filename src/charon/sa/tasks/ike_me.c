@@ -166,11 +166,11 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
  */
 static void process_payloads(private_ike_me_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
-
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) != NOTIFY)
 		{
@@ -237,7 +237,7 @@ static void process_payloads(private_ike_me_t *this, message_t *message)
 				break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**

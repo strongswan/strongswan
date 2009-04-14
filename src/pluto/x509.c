@@ -423,8 +423,9 @@ init_rdn(chunk_t dn, chunk_t *rdn, chunk_t *attribute, bool *next)
     rdn->len = asn1_length(&dn);
 
     if (rdn->len == ASN1_INVALID_LENGTH)
+    {
 	return "Invalid RDN length";
-
+    }
     rdn->ptr = dn.ptr;
 
     /* are there any RDNs ? */
@@ -451,13 +452,15 @@ get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, chunk_t *value
     {
 	/* an RDN is a SET OF attributeTypeAndValue */
 	if (*rdn->ptr != ASN1_SET)
+	{
 	    return "RDN is not a SET";
-
+	}
 	attribute->len = asn1_length(rdn);
 	
 	if (attribute->len == ASN1_INVALID_LENGTH)
+	{
 	    return "Invalid attribute length";
-
+	}
 	attribute->ptr = rdn->ptr;
 
 	/* advance to start of next RDN */
@@ -467,14 +470,17 @@ get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, chunk_t *value
 
     /* an attributeTypeAndValue is a SEQUENCE */
     if (*attribute->ptr != ASN1_SEQUENCE)
+    {
  	return "attributeTypeAndValue is not a SEQUENCE";
+    }
 
     /* extract the attribute body */
     body.len = asn1_length(attribute);
     
     if (body.len == ASN1_INVALID_LENGTH)
+    {
 	return "Invalid attribute body length";
-
+    }
     body.ptr = attribute->ptr;
     
     /* advance to start of next attribute */
@@ -483,14 +489,17 @@ get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, chunk_t *value
 
     /* attribute type is an OID */
     if (*body.ptr != ASN1_OID)
+    {
 	return "attributeType is not an OID";
+    }
 
     /* extract OID */
     oid->len = asn1_length(&body);
     
-    if (oid->len == ASN1_INVALID_LENGTH)
+    if (oid->len == ASN1_INVALID_LENGTH)  
+    {
 	return "Invalid attribute OID length";
-
+    }
     oid->ptr = body.ptr;
 
     /* advance to the attribute value */
@@ -504,8 +513,9 @@ get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, chunk_t *value
     value->len = asn1_length(&body);
     
     if (value->len == ASN1_INVALID_LENGTH)
+    {
 	return "Invalid attribute string length";
-
+    }
     value->ptr = body.ptr;
 
     /* are there any RDNs left? */
@@ -529,27 +539,39 @@ dn_parse(chunk_t dn, chunk_t *str)
     err_t ugh = init_rdn(dn, &rdn, &attribute, &next);
 
     if (ugh != NULL) /* a parsing error has occured */
+    {
         return ugh;
+    }
 
     while (next)
     {
 	ugh = get_next_rdn(&rdn, &attribute, &oid, &value, &type, &next);
 
 	if (ugh != NULL) /* a parsing error has occured */
+	{
 	    return ugh;
+	}
 
 	if (first)		/* first OID/value pair */
+	{
 	    first = FALSE;
+	}
 	else			/* separate OID/value pair by a comma */
+	{
 	    update_chunk(str, snprintf(str->ptr,str->len,", "));
+	}
 
 	/* print OID */
 	oid_code = known_oid(oid);
 	if (oid_code == OID_UNKNOWN)	/* OID not found in list */
+	{
 	    hex_str(oid, str);
+	}
 	else
+	{
 	    update_chunk(str, snprintf(str->ptr,str->len,"%s",
 			      oid_names[oid_code].name));
+	}
 
 	/* print value */
 	update_chunk(str, snprintf(str->ptr,str->len,"=%.*s",
@@ -572,16 +594,22 @@ dn_count_wildcards(chunk_t dn)
     err_t ugh = init_rdn(dn, &rdn, &attribute, &next);
 
     if (ugh != NULL) /* a parsing error has occured */
+    {
         return -1;
+    }
 
     while (next)
     {
 	ugh = get_next_rdn(&rdn, &attribute, &oid, &value, &type, &next);
 
 	if (ugh != NULL) /* a parsing error has occured */
+	{
 	    return -1;
+	}
 	if (value.len == 1 && *value.ptr == '*')
+	{
 	    wildcards++; /* we have found a wildcard RDN */
+	}
     }
     return wildcards;
 }
@@ -631,9 +659,13 @@ int
 dntoa_or_null(char *dst, size_t dstlen, chunk_t dn, const char* null_dn)
 {
     if (dn.ptr == NULL)
+    {
 	return snprintf(dst, dstlen, "%s", null_dn);
+    }
     else
+    {
 	return dntoa(dst, dstlen, dn);
+    }
 }
 
 /*  Converts an LDAP-style human-readable ASCII-encoded
@@ -692,14 +724,18 @@ atodn(char *src, chunk_t *dn)
 	    break;
 	case READ_OID:
 	    if (*src != ' ' && *src != '=')
+	    {
 		oid.len++;
+	    }
 	    else
 	    {
 		for (pos = 0; pos < X501_RDN_ROOF; pos++)
 		{
 		    if (strlen(x501rdns[pos].name) == oid.len &&
 			strncasecmp(x501rdns[pos].name, oid.ptr, oid.len) == 0)
+		    {
 			break; /* found a valid OID */
+		    }
 		}
 		if (pos == X501_RDN_ROOF)
 		{
@@ -728,9 +764,13 @@ atodn(char *src, chunk_t *dn)
 	    {
 		name.len++;
 		if (*src == ' ')
+		{
 		    whitespace++;
+		}
 		else
+		{
 		    whitespace = 0;
+		}
 	    }
 	    else
 	    {
@@ -796,16 +836,22 @@ same_dn(chunk_t a, chunk_t b)
 
     /* same lengths for the DNs */
     if (a.len != b.len)
+    {
 	return FALSE;
+    }
 
     /* try a binary comparison first */
-    if (memcmp(a.ptr, b.ptr, b.len) == 0)
+    if (memeq(a.ptr, b.ptr, b.len))
+    {
 	return TRUE;
- 
+    }
+
     /* initialize DN parsing */
     if (init_rdn(a, &rdn_a, &attribute_a, &next_a) != NULL
     ||  init_rdn(b, &rdn_b, &attribute_b, &next_b) != NULL)
+    {
 	return FALSE;
+    }
 
     /* fetch next RDN pair */
     while (next_a && next_b)
@@ -819,28 +865,38 @@ same_dn(chunk_t a, chunk_t b)
 
 	/* OIDs must agree */
 	if (oid_a.len != oid_b.len || memcmp(oid_a.ptr, oid_b.ptr, oid_b.len) != 0)
+	{
 	    return FALSE;
+	}
 
 	/* same lengths for values */
 	if (value_a.len != value_b.len)
+	{
 	    return FALSE;
+	}
 
 	/* printableStrings and email RDNs require uppercase comparison */
 	if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
 	   (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
 	{
 	    if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
+	    {
 		return FALSE;
+	    }
 	}
 	else
 	{
 	    if (strncmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
+	    {
 		return FALSE;
+	    }
 	}
     }
     /* both DNs must have same number of RDNs */
     if (next_a || next_b)
+    {
 	return FALSE;
+    }
 
     /* the two DNs are equal! */
     return TRUE;
@@ -864,7 +920,9 @@ match_dn(chunk_t a, chunk_t b, int *wildcards)
     /* initialize DN parsing */
     if (init_rdn(a, &rdn_a, &attribute_a, &next_a) != NULL
     ||  init_rdn(b, &rdn_b, &attribute_b, &next_b) != NULL)
+    {
     	return FALSE;
+    }
 
     /* fetch next RDN pair */
     while (next_a && next_b)
@@ -878,7 +936,9 @@ match_dn(chunk_t a, chunk_t b, int *wildcards)
 
 	/* OIDs must agree */
 	if (oid_a.len != oid_b.len || memcmp(oid_a.ptr, oid_b.ptr, oid_b.len) != 0)
+	{
 	    return FALSE;
+	}
 
 	/* does rdn_b contain a wildcard? */
 	if (value_b.len == 1 && *value_b.ptr == '*')
@@ -889,24 +949,33 @@ match_dn(chunk_t a, chunk_t b, int *wildcards)
 
 	/* same lengths for values */
 	if (value_a.len != value_b.len)
+	{
 	    return FALSE;
+	}
 
 	/* printableStrings and email RDNs require uppercase comparison */
 	if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
 	   (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
 	{
 	    if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
+	    {
 		return FALSE;
+	    }
 	}
 	else
 	{
 	    if (strncmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
+	    {
 		return FALSE;
+	    }
 	}
     }
+
     /* both DNs must have same number of RDNs */
     if (next_a || next_b)
+    {
 	return FALSE;
+    }
 
     /* the two DNs match! */
     return TRUE;
@@ -928,7 +997,9 @@ void
 share_x509cert(x509cert_t *cert)
 {
     if (cert != NULL)
+    {
  	cert->count++;
+    }
 }
 
 /*
@@ -1009,8 +1080,9 @@ bool
 same_keyid(chunk_t a, chunk_t b)
 {
     if (a.ptr == NULL || b.ptr == NULL)
+    {
 	return FALSE;
-
+    }
     return same_chunk(a, b);
 }
 
@@ -1022,8 +1094,9 @@ same_serial(chunk_t a, chunk_t b)
 {
     /* do not compare serial numbers if one of them is not defined */
     if (a.ptr == NULL || b.ptr == NULL)
+    {
 	return TRUE;
-
+    }
     return same_chunk(a, b);
 }
 
@@ -1175,7 +1248,9 @@ release_x509cert(x509cert_t *cert)
     {
 	x509cert_t **pp = &x509certs;
 	while (*pp != cert)
+	{
 	    pp = &(*pp)->next;
+	}
         *pp = cert->next;
 	free_x509cert(cert);
     }
@@ -1215,7 +1290,9 @@ store_x509certs(x509cert_t **firstcert, bool strict)
 	    }
 	}
 	else
+	{
 	    pp = &cert->next;
+	}
     }
 
     /* now verify the candidate CA certs */
@@ -1330,9 +1407,13 @@ check_signature(chunk_t tbs, chunk_t sig, int digest_alg, int enc_alg
 
     DBG(DBG_PARSING,
 	if (digest_alg != OID_UNKNOWN)
+	{
 	    DBG_log("signature digest algorithm: '%s'",oid_names[digest_alg].name);
+	}
 	else
+	{
 	    DBG_log("unknown signature digest algorithm");
+	}
     )
 
     if (!compute_digest(tbs, digest_alg, &digest))
@@ -1349,9 +1430,13 @@ check_signature(chunk_t tbs, chunk_t sig, int digest_alg, int enc_alg
 
     DBG(DBG_PARSING,
 	if (enc_alg != OID_UNKNOWN)
+	{
 	    DBG_log("signature encryption algorithm: '%s'",oid_names[enc_alg].name);
+	}
 	else
+	{
 	    DBG_log("unknown signature encryption algorithm");
+	}
     )
 
     if (!decrypt_sig(sig, enc_alg, issuer_cert, &decrypted))
@@ -1361,7 +1446,7 @@ check_signature(chunk_t tbs, chunk_t sig, int digest_alg, int enc_alg
     }
 
     /* check if digests are equal */
-    return !memcmp(decrypted.ptr, digest.ptr, digest.len);
+    return memeq(decrypted.ptr, digest.ptr, digest.len);
 }
 
 /*
@@ -1382,8 +1467,9 @@ parse_basicConstraints(chunk_t blob, int level0)
 
 	if (!extract_object(basicConstraintsObjects, &objectID,
 			    &object,&level, &ctx))
+	{
 	     break;
-
+	}
 	if (objectID == BASIC_CONSTRAINTS_CA)
 	{
 	    isCA = object.len && *object.ptr;
@@ -1460,7 +1546,9 @@ parse_otherName(chunk_t blob, int level0)
     while (objectID < ON_OBJ_ROOF)
     {
 	if (!extract_object(otherNameObjects, &objectID, &object, &level, &ctx))
+	{
 	     return FALSE;
+	}
 
 	switch (objectID)
 	{
@@ -1505,7 +1593,9 @@ parse_generalName(chunk_t blob, int level0)
 	bool valid_gn = FALSE;
 	
 	if (!extract_object(generalNameObjects, &objectID, &object, &level, &ctx))
+	{
 	     return NULL;
+	}
 
 	switch (objectID) {
 	case GN_OBJ_RFC822_NAME:
@@ -1574,8 +1664,9 @@ parse_generalNames(chunk_t blob, int level0, bool implicit)
     while (objectID < GENERAL_NAMES_ROOF)
     {
 	if (!extract_object(generalNamesObjects, &objectID, &object, &level, &ctx))
+	{
 	     return NULL;
-	     
+	}
 	if (objectID == GENERAL_NAMES_GN)
 	{
 	    generalName_t *gn = parse_generalName(object, level+1);
@@ -1599,10 +1690,10 @@ chunk_t get_directoryName(chunk_t blob, int level, bool implicit)
     generalName_t * gn = parse_generalNames(blob, level, implicit);
 
     if (gn != NULL && gn->kind == GN_DIRECTORY_NAME)
+    {
 	name= gn->name;
-
+    }
     free_generalNames(gn, FALSE);
-
     return name;
 }
 
@@ -1622,8 +1713,9 @@ parse_time(chunk_t blob, int level0)
     while (objectID < TIME_ROOF)
     {
 	if (!extract_object(timeObjects, &objectID, &object, &level, &ctx))
+	{
 	     return UNDEFINED_TIME;
-
+	}
 	if (objectID == TIME_UTC || objectID == TIME_GENERALIZED)
 	{
 	    return asn1totime(&object, (objectID == TIME_UTC)
@@ -1668,9 +1760,11 @@ parse_authorityKeyIdentifier(chunk_t blob, int level0
     while (objectID < AUTH_KEY_ID_ROOF)
     {
 	if (!extract_object(authorityKeyIdentifierObjects, &objectID, &object, &level, &ctx))
+	{
 	     return;
-
-	switch (objectID) {
+	}
+	switch (objectID)
+	{
 	case AUTH_KEY_ID_KEY_ID:
 	    *authKeyID = parse_keyIdentifier(object, level+1, TRUE);
 	    break;
@@ -1708,9 +1802,12 @@ parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessLocation)
     while (objectID < AUTH_INFO_ACCESS_ROOF)
     {
 	if (!extract_object(authorityInfoAccessObjects, &objectID, &object, &level, &ctx))
+	{
 	     return;
+	}
 
-	switch (objectID) {
+	switch (objectID)
+	{
 	case AUTH_INFO_ACCESS_METHOD:
 	    accessMethod = known_oid(object);
 	    break;
@@ -1722,8 +1819,9 @@ parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessLocation)
 		    if (*object.ptr == ASN1_CONTEXT_S_6)
 		    {
 			if (asn1_length(&object) == ASN1_INVALID_LENGTH)
+			{
 			    return;
-
+			}
 			DBG(DBG_PARSING,
 			    DBG_log("  '%.*s'",(int)object.len, object.ptr)
 			)
@@ -1768,11 +1866,14 @@ parse_extendedKeyUsage(chunk_t blob, int level0)
     {
 	if (!extract_object(extendedKeyUsageObjects, &objectID
 			    , &object, &level, &ctx))
+	{
 	     return FALSE;
-
+	}
 	if (objectID == EXT_KEY_USAGE_PURPOSE_ID
 	&& known_oid(object) == OID_OCSP_SIGNING)
+	{
 	    return TRUE;
+	}
 	objectID++;
     }
     return FALSE;
@@ -1798,8 +1899,9 @@ parse_crlDistributionPoints(chunk_t blob, int level0)
     {
 	if (!extract_object(crlDistributionPointsObjects, &objectID,
 			    &object, &level, &ctx))
+	{
 	     return NULL;
-
+	}
 	if (objectID == CRL_DIST_POINTS_FULLNAME)
 	{
 	    generalName_t *gn = parse_generalNames(object, level+1, TRUE);
@@ -1836,7 +1938,9 @@ parse_x509cert(chunk_t blob, u_int level0, x509cert_t *cert)
     while (objectID < X509_OBJ_ROOF)
     {
 	if (!extract_object(certObjects, &objectID, &object, &level, &ctx))
+	{
 	     return FALSE;
+	}
 
 	/* those objects which will parsed further need the next higher level */
 	level++;
@@ -1882,7 +1986,9 @@ parse_x509cert(chunk_t blob, u_int level0, x509cert_t *cert)
 	    break;
 	case X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM:
 	    if (parse_algorithmIdentifier(object, level, NULL) == OID_RSA_ENCRYPTION)
+	    {
 		cert->subjectPublicKeyAlgorithm = PUBKEY_ALG_RSA;
+	    }
 	    else
 	    {
 		plog("  unsupported public key algorithm");
@@ -2003,14 +2109,22 @@ check_validity(const x509cert_t *cert, time_t *until)
 	DBG_log("  not after   : %s", timetoa(&cert->notAfter, TRUE));
     )
 
-    if (cert->notAfter < *until) *until = cert->notAfter;
-
+    if (cert->notAfter < *until)
+    {
+	*until = cert->notAfter;
+    }
     if (current_time < cert->notBefore)
+    {
 	return "certificate is not valid yet";
+    }
     if (current_time > cert->notAfter)
+    {
 	return "certificate has expired";
+    }
     else
+    {
 	return NULL;
+    }
 }
 
 /*
@@ -2126,7 +2240,9 @@ verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 		 * lifetime as the validity of the ocsp status or crl lifetime
 		 */
 		if (strict && nextUpdate < *until)
+		{
 		    *until = nextUpdate;
+		}
 		break;
 	    case CERT_REVOKED:
 		plog("certificate was revoked on %s, reason: %s"

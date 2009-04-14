@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include <freeswan.h>
+#include <settings.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -42,6 +43,8 @@
 #include "xauth.h"
 
 #define MAX_XAUTH_TRIES		3
+#define DNS_SERVER_MAX		2
+#define NBNS_SERVER_MAX		2
 
 #define SUPPORTED_ATTR_SET   ( LELEM(INTERNAL_IP4_ADDRESS)         \
                              | LELEM(INTERNAL_IP4_NETMASK)         \
@@ -53,6 +56,8 @@
 #define SUPPORTED_UNITY_ATTR_SET ( LELEM(UNITY_BANNER - UNITY_BASE) )
 
 #define UNITY_BANNER_STR    "Welcome to strongSwan - the Linux VPN Solution!\n"
+
+extern settings_t *settings;
 
 /*
  * Addresses assigned (usually via ModeCfg) to the Initiator
@@ -67,8 +72,8 @@ struct internal_addr
 
     /* ModeCfg variables */
     ip_address ipaddr;
-    ip_address dns[2];
-    ip_address wins[2];
+    ip_address dns[DNS_SERVER_MAX];
+    ip_address nbns[NBNS_SERVER_MAX];
 
     char *unity_banner;
 
@@ -84,6 +89,8 @@ struct internal_addr
 static void
 init_internal_addr(internal_addr_t *ia)
 {
+    int i;
+
     ia->attr_set = LEMPTY;
     ia->xauth_attr_set = LEMPTY;
     ia->xauth_secret.user_name = empty_chunk;
@@ -94,10 +101,18 @@ init_internal_addr(internal_addr_t *ia)
     ia->unity_banner = NULL;
 
     anyaddr(AF_INET, &ia->ipaddr);
-    anyaddr(AF_INET, &ia->dns[0]);
-    anyaddr(AF_INET, &ia->dns[1]);
-    anyaddr(AF_INET, &ia->wins[0]);
-    anyaddr(AF_INET, &ia->wins[1]);
+
+    /* initialize DNS server information */
+    for (i = 0; i < DNS_SERVER_MAX; i++)
+    {
+	anyaddr(AF_INET, &ia->dns[i]);
+    }
+
+    /* initialize WINS server information */
+    for (i = 0; i < NBNS_SERVER_MAX; i++)
+    {
+ 	anyaddr(AF_INET, &ia->nbns[i]);
+    }
 }
 
 /*
@@ -106,6 +121,8 @@ init_internal_addr(internal_addr_t *ia)
 static void
 get_internal_addr(struct connection *c, internal_addr_t *ia)
 {
+    int i, dns_idx = 0, nbns_idx = 0;
+
     if (isanyaddr(&c->spd.that.host_srcip))
     {
 	/* not defined in connection - fetch it from LDAP */
@@ -130,12 +147,59 @@ get_internal_addr(struct connection *c, internal_addr_t *ia)
 		     | LELEM(INTERNAL_IP4_NETMASK);
     }
 
-    if (!isanyaddr(&ia->dns[0]))	/* We got DNS addresses, send them */
-	ia->attr_set |= LELEM(INTERNAL_IP4_DNS);
+    /* assign DNS servers */
+    for (i = 1; i <= DNS_SERVER_MAX; i++)
+    {
+	char dns_key[16], *dns_str;
 
-    if (!isanyaddr(&ia->wins[0]))	/* We got WINS addresses, send them */
-	ia->attr_set |= LELEM(INTERNAL_IP4_NBNS);
+	snprintf(dns_key, sizeof(dns_key), "pluto.dns%d", i);
+	dns_str = settings->get_str(settings, dns_key, NULL);
+	if (dns_str)
+	{
+	    err_t ugh;
+	    sa_family_t family = strchr(dns_str, ':') ? AF_INET6 : AF_INET;
+
+	    ugh = ttoaddr(dns_str, 0, family, &ia->dns[dns_idx]);
+	    if (ugh != NULL)
+	    {
+		plog("error in DNS server address: %s", ugh);
+		continue;
+	    }
+	    plog("assigning DNS server %s to peer", dns_str);
+
+	    /* differentiate between IP4 and IP6 in modecfg_build_msg() */ 
+	    ia->attr_set |= LELEM(INTERNAL_IP4_DNS);
+	    dns_idx++;
+	}
+    }
+
+    /* assign WINS servers */
+    for (i = 1; i <= NBNS_SERVER_MAX; i++)
+    {
+	char nbns_key[16], *nbns_str;
+
+	snprintf(nbns_key, sizeof(nbns_key), "pluto.nbns%d", i);
+	nbns_str = settings->get_str(settings, nbns_key, NULL);
+	if (nbns_str)
+	{
+	    err_t ugh;
+	    sa_family_t family = strchr(nbns_str, ':') ? AF_INET6 : AF_INET;
+
+	    ugh = ttoaddr(nbns_str, 0, family, &ia->nbns[nbns_idx]);
+	    if (ugh != NULL)
+	    {
+		plog("error in WINS server address: %s", ugh);
+		continue;
+	    }
+	    plog("assigning NBNS server %s to peer", nbns_str);
+
+	    /* differentiate between IP4 and IP6 in modecfg_build_msg() */ 
+	    ia->attr_set |= LELEM(INTERNAL_IP4_NBNS);
+	    nbns_idx++;
+	}
+    }
 }
+
 
 /*
  * Set srcip and client subnet to internal IP address
@@ -218,8 +282,8 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 	struct isakmp_mode_attr attrh;
 	struct isakmp_attribute attr;
 	pb_stream strattr,attrval;
-	int attr_type;
-	int dns_idx, wins_idx;
+	int attr_type, dns_attr_type, nbns_attr_type;
+	int dns_idx, nbns_idx;
 	bool dont_advance;
 	bool is_xauth_attr_set = ia->xauth_attr_set != LEMPTY;
 	bool is_unity_attr_set = ia->unity_attr_set != LEMPTY;
@@ -230,11 +294,12 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 	attrh.isama_identifier = ap_id;
 
 	if (!out_struct(&attrh, &isakmp_attr_desc, rbody, &strattr))
+	{
 	    return STF_INTERNAL_ERROR;
-
+	}
 	attr_type = 0;
 	dns_idx = 0;
-	wins_idx = 0;
+	nbns_idx = 0;
 
 	while (attr_set != LEMPTY || is_xauth_attr_set || is_unity_attr_set)
 	{
@@ -272,6 +337,20 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 		    attr.isaat_af_type = attr_type | ISAKMP_ATTR_AF_TV;
 		    attr.isaat_lv = ia->xauth_status;
 		}
+		else if (attr_type == INTERNAL_IP4_DNS && !isanyaddr(&ia->dns[dns_idx]))
+		{
+		    dns_attr_type = (addrtypeof(&ia->dns[dns_idx]) == AF_INET) ?
+					INTERNAL_IP4_DNS : INTERNAL_IP6_DNS;
+		    attr.isaat_af_type = dns_attr_type | ISAKMP_ATTR_AF_TLV;
+
+		}
+		else if (attr_type == INTERNAL_IP4_NBNS && !isanyaddr(&ia->nbns[nbns_idx]))
+		{
+		    nbns_attr_type = (addrtypeof(&ia->nbns[nbns_idx]) == AF_INET) ?
+					INTERNAL_IP4_NBNS : INTERNAL_IP6_NBNS;
+		    attr.isaat_af_type = nbns_attr_type | ISAKMP_ATTR_AF_TLV;
+
+		}
 		else
 		{
 		    attr.isaat_af_type = attr_type | ISAKMP_ATTR_AF_TLV;
@@ -303,10 +382,14 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 			}
 #endif				    
 			if (st->st_connection->spd.this.client.maskbits == 0)
+			{
  			    mask = 0;
+			}
  			else
+			{
  			    mask = 0xffffffff * 1;
 			    out_raw(&mask, 4, &attrval, "IP4_mask");
+			}
 		    }
 		    break;
 		case INTERNAL_IP4_SUBNET:
@@ -318,13 +401,12 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 
 			for (t = 0; t < 4; t++)
 			{
-			    if (m < 8)
-				mask[t] = bits[m];
-			    else
-				mask[t] = 0xff;
+			    mask[t] = (m < 8) ? bits[m] : 0xff;
 			    m -= 8;
 			    if (m < 0)
+			    {
 			        m = 0;
+			    }
 			}
 			len = addrbytesptr(&st->st_connection->spd.this.client.addr, &byte_ptr);
 			out_raw(byte_ptr, len, &attrval, "IP4_subnet");
@@ -332,23 +414,25 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 		    }
 		    break;
 		case INTERNAL_IP4_DNS:
+		case INTERNAL_IP6_DNS:
 		    if (!isanyaddr(&ia->dns[dns_idx]))
 		    {
  		    	len = addrbytesptr(&ia->dns[dns_idx++], &byte_ptr);
- 		        out_raw(byte_ptr, len, &attrval, "IP4_dns");
+ 		        out_raw(byte_ptr, len, &attrval, "IP_dns");
 		    }
-		    if (dns_idx < 2 && !isanyaddr(&ia->dns[dns_idx]))
+		    if (dns_idx < DNS_SERVER_MAX && !isanyaddr(&ia->dns[dns_idx]))
 		    {
 			dont_advance = TRUE;
 		    }
  		    break;
 		case INTERNAL_IP4_NBNS:
-		    if (!isanyaddr(&ia->wins[wins_idx]))
+		case INTERNAL_IP6_NBNS:
+		    if (!isanyaddr(&ia->nbns[nbns_idx]))
 		    {
-			len = addrbytesptr(&ia->wins[wins_idx++], &byte_ptr);
-			out_raw(byte_ptr, len, &attrval, "IP4_wins");
+			len = addrbytesptr(&ia->nbns[nbns_idx++], &byte_ptr);
+			out_raw(byte_ptr, len, &attrval, "IP_nbns");
 		    }
-		    if (wins_idx < 2 && !isanyaddr(&ia->wins[wins_idx]))
+		    if (nbns_idx < NBNS_SERVER_MAX && !isanyaddr(&ia->nbns[nbns_idx]))
 		    {
 			dont_advance = TRUE;
 		    }
@@ -619,7 +703,9 @@ modecfg_parse_msg(struct msg_digest *md, int isama_type, u_int16_t *isama_id
 	    stat = modecfg_parse_attributes(&p->pbs, &ia_candidate);
 	}
 	if (stat != STF_OK)
+	{
 	    return stat;
+	}
     }
     return STF_IGNORE;
 }
@@ -642,7 +728,9 @@ modecfg_send_request(struct state *st)
     st->st_state = STATE_MODE_CFG_I1;
     stat = modecfg_send_msg(st, ISAKMP_CFG_REQUEST, &ia);
     if (stat == STF_OK)
+    {
 	st->st_modecfg.started = TRUE;
+    }
     return stat;
 }
 
@@ -662,10 +750,11 @@ modecfg_inR0(struct msg_digest *md)
 
     stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia);
     if (stat != STF_OK)
+    {
 	return stat;
+    }
 
     want_unity_banner = (ia.unity_attr_set & LELEM(UNITY_BANNER - UNITY_BASE)) != LEMPTY;
-
     init_internal_addr(&ia);
     get_internal_addr(st->st_connection, &ia);
 
@@ -682,8 +771,9 @@ modecfg_inR0(struct msg_digest *md)
 				     , &ia
 				     , isama_id);
     if (stat_build != STF_OK)
+    {
 	return stat_build;
-
+    }
     st->st_msgid = 0;
     return STF_OK;
 }
@@ -705,8 +795,9 @@ modecfg_inI1(struct msg_digest *md)
 
     stat = modecfg_parse_msg(md, ISAKMP_CFG_REPLY, &isama_id, &ia);
     if (stat != STF_OK)
+    {
 	return stat;
-
+    }
     st->st_modecfg.vars_set = set_internal_addr(st->st_connection, &ia);
     st->st_msgid = 0;
     return STF_OK;
@@ -734,7 +825,9 @@ modecfg_send_set(struct state *st)
     st->st_state = STATE_MODE_CFG_R3;
     stat = modecfg_send_msg(st, ISAKMP_CFG_SET, &ia);
     if (stat == STF_OK)
+    {
 	st->st_modecfg.started = TRUE;
+    }
     return stat;
 }
 
@@ -756,8 +849,9 @@ modecfg_inI0(struct msg_digest *md)
 
     stat = modecfg_parse_msg(md, ISAKMP_CFG_SET, &isama_id, &ia);
     if (stat != STF_OK)
+    {
 	return stat;
-
+    }
     st->st_modecfg.vars_set = set_internal_addr(st->st_connection, &ia);
 
     /* prepare ModeCfg ack which sends zero length attributes */
@@ -774,8 +868,9 @@ modecfg_inI0(struct msg_digest *md)
 			 	     , &ia
 			 	     , isama_id);
     if (stat_build != STF_OK)
+    {
 	return stat_build;
-
+    }
     st->st_msgid = 0;
     return STF_OK;
 }
@@ -797,8 +892,9 @@ modecfg_inR3(struct msg_digest *md)
 
     stat = modecfg_parse_msg(md, ISAKMP_CFG_ACK, &isama_id, &ia);
     if (stat != STF_OK)
+    {
 	return stat;
-
+    }
     st->st_msgid = 0;
     return STF_OK;
 }
@@ -820,7 +916,9 @@ xauth_send_request(struct state *st)
     st->st_state = STATE_XAUTH_R1;
     stat = modecfg_send_msg(st, ISAKMP_CFG_REQUEST, &ia);
     if (stat == STF_OK)
+    {
 	st->st_xauth.started = TRUE;
+    }
     return stat;
 }
 
@@ -842,8 +940,10 @@ xauth_inI0(struct msg_digest *md)
 
     stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia);
     if (stat != STF_OK)
+    {
 	return stat;
- 
+    }
+
     /* check XAUTH attributes */
     xauth_type_present = (ia.xauth_attr_set & LELEM(XAUTH_TYPE - XAUTH_BASE)) != LEMPTY;
 
@@ -890,7 +990,9 @@ xauth_inI0(struct msg_digest *md)
 	ia.xauth_attr_set = LELEM(XAUTH_USER_NAME     - XAUTH_BASE)
 		 	  | LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE);
         if (xauth_type_present)
+	{
 	    ia.xauth_attr_set |= LELEM(XAUTH_TYPE - XAUTH_BASE);
+	}
     }
     else
     {
@@ -905,8 +1007,9 @@ xauth_inI0(struct msg_digest *md)
 				     , &ia
 				     , isama_id);
     if (stat_build != STF_OK)
+    {
 	return stat_build;
-
+    }
     if (stat == STF_OK)
     {
 	st->st_xauth.started = TRUE;
@@ -942,8 +1045,10 @@ xauth_inR1(struct msg_digest *md)
 
     stat = modecfg_parse_msg(md, ISAKMP_CFG_REPLY, &isama_id, &ia);
     if (stat != STF_OK)
+    {
 	return stat;
- 
+    }
+
     /* did the client return an XAUTH FAIL status? */
     if ((ia.xauth_attr_set & LELEM(XAUTH_STATUS - XAUTH_BASE)) != LEMPTY)
     {
@@ -997,7 +1102,9 @@ xauth_inR1(struct msg_digest *md)
 
     stat_build = modecfg_send_msg(st, ISAKMP_CFG_SET, &ia);
     if (stat_build != STF_OK)
+    {
 	return stat_build;
+    }
     return STF_OK;
 }
 
@@ -1033,8 +1140,9 @@ xauth_inI1(struct msg_digest *md)
 				     , &ia
 				     , isama_id);
     if (stat_build != STF_OK)
+    {
 	return stat_build;
- 
+    }
     if (st->st_xauth.status)
     {
 	st->st_msgid = 0;
@@ -1069,8 +1177,9 @@ xauth_inR2(struct msg_digest *md)
 
     stat = modecfg_parse_msg(md, ISAKMP_CFG_ACK, &isama_id, &ia);
     if (stat != STF_OK)
+    {
 	return stat;
-
+    }
     st->st_msgid = 0;
     if (st->st_xauth.status)
     {

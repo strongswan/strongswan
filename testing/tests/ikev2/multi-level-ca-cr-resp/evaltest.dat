@@ -7,6 +7,6 @@ moon::cat /var/log/daemon.log::crl correctly signed by.*Sales CA::YES
 moon::cat /var/log/daemon.log::fetching crl from.*http.*strongswan.crl::YES
 moon::cat /var/log/daemon.log::crl correctly signed by.*strongSwan Root CA::YES
 carol::ipsec status::alice.*INSTALLED::YES
-moon::ipsec status::alice.*ESTABLISHED.*carol@strongswan.org::YES
+moon::ipsec status::alice.*INSTALLED::YES
 dave::ipsec status::venus.*INSTALLED::YES
-moon::ipsec status::venus.*ESTABLISHED.*dave@strongswan.org::YES
+moon::ipsec status::venus.*INSTALLED::YES

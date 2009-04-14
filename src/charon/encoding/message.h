@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -286,14 +286,11 @@ struct message_t {
 	void (*set_destination) (message_t *this, host_t *host);
 	
 	/**
-	 * Returns an iterator on all stored payloads.
-	 * 
-	 * @warning Don't insert payloads over this iterator. 
-	 * 			Use add_payload() instead.
+	 * Create an enumerator over all payloads.
 	 *
-	 * @return			iterator_t object which has to get destroyd by the caller
+	 * @return			enumerator over payload_t
 	 */	
-	iterator_t * (*get_payload_iterator) (message_t *this);
+	enumerator_t * (*create_payload_enumerator) (message_t *this);
 	
 	/**
 	 * Find a payload of a specific type.
@@ -304,6 +301,14 @@ struct message_t {
 	 * @return			payload, or NULL if no such payload found
 	 */	
 	payload_t* (*get_payload) (message_t *this, payload_type_t type);
+	
+	/**
+	 * Get the first notify payload of a specific type.
+	 *
+	 * @param type		type of notification payload
+	 * @return			notify payload, NULL if no such notify found
+	 */
+	notify_payload_t* (*get_notify)(message_t *this, notify_type_t type);
 	
 	/**
 	 * Returns a clone of the internal stored packet_t object.

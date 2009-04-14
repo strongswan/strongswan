@@ -734,11 +734,11 @@ static void build_pairs(check_list_t *checklist)
  */
 static status_t process_payloads(message_t *message, check_t *check)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) != NOTIFY)
 		{
@@ -796,7 +796,7 @@ static status_t process_payloads(message_t *message, check_t *check)
 				break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	if (!check->connect_id.ptr || !check->endpoint || !check->auth.ptr)
 	{

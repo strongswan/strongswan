@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -30,9 +30,8 @@ typedef enum auth_class_t auth_class_t;
 typedef struct authenticator_t authenticator_t;
 
 #include <library.h>
+#include <config/auth_cfg.h>
 #include <sa/ike_sa.h>
-#include <config/peer_cfg.h>
-#include <encoding/payloads/auth_payload.h>
 
 /**
  * Method to use for authentication, as defined in IKEv2.
@@ -84,6 +83,8 @@ extern enum_name_t *auth_method_names;
  * certificate finally dictates wich method is used.
  */
 enum auth_class_t {
+	/** any class acceptable */
+	AUTH_CLASS_ANY = 0,
 	/** authentication using public keys (RSA, ECDSA) */
 	AUTH_CLASS_PUBKEY = 1,
 	/** authentication using a pre-shared secrets */
@@ -100,66 +101,64 @@ extern enum_name_t *auth_class_names;
 /**
  * Authenticator interface implemented by the various authenticators.
  *
- * Currently the following two AUTH methods are supported:
- *  - shared key message integrity code
- *  - RSA digital signature
- *  - EAP using the EAP framework and one of the EAP plugins
- *  - ECDSA is supported using OpenSSL
+ * An authenticator implementation handles AUTH and EAP payloads. Received
+ * messages are passed to the process() method, to send authentication data
+ * the message is passed to the build() method.
  */
 struct authenticator_t {
 
 	/**
-	 * Verify a received authentication payload.
+	 * Process an incoming message using the authenticator.
 	 *
-	 * @param ike_sa_init	binary representation of received ike_sa_init
-	 * @param my_nonce		the sent nonce
-	 * @param auth_payload	authentication payload to verify
+	 * @param message		message containing authentication payloads
 	 * @return
-	 *						- SUCCESS,
-	 *						- FAILED if verification failed
-	 *						- INVALID_ARG if auth_method does not match
-	 *						- NOT_FOUND if credentials not found
+	 *						- SUCCESS if authentication successful
+	 *						- FAILED if authentication failed
+	 *						- NEED_MORE if another exchange required
 	 */
-	status_t (*verify) (authenticator_t *this, chunk_t ike_sa_init,
-						chunk_t my_nonce, auth_payload_t *auth_payload);
-
+	status_t (*process)(authenticator_t *this, message_t *message);
+	
 	/**
-	 * Build an authentication payload to send to the other peer.
+	 * Attach authentication data to an outgoing message.
 	 *
-	 * @param ike_sa_init	binary representation of sent ike_sa_init
-	 * @param other_nonce	the received nonce
-	 * @param auth_payload	the resulting authentication payload
+	 * @param message		message to add authentication data to
 	 * @return
-	 *						- SUCCESS,
-	 *						- NOT_FOUND if credentials not found
+	 *						- SUCCESS if authentication successful
+	 *						- FAILED if authentication failed
+	 *						- NEED_MORE if another exchange required
 	 */
-	status_t (*build) (authenticator_t *this, chunk_t ike_sa_init,
-					   chunk_t other_nonce, auth_payload_t **auth_payload);
-
+	status_t (*build)(authenticator_t *this, message_t *message);
+	
 	/**
-	 * Destroys a authenticator_t object.
+	 * Destroy authenticator instance.
 	 */
 	void (*destroy) (authenticator_t *this);
 };
 
 /**
- * Creates an authenticator for the specified auth class (as configured).
+ * Create an authenticator to build signatures.
  *
- * @param ike_sa		associated ike_sa
- * @param class			class of authentication to use
- * @return				authenticator_t object
+ * @param ike_sa			associated ike_sa
+ * @param cfg				authentication configuration
+ * @param received_nonce	nonce received in IKE_SA_INIT
+ * @param sent_init			sent IKE_SA_INIT message data
+ * @return					authenticator, NULL if not supported
  */
-authenticator_t *authenticator_create_from_class(ike_sa_t *ike_sa,
-												 auth_class_t class);
+authenticator_t *authenticator_create_builder(
+									ike_sa_t *ike_sa, auth_cfg_t *cfg,
+									chunk_t received_nonce, chunk_t sent_init);
 
 /**
- * Creates an authenticator for method (as received in payload).
+ * Create an authenticator to verify signatures.
  * 
- * @param ike_sa		associated ike_sa
- * @param method		method as found in payload
- * @return				authenticator_t object
+ * @param ike_sa			associated ike_sa
+ * @param message			message containing authentication data
+ * @param sent_nonce		nonce sent in IKE_SA_INIT
+ * @param received_init		received IKE_SA_INIT message data
+ * @return					authenticator, NULL if not supported
  */
-authenticator_t *authenticator_create_from_method(ike_sa_t *ike_sa,	
-												  auth_method_t method);
+authenticator_t *authenticator_create_verifier(
+									ike_sa_t *ike_sa, message_t *message,
+									chunk_t sent_nonce, chunk_t received_init);
 
 #endif /** AUTHENTICATOR_H_ @}*/

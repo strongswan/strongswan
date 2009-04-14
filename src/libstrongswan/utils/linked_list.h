@@ -27,7 +27,6 @@
 
 typedef struct linked_list_t linked_list_t;
 
-#include <library.h>
 #include <utils/iterator.h>
 #include <utils/enumerator.h>
 

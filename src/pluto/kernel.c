@@ -2955,7 +2955,7 @@ was_eroute_idle(struct state *st, time_t idle_max, time_t *idle_time)
 		break;
 	    }
 
-	    if (strncmp(line, text_said, strlen(text_said)) == 0)
+	    if (strneq(line, text_said, strlen(text_said)))
 	    {
 		/* we found a match, now try to find idle= */
 		char *p = strstr(line, idle);

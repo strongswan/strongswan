@@ -521,6 +521,45 @@ static void child_keys(private_bus_t *this, child_sa_t *child_sa,
 }
 
 /**
+ * Implementation of bus_t.authorize
+ */
+static bool authorize(private_bus_t *this, linked_list_t *auth, bool final)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	bool keep, success = TRUE;
+	
+	ike_sa = pthread_getspecific(this->thread_sa);
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->authorize)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->authorize(entry->listener, ike_sa,
+										  auth, final, &success);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+			break;
+		}
+		if (!success)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+	return success;
+}
+
+/**
  * Implementation of bus_t.destroy.
  */
 static void destroy(private_bus_t *this)
@@ -548,6 +587,7 @@ bus_t *bus_create()
 	this->public.message = (void(*)(bus_t*, message_t *message, bool incoming))message;
 	this->public.ike_keys = (void(*)(bus_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
 	this->public.child_keys = (void(*)(bus_t*, child_sa_t *child_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r))child_keys;
+	this->public.authorize = (bool(*)(bus_t*, linked_list_t *auth, bool final))authorize;
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();

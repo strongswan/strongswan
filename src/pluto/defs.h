@@ -32,10 +32,6 @@
 # define USED_BY_DEBUG	UNUSED
 #endif
 
-/* Length of temporary buffers */
-
-#define BUF_LEN	      512
-
 /* type of serial number of a state object
  * Needed in connections.h and state.h; here to simplify dependencies.
  */
@@ -117,9 +113,6 @@ typedef struct {
     bool prompt;
     int fd;
 } prompt_pass_t;
-
-/* no time defined in time_t */
-#define UNDEFINED_TIME	0
 
 /* size of timetoa string buffer */
 #define TIMETOA_BUF	30

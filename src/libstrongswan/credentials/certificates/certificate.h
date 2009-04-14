@@ -58,18 +58,20 @@ extern enum_name_t *certificate_type_names;
 
 /**
  * Result of a certificate validation.
+ *
+ * Order of values is relevant, sorted from good to bad.
  */
 enum cert_validation_t {
 	/** certificate has been validated successfully */
-	VALIDATION_GOOD,
-	/** certificate has been validated, but check based on stale information */
-	VALIDATION_STALE,
-	/** certificate has been revoked */
-	VALIDATION_REVOKED,
-	/** validation failed due to a processing error */
-	VALIDATION_FAILED,
+	VALIDATION_GOOD = 0,
 	/** validation has been skipped due to missing validation information */
 	VALIDATION_SKIPPED,
+	/** certificate has been validated, but check based on stale information */
+	VALIDATION_STALE,
+	/** validation failed due to a processing error */
+	VALIDATION_FAILED,
+	/** certificate has been revoked */
+	VALIDATION_REVOKED,
 };
 
 /**

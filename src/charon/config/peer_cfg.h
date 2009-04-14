@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007-2008 Tobias Brunner
- * Copyright (C) 2005-2007 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -38,7 +38,7 @@ typedef struct peer_cfg_t peer_cfg_t;
 #include <config/child_cfg.h>
 #include <sa/authenticators/authenticator.h>
 #include <sa/authenticators/eap/eap_method.h>
-#include <credentials/auth_info.h>
+#include <config/auth_cfg.h>
 
 /**
  * Certificate sending policy. This is also used for certificate
@@ -87,27 +87,33 @@ extern enum_name_t *unique_policy_names;
  * exactly one ike_cfg_t, which is use for initiation. Additionally, it contains
  * multiple child_cfg_t defining which CHILD_SAs are allowed for this peer.
  * @verbatim
-
-                           +-------------------+           +---------------+
-   +---------------+       |     peer_cfg      |         +---------------+ |
-   |    ike_cfg    |       +-------------------+         |   child_cfg   | |
-   +---------------+       | - ids             |         +---------------+ |
-   | - hosts       | 1   1 | - cas             | 1     n | - proposals   | |
-   | - proposals   |<------| - auth info       |-------->| - traffic sel | |
-   | - ...         |       | - dpd config      |         | - ...         |-+
-   +---------------+       | - ...             |         +---------------+
-                           +-------------------+
-                                     ^
-                                     |
-                           +-------------------+
-                           |     auth_info     |
-                           +-------------------+
-                           |     auth_items    |
-                           +-------------------+
+                          +-------------------+        +---------------+
+   +---------------+      |     peer_cfg      |      +---------------+ |
+   |    ike_cfg    |      +-------------------+      |   child_cfg   | |
+   +---------------+      | - ids             |      +---------------+ |
+   | - hosts       | 1  1 | - cas             | 1  n | - proposals   | |
+   | - proposals   |<-----| - auth info       |----->| - traffic sel | |
+   | - ...         |      | - dpd config      |      | - ...         |-+
+   +---------------+      | - ...             |      +---------------+
+                          +-------------------+
+                             | 1         0 |
+                             |             |
+                             v n         n V
+             +-------------------+     +-------------------+
+           +-------------------+ |   +-------------------+ |
+           |     auth_cfg      | |   |     auth_cfg      | |
+           +-------------------+ |   +-------------------+ |
+           | - local rules     |-+   | - remote constr.  |-+
+           +-------------------+     +-------------------+
    @endverbatim
- * The auth_info_t object associated to the peer_cfg holds additional
- * authorization constraints. A peer who wants to use a config needs to fullfil
- * the requirements defined in auth_info.
+ *
+ * Each peer_cfg has two lists of authentication config attached. Local
+ * authentication configs define how to authenticate ourself against the remote
+ * peer. Each config is enforced using the multiple authentication extension
+ * (RFC4739). 
+ * The remote authentication configs are handled as constraints. The peer has
+ * to fullfill each of these rules (using multiple authentication, in any order)
+ * to gain access to the configuration.
  */
 struct peer_cfg_t {
 	
@@ -169,25 +175,20 @@ struct peer_cfg_t {
 									  host_t *other_host);
 	
 	/**
-	 * Get the authentication constraint items.
+	 * Add an authentication config to the peer configuration.
 	 *
-	 * @return				auth_info object to manipulate requirements
+	 * @param config		config to add
+	 * @param local			TRUE for local rules, FALSE for remote constraints
 	 */
-	auth_info_t* (*get_auth)(peer_cfg_t *this);
-		
-	/**
-	 * Get own ID.
-	 * 
-	 * @return				own id
-	 */
-	identification_t* (*get_my_id)(peer_cfg_t *this);
+	void (*add_auth_cfg)(peer_cfg_t *this, auth_cfg_t *cfg, bool local);
 	
 	/**
-	 * Get peers ID.
-	 * 
-	 * @return				other id
+	 * Create an enumerator over registered authentication configs.
+	 *
+	 * @param local			TRUE for local rules, FALSE for remote constraints
+	 * @return				enumerator over auth_cfg_t*
 	 */
-	identification_t* (*get_other_id)(peer_cfg_t *this);
+	enumerator_t* (*create_auth_cfg_enumerator)(peer_cfg_t *this, bool local);
 
 	/**
 	 * Should be sent a certificate for this connection?
@@ -331,8 +332,6 @@ struct peer_cfg_t {
  * @param name				name of the peer_cfg
  * @param ike_version		which IKE version we sould use for this peer
  * @param ike_cfg			IKE config to use when acting as initiator
- * @param my_id 			identification_t for ourselves
- * @param other_id 			identification_t for the remote guy
  * @param cert_policy		should we send a certificate payload?
  * @param unique			uniqueness of an IKE_SA
  * @param keyingtries		how many keying tries should be done before giving up
@@ -350,7 +349,6 @@ struct peer_cfg_t {
  * @return 					peer_cfg_t object
  */
 peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
-							identification_t *my_id, identification_t *other_id,
 							cert_policy_t cert_policy, unique_policy_t unique,
 							u_int32_t keyingtries, u_int32_t rekey_time,
 							u_int32_t reauth_time, u_int32_t jitter_time,

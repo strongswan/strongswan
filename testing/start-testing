@@ -33,10 +33,10 @@ else
 fi
 
 #####################################################
-# start the uml switches
+# start the uml bridges
 #
-cecho "Start the uml switches  (scripts/start-switches)"
-$DIR/scripts/start-switches
+cecho "Start the uml bridges  (scripts/start-bridges)"
+$DIR/scripts/start-bridges
 
 
 #####################################################

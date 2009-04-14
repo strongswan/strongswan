@@ -55,90 +55,21 @@ struct private_stroke_config_t {
 };
 
 /**
- * data to pass peer_filter
- */
-typedef struct {
-	private_stroke_config_t *this;
-	identification_t *me;
-	identification_t *other;
-} peer_data_t;
-
-/**
- * destroy id enumerator data and unlock list
- */
-static void peer_data_destroy(peer_data_t *data)
-{
-	data->this->mutex->unlock(data->this->mutex);
-	free(data);
-}
-
-/**
- * filter function for peer configs
- */
-static bool peer_filter(peer_data_t *data, peer_cfg_t **in, peer_cfg_t **out)
-{
-	bool match_me = FALSE, match_other = FALSE;
-	identification_t *me, *other;
-	
-	me = (*in)->get_my_id(*in);
-	other = (*in)->get_other_id(*in);
-	
-	/* own ID may have wildcards in data (no IDr payload) or in config */
-	match_me = (!data->me || data->me->matches(data->me, me) ||
-				me->matches(me, data->me));
-	/* others ID has wildcards in config only */
-	match_other = (!data->other || data->other->matches(data->other, other));
-	
-	if (match_me && match_other)
-	{
-		*out = *in;
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
  * Implementation of backend_t.create_peer_cfg_enumerator.
  */
 static enumerator_t* create_peer_cfg_enumerator(private_stroke_config_t *this,
 												identification_t *me,
 												identification_t *other)
 {
-	peer_data_t *data;
-	
-	data = malloc_thing(peer_data_t);
-	data->this = this;
-	data->me = me;
-	data->other = other;
-	
 	this->mutex->lock(this->mutex);
-	return enumerator_create_filter(this->list->create_enumerator(this->list),
-									(void*)peer_filter, data,
-									(void*)peer_data_destroy);
-}
-
-/**
- * data to pass ike_filter
- */
-typedef struct {
-	private_stroke_config_t *this;
-	host_t *me;
-	host_t *other;
-} ike_data_t;
-
-/**
- * destroy id enumerator data and unlock list
- */
-static void ike_data_destroy(ike_data_t *data)
-{
-	data->this->mutex->unlock(data->this->mutex);
-	free(data);
+	return enumerator_create_cleaner(this->list->create_enumerator(this->list),
+									 (void*)this->mutex->unlock, this->mutex);
 }
 
 /**
  * filter function for ike configs
  */
-static bool ike_filter(ike_data_t *data, peer_cfg_t **in, ike_cfg_t **out)
+static bool ike_filter(void *data, peer_cfg_t **in, ike_cfg_t **out)
 {
 	*out = (*in)->get_ike_cfg(*in);
 	return TRUE;
@@ -150,17 +81,10 @@ static bool ike_filter(ike_data_t *data, peer_cfg_t **in, ike_cfg_t **out)
 static enumerator_t* create_ike_cfg_enumerator(private_stroke_config_t *this,
 											   host_t *me, host_t *other)
 {
-	ike_data_t *data;
-	
-	data = malloc_thing(ike_data_t);
-	data->this = this;
-	data->me = me;
-	data->other = other;
-	
 	this->mutex->lock(this->mutex);
 	return enumerator_create_filter(this->list->create_enumerator(this->list),
-									(void*)ike_filter, data,
-									(void*)ike_data_destroy);
+									(void*)ike_filter, this->mutex,
+									(void*)this->mutex->unlock);
 }
 
 /**
@@ -171,54 +95,38 @@ static peer_cfg_t *get_peer_cfg_by_name(private_stroke_config_t *this, char *nam
 	enumerator_t *e1, *e2;
 	peer_cfg_t *current, *found = NULL;
 	child_cfg_t *child;
-
+	
 	this->mutex->lock(this->mutex);
 	e1 = this->list->create_enumerator(this->list);
 	while (e1->enumerate(e1, &current))
 	{
-        /* compare peer_cfgs name first */
-        if (streq(current->get_name(current), name))
-        {
-            found = current;
-            found->get_ref(found);
-            break;
-        }
-        /* compare all child_cfg names otherwise */
-        e2 = current->create_child_cfg_enumerator(current);
-        while (e2->enumerate(e2, &child))
-        {
-            if (streq(child->get_name(child), name))
-            {
-                found = current;
-                found->get_ref(found);
-                break;
-            }
-        }
-        e2->destroy(e2);
-        if (found)
-        {
-            break;
-        }
+		/* compare peer_cfgs name first */
+		if (streq(current->get_name(current), name))
+		{
+			found = current;
+			found->get_ref(found);
+			break;
+		}
+		/* compare all child_cfg names otherwise */
+		e2 = current->create_child_cfg_enumerator(current);
+		while (e2->enumerate(e2, &child))
+		{
+			if (streq(child->get_name(child), name))
+			{
+				found = current;
+				found->get_ref(found);
+				break;
+			}
+		}
+		e2->destroy(e2);
+		if (found)
+		{
+			break;
+		}
 	}
 	e1->destroy(e1);
 	this->mutex->unlock(this->mutex);
 	return found;
-}
-
-/**
- * check if a certificate has an ID
- */
-static identification_t *update_peerid(certificate_t *cert, identification_t *id)
-{
-	if (id->get_type(id) == ID_ANY || !cert->has_subject(cert, id))
-	{
-		DBG1(DBG_CFG, "  peerid %D not confirmed by certificate, "
-			 "defaulting to subject DN", id);
-		id->destroy(id);
-		id = cert->get_subject(cert);
-		return id->clone(id);
-	}
-	return id;
 }
 
 /**
@@ -332,45 +240,303 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 	add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg, NULL);
 	return ike_cfg;					 
 }
+
+/**
+ * Add CRL constraint to config
+ */
+static void build_crl_policy(auth_cfg_t *cfg, bool local, int policy)
+{
+	/* CRL/OCSP policy, for remote config only */
+	if (!local)
+	{
+		switch (policy)
+		{
+			case CRL_STRICT_YES:
+				/* if yes, we require a GOOD validation */
+				cfg->add(cfg, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
+				break;
+			case CRL_STRICT_IFURI:
+				/* for ifuri, a SKIPPED validation is sufficient */
+				cfg->add(cfg, AUTH_RULE_CRL_VALIDATION, VALIDATION_SKIPPED);
+				break;
+			default:
+				break;
+		}
+	}
+}
+
+/**
+ * build authentication config
+ */
+static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
+								  stroke_msg_t *msg, bool local, bool primary)
+{
+	identification_t *identity;
+	certificate_t *certificate;
+	char *auth, *id, *cert, *ca;
+	stroke_end_t *end, *other_end;
+	auth_cfg_t *cfg;
+	char eap_buf[32];
+	
+	/* select strings */
+	if (local)
+	{
+		end = &msg->add_conn.me;
+		other_end = &msg->add_conn.other;
+	}
+	else
+	{
+		end = &msg->add_conn.other;
+		other_end = &msg->add_conn.me;
+	}
+	if (primary)
+	{
+		auth = end->auth;
+		id = end->id;
+		if (!id)
+		{	/* leftid/rightid fallback to address */
+			id = end->address;
+		}
+		cert = end->cert;
+		ca = end->ca;
+		if (ca && streq(ca, "%same"))
+		{
+			ca = other_end->ca;
+		}
+	}
+	else
+	{
+		auth = end->auth2;
+		id = end->id2;
+		if (local && !id)
+		{	/* leftid2 falls back to leftid */
+			id = end->id;
+		}
+		cert = end->cert2;
+		ca = end->ca2;
+		if (ca && streq(ca, "%same"))
+		{
+			ca = other_end->ca2;
+		}
+	}
+	
+	if (!auth)
+	{
+		if (primary)
+		{
+			if (local)
+			{	/* "leftauth" not defined, fall back to deprecated "authby" */
+				switch (msg->add_conn.auth_method)
+				{
+					default:
+					case AUTH_CLASS_PUBKEY:
+						auth = "pubkey";
+						break;
+					case AUTH_CLASS_PSK:
+						auth = "psk";
+						break;
+					case AUTH_CLASS_EAP:
+						auth = "eap";
+						break;
+				}
+			}
+			else
+			{	/* "rightauth" not defined, fall back to deprecated "eap" */
+				if (msg->add_conn.eap_type)
+				{
+					if (msg->add_conn.eap_vendor)
+					{
+						snprintf(eap_buf, sizeof(eap_buf), "eap-%d-%d",
+								 msg->add_conn.eap_type,
+								 msg->add_conn.eap_vendor);
+					}
+					else
+					{
+						snprintf(eap_buf, sizeof(eap_buf), "eap-%d",
+								 msg->add_conn.eap_type);
+					}
+					auth = eap_buf;
+				}
+				else
+				{	/* not EAP => no constraints for this peer */
+					auth = "any";
+				}
+			}
+		}
+		else
+		{	/* no second authentication round, fine */
+			return NULL;
+		}
+	}
+	
+	cfg = auth_cfg_create();
+	
+	/* add identity and peer certifcate */
+	identity = identification_create_from_string(id);
+	if (cert)
+	{
+		certificate = this->cred->load_peer(this->cred, cert);
+		if (certificate)
+		{
+			if (local)
+			{
+				this->ca->check_for_hash_and_url(this->ca, certificate);
+			}
+			cfg->add(cfg, AUTH_RULE_SUBJECT_CERT, certificate); 
+			if (identity->get_type(identity) == ID_ANY ||
+				!certificate->has_subject(certificate, identity))
+			{
+				DBG1(DBG_CFG, "  peerid %D not confirmed by certificate, "
+					 "defaulting to subject DN: %D", identity,
+					 certificate->get_subject(certificate));
+				identity->destroy(identity);
+				identity = certificate->get_subject(certificate);
+				identity = identity->clone(identity);
+			}
+		}
+	}
+	cfg->add(cfg, AUTH_RULE_IDENTITY, identity);
+	
+	/* CA constraint */
+	if (ca)
+	{
+		identity = identification_create_from_string(ca);
+		certificate = charon->credentials->get_cert(charon->credentials,
+											CERT_X509, KEY_ANY, identity, TRUE);
+		identity->destroy(identity);
+		if (certificate)
+		{
+			cfg->add(cfg, AUTH_RULE_CA_CERT, certificate);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "CA certificate %s not found, discarding CA "
+				 "constraint", ca);
+		}
+	}
+	
+	/* AC groups */
+	if (end->groups)
+	{
+		enumerator_t *enumerator;
+		char *group;
+		
+		enumerator = enumerator_create_token(end->groups, ",", " ");
+		while (enumerator->enumerate(enumerator, &group))
+		{
+			identity = identification_create_from_encoding(ID_IETF_ATTR_STRING,
+											chunk_create(group, strlen(group)));
+			cfg->add(cfg, AUTH_RULE_AC_GROUP, identity);
+		}
+		enumerator->destroy(enumerator);
+	}
+	
+	/* authentication metod (class, actually) */
+	if (streq(auth, "pubkey") ||
+		streq(auth, "rsasig") || streq(auth, "rsa") ||
+		streq(auth, "ecdsasig") || streq(auth, "ecdsa"))
+	{
+		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+		build_crl_policy(cfg, local, msg->add_conn.crl_policy);
+	}
+	else if (streq(auth, "psk") || streq(auth, "secret"))
+	{
+		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+	}
+	else if (strneq(auth, "eap", 3))
+	{
+		enumerator_t *enumerator;
+		char *str;
+		int i = 0, type = 0, vendor;
+		
+		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
+		
+		/* parse EAP string, format: eap[-type[-vendor]] */
+		enumerator = enumerator_create_token(auth, "-", " ");
+		while (enumerator->enumerate(enumerator, &str))
+		{
+			switch (i)
+			{
+				case 1:
+					type = eap_type_from_string(str);
+					if (!type)
+					{
+						type = atoi(str);
+						if (!type)
+						{
+							DBG1(DBG_CFG, "unknown EAP method: %s", str);
+							break;
+						}
+					}
+					cfg->add(cfg, AUTH_RULE_EAP_TYPE, type);
+					break;
+				case 2:
+					if (type)
+					{
+						vendor = atoi(str);
+						if (vendor)
+						{
+							cfg->add(cfg, AUTH_RULE_EAP_VENDOR, vendor);
+						}
+						else
+						{
+							DBG1(DBG_CFG, "unknown EAP vendor: %s", str);
+						}
+					}
+					break;
+				default:
+					break;
+			}
+			i++;
+		}
+		enumerator->destroy(enumerator);
+		
+		if (msg->add_conn.eap_identity)
+		{
+			if (streq(msg->add_conn.eap_identity, "%identity"))
+			{
+				identity = identification_create_from_encoding(ID_ANY,
+															   chunk_empty);
+			}
+			else
+			{
+				identity = identification_create_from_string(
+													msg->add_conn.eap_identity);
+			}
+			cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, identity);
+		}
+	}
+	else
+	{
+		if (!streq(auth, "any"))
+		{
+			DBG1(DBG_CFG, "authentication method %s unknown, fallback to any",
+				 auth);
+		}
+		build_crl_policy(cfg, local, msg->add_conn.crl_policy);
+	}
+	return cfg;
+}
+
 /**
  * build a peer_cfg from a stroke msg
  */
 static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
-								  stroke_msg_t *msg, ike_cfg_t *ike_cfg,
-								  identification_t **my_issuer,
-								  identification_t **other_issuer)
+								  stroke_msg_t *msg, ike_cfg_t *ike_cfg)
 {
-	identification_t *me, *other, *peer_id = NULL;
+	identification_t *peer_id = NULL;
 	peer_cfg_t *mediated_by = NULL;
 	host_t *vip = NULL;
-	certificate_t *cert;
 	unique_policy_t unique;
 	u_int32_t rekey = 0, reauth = 0, over, jitter;
-	
-	me = identification_create_from_string(msg->add_conn.me.id ?
-						msg->add_conn.me.id : msg->add_conn.me.address);
-	if (!me)
-	{
-		DBG1(DBG_CFG, "invalid ID: %s\n", msg->add_conn.me.id);
-		return NULL;
-	}
-	other = identification_create_from_string(msg->add_conn.other.id ?
-						msg->add_conn.other.id : msg->add_conn.other.address);
-	if (!other)
-	{
-		DBG1(DBG_CFG, "invalid ID: %s\n", msg->add_conn.other.id);
-		me->destroy(me);
-		return NULL;
-	}
-	
+	peer_cfg_t *peer_cfg;
+	auth_cfg_t *auth_cfg;
 	
 #ifdef ME
 	if (msg->add_conn.ikeme.mediation && msg->add_conn.ikeme.mediated_by)
 	{
 		DBG1(DBG_CFG, "a mediation connection cannot be a"
 				" mediated connection at the same time, aborting");
-		me->destroy(me);
-		other->destroy(other);
 		return NULL;
 	}
 	
@@ -388,8 +554,6 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		{
 			DBG1(DBG_CFG, "mediation connection '%s' not found, aborting",
 				 msg->add_conn.ikeme.mediated_by);
-			me->destroy(me);
-			other->destroy(other);
 			return NULL;
 		}
 		
@@ -399,56 +563,19 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 				 "no mediation connection, aborting", 
 				msg->add_conn.ikeme.mediated_by, msg->add_conn.name);
 			mediated_by->destroy(mediated_by);
-			me->destroy(me);
-			other->destroy(other);
 			return NULL;
 		}
-	}
-	
-	if (msg->add_conn.ikeme.peerid)
-	{
-		peer_id = identification_create_from_string(msg->add_conn.ikeme.peerid);
-		if (!peer_id)
+		if (msg->add_conn.ikeme.peerid)
 		{
-			DBG1(DBG_CFG, "invalid peer ID: %s\n", msg->add_conn.ikeme.peerid);
-			mediated_by->destroy(mediated_by);
-			me->destroy(me);
-			other->destroy(other);
-			return NULL;
+			peer_id = identification_create_from_string(msg->add_conn.ikeme.peerid);
 		}
-	}
-	else
-	{
-		/* no peer ID supplied, assume right ID */
-		peer_id = other->clone(other);
+		else if (msg->add_conn.other.id)
+		{
+			peer_id = identification_create_from_string(msg->add_conn.other.id);
+		}
 	}
 #endif /* ME */
 	
-	if (msg->add_conn.me.cert)
-	{
-		cert = this->cred->load_peer(this->cred, msg->add_conn.me.cert);
-		if (cert)
-		{
-			identification_t *issuer = cert->get_issuer(cert);
-
-			*my_issuer = issuer->clone(issuer); 
-			this->ca->check_for_hash_and_url(this->ca, cert);
-			me = update_peerid(cert, me);
-			cert->destroy(cert);
-		}
-	}
-	if (msg->add_conn.other.cert)
-	{
-		cert = this->cred->load_peer(this->cred, msg->add_conn.other.cert);
-		if (cert)
-		{
-			identification_t *issuer = cert->get_issuer(cert);
-
-			*other_issuer = issuer->clone(issuer); 
-			other = update_peerid(cert, other);
-			cert->destroy(cert);
-		}
-	}
 	jitter = msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100;
 	over = msg->add_conn.rekey.margin;
 	if (msg->add_conn.rekey.reauth)
@@ -512,179 +639,45 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	/* other.sourceip is managed in stroke_attributes. If it is set, we define
 	 * the pool name as the connection name, which the attribute provider
 	 * uses to serve pool addresses. */
-	return peer_cfg_create(msg->add_conn.name,
-		msg->add_conn.ikev2 ? 2 : 1, ike_cfg, me, other,
+	peer_cfg = peer_cfg_create(msg->add_conn.name,
+		msg->add_conn.ikev2 ? 2 : 1, ike_cfg,
 		msg->add_conn.me.sendcert, unique, 
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay,
 		vip, msg->add_conn.other.sourceip_size ?
 							msg->add_conn.name : msg->add_conn.other.sourceip,
 		msg->add_conn.ikeme.mediation, mediated_by, peer_id);
-}
-
-/**
- * fill in auth_info from stroke message
- */
-static void build_auth_info(private_stroke_config_t *this,
-							stroke_msg_t *msg, auth_info_t *auth,
-							identification_t *my_ca,
-							identification_t *other_ca)
-{
-	identification_t *id;
-	bool my_ca_same = FALSE;
-	bool other_ca_same = FALSE;
-	cert_validation_t valid;
-
-	switch (msg->add_conn.crl_policy)
-	{
-		case CRL_STRICT_YES:
-			valid = VALIDATION_GOOD;
-			auth->add_item(auth, AUTHZ_CRL_VALIDATION, &valid);
-			break;
-		case CRL_STRICT_IFURI:
-			valid = VALIDATION_SKIPPED;
-			auth->add_item(auth, AUTHZ_CRL_VALIDATION, &valid);
-			break;
-		default:
-			break;
-	}
 	
-	if (msg->add_conn.me.ca)
+	/* build leftauth= */
+	auth_cfg = build_auth_cfg(this, msg, TRUE, TRUE);
+	if (auth_cfg)
 	{
-		if (my_ca)
-		{
-			my_ca->destroy(my_ca);
-			my_ca = NULL;
-		}
-		if (streq(msg->add_conn.me.ca, "%same"))
-		{
-			my_ca_same = TRUE;
-		}
-		else
-		{
-			my_ca = identification_create_from_string(msg->add_conn.me.ca);
-		}
+		peer_cfg->add_auth_cfg(peer_cfg, auth_cfg, TRUE);
 	}
-
-	if (msg->add_conn.other.ca)
+	else
+	{	/* we require at least one config on our side */
+		peer_cfg->destroy(peer_cfg);
+		return NULL;
+	}
+	/* build leftauth2= */
+	auth_cfg = build_auth_cfg(this, msg, TRUE, FALSE);
+	if (auth_cfg)
 	{
-		if (other_ca)
-		{
-			other_ca->destroy(other_ca);
-			other_ca = NULL;
-		}
-		if (streq(msg->add_conn.other.ca, "%same"))
-		{
-			other_ca_same = TRUE;
-		}
-		else
-		{
-			other_ca = identification_create_from_string(msg->add_conn.other.ca);
-		}
+		peer_cfg->add_auth_cfg(peer_cfg, auth_cfg, TRUE);
 	}
-
-	if (other_ca_same && my_ca)
+	/* build rightauth= */
+	auth_cfg = build_auth_cfg(this, msg, FALSE, TRUE);
+	if (auth_cfg)
 	{
-		other_ca = my_ca->clone(my_ca);
+		peer_cfg->add_auth_cfg(peer_cfg, auth_cfg, FALSE);
 	}
-	else if (my_ca_same && other_ca)
+	/* build rightauth2= */
+	auth_cfg = build_auth_cfg(this, msg, FALSE, FALSE);
+	if (auth_cfg)
 	{
-		my_ca = other_ca->clone(other_ca);
+		peer_cfg->add_auth_cfg(peer_cfg, auth_cfg, FALSE);
 	}
-	
-	if (other_ca)
-	{
-		DBG2(DBG_CFG, "  other ca: %D", other_ca);
-		certificate_t *cert = charon->credentials->get_cert(charon->credentials, 
-									CERT_X509, KEY_ANY, other_ca, TRUE);
-		if (cert)
-		{
-			auth->add_item(auth, AUTHZ_CA_CERT, cert);
-			cert->destroy(cert);
-		}
-		else
-		{
-			auth->add_item(auth, AUTHZ_CA_CERT_NAME, other_ca);
-		}
-		other_ca->destroy(other_ca);
-	}
-
-	if (my_ca)
-	{
-		DBG2(DBG_CFG, "  my ca:    %D", my_ca);
-		certificate_t *cert = charon->credentials->get_cert(charon->credentials, 
-									CERT_X509, KEY_ANY, my_ca, TRUE);
-		if (cert)
-		{
-			auth->add_item(auth, AUTHN_CA_CERT, cert);
-			cert->destroy(cert);
-		}
-		else
-		{
-			auth->add_item(auth, AUTHN_CA_CERT_NAME, my_ca);
-		}
-		my_ca->destroy(my_ca);
-	}
-	auth->add_item(auth, AUTHN_AUTH_CLASS, &msg->add_conn.auth_method);
-	if (msg->add_conn.eap_type)
-	{
-		auth->add_item(auth, AUTHN_EAP_TYPE, &msg->add_conn.eap_type);
-		if (msg->add_conn.eap_vendor)
-		{
-			auth->add_item(auth, AUTHN_EAP_VENDOR, &msg->add_conn.eap_vendor);
-		}
-	}
-
-	if (msg->add_conn.eap_identity)
-	{
-		if (streq(msg->add_conn.eap_identity, "%identity"))
-		{
-			id = identification_create_from_encoding(ID_ANY, chunk_empty);
-		}
-		else
-		{
-			id = identification_create_from_encoding(ID_EAP, chunk_create(
-										msg->add_conn.eap_identity,
-										strlen(msg->add_conn.eap_identity)));
-		}
-		auth->add_item(auth, AUTHN_EAP_IDENTITY, id);
-		id->destroy(id);
-	}
-
-	if (msg->add_conn.other.groups)
-	{
-		chunk_t line = { msg->add_conn.other.groups,
-						 strlen(msg->add_conn.other.groups) };
-
-		while (eat_whitespace(&line))
-		{
-			chunk_t group;
-
-			/* extract the next comma-separated group attribute */
-			if (!extract_token(&group, ',', &line))
-			{
-				group = line;
-				line.len = 0;
-			}
-
-			/* remove any trailing spaces */
-			while (group.len > 0 && *(group.ptr + group.len - 1) == ' ')
-			{
-				group.len--;
-			}
-
-			/* add the group attribute to the list */
-			if (group.len > 0)
-			{
-				identification_t *ac_group;
-
-				ac_group = identification_create_from_encoding(
-									ID_IETF_ATTR_STRING, group);
-				auth->add_item(auth, AUTHZ_AC_GROUP, ac_group);
-				ac_group->destroy(ac_group);	
-			}
-		}
-	}
+	return peer_cfg;
 }
 
 /**
@@ -799,7 +792,6 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 	ike_cfg_t *ike_cfg, *existing_ike;
 	peer_cfg_t *peer_cfg, *existing;
 	child_cfg_t *child_cfg;
-	identification_t *my_issuer = NULL, *other_issuer = NULL;
 	enumerator_t *enumerator;
 	bool use_existing = FALSE;
 
@@ -808,15 +800,13 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 	{
 		return;
 	}
-	peer_cfg = build_peer_cfg(this, msg, ike_cfg, &my_issuer, &other_issuer);
+	peer_cfg = build_peer_cfg(this, msg, ike_cfg);
 	if (!peer_cfg)
 	{
 		ike_cfg->destroy(ike_cfg);
 		return;
 	}
 	
-	build_auth_info(this, msg, peer_cfg->get_auth(peer_cfg),
-					my_issuer, other_issuer);
 	enumerator = create_peer_cfg_enumerator(this, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &existing))
 	{
@@ -850,9 +840,7 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 	else
 	{
 		/* add config to backend */
-		DBG1(DBG_CFG, "added configuration '%s': %s[%D]...%s[%D]", msg->add_conn.name,
-			 ike_cfg->get_my_addr(ike_cfg), peer_cfg->get_my_id(peer_cfg),
-			 ike_cfg->get_other_addr(ike_cfg), peer_cfg->get_other_id(peer_cfg));
+		DBG1(DBG_CFG, "added configuration '%s'", msg->add_conn.name);
 		this->mutex->lock(this->mutex);
 		this->list->insert_last(this->list, peer_cfg);
 		this->mutex->unlock(this->mutex);

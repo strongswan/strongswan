@@ -64,12 +64,12 @@ static void add_auth_lifetime(private_ike_auth_lifetime_t *this, message_t *mess
  */
 static void process_payloads(private_ike_auth_lifetime_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 	notify_payload_t *notify;
 	
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) == NOTIFY)
 		{
@@ -88,7 +88,7 @@ static void process_payloads(private_ike_auth_lifetime_t *this, message_t *messa
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**

@@ -15,7 +15,7 @@
 
 #include <daemon.h>
 #include <library.h>
-#include <credentials/auth_info.h>
+#include <config/auth_cfg.h>
 
 
 char buf[] = {0x01,0x02,0x03,0x04};
@@ -75,14 +75,14 @@ chunk_t certchunk = chunk_from_buf(certbuf);
 /*******************************************************************************
  * auth info test
  ******************************************************************************/
-bool test_auth_info()
+bool test_auth_cfg()
 {
-	auth_info_t *auth = auth_info_create(), *auth2;
+	auth_cfg_t *auth = auth_cfg_create(), *auth2;
 	certificate_t *c1, *c2;
 	enumerator_t *enumerator;
 	int round = 0;
 	void *value;
-	auth_item_t type;
+	auth_rule_t type;
 	
 	c1 = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							BUILD_BLOB_ASN1_DER, certchunk,
@@ -92,8 +92,9 @@ bool test_auth_info()
 		return FALSE;
 	}
 	
-	auth->add_item(auth, AUTHN_SUBJECT_CERT, c1);
-	if (!auth->get_item(auth, AUTHN_SUBJECT_CERT, (void**)&c2))
+	auth->add(auth, AUTH_RULE_SUBJECT_CERT, c1->get_ref(c1));
+	c2 = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+	if (!c2)
 	{
 		return FALSE;
 	}
@@ -102,11 +103,11 @@ bool test_auth_info()
 		return FALSE;
 	}
 	
-	enumerator = auth->create_item_enumerator(auth);
+	enumerator = auth->create_enumerator(auth);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
 		round++;
-		if (round == 1 && type == AUTHN_SUBJECT_CERT && value == c1)
+		if (round == 1 && type == AUTH_RULE_SUBJECT_CERT && value == c1)
 		{
 			continue;
 		}
@@ -114,20 +115,20 @@ bool test_auth_info()
 	}
 	enumerator->destroy(enumerator);
 	
-	auth2 = auth_info_create();
-	auth2->add_item(auth2, AUTHN_CA_CERT, c1);
-	auth2->merge(auth2, auth);
+	auth2 = auth_cfg_create();
+	auth2->add(auth2, AUTH_RULE_CA_CERT, c1->get_ref(c1));
+	auth2->merge(auth2, auth, FALSE);
 	
 	round = 0;
-	enumerator = auth2->create_item_enumerator(auth2);
+	enumerator = auth2->create_enumerator(auth2);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
 		round++;
-		if (round == 1 && type == AUTHN_CA_CERT && value == c1)
+		if (round == 1 && type == AUTH_RULE_CA_CERT && value == c1)
 		{
 			continue;
 		}
-		if (round == 2 && type == AUTHN_SUBJECT_CERT && value == c1)
+		if (round == 2 && type == AUTH_RULE_SUBJECT_CERT && value == c1)
 		{
 			continue;
 		}

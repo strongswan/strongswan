@@ -25,7 +25,7 @@
 
 typedef struct settings_t settings_t;
 
-#include <library.h>
+#include <utils.h>
 #include <utils/enumerator.h>
 
 /**

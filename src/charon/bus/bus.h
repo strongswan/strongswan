@@ -210,6 +210,23 @@ struct listener_t {
 	 */
 	bool (*child_keys)(listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
+	
+	/**
+	 * Hook called to invoke additional authorization rules.
+	 *
+	 * An authorization hook gets invoked several times: After each
+	 * authentication round, the hook gets invoked with with final = FALSE.
+	 * After authentication is complete and the peer configuration is selected,
+	 * it is invoked again, but with final = TRUE.
+	 *
+	 * @param ike_sa	IKE_SA to authorize
+	 * @param auth		list of auth_cfg_t, done in peers authentication rounds
+	 * @param final		TRUE if this is the final hook invocation
+	 * @param success	set to TRUE to complete IKE_SA, FALSE abort
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*authorize)(listener_t *this, ike_sa_t *ike_sa, linked_list_t *auth,
+					  bool final, bool *success);
 };
 
 /**
@@ -315,6 +332,15 @@ struct bus_t {
 	 * @param incoming	TRUE for incoming messages, FALSE for outgoing
 	 */
 	void (*message)(bus_t *this, message_t *message, bool incoming);
+	
+	/**
+	 * IKE_SA authorization hook.
+	 *
+	 * @param auth		list of auth_cfg_t, containing peers authentication info
+	 * @param final		TRUE if this is the final invocation
+	 * @return			TRUE to establish IKE_SA, FALSE to send AUTH_FAILED
+	 */
+	bool (*authorize)(bus_t *this, linked_list_t *auth, bool final);
 	
 	/**
 	 * IKE_SA keymat hook.

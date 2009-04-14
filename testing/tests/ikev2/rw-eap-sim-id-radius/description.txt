@@ -9,5 +9,5 @@ are used instead of a physical SIM card on the client <b>carol</b> and
 the gateway forwards all EAP messages to the RADIUS server <b>alice</b>
 which also uses static triplets. In addition to her IKEv2 identity
 <b>carol@strongswan.org</b>, roadwarrior <b>carol</b> uses the EAP
-identity <b>232420100000015</b>.
+identity <b>228060123456001</b>.
 

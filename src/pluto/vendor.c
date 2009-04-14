@@ -497,7 +497,7 @@ handle_vendorid (struct msg_digest *md, const char *vid, size_t len)
 	{
 	    if (pvid->vid_len == len)
 	    {
-		if (memcmp(pvid->vid, vid, len) == 0)
+		if (memeq(pvid->vid, vid, len))
 		{
 		    handle_known_vendorid(md, vid, len, pvid);
 		    return;
@@ -505,7 +505,7 @@ handle_vendorid (struct msg_digest *md, const char *vid, size_t len)
 	    }
 	    else if ((pvid->vid_len < len) && (pvid->flags & VID_SUBSTRING))
 	    {
-		if (memcmp(pvid->vid, vid, pvid->vid_len) == 0)
+		if (memeq(pvid->vid, vid, pvid->vid_len))
 		{
 		    handle_known_vendorid(md, vid, len, pvid);
 		    return;

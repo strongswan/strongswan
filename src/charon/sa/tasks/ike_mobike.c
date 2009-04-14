@@ -97,12 +97,12 @@ static void flush_additional_addresses(private_ike_mobike_t *this)
  */
 static void process_payloads(private_ike_mobike_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 	bool first = TRUE;
 	
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		int family = AF_INET;
 		notify_payload_t *notify;
@@ -181,7 +181,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 				break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -332,9 +332,8 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
  */
 static status_t build_i(private_ike_mobike_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_payload(message, ID_INITIATOR))
-	{
+	if (message->get_message_id(message) == 1)
+	{	/* only in first IKE_AUTH */
 		message->add_notify(message, FALSE, MOBIKE_SUPPORTED, chunk_empty);
 		build_address_list(this, message);
 	}
@@ -381,9 +380,8 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
  */
 static status_t process_r(private_ike_mobike_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_payload(message, ID_INITIATOR))
-	{
+	if (message->get_message_id(message) == 1)
+	{	/* only first IKE_AUTH */
 		process_payloads(this, message);
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)

@@ -246,20 +246,17 @@ for RSA digital signatures (the default),
 for either, and
 .B never
 if negotiation is never to be attempted or accepted (useful for shunt-only conns).
-Digital signatures are superior in every way to shared secrets. In IKEv2, the
-two ends must not agree on this parameter, it is relevant for the
-outbound authentication method only.
+Digital signatures are superior in every way to shared secrets. 
 IKEv1 additionally supports the values
 .B xauthpsk
 and
 .B xauthrsasig
 that will enable eXtended AUTHentication (XAUTH) in addition to IKEv1 main mode
 based on shared secrets  or digital RSA signatures, respectively.
-IKEv2 additionally supports the value
-.B eap,
-which indicates an initiator to request EAP authentication. The EAP method to 
-use is selected by the server (see
-.B eap).
+This parameter is deprecated for IKEv2 connections, as two peers do not need
+to agree on an authentication method. Use the 
+.B leftauth
+parameter instead to define authentication methods in IKEv2.
 .TP
 .B auto
 what operation, if any, should be done automatically at IPsec startup;
@@ -350,25 +347,9 @@ in case of inactivity. This only applies to IKEv1, in IKEv2 the default
 retransmission timeout applies, as every exchange is used to detect dead peers.
 .TP
 .B eap
-defines the EAP type to propose as server if the client has 
-.B authby=eap
-selected. Acceptable values are
-.B aka
-for EAP-AKA,
-.B sim
-for EAP-SIM,
-.B gtc
-for EAP-GTC,
-.B md5
-for EAP-MD5, and
-.B mschapv2
-for EAP-MS-CHAPv2.
-Additionally, IANA assigned EAP method numbers are accepted, or a definition
-in the form
-.B eap=type-vendor
-(e.g.
-.B eap=7-12345
-) can be used to specify vendor specific EAP types.
+defines the EAP type to propose as server if the client requests EAP
+authentication. This parameter is deprecated in the favour of
+.B leftauth.
 
 To forward EAP authentication to a RADIUS server using the EAP-RADIUS plugin,
 set 
@@ -509,10 +490,45 @@ and
 .B no
 (the default).
 .TP
+.B leftauth
+Authentication method to use (local) or require (remote) in this connection.
+This parameter is supported in IKEv2 only. Acceptable values are 
+.B pubkey
+for public key authentication (RSA/ECDSA), 
+.B psk
+for pre-shared key authentication and
+.B eap
+to (require the) use of the Extensible Authentication Protocol. In the case
+of 
+.B eap,
+an optional EAP method can be appended. Currently defined methods are
+.B eap-aka, eap-sim, eap-gtc, eap-md5
+and
+.B eap-mschapv2.
+Alternatively, IANA assigned EAP method numbers are accepted. Vendor specific
+EAP methods are defined in the form
+.B eap-type-vendor
+(e.g.
+.B eap-7-12345
+).
+.TP
+.B leftauth2
+Same as 
+.B leftauth,
+but defines an additional authentication exchange. IKEv2 supports multiple
+authentication rounds using "Multiple Authentication Exchanges" defined
+in RFC4739. This allows, for example, separated authentication
+of host and user (IKEv2 only).
+.TP
 .B leftca
 the distinguished name of a certificate authority which is required to
 lie in the trust path going from the left participant's certificate up
 to the root certification authority. 
+.TP
+.B leftca2
+Same as
+.B leftca,
+but for the second authentication round (IKEv2 only).
 .TP
 .B leftcert
 the path to the left participant's X.509 certificate. The file can be coded either in
@@ -528,6 +544,11 @@ to the distinguished name of the certificate's issuer.
 The left participant's ID can be overriden by specifying a
 .B leftid
 value which must be certified by the certificate, though.
+.TP
+.B leftcert2
+Same as
+.B leftcert,
+but for the second authentication round (IKEv2 only).
 .TP
 .B leftfirewall
 whether the left participant is doing forwarding-firewalling
@@ -593,6 +614,11 @@ syntax)
 or a fully-qualified domain name preceded by
 .B @
 (which is used as a literal string and not resolved).
+.TP
+.B leftid2
+identity to use for a second authentication for the left participant
+(IKEv2 only); defaults to
+.BR leftid .
 .TP
 .B leftnexthop
 this parameter is not needed any more because the NETKEY IPsec stack does

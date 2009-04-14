@@ -1,5 +1,5 @@
 carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
-carol::cat /var/log/daemon.log::EAP server requested EAP_SIM authentication::YES
+carol::cat /var/log/daemon.log::server requested EAP_SIM authentication::YES
 carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
 moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES
 moon::ipsec statusall::rw-eap.*ESTABLISHED.*carol@strongswan.org::YES
@@ -8,7 +8,7 @@ carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
 moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
 moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP::YES
 moon::cat /var/log/daemon.log::received Access-Reject from RADIUS server::YES
-moon::cat /var/log/daemon.log::authentication of 'dave@strongswan.org' with EAP failed::YES
+moon::cat /var/log/daemon.log::EAP method EAP_SIM failed for peer dave@strongswan.org::YES
 moon::ipsec statusall::rw-eap.*ESTABLISHED.*dave@strongswan.org::NO
 dave::cat /var/log/daemon.log::received EAP_FAILURE, EAP authentication failed::YES
 dave::ipsec statusall::home.*ESTABLISHED::NO

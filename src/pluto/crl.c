@@ -536,7 +536,7 @@ check_revocation(const x509crl_t *crl, chunk_t serial
     {
 	/* compare serial numbers */
 	if (revokedCert->userCertificate.len == serial.len &&
-	    memcmp(revokedCert->userCertificate.ptr, serial.ptr, serial.len) == 0)
+	    memeq(revokedCert->userCertificate.ptr, serial.ptr, serial.len))
 	{
 	    *revocationDate = revokedCert->revocationDate;
 	    *revocationReason = revokedCert->revocationReason;

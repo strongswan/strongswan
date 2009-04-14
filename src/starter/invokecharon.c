@@ -109,7 +109,7 @@ starter_stop_charon (void)
 
 
 int
-starter_start_charon (starter_config_t *cfg, bool no_fork)
+starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 {
     struct stat stb;
     int pid, i;
@@ -121,7 +121,14 @@ starter_start_charon (starter_config_t *cfg, bool no_fork)
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
     };
-
+    
+    if (attach_gdb)
+    {
+	argc = 0;
+	arg[argc++] = "/usr/bin/gdb";
+	arg[argc++] = "--args";
+	arg[argc++] = CHARON_CMD;
+	}
     if (!no_fork)
     {
 	arg[argc++] = "--use-syslog";

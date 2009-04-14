@@ -1,6 +1,7 @@
-The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each 
-to gateway <b>moon</b>. The authentication is based on <b>X.509 certificates</b>.
-Gateway <b>moon</b> has already loaded a revoked certificate for <b>carol</b>
-and a self-signed certificate for <b>dave</b> locally but gets actual certificates
-as CERT payloads from both peers. The RSA signature verification process tries all
-candidate peer certificates until it finds a valid one with a matching public key.
+The roadwarrior <b>carol</b> possesses two different X.509 certificates plus
+matching RSA private keys. With the first certificate <b>carol</b> authenticates
+a tunnel connection to gateway <b>moon</b> in order to reach client <b>alice</b>
+and presents the second certificate in order to reach client <b>venus</b> using
+the identity <b>carol@strongswan.org</b> for both IKE security associations.
+Therefore the RSA signature verification process on <b>moon</b> tries all
+candidate peer certificates until it finds the correct RSA public key.

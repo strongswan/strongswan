@@ -65,9 +65,9 @@ struct private_eap_manager_t {
 	linked_list_t *methods;
 	
 	/**
-	 * mutex to lock methods
+	 * rwlock to lock methods
 	 */
-	mutex_t *mutex;
+	rwlock_t *lock;
 };
 
 /**
@@ -84,9 +84,9 @@ static void add_method(private_eap_manager_t *this, eap_type_t type,
 	entry->role = role;
 	entry->constructor = constructor;
 
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	this->methods->insert_last(this->methods, entry);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -97,7 +97,7 @@ static void remove_method(private_eap_manager_t *this, eap_constructor_t constru
 	enumerator_t *enumerator;
 	eap_entry_t *entry;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	enumerator = this->methods->create_enumerator(this->methods);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -108,7 +108,7 @@ static void remove_method(private_eap_manager_t *this, eap_constructor_t constru
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -123,7 +123,7 @@ static eap_method_t* create_instance(private_eap_manager_t *this,
 	eap_entry_t *entry;
 	eap_method_t *method = NULL;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = this->methods->create_enumerator(this->methods);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -138,7 +138,7 @@ static eap_method_t* create_instance(private_eap_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return method;
 }
 
@@ -148,7 +148,7 @@ static eap_method_t* create_instance(private_eap_manager_t *this,
 static void destroy(private_eap_manager_t *this)
 {
 	this->methods->destroy_function(this->methods, free);
-	this->mutex->destroy(this->mutex);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -165,7 +165,7 @@ eap_manager_t *eap_manager_create()
 	this->public.destroy = (void(*)(eap_manager_t*))destroy;
 	
 	this->methods = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_DEFAULT);
 	
 	return &this->public;
 }

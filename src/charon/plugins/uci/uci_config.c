@@ -83,24 +83,6 @@ static proposal_t *create_proposal(char *string, protocol_id_t proto)
 }
 
 /**
- * create an identity, with fallback to %any
- */
-static identification_t *create_id(char *string)
-{
-	identification_t *id = NULL;
-	
-	if (string)
-	{
-		id = identification_create_from_string(string);
-	}
-	if (!id)
-	{
-		id = identification_create_from_encoding(ID_ANY, chunk_empty);
-	}
-	return id;
-}
-
-/**
  * create an traffic selector, fallback to dynamic
  */
 static traffic_selector_t *create_ts(char *string)
@@ -163,8 +145,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	char *remote_id, *remote_addr, *remote_net;
 	child_cfg_t *child_cfg;
 	ike_cfg_t *ike_cfg;
-	auth_info_t *auth;
-	auth_class_t class;
+	auth_cfg_t *auth;
 	
 	/* defaults */
 	name = "unnamed";
@@ -187,16 +168,26 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 		ike_cfg = ike_cfg_create(FALSE, FALSE, local_addr, remote_addr);
 		ike_cfg->add_proposal(ike_cfg, create_proposal(ike_proposal, PROTO_IKE));
 		this->peer_cfg = peer_cfg_create(
-					name, 2, ike_cfg, create_id(local_id), create_id(remote_id),
-					CERT_SEND_IF_ASKED, UNIQUE_NO,
+					name, 2, ike_cfg, CERT_SEND_IF_ASKED, UNIQUE_NO,
 					1, create_rekey(ike_rekey), 0,  /* keytries, rekey, reauth */
 					1800, 900,						/* jitter, overtime */
 					TRUE, 60, 						/* mobike, dpddelay */
 					NULL, NULL, 					/* vip, pool */
 					FALSE, NULL, NULL); 			/* mediation, med by, peer id */
-		auth = this->peer_cfg->get_auth(this->peer_cfg);
-		class = AUTH_CLASS_PSK;
-		auth->add_item(auth, AUTHN_AUTH_CLASS, &class);
+		auth = auth_cfg_create();
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+		auth->add(auth, AUTH_RULE_IDENTITY,
+				  identification_create_from_string(local_id));
+		this->peer_cfg->add_auth_cfg(this->peer_cfg, auth, TRUE);
+		
+		auth = auth_cfg_create();
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+		if (remote_id)
+		{
+			auth->add(auth, AUTH_RULE_IDENTITY,
+					  identification_create_from_string(remote_id));
+		}
+		this->peer_cfg->add_auth_cfg(this->peer_cfg, auth, FALSE);
 		child_cfg = child_cfg_create(name,
 					create_rekey(esp_rekey) + 300, create_rekey(ike_rekey), 300,
 					NULL, TRUE,	MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);

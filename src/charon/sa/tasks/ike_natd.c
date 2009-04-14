@@ -166,7 +166,7 @@ static notify_payload_t *build_natd_payload(private_ike_natd_t *this,
  */
 static void process_payloads(private_ike_natd_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 	notify_payload_t *notify;
 	chunk_t hash, src_hash, dst_hash;
@@ -184,8 +184,8 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	DBG3(DBG_IKE, "precalculated src_hash %B", &src_hash);
 	DBG3(DBG_IKE, "precalculated dst_hash %B", &dst_hash);
 	
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) != NOTIFY)
 		{
@@ -235,7 +235,7 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 				break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	chunk_free(&src_hash);
 	chunk_free(&dst_hash);

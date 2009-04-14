@@ -44,7 +44,7 @@
 #endif /* __KERNEL__ */
 
 #include <ipsec_param.h>
-
+#include <utils.h>
 
 /*
  * Grab the kernel version to see if we have NET_21, and therefore 
@@ -147,7 +147,6 @@ struct sa_id {			/* old v4-only version */
 };
 
 /* misc */
-typedef const char *err_t;	/* error message, or NULL for success */
 struct prng {			/* pseudo-random-number-generator guts */
 	unsigned char sbox[256];
 	int i, j;
@@ -446,7 +445,6 @@ bitstomask(
 /* option pickup from files (userland only because of use of FILE) */
 const char *optionsfrom(const char *filename, int *argcp, char ***argvp,
 						int optind, FILE *errorreport);
-#define ignore_result(call) { if (call); }
 #endif
 
 /*

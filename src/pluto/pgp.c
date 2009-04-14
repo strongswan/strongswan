@@ -521,7 +521,7 @@ static bool
 same_pgpcert(pgpcert_t *a, pgpcert_t *b)
 {
     return a->certificate.len == b->certificate.len &&
-	memcmp(a->certificate.ptr, b->certificate.ptr, b->certificate.len) == 0;
+	memeq(a->certificate.ptr, b->certificate.ptr, b->certificate.len);
 }
 
 /*
@@ -531,7 +531,9 @@ void
 share_pgpcert(pgpcert_t *cert)
 {
     if (cert != NULL)
+    {
  	cert->count++;
+    }
 }
 
 /*

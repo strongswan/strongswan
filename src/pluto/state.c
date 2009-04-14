@@ -578,14 +578,19 @@ find_state(const u_char *icookie
     struct state *st = *state_hash(icookie, rcookie, peer);
 
     while (st != (struct state *) NULL)
+    {
 	if (sameaddr(peer, &st->st_connection->spd.that.host_addr)
-	&& memcmp(icookie, st->st_icookie, COOKIE_SIZE) == 0
-	&& memcmp(rcookie, st->st_rcookie, COOKIE_SIZE) == 0
+	&& memeq(icookie, st->st_icookie, COOKIE_SIZE)
+	&& memeq(rcookie, st->st_rcookie, COOKIE_SIZE)
 	&& msgid == st->st_msgid)
+	{
 	    break;
+	}
 	else
+	{
 	    st = st->st_hashchain_next;
-
+	}
+    }
     DBG(DBG_CONTROL,
 	if (st == NULL)
 	    DBG_log("state object not found");
@@ -607,13 +612,20 @@ find_sender(size_t packet_len, u_char *packet)
     struct state *st;
 
     if (packet_len >= sizeof(struct isakmp_hdr))
+    {
 	for (i = 0; i < STATE_TABLE_SIZE; i++)
+	{
 	    for (st = statetable[i]; st != NULL; st = st->st_hashchain_next)
+	    {
 		if (st->st_tpacket.ptr != NULL
 		&& st->st_tpacket.len == packet_len
-		&& memcmp(st->st_tpacket.ptr, packet, packet_len) == 0)
+		&& memeq(st->st_tpacket.ptr, packet, packet_len))
+		{
 		    return st;
-
+		}
+	    }
+	}
+    }
     return NULL;
 }
 

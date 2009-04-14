@@ -1,5 +1,5 @@
-carol::ping -c 2 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq::YES
-carol::ping -c 2 PH_IP_MOON1::64 bytes from PH_IP_MOON1: icmp_seq::YES
+carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq::YES
+carol::ping -c 1 PH_IP_MOON1::64 bytes from PH_IP_MOON1: icmp_seq::YES
 carol::ssh PH_IP_ALICE hostname::alice::YES
 carol::cat /var/log/auth.log::initiate on demand::YES
 carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES

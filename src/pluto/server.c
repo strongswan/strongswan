@@ -544,8 +544,10 @@ process_raw_ifaces(struct raw_iface *rifaces)
 	struct raw_iface *vfp;
 
 	/* ignore if virtual (ipsec*) interface */
-	if (strncmp(ifp->name, IPSECDEVPREFIX, sizeof(IPSECDEVPREFIX)-1) == 0)
+	if (strneq(ifp->name, IPSECDEVPREFIX, sizeof(IPSECDEVPREFIX)-1))
+	{
 	    continue;
+	}
 
 	for (vfp = rifaces; vfp != NULL; vfp = vfp->next)
 	{
@@ -558,7 +560,7 @@ process_raw_ifaces(struct raw_iface *rifaces)
 		/* Different entries with matching IP addresses.
 		 * Many interesting cases.
 		 */
-		if (strncmp(vfp->name, IPSECDEVPREFIX, sizeof(IPSECDEVPREFIX)-1) == 0)
+		if (strneq(vfp->name, IPSECDEVPREFIX, sizeof(IPSECDEVPREFIX)-1))
 		{
 		    if (v != NULL  && !streq(v->name, vfp->name))
 		    {

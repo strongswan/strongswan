@@ -36,6 +36,36 @@ ENUM_NEXT(eap_type_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
 	"EAP_EXPERIMENTAL");
 ENUM_END(eap_type_names, EAP_EXPERIMENTAL);
 
+/*
+ * See header
+ */
+eap_type_t eap_type_from_string(char *name)
+{
+	int i;
+	static struct {
+		char *name;
+		eap_type_t type;
+	} types[] = {
+		{"identity",	EAP_IDENTITY},
+		{"md5",			EAP_MD5},
+		{"otp",			EAP_OTP},
+		{"gtc",			EAP_GTC},
+		{"sim",			EAP_SIM},
+		{"aka",			EAP_AKA},
+		{"mschapv2",	EAP_MSCHAPV2},
+		{"radius",		EAP_RADIUS},
+	};
+	
+	for (i = 0; i < countof(types); i++)
+	{
+		if (strcasecmp(name, types[i].name) == 0)
+		{
+			return types[i].type;
+		}
+	}
+	return 0;
+}
+
 ENUM(eap_code_names, EAP_REQUEST, EAP_FAILURE,
 	"EAP_REQUEST",
 	"EAP_RESPONSE",
@@ -47,4 +77,7 @@ ENUM(eap_role_names, EAP_SERVER, EAP_PEER,
 	"EAP_SERVER",
 	"EAP_PEER",
 );
+
+
+
 

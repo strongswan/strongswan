@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include "proposal.h"
+#include "proposal_keywords.h"
 
 #include <daemon.h>
 #include <utils/linked_list.h>
@@ -583,221 +584,58 @@ static void check_proposal(private_proposal_t *this)
 	}
 }
 
+struct proposal_token {
+	char             *name;
+	transform_type_t  type;
+	u_int16_t         algorithm;
+	u_int16_t         keysize;  
+};
+
 /**
  * add a algorithm identified by a string to the proposal.
- * TODO: we could use gperf here.
  */
 static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 {
-	if (strncmp(alg.ptr, "null", alg.len) == 0)
-	{
-		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_NULL, 0);
-	}
-	else if (strncmp(alg.ptr, "aes128", alg.len) == 0)
-	{
-		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 128);
-	}
-	else if (strncmp(alg.ptr, "aes192", alg.len) == 0)
-	{
-		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 192);
-	}
-	else if (strncmp(alg.ptr, "aes256", alg.len) == 0)
-	{
-		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 256);
-	}
-	else if (strstr(alg.ptr, "ccm"))
-	{
-		u_int16_t key_size, icv_size;
+	const proposal_token_t *token = in_word_set(alg.ptr, alg.len);
 
-		if (sscanf(alg.ptr, "aes%huccm%hu", &key_size, &icv_size) == 2)
-		{
-			if (key_size == 128 || key_size == 192 || key_size == 256)
-			{
-				switch (icv_size)
-				{
-					case   8: /* octets */
-					case  64: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM,
-									  ENCR_AES_CCM_ICV8, key_size);
-						break;
-					case  12: /* octets */
-					case  96: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM,
-									  ENCR_AES_CCM_ICV12, key_size);
-						break;
-					case  16: /* octets */
-					case 128: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM,
-									  ENCR_AES_CCM_ICV16, key_size);
-						break;
-					default:
-						/* invalid ICV size */
-						break;
-				}
-			}
-		}
-	}
-	else if (strstr(alg.ptr, "gcm"))
-	{
-		u_int16_t key_size, icv_size;
-
-		if (sscanf(alg.ptr, "aes%hugcm%hu", &key_size, &icv_size) == 2)
-		{
-			if (key_size == 128 || key_size == 192 || key_size == 256)
-			{
-				switch (icv_size)
-				{
-					case   8: /* octets */
-					case  64: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM,
-									  ENCR_AES_GCM_ICV8, key_size);
-						break;
-					case  12: /* octets */
-					case  96: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM,
-									  ENCR_AES_GCM_ICV12, key_size);
-						break;
-					case  16: /* octets */
-					case 128: /* bits */
-						add_algorithm(this, ENCRYPTION_ALGORITHM,
-									  ENCR_AES_GCM_ICV16, key_size);
-						break;
-					default:
-						/* invalid ICV size */
-						break;
-				}
-			}
-		}
-	}
-	else if (strncmp(alg.ptr, "3des", alg.len) == 0)
-	{
-		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_3DES, 0);
-	}
-	/* blowfish only uses some predefined key sizes yet */
-	else if (strncmp(alg.ptr, "blowfish128", alg.len) == 0)
-	{
-		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 128);
-	}
-	else if (strncmp(alg.ptr, "blowfish192", alg.len) == 0)
-	{
-		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 192);
-	}
-	else if (strncmp(alg.ptr, "blowfish256", alg.len) == 0)
-	{
-		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 256);
-	}
-	else if (strncmp(alg.ptr, "sha", alg.len) == 0 ||
-			 strncmp(alg.ptr, "sha1", alg.len) == 0)
-	{
-		/* sha means we use SHA for both, PRF and AUTH */
-		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
-		if (this->protocol == PROTO_IKE)
-		{
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
-		}
-	}  
-	else if (strncmp(alg.ptr, "sha256", alg.len) == 0 ||
-			 strncmp(alg.ptr, "sha2_256", alg.len) == 0)
-	{
-		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA2_256_128, 0);
-		if (this->protocol == PROTO_IKE)
-		{
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_256, 0);
-		}
-	}
-	else if (strncmp(alg.ptr, "sha384", alg.len) == 0 ||
-			 strncmp(alg.ptr, "sha2_384", alg.len) == 0)
-	{
-		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA2_384_192, 0);
-		if (this->protocol == PROTO_IKE)
-		{
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_384, 0);
-		}
-	}
-	else if (strncmp(alg.ptr, "sha512", alg.len) == 0 ||
-			 strncmp(alg.ptr, "sha2_512", alg.len) == 0)
-	{
-		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA2_512_256, 0);
-		if (this->protocol == PROTO_IKE)
-		{
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_512, 0);
-		}
-	}
-	else if (strncmp(alg.ptr, "md5", alg.len) == 0)
-	{
-		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
-		if (this->protocol == PROTO_IKE)
-		{
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
-		}
-	}
-	else if (strncmp(alg.ptr, "aesxcbc", alg.len) == 0)
-	{
-		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_AES_XCBC_96, 0);
-		if (this->protocol == PROTO_IKE)
-		{
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_AES128_XCBC, 0);
-		}
-	}
-	else if (strncmp(alg.ptr, "modpnull", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_NULL, 0);
-	}
-	else if (strncmp(alg.ptr, "modp768", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_768_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "modp1024", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "modp1536", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_1536_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "modp2048", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "modp3072", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_3072_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "modp4096", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "modp6144", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_6144_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "modp8192", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "ecp192", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_192_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "ecp224", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_224_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "ecp256", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_256_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "ecp384", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_384_BIT, 0);
-	}
-	else if (strncmp(alg.ptr, "ecp521", alg.len) == 0)
-	{
-		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_521_BIT, 0);
-	}
-	else
+	if (token == NULL)
 	{
 		return FAILED;
+	}
+
+	add_algorithm(this, token->type, token->algorithm, token->keysize);
+
+	if (this->protocol == PROTO_IKE && token->type == INTEGRITY_ALGORITHM)
+	{
+		pseudo_random_function_t prf;
+
+		switch (token->algorithm)
+		{
+			case AUTH_HMAC_SHA1_96:
+				prf = PRF_HMAC_SHA1;
+				break;
+			case AUTH_HMAC_SHA2_256_128:
+				prf = PRF_HMAC_SHA2_256;
+				break;
+			case AUTH_HMAC_SHA2_384_192:
+				prf = PRF_HMAC_SHA2_384;
+				break;
+			case AUTH_HMAC_SHA2_512_256:
+				prf = PRF_HMAC_SHA2_512;
+				break;
+			case AUTH_HMAC_MD5_96:
+				prf = PRF_HMAC_MD5;
+				break;
+			case AUTH_AES_XCBC_96:
+				prf = PRF_AES128_XCBC;
+				break;
+			default: 
+				prf = PRF_UNDEFINED;
+		}
+		if (prf != PRF_UNDEFINED)
+		{
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
+		}
 	}
 	return SUCCESS;
 }

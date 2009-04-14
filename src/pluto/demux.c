@@ -1713,7 +1713,7 @@ process_packet(struct msg_digest **mdp)
     if (st != NULL
     && st->st_rpacket.ptr != NULL
     && st->st_rpacket.len == pbs_room(&md->packet_pbs)
-    && memcmp(st->st_rpacket.ptr, md->packet_pbs.start, st->st_rpacket.len) == 0)
+    && memeq(st->st_rpacket.ptr, md->packet_pbs.start, st->st_rpacket.len))
     {
 	if (smc->flags & SMF_RETRANSMIT_ON_DUPLICATE)
 	{

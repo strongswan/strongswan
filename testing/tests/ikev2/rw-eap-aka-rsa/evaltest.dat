@@ -1,4 +1,5 @@
 carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
+carol::cat /var/log/daemon.log::server requested EAP_AKA authentication::YES
 carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
 moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES
 moon::ipsec statusall::rw-eapaka.*ESTABLISHED::YES

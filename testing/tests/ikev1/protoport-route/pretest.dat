@@ -2,5 +2,7 @@ moon::/etc/init.d/iptables start 2> /dev/null
 carol::/etc/init.d/iptables start 2> /dev/null
 moon::ipsec start
 carol::ipsec start
+carol::sleep 1
+carol::ssh -o ConnectTimeout=5 PH_IP_ALICE hostname
+carol::ping -c 1 PH_IP_ALICE > /dev/null
 carol::sleep 2
-carol::ssh PH_IP_ALICE hostname

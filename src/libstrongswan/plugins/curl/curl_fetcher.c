@@ -35,7 +35,7 @@ struct private_curl_fetcher_t {
 	 * Public data
 	 */
 	curl_fetcher_t public;
-
+	
 	/**
 	 * CURL handle
 	 */
@@ -52,15 +52,15 @@ struct private_curl_fetcher_t {
  */
 static size_t append(void *ptr, size_t size, size_t nmemb, chunk_t *data)
 {
-    size_t realsize = size * nmemb;
-
-    data->ptr = (u_char*)realloc(data->ptr, data->len + realsize);
-    if (data->ptr)
-    {
+	size_t realsize = size * nmemb;
+	
+	data->ptr = (u_char*)realloc(data->ptr, data->len + realsize);
+	if (data->ptr)
+	{
 		memcpy(&data->ptr[data->len], ptr, realsize);
 		data->len += realsize;
-    }
-    return realsize;
+	}
+	return realsize;
 }
 
 /**
@@ -91,7 +91,7 @@ static status_t fetch(private_curl_fetcher_t *this, char *uri, chunk_t *result)
 		headers = curl_slist_append(headers, buf);
 		curl_easy_setopt(this->curl, CURLOPT_HTTPHEADER, headers);
 	}
-
+	
 	DBG2("sending http request to '%s'...", uri);
 	switch (curl_easy_perform(this->curl))
 	{
@@ -102,7 +102,7 @@ static status_t fetch(private_curl_fetcher_t *this, char *uri, chunk_t *result)
 			status = SUCCESS;
 			break;
 		default:
-    		DBG1("libcurl http request failed: %s", error);
+			DBG1("libcurl http request failed: %s", error);
 			status = FAILED;
 			break;
 	}
@@ -158,7 +158,7 @@ static void destroy(private_curl_fetcher_t *this)
 curl_fetcher_t *curl_fetcher_create()
 {
 	private_curl_fetcher_t *this = malloc_thing(private_curl_fetcher_t);
-
+	
 	this->curl = curl_easy_init();
 	if (this->curl == NULL)
 	{
@@ -166,11 +166,11 @@ curl_fetcher_t *curl_fetcher_create()
 		return NULL;
 	}
 	this->request_type = NULL;
-
+	
 	this->public.interface.fetch = (status_t(*)(fetcher_t*,char*,chunk_t*))fetch;
 	this->public.interface.set_option = (bool(*)(fetcher_t*, fetcher_option_t option, ...))set_option;
 	this->public.interface.destroy = (void (*)(fetcher_t*))destroy;
-
+	
 	return &this->public;
 }
 

@@ -114,15 +114,16 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
  */
 static void process_payloads(private_child_delete_t *this, message_t *message)
 {
-	iterator_t *payloads, *spis;
+	enumerator_t *payloads;
+	iterator_t *spis;
 	payload_t *payload;
 	delete_payload_t *delete_payload;
 	u_int32_t *spi;
 	protocol_id_t protocol;
 	child_sa_t *child_sa;
 	
-	payloads = message->get_payload_iterator(message);
-	while (payloads->iterate(payloads, (void**)&payload))
+	payloads = message->create_payload_enumerator(message);
+	while (payloads->enumerate(payloads, &payload))
 	{
 		if (payload->get_type(payload) == DELETE)
 		{

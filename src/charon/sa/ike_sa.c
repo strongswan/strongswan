@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -109,14 +109,14 @@ struct private_ike_sa_t {
 	peer_cfg_t *peer_cfg;
 	
 	/**
-	 * associated authentication/authorization info for local peer
+	 * currently used authentication ruleset, local (as auth_cfg_t)
 	 */
-	auth_info_t *my_auth;
+	auth_cfg_t *my_auth;
 	
 	/**
-	 * associated authentication/authorization info for remote peer
+	 * currently used authentication constraints, remote (as auth_cfg_t)
 	 */
-	auth_info_t *other_auth;
+	auth_cfg_t *other_auth;
 	
 	/**
 	 * Selected IKE proposal
@@ -355,40 +355,23 @@ static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 	DESTROY_IF(this->peer_cfg);
 	peer_cfg->get_ref(peer_cfg);
 	this->peer_cfg = peer_cfg;
-
+	
 	if (this->ike_cfg == NULL)
 	{
 		this->ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 		this->ike_cfg->get_ref(this->ike_cfg);
 	}
-	/* apply IDs if they are not already set */
-	if (this->my_id->contains_wildcards(this->my_id))
-	{
-		DESTROY_IF(this->my_id);
-		this->my_id = this->peer_cfg->get_my_id(this->peer_cfg);
-		this->my_id = this->my_id->clone(this->my_id);
-	}
-	if (this->other_id->contains_wildcards(this->other_id))
-	{
-		DESTROY_IF(this->other_id);
-		this->other_id = this->peer_cfg->get_other_id(this->peer_cfg);
-		this->other_id = this->other_id->clone(this->other_id);
-	}
 }
 
 /**
- * Implementation of ike_sa_t.get_my_auth.
+ * Implementation of ike_sa_t.get_auth_cfg
  */
-static auth_info_t* get_my_auth(private_ike_sa_t *this)
+static auth_cfg_t* get_auth_cfg(private_ike_sa_t *this, bool local)
 {
-	return this->my_auth;
-}
-
-/**
- * Implementation of ike_sa_t.get_other_auth.
- */
-static auth_info_t* get_other_auth(private_ike_sa_t *this)
-{
+	if (local)
+	{
+		return this->my_auth;
+	}
 	return this->other_auth;
 }
 
@@ -1483,14 +1466,6 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		status = this->task_manager->process_message(this->task_manager, message);
 		if (status != DESTROY_ME)
 		{
-			if (message->get_exchange_type(message) == IKE_AUTH &&
-				this->state == IKE_ESTABLISHED)
-			{
-				/* purge auth items if SA is up, as they contain certs
-				 * and other memory wasting elements */
-				this->my_auth->purge(this->my_auth);
-				this->other_auth->purge(this->other_auth);
-			}
 			return status;
 		}
 		/* if IKE_SA gets closed for any reasons, reroute routed children */
@@ -2304,9 +2279,9 @@ static void destroy(private_ike_sa_t *this)
 	
 	DESTROY_IF(this->ike_cfg);
 	DESTROY_IF(this->peer_cfg);
-	DESTROY_IF(this->my_auth);
-	DESTROY_IF(this->other_auth);
 	DESTROY_IF(this->proposal);
+	this->my_auth->destroy(this->my_auth);
+	this->other_auth->destroy(this->other_auth);
 	
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
@@ -2334,8 +2309,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_ike_cfg = (void (*)(ike_sa_t*,ike_cfg_t*))set_ike_cfg;
 	this->public.get_peer_cfg = (peer_cfg_t* (*)(ike_sa_t*))get_peer_cfg;
 	this->public.set_peer_cfg = (void (*)(ike_sa_t*,peer_cfg_t*))set_peer_cfg;
-	this->public.get_my_auth = (auth_info_t*(*)(ike_sa_t*))get_my_auth;
-	this->public.get_other_auth = (auth_info_t*(*)(ike_sa_t*))get_other_auth;
+	this->public.get_auth_cfg = (auth_cfg_t*(*)(ike_sa_t*, bool local))get_auth_cfg;
 	this->public.get_proposal = (proposal_t*(*)(ike_sa_t*))get_proposal;
 	this->public.set_proposal = (void(*)(ike_sa_t*, proposal_t *proposal))set_proposal;
 	this->public.get_id = (ike_sa_id_t* (*)(ike_sa_t*)) get_id;
@@ -2416,8 +2390,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->stats[STAT_INBOUND] = this->stats[STAT_OUTBOUND] = time(NULL);
 	this->ike_cfg = NULL;
 	this->peer_cfg = NULL;
-	this->my_auth = auth_info_create();
-	this->other_auth = auth_info_create();
+	this->my_auth = auth_cfg_create();
+	this->other_auth = auth_cfg_create();
 	this->proposal = NULL;
 	this->task_manager = task_manager_create(&this->public);
 	this->unique_id = ++unique_id;

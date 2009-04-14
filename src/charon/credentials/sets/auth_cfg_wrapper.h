@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,22 +16,22 @@
  */
 
 /**
- * @defgroup auth_info_wrapper auth_info_wrapper
+ * @defgroup auth_cfg_wrapper auth_cfg_wrapper
  * @{ @ingroup sets
  */
 
-#ifndef AUTH_INFO_WRAPPER_H_
-#define AUTH_INFO_WRAPPER_H_
+#ifndef AUTH_CFG_WRAPPER_H_
+#define AUTH_CFG_WRAPPER_H_
 
+#include <config/auth_cfg.h>
 #include <credentials/credential_set.h>
-#include <credentials/auth_info.h>
 
-typedef struct auth_info_wrapper_t auth_info_wrapper_t;
+typedef struct auth_cfg_wrapper_t auth_cfg_wrapper_t;
 
 /**
- * A wrapper around auth_info_t to handle it like a credential set.
+ * A wrapper around auth_cfg_t to handle it as a credential set.
  */
-struct auth_info_wrapper_t {
+struct auth_cfg_wrapper_t {
 
 	/**
 	 * implements credential_set_t
@@ -39,17 +39,17 @@ struct auth_info_wrapper_t {
 	credential_set_t set;
 		
 	/**
-     * Destroy a auth_info_wrapper instance.
+     * Destroy a auth_cfg_wrapper instance.
      */
-    void (*destroy)(auth_info_wrapper_t *this);
+    void (*destroy)(auth_cfg_wrapper_t *this);
 };
 
 /**
- * Create a auth_info_wrapper instance.
+ * Create a auth_cfg_wrapper instance.
  *
  * @param auth		the wrapped auth info
  * @return			wrapper around auth
  */
-auth_info_wrapper_t *auth_info_wrapper_create(auth_info_t *auth);
+auth_cfg_wrapper_t *auth_cfg_wrapper_create(auth_cfg_t *auth);
 
-#endif /** AUTH_INFO_WRAPPER_H_ @}*/
+#endif /** AUTH_CFG_WRAPPER_H_ @}*/

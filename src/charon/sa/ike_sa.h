@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -41,7 +41,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <sa/keymat.h>
 #include <config/peer_cfg.h>
 #include <config/ike_cfg.h>
-#include <credentials/auth_info.h>
+#include <config/auth_cfg.h>
 
 /**
  * Timeout in milliseconds after that a half open IKE_SA gets deleted.
@@ -82,6 +82,11 @@ enum ike_extension_t {
 	 * peer supports HTTP cert lookups as specified in RFC4306
 	 */
 	EXT_HASH_AND_URL = (1<<2),
+	
+	/**
+	 * peer supports multiple authentication exchanges, RFC4739
+	 */
+	EXT_MULTIPLE_AUTH = (1<<3),
 };
 
 /**
@@ -110,7 +115,7 @@ enum ike_condition_t {
 	COND_NAT_FAKE = (1<<3),
 	
 	/**
-	 * peer has ben authenticated using EAP
+	 * peer has been authenticated using EAP at least once
 	 */
 	COND_EAP_AUTHENTICATED = (1<<4),
 	
@@ -391,18 +396,12 @@ struct ike_sa_t {
 	void (*set_peer_cfg) (ike_sa_t *this, peer_cfg_t *config);
 	
 	/**
-	 * Get authentication/authorization info for local peer.
+	 * Get the authentication config with rules of the current auth round.
 	 *
-	 * @return				auth_info for me
+	 * @param local			TRUE for local rules, FALSE for remote constraints
+	 * @return				current cfg
 	 */
-	auth_info_t* (*get_my_auth)(ike_sa_t *this);
-	
-	/**
-	 * Get authentication/authorization info for remote peer.
-	 *
-	 * @return				auth_info for me
-	 */
-	auth_info_t* (*get_other_auth)(ike_sa_t *this);
+	auth_cfg_t* (*get_auth_cfg)(ike_sa_t *this, bool local);
 	
 	/**
 	 * Get the selected proposal of this IKE_SA.

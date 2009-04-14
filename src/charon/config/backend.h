@@ -28,7 +28,6 @@ typedef struct backend_t backend_t;
 #include <library.h>
 #include <config/ike_cfg.h>
 #include <config/peer_cfg.h>
-#include <credentials/auth_info.h>
 #include <utils/linked_list.h>
 
 /**
@@ -45,6 +44,10 @@ struct backend_t {
 	 *
 	 * Hosts may be NULL to get all.
 	 *
+	 * There is no requirement for the backend to filter the configurations
+	 * using the supplied hosts; but it may do so if it increases lookup times
+	 * (e.g. include hosts in SQL query).
+	 *
 	 * @param me		address of local host
 	 * @param other		address of remote host
 	 * @return			enumerator over ike_cfg_t's
@@ -52,9 +55,16 @@ struct backend_t {
 	enumerator_t* (*create_ike_cfg_enumerator)(backend_t *this,
 											   host_t *me, host_t *other);
 	/**
-	 * Create an enumerator over all Peer configs matching two IDs.
+	 * Create an enumerator over all peer configs matching two identities.
 	 *
 	 * IDs may be NULL to get all.
+	 *
+	 * As configurations are looked up in the first authentication round (when
+	 * multiple authentication), the backend implementation should compare
+	 * the identities to the first auth_cfgs only.
+	 * There is no requirement for the backend to filter the configurations
+	 * using the supplied identities; but it may do so if it increases lookup
+	 * times (e.g. include hosts in SQL query).
 	 *
 	 * @param me		identity of ourself
 	 * @param other		identity of remote host
@@ -64,7 +74,7 @@ struct backend_t {
 												identification_t *me,
 												identification_t *other);
 	/**
-	 * Get a peer_cfg identified by it's name, or a name of its child.
+	 * Get a peer_cfg identified by it's name, or a name of its children.
 	 *
 	 * @param name				name of peer/child cfg
 	 * @return					matching peer_config, or NULL if none found

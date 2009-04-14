@@ -8,11 +8,12 @@ carol::ipsec status::alice.*INSTALLED::YES
 moon::ipsec status::alice.*ESTABLISHED.*carol@strongswan.org::YES
 carol::cat /var/log/daemon.log::received TS_UNACCEPTABLE notify, no CHILD_SA built::YES
 carol::ipsec status::venus.*INSTALLED::NO
-moon::cat /var/log/daemon.log::constraint check failed: peer not authenticated by.*Sales CA::YES
 moon::ipsec status::venus.*ESTABLISHED.*carol@strongswan.org::NO
+moon::cat /var/log/daemon.log::constraint check failed: peer not authenticated by.*Research CA::YES
+moon::cat /var/log/daemon.log::selected peer config.*alice.*inacceptable::YES
+moon::cat /var/log/daemon.log::switching to peer config.*venus::YES
 dave::ipsec status::venus.*INSTALLED::YES
 moon::ipsec status::venus.*ESTABLISHED.*dave@strongswan.org::YES
 dave::cat /var/log/daemon.log::received TS_UNACCEPTABLE notify, no CHILD_SA built::YES
 dave::ipsec status::alice.*INSTALLED::NO
-moon::cat /var/log/daemon.log::constraint check failed: peer not authenticated by.*Research CA::YES
 moon::ipsec status::alice.*ESTABLISHED.*dave@strongswan.org::NO

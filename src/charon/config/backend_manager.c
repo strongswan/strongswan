@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Martin Willi
+ * Copyright (C) 2007-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -68,15 +68,6 @@ typedef struct {
 } ike_data_t;
 
 /**
- * data to pass nested peer enumerator
- */
-typedef struct {
-	private_backend_manager_t *this;
-	identification_t *me;
-	identification_t *other;
-} peer_data_t;
-
-/**
  * inner enumerator constructor for IKE cfgs
  */
 static enumerator_t *ike_enum_create(backend_t *backend, ike_data_t *data)
@@ -85,59 +76,58 @@ static enumerator_t *ike_enum_create(backend_t *backend, ike_data_t *data)
 }
 
 /**
- * inner enumerator constructor for Peer cfgs
- */
-static enumerator_t *peer_enum_create(backend_t *backend, peer_data_t *data)
-{
-	return backend->create_peer_cfg_enumerator(backend, data->me, data->other);
-}
-/**
- * inner enumerator constructor for all Peer cfgs
- */
-static enumerator_t *peer_enum_create_all(backend_t *backend)
-{
-	return backend->create_peer_cfg_enumerator(backend, NULL, NULL);
-}
-
-/**
  * get a match of a candidate ike_cfg for two hosts
  */
-static ike_cfg_match_t get_match(ike_cfg_t *cand, host_t *me, host_t *other)
+static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 {
 	host_t *me_cand, *other_cand;
 	ike_cfg_match_t match = MATCH_NONE;
 	
-	me_cand = host_create_from_dns(cand->get_my_addr(cand),
-								   me->get_family(me), 0);
-	if (!me_cand)
+	if (me)
 	{
-		return MATCH_NONE;
+		me_cand = host_create_from_dns(cand->get_my_addr(cand),
+									   me->get_family(me), 0);
+		if (!me_cand)
+		{
+			return MATCH_NONE;
+		}
+		if (me_cand->ip_equals(me_cand, me))
+		{
+			match += MATCH_ME;
+		}
+		else if (me_cand->is_anyaddr(me_cand))
+		{
+			match += MATCH_ANY;
+		}
+		me_cand->destroy(me_cand);
 	}
-	if (me_cand->ip_equals(me_cand, me))
-	{
-		match += MATCH_ME;
-	}
-	else if (me_cand->is_anyaddr(me_cand))
+	else
 	{
 		match += MATCH_ANY;
 	}
-	me_cand->destroy(me_cand);
 	
-	other_cand = host_create_from_dns(cand->get_other_addr(cand),
-									  other->get_family(other), 0);
-	if (!other_cand)
+	if (other)
 	{
-		return MATCH_NONE;
+		other_cand = host_create_from_dns(cand->get_other_addr(cand),
+										  other->get_family(other), 0);
+		if (!other_cand)
+		{
+			return MATCH_NONE;
+		}
+		if (other_cand->ip_equals(other_cand, other))
+		{
+			match += MATCH_OTHER;
+		}
+		else if (other_cand->is_anyaddr(other_cand))
+		{
+			match += MATCH_ANY;
+		}
+		other_cand->destroy(other_cand);
 	}
-	if (other_cand->ip_equals(other_cand, other))
-	{
-		match += MATCH_OTHER;
-	}
-	else if (other_cand->is_anyaddr(other_cand))
+	else
 	{
 		match += MATCH_ANY;
 	}
-	other_cand->destroy(other_cand);
 	return match;
 }
 
@@ -165,7 +155,7 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 						(void*)ike_enum_create, data, (void*)free);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
-		match = get_match(current, me, other);
+		match = get_ike_match(current, me, other);
 		
 		if (match)
 		{
@@ -191,87 +181,198 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 	return found;
 }
 
-
-static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this)
+/**
+ * Get the best ID match in one of the configs auth_cfg
+ */
+static id_match_t get_peer_match(identification_t *id,
+								 peer_cfg_t *cfg, bool local)
 {
-	this->lock->read_lock(this->lock);
-	return enumerator_create_nested(
-							this->backends->create_enumerator(this->backends),
-							(void*)peer_enum_create_all, this->lock,
-							(void*)this->lock->unlock);
+	enumerator_t *enumerator;
+	auth_cfg_t *auth;
+	identification_t *candidate;
+	id_match_t match = ID_MATCH_NONE;
+	
+	if (!id)
+	{
+		return ID_MATCH_ANY;
+	}
+	
+	/* compare first auth config only */
+	enumerator = cfg->create_auth_cfg_enumerator(cfg, local);
+	if (enumerator->enumerate(enumerator, &auth))
+	{
+		candidate = auth->get(auth, AUTH_RULE_IDENTITY);
+		if (candidate)
+		{
+			match = id->matches(id, candidate);
+			/* match vice-versa, as the proposed IDr might be ANY */
+			if (!match)
+			{
+				match = candidate->matches(candidate, id);
+			}
+		}
+		else
+		{
+			match = ID_MATCH_ANY;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return match;
 }
 
 /**
- * implements backend_manager_t.get_peer_cfg.
- */			
-static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
-								host_t *other, identification_t *my_id,
-								identification_t *other_id, auth_info_t *auth)
+ * data to pass nested peer enumerator
+ */
+typedef struct {
+	rwlock_t *lock;
+	identification_t *me;
+	identification_t *other;
+} peer_data_t;
+
+/**
+ * list element to help sorting
+ */
+typedef struct {
+	id_match_t match_peer;
+	ike_cfg_match_t match_ike;
+	peer_cfg_t *cfg;
+} match_entry_t;
+
+/**
+ * inner enumerator constructor for peer cfgs
+ */
+static enumerator_t *peer_enum_create(backend_t *backend, peer_data_t *data)
 {
-	peer_cfg_t *current, *found = NULL;
-	enumerator_t *enumerator;
-	id_match_t best_peer = ID_MATCH_NONE;
-	ike_cfg_match_t best_ike = MATCH_NONE;
-	peer_data_t *data;
+	return backend->create_peer_cfg_enumerator(backend, data->me, data->other);
+}
+
+/**
+ * unlock/cleanup peer enumerator
+ */
+static void peer_enum_destroy(peer_data_t *data)
+{
+	data->lock->unlock(data->lock);
+	free(data);
+}
+
+/**
+ * convert enumerator value from match_entry to config
+ */
+static bool peer_enum_filter(linked_list_t *configs,
+							 match_entry_t **in, peer_cfg_t **out)
+{
+	*out = (*in)->cfg;
+	return TRUE;
+}
+
+/**
+ * Clean up temporary config list
+ */
+static void peer_enum_filter_destroy(linked_list_t *configs)
+{
+	match_entry_t *entry;
 	
-	DBG2(DBG_CFG, "looking for a peer config for %H[%D]...%H[%D]",
-		 me, my_id, other, other_id);
+	while (configs->remove_last(configs, (void**)&entry) == SUCCESS)
+	{
+		entry->cfg->destroy(entry->cfg);
+		free(entry);
+	}
+	configs->destroy(configs);
+}
+
+/**
+ * Insert entry into match-sorted list, using helper
+ */
+static void insert_sorted(match_entry_t *entry, linked_list_t *list,
+						  linked_list_t *helper)
+{
+	match_entry_t *current;
+	
+	while (list->remove_first(list, (void**)&current) == SUCCESS)
+	{
+		helper->insert_last(helper, current);
+	}
+	while (helper->remove_first(helper, (void**)&current) == SUCCESS)
+	{
+		if (entry && (
+			 (entry->match_ike > current->match_ike &&
+			  entry->match_peer >= current->match_peer) ||
+			 (entry->match_ike >= current->match_ike &&
+			  entry->match_peer > current->match_peer)))
+		{
+			list->insert_last(list, entry);
+			entry = NULL;
+		}
+		list->insert_last(list, current);
+	}
+	if (entry)
+	{
+		list->insert_last(list, entry);
+	}
+}
+
+/**
+ * Implements backend_manager_t.create_peer_cfg_enumerator.
+ */			
+static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this,
+							host_t *me, host_t *other, identification_t *my_id,
+							identification_t *other_id)
+{
+	enumerator_t *enumerator;
+	peer_data_t *data;
+	peer_cfg_t *cfg;
+	linked_list_t *configs, *helper;
 	
 	data = malloc_thing(peer_data_t);
-	data->this = this;
+	data->lock = this->lock;
 	data->me = my_id;
 	data->other = other_id;
 	
+	/* create a sorted list with all matches */
 	this->lock->read_lock(this->lock);
 	enumerator = enumerator_create_nested(
-						this->backends->create_enumerator(this->backends),
-						(void*)peer_enum_create, data, (void*)free);
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		identification_t *my_cand, *other_cand;
-		id_match_t m1, m2, match_peer;
-		ike_cfg_match_t match_ike;
-		
-		my_cand = current->get_my_id(current);
-		other_cand = current->get_other_id(current);
-		
-		/* own ID may have wildcards in both, config and request (missing IDr) */
-		m1 = my_cand->matches(my_cand, my_id);
-		if (!m1)
-		{
-			m1 = my_id->matches(my_id, my_cand);
-		}
-		m2 = other_id->matches(other_id, other_cand);
-		
-		match_peer = m1 + m2;
-		match_ike = get_match(current->get_ike_cfg(current), me, other);
-		
-		if (m1 && m2 && match_ike && 
-			auth->complies(auth, current->get_auth(current)))
-		{
-			DBG2(DBG_CFG, "  candidate \"%s\": %D...%D with prio %d.%d",
-			 	 current->get_name(current), my_cand, other_cand,
-			 	 match_peer, match_ike);
-			if ((match_peer > best_peer && match_ike >= best_ike) ||
-				(match_peer >= best_peer && match_ike > best_ike))
-			{
-				DESTROY_IF(found);
-				found = current;
-				found->get_ref(found);
-				best_peer = match_peer;
-				best_ike = match_ike;
-			}
-		}
+					this->backends->create_enumerator(this->backends),
+					(void*)peer_enum_create, data, (void*)peer_enum_destroy);
+	
+	if (!me && !other && !my_id && !other_id)
+	{	/* shortcut if we are doing a "listall" */
+		return enumerator;
 	}
-	if (found)
+	
+	DBG1(DBG_CFG, "looking for peer configs matching %H[%D]...%H[%D]",
+		 me, my_id, other, other_id);
+	
+	configs = linked_list_create();
+	/* only once allocated helper list for sorting */
+	helper = linked_list_create();
+	while (enumerator->enumerate(enumerator, &cfg))
 	{
-		DBG1(DBG_CFG, "found matching peer config \"%s\": %D...%D with prio %d.%d",
-			 found->get_name(found), found->get_my_id(found),
-			 found->get_other_id(found), best_peer, best_ike);
+		id_match_t match_peer_me, match_peer_other;
+		ike_cfg_match_t match_ike;
+		match_entry_t *entry;
+		
+		match_peer_me = get_peer_match(my_id, cfg, TRUE);
+		match_peer_other = get_peer_match(other_id, cfg, FALSE);
+		match_ike = get_ike_match(cfg->get_ike_cfg(cfg), me, other);
+		
+		if (match_peer_me && match_peer_other && match_ike)
+		{
+			DBG2(DBG_CFG, "  candidate \"%s\", match: %d/%d/%d (me/other/ike)",
+				 cfg->get_name(cfg), match_peer_me, match_peer_other, match_ike);
+			
+			entry = malloc_thing(match_entry_t);
+			entry->match_peer = match_peer_me + match_peer_other;
+			entry->match_ike = match_ike;
+			entry->cfg = cfg->get_ref(cfg);
+			insert_sorted(entry, configs, helper);
+		}
 	}
 	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
-	return found;
+	helper->destroy(helper);
+	
+	return enumerator_create_filter(configs->create_enumerator(configs),
+									(void*)peer_enum_filter, configs,
+									(void*)peer_enum_filter_destroy);
 }
 
 /**
@@ -332,9 +433,8 @@ backend_manager_t *backend_manager_create()
 	private_backend_manager_t *this = malloc_thing(private_backend_manager_t);
 	
 	this->public.get_ike_cfg = (ike_cfg_t* (*)(backend_manager_t*, host_t*, host_t*))get_ike_cfg;
-	this->public.get_peer_cfg = (peer_cfg_t* (*)(backend_manager_t*,host_t*,host_t*,identification_t*,identification_t*,auth_info_t*))get_peer_cfg;
 	this->public.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_manager_t*,char*))get_peer_cfg_by_name;
-	this->public.create_peer_cfg_enumerator = (enumerator_t* (*)(backend_manager_t*))create_peer_cfg_enumerator;
+	this->public.create_peer_cfg_enumerator = (enumerator_t* (*)(backend_manager_t*,host_t*,host_t*,identification_t*,identification_t*))create_peer_cfg_enumerator;
 	this->public.add_backend = (void(*)(backend_manager_t*, backend_t *backend))add_backend;
 	this->public.remove_backend = (void(*)(backend_manager_t*, backend_t *backend))remove_backend;
 	this->public.destroy = (void (*)(backend_manager_t*))destroy;

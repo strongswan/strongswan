@@ -1042,9 +1042,7 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	enumerator_t *enumerator;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
-	identification_t *my_id, *other_id;
-	host_t *my_host, *other_host;
-	ike_cfg_t *ike_cfg;
+	peer_cfg_t *current_cfg;
 	u_int segment;
 	
 	if (!this->reuse_ikesa)
@@ -1054,70 +1052,29 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 		return ike_sa;
 	}
 	
-	ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-	my_id = peer_cfg->get_my_id(peer_cfg);
-	other_id = peer_cfg->get_other_id(peer_cfg);
-	my_host = host_create_from_dns(ike_cfg->get_my_addr(ike_cfg), 0, 0);
-	other_host = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg), 0, 0);
-	
-	if (my_host && other_host)
+	enumerator = create_table_enumerator(this);
+	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
-		enumerator = create_table_enumerator(this);
-		while (enumerator->enumerate(enumerator, &entry, &segment))
+		if (!wait_for_entry(this, entry, segment))
 		{
-			identification_t *found_my_id, *found_other_id;
-			host_t *found_my_host, *found_other_host;
-		
-			if (!wait_for_entry(this, entry, segment))
-			{
-				continue;
-			}
-		
-			if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
-			{
-				/* skip IKE_SAs which are not usable */
-				continue;
-			}
-		
-			found_my_id = entry->ike_sa->get_my_id(entry->ike_sa);
-			found_other_id = entry->ike_sa->get_other_id(entry->ike_sa);
-			found_my_host = entry->ike_sa->get_my_host(entry->ike_sa);
-			found_other_host = entry->ike_sa->get_other_host(entry->ike_sa);
-		
-			if (found_my_id->get_type(found_my_id) == ID_ANY &&
-				found_other_id->get_type(found_other_id) == ID_ANY)
-			{
-				/* IKE_SA has no IDs yet, so we can't use it */
-				continue;
-			}
-			DBG2(DBG_MGR, "candidate IKE_SA for \n"
-				 "  %H[%D]...%H[%D]\n"
-				 "  %H[%D]...%H[%D]",
-				 my_host, my_id, other_host, other_id,
-				 found_my_host, found_my_id, found_other_host, found_other_id);
-			/* compare ID and hosts. Supplied ID may contain wildcards, and IP
-			 * may be %any. */
-			if ((my_host->is_anyaddr(my_host) ||
-				 my_host->ip_equals(my_host, found_my_host)) &&
-				(other_host->is_anyaddr(other_host) ||
-				 other_host->ip_equals(other_host, found_other_host)) &&
-				found_my_id->matches(found_my_id, my_id) &&
-				found_other_id->matches(found_other_id, other_id) &&
-				streq(peer_cfg->get_name(peer_cfg),
-					  entry->ike_sa->get_name(entry->ike_sa)))
-			{
-				/* looks good, we take this one */
-				DBG2(DBG_MGR, "found an existing IKE_SA for %H[%D]...%H[%D]",
-					 my_host, my_id, other_host, other_id);
-				entry->checked_out = TRUE;
-				ike_sa = entry->ike_sa;
-				break;
-			}
+			continue;
 		}
-		enumerator->destroy(enumerator);
+		if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
+		{	/* skip IKE_SAs which are not usable */
+			continue;
+		}
+		
+		current_cfg = entry->ike_sa->get_peer_cfg(entry->ike_sa);
+		if (current_cfg && current_cfg->equals(current_cfg, peer_cfg))
+		{
+			DBG2(DBG_MGR, "found an existing IKE_SA with a '%s' config",
+				 current_cfg->get_name(current_cfg));
+			entry->checked_out = TRUE;
+			ike_sa = entry->ike_sa;
+			break;
+		}
 	}
-	DESTROY_IF(my_host);
-	DESTROY_IF(other_host);
+	enumerator->destroy(enumerator);
 	
 	if (!ike_sa)
 	{	/* no IKE_SA using such a config, hand out a new */
@@ -1326,20 +1283,12 @@ static void checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	
 	/* apply identities for duplicate test (only as responder) */
 	if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
-			(!entry->my_id || !entry->other_id))
+		ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
+		entry->my_id == NULL && entry->other_id == NULL)
 	{
-		if (!entry->my_id && my_id->get_type(my_id) != ID_ANY)
-		{
-			entry->my_id = my_id->clone(my_id);
-		}
-		if (!entry->other_id && other_id->get_type(other_id) != ID_ANY)
-		{
-			entry->other_id = other_id->clone(other_id);
-		}
-		if (entry->my_id && entry->other_id)
-		{
-			put_connected_peers(this, entry);
-		}
+		entry->my_id = my_id->clone(my_id);
+		entry->other_id = other_id->clone(other_id);
+		put_connected_peers(this, entry);
 	}
 	
 	unlock_single_segment(this, segment);

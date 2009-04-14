@@ -1,4 +1,4 @@
 moon::cat /var/log/daemon.log::maximum ca path length of 7 levels reached::YES
-moon::cat /var/log/daemon.log::authentication of.*carol@strongswan.org.*failed::YES
+carol::cat /var/log/daemon.log::received AUTHENTICATION_FAILED notify error::YES
 carol::ipsec status::alice.*INSTALLED::NO
 moon::ipsec status::alice.*ESTABLISHED.*carol@strongswan.org::NO

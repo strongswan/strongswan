@@ -196,8 +196,7 @@ static void read_triplets(private_eap_sim_file_triplets_t *this, char *path)
 			switch (i++)
 			{
 				case 0: /* IMSI */
-					triplet->imsi = identification_create_from_encoding(ID_EAP,
-											chunk_create(token, strlen(token)));
+					triplet->imsi = identification_create_from_string(token);
 					continue;
 				case 1: /* rand */
 					parse_token(triplet->rand, token, RAND_LEN);
@@ -221,7 +220,7 @@ static void read_triplets(private_eap_sim_file_triplets_t *this, char *path)
 			continue;
 		}
 		
-		DBG1(DBG_CFG, "triplet: imsi %D\nrand %b\nsres %b\nkc %b",
+		DBG2(DBG_CFG, "triplet: imsi %D\nrand %b\nsres %b\nkc %b",
 			 triplet->imsi, triplet->rand, RAND_LEN,
 			 triplet->sres, SRES_LEN, triplet->kc, KC_LEN);
 			 

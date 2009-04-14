@@ -84,11 +84,12 @@ AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${confdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
+-DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \
-oid.o \
+oid.o debug.o linked_list.o enumerator.o settings.o \
 $(LIBFREESWANDIR)/libfreeswan.a \
 $(LIBCRYPTODIR)/libcrypto.a \
 -lgmp -lresolv -lpthread -ldl
@@ -99,7 +100,20 @@ $(LIBFREESWANDIR)/libfreeswan.a \
 
 dist_man_MANS = pluto.8 ipsec.secrets.5
 
+# Copy functions from libstrongswan
 oid.o :	$(LIBSTRONGSWANDIR)/asn1/oid.c $(LIBSTRONGSWANDIR)/asn1/oid.h
+		$(COMPILE) -c -o $@ $<
+
+debug.o : $(LIBSTRONGSWANDIR)/debug.c $(LIBSTRONGSWANDIR)/debug.h
+		$(COMPILE) -c -o $@ $<
+
+linked_list.o : $(LIBSTRONGSWANDIR)/utils/linked_list.c $(LIBSTRONGSWANDIR)/utils/linked_list.h
+		$(COMPILE) -c -o $@ $<
+
+enumerator.o : $(LIBSTRONGSWANDIR)/utils/enumerator.c $(LIBSTRONGSWANDIR)/utils/enumerator.h
+		$(COMPILE) -c -o $@ $<
+
+settings.o : $(LIBSTRONGSWANDIR)/settings.c $(LIBSTRONGSWANDIR)/settings.h
 		$(COMPILE) -c -o $@ $<
 
 # This compile option activates the sending of a strongSwan VID

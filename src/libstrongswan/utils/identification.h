@@ -143,16 +143,11 @@ enum id_type_t {
 	 * SHA1 hash of the binary DER encoding of a certificate
 	 */
 	ID_CERT_DER_SHA1 = 204,
-	
-	/**
-	 * Generic EAP identity
-	 */
-	ID_EAP = 205,
 
 	/**
 	 * IETF Attribute Syntax String (RFC 3281)
 	 */
-	ID_IETF_ATTR_STRING = 206,
+	ID_IETF_ATTR_STRING = 205,
 };
 
 /**
@@ -257,8 +252,11 @@ struct identification_t {
  * N, G, I, ID, EN, EmployeeNumber, E, Email, emailAddress, UN, 
  * unstructuredName, TCGID.
  * 
+ * This constructor never returns NULL. If it does not find a suitable
+ * conversion function, it will copy the string to an ID_KEY_ID.
+ * 
  * @param string	input string, which will be converted
- * @return			created identification_t, NULL if not supported.
+ * @return			identification_t
  */
 identification_t * identification_create_from_string(char *string);
 

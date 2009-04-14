@@ -103,11 +103,11 @@ static status_t process_i_delete(private_child_rekey_t *this, message_t *message
  */
 static void find_child(private_child_rekey_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 	
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		notify_payload_t *notify;
 		u_int32_t spi;
@@ -131,7 +131,7 @@ static void find_child(private_child_rekey_t *this, message_t *message)
 		break;
 			
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -220,12 +220,12 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 	protocol_id_t protocol;
 	u_int32_t spi;
 	child_sa_t *to_delete;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 	
 	/* handle NO_ADDITIONAL_SAS notify */
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) == NOTIFY)
 		{
@@ -239,12 +239,12 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 				charon->processor->queue_job(charon->processor,
 						(job_t*)rekey_ike_sa_job_create(
 									this->ike_sa->get_id(this->ike_sa), TRUE));
-				iterator->destroy(iterator);
+				enumerator->destroy(enumerator);
 				return SUCCESS;
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	if (this->child_create->task.process(&this->child_create->task, message) == NEED_MORE)
 	{

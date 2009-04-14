@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007-2008 Tobias Brunner
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -82,16 +82,6 @@ struct private_peer_cfg_t {
 	mutex_t *mutex;
 	
 	/**
-	 * id to use to identify us
-	 */
-	identification_t *my_id;
-	
-	/**
-	 * allowed id for other
-	 */
-	identification_t *other_id;
-	
-	/**
 	 * should we send a certificate
 	 */
 	cert_policy_t cert_policy;
@@ -147,10 +137,15 @@ struct private_peer_cfg_t {
 	char *pool;
 	
 	/**
-	 * required authorization constraints
+	 * local authentication configs (rulesets)
 	 */
-	auth_info_t *auth;
-
+	linked_list_t *local_auth;
+	
+	/**
+	 * remote authentication configs (constraints)
+	 */
+	linked_list_t *remote_auth;
+	
 #ifdef ME	
 	/**
 	 * Is this a mediation connection?
@@ -287,22 +282,6 @@ static child_cfg_t* select_child_cfg(private_peer_cfg_t *this,
 }
 
 /**
- * Implementation of peer_cfg_t.get_my_id
- */
-static identification_t *get_my_id(private_peer_cfg_t *this)
-{
-	return this->my_id;
-}
-
-/**
- * Implementation of peer_cfg_t.get_other_id
- */
-static identification_t *get_other_id(private_peer_cfg_t *this)
-{
-	return this->other_id;
-}
-
-/**
  * Implementation of peer_cfg_t.get_cert_policy.
  */
 static cert_policy_t get_cert_policy(private_peer_cfg_t *this)
@@ -397,13 +376,34 @@ static char* get_pool(private_peer_cfg_t *this)
 {
 	return this->pool;
 }
-	
+
 /**
- * Implementation of peer_cfg_t.get_auth.
+ * Implementation of peer_cfg_t.add_auth_cfg
  */
-static auth_info_t* get_auth(private_peer_cfg_t *this)
+static void add_auth_cfg(private_peer_cfg_t *this,
+						 auth_cfg_t *cfg, bool local)
 {
-	return this->auth;
+	if (local)
+	{
+		this->local_auth->insert_last(this->local_auth, cfg);
+	}
+	else
+	{
+		this->remote_auth->insert_last(this->remote_auth, cfg);
+	}
+}
+
+/**
+ * Implementation of peer_cfg_t.create_auth_cfg_enumerator
+ */
+static enumerator_t* create_auth_cfg_enumerator(private_peer_cfg_t *this,
+												 bool local)
+{
+	if (local)
+	{
+		return this->local_auth->create_enumerator(this->local_auth);
+	}
+	return this->remote_auth->create_enumerator(this->remote_auth);
 }
 
 #ifdef ME
@@ -433,6 +433,60 @@ static identification_t* get_peer_id(private_peer_cfg_t *this)
 #endif /* ME */
 
 /**
+ * check auth configs for equality
+ */
+static bool auth_cfg_equal(private_peer_cfg_t *this, private_peer_cfg_t *other)
+{
+	enumerator_t *e1, *e2;
+	auth_cfg_t *cfg1, *cfg2;
+	bool equal = TRUE;
+	
+	if (this->local_auth->get_count(this->local_auth) !=
+		other->local_auth->get_count(other->local_auth))
+	{
+		return FALSE;
+	}
+	if (this->remote_auth->get_count(this->remote_auth) !=
+		other->remote_auth->get_count(other->remote_auth))
+	{
+		return FALSE;
+	}
+	
+	e1 = this->local_auth->create_enumerator(this->local_auth);
+	e2 = other->local_auth->create_enumerator(other->local_auth);
+	while (e1->enumerate(e1, &cfg1) && e2->enumerate(e2, &cfg2))
+	{
+		if (!cfg1->equals(cfg1, cfg2))
+		{
+			equal = FALSE;
+			break;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+	
+	if (!equal)
+	{
+		return FALSE;
+	}
+	
+	e1 = this->remote_auth->create_enumerator(this->remote_auth);
+	e2 = other->remote_auth->create_enumerator(other->remote_auth);
+	while (e1->enumerate(e1, &cfg1) && e2->enumerate(e2, &cfg2))
+	{
+		if (!cfg1->equals(cfg1, cfg2))
+		{
+			equal = FALSE;
+			break;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+	
+	return equal;
+}
+
+/**
  * Implementation of peer_cfg_t.equals.
  */
 static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
@@ -448,8 +502,6 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 	
 	return (
 		this->ike_version == other->ike_version &&
-		this->my_id->equals(this->my_id, other->my_id) &&
-		this->other_id->equals(this->other_id, other->other_id) &&
 		this->cert_policy == other->cert_policy &&
 		this->unique == other->unique &&
 		this->keyingtries == other->keyingtries &&
@@ -464,7 +516,7 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 		  this->virtual_ip->equals(this->virtual_ip, other->virtual_ip))) &&
 		(this->pool == other->pool || 
 		 (this->pool && other->pool && streq(this->pool, other->pool))) &&
-		this->auth->equals(this->auth, other->auth) 
+		auth_cfg_equal(this, other)
 #ifdef ME
 		&& this->mediation == other->mediation &&
 		this->mediated_by == other->mediated_by &&
@@ -492,11 +544,13 @@ static void destroy(private_peer_cfg_t *this)
 	if (ref_put(&this->refcount))
 	{
 		this->ike_cfg->destroy(this->ike_cfg);
-		this->child_cfgs->destroy_offset(this->child_cfgs, offsetof(child_cfg_t, destroy));
-		this->my_id->destroy(this->my_id);
-		this->other_id->destroy(this->other_id);
+		this->child_cfgs->destroy_offset(this->child_cfgs,
+										offsetof(child_cfg_t, destroy));
 		DESTROY_IF(this->virtual_ip);
-		this->auth->destroy(this->auth);
+		this->local_auth->destroy_offset(this->local_auth,
+										offsetof(auth_cfg_t, destroy));
+		this->remote_auth->destroy_offset(this->remote_auth,
+										offsetof(auth_cfg_t, destroy));
 #ifdef ME
 		DESTROY_IF(this->mediated_by);
 		DESTROY_IF(this->peer_id);
@@ -512,7 +566,6 @@ static void destroy(private_peer_cfg_t *this)
  * Described in header-file
  */
 peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
-							identification_t *my_id, identification_t *other_id,
 							cert_policy_t cert_policy, unique_policy_t unique,
 							u_int32_t keyingtries, u_int32_t rekey_time,
 							u_int32_t reauth_time, u_int32_t jitter_time,
@@ -531,8 +584,6 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.remove_child_cfg = (void(*)(peer_cfg_t*, enumerator_t*))remove_child_cfg;
 	this->public.create_child_cfg_enumerator = (enumerator_t* (*) (peer_cfg_t *))create_child_cfg_enumerator;
 	this->public.select_child_cfg = (child_cfg_t* (*) (peer_cfg_t *,linked_list_t*,linked_list_t*,host_t*,host_t*))select_child_cfg;
-	this->public.get_my_id = (identification_t* (*)(peer_cfg_t*))get_my_id;
-	this->public.get_other_id = (identification_t* (*)(peer_cfg_t *))get_other_id;
 	this->public.get_cert_policy = (cert_policy_t (*) (peer_cfg_t *))get_cert_policy;
 	this->public.get_unique_policy = (unique_policy_t (*) (peer_cfg_t *))get_unique_policy;
 	this->public.get_keyingtries = (u_int32_t (*) (peer_cfg_t *))get_keyingtries;
@@ -543,7 +594,8 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_dpd = (u_int32_t (*) (peer_cfg_t *))get_dpd;
 	this->public.get_virtual_ip = (host_t* (*) (peer_cfg_t *))get_virtual_ip;
 	this->public.get_pool = (char*(*)(peer_cfg_t*))get_pool;
-	this->public.get_auth = (auth_info_t*(*)(peer_cfg_t*))get_auth;
+	this->public.add_auth_cfg = (void(*)(peer_cfg_t*, auth_cfg_t *cfg, bool local))add_auth_cfg;
+	this->public.create_auth_cfg_enumerator = (enumerator_t*(*)(peer_cfg_t*, bool local))create_auth_cfg_enumerator;
 	this->public.equals = (bool(*)(peer_cfg_t*, peer_cfg_t *other))equals;
 	this->public.get_ref = (peer_cfg_t*(*)(peer_cfg_t *))get_ref;
 	this->public.destroy = (void(*)(peer_cfg_t *))destroy;
@@ -559,8 +611,6 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->ike_cfg = ike_cfg;
 	this->child_cfgs = linked_list_create();
 	this->mutex = mutex_create(MUTEX_DEFAULT);
-	this->my_id = my_id;
-	this->other_id = other_id;
 	this->cert_policy = cert_policy;
 	this->unique = unique;
 	this->keyingtries = keyingtries;
@@ -580,7 +630,8 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->dpd = dpd;
 	this->virtual_ip = virtual_ip;
 	this->pool = pool ? strdup(pool) : NULL;
-	this->auth = auth_info_create();
+	this->local_auth = linked_list_create();
+	this->remote_auth = linked_list_create();
 	this->refcount = 1;
 #ifdef ME
 	this->mediation = mediation;

@@ -260,11 +260,12 @@ static void process_attribute(private_ike_config_t *this,
  */
 static void process_payloads(private_ike_config_t *this, message_t *message)
 {
-	iterator_t *iterator, *attributes;
+	enumerator_t *enumerator;
+	iterator_t *attributes;
 	payload_t *payload;
 	
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) == CONFIGURATION)
 		{
@@ -290,7 +291,7 @@ static void process_payloads(private_ike_config_t *this, message_t *message)
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -298,9 +299,8 @@ static void process_payloads(private_ike_config_t *this, message_t *message)
  */
 static status_t build_i(private_ike_config_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_payload(message, ID_INITIATOR))
-	{
+	if (message->get_message_id(message) == 1)
+	{	/* in first IKE_AUTH only */
 		peer_cfg_t *config;
 		host_t *vip;
 		
@@ -327,9 +327,8 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
  */
 static status_t process_r(private_ike_config_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_payload(message, ID_INITIATOR))
-	{
+	if (message->get_message_id(message) == 1)
+	{	/* in first IKE_AUTH only */
 		process_payloads(this, message);
 	}
 	return NEED_MORE;
@@ -340,9 +339,8 @@ static status_t process_r(private_ike_config_t *this, message_t *message)
  */
 static status_t build_r(private_ike_config_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_payload(message, EXTENSIBLE_AUTHENTICATION) == NULL)
-	{
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
+	{	/* in last IKE_AUTH exchange */
 		peer_cfg_t *config = this->ike_sa->get_peer_cfg(this->ike_sa);
 		
 		if (config && this->virtual_ip)
@@ -355,7 +353,6 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 				ip = charon->attributes->acquire_address(charon->attributes, 
 									config->get_pool(config),
 									this->ike_sa->get_other_id(this->ike_sa),
-									this->ike_sa->get_other_auth(this->ike_sa),
 									this->virtual_ip);
 			}
 			if (ip == NULL)
@@ -384,9 +381,8 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
  */
 static status_t process_i(private_ike_config_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_AUTH &&
-		!message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
-	{
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
+	{	/* in last IKE_AUTH exchange */
 		host_t *ip;
 		peer_cfg_t *config;
 		

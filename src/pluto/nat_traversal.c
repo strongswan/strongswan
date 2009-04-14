@@ -237,7 +237,7 @@ void nat_traversal_natd_lookup(struct msg_digest *md)
 	&(md->iface->addr), ntohs(st->st_connection->spd.this.host_port));
 
     if (!(pbs_left(&p->pbs) == st->st_oakley.hasher->hash_digest_len &&
-	  memcmp(p->pbs.cur, hash, st->st_oakley.hasher->hash_digest_len) == 0))
+	  memeq(p->pbs.cur, hash, st->st_oakley.hasher->hash_digest_len)))
     {
 #ifdef NAT_D_DEBUG
 	DBG(DBG_NATT,
@@ -258,7 +258,7 @@ void nat_traversal_natd_lookup(struct msg_digest *md)
     for (p = p->next, i=0 ; p != NULL; p = p->next)
     {
 	if (pbs_left(&p->pbs) == st->st_oakley.hasher->hash_digest_len &&
-	    memcmp(p->pbs.cur, hash, st->st_oakley.hasher->hash_digest_len) == 0)
+	    memeq(p->pbs.cur, hash, st->st_oakley.hasher->hash_digest_len))
 	{
 	    i++;
 	}

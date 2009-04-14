@@ -64,20 +64,6 @@ struct backend_manager_t {
 							  host_t *my_host, host_t *other_host);
 	
 	/**
-	 * Get a peer_config identified by two IDs and authorization info.
-	 *
-	 * @param me				own address
-	 * @param other				peer address
-	 * @param my_id				own ID
-	 * @param other_id			peer ID
-	 * @param auth_info			authorization info
-	 * @return					matching peer_config, or NULL if none found
-	 */
-	peer_cfg_t* (*get_peer_cfg)(backend_manager_t *this, host_t *me,
-								host_t *other, identification_t *my_id,
-								identification_t *other_id, auth_info_t *auth);
-	
-	/**
 	 * Get a peer_config identified by it's name.
 	 *
 	 * @param name				name of the peer_config
@@ -86,12 +72,20 @@ struct backend_manager_t {
 	peer_cfg_t* (*get_peer_cfg_by_name)(backend_manager_t *this, char *name);
 	
 	/**
-	 * Create an enumerator over all peer configs.
+	 * Create an enumerator over all matching peer configs.
 	 *
-	 * @return 					enumerator over peer configs
+	 * Pass NULL as parameters to match any. The enumerator enumerates over
+	 * peer_cfgs, ordered by priority (best match first).
+	 *
+	 * @param me				local address
+	 * @param other				remote address
+	 * @param my_id				IDr in first authentication round
+	 * @param other_id			IDi in first authentication round
+	 * @return 					enumerator over peer_cfg_t
 	 */
-	enumerator_t* (*create_peer_cfg_enumerator)(backend_manager_t *this);
-	
+	enumerator_t* (*create_peer_cfg_enumerator)(backend_manager_t *this,
+							host_t *me, host_t *other, identification_t *my_id,
+							identification_t *other_id);
 	/**
 	 * Register a backend on the manager.
 	 *

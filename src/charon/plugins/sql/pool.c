@@ -401,11 +401,6 @@ static enumerator_t *create_lease_query(char *filter)
 				{
 					id = identification_create_from_string(value);
 				}
-				if (!id)
-				{
-					fprintf(stderr, "invalid 'id' in filter string.\n");
-					exit(-1);
-				}
 				break;
 			case FIL_ADDR:
 				if (value)

@@ -905,26 +905,13 @@ static void load_secrets(private_stroke_cred_t *this)
 					continue;
 				}
 				
-				if (type == SHARED_EAP)
+				/* NULL terminate the ID string */
+				*(id.ptr + id.len) = '\0';
+				peer_id = identification_create_from_string(id.ptr);
+				if (peer_id->get_type(peer_id) == ID_ANY)
 				{
-					/* we use a special EAP identity type for EAP secrets */
-					peer_id = identification_create_from_encoding(ID_EAP, id);
-				}
-				else
-				{
-					/* NULL terminate the ID string */
-					*(id.ptr + id.len) = '\0';
-					peer_id = identification_create_from_string(id.ptr);
-					if (peer_id == NULL)
-					{
-						DBG1(DBG_CFG, "line %d: malformed ID: %s", line_nr, id.ptr);
-						goto error;
-					}
-					if (peer_id->get_type(peer_id) == ID_ANY)
-					{
-						peer_id->destroy(peer_id);
-						continue;
-					}
+					peer_id->destroy(peer_id);
+					continue;
 				}
 				
 				shared_key->add_owner(shared_key, peer_id);

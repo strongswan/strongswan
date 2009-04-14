@@ -55,23 +55,6 @@ struct private_stroke_list_t {
 };
 
 /**
- * get the authentication class of a config
- */
-auth_class_t get_auth_class(peer_cfg_t *config)
-{
-	auth_class_t *class;
-	auth_info_t *auth_info;
-	
-	auth_info = config->get_auth(config);
-	if (auth_info->get_item(auth_info, AUTHN_AUTH_CLASS, (void**)&class))
-	{
-		return *class;
-	}
-	/* fallback to pubkey authentication */
-	return AUTH_CLASS_PUBKEY;
-}
-
-/**
  * log an IKE_SA to out
  */
 static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
@@ -110,9 +93,11 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 		{
 			time_t rekey, reauth;
+			peer_cfg_t *peer_cfg;
 			
 			rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY);
 			reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH);
+			peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 			
 			if (rekey)
 			{
@@ -120,9 +105,24 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 			}
 			if (reauth)
 			{
-				fprintf(out, ", %N reauthentication in %V", auth_class_names,
-						get_auth_class(ike_sa->get_peer_cfg(ike_sa)),
-						&reauth, &now);
+				bool first = TRUE;
+				enumerator_t *enumerator;
+				auth_cfg_t *auth;
+				
+				fprintf(out, ", ");
+				enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, TRUE);
+				while (enumerator->enumerate(enumerator, &auth))
+				{
+					if (!first)
+					{
+						fprintf(out, "+");
+					}
+					first = FALSE;
+					fprintf(out, "%N", auth_class_names,
+							auth->get(auth, AUTH_RULE_AUTH_CLASS));
+				}
+				enumerator->destroy(enumerator);
+				fprintf(out, " reauthentication in %V", &reauth, &now);
 			}
 			if (!rekey && !reauth)
 			{
@@ -248,6 +248,107 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 }
 
 /**
+ * Log a configs local or remote authentication config to out
+ */
+static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
+{
+	enumerator_t *enumerator, *rules;
+	auth_rule_t rule;
+	auth_cfg_t *auth;
+	auth_class_t auth_class;
+	identification_t *id;
+	certificate_t *cert;
+	cert_validation_t valid;
+	char *name;
+	
+	name = peer_cfg->get_name(peer_cfg);
+	
+	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, local);
+	while (enumerator->enumerate(enumerator, &auth))
+	{
+		fprintf(out, "%12s:   %s [%D] uses ", name,	local ? "local: " : "remote:",
+				auth->get(auth, AUTH_RULE_IDENTITY));
+
+		auth_class = (uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS);
+		if (auth_class != AUTH_CLASS_EAP)
+		{
+			fprintf(out, "%N authentication\n", auth_class_names, auth_class);
+		}
+		else
+		{
+			if ((uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE) == EAP_NAK)
+			{
+				fprintf(out, "EAP authentication");
+			}
+			else
+			{
+				if ((uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR))
+				{
+					fprintf(out, "EAP_%d-%d authentication",
+						(uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE),
+						(uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR));
+				}
+				else
+				{
+					fprintf(out, "%N authentication", eap_type_names,
+						(uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE));
+				}
+			}
+			id = auth->get(auth, AUTH_RULE_EAP_IDENTITY);
+			if (id)
+			{
+				fprintf(out, " with EAP identity '%D'", id);
+			}
+			fprintf(out, "\n");
+		}
+
+		cert = auth->get(auth, AUTH_RULE_CA_CERT);
+		if (cert)
+		{
+			fprintf(out, "%12s:    ca:    \"%D\"\n", name, cert->get_subject(cert));
+		}
+
+		cert = auth->get(auth, AUTH_RULE_IM_CERT);
+		if (cert)
+		{
+			fprintf(out, "%12s:    im-ca: \"%D\"\n", name, cert->get_subject(cert));
+		}
+
+		cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+		if (cert)
+		{
+			fprintf(out, "%12s:    cert:  \"%D\"\n", name,
+					cert->get_subject(cert));
+		}
+
+		valid = (uintptr_t)auth->get(auth, AUTH_RULE_OCSP_VALIDATION);
+		if (valid != VALIDATION_FAILED)
+		{
+			fprintf(out, "%12s:    ocsp:  status must be GOOD%s\n", name,
+					(valid == VALIDATION_SKIPPED) ? " or SKIPPED" : "");
+		}
+		
+		valid = (uintptr_t)auth->get(auth, AUTH_RULE_CRL_VALIDATION);
+		if (valid != VALIDATION_FAILED)
+		{
+			fprintf(out, "%12s:    crl:   status must be GOOD%s\n", name,
+					(valid == VALIDATION_SKIPPED) ? " or SKIPPED" : "");
+		}
+
+		rules = auth->create_enumerator(auth);
+		while (rules->enumerate(rules, &rule, &id))
+		{
+			if (rule == AUTH_RULE_AC_GROUP)
+			{
+				fprintf(out, "%12s:    group: %D\n", name, id);
+			}
+		}
+		rules->destroy(rules);
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Implementation of stroke_list_t.status.
  */
 static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all)
@@ -313,138 +414,42 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		enumerator->destroy(enumerator);
 	
 		fprintf(out, "Connections:\n");
-		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends);
-		while (enumerator->enumerate(enumerator, (void**)&peer_cfg))
+		enumerator = charon->backends->create_peer_cfg_enumerator(
+									charon->backends, NULL, NULL, NULL, NULL);
+		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
-			void *ptr;
-			certificate_t *cert;
-			auth_item_t item;
-			auth_info_t *auth;
-			enumerator_t *auth_enumerator;
-			identification_t *my_ca = NULL, *other_ca = NULL;
-			identification_t *eap_identity = NULL;
-			u_int32_t *eap_type = NULL;
-			bool ac_groups = FALSE;
-
 			if (peer_cfg->get_ike_version(peer_cfg) != 2 ||
 				(name && !streq(name, peer_cfg->get_name(peer_cfg))))
 			{
 				continue;
 			}
 			
-			/* determine any required CAs, EAP type, EAP identity,
-			 * and the presence of AC groups
-			 */
-			auth = peer_cfg->get_auth(peer_cfg);
-			auth_enumerator = auth->create_item_enumerator(auth);
-			while (auth_enumerator->enumerate(auth_enumerator, &item, &ptr))
-			{
-				switch (item)
-				{
-					case AUTHN_EAP_TYPE:
-						eap_type = (u_int32_t *)ptr;
-						break;
-					case AUTHN_EAP_IDENTITY:
-						eap_identity = (identification_t *)ptr;
-						break;
-					case AUTHN_CA_CERT:
-						cert = (certificate_t *)ptr;
-						my_ca = cert->get_subject(cert);
-						break;
-					case AUTHN_CA_CERT_NAME:
-						my_ca = (identification_t *)ptr;
-						break;
-					case AUTHZ_CA_CERT:
-						cert = (certificate_t *)ptr;
-						other_ca = cert->get_subject(cert);
-						break;
-					case AUTHZ_CA_CERT_NAME:
-						other_ca = (identification_t *)ptr;
-						break;
-					case AUTHZ_AC_GROUP:
-						ac_groups = TRUE;
-						break;
-					default:
-						break;
-				}
-			}
-			auth_enumerator->destroy(auth_enumerator);
-
 			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-			fprintf(out, "%12s:  %s[%D]...%s[%D]\n", peer_cfg->get_name(peer_cfg),
-					ike_cfg->get_my_addr(ike_cfg), peer_cfg->get_my_id(peer_cfg),
-					ike_cfg->get_other_addr(ike_cfg), peer_cfg->get_other_id(peer_cfg));
-			if (my_ca || other_ca)
-			{
-				fprintf(out, "%12s:  CAs: ", peer_cfg->get_name(peer_cfg));
-				if (my_ca)
-				{
-					fprintf(out, "\"%D\"...", my_ca);
-				}
-				else
-				{
-					fprintf(out, "%%any...");
-				}
-				if (other_ca)
-				{
-					fprintf(out, "\"%D\"\n", other_ca);
-				}
-				else
-				{
-					fprintf(out, "%%any\n");
-				}
-			}
-
-			if (ac_groups)
-			{
-				bool first = TRUE;
-
-				fprintf(out, "%12s:  groups: ",  peer_cfg->get_name(peer_cfg));
-				auth_enumerator = auth->create_item_enumerator(auth);
-				while (auth_enumerator->enumerate(auth_enumerator, &item, &ptr))
-				{
-					if (item == AUTHZ_AC_GROUP)
-					{
-						identification_t *group = (identification_t *)ptr;
-
-						fprintf(out, "%s%D", first? "":", ", group);
-						first = FALSE;
-					}
-				}
-				auth_enumerator->destroy(auth_enumerator);
-				fprintf(out, "\n");
-			}
-
-			fprintf(out, "%12s:  %N ",  peer_cfg->get_name(peer_cfg),
-					auth_class_names, get_auth_class(peer_cfg));
-			if (eap_type)
-			{
-				fprintf(out, "and %N ", eap_type_names, *eap_type);
-			}
-			fprintf(out, "authentication");
-			if (eap_identity)
-			{
-				fprintf(out, ", EAP identity: '%D'", eap_identity);
-			}
+			fprintf(out, "%12s:  %s...%s", peer_cfg->get_name(peer_cfg),
+				ike_cfg->get_my_addr(ike_cfg), ike_cfg->get_other_addr(ike_cfg));
+			
 			dpd = peer_cfg->get_dpd(peer_cfg);
 			if (dpd)
 			{
 				fprintf(out, ", dpddelay=%us", dpd);
 			}
 			fprintf(out, "\n");
-
+			
+			log_auth_cfgs(out, peer_cfg, TRUE);
+			log_auth_cfgs(out, peer_cfg, FALSE);
+			
 			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 			while (children->enumerate(children, &child_cfg))
 			{
 				linked_list_t *my_ts, *other_ts;
-
+				
 				my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
 				other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
-				fprintf(out, "%12s:    %#R=== %#R", child_cfg->get_name(child_cfg),
+				fprintf(out, "%12s:   child:  %#R=== %#R", child_cfg->get_name(child_cfg),
 						my_ts, other_ts);
 				my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 				other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
-
+				
 				if (dpd)
 				{
 					fprintf(out, ", dpdaction=%N", action_names,

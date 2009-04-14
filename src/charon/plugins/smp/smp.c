@@ -294,8 +294,9 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
 	/* <configlist> */
 	xmlTextWriterStartElement(writer, "configlist");
 	
-	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends);
-	while (enumerator->enumerate(enumerator, (void**)&peer_cfg))
+	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
+														NULL, NULL, NULL, NULL);
+	while (enumerator->enumerate(enumerator, &peer_cfg))
 	{
 		enumerator_t *children;
 		child_cfg_t *child_cfg;
@@ -310,8 +311,8 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
 		/* <peerconfig> */
 		xmlTextWriterStartElement(writer, "peerconfig");
 		xmlTextWriterWriteElement(writer, "name", peer_cfg->get_name(peer_cfg));
-		write_id(writer, "local", peer_cfg->get_my_id(peer_cfg));
-		write_id(writer, "remote", peer_cfg->get_other_id(peer_cfg));
+		
+		/* TODO: write auth_cfgs */
 		
 		/* <ikeconfig> */
 		ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -17,13 +17,10 @@
  * $Id$
  */
 
-#include <string.h>
-
 #include "pubkey_authenticator.h"
 
 #include <daemon.h>
-#include <credentials/auth_info.h>
-
+#include <encoding/payloads/auth_payload.h>
 
 typedef struct private_pubkey_authenticator_t private_pubkey_authenticator_t;
 
@@ -41,90 +38,35 @@ struct private_pubkey_authenticator_t {
 	 * Assigned IKE_SA
 	 */
 	ike_sa_t *ike_sa;
+	
+	/**
+	 * nonce to include in AUTH calculation
+	 */
+	chunk_t nonce;
+	
+	/**
+	 * IKE_SA_INIT message data to include in AUTH calculation
+	 */
+	chunk_t ike_sa_init;
 };
 
 /**
- * Implementation of authenticator_t.verify.
+ * Implementation of authenticator_t.build for builder
  */
-static status_t verify(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
- 					   chunk_t my_nonce, auth_payload_t *auth_payload)
-{
-	public_key_t *public;
-	auth_method_t auth_method;
-	chunk_t auth_data, octets;
-	identification_t *id;
-	auth_info_t *auth, *current_auth;
-	enumerator_t *enumerator;
-	key_type_t key_type = KEY_ECDSA;
-	signature_scheme_t scheme;
-	status_t status = FAILED;
-	keymat_t *keymat;
-	
-	id = this->ike_sa->get_other_id(this->ike_sa);
-	auth_method = auth_payload->get_auth_method(auth_payload);
-	switch (auth_method)
-	{
-		case AUTH_RSA:
-			/* We are currently fixed to SHA1 hashes.
-			 * TODO: allow other hash algorithms and note it in "auth" */
-			key_type = KEY_RSA;
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-			break;
-		case AUTH_ECDSA_256:
-			scheme = SIGN_ECDSA_256;
-			break;
-		case AUTH_ECDSA_384:
-			scheme = SIGN_ECDSA_384;
-			break;
-		case AUTH_ECDSA_521:
-			scheme = SIGN_ECDSA_521;
-			break;
-		default:
-			return INVALID_ARG;
-	}
-	auth_data = auth_payload->get_data(auth_payload);
-	keymat = this->ike_sa->get_keymat(this->ike_sa);
-	octets = keymat->get_auth_octets(keymat, TRUE, ike_sa_init, my_nonce, id);
-	auth = this->ike_sa->get_other_auth(this->ike_sa);
-	enumerator = charon->credentials->create_public_enumerator(
-										charon->credentials, key_type, id, auth);
-	while (enumerator->enumerate(enumerator, &public, &current_auth))
-	{
-		if (public->verify(public, scheme, octets, auth_data))
-		{
-			DBG1(DBG_IKE, "authentication of '%D' with %N successful",
-						   id, auth_method_names, auth_method);
-			status = SUCCESS;
-			auth->merge(auth, current_auth);
-			break;
-		}
-		else
-		{
-			DBG1(DBG_IKE, "signature validation failed, looking for another key");
-		}
-	}
-	enumerator->destroy(enumerator);
-	chunk_free(&octets);
-	return status;
-}
-
-/**
- * Implementation of authenticator_t.build.
- */
-static status_t build(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
-					  chunk_t other_nonce, auth_payload_t **auth_payload)
+static status_t build(private_pubkey_authenticator_t *this, message_t *message)
 {
 	chunk_t octets, auth_data;
 	status_t status = FAILED;
 	private_key_t *private;
 	identification_t *id;
-	auth_info_t *auth;
+	auth_cfg_t *auth;
+	auth_payload_t *auth_payload;
 	auth_method_t auth_method;
 	signature_scheme_t scheme;
 	keymat_t *keymat;
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
-	auth = this->ike_sa->get_my_auth(this->ike_sa);
+	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 	private = charon->credentials->get_private(charon->credentials, KEY_ANY,
 											   id, auth);
 	if (private == NULL)
@@ -169,15 +111,15 @@ static status_t build(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
 			return status;
 	}
 	keymat = this->ike_sa->get_keymat(this->ike_sa);
-	octets = keymat->get_auth_octets(keymat, FALSE, ike_sa_init, other_nonce, id);
-	
+	octets = keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
+									 this->nonce, id);
 	if (private->sign(private, scheme, octets, &auth_data))
 	{
-		auth_payload_t *payload = auth_payload_create();
-		payload->set_auth_method(payload, auth_method);
-		payload->set_data(payload, auth_data);
-		*auth_payload = payload;
+		auth_payload = auth_payload_create();
+		auth_payload->set_auth_method(auth_payload, auth_method);
+		auth_payload->set_data(auth_payload, auth_data);
 		chunk_free(&auth_data);
+		message->add_payload(message, (payload_t*)auth_payload);
 		status = SUCCESS;
 	}
 	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N %s", id,
@@ -187,6 +129,93 @@ static status_t build(private_pubkey_authenticator_t *this, chunk_t ike_sa_init,
 	private->destroy(private);
 	
 	return status;
+}
+
+/**
+ * Implementation of authenticator_t.process for verifier
+ */
+static status_t process(private_pubkey_authenticator_t *this, message_t *message)
+{
+	public_key_t *public;
+	auth_method_t auth_method;
+	auth_payload_t *auth_payload;
+	chunk_t auth_data, octets;
+	identification_t *id;
+	auth_cfg_t *auth, *current_auth;
+	enumerator_t *enumerator;
+	key_type_t key_type = KEY_ECDSA;
+	signature_scheme_t scheme;
+	status_t status = NOT_FOUND;
+	keymat_t *keymat;
+	
+	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
+	if (!auth_payload)
+	{
+		return FAILED;
+	}
+	auth_method = auth_payload->get_auth_method(auth_payload);
+	switch (auth_method)
+	{
+		case AUTH_RSA:
+			/* We currently accept SHA1 signatures only
+			 * TODO: allow other hash algorithms and note it in "auth" */
+			key_type = KEY_RSA;
+			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+			break;
+		case AUTH_ECDSA_256:
+			scheme = SIGN_ECDSA_256;
+			break;
+		case AUTH_ECDSA_384:
+			scheme = SIGN_ECDSA_384;
+			break;
+		case AUTH_ECDSA_521:
+			scheme = SIGN_ECDSA_521;
+			break;
+		default:
+			return INVALID_ARG;
+	}
+	auth_data = auth_payload->get_data(auth_payload);
+	id = this->ike_sa->get_other_id(this->ike_sa);
+	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	octets = keymat->get_auth_octets(keymat, TRUE, this->ike_sa_init,
+									 this->nonce, id);
+	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
+	enumerator = charon->credentials->create_public_enumerator(
+										charon->credentials, key_type, id, auth);
+	while (enumerator->enumerate(enumerator, &public, &current_auth))
+	{
+		if (public->verify(public, scheme, octets, auth_data))
+		{
+			DBG1(DBG_IKE, "authentication of '%D' with %N successful",
+						   id, auth_method_names, auth_method);
+			status = SUCCESS;
+			auth->merge(auth, current_auth, FALSE);
+			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+			break;
+		}
+		else
+		{
+			status = FAILED;
+			DBG1(DBG_IKE, "signature validation failed, looking for another key");
+		}
+	}
+	enumerator->destroy(enumerator);
+	chunk_free(&octets);
+	if (status == NOT_FOUND)
+	{
+		DBG1(DBG_IKE, "no trusted %N public key found for '%D'",
+			 key_type_names, key_type, id);
+	}
+	return status;
+}
+
+/**
+ * Implementation of authenticator_t.process for builder
+ * Implementation of authenticator_t.build for verifier
+ */
+static status_t return_failed()
+{
+	return FAILED;
 }
 
 /**
@@ -200,17 +229,37 @@ static void destroy(private_pubkey_authenticator_t *this)
 /*
  * Described in header.
  */
-pubkey_authenticator_t *pubkey_authenticator_create(ike_sa_t *ike_sa)
+pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
+									chunk_t received_nonce, chunk_t sent_init)
 {
 	private_pubkey_authenticator_t *this = malloc_thing(private_pubkey_authenticator_t);
 	
-	/* public functions */
-	this->public.authenticator_interface.verify = (status_t(*)(authenticator_t*,chunk_t,chunk_t,auth_payload_t*))verify;
-	this->public.authenticator_interface.build = (status_t(*)(authenticator_t*,chunk_t,chunk_t,auth_payload_t**))build;
-	this->public.authenticator_interface.destroy = (void(*)(authenticator_t*))destroy;
+	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))build;
+	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))return_failed;
+	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
 	
-	/* private data */
 	this->ike_sa = ike_sa;
+	this->ike_sa_init = sent_init;
+	this->nonce = received_nonce;
+	
+	return &this->public;
+}
+
+/*
+ * Described in header.
+ */
+pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
+									chunk_t sent_nonce, chunk_t received_init)
+{
+	private_pubkey_authenticator_t *this = malloc_thing(private_pubkey_authenticator_t);
+	
+	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))return_failed;
+	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))process;
+	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
+	
+	this->ike_sa = ike_sa;
+	this->ike_sa_init = received_init;
+	this->nonce = sent_nonce;
 	
 	return &this->public;
 }

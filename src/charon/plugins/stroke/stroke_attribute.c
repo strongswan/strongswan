@@ -191,7 +191,7 @@ int host2offset(pool_t *pool, host_t *addr)
  */
 static host_t* acquire_address(private_stroke_attribute_t *this,
 							   char *name, identification_t *id,
-							   auth_info_t *auth, host_t *requested)
+							   host_t *requested)
 {
 	pool_t *pool;
 	uintptr_t offset = 0;
@@ -530,7 +530,7 @@ stroke_attribute_t *stroke_attribute_create()
 {
 	private_stroke_attribute_t *this = malloc_thing(private_stroke_attribute_t);
 	
-	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *,auth_info_t *, host_t *))acquire_address;
+	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *,host_t *))acquire_address;
 	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
 	this->public.add_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))add_pool;
 	this->public.del_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))del_pool;

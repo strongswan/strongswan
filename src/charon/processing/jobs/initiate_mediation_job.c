@@ -75,6 +75,8 @@ static void initiate(private_initiate_mediation_job_t *this)
 {
 	ike_sa_t *mediated_sa, *mediation_sa;
 	peer_cfg_t *mediated_cfg, *mediation_cfg;
+	enumerator_t *enumerator;
+	auth_cfg_t *auth_cfg;
 	
 	mediated_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 												   this->mediated_sa_id);
@@ -88,8 +90,20 @@ static void initiate(private_initiate_mediation_job_t *this)
 		mediation_cfg = mediated_cfg->get_mediated_by(mediated_cfg);
 		mediation_cfg->get_ref(mediation_cfg);
 		
+		enumerator = mediation_cfg->create_auth_cfg_enumerator(mediation_cfg,
+															   TRUE);
+		if (!enumerator->enumerate(enumerator, &auth_cfg) ||
+			auth_cfg->get(auth_cfg, AUTH_RULE_IDENTITY) == NULL)
+		{
+			mediated_cfg->destroy(mediated_cfg);
+			mediation_cfg->destroy(mediation_cfg);
+			enumerator->destroy(enumerator);
+			destroy(this);
+			return;
+		}
+		
 		if (charon->connect_manager->check_and_register(charon->connect_manager,
-				mediation_cfg->get_my_id(mediation_cfg),
+				auth_cfg->get(auth_cfg, AUTH_RULE_IDENTITY),
 				mediated_cfg->get_peer_id(mediated_cfg),
 				this->mediated_sa_id))
 		{

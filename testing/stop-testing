@@ -42,10 +42,9 @@ done
 cgecho "done"
 
 #####################################################
-# Shutting down the uml switches
+# Shutting down the uml bridhges
 #
-cecho-n " * Stopping the UML switches.."
-killall uml_switch &> /dev/null
-rm -f /tmp/umlswitch[012] &> /dev/null 2>&1
-cgecho "done"
+cecho "Stop the uml bridges  (scripts/stop-bridges)"
+$DIR/scripts/stop-bridges
+
 

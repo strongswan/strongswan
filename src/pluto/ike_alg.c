@@ -464,8 +464,8 @@ ike_hash_test(const struct hash_desc *desc)
 	    desc->hash_update(&ctx, desc->hash_testvectors[i].msg
 				   ,desc->hash_testvectors[i].msg_size);
 	    desc->hash_final(digest, &ctx);
-	    result = memcmp(digest, desc->hash_testvectors[i].msg_digest
-				  , desc->hash_digest_size) == 0;
+	    result = memeq(digest, desc->hash_testvectors[i].msg_digest
+				  , desc->hash_digest_size);
 	    DBG(DBG_CRYPT,
 		DBG_log("  hash testvector %d: %s", i, result ? "ok":"failed")
 	    )
@@ -495,8 +495,8 @@ ike_hash_test(const struct hash_desc *desc)
 	    hmac_update(&ctx, desc->hmac_testvectors[i].msg
 			     ,desc->hmac_testvectors[i].msg_size);
 	    hmac_final(digest, &ctx);
-	    result = memcmp(digest, desc->hmac_testvectors[i].hmac
-				  , desc->hash_digest_size) == 0;
+	    result = memeq(digest, desc->hmac_testvectors[i].hmac
+				  , desc->hash_digest_size);
 	    DBG(DBG_CRYPT,
 		DBG_log("  hmac testvector %d: %s", i, result ? "ok":"failed")
 	    )

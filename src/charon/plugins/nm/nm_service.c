@@ -151,7 +151,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
 	ike_sa_t *ike_sa;
-	auth_info_t *auth;
+	auth_cfg_t *auth;
 	auth_class_t auth_class = AUTH_CLASS_EAP;
 	certificate_t *cert = NULL;
 	bool agent = FALSE;
@@ -223,8 +223,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		str = nm_setting_vpn_get_data_item(settings, "user");
 		if (str)
 		{
-			user = identification_create_from_encoding(ID_KEY_ID,
-											chunk_create(str, strlen(str)));
+			user = identification_create_from_string(str);
 			str = nm_setting_vpn_get_secret(settings, "password");
 			creds->set_username_password(creds, user, (char*)str);
 		}
@@ -322,15 +321,21 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	ike_cfg = ike_cfg_create(TRUE, encap, "0.0.0.0", (char*)address);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create(CONFIG_NAME, 2, ike_cfg,
-					user, gateway->clone(gateway),
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 					36000, 0, /* rekey 10h, reauth none */
 					600, 600, /* jitter, over 10min */
 					TRUE, 0, /* mobike, DPD */
 					virtual ? host_create_from_string("0.0.0.0", 0) : NULL,
 					NULL, FALSE, NULL, NULL); /* pool, mediation */
-	auth = peer_cfg->get_auth(peer_cfg);
-	auth->add_item(auth, AUTHN_AUTH_CLASS, &auth_class);
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, auth_class);
+	auth->add(auth, AUTH_RULE_IDENTITY, user);
+	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	auth->add(auth, AUTH_RULE_IDENTITY, gateway->clone(gateway));
+	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
+	
 	child_cfg = child_cfg_create(CONFIG_NAME,
 								 10800, 10200, /* lifetime 3h, rekey 2h50min */
 								 300, /* jitter 5min */

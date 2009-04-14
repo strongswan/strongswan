@@ -570,7 +570,7 @@ static void handle_notify(private_child_create_t *this, notify_payload_t *notify
  */
 static void process_payloads(private_child_create_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 	sa_payload_t *sa_payload;
 	ke_payload_t *ke_payload;
@@ -579,8 +579,8 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 	/* defaults to TUNNEL mode */
 	this->mode = MODE_TUNNEL;
 
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		switch (payload->get_type(payload))
 		{
@@ -616,7 +616,7 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 				break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -643,9 +643,9 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 			}
 			break;
 		case IKE_AUTH:
-			if (!message->get_payload(message, ID_INITIATOR))
+			if (message->get_message_id(message) != 1)
 			{
-				/* send only in the first request, not in subsequent EAP  */
+				/* send only in the first request, not in subsequent rounds */
 				return NEED_MORE;
 			}
 			break;
@@ -737,8 +737,6 @@ static status_t build_i(private_child_create_t *this, message_t *message)
  */
 static status_t process_r(private_child_create_t *this, message_t *message)
 {
-	peer_cfg_t *peer_cfg;
-
 	switch (message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
@@ -747,42 +745,17 @@ static status_t process_r(private_child_create_t *this, message_t *message)
 			get_nonce(message, &this->other_nonce);
 			break;
 		case IKE_AUTH:
-			if (message->get_payload(message, ID_INITIATOR) == NULL)
+			if (message->get_message_id(message) != 1)
 			{
-				/* wait until extensible authentication completed, if used */
+				/* only handle first AUTH payload, not additional rounds */
 				return NEED_MORE;
 			}
 		default:
 			break;
 	}
-
+	
 	process_payloads(this, message);
 	
-	if (this->tsi == NULL || this->tsr == NULL)
-	{
-		DBG1(DBG_IKE, "TS payload missing in message");
-		return NEED_MORE;
-	}
-		  
-	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (peer_cfg)
-	{
-		host_t *me, *other;
-		
-		me = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
-		if (me == NULL)
-		{
-			me = this->ike_sa->get_my_host(this->ike_sa);
-		}
-		other = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
-		if (other == NULL)
-		{
-			other = this->ike_sa->get_other_host(this->ike_sa);
-		}
-		
-		this->config = peer_cfg->select_child_cfg(peer_cfg, this->tsr,
-												  this->tsi, me, other);
-	}
 	return NEED_MORE;
 }
 
@@ -810,10 +783,11 @@ static void handle_child_sa_failure(private_child_create_t *this,
  */
 static status_t build_r(private_child_create_t *this, message_t *message)
 {
+	peer_cfg_t *peer_cfg;
 	payload_t *payload;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	bool no_dh = TRUE;
-
+	
 	switch (message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
@@ -828,9 +802,8 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 			no_dh = FALSE;
 			break;
 		case IKE_AUTH:
-			if (message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
-			{
-				/* wait until extensible authentication completed, if used */
+			if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+			{	/* wait until all authentication round completed */
 				return NEED_MORE;
 			}
 		default:
@@ -844,6 +817,25 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 		return SUCCESS;
 	}
 	
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer_cfg && this->tsi && this->tsr)
+	{
+		host_t *me, *other;
+		
+		me = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
+		if (me == NULL)
+		{
+			me = this->ike_sa->get_my_host(this->ike_sa);
+		}
+		other = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
+		if (other == NULL)
+		{
+			other = this->ike_sa->get_other_host(this->ike_sa);
+		}
+		this->config = peer_cfg->select_child_cfg(peer_cfg, this->tsr,
+												  this->tsi, me, other);
+	}
+	
 	if (this->config == NULL)
 	{
 		DBG1(DBG_IKE, "traffic selectors %#R=== %#R inacceptable",
@@ -854,8 +846,8 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 	}
 	
 	/* check if ike_config_t included non-critical error notifies */
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) == NOTIFY)
 		{
@@ -868,7 +860,7 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 				{
 					DBG1(DBG_IKE,"configuration payload negotation "
 						 "failed, no CHILD_SA built");
-					iterator->destroy(iterator);
+					enumerator->destroy(enumerator);
 					handle_child_sa_failure(this, message);
 					return SUCCESS;
 				}
@@ -877,7 +869,7 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
@@ -938,7 +930,7 @@ static status_t build_r(private_child_create_t *this, message_t *message)
  */
 static status_t process_i(private_child_create_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 	bool no_dh = TRUE;
 
@@ -951,9 +943,8 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 			no_dh = FALSE;
 			break;
 		case IKE_AUTH:
-			if (message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
-			{
-				/* wait until extensible authentication completed, if used */
+			if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+			{	/* wait until all authentication round completed */
 				return NEED_MORE;
 			}
 		default:
@@ -961,8 +952,8 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 	}
 
 	/* check for erronous notifies */
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) == NOTIFY)
 		{
@@ -982,7 +973,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 				{
 					DBG1(DBG_IKE, "received %N notify, no CHILD_SA built",
 						 notify_type_names, type);
-					iterator->destroy(iterator);
+					enumerator->destroy(enumerator);
 					handle_child_sa_failure(this, message);
 					/* an error in CHILD_SA creation is not critical */
 					return SUCCESS;
@@ -1000,7 +991,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 						 bad_group, diffie_hellman_group_names, this->dh_group);
 					
 					this->public.task.migrate(&this->public.task, this->ike_sa);
-					iterator->destroy(iterator);
+					enumerator->destroy(enumerator);
 					return NEED_MORE;
 				}
 				default:
@@ -1008,7 +999,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	process_payloads(this, message);
 	

@@ -33,8 +33,8 @@ bool test_med_db()
 	chunk_t keyid = chunk_from_buf(keyid_buf);
 	identification_t *id, *found;
 	enumerator_t *enumerator;
-	auth_info_t *auth;
 	public_key_t *public;
+	auth_cfg_t *auth;
 	bool good = FALSE;
 	
 	id = identification_create_from_encoding(ID_KEY_ID, keyid);

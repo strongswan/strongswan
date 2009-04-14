@@ -1208,14 +1208,20 @@ enum_search(enum_names *ed, const char *str)
     unsigned en;
 
     for (p = ed; p != NULL; p = p->en_next_range)
+    {
 	for (en = p->en_first; en <= p->en_last ;en++)
 	{
 	    ptr = p->en_names[en - p->en_first];
-	    if (ptr == 0) continue;
-	    /* if (strncmp(ptr, str, strlen(ptr))==0) */
-	    if (strcmp(ptr, str) == 0)
-		    return en;
+	    if (ptr == 0)
+	    {
+		continue;
+	    }
+	    if (streq(ptr, str))
+	    {
+		return en;
+	    }
 	}
+    }
     return -1;
 }
 

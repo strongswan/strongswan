@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2008 Martin Willi
+ * Copyright (C) 2007-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 #include <utils/identification.h>
 #include <utils/enumerator.h>
-#include <credentials/auth_info.h>
+#include <config/auth_cfg.h>
 #include <credentials/credential_set.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/shared_key.h>
@@ -122,7 +122,6 @@ struct credential_manager_t {
 	 * @param type		kind of requested shared key
 	 * @param me		own identity
 	 * @param other		peers identity
-	 * @param auth		auth_info helper 
 	 * @return			shared_key_t, NULL if none found
 	 */			   
 	shared_key_t *(*get_shared)(credential_manager_t *this, shared_key_type_t type,
@@ -138,11 +137,11 @@ struct credential_manager_t {
 	 *
 	 * @param type		type of the key to get
 	 * @param id		identification the key belongs to
-	 * @param auth		auth_info helper, including trusted CA certificates
+	 * @param auth		auth config, including trusted CA certificates
 	 * @return			private_key_t, NULL if none found
 	 */
 	private_key_t* (*get_private)(credential_manager_t *this, key_type_t type,
-								  identification_t *id, auth_info_t *auth);
+								  identification_t *id, auth_cfg_t *auth);
 	
 	/**
 	 * Create an enumerator over trusted public keys.
@@ -150,9 +149,8 @@ struct credential_manager_t {
 	 * This method gets a an enumerator over trusted public keys to verify a
 	 * signature created by id. The auth parameter contains additional 
 	 * authentication infos, e.g. peer and intermediate certificates.
-	 * The resulting enumerator enumerates over public_key_t *, auth_info_t *,
-	 * where the auth info contains gained privileges for the authorization
-	 * process.
+	 * The resulting enumerator enumerates over public_key_t *, auth_cfg_t *,
+	 * where the auth config helper contains rules for constraint checks.
 	 *
 	 * @param type		type of the key to get
 	 * @param id		owner of the key, signer of the signature
@@ -160,7 +158,7 @@ struct credential_manager_t {
 	 * @return			enumerator
 	 */
 	enumerator_t* (*create_public_enumerator)(credential_manager_t *this,
-					key_type_t type, identification_t *id, auth_info_t *auth);
+					key_type_t type, identification_t *id, auth_cfg_t *auth);
 	
 	/**
 	 * Cache a certificate by invoking cache_cert() on all registerd sets.

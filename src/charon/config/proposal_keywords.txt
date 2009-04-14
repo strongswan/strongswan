@@ -1,0 +1,101 @@
+%{
+/* proposal keywords
+ * Copyright (C) 2009 Andreas Steffen
+ * Hochschule fuer Technik Rapperswil, Switzerland
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ *
+ * RCSID $Id:$
+ */
+
+#include <string.h>
+
+#include "proposal.h"
+
+#include <crypto/crypters/crypter.h>
+#include <crypto/signers/signer.h>
+
+%}
+struct proposal_token {
+    char             *name;
+    transform_type_t  type;
+	u_int16_t         algorithm;
+    u_int16_t         keysize;  
+};
+%%
+null,             ENCRYPTION_ALGORITHM, ENCR_NULL,                0
+aes128,           ENCRYPTION_ALGORITHM, ENCR_AES_CBC,           128
+aes192,           ENCRYPTION_ALGORITHM, ENCR_AES_CBC,           192
+aes256,           ENCRYPTION_ALGORITHM, ENCR_AES_CBC,           256
+aes128ccm8,       ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV8,      128
+aes128ccm64,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV8,      128
+aes128ccm12,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV12,     128
+aes128ccm96,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV12,     128
+aes128ccm16,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV16,     128
+aes128ccm128,     ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV16,     128
+aes192ccm8,       ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV8,      192
+aes192ccm64,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV8,      192
+aes192ccm12,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV12,     192
+aes192ccm96,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV12,     192
+aes192ccm16,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV16,     192
+aes192ccm128,     ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV16,     192
+aes256ccm8,       ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV8,      256
+aes256ccm64,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV8,      256
+aes256ccm12,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV12,     256
+aes256ccm96,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV12,     256
+aes256ccm16,      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV16,     256
+aes256ccm128,     ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV16,     256
+aes128gcm8,       ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV8,      128
+aes128gcm64,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV8,      128
+aes128gcm12,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV12,     128
+aes128gcm96,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV12,     128
+aes128gcm16,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16,     128
+aes128gcm128,     ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16,     128
+aes192gcm8,       ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV8,      192
+aes192gcm64,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV8,      192
+aes192gcm12,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV12,     192
+aes192gcm96,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV12,     192
+aes192gcm16,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16,     192
+aes192gcm128,     ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16,     192
+aes256gcm8,       ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV8,      256
+aes256gcm64,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV8,      256
+aes256gcm12,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV12,     256
+aes256gcm96,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV12,     256
+aes256gcm16,      ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16,     256
+aes256gcm128,     ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16,     256
+3des,             ENCRYPTION_ALGORITHM, ENCR_3DES,                0
+blowfish128,      ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,          128
+blowfish192,      ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,          192
+blowfish256,      ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,          256
+sha,              INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA1_96,        0
+sha1,             INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA1_96,        0
+sha256,           INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,   0
+sha2_256,         INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,   0
+sha384,           INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_384_192,   0
+sha2_384,         INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_384_192,   0
+sha512,           INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_512_256,   0
+sha2_512,         INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_512_256,   0
+md5,              INTEGRITY_ALGORITHM,  AUTH_HMAC_MD5_96,         0
+aesxcbc,          INTEGRITY_ALGORITHM,  AUTH_AES_XCBC_96,         0
+modpnull,         DIFFIE_HELLMAN_GROUP, MODP_NULL,                0
+modp768,          DIFFIE_HELLMAN_GROUP, MODP_768_BIT,             0
+modp1024,         DIFFIE_HELLMAN_GROUP, MODP_1024_BIT,            0
+modp1536,         DIFFIE_HELLMAN_GROUP, MODP_1536_BIT,            0
+modp2048,         DIFFIE_HELLMAN_GROUP, MODP_2048_BIT,            0
+modp3072,         DIFFIE_HELLMAN_GROUP, MODP_3072_BIT,            0
+modp4096,         DIFFIE_HELLMAN_GROUP, MODP_4096_BIT,            0
+modp6144,         DIFFIE_HELLMAN_GROUP, MODP_6144_BIT,            0
+modp8192,         DIFFIE_HELLMAN_GROUP, MODP_8192_BIT,            0
+ecp192,           DIFFIE_HELLMAN_GROUP, ECP_192_BIT,              0
+ecp224,           DIFFIE_HELLMAN_GROUP, ECP_224_BIT,              0
+ecp256,           DIFFIE_HELLMAN_GROUP, ECP_256_BIT,              0
+ecp384,           DIFFIE_HELLMAN_GROUP, ECP_384_BIT,              0
+ecp521,           DIFFIE_HELLMAN_GROUP, ECP_521_BIT,              0

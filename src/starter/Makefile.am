@@ -5,7 +5,14 @@ starterstroke.h interfaces.c invokepluto.h confread.h interfaces.h args.c \
 keywords.c files.h keywords.h cmp.c starter.c cmp.h exec.c invokecharon.c \
 exec.h invokecharon.h lex.yy.c loglite.c klips.c klips.h
 
-INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libfreeswan -I$(top_srcdir)/src/pluto -I$(top_srcdir)/src/whack -I$(top_srcdir)/src/stroke
+INCLUDES = \
+-I${linuxdir} \
+-I$(top_srcdir)/src/libstrongswan \
+-I$(top_srcdir)/src/libfreeswan \
+-I$(top_srcdir)/src/pluto \
+-I$(top_srcdir)/src/whack \
+-I$(top_srcdir)/src/stroke
+
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_EAPDIR=\"${eapdir}\" -DDEBUG
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a
 EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,22 +28,36 @@ typedef struct psk_authenticator_t psk_authenticator_t;
 #include <sa/authenticators/authenticator.h>
 
 /**
- * Implementation of the authenticator_t interface using AUTH_PSK.
+ * Implementation of authenticator_t using pre-shared keys.
  */
 struct psk_authenticator_t {
 
 	/**
 	 * Implemented authenticator_t interface.
 	 */
-	authenticator_t authenticator_interface;
+	authenticator_t authenticator;
 };
 
 /**
- * Creates an authenticator for AUTH_PSK.
+ * Create an authenticator to build PSK signatures.
  *
- * @param ike_sa		associated ike_sa
- * @return				psk_authenticator_t object
+ * @param ike_sa			associated ike_sa
+ * @param received_nonce	nonce received in IKE_SA_INIT
+ * @param sent_init			sent IKE_SA_INIT message data
+ * @return					PSK authenticator
  */
-psk_authenticator_t *psk_authenticator_create(ike_sa_t *ike_sa);
+psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
+									chunk_t received_nonce, chunk_t sent_init);
+
+/**
+ * Create an authenticator to verify PSK signatures.
+ * 
+ * @param ike_sa			associated ike_sa
+ * @param sent_nonce		nonce sent in IKE_SA_INIT
+ * @param received_init		received IKE_SA_INIT message data
+ * @return					PSK authenticator
+ */
+psk_authenticator_t *psk_authenticator_create_verifier(ike_sa_t *ike_sa,
+									chunk_t sent_nonce, chunk_t received_init);
 
 #endif /** PSK_AUTHENTICATOR_H_ @}*/

@@ -19,6 +19,8 @@
 #ifndef _CONSTANTS_H
 #define _CONSTANTS_H
 
+#include <utils.h>
+
 extern const char compile_time_interop_options[];
 
 extern void init_constants(void);
@@ -39,17 +41,10 @@ extern void init_constants(void);
  * <freeswan.h> defines err_t for this return type.
  */
 
-typedef int bool;
-#define FALSE	0
-#define TRUE	1
-
 #define NULL_FD	(-1)	/* NULL file descriptor */
 #define dup_any(fd) ((fd) == NULL_FD? NULL_FD : dup(fd))
 #define close_any(fd) { if ((fd) != NULL_FD) { close(fd); (fd) = NULL_FD; } }
 
-#define BITS_PER_BYTE	8
-
-#define streq(a, b) (strcmp((a), (b)) == 0)	/* clearer shorthand */
 #define strcaseeq(a, b) (strcasecmp((a), (b)) == 0)	/* clearer shorthand */
 
 /* set type with room for at least 64 elements for ALG opts (was 32 in stock FS) */

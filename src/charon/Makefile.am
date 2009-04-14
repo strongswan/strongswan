@@ -8,7 +8,8 @@ config/backend_manager.c config/backend_manager.h config/backend.h \
 config/child_cfg.c config/child_cfg.h \
 config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
-config/proposal.c config/proposal.h \
+config/proposal.c config/proposal.h config/proposal_keywords.c config/proposal_keywords.h \
+config/auth_cfg.c config/auth_cfg.h \
 config/traffic_selector.c config/traffic_selector.h \
 config/attributes/attribute_provider.h \
 config/attributes/attribute_manager.c config/attributes/attribute_manager.h \
@@ -93,8 +94,7 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/task.c sa/tasks/task.h \
 credentials/credential_manager.c credentials/credential_manager.h \
-credentials/auth_info.c credentials/auth_info.h \
-credentials/sets/auth_info_wrapper.c credentials/sets/auth_info_wrapper.h \
+credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
 credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/credential_set.h
@@ -107,6 +107,12 @@ AM_CFLAGS = -rdynamic \
   -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
   -DRESOLV_CONF=\"${resolv_conf}\"
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm -ldl
+
+EXTRA_DIST = config/proposal_keywords.txt
+MAINTAINERCLEANFILES = config/proposal_keywords.c
+
+config/proposal_keywords.c:	config/proposal_keywords.txt config/proposal_keywords.h
+		$(GPERF) -C -G -c -t < $< > $@
 
 # compile options
 #################

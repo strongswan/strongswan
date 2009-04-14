@@ -650,6 +650,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 static status_t process_request(private_task_manager_t *this,
 								message_t *message)
 {
+	enumerator_t *enumerator;
 	iterator_t *iterator;
 	task_t *task = NULL;
 	payload_t *payload;
@@ -688,8 +689,8 @@ static status_t process_request(private_task_manager_t *this,
 		case CREATE_CHILD_SA:
 		{	/* FIXME: we should prevent this on mediation connections */
 			bool notify_found = FALSE, ts_found = FALSE;
-			iterator = message->get_payload_iterator(message);
-			while (iterator->iterate(iterator, (void**)&payload))
+			enumerator = message->create_payload_enumerator(message);
+			while (enumerator->enumerate(enumerator, &payload))
 			{
 				switch (payload->get_type(payload))
 				{
@@ -716,7 +717,7 @@ static status_t process_request(private_task_manager_t *this,
 						break;
 				}
 			}
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 		
 			if (ts_found)
 			{
@@ -739,8 +740,8 @@ static status_t process_request(private_task_manager_t *this,
 		}
 		case INFORMATIONAL:
 		{
-			iterator = message->get_payload_iterator(message);
-			while (iterator->iterate(iterator, (void**)&payload))
+			enumerator = message->create_payload_enumerator(message);
+			while (enumerator->enumerate(enumerator, &payload))
 			{
 				switch (payload->get_type(payload))
 				{
@@ -793,7 +794,7 @@ static status_t process_request(private_task_manager_t *this,
 					break;
 				}
 			}
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 			
 			if (task == NULL)
 			{
