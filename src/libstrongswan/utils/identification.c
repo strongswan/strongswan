@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Tobias Brunner
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -921,6 +921,124 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 }
 
 /**
+ * Enumerator over RDNs
+ */
+typedef struct {
+	/* implements enumerator interface */
+	enumerator_t public;
+	/* current RDN */
+	chunk_t rdn;
+	/* current attribute */
+	chunk_t attr;
+	/** have another RDN? */
+	bool next;
+} rdn_enumerator_t;
+
+/**
+ * Implementation of rdn_enumerator_t.enumerate
+ */
+static bool rdn_enumerate(rdn_enumerator_t *this,
+						  id_part_t *type, chunk_t *data)
+{
+	chunk_t oid, value;
+	asn1_t asn1_type;
+	
+	while (this->next)
+	{
+		if (!get_next_rdn(&this->rdn, &this->attr, &oid,
+						  &value, &asn1_type, &this->next))
+		{
+			return FALSE;
+		}
+		switch (asn1_known_oid(oid))
+		{
+			case OID_COMMON_NAME:
+				 *type = ID_PART_RDN_CN;
+				break;
+			case OID_SURNAME:
+				 *type = ID_PART_RDN_S;
+				break;
+			case OID_SERIAL_NUMBER:
+				 *type = ID_PART_RDN_SN;
+				break;
+			case OID_COUNTRY:
+				 *type = ID_PART_RDN_C;
+				break;
+			case OID_LOCALITY:
+				 *type = ID_PART_RDN_L;
+				break;
+			case OID_STATE_OR_PROVINCE:
+				 *type = ID_PART_RDN_ST;
+				break;
+			case OID_ORGANIZATION:
+				 *type = ID_PART_RDN_O;
+				break;
+			case OID_ORGANIZATION_UNIT:
+				 *type = ID_PART_RDN_OU;
+				break;
+			case OID_TITLE:
+				 *type = ID_PART_RDN_T;
+				break;
+			case OID_DESCRIPTION:
+				 *type = ID_PART_RDN_D;
+				break;
+			case OID_NAME:
+				 *type = ID_PART_RDN_N;
+				break;
+			case OID_GIVEN_NAME:
+				 *type = ID_PART_RDN_G;
+				break;
+			case OID_INITIALS:
+				 *type = ID_PART_RDN_I;
+				break;
+			case OID_UNIQUE_IDENTIFIER:
+				 *type = ID_PART_RDN_ID;
+				break;
+			case OID_EMAIL_ADDRESS:
+				*type = ID_PART_RDN_E;
+				break;
+			case OID_EMPLOYEE_NUMBER:
+				*type = ID_PART_RDN_EN;
+				break;
+			default:
+				continue;
+		}
+		*data = value;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Implementation of identification_t.create_part_enumerator
+ */
+static enumerator_t* create_part_enumerator(private_identification_t *this)
+{
+	switch (this->type)
+	{
+		case ID_DER_ASN1_DN:
+		{
+			rdn_enumerator_t *e = malloc_thing(rdn_enumerator_t);
+			
+			e->public.enumerate = (void*)rdn_enumerate;
+			e->public.destroy = (void*)free;
+			if (init_rdn(this->encoded, &e->rdn, &e->attr, &e->next))
+			{
+				return &e->public;
+			}
+			free(e);
+			/* FALL */
+		}
+		case ID_RFC822_ADDR:
+			/* TODO */
+		case ID_FQDN:
+			/* TODO */
+		default:
+			return enumerator_create_empty();
+	}
+}
+
+/**
  * Implementation of identification_t.clone.
  */
 static identification_t *clone_(private_identification_t *this)
@@ -957,6 +1075,7 @@ static private_identification_t *identification_create(void)
 	this->public.get_encoding = (chunk_t (*) (identification_t*))get_encoding;
 	this->public.get_type = (id_type_t (*) (identification_t*))get_type;
 	this->public.contains_wildcards = (bool (*) (identification_t *this))contains_wildcards;
+	this->public.create_part_enumerator = (enumerator_t*(*)(identification_t*))create_part_enumerator;
 	this->public.clone = (identification_t* (*) (identification_t*))clone_;
 	this->public.destroy = (void (*) (identification_t*))destroy;
 	/* we use these as defaults, the may be overloaded for special ID types */

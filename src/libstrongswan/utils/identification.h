@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Tobias Brunner
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -29,6 +29,7 @@
 typedef enum id_type_t id_type_t;
 typedef struct identification_t identification_t;
 typedef enum id_match_t id_match_t;
+typedef enum id_part_t id_part_t;
 
 #include <library.h>
 
@@ -156,6 +157,56 @@ enum id_type_t {
 extern enum_name_t *id_type_names;
 
 /**
+ * Type of an ID sub part.
+ */
+enum id_part_t {
+	/** Username part of an RFC822_ADDR */
+	ID_PART_USERNAME,
+	/** Domain part of an RFC822_ADDR */
+	ID_PART_DOMAIN,
+	
+	/** Top-Level domain of a FQDN */
+	ID_PART_TLD,
+	/** Second-Level domain of a FQDN */
+	ID_PART_SLD,
+	/** Another Level domain of a FQDN */
+	ID_PART_ALD,
+	
+	/** Country RDN of a DN */
+	ID_PART_RDN_C,
+	/** CommonName RDN of a DN */
+	ID_PART_RDN_CN,
+	/** Description RDN of a DN */
+	ID_PART_RDN_D,
+	/** Email RDN of a DN */
+	ID_PART_RDN_E,
+	/** EmployeeNumber RDN of a DN */
+	ID_PART_RDN_EN,
+	/** GivenName RDN of a DN */
+	ID_PART_RDN_G,
+	/** Initials RDN of a DN */
+	ID_PART_RDN_I,
+	/** UniqueIdentifier RDN of a DN */
+	ID_PART_RDN_ID,
+	/** Locality RDN of a DN */
+	ID_PART_RDN_L,
+	/** Name RDN of a DN */
+	ID_PART_RDN_N,
+	/** Organization RDN of a DN */
+	ID_PART_RDN_O,
+	/** OrganizationUnit RDN of a DN */
+	ID_PART_RDN_OU,
+	/** Surname RDN of a DN */
+	ID_PART_RDN_S,
+	/** SerialNumber RDN of a DN */
+	ID_PART_RDN_SN,
+	/** StateOrProvince RDN of a DN */
+	ID_PART_RDN_ST,
+	/** Title RDN of a DN */
+	ID_PART_RDN_T,
+};
+
+/**
  * Generic identification, such as used in ID payload.
  * 
  * @todo Support for ID_DER_ASN1_GN is minimal right now. Comparison
@@ -220,6 +271,19 @@ struct identification_t {
 	bool (*contains_wildcards) (identification_t *this);
 	
 	/**
+	 * Create an enumerator over subparts of an identity.
+	 *
+	 * Some identities are built from several parts, e.g. an E-Mail consists
+	 * of a username and a domain part, or a DistinguishedName contains several
+	 * RDNs.
+	 * For identity without subtypes (support), an empty enumerator is
+	 * returned.
+	 *
+	 * @return			an enumerator over (id_part_t type, chunk_t data)
+	 */
+	enumerator_t* (*create_part_enumerator)(identification_t *this);
+	
+	/**
 	 * Clone a identification_t instance.
 	 * 
 	 * @return 			clone of this
@@ -262,9 +326,6 @@ identification_t * identification_create_from_string(char *string);
 
 /**
  * Creates an identification_t object from an encoded chunk.
- *
- * In contrast to identification_create_from_string(), this constructor never
- * returns NULL, even when the conversion to a string representation fails.
  * 
  * @param type		type of this id, such as ID_IPV4_ADDR
  * @param encoded	encoded bytes, such as from identification_t.get_encoding
