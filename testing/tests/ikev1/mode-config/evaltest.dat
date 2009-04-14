@@ -1,4 +1,6 @@
 carol::cat /var/log/auth.log::setting virtual IP source address to PH_IP_CAROL1::YES
+carol::cat /var/log/auth.log::received IPv4 DNS server address PH_IP_WINNETOU::YES
+carol::cat /var/log/auth.log::received IPv6 DNS server address fec1\:\:20::YES
 carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
 carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
 dave::cat /var/log/auth.log::setting virtual IP source address to PH_IP_DAVE1::YES
