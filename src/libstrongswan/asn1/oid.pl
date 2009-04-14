@@ -38,6 +38,7 @@ print OID_H "/* Object identifiers (OIDs) used by strongSwan\n",
 	    "    u_char octet;\n",
 	    "    u_int  next;\n",
 	    "    u_int  down;\n",
+	    "    u_int  level;\n",
 	    "    const u_char *name;\n",
 	    "} oid_t;\n",
 	    "\n",
@@ -77,6 +78,8 @@ while ($line = <SRC>)
     $counter++;
 }
 
+printf OID_H "\n#define OID_MAX%s%d\n", "\t" x 8, $counter;
+
 print OID_H "\n#endif /* OID_H_ */\n";
 
 close SRC;
@@ -113,12 +116,13 @@ for ($c = 0; $c < $counter; $c++)
 	}
     }
 
-    printf OID_C "  {%s%s,%s%3d, %d, %s%s}%s  /* %3d */\n"
+    printf OID_C " {%s%s,%s%3d, %d, %2d, %s%s}%s /* %3d */\n"
 	,' '  x @order[$c]
 	, @octet[$c]
 	, ' ' x (1 + $max_order - @order[$c])
 	, @next[$c]
 	, @order[$c+1] > @order[$c]
+	, @order[$c] / 2
 	, @name[$c]
 	, ' ' x ($max_name - length(@name[$c]))
 	, $c != $counter-1 ? "," : " "

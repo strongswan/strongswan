@@ -220,6 +220,35 @@ int asn1_known_oid(chunk_t object)
 /*
  * Defined in header.
  */
+chunk_t asn1_get_known_oid(int n)
+{
+	chunk_t oid;
+	int i;
+	
+	if (n < 0 || n >= OID_MAX)
+	{
+		return chunk_empty;
+	}
+	
+	i = oid_names[n].level + 1;
+	oid = chunk_alloc(i);
+	do
+	{
+		if (oid_names[n].level >= i)
+		{
+			n--;
+			continue;
+		}
+		oid.ptr[--i] = oid_names[n--].octet;
+	}
+	while (i > 0);
+	
+	return oid;
+}
+
+/*
+ * Defined in header.
+ */
 u_int asn1_length(chunk_t *blob)
 {
 	u_char n;
