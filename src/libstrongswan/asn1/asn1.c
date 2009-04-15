@@ -209,9 +209,13 @@ int asn1_known_oid(chunk_t object)
 		else
 		{
 			if (oid_names[oid].next)
+			{
 				oid = oid_names[oid].next;
+			}
 			else
+			{
 				return OID_UNKNOWN;
+			}
 		}
 	}
 	return -1;
