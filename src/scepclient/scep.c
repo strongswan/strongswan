@@ -253,7 +253,7 @@ parse_attributes(chunk_t blob, scep_attributes_t *attrs)
 	switch (objectID)
 	{
 	case ATTRIBUTE_OBJ_TYPE:
-	    oid = known_oid(object);
+	    oid = asn1_known_oid(object);
 	    break;
 	case ATTRIBUTE_OBJ_VALUE:
 	   if (!extract_attribute(oid, object, level, attrs))
