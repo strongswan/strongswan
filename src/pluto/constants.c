@@ -753,6 +753,13 @@ static const char *const unity_attr_name[] = {
 enum_names unity_attr_names =
     { UNITY_BANNER , UNITY_DDNS_HOSTNAME, unity_attr_name , &xauth_attr_tv_names };
 
+static const char *const microsoft_attr_name[] = {
+	"INTERNAL_IP4_SERVER",
+	"INTERNAL_IP6_SERVER",
+};
+
+enum_names microsoft_attr_names =
+    { INTERNAL_IP4_SERVER, INTERNAL_IP6_SERVER, microsoft_attr_name , &unity_attr_names };
 
 static const char *const xauth_attr_name[] = {
 	"XAUTH_USER_NAME",
@@ -767,7 +774,7 @@ static const char *const xauth_attr_name[] = {
     };
 
 enum_names xauth_attr_names =
-    { XAUTH_USER_NAME , XAUTH_ANSWER, xauth_attr_name , &unity_attr_names };
+    { XAUTH_USER_NAME , XAUTH_ANSWER, xauth_attr_name , &microsoft_attr_names };
 
 static const char *const modecfg_attr_name[] = {
 	"INTERNAL_IP4_ADDRESS",

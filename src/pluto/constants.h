@@ -682,7 +682,13 @@ extern enum_names modecfg_attr_names;
 
 extern enum_names xauth_attr_names;
 
-/* ISAKMP mode config attributes specific to the Unity vendor Id */
+/* ISAKMP mode config attributes specific to Microsoft */
+#define	INTERNAL_IP4_SERVER	    23456
+#define	INTERNAL_IP6_SERVER	    23457
+
+extern enum_names microsoft_attr_names;
+
+/* ISAKMP mode config attributes specific to the Unity vendor ID */
 #define   UNITY_BANNER		    28672
 #define   UNITY_SAVE_PASSWD	    28673
 #define   UNITY_DEF_DOMAIN	    28674
