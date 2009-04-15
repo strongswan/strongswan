@@ -217,7 +217,7 @@ pkcs7_parse_contentInfo(chunk_t blob, u_int level0, contentInfo_t *cInfo)
 
 	if (objectID == PKCS7_INFO_TYPE)
 	{
-	    cInfo->type = known_oid(object);
+	    cInfo->type = asn1_known_oid(object);
 	    if (cInfo->type < OID_PKCS7_DATA
 	    ||  cInfo->type > OID_PKCS7_ENCRYPTED_DATA)
 	    {
@@ -458,7 +458,7 @@ pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data
 	    )
 	    break;
 	case PKCS7_CONTENT_TYPE:
-	    if (known_oid(object) != OID_PKCS7_DATA)
+	    if (asn1_known_oid(object) != OID_PKCS7_DATA)
 	    {
 		 plog("encrypted content not of type pkcs7 data");
 		 goto failed;

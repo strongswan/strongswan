@@ -562,7 +562,7 @@ dn_parse(chunk_t dn, chunk_t *str)
 	}
 
 	/* print OID */
-	oid_code = known_oid(oid);
+	oid_code = asn1_known_oid(oid);
 	if (oid_code == OID_UNKNOWN)	/* OID not found in list */
 	{
 	    hex_str(oid, str);
@@ -877,7 +877,7 @@ same_dn(chunk_t a, chunk_t b)
 
 	/* printableStrings and email RDNs require uppercase comparison */
 	if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
-	   (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
+	   (type_a == ASN1_IA5STRING && asn1_known_oid(oid_a) == OID_PKCS9_EMAIL)))
 	{
 	    if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
 	    {
@@ -955,7 +955,7 @@ match_dn(chunk_t a, chunk_t b, int *wildcards)
 
 	/* printableStrings and email RDNs require uppercase comparison */
 	if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
-	   (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
+	   (type_a == ASN1_IA5STRING && asn1_known_oid(oid_a) == OID_PKCS9_EMAIL)))
 	{
 	    if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
 	    {
@@ -1553,7 +1553,7 @@ parse_otherName(chunk_t blob, int level0)
 	switch (objectID)
 	{
 	case ON_OBJ_ID_TYPE:
-	    oid = known_oid(object);
+	    oid = asn1_known_oid(object);
 	    break;
 	case ON_OBJ_VALUE:
 	    if (oid == OID_XMPP_ADDR)
@@ -1809,7 +1809,7 @@ parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessLocation)
 	switch (objectID)
 	{
 	case AUTH_INFO_ACCESS_METHOD:
-	    accessMethod = known_oid(object);
+	    accessMethod = asn1_known_oid(object);
 	    break;
 	case AUTH_INFO_ACCESS_LOCATION:
 	    {
@@ -1870,7 +1870,7 @@ parse_extendedKeyUsage(chunk_t blob, int level0)
 	     return FALSE;
 	}
 	if (objectID == EXT_KEY_USAGE_PURPOSE_ID
-	&& known_oid(object) == OID_OCSP_SIGNING)
+	&& asn1_known_oid(object) == OID_OCSP_SIGNING)
 	{
 	    return TRUE;
 	}
@@ -2027,7 +2027,7 @@ parse_x509cert(chunk_t blob, u_int level0, x509cert_t *cert)
 	    cert->publicExponent = object;
 	    break;
 	case X509_OBJ_EXTN_ID:
-	    extn_oid = known_oid(object);
+	    extn_oid = asn1_known_oid(object);
 	    break;
 	case X509_OBJ_CRITICAL:
 	    critical = object.len && *object.ptr;

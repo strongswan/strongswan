@@ -480,7 +480,7 @@ parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
 	case CRL_OBJ_CRL_ENTRY_EXTN_VALUE:
 	case CRL_OBJ_EXTN_VALUE:
 	    {
-		u_int extn_oid = known_oid(extnID);
+		u_int extn_oid = asn1_known_oid(extnID);
 
 		if (extn_oid == OID_CRL_REASON_CODE)
 		{

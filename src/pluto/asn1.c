@@ -116,7 +116,7 @@ asn1_algorithmIdentifier(int oid)
  *  position in the oid_names table is returned otherwise -1 is returned
  */
 int
-known_oid(chunk_t object)
+asn1_known_oid(chunk_t object)
 {
     int oid = 0;
 
@@ -136,12 +136,48 @@ known_oid(chunk_t object)
 	else
 	{
 	    if (oid_names[oid].next)
+	    {
 		oid = oid_names[oid].next;
+	    }
 	    else
+	    {
 		return OID_UNKNOWN;
+	    }
 	}
     }
     return -1;
+}
+
+/*
+ * Converts an known OID index to ASN.1 OID
+ */ 
+chunk_t
+asn1_get_known_oid(int n)
+{
+    chunk_t oid;
+    int i;
+	
+    if (n < 0 || n >= OID_MAX)
+    {
+	return empty_chunk;
+    }
+	
+    i = oid_names[n].level + 1;
+    oid.ptr = alloc_bytes(i, "known oid");
+    oid.len = i;
+
+    do
+    {
+	if (oid_names[n].level >= i)
+	{
+	    n--;
+	    continue;
+	}
+	oid.ptr[--i] = oid_names[n--].octet;
+    }
+    while (i > 0);
+	
+    return oid;
 }
 
 /*
@@ -484,7 +520,7 @@ debug_asn1_simple_object(chunk_t object, asn1_t type, u_int cond)
     switch (type)
     {
     case ASN1_OID:
-	oid = known_oid(object);
+	oid = asn1_known_oid(object);
 	if (oid != OID_UNKNOWN)
 	{
 	    DBG(DBG_PARSING,
@@ -735,7 +771,7 @@ parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters)
 	switch (objectID)
 	{
 	case ALGORITHM_ID_ALG:
-	    alg = known_oid(object);
+	    alg = asn1_known_oid(object);
 	    break;
 	case ALGORITHM_ID_PARAMETERS:
 	    if (parameters != NULL)

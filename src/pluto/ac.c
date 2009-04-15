@@ -519,7 +519,7 @@ parse_ac(chunk_t blob, x509acert_t *ac)
 	    ac->notAfter = asn1totime(&object, ASN1_GENERALIZEDTIME);
 	    break;
 	case AC_OBJ_ATTRIBUTE_TYPE:
-	    type = known_oid(object);
+	    type = asn1_known_oid(object);
 	    break;
 	case AC_OBJ_ATTRIBUTE_VALUE:
 	    {
@@ -549,7 +549,7 @@ parse_ac(chunk_t blob, x509acert_t *ac)
 	    }
 	    break;
 	case AC_OBJ_EXTN_ID:
-	    extn_oid = known_oid(object);
+	    extn_oid = asn1_known_oid(object);
 	    break;
 	case AC_OBJ_CRITICAL:
 	    critical = object.len && *object.ptr;

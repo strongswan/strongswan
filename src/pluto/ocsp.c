@@ -1134,7 +1134,7 @@ parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 	    res->responses = object;
 	    break;
 	case BASIC_RESPONSE_EXT_ID:
-	    extn_oid = known_oid(object);
+	    extn_oid = asn1_known_oid(object);
 	    break;
 	case BASIC_RESPONSE_CRITICAL:
 	    critical = object.len && *object.ptr;
@@ -1223,7 +1223,7 @@ parse_ocsp_response(chunk_t blob, response_t * res)
 	    }
 	    break;
 	case OCSP_RESPONSE_TYPE:
-	    ocspResponseType = known_oid(object);
+	    ocspResponseType = asn1_known_oid(object);
 	    break;
 	case OCSP_RESPONSE:
 	    {
@@ -1303,7 +1303,7 @@ parse_ocsp_single_response(chunk_t blob, int level0, single_response_t *sres)
 	    sres->nextUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
 	    break;
 	case SINGLE_RESPONSE_EXT_ID:
-	    extn_oid = known_oid(object);
+	    extn_oid = asn1_known_oid(object);
 	    break;
 	case SINGLE_RESPONSE_CRITICAL:
 	    critical = object.len && *object.ptr;
