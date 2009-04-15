@@ -51,6 +51,8 @@
                              | LELEM(INTERNAL_IP4_DNS)             \
                              | LELEM(INTERNAL_IP4_NBNS)            \
                              | LELEM(APPLICATION_VERSION)          \
+                             | LELEM(INTERNAL_IP6_DNS)             \
+                             | LELEM(INTERNAL_IP6_NBNS)            \
                              )
 
 #define SUPPORTED_UNITY_ATTR_SET ( LELEM(UNITY_BANNER - UNITY_BASE) )
