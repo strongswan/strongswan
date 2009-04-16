@@ -49,12 +49,7 @@ extern void *clone_bytes(const void *orig, size_t size, const char *name);
 #define clone_str(str, name) \
     ((str) == NULL? NULL : clone_bytes((str), strlen((str))+1, (name)))
 
-#ifdef LEAK_DETECTIVE
-  extern void pfree(void *ptr);
-  extern void report_leaks(void);
-#else
-# define pfree(ptr) free(ptr)	/* ordinary stdc free */
-#endif
+#define pfree(ptr) free(ptr)	/* ordinary stdc free */
 #define pfreeany(p) { if ((p) != NULL) pfree(p); }
 #define replace(p, q) { pfreeany(p); (p) = (q); }
 

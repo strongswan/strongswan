@@ -42,127 +42,14 @@ all_zero(const unsigned char *m, size_t len)
     return TRUE;
 }
 
-/* memory allocation
- *
- * LEAK_DETECTIVE puts a wrapper around each allocation and maintains
- * a list of live ones.  If a dead one is freed, an assertion MIGHT fail.
- * If the live list is currupted, that will often be detected.
- * In the end, report_leaks() is called, and the names of remaining
- * live allocations are printed.  At the moment, it is hoped, not that
- * the list is empty, but that there will be no surprises.
- *
- * Accepted Leaks:
- * - "struct iface" and "device name" (for "discovered" net interfaces)
- * - "struct event in event_schedule()" (events not associated with states)
- * - "Pluto lock name" (one only, needed until end -- why bother?)
- */
-
-#ifdef LEAK_DETECTIVE
-
-/* this magic number is 3671129837 decimal (623837458 complemented) */
-#define LEAK_MAGIC 0xDAD0FEEDul
-
-union mhdr {
-    struct {
-	const char *name;
-	union mhdr *older, *newer;
-	unsigned long magic;
-    } i;    /* info */
-    unsigned long junk;	/* force maximal alignment */
-};
-
-static union mhdr *allocs = NULL;
-
-void *alloc_bytes(size_t size, const char *name)
-{
-    union mhdr *p = malloc(sizeof(union mhdr) + size);
-
-    if (p == NULL)
-	exit_log("unable to malloc %lu bytes for %s"
-	    , (unsigned long) size, name);
-    p->i.name = name;
-    p->i.older = allocs;
-    if (allocs != NULL)
-	allocs->i.newer = p;
-    allocs = p;
-    p->i.newer = NULL;
-    p->i.magic = LEAK_MAGIC;
-
-    memset(p+1, '\0', size);
-    return p+1;
-}
-
-void *
-clone_bytes(const void *orig, size_t size, const char *name)
-{
-    void *p = alloc_bytes(size, name);
-
-    memcpy(p, orig, size);
-    return p;
-}
-
-void
-pfree(void *ptr)
-{
-    union mhdr *p;
-
-    passert(ptr != NULL);
-    p = ((union mhdr *)ptr) - 1;
-    passert(p->i.magic == LEAK_MAGIC);
-    if (p->i.older != NULL)
-    {
-	passert(p->i.older->i.newer == p);
-	p->i.older->i.newer = p->i.newer;
-    }
-    if (p->i.newer == NULL)
-    {
-	passert(p == allocs);
-	allocs = p->i.older;
-    }
-    else
-    {
-	passert(p->i.newer->i.older == p);
-	p->i.newer->i.older = p->i.older;
-    }
-    p->i.magic = ~LEAK_MAGIC;
-    free(p);
-}
-
-void
-report_leaks(void)
-{
-    union mhdr
-	*p = allocs,
-	*pprev = NULL;
-    unsigned long n = 0;
-
-    while (p != NULL)
-    {
-	passert(p->i.magic == LEAK_MAGIC);
-	passert(pprev == p->i.newer);
-	pprev = p;
-	p = p->i.older;
-	n++;
-	if (p == NULL || pprev->i.name != p->i.name)
-	{
-	    if (n != 1)
-		plog("leak: %lu * %s", n, pprev->i.name);
-	    else
-		plog("leak: %s", pprev->i.name);
-	    n = 0;
-	}
-    }
-}
-
-#else /* !LEAK_DETECTIVE */
-
 void *alloc_bytes(size_t size, const char *name)
 {
     void *p = malloc(size);
 
     if (p == NULL)
-	exit_log("unable to malloc %lu bytes for %s"
-	    , (unsigned long) size, name);
+    {
+	exit_log("unable to malloc %lu bytes for %s", (unsigned long) size, name);
+    }
     memset(p, '\0', size);
     return p;
 }
@@ -172,12 +59,12 @@ void *clone_bytes(const void *orig, size_t size, const char *name)
     void *p = malloc(size);
 
     if (p == NULL)
-	exit_log("unable to malloc %lu bytes for %s"
-	    , (unsigned long) size, name);
+    {
+	exit_log("unable to malloc %lu bytes for %s", (unsigned long) size, name);
+    }
     memcpy(p, orig, size);
     return p;
 }
-#endif /* !LEAK_DETECTIVE */
 
 /*  Note that there may be as many as six IDs that are temporary at
  *  one time before unsharing the two ends of a connection. So we need

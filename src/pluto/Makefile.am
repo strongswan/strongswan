@@ -35,6 +35,7 @@ kernel_noklips.c kernel_noklips.h \
 kernel_pfkey.c kernel_pfkey.h \
 keys.c keys.h \
 lex.c lex.h \
+library.c library.h \
 log.c log.h \
 md2.c md2.h \
 md5.c md5.h \
@@ -94,6 +95,11 @@ $(LIBFREESWANDIR)/libfreeswan.a \
 $(LIBCRYPTODIR)/libcrypto.a \
 -lgmp -lresolv -lpthread -ldl
 
+if USE_LEAK_DETECTIVE
+  AM_CFLAGS += -DLEAK_DETECTIVE
+  pluto_LDADD += backtrace.o leak_detective.o
+endif
+
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv -ldl
@@ -105,6 +111,12 @@ oid.o :	$(LIBSTRONGSWANDIR)/asn1/oid.c $(LIBSTRONGSWANDIR)/asn1/oid.h
 		$(COMPILE) -c -o $@ $<
 
 debug.o : $(LIBSTRONGSWANDIR)/debug.c $(LIBSTRONGSWANDIR)/debug.h
+		$(COMPILE) -c -o $@ $<
+
+backtrace.o : $(LIBSTRONGSWANDIR)/utils/backtrace.c $(LIBSTRONGSWANDIR)/utils/backtrace.h
+		$(COMPILE) -c -o $@ $<
+
+leak_detective.o : $(LIBSTRONGSWANDIR)/utils/leak_detective.c $(LIBSTRONGSWANDIR)/utils/leak_detective.h
 		$(COMPILE) -c -o $@ $<
 
 linked_list.o : $(LIBSTRONGSWANDIR)/utils/linked_list.c $(LIBSTRONGSWANDIR)/utils/linked_list.h

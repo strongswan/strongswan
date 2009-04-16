@@ -149,10 +149,10 @@ asn1_known_oid(chunk_t object)
 }
 
 /*
- * Converts an known OID index to ASN.1 OID
+ * Converts a known OID index to an ASN.1 OID
  */ 
 chunk_t
-asn1_get_known_oid(int n)
+asn1_build_known_oid(int n)
 {
     chunk_t oid;
     int i;
@@ -163,8 +163,10 @@ asn1_get_known_oid(int n)
     }
 	
     i = oid_names[n].level + 1;
-    oid.ptr = alloc_bytes(i, "known oid");
+    oid.ptr = alloc_bytes(2 + i, "known oid");
     oid.len = i;
+    oid.ptr[0] = ASN1_OID;
+    oid.ptr[1] = i;
 
     do
     {

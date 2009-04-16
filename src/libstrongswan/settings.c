@@ -17,6 +17,7 @@
 
 #define _GNU_SOURCE
 #include <string.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <errno.h>
 

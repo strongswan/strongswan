@@ -266,6 +266,8 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 	    }
 	    setsid();
 	    sigprocmask(SIG_SETMASK, 0, NULL);
+	    /* disable glibc's malloc checker, conflicts with leak detective */
+	    setenv("MALLOC_CHECK_", "0", 1);
 	    execv(arg[0], arg);
 	    plog("can't execv(%s,...): %s", arg[0], strerror(errno));
 	    exit(1);

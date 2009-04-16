@@ -473,6 +473,19 @@ init_crypto(void)
     ike_alg_test();
 }
 
+void
+free_crypto(void)
+{
+    mpz_clear(&groupgenerator);
+    mpz_clear(&modp1024_modulus);
+    mpz_clear(&modp1536_modulus);
+    mpz_clear(&modp2048_modulus);
+    mpz_clear(&modp3072_modulus);
+    mpz_clear(&modp4096_modulus);
+    mpz_clear(&modp6144_modulus);
+    mpz_clear(&modp8192_modulus);
+}
+
 /* Oakley group description
  *
  * See RFC2409 "The Internet key exchange (IKE)" 6.

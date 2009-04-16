@@ -25,6 +25,8 @@
 # include <execinfo.h>
 #endif /* HAVE_BACKTRACE */
 
+#include <string.h>
+
 #include "backtrace.h"
 
 typedef struct private_backtrace_t private_backtrace_t;

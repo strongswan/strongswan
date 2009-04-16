@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include <freeswan.h>
-#include <settings.h>
+#include <library.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -58,8 +58,6 @@
 #define SUPPORTED_UNITY_ATTR_SET ( LELEM(UNITY_BANNER - UNITY_BASE) )
 
 #define UNITY_BANNER_STR    "Welcome to strongSwan - the Linux VPN Solution!\n"
-
-extern settings_t *settings;
 
 /*
  * Addresses assigned (usually via ModeCfg) to the Initiator
@@ -155,7 +153,7 @@ get_internal_addr(struct connection *c, internal_addr_t *ia)
 	char dns_key[16], *dns_str;
 
 	snprintf(dns_key, sizeof(dns_key), "pluto.dns%d", i);
-	dns_str = settings->get_str(settings, dns_key, NULL);
+	dns_str = lib->settings->get_str(lib->settings, dns_key, NULL);
 	if (dns_str)
 	{
 	    err_t ugh;
@@ -181,7 +179,7 @@ get_internal_addr(struct connection *c, internal_addr_t *ia)
 	char nbns_key[16], *nbns_str;
 
 	snprintf(nbns_key, sizeof(nbns_key), "pluto.nbns%d", i);
-	nbns_str = settings->get_str(settings, nbns_key, NULL);
+	nbns_str = lib->settings->get_str(lib->settings, nbns_key, NULL);
 	if (nbns_str)
 	{
 	    err_t ugh;
