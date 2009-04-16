@@ -105,7 +105,7 @@ static bool enumerator_enumerate(triplet_enumerator_t *e, identification_t **ims
 								 char **rand, char **sres, char **kc)
 {
 	triplet_t *triplet;
-
+	
 	if (e->inner->enumerate(e->inner, &triplet))
 	{
 		e->current = triplet;
