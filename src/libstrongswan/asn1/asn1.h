@@ -107,12 +107,12 @@ chunk_t asn1_algorithmIdentifier(int oid);
 int asn1_known_oid(chunk_t object);
 
 /**
- * Converts an known OID index to ASN.1 OID
+ * Converts a known OID index to an ASN.1 OID
  *
  * @param n			index into the oid_names[] table
  * @return			allocated OID chunk, chunk_empty if index out of range
  */
-chunk_t asn1_get_known_oid(int n);
+chunk_t asn1_build_known_oid(int n);
 
 /**
  * Returns the length of an ASN.1 object

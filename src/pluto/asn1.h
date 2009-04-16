@@ -118,7 +118,7 @@ extern const chunk_t ASN1_sha1WithRSA_id;
 
 extern chunk_t asn1_algorithmIdentifier(int oid);
 extern int asn1_known_oid(chunk_t object);
-extern chunk_t asn1_get_known_oid(int n);
+extern chunk_t asn1_build_known_oid(int n);
 extern u_int asn1_length(chunk_t *blob);
 extern void code_asn1_length(size_t length, chunk_t *code);
 extern u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen);

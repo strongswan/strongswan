@@ -224,7 +224,7 @@ int asn1_known_oid(chunk_t object)
 /*
  * Defined in header.
  */
-chunk_t asn1_get_known_oid(int n)
+chunk_t asn1_build_known_oid(int n)
 {
 	chunk_t oid;
 	int i;
@@ -235,7 +235,10 @@ chunk_t asn1_get_known_oid(int n)
 	}
 	
 	i = oid_names[n].level + 1;
-	oid = chunk_alloc(i);
+	oid = chunk_alloc(2 + i);
+	oid.ptr[0] = ASN1_OID;
+	oid.ptr[1] = i;
+
 	do
 	{
 		if (oid_names[n].level >= i)

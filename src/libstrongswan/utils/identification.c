@@ -581,13 +581,13 @@ static status_t atodn(char *src, chunk_t *dn)
 					{
 						chunk_t rdn_oid;
 						
-						rdn_oid = asn1_get_known_oid(x501rdns[i].oid);
+						rdn_oid = asn1_build_known_oid(x501rdns[i].oid);
 						if (rdn_oid.len)
 						{
 							rdns[rdn_count] = 
 									asn1_wrap(ASN1_SET, "m",
 										asn1_wrap(ASN1_SEQUENCE, "mm",
-											asn1_wrap(ASN1_OID, "m", rdn_oid),
+											rdn_oid,
 											asn1_wrap(rdn_type, "c", name)
 										)
 									);
