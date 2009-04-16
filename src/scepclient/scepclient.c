@@ -138,9 +138,6 @@ pkcs10_t *pkcs10               = NULL;
 /**
  * @brief exit scepclient
  *
- * The log is closed and leaks are reported
- * if LEAK_DETECTIVE is activated
- *
  * @param status 0 = OK, 1 = general discomfort
  */
 static void
@@ -170,10 +167,6 @@ exit_scepclient(err_t message, ...)
     free_x509cert(x509_ca_enc);
     free_x509cert(x509_ca_sig);
     pkcs10_free(pkcs10);
-
-#ifdef LEAK_DETECTIVE
-    report_leaks();
-#endif /* LEAK_DETECTIVE */
     close_log();
 
     /* print any error message to stderr */
