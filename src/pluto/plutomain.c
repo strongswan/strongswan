@@ -707,6 +707,7 @@ exit_pluto(int status)
     stop_adns();
     free_md_pool();
     free_crypto();
+    free_id();
     delete_lock();
 	library_deinit();
     close_log();

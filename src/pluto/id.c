@@ -66,6 +66,21 @@ init_id(void)
     set_myFQDN();
 }
 
+/*
+ *  free id module
+ */
+void
+free_id(void)
+{
+    enum myid_state s;
+
+    for (s = MYID_UNKNOWN; s <= MYID_SPECIFIED; s++)
+    {
+	free_id_content(&myids[s]);
+	free(myid_str[s]);
+    }
+}
+
 static void
 calc_myid_str(enum myid_state s)
 {

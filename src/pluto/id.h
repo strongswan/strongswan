@@ -27,13 +27,13 @@ struct id {
 };
 
 extern void init_id(void);
-
+extern void free_id(void);
 extern const struct id empty_id;	/* ID_NONE */
 
 enum myid_state {
     MYID_UNKNOWN,	/* not yet figured out */
     MYID_HOSTNAME,	/* our current hostname */
-    MYID_IP,	/* our default IP address */
+    MYID_IP,		/* our default IP address */
     MYID_SPECIFIED	/* as specified by ipsec.conf */
 };
 
