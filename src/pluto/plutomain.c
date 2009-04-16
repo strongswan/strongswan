@@ -707,9 +707,10 @@ exit_pluto(int status)
     stop_adns();
     free_md_pool();
     free_crypto();
-    free_id();
+    free_id();			/* free myids */
+    free_events();		/* free remaining events */
     delete_lock();
-	library_deinit();
+    library_deinit();
     close_log();
     exit(status);
 }

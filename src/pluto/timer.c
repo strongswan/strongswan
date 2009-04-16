@@ -529,4 +529,22 @@ delete_dpd_event(struct state *st)
     }
 }
 
+/*
+ * Free remaining events
+ */
+void
+free_events(void)
+{
+    struct event *ev_tmp, *ev;
+
+    ev = evlist;
+    evlist = NULL;
+
+    while (ev)
+    {
+	ev_tmp = ev;
+	ev = ev->ev_next;
+	free(ev_tmp);
+    }
+}
 
