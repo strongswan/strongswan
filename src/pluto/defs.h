@@ -46,7 +46,7 @@ extern void *clone_bytes(const void *orig, size_t size);
 #define clone_thing(orig) clone_bytes((const void *)&(orig), sizeof(orig))
 
 #define clone_str(str) \
-    ((str) == NULL? NULL : clone_bytes((str), strlen((str))+1))
+    ((str) == NULL? NULL : strdup(str))
 
 #define replace(p, q) { free(p); (p) = (q); }
 
