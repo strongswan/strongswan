@@ -175,7 +175,7 @@ asn1_build_known_oid(int n)
 	    n--;
 	    continue;
 	}
-	oid.ptr[--i] = oid_names[n--].octet;
+	oid.ptr[--i + 2] = oid_names[n--].octet;
     }
     while (i > 0);
 	
