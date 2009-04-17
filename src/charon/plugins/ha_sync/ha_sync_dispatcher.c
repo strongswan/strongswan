@@ -251,19 +251,19 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 					DBG1(DBG_IKE, "HA sync is missing nodes peer configuration");
 				}
 				break;
-			case HA_SYNC_CONDITIONS:
-				set_condition(ike_sa, value.u32, EXT_NATT);
-				set_condition(ike_sa, value.u32, EXT_MOBIKE);
-				set_condition(ike_sa, value.u32, EXT_HASH_AND_URL);
-				break;
 			case HA_SYNC_EXTENSIONS:
-				set_extension(ike_sa, value.u32, COND_NAT_ANY);
-				set_extension(ike_sa, value.u32, COND_NAT_HERE);
-				set_extension(ike_sa, value.u32, COND_NAT_THERE);
-				set_extension(ike_sa, value.u32, COND_NAT_FAKE);
-				set_extension(ike_sa, value.u32, COND_EAP_AUTHENTICATED);
-				set_extension(ike_sa, value.u32, COND_CERTREQ_SEEN);
-				set_extension(ike_sa, value.u32, COND_ORIGINAL_INITIATOR);
+				set_extension(ike_sa, value.u32, EXT_NATT);
+				set_extension(ike_sa, value.u32, EXT_MOBIKE);
+				set_extension(ike_sa, value.u32, EXT_HASH_AND_URL);
+				break;
+			case HA_SYNC_CONDITIONS:
+				set_condition(ike_sa, value.u32, COND_NAT_ANY);
+				set_condition(ike_sa, value.u32, COND_NAT_HERE);
+				set_condition(ike_sa, value.u32, COND_NAT_THERE);
+				set_condition(ike_sa, value.u32, COND_NAT_FAKE);
+				set_condition(ike_sa, value.u32, COND_EAP_AUTHENTICATED);
+				set_condition(ike_sa, value.u32, COND_CERTREQ_SEEN);
+				set_condition(ike_sa, value.u32, COND_ORIGINAL_INITIATOR);
 				break;
 			case HA_SYNC_INITIATE_MID:
 				ike_sa->set_message_id(ike_sa, TRUE, value.u32);
