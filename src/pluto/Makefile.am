@@ -90,7 +90,7 @@ AM_CFLAGS = \
 -DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \
-oid.o debug.o linked_list.o enumerator.o settings.o \
+oid.o debug.o linked_list.o enumerator.o settings.o utils.o chunk.o \
 $(LIBFREESWANDIR)/libfreeswan.a \
 $(LIBCRYPTODIR)/libcrypto.a \
 -lgmp -lresolv -lpthread -ldl
@@ -126,6 +126,12 @@ enumerator.o : $(LIBSTRONGSWANDIR)/utils/enumerator.c $(LIBSTRONGSWANDIR)/utils/
 		$(COMPILE) -c -o $@ $<
 
 settings.o : $(LIBSTRONGSWANDIR)/settings.c $(LIBSTRONGSWANDIR)/settings.h
+		$(COMPILE) -c -o $@ $<
+
+utils.o : $(LIBSTRONGSWANDIR)/utils.c $(LIBSTRONGSWANDIR)/utils.h
+		$(COMPILE) -c -o $@ $<
+
+chunk.o : $(LIBSTRONGSWANDIR)/chunk.c $(LIBSTRONGSWANDIR)/chunk.h
 		$(COMPILE) -c -o $@ $<
 
 # This compile option activates the sending of a strongSwan VID

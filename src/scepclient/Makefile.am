@@ -20,7 +20,8 @@ AM_CFLAGS = -DDEBUG -DNO_PLUTO -DIPSEC_CONFDIR=\"${confdir}\"
 LIBFREESWANBUILDDIR=$(top_builddir)/src/libfreeswan
 LIBCRYPTOBUILDDIR=$(top_builddir)/src/libcrypto
 
-scepclient_LDADD = asn1.o ca.o crl.o certs.o constants.o defs.o fetch.o id.o \
+scepclient_LDADD = debug.o utils.o chunk.o \
+                   asn1.o ca.o crl.o certs.o constants.o defs.o fetch.o id.o \
                    keys.o lex.o md2.o md5.o mp_defs.o ocsp.o oid.o pem.o pgp.o \
                    pkcs1.o pkcs7.o rnd.o sha1.o smartcard.o x509.o \
                    $(LIBFREESWANBUILDDIR)/libfreeswan.a $(LIBCRYPTOBUILDDIR)/libcrypto.a \
@@ -39,6 +40,15 @@ if USE_CURL
 endif
 
 dist_man_MANS = scepclient.8
+
+debug.o : $(LIBSTRONGSWANDIR)/debug.c $(LIBSTRONGSWANDIR)/debug.h
+		$(COMPILE) -c -o $@ $<
+
+utils.o : $(LIBSTRONGSWANDIR)/utils.c $(LIBSTRONGSWANDIR)/utils.h
+		$(COMPILE) -c -o $@ $<
+
+chunk.o : $(LIBSTRONGSWANDIR)/chunk.c $(LIBSTRONGSWANDIR)/chunk.h
+		$(COMPILE) -c -o $@ $<
 
 asn1.o :	$(PLUTODIR)/asn1.c $(PLUTODIR)/asn1.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<

@@ -21,6 +21,8 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include <chunk.h>
+
 #ifdef KLIPS
 # define USED_BY_KLIPS	/* ignore */
 #else
@@ -52,59 +54,11 @@ extern void *clone_bytes(const void *orig, size_t size);
 #define replace(p, q) \
     { free(p); (p) = (q); }
 
-
-/* chunk is a simple pointer-and-size abstraction */
-
-struct chunk {
-    u_char *ptr;
-    size_t len;
-    };
-typedef struct chunk chunk_t;
-
-extern const chunk_t chunk_empty;
-
-static inline chunk_t chunk_create(u_char *ptr, size_t len)
-{
-    chunk_t chunk = {ptr, len};
-    return chunk;
-}
-
-static inline void chunk_free(chunk_t *chunk)
-{
-    free(chunk->ptr);
-    *chunk = chunk_empty;
-}
-
-static inline void chunk_clear(chunk_t *chunk)
-{
-    if (chunk->ptr)
-    {
-	memset(chunk->ptr, 0, chunk->len);
-	chunk_free(chunk);
-    }
-}
-
-static inline bool chunk_equals(chunk_t a, chunk_t b)
-{
-    return a.ptr != NULL  && b.ptr != NULL &&
-	   a.len == b.len && memeq(a.ptr, b.ptr, a.len);
-}
-
-extern chunk_t chunk_create_clone(u_char *ptr, chunk_t chunk);
-
-#define chunk_clone(chunk) \
-    chunk_create_clone((chunk).len ? malloc((chunk).len) : NULL, chunk)
-
-#define chunk_from_buf(str) { str, sizeof(str) }
-
 #define chunkcpy(dst, chunk) \
     { memcpy(dst, chunk.ptr, chunk.len); dst += chunk.len;}
 
 extern char* temporary_cyclic_buffer(void);
 extern const char* concatenate_paths(const char *a, const char *b);
-
-/* compare two chunks */
-extern int chunk_compare(chunk_t a, chunk_t b);
 
 /* move a chunk to a memory position and free it after insertion */
 extern void mv_chunk(u_char **pos, chunk_t content);
