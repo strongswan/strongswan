@@ -69,25 +69,6 @@
 
 #include <assert.h>
 
-#ifndef NO_PLUTO
-#else
-#define passert(x) assert(x)
-extern int debug;	/* eg: spi.c */
-#define DBG(cond, action)   { if (debug) { action ; } }
-#define DBG_log(x, args...) fprintf(stderr, x "\n" , ##args);
-#define alloc_thing(thing, name) alloc_bytes(sizeof (thing), name)
-void * alloc_bytes(size_t size, const char *name) {
-	void *p=malloc(size);
-        if (p == NULL)
-		fprintf(stderr, "unable to malloc %lu bytes for %s",
-			(unsigned long) size, name);
-	memset(p, '\0', size);
-	return p;
-}
-#define pfreeany(ptr) free(ptr)
-
-#endif
-
 #ifdef NOT_YET
 /*
  * 	Allocator cache:
@@ -121,23 +102,24 @@ struct db_ops_stats {
 static struct db_ops_stats db_context_st = DB_OPS_ZERO;
 static struct db_ops_stats db_trans_st = DB_OPS_ZERO;
 static struct db_ops_stats db_attrs_st = DB_OPS_ZERO;
-static __inline__ void * alloc_bytes_st (size_t size, const char *str, struct db_ops_stats *st) 
+static __inline__ void *malloc_bytes_st(size_t size, struct db_ops_stats *st) 
 {
-	void *ptr = alloc_bytes(size, str);
-	if (ptr)  {
+	void *ptr = malloc(size);
+	if (ptr)
+	{
 		st->st_curr_cnt++;
 		st->st_total_cnt++;
 		if (size > st->st_maxsz) st->st_maxsz=size;
 	}	
 	return ptr;
 }
-#define ALLOC_BYTES_ST(z,s,st) alloc_bytes_st(z, s, &st);
-#define PFREE_ST(p,st)         do { st.st_curr_cnt--; pfree(p);  } while (0);
+#define ALLOC_BYTES_ST(z,st) malloc_bytes_st(z, &st);
+#define PFREE_ST(p,st)         do { st.st_curr_cnt--; free(p);  } while (0);
 
 #else
 
-#define ALLOC_BYTES_ST(z,s,n) alloc_bytes(z, s);
-#define PFREE_ST(p,n)         pfree(p);
+#define ALLOC_BYTES_ST(z,n) malloc(z);
+#define PFREE_ST(p,n)         free(p);
 
 #endif /* NO_DB_OPS_STATS */
 /*	Initialize db object
@@ -153,15 +135,15 @@ db_prop_init(struct db_context *ctx, u_int8_t protoid, int max_trans, int max_at
 	ctx->attrs0 = NULL;
 
 	if (max_trans > 0) { /* quite silly if not */
-		ctx->trans0 = ALLOC_BYTES_ST ( sizeof (struct db_trans) * max_trans, 
-			"db_context->trans", db_trans_st);
-		if (!ctx->trans0) goto out;
+		ctx->trans0 = ALLOC_BYTES_ST ( sizeof(struct db_trans) * max_trans, 
+				db_trans_st);
+		memset(ctx->trans0, '\0', sizeof(struct db_trans) * max_trans);
 	}
 
 	if (max_attrs > 0) { /* quite silly if not */
-		ctx->attrs0 = ALLOC_BYTES_ST (sizeof (struct db_attr) * max_attrs,
-				"db_context->attrs", db_attrs_st);
-		if (!ctx->attrs0) goto out;
+		ctx->attrs0 = ALLOC_BYTES_ST (sizeof(struct db_attr) * max_attrs,
+				db_attrs_st);
+		memset(ctx->attrs0, '\0', sizeof(struct db_attr) * max_attrs);
 	}
 	ret = 0;
 out:
@@ -190,7 +172,7 @@ db_trans_expand(struct db_context *ctx, int delta_trans)
 
 	old_trans = ctx->trans0;
 	new_trans = ALLOC_BYTES_ST ( sizeof (struct db_trans) * max_trans, 
-			"db_context->trans (expand)", db_trans_st);
+			db_trans_st);
 	if (!new_trans)
 		goto out;
 	memcpy(new_trans, old_trans, ctx->max_trans * sizeof(struct db_trans));
@@ -229,7 +211,7 @@ db_attrs_expand(struct db_context *ctx, int delta_attrs)
 
 	old_attrs = ctx->attrs0;
 	new_attrs = ALLOC_BYTES_ST ( sizeof (struct db_attr) * max_attrs, 
-			"db_context->attrs (expand)", db_attrs_st);
+			db_attrs_st);
 	if (!new_attrs)
 		goto out;
 
@@ -268,7 +250,7 @@ struct db_context *
 db_prop_new(u_int8_t protoid, int max_trans, int max_attrs) 
 {
 	struct db_context *ctx;
-	ctx = ALLOC_BYTES_ST ( sizeof (struct db_context), "db_context", db_context_st);
+	ctx = ALLOC_BYTES_ST ( sizeof (struct db_context), db_context_st);
 	if (!ctx) goto out;
 	
 	if (db_prop_init(ctx, protoid, max_trans, max_attrs) < 0) {

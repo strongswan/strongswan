@@ -280,7 +280,7 @@ pfkey_get_response(pfkey_buf *buf, pfkey_seq_t seq)
 	{
 	    /* Not for us: queue it. */
 	    size_t bl = buf->msg.sadb_msg_len * IPSEC_PFKEYv2_ALIGN;
-	    pfkey_item *it = alloc_bytes(offsetof(pfkey_item, buf) + bl, "pfkey_item");
+	    pfkey_item *it = malloc(offsetof(pfkey_item, buf) + bl);
 
 	    memcpy(&it->buf, buf, bl);
 
@@ -447,7 +447,7 @@ pfkey_dequeue(void)
 
 	pfkey_async(&it->buf);
 	pfkey_iq_head = it->next;
-	pfree(it);
+	free(it);
     }
 
     /* Handle any orphaned holds, but only if no pfkey input is pending.
@@ -898,7 +898,7 @@ pfkey_close(void)
 	pfkey_item *it = pfkey_iq_head;
 
 	pfkey_iq_head = it->next;
-	pfree(it);
+	free(it);
     }
 
     close(pfkeyfd);

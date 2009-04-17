@@ -448,18 +448,17 @@ free_ca_info(ca_info_t* ca_info)
     if (ca_info == NULL)
 	return;
 
-    pfreeany(ca_info->name);
-    pfreeany(ca_info->ldaphost);
-    pfreeany(ca_info->ldapbase);
-    pfreeany(ca_info->ocspuri);
+    free(ca_info->name);
+    free(ca_info->ldaphost);
+    free(ca_info->ldapbase);
+    free(ca_info->ocspuri);
 
     freeanychunk(ca_info->authName);
     freeanychunk(ca_info->authKeyID);
     freeanychunk(ca_info->authKeySerialNumber);
 
     free_generalNames(ca_info->crluri, TRUE);
-
-    pfree(ca_info);
+    free(ca_info);
 }
 
 /*
@@ -558,29 +557,28 @@ add_ca_info(const whack_message_t *msg)
 	plog("added ca description \"%s\"", msg->name);
 
 	/* create and initialize new ca_info record */
-	ca = alloc_thing(ca_info_t, "ca info");
+	ca = malloc_thing(ca_info_t);
 	*ca = empty_ca_info;
 
 	/* name */
-	ca->name = clone_str(msg->name, "ca name");
+	ca->name = clone_str(msg->name);
 	    
 	/* authName */
-	clonetochunk(ca->authName, cacert->subject.ptr
-	    , cacert->subject.len, "authName");
+	clonetochunk(ca->authName, cacert->subject.ptr, cacert->subject.len);
 	dntoa(buf, BUF_LEN, ca->authName);
 	DBG(DBG_CONTROL,
 	    DBG_log("authname: '%s'", buf)
 	)
 
 	/* authSerialNumber */
-	clonetochunk(ca->authKeySerialNumber, cacert->serialNumber.ptr
-	    , cacert->serialNumber.len, "authKeySerialNumber");
+	clonetochunk(ca->authKeySerialNumber, cacert->serialNumber.ptr,
+		cacert->serialNumber.len);
 
 	/* authKeyID */
 	if (cacert->subjectKeyID.ptr != NULL)
 	{
-	    clonetochunk(ca->authKeyID, cacert->subjectKeyID.ptr
-		, cacert->subjectKeyID.len, "authKeyID");
+	    clonetochunk(ca->authKeyID, cacert->subjectKeyID.ptr,
+		cacert->subjectKeyID.len);
 	    datatot(cacert->subjectKeyID.ptr, cacert->subjectKeyID.len, ':'
 		, buf, BUF_LEN);
 	    DBG(DBG_CONTROL | DBG_PARSING ,
@@ -589,16 +587,16 @@ add_ca_info(const whack_message_t *msg)
 	}
 
 	/* ldaphost */
-	ca->ldaphost = clone_str(msg->ldaphost, "ldaphost");
+	ca->ldaphost = clone_str(msg->ldaphost);
 
 	/* ldapbase */
-	ca->ldapbase = clone_str(msg->ldapbase, "ldapbase");
+	ca->ldapbase = clone_str(msg->ldapbase);
 
 	/* ocspuri */
 	if (msg->ocspuri != NULL)
 	{
 	    if (strncasecmp(msg->ocspuri, "http", 4) == 0)
-		ca->ocspuri = clone_str(msg->ocspuri, "ocspuri");
+		ca->ocspuri = clone_str(msg->ocspuri);
 	    else
 		plog("  ignoring ocspuri with unkown protocol");
 	}

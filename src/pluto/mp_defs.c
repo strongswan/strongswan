@@ -32,7 +32,7 @@ mpz_to_n(const MP_INT *mp, size_t bytes)
     int i;
 
     r.len = bytes;
-    r.ptr = alloc_bytes(r.len, "host representation of large integer");
+    r.ptr = malloc(r.len);
 
     mpz_init(&temp1);
     mpz_init(&temp2);

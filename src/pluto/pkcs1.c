@@ -417,7 +417,7 @@ sign_hash(const RSA_private_key_t *k, const u_char *hash_val, size_t hash_len
     /* PKCS#1 v1.5 8.4 integer-to-octet-string conversion */
     ch = mpz_to_n(t1, sig_len);
     memcpy(sig_val, ch.ptr, sig_len);
-    pfree(ch.ptr);
+    free(ch.ptr);
 
     mpz_clear(t1);
     mpz_clear(t2);
@@ -545,7 +545,7 @@ RSA_decrypt(const RSA_private_key_t *key, chunk_t in, chunk_t *out)
 	return FALSE;
     }
 
-    clonetochunk(*out, pos, padded.len, "decrypted data");
+    clonetochunk(*out, pos, padded.len);
     freeanychunk(padded);
     return TRUE;
 }
@@ -598,7 +598,7 @@ pkcs1_build_signature(chunk_t tbs, int hash_alg, const RSA_private_key_t *key
 	pos = build_asn1_object(&signatureValue, ASN1_OCTET_STRING, siglen);
     }
     sign_hash(key, digestInfo.ptr, digestInfo.len, pos, siglen);
-    pfree(digestInfo.ptr);
+    free(digestInfo.ptr);
 
     return signatureValue;
 }

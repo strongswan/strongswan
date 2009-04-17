@@ -71,7 +71,7 @@ load_coded_file(const char *filename, prompt_pass_t *pass, const char *type
 	fseek(fd, 0, SEEK_END );
 	blob->len = ftell(fd);
 	rewind(fd);
-	blob->ptr = alloc_bytes(blob->len, type);
+	blob->ptr = malloc(blob->len);
 	bytes = fread(blob->ptr, 1, blob->len, fd);
 	fclose(fd);
 	plog("  loaded %s file '%s' (%d bytes)", type, filename, bytes);
@@ -111,7 +111,7 @@ load_coded_file(const char *filename, prompt_pass_t *pass, const char *type
 
 	/* a conversion error has occured */
 	plog("  %s", ugh);
-	pfree(blob->ptr);
+	free(blob->ptr);
 	*blob = empty_chunk;
     }
     else
@@ -146,7 +146,7 @@ load_rsa_private_key(const char* filename, prompt_pass_t *pass
 	    if (!pkcs1_parse_private_key(blob, key))
 		ugh = "syntax error in PKCS#1 private key file";
 	}
-	pfree(blob.ptr);
+	free(blob.ptr);
     }
     else
 	ugh = "error loading RSA private key file";
@@ -170,7 +170,7 @@ load_cert(const char *filename, const char *label, cert_t *cert)
     {
 	if (pgp)
 	{
-	    pgpcert_t *pgpcert = alloc_thing(pgpcert_t, "pgpcert");
+	    pgpcert_t *pgpcert = malloc_thing(pgpcert_t);
 	    *pgpcert = empty_pgpcert;
 	    if (parse_pgp(blob, pgpcert, NULL))
 	    {
@@ -187,7 +187,7 @@ load_cert(const char *filename, const char *label, cert_t *cert)
 	}
 	else
 	{
-	    x509cert_t *x509cert = alloc_thing(x509cert_t, "x509cert");
+	    x509cert_t *x509cert = malloc_thing(x509cert_t);
 	    *x509cert = empty_x509cert;
 	    if (parse_x509cert(blob, 0, x509cert))
 	    {

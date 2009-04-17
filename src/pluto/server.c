@@ -170,10 +170,10 @@ free_dead_ifaces(void)
 	    if (p->change == IFN_DELETE)
 	    {
 		*pp = p->next;	/* advance *pp */
-		pfree(p->vname);
-		pfree(p->rname);
+		free(p->vname);
+		free(p->rname);
 		close(p->fd);
-		pfree(p);
+		free(p);
 	    }
 	    else
 	    {
@@ -310,7 +310,7 @@ find_raw_ifaces4(void)
 	DBG(DBG_CONTROL, DBG_log("found %s with address %s"
 	    , ri.name, ip_str(&ri.addr)));
 	ri.next = rifaces;
-	rifaces = clone_thing(ri, "struct raw_iface");
+	rifaces = clone_thing(ri);
     }
 
     close(master_sock);
@@ -393,7 +393,7 @@ find_raw_ifaces6(void)
 		    , DBG_log("found %s with address %s"
 			, ri.name, sb));
 		ri.next = rifaces;
-		rifaces = clone_thing(ri, "struct raw_iface");
+		rifaces = clone_thing(ri);
 	    }
 	}
 	fclose(proc_sock);
@@ -663,9 +663,10 @@ add_entry:
 			nat_traversal_espinudp_socket(fd, ESPINUDP_WITH_NON_IKE);
 		    }
 
-		    q = alloc_thing(struct iface, "struct iface");
-		    q->rname = clone_str(ifp->name, "real device name");
-		    q->vname = clone_str(v->name, "virtual device name");
+		    q = malloc_thing(struct iface);
+		    zero(q);
+		    q->rname = clone_str(ifp->name);
+		    q->vname = clone_str(v->name);
 		    q->addr = ifp->addr;
 		    q->fd = fd;
 		    q->next = interfaces;
@@ -682,9 +683,10 @@ add_entry:
 			    break;
 			nat_traversal_espinudp_socket(fd,
 			    ESPINUDP_WITH_NON_ESP);
-			q = alloc_thing(struct iface, "struct iface");
-			q->rname = clone_str(ifp->name, "real device name");
-			q->vname = clone_str(v->name, "virtual device name");
+			q = malloc_thing(struct iface);
+			zero(q);
+			q->rname = clone_str(ifp->name);
+			q->vname = clone_str(v->name);
 			q->addr = ifp->addr;
 			setportof(htons(NAT_T_IKE_FLOAT_PORT), &q->addr);
 			q->fd = fd;
@@ -731,7 +733,7 @@ add_entry:
 	struct raw_iface *t = rifaces;
 
 	rifaces = t->next;
-	pfree(t);
+	free(t);
     }
 }
 

@@ -285,11 +285,9 @@ pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 	    {
 		chunk_t cert_blob;
 
-		x509cert_t *newcert = alloc_thing(x509cert_t
-					, "pkcs7 wrapped x509cert");
+		x509cert_t *newcert = malloc_thing(x509cert_t);
 
-		clonetochunk(cert_blob, object.ptr, object.len
-			    , "pkcs7 cert blob");
+		clonetochunk(cert_blob, object.ptr, object.len);
 		*newcert = empty_x509cert;
 
 		DBG(DBG_CONTROL | DBG_PARSING,
@@ -521,7 +519,7 @@ pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data
 	}
 
 	data->len = encrypted_content.len;
-	data->ptr = alloc_bytes(data->len, "decrypted data");
+	data->ptr = malloc(data->len);
 
 	switch (content_enc_alg)
 	{
@@ -568,7 +566,7 @@ pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data
 
 failed:
     freeanychunk(symmetric_key);
-    pfreeany(data->ptr);
+    free(data->ptr);
     return FALSE;
 }
 
@@ -679,8 +677,7 @@ pkcs7_build_signedData(chunk_t data, chunk_t attributes, const x509cert_t *cert
     {
 	encryptedDigest = pkcs1_build_signature(attributes, digest_alg
 				, key, FALSE);
-	clonetochunk(authenticatedAttributes, attributes.ptr, attributes.len
-	    , "authenticatedAttributes");
+	clonetochunk(authenticatedAttributes, attributes.ptr, attributes.len);
 	*authenticatedAttributes.ptr = ASN1_CONTEXT_C_0;
     }
     else
@@ -746,7 +743,7 @@ pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int cipher)
 	padding += DES_CBC_BLOCK_SIZE;
 
     out.len = data.len + padding;
-    out.ptr = alloc_bytes(out.len, "DES-encrypted output");
+    out.ptr = malloc(out.len);
 
     DBG(DBG_CONTROL,
 	DBG_log("padding %d bytes of data to multiple DES block size of %d bytes"

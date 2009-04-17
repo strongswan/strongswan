@@ -531,7 +531,7 @@ modecfg_send_msg(struct state *st, int isama_type, internal_addr_t *ia)
 		     );
 
     freeanychunk(st->st_tpacket);
-    clonetochunk(st->st_tpacket, msg.start, pbs_offset(&msg), "ModeCfg msg");
+    clonetochunk(st->st_tpacket, msg.start, pbs_offset(&msg));
 
     /* Transmit */
     send_packet(st, "ModeCfg msg");
@@ -1093,8 +1093,7 @@ xauth_inI0(struct msg_digest *md)
     {
 	/* send XAUTH reply msg and then delete ISAKMP SA */
 	freeanychunk(st->st_tpacket);
-	clonetochunk(st->st_tpacket, md->reply.start
-	    , pbs_offset(&md->reply), "XAUTH reply msg");
+	clonetochunk(st->st_tpacket, md->reply.start, pbs_offset(&md->reply));
 	send_packet(st, "XAUTH reply msg");
 	delete_state(st);
 	return STF_IGNORE;
@@ -1225,8 +1224,7 @@ xauth_inI1(struct msg_digest *md)
     {
 	/* send XAUTH ack msg and then delete ISAKMP SA */
 	freeanychunk(st->st_tpacket);
-	clonetochunk(st->st_tpacket, md->reply.start
-	    , pbs_offset(&md->reply), "XAUTH ack msg");
+	clonetochunk(st->st_tpacket, md->reply.start, pbs_offset(&md->reply));
 	send_packet(st, "XAUTH ack msg");
 	delete_state(st);
 	return STF_IGNORE;

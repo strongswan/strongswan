@@ -175,7 +175,7 @@ connect_to_host_pair(struct connection *c)
 	if (hp == NULL)
 	{
 	    /* no suitable host_pair -- build one */
-	    hp = alloc_thing(struct host_pair, "host_pair");
+	    hp = malloc_thing(struct host_pair);
 	    hp->me.addr = c->spd.this.host_addr;
 	    hp->him.addr = his_addr;
 	    hp->me.port = nat_traversal_enabled ? pluto_port : c->spd.this.host_port;
@@ -325,23 +325,23 @@ delete_connection(struct connection *c, bool relations)
 	{
 	    passert(hp->pending == NULL);	/* ??? must deal with this! */
 	    list_rm(struct host_pair, next, hp, host_pairs);
-	    pfree(hp);
+	    free(hp);
 	}
     }
-
     if (c->kind != CK_GOING_AWAY)
-	pfreeany(c->spd.that.virt);
-
+    {
+	free(c->spd.that.virt);
+    }
 #ifdef DEBUG
     cur_debugging = old_cur_debugging;
 #endif
-    pfreeany(c->name);
+    free(c->name);
     free_id_content(&c->spd.this.id);
-    pfreeany(c->spd.this.updown);
+    free(c->spd.this.updown);
     freeanychunk(c->spd.this.ca);
     free_ietfAttrList(c->spd.this.groups);
     free_id_content(&c->spd.that.id);
-    pfreeany(c->spd.that.updown);
+    free(c->spd.that.updown);
     freeanychunk(c->spd.that.ca);
     free_ietfAttrList(c->spd.that.groups);
     free_generalNames(c->requested_ca, TRUE);
@@ -357,7 +357,7 @@ delete_connection(struct connection *c, bool relations)
     alg_info_delref((struct alg_info **)&c->alg_info_esp);
     alg_info_delref((struct alg_info **)&c->alg_info_ike);
 
-    pfree(c);
+    free(c);
 }
 
 /* Delete connections with the specified name */
@@ -682,21 +682,23 @@ format_connection(char *buf, size_t buf_len
 static void
 unshare_connection_strings(struct connection *c)
 {
-    c->name = clone_str(c->name, "connection name");
+    c->name = clone_str(c->name);
 
     unshare_id_content(&c->spd.this.id);
-    c->spd.this.updown = clone_str(c->spd.this.updown, "updown");
+    c->spd.this.updown = clone_str(c->spd.this.updown);
     scx_share(c->spd.this.sc);
     share_cert(c->spd.this.cert);
     if (c->spd.this.ca.ptr != NULL)
-	clonetochunk(c->spd.this.ca, c->spd.this.ca.ptr, c->spd.this.ca.len, "ca string");
+	clonetochunk(c->spd.this.ca, c->spd.this.ca.ptr, c->spd.this.ca.len);
 
     unshare_id_content(&c->spd.that.id);
-    c->spd.that.updown = clone_str(c->spd.that.updown, "updown");
+    c->spd.that.updown = clone_str(c->spd.that.updown);
     scx_share(c->spd.that.sc);
     share_cert(c->spd.that.cert);
     if (c->spd.that.ca.ptr != NULL)
-	clonetochunk(c->spd.that.ca, c->spd.that.ca.ptr, c->spd.that.ca.len, "ca string");
+    {
+	clonetochunk(c->spd.that.ca, c->spd.that.ca.ptr, c->spd.that.ca.len);
+    }
 
     /* increment references to algo's */
     alg_info_addref((struct alg_info *)c->alg_info_esp);
@@ -976,8 +978,9 @@ add_connection(const whack_message_t *wm)
     && check_connection_end(&wm->left, &wm->right, wm))
     {
 	bool same_rightca, same_leftca;
-	struct connection *c = alloc_thing(struct connection, "struct connection");
+	struct connection *c = malloc_thing(struct connection);
 
+	zero(c);
 	c->name   = wm->name;
 	c->ikev1  = wm->ikev1;
 	c->policy = wm->policy;
@@ -1178,7 +1181,7 @@ add_connection(const whack_message_t *wm)
 /* Derive a template connection from a group connection and target.
  * Similar to instantiate().  Happens at whack --listen.
  * Returns name of new connection.  May be NULL.
- * Caller is responsible for pfreeing.
+ * Caller is responsible for freeing.
  */
 char *
 add_group_instance(struct connection *group, const ip_subnet *target)
@@ -1202,10 +1205,10 @@ add_group_instance(struct connection *group, const ip_subnet *target)
     }
     else
     {
-	t = clone_thing(*group, "group instance");
+	t = clone_thing(*group);
 	t->name = namebuf;
 	unshare_connection_strings(t);
-	name = clone_str(t->name, "group instance name");
+	name = clone_str(t->name);
 	t->spd.that.client = *target;
 	t->policy &= ~(POLICY_GROUP | POLICY_GROUTED);
 	t->kind = isanyaddr(&t->spd.that.host_addr) && !NEVER_NEGOTIATE(t->policy)
@@ -1274,7 +1277,7 @@ instantiate(struct connection *c, const ip_address *him
     passert(c->spd.next == NULL);
 
     c->instance_serial++;
-    d = clone_thing(*c, "temporary connection");
+    d = clone_thing(*c);
     d->spd.that.allow_any = FALSE;
 
     if (his_id != NULL)
@@ -1974,7 +1977,7 @@ cannot_oppo(struct connection *c
 	 * situation that we have.
 	 */
 
-	shunt_spd = clone_thing(nc->spd, "shunt eroute policy");
+	shunt_spd = clone_thing(nc->spd);
 
 	shunt_spd->next = nc->spd.next;
 	nc->spd.next = shunt_spd;
@@ -2793,8 +2796,7 @@ initiate_opportunistic_body(struct find_oppo_bundle *b
 	else
 	{
 	    /* set up the next query */
-	    struct find_oppo_continuation *cr = alloc_thing(struct find_oppo_continuation
-		, "opportunistic continuation");
+	    struct find_oppo_continuation *cr = malloc_thing(struct find_oppo_continuation);
 	    struct id id;
 
 	    b->policy_prio = c->prio;
@@ -3968,7 +3970,7 @@ show_connections_status(bool all, const char *name)
 	if (c->ikev1 && (name == NULL || streq(c->name, name)))
 	    count++;
     }
-    array = alloc_bytes(sizeof(struct connection *)*count, "connection array");
+    array = malloc(sizeof(struct connection *)*count);
 
     count=0;
     for (c = connections; c != NULL; c = c->ac_next)
@@ -4102,7 +4104,7 @@ show_connections_status(bool all, const char *name)
     if (count > 0)
 	whack_log(RC_COMMENT, BLANK_FORMAT);	/* spacer */
 
-    pfree(array);
+    free(array);
 }
 
 /* struct pending, the structure representing Quick Mode
@@ -4151,7 +4153,7 @@ add_pending(int whack_sock
     if (already_queued)
 	return;
 
-    p = alloc_thing(struct pending, "struct pending");
+    p = malloc_thing(struct pending);
     p->whack_sock = whack_sock;
     p->isakmp_sa = isakmp_sa;
     p->connection = c;
@@ -4208,7 +4210,7 @@ delete_pending(struct pending **pp)
     if (p->connection != NULL)
 	connection_discard(p->connection);
     close_any(p->whack_sock);
-    pfree(p);
+    free(p);
 }
 
 void

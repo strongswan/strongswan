@@ -95,7 +95,7 @@ pkcs10_add_subjectAltName(generalName_t **subjectAltNames, generalNames_t kind
 	break;
     }
 
-    gn = alloc_thing(generalName_t, "subjectAltName");
+    gn = malloc_thing(generalName_t);
     gn->kind = kind;
     gn->name = asn1_simple_object(asn1_type, name);
     gn->next = *subjectAltNames;
@@ -193,7 +193,7 @@ pkcs10_t*
 pkcs10_build(RSA_private_key_t *key, chunk_t subject, chunk_t challengePassword
 , generalName_t *subjectAltNames, int signature_alg)
 {
-    pkcs10_t *pkcs10 = alloc_thing(pkcs10_t, "pkcs10_t");
+    pkcs10_t *pkcs10 = malloc_thing(pkcs10_t);
 
     pkcs10->subject = subject;
     pkcs10->private_key = key;
@@ -215,6 +215,6 @@ pkcs10_free(pkcs10_t *pkcs10)
     if (pkcs10 != NULL)
     {
 	freeanychunk(pkcs10->request);
-	pfree(pkcs10);
+	free(pkcs10);
     }
 }

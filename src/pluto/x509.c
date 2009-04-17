@@ -1215,10 +1215,10 @@ free_generalNames(generalName_t* gn, bool free_name)
 	generalName_t *gn_top = gn;
 	if (free_name)
 	{
-	    pfree(gn->name.ptr);
+	    free(gn->name.ptr);
 	}
 	gn = gn->next;
-	pfree(gn_top);
+	free(gn_top);
     }
 }
 
@@ -1232,8 +1232,8 @@ free_x509cert(x509cert_t *cert)
     {
 	free_generalNames(cert->subjectAltName, FALSE);
 	free_generalNames(cert->crlDistributionPoints, FALSE);
-	pfreeany(cert->certificate.ptr);
-	pfree(cert);
+	free(cert->certificate.ptr);
+	free(cert);
 	cert = NULL;
     }
 }
@@ -1383,7 +1383,7 @@ decrypt_sig(chunk_t sig, int alg, const x509cert_t *issuer_cert,
 
 	    /* free memory */
 	    free_RSA_public_content(&rsa);
-	    pfree(decrypted.ptr);
+	    free(decrypted.ptr);
 	    mpz_clear(s);
 	    return TRUE;
 	}
@@ -1634,7 +1634,7 @@ parse_generalName(chunk_t blob, int level0)
 
 	if (valid_gn)
 	{
-	    generalName_t *gn = alloc_thing(generalName_t, "generalName");
+	    generalName_t *gn = malloc_thing(generalName_t);
 	    gn->kind = (objectID - GN_OBJ_OTHER_NAME) / 2;
 	    gn->name = object;
 	    gn->next = NULL;

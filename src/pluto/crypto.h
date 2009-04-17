@@ -101,9 +101,9 @@ extern void hmac_update(
 extern void hmac_final(u_char *output, struct hmac_ctx *ctx);
 
 #define hmac_final_chunk(ch, name, ctx) { \
-	pfreeany((ch).ptr); \
+	free((ch).ptr); \
 	(ch).len = (ctx)->hmac_digest_size; \
-	(ch).ptr = alloc_bytes((ch).len, name); \
+	(ch).ptr = malloc((ch).len); \
 	hmac_final((ch).ptr, (ctx)); \
     }
 #endif

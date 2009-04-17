@@ -32,7 +32,6 @@
 
 #include "alg_info.h"
 #include "constants.h"
-#ifndef NO_PLUTO
 #include "defs.h"
 #include "log.h"
 #include "whack.h"
@@ -41,28 +40,6 @@
 #include "crypto.h"
 #include "kernel_alg.h"
 #include "ike_alg.h"
-#else
-/*
- *	macros/functions for compilation without pluto (eg: spi for manual conns)
- */
-#include <assert.h>
-#define passert(x) assert(x)
-extern int debug;	/* eg: spi.c */
-#define DBG(cond, action)   { if (debug) { action ; } }
-#define DBG_log(x, args...) fprintf(stderr, x "\n" , ##args);
-#define RC_LOG_SERIOUS
-#define loglog(x, args...) fprintf(stderr, ##args);
-#define alloc_thing(thing, name) alloc_bytes(sizeof (thing), name)
-void * alloc_bytes(size_t size, const char *name) {
-	void *p=malloc(size);
-        if (p == NULL)
-		fprintf(stderr, "unable to malloc %lu bytes for %s",
-			(unsigned long) size, name);
-	memset(p, '\0', size);
-	return p;
-}
-#define pfreeany(ptr) free(ptr)
-#endif /* NO_PLUTO */
 
 /*
  * sadb/ESP aa attrib converters
@@ -235,7 +212,7 @@ modp_getbyname_esp(const char *const str, int len)
 void 
 alg_info_free(struct alg_info *alg_info)
 {
-    pfreeany(alg_info);
+    free(alg_info);
 }
 
 /*
@@ -244,7 +221,7 @@ alg_info_free(struct alg_info *alg_info)
 static void
 __alg_info_esp_add (struct alg_info_esp *alg_info, int ealg_id, unsigned ek_bits, int aalg_id, unsigned ak_bits)
 {
-    struct esp_info *esp_info=alg_info->esp;
+    struct esp_info *esp_info = alg_info->esp;
     unsigned cnt = alg_info->alg_info_cnt, i;
 
     /* check for overflows */
@@ -941,9 +918,8 @@ alg_info_esp_create_from_str (const char *alg_str, const char **err_p)
      * but this may require 2passes to know
      * transform count in advance.
      */
-    alg_info_esp = alloc_thing (struct alg_info_esp, "alg_info_esp");
-    if (!alg_info_esp)
-	goto out;
+    alg_info_esp = malloc_thing (struct alg_info_esp);
+    zero(alg_info_esp);
 
     pfs_name=index (alg_str, ';');
     if (pfs_name)
@@ -985,7 +961,7 @@ alg_info_esp_create_from_str (const char *alg_str, const char **err_p)
 out:
     if (ret < 0)
     {
-	pfreeany(alg_info_esp);
+	free(alg_info_esp);
 	alg_info_esp = NULL;
     }
     return alg_info_esp;
@@ -1001,13 +977,13 @@ alg_info_ike_create_from_str (const char *alg_str, const char **err_p)
      * but this may require 2passes to know
      * transform count in advance.
      */
-    alg_info_ike = alloc_thing (struct alg_info_ike, "alg_info_ike");
+    alg_info_ike = malloc_thing (struct alg_info_ike);
+    zero(alg_info_ike);
     alg_info_ike->alg_info_protoid = PROTO_ISAKMP;
 
-    if (alg_info_parse_str((struct alg_info *)alg_info_ike,
-			   alg_str, err_p) < 0)
+    if (alg_info_parse_str((struct alg_info *)alg_info_ike, alg_str, err_p) < 0)
     {
-	pfreeany(alg_info_ike);
+	free(alg_info_ike);
 	return NULL;
     }
     return alg_info_ike;

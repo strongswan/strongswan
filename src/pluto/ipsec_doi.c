@@ -206,7 +206,7 @@ accept_KE(chunk_t *dest, const char *val_name
 	/* XXX Could send notification back */
 	return INVALID_KEY_INFORMATION;
     }
-    clonereplacechunk(*dest, pbs->cur, pbs_left(pbs), val_name);
+    clonereplacechunk(*dest, pbs->cur, pbs_left(pbs));
     DBG_cond_dump_chunk(DBG_CRYPT, "DH public value received:\n", *dest);
     return NOTHING_WRONG;
 }
@@ -254,7 +254,7 @@ build_and_ship_nonce(chunk_t *n, pb_stream *outs, u_int8_t np
 , const char *name)
 {
     freeanychunk(*n);
-    setchunk(*n, alloc_bytes(DEFAULT_NONCE_SIZE, name), DEFAULT_NONCE_SIZE);
+    setchunk(*n, malloc(DEFAULT_NONCE_SIZE), DEFAULT_NONCE_SIZE);
     get_rnd_bytes(n->ptr, DEFAULT_NONCE_SIZE);
     return out_generic_chunk(np, &isakmp_nonce_desc, outs, *n, name);
 }
@@ -284,7 +284,7 @@ collect_rw_ca_candidates(struct msg_digest *md, generalName_t **top)
 	    }
 	    if (new_entry)
 	    {
-		gn = alloc_thing(generalName_t, "generalName");
+		gn = malloc_thing(generalName_t);
 		gn->kind = GN_DIRECTORY_NAME;
 		gn->name = d->spd.that.ca;
 		gn->next = *top;
@@ -962,8 +962,7 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 
 	/* save initiator SA for later HASH */
 	passert(st->st_p1isa.ptr == NULL);	/* no leak!  (MUST be first time) */
-	clonetochunk(st->st_p1isa, sa_start, rbody.cur - sa_start
-	    , "sa in main_outI1");
+	clonetochunk(st->st_p1isa, sa_start, rbody.cur - sa_start);
     }
 
     /* if enabled send Pluto Vendor ID */
@@ -1034,9 +1033,7 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 
     close_message(&rbody);
     close_output_pbs(&reply);
-
-    clonetochunk(st->st_tpacket, reply.start, pbs_offset(&reply)
-	, "reply packet for main_outI1");
+    clonetochunk(st->st_tpacket, reply.start, pbs_offset(&reply));
 
     /* Transmit */
 
@@ -1193,11 +1190,11 @@ skeyid_digisig(struct state *st)
      * so we have to build a temporary concatentation.
      */
     nir.len = st->st_ni.len + st->st_nr.len;
-    nir.ptr = alloc_bytes(nir.len, "Ni + Nr in skeyid_digisig");
+    nir.ptr = malloc(nir.len);
     memcpy(nir.ptr, st->st_ni.ptr, st->st_ni.len);
     memcpy(nir.ptr+st->st_ni.len, st->st_nr.ptr, st->st_nr.len);
     hmac_init_chunk(&ctx, st->st_oakley.hasher, nir);
-    pfree(nir.ptr);
+    free(nir.ptr);
 
     hmac_update_chunk(&ctx, st->st_shared);
     hmac_final_chunk(st->st_skeyid, "st_skeyid in skeyid_digisig()", &ctx);
@@ -1319,7 +1316,7 @@ generate_skeyids_iv(struct state *st)
 	    }
 	    k = keytemp;
 	}
-	clonereplacechunk(st->st_enc_key, k, keysize, "st_enc_key");
+	clonereplacechunk(st->st_enc_key, k, keysize);
     }
 
     DBG(DBG_CRYPT,
@@ -1538,7 +1535,7 @@ try_RSA_signature(const u_char hash_val[MAX_DIGEST_LEN], size_t hash_len
 
 	temp_s = mpz_to_n(c, sig_len);	/* back to octets */
 	memcpy(s, temp_s.ptr, sig_len);
-	pfree(temp_s.ptr);
+	free(temp_s.ptr);
 	mpz_clear(c);
     }
 
@@ -1849,7 +1846,7 @@ accept_nonce(struct msg_digest *md, chunk_t *dest, const char *name)
 	    , name , MINIMUM_NONCE_SIZE, MAXIMUM_NONCE_SIZE);
 	return PAYLOAD_MALFORMED;	/* ??? */
     }
-    clonereplacechunk(*dest, nonce_pbs->cur, len, "nonce");
+    clonereplacechunk(*dest, nonce_pbs->cur, len);
     return NOTHING_WRONG;
 }
 
@@ -2206,8 +2203,7 @@ quick_outI1(int whack_sock
     }
 
     /* save packet, now that we know its size */
-    clonetochunk(st->st_tpacket, reply.start, pbs_offset(&reply)
-	, "reply packet from quick_outI1");
+    clonetochunk(st->st_tpacket, reply.start, pbs_offset(&reply));
 
     /* send the packet */
 
@@ -2314,8 +2310,8 @@ decode_cr(struct msg_digest *md, struct connection *c)
 		if (!is_asn1(ca_name))
 		    continue;
 
-		gn = alloc_thing(generalName_t, "generalName");
-		clonetochunk(ca_name, ca_name.ptr,ca_name.len, "ca name");
+		gn = malloc_thing(generalName_t);
+		clonetochunk(ca_name, ca_name.ptr,ca_name.len);
 		gn->kind = GN_DIRECTORY_NAME;
 		gn->name = ca_name;
 		gn->next = c->requested_ca;
@@ -2895,8 +2891,8 @@ compute_proto_keymat(struct state *st
 	ctx_peer = ctx_me;	/* duplicate initial conditions */
 
 	needed_space = needed_len + pad_up(needed_len, ctx_me.hmac_digest_size);
-	replace(pi->our_keymat, alloc_bytes(needed_space, "keymat in compute_keymat()"));
-	replace(pi->peer_keymat, alloc_bytes(needed_space, "peer_keymat in quick_inI1_outR1()"));
+	replace(pi->our_keymat, malloc(needed_space));
+	replace(pi->peer_keymat, malloc(needed_space));
 
 	for (i = 0;; )
 	{
@@ -3225,7 +3221,7 @@ main_inI1_outR1(struct msg_digest *md)
     close_message(&md->rbody);
 
     /* save initiator SA for HASH */
-    clonereplacechunk(st->st_p1isa, sa_pd->pbs.start, pbs_room(&sa_pd->pbs), "sa in main_inI1_outR1()");
+    clonereplacechunk(st->st_p1isa, sa_pd->pbs.start, pbs_room(&sa_pd->pbs));
 
     return STF_OK;
 }
@@ -3750,8 +3746,7 @@ main_id_and_auth(struct msg_digest *md
 	if (r == STF_SUSPEND)
 	{
 	    /* initiate/resume asynchronous DNS lookup for key */
-	    struct key_continuation *nkc
-		= alloc_thing(struct key_continuation, "key continuation");
+	    struct key_continuation *nkc = malloc_thing(struct key_continuation);
 	    enum key_oppo_step step_done = kc == NULL? kos_null : kc->step;
 	    err_t ugh = NULL;
 
@@ -4377,8 +4372,7 @@ quick_inI1_outR1_start_query(struct verify_oppo_bundle *b
     struct msg_digest *md = b->md;
     struct state *p1st = md->st;
     struct connection *c = p1st->st_connection;
-    struct verify_oppo_continuation *vc
-	= alloc_thing(struct verify_oppo_continuation, "verify continuation");
+    struct verify_oppo_continuation *vc	= malloc_thing(struct verify_oppo_continuation);
     struct id id	/* subject of query */
 	, *our_id	/* needed for myid playing */
 	, our_id_space;	/* ephemeral: no need for unshare_id_content */

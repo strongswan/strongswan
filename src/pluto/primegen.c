@@ -162,7 +162,7 @@ generate_elg_prime( int mode, unsigned pbits, unsigned qbits,
 	    }
 	    /* init m_out_of_n() */
 #ifdef PLUTO
-	    perms = alloc_bytes( m, "perms" );
+	    perms = malloc(m);
 #else
 	    perms = m_alloc_clear( m );
 #endif

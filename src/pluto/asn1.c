@@ -163,7 +163,7 @@ asn1_build_known_oid(int n)
     }
 	
     i = oid_names[n].level + 1;
-    oid.ptr = alloc_bytes(2 + i, "known oid");
+    oid.ptr = malloc(2 + i);
     oid.len = i;
     oid.ptr[0] = ASN1_OID;
     oid.ptr[1] = i;
@@ -281,7 +281,7 @@ build_asn1_object(chunk_t *object, asn1_t type, size_t datalen)
 
     /* allocate memory for the asn.1 TLV object */
     object->len = 1 + length.len + datalen;
-    object->ptr = alloc_bytes(object->len, "asn1 object");
+    object->ptr = malloc(object->len);
 
     /* set position pointer at the start of the object */
     pos = object->ptr;

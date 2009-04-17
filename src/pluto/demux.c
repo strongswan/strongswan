@@ -954,12 +954,12 @@ free_md_pool(void)
 	if (md == NULL)
 	    break;
 	md_pool = md->next;
-	pfree(md);
+	free(md);
     }
 }
 
 static struct msg_digest *
-alloc_md(void)
+malloc_md(void)
 {
     struct msg_digest *md = md_pool;
 
@@ -971,7 +971,7 @@ alloc_md(void)
     static const struct msg_digest blank_md;
 
     if (md == NULL)
-	md = alloc_thing(struct msg_digest, "msg_digest");
+	md = malloc_thing(struct msg_digest);
     else
 	md_pool = md->next;
 
@@ -991,7 +991,7 @@ void
 release_md(struct msg_digest *md)
 {
     freeanychunk(md->raw_packet);
-    pfreeany(md->packet_pbs.start);
+    free(md->packet_pbs.start);
     md->packet_pbs.start = NULL;
     md->next = md_pool;
     md_pool = md;
@@ -1030,7 +1030,7 @@ comm_handle(const struct iface *ifp)
 	return;	/* no normal message to read */
 #endif /* defined(IP_RECVERR) && defined(MSG_ERRQUEUE) */
 
-    md = alloc_md();
+    md = malloc_md();
     md->iface = ifp;
 
     if (read_packet(md))
@@ -1069,7 +1069,7 @@ read_packet(struct msg_digest *md)
     happy(anyaddr(addrtypeof(&ifp->addr), &md->sender));
     zero(&from.sa);
     ioctl(ifp->fd, FIONREAD, &packet_len);
-    buffer = alloc_bytes(packet_len, "buffer read packet");
+    buffer = malloc(packet_len);
     packet_len = recvfrom(ifp->fd, buffer, packet_len, 0
 	, &from.sa, &from_len);
 
@@ -1171,9 +1171,9 @@ read_packet(struct msg_digest *md)
 	    return FALSE;
 	}
 	packet_len -= sizeof(u_int32_t);
-	buffer_nat = alloc_bytes(packet_len, "buffer read packet");
+	buffer_nat = malloc(packet_len);
 	memcpy(buffer_nat, buffer + sizeof(u_int32_t), packet_len);
-	pfree(buffer);
+	free(buffer);
 	buffer = buffer_nat;
     }
 
@@ -1793,8 +1793,7 @@ process_packet(struct msg_digest **mdp)
 	    /* XXX Detect weak keys */
 
 	    /* grab a copy of raw packet (for duplicate packet detection) */
-	    clonetochunk(md->raw_packet, md->packet_pbs.start
-		, pbs_room(&md->packet_pbs), "raw packet");
+	    clonetochunk(md->raw_packet, md->packet_pbs.start, pbs_room(&md->packet_pbs));
 
 	    /* Decrypt everything after header */
 	    if (!new_iv_set)
@@ -2128,7 +2127,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 
 	    /* replace previous receive packet with latest */
 
-	    pfreeany(st->st_rpacket.ptr);
+	    free(st->st_rpacket.ptr);
 
 	    if (md->encrypted)
 	    {
@@ -2140,7 +2139,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 	    {
 		clonetochunk(st->st_rpacket
 		    , md->packet_pbs.start
-		    , pbs_room(&md->packet_pbs), "raw packet");
+		    , pbs_room(&md->packet_pbs));
 	    }
 
 	    /* free previous transmit packet */
@@ -2151,8 +2150,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 	    {
 		close_output_pbs(&md->reply);   /* good form, but actually a no-op */
 
-		clonetochunk(st->st_tpacket, md->reply.start
-		    , pbs_offset(&md->reply), "reply packet");
+		clonetochunk(st->st_tpacket, md->reply.start, pbs_offset(&md->reply));
 
 		if (nat_traversal_enabled)
 		    nat_traversal_change_port_lookup(md, md->st);

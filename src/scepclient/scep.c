@@ -276,7 +276,7 @@ scep_generate_pkcs10_fingerprint(chunk_t pkcs10, chunk_t *fingerprint)
     /* the fingerprint is the MD5 hash in hexadecimal format */
     compute_digest(pkcs10, OID_MD5, &digest);
     fingerprint->len = 2*digest.len;
-    fingerprint->ptr = alloc_bytes(fingerprint->len + 1, "fingerprint");
+    fingerprint->ptr = malloc(fingerprint->len + 1);
     datatot(digest.ptr, digest.len, 16, fingerprint->ptr, fingerprint->len + 1);
 }
 
@@ -296,14 +296,14 @@ scep_generate_transaction_id(const RSA_public_key_t *rsak
     u_char *pos;
 
     compute_digest(public_key, OID_MD5, &digest);
-    pfree(public_key.ptr);
+    free(public_key.ptr);
 
     /* is the most significant bit of the digest set? */
     msb_set = (*digest.ptr & 0x80) == 0x80;
 
     /* allocate space for the serialNumber */
     serialNumber->len = msb_set + digest.len;
-    serialNumber->ptr = alloc_bytes(serialNumber->len, "serialNumber");
+    serialNumber->ptr = malloc(serialNumber->len);
 
     /* the serial number as the two's complement of the digest */
     pos = serialNumber->ptr;
@@ -315,7 +315,7 @@ scep_generate_transaction_id(const RSA_public_key_t *rsak
 
     /* the transaction id is the serial number in hex format */
     transID->len = 2*digest.len;
-    transID->ptr = alloc_bytes(transID->len + 1, "transID");
+    transID->ptr = malloc(transID->len + 1);
     datatot(digest.ptr, digest.len, 16, transID->ptr, transID->len + 1);
 }
 
@@ -415,7 +415,7 @@ escape_http_request(chunk_t req)
 
     /* compute and allocate the size of the base64-encoded request */
     int len = 1 + 4*((req.len + 2)/3);
-    char *encoded_req = alloc_bytes(len, "encoded request");
+    char *encoded_req = malloc(len);
 
     /* do the base64 conversion */
     len = datatot(req.ptr, req.len, 64, encoded_req, len);
@@ -431,7 +431,7 @@ escape_http_request(chunk_t req)
 	    plus++;
     }
 
-    escaped_req = alloc_bytes(len + 3*(lines + plus), "escaped request");
+    escaped_req = malloc(len + 3*(lines + plus));
 
     /* escape special characters in the request */
     p1 = encoded_req;
@@ -457,7 +457,7 @@ escape_http_request(chunk_t req)
 	n++;
     }
     *p2 = '\0';
-    pfreeany(encoded_req);
+    free(encoded_req);
     return escaped_req;
 }
 #endif
@@ -498,10 +498,10 @@ scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op
 	    /* form complete url */
 	    int len = strlen(url) + 20 + strlen(operation) + strlen(escaped_req) + 1;
 
-	    complete_url = alloc_bytes(len, "complete url");
+	    complete_url = malloc(len);
 	    snprintf(complete_url, len, "%s?operation=%s&message=%s"
 		    , url, operation, escaped_req);
-	    pfreeany(escaped_req);
+	    free(escaped_req);
 
 	    curl_easy_setopt(curl, CURLOPT_HTTPGET, TRUE);
 	    headers = curl_slist_append(headers, "Pragma:");
@@ -515,7 +515,7 @@ scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op
 	    /* form complete url */
 	    int len = strlen(url) + 11 + strlen(operation) + 1;
 
-	    complete_url = alloc_bytes(len, "complete url");
+	    complete_url = malloc(len);
 	    snprintf(complete_url, len, "%s?operation=%s", url, operation);
 
 	    curl_easy_setopt(curl, CURLOPT_HTTPGET, FALSE);
@@ -533,7 +533,7 @@ scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op
 	/* form complete url */
 	int len = strlen(url) + 32 + strlen(operation) + 1;
 
-	complete_url = alloc_bytes(len, "complete url");
+	complete_url = malloc(len);
 	snprintf(complete_url, len, "%s?operation=%s&message=CAIdentifier"
 		, url, operation);
 
@@ -567,7 +567,7 @@ scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op
     }
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    pfreeany(complete_url);
+    free(complete_url);
 
     return (res == CURLE_OK);
 #else   /* !LIBCURL */

@@ -75,8 +75,8 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.policy  = POLICY_ENCRYPT | POLICY_TUNNEL | POLICY_RSASIG |
 								POLICY_PFS | POLICY_MOBIKE;
 
-	cfg->conn_default.ike                   = clone_str(ike_defaults, "ike_defaults");
-	cfg->conn_default.esp                   = clone_str(esp_defaults, "esp_defaults");
+	cfg->conn_default.ike                   = clone_str(ike_defaults);
+	cfg->conn_default.esp                   = clone_str(esp_defaults);
 	cfg->conn_default.sa_ike_life_seconds   = OAKLEY_ISAKMP_SA_LIFETIME_DEFAULT;
 	cfg->conn_default.sa_ipsec_life_seconds = PLUTO_SA_LIFE_DURATION_DEFAULT;
 	cfg->conn_default.sa_rekey_margin       = SA_REPLACEMENT_MARGIN_DEFAULT;
@@ -193,7 +193,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		if (streq(value, "%modeconfig") || streq(value, "%modecfg") ||
 			streq(value, "%config") || streq(value, "%cfg"))
 		{
-			pfree(end->srcip);
+			free(end->srcip);
 			end->srcip = NULL;
 			end->modecfg = TRUE;
 		}
@@ -336,7 +336,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			plog("# bad subnet: %s=%s [%s]", name, value, ugh);
 			goto err;
 		}
-		end->subnet = clone_str(value, "subnetwithin");
+		end->subnet = clone_str(value);
 		break;
 	}
 	case KW_PROTOPORT:
@@ -356,7 +356,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			if (cfg->defaultroute.defined)
 			{
 				addrtot(&cfg->defaultroute.addr, 0, buf, sizeof(buf));
-				end->srcip = clone_str(buf, "natip");
+				end->srcip = clone_str(buf);
 			}
 			else
 			{
@@ -375,7 +375,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 				plog("# bad addr: %s=%s [%s]", name, value, ugh);
 				goto err;
 			}
-			end->srcip = clone_str(value, "srcip");
+			end->srcip = clone_str(value);
 		}
 		end->has_natip = TRUE;
 		conn->policy |= POLICY_TUNNEL;
@@ -426,7 +426,7 @@ handle_firewall( const char *label, starter_end_t *end, starter_config_t *cfg)
 		}
 		else
 		{
-			end->updown = clone_str(firewall_defaults, "firewall_defaults");
+			end->updown = clone_str(firewall_defaults);
 			end->firewall = FALSE;
 		}
 	}
@@ -467,9 +467,9 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 		{
 			if (cfg->parse_also)
 			{
-				also_t *also = alloc_thing(also_t, "also_t");
+				also_t *also = malloc_thing(also_t);
 
-				also->name = clone_str(kw->value, "also");
+				also->name = clone_str(kw->value);
 				also->next = conn->also;
 				conn->also = also;
 
@@ -698,7 +698,7 @@ static void
 conn_default(char *name, starter_conn_t *conn, starter_conn_t *def)
 {
 	memcpy(conn, def, sizeof(starter_conn_t));
-	conn->name = clone_str(name, "conn name");
+	conn->name = clone_str(name);
 
 	clone_args(KW_CONN_FIRST, KW_CONN_LAST, (char *)conn, (char *)def);
 	clone_args(KW_END_FIRST, KW_END_LAST, (char *)&conn->left, (char *)&def->left);
@@ -727,9 +727,9 @@ load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
 		{
 			if (cfg->parse_also)
 			{
-				also_t *also = alloc_thing(also_t, "also_t");
+				also_t *also = malloc_thing(also_t);
 
-				also->name = clone_str(kw->value, "also");
+				also->name = clone_str(kw->value);
 				also->next = ca->also;
 				ca->also = also;
 
@@ -766,7 +766,7 @@ static void
 ca_default(char *name, starter_ca_t *ca, starter_ca_t *def)
 {
 	memcpy(ca, def, sizeof(starter_ca_t));
-	ca->name = clone_str(name, "ca name");
+	ca->name = clone_str(name);
 
 	clone_args(KW_CA_FIRST, KW_CA_LAST, (char *)ca, (char *)def);
 }
@@ -896,8 +896,8 @@ free_also(also_t *head)
 		also_t *also = head;
 
 		head = also->next;
-		pfree(also->name);
-		pfree(also);
+		free(also->name);
+		free(also);
 	}
 }
 
@@ -942,7 +942,7 @@ confread_free(starter_config_t *cfg)
 
 		conn = conn->next;
 		confread_free_conn(conn_aux);
-		pfree(conn_aux);
+		free(conn_aux);
 	}
 
 	confread_free_ca(&cfg->ca_default);
@@ -953,10 +953,10 @@ confread_free(starter_config_t *cfg)
 
 		ca = ca->next;
 		confread_free_ca(ca_aux);
-		pfree(ca_aux);
+		free(ca_aux);
 	}
 
-	pfree(cfg);
+	free(cfg);
 }
 
 /*
@@ -980,7 +980,7 @@ confread_load(const char *file)
 	{
 		return NULL;
 	}
-	cfg = (starter_config_t *)alloc_thing(starter_config_t, "starter_config_t");
+	cfg = malloc_thing(starter_config_t);
 
 	/* set default values */
 	default_values(cfg);
@@ -1021,7 +1021,7 @@ confread_load(const char *file)
 		DBG(DBG_CONTROL,
 			DBG_log("Loading ca '%s'", sca->name)
 		)
-		ca = (starter_ca_t *)alloc_thing(starter_ca_t, "starter_ca_t");
+		ca = malloc_thing(starter_ca_t);
 
 		ca_default(sca->name, ca, &cfg->ca_default);
 		ca->kw =  sca->kw;
@@ -1092,7 +1092,7 @@ confread_load(const char *file)
 		DBG(DBG_CONTROL,
 			DBG_log("Loading conn '%s'", sconn->name)
 		)
-		conn = (starter_conn_t *)alloc_thing(starter_conn_t, "starter_conn_t");
+		conn = malloc_thing(starter_conn_t);
 
 		conn_default(sconn->name, conn, &cfg->conn_default);
 		conn->kw =  sconn->kw;

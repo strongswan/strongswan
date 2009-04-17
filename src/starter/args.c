@@ -269,8 +269,10 @@ free_list(char **list)
     char **s;
 
     for (s = list; *s; s++)
-	pfree(*s);
-    pfree(list);
+    {
+	free(*s);
+    }
+    free(list);
 }
 
 char **
@@ -279,7 +281,7 @@ new_list(char *value)
     char *val, *b, *e, *end, **ret;
     int count;
 
-    val = value ? clone_str(value, "list value") : NULL;
+    val = value ? clone_str(value) : NULL;
     if (!val)
 	return NULL;
     end = val + strlen(val);
@@ -293,20 +295,20 @@ new_list(char *value)
     }
     if (count == 0)
     {
-	pfree(val);
+	free(val);
 	return NULL;
     }
-    ret = (char **)alloc_bytes((count+1) * sizeof(char *), "list");
+    ret = (char **)malloc((count+1) * sizeof(char *));
 
     for (b = val, count = 0; b < end; )
     {
 	for (e = b; (*e != '\0'); e++);
 	if (e != b)
-	    ret[count++] = clone_str(b, "list value");
+	    ret[count++] = clone_str(b);
 	b = e + 1;
     }
     ret[count] = NULL;
-    pfree(val);
+    free(val);
     return ret;
 }
 
@@ -455,10 +457,10 @@ assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
 	    char **cp = (char **)p;
 
 	    /* free any existing string */
-	    pfreeany(*cp);
+	    free(*cp);
 
 	    /* assign the new string */
-	    *cp = clone_str(kw->value, "str_value");
+	    *cp = clone_str(kw->value);
 	}
 	break;
     case ARG_LST:
@@ -521,7 +523,7 @@ free_args(kw_token_t first, kw_token_t last, char *base)
 	    {
 		char **cp = (char **)p;
 
-		pfreeany(*cp);
+		free(*cp);
 		*cp = NULL;
 	    }
 	    break;
@@ -557,7 +559,7 @@ clone_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 	    char **cp1 = (char **)(base1 + token_info[token].offset);
 	    char **cp2 = (char **)(base2 + token_info[token].offset);
 
-	    *cp1 = clone_str(*cp2, "cloned str");
+	    *cp1 = clone_str(*cp2);
 	}
     }
 }

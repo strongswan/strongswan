@@ -76,13 +76,13 @@ extern void log_mpidump( const char *text, MPI a );
 
 #define m_alloc_ptrs_clear(pp, n) { \
 	int c = (n); \
-	(pp) = alloc_bytes((n) * sizeof(*(pp)), "m_alloc_ptrs_clear"); \
+	(pp) = malloc((n) * sizeof(*(pp))); \
 	while (c > 0) (pp)[--c] = NULL; \
     }
 
 extern u_char *get_random_bits(size_t nbits, int level, int secure);
-#define m_alloc(sz) alloc_bytes((sz), "m_alloc")	/* not initialized */
-#define m_free(n) pfree(n)  /* always freeing something from get_random_bits */
+#define m_alloc(sz) malloc((sz))	/* not initialized */
+#define m_free(n) free(n)  /* always freeing something from get_random_bits */
 
 /* declarations from gnupg-1.0.0/include/cipher.h */
 /*-- primegen.c --*/

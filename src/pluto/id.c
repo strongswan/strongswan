@@ -88,7 +88,7 @@ calc_myid_str(enum myid_state s)
     char buf[BUF_LEN];
 
     idtoa(&myids[s], buf, BUF_LEN);
-    replace(myid_str[s], clone_str(buf, "myid string"));
+    replace(myid_str[s], clone_str(buf));
 }
 
 
@@ -145,7 +145,7 @@ set_myFQDN(void)
 
 	if (!strcaseeq(FQDN, "localhost.localdomain"))
 	{
-	    clonetochunk(myids[MYID_HOSTNAME].name, FQDN, strlen(FQDN), "my FQDN");
+	    clonetochunk(myids[MYID_HOSTNAME].name, FQDN, strlen(FQDN));
 	    myids[MYID_HOSTNAME].kind = ID_FQDN;
 	    calc_myid_str(MYID_HOSTNAME);
 	}
@@ -365,7 +365,7 @@ unshare_id_content(struct id *id)
     case ID_USER_FQDN:
     case ID_DER_ASN1_DN:
     case ID_KEY_ID:
-	id->name.ptr = clone_bytes(id->name.ptr, id->name.len, "keep id name");
+	id->name.ptr = clone_bytes(id->name.ptr, id->name.len);
 	break;
     case ID_MYID:
     case ID_NONE:

@@ -244,7 +244,7 @@ perpeer_logfree(struct connection *c)
     perpeer_logclose(c);
     if (c->log_file_name != NULL)
     {
-	pfree(c->log_file_name);
+	free(c->log_file_name);
 	c->log_file_name = NULL;
 	c->log_file_err = FALSE;
     }
@@ -282,7 +282,7 @@ open_peerlog(struct connection *c)
 	    + strlen(base_perpeer_logdir)
 	    + sizeof("//.log")
 	    + 1;
-	c->log_file_name = alloc_bytes(lf_len, "per-peer log file name");
+	c->log_file_name = malloc(lf_len);
 
 	fprintf(stderr, "base dir |%s| dname |%s| peername |%s|"
 		, base_perpeer_logdir, dname, peername);
@@ -299,7 +299,7 @@ open_peerlog(struct connection *c)
 	int   bpl_len = strlen(base_perpeer_logdir);
 	char *slashloc;
 
-	dname = clone_str(c->log_file_name, "temp copy of file name");
+	dname = clone_str(c->log_file_name);
 	dname = dirname(dname);
 
 	if (access(dname, W_OK) != 0)
@@ -311,7 +311,7 @@ open_peerlog(struct connection *c)
 		    syslog(LOG_CRIT, "can not write to %s: %s"
 			   , dname, strerror(errno));
 		    c->log_file_err = TRUE;
-		    pfree(dname);
+		    free(dname);
 		    return;
 		}
 	    }
@@ -338,7 +338,7 @@ open_peerlog(struct connection *c)
 		    syslog(LOG_CRIT, "can not create dir %s: %s"
 			   , dname, strerror(errno));
 		    c->log_file_err = TRUE;
-		    pfree(dname);
+		    free(dname);
 		    return;
 		}
 		syslog(LOG_DEBUG, "created new directory %s", dname);
@@ -346,8 +346,7 @@ open_peerlog(struct connection *c)
 		slashloc++;
 	    }
 	}
-
-	pfree(dname);
+	free(dname);
     }
 
     c->log_file = fopen(c->log_file_name, "a");

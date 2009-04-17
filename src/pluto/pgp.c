@@ -600,9 +600,8 @@ free_pgpcert(pgpcert_t *cert)
 {
     if (cert != NULL)
     {
-	if (cert->certificate.ptr != NULL)
-	    pfree(cert->certificate.ptr);
-	pfree(cert);
+	free(cert->certificate.ptr);
+	free(cert);
     }
 }
 

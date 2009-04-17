@@ -189,9 +189,9 @@ record_and_initiate_opportunistic(const ip_subnet *ours
      * which can't do this itself.
      */
     {
-	struct bare_shunt *bs = alloc_thing(struct bare_shunt, "bare shunt");
+	struct bare_shunt *bs = malloc_thing(struct bare_shunt);
 
-	bs->why = clone_str(why, "story for bare shunt");
+	bs->why = clone_str(why);
 	bs->ours = *ours;
 	bs->his = *his;
 	bs->transport_proto = transport_proto;
@@ -233,7 +233,7 @@ record_and_initiate_opportunistic(const ip_subnet *ours
 	    && portof(&his->addr) == portof(&p->his.addr))
 	    {
 		*pp = p->next;
-		pfree(p);
+		free(p);
 		break;
 	    }
 	}
@@ -897,8 +897,8 @@ free_bare_shunt(struct bare_shunt **pp)
 
 	*pp = p->next;
 	DBG_bare_shunt("delete", p);
-	pfree(p->why);
-	pfree(p);
+	free(p->why);
+	free(p);
     }
 }
 
@@ -1024,13 +1024,13 @@ replace_bare_shunt(const ip_address *src, const ip_address *dst
 			   , 0, null_proto_info
 			   , SHUNT_PATIENCE, ERO_ADD, why))
 	    {
-		struct bare_shunt *bs = alloc_thing(struct bare_shunt, "bare shunt");
+		struct bare_shunt *bs = malloc_thing(struct bare_shunt);
 
 		bs->ours = this_broad_client;
 		bs->his =  that_broad_client;
 		bs->transport_proto = 0;
 		bs->said.proto = SA_INT;
-		bs->why = clone_str(why, "bare shunt story");
+		bs->why = clone_str(why);
 		bs->policy_prio = policy_prio;
 		bs->said.spi = htonl(shunt_spi);
 		bs->said.dst = *null_host;
@@ -1428,7 +1428,7 @@ scan_proc_shunts(void)
 	struct eroute_info *p = orphaned_holds;
 
 	orphaned_holds = p->next;
-	pfree(orphaned_holds);
+	free(orphaned_holds);
     }
 
     /* decode the /proc file.  Don't do anything strenuous to it
@@ -1582,7 +1582,7 @@ scan_proc_shunts(void)
 			    , ourst, ourport, hist, hisport, sat, eri.transport_proto)
 		     )
 		    eri.next = orphaned_holds;
-		    orphaned_holds = clone_thing(eri, "orphaned %hold");
+		    orphaned_holds = clone_thing(eri);
 		}
 		break;
 
@@ -1607,7 +1607,7 @@ scan_proc_shunts(void)
 			else if (nw - bs->last_activity > SHUNT_PATIENCE)
 			{
 			    eri.next = expired;
-			    expired = clone_thing(eri, "expired %pass");
+			    expired = clone_thing(eri);
 			}
 		    }
 		}
@@ -1643,7 +1643,7 @@ scan_proc_shunts(void)
 	    , SPI_PASS	/* not used because we are deleting.  This value is a filler */
 	    , FALSE, p->transport_proto, "delete expired bare shunts");
 	expired = p->next;
-	pfree(p);
+	free(p);
     }
 }
 

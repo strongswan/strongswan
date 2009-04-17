@@ -27,7 +27,7 @@
 MPI
 mpi_alloc( unsigned nlimbs UNUSED )
 {
-    MPI n = alloc_bytes(sizeof *n, "mpi_alloc");
+    MPI n = malloc(sizeof *n);
 
     mpz_init(n);
     return n;
@@ -42,7 +42,7 @@ mpi_alloc_secure( unsigned nlimbs )
 MPI
 mpi_alloc_set_ui( unsigned long u)
 {
-    MPI n = alloc_bytes(sizeof *n, "mpi_copy");
+    MPI n = malloc(sizeof *n);
 
     mpz_init_set_ui(n, u);
     return n;
@@ -51,7 +51,7 @@ mpi_alloc_set_ui( unsigned long u)
 MPI
 mpi_copy( MPI a )
 {
-    MPI n = alloc_bytes(sizeof *n, "mpi_copy");
+    MPI n = malloc(sizeof *n);
 
     mpz_init_set(n, a);
     return n;
@@ -61,7 +61,7 @@ void
 mpi_free( MPI a )
 {
     mpz_clear(a);
-    pfree(a);
+    free(a);
 }
 
 int
@@ -146,7 +146,7 @@ u_char *
 get_random_bits(size_t nbits, int level UNUSED, int secure UNUSED)
 {
     size_t nbytes = (nbits+7)/8;
-    u_char *b = alloc_bytes(nbytes, "random bytes");
+    u_char *b = malloc(nbytes);
 
     get_rnd_bytes(b, nbytes);
     return b;

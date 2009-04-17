@@ -146,7 +146,7 @@ exit_scepclient(err_t message, ...)
     if (private_key != NULL)
     {
 	free_RSA_private_content(private_key);
-	pfree(private_key);
+	free(private_key);
     }
     freeanychunk(pkcs1);
     freeanychunk(pkcs7);
@@ -703,7 +703,7 @@ int main(int argc, char **argv)
     /*
      * input of PKCS#1 file
      */
-    private_key = alloc_thing(RSA_private_key_t, "RSA_private_key_t");
+    private_key = malloc_thing(RSA_private_key_t);
 
     if (filetype_in & PKCS1)	/* load an RSA key pair from file */ 
     {
@@ -767,7 +767,7 @@ int main(int argc, char **argv)
 	if (ugh != NULL)
 	    exit_scepclient(ugh);
 
-	clonetochunk(subject, dn.ptr, dn.len, "subject dn");
+	clonetochunk(subject, dn.ptr, dn.len);
 
 	DBG(DBG_CONTROL,
 	    DBG_log("building pkcs10 object:")
@@ -820,7 +820,7 @@ int main(int argc, char **argv)
     plog("  transaction ID: %.*s", (int)transID.len, transID.ptr);
 
     /* generate a self-signed X.509 certificate */
-    x509_signer = alloc_thing(x509cert_t, "signer cert");
+    x509_signer = malloc_thing(x509cert_t);
     *x509_signer = empty_x509cert;
     x509_signer->serialNumber = serialNumber;
     x509_signer->sigAlg = OID_SHA1_WITH_RSA;

@@ -82,7 +82,7 @@ struct secret {
 static pubkey_t*
 allocate_RSA_public_key(const cert_t cert)
 {
-    pubkey_t *pk = alloc_thing(pubkey_t, "pubkey");
+    pubkey_t *pk = malloc_thing(pubkey_t);
     chunk_t e = empty_chunk, n = empty_chunk;
 
     switch (cert.type)
@@ -99,6 +99,7 @@ allocate_RSA_public_key(const cert_t cert)
 	plog("RSA public key allocation error");
     }
 
+    zero(pk);
     init_RSA_public_key(&pk->u.rsa, e, n);
     DBG(DBG_RAW,
 	RSA_show_public_key(&pk->u.rsa)
@@ -131,7 +132,7 @@ free_public_key(pubkey_t *pk)
     default:
 	bad_case(pk->alg);
     }
-    pfree(pk);
+    free(pk);
 }
 
 secret_t *secrets = NULL;
@@ -410,7 +411,7 @@ process_psk_secret(chunk_t *psk)
 
     if (*tok == '"' || *tok == '\'')
     {
-	clonetochunk(*psk, tok+1, flp->cur - tok  - 2, "PSK");
+	clonetochunk(*psk, tok+1, flp->cur - tok  - 2);
 	(void) shift();
     }
     else
@@ -427,7 +428,7 @@ process_psk_secret(chunk_t *psk)
 	}
 	else
 	{
-	    clonetochunk(*psk, buf, sz, "PSK");
+	    clonetochunk(*psk, buf, sz);
 	    (void) shift();
 	}
     }
@@ -609,7 +610,7 @@ process_xauth(secret_t *s)
 		, user_name.len
 		, user_name.ptr);
     clonetochunk(s->u.xauth_secret.user_name
-	, user_name.ptr, user_name.len, "xauth user name");
+	, user_name.ptr, user_name.len);
 
     if (!shift())
 	return "missing xauth user password";
@@ -737,7 +738,7 @@ process_pin(secret_t *s, int whackfd)
     {
 	shift();
 	/* pin will be entered via pin pad during verification */
-	clonetochunk(sc->pin, "", 0, "empty pin");
+	clonetochunk(sc->pin, "", 0);
 	sc->pinpad = TRUE;
 	sc->valid = TRUE;
 	pin_status = "pin entry via pad";
@@ -858,7 +859,7 @@ process_secret(secret_t *s, int whackfd)
     {
 	loglog(RC_LOG_SERIOUS, "\"%s\" line %d: %s"
 	    , flp->filename, flp->lino, ugh);
-	pfree(s);
+	free(s);
     }
     else if (flushline("expected record boundary in key"))
     {
@@ -931,8 +932,9 @@ process_secret_records(int whackfd)
 	else
 	{
 	    /* expecting a list of indices and then the key info */
-	    secret_t *s = alloc_thing(secret_t, "secret");
+	    secret_t *s = malloc_thing(secret_t);
 
+	    zero(s);
 	    s->ids = NULL;
 	    s->kind = PPK_PSK;	/* default */
 	    setchunk(s->u.preshared_secret, NULL, 0);
@@ -986,8 +988,7 @@ process_secret_records(int whackfd)
 		    }
 		    else
 		    {
-			id_list_t *i = alloc_thing(id_list_t
-			    , "id_list");
+			id_list_t *i = malloc_thing(id_list_t);
 
 			i->id = id;
 			unshare_id_content(&i->id);
@@ -1090,19 +1091,19 @@ free_preshared_secrets(void)
 	    {
 		ni = i->next;	/* grab before freeing i */
 		free_id_content(&i->id);
-		pfree(i);
+		free(i);
 	    }
 	    switch (s->kind)
 	    {
 	    case PPK_PSK:
-		pfree(s->u.preshared_secret.ptr);
+		free(s->u.preshared_secret.ptr);
 		break;
 	    case PPK_RSA:
 		free_RSA_private_content(&s->u.RSA_private_key);
 		break;
 	    case PPK_XAUTH:
-		pfree(s->u.xauth_secret.user_name.ptr);
-		pfree(s->u.xauth_secret.user_password.ptr);
+		free(s->u.xauth_secret.user_name.ptr);
+		free(s->u.xauth_secret.user_password.ptr);
 		break;
 	    case PPK_PIN:
 		scx_release(s->u.smartcard);
@@ -1110,7 +1111,7 @@ free_preshared_secrets(void)
 	    default:
 		bad_case(s->kind);
 	    }
-	    pfree(s);
+	    free(s);
 	}
 	secrets = NULL;
     }
@@ -1132,8 +1133,9 @@ load_preshared_secrets(int whackfd)
 pubkey_t *
 public_key_from_rsa(const RSA_public_key_t *k)
 {
-    pubkey_t *p = alloc_thing(pubkey_t, "pubkey");
+    pubkey_t *p = malloc_thing(pubkey_t);
 
+    zero(p);
     p->id = empty_id;	/* don't know, doesn't matter */
     p->issuer = empty_chunk;
     p->serial = empty_chunk;
@@ -1162,7 +1164,7 @@ free_public_keyentry(pubkey_list_t *p)
 
     if (p->key != NULL)
 	unreference_key(&p->key);
-    pfree(p);
+    free(p);
     return nxt;
 }
 
@@ -1196,7 +1198,7 @@ transfer_to_public_keys(struct gw_info *gateways_from_dns
 
 	for (gwp = gateways_from_dns; gwp != NULL; gwp = gwp->next)
 	{
-	    pubkey_list_t *pl = alloc_thing(pubkey_list_t, "from TXT");
+	    pubkey_list_t *pl = malloc_thing(pubkey_list_t);
 
 	    pl->key = gwp->key;	/* note: this is a transfer */
 	    gwp->key = NULL;	/* really, it is! */
@@ -1277,17 +1279,21 @@ unpack_RSA_public_key(RSA_public_key_t *rsa, const chunk_t *pubkey)
 static void
 install_public_key(pubkey_t *pk, pubkey_list_t **head)
 {
-    pubkey_list_t *p = alloc_thing(pubkey_list_t, "pubkey entry");
+    pubkey_list_t *p = malloc_thing(pubkey_list_t);
 
     unshare_id_content(&pk->id);
 
     /* copy issuer dn */
     if (pk->issuer.ptr != NULL)
-	pk->issuer.ptr = clone_bytes(pk->issuer.ptr, pk->issuer.len, "issuer dn");
+    {
+	pk->issuer.ptr = clone_bytes(pk->issuer.ptr, pk->issuer.len);
+    }
 
     /* copy serial number */
     if (pk->serial.ptr != NULL)
-	pk->serial.ptr = clone_bytes(pk->serial.ptr, pk->serial.len, "serialNumber");
+    {
+	pk->serial.ptr = clone_bytes(pk->serial.ptr, pk->serial.len);
+    }
 
     /* store the time the public key was installed */
     time(&pk->installed_time);
@@ -1352,15 +1358,14 @@ unreference_key(pubkey_t **pkp)
 }
 
 err_t
-add_public_key(const struct id *id
-, enum dns_auth_level dns_auth_level
-, enum pubkey_alg alg
-, const chunk_t *key
-, pubkey_list_t **head)
+add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
+	       enum pubkey_alg alg, const chunk_t *key, pubkey_list_t **head)
 {
-    pubkey_t *pk = alloc_thing(pubkey_t, "pubkey");
+    pubkey_t *pk;
 
-    /* first: algorithm-specific decoding of key chunk */
+    pk = malloc_thing(pubkey_t); zero(pk);
+
+   /* first: algorithm-specific decoding of key chunk */
     switch (alg)
     {
     case PUBKEY_ALG_RSA:
@@ -1369,7 +1374,7 @@ add_public_key(const struct id *id
 
 	    if (ugh != NULL)
 	    {
-		pfree(pk);
+		free(pk);
 		return ugh;
 	    }
 	}

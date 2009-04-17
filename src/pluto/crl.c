@@ -166,7 +166,7 @@ free_revoked_certs(revokedCert_t* revokedCerts)
     {
 	revokedCert_t * revokedCert = revokedCerts;
 	revokedCerts = revokedCert->next;
-	pfree(revokedCert);
+	free(revokedCert);
     }
 }
 
@@ -178,8 +178,8 @@ free_crl(x509crl_t *crl)
 {
     free_revoked_certs(crl->revokedCertificates);
     free_generalNames(crl->distributionPoints, TRUE);
-    pfree(crl->certificateList.ptr);
-    pfree(crl);
+    free(crl->certificateList.ptr);
+    free(crl);
 }
 
 static void
@@ -208,7 +208,7 @@ free_crls(void)
 bool
 insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl)
 {
-    x509crl_t *crl = alloc_thing(x509crl_t, "x509crl");
+    x509crl_t *crl = malloc_thing(x509crl_t);
 
     *crl = empty_x509crl;
 
@@ -220,7 +220,7 @@ insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl)
 	generalName_t *gn;
 
 	/* add distribution point */
-	gn = alloc_thing(generalName_t, "generalName");
+	gn = malloc_thing(generalName_t);
 	gn->kind = GN_URI;
 	gn->name = crl_uri;
 	gn->next = crl->distributionPoints;
@@ -359,7 +359,7 @@ load_crls(void)
 		    chunk_t crl_uri;
 
 		    crl_uri.len = 7 + sizeof(CRL_PATH) + strlen(filename);
-		    crl_uri.ptr = alloc_bytes(crl_uri.len + 1, "crl uri");
+		    crl_uri.ptr = malloc(crl_uri.len + 1);
 
 		    /* build CRL file URI */
 		    snprintf(crl_uri.ptr, crl_uri.len + 1, "file://%s/%s"
@@ -458,7 +458,7 @@ parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
 		/* put all the serial numbers and the revocation date in a chained list
 		   with revocedCertificates pointing to the first revoked certificate */
 
-		revokedCert_t *revokedCert = alloc_thing(revokedCert_t, "revokedCert");
+		revokedCert_t *revokedCert = malloc_thing(revokedCert_t);
 		revokedCert->userCertificate = userCertificate;
 		revokedCert->revocationDate = parse_time(object, level);
 		revokedCert->revocationReason = REASON_UNSPECIFIED;

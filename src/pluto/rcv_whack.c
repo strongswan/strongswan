@@ -129,10 +129,11 @@ key_add_merge(struct key_add_common *oc, const struct id *keyid)
 		key_add_ugh(keyid, oc->diag[kaa]);
 
 	for (kaa = ka_TXT; kaa != ka_roof; kaa++)
-	    pfreeany(oc->diag[kaa]);
-
+	{
+	    free(oc->diag[kaa]);
+	}
 	close(oc->whack_fd);
-	pfree(oc);
+	free(oc);
     }
 }
 
@@ -147,7 +148,7 @@ key_add_continue(struct adns_continuation *ac, err_t ugh)
 
     if (ugh != NULL)
     {
-	oc->diag[kc->lookingfor] = clone_str(ugh, "key add error");
+	oc->diag[kc->lookingfor] = clone_str(ugh);
     }
     else
     {
@@ -182,9 +183,7 @@ key_add_request(const whack_message_t *msg)
 
 	if (msg->keyval.len == 0)
 	{
-	    struct key_add_common *oc
-		= alloc_thing(struct key_add_common
-			      , "key add common things");
+	    struct key_add_common *oc = malloc_thing(struct key_add_common);
 	    enum key_add_attempt kaa;
 
 	    /* initialize state shared by queries */
@@ -194,14 +193,14 @@ key_add_request(const whack_message_t *msg)
 
 	    for (kaa = ka_TXT; kaa != ka_roof; kaa++)
 	    {
-		struct key_add_continuation *kc
-		    = alloc_thing(struct key_add_continuation
-			, "key add continuation");
+		struct key_add_continuation *kc;
 
 		oc->diag[kaa] = NULL;
 		oc->refCount++;
+		kc = malloc_thing(struct key_add_continuation);
 		kc->common = oc;
 		kc->lookingfor = kaa;
+
 		switch (kaa)
 		{
 		case ka_TXT:
@@ -225,7 +224,7 @@ key_add_request(const whack_message_t *msg)
 		}
 		if (ugh != NULL)
 		{
-		    oc->diag[kaa] = clone_str(ugh, "early key add failure");
+		    oc->diag[kaa] = clone_str(ugh);
 		    oc->refCount--;
 		}
 	    }

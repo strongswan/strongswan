@@ -249,17 +249,16 @@ add_ietfAttr(ietfAttr_t *attr)
     if (cmp == 0)
     {
 	/* attribute already exists, increase count */
-	pfree(attr);
+	free(attr);
 	list->attr->count++;
 	return list->attr;
     }
     else
     {
-	ietfAttrList_t *el = alloc_thing(ietfAttrList_t, "ietfAttrList");
+	ietfAttrList_t *el = malloc_thing(ietfAttrList_t);
 
 	/* new attribute, unshare value */
-	attr->value.ptr = clone_bytes(attr->value.ptr, attr->value.len
-	    , "attr value");
+	attr->value.ptr = clone_bytes(attr->value.ptr, attr->value.len);
 	attr->count = 1;
 	time(&attr->installed);
 
@@ -300,8 +299,8 @@ decode_groups(char *groups, ietfAttrList_t **listp)
 
 	if (groups < end)
 	{
-	    ietfAttr_t *attr   = alloc_thing(ietfAttr_t, "ietfAttr");
-	    ietfAttrList_t *el = alloc_thing(ietfAttrList_t, "ietfAttrList");
+	    ietfAttr_t *attr   = malloc_thing(ietfAttr_t);
+	    ietfAttrList_t *el = malloc_thing(ietfAttrList_t);
 
 	    attr->kind  = IETF_ATTRIBUTE_STRING;
 	    attr->value.ptr = groups;
@@ -368,7 +367,7 @@ unshare_ietfAttrList(ietfAttrList_t **listp)
 
     while (list != NULL)
     {
-	ietfAttrList_t *el = alloc_thing(ietfAttrList_t, "ietfAttrList");
+	ietfAttrList_t *el = malloc_thing(ietfAttrList_t);
 
 	el->attr = list->attr;
 	el->attr->count++;
@@ -405,8 +404,8 @@ parse_ietfAttrSyntax(chunk_t blob, int level0)
 	case IETF_ATTR_OID:
 	case IETF_ATTR_STRING:
 	    {
-		ietfAttr_t *attr   = alloc_thing(ietfAttr_t, "ietfAttr");
-		ietfAttrList_t *el = alloc_thing(ietfAttrList_t, "ietfAttrList");
+		ietfAttr_t *attr   = malloc_thing(ietfAttr_t);
+		ietfAttrList_t *el = malloc_thing(ietfAttrList_t);
 
 		attr->kind  = (objectID - IETF_ATTR_OCTETS) / 2;
 		attr->value = object;
@@ -616,9 +615,9 @@ release_ietfAttr(ietfAttr_t* attr)
 	}
         *plist = list->next;
 	
-	pfree(attr->value.ptr);
-	pfree(attr);
-	pfree(list);
+	free(attr->value.ptr);
+	free(attr);
+	free(list);
     }
 }
 
@@ -634,7 +633,7 @@ free_ietfAttrList(ietfAttrList_t* list)
 
 	release_ietfAttr(el->attr);
 	list = list->next;
-	pfree(el);
+	free(el);
     }
 }
 
@@ -648,8 +647,8 @@ free_acert(x509acert_t *ac)
     {
 	free_ietfAttrList(ac->charging);
 	free_ietfAttrList(ac->groups);
-	pfreeany(ac->certificate.ptr);
-	pfree(ac);
+	free(ac->certificate.ptr);
+	free(ac);
     }
 }
 
@@ -844,7 +843,7 @@ load_acerts(void)
 
 		if (load_coded_file(filelist[n]->d_name, NULL, "acert", &blob, &pgp))
 		{
-		    x509acert_t *ac = alloc_thing(x509acert_t, "x509acert");
+		    x509acert_t *ac = malloc_thing(x509acert_t);
 		    
 		    *ac = empty_ac;
 

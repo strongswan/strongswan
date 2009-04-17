@@ -119,24 +119,20 @@ init_virtual_ip(const char *private_list)
 	/** Allocate **/
 	if (private_net_ok_len)
 	{
-	    private_net_ok = (ip_subnet *)alloc_bytes(
-		(private_net_ok_len*sizeof(ip_subnet)),
-		"private_net_ok subnets");
+	    private_net_ok = (ip_subnet *)malloc(private_net_ok_len * sizeof(ip_subnet));
 	}
 	if (private_net_ko_len)
 	{
-	    private_net_ko = (ip_subnet *)alloc_bytes(
-		(private_net_ko_len*sizeof(ip_subnet)),
-		"private_net_ko subnets");
+	    private_net_ko = (ip_subnet *)malloc(private_net_ko_len * sizeof(ip_subnet));
 	}
 	if ((private_net_ok_len && !private_net_ok)
 	||  (private_net_ko_len && !private_net_ko))
 	{
 	    loglog(RC_LOG_SERIOUS,
 		"can't alloc in init_virtual_ip");
-	    pfreeany(private_net_ok);
+	    free(private_net_ok);
 	    private_net_ok = NULL;
-	    pfreeany(private_net_ko);
+	    free(private_net_ko);
 	    private_net_ko = NULL;
 	}
 	else
@@ -237,9 +233,8 @@ struct virtual_t
 	str = *next ? next+1 : NULL;
     }
 
-    v = (struct virtual_t *)alloc_bytes(
-	sizeof(struct virtual_t) + (n_net*sizeof(ip_subnet)),
-	"virtual description");
+    v = (struct virtual_t *)malloc(sizeof(struct virtual_t) +
+				  (n_net * sizeof(ip_subnet)));
     if (!v) goto fail;
 
     v->flags = flags;

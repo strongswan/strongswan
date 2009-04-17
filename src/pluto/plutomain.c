@@ -239,6 +239,7 @@ main(int argc, char **argv)
     cap_t caps;
     int keep[] = { CAP_NET_ADMIN, CAP_NET_BIND_SERVICE };
 #endif /* CAPABILITIES */
+
     library_init(STRONGSWAN_CONF);
 
     /* handle arguments */

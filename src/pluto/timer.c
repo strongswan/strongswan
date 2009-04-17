@@ -72,7 +72,7 @@ static struct event *evlist = (struct event *) NULL;
 void
 event_schedule(enum event_type type, time_t tm, struct state *st)
 {
-    struct event *ev = alloc_thing(struct event, "struct event in event_schedule()");
+    struct event *ev = malloc_thing(struct event);
 
     ev->ev_type = type;
     ev->ev_time = tm + now();
@@ -432,7 +432,7 @@ handle_timer_event(void)
 		, enum_show(&timer_event_names, type));
     }
 
-    pfree(ev);
+    free(ev);
     reset_cur_state();
 }
 
@@ -490,8 +490,10 @@ delete_event(struct state *st)
 		*ev = (*ev)->ev_next;
 
 		if (st->st_event->ev_type == EVENT_RETRANSMIT)
+		{
 		    st->st_retransmit = 0;
-		pfree(st->st_event);
+		}
+		free(st->st_event);
 		st->st_event = (struct event *) NULL;
 
 		break;
@@ -521,7 +523,7 @@ delete_dpd_event(struct state *st)
             if ((*ev) == st->st_dpd_event)
             {
                 *ev = (*ev)->ev_next;
-                pfree(st->st_dpd_event);
+                free(st->st_dpd_event);
                 st->st_dpd_event = (struct event *) NULL;
                 break;
             }

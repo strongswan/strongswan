@@ -276,11 +276,11 @@ wake_fetch_thread(const char *who)
 static void
 free_fetch_request(fetch_req_t *req)
 {
-    pfree(req->issuer.ptr);
-    pfreeany(req->authKeySerialNumber.ptr);
-    pfreeany(req->authKeyID.ptr);
+    free(req->issuer.ptr);
+    free(req->authKeySerialNumber.ptr);
+    free(req->authKeyID.ptr);
     free_generalNames(req->distributionPoints, TRUE);
-    pfree(req);
+    free(req);
 }
 
 /* writes data into a dynamically resizeable chunk_t
@@ -333,7 +333,7 @@ fetch_curl(char *url, chunk_t *blob)
 	if (res == CURLE_OK)
 	{
 	    blob->len = response.len;
-	    blob->ptr = alloc_bytes(response.len, "curl blob");
+	    blob->ptr = malloc(response.len);
 	    memcpy(blob->ptr, response.ptr, response.len);
 	}
 	else
@@ -377,7 +377,7 @@ parse_ldap_result(LDAP * ldap, LDAPMessage *result, chunk_t *blob)
 		if (values[0] != NULL)
 		{
 		    blob->len = values[0]->bv_len;
-		    blob->ptr = alloc_bytes(blob->len, "ldap blob");
+		    blob->ptr = malloc(blob->len);
 		    memcpy(blob->ptr, values[0]->bv_val, blob->len);
 		    if (values[1] != NULL)
 		    {
@@ -531,12 +531,12 @@ fetch_asn1_blob(char *url, chunk_t *blob)
 	    else
 	    {
 		ugh = "blob coded in unknown format";
-		pfree(blob->ptr);
+		free(blob->ptr);
 	    }
 	}
 	else
 	{
-	    pfree(blob->ptr);
+	    free(blob->ptr);
 	}
     }
     return ugh;
@@ -570,7 +570,7 @@ complete_uri(chunk_t distPoint, const char *ldaphost)
 		
 		if (symbol != NULL && symbol - ptr == 0 && ldaphost != NULL)
 		{
-		    uri = alloc_bytes(distPoint.len+strlen(ldaphost)+1, "uri");
+		    uri = malloc(distPoint.len + strlen(ldaphost) + 1);
 
 		    /* insert the ldaphost into the uri */
 		    sprintf(uri, "%.*s%s%.*s"
@@ -584,7 +584,7 @@ complete_uri(chunk_t distPoint, const char *ldaphost)
     }
     
     /* default action:  copy distributionPoint without change */
-    uri = alloc_bytes(distPoint.len+1, "uri");
+    uri = malloc(distPoint.len + 1);
     sprintf(uri, "%.*s", (int)distPoint.len, distPoint.ptr);
     return uri;
 }
@@ -620,7 +620,7 @@ fetch_crls(bool cache_crls)
 	    char *uri = complete_uri(gn->name, ldaphost);
 
 	    err_t ugh = fetch_asn1_blob(uri, &blob);
-	    pfree(uri);
+	    free(uri);
 
 	    if (ugh != NULL)
 	    {
@@ -630,7 +630,7 @@ fetch_crls(bool cache_crls)
 	    {
 		chunk_t crl_uri;
 
-		clonetochunk(crl_uri, gn->name.ptr, gn->name.len, "crl uri");
+		clonetochunk(crl_uri, gn->name.ptr, gn->name.len);
 		if (insert_crl(blob, crl_uri, cache_crls))
 		{
 		    DBG(DBG_CONTROL,
@@ -692,7 +692,7 @@ fetch_ocsp_status(ocsp_location_t* location)
     {
 	char errorbuffer[CURL_ERROR_SIZE];
 	struct curl_slist *headers = NULL;
-	char* uri = alloc_bytes(location->uri.len+1, "ocsp uri");
+	char* uri = malloc(location->uri.len + 1);
 
 	/* we need a null terminated string for curl */
 	memcpy(uri, location->uri.ptr, location->uri.len);
@@ -729,7 +729,7 @@ fetch_ocsp_status(ocsp_location_t* location)
 	}
 	curl_slist_free_all(headers);
 	curl_easy_cleanup(curl);
-	pfree(uri);
+	free(uri);
 	/* not using freeanychunk because of realloc (no leak detective) */
 	curl_free(response.ptr);
     }
@@ -917,9 +917,8 @@ add_distribution_points(const generalName_t *newPoints ,generalName_t **distribu
 	    if (add)
 	    {
 		/* clone additional distribution point */
-		gn = clone_thing(*newPoints, "generalName");
-		clonetochunk(gn->name, newPoints->name.ptr, newPoints->name.len
-		    , "crl uri");
+		gn = clone_thing(*newPoints);
+		clonetochunk(gn->name, newPoints->name.ptr, newPoints->name.len);
 
 		/* insert additional CRL distribution point */
 		gn->next = *distributionPoints;
@@ -934,22 +933,22 @@ fetch_req_t*
 build_crl_fetch_request(chunk_t issuer, chunk_t authKeySerialNumber
 , chunk_t authKeyID, const generalName_t *gn)
 {
-    fetch_req_t *req = alloc_thing(fetch_req_t, "fetch request");
+    fetch_req_t *req = malloc_thing(fetch_req_t);
     *req = empty_fetch_req;
 
     /* note current time */
     req->installed = time(NULL);
 
     /* clone fields */
-    clonetochunk(req->issuer, issuer.ptr, issuer.len, "issuer");
+    clonetochunk(req->issuer, issuer.ptr, issuer.len);
     if (authKeySerialNumber.ptr != NULL)
     {
 	clonetochunk(req->authKeySerialNumber, authKeySerialNumber.ptr
-	    , authKeySerialNumber.len, "authKeySerialNumber");
+	    , authKeySerialNumber.len);
     }
     if (authKeyID.ptr != NULL)
     {
-	clonetochunk(req->authKeyID, authKeyID.ptr, authKeyID.len, "authKeyID");
+	clonetochunk(req->authKeyID, authKeyID.ptr, authKeyID.len);
     }
 
     /* copy distribution points */

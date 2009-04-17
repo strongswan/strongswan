@@ -80,10 +80,9 @@ section_or_include:
     } kw_section
     | CONN STRING EOL
     {
-	section_list_t *section = (section_list_t *)alloc_thing(section_list_t
-							     , "section_list_t");
+	section_list_t *section = malloc_thing(section_list_t);
 	
-	section->name = clone_str($2, "conn section name");
+	section->name = clone_str($2);
 	section->kw = NULL;
 	section->next = NULL;
 	_parser_kw = &(section->kw);
@@ -97,9 +96,8 @@ section_or_include:
     } kw_section
     | CA STRING EOL
     {
-	section_list_t *section = (section_list_t *)alloc_thing(section_list_t
-							     , "section_list_t");
-	section->name = clone_str($2, "ca section name");
+	section_list_t *section = malloc_thing(section_list_t);
+	section->name = clone_str($2);
 	section->kw = NULL;
 	section->next = NULL;
 	_parser_kw = &(section->kw);
@@ -138,9 +136,9 @@ statement_kw:
 	}
 	else if (_parser_kw)
 	{
-	    new = (kw_list_t *)alloc_thing(kw_list_t, "kw_list_t");
+	    new = (kw_list_t *)malloc_thing(kw_list_t);
 	    new->entry = entry;
-	    new->value = clone_str($3, "kw_list value");
+	    new->value = clone_str($3);
 	    new->next = NULL;
 	    if (_parser_kw_last)
 		_parser_kw_last->next = new;
@@ -179,7 +177,7 @@ parser_load_conf(const char *file)
 
     memset(parser_errstring, 0, ERRSTRING_LEN+1);
 
-    cfg = (config_parsed_t *)alloc_thing(config_parsed_t, "config_parsed_t");
+    cfg = (config_parsed_t *)malloc_thing(config_parsed_t);
     if (cfg)
     {
 	memset(cfg, 0, sizeof(config_parsed_t));
@@ -247,9 +245,8 @@ parser_free_kwlist(kw_list_t *list)
     {
 	elt = list;
 	list = list->next;
-	if (elt->value)
-	    pfree(elt->value);
-	pfree(elt);
+	free(elt->value);
+	free(elt);
     }
 }
 
@@ -264,20 +261,18 @@ parser_free_conf(config_parsed_t *cfg)
 	{
 	    sec = cfg->conn_first;
 	    cfg->conn_first = cfg->conn_first->next;
-	    if (sec->name)
-		pfree(sec->name);
+	    free(sec->name);
 	    parser_free_kwlist(sec->kw);
-	    pfree(sec);
+	    free(sec);
 	}
 	while (cfg->ca_first)
 	{
 	    sec = cfg->ca_first;
 	    cfg->ca_first = cfg->ca_first->next;
-	    if (sec->name)
-		pfree(sec->name);
+	    free(sec->name);
 	    parser_free_kwlist(sec->kw);
-	    pfree(sec);
+	    free(sec);
 	}
-	pfree(cfg);
+	free(cfg);
     }
 }

@@ -41,17 +41,14 @@ typedef unsigned long so_serial_t;
 
 /* memory allocation */
 
-extern void *alloc_bytes(size_t size, const char *name);
-#define alloc_thing(thing, name) (alloc_bytes(sizeof(thing), (name)))
+extern void *clone_bytes(const void *orig, size_t size);
 
-extern void *clone_bytes(const void *orig, size_t size, const char *name);
-#define clone_thing(orig, name) clone_bytes((const void *)&(orig), sizeof(orig), (name))
-#define clone_str(str, name) \
-    ((str) == NULL? NULL : clone_bytes((str), strlen((str))+1, (name)))
+#define clone_thing(orig) clone_bytes((const void *)&(orig), sizeof(orig))
 
-#define pfree(ptr) free(ptr)	/* ordinary stdc free */
-#define pfreeany(p) { if ((p) != NULL) pfree(p); }
-#define replace(p, q) { pfreeany(p); (p) = (q); }
+#define clone_str(str) \
+    ((str) == NULL? NULL : clone_bytes((str), strlen((str))+1))
+
+#define replace(p, q) { free(p); (p) = (q); }
 
 
 /* chunk is a simple pointer-and-size abstraction */
@@ -63,15 +60,21 @@ struct chunk {
 typedef struct chunk chunk_t;
 
 #define setchunk(ch, addr, size) { (ch).ptr = (addr); (ch).len = (size); }
+
 #define strchunk(str) { str, sizeof(str) }
-/* NOTE: freeanychunk, unlike pfreeany, NULLs .ptr */
-#define freeanychunk(ch) { pfreeany((ch).ptr); (ch).ptr = NULL; }
-#define clonetochunk(ch, addr, size, name) \
-    { (ch).ptr = clone_bytes((addr), (ch).len = (size), name); }
-#define clonereplacechunk(ch, addr, size, name) \
-    { pfreeany((ch).ptr); clonetochunk(ch, addr, size, name); }
+
+/* NOTE: freeanychunk NULLs .ptr */
+#define freeanychunk(ch) { free((ch).ptr); (ch).ptr = NULL; }
+
+#define clonetochunk(ch, addr, size) \
+    { (ch).ptr = clone_bytes((addr), (ch).len = (size)); }
+
+#define clonereplacechunk(ch, addr, size) \
+    { free((ch).ptr); clonetochunk(ch, addr, size); }
+
 #define chunkcpy(dst, chunk) \
     { memcpy(dst, chunk.ptr, chunk.len); dst += chunk.len;}
+
 #define same_chunk(a, b) \
     ( (a).len == (b).len && memcmp((a).ptr, (b).ptr, (b).len) == 0 )
 

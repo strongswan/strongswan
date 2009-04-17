@@ -489,7 +489,7 @@ static void
 free_certinfo(ocsp_certinfo_t *certinfo)
 {
     freeanychunk(certinfo->serialNumber);
-    pfree(certinfo);
+    free(certinfo);
 }
 
 /*
@@ -520,7 +520,7 @@ free_ocsp_location(ocsp_location_t* location)
     freeanychunk(location->authKeySerialNumber);
     freeanychunk(location->uri);
     free_certinfos(location->certinfo);
-    pfree(location);
+    free(location);
 }
 
 /*
@@ -554,7 +554,7 @@ free_ocsp_cache(void)
 void
 free_ocsp(void)
 {
-    pfreeany(ocsp_default_uri.ptr);
+    free(ocsp_default_uri.ptr);
     free_ocsp_cache();
 }
 
@@ -849,7 +849,7 @@ build_request_list(ocsp_location_t *location)
 	/* build request for every certificate in list
 	 * and store them in a chained list
 	 */
-	request_list_t *req = alloc_thing(request_list_t, "ocsp request");
+	request_list_t *req = malloc_thing(request_list_t);
 
 	req->request = build_request(location, certinfo);
 	req->next = reqs;
@@ -869,7 +869,7 @@ build_request_list(ocsp_location_t *location)
 
 	mv_chunk(&pos, req->request);
 	reqs = reqs->next;
-	pfree(req);
+	free(req);
     }
 
     return requestList;
@@ -893,7 +893,7 @@ static chunk_t
 build_nonce_extension(ocsp_location_t *location)
 {
     /* generate a random nonce */
-    location->nonce.ptr = alloc_bytes(NONCE_LENGTH, "ocsp nonce"),
+    location->nonce.ptr = malloc(NONCE_LENGTH),
     location->nonce.len = NONCE_LENGTH;
     get_rnd_bytes(location->nonce.ptr, NONCE_LENGTH);
 
@@ -1155,9 +1155,9 @@ parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 	case BASIC_RESPONSE_CERTIFICATE:
 	    {
 		chunk_t blob;
-		x509cert_t *cert = alloc_thing(x509cert_t, "ocspcert");
+		x509cert_t *cert = malloc_thing(x509cert_t);
 
-		clonetochunk(blob, object.ptr, object.len, "ocspcert blob");
+		clonetochunk(blob, object.ptr, object.len);
 		*cert = empty_x509cert;
 
 		if (parse_x509cert(blob, level+1, cert)
@@ -1324,35 +1324,33 @@ parse_ocsp_single_response(chunk_t blob, int level0, single_response_t *sres)
 ocsp_location_t*
 add_ocsp_location(const ocsp_location_t *loc, ocsp_location_t **chain)
 {
-    ocsp_location_t *location = alloc_thing(ocsp_location_t, "ocsp location");
+    ocsp_location_t *location = malloc_thing(ocsp_location_t);
 
     /* unshare location fields */
-    clonetochunk(location->issuer
-		, loc->issuer.ptr, loc->issuer.len
-		, "ocsp issuer");
+    clonetochunk(location->issuer, loc->issuer.ptr, loc->issuer.len);
 
-    clonetochunk(location->authNameID
-		, loc->authNameID.ptr, loc->authNameID.len
-		, "ocsp authNameID");
+    clonetochunk(location->authNameID, loc->authNameID.ptr, loc->authNameID.len);
 
     if (loc->authKeyID.ptr == NULL)
+    {
 	location->authKeyID = empty_chunk;
+    }
     else
-	clonetochunk(location->authKeyID
-		, loc->authKeyID.ptr, loc->authKeyID.len
-		, "ocsp authKeyID");
+    {
+	clonetochunk(location->authKeyID, loc->authKeyID.ptr, loc->authKeyID.len);
+    }
 
     if (loc->authKeySerialNumber.ptr == NULL)
+    {
 	location->authKeySerialNumber = empty_chunk;
+    }
     else
+    {
 	clonetochunk(location->authKeySerialNumber
-    		, loc->authKeySerialNumber.ptr, loc->authKeySerialNumber.len
-		, "ocsp authKeySerialNumber");
+    		, loc->authKeySerialNumber.ptr, loc->authKeySerialNumber.len);
+    }
 
-    clonetochunk(location->uri
-		, loc->uri.ptr, loc->uri.len
-		, "ocsp uri");
-
+    clonetochunk(location->uri, loc->uri.ptr, loc->uri.len);
     location->certinfo = NULL;
 
     /* insert new ocsp location in front of chain */
@@ -1399,9 +1397,8 @@ add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info, ocsp_location_t **chai
     if (cmp != 0)
     {
 	/* add a new certinfo entry */
-	ocsp_certinfo_t *cnew = alloc_thing(ocsp_certinfo_t, "ocsp certinfo");
-	clonetochunk(cnew->serialNumber, info->serialNumber.ptr
-	    , info->serialNumber.len, "serialNumber");
+	ocsp_certinfo_t *cnew = malloc_thing(ocsp_certinfo_t);
+	clonetochunk(cnew->serialNumber, info->serialNumber.ptr, info->serialNumber.len);
 	cnew->next = certinfo;
 	*certinfop = cnew;
 	certinfo = cnew;

@@ -397,7 +397,7 @@ scx_unload_pkcs11_module(scx_pkcs11_module_t *mod)
 	return CKR_FUNCTION_FAILED;
 
     memset(mod, 0, sizeof(*mod));
-    pfree(mod);
+    free(mod);
     return CKR_OK;
 }
 
@@ -417,7 +417,7 @@ scx_load_pkcs11_module(const char *name, CK_FUNCTION_LIST_PTR_PTR funcs)
     if (handle == NULL)
 	return NULL;
 
-    mod = alloc_thing(scx_pkcs11_module_t, "scx_pkcs11_module");
+    mod = malloc_thing(scx_pkcs11_module_t);
     mod->_magic = SCX_MAGIC;
     mod->handle = handle;
 
@@ -465,13 +465,13 @@ scx_find_cert_object(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE object
 	return FALSE;
     }
 
-    pfreeany(sc->label);
+    free(sc->label);
 
-    hex_id    = alloc_bytes(attr[0].ulValueLen, "hex id");
+    hex_id    = malloc(attr[0].ulValueLen);
     hex_len   = attr[0].ulValueLen;
-    sc->label = alloc_bytes(attr[1].ulValueLen + 1, "sc label");
+    sc->label = malloc(attr[1].ulValueLen + 1);
     label_len = attr[1].ulValueLen;
-    blob.ptr  = alloc_bytes(attr[2].ulValueLen, "x509cert blob");
+    blob.ptr  = malloc(attr[2].ulValueLen);
     blob.len  = attr[2].ulValueLen;
 
     attr[0].pValue = hex_id;
@@ -484,24 +484,24 @@ scx_find_cert_object(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE object
     {
 	plog("couldn't read the attributes: %s"
 	    , enum_show(&pkcs11_return_names, rv));
-	pfree(hex_id);
-	pfreeany(sc->label);
-	pfree(blob.ptr);
+	free(hex_id);
+	free(sc->label);
+	free(blob.ptr);
 	return FALSE;
     }
 
-    pfreeany(sc->id);
+    free(sc->id);
 
     /* convert id from hex to ASCII */
-    sc->id = alloc_bytes(2*hex_len + 1, " sc id");
+    sc->id = malloc(2*hex_len + 1);
     datatot(hex_id, hex_len, 16, sc->id, 2*hex_len + 1);
-    pfree(hex_id);
+    free(hex_id);
 
     /* safeguard in case the label is not null terminated */
     sc->label[label_len] = '\0';
 
     /* parse the retrieved cert */
-    x509cert = alloc_thing(x509cert_t, "x509cert");
+    x509cert = malloc_thing(x509cert_t);
     *x509cert = empty_x509cert;
     x509cert->smartcard = TRUE;
 
@@ -556,7 +556,7 @@ scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 	    break;
 
 	/* create and initialize a new smartcard object */
-	sc  = alloc_thing(smartcard_t, "smartcard");
+	sc  = malloc_thing(smartcard_t);
 	*sc = empty_sc;
 	sc->any_slot = FALSE;
 	sc->slot  = slot;
@@ -635,13 +635,13 @@ scx_find_all_cert_objects(void)
     rv = pkcs11_functions->C_GetSlotList(FALSE, NULL_PTR, &slot_count);
 
     /* allocate memory for the slots */
-    slots = (CK_SLOT_ID *)alloc_bytes(slot_count * sizeof(CK_SLOT_ID), "slots");
+    slots = (CK_SLOT_ID *)malloc(slot_count * sizeof(CK_SLOT_ID));
 
     rv = pkcs11_functions->C_GetSlotList(FALSE, slots, &slot_count);
     if (rv != CKR_OK)
     {
 	plog("error in C_GetSlotList: %s", enum_show(&pkcs11_return_names, rv));
-	pfreeany(slots);
+	free(slots);
 	return;
     }
 
@@ -687,7 +687,7 @@ scx_find_all_cert_objects(void)
 		, enum_show(&pkcs11_return_names, rv));
 	}
     }
-    pfreeany(slots);
+    free(slots);
 }
 #endif
 
@@ -941,14 +941,14 @@ scx_establish_context(smartcard_t *sc)
 	rv = pkcs11_functions->C_GetSlotList(FALSE, NULL_PTR, &slot_count);
 
 	/* allocate memory for the slots */
-	slots = (CK_SLOT_ID *)alloc_bytes(slot_count * sizeof(CK_SLOT_ID), "slots");
+	slots = (CK_SLOT_ID *)malloc(slot_count * sizeof(CK_SLOT_ID));
 
 	rv = pkcs11_functions->C_GetSlotList(FALSE, slots, &slot_count);
 	if (rv != CKR_OK)
 	{
 	    plog("error in C_GetSlotList: %s"
 		, enum_show(&pkcs11_return_names, rv));
-	    pfreeany(slots);
+	    free(slots);
 	    return FALSE;
         }
 
@@ -960,7 +960,7 @@ scx_establish_context(smartcard_t *sc)
 	    if (id_found)
 	        break;
         }
-	pfreeany(slots)
+	free(slots);
     }
 
     if (id_found)
@@ -1163,7 +1163,7 @@ smartcard_t*
 scx_parse_number_slot_id(const char *number_slot_id)
 {
     int len = strlen(number_slot_id);
-    smartcard_t *sc = alloc_thing(smartcard_t, "smartcard");
+    smartcard_t *sc = malloc_thing(smartcard_t);
 
     /* assign default values */
     *sc = empty_sc;
@@ -1212,7 +1212,7 @@ scx_parse_number_slot_id(const char *number_slot_id)
 	}
     }
     /* unshare the id string */
-    sc->id = clone_str(sc->id, "key id");
+    sc->id = clone_str(sc->id);
     return sc;
 }
 
@@ -1448,24 +1448,24 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 	    DBG(DBG_CONTROL,
 		DBG_log("doing RSA encryption in software")
 	    )
-	    attr[0].pValue = alloc_bytes(attr[0].ulValueLen, "modulus");
-	    attr[1].pValue = alloc_bytes(attr[1].ulValueLen, "exponent");
+	    attr[0].pValue = malloc(attr[0].ulValueLen);
+	    attr[1].pValue = malloc(attr[1].ulValueLen);
 
 	    rv = pkcs11_functions->C_GetAttributeValue(sc->session, object, attr, 2);
 	    if (rv != CKR_OK)
 	    {
 		plog("couldn't read modulus and public exponent: %s"
 		    , enum_show(&pkcs11_return_names, rv));
-		pfree(attr[0].pValue);
-		pfree(attr[1].pValue);
+		free(attr[0].pValue);
+		free(attr[1].pValue);
 		scx_release_context(sc);
 		return FALSE;
 	    }
 	    rsa.k = attr[0].ulValueLen;
 	    n_to_mpz(&rsa.n, attr[0].pValue, attr[0].ulValueLen);
 	    n_to_mpz(&rsa.e, attr[1].pValue, attr[1].ulValueLen);
-	    pfree(attr[0].pValue);
-	    pfree(attr[1].pValue);
+	    free(attr[0].pValue);
+	    free(attr[1].pValue);
 
 	    cipher_text = RSA_encrypt(&rsa, plain_text);
 	    free_RSA_public_content(&rsa);
@@ -1759,7 +1759,7 @@ scx_get_pin(smartcard_t *sc, int whackfd)
 	/* verify the pin */
 	if (scx_verify_pin(sc))
 	{
-	    clonetochunk(sc->pin, pin, strlen(pin), "pin");
+	    clonetochunk(sc->pin, pin, strlen(pin));
 	    break;
 	}
 
@@ -1789,7 +1789,7 @@ scx_free_pin(chunk_t *pin)
     {
 	/* clear pin field in memory */
 	memset(pin->ptr, '\0', pin->len);
-	pfree(pin->ptr);
+	free(pin->ptr);
 	*pin = empty_chunk;
     }
 }
@@ -1803,10 +1803,10 @@ scx_free(smartcard_t *sc)
     if (sc != NULL)
     {
 	scx_release_context(sc);
-	pfreeany(sc->id);
-	pfreeany(sc->label);
+	free(sc->id);
+	free(sc->label);
 	scx_free_pin(&sc->pin);
-	pfree(sc);
+	free(sc);
     }
 }
 

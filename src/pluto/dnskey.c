@@ -445,7 +445,7 @@ process_txt_rr_body(u_char *str
 	    });
 
 	gi.next = *gwip;
-	*gwip = clone_thing(gi, "gateway info");
+	*gwip = clone_thing(gi);
 	unshare_id_content(&(*gwip)->gw_id);
 	unshare_id_content(&(*gwip)->client_id);
     }
@@ -1327,7 +1327,7 @@ gw_delref(struct gw_info **gwp)
 	    if (gw->gw_key_present)
 		unreference_key(&gw->key);
 	    gw_delref(&gw->next);
-	    pfree(gw);	/* trickery could make this a tail-call */
+	    free(gw);	/* trickery could make this a tail-call */
 	}
 	*gwp = NULL;
     }
@@ -1415,7 +1415,7 @@ release_adns_continuation(struct adns_continuation *cr)
 	cr->previous->next = cr->next;
     }
 
-    pfree(cr);
+    free(cr);
 }
 
 err_t
@@ -1725,8 +1725,8 @@ process_lwdnsq_answer(char *ts)
 	/* record the SIG records for posterity */
 	if (cr->last_info != NULL)
 	{
-	    pfreeany(cr->last_info->dns_sig);
-	    cr->last_info->dns_sig = clone_str(rest, "sigrecord");
+	    free(cr->last_info->dns_sig);
+	    cr->last_info->dns_sig = clone_str(rest);
 	}
     }
     else if (strcaseeq(atype, "A"))

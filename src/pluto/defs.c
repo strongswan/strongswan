@@ -42,26 +42,10 @@ all_zero(const unsigned char *m, size_t len)
     return TRUE;
 }
 
-void *alloc_bytes(size_t size, const char *name)
+void *clone_bytes(const void *orig, size_t size)
 {
     void *p = malloc(size);
 
-    if (p == NULL)
-    {
-	exit_log("unable to malloc %lu bytes for %s", (unsigned long) size, name);
-    }
-    memset(p, '\0', size);
-    return p;
-}
-
-void *clone_bytes(const void *orig, size_t size, const char *name)
-{
-    void *p = malloc(size);
-
-    if (p == NULL)
-    {
-	exit_log("unable to malloc %lu bytes for %s", (unsigned long) size, name);
-    }
     memcpy(p, orig, size);
     return p;
 }

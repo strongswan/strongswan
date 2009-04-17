@@ -95,7 +95,7 @@ reserve_msgid(struct state *isakmp_sa, msgid_t msgid)
 	if (p->msgid == msgid)
 	    return FALSE;
 
-    p = alloc_thing(struct msgid_list, "msgid");
+    p = malloc_thing(struct msgid_list);
     p->msgid = msgid;
     p->next = isakmp_sa->st_used_msgids;
     isakmp_sa->st_used_msgids = p;
@@ -171,7 +171,7 @@ new_state(void)
     static so_serial_t next_so = SOS_FIRST;
     struct state *st;
 
-    st = clone_thing(blank_state, "struct state in new_state()");
+    st = clone_thing(blank_state);
     st->st_serialno = next_so++;
     passert(next_so > SOS_FIRST);	/* overflow can't happen! */
     st->st_whack_sock = NULL_FD;
@@ -344,7 +344,7 @@ delete_state(struct state *st)
 	{
 	    struct msgid_list *q = p;
 	    p = p->next;
-	    pfree(q);
+	    free(q);
 	}
     }
 
@@ -353,25 +353,25 @@ delete_state(struct state *st)
     if (st->st_sec_in_use)
 	mpz_clear(&(st->st_sec));
 
-    pfreeany(st->st_tpacket.ptr);
-    pfreeany(st->st_rpacket.ptr);
-    pfreeany(st->st_p1isa.ptr);
-    pfreeany(st->st_gi.ptr);
-    pfreeany(st->st_gr.ptr);
-    pfreeany(st->st_shared.ptr);
-    pfreeany(st->st_ni.ptr);
-    pfreeany(st->st_nr.ptr);
-    pfreeany(st->st_skeyid.ptr);
-    pfreeany(st->st_skeyid_d.ptr);
-    pfreeany(st->st_skeyid_a.ptr);
-    pfreeany(st->st_skeyid_e.ptr);
-    pfreeany(st->st_enc_key.ptr);
-    pfreeany(st->st_ah.our_keymat);
-    pfreeany(st->st_ah.peer_keymat);
-    pfreeany(st->st_esp.our_keymat);
-    pfreeany(st->st_esp.peer_keymat);
+    free(st->st_tpacket.ptr);
+    free(st->st_rpacket.ptr);
+    free(st->st_p1isa.ptr);
+    free(st->st_gi.ptr);
+    free(st->st_gr.ptr);
+    free(st->st_shared.ptr);
+    free(st->st_ni.ptr);
+    free(st->st_nr.ptr);
+    free(st->st_skeyid.ptr);
+    free(st->st_skeyid_d.ptr);
+    free(st->st_skeyid_a.ptr);
+    free(st->st_skeyid_e.ptr);
+    free(st->st_enc_key.ptr);
+    free(st->st_ah.our_keymat);
+    free(st->st_ah.peer_keymat);
+    free(st->st_esp.our_keymat);
+    free(st->st_esp.peer_keymat);
 
-    pfree(st);
+    free(st);
 }
 
 /*
@@ -538,13 +538,13 @@ duplicate_state(struct state *st)
     nst->st_oakley = st->st_oakley;
     nst->st_modecfg = st->st_modecfg;
 
-#   define clone_chunk(ch, name) \
-	clonetochunk(nst->ch, st->ch.ptr, st->ch.len, name)
+#   define clone_chunk(ch) \
+	clonetochunk(nst->ch, st->ch.ptr, st->ch.len)
 
-    clone_chunk(st_skeyid_d, "st_skeyid_d in duplicate_state");
-    clone_chunk(st_skeyid_a, "st_skeyid_a in duplicate_state");
-    clone_chunk(st_skeyid_e, "st_skeyid_e in duplicate_state");
-    clone_chunk(st_enc_key, "st_enc_key in duplicate_state");
+    clone_chunk(st_skeyid_d);
+    clone_chunk(st_skeyid_a);
+    clone_chunk(st_skeyid_e);
+    clone_chunk(st_enc_key);
 
 #   undef clone_chunk
 
@@ -880,7 +880,7 @@ show_states_status(bool all, const char *name)
     }
 
     /* build the array */
-    array = alloc_bytes(sizeof(struct state *)*count, "state array");
+    array = malloc(sizeof(struct state *)*count);
     count = 0;
     for (i = 0; i < STATE_TABLE_SIZE; i++)
     {
@@ -918,7 +918,7 @@ show_states_status(bool all, const char *name)
 	whack_log(RC_COMMENT, BLANK_FORMAT);	/* spacer */
 
     /* free the array */
-    pfree(array);
+    free(array);
 }
 
 /* Given that we've used up a range of unused CPI's,

@@ -286,17 +286,17 @@ pem_decrypt(chunk_t *blob, chunk_t *iv, prompt_pass_t *pass, const char* label)
 		return ugh;
 	    }
 
-	    clonetochunk(blob_copy, blob->ptr, blob->len, "blob copy");
+	    clonetochunk(blob_copy, blob->ptr, blob->len);
 
 	    if (pem_decrypt_3des(blob, iv, pass->secret))
 	    {
 		whack_log(RC_SUCCESS, "valid passphrase");
-		pfree(blob_copy.ptr);
+		free(blob_copy.ptr);
 		return NULL;
 	    }
 	    
 	    /* blob is useless after wrong decryption, restore the original */
-	    pfree(blob->ptr);
+	    free(blob->ptr);
 	    *blob = blob_copy;
 	}
 	whack_log(RC_LOG_SERIOUS, ugh);

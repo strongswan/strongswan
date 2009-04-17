@@ -38,22 +38,10 @@
 #include "kernel.h"
 #include "kernel_alg.h"
 #include "alg_info.h"
-
-#ifndef NO_PLUTO
 #include "log.h"
 #include "whack.h"
 #include "db_ops.h"
-#else
-/*
- *	macros/functions for compilation without pluto (eg: spi for manual conns)
- */
-extern int debug;
-#include <assert.h>
-#define passert(x) assert(x)
-#define DBG(cond, action)   { if (debug) { action ; } }
-#define DBG_log(x, args...) fprintf(stderr, x "\n" , ##args);
-#define plog(x, args...) fprintf(stderr, x "\n" , ##args);
-#endif /* NO_PLUTO */
+
 /* ALG storage */
 static struct sadb_alg esp_aalg[SADB_AALG_MAX+1];
 static struct sadb_alg esp_ealg[SADB_EALG_MAX+1];

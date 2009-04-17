@@ -133,9 +133,9 @@ read_foodgroup(struct fg_groups *g)
 
     if (plen > fg_path_space)
     {
-	pfreeany(fg_path);
+	free(fg_path);
 	fg_path_space = plen + 10;
-	fg_path = alloc_bytes(fg_path_space, "policy group path");
+	fg_path = malloc(fg_path_space);
     }
     snprintf(fg_path, fg_path_space, "%s/%s", policygroups_dir, fgn);
     if (!lexopen(&flp_space, fg_path, TRUE))
@@ -219,7 +219,7 @@ read_foodgroup(struct fg_groups *g)
 			}
 			else
 			{
-			    struct fg_targets *f = alloc_thing(struct fg_targets, "fg_target");
+			    struct fg_targets *f = malloc_thing(struct fg_targets);
 
 			    f->next = *pp;
 			    f->group = g;
@@ -254,8 +254,8 @@ free_targets(void)
 	struct fg_targets *t = targets;
 
 	targets = t->next;
-	pfreeany(t->name);
-	pfree(t);
+	free(t->name);
+	free(t);
     }
 }
 
@@ -346,7 +346,7 @@ load_groups(void)
 void
 add_group(struct connection *c)
 {
-    struct fg_groups *g = alloc_thing(struct fg_groups, "policy group");
+    struct fg_groups *g = malloc_thing(struct fg_groups);
 
     g->next = groups;
     groups = g;
@@ -448,7 +448,7 @@ delete_group(const struct connection *c)
 	    {
 		*pp = t->next;
 		remove_group_instance(t->group->connection, t->name);
-		pfree(t);
+		free(t);
 		/* pp is ready for next iteration */
 	    }
 	    else
@@ -458,5 +458,5 @@ delete_group(const struct connection *c)
 	}
     }
 
-    pfree(g);
+    free(g);
 }
