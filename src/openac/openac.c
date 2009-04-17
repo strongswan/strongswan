@@ -218,18 +218,35 @@ static bool stderr_quiet = FALSE;
 static void openac_dbg(int level, char *fmt, ...)
 {
 	int priority = LOG_INFO;
+	char buffer[8192];
+	char *current = buffer, *next;
 	va_list args;
 	
 	if (level <= debug_level)
 	{
 		va_start(args, fmt);
+
 		if (!stderr_quiet)
 		{
 			vfprintf(stderr, fmt, args);
 			fprintf(stderr, "\n");
 		}
-		vsyslog(priority, fmt, args);
+
+		/* write in memory buffer first */
+		vsnprintf(buffer, sizeof(buffer), fmt, args);
 		va_end(args);
+
+		/* do a syslog with every line */
+		while (current)
+		{
+			next = strchr(current, '\n');
+			if (next)
+			{
+				*(next++) = '\0';
+			}
+			syslog(priority, "%s\n", current);
+			current = next;
+		}
 	}
 }
 
