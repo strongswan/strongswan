@@ -67,6 +67,16 @@ struct private_load_tester_config_t {
 	char *responder_auth;
 	
 	/**
+	 * IKE_SA rekeying delay
+	 */
+	u_int ike_rekey;
+	
+	/**
+	 * CHILD_SA rekeying delay
+	 */
+	u_int child_rekey;
+	
+	/**
 	 * incremental numbering of generated configs
 	 */
 	u_int num;
@@ -177,10 +187,12 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", this->remote);
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
 	peer_cfg = peer_cfg_create("load-test", 2, ike_cfg,
-			CERT_SEND_IF_ASKED, UNIQUE_NO, 1, 0, 0, /* keytries, rekey, reauth */
-			0, 0, FALSE, 0,	/* jitter, overtime, mobike, dpddelay */
-			this->vip ? this->vip->clone(this->vip) : NULL,
-			this->pool, FALSE, NULL, NULL);
+							   CERT_SEND_IF_ASKED, UNIQUE_NO, 1, /* keytries */
+							   this->ike_rekey, 0, /* rekey, reauth */
+							   0, this->ike_rekey, /* jitter, overtime */
+							   FALSE, 0, /* mobike, dpddelay */
+							   this->vip ? this->vip->clone(this->vip) : NULL,
+							   this->pool, FALSE, NULL, NULL);
 	if (num)
 	{	/* initiator */
 		generate_auth_cfg(this, this->initiator_auth, peer_cfg, TRUE, num);
@@ -191,7 +203,8 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 		generate_auth_cfg(this, this->responder_auth, peer_cfg, TRUE, num);
 		generate_auth_cfg(this, this->initiator_auth, peer_cfg, FALSE, num);
 	}
-	child_cfg = child_cfg_create("load-test", 1200, 600, 0, NULL, TRUE,
+	child_cfg = child_cfg_create("load-test", this->child_rekey * 2,
+								 this->child_rekey, 0, NULL, TRUE,
 								 MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
 	proposal = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
 	child_cfg->add_proposal(child_cfg, proposal);
@@ -280,6 +293,11 @@ load_tester_config_t *load_tester_config_create()
 		this->proposal = proposal_create_from_string(PROTO_IKE,
 													 "aes128-sha1-modp768");
 	}
+	this->ike_rekey = lib->settings->get_int(lib->settings,
+				"charon.plugins.load_tester.ike_rekey", 0);
+	this->child_rekey = lib->settings->get_int(lib->settings,
+				"charon.plugins.load_tester.child_rekey", 600);
+	
 	this->initiator_auth = lib->settings->get_str(lib->settings,
 				"charon.plugins.load_tester.initiator_auth", "pubkey");
 	this->responder_auth = lib->settings->get_str(lib->settings,
