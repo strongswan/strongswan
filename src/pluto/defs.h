@@ -18,6 +18,7 @@
 #ifndef _DEFS_H
 #define _DEFS_H
 
+#include <string.h>
 #include <sys/types.h>
 
 #ifdef KLIPS
