@@ -58,7 +58,7 @@ eap_type_t eap_type_from_string(char *name)
 	
 	for (i = 0; i < countof(types); i++)
 	{
-		if (strcasecmp(name, types[i].name) == 0)
+		if (strcasecmp(name, types[i].name))
 		{
 			return types[i].type;
 		}

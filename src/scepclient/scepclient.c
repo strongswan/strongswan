@@ -422,19 +422,19 @@ int main(int argc, char **argv)
 		    /* set pointer to start of filename */
 		    filename++;
 		}
-		if (strcasecmp("pkcs1", optarg) == 0)
+		if (strcaseeq("pkcs1", optarg))
 		{
 		    filetype_in |= PKCS1;
 		    if (filename)
 			file_in_pkcs1 = filename;
 		}
-		else if (strcasecmp("cacert-enc", optarg) == 0)
+		else if (strcaseeq("cacert-enc", optarg))
 		{
 		    filetype_in |= CACERT_ENC;
 		    if (filename)
 			file_in_cacert_enc = filename;
 		}
-		else if (strcasecmp("cacert-sig", optarg) == 0)
+		else if (strcaseeq("cacert-sig", optarg))
 		{
 		    filetype_in |= CACERT_SIG;
 		    if (filename)
@@ -458,37 +458,37 @@ int main(int argc, char **argv)
 		    /* set pointer to start of filename */
 		    filename++;
 		}
-		if (strcasecmp("pkcs1", optarg) == 0)
+		if (strcaseeq("pkcs1", optarg))
 		{
 		    filetype_out |= PKCS1;
 		    if (filename)
 			file_out_pkcs1 = filename;
 		}
-		else if (strcasecmp("pkcs10", optarg) == 0)
+		else if (strcaseeq("pkcs10", optarg))
 		{
 		    filetype_out |= PKCS10;
 		    if (filename)
 			file_out_pkcs10 = filename;
 		}
-		else if (strcasecmp("pkcs7", optarg) == 0)
+		else if (strcaseeq("pkcs7", optarg))
 		{
 		    filetype_out |= PKCS7;
 		    if (filename)
 			file_out_pkcs7 = filename;
 		}
-		else if (strcasecmp("cert-self", optarg) == 0)
+		else if (strcaseeq("cert-self", optarg))
 		{
 		    filetype_out |= CERT_SELF;
 		    if (filename)
 			file_out_cert_self = filename;
 		}
-		else if (strcasecmp("cert", optarg) == 0)
+		else if (strcaseeq("cert", optarg))
 		{
 		    filetype_out |= CERT;
 		    if (filename)
 			file_out_cert = filename;
 		}
-		else if (strcasecmp("cacert", optarg) == 0)
+		else if (strcaseeq("cacert", optarg))
 		{
 		    request_ca_certificate = TRUE;
 		    if (filename)
@@ -579,12 +579,18 @@ int main(int argc, char **argv)
 		    value++;
 		}
 
-		if (!strcasecmp("email", optarg))
+		if (strcaseeq("email", optarg))
+		{	
 		    kind = GN_RFC822_NAME;
-		else if (!strcasecmp("dns", optarg))
+		}
+		else if (strcaseeq("dns", optarg))
+		{
 		    kind = GN_DNS_NAME;
-		else if (!strcasecmp("ip", optarg))
+		}
+		else if (strcaseeq("ip", optarg))
+		{
 		    kind = GN_IP_ADDRESS;
+		}
 		else
 		{
 		    usage("invalid --subjectAltName type");
@@ -596,9 +602,10 @@ int main(int argc, char **argv)
 
 	case 'p':	/* --password */
 	    if (challengePassword.len > 0)
+	    {
 		usage("only one challenge password allowed");
-
-	    if (strcasecmp("%prompt", optarg) == 0)
+	    }
+	    if (strcaseeq("%prompt", optarg))
 	    {
 		printf("Challenge password: ");
 		if (fgets(challenge_password_buffer, sizeof(challenge_password_buffer)-1, stdin))
@@ -621,38 +628,56 @@ int main(int argc, char **argv)
 
 	case 'u':	/* -- url */
 	    if (scep_url)
+	    {
 		usage("only one URL argument allowed");
+	    }
 	    scep_url = optarg;
 	    continue;
 
 	case 'm':	/* --method */
-	    if (strcasecmp("post", optarg) == 0)
+	    if (strcaseeq("post", optarg))
+	    {
 		request_type = FETCH_POST;
-	    else if (strcasecmp("get", optarg) == 0)
+	    }
+	    else if (strcaseeq("get", optarg))
+	    {
 		request_type = FETCH_GET;
+	    }
 	    else
+	    {
 		usage("invalid http request method specified");
+	    }
 	    continue;
 
 	case 't':	/* --interval */
 	    poll_interval = atoi(optarg);
 	    if (poll_interval <= 0)
+	    {
 		usage("invalid interval specified");
+	    }
 	    continue;
 
 	case 'x':	/* --maxpolltime */
 	    max_poll_time = atoi(optarg);
 	    if (max_poll_time < 0)
+	    {
 		usage("invalid maxpolltime specified");
+	    }
 	    continue;
 
 	case 'a':	/*--algorithm */
-	    if (strcasecmp("des-cbc", optarg) == 0)
+	    if (strcaseeq("des-cbc", optarg))
+	    {
 		pkcs7_symmetric_cipher = OID_DES_CBC;
-	    else if (strcasecmp("3des-cbc", optarg) == 0)
+	    }
+	    else if (strcaseeq("3des-cbc", optarg))
+	    {
 		pkcs7_symmetric_cipher = OID_3DES_EDE_CBC;
+	    }
 	    else
+	    {
 		usage("invalid encryption algorithm specified");
+	    }
 	    continue;
 #ifdef DEBUG
 	case 'A':	/* --debug-all */
@@ -687,18 +712,25 @@ int main(int argc, char **argv)
     init_fetch();
 
     if ((filetype_out == 0) && (!request_ca_certificate))
+    {
 	usage ("--out filetype required");
-
+    }
     if (request_ca_certificate && (filetype_out > 0 || filetype_in > 0))
+    {
 	usage("in CA certificate request, no other --in or --out option allowed");
+    }
 
     /* check if url is given, if cert output defined */
     if (((filetype_out & CERT) || request_ca_certificate) && !scep_url)
-		usage("URL of SCEP server required");
+    {
+	usage("URL of SCEP server required");
+    }
 
     /* check for sanity of --in/--out */
     if (!filetype_in && (filetype_in > filetype_out))
+    {
 	usage("cannot generate --out of given --in!");
+    }
 
     /*
      * input of PKCS#1 file
@@ -765,7 +797,9 @@ int main(int argc, char **argv)
 	)
 	ugh = atodn(distinguishedName, &dn);
 	if (ugh != NULL)
+	{
 	    exit_scepclient(ugh);
+	}
 
 	clonetochunk(subject, dn.ptr, dn.len);
 
@@ -792,7 +826,9 @@ int main(int argc, char **argv)
     }
 
     if (!filetype_out)
+    {
 	exit_scepclient(NULL); /* no further output required */
+    }
 
     /*
      * output of PKCS#1 file
@@ -813,7 +849,9 @@ int main(int argc, char **argv)
     }
 
     if (!filetype_out)
+    {
 	exit_scepclient(NULL); /* no further output required */
+    }
 
     scep_generate_transaction_id((const RSA_public_key_t *)private_key
 	, &transID, &serialNumber);
@@ -849,7 +887,9 @@ int main(int argc, char **argv)
     }
 
     if (!filetype_out)
+    {
 	exit_scepclient(NULL); /* no further output required */
+    }
 
     /*
      * load ca encryption certificate
@@ -859,7 +899,9 @@ int main(int argc, char **argv)
 	cert_t cert;
 
 	if (!load_cert(path, "encryption cacert", &cert))
+	{
 	    exit_scepclient("could not load encryption cacert file '%s'", path);
+	}
 	x509_ca_enc = cert.u.x509;
     }
 
@@ -901,7 +943,9 @@ int main(int argc, char **argv)
     }
 
     if (!filetype_out)
+    {
 	exit_scepclient(NULL); /* no further output required */
+    }
 
     /*
      * output certificate fetch from SCEP server
@@ -930,7 +974,9 @@ int main(int argc, char **argv)
         ugh = scep_parse_response(scep_response, transID, &data, &attrs
 				 , x509_ca_sig);
 	if (ugh != NULL)
+	{
 	    exit_scepclient(ugh);
+	}
 
 	/* in case of manual mode, we are going into a polling loop */
 	if (attrs.pkiStatus == SCEP_PENDING)
@@ -975,7 +1021,9 @@ int main(int argc, char **argv)
             ugh = scep_parse_response(scep_response, transID, &data, &attrs
 				     , x509_ca_sig);
 	    if (ugh != NULL)
+	    {
 		exit_scepclient(ugh);
+	    }
 	}
 
 	if (attrs.pkiStatus != SCEP_SUCCESS)

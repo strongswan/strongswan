@@ -214,17 +214,17 @@ static bool get_bool(private_settings_t *this, char *key, bool def, ...)
 	va_end(args);
 	if (value)
 	{
-		if (strcasecmp(value, "true") == 0 ||
-			strcasecmp(value, "enabled") == 0 ||
-			strcasecmp(value, "yes") == 0 ||
-			strcasecmp(value, "1") == 0)
+		if (strcaseeq(value, "true") ||
+			strcaseeq(value, "enabled") ||
+			strcaseeq(value, "yes") ||
+			strcaseeq(value, "1"))
 		{
 			return TRUE;
 		}
-		else if (strcasecmp(value, "false") == 0 ||
-				 strcasecmp(value, "disabled") == 0 ||
-				 strcasecmp(value, "no") == 0 ||
-				 strcasecmp(value, "0") == 0)
+		else if (strcaseeq(value, "false") ||
+				 strcaseeq(value, "disabled") ||
+				 strcaseeq(value, "no") ||
+				 strcaseeq(value, "0"))
 		{
 			return FALSE;
 		}

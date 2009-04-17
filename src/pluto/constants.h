@@ -43,8 +43,6 @@ extern void init_constants(void);
 #define dup_any(fd) ((fd) == NULL_FD? NULL_FD : dup(fd))
 #define close_any(fd) { if ((fd) != NULL_FD) { close(fd); (fd) = NULL_FD; } }
 
-#define strcaseeq(a, b) (strcasecmp((a), (b)) == 0)	/* clearer shorthand */
-
 /* set type with room for at least 64 elements for ALG opts (was 32 in stock FS) */
 
 typedef unsigned long long lset_t;

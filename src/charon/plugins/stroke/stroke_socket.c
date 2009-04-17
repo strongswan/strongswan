@@ -361,16 +361,16 @@ static void stroke_leases(private_stroke_socket_t *this,
 
 debug_t get_group_from_name(char *type)
 {
-	if (strcasecmp(type, "any") == 0) return DBG_ANY;
-	else if (strcasecmp(type, "mgr") == 0) return DBG_MGR;
-	else if (strcasecmp(type, "ike") == 0) return DBG_IKE;
-	else if (strcasecmp(type, "chd") == 0) return DBG_CHD;
-	else if (strcasecmp(type, "job") == 0) return DBG_JOB;
-	else if (strcasecmp(type, "cfg") == 0) return DBG_CFG;
-	else if (strcasecmp(type, "knl") == 0) return DBG_KNL;
-	else if (strcasecmp(type, "net") == 0) return DBG_NET;
-	else if (strcasecmp(type, "enc") == 0) return DBG_ENC;
-	else if (strcasecmp(type, "lib") == 0) return DBG_LIB;
+	if (strcaseeq(type, "any")) return DBG_ANY;
+	else if (strcaseeq(type, "mgr")) return DBG_MGR;
+	else if (strcaseeq(type, "ike")) return DBG_IKE;
+	else if (strcaseeq(type, "chd")) return DBG_CHD;
+	else if (strcaseeq(type, "job")) return DBG_JOB;
+	else if (strcaseeq(type, "cfg")) return DBG_CFG;
+	else if (strcaseeq(type, "knl")) return DBG_KNL;
+	else if (strcaseeq(type, "net")) return DBG_NET;
+	else if (strcaseeq(type, "enc")) return DBG_ENC;
+	else if (strcaseeq(type, "lib")) return DBG_LIB;
 	else return -1;
 }
 
