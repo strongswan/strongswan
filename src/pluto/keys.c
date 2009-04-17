@@ -83,7 +83,7 @@ static pubkey_t*
 allocate_RSA_public_key(const cert_t cert)
 {
     pubkey_t *pk = malloc_thing(pubkey_t);
-    chunk_t e = empty_chunk, n = empty_chunk;
+    chunk_t e = chunk_empty, n = chunk_empty;
 
     switch (cert.type)
     {
@@ -107,8 +107,8 @@ allocate_RSA_public_key(const cert_t cert)
 
     pk->alg = PUBKEY_ALG_RSA;
     pk->id  = empty_id;
-    pk->issuer = empty_chunk;
-    pk->serial = empty_chunk;
+    pk->issuer = chunk_empty;
+    pk->serial = chunk_empty;
 
     return pk;
 }
@@ -179,7 +179,7 @@ get_secret(const struct connection *c, enum PrivateKeyKind kind, bool asym)
     {
 	/* roadwarrior: replace him with 0.0.0.0 */
 	rw_id.kind = c->spd.that.id.kind;
-	rw_id.name = empty_chunk;
+	rw_id.name = chunk_empty;
 	happy(anyaddr(addrtypeof(&c->spd.that.host_addr), &rw_id.ip_addr));
 	his_id = &rw_id;
     }
@@ -1137,8 +1137,8 @@ public_key_from_rsa(const RSA_public_key_t *k)
 
     zero(p);
     p->id = empty_id;	/* don't know, doesn't matter */
-    p->issuer = empty_chunk;
-    p->serial = empty_chunk;
+    p->issuer = chunk_empty;
+    p->serial = chunk_empty;
     p->alg = PUBKEY_ALG_RSA;
 
     memcpy(p->u.rsa.keyid, k->keyid, sizeof(p->u.rsa.keyid));
@@ -1387,8 +1387,8 @@ add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
     pk->dns_auth_level = dns_auth_level;
     pk->alg = alg;
     pk->until_time = UNDEFINED_TIME;
-    pk->issuer = empty_chunk;
-    pk->serial = empty_chunk;
+    pk->issuer = chunk_empty;
+    pk->serial = chunk_empty;
        
     install_public_key(pk, head);
     return NULL;
@@ -1468,7 +1468,7 @@ add_pgp_public_key(pgpcert_t *cert , time_t until
     pk->id.name.len = PGP_FINGERPRINT_SIZE;
     pk->dns_auth_level = dns_auth_level;
     pk->until_time = until;
-    delete_public_keys(&pk->id, pk->alg, empty_chunk, empty_chunk);
+    delete_public_keys(&pk->id, pk->alg, chunk_empty, chunk_empty);
     install_public_key(pk, &pubkeys);
 }
 

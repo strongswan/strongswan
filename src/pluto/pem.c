@@ -69,7 +69,7 @@ match(const char *pattern, const chunk_t *ch)
 static bool
 find_boundary(const char* tag, chunk_t *line)
 {
-    chunk_t name = empty_chunk;
+    chunk_t name = chunk_empty;
 
     if (!present("-----", line))
 	return FALSE;
@@ -117,7 +117,7 @@ extract_token(chunk_t *token, char termination, chunk_t *src)
     u_char *eot = memchr(src->ptr, termination, src->len);
 
     /* initialize empty token */
-    *token = empty_chunk;
+    *token = chunk_empty;
 
     if (eot == NULL) /* termination symbol not found */
 	return FALSE;
@@ -334,8 +334,8 @@ pemtobin(chunk_t *blob, prompt_pass_t *pass, const char* label, bool *pgp)
 
     chunk_t src    = *blob;
     chunk_t dst    = *blob;
-    chunk_t line   = empty_chunk;
-    chunk_t iv     = empty_chunk;
+    chunk_t line   = chunk_empty;
+    chunk_t iv     = chunk_empty;
 
     u_char iv_buf[MAX_DIGEST_LEN];
 
@@ -371,8 +371,8 @@ pemtobin(chunk_t *blob, prompt_pass_t *pass, const char* label, bool *pgp)
 	    }
 	    if (state == PEM_HEADER)
 	    {
-		chunk_t name  = empty_chunk;
-		chunk_t value = empty_chunk;
+		chunk_t name  = chunk_empty;
+		chunk_t value = chunk_empty;
 
 		/* an empty line separates HEADER and BODY */
 		if (line.len == 0)

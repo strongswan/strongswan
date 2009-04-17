@@ -251,7 +251,7 @@ pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
     int objectID = 0;
 
     contentInfo_t cInfo = empty_contentInfo;
-    chunk_t encrypted_digest = empty_chunk;
+    chunk_t encrypted_digest = chunk_empty;
 
     if (!pkcs7_parse_contentInfo(blob, 0, &cInfo))
 	return FALSE;
@@ -378,9 +378,9 @@ pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data
 {
     asn1_ctx_t ctx;
     chunk_t object;
-    chunk_t iv                = empty_chunk;
-    chunk_t symmetric_key     = empty_chunk;
-    chunk_t encrypted_content = empty_chunk;
+    chunk_t iv                = chunk_empty;
+    chunk_t symmetric_key     = chunk_empty;
+    chunk_t encrypted_content = chunk_empty;
 
     u_char buf[BUF_LEN];
     u_int level;
@@ -390,7 +390,7 @@ pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data
     int objectID = 0;
 
     contentInfo_t cInfo = empty_contentInfo;
-    *data = empty_chunk;
+    *data = chunk_empty;
 
     if (!pkcs7_parse_contentInfo(blob, 0, &cInfo))
 	goto failed;
@@ -639,7 +639,7 @@ pkcs7_build_contentInfo(contentInfo_t *cInfo)
     case OID_UNKNOWN:
     default:
 	fprintf(stderr, "invalid pkcs7 contentInfo type");
-	return empty_chunk;
+	return chunk_empty;
     }
 
     return (cInfo->content.ptr == NULL)
@@ -682,9 +682,9 @@ pkcs7_build_signedData(chunk_t data, chunk_t attributes, const x509cert_t *cert
     }
     else
     {
-	encryptedDigest = (data.ptr == NULL)? empty_chunk
+	encryptedDigest = (data.ptr == NULL)? chunk_empty
 		: pkcs1_build_signature(data, digest_alg, key, FALSE);
-	authenticatedAttributes = empty_chunk;
+	authenticatedAttributes = chunk_empty;
     }
 
     signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmcmcm"
@@ -696,7 +696,7 @@ pkcs7_build_signedData(chunk_t data, chunk_t attributes, const x509cert_t *cert
 		, encryptedDigest);
 
     pkcs7Data.type    = OID_PKCS7_DATA;
-    pkcs7Data.content = (data.ptr == NULL)? empty_chunk
+    pkcs7Data.content = (data.ptr == NULL)? chunk_empty
 		: asn1_simple_object(ASN1_OCTET_STRING, data);
 
     signedData.type = OID_PKCS7_SIGNED_DATA;

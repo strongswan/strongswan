@@ -838,7 +838,7 @@ load_acerts(void)
 	{
 	    while (n--)
 	    {
-		chunk_t blob = empty_chunk;
+		chunk_t blob = chunk_empty;
 		bool pgp = FALSE;
 
 		if (load_coded_file(filelist[n]->d_name, NULL, "acert", &blob, &pgp))

@@ -1764,7 +1764,7 @@ scx_get_pin(smartcard_t *sc, int whackfd)
 	}
 
 	/* wrong pin - we try another round */
-	sc->pin = empty_chunk;
+	sc->pin = chunk_empty;
     }
 
     if (sc->valid)
@@ -1790,7 +1790,7 @@ scx_free_pin(chunk_t *pin)
 	/* clear pin field in memory */
 	memset(pin->ptr, '\0', pin->len);
 	free(pin->ptr);
-	*pin = empty_chunk;
+	*pin = chunk_empty;
     }
 }
 

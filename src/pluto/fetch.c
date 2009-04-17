@@ -309,7 +309,7 @@ fetch_curl(char *url, chunk_t *blob)
 {
 #ifdef LIBCURL
     char errorbuffer[CURL_ERROR_SIZE] = "";
-    chunk_t response = empty_chunk;
+    chunk_t response = chunk_empty;
     CURLcode res;
 
     /* get it with libcurl */
@@ -605,7 +605,7 @@ fetch_crls(bool cache_crls)
     while (req != NULL)
     {
 	bool valid_crl = FALSE;
-	chunk_t blob = empty_chunk;
+	chunk_t blob = chunk_empty;
 	generalName_t *gn = req->distributionPoints;
 	const char *ldaphost;
 	ca_info_t *ca;
@@ -670,7 +670,7 @@ fetch_ocsp_status(ocsp_location_t* location)
 {
 #ifdef LIBCURL
     chunk_t request;
-    chunk_t response = empty_chunk;
+    chunk_t response = chunk_empty;
 
     CURL* curl;
     CURLcode res;

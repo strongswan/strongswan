@@ -348,15 +348,15 @@ int main(int argc, char **argv)
     err_t ugh = NULL;
 
     /* initialize global variables */
-    pkcs1             = empty_chunk;
-    pkcs7             = empty_chunk;
-    serialNumber      = empty_chunk;
-    transID           = empty_chunk;
-    fingerprint       = empty_chunk;
-    issuerAndSubject  = empty_chunk;
-    challengePassword = empty_chunk;
-    getCertInitial    = empty_chunk;
-    scep_response     = empty_chunk;
+    pkcs1             = chunk_empty;
+    pkcs7             = chunk_empty;
+    serialNumber      = chunk_empty;
+    transID           = chunk_empty;
+    fingerprint       = chunk_empty;
+    issuerAndSubject  = chunk_empty;
+    challengePassword = chunk_empty;
+    getCertInitial    = chunk_empty;
+    scep_response     = chunk_empty;
     log_to_stderr     = TRUE;
 
     for (;;)
@@ -774,7 +774,7 @@ int main(int argc, char **argv)
     else
     {
 	char buf[IDTOA_BUF];
-	chunk_t dn = empty_chunk;
+	chunk_t dn = chunk_empty;
 
         dn.ptr = buf;
 
@@ -957,8 +957,8 @@ int main(int argc, char **argv)
 	time_t poll_start;
 
 	x509cert_t       *certs         = NULL;
-	chunk_t           envelopedData = empty_chunk;
-	chunk_t           certData      = empty_chunk;
+	chunk_t           envelopedData = chunk_empty;
+	chunk_t           certData      = chunk_empty;
 	contentInfo_t     data          = empty_contentInfo;
 	scep_attributes_t attrs         = empty_scep_attributes;
 

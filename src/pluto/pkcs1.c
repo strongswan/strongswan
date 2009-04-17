@@ -435,7 +435,7 @@ RSA_encrypt(const RSA_public_key_t *key, chunk_t in)
     int i;
 
     if (padding < 8 || key->k > RSA_MAX_OCTETS)
-	return empty_chunk;
+	return chunk_empty;
 
     /* add padding according to PKCS#1 7.2.1 1.+2. */
     *pos++ = 0x00;
@@ -576,7 +576,7 @@ pkcs1_build_signature(chunk_t tbs, int hash_alg, const RSA_private_key_t *key
 	alg_id = ASN1_sha1_id;
 	break;
     default:
-	return empty_chunk;
+	return chunk_empty;
     }
     compute_digest(tbs, hash_alg, &digest);
 

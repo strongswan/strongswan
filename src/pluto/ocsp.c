@@ -321,7 +321,7 @@ build_ocsp_location(const x509cert_t *cert, ocsp_location_t *location)
 	}
     }
 
-    location->nonce = empty_chunk;
+    location->nonce = chunk_empty;
     location->certinfo = NULL;
 
     return TRUE;
@@ -730,7 +730,7 @@ generate_signature(chunk_t digest, smartcard_t *sc
 	if (!scx_establish_context(sc) || !scx_login(sc))
 	{
 	    scx_release_context(sc);
-	    return empty_chunk;
+	    return chunk_empty;
 	}
 
 	siglen = scx_get_keylength(sc);
@@ -739,7 +739,7 @@ generate_signature(chunk_t digest, smartcard_t *sc
 	{
 	    plog("failed to get keylength from smartcard");
 	    scx_release_context(sc);
-	    return empty_chunk;
+	    return chunk_empty;
 	}
 
 	DBG(DBG_CONTROL | DBG_CRYPT,
@@ -779,7 +779,7 @@ build_signature(chunk_t tbsRequest)
     chunk_t digest_raw = { digest_buf, MAX_DIGEST_LEN };
 
     if (!compute_digest(tbsRequest, OID_SHA1, &digest_raw))
-	return empty_chunk;
+	return chunk_empty;
 
     /* according to PKCS#1 v2.1 digest must be packaged into
      * an ASN.1 structure for encryption
@@ -796,7 +796,7 @@ build_signature(chunk_t tbsRequest)
 
     /* has the RSA signature generation been successful? */
     if (sigdata.ptr == NULL)
-	return empty_chunk;
+	return chunk_empty;
 
     /* include our certificate */
     certs = asn1_wrap(ASN1_CONTEXT_C_0, "m"
@@ -929,7 +929,7 @@ build_tbs_request(ocsp_location_t *location, bool has_requestor_cert)
     return asn1_wrap(ASN1_SEQUENCE, "mmm"
 		, (has_requestor_cert)
 			? build_requestor_name()
-			: empty_chunk
+			: chunk_empty
 		, build_request_list(location)
 		, build_request_ext(location));
 }
@@ -965,7 +965,7 @@ build_ocsp_request(ocsp_location_t *location)
 
     /* sign tbsReuqest */
     signature = (has_requestor_cert)? build_signature(tbsRequest)
-				    : empty_chunk;
+				    : chunk_empty;
 
     unlock_certs_and_keys("build_ocsp_request");
 
@@ -985,7 +985,7 @@ valid_ocsp_response(response_t *res)
 
     lock_authcert_list("valid_ocsp_response");
 
-    authcert = get_authcert(res->responder_id_name, empty_chunk
+    authcert = get_authcert(res->responder_id_name, chunk_empty
 		    , res->responder_id_key, AUTH_OCSP | AUTH_CA);
 
     if (authcert == NULL)
@@ -1333,7 +1333,7 @@ add_ocsp_location(const ocsp_location_t *loc, ocsp_location_t **chain)
 
     if (loc->authKeyID.ptr == NULL)
     {
-	location->authKeyID = empty_chunk;
+	location->authKeyID = chunk_empty;
     }
     else
     {
@@ -1342,7 +1342,7 @@ add_ocsp_location(const ocsp_location_t *loc, ocsp_location_t **chain)
 
     if (loc->authKeySerialNumber.ptr == NULL)
     {
-	location->authKeySerialNumber = empty_chunk;
+	location->authKeySerialNumber = chunk_empty;
     }
     else
     {

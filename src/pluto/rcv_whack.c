@@ -179,7 +179,7 @@ key_add_request(const whack_message_t *msg)
     {
 	if (!msg->whack_addkey)
 	    delete_public_keys(&keyid, msg->pubkey_alg
-		, empty_chunk, empty_chunk);
+		, chunk_empty, chunk_empty);
 
 	if (msg->keyval.len == 0)
 	{

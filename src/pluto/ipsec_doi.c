@@ -2457,7 +2457,7 @@ switch_connection(struct msg_digest *md, struct id *peer, bool initiator)
     struct connection *c = st->st_connection;
 
     chunk_t peer_ca = (st->st_peer_pubkey != NULL)
-    		     ? st->st_peer_pubkey->issuer : empty_chunk;
+    		     ? st->st_peer_pubkey->issuer : chunk_empty;
 
     DBG(DBG_CONTROL,
 	char buf[BUF_LEN];
@@ -3441,7 +3441,7 @@ main_inI2_outR2(struct msg_digest *md)
 	    }
 	    else
 	    {
-		if (!build_and_ship_CR(CERT_X509_SIGNATURE, empty_chunk
+		if (!build_and_ship_CR(CERT_X509_SIGNATURE, chunk_empty
 		, &md->rbody, np))
 		    return STF_INTERNAL_ERROR;
 	    }

@@ -29,7 +29,7 @@
 #include "log.h"
 #include "whack.h"	/* for RC_LOG_SERIOUS */
 
-const chunk_t empty_chunk = { NULL, 0 };
+const chunk_t chunk_empty = { NULL, 0 };
 
 bool
 all_zero(const unsigned char *m, size_t len)

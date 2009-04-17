@@ -108,7 +108,7 @@ asn1_algorithmIdentifier(int oid)
    case OID_SHA1:
 	return ASN1_sha1_id;
    default:
-	return empty_chunk;
+	return chunk_empty;
     }
 }
 
@@ -159,7 +159,7 @@ asn1_build_known_oid(int n)
 	
     if (n < 0 || n >= OID_MAX)
     {
-	return empty_chunk;
+	return chunk_empty;
     }
 	
     i = oid_names[n].level + 1;
@@ -567,7 +567,7 @@ extract_object(asn1Object_t const *objects,
     chunk_t *blob1;
     u_char *start_ptr;
 
-    *object = empty_chunk;
+    *object = chunk_empty;
 
     if (obj.flags & ASN1_END)  /* end of loop or option found */
     {

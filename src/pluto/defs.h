@@ -81,7 +81,7 @@ typedef struct chunk chunk_t;
 extern char* temporary_cyclic_buffer(void);
 extern const char* concatenate_paths(const char *a, const char *b);
 
-extern const chunk_t empty_chunk;
+extern const chunk_t chunk_empty;
 
 /* compare two chunks */
 extern int cmp_chunk(chunk_t a, chunk_t b);

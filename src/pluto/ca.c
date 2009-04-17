@@ -90,7 +90,7 @@ trusted_ca(chunk_t a, chunk_t b, int *pathlen)
 
     while ((*pathlen)++ < MAX_CA_PATH_LEN)
     {
-	x509cert_t *cacert = get_authcert(a, empty_chunk, empty_chunk, AUTH_CA);
+	x509cert_t *cacert = get_authcert(a, chunk_empty, chunk_empty, AUTH_CA);
 
 	/* cacert not found or self-signed root cacert-> exit */
 	if (cacert == NULL || same_dn(cacert->issuer, a))

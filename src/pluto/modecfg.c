@@ -93,8 +93,8 @@ init_internal_addr(internal_addr_t *ia)
 
     ia->attr_set = LEMPTY;
     ia->xauth_attr_set = LEMPTY;
-    ia->xauth_secret.user_name = empty_chunk;
-    ia->xauth_secret.user_password = empty_chunk;
+    ia->xauth_secret.user_name = chunk_empty;
+    ia->xauth_secret.user_password = chunk_empty;
     ia->xauth_type = XAUTH_TYPE_GENERIC;
     ia->xauth_status = XAUTH_STATUS_FAIL;
     ia->unity_attr_set = LEMPTY;

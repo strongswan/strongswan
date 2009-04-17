@@ -50,7 +50,7 @@ get_mycert(cert_t cert)
     case CERT_X509_SIGNATURE:
 	return cert.u.x509->certificate;
     default:
-	return empty_chunk;
+	return chunk_empty;
     }
 }
 
@@ -112,7 +112,7 @@ load_coded_file(const char *filename, prompt_pass_t *pass, const char *type
 	/* a conversion error has occured */
 	plog("  %s", ugh);
 	free(blob->ptr);
-	*blob = empty_chunk;
+	*blob = chunk_empty;
     }
     else
     {
@@ -130,7 +130,7 @@ load_rsa_private_key(const char* filename, prompt_pass_t *pass
 {
     err_t ugh = NULL;
     bool pgp = FALSE;
-    chunk_t blob = empty_chunk;
+    chunk_t blob = chunk_empty;
 
     const char *path = concatenate_paths(PRIVATE_KEY_PATH, filename);
 
@@ -160,7 +160,7 @@ bool
 load_cert(const char *filename, const char *label, cert_t *cert)
 {
     bool pgp = FALSE;
-    chunk_t blob = empty_chunk;
+    chunk_t blob = chunk_empty;
 
     /* initialize cert struct */
     cert->type = CERT_NONE;

@@ -477,7 +477,7 @@ scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op
     CURLcode res;
 
     /* initialize response */
-    *response = empty_chunk;
+    *response = chunk_empty;
 
     /* initialize curl context */
     curl = curl_easy_init();

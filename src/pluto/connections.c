@@ -822,7 +822,7 @@ extract_end(struct end *dst, const whack_end_t *src, const char *which)
 	}
     }
 
-    dst->ca = empty_chunk;
+    dst->ca = chunk_empty;
 
     /* decode CA distinguished name, if any */
     if (src->ca != NULL)
@@ -838,7 +838,7 @@ extract_end(struct end *dst, const whack_end_t *src, const char *which)
 	    if (ugh != NULL)
 	    {
 		plog("bad CA string '%s': %s (ignored)", src->ca, ugh);
-		dst->ca = empty_chunk;
+		dst->ca = chunk_empty;
 	    }
 	}
     }
@@ -3777,7 +3777,7 @@ get_peer_ca_and_groups(struct connection *c, const ietfAttrList_t **peer_list)
 	}
 	return p1st->st_peer_pubkey->issuer;
     }
-    return empty_chunk;
+    return chunk_empty;
 }
 
 struct connection *

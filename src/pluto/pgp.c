@@ -436,7 +436,7 @@ parse_pgp(chunk_t blob, pgpcert_t *cert, RSA_private_key_t *key)
 
     while (blob.len > 0)
     {
-	chunk_t packet = empty_chunk;
+	chunk_t packet = chunk_empty;
 	u_char packet_tag = *blob.ptr;
 
 	DBG(DBG_PARSING,

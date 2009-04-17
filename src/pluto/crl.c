@@ -351,7 +351,7 @@ load_crls(void)
 	    while (n--)
 	    {
 		bool pgp = FALSE;
-		chunk_t blob = empty_chunk;
+		chunk_t blob = chunk_empty;
 		char *filename = filelist[n]->d_name;
 
 		if (load_coded_file(filename, NULL, "crl", &blob, &pgp))
@@ -406,7 +406,7 @@ parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
     asn1_ctx_t ctx;
     bool critical;
     chunk_t extnID;
-    chunk_t userCertificate = empty_chunk;
+    chunk_t userCertificate = chunk_empty;
     chunk_t object;
     u_int level;
     int objectID = 0;

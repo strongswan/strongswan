@@ -115,8 +115,8 @@ static chunk_t
 build_req_info_attributes(pkcs10_t* pkcs10)
 {
 
-    chunk_t subjectAltNames   = empty_chunk;
-    chunk_t challengePassword = empty_chunk;
+    chunk_t subjectAltNames   = chunk_empty;
+    chunk_t challengePassword = chunk_empty;
 
     if (pkcs10->subjectAltNames != NULL) 
     {
@@ -185,7 +185,7 @@ pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
  *
  * @param[in]	key			rsakey of type #rsakey_t
  * @param[in]	subject			DER-coded subject distinguished name
- * @param[in]	challengePassword	challenge password or empty_chunk
+ * @param[in]	challengePassword	challenge password or chunk_empty
  * @param[in]	subjectAltNames		linked list of subjectAltNames or NULL
  * @return 				pointer to a #pkcs10_t object
  */

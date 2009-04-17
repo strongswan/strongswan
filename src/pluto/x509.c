@@ -410,8 +410,8 @@ update_chunk(chunk_t *ch, int n)
 static err_t
 init_rdn(chunk_t dn, chunk_t *rdn, chunk_t *attribute, bool *next)
 {
-    *rdn = empty_chunk;
-    *attribute = empty_chunk;
+    *rdn = chunk_empty;
+    *attribute = chunk_empty;
 
     /* a DN is a SEQUENCE OF RDNs */
 
@@ -444,8 +444,8 @@ get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, chunk_t *value
     chunk_t body;
 
     /* initialize return values */
-    *oid   = empty_chunk;
-    *value = empty_chunk;
+    *oid   = chunk_empty;
+    *value = chunk_empty;
 
     /* if all attributes have been parsed, get next rdn */
     if (attribute->len <= 0)
@@ -695,8 +695,8 @@ atodn(char *src, chunk_t *dn)
     chunk_t asn1_rdn_seq_len = { rdn_seq_len_buf, 0 };
     chunk_t asn1_rdn_set_len = { rdn_set_len_buf, 0 };
     chunk_t asn1_dn_seq_len  = { dn_seq_len_buf,  0 };
-    chunk_t oid  = empty_chunk;
-    chunk_t name = empty_chunk;
+    chunk_t oid  = chunk_empty;
+    chunk_t name = chunk_empty;
 
     int whitespace  = 0;
     int rdn_seq_len = 0;
@@ -746,7 +746,7 @@ atodn(char *src, chunk_t *dn)
 		code_asn1_length(x501rdns[pos].oid.len, &asn1_oid_len);
 
 		/* reset oid and change state */
-		oid = empty_chunk;
+		oid = chunk_empty;
 		state = SEARCH_NAME;
 	    }
 	    break;
@@ -804,7 +804,7 @@ atodn(char *src, chunk_t *dn)
 		dn_seq_len += 1 + asn1_rdn_set_len.len + rdn_set_len;
 
 		/* reset name and change state */
-		name = empty_chunk;
+		name = chunk_empty;
 		state = SEARCH_OID;
 	    }
 	    break;
@@ -1162,7 +1162,7 @@ build_tbs_x509cert(x509cert_t *cert, const RSA_public_key_t *rsa)
     /* version is always X.509v3 */
     chunk_t version = asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2);
 
-    chunk_t extensions = empty_chunk;
+    chunk_t extensions = chunk_empty;
 
     if (cert->subjectAltName != NULL)
     {
@@ -1509,7 +1509,7 @@ gntoid(struct id *id, const generalName_t *gn)
 	break;
     default:
 	id->kind = ID_NONE;
-	id->name = empty_chunk;
+	id->name = chunk_empty;
     }
 }
 
@@ -1686,7 +1686,7 @@ parse_generalNames(chunk_t blob, int level0, bool implicit)
  */
 chunk_t get_directoryName(chunk_t blob, int level, bool implicit)
 {
-    chunk_t name = empty_chunk;
+    chunk_t name = chunk_empty;
     generalName_t * gn = parse_generalNames(blob, level, implicit);
 
     if (gn != NULL && gn->kind == GN_DIRECTORY_NAME)
