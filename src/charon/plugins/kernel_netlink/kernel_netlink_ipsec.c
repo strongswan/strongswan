@@ -177,7 +177,13 @@ static kernel_algorithm_t encryption_algs[] = {
 	{ENCR_AES_GCM_ICV8,			"rfc4106(gcm(aes))"	},
 	{ENCR_AES_GCM_ICV12,		"rfc4106(gcm(aes))"	},
 	{ENCR_AES_GCM_ICV16,		"rfc4106(gcm(aes))"	},
-	{END_OF_LIST, 				NULL				},
+/*	{ENCR_NULL_AUTH_AES_GMAC,	"***"				}, */
+	{ENCR_CAMELLIA_CBC,			"cbc(camellia)"		},
+/*	{ENCR_CAMELLIA_CTR,			"***"				}, */
+/*	{ENCR_CAMELLIA_CCM_ICV8,	"***"				}, */
+/*	{ENCR_CAMELLIA_CCM_ICV12,	"***"				}, */
+/*	{ENCR_CAMELLIA_CCM_ICV16,	"***"				}, */
+	{END_OF_LIST, 				NULL				}
 };
 
 /**
@@ -192,7 +198,7 @@ static kernel_algorithm_t integrity_algs[] = {
 /*	{AUTH_DES_MAC,				"***"				}, */
 /*	{AUTH_KPDK_MD5,				"***"				}, */
 	{AUTH_AES_XCBC_96,			"xcbc(aes)"			},
-	{END_OF_LIST, 				NULL				},
+	{END_OF_LIST, 				NULL				}
 };
 
 /**
@@ -203,7 +209,7 @@ static kernel_algorithm_t compression_algs[] = {
 	{IPCOMP_DEFLATE,			"deflate"			},
 	{IPCOMP_LZS,				"lzs"				},
 	{IPCOMP_LZJH,				"lzjh"				},
-	{END_OF_LIST, 				NULL				},
+	{END_OF_LIST, 				NULL				}
 };
 
 /**

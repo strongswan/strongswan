@@ -1,3 +1,10 @@
+strongswan-4.3.0
+----------------
+
+- The IKEv2 charon daemon can now configure the ESP CAMELLIA-CBC
+  cipher (esp=camellia128|192|256).
+
+
 strongswan-4.2.14
 -----------------
 
