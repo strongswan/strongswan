@@ -134,7 +134,7 @@ RSA_show_key_fields(RSA_private_key_t *k, int fieldcnt)
 void
 RSA_show_private_key(RSA_private_key_t *k)
 {
-    RSA_show_key_fields(k, elemsof(RSA_private_field));
+    RSA_show_key_fields(k, countof(RSA_private_field));
 }
 
 void

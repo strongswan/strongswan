@@ -510,7 +510,7 @@ lookup_group(u_int16_t group)
 {
     int i;
 
-    for (i = 0; i != elemsof(oakley_group); i++)
+    for (i = 0; i != countof(oakley_group); i++)
 	if (group == oakley_group[i].group)
 	    return &oakley_group[i];
     return NULL;

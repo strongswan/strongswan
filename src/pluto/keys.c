@@ -483,7 +483,7 @@ process_rsa_secret(RSA_private_key_t *rsak)
 	    MP_INT *n = (MP_INT *) ((char *)rsak + p->offset);
 
 	    n_to_mpz(n, buf, sz);
-	    if (pb_next < &pub_bytes[elemsof(pub_bytes)])
+	    if (pb_next < &pub_bytes[countof(pub_bytes)])
 	    {
 		if (eb_next - ebytes + sz > sizeof(ebytes))
 		    return "public key takes too many bytes";

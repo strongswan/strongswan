@@ -225,7 +225,7 @@ __alg_info_esp_add (struct alg_info_esp *alg_info, int ealg_id, unsigned ek_bits
     unsigned cnt = alg_info->alg_info_cnt, i;
 
     /* check for overflows */
-    passert(cnt < elemsof(alg_info->esp));
+    passert(cnt < countof(alg_info->esp));
 
     /* dont add duplicates */
     for (i = 0; i < cnt; i++)
@@ -366,7 +366,7 @@ __alg_info_ike_add (struct alg_info_ike *alg_info, int ealg_id, unsigned ek_bits
     unsigned i;
 
     /* check for overflows */
-    passert(cnt < elemsof(alg_info->ike));
+    passert(cnt < countof(alg_info->ike));
 
     /* dont add duplicates */
    for (i = 0;i < cnt; i++)
@@ -410,7 +410,7 @@ static void
 alg_info_ike_add (struct alg_info *alg_info, int ealg_id, int ek_bits, int aalg_id, int ak_bits, int modp_id)
 {
     int i = 0;
-    int n_groups = elemsof(default_ike_groups);
+    int n_groups = countof(default_ike_groups);
 
     /* if specified modp_id avoid loop over default_ike_groups */
     if (modp_id)

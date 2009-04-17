@@ -212,7 +212,7 @@ static int pluto_ifn_roof = 0;
 bool
 use_interface(const char *rifn)
 {
-    if (pluto_ifn_roof >= (int)elemsof(pluto_ifn))
+    if (pluto_ifn_roof >= (int)countof(pluto_ifn))
     {
 	return FALSE;
     }

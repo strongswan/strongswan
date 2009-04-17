@@ -378,7 +378,7 @@ ike_alg_list(void)
     whack_log(RC_COMMENT, "List of registered IKE DH Groups:");
     whack_log(RC_COMMENT, " ");
 
-    for (i = 0; i < elemsof(oakley_group); i++)
+    for (i = 0; i < countof(oakley_group); i++)
     {
 	const struct oakley_group_desc *gdesc=oakley_group + i;
 

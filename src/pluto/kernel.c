@@ -1460,7 +1460,7 @@ scan_proc_shunts(void)
 	 * Note: if there are too many fields, just stop;
 	 * it will be diagnosed a little later.
 	 */
-	for (fi = 0; fi < (int)elemsof(field); fi++)
+	for (fi = 0; fi < (int)countof(field); fi++)
 	{
 	    static const char sep[] = " \t\n";	/* field-separating whitespace */
 	    size_t w;
@@ -1869,7 +1869,7 @@ setup_half_ipsec_sa(struct state *st, bool inbound)
 
 	for (ei = esp_info; ; ei++)
 	{
-	    if (ei == &esp_info[elemsof(esp_info)])
+	    if (ei == &esp_info[countof(esp_info)])
 	    {
 		/* Check for additional kernel alg */
 #ifndef NO_KERNEL_ALG

@@ -30,8 +30,6 @@ extern void init_constants(void);
  * Any changes here should be reflected there.
  */
 
-#define elemsof(array) (sizeof(array) / sizeof(*(array)))	/* number of elements in an array */
-
 /* Many routines return only success or failure, but wish to describe
  * the failure in a message.  We use the convention that they return
  * a NULL on success and a pointer to constant string on failure.

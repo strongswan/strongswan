@@ -45,7 +45,7 @@
 #include "db_ops.h"
 #include "nat_traversal.h"
 
-#define AD(x) x, elemsof(x)	/* Array Description */
+#define AD(x) x, countof(x)	/* Array Description */
 #define AD_NULL NULL, 0
 
 /**************** Oakely (main mode) SA database ****************/

@@ -1117,7 +1117,7 @@ process_dns_answer(struct adns_continuation *const cr
 
     r = (qr_header.stuff >> QRS_RCODE_SHIFT) & QRS_RCODE_MASK;
     if (r != 0)
-	return r < (int)elemsof(rcode_text)? rcode_text[r] : "unknown rcode";
+	return r < (int)countof(rcode_text)? rcode_text[r] : "unknown rcode";
 
     if (qr_header.ancount == 0)
 	return builddiag("no %s RR found by DNS", rr_typename(type));

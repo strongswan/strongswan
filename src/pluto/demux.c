@@ -526,7 +526,7 @@ init_demux(void)
      */
     const struct state_microcode *t;
 
-    for (t = &state_microcode_table[elemsof(state_microcode_table) - 1];;)
+    for (t = &state_microcode_table[countof(state_microcode_table) - 1];;)
     {
 	passert(STATE_IKE_FLOOR <= t->state && t->state < STATE_IKE_ROOF);
 	ike_microcode_index[t->state - STATE_IKE_FLOOR] = t;
