@@ -53,6 +53,9 @@ struct ike_sa_manager_t {
 	
 	/**
 	 * Create and check out a new IKE_SA.
+	 * 
+	 * @note If initiator equals FALSE, the returned IKE_SA is not registered
+	 * in the manager.
 	 *
 	 * @param initiator			TRUE for initiator, FALSE otherwise
 	 * @returns 				created and checked out IKE_SA
