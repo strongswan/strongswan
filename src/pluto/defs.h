@@ -49,7 +49,8 @@ extern void *clone_bytes(const void *orig, size_t size);
 #define clone_str(str) \
     ((str) == NULL? NULL : strdup(str))
 
-#define replace(p, q) { free(p); (p) = (q); }
+#define replace(p, q) \
+    { free(p); (p) = (q); }
 
 
 /* chunk is a simple pointer-and-size abstraction */
@@ -60,32 +61,50 @@ struct chunk {
     };
 typedef struct chunk chunk_t;
 
-#define setchunk(ch, addr, size) { (ch).ptr = (addr); (ch).len = (size); }
+extern const chunk_t chunk_empty;
 
-#define strchunk(str) { str, sizeof(str) }
+static inline chunk_t chunk_create(u_char *ptr, size_t len)
+{
+    chunk_t chunk = {ptr, len};
+    return chunk;
+}
 
-/* NOTE: freeanychunk NULLs .ptr */
-#define freeanychunk(ch) { free((ch).ptr); (ch).ptr = NULL; }
+static inline void chunk_free(chunk_t *chunk)
+{
+    free(chunk->ptr);
+    *chunk = chunk_empty;
+}
 
-#define clonetochunk(ch, addr, size) \
-    { (ch).ptr = clone_bytes((addr), (ch).len = (size)); }
+static inline void chunk_clear(chunk_t *chunk)
+{
+    if (chunk->ptr)
+    {
+	memset(chunk->ptr, 0, chunk->len);
+	chunk_free(chunk);
+    }
+}
 
-#define clonereplacechunk(ch, addr, size) \
-    { free((ch).ptr); clonetochunk(ch, addr, size); }
+static inline bool chunk_equals(chunk_t a, chunk_t b)
+{
+    return a.ptr != NULL  && b.ptr != NULL &&
+	   a.len == b.len && memeq(a.ptr, b.ptr, a.len);
+}
+
+extern chunk_t chunk_create_clone(u_char *ptr, chunk_t chunk);
+
+#define chunk_clone(chunk) \
+    chunk_create_clone((chunk).len ? malloc((chunk).len) : NULL, chunk)
+
+#define chunk_from_buf(str) { str, sizeof(str) }
 
 #define chunkcpy(dst, chunk) \
     { memcpy(dst, chunk.ptr, chunk.len); dst += chunk.len;}
 
-#define same_chunk(a, b) \
-    ( (a).len == (b).len && memcmp((a).ptr, (b).ptr, (b).len) == 0 )
-
 extern char* temporary_cyclic_buffer(void);
 extern const char* concatenate_paths(const char *a, const char *b);
 
-extern const chunk_t chunk_empty;
-
 /* compare two chunks */
-extern int cmp_chunk(chunk_t a, chunk_t b);
+extern int chunk_compare(chunk_t a, chunk_t b);
 
 /* move a chunk to a memory position and free it after insertion */
 extern void mv_chunk(u_char **pos, chunk_t content);

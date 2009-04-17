@@ -341,7 +341,6 @@ fetch_curl(char *url, chunk_t *blob)
 	    plog("fetching uri (%s) with libcurl failed: %s", url, errorbuffer);
 	}
 	curl_easy_cleanup(curl);
-	/* not using freeanychunk because of realloc (no leak detective) */
 	curl_free(response.ptr);
     }
     return strlen(errorbuffer) > 0 ? "libcurl error" : NULL;
@@ -628,9 +627,8 @@ fetch_crls(bool cache_crls)
 	    }
 	    else
 	    {
-		chunk_t crl_uri;
+		chunk_t crl_uri = chunk_clone(gn->name);
 
-		clonetochunk(crl_uri, gn->name.ptr, gn->name.len);
 		if (insert_crl(blob, crl_uri, cache_crls))
 		{
 		    DBG(DBG_CONTROL,
@@ -730,11 +728,10 @@ fetch_ocsp_status(ocsp_location_t* location)
 	curl_slist_free_all(headers);
 	curl_easy_cleanup(curl);
 	free(uri);
-	/* not using freeanychunk because of realloc (no leak detective) */
 	curl_free(response.ptr);
     }
-    freeanychunk(location->nonce);
-    freeanychunk(request);
+    free(request.ptr);
+    chunk_free(&location->nonce);
 
     /* increment the trial counter of the unresolved fetch requests */
     {
@@ -918,7 +915,7 @@ add_distribution_points(const generalName_t *newPoints ,generalName_t **distribu
 	    {
 		/* clone additional distribution point */
 		gn = clone_thing(*newPoints);
-		clonetochunk(gn->name, newPoints->name.ptr, newPoints->name.len);
+		gn->name = chunk_clone(newPoints->name);
 
 		/* insert additional CRL distribution point */
 		gn->next = *distributionPoints;
@@ -940,17 +937,10 @@ build_crl_fetch_request(chunk_t issuer, chunk_t authKeySerialNumber
     req->installed = time(NULL);
 
     /* clone fields */
-    clonetochunk(req->issuer, issuer.ptr, issuer.len);
-    if (authKeySerialNumber.ptr != NULL)
-    {
-	clonetochunk(req->authKeySerialNumber, authKeySerialNumber.ptr
-	    , authKeySerialNumber.len);
-    }
-    if (authKeyID.ptr != NULL)
-    {
-	clonetochunk(req->authKeyID, authKeyID.ptr, authKeyID.len);
-    }
-
+    req->issuer = chunk_clone(issuer);
+    req->authKeySerialNumber =  chunk_clone(authKeySerialNumber);
+    req->authKeyID = chunk_clone(authKeyID);
+ 
     /* copy distribution points */
     add_distribution_points(gn, &req->distributionPoints);
 

@@ -286,7 +286,7 @@ pem_decrypt(chunk_t *blob, chunk_t *iv, prompt_pass_t *pass, const char* label)
 		return ugh;
 	    }
 
-	    clonetochunk(blob_copy, blob->ptr, blob->len);
+	    blob_copy = chunk_clone(*blob);
 
 	    if (pem_decrypt_3des(blob, iv, pass->secret))
 	    {

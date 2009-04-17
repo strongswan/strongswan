@@ -258,7 +258,7 @@ add_ietfAttr(ietfAttr_t *attr)
 	ietfAttrList_t *el = malloc_thing(ietfAttrList_t);
 
 	/* new attribute, unshare value */
-	attr->value.ptr = clone_bytes(attr->value.ptr, attr->value.len);
+	attr->value = chunk_clone(attr->value);
 	attr->count = 1;
 	time(&attr->installed);
 

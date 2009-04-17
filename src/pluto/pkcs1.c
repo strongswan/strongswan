@@ -491,7 +491,7 @@ RSA_encrypt(const RSA_public_key_t *key, chunk_t in)
 bool
 RSA_decrypt(const RSA_private_key_t *key, chunk_t in, chunk_t *out)
 {
-    chunk_t padded;
+    chunk_t padded, plaintext;
     u_char *pos;
     mpz_t t1, t2;
 
@@ -530,7 +530,7 @@ RSA_decrypt(const RSA_private_key_t *key, chunk_t in, chunk_t *out)
     if ((*pos++ != 0x00) || (*(pos++) != 0x02))
     {
 	plog("incorrect padding - probably wrong RSA key");
-	freeanychunk(padded);
+	chunk_clear(&padded);
 	return FALSE;
     }
     padded.len -= 2;
@@ -541,12 +541,13 @@ RSA_decrypt(const RSA_private_key_t *key, chunk_t in, chunk_t *out)
     if (padded.len == 0)
     {
 	plog("no plaintext data");
-	freeanychunk(padded);
+	free(padded.ptr);
 	return FALSE;
     }
 
-    clonetochunk(*out, pos, padded.len);
-    freeanychunk(padded);
+    plaintext = chunk_create(pos, padded.len);
+    *out = chunk_clone(plaintext);
+    chunk_clear(&padded);
     return TRUE;
 }
 

@@ -452,11 +452,9 @@ free_ca_info(ca_info_t* ca_info)
     free(ca_info->ldaphost);
     free(ca_info->ldapbase);
     free(ca_info->ocspuri);
-
-    freeanychunk(ca_info->authName);
-    freeanychunk(ca_info->authKeyID);
-    freeanychunk(ca_info->authKeySerialNumber);
-
+    free(ca_info->authName.ptr);
+    free(ca_info->authKeyID.ptr);
+    free(ca_info->authKeySerialNumber.ptr);
     free_generalNames(ca_info->crluri, TRUE);
     free(ca_info);
 }
@@ -564,21 +562,19 @@ add_ca_info(const whack_message_t *msg)
 	ca->name = clone_str(msg->name);
 	    
 	/* authName */
-	clonetochunk(ca->authName, cacert->subject.ptr, cacert->subject.len);
+	ca->authName = chunk_clone(cacert->subject);
 	dntoa(buf, BUF_LEN, ca->authName);
 	DBG(DBG_CONTROL,
 	    DBG_log("authname: '%s'", buf)
 	)
 
 	/* authSerialNumber */
-	clonetochunk(ca->authKeySerialNumber, cacert->serialNumber.ptr,
-		cacert->serialNumber.len);
+	ca->authKeySerialNumber = chunk_clone(cacert->serialNumber);
 
 	/* authKeyID */
 	if (cacert->subjectKeyID.ptr != NULL)
 	{
-	    clonetochunk(ca->authKeyID, cacert->subjectKeyID.ptr,
-		cacert->subjectKeyID.len);
+	    ca->authKeyID = chunk_clone(cacert->subjectKeyID);
 	    datatot(cacert->subjectKeyID.ptr, cacert->subjectKeyID.len, ':'
 		, buf, BUF_LEN);
 	    DBG(DBG_CONTROL | DBG_PARSING ,

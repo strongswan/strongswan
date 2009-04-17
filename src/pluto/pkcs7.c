@@ -155,17 +155,17 @@ static char ASN1_pkcs7_encrypted_data_oid_str[] = {
 };
 
 static const chunk_t ASN1_pkcs7_data_oid = 
-			strchunk(ASN1_pkcs7_data_oid_str);
+			chunk_from_buf(ASN1_pkcs7_data_oid_str);
 static const chunk_t ASN1_pkcs7_signed_data_oid =
-			strchunk(ASN1_pkcs7_signed_data_oid_str);
+			chunk_from_buf(ASN1_pkcs7_signed_data_oid_str);
 static const chunk_t ASN1_pkcs7_enveloped_data_oid =
-			strchunk(ASN1_pkcs7_enveloped_data_oid_str);
+			chunk_from_buf(ASN1_pkcs7_enveloped_data_oid_str);
 static const chunk_t ASN1_pkcs7_signed_enveloped_data_oid = 
-			strchunk(ASN1_pkcs7_signed_enveloped_data_oid_str);
+			chunk_from_buf(ASN1_pkcs7_signed_enveloped_data_oid_str);
 static const chunk_t ASN1_pkcs7_digested_data_oid =
-			strchunk(ASN1_pkcs7_digested_data_oid_str);
+			chunk_from_buf(ASN1_pkcs7_digested_data_oid_str);
 static const chunk_t ASN1_pkcs7_encrypted_data_oid =
-			strchunk(ASN1_pkcs7_encrypted_data_oid_str);
+			chunk_from_buf(ASN1_pkcs7_encrypted_data_oid_str);
 
 /* 3DES and DES encryption OIDs */
 
@@ -178,9 +178,9 @@ static u_char ASN1_des_cbc_oid_str[] = {
 };
 
 static const chunk_t ASN1_3des_ede_cbc_oid = 
-			strchunk(ASN1_3des_ede_cbc_oid_str);
+			chunk_from_buf(ASN1_3des_ede_cbc_oid_str);
 static const chunk_t ASN1_des_cbc_oid =
-			strchunk(ASN1_des_cbc_oid_str);
+			chunk_from_buf(ASN1_des_cbc_oid_str);
 
 /* PKCS#7 attribute type OIDs */
 
@@ -193,9 +193,9 @@ static u_char ASN1_messageDigest_oid_str[] = {
 };
 
 static const chunk_t ASN1_contentType_oid =
-			strchunk(ASN1_contentType_oid_str);
+			chunk_from_buf(ASN1_contentType_oid_str);
 static const chunk_t ASN1_messageDigest_oid =
-			strchunk(ASN1_messageDigest_oid_str);
+			chunk_from_buf(ASN1_messageDigest_oid_str);
 
 /*
  * Parse PKCS#7 ContentInfo object
@@ -283,11 +283,9 @@ pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 	case PKCS7_SIGNED_CERT:
 	    if (cert != NULL)
 	    {
-		chunk_t cert_blob;
-
+		chunk_t cert_blob = chunk_clone(object);
 		x509cert_t *newcert = malloc_thing(x509cert_t);
 
-		clonetochunk(cert_blob, object.ptr, object.len);
 		*newcert = empty_x509cert;
 
 		DBG(DBG_CONTROL | DBG_PARSING,
@@ -431,7 +429,7 @@ pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data
 	    )
 	    break;	
 	case PKCS7_SERIAL_NUMBER:
-	    if (!same_chunk(serialNumber, object))
+	    if (!chunk_equals(serialNumber, object))
 	    {
 		plog("serial numbers do not match");
 		goto failed;
@@ -561,11 +559,11 @@ pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data
 	    }
 	}
     }
-    freeanychunk(symmetric_key);
+    chunk_clear(&symmetric_key);
     return TRUE;
 
 failed:
-    freeanychunk(symmetric_key);
+    chunk_clear(&symmetric_key);
     free(data->ptr);
     return FALSE;
 }
@@ -677,7 +675,7 @@ pkcs7_build_signedData(chunk_t data, chunk_t attributes, const x509cert_t *cert
     {
 	encryptedDigest = pkcs1_build_signature(attributes, digest_alg
 				, key, FALSE);
-	clonetochunk(authenticatedAttributes, attributes.ptr, attributes.len);
+	authenticatedAttributes = chunk_clone(attributes);
 	*authenticatedAttributes.ptr = ASN1_CONTEXT_C_0;
     }
     else
@@ -712,8 +710,8 @@ pkcs7_build_signedData(chunk_t data, chunk_t attributes, const x509cert_t *cert
 	DBG_dump_chunk("signedData:\n", cInfo)
     )
 
-    freeanychunk(pkcs7Data.content);
-    freeanychunk(signedData.content);
+    free(pkcs7Data.content.ptr);
+    free(signedData.content.ptr);
     return cInfo;
 }
 
@@ -853,7 +851,7 @@ pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int cipher)
 	)
 
 	free_RSA_public_content(&public_key);
-	freeanychunk(envelopedData.content);
+	free(envelopedData.content.ptr);
 	return cInfo;
     }
 }

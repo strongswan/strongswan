@@ -29,7 +29,26 @@
 #include "log.h"
 #include "whack.h"	/* for RC_LOG_SERIOUS */
 
+/**
+ * Empty chunk.
+ */
 const chunk_t chunk_empty = { NULL, 0 };
+
+/**
+ * Create a clone of a chunk pointing to "ptr"
+ */
+chunk_t chunk_create_clone(u_char *ptr, chunk_t chunk)
+{
+    chunk_t clone = chunk_empty;
+	
+    if (chunk.ptr && chunk.len > 0)
+    {
+	clone.ptr = ptr;
+	clone.len = chunk.len;
+	memcpy(clone.ptr, chunk.ptr, chunk.len);
+    }
+    return clone;
+}
 
 bool
 all_zero(const unsigned char *m, size_t len)
@@ -86,17 +105,17 @@ concatenate_paths(const char *a, const char *b)
 /*  compare two chunks, returns zero if a equals b
  *  negative/positive if a is earlier/later in the alphabet than b
  */
-int
-cmp_chunk(chunk_t a, chunk_t b)
+int chunk_compare(chunk_t a, chunk_t b)
 {
-    int cmp_len, len, cmp_value;
-    
-    cmp_len = a.len - b.len;
-    len = (cmp_len < 0)? a.len : b.len;
-    cmp_value = memcmp(a.ptr, b.ptr, len);
+    int compare_len = a.len - b.len;
+    int len = (compare_len < 0)? a.len : b.len;
 
-    return (cmp_value == 0)? cmp_len : cmp_value;
-};
+    if (compare_len != 0 || len == 0)
+    {
+	return compare_len;
+    }
+    return memcmp(a.ptr, b.ptr, len);
+}
 
 /* moves a chunk to a memory position, chunk is freed afterwards
  * position pointer is advanced after the insertion point
@@ -107,7 +126,7 @@ mv_chunk(u_char **pos, chunk_t content)
     if (content.len > 0)
     {
 	chunkcpy(*pos, content);
-	freeanychunk(content);
+	free(content.ptr);
     }
 }
 

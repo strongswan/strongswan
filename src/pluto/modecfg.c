@@ -530,8 +530,9 @@ modecfg_send_msg(struct state *st, int isama_type, internal_addr_t *ia)
 			, 0 /* XXX isama_id */
 		     );
 
-    freeanychunk(st->st_tpacket);
-    clonetochunk(st->st_tpacket, msg.start, pbs_offset(&msg));
+    free(st->st_tpacket.ptr);
+    st->st_tpacket = chunk_create(msg.start, pbs_offset(&msg));
+    st->st_tpacket = chunk_clone(st->st_tpacket);
 
     /* Transmit */
     send_packet(st, "ModeCfg msg");
@@ -675,11 +676,11 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 	    ia->xauth_attr_set |= LELEM(attr_type - XAUTH_BASE);
 	    break;
 	case XAUTH_USER_NAME:
-	    setchunk(ia->xauth_secret.user_name, strattr.cur, attr_len);
+	    ia->xauth_secret.user_name = chunk_create(strattr.cur, attr_len);
 	    ia->xauth_attr_set |= LELEM(attr_type - XAUTH_BASE);
 	    break;
 	case XAUTH_USER_PASSWORD:
-	    setchunk(ia->xauth_secret.user_password, strattr.cur, attr_len);
+	    ia->xauth_secret.user_password = chunk_create(strattr.cur, attr_len);
 	    ia->xauth_attr_set |= LELEM(attr_type - XAUTH_BASE);
 	    break;
 	case XAUTH_STATUS:
@@ -1092,8 +1093,9 @@ xauth_inI0(struct msg_digest *md)
     else
     {
 	/* send XAUTH reply msg and then delete ISAKMP SA */
-	freeanychunk(st->st_tpacket);
-	clonetochunk(st->st_tpacket, md->reply.start, pbs_offset(&md->reply));
+	free(st->st_tpacket.ptr);
+	st->st_tpacket = chunk_create(md->reply.start, pbs_offset(&md->reply));
+	st->st_tpacket = chunk_clone(st->st_tpacket);
 	send_packet(st, "XAUTH reply msg");
 	delete_state(st);
 	return STF_IGNORE;
@@ -1223,8 +1225,9 @@ xauth_inI1(struct msg_digest *md)
     else
     {
 	/* send XAUTH ack msg and then delete ISAKMP SA */
-	freeanychunk(st->st_tpacket);
-	clonetochunk(st->st_tpacket, md->reply.start, pbs_offset(&md->reply));
+	free(st->st_tpacket.ptr);
+	st->st_tpacket = chunk_create(md->reply.start, pbs_offset(&md->reply));
+	st->st_tpacket = chunk_clone(st->st_tpacket);
 	send_packet(st, "XAUTH ack msg");
 	delete_state(st);
 	return STF_IGNORE;

@@ -927,9 +927,8 @@ process_key_rr(u_char *ptr, size_t len
 
 	if (doit)
 	{
-	    chunk_t k;
+	    chunk_t k = { pbs.cur, pbs_left(&pbs) };
 
-	    setchunk(k, pbs.cur, pbs_left(&pbs));
 	    TRY(add_public_key(&cr->id, dns_auth_level, PUBKEY_ALG_RSA, &k
 		, &cr->keys_from_dns));
 	}

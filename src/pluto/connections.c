@@ -338,11 +338,11 @@ delete_connection(struct connection *c, bool relations)
     free(c->name);
     free_id_content(&c->spd.this.id);
     free(c->spd.this.updown);
-    freeanychunk(c->spd.this.ca);
+    free(c->spd.this.ca.ptr);
     free_ietfAttrList(c->spd.this.groups);
     free_id_content(&c->spd.that.id);
     free(c->spd.that.updown);
-    freeanychunk(c->spd.that.ca);
+    free(c->spd.that.ca.ptr);
     free_ietfAttrList(c->spd.that.groups);
     free_generalNames(c->requested_ca, TRUE);
     gw_delref(&c->gw_info);
@@ -688,17 +688,13 @@ unshare_connection_strings(struct connection *c)
     c->spd.this.updown = clone_str(c->spd.this.updown);
     scx_share(c->spd.this.sc);
     share_cert(c->spd.this.cert);
-    if (c->spd.this.ca.ptr != NULL)
-	clonetochunk(c->spd.this.ca, c->spd.this.ca.ptr, c->spd.this.ca.len);
+    c->spd.this.ca = chunk_clone(c->spd.this.ca);
 
     unshare_id_content(&c->spd.that.id);
     c->spd.that.updown = clone_str(c->spd.that.updown);
     scx_share(c->spd.that.sc);
     share_cert(c->spd.that.cert);
-    if (c->spd.that.ca.ptr != NULL)
-    {
-	clonetochunk(c->spd.that.ca, c->spd.that.ca.ptr, c->spd.that.ca.len);
-    }
+    c->spd.that.ca = chunk_clone(c->spd.that.ca);
 
     /* increment references to algo's */
     alg_info_addref((struct alg_info *)c->alg_info_esp);

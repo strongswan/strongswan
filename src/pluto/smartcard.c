@@ -1479,9 +1479,12 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 
 	    memcpy(out, cipher_text.ptr, cipher_text.len);
 	    *outlen = cipher_text.len;
-	    freeanychunk(cipher_text);
+	    free(cipher_text.ptr);
+
 	    if (!pkcs11_keep_state)
+	    {
 		scx_release_context(sc);
+	    }
 	    return TRUE;
 	}
 	else
@@ -1759,7 +1762,8 @@ scx_get_pin(smartcard_t *sc, int whackfd)
 	/* verify the pin */
 	if (scx_verify_pin(sc))
 	{
-	    clonetochunk(sc->pin, pin, strlen(pin));
+	    sc->pin = chunk_create(pin, strlen(pin));
+	    sc->pin = chunk_clone(sc->pin);
 	    break;
 	}
 

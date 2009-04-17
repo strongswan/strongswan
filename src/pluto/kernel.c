@@ -1467,7 +1467,7 @@ scan_proc_shunts(void)
 
 	    cp += strspn(cp, sep);	/* find start of field */
 	    w = strcspn(cp, sep);	/* find width of field */
-	    setchunk(field[fi], cp, w);
+	    field[fi] = chunk_create(cp, w);
 	    cp += w;
 	    if (w == 0)
 		break;

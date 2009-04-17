@@ -120,8 +120,8 @@ static void
 free_public_key(pubkey_t *pk)
 {
     free_id_content(&pk->id);
-    freeanychunk(pk->issuer);
-    freeanychunk(pk->serial);
+    free(pk->issuer.ptr);
+    free(pk->serial.ptr);
 
     /* algorithm-specific freeing */
     switch (pk->alg)
@@ -411,7 +411,9 @@ process_psk_secret(chunk_t *psk)
 
     if (*tok == '"' || *tok == '\'')
     {
-	clonetochunk(*psk, tok+1, flp->cur - tok  - 2);
+	chunk_t secret = { tok + 1, flp->cur - tok  -2 };
+
+	*psk = chunk_clone(secret);
 	(void) shift();
     }
     else
@@ -428,7 +430,8 @@ process_psk_secret(chunk_t *psk)
 	}
 	else
 	{
-	    clonetochunk(*psk, buf, sz);
+	    chunk_t secret = { buf, sz };
+	    *psk = chunk_clone(secret);
 	    (void) shift();
 	}
     }
@@ -488,7 +491,7 @@ process_rsa_secret(RSA_private_key_t *rsak)
 		if (eb_next - ebytes + sz > sizeof(ebytes))
 		    return "public key takes too many bytes";
 
-		setchunk(*pb_next, eb_next, sz);
+		*pb_next = chunk_create(eb_next, sz);
 		memcpy(eb_next, buf, sz);
 		eb_next += sz;
 		pb_next++;
@@ -609,8 +612,7 @@ process_xauth(secret_t *s)
     plog("  loaded xauth credentials of user '%.*s'"
 		, user_name.len
 		, user_name.ptr);
-    clonetochunk(s->u.xauth_secret.user_name
-	, user_name.ptr, user_name.len);
+    s->u.xauth_secret.user_name = chunk_clone(user_name);
 
     if (!shift())
 	return "missing xauth user password";
@@ -657,10 +659,10 @@ xauth_verify_secret(const xauth_peer_t *peer, const xauth_t *xauth_secret)
     {
 	if (s->kind == PPK_XAUTH)
 	{
-	    if (!same_chunk(xauth_secret->user_name, s->u.xauth_secret.user_name))
+	    if (!chunk_equals(xauth_secret->user_name, s->u.xauth_secret.user_name))
 		continue;
 	    found = TRUE;
-	    if (same_chunk(xauth_secret->user_password, s->u.xauth_secret.user_password))
+	    if (chunk_equals(xauth_secret->user_password, s->u.xauth_secret.user_password))
 		return TRUE;
 	}
     }
@@ -736,14 +738,19 @@ process_pin(secret_t *s, int whackfd)
     }
     else if (tokeqword("%pinpad"))
     {
+	chunk_t empty_pin = { "", 0 };
+
 	shift();
+
 	/* pin will be entered via pin pad during verification */
-	clonetochunk(sc->pin, "", 0);
+	sc->pin = chunk_clone(empty_pin);
 	sc->pinpad = TRUE;
 	sc->valid = TRUE;
 	pin_status = "pin entry via pad";
 	if (pkcs11_keep_state)
+	{
 	    scx_verify_pin(sc);
+	}
     }
     else
     {	
@@ -937,7 +944,7 @@ process_secret_records(int whackfd)
 	    zero(s);
 	    s->ids = NULL;
 	    s->kind = PPK_PSK;	/* default */
-	    setchunk(s->u.preshared_secret, NULL, 0);
+	    s->u.preshared_secret = chunk_empty;
 	    s->next = NULL;
 
 	    for (;;)
@@ -1239,16 +1246,18 @@ unpack_RSA_public_key(RSA_public_key_t *rsa, const chunk_t *pubkey)
 
     if (pubkey->ptr[0] != 0x00)
     {
-	setchunk(exp, pubkey->ptr + 1, pubkey->ptr[0]);
+	exp = chunk_create(pubkey->ptr + 1, pubkey->ptr[0]);
     }
     else
     {
-	setchunk(exp, pubkey->ptr + 3
-	    , (pubkey->ptr[1] << BITS_PER_BYTE) + pubkey->ptr[2]);
+	exp = chunk_create(pubkey->ptr + 3,
+			  (pubkey->ptr[1] << BITS_PER_BYTE) + pubkey->ptr[2]);
     }
 
     if (pubkey->len - (exp.ptr - pubkey->ptr) < exp.len + RSA_MIN_OCTETS_RFC)
+    {
 	return "RSA public key blob too short";
+    }
 
     mod.ptr = exp.ptr + exp.len;
     mod.len = &pubkey->ptr[pubkey->len] - mod.ptr;
@@ -1284,16 +1293,10 @@ install_public_key(pubkey_t *pk, pubkey_list_t **head)
     unshare_id_content(&pk->id);
 
     /* copy issuer dn */
-    if (pk->issuer.ptr != NULL)
-    {
-	pk->issuer.ptr = clone_bytes(pk->issuer.ptr, pk->issuer.len);
-    }
+    pk->issuer = chunk_clone(pk->issuer);
 
     /* copy serial number */
-    if (pk->serial.ptr != NULL)
-    {
-	pk->serial.ptr = clone_bytes(pk->serial.ptr, pk->serial.len);
-    }
+    pk->serial = chunk_clone(pk->serial);
 
     /* store the time the public key was installed */
     time(&pk->installed_time);

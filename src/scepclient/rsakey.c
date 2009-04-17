@@ -321,10 +321,12 @@ generate_rsa_private_key(int nbits, RSA_private_key_t *key)
 	size_t n_len = (mpz_sizeinbase(n,2)+BITS_PER_BYTE-1)/BITS_PER_BYTE;
 	chunk_t e_ch = mpz_to_n(e, e_len);
 	chunk_t n_ch = mpz_to_n(n, n_len);
+
 	form_keyid(e_ch, n_ch, key->pub.keyid, &key->pub.k);
-	freeanychunk(e_ch);
-	freeanychunk(n_ch);
+	free(e_ch.ptr);
+	free(n_ch.ptr);
     }
+
     /* fill in the elements of the RSA private key */
     key->p = *p;
     key->q = *q;

@@ -33,9 +33,9 @@ static u_char ASN1_INTEGER_0_str[] = { 0x02, 0x00 };
 static u_char ASN1_INTEGER_1_str[] = { 0x02, 0x01, 0x01 };
 static u_char ASN1_INTEGER_2_str[] = { 0x02, 0x01, 0x02 };
 
-const chunk_t ASN1_INTEGER_0 = strchunk(ASN1_INTEGER_0_str);
-const chunk_t ASN1_INTEGER_1 = strchunk(ASN1_INTEGER_1_str);
-const chunk_t ASN1_INTEGER_2 = strchunk(ASN1_INTEGER_2_str);
+const chunk_t ASN1_INTEGER_0 = chunk_from_buf(ASN1_INTEGER_0_str);
+const chunk_t ASN1_INTEGER_1 = chunk_from_buf(ASN1_INTEGER_1_str);
+const chunk_t ASN1_INTEGER_2 = chunk_from_buf(ASN1_INTEGER_2_str);
 
 /* some popular algorithmIdentifiers */
 
@@ -69,11 +69,11 @@ static u_char ASN1_rsaEncryption_id_str[] = {
 	  0x05, 0x00
 };
 
-const chunk_t ASN1_md5_id = strchunk(ASN1_md5_id_str);
-const chunk_t ASN1_sha1_id = strchunk(ASN1_sha1_id_str);
-const chunk_t ASN1_rsaEncryption_id = strchunk(ASN1_rsaEncryption_id_str);
-const chunk_t ASN1_md5WithRSA_id = strchunk(ASN1_md5WithRSA_id_str);
-const chunk_t ASN1_sha1WithRSA_id = strchunk(ASN1_sha1WithRSA_id_str);
+const chunk_t ASN1_md5_id = chunk_from_buf(ASN1_md5_id_str);
+const chunk_t ASN1_sha1_id = chunk_from_buf(ASN1_sha1_id_str);
+const chunk_t ASN1_rsaEncryption_id = chunk_from_buf(ASN1_rsaEncryption_id_str);
+const chunk_t ASN1_md5WithRSA_id = chunk_from_buf(ASN1_md5WithRSA_id_str);
+const chunk_t ASN1_sha1WithRSA_id = chunk_from_buf(ASN1_sha1WithRSA_id_str);
 
 /* ASN.1 definition of an algorithmIdentifier */
 

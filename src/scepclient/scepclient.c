@@ -148,21 +148,21 @@ exit_scepclient(err_t message, ...)
 	free_RSA_private_content(private_key);
 	free(private_key);
     }
-    freeanychunk(pkcs1);
-    freeanychunk(pkcs7);
-    freeanychunk(subject);
-    freeanychunk(serialNumber);
-    freeanychunk(transID);
-    freeanychunk(fingerprint);
-    freeanychunk(issuerAndSubject);
-    freeanychunk(getCertInitial);
-    if (scep_response.ptr != NULL)
-	free(scep_response.ptr);
+    free(pkcs1.ptr);
+    free(pkcs7.ptr);
+    free(subject.ptr);
+    free(serialNumber.ptr);
+    free(transID.ptr);
+    free(fingerprint.ptr);
+    free(issuerAndSubject.ptr);
+    free(getCertInitial.ptr);
+    free(scep_response.ptr);
 
     free_generalNames(subjectAltNames, TRUE);
     if (x509_signer != NULL)
+    {
 	x509_signer->subjectAltName = NULL;
-
+    }
     free_x509cert(x509_signer);
     free_x509cert(x509_ca_enc);
     free_x509cert(x509_ca_sig);
@@ -801,7 +801,7 @@ int main(int argc, char **argv)
 	    exit_scepclient(ugh);
 	}
 
-	clonetochunk(subject, dn.ptr, dn.len);
+	subject = chunk_clone(dn);
 
 	DBG(DBG_CONTROL,
 	    DBG_log("building pkcs10 object:")
@@ -1007,7 +1007,7 @@ int main(int argc, char **argv)
 		DBG_log("transaction ID: %.*s", (int)transID.len, transID.ptr)
 	    )
 
-	    freeanychunk(getCertInitial);
+	    chunk_free(&getCertInitial);
 	    getCertInitial = scep_build_request(issuerAndSubject
 				, transID, SCEP_GetCertInitial_MSG
 				, x509_ca_enc, pkcs7_symmetric_cipher
@@ -1047,7 +1047,7 @@ int main(int argc, char **argv)
         {
 	    exit_scepclient("error parsing the scep response");
 	}
-	freeanychunk(certData);
+	chunk_free(&certData);
 
 	/* store the end entity certificate */
 	path = concatenate_paths(HOST_CERT_PATH, file_out_cert);

@@ -537,16 +537,10 @@ duplicate_state(struct state *st)
     nst->st_clonedfrom = st->st_serialno;
     nst->st_oakley = st->st_oakley;
     nst->st_modecfg = st->st_modecfg;
-
-#   define clone_chunk(ch) \
-	clonetochunk(nst->ch, st->ch.ptr, st->ch.len)
-
-    clone_chunk(st_skeyid_d);
-    clone_chunk(st_skeyid_a);
-    clone_chunk(st_skeyid_e);
-    clone_chunk(st_enc_key);
-
-#   undef clone_chunk
+    nst->st_skeyid_d = chunk_clone(st->st_skeyid_d);
+    nst->st_skeyid_a = chunk_clone(st->st_skeyid_a);
+    nst->st_skeyid_e = chunk_clone(st->st_skeyid_e);
+    nst->st_enc_key = chunk_clone(st->st_enc_key);
 
     return nst;
 }

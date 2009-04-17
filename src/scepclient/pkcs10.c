@@ -43,13 +43,13 @@ static u_char ASN1_challengePassword_oid_str[] = {
     0x06,0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x07
 };
 
-static const chunk_t ASN1_challengePassword_oid = strchunk(ASN1_challengePassword_oid_str);
+static const chunk_t ASN1_challengePassword_oid = chunk_from_buf(ASN1_challengePassword_oid_str);
 
 static u_char ASN1_extensionRequest_oid_str[] = {
     0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x0E
 };
 
-static const chunk_t ASN1_extensionRequest_oid = strchunk(ASN1_extensionRequest_oid_str);
+static const chunk_t ASN1_extensionRequest_oid = chunk_from_buf(ASN1_extensionRequest_oid_str);
 
 /** 
  * @brief Adds a subjectAltName in DER-coded form to a linked list
@@ -214,7 +214,7 @@ pkcs10_free(pkcs10_t *pkcs10)
 {
     if (pkcs10 != NULL)
     {
-	freeanychunk(pkcs10->request);
+	free(pkcs10->request.ptr);
 	free(pkcs10);
     }
 }

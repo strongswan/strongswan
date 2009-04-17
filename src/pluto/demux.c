@@ -990,7 +990,7 @@ malloc_md(void)
 void
 release_md(struct msg_digest *md)
 {
-    freeanychunk(md->raw_packet);
+    chunk_free(&md->raw_packet);
     free(md->packet_pbs.start);
     md->packet_pbs.start = NULL;
     md->next = md_pool;
@@ -1793,7 +1793,8 @@ process_packet(struct msg_digest **mdp)
 	    /* XXX Detect weak keys */
 
 	    /* grab a copy of raw packet (for duplicate packet detection) */
-	    clonetochunk(md->raw_packet, md->packet_pbs.start, pbs_room(&md->packet_pbs));
+	    md->raw_packet = chunk_create(md->packet_pbs.start, pbs_room(&md->packet_pbs));
+	    md->raw_packet = chunk_clone(md->raw_packet);
 
 	    /* Decrypt everything after header */
 	    if (!new_iv_set)
@@ -2137,20 +2138,21 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 	    }
 	    else
 	    {
-		clonetochunk(st->st_rpacket
-		    , md->packet_pbs.start
-		    , pbs_room(&md->packet_pbs));
+		st->st_rpacket = chunk_create(md->packet_pbs.start,
+					      pbs_room(&md->packet_pbs));
+		st->st_rpacket = chunk_clone(st->st_rpacket);
 	    }
 
 	    /* free previous transmit packet */
-	    freeanychunk(st->st_tpacket);
+	    chunk_free(&st->st_tpacket);
 
 	    /* if requested, send the new reply packet */
 	    if (smc->flags & SMF_REPLY)
 	    {
 		close_output_pbs(&md->reply);   /* good form, but actually a no-op */
 
-		clonetochunk(st->st_tpacket, md->reply.start, pbs_offset(&md->reply));
+		st->st_tpacket = chunk_create(md->reply.start, pbs_offset(&md->reply));
+		st->st_tpacket = chunk_clone(st->st_tpacket);
 
 		if (nat_traversal_enabled)
 		    nat_traversal_change_port_lookup(md, md->st);

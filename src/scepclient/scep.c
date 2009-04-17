@@ -53,11 +53,11 @@ static char ASN1_transId_oid_str[] = {
 };
 
 static const chunk_t ASN1_messageType_oid =
-			strchunk(ASN1_messageType_oid_str);
+			chunk_from_buf(ASN1_messageType_oid_str);
 static const chunk_t ASN1_senderNonce_oid =
-			strchunk(ASN1_senderNonce_oid_str);
+			chunk_from_buf(ASN1_senderNonce_oid_str);
 static const chunk_t ASN1_transId_oid =
-			strchunk(ASN1_transId_oid_str);
+			chunk_from_buf(ASN1_transId_oid_str);
 
 static const char *pkiStatus_values[] = { "0", "2", "3" };
 
@@ -395,8 +395,8 @@ scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg
 
     request = pkcs7_build_signedData(envelopedData, attributes
 		    , signer_cert, digest_alg, private_key);
-    freeanychunk(envelopedData);
-    freeanychunk(attributes);
+    free(envelopedData.ptr);
+    free(attributes.ptr);
     return request;
 }
 
@@ -590,7 +590,7 @@ scep_parse_response(chunk_t response, chunk_t transID, contentInfo_t *data
     {
 	return "error parsing the scep response attributes";
     }
-    if (!same_chunk(transID, attrs->transID))
+    if (!chunk_equals(transID, attrs->transID))
     {
 	return "transaction ID of scep response does not match";
     }

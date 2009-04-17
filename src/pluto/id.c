@@ -145,7 +145,9 @@ set_myFQDN(void)
 
 	if (!strcaseeq(FQDN, "localhost.localdomain"))
 	{
-	    clonetochunk(myids[MYID_HOSTNAME].name, FQDN, strlen(FQDN));
+	    chunk_t myid_name = { FQDN, strlen(FQDN) };
+
+	    myids[MYID_HOSTNAME].name = chunk_clone(myid_name);
 	    myids[MYID_HOSTNAME].kind = ID_FQDN;
 	    calc_myid_str(MYID_HOSTNAME);
 	}
@@ -365,7 +367,7 @@ unshare_id_content(struct id *id)
     case ID_USER_FQDN:
     case ID_DER_ASN1_DN:
     case ID_KEY_ID:
-	id->name.ptr = clone_bytes(id->name.ptr, id->name.len);
+	id->name = chunk_clone(id->name);
 	break;
     case ID_MYID:
     case ID_NONE:
@@ -386,7 +388,7 @@ free_id_content(struct id *id)
     case ID_USER_FQDN:
     case ID_DER_ASN1_DN:
     case ID_KEY_ID:
-	freeanychunk(id->name);
+	free(id->name.ptr);
 	break;
     case ID_MYID:
     case ID_NONE:

@@ -136,7 +136,7 @@ compute_dh_shared(struct state *st, const chunk_t g
     mpz_init(&mp_shared);
     mpz_powm(&mp_shared, &mp_g, &st->st_sec, group->modulus);
     mpz_clear(&mp_g);
-    freeanychunk(st->st_shared);	/* happens in odd error cases */
+    free(st->st_shared.ptr);	/* happens in odd error cases */
     st->st_shared = mpz_to_n(&mp_shared, group->bytes);
     mpz_clear(&mp_shared);
     gettimeofday(&tv1, NULL);
@@ -175,7 +175,7 @@ build_and_ship_KE(struct state *st, chunk_t *g
 
 	mpz_init(&mp_g);
 	mpz_powm(&mp_g, &groupgenerator, &st->st_sec, group->modulus);
-	freeanychunk(*g);	/* happens in odd error cases */
+	free(g->ptr);	/* happens in odd error cases */
 	*g = mpz_to_n(&mp_g, group->bytes);
 	mpz_clear(&mp_g);
 	DBG(DBG_CRYPT,
@@ -206,7 +206,9 @@ accept_KE(chunk_t *dest, const char *val_name
 	/* XXX Could send notification back */
 	return INVALID_KEY_INFORMATION;
     }
-    clonereplacechunk(*dest, pbs->cur, pbs_left(pbs));
+    free(dest->ptr);
+    *dest = chunk_create(pbs->cur, pbs_left(pbs));
+    *dest = chunk_clone(*dest);
     DBG_cond_dump_chunk(DBG_CRYPT, "DH public value received:\n", *dest);
     return NOTHING_WRONG;
 }
@@ -253,8 +255,8 @@ static bool
 build_and_ship_nonce(chunk_t *n, pb_stream *outs, u_int8_t np
 , const char *name)
 {
-    freeanychunk(*n);
-    setchunk(*n, malloc(DEFAULT_NONCE_SIZE), DEFAULT_NONCE_SIZE);
+    free(n->ptr);
+    *n = chunk_create(malloc(DEFAULT_NONCE_SIZE), DEFAULT_NONCE_SIZE);
     get_rnd_bytes(n->ptr, DEFAULT_NONCE_SIZE);
     return out_generic_chunk(np, &isakmp_nonce_desc, outs, *n, name);
 }
@@ -445,7 +447,7 @@ send_notification(struct state *sndst, u_int16_t type, struct state *encst,
     {
 	chunk_t saved_tpacket = sndst->st_tpacket;
 
-	setchunk(sndst->st_tpacket, pbs.start, pbs_offset(&pbs));
+	sndst->st_tpacket = chunk_create(pbs.start, pbs_offset(&pbs));
 	send_packet(sndst, "ISAKMP notify");
 	sndst->st_tpacket = saved_tpacket;
     }
@@ -677,7 +679,7 @@ send_delete(struct state *st)
 	if (!encrypt_message(&r_hdr_pbs, p1st))
 	    impossible();
 
-	setchunk(p1st->st_tpacket, reply_pbs.start, pbs_offset(&reply_pbs));
+	p1st->st_tpacket = chunk_create(reply_pbs.start, pbs_offset(&reply_pbs));
 	send_packet(p1st, "delete notify");
 	p1st->st_tpacket = saved_tpacket;
 
@@ -962,7 +964,8 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 
 	/* save initiator SA for later HASH */
 	passert(st->st_p1isa.ptr == NULL);	/* no leak!  (MUST be first time) */
-	clonetochunk(st->st_p1isa, sa_start, rbody.cur - sa_start);
+	st->st_p1isa = chunk_create(sa_start, rbody.cur - sa_start);
+	st->st_p1isa = chunk_clone(st->st_p1isa);
     }
 
     /* if enabled send Pluto Vendor ID */
@@ -1033,7 +1036,8 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 
     close_message(&rbody);
     close_output_pbs(&reply);
-    clonetochunk(st->st_tpacket, reply.start, pbs_offset(&reply));
+    st->st_tpacket = chunk_create(reply.start, pbs_offset(&reply));
+    st->st_tpacket = chunk_clone(st->st_tpacket);
 
     /* Transmit */
 
@@ -1316,7 +1320,9 @@ generate_skeyids_iv(struct state *st)
 	    }
 	    k = keytemp;
 	}
-	clonereplacechunk(st->st_enc_key, k, keysize);
+	free(st->st_enc_key.ptr);
+	st->st_enc_key = chunk_create(k, keysize);
+	st->st_enc_key = chunk_clone(st->st_enc_key);
     }
 
     DBG(DBG_CRYPT,
@@ -1846,7 +1852,9 @@ accept_nonce(struct msg_digest *md, chunk_t *dest, const char *name)
 	    , name , MINIMUM_NONCE_SIZE, MAXIMUM_NONCE_SIZE);
 	return PAYLOAD_MALFORMED;	/* ??? */
     }
-    clonereplacechunk(*dest, nonce_pbs->cur, len);
+    free(dest->ptr);
+    *dest = chunk_create(nonce_pbs->cur, len);
+    *dest = chunk_clone(*dest);
     return NOTHING_WRONG;
 }
 
@@ -2203,7 +2211,8 @@ quick_outI1(int whack_sock
     }
 
     /* save packet, now that we know its size */
-    clonetochunk(st->st_tpacket, reply.start, pbs_offset(&reply));
+    st->st_tpacket = chunk_create(reply.start, pbs_offset(&reply));
+    st->st_tpacket = chunk_clone(st->st_tpacket);
 
     /* send the packet */
 
@@ -2311,7 +2320,7 @@ decode_cr(struct msg_digest *md, struct connection *c)
 		    continue;
 
 		gn = malloc_thing(generalName_t);
-		clonetochunk(ca_name, ca_name.ptr,ca_name.len);
+		ca_name = chunk_clone(ca_name);
 		gn->kind = GN_DIRECTORY_NAME;
 		gn->name = ca_name;
 		gn->next = c->requested_ca;
@@ -2409,17 +2418,17 @@ decode_peer_id(struct msg_digest *md, struct id *peer)
 
 	/* ??? ought to do some more sanity check, but what? */
 
-	setchunk(peer->name, id_pbs->cur, pbs_left(id_pbs));
+	peer->name = chunk_create(id_pbs->cur, pbs_left(id_pbs));
 	break;
 
     case ID_KEY_ID:
-	setchunk(peer->name, id_pbs->cur, pbs_left(id_pbs));
+	peer->name = chunk_create(id_pbs->cur, pbs_left(id_pbs));
 	DBG(DBG_PARSING,
  	    DBG_dump_chunk("KEY ID:", peer->name));
 	break;
 
     case ID_DER_ASN1_DN:
-	setchunk(peer->name, id_pbs->cur, pbs_left(id_pbs));
+	peer->name = chunk_create(id_pbs->cur, pbs_left(id_pbs));
  	DBG(DBG_PARSING,
  	    DBG_dump_chunk("DER ASN1 DN:", peer->name));
 	break;
@@ -3221,7 +3230,9 @@ main_inI1_outR1(struct msg_digest *md)
     close_message(&md->rbody);
 
     /* save initiator SA for HASH */
-    clonereplacechunk(st->st_p1isa, sa_pd->pbs.start, pbs_room(&sa_pd->pbs));
+    free(st->st_p1isa.ptr);
+    st->st_p1isa = chunk_create(sa_pd->pbs.start, pbs_room(&sa_pd->pbs));
+    st->st_p1isa = chunk_clone(st->st_p1isa);
 
     return STF_OK;
 }
@@ -5332,7 +5343,7 @@ send_isakmp_notification(struct state *st, u_int16_t type
     {
         chunk_t saved_tpacket = st->st_tpacket;
 
-        setchunk(st->st_tpacket, reply.start, pbs_offset(&reply));
+        st->st_tpacket = chunk_create(reply.start, pbs_offset(&reply));
         send_packet(st, "ISAKMP notify");
         st->st_tpacket = saved_tpacket;
     }

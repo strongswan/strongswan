@@ -575,14 +575,14 @@ static void nat_traversal_send_ka (struct state *st)
     )
 
     /* save state chunk */
-    setchunk(sav, st->st_tpacket.ptr, st->st_tpacket.len);
+    sav = st->st_tpacket;
 
     /* send keep alive */
-    setchunk(st->st_tpacket, &ka_payload, 1);
+    st->st_tpacket = chunk_create(&ka_payload, 1);
     send_packet(st, "NAT-T Keep Alive");
 
     /* restore state chunk */
-    setchunk(st->st_tpacket, sav.ptr, sav.len);
+    st->st_tpacket = sav;
 }
 
 /**

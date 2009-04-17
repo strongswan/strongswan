@@ -131,13 +131,13 @@ static u_char ASN1_nonce_oid_str[] = {
     0x06, 0x09, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x02
 };
 
-static const chunk_t ASN1_nonce_oid = strchunk(ASN1_nonce_oid_str);
+static const chunk_t ASN1_nonce_oid = chunk_from_buf(ASN1_nonce_oid_str);
 
 static u_char ASN1_response_oid_str[] = {
     0x06, 0x09, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x04
 };
 
-static const chunk_t ASN1_response_oid = strchunk(ASN1_response_oid_str);
+static const chunk_t ASN1_response_oid = chunk_from_buf(ASN1_response_oid_str);
 
 static u_char ASN1_response_content_str[] = {
     0x04, 0x0D,
@@ -145,7 +145,7 @@ static u_char ASN1_response_content_str[] = {
 		0x06, 0x09, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x01
 };
 
-static const chunk_t ASN1_response_content = strchunk(ASN1_response_content_str);
+static const chunk_t ASN1_response_content = chunk_from_buf(ASN1_response_content_str);
 
 /* default OCSP uri */
 static chunk_t ocsp_default_uri;
@@ -295,13 +295,16 @@ build_ocsp_location(const x509cert_t *cert, ocsp_location_t *location)
 	ca_info_t *ca = get_ca_info(cert->issuer, cert->authKeySerialNumber
 		, cert->authKeyID);
 	if (ca != NULL && ca->ocspuri != NULL)
-	    setchunk(location->uri, ca->ocspuri, strlen(ca->ocspuri))
+	{
+	    location->uri = chunk_create(ca->ocspuri, strlen(ca->ocspuri));
+	}
 	else
-	    /* abort if no ocsp location uri is defined */
+	{   /* abort if no ocsp location uri is defined */
 	    return FALSE;
+	}
     }
     
-    setchunk(location->authNameID, digest, SHA1_DIGEST_SIZE);
+    location->authNameID = chunk_create(digest, SHA1_DIGEST_SIZE);
     compute_digest(cert->issuer, OID_SHA1, &location->authNameID);
 
     location->next = NULL;
@@ -337,7 +340,7 @@ same_ocsp_location(const ocsp_location_t *a, const ocsp_location_t *b)
 		? same_keyid(a->authKeyID, b->authKeyID)
 		: (same_dn(a->issuer, b->issuer)
 		    && same_serial(a->authKeySerialNumber, b->authKeySerialNumber)))
-	    && same_chunk(a->uri, b->uri);
+	    && chunk_equals(a->uri, b->uri);
 }
 
 /*
@@ -378,7 +381,7 @@ get_ocsp_status(const ocsp_location_t *loc, chunk_t serialNumber
 
     while (certinfo != NULL)
     {
-	cmp = cmp_chunk(serialNumber, certinfo->serialNumber);
+	cmp = chunk_compare(serialNumber, certinfo->serialNumber);
 	if (cmp <= 0)
 	    break;
 	certinfop = &certinfo->next;
@@ -488,7 +491,7 @@ check_ocsp(void)
 static void
 free_certinfo(ocsp_certinfo_t *certinfo)
 {
-    freeanychunk(certinfo->serialNumber);
+    free(certinfo->serialNumber.ptr);
     free(certinfo);
 }
 
@@ -514,11 +517,11 @@ free_certinfos(ocsp_certinfo_t *chain)
 static void
 free_ocsp_location(ocsp_location_t* location)
 {
-    freeanychunk(location->issuer);
-    freeanychunk(location->authNameID);
-    freeanychunk(location->authKeyID);
-    freeanychunk(location->authKeySerialNumber);
-    freeanychunk(location->uri);
+    free(location->issuer.ptr);
+    free(location->authNameID.ptr);
+    free(location->authKeyID.ptr);
+    free(location->authKeySerialNumber.ptr);
+    free(location->uri.ptr);
     free_certinfos(location->certinfo);
     free(location);
 }
@@ -792,7 +795,7 @@ build_signature(chunk_t tbsRequest)
     sigdata = generate_signature(digest_info
 	, ocsp_requestor_sc
 	, ocsp_requestor_pri);
-    freeanychunk(digest_info);
+    free(digest_info.ptr);
 
     /* has the RSA signature generation been successful? */
     if (sigdata.ptr == NULL)
@@ -1154,10 +1157,9 @@ parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 	    break;
 	case BASIC_RESPONSE_CERTIFICATE:
 	    {
-		chunk_t blob;
+		chunk_t blob = chunk_clone(object);
 		x509cert_t *cert = malloc_thing(x509cert_t);
 
-		clonetochunk(blob, object.ptr, object.len);
 		*cert = empty_x509cert;
 
 		if (parse_x509cert(blob, level+1, cert)
@@ -1327,30 +1329,11 @@ add_ocsp_location(const ocsp_location_t *loc, ocsp_location_t **chain)
     ocsp_location_t *location = malloc_thing(ocsp_location_t);
 
     /* unshare location fields */
-    clonetochunk(location->issuer, loc->issuer.ptr, loc->issuer.len);
-
-    clonetochunk(location->authNameID, loc->authNameID.ptr, loc->authNameID.len);
-
-    if (loc->authKeyID.ptr == NULL)
-    {
-	location->authKeyID = chunk_empty;
-    }
-    else
-    {
-	clonetochunk(location->authKeyID, loc->authKeyID.ptr, loc->authKeyID.len);
-    }
-
-    if (loc->authKeySerialNumber.ptr == NULL)
-    {
-	location->authKeySerialNumber = chunk_empty;
-    }
-    else
-    {
-	clonetochunk(location->authKeySerialNumber
-    		, loc->authKeySerialNumber.ptr, loc->authKeySerialNumber.len);
-    }
-
-    clonetochunk(location->uri, loc->uri.ptr, loc->uri.len);
+    location->issuer = chunk_clone(loc->issuer);
+    location->authNameID = chunk_clone(loc->authNameID);
+    location->authKeyID = chunk_clone(loc->authKeyID);
+    location->authKeySerialNumber = chunk_clone(loc->authKeySerialNumber);
+    location->uri = chunk_clone(loc->uri);
     location->certinfo = NULL;
 
     /* insert new ocsp location in front of chain */
@@ -1387,7 +1370,7 @@ add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info, ocsp_location_t **chai
 
     while (certinfo != NULL)
     {
-	cmp = cmp_chunk(info->serialNumber, certinfo->serialNumber);
+	cmp = chunk_compare(info->serialNumber, certinfo->serialNumber);
 	if (cmp <= 0)
 	    break;
 	certinfop = &certinfo->next;
@@ -1398,7 +1381,8 @@ add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info, ocsp_location_t **chai
     {
 	/* add a new certinfo entry */
 	ocsp_certinfo_t *cnew = malloc_thing(ocsp_certinfo_t);
-	clonetochunk(cnew->serialNumber, info->serialNumber.ptr, info->serialNumber.len);
+
+	cnew->serialNumber = chunk_clone(info->serialNumber);
 	cnew->next = certinfo;
 	*certinfop = cnew;
 	certinfo = cnew;
@@ -1454,8 +1438,8 @@ process_single_response(ocsp_location_t *location, single_response_t *sres)
 	plog("only SHA-1 hash supported in OCSP single response");
 	return;
     }
-    if (!(same_chunk(sres->issuer_name_hash, location->authNameID)
-    &&   same_chunk(sres->issuer_key_hash, location->authKeyID)))
+    if (!(chunk_equals(sres->issuer_name_hash, location->authNameID)
+    &&   chunk_equals(sres->issuer_key_hash, location->authKeyID)))
     {
 	plog("ocsp single response has wrong issuer");
 	return;
@@ -1467,7 +1451,7 @@ process_single_response(ocsp_location_t *location, single_response_t *sres)
 
     while (certinfo != NULL)
     {
-	cmp = cmp_chunk(sres->serialNumber, certinfo->serialNumber);
+	cmp = chunk_compare(sres->serialNumber, certinfo->serialNumber);
 	if (cmp <= 0)
 	    break;
 	certinfop = &certinfo->next;
@@ -1522,7 +1506,7 @@ parse_ocsp(ocsp_location_t *location, chunk_t blob)
 	plog("ocsp response contains no nonce, replay attack possible");
     }
     /* check if the nonce is identical */
-    if (res.nonce.ptr != NULL && !same_chunk(res.nonce, location->nonce))
+    if (res.nonce.ptr != NULL && !chunk_equals(res.nonce, location->nonce))
     {
 	plog("invalid nonce in ocsp response");
 	return;

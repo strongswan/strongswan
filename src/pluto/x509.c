@@ -394,7 +394,7 @@ static u_char ASN1_subjectAltName_oid_str[] = {
     0x06, 0x03, 0x55, 0x1D, 0x11
 };
 
-static const chunk_t ASN1_subjectAltName_oid = strchunk(ASN1_subjectAltName_oid_str);
+static const chunk_t ASN1_subjectAltName_oid = chunk_from_buf(ASN1_subjectAltName_oid_str);
 
 static void
 update_chunk(chunk_t *ch, int n)
@@ -987,7 +987,7 @@ match_dn(chunk_t a, chunk_t b, int *wildcards)
 bool
 same_x509cert(const x509cert_t *a, const x509cert_t *b)
 {
-    return same_chunk(a->signature, b->signature);
+    return chunk_equals(a->signature, b->signature);
 }
 
 /*  for each link pointing to the certificate
@@ -1083,7 +1083,7 @@ same_keyid(chunk_t a, chunk_t b)
     {
 	return FALSE;
     }
-    return same_chunk(a, b);
+    return chunk_equals(a, b);
 }
 
 /*
@@ -1097,7 +1097,7 @@ same_serial(chunk_t a, chunk_t b)
     {
 	return TRUE;
     }
-    return same_chunk(a, b);
+    return chunk_equals(a, b);
 }
 
 /*
