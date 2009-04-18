@@ -39,6 +39,7 @@
 #include <library.h>
 #include <debug.h>
 #include <asn1/oid.h>
+#include <utils/optionsfrom.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
@@ -113,6 +114,8 @@ long crl_check_interval = 0;
 /* by default pluto logs out after every smartcard use */
 bool pkcs11_keep_state = FALSE;
 
+/* options read by optionsfrom */
+options_t *options;
 
 /*
  * Global variables
@@ -146,6 +149,8 @@ pkcs10_t *pkcs10               = NULL;
 static void
 exit_scepclient(err_t message, ...)
 {
+    int status = 0;
+
     if (private_key != NULL)
     {
 	free_RSA_private_content(private_key);
@@ -170,8 +175,7 @@ exit_scepclient(err_t message, ...)
     free_x509cert(x509_ca_enc);
     free_x509cert(x509_ca_sig);
     pkcs10_free(pkcs10);
-    library_deinit();
-    close_log();
+    options->destroy(options);
 
     /* print any error message to stderr */
     if (message != NULL && *message != '\0')
@@ -184,9 +188,11 @@ exit_scepclient(err_t message, ...)
 	va_end(args);
 
 	fprintf(stderr, "error: %s\n", m);
-	exit(-1);
+	status = -1;
     }
-    exit(0);
+    library_deinit();
+    close_log();
+    exit(status);
 }
 
 /**
@@ -391,7 +397,7 @@ int main(int argc, char **argv)
     u_int max_poll_time = 0;
 
     err_t ugh = NULL;
-
+ 
     /* initialize global variables */
     pkcs1             = chunk_empty;
     pkcs7             = chunk_empty;
@@ -404,7 +410,9 @@ int main(int argc, char **argv)
     scep_response     = chunk_empty;
     log_to_stderr     = TRUE;
 
+    /* initialize library and optionsfrom */
     library_init(STRONGSWAN_CONF);
+    options = options_create();
 
     for (;;)
     {
@@ -553,8 +561,10 @@ int main(int argc, char **argv)
 	    continue;
 
 	case '+':	/* --optionsfrom <filename> */
-	    optionsfrom(optarg, &argc, &argv, optind, stderr);
-	    /* does not return on error */
+	    if (!options->from(options, optarg, &argc, &argv, optind))
+	    {
+		exit_scepclient("optionsfrom failed");
+	    }
 	    continue;
 
 	case 'k':	 /* --keylength <length> */
