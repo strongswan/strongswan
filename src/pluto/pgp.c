@@ -195,7 +195,7 @@ parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
     cert->created = (time_t)pgp_size(packet, 4);
     DBG(DBG_PARSING,
 	DBG_log("L3 - created:");
-	DBG_log("  %s", timetoa(&cert->created, TRUE))
+	DBG_log("  %T", &cert->created, TRUE)
     )
 
     if (version == 3)
@@ -209,7 +209,7 @@ parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 
 	DBG(DBG_PARSING,
 	    DBG_log("L3 - until:");
-	    DBG_log("  %s", timetoa(&cert->until, TRUE));
+	    DBG_log("  %T", &cert->until, TRUE);
 	)
     }
 
@@ -403,7 +403,7 @@ parse_pgp_signature_packet(chunk_t *packet, pgpcert_t *cert)
     created = (time_t)pgp_size(packet, 4);
     DBG(DBG_PARSING,
 	DBG_log("L3 - created:");
-	DBG_log("  %s", timetoa(&cert->created, TRUE))
+	DBG_log("  %T", &cert->created, TRUE)
     )
 
     /* key ID of signer - 8 bytes */
@@ -633,14 +633,14 @@ list_pgp_end_certs(bool utc)
 	c.type = CERT_PGP;
 	c.u.pgp = cert;
 
-	whack_log(RC_COMMENT, "%s, count: %d", timetoa(&cert->installed, utc), cert->count);
+	whack_log(RC_COMMENT, "%T, count: %d", &cert->installed, utc), cert->count;
 	datatot(cert->fingerprint, PGP_FINGERPRINT_SIZE, 'x', buf, BUF_LEN);
 	whack_log(RC_COMMENT, "       fingerprint:  %s", buf);
 	form_keyid(cert->publicExponent, cert->modulus, buf, &keysize);
 	whack_log(RC_COMMENT, "       pubkey:   %4d RSA Key %s%s", 8*keysize, buf,
 		(has_private_key(c))? ", has private key" : "");
-	whack_log(RC_COMMENT, "       created:  %s", timetoa(&cert->created, utc));
-	whack_log(RC_COMMENT, "       until:    %s %s", timetoa(&cert->until, utc),
+	whack_log(RC_COMMENT, "       created:  %T", &cert->created, utc);
+	whack_log(RC_COMMENT, "       until:    %T %s", &cert->until, utc,
 		check_expiry(cert->until, CA_CERT_WARNING_INTERVAL, TRUE));
 	cert = cert->next;
     }

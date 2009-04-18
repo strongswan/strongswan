@@ -677,8 +677,7 @@ verify_by_crl(const x509cert_t *cert, time_t *until, time_t *revocationDate
 	    {
 		fetch_req_t *req;
 
-		plog("crl update is overdue since %s"
-		    , timetoa(until, TRUE));
+		plog("crl update is overdue since %T", until, TRUE);
 
 		/* try to fetch a crl update */
 		req = build_crl_fetch_request(crl->issuer
@@ -738,8 +737,8 @@ list_crls(bool utc, bool strict)
 	    revokedCert = revokedCert->next;
         }
 
-	whack_log(RC_COMMENT, "%s, revoked certs: %d",
-		timetoa(&crl->installed, utc), revoked);
+	whack_log(RC_COMMENT, "%T, revoked certs: %d",
+		&crl->installed, utc, revoked);
 	dntoa(buf, BUF_LEN, crl->issuer);
 	whack_log(RC_COMMENT, "       issuer:   '%s'", buf);
 	if (crl->crlNumber.ptr != NULL)
@@ -750,10 +749,10 @@ list_crls(bool utc, bool strict)
 	}
 	list_distribution_points(crl->distributionPoints);
 
-	whack_log(RC_COMMENT, "       updates:   this %s",
-		timetoa(&crl->thisUpdate, utc));
-	whack_log(RC_COMMENT, "                  next %s %s",
-		timetoa(&crl->nextUpdate, utc),
+	whack_log(RC_COMMENT, "       updates:   this %T",
+		&crl->thisUpdate, utc);
+	whack_log(RC_COMMENT, "                  next %T %s",
+		&crl->nextUpdate, utc,
 		check_expiry(crl->nextUpdate, CRL_WARNING_INTERVAL, strict));
 	if (crl->authKeyID.ptr != NULL)
 	{

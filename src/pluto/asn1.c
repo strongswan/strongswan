@@ -544,7 +544,7 @@ debug_asn1_simple_object(chunk_t object, asn1_t type, u_int cond)
     case ASN1_GENERALIZEDTIME:
 	DBG(DBG_PARSING,
 	    time_t time = asn1totime(&object, type);
-	    DBG_log("  '%s'", timetoa(&time, TRUE));
+	    DBG_log("  '%T'", &time, TRUE);
 	)
 	return;
     default:

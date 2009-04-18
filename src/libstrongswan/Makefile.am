@@ -1,4 +1,4 @@
-lib_LTLIBRARIES = libstrongswan.la
+lib_LTLIBRARIES = libstrongswan.la libstrongswan-lite.la
 
 if USE_INTEGRITY_TEST
   libstrongswan_la_SOURCES = \
@@ -56,13 +56,27 @@ plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
 libstrongswan_la_LIBADD = -lpthread -ldl
 
+libstrongswan_lite_la_SOURCES = \
+chunk.c chunk.h \
+debug.c debug.h \
+asn1/oid.c asn1/oid.h \
+printf_hook.c printf_hook.h \
+settings.c settings.h \
+utils.c utils.h \
+utils/enumerator.c utils/enumerator.h \
+utils/linked_list.c utils/linked_list.h
+
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" \
 			-DIPSEC_PLUGINDIR=\"${plugindir}\"
 
 if USE_LEAK_DETECTIVE
   AM_CFLAGS += -DLEAK_DETECTIVE
-  libstrongswan_la_SOURCES += utils/leak_detective.c utils/leak_detective.h
+  libstrongswan_la_SOURCES += \
+    utils/leak_detective.c utils/leak_detective.h
+  libstrongswan_lite_la_SOURCES += \
+    utils/leak_detective.c utils/leak_detective.h \
+    utils/backtrace.c utils/backtrace.h 
 endif
 
 if USE_LOCK_PROFILER

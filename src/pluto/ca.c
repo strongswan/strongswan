@@ -661,11 +661,11 @@ list_ca_infos(bool utc)
 
 	/* strictpolicy per CA not supported yet
 	 *
-	whack_log(RC_COMMENT, "%s, \"%s\", strictcrlpolicy: %s"
-		, timetoa(&ca->installed, utc), ca->name
+	whack_log(RC_COMMENT, "%T, \"%s\", strictcrlpolicy: %s"
+		, &ca->installed, utc, ca->name
 		, ca->strictcrlpolicy? "yes":"no");
 	*/
-	whack_log(RC_COMMENT, "%s, \"%s\"", timetoa(&ca->installed, utc), ca->name);
+	whack_log(RC_COMMENT, "%T, \"%s\"", &ca->installed, utc, ca->name);
 	dntoa(buf, BUF_LEN, ca->authName);
 	whack_log(RC_COMMENT, "       authname: '%s'", buf);
 	if (ca->ldaphost != NULL)

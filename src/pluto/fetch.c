@@ -1043,8 +1043,8 @@ list_crl_fetch_requests(bool utc)
     {
 	u_char buf[BUF_LEN];
 
-	whack_log(RC_COMMENT, "%s, trials: %d"
-	    , timetoa(&req->installed, utc), req->trials);
+	whack_log(RC_COMMENT, "%T, trials: %d"
+	    , &req->installed, utc, req->trials);
 	dntoa(buf, BUF_LEN, req->issuer);
 	whack_log(RC_COMMENT, "       issuer:   '%s'", buf);
 	if (req->authKeyID.ptr != NULL)

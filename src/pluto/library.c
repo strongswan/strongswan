@@ -21,6 +21,7 @@
 #include <stdlib.h>
 
 #include <utils.h>
+#include <chunk.h>
 #ifdef LEAK_DETECTIVE
 #include <utils/leak_detective.h>
 #endif
@@ -58,6 +59,7 @@ void library_deinit()
 	private_library_t *this = (private_library_t*)lib;
 
 	this->public.settings->destroy(this->public.settings);
+	this->public.printf_hook->destroy(this->public.printf_hook);
 	
 #ifdef LEAK_DETECTIVE
 	if (this->detective)
@@ -74,6 +76,7 @@ void library_deinit()
  */
 void library_init(char *settings)
 {
+	printf_hook_t *pfh;
 	private_library_t *this = malloc_thing(private_library_t);
 	lib = &this->public;
 	
@@ -82,6 +85,21 @@ void library_init(char *settings)
 #ifdef LEAK_DETECTIVE
 	this->detective = leak_detective_create();
 #endif /* LEAK_DETECTIVE */
+
+	pfh = printf_hook_create();
+	this->public.printf_hook = pfh;
+	
+	pfh->add_handler(pfh, 'b', mem_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_INT,
+					 PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'B', chunk_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'T', time_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_INT,
+					 PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'V', time_delta_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_POINTER,
+					 PRINTF_HOOK_ARGTYPE_END);
 
 	this->public.settings = settings_create(settings);
 }

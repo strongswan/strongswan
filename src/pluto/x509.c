@@ -2104,9 +2104,9 @@ check_validity(const x509cert_t *cert, time_t *until)
 
     time(&current_time);
     DBG(DBG_CONTROL | DBG_PARSING ,
-	DBG_log("  not before  : %s", timetoa(&cert->notBefore, TRUE));
-	DBG_log("  current time: %s", timetoa(&current_time, TRUE));
-	DBG_log("  not after   : %s", timetoa(&cert->notAfter, TRUE));
+	DBG_log("  not before  : %T", &cert->notBefore, TRUE);
+	DBG_log("  current time: %T", &current_time, TRUE);
+	DBG_log("  not after   : %T", &cert->notAfter, TRUE);
     )
 
     if (cert->notAfter < *until)
@@ -2245,8 +2245,8 @@ verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 		}
 		break;
 	    case CERT_REVOKED:
-		plog("certificate was revoked on %s, reason: %s"
-		    , timetoa(&revocationDate, TRUE)
+		plog("certificate was revoked on %T, reason: %s"
+		    , &revocationDate, TRUE
 		    , enum_name(&crl_reason_names, revocationReason));
 		remove_x509_public_key(cert);
 		return FALSE;
@@ -2303,7 +2303,7 @@ list_x509cert_chain(const char *caption, x509cert_t* cert, u_char auth_flags
 		first = FALSE;
 	    }
 
-	    whack_log(RC_COMMENT, "%s, count: %d", timetoa(&cert->installed, utc),
+	    whack_log(RC_COMMENT, "%T, count: %d", &cert->installed, utc,
 		cert->count);
 	    dntoa(buf, BUF_LEN, cert->subject);
 	    whack_log(RC_COMMENT, "       subject:  '%s'", buf);
@@ -2317,11 +2317,11 @@ list_x509cert_chain(const char *caption, x509cert_t* cert, u_char auth_flags
 		, 8*keysize, keyid
 		, cert->smartcard ? ", on smartcard" :
 		(has_private_key(c)? ", has private key" : ""));
-	    whack_log(RC_COMMENT, "       validity:  not before %s %s",
-		timetoa(&cert->notBefore, utc),
+	    whack_log(RC_COMMENT, "       validity:  not before %T %s",
+		&cert->notBefore, utc,
 		(cert->notBefore < now)?"ok":"fatal (not valid yet)");
-	    whack_log(RC_COMMENT, "                  not after  %s %s",
-		timetoa(&cert->notAfter, utc),
+	    whack_log(RC_COMMENT, "                  not after  %T %s",
+		&cert->notAfter, utc,
 		check_expiry(cert->notAfter, CA_CERT_WARNING_INTERVAL, TRUE));
 	    if (cert->subjectKeyID.ptr != NULL)
 	    {

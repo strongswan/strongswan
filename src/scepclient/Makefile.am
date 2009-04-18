@@ -15,17 +15,27 @@ INCLUDES = \
 -I$(LIBCRYPTODIR) \
 -I$(WHACKDIR)
 
-AM_CFLAGS = -DDEBUG -DNO_PLUTO -DIPSEC_CONFDIR=\"${confdir}\"
+AM_CFLAGS = \
+-DIPSEC_CONFDIR=\"${confdir}\" \
+-DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
+-DDEBUG -DNO_PLUTO
 
 LIBFREESWANBUILDDIR=$(top_builddir)/src/libfreeswan
 LIBCRYPTOBUILDDIR=$(top_builddir)/src/libcrypto
 
-scepclient_LDADD = debug.o utils.o chunk.o \
-                   asn1.o ca.o crl.o certs.o constants.o defs.o fetch.o id.o \
-                   keys.o lex.o md2.o md5.o mp_defs.o ocsp.o oid.o pem.o pgp.o \
-                   pkcs1.o pkcs7.o rnd.o sha1.o smartcard.o x509.o \
-                   $(LIBFREESWANBUILDDIR)/libfreeswan.a $(LIBCRYPTOBUILDDIR)/libcrypto.a \
-                   -lgmp
+scepclient_LDADD = \
+asn1.o ca.o crl.o certs.o constants.o defs.o fetch.o id.o keys.o \
+lex.o library.o md2.o md5.o mp_defs.o ocsp.o pem.o pgp.o pkcs1.o \
+pkcs7.o rnd.o sha1.o smartcard.o x509.o \
+$(LIBSTRONGSWANDIR)/libstrongswan-lite.la \
+$(LIBFREESWANBUILDDIR)/libfreeswan.a \
+$(LIBCRYPTOBUILDDIR)/libcrypto.a \
+-lgmp
+
+# This compile option activates the memory leak detective
+if USE_LEAK_DETECTIVE
+  AM_CFLAGS += -DLEAK_DETECTIVE
+endif
 
 # This compile option activates smartcard support
 if USE_SMARTCARD
@@ -40,15 +50,6 @@ if USE_CURL
 endif
 
 dist_man_MANS = scepclient.8
-
-debug.o : $(LIBSTRONGSWANDIR)/debug.c $(LIBSTRONGSWANDIR)/debug.h
-		$(COMPILE) -c -o $@ $<
-
-utils.o : $(LIBSTRONGSWANDIR)/utils.c $(LIBSTRONGSWANDIR)/utils.h
-		$(COMPILE) -c -o $@ $<
-
-chunk.o : $(LIBSTRONGSWANDIR)/chunk.c $(LIBSTRONGSWANDIR)/chunk.h
-		$(COMPILE) -c -o $@ $<
 
 asn1.o :	$(PLUTODIR)/asn1.c $(PLUTODIR)/asn1.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
@@ -83,6 +84,9 @@ keys.o :	$(PLUTODIR)/keys.c $(PLUTODIR)/keys.h
 lex.o :		$(PLUTODIR)/lex.c $(PLUTODIR)/lex.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
+library.o :	$(PLUTODIR)/library.c $(PLUTODIR)/library.h
+		$(COMPILE) $(INCLUDES) -c -o $@ $<
+
 md2.o :		$(PLUTODIR)/md2.c $(PLUTODIR)/md2.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
@@ -91,9 +95,6 @@ md5.o :		$(PLUTODIR)/md5.c $(PLUTODIR)/md5.h
 
 ocsp.o :	$(PLUTODIR)/ocsp.c $(PLUTODIR)/ocsp.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-oid.o :		$(LIBSTRONGSWANDIR)/asn1/oid.c $(LIBSTRONGSWANDIR)/asn1/oid.h
-		$(COMPILE) -c -o $@ $<
 
 pem.o :		$(PLUTODIR)/pem.c $(PLUTODIR)/pem.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<

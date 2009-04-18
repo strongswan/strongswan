@@ -27,6 +27,12 @@ typedef struct library_t library_t;
  * Libstrongswan library context, contains library relevant globals.
  */
 struct library_t {
+
+	/**
+	 * Printf hook registering facility
+	 */
+	printf_hook_t *printf_hook;
+	
 	/**
 	 * various settings loaded from settings file
 	 */

@@ -27,6 +27,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <syslog.h>
 #include <string.h>
 #include <getopt.h>
 #include <ctype.h>
@@ -35,6 +36,8 @@
 #include <gmp.h>
 
 #include <freeswan.h>
+#include <library.h>
+#include <debug.h>
 #include <asn1/oid.h>
 
 #include "../pluto/constants.h"
@@ -167,6 +170,7 @@ exit_scepclient(err_t message, ...)
     free_x509cert(x509_ca_enc);
     free_x509cert(x509_ca_sig);
     pkcs10_free(pkcs10);
+    library_deinit();
     close_log();
 
     /* print any error message to stderr */
@@ -262,6 +266,47 @@ usage(const char *message)
     exit_scepclient(message);
 }
 
+static int debug_level = 1;
+
+/**
+ * @brief scepclient dbg function
+ */
+static void scepclient_dbg(int level, char *fmt, ...)
+{
+    int priority = LOG_INFO;
+    char buffer[8192];
+    char *current = buffer, *next;
+    va_list args;
+	
+    if (level <= debug_level)
+    {
+	va_start(args, fmt);
+
+	if (log_to_stderr)
+	{
+	    vfprintf(stderr, fmt, args);
+	    fprintf(stderr, "\n");
+	}
+	if (log_to_syslog)
+	{
+	    /* write in memory buffer first */
+	    vsnprintf(buffer, sizeof(buffer), fmt, args);
+
+	    /* do a syslog with every line */
+	    while (current)
+	    {
+		next = strchr(current, '\n');
+		if (next)
+	        {
+		    *(next++) = '\0';
+		}
+		syslog(priority, "%s\n", current);
+		current = next;
+	    }
+	}
+	va_end(args);
+    }
+}
 /**
  * @brief main of scepclient
  *
@@ -358,6 +403,8 @@ int main(int argc, char **argv)
     getCertInitial    = chunk_empty;
     scep_response     = chunk_empty;
     log_to_stderr     = TRUE;
+
+    library_init(STRONGSWAN_CONF);
 
     for (;;)
     {
@@ -705,6 +752,9 @@ int main(int argc, char **argv)
 	/* break from loop */
 	break;
     }
+
+    /* enable scepclient bugging hook */
+    dbg = scepclient_dbg;
 
     init_log("scepclient");
     cur_debugging = base_debugging;

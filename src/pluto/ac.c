@@ -746,9 +746,9 @@ check_ac_validity(const x509acert_t *ac)
 
     time(&current_time);
     DBG(DBG_CONTROL | DBG_PARSING,
-	DBG_log("  not before  : %s", timetoa(&ac->notBefore, TRUE));
-	DBG_log("  current time: %s", timetoa(&current_time, TRUE));
-	DBG_log("  not after   : %s", timetoa(&ac->notAfter, TRUE));
+	DBG_log("  not before  : %T", &ac->notBefore, TRUE);
+	DBG_log("  current time: %T", &current_time, TRUE);
+	DBG_log("  not after   : %T", &ac->notAfter, TRUE);
     )
 
     if (current_time < ac->notBefore)
@@ -917,7 +917,7 @@ list_acerts(bool utc)
     {
 	u_char buf[BUF_LEN];
 
-	whack_log(RC_COMMENT, "%s",timetoa(&ac->installed, utc));
+	whack_log(RC_COMMENT, "%T", &ac->installed, utc);
 	if (ac->entityName.ptr != NULL)
 	{
 	    dntoa(buf, BUF_LEN, ac->entityName);
@@ -944,11 +944,11 @@ list_acerts(bool utc)
 	datatot(ac->serialNumber.ptr, ac->serialNumber.len, ':'
 	    , buf, BUF_LEN);
 	whack_log(RC_COMMENT, "       serial:    %s", buf);
-	whack_log(RC_COMMENT, "       validity:  not before %s %s",
-		timetoa(&ac->notBefore, utc),
+	whack_log(RC_COMMENT, "       validity:  not before %T %s",
+		&ac->notBefore, utc,
 		(ac->notBefore < now)?"ok":"fatal (not valid yet)");
-	whack_log(RC_COMMENT, "                  not after  %s %s",
-		timetoa(&ac->notAfter, utc),
+	whack_log(RC_COMMENT, "                  not after  %T %s",
+		&ac->notAfter, utc,
 		check_expiry(ac->notAfter, ACERT_WARNING_INTERVAL, TRUE));
 	if (ac->authKeyID.ptr != NULL)
 	{
@@ -986,8 +986,7 @@ list_groups(bool utc)
     {
 	ietfAttr_t *attr = list->attr;
 
-	whack_log(RC_COMMENT, "%s, count: %d", timetoa(&attr->installed, utc),
-		attr->count);
+	whack_log(RC_COMMENT, "%T, count: %d", &attr->installed, utc, attr->count);
 	
 	switch (attr->kind)
 	{

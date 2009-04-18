@@ -1,6 +1,7 @@
 /* Pluto main program
  * Copyright (C) 1997 Angelos D. Keromytis.
  * Copyright (C) 1998-2001  D. Hugh Redelmeier.
+ * Copyright (C) 2009 Andreas Steffen
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,6 +18,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <syslog.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <errno.h>
@@ -39,6 +41,7 @@
 
 #include <freeswan.h>
 #include <library.h>
+#include <debug.h>
 
 #include <pfkeyv2.h>
 #include <pfkey.h>
@@ -188,13 +191,54 @@ fill_lock(int lockfd, pid_t pid)
     return ok;
 }
 
-static void
-delete_lock(void)
+static void delete_lock(void)
 {
     if (pluto_lock_created)
     {
 	delete_ctl_socket();
 	unlink(pluto_lock);	/* is noting failure useful? */
+    }
+}
+
+static int debug_level = 1;
+
+/**
+ * pluto dbg function
+ */
+static void pluto_dbg(int level, char *fmt, ...)
+{
+    int priority = LOG_INFO;
+    char buffer[8192];
+    char *current = buffer, *next;
+    va_list args;
+	
+    if (level <= debug_level)
+    {
+	va_start(args, fmt);
+
+	if (log_to_stderr)
+	{
+	    vfprintf(stderr, fmt, args);
+	    fprintf(stderr, "\n");
+	}
+	if (log_to_syslog)
+	{
+	    /* write in memory buffer first */
+	    vsnprintf(buffer, sizeof(buffer), fmt, args);
+
+	    /* do a syslog with every line */
+	    while (current)
+	    {
+		next = strchr(current, '\n');
+		if (next)
+	        {
+		    *(next++) = '\0';
+		}
+		syslog(priority, "%s\n", current);
+		current = next;
+	    }
+	}
+	va_end(args);
     }
 }
 
@@ -506,9 +550,13 @@ main(int argc, char **argv)
     /* select between logging methods */
 
     if (log_to_stderr_desired)
+    {
 	log_to_syslog = FALSE;
+    }
     else
+    {
 	log_to_stderr = FALSE;
+    }
 
     /* set the logging function of pfkey debugging */
 #ifdef DEBUG
@@ -596,6 +644,9 @@ main(int argc, char **argv)
 	if (!log_to_stderr && dup2(0, 2) != 2)
 	    abort();
     }
+
+    /* enable pluto debugging hook */
+    dbg = pluto_dbg;
 
     init_constants();
     init_log("pluto");

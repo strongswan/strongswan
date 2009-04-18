@@ -2282,7 +2282,7 @@ get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 	if (!kernel_ops->get_policy(&sa, inbound, use_time))
 	    return FALSE;
 	DBG(DBG_KLIPS,
-	    DBG_log("  use_time: %s", timetoa(use_time, FALSE))
+	    DBG_log("  use_time: %T", use_time, FALSE)
 	)
     }
     return TRUE;

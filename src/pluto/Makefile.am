@@ -90,15 +90,10 @@ AM_CFLAGS = \
 -DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \
-oid.o debug.o linked_list.o enumerator.o settings.o utils.o chunk.o \
+$(LIBSTRONGSWANDIR)/libstrongswan-lite.la \ 
 $(LIBFREESWANDIR)/libfreeswan.a \
 $(LIBCRYPTODIR)/libcrypto.a \
 -lgmp -lresolv -lpthread -ldl
-
-if USE_LEAK_DETECTIVE
-  AM_CFLAGS += -DLEAK_DETECTIVE
-  pluto_LDADD += backtrace.o leak_detective.o
-endif
 
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
@@ -106,33 +101,10 @@ $(LIBFREESWANDIR)/libfreeswan.a \
 
 dist_man_MANS = pluto.8 ipsec.secrets.5
 
-# Copy functions from libstrongswan
-oid.o :	$(LIBSTRONGSWANDIR)/asn1/oid.c $(LIBSTRONGSWANDIR)/asn1/oid.h
-		$(COMPILE) -c -o $@ $<
-
-debug.o : $(LIBSTRONGSWANDIR)/debug.c $(LIBSTRONGSWANDIR)/debug.h
-		$(COMPILE) -c -o $@ $<
-
-backtrace.o : $(LIBSTRONGSWANDIR)/utils/backtrace.c $(LIBSTRONGSWANDIR)/utils/backtrace.h
-		$(COMPILE) -c -o $@ $<
-
-leak_detective.o : $(LIBSTRONGSWANDIR)/utils/leak_detective.c $(LIBSTRONGSWANDIR)/utils/leak_detective.h
-		$(COMPILE) -c -o $@ $<
-
-linked_list.o : $(LIBSTRONGSWANDIR)/utils/linked_list.c $(LIBSTRONGSWANDIR)/utils/linked_list.h
-		$(COMPILE) -c -o $@ $<
-
-enumerator.o : $(LIBSTRONGSWANDIR)/utils/enumerator.c $(LIBSTRONGSWANDIR)/utils/enumerator.h
-		$(COMPILE) -c -o $@ $<
-
-settings.o : $(LIBSTRONGSWANDIR)/settings.c $(LIBSTRONGSWANDIR)/settings.h
-		$(COMPILE) -c -o $@ $<
-
-utils.o : $(LIBSTRONGSWANDIR)/utils.c $(LIBSTRONGSWANDIR)/utils.h
-		$(COMPILE) -c -o $@ $<
-
-chunk.o : $(LIBSTRONGSWANDIR)/chunk.c $(LIBSTRONGSWANDIR)/chunk.h
-		$(COMPILE) -c -o $@ $<
+# This compile option activates the memory leak detective
+if USE_LEAK_DETECTIVE
+  AM_CFLAGS += -DLEAK_DETECTIVE
+endif
 
 # This compile option activates the sending of a strongSwan VID
 if USE_VENDORID

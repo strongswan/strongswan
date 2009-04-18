@@ -615,7 +615,7 @@ list_ocsp_locations(ocsp_location_t *location, bool requests, bool utc
 	    {
 		char thisUpdate[TIMETOA_BUF];
 
-		strcpy(thisUpdate, timetoa(&certinfo->thisUpdate, utc));
+		snprintf(thisUpdate, TIMETOA_BUF, "%T", &certinfo->thisUpdate, utc);
 
 		if (requests)
 		{
@@ -629,8 +629,8 @@ list_ocsp_locations(ocsp_location_t *location, bool requests, bool utc
 		}
 		else
 		{
-		    whack_log(RC_COMMENT, "%s, until %s %s", thisUpdate
-			, timetoa(&certinfo->nextUpdate, utc)
+		    whack_log(RC_COMMENT, "%s, until %T %s", thisUpdate
+			, &certinfo->nextUpdate, utc
 			, check_expiry(certinfo->nextUpdate, OCSP_WARNING_INTERVAL, strict));
 		}
 		datatot(certinfo->serialNumber.ptr, certinfo->serialNumber.len, ':'

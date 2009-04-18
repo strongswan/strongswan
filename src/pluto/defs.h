@@ -67,9 +67,6 @@ extern void mv_chunk(u_char **pos, chunk_t content);
 extern bool write_chunk(const char *filename, const char *label, chunk_t ch
     ,mode_t mask, bool force);
 
-/* display a date either in local or UTC time */
-extern char* timetoa(const time_t *time, bool utc);
-
 /* warns a predefined interval before expiry */
 extern const char* check_expiry(time_t expiration_date,
     int warning_interval, bool strict);

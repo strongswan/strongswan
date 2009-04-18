@@ -143,36 +143,6 @@ write_chunk(const char *filename, const char *label, chunk_t ch
     }
 }
 
-/* Names of the months */
-
-static const char* months[] = {
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
-
-
-/*
- *  Display a date either in local or UTC time
- */
-char*
-timetoa(const time_t *time, bool utc)
-{
-    static char buf[TIMETOA_BUF];
-
-    if (*time == UNDEFINED_TIME)
-	sprintf(buf, "--- -- --:--:--%s----", (utc)?" UTC ":" ");
-    else
-    {
-	struct tm *t = (utc)? gmtime(time) : localtime(time);
-
-	sprintf(buf, "%s %02d %02d:%02d:%02d%s%04d",
-	    months[t->tm_mon], t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec,
-	    (utc)?" UTC ":" ", t->tm_year + 1900
-	);
-    }
-    return buf;
-}
-
 /*  checks if the expiration date has been reached and
  *  warns during the warning_interval of the imminent
  *  expiry. strict=TRUE declares a fatal error,

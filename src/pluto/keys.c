@@ -1528,14 +1528,12 @@ void list_public_keys(bool utc)
 	if (key->alg == PUBKEY_ALG_RSA)
 	{
 	    char buf[BUF_LEN];
-	    char expires_buf[TIMETOA_BUF];
 
 	    idtoa(&key->id, buf, BUF_LEN);
-	    strcpy(expires_buf, timetoa(&key->until_time, utc));
-	    whack_log(RC_COMMENT, "%s, %4d RSA Key %s, until %s %s",
-
-		timetoa(&key->installed_time, utc), 8*key->u.rsa.k, key->u.rsa.keyid,
-		expires_buf,
+	    whack_log(RC_COMMENT, "%T, %4d RSA Key %s, until %T %s",
+		&key->installed_time, utc,
+		8*key->u.rsa.k, key->u.rsa.keyid,
+		&key->until_time, utc,
 		check_expiry(key->until_time, PUBKEY_WARNING_INTERVAL, TRUE));
 	    whack_log(RC_COMMENT,"       %s '%s'",
 		enum_show(&ident_names, key->id.kind), buf);

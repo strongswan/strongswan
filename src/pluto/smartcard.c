@@ -1939,8 +1939,8 @@ scx_list(bool utc)
 
     while (sc != NULL)
     {
-	whack_log(RC_COMMENT, "%s, #%d, count: %d"
-	    , timetoa(&sc->last_load, utc)
+	whack_log(RC_COMMENT, "%T, #%d, count: %d"
+	    , &sc->last_load, utc
 	    , sc->number
 	    , sc->count);
 	whack_log(RC_COMMENT, "       %s, session %s, logged %s, has %s"
