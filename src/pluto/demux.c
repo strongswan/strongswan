@@ -971,7 +971,10 @@ malloc_md(void)
     static const struct msg_digest blank_md;
 
     if (md == NULL)
+    {
 	md = malloc_thing(struct msg_digest);
+	zero(md);
+    }
     else
 	md_pool = md->next;
 
