@@ -155,28 +155,26 @@ static void generate_selfcert()
 			gid_t gid = 0;
 
 #ifdef IPSEC_GROUP
-				{
-						char buf[1024];
-						struct group group, *grp;
+			{
+				char buf[1024];
+				struct group group, *grp;
 				
-						if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) == 0 &&
-								grp)
-						{
-								gid = grp->gr_gid;
-						}
+				if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) == 0 &&	grp)
+				{
+					gid = grp->gr_gid;
 				}
+			}
 #endif
 #ifdef IPSEC_USER
-				{
-						char buf[1024];
-						struct passwd passwd, *pwp;
+			{
+				char buf[1024];
+				struct passwd passwd, *pwp;
 				
-						if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) == 0 &&
-								pwp)
-						{
-								uid = pwp->pw_uid;
-						}
+				if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) == 0 &&	pwp)
+				{
+					uid = pwp->pw_uid;
 				}
+			}
 #endif
 			setegid(gid);
 			seteuid(uid);
