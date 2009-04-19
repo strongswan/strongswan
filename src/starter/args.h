@@ -23,12 +23,12 @@
 
 extern char **new_list(char *value);
 extern bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw
-    , char *base, bool *assigned);
+	, char *base, bool *assigned);
 extern void free_args(kw_token_t first, kw_token_t last, char *base);
 extern void clone_args(kw_token_t first, kw_token_t last, char *base1
-    , char *base2);
+	, char *base2);
 extern bool cmp_args(kw_token_t first, kw_token_t last, char *base1
-    , char *base2);
+	, char *base2);
 
 #endif /* _ARGS_H_ */
 

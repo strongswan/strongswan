@@ -22,10 +22,10 @@
 #include "../pluto/constants.h"
 
 typedef struct {
-    bool defined;
-    char iface[IFNAMSIZ];
-    ip_address addr;
-    ip_address nexthop;
+	bool defined;
+	char iface[IFNAMSIZ];
+	ip_address addr;
+	ip_address nexthop;
 } defaultroute_t;
 
 extern void get_defaultroute(defaultroute_t *defaultroute);

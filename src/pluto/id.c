@@ -22,8 +22,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#ifndef HOST_NAME_MAX	/* POSIX 1003.1-2001 says <unistd.h> defines this */
-# define HOST_NAME_MAX	255 /* upper bound, according to SUSv2 */
+#ifndef HOST_NAME_MAX   /* POSIX 1003.1-2001 says <unistd.h> defines this */
+# define HOST_NAME_MAX  255 /* upper bound, according to SUSv2 */
 #endif
 #include <sys/queue.h>
 
@@ -38,10 +38,10 @@
 #include "packet.h"
 #include "whack.h"
 
-const struct id empty_id;	/* ID_NONE */
+const struct id empty_id;       /* ID_NONE */
 
 enum myid_state myid_state = MYID_UNKNOWN;
-struct id myids[MYID_SPECIFIED+1];	/* %myid */
+struct id myids[MYID_SPECIFIED+1];      /* %myid */
 char *myid_str[MYID_SPECIFIED+1];     /* string form of IDs */
 
 /* initialize id module
@@ -50,20 +50,20 @@ char *myid_str[MYID_SPECIFIED+1];     /* string form of IDs */
 void
 init_id(void)
 {
-    passert(empty_id.kind == ID_NONE);
-    myid_state = MYID_UNKNOWN;
-    {
-	enum myid_state s;
-
-	for (s = MYID_UNKNOWN; s <= MYID_SPECIFIED; s++)
+	passert(empty_id.kind == ID_NONE);
+	myid_state = MYID_UNKNOWN;
 	{
-	    myids[s] = empty_id;
-	    myid_str[s] = NULL;
+		enum myid_state s;
+
+		for (s = MYID_UNKNOWN; s <= MYID_SPECIFIED; s++)
+		{
+			myids[s] = empty_id;
+			myid_str[s] = NULL;
+		}
 	}
-    }
-    set_myid(MYID_SPECIFIED, getenv("IPSECmyid"));
-    set_myid(MYID_IP, getenv("defaultrouteaddr"));
-    set_myFQDN();
+	set_myid(MYID_SPECIFIED, getenv("IPSECmyid"));
+	set_myid(MYID_IP, getenv("defaultrouteaddr"));
+	set_myFQDN();
 }
 
 /*
@@ -72,95 +72,95 @@ init_id(void)
 void
 free_id(void)
 {
-    enum myid_state s;
+	enum myid_state s;
 
-    for (s = MYID_UNKNOWN; s <= MYID_SPECIFIED; s++)
-    {
-	free_id_content(&myids[s]);
-	free(myid_str[s]);
-    }
+	for (s = MYID_UNKNOWN; s <= MYID_SPECIFIED; s++)
+	{
+		free_id_content(&myids[s]);
+		free(myid_str[s]);
+	}
 }
 
 static void
 calc_myid_str(enum myid_state s)
 {
-    /* preformat the ID name */
-    char buf[BUF_LEN];
+	/* preformat the ID name */
+	char buf[BUF_LEN];
 
-    idtoa(&myids[s], buf, BUF_LEN);
-    replace(myid_str[s], clone_str(buf));
+	idtoa(&myids[s], buf, BUF_LEN);
+	replace(myid_str[s], clone_str(buf));
 }
 
 
 void
 set_myid(enum myid_state s, char *idstr)
 {
-    if (idstr != NULL)
-    {
-	struct id id;
-	err_t ugh = atoid(idstr, &id, FALSE);
-
-	if (ugh != NULL)
+	if (idstr != NULL)
 	{
-	    loglog(RC_BADID, "myid malformed: %s \"%s\"", ugh, idstr);
-	}
-	else
-	{
-	    free_id_content(&myids[s]);
-	    unshare_id_content(&id);
-	    myids[s] = id;
-	    if (s == MYID_SPECIFIED)
-		myid_state = MYID_SPECIFIED;
+		struct id id;
+		err_t ugh = atoid(idstr, &id, FALSE);
 
-	    calc_myid_str(s);
+		if (ugh != NULL)
+		{
+			loglog(RC_BADID, "myid malformed: %s \"%s\"", ugh, idstr);
+		}
+		else
+		{
+			free_id_content(&myids[s]);
+			unshare_id_content(&id);
+			myids[s] = id;
+			if (s == MYID_SPECIFIED)
+				myid_state = MYID_SPECIFIED;
+
+			calc_myid_str(s);
+		}
 	}
-    }
 }
 
 void
 set_myFQDN(void)
 {
-    char FQDN[HOST_NAME_MAX + 1];
-    int r = gethostname(FQDN, sizeof(FQDN));
+	char FQDN[HOST_NAME_MAX + 1];
+	int r = gethostname(FQDN, sizeof(FQDN));
 
-    free_id_content(&myids[MYID_HOSTNAME]);
-    myids[MYID_HOSTNAME] = empty_id;
-    if (r != 0)
-    {
-	log_errno((e, "gethostname() failed in set_myFQDN"));
-    }
-    else
-    {
-	FQDN[sizeof(FQDN) - 1] = '\0';	/* insurance */
-
+	free_id_content(&myids[MYID_HOSTNAME]);
+	myids[MYID_HOSTNAME] = empty_id;
+	if (r != 0)
 	{
-	    size_t len = strlen(FQDN);
-
-	    if (len > 0 && FQDN[len-1] == '.')
-	    {
-		/* nuke trailing . */
-		FQDN[len-1]='\0';
-	    }
+		log_errno((e, "gethostname() failed in set_myFQDN"));
 	}
-
-	if (!strcaseeq(FQDN, "localhost.localdomain"))
+	else
 	{
-	    chunk_t myid_name = { FQDN, strlen(FQDN) };
+		FQDN[sizeof(FQDN) - 1] = '\0';  /* insurance */
 
-	    myids[MYID_HOSTNAME].name = chunk_clone(myid_name);
-	    myids[MYID_HOSTNAME].kind = ID_FQDN;
-	    calc_myid_str(MYID_HOSTNAME);
+		{
+			size_t len = strlen(FQDN);
+
+			if (len > 0 && FQDN[len-1] == '.')
+			{
+				/* nuke trailing . */
+				FQDN[len-1]='\0';
+			}
+		}
+
+		if (!strcaseeq(FQDN, "localhost.localdomain"))
+		{
+			chunk_t myid_name = { FQDN, strlen(FQDN) };
+
+			myids[MYID_HOSTNAME].name = chunk_clone(myid_name);
+			myids[MYID_HOSTNAME].kind = ID_FQDN;
+			calc_myid_str(MYID_HOSTNAME);
+		}
 	}
-    }
 }
 
 void
 show_myid_status(void)
 {
-    char idstr[BUF_LEN];
+	char idstr[BUF_LEN];
 
-    (void)idtoa(&myids[myid_state], idstr, sizeof(idstr));
-    whack_log(RC_COMMENT, "%%myid = %s", idstr);
+	(void)idtoa(&myids[myid_state], idstr, sizeof(idstr));
+	whack_log(RC_COMMENT, "%%myid = %s", idstr);
 }
 
 /* Convert textual form of id into a (temporary) struct id.
@@ -169,86 +169,86 @@ show_myid_status(void)
 err_t
 atoid(char *src, struct id *id, bool myid_ok)
 {
-    err_t ugh = NULL;
+	err_t ugh = NULL;
 
-    *id = empty_id;
+	*id = empty_id;
 
-    if (myid_ok && streq("%myid", src))
-    {
-	id->kind = ID_MYID;
-    }
-    else if (strchr(src, '=') != NULL)
-    {
-	/* we interpret this as an ASCII X.501 ID_DER_ASN1_DN */
-	id->kind = ID_DER_ASN1_DN;
-	id->name.ptr = temporary_cyclic_buffer(); /* assign temporary buffer */
-	id->name.len = 0;
-	/* convert from LDAP style or openssl x509 -subject style to ASN.1 DN
-	 * discard optional @ character in front of DN
-	 */
-	ugh = atodn((*src == '@')?src+1:src, &id->name);
-    }
-    else if (strchr(src, '@') == NULL)
-    {
-	if (streq(src, "%any") || streq(src, "0.0.0.0"))
+	if (myid_ok && streq("%myid", src))
 	{
-	    /* any ID will be accepted */
-	    id->kind = ID_NONE;
+		id->kind = ID_MYID;
 	}
-	else
+	else if (strchr(src, '=') != NULL)
 	{
-	   /* !!! this test is not sufficient for distinguishing address families.
-	    * We need a notation to specify that a FQDN is to be resolved to IPv6.
-	    */
-	   const struct af_info *afi = strchr(src, ':') == NULL
-	? &af_inet4_info: &af_inet6_info;
-
-	   id->kind = afi->id_addr;
-	   ugh = ttoaddr(src, 0, afi->af, &id->ip_addr);
-	}
-    }
-    else
-    {
-	if (*src == '@')
-	{
-	    if (*(src+1) == '#')
-	    {
-		/* if there is a second specifier (#) on the line
-		 * we interprete this as ID_KEY_ID
-		 */
-		id->kind = ID_KEY_ID;
-		id->name.ptr = src;
-		/* discard @~, convert from hex to bin */
-		ugh = ttodata(src+2, 0, 16, id->name.ptr, strlen(src), &id->name.len);
-	    }
-	    else if (*(src+1) == '~')
-	    {
-		/* if there is a second specifier (~) on the line
-		* we interprete this as a binary ID_DER_ASN1_DN
-		*/
+		/* we interpret this as an ASCII X.501 ID_DER_ASN1_DN */
 		id->kind = ID_DER_ASN1_DN;
-		id->name.ptr = src;
-		/* discard @~, convert from hex to bin */
-		ugh = ttodata(src+2, 0, 16, id->name.ptr, strlen(src), &id->name.len);
-	    }
-	    else
-	    {
-		id->kind = ID_FQDN;
-		id->name.ptr = src+1;	/* discard @ */
-		id->name.len = strlen(src)-1;
-	    }
+		id->name.ptr = temporary_cyclic_buffer(); /* assign temporary buffer */
+		id->name.len = 0;
+		/* convert from LDAP style or openssl x509 -subject style to ASN.1 DN
+		 * discard optional @ character in front of DN
+		 */
+		ugh = atodn((*src == '@')?src+1:src, &id->name);
+	}
+	else if (strchr(src, '@') == NULL)
+	{
+		if (streq(src, "%any") || streq(src, "0.0.0.0"))
+		{
+			/* any ID will be accepted */
+			id->kind = ID_NONE;
+		}
+		else
+		{
+		   /* !!! this test is not sufficient for distinguishing address families.
+			* We need a notation to specify that a FQDN is to be resolved to IPv6.
+			*/
+		   const struct af_info *afi = strchr(src, ':') == NULL
+		? &af_inet4_info: &af_inet6_info;
+
+		   id->kind = afi->id_addr;
+		   ugh = ttoaddr(src, 0, afi->af, &id->ip_addr);
+		}
 	}
 	else
 	{
-	    /* We leave in @, as per DOI 4.6.2.4
-	     * (but DNS wants . instead).
-	     */
-	    id->kind = ID_USER_FQDN;
-	    id->name.ptr = src;
-	    id->name.len = strlen(src);
+		if (*src == '@')
+		{
+			if (*(src+1) == '#')
+			{
+				/* if there is a second specifier (#) on the line
+				 * we interprete this as ID_KEY_ID
+				 */
+				id->kind = ID_KEY_ID;
+				id->name.ptr = src;
+				/* discard @~, convert from hex to bin */
+				ugh = ttodata(src+2, 0, 16, id->name.ptr, strlen(src), &id->name.len);
+			}
+			else if (*(src+1) == '~')
+			{
+				/* if there is a second specifier (~) on the line
+				* we interprete this as a binary ID_DER_ASN1_DN
+				*/
+				id->kind = ID_DER_ASN1_DN;
+				id->name.ptr = src;
+				/* discard @~, convert from hex to bin */
+				ugh = ttodata(src+2, 0, 16, id->name.ptr, strlen(src), &id->name.len);
+			}
+			else
+			{
+				id->kind = ID_FQDN;
+				id->name.ptr = src+1;   /* discard @ */
+				id->name.len = strlen(src)-1;
+			}
+		}
+		else
+		{
+			/* We leave in @, as per DOI 4.6.2.4
+			 * (but DNS wants . instead).
+			 */
+			id->kind = ID_USER_FQDN;
+			id->name.ptr = src;
+			id->name.len = strlen(src);
+		}
 	}
-    }
-    return ugh;
+	return ugh;
 }
 
 
@@ -258,72 +258,72 @@ atoid(char *src, struct id *id, bool myid_ok)
 int
 keyidtoa(char *dst, size_t dstlen, chunk_t keyid)
 {
-    int n = datatot(keyid.ptr, keyid.len, 'x', dst, dstlen);
-    return (((size_t)n < dstlen)? n : dstlen) - 1;
+	int n = datatot(keyid.ptr, keyid.len, 'x', dst, dstlen);
+	return (((size_t)n < dstlen)? n : dstlen) - 1;
 }
 
 void
 iptoid(const ip_address *ip, struct id *id)
 {
-    *id = empty_id;
+	*id = empty_id;
 
-    switch (addrtypeof(ip))
-    {
-    case AF_INET:
-	id->kind = ID_IPV4_ADDR;
-	break;
-    case AF_INET6:
-	id->kind = ID_IPV6_ADDR;
-	break;
-    default:
-	bad_case(addrtypeof(ip));
-    }
-    id->ip_addr = *ip;
+	switch (addrtypeof(ip))
+	{
+	case AF_INET:
+		id->kind = ID_IPV4_ADDR;
+		break;
+	case AF_INET6:
+		id->kind = ID_IPV6_ADDR;
+		break;
+	default:
+		bad_case(addrtypeof(ip));
+	}
+	id->ip_addr = *ip;
 }
 
 int
 idtoa(const struct id *id, char *dst, size_t dstlen)
 {
-    int n;
+	int n;
 
-    id = resolve_myid(id);
-    switch (id->kind)
-    {
-    case ID_NONE:
-	n = snprintf(dst, dstlen, "(none)");
-	break;
-    case ID_IPV4_ADDR:
-    case ID_IPV6_ADDR:
-	n = (int)addrtot(&id->ip_addr, 0, dst, dstlen) - 1;
-	break;
-    case ID_FQDN:
-	n = snprintf(dst, dstlen, "@%.*s", (int)id->name.len, id->name.ptr);
-	break;
-    case ID_USER_FQDN:
-	n = snprintf(dst, dstlen, "%.*s", (int)id->name.len, id->name.ptr);
-	break;
-    case ID_DER_ASN1_DN:
-	n = dntoa(dst, dstlen, id->name);
-	break;
-    case ID_KEY_ID:
-	n = keyidtoa(dst, dstlen, id->name);
-	break;
-    default:
-	n = snprintf(dst, dstlen, "unknown id kind %d", id->kind);
-	break;
-    }
+	id = resolve_myid(id);
+	switch (id->kind)
+	{
+	case ID_NONE:
+		n = snprintf(dst, dstlen, "(none)");
+		break;
+	case ID_IPV4_ADDR:
+	case ID_IPV6_ADDR:
+		n = (int)addrtot(&id->ip_addr, 0, dst, dstlen) - 1;
+		break;
+	case ID_FQDN:
+		n = snprintf(dst, dstlen, "@%.*s", (int)id->name.len, id->name.ptr);
+		break;
+	case ID_USER_FQDN:
+		n = snprintf(dst, dstlen, "%.*s", (int)id->name.len, id->name.ptr);
+		break;
+	case ID_DER_ASN1_DN:
+		n = dntoa(dst, dstlen, id->name);
+		break;
+	case ID_KEY_ID:
+		n = keyidtoa(dst, dstlen, id->name);
+		break;
+	default:
+		n = snprintf(dst, dstlen, "unknown id kind %d", id->kind);
+		break;
+	}
 
-    /* "Sanitize" string so that log isn't endangered:
-     * replace unprintable characters with '?'.
-     */
-    if (n > 0)
-    {
-	for ( ; *dst != '\0'; dst++)
-	    if (!isprint(*dst))
-		*dst = '?';
-    }
+	/* "Sanitize" string so that log isn't endangered:
+	 * replace unprintable characters with '?'.
+	 */
+	if (n > 0)
+	{
+		for ( ; *dst != '\0'; dst++)
+			if (!isprint(*dst))
+				*dst = '?';
+	}
 
-    return n;
+	return n;
 }
 
 /* Replace the shell metacharacters ', \, ", `, and $ in a character string
@@ -332,26 +332,26 @@ idtoa(const struct id *id, char *dst, size_t dstlen)
 void
 escape_metachar(const char *src, char *dst, size_t dstlen)
 {
-    while (*src != '\0' && dstlen > 4)
-    {
-	switch (*src)
+	while (*src != '\0' && dstlen > 4)
 	{
-	case '\'':
-	case '\\':
-	case '"':
-	case '`':
-	case '$':
-	    sprintf(dst,"\\%s%o", (*src < 64)?"0":"", *src);
-	    dst += 4;
-	    dstlen -= 4;
-	    break;
-	default:
-	    *dst++ = *src;
-	    dstlen--;
+		switch (*src)
+		{
+		case '\'':
+		case '\\':
+		case '"':
+		case '`':
+		case '$':
+			sprintf(dst,"\\%s%o", (*src < 64)?"0":"", *src);
+			dst += 4;
+			dstlen -= 4;
+			break;
+		default:
+			*dst++ = *src;
+			dstlen--;
+		}
+		src++;
 	}
-	src++;
-    }
-    *dst = '\0';
+	*dst = '\0';
 }
 
 
@@ -361,126 +361,126 @@ escape_metachar(const char *src, char *dst, size_t dstlen)
 void
 unshare_id_content(struct id *id)
 {
-    switch (id->kind)
-    {
-    case ID_FQDN:
-    case ID_USER_FQDN:
-    case ID_DER_ASN1_DN:
-    case ID_KEY_ID:
-	id->name = chunk_clone(id->name);
-	break;
-    case ID_MYID:
-    case ID_NONE:
-    case ID_IPV4_ADDR:
-    case ID_IPV6_ADDR:
-	break;
-    default:
-	bad_case(id->kind);
-    }
+	switch (id->kind)
+	{
+	case ID_FQDN:
+	case ID_USER_FQDN:
+	case ID_DER_ASN1_DN:
+	case ID_KEY_ID:
+		id->name = chunk_clone(id->name);
+		break;
+	case ID_MYID:
+	case ID_NONE:
+	case ID_IPV4_ADDR:
+	case ID_IPV6_ADDR:
+		break;
+	default:
+		bad_case(id->kind);
+	}
 }
 
 void
 free_id_content(struct id *id)
 {
-    switch (id->kind)
-    {
-    case ID_FQDN:
-    case ID_USER_FQDN:
-    case ID_DER_ASN1_DN:
-    case ID_KEY_ID:
-	free(id->name.ptr);
-	break;
-    case ID_MYID:
-    case ID_NONE:
-    case ID_IPV4_ADDR:
-    case ID_IPV6_ADDR:
-	break;
-    default:
-	bad_case(id->kind);
-    }
+	switch (id->kind)
+	{
+	case ID_FQDN:
+	case ID_USER_FQDN:
+	case ID_DER_ASN1_DN:
+	case ID_KEY_ID:
+		free(id->name.ptr);
+		break;
+	case ID_MYID:
+	case ID_NONE:
+	case ID_IPV4_ADDR:
+	case ID_IPV6_ADDR:
+		break;
+	default:
+		bad_case(id->kind);
+	}
 }
 
 /* compare two struct id values */
 bool
 same_id(const struct id *a, const struct id *b)
 {
-    a = resolve_myid(a);
-    b = resolve_myid(b);
-    if (a->kind != b->kind)
-	return FALSE;
-    switch (a->kind)
-    {
-    case ID_NONE:
-	return TRUE;	/* kind of vacuous */
-
-    case ID_IPV4_ADDR:
-    case ID_IPV6_ADDR:
-	return sameaddr(&a->ip_addr, &b->ip_addr);
-
-    case ID_FQDN:
-    case ID_USER_FQDN:
-	/* assumptions:
-	 * - case should be ignored
-	 * - trailing "." should be ignored (even if the only character?)
-	 */
+	a = resolve_myid(a);
+	b = resolve_myid(b);
+	if (a->kind != b->kind)
+		return FALSE;
+	switch (a->kind)
 	{
-	    size_t al = a->name.len
-		, bl = b->name.len;
+	case ID_NONE:
+		return TRUE;    /* kind of vacuous */
 
-	    while (al > 0 && a->name.ptr[al - 1] == '.')
-		al--;
-	    while (bl > 0 && b->name.ptr[bl - 1] == '.')
-		bl--;
-	    return al == bl
-		&& strncasecmp(a->name.ptr, b->name.ptr, al) == 0;
+	case ID_IPV4_ADDR:
+	case ID_IPV6_ADDR:
+		return sameaddr(&a->ip_addr, &b->ip_addr);
+
+	case ID_FQDN:
+	case ID_USER_FQDN:
+		/* assumptions:
+		 * - case should be ignored
+		 * - trailing "." should be ignored (even if the only character?)
+		 */
+		{
+			size_t al = a->name.len
+				, bl = b->name.len;
+
+			while (al > 0 && a->name.ptr[al - 1] == '.')
+				al--;
+			while (bl > 0 && b->name.ptr[bl - 1] == '.')
+				bl--;
+			return al == bl
+				&& strncasecmp(a->name.ptr, b->name.ptr, al) == 0;
+		}
+
+	case ID_DER_ASN1_DN:
+		return same_dn(a->name, b->name);
+
+	case ID_KEY_ID:
+		return a->name.len == b->name.len
+			&& memeq(a->name.ptr, b->name.ptr, a->name.len);
+
+	default:
+		bad_case(a->kind);
 	}
-
-    case ID_DER_ASN1_DN:
-	return same_dn(a->name, b->name);
-
-    case ID_KEY_ID:
-	return a->name.len == b->name.len
-	    && memeq(a->name.ptr, b->name.ptr, a->name.len);
-
-    default:
-	bad_case(a->kind);
-    }
-    return FALSE;
+	return FALSE;
 }
 
 /* compare two struct id values, DNs can contain wildcards */
 bool
 match_id(const struct id *a, const struct id *b, int *wildcards)
 {
-    if (b->kind == ID_NONE)
-    {
-	*wildcards = MAX_WILDCARDS;
-	return TRUE;
-    }
-    if (a->kind != b->kind)
-	return FALSE;
-    if (a->kind == ID_DER_ASN1_DN)
-	return match_dn(a->name, b->name, wildcards);
-    else
-    {
-	*wildcards = 0;
-	return same_id(a, b);
-    }
+	if (b->kind == ID_NONE)
+	{
+		*wildcards = MAX_WILDCARDS;
+		return TRUE;
+	}
+	if (a->kind != b->kind)
+		return FALSE;
+	if (a->kind == ID_DER_ASN1_DN)
+		return match_dn(a->name, b->name, wildcards);
+	else
+	{
+		*wildcards = 0;
+		return same_id(a, b);
+	}
 }
 
 /* count the numer of wildcards in an id */
 int
 id_count_wildcards(const struct id *id)
 {
-    switch (id->kind)
-    {
-    case ID_NONE:
-	return MAX_WILDCARDS;
-    case ID_DER_ASN1_DN:
-	return dn_count_wildcards(id->name);
-    default:
-	return 0;
-    }
+	switch (id->kind)
+	{
+	case ID_NONE:
+		return MAX_WILDCARDS;
+	case ID_DER_ASN1_DN:
+		return dn_count_wildcards(id->name);
+	default:
+		return 0;
+	}
 }
 
 /* build an ID payload
@@ -491,31 +491,31 @@ id_count_wildcards(const struct id *id)
 void
 build_id_payload(struct isakmp_ipsec_id *hd, chunk_t *tl, struct end *end)
 {
-    const struct id *id = resolve_myid(&end->id);
+	const struct id *id = resolve_myid(&end->id);
 
-    zero(hd);
-    hd->isaiid_idtype = id->kind;
-    switch (id->kind)
-    {
-    case ID_NONE:
-	hd->isaiid_idtype = aftoinfo(addrtypeof(&end->host_addr))->id_addr;
-	tl->len = addrbytesptr(&end->host_addr
-	    , (const unsigned char **)&tl->ptr);	/* sets tl->ptr too */
-	break;
-    case ID_FQDN:
-    case ID_USER_FQDN:
-    case ID_DER_ASN1_DN:
-    case ID_KEY_ID:
-	*tl = id->name;
-	break;
-    case ID_IPV4_ADDR:
-    case ID_IPV6_ADDR:
-	tl->len = addrbytesptr(&id->ip_addr
-	    , (const unsigned char **)&tl->ptr);	/* sets tl->ptr too */
-	break;
-    default:
-	bad_case(id->kind);
-    }
+	zero(hd);
+	hd->isaiid_idtype = id->kind;
+	switch (id->kind)
+	{
+	case ID_NONE:
+		hd->isaiid_idtype = aftoinfo(addrtypeof(&end->host_addr))->id_addr;
+		tl->len = addrbytesptr(&end->host_addr
+			, (const unsigned char **)&tl->ptr);        /* sets tl->ptr too */
+		break;
+	case ID_FQDN:
+	case ID_USER_FQDN:
+	case ID_DER_ASN1_DN:
+	case ID_KEY_ID:
+		*tl = id->name;
+		break;
+	case ID_IPV4_ADDR:
+	case ID_IPV6_ADDR:
+		tl->len = addrbytesptr(&id->ip_addr
+			, (const unsigned char **)&tl->ptr);        /* sets tl->ptr too */
+		break;
+	default:
+		bad_case(id->kind);
+	}
 }
 
 /*

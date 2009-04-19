@@ -21,19 +21,19 @@
 
 #include "certs.h"
 
-#define SCX_TOKEN		  "%smartcard"
-#define SCX_CERT_CACHE_INTERVAL	  60 /* seconds */
-#define SCX_MAX_PIN_TRIALS	  3
+#define SCX_TOKEN                 "%smartcard"
+#define SCX_CERT_CACHE_INTERVAL   60 /* seconds */
+#define SCX_MAX_PIN_TRIALS        3
 
 /* smartcard operations, update copy in whack.h */
 
 #ifndef SC_OP_T
 #define SC_OP_T
 typedef enum {
-    SC_OP_NONE =    0,
-    SC_OP_ENCRYPT = 1,
-    SC_OP_DECRYPT = 2,
-    SC_OP_SIGN =    3,
+	SC_OP_NONE =    0,
+	SC_OP_ENCRYPT = 1,
+	SC_OP_DECRYPT = 2,
+	SC_OP_SIGN =    3,
 } sc_op_t;
 #endif /* SC_OP_T */
 
@@ -42,21 +42,21 @@ typedef enum {
 typedef struct smartcard smartcard_t;
 
 struct smartcard {
-    smartcard_t  *next;
-    time_t	  last_load;
-    cert_t	  last_cert;
-    int		  count;
-    int		  number;
-    unsigned long slot;
-    char	  *id;
-    char	 *label;
-    chunk_t	  pin;
-    bool	  pinpad;
-    bool	  valid;
-    bool	  session_opened;
-    bool	  logged_in;
-    bool	  any_slot;
-    long	  session;
+	smartcard_t  *next;
+	time_t        last_load;
+	cert_t        last_cert;
+	int           count;
+	int           number;
+	unsigned long slot;
+	char          *id;
+	char         *label;
+	chunk_t       pin;
+	bool          pinpad;
+	bool          valid;
+	bool          session_opened;
+	bool          logged_in;
+	bool          any_slot;
+	long          session;
 };
 
 extern const smartcard_t empty_sc;
@@ -78,17 +78,17 @@ extern bool scx_establish_context(smartcard_t *sc);
 extern bool scx_login(smartcard_t *sc);
 extern bool scx_on_smartcard(const char *filename);
 extern bool scx_load_cert(const char *filename, smartcard_t **scp
-    , cert_t *cert, bool *cached);
+	, cert_t *cert, bool *cached);
 extern bool scx_verify_pin(smartcard_t *sc);
 extern void scx_share(smartcard_t *sc);
 extern bool scx_sign_hash(smartcard_t *sc, const u_char *in, size_t inlen
-    , u_char *out, size_t outlen);
+	, u_char *out, size_t outlen);
 extern bool scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
-    , u_char *out, size_t *outlen);
+	, u_char *out, size_t *outlen);
 extern bool scx_decrypt(smartcard_t *sc, const u_char *in, size_t inlen
-    , u_char *out, size_t *outlen);
+	, u_char *out, size_t *outlen);
 extern bool scx_op_via_whack(const char* msg, int inbase, int outbase
-    , sc_op_t op, const char *keyid, int whackfd);
+	, sc_op_t op, const char *keyid, int whackfd);
 extern bool scx_get_pin(smartcard_t *sc, int whackfd);
 extern size_t scx_get_keylength(smartcard_t *sc);
 extern smartcard_t* scx_add(smartcard_t *sc);

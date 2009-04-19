@@ -43,149 +43,149 @@ int _parser_y_include (const char *filename);
 
 void _parser_y_error(char *b, int size, const char *s)
 {
-    extern char *yytext; // was: char yytext[];
+	extern char *yytext; // was: char yytext[];
 
-    snprintf(b, size, "%s:%d: %s [%s]",
-	    __parser_y_private.filename[__parser_y_private.stack_ptr],
-	    __parser_y_private.line[__parser_y_private.stack_ptr],
-	    s, yytext);
+	snprintf(b, size, "%s:%d: %s [%s]",
+			__parser_y_private.filename[__parser_y_private.stack_ptr],
+			__parser_y_private.line[__parser_y_private.stack_ptr],
+			s, yytext);
 }
 
 void _parser_y_init (const char *f)
 {
-    memset(&__parser_y_private, 0, sizeof(__parser_y_private));
-    __parser_y_private.line[0] = 1;
-    __parser_y_private.filename[0] = strdup(f);
+	memset(&__parser_y_private, 0, sizeof(__parser_y_private));
+	__parser_y_private.line[0] = 1;
+	__parser_y_private.filename[0] = strdup(f);
 }
 
 void _parser_y_fini (void)
 {
-    unsigned int i;
+	unsigned int i;
 
-    for (i = 0; i < MAX_INCLUDE_DEPTH; i++)
-    {
-	if (__parser_y_private.filename[i])
-	    free(__parser_y_private.filename[i]);
-	if (__parser_y_private.file[i])
-	    fclose(__parser_y_private.file[i]);
-    }
-    memset(&__parser_y_private, 0, sizeof(__parser_y_private));
+	for (i = 0; i < MAX_INCLUDE_DEPTH; i++)
+	{
+		if (__parser_y_private.filename[i])
+			free(__parser_y_private.filename[i]);
+		if (__parser_y_private.file[i])
+			fclose(__parser_y_private.file[i]);
+	}
+	memset(&__parser_y_private, 0, sizeof(__parser_y_private));
 }
 
 int _parser_y_include (const char *filename)
 {
-    glob_t files;
-    int i, ret;
+	glob_t files;
+	int i, ret;
 
-    ret = glob(filename, GLOB_ERR, NULL, &files);
-    if (ret)
-    {
-	const char *err;
-
-	switch (ret)
+	ret = glob(filename, GLOB_ERR, NULL, &files);
+	if (ret)
 	{
-	case GLOB_NOSPACE:
-	    err = "include files ran out of memory";
-	    break;
-	case GLOB_ABORTED:
-	    err = "include files aborted due to read error";
-	    break;
-	case GLOB_NOMATCH:
-	    err = "include files found no matches";
-	    break;
-	default:
-	    err = "unknown include files error";
-	}
-	yyerror(err);
-	return 1;
-    }
+		const char *err;
 
-    for (i = 0; i < files.gl_pathc; i++)
-    {
-	FILE *f;
-	unsigned int p = __parser_y_private.stack_ptr + 1;
-
-	if (p >= MAX_INCLUDE_DEPTH)
-	{
-	    yyerror("max inclusion depth reached");
-	    return 1;
+		switch (ret)
+		{
+		case GLOB_NOSPACE:
+			err = "include files ran out of memory";
+			break;
+		case GLOB_ABORTED:
+			err = "include files aborted due to read error";
+			break;
+		case GLOB_NOMATCH:
+			err = "include files found no matches";
+			break;
+		default:
+			err = "unknown include files error";
+		}
+		yyerror(err);
+		return 1;
 	}
 
-	f = fopen(files.gl_pathv[i], "r");
-	if (!f)
+	for (i = 0; i < files.gl_pathc; i++)
 	{
-	    yyerror("can't open include filename");
-	    continue;
+		FILE *f;
+		unsigned int p = __parser_y_private.stack_ptr + 1;
+
+		if (p >= MAX_INCLUDE_DEPTH)
+		{
+			yyerror("max inclusion depth reached");
+			return 1;
+		}
+
+		f = fopen(files.gl_pathv[i], "r");
+		if (!f)
+		{
+			yyerror("can't open include filename");
+			continue;
+		}
+
+		__parser_y_private.stack_ptr++;
+		__parser_y_private.file[p] = f;
+		__parser_y_private.stack[p] = YY_CURRENT_BUFFER;
+		__parser_y_private.line[p] = 1;
+		__parser_y_private.filename[p] = strdup(files.gl_pathv[i]);
+
+		yy_switch_to_buffer(yy_create_buffer(f, YY_BUF_SIZE));
 	}
-
-	__parser_y_private.stack_ptr++;
-	__parser_y_private.file[p] = f;
-	__parser_y_private.stack[p] = YY_CURRENT_BUFFER;
-	__parser_y_private.line[p] = 1;
-	__parser_y_private.filename[p] = strdup(files.gl_pathv[i]);
-
-	yy_switch_to_buffer(yy_create_buffer(f, YY_BUF_SIZE));
-    }
-    globfree(&files);
-    return 0;
+	globfree(&files);
+	return 0;
 }
 
 %}
 
 %%
 
-<<EOF>>	{
-	if (__parser_y_private.filename[__parser_y_private.stack_ptr]) {
-		free(__parser_y_private.filename[__parser_y_private.stack_ptr]);
-		__parser_y_private.filename[__parser_y_private.stack_ptr] = NULL;
-	}
-	if (__parser_y_private.file[__parser_y_private.stack_ptr]) {
-		fclose(__parser_y_private.file[__parser_y_private.stack_ptr]);
-		__parser_y_private.file[__parser_y_private.stack_ptr] = NULL;
-		yy_delete_buffer (YY_CURRENT_BUFFER);
-		yy_switch_to_buffer
-			(__parser_y_private.stack[__parser_y_private.stack_ptr]);
-	}
-	if (--__parser_y_private.stack_ptr < 0) {
-		yyterminate();
-	}
+<<EOF>> {
+		if (__parser_y_private.filename[__parser_y_private.stack_ptr]) {
+				free(__parser_y_private.filename[__parser_y_private.stack_ptr]);
+				__parser_y_private.filename[__parser_y_private.stack_ptr] = NULL;
+		}
+		if (__parser_y_private.file[__parser_y_private.stack_ptr]) {
+				fclose(__parser_y_private.file[__parser_y_private.stack_ptr]);
+				__parser_y_private.file[__parser_y_private.stack_ptr] = NULL;
+				yy_delete_buffer (YY_CURRENT_BUFFER);
+				yy_switch_to_buffer
+						(__parser_y_private.stack[__parser_y_private.stack_ptr]);
+		}
+		if (--__parser_y_private.stack_ptr < 0) {
+				yyterminate();
+		}
 }
 
-^[\t ]+			return FIRST_SPACES;
+^[\t ]+                 return FIRST_SPACES;
 
-[\t ]+			/* ignore spaces in line */ ;
+[\t ]+                  /* ignore spaces in line */ ;
 
-=				return EQUAL;
+=                               return EQUAL;
 
-\n|#.*\n		{
-					__parser_y_private.line[__parser_y_private.stack_ptr]++;
-					return EOL;
-				}
+\n|#.*\n                {
+										__parser_y_private.line[__parser_y_private.stack_ptr]++;
+										return EOL;
+								}
 
-config			return CONFIG;
-setup			return SETUP;
-conn			return CONN;
-ca			return CA;
-include			return INCLUDE;
-version			return FILE_VERSION;
+config                  return CONFIG;
+setup                   return SETUP;
+conn                    return CONN;
+ca                      return CA;
+include                 return INCLUDE;
+version                 return FILE_VERSION;
 
-[^\"= \t\n]+	{
-					yylval.s = strdup(yytext);
-					return STRING;
-				}
+[^\"= \t\n]+    {
+										yylval.s = strdup(yytext);
+										return STRING;
+								}
 
-\"[^\"\n]*\"	{
-					yylval.s = strdup(yytext+1);
-					if (yylval.s) yylval.s[strlen(yylval.s)-1]='\0';
-					return STRING;
-				}
+\"[^\"\n]*\"    {
+										yylval.s = strdup(yytext+1);
+										if (yylval.s) yylval.s[strlen(yylval.s)-1]='\0';
+										return STRING;
+								}
 
-.				yyerror(yytext);
+.                               yyerror(yytext);
 
 %%
 
 int yywrap(void)
 {
-    return 1;
+	return 1;
 }
 

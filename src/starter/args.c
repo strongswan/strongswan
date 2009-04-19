@@ -33,283 +33,283 @@
 /* argument types */
 
 typedef enum {
-    ARG_NONE,
-    ARG_ENUM,
-    ARG_UINT,
-    ARG_TIME,
-    ARG_ULNG,
-    ARG_PCNT,
-    ARG_STR,
-    ARG_LST,
-    ARG_MISC
+	ARG_NONE,
+	ARG_ENUM,
+	ARG_UINT,
+	ARG_TIME,
+	ARG_ULNG,
+	ARG_PCNT,
+	ARG_STR,
+	ARG_LST,
+	ARG_MISC
 } arg_t;
 
 /* various keyword lists */
 
 static const char *LST_bool[] = {
-    "no",
-    "yes",
-     NULL
+	"no",
+	"yes",
+	 NULL
 };
 
 static const char *LST_sendcert[] = {
-    "always",
-    "ifasked",
-    "never",
-    "yes",
-    "no",
-     NULL
+	"always",
+	"ifasked",
+	"never",
+	"yes",
+	"no",
+	 NULL
 };
 
 static const char *LST_unique[] = {
-    "no",
-    "yes",
-    "replace",
-    "keep",
-     NULL
+	"no",
+	"yes",
+	"replace",
+	"keep",
+	 NULL
 };
 
 static const char *LST_strict[] = {
-    "no",
-    "yes",
-    "ifuri",
-     NULL
+	"no",
+	"yes",
+	"ifuri",
+	 NULL
 };
 static const char *LST_dpd_action[] = {
-    "none",
-    "clear",
-    "hold",
-    "restart",
-     NULL
+	"none",
+	"clear",
+	"hold",
+	"restart",
+	 NULL
 };
 
 static const char *LST_startup[] = {
-    "ignore",
-    "add",
-    "route",
-    "start",
-     NULL
+	"ignore",
+	"add",
+	"route",
+	"start",
+	 NULL
 };
 
 static const char *LST_packetdefault[] = {
-    "drop",
-    "reject",
-    "pass",
-     NULL
+	"drop",
+	"reject",
+	"pass",
+	 NULL
 };
 
 static const char *LST_keyexchange[] = {
-    "ike",
-    "ikev1",
-    "ikev2",
-     NULL
+	"ike",
+	"ikev1",
+	"ikev2",
+	 NULL
 };
 
 static const char *LST_pfsgroup[] = {
-    "modp1024",
-    "modp1536",
-    "modp2048",
-    "modp3072",
-    "modp4096",
-    "modp6144",
-    "modp8192",
-     NULL
+	"modp1024",
+	"modp1536",
+	"modp2048",
+	"modp3072",
+	"modp4096",
+	"modp6144",
+	"modp8192",
+	 NULL
 };
 
 static const char *LST_plutodebug[] = {
-    "none",
-    "all",
-    "raw",
-    "crypt",
-    "parsing",
-    "emitting",
-    "control",
-    "lifecycle",
-    "klips",
-    "dns",
-    "natt",
-    "oppo",
-    "controlmore",
-    "private",
-     NULL
+	"none",
+	"all",
+	"raw",
+	"crypt",
+	"parsing",
+	"emitting",
+	"control",
+	"lifecycle",
+	"klips",
+	"dns",
+	"natt",
+	"oppo",
+	"controlmore",
+	"private",
+	 NULL
 };
 
 static const char *LST_klipsdebug[] = {
-    "tunnel",
-    "tunnel-xmit",
-    "pfkey",
-    "xform",
-    "eroute",
-    "spi",
-    "radij",
-    "esp",
-    "ah",
-    "ipcomp",
-    "verbose",
-    "all",
-    "none",
-     NULL
+	"tunnel",
+	"tunnel-xmit",
+	"pfkey",
+	"xform",
+	"eroute",
+	"spi",
+	"radij",
+	"esp",
+	"ah",
+	"ipcomp",
+	"verbose",
+	"all",
+	"none",
+	 NULL
 };
 
 typedef struct {
-    arg_t       type;
-    size_t      offset;
-    const char  **list;
+	arg_t       type;
+	size_t      offset;
+	const char  **list;
 } token_info_t;
 
 static const token_info_t token_info[] =
 {
-    /* config setup keywords */
-    { ARG_LST,  offsetof(starter_config_t, setup.interfaces), NULL                 },
-    { ARG_STR,  offsetof(starter_config_t, setup.dumpdir), NULL                    },
-    { ARG_ENUM, offsetof(starter_config_t, setup.charonstart), LST_bool            },
-    { ARG_ENUM, offsetof(starter_config_t, setup.plutostart), LST_bool             },
+	/* config setup keywords */
+	{ ARG_LST,  offsetof(starter_config_t, setup.interfaces), NULL                 },
+	{ ARG_STR,  offsetof(starter_config_t, setup.dumpdir), NULL                    },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.charonstart), LST_bool            },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.plutostart), LST_bool             },
 
-    /* pluto/charon keywords */
-    { ARG_LST,  offsetof(starter_config_t, setup.plutodebug), LST_plutodebug       },
-    { ARG_STR,  offsetof(starter_config_t, setup.charondebug),  NULL               },
-    { ARG_STR,  offsetof(starter_config_t, setup.prepluto), NULL                   },
-    { ARG_STR,  offsetof(starter_config_t, setup.postpluto), NULL                  },
-    { ARG_STR,  offsetof(starter_config_t, setup.plutostderrlog), NULL             },
-    { ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_unique            },
-    { ARG_UINT, offsetof(starter_config_t, setup.overridemtu), NULL                },
-    { ARG_TIME, offsetof(starter_config_t, setup.crlcheckinterval), NULL           },
-    { ARG_ENUM, offsetof(starter_config_t, setup.cachecrls), LST_bool              },
-    { ARG_ENUM, offsetof(starter_config_t, setup.strictcrlpolicy), LST_strict      },
-    { ARG_ENUM, offsetof(starter_config_t, setup.nocrsend), LST_bool               },
-    { ARG_ENUM, offsetof(starter_config_t, setup.nat_traversal), LST_bool          },
-    { ARG_TIME, offsetof(starter_config_t, setup.keep_alive), NULL                 },
-    { ARG_ENUM, offsetof(starter_config_t, setup.force_keepalive), LST_bool        },
-    { ARG_STR,  offsetof(starter_config_t, setup.virtual_private), NULL            },
-    { ARG_STR,  offsetof(starter_config_t, setup.pkcs11module), NULL               },
-    { ARG_STR,  offsetof(starter_config_t, setup.pkcs11initargs), NULL             },
-    { ARG_ENUM, offsetof(starter_config_t, setup.pkcs11keepstate), LST_bool        },
-    { ARG_ENUM, offsetof(starter_config_t, setup.pkcs11proxy), LST_bool            },
+	/* pluto/charon keywords */
+	{ ARG_LST,  offsetof(starter_config_t, setup.plutodebug), LST_plutodebug       },
+	{ ARG_STR,  offsetof(starter_config_t, setup.charondebug),  NULL               },
+	{ ARG_STR,  offsetof(starter_config_t, setup.prepluto), NULL                   },
+	{ ARG_STR,  offsetof(starter_config_t, setup.postpluto), NULL                  },
+	{ ARG_STR,  offsetof(starter_config_t, setup.plutostderrlog), NULL             },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_unique            },
+	{ ARG_UINT, offsetof(starter_config_t, setup.overridemtu), NULL                },
+	{ ARG_TIME, offsetof(starter_config_t, setup.crlcheckinterval), NULL           },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.cachecrls), LST_bool              },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.strictcrlpolicy), LST_strict      },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.nocrsend), LST_bool               },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.nat_traversal), LST_bool          },
+	{ ARG_TIME, offsetof(starter_config_t, setup.keep_alive), NULL                 },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.force_keepalive), LST_bool        },
+	{ ARG_STR,  offsetof(starter_config_t, setup.virtual_private), NULL            },
+	{ ARG_STR,  offsetof(starter_config_t, setup.pkcs11module), NULL               },
+	{ ARG_STR,  offsetof(starter_config_t, setup.pkcs11initargs), NULL             },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.pkcs11keepstate), LST_bool        },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.pkcs11proxy), LST_bool            },
 
-    /* KLIPS keywords */
-    { ARG_LST,  offsetof(starter_config_t, setup.klipsdebug), LST_klipsdebug       },
-    { ARG_ENUM, offsetof(starter_config_t, setup.fragicmp), LST_bool               },
-    { ARG_STR,  offsetof(starter_config_t, setup.packetdefault), LST_packetdefault },
-    { ARG_ENUM, offsetof(starter_config_t, setup.hidetos), LST_bool                },
+	/* KLIPS keywords */
+	{ ARG_LST,  offsetof(starter_config_t, setup.klipsdebug), LST_klipsdebug       },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.fragicmp), LST_bool               },
+	{ ARG_STR,  offsetof(starter_config_t, setup.packetdefault), LST_packetdefault },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.hidetos), LST_bool                },
 
-    /* conn section keywords */
-    { ARG_STR,  offsetof(starter_conn_t, name), NULL                               },
-    { ARG_ENUM, offsetof(starter_conn_t, startup), LST_startup                     },
-    { ARG_ENUM, offsetof(starter_conn_t, keyexchange), LST_keyexchange             },
-    { ARG_MISC, 0, NULL  /* KW_TYPE */                                             },
-    { ARG_MISC, 0, NULL  /* KW_PFS */                                              },
-    { ARG_MISC, 0, NULL  /* KW_COMPRESS */                                         },
-    { ARG_ENUM, offsetof(starter_conn_t, install_policy), LST_bool                 },
-    { ARG_MISC, 0, NULL  /* KW_AUTH */                                             },
-    { ARG_MISC, 0, NULL  /* KW_AUTHBY */                                           },
-    { ARG_MISC, 0, NULL  /* KW_EAP */                                              },
-    { ARG_STR,  offsetof(starter_conn_t, eap_identity), NULL                       },
-    { ARG_MISC, 0, NULL  /* KW_MOBIKE */                                           },
-    { ARG_MISC, 0, NULL  /* KW_FORCEENCAPS */                                      },
-    { ARG_TIME, offsetof(starter_conn_t, sa_ike_life_seconds), NULL                },
-    { ARG_TIME, offsetof(starter_conn_t, sa_ipsec_life_seconds), NULL              },
-    { ARG_TIME, offsetof(starter_conn_t, sa_rekey_margin), NULL                    },
-    { ARG_MISC, 0, NULL  /* KW_KEYINGTRIES */                                      },
-    { ARG_PCNT, offsetof(starter_conn_t, sa_rekey_fuzz), NULL                      },
-    { ARG_MISC, 0, NULL  /* KW_REKEY */                                            },
-    { ARG_MISC, 0, NULL  /* KW_REAUTH */                                           },
-    { ARG_STR,  offsetof(starter_conn_t, ike), NULL                                },
-    { ARG_STR,  offsetof(starter_conn_t, esp), NULL                                },
-    { ARG_STR,  offsetof(starter_conn_t, pfsgroup), LST_pfsgroup                   },
-    { ARG_TIME, offsetof(starter_conn_t, dpd_delay), NULL                          },
-    { ARG_TIME, offsetof(starter_conn_t, dpd_timeout), NULL                        },
-    { ARG_ENUM, offsetof(starter_conn_t, dpd_action), LST_dpd_action               },
-    { ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
-    { ARG_MISC, 0, NULL  /* KW_XAUTH */                                            },
-    { ARG_ENUM, offsetof(starter_conn_t, me_mediation), LST_bool                   },
-    { ARG_STR,  offsetof(starter_conn_t, me_mediated_by), NULL                     },
-    { ARG_STR,  offsetof(starter_conn_t, me_peerid), NULL                          },
+	/* conn section keywords */
+	{ ARG_STR,  offsetof(starter_conn_t, name), NULL                               },
+	{ ARG_ENUM, offsetof(starter_conn_t, startup), LST_startup                     },
+	{ ARG_ENUM, offsetof(starter_conn_t, keyexchange), LST_keyexchange             },
+	{ ARG_MISC, 0, NULL  /* KW_TYPE */                                             },
+	{ ARG_MISC, 0, NULL  /* KW_PFS */                                              },
+	{ ARG_MISC, 0, NULL  /* KW_COMPRESS */                                         },
+	{ ARG_ENUM, offsetof(starter_conn_t, install_policy), LST_bool                 },
+	{ ARG_MISC, 0, NULL  /* KW_AUTH */                                             },
+	{ ARG_MISC, 0, NULL  /* KW_AUTHBY */                                           },
+	{ ARG_MISC, 0, NULL  /* KW_EAP */                                              },
+	{ ARG_STR,  offsetof(starter_conn_t, eap_identity), NULL                       },
+	{ ARG_MISC, 0, NULL  /* KW_MOBIKE */                                           },
+	{ ARG_MISC, 0, NULL  /* KW_FORCEENCAPS */                                      },
+	{ ARG_TIME, offsetof(starter_conn_t, sa_ike_life_seconds), NULL                },
+	{ ARG_TIME, offsetof(starter_conn_t, sa_ipsec_life_seconds), NULL              },
+	{ ARG_TIME, offsetof(starter_conn_t, sa_rekey_margin), NULL                    },
+	{ ARG_MISC, 0, NULL  /* KW_KEYINGTRIES */                                      },
+	{ ARG_PCNT, offsetof(starter_conn_t, sa_rekey_fuzz), NULL                      },
+	{ ARG_MISC, 0, NULL  /* KW_REKEY */                                            },
+	{ ARG_MISC, 0, NULL  /* KW_REAUTH */                                           },
+	{ ARG_STR,  offsetof(starter_conn_t, ike), NULL                                },
+	{ ARG_STR,  offsetof(starter_conn_t, esp), NULL                                },
+	{ ARG_STR,  offsetof(starter_conn_t, pfsgroup), LST_pfsgroup                   },
+	{ ARG_TIME, offsetof(starter_conn_t, dpd_delay), NULL                          },
+	{ ARG_TIME, offsetof(starter_conn_t, dpd_timeout), NULL                        },
+	{ ARG_ENUM, offsetof(starter_conn_t, dpd_action), LST_dpd_action               },
+	{ ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
+	{ ARG_MISC, 0, NULL  /* KW_XAUTH */                                            },
+	{ ARG_ENUM, offsetof(starter_conn_t, me_mediation), LST_bool                   },
+	{ ARG_STR,  offsetof(starter_conn_t, me_mediated_by), NULL                     },
+	{ ARG_STR,  offsetof(starter_conn_t, me_peerid), NULL                          },
 
-    /* ca section keywords */
-    { ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },
-    { ARG_ENUM, offsetof(starter_ca_t, startup), LST_startup                       },
-    { ARG_STR,  offsetof(starter_ca_t, cacert), NULL                               },
-    { ARG_STR,  offsetof(starter_ca_t, ldaphost), NULL                             },
-    { ARG_STR,  offsetof(starter_ca_t, ldapbase), NULL                             },
-    { ARG_STR,  offsetof(starter_ca_t, crluri), NULL                               },
-    { ARG_STR,  offsetof(starter_ca_t, crluri2), NULL                              },
-    { ARG_STR,  offsetof(starter_ca_t, ocspuri), NULL                              },
-    { ARG_STR,  offsetof(starter_ca_t, ocspuri2), NULL                             },
-    { ARG_STR,  offsetof(starter_ca_t, certuribase), NULL                          },
+	/* ca section keywords */
+	{ ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },
+	{ ARG_ENUM, offsetof(starter_ca_t, startup), LST_startup                       },
+	{ ARG_STR,  offsetof(starter_ca_t, cacert), NULL                               },
+	{ ARG_STR,  offsetof(starter_ca_t, ldaphost), NULL                             },
+	{ ARG_STR,  offsetof(starter_ca_t, ldapbase), NULL                             },
+	{ ARG_STR,  offsetof(starter_ca_t, crluri), NULL                               },
+	{ ARG_STR,  offsetof(starter_ca_t, crluri2), NULL                              },
+	{ ARG_STR,  offsetof(starter_ca_t, ocspuri), NULL                              },
+	{ ARG_STR,  offsetof(starter_ca_t, ocspuri2), NULL                             },
+	{ ARG_STR,  offsetof(starter_ca_t, certuribase), NULL                          },
 
-    /* end keywords */
-    { ARG_MISC, 0, NULL  /* KW_HOST */                                             },
-    { ARG_MISC, 0, NULL  /* KW_NEXTHOP */                                          },
-    { ARG_STR, offsetof(starter_end_t, subnet), NULL                               },
-    { ARG_MISC, 0, NULL  /* KW_SUBNETWITHIN */                                     },
-    { ARG_MISC, 0, NULL  /* KW_PROTOPORT */                                        },
-    { ARG_STR, offsetof(starter_end_t, srcip), NULL                                },
-    { ARG_MISC, 0, NULL  /* KW_NATIP */                                            },
-    { ARG_ENUM, offsetof(starter_end_t, firewall), LST_bool                        },
-    { ARG_ENUM, offsetof(starter_end_t, hostaccess), LST_bool                      },
-    { ARG_ENUM, offsetof(starter_end_t, allow_any), LST_bool                       },
-    { ARG_STR,  offsetof(starter_end_t, updown), NULL                              },
-    { ARG_STR,  offsetof(starter_end_t, auth), NULL                                },
-    { ARG_STR,  offsetof(starter_end_t, auth2), NULL                               },
-    { ARG_STR,  offsetof(starter_end_t, id), NULL                                  },
-    { ARG_STR,  offsetof(starter_end_t, id2), NULL                                 },
-    { ARG_STR,  offsetof(starter_end_t, rsakey), NULL                              },
-    { ARG_STR,  offsetof(starter_end_t, cert), NULL                                },
-    { ARG_STR,  offsetof(starter_end_t, cert2), NULL                               },
-    { ARG_ENUM, offsetof(starter_end_t, sendcert), LST_sendcert                    },
-    { ARG_STR,  offsetof(starter_end_t, ca), NULL                                  },
-    { ARG_STR,  offsetof(starter_end_t, ca2), NULL                                 },
-    { ARG_STR,  offsetof(starter_end_t, groups), NULL                              },
-    { ARG_STR,  offsetof(starter_end_t, iface), NULL                               }
+	/* end keywords */
+	{ ARG_MISC, 0, NULL  /* KW_HOST */                                             },
+	{ ARG_MISC, 0, NULL  /* KW_NEXTHOP */                                          },
+	{ ARG_STR, offsetof(starter_end_t, subnet), NULL                               },
+	{ ARG_MISC, 0, NULL  /* KW_SUBNETWITHIN */                                     },
+	{ ARG_MISC, 0, NULL  /* KW_PROTOPORT */                                        },
+	{ ARG_STR, offsetof(starter_end_t, srcip), NULL                                },
+	{ ARG_MISC, 0, NULL  /* KW_NATIP */                                            },
+	{ ARG_ENUM, offsetof(starter_end_t, firewall), LST_bool                        },
+	{ ARG_ENUM, offsetof(starter_end_t, hostaccess), LST_bool                      },
+	{ ARG_ENUM, offsetof(starter_end_t, allow_any), LST_bool                       },
+	{ ARG_STR,  offsetof(starter_end_t, updown), NULL                              },
+	{ ARG_STR,  offsetof(starter_end_t, auth), NULL                                },
+	{ ARG_STR,  offsetof(starter_end_t, auth2), NULL                               },
+	{ ARG_STR,  offsetof(starter_end_t, id), NULL                                  },
+	{ ARG_STR,  offsetof(starter_end_t, id2), NULL                                 },
+	{ ARG_STR,  offsetof(starter_end_t, rsakey), NULL                              },
+	{ ARG_STR,  offsetof(starter_end_t, cert), NULL                                },
+	{ ARG_STR,  offsetof(starter_end_t, cert2), NULL                               },
+	{ ARG_ENUM, offsetof(starter_end_t, sendcert), LST_sendcert                    },
+	{ ARG_STR,  offsetof(starter_end_t, ca), NULL                                  },
+	{ ARG_STR,  offsetof(starter_end_t, ca2), NULL                                 },
+	{ ARG_STR,  offsetof(starter_end_t, groups), NULL                              },
+	{ ARG_STR,  offsetof(starter_end_t, iface), NULL                               }
 };
 
 static void
 free_list(char **list)
 {
-    char **s;
+	char **s;
 
-    for (s = list; *s; s++)
-    {
-	free(*s);
-    }
-    free(list);
+	for (s = list; *s; s++)
+	{
+		free(*s);
+	}
+	free(list);
 }
 
 char **
 new_list(char *value)
 {
-    char *val, *b, *e, *end, **ret;
-    int count;
+	char *val, *b, *e, *end, **ret;
+	int count;
 
-    val = value ? clone_str(value) : NULL;
-    if (!val)
-	return NULL;
-    end = val + strlen(val);
-    for (b = val, count = 0; b < end;)
-    {
-	for (e = b; ((*e != ' ') && (*e != '\0')); e++);
-	*e = '\0';
-	if (e != b)
-	    count++;
-	b = e + 1;
-    }
-    if (count == 0)
-    {
+	val = value ? clone_str(value) : NULL;
+	if (!val)
+		return NULL;
+	end = val + strlen(val);
+	for (b = val, count = 0; b < end;)
+	{
+		for (e = b; ((*e != ' ') && (*e != '\0')); e++);
+		*e = '\0';
+		if (e != b)
+			count++;
+		b = e + 1;
+	}
+	if (count == 0)
+	{
+		free(val);
+		return NULL;
+	}
+	ret = (char **)malloc((count+1) * sizeof(char *));
+
+	for (b = val, count = 0; b < end; )
+	{
+		for (e = b; (*e != '\0'); e++);
+		if (e != b)
+			ret[count++] = clone_str(b);
+		b = e + 1;
+	}
+	ret[count] = NULL;
 	free(val);
-	return NULL;
-    }
-    ret = (char **)malloc((count+1) * sizeof(char *));
-
-    for (b = val, count = 0; b < end; )
-    {
-	for (e = b; (*e != '\0'); e++);
-	if (e != b)
-	    ret[count++] = clone_str(b);
-	b = e + 1;
-    }
-    ret[count] = NULL;
-    free(val);
-    return ret;
+	return ret;
 }
 
 
@@ -318,191 +318,191 @@ new_list(char *value)
  */
 bool
 assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
-    , bool *assigned)
+	, bool *assigned)
 {
-    char *p = base + token_info[token].offset;
-    const char **list = token_info[token].list;
+	char *p = base + token_info[token].offset;
+	const char **list = token_info[token].list;
 
-    int index = -1;  /* used for enumeration arguments */
+	int index = -1;  /* used for enumeration arguments */
 
-    lset_t *seen = (lset_t *)base;    /* seen flags are at the top of the struct */
-    lset_t f = LELEM(token - first);  /* compute flag position of argument */
+	lset_t *seen = (lset_t *)base;    /* seen flags are at the top of the struct */
+	lset_t f = LELEM(token - first);  /* compute flag position of argument */
 
-    *assigned = FALSE;
+	*assigned = FALSE;
 
-    DBG(DBG_CONTROLMORE,
-	DBG_log("  %s=%s", kw->entry->name, kw->value)
-    )
+	DBG(DBG_CONTROLMORE,
+		DBG_log("  %s=%s", kw->entry->name, kw->value)
+	)
 
-    if (*seen & f)
-    {
-	plog("# duplicate '%s' option", kw->entry->name);
-	return FALSE;
-    }
-
-    /* set flag that this argument has been seen */
-    *seen |= f;
-
-    /* is there a keyword list? */
-    if (list != NULL && token_info[token].type != ARG_LST)
-    {
-	bool match = FALSE;
-
-	while (*list != NULL && !match)
+	if (*seen & f)
 	{
-	    index++;
-	    match = streq(kw->value, *list++);
-	}
-	if (!match)
-	{
-	    plog("# bad value: %s=%s", kw->entry->name, kw->value);
-	    return FALSE;
-	}
-    }
-
-    switch (token_info[token].type)
-    {
-    case ARG_NONE:
-	plog("# option '%s' not supported yet", kw->entry->name);
-	return FALSE;
-    case ARG_ENUM:
-	{
-	    int *i = (int *)p;
-
-	    if (index < 0)
-	    {
-		plog("# bad enumeration value: %s=%s (%d)"
-		    , kw->entry->name, kw->value, index);
+		plog("# duplicate '%s' option", kw->entry->name);
 		return FALSE;
-	    }
-	    *i = index;
 	}
-	break;
 
-    case ARG_UINT:
+	/* set flag that this argument has been seen */
+	*seen |= f;
+
+	/* is there a keyword list? */
+	if (list != NULL && token_info[token].type != ARG_LST)
 	{
-	    char *endptr;
-	    u_int *u = (u_int *)p; 
+		bool match = FALSE;
 
-	    *u = strtoul(kw->value, &endptr, 10);
+		while (*list != NULL && !match)
+		{
+			index++;
+			match = streq(kw->value, *list++);
+		}
+		if (!match)
+		{
+			plog("# bad value: %s=%s", kw->entry->name, kw->value);
+			return FALSE;
+		}
+	}
 
-	    if (*endptr != '\0')
-	    {
-		plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+	switch (token_info[token].type)
+	{
+	case ARG_NONE:
+		plog("# option '%s' not supported yet", kw->entry->name);
 		return FALSE;
-	    }
-	}
-	break;
-    case ARG_ULNG:
-    case ARG_PCNT:
-	{
-	    char *endptr;
-	    unsigned long *l = (unsigned long *)p;
-
-	    *l = strtoul(kw->value, &endptr, 10);
-
-	    if (token_info[token].type == ARG_ULNG)
-	    {
-		if (*endptr != '\0')
+	case ARG_ENUM:
 		{
-		    plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
-		    return FALSE;
-		}
-	    }
-            else
-	    {
-		if ((*endptr != '%') || (endptr[1] != '\0') || endptr == kw->value)
-		{
-		    plog("# bad percent value: %s=%s", kw->entry->name, kw->value);
-		    return FALSE;
-		}
-	    }
- 
-	}
-	break;
-    case ARG_TIME:
-	{
-	    char *endptr;
-	    time_t *t = (time_t *)p;
+			int *i = (int *)p;
 
-	    *t = strtoul(kw->value, &endptr, 10);
-
-	    /* time in seconds? */
-	    if (*endptr == '\0' || (*endptr == 's' && endptr[1] == '\0'))
+			if (index < 0)
+			{
+				plog("# bad enumeration value: %s=%s (%d)"
+					, kw->entry->name, kw->value, index);
+				return FALSE;
+			}
+			*i = index;
+		}
 		break;
 
-	    if (endptr[1] == '\0')
-	    {
-		if (*endptr == 'm')  /* time in minutes? */
+	case ARG_UINT:
 		{
-		    *t *= 60;
-		    break;
+			char *endptr;
+			u_int *u = (u_int *)p; 
+
+			*u = strtoul(kw->value, &endptr, 10);
+
+			if (*endptr != '\0')
+			{
+				plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+				return FALSE;
+			}
 		}
-		if (*endptr == 'h')  /* time in hours? */
+		break;
+	case ARG_ULNG:
+	case ARG_PCNT:
 		{
-		    *t *= 3600;
-		    break;
+			char *endptr;
+			unsigned long *l = (unsigned long *)p;
+
+			*l = strtoul(kw->value, &endptr, 10);
+
+			if (token_info[token].type == ARG_ULNG)
+			{
+				if (*endptr != '\0')
+				{
+					plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+					return FALSE;
+				}
+			}
+			else
+			{
+				if ((*endptr != '%') || (endptr[1] != '\0') || endptr == kw->value)
+				{
+					plog("# bad percent value: %s=%s", kw->entry->name, kw->value);
+					return FALSE;
+				}
+			}
+
 		}
-		if (*endptr == 'd')  /* time in days? */
+		break;
+	case ARG_TIME:
 		{
-		    *t *= 3600*24;
-		    break;
-		}
-	    }
-	    plog("# bad duration value: %s=%s", kw->entry->name, kw->value);
-	    return FALSE;
-	}
-    case ARG_STR:
-	{
-	    char **cp = (char **)p;
+			char *endptr;
+			time_t *t = (time_t *)p;
 
-	    /* free any existing string */
-	    free(*cp);
+			*t = strtoul(kw->value, &endptr, 10);
 
-	    /* assign the new string */
-	    *cp = clone_str(kw->value);
-	}
-	break;
-    case ARG_LST:
-	{
-	    char ***listp = (char ***)p;
+			/* time in seconds? */
+			if (*endptr == '\0' || (*endptr == 's' && endptr[1] == '\0'))
+				break;
 
-	    /* free any existing list */
-	    if (*listp != NULL)
-		free_list(*listp);
-
-	    /* create a new list and assign values */
-	    *listp = new_list(kw->value);
-
-	    /* is there a keyword list? */
-	    if (list != NULL)
-	    {
-		char ** lst;
-
-		for (lst = *listp; lst && *lst; lst++) 
-		{
-		    bool match = FALSE;
-
-		    list = token_info[token].list;
-		
-		    while (*list != NULL && !match)
-		    {
-			match = streq(*lst, *list++);
-		    }
-		    if (!match)
-		    {
-			plog("# bad value: %s=%s", kw->entry->name, *lst);
+			if (endptr[1] == '\0')
+			{
+				if (*endptr == 'm')  /* time in minutes? */
+				{
+					*t *= 60;
+					break;
+				}
+				if (*endptr == 'h')  /* time in hours? */
+				{
+					*t *= 3600;
+					break;
+				}
+				if (*endptr == 'd')  /* time in days? */
+				{
+					*t *= 3600*24;
+					break;
+				}
+			}
+			plog("# bad duration value: %s=%s", kw->entry->name, kw->value);
 			return FALSE;
-		    }
 		}
-	    }
-	}
-    default:
-	return TRUE;
-    }
+	case ARG_STR:
+		{
+			char **cp = (char **)p;
 
-    *assigned = TRUE;
-    return TRUE;
+			/* free any existing string */
+			free(*cp);
+
+			/* assign the new string */
+			*cp = clone_str(kw->value);
+		}
+		break;
+	case ARG_LST:
+		{
+			char ***listp = (char ***)p;
+
+			/* free any existing list */
+			if (*listp != NULL)
+				free_list(*listp);
+
+			/* create a new list and assign values */
+			*listp = new_list(kw->value);
+
+			/* is there a keyword list? */
+			if (list != NULL)
+			{
+				char ** lst;
+
+				for (lst = *listp; lst && *lst; lst++) 
+				{
+					bool match = FALSE;
+
+					list = token_info[token].list;
+				
+					while (*list != NULL && !match)
+					{
+						match = streq(*lst, *list++);
+					}
+					if (!match)
+					{
+						plog("# bad value: %s=%s", kw->entry->name, *lst);
+						return FALSE;
+					}
+				}
+			}
+		}
+	default:
+		return TRUE;
+	}
+
+	*assigned = TRUE;
+	return TRUE;
 }
 
 /*
@@ -511,37 +511,37 @@ assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
 void
 free_args(kw_token_t first, kw_token_t last, char *base)
 {
-    kw_token_t token;
+	kw_token_t token;
 
-    for (token = first; token <= last; token++)
-    {
-	char *p = base + token_info[token].offset;
-
-	switch (token_info[token].type)
+	for (token = first; token <= last; token++)
 	{
-	case ARG_STR:
-	    {
-		char **cp = (char **)p;
+		char *p = base + token_info[token].offset;
 
-		free(*cp);
-		*cp = NULL;
-	    }
-	    break;
-	case ARG_LST:
-	    {
-		char ***listp = (char ***)p;
-
-		if (*listp != NULL)
+		switch (token_info[token].type)
 		{
-		    free_list(*listp);
-		    *listp = NULL;
-		 }
-	    }
-	    break;
-	default:
-	    break;
+		case ARG_STR:
+			{
+				char **cp = (char **)p;
+
+				free(*cp);
+				*cp = NULL;
+			}
+			break;
+		case ARG_LST:
+			{
+				char ***listp = (char ***)p;
+
+				if (*listp != NULL)
+				{
+					free_list(*listp);
+					*listp = NULL;
+				 }
+			}
+			break;
+		default:
+			break;
+		}
 	}
-    }
 }
 
 /*
@@ -550,38 +550,38 @@ free_args(kw_token_t first, kw_token_t last, char *base)
 void
 clone_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 {
-    kw_token_t token;
+	kw_token_t token;
 
-    for (token = first; token <= last; token++)
-    {
-	if (token_info[token].type == ARG_STR)
+	for (token = first; token <= last; token++)
 	{
-	    char **cp1 = (char **)(base1 + token_info[token].offset);
-	    char **cp2 = (char **)(base2 + token_info[token].offset);
+		if (token_info[token].type == ARG_STR)
+		{
+			char **cp1 = (char **)(base1 + token_info[token].offset);
+			char **cp2 = (char **)(base2 + token_info[token].offset);
 
-	    *cp1 = clone_str(*cp2);
+			*cp1 = clone_str(*cp2);
+		}
 	}
-    }
 }
 
 static bool
 cmp_list(char **list1, char **list2)
 {
-    if ((list1 == NULL) && (list2 == NULL))
+	if ((list1 == NULL) && (list2 == NULL))
+		return TRUE;
+	if ((list1 == NULL) || (list2 == NULL))
+		return FALSE;
+
+	for ( ; *list1 && *list2; list1++, list2++)
+	{
+		if (strcmp(*list1,*list2) != 0)
+			return FALSE;
+	}
+
+	if ((*list1 != NULL) || (*list2 != NULL))
+		return FALSE;
+
 	return TRUE;
-    if ((list1 == NULL) || (list2 == NULL))
-	return FALSE;
-
-    for ( ; *list1 && *list2; list1++, list2++)
-    {
-	if (strcmp(*list1,*list2) != 0)
-	    return FALSE;
-    }
-
-    if ((*list1 != NULL) || (*list2 != NULL))
-	return FALSE;
-
-    return TRUE;
 }
 
 /*
@@ -590,75 +590,75 @@ cmp_list(char **list1, char **list2)
 bool
 cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 {
-    kw_token_t token;
+	kw_token_t token;
 
-    for (token = first; token <= last; token++)
-    {
-	char *p1 = base1 + token_info[token].offset;
-	char *p2 = base2 + token_info[token].offset;
-
-	switch (token_info[token].type)
+	for (token = first; token <= last; token++)
 	{
-	case ARG_ENUM:
-	    {
-		int *i1 = (int *)p1;
-		int *i2 = (int *)p2;
+		char *p1 = base1 + token_info[token].offset;
+		char *p2 = base2 + token_info[token].offset;
 
-		if (*i1 != *i2)
-		    return FALSE;
-	    }
-	    break;
-	case ARG_UINT:
-	    {
-		u_int *u1 = (u_int *)p1;
-		u_int *u2 = (u_int *)p2;
+		switch (token_info[token].type)
+		{
+		case ARG_ENUM:
+			{
+				int *i1 = (int *)p1;
+				int *i2 = (int *)p2;
 
-		if (*u1 != *u2)
-		    return FALSE;
-	    }
-	    break;
-	case ARG_ULNG:
-	case ARG_PCNT:
-	    {
-		unsigned long *l1 = (unsigned long *)p1;
-		unsigned long *l2 = (unsigned long *)p2;
+				if (*i1 != *i2)
+					return FALSE;
+			}
+			break;
+		case ARG_UINT:
+			{
+				u_int *u1 = (u_int *)p1;
+				u_int *u2 = (u_int *)p2;
 
-		if (*l1 != *l2)
-		    return FALSE;
-	    }
-	    break;
-	case ARG_TIME:
-	    {
-		time_t *t1 = (time_t *)p1;
-		time_t *t2 = (time_t *)p2;
+				if (*u1 != *u2)
+					return FALSE;
+			}
+			break;
+		case ARG_ULNG:
+		case ARG_PCNT:
+			{
+				unsigned long *l1 = (unsigned long *)p1;
+				unsigned long *l2 = (unsigned long *)p2;
 
-		if (*t1 != *t2)
-		    return FALSE;
-	    }
-	    break;
-	case ARG_STR:
-	    {
-		char **cp1 = (char **)p1;
-		char **cp2 = (char **)p2;
+				if (*l1 != *l2)
+					return FALSE;
+			}
+			break;
+		case ARG_TIME:
+			{
+				time_t *t1 = (time_t *)p1;
+				time_t *t2 = (time_t *)p2;
 
-		if (*cp1 == NULL && *cp2 == NULL)
-		    break;
-		if (*cp1 == NULL || *cp2 == NULL || strcmp(*cp1, *cp2) != 0)
-		    return FALSE;
-	    }
-	    break;
-	case ARG_LST:
-	    {
-		char ***listp1 = (char ***)p1;
-		char ***listp2 = (char ***)p2;
+				if (*t1 != *t2)
+					return FALSE;
+			}
+			break;
+		case ARG_STR:
+			{
+				char **cp1 = (char **)p1;
+				char **cp2 = (char **)p2;
 
-		if (!cmp_list(*listp1, *listp2))
-		    return FALSE;
-	    }
-	    break;
-	default:
-	    break;
+				if (*cp1 == NULL && *cp2 == NULL)
+					break;
+				if (*cp1 == NULL || *cp2 == NULL || strcmp(*cp1, *cp2) != 0)
+					return FALSE;
+			}
+			break;
+		case ARG_LST:
+			{
+				char ***listp1 = (char ***)p1;
+				char ***listp2 = (char ***)p2;
+
+				if (!cmp_list(*listp1, *listp2))
+					return FALSE;
+			}
+			break;
+		default:
+			break;
+		}
 	}
-    }
-    return TRUE;
+	return TRUE;
 }

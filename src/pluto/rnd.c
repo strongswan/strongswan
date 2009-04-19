@@ -68,7 +68,7 @@
 #include "timer.h"
 
 #ifdef linux
-# define USE_DEV_RANDOM	1
+# define USE_DEV_RANDOM 1
 # define RANDOM_PATH    DEV_URANDOM
 #else
 # ifdef __OpenBSD__
@@ -82,7 +82,7 @@
 
 #define get_rnd_byte() (arc4random() % 256)
 
-#else	/**** start of large #else ****/
+#else   /**** start of large #else ****/
 
 #ifdef USE_DEV_RANDOM
 static int random_fd = NULL_FD;
@@ -97,12 +97,12 @@ static u_char random_pool[RANDOM_POOL_SIZE];
 static u_char
 generate_rnd_byte(void)
 {
-    u_char c;
+	u_char c;
 
-    if (read(random_fd, &c, sizeof(c)) == -1)
-	exit_log_errno((e, "read() failed in get_rnd_byte()"));
+	if (read(random_fd, &c, sizeof(c)) == -1)
+		exit_log_errno((e, "read() failed in get_rnd_byte()"));
 
-    return c;
+	return c;
 }
 
 #else /* !USE_DEV_RANDOM */
@@ -121,52 +121,52 @@ static volatile sig_atomic_t i, j, k;
 static void
 rnd_handler(int ignore_me UNUSED)
 {
-    k <<= 1;	/* Shift left by 1 */
-    j++;
-    k |= (i & 0x1); /* Get lsbit of counter */
+	k <<= 1;    /* Shift left by 1 */
+	j++;
+	k |= (i & 0x1); /* Get lsbit of counter */
 
-    if (j != 8)
-	signal(SIGVTALRM, rnd_handler);
+	if (j != 8)
+		signal(SIGVTALRM, rnd_handler);
 }
 
 static u_char
 generate_rnd_byte(void)
 {
-    struct itimerval tmval, ntmval;
+	struct itimerval tmval, ntmval;
 
-# ifdef NEVER	/* ??? */
+# ifdef NEVER   /* ??? */
 #  ifdef linux
-    int mask = siggetmask();
+	int mask = siggetmask();
 
-    mask |= SIGVTALRM;
-    sigsetmask(mask);
+	mask |= SIGVTALRM;
+	sigsetmask(mask);
 #  endif
 # endif
 
-    i = 0;
-    j = 0;
+	i = 0;
+	j = 0;
 
-    ntmval.it_interval.tv_sec = 0;
-    ntmval.it_interval.tv_usec = 1;
-    ntmval.it_value.tv_sec = 0;
-    ntmval.it_value.tv_usec = 1;
-    signal(SIGVTALRM, rnd_handler);
-    setitimer(ITIMER_VIRTUAL, &ntmval, &tmval);
+	ntmval.it_interval.tv_sec = 0;
+	ntmval.it_interval.tv_usec = 1;
+	ntmval.it_value.tv_sec = 0;
+	ntmval.it_value.tv_usec = 1;
+	signal(SIGVTALRM, rnd_handler);
+	setitimer(ITIMER_VIRTUAL, &ntmval, &tmval);
 
-    while (j != 8)
-	i++;
+	while (j != 8)
+		i++;
 
-    setitimer(ITIMER_VIRTUAL, &tmval, &ntmval);
-    signal(SIGVTALRM, SIG_IGN);
+	setitimer(ITIMER_VIRTUAL, &tmval, &ntmval);
+	signal(SIGVTALRM, SIG_IGN);
 
-# ifdef NEVER	/* ??? */
+# ifdef NEVER   /* ??? */
 #  ifdef linux
-    mask ^= SIGVTALRM;
-    sigsetmask(mask);
+	mask ^= SIGVTALRM;
+	sigsetmask(mask);
 #  endif
 # endif
 
-    return k;
+	return k;
 }
 
 #endif /* !USE_DEV_RANDOM */
@@ -174,11 +174,11 @@ generate_rnd_byte(void)
 static void
 mix_pool(void)
 {
-    SHA1_CTX ctx;
+	SHA1_CTX ctx;
 
-    SHA1Init(&ctx);
-    SHA1Update(&ctx, random_pool, RANDOM_POOL_SIZE);
-    SHA1Final(random_pool, &ctx);
+	SHA1Init(&ctx);
+	SHA1Update(&ctx, random_pool, RANDOM_POOL_SIZE);
+	SHA1Final(random_pool, &ctx);
 }
 
 /*
@@ -187,21 +187,21 @@ mix_pool(void)
 static u_char
 get_rnd_byte(void)
 {
-    random_pool[RANDOM_POOL_SIZE - 1] = generate_rnd_byte();
-    random_pool[0] = generate_rnd_byte();
-    mix_pool();
-    return random_pool[0];
+	random_pool[RANDOM_POOL_SIZE - 1] = generate_rnd_byte();
+	random_pool[0] = generate_rnd_byte();
+	mix_pool();
+	return random_pool[0];
 }
 
-#endif /* !USE_ARC4RANDOM */	/**** end of large #else ****/
+#endif /* !USE_ARC4RANDOM */    /**** end of large #else ****/
 
 void
 get_rnd_bytes(u_char *buffer, int length)
 {
-    int i;
+	int i;
 
-    for (i = 0; i < length; i++)
-	buffer[i] = get_rnd_byte();
+	for (i = 0; i < length; i++)
+		buffer[i] = get_rnd_byte();
 }
 
 /*
@@ -212,24 +212,24 @@ init_rnd_pool(void)
 {
 #ifndef USE_ARC4RANDOM
 # ifdef USE_DEV_RANDOM
-    DBG(DBG_KLIPS, DBG_log("opening %s", RANDOM_PATH));
-    random_fd = open(RANDOM_PATH, O_RDONLY);
-    if (random_fd == -1)
-	exit_log_errno((e, "open of %s failed in init_rnd_pool()", RANDOM_PATH));
-    fcntl(random_fd, F_SETFD, FD_CLOEXEC);
+	DBG(DBG_KLIPS, DBG_log("opening %s", RANDOM_PATH));
+	random_fd = open(RANDOM_PATH, O_RDONLY);
+	if (random_fd == -1)
+		exit_log_errno((e, "open of %s failed in init_rnd_pool()", RANDOM_PATH));
+	fcntl(random_fd, F_SETFD, FD_CLOEXEC);
 # endif
 
-    get_rnd_bytes(random_pool, RANDOM_POOL_SIZE);
-    mix_pool();
+	get_rnd_bytes(random_pool, RANDOM_POOL_SIZE);
+	mix_pool();
 #endif /* !USE_ARC4RANDOM */
 
-    /* start of rand(3) on the right foot */
-    {
-	unsigned int seed;
+	/* start of rand(3) on the right foot */
+	{
+		unsigned int seed;
 
-	get_rnd_bytes((void *)&seed, sizeof(seed));
-	srand(seed);
-    }
+		get_rnd_bytes((void *)&seed, sizeof(seed));
+		srand(seed);
+	}
 }
 
 u_char    secret_of_the_day[SHA1_DIGEST_SIZE];
@@ -239,12 +239,12 @@ u_char    secret_of_the_day[SHA1_DIGEST_SIZE];
 void
 init_secret(void)
 {
-    /*
-     * Generate the secret value for responder cookies, and
-     * schedule an event for refresh.
-     */
-    get_rnd_bytes(secret_of_the_day, sizeof(secret_of_the_day));
-    event_schedule(EVENT_REINIT_SECRET, EVENT_REINIT_SECRET_DELAY, NULL);
+	/*
+	 * Generate the secret value for responder cookies, and
+	 * schedule an event for refresh.
+	 */
+	get_rnd_bytes(secret_of_the_day, sizeof(secret_of_the_day));
+	event_schedule(EVENT_REINIT_SECRET, EVENT_REINIT_SECRET_DELAY, NULL);
 }
 
 #endif /* NO_PLUTO */

@@ -27,10 +27,10 @@ extern chunk_t mpz_to_n(const MP_INT *mp, size_t bytes);
 
 /* var := mod(base ** exp, mod), ensuring var is mpz_inited */
 #define mpz_init_powm(flag, var, base, exp, mod) { \
-    if (!(flag)) \
-	mpz_init(&(var)); \
-    (flag) = TRUE; \
-    mpz_powm(&(var), &(base), &(exp), (mod)); \
-    }
+	if (!(flag)) \
+		mpz_init(&(var)); \
+	(flag) = TRUE; \
+	mpz_powm(&(var), &(base), &(exp), (mod)); \
+	}
 
 #endif /* _MP_DEFS_H */

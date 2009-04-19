@@ -118,135 +118,135 @@
  * - display format: n,m
  */
 typedef unsigned long policy_prio_t;
-#define BOTTOM_PRIO   ((policy_prio_t)0)	/* smaller than any real prio */
+#define BOTTOM_PRIO   ((policy_prio_t)0)        /* smaller than any real prio */
 #define set_policy_prio(c) { (c)->prio = \
-	((policy_prio_t)(c)->spd.this.client.maskbits << 16) \
-	| ((policy_prio_t)(c)->spd.that.client.maskbits << 8) \
-	| (policy_prio_t)1; }
-#define POLICY_PRIO_BUF	(3+1+3+1)
+		((policy_prio_t)(c)->spd.this.client.maskbits << 16) \
+		| ((policy_prio_t)(c)->spd.that.client.maskbits << 8) \
+		| (policy_prio_t)1; }
+#define POLICY_PRIO_BUF (3+1+3+1)
 extern void fmt_policy_prio(policy_prio_t pp, char buf[POLICY_PRIO_BUF]);
 
 struct virtual_t;
 
 struct end {
-    struct id id;
-    ip_address
-	host_addr,
-	host_nexthop,
-	host_srcip;
-    ip_subnet client;
+	struct id id;
+	ip_address
+		host_addr,
+		host_nexthop,
+		host_srcip;
+	ip_subnet client;
 
-    bool key_from_DNS_on_demand;
-    bool has_client;
-    bool has_client_wildcard;
-    bool has_port_wildcard;
-    bool has_id_wildcards;
-    bool has_natip;
-    char *updown;
-    u_int16_t host_port;	/* host order */
-    u_int16_t port;		/* host order */
-    u_int8_t protocol;
-    cert_t cert;		/* end certificate */
-    chunk_t ca;			/* CA distinguished name */
-    struct ietfAttrList *groups;/* access control groups */
-    smartcard_t *sc;		/* smartcard reader and key info */
-    struct virtual_t *virt;
-    bool modecfg;		/* this end: request local address from server */
-				/* that end: give local addresses to clients */
-    bool hostaccess;		/* allow access to host via iptables INPUT/OUTPUT */
-				/* rules if client behind host is a subnet */
-    bool allow_any;		/* IP address is subject to change */
-    certpolicy_t sendcert;	/* whether or not to send the certificate */
+	bool key_from_DNS_on_demand;
+	bool has_client;
+	bool has_client_wildcard;
+	bool has_port_wildcard;
+	bool has_id_wildcards;
+	bool has_natip;
+	char *updown;
+	u_int16_t host_port;        /* host order */
+	u_int16_t port;             /* host order */
+	u_int8_t protocol;
+	cert_t cert;                /* end certificate */
+	chunk_t ca;                 /* CA distinguished name */
+	struct ietfAttrList *groups;/* access control groups */
+	smartcard_t *sc;            /* smartcard reader and key info */
+	struct virtual_t *virt;
+	bool modecfg;               /* this end: request local address from server */
+								/* that end: give local addresses to clients */
+	bool hostaccess;            /* allow access to host via iptables INPUT/OUTPUT */
+								/* rules if client behind host is a subnet */
+	bool allow_any;             /* IP address is subject to change */
+	certpolicy_t sendcert;      /* whether or not to send the certificate */
 };
 
 struct spd_route {
-    struct spd_route *next;
-    struct end this;
-    struct end that;
-    so_serial_t eroute_owner;
-    enum routing_t routing;	/* level of routing in place */
-    uint32_t reqid;
+	struct spd_route *next;
+	struct end this;
+	struct end that;
+	so_serial_t eroute_owner;
+	enum routing_t routing;     /* level of routing in place */
+	uint32_t reqid;
 };
 
 struct connection {
-    char *name;
-    bool ikev1;
+	char *name;
+	bool ikev1;
 
-    lset_t policy;
-    time_t sa_ike_life_seconds;
-    time_t sa_ipsec_life_seconds;
-    time_t sa_rekey_margin;
-    unsigned long sa_rekey_fuzz;
-    unsigned long sa_keying_tries;
+	lset_t policy;
+	time_t sa_ike_life_seconds;
+	time_t sa_ipsec_life_seconds;
+	time_t sa_rekey_margin;
+	unsigned long sa_rekey_fuzz;
+	unsigned long sa_keying_tries;
 
-    /* RFC 3706 DPD */
-    time_t dpd_delay;
-    time_t dpd_timeout;
-    dpd_action_t dpd_action;
+	/* RFC 3706 DPD */
+	time_t dpd_delay;
+	time_t dpd_timeout;
+	dpd_action_t dpd_action;
 
-    char              *log_file_name;       /* name of log file */
-    FILE              *log_file;            /* possibly open FILE */
-    TAILQ_ENTRY(connection) log_link;     /* linked list of open conns */
-    bool               log_file_err;        /* only bitch once */
+	char              *log_file_name;       /* name of log file */
+	FILE              *log_file;            /* possibly open FILE */
+	TAILQ_ENTRY(connection) log_link;     /* linked list of open conns */
+	bool               log_file_err;        /* only bitch once */
 
-    struct spd_route spd;
+	struct spd_route spd;
 
-    /* internal fields: */
+	/* internal fields: */
 
-    unsigned long instance_serial;
-    policy_prio_t prio;
-    bool instance_initiation_ok;	/* this is an instance of a policy that mandates initiate */
-    enum connection_kind kind;
-    const struct iface *interface;	/* filled in iff oriented */
+	unsigned long instance_serial;
+	policy_prio_t prio;
+	bool instance_initiation_ok;        /* this is an instance of a policy that mandates initiate */
+	enum connection_kind kind;
+	const struct iface *interface;      /* filled in iff oriented */
 
-    so_serial_t	/* state object serial number */
-	newest_isakmp_sa,
-	newest_ipsec_sa;
+	so_serial_t /* state object serial number */
+		newest_isakmp_sa,
+		newest_ipsec_sa;
 
 
 #ifdef DEBUG
-    lset_t extra_debugging;
+	lset_t extra_debugging;
 #endif
 
-    /* note: if the client is the gateway, the following must be equal */
-    sa_family_t addr_family;		/* between gateways */
-    sa_family_t tunnel_addr_family;	/* between clients */
+	/* note: if the client is the gateway, the following must be equal */
+	sa_family_t addr_family;            /* between gateways */
+	sa_family_t tunnel_addr_family;     /* between clients */
 
-    struct connection *policy_next;	/* if multiple policies,
-					   next one to apply */
+	struct connection *policy_next;     /* if multiple policies,
+										   next one to apply */
 
-    struct gw_info *gw_info;
-    struct alg_info_esp *alg_info_esp;
-    struct alg_info_ike *alg_info_ike;
+	struct gw_info *gw_info;
+	struct alg_info_esp *alg_info_esp;
+	struct alg_info_ike *alg_info_ike;
 
-    struct host_pair *host_pair;
-    struct connection *hp_next;		/* host pair list link */
+	struct host_pair *host_pair;
+	struct connection *hp_next;         /* host pair list link */
 
-    struct connection *ac_next;		/* all connections list link */
+	struct connection *ac_next;         /* all connections list link */
 
-    generalName_t *requested_ca;	/* collected certificate requests */
-    bool got_certrequest;
+	generalName_t *requested_ca;        /* collected certificate requests */
+	bool got_certrequest;
 };
 
 #define oriented(c) ((c).interface != NULL)
 extern bool orient(struct connection *c);
 
 extern bool same_peer_ids(const struct connection *c
-    , const struct connection *d, const struct id *his_id);
+	, const struct connection *d, const struct id *his_id);
 
 /* Format the topology of a connection end, leaving out defaults.
  * Largest left end looks like: client === host : port [ host_id ] --- hop
  * Note: if that==NULL, skip nexthop
  */
-#define END_BUF	(SUBNETTOT_BUF + ADDRTOT_BUF + IDTOA_BUF + ADDRTOT_BUF + 10)
+#define END_BUF (SUBNETTOT_BUF + ADDRTOT_BUF + IDTOA_BUF + ADDRTOT_BUF + 10)
 extern size_t format_end(char *buf, size_t buf_len
-    , const struct end *this, const struct end *that
-    , bool is_left, lset_t policy);
+	, const struct end *this, const struct end *that
+	, bool is_left, lset_t policy);
 
 extern void add_connection(const whack_message_t *wm);
 extern void initiate_connection(const char *name, int whackfd);
 extern void initiate_opportunistic(const ip_address *our_client
-    , const ip_address *peer_client, int transport_proto, bool held, int whackfd);
+	, const ip_address *peer_client, int transport_proto, bool held, int whackfd);
 extern void terminate_connection(const char *nm);
 extern void release_connection(struct connection *c, bool relations);
 extern void delete_connection(struct connection *c, bool relations);
@@ -257,87 +257,87 @@ extern void remove_group_instance(const struct connection *group, const char *na
 extern void release_dead_interfaces(void);
 extern void check_orientations(void);
 extern struct connection *route_owner(struct connection *c
-				      , struct spd_route **srp
-				      , struct connection **erop
-				      , struct spd_route **esrp);
+									  , struct spd_route **srp
+									  , struct connection **erop
+									  , struct spd_route **esrp);
 extern struct connection *shunt_owner(const ip_subnet *ours
-    , const ip_subnet *his);
+	, const ip_subnet *his);
 
-extern bool uniqueIDs;	/* --uniqueids? */
+extern bool uniqueIDs;  /* --uniqueids? */
 extern void ISAKMP_SA_established(struct connection *c, so_serial_t serial);
 
 #define his_id_was_instantiated(c) ((c)->kind == CK_INSTANCE \
-    && (id_is_ipaddr(&(c)->spd.that.id)? \
-    sameaddr(&(c)->spd.that.id.ip_addr, &(c)->spd.that.host_addr) : TRUE))
+	&& (id_is_ipaddr(&(c)->spd.that.id)? \
+	sameaddr(&(c)->spd.that.id.ip_addr, &(c)->spd.that.host_addr) : TRUE))
 
-struct state;	/* forward declaration of tag (defined in state.h) */
+struct state;   /* forward declaration of tag (defined in state.h) */
 extern struct connection
-    *con_by_name(const char *nm, bool strict),
-    *find_host_connection(const ip_address *me, u_int16_t my_port
-	, const ip_address *him, u_int16_t his_port, lset_t policy),
-    *refine_host_connection(const struct state *st, const struct id *id
-	, chunk_t peer_ca),
-    *find_client_connection(struct connection *c
-	, const ip_subnet *our_net
-	, const ip_subnet *peer_net
-	, const u_int8_t our_protocol
-	, const u_int16_t out_port
-	, const u_int8_t peer_protocol
-	, const u_int16_t peer_port),
-    *find_connection_by_reqid(uint32_t reqid);
+	*con_by_name(const char *nm, bool strict),
+	*find_host_connection(const ip_address *me, u_int16_t my_port
+		, const ip_address *him, u_int16_t his_port, lset_t policy),
+	*refine_host_connection(const struct state *st, const struct id *id
+		, chunk_t peer_ca),
+	*find_client_connection(struct connection *c
+		, const ip_subnet *our_net
+		, const ip_subnet *peer_net
+		, const u_int8_t our_protocol
+		, const u_int16_t out_port
+		, const u_int8_t peer_protocol
+		, const u_int16_t peer_port),
+	*find_connection_by_reqid(uint32_t reqid);
 
 extern struct connection *
 find_connection_for_clients(struct spd_route **srp
-			    , const ip_address *our_client
-			    , const ip_address *peer_client
-			    , int transport_proto);
+							, const ip_address *our_client
+							, const ip_address *peer_client
+							, int transport_proto);
 
 extern chunk_t get_peer_ca_and_groups(struct connection *c
-    , const ietfAttrList_t **peer_list);
-    
+	, const ietfAttrList_t **peer_list);
+	
 /* instantiating routines
  * Note: connection_discard() is in state.h because all its work
  * is looking through state objects.
  */
-struct gw_info;	/* forward declaration of tag (defined in dnskey.h) */
-struct alg_info;	/* forward declaration of tag (defined in alg_info.h) */
+struct gw_info; /* forward declaration of tag (defined in dnskey.h) */
+struct alg_info;        /* forward declaration of tag (defined in alg_info.h) */
 extern struct connection *rw_instantiate(struct connection *c
-					 , const ip_address *him
-					 , u_int16_t his_port
-					 , const ip_subnet *his_net
-					 , const struct id *his_id);
+										 , const ip_address *him
+										 , u_int16_t his_port
+										 , const ip_subnet *his_net
+										 , const struct id *his_id);
 
 extern struct connection *oppo_instantiate(struct connection *c
-					   , const ip_address *him
-					   , const struct id *his_id
-					   , struct gw_info *gw
-					   , const ip_address *our_client
-					   , const ip_address *peer_client);
+										   , const ip_address *him
+										   , const struct id *his_id
+										   , struct gw_info *gw
+										   , const ip_address *our_client
+										   , const ip_address *peer_client);
 
 extern struct connection
   *build_outgoing_opportunistic_connection(struct gw_info *gw
-					   , const ip_address *our_client
-					   , const ip_address *peer_client);
+										   , const ip_address *our_client
+										   , const ip_address *peer_client);
 
 /* worst case: "[" serial "] " myclient "=== ..." peer "===" hisclient '\0' */
 #define CONN_INST_BUF \
-    (2 + 10 + 1 + SUBNETTOT_BUF + 7 + ADDRTOT_BUF + 3 + SUBNETTOT_BUF + 1)
+	(2 + 10 + 1 + SUBNETTOT_BUF + 7 + ADDRTOT_BUF + 3 + SUBNETTOT_BUF + 1)
 
 extern void fmt_conn_instance(const struct connection *c
-    , char buf[CONN_INST_BUF]);
+	, char buf[CONN_INST_BUF]);
 
 /* operations on "pending", the structure representing Quick Mode
  * negotiations delayed until a Keying Channel has been negotiated.
  */
 
-struct pending;	/* forward declaration (opaque outside connections.c) */
+struct pending; /* forward declaration (opaque outside connections.c) */
 
 extern void add_pending(int whack_sock
-    , struct state *isakmp_sa
-    , struct connection *c
-    , lset_t policy
-    , unsigned long try
-    , so_serial_t replacing);
+	, struct state *isakmp_sa
+	, struct connection *c
+	, lset_t policy
+	, unsigned long try
+	, so_serial_t replacing);
 
 extern void release_pending_whacks(struct state *st, err_t story);
 extern void unpend(struct state *st);
@@ -360,9 +360,9 @@ extern struct connection *eclipsed(struct connection *c, struct spd_route **);
 
 extern void show_connections_status(bool all, const char *name);
 extern int  connection_compare(const struct connection *ca
-    , const struct connection *cb);
+	, const struct connection *cb);
 extern void update_host_pair(const char *why, struct connection *c
-    , const ip_address *myaddr, u_int16_t myport
-    , const ip_address *hisaddr, u_int16_t hisport);
+	, const ip_address *myaddr, u_int16_t myport
+	, const ip_address *hisaddr, u_int16_t hisport);
 
 #endif /* _CONNECTIONS_H */

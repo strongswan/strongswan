@@ -1,7 +1,7 @@
 /* Support of X.509 attribute certificates
  * Copyright (C) 2002 Ueli Galizzi, Ariane Seiler
  * Copyright (C) 2003 Martin Berner, Lukas Suter
- 
+
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,9 +22,9 @@
 /* definition of ietfAttribute kinds */
 
 typedef enum {
-    IETF_ATTRIBUTE_OCTETS =	0,
-    IETF_ATTRIBUTE_OID =	1,
-    IETF_ATTRIBUTE_STRING =	2
+	IETF_ATTRIBUTE_OCTETS =     0,
+	IETF_ATTRIBUTE_OID =        1,
+	IETF_ATTRIBUTE_STRING =     2
 } ietfAttribute_t;
 
 /* access structure for an ietfAttribute */
@@ -32,17 +32,17 @@ typedef enum {
 typedef struct ietfAttr ietfAttr_t;
 
 struct ietfAttr {
-  time_t	   installed;
-  int		   count;
+  time_t           installed;
+  int              count;
   ietfAttribute_t  kind;
-  chunk_t	   value;
+  chunk_t          value;
 };
 
 typedef struct ietfAttrList ietfAttrList_t;
 
 struct ietfAttrList {
   ietfAttrList_t   *next;
-  ietfAttr_t	   *attr;
+  ietfAttr_t       *attr;
 };
 
 
@@ -52,31 +52,31 @@ typedef struct x509acert x509acert_t;
 
 struct x509acert {
   x509acert_t    *next;
-  time_t	 installed;
-  chunk_t	 certificate;
-  chunk_t	   certificateInfo;
-  u_int		     version;
-		/*   holder */
-		/*     baseCertificateID */
-  chunk_t		 holderIssuer;
-  chunk_t		 holderSerial;
-  chunk_t		 entityName;
-                /*   v2Form */
-  chunk_t	       issuerName;
-                /*   signature */
+  time_t         installed;
+  chunk_t        certificate;
+  chunk_t          certificateInfo;
+  u_int              version;
+				/*   holder */
+				/*     baseCertificateID */
+  chunk_t                holderIssuer;
+  chunk_t                holderSerial;
+  chunk_t                entityName;
+				/*   v2Form */
+  chunk_t              issuerName;
+				/*   signature */
   int                  sigAlg;
-  chunk_t	     serialNumber;
-                /*   attrCertValidityPeriod */
+  chunk_t            serialNumber;
+				/*   attrCertValidityPeriod */
   time_t               notBefore;
   time_t               notAfter;
-		/*   attributes */
+				/*   attributes */
   ietfAttrList_t       *charging;
   ietfAttrList_t       *groups;
-		/*   extensions */
+				/*   extensions */
   chunk_t              authKeyID;
   chunk_t              authKeySerialNumber;
-  bool		       noRevAvail;
-		/* signatureAlgorithm */
+  bool                 noRevAvail;
+				/* signatureAlgorithm */
   int                algorithm;
   chunk_t          signature;
 };
@@ -88,7 +88,7 @@ extern void unshare_ietfAttrList(ietfAttrList_t **listp);
 extern void free_ietfAttrList(ietfAttrList_t *list);
 extern void decode_groups(char *groups, ietfAttrList_t **listp);
 extern bool group_membership(const ietfAttrList_t *my_list
-    , const char *conn, const ietfAttrList_t *conn_list);
+	, const char *conn, const ietfAttrList_t *conn_list);
 extern bool parse_ac(chunk_t blob, x509acert_t *ac);
 extern bool verify_x509acert(x509acert_t *ac, bool strict);
 extern x509acert_t* get_x509acert(chunk_t issuer, chunk_t serial);

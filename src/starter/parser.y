@@ -27,7 +27,7 @@
 #include "parser.h"
 
 #define YYERROR_VERBOSE
-#define ERRSTRING_LEN	256
+#define ERRSTRING_LEN   256
 
 /**
  * Bison
@@ -64,215 +64,215 @@ extern kw_entry_t *in_word_set (char *str, unsigned int len);
  */
 
 config_file:
-    config_file section_or_include
-    | /* NULL */		
-    ;
+	config_file section_or_include
+	| /* NULL */                
+	;
 
 section_or_include:
-    FILE_VERSION STRING EOL
-    {
-	free($2);
-    }
-    | CONFIG SETUP EOL
-    {
-	_parser_kw = &(_parser_cfg->config_setup);
-	_parser_kw_last = NULL;
-    } kw_section
-    | CONN STRING EOL
-    {
-	section_list_t *section = malloc_thing(section_list_t);
-	
-	section->name = clone_str($2);
-	section->kw = NULL;
-	section->next = NULL;
-	_parser_kw = &(section->kw);
-	if (!_parser_cfg->conn_first)
-	    _parser_cfg->conn_first = section;
-	if (_parser_cfg->conn_last)
-	    _parser_cfg->conn_last->next = section;
-	_parser_cfg->conn_last = section;
-	_parser_kw_last = NULL;
-	free($2);
-    } kw_section
-    | CA STRING EOL
-    {
-	section_list_t *section = malloc_thing(section_list_t);
-	section->name = clone_str($2);
-	section->kw = NULL;
-	section->next = NULL;
-	_parser_kw = &(section->kw);
-	if (!_parser_cfg->ca_first)
-	    _parser_cfg->ca_first = section;
-	if (_parser_cfg->ca_last)
-	    _parser_cfg->ca_last->next = section;
-	_parser_cfg->ca_last = section;
-	_parser_kw_last = NULL;
-	free($2);
-    } kw_section
-    | INCLUDE STRING
-    {
-	extern void _parser_y_include (const char *f);
-	_parser_y_include($2);
-	free($2);
-    } EOL
-    | EOL
-    ;
+	FILE_VERSION STRING EOL
+	{
+		free($2);
+	}
+	| CONFIG SETUP EOL
+	{
+		_parser_kw = &(_parser_cfg->config_setup);
+		_parser_kw_last = NULL;
+	} kw_section
+	| CONN STRING EOL
+	{
+		section_list_t *section = malloc_thing(section_list_t);
+		
+		section->name = clone_str($2);
+		section->kw = NULL;
+		section->next = NULL;
+		_parser_kw = &(section->kw);
+		if (!_parser_cfg->conn_first)
+			_parser_cfg->conn_first = section;
+		if (_parser_cfg->conn_last)
+			_parser_cfg->conn_last->next = section;
+		_parser_cfg->conn_last = section;
+		_parser_kw_last = NULL;
+		free($2);
+	} kw_section
+	| CA STRING EOL
+	{
+		section_list_t *section = malloc_thing(section_list_t);
+		section->name = clone_str($2);
+		section->kw = NULL;
+		section->next = NULL;
+		_parser_kw = &(section->kw);
+		if (!_parser_cfg->ca_first)
+			_parser_cfg->ca_first = section;
+		if (_parser_cfg->ca_last)
+			_parser_cfg->ca_last->next = section;
+		_parser_cfg->ca_last = section;
+		_parser_kw_last = NULL;
+		free($2);
+	} kw_section
+	| INCLUDE STRING
+	{
+		extern void _parser_y_include (const char *f);
+		_parser_y_include($2);
+		free($2);
+	} EOL
+	| EOL
+	;
 
 kw_section:
-    FIRST_SPACES statement_kw EOL kw_section
-    |
-    ;
+	FIRST_SPACES statement_kw EOL kw_section
+	|
+	;
 
 statement_kw:
-    STRING EQUAL STRING
-    {
-	kw_list_t  *new;
-	kw_entry_t *entry = in_word_set($1, strlen($1));
+	STRING EQUAL STRING
+	{
+		kw_list_t  *new;
+		kw_entry_t *entry = in_word_set($1, strlen($1));
 
-	if (entry == NULL)
-	{
-	    snprintf(errbuf, ERRSTRING_LEN, "unknown keyword '%s'", $1);
-	    yyerror(errbuf);
+		if (entry == NULL)
+		{
+			snprintf(errbuf, ERRSTRING_LEN, "unknown keyword '%s'", $1);
+			yyerror(errbuf);
+		}
+		else if (_parser_kw)
+		{
+			new = (kw_list_t *)malloc_thing(kw_list_t);
+			new->entry = entry;
+			new->value = clone_str($3);
+			new->next = NULL;
+			if (_parser_kw_last)
+				_parser_kw_last->next = new;
+			_parser_kw_last = new;
+			if (!*_parser_kw)
+				*_parser_kw = new;
+		}
+		free($1);
+		free($3);
 	}
-	else if (_parser_kw)
-	{
-	    new = (kw_list_t *)malloc_thing(kw_list_t);
-	    new->entry = entry;
-	    new->value = clone_str($3);
-	    new->next = NULL;
-	    if (_parser_kw_last)
-		_parser_kw_last->next = new;
-	    _parser_kw_last = new;
-	    if (!*_parser_kw)
-		*_parser_kw = new;
-	}
-	free($1);
-	free($3);
-    }
-    | STRING EQUAL
-      {
-	free($1);
-      }
-    |
-    ;
+	| STRING EQUAL
+	  {
+		free($1);
+	  }
+	|
+	;
 
 %%
 
 void
 yyerror(const char *s)
 {
-    if (_save_errors_)
-	_parser_y_error(parser_errstring, ERRSTRING_LEN, s);
+	if (_save_errors_)
+		_parser_y_error(parser_errstring, ERRSTRING_LEN, s);
 }
 
 config_parsed_t *
 parser_load_conf(const char *file)
 {
-    config_parsed_t *cfg = NULL;
-    int err = 0;
-    FILE *f;
+	config_parsed_t *cfg = NULL;
+	int err = 0;
+	FILE *f;
 
-    extern void _parser_y_init (const char *f);
-    extern FILE *yyin;
+	extern void _parser_y_init (const char *f);
+	extern FILE *yyin;
 
-    memset(parser_errstring, 0, ERRSTRING_LEN+1);
+	memset(parser_errstring, 0, ERRSTRING_LEN+1);
 
-    cfg = (config_parsed_t *)malloc_thing(config_parsed_t);
-    if (cfg)
-    {
-	memset(cfg, 0, sizeof(config_parsed_t));
-	f = fopen(file, "r");
-	if (f)
+	cfg = (config_parsed_t *)malloc_thing(config_parsed_t);
+	if (cfg)
 	{
-	    yyin = f;
-	    _parser_y_init(file);
-	    _save_errors_ = 1;
-	    _parser_cfg = cfg;
-
-	    if (yyparse() !=0 )
-	    {
-		if (parser_errstring[0] == '\0')
+		memset(cfg, 0, sizeof(config_parsed_t));
+		f = fopen(file, "r");
+		if (f)
 		{
-		    snprintf(parser_errstring, ERRSTRING_LEN, "Unknown error...");
-		}
-		_save_errors_ = 0;
-		while (yyparse() != 0);
-		err++;
-	    }
-	    else if (parser_errstring[0] != '\0')
-	    {
-		err++;
-	    }
-	    else
-	    {
-		/**
-		 * Config valid
-		 */
-	    }
+			yyin = f;
+			_parser_y_init(file);
+			_save_errors_ = 1;
+			_parser_cfg = cfg;
 
-	    fclose(f);
+			if (yyparse() !=0 )
+			{
+				if (parser_errstring[0] == '\0')
+				{
+					snprintf(parser_errstring, ERRSTRING_LEN, "Unknown error...");
+				}
+				_save_errors_ = 0;
+				while (yyparse() != 0);
+				err++;
+			}
+			else if (parser_errstring[0] != '\0')
+			{
+				err++;
+			}
+			else
+			{
+				/**
+				 * Config valid
+				 */
+			}
+
+			fclose(f);
+		}
+		else
+		{
+			snprintf(parser_errstring, ERRSTRING_LEN, "can't load file '%s'", file);
+			err++;
+		}
 	}
 	else
 	{
-	    snprintf(parser_errstring, ERRSTRING_LEN, "can't load file '%s'", file);
-	    err++;
+		snprintf(parser_errstring, ERRSTRING_LEN, "can't allocate memory");
+		err++;
 	}
-    }
-    else
-    {
-	snprintf(parser_errstring, ERRSTRING_LEN, "can't allocate memory");
-	err++;
-    }
 
-    if (err)
-    {
-	plog("%s", parser_errstring);
+	if (err)
+	{
+		plog("%s", parser_errstring);
 
-	if (cfg)
-	    parser_free_conf(cfg);
-	cfg = NULL;
-    }
+		if (cfg)
+			parser_free_conf(cfg);
+		cfg = NULL;
+	}
 
-    return cfg;
+	return cfg;
 }
 
 static void
 parser_free_kwlist(kw_list_t *list)
 {
-    kw_list_t *elt;
+	kw_list_t *elt;
 
-    while (list)
-    {
-	elt = list;
-	list = list->next;
-	free(elt->value);
-	free(elt);
-    }
+	while (list)
+	{
+		elt = list;
+		list = list->next;
+		free(elt->value);
+		free(elt);
+	}
 }
 
 void
 parser_free_conf(config_parsed_t *cfg)
 {
-    section_list_t *sec;
-    if (cfg)
-    {
-	parser_free_kwlist(cfg->config_setup);
-	while (cfg->conn_first)
+	section_list_t *sec;
+	if (cfg)
 	{
-	    sec = cfg->conn_first;
-	    cfg->conn_first = cfg->conn_first->next;
-	    free(sec->name);
-	    parser_free_kwlist(sec->kw);
-	    free(sec);
+		parser_free_kwlist(cfg->config_setup);
+		while (cfg->conn_first)
+		{
+			sec = cfg->conn_first;
+			cfg->conn_first = cfg->conn_first->next;
+			free(sec->name);
+			parser_free_kwlist(sec->kw);
+			free(sec);
+		}
+		while (cfg->ca_first)
+		{
+			sec = cfg->ca_first;
+			cfg->ca_first = cfg->ca_first->next;
+			free(sec->name);
+			parser_free_kwlist(sec->kw);
+			free(sec);
+		}
+		free(cfg);
 	}
-	while (cfg->ca_first)
-	{
-	    sec = cfg->ca_first;
-	    cfg->ca_first = cfg->ca_first->next;
-	    free(sec->name);
-	    parser_free_kwlist(sec->kw);
-	    free(sec);
-	}
-	free(cfg);
-    }
 }

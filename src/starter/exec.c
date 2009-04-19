@@ -37,18 +37,18 @@
 int
 starter_exec(const char *fmt, ...)
 {
-    va_list args;
-    static char buf[BUF_SIZE];
-    int r;
+	va_list args;
+	static char buf[BUF_SIZE];
+	int r;
 
-    va_start (args, fmt);
-    vsnprintf(buf, BUF_SIZE-1, fmt, args);
-    buf[BUF_SIZE - 1] = '\0';
-    va_end(args);
-    r = system(buf);
-    DBG(DBG_CONTROL,
-	DBG_log("starter_exec(%s) = %d", buf, r)
-    )
-    return r;
+	va_start (args, fmt);
+	vsnprintf(buf, BUF_SIZE-1, fmt, args);
+	buf[BUF_SIZE - 1] = '\0';
+	va_end(args);
+	r = system(buf);
+	DBG(DBG_CONTROL,
+		DBG_log("starter_exec(%s) = %d", buf, r)
+	)
+	return r;
 }
 

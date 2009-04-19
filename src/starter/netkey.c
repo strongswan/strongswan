@@ -29,57 +29,57 @@
 bool
 starter_netkey_init(void)
 {
-    struct stat stb;
+	struct stat stb;
 
-    if (stat(PROC_NETKEY, &stb) != 0)
-    {
-	/* af_key module makes the netkey proc interface visible */
-	if (stat(PROC_MODULES, &stb) == 0)
-	{
-	    ignore_result(system("modprobe -qv af_key"));
-	}
-
-	/* now test again */
 	if (stat(PROC_NETKEY, &stb) != 0)
 	{
-	    DBG(DBG_CONTROL,
-		DBG_log("kernel appears to lack the native netkey IPsec stack")
-	    )
-	    return FALSE;
+		/* af_key module makes the netkey proc interface visible */
+		if (stat(PROC_MODULES, &stb) == 0)
+		{
+			ignore_result(system("modprobe -qv af_key"));
+		}
+
+		/* now test again */
+		if (stat(PROC_NETKEY, &stb) != 0)
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("kernel appears to lack the native netkey IPsec stack")
+			)
+			return FALSE;
+		}
 	}
-    }
 
-    /* make sure that all required IPsec modules are loaded */
-    if (stat(PROC_MODULES, &stb) == 0)
-    {
-	ignore_result(system("modprobe -qv ah4"));
-	ignore_result(system("modprobe -qv esp4"));
-	ignore_result(system("modprobe -qv ipcomp"));
-	ignore_result(system("modprobe -qv xfrm4_tunnel"));
-	ignore_result(system("modprobe -qv xfrm_user"));
-    }
+	/* make sure that all required IPsec modules are loaded */
+	if (stat(PROC_MODULES, &stb) == 0)
+	{
+		ignore_result(system("modprobe -qv ah4"));
+		ignore_result(system("modprobe -qv esp4"));
+		ignore_result(system("modprobe -qv ipcomp"));
+		ignore_result(system("modprobe -qv xfrm4_tunnel"));
+		ignore_result(system("modprobe -qv xfrm_user"));
+	}
 
-    DBG(DBG_CONTROL,
-	DBG_log("Found netkey IPsec stack")
-    )
-    return TRUE;
+	DBG(DBG_CONTROL,
+		DBG_log("Found netkey IPsec stack")
+	)
+	return TRUE;
 }
 
 void
 starter_netkey_cleanup(void)
 {
-    if (system("ip xfrm state > /dev/null 2>&1") == 0)
-    {
-	ignore_result(system("ip xfrm state flush"));
-	ignore_result(system("ip xfrm policy flush"));
-    }
-    else if (system("type setkey > /dev/null 2>&1") == 0)
-    {
-	ignore_result(system("setkey -F"));
-	ignore_result(system("setkey -FP"));
-    }
-    else
-    {
-        plog("WARNING: cannot flush IPsec state/policy database");
-    }
+	if (system("ip xfrm state > /dev/null 2>&1") == 0)
+	{
+		ignore_result(system("ip xfrm state flush"));
+		ignore_result(system("ip xfrm policy flush"));
+	}
+	else if (system("type setkey > /dev/null 2>&1") == 0)
+	{
+		ignore_result(system("setkey -F"));
+		ignore_result(system("setkey -FP"));
+	}
+	else
+	{
+		plog("WARNING: cannot flush IPsec state/policy database");
+	}
 }

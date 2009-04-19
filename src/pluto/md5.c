@@ -41,12 +41,12 @@ documentation and/or software.
 
 #include <stddef.h>
 #include <string.h>
-#include <sys/types.h>	/* for u_int*_t */
-#include <endian.h>	/* sets BYTE_ORDER, LITTLE_ENDIAN, and BIG_ENDIAN */
+#include <sys/types.h>  /* for u_int*_t */
+#include <endian.h>     /* sets BYTE_ORDER, LITTLE_ENDIAN, and BIG_ENDIAN */
 
 #include "md5.h"
 
-#define HAVEMEMCOPY 1	/* use ISO C's memcpy and memset */
+#define HAVEMEMCOPY 1   /* use ISO C's memcpy and memset */
 
 /* Constants for MD5Transform routine.
  */
@@ -84,8 +84,8 @@ static void Decode PROTO_LIST
 
 #ifdef HAVEMEMCOPY
 #include <memory.h>
-#define MD5_memcpy	memcpy
-#define MD5_memset	memset
+#define MD5_memcpy      memcpy
+#define MD5_memset      memset
 #else
 #ifdef HAVEBCOPY
 #define MD5_memcpy(_a,_b,_c) memcpy((_a), (_b),(_c))
@@ -167,23 +167,23 @@ UINT4 inputLen;                            /* length of input block */
 
   /* Update number of bits */
   if ((context->count[0] += (inputLen << 3)) < (inputLen << 3))
-	context->count[1]++;
+		context->count[1]++;
   context->count[1] += (inputLen >> 29);
 
   partLen = 64 - index;
 
   /* Transform as many times as possible. */
   if (inputLen >= partLen) {
-	MD5_memcpy((POINTER)&context->buffer[index], (CONSTPOINTER)input, partLen);
-	MD5Transform (context->state, context->buffer);
+		MD5_memcpy((POINTER)&context->buffer[index], (CONSTPOINTER)input, partLen);
+		MD5Transform (context->state, context->buffer);
 
-	for (i = partLen; i + 63 < inputLen; i += 64)
-	    MD5Transform (context->state, &input[i]);
+		for (i = partLen; i + 63 < inputLen; i += 64)
+			MD5Transform (context->state, &input[i]);
 
-	index = 0;
+		index = 0;
   }
   else
-	i = 0;
+		i = 0;
 
   /* Buffer remaining input */
   MD5_memcpy((POINTER)&context->buffer[index], (CONSTPOINTER)&input[i], inputLen-i);
@@ -211,14 +211,14 @@ MD5_CTX *context;                                       /* context */
   /* Append length (before padding) */
   MD5Update (context, bits, 8);
 
-  if (digest != NULL)			/* Bill Simpson's padding */
+  if (digest != NULL)                   /* Bill Simpson's padding */
   {
-	  /* store state in digest */
-	  Encode (digest, context->state, 16);
+		  /* store state in digest */
+		  Encode (digest, context->state, 16);
 
-	  /* Zeroize sensitive information.
-	   */
-	  MD5_memset ((POINTER)context, 0, sizeof (*context));
+		  /* Zeroize sensitive information.
+		   */
+		  MD5_memset ((POINTER)context, 0, sizeof (*context));
   }
 }
 

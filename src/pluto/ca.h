@@ -20,45 +20,45 @@
 #include "x509.h"
 #include "whack.h"
 
-#define MAX_CA_PATH_LEN		7
+#define MAX_CA_PATH_LEN         7
 
 /* authority flags */
 
-#define AUTH_NONE	0x00	/* no authorities */
-#define AUTH_CA		0x01	/* certification authority */
-#define AUTH_AA		0x02	/* authorization authority */
-#define AUTH_OCSP	0x04	/* ocsp signing authority */
+#define AUTH_NONE       0x00    /* no authorities */
+#define AUTH_CA         0x01    /* certification authority */
+#define AUTH_AA         0x02    /* authorization authority */
+#define AUTH_OCSP       0x04    /* ocsp signing authority */
 
 /* CA info structures */
 
 typedef struct ca_info ca_info_t;
 
 struct ca_info {
-    ca_info_t       *next;
-    char	    *name;
-    time_t	    installed;
-    chunk_t	    authName;
-    chunk_t	    authKeyID;
-    chunk_t	    authKeySerialNumber;
-    char	    *ldaphost;
-    char	    *ldapbase;
-    char	    *ocspuri;
-    generalName_t   *crluri;
-    bool	    strictcrlpolicy;
+	ca_info_t       *next;
+	char            *name;
+	time_t          installed;
+	chunk_t         authName;
+	chunk_t         authKeyID;
+	chunk_t         authKeySerialNumber;
+	char            *ldaphost;
+	char            *ldapbase;
+	char            *ocspuri;
+	generalName_t   *crluri;
+	bool            strictcrlpolicy;
 };
 
 extern bool trusted_ca(chunk_t a, chunk_t b, int *pathlen);
 extern bool match_requested_ca(generalName_t *requested_ca
-    , chunk_t our_ca, int *our_pathlen);
+	, chunk_t our_ca, int *our_pathlen);
 extern x509cert_t* get_authcert(chunk_t subject, chunk_t serial, chunk_t keyid
-    , u_char auth_flags);
+	, u_char auth_flags);
 extern void load_authcerts(const char *type, const char *path
-    , u_char auth_flags);
+	, u_char auth_flags);
 extern x509cert_t* add_authcert(x509cert_t *cert, u_char auth_flags);
 extern void free_authcerts(void);
 extern void list_authcerts(const char *caption, u_char auth_flags, bool utc);
 extern bool trust_authcert_candidate(const x509cert_t *cert
-    , const x509cert_t *alt_chain);
+	, const x509cert_t *alt_chain);
 extern ca_info_t* get_ca_info(chunk_t name, chunk_t serial, chunk_t keyid);
 extern bool find_ca_info_by_name(const char *name, bool delete);
 extern void add_ca_info(const whack_message_t *msg);

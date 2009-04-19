@@ -27,49 +27,49 @@
 #ifdef DEBUG
 
 extern void passert_fail(const char *pred_str
-    , const char *file_str, unsigned long line_no) NEVER_RETURNS;
+	, const char *file_str, unsigned long line_no) NEVER_RETURNS;
 
 extern void pexpect_log(const char *pred_str
-			, const char *file_str, unsigned long line_no);
+						, const char *file_str, unsigned long line_no);
 
 # define impossible() passert_fail("impossible", __FILE__, __LINE__)
 
 extern void switch_fail(int n
-    , const char *file_str, unsigned long line_no) NEVER_RETURNS;
+	, const char *file_str, unsigned long line_no) NEVER_RETURNS;
 
 # define bad_case(n) switch_fail((int) n, __FILE__, __LINE__)
 
 # define passert(pred) { \
-	if (!(pred)) \
-	    passert_fail(#pred, __FILE__, __LINE__); \
-    }
+		if (!(pred)) \
+			passert_fail(#pred, __FILE__, __LINE__); \
+	}
 
 # define pexpect(pred) { \
-	if (!(pred)) \
-	    pexpect_log(#pred, __FILE__, __LINE__); \
-    }
+		if (!(pred)) \
+			pexpect_log(#pred, __FILE__, __LINE__); \
+	}
 
 /* assert that an err_t is NULL; evaluate exactly once */
 # define happy(x) { \
-	err_t ugh = x; \
-	if (ugh != NULL) \
-	    passert_fail(ugh, __FILE__, __LINE__); \
-    }
+		err_t ugh = x; \
+		if (ugh != NULL) \
+			passert_fail(ugh, __FILE__, __LINE__); \
+	}
 
 #else /*!DEBUG*/
 
 # define impossible() abort()
 # define bad_case(n) abort()
-# define passert(pred)  { }	/* do nothing */
-# define happy(x)  { (void) x; }	/* evaluate non-judgementally */
+# define passert(pred)  { }     /* do nothing */
+# define happy(x)  { (void) x; }        /* evaluate non-judgementally */
 
 #endif /*!DEBUG*/
 
 
 extern bool
-    log_to_stderr,	/* should log go to stderr? */
-    log_to_syslog,	/* should log go to syslog? */
-    log_to_perpeer;     /* should log go to per-IP file? */
+	log_to_stderr,      /* should log go to stderr? */
+	log_to_syslog,      /* should log go to syslog? */
+	log_to_perpeer;     /* should log go to per-IP file? */
 
 extern const char *base_perpeer_logdir;
 
@@ -84,25 +84,25 @@ extern const char *base_perpeer_logdir;
  * If the context provides a whack file descriptor, messages
  * should be copied to it -- see whack_log()
  */
-extern int whack_log_fd;	/* only set during whack_handle() */
-extern struct state *cur_state;	/* current state, for diagnostics */
-extern struct connection *cur_connection;	/* current connection, for diagnostics */
-extern const ip_address *cur_from;	/* source of current current message */
-extern u_int16_t cur_from_port;	/* host order */
+extern int whack_log_fd;        /* only set during whack_handle() */
+extern struct state *cur_state; /* current state, for diagnostics */
+extern struct connection *cur_connection;       /* current connection, for diagnostics */
+extern const ip_address *cur_from;      /* source of current current message */
+extern u_int16_t cur_from_port; /* host order */
 
 #ifdef DEBUG
 
-  extern lset_t cur_debugging;	/* current debugging level */
+  extern lset_t cur_debugging;  /* current debugging level */
 
   extern void extra_debugging(const struct connection *c);
 
 # define reset_debugging() { cur_debugging = base_debugging; }
 
 # define GLOBALS_ARE_RESET() (whack_log_fd == NULL_FD \
-    && cur_state == NULL \
-    && cur_connection == NULL \
-    && cur_from == NULL \
-    && cur_debugging == base_debugging)
+	&& cur_state == NULL \
+	&& cur_connection == NULL \
+	&& cur_from == NULL \
+	&& cur_debugging == base_debugging)
 
 #else /*!DEBUG*/
 
@@ -111,40 +111,40 @@ extern u_int16_t cur_from_port;	/* host order */
 # define reset_debugging() { }
 
 # define GLOBALS_ARE_RESET() (whack_log_fd == NULL_FD \
-    && cur_state == NULL \
-    && cur_connection == NULL \
-    && cur_from == NULL)
+	&& cur_state == NULL \
+	&& cur_connection == NULL \
+	&& cur_from == NULL)
 
 #endif /*!DEBUG*/
 
 #define reset_globals() { \
-    whack_log_fd = NULL_FD; \
-    cur_state = NULL; \
-    cur_from = NULL; \
-    reset_cur_connection(); \
-    }
+	whack_log_fd = NULL_FD; \
+	cur_state = NULL; \
+	cur_from = NULL; \
+	reset_cur_connection(); \
+	}
 
 
 #define set_cur_connection(c) { \
-    cur_connection = (c); \
-    extra_debugging(c); \
-    }
+	cur_connection = (c); \
+	extra_debugging(c); \
+	}
 
 #define reset_cur_connection() { \
-    cur_connection = NULL; \
-    reset_debugging(); \
-    }
+	cur_connection = NULL; \
+	reset_debugging(); \
+	}
 
 
 #define set_cur_state(s) { \
-    cur_state = (s); \
-    extra_debugging((s)->st_connection); \
-    }
+	cur_state = (s); \
+	extra_debugging((s)->st_connection); \
+	}
 
 #define reset_cur_state() { \
-    cur_state = NULL; \
-    reset_debugging(); \
-    }
+	cur_state = NULL; \
+	reset_debugging(); \
+	}
 
 extern void init_log(const char *program);
 extern void close_log(void);
@@ -188,12 +188,12 @@ extern void show_status(bool all, const char *name);
  * restriction is not checked in any way: violators will produce
  * confusing results (without crashing!).
  */
-extern char diag_space[LOG_WIDTH];	/* output buffer, but can be occupied at call */
+extern char diag_space[LOG_WIDTH];      /* output buffer, but can be occupied at call */
 extern err_t builddiag(const char *fmt, ...) PRINTF_LIKE(1);
 
 #ifdef DEBUG
 
-extern lset_t base_debugging;	/* bits selecting what to report */
+extern lset_t base_debugging;   /* bits selecting what to report */
 
 #define DBGP(cond)         (cur_debugging & (cond))
 #define DBG(cond, action)   { if (DBGP(cond)) { action ; } }
@@ -204,7 +204,7 @@ extern void DBG_dump(const char *label, const void *p, size_t len);
 
 #else /*!DEBUG*/
 
-#define DBG(cond, action)	{ }	/* do nothing */
+#define DBG(cond, action)       { }     /* do nothing */
 
 #endif /*!DEBUG*/
 

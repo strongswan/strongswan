@@ -23,7 +23,7 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include <signal.h>	/* used only if MSG_NOSIGNAL not defined */
+#include <signal.h>     /* used only if MSG_NOSIGNAL not defined */
 #include <libgen.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -36,118 +36,118 @@
 #include <whack.h>
 
 bool
-    log_to_stderr = FALSE,	/* should log go to stderr? */
-    log_to_syslog = TRUE;	/* should log go to syslog? */
+	log_to_stderr = FALSE,      /* should log go to stderr? */
+	log_to_syslog = TRUE;       /* should log go to syslog? */
 
 void
 init_log(const char *program)
 {
-    if (log_to_stderr)
-	setbuf(stderr, NULL);
-    if (log_to_syslog)
-	openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
+	if (log_to_stderr)
+		setbuf(stderr, NULL);
+	if (log_to_syslog)
+		openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
 }
 
 void
 close_log(void)
 {
-    if (log_to_syslog)
-	closelog();
+	if (log_to_syslog)
+		closelog();
 }
 
 void
 plog(const char *message, ...)
 {
-    va_list args;
-    char m[LOG_WIDTH];	/* longer messages will be truncated */
+	va_list args;
+	char m[LOG_WIDTH];  /* longer messages will be truncated */
 
-    va_start(args, message);
-    vsnprintf(m, sizeof(m), message, args);
-    va_end(args);
+	va_start(args, message);
+	vsnprintf(m, sizeof(m), message, args);
+	va_end(args);
 
-    if (log_to_stderr)
-	fprintf(stderr, "%s\n", m);
-    if (log_to_syslog)
-	syslog(LOG_WARNING, "%s", m);
+	if (log_to_stderr)
+		fprintf(stderr, "%s\n", m);
+	if (log_to_syslog)
+		syslog(LOG_WARNING, "%s", m);
 }
 
 void
 loglog(int mess_no, const char *message, ...)
 {
-    va_list args;
-    char m[LOG_WIDTH];	/* longer messages will be truncated */
+	va_list args;
+	char m[LOG_WIDTH];  /* longer messages will be truncated */
 
-    va_start(args, message);
-    vsnprintf(m, sizeof(m), message, args);
-    va_end(args);
+	va_start(args, message);
+	vsnprintf(m, sizeof(m), message, args);
+	va_end(args);
 
-    if (log_to_stderr)
-	fprintf(stderr, "%s\n", m);
-    if (log_to_syslog)
-	syslog(LOG_WARNING, "%s", m);
+	if (log_to_stderr)
+		fprintf(stderr, "%s\n", m);
+	if (log_to_syslog)
+		syslog(LOG_WARNING, "%s", m);
 }
 
 void
 log_errno_routine(int e, const char *message, ...)
 {
-    va_list args;
-    char m[LOG_WIDTH];	/* longer messages will be truncated */
+	va_list args;
+	char m[LOG_WIDTH];  /* longer messages will be truncated */
 
-    va_start(args, message);
-    vsnprintf(m, sizeof(m), message, args);
-    va_end(args);
+	va_start(args, message);
+	vsnprintf(m, sizeof(m), message, args);
+	va_end(args);
 
-    if (log_to_stderr)
-	fprintf(stderr, "ERROR: %s. Errno %d: %s\n", m, e, strerror(e));
-    if (log_to_syslog)
-	syslog(LOG_ERR, "ERROR: %s. Errno %d: %s", m, e, strerror(e));
+	if (log_to_stderr)
+		fprintf(stderr, "ERROR: %s. Errno %d: %s\n", m, e, strerror(e));
+	if (log_to_syslog)
+		syslog(LOG_ERR, "ERROR: %s. Errno %d: %s", m, e, strerror(e));
 }
 
 void
 exit_log(const char *message, ...)
 {
-    va_list args;
-    char m[LOG_WIDTH];	/* longer messages will be truncated */
+	va_list args;
+	char m[LOG_WIDTH];  /* longer messages will be truncated */
 
-    va_start(args, message);
-    vsnprintf(m, sizeof(m), message, args);
-    va_end(args);
+	va_start(args, message);
+	vsnprintf(m, sizeof(m), message, args);
+	va_end(args);
 
-    if (log_to_stderr)
-	fprintf(stderr, "FATAL ERROR: %s\n", m);
-    if (log_to_syslog)
-	syslog(LOG_ERR, "FATAL ERROR: %s", m);
-    exit(1);
+	if (log_to_stderr)
+		fprintf(stderr, "FATAL ERROR: %s\n", m);
+	if (log_to_syslog)
+		syslog(LOG_ERR, "FATAL ERROR: %s", m);
+	exit(1);
 }
 
 void
 exit_log_errno_routine(int e, const char *message, ...)
 {
-    va_list args;
-    char m[LOG_WIDTH];	/* longer messages will be truncated */
+	va_list args;
+	char m[LOG_WIDTH];  /* longer messages will be truncated */
 
-    va_start(args, message);
-    vsnprintf(m, sizeof(m), message, args);
-    va_end(args);
+	va_start(args, message);
+	vsnprintf(m, sizeof(m), message, args);
+	va_end(args);
 
-    if (log_to_stderr)
-	fprintf(stderr, "FATAL ERROR: %s. Errno %d: %s\n", m, e, strerror(e));
-    if (log_to_syslog)
-	syslog(LOG_ERR, "FATAL ERROR: %s. Errno %d: %s", m, e, strerror(e));
-    exit(1);
+	if (log_to_stderr)
+		fprintf(stderr, "FATAL ERROR: %s. Errno %d: %s\n", m, e, strerror(e));
+	if (log_to_syslog)
+		syslog(LOG_ERR, "FATAL ERROR: %s. Errno %d: %s", m, e, strerror(e));
+	exit(1);
 }
 
 void
 whack_log(int mess_no, const char *message, ...)
 {
-    va_list args;
-    char m[LOG_WIDTH];	/* longer messages will be truncated */
+	va_list args;
+	char m[LOG_WIDTH];  /* longer messages will be truncated */
 
-    va_start(args, message);
-    vsnprintf(m, sizeof(m), message, args);
-    va_end(args);
+	va_start(args, message);
+	vsnprintf(m, sizeof(m), message, args);
+	va_end(args);
 
-    fprintf(stderr, "%s\n", m);
+	fprintf(stderr, "%s\n", m);
 }
 
 /* Build up a diagnostic in a static buffer.
@@ -165,16 +165,16 @@ char diag_space[sizeof(diag_space)];
 err_t
 builddiag(const char *fmt, ...)
 {
-    static char diag_space[LOG_WIDTH];	/* longer messages will be truncated */
-    char t[sizeof(diag_space)];	/* build result here first */
-    va_list args;
+	static char diag_space[LOG_WIDTH];  /* longer messages will be truncated */
+	char t[sizeof(diag_space)]; /* build result here first */
+	va_list args;
 
-    va_start(args, fmt);
-    t[0] = '\0';	/* in case nothing terminates string */
-    vsnprintf(t, sizeof(t), fmt, args);
-    va_end(args);
-    strcpy(diag_space, t);
-    return diag_space;
+	va_start(args, fmt);
+	t[0] = '\0';        /* in case nothing terminates string */
+	vsnprintf(t, sizeof(t), fmt, args);
+	va_end(args);
+	strcpy(diag_space, t);
+	return diag_space;
 }
 
 /* Debugging message support */
@@ -184,29 +184,29 @@ builddiag(const char *fmt, ...)
 void
 switch_fail(int n, const char *file_str, unsigned long line_no)
 {
-    char buf[30];
+	char buf[30];
 
-    snprintf(buf, sizeof(buf), "case %d unexpected", n);
-    passert_fail(buf, file_str, line_no);
+	snprintf(buf, sizeof(buf), "case %d unexpected", n);
+	passert_fail(buf, file_str, line_no);
 }
 
 void
 passert_fail(const char *pred_str, const char *file_str, unsigned long line_no)
 {
-    /* we will get a possibly unplanned prefix.  Hope it works */
-    loglog(RC_LOG_SERIOUS, "ASSERTION FAILED at %s:%lu: %s", file_str, line_no, pred_str);
-    abort();	/* exiting correctly doesn't always work */
+	/* we will get a possibly unplanned prefix.  Hope it works */
+	loglog(RC_LOG_SERIOUS, "ASSERTION FAILED at %s:%lu: %s", file_str, line_no, pred_str);
+	abort();    /* exiting correctly doesn't always work */
 }
 
 lset_t
-    base_debugging = DBG_NONE,	/* default to reporting nothing */
-    cur_debugging =  DBG_NONE;
+	base_debugging = DBG_NONE,  /* default to reporting nothing */
+	cur_debugging =  DBG_NONE;
 
 void
 pexpect_log(const char *pred_str, const char *file_str, unsigned long line_no)
 {
-    /* we will get a possibly unplanned prefix.  Hope it works */
-    loglog(RC_LOG_SERIOUS, "EXPECTATION FAILED at %s:%lu: %s", file_str, line_no, pred_str);
+	/* we will get a possibly unplanned prefix.  Hope it works */
+	loglog(RC_LOG_SERIOUS, "EXPECTATION FAILED at %s:%lu: %s", file_str, line_no, pred_str);
 }
 
 /* log a debugging message (prefixed by "| ") */
@@ -214,17 +214,17 @@ pexpect_log(const char *pred_str, const char *file_str, unsigned long line_no)
 void
 DBG_log(const char *message, ...)
 {
-    va_list args;
-    char m[LOG_WIDTH];	/* longer messages will be truncated */
+	va_list args;
+	char m[LOG_WIDTH];  /* longer messages will be truncated */
 
-    va_start(args, message);
-    vsnprintf(m, sizeof(m), message, args);
-    va_end(args);
+	va_start(args, message);
+	vsnprintf(m, sizeof(m), message, args);
+	va_end(args);
 
-    if (log_to_stderr)
-	fprintf(stderr, "| %s\n", m);
-    if (log_to_syslog)
-	syslog(LOG_DEBUG, "| %s", m);
+	if (log_to_stderr)
+		fprintf(stderr, "| %s\n", m);
+	if (log_to_syslog)
+		syslog(LOG_DEBUG, "| %s", m);
 }
 
 /* dump raw bytes in hex to stderr (for lack of any better destination) */
@@ -232,62 +232,62 @@ DBG_log(const char *message, ...)
 void
 DBG_dump(const char *label, const void *p, size_t len)
 {
-#   define DUMP_LABEL_WIDTH 20	/* arbitrary modest boundary */
-#   define DUMP_WIDTH	(4 * (1 + 4 * 3) + 1)
-    char buf[DUMP_LABEL_WIDTH + DUMP_WIDTH];
-    char *bp;
-    const unsigned char *cp = p;
+#   define DUMP_LABEL_WIDTH 20  /* arbitrary modest boundary */
+#   define DUMP_WIDTH   (4 * (1 + 4 * 3) + 1)
+	char buf[DUMP_LABEL_WIDTH + DUMP_WIDTH];
+	char *bp;
+	const unsigned char *cp = p;
 
-    bp = buf;
-
-    if (label != NULL && label[0] != '\0')
-    {
-	/* Handle the label.  Care must be taken to avoid buffer overrun. */
-	size_t llen = strlen(label);
-
-	if (llen + 1 > sizeof(buf))
-	{
-	    DBG_log("%s", label);
-	}
-	else
-	{
-	    strcpy(buf, label);
-	    if (buf[llen-1] == '\n')
-	    {
-		buf[llen-1] = '\0';	/* get rid of newline */
-		DBG_log("%s", buf);
-	    }
-	    else if (llen < DUMP_LABEL_WIDTH)
-	    {
-		bp = buf + llen;
-	    }
-	    else
-	    {
-		DBG_log("%s", buf);
-	    }
-	}
-    }
-
-    do {
-	int i, j;
-
-	for (i = 0; len!=0 && i!=4; i++)
-	{
-	    *bp++ = ' ';
-	    for (j = 0; len!=0 && j!=4; len--, j++)
-	    {
-		static const char hexdig[] = "0123456789abcdef";
-
-		*bp++ = ' ';
-		*bp++ = hexdig[(*cp >> 4) & 0xF];
-		*bp++ = hexdig[*cp & 0xF];
-		cp++;
-	    }
-	}
-	*bp = '\0';
-	DBG_log("%s", buf);
 	bp = buf;
-    } while (len != 0);
+
+	if (label != NULL && label[0] != '\0')
+	{
+		/* Handle the label.  Care must be taken to avoid buffer overrun. */
+		size_t llen = strlen(label);
+
+		if (llen + 1 > sizeof(buf))
+		{
+			DBG_log("%s", label);
+		}
+		else
+		{
+			strcpy(buf, label);
+			if (buf[llen-1] == '\n')
+			{
+				buf[llen-1] = '\0';     /* get rid of newline */
+				DBG_log("%s", buf);
+			}
+			else if (llen < DUMP_LABEL_WIDTH)
+			{
+				bp = buf + llen;
+			}
+			else
+			{
+				DBG_log("%s", buf);
+			}
+		}
+	}
+
+	do {
+		int i, j;
+
+		for (i = 0; len!=0 && i!=4; i++)
+		{
+			*bp++ = ' ';
+			for (j = 0; len!=0 && j!=4; len--, j++)
+			{
+				static const char hexdig[] = "0123456789abcdef";
+
+				*bp++ = ' ';
+				*bp++ = hexdig[(*cp >> 4) & 0xF];
+				*bp++ = hexdig[*cp & 0xF];
+				cp++;
+			}
+		}
+		*bp = '\0';
+		DBG_log("%s", buf);
+		bp = buf;
+	} while (len != 0);
 #   undef DUMP_LABEL_WIDTH
 #   undef DUMP_WIDTH
 }

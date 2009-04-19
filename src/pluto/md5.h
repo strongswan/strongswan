@@ -4,9 +4,9 @@
  */
 
 /* PROTOTYPES should be set to one if and only if the compiler supports
-     function argument prototyping.
+	 function argument prototyping.
    The following makes PROTOTYPES default to 0 if it has not already
-     been defined with C compiler flags.
+	 been defined with C compiler flags.
  */
 #ifndef PROTOTYPES
 #define PROTOTYPES 1
@@ -24,7 +24,7 @@ typedef u_int32_t UINT4;
 
 /* PROTO_LIST is defined depending on how PROTOTYPES is defined above.
    If using PROTOTYPES, then PROTO_LIST returns the list, otherwise it
-     returns an empty list.
+	 returns an empty list.
  */
 
 #if PROTOTYPES

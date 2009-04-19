@@ -24,23 +24,23 @@
 #include <chunk.h>
 
 #ifdef KLIPS
-# define USED_BY_KLIPS	/* ignore */
+# define USED_BY_KLIPS  /* ignore */
 #else
-# define USED_BY_KLIPS	UNUSED
+# define USED_BY_KLIPS  UNUSED
 #endif
 
 #ifdef DEBUG
-# define USED_BY_DEBUG	/* ignore */
+# define USED_BY_DEBUG  /* ignore */
 #else
-# define USED_BY_DEBUG	UNUSED
+# define USED_BY_DEBUG  UNUSED
 #endif
 
 /* type of serial number of a state object
  * Needed in connections.h and state.h; here to simplify dependencies.
  */
 typedef unsigned long so_serial_t;
-#define SOS_NOBODY	0	/* null serial number */
-#define SOS_FIRST	1	/* first normal serial number */
+#define SOS_NOBODY      0       /* null serial number */
+#define SOS_FIRST       1       /* first normal serial number */
 
 /* memory allocation */
 
@@ -49,13 +49,13 @@ extern void *clone_bytes(const void *orig, size_t size);
 #define clone_thing(orig) clone_bytes((const void *)&(orig), sizeof(orig))
 
 #define clone_str(str) \
-    ((str) == NULL? NULL : strdup(str))
+	((str) == NULL? NULL : strdup(str))
 
 #define replace(p, q) \
-    { free(p); (p) = (q); }
+	{ free(p); (p) = (q); }
 
 #define chunkcpy(dst, chunk) \
-    { memcpy(dst, chunk.ptr, chunk.len); dst += chunk.len;}
+	{ memcpy(dst, chunk.ptr, chunk.len); dst += chunk.len;}
 
 extern char* temporary_cyclic_buffer(void);
 extern const char* concatenate_paths(const char *a, const char *b);
@@ -65,26 +65,26 @@ extern void mv_chunk(u_char **pos, chunk_t content);
 
 /* write the binary contents of a chunk_t to a file */
 extern bool write_chunk(const char *filename, const char *label, chunk_t ch
-    ,mode_t mask, bool force);
+	,mode_t mask, bool force);
 
 /* warns a predefined interval before expiry */
 extern const char* check_expiry(time_t expiration_date,
-    int warning_interval, bool strict);
+	int warning_interval, bool strict);
 
-#define MAX_PROMPT_PASS_TRIALS	5
-#define PROMPT_PASS_LEN		64
+#define MAX_PROMPT_PASS_TRIALS  5
+#define PROMPT_PASS_LEN         64
 
 /* struct used to prompt for a secret passphrase
  * from a console with file descriptor fd
  */
 typedef struct {
-    char secret[PROMPT_PASS_LEN+1];
-    bool prompt;
-    int fd;
+	char secret[PROMPT_PASS_LEN+1];
+	bool prompt;
+	int fd;
 } prompt_pass_t;
 
 /* size of timetoa string buffer */
-#define TIMETOA_BUF	30
+#define TIMETOA_BUF     30
 
 /* filter eliminating the directory entries '.' and '..' */
 typedef struct dirent dirent_t;

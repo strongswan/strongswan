@@ -21,7 +21,7 @@
 /*
  * Length of PGP V3 fingerprint
  */
-#define PGP_FINGERPRINT_SIZE	MD5_DIGEST_SIZE
+#define PGP_FINGERPRINT_SIZE    MD5_DIGEST_SIZE
 
 typedef char fingerprint_t[PGP_FINGERPRINT_SIZE];
 
@@ -30,16 +30,16 @@ typedef char fingerprint_t[PGP_FINGERPRINT_SIZE];
 typedef struct pgpcert pgpcert_t;
 
 struct pgpcert {
-  pgpcert_t	    *next;
-  time_t	    installed;
-  int		    count;
-  chunk_t	    certificate;
-  time_t	    created;
-  time_t	    until;
+  pgpcert_t         *next;
+  time_t            installed;
+  int               count;
+  chunk_t           certificate;
+  time_t            created;
+  time_t            until;
   enum pubkey_alg   pubkeyAlg;
-  chunk_t	    modulus;
-  chunk_t	    publicExponent;
-  fingerprint_t	    fingerprint;
+  chunk_t           modulus;
+  chunk_t           publicExponent;
+  fingerprint_t     fingerprint;
 };
 
 extern const pgpcert_t empty_pgpcert;

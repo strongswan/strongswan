@@ -29,7 +29,7 @@
 #include "rnd.h"
 #include "cookie.h"
 
-const u_char zero_cookie[COOKIE_SIZE];	/* guaranteed 0 */
+const u_char zero_cookie[COOKIE_SIZE];  /* guaranteed 0 */
 
 /* Generate a cookie.
  * First argument is true if we're to create an Initiator cookie.
@@ -38,30 +38,30 @@ const u_char zero_cookie[COOKIE_SIZE];	/* guaranteed 0 */
 void
 get_cookie(bool initiator, u_int8_t *cookie, int length, const ip_address *addr)
 {
-    u_char buffer[SHA1_DIGEST_SIZE];
-    SHA1_CTX ctx;
+	u_char buffer[SHA1_DIGEST_SIZE];
+	SHA1_CTX ctx;
 
-    do {
-	if (initiator)
-	{
-	    get_rnd_bytes(cookie, length);
-	}
-	else  /* Responder cookie */
-	{
-	    /* This looks as good as any way */
-	    size_t addr_length;
-	    static u_int32_t counter = 0;
-	    unsigned char addr_buff[
-		sizeof(union {struct in_addr A; struct in6_addr B;})];
+	do {
+		if (initiator)
+		{
+			get_rnd_bytes(cookie, length);
+		}
+		else  /* Responder cookie */
+		{
+			/* This looks as good as any way */
+			size_t addr_length;
+			static u_int32_t counter = 0;
+			unsigned char addr_buff[
+				sizeof(union {struct in_addr A; struct in6_addr B;})];
 
-	    addr_length = addrbytesof(addr, addr_buff, sizeof(addr_buff));
-	    SHA1Init(&ctx);
-	    SHA1Update(&ctx, addr_buff, addr_length);
-	    SHA1Update(&ctx, secret_of_the_day, sizeof(secret_of_the_day));
-	    counter++;
-	    SHA1Update(&ctx, (const void *) &counter, sizeof(counter));
-	    SHA1Final(buffer, &ctx);
-	    memcpy(cookie, buffer, length);
-	}
-    } while (is_zero_cookie(cookie));	/* probably never loops */
+			addr_length = addrbytesof(addr, addr_buff, sizeof(addr_buff));
+			SHA1Init(&ctx);
+			SHA1Update(&ctx, addr_buff, addr_length);
+			SHA1Update(&ctx, secret_of_the_day, sizeof(secret_of_the_day));
+			counter++;
+			SHA1Update(&ctx, (const void *) &counter, sizeof(counter));
+			SHA1Final(buffer, &ctx);
+			memcpy(cookie, buffer, length);
+		}
+	} while (is_zero_cookie(cookie));   /* probably never loops */
 }

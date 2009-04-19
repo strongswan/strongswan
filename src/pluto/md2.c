@@ -21,15 +21,15 @@
 
 #include "md2.h"
 
-#define HAVEMEMCOPY 1	/* use ISO C's memcpy and memset */
+#define HAVEMEMCOPY 1   /* use ISO C's memcpy and memset */
 
 static void MD2Transform PROTO_LIST
   ((unsigned char [16], unsigned char [16], const unsigned char [16]));
 
 #ifdef HAVEMEMCOPY
 #include <memory.h>
-#define MD2_memcpy	memcpy
-#define MD2_memset	memset
+#define MD2_memcpy      memcpy
+#define MD2_memset      memset
 #else
 #ifdef HAVEBCOPY
 #define MD2_memcpy(_a,_b,_c) memcpy((_a), (_b),(_c))
@@ -79,13 +79,13 @@ static const unsigned char *PADDING[] = {
   (const unsigned char *)"\013\013\013\013\013\013\013\013\013\013\013",
   (const unsigned char *)"\014\014\014\014\014\014\014\014\014\014\014\014",
   (const unsigned char *)
-    "\015\015\015\015\015\015\015\015\015\015\015\015\015",
+	"\015\015\015\015\015\015\015\015\015\015\015\015\015",
   (const unsigned char *)
-    "\016\016\016\016\016\016\016\016\016\016\016\016\016\016",
+	"\016\016\016\016\016\016\016\016\016\016\016\016\016\016",
   (const unsigned char *)
-    "\017\017\017\017\017\017\017\017\017\017\017\017\017\017\017",
+	"\017\017\017\017\017\017\017\017\017\017\017\017\017\017\017",
   (const unsigned char *)
-    "\020\020\020\020\020\020\020\020\020\020\020\020\020\020\020\020"
+	"\020\020\020\020\020\020\020\020\020\020\020\020\020\020\020\020"
 };
 
 /* MD2 initialization. Begins an MD2 operation, writing a new context.
@@ -96,12 +96,12 @@ MD2_CTX *context;                                        /* context */
   context->count = 0;
   MD2_memset ((POINTER)context->state, 0, sizeof (context->state));
   MD2_memset
-    ((POINTER)context->checksum, 0, sizeof (context->checksum));
+	((POINTER)context->checksum, 0, sizeof (context->checksum));
 }
 
 /* MD2 block update operation. Continues an MD2 message-digest
-     operation, processing another message block, and updating the
-     context.
+	 operation, processing another message block, and updating the
+	 context.
  */
 void MD2Update (context, input, inputLen)
 MD2_CTX *context;                                        /* context */
@@ -117,28 +117,28 @@ unsigned int inputLen;                     /* length of input block */
   partLen = 16 - index;
 
   /* Transform as many times as possible.
-    */
+	*/
   if (inputLen >= partLen) {
-    MD2_memcpy
-      ((POINTER)&context->buffer[index], (CONST_POINTER)input, partLen);
-    MD2Transform (context->state, context->checksum, context->buffer);
+	MD2_memcpy
+	  ((POINTER)&context->buffer[index], (CONST_POINTER)input, partLen);
+	MD2Transform (context->state, context->checksum, context->buffer);
 
-    for (i = partLen; i + 15 < inputLen; i += 16)
-      MD2Transform (context->state, context->checksum, &input[i]);
+	for (i = partLen; i + 15 < inputLen; i += 16)
+	  MD2Transform (context->state, context->checksum, &input[i]);
 
-    index = 0;
+	index = 0;
   }
   else
-    i = 0;
+	i = 0;
 
   /* Buffer remaining input */
   MD2_memcpy
-    ((POINTER)&context->buffer[index], (CONST_POINTER)&input[i],
-     inputLen-i);
+	((POINTER)&context->buffer[index], (CONST_POINTER)&input[i],
+	 inputLen-i);
 }
 
 /* MD2 finalization. Ends an MD2 message-digest operation, writing the
-     message digest and zeroizing the context.
+	 message digest and zeroizing the context.
  */
 void MD2Final (digest, context)
 
@@ -165,7 +165,7 @@ MD2_CTX *context;                                        /* context */
 }
 
 /* MD2 basic transformation. Transforms state and updates checksum
-     based on block.
+	 based on block.
  */
 static void MD2Transform (state, checksum, block)
 unsigned char state[16];
@@ -180,15 +180,15 @@ const unsigned char block[16];
   MD2_memcpy ((POINTER)x, (CONST_POINTER)state, 16);
   MD2_memcpy ((POINTER)x+16, (CONST_POINTER)block, 16);
   for (i = 0; i < 16; i++)
-    x[i+32] = state[i] ^ block[i];
+	x[i+32] = state[i] ^ block[i];
 
   /* Encrypt block (18 rounds).
    */
   t = 0;
   for (i = 0; i < 18; i++) {
-    for (j = 0; j < 48; j++)
-      t = x[j] ^= PI_SUBST[t];
-    t = (t + i) & 0xff;
+	for (j = 0; j < 48; j++)
+	  t = x[j] ^= PI_SUBST[t];
+	t = (t + i) & 0xff;
   }
 
   /* Save new state */
@@ -198,7 +198,7 @@ const unsigned char block[16];
    */
   t = checksum[15];
   for (i = 0; i < 16; i++)
-    t = checksum[i] ^= PI_SUBST[block[i] ^ t];
+	t = checksum[i] ^= PI_SUBST[block[i] ^ t];
 
   /* Zeroize sensitive information.
    */
@@ -217,7 +217,7 @@ unsigned int len;
   unsigned int i;
 
   for (i = 0; i < len; i++)
-    output[i] = input[i];
+	output[i] = input[i];
 }
 
 /* Note: Replace "for loop" with standard memset if possible.
@@ -230,7 +230,7 @@ unsigned int len;
   unsigned int i;
 
   for (i = 0; i < len; i++)
-    ((char *)output)[i] = (char)value;
+	((char *)output)[i] = (char)value;
 }
 #endif
 #endif

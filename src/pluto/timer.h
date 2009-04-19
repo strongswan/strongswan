@@ -14,16 +14,16 @@
  * RCSID $Id$
  */
 
-extern time_t now(void);	/* careful version of time(2) */
+extern time_t now(void);        /* careful version of time(2) */
 
-struct state;	/* forward declaration */
+struct state;   /* forward declaration */
 
 struct event
 {
-    time_t          ev_time;
-    int             ev_type;        /* Event type */
-    struct state   *ev_state;       /* Pointer to relevant state (if any) */
-    struct event   *ev_next;        /* Pointer to next event */
+	time_t          ev_time;
+	int             ev_type;        /* Event type */
+	struct state   *ev_state;       /* Pointer to relevant state (if any) */
+	struct event   *ev_next;        /* Pointer to next event */
 };
 
 extern void event_schedule(enum event_type type, time_t tm, struct state *st);

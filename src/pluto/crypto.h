@@ -24,15 +24,15 @@ extern void free_crypto(void);
 
 /* Oakley group descriptions */
 
-extern MP_INT groupgenerator;	/* MODP group generator (2) */
+extern MP_INT groupgenerator;   /* MODP group generator (2) */
 
 struct oakley_group_desc {
-    u_int16_t group;
-    MP_INT *modulus;
-    size_t bytes;
+	u_int16_t group;
+	MP_INT *modulus;
+	size_t bytes;
 };
 
-extern const struct oakley_group_desc unset_group;	/* magic signifier */
+extern const struct oakley_group_desc unset_group;      /* magic signifier */
 extern const struct oakley_group_desc *lookup_group(u_int16_t group);
 #define OAKLEY_GROUP_SIZE 7
 extern const struct oakley_group_desc oakley_group[OAKLEY_GROUP_SIZE];
@@ -47,26 +47,26 @@ extern const struct oakley_group_desc oakley_group[OAKLEY_GROUP_SIZE];
 #define MAX_OAKLEY_KEY_LEN0  (3 * DES_CBC_BLOCK_SIZE)
 #define MAX_OAKLEY_KEY_LEN  (256/BITS_PER_BYTE)
 
-struct state;	/* forward declaration, dammit */
+struct state;   /* forward declaration, dammit */
 
 void crypto_cbc_encrypt(const struct encrypt_desc *e, bool enc, u_int8_t *buf, size_t size, struct state *st);
 
-#define update_iv(st)	memcpy((st)->st_iv, (st)->st_new_iv \
-    , (st)->st_iv_len = (st)->st_new_iv_len)
+#define update_iv(st)   memcpy((st)->st_iv, (st)->st_new_iv \
+	, (st)->st_iv_len = (st)->st_new_iv_len)
 
 #define set_ph1_iv(st, iv) \
-    passert((st)->st_ph1_iv_len <= sizeof((st)->st_ph1_iv)); \
-    memcpy((st)->st_ph1_iv, (iv), (st)->st_ph1_iv_len);
+	passert((st)->st_ph1_iv_len <= sizeof((st)->st_ph1_iv)); \
+	memcpy((st)->st_ph1_iv, (iv), (st)->st_ph1_iv_len);
 
 /* unification of cryptographic hashing mechanisms */
 
 #ifndef NO_HASH_CTX
 union hash_ctx {
-	MD5_CTX ctx_md5;
-	SHA1_CTX ctx_sha1;
-	sha256_context ctx_sha256;
-	sha512_context ctx_sha512;
-    };
+		MD5_CTX ctx_md5;
+		SHA1_CTX ctx_sha1;
+		sha256_context ctx_sha256;
+		sha512_context ctx_sha512;
+	};
 
 /* HMAC package
  * Note that hmac_ctx can be (and is) copied since there are
@@ -74,36 +74,36 @@ union hash_ctx {
  */
 
 struct hmac_ctx {
-    const struct hash_desc *h;	/* underlying hash function */
-    size_t hmac_digest_size;	/* copy of h->hash_digest_size */
-    union hash_ctx hash_ctx;	/* ctx for hash function */
-    u_char buf1[MAX_HASH_BLOCK_SIZE];
-    u_char buf2[MAX_HASH_BLOCK_SIZE];
-    };
+	const struct hash_desc *h;  /* underlying hash function */
+	size_t hmac_digest_size;    /* copy of h->hash_digest_size */
+	union hash_ctx hash_ctx;    /* ctx for hash function */
+	u_char buf1[MAX_HASH_BLOCK_SIZE];
+	u_char buf2[MAX_HASH_BLOCK_SIZE];
+	};
 
 extern void hmac_init(
-    struct hmac_ctx *ctx,
-    const struct hash_desc *h,
-    const u_char *key,
-    size_t key_len);
+	struct hmac_ctx *ctx,
+	const struct hash_desc *h,
+	const u_char *key,
+	size_t key_len);
 
 #define hmac_init_chunk(ctx, h, ch) hmac_init((ctx), (h), (ch).ptr, (ch).len)
 
-extern void hmac_reinit(struct hmac_ctx *ctx);	/* saves recreating pads */
+extern void hmac_reinit(struct hmac_ctx *ctx);  /* saves recreating pads */
 
 extern void hmac_update(
-    struct hmac_ctx *ctx,
-    const u_char *data,
-    size_t data_len);
+	struct hmac_ctx *ctx,
+	const u_char *data,
+	size_t data_len);
 
 #define hmac_update_chunk(ctx, ch) hmac_update((ctx), (ch).ptr, (ch).len)
 
 extern void hmac_final(u_char *output, struct hmac_ctx *ctx);
 
 #define hmac_final_chunk(ch, name, ctx) { \
-	free((ch).ptr); \
-	(ch).len = (ctx)->hmac_digest_size; \
-	(ch).ptr = malloc((ch).len); \
-	hmac_final((ch).ptr, (ctx)); \
-    }
+		free((ch).ptr); \
+		(ch).len = (ctx)->hmac_digest_size; \
+		(ch).ptr = malloc((ch).len); \
+		hmac_final((ch).ptr, (ctx)); \
+	}
 #endif

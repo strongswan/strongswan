@@ -1,5 +1,5 @@
 /* elgamal.h
- *	Copyright (C) 1998 Free Software Foundation, Inc.
+ *      Copyright (C) 1998 Free Software Foundation, Inc.
  *
  * This file is part of GnuPG.
  *
@@ -26,10 +26,10 @@ int elg_encrypt( int algo, MPI *resarr, MPI data, MPI *pkey );
 int elg_decrypt( int algo, MPI *result, MPI *data, MPI *skey );
 int elg_sign( int algo, MPI *resarr, MPI data, MPI *skey );
 int elg_verify( int algo, MPI hash, MPI *data, MPI *pkey,
-		    int (*cmp)(void *, MPI), void *opaquev );
+					int (*cmp)(void *, MPI), void *opaquev );
 unsigned elg_get_nbits( int algo, MPI *pkey );
 const char *elg_get_info( int algo, int *npkey, int *nskey,
-				    int *nenc, int *nsig, int *use );
+									int *nenc, int *nsig, int *use );
 
 
 #endif /*G10_ELGAMAL_H*/

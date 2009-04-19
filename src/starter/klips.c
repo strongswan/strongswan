@@ -29,54 +29,54 @@
 bool
 starter_klips_init(void)
 {
-    struct stat stb;
+	struct stat stb;
 
-    if (stat(PROC_KLIPS, &stb) != 0)
-    {
-	/* ipsec module makes the pf_key proc interface visible */
-	if (stat(PROC_MODULES, &stb) == 0)
-	{
-	    ignore_result(system("modprobe -qv ipsec"));
-	}
-
-	/* now test again */
 	if (stat(PROC_KLIPS, &stb) != 0)
 	{
-	    DBG(DBG_CONTROL,
-		DBG_log("kernel appears to lack the KLIPS IPsec stack")
-	    )
-	    return FALSE;
-	}
-    }
-    
-    /* load crypto algorithm modules */
-    ignore_result(system("modprobe -qv ipsec_aes"));
-    ignore_result(system("modprobe -qv ipsec_blowfish"));
-    ignore_result(system("modprobe -qv ipsec_sha2"));
+		/* ipsec module makes the pf_key proc interface visible */
+		if (stat(PROC_MODULES, &stb) == 0)
+		{
+			ignore_result(system("modprobe -qv ipsec"));
+		}
 
-    DBG(DBG_CONTROL,
-	DBG_log("Found KLIPS IPsec stack")
-    )
-    
-    return TRUE;
+		/* now test again */
+		if (stat(PROC_KLIPS, &stb) != 0)
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("kernel appears to lack the KLIPS IPsec stack")
+			)
+			return FALSE;
+		}
+	}
+	
+	/* load crypto algorithm modules */
+	ignore_result(system("modprobe -qv ipsec_aes"));
+	ignore_result(system("modprobe -qv ipsec_blowfish"));
+	ignore_result(system("modprobe -qv ipsec_sha2"));
+
+	DBG(DBG_CONTROL,
+		DBG_log("Found KLIPS IPsec stack")
+	)
+	
+	return TRUE;
 }
 
 void
 starter_klips_cleanup(void)
 {
-    if (system("type eroute > /dev/null 2>&1") == 0)
-    {
-	ignore_result(system("spi --clear"));
-	ignore_result(system("eroute --clear"));
-    }
-	else if (system("type setkey > /dev/null 2>&1") == 0)
-    {
-	ignore_result(system("setkey -F"));
-	ignore_result(system("setkey -FP"));
-    }
-    else
-    {
-	plog("WARNING: cannot flush IPsec state/policy database");
-    }
+	if (system("type eroute > /dev/null 2>&1") == 0)
+	{
+		ignore_result(system("spi --clear"));
+		ignore_result(system("eroute --clear"));
+	}
+		else if (system("type setkey > /dev/null 2>&1") == 0)
+	{
+		ignore_result(system("setkey -F"));
+		ignore_result(system("setkey -FP"));
+	}
+	else
+	{
+		plog("WARNING: cannot flush IPsec state/policy database");
+	}
 }
 

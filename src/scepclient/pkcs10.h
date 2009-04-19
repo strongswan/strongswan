@@ -4,7 +4,7 @@
  * 
  * Contains functions to build DER encoded pkcs#10 certificate requests
  */
- 
+
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -38,20 +38,20 @@ typedef struct pkcs10_struct pkcs10_t;
  * The RSA private key is needed to compute the signature of the given request
  */
 struct pkcs10_struct {
-    RSA_private_key_t *private_key;
-    chunk_t            request;
-    chunk_t            subject;
-    chunk_t            challengePassword;
-    generalName_t     *subjectAltNames;
+	RSA_private_key_t *private_key;
+	chunk_t            request;
+	chunk_t            subject;
+	chunk_t            challengePassword;
+	generalName_t     *subjectAltNames;
 };
 
 extern const pkcs10_t empty_pkcs10;
 
 extern void pkcs10_add_subjectAltName(generalName_t **subjectAltNames
-    , generalNames_t kind, char *value);
+	, generalNames_t kind, char *value);
 extern pkcs10_t* pkcs10_build(RSA_private_key_t *key, chunk_t subject
-    , chunk_t challengePassword, generalName_t *subjectAltNames
-    , int signature_alg);
+	, chunk_t challengePassword, generalName_t *subjectAltNames
+	, int signature_alg);
 extern void pkcs10_free(pkcs10_t *pkcs10);
 
 #endif /* _PKCS10_H */

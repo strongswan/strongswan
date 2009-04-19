@@ -17,25 +17,25 @@
 
 #include "x509.h"
 
-#define FETCH_CMD_TIMEOUT	10	/* seconds */
+#define FETCH_CMD_TIMEOUT       10      /* seconds */
 
-struct ocsp_location;	/* forward declaration of ocsp_location defined in ocsp.h */
+struct ocsp_location;   /* forward declaration of ocsp_location defined in ocsp.h */
 
 typedef enum {
-    FETCH_GET =  1,
-    FETCH_POST = 2
+	FETCH_GET =  1,
+	FETCH_POST = 2
 } fetch_request_t;
 
 typedef struct fetch_req fetch_req_t;
 
 struct fetch_req {
-    fetch_req_t   *next;
-    time_t        installed;
-    int           trials;
-    chunk_t       issuer;
-    chunk_t       authKeyID;
-    chunk_t	  authKeySerialNumber;
-    generalName_t *distributionPoints;
+	fetch_req_t   *next;
+	time_t        installed;
+	int           trials;
+	chunk_t       issuer;
+	chunk_t       authKeyID;
+	chunk_t       authKeySerialNumber;
+	generalName_t *distributionPoints;
 };
 
 #ifdef THREADS
@@ -67,9 +67,9 @@ extern void init_fetch(void);
 extern void free_crl_fetch(void);
 extern void free_ocsp_fetch(void);
 extern void add_distribution_points(const generalName_t *newPoints
-    , generalName_t **distributionPoints);
+	, generalName_t **distributionPoints);
 extern fetch_req_t* build_crl_fetch_request(chunk_t issuer, chunk_t authKeySerialNumber
-    , chunk_t authKeyID, const generalName_t *gn);
+	, chunk_t authKeyID, const generalName_t *gn);
 extern void add_crl_fetch_request(fetch_req_t *req);
 extern void add_ocsp_fetch_request(struct ocsp_location *location, chunk_t serialNumber);
 extern void list_distribution_points(const generalName_t *gn);

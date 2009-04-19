@@ -43,15 +43,15 @@ const cert_t empty_cert = {CERT_NONE, {NULL}};
 chunk_t
 get_mycert(cert_t cert)
 {
-    switch (cert.type)
-    {
-    case CERT_PGP:
-	return cert.u.pgp->certificate;
-    case CERT_X509_SIGNATURE:
-	return cert.u.x509->certificate;
-    default:
-	return chunk_empty;
-    }
+	switch (cert.type)
+	{
+	case CERT_PGP:
+		return cert.u.pgp->certificate;
+	case CERT_X509_SIGNATURE:
+		return cert.u.x509->certificate;
+	default:
+		return chunk_empty;
+	}
 }
 
 /* load a coded key or certificate file with autodetection
@@ -61,64 +61,64 @@ bool
 load_coded_file(const char *filename, prompt_pass_t *pass, const char *type
 , chunk_t *blob, bool *pgp)
 {
-    err_t ugh = NULL;
+	err_t ugh = NULL;
 
-    FILE *fd = fopen(filename, "r");
+	FILE *fd = fopen(filename, "r");
 
-    if (fd)
-    {
-	int bytes;
-	fseek(fd, 0, SEEK_END );
-	blob->len = ftell(fd);
-	rewind(fd);
-	blob->ptr = malloc(blob->len);
-	bytes = fread(blob->ptr, 1, blob->len, fd);
-	fclose(fd);
-	plog("  loaded %s file '%s' (%d bytes)", type, filename, bytes);
-
-	*pgp = FALSE;
-
-	/* try DER format */
-	if (is_asn1(*blob))
+	if (fd)
 	{
-	    DBG(DBG_PARSING,
-		DBG_log("  file coded in DER format");
-	    )
-	    return TRUE;
+		int bytes;
+		fseek(fd, 0, SEEK_END );
+		blob->len = ftell(fd);
+		rewind(fd);
+		blob->ptr = malloc(blob->len);
+		bytes = fread(blob->ptr, 1, blob->len, fd);
+		fclose(fd);
+		plog("  loaded %s file '%s' (%d bytes)", type, filename, bytes);
+
+		*pgp = FALSE;
+
+		/* try DER format */
+		if (is_asn1(*blob))
+		{
+			DBG(DBG_PARSING,
+				DBG_log("  file coded in DER format");
+			)
+			return TRUE;
+		}
+
+		/* try PEM format */
+		ugh = pemtobin(blob, pass, filename, pgp);
+
+		if (ugh == NULL)
+		{
+			if (*pgp)
+			{
+				DBG(DBG_PARSING,
+					DBG_log("  file coded in armored PGP format");
+				)
+				return TRUE;
+			}
+			if (is_asn1(*blob))
+			{
+				DBG(DBG_PARSING,
+					DBG_log("  file coded in PEM format");
+				)
+				return TRUE;
+			}
+			ugh = "file coded in unknown format, discarded";
+		}
+
+		/* a conversion error has occured */
+		plog("  %s", ugh);
+		free(blob->ptr);
+		*blob = chunk_empty;
 	}
-
-	/* try PEM format */
-	ugh = pemtobin(blob, pass, filename, pgp);
-
-	if (ugh == NULL)
+	else
 	{
-	    if (*pgp)
-	    {
-                DBG(DBG_PARSING,
-                    DBG_log("  file coded in armored PGP format");
-                )
-                return TRUE;
-	    }
-	    if (is_asn1(*blob))
-	    {
-		DBG(DBG_PARSING,
-		    DBG_log("  file coded in PEM format");
-		)
-		return TRUE;
-	    }
-	    ugh = "file coded in unknown format, discarded";
+		plog("  could not open %s file '%s'", type, filename);
 	}
-
-	/* a conversion error has occured */
-	plog("  %s", ugh);
-	free(blob->ptr);
-	*blob = chunk_empty;
-    }
-    else
-    {
-	plog("  could not open %s file '%s'", type, filename);
-    }
-    return FALSE;
+	return FALSE;
 }
 
 /*
@@ -128,30 +128,30 @@ err_t
 load_rsa_private_key(const char* filename, prompt_pass_t *pass
 , RSA_private_key_t *key)
 {
-    err_t ugh = NULL;
-    bool pgp = FALSE;
-    chunk_t blob = chunk_empty;
+	err_t ugh = NULL;
+	bool pgp = FALSE;
+	chunk_t blob = chunk_empty;
 
-    const char *path = concatenate_paths(PRIVATE_KEY_PATH, filename);
+	const char *path = concatenate_paths(PRIVATE_KEY_PATH, filename);
 
-    if (load_coded_file(path, pass, "private key", &blob, &pgp))
-    {
-	if (pgp)
+	if (load_coded_file(path, pass, "private key", &blob, &pgp))
 	{
-	    if (!parse_pgp(blob, NULL, key))
-		ugh = "syntax error in PGP private key file";
+		if (pgp)
+		{
+			if (!parse_pgp(blob, NULL, key))
+				ugh = "syntax error in PGP private key file";
+		}
+		else
+		{
+			if (!pkcs1_parse_private_key(blob, key))
+				ugh = "syntax error in PKCS#1 private key file";
+		}
+		free(blob.ptr);
 	}
 	else
-	{
-	    if (!pkcs1_parse_private_key(blob, key))
-		ugh = "syntax error in PKCS#1 private key file";
-	}
-	free(blob.ptr);
-    }
-    else
-	ugh = "error loading RSA private key file";
+		ugh = "error loading RSA private key file";
 
-    return ugh;
+	return ugh;
 }
 /*
  *  Loads a X.509 or OpenPGP certificate
@@ -159,51 +159,51 @@ load_rsa_private_key(const char* filename, prompt_pass_t *pass
 bool
 load_cert(const char *filename, const char *label, cert_t *cert)
 {
-    bool pgp = FALSE;
-    chunk_t blob = chunk_empty;
+	bool pgp = FALSE;
+	chunk_t blob = chunk_empty;
 
-    /* initialize cert struct */
-    cert->type = CERT_NONE;
-    cert->u.x509 = NULL;
+	/* initialize cert struct */
+	cert->type = CERT_NONE;
+	cert->u.x509 = NULL;
 
-    if (load_coded_file(filename, NULL, label, &blob, &pgp))
-    {
-	if (pgp)
+	if (load_coded_file(filename, NULL, label, &blob, &pgp))
 	{
-	    pgpcert_t *pgpcert = malloc_thing(pgpcert_t);
-	    *pgpcert = empty_pgpcert;
-	    if (parse_pgp(blob, pgpcert, NULL))
-	    {
-		cert->type = CERT_PGP;
-		cert->u.pgp = pgpcert;
-		return TRUE;
-	    }
-	    else
-	    {
-		plog("  error in OpenPGP certificate");
-		free_pgpcert(pgpcert);
-		return FALSE;
-	    }
+		if (pgp)
+		{
+			pgpcert_t *pgpcert = malloc_thing(pgpcert_t);
+			*pgpcert = empty_pgpcert;
+			if (parse_pgp(blob, pgpcert, NULL))
+			{
+				cert->type = CERT_PGP;
+				cert->u.pgp = pgpcert;
+				return TRUE;
+			}
+			else
+			{
+				plog("  error in OpenPGP certificate");
+				free_pgpcert(pgpcert);
+				return FALSE;
+			}
+		}
+		else
+		{
+			x509cert_t *x509cert = malloc_thing(x509cert_t);
+			*x509cert = empty_x509cert;
+			if (parse_x509cert(blob, 0, x509cert))
+			{
+				cert->type = CERT_X509_SIGNATURE;
+				cert->u.x509 = x509cert;
+				return TRUE;
+			}
+			else
+			{
+				plog("  error in X.509 certificate");
+				free_x509cert(x509cert);
+				return FALSE;
+			}
+		}
 	}
-	else
-	{
-	    x509cert_t *x509cert = malloc_thing(x509cert_t);
-	    *x509cert = empty_x509cert;
-	    if (parse_x509cert(blob, 0, x509cert))
-	    {
-		cert->type = CERT_X509_SIGNATURE;
-		cert->u.x509 = x509cert;
-		return TRUE;
-	    }
-	    else
-	    {
-		plog("  error in X.509 certificate");
-		free_x509cert(x509cert);
-		return FALSE;
-	    }
-	}
-    }
-    return FALSE;
+	return FALSE;
 }
 
 /*
@@ -212,9 +212,9 @@ load_cert(const char *filename, const char *label, cert_t *cert)
 bool
 load_host_cert(const char *filename, cert_t *cert)
 {
-    const char *path = concatenate_paths(HOST_CERT_PATH, filename);
+	const char *path = concatenate_paths(HOST_CERT_PATH, filename);
 
-    return load_cert(path, "host cert", cert);
+	return load_cert(path, "host cert", cert);
 }
 
 /*
@@ -223,9 +223,9 @@ load_host_cert(const char *filename, cert_t *cert)
 bool
 load_ca_cert(const char *filename, cert_t *cert)
 {
-    const char *path = concatenate_paths(CA_CERT_PATH, filename);
+	const char *path = concatenate_paths(CA_CERT_PATH, filename);
 
-    return load_cert(path, "CA cert", cert);
+	return load_cert(path, "CA cert", cert);
 }
 
 /*
@@ -234,7 +234,7 @@ load_ca_cert(const char *filename, cert_t *cert)
 bool
 same_cert(const cert_t *a, const cert_t *b)
 {
-    return a->type == b->type && a->u.x509 == b->u.x509;
+	return a->type == b->type && a->u.x509 == b->u.x509;
 }
 
 /*  for each link pointing to the certif icate
@@ -243,17 +243,17 @@ same_cert(const cert_t *a, const cert_t *b)
 void
 share_cert(cert_t cert)
 {
-    switch (cert.type)
-    {
-    case CERT_PGP:
-	share_pgpcert(cert.u.pgp);
-	break;
-    case CERT_X509_SIGNATURE:
-	share_x509cert(cert.u.x509);
-	break;
-    default:
-        break;
-    }
+	switch (cert.type)
+	{
+	case CERT_PGP:
+		share_pgpcert(cert.u.pgp);
+		break;
+	case CERT_X509_SIGNATURE:
+		share_x509cert(cert.u.x509);
+		break;
+	default:
+		break;
+	}
 }
 
 /*  release of a certificate decreases the count by one
@@ -263,16 +263,16 @@ void
 release_cert(cert_t cert)
 {
    switch (cert.type)
-    {
-    case CERT_PGP:
-	release_pgpcert(cert.u.pgp);
-	break;
-    case CERT_X509_SIGNATURE:
-	release_x509cert(cert.u.x509);
-	break;
-    default:
-        break;
-    }
+	{
+	case CERT_PGP:
+		release_pgpcert(cert.u.pgp);
+		break;
+	case CERT_X509_SIGNATURE:
+		release_x509cert(cert.u.x509);
+		break;
+	default:
+		break;
+	}
 }
 
 /*
@@ -281,7 +281,7 @@ release_cert(cert_t cert)
 void
 list_certs(bool utc)
 {
-    list_x509_end_certs(utc);
-    list_pgp_end_certs(utc);
+	list_x509_end_certs(utc);
+	list_pgp_end_certs(utc);
 }
 

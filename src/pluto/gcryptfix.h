@@ -14,7 +14,7 @@
  * RCSID $Id$
  */
 
-#define DBG_CIPHER  1	/* some day we'll do this right */
+#define DBG_CIPHER  1   /* some day we'll do this right */
 
 /* Simulate MPI routines with gmp routines.
  * gmp's MP_INT is a stuct; MPI's MPI is a pointer to an analogous struct.
@@ -35,7 +35,7 @@ extern MPI mpi_alloc_set_ui( unsigned long u);
 extern void mpi_free( MPI a );
 extern MPI  mpi_copy( MPI a );
 extern unsigned mpi_get_nbits( MPI a );
-#define mpi_get_nlimbs(a)     ((a)->_mp_alloc)	/* dirty, but useless */
+#define mpi_get_nlimbs(a)     ((a)->_mp_alloc)  /* dirty, but useless */
 extern void  mpi_set_buffer( MPI a, const u_char *buffer, unsigned nbytes, int sign );
 extern unsigned mpi_trailing_zeros( MPI a );
 extern int  mpi_test_bit( MPI a, unsigned n );
@@ -66,22 +66,22 @@ extern void mpi_mulpowm( MPI res, MPI *basearray, MPI *exparray, MPI mod);
 #ifdef DEBUG
 # define log_debug(f...)  DBG_log(f)
 #else
-# define log_debug(f...)  do ; while (0)	/* do nothing, carefully */
+# define log_debug(f...)  do ; while (0)        /* do nothing, carefully */
 #endif
-#define log_fatal(f...)  exit_log(f)	/* overreaction? */
+#define log_fatal(f...)  exit_log(f)    /* overreaction? */
 extern void log_mpidump( const char *text, MPI a );
 
 #define assert(p) passert(p)
 #define BUG() passert(FALSE)
 
 #define m_alloc_ptrs_clear(pp, n) { \
-	int c = (n); \
-	(pp) = malloc((n) * sizeof(*(pp))); \
-	while (c > 0) (pp)[--c] = NULL; \
-    }
+		int c = (n); \
+		(pp) = malloc((n) * sizeof(*(pp))); \
+		while (c > 0) (pp)[--c] = NULL; \
+	}
 
 extern u_char *get_random_bits(size_t nbits, int level, int secure);
-#define m_alloc(sz) malloc((sz))	/* not initialized */
+#define m_alloc(sz) malloc((sz))        /* not initialized */
 #define m_free(n) free(n)  /* always freeing something from get_random_bits */
 
 /* declarations from gnupg-1.0.0/include/cipher.h */
@@ -89,7 +89,7 @@ extern u_char *get_random_bits(size_t nbits, int level, int secure);
 MPI generate_secret_prime( unsigned nbits );
 MPI generate_public_prime( unsigned nbits );
 MPI generate_elg_prime( int mode, unsigned pbits, unsigned qbits,
-					   MPI g, MPI **factors );
+										   MPI g, MPI **factors );
 
 #define PUBKEY_ALGO_ELGAMAL_E 16     /* encrypt only ElGamal (but not for v3)*/
 #define PUBKEY_ALGO_DSA       17
@@ -97,15 +97,15 @@ MPI generate_elg_prime( int mode, unsigned pbits, unsigned qbits,
 
 #define is_ELGAMAL(a) ((a)==PUBKEY_ALGO_ELGAMAL || (a)==PUBKEY_ALGO_ELGAMAL_E)
 
-#define PUBKEY_USAGE_SIG     1	    /* key is good for signatures */
-#define PUBKEY_USAGE_ENC     2	    /* key is good for encryption */
+#define PUBKEY_USAGE_SIG     1      /* key is good for signatures */
+#define PUBKEY_USAGE_ENC     2      /* key is good for encryption */
 
 /* from gnupg-1.0.0/include/errors.h */
 
 #define G10ERR_PUBKEY_ALGO     4 /* Unknown pubkey algorithm */
 #define G10ERR_BAD_SECKEY      7 /* Bad secret key */
 #define G10ERR_BAD_SIGN        8 /* Bad signature */
-#define G10ERR_BAD_MPI	      30
+#define G10ERR_BAD_MPI        30
 
 /*-- smallprime.c --*/
 extern ushort small_prime_numbers[];

@@ -14,16 +14,16 @@
  * RCSID $Id$
  */
 
-extern int ctl_fd;	/* file descriptor of control (whack) socket */
-extern struct sockaddr_un ctl_addr;	/* address of control (whack) socket */
+extern int ctl_fd;      /* file descriptor of control (whack) socket */
+extern struct sockaddr_un ctl_addr;     /* address of control (whack) socket */
 
-extern int info_fd;	/* file descriptor of control (info) socket */
-extern struct sockaddr_un info_addr;	/* address of control (info) socket */
+extern int info_fd;     /* file descriptor of control (info) socket */
+extern struct sockaddr_un info_addr;    /* address of control (info) socket */
 
 extern err_t init_ctl_socket(void);
 extern void delete_ctl_socket(void);
 
-extern bool listening;	/* should we pay attention to IKE messages? */
+extern bool listening;  /* should we pay attention to IKE messages? */
 
 
 /* interface: a terminal point for IKE traffic, IPsec transport mode
@@ -35,16 +35,16 @@ extern bool listening;	/* should we pay attention to IKE messages? */
  * Note: the port for IKE is always implicitly UDP/pluto_port.
  */
 struct iface {
-    char *vname;	/* virtual (ipsec) device name */
-    char *rname;	/* real device name */
-    ip_address addr;	/* interface IP address */
-    int fd;	/* file descriptor of socket for IKE UDP messages */
-    struct iface *next;
-    bool ike_float;
-    enum { IFN_ADD, IFN_KEEP, IFN_DELETE } change;
+	char *vname;        /* virtual (ipsec) device name */
+	char *rname;        /* real device name */
+	ip_address addr;    /* interface IP address */
+	int fd;     /* file descriptor of socket for IKE UDP messages */
+	struct iface *next;
+	bool ike_float;
+	enum { IFN_ADD, IFN_KEEP, IFN_DELETE } change;
 };
 
-extern struct iface *interfaces;	/* public interfaces */
+extern struct iface *interfaces;        /* public interfaces */
 
 extern bool use_interface(const char *rifn);
 extern void find_ifaces(void);

@@ -16,7 +16,7 @@
 
 #include "packet.h"
 
-struct state;	/* forward declaration of tag */
+struct state;   /* forward declaration of tag */
 extern void init_demux(void);
 extern bool send_packet(struct state *st, const char *where);
 extern void comm_handle(const struct iface *ifp);
@@ -36,9 +36,9 @@ extern u_int8_t reply_buffer[MAX_OUTPUT_UDP_SIZE];
  */
 
 struct payload_digest {
-    pb_stream pbs;
-    union payload payload;
-    struct payload_digest *next;   /* of same kind */
+	pb_stream pbs;
+	union payload payload;
+	struct payload_digest *next;   /* of same kind */
 };
 
 /* message digest
@@ -46,30 +46,30 @@ struct payload_digest {
  */
 
 struct msg_digest {
-    struct msg_digest *next;	/* for free list */
-    chunk_t raw_packet;		/* if encrypted, received packet before decryption */
-    const struct iface *iface;	/* interface on which message arrived */
-    ip_address sender;	/* where message came from */
-    u_int16_t sender_port;	/* host order */
-    pb_stream packet_pbs;	/* whole packet */
-    pb_stream message_pbs;	/* message to be processed */
-    struct isakmp_hdr hdr;	/* message's header */
-    bool encrypted;		/* was it encrypted? */
-    enum state_kind from_state;	/* state we started in */
-    const struct state_microcode *smc;	/* microcode for initial state */
-    struct state *st;		/* current state object */
-    pb_stream reply;		/* room for reply */
-    pb_stream rbody;		/* room for reply body (after header) */
-    notification_t note;	/* reason for failure */
-    bool dpd;           	/* peer supports RFC 3706 DPD */
-    bool openpgp;		/* peer supports OpenPGP certificates */
+	struct msg_digest *next;    /* for free list */
+	chunk_t raw_packet;         /* if encrypted, received packet before decryption */
+	const struct iface *iface;  /* interface on which message arrived */
+	ip_address sender;  /* where message came from */
+	u_int16_t sender_port;      /* host order */
+	pb_stream packet_pbs;       /* whole packet */
+	pb_stream message_pbs;      /* message to be processed */
+	struct isakmp_hdr hdr;      /* message's header */
+	bool encrypted;             /* was it encrypted? */
+	enum state_kind from_state; /* state we started in */
+	const struct state_microcode *smc;  /* microcode for initial state */
+	struct state *st;           /* current state object */
+	pb_stream reply;            /* room for reply */
+	pb_stream rbody;            /* room for reply body (after header) */
+	notification_t note;        /* reason for failure */
+	bool dpd;                   /* peer supports RFC 3706 DPD */
+	bool openpgp;               /* peer supports OpenPGP certificates */
 
 #   define PAYLIMIT 40
-    struct payload_digest
-	digest[PAYLIMIT],
-	*digest_roof,
-	*chain[ISAKMP_NEXT_ROOF];
-	unsigned short nat_traversal_vid;
+	struct payload_digest
+		digest[PAYLIMIT],
+		*digest_roof,
+		*chain[ISAKMP_NEXT_ROOF];
+		unsigned short nat_traversal_vid;
 };
 
 extern void release_md(struct msg_digest *md);
@@ -79,11 +79,11 @@ extern void release_md(struct msg_digest *md);
  */
 
 typedef enum {
-    STF_IGNORE,	/* don't respond */
-    STF_SUSPEND,    /* unfinished -- don't release resources */
-    STF_OK,	/* success */
-    STF_INTERNAL_ERROR,	/* discard everything, we failed */
-    STF_FAIL	/* discard everything, something failed.  notification_t added. */
+	STF_IGNORE, /* don't respond */
+	STF_SUSPEND,    /* unfinished -- don't release resources */
+	STF_OK,     /* success */
+	STF_INTERNAL_ERROR, /* discard everything, we failed */
+	STF_FAIL    /* discard everything, something failed.  notification_t added. */
 } stf_status;
 
 typedef stf_status state_transition_fn(struct msg_digest *md);

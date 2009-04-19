@@ -14,7 +14,7 @@
  * RCSID $Id$
  */
 
-#ifndef USE_LWRES	/* whole file! */
+#ifndef USE_LWRES       /* whole file! */
 
 /* The interface in RHL6.x and BIND distribution 8.2.2 are different,
  * so we build some of our own :-(
@@ -38,38 +38,38 @@
  */
 
 struct adns_query {
-    size_t len;
-    unsigned int qmagic;
-    unsigned long serial;
-    lset_t debugging;	/* only used #ifdef DEBUG, but don't want layout to change */
-    u_char name_buf[NS_MAXDNAME + 2];
-    int type;	/* T_KEY or T_TXT */
+	size_t len;
+	unsigned int qmagic;
+	unsigned long serial;
+	lset_t debugging;   /* only used #ifdef DEBUG, but don't want layout to change */
+	u_char name_buf[NS_MAXDNAME + 2];
+	int type;   /* T_KEY or T_TXT */
 };
 
 struct adns_answer {
-    size_t len;
-    unsigned int amagic;
-    unsigned long serial;
-    struct adns_continuation *continuation;
-    int result;
-    int h_errno_val;
-    u_char ans[NS_PACKETSZ * 10];   /* very probably bigger than necessary */
+	size_t len;
+	unsigned int amagic;
+	unsigned long serial;
+	struct adns_continuation *continuation;
+	int result;
+	int h_errno_val;
+	u_char ans[NS_PACKETSZ * 10];   /* very probably bigger than necessary */
 };
 
 enum helper_exit_status {
-    HES_CONTINUE = -1,	/* not an exit */
-    HES_OK = 0,	/* all's well that ends well (perhaps EOF) */
-    HES_INVOCATION,	/* improper invocation */
-    HES_IO_ERROR_SELECT,	/* IO error in select() */
-    HES_MALLOC,	/* malloc failed */
-    HES_IO_ERROR_IN,	/* error reading pipe */
-    HES_IO_ERROR_OUT,	/* error reading pipe */
-    HES_PIPE,	/* pipe(2) failed */
-    HES_SYNC,	/* answer from worker doesn't match query */
-    HES_FORK,	/* fork(2) failed */
-    HES_RES_INIT,	/* resolver initialization failed */
-    HES_BAD_LEN,	/* implausible .len field */
-    HES_BAD_MAGIC,	/* .magic field wrong */
+	HES_CONTINUE = -1,  /* not an exit */
+	HES_OK = 0, /* all's well that ends well (perhaps EOF) */
+	HES_INVOCATION,     /* improper invocation */
+	HES_IO_ERROR_SELECT,        /* IO error in select() */
+	HES_MALLOC, /* malloc failed */
+	HES_IO_ERROR_IN,    /* error reading pipe */
+	HES_IO_ERROR_OUT,   /* error reading pipe */
+	HES_PIPE,   /* pipe(2) failed */
+	HES_SYNC,   /* answer from worker doesn't match query */
+	HES_FORK,   /* fork(2) failed */
+	HES_RES_INIT,       /* resolver initialization failed */
+	HES_BAD_LEN,        /* implausible .len field */
+	HES_BAD_MAGIC,      /* .magic field wrong */
 };
 
 #endif /* !USE_LWRES */
