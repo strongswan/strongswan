@@ -28,26 +28,26 @@ typedef struct library_t library_t;
  */
 struct library_t {
 
-		/**
-		 * Printf hook registering facility
-		 */
-		printf_hook_t *printf_hook;
-		
-		/**
-		 * various settings loaded from settings file
-		 */
-		settings_t *settings;
-		
-		/**
-		 * is leak detective running?
-		 */
-		bool leak_detective;
+	/**
+	 * Printf hook registering facility
+	 */
+	printf_hook_t *printf_hook;
+	
+	/**
+	 * various settings loaded from settings file
+	 */
+	settings_t *settings;
+	
+	/**
+	 * is leak detective running?
+	 */
+	bool leak_detective;
 };
 
 /**
  * Initialize library, creates "lib" instance.
  *
- * @param settings              file to read settings from, may be NULL for none
+ * @param settings		file to read settings from, may be NULL for none
  */
 void library_init(char *settings);
 
