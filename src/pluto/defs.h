@@ -63,10 +63,6 @@ extern const char* concatenate_paths(const char *a, const char *b);
 /* move a chunk to a memory position and free it after insertion */
 extern void mv_chunk(u_char **pos, chunk_t content);
 
-/* write the binary contents of a chunk_t to a file */
-extern bool write_chunk(const char *filename, const char *label, chunk_t ch
-	,mode_t mask, bool force);
-
 /* warns a predefined interval before expiry */
 extern const char* check_expiry(time_t expiration_date,
 	int warning_interval, bool strict);
@@ -88,9 +84,7 @@ typedef struct dirent dirent_t;
 extern int file_select(const dirent_t *entry);
 
 /* cleanly exit Pluto */
-
 extern void exit_pluto(int /*status*/) NEVER_RETURNS;
-
 
 /* zero all bytes */
 #define zero(x) memset((x), '\0', sizeof(*(x)))

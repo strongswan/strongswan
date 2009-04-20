@@ -86,8 +86,14 @@ void chunk_split(chunk_t chunk, const char *mode, ...);
 
 /**
   * Write the binary contents of a chunk_t to a file
-  */
-bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force);
+  *
+ * @param path			path where file is written to
+ * @param label			label specifying file type 
+ * @param mask			file mode creation mask
+ * @param force			overwrite existing file by force
+ * @return				TRUE if write operation was successful
+ */
+bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force);
 
 /**
  * Convert a chunk of data to hex encoding.
@@ -95,7 +101,6 @@ bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force);
  * The resulting string is '\\0' terminated, but the chunk does not include
  * the '\\0'. If buf is supplied, it must hold at least (chunk.len * 2 + 1).
  *
- * @param chunk			data to convert
  * @param buf			buffer to write to, NULL to malloc
  * @param uppercase		TRUE to use uppercase letters
  * @return				chunk of encoded data

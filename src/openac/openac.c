@@ -564,9 +564,8 @@ int main(int argc, char **argv)
 	
 		/* write the attribute certificate to file */
 		attr_chunk = attr_cert->get_encoding(attr_cert);
-		if (chunk_write(attr_chunk, outfile, 0022, TRUE))
+		if (chunk_write(attr_chunk, outfile, "attribute cert", 0022, TRUE))
 		{
-			DBG1("  wrote attribute cert file '%s' (%u bytes)", outfile, attr_chunk.len);
 			write_serial(serial);
 			status = 0;
 		}

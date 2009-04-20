@@ -879,7 +879,7 @@ int main(int argc, char **argv)
 	{
 		const char *path = concatenate_paths(REQ_PATH, file_out_pkcs10);
 
-		if (!write_chunk(path, "pkcs10", pkcs10->request, 0022, force))
+		if (!chunk_write(pkcs10->request,path, "pkcs10",  0022, force))
 			exit_scepclient("could not write pkcs10 file '%s'", path);
 
 		filetype_out &= ~PKCS10;   /* delete PKCS10 flag */
@@ -902,7 +902,7 @@ int main(int argc, char **argv)
 		)
 		pkcs1 = pkcs1_build_private_key(private_key);
 
-		if (!write_chunk(path, "pkcs1", pkcs1, 0066, force))
+		if (!chunk_write(pkcs1, path, "pkcs1", 0066, force))
 			exit_scepclient("could not write pkcs1 file '%s'", path);
 
 		filetype_out &= ~PKCS1;   /* delete PKCS1 flag */
@@ -940,7 +940,7 @@ int main(int argc, char **argv)
 	{
 		const char *path = concatenate_paths(HOST_CERT_PATH, file_out_cert_self);
 
-		if (!write_chunk(path, "self-signed cert", x509_signer->certificate, 0022, force))
+		if (!chunk_write(x509_signer->certificate, path, "self-signed cert", 0022, force))
 			exit_scepclient("could not write self-signed cert file '%s'", path);
 ;
 		filetype_out &= ~CERT_SELF;   /* delete CERT_SELF flag */
@@ -996,7 +996,7 @@ int main(int argc, char **argv)
 	{
 		const char *path = concatenate_paths(REQ_PATH, file_out_pkcs7);
 
-		if (!write_chunk(path, "pkcs7 encrypted request", pkcs7, 0022, force))
+		if (!chunk_write(pkcs7, path, "pkcs7 encrypted request", 0022, force))
 			exit_scepclient("could not write pkcs7 file '%s'", path);
 ;
 		filetype_out &= ~PKCS7;   /* delete PKCS7 flag */
@@ -1120,7 +1120,7 @@ int main(int argc, char **argv)
 			{
 				if (stored)
 					exit_scepclient("multiple certs received, only first stored");
-				if (!write_chunk(path, "requested cert", cert->certificate, 0022, force))
+				if (!chunk_write(cert->certificate, path, "requested cert", 0022, force))
 					exit_scepclient("could not write cert file '%s'", path);
 				stored = TRUE;
 			}

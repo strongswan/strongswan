@@ -94,55 +94,6 @@ mv_chunk(u_char **pos, chunk_t content)
 	}
 }
 
-/*
- * write the binary contents of a chunk_t to a file
- */
-bool
-write_chunk(const char *filename, const char *label, chunk_t ch
-, mode_t mask, bool force)
-{
-	mode_t oldmask;
-	FILE *fd;
-	size_t written;
-
-	if (!force)
-	{
-		fd = fopen(filename, "r");
-		if (fd)
-		{
-			fclose(fd);
-			plog("  %s file '%s' already exists", label, filename);
-			return FALSE;
-		}
-	}
-
-	/* set umask */
-	oldmask = umask(mask);
-
-	fd = fopen(filename, "w");
-
-	if (fd)
-	{
-		written = fwrite(ch.ptr, sizeof(u_char), ch.len, fd);
-		fclose(fd);
-		if (written != ch.len)
-		{
-			plog("  writing to %s file '%s' failed", label, filename);
-			umask(oldmask);
-			return FALSE;
-		}
-		plog("  written %s file '%s' (%d bytes)", label, filename, (int)ch.len);
-		umask(oldmask);
-		return TRUE;
-	}
-	else
-	{
-		plog("  could not open %s file '%s' for writing", label, filename);
-		umask(oldmask);
-		return FALSE;
-	}
-}
-
 /*  checks if the expiration date has been reached and
  *  warns during the warning_interval of the imminent
  *  expiry. strict=TRUE declares a fatal error,

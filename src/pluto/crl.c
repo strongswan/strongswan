@@ -308,7 +308,7 @@ insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl)
 
 			datatot(subjectKeyID.ptr, subjectKeyID.len, 16, buf, BUF_LEN);
 			snprintf(path, BUF_LEN, "%s/%s.crl", CRL_PATH, buf);
-			write_chunk(path, "crl", crl->certificateList, 0022, TRUE);
+			chunk_write(crl->certificateList, path, "crl",  0022, TRUE);
 		}
 
 		/* is the fetched crl valid? */
