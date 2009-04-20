@@ -942,15 +942,6 @@ static void adopt_tasks(private_task_manager_t *this, private_task_manager_t *ot
 		task->migrate(task, this->ike_sa);
 		this->queued_tasks->insert_first(this->queued_tasks, task);
 	}
-	
-	/* reset active tasks and move them to others queued tasks */
-	while (other->active_tasks->remove_last(other->active_tasks,
-												(void**)&task) == SUCCESS)
-	{
-		DBG2(DBG_IKE, "migrating %N task", task_type_names, task->get_type(task));
-		task->migrate(task, this->ike_sa);
-		this->queued_tasks->insert_first(this->queued_tasks, task);
-	}
 }
 
 /**
