@@ -94,6 +94,9 @@ void library_init(char *settings)
 					 PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'B', chunk_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'N', enum_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_INT,
+					 PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'T', time_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_INT,
 					 PRINTF_HOOK_ARGTYPE_END);

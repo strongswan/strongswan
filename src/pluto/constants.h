@@ -320,7 +320,7 @@ typedef enum {
 
 /* RFC 2459 CRL reason codes */
 
-extern enum_names crl_reason_names;
+extern enum_name_t *crl_reason_names;
 
 typedef enum {
 	REASON_UNSPECIFIED =                0,
@@ -335,7 +335,7 @@ typedef enum {
 
 /* RFC 3706 Dead Peer Detection */
 
-extern enum_names dpd_action_names;
+extern enum_name_t *dpd_action_names;
 
 typedef enum {
 	DPD_ACTION_NONE =    0,
@@ -347,7 +347,7 @@ typedef enum {
 
 /* Timer events */
 
-extern enum_names timer_event_names;
+extern enum_name_t *timer_event_names;
 
 enum event_type {
 	EVENT_NULL, /* non-event */
@@ -798,15 +798,16 @@ typedef u_int16_t cpi_t;
 
 extern enum_names ident_names;
 extern enum_names cert_type_names;
-extern enum_names cert_policy_names;
+
+extern enum_name_t *cert_policy_names;
 
 typedef enum certpolicy {
-  CERT_ALWAYS_SEND   = 0,       /* the default */
-  CERT_SEND_IF_ASKED = 1,
-  CERT_NEVER_SEND    = 2,
+	CERT_ALWAYS_SEND   = 0,       /* the default */
+	CERT_SEND_IF_ASKED = 1,
+	CERT_NEVER_SEND    = 2,
 
-  CERT_YES_SEND      = 3,       /* synonym for CERT_ALWAYS_SEND */
-  CERT_NO_SEND       = 4        /* synonym for CERT_NEVER_SEND  */
+ 	CERT_YES_SEND      = 3,       /* synonym for CERT_ALWAYS_SEND */
+	CERT_NO_SEND       = 4        /* synonym for CERT_NEVER_SEND  */
 } certpolicy_t;
 
 /* Policies for establishing an SA

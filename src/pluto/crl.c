@@ -391,7 +391,7 @@ parse_crl_reasonCode(chunk_t object)
 	}
 
 	DBG(DBG_PARSING,
-		DBG_log("  '%s'", enum_name(&crl_reason_names, reason))
+		DBG_log("  '%N'", crl_reason_names, reason)
 	)
 	return reason;
 }

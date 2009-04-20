@@ -2245,9 +2245,9 @@ verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 				}
 				break;
 			case CERT_REVOKED:
-				plog("certificate was revoked on %T, reason: %s"
+				plog("certificate was revoked on %T, reason: %N"
 					, &revocationDate, TRUE
-					, enum_name(&crl_reason_names, revocationReason));
+					, crl_reason_names, revocationReason);
 				remove_x509_public_key(cert);
 				return FALSE;
 			case CERT_UNKNOWN:

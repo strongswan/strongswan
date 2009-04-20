@@ -98,11 +98,11 @@ event_schedule(enum event_type type, time_t tm, struct state *st)
 
 	DBG(DBG_CONTROL,
 		if (st == NULL)
-			DBG_log("inserting event %s, timeout in %lu seconds"
-				, enum_show(&timer_event_names, type), (unsigned long)tm);
+			DBG_log("inserting event %N, timeout in %lu seconds"
+				, timer_event_names, type, (unsigned long)tm);
 		else
-			DBG_log("inserting event %s, timeout in %lu seconds for #%lu"
-				, enum_show(&timer_event_names, type), (unsigned long)tm
+			DBG_log("inserting event %N, timeout in %lu seconds for #%lu"
+				, timer_event_names, type, (unsigned long)tm
 				, ev->ev_state->st_serialno));
 
 	if (evlist == (struct event *) NULL
@@ -122,11 +122,11 @@ event_schedule(enum event_type type, time_t tm, struct state *st)
 #ifdef NEVER    /* this seems to be overkill */
 		DBG(DBG_CONTROL,
 			if (evt->ev_state == NULL)
-				DBG_log("event added after event %s"
-					, enum_show(&timer_event_names, evt->ev_type));
+				DBG_log("event added after event %N"
+					, timer_event_names, evt->ev_type);
 			else
-				DBG_log("event added after event %s for #%lu"
-					, enum_show(&timer_event_names, evt->ev_type)
+				DBG_log("event added after event %N for #%lu"
+					, timer_event_names, evt->ev_type,
 					, evt->ev_state->st_serialno));
 #endif /* NEVER */
 
@@ -161,9 +161,9 @@ handle_timer_event(void)
 
 	if (tm < ev->ev_time)
 	{
-		DBG(DBG_CONTROL, DBG_log("called while no event expired (%lu/%lu, %s)"
+		DBG(DBG_CONTROL, DBG_log("called while no event expired (%lu/%lu, %N)"
 			, (unsigned long)tm, (unsigned long)ev->ev_time
-			, enum_show(&timer_event_names, type)));
+			, timer_event_names, type));
 
 		/* This will happen if the most close-to-expire event was
 		 * a retransmission or cleanup, and we received a packet
@@ -178,8 +178,8 @@ handle_timer_event(void)
 
 	DBG(DBG_CONTROL,
 		if (evlist != (struct event *) NULL)
-			DBG_log("event after this is %s in %ld seconds"
-				, enum_show(&timer_event_names, evlist->ev_type)
+			DBG_log("event after this is %N in %ld seconds"
+				, timer_event_names, evlist->ev_type
 				, (long) (evlist->ev_time - tm)));
 
 	/* for state-associated events, pick up the state pointer
@@ -428,8 +428,8 @@ handle_timer_event(void)
 			nat_traversal_ka_event();
 			break;
 		default:
-			loglog(RC_LOG_SERIOUS, "INTERNAL ERROR: ignoring unknown expiring event %s"
-				, enum_show(&timer_event_names, type));
+			loglog(RC_LOG_SERIOUS, "INTERNAL ERROR: ignoring unknown expiring event %N"
+				, timer_event_names, type);
 	}
 
 	free(ev);
@@ -452,12 +452,12 @@ next_event(void)
 
 	DBG(DBG_CONTROL,
 		if (evlist->ev_state == NULL)
-			DBG_log("next event %s in %ld seconds"
-				, enum_show(&timer_event_names, evlist->ev_type)
+			DBG_log("next event %N in %ld seconds"
+				, timer_event_names, evlist->ev_type
 				, (long)evlist->ev_time - (long)tm);
 		else
-			DBG_log("next event %s in %ld seconds for #%lu"
-				, enum_show(&timer_event_names, evlist->ev_type)
+			DBG_log("next event %N in %ld seconds for #%lu"
+				, timer_event_names, evlist->ev_type
 				, (long)evlist->ev_time - (long)tm
 				, evlist->ev_state->st_serialno));
 
@@ -481,8 +481,8 @@ delete_event(struct state *st)
 		{
 			if (*ev == NULL)
 			{
-				DBG(DBG_CONTROL, DBG_log("event %s to be deleted not found",
-					enum_show(&timer_event_names, st->st_event->ev_type)));
+				DBG(DBG_CONTROL, DBG_log("event %N to be deleted not found",
+					timer_event_names, st->st_event->ev_type));
 				break;
 			}
 			if ((*ev) == st->st_event)
@@ -516,8 +516,8 @@ delete_dpd_event(struct state *st)
 		{
 			if (*ev == NULL)
 			{
-				DBG(DBG_CONTROL, DBG_log("event %s to be deleted not found",
-					enum_show(&timer_event_names, st->st_dpd_event->ev_type)));
+				DBG(DBG_CONTROL, DBG_log("event %N to be deleted not found",
+					timer_event_names, st->st_dpd_event->ev_type));
 				break;
 			}
 			if ((*ev) == st->st_dpd_event)

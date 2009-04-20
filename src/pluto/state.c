@@ -746,12 +746,12 @@ void fmt_state(bool all, struct state *st, time_t n
 	fmt_conn_instance(c, inst);
 
 	snprintf(state_buf, state_buf_len
-		, "#%lu: \"%s\"%s %s (%s); %s in %lds%s%s%s%s"
+		, "#%lu: \"%s\"%s %s (%s); %N in %lds%s%s%s%s"
 		, st->st_serialno
 		, c->name, inst
 		, enum_name(&state_names, st->st_state)
 		, state_story[st->st_state - STATE_MAIN_R0]
-		, enum_name(&timer_event_names, st->st_event->ev_type)
+		, timer_event_names, st->st_event->ev_type
 		, delta
 		, np1, np2, eo, dpd);
 

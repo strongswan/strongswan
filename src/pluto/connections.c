@@ -4056,11 +4056,11 @@ show_connections_status(bool all, const char *name)
 		
 			if (c->dpd_action != DPD_ACTION_NONE)
 				whack_log(RC_COMMENT
-					, "\"%s\"%s:   dpd_action: %s;"
+					, "\"%s\"%s:   dpd_action: %N;"
 					" dpd_delay: %lus; dpd_timeout: %lus;"
 					, c->name
 					, instance
-					, enum_show(&dpd_action_names, c->dpd_action)
+					, dpd_action_names, c->dpd_action
 					, (unsigned long) c->dpd_delay
 					, (unsigned long) c->dpd_timeout);
 

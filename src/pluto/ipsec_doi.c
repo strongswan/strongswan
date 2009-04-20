@@ -3573,8 +3573,7 @@ main_inR2_outI3(struct msg_digest *md)
 	if (RSA_auth)
 	{
 		DBG(DBG_CONTROL,
-			DBG_log("our certificate policy is %s"
-				, enum_name(&cert_policy_names, cert_policy))
+			DBG_log("our certificate policy is %N", cert_policy_names, cert_policy)
 		)
 		if (mycert.type != CERT_NONE)
 		{
@@ -3988,8 +3987,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 	if (RSA_auth)
 	{
 		DBG(DBG_CONTROL,
-			DBG_log("our certificate policy is %s"
-				, enum_name(&cert_policy_names, cert_policy))
+			DBG_log("our certificate policy is %N", cert_policy_names, cert_policy)
 		)
 		if (mycert.type != CERT_NONE)
 		{

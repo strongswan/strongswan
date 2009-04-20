@@ -59,6 +59,7 @@ libstrongswan_la_LIBADD = -lpthread -ldl
 libstrongswan_lite_la_SOURCES = \
 chunk.c chunk.h \
 debug.c debug.h \
+enum.c enum.h \
 printf_hook.c printf_hook.h \
 settings.c settings.h \
 utils.c utils.h \
