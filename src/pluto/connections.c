@@ -701,8 +701,7 @@ unshare_connection_strings(struct connection *c)
 	alg_info_addref((struct alg_info *)c->alg_info_ike);
 }
 
-static void
-load_end_certificate(const char *filename, struct end *dst)
+static void load_end_certificate(char *filename, struct end *dst)
 {
 	time_t valid_until;
 	cert_t cert;

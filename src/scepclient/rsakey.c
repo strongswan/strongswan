@@ -36,7 +36,6 @@
 #include "../pluto/defs.h"
 #include "../pluto/mp_defs.h"
 #include "../pluto/log.h"
-#include "../pluto/asn1.h"
 #include "../pluto/pkcs1.h"
 
 #include "rsakey.h"

@@ -20,10 +20,11 @@
 
 #include <gmp.h>
 
-#include "defs.h"
+#include <utils.h>
 
 extern void n_to_mpz(MP_INT *mp, const u_char *nbytes, size_t nlen);
 extern chunk_t mpz_to_n(const MP_INT *mp, size_t bytes);
+extern chunk_t asn1_integer_from_mpz(const mpz_t value);
 
 /* var := mod(base ** exp, mod), ensuring var is mpz_inited */
 #define mpz_init_powm(flag, var, base, exp, mod) { \

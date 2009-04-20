@@ -1,7 +1,7 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic -Wformat=0
 
 plugin_LTLIBRARIES = libstrongswan-x509.la
 

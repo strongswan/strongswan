@@ -105,7 +105,8 @@ AM_CFLAGS = -rdynamic \
   -DIPSEC_PIDDIR=\"${piddir}\" \
   -DIPSEC_PLUGINDIR=\"${plugindir}\" \
   -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
-  -DRESOLV_CONF=\"${resolv_conf}\"
+  -DRESOLV_CONF=\"${resolv_conf}\" \
+  -Wformat=0
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm -ldl
 
 EXTRA_DIST = config/proposal_keywords.txt

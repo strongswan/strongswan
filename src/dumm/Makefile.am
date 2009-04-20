@@ -16,4 +16,6 @@ irdumm_LDADD = libdumm.la -lruby1.8
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan ${gtk_CFLAGS} \
   -I/usr/lib/ruby/1.8/i486-linux/
-AM_CFLAGS = -D_FILE_OFFSET_BITS=64
+AM_CFLAGS = \
+-D_FILE_OFFSET_BITS=64 \
+-Wformat=0

@@ -225,13 +225,13 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 	{
 		if (fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd) == chunk.len)
 		{
-			DBG1("  written to %s file '%s' (%d bytes)",
+			DBG1("  written %s file '%s' (%d bytes)",
 				 label, path, chunk.len);
 			good = TRUE;
 		}
 		else
 		{
-			DBG1("  writing to %s file '%s' failed: %s",
+			DBG1("  writing %s file '%s' failed: %s",
 				 label, path, strerror(errno));
 		}
 		fclose(fd);

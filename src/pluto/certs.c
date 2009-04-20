@@ -21,10 +21,11 @@
 #include <freeswan.h>
 #include <ipsec_policy.h>
 
+#include "asn1/asn1.h"
+
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
-#include "asn1.h"
 #include "id.h"
 #include "x509.h"
 #include "pgp.h"
@@ -32,16 +33,15 @@
 #include "certs.h"
 #include "pkcs1.h"
 
-/*
+/**
  * used for initializatin of certs
  */
 const cert_t empty_cert = {CERT_NONE, {NULL}};
 
-/*
+/**
  * extracts the certificate to be sent to the peer
  */
-chunk_t
-get_mycert(cert_t cert)
+chunk_t get_mycert(cert_t cert)
 {
 	switch (cert.type)
 	{
@@ -57,9 +57,8 @@ get_mycert(cert_t cert)
 /* load a coded key or certificate file with autodetection
  * of binary DER or base64 PEM ASN.1 formats and armored PGP format
  */
-bool
-load_coded_file(const char *filename, prompt_pass_t *pass, const char *type
-, chunk_t *blob, bool *pgp)
+bool load_coded_file(char *filename, prompt_pass_t *pass, const char *type,
+					 chunk_t *blob, bool *pgp)
 {
 	err_t ugh = NULL;
 
@@ -121,18 +120,17 @@ load_coded_file(const char *filename, prompt_pass_t *pass, const char *type
 	return FALSE;
 }
 
-/*
+/**
  *  Loads a PKCS#1 or PGP private RSA key file
  */
-err_t
-load_rsa_private_key(const char* filename, prompt_pass_t *pass
-, RSA_private_key_t *key)
+err_t load_rsa_private_key(char* filename, prompt_pass_t *pass,
+						   RSA_private_key_t *key)
 {
 	err_t ugh = NULL;
 	bool pgp = FALSE;
 	chunk_t blob = chunk_empty;
 
-	const char *path = concatenate_paths(PRIVATE_KEY_PATH, filename);
+	char *path = concatenate_paths(PRIVATE_KEY_PATH, filename);
 
 	if (load_coded_file(path, pass, "private key", &blob, &pgp))
 	{
@@ -153,11 +151,11 @@ load_rsa_private_key(const char* filename, prompt_pass_t *pass
 
 	return ugh;
 }
-/*
+
+/**
  *  Loads a X.509 or OpenPGP certificate
  */
-bool
-load_cert(const char *filename, const char *label, cert_t *cert)
+bool load_cert(char *filename, const char *label, cert_t *cert)
 {
 	bool pgp = FALSE;
 	chunk_t blob = chunk_empty;
@@ -206,42 +204,38 @@ load_cert(const char *filename, const char *label, cert_t *cert)
 	return FALSE;
 }
 
-/*
+/**
  *  Loads a host certificate
  */
-bool
-load_host_cert(const char *filename, cert_t *cert)
+bool load_host_cert(char *filename, cert_t *cert)
 {
-	const char *path = concatenate_paths(HOST_CERT_PATH, filename);
+	char *path = concatenate_paths(HOST_CERT_PATH, filename);
 
 	return load_cert(path, "host cert", cert);
 }
 
-/*
+/**
  *  Loads a CA certificate
  */
-bool
-load_ca_cert(const char *filename, cert_t *cert)
+bool load_ca_cert(char *filename, cert_t *cert)
 {
-	const char *path = concatenate_paths(CA_CERT_PATH, filename);
+	char *path = concatenate_paths(CA_CERT_PATH, filename);
 
 	return load_cert(path, "CA cert", cert);
 }
 
-/*
+/**
  * establish equality of two certificates
  */
-bool
-same_cert(const cert_t *a, const cert_t *b)
+bool same_cert(const cert_t *a, const cert_t *b)
 {
 	return a->type == b->type && a->u.x509 == b->u.x509;
 }
 
-/*  for each link pointing to the certif icate
- "  increase the count by one
+/**
+ * for each link pointing to the certificate increase the count by one
  */
-void
-share_cert(cert_t cert)
+void share_cert(cert_t cert)
 {
 	switch (cert.type)
 	{

@@ -26,6 +26,10 @@
 #include <freeswan.h>
 #include <ipsec_policy.h>
 
+#include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
+#include <asn1/oid.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
@@ -33,10 +37,8 @@
 #include "crl.h"
 #include "ca.h"
 #include "rnd.h"
-#include "asn1.h"
 #include "certs.h"
 #include "smartcard.h"
-#include <asn1/oid.h>
 #include "whack.h"
 #include "pkcs1.h"
 #include "keys.h"
@@ -160,131 +162,137 @@ static smartcard_t *ocsp_requestor_sc = NULL;
 
 static const struct RSA_private_key *ocsp_requestor_pri = NULL;
 
-/* asn.1 definitions for parsing */
-
+/**
+ * ASN.1 definition of ocspResponse
+ */
 static const asn1Object_t ocspResponseObjects[] = {
-  { 0, "OCSPResponse",                  ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
-  { 1,   "responseStatus",              ASN1_ENUMERATED,   ASN1_BODY }, /*  1 */
-  { 1,   "responseBytesContext",        ASN1_CONTEXT_C_0,  ASN1_OPT  }, /*  2 */
-  { 2,     "responseBytes",             ASN1_SEQUENCE,     ASN1_NONE }, /*  3 */
-  { 3,       "responseType",            ASN1_OID,          ASN1_BODY }, /*  4 */
-  { 3,       "response",                ASN1_OCTET_STRING, ASN1_BODY }, /*  5 */
-  { 1,   "end opt",                     ASN1_EOC,          ASN1_END  }  /*  6 */
+	{ 0, "OCSPResponse",			ASN1_SEQUENCE,		ASN1_NONE }, /* 0 */
+	{ 1,   "responseStatus",		ASN1_ENUMERATED,	ASN1_BODY }, /* 1 */
+	{ 1,   "responseBytesContext",	ASN1_CONTEXT_C_0,	ASN1_OPT  }, /* 2 */
+	{ 2,     "responseBytes",		ASN1_SEQUENCE,		ASN1_NONE }, /* 3 */
+	{ 3,       "responseType",		ASN1_OID,			ASN1_BODY }, /* 4 */
+	{ 3,       "response",			ASN1_OCTET_STRING,	ASN1_BODY }, /* 5 */
+	{ 1,   "end opt",				ASN1_EOC,			ASN1_END  }, /* 6 */
+	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT }
 };
+#define OCSP_RESPONSE_STATUS	1
+#define OCSP_RESPONSE_TYPE		4
+#define OCSP_RESPONSE			5
 
-#define OCSP_RESPONSE_STATUS    1
-#define OCSP_RESPONSE_TYPE      4
-#define OCSP_RESPONSE           5
-#define OCSP_RESPONSE_ROOF      7
-
+/**
+ * ASN.1 definition of basicResponse
+ */
 static const asn1Object_t basicResponseObjects[] = {
-  { 0, "BasicOCSPResponse",             ASN1_SEQUENCE,        ASN1_NONE }, /*  0 */
-  { 1,   "tbsResponseData",             ASN1_SEQUENCE,        ASN1_OBJ  }, /*  1 */
-  { 2,     "versionContext",            ASN1_CONTEXT_C_0,     ASN1_NONE |
-															  ASN1_DEF  }, /*  2 */
-  { 3,       "version",                 ASN1_INTEGER,         ASN1_BODY }, /*  3 */
-  { 2,     "responderIdContext",        ASN1_CONTEXT_C_1,     ASN1_OPT  }, /*  4 */
-  { 3,       "responderIdByName",       ASN1_SEQUENCE,        ASN1_OBJ  }, /*  5 */
-  { 2,     "end choice",                ASN1_EOC,             ASN1_END  }, /*  6 */
-  { 2,     "responderIdContext",        ASN1_CONTEXT_C_2,     ASN1_OPT  }, /*  7 */
-  { 3,       "responderIdByKey",        ASN1_OCTET_STRING,    ASN1_BODY }, /*  8 */
-  { 2,     "end choice",                ASN1_EOC,             ASN1_END  }, /*  9 */
-  { 2,     "producedAt",                ASN1_GENERALIZEDTIME, ASN1_BODY }, /* 10 */
-  { 2,     "responses",                 ASN1_SEQUENCE,        ASN1_OBJ  }, /* 11 */
-  { 2,     "responseExtensionsContext", ASN1_CONTEXT_C_1,     ASN1_OPT  }, /* 12 */
-  { 3,       "responseExtensions",      ASN1_SEQUENCE,        ASN1_LOOP }, /* 13 */
-  { 4,         "extension",             ASN1_SEQUENCE,        ASN1_NONE }, /* 14 */
-  { 5,           "extnID",              ASN1_OID,             ASN1_BODY }, /* 15 */
-  { 5,           "critical",            ASN1_BOOLEAN,         ASN1_BODY |
-															  ASN1_DEF  }, /* 16 */
-  { 5,           "extnValue",           ASN1_OCTET_STRING,    ASN1_BODY }, /* 17 */
-  { 4,         "end loop",              ASN1_EOC,             ASN1_END  }, /* 18 */
-  { 2,     "end opt",                   ASN1_EOC,             ASN1_END  }, /* 19 */
-  { 1,   "signatureAlgorithm",          ASN1_EOC,             ASN1_RAW  }, /* 20 */
-  { 1,   "signature",                   ASN1_BIT_STRING,      ASN1_BODY }, /* 21 */
-  { 1,   "certsContext",                ASN1_CONTEXT_C_0,     ASN1_OPT  }, /* 22 */
-  { 2,     "certs",                     ASN1_SEQUENCE,        ASN1_LOOP }, /* 23 */
-  { 3,       "certificate",             ASN1_SEQUENCE,        ASN1_OBJ  }, /* 24 */
-  { 2,     "end loop",                  ASN1_EOC,             ASN1_END  }, /* 25 */
-  { 1,   "end opt",                     ASN1_EOC,             ASN1_END  }  /* 26 */
+	{ 0, "BasicOCSPResponse",				ASN1_SEQUENCE,			ASN1_NONE }, /*  0 */
+	{ 1,   "tbsResponseData",				ASN1_SEQUENCE,			ASN1_OBJ  }, /*  1 */
+	{ 2,     "versionContext",				ASN1_CONTEXT_C_0,		ASN1_NONE |
+																	ASN1_DEF  }, /*  2 */
+	{ 3,       "version",					ASN1_INTEGER,			ASN1_BODY }, /*  3 */
+	{ 2,     "responderIdContext",			ASN1_CONTEXT_C_1,		ASN1_OPT  }, /*  4 */
+	{ 3,       "responderIdByName",			ASN1_SEQUENCE,			ASN1_OBJ  }, /*  5 */
+	{ 2,     "end choice",					ASN1_EOC,				ASN1_END  }, /*  6 */
+	{ 2,     "responderIdContext",			ASN1_CONTEXT_C_2,		ASN1_OPT  }, /*  7 */
+	{ 3,       "responderIdByKey",			ASN1_OCTET_STRING,		ASN1_BODY }, /*  8 */
+	{ 2,     "end choice",					ASN1_EOC,				ASN1_END  }, /*  9 */
+	{ 2,     "producedAt",					ASN1_GENERALIZEDTIME,	ASN1_BODY }, /* 10 */
+	{ 2,     "responses",					ASN1_SEQUENCE,			ASN1_OBJ  }, /* 11 */
+	{ 2,     "responseExtensionsContext",	ASN1_CONTEXT_C_1,		ASN1_OPT  }, /* 12 */
+	{ 3,       "responseExtensions",		ASN1_SEQUENCE,			ASN1_LOOP }, /* 13 */
+	{ 4,         "extension",				ASN1_SEQUENCE,			ASN1_NONE }, /* 14 */
+	{ 5,           "extnID",				ASN1_OID,				ASN1_BODY }, /* 15 */
+	{ 5,           "critical",				ASN1_BOOLEAN,			ASN1_BODY |
+																	ASN1_DEF  }, /* 16 */
+	{ 5,           "extnValue",				ASN1_OCTET_STRING,		ASN1_BODY }, /* 17 */
+	{ 4,         "end loop",				ASN1_EOC,				ASN1_END  }, /* 18 */
+	{ 2,     "end opt",						ASN1_EOC,				ASN1_END  }, /* 19 */
+	{ 1,   "signatureAlgorithm",			ASN1_EOC,				ASN1_RAW  }, /* 20 */
+	{ 1,   "signature",						ASN1_BIT_STRING,		ASN1_BODY }, /* 21 */
+	{ 1,   "certsContext",					ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 22 */
+	{ 2,     "certs",						ASN1_SEQUENCE,			ASN1_LOOP }, /* 23 */
+	{ 3,       "certificate",				ASN1_SEQUENCE,			ASN1_RAW  }, /* 24 */
+	{ 2,     "end loop",					ASN1_EOC,				ASN1_END  }, /* 25 */
+	{ 1,   "end opt",						ASN1_EOC,				ASN1_END  }, /* 26 */
+	{ 0, "exit",							ASN1_EOC,				ASN1_EXIT }
 };
+#define BASIC_RESPONSE_TBS_DATA		 1
+#define BASIC_RESPONSE_VERSION		 3
+#define BASIC_RESPONSE_ID_BY_NAME	 5
+#define BASIC_RESPONSE_ID_BY_KEY	 8
+#define BASIC_RESPONSE_PRODUCED_AT	10
+#define BASIC_RESPONSE_RESPONSES	11
+#define BASIC_RESPONSE_EXT_ID		15
+#define BASIC_RESPONSE_CRITICAL		16
+#define BASIC_RESPONSE_EXT_VALUE	17
+#define BASIC_RESPONSE_ALGORITHM	20
+#define BASIC_RESPONSE_SIGNATURE	21
+#define BASIC_RESPONSE_CERTIFICATE	24
 
-#define BASIC_RESPONSE_TBS_DATA          1
-#define BASIC_RESPONSE_VERSION           3
-#define BASIC_RESPONSE_ID_BY_NAME        5
-#define BASIC_RESPONSE_ID_BY_KEY         8
-#define BASIC_RESPONSE_PRODUCED_AT      10
-#define BASIC_RESPONSE_RESPONSES        11
-#define BASIC_RESPONSE_EXT_ID           15
-#define BASIC_RESPONSE_CRITICAL         16
-#define BASIC_RESPONSE_EXT_VALUE        17
-#define BASIC_RESPONSE_ALGORITHM        20
-#define BASIC_RESPONSE_SIGNATURE        21
-#define BASIC_RESPONSE_CERTIFICATE      24
-#define BASIC_RESPONSE_ROOF             27
-
+/**
+ * ASN.1 definition of responses
+ */
 static const asn1Object_t responsesObjects[] = {
-  { 0, "responses",                   ASN1_SEQUENCE,          ASN1_LOOP }, /*  0 */
-  { 1,   "singleResponse",            ASN1_EOC,               ASN1_RAW  }, /*  1 */
-  { 0, "end loop",                    ASN1_EOC,               ASN1_END  }  /*  2 */
+	{ 0, "responses",			ASN1_SEQUENCE,	ASN1_LOOP }, /* 0 */
+	{ 1,   "singleResponse",	ASN1_EOC,		ASN1_RAW  }, /* 1 */
+	{ 0, "end loop",			ASN1_EOC,		ASN1_END  }, /* 2 */
+	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
 };
+#define RESPONSES_SINGLE_RESPONSE	1
 
-#define RESPONSES_SINGLE_RESPONSE        1
-#define RESPONSES_ROOF                   3
-
+/**
+ * ASN.1 definition of singleResponse
+ */
 static const asn1Object_t singleResponseObjects[] = {
-  { 0, "singleResponse",            ASN1_SEQUENCE,          ASN1_BODY }, /*  0 */
-  { 1,   "certID",                  ASN1_SEQUENCE,          ASN1_NONE }, /*  1 */
-  { 2,     "algorithm",             ASN1_EOC,               ASN1_RAW  }, /*  2 */
-  { 2,     "issuerNameHash",        ASN1_OCTET_STRING,      ASN1_BODY }, /*  3 */
-  { 2,     "issuerKeyHash",         ASN1_OCTET_STRING,      ASN1_BODY }, /*  4 */
-  { 2,     "serialNumber",          ASN1_INTEGER,           ASN1_BODY }, /*  5 */
-  { 1,   "certStatusGood",          ASN1_CONTEXT_S_0,       ASN1_OPT  }, /*  6 */
-  { 1,   "end opt",                 ASN1_EOC,               ASN1_END  }, /*  7 */
-  { 1,   "certStatusRevoked",       ASN1_CONTEXT_C_1,       ASN1_OPT  }, /*  8 */
-  { 2,     "revocationTime",        ASN1_GENERALIZEDTIME,   ASN1_BODY }, /*  9 */
-  { 2,     "revocationReason",      ASN1_CONTEXT_C_0,       ASN1_OPT  }, /* 10 */
-  { 3,       "crlReason",           ASN1_ENUMERATED,        ASN1_BODY }, /* 11 */
-  { 2,     "end opt",               ASN1_EOC,               ASN1_END  }, /* 12 */
-  { 1,   "end opt",                 ASN1_EOC,               ASN1_END  }, /* 13 */
-  { 1,   "certStatusUnknown",       ASN1_CONTEXT_S_2,       ASN1_OPT  }, /* 14 */
-  { 1,   "end opt",                 ASN1_EOC,               ASN1_END  }, /* 15 */
-  { 1,   "thisUpdate",              ASN1_GENERALIZEDTIME,   ASN1_BODY }, /* 16 */
-  { 1,   "nextUpdateContext",       ASN1_CONTEXT_C_0,       ASN1_OPT  }, /* 17 */
-  { 2,     "nextUpdate",            ASN1_GENERALIZEDTIME,   ASN1_BODY }, /* 18 */
-  { 1,   "end opt",                 ASN1_EOC,               ASN1_END  }, /* 19 */
-  { 1,   "singleExtensionsContext", ASN1_CONTEXT_C_1,       ASN1_OPT  }, /* 20 */
-  { 2,     "singleExtensions",      ASN1_SEQUENCE,          ASN1_LOOP }, /* 21 */
-  { 3,       "extension",           ASN1_SEQUENCE,          ASN1_NONE }, /* 22 */
-  { 4,         "extnID",            ASN1_OID,               ASN1_BODY }, /* 23 */
-  { 4,         "critical",          ASN1_BOOLEAN,           ASN1_BODY |
-															ASN1_DEF  }, /* 24 */
-  { 4,         "extnValue",         ASN1_OCTET_STRING,      ASN1_BODY }, /* 25 */
-  { 2,     "end loop",              ASN1_EOC,               ASN1_END  }, /* 26 */
-  { 1,   "end opt",                 ASN1_EOC,               ASN1_END  }  /* 27 */
+	{ 0, "singleResponse",				ASN1_SEQUENCE,			ASN1_BODY }, /*  0 */
+	{ 1,   "certID",					ASN1_SEQUENCE,			ASN1_NONE }, /*  1 */
+	{ 2,     "algorithm",				ASN1_EOC,				ASN1_RAW  }, /*  2 */
+	{ 2,     "issuerNameHash",			ASN1_OCTET_STRING,		ASN1_BODY }, /*  3 */
+	{ 2,     "issuerKeyHash",			ASN1_OCTET_STRING,		ASN1_BODY }, /*  4 */
+	{ 2,     "serialNumber",			ASN1_INTEGER,			ASN1_BODY }, /*  5 */
+	{ 1,   "certStatusGood",			ASN1_CONTEXT_S_0,		ASN1_OPT  }, /*  6 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /*  7 */
+	{ 1,   "certStatusRevoked",			ASN1_CONTEXT_C_1,		ASN1_OPT  }, /*  8 */
+	{ 2,     "revocationTime",			ASN1_GENERALIZEDTIME,	ASN1_BODY }, /*  9 */
+	{ 2,     "revocationReason",		ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 10 */
+	{ 3,       "crlReason",				ASN1_ENUMERATED,		ASN1_BODY }, /* 11 */
+	{ 2,     "end opt",					ASN1_EOC,				ASN1_END  }, /* 12 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 13 */
+	{ 1,   "certStatusUnknown",			ASN1_CONTEXT_S_2,		ASN1_OPT  }, /* 14 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 15 */
+	{ 1,   "thisUpdate",				ASN1_GENERALIZEDTIME,	ASN1_BODY }, /* 16 */
+	{ 1,   "nextUpdateContext",			ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 17 */
+	{ 2,     "nextUpdate",				ASN1_GENERALIZEDTIME,	ASN1_BODY }, /* 18 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 19 */
+	{ 1,   "singleExtensionsContext",	ASN1_CONTEXT_C_1,		ASN1_OPT  }, /* 20 */
+	{ 2,     "singleExtensions",		ASN1_SEQUENCE,			ASN1_LOOP }, /* 21 */
+	{ 3,       "extension",				ASN1_SEQUENCE,			ASN1_NONE }, /* 22 */
+	{ 4,         "extnID",				ASN1_OID,				ASN1_BODY }, /* 23 */
+	{ 4,         "critical",			ASN1_BOOLEAN,			ASN1_BODY |
+																ASN1_DEF  }, /* 24 */
+	{ 4,         "extnValue",			ASN1_OCTET_STRING,		ASN1_BODY }, /* 25 */
+	{ 2,     "end loop",				ASN1_EOC,				ASN1_END  }, /* 26 */
+	{ 1,   "end opt",					ASN1_EOC,				ASN1_END  }, /* 27 */
+	{ 0, "exit",						ASN1_EOC,				ASN1_EXIT }
 };
+#define SINGLE_RESPONSE_ALGORITHM					 2
+#define SINGLE_RESPONSE_ISSUER_NAME_HASH			 3
+#define SINGLE_RESPONSE_ISSUER_KEY_HASH				 4
+#define SINGLE_RESPONSE_SERIAL_NUMBER				 5
+#define SINGLE_RESPONSE_CERT_STATUS_GOOD			 6
+#define SINGLE_RESPONSE_CERT_STATUS_REVOKED			 8
+#define SINGLE_RESPONSE_CERT_STATUS_REVOCATION_TIME	 9
+#define SINGLE_RESPONSE_CERT_STATUS_CRL_REASON		11
+#define SINGLE_RESPONSE_CERT_STATUS_UNKNOWN			14
+#define SINGLE_RESPONSE_THIS_UPDATE					16
+#define SINGLE_RESPONSE_NEXT_UPDATE					18
+#define SINGLE_RESPONSE_EXT_ID						23
+#define SINGLE_RESPONSE_CRITICAL					24
+#define SINGLE_RESPONSE_EXT_VALUE					25
 
-#define SINGLE_RESPONSE_ALGORITHM                        2
-#define SINGLE_RESPONSE_ISSUER_NAME_HASH                 3
-#define SINGLE_RESPONSE_ISSUER_KEY_HASH                  4
-#define SINGLE_RESPONSE_SERIAL_NUMBER                    5
-#define SINGLE_RESPONSE_CERT_STATUS_GOOD                 6
-#define SINGLE_RESPONSE_CERT_STATUS_REVOKED              8
-#define SINGLE_RESPONSE_CERT_STATUS_REVOCATION_TIME      9
-#define SINGLE_RESPONSE_CERT_STATUS_CRL_REASON          11
-#define SINGLE_RESPONSE_CERT_STATUS_UNKNOWN             14
-#define SINGLE_RESPONSE_THIS_UPDATE                     16
-#define SINGLE_RESPONSE_NEXT_UPDATE                     18
-#define SINGLE_RESPONSE_EXT_ID                          23
-#define SINGLE_RESPONSE_CRITICAL                        24
-#define SINGLE_RESPONSE_EXT_VALUE                       25
-#define SINGLE_RESPONSE_ROOF                            28
-
-/* build an ocsp location from certificate information
+/*
+ * Build an ocsp location from certificate information
  * without unsharing its contents
  */
-static bool
-build_ocsp_location(const x509cert_t *cert, ocsp_location_t *location)
+static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *location)
 {
 	static u_char digest[SHA1_DIGEST_SIZE];  /* temporary storage */
 
@@ -330,11 +338,10 @@ build_ocsp_location(const x509cert_t *cert, ocsp_location_t *location)
 	return TRUE;
 }
 
-/*
- * compare two ocsp locations for equality
+/**
+ * Compare two ocsp locations for equality
  */
-static bool
-same_ocsp_location(const ocsp_location_t *a, const ocsp_location_t *b)
+static bool same_ocsp_location(const ocsp_location_t *a, const ocsp_location_t *b)
 {
 	return ((a->authKeyID.ptr != NULL)
 				? same_keyid(a->authKeyID, b->authKeyID)
@@ -343,11 +350,10 @@ same_ocsp_location(const ocsp_location_t *a, const ocsp_location_t *b)
 			&& chunk_equals(a->uri, b->uri);
 }
 
-/*
- * find an existing ocsp location in a chained list
+/**
+ * Find an existing ocsp location in a chained list
  */
-ocsp_location_t*
-get_ocsp_location(const ocsp_location_t * loc, ocsp_location_t *chain)
+ocsp_location_t* get_ocsp_location(const ocsp_location_t * loc, ocsp_location_t *chain)
 {
 
 	while (chain != NULL)
@@ -359,12 +365,14 @@ get_ocsp_location(const ocsp_location_t * loc, ocsp_location_t *chain)
 	return NULL;
 }
 
-/* retrieves the status of a cert from the ocsp cache
+/**
+ * Retrieves the status of a cert from the ocsp cache
  * returns CERT_UNDEFINED if no status is found
  */
-static cert_status_t
-get_ocsp_status(const ocsp_location_t *loc, chunk_t serialNumber
-	,time_t *nextUpdate, time_t *revocationTime, crl_reason_t *revocationReason)
+static cert_status_t get_ocsp_status(const ocsp_location_t *loc,
+									 chunk_t serialNumber,
+									 time_t *nextUpdate, time_t *revocationTime,
+									 crl_reason_t *revocationReason)
 {
 	ocsp_certinfo_t *certinfo, **certinfop;
 	int cmp = -1;
@@ -399,12 +407,12 @@ get_ocsp_status(const ocsp_location_t *loc, chunk_t serialNumber
 	return CERT_UNDEFINED;
 }
 
-/*
- * verify the ocsp status of a certificate
+/**
+ * Verify the ocsp status of a certificate
  */
-cert_status_t
-verify_by_ocsp(const x509cert_t *cert, time_t *until
-, time_t *revocationDate, crl_reason_t *revocationReason)
+cert_status_t verify_by_ocsp(const x509cert_t *cert, time_t *until,
+							 time_t *revocationDate,
+							 crl_reason_t *revocationReason)
 {
 	cert_status_t status;
 	ocsp_location_t location;
@@ -434,11 +442,10 @@ verify_by_ocsp(const x509cert_t *cert, time_t *until
 	return status;
 }
 
-/*
- * check if an ocsp status is about to expire
+/**
+ * Check if an ocsp status is about to expire
  */
-void
-check_ocsp(void)
+void check_ocsp(void)
 {
 	ocsp_location_t *location;
 
@@ -485,21 +492,19 @@ check_ocsp(void)
 	unlock_ocsp_cache("check_ocsp");
 }
 
-/*
+/**
  *  frees the allocated memory of a certinfo struct
  */
-static void
-free_certinfo(ocsp_certinfo_t *certinfo)
+static void free_certinfo(ocsp_certinfo_t *certinfo)
 {
 	free(certinfo->serialNumber.ptr);
 	free(certinfo);
 }
 
-/*
+/**
  * frees all certinfos in a chained list
  */
-static void
-free_certinfos(ocsp_certinfo_t *chain)
+static void free_certinfos(ocsp_certinfo_t *chain)
 {
 	ocsp_certinfo_t *certinfo;
 
@@ -511,11 +516,10 @@ free_certinfos(ocsp_certinfo_t *chain)
 	}
 }
 
-/*
- * frees the memory allocated to an ocsp location including all certinfos
+/**
+ * Frees the memory allocated to an ocsp location including all certinfos
  */
-static void
-free_ocsp_location(ocsp_location_t* location)
+static void free_ocsp_location(ocsp_location_t* location)
 {
 	free(location->issuer.ptr);
 	free(location->authNameID.ptr);
@@ -527,10 +531,9 @@ free_ocsp_location(ocsp_location_t* location)
 }
 
 /*
- * free a chained list of ocsp locations
+ * Free a chained list of ocsp locations
  */
-void
-free_ocsp_locations(ocsp_location_t **chain)
+void free_ocsp_locations(ocsp_location_t **chain)
 {
 	while (*chain != NULL)
 	{
@@ -540,33 +543,30 @@ free_ocsp_locations(ocsp_location_t **chain)
 	}
 }
 
-/*
- * free the ocsp cache
+/**
+ * Free the ocsp cache
  */
-void
-free_ocsp_cache(void)
+void free_ocsp_cache(void)
 {
 	lock_ocsp_cache("free_ocsp_cache");
 	free_ocsp_locations(&ocsp_cache);
 	unlock_ocsp_cache("free_ocsp_cache");
 }
 
-/*
- * frees the ocsp cache and global variables
+/**
+ * Frees the ocsp cache and global variables
  */
-void
-free_ocsp(void)
+void free_ocsp(void)
 {
 	free(ocsp_default_uri.ptr);
 	free_ocsp_cache();
 }
 
-/*
- * list a chained list of ocsp_locations
+/**
+ * List a chained list of ocsp_locations
  */
-void
-list_ocsp_locations(ocsp_location_t *location, bool requests, bool utc
-, bool strict)
+void list_ocsp_locations(ocsp_location_t *location, bool requests,
+						 bool utc, bool strict)
 {
 	bool first = TRUE;
 
@@ -644,19 +644,17 @@ list_ocsp_locations(ocsp_location_t *location, bool requests, bool utc
 	}
 }
 
-/*
- * list the ocsp cache
+/**
+ * List the ocsp cache
  */
-void
-list_ocsp_cache(bool utc, bool strict)
+void list_ocsp_cache(bool utc, bool strict)
 {
 	lock_ocsp_cache("list_ocsp_cache");
 	list_ocsp_locations(ocsp_cache, FALSE, utc, strict);
 	unlock_ocsp_cache("list_ocsp_cache");
 }
 
-static bool
-get_ocsp_requestor_cert(ocsp_location_t *location)
+static bool get_ocsp_requestor_cert(ocsp_location_t *location)
 {
 	x509cert_t *cert = NULL;
 
@@ -718,9 +716,8 @@ get_ocsp_requestor_cert(ocsp_location_t *location)
 	return FALSE;
 }
 
-static chunk_t
-generate_signature(chunk_t digest, smartcard_t *sc
-	, const RSA_private_key_t *pri)
+static chunk_t generate_signature(chunk_t digest, smartcard_t *sc,
+								  const RSA_private_key_t *pri)
 {
 	chunk_t sigdata;
 	u_char *pos;
@@ -750,7 +747,7 @@ generate_signature(chunk_t digest, smartcard_t *sc
 				, (int)sc->slot, sc->id)
 		)
 
-		pos = build_asn1_object(&sigdata, ASN1_BIT_STRING, 1 + siglen);
+		pos = asn1_build_object(&sigdata, ASN1_BIT_STRING, 1 + siglen);
 		*pos++ = 0x00;
 		scx_sign_hash(sc, digest.ptr, digest.len, pos, siglen);
 		if (!pkcs11_keep_state)
@@ -760,20 +757,18 @@ generate_signature(chunk_t digest, smartcard_t *sc
 	{
 		/* RSA signature is done in software */
 		siglen = pri->pub.k;
-		pos = build_asn1_object(&sigdata, ASN1_BIT_STRING, 1 + siglen);
+		pos = asn1_build_object(&sigdata, ASN1_BIT_STRING, 1 + siglen);
 		*pos++ = 0x00;
 		sign_hash(pri, digest.ptr, digest.len, pos, siglen);
 	}
 	return sigdata;
 }
 
-/*
- * build signature into ocsp request
- * gets built only if a request cert with
- * a corresponding private key is found
+/**
+ * build signature into ocsp request gets built only if a request cert
+ * with a corresponding private key is found
  */
-static chunk_t
-build_signature(chunk_t tbsRequest)
+static chunk_t build_signature(chunk_t tbsRequest)
 {
 	chunk_t sigdata, certs;
 	chunk_t digest_info;
@@ -788,7 +783,7 @@ build_signature(chunk_t tbsRequest)
 	 * an ASN.1 structure for encryption
 	 */
 	digest_info = asn1_wrap(ASN1_SEQUENCE, "cm"
-		, ASN1_sha1_id
+		, asn1_algorithmIdentifier(OID_SHA1)
 		, asn1_simple_object(ASN1_OCTET_STRING, digest_raw));
 
 	/* generate the RSA signature */
@@ -811,21 +806,21 @@ build_signature(chunk_t tbsRequest)
 	/* build signature comprising algorithm, signature and cert */
 	return asn1_wrap(ASN1_CONTEXT_C_0, "m"
 				, asn1_wrap(ASN1_SEQUENCE, "cmm"
-					, ASN1_sha1WithRSA_id
+					, asn1_algorithmIdentifier(OID_SHA1_WITH_RSA)
 					, sigdata
 					, certs
 				  )
 		   );
 }
 
-/* build request (into requestList)
+/**
+ * Build request (into requestList)
  * no singleRequestExtensions used
  */
-static chunk_t
-build_request(ocsp_location_t *location, ocsp_certinfo_t *certinfo)
+static chunk_t build_request(ocsp_location_t *location, ocsp_certinfo_t *certinfo)
 {
 	chunk_t reqCert = asn1_wrap(ASN1_SEQUENCE, "cmmm"
-				, ASN1_sha1_id
+				, asn1_algorithmIdentifier(OID_SHA1)
 				, asn1_simple_object(ASN1_OCTET_STRING, location->authNameID)
 				, asn1_simple_object(ASN1_OCTET_STRING, location->authKeyID)
 				, asn1_simple_object(ASN1_INTEGER, certinfo->serialNumber));
@@ -833,11 +828,10 @@ build_request(ocsp_location_t *location, ocsp_certinfo_t *certinfo)
 	return asn1_wrap(ASN1_SEQUENCE, "m", reqCert);
 }
 
-/*
+/**
  * build requestList (into TBSRequest)
  */
-static chunk_t
-build_request_list(ocsp_location_t *location)
+static chunk_t build_request_list(ocsp_location_t *location)
 {
 	chunk_t requestList;
 	request_list_t *reqs = NULL;
@@ -862,8 +856,7 @@ build_request_list(ocsp_location_t *location)
 		certinfo = certinfo->next;
 	}
 
-	pos = build_asn1_object(&requestList, ASN1_SEQUENCE
-			, datalen);
+	pos = asn1_build_object(&requestList, ASN1_SEQUENCE, datalen);
 
 	/* copy all in chained list, free list afterwards */
 	while (reqs != NULL)
@@ -878,22 +871,20 @@ build_request_list(ocsp_location_t *location)
 	return requestList;
 }
 
-/*
- * build requestorName (into TBSRequest)
+/**
+ * Build requestorName (into TBSRequest)
  */
-static chunk_t
-build_requestor_name(void)
+static chunk_t build_requestor_name(void)
 {
 	return asn1_wrap(ASN1_CONTEXT_C_1, "m"
 				, asn1_simple_object(ASN1_CONTEXT_C_4
 					, ocsp_requestor_cert->subject));
 }
 
-/*
+/**
  * build nonce extension (into requestExtensions)
  */
-static chunk_t
-build_nonce_extension(ocsp_location_t *location)
+static chunk_t build_nonce_extension(ocsp_location_t *location)
 {
 	/* generate a random nonce */
 	location->nonce.ptr = malloc(NONCE_LENGTH),
@@ -905,11 +896,10 @@ build_nonce_extension(ocsp_location_t *location)
 				, asn1_simple_object(ASN1_OCTET_STRING, location->nonce));
 }
 
-/*
- * build requestExtensions (into TBSRequest)
+/**
+ * Build requestExtensions (into TBSRequest)
  */
-static chunk_t
-build_request_ext(ocsp_location_t *location)
+static chunk_t build_request_ext(ocsp_location_t *location)
 {
 	return asn1_wrap(ASN1_CONTEXT_C_2, "m"
 				, asn1_wrap(ASN1_SEQUENCE, "mm"
@@ -922,11 +912,10 @@ build_request_ext(ocsp_location_t *location)
 			);
 }
 
-/*
- * build TBSRequest (into OCSPRequest)
+/**
+ * Build TBSRequest (into OCSPRequest)
  */
-static chunk_t
-build_tbs_request(ocsp_location_t *location, bool has_requestor_cert)
+static chunk_t build_tbs_request(ocsp_location_t *location, bool has_requestor_cert)
 {
 	/* version is skipped since the default is ok */
 	return asn1_wrap(ASN1_SEQUENCE, "mmm"
@@ -937,11 +926,11 @@ build_tbs_request(ocsp_location_t *location, bool has_requestor_cert)
 				, build_request_ext(location));
 }
 
-/* assembles an ocsp request to given location
+/**
+ * Assembles an ocsp request to given location
  * and sets nonce field in location to the sent nonce
  */
-chunk_t
-build_ocsp_request(ocsp_location_t *location)
+chunk_t build_ocsp_request(ocsp_location_t *location)
 {
 	bool has_requestor_cert;
 	chunk_t tbsRequest, signature;
@@ -977,11 +966,10 @@ build_ocsp_request(ocsp_location_t *location)
 				, signature);
 }
 
-/*
- * check if the OCSP response has a valid signature
+/**
+ * Check if the OCSP response has a valid signature
  */
-static bool
-valid_ocsp_response(response_t *res)
+static bool valid_ocsp_response(response_t *res)
 {
 	int pathlen;
 	x509cert_t *authcert;
@@ -1086,27 +1074,25 @@ valid_ocsp_response(response_t *res)
 	return FALSE;
 }
 
-/*
- * parse a basic OCSP response
+/**
+ * Parse a basic OCSP response
  */
-static bool
-parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
+static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 {
-	asn1_ctx_t ctx;
-	bool critical;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level, version;
+	u_int version;
 	u_char buf[BUF_LEN];
-	int objectID = 0;
+	int objectID;
 	int extn_oid = OID_UNKNOWN;
+	bool success = FALSE;
+	bool critical;
 
-	asn1_init(&ctx, blob, level0, FALSE, DBG_RAW);
+	parser = asn1_parser_create(basicResponseObjects, blob);
+	parser->set_top_level(parser, level0);
 
-	while (objectID < BASIC_RESPONSE_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(basicResponseObjects, &objectID, &object, &level, &ctx))
-			return FALSE;
-		
 		switch (objectID)
 		{
 		case BASIC_RESPONSE_TBS_DATA:
@@ -1117,7 +1103,7 @@ parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 			if (version != OCSP_BASIC_RESPONSE_VERSION)
 			{
 				plog("wrong ocsp basic response version (version= %i)",  version);
-				return FALSE;
+				goto end;
 			}
 			break;
 		case BASIC_RESPONSE_ID_BY_NAME:
@@ -1131,7 +1117,7 @@ parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 			res->responder_id_key = object;
 			break;
 		case BASIC_RESPONSE_PRODUCED_AT:
-			res->produced_at = asn1totime(&object, ASN1_GENERALIZEDTIME);
+			res->produced_at = asn1_to_time(&object, ASN1_GENERALIZEDTIME);
 			break;
 		case BASIC_RESPONSE_RESPONSES:
 			res->responses = object;
@@ -1150,7 +1136,8 @@ parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 				res->nonce = object;
 			break;
 		case BASIC_RESPONSE_ALGORITHM:
-			res->algorithm = parse_algorithmIdentifier(object, level+1, NULL);
+			res->algorithm = asn1_parse_algorithmIdentifier(object,
+								parser->get_level(parser)+1, NULL);
 			break;
 		case BASIC_RESPONSE_SIGNATURE:
 			res->signature = object;
@@ -1162,7 +1149,7 @@ parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 
 				*cert = empty_x509cert;
 
-				if (parse_x509cert(blob, level+1, cert)
+				if (parse_x509cert(blob, parser->get_level(parser)+1, cert)
 				&& cert->isOcspSigner
 				&& trust_authcert_candidate(cert, NULL))
 				{
@@ -1178,32 +1165,32 @@ parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 			}
 			break;
 		}
-		objectID++;
 	}
-	return TRUE;
+	success = parser->success(parser);
+
+end:
+	parser->destroy(parser);
+	return success;
+
 }
 
 
-/*
- * parse an ocsp response and return the result as a response_t struct
+/**
+ * Parse an ocsp response and return the result as a response_t struct
  */
-static response_status
-parse_ocsp_response(chunk_t blob, response_t * res)
+static response_status parse_ocsp_response(chunk_t blob, response_t * res)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
-	int objectID = 0;
+	int objectID;
 	int ocspResponseType = OID_UNKNOWN;
+	bool success = FALSE;
 	response_status rStatus = STATUS_INTERNALERROR;
 
-	asn1_init(&ctx, blob, 0, FALSE, DBG_RAW);
+	parser = asn1_parser_create(ocspResponseObjects, blob);
 
-	while (objectID < OCSP_RESPONSE_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(ocspResponseObjects, &objectID, &object, &level, &ctx))
-			return STATUS_INTERNALERROR;
-
 		switch (objectID) {
 		case OCSP_RESPONSE_STATUS:
 			rStatus = (response_status) *object.ptr;
@@ -1219,9 +1206,9 @@ parse_ocsp_response(chunk_t blob, response_t * res)
 			case STATUS_UNAUTHORIZED:
 				plog("ocsp response: server said '%s'"
 					, response_status_names[rStatus]);
-				return rStatus;
+				goto end;
 			default:
-				return STATUS_INTERNALERROR;
+				goto end;
 			}
 			break;
 		case OCSP_RESPONSE_TYPE:
@@ -1231,47 +1218,50 @@ parse_ocsp_response(chunk_t blob, response_t * res)
 			{
 				switch (ocspResponseType) {
 				case OID_BASIC:
-					if (!parse_basic_ocsp_response(object, level+1, res))
-						return STATUS_INTERNALERROR;
+					success = parse_basic_ocsp_response(object,
+									parser->get_level(parser)+1, res);
 					break;
 				default:
 					DBG(DBG_CONTROL,
 						DBG_log("ocsp response is not of type BASIC");
 						DBG_dump_chunk("ocsp response OID: ", object);
 					)
-					return STATUS_INTERNALERROR;
+					goto end;
 				}
 			}
 			break;
 		}
-		objectID++;
 	}
+	success &= parser->success(parser);
+
+end:
+	parser->destroy(parser);
 	return rStatus;
 }
 
-/*
- * parse a basic OCSP response
+/**
+ * Parse a basic OCSP response
  */
-static bool
-parse_ocsp_single_response(chunk_t blob, int level0, single_response_t *sres)
+static bool parse_ocsp_single_response(chunk_t blob, int level0,
+									   single_response_t *sres)
 {
-	u_int level, extn_oid;
-	asn1_ctx_t ctx;
-	bool critical;
+	asn1_parser_t *parser;
 	chunk_t object;
-	int objectID = 0;
+	u_int extn_oid;
+	int objectID;
+	bool critical;
+	bool success = FALSE;
 
-	asn1_init(&ctx, blob, level0, FALSE, DBG_RAW);
+	parser = asn1_parser_create(singleResponseObjects, blob);
+	parser->set_top_level(parser, level0);
 
-	while (objectID < SINGLE_RESPONSE_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(singleResponseObjects, &objectID, &object, &level, &ctx))
-			return FALSE;
-
 		switch (objectID)
 		{
 		case SINGLE_RESPONSE_ALGORITHM:
-			sres->hash_algorithm = parse_algorithmIdentifier(object, level+1, NULL);
+			sres->hash_algorithm = asn1_parse_algorithmIdentifier(object,
+										parser->get_level(parser)+1, NULL);
 			break;
 		case SINGLE_RESPONSE_ISSUER_NAME_HASH:
 			sres->issuer_name_hash = object;
@@ -1289,7 +1279,7 @@ parse_ocsp_single_response(chunk_t blob, int level0, single_response_t *sres)
 			sres->status = CERT_REVOKED;
 			break;
 		case SINGLE_RESPONSE_CERT_STATUS_REVOCATION_TIME:
-			sres->revocationTime = asn1totime(&object, ASN1_GENERALIZEDTIME);
+			sres->revocationTime = asn1_to_time(&object, ASN1_GENERALIZEDTIME);
 			break;
 		case SINGLE_RESPONSE_CERT_STATUS_CRL_REASON:
 			sres->revocationReason = (object.len == 1)
@@ -1299,10 +1289,10 @@ parse_ocsp_single_response(chunk_t blob, int level0, single_response_t *sres)
 			sres->status = CERT_UNKNOWN;
 			break;
 		case SINGLE_RESPONSE_THIS_UPDATE:
-			sres->thisUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
+			sres->thisUpdate = asn1_to_time(&object, ASN1_GENERALIZEDTIME);
 			break;
 		case SINGLE_RESPONSE_NEXT_UPDATE:
-			sres->nextUpdate = asn1totime(&object, ASN1_GENERALIZEDTIME);
+			sres->nextUpdate = asn1_to_time(&object, ASN1_GENERALIZEDTIME);
 			break;
 		case SINGLE_RESPONSE_EXT_ID:
 			extn_oid = asn1_known_oid(object);
@@ -1315,16 +1305,17 @@ parse_ocsp_single_response(chunk_t blob, int level0, single_response_t *sres)
 		case SINGLE_RESPONSE_EXT_VALUE:
 			break;
 		}
-		objectID++;
 	}
-	return TRUE;
+	success = parser->success(parser);
+	parser->destroy(parser);
+	return success;
 }
 
-/*
- * add an ocsp location to a chained list
+/**
+ * Add an ocsp location to a chained list
  */
-ocsp_location_t*
-add_ocsp_location(const ocsp_location_t *loc, ocsp_location_t **chain)
+ocsp_location_t* add_ocsp_location(const ocsp_location_t *loc,
+								   ocsp_location_t **chain)
 {
 	ocsp_location_t *location = malloc_thing(ocsp_location_t);
 
@@ -1347,12 +1338,11 @@ add_ocsp_location(const ocsp_location_t *loc, ocsp_location_t **chain)
 	return location;
 }
 
-/*
+/**
  * add a certinfo struct to a chained list
  */
-void
-add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info, ocsp_location_t **chain
-	, bool request)
+void add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info,
+				  ocsp_location_t **chain, bool request)
 {
 	ocsp_location_t *location;
 	ocsp_certinfo_t *certinfo, **certinfop;
@@ -1362,7 +1352,9 @@ add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info, ocsp_location_t **chai
 
 	location = get_ocsp_location(loc, *chain);
 	if (location == NULL)
+	{
 		location = add_ocsp_location(loc, chain);
+	}
 
 	/* traverse list of certinfos in increasing order */
 	certinfop = &location->certinfo;
@@ -1404,8 +1396,9 @@ add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info, ocsp_location_t **chai
 		certinfo->status = CERT_UNDEFINED;
 		
 		if (cmp != 0)
+		{
 			certinfo->thisUpdate = now;
-
+		}
 		certinfo->nextUpdate = UNDEFINED_TIME;
 	}
 	else
@@ -1424,11 +1417,11 @@ add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info, ocsp_location_t **chai
 	}
 }
 
-/*
- * process received ocsp single response and add it to ocsp cache
+/**
+ * Process received ocsp single response and add it to ocsp cache
  */
-static void
-process_single_response(ocsp_location_t *location, single_response_t *sres)
+static void process_single_response(ocsp_location_t *location,
+									single_response_t *sres)
 {
 	ocsp_certinfo_t *certinfo, **certinfop;
 	int cmp = -1;
@@ -1481,14 +1474,12 @@ process_single_response(ocsp_location_t *location, single_response_t *sres)
 
 	/* free certinfo unlinked from ocsp fetch request list */
 	free_certinfo(certinfo);
-
 }
 
-/*
- *  parse and verify ocsp response and update the ocsp cache
+/**
+ *  Parse and verify ocsp response and update the ocsp cache
  */
-void
-parse_ocsp(ocsp_location_t *location, chunk_t blob)
+void parse_ocsp(ocsp_location_t *location, chunk_t blob)
 {
 	response_t res = empty_response;
 
@@ -1523,28 +1514,27 @@ parse_ocsp(ocsp_location_t *location, chunk_t blob)
 
 	/* now parse the single responses one at a time */
 	{
-		u_int level;
-		asn1_ctx_t ctx;
+		asn1_parser_t *parser;
 		chunk_t object;
-		int objectID = 0;
+		int objectID;
 
-		asn1_init(&ctx, res.responses, 0, FALSE, DBG_RAW);
+		parser = asn1_parser_create(responsesObjects, res.responses);
 
-		while (objectID < RESPONSES_ROOF)
+		while (parser->iterate(parser, &objectID, &object))
 		{
-			if (!extract_object(responsesObjects, &objectID, &object, &level, &ctx))
-				return;
-			
 			if (objectID == RESPONSES_SINGLE_RESPONSE)
 			{
 				single_response_t sres = empty_single_response;
 
-				if (parse_ocsp_single_response(object, level+1, &sres))
+				if (!parse_ocsp_single_response(object,
+						 				parser->get_level(parser)+1, &sres))
 				{
-					process_single_response(location, &sres);
+					goto end;
 				}
+				process_single_response(location, &sres);
 			}
-			objectID++;
 		}
+end:
+		parser->destroy(parser);
 	}
 }

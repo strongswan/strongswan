@@ -38,11 +38,12 @@
 #include <ldap.h>
 #endif
 
+#include "asn1/asn1.h"
+
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
 #include "id.h"
-#include "asn1.h"
 #include "pem.h"
 #include "x509.h"
 #include "ca.h"

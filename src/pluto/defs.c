@@ -68,8 +68,7 @@ temporary_cyclic_buffer(void)
 /* concatenates two sub paths into a string with a maximum size of BUF_LEN
  * use for temporary storage only
  */
-const char*
-concatenate_paths(const char *a, const char *b)
+char* concatenate_paths(char *a, char *b)
 {
 	char *c;
 

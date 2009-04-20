@@ -23,11 +23,13 @@
 #include <freeswan.h>
 #include <libsha2/sha2.h>
 
+#include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
+#include <asn1/oid.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "mp_defs.h"
-#include "asn1.h"
-#include <asn1/oid.h>
 #include "log.h"
 #include "pkcs1.h"
 #include "md2.h"
@@ -48,40 +50,38 @@ const struct fld RSA_private_field[] =
 	{ "Coefficient",     offsetof(RSA_private_key_t, qInv) },
 };
 
-/* ASN.1 definition of a PKCS#1 RSA private key */
-
-static const asn1Object_t privkeyObjects[] = {
-  { 0, "RSAPrivateKey",                 ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
-  { 1,   "version",                     ASN1_INTEGER,      ASN1_BODY }, /*  1 */
-  { 1,   "modulus",                     ASN1_INTEGER,      ASN1_BODY }, /*  2 */
-  { 1,   "publicExponent",              ASN1_INTEGER,      ASN1_BODY }, /*  3 */
-  { 1,   "privateExponent",             ASN1_INTEGER,      ASN1_BODY }, /*  4 */
-  { 1,   "prime1",                      ASN1_INTEGER,      ASN1_BODY }, /*  5 */
-  { 1,   "prime2",                      ASN1_INTEGER,      ASN1_BODY }, /*  6 */
-  { 1,   "exponent1",                   ASN1_INTEGER,      ASN1_BODY }, /*  7 */
-  { 1,   "exponent2",                   ASN1_INTEGER,      ASN1_BODY }, /*  8 */
-  { 1,   "coefficient",                 ASN1_INTEGER,      ASN1_BODY }, /*  9 */
-  { 1,   "otherPrimeInfos",             ASN1_SEQUENCE,     ASN1_OPT |
-														   ASN1_LOOP }, /* 10 */
-  { 2,     "otherPrimeInfo",            ASN1_SEQUENCE,     ASN1_NONE }, /* 11 */
-  { 3,       "prime",                   ASN1_INTEGER,      ASN1_BODY }, /* 12 */
-  { 3,       "exponent",                ASN1_INTEGER,      ASN1_BODY }, /* 13 */
-  { 3,       "coefficient",             ASN1_INTEGER,      ASN1_BODY }, /* 14 */
-  { 1,   "end opt or loop",             ASN1_EOC,          ASN1_END  }  /* 15 */
-};
-
-#define PKCS1_PRIV_KEY_VERSION           1
-#define PKCS1_PRIV_KEY_MODULUS           2
-#define PKCS1_PRIV_KEY_PUB_EXP           3
-#define PKCS1_PRIV_KEY_COEFF             9
-#define PKCS1_PRIV_KEY_ROOF             16
-
-
-/*
- * forms the FreeS/WAN keyid from the public exponent e and modulus n
+/**
+ * ASN.1 definition of a PKCS#1 RSA private key
  */
-void
-form_keyid(chunk_t e, chunk_t n, char* keyid, unsigned *keysize)
+static const asn1Object_t privkeyObjects[] = {
+	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
+	{ 1,   "version",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
+	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  2 */
+	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  3 */
+	{ 1,   "privateExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  4 */
+	{ 1,   "prime1",			ASN1_INTEGER,      ASN1_BODY }, /*  5 */
+	{ 1,   "prime2",			ASN1_INTEGER,      ASN1_BODY }, /*  6 */
+	{ 1,   "exponent1",			ASN1_INTEGER,      ASN1_BODY }, /*  7 */
+	{ 1,   "exponent2",			ASN1_INTEGER,      ASN1_BODY }, /*  8 */
+	{ 1,   "coefficient",		ASN1_INTEGER,      ASN1_BODY }, /*  9 */
+	{ 1,   "otherPrimeInfos",	ASN1_SEQUENCE,     ASN1_OPT |
+												   ASN1_LOOP }, /* 10 */
+	{ 2,     "otherPrimeInfo",	ASN1_SEQUENCE,     ASN1_NONE }, /* 11 */
+	{ 3,       "prime",			ASN1_INTEGER,      ASN1_BODY }, /* 12 */
+	{ 3,       "exponent",		ASN1_INTEGER,      ASN1_BODY }, /* 13 */
+	{ 3,       "coefficient",	ASN1_INTEGER,      ASN1_BODY }, /* 14 */
+	{ 1,   "end opt or loop",	ASN1_EOC,          ASN1_END  }, /* 15 */
+	{ 0, "exit",				ASN1_EOC,          ASN1_EXIT }
+};
+#define PKCS1_PRIV_KEY_VERSION		 1
+#define PKCS1_PRIV_KEY_MODULUS		 2
+#define PKCS1_PRIV_KEY_PUB_EXP		 3
+#define PKCS1_PRIV_KEY_COEFF		 9
+
+/**
+ * Forms the FreeS/WAN keyid from the public exponent e and modulus n
+ */
+void form_keyid(chunk_t e, chunk_t n, char* keyid, unsigned *keysize)
 {
 	/* eliminate leading zero bytes in modulus from ASN.1 coding */
 	while (n.len > 1 && *n.ptr == 0x00)
@@ -97,11 +97,10 @@ form_keyid(chunk_t e, chunk_t n, char* keyid, unsigned *keysize)
 	*keysize = n.len;
 }
 
-/*
- * initialize an RSA_public_key_t object
+/**
+ * Initialize an RSA_public_key_t object
  */
-void
-init_RSA_public_key(RSA_public_key_t *rsa, chunk_t e, chunk_t n)
+void init_RSA_public_key(RSA_public_key_t *rsa, chunk_t e, chunk_t n)
 {
 	n_to_mpz(&rsa->e, e.ptr, e.len);
 	n_to_mpz(&rsa->n, n.ptr, n.len);
@@ -110,8 +109,7 @@ init_RSA_public_key(RSA_public_key_t *rsa, chunk_t e, chunk_t n)
 }
 
 #ifdef DEBUG
-static void
-RSA_show_key_fields(RSA_private_key_t *k, int fieldcnt)
+static void RSA_show_key_fields(RSA_private_key_t *k, int fieldcnt)
 {
 	const struct fld *p;
 
@@ -130,15 +128,15 @@ RSA_show_key_fields(RSA_private_key_t *k, int fieldcnt)
 	}
 }
 
-/* debugging info that compromises security! */
-void
-RSA_show_private_key(RSA_private_key_t *k)
+/**
+ * debugging info that compromises security!
+ */
+void RSA_show_private_key(RSA_private_key_t *k)
 {
 	RSA_show_key_fields(k, countof(RSA_private_field));
 }
 
-void
-RSA_show_public_key(RSA_public_key_t *k)
+void RSA_show_public_key(RSA_public_key_t *k)
 {
 	/* Kludge: pretend that it is a private key, but only display the
 	 * first two fields (which are the public key).
@@ -148,8 +146,7 @@ RSA_show_public_key(RSA_public_key_t *k)
 }
 #endif
 
-err_t
-RSA_private_key_sanity(RSA_private_key_t *k)
+err_t RSA_private_key_sanity(RSA_private_key_t *k)
 {
 	/* note that the *last* error found is reported */
 	err_t ugh = NULL;
@@ -226,41 +223,36 @@ RSA_private_key_sanity(RSA_private_key_t *k)
 	return ugh;
 }
 
-/*
+/**
  * Check the equality of two RSA public keys
  */
-bool
-same_RSA_public_key(const RSA_public_key_t *a, const RSA_public_key_t *b)
+bool same_RSA_public_key(const RSA_public_key_t *a, const RSA_public_key_t *b)
 {
 	return a == b
 	|| (a->k == b->k && mpz_cmp(&a->n, &b->n) == 0 && mpz_cmp(&a->e, &b->e) == 0);
 }
 
-/*
+/**
  *  Parses a PKCS#1 private key
  */
-bool
-pkcs1_parse_private_key(chunk_t blob, RSA_private_key_t *key)
+bool pkcs1_parse_private_key(chunk_t blob, RSA_private_key_t *key)
 {
-	err_t ugh = NULL;
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object, modulus, exp;
-	u_int level;
-	int objectID = 0;
+	int objectID;
+	bool success = FALSE;
 
-	asn1_init(&ctx, blob, 0, FALSE, DBG_PRIVATE);
-
-	while (objectID < PKCS1_PRIV_KEY_ROOF) {
-
-		if (!extract_object(privkeyObjects, &objectID, &object, &level, &ctx))
-			 return FALSE;
-
+	parser = asn1_parser_create(privkeyObjects, blob);
+	parser->set_flags(parser, FALSE, TRUE);
+	
+	while (parser->iterate(parser, &objectID, &object))
+	{
 		if (objectID == PKCS1_PRIV_KEY_VERSION)
 		{
 			if (object.len > 0 && *object.ptr != 0)
 			{
 				plog("  wrong PKCS#1 private key version");
-				return FALSE;
+				goto end;
 			}
 		}
 		else if (objectID >= PKCS1_PRIV_KEY_MODULUS &&
@@ -276,18 +268,27 @@ pkcs1_parse_private_key(chunk_t blob, RSA_private_key_t *key)
 			else if (objectID == PKCS1_PRIV_KEY_PUB_EXP)
 				exp = object;
 		}
-		objectID++;
 	}
-	form_keyid(exp, modulus, key->pub.keyid, &key->pub.k);
-	ugh = RSA_private_key_sanity(key);
-	return (ugh == NULL);
+	success = parser->success(parser);
+
+end:
+	parser->destroy(parser);
+
+	if (success)
+	{
+		err_t ugh;
+
+		form_keyid(exp, modulus, key->pub.keyid, &key->pub.k);
+		ugh = RSA_private_key_sanity(key);
+		success = (ugh == NULL);
+	}
+	return success;
 }
 
-/*
- *  compute a digest over a binary blob
+/**
+ *  Compute a digest over a binary blob
  */
-bool
-compute_digest(chunk_t tbs, int alg, chunk_t *digest)
+bool compute_digest(chunk_t tbs, int alg, chunk_t *digest)
 {
 	switch (alg)
 	{
@@ -367,12 +368,11 @@ compute_digest(chunk_t tbs, int alg, chunk_t *digest)
 	}
 }
 
-/*
- * compute an RSA signature with PKCS#1 padding
+/**
+ * Compute an RSA signature with PKCS#1 padding
  */
-void
-sign_hash(const RSA_private_key_t *k, const u_char *hash_val, size_t hash_len
-	, u_char *sig_val, size_t sig_len)
+void sign_hash(const RSA_private_key_t *k, const u_char *hash_val,
+			   size_t hash_len, u_char *sig_val, size_t sig_len)
 {
 	chunk_t ch;
 	mpz_t t1, t2;
@@ -423,11 +423,10 @@ sign_hash(const RSA_private_key_t *k, const u_char *hash_val, size_t hash_len
 	mpz_clear(t2);
 }
 
-/*
- * encrypt data with an RSA public key after padding
+/**
+ * Encrypt data with an RSA public key after padding
  */
-chunk_t
-RSA_encrypt(const RSA_public_key_t *key, chunk_t in)
+chunk_t RSA_encrypt(const RSA_public_key_t *key, chunk_t in)
 {
 	u_char padded[RSA_MAX_OCTETS];
 	u_char *pos = padded;
@@ -485,11 +484,10 @@ RSA_encrypt(const RSA_public_key_t *key, chunk_t in)
 	}
 }
 
-/*
- * decrypt data with an RSA private key and remove padding
+/**
+ * Decrypt data with an RSA private key and remove padding
  */
-bool
-RSA_decrypt(const RSA_private_key_t *key, chunk_t in, chunk_t *out)
+bool RSA_decrypt(const RSA_private_key_t *key, chunk_t in, chunk_t *out)
 {
 	chunk_t padded, plaintext;
 	u_char *pos;
@@ -551,12 +549,11 @@ RSA_decrypt(const RSA_private_key_t *key, chunk_t in, chunk_t *out)
 	return TRUE;
 }
 
-/*
- * build signatureValue
+/**
+ * Build signatureValue
  */
-chunk_t
-pkcs1_build_signature(chunk_t tbs, int hash_alg, const RSA_private_key_t *key
-, bool bit_string)
+chunk_t pkcs1_build_signature(chunk_t tbs, int hash_alg,
+							  const RSA_private_key_t *key, bool bit_string)
 {
 
 	size_t siglen = key->pub.k;
@@ -566,37 +563,27 @@ pkcs1_build_signature(chunk_t tbs, int hash_alg, const RSA_private_key_t *key
 	chunk_t digestInfo, alg_id, signatureValue;
 	u_char *pos;
 
-	switch (hash_alg)
+	if (!compute_digest(tbs, hash_alg, &digest))
 	{
-	case OID_MD5:
-	case OID_MD5_WITH_RSA:
-		alg_id = ASN1_md5_id;
-		break;
-	case OID_SHA1:
-	case OID_SHA1_WITH_RSA:
-		alg_id = ASN1_sha1_id;
-		break;
-	default:
 		return chunk_empty;
 	}
-	compute_digest(tbs, hash_alg, &digest);
 
 	/* according to PKCS#1 v2.1 digest must be packaged into
 	 * an ASN.1 structure for encryption
 	 */
 	digestInfo = asn1_wrap(ASN1_SEQUENCE, "cm"
-					, alg_id
+					, asn1_algorithmIdentifier(hash_alg)
 					, asn1_simple_object(ASN1_OCTET_STRING, digest));
 
 	/* generate the RSA signature */
 	if (bit_string)
 	{
-		pos = build_asn1_object(&signatureValue, ASN1_BIT_STRING, 1 + siglen);
+		pos = asn1_build_object(&signatureValue, ASN1_BIT_STRING, 1 + siglen);
 		*pos++ = 0x00;
 	}
 	else
 	{
-		pos = build_asn1_object(&signatureValue, ASN1_OCTET_STRING, siglen);
+		pos = asn1_build_object(&signatureValue, ASN1_OCTET_STRING, siglen);
 	}
 	sign_hash(key, digestInfo.ptr, digestInfo.len, pos, siglen);
 	free(digestInfo.ptr);
@@ -604,11 +591,10 @@ pkcs1_build_signature(chunk_t tbs, int hash_alg, const RSA_private_key_t *key
 	return signatureValue;
 }
 
-/*
- * build a DER-encoded PKCS#1 private key object
+/**
+ * Build a DER-encoded PKCS#1 private key object
  */
-chunk_t
-pkcs1_build_private_key(const RSA_private_key_t *key)
+chunk_t pkcs1_build_private_key(const RSA_private_key_t *key)
 {
 	chunk_t pkcs1 = asn1_wrap(ASN1_SEQUENCE, "cmmmmmmmm"
 						, ASN1_INTEGER_0
@@ -627,44 +613,41 @@ pkcs1_build_private_key(const RSA_private_key_t *key)
 	return pkcs1;
 }
 
-/*
- * build a DER-encoded PKCS#1 public key object
+/**
+ * Build a DER-encoded PKCS#1 public key object
  */
-chunk_t
-pkcs1_build_public_key(const RSA_public_key_t *rsa)
+chunk_t pkcs1_build_public_key(const RSA_public_key_t *rsa)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "mm"
 				, asn1_integer_from_mpz(&rsa->n)
 				, asn1_integer_from_mpz(&rsa->e));
 }
 
-/*
- * build a DER-encoded publicKeyInfo object
+/**
+ * Build a DER-encoded publicKeyInfo object
  */
-chunk_t
-pkcs1_build_publicKeyInfo(const RSA_public_key_t *rsa)
+chunk_t pkcs1_build_publicKeyInfo(const RSA_public_key_t *rsa)
 {
 	chunk_t publicKey;
 	chunk_t rawKey = pkcs1_build_public_key(rsa);
+	u_char *pos;
 
-	u_char *pos = build_asn1_object(&publicKey, ASN1_BIT_STRING
-						, 1 + rawKey.len);
+	pos = asn1_build_object(&publicKey, ASN1_BIT_STRING, 1 + rawKey.len);
 	*pos++ = 0x00;
 	mv_chunk(&pos, rawKey);
 
 	return asn1_wrap(ASN1_SEQUENCE, "cm"
-				, ASN1_rsaEncryption_id
+				, asn1_algorithmIdentifier(OID_RSA_ENCRYPTION)
 				, publicKey);   
 }
-void
-free_RSA_public_content(RSA_public_key_t *rsa)
+
+void free_RSA_public_content(RSA_public_key_t *rsa)
 {
 	mpz_clear(&rsa->n);
 	mpz_clear(&rsa->e);
 }
 
-void
-free_RSA_private_content(RSA_private_key_t *rsak)
+void free_RSA_private_content(RSA_private_key_t *rsak)
 {
 	free_RSA_public_content(&rsak->pub);
 	mpz_clear(&rsak->d);
@@ -674,4 +657,3 @@ free_RSA_private_content(RSA_private_key_t *rsak)
 	mpz_clear(&rsak->dQ);
 	mpz_clear(&rsak->qInv);
 }
-

@@ -7,6 +7,7 @@ AM_CFLAGS = \
   -DIPSEC_CONFDIR=\"${confdir}\" \
   -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
   -DIPSEC_PLUGINDIR=\"${plugindir}\" \
-  -DPLUGINS=\""${libstrongswan_plugins}\""
+  -DPLUGINS=\""${libstrongswan_plugins}\"" \
+  -Wformat=0
 openac_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp
 

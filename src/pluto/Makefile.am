@@ -7,7 +7,6 @@ ipsec_PROGRAMS = pluto _pluto_adns
 pluto_SOURCES = \
 ac.c ac.h \
 alg_info.c alg_info.h \
-asn1.c asn1.h \
 ca.c ca.h \
 certs.c certs.h \
 connections.c connections.h \
@@ -87,7 +86,8 @@ AM_CFLAGS = \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
--DPLUTO -DKLIPS -DDEBUG
+-DPLUTO -DKLIPS -DDEBUG \
+-Wformat=0
 
 pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan-lite.la \

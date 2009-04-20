@@ -26,11 +26,11 @@
 #include <arpa/inet.h>
 
 #include <freeswan.h>
+#include <asn1/asn1.h>
 #include <asn1/oid.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
-#include "../pluto/asn1.h"
 #include "../pluto/pkcs1.h"
 #include "../pluto/log.h"
 #include "../pluto/x509.h"
@@ -133,7 +133,7 @@ build_req_info_attributes(pkcs10_t* pkcs10)
 
 	if (pkcs10->challengePassword.len > 0)
 	{
-		asn1_t type = is_printablestring(pkcs10->challengePassword)
+		asn1_t type = asn1_is_printablestring(pkcs10->challengePassword)
 					  ? ASN1_PRINTABLESTRING : ASN1_T61STRING;
 
 		challengePassword = asn1_wrap(ASN1_SEQUENCE, "cm"

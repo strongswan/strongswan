@@ -58,7 +58,6 @@
 #include "whack.h"
 #include "fetch.h"
 #include "pkcs7.h"
-#include "asn1.h"
 
 #include "sha1.h"
 #include "md5.h"

@@ -20,6 +20,7 @@
 #ifndef _X509_H
 #define _X509_H
 
+#include "constants.h"
 #include "pkcs1.h"
 #include "id.h"
 

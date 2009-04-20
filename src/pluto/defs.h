@@ -58,7 +58,7 @@ extern void *clone_bytes(const void *orig, size_t size);
 	{ memcpy(dst, chunk.ptr, chunk.len); dst += chunk.len;}
 
 extern char* temporary_cyclic_buffer(void);
-extern const char* concatenate_paths(const char *a, const char *b);
+extern char* concatenate_paths(char *a, char *b);
 
 /* move a chunk to a memory position and free it after insertion */
 extern void mv_chunk(u_char **pos, chunk_t content);

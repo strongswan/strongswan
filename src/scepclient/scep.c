@@ -24,6 +24,9 @@
 #include <stdlib.h>
 
 #include <freeswan.h>
+
+#include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
 
 #ifdef LIBCURL
@@ -33,7 +36,6 @@
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/rnd.h"
-#include "../pluto/asn1.h"
 #include "../pluto/pkcs1.h"
 #include "../pluto/fetch.h"
 #include "../pluto/log.h"
@@ -62,62 +64,60 @@ static const chunk_t ASN1_transId_oid =
 static const char *pkiStatus_values[] = { "0", "2", "3" };
 
 static const char *pkiStatus_names[] = {
-   "SUCCESS",
-   "FAILURE",
-   "PENDING",
-   "UNKNOWN"
+	"SUCCESS",
+	"FAILURE",
+	"PENDING",
+	"UNKNOWN"
 };
 
 static const char *msgType_values[] = { "3", "19", "20", "21", "22" };
 
 static const char *msgType_names[] = {
-  "CertRep",
-  "PKCSReq",
-  "GetCertInitial",
-  "GetCert",
-  "GetCRL",
-  "Unknown"
+	"CertRep",
+	"PKCSReq",
+	"GetCertInitial",
+	"GetCert",
+	"GetCRL",
+	"Unknown"
 };
 
 static const char *failInfo_reasons[] = {
-  "badAlg - unrecognized or unsupported algorithm identifier",
-  "badMessageCheck - integrity check failed",
-  "badRequest - transaction not permitted or supported",
-  "badTime - Message time field was not sufficiently close to the system time",
-  "badCertId - No certificate could be identified matching the provided criteria"
+	"badAlg - unrecognized or unsupported algorithm identifier",
+	"badMessageCheck - integrity check failed",
+	"badRequest - transaction not permitted or supported",
+	"badTime - Message time field was not sufficiently close to the system time",
+	"badCertId - No certificate could be identified matching the provided criteria"
 };
 
 const scep_attributes_t empty_scep_attributes = {
-  SCEP_Unknown_MSG   , /* msgType */
-  SCEP_UNKNOWN       , /* pkiStatus */
-  SCEP_unknown_REASON, /* failInfo */
-  { NULL, 0 }        , /* transID */
-  { NULL, 0 }        , /* senderNonce */
-  { NULL, 0 }        , /* recipientNonce */
+	SCEP_Unknown_MSG   , /* msgType */
+	SCEP_UNKNOWN       , /* pkiStatus */
+	SCEP_unknown_REASON, /* failInfo */
+	{ NULL, 0 }        , /* transID */
+	{ NULL, 0 }        , /* senderNonce */
+	{ NULL, 0 }        , /* recipientNonce */
 };
 
 /* ASN.1 definition of the X.501 atttribute type */
 
 static const asn1Object_t attributesObjects[] = {
-  { 0, "attributes",    ASN1_SET,       ASN1_LOOP }, /* 0 */
-  { 1,   "attribute",   ASN1_SEQUENCE,  ASN1_NONE }, /* 1 */
-  { 2,     "type",      ASN1_OID,       ASN1_BODY }, /* 2 */
-  { 2,     "values",    ASN1_SET,       ASN1_LOOP }, /* 3 */
-  { 3,       "value",   ASN1_EOC,       ASN1_RAW  }, /* 4 */
-  { 2,     "end loop",  ASN1_EOC,       ASN1_END  }, /* 5 */
-  { 0, "end loop",      ASN1_EOC,       ASN1_END  }, /* 6 */
+	{ 0, "attributes",    ASN1_SET,       ASN1_LOOP }, /* 0 */
+	{ 1,   "attribute",   ASN1_SEQUENCE,  ASN1_NONE }, /* 1 */
+	{ 2,     "type",      ASN1_OID,       ASN1_BODY }, /* 2 */
+	{ 2,     "values",    ASN1_SET,       ASN1_LOOP }, /* 3 */
+	{ 3,       "value",   ASN1_EOC,       ASN1_RAW  }, /* 4 */
+	{ 2,     "end loop",  ASN1_EOC,       ASN1_END  }, /* 5 */
+	{ 0, "end loop",      ASN1_EOC,       ASN1_END  }, /* 6 */
+	{ 0, "exit",          ASN1_EOC,       ASN1_EXIT	}
 };
-
 #define ATTRIBUTE_OBJ_TYPE      2
 #define ATTRIBUTE_OBJ_VALUE     4
-#define ATTRIBUTE_OBJ_ROOF      7
 
-/*
- * extract and store an attribute
+/**
+ * Extract and store an attribute
  */
-static bool
-extract_attribute(int oid, chunk_t object, u_int level
-, scep_attributes_t *attrs)
+static bool extract_attribute(int oid, chunk_t object, u_int level,
+							  scep_attributes_t *attrs)
 {
 	asn1_t type = ASN1_EOC;
 	const char *name = "none";
@@ -167,7 +167,7 @@ extract_attribute(int oid, chunk_t object, u_int level
 	if (type == ASN1_EOC)
 		return TRUE;
 
-	if (!parse_asn1_simple_object(&object, type, level+1, name))
+	if (!asn1_parse_simple_object(&object, type, level+1, name))
 		return FALSE;
 
 	switch (oid)
@@ -227,41 +227,41 @@ extract_attribute(int oid, chunk_t object, u_int level
 	return TRUE;
 }
 
-/*
- * parse X.501 attributes
+/**
+ * Parse X.501 attributes
  */
-bool
-parse_attributes(chunk_t blob, scep_attributes_t *attrs)
+bool parse_attributes(chunk_t blob, scep_attributes_t *attrs)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
 	int oid = OID_UNKNOWN;
-	int objectID = 0;
+	int objectID;
+	bool success = FALSE;
 
-	asn1_init(&ctx, blob, 0, FALSE, DBG_RAW);
-
+	parser = asn1_parser_create(attributesObjects, blob);
 	DBG(DBG_CONTROL | DBG_PARSING,
 		DBG_log("parsing attributes")
 	)
-	while (objectID < ATTRIBUTE_OBJ_ROOF)
+	
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(attributesObjects, &objectID
-						   , &object, &level, &ctx))
-			 return FALSE;
-
 		switch (objectID)
 		{
 		case ATTRIBUTE_OBJ_TYPE:
 			oid = asn1_known_oid(object);
 			break;
 		case ATTRIBUTE_OBJ_VALUE:
-		   if (!extract_attribute(oid, object, level, attrs))
-				return FALSE;
+			if (!extract_attribute(oid, object, parser->get_level(parser), attrs))
+			{
+				goto end;
+			}
 		}
-		objectID++;
 	}
-	return TRUE;
+	success = parser->success(parser);
+	
+end:
+	parser->destroy(parser);
+	return success;
 }
 
 /* generates a unique fingerprint of the pkcs10 request 

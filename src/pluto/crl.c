@@ -1,5 +1,7 @@
 /* Support of X.509 certificate revocation lists (CRLs)
- * Copyright (C) 2000-2004 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2000-2009 Andreas Steffen
+ *
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,11 +27,13 @@
 #include <freeswan.h>
 #include <ipsec_policy.h>
 
+#include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
+#include <asn1/oid.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
-#include "asn1.h"
-#include <asn1/oid.h>
 #include "x509.h"
 #include "crl.h"
 #include "ca.h"
@@ -43,64 +47,64 @@
 
 static x509crl_t  *x509crls      = NULL;
 
-/* ASN.1 definition of an X.509 certificate list */
-
+/**
+  * ASN.1 definition of an X.509 certificate revocation list
+ */
 static const asn1Object_t crlObjects[] = {
-  { 0, "certificateList",               ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
-  { 1,   "tbsCertList",                 ASN1_SEQUENCE,     ASN1_OBJ  }, /*  1 */
-  { 2,     "version",                   ASN1_INTEGER,      ASN1_OPT |
+	{ 0, "certificateList",				ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
+	{ 1,   "tbsCertList",				ASN1_SEQUENCE,     ASN1_OBJ  }, /*  1 */
+	{ 2,     "version",					ASN1_INTEGER,      ASN1_OPT |
 														   ASN1_BODY }, /*  2 */
-  { 2,     "end opt",                   ASN1_EOC,          ASN1_END  }, /*  3 */
-  { 2,     "signature",                 ASN1_EOC,          ASN1_RAW  }, /*  4 */
-  { 2,     "issuer",                    ASN1_SEQUENCE,     ASN1_OBJ  }, /*  5 */
-  { 2,     "thisUpdate",                ASN1_EOC,          ASN1_RAW  }, /*  6 */
-  { 2,     "nextUpdate",                ASN1_EOC,          ASN1_RAW  }, /*  7 */
-  { 2,     "revokedCertificates",       ASN1_SEQUENCE,     ASN1_OPT |
+	{ 2,     "end opt",					ASN1_EOC,          ASN1_END  }, /*  3 */
+	{ 2,     "signature",				ASN1_EOC,          ASN1_RAW  }, /*  4 */	
+	{ 2,     "issuer",					ASN1_SEQUENCE,     ASN1_OBJ  }, /*  5 */
+	{ 2,     "thisUpdate",				ASN1_EOC,          ASN1_RAW  }, /*  6 */
+	{ 2,     "nextUpdate",				ASN1_EOC,          ASN1_RAW  }, /*  7 */
+	{ 2,     "revokedCertificates",		ASN1_SEQUENCE,     ASN1_OPT |
 														   ASN1_LOOP }, /*  8 */
-  { 3,       "certList",                ASN1_SEQUENCE,     ASN1_NONE }, /*  9 */
-  { 4,         "userCertificate",       ASN1_INTEGER,      ASN1_BODY }, /* 10 */
-  { 4,         "revocationDate",        ASN1_EOC,          ASN1_RAW  }, /* 11 */
-  { 4,         "crlEntryExtensions",    ASN1_SEQUENCE,     ASN1_OPT |
-														   ASN1_LOOP }, /* 12 */
-  { 5,           "extension",           ASN1_SEQUENCE,     ASN1_NONE }, /* 13 */
-  { 6,             "extnID",            ASN1_OID,          ASN1_BODY }, /* 14 */
-  { 6,             "critical",          ASN1_BOOLEAN,      ASN1_DEF |
+	{ 3,       "certList",				ASN1_SEQUENCE,     ASN1_NONE }, /*  9 */
+	{ 4,         "userCertificate",		ASN1_INTEGER,      ASN1_BODY }, /* 10 */
+	{ 4,         "revocationDate",		ASN1_EOC,          ASN1_RAW  }, /* 11 */
+	{ 4,         "crlEntryExtensions",  ASN1_SEQUENCE,     ASN1_OPT |
+							   							   ASN1_LOOP }, /* 12 */
+	{ 5,           "extension",			ASN1_SEQUENCE,	   ASN1_NONE }, /* 13 */
+	{ 6,             "extnID",			ASN1_OID,          ASN1_BODY }, /* 14 */
+	{ 6,             "critical",		ASN1_BOOLEAN,      ASN1_DEF |
 														   ASN1_BODY }, /* 15 */
-  { 6,             "extnValue",         ASN1_OCTET_STRING, ASN1_BODY }, /* 16 */
-  { 4,         "end opt or loop",       ASN1_EOC,          ASN1_END  }, /* 17 */
-  { 2,     "end opt or loop",           ASN1_EOC,          ASN1_END  }, /* 18 */
-  { 2,     "optional extensions",       ASN1_CONTEXT_C_0,  ASN1_OPT  }, /* 19 */
-  { 3,       "crlExtensions",           ASN1_SEQUENCE,     ASN1_LOOP }, /* 20 */
-  { 4,         "extension",             ASN1_SEQUENCE,     ASN1_NONE }, /* 21 */
-  { 5,           "extnID",              ASN1_OID,          ASN1_BODY }, /* 22 */
-  { 5,           "critical",            ASN1_BOOLEAN,      ASN1_DEF |
+	{ 6,             "extnValue",		ASN1_OCTET_STRING, ASN1_BODY }, /* 16 */
+	{ 4,         "end opt or loop",		ASN1_EOC,          ASN1_END  }, /* 17 */
+	{ 2,     "end opt or loop",			ASN1_EOC,          ASN1_END  }, /* 18 */
+	{ 2,     "optional extensions",		ASN1_CONTEXT_C_0,  ASN1_OPT  }, /* 19 */
+	{ 3,       "crlExtensions",			ASN1_SEQUENCE,     ASN1_LOOP }, /* 20 */
+	{ 4,         "extension",			ASN1_SEQUENCE,     ASN1_NONE }, /* 21 */
+	{ 5,           "extnID",			ASN1_OID,          ASN1_BODY }, /* 22 */
+	{ 5,           "critical",			ASN1_BOOLEAN,      ASN1_DEF |
 														   ASN1_BODY }, /* 23 */
-  { 5,           "extnValue",           ASN1_OCTET_STRING, ASN1_BODY }, /* 24 */
-  { 3,       "end loop",                ASN1_EOC,          ASN1_END  }, /* 25 */
-  { 2,     "end opt",                   ASN1_EOC,          ASN1_END  }, /* 26 */
-  { 1,   "signatureAlgorithm",          ASN1_EOC,          ASN1_RAW  }, /* 27 */
-  { 1,   "signatureValue",              ASN1_BIT_STRING,   ASN1_BODY }  /* 28 */
- };
+	{ 5,           "extnValue",			ASN1_OCTET_STRING, ASN1_BODY }, /* 24 */
+	{ 3,       "end loop",				ASN1_EOC,          ASN1_END  }, /* 25 */
+	{ 2,     "end opt",					ASN1_EOC,          ASN1_END  }, /* 26 */
+	{ 1,   "signatureAlgorithm",		ASN1_EOC,          ASN1_RAW  }, /* 27 */
+	{ 1,   "signatureValue",			ASN1_BIT_STRING,   ASN1_BODY }, /* 28 */
+	{ 0, "exit",						ASN1_EOC,		   ASN1_EXIT }
+};
 
-#define CRL_OBJ_CERTIFICATE_LIST                 0
-#define CRL_OBJ_TBS_CERT_LIST                    1
-#define CRL_OBJ_VERSION                          2
-#define CRL_OBJ_SIG_ALG                          4
-#define CRL_OBJ_ISSUER                           5
-#define CRL_OBJ_THIS_UPDATE                      6
-#define CRL_OBJ_NEXT_UPDATE                      7
-#define CRL_OBJ_USER_CERTIFICATE                10
-#define CRL_OBJ_REVOCATION_DATE                 11
-#define CRL_OBJ_CRL_ENTRY_EXTN_ID               14
-#define CRL_OBJ_CRL_ENTRY_CRITICAL              15
-#define CRL_OBJ_CRL_ENTRY_EXTN_VALUE            16
-#define CRL_OBJ_EXTN_ID                         22
-#define CRL_OBJ_CRITICAL                        23
-#define CRL_OBJ_EXTN_VALUE                      24
-#define CRL_OBJ_ALGORITHM                       27
-#define CRL_OBJ_SIGNATURE                       28
-#define CRL_OBJ_ROOF                            29
-
+#define CRL_OBJ_CERTIFICATE_LIST         0
+#define CRL_OBJ_TBS_CERT_LIST			 1
+#define CRL_OBJ_VERSION					 2
+#define CRL_OBJ_SIG_ALG					 4
+#define CRL_OBJ_ISSUER					 5
+#define CRL_OBJ_THIS_UPDATE				 6
+#define CRL_OBJ_NEXT_UPDATE				 7
+#define CRL_OBJ_USER_CERTIFICATE		10
+#define CRL_OBJ_REVOCATION_DATE			11
+#define CRL_OBJ_CRL_ENTRY_EXTN_ID		14
+#define CRL_OBJ_CRL_ENTRY_CRITICAL		15
+#define CRL_OBJ_CRL_ENTRY_EXTN_VALUE	16
+#define CRL_OBJ_EXTN_ID					22
+#define CRL_OBJ_CRITICAL				23
+#define CRL_OBJ_EXTN_VALUE				24
+#define CRL_OBJ_ALGORITHM				27
+#define CRL_OBJ_SIGNATURE				28
 
 const x509crl_t empty_x509crl = {
 	  NULL        , /* *next */
@@ -126,11 +130,10 @@ const x509crl_t empty_x509crl = {
 	{ NULL, 0 }     /*   signature */
 };
 
-/*
- *  get the X.509 CRL with a given issuer
+/**
+ *  Get the X.509 CRL with a given issuer
  */
-static x509crl_t*
-get_x509crl(chunk_t issuer, chunk_t serial, chunk_t keyid)
+static x509crl_t* get_x509crl(chunk_t issuer, chunk_t serial, chunk_t keyid)
 {
 	x509crl_t *crl = x509crls;
 	x509crl_t *prev_crl = NULL;
@@ -156,11 +159,10 @@ get_x509crl(chunk_t issuer, chunk_t serial, chunk_t keyid)
 	return NULL;
 }
 
-/*
- *  free the dynamic memory used to store revoked certificates
+/**
+ *  Free the dynamic memory used to store revoked certificates
  */
-static void
-free_revoked_certs(revokedCert_t* revokedCerts)
+static void free_revoked_certs(revokedCert_t* revokedCerts)
 {
 	while (revokedCerts != NULL)
 	{
@@ -170,11 +172,10 @@ free_revoked_certs(revokedCert_t* revokedCerts)
 	}
 }
 
-/*
- *  free the dynamic memory used to store CRLs
+/**
+ *  Free the dynamic memory used to store CRLs
  */
-void
-free_crl(x509crl_t *crl)
+void free_crl(x509crl_t *crl)
 {
 	free_revoked_certs(crl->revokedCertificates);
 	free_generalNames(crl->distributionPoints, TRUE);
@@ -182,8 +183,7 @@ free_crl(x509crl_t *crl)
 	free(crl);
 }
 
-static void
-free_first_crl(void)
+static void free_first_crl(void)
 {
 	x509crl_t *crl = x509crls;
 
@@ -191,8 +191,7 @@ free_first_crl(void)
 	free_crl(crl);
 }
 
-void
-free_crls(void)
+void free_crls(void)
 {
 	lock_crl_list("free_crls");
 
@@ -202,11 +201,10 @@ free_crls(void)
 	unlock_crl_list("free_crls");
 }
 
-/*
+/**
  * Insert X.509 CRL into chained list
  */
-bool
-insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl)
+bool insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl)
 {
 	x509crl_t *crl = malloc_thing(x509crl_t);
 
@@ -322,11 +320,10 @@ insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl)
 	}
 }
 
-/*
+/**
  *  Loads CRLs
  */
-void
-load_crls(void)
+void load_crls(void)
 {
 	struct dirent **filelist;
 	u_char buf[BUF_LEN];
@@ -376,11 +373,10 @@ load_crls(void)
 	ignore_result(chdir(save_dir));
 }
 
-/*
+/**
  * Parses a CRL revocation reason code
  */
-static crl_reason_t
-parse_crl_reasonCode(chunk_t object)
+static crl_reason_t parse_crl_reasonCode(chunk_t object)
 {
 	crl_reason_t reason = REASON_UNSPECIFIED;
 
@@ -399,27 +395,22 @@ parse_crl_reasonCode(chunk_t object)
 /*
  *  Parses an X.509 CRL
  */
-bool
-parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
+bool parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
 {
 	u_char buf[BUF_LEN];
-	asn1_ctx_t ctx;
-	bool critical;
+	asn1_parser_t *parser;
 	chunk_t extnID;
 	chunk_t userCertificate = chunk_empty;
 	chunk_t object;
-	u_int level;
-	int objectID = 0;
+	int objectID;
+	bool success = FALSE;
+	bool critical;
 
-	asn1_init(&ctx, blob, level0, FALSE, DBG_RAW);
+	parser = asn1_parser_create(crlObjects, blob);
 
-	while (objectID < CRL_OBJ_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(crlObjects, &objectID, &object, &level, &ctx))
-			 return FALSE;
-
-		/* those objects which will parsed further need the next higher level */
-		level++;
+		u_int level = parser->get_level(parser)+1;
 
 		switch (objectID) {
 		case CRL_OBJ_CERTIFICATE_LIST:
@@ -435,7 +426,7 @@ parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
 			)
 			break;
 		case CRL_OBJ_SIG_ALG:
-			crl->sigAlg = parse_algorithmIdentifier(object, level, NULL);
+			crl->sigAlg = asn1_parse_algorithmIdentifier(object, level, NULL);
 			break;
 		case CRL_OBJ_ISSUER:
 			crl->issuer = object;
@@ -445,10 +436,10 @@ parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
 			)
 			break;
 		case CRL_OBJ_THIS_UPDATE:
-			crl->thisUpdate = parse_time(object, level);
+			crl->thisUpdate = asn1_parse_time(object, level);
 			break;
 		case CRL_OBJ_NEXT_UPDATE:
-			crl->nextUpdate = parse_time(object, level);
+			crl->nextUpdate = asn1_parse_time(object, level);
 			break;
 		case CRL_OBJ_USER_CERTIFICATE:
 			userCertificate = object;
@@ -460,7 +451,7 @@ parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
 
 				revokedCert_t *revokedCert = malloc_thing(revokedCert_t);
 				revokedCert->userCertificate = userCertificate;
-				revokedCert->revocationDate = parse_time(object, level);
+				revokedCert->revocationDate = asn1_parse_time(object, level);
 				revokedCert->revocationReason = REASON_UNSPECIFIED;
 				revokedCert->next = crl->revokedCertificates;
 				crl->revokedCertificates = revokedCert;
@@ -494,14 +485,17 @@ parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
 				}
 				else if (extn_oid == OID_CRL_NUMBER)
 				{
-					if (!parse_asn1_simple_object(&object, ASN1_INTEGER, level, "crlNumber"))
-						return FALSE;
+					if (!asn1_parse_simple_object(&object, ASN1_INTEGER,
+												  level, "crlNumber"))
+					{
+						goto end;
+					}
 					crl->crlNumber = object;
 				}
 			}
 			break;
 		case CRL_OBJ_ALGORITHM:
-			crl->algorithm = parse_algorithmIdentifier(object, level, NULL);
+			crl->algorithm = asn1_parse_algorithmIdentifier(object, level, NULL);
 			break;
 		case CRL_OBJ_SIGNATURE:
 			crl->signature = object;
@@ -509,10 +503,13 @@ parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
 		default:
 			break;
 		}
-		objectID++;
 	}
+	success = parser->success(parser);
 	time(&crl->installed);
-	return TRUE;
+
+end:
+	parser->destroy(parser);
+	return success;
 }
 
 /*  Checks if the current certificate is revoked. It goes through the

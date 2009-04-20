@@ -1,7 +1,7 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic -Wformat=0
 
 plugin_LTLIBRARIES = libstrongswan-updown.la
 libstrongswan_updown_la_SOURCES = \

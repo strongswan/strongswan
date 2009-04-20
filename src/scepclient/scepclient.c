@@ -38,13 +38,13 @@
 #include <freeswan.h>
 #include <library.h>
 #include <debug.h>
+#include <asn1/asn1.h>
 #include <asn1/oid.h>
 #include <utils/optionsfrom.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/log.h"
-#include "../pluto/asn1.h"
 #include "../pluto/pkcs1.h"
 #include "../pluto/pkcs7.h"
 #include "../pluto/certs.h"
@@ -604,7 +604,7 @@ int main(int argc, char **argv)
 				usage("date format must be YYMMDDHHMMSSZ");
 			{
 				chunk_t date = { optarg, 13 };
-				notBefore = asn1totime(&date, ASN1_UTCTIME);
+				notBefore = asn1_to_time(&date, ASN1_UTCTIME);
 			}
 			continue;
 
@@ -613,7 +613,7 @@ int main(int argc, char **argv)
 				usage("date format must be YYMMDDHHMMSSZ");
 			{
 				chunk_t date = { optarg, 13 };
-				notAfter = asn1totime(&date, ASN1_UTCTIME);
+				notAfter = asn1_to_time(&date, ASN1_UTCTIME);
 			}
 			continue;
 
@@ -800,7 +800,7 @@ int main(int argc, char **argv)
 	if (filetype_in & PKCS1)    /* load an RSA key pair from file */ 
 	{
 		prompt_pass_t pass = { "", FALSE, STDIN_FILENO };
-		const char *path = concatenate_paths(PRIVATE_KEY_PATH, file_in_pkcs1);
+		char *path = concatenate_paths(PRIVATE_KEY_PATH, file_in_pkcs1);
 
 		ugh = load_rsa_private_key(path, &pass, private_key);
 	}
@@ -877,9 +877,9 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & PKCS10)
 	{
-		const char *path = concatenate_paths(REQ_PATH, file_out_pkcs10);
+		char *path = concatenate_paths(REQ_PATH, file_out_pkcs10);
 
-		if (!chunk_write(pkcs10->request,path, "pkcs10",  0022, force))
+		if (!chunk_write(pkcs10->request, path, "pkcs10",  0022, force))
 			exit_scepclient("could not write pkcs10 file '%s'", path);
 
 		filetype_out &= ~PKCS10;   /* delete PKCS10 flag */
@@ -895,7 +895,7 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & PKCS1)
 	{
-		const char *path = concatenate_paths(PRIVATE_KEY_PATH, file_out_pkcs1);
+		char *path = concatenate_paths(PRIVATE_KEY_PATH, file_out_pkcs1);
 
 		DBG(DBG_CONTROL,
 			DBG_log("building pkcs1 object:")
@@ -938,7 +938,7 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & CERT_SELF)
 	{
-		const char *path = concatenate_paths(HOST_CERT_PATH, file_out_cert_self);
+		char *path = concatenate_paths(HOST_CERT_PATH, file_out_cert_self);
 
 		if (!chunk_write(x509_signer->certificate, path, "self-signed cert", 0022, force))
 			exit_scepclient("could not write self-signed cert file '%s'", path);
@@ -955,7 +955,7 @@ int main(int argc, char **argv)
 	 * load ca encryption certificate
 	 */
 	{
-		const char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_enc);
+		char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_enc);
 		cert_t cert;
 
 		if (!load_cert(path, "encryption cacert", &cert))
@@ -994,7 +994,7 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & PKCS7)
 	{
-		const char *path = concatenate_paths(REQ_PATH, file_out_pkcs7);
+		char *path = concatenate_paths(REQ_PATH, file_out_pkcs7);
 
 		if (!chunk_write(pkcs7, path, "pkcs7 encrypted request", 0022, force))
 			exit_scepclient("could not write pkcs7 file '%s'", path);
@@ -1012,7 +1012,7 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & CERT)
 	{
-		const char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_sig);
+		char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_sig);
 		cert_t cert;
 		time_t poll_start;
 
@@ -1094,7 +1094,7 @@ int main(int argc, char **argv)
 		envelopedData = data.content;
 
 		if (data.type != OID_PKCS7_DATA
-		|| !parse_asn1_simple_object(&envelopedData, ASN1_OCTET_STRING, 0, "data"))
+		|| !asn1_parse_simple_object(&envelopedData, ASN1_OCTET_STRING, 0, "data"))
 		{
 			exit_scepclient("contentInfo is not of type 'data'");
 		}

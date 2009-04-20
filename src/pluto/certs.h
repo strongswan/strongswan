@@ -61,15 +61,14 @@ extern const cert_t empty_cert;
  */
 extern bool no_cr_send;
 
-extern err_t load_rsa_private_key(const char* filename, prompt_pass_t *pass
+extern err_t load_rsa_private_key(char* filename, prompt_pass_t *pass
 	, RSA_private_key_t *key);
 extern chunk_t get_mycert(cert_t cert);
-extern bool load_coded_file(const char *filename, prompt_pass_t *pass
+extern bool load_coded_file(char *filename, prompt_pass_t *pass
 	, const char *type, chunk_t *blob, bool *pgp);
-extern bool load_cert(const char *filename, const char *label
-	, cert_t *cert);
-extern bool load_host_cert(const char *filename, cert_t *cert);
-extern bool load_ca_cert(const char *filename, cert_t *cert);
+extern bool load_cert(char *filename, const char *label, cert_t *cert);
+extern bool load_host_cert(char *filename, cert_t *cert);
+extern bool load_ca_cert(char *filename, cert_t *cert);
 extern bool same_cert(const cert_t *a, const cert_t *b);
 extern void share_cert(cert_t cert);
 extern void release_cert(cert_t cert);

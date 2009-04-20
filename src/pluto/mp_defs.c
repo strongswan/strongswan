@@ -16,6 +16,9 @@
 
 #include <freeswan.h>
 
+#include <utils.h>
+#include <asn1/asn1.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "mp_defs.h"
@@ -68,3 +71,17 @@ n_to_mpz(MP_INT *mp, const u_char *nbytes, size_t nlen)
 		mpz_add_ui(mp, mp, nbytes[i]);
 	}
 }
+
+/*
+ * convert a MP integer into a DER coded ASN.1 object
+ */
+chunk_t
+asn1_integer_from_mpz(const mpz_t value)
+{
+	size_t bits = mpz_sizeinbase(value, 2);  /* size in bits */
+	size_t size = 1 + bits / BITS_PER_BYTE;  /* size in bytes */
+	chunk_t n = mpz_to_n(value, size);
+
+	return asn1_wrap(ASN1_INTEGER, "m", n);
+}
+
