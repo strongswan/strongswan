@@ -90,7 +90,7 @@ AM_CFLAGS = \
 -DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \
-$(LIBSTRONGSWANDIR)/libstrongswan-lite.la \ 
+$(LIBSTRONGSWANDIR)/libstrongswan-lite.la \
 $(LIBFREESWANDIR)/libfreeswan.a \
 $(LIBCRYPTODIR)/libcrypto.a \
 -lgmp -lresolv -lpthread -ldl
