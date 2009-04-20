@@ -193,7 +193,6 @@ static status_t build_r(private_ike_rekey_t *this, message_t *message)
  */
 static status_t process_i(private_ike_rekey_t *this, message_t *message)
 {
-	ike_sa_id_t *to_delete;
 	enumerator_t *enumerator;
 	payload_t *payload;
 	
@@ -245,7 +244,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 		default:
 			break;
 	}
-
+	
 	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
 	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%D]...%H[%D]",
 		 this->new_sa->get_name(this->new_sa),
@@ -254,8 +253,6 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 		 this->ike_sa->get_my_id(this->ike_sa),
 		 this->ike_sa->get_other_host(this->ike_sa),
 		 this->ike_sa->get_other_id(this->ike_sa));
-
-	to_delete = this->ike_sa->get_id(this->ike_sa);
 	
 	/* check for collisions */
 	if (this->collision &&
@@ -273,8 +270,13 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 		if (memcmp(this_nonce.ptr, other_nonce.ptr, 
 				   min(this_nonce.len, other_nonce.len)) < 0)
 		{
+			/* peer should delete this SA. Add a timeout just in case. */
+			job_t *job = (job_t*)delete_ike_sa_job_create(
+									other->new_sa->get_id(other->new_sa), TRUE);
+			charon->scheduler->schedule_job(charon->scheduler, job, 10000);
 			DBG1(DBG_IKE, "IKE_SA rekey collision won, deleting rekeyed IKE_SA");
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, other->new_sa);
+			other->new_sa = NULL;
 		}
 		else
 		{
@@ -285,11 +287,22 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 			host = this->ike_sa->get_other_host(this->ike_sa);
 			this->new_sa->set_other_host(this->new_sa, host->clone(host));
 			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-			to_delete = this->new_sa->get_id(this->new_sa);
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
+			if (this->new_sa->delete(this->new_sa) == DESTROY_ME)
+			{
+				charon->ike_sa_manager->checkin_and_destroy(
+										charon->ike_sa_manager, this->new_sa);
+			}
+			else
+			{
+				charon->ike_sa_manager->checkin(
+										charon->ike_sa_manager, this->new_sa);
+			}
+			/* set threads active IKE_SA after checkin */
+			charon->bus->set_sa(charon->bus, this->ike_sa);
 			/* inherit to other->new_sa in destroy() */
 			this->new_sa = other->new_sa;
 			other->new_sa = NULL;
+			return SUCCESS;
 		}
 		/* set threads active IKE_SA after checkin */
 		charon->bus->set_sa(charon->bus, this->ike_sa);
