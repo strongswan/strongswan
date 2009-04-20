@@ -613,9 +613,9 @@ list_ocsp_locations(ocsp_location_t *location, bool requests, bool utc
 			}
 			while (certinfo != NULL)
 			{
-				char thisUpdate[TIMETOA_BUF];
+				char thisUpdate[BUF_LEN];
 
-				snprintf(thisUpdate, TIMETOA_BUF, "%T", &certinfo->thisUpdate, utc);
+				snprintf(thisUpdate, BUF_LEN, "%T", &certinfo->thisUpdate, utc);
 
 				if (requests)
 				{

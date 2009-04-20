@@ -475,7 +475,7 @@ timetoasn1(const time_t *time, asn1_t type)
 {
 	int offset;
 	const char *format;
-	char buf[TIMETOA_BUF];
+	char buf[BUF_LEN];
 	chunk_t formatted_time;
 	struct tm *t = gmtime(time);
 

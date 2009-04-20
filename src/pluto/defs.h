@@ -83,9 +83,6 @@ typedef struct {
 	int fd;
 } prompt_pass_t;
 
-/* size of timetoa string buffer */
-#define TIMETOA_BUF     30
-
 /* filter eliminating the directory entries '.' and '..' */
 typedef struct dirent dirent_t;
 extern int file_select(const dirent_t *entry);
