@@ -129,8 +129,6 @@ static __inline__ void *malloc_bytes_st(size_t size, struct db_ops_stats *st)
 int
 db_prop_init(struct db_context *ctx, u_int8_t protoid, int max_trans, int max_attrs) 
 {
-		int ret=-1;
-
 		ctx->trans0 = NULL;
 		ctx->attrs0 = NULL;
 
@@ -145,12 +143,7 @@ db_prop_init(struct db_context *ctx, u_int8_t protoid, int max_trans, int max_at
 								db_attrs_st);
 				memset(ctx->attrs0, '\0', sizeof(struct db_attr) * max_attrs);
 		}
-		ret = 0;
-out:
-		if (ret < 0 && ctx->trans0) {
-				PFREE_ST(ctx->trans0, db_trans_st);
-				ctx->trans0 = NULL;
-		}
+
 		ctx->max_trans = max_trans;
 		ctx->max_attrs = max_attrs;
 		ctx->trans_cur = ctx->trans0;
@@ -158,7 +151,7 @@ out:
 		ctx->prop.protoid = protoid;
 		ctx->prop.trans = ctx->trans0;
 		ctx->prop.trans_cnt = 0;
-		return ret;
+		return 0;
 }
 
 /*      Expand storage for transforms by number delta_trans */

@@ -633,7 +633,7 @@ list_pgp_end_certs(bool utc)
 		c.type = CERT_PGP;
 		c.u.pgp = cert;
 
-		whack_log(RC_COMMENT, "%T, count: %d", &cert->installed, utc), cert->count;
+		whack_log(RC_COMMENT, "%T, count: %d", &cert->installed, utc, cert->count);
 		datatot(cert->fingerprint, PGP_FINGERPRINT_SIZE, 'x', buf, BUF_LEN);
 		whack_log(RC_COMMENT, "       fingerprint:  %s", buf);
 		form_keyid(cert->publicExponent, cert->modulus, buf, &keysize);

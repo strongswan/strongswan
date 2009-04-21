@@ -560,7 +560,7 @@ chunk_t pkcs1_build_signature(chunk_t tbs, int hash_alg,
 
 	u_char digest_buf[MAX_DIGEST_LEN];
 	chunk_t digest = { digest_buf, MAX_DIGEST_LEN };
-	chunk_t digestInfo, alg_id, signatureValue;
+	chunk_t digestInfo, signatureValue;
 	u_char *pos;
 
 	if (!compute_digest(tbs, hash_alg, &digest))
