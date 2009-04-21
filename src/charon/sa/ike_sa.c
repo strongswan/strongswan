@@ -443,7 +443,7 @@ static void send_keepalive(private_ike_sa_t *this)
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);
 	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job,
-									(this->keepalive_interval - diff) * 1000);
+									this->keepalive_interval - diff);
 }
 
 /**
@@ -542,7 +542,7 @@ static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
  */
 static status_t send_dpd(private_ike_sa_t *this)
 {
-	send_dpd_job_t *job;
+	job_t *job;
 	time_t diff, delay;
 	
 	delay = this->peer_cfg->get_dpd(this->peer_cfg);
@@ -591,9 +591,8 @@ static status_t send_dpd(private_ike_sa_t *this)
 		}
 	}
 	/* recheck in "interval" seconds */
-	job = send_dpd_job_create(this->ike_sa_id);
-	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job,
-									(delay - diff) * 1000);
+	job = (job_t*)send_dpd_job_create(this->ike_sa_id);
+	charon->scheduler->schedule_job(charon->scheduler, job, delay - diff);
 	return SUCCESS;
 }
 
@@ -636,8 +635,7 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 				{
 					this->stats[STAT_REKEY] = t + this->stats[STAT_ESTABLISHED];
 					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, FALSE);
-					charon->scheduler->schedule_job(charon->scheduler,
-													job, t * 1000);
+					charon->scheduler->schedule_job(charon->scheduler, job, t);
 					DBG1(DBG_IKE, "scheduling rekeying in %ds", t);
 				}
 				t = this->peer_cfg->get_reauth_time(this->peer_cfg);
@@ -646,8 +644,7 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 				{
 					this->stats[STAT_REAUTH] = t + this->stats[STAT_ESTABLISHED];
 					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE);
-					charon->scheduler->schedule_job(charon->scheduler,
-													job, t * 1000);
+					charon->scheduler->schedule_job(charon->scheduler, job, t);
 					DBG1(DBG_IKE, "scheduling reauthentication in %ds", t);
 				}
 				t = this->peer_cfg->get_over_time(this->peer_cfg);
@@ -669,8 +666,7 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 					this->stats[STAT_DELETE] += t;
 					t = this->stats[STAT_DELETE] - this->stats[STAT_ESTABLISHED];
 					job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-					charon->scheduler->schedule_job(charon->scheduler, job,
-													t * 1000);
+					charon->scheduler->schedule_job(charon->scheduler, job, t);
 					DBG1(DBG_IKE, "maximum IKE_SA lifetime %ds", t);
 				}
 				
@@ -1930,8 +1926,8 @@ static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
 			 " in %ds", lifetime, lifetime - reduction);
 		charon->scheduler->schedule_job(charon->scheduler,
-					(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE),
-					(lifetime - reduction) * 1000);
+						(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE),
+						lifetime - reduction);
 	}
 	else
 	{
@@ -2077,11 +2073,9 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 		DBG1(DBG_IKE, "rescheduling reauthentication in %ds after rekeying, "
 			 "lifetime reduced to %ds", reauth, delete);
 		charon->scheduler->schedule_job(charon->scheduler, 
-						(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE),
-						reauth * 1000);
+				(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE), reauth);
 		charon->scheduler->schedule_job(charon->scheduler, 
-						(job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE),
-						delete * 1000);
+				(job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE), delete);
 	}
 	/* we have to initate here, there may be new tasks to handle */
 	return this->task_manager->initiate(this->task_manager);

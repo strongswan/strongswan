@@ -904,7 +904,7 @@ static void update_checklist_state(private_connect_manager_t *this, check_list_t
 		
 		callback_data_t *data = callback_data_create(this, checklist->connect_id);
 		job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiator_finish, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
-		charon->scheduler->schedule_job(charon->scheduler, job, ME_WAIT_TO_FINISH);
+		charon->scheduler->schedule_job_ms(charon->scheduler, job, ME_WAIT_TO_FINISH);
 		checklist->is_finishing = TRUE;
 	}
 	
@@ -1002,7 +1002,7 @@ static void queue_retransmission(private_connect_manager_t *this, check_list_t *
 	}
 	DBG2(DBG_IKE, "scheduling retransmission %d of pair '%d' in %dms", retransmission, pair->id, rto);
 	
-	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, rto);
+	charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)job, rto);
 }
 
 /**
@@ -1139,7 +1139,7 @@ static void schedule_checks(private_connect_manager_t *this, check_list_t *check
 {
 	callback_data_t *data = callback_data_create(this, checklist->connect_id);
 	checklist->sender = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
-	charon->scheduler->schedule_job(charon->scheduler, checklist->sender, time);
+	charon->scheduler->schedule_job_ms(charon->scheduler, checklist->sender, time);
 }
 
 /**

@@ -234,7 +234,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 				DBG1(DBG_IKE, "IKE_SA rekeying failed, "
 					 					"trying again in %d seconds", retry);
 				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-				charon->scheduler->schedule_job(charon->scheduler, job, retry * 1000);
+				charon->scheduler->schedule_job(charon->scheduler, job, retry);
 			}
 			return SUCCESS;
 		case NEED_MORE:
@@ -273,7 +273,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 			/* peer should delete this SA. Add a timeout just in case. */
 			job_t *job = (job_t*)delete_ike_sa_job_create(
 									other->new_sa->get_id(other->new_sa), TRUE);
-			charon->scheduler->schedule_job(charon->scheduler, job, 10000);
+			charon->scheduler->schedule_job(charon->scheduler, job, 10);
 			DBG1(DBG_IKE, "IKE_SA rekey collision won, deleting rekeyed IKE_SA");
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, other->new_sa);
 			other->new_sa = NULL;

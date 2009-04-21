@@ -772,7 +772,7 @@ static void handle_child_sa_failure(private_child_create_t *this,
 		/* we delay the delete for 100ms, as the IKE_AUTH response must arrive
 		 * first */
 		DBG1(DBG_IKE, "closing IKE_SA due CHILD_SA setup failure");
-		charon->scheduler->schedule_job(charon->scheduler, (job_t*)
+		charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)
 			delete_ike_sa_job_create(this->ike_sa->get_id(this->ike_sa), TRUE),
 			100);
 	}

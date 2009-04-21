@@ -19,7 +19,6 @@
 
 #include <stdlib.h>
 #include <pthread.h>
-#include <sys/time.h>
 
 #include "scheduler.h"
 
@@ -41,7 +40,7 @@ struct event_t {
 	 * Time to fire the event.
 	 */
 	timeval_t time;
-
+	
 	/**
 	 * Every event has its assigned job.
 	 */
@@ -63,16 +62,17 @@ typedef struct private_scheduler_t private_scheduler_t;
  * Private data of a scheduler_t object.
  */
 struct private_scheduler_t {
+	
 	/**
 	 * Public part of a scheduler_t object.
 	 */
 	 scheduler_t public;
-
+	
 	/**
 	 * Job which queues scheduled jobs to the processor.
 	 */
 	callback_job_t *job;
-		
+	
 	/**
 	 * The heap in which the events are stored.
 	 */
@@ -87,12 +87,12 @@ struct private_scheduler_t {
 	 * The number of scheduled events.
 	 */
 	u_int event_count;
-
+	
 	/**
 	 * Exclusive access to list
 	 */
 	mutex_t *mutex;
-
+	
 	/**
 	 * Condvar to wait for next job.
 	 */
@@ -100,16 +100,27 @@ struct private_scheduler_t {
 };
 
 /**
- * Returns the difference of two timeval structs in milliseconds
+ * Comparse two timevals, return >0 if a > b, <0 if a < b and =0 if equal
  */
-static long time_difference(timeval_t *end, timeval_t *start)
+static int timeval_cmp(timeval_t *a, timeval_t *b)
 {
-	time_t s;
-	suseconds_t us;
-	
-	s = end->tv_sec - start->tv_sec;
-	us = end->tv_usec - start->tv_usec;
-	return (s * 1000 + us/1000);
+	if (a->tv_sec > b->tv_sec)
+	{
+		return 1;
+	}
+	if (a->tv_sec < b->tv_sec)
+	{
+		return -1;
+	}
+	if (a->tv_usec > b->tv_usec)
+	{
+		return 1;
+	}
+	if (a->tv_usec < b->tv_usec)
+	{
+		return -1;
+	}
+	return 0;
 }
 
 /**
@@ -146,14 +157,14 @@ static event_t *remove_event(private_scheduler_t *this)
 			u_int child = position << 1;
 			
 			if ((child + 1) <= this->event_count &&
-				time_difference(&this->heap[child + 1]->time,
-								&this->heap[child]->time) < 0)
+				timeval_cmp(&this->heap[child + 1]->time,
+							&this->heap[child]->time) < 0)
 			{
 				/* the "right" child is smaller */
 				child++;
 			}
 			
-			if (time_difference(&top->time, &this->heap[child]->time) <= 0)
+			if (timeval_cmp(&top->time, &this->heap[child]->time) <= 0)
 			{
 				/* the top event fires before the smaller of the two children, stop */
 				break;
@@ -175,7 +186,6 @@ static job_requeue_t schedule(private_scheduler_t * this)
 {
 	timeval_t now;
 	event_t *event;
-	long difference;
 	int oldstate;
 	bool timed = FALSE;
 	
@@ -185,8 +195,7 @@ static job_requeue_t schedule(private_scheduler_t * this)
 	
 	if ((event = peek_event(this)) != NULL)
 	{
-		difference = time_difference(&now, &event->time);
-		if (difference >= 0)
+		if (timeval_cmp(&now, &event->time) >= 0)
 		{
 			remove_event(this);
 			this->mutex->unlock(this->mutex);
@@ -195,7 +204,16 @@ static job_requeue_t schedule(private_scheduler_t * this)
 			free(event);
 			return JOB_REQUEUE_DIRECT;
 		}
-		DBG2(DBG_JOB, "next event in %ldms, waiting", -difference);
+		timersub(&event->time, &now, &now);
+		if (now.tv_sec)
+		{
+			DBG2(DBG_JOB, "next event in %ds %dms, waiting",
+				 now.tv_sec, now.tv_usec/1000);
+		}
+		else
+		{
+			DBG2(DBG_JOB, "next event in %dms, waiting", now.tv_usec/1000);
+		}
 		timed = TRUE;
 	}
 	pthread_cleanup_push((void*)this->mutex->unlock, this->mutex);
@@ -228,25 +246,16 @@ static u_int get_job_load(private_scheduler_t *this)
 }
 
 /**
- * Implements scheduler_t.schedule_job.
+ * Implements scheduler_t.schedule_job_tv.
  */
-static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t time)
+static void schedule_job_tv(private_scheduler_t *this, job_t *job, timeval_t tv)
 {
-	timeval_t now;
 	event_t *event;
 	u_int position;
-	time_t s;
-	suseconds_t us;
 	
 	event = malloc_thing(event_t);
 	event->job = job;
-	
-	/* calculate absolute time */
-	s = time / 1000;
-	us = (time - s * 1000) * 1000;
-	gettimeofday(&now, NULL);
-	event->time.tv_usec = (now.tv_usec + us) % 1000000;
-	event->time.tv_sec = now.tv_sec + (now.tv_usec + us)/1000000 + s;
+	event->time = tv;
 	
 	this->mutex->lock(this->mutex);
 	
@@ -255,14 +264,15 @@ static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t time)
 	{
 		/* double the size of the heap */
 		this->heap_size <<= 1;
-		this->heap = (event_t**)realloc(this->heap, (this->heap_size + 1) * sizeof(event_t*));
+		this->heap = (event_t**)realloc(this->heap,
+									(this->heap_size + 1) * sizeof(event_t*));
 	}
 	/* "put" the event to the bottom */
 	position = this->event_count;
 	
 	/* then bubble it up */
-	while (position > 1 && time_difference(&this->heap[position >> 1]->time,
-										   &event->time) > 0)
+	while (position > 1 && timeval_cmp(&this->heap[position >> 1]->time,
+									   &event->time) > 0)
 	{
 		/* parent has to be fired after the new event, move up */
 		this->heap[position] = this->heap[position >> 1];
@@ -272,6 +282,35 @@ static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t time)
 	
 	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Implements scheduler_t.schedule_job.
+ */
+static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t s)
+{
+	timeval_t tv;
+	
+	gettimeofday(&tv, NULL);
+	tv.tv_sec += s;
+	
+	schedule_job_tv(this, job, tv);
+}
+
+/**
+ * Implements scheduler_t.schedule_job_ms.
+ */
+static void schedule_job_ms(private_scheduler_t *this, job_t *job, u_int32_t ms)
+{
+	timeval_t tv, add;
+	
+	gettimeofday(&tv, NULL);
+	add.tv_sec = ms / 1000;
+	add.tv_usec = (ms % 1000) * 1000;
+	
+	timeradd(&tv, &add, &tv);
+	
+	schedule_job_tv(this, job, tv);
 }
 
 /**
@@ -299,7 +338,9 @@ scheduler_t * scheduler_create()
 	private_scheduler_t *this = malloc_thing(private_scheduler_t);
 	
 	this->public.get_job_load = (u_int (*) (scheduler_t *this)) get_job_load;
-	this->public.schedule_job = (void (*) (scheduler_t *this, job_t *job, u_int32_t ms)) schedule_job;
+	this->public.schedule_job = (void (*) (scheduler_t *this, job_t *job, u_int32_t s)) schedule_job;
+	this->public.schedule_job_ms = (void (*) (scheduler_t *this, job_t *job, u_int32_t ms)) schedule_job_ms;
+	this->public.schedule_job_tv = (void (*) (scheduler_t *this, job_t *job, timeval_t tv)) schedule_job_tv;
 	this->public.destroy = (void(*)(scheduler_t*)) destroy;
 	
 	/* Note: the root of the heap is at index 1 */

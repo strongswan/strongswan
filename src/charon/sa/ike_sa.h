@@ -44,9 +44,9 @@ typedef struct ike_sa_t ike_sa_t;
 #include <config/auth_cfg.h>
 
 /**
- * Timeout in milliseconds after that a half open IKE_SA gets deleted.
+ * Timeout in seconds after that a half open IKE_SA gets deleted.
  */
-#define HALF_OPEN_IKE_SA_TIMEOUT 30000
+#define HALF_OPEN_IKE_SA_TIMEOUT 30
 
 /**
  * Interval to send keepalives when NATed, in seconds.

@@ -219,7 +219,7 @@ static void fire_roam_job(private_kernel_netlink_net_t *this, bool address)
 				now.tv_usec -= 1000000;
 			}
 			this->last_roam = now;
-			charon->scheduler->schedule_job(charon->scheduler,
+			charon->scheduler->schedule_job_ms(charon->scheduler,
 					(job_t*)roam_job_create(address), ROAM_DELAY);
 		}
 	}

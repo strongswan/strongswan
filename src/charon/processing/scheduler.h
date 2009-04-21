@@ -26,6 +26,8 @@
 
 typedef struct scheduler_t scheduler_t;
 
+#include <sys/time.h>
+
 #include <library.h>
 #include <processing/jobs/job.h>
 
@@ -34,17 +36,31 @@ typedef struct scheduler_t scheduler_t;
  *
  * The scheduler stores timed events and passes them to the processor.
  */
-struct scheduler_t { 	
-
+struct scheduler_t {
+	
 	/**
-	 * Adds a event to the queue, using a relative time offset.
+	 * Adds a event to the queue, using a relative time offset in s.
 	 *
-	 * Schedules a job for execution using a relative time offset.
-	 *
- 	 * @param job 			job to schedule
-  	 * @param time 			relative to to schedule job (in ms)
+	 * @param job 			job to schedule
+	 * @param time 			relative time to schedule job, in s
 	 */
-	void (*schedule_job) (scheduler_t *this, job_t *job, u_int32_t time);
+	void (*schedule_job) (scheduler_t *this, job_t *job, u_int32_t s);
+	
+	/**
+	 * Adds a event to the queue, using a relative time offset in ms.
+	 *
+	 * @param job 			job to schedule
+	 * @param time 			relative time to schedule job, in ms
+	 */
+	void (*schedule_job_ms) (scheduler_t *this, job_t *job, u_int32_t ms);
+	
+	/**
+	 * Adds a event to the queue, using an absolut time.
+	 *
+	 * @param job 			job to schedule
+	 * @param time 			absolut time to schedule job
+	 */
+	void (*schedule_job_tv) (scheduler_t *this, job_t *job, timeval_t tv);
 	
 	/**
 	 * Returns number of jobs scheduled.
