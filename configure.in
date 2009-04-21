@@ -996,7 +996,7 @@ AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
 AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 
