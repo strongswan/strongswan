@@ -115,6 +115,7 @@ static void pluto_dbg(int level, char *fmt, ...)
 
 		if (log_to_stderr)
 		{
+			fprintf(stderr, "| ");
 			vfprintf(stderr, fmt, args);
 			fprintf(stderr, "\n");
 		}
@@ -131,7 +132,7 @@ static void pluto_dbg(int level, char *fmt, ...)
 				{
 					*(next++) = '\0';
 				}
-				syslog(priority, "|%s\n", current);
+				syslog(priority, "| %s\n", current);
 				current = next;
 			}
 		}
