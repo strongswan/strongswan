@@ -30,6 +30,7 @@
 #include <sys/types.h>
 
 #include <freeswan.h>
+#include <debug.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -80,14 +81,78 @@ struct connection *cur_connection = NULL;       /* current connection, for diagn
 const ip_address *cur_from = NULL;      /* source of current current message */
 u_int16_t cur_from_port;        /* host order */
 
+/**
+ * pluto dbg function for libstrongswan
+ */
+static void pluto_dbg(int level, char *fmt, ...)
+{
+	int priority = LOG_INFO;
+	char buffer[8192];
+	char *current = buffer, *next;
+	va_list args;
+	int debug_level;
+
+	if (cur_debugging & DBG_PRIVATE)
+	{
+		debug_level = 4;
+	}
+	else if (cur_debugging & DBG_RAW)
+	{
+		debug_level = 3;
+	}	
+	else if (cur_debugging & DBG_PARSING)
+	{
+		debug_level = 2;
+	}
+	else 
+	{
+		debug_level = 1;
+	}
+
+	if (level <= debug_level)
+	{
+		va_start(args, fmt);
+
+		if (log_to_stderr)
+		{
+			vfprintf(stderr, fmt, args);
+			fprintf(stderr, "\n");
+		}
+		if (log_to_syslog)
+		{
+			/* write in memory buffer first */
+			vsnprintf(buffer, sizeof(buffer), fmt, args);
+
+			/* do a syslog with every line */
+			while (current)
+			{
+				next = strchr(current, '\n');
+				if (next)
+				{
+					*(next++) = '\0';
+				}
+				syslog(priority, "|%s\n", current);
+				current = next;
+			}
+		}
+		va_end(args);
+	}
+}
+
 void
 init_log(const char *program)
 {
-	if (log_to_stderr)
-		setbuf(stderr, NULL);
-	if (log_to_syslog)
-		openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
+	/* enable pluto debugging hook for libstrongswan */
+	dbg = pluto_dbg;
 
+	if (log_to_stderr)
+	{
+		setbuf(stderr, NULL);
+	}
+	if (log_to_syslog)
+	{
+		openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
+	}
 	TAILQ_INIT(&perpeer_list);
 }
 

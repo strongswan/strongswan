@@ -18,7 +18,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <syslog.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <errno.h>
@@ -41,7 +40,6 @@
 
 #include <freeswan.h>
 #include <library.h>
-#include <debug.h>
 
 #include <pfkeyv2.h>
 #include <pfkey.h>
@@ -75,8 +73,7 @@
 #include "nat_traversal.h"
 #include "virtual.h"
 
-static void
-usage(const char *mess)
+static void usage(const char *mess)
 {
 	if (mess != NULL && *mess != '\0')
 		fprintf(stderr, "%s\n", mess);
@@ -128,9 +125,9 @@ usage(const char *mess)
 			"[--debug-oppo]"
 			" [--debug-controlmore]"
 			" [--debug-private]"
+			" [--debug-natt]"
 #endif
-			" [ --debug-natt]"
-			" \\\n\t"
+ 		    " \\\n\t"
 			"[--nat_traversal] [--keep_alive <delay_sec>]"
 			" \\\n\t"
 			"[--force_keepalive] [--disable_port_floating]"
@@ -154,8 +151,7 @@ static char pluto_lock[sizeof(ctl_addr.sun_path)] = DEFAULT_CTLBASE LOCK_SUFFIX;
 static bool pluto_lock_created = FALSE;
 
 /* create lockfile, or die in the attempt */
-static int
-create_lock(void)
+static int create_lock(void)
 {
 	int fd = open(pluto_lock, O_WRONLY | O_CREAT | O_EXCL | O_TRUNC
 		, S_IRUSR | S_IRGRP | S_IROTH);
@@ -180,8 +176,7 @@ create_lock(void)
 	return fd;
 }
 
-static bool
-fill_lock(int lockfd, pid_t pid)
+static bool fill_lock(int lockfd, pid_t pid)
 {
 	char buf[30];       /* holds "<pid>\n" */
 	int len = snprintf(buf, sizeof(buf), "%u\n", (unsigned int) pid);
@@ -200,47 +195,6 @@ static void delete_lock(void)
 	}
 }
 
-static int debug_level = 1;
-
-/**
- * pluto dbg function
- */
-static void pluto_dbg(int level, char *fmt, ...)
-{
-	int priority = LOG_INFO;
-	char buffer[8192];
-	char *current = buffer, *next;
-	va_list args;
-		
-	if (level <= debug_level)
-	{
-		va_start(args, fmt);
-
-		if (log_to_stderr)
-		{
-			vfprintf(stderr, fmt, args);
-			fprintf(stderr, "\n");
-		}
-		if (log_to_syslog)
-		{
-			/* write in memory buffer first */
-			vsnprintf(buffer, sizeof(buffer), fmt, args);
-
-			/* do a syslog with every line */
-			while (current)
-			{
-				next = strchr(current, '\n');
-				if (next)
-				{
-					*(next++) = '\0';
-				}
-				syslog(priority, "%s\n", current);
-				current = next;
-			}
-		}
-		va_end(args);
-	}
-}
 
 /* by default pluto sends certificate requests to its peers */
 bool no_cr_send = FALSE;
@@ -268,8 +222,7 @@ bool pkcs11_proxy = FALSE;
  */
 static const char *pkcs11_init_args = NULL;
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	bool fork_desired = TRUE;
 	bool log_to_stderr_desired = FALSE;
@@ -644,9 +597,6 @@ main(int argc, char **argv)
 		if (!log_to_stderr && dup2(0, 2) != 2)
 			abort();
 	}
-
-	/* enable pluto debugging hook */
-	dbg = pluto_dbg;
 
 	init_constants();
 	init_log("pluto");
