@@ -5,8 +5,11 @@ strongswan-4.3.0
   cipher (esp=camellia128|192|256).
 
 - Refactored the pluto and scepclient code to use basic functions
-  (memory allocation, leak detective, printf_hooks, ASN.1 parser, etc.)
-  from a libstrongswan-lite library.
+  (memory allocation, leak detective, printf_hooks, strongswan.conf
+  attributes, ASN.1 parser, etc.) from a libstrongswan-lite library.
+
+- Up to two DNS and WINS servers to be sent via IKEv1 ModeConfig
+  can be configured in the pluto section of strongswan.conf.
 
 
 strongswan-4.2.14
