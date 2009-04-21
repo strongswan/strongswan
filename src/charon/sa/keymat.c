@@ -463,6 +463,16 @@ static bool derive_child_keys(private_keymat_t *this,
 	
 	prf_plus->destroy(prf_plus);
 	
+	if (enc_size)
+	{
+		DBG4(DBG_CHD, "encryption initiator key %B", encr_i);
+		DBG4(DBG_CHD, "encryption responder key %B", encr_r);
+	}
+	if (int_size)
+	{
+		DBG4(DBG_CHD, "integrity initiator key %B", integ_i);
+		DBG4(DBG_CHD, "integrity responder key %B", integ_r);
+	}
 	return TRUE;
 }
 
