@@ -87,10 +87,10 @@ u_int16_t cur_from_port;        /* host order */
 static void pluto_dbg(int level, char *fmt, ...)
 {
 	int priority = LOG_INFO;
+	int debug_level;
 	char buffer[8192];
 	char *current = buffer, *next;
 	va_list args;
-	int debug_level;
 
 	if (cur_debugging & DBG_PRIVATE)
 	{
@@ -115,7 +115,10 @@ static void pluto_dbg(int level, char *fmt, ...)
 
 		if (log_to_stderr)
 		{
-			fprintf(stderr, "| ");
+			if (level > 1)
+			{
+				fprintf(stderr, "| ");
+			}
 			vfprintf(stderr, fmt, args);
 			fprintf(stderr, "\n");
 		}
@@ -132,7 +135,7 @@ static void pluto_dbg(int level, char *fmt, ...)
 				{
 					*(next++) = '\0';
 				}
-				syslog(priority, "| %s\n", current);
+				syslog(priority, "%s%s\n", (level > 1)? "| ":"", current);
 				current = next;
 			}
 		}

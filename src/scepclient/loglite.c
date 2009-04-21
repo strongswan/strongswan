@@ -29,6 +29,7 @@
 #include <sys/types.h>
 
 #include <freeswan.h>
+#include <debug.h>
 
 #include <constants.h>
 #include <defs.h>
@@ -39,24 +40,90 @@ bool
 	log_to_stderr = FALSE,      /* should log go to stderr? */
 	log_to_syslog = TRUE;       /* should log go to syslog? */
 
-void
-init_log(const char *program)
+/**
+ * @brief scepclient dbg function
+ */
+static void scepclient_dbg(int level, char *fmt, ...)
 {
-	if (log_to_stderr)
-		setbuf(stderr, NULL);
-	if (log_to_syslog)
-		openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
+	int priority = LOG_INFO;
+	int debug_level;
+	char buffer[8192];
+	char *current = buffer, *next;
+	va_list args;
+
+	if (cur_debugging & DBG_PRIVATE)
+	{
+		debug_level = 4;
+	}
+	else if (cur_debugging & DBG_RAW)
+	{
+		debug_level = 3;
+	}	
+	else if (cur_debugging & DBG_PARSING)
+	{
+		debug_level = 2;
+	}
+	else 
+	{
+		debug_level = 1;
+	}
+
+	if (level <= debug_level)
+	{
+		va_start(args, fmt);
+
+		if (log_to_stderr)
+		{
+			if (level > 1)
+			{
+				fprintf(stderr, "| ");
+			}
+			vfprintf(stderr, fmt, args);
+			fprintf(stderr, "\n");
+		}
+		if (log_to_syslog)
+		{
+			/* write in memory buffer first */
+			vsnprintf(buffer, sizeof(buffer), fmt, args);
+
+			/* do a syslog with every line */
+			while (current)
+			{
+				next = strchr(current, '\n');
+				if (next)
+				{
+					*(next++) = '\0';
+				}
+				syslog(priority, "%s%s\n", (level > 1)? "| ":"", current);
+				current = next;
+			}
+		}
+		va_end(args);
+	}
 }
 
-void
-close_log(void)
+void init_log(const char *program)
+{
+	/* enable scepclient bugging hook */
+	dbg = scepclient_dbg;
+
+	if (log_to_stderr)
+	{
+		setbuf(stderr, NULL);
+	}
+	if (log_to_syslog)
+	{
+		openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
+	}
+}
+
+void close_log(void)
 {
 	if (log_to_syslog)
 		closelog();
 }
 
-void
-plog(const char *message, ...)
+void plog(const char *message, ...)
 {
 	va_list args;
 	char m[LOG_WIDTH];  /* longer messages will be truncated */
@@ -71,8 +138,7 @@ plog(const char *message, ...)
 		syslog(LOG_WARNING, "%s", m);
 }
 
-void
-loglog(int mess_no, const char *message, ...)
+void loglog(int mess_no, const char *message, ...)
 {
 	va_list args;
 	char m[LOG_WIDTH];  /* longer messages will be truncated */
@@ -87,8 +153,7 @@ loglog(int mess_no, const char *message, ...)
 		syslog(LOG_WARNING, "%s", m);
 }
 
-void
-log_errno_routine(int e, const char *message, ...)
+void log_errno_routine(int e, const char *message, ...)
 {
 	va_list args;
 	char m[LOG_WIDTH];  /* longer messages will be truncated */
@@ -103,8 +168,7 @@ log_errno_routine(int e, const char *message, ...)
 		syslog(LOG_ERR, "ERROR: %s. Errno %d: %s", m, e, strerror(e));
 }
 
-void
-exit_log(const char *message, ...)
+void exit_log(const char *message, ...)
 {
 	va_list args;
 	char m[LOG_WIDTH];  /* longer messages will be truncated */
@@ -120,8 +184,7 @@ exit_log(const char *message, ...)
 	exit(1);
 }
 
-void
-exit_log_errno_routine(int e, const char *message, ...)
+void exit_log_errno_routine(int e, const char *message, ...)
 {
 	va_list args;
 	char m[LOG_WIDTH];  /* longer messages will be truncated */
@@ -137,8 +200,7 @@ exit_log_errno_routine(int e, const char *message, ...)
 	exit(1);
 }
 
-void
-whack_log(int mess_no, const char *message, ...)
+void whack_log(int mess_no, const char *message, ...)
 {
 	va_list args;
 	char m[LOG_WIDTH];  /* longer messages will be truncated */
@@ -162,8 +224,7 @@ whack_log(int mess_no, const char *message, ...)
  */
 char diag_space[sizeof(diag_space)];
 
-err_t
-builddiag(const char *fmt, ...)
+err_t builddiag(const char *fmt, ...)
 {
 	static char diag_space[LOG_WIDTH];  /* longer messages will be truncated */
 	char t[sizeof(diag_space)]; /* build result here first */
@@ -181,8 +242,7 @@ builddiag(const char *fmt, ...)
 
 #ifdef DEBUG
 
-void
-switch_fail(int n, const char *file_str, unsigned long line_no)
+void switch_fail(int n, const char *file_str, unsigned long line_no)
 {
 	char buf[30];
 
@@ -190,8 +250,7 @@ switch_fail(int n, const char *file_str, unsigned long line_no)
 	passert_fail(buf, file_str, line_no);
 }
 
-void
-passert_fail(const char *pred_str, const char *file_str, unsigned long line_no)
+void passert_fail(const char *pred_str, const char *file_str, unsigned long line_no)
 {
 	/* we will get a possibly unplanned prefix.  Hope it works */
 	loglog(RC_LOG_SERIOUS, "ASSERTION FAILED at %s:%lu: %s", file_str, line_no, pred_str);
@@ -202,8 +261,7 @@ lset_t
 	base_debugging = DBG_NONE,  /* default to reporting nothing */
 	cur_debugging =  DBG_NONE;
 
-void
-pexpect_log(const char *pred_str, const char *file_str, unsigned long line_no)
+void pexpect_log(const char *pred_str, const char *file_str, unsigned long line_no)
 {
 	/* we will get a possibly unplanned prefix.  Hope it works */
 	loglog(RC_LOG_SERIOUS, "EXPECTATION FAILED at %s:%lu: %s", file_str, line_no, pred_str);
@@ -211,8 +269,7 @@ pexpect_log(const char *pred_str, const char *file_str, unsigned long line_no)
 
 /* log a debugging message (prefixed by "| ") */
 
-void
-DBG_log(const char *message, ...)
+void DBG_log(const char *message, ...)
 {
 	va_list args;
 	char m[LOG_WIDTH];  /* longer messages will be truncated */
@@ -229,8 +286,7 @@ DBG_log(const char *message, ...)
 
 /* dump raw bytes in hex to stderr (for lack of any better destination) */
 
-void
-DBG_dump(const char *label, const void *p, size_t len)
+void DBG_dump(const char *label, const void *p, size_t len)
 {
 #   define DUMP_LABEL_WIDTH 20  /* arbitrary modest boundary */
 #   define DUMP_WIDTH   (4 * (1 + 4 * 3) + 1)

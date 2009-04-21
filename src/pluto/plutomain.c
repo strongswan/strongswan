@@ -40,6 +40,8 @@
 
 #include <freeswan.h>
 #include <library.h>
+#include <debug.h>
+#include <utils/enumerator.h>
 
 #include <pfkeyv2.h>
 #include <pfkey.h>
@@ -222,6 +224,24 @@ bool pkcs11_proxy = FALSE;
  * Not used for compliant modules, just for NSS softoken
  */
 static const char *pkcs11_init_args = NULL;
+
+/**
+ * Log loaded plugins
+ */
+static void print_plugins()
+{
+	char buf[BUF_LEN], *plugin;
+	int len = 0;
+	enumerator_t *enumerator;
+	
+	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
+	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
+	{
+		len += snprintf(&buf[len], BUF_LEN-len, "%s ", plugin);
+	}
+	enumerator->destroy(enumerator);
+	DBG1("loaded plugins: %s", buf);
+}
 
 int main(int argc, char **argv)
 {
@@ -609,6 +629,11 @@ int main(int argc, char **argv)
 		, ipsec_version_code()
 		, compile_time_interop_options);
 
+	/* load plugins, further infrastructure may need it */
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+		lib->settings->get_str(lib->settings, "pluto.load", ""));
+	print_plugins();
+
 	init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
 	init_virtual_ip(virtual_private);
 	scx_init(pkcs11_module_path, pkcs11_init_args);   /* load and initialize PKCS #11 module */
@@ -690,8 +715,7 @@ int main(int argc, char **argv)
  *  1 general discomfort
  * 10 lock file exists
  */
-void
-exit_pluto(int status)
+void exit_pluto(int status)
 {
 	reset_globals();    /* needed because we may be called in odd state */
 	free_preshared_secrets();

@@ -27,7 +27,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <syslog.h>
 #include <string.h>
 #include <getopt.h>
 #include <ctype.h>
@@ -41,6 +40,7 @@
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
 #include <utils/optionsfrom.h>
+#include <utils/enumerator.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
@@ -272,47 +272,24 @@ usage(const char *message)
 	exit_scepclient(message);
 }
 
-static int debug_level = 1;
-
 /**
- * @brief scepclient dbg function
+ * Log loaded plugins
  */
-static void scepclient_dbg(int level, char *fmt, ...)
+static void print_plugins()
 {
-	int priority = LOG_INFO;
-	char buffer[8192];
-	char *current = buffer, *next;
-	va_list args;
-		
-	if (level <= debug_level)
+	char buf[BUF_LEN], *plugin;
+	int len = 0;
+	enumerator_t *enumerator;
+	
+	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
+	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
 	{
-		va_start(args, fmt);
-
-		if (log_to_stderr)
-		{
-			vfprintf(stderr, fmt, args);
-			fprintf(stderr, "\n");
-		}
-		if (log_to_syslog)
-		{
-			/* write in memory buffer first */
-			vsnprintf(buffer, sizeof(buffer), fmt, args);
-
-			/* do a syslog with every line */
-			while (current)
-			{
-				next = strchr(current, '\n');
-				if (next)
-				{
-					*(next++) = '\0';
-				}
-				syslog(priority, "%s\n", current);
-				current = next;
-			}
-		}
-		va_end(args);
+		len += snprintf(&buf[len], BUF_LEN-len, "%s ", plugin);
 	}
+	enumerator->destroy(enumerator);
+	DBG1("  loaded plugins: %s", buf);
 }
+
 /**
  * @brief main of scepclient
  *
@@ -762,12 +739,15 @@ int main(int argc, char **argv)
 		/* break from loop */
 		break;
 	}
-
-	/* enable scepclient bugging hook */
-	dbg = scepclient_dbg;
+	cur_debugging = base_debugging;
 
 	init_log("scepclient");
-	cur_debugging = base_debugging;
+
+	/* load plugins, further infrastructure may need it */
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+		lib->settings->get_str(lib->settings, "scepclient.load", ""));
+	print_plugins();
+
 	init_rnd_pool();
 	init_fetch();
 
