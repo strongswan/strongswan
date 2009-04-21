@@ -34,7 +34,6 @@ kernel_noklips.c kernel_noklips.h \
 kernel_pfkey.c kernel_pfkey.h \
 keys.c keys.h \
 lex.c lex.h \
-library.c library.h \
 log.c log.h \
 md2.c md2.h \
 md5.c md5.h \
@@ -84,6 +83,7 @@ AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${confdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
+-DIPSEC_PLUGINDIR=\"${plugindir}\" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG \
