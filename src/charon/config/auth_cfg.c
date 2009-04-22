@@ -183,7 +183,7 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_CRL_VALIDATION:
 			case AUTH_RULE_OCSP_VALIDATION:
 				/* integer type */
-				enumerator->current->value = (void*)va_arg(args, u_int);
+				enumerator->current->value = (void*)(uintptr_t)va_arg(args, u_int);
 				break;
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
@@ -283,7 +283,7 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
 			/* integer type */
-			entry->value = (void*)va_arg(args, u_int);
+			entry->value = (void*)(uintptr_t)va_arg(args, u_int);
 			break;
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:

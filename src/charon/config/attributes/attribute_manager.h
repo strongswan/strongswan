@@ -69,9 +69,9 @@ struct attribute_manager_t {
 	void (*remove_provider)(attribute_manager_t *this,
 							attribute_provider_t *provider);
 	/**
-     * Destroy a attribute_manager instance.
-     */
-    void (*destroy)(attribute_manager_t *this);
+	 * Destroy a attribute_manager instance.
+	 */
+	void (*destroy)(attribute_manager_t *this);
 };
 
 /**

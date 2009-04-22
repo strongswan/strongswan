@@ -643,7 +643,7 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 /**
  * print all algorithms of a kind to buffer
  */
-static int print_alg(private_proposal_t *this, char **dst, int *len,
+static int print_alg(private_proposal_t *this, char **dst, size_t *len,
 					 u_int kind, void *names, bool *first)
 {
 	enumerator_t *enumerator;
