@@ -400,7 +400,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 				first = FALSE;
 				fprintf(out, "Virtual IP pools (size/online/offline):\n");
 			}
-			fprintf(out, "  %s: %lu/%lu/%lu\n", pool, size, online, offline);
+			fprintf(out, "  %s: %u/%u/%u\n", pool, size, online, offline);
 		}
 		enumerator->destroy(enumerator);
 		
