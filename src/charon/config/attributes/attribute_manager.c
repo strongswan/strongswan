@@ -39,6 +39,11 @@ struct private_attribute_manager_t {
 	linked_list_t *providers;
 	
 	/**
+	 * list of registered handlers
+	 */
+	linked_list_t *handlers;
+	
+	/**
 	 * rwlock provider list
 	 */
 	rwlock_t *lock;
@@ -105,6 +110,29 @@ static void release_address(private_attribute_manager_t *this,
 }
 
 /**
+ * inner enumerator constructor for attributes
+ */
+static enumerator_t *attrib_enum_create(attribute_provider_t *provider,
+										identification_t *id)
+{
+	return provider->create_attribute_enumerator(provider, id);
+}
+
+/**
+ * Implementation of attribute_manager_t.create_attribute_enumerator
+ */
+static enumerator_t* create_attribute_enumerator(
+						private_attribute_manager_t *this, identification_t *id)
+{
+	this->lock->read_lock(this->lock);
+	return enumerator_create_cleaner(
+				enumerator_create_nested(
+					this->providers->create_enumerator(this->providers),
+					(void*)attrib_enum_create, id, NULL),
+				(void*)this->lock->unlock, this->lock);
+}
+
+/**
  * Implementation of attribute_manager_t.add_provider.
  */
 static void add_provider(private_attribute_manager_t *this,
@@ -127,11 +155,89 @@ static void remove_provider(private_attribute_manager_t *this,
 }
 
 /**
+ * Implementation of attribute_manager_t.handle
+ */
+static attribute_handler_t* handle(private_attribute_manager_t *this,
+						ike_sa_t *ike_sa, configuration_attribute_type_t type,
+						chunk_t data)
+{
+	enumerator_t *enumerator;
+	attribute_handler_t *current, *handled = NULL;
+	
+	this->lock->read_lock(this->lock);
+	enumerator = this->handlers->create_enumerator(this->handlers);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current->handle(current, ike_sa, type, data))
+		{
+			handled = current;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+	
+	if (!handled)
+	{
+		DBG1(DBG_CFG, "handling %N attribute failed",
+			 configuration_attribute_type_names, type);
+	}
+	return handled;
+}
+
+/**
+ * Implementation of attribute_manager_t.release
+ */
+static void release(private_attribute_manager_t *this,
+						attribute_handler_t *handler, ike_sa_t *ike_sa,
+						configuration_attribute_type_t type, chunk_t data)
+{
+	enumerator_t *enumerator;
+	attribute_handler_t *current;
+	
+	this->lock->read_lock(this->lock);
+	enumerator = this->handlers->create_enumerator(this->handlers);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current == handler)
+		{
+			current->release(current, ike_sa, type, data);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
+/**
+ * Implementation of attribute_manager_t.add_handler
+ */
+static void add_handler(private_attribute_manager_t *this,
+						attribute_handler_t *handler)
+{
+	this->lock->write_lock(this->lock);
+	this->handlers->insert_last(this->handlers, handler);
+	this->lock->unlock(this->lock);
+}
+
+/**
+ * Implementation of attribute_manager_t.remove_handler
+ */
+static void remove_handler(private_attribute_manager_t *this,
+						attribute_handler_t *handler)
+{
+	this->lock->write_lock(this->lock);
+	this->handlers->remove(this->handlers, handler, NULL);
+	this->lock->unlock(this->lock);
+}
+
+/**
  * Implementation of attribute_manager_t.destroy
  */
 static void destroy(private_attribute_manager_t *this)
 {
 	this->providers->destroy(this->providers);
+	this->handlers->destroy(this->handlers);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -145,11 +251,17 @@ attribute_manager_t *attribute_manager_create()
 	
 	this->public.acquire_address = (host_t*(*)(attribute_manager_t*, char*, identification_t*,host_t*))acquire_address;
 	this->public.release_address = (void(*)(attribute_manager_t*, char *, host_t*, identification_t*))release_address;
+	this->public.create_attribute_enumerator = (enumerator_t*(*)(attribute_manager_t*, identification_t *id))create_attribute_enumerator;
 	this->public.add_provider = (void(*)(attribute_manager_t*, attribute_provider_t *provider))add_provider;
 	this->public.remove_provider = (void(*)(attribute_manager_t*, attribute_provider_t *provider))remove_provider;
+	this->public.handle = (attribute_handler_t*(*)(attribute_manager_t*, ike_sa_t *ike_sa, configuration_attribute_type_t type, chunk_t data))handle;
+	this->public.release = (void(*)(attribute_manager_t*, attribute_handler_t *handler, ike_sa_t *ike_sa, configuration_attribute_type_t type, chunk_t data))release;
+	this->public.add_handler = (void(*)(attribute_manager_t*, attribute_handler_t *handler))add_handler;
+	this->public.remove_handler = (void(*)(attribute_manager_t*, attribute_handler_t *handler))remove_handler;
 	this->public.destroy = (void(*)(attribute_manager_t*))destroy;
 	
 	this->providers = linked_list_create();
+	this->handlers = linked_list_create();
 	this->lock = rwlock_create(RWLOCK_DEFAULT);
 	
 	return &this->public;

@@ -50,54 +50,34 @@ struct private_ike_config_t {
 	 * virtual ip
 	 */
 	host_t *virtual_ip;
-	
-	/**
-	 * list of DNS servers
-	 */
-	linked_list_t *dns;
-
-	/**
-	 * list of WINS servers
-	 */
-	linked_list_t *nbns;
 };
 
 /**
- * build configuration payloads and attributes
+ * build INTERNAL_IPV4/6_ADDRESS from virtual ip
  */
-static void build_payloads(private_ike_config_t *this, message_t *message,
-						   config_type_t type)
+static void build_vip(private_ike_config_t *this, host_t *vip, cp_payload_t *cp)
 {
-	cp_payload_t *cp;
 	configuration_attribute_t *ca;
 	chunk_t chunk, prefix;
 	
-	if (!this->virtual_ip)
-	{
-		return;
-	}
-
-	cp = cp_payload_create();
-	cp->set_config_type(cp, type);
-
 	ca = configuration_attribute_create();
 	
-	if (this->virtual_ip->get_family(this->virtual_ip) == AF_INET)
+	if (vip->get_family(vip) == AF_INET)
 	{
 		ca->set_type(ca, INTERNAL_IP4_ADDRESS);
-		if (this->virtual_ip->is_anyaddr(this->virtual_ip))
+		if (vip->is_anyaddr(vip))
 		{
 			chunk = chunk_empty;
 		}
 		else
 		{
-			chunk = this->virtual_ip->get_address(this->virtual_ip);
+			chunk = vip->get_address(vip);
 		}
 	}
 	else
 	{
 		ca->set_type(ca, INTERNAL_IP6_ADDRESS);
-		if (this->virtual_ip->is_anyaddr(this->virtual_ip))
+		if (vip->is_anyaddr(vip))
 		{
 			chunk = chunk_empty;
 		}
@@ -105,71 +85,12 @@ static void build_payloads(private_ike_config_t *this, message_t *message,
 		{
 			prefix = chunk_alloca(1);
 			*prefix.ptr = 64;
-			chunk = this->virtual_ip->get_address(this->virtual_ip);
+			chunk = vip->get_address(vip);
 			chunk = chunk_cata("cc", chunk, prefix);
 		}
 	}
 	ca->set_value(ca, chunk);
 	cp->add_configuration_attribute(cp, ca);
-	
-	/* we currently always add a DNS request if we request an IP */
-	if (this->initiator)
-	{
-		ca = configuration_attribute_create();
-		if (this->virtual_ip->get_family(this->virtual_ip) == AF_INET)
-		{
-			ca->set_type(ca, INTERNAL_IP4_DNS);
-		}
-		else
-		{
-			ca->set_type(ca, INTERNAL_IP6_DNS);
-		}
-		cp->add_configuration_attribute(cp, ca);
-	}
-	else
-	{
-		host_t *ip;
-		iterator_t *iterator;
-
-		/* Add internal DNS servers */
-		iterator = this->dns->create_iterator(this->dns, TRUE);
-		while (iterator->iterate(iterator, (void**)&ip))
-		{
-			ca = configuration_attribute_create();
-			if (ip->get_family(ip) == AF_INET)
-			{
-				ca->set_type(ca, INTERNAL_IP4_DNS);
-			}
-			else
-			{
-				ca->set_type(ca, INTERNAL_IP6_DNS);
-			}
-			chunk = ip->get_address(ip);
-			ca->set_value(ca, chunk);
-			cp->add_configuration_attribute(cp, ca);
-		}
-		iterator->destroy(iterator);
-
-		/* Add internal WINS servers */
-		iterator = this->nbns->create_iterator(this->nbns, TRUE);
-		while (iterator->iterate(iterator, (void**)&ip))
-		{
-			ca = configuration_attribute_create();
-			if (ip->get_family(ip) == AF_INET)
-			{
-				ca->set_type(ca, INTERNAL_IP4_NBNS);
-			}
-			else
-			{
-				ca->set_type(ca, INTERNAL_IP6_NBNS);
-			}
-			chunk = ip->get_address(ip);
-			ca->set_value(ca, chunk);
-			cp->add_configuration_attribute(cp, ca);
-		}
-		iterator->destroy(iterator);
-	}
-	message->add_payload(message, (payload_t*)cp);
 }
 
 /**
@@ -203,55 +124,23 @@ static void process_attribute(private_ike_config_t *this,
 				}
 				ip = host_create_from_chunk(family, addr, 0);
 			}
-			if (ip && !this->virtual_ip)
+			if (ip)
 			{
+				DESTROY_IF(this->virtual_ip);
 				this->virtual_ip = ip;
 			}
 			break;
 		}
-		case INTERNAL_IP4_DNS:
-			family = AF_INET;
-			/* fall */
-		case INTERNAL_IP6_DNS:
-		{
-			addr = ca->get_value(ca);
-			if (addr.len == 0)
-			{
-				ip = host_create_any(family);
-			}
-			else
-			{
-				ip = host_create_from_chunk(family, addr, 0);
-			}
-			if (ip)
-			{
-				this->dns->insert_last(this->dns, ip);
-			}
-			break;
-		}
-		case INTERNAL_IP4_NBNS:
-		case INTERNAL_IP6_NBNS:
-		{
-			addr = ca->get_value(ca);
-			if (addr.len == 0)
-			{
-				ip = host_create_any(family);
-			}
-			else
-			{
-				ip = host_create_from_chunk(family, addr, 0);
-			}
-			if (ip)
-			{
-				this->nbns->insert_last(this->nbns, ip);
-			}
-			break;
-		}
 		default:
-			DBG1(DBG_IKE, "ignoring %N config attribute", 
-	 			 configuration_attribute_type_names,
-	 			 ca->get_type(ca));
-			break;
+			if (this->initiator)
+			{
+				this->ike_sa->add_configuration_attribute(this->ike_sa,
+										ca->get_type(ca), ca->get_value(ca));
+			}
+			else
+			{
+				/* we do not handle attribute requests other than for VIPs */
+			}
 	}
 }
 
@@ -313,12 +202,28 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 		}
 		if (vip)
 		{
-			this->virtual_ip = vip->clone(vip);
+			configuration_attribute_t *ca;
+			cp_payload_t *cp;
+			
+			cp = cp_payload_create();
+			cp->set_config_type(cp, CFG_REQUEST);
+			
+			build_vip(this, vip, cp);
+			
+			/* we currently always add a DNS request if we request an IP */
+			ca = configuration_attribute_create();
+			if (vip->get_family(vip) == AF_INET)
+			{
+				ca->set_type(ca, INTERNAL_IP4_DNS);
+			}
+			else
+			{
+				ca->set_type(ca, INTERNAL_IP6_DNS);
+			}
+			cp->add_configuration_attribute(cp, ca);
+			message->add_payload(message, (payload_t*)cp);
 		}
-		
-		build_payloads(this, message, CFG_REQUEST);
 	}
-	
 	return NEED_MORE;
 }
 
@@ -345,17 +250,22 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 		
 		if (config && this->virtual_ip)
 		{
-			host_t *ip = NULL;
+			enumerator_t *enumerator;
+			configuration_attribute_type_t type;
+			configuration_attribute_t *ca;
+			chunk_t value;
+			cp_payload_t *cp;
+			host_t *vip = NULL;
 			
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
 			if (config->get_pool(config))
 			{
-				ip = charon->attributes->acquire_address(charon->attributes, 
+				vip = charon->attributes->acquire_address(charon->attributes, 
 									config->get_pool(config),
 									this->ike_sa->get_other_id(this->ike_sa),
 									this->virtual_ip);
 			}
-			if (ip == NULL)
+			if (vip == NULL)
 			{
 				DBG1(DBG_IKE, "no virtual IP found, sending %N",
 					 notify_type_names, INTERNAL_ADDRESS_FAILURE);
@@ -363,13 +273,27 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 									chunk_empty);
 				return SUCCESS;
 			}
-			DBG1(DBG_IKE, "assigning virtual IP %H to peer", ip);
-			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, ip);
+			DBG1(DBG_IKE, "assigning virtual IP %H to peer", vip);
+			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, vip);
 			
-			this->virtual_ip->destroy(this->virtual_ip);
-			this->virtual_ip = ip;
+			cp = cp_payload_create();
+			cp->set_config_type(cp, CFG_REQUEST);
 			
-			build_payloads(this, message, CFG_REPLY);
+			build_vip(this, vip, cp);
+			
+			/* if we add an IP, we also look for other attributes */
+			enumerator = charon->attributes->create_attribute_enumerator(
+				charon->attributes, this->ike_sa->get_other_id(this->ike_sa));
+			while (enumerator->enumerate(enumerator, &type, &value))
+			{
+				ca = configuration_attribute_create();
+				ca->set_type(ca, type);
+				ca->set_value(ca, value);
+				cp->add_configuration_attribute(cp, ca);
+			}
+			enumerator->destroy(enumerator);
+			
+			message->add_payload(message, (payload_t*)cp);
 		}
 		return SUCCESS;
 	}
@@ -383,36 +307,12 @@ static status_t process_i(private_ike_config_t *this, message_t *message)
 {
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{	/* in last IKE_AUTH exchange */
-		host_t *ip;
-		peer_cfg_t *config;
 		
-		DESTROY_IF(this->virtual_ip);
-		this->virtual_ip = NULL;
-
 		process_payloads(this, message);
 		
-		if (this->virtual_ip == NULL)
-		{	/* force a configured virtual IP, even if server didn't return one */
-			config = this->ike_sa->get_peer_cfg(this->ike_sa);
-			this->virtual_ip = config->get_virtual_ip(config);
-			if (this->virtual_ip)
-			{
-				this->virtual_ip = this->virtual_ip->clone(this->virtual_ip);
-			}
-		}
-
-		if (this->virtual_ip && !this->virtual_ip->is_anyaddr(this->virtual_ip))
+		if (this->virtual_ip)
 		{
 			this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, this->virtual_ip);
-			
-			while (this->dns->remove_last(this->dns, (void**)&ip) == SUCCESS)
-			{
-				if (!ip->is_anyaddr(ip))
-				{
-					this->ike_sa->add_dns_server(this->ike_sa, ip);
-				}
-				ip->destroy(ip);
-			}
 		}
 		return SUCCESS;
 	}
@@ -433,11 +333,9 @@ static task_type_t get_type(private_ike_config_t *this)
 static void migrate(private_ike_config_t *this, ike_sa_t *ike_sa)
 {
 	DESTROY_IF(this->virtual_ip);
-	this->dns->destroy_offset(this->dns, offsetof(host_t, destroy));
 	
 	this->ike_sa = ike_sa;
 	this->virtual_ip = NULL;
-	this->dns = linked_list_create();
 }
 
 /**
@@ -446,8 +344,6 @@ static void migrate(private_ike_config_t *this, ike_sa_t *ike_sa)
 static void destroy(private_ike_config_t *this)
 {
 	DESTROY_IF(this->virtual_ip);
-	this->dns->destroy_offset(this->dns, offsetof(host_t, destroy));
-	this->nbns->destroy_offset(this->nbns, offsetof(host_t, destroy));
 	free(this);
 }
 
@@ -457,7 +353,7 @@ static void destroy(private_ike_config_t *this)
 ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 {
 	private_ike_config_t *this = malloc_thing(private_ike_config_t);
-
+	
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
@@ -465,9 +361,7 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 	this->initiator = initiator;
 	this->ike_sa = ike_sa;
 	this->virtual_ip = NULL;
-	this->dns = linked_list_create();
-	this->nbns = linked_list_create();
-
+	
 	if (initiator)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
@@ -475,49 +369,10 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 	}
 	else
 	{
-		int i;
-
-		/* assign DNS servers */
-		for (i = 1; i <= DNS_SERVER_MAX; i++)
-		{
-			char dns_key[16], *dns_str;
-
-			snprintf(dns_key, sizeof(dns_key), "charon.dns%d", i);
-			dns_str = lib->settings->get_str(lib->settings, dns_key, NULL);
-			if (dns_str)
-			{
-				host_t *dns = host_create_from_string(dns_str, 0);
-
-				if (dns)
-				{
-					DBG2(DBG_CFG, "assigning DNS server %H to peer", dns);
-					this->dns->insert_last(this->dns, dns);
-				}
-			}
-		}
-
-		/* assign WINS servers */
-		for (i = 1; i <= NBNS_SERVER_MAX; i++)
-		{
-			char nbns_key[16], *nbns_str;
-
-			snprintf(nbns_key, sizeof(nbns_key), "charon.nbns%d", i);
-			nbns_str = lib->settings->get_str(lib->settings, nbns_key, NULL);
-			if (nbns_str)
-			{
-				host_t *nbns = host_create_from_string(nbns_str, 0);
-
-				if (nbns)
-				{
-					DBG2(DBG_CFG, "assigning NBNS server %H to peer", nbns);
-					this->nbns->insert_last(this->nbns, nbns);
-				}
-			}
-		}
-
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
-
+	
 	return &this->public;
 }
+

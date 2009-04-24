@@ -57,10 +57,6 @@
 #include <processing/jobs/initiate_mediation_job.h>
 #endif
 
-#ifndef RESOLV_CONF
-#define RESOLV_CONF "/etc/resolv.conf"
-#endif
-
 ENUM(ike_sa_state_names, IKE_CREATED, IKE_DESTROYING,
 	"CREATED",
 	"CONNECTING",
@@ -72,17 +68,18 @@ ENUM(ike_sa_state_names, IKE_CREATED, IKE_DESTROYING,
 );
 
 typedef struct private_ike_sa_t private_ike_sa_t;
+typedef struct attribute_entry_t attribute_entry_t;
 
 /**
  * Private data of an ike_sa_t object.
  */
 struct private_ike_sa_t {
-
+	
 	/**
 	 * Public members
 	 */
 	ike_sa_t public;
-
+	
 	/**
 	 * Identifier for the current IKE_SA.
 	 */
@@ -96,7 +93,7 @@ struct private_ike_sa_t {
 	/**
 	 * Current state of the IKE_SA
 	 */
-	ike_sa_state_t state;	
+	ike_sa_state_t state;
 	
 	/**
 	 * IKE configuration used to set up this IKE_SA
@@ -179,7 +176,7 @@ struct private_ike_sa_t {
 	 * set of condition flags currently enabled for this IKE_SA
 	 */
 	ike_condition_t conditions;
-
+	
 	/**
 	 * Linked List containing the child sa's of the current IKE_SA.
 	 */
@@ -201,9 +198,9 @@ struct private_ike_sa_t {
 	host_t *other_virtual_ip;
 	
 	/**
-	 * List of DNS servers installed by us
+	 * List of configuration attributes (attribute_entry_t)
 	 */
-	linked_list_t *dns_servers;
+	linked_list_t *attributes;
 	
 	/**
 	 * list of peers additional addresses, transmitted via MOBIKE
@@ -219,7 +216,7 @@ struct private_ike_sa_t {
 	 * number pending UPDATE_SA_ADDRESS (MOBIKE)
 	 */
 	u_int32_t pending_updates;
-
+	
 	/**
 	 * NAT keep alive interval
 	 */
@@ -234,16 +231,28 @@ struct private_ike_sa_t {
 	 * how many times we have retried so far (keyingtries)
 	 */
 	u_int32_t keyingtry;
-
+	
 	/**
 	 * local host address to be used for IKE, set via MIGRATE kernel message
 	 */
 	host_t *local_host;
-
+	
 	/**
 	 * remote host address to be used for IKE, set via MIGRATE kernel message
 	 */
 	host_t *remote_host;
+};
+
+/**
+ * Entry to maintain install configuration attributes during IKE_SA lifetime
+ */
+struct attribute_entry_t {
+	/** handler used to install this attribute */
+	attribute_handler_t *handler;
+	/** attribute type */
+	configuration_attribute_type_t type;
+	/** attribute data */
+	chunk_t data;
 };
 
 /**
@@ -1996,12 +2005,34 @@ static status_t roam(private_ike_sa_t *this, bool address)
 }
 
 /**
+ * Implementation of ike_sa_t.add_configuration_attribute
+ */
+static void add_configuration_attribute(private_ike_sa_t *this,
+							configuration_attribute_type_t type, chunk_t data)
+{
+	attribute_entry_t *entry;
+	attribute_handler_t *handler;
+	
+	handler = charon->attributes->handle(charon->attributes,
+										 &this->public, type, data);
+	if (handler)
+	{
+		entry = malloc_thing(attribute_entry_t);
+		entry->handler = handler;
+		entry->type = type;
+		entry->data = chunk_clone(data);
+		
+		this->attributes->insert_last(this->attributes, entry);
+	}
+}
+
+/**
  * Implementation of ike_sa_t.inherit.
  */
 static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 {
 	child_sa_t *child_sa;
-	host_t *ip;
+	attribute_entry_t *entry;
 	
 	/* apply hosts and ids */
 	this->my_host->destroy(this->my_host);
@@ -2025,11 +2056,11 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 		other->other_virtual_ip = NULL;
 	}
 	
-	/* ... and DNS servers */
-	while (other->dns_servers->remove_last(other->dns_servers, 
-										   (void**)&ip) == SUCCESS)
+	/* ... and configuration attributes */
+	while (other->attributes->remove_last(other->attributes, 
+										  (void**)&entry) == SUCCESS)
 	{
-		this->dns_servers->insert_first(this->dns_servers, ip);
+		this->attributes->insert_first(this->attributes, entry);
 	}
 
 	/* inherit all conditions */
@@ -2082,146 +2113,26 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 }
 
 /**
- * Implementation of ike_sa_t.remove_dns_server
- */
-static void remove_dns_servers(private_ike_sa_t *this)
-{
-	FILE *file;
-	struct stat stats;
-	chunk_t contents, line, orig_line, token;
-	char string[INET6_ADDRSTRLEN];
-	host_t *ip;
-	iterator_t *iterator;
-	
-	if (this->dns_servers->get_count(this->dns_servers) == 0)
-	{
-		/* don't touch anything if we have no nameservers installed */
-		return;
-	}
-	
-	file = fopen(RESOLV_CONF, "r");
-	if (file == NULL || stat(RESOLV_CONF, &stats) != 0)
-	{
-		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %s",
-			 RESOLV_CONF, strerror(errno));
-		return;
-	}
-	
-	contents = chunk_alloca((size_t)stats.st_size);
-	
-	if (fread(contents.ptr, 1, contents.len, file) != contents.len)
-	{
-		DBG1(DBG_IKE, "unable to read DNS configuration file: %s", strerror(errno));
-		fclose(file);
-		return;
-	}
-	
-	fclose(file);
-	file = fopen(RESOLV_CONF, "w");
-	if (file == NULL)
-	{
-		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %s",
-			 RESOLV_CONF, strerror(errno));
-		return;
-	}
-	
-	iterator = this->dns_servers->create_iterator(this->dns_servers, TRUE);
-	while (fetchline(&contents, &line))
-	{
-		bool found = FALSE;
-		orig_line = line;
-		if (extract_token(&token, ' ', &line) &&
-			strncasecmp(token.ptr, "nameserver", token.len) == 0)
-		{
-			if (!extract_token(&token, ' ', &line))
-			{
-				token = line;
-			}
-			iterator->reset(iterator);
-			while (iterator->iterate(iterator, (void**)&ip))
-			{
-				snprintf(string, sizeof(string), "%H", ip);
-				if (strlen(string) == token.len &&
-					strncmp(token.ptr, string, token.len) == 0)
-				{
-					iterator->remove(iterator);
-					ip->destroy(ip);
-					found = TRUE;
-					break;
-				}
-			}
-		}		
-		
-		if (!found)
-		{	
-			/* write line untouched back to file */
-			ignore_result(fwrite(orig_line.ptr, orig_line.len, 1, file));
-			fprintf(file, "\n");
-		}
-	}
-	iterator->destroy(iterator);
-	fclose(file);
-}
-
-/**
- * Implementation of ike_sa_t.add_dns_server
- */
-static void add_dns_server(private_ike_sa_t *this, host_t *dns)
-{
-	FILE *file;
-	struct stat stats;
-	chunk_t contents;
-
-	DBG1(DBG_IKE, "installing DNS server %H", dns);
-	
-	file = fopen(RESOLV_CONF, "a+");
-	if (file == NULL || stat(RESOLV_CONF, &stats) != 0)
-	{
-		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %s",
-			 RESOLV_CONF, strerror(errno));
-		return;
-	}
-
-	contents = chunk_alloca(stats.st_size);
-	
-	if (fread(contents.ptr, 1, contents.len, file) != contents.len)
-	{
-		DBG1(DBG_IKE, "unable to read DNS configuration file: %s", strerror(errno));
-		fclose(file);
-		return;
-	}
-	
-	fclose(file);
-	file = fopen(RESOLV_CONF, "w");
-	if (file == NULL)
-	{
-		DBG1(DBG_IKE, "unable to open DNS configuration file %s: %s",
-			 RESOLV_CONF, strerror(errno));
-		return;
-	}
-	
-	if (fprintf(file, "nameserver %H   # added by strongSwan, assigned by %D\n",
-		dns, this->other_id) < 0)
-	{
-		DBG1(DBG_IKE, "unable to write DNS configuration: %s", strerror(errno));
-	}
-	else
-	{
-		this->dns_servers->insert_last(this->dns_servers, dns->clone(dns));
-	}
-	ignore_result(fwrite(contents.ptr, contents.len, 1, file));
-	
-	fclose(file);	
-}
-
-/**
  * Implementation of ike_sa_t.destroy.
  */
 static void destroy(private_ike_sa_t *this)
 {
+	attribute_entry_t *entry;
+	
 	charon->bus->set_sa(charon->bus, &this->public);
 	
 	set_state(this, IKE_DESTROYING);
+	
+	/* remove attributes first, as we pass the IKE_SA to the handler */
+	while (this->attributes->remove_last(this->attributes, 
+										 (void**)&entry) == SUCCESS)
+	{
+		charon->attributes->release(charon->attributes, entry->handler,
+									&this->public, entry->type, entry->data);
+		free(entry->data.ptr);
+		free(entry);
+	}
+	this->attributes->destroy(this->attributes);
 	
 	this->child_sas->destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
 	
@@ -2247,10 +2158,6 @@ static void destroy(private_ike_sa_t *this)
 		}
 		this->other_virtual_ip->destroy(this->other_virtual_ip);
 	}
-	
-	remove_dns_servers(this);
-	this->dns_servers->destroy_offset(this->dns_servers,
-													offsetof(host_t, destroy));
 	this->additional_addresses->destroy_offset(this->additional_addresses,
 													offsetof(host_t, destroy));
 #ifdef ME
@@ -2351,7 +2258,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_unique_id = (u_int32_t (*)(ike_sa_t*))get_unique_id;
 	this->public.set_virtual_ip = (void (*)(ike_sa_t*,bool,host_t*))set_virtual_ip;
 	this->public.get_virtual_ip = (host_t* (*)(ike_sa_t*,bool))get_virtual_ip;
-	this->public.add_dns_server = (void (*)(ike_sa_t*,host_t*))add_dns_server;
+	this->public.add_configuration_attribute = (void(*)(ike_sa_t*, configuration_attribute_type_t type, chunk_t data))add_configuration_attribute;
 	this->public.set_kmaddress = (void (*)(ike_sa_t*,host_t*,host_t*))set_kmaddress;
 #ifdef ME
 	this->public.act_as_mediation_server = (void (*)(ike_sa_t*)) act_as_mediation_server;
@@ -2391,8 +2298,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->unique_id = ++unique_id;
 	this->my_virtual_ip = NULL;
 	this->other_virtual_ip = NULL;
-	this->dns_servers = linked_list_create();
 	this->additional_addresses = linked_list_create();
+	this->attributes = linked_list_create();
 	this->nat_detection_dest = chunk_empty;
 	this->pending_updates = 0;
 	this->keyingtry = 0;

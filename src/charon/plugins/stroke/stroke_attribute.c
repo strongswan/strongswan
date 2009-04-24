@@ -532,6 +532,7 @@ stroke_attribute_t *stroke_attribute_create()
 	
 	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *,host_t *))acquire_address;
 	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
+	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id))enumerator_create_empty;
 	this->public.add_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))add_pool;
 	this->public.del_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))del_pool;
 	this->public.create_pool_enumerator = (enumerator_t*(*)(stroke_attribute_t*))create_pool_enumerator;

@@ -35,6 +35,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <library.h>
 #include <encoding/message.h>
 #include <encoding/payloads/proposal_substructure.h>
+#include <encoding/payloads/configuration_attribute.h>
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
 #include <sa/tasks/task.h>
@@ -868,14 +869,18 @@ struct ike_sa_t {
 	host_t* (*get_virtual_ip) (ike_sa_t *this, bool local);
 	
 	/**
-	 * Add a DNS server to the system.
+	 * Register a configuration attribute to the IKE_SA.
 	 *
-	 * An IRAS may send a DNS server. To use it, it is installed on the
-	 * system. The DNS entry has a lifetime until the IKE_SA gets closed.
+	 * If an IRAS sends a configuration attribute it is installed and
+	 * registered at the IKE_SA. Attributes are inherit()ed and get released
+	 * when the IKE_SA is closed.
 	 *
-	 * @param dns			DNS server to install on the system
+	 * @param handler		handler installed the attribute, use for release()
+	 * @param type			configuration attribute type
+	 * @param data			associated attribute data
 	 */
-	void (*add_dns_server) (ike_sa_t *this, host_t *dns);
+	void (*add_configuration_attribute)(ike_sa_t *this,
+							configuration_attribute_type_t type, chunk_t data);
 	
 	/**
 	 * Set local and remote host addresses to be used for IKE.
@@ -887,7 +892,7 @@ struct ike_sa_t {
 	 * @param remote		remote kmaddress
 	 */
 	void (*set_kmaddress) (ike_sa_t *this, host_t *local, host_t *remote);
-
+	
 	/**
 	 * Inherit all attributes of other to this after rekeying.
 	 *

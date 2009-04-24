@@ -12,6 +12,7 @@ config/proposal.c config/proposal.h config/proposal_keywords.c config/proposal_k
 config/auth_cfg.c config/auth_cfg.h \
 config/traffic_selector.c config/traffic_selector.h \
 config/attributes/attribute_provider.h \
+config/attributes/attribute_handler.h \
 config/attributes/attribute_manager.c config/attributes/attribute_manager.h \
 control/controller.c control/controller.h \
 daemon.c daemon.h \
@@ -105,7 +106,6 @@ AM_CFLAGS = -rdynamic \
   -DIPSEC_PIDDIR=\"${piddir}\" \
   -DIPSEC_PLUGINDIR=\"${plugindir}\" \
   -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
-  -DRESOLV_CONF=\"${resolv_conf}\" \
   -Wformat=0
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm -ldl
 
@@ -191,6 +191,16 @@ endif
 if USE_UPDOWN
   SUBDIRS += plugins/updown
   PLUGINS += updown
+endif
+
+if USE_ATTR
+  SUBDIRS += plugins/attr
+  PLUGINS += attr
+endif
+
+if USE_RESOLV_CONF
+  SUBDIRS += plugins/resolv_conf
+  PLUGINS += resolv-conf
 endif
 
 if USE_EAP_IDENTITY

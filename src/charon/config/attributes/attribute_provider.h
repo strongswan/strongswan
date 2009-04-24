@@ -54,6 +54,15 @@ struct attribute_provider_t {
 	 */
 	bool (*release_address)(attribute_provider_t *this,
 							char *pool, host_t *address, identification_t *id);
+	
+	/**
+	 * Create an enumerator over attributes to hand out to a peer.
+	 *
+	 * @param id			peer ID
+	 * @return				enumerator (configuration_attribute_type_t, chunk_t)
+	 */
+	enumerator_t* (*create_attribute_enumerator)(attribute_provider_t *this,
+												 identification_t *id);
 };
 
 #endif /** ATTRIBUTE_PROVIDER_H_ @}*/
