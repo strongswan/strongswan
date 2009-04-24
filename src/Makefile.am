@@ -1,11 +1,11 @@
 SUBDIRS = . include
 
-if USE_FILE_CONFIG
-  SUBDIRS += libfreeswan starter ipsec _copyright
-endif
-
 if USE_LIBSTRONGSWAN
   SUBDIRS += libstrongswan
+endif
+
+if USE_FILE_CONFIG
+  SUBDIRS += libfreeswan starter ipsec _copyright
 endif
 
 if USE_PLUTO
