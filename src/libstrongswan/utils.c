@@ -148,6 +148,22 @@ void *return_null()
 }
 
 /**
+ * returns TRUE
+ */
+bool return_true()
+{
+	return TRUE;
+}
+
+/**
+ * returns FALSE
+ */
+bool return_false()
+{
+	return FALSE;
+}
+
+/**
  * nop operation
  */
 void nop()

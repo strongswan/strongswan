@@ -255,6 +255,16 @@ void *return_null();
 void nop();
 
 /**
+ * returns TRUE
+ */
+bool return_true();
+
+/**
+ * returns FALSE
+ */
+bool return_false();
+
+/**
  * Special type to count references
  */
 typedef volatile u_int refcount_t;
