@@ -47,7 +47,7 @@ AC_ARG_WITH(
 )
 AC_ARG_WITH(
 	[resolv-conf],
-	AS_HELP_STRING([--with-resolv-conf=file],[set the file to store DNS server information other than "sysconfdir/resolv.conf"]),
+	AS_HELP_STRING([--with-resolv-conf=file],[set the file to use in DNS handler plugin other than "sysconfdir/resolv.conf"]),
 	[AC_SUBST(resolv_conf, "$withval")],
 	[AC_SUBST(resolv_conf, "${sysconfdir}/resolv.conf")]
 )
@@ -638,6 +638,28 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[attr],
+	AS_HELP_STRING([--disable-attr],[disable strongswan.conf based configuration attribute plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		attr=true
+	 else
+		attr=false
+	fi],
+	attr=true
+)
+
+AC_ARG_ENABLE(
+	[resolv-conf],
+	AS_HELP_STRING([--disable-resolv-conf],[disable resolv.conf DNS handler plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		resolvconf=true
+	 else
+		resolvconf=false
+	fi],
+	resolvconf=true
+)
+
+AC_ARG_ENABLE(
 	[padlock],
 	AS_HELP_STRING([--enable-padlock],[enables VIA Padlock crypto plugin. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -962,6 +984,8 @@ AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
+AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
+AM_CONDITIONAL(USE_RESOLV_CONF, test x$resolvconf = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unittest = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTS, test x$loadtest = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
@@ -1065,6 +1089,8 @@ AC_OUTPUT(
 	src/charon/plugins/uci/Makefile
 	src/charon/plugins/stroke/Makefile
 	src/charon/plugins/updown/Makefile
+	src/charon/plugins/attr/Makefile
+	src/charon/plugins/resolv_conf/Makefile
 	src/charon/plugins/unit_tester/Makefile
 	src/charon/plugins/load_tester/Makefile
 	src/stroke/Makefile
