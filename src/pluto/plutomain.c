@@ -736,6 +736,7 @@ void exit_pluto(int status)
 	free_crypto();
 	free_id();                  /* free myids */
 	free_events();              /* free remaining events */
+	free_vendorid();			/* free all vendor id records */
 	delete_lock();
 	library_deinit();
 	close_log();

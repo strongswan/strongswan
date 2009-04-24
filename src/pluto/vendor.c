@@ -323,8 +323,7 @@ static const char _hexdig[] = "0123456789abcdef";
 
 static int _vid_struct_init = 0;
 
-void
-init_vendorid(void)
+void init_vendorid(void)
 {
 	struct vid_struct *vid;
 	MD5_CTX ctx;
@@ -392,9 +391,21 @@ init_vendorid(void)
 	_vid_struct_init = 1;
 }
 
-static void
-handle_known_vendorid (struct msg_digest *md
-, const char *vidstr, size_t len, struct vid_struct *vid)
+void free_vendorid(void)
+{
+	struct vid_struct *vid;
+
+	for (vid = _vid_tab; vid->id; vid++)
+	{
+		if (vid->flags & (VID_STRING | VID_MD5HASH | VID_FSWAN_HASH))
+		{
+			free(vid->vid);
+		}
+	}
+}
+
+static void handle_known_vendorid (struct msg_digest *md, const char *vidstr,
+								   size_t len, struct vid_struct *vid)
 {
 	char vid_dump[128];
 	bool vid_useful = FALSE;
@@ -481,8 +492,7 @@ handle_known_vendorid (struct msg_digest *md
 			vid_useful ? "received" : "ignoring", vid_dump);
 }
 
-void
-handle_vendorid (struct msg_digest *md, const char *vid, size_t len)
+void handle_vendorid (struct msg_digest *md, const char *vid, size_t len)
 {
 	struct vid_struct *pvid;
 
@@ -537,8 +547,7 @@ handle_vendorid (struct msg_digest *md, const char *vid, size_t len)
 /**
  * Add a vendor id payload to the msg
  */
-bool
-out_vendorid (u_int8_t np, pb_stream *outs, enum known_vendorid vid)
+bool out_vendorid (u_int8_t np, pb_stream *outs, enum known_vendorid vid)
 {
 	struct vid_struct *pvid;
 
