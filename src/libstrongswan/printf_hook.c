@@ -60,7 +60,7 @@ struct printf_hook_handler_t {
 	 */
 	int argtypes[ARGS_MAX];
 
-#ifndef HAVE_PRINTF_HOOKS
+#ifdef USE_VSTR
 	/**
 	 * name required for Vstr
 	 */
@@ -75,7 +75,7 @@ static printf_hook_handler_t *printf_hooks[NUM_HANDLERS];
 #define SPEC_TO_INDEX(spec) ((int)(spec) - (int)'A')
 #define IS_VALID_SPEC(spec) (SPEC_TO_INDEX(spec) > -1 && SPEC_TO_INDEX(spec) < NUM_HANDLERS)
 
-#ifdef HAVE_PRINTF_HOOKS
+#if defined(HAVE_PRINTF_HOOKS) && !defined(USE_VSTR)
 
 /**
  * Printf hook print function. This is actually of type "printf_function",
@@ -359,7 +359,7 @@ static void add_handler(private_printf_hook_t *this, char spec,
 	
 	if (handler->numargs > 0)
 	{
-#ifdef HAVE_PRINTF_HOOKS
+#if defined(HAVE_PRINTF_HOOKS) && !defined(USE_VSTR)
 		register_printf_function(spec, custom_print, custom_arginfo);
 #else
 		Vstr_conf *conf = get_vstr_conf();
@@ -382,7 +382,7 @@ static void add_handler(private_printf_hook_t *this, char spec,
 static void destroy(private_printf_hook_t *this)
 {
 	int i;
-#ifndef HAVE_PRINTF_HOOKS
+#ifdef USE_VSTR
 	Vstr_conf *conf = get_vstr_conf();
 #endif
 	
@@ -391,7 +391,7 @@ static void destroy(private_printf_hook_t *this)
 		printf_hook_handler_t *handler = printf_hooks[i];
 		if (handler)
 		{
-#ifndef HAVE_PRINTF_HOOKS
+#ifdef USE_VSTR
 			vstr_fmt_del(conf, handler->name);
 			free(handler->name);
 #endif
@@ -399,7 +399,7 @@ static void destroy(private_printf_hook_t *this)
 		}
 	}
 	
-#ifndef HAVE_PRINTF_HOOKS
+#ifdef USE_VSTR
 	/* freeing the Vstr_conf of the main thread */
 	pthread_key_delete(vstr_conf_key);
 	vstr_free_conf(conf);
@@ -420,7 +420,7 @@ printf_hook_t *printf_hook_create()
 	
 	memset(printf_hooks, 0, sizeof(printf_hooks));
 	
-#ifndef HAVE_PRINTF_HOOKS
+#ifdef USE_VSTR
 	if (!vstr_init())
 	{
 		DBG1("failed to initialize Vstr library!");

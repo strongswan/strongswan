@@ -712,6 +712,14 @@ AC_ARG_ENABLE(
 	fi]
 )
 
+AC_ARG_ENABLE(
+	[vstr],
+	AS_HELP_STRING([--enable-vstr],[enforce using the Vstr string library to replace glibc-like printf hooks (default is NO).]),
+	[if test x$enableval = xyes; then
+	 	vstr=true
+	fi]
+)
+
 dnl =========================
 dnl  set up compiler and flags
 dnl =========================
@@ -844,8 +852,14 @@ AC_CHECK_FUNC(
 	[AC_DEFINE(HAVE_PRINTF_HOOKS)],
 	[
 		AC_MSG_NOTICE([printf does not support custom format specifiers!])
-		AC_HAVE_LIBRARY([vstr],[LIBS="$LIBS"]; vstr=true,[AC_MSG_ERROR([Vstr string library not found])])
-	])
+		vstr=true
+	]
+)
+
+if test x$vstr = xtrue; then
+	AC_HAVE_LIBRARY([vstr],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])])
+	AC_DEFINE(USE_VSTR)
+fi
 
 if test x$gmp = xtrue; then
 	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
