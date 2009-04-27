@@ -6,21 +6,29 @@ Internet-Draft                                                 Microsoft
 Obsoletes: 4306, 4718                                         P. Hoffman
 (if approved)                                             VPN Consortium
 Intended status: Standards Track                                  Y. Nir
-Expires: May 3, 2009                                         Check Point
+Expires: October 26, 2009                                    Check Point
                                                                P. Eronen
                                                                    Nokia
-                                                        October 30, 2008
+                                                          April 24, 2009
 
 
                  Internet Key Exchange Protocol: IKEv2
-                     draft-ietf-ipsecme-ikev2bis-01
+                     draft-ietf-ipsecme-ikev2bis-03
 
 Status of this Memo
 
-   By submitting this Internet-Draft, each author represents that any
-   applicable patent or other IPR claims of which he or she is aware
-   have been or will be disclosed, and any of which he or she becomes
-   aware will be disclosed, in accordance with Section 6 of BCP 79.
+   This Internet-Draft is submitted to IETF in full conformance with the
+   provisions of BCP 78 and BCP 79.  This document may contain material
+   from IETF Documents or IETF Contributions published or made publicly
+   available before November 10, 2008.  The person(s) controlling the
+   copyright in some of this material may not have granted the IETF
+   Trust the right to allow modifications of such material outside the
+   IETF Standards Process.  Without obtaining an adequate license from
+   the person(s) controlling the copyright in such materials, this
+   document may not be modified outside the IETF Standards Process, and
+   derivative works of it may not be created outside the IETF Standards
+   Process, except to format it for publication as an RFC or to
+   translate it into languages other than English.
 
    Internet-Drafts are working documents of the Internet Engineering
    Task Force (IETF), its areas, and its working groups.  Note that
@@ -38,156 +46,207 @@ Status of this Memo
    The list of Internet-Draft Shadow Directories can be accessed at
    http://www.ietf.org/shadow.html.
 
-   This Internet-Draft will expire on May 3, 2009.
+   This Internet-Draft will expire on October 26, 2009.
 
 Copyright Notice
 
-   Copyright (C) The IETF Trust (2008).
+
+
+Kaufman, et al.         Expires October 26, 2009                [Page 1]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
+   Copyright (c) 2009 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents in effect on the date of
+   publication of this document (http://trustee.ietf.org/license-info).
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.
 
 Abstract
 
    This document describes version 2 of the Internet Key Exchange (IKE)
    protocol.  IKE is a component of IPsec used for performing mutual
    authentication and establishing and maintaining security associations
-
-
-
-Kaufman, et al.            Expires May 3, 2009                  [Page 1]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    (SAs).  It replaces and updates RFC 4306, and includes all of the
    clarifications from RFC 4718.
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009                [Page 2]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
 Table of Contents
 
-   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   5
-     1.1.  Usage Scenarios . . . . . . . . . . . . . . . . . . . . .   6
-       1.1.1.  Security Gateway to Security Gateway Tunnel Mode  . .   6
-       1.1.2.  Endpoint-to-Endpoint Transport Mode . . . . . . . . .   7
-       1.1.3.  Endpoint to Security Gateway Tunnel Mode  . . . . . .   8
-       1.1.4.  Other Scenarios . . . . . . . . . . . . . . . . . . .   8
-     1.2.  The Initial Exchanges . . . . . . . . . . . . . . . . . .   9
-     1.3.  The CREATE_CHILD_SA Exchange  . . . . . . . . . . . . . .  12
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   6
+     1.1.  Usage Scenarios . . . . . . . . . . . . . . . . . . . . .   7
+       1.1.1.  Security Gateway to Security Gateway Tunnel Mode  . .   7
+       1.1.2.  Endpoint-to-Endpoint Transport Mode . . . . . . . . .   8
+       1.1.3.  Endpoint to Security Gateway Tunnel Mode  . . . . . .   9
+       1.1.4.  Other Scenarios . . . . . . . . . . . . . . . . . . .   9
+     1.2.  The Initial Exchanges . . . . . . . . . . . . . . . . . .  10
+     1.3.  The CREATE_CHILD_SA Exchange  . . . . . . . . . . . . . .  13
        1.3.1.  Creating New Child SAs with the CREATE_CHILD_SA
-               Exchange  . . . . . . . . . . . . . . . . . . . . . .  13
-       1.3.2.  Rekeying IKE SAs with the CREATE_CHILD_SA Exchange  .  14
+               Exchange  . . . . . . . . . . . . . . . . . . . . . .  14
+       1.3.2.  Rekeying IKE SAs with the CREATE_CHILD_SA Exchange  .  16
        1.3.3.  Rekeying Child SAs with the CREATE_CHILD_SA
-               Exchange  . . . . . . . . . . . . . . . . . . . . . .  15
-     1.4.  The INFORMATIONAL Exchange  . . . . . . . . . . . . . . .  16
-       1.4.1.  Deleting an SA with INFORMATIONAL Exchanges . . . . .  16
-     1.5.  Informational Messages outside of an IKE SA . . . . . . .  17
-     1.6.  Requirements Terminology  . . . . . . . . . . . . . . . .  18
-     1.7.  Differences Between RFC 4306 and This Document  . . . . .  18
-   2.  IKE Protocol Details and Variations . . . . . . . . . . . . .  20
-     2.1.  Use of Retransmission Timers  . . . . . . . . . . . . . .  21
-     2.2.  Use of Sequence Numbers for Message ID  . . . . . . . . .  22
-     2.3.  Window Size for Overlapping Requests  . . . . . . . . . .  22
-     2.4.  State Synchronization and Connection Timeouts . . . . . .  24
-     2.5.  Version Numbers and Forward Compatibility . . . . . . . .  26
-     2.6.  IKE SA SPIs and Cookies . . . . . . . . . . . . . . . . .  28
-       2.6.1.  Interaction of COOKIE and INVALID_KE_PAYLOAD  . . . .  30
-     2.7.  Cryptographic Algorithm Negotiation . . . . . . . . . . .  31
-     2.8.  Rekeying  . . . . . . . . . . . . . . . . . . . . . . . .  32
-       2.8.1.  Simultaneous Child SA rekeying  . . . . . . . . . . .  34
-       2.8.2.  Rekeying the IKE SA Versus Reauthentication . . . . .  36
-     2.9.  Traffic Selector Negotiation  . . . . . . . . . . . . . .  37
-       2.9.1.  Traffic Selectors Violating Own Policy  . . . . . . .  40
-     2.10. Nonces  . . . . . . . . . . . . . . . . . . . . . . . . .  40
-     2.11. Address and Port Agility  . . . . . . . . . . . . . . . .  41
-     2.12. Reuse of Diffie-Hellman Exponentials  . . . . . . . . . .  41
-     2.13. Generating Keying Material  . . . . . . . . . . . . . . .  42
-     2.14. Generating Keying Material for the IKE SA . . . . . . . .  43
-     2.15. Authentication of the IKE SA  . . . . . . . . . . . . . .  44
-     2.16. Extensible Authentication Protocol Methods  . . . . . . .  46
-     2.17. Generating Keying Material for Child SAs  . . . . . . . .  48
-     2.18. Rekeying IKE SAs Using a CREATE_CHILD_SA Exchange . . . .  49
-     2.19. Requesting an Internal Address on a Remote Network  . . .  50
+               Exchange  . . . . . . . . . . . . . . . . . . . . . .  16
+     1.4.  The INFORMATIONAL Exchange  . . . . . . . . . . . . . . .  17
+       1.4.1.  Deleting an SA with INFORMATIONAL Exchanges . . . . .  18
+     1.5.  Informational Messages outside of an IKE SA . . . . . . .  18
+     1.6.  Requirements Terminology  . . . . . . . . . . . . . . . .  19
+     1.7.  Differences Between RFC 4306 and This Document  . . . . .  20
+   2.  IKE Protocol Details and Variations . . . . . . . . . . . . .  21
+     2.1.  Use of Retransmission Timers  . . . . . . . . . . . . . .  22
+     2.2.  Use of Sequence Numbers for Message ID  . . . . . . . . .  23
+     2.3.  Window Size for Overlapping Requests  . . . . . . . . . .  24
+     2.4.  State Synchronization and Connection Timeouts . . . . . .  25
+     2.5.  Version Numbers and Forward Compatibility . . . . . . . .  27
+     2.6.  IKE SA SPIs and Cookies . . . . . . . . . . . . . . . . .  29
+       2.6.1.  Interaction of COOKIE and INVALID_KE_PAYLOAD  . . . .  32
+     2.7.  Cryptographic Algorithm Negotiation . . . . . . . . . . .  32
+     2.8.  Rekeying  . . . . . . . . . . . . . . . . . . . . . . . .  34
+       2.8.1.  Simultaneous Child SA rekeying  . . . . . . . . . . .  36
+       2.8.2.  Simultaneous IKE SA Rekeying  . . . . . . . . . . . .  38
+       2.8.3.  Rekeying the IKE SA Versus Reauthentication . . . . .  39
+     2.9.  Traffic Selector Negotiation  . . . . . . . . . . . . . .  39
+       2.9.1.  Traffic Selectors Violating Own Policy  . . . . . . .  42
+     2.10. Nonces  . . . . . . . . . . . . . . . . . . . . . . . . .  43
+     2.11. Address and Port Agility  . . . . . . . . . . . . . . . .  43
+     2.12. Reuse of Diffie-Hellman Exponentials  . . . . . . . . . .  43
+     2.13. Generating Keying Material  . . . . . . . . . . . . . . .  44
+     2.14. Generating Keying Material for the IKE SA . . . . . . . .  45
+     2.15. Authentication of the IKE SA  . . . . . . . . . . . . . .  46
+     2.16. Extensible Authentication Protocol Methods  . . . . . . .  48
+     2.17. Generating Keying Material for Child SAs  . . . . . . . .  50
+     2.18. Rekeying IKE SAs Using a CREATE_CHILD_SA Exchange . . . .  51
+     2.19. Requesting an Internal Address on a Remote Network  . . .  52
+       2.19.1. Configuration Payloads  . . . . . . . . . . . . . . .  53
+     2.20. Requesting the Peer's Version . . . . . . . . . . . . . .  55
+     2.21. Error Handling  . . . . . . . . . . . . . . . . . . . . .  55
 
 
 
-Kaufman, et al.            Expires May 3, 2009                  [Page 2]
+Kaufman, et al.         Expires October 26, 2009                [Page 3]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
-       2.19.1. Configuration Payloads  . . . . . . . . . . . . . . .  51
-     2.20. Requesting the Peer's Version . . . . . . . . . . . . . .  53
-     2.21. Error Handling  . . . . . . . . . . . . . . . . . . . . .  53
-     2.22. IPComp  . . . . . . . . . . . . . . . . . . . . . . . . .  54
-     2.23. NAT Traversal . . . . . . . . . . . . . . . . . . . . . .  55
-     2.24. Explicit Congestion Notification (ECN)  . . . . . . . . .  59
-   3.  Header and Payload Formats  . . . . . . . . . . . . . . . . .  59
-     3.1.  The IKE Header  . . . . . . . . . . . . . . . . . . . . .  59
-     3.2.  Generic Payload Header  . . . . . . . . . . . . . . . . .  62
-     3.3.  Security Association Payload  . . . . . . . . . . . . . .  64
-       3.3.1.  Proposal Substructure . . . . . . . . . . . . . . . .  66
-       3.3.2.  Transform Substructure  . . . . . . . . . . . . . . .  68
-       3.3.3.  Valid Transform Types by Protocol . . . . . . . . . .  71
-       3.3.4.  Mandatory Transform IDs . . . . . . . . . . . . . . .  71
-       3.3.5.  Transform Attributes  . . . . . . . . . . . . . . . .  72
-       3.3.6.  Attribute Negotiation . . . . . . . . . . . . . . . .  74
-     3.4.  Key Exchange Payload  . . . . . . . . . . . . . . . . . .  75
-     3.5.  Identification Payloads . . . . . . . . . . . . . . . . .  75
-     3.6.  Certificate Payload . . . . . . . . . . . . . . . . . . .  78
-     3.7.  Certificate Request Payload . . . . . . . . . . . . . . .  80
-     3.8.  Authentication Payload  . . . . . . . . . . . . . . . . .  82
-     3.9.  Nonce Payload . . . . . . . . . . . . . . . . . . . . . .  83
-     3.10. Notify Payload  . . . . . . . . . . . . . . . . . . . . .  84
-       3.10.1. Notify Message Types  . . . . . . . . . . . . . . . .  85
-     3.11. Delete Payload  . . . . . . . . . . . . . . . . . . . . .  88
-     3.12. Vendor ID Payload . . . . . . . . . . . . . . . . . . . .  90
-     3.13. Traffic Selector Payload  . . . . . . . . . . . . . . . .  91
-       3.13.1. Traffic Selector  . . . . . . . . . . . . . . . . . .  92
-     3.14. Encrypted Payload . . . . . . . . . . . . . . . . . . . .  94
-     3.15. Configuration Payload . . . . . . . . . . . . . . . . . .  96
-       3.15.1. Configuration Attributes  . . . . . . . . . . . . . .  97
-       3.15.2. Meaning of INTERNAL_IP4_SUBNET/INTERNAL_IP6_SUBNET  . 100
-       3.15.3. Configuration payloads for IPv6 . . . . . . . . . . . 102
-       3.15.4. Address Assignment Failures . . . . . . . . . . . . . 103
-     3.16. Extensible Authentication Protocol (EAP) Payload  . . . . 103
-   4.  Conformance Requirements  . . . . . . . . . . . . . . . . . . 105
-   5.  Security Considerations . . . . . . . . . . . . . . . . . . . 107
-     5.1.  Traffic selector authorization  . . . . . . . . . . . . . 109
-   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . . 111
-   7.  Acknowledgements  . . . . . . . . . . . . . . . . . . . . . . 111
-   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . . 111
-     8.1.  Normative References  . . . . . . . . . . . . . . . . . . 111
-     8.2.  Informative References  . . . . . . . . . . . . . . . . . 113
-   Appendix A.  Summary of changes from IKEv1  . . . . . . . . . . . 117
-   Appendix B.  Diffie-Hellman Groups  . . . . . . . . . . . . . . . 118
-     B.1.  Group 1 - 768 Bit MODP  . . . . . . . . . . . . . . . . . 118
-     B.2.  Group 2 - 1024 Bit MODP . . . . . . . . . . . . . . . . . 118
-   Appendix C.  Exchanges and Payloads . . . . . . . . . . . . . . . 119
+     2.22. IPComp  . . . . . . . . . . . . . . . . . . . . . . . . .  56
+     2.23. NAT Traversal . . . . . . . . . . . . . . . . . . . . . .  58
+     2.24. Explicit Congestion Notification (ECN)  . . . . . . . . .  61
+   3.  Header and Payload Formats  . . . . . . . . . . . . . . . . .  62
+     3.1.  The IKE Header  . . . . . . . . . . . . . . . . . . . . .  62
+     3.2.  Generic Payload Header  . . . . . . . . . . . . . . . . .  65
+     3.3.  Security Association Payload  . . . . . . . . . . . . . .  67
+       3.3.1.  Proposal Substructure . . . . . . . . . . . . . . . .  69
+       3.3.2.  Transform Substructure  . . . . . . . . . . . . . . .  71
+       3.3.3.  Valid Transform Types by Protocol . . . . . . . . . .  74
+       3.3.4.  Mandatory Transform IDs . . . . . . . . . . . . . . .  74
+       3.3.5.  Transform Attributes  . . . . . . . . . . . . . . . .  75
+       3.3.6.  Attribute Negotiation . . . . . . . . . . . . . . . .  77
+     3.4.  Key Exchange Payload  . . . . . . . . . . . . . . . . . .  78
+     3.5.  Identification Payloads . . . . . . . . . . . . . . . . .  79
+     3.6.  Certificate Payload . . . . . . . . . . . . . . . . . . .  81
+     3.7.  Certificate Request Payload . . . . . . . . . . . . . . .  83
+     3.8.  Authentication Payload  . . . . . . . . . . . . . . . . .  85
+     3.9.  Nonce Payload . . . . . . . . . . . . . . . . . . . . . .  87
+     3.10. Notify Payload  . . . . . . . . . . . . . . . . . . . . .  87
+       3.10.1. Notify Message Types  . . . . . . . . . . . . . . . .  88
+     3.11. Delete Payload  . . . . . . . . . . . . . . . . . . . . .  91
+     3.12. Vendor ID Payload . . . . . . . . . . . . . . . . . . . .  93
+     3.13. Traffic Selector Payload  . . . . . . . . . . . . . . . .  94
+       3.13.1. Traffic Selector  . . . . . . . . . . . . . . . . . .  95
+     3.14. Encrypted Payload . . . . . . . . . . . . . . . . . . . .  97
+     3.15. Configuration Payload . . . . . . . . . . . . . . . . . .  99
+       3.15.1. Configuration Attributes  . . . . . . . . . . . . . . 100
+       3.15.2. Meaning of INTERNAL_IP4_SUBNET/INTERNAL_IP6_SUBNET  . 103
+       3.15.3. Configuration payloads for IPv6 . . . . . . . . . . . 105
+       3.15.4. Address Assignment Failures . . . . . . . . . . . . . 106
+     3.16. Extensible Authentication Protocol (EAP) Payload  . . . . 106
+   4.  Conformance Requirements  . . . . . . . . . . . . . . . . . . 108
+   5.  Security Considerations . . . . . . . . . . . . . . . . . . . 110
+     5.1.  Traffic selector authorization  . . . . . . . . . . . . . 113
+   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . . 114
+   7.  Acknowledgements  . . . . . . . . . . . . . . . . . . . . . . 114
+   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . . 115
+     8.1.  Normative References  . . . . . . . . . . . . . . . . . . 115
+     8.2.  Informative References  . . . . . . . . . . . . . . . . . 116
+   Appendix A.  Summary of changes from IKEv1  . . . . . . . . . . . 120
+   Appendix B.  Diffie-Hellman Groups  . . . . . . . . . . . . . . . 121
+     B.1.  Group 1 - 768 Bit MODP  . . . . . . . . . . . . . . . . . 122
+     B.2.  Group 2 - 1024 Bit MODP . . . . . . . . . . . . . . . . . 122
+   Appendix C.  Exchanges and Payloads . . . . . . . . . . . . . . . 122
+     C.1.  IKE_SA_INIT Exchange  . . . . . . . . . . . . . . . . . . 123
+     C.2.  IKE_AUTH Exchange without EAP . . . . . . . . . . . . . . 124
+     C.3.  IKE_AUTH Exchange with EAP  . . . . . . . . . . . . . . . 125
 
 
 
-Kaufman, et al.            Expires May 3, 2009                  [Page 3]
+Kaufman, et al.         Expires October 26, 2009                [Page 4]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
-     C.1.  IKE_SA_INIT Exchange  . . . . . . . . . . . . . . . . . . 119
-     C.2.  IKE_AUTH Exchange without EAP . . . . . . . . . . . . . . 120
-     C.3.  IKE_AUTH Exchange with EAP  . . . . . . . . . . . . . . . 121
      C.4.  CREATE_CHILD_SA Exchange for Creating or Rekeying
-           Child SAs . . . . . . . . . . . . . . . . . . . . . . . . 122
-     C.5.  CREATE_CHILD_SA Exchange for Rekeying the IKE SA  . . . . 122
-     C.6.  INFORMATIONAL Exchange  . . . . . . . . . . . . . . . . . 122
-   Appendix D.  Changes Between Internet Draft Versions  . . . . . . 122
-     D.1.  Changes from IKEv2 to draft -00 . . . . . . . . . . . . . 123
-     D.2.  Changes from draft -00 to draft -01 . . . . . . . . . . . 123
-     D.3.  Changes from draft -00 to draft -01 . . . . . . . . . . . 125
-     D.4.  Changes from draft -01 to draft -02 . . . . . . . . . . . 126
-     D.5.  Changes from draft -02 to draft -03 . . . . . . . . . . . 127
-     D.6.  Changes from draft -03 to
-           draft-ietf-ipsecme-ikev2bis-00  . . . . . . . . . . . . . 128
-     D.7.  Changes from draft-ietf-ipsecme-ikev2bis-00 to
-           draft-ietf-ipsecme-ikev2bis-01  . . . . . . . . . . . . . 129
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . . 133
-   Intellectual Property and Copyright Statements  . . . . . . . . . 134
+           Child SAs . . . . . . . . . . . . . . . . . . . . . . . . 126
+     C.5.  CREATE_CHILD_SA Exchange for Rekeying the IKE SA  . . . . 126
+     C.6.  INFORMATIONAL Exchange  . . . . . . . . . . . . . . . . . 126
+   Appendix D.  Significant Changes from RFC 4306  . . . . . . . . . 126
+   Appendix E.  Changes Between Internet Draft Versions  . . . . . . 127
+     E.1.  Changes from IKEv2 to draft -00 . . . . . . . . . . . . . 127
+     E.2.  Changes from draft -00 to draft -01 . . . . . . . . . . . 127
+     E.3.  Changes from draft -00 to draft -01 . . . . . . . . . . . 129
+     E.4.  Changes from draft -01 to draft -02 . . . . . . . . . . . 130
+     E.5.  Changes from draft -02 to draft -03 . . . . . . . . . . . 131
+     E.6.  Changes from draft -03 to
+           draft-ietf-ipsecme-ikev2bis-00  . . . . . . . . . . . . . 132
+     E.7.  Changes from draft-ietf-ipsecme-ikev2bis-00 to
+           draft-ietf-ipsecme-ikev2bis-01  . . . . . . . . . . . . . 133
+     E.8.  Changes from draft-ietf-ipsecme-ikev2bis-01 to
+           draft-ietf-ipsecme-ikev2bis-02  . . . . . . . . . . . . . 137
+     E.9.  Changes from draft-ietf-ipsecme-ikev2bis-01 to
+           draft-ietf-ipsecme-ikev2bis-02  . . . . . . . . . . . . . 139
+     E.10. Changes from draft-ietf-ipsecme-ikev2bis-02 to
+           draft-ietf-ipsecme-ikev2bis-03  . . . . . . . . . . . . . 140
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . . 140
 
 
 
@@ -217,12 +276,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-
-
-
-Kaufman, et al.            Expires May 3, 2009                  [Page 4]
+Kaufman, et al.         Expires October 26, 2009                [Page 5]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
 1.  Introduction
@@ -276,9 +332,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                  [Page 5]
+Kaufman, et al.         Expires October 26, 2009                [Page 6]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    in any order.  In some scenarios, only a single Child SA is needed
@@ -332,9 +388,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                  [Page 6]
+Kaufman, et al.         Expires October 26, 2009                [Page 7]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    In this scenario, neither endpoint of the IP connection implements
@@ -388,9 +444,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                  [Page 7]
+Kaufman, et al.         Expires October 26, 2009                [Page 8]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
 1.1.3.  Endpoint to Security Gateway Tunnel Mode
@@ -444,9 +500,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                  [Page 8]
+Kaufman, et al.         Expires October 26, 2009                [Page 9]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    gateway using an IPsec tunnel, where the addresses on the subnet are
@@ -500,9 +556,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                  [Page 9]
+Kaufman, et al.         Expires October 26, 2009               [Page 10]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    Notation    Payload
@@ -556,9 +612,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 10]
+Kaufman, et al.         Expires October 26, 2009               [Page 11]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    encryption and integrity protection are derived from SKEYSEED and are
@@ -612,9 +668,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 11]
+Kaufman, et al.         Expires October 26, 2009               [Page 12]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    {{ Clarif-4.2}} If creating the Child SA during the IKE_AUTH exchange
@@ -668,9 +724,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 12]
+Kaufman, et al.         Expires October 26, 2009               [Page 13]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    The CREATE_CHILD_SA request MAY optionally contain a KE payload for
@@ -724,9 +780,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 13]
+Kaufman, et al.         Expires October 26, 2009               [Page 14]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    The responder replies (using the same Message ID to respond) with the
@@ -767,25 +823,35 @@ Internet-Draft                  IKEv2bis                    October 2008
    NON_FIRST_FRAGMENTS_ALSO notification from its response, but does not
    reject the whole Child SA creation.
 
+   Failure of an attempt to create a CHILD SA SHOULD NOT tear down the
+   IKE SA: there is no reason to lose the work done to set up the IKE
+   SA.  When an IKE SA is not created, the error message return SHOULD
+   NOT be encrypted because the other party will not be able to
+   authenticate that message. [[ Note: this text may be changed in the
+   future. ]]
+
+
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 15]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
 1.3.2.  Rekeying IKE SAs with the CREATE_CHILD_SA Exchange
 
    The CREATE_CHILD_SA request for rekeying an IKE SA is:
 
    Initiator                         Responder
    -------------------------------------------------------------------
-   HDR, SK {SA, Ni, [KEi]} -->
+   HDR, SK {SA, Ni, KEi} -->
 
    The initiator sends SA offer(s) in the SA payload, a nonce in the Ni
    payload, and a Diffie-Hellman value in the KEi payload.  The KEi
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 14]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
-   payload SHOULD be included.  New initiator and responder SPIs are
+   payload MUST be included.  New initiator and responder SPIs are
    supplied in the SPI fields of the SA payload.
 
    The CREATE_CHILD_SA response for rekeying an IKE SA is:
@@ -797,8 +863,12 @@ Internet-Draft                  IKEv2bis                    October 2008
    KEr payload if the selected cryptographic suite includes that group.
 
    The new IKE SA has its message counters set to 0, regardless of what
-   they were in the earlier IKE SA.  The window size starts at 1 for any
-   new IKE SA.
+   they were in the earlier IKE SA.  The first IKE requests from both
+   sides on the new IKE SA will have message ID 0.  The old IKE SA
+   retains its numbering, so any further requests (for example, to
+   delete the IKE SA) will have consecutive numbering.  The new IKE SA
+   also has its window size reset to 1, and the initiator in this rekey
+   exchange is the new "original initiator" of the new IKE SA.
 
 1.3.3.  Rekeying Child SAs with the CREATE_CHILD_SA Exchange
 
@@ -819,6 +889,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    an existing ESP or AH SA. {{ Clarif-5.4 }} The SA being rekeyed is
    identified by the SPI field in the Notify payload; this is the SPI
    the exchange initiator would expect in inbound ESP or AH packets.
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 16]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    There is no data associated with this Notify type.  The Protocol ID
    field of the REKEY_SA notification is set to match the protocol of
    the SA we are rekeying, for example, 3 for ESP and 2 for AH.
@@ -832,14 +910,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    accepted offer in an SA payload, and a Diffie-Hellman value in the
    KEr payload if KEi was included in the request and the selected
    cryptographic suite includes that group.
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 15]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    The traffic selectors for traffic to be sent on that SA are specified
    in the TS payloads in the response, which may be a subset of what the
@@ -875,6 +945,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    HDR, SK {[N,] [D,]
        [CP,] ...}  -->
                                 <--  HDR, SK {[N,] [D,]
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 17]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
                                          [CP], ...}
 
    The processing of an INFORMATIONAL exchange is determined by its
@@ -889,14 +967,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    To delete an SA, an INFORMATIONAL exchange with one or more delete
    payloads is sent listing the SPIs (as they would be expected in the
    headers of inbound packets) of the SAs to be deleted.  The recipient
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 16]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    MUST close the designated SAs. {{ Clarif-5.7 }} Note that one never
    sends delete payloads for the two sides of an SA in a single message.
    If there are many SAs to delete at the same time, one includes delete
@@ -931,6 +1001,14 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    If an encrypted IKE request packet arrives on port 500 or 4500 with
    an unrecognized SPI, it could be because the receiving node has
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 18]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    recently crashed and lost state or because of some other system
    malfunction or attack.  If the receiving node has an active IKE SA to
    the IP address from whence the packet came, it MAY send a
@@ -945,14 +1023,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    INFORMATIONAL exchange when a node receives an ESP or AH packet with
    an invalid SPI.  The Notification Data contains the SPI of the
    invalid packet.  This usually indicates a node has rebooted and
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 17]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    forgotten an SA.  If this Informational Message is sent outside the
    context of an IKE SA, it should only be used by the recipient as a
    "hint" that something might be wrong (because it could easily be
@@ -968,6 +1038,8 @@ Internet-Draft                  IKEv2bis                    October 2008
    and thus it is sent to the IP address and port from whence it came
    with the same IKE SPIs and the Message ID is copied.  The Response
    bit is set to 1, and the version flags are set in the normal fashion.
+   For a one-way INVALID_IKE_SPI notification for an unrecognized SPI,
+   the responder SHOULD copy the Exchange Type from the request.
 
    In case of INVALID_SPI, however, there are no IKE SPI values that
    would be meaningful to the recipient of such a notification.  Using
@@ -985,6 +1057,14 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    Keywords "MUST", "MUST NOT", "REQUIRED", "SHOULD", "SHOULD NOT" and
    "MAY" that appear in this document are to be interpreted as described
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 19]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    in [MUSTSHOULD].
 
 1.7.  Differences Between RFC 4306 and This Document
@@ -1001,14 +1081,6 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    The protocol described in this document retains the same major
    version number (2) and minor version number (0) as was used in RFC
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 18]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    4306.  That is, the version number is *not* changed from RFC 4306.
 
    This document makes the figures and references a bit more regular
@@ -1041,6 +1113,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    RFC 4301.  Basically, IKEv2 is based on RFC 4301, which does not
    include "SA bundles" that were part of RFC 2401.  While a single
    packet can go through IPsec processing multiple times, each of these
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 20]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    passes uses a separate SA, and the passes are coordinated by the
    forwarding tables.  In IKEv2, each of these SAs has to be created
    using a separate CREATE_CHILD_SA exchange.
@@ -1057,14 +1137,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    fixed-size keys.
 
    A later version of this document may have all the {{ }} comments
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 19]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    removed from the body of the document and instead appear in an
    appendix.
 
@@ -1097,6 +1169,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    IKE messages that are up to 1280 octets long, and they SHOULD be able
    to send, receive, and process messages that are up to 3000 octets
    long. {{ Demoted the SHOULD }} IKEv2 implementations need to be aware
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 21]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    of the maximum UDP message size supported and MAY shorten messages by
    leaving out some certificates or cryptographic suite proposals if
    that will keep messages below the maximum.  Use of the "Hash and URL"
@@ -1110,16 +1190,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    {{ Clarif-7.5 }} The UDP payload of all packets containing IKE
    messages sent on port 4500 MUST begin with the prefix of four zeros;
    otherwise, the receiver won't know how to handle them.
-
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 20]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
 2.1.  Use of Retransmission Timers
 
@@ -1141,7 +1211,11 @@ Internet-Draft                  IKEv2bis                    October 2008
    the corresponding response.  The responder MUST remember each
    response until it receives a request whose sequence number is larger
    than or equal to the sequence number in the response plus its window
-   size (see Section 2.3).
+   size (see Section 2.3).  In order to allow saving memory, responders
+   are allowed to forget response after a timeout of several minutes.
+   If the responder receives a retransmitted request for which it has
+   already forgotten the response, it MUST ignore the request (and not,
+   for example, attempt constructing a new response).
 
    IKE is a reliable protocol, in the sense that the initiator MUST
    retransmit a request until either it receives a corresponding reply
@@ -1151,12 +1225,20 @@ Internet-Draft                  IKEv2bis                    October 2008
    MUST be bitwise identical to the original request.  That is,
    everything starting from the IKE Header (the IKE SA Initiator's SPI
    onwards) must be bitwise identical; items before it (such as the IP
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 22]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    and UDP headers, and the zero non-ESP marker) do not have to be
    identical.
 
    {{ Clarif-2.3 }} Retransmissions of the IKE_SA_INIT request require
    some special handling.  When a responder receives an IKE_SA_INIT
-   request, it has to determine whether the packet is retransmission
+   request, it has to determine whether the packet is a retransmission
    belonging to an existing "half-open" IKE SA (in which case the
    responder retransmits the same response), or a new request (in which
    case the responder creates a new IKE SA and sends a fresh response),
@@ -1168,14 +1250,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    behind a single NAT could choose the same initiator SPI.  Instead, a
    robust responder will do the IKE SA lookup using the whole packet,
    its hash, or the Ni payload.
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 21]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
 2.2.  Use of Sequence Numbers for Message ID
 
@@ -1207,6 +1281,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    which of the four messages a particular one is.
 
    {{ Clarif-5.9 }} Throughout this document, "initiator" refers to the
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 23]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    party who initiated the exchange being described, and "original
    initiator" refers to the party who initiated the whole IKE SA.  The
    "original initiator" always refers to the party who initiated the
@@ -1220,30 +1302,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    closed or rekeyed.
 
 2.3.  Window Size for Overlapping Requests
-
-   In order to maximize IKE throughput, an IKE endpoint MAY issue
-   multiple requests before getting a response to any of them if the
-   other endpoint has indicated its ability to handle such requests.
-   For simplicity, an IKE implementation MAY choose to process requests
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 22]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
-   strictly in order and/or wait for a response to one request before
-   issuing another.  Certain rules must be followed to ensure
-   interoperability between implementations using different strategies.
-
-   After an IKE SA is set up, either end can initiate one or more
-   requests.  These requests may pass one another over the network.  An
-   IKE endpoint MUST be prepared to accept and process a request while
-   it has a request outstanding in order to avoid a deadlock in this
-   situation. {{ Downgraded the SHOULD }} An IKE endpoint may also
-   accept and process multiple requests while it has a request
-   outstanding.
 
    {{ 3.10.1-16385 }} The SET_WINDOW_SIZE notification asserts that the
    sending endpoint is capable of keeping state for multiple outstanding
@@ -1260,6 +1318,16 @@ Internet-Draft                  IKEv2bis                    October 2008
    peer is prepared to maintain state for multiple outstanding messages
    in order to allow greater throughput.
 
+   After an IKE SA is set up, in order to maximize IKE throughput, an
+   IKE endpoint MAY issue multiple requests before getting a response to
+   any of them, up to the limit set by its peer's SET_WINDOW_SIZE.
+   These requests may pass one another over the network.  An IKE
+   endpoint MUST be prepared to accept and process a request while it
+   has a request outstanding in order to avoid a deadlock in this
+   situation. {{ Downgraded the SHOULD }} An IKE endpoint may also
+   accept and process multiple requests while it has a request
+   outstanding.
+
    An IKE endpoint MUST NOT exceed the peer's stated window size for
    transmitted IKE requests.  In other words, if the responder stated
    its window size is N, then when the initiator needs to make a request
@@ -1269,6 +1337,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    corresponding response.  An IKE endpoint MUST keep a copy of (or be
    able to regenerate exactly) the number of previous responses equal to
    its declared window size in case its response was lost and the
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 24]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    initiator requests its retransmission by retransmitting the request.
 
    An IKE endpoint supporting a window size greater than one ought to be
@@ -1281,14 +1357,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    example).  In particular, it is not defined what the responder should
    do when it receives a SET_WINDOW_SIZE notification containing a
    smaller value than is currently in effect.  Thus, there is currently
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 23]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    no way to reduce the window size of an existing IKE SA; you can only
    increase it.  When rekeying an IKE SA, the new IKE SA starts with
    window size 1 until it is explicitly increased by sending a new
@@ -1321,9 +1389,17 @@ Internet-Draft                  IKEv2bis                    October 2008
    be replicated (e.g., a roaming user's credentials where the user is
    allowed to connect to the corporate firewall from two remote systems
    at the same time). {{ Clarif-7.9 }} The INITIAL_CONTACT notification,
-   if sent, MUST be in the first IKE_AUTH request, not as a separate
-   exchange afterwards; however, receiving parties need to deal with it
-   in other requests.
+   if sent, MUST be in the first IKE_AUTH request or response, not as a
+   separate exchange afterwards; however, receiving parties MAY ignore
+   it in other messages.
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 25]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
    Since IKE is designed to operate in spite of Denial of Service (DoS)
    attacks from the network, an endpoint MUST NOT conclude that the
@@ -1337,14 +1413,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    authenticated identity. {{ Demoted the SHOULD }} An endpoint should
    suspect that the other endpoint has failed based on routing
    information and initiate a request to see whether the other endpoint
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 24]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    is alive.  To check whether the other side is alive, IKE specifies an
    empty INFORMATIONAL message that (like all IKE requests) requires an
    acknowledgement (note that within the context of an IKE SA, an
@@ -1381,6 +1449,14 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    There is a Denial of Service attack on the initiator of an IKE SA
    that can be avoided if the initiator takes the proper care.  Since
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 26]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    the first two messages of an SA setup are not cryptographically
    protected, an attacker could respond to the initiator's message
    before the genuine responder and poison the connection setup attempt.
@@ -1393,14 +1469,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    they are cryptographically valid.
 
    Note that with these rules, there is no reason to negotiate and agree
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 25]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    upon an SA lifetime.  If IKE presumes the partner is dead, based on
    repeated lack of acknowledgement to an IKE message, then the IKE SA
    and all Child SAs set up through that IKE SA are deleted.
@@ -1437,6 +1505,14 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    {{ 3.10.1-5 }} If an endpoint receives a message with a higher major
    version number, it MUST drop the message and SHOULD send an
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 27]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    unauthenticated notification message of type INVALID_MAJOR_VERSION
    containing the highest (closest) version number it supports.  If an
    endpoint supports major version n, and major version m, it MUST
@@ -1449,14 +1525,6 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    Thus, the major version number in the IKE header indicates the
    version number of the message, not the highest version number that
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 26]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    the transmitter supports.  If the initiator is capable of speaking
    versions n, n+1, and n+2, and the responder is capable of speaking
    versions n and n+1, then they will negotiate speaking n+1, where the
@@ -1493,6 +1561,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    unsupported, that payload MUST be ignored.  Payloads sent in IKE
    response messages MUST NOT have the critical flag set.  Note that the
    critical flag applies only to the payload type, not the contents.  If
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 28]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    the payload type is recognized, but the payload contains something
    which is not (such as an unknown transform inside an SA payload, or
    an unknown Notify Message Type inside a Notify payload), the critical
@@ -1504,14 +1580,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    payloads defined in this specification in the order shown in the
    figures in Section 2; implementations are explicitly allowed to
    reject as invalid a message with those payloads in any other order.
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 27]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
 2.6.  IKE SA SPIs and Cookies
 
@@ -1550,6 +1618,13 @@ Internet-Draft                  IKEv2bis                    October 2008
    to an SA until it knows the initiator can receive packets at the
    address from which it claims to be sending them.
 
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 29]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    When a responder detects a large number of half-open IKE SAs, it
    SHOULD reply to IKE_SA_INIT requests with a response containing the
    COOKIE notification. {{ 3.10.1-16390 }} The data associated with this
@@ -1560,14 +1635,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    notification containing the received data as the first payload, and
    all other payloads unchanged.  The initial exchange will then be as
    follows:
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 28]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    Initiator                         Responder
    -------------------------------------------------------------------
@@ -1606,25 +1673,30 @@ Internet-Draft                  IKEv2bis                    October 2008
    responder and periodically changed and | indicates concatenation.
    <VersionIDofSecret> should be changed whenever <secret> is
    regenerated.  The cookie can be recomputed when the IKE_SA_INIT
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 30]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    arrives the second time and compared to the cookie in the received
    message.  If it matches, the responder knows that the cookie was
    generated since the last change to <secret> and that IPi must be the
    same as the source address it saw the first time.  Incorporating SPIi
    into the calculation ensures that if multiple IKE SAs are being set
    up in parallel they will all get different cookies (assuming the
-   initiator chooses unique SPIi's).  Incorporating Ni into the hash
+   initiator chooses unique SPIi's).  Incorporating Ni in the hash
    ensures that an attacker who sees only message 2 can't successfully
-   forge a message 3.
+   forge a message 3.  Also, incorporating Ni in the hash prevents an
+   attacker from fetching one one cookie from the other end, and then
+   initiating many IKE_SA_INIT exchanges all with different initiator
+   SPIs (and perhaps port numbers) so that the responder thinks that
+   there are lots of machines behind one NAT box who are all trying to
+   connect.
 
    If a new value for <secret> is chosen while there are connections in
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 29]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    the process of being initialized, an IKE_SA_INIT might be returned
    with other than the current <VersionIDofSecret>.  The responder in
    that case MAY reject the message by sending another response with a
@@ -1655,6 +1727,16 @@ Internet-Draft                  IKEv2bis                    October 2008
    cookies), and one reply from responder to initiator that includes the
    correct cookie.
 
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 31]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
 2.6.1.  Interaction of COOKIE and INVALID_KE_PAYLOAD
 
    {{ This section added by Clarif-2.4 }}
@@ -1673,13 +1755,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    retries, but the responder does not support this.  For instance, if
    the responder includes the SAi1 and KEi payloads in cookie
    calculation, it will reject the request by sending a new cookie.
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 30]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    If both peers support including the cookie in all retries, a slightly
    shorter exchange can happen.
@@ -1710,6 +1785,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    cryptographic algorithm).
 
    This hierarchical structure was designed to efficiently encode
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 32]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    proposals for cryptographic suites when the number of supported
    suites is large because multiple values are acceptable for multiple
    transforms.  The responder MUST choose a single suite, which may be
@@ -1729,13 +1812,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    AUTH_HMAC_MD5, and AUTH_HMAC_SHA, the accepted suite MUST contain one
    of the ENCR_ transforms and one of the AUTH_ transforms.  Thus, six
    combinations are acceptable.
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 31]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    If an initiator proposes both normal ciphers with integrity
    protection as well as combined-mode ciphers, then two proposals are
@@ -1763,6 +1839,16 @@ Internet-Draft                  IKEv2bis                    October 2008
    However, if the responder sends a non-zero responder SPI, the
    initiator should not reject the response for only that reason.
 
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 33]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
 2.8.  Rekeying
 
    {{ Demoted the SHOULD }} IKE, ESP, and AH security associations use
@@ -1785,14 +1871,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    likely to reduce the number of packets lost during the transition.
 
    To rekey a Child SA within an existing IKE SA, create a new,
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 32]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    equivalent SA (see Section 2.17 below), and when the new one is
    established, delete the old one.  To rekey an IKE SA, establish a new
    equivalent IKE SA (see Section 2.18 below) with the peer to whom the
@@ -1819,6 +1897,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    endpoint would not initiate the SA in the absence of traffic, the
    endpoint MAY choose to close the SA instead of rekeying it when its
    lifetime expires. {{ Demoted the SHOULD }} It should do so if there
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 34]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    has been no traffic since the last time the SA was rekeyed.
 
    Note that IKEv2 deliberately allows parallel SAs with the same
@@ -1841,14 +1927,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    is no ambiguity for the initiator.  The initiator MAY begin sending
    on an SA as soon as it processes the response.  The initiator,
    however, cannot receive on a newly created SA until it receives and
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 33]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    processes the response to its CREATE_CHILD_SA request.  How, then, is
    the responder to know when it is OK to send on the newly created SA?
 
@@ -1872,6 +1950,16 @@ Internet-Draft                  IKEv2bis                    October 2008
    CREATE_CHILD_SA request.  An initiator MAY send a dummy message on a
    newly created SA if it has no messages queued in order to assure the
    responder that the initiator is ready to receive messages.
+
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 35]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
 2.8.1.  Simultaneous Child SA rekeying
 
@@ -1897,14 +1985,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    nonce is the lower one.
 
    The following is an explanation on the impact this has on
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 34]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    implementations.  Assume that hosts A and B have an existing IPsec SA
    pair with SPIs (SPIa1,SPIb1), and both start rekeying it at the same
    time:
@@ -1928,6 +2008,14 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    Now B also knows that simultaneous rekeying is going on.  It responds
    as usual.
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 36]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
                                <--  send resp1: SA(..,SPIb3,..),
                                         Nr2,..
@@ -1954,13 +2042,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    retransmissions.  The rekeying begins as usual, but A's first packet
    (req1) is lost.
 
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 35]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    Host A                            Host B
    -------------------------------------------------------------------
    send req1: N(REKEY_SA,SPIa1),
@@ -1985,6 +2066,13 @@ Internet-Draft                  IKEv2bis                    October 2008
    resend req1 -->
                                 -->  recv req1
 
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 37]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    To B, it looks like A is trying to rekey an SA that no longer exists;
    thus, B responds to the request with something non-fatal such as
    NO_PROPOSAL_CHOSEN.
@@ -1995,7 +2083,53 @@ Internet-Draft                  IKEv2bis                    October 2008
    When A receives this error, it already knows there was simultaneous
    rekeying, so it can ignore the error message.
 
-2.8.2.   Rekeying the IKE SA Versus Reauthentication
+2.8.2.  Simultaneous IKE SA Rekeying
+
+   Probably the most complex case occurs when both peers try to rekey
+   the IKE_SA at the same time.  Basically, the text in Section 2.8
+   applies to this case as well; however, it is important to ensure that
+   the CHILD_SAs are inherited by the right IKE_SA.
+
+   The case where both endpoints notice the simultaneous rekeying works
+   the same way as with CHILD_SAs.  After the CREATE_CHILD_SA exchanges,
+   three IKE_SAs exist between A and B; the one containing the lowest
+   nonce inherits the CHILD_SAs.
+
+   However, there is a twist to the other case where one rekeying
+   finishes first:
+
+   Host A                      Host B
+   -------------------------------------------------------------------
+   send req1:
+        SA(..,SPIa1,..),Ni1,.. -->
+                             <-- send req2: SA(..,SPIb1,..),Ni2,..
+                             --> recv req1
+                             <-- send resp1: SA(..,SPIb2,..),Nr2,..
+   recv resp1 <--
+   send req3: D() -->
+                             --> recv req3
+
+   At this point, host B sees a request to close the IKE_SA.  There's
+   not much more to do than to reply as usual.  However, at this point
+   host B should stop retransmitting req2, since once host A receives
+   resp3, it will delete all the state associated with the old IKE_SA
+   and will not be able to reply to it.
+
+                             <-- send resp3: ()
+
+
+
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 38]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
+2.8.3.  Rekeying the IKE SA Versus Reauthentication
 
    {{ Added this section from Clarif-5.2 }}
 
@@ -2009,14 +2143,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    to the long-term credentials) is often more important.
 
    IKEv2 does not have any special support for reauthentication.
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 36]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    Reauthentication is done by creating a new IKE SA from scratch (using
    IKE_SA_INIT/IKE_AUTH exchanges, without any REKEY_SA notify
    payloads), creating new Child SAs within the new IKE SA (without
@@ -2051,6 +2177,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    the information from their SPD to their peers.  TS payloads specify
    the selection criteria for packets that will be forwarded over the
    newly set up SA.  This can serve as a consistency check in some
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 39]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    scenarios to assure that the SPDs are consistent.  In others, it
    guides the dynamic update of the SPD.
 
@@ -2065,14 +2199,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    destination address of traffic forwarded to) the initiator of the
    Child SA pair.  TSr specifies the destination address of the traffic
    forwarded to (or the source address of the traffic forwarded from)
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 37]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    the responder of the Child SA pair.  For example, if the original
    initiator requests the creation of a Child SA pair, and wishes to
    tunnel all traffic from subnet 192.0.1.* on the initiator's side to
@@ -2107,6 +2233,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    initiator SHOULD include as the first traffic selector in each of TSi
    and TSr a very specific traffic selector including the addresses in
    the packet triggering the request.  In the example, the initiator
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 40]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    would include in TSi two traffic selectors: the first containing the
    address range (192.0.1.43 - 192.0.1.43) and the source port and IP
    protocol from the packet and the second containing (192.0.1.0 -
@@ -2119,15 +2253,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    specific values.
 
    The responder performs the narrowing as follows: {{ Clarif-4.10 }}
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 38]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    o  If the responder's policy does not allow it to accept any part of
       the proposed traffic selectors, it responds with TS_UNACCEPTABLE.
@@ -2164,6 +2289,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    ranges, all encompassed by the initiator's traffic selector, and with
    the responder's policy being that each of those ranges should be sent
    over a different SA.  Continuing the example above, the responder
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 41]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    might have a policy of being willing to tunnel those addresses to and
    from the initiator, but might require that each address pair be on a
    separately negotiated Child SA.  If the initiator generated its
@@ -2177,14 +2310,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    CREATE_CHILD_SA request is unacceptable because its sender is only
    willing to accept traffic selectors specifying a single pair of
    addresses.  The requestor is expected to respond by requesting an SA
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 39]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    for only the specific traffic it is trying to forward.
 
    {{ Clarif-4.11 }} Few implementations will have policies that require
@@ -2220,6 +2345,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    ((192.0.1.0-192.0.1.65),(192.0.1.67-192.0.1.255)) instead.
 
    In general, if (1) the initiator makes a proposal "for traffic X
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 42]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    (TSi/TSr), do SA", and (2) for some subset X' of X, the initiator
    does not actually accept traffic X' with SA, and (3) the initiator
    would be willing to accept traffic X' with some SA' (!=SA), valid
@@ -2233,14 +2366,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    and the CREATE_CHILD_SA response also contain nonces.  These nonces
    are used to add freshness to the key derivation technique used to
    obtain keys for Child SA, and to ensure creation of strong pseudo-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 40]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    random bits from the Diffie-Hellman key.  Nonces used in IKEv2 MUST
    be randomly chosen, MUST be at least 128 bits in size, and MUST be at
    least half the key size of the negotiated prf. ("prf" refers to
@@ -2276,6 +2401,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    conversation without doing a brute force search of the session key
    space.
 
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 43]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    Achieving perfect forward secrecy requires that when a connection is
    closed, each endpoint MUST forget not only the keys used by the
    connection but also any information that could be used to recompute
@@ -2289,14 +2422,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    perfect forward secrecy if some connection lasts for less than the
    lifetime of the exponential.  Or it could keep track of which
    exponential was used for each connection and delete the information
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 41]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    associated with the exponential only when some corresponding
    connection was closed.  This would allow the exponential to be reused
    without losing perfect forward secrecy at the cost of maintaining
@@ -2307,7 +2432,9 @@ Internet-Draft                  IKEv2bis                    October 2008
    interoperability.  An implementation that reuses exponentials MAY
    choose to remember the exponential used by the other endpoint on past
    exchanges and if one is reused to avoid the second half of the
-   calculation.
+   calculation.  See [REUSE] for a security analysis of this practice
+   and for additional security considerations when reusing ephemeral DH
+   keys.
 
 2.13.  Generating Keying Material
 
@@ -2331,6 +2458,13 @@ Internet-Draft                  IKEv2bis                    October 2008
    Code (HMAC), the fixed key size is the size of the output of the
    underlying hash function.
 
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 44]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    It is assumed that pseudo-random functions (PRFs) accept keys of any
    length, but have a preferred key size.  The preferred key size is
    used as the length of SK_d, SK_pi, and SK_pr (see Section 2.14).  For
@@ -2344,14 +2478,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    will use the prf iteratively.  We will use the terminology prf+ to
    describe the function that outputs a pseudo-random stream based on
    the inputs to a prf as follows: (where | indicates concatenation)
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 42]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    prf+ (K,S) = T1 | T2 | T3 | T4 | ...
 
@@ -2388,6 +2514,13 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    SKEYSEED and its derivatives are computed as follows:
 
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 45]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    SKEYSEED = prf(Ni | Nr, g^ir)
 
    {SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr }
@@ -2401,14 +2534,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    modulus.  Ni and Nr are the nonces, stripped of any headers.  For
    historical backwards-compatibility reasons, there are two PRFs that
    are treated specially in this calculation.  If the negotiated PRF is
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 43]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    AES-XCBC-PRF-128 [RFC4434] or AES-CMAC-PRF-128 [RFC4615], only the
    first 64 bits of Ni and the first 64 bits of Nr are used in the
    calculation.
@@ -2443,6 +2568,15 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    The initiator's signed octets can be described as:
 
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 46]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    InitiatorSignedOctets = RealMessage1 | NonceRData | MACedIDForI
    GenIKEHDR = [ four octets 0 if using port 4500 ] | RealIKEHDR
    RealIKEHDR =  SPIi | SPIr |  . . . | Length
@@ -2453,17 +2587,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    MACedIDForI = prf(SK_pi, RestOfInitIDPayload)
 
    The responder's signed octets can be described as:
-
-
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 44]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    ResponderSignedOctets = RealMessage2 | NonceIData | MACedIDForR
    GenIKEHDR = [ four octets 0 if using port 4500 ] | RealIKEHDR
@@ -2502,25 +2625,30 @@ Internet-Draft                  IKEv2bis                    October 2008
    attacks are not prevented in this authentication method.
    (Applications using password-based authentication for bootstrapping
    and IKE SA should use the authentication method in Section 2.16,
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 47]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    which is designed to prevent off-line dictionary attacks.) {{ Demoted
    the SHOULD }} The pre-shared key needs to contain as much
    unpredictability as the strongest key being negotiated.  In the case
    of a pre-shared key, the AUTH value is computed as:
 
-   AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>)
+   For the initiator:
+      AUTH = prf( prf( Shared Secret,"Key Pad for IKEv2"),
+                       <InitiatorSignedOctets>)
+   For the responder:
+      AUTH = prf( prf( Shared Secret,"Key Pad for IKEv2"),
+                       <ResponderSignedOctets>)
 
    where the string "Key Pad for IKEv2" is 17 ASCII characters without
    null termination.  The shared secret can be variable length.  The pad
    string is added so that if the shared secret is derived from a
    password, the IKE implementation need not store the password in
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 45]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    cleartext, but rather can store the value prf(Shared Secret,"Key Pad
    for IKEv2"), which could not be used as a password equivalent for
    protocols other than IKEv2.  As noted above, deriving the shared
@@ -2553,6 +2681,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    additional IKE_AUTH exchanges that MUST be completed in order to
    initialize the IKE SA.
 
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 48]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    An initiator indicates a desire to use extensible authentication by
    leaving out the AUTH payload from message 3.  By including an IDi
    payload but not an AUTH payload, the initiator has declared an
@@ -2562,20 +2698,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    SAr2, TSi, and TSr until initiator authentication is complete in a
    subsequent IKE_AUTH exchange.  In the case of a minimal extensible
    authentication, the initial SA establishment will appear as follows:
-
-
-
-
-
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 46]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    Initiator                         Responder
    -------------------------------------------------------------------
@@ -2615,6 +2737,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    {{ Demoted the SHOULD }} The initiator of an IKE SA using EAP needs
    to be capable of extending the initial protocol exchange to at least
    ten IKE_AUTH exchanges in the event the responder sends notification
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 49]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    messages and/or retries the authentication prompt.  Once the protocol
    exchange defined by the chosen EAP authentication method has
    successfully terminated, the responder MUST send an EAP payload
@@ -2625,14 +2755,6 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    Following such an extended exchange, the EAP AUTH payloads MUST be
    included in the two messages following the one containing the EAP
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 47]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    Success message.
 
    {{ Clarif-3.5 }} When the initiator authentication uses EAP, it is
@@ -2671,6 +2793,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    associations (one in each direction).  Keying material MUST be taken
    from the expanded KEYMAT in the following order:
 
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 50]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    o  The encryption key (if any) for the SA carrying data from the
       initiator to the responder.
 
@@ -2679,15 +2809,6 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    o  The encryption key (if any) for the SA carrying data from the
       responder to the initiator.
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 48]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    o  The authentication key (if any) for the SA carrying data from the
       responder to the initiator.
@@ -2708,7 +2829,7 @@ Internet-Draft                  IKEv2bis                    October 2008
    SKEYSEED for the new IKE SA is computed using SK_d from the existing
    IKE SA as follows:
 
-   SKEYSEED = prf(SK_d (old), [g^ir (new)] | Ni | Nr)
+   SKEYSEED = prf(SK_d (old), g^ir (new) | Ni | Nr)
 
    where g^ir (new) is the shared secret from the ephemeral Diffie-
    Hellman exchange of this CREATE_CHILD_SA exchange (represented as an
@@ -2720,30 +2841,26 @@ Internet-Draft                  IKEv2bis                    October 2008
    PRF.  Because the rekeying exchange belongs to the old IKE SA, it is
    the old IKE SA's PRF that is used.
 
-   {{ Clarif-5.12}} The main rekeying the IKE SA is to ensure that the
-   compromise of old keying material does not provide information about
-   the current keys, or vice versa.  Therefore, implementations SHOULD
-   perform a new Diffie-Hellman exchange when rekeying the IKE SA.  In
-   other words, an initiator SHOULD NOT propose the value "NONE" for the
-   D-H transform, and a responder SHOULD NOT accept such a proposal.
-   This means that a succesful exchange rekeying the IKE SA always
-   includes the KEi/KEr payloads.
+   {{ Clarif-5.12}} The main reason for rekeying the IKE SA is to ensure
+   that the compromise of old keying material does not provide
+   information about the current keys, or vice versa.  Therefore,
+   implementations MUST perform a new Diffie-Hellman exchange when
+   rekeying the IKE SA.  In other words, an initiator MUST NOT propose
+   the value "NONE" for the D-H transform, and a responder MUST NOT
+   accept such a proposal.  This means that a succesful exchange
+   rekeying the IKE SA always includes the KEi/KEr payloads.
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 51]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
    The new IKE SA MUST reset its message counters to 0.
 
    SK_d, SK_ai, SK_ar, SK_ei, and SK_er are computed from SKEYSEED as
    specified in Section 2.14.
-
-
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 49]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
 2.19.  Requesting an Internal Address on a Remote Network
 
@@ -2752,7 +2869,9 @@ Internet-Draft                  IKEv2bis                    October 2008
    security gateway and may need to have that address dynamically
    assigned.  A request for such a temporary address can be included in
    any request to create a Child SA (including the implicit request in
-   message 3) by including a CP payload.
+   message 3) by including a CP payload.  Note, however, it is usual to
+   only assign one IP address during the IKE_AUTH exchange.  That
+   address persists at least until the deletion of the IKE SA.
 
    This function provides address allocation to an IPsec Remote Access
    Client (IRAC) trying to tunnel into a network protected by an IPsec
@@ -2784,6 +2903,16 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    For example, message from initiator to responder:
 
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 52]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    CP(CFG_REQUEST)=
      INTERNAL_ADDRESS()
    TSi = (0, 0-65535,0.0.0.0-255.255.255.255)
@@ -2793,13 +2922,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    range).
 
    Message from responder to initiator:
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 50]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    CP(CFG_REPLY)=
      INTERNAL_ADDRESS(192.0.2.202)
@@ -2839,6 +2961,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    initiator what it is. {{ Clarif-6.1 }} That request is done using
    configuration payloads, not traffic selectors.  An address in a TSi
    payload in a response does not mean that the responder has assigned
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 53]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    that address to the initiator: it only means that if packets matching
    these traffic selectors are sent by the initiator, IPsec processing
    can be performed as agreed for this SA.
@@ -2849,14 +2979,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    IKE response MUST include either a corresponding CFG_REPLY or CFG_ACK
    or a Notify payload with an error type indicating why the request
    could not be honored.  An exception is that a minimal implementation
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 51]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    MAY ignore all CFG_REQUEST and CFG_SET payloads, so a response
    message without a corresponding CFG_REPLY or CFG_ACK MUST be accepted
    as an indication that the request was not supported.
@@ -2895,6 +3017,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    empty CFG_ACK payload or a response message without a CFG_ACK
    payload.  There are currently no defined uses for the CFG_SET/CFG_ACK
    exchange, though they may be used in connection with extensions based
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 54]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    on Vendor IDs.  An minimal implementation of this specification MAY
    ignore CFG_SET payloads.
 
@@ -2905,14 +3035,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    information between some Security Gateways (SGW) or small networks,
    existing management protocols such as DHCP [DHCP], RADIUS [RADIUS],
    SNMP, or LDAP [LDAP] should be preferred for enterprise management as
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 52]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    well as subsequent information exchanges.
 
 2.20.  Requesting the Peer's Version
@@ -2951,6 +3073,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    problem.
 
    Errors that occur before a cryptographically protected IKE SA is
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 55]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    established must be handled very carefully.  There is a trade-off
    between wanting to be helpful in diagnosing a problem and responding
    to it and wanting to avoid being a dupe in a denial of service attack
@@ -2961,14 +3091,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    may be the result of a recent crash of the node.  If the message is
    marked as a response, the node MAY audit the suspicious event but
    MUST NOT respond.  If the message is marked as a request, the node
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 53]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    MAY audit the suspicious event and MAY send a response.  If a
    response is sent, the response MUST be sent to the IP address and
    port from whence it came with the same IKE SPIs and the Message ID
@@ -3007,6 +3129,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    corresponding ESP or AH SA goes away.  It is not explicitly mentioned
    in any DELETE payload.
 
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 56]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    Negotiation of IP compression is separate from the negotiation of
    cryptographic parameters associated with a Child SA.  A node
    requesting a Child SA MAY advertise its support for one or more
@@ -3017,13 +3147,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    MAY indicate acceptance of a single compression algorithm with a
    Notify payload of type IPCOMP_SUPPORTED.  These payloads MUST NOT
    occur in messages that do not contain SA payloads.
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 54]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    {{ 3.10.1-16387 }}The data associated with this notification includes
    a two-octet IPComp CPI followed by a one-octet transform ID
@@ -3061,6 +3184,15 @@ Internet-Draft                  IKEv2bis                    October 2008
    appropriate than IP Compression.  [ROHCV2] defines the use of ROHC
    with IKEv2 and IPsec.
 
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 57]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
 2.23.  NAT Traversal
 
    Network Address Translation (NAT) gateways are a controversial
@@ -3073,14 +3205,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    NATs exist primarily because of the shortage of IPv4 addresses,
    though there are other rationales.  IP nodes that are "behind" a NAT
    have IP addresses that are not globally unique, but rather are
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 55]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    assigned from some space that is unique within the network behind the
    NAT but that are likely to be reused by nodes behind other NATs.
    Generally, nodes behind NATs can communicate with other nodes behind
@@ -3117,6 +3241,14 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    It is a common practice of NATs to translate TCP and UDP port numbers
    as well as addresses and use the port numbers of inbound packets to
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 58]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    decide which internal node should get a given packet.  For this
    reason, even though IKE packets MUST be sent from and to UDP port 500
    or 4500, they MUST be accepted coming from any port and responses
@@ -3129,15 +3261,19 @@ Internet-Draft                  IKEv2bis                    October 2008
    Port 4500 is reserved for UDP-encapsulated ESP and IKE. {{ Clarif-7.6
    }} An IPsec endpoint that discovers a NAT between it and its
    correspondent MUST send all subsequent traffic from port 4500, which
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 56]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    NATs should not treat specially (as they might with port 500).
+
+   An initiator can float to port 4500, regardless whether or not there
+   is NAT, even at the beginning of IKE.  When either side is using port
+   4500, sending with UDP encapsulation is not required, but
+   understanding received packets with UDP encapsulation is required.
+   UDP encapsulation MUST NOT be done on port 500.  If NAT-T is
+   supported (that is, if NAT_DETECTION_*_IP payloads were exchanged
+   during IKE_SA_INIT), all devices MUST be able to receive and process
+   both UDP encapsulated and non-UDP encapsulated packets at any time.
+   Either side can decide whether or not to use UDP encapsulation
+   irrespective of the choice made by the other side.  However, if a NAT
+   is detected, both devices MUST send UDP encapsulated packets.
 
    The specific requirements for supporting NAT traversal [NATREQ] are
    listed below.  Support for NAT traversal is optional.  In this
@@ -3161,6 +3297,14 @@ Internet-Draft                  IKEv2bis                    October 2008
       which this packet was sent.  There MAY be multiple
       NAT_DETECTION_SOURCE_IP payloads in a message if the sender does
       not know which of several network attachments will be used to send
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 59]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
       the packet.
 
    o  {{ 3.10.1-16389 }} The data associated with the
@@ -3185,14 +3329,6 @@ Internet-Draft                  IKEv2bis                    October 2008
       the expected value of the source IP and port found from the IP
       header of the packet containing the payload, it means that the
       system sending those payloads is behind NAT (i.e., someone along
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 57]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
       the route changed the source address of the original packet to
       match the address of the NAT box).  In this case, the system
       receiving the payloads should allow dynamic update of the other
@@ -3218,6 +3354,13 @@ Internet-Draft                  IKEv2bis                    October 2008
       validly be zero, it is always possible to distinguish ESP and IKE
       messages.
 
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 60]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    o  Implementations MUST process received UDP-encapsulated ESP packets
       even when no NAT was detected.
 
@@ -3239,15 +3382,22 @@ Internet-Draft                  IKEv2bis                    October 2008
       packet or any authenticated UDP-encapsulated ESP packet can be
       used to detect that the IP address or the port has changed.
 
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 58]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
+   o  There are cases where a NAT box decides to remove mappings that
+      are still alive (for example, the keepalive interval is too long,
+      or the NAT box is rebooted).  To recover in these cases, hosts
+      that do not support other methods of recovery such as MOBIKE
+      [MOBIKE], and that are not behind a NAT, SHOULD send all packets
+      (including retransmission packets) to the IP address and port from
+      the last valid authenticated packet from the other end (that is,
+      they should dynamically update the address).  A host behind a NAT
+      SHOULD NOT do this because it opens a possible denial-of-service
+      attack.  Any authenticated IKE packet or any authenticated UDP-
+      encapsulated ESP packet can be used to detect that the IP address
+      or the port has changed.  When IKEv2 is used with MOBIKE,
+      dynamically updating the addresses described above interferes with
+      MOBIKE's way of recovering from the same situation, so this method
+      MUST NOT be used when MOBIKE is used.  See Section 3.8 of [MOBIKE]
+      for more information.
 
 2.24.  Explicit Congestion Notification (ECN)
 
@@ -3259,6 +3409,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    [ECN]).  IKEv2 simplifies this situation by requiring that ECN be
    usable in the outer IP headers of all tunnel-mode IPsec SAs created
    by IKEv2.  Specifically, tunnel encapsulators and decapsulators for
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 61]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    all tunnel-mode SAs created by IKEv2 MUST support the ECN full-
    functionality option for tunnels specified in [ECN] and MUST
    implement the tunnel encapsulation and decapsulation processing
@@ -3297,14 +3455,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    payloads follow.  If a payload of type "Encrypted" is found, that
    payload is decrypted and its contents parsed as additional payloads.
    An Encrypted payload MUST be the last payload in a packet and an
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 59]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    Encrypted payload MUST NOT contain another Encrypted payload.
 
    The Recipient SPI in the header identifies an instance of an IKE
@@ -3314,6 +3464,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    All multi-octet fields representing integers are laid out in big
    endian order (also known as "most significant byte first", or
    "network byte order").
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 62]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
    The format of the IKE header is shown in Figure 4.
 
@@ -3353,14 +3511,6 @@ Internet-Draft                  IKEv2bis                    October 2008
       protocol in use.  Implementations based on this version of IKE
       MUST set the Major Version to 2.  Implementations based on
       previous versions of IKE and ISAKMP MUST set the Major Version to
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 60]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
       1.  Implementations based on this version of IKE MUST reject or
       ignore messages containing a version number greater than 2 with an
       INVALID_MAJOR_VERSION notification message as described in Section
@@ -3370,6 +3520,14 @@ Internet-Draft                  IKEv2bis                    October 2008
       protocol in use.  Implementations based on this version of IKE
       MUST set the Minor Version to 0.  They MUST ignore the minor
       version number of received messages.
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 63]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
    o  Exchange Type (1 octet) - Indicates the type of exchange being
       used.  This constrains the payloads sent in each message in an
@@ -3405,17 +3563,8 @@ Internet-Draft                  IKEv2bis                    October 2008
       *  V(ersion) (bit 4 of Flags) - This bit indicates that the
          transmitter is capable of speaking a higher major version
          number of the protocol than the one indicated in the major
-         version number field.  Implementations of IKEv2 must clear this
+         version number field.  Implementations of IKEv2 MUST clear this
          bit when sending and MUST ignore it in incoming messages.
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 61]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
       *  R(esponse) (bit 5 of Flags) - This bit indicates that this
          message is a response to a message containing the same message
@@ -3425,6 +3574,16 @@ Internet-Draft                  IKEv2bis                    October 2008
 
       *  X(reserved) (bits 6-7 of Flags) - These bits MUST be cleared
          when sending and MUST be ignored on receipt.
+
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 64]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
    o  Message ID (4 octets) - Message identifier used to control
       retransmission of lost packets and matching of requests and
@@ -3468,9 +3627,18 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 62]
+
+
+
+
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 65]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
       Next Payload Type                Notation  Value
@@ -3524,9 +3692,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 63]
+Kaufman, et al.         Expires October 26, 2009               [Page 66]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    {{ Clarif-7.10 }} Many payloads contain fields marked as "RESERVED".
@@ -3580,9 +3748,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 64]
+Kaufman, et al.         Expires October 26, 2009               [Page 67]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    proposal would have two proposal structures: ESP with ENCR_AES-CCM_8,
@@ -3636,9 +3804,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 65]
+Kaufman, et al.         Expires October 26, 2009               [Page 68]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
                         1                   2                   3
@@ -3692,9 +3860,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 66]
+Kaufman, et al.         Expires October 26, 2009               [Page 69]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    o  Proposal # (1 octet) - When a proposal is made, the first proposal
@@ -3748,9 +3916,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 67]
+Kaufman, et al.         Expires October 26, 2009               [Page 70]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
 3.3.2.  Transform Substructure
@@ -3804,9 +3972,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 68]
+Kaufman, et al.         Expires October 26, 2009               [Page 71]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    Description                     Trans.  Used In
@@ -3860,9 +4028,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 69]
+Kaufman, et al.         Expires October 26, 2009               [Page 72]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    Name                        Number    Defined In
@@ -3916,9 +4084,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 70]
+Kaufman, et al.         Expires October 26, 2009               [Page 73]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    Name                               Number
@@ -3972,9 +4140,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 71]
+Kaufman, et al.         Expires October 26, 2009               [Page 74]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    It is likely that IANA will add additional transforms in the future,
@@ -4028,9 +4196,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 72]
+Kaufman, et al.         Expires October 26, 2009               [Page 75]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    o  Attribute Format (AF) (1 bit) - Indicates whether the data
@@ -4084,9 +4252,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 73]
+Kaufman, et al.         Expires October 26, 2009               [Page 76]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
       proposals not containing it MUST be rejected).  This includes,
@@ -4107,7 +4275,7 @@ Internet-Draft                  IKEv2bis                    October 2008
    Support of this capability allows a responder to express a concept of
    "at least" a certain level of security -- "a key length of _at least_
    X bits for cipher Y".  However, as the attribute is always returned
-   unchanged (see Section 3.3.6), an initiator willing to accept
+   unchanged (see the next section), an initiator willing to accept
    multiple key lengths has to include multiple transforms with the same
    Transform Type, each with different Key Length attribute.
 
@@ -4132,27 +4300,31 @@ Internet-Draft                  IKEv2bis                    October 2008
    Transform Attribute it does not understand, it MUST consider this
    transform unacceptable; other transforms with the same Transform Type
    are processed as usual.  This allows new Transform Types and
-   Transform Attributes to be defined in the future.
+   Transform Attributes to be defined in the future.  An exception is
+   the case where one of the proposals offered is for the Diffie-Hellman
+   group of NONE.  In this case, the responder MUST ignore the
+   initiator's KE payload and omit the KE payload from the response.
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 77]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
    Negotiating Diffie-Hellman groups presents some special challenges.
    SA offers include proposed attributes and a Diffie-Hellman public
    number (KE) in the same message.  If in the initial exchange the
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 74]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    initiator offers to use one of several Diffie-Hellman groups, it
    SHOULD pick the one the responder is most likely to accept and
-   include a KE corresponding to that group.  If the guess turns out to
-   be wrong, the responder will indicate the correct group in the
-   response and the initiator SHOULD pick an element of that group for
-   its KE value when retrying the first message.  It SHOULD, however,
-   continue to propose its full supported set of groups in order to
-   prevent a man-in-the-middle downgrade attack.
+   include a KE corresponding to that group.  If the responder selects a
+   proposal using a different Diffie-Hellman group (other than NONE),
+   the responder will indicate the correct group in the response and the
+   initiator SHOULD pick an element of that group for its KE value when
+   retrying the first message.  It SHOULD, however, continue to propose
+   its full supported set of groups in order to prevent a man-in-the-
+   middle downgrade attack.
 
 3.4.  Key Exchange Payload
 
@@ -4182,10 +4354,22 @@ Internet-Draft                  IKEv2bis                    October 2008
    performed, prepending zero bits to the value if necessary.
 
    The DH Group # identifies the Diffie-Hellman group in which the Key
-   Exchange Data was computed (see Section 3.3.2).  If the selected
-   proposal uses a different Diffie-Hellman group (other than NONE), the
-   message MUST be rejected with a Notify payload of type
-   INVALID_KE_PAYLOAD.
+   Exchange Data was computed (see Section 3.3.2).  This Group # MUST
+   match a DH Group specified in a proposal in the SA payload that is
+   sent in the same message, and SHOULD match the DH group in the first
+   group in the first proposal, if such exists.  If none of the
+   proposals in that SA payload specifies a DH Group, the KE payload
+   MUST NOT be present.  If the selected proposal uses a different
+   Diffie-Hellman group (other than NONE), the message MUST be rejected
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 78]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
+   with a Notify payload of type INVALID_KE_PAYLOAD.
 
    The payload type for the Key Exchange payload is thirty four (34).
 
@@ -4193,14 +4377,6 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    The Identification Payloads, denoted IDi and IDr in this memo, allow
    peers to assert an identity to one another.  This identity may be
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 75]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    used for policy lookup, but does not necessarily have to match
    anything in the CERT payload; both fields may be used by an
    implementation to perform access control decisions. {{ Clarif-7.1 }}
@@ -4241,21 +4417,18 @@ Internet-Draft                  IKEv2bis                    October 2008
       computed from the size in the ID payload header.
 
    The payload types for the Identification Payload are thirty five (35)
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 79]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    for IDi and thirty six (36) for IDr.
 
    The following table lists the assigned values for the Identification
    Type field:
-
-
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 76]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    ID Type                           Value
    -------------------------------------------------------------------
@@ -4301,18 +4474,17 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    PRIVATE USE                         201-255
 
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 80]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    Two implementations will interoperate only if each can generate a
    type of ID acceptable to the other.  To assure maximum
    interoperability, implementations MUST be configurable to send at
    least one of ID_IPV4_ADDR, ID_FQDN, ID_RFC822_ADDR, or ID_KEY_ID, and
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 77]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    MUST be configurable to accept all of these types.  Implementations
    SHOULD be capable of generating and accepting all of these types.
    IPv6-capable implementations MUST additionally be configurable to
@@ -4358,16 +4530,16 @@ Internet-Draft                  IKEv2bis                    October 2008
 
              Figure 12:  Certificate Payload Format
 
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 81]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    o  Certificate Encoding (1 octet) - This field indicates the type of
       certificate or certificate-related information contained in the
       Certificate Data field.
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 78]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
       Certificate Encoding                 Value
       ----------------------------------------------------
@@ -4413,17 +4585,17 @@ Internet-Draft                  IKEv2bis                    October 2008
       [SHA]) of the replaced value followed by a variable-length URL
       that resolves to the DER encoded data structure itself.  This
       improves efficiency when the endpoints have certificate data
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 82]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
       cached and makes IKE less subject to denial of service attacks
       that become easier to mount when IKE messages are large enough to
       require IP fragmentation [DOSUDPPROT].
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 79]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    Use the following ASN.1 definition for an X.509 bundle:
 
@@ -4469,17 +4641,15 @@ Internet-Draft                  IKEv2bis                    October 2008
    are trusted and the certificate encoding does not allow a list, then
    multiple Certificate Request payloads would need to be transmitted.
 
-   The Certificate Request Payload is defined as follows:
 
 
 
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 80]
+Kaufman, et al.         Expires October 26, 2009               [Page 83]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
+
+   The Certificate Request Payload is defined as follows:
 
                         1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -4527,16 +4697,16 @@ Internet-Draft                  IKEv2bis                    October 2008
    such cases is not defined in this document.
 
    The Certificate Request Payload is processed by inspecting the "Cert
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 84]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    Encoding" field to determine whether the processor has any
    certificates of this type.  If so, the "Certification Authority"
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 81]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    field is inspected to determine if the processor has any certificates
    that can be validated up to one of the specified certification
    authorities.  This can be a chain of certificates.
@@ -4583,15 +4753,15 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    The Authentication Payload, denoted AUTH in this memo, contains data
    used for authentication purposes.  The syntax of the Authentication
-   data varies according to the Auth Method as specified below.
 
 
 
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 82]
+Kaufman, et al.         Expires October 26, 2009               [Page 85]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
+
+   data varies according to the Auth Method as specified below.
 
    The Authentication Payload is defined as follows:
 
@@ -4636,19 +4806,22 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    The payload type for the Authentication Payload is thirty nine (39).
 
+
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009               [Page 86]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
 3.9.  Nonce Payload
 
    The Nonce Payload, denoted Ni and Nr in this memo for the initiator's
    and responder's nonce respectively, contains random data used to
    guarantee liveness during an exchange and protect against replay
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 83]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    attacks.
 
    The Nonce Payload is defined as follows:
@@ -4695,14 +4868,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 84]
+Kaufman, et al.         Expires October 26, 2009               [Page 87]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
                         1                   2                   3
@@ -4756,9 +4924,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 85]
+Kaufman, et al.         Expires October 26, 2009               [Page 88]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    managing an SA database wishes to communicate with a peer process.
@@ -4812,15 +4980,20 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 86]
+Kaufman, et al.         Expires October 26, 2009               [Page 89]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
        See Section 1.5.
 
    NO_PROPOSAL_CHOSEN                       14
-       See Section 2.7.
+       None of the proposed crypto suites was acceptable. This can be
+       sent in any case where the offered proposal (including but not
+       limited to SA payload values, USE_TRANSPORT_MODE notify,
+       IPCOMP_SUPPORTED notify) are not acceptable for the responder.
+       This can also be used as "generic" Child SA error when Child SA
+       cannot be created for some other reason. See also Section 2.7.
 
    INVALID_KE_PAYLOAD                       17
        See Section 1.3.
@@ -4863,14 +5036,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                 [Page 87]
+Kaufman, et al.         Expires October 26, 2009               [Page 90]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    NOTIFY messages: status types            Value
@@ -4924,9 +5092,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 88]
+Kaufman, et al.         Expires October 26, 2009               [Page 91]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    valid.  Figure 17 shows the format of the Delete Payload.  It is
@@ -4980,9 +5148,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 89]
+Kaufman, et al.         Expires October 26, 2009               [Page 92]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
 3.12.  Vendor ID Payload
@@ -5036,9 +5204,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 90]
+Kaufman, et al.         Expires October 26, 2009               [Page 93]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
       where you were when you chose the ID and some random input.  A
@@ -5092,9 +5260,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 91]
+Kaufman, et al.         Expires October 26, 2009               [Page 94]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    For instance, the following traffic selectors:
@@ -5148,9 +5316,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 92]
+Kaufman, et al.         Expires October 26, 2009               [Page 95]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    o  Selector Length - Specifies the length of this Traffic Selector
@@ -5204,9 +5372,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 93]
+Kaufman, et al.         Expires October 26, 2009               [Page 96]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    The following table lists the assigned values for the Traffic
@@ -5260,9 +5428,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 94]
+Kaufman, et al.         Expires October 26, 2009               [Page 97]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    The payload type for an Encrypted payload is forty six (46).  The
@@ -5303,11 +5471,11 @@ Internet-Draft                  IKEv2bis                    October 2008
       initialization vector (IV) is equal to the block length of the
       underlying encryption algorithm.  Senders MUST select a new
       unpredictable IV for every message; recipients MUST accept any
-      value.  For other modes than CBC, the IV format and processing is
-      specified in the document specifying the encryption algorithm and
-      mode.  The reader is encouraged to consult [MODES] for advice on
+      value.  The reader is encouraged to consult [MODES] for advice on
       IV generation.  In particular, using the final ciphertext block of
-      the previous message is not considered unpredictable.
+      the previous message is not considered unpredictable.  For modes
+      other than CBC, the IV format and processing is specified in the
+      document specifying the encryption algorithm and mode.
 
    o  IKE Payloads are as specified earlier in this section.  This field
       is encrypted with the negotiated cipher.
@@ -5316,9 +5484,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 95]
+Kaufman, et al.         Expires October 26, 2009               [Page 98]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    o  Padding MAY contain any value chosen by the sender, and MUST have
@@ -5372,9 +5540,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 96]
+Kaufman, et al.         Expires October 26, 2009               [Page 99]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
       CFG Type           Value
@@ -5428,9 +5596,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 97]
+Kaufman, et al.         Expires October 26, 2009              [Page 100]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
                                       Multi-
@@ -5484,9 +5652,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 98]
+Kaufman, et al.         Expires October 26, 2009              [Page 101]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
       as INTERNAL_IP4_SUBNET containing the same information ("send
@@ -5540,9 +5708,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                 [Page 99]
+Kaufman, et al.         Expires October 26, 2009              [Page 102]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    o  INTERNAL_IP6_SUBNET - The protected sub-networks that this edge-
@@ -5596,9 +5764,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 100]
+Kaufman, et al.         Expires October 26, 2009              [Page 103]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    In these cases, the INTERNAL_IP4_SUBNET does not really carry any
@@ -5652,9 +5820,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 101]
+Kaufman, et al.         Expires October 26, 2009              [Page 104]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    Because the meaning of INTERNAL_IP4_SUBNET/INTERNAL_IP6_SUBNET is in
@@ -5708,9 +5876,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 102]
+Kaufman, et al.         Expires October 26, 2009              [Page 105]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
 3.15.4.  Address Assignment Failures
@@ -5764,9 +5932,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 103]
+Kaufman, et al.         Expires October 26, 2009              [Page 106]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
                    Figure 24:  EAP Payload Format
@@ -5820,9 +5988,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 104]
+Kaufman, et al.         Expires October 26, 2009              [Page 107]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    responder should not send EAP Identity requests.  The initiator may,
@@ -5876,9 +6044,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 105]
+Kaufman, et al.         Expires October 26, 2009              [Page 108]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    implementation MAY respond to any INFORMATIONAL message with an empty
@@ -5932,9 +6100,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 106]
+Kaufman, et al.         Expires October 26, 2009              [Page 109]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    o  Authentication where the responder is authenticated using PKIX
@@ -5988,9 +6156,9 @@ Internet-Draft                  IKEv2bis                    October 2008
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 107]
+Kaufman, et al.         Expires October 26, 2009              [Page 110]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
    from stronger groups (limited by the strength of the other algorithms
@@ -6001,6 +6169,14 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    It is assumed that all Diffie-Hellman exponents are erased from
    memory after use.
+
+   The IKE_SA_INIT and IKE_AUTH exchanges happen before the initiator
+   has been authenticated.  As a result, an implementation of this
+   protocol needs to be completely robust when deployed on any insecure
+   network.  Implementation vulnerabilities, particularly denial-of-
+   service attacks, can be exploited by unauthenticated peers.  This
+   issue is particularly worrisome because of the unlimited number of
+   messages in EAP-based authentication.
 
    The strength of all keys is limited by the size of the output of the
    negotiated prf function.  For this reason, a prf function whose
@@ -6033,6 +6209,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    Since the IPv4 address space is only 32 bits, and it is usually very
    sparse, it would be possible for an attacker to find out the internal
    address used behind the NAT box by trying all possible IP addresses
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 111]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    and trying to find the matching hash.  The port numbers are normally
    fixed to 500, and the SPIs can be extracted from the packet.  This
    reduces the number of hash calculations to 2^32.  With an educated
@@ -6041,14 +6225,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    that use of IKE will not leak internal address information.
 
    When using an EAP authentication method that does not generate a
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 108]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    shared key for protecting a subsequent AUTH payload, certain man-in-
    the-middle and server impersonation attacks are possible [EAPMITM].
    These vulnerabilities occur when EAP is also used in protocols that
@@ -6087,6 +6263,23 @@ Internet-Draft                  IKEv2bis                    October 2008
    instead of sending certificates (see Section 3.6).  Additional
    mitigations are discussed in [DOSUDPPROT].
 
+   Admission control is critical to the security of the protocol.  For
+   example, trust anchors used for identifying IKE peers should probably
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 112]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
+   be different than those used for other forms of trust, such as those
+   used to identify public web servers.  Moreover, although IKE provides
+   a great deal of leeway in defining the security policy for a trusted
+   peer's identity, credentials, and the correlation between them,
+   having such security policy defined explicitly is essential to a
+   secure implementation.
+
 5.1.  Traffic selector authorization
 
    {{ Added this section from Clarif-4.13 }}
@@ -6097,14 +6290,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    requests the creation of an IPsec SA with some traffic selectors, the
    PAD must contain "Child SA Authorization Data" linking the identity
    authenticated by IKEv2 and the addresses permitted for traffic
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 109]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    selectors.
 
    For example, the PAD might be configured so that authenticated
@@ -6136,6 +6321,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    address.
 
    It has been recognized that configuring the PAD correctly may be
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 113]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    difficult in some environments.  For instance, if IPsec is used
    between a pair of hosts whose addresses are allocated dynamically
    using DHCP, it is extremely difficult to ensure that the PAD
@@ -6152,13 +6345,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    configuration in most circumstances.  See [H2HIPSEC] for an extensive
    discussion about this issue, and the limitations of host-to-host
    IPsec in general.
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 110]
-
-Internet-Draft                  IKEv2bis                    October 2008
 
 
 6.  IANA Considerations
@@ -6191,6 +6377,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    Reingold, and Michael Richardson.  Many other people contributed to
    the design.  It is an evolution of IKEv1, ISAKMP, and the IPsec DOI,
    each of which has its own list of authors.  Hugh Daniel suggested the
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 114]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    feature of having the initiator, in message 3, specify a name for the
    responder, and gave the feature the cute name "You Tarzan, Me Jane".
    David Faucher and Valery Smyzlov helped refine the design of the
@@ -6209,14 +6403,6 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    [ADDGROUP]
               Kivinen, T. and M. Kojo, "More Modular Exponential (MODP)
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 111]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
               Diffie-Hellman groups for Internet Key Exchange (IKE)",
               RFC 3526, May 2003.
 
@@ -6247,6 +6433,14 @@ Internet-Draft                  IKEv2bis                    October 2008
               Standards (PKCS) #1: RSA Cryptography Specifications
               Version 2.1", RFC 3447, February 2003.
 
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 115]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    [PKIX]     Housley, R., Polk, W., Ford, W., and D. Solo, "Internet
               X.509 Public Key Infrastructure Certificate and
               Certificate Revocation List (CRL) Profile", RFC 3280,
@@ -6265,14 +6459,6 @@ Internet-Draft                  IKEv2bis                    October 2008
    [UDPENCAPS]
               Huttunen, A., Swander, B., Volpe, V., DiBurro, L., and M.
               Stenberg, "UDP Encapsulation of IPsec ESP Packets",
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 112]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
               RFC 3948, January 2005.
 
 8.2.  Informative References
@@ -6303,6 +6489,14 @@ Internet-Draft                  IKEv2bis                    October 2008
               V.IT-22 n. 6, June 1977.
 
    [DHCP]     Droms, R., "Dynamic Host Configuration Protocol",
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 116]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
               RFC 2131, March 1997.
 
    [DIFFSERVARCH]
@@ -6321,14 +6515,6 @@ Internet-Draft                  IKEv2bis                    October 2008
               RFC 2983, October 2000.
 
    [DOI]      Piper, D., "The Internet IP Security Domain of
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 113]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
               Interpretation for ISAKMP", RFC 2407, November 1998.
 
    [DOSUDPPROT]
@@ -6359,6 +6545,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    [H2HIPSEC]
               Aura, T., Roe, M., and A. Mohammed, "Experiences with
               Host-to-Host IPsec", 13th International Workshop on
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 117]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
               Security Protocols, Cambridge, UK, April 2005.
 
    [HMAC]     Krawczyk, H., Bellare, M., and R. Canetti, "HMAC: Keyed-
@@ -6377,14 +6571,6 @@ Internet-Draft                  IKEv2bis                    October 2008
               (IKE)", RFC 2409, November 1998.
 
    [IKEV2]    Kaufman, C., "Internet Key Exchange (IKEv2) Protocol",
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 114]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
               RFC 4306, December 2005.
 
    [IP-COMP]  Shacham, A., Monsour, B., Pereira, R., and M. Thomas, "IP
@@ -6416,8 +6602,18 @@ Internet-Draft                  IKEv2bis                    October 2008
    [MIPV6]    Johnson, D., Perkins, C., and J. Arkko, "Mobility Support
               in IPv6", RFC 3775, June 2004.
 
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 118]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    [MLDV2]    Vida, R. and L. Costa, "Multicast Listener Discovery
               Version 2 (MLDv2) for IPv6", RFC 3810, June 2004.
+
+   [MOBIKE]   Eronen, P., "IKEv2 Mobility and Multihoming Protocol
+              (MOBIKE)", RFC 4555, June 2006.
 
    [MODES]    National Institute of Standards and Technology, U.S.
               Department of Commerce, "Recommendation for Block Cipher
@@ -6433,14 +6629,6 @@ Internet-Draft                  IKEv2bis                    October 2008
               RFC 2412, November 1998.
 
    [PFKEY]    McDonald, D., Metz, C., and B. Phan, "PF_KEY Key
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 115]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
               Management API, Version 2", RFC 2367, July 1998.
 
    [PHOTURIS]
@@ -6458,12 +6646,25 @@ Internet-Draft                  IKEv2bis                    October 2008
    [REAUTH]   Nir, Y., "Repeated Authentication in Internet Key Exchange
               (IKEv2) Protocol", RFC 4478, April 2006.
 
+   [REUSE]    Menezes, A. and B. Ustaoglu, "On Reusing Ephemeral Keys In
+              Diffie-Hellman  Key Agreement Protocols", December 2008,
+              <http://www.cacr.math.uwaterloo.ca/~ajmeneze/
+              publications/ephemeral.pdf>.
+
    [ROHCV2]   Ertekin, et. al., E., "IKEv2 Extensions to Support Robust
               Header Compression over IPsec (ROHCoIPsec)",
               draft-ietf-rohc-ikev2-extensions-hcoipsec (work in
               progress), October 2008.
 
    [RSA]      R. Rivest, A. Shamir, and L. Adleman, "A Method for
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 119]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
               Obtaining Digital Signatures and Public-Key
               Cryptosystems", February 1978.
 
@@ -6489,14 +6690,6 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    [X.501]    ITU-T, "Recommendation X.501: Information Technology -
               Open Systems Interconnection - The Directory: Models",
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 116]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
               1993.
 
    [X.509]    ITU-T, "Recommendation X.509 (1997 E): Information
@@ -6518,6 +6711,15 @@ Appendix A.  Summary of changes from IKEv1
         authentication mechanisms affecting only a single AUTH payload
         rather than restructuring the entire exchange) see
         [EXCHANGEANALYSIS];
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 120]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
    3.   To remove the Domain of Interpretation (DOI), Situation (SIT),
         and Labeled Domain Identifier fields, and the Commit and
@@ -6544,15 +6746,6 @@ Appendix A.  Summary of changes from IKEv1
         symmetries in hashes used for authentication documented by Tero
         Kivinen;
 
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 117]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    9.   To specify Traffic Selectors in their own payloads type rather
         than overloading ID payloads, and making more flexible the
         Traffic Selectors that may be specified;
@@ -6575,6 +6768,14 @@ Appendix B.  Diffie-Hellman Groups
    There are two Diffie-Hellman groups defined here for use in IKE.
    These groups were generated by Richard Schroeppel at the University
    of Arizona.  Properties of these primes are described in [OAKLEY].
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 121]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
    The strength supplied by group one may not be sufficient for the
    mandatory-to-implement encryption algorithm and is here for historic
@@ -6599,15 +6800,6 @@ B.1.  Group 1 - 768 Bit MODP
 B.2.  Group 2 - 1024 Bit MODP
 
    This group is assigned id 2 (two).
-
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 118]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    The prime is 2^1024 - 2^960 - 1 + 2^64 * { [2^894 pi] + 129093 }.
    Its hexadecimal value is:
@@ -6634,25 +6826,32 @@ Appendix C.  Exchanges and Payloads
    Vendor-ID (V) payloads may be included in any place in any message.
    This sequence here shows what are the most logical places for them.
 
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 122]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
 C.1.  IKE_SA_INIT Exchange
 
    request             --> [N(COOKIE)],
                            SA, KE, Ni,
                            [N(NAT_DETECTION_SOURCE_IP)+,
                             N(NAT_DETECTION_DESTINATION_IP)],
-                           [V+]
+                           [V+][N+]
 
    normal response     <-- SA, KE, Nr,
    (no cookie)             [N(NAT_DETECTION_SOURCE_IP),
                             N(NAT_DETECTION_DESTINATION_IP)],
                            [[N(HTTP_CERT_LOOKUP_SUPPORTED)], CERTREQ+],
-                           [V+]
+                           [V+][N+]
 
    cookie response     <-- N(COOKIE),
-                           [V+]
+                           [V+][N+]
 
    different D-H       <-- N(INVALID_KE_PAYLOAD),
-   group wanted            [V+]
+   group wanted            [V+][N+]
 
 
 
@@ -6660,9 +6859,34 @@ C.1.  IKE_SA_INIT Exchange
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 119]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 123]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
 C.2.  IKE_AUTH Exchange without EAP
@@ -6678,7 +6902,7 @@ C.2.  IKE_AUTH Exchange without EAP
                            [N(ESP_TFC_PADDING_NOT_SUPPORTED)],
                            [N(NON_FIRST_FRAGMENTS_ALSO)],
                            SA, TSi, TSr,
-                           [V+]
+                           [V+][N+]
 
    response            <-- IDr, [CERT+],
                            AUTH,
@@ -6689,12 +6913,12 @@ C.2.  IKE_AUTH Exchange without EAP
                            [N(NON_FIRST_FRAGMENTS_ALSO)],
                            SA, TSi, TSr,
                            [N(ADDITIONAL_TS_POSSIBLE)],
-                           [V+]
+                           [V+][N+]
 
    error in Child SA  <--  IDr, [CERT+],
    creation                AUTH,
                            N(error),
-                           [V+]
+                           [V+][N+]
 
 
 
@@ -6716,9 +6940,9 @@ C.2.  IKE_AUTH Exchange without EAP
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 120]
+Kaufman, et al.         Expires October 26, 2009              [Page 124]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
 C.3.  IKE_AUTH Exchange with EAP
@@ -6733,11 +6957,11 @@ C.3.  IKE_AUTH Exchange with EAP
                            [N(ESP_TFC_PADDING_NOT_SUPPORTED)],
                            [N(NON_FIRST_FRAGMENTS_ALSO)],
                            SA, TSi, TSr,
-                           [V+]
+                           [V+][N+]
 
    first response      <-- IDr, [CERT+], AUTH,
                            EAP,
-                           [V+]
+                           [V+][N+]
 
                      / --> EAP
    repeat 1..N times |
@@ -6753,7 +6977,7 @@ C.3.  IKE_AUTH Exchange with EAP
                            [N(NON_FIRST_FRAGMENTS_ALSO)],
                            SA, TSi, TSr,
                            [N(ADDITIONAL_TS_POSSIBLE)],
-                           [V+]
+                           [V+][N+]
 
 
 
@@ -6772,9 +6996,9 @@ C.3.  IKE_AUTH Exchange with EAP
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 121]
+Kaufman, et al.         Expires October 26, 2009              [Page 125]
 
-Internet-Draft                  IKEv2bis                    October 2008
+Internet-Draft                  IKEv2bis                      April 2009
 
 
 C.4.  CREATE_CHILD_SA Exchange for Creating or Rekeying Child SAs
@@ -6786,7 +7010,7 @@ C.4.  CREATE_CHILD_SA Exchange for Creating or Rekeying Child SAs
                            [N(ESP_TFC_PADDING_NOT_SUPPORTED)],
                            [N(NON_FIRST_FRAGMENTS_ALSO)],
                            SA, Ni, [KEi], TSi, TSr
-                           [V+]
+                           [V+][N+]
 
    normal              <-- [CP(CFG_REPLY)],
    response                [N(IPCOMP_SUPPORTED)],
@@ -6795,20 +7019,20 @@ C.4.  CREATE_CHILD_SA Exchange for Creating or Rekeying Child SAs
                            [N(NON_FIRST_FRAGMENTS_ALSO)],
                            SA, Nr, [KEr], TSi, TSr,
                            [N(ADDITIONAL_TS_POSSIBLE)]
-                           [V+]
+                           [V+][N+]
 
    error case          <-- N(error)
 
    different D-H       <-- N(INVALID_KE_PAYLOAD),
-   group wanted            [V+]
+   group wanted            [V+][N+]
 
 C.5.  CREATE_CHILD_SA Exchange for Rekeying the IKE SA
 
    request             --> SA, Ni, [KEi]
-                           [V+]
+                           [V+][N+]
 
    response            <-- SA, Nr, [KEr]
-                           [V+]
+                           [V+][N+]
 
 C.6.  INFORMATIONAL Exchange
 
@@ -6821,21 +7045,30 @@ C.6.  INFORMATIONAL Exchange
                            [CP(CFG_REPLY)]
 
 
-Appendix D.  Changes Between Internet Draft Versions
+Appendix D.  Significant Changes from RFC 4306
+
+   This is a placeholder that will be filled in.  The WG needs to decide
+   what level of specificity is most useful here.  For example, it might
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 126]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
+   only be changes that involve SHOULD-level or MUST-level requirements,
+   or it might also include additional "significant" advice that was
+   added.
+
+
+Appendix E.  Changes Between Internet Draft Versions
 
    This section will be removed before publication as an RFC, but should
    be left intact until then so that reviewers can follow what has
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 122]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    changed.
 
-D.1.  Changes from IKEv2 to draft -00
+E.1.  Changes from IKEv2 to draft -00
 
    There were a zillion additions from RFC 4718.  These are noted with
    "{{ Clarif-nn }}".
@@ -6853,7 +7086,7 @@ D.1.  Changes from IKEv2 to draft -00
    is what most current IKEv2 implementations do, and it better matches
    the actual security requirement.
 
-D.2.  Changes from draft -00 to draft -01
+E.2.  Changes from draft -00 to draft -01
 
    The most significant technical change was to make KE optional but
    strongly recommended in Section 1.3.2.
@@ -6872,6 +7105,14 @@ D.2.  Changes from draft -00 to draft -01
    Removed discussion of ESP+AH bundles in many places, and added a
    paragraph about it in Section 1.7.
 
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 127]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    Removed the discussion of INTERNAL_ADDRESS_EXPIRY in many places, and
    added a paragraph about it in Section 1.7.
 
@@ -6881,14 +7122,6 @@ D.2.  Changes from draft -00 to draft -01
    saying "The KEi payload SHOULD be included."
 
    In the figure in Section 1.3.2, maked KEr optional, and removed text
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 123]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    saying "KEi and KEr are required for rekeying an IKE SA."
 
    In Section 1.4, clarified that the half-closed connections being
@@ -6928,6 +7161,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    In Section 2.17, removed "If multiple IPsec protocols are negotiated,
    keying material is taken in the order in which the protocol headers
    will appear in the encapsulated packet" because multiple IPsec
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 128]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    protocols cannot be negotiated at one time.
 
    Added the material from Clarif-5.12 to Section 2.18.
@@ -6936,14 +7177,6 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    In the bulleted list in Section 2.23, replaced "this end" with a
    clearer description of which system is being discussed.
-
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 124]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    Added the paragraph at the beginning of Section 3 about
    interoperability and UNSPECIFIED values ("In the tables in this
@@ -6975,7 +7208,7 @@ Internet-Draft                  IKEv2bis                    October 2008
    Made [PKCS1] a normative reference instead of an informative
    reference and changed the pointer to RFC 3447.
 
-D.3.  Changes from draft -00 to draft -01
+E.3.  Changes from draft -00 to draft -01
 
    In Section 1.5, added "request" to first sentence to make it "If an
    encrypted IKE request packet arrives on port 500 or 4500 with an
@@ -6983,6 +7216,14 @@ D.3.  Changes from draft -00 to draft -01
 
    In Section 3.3, fifth paragraph, upped the number of transforms for
    AH and ESP by one each to account for ESN, which is now mandatory.
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 129]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
 
    In Section 2.1, added "or equal to" in "The responder MUST remember
    each response until it receives a request whose sequence number is
@@ -6993,15 +7234,7 @@ D.3.  Changes from draft -00 to draft -01
    SA's PRF has a fixed key size because the output of the PRF may not
    be of the correct size." because it is no longer relevant.
 
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 125]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
-D.4.  Changes from draft -01 to draft -02
+E.4.  Changes from draft -01 to draft -02
 
    Many grammatical fixes.
 
@@ -7041,6 +7274,13 @@ D.4.  Changes from draft -01 to draft -02
    second paragraph about transforms not understood, and clarified third
    paragraph about picking D-H groups.
 
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 130]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    Moved 3.10.1-16392 from Section 3.6 to 3.7.
 
    In Section 3.10, clarified 3.10.1-16394.
@@ -7049,19 +7289,11 @@ D.4.  Changes from draft -01 to draft -02
    this spec.  Also removed the definition of "Expert Review" from
    Section 1.6 for the same reason.
 
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 126]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    In Appendix A, removed "and not commit any state to an exchange until
    the initiator can be cryptographically authenticated" because that
    was only true in an earlier version of IKEv2.
 
-D.5.  Changes from draft -02 to draft -03
+E.5.  Changes from draft -02 to draft -03
 
    In Section 1.3, changed "If the responder rejects the Diffie-Hellman
    group of the KEi payload, the responder MUST reject the request and
@@ -7097,6 +7329,14 @@ D.5.  Changes from draft -02 to draft -03
    In Section 2.23, added "Implementations MUST process received UDP-
    encapsulated ESP packets even when no NAT was detected."
 
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 131]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    In Section 3.3, changed "Each proposal may contain a" to "Each
    proposal contains a".
 
@@ -7105,14 +7345,6 @@ D.5.  Changes from draft -02 to draft -03
 
    In Section 3.3.2, changed the following algorithms to (UNSPECIFIED)
    because the RFCs listed didn't really specify how to implement them
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 127]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    in an interoperable fashion:
 
    Encryption Algorithms
@@ -7139,7 +7371,7 @@ Internet-Draft                  IKEv2bis                    October 2008
    In Section 5, in the second-to-last paragraph, changed "a public-key-
    based" to "strong" to match the wording in Section 2.16.
 
-D.6.  Changes from draft -03 to draft-ietf-ipsecme-ikev2bis-00
+E.6.  Changes from draft -03 to draft-ietf-ipsecme-ikev2bis-00
 
    Changed the document's filename to draft-ietf-ipsecme-ikev2bis-00.
    Added Yoav Nir as a co-author.
@@ -7153,6 +7385,14 @@ D.6.  Changes from draft -03 to draft-ietf-ipsecme-ikev2bis-00
 
    In Section 1, clarified that RFC 4306 already replaced IKEv1, and
    that this document replaces RFC 4306.  Also fixed Section 2.5 for
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 132]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    similar issue.  Also updated the Abstract to cover this.
 
    In Section 2.15, in the responder's signed octets, changed:
@@ -7161,21 +7401,13 @@ D.6.  Changes from draft -03 to draft-ietf-ipsecme-ikev2bis-00
        to
    RestOfRespIDPayload = IDType | RESERVED | RespIDData
 
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 128]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    In 2.16, changed "strong" back to "public key signature based" to
    make it the same as 4306.
 
    In section 3.10, added "and the field must be empty" to make it clear
    that a zero-length SPI is really empty.
 
-D.7.  Changes from draft-ietf-ipsecme-ikev2bis-00 to
+E.7.  Changes from draft-ietf-ipsecme-ikev2bis-00 to
       draft-ietf-ipsecme-ikev2bis-01
 
    Throughout, changed "IKE_SA" to "IKE SA", and changed "CHILD_SA" to
@@ -7209,6 +7441,14 @@ D.7.  Changes from draft-ietf-ipsecme-ikev2bis-00 to
 
    At the end of section 1.3.1, clarified that the responder is the one
    who controls whether non-first-fragments will be sent, and reworded
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 133]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    the paragraph.
 
    In section 1.3.3, added "The Protocol ID field of the REKEY_SA
@@ -7217,13 +7457,6 @@ D.7.  Changes from draft-ietf-ipsecme-ikev2bis-00 to
 
    In 1.3.2, added "of the SA payload" to "New initiator and responder
    SPIs are supplied in the SPI fields."
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 129]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    In 1.3.3, fixed the art.
 
@@ -7264,6 +7497,14 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    Removed the question to implementers about payload order in 2.5.
 
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 134]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    Changed the title of 2.6 to "IKE SA SPIs and Cookies".  Also, in the
    paragraph that describes how to implement the responder, changed the
    lower-case "should" to "can" to emphasize that this is a choice.
@@ -7273,13 +7514,6 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    In section 2.6, upgraded "needs to choose them so as to be unique
    identifiers of an IKE_SA" to a MUST.
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 130]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    Added sentences at the end of 2.6 eplaining wny the initiator should
    limit the number of responses it sends out.
@@ -7319,6 +7553,14 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    In 2.23, changed "can negotiate" to "will use". for UDP
    encapsulation.  Added "or 4500" to "...MUST be sent from and to UDP
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 135]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    port 500".  Also removed the text about why not to do NAT-traversal
    over port 500 because we later say you can't do that anyway.  [Issue
    #27] Also removed the last paragraph, which obliquely pointed to
@@ -7329,13 +7571,6 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    In 3.1, added "This bit changes to reflect who initiated the last
    rekey of the IKE SA." to the description of the Initiator bit.
-
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 131]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
 
    In 3.3, added a long example of why you might use a Proposal
    structure because of combined-mode algorithms.  [Issue #42]
@@ -7374,6 +7609,14 @@ Internet-Draft                  IKEv2bis                    October 2008
    INTERNAL_IP4_SUBNET and INTERNAL_IP6_SUBNET, added a pointer to
    3.15.2.
 
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 136]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
    In 3.15.4, added "The IKE SA is still created even if the initial
    Child SA cannot be created because of this failure."
 
@@ -7386,18 +7629,216 @@ Internet-Draft                  IKEv2bis                    October 2008
 
    Updated a bunch of reference to their newer versions.
 
-
-
-Kaufman, et al.            Expires May 3, 2009                [Page 132]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
    Added "[V+]" to the end of the exchanges in C.4 and C.5.
 
    Added two more response templates to Appendix C.1.  Added another
    response template in Appendix C.2.  Added two more responses in
    Appendix C.4.
+
+E.8.  Changes from draft-ietf-ipsecme-ikev2bis-01 to
+      draft-ietf-ipsecme-ikev2bis-02
+
+   In section 1.3.1, added "Failure of an attempt to create a CHILD SA
+   SHOULD NOT tear down the IKE SA: there is no reason to lose the work
+   done to set up the IKE SA.  When an IKE SA is not created, the error
+   message return SHOULD NOT be encrypted because the other party will
+   not be able to authenticate that message."  This may be changed again
+   in the future.  [Issue #9]
+
+   In section 1.3.2, changed "The KEi payload SHOULD be included" to be
+   "The KEi payload MUST be included".  This also lead to changes in
+   section 2.18.  The square brackets around "g^ir (new)" in the
+   SKEYSEED calculation are eliminated, and the requirement language in
+   the paragraph starting "The main rekeying" is changed from SHOULD to
+   MUST.  [Issue #50]
+
+   In section 1.3.2, changed "The window size starts at 1 for any new
+   IKE SA." to "The first IKE requests from both sides on the new IKE SA
+   will have message ID 0.  The old IKE SA retains its numbering, so any
+   further requests (for example, to delete the IKE SA) will have
+   consecutive numbering.  The new IKE SA also has its window size reset
+   to 1, and the initiator in this rekey exchange is the new "original
+   initiator" of the new IKE SA."  [Issue #65]
+
+   Added to section 1.5: For a one-way INVALID_IKE_SPI notification for
+   an unrecognized SPI, the responder SHOULD copy the Exchange Type from
+   the request.  [Issue #46]
+
+   In 2.1, at the end of the paragraph about retransmission timers,
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 137]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
+   added "In order to allow saving memory, responders are allowed to
+   forget response after a timeout of several minutes.  If the responder
+   receives a retransmitted request for which it has already forgotten
+   the response, it MUST ignore the request (and not, for example,
+   attempt constructing a new response)."  [Issue #14]
+
+   In 2.6, added: "Also, incorporating Ni in the hash prevents an
+   attacker from fetching one one cookie from the other end, and then
+   initiating many IKE_SA_INIT exchanges all with different initiator
+   SPIs (and perhaps port numbers) so that the responder thinks that
+   there are lots of machines behind one NAT box who are all trying to
+   connect."  [Issue #19]
+
+   Added text for the new 2.8.2, and bumped the section number of the
+   old 2.8.2 to 2.8.3.  [Issue #22]
+
+   Added a reference to the end of 2.12 on key reuse.
+
+   Added to the end of the first paragraph in 2.19: Note, however, it is
+   usual to only assign one IP address during the IKE_AUTH exchange.
+   That address persists at least until the deletion of the IKE SA.
+   [Issue #79]
+
+   Added the following to 2.23: An initiator can float to port 4500,
+   regardless whether or not there is NAT, even at the beginning of IKE.
+   When either side is using port 4500, sending with UDP encapsulation
+   is not required, but understanding received packets with UDP
+   encapsulation is required.  UDP encapsulation MUST NOT be done on
+   port 500.  If NAT-T is supported (that is, if NAT_DETECTION_*_IP
+   payloads were exchanged during IKE_SA_INIT), all devices MUST be able
+   to receive and process both UDP encapsulated and non-UDP encapsulated
+   packets at any time.  Either side can decide whether or not to use
+   UDP encapsulation irrespective of the choice made by the other side.
+   However, if a NAT is detected, both devices MUST send UDP
+   encapsulated packets.  [Issue #40]
+
+   The second-to-last paragraph in section 3.4 is changed to: The DH
+   Group # identifies the Diffie-Hellman group in which the Key Exchange
+   Data was computed (see Section 3.3.2.  This Group # MUST match a DH
+   Group specified in a proposal in the SA payload that is sent in the
+   same message, and SHOULD match the DH group in the first group in the
+   first proposal, if such exists.  If none of the proposals in that SA
+   payload specifies a DH Group, the KE payload MUST NOT be present.  If
+   the selected proposal uses a different Diffie-Hellman group (other
+   than NONE), the message MUST be rejected with a Notify payload of
+   type INVALID_KE_PAYLOAD.  [Issue #30]
+
+   In 3.10.1, changed the definition of NO_PROPOSAL_CHOSEN, 14, to: None
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 138]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
+   of the proposed crypto suites was acceptable.  This can be sent in
+   any case where the offered proposal (including but not limited to SA
+   payload values, USE_TRANSPORT_MODE notify, IPCOMP_SUPPORTED notify)
+   are not acceptable for the responder.  This can also be used as
+   "generic" Child SA error when Child SA cannot be created for some
+   other reason.  See also Section 2.7.  [Issue #81]
+
+   In the description of IVs in 3.14, reorganized the text a bit to
+   emphasize when we are and are not talking about CBC.  [Issue #68]
+
+   Added the following to section 5 (Security Considerations): "The
+   IKE_SA_INIT and IKE_AUTH exchanges happen before the initiator has
+   been authenticated.  As a result, an implementation of this protocol
+   needs to be completely robust when deployed on any insecure network.
+   Implementation vulnerabilities, particularly denial-of-service
+   attacks, can be exploited by unauthenticated peers.  This issue is
+   particularly worrisome because of the unlimited number of messages in
+   EAP-based authentication."  [Issue #62]
+
+   Added new Appendix D, "Significant Changes from RFC 4306", as a
+   placeholder for now.  [Issue #3]
+
+E.9.  Changes from draft-ietf-ipsecme-ikev2bis-01 to
+      draft-ietf-ipsecme-ikev2bis-02
+
+   Near the end of 1.3, changed "If the guess turns out to be wrong, the
+   responder will indicate the correct group in the response and the
+   initiator SHOULD pick an element of that group for its KE value when
+   retrying the first message." to "If the responder selects a proposal
+   using a different Diffie-Hellman group (other than NONE), the
+   responder will indicate the correct group in the response and the
+   initiator SHOULD pick an element of that group for its KE value when
+   retrying the first message."  [Issue #6]
+
+   In the figures in 1.3.2, changed the diagrams from "HDR, SK {SA, Ni,
+   [KEi]}" to "HDR, SK {SA, Ni, KEi}", and "HDR, SK {SA, Nr,[KEr]}" to
+   "HDR, SK {SA, Nr,KEr}".  This matches the text in the section, which
+   was updated in the last revision.  [Issue #50]
+
+   Reorganized the beginning of section 2.3 and clarified some of the
+   logic.  [Issue #52]
+
+   Clarified the octets to be signed in setion 2.15.  Changed
+
+   AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>)
+
+   to
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 139]
+
+Internet-Draft                  IKEv2bis                      April 2009
+
+
+   For the initiator:
+      AUTH = prf( prf( Shared Secret,"Key Pad for IKEv2"),
+                       <InitiatorSignedOctets>)
+   For the responder:
+      AUTH = prf( prf( Shared Secret,"Key Pad for IKEv2"),
+                       <ResponderSignedOctets>)
+
+   [Issue #72]
+
+   Changed the last bullet item in section 2.23 to discuss MOBIKE in
+   more detail.  [Issue #41]
+
+   In section 3.1, the bullet about bit 4, changed "must" to "MUST".
+
+   In section 3.3.6, added two sentences at the end of the second
+   paragraph to indicate that there is an exception for when the
+   proposal is a DH group of NONE.  [Issue #6]
+
+E.10.  Changes from draft-ietf-ipsecme-ikev2bis-02 to
+       draft-ietf-ipsecme-ikev2bis-03
+
+   In section 2.4, change "The INITIAL_CONTACT notification, if sent,
+   MUST be in the first IKE_AUTH request, not as a separate exchange
+   afterwards; however, receiving parties need to deal with it in other
+   requests." to "The INITIAL_CONTACT notification, if sent, MUST be in
+   the first IKE_AUTH request or response, not as a separate exchange
+   afterwards; however, receiving parties MAY ignore it in other
+   messages."  [Issue #53]
+
+   Added to the security considerations: "Admission control is critical
+   to the security of the protocol.  For example, trust anchors used for
+   identifying IKE peers should probably be different than those used
+   for other forms of trust, such as those used to identify public web
+   servers.  Moreover, although IKE provides a great deal of leeway in
+   defining the security policy for a trusted peer's identity,
+   credentials, and the correlation between them, having such security
+   policy defined explicitly is essential to a secure implementation."
+   [Issue #61]
+
+   Changed "[V+]" to "[V+][N+]" throughout Appendix C.  [Issue #63]
+
+
+
+
+
+
+
+
+
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 140]
+
+Internet-Draft                  IKEv2bis                      April 2009
 
 
 Authors' Addresses
@@ -7444,61 +7885,12 @@ Authors' Addresses
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 133]
-
-Internet-Draft                  IKEv2bis                    October 2008
-
-
-Full Copyright Statement
-
-   Copyright (C) The IETF Trust (2008).
-
-   This document is subject to the rights, licenses and restrictions
-   contained in BCP 78, and except as set forth therein, the authors
-   retain all their rights.
-
-   This document and the information contained herein are provided on an
-   "AS IS" basis and THE CONTRIBUTOR, THE ORGANIZATION HE/SHE REPRESENTS
-   OR IS SPONSORED BY (IF ANY), THE INTERNET SOCIETY, THE IETF TRUST AND
-   THE INTERNET ENGINEERING TASK FORCE DISCLAIM ALL WARRANTIES, EXPRESS
-   OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF
-   THE INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED
-   WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
-
-
-Intellectual Property
-
-   The IETF takes no position regarding the validity or scope of any
-   Intellectual Property Rights or other rights that might be claimed to
-   pertain to the implementation or use of the technology described in
-   this document or the extent to which any license under such rights
-   might or might not be available; nor does it represent that it has
-   made any independent effort to identify any such rights.  Information
-   on the procedures with respect to rights in RFC documents can be
-   found in BCP 78 and BCP 79.
-
-   Copies of IPR disclosures made to the IETF Secretariat and any
-   assurances of licenses to be made available, or the result of an
-   attempt made to obtain a general license or permission for the use of
-   such proprietary rights by implementers or users of this
-   specification can be obtained from the IETF on-line IPR repository at
-   http://www.ietf.org/ipr.
-
-   The IETF invites any interested party to bring to its attention any
-   copyrights, patents or patent applications, or other proprietary
-   rights that may cover technology that may be required to implement
-   this standard.  Please address the information to the IETF at
-   ietf-ipr@ietf.org.
-
-
-Acknowledgment
-
-   Funding for the RFC Editor function is provided by the IETF
-   Administrative Support Activity (IASA).
 
 
 
 
 
-Kaufman, et al.            Expires May 3, 2009                [Page 134]
+
+
+Kaufman, et al.         Expires October 26, 2009              [Page 141]
 
