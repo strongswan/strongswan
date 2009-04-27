@@ -2,7 +2,7 @@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
 
 AM_CFLAGS = \
--rdynamic -Wformat=0 \
+-rdynamic \
 -DIPSEC_CONFDIR=\"${confdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\"
 

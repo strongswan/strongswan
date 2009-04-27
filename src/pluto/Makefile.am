@@ -86,8 +86,7 @@ AM_CFLAGS = \
 -DIPSEC_PLUGINDIR=\"${plugindir}\" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
--DPLUTO -DKLIPS -DDEBUG \
--Wformat=0
+-DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan.la \

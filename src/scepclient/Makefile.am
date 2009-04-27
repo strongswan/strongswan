@@ -19,8 +19,7 @@ AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${confdir}\" \
 -DIPSEC_PLUGINDIR=\"${plugindir}\" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
--DDEBUG -DNO_PLUTO \
--Wformat=0
+-DDEBUG -DNO_PLUTO
 
 LIBSTRONGSWANBUILDDIR=$(top_builddir)/src/libstrongswan
 LIBFREESWANBUILDDIR=$(top_builddir)/src/libfreeswan

@@ -18,7 +18,6 @@ dnl ===========================
 
 AC_INIT(strongSwan,4.3.1)
 AM_INIT_AUTOMAKE(tar-ustar)
-AC_C_BIGENDIAN
 AC_SUBST(confdir, '${sysconfdir}')
 PKG_PROG_PKG_CONFIG
 
@@ -706,6 +705,16 @@ AC_ARG_ENABLE(
 )
 
 dnl =========================
+dnl  set up compiler and flags
+dnl =========================
+
+if test -z "$CFLAGS"; then
+	AC_SUBST(CFLAGS, "-g -O2 -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing")
+fi
+AC_PROG_CC
+AC_C_BIGENDIAN
+
+dnl =========================
 dnl  check required programs
 dnl =========================
 
@@ -713,7 +722,6 @@ AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 AC_PROG_LEX
 AC_PROG_YACC
-AC_PROG_CC()
 AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 
