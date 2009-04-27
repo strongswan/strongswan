@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
 #include <nm-vpn-plugin.h>
 
 #include "nm_creds.h"
+#include "nm_handler.h"
 
 #define NM_TYPE_STRONGSWAN_PLUGIN            (nm_strongswan_plugin_get_type ())
 #define NM_STRONGSWAN_PLUGIN(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), NM_TYPE_STRONGSWAN_PLUGIN, NMSTRONGSWANPlugin))
@@ -50,6 +51,7 @@ typedef struct {
 
 GType nm_strongswan_plugin_get_type(void);
 
-NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds);
+NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds,
+											 nm_handler_t *handler);
 
 #endif /** NM_SERVICE_H_ @}*/

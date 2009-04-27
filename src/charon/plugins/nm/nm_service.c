@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -34,15 +34,46 @@ G_DEFINE_TYPE(NMStrongswanPlugin, nm_strongswan_plugin, NM_TYPE_VPN_PLUGIN)
  * Private data of NMStrongswanPlugin
  */
 typedef struct {
+	/* implements bus listener interface */
 	listener_t listener;
+	/* IKE_SA we are listening on */
 	ike_sa_t *ike_sa;
+	/* backref to public plugin */
 	NMVPNPlugin *plugin;
+	/* credentials to use for authentication */
 	nm_creds_t *creds;
+	/* attribute handler for DNS/NBNS server information */
+	nm_handler_t *handler;
 } NMStrongswanPluginPrivate;
 
 #define NM_STRONGSWAN_PLUGIN_GET_PRIVATE(o) \
 			(G_TYPE_INSTANCE_GET_PRIVATE ((o), \
 				NM_TYPE_STRONGSWAN_PLUGIN, NMStrongswanPluginPrivate))
+
+/**
+ * convert enumerated handler chunks to a UINT_ARRAY GValue
+ */
+static GValue* handler_to_val(nm_handler_t *handler,
+							 configuration_attribute_type_t type)
+{
+	GValue *val;
+	GArray *array;
+	enumerator_t *enumerator;
+	chunk_t chunk;
+	
+	enumerator = handler->create_enumerator(handler, type);
+	array = g_array_new (FALSE, TRUE, sizeof (guint32));
+	while (enumerator->enumerate(enumerator, &chunk))
+	{
+		g_array_append_val (array, *(u_int32_t*)chunk.ptr);
+	}
+	enumerator->destroy(enumerator);
+	val = g_slice_new0 (GValue);
+	g_value_init (val, DBUS_TYPE_G_UINT_ARRAY);
+	g_value_set_boxed (val, array);
+	
+	return val;
+}
 
 /**
  * signal IPv4 config to NM, set connection as established
@@ -53,10 +84,12 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 	GValue *val;
 	GHashTable *config;
 	host_t *me, *other;
+	nm_handler_t *handler;
 	
 	config = g_hash_table_new(g_str_hash, g_str_equal);
 	me = ike_sa->get_my_host(ike_sa);
 	other = ike_sa->get_other_host(ike_sa);
+	handler = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->handler;
 	
 	/* NM requires a tundev, but netkey does not use one. Passing an invalid
 	 * iface makes NM complain, but it accepts it without fiddling on eth0. */
@@ -75,6 +108,14 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 	g_value_set_uint(val, me->get_address(me).len * 8);
 	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_PREFIX, val);
 	
+	val = handler_to_val(handler, INTERNAL_IP4_DNS);
+	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_DNS, val);
+	
+	val = handler_to_val(handler, INTERNAL_IP4_NBNS);
+	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_NBNS, val);
+	
+	handler->reset(handler);
+	
 	nm_vpn_plugin_set_ip4_config(plugin, config);
 }
 
@@ -83,6 +124,10 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
  */
 static void signal_failure(NMVPNPlugin *plugin)
 {
+	nm_handler_t *handler = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->handler;
+	
+	handler->reset(handler);
+	
 	/* TODO: NM does not handle this failure!? */
 	nm_vpn_plugin_failure(plugin, NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED); 
 	nm_vpn_plugin_set_state(plugin, NM_VPN_SERVICE_STATE_STOPPED);
@@ -223,7 +268,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		str = nm_setting_vpn_get_data_item(settings, "user");
 		if (str)
 		{
-			user = identification_create_from_string(str);
+			user = identification_create_from_string((char*)str);
 			str = nm_setting_vpn_get_secret(settings, "password");
 			creds->set_username_password(creds, user, (char*)str);
 		}
@@ -494,7 +539,8 @@ static void nm_strongswan_plugin_class_init(
 /**
  * Object constructor
  */
-NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds)
+NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds,
+											 nm_handler_t *handler)
 {
 	NMStrongswanPlugin *plugin = (NMStrongswanPlugin *)g_object_new (
 					NM_TYPE_STRONGSWAN_PLUGIN,
@@ -503,6 +549,7 @@ NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds)
 	if (plugin)
 	{
 		NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->creds = creds;
+		NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->handler = handler;
 	}
 	return plugin;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,6 +18,7 @@
 #include "nm_plugin.h"
 #include "nm_service.h"
 #include "nm_creds.h"
+#include "nm_handler.h"
 
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
@@ -50,6 +51,11 @@ struct private_nm_plugin_t {
 	 * credential set registered at the daemon
 	 */
 	nm_creds_t *creds;
+	
+	/**
+	 * attribute handler regeisterd at the daemon
+	 */
+	nm_handler_t *handler;
 };
 
 /**
@@ -79,6 +85,8 @@ static void destroy(private_nm_plugin_t *this)
 	}
 	charon->credentials->remove_set(charon->credentials, &this->creds->set);
 	this->creds->destroy(this->creds);
+	charon->attributes->remove_handler(charon->attributes, &this->handler->handler);
+	this->handler->destroy(this->handler);
 	free(this);
 }
 
@@ -99,8 +107,10 @@ plugin_t *plugin_create()
 	}
 	
 	this->creds = nm_creds_create();
+	this->handler = nm_handler_create();
 	charon->credentials->add_set(charon->credentials, &this->creds->set);
-	this->plugin = nm_strongswan_plugin_new(this->creds);
+	charon->attributes->add_handler(charon->attributes, &this->handler->handler);
+	this->plugin = nm_strongswan_plugin_new(this->creds, this->handler);
 	if (!this->plugin)
 	{
 		DBG1(DBG_CFG, "DBUS binding failed");
