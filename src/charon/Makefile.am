@@ -198,11 +198,6 @@ if USE_ATTR
   PLUGINS += attr
 endif
 
-if USE_RESOLV_CONF
-  SUBDIRS += plugins/resolv_conf
-  PLUGINS += resolv-conf
-endif
-
 if USE_EAP_IDENTITY
   SUBDIRS += plugins/eap_identity
   PLUGINS += eapidentity
@@ -256,6 +251,11 @@ endif
 if USE_NM
   SUBDIRS += plugins/nm
   PLUGINS += nm
+endif
+
+if USE_RESOLV_CONF
+  SUBDIRS += plugins/resolv_conf
+  PLUGINS += resolv-conf
 endif
 
 if USE_UCI
