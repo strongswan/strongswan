@@ -170,7 +170,7 @@ static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_DES_IV32, 			"***"				}, */
 	{ENCR_NULL, 				"cipher_null"		},
 	{ENCR_AES_CBC,	 			"aes"				},
-/*	{ENCR_AES_CTR, 				"***"				}, */
+	{ENCR_AES_CTR, 				"rfc3686(ctr(aes))"	},
 	{ENCR_AES_CCM_ICV8,			"rfc4309(ccm(aes))"	},
 	{ENCR_AES_CCM_ICV12,		"rfc4309(ccm(aes))"	},
 	{ENCR_AES_CCM_ICV16,		"rfc4309(ccm(aes))"	},

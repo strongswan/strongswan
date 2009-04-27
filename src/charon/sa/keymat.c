@@ -415,17 +415,18 @@ static bool derive_child_keys(private_keymat_t *this,
 		/* to bytes */
 		enc_size /= 8;
 		
-	 	/* CCM/GCM needs additional bytes */
+		/* CCM/GCM/CTR needs additional bytes */
 		switch (enc_alg)
 		{
 			case ENCR_AES_CCM_ICV8:
 			case ENCR_AES_CCM_ICV12:
 			case ENCR_AES_CCM_ICV16:
 				enc_size += 3;
-				break;		
+				break;
 			case ENCR_AES_GCM_ICV8:
 			case ENCR_AES_GCM_ICV12:
 			case ENCR_AES_GCM_ICV16:
+			case ENCR_AES_CTR:
 				enc_size += 4;
 				break;
 			default:
