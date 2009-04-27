@@ -1,3 +1,10 @@
+strongswan-4.3.1
+----------------
+
+- The nm plugin now passes DNS/NBNS server information to NetworkManager,
+  allowing Gateway administrator to set DNS/NBNS configuration on clients
+  dynamically.
+
 strongswan-4.3.0
 ----------------
 
