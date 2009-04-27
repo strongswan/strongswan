@@ -93,6 +93,7 @@ static enumerator_t* create_enumerator(private_nm_handler_t *this,
 			break;
 		case INTERNAL_IP4_NBNS:
 			list = this->nbns;
+			break;
 		default:
 			return enumerator_create_empty();
 	}
