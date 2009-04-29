@@ -54,7 +54,7 @@ plugin_t *plugin_create()
 	
 	lib->crypto->add_rng(lib->crypto, RNG_STRONG, 
 						 (rng_constructor_t)random_rng_create);
-	lib->crypto->add_rng(lib->crypto, RNG_REAL, 
+	lib->crypto->add_rng(lib->crypto, RNG_TRUE, 
 						 (rng_constructor_t)random_rng_create);
 	
 	return &this->public.plugin;

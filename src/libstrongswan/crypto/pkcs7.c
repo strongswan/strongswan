@@ -772,7 +772,7 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 	{
 		rng_t *rng;
 		
-		rng = lib->crypto->create_rng(lib->crypto, RNG_REAL);
+		rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 		rng->allocate_bytes(rng, crypter->get_key_size(crypter), &symmetricKey);
 		DBG4("  symmetric encryption key: %B", &symmetricKey);
 		rng->destroy(rng);

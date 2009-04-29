@@ -17,8 +17,8 @@
 
 #include "rng.h"
 
-ENUM(rng_quality_names, RNG_WEAK, RNG_REAL,
+ENUM(rng_quality_names, RNG_WEAK, RNG_TRUE,
 	"RNG_WEAK",
 	"RNG_STRONG",
-	"RNG_REAL",
+	"RNG_TRUE",
 );

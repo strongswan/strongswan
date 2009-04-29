@@ -126,7 +126,7 @@ padlock_rng_t *padlock_rng_create(rng_quality_t quality)
 		case RNG_STRONG:
 			this->quality = PADLOCK_QF1;
 			break;
-		case RNG_REAL:
+		case RNG_TRUE:
 			this->quality = PADLOCK_QF3;
 			break;
 	}

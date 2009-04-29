@@ -212,7 +212,7 @@ bool test_rng()
 	{
 		return FALSE;
 	}
-	if (!test_rng_quality(RNG_REAL))
+	if (!test_rng_quality(RNG_TRUE))
 	{
 		return FALSE;
 	}

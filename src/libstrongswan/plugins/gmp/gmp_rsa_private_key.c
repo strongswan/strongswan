@@ -141,10 +141,10 @@ static status_t compute_prime(private_gmp_rsa_private_key_t *this,
 	rng_t *rng;
 	chunk_t random_bytes;
 	
-	rng = lib->crypto->create_rng(lib->crypto, RNG_REAL);
+	rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 	if (!rng)
 	{
-		DBG1("no RNG of quality %N found", rng_quality_names, RNG_REAL);
+		DBG1("no RNG of quality %N found", rng_quality_names, RNG_TRUE);
 		return FAILED;
 	}
 	

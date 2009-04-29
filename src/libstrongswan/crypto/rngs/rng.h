@@ -36,8 +36,8 @@ enum rng_quality_t {
 	RNG_WEAK,
 	/** stronger randomness, usable for session keys */
 	RNG_STRONG,
-	/** real random, key material */
-	RNG_REAL,
+	/** true random key material */
+	RNG_TRUE,
 };
 
 /**
