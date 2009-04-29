@@ -38,12 +38,6 @@ const char compile_time_interop_options[] = ""
 #ifdef THREADS
 		" THREADS"
 #endif
-#ifdef LIBCURL
-		" LIBCURL"
-#endif
-#ifdef LIBLDAP
-		" LIBLDAP"
-#endif
 #ifdef SMARTCARD
 		" SMARTCARD"
 #endif

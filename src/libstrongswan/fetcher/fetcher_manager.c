@@ -101,7 +101,11 @@ static status_t fetch(private_fetcher_manager_t *this,
 					good = fetcher->set_option(fetcher, opt, va_arg(args, chunk_t));
 					continue;
 				case FETCH_REQUEST_TYPE:
+				case FETCH_REQUEST_HEADER:
 					good = fetcher->set_option(fetcher, opt, va_arg(args, char*));
+					continue;
+				case FETCH_HTTP_VERSION_1_0:
+					good = fetcher->set_option(fetcher, opt);
 					continue;
 				case FETCH_TIMEOUT:
 					good = fetcher->set_option(fetcher, opt, va_arg(args, u_int));

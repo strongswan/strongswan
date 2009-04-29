@@ -18,6 +18,7 @@ INCLUDES = \
 AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${confdir}\" \
 -DIPSEC_PLUGINDIR=\"${plugindir}\" \
+-DPLUGINS=\""${pluto_plugins}\"" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
 -DDEBUG -DNO_PLUTO
 
@@ -34,21 +35,10 @@ $(LIBFREESWANBUILDDIR)/libfreeswan.a \
 $(LIBCRYPTOBUILDDIR)/libcrypto.a \
 -lgmp
 
-# This compile option activates the memory leak detective
-if USE_LEAK_DETECTIVE
-  AM_CFLAGS += -DLEAK_DETECTIVE
-endif
-
 # This compile option activates smartcard support
 if USE_SMARTCARD
   AM_CFLAGS += -DSMARTCARD
   scepclient_LDADD += -ldl
-endif
-
-# This compile option activates dynamic URL fetching using libcurl
-if USE_CURL
-  AM_CFLAGS += -DLIBCURL
-  scepclient_LDADD += -lcurl
 endif
 
 dist_man_MANS = scepclient.8

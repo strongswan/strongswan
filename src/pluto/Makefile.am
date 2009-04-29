@@ -84,6 +84,7 @@ AM_CFLAGS = \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
 -DIPSEC_PLUGINDIR=\"${plugindir}\" \
+-DPLUGINS=\""${pluto_plugins}\"" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG
@@ -99,11 +100,6 @@ $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv -ldl
 
 dist_man_MANS = pluto.8 ipsec.secrets.5
-
-# This compile option activates the memory leak detective
-if USE_LEAK_DETECTIVE
-  AM_CFLAGS += -DLEAK_DETECTIVE
-endif
 
 # This compile option activates the sending of a strongSwan VID
 if USE_VENDORID
@@ -123,18 +119,6 @@ endif
 # This compile option activates NAT traversal with IPSec transport mode
 if USE_NAT_TRANSPORT
   AM_CFLAGS += -DI_KNOW_TRANSPORT_MODE_HAS_SECURITY_CONCERN_BUT_I_WANT_IT
-endif
-
-# This compile option activates dynamic URL fetching using libcurl
-if USE_CURL
-  pluto_LDADD += -lcurl
-  AM_CFLAGS += -DLIBCURL
-endif
-
-# This compile option activates dynamic LDAP CRL fetching
-if USE_LDAP
-  pluto_LDADD += -lldap -llber
-  AM_CFLAGS += -DLIBLDAP
 endif
 
 # This compile option activates smartcard support

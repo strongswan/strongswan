@@ -25,13 +25,10 @@
 
 #include <freeswan.h>
 
+#include <library.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
-
-#ifdef LIBCURL
-#include <curl/curl.h>
-#endif
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
@@ -264,11 +261,11 @@ end:
 	return success;
 }
 
-/* generates a unique fingerprint of the pkcs10 request 
+/**
+ * Generates a unique fingerprint of the pkcs10 request 
  * by computing an MD5 hash over it
  */
-void
-scep_generate_pkcs10_fingerprint(chunk_t pkcs10, chunk_t *fingerprint)
+void scep_generate_pkcs10_fingerprint(chunk_t pkcs10, chunk_t *fingerprint)
 {
 	char buf[MD5_DIGEST_SIZE];
 	chunk_t digest = { buf, sizeof(buf) };
@@ -280,12 +277,12 @@ scep_generate_pkcs10_fingerprint(chunk_t pkcs10, chunk_t *fingerprint)
 	datatot(digest.ptr, digest.len, 16, fingerprint->ptr, fingerprint->len + 1);
 }
 
-/* generate a transaction id as the MD5 hash of an public key
+/**
+ * Generate a transaction id as the MD5 hash of an public key
  * the transaction id is also used as a unique serial number
  */
-void
-scep_generate_transaction_id(const RSA_public_key_t *rsak
-, chunk_t *transID, chunk_t *serialNumber)
+void scep_generate_transaction_id(const RSA_public_key_t *rsak,
+								  chunk_t *transID, chunk_t *serialNumber)
 {
 	char buf[MD5_DIGEST_SIZE];
 
@@ -319,11 +316,10 @@ scep_generate_transaction_id(const RSA_public_key_t *rsak
 	datatot(digest.ptr, digest.len, 16, transID->ptr, transID->len + 1);
 }
 
-/*
- * builds a transId attribute
+/**
+ * Builds a transId attribute
  */
-chunk_t
-scep_transId_attribute(chunk_t transID)
+chunk_t scep_transId_attribute(chunk_t transID)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "cm"
 				, ASN1_transId_oid
@@ -333,11 +329,10 @@ scep_transId_attribute(chunk_t transID)
 			  );
 }
 
-/*
- * builds a messageType attribute
+/**
+ * Builds a messageType attribute
  */
-chunk_t
-scep_messageType_attribute(scep_msg_t m)
+chunk_t scep_messageType_attribute(scep_msg_t m)
 {
 	chunk_t msgType = {
 		(u_char*)msgType_values[m],
@@ -352,11 +347,10 @@ scep_messageType_attribute(scep_msg_t m)
 			  );
 }
 
-/*
- * builds a senderNonce attribute
+/**
+ * Builds a senderNonce attribute
  */
-chunk_t
-scep_senderNonce_attribute(void)
+chunk_t scep_senderNonce_attribute(void)
 {
 	const size_t nonce_len = 16;
 	u_char nonce_buf[nonce_len];
@@ -372,14 +366,13 @@ scep_senderNonce_attribute(void)
 			  );
 }
 
-/*
- * builds a pkcs7 enveloped and signed scep request
+/**
+ * Builds a pkcs7 enveloped and signed scep request
  */
-chunk_t
-scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg
-, const x509cert_t *enc_cert, int enc_alg
-, const x509cert_t *signer_cert, int digest_alg
-, const RSA_private_key_t *private_key)
+chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
+						   const x509cert_t *enc_cert, int enc_alg,
+						   const x509cert_t *signer_cert, int digest_alg,
+						   const RSA_private_key_t *private_key)
 {
 	chunk_t envelopedData, attributes, request;
 
@@ -400,12 +393,11 @@ scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg
 	return request;
 }
 
-#ifdef LIBCURL
-/* converts a binary request to base64 with 64 characters per line
+/**
+ * Converts a binary request to base64 with 64 characters per line
  * newline and '+' characters are escaped by %0A and %2B, respectively
  */
-static char*
-escape_http_request(chunk_t req)
+static char* escape_http_request(chunk_t req)
 {
 	char *escaped_req = NULL;
 	char *p1, *p2;
@@ -460,70 +452,58 @@ escape_http_request(chunk_t req)
 	free(encoded_req);
 	return escaped_req;
 }
-#endif
 
-/*
- * send a SCEP request via HTTP and wait for a response
+/**
+ * Send a SCEP request via HTTP and wait for a response
  */
-bool
-scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op
-, fetch_request_t req_type, chunk_t *response)
+bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
+					   bool http_get_request, chunk_t *response)
 {
-#ifdef LIBCURL
-	char errorbuffer[CURL_ERROR_SIZE] = "";
+	int len;
+	status_t status;
 	char *complete_url = NULL;
-	struct curl_slist *headers = NULL;
-	CURL *curl;
-	CURLcode res;
 
 	/* initialize response */
 	*response = chunk_empty;
 
-	/* initialize curl context */
-	curl = curl_easy_init();
-	if (curl == NULL)
-	{
-		plog("could not initialize curl context");
-		return FALSE;
-	}
+	DBG(DBG_CONTROL,
+		DBG_log("sending scep request to '%s'", url)
+	)
 
 	if (op == SCEP_PKI_OPERATION)
 	{
 		const char operation[] = "PKIOperation";
 
-		if (req_type == FETCH_GET)
+		if (http_get_request)
 		{
 			char *escaped_req = escape_http_request(pkcs7);
 
 			/* form complete url */
-			int len = strlen(url) + 20 + strlen(operation) + strlen(escaped_req) + 1;
-
+			len = strlen(url) + 20 + strlen(operation) + strlen(escaped_req) + 1;
 			complete_url = malloc(len);
 			snprintf(complete_url, len, "%s?operation=%s&message=%s"
 					, url, operation, escaped_req);
 			free(escaped_req);
 
-			curl_easy_setopt(curl, CURLOPT_HTTPGET, TRUE);
-			headers = curl_slist_append(headers, "Pragma:");
-			headers = curl_slist_append(headers, "Host:");
-			headers = curl_slist_append(headers, "Accept:");
-			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers); 
-			curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
+										 FETCH_HTTP_VERSION_1_0, 
+										 FETCH_REQUEST_HEADER, "Pragma:",
+										 FETCH_REQUEST_HEADER, "Host:",
+										 FETCH_REQUEST_HEADER, "Accept:",
+										 FETCH_END);
 		}
 		else /* HTTP_POST */
 		{
 			/* form complete url */
-			int len = strlen(url) + 11 + strlen(operation) + 1;
-
+			len = strlen(url) + 11 + strlen(operation) + 1;
 			complete_url = malloc(len);
 			snprintf(complete_url, len, "%s?operation=%s", url, operation);
 
-			curl_easy_setopt(curl, CURLOPT_HTTPGET, FALSE);
-			headers = curl_slist_append(headers, "Content-Type:");
-			headers = curl_slist_append(headers, "Expect:");
-			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers); 
-			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char*)pkcs7.ptr);
-			curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, pkcs7.len);
+			status = lib->fetcher->fetch(lib->fetcher, complete_url, response, 
+										 FETCH_REQUEST_DATA, pkcs7,
+										 FETCH_REQUEST_TYPE, "",
+										 FETCH_REQUEST_HEADER, "Expect:",
+										 FETCH_END);
 		}
 	}
 	else  /* SCEP_GET_CA_CERT */
@@ -531,54 +511,21 @@ scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op
 		const char operation[] = "GetCACert";
 
 		/* form complete url */
-		int len = strlen(url) + 32 + strlen(operation) + 1;
-
+		len = strlen(url) + 32 + strlen(operation) + 1;
 		complete_url = malloc(len);
 		snprintf(complete_url, len, "%s?operation=%s&message=CAIdentifier"
 				, url, operation);
 
-		curl_easy_setopt(curl, CURLOPT_HTTPGET, TRUE);
+		status = lib->fetcher->fetch(lib->fetcher, complete_url, response, 
+									 FETCH_END);
 	}
 
-	curl_easy_setopt(curl, CURLOPT_URL, complete_url);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_buffer);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)response);
-	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorbuffer);
-	curl_easy_setopt(curl, CURLOPT_FAILONERROR, TRUE);
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, FETCH_CMD_TIMEOUT);
-		
-	DBG(DBG_CONTROL,
-		DBG_log("sending scep request to '%s'", url)
-	)
-	res = curl_easy_perform(curl);
-		
-	if (res == CURLE_OK)
-	{
-		DBG(DBG_CONTROL,
-			DBG_log("received scep response")
-		)
-		DBG(DBG_RAW,
-			DBG_dump_chunk("SCEP response:\n", *response)
-		)
-	}
-	else
-	{
-		plog("failed to fetch scep response from '%s': %s", url, errorbuffer);
-	}
-	curl_slist_free_all(headers);
-	curl_easy_cleanup(curl);
 	free(complete_url);
-
-	return (res == CURLE_OK);
-#else   /* !LIBCURL */
-	plog("scep error: pluto wasn't compiled with libcurl support");
-	return FALSE;
-#endif  /* !LIBCURL */
+	return (status == SUCCESS);
 }
 
-err_t
-scep_parse_response(chunk_t response, chunk_t transID, contentInfo_t *data
-, scep_attributes_t *attrs, x509cert_t *signer_cert)
+err_t scep_parse_response(chunk_t response, chunk_t transID, contentInfo_t *data,
+						  scep_attributes_t *attrs, x509cert_t *signer_cert)
 {
 	chunk_t attributes;
 

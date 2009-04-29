@@ -48,7 +48,6 @@
 #include "../pluto/pkcs1.h"
 #include "../pluto/pkcs7.h"
 #include "../pluto/certs.h"
-#include "../pluto/fetch.h"
 #include "../pluto/rnd.h"
 
 #include "rsakey.h"
@@ -355,17 +354,17 @@ int main(int argc, char **argv)
 	/* symmetric encryption algorithm used by pkcs7, default is 3DES */
 	int pkcs7_symmetric_cipher = OID_3DES_EDE_CBC;
 
-	/* digest algorithm used by pkcs7, default is MD5 */
-	int pkcs7_digest_alg = OID_MD5;
+	/* digest algorithm used by pkcs7, default is SHA-1 */
+	int pkcs7_digest_alg = OID_SHA1;
 
-	/* signature algorithm used by pkcs10, default is MD5 with RSA encryption */
-	int pkcs10_signature_alg = OID_MD5;
+	/* signature algorithm used by pkcs10, default is SHA-1 with RSA encryption */
+	int pkcs10_signature_alg = OID_SHA1;
 
 	/* URL of the SCEP-Server */
 	char *scep_url = NULL;
 
 	/* http request method, default is GET */
-	fetch_request_t request_type = FETCH_GET;
+	bool http_get_request = TRUE;
 
 	/* poll interval time in manual mode in seconds */
 	u_int poll_interval = DEFAULT_POLL_INTERVAL;
@@ -669,13 +668,13 @@ int main(int argc, char **argv)
 			continue;
 
 		case 'm':       /* --method */
-			if (strcaseeq("post", optarg))
+			if (strcaseeq("get", optarg))
 			{
-				request_type = FETCH_POST;
+				http_get_request = TRUE;
 			}
-			else if (strcaseeq("get", optarg))
+			else if (strcaseeq("post", optarg))
 			{
-				request_type = FETCH_GET;
+				http_get_request = FALSE;
 			}
 			else
 			{
@@ -745,7 +744,7 @@ int main(int argc, char **argv)
 
 	/* load plugins, further infrastructure may need it */
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
-		lib->settings->get_str(lib->settings, "scepclient.load", ""));
+		lib->settings->get_str(lib->settings, "scepclient.load", PLUGINS));
 	print_plugins();
 
 	init_rnd_pool();
@@ -1006,8 +1005,8 @@ int main(int argc, char **argv)
 			exit_scepclient("could not load signature cacert file '%s'", path);
 		x509_ca_sig = cert.u.x509;
 
-		if (!scep_http_request(scep_url, pkcs7, SCEP_PKI_OPERATION
-			, request_type, &scep_response))
+		if (!scep_http_request(scep_url, pkcs7, SCEP_PKI_OPERATION,
+			http_get_request, &scep_response))
 		{
 			exit_scepclient("did not receive a valid scep response");
 		}
@@ -1053,8 +1052,8 @@ int main(int argc, char **argv)
 								, x509_ca_enc, pkcs7_symmetric_cipher
 								, x509_signer, pkcs7_digest_alg, private_key);
 
-			if (!scep_http_request(scep_url, getCertInitial, SCEP_PKI_OPERATION
-			, request_type, &scep_response))
+			if (!scep_http_request(scep_url, getCertInitial, SCEP_PKI_OPERATION,
+				http_get_request, &scep_response))
 			{
 				exit_scepclient("did not receive a valid scep response");
 			}

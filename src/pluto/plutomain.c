@@ -631,7 +631,7 @@ int main(int argc, char **argv)
 
 	/* load plugins, further infrastructure may need it */
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
-		lib->settings->get_str(lib->settings, "pluto.load", ""));
+		lib->settings->get_str(lib->settings, "pluto.load", PLUGINS));
 	print_plugins();
 
 	init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);

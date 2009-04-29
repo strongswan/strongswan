@@ -25,20 +25,11 @@
 #include <pthread.h>
 #endif
 
-#ifdef LIBCURL
-#include <curl/curl.h>
-#endif
-
 #include <freeswan.h>
 
-#ifdef LIBLDAP
-#ifndef LDAP_DEPRECATED
-#define LDAP_DEPRECATED         1
-#endif
-#include <ldap.h>
-#endif
-
-#include "asn1/asn1.h"
+#include <library.h>
+#include <debug.h>
+#include <asn1/asn1.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -80,11 +71,10 @@ static pthread_mutex_t ocsp_fetch_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t fetch_wake_mutex      = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  fetch_wake_cond       = PTHREAD_COND_INITIALIZER;
 
-/*
+/**
  * lock access to my certs and keys
  */
-void
-lock_certs_and_keys(const char *who)
+void lock_certs_and_keys(const char *who)
 {
 	pthread_mutex_lock(&certs_and_keys_mutex);
 	DBG(DBG_CONTROLMORE,
@@ -92,11 +82,10 @@ lock_certs_and_keys(const char *who)
 	)
 }
 
-/*
- * unlock access to my certs and keys
+/**
+ * Unlock access to my certs and keys
  */
-void
-unlock_certs_and_keys(const char *who)
+void unlock_certs_and_keys(const char *who)
 {
 	DBG(DBG_CONTROLMORE,
 		DBG_log("certs and keys unlocked by '%s'", who)
@@ -104,11 +93,10 @@ unlock_certs_and_keys(const char *who)
 	pthread_mutex_unlock(&certs_and_keys_mutex);
 }
 
-/*
- * lock access to the chained authcert list
+/**
+ * Lock access to the chained authcert list
  */
-void
-lock_authcert_list(const char *who)
+void lock_authcert_list(const char *who)
 {
 	pthread_mutex_lock(&authcert_list_mutex);
 	DBG(DBG_CONTROLMORE,
@@ -116,11 +104,10 @@ lock_authcert_list(const char *who)
 	)
 }
 
-/*
- * unlock access to the chained authcert list
+/**
+ * Unlock access to the chained authcert list
  */
-void
-unlock_authcert_list(const char *who)
+void unlock_authcert_list(const char *who)
 {
 	DBG(DBG_CONTROLMORE,
 		DBG_log("authcert list unlocked by '%s'", who)
@@ -128,11 +115,10 @@ unlock_authcert_list(const char *who)
 	pthread_mutex_unlock(&authcert_list_mutex);
 }
 
-/*
- * lock access to the chained crl list
+/**
+ * Lock access to the chained crl list
  */
-void
-lock_crl_list(const char *who)
+void lock_crl_list(const char *who)
 {
 	pthread_mutex_lock(&crl_list_mutex);
 	DBG(DBG_CONTROLMORE,
@@ -140,11 +126,10 @@ lock_crl_list(const char *who)
 	)
 }
 
-/*
- * unlock access to the chained crl list
+/**
+ * Unlock access to the chained crl list
  */
-void
-unlock_crl_list(const char *who)
+void unlock_crl_list(const char *who)
 {
 	DBG(DBG_CONTROLMORE,
 		DBG_log("crl list unlocked by '%s'", who)
@@ -152,11 +137,10 @@ unlock_crl_list(const char *who)
 	pthread_mutex_unlock(&crl_list_mutex);
 }
 
-/*
- * lock access to the ocsp cache
+/**
+ * Lock access to the ocsp cache
  */
-extern void
-lock_ocsp_cache(const char *who)
+extern void lock_ocsp_cache(const char *who)
 {
 	pthread_mutex_lock(&ocsp_cache_mutex);
 	DBG(DBG_CONTROLMORE,
@@ -164,11 +148,10 @@ lock_ocsp_cache(const char *who)
 	)
 }
 
-/*
- * unlock access to the ocsp cache
+/**
+ * Unlock access to the ocsp cache
  */
-extern void
-unlock_ocsp_cache(const char *who)
+extern void unlock_ocsp_cache(const char *who)
 {
 	DBG(DBG_CONTROLMORE,
 		DBG_log("ocsp cache unlocked by '%s'", who)
@@ -176,11 +159,10 @@ unlock_ocsp_cache(const char *who)
 	pthread_mutex_unlock(&ocsp_cache_mutex);
 }
 
-/*
- * lock access to the ca info list
+/**
+ * Lock access to the ca info list
  */
-extern void
-lock_ca_info_list(const char *who)
+extern void lock_ca_info_list(const char *who)
 {
 	pthread_mutex_lock(&ca_info_list_mutex);
 	DBG(DBG_CONTROLMORE,
@@ -188,11 +170,10 @@ lock_ca_info_list(const char *who)
 	)
 }
 
-/*
- * unlock access to the ca info list
+/**
+ * Unlock access to the ca info list
  */
-extern void
-unlock_ca_info_list(const char *who)
+extern void unlock_ca_info_list(const char *who)
 {
 	DBG(DBG_CONTROLMORE,
 		DBG_log("ca info list unlocked by '%s'", who)
@@ -200,11 +181,10 @@ unlock_ca_info_list(const char *who)
 	pthread_mutex_unlock(&ca_info_list_mutex);
 }
 
-/*
- * lock access to the chained crl fetch request list
+/**
+ * Lock access to the chained crl fetch request list
  */
-static void
-lock_crl_fetch_list(const char *who)
+static void lock_crl_fetch_list(const char *who)
 {
 	pthread_mutex_lock(&crl_fetch_list_mutex);
 	DBG(DBG_CONTROLMORE,
@@ -212,11 +192,10 @@ lock_crl_fetch_list(const char *who)
 	)
 }
 
-/*
- * unlock access to the chained crl fetch request list
+/**
+ * Unlock access to the chained crl fetch request list
  */
-static void
-unlock_crl_fetch_list(const char *who)
+static void unlock_crl_fetch_list(const char *who)
 {
 	DBG(DBG_CONTROLMORE,
 		DBG_log("crl fetch request list unlocked by '%s'", who)
@@ -224,11 +203,10 @@ unlock_crl_fetch_list(const char *who)
 	pthread_mutex_unlock(&crl_fetch_list_mutex);
 }
 
-/*
- * lock access to the chained ocsp fetch request list
+/**
+ * Lock access to the chained ocsp fetch request list
  */
-static void
-lock_ocsp_fetch_list(const char *who)
+static void lock_ocsp_fetch_list(const char *who)
 {
 	pthread_mutex_lock(&ocsp_fetch_list_mutex);
 	DBG(DBG_CONTROLMORE,
@@ -236,11 +214,10 @@ lock_ocsp_fetch_list(const char *who)
 	)
 }
 
-/*
- * unlock access to the chained ocsp fetch request list
+/**
+ * Unlock access to the chained ocsp fetch request list
  */
-static void
-unlock_ocsp_fetch_list(const char *who)
+static void unlock_ocsp_fetch_list(const char *who)
 {
 	DBG(DBG_CONTROLMORE,
 		DBG_log("ocsp fetch request list unlocked by '%s'", who)
@@ -248,11 +225,10 @@ unlock_ocsp_fetch_list(const char *who)
 	pthread_mutex_unlock(&ocsp_fetch_list_mutex);
 }
 
-/*
- * wakes up the sleeping fetch thread
+/**
+ * Wakes up the sleeping fetch thread
  */
-void
-wake_fetch_thread(const char *who)
+void wake_fetch_thread(const char *who)
 {
 	if (crl_check_interval > 0)
 	{
@@ -271,11 +247,10 @@ wake_fetch_thread(const char *who)
 #define unlock_ocsp_fetch_list(who) /* do nothing */
 #endif /* !THREADS */
 
-/*
- *  free the dynamic memory used to store fetch requests
+/**
+ *  Free the dynamic memory used to store fetch requests
  */
-static void
-free_fetch_request(fetch_req_t *req)
+static void free_fetch_request(fetch_req_t *req)
 {
 	free(req->issuer.ptr);
 	free(req->authKeySerialNumber.ptr);
@@ -284,269 +259,53 @@ free_fetch_request(fetch_req_t *req)
 	free(req);
 }
 
-/* writes data into a dynamically resizeable chunk_t
- * needed for libcurl responses
- */
-size_t
-write_buffer(void *ptr, size_t size, size_t nmemb, void *data)
-{
-	size_t realsize = size * nmemb;
-	chunk_t *mem = (chunk_t*)data;
-
-	mem->ptr = (u_char *)realloc(mem->ptr, mem->len + realsize);
-	if (mem->ptr) {
-		memcpy(&(mem->ptr[mem->len]), ptr, realsize);
-		mem->len += realsize;
-	}
-	return realsize;
-}
-
 #ifdef THREADS
-/*
- * fetches a binary blob from a url with libcurl
+/**
+ * Fetch an ASN.1 blob coded in PEM or DER format from a URL
  */
-static err_t
-fetch_curl(char *url, chunk_t *blob)
-{
-#ifdef LIBCURL
-	char errorbuffer[CURL_ERROR_SIZE] = "";
-	chunk_t response = chunk_empty;
-	CURLcode res;
-
-	/* get it with libcurl */
-	CURL *curl = curl_easy_init();
-
-	if (curl != NULL)
-	{
-		DBG(DBG_CONTROL,
-			DBG_log("Trying cURL '%s'", url)
-		)
-
-		curl_easy_setopt(curl, CURLOPT_URL, url);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_buffer);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
-		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorbuffer);
-		curl_easy_setopt(curl, CURLOPT_FAILONERROR, TRUE);
-		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, FETCH_CMD_TIMEOUT);
-
-		res = curl_easy_perform(curl);
-
-		if (res == CURLE_OK)
-		{
-			blob->len = response.len;
-			blob->ptr = malloc(response.len);
-			memcpy(blob->ptr, response.ptr, response.len);
-		}
-		else
-		{
-			plog("fetching uri (%s) with libcurl failed: %s", url, errorbuffer);
-		}
-		curl_easy_cleanup(curl);
-		curl_free(response.ptr);
-	}
-	return strlen(errorbuffer) > 0 ? "libcurl error" : NULL;
-#else   /* !LIBCURL */
-	return "warning: not compiled with libcurl support";
-#endif  /* !LIBCURL */
-}
-
-#ifdef LIBLDAP
-/*
- * parses the result returned by an ldap query
- */
-static err_t
-parse_ldap_result(LDAP * ldap, LDAPMessage *result, chunk_t *blob)
+bool fetch_asn1_blob(char *url, chunk_t *blob)
 {
 	err_t ugh = NULL;
 
-	LDAPMessage * entry = ldap_first_entry(ldap, result);
-
-	if (entry != NULL)
+	DBG1("  fetching crl from '%s' ...", url);
+	if (lib->fetcher->fetch(lib->fetcher, url, blob, FETCH_END) != SUCCESS)
 	{
-		BerElement *ber = NULL;
-		char *attr;
-		
-		attr = ldap_first_attribute(ldap, entry, &ber);
-
-		if (attr != NULL)
-		{
-			struct berval **values = ldap_get_values_len(ldap, entry, attr);
-
-			if (values != NULL)
-			{
-				if (values[0] != NULL)
-				{
-					blob->len = values[0]->bv_len;
-					blob->ptr = malloc(blob->len);
-					memcpy(blob->ptr, values[0]->bv_val, blob->len);
-					if (values[1] != NULL)
-					{
-						plog("warning: more than one value was fetched from LDAP URL");
-					}
-				}
-				else
-				{
-					ugh = "no values in attribute";
-				}
-				ldap_value_free_len(values);
-			}
-			else
-			{
-				ugh = ldap_err2string(ldap_result2error(ldap, entry, 0));
-			}
-			ldap_memfree(attr);
-		}
-		else
-		{
-			ugh = ldap_err2string(ldap_result2error(ldap, entry, 0));
-		}
-		ber_free(ber, 0);
+		DBG1("crl fetching failed");
+		return FALSE;
 	}
-	else
-	{
-		ugh = ldap_err2string(ldap_result2error(ldap, result, 0));
-	}
-	return ugh;
-}
-
-/*
- * fetches a binary blob from an ldap url
- */
-static err_t
-fetch_ldap_url(char *url, chunk_t *blob)
-{
-	LDAPURLDesc *lurl;
-	err_t ugh = NULL;
-	int rc;
-
-	DBG(DBG_CONTROL,
-		DBG_log("Trying LDAP URL '%s'", url)
-	)
-
-	rc = ldap_url_parse(url, &lurl);
-	
-	if (rc == LDAP_SUCCESS)
-	{
-		LDAP *ldap = ldap_init(lurl->lud_host, lurl->lud_port);
-
-		if (ldap != NULL)
-		{
-			int ldap_version = LDAP_VERSION3;
-			struct timeval timeout;
-
-			timeout.tv_sec  = FETCH_CMD_TIMEOUT;
-			timeout.tv_usec = 0;
-			ldap_set_option(ldap, LDAP_OPT_PROTOCOL_VERSION, &ldap_version);
-			ldap_set_option(ldap, LDAP_OPT_NETWORK_TIMEOUT, &timeout);
-
-			rc = ldap_simple_bind_s(ldap, NULL, NULL);
-
-			if (rc == LDAP_SUCCESS)
-			{
-				LDAPMessage *result;
-
-				timeout.tv_sec = FETCH_CMD_TIMEOUT;
-				timeout.tv_usec = 0;
-				
-				rc = ldap_search_st(ldap, lurl->lud_dn
-										, lurl->lud_scope
-										, lurl->lud_filter
-										, lurl->lud_attrs
-										, 0, &timeout, &result);
-
-				if (rc == LDAP_SUCCESS)
-				{
-					ugh = parse_ldap_result(ldap, result, blob);
-					ldap_msgfree(result);
-				}
-				else
-				{
-					ugh = ldap_err2string(rc);
-				}
-			}
-			else
-			{
-				ugh = ldap_err2string(rc);
-			}
-			ldap_unbind_s(ldap);
-		}
-		else
-		{
-			ugh = "ldap init";
-		}
-		ldap_free_urldesc(lurl);
-	}
-	else
-	{
-		ugh = ldap_err2string(rc);
-	}
-	return ugh;
-}
-#else   /* !LIBLDAP */
-static err_t
-fetch_ldap_url(char *url, chunk_t *blob)
-{
-	return "LDAP URL fetching not activated in pluto source code";
-}
-#endif  /* !LIBLDAP */
-
-/*
- * fetch an ASN.1 blob coded in PEM or DER format from a URL
- */
-static err_t
-fetch_asn1_blob(char *url, chunk_t *blob)
-{
-	err_t ugh = NULL;
-
-	if (strlen(url) >= 4 && strncasecmp(url, "ldap", 4) == 0)
-	{
-		ugh = fetch_ldap_url(url, blob);
-	}
-	else
-	{
-		ugh = fetch_curl(url, blob);
-	}
-	if (ugh != NULL)
-		return ugh;
 
 	if (is_asn1(*blob))
 	{
-		DBG(DBG_PARSING,
-			DBG_log("  fetched blob coded in DER format")
-		)
+		DBG2("  fetched blob coded in DER format");
 	}
 	else
 	{
 		bool pgp = FALSE;
 
 		ugh = pemtobin(blob, NULL, "", &pgp);
-		if (ugh == NULL)
+		if (ugh != NULL)
 		{
-			if (is_asn1(*blob))
-			{
-				DBG(DBG_PARSING,
-					DBG_log("  fetched blob coded in PEM format")
-				)
-			}
-			else
-			{
-				ugh = "blob coded in unknown format";
-				free(blob->ptr);
-			}
+			free(blob->ptr);
+			return FALSE;
+		};
+		if (is_asn1(*blob))
+		{
+			DBG2("  fetched blob coded in PEM format");
 		}
 		else
 		{
+			DBG1("crl fetched successfully but data coded in unknown format");
 			free(blob->ptr);
+			return FALSE;
 		}
 	}
-	return ugh;
+	return TRUE;
 }
 
-/*
- * complete a distributionPoint URI with ca information
+/**
+ * Complete a distributionPoint URI with ca information
  */
-static char*
-complete_uri(chunk_t distPoint, const char *ldaphost)
+static char* complete_uri(chunk_t distPoint, const char *ldaphost)
 {
 	char *uri;
 	char *ptr  = distPoint.ptr;
@@ -589,11 +348,10 @@ complete_uri(chunk_t distPoint, const char *ldaphost)
 	return uri;
 }
 
-/*
- * try to fetch the crls defined by the fetch requests
+/**
+ * Try to fetch the crls defined by the fetch requests
  */
-static void
-fetch_crls(bool cache_crls)
+static void fetch_crls(bool cache_crls)
 {
 	fetch_req_t *req;
 	fetch_req_t **reqp;
@@ -619,14 +377,7 @@ fetch_crls(bool cache_crls)
 		{
 			char *uri = complete_uri(gn->name, ldaphost);
 
-			err_t ugh = fetch_asn1_blob(uri, &blob);
-			free(uri);
-
-			if (ugh != NULL)
-			{
-				plog("fetch failed:  %s", ugh);
-			}
-			else
+			if (fetch_asn1_blob(uri, &blob))
 			{
 				chunk_t crl_uri = chunk_clone(gn->name);
 
@@ -636,9 +387,11 @@ fetch_crls(bool cache_crls)
 						DBG_log("we have a valid crl")
 					)
 					valid_crl = TRUE;
+					free(uri);
 					break;
 				}
 			}
+			free(uri);
 			gn = gn->next;
 		}
 
@@ -664,73 +417,33 @@ fetch_crls(bool cache_crls)
 	unlock_crl_fetch_list("fetch_crls");
 }
 
-static void
-fetch_ocsp_status(ocsp_location_t* location)
+static void fetch_ocsp_status(ocsp_location_t* location)
 {
-#ifdef LIBCURL
-	chunk_t request;
-	chunk_t response = chunk_empty;
-
-	CURL* curl;
-	CURLcode res;
+	chunk_t request, response;
+	char *uri;
 
 	request = build_ocsp_request(location);
+	response = chunk_empty;
 
-	DBG(DBG_CONTROL,
-		DBG_log("sending ocsp request to location '%.*s'"
-			, (int)location->uri.len, location->uri.ptr)
-	)
-	DBG(DBG_RAW,
-		DBG_dump_chunk("OCSP request", request)
-	)
+	/* we need a null terminated string for curl */
+	uri = malloc(location->uri.len + 1);
+	memcpy(uri, location->uri.ptr, location->uri.len);
+	*(uri + location->uri.len) = '\0';
 
-	/* send via http post using libcurl */
-	curl = curl_easy_init();
-
-	if (curl != NULL)
+	DBG1("  requesting ocsp status from '%s' ...", uri);
+	if (lib->fetcher->fetch(lib->fetcher, uri, &response, 
+							FETCH_REQUEST_DATA, request,
+							FETCH_REQUEST_TYPE, "application/ocsp-request",
+							FETCH_END) == SUCCESS)
 	{
-		char errorbuffer[CURL_ERROR_SIZE];
-		struct curl_slist *headers = NULL;
-		char* uri = malloc(location->uri.len + 1);
-
-		/* we need a null terminated string for curl */
-		memcpy(uri, location->uri.ptr, location->uri.len);
-		*(uri + location->uri.len) = '\0';
-
-		/* set content type header */
-		headers = curl_slist_append(headers, "Content-Type: application/ocsp-request");
-		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-		curl_easy_setopt(curl, CURLOPT_URL, uri);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_buffer);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (void*)request.ptr);
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request.len);
-		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorbuffer);
-		curl_easy_setopt(curl, CURLOPT_FAILONERROR, TRUE);
-		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, FETCH_CMD_TIMEOUT);
-
-		res = curl_easy_perform(curl);
-
-		if (res == CURLE_OK)
-		{
-			DBG(DBG_CONTROL,
-				DBG_log("received ocsp response")
-			)
-			DBG(DBG_RAW,
-				DBG_dump_chunk("OCSP response:\n", response)
-			)
-			parse_ocsp(location, response);
-		}
-		else
-		{
-			plog("failed to fetch ocsp status from '%s': %s", uri, errorbuffer);
-		}
-		curl_slist_free_all(headers);
-		curl_easy_cleanup(curl);
-		free(uri);
-		curl_free(response.ptr);
+		parse_ocsp(location, response);
 	}
+	else
+	{
+		DBG1("ocsp request to %s failed", uri);
+	}
+
+	free(uri);
 	free(request.ptr);
 	chunk_free(&location->nonce);
 
@@ -744,17 +457,12 @@ fetch_ocsp_status(ocsp_location_t* location)
 			certinfo = certinfo->next;
 		}
 	}
-	return;
-#else   /* !LIBCURL */
-	plog("ocsp error: pluto wasn't compiled with libcurl support");
-#endif  /* !LIBCURL */
 }
 
-/*
- * try to fetch the necessary ocsp information
+/**
+ * Try to fetch the necessary ocsp information
  */
-static void
-fetch_ocsp(void)
+static void fetch_ocsp(void)
 {
 	ocsp_location_t *location;
 
@@ -765,15 +473,16 @@ fetch_ocsp(void)
 	while (location != NULL)
 	{
 		if (location->certinfo != NULL)
+		{
 			fetch_ocsp_status(location);
+		}
 		location = location->next;
 	}
 
 	unlock_ocsp_fetch_list("fetch_ocsp");
 }
 
-static void*
-fetch_thread(void *arg)
+static void* fetch_thread(void *arg)
 {
 	struct timespec wait_interval;
 
@@ -817,29 +526,16 @@ fetch_thread(void *arg)
 }
 #endif /* THREADS*/
 
-/*
- * initializes curl and starts the fetching thread
+/**
+ * Initializes curl and starts the fetching thread
  */
-void
-init_fetch(void)
+void init_fetch(void)
 {
-#if defined(LIBCURL) || defined (THREADS)
-	int status;
-#endif
-
-#ifdef LIBCURL
-	/* init curl */
-	status = curl_global_init(CURL_GLOBAL_NOTHING);
-	if (status != CURLE_OK)
-	{
-		plog("libcurl could not be initialized, status = %d", status);
-	}
-#endif  /* LIBCURL */
-
 	if (crl_check_interval > 0)
 	{
 #ifdef THREADS
-		status = pthread_create( &thread, NULL, fetch_thread, NULL);
+		int status = pthread_create( &thread, NULL, fetch_thread, NULL);
+
 		if (status != 0)
 		{
 			plog("fetching thread could not be started, status = %d", status);
@@ -850,8 +546,7 @@ init_fetch(void)
 	}
 }
 
-void
-free_crl_fetch(void)
+void free_crl_fetch(void)
 {
    lock_crl_fetch_list("free_crl_fetch");
 
@@ -863,21 +558,12 @@ free_crl_fetch(void)
 	}
 
 	unlock_crl_fetch_list("free_crl_fetch");
-
-#ifdef LIBCURL
-	if (crl_check_interval > 0)
-	{
-		/* cleanup curl */
-		curl_global_cleanup();
-	}
-#endif  /* LIBCURL */
 }
 
-/*
- * free the chained list of ocsp requests
+/**
+ * Free the chained list of ocsp requests
  */
-void
-free_ocsp_fetch(void)
+void free_ocsp_fetch(void)
 {
 	lock_ocsp_fetch_list("free_ocsp_fetch");
 	free_ocsp_locations(&ocsp_fetch_reqs);
@@ -885,11 +571,10 @@ free_ocsp_fetch(void)
 }
 
 
-/*
- * add additional distribution points
+/**
+ * Add additional distribution points
  */
-void
-add_distribution_points(const generalName_t *newPoints ,generalName_t **distributionPoints)
+void add_distribution_points(const generalName_t *newPoints ,generalName_t **distributionPoints)
 {
 	while (newPoints != NULL)
 	{
@@ -927,9 +612,8 @@ add_distribution_points(const generalName_t *newPoints ,generalName_t **distribu
 	}
 }
 
-fetch_req_t*
-build_crl_fetch_request(chunk_t issuer, chunk_t authKeySerialNumber
-, chunk_t authKeyID, const generalName_t *gn)
+fetch_req_t* build_crl_fetch_request(chunk_t issuer, chunk_t authKeySerialNumber,
+									 chunk_t authKeyID, const generalName_t *gn)
 {
 	fetch_req_t *req = malloc_thing(fetch_req_t);
 	*req = empty_fetch_req;
@@ -948,11 +632,10 @@ build_crl_fetch_request(chunk_t issuer, chunk_t authKeySerialNumber
 	return req;
 }
 
-/*
- * add a crl fetch request to the chained list
+/**
+ * Add a crl fetch request to the chained list
  */
-void
-add_crl_fetch_request(fetch_req_t *req)
+void add_crl_fetch_request(fetch_req_t *req)
 {
 	fetch_req_t *r;
 
@@ -990,11 +673,10 @@ add_crl_fetch_request(fetch_req_t *req)
 	unlock_crl_fetch_list("add_crl_fetch_request");
 }
 
-/*
- * add an ocsp fetch request to the chained list
+/**
+ * Add an ocsp fetch request to the chained list
  */
-void
-add_ocsp_fetch_request(ocsp_location_t *location, chunk_t serialNumber)
+void add_ocsp_fetch_request(ocsp_location_t *location, chunk_t serialNumber)
 {
 	ocsp_certinfo_t certinfo;
 
@@ -1005,11 +687,10 @@ add_ocsp_fetch_request(ocsp_location_t *location, chunk_t serialNumber)
 	unlock_ocsp_fetch_list("add_ocsp_fetch_request");
 }
 
-/*
- * list all distribution points
+/**
+ * List all distribution points
  */
-void
-list_distribution_points(const generalName_t *gn)
+void list_distribution_points(const generalName_t *gn)
 {
 	bool first_gn = TRUE;
 
@@ -1022,11 +703,10 @@ list_distribution_points(const generalName_t *gn)
 	}
 }
 
-/*
- *  list all fetch requests in the chained list
+/**
+ *  List all fetch requests in the chained list
  */
-void
-list_crl_fetch_requests(bool utc)
+void list_crl_fetch_requests(bool utc)
 {
 	fetch_req_t *req;
 
@@ -1066,8 +746,7 @@ list_crl_fetch_requests(bool utc)
 	unlock_crl_fetch_list("list_crl_fetch_requests");
 }
 
-void
-list_ocsp_fetch_requests(bool utc)
+void list_ocsp_fetch_requests(bool utc)
 {
 	lock_ocsp_fetch_list("list_ocsp_fetch_requests");
 	list_ocsp_locations(ocsp_fetch_reqs, TRUE, utc, FALSE);

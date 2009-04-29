@@ -86,7 +86,7 @@ extern chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg
 	, const x509cert_t *signer_cert, int digest_alg
 	, const RSA_private_key_t *private_key);
 extern bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op
-	, fetch_request_t request_type, chunk_t *response);
+	,  bool http_get_request, chunk_t *response);
 extern err_t scep_parse_response(chunk_t response, chunk_t transID
 	, contentInfo_t *data, scep_attributes_t *attrs, x509cert_t *signer_cert);
 
