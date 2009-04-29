@@ -891,12 +891,15 @@ dnl  collect all plugins for libstrongswan
 dnl ======================================
 
 libstrongswan_plugins=
+pluto_plugins=
 
 if test x$curl = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" curl"
+	pluto_plugins=${pluto_plugins}" curl"
 fi
 if test x$ldap = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" ldap"
+	pluto_plugins=${pluto_plugins}" ldap"
 fi
 if test x$aes = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" aes"
@@ -954,6 +957,7 @@ if test x$gmp = xtrue; then
 fi
 
 AC_SUBST(libstrongswan_plugins)
+AC_SUBST(pluto_plugins)
 
 dnl =========================
 dnl  set Makefile.am vars

@@ -49,7 +49,6 @@ pkcs7.c pkcs7.h \
 plutomain.c \
 primegen.c smallprime.c \
 rcv_whack.c rcv_whack.h \
-rnd.c rnd.h \
 server.c server.h \
 sha1.c sha1.h \
 smartcard.c smartcard.h \
