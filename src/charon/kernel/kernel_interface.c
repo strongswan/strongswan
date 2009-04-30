@@ -109,10 +109,10 @@ static status_t update_sa(private_kernel_interface_t *this, u_int32_t spi,
 /**
  * Implementation of kernel_interface_t.del_sa
  */
-static status_t del_sa(private_kernel_interface_t *this, host_t *dst, u_int32_t spi,
-				protocol_id_t protocol, u_int16_t cpi)
+static status_t del_sa(private_kernel_interface_t *this, host_t *src, host_t *dst,
+				u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
 {
-	return this->ipsec->del_sa(this->ipsec, dst, spi, protocol, cpi);
+	return this->ipsec->del_sa(this->ipsec, src, dst, spi, protocol, cpi);
 }
 
 /**
@@ -373,7 +373,7 @@ kernel_interface_t *kernel_interface_create()
 	this->public.get_cpi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
 	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
 	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
-	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
+	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,bool))del_policy;

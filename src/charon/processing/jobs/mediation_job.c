@@ -101,7 +101,7 @@ static void execute(private_mediation_job_t *this)
 				/* send callback to a peer */
 				if (target_sa->callback(target_sa, this->source) != SUCCESS)
 				{
-					DBG1(DBG_JOB, "callback for '%D' to '%D' failed",
+					DBG1(DBG_JOB, "callback for '%Y' to '%Y' failed",
 							this->source, this->target);
 					charon->ike_sa_manager->checkin(charon->ike_sa_manager, target_sa);
 					destroy(this);
@@ -114,7 +114,7 @@ static void execute(private_mediation_job_t *this)
 				if (target_sa->relay(target_sa, this->source, this->connect_id,
 						this->connect_key, this->endpoints, this->response) != SUCCESS)
 				{
-					DBG1(DBG_JOB, "mediation between '%D' and '%D' failed",
+					DBG1(DBG_JOB, "mediation between '%Y' and '%Y' failed",
 							this->source, this->target);
 					charon->ike_sa_manager->checkin(charon->ike_sa_manager, target_sa);
 					/* FIXME: notify the initiator */
@@ -127,13 +127,13 @@ static void execute(private_mediation_job_t *this)
 		}
 		else
 		{
-			DBG1(DBG_JOB, "mediation between '%D' and '%D' failed: "
+			DBG1(DBG_JOB, "mediation between '%Y' and '%Y' failed: "
 					"SA not found", this->source, this->target);
 		}
 	}
 	else
 	{
-		DBG1(DBG_JOB, "mediation between '%D' and '%D' failed: "
+		DBG1(DBG_JOB, "mediation between '%Y' and '%Y' failed: "
 				"peer is not online anymore", this->source, this->target);
 	}
 	destroy(this);

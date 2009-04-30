@@ -101,8 +101,6 @@ void library_init(char *settings)
 					 PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'B', chunk_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
-	pfh->add_handler(pfh, 'D', identification_printf_hook,
-					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'H', host_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'N', enum_printf_hook,
@@ -114,6 +112,8 @@ void library_init(char *settings)
 	pfh->add_handler(pfh, 'V', time_delta_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_POINTER,
 					 PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'Y', identification_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 	
 	this->public.crypto = crypto_factory_create();
 	this->public.creds = credential_factory_create();

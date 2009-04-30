@@ -17,121 +17,8 @@
 
 #ifndef __NET_IPSEC_PF_KEY_H
 #define __NET_IPSEC_PF_KEY_H
-#ifdef __KERNEL__
-extern struct proto_ops pfkey_proto_ops;
-typedef struct sock pfkey_sock;
-extern int debug_pfkey;
-
-extern /* void */ int pfkey_init(void);
-extern /* void */ int pfkey_cleanup(void);
-
-extern struct sock *pfkey_sock_list;
-struct socket_list
-{
-	struct socket *socketp;
-	struct socket_list *next;
-};
-extern int pfkey_list_insert_socket(struct socket*, struct socket_list**);
-extern int pfkey_list_remove_socket(struct socket*, struct socket_list**);
-extern struct socket_list *pfkey_open_sockets;
-extern struct socket_list *pfkey_registered_sockets[SADB_SATYPE_MAX+1];
-
-/* 
- *	There is a field-by-field copy in klips/net/ipsec/ipsec_alg.h
- *	please keep in sync until we migrate all support stuff
- *	to ipsec_alg objects
- */
-struct supported
-{
-	uint16_t supported_alg_exttype;
-	uint8_t supported_alg_id;
-	uint8_t supported_alg_ivlen;
-	uint16_t supported_alg_minbits;
-	uint16_t supported_alg_maxbits;
-};
-extern struct supported_list *pfkey_supported_list[SADB_SATYPE_MAX+1];
-struct supported_list
-{
-	struct supported *supportedp;
-	struct supported_list *next;
-};
-extern int pfkey_list_insert_supported(struct supported*, struct supported_list**);
-extern int pfkey_list_remove_supported(struct supported*, struct supported_list**);
-
-struct sockaddr_key
-{
-	uint16_t	key_family;	/* PF_KEY */
-	uint16_t	key_pad;	/* not used */
-	uint32_t	key_pid;	/* process ID */
-};
-
-struct pfkey_extracted_data
-{
-	struct ipsec_sa* ips;
-	struct ipsec_sa* ips2;
-	struct eroute *eroute;
-};
-
-extern int
-pfkey_alloc_eroute(struct eroute** eroute);
-
-extern int
-pfkey_sa_process(struct sadb_ext *pfkey_ext,
-		 struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_lifetime_process(struct sadb_ext *pfkey_ext,
-		       struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_address_process(struct sadb_ext *pfkey_ext,
-		      struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_key_process(struct sadb_ext *pfkey_ext,
-		  struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_ident_process(struct sadb_ext *pfkey_ext,
-		    struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_sens_process(struct sadb_ext *pfkey_ext,
-		   struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_prop_process(struct sadb_ext *pfkey_ext,
-		   struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_supported_process(struct sadb_ext *pfkey_ext,
-			struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_spirange_process(struct sadb_ext *pfkey_ext,
-		       struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_x_kmprivate_process(struct sadb_ext *pfkey_ext,
-			  struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_x_satype_process(struct sadb_ext *pfkey_ext,
-		       struct pfkey_extracted_data* extr);
-
-extern int
-pfkey_x_debug_process(struct sadb_ext *pfkey_ext,
-		      struct pfkey_extracted_data* extr);
-
-extern int pfkey_register_reply(int satype, struct sadb_msg *);
-extern int pfkey_upmsg(struct socket *, struct sadb_msg *);
-extern int pfkey_expire(struct ipsec_sa *, int);
-extern int pfkey_acquire(struct ipsec_sa *);
-#else /* ! __KERNEL__ */
 
 extern void (*pfkey_debug_func)(const char *message, ...);
-
-#endif /* __KERNEL__ */
 
 extern uint8_t satype2proto(uint8_t satype);
 extern uint8_t proto2satype(uint8_t proto);
@@ -241,12 +128,6 @@ pfkey_ident_build(struct sadb_ext**	pfkey_ext,
 		  uint64_t		ident_id,
 		  uint8_t               ident_len,
 		  char*			ident_string);
-
-#ifdef __KERNEL__
-extern int pfkey_nat_t_new_mapping(struct ipsec_sa *, struct sockaddr *, __u16);
-extern int pfkey_x_nat_t_type_process(struct sadb_ext *pfkey_ext, struct pfkey_extracted_data* extr);
-extern int pfkey_x_nat_t_port_process(struct sadb_ext *pfkey_ext, struct pfkey_extracted_data* extr);
-#endif /* __KERNEL__ */
 
 int
 pfkey_x_nat_t_type_build(struct sadb_ext**  pfkey_ext,

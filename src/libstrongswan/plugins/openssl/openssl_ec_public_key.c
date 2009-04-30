@@ -178,7 +178,7 @@ static bool verify(private_openssl_ec_public_key_t *this, signature_scheme_t sch
 /**
  * Implementation of public_key_t.get_keysize.
  */
-static bool encrypt(private_openssl_ec_public_key_t *this, chunk_t crypto, chunk_t *plain)
+static bool encrypt_(private_openssl_ec_public_key_t *this, chunk_t crypto, chunk_t *plain)
 {
 	DBG1("EC public key encryption not implemented");
 	return FALSE;
@@ -279,7 +279,7 @@ static private_openssl_ec_public_key_t *openssl_ec_public_key_create_empty()
 	
 	this->public.interface.get_type = (key_type_t (*)(public_key_t *this))get_type;
 	this->public.interface.verify = (bool (*)(public_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t signature))verify;
-	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt;
+	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt_;
 	this->public.interface.get_keysize = (size_t (*) (public_key_t *this))get_keysize;
 	this->public.interface.get_id = (identification_t* (*) (public_key_t *this,id_type_t))get_id;
 	this->public.interface.get_encoding = (chunk_t(*)(public_key_t*))get_encoding;

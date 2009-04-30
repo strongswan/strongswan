@@ -21,49 +21,16 @@
 
 char pfkey_v2_build_c_version[] = "$Id$";
 
-/*
- * Some ugly stuff to allow consistent debugging code for use in the
- * kernel and in user space
-*/
-
-#ifdef __KERNEL__
-
-# include <linux/kernel.h>  /* for printk */
-
-# include "freeswan/ipsec_kversion.h" /* for malloc switch */
-# ifdef MALLOC_SLAB
-#  include <linux/slab.h> /* kmalloc() */
-# else /* MALLOC_SLAB */
-#  include <linux/malloc.h> /* kmalloc() */
-# endif /* MALLOC_SLAB */
-# include <linux/errno.h>  /* error codes */
-# include <linux/types.h>  /* size_t */
-# include <linux/interrupt.h> /* mark_bh */
-
-# include <linux/netdevice.h>   /* struct device, and other headers */
-# include <linux/etherdevice.h> /* eth_type_trans */
-# include <linux/ip.h>          /* struct iphdr */ 
-# if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
-#  include <linux/ipv6.h>        /* struct ipv6hdr */
-# endif /* if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE) */
-
-# define MALLOC(size) kmalloc(size, GFP_ATOMIC)
-# define FREE(obj) kfree(obj)
-# include <freeswan.h>
-#else /* __KERNEL__ */
-
 # include <sys/types.h>
-# include <linux/types.h>
-# include <linux/errno.h>
-# include <malloc.h>
+# include <sys/socket.h>
+# include <stdlib.h>
+# include <errno.h>
 # include <string.h> /* memset */
 
 # include <freeswan.h>
 unsigned int pfkey_lib_debug = 0;
 
 void (*pfkey_debug_func)(const char *message, ...) PRINTF_LIKE(1);
-
-/* #define PLUTO */
 
 #define DEBUGGING(args...)  if(pfkey_lib_debug) { \
                               if(pfkey_debug_func != NULL) { \
@@ -73,21 +40,9 @@ void (*pfkey_debug_func)(const char *message, ...) PRINTF_LIKE(1);
                               } }
 # define MALLOC(size) malloc(size)
 # define FREE(obj) free(obj)
-#endif /* __KERNEL__ */
 
 #include <pfkeyv2.h>
 #include <pfkey.h>
-
-#ifdef __KERNEL__
-
-#include "freeswan/radij.h"  /* rd_nodes */
-#include "freeswan/ipsec_encap.h"  /* sockaddr_encap */
-
-# define DEBUGGING(args...) \
-         KLIPS_PRINT(debug_pfkey, "klips_debug:" args)
-#endif /* __KERNEL__ */
-
-#include "ipsec_sa.h"  /* IPSEC_SAREF_NULL, IPSEC_SA_REF_TABLE_IDX_WIDTH */
 
 #define SENDERR(_x) do { error = -(_x); goto errlab; } while (0)
 
@@ -483,14 +438,14 @@ pfkey_address_build(struct sadb_ext**	pfkey_ext,
 			"found address family AF_INET6.\n");
 		saddr_len = sizeof(struct sockaddr_in6);
 		sprintf(ipaddr_txt, "%x:%x:%x:%x:%x:%x:%x:%x-%x"
-			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr16[0])
-			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr16[1])
-			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr16[2])
-			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr16[3])
-			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr16[4])
-			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr16[5])
-			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr16[6])
-			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr16[7])
+			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr[0])
+			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr[1])
+			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr[2])
+			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr[3])
+			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr[4])
+			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr[5])
+			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr[6])
+			, ntohs(((struct sockaddr_in6*)address)->sin6_addr.s6_addr[7])
 			, ntohs(((struct sockaddr_in6*)address)->sin6_port));
 		break;
 	default:

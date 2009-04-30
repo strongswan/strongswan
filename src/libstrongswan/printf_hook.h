@@ -30,10 +30,11 @@ typedef enum printf_hook_argtype_t printf_hook_argtype_t;
 
 #ifdef HAVE_PRINTF_HOOKS
 
+#include <stdio.h>
 #include <printf.h>
 
 enum printf_hook_argtype_t {
-	PRINTF_HOOK_ARGTYPE_END = PA_LAST,
+	PRINTF_HOOK_ARGTYPE_END = -1,
 	PRINTF_HOOK_ARGTYPE_INT = PA_INT,
 	PRINTF_HOOK_ARGTYPE_POINTER = PA_POINTER,
 };

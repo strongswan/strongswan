@@ -339,7 +339,7 @@ static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this,
 		return enumerator;
 	}
 	
-	DBG1(DBG_CFG, "looking for peer configs matching %H[%D]...%H[%D]",
+	DBG1(DBG_CFG, "looking for peer configs matching %H[%Y]...%H[%Y]",
 		 me, my_id, other, other_id);
 	
 	configs = linked_list_create();

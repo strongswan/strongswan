@@ -17,7 +17,9 @@
  */
 
 #include <stdio.h>
+#ifdef HAVE_PRCTL
 #include <sys/prctl.h>
+#endif
 #include <signal.h>
 #include <pthread.h>
 #include <sys/stat.h>
@@ -240,8 +242,10 @@ static void kill_daemon(private_daemon_t *this, char *reason)
  * drop daemon capabilities
  */
 static void drop_capabilities(private_daemon_t *this)
-{	
+{
+#ifdef HAVE_PRCTL
 	prctl(PR_SET_KEEPCAPS, 1);
+#endif
 
 	if (setgid(charon->gid) != 0)
 	{

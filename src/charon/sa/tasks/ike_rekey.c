@@ -177,7 +177,7 @@ static status_t build_r(private_ike_rekey_t *this, message_t *message)
 	
 	this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%D]...%H[%D]",
+	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 		 this->new_sa->get_name(this->new_sa),
 		 this->new_sa->get_unique_id(this->new_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),
@@ -246,7 +246,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 	}
 	
 	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%D]...%H[%D]",
+	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 		 this->new_sa->get_name(this->new_sa),
 		 this->new_sa->get_unique_id(this->new_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),

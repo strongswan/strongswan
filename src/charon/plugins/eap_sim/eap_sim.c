@@ -571,7 +571,7 @@ static bool get_card_triplet(private_eap_sim_t *this,
 	enumerator->destroy(enumerator);
 	if (!card)
 	{
-		DBG1(DBG_IKE, "no SIM card found matching '%D'", this->peer);
+		DBG1(DBG_IKE, "no SIM card found matching '%Y'", this->peer);
 	}
 	return success;
 }
@@ -775,7 +775,7 @@ static bool get_provider_triplet(private_eap_sim_t *this,
 		tried++;
 	}
 	enumerator->destroy(enumerator);
-	DBG1(DBG_IKE, "tried %d SIM providers, but none had a triplet for '%D'",
+	DBG1(DBG_IKE, "tried %d SIM providers, but none had a triplet for '%Y'",
 		 tried, this->peer);
 	return FALSE;
 }

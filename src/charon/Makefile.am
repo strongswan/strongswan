@@ -106,13 +106,14 @@ AM_CFLAGS = -rdynamic \
   -DIPSEC_PIDDIR=\"${piddir}\" \
   -DIPSEC_PLUGINDIR=\"${plugindir}\" \
   -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
-charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm -ldl
+charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm $(DLLIB)
 
 EXTRA_DIST = config/proposal_keywords.txt
-MAINTAINERCLEANFILES = config/proposal_keywords.c
+BUILT_SOURCES = $(srcdir)/config/proposal_keywords.c
+MAINTAINERCLEANFILES = $(srcdir)/config/proposal_keywords.c
 
-config/proposal_keywords.c:	config/proposal_keywords.txt config/proposal_keywords.h
-		(cd `dirname $<` && $(GPERF) -C -G -c -t < `basename $<` > `basename $@` )
+$(srcdir)/config/proposal_keywords.c:	$(srcdir)/config/proposal_keywords.txt $(srcdir)/config/proposal_keywords.h
+		$(GPERF) -C -G -c -t -D < $(srcdir)/config/proposal_keywords.txt > $@
 
 # compile options
 #################
@@ -160,6 +161,11 @@ endif
 if USE_KERNEL_PFKEY
   SUBDIRS += plugins/kernel_pfkey
   PLUGINS += kernel-pfkey
+endif
+
+if USE_KERNEL_PFROUTE
+  SUBDIRS += plugins/kernel_pfroute
+  PLUGINS += kernel-pfroute
 endif
 
 if USE_KERNEL_KLIPS

@@ -307,8 +307,8 @@ u_int asn1_length(chunk_t *blob)
  */
 time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 {
-	struct tm t;
-	time_t tc, tz_offset;
+	struct tm t, local;
+	time_t tc, tz_offset, now;
 	u_char *eot = NULL;
 	
 	if ((eot = memchr(utctime->ptr, 'Z', utctime->len)) != NULL)
@@ -375,9 +375,16 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	
 	/* convert to time_t */
 	tc = mktime(&t);
+	
+	if (tc == -1)
+	{
+		return TIME_MAX;
+	}
 
 	/* if no conversion overflow occurred, compensate timezone */
-	return (tc == -1) ? TIME_MAX : (tc - timezone - tz_offset);
+	now = time(NULL);
+	localtime_r(&now, &local);
+	return tc - local.tm_gmtoff - tz_offset;
 }
 
 /**

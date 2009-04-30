@@ -667,7 +667,7 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 										SHARED_EAP, this->peer, this->server);
 	if (shared == NULL)
 	{
-		DBG1(DBG_IKE, "no EAP key found for hosts '%D' - '%D'",
+		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'",
 			 this->server, this->peer);
 		return NOT_FOUND;
 	}
@@ -1019,14 +1019,14 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	name_len = min(data.len - RESPONSE_PAYLOAD_LEN, 255);
 	snprintf(buf, sizeof(buf), "%.*s", name_len, res->name);
 	userid = identification_create_from_string(buf);
-	DBG2(DBG_IKE, "EAP-MS-CHAPv2 username: '%D'", userid);
+	DBG2(DBG_IKE, "EAP-MS-CHAPv2 username: '%Y'", userid);
 	username = extract_username(userid);
 	
 	shared = charon->credentials->get_shared(charon->credentials,
 											 SHARED_EAP, this->server, userid);
 	if (shared == NULL)
 	{
-		DBG1(DBG_IKE, "no EAP key found for hosts '%D' - '%D'",
+		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'",
 					  this->server, userid);
 		/* FIXME: windows 7 always sends the username that is first entered in
 		 * the username box, even, if the user changes it during retries (probably

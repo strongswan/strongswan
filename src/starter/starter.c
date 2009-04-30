@@ -328,11 +328,11 @@ int main (int argc, char **argv)
 	/* determine if we have a native netkey IPsec stack */
 	if (!starter_netkey_init())
 	{
-		plog("no netkey IPSec stack detected");
+		plog("no netkey IPsec stack detected");
 		if (!starter_klips_init())
 		{
-			plog("no KLIPS IPSec stack detected");
-			exit(LSB_RC_FAILURE);
+			plog("no KLIPS IPsec stack detected");
+			plog("no known IPsec stack detected, ignoring!");
 		}
 	}
 

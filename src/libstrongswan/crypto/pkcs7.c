@@ -334,7 +334,7 @@ static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
 				identification_t *issuer;
 
 				issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", issuer);
+				DBG2("  '%Y'", issuer);
 				issuer->destroy(issuer);
 				break;
 			}
@@ -522,7 +522,7 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 					identification_t *issuer;
 
 					issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-					DBG2("  '%D'", issuer);
+					DBG2("  '%Y'", issuer);
 					issuer->destroy(issuer);
 				}
 				break;

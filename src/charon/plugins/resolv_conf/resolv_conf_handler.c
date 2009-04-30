@@ -79,7 +79,7 @@ static bool handle(private_resolv_conf_handler_t *this, ike_sa_t *ike_sa,
 	if (out)
 	{
 		addr = host_create_from_chunk(family, data, 0);
-		fprintf(out, "nameserver %H   # by strongSwan, from %D\n",
+		fprintf(out, "nameserver %H   # by strongSwan, from %Y\n",
 				addr, ike_sa->get_other_id(ike_sa));
 		DBG1(DBG_IKE, "installing DNS server %H to %s", addr, this->file);
 		addr->destroy(addr);
@@ -140,7 +140,7 @@ static void release(private_resolv_conf_handler_t *this, ike_sa_t *ike_sa,
 		{
 			addr = host_create_from_chunk(family, data, 0);
 			snprintf(matcher, sizeof(matcher),
-					 "nameserver %H   # by strongSwan, from %D\n",
+					 "nameserver %H   # by strongSwan, from %Y\n",
 					 addr, ike_sa->get_other_id(ike_sa));
 			
 			/* copy all, but matching line */

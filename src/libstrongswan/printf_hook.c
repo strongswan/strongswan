@@ -165,7 +165,7 @@ static int custom_fmt_cb(Vstr_base *base, size_t pos, Vstr_fmt_spec *fmt_spec)
 }
 
 /**
- * Add a custom format handler to the given Vstr_conf object 
+ * Add a custom format handler to the given Vstr_conf object
  */
 static void vstr_fmt_add_handler(Vstr_conf *conf, printf_hook_handler_t *handler)
 {
@@ -340,7 +340,7 @@ static void add_handler(private_printf_hook_t *this, char spec,
 		return;
 	}
 	
-	handler = malloc_thing(printf_hook_handler_t); 
+	handler = malloc_thing(printf_hook_handler_t);
 	handler->hook = hook;
 	
 	va_start(args, hook);

@@ -15,10 +15,6 @@
  * RCSID $Id$
  */
 
-#ifdef __KERNEL__
-#include <linux/netdevice.h>
-#endif
-
 #include "freeswan.h"
 
 static const char strongswan_number[] = VERSION;

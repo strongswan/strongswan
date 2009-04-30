@@ -571,8 +571,11 @@ static job_requeue_t receive(private_stroke_socket_t *this)
  */
 static bool open_socket(private_stroke_socket_t *this)
 {
-	struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
+	struct sockaddr_un socket_addr;
 	mode_t old;
+
+	socket_addr.sun_family = AF_UNIX;
+	strcpy(socket_addr.sun_path, STROKE_SOCKET);
 	
 	/* set up unix socket */
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);

@@ -145,14 +145,15 @@ struct kernel_interface_t {
 	/**
 	 * Delete a previously installed SA from the SAD.
 	 * 
+	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
 	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @param cpi			CPI for IPComp or 0
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_sa) (kernel_interface_t *this, host_t *dst, u_int32_t spi,
-						protocol_id_t protocol, u_int16_t cpi);
+	status_t (*del_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
+						u_int32_t spi, protocol_id_t protocol, u_int16_t cpi);
 	
 	/**
 	 * Add a policy to the SPD.

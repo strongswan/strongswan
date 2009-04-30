@@ -642,7 +642,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		{	/* IDr received, check if it matches configuration */
 			if (id_cfg && !id->matches(id, id_cfg))
 			{
-				DBG1(DBG_CFG, "received IDr %D, but require %D", id, id_cfg);
+				DBG1(DBG_CFG, "received IDr %Y, but require %Y", id, id_cfg);
 				message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
 									chunk_empty);
 				return FAILED;
@@ -730,7 +730,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 			return FAILED;
 		}
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%D]...%H[%D]",
+		DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 			 this->ike_sa->get_name(this->ike_sa),
 			 this->ike_sa->get_unique_id(this->ike_sa),
 			 this->ike_sa->get_my_host(this->ike_sa),
@@ -907,7 +907,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 			return FAILED;
 		}
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%D]...%H[%D]",
+		DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 			 this->ike_sa->get_name(this->ike_sa),
 			 this->ike_sa->get_unique_id(this->ike_sa),
 			 this->ike_sa->get_my_host(this->ike_sa),

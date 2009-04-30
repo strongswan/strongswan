@@ -90,7 +90,7 @@ static status_t hash_challenge(private_eap_md5_t *this, chunk_t *response)
 											 this->server, this->peer);
 	if (shared == NULL)
 	{
-		DBG1(DBG_IKE, "no EAP key found for hosts '%D' - '%D'",
+		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'",
 			 this->server, this->peer);
 		return NOT_FOUND;
 	}

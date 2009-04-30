@@ -56,7 +56,7 @@ static status_t build_i(private_ike_delete_t *this, message_t *message)
 {
 	delete_payload_t *delete_payload;
 
-	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%D]...%H[%D]",
+	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),
@@ -95,7 +95,7 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
 	DBG1(DBG_IKE, "received DELETE for IKE_SA %s[%d]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa));
-	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%D]...%H[%D]",
+	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),

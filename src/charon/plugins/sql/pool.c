@@ -562,7 +562,7 @@ static void leases(char *filter, bool utc)
 				printf("    ");
 			}
 		}
-		printf("%D\n", identity);
+		printf("%Y\n", identity);
 		DESTROY_IF(address);
 		identity->destroy(identity);
 	}

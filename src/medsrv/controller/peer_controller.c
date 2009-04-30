@@ -72,7 +72,7 @@ static void list(private_peer_controller_t *this, request_t *request)
 		{
 			request->setf(request, "peers.%d.alias=%s", id, alias);
 			identifier = identification_create_from_encoding(ID_KEY_ID, keyid);
-			request->setf(request, "peers.%d.identifier=%D", id, identifier);
+			request->setf(request, "peers.%d.identifier=%Y", id, identifier);
 			identifier->destroy(identifier);
 		}
 		query->destroy(query);

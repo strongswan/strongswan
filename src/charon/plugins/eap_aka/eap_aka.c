@@ -880,7 +880,7 @@ static status_t server_initiate_challenge(private_eap_aka_t *this, chunk_t sqn,
 	/* Get the shared key K: */
 	if (load_key(this->server, this->peer, &this->k) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "no shared key found for IDs '%D' - '%D' to authenticate "
+		DBG1(DBG_IKE, "no shared key found for IDs '%Y' - '%Y' to authenticate "
 				"with EAP-AKA", this->server, this->peer);
 		return FAILED;
 	}
@@ -1202,7 +1202,7 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 	{
 	 	*out = build_aka_payload(this, EAP_RESPONSE, identifier,
 	 							 AKA_AUTHENTICATION_REJECT, AT_END);
-		DBG3(DBG_IKE, "no shared key found for IDs '%D' - '%D' to authenticate "
+		DBG3(DBG_IKE, "no shared key found for IDs '%Y' - '%Y' to authenticate "
 			 "with EAP-AKA, sending %N", this->peer, this->server,
 			 aka_subtype_names, AKA_AUTHENTICATION_REJECT);
 		return NEED_MORE;

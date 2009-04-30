@@ -96,7 +96,7 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator,
 		return FALSE;
 	}
 	
-	DBG1(DBG_CFG, "  fetched certificate \"%D\"", cert->get_subject(cert));
+	DBG1(DBG_CFG, "  fetched certificate \"%Y\"", cert->get_subject(cert));
 	charon->credentials->cache_cert(charon->credentials, cert);
 	
 	if (*rule == AUTH_HELPER_IM_HASH_URL)

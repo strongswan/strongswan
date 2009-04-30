@@ -1175,7 +1175,7 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this, int nlmsg_ty
 /**
  * Implementation of kernel_net_t.add_route.
  */
-status_t add_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
+static status_t add_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
 		u_int8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
 {
 	return manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
@@ -1185,7 +1185,7 @@ status_t add_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
 /**
  * Implementation of kernel_net_t.del_route.
  */
-status_t del_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
+static status_t del_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
 		u_int8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
 {
 	return manage_srcroute(this, RTM_DELROUTE, 0, dst_net, prefixlen,

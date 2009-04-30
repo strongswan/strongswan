@@ -174,7 +174,7 @@ static status_t process_peer(private_eap_gtc_t *this,
 											 this->peer, this->server);
 	if (shared == NULL)
 	{
-		DBG1(DBG_IKE, "no EAP key found for '%D' - '%D'",
+		DBG1(DBG_IKE, "no EAP key found for '%Y' - '%Y'",
 			 this->peer, this->server);
 		return FAILED;
 	}

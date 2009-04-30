@@ -249,7 +249,7 @@ static void terminate_srcip(private_stroke_control_t *this,
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
 	host_t *start = NULL, *end = NULL, *vip;
-	chunk_t chunk_start, chunk_end, chunk_vip;
+	chunk_t chunk_start, chunk_end = chunk_empty, chunk_vip;
 	
 	if (msg->terminate_srcip.start)
 	{

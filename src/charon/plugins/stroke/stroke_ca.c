@@ -398,14 +398,14 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 			first = FALSE;
 		}
 		fprintf(out, "\n");
-		fprintf(out, "  authname:    \"%D\"\n", cert->get_subject(cert));
+		fprintf(out, "  authname:    \"%Y\"\n", cert->get_subject(cert));
 
 		/* list authkey and keyid */
 		if (public)
 		{
-			fprintf(out, "  authkey:      %D\n",
+			fprintf(out, "  authkey:      %Y\n",
 					public->get_id(public, ID_PUBKEY_SHA1));
-			fprintf(out, "  keyid:        %D\n",
+			fprintf(out, "  keyid:        %Y\n",
 					public->get_id(public, ID_PUBKEY_INFO_SHA1));
 			public->destroy(public);
 		}

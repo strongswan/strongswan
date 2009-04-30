@@ -14,6 +14,8 @@
  *
  * RCSID $Id$
  */
+#include <sys/socket.h>
+
 #include "internal.h"
 #include "freeswan.h"
 

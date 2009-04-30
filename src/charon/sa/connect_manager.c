@@ -1196,8 +1196,8 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
 		}
 		else
 		{
-			DBG1(DBG_IKE, "there is no mediated connection waiting between '%D' "
-					"and '%D'", checklist->initiator.id, checklist->responder.id);
+			DBG1(DBG_IKE, "there is no mediated connection waiting between '%Y' "
+					"and '%Y'", checklist->initiator.id, checklist->responder.id);
 		}
 	}
 }
@@ -1396,7 +1396,7 @@ static bool check_and_register(private_connect_manager_t *this,
 
 	if (get_initiated_by_ids(this, id, peer_id, &initiated) != SUCCESS)
 	{
-		DBG2(DBG_IKE, "registered waiting mediated connection with '%D'", peer_id);
+		DBG2(DBG_IKE, "registered waiting mediated connection with '%Y'", peer_id);
 		initiated = initiated_create(id, peer_id);
 		this->initiated->insert_last(this->initiated, initiated);
 		already_there = FALSE;
@@ -1425,7 +1425,7 @@ static void check_and_initiate(private_connect_manager_t *this, ike_sa_id_t *med
 
 	if (get_initiated_by_ids(this, id, peer_id, &initiated) != SUCCESS)
 	{
-		DBG2(DBG_IKE, "no waiting mediated connections with '%D'", peer_id);
+		DBG2(DBG_IKE, "no waiting mediated connections with '%Y'", peer_id);
 		this->mutex->unlock(this->mutex);
 		return;
 	}

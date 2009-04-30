@@ -38,7 +38,7 @@ $(LIBCRYPTOBUILDDIR)/libcrypto.a \
 # This compile option activates smartcard support
 if USE_SMARTCARD
   AM_CFLAGS += -DSMARTCARD
-  scepclient_LDADD += -ldl
+  scepclient_LDADD += $(DLLIB)
 endif
 
 dist_man_MANS = scepclient.8

@@ -96,7 +96,7 @@ static enumerator_t* create_private_enumerator(private_medcli_creds_t *this,
 	if ((type != KEY_RSA && type != KEY_ANY) ||
 		id == NULL || id->get_type(id) != ID_KEY_ID)
 	{
-		DBG1(DBG_CFG, "%N - %D", key_type_names, type, id);
+		DBG1(DBG_CFG, "%N - %Y", key_type_names, type, id);
 		return NULL;
 	}
 	

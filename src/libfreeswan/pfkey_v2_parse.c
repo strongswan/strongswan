@@ -21,50 +21,14 @@
 
 char pfkey_v2_parse_c_version[] = "$Id$";
 
-/*
- * Some ugly stuff to allow consistent debugging code for use in the
- * kernel and in user space
-*/
-
-#ifdef __KERNEL__
-
-# include <linux/kernel.h>  /* for printk */
-
-#include "freeswan/ipsec_kversion.h" /* for malloc switch */
-
-# ifdef MALLOC_SLAB
-#  include <linux/slab.h> /* kmalloc() */
-# else /* MALLOC_SLAB */
-#  include <linux/malloc.h> /* kmalloc() */
-# endif /* MALLOC_SLAB */
-# include <linux/errno.h>  /* error codes */
-# include <linux/types.h>  /* size_t */
-# include <linux/interrupt.h> /* mark_bh */
-
-# include <linux/netdevice.h>   /* struct device, and other headers */
-# include <linux/etherdevice.h> /* eth_type_trans */
-# include <linux/ip.h>          /* struct iphdr */ 
-# if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
-#  include <linux/ipv6.h>        /* struct ipv6hdr */
-# endif /* if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE) */
-extern int debug_pfkey;
-
-#include "freeswan.h"
-
-#include "ipsec_encap.h"
-
-#else /* __KERNEL__ */
-
 # include <sys/types.h>
-# include <linux/types.h>
-# include <linux/errno.h>
+# include <sys/socket.h>
+# include <errno.h>
 
 # include <freeswan.h>
 # include <constants.h>
 # include <defs.h>  /* for PRINTF_LIKE */
 # include <log.h>  /* for debugging and DBG_log */
-
-/* #define PLUTO */
 
 # ifdef PLUTO
 #  define DEBUGGING(level, args...)  { DBG_log("pfkey_lib_debug:" args);  }
@@ -72,21 +36,8 @@ extern int debug_pfkey;
 #  define DEBUGGING(level, args...)  if(pfkey_lib_debug & level) { printf("pfkey_lib_debug:" args); } else { ; }
 # endif
 
-#endif /* __KERNEL__ */
-
-
 #include <pfkeyv2.h>
 #include <pfkey.h>
-
-#ifdef __KERNEL__
-extern int sysctl_ipsec_debug_verbose;
-# define DEBUGGING(level, args...) \
-         KLIPS_PRINT( \
-		((debug_pfkey & level & (PF_KEY_DEBUG_PARSE_STRUCT | PF_KEY_DEBUG_PARSE_PROBLEM)) \
-		 || (sysctl_ipsec_debug_verbose && (debug_pfkey & level & PF_KEY_DEBUG_PARSE_FLOW))) \
- 		, "klips_debug:" args)
-#endif /* __KERNEL__ */
-#include "ipsec_sa.h"  /* IPSEC_SAREF_NULL, IPSEC_SA_REF_TABLE_IDX_WIDTH */
 
 
 #define SENDERR(_x) do { error = -(_x); goto errlab; } while (0)
@@ -96,21 +47,11 @@ struct satype_tbl {
 	uint8_t satype;
 	char* name;
 } static satype_tbl[] = {
-#ifdef __KERNEL__
-	{ IPPROTO_ESP,	SADB_SATYPE_ESP,	"ESP"  },
-	{ IPPROTO_AH,	SADB_SATYPE_AH,		"AH"   },
-	{ IPPROTO_IPIP,	SADB_X_SATYPE_IPIP,	"IPIP" },
-#ifdef CONFIG_IPSEC_IPCOMP
-	{ IPPROTO_COMP,	SADB_X_SATYPE_COMP,	"COMP" },
-#endif /* CONFIG_IPSEC_IPCOMP */
-	{ IPPROTO_INT,	SADB_X_SATYPE_INT,	"INT" },
-#else /* __KERNEL__ */
 	{ SA_ESP,	SADB_SATYPE_ESP,	"ESP"  },
 	{ SA_AH,	SADB_SATYPE_AH,		"AH"   },
 	{ SA_IPIP,	SADB_X_SATYPE_IPIP,	"IPIP" },
 	{ SA_COMP,	SADB_X_SATYPE_COMP,	"COMP" },
 	{ SA_INT,	SADB_X_SATYPE_INT,	"INT" },
-#endif /* __KERNEL__ */
 	{ 0,		0,			"UNKNOWN" }
 };
 
@@ -418,14 +359,14 @@ pfkey_address_parse(struct sadb_ext *pfkey_ext)
 	case AF_INET6:
 		saddr_len = sizeof(struct sockaddr_in6);
 		sprintf(ipaddr_txt, "%x:%x:%x:%x:%x:%x:%x:%x"
-			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr16[0])
-			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr16[1])
-			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr16[2])
-			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr16[3])
-			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr16[4])
-			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr16[5])
-			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr16[6])
-			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr16[7]));
+			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr[0])
+			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr[1])
+			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr[2])
+			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr[3])
+			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr[4])
+			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr[5])
+			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr[6])
+			, ntohs(((struct sockaddr_in6*)s)->sin6_addr.s6_addr[7]));
 		DEBUGGING(PF_KEY_DEBUG_PARSE_STRUCT,
 			  "pfkey_address_parse: "
 			  "found exttype=%u(%s) family=%d(AF_INET6) address=%s proto=%u port=%u.\n",

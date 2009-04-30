@@ -95,14 +95,14 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 											CERT_X509, KEY_ANY, id, TRUE);
 					if (cert)
 					{
-						DBG1(DBG_IKE, "received cert request for \"%D\"",
+						DBG1(DBG_IKE, "received cert request for \"%Y\"",
 							 cert->get_subject(cert));
 						auth->add(auth, AUTH_RULE_CA_CERT, cert);
 					}
 					else
 					{
 						DBG1(DBG_IKE, "received cert request for unknown ca "
-									  "with keyid %D", id);
+									  "with keyid %Y", id);
 					}
 					id->destroy(id);
 				}
@@ -211,14 +211,14 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 					{
 						if (first)
 						{	/* the first is an end entity certificate */
-							DBG1(DBG_IKE, "received end entity cert \"%D\"",
+							DBG1(DBG_IKE, "received end entity cert \"%Y\"",
 								 cert->get_subject(cert));
 							auth->add(auth, AUTH_HELPER_SUBJECT_CERT, cert);
 							first = FALSE;
 						}
 						else
 						{
-							DBG1(DBG_IKE, "received issuer cert \"%D\"",
+							DBG1(DBG_IKE, "received issuer cert \"%Y\"",
 								 cert->get_subject(cert));
 							auth->add(auth, AUTH_HELPER_IM_CERT, cert);
 						}
@@ -300,7 +300,7 @@ static void add_certreq(certreq_payload_t **req, certificate_t *cert)
 			keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
 			(*req)->add_keyid(*req, keyid->get_encoding(keyid));
 			public->destroy(public);
-			DBG1(DBG_IKE, "sending cert request for \"%D\"",
+			DBG1(DBG_IKE, "sending cert request for \"%Y\"",
 				 cert->get_subject(cert));
 			break;
 		}

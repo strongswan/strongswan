@@ -71,7 +71,7 @@ static status_t build(private_pubkey_authenticator_t *this, message_t *message)
 											   id, auth);
 	if (private == NULL)
 	{
-		DBG1(DBG_IKE, "no private key found for '%D'", id);
+		DBG1(DBG_IKE, "no private key found for '%Y'", id);
 		return NOT_FOUND;
 	}
 	
@@ -122,7 +122,7 @@ static status_t build(private_pubkey_authenticator_t *this, message_t *message)
 		message->add_payload(message, (payload_t*)auth_payload);
 		status = SUCCESS;
 	}
-	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N %s", id,
+	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
 		 auth_method_names, auth_method, 
 		 (status == SUCCESS)? "successful":"failed");
 	chunk_free(&octets);
@@ -186,7 +186,7 @@ static status_t process(private_pubkey_authenticator_t *this, message_t *message
 	{
 		if (public->verify(public, scheme, octets, auth_data))
 		{
-			DBG1(DBG_IKE, "authentication of '%D' with %N successful",
+			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
 						   id, auth_method_names, auth_method);
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
@@ -203,7 +203,7 @@ static status_t process(private_pubkey_authenticator_t *this, message_t *message
 	chunk_free(&octets);
 	if (status == NOT_FOUND)
 	{
-		DBG1(DBG_IKE, "no trusted %N public key found for '%D'",
+		DBG1(DBG_IKE, "no trusted %N public key found for '%Y'",
 			 key_type_names, key_type, id);
 	}
 	return status;

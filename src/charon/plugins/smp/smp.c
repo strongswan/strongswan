@@ -109,7 +109,7 @@ static void write_id(xmlTextWriterPtr writer, char *element, identification_t *i
 					break;
 			}
 			xmlTextWriterWriteAttribute(writer, "type", type);
-			xmlTextWriterWriteFormatString(writer, "%D", id);
+			xmlTextWriterWriteFormatString(writer, "%Y", id);
 			break;
 		}
 		default:

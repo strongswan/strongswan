@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
@@ -18,10 +18,32 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+
+#ifdef HAVE_NET_PFKEYV2_H
+#include <net/pfkeyv2.h>
+#else
 #include <stdint.h>
-#include <linux/ipsec.h>
 #include <linux/pfkeyv2.h>
+#endif
+
+#ifdef SADB_X_EXT_NAT_T_TYPE
+#define HAVE_NATT
+#endif
+
+#ifdef HAVE_NETIPSEC_IPSEC_H
+#include <netipsec/ipsec.h>
+#else
+#include <linux/ipsec.h>
+#endif
+
+#ifdef HAVE_NATT
+#ifdef HAVE_NETINET_UDP_H
+#include <netinet/udp.h>
+#else
 #include <linux/udp.h>
+#endif /*HAVE_NETINET_UDP_H*/
+#endif /*HAVE_NATT*/
+
 #include <unistd.h>
 #include <pthread.h>
 #include <errno.h>
@@ -38,6 +60,30 @@
 #include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/update_sa_job.h>
 
+/** non linux specific */
+#ifndef IPPROTO_COMP
+#define IPPROTO_COMP IPPROTO_IPCOMP
+#endif
+
+#ifndef SADB_X_AALG_SHA2_256HMAC
+#define SADB_X_AALG_SHA2_256HMAC SADB_X_AALG_SHA2_256
+#define SADB_X_AALG_SHA2_384HMAC SADB_X_AALG_SHA2_384
+#define SADB_X_AALG_SHA2_512HMAC SADB_X_AALG_SHA2_512
+#endif
+
+#ifndef SADB_X_EALG_AESCBC
+#define SADB_X_EALG_AESCBC SADB_X_EALG_AES
+#endif
+
+#ifndef SADB_X_EALG_CASTCBC
+#define SADB_X_EALG_CASTCBC SADB_X_EALG_CAST128CBC
+#endif
+
+#ifndef SOL_IP
+#define SOL_IP IPPROTO_IP
+#define SOL_IPV6 IPPROTO_IPV6
+#endif
+
 /** from linux/in.h */
 #ifndef IP_IPSEC_POLICY
 #define IP_IPSEC_POLICY 16
@@ -46,7 +92,7 @@
 /* missing on uclibc */
 #ifndef IPV6_IPSEC_POLICY
 #define IPV6_IPSEC_POLICY 34
-#endif /*IPV6_IPSEC_POLICY*/
+#endif
 
 /** default priority of installed policies */
 #define PRIO_LOW 3000
@@ -160,8 +206,8 @@ struct route_entry_t {
 static void route_entry_destroy(route_entry_t *this)
 {
 	free(this->if_name);
-	this->src_ip->destroy(this->src_ip);
-	this->gateway->destroy(this->gateway);
+	DESTROY_IF(this->src_ip);
+	DESTROY_IF(this->gateway);
 	chunk_free(&this->dst_net);
 	free(this);
 }
@@ -217,7 +263,7 @@ static policy_entry_t *create_policy_entry(traffic_selector_t *src_ts,
 	
 	/* src or dest proto may be "any" (0), use more restrictive one */
 	policy->src.proto = max(src_ts->get_protocol(src_ts), dst_ts->get_protocol(dst_ts));
-	policy->src.proto = policy->src.proto ? policy->src.proto : IPSEC_PROTO_ANY; 
+	policy->src.proto = policy->src.proto ? policy->src.proto : IPSEC_PROTO_ANY;
 	policy->dst.proto = policy->src.proto;
 	
 	return policy;
@@ -268,7 +314,6 @@ struct pfkey_msg_t
 	 */
 	struct sadb_msg *msg;
 	
-	
 	/**
 	 * PF_KEY message extensions
 	 */
@@ -305,7 +350,7 @@ struct pfkey_msg_t
 	};
 };
 
-ENUM(sadb_ext_type_names, SADB_EXT_RESERVED, SADB_X_EXT_KMADDRESS,
+ENUM(sadb_ext_type_names, SADB_EXT_RESERVED, SADB_EXT_MAX,
 	"SADB_EXT_RESERVED",
 	"SADB_EXT_SA",
 	"SADB_EXT_LIFETIME_CURRENT",
@@ -333,6 +378,7 @@ ENUM(sadb_ext_type_names, SADB_EXT_RESERVED, SADB_X_EXT_KMADDRESS,
 	"SADB_X_EXT_SEC_CTX",
 	"SADB_X_EXT_KMADDRESS"
 );
+
 /**
  * convert a IKEv2 specific protocol identifier to the PF_KEY sa type
  */
@@ -396,8 +442,10 @@ static u_int8_t mode2kernel(ipsec_mode_t mode)
 			return IPSEC_MODE_TRANSPORT;
 		case MODE_TUNNEL:
 			return IPSEC_MODE_TUNNEL;
+#ifdef IPSEC_MODE_BEET
 		case MODE_BEET:
 			return IPSEC_MODE_BEET;
+#endif
 		default:
 			return mode;
 	}
@@ -414,13 +462,16 @@ static u_int8_t dir2kernel(policy_dir_t dir)
 			return IPSEC_DIR_INBOUND;
 		case POLICY_OUT:
 			return IPSEC_DIR_OUTBOUND;
+#ifdef IPSEC_DIR_FWD
 		case POLICY_FWD:
 			return IPSEC_DIR_FWD;
+#endif
 		default:
 			return dir;
 	}
 }
 
+#ifdef SADB_X_MIGRATE
 /**
  * convert the policy direction in ipsec.h to the general one.
  */
@@ -432,12 +483,16 @@ static policy_dir_t kernel2dir(u_int8_t  dir)
 			return POLICY_IN;
 		case IPSEC_DIR_OUTBOUND:
 			return POLICY_OUT;
+#ifdef IPSEC_DIR_FWD
 		case IPSEC_DIR_FWD:
 			return POLICY_FWD;
+#endif
 		default:
 			return dir;
 	}
 }
+#endif /*SADB_X_MIGRATE*/
+
 typedef struct kernel_algorithm_t kernel_algorithm_t;
 
 /**
@@ -461,32 +516,32 @@ struct kernel_algorithm_t {
  * Algorithms for encryption
  */
 static kernel_algorithm_t encryption_algs[] = {
-/*	{ENCR_DES_IV64, 			0							}, */
-	{ENCR_DES, 					SADB_EALG_DESCBC			},
-	{ENCR_3DES, 				SADB_EALG_3DESCBC			},
-/*	{ENCR_RC5, 					0							}, */
-/*	{ENCR_IDEA, 				0							}, */
-	{ENCR_CAST, 				SADB_X_EALG_CASTCBC			},
-	{ENCR_BLOWFISH, 			SADB_X_EALG_BLOWFISHCBC		},
-/*	{ENCR_3IDEA, 				0							}, */
-/*	{ENCR_DES_IV32, 			0							}, */
-	{ENCR_NULL, 				SADB_EALG_NULL				},
-	{ENCR_AES_CBC,	 			SADB_X_EALG_AESCBC			},
-/*	{ENCR_AES_CTR, 				SADB_X_EALG_AESCTR			}, */
+/*	{ENCR_DES_IV64,				0							}, */
+	{ENCR_DES,					SADB_EALG_DESCBC			},
+	{ENCR_3DES,					SADB_EALG_3DESCBC			},
+/*	{ENCR_RC5,					0							}, */
+/*	{ENCR_IDEA,					0							}, */
+	{ENCR_CAST,					SADB_X_EALG_CASTCBC			},
+	{ENCR_BLOWFISH,				SADB_X_EALG_BLOWFISHCBC		},
+/*	{ENCR_3IDEA,				0							}, */
+/*	{ENCR_DES_IV32,				0							}, */
+	{ENCR_NULL,					SADB_EALG_NULL				},
+	{ENCR_AES_CBC,				SADB_X_EALG_AESCBC			},
+/*	{ENCR_AES_CTR,				SADB_X_EALG_AESCTR			}, */
 /*  {ENCR_AES_CCM_ICV8,			SADB_X_EALG_AES_CCM_ICV8	}, */
 /*	{ENCR_AES_CCM_ICV12,		SADB_X_EALG_AES_CCM_ICV12	}, */
 /*	{ENCR_AES_CCM_ICV16,		SADB_X_EALG_AES_CCM_ICV16	}, */
 /*	{ENCR_AES_GCM_ICV8,			SADB_X_EALG_AES_GCM_ICV8	}, */
 /*	{ENCR_AES_GCM_ICV12,		SADB_X_EALG_AES_GCM_ICV12	}, */
 /*	{ENCR_AES_GCM_ICV16,		SADB_X_EALG_AES_GCM_ICV16	}, */
-	{END_OF_LIST, 				0							},
+	{END_OF_LIST,				0							},
 };
 
 /**
  * Algorithms for integrity protection
  */
 static kernel_algorithm_t integrity_algs[] = {
-	{AUTH_HMAC_MD5_96, 			SADB_AALG_MD5HMAC			},
+	{AUTH_HMAC_MD5_96,			SADB_AALG_MD5HMAC			},
 	{AUTH_HMAC_SHA1_96,			SADB_AALG_SHA1HMAC			},
 	{AUTH_HMAC_SHA2_256_128,	SADB_X_AALG_SHA2_256HMAC	},
 	{AUTH_HMAC_SHA2_384_192,	SADB_X_AALG_SHA2_384HMAC	},
@@ -494,7 +549,7 @@ static kernel_algorithm_t integrity_algs[] = {
 /*	{AUTH_DES_MAC,				0,							}, */
 /*	{AUTH_KPDK_MD5,				0,							}, */
 	{AUTH_AES_XCBC_96,			SADB_X_AALG_AES_XCBC_MAC,	},
-	{END_OF_LIST, 				0,							},
+	{END_OF_LIST,				0,							},
 };
 
 #if 0
@@ -502,11 +557,11 @@ static kernel_algorithm_t integrity_algs[] = {
  * Algorithms for IPComp, unused yet
  */
 static kernel_algorithm_t compression_algs[] = {
-/*	{IPCOMP_OUI, 				0							}, */
+/*	{IPCOMP_OUI,				0							}, */
 	{IPCOMP_DEFLATE,			SADB_X_CALG_DEFLATE			},
 	{IPCOMP_LZS,				SADB_X_CALG_LZS				},
 	{IPCOMP_LZJH,				SADB_X_CALG_LZJH			},
-	{END_OF_LIST, 				0							},
+	{END_OF_LIST,				0							},
 };
 #endif
 
@@ -533,8 +588,11 @@ static void host2ext(host_t *host, struct sadb_address *ext)
 {
 	sockaddr_t *host_addr = host->get_sockaddr(host);
 	socklen_t *len = host->get_sockaddr_len(host);
- 	memcpy((char*)(ext + 1), host_addr, *len);
- 	ext->sadb_address_len = PFKEY_LEN(sizeof(*ext) + *len);
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+	host_addr->sa_len = *len;
+#endif
+	memcpy((char*)(ext + 1), host_addr, *len);
+	ext->sadb_address_len = PFKEY_LEN(sizeof(*ext) + *len);
 }
 
 /**
@@ -562,10 +620,14 @@ static void add_anyaddr_ext(struct sadb_msg *msg, int family, u_int8_t type)
 	addr->sadb_address_exttype = type;
 	sockaddr_t *saddr = (sockaddr_t*)(addr + 1);
 	saddr->sa_family = family;
- 	addr->sadb_address_len = PFKEY_LEN(sizeof(*addr) + len);
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+	saddr->sa_len = len;
+#endif
+	addr->sadb_address_len = PFKEY_LEN(sizeof(*addr) + len);
 	PFKEY_EXT_ADD(msg, addr);
 }
 
+#ifdef HAVE_NATT
 /**
  * add udp encap extensions to a sadb_msg
  */
@@ -592,6 +654,7 @@ static void add_encap_ext(struct sadb_msg *msg, host_t *src, host_t *dst)
 	nat_port->sadb_x_nat_t_port_port = htons(dst->get_port(dst));
 	PFKEY_EXT_ADD(msg, nat_port);
 }
+#endif /*HAVE_NATT*/
 
 /**
  * Convert a sadb_address to a traffic_selector
@@ -606,7 +669,7 @@ static traffic_selector_t* sadb_address2ts(struct sadb_address *address)
      */
 	host = host_create_from_sockaddr((sockaddr_t*)&address[1])	;
 	ts = traffic_selector_create_from_subnet(host, address->sadb_address_prefixlen,
- 				address->sadb_address_proto, host->get_port(host));
+				address->sadb_address_proto, host->get_port(host));
 	return ts;
 }
 
@@ -645,7 +708,7 @@ static status_t parse_pfkey_message(struct sadb_msg *msg, pfkey_msg_t *out)
 		
 		if (out->ext[ext->sadb_ext_type])
 		{
-			DBG1(DBG_KNL, "duplicate %N extension",			
+			DBG1(DBG_KNL, "duplicate %N extension",
 						   sadb_ext_type_names, ext->sadb_ext_type);
 			break;
 		}
@@ -699,7 +762,7 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 	}
 	
 	while (TRUE)
-	{	
+	{
 		msg = (struct sadb_msg*)buf;
 		
 		len = recv(socket, buf, sizeof(buf), 0);
@@ -757,7 +820,7 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 	*out_len = len;
 	*out = (struct sadb_msg*)malloc(len);
 	memcpy(*out, buf, len);
-		
+	
 	this->mutex_pfkey->unlock(this->mutex_pfkey);
 	
 	return SUCCESS;
@@ -868,8 +931,9 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* 
 	charon->processor->queue_job(charon->processor, job);
 }
 
+#ifdef SADB_X_MIGRATE
 /**
- * Process a SADB_MIGRATE message from the kernel
+ * Process a SADB_X_MIGRATE message from the kernel
  */
 static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* msg)
 {
@@ -893,7 +957,7 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	DBG2(DBG_KNL, "  policy %R === %R %N, id %u", src_ts, dst_ts,
 					 policy_dir_names, dir);
 	
-	/* SADB_X_EXT_KMADDRESS is not present in unpatched kernels < 2.6.28 */   
+	/* SADB_X_EXT_KMADDRESS is not present in unpatched kernels < 2.6.28 */
 	if (response.x_kmaddress)
 	{
 		sockaddr_t *local_addr, *remote_addr;
@@ -924,7 +988,9 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 		DESTROY_IF(remote);
 	}
 }
+#endif /*SADB_X_MIGRATE*/
 
+#ifdef HAVE_NATT
 /**
  * Process a SADB_X_NAT_T_NEW_MAPPING message from the kernel
  */
@@ -980,6 +1046,7 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 		}
 	}
 }
+#endif /*HAVE_NATT*/
 
 /**
  * Receives events from kernel
@@ -991,7 +1058,7 @@ static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
 	int len, oldstate;
 	
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-	len = recv(this->socket_events, buf, sizeof(buf), 0);
+	len = recvfrom(this->socket_events, buf, sizeof(buf), 0, NULL, 0);
 	pthread_setcancelstate(oldstate, NULL);
 	
 	if (len < 0)
@@ -1035,12 +1102,16 @@ static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
 		case SADB_EXPIRE:
 			process_expire(this, msg);
 			break;
+#ifdef SADB_X_MIGRATE
 		case SADB_X_MIGRATE:
 			process_migrate(this, msg);
 			break;
+#endif /*SADB_X_MIGRATE*/
+#ifdef HAVE_NATT
 		case SADB_X_NAT_T_NEW_MAPPING:
 			process_mapping(this, msg);
 			break;
+#endif /*HAVE_NATT*/
 		default:
 			break;
 	}
@@ -1051,8 +1122,8 @@ static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
 /**
  * Implementation of kernel_interface_t.get_spi.
  */
-static status_t get_spi(private_kernel_pfkey_ipsec_t *this, 
-						host_t *src, host_t *dst, 
+static status_t get_spi(private_kernel_pfkey_ipsec_t *this,
+						host_t *src, host_t *dst,
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int32_t *spi)
 {
@@ -1099,7 +1170,7 @@ static status_t get_spi(private_kernel_pfkey_ipsec_t *this,
 		{
 			received_spi = response.sa->sadb_sa_spi;
 		}
-		free(out);	
+		free(out);
 	}
 	
 	if (received_spi == 0)
@@ -1114,8 +1185,8 @@ static status_t get_spi(private_kernel_pfkey_ipsec_t *this,
 /**
  * Implementation of kernel_interface_t.get_cpi.
  */
-static status_t get_cpi(private_kernel_pfkey_ipsec_t *this, 
-						host_t *src, host_t *dst, 
+static status_t get_cpi(private_kernel_pfkey_ipsec_t *this,
+						host_t *src, host_t *dst,
 						u_int32_t reqid, u_int16_t *cpi)
 {
 	return FAILED;
@@ -1226,11 +1297,13 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 	{
 		/*TODO*/
 	}
-	
+
+#ifdef HAVE_NATT
 	if (encap)
 	{
 		add_encap_ext(msg, src, dst);
 	}
+#endif /*HAVE_NATT*/
 	
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
@@ -1346,11 +1419,13 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 	{
 		PFKEY_EXT_COPY(msg, response.key_auth);
 	}
-	
+
+#ifdef HAVE_NATT
 	if (new_encap)
 	{
 		add_encap_ext(msg, new_src, new_dst);
 	}
+#endif /*HAVE_NATT*/
 	
 	free(out);
 	
@@ -1374,8 +1449,9 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 /**
  * Implementation of kernel_interface_t.del_sa.
  */
-static status_t del_sa(private_kernel_pfkey_ipsec_t *this, host_t *dst,
-					   u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
+static status_t del_sa(private_kernel_pfkey_ipsec_t *this, host_t *src,
+					   host_t *dst, u_int32_t spi, protocol_id_t protocol,
+					   u_int16_t cpi)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1398,9 +1474,8 @@ static status_t del_sa(private_kernel_pfkey_ipsec_t *this, host_t *dst,
 	sa->sadb_sa_spi = spi;
 	PFKEY_EXT_ADD(msg, sa);
 	
-	/* the kernel wants a SADB_EXT_ADDRESS_SRC to be present even though
-	 * it is not used for anything. */
-	add_anyaddr_ext(msg, dst->get_family(dst), SADB_EXT_ADDRESS_SRC);
+	/* the Linux Kernel doesn't care for the src address, but other systems do (e.g. FreeBSD) */
+	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
 	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
 	
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
@@ -1424,7 +1499,7 @@ static status_t del_sa(private_kernel_pfkey_ipsec_t *this, host_t *dst,
 /**
  * Implementation of kernel_interface_t.add_policy.
  */
-static status_t add_policy(private_kernel_pfkey_ipsec_t *this, 
+static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 						   host_t *src, host_t *dst,
 						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
@@ -1463,7 +1538,7 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 		this->policies->insert_last(this->policies, policy);
 		policy->refcount = 1;
 	}
-		
+	
 	memset(&request, 0, sizeof(request));
 	
 	DBG2(DBG_KNL, "adding policy %R === %R %N", src_ts, dst_ts,
@@ -1480,12 +1555,14 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 	pol->sadb_x_policy_len = PFKEY_LEN(sizeof(struct sadb_x_policy));
 	pol->sadb_x_policy_id = 0;
 	pol->sadb_x_policy_dir = dir2kernel(direction);
+	pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
+#ifdef HAVE_STRUCT_SADB_X_POLICY_SADB_X_POLICY_PRIORITY
 	/* calculate priority based on source selector size, small size = high prio */
 	pol->sadb_x_policy_priority = routed ? PRIO_LOW : PRIO_HIGH;
 	pol->sadb_x_policy_priority -= policy->src.mask * 10;
 	pol->sadb_x_policy_priority -= policy->src.proto != IPSEC_PROTO_ANY ? 2 : 0;
 	pol->sadb_x_policy_priority -= policy->src.net->get_port(policy->src.net) ? 1 : 0;
-	pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
+#endif
 	
 	/* one or more sadb_x_ipsecrequest extensions are added to the sadb_x_policy extension */
 	req = (struct sadb_x_ipsecrequest*)(pol + 1);
@@ -1599,9 +1676,9 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 		{
 			free(route);
 		}
-	}	
+	}
 	
-	this->mutex->unlock(this->mutex);	
+	this->mutex->unlock(this->mutex);
 	
 	return SUCCESS;
 }
@@ -1610,7 +1687,7 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
  * Implementation of kernel_interface_t.query_policy.
  */
 static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
-							 traffic_selector_t *src_ts, 
+							 traffic_selector_t *src_ts,
 							 traffic_selector_t *dst_ts,
 							 policy_dir_t direction, u_int32_t *use_time)
 {
@@ -1689,7 +1766,7 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 	*use_time = response.lft_current->sadb_lifetime_usetime;
 	
 	free(out);
-			
+	
 	return SUCCESS;
 }
 
@@ -1697,7 +1774,7 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
  * Implementation of kernel_interface_t.del_policy.
  */
 static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
-						   traffic_selector_t *src_ts, 
+						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
 						   policy_dir_t direction, bool unrouted)
 {
@@ -1722,7 +1799,7 @@ static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 		if (--found->refcount > 0)
 		{
 			/* is used by more SAs, keep in kernel */
-			DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");	
+			DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
 			policy_entry_destroy(policy);
 			this->mutex->unlock(this->mutex);
 			return SUCCESS;
@@ -1741,7 +1818,7 @@ static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 		return NOT_FOUND;
 	}
 	this->mutex->unlock(this->mutex);
-		
+	
 	memset(&request, 0, sizeof(request));
 	
 	msg = (struct sadb_msg*)request;
@@ -1791,7 +1868,7 @@ static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 			DBG1(DBG_KNL, "error uninstalling route installed with "
 						  "policy %R === %R %N", src_ts, dst_ts,
 						   policy_dir_names, direction);
-		}		
+		}
 		route_entry_destroy(route);
 	}
 	
@@ -1863,22 +1940,26 @@ static bool add_bypass_policies(private_kernel_pfkey_ipsec_t *this)
 		switch (family)
 		{
 			case AF_INET:
+			{
 				sol = SOL_IP;
 				ipsec_policy = IP_IPSEC_POLICY;
 				break;
+			}
 			case AF_INET6:
 			{
 				sol = SOL_IPV6;
 				ipsec_policy = IPV6_IPSEC_POLICY;
 				break;
 			}
+			default:
+				continue;
 		}
 		
 		memset(&policy, 0, sizeof(policy));
 		policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
 		policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 		policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
-	
+		
 		policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
 		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 		{
@@ -1890,7 +1971,7 @@ static bool add_bypass_policies(private_kernel_pfkey_ipsec_t *this)
 		policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
 		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 		{
-			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s", 
+			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
 				 strerror(errno));
 			status = FALSE;
 			break;
@@ -1912,7 +1993,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
 	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
-	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
+	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
 	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.interface.del_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,bool))del_policy;

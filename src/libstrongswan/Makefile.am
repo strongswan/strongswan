@@ -54,7 +54,7 @@ utils/mutex.c utils/mutex.h \
 utils/backtrace.c utils/backtrace.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
-libstrongswan_la_LIBADD = -lpthread -ldl
+libstrongswan_la_LIBADD = -lpthread $(DLLIB)
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
@@ -81,14 +81,14 @@ if USE_VSTR
 endif
 
 EXTRA_DIST = asn1/oid.txt asn1/oid.pl
-BUILT_SOURCES = asn1/oid.c asn1/oid.h
-MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h
+BUILT_SOURCES = $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h
+MAINTAINERCLEANFILES = $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h
 
-asn1/oid.c :	asn1/oid.pl asn1/oid.txt
-		(cd `dirname $<` && $(PERL) `basename $<`)
+$(srcdir)/asn1/oid.c :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
+		(cd $(srcdir)/asn1/ && $(PERL) oid.pl)
 
-asn1/oid.h :	asn1/oid.pl asn1/oid.txt
-		(cd `dirname $<` && $(PERL) `basename $<`)
+$(srcdir)/asn1/oid.h :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
+		(cd $(srcdir)/asn1/ && $(PERL) oid.pl)
 
 
 # build plugins with their own Makefile

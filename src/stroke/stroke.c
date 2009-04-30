@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "stroke_msg.h"
 #include "stroke_keywords.h"
@@ -54,10 +55,13 @@ static char* push_string(stroke_msg_t *msg, char *string)
 
 static int send_stroke_msg (stroke_msg_t *msg)
 {
-	struct sockaddr_un ctl_addr = { AF_UNIX, STROKE_SOCKET };
+	struct sockaddr_un ctl_addr;
 	int sock;
 	char buffer[64];
 	int byte_count;
+
+	ctl_addr.sun_family = AF_UNIX;
+	strcpy(ctl_addr.sun_path, STROKE_SOCKET);
 	
 	msg->output_verbosity = 1; /* CONTROL */
 	

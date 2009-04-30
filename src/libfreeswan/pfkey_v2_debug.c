@@ -18,31 +18,8 @@
  *
  */
 
-#ifdef __KERNEL__
-
-# include <linux/kernel.h>  /* for printk */
-
-# include "freeswan/ipsec_kversion.h" /* for malloc switch */
-# ifdef MALLOC_SLAB
-#  include <linux/slab.h> /* kmalloc() */
-# else /* MALLOC_SLAB */
-#  include <linux/malloc.h> /* kmalloc() */
-# endif /* MALLOC_SLAB */
-# include <linux/errno.h>  /* error codes */
-# include <linux/types.h>  /* size_t */
-# include <linux/interrupt.h> /* mark_bh */
-
-# include <linux/netdevice.h>   /* struct device, and other headers */
-# include <linux/etherdevice.h> /* eth_type_trans */
-extern int debug_pfkey;
-
-#else /* __KERNEL__ */
-
 # include <sys/types.h>
-# include <linux/types.h>
-# include <linux/errno.h>
-
-#endif /* __KERNEL__ */
+# include <errno.h>
 
 #include "freeswan.h"
 #include "pfkeyv2.h"

@@ -523,12 +523,12 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 			case BASIC_RESPONSE_ID_BY_NAME:
 				this->responderId = identification_create_from_encoding(
 													ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", this->responderId);
+				DBG2("  '%Y'", this->responderId);
 				break;
 			case BASIC_RESPONSE_ID_BY_KEY:
 				this->responderId = identification_create_from_encoding(
 													ID_PUBKEY_INFO_SHA1, object);
-				DBG2("  '%D'", this->responderId);
+				DBG2("  '%Y'", this->responderId);
 				break;
 			case BASIC_RESPONSE_PRODUCED_AT:
 				this->producedAt = asn1_to_time(&object, ASN1_GENERALIZEDTIME);

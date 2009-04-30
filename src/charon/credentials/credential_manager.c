@@ -530,7 +530,7 @@ static bool verify_ocsp(private_credential_manager_t *this,
 	{
 		if (this->cache->issued_by(this->cache, subject, issuer))
 		{
-			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%D\"",
+			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
 						     issuer->get_subject(issuer));
 			verified = TRUE;
 			break;
@@ -756,7 +756,7 @@ static bool verify_crl(private_credential_manager_t *this, certificate_t *crl)
 	{
 		if (this->cache->issued_by(this->cache, crl, issuer))
 		{
-			DBG1(DBG_CFG, "  crl correctly signed by \"%D\"",
+			DBG1(DBG_CFG, "  crl correctly signed by \"%Y\"",
 						   issuer->get_subject(issuer));
 			verified = TRUE;
 			break;
@@ -966,7 +966,7 @@ static bool check_certificate(private_credential_manager_t *this,
 	{
 		if (ocsp || crl)
 		{
-			DBG1(DBG_CFG, "checking certificate status of \"%D\"",
+			DBG1(DBG_CFG, "checking certificate status of \"%Y\"",
 						   subject->get_subject(subject));
 		}
 		if (ocsp)
@@ -1082,7 +1082,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			if (this->cache->issued_by(this->cache, issuer, issuer))
 			{
 				auth->add(auth, AUTH_RULE_CA_CERT, issuer->get_ref(issuer));
-				DBG1(DBG_CFG, "  using trusted ca certificate \"%D\"",
+				DBG1(DBG_CFG, "  using trusted ca certificate \"%Y\"",
 					 issuer->get_subject(issuer));
 				trusted = TRUE;
 			}
@@ -1090,7 +1090,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			{
 				auth->add(auth, AUTH_RULE_IM_CERT, issuer->get_ref(issuer));
 				DBG1(DBG_CFG, "  using trusted intermediate ca certificate "
-					 "\"%D\"", issuer->get_subject(issuer));
+					 "\"%Y\"", issuer->get_subject(issuer));
 			}
 		}
 		else
@@ -1100,18 +1100,18 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			{
 				if (current->equals(current, issuer))
 				{
-					DBG1(DBG_CFG, "  self-signed certificate \"%D\" is not trusted",
+					DBG1(DBG_CFG, "  self-signed certificate \"%Y\" is not trusted",
 						 current->get_subject(current));
 					issuer->destroy(issuer);
 					break;
 				}
 				auth->add(auth, AUTH_RULE_IM_CERT, issuer->get_ref(issuer));
 				DBG1(DBG_CFG, "  using untrusted intermediate certificate "
-					 "\"%D\"", issuer->get_subject(issuer));
+					 "\"%Y\"", issuer->get_subject(issuer));
 			}
 			else
 			{
-				DBG1(DBG_CFG, "no issuer certificate found for \"%D\"", 
+				DBG1(DBG_CFG, "no issuer certificate found for \"%Y\"", 
 					 current->get_subject(current));
 				break;
 			}
@@ -1197,7 +1197,7 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 			{
 				this->auth->add(this->auth, AUTH_RULE_SUBJECT_CERT,
 								this->pretrusted->get_ref(this->pretrusted));
-				DBG1(DBG_CFG, "  using trusted certificate \"%D\"",
+				DBG1(DBG_CFG, "  using trusted certificate \"%Y\"",
 					 this->pretrusted->get_subject(this->pretrusted));
 				*cert = this->pretrusted;
 				if (auth)
@@ -1217,7 +1217,7 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 			continue;
 		}
 	
-		DBG1(DBG_CFG, "  using certificate \"%D\"",
+		DBG1(DBG_CFG, "  using certificate \"%Y\"",
 			 current->get_subject(current));
 		if (verify_trust_chain(this->this, current, this->auth, FALSE,
 							   this->crl, this->ocsp))

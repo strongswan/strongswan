@@ -8,5 +8,5 @@ _updown : _updown.in
 	-e "s:@IPSEC_SBINDIR@:$(sbindir):" \
 	-e "s:\@IPSEC_ROUTING_TABLE\@:$(IPSEC_ROUTING_TABLE):" \
 	-e "s:\@IPSEC_ROUTING_TABLE_PRIO\@:$(IPSEC_ROUTING_TABLE_PRIO):" \
-	$< > $@
+	$(srcdir)/$@.in > $@
 	chmod +x $@

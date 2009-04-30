@@ -353,7 +353,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 		if (id_type != ID_ANY)
 		{
 			gn = identification_create_from_encoding(id_type, object);
-			DBG2("  '%D'", gn);
+			DBG2("  '%Y'", gn);
 			goto end;
 		}
 	}
@@ -510,9 +510,9 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0,
 								/* parsing went wrong - abort */
 								goto end;
 							}
-							DBG2("  '%D'", id);
+							DBG2("  '%Y'", id);
 							if (accessMethod == OID_OCSP &&
-								asprintf(&uri, "%D", id) > 0)
+								asprintf(&uri, "%Y", id) > 0)
 							{
 								this->ocsp_uris->insert_last(this->ocsp_uris, uri);
 							}
@@ -619,7 +619,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 			{
 				char *uri;
 				
-				if (asprintf(&uri, "%D", id) > 0)
+				if (asprintf(&uri, "%Y", id) > 0)
 				{
 					this->crl_uris->insert_last(this->crl_uris, uri);
 				}
@@ -714,7 +714,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 				break;
 			case X509_OBJ_ISSUER:
 				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", this->issuer);
+				DBG2("  '%Y'", this->issuer);
 				break;
 			case X509_OBJ_NOT_BEFORE:
 				this->notBefore = asn1_parse_time(object, level);
@@ -724,7 +724,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 				break;
 			case X509_OBJ_SUBJECT:
 				this->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", this->subject);
+				DBG2("  '%Y'", this->subject);
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_INFO:
 				this->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,

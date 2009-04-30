@@ -30,20 +30,20 @@ if USE_CHARON
   AM_CFLAGS += -DSTART_CHARON
 endif
 
-lex.yy.c:	parser.l parser.y parser.h y.tab.c
-		$(LEX) --nounput $< 
+lex.yy.c:	$(srcdir)/parser.l $(srcdir)/parser.y $(srcdir)/parser.h
+		$(LEX) $(srcdir)/parser.l 
 
-y.tab.c:	parser.y parser.l parser.h
-		$(YACC) -v -d $<
+y.tab.c:	$(srcdir)/parser.y $(srcdir)/parser.l $(srcdir)/parser.h
+		$(YACC) -v -d $(srcdir)/parser.y
 
-y.tab.h:	parser.y parser.l parser.h
-		$(YACC) -v -d $<
+y.tab.h:	$(srcdir)/parser.y $(srcdir)/parser.l $(srcdir)/parser.h
+		$(YACC) -v -d $(srcdir)/parser.y
 
-keywords.c:	keywords.txt keywords.h
-		$(GPERF) -C -G -t < $< > $@
+keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
+		$(GPERF) -C -G -D -t < $(srcdir)/keywords.txt > $@
 
 defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
-		$(COMPILE) -c -o $@ $<
+		$(COMPILE) -c -o $@ $(PLUTODIR)/defs.c
 
 install-exec-local :	
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -o ${ipsecuser} -g ${ipsecgroup} -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true

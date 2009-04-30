@@ -16,14 +16,12 @@
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#include <linux/if.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
 
 #include <freeswan.h>
-#include <ipsec_tunnel.h>
 
 #include <constants.h>
 #include <defs.h>

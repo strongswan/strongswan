@@ -63,13 +63,13 @@ static status_t build(private_psk_authenticator_t *this, message_t *message)
 	keymat = this->ike_sa->get_keymat(this->ike_sa);
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
-	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
+	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_method_names, AUTH_PSK);
 	key = charon->credentials->get_shared(charon->credentials, SHARED_IKE,
 										  my_id, other_id);
 	if (key == NULL)
 	{
-		DBG1(DBG_IKE, "no shared key found for '%D' - '%D'", my_id, other_id);
+		DBG1(DBG_IKE, "no shared key found for '%Y' - '%Y'", my_id, other_id);
 		return NOT_FOUND;
 	}
 	auth_data = keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init,
@@ -119,7 +119,7 @@ static status_t process(private_psk_authenticator_t *this, message_t *message)
 									this->nonce, key->get_key(key), other_id);
 		if (auth_data.len && chunk_equals(auth_data, recv_auth_data))
 		{
-			DBG1(DBG_IKE, "authentication of '%D' with %N successful",
+			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
 				 other_id, auth_method_names, AUTH_PSK);
 			authenticated = TRUE;
 		}
@@ -131,10 +131,10 @@ static status_t process(private_psk_authenticator_t *this, message_t *message)
 	{
 		if (keys_found == 0)
 		{
-			DBG1(DBG_IKE, "no shared key found for '%D' - '%D'", my_id, other_id);
+			DBG1(DBG_IKE, "no shared key found for '%Y' - '%Y'", my_id, other_id);
 			return NOT_FOUND;
 		}
-		DBG1(DBG_IKE, "tried %d shared key%s for '%D' - '%D', but MAC mismatched",
+		DBG1(DBG_IKE, "tried %d shared key%s for '%Y' - '%Y', but MAC mismatched",
 			 keys_found, keys_found == 1 ? "" : "s", my_id, other_id);
 		return FAILED;
 	}

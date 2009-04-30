@@ -339,7 +339,7 @@ static status_t process_r(private_ike_me_t *this, message_t *message)
 			
 			if (this->callback)
 			{
-				DBG1(DBG_IKE, "received ME_CALLBACK for '%D'", this->peer_id);
+				DBG1(DBG_IKE, "received ME_CALLBACK for '%Y'", this->peer_id);
 				break;
 			}			
 			
@@ -471,7 +471,7 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 			
 			if (this->failed)
 			{
-				DBG1(DBG_IKE, "peer '%D' is not online", this->peer_id);
+				DBG1(DBG_IKE, "peer '%Y' is not online", this->peer_id);
 				/* FIXME: notify the mediated connection (job?) */
 			}
 			else

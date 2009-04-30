@@ -92,11 +92,11 @@ pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan.la \
 $(LIBFREESWANDIR)/libfreeswan.a \
 $(LIBCRYPTODIR)/libcrypto.a \
--lgmp -lresolv -lpthread -ldl
+-lgmp -lresolv -lpthread $(DLLIB)
 
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
--lresolv -ldl
+-lresolv $(DLLIB)
 
 dist_man_MANS = pluto.8 ipsec.secrets.5
 

@@ -19,6 +19,7 @@
 #include <sys/un.h>
 #include <stddef.h>
 #include <unistd.h>
+#include <string.h>
 #include <errno.h>
 
 #include <freeswan.h>
@@ -56,10 +57,13 @@ pack_str (char **p, char **next, char **roof)
 static int
 send_whack_msg (whack_message_t *msg)
 {
-	struct sockaddr_un ctl_addr = { AF_UNIX, PLUTO_CTL_FILE };
+	struct sockaddr_un ctl_addr;
 	int sock;
 	ssize_t len;
 	char *str_next, *str_roof;
+
+	ctl_addr.sun_family = AF_UNIX;
+	strcpy(ctl_addr.sun_path, PLUTO_CTL_FILE);
 
 	/* pack strings */
 	str_next = (char *)msg->string;

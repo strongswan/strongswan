@@ -227,12 +227,12 @@ static void update_sa_id(private_mediation_manager_t *this, identification_t *pe
 	
 	if (!found)
 	{
-		DBG2(DBG_IKE, "adding peer '%D'", peer_id);
+		DBG2(DBG_IKE, "adding peer '%Y'", peer_id);
 		peer = peer_create(peer_id, NULL);
 		this->peers->insert_last(this->peers, peer);
 	}
 
-	DBG2(DBG_IKE, "changing registered IKE_SA ID of peer '%D'", peer_id);			
+	DBG2(DBG_IKE, "changing registered IKE_SA ID of peer '%Y'", peer_id);			
 	peer->ike_sa_id = ike_sa_id ? ike_sa_id->clone(ike_sa_id) : NULL;
 	
 	/* send callbacks to registered peers */
@@ -284,7 +284,7 @@ static ike_sa_id_t *check_and_register(private_mediation_manager_t *this,
 
 	if (get_peer_by_id(this, peer_id, &peer) != SUCCESS)
 	{
-		DBG2(DBG_IKE, "adding peer %D", peer_id);
+		DBG2(DBG_IKE, "adding peer %Y", peer_id);
 		peer = peer_create(peer_id, NULL);
 		this->peers->insert_last(this->peers, peer);
 	}
@@ -292,7 +292,7 @@ static ike_sa_id_t *check_and_register(private_mediation_manager_t *this,
 	if (!peer->ike_sa_id)
 	{
 		/* the peer is not online */
-		DBG2(DBG_IKE, "requested peer '%D' is offline, registering peer '%D'", peer_id, requester);
+		DBG2(DBG_IKE, "requested peer '%Y' is offline, registering peer '%Y'", peer_id, requester);
 		register_peer(peer, requester);
 		this->mutex->unlock(this->mutex);
 		return NULL;

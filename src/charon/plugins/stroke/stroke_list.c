@@ -74,7 +74,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 		fprintf(out, " %V ago", &now, &established);
 	}
 	
-	fprintf(out, ", %H[%D]...%H[%D]\n",
+	fprintf(out, ", %H[%Y]...%H[%Y]\n",
 			ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
 			ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
 	
@@ -266,7 +266,7 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, local);
 	while (enumerator->enumerate(enumerator, &auth))
 	{
-		fprintf(out, "%12s:   %s [%D] uses ", name,	local ? "local: " : "remote:",
+		fprintf(out, "%12s:   %s [%Y] uses ", name,	local ? "local: " : "remote:",
 				auth->get(auth, AUTH_RULE_IDENTITY));
 
 		auth_class = (uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS);
@@ -297,7 +297,7 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 			id = auth->get(auth, AUTH_RULE_EAP_IDENTITY);
 			if (id)
 			{
-				fprintf(out, " with EAP identity '%D'", id);
+				fprintf(out, " with EAP identity '%Y'", id);
 			}
 			fprintf(out, "\n");
 		}
@@ -305,19 +305,19 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 		cert = auth->get(auth, AUTH_RULE_CA_CERT);
 		if (cert)
 		{
-			fprintf(out, "%12s:    ca:    \"%D\"\n", name, cert->get_subject(cert));
+			fprintf(out, "%12s:    ca:    \"%Y\"\n", name, cert->get_subject(cert));
 		}
 
 		cert = auth->get(auth, AUTH_RULE_IM_CERT);
 		if (cert)
 		{
-			fprintf(out, "%12s:    im-ca: \"%D\"\n", name, cert->get_subject(cert));
+			fprintf(out, "%12s:    im-ca: \"%Y\"\n", name, cert->get_subject(cert));
 		}
 
 		cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
 		if (cert)
 		{
-			fprintf(out, "%12s:    cert:  \"%D\"\n", name,
+			fprintf(out, "%12s:    cert:  \"%Y\"\n", name,
 					cert->get_subject(cert));
 		}
 
@@ -340,7 +340,7 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 		{
 			if (rule == AUTH_RULE_AC_GROUP)
 			{
-				fprintf(out, "%12s:    group: %D\n", name, id);
+				fprintf(out, "%12s:    group: %Y\n", name, id);
 			}
 		}
 		rules->destroy(rules);
@@ -593,8 +593,8 @@ static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 					key_type_names, public->get_type(public),
 					public->get_keysize(public) * 8,
 					private ? ", has private key" : "");
-			fprintf(out, "  keyid:     %D\n", keyid);
-			fprintf(out, "  subjkey:   %D\n", id);
+			fprintf(out, "  keyid:     %Y\n", keyid);
+			fprintf(out, "  subjkey:   %Y\n", id);
 			DESTROY_IF(private);
 			public->destroy(public);
 		}
@@ -650,7 +650,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 				{
 					fprintf(out, ", ");
 				}
-				fprintf(out, "%D", altName);
+				fprintf(out, "%Y", altName);
 			}
 			if (!first_altName)
 			{
@@ -658,8 +658,8 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 			}
 			enumerator->destroy(enumerator);
 
-			fprintf(out, "  subject:  \"%D\"\n", cert->get_subject(cert));
-			fprintf(out, "  issuer:   \"%D\"\n", cert->get_issuer(cert));
+			fprintf(out, "  subject:  \"%Y\"\n", cert->get_subject(cert));
+			fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
 			fprintf(out, "  serial:    %#B\n", &serial);
 
 			/* list validity */
@@ -704,8 +704,8 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 						key_type_names, public->get_type(public),
 						public->get_keysize(public) * 8,
 						private ? ", has private key" : "");
-				fprintf(out, "  keyid:     %D\n", keyid);
-				fprintf(out, "  subjkey:   %D\n", id);
+				fprintf(out, "  keyid:     %Y\n", keyid);
+				fprintf(out, "  subjkey:   %Y\n", id);
 				DESTROY_IF(private);
 				public->destroy(public);
 			}
@@ -713,7 +713,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 			/* list optional authorityKeyIdentifier */
 			if (authkey)
 			{
-				fprintf(out, "  authkey:   %D\n", authkey);
+				fprintf(out, "  authkey:   %Y\n", authkey);
 			}
 		}
 	}
@@ -749,17 +749,17 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 
 		if (entityName)
 		{
-			fprintf(out, "  holder:   \"%D\"\n", entityName);
+			fprintf(out, "  holder:   \"%Y\"\n", entityName);
 		}
 		if (holderIssuer)
 		{
-			fprintf(out, "  hissuer:  \"%D\"\n", holderIssuer);
+			fprintf(out, "  hissuer:  \"%Y\"\n", holderIssuer);
 		}
 		if (holderSerial.ptr)
 		{
 			fprintf(out, "  hserial:   %#B\n", &holderSerial);
 		}
-		fprintf(out, "  issuer:   \"%D\"\n", cert->get_issuer(cert));
+		fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
 		fprintf(out, "  serial:    %#B\n", &serial);
 
 		/* list validity */
@@ -783,7 +783,7 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 		/* list optional authorityKeyIdentifier */
 		if (authkey)
 		{
-			fprintf(out, "  authkey:   %D\n", authkey);
+			fprintf(out, "  authkey:   %Y\n", authkey);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -813,7 +813,7 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 		}
 		fprintf(out, "\n");
 
-		fprintf(out, "  issuer:   \"%D\"\n", cert->get_issuer(cert));
+		fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
 
 		/* list optional crlNumber */
 		if (serial.ptr)
@@ -856,7 +856,7 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 		/* list optional authorityKeyIdentifier */
 		if (authkey)
 		{
-			fprintf(out, "  authkey:   %D\n", authkey);
+			fprintf(out, "  authkey:   %Y\n", authkey);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -881,7 +881,7 @@ static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 			first = FALSE;
 		}
 
-		fprintf(out, "  signer:   \"%D\"\n", cert->get_issuer(cert));
+		fprintf(out, "  signer:   \"%Y\"\n", cert->get_issuer(cert));
 	}
 	enumerator->destroy(enumerator);
 }
@@ -1024,7 +1024,7 @@ static void pool_leases(private_stroke_list_t *this, FILE *out, char *pool,
 	{
 		if (!address || address->ip_equals(address, lease))
 		{
-			fprintf(out, "  %15H   %s   '%D'\n",
+			fprintf(out, "  %15H   %s   '%Y'\n",
 					lease, on ? "online" : "offline", id);
 			found++;
 		}

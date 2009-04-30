@@ -220,7 +220,7 @@ static void read_triplets(private_eap_sim_file_triplets_t *this, char *path)
 			continue;
 		}
 		
-		DBG2(DBG_CFG, "triplet: imsi %D\nrand %b\nsres %b\nkc %b",
+		DBG2(DBG_CFG, "triplet: imsi %Y\nrand %b\nsres %b\nkc %b",
 			 triplet->imsi, triplet->rand, RAND_LEN,
 			 triplet->sres, SRES_LEN, triplet->kc, KC_LEN);
 			 

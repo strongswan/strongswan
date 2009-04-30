@@ -724,14 +724,14 @@ static void destroy(private_child_sa_t *this)
 	if (this->my_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->my_addr, this->my_spi, this->protocol,
-					this->my_cpi);
+					this->other_addr, this->my_addr, this->my_spi,
+					this->protocol, this->my_cpi);
 	}
 	if (this->other_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->other_addr, this->other_spi, this->protocol,
-					this->other_cpi);
+					this->my_addr, this->other_addr, this->other_spi,
+					this->protocol, this->other_cpi);
 	}
 	
 	if (this->config->install_policy(this->config))

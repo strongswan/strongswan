@@ -217,7 +217,7 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 				{
 					snprintf(buf, sizeof(buf), "%.*s", data.len, data.ptr);
 					this->eap_identity = identification_create_from_string(buf);
-					DBG1(DBG_IKE, "received EAP identity '%D'",
+					DBG1(DBG_IKE, "received EAP identity '%Y'",
 						 this->eap_identity);
 				}
 				/* restart EAP exchange, but with real method */
@@ -254,12 +254,12 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 			if (vendor)
 			{
 				DBG1(DBG_IKE, "EAP vendor specific method %d-%d failed for "
-					 "peer %D", type, vendor, 
+					 "peer %Y", type, vendor, 
 					 this->ike_sa->get_other_id(this->ike_sa));
 			}
 			else
 			{
-				DBG1(DBG_IKE, "EAP method %N failed for peer %D",
+				DBG1(DBG_IKE, "EAP method %N failed for peer %Y",
 					 eap_type_names, type,
 					 this->ike_sa->get_other_id(this->ike_sa));
 			}
@@ -290,7 +290,7 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 		{
 			id = this->ike_sa->get_my_id(this->ike_sa);
 		}
-		DBG1(DBG_IKE, "server requested %N, sending '%D'",
+		DBG1(DBG_IKE, "server requested %N, sending '%Y'",
 			 eap_type_names, type, id);
 		this->eap_identity = id->clone(id);
 		
@@ -380,7 +380,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message)
 	}
 	chunk_free(&auth_data);
 	
-	DBG1(DBG_IKE, "authentication of '%D' with %N successful",
+	DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
 		 other_id, auth_class_names, AUTH_CLASS_EAP);
 	this->auth_complete = TRUE;
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
@@ -401,7 +401,7 @@ static void build_auth(private_eap_authenticator_t *this, message_t *message)
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	keymat = this->ike_sa->get_keymat(this->ike_sa);
 	
-	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
+	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);
 	
 	auth_data = keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init,

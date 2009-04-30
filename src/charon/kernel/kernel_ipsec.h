@@ -35,17 +35,15 @@ typedef struct kernel_ipsec_t kernel_ipsec_t;
 #include <encoding/payloads/proposal_substructure.h>
 
 /**
- * Mode of an CHILD_SA.
- *
- * These are equal to those defined in XFRM, so don't change.
+ * Mode of a CHILD_SA.
  */
 enum ipsec_mode_t {
 	/** transport mode, no inner address */
-	MODE_TRANSPORT = 0,
+	MODE_TRANSPORT = 1,
 	/** tunnel mode, inner and outer addresses */
-	MODE_TUNNEL = 1,
+	MODE_TUNNEL,
 	/** BEET mode, tunnel mode but fixed, bound inner addresses */
-	MODE_BEET = 4,
+	MODE_BEET,
 };
 
 /**
@@ -177,14 +175,15 @@ struct kernel_ipsec_t {
 	/**
 	 * Delete a previusly installed SA from the SAD.
 	 * 
+	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
 	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @param cpi			CPI for IPComp or 0
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_sa) (kernel_ipsec_t *this, host_t *dst, u_int32_t spi,
-						protocol_id_t protocol, u_int16_t cpi);
+	status_t (*del_sa) (kernel_ipsec_t *this, host_t *src, host_t *dst,
+						u_int32_t spi, protocol_id_t protocol, u_int16_t cpi);
 	
 	/**
 	 * Add a policy to the SPD.

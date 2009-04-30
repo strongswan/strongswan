@@ -340,7 +340,7 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 				if (!success && log_error)
 				{
 					DBG1(DBG_CFG, "constraint check failed: peer not "
-						 "authenticated by CA '%D'.", c1->get_subject(c1));
+						 "authenticated by CA '%Y'.", c1->get_subject(c1));
 				}
 				break;
 			}
@@ -356,7 +356,7 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 					if (log_error)
 					{
 						DBG1(DBG_CFG, "constraint check failed: peer not "
-							 "authenticated with peer cert '%D'.",
+							 "authenticated with peer cert '%Y'.",
 							 c1->get_subject(c1));
 					}
 				}
@@ -411,7 +411,7 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 					success = FALSE;
 					if (log_error)
 					{
-						DBG1(DBG_CFG, "constraint check failed: %sidentity '%D'"
+						DBG1(DBG_CFG, "constraint check failed: %sidentity '%Y'"
 							 " required ", t1 == AUTH_RULE_IDENTITY ? "" :
 							 "EAP ", id1);
 					}

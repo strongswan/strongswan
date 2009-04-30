@@ -17,7 +17,9 @@
 #ifndef _STARTER_INTERFACES_H_
 #define _STARTER_INTERFACES_H_
 
-#include <linux/if.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <net/if.h>
 
 #include "../pluto/constants.h"
 

@@ -21,10 +21,10 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <linux/xfrm.h>
 
 #include <freeswan.h>
 
@@ -40,6 +40,15 @@
 
 #define IPV4_LEN	 4
 #define IPV6_LEN	16
+
+/**
+ * Mode of an IPsec SA, must be the same as in charons kernel_ipsec.h
+ */
+enum ipsec_mode_t {
+	MODE_TRANSPORT = 1,
+	MODE_TUNNEL,
+	MODE_BEET
+};
 
 /**
  * Authentication methods, must be the same as in charons authenticator.h
@@ -68,9 +77,12 @@ static char* push_string(stroke_msg_t *msg, char *string)
 
 static int send_stroke_msg (stroke_msg_t *msg)
 {
-	struct sockaddr_un ctl_addr = { AF_UNIX, CHARON_CTL_FILE };
+	struct sockaddr_un ctl_addr;
 	int byte_count;
 	char buffer[64];
+
+	ctl_addr.sun_family = AF_UNIX;
+	strcpy(ctl_addr.sun_path, CHARON_CTL_FILE);
 	
 	/* starter is not called from commandline, and therefore absolutely silent */
 	msg->output_verbosity = -1;
@@ -247,20 +259,20 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	
 	if (conn->policy & POLICY_TUNNEL)
 	{
-		msg.add_conn.mode = XFRM_MODE_TUNNEL;
+		msg.add_conn.mode = MODE_TUNNEL;
 	}
 	else if (conn->policy & POLICY_BEET)
 	{
-		msg.add_conn.mode = XFRM_MODE_BEET;
+		msg.add_conn.mode = MODE_BEET;
 	}
 	else if (conn->policy & POLICY_PROXY)
 	{
-		msg.add_conn.mode = XFRM_MODE_TRANSPORT;
+		msg.add_conn.mode = MODE_TRANSPORT;
 		msg.add_conn.proxy_mode = TRUE;
 	} 
 	else
 	{
-		msg.add_conn.mode = XFRM_MODE_TRANSPORT;
+		msg.add_conn.mode = MODE_TRANSPORT;
 	}
 
 	if (!(conn->policy & POLICY_DONT_REKEY))
