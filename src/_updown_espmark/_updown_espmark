@@ -15,8 +15,6 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
-#
-# RCSID $Id$
 
 
 
@@ -38,7 +36,7 @@
 #              specifies the name of the operation to be performed
 #              (prepare-host, prepare-client, up-host, up-client,
 #              down-host, or down-client).  If the address family
-#              for security gateway to security gateway communica­
+#              for security gateway to security gateway communicaï¿½
 #              tions is IPv6, then a suffix of -v6 is added to the
 #              verb.
 #
@@ -95,7 +93,7 @@
 #              is the CA which issued the cert of our peer.
 #
 #       PLUTO_PEER_CLIENT
-#              is the IP address / count of the peer's client sub­
+#              is the IP address / count of the peer's client subï¿½
 #              net.   If the client is just the peer, this will be
 #              the peer's own IP address / max (where  max  is  32
 #              for IPv4 and 128 for IPv6).

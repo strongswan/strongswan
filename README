@@ -1159,7 +1159,7 @@ The presence of a rightca parameter also causes the CA to be sent as
 part of the certificate request message when strongSwan is the initiator.
 A special case occurs when strongSwan responds to a roadwarrior. If several
 roadwarrior connections based on different CAs are defined then all eligible
-CAs will be listed in Pluto’s certificate request message.
+CAs will be listed in Plutoï¿½s certificate request message.
 
 
 4.9 IPsec policies based on group attributes
@@ -3118,7 +3118,7 @@ by the pluto/xauth.h header file.
 	               Copyright (c) 2000, Kai Martius
 
 		   X.509, OCSP and smartcard functionality:
-°
+ï¿½
   Copyright (c) 2000, Andreas Hess, Patric Lichtsteiner, Roger Wegmann
   Copyright (c) 2001, Marco Bertossa, Andreas Schleiss
   Copyright (c) 2002, Uli Galizzi, Ariane Seiler, Mario Strasser
@@ -3146,6 +3146,4 @@ by the pluto/xauth.h header file.
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
   for more details.
 -----------------------------------------------------------------------------
-
-This file is RCSID $Id$
 

@@ -11,15 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id$
  */
 
 /*
  *		Template from klips/net/ipsec/ipsec/ipsec_parser.c.
  */
 
-char pfkey_v2_parse_c_version[] = "$Id$";
+char pfkey_v2_parse_c_version[] = "";
 
 # include <sys/types.h>
 # include <sys/socket.h>

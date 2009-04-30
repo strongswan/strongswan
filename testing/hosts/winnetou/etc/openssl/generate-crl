@@ -13,8 +13,6 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
-#
-# RCSID $Id: generate-crl,v 1.2 2005/03/24 11:19:38 as Exp $
 
 export COMMON_NAME=strongSwan
 

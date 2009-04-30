@@ -17,8 +17,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: rsakey.h,v 1.2 2005/08/11 21:52:56 as Exp $
  */
 
 #ifndef RSAKEY_H_

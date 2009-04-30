@@ -6,7 +6,7 @@
  * Copyright (C) 2005 Michael Joosten
  *
  * Copyright (C) 2005 Andreas Steffen
- * Hochschule für Technik Rapperswil, Switzerland
+ * Hochschule fï¿½r Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,8 +17,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id$
  */
 
 #include <stdio.h>

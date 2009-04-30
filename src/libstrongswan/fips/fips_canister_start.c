@@ -2,8 +2,6 @@
  * Copyright (c) 2005 The OpenSSL Project. Rights for redistribution
  * and usage in source and binary forms are granted according to the
  * OpenSSL license.
- *
- * $Id$
  */
 
 #include <stdio.h>

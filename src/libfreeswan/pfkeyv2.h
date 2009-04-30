@@ -1,8 +1,4 @@
 /*
- * RCSID $Id$
- */
-
-/*
 RFC 2367               PF_KEY Key Management API               July 1998
 
 

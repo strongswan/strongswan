@@ -14,8 +14,6 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id$
- *
  * This code originally written by Colubris Networks, Inc.
  * Extraction of patch and porting to 1.99 codebases by Xelerance Corporation
  * Porting to 2.x by Sean Mathews

@@ -1,8 +1,6 @@
 Notes on Pluto Conventions
 ==========================
 
-RCSID $Id$
-
 Pluto has its own stylistic conventions.  They are fairly easily
 inferred by reading the code.
 

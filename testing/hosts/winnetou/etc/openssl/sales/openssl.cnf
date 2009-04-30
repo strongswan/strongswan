@@ -1,7 +1,5 @@
 # openssl.cnf -  OpenSSL configuration file for the ZHW PKI
 # Mario Strasser <mario.strasser@zhwin.ch>
-#
-# $Id: openssl.cnf,v 1.1 2005/03/24 11:24:07 as Exp $
 #	
 
 # This definitions were set by the ca_init script DO NOT change

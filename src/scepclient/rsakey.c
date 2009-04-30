@@ -17,8 +17,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: rsakey.c,v 1.5 2006/01/04 21:16:30 as Exp $
  */
 
 

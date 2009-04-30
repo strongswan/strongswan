@@ -13,8 +13,6 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
-#
-# RCSID $Id$
 
 # define a minimum PATH environment in case it is not set
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:@IPSEC_SBINDIR@"
