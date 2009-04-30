@@ -6,7 +6,7 @@
  * Copyright (C) 2005 Michael Joosten
  *
  * Copyright (C) 2005 Andreas Steffen
- * Hochschule f�r Technik Rapperswil, Switzerland
+ * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
