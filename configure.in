@@ -492,6 +492,14 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[kernel-pfroute],
+	AS_HELP_STRING([--enable-kernel-pfroute],[enable the PF_ROUTE kernel interface. (default is NO).]),
+	[if test x$enableval = xyes; then
+		kernel_pfroute=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[kernel-klips],
 	AS_HELP_STRING([--enable-kernel-klips],[enable the KLIPS kernel interface. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -758,9 +766,34 @@ dnl ==========================================
 dnl  check required libraries and header files
 dnl ==========================================
 
-AC_HAVE_LIBRARY(dl)
+saved_LIBS=$LIBS
+LIBS=""
+AC_SEARCH_LIBS(dlopen, dl, [DLLIB=$LIBS])
+LIBS=$saved_LIBS
+AC_SUBST(DLLIB)
+
 AC_CHECK_FUNCS(backtrace)
 AC_CHECK_FUNCS(dladdr)
+AC_CHECK_FUNCS(prctl)
+
+AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h)
+
+AC_CHECK_MEMBERS([struct sockaddr.sa_len], [], [],
+[
+	#include <sys/types.h>
+	#include <sys/socket.h>
+])
+
+AC_CHECK_MEMBERS([struct sadb_x_policy.sadb_x_policy_priority], [], [],
+[
+	#include <sys/types.h>
+	#ifdef HAVE_NET_PFKEYV2_H
+	#include <net/pfkeyv2.h>
+	#else
+	#include <stdint.h>
+	#include <linux/pfkeyv2.h>
+	#endif
+])
 
 AC_MSG_CHECKING([for gcc atomic operations])
 AC_TRY_RUN(
@@ -1010,6 +1043,7 @@ AM_CONDITIONAL(USE_EAP_MSCHAPV2, test x$eap_mschapv2 = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
+AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
 
 dnl other options
@@ -1092,6 +1126,7 @@ AC_OUTPUT(
 	src/charon/plugins/eap_radius/Makefile
 	src/charon/plugins/kernel_netlink/Makefile
 	src/charon/plugins/kernel_pfkey/Makefile
+	src/charon/plugins/kernel_pfroute/Makefile
 	src/charon/plugins/kernel_klips/Makefile
 	src/charon/plugins/smp/Makefile
 	src/charon/plugins/sql/Makefile

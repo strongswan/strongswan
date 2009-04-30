@@ -6,6 +6,6 @@ EXTRA_DIST = do-tests.in make-testing start-testing stop-testing \
 do-tests : do-tests.in
 	sed \
 	-e "s:\@IPSEC_ROUTING_TABLE\@:$(IPSEC_ROUTING_TABLE):" \
-	$< > $@
+	$(srcdir)/$@.in > $@
 	chmod +x $@
 
