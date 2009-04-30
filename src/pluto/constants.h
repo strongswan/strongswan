@@ -1268,4 +1268,7 @@ enum dns_auth_level {
 /* natt traversal types */
 extern const char *const natt_type_bitnames[];
 
+/* secret value for responder cookies */
+extern u_char secret_of_the_day[SHA1_DIGEST_SIZE];
+
 #endif /* _CONSTANTS_H */

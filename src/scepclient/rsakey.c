@@ -30,6 +30,9 @@
 
 #include <freeswan.h>
 
+#include <library.h>
+#include <crypto/rngs/rng.h>
+
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/mp_defs.h"
@@ -58,45 +61,6 @@
  * @return                              TRUE, if succeeded, FALSE otherwise
  */
 
-static bool
-get_true_random_bytes(size_t nbytes, char *buf)
-{
-	size_t ndone;
-	size_t got;
-	char *device = DEV_RANDOM;
-
-	int dev = open(DEV_RANDOM, 0);
-
-	if (dev < 0)
-	{
-		fprintf(stderr, "could not open random device %s", device);
-		return FALSE;
-	}
-
-	DBG(DBG_CONTROL,
-		DBG_log("getting %d bytes from %s...", (int) nbytes, device)
-	)
-		
-	ndone = 0;
-	while (ndone < nbytes)
-	{
-		got = read(dev, buf + ndone, nbytes - ndone);
-		if (got < 0)
-		{
-			fprintf(stderr, "read error on %s", device);
-			return FALSE;
-		}
-		if (got == 0)
-		{
-			fprintf(stderr, "eof on %s", device);
-			return FALSE;
-		}
-		 ndone += got;
-	}
-	close(dev);
-	return TRUE;
-}
-
 /**
  * @brief initialize an mpz_t to a random number, specified bit count
  *
@@ -110,17 +74,20 @@ get_true_random_bytes(size_t nbytes, char *buf)
  * @param[in]   nbits length of var in bits (known to be a multiple of BITS_PER_BYTE)
  * @return      TRUE on success, FALSE otherwise
  */
-static bool
-init_random(mpz_t var, int nbits)
+static bool init_random(mpz_t var, int nbits)
 {
 	size_t nbytes = (size_t)(nbits/BITS_PER_BYTE);
 	char random_buf[RSA_MAX_OCTETS/2];
+	rng_t *rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 
-	assert(nbytes <= sizeof(random_buf));
-
-	if (!get_true_random_bytes(nbytes, random_buf))
+	if (!rng)
+	{
 		return FALSE;
-		
+	}
+	assert(nbytes <= sizeof(random_buf));
+	rng->get_bytes(rng, nbytes, random_buf);
+	rng->destroy(rng);
+
 	random_buf[0] |= 01 << (BITS_PER_BYTE-1);   /* force high bit on */
 	random_buf[nbytes-1] |= 01;                 /* force low bit on */
 	n_to_mpz(var, random_buf, nbytes);
@@ -138,8 +105,7 @@ init_random(mpz_t var, int nbits)
  * @param[in]   eval E-Value, 0 means don't bother w. tweak
  * @return              1 on success, 0 otherwise
  */
-static bool
-init_prime(mpz_t var, int nbits, int eval)
+static bool init_prime(mpz_t var, int nbits, int eval)
 {
 	unsigned long tries;
 	size_t len;
@@ -194,8 +160,7 @@ init_prime(mpz_t var, int nbits, int eval)
  * @param[in]   nbits size of rsa key in bits
  * @return      RSA_public_key_t containing the generated RSA key 
  */
-err_t
-generate_rsa_private_key(int nbits, RSA_private_key_t *key)
+err_t generate_rsa_private_key(int nbits, RSA_private_key_t *key)
 {
 	mpz_t p, q, n, e, d, exp1, exp2, coeff;
 	mpz_t m, q1, t;     /* temporary variables*/

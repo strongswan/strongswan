@@ -29,10 +29,10 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
+#include <crypto/rngs/rng.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
-#include "../pluto/rnd.h"
 #include "../pluto/pkcs1.h"
 #include "../pluto/fetch.h"
 #include "../pluto/log.h"
@@ -355,8 +355,11 @@ chunk_t scep_senderNonce_attribute(void)
 	const size_t nonce_len = 16;
 	u_char nonce_buf[nonce_len];
 	chunk_t senderNonce = { nonce_buf, nonce_len };
+	rng_t *rng;
 
-	get_rnd_bytes(nonce_buf, nonce_len);
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	rng->get_bytes(rng, nonce_len, nonce_buf);
+	rng->destroy(rng);
 
 	return asn1_wrap(ASN1_SEQUENCE, "cm"
 				, ASN1_senderNonce_oid

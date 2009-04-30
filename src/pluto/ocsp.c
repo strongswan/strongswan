@@ -24,9 +24,11 @@
 #include <freeswan.h>
 #include <ipsec_policy.h>
 
+#include <library.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
+#include <crypto/rngs/rng.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -34,7 +36,6 @@
 #include "x509.h"
 #include "crl.h"
 #include "ca.h"
-#include "rnd.h"
 #include "certs.h"
 #include "smartcard.h"
 #include "whack.h"
@@ -884,10 +885,14 @@ static chunk_t build_requestor_name(void)
  */
 static chunk_t build_nonce_extension(ocsp_location_t *location)
 {
+	rng_t *rng;
+
 	/* generate a random nonce */
 	location->nonce.ptr = malloc(NONCE_LENGTH),
 	location->nonce.len = NONCE_LENGTH;
-	get_rnd_bytes(location->nonce.ptr, NONCE_LENGTH);
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	rng->get_bytes(rng, location->nonce.len, location->nonce.ptr);
+	rng->destroy(rng);
 
 	return asn1_wrap(ASN1_SEQUENCE, "cm"
 				, ASN1_nonce_oid

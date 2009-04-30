@@ -35,6 +35,7 @@
 #include <gmp.h>
 
 #include <freeswan.h>
+
 #include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
@@ -48,7 +49,6 @@
 #include "../pluto/pkcs1.h"
 #include "../pluto/pkcs7.h"
 #include "../pluto/certs.h"
-#include "../pluto/rnd.h"
 
 #include "rsakey.h"
 #include "pkcs10.h"
@@ -746,9 +746,6 @@ int main(int argc, char **argv)
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "scepclient.load", PLUGINS));
 	print_plugins();
-
-	init_rnd_pool();
-	init_fetch();
 
 	if ((filetype_out == 0) && (!request_ca_certificate))
 	{

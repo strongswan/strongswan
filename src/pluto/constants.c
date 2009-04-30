@@ -1363,3 +1363,7 @@ void init_constants(void)
 	happy(initsubnet(&ipv4_any, 0, '0', &ipv4_all));
 	happy(initsubnet(&ipv6_any, 0, '0', &ipv6_all));
 }
+
+u_char secret_of_the_day[SHA1_DIGEST_SIZE];
+
+

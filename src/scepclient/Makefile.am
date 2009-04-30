@@ -20,6 +20,7 @@ AM_CFLAGS = \
 -DIPSEC_PLUGINDIR=\"${plugindir}\" \
 -DPLUGINS=\""${pluto_plugins}\"" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
+-DNO_CREDENTIAL_FACTORY \
 -DDEBUG -DNO_PLUTO
 
 LIBSTRONGSWANBUILDDIR=$(top_builddir)/src/libstrongswan
@@ -28,7 +29,7 @@ LIBCRYPTOBUILDDIR=$(top_builddir)/src/libcrypto
 
 scepclient_LDADD = \
 ca.o crl.o certs.o constants.o defs.o fetch.o id.o keys.o lex.o \
-md2.o md5.o mp_defs.o ocsp.o pem.o pgp.o pkcs1.o pkcs7.o rnd.o sha1.o \
+md2.o md5.o mp_defs.o ocsp.o pem.o pgp.o pkcs1.o pkcs7.o sha1.o \
 smartcard.o x509.o \
 $(LIBSTRONGSWANBUILDDIR)/libstrongswan.la \
 $(LIBFREESWANBUILDDIR)/libfreeswan.a \
@@ -92,9 +93,6 @@ pkcs1.o :	$(PLUTODIR)/pkcs1.c $(PLUTODIR)/pkcs1.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 pkcs7.o :	$(PLUTODIR)/pkcs7.c $(PLUTODIR)/pkcs7.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-rnd.o :		$(PLUTODIR)/rnd.c $(PLUTODIR)/rnd.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 sha1.o :	$(PLUTODIR)/sha1.c $(PLUTODIR)/sha1.h

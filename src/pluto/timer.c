@@ -24,6 +24,9 @@
 
 #include <freeswan.h>
 
+#include <library.h>
+#include <crypto/rngs/rng.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "connections.h"
@@ -33,14 +36,14 @@
 #include "kernel.h"
 #include "server.h"
 #include "log.h"
-#include "rnd.h"
 #include "timer.h"
 #include "whack.h"
 #include "nat_traversal.h"
 
-/* monotonic version of time(3) */
-time_t
-now(void)
+/**
+ * monotonic version of time(3)
+ */
+time_t now(void)
 {
 	static time_t delta = 0
 		, last_time = 0;
@@ -64,11 +67,10 @@ now(void)
 
 static struct event *evlist = (struct event *) NULL;
 
-/*
+/**
  * This routine places an event in the event list.
  */
-void
-event_schedule(enum event_type type, time_t tm, struct state *st)
+void event_schedule(enum event_type type, time_t tm, struct state *st)
 {
 	struct event *ev = malloc_thing(struct event);
 
@@ -133,11 +135,24 @@ event_schedule(enum event_type type, time_t tm, struct state *st)
 	}
 }
 
-/*
+/**
+ * Generate the secret value for responder cookies, and
+ * schedule an event for refresh.
+ */
+void init_secret(void)
+{
+	rng_t *rng;
+	 
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	rng->get_bytes(rng, sizeof(secret_of_the_day), secret_of_the_day);
+	rng->destroy(rng);
+    event_schedule(EVENT_REINIT_SECRET, EVENT_REINIT_SECRET_DELAY, NULL);
+}
+
+/**
  * Handle the first event on the list.
  */
-void
-handle_timer_event(void)
+void handle_timer_event(void)
 {
 	time_t tm;
 	struct event *ev = evlist;
@@ -434,12 +449,11 @@ handle_timer_event(void)
 	reset_cur_state();
 }
 
-/*
+/**
  * Return the time until the next event in the queue
  * expires (never negative), or -1 if no jobs in queue.
  */
-long
-next_event(void)
+long next_event(void)
 {
 	time_t tm;
 
@@ -465,11 +479,10 @@ next_event(void)
 		return evlist->ev_time - tm;
 }
 
-/*
+/**
  * Delete an event.
  */
-void
-delete_event(struct state *st)
+void delete_event(struct state *st)
 {
 	if (st->st_event != (struct event *) NULL)
 	{
@@ -500,11 +513,10 @@ delete_event(struct state *st)
 	}
 }
 
-/*
+/**
  * Delete a DPD event.
  */
-void
-delete_dpd_event(struct state *st)
+void delete_dpd_event(struct state *st)
 {
 	if (st->st_dpd_event != (struct event *) NULL)
 	{
@@ -529,11 +541,10 @@ delete_dpd_event(struct state *st)
 	}
 }
 
-/*
+/**
  * Free remaining events
  */
-void
-free_events(void)
+void free_events(void)
 {
 	struct event *ev_tmp, *ev;
 

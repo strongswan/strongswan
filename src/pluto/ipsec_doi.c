@@ -28,7 +28,10 @@
 
 #include <freeswan.h>
 #include <ipsec_policy.h>
+
+#include <library.h>
 #include <asn1/asn1.h>
+#include <crypto/rngs/rng.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -52,7 +55,6 @@
 #include "server.h"
 #include "spdb.h"
 #include "timer.h"
-#include "rnd.h"
 #include "ipsec_doi.h"  /* needs demux.h and state.h */
 #include "whack.h"
 #include "fetch.h"
@@ -120,9 +122,8 @@ echo_hdr(struct msg_digest *md, bool enc, u_int8_t np)
  * We make the leap that the length should be that of the group
  * (see quoted passage at start of ACCEPT_KE).
  */
-static void
-compute_dh_shared(struct state *st, const chunk_t g
-, const struct oakley_group_desc *group)
+static void compute_dh_shared(struct state *st, const chunk_t g,
+							  const struct oakley_group_desc *group)
 {
 	MP_INT mp_g, mp_shared;
 	struct timeval tv0, tv1;
@@ -158,16 +159,19 @@ compute_dh_shared(struct state *st, const chunk_t g
 /* if we haven't already done so, compute a local DH secret (st->st_sec) and
  * the corresponding public value (g).  This is emitted as a KE payload.
  */
-static bool
-build_and_ship_KE(struct state *st, chunk_t *g
-, const struct oakley_group_desc *group, pb_stream *outs, u_int8_t np)
+static bool build_and_ship_KE(struct state *st, chunk_t *g,
+							  const struct oakley_group_desc *group,
+							  pb_stream *outs, u_int8_t np)
 {
 	if (!st->st_sec_in_use)
 	{
 		u_char tmp[LOCALSECRETSIZE];
 		MP_INT mp_g;
-
-		get_rnd_bytes(tmp, LOCALSECRETSIZE);
+		rng_t *rng;
+		
+		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+		rng->get_bytes(rng, LOCALSECRETSIZE, tmp);
+		rng->destroy(rng);
 		st->st_sec_in_use = TRUE;
 		n_to_mpz(&st->st_sec, tmp, LOCALSECRETSIZE);
 
@@ -192,10 +196,9 @@ build_and_ship_KE(struct state *st, chunk_t *g
  *  Diffie-Hellman group enforced, if necessary, by pre-pending the
  *  value with zeros.
  */
-static notification_t
-accept_KE(chunk_t *dest, const char *val_name
-, const struct oakley_group_desc *gr
-, pb_stream *pbs)
+static notification_t accept_KE(chunk_t *dest, const char *val_name,
+								const struct oakley_group_desc *gr,
+								pb_stream *pbs)
 {
 	if (pbs_left(pbs) != gr->bytes)
 	{
@@ -216,9 +219,8 @@ accept_KE(chunk_t *dest, const char *val_name
  * Check and accept optional Quick Mode KE payload for PFS.
  * Extends ACCEPT_PFS to check whether KE is allowed or required.
  */
-static notification_t
-accept_PFS_KE(struct msg_digest *md, chunk_t *dest
-, const char *val_name, const char *msg_name)
+static notification_t accept_PFS_KE(struct msg_digest *md, chunk_t *dest,
+									const char *val_name, const char *msg_name)
 {
 	struct state *st = md->st;
 	struct payload_digest *const ke_pd = md->chain[ISAKMP_NEXT_KE];
@@ -249,18 +251,20 @@ accept_PFS_KE(struct msg_digest *md, chunk_t *dest
 	return NOTHING_WRONG;
 }
 
-static bool
-build_and_ship_nonce(chunk_t *n, pb_stream *outs, u_int8_t np
-, const char *name)
+static bool build_and_ship_nonce(chunk_t *n, pb_stream *outs, u_int8_t np,
+								 const char *name)
 {
+	rng_t *rng;
+
 	free(n->ptr);
 	*n = chunk_create(malloc(DEFAULT_NONCE_SIZE), DEFAULT_NONCE_SIZE);
-	get_rnd_bytes(n->ptr, DEFAULT_NONCE_SIZE);
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	rng->get_bytes(rng, DEFAULT_NONCE_SIZE, n->ptr);
+	rng->destroy(rng);
 	return out_generic_chunk(np, &isakmp_nonce_desc, outs, *n, name);
 }
 
-static bool
-collect_rw_ca_candidates(struct msg_digest *md, generalName_t **top)
+static bool collect_rw_ca_candidates(struct msg_digest *md, generalName_t **top)
 {
 	struct connection *d = find_host_connection(&md->iface->addr
 		, pluto_port, (ip_address*)NULL, md->sender_port, LEMPTY);
@@ -295,8 +299,8 @@ collect_rw_ca_candidates(struct msg_digest *md, generalName_t **top)
 	return *top != NULL;
 }
 
-static bool
-build_and_ship_CR(u_int8_t type, chunk_t ca, pb_stream *outs, u_int8_t np)
+static bool build_and_ship_CR(u_int8_t type, chunk_t ca, pb_stream *outs,
+							  u_int8_t np)
 {
 	pb_stream cr_pbs;
 	struct isakmp_cr cr_hd;
@@ -321,10 +325,10 @@ build_and_ship_CR(u_int8_t type, chunk_t ca, pb_stream *outs, u_int8_t np)
  * whether to send the notification, based on the type and the
  * destination, if we care to.
  */
-static void
-send_notification(struct state *sndst, u_int16_t type, struct state *encst,
-	msgid_t msgid, u_char *icookie, u_char *rcookie,
-	u_char *spi, size_t spisize, u_char protoid)
+static void send_notification(struct state *sndst, u_int16_t type,
+							  struct state *encst, msgid_t msgid,
+							  u_char *icookie, u_char *rcookie,
+							  u_char *spi, size_t spisize, u_char protoid)
 {
 	u_char buffer[1024];
 	pb_stream pbs, r_hdr_pbs;
@@ -451,9 +455,8 @@ send_notification(struct state *sndst, u_int16_t type, struct state *encst,
 	}
 }
 
-void
-send_notification_from_state(struct state *st, enum state_kind state,
-	u_int16_t type)
+void send_notification_from_state(struct state *st, enum state_kind state,
+								  u_int16_t type)
 {
 	struct state *p1st;
 
@@ -487,8 +490,7 @@ send_notification_from_state(struct state *st, enum state_kind state,
 	}
 }
 
-void
-send_notification_from_md(struct msg_digest *md, u_int16_t type)
+void send_notification_from_md(struct msg_digest *md, u_int16_t type)
 {
 	/**
 	 * Create a dummy state to be able to use send_packet in
@@ -519,8 +521,7 @@ send_notification_from_md(struct msg_digest *md, u_int16_t type)
  * inbound IPSEC SAs.  Does nothing if no such SAs are being deleted.
  * Delete Notifications cannot announce deletion of outbound IPSEC/ISAKMP SAs.
  */
-void
-send_delete(struct state *st)
+void send_delete(struct state *st)
 {
 	pb_stream reply_pbs;
 	pb_stream r_hdr_pbs;
@@ -686,8 +687,8 @@ send_delete(struct state *st)
 	}
 }
 
-void
-accept_delete(struct state *st, struct msg_digest *md, struct payload_digest *p)
+void accept_delete(struct state *st, struct msg_digest *md,
+				   struct payload_digest *p)
 {
 	struct isakmp_delete *d = &(p->payload.delete);
 	size_t sizespi;
@@ -869,8 +870,7 @@ accept_delete(struct state *st, struct msg_digest *md, struct payload_digest *p)
  * rfc2408 3.6 Transform Payload.
  * Note: it talks about 4 BYTE boundaries!
  */
-void
-close_message(pb_stream *pbs)
+void close_message(pb_stream *pbs)
 {
 	size_t padding =  pad_up(pbs_offset(pbs), 4);
 
@@ -1062,12 +1062,8 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	return STF_OK;
 }
 
-void
-ipsecdoi_initiate(int whack_sock
-, struct connection *c
-, lset_t policy
-, unsigned long try
-, so_serial_t replacing)
+void ipsecdoi_initiate(int whack_sock, struct connection *c, lset_t policy,
+					   unsigned long try, so_serial_t replacing)
 {
 	/* If there's already an ISAKMP SA established, use that and
 	 * go directly to Quick Mode.  We are even willing to use one
@@ -1114,8 +1110,7 @@ ipsecdoi_initiate(int whack_sock
  * - duplicate whack fd, if live.
  * Does not delete the old state -- someone else will do that.
  */
-void
-ipsecdoi_replace(struct state *st, unsigned long try)
+void ipsecdoi_replace(struct state *st, unsigned long try)
 {
 	int whack_sock = dup_any(st->st_whack_sock);
 	lset_t policy = st->st_policy;
@@ -1160,8 +1155,7 @@ ipsecdoi_replace(struct state *st, unsigned long try)
 /* SKEYID for preshared keys.
  * See draft-ietf-ipsec-ike-01.txt 4.1
  */
-static bool
-skeyid_preshared(struct state *st)
+static bool skeyid_preshared(struct state *st)
 {
 	const chunk_t *pss = get_preshared_secret(st->st_connection);
 
@@ -1206,8 +1200,7 @@ skeyid_digisig(struct state *st)
 /* Generate the SKEYID_* and new IV
  * See draft-ietf-ipsec-ike-01.txt 4.1
  */
-static bool
-generate_skeyids_iv(struct state *st)
+static bool generate_skeyids_iv(struct state *st)
 {
 	/* Generate the SKEYID */
 	switch (st->st_oakley.auth)
@@ -1347,12 +1340,10 @@ generate_skeyids_iv(struct state *st)
  */
 
 typedef void (*hash_update_t)(union hash_ctx *, const u_char *, size_t) ;
-static void
-main_mode_hash_body(struct state *st
-, bool hashi    /* Initiator? */
-, const pb_stream *idpl /* ID payload, as PBS */
-, union hash_ctx *ctx
-, void (*hash_update_void)(void *, const u_char *input, size_t))
+
+static void main_mode_hash_body(struct state *st, bool hashi,
+								const pb_stream *idpl, union hash_ctx *ctx,
+			void (*hash_update_void)(void *, const u_char *input, size_t))
 {
 #define HASH_UPDATE_T (union hash_ctx *, const u_char *input, unsigned int len)
 	hash_update_t hash_update=(hash_update_t)  hash_update_void;
@@ -1401,10 +1392,8 @@ main_mode_hash_body(struct state *st
 }
 
 static size_t   /* length of hash */
-main_mode_hash(struct state *st
-, u_char *hash_val      /* resulting bytes */
-, bool hashi    /* Initiator? */
-, const pb_stream *idpl)        /* ID payload, as PBS; cur must be at end */
+main_mode_hash(struct state *st, u_char *hash_val, bool hashi,
+			   const pb_stream *idpl)
 {
 	struct hmac_ctx ctx;
 
@@ -1438,10 +1427,8 @@ main_mode_sha1(struct state *st
  * Use PKCS#1 version 1.5 encryption of hash (called
  * RSAES-PKCS1-V1_5) in PKCS#2.
  */
-static size_t
-RSA_sign_hash(struct connection *c
-, u_char sig_val[RSA_MAX_OCTETS]
-, const u_char *hash_val, size_t hash_len)
+static size_t RSA_sign_hash(struct connection *c, u_char sig_val[RSA_MAX_OCTETS],
+							const u_char *hash_val, size_t hash_len)
 {
 	size_t sz = 0;
 	smartcard_t *sc = c->spd.this.sc;
@@ -1511,10 +1498,9 @@ RSA_sign_hash(struct connection *c
  * it is not: the knowledge of the private key allows more efficient (i.e.
  * different) computation for encryption.
  */
-static err_t
-try_RSA_signature(const u_char hash_val[MAX_DIGEST_LEN], size_t hash_len
-, const pb_stream *sig_pbs, pubkey_t *kr
-, struct state *st)
+static err_t try_RSA_signature(const u_char hash_val[MAX_DIGEST_LEN],
+							   size_t hash_len, const pb_stream *sig_pbs,
+							   pubkey_t *kr, struct state *st)
 {
 	const u_char *sig_val = sig_pbs->cur;
 	size_t sig_len = pbs_left(sig_pbs);
@@ -1644,10 +1630,8 @@ struct tac_state {
 	char *tn;   /* roof of tried[] */
 };
 
-static bool
-take_a_crack(struct tac_state *s
-, pubkey_t *kr
-, const char *story USED_BY_DEBUG)
+static bool take_a_crack(struct tac_state *s, pubkey_t *kr,
+						 const char *story USED_BY_DEBUG)
 {
 	err_t ugh = try_RSA_signature(s->hash_val, s->hash_len, s->sig_pbs
 		, kr, s->st);
@@ -1679,17 +1663,13 @@ take_a_crack(struct tac_state *s
 	}
 }
 
-static stf_status
-RSA_check_signature(const struct id* peer
-, struct state *st
-, const u_char hash_val[MAX_DIGEST_LEN]
-, size_t hash_len
-, const pb_stream *sig_pbs
+static stf_status RSA_check_signature(const struct id* peer, struct state *st,
+									  const u_char hash_val[MAX_DIGEST_LEN],
+									  size_t hash_len, const pb_stream *sig_pbs,
 #ifdef USE_KEYRR
-, const pubkey_list_t *keys_from_dns
+									  const pubkey_list_t *keys_from_dns,
 #endif /* USE_KEYRR */
-, const struct gw_info *gateways_from_dns
-)
+									  const struct gw_info *gateways_from_dns)
 {
 	const struct connection *c = st->st_connection;
 	struct tac_state s;
@@ -1838,8 +1818,8 @@ RSA_check_signature(const struct id* peer
 	}
 }
 
-static notification_t
-accept_nonce(struct msg_digest *md, chunk_t *dest, const char *name)
+static notification_t accept_nonce(struct msg_digest *md, chunk_t *dest,
+								   const char *name)
 {
 	pb_stream *nonce_pbs = &md->chain[ISAKMP_NEXT_NONCE]->pbs;
 	size_t len = pbs_left(nonce_pbs);
@@ -1902,9 +1882,9 @@ encrypt_message(pb_stream *pbs, struct state *st)
  * Used by: quick_outI1, quick_inI1_outR1 (twice), quick_inR1_outI2
  * (see RFC 2409 "IKE" 5.5, pg. 18 or draft-ietf-ipsec-ike-01.txt 6.2 pg 25)
  */
-static size_t
-quick_mode_hash12(u_char *dest, const u_char *start, const u_char *roof
-, const struct state *st, const msgid_t *msgid, bool hash2)
+static size_t quick_mode_hash12(u_char *dest, const u_char *start,
+								const u_char *roof, const struct state *st,
+								const msgid_t *msgid, bool hash2)
 {
 	struct hmac_ctx ctx;
 
@@ -1935,8 +1915,7 @@ quick_mode_hash12(u_char *dest, const u_char *start, const u_char *roof
  * NOTE: this hash (unlike HASH(1) and HASH(2)) ONLY covers the
  * Message ID and Nonces.  This is a mistake.
  */
-static size_t
-quick_mode_hash3(u_char *dest, struct state *st)
+static size_t quick_mode_hash3(u_char *dest, struct state *st)
 {
 	struct hmac_ctx ctx;
 
@@ -1953,8 +1932,7 @@ quick_mode_hash3(u_char *dest, struct state *st)
 /* Compute Phase 2 IV.
  * Uses Phase 1 IV from st_iv; puts result in st_new_iv.
  */
-void
-init_phase2_iv(struct state *st, const msgid_t *msgid)
+void init_phase2_iv(struct state *st, const msgid_t *msgid)
 {
 	const struct hash_desc *h = st->st_oakley.hasher;
 	union hash_ctx ctx;
@@ -1981,9 +1959,8 @@ init_phase2_iv(struct state *st, const msgid_t *msgid)
  * Note: this is not called from demux.c
  */
 
-static bool
-emit_subnet_id(ip_subnet *net
-, u_int8_t np, u_int8_t protoid, u_int16_t port, pb_stream *outs)
+static bool emit_subnet_id(ip_subnet *net, u_int8_t np, u_int8_t protoid,
+						   u_int16_t port, pb_stream *outs)
 {
 	struct isakmp_ipsec_id id;
 	pb_stream id_pbs;
@@ -2018,13 +1995,9 @@ emit_subnet_id(ip_subnet *net
 	return TRUE;
 }
 
-stf_status
-quick_outI1(int whack_sock
-, struct state *isakmp_sa
-, struct connection *c
-, lset_t policy
-, unsigned long try
-, so_serial_t replacing)
+stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
+					   struct connection *c, lset_t policy, unsigned long try,
+					   so_serial_t replacing)
 {
 	struct state *st = duplicate_state(isakmp_sa);
 	pb_stream reply;    /* not really a reply */
@@ -2236,8 +2209,7 @@ quick_outI1(int whack_sock
 /*
  * Decode the CERT payload of Phase 1.
  */
-static void
-decode_cert(struct msg_digest *md)
+static void decode_cert(struct msg_digest *md)
 {
 	struct payload_digest *p;
 
@@ -2291,8 +2263,7 @@ decode_cert(struct msg_digest *md)
 /*
  * Decode the CR payload of Phase 1.
  */
-static void
-decode_cr(struct msg_digest *md, struct connection *c)
+static void decode_cr(struct msg_digest *md, struct connection *c)
 {
 	struct payload_digest *p;
 
@@ -2342,8 +2313,7 @@ decode_cr(struct msg_digest *md, struct connection *c)
  * We must be called before SIG or HASH are decoded since we
  * may change the peer's RSA key or ID.
  */
-static bool
-decode_peer_id(struct msg_digest *md, struct id *peer)
+static bool decode_peer_id(struct msg_digest *md, struct id *peer)
 {
 	struct state *const st = md->st;
 	struct payload_digest *const id_pld = md->chain[ISAKMP_NEXT_ID];
@@ -2457,8 +2427,8 @@ decode_peer_id(struct msg_digest *md, struct id *peer)
  * - if the initiation was explicit, we'd be ignoring user's intent
  * - if opportunistic, we'll lose our HOLD info
  */
-static bool
-switch_connection(struct msg_digest *md, struct id *peer, bool initiator)
+static bool switch_connection(struct msg_digest *md, struct id *peer,
+							  bool initiator)
 {
 	struct state *const st = md->st;
 	struct connection *c = st->st_connection;
@@ -2569,11 +2539,8 @@ switch_connection(struct msg_digest *md, struct id *peer, bool initiator)
  * Rejects 0.0.0.0/32 or IPv6 equivalent because
  * (1) it is wrong and (2) we use this value for inband signalling.
  */
-static bool
-decode_net_id(struct isakmp_ipsec_id *id
-, pb_stream *id_pbs
-, ip_subnet *net
-, const char *which)
+static bool decode_net_id(struct isakmp_ipsec_id *id, pb_stream *id_pbs,
+						  ip_subnet *net, const char *which)
 {
 	const struct af_info *afi = NULL;
 
@@ -2737,14 +2704,9 @@ decode_net_id(struct isakmp_ipsec_id *id
 }
 
 /* like decode, but checks that what is received matches what was sent */
-static bool
-
-check_net_id(struct isakmp_ipsec_id *id
-, pb_stream *id_pbs
-, u_int8_t *protoid
-, u_int16_t *port
-, ip_subnet *net
-, const char *which)
+static bool check_net_id(struct isakmp_ipsec_id *id, pb_stream *id_pbs,
+						 u_int8_t *protoid, u_int16_t *port, ip_subnet *net,
+						 const char *which)
 {
 	ip_subnet net_temp;
 
@@ -2763,8 +2725,7 @@ check_net_id(struct isakmp_ipsec_id *id
 /*
  * look for the existence of a non-expiring preloaded public key
  */
-static bool
-has_preloaded_public_key(struct state *st)
+static bool has_preloaded_public_key(struct state *st)
 {
 	struct connection *c = st->st_connection;
 
@@ -2797,10 +2758,8 @@ has_preloaded_public_key(struct state *st)
  * RFC 2409 "IKE" section 5.5
  * specifies how this is to be done.
  */
-static void
-compute_proto_keymat(struct state *st
-, u_int8_t protoid
-, struct ipsec_proto_info *pi)
+static void compute_proto_keymat(struct state *st, u_int8_t protoid,
+								 struct ipsec_proto_info *pi)
 {
 	size_t needed_len = 0; /* bytes of keying material needed */
 
@@ -2945,8 +2904,7 @@ compute_proto_keymat(struct state *st
 		DBG_dump("Peer KEYMAT computed:\n", pi->peer_keymat, pi->keymat_len));
 }
 
-static void
-compute_keymats(struct state *st)
+static void compute_keymats(struct state *st)
 {
 	if (st->st_ah.present)
 		compute_proto_keymat(st, PROTO_IPSEC_AH, &st->st_ah);
@@ -3245,8 +3203,7 @@ main_inI1_outR1(struct msg_digest *md)
  *
  * We must verify that the proposal received matches one we sent.
  */
-stf_status
-main_inR1_outI2(struct msg_digest *md)
+stf_status main_inR1_outI2(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 
@@ -3346,8 +3303,7 @@ main_inR1_outI2(struct msg_digest *md)
  *          HDR, [ HASH(1), ] <Ni_b>Pubkey_r, <KE_b>Ke_i, <IDi1_b>Ke_i [,<<Cert-I_b>Ke_i]
  *          --> HDR, <Nr_b>PubKey_i, <KE_b>Ke_r, <IDr1_b>Ke_r
  */
-stf_status
-main_inI2_outR2(struct msg_digest *md)
+stf_status main_inI2_outR2(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	pb_stream *keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
@@ -3487,8 +3443,7 @@ main_inI2_outR2(struct msg_digest *md)
  * SMF_RPKE_AUTH: HDR, <Nr_b>PubKey_i, <KE_b>Ke_r, <IDr1_b>Ke_r
  *          --> HDR*, HASH_I
  */
-stf_status
-main_inR2_outI3(struct msg_digest *md)
+stf_status main_inR2_outI3(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	pb_stream *const keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
@@ -3672,8 +3627,8 @@ struct key_continuation {
 
 typedef stf_status (key_tail_fn)(struct msg_digest *md
 								  , struct key_continuation *kc);
-static void
-report_key_dns_failure(struct id *id, err_t ugh)
+
+static void report_key_dns_failure(struct id *id, err_t ugh)
 {
 	char id_buf[BUF_LEN];       /* arbitrary limit on length of ID reported */
 
@@ -3843,10 +3798,8 @@ main_id_and_auth(struct msg_digest *md
  * to find authentication, or we run out of things
  * to try.
  */
-static void
-key_continue(struct adns_continuation *cr
-, err_t ugh
-, key_tail_fn *tail)
+static void key_continue(struct adns_continuation *cr, err_t ugh, 
+						 key_tail_fn *tail)
 {
 	struct key_continuation *kc = (void *)cr;
 	struct state *st = kc->md->st;
@@ -3898,14 +3851,12 @@ key_continue(struct adns_continuation *cr
  */
 static key_tail_fn main_inI3_outR3_tail;        /* forward */
 
-stf_status
-main_inI3_outR3(struct msg_digest *md)
+stf_status main_inI3_outR3(struct msg_digest *md)
 {
 	return main_inI3_outR3_tail(md, NULL);
 }
 
-static void
-main_inI3_outR3_continue(struct adns_continuation *cr, err_t ugh)
+static void main_inI3_outR3_continue(struct adns_continuation *cr, err_t ugh)
 {
 	key_continue(cr, ugh, main_inI3_outR3_tail);
 }
@@ -4077,21 +4028,18 @@ main_inI3_outR3_tail(struct msg_digest *md
 
 static key_tail_fn main_inR3_tail;      /* forward */
 
-stf_status
-main_inR3(struct msg_digest *md)
+stf_status main_inR3(struct msg_digest *md)
 {
 	return main_inR3_tail(md, NULL);
 }
 
-static void
-main_inR3_continue(struct adns_continuation *cr, err_t ugh)
+static void main_inR3_continue(struct adns_continuation *cr, err_t ugh)
 {
 	key_continue(cr, ugh, main_inR3_tail);
 }
 
-static stf_status
-main_inR3_tail(struct msg_digest *md
-, struct key_continuation *kc)
+static stf_status main_inR3_tail(struct msg_digest *md,
+								 struct key_continuation *kc)
 {
 	struct state *const st = md->st;
 
@@ -4233,8 +4181,7 @@ struct verify_oppo_continuation {
 static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 	, struct adns_continuation *ac);
 
-stf_status
-quick_inI1_outR1(struct msg_digest *md)
+stf_status quick_inI1_outR1(struct msg_digest *md)
 {
 	const struct state *const p1st = md->st;
 	struct connection *c = p1st->st_connection;
@@ -4341,8 +4288,7 @@ report_verify_failure(struct verify_oppo_bundle *b, err_t ugh)
 		, fgwb, cb, which, ugh);
 }
 
-static void
-quick_inI1_outR1_continue(struct adns_continuation *cr, err_t ugh)
+static void quick_inI1_outR1_continue(struct adns_continuation *cr, err_t ugh)
 {
 	stf_status r;
 	struct verify_oppo_continuation *vc = (void *)cr;
@@ -4372,9 +4318,8 @@ quick_inI1_outR1_continue(struct adns_continuation *cr, err_t ugh)
 	cur_state = NULL;
 }
 
-static stf_status
-quick_inI1_outR1_start_query(struct verify_oppo_bundle *b
-, enum verify_oppo_step next_step)
+static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
+											   enum verify_oppo_step next_step)
 {
 	struct msg_digest *md = b->md;
 	struct state *p1st = md->st;
@@ -4489,10 +4434,10 @@ quick_inI1_outR1_start_query(struct verify_oppo_bundle *b
 	}
 }
 
-static enum verify_oppo_step
-quick_inI1_outR1_process_answer(struct verify_oppo_bundle *b
-, struct adns_continuation *ac
-, struct state *p1st)
+static enum verify_oppo_step quick_inI1_outR1_process_answer(
+										struct verify_oppo_bundle *b,
+										struct adns_continuation *ac,
+										struct state *p1st)
 {
 	struct connection *c = p1st->st_connection;
 	enum verify_oppo_step next_step = vos_our_client;
@@ -4665,9 +4610,8 @@ quick_inI1_outR1_process_answer(struct verify_oppo_bundle *b
 	return next_step;
 }
 
-static stf_status
-quick_inI1_outR1_tail(struct verify_oppo_bundle *b
-, struct adns_continuation *ac)
+static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
+										struct adns_continuation *ac)
 {
 	struct msg_digest *md = b->md;
 	struct state *const p1st = md->st;
@@ -5019,8 +4963,7 @@ quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 /*
  * Initialize RFC 3706 Dead Peer Detection
  */
-static void
-dpd_init(struct state *st)
+static void dpd_init(struct state *st)
 {
 	struct state *p1st = find_state(st->st_icookie, st->st_rcookie
 								, &st->st_connection->spd.that.host_addr, 0);
@@ -5044,8 +4987,7 @@ dpd_init(struct state *st)
  * (see RFC 2409 "IKE" 5.5)
  * Installs inbound and outbound IPsec SAs, routing, etc.
  */
-stf_status
-quick_inR1_outI2(struct msg_digest *md)
+stf_status quick_inR1_outI2(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	const struct connection *c = st->st_connection;
@@ -5197,8 +5139,7 @@ quick_inR1_outI2(struct msg_digest *md)
  * (see RFC 2409 "IKE" 5.5)
  * Installs outbound IPsec SAs, routing, etc.
  */
-stf_status
-quick_inI2(struct msg_digest *md)
+stf_status quick_inI2(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 
@@ -5243,9 +5184,8 @@ quick_inI2(struct msg_digest *md)
 	return STF_OK;
 }
 
-static stf_status
-send_isakmp_notification(struct state *st, u_int16_t type
-	, const void *data, size_t len)
+static stf_status send_isakmp_notification(struct state *st, u_int16_t type,
+										   const void *data, size_t len)
 {
 	msgid_t msgid;
 	pb_stream reply;
@@ -5350,8 +5290,7 @@ send_isakmp_notification(struct state *st, u_int16_t type
 /*
  * DPD Out Initiator
  */
-void
-dpd_outI(struct state *p2st)
+void dpd_outI(struct state *p2st)
 {
 	struct state *st;
 	u_int32_t seqno;
@@ -5411,8 +5350,12 @@ dpd_outI(struct state *p2st)
 
 	if (!st->st_dpd_seqno)
 	{
+		rng_t *rng;
+
 		/* Get a non-zero random value that has room to grow */
-		get_rnd_bytes((u_char *)&st->st_dpd_seqno, sizeof(st->st_dpd_seqno));
+		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+		rng->get_bytes(rng, sizeof(st->st_dpd_seqno), (u_char *)&st->st_dpd_seqno);
+		rng->destroy(rng);
 		st->st_dpd_seqno &= 0x7fff;
 		st->st_dpd_seqno++;
 	}
@@ -5512,8 +5455,8 @@ dpd_inI_outR(struct state *st, struct isakmp_notification *const n, pb_stream *p
 /*
  * DPD out Responder
  */
-stf_status
-dpd_inR(struct state *st, struct isakmp_notification *const n, pb_stream *pbs)
+stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
+				   pb_stream *pbs)
 {
 	u_int32_t seqno;
 

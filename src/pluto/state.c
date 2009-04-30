@@ -26,6 +26,9 @@
 
 #include <freeswan.h>
 
+#include <library.h>
+#include <crypto/rngs/rng.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "connections.h"
@@ -34,7 +37,6 @@
 #include "log.h"
 #include "packet.h"     /* so we can calculate sizeof(struct isakmp_hdr) */
 #include "keys.h"       /* for free_public_key */
-#include "rnd.h"
 #include "timer.h"
 #include "whack.h"
 #include "demux.h"      /* needs packet.h */
@@ -81,8 +83,7 @@ struct msgid_list
 	struct msgid_list     *next;
 };
 
-bool
-reserve_msgid(struct state *isakmp_sa, msgid_t msgid)
+bool reserve_msgid(struct state *isakmp_sa, msgid_t msgid)
 {
 	struct msgid_list *p;
 
@@ -100,20 +101,22 @@ reserve_msgid(struct state *isakmp_sa, msgid_t msgid)
 	return TRUE;
 }
 
-msgid_t
-generate_msgid(struct state *isakmp_sa)
+msgid_t generate_msgid(struct state *isakmp_sa)
 {
 	int timeout = 100;  /* only try so hard for unique msgid */
 	msgid_t msgid;
+	rng_t *rng;
 
 	passert(IS_ISAKMP_ENCRYPTED(isakmp_sa->st_state));
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 
 	for (;;)
 	{
-		get_rnd_bytes((void *) &msgid, sizeof(msgid));
+		rng->get_bytes(rng, sizeof(msgid), (void *) &msgid);
 		if (msgid != 0 && reserve_msgid(isakmp_sa, msgid))
+		{
 			break;
-
+		}
 		if (--timeout == 0)
 		{
 			plog("gave up looking for unique msgid; using 0x%08lx"
@@ -121,6 +124,7 @@ generate_msgid(struct state *isakmp_sa)
 			break;
 		}
 	}
+	rng->destroy(rng);
 	return msgid;
 }
 
@@ -131,8 +135,8 @@ generate_msgid(struct state *isakmp_sa)
 
 static struct state *statetable[STATE_TABLE_SIZE];
 
-static struct state **
-state_hash(const u_char *icookie, const u_char *rcookie, const ip_address *peer)
+static struct state **state_hash(const u_char *icookie, const u_char *rcookie,
+								 const ip_address *peer)
 {
 	u_int i = 0, j;
 	const unsigned char *byte_ptr;
@@ -162,8 +166,7 @@ state_hash(const u_char *icookie, const u_char *rcookie, const ip_address *peer)
  * Caller must schedule an event for this object so that it doesn't leak.
  * Caller must insert_state().
  */
-struct state *
-new_state(void)
+struct state *new_state(void)
 {
 	static const struct state blank_state;      /* initialized all to zero & NULL */
 	static so_serial_t next_so = SOS_FIRST;
@@ -181,8 +184,7 @@ new_state(void)
 /*
  * Initialize the state table (and mask*).
  */
-void
-init_states(void)
+void init_states(void)
 {
 	int i;
 
@@ -197,8 +199,7 @@ init_states(void)
  * If this turns out to be a significant CPU hog, it could be
  * improved to use a hash table rather than sequential seartch.
  */
-struct state *
-state_with_serialno(so_serial_t sn)
+struct state *state_with_serialno(so_serial_t sn)
 {
 	if (sn >= SOS_FIRST)
 	{
@@ -217,8 +218,7 @@ state_with_serialno(so_serial_t sn)
  * at the begining of list.
  * Needs cookies, connection, and msgid.
  */
-void
-insert_state(struct state *st)
+void insert_state(struct state *st)
 {
 	struct state **p = state_hash(st->st_icookie, st->st_rcookie
 		, &st->st_connection->spd.that.host_addr);
@@ -244,8 +244,7 @@ insert_state(struct state *st)
 
 /* unlink a state object from the hash table, but don't free it
  */
-void
-unhash_state(struct state *st)
+void unhash_state(struct state *st)
 {
 	/* unlink from forward chain */
 	struct state **p = st->st_hashchain_prev == NULL
@@ -270,15 +269,15 @@ unhash_state(struct state *st)
 /* Free the Whack socket file descriptor.
  * This has the side effect of telling Whack that we're done.
  */
-void
-release_whack(struct state *st)
+void release_whack(struct state *st)
 {
 	close_any(st->st_whack_sock);
 }
 
-/* delete a state object */
-void
-delete_state(struct state *st)
+/**
+ * Delete a state object
+ */
+void delete_state(struct state *st)
 {
 	struct connection *const c = st->st_connection;
 	struct state *old_cur_state = cur_state == st? NULL : cur_state;
@@ -372,11 +371,10 @@ delete_state(struct state *st)
 	free(st);
 }
 
-/*
+/**
  * Is a connection in use by some state?
  */
-bool
-states_use_connection(struct connection *c)
+bool states_use_connection(struct connection *c)
 {
 	/* are there any states still using it? */
 	struct state *st = NULL;
@@ -390,13 +388,12 @@ states_use_connection(struct connection *c)
 	return FALSE;
 }
 
-/*
- * delete all states that were created for a given connection.
+/**
+ * Delete all states that were created for a given connection.
  * if relations == TRUE, then also delete states that share
  * the same phase 1 SA.
  */
-void
-delete_states_by_connection(struct connection *c, bool relations)
+void delete_states_by_connection(struct connection *c, bool relations)
 {
 	int pass;
 	/* this kludge avoids an n^2 algorithm */
@@ -465,11 +462,11 @@ delete_states_by_connection(struct connection *c, bool relations)
 	c->kind = ck;
 }
 
-/* Walk through the state table, and delete each state whose phase 1 (IKE)
+/**
+ * Walk through the state table, and delete each state whose phase 1 (IKE)
  * peer is among those given.
  */
-void
-delete_states_by_peer(ip_address *peer)
+void delete_states_by_peer(ip_address *peer)
 {
 	char peerstr[ADDRTOT_BUF];
 	int i;
@@ -512,8 +509,7 @@ delete_states_by_peer(ip_address *peer)
  * Caller must schedule an event for this object so that it doesn't leak.
  * Caller must insert_state().
  */
-struct state *
-duplicate_state(struct state *st)
+struct state *duplicate_state(struct state *st)
 {
 	struct state *nst;
 
@@ -558,14 +554,11 @@ void for_each_state(void *(f)(struct state *, void *data), void *data)
 }
 #endif
 
-/*
+/**
  * Find a state object.
  */
-struct state *
-find_state(const u_char *icookie
-, const u_char *rcookie
-, const ip_address *peer
-, msgid_t /*network order*/ msgid)
+struct state *find_state(const u_char *icookie, const u_char *rcookie,
+						 const ip_address *peer, msgid_t msgid)
 {
 	struct state *st = *state_hash(icookie, rcookie, peer);
 
@@ -594,11 +587,11 @@ find_state(const u_char *icookie
 	return st;
 }
 
-/* Find the state that sent a packet
+/**
+ * Find the state that sent a packet
  * ??? this could be expensive -- it should be rate-limited to avoid DoS
  */
-struct state *
-find_sender(size_t packet_len, u_char *packet)
+struct state *find_sender(size_t packet_len, u_char *packet)
 {
 	int i;
 	struct state *st;
@@ -621,11 +614,9 @@ find_sender(size_t packet_len, u_char *packet)
 	return NULL;
 }
 
-struct state *
-find_phase2_state_to_delete(const struct state *p1st
-, u_int8_t protoid
-, ipsec_spi_t spi
-, bool *bogus)
+struct state *find_phase2_state_to_delete(const struct state *p1st,
+										  u_int8_t protoid, ipsec_spi_t spi,
+										  bool *bogus)
 {
 	struct state *st;
 	int i;
@@ -655,10 +646,10 @@ find_phase2_state_to_delete(const struct state *p1st
 	return NULL;
 }
 
-/* Find newest Phase 1 negotiation state object for suitable for connection c
+/**
+ * Find newest Phase 1 negotiation state object for suitable for connection c
  */
-struct state *
-find_phase1_state(const struct connection *c, lset_t ok_states)
+struct state *find_phase1_state(const struct connection *c, lset_t ok_states)
 {
 	struct state
 		*st,
@@ -676,9 +667,8 @@ find_phase1_state(const struct connection *c, lset_t ok_states)
 	return best;
 }
 
-void
-state_eroute_usage(ip_subnet *ours, ip_subnet *his
-, unsigned long count, time_t nw)
+void state_eroute_usage(ip_subnet *ours, ip_subnet *his, unsigned long count,
+						time_t nw)
 {
 	struct state *st;
 	int i;
@@ -717,9 +707,8 @@ state_eroute_usage(ip_subnet *ours, ip_subnet *his
 		});
 }
 
-void fmt_state(bool all, struct state *st, time_t n
-, char *state_buf, size_t state_buf_len
-, char *state_buf2, size_t state_buf2_len)
+void fmt_state(bool all, struct state *st, time_t n, char *state_buf,
+			   size_t state_buf_len, char *state_buf2, size_t state_buf2_len)
 {
 	/* what the heck is interesting about a state? */
 	const struct connection *c = st->st_connection;
@@ -835,8 +824,7 @@ void fmt_state(bool all, struct state *st, time_t n
  *  isakmp_sa (XXX probably wrong)
  *
  */
-static int
-state_compare(const void *a, const void *b)
+static int state_compare(const void *a, const void *b)
 {
 	const struct state *sap = *(const struct state *const *)a;
 	struct connection *ca = sap->st_connection;
@@ -848,8 +836,7 @@ state_compare(const void *a, const void *b)
 	return connection_compare(ca, cb);
 }
 
-void
-show_states_status(bool all, const char *name)
+void show_states_status(bool all, const char *name)
 {
 	time_t n = now();
 	int i;
@@ -919,8 +906,7 @@ show_states_status(bool all, const char *name)
  * If we can't find one easily, choose 0 (a bad SPI,
  * no matter what order) indicating failure.
  */
-void
-find_my_cpi_gap(cpi_t *latest_cpi, cpi_t *first_busy_cpi)
+void find_my_cpi_gap(cpi_t *latest_cpi, cpi_t *first_busy_cpi)
 {
 	int tries = 0;
 	cpi_t base = *latest_cpi;
@@ -972,16 +958,16 @@ startover:
  * If we can't find one easily, return 0 (a bad SPI,
  * no matter what order) indicating failure.
  */
-ipsec_spi_t
-uniquify_his_cpi(ipsec_spi_t cpi, struct state *st)
+ipsec_spi_t uniquify_his_cpi(ipsec_spi_t cpi, struct state *st)
 {
 	int tries = 0;
 	int i;
+	rng_t *rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 
 startover:
 
 	/* network order makes first two bytes our target */
-	get_rnd_bytes((u_char *)&cpi, 2);
+	rng->get_bytes(rng, 2, (u_char *)&cpi);
 
 	/* Make sure that the result is unique.
 	 * Hard work.  If there is no unique value, we'll loop forever!
@@ -998,11 +984,15 @@ startover:
 			&& cpi == s->st_ipcomp.attrs.spi)
 			{
 				if (++tries == 20)
+				{
+					rng->destroy(rng);
 					return 0;   /* FAILURE */
+				}
 				goto startover;
 			}
 		}
 	}
+	rng->destroy(rng);
 	return cpi;
 }
 

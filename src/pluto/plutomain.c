@@ -60,7 +60,6 @@
 #include "keys.h"
 #include "adns.h"       /* needs <resolv.h> */
 #include "dnskey.h"     /* needs keys.h and adns.h */
-#include "rnd.h"
 #include "state.h"
 #include "ipsec_doi.h"  /* needs demux.h and state.h */
 #include "ocsp.h"
@@ -73,6 +72,7 @@
 #include "nat_traversal.h"
 #include "virtual.h"
 #include "timer.h"
+#include "vendor.h"
 
 static void usage(const char *mess)
 {
@@ -634,9 +634,8 @@ int main(int argc, char **argv)
 
 	init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
 	init_virtual_ip(virtual_private);
-	scx_init(pkcs11_module_path, pkcs11_init_args);   /* load and initialize PKCS #11 module */
-	xauth_init();                   /* load and initialize XAUTH module */
-	init_rnd_pool();
+	scx_init(pkcs11_module_path, pkcs11_init_args);
+	xauth_init();
 	init_secret();
 	init_states();
 	init_crypto();

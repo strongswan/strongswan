@@ -67,7 +67,6 @@ static size_t append(void *ptr, size_t size, size_t nmemb, chunk_t *data)
 static status_t fetch(private_curl_fetcher_t *this, char *uri, chunk_t *result)
 {
 	char error[CURL_ERROR_SIZE];
-	char buf[256];
 	status_t status;
 	
 	*result = chunk_empty;

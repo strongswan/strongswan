@@ -18,11 +18,8 @@ db_ops.c db_ops.h \
 defs.c defs.h \
 demux.c demux.h \
 dnskey.c dnskey.h \
-dsa.c dsa.h \
-elgamal.c elgamal.h \
 fetch.c fetch.h \
 foodgroups.c foodgroups.h \
-gcryptfix.c gcryptfix.h \
 id.c id.h \
 ike_alg.c ike_alg.h \
 ipsec_doi.c ipsec_doi.h \
@@ -47,7 +44,6 @@ pgp.c pgp.h \
 pkcs1.c pkcs1.h \
 pkcs7.c pkcs7.h \
 plutomain.c \
-primegen.c smallprime.c \
 rcv_whack.c rcv_whack.h \
 server.c server.h \
 sha1.c sha1.h \
@@ -86,6 +82,7 @@ AM_CFLAGS = \
 -DPLUGINS=\""${pluto_plugins}\"" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
+-DNO_CREDENTIAL_FACTORY \
 -DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \

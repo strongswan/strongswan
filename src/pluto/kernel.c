@@ -31,6 +31,9 @@
 #include <freeswan.h>
 #include <ipsec_policy.h>
 
+#include <library.h>
+#include <crypto/rngs/rng.h>
+
 #ifdef KLIPS
 #include <signal.h>
 #include <sys/time.h>   /* for select(2) */
@@ -42,7 +45,6 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "rnd.h"
 #include "id.h"
 #include "connections.h"
 #include "state.h"
@@ -118,8 +120,7 @@ struct bare_shunt {
 static struct bare_shunt *bare_shunts = NULL;
 
 #ifdef DEBUG
-static void
-DBG_bare_shunt(const char *op, const struct bare_shunt *bs)
+static void DBG_bare_shunt(const char *op, const struct bare_shunt *bs)
 {
 	DBG(DBG_KLIPS,
 		{
@@ -150,14 +151,12 @@ DBG_bare_shunt(const char *op, const struct bare_shunt *bs)
 struct eroute_info *orphaned_holds = NULL;
 
 /* forward declaration */
-static bool shunt_eroute(struct connection *c
-						 , struct spd_route *sr
-						 , enum routing_t rt_kind
-						 , unsigned int op, const char *opname);
-static void set_text_said(char *text_said
-						  , const ip_address *dst
-						  , ipsec_spi_t spi
-						  , int proto);
+static bool shunt_eroute(struct connection *c, struct spd_route *sr,
+						 enum routing_t rt_kind, unsigned int op,
+						 const char *opname);
+
+static void set_text_said(char *text_said, const ip_address *dst,
+						  ipsec_spi_t spi, int proto);
 
 bool no_klips = FALSE;  /* don't actually use KLIPS */
 
@@ -174,11 +173,9 @@ static const struct pfkey_proto_info null_proto_info[2] = {
 		}
 };
 
-void
-record_and_initiate_opportunistic(const ip_subnet *ours
-								  , const ip_subnet *his
-								  , int transport_proto
-								  , const char *why)
+void record_and_initiate_opportunistic(const ip_subnet *ours,
+									   const ip_subnet *his,
+									   int transport_proto, const char *why)
 {
 	passert(samesubnettype(ours, his));
 
@@ -279,25 +276,31 @@ static unsigned get_proto_reqid(unsigned base, int proto)
  * check if the number was previously used (assuming that no
  * SPI lives longer than 4G of its successors).
  */
-ipsec_spi_t
-get_ipsec_spi(ipsec_spi_t avoid, int proto, struct spd_route *sr, bool tunnel)
+ipsec_spi_t get_ipsec_spi(ipsec_spi_t avoid, int proto, struct spd_route *sr,
+						  bool tunnel)
 {
 	static ipsec_spi_t spi = 0; /* host order, so not returned directly! */
 	char text_said[SATOT_BUF];
+	rng_t *rng;
 
 	set_text_said(text_said, &sr->this.host_addr, 0, proto);
 
 	if (kernel_ops->get_spi)
+	{
 		return kernel_ops->get_spi(&sr->that.host_addr
 			, &sr->this.host_addr, proto, tunnel
 			, get_proto_reqid(sr->reqid, proto)
 			, IPSEC_DOI_SPI_OUR_MIN, 0xffffffff
 			, text_said);
+	}
 
 	spi++;
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	while (spi < IPSEC_DOI_SPI_OUR_MIN || spi == ntohl(avoid))
-		get_rnd_bytes((u_char *)&spi, sizeof(spi));
-
+	{
+		rng->get_bytes(rng, sizeof(spi), (u_char *)&spi);
+	}
+	rng->destroy(rng);
 	DBG(DBG_CONTROL,
 		{
 			ipsec_spi_t spi_net = htonl(spi);
@@ -316,28 +319,30 @@ get_ipsec_spi(ipsec_spi_t avoid, int proto, struct spd_route *sr, bool tunnel)
  * If we can't find one easily, return 0 (a bad SPI,
  * no matter what order) indicating failure.
  */
-ipsec_spi_t
-get_my_cpi(struct spd_route *sr, bool tunnel)
+ipsec_spi_t get_my_cpi(struct spd_route *sr, bool tunnel)
 {
-	static cpi_t
-		first_busy_cpi = 0,
-		latest_cpi;
+	static cpi_t first_busy_cpi = 0, latest_cpi;
 	char text_said[SATOT_BUF];
+	rng_t *rng;
 
 	set_text_said(text_said, &sr->this.host_addr, 0, IPPROTO_COMP);
 
 	if (kernel_ops->get_spi)
+	{
 		return kernel_ops->get_spi(&sr->that.host_addr
 			, &sr->this.host_addr, IPPROTO_COMP, tunnel
 			, get_proto_reqid(sr->reqid, IPPROTO_COMP)
 			, IPCOMP_FIRST_NEGOTIATED, IPCOMP_LAST_NEGOTIATED
 			, text_said);
+	}
 
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	while (!(IPCOMP_FIRST_NEGOTIATED <= first_busy_cpi && first_busy_cpi < IPCOMP_LAST_NEGOTIATED))
 	{
-		get_rnd_bytes((u_char *)&first_busy_cpi, sizeof(first_busy_cpi));
+		rng->get_bytes(rng, sizeof(first_busy_cpi), (u_char *)&first_busy_cpi);
 		latest_cpi = first_busy_cpi;
 	}
+	rng->destroy(rng);
 
 	latest_cpi++;
 
@@ -387,8 +392,8 @@ get_my_cpi(struct spd_route *sr, bool tunnel)
 # define DEFAULT_UPDOWN "ipsec _updown"
 #endif
 
-static bool
-do_command(struct connection *c, struct spd_route *sr, const char *verb)
+static bool do_command(struct connection *c, struct spd_route *sr,
+					   const char *verb)
 {
 	char cmd[1536];     /* arbitrary limit on shell command length */
 	const char *verb_suffix;
@@ -647,8 +652,7 @@ enum routability {
 	route_farconflict = 3
 };
 
-static enum routability
-could_route(struct connection *c)
+static enum routability could_route(struct connection *c)
 {
 	struct spd_route *esr, *rosr;
 	struct connection *ero      /* who, if anyone, owns our eroute? */
@@ -792,8 +796,7 @@ could_route(struct connection *c)
 	return route_easy;
 }
 
-bool
-trap_connection(struct connection *c)
+bool trap_connection(struct connection *c)
 {
 	switch (could_route(c))
 	{
@@ -818,9 +821,10 @@ trap_connection(struct connection *c)
 	return FALSE;
 }
 
-/* delete any eroute for a connection and unroute it if route isn't shared */
-void
-unroute_connection(struct connection *c)
+/**
+ * Delete any eroute for a connection and unroute it if route isn't shared
+ */
+void unroute_connection(struct connection *c)
 {
 	struct spd_route *sr;
 	enum routing_t cr;
@@ -849,8 +853,8 @@ unroute_connection(struct connection *c)
 
 #ifdef KLIPS
 
-static void
-set_text_said(char *text_said, const ip_address *dst, ipsec_spi_t spi, int proto)
+static void set_text_said(char *text_said, const ip_address *dst,
+						  ipsec_spi_t spi, int proto)
 {
 	ip_said said;
 
@@ -862,8 +866,9 @@ set_text_said(char *text_said, const ip_address *dst, ipsec_spi_t spi, int proto
  * Trick: return a pointer to the pointer to the entry;
  * this allows the entry to be deleted.
  */
-static struct bare_shunt **
-bare_shunt_ptr(const ip_subnet *ours, const ip_subnet *his, int transport_proto)
+static struct bare_shunt** bare_shunt_ptr(const ip_subnet *ours,
+										  const ip_subnet *his, 
+										  int transport_proto)
 {
 	struct bare_shunt *p, **pp;
 
@@ -880,8 +885,7 @@ bare_shunt_ptr(const ip_subnet *ours, const ip_subnet *his, int transport_proto)
 }
 
 /* free a bare_shunt entry, given a pointer to the pointer */
-static void
-free_bare_shunt(struct bare_shunt **pp)
+static void free_bare_shunt(struct bare_shunt **pp)
 {
 	if (pp == NULL)
 	{
@@ -933,19 +937,18 @@ show_shunt_status(void)
  * op is one of the ERO_* operators.
  */
 
-static bool
-raw_eroute(const ip_address *this_host
-		   , const ip_subnet *this_client
-		   , const ip_address *that_host
-		   , const ip_subnet *that_client
-		   , ipsec_spi_t spi
-		   , unsigned int proto
-		   , unsigned int satype
-		   , unsigned int transport_proto
-		   , const struct pfkey_proto_info *proto_info
-		   , time_t use_lifetime
-		   , unsigned int op
-		   , const char *opname USED_BY_DEBUG)
+static bool raw_eroute(const ip_address *this_host,
+					   const ip_subnet *this_client,
+					   const ip_address *that_host,
+					   const ip_subnet *that_client,
+		   			   ipsec_spi_t spi,
+		   			   unsigned int proto,
+					   unsigned int satype,
+					   unsigned int transport_proto,
+					   const struct pfkey_proto_info *proto_info,
+					   time_t use_lifetime,
+					   unsigned int op,
+					   const char *opname USED_BY_DEBUG)
 {
 	char text_said[SATOT_BUF];
 
@@ -971,8 +974,8 @@ raw_eroute(const ip_address *this_host
 }
 
 /* test to see if %hold remains */
-bool
-has_bare_hold(const ip_address *src, const ip_address *dst, int transport_proto)
+bool has_bare_hold(const ip_address *src, const ip_address *dst,
+				   int transport_proto)
 {
 	ip_subnet this_client, that_client;
 	struct bare_shunt **bspp;
@@ -989,13 +992,9 @@ has_bare_hold(const ip_address *src, const ip_address *dst, int transport_proto)
 /* Replace (or delete) a shunt that is in the bare_shunts table.
  * Issues the PF_KEY commands and updates the bare_shunts table.
  */
-bool
-replace_bare_shunt(const ip_address *src, const ip_address *dst
-				   , policy_prio_t policy_prio
-				   , ipsec_spi_t shunt_spi      /* in host order! */
-				   , bool repl  /* if TRUE, replace; if FALSE, delete */
-				   , unsigned int transport_proto
-				   , const char *why)
+bool replace_bare_shunt(const ip_address *src, const ip_address *dst,
+						policy_prio_t policy_prio, ipsec_spi_t shunt_spi,
+						bool repl, unsigned int transport_proto, const char *why)
 {
 	ip_subnet this_client, that_client;
 	ip_subnet this_broad_client, that_broad_client;
@@ -1060,11 +1059,10 @@ replace_bare_shunt(const ip_address *src, const ip_address *dst
 	}
 }
 
-static bool
-eroute_connection(struct spd_route *sr
-, ipsec_spi_t spi, unsigned int proto, unsigned int satype
-, const struct pfkey_proto_info *proto_info
-, unsigned int op, const char *opname)
+static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
+							  unsigned int proto, unsigned int satype,
+							  const struct pfkey_proto_info *proto_info,
+							  unsigned int op, const char *opname)
 {
 	const ip_address *peer = &sr->that.host_addr;
 	char buf2[256];
@@ -1084,11 +1082,10 @@ eroute_connection(struct spd_route *sr
 
 /* assign a bare hold to a connection */
 
-bool
-assign_hold(struct connection *c USED_BY_DEBUG
-			, struct spd_route *sr
-			, int transport_proto
-			, const ip_address *src, const ip_address *dst)
+bool assign_hold(struct connection *c USED_BY_DEBUG, struct spd_route *sr,
+				 int transport_proto,
+				 const ip_address *src,
+				 const ip_address *dst)
 {
 	/* either the automatically installed %hold eroute is broad enough
 	 * or we try to add a broader one and delete the automatic one.
@@ -1143,9 +1140,8 @@ assign_hold(struct connection *c USED_BY_DEBUG
 }
 
 /* install or remove eroute for SA Group */
-static bool
-sag_eroute(struct state *st, struct spd_route *sr
-		   , unsigned op, const char *opname)
+static bool sag_eroute(struct state *st, struct spd_route *sr,
+					   unsigned op, const char *opname)
 {
 	u_int inner_proto = 0;
 	u_int inner_satype = 0;
@@ -1259,11 +1255,9 @@ shunt_policy_spi(struct connection *c, bool prospective)
  * If negotiation has failed, the choice between %trap/%pass/%drop/%reject
  * is specified in the policy of connection c.
  */
-static bool
-shunt_eroute(struct connection *c
-, struct spd_route *sr
-, enum routing_t rt_kind
-, unsigned int op, const char *opname)
+static bool shunt_eroute(struct connection *c, struct spd_route *sr,
+						 enum routing_t rt_kind,
+						 unsigned int op, const char *opname)
 {
 	/* We are constructing a special SAID for the eroute.
 	 * The destination doesn't seem to matter, but the family does.
@@ -1355,8 +1349,7 @@ shunt_eroute(struct connection *c
  * The task here is to remove the ":p" part so that the rest can be read
  * by another routine.
  */
-static const char *
-read_proto(const char * s, size_t * len, int * transport_proto)
+static const char *read_proto(const char * s, size_t * len, int * transport_proto)
 {
 	const char * p;
 	const char * ugh;
@@ -1405,8 +1398,7 @@ read_proto(const char * s, size_t * len, int * transport_proto)
  * searching for each is sequential.  If this becomes a problem, faster
  * searches could be implemented (hash or radix tree, for example).
  */
-void
-scan_proc_shunts(void)
+void scan_proc_shunts(void)
 {
 	static const char procname[] = "/proc/net/ipsec_eroute";
 	FILE *f;
@@ -1645,9 +1637,8 @@ scan_proc_shunts(void)
 	}
 }
 
-static bool
-del_spi(ipsec_spi_t spi, int proto
-, const ip_address *src, const ip_address *dest)
+static bool del_spi(ipsec_spi_t spi, int proto,
+					const ip_address *src, const ip_address *dest)
 {
 	char text_said[SATOT_BUF];
 	struct kernel_sa sa;
@@ -1670,8 +1661,7 @@ del_spi(ipsec_spi_t spi, int proto
  * ipsec-0.5.
  */
 
-static bool
-setup_half_ipsec_sa(struct state *st, bool inbound)
+static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 {
 	/* Build an inbound or outbound SA */
 
@@ -2122,8 +2112,7 @@ fail:
 
 /* teardown_ipsec_sa is a canibalized version of setup_ipsec_sa */
 
-static bool
-teardown_half_ipsec_sa(struct state *st, bool inbound)
+static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 {
 	/* We need to delete AH, ESP, and IP in IP SPIs.
 	 * But if there is more than one, they have been grouped
@@ -2218,8 +2207,7 @@ teardown_half_ipsec_sa(struct state *st, bool inbound)
 /*
  * get information about a given sa
  */
-bool
-get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
+bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 {
 	char text_said[SATOT_BUF];
 	struct kernel_sa sa;
@@ -2290,8 +2278,7 @@ const struct kernel_ops *kernel_ops;
 
 #endif /* KLIPS */
 
-void
-init_kernel(void)
+void init_kernel(void)
 {
 #ifdef KLIPS
 
@@ -2343,8 +2330,7 @@ init_kernel(void)
  * The Responder will subsequently use install_ipsec_sa for the outbound.
  * The Initiator uses install_ipsec_sa to install both at once.
  */
-bool
-install_inbound_ipsec_sa(struct state *st)
+bool install_inbound_ipsec_sa(struct state *st)
 {
 	struct connection *const c = st->st_connection;
 
@@ -2405,10 +2391,9 @@ install_inbound_ipsec_sa(struct state *st)
  * Any SA Group must have already been created.
  * On failure, steps will be unwound.
  */
-bool
-route_and_eroute(struct connection *c USED_BY_KLIPS
-				 , struct spd_route *sr USED_BY_KLIPS
-				 , struct state *st USED_BY_KLIPS)
+bool route_and_eroute(struct connection *c USED_BY_KLIPS,
+					  struct spd_route *sr USED_BY_KLIPS,
+					  struct state *st USED_BY_KLIPS)
 {
 #ifdef KLIPS
 	struct spd_route *esr;
@@ -2688,8 +2673,7 @@ route_and_eroute(struct connection *c USED_BY_KLIPS
 #endif /* !KLIPS */
 }
 
-bool
-install_ipsec_sa(struct state *st, bool inbound_also USED_BY_KLIPS)
+bool install_ipsec_sa(struct state *st, bool inbound_also USED_BY_KLIPS)
 {
 #ifdef KLIPS
 	struct spd_route *sr;
@@ -2764,8 +2748,8 @@ install_ipsec_sa(struct state *st, bool inbound_also USED_BY_KLIPS)
  * we may not succeed, but we bull ahead anyway because
  * we cannot do anything better by recognizing failure
  */
-void
-delete_ipsec_sa(struct state *st USED_BY_KLIPS, bool inbound_only USED_BY_KLIPS)
+void delete_ipsec_sa(struct state *st USED_BY_KLIPS,
+					 bool inbound_only USED_BY_KLIPS)
 {
 #ifdef KLIPS
 	if (!inbound_only)
@@ -2888,8 +2872,7 @@ bool update_ipsec_sa (struct state *st USED_BY_KLIPS)
  * If FALSE, DPD is not necessary. We also return TRUE for errors, as they
  * could mean that the SA is broken and needs to be replace anyway.
  */
-bool
-was_eroute_idle(struct state *st, time_t idle_max, time_t *idle_time)
+bool was_eroute_idle(struct state *st, time_t idle_max, time_t *idle_time)
 {
 	static const char procname[] = "/proc/net/ipsec_spi";
 	FILE *f;

@@ -957,6 +957,7 @@ if test x$fips_prf = xtrue; then
 fi
 if test x$random = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" random"
+	pluto_plugins=${pluto_plugins}" random"
 fi
 if test x$x509 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" x509"

@@ -21,10 +21,12 @@
 
 #include <freeswan.h>
 
+#include <library.h>
+#include <crypto/rngs/rng.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "sha1.h"
-#include "rnd.h"
 #include "cookie.h"
 
 const u_char zero_cookie[COOKIE_SIZE];  /* guaranteed 0 */
@@ -33,8 +35,8 @@ const u_char zero_cookie[COOKIE_SIZE];  /* guaranteed 0 */
  * First argument is true if we're to create an Initiator cookie.
  * Length SHOULD be a multiple of sizeof(u_int32_t).
  */
-void
-get_cookie(bool initiator, u_int8_t *cookie, int length, const ip_address *addr)
+void get_cookie(bool initiator, u_int8_t *cookie, int length,
+				const ip_address *addr)
 {
 	u_char buffer[SHA1_DIGEST_SIZE];
 	SHA1_CTX ctx;
@@ -42,7 +44,11 @@ get_cookie(bool initiator, u_int8_t *cookie, int length, const ip_address *addr)
 	do {
 		if (initiator)
 		{
-			get_rnd_bytes(cookie, length);
+			rng_t *rng;
+
+			rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+			rng->get_bytes(rng, length, cookie);
+			rng->destroy(rng);
 		}
 		else  /* Responder cookie */
 		{

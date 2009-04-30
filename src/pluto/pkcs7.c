@@ -20,9 +20,11 @@
 
 #include <freeswan.h>
 
+#include <library.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
+#include <crypto/rngs/rng.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -30,7 +32,6 @@
 #include "x509.h"
 #include "certs.h"
 #include "pkcs7.h"
-#include "rnd.h"
 
 const contentInfo_t empty_contentInfo = {
 	OID_UNKNOWN , /* type */
@@ -744,6 +745,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int ciph
 	chunk_t out;
 	chunk_t cipher_oid;
 
+	rng_t *rng;
 	u_int total_keys, i;
 	size_t padding = pad_up(data.len, DES_CBC_BLOCK_SIZE);
 
@@ -789,16 +791,19 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int ciph
 	)
 
 	/* generate a strong random key for DES/3DES */
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	des_check_key_save = des_check_key;
 	des_check_key = TRUE;
 	for (i = 0; i < total_keys;i++)
 	{
 		for (;;)
 		{
-			get_rnd_bytes((char*)key[i], DES_CBC_BLOCK_SIZE);
+			rng->get_bytes(rng, DES_CBC_BLOCK_SIZE, (char*)key[i]);
 			des_set_odd_parity(&key[i]);
 			if (!des_set_key(&key[i], ks[i]))
+			{
 				break;
+			}
 			plog("weak DES key discarded - we try again");
 		}
 		DBG(DBG_PRIVATE,
@@ -808,11 +813,12 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int ciph
 	des_check_key = des_check_key_save;
 
 	/* generate an iv for DES/3DES CBC */
-	get_rnd_bytes(des_iv, DES_CBC_BLOCK_SIZE);
+	rng->get_bytes(rng, DES_CBC_BLOCK_SIZE, des_iv);
 	memcpy(iv.ptr, des_iv, DES_CBC_BLOCK_SIZE);
 	DBG(DBG_RAW,
 		DBG_dump_chunk("DES IV :", iv)
 	)
+	rng->destroy(rng);
 
 	/* encryption using specified cipher */
 	switch (cipher)

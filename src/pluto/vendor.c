@@ -90,7 +90,7 @@ struct vid_struct {
 		unsigned short flags;
 		const char *data;
 		const char *descr;
-		const char *vid;
+		char *vid;
 		u_int vid_len;
 };
 

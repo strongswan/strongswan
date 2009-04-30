@@ -28,7 +28,6 @@
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
-#include "rnd.h"
 #include "gcryptfix.h"
 #else /*! PLUTO */
 /* #include <config.h> */

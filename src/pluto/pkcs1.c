@@ -21,9 +21,11 @@
 #include <freeswan.h>
 #include <libsha2/sha2.h>
 
+#include <library.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
+#include <crypto/rngs/rng.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -33,7 +35,6 @@
 #include "md2.h"
 #include "md5.h"
 #include "sha1.h"
-#include "rnd.h"
 
 const struct fld RSA_private_field[] =
 {
@@ -430,6 +431,7 @@ chunk_t RSA_encrypt(const RSA_public_key_t *key, chunk_t in)
 	u_char *pos = padded;
 	int padding = key->k - in.len - 3;
 	int i;
+	rng_t *rng;
 
 	if (padding < 8 || key->k > RSA_MAX_OCTETS)
 		return chunk_empty;
@@ -439,15 +441,17 @@ chunk_t RSA_encrypt(const RSA_public_key_t *key, chunk_t in)
 	*pos++ = 0x02;
 
 	/* pad with pseudo random bytes unequal to zero */
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	for (i = 0; i < padding; i++)
 	{
-		get_rnd_bytes(pos, padding);
+		rng->get_bytes(rng, padding, pos);
 		while (!*pos)
 		{
-			get_rnd_bytes(pos, 1);
+			rng->get_bytes(rng, 1, pos);
 		}
 		pos++;
 	}
+	rng->destroy(rng);
 
 	/* append the padding terminator */
 	*pos++ = 0x00;
