@@ -16,8 +16,8 @@
  */
  
 /**
- * @defgroup traffic_selector traffic_selector
- * @{ @ingroup config
+ * @defgroup hasher hasher
+ * @{ @ingroup crypto
  */
 
 #ifndef HASHER_H_
