@@ -41,8 +41,10 @@ enum integrity_algorithm_t {
 	AUTH_DES_MAC = 3,
 	AUTH_KPDK_MD5 = 4,
 	AUTH_AES_XCBC_96 = 5,
-	/** RFC4595, used for RADIUS */
+	/** RFC4595, used for IKEv1 or RADIUS */
 	AUTH_HMAC_MD5_128 = 6,
+	/** RFC4595, used for IKEv1 */
+	AUTH_HMAC_SHA1_160 = 7,
 	/** Implemented via hmac_signer_t */
 	AUTH_HMAC_SHA2_256_128 = 12,
 	/** Implemented via hmac_signer_t */
