@@ -61,7 +61,7 @@ enum integrity_algorithm_t {
 extern enum_name_t *integrity_algorithm_names;
 
 /**
- * Generig interface for a symmetric signature algorithm.
+ * Generic interface for a symmetric signature algorithm.
  */
 struct signer_t {
 	/**
