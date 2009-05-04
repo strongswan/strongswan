@@ -773,8 +773,17 @@ LIBS=$saved_LIBS
 AC_SUBST(DLLIB)
 
 AC_CHECK_FUNCS(backtrace)
-AC_CHECK_FUNCS(dladdr)
 AC_CHECK_FUNCS(prctl)
+
+AC_MSG_CHECKING(for dladdr)
+AC_TRY_COMPILE(
+	[#define _GNU_SOURCE
+	 #include <dlfcn.h>],
+	[Dl_info* info = 0;
+	 dladdr(0, info);],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_DLADDR])],
+	[AC_MSG_RESULT([no])]
+)
 
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h)
 
