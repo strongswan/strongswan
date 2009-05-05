@@ -40,8 +40,6 @@
 #include "whack.h"
 #include "timer.h"
 #include "cookie.h"
-#include "sha1.h"
-#include "md5.h"
 #include "crypto.h"
 #include "vendor.h"
 #include "ike_alg.h"

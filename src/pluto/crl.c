@@ -28,6 +28,7 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
+#include <crypto/hashers/hasher.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -39,7 +40,7 @@
 #include "keys.h"
 #include "whack.h"
 #include "fetch.h"
-#include "sha1.h"
+
 
 /* chained lists of X.509 crls */
 
@@ -292,19 +293,26 @@ bool insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl)
 		 */
 		if (cache_crl && strncasecmp(crl_uri.ptr, "file", 4) != 0)
 		{
-			char path[BUF_LEN];
-			char buf[BUF_LEN];
-			char digest_buf[SHA1_DIGEST_SIZE];
-			chunk_t subjectKeyID = { digest_buf, SHA1_DIGEST_SIZE };
-
+			char path[BUF_LEN], buf[BUF_LEN];
+			char digest_buf[HASH_SIZE_SHA1];
+			chunk_t subjectKeyID = chunk_from_buf(digest_buf);
+			bool has_keyID;
+			
 			if (issuer_cert->subjectKeyID.ptr == NULL)
-				compute_subjectKeyID(issuer_cert, subjectKeyID);
+			{
+				has_keyID = compute_subjectKeyID(issuer_cert, subjectKeyID);
+			}
 			else
+			{
 				subjectKeyID = issuer_cert->subjectKeyID;
-
-			datatot(subjectKeyID.ptr, subjectKeyID.len, 16, buf, BUF_LEN);
-			snprintf(path, BUF_LEN, "%s/%s.crl", CRL_PATH, buf);
-			chunk_write(crl->certificateList, path, "crl",  0022, TRUE);
+				has_keyID = TRUE;
+			}
+			if (has_keyID)
+			{
+				datatot(subjectKeyID.ptr, subjectKeyID.len, 16, buf, BUF_LEN);
+				snprintf(path, BUF_LEN, "%s/%s.crl", CRL_PATH, buf);
+				chunk_write(crl->certificateList, path, "crl",  0022, TRUE);
+			}
 		}
 
 		/* is the fetched crl valid? */

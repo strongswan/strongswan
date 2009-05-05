@@ -66,9 +66,7 @@
 #include "crl.h"
 #include "fetch.h"
 #include "xauth.h"
-#include "sha1.h"
-#include "md5.h"
-#include "crypto.h"     /* requires sha1.h and md5.h */
+#include "crypto.h"
 #include "nat_traversal.h"
 #include "virtual.h"
 #include "timer.h"

@@ -33,8 +33,6 @@
 #include "defs.h"
 #include "log.h"
 #include "whack.h"
-#include "sha1.h"
-#include "md5.h"
 #include "crypto.h"
 #include "kernel_alg.h"
 #include "ike_alg.h"

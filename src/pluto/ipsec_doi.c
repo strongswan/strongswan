@@ -31,6 +31,8 @@
 
 #include <library.h>
 #include <asn1/asn1.h>
+#include <crypto/hashers/hasher.h>
+#include <crypto/prfs/prf.h>
 #include <crypto/rngs/rng.h>
 
 #include "constants.h"
@@ -59,10 +61,7 @@
 #include "whack.h"
 #include "fetch.h"
 #include "pkcs7.h"
-
-#include "sha1.h"
-#include "md5.h"
-#include "crypto.h" /* requires sha1.h and md5.h */
+#include "crypto.h"
 #include "vendor.h"
 #include "alg_info.h"
 #include "ike_alg.h"
@@ -1166,12 +1165,22 @@ static bool skeyid_preshared(struct state *st)
 	}
 	else
 	{
-		struct hmac_ctx ctx;
+		pseudo_random_function_t prf_alg;
+		prf_t *prf;
 
-		hmac_init_chunk(&ctx, st->st_oakley.hasher, *pss);
-		hmac_update_chunk(&ctx, st->st_ni);
-		hmac_update_chunk(&ctx, st->st_nr);
-		hmac_final_chunk(st->st_skeyid, "st_skeyid in skeyid_preshared()", &ctx);
+		prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+		if (prf == NULL)
+		{
+		loglog(RC_LOG_SERIOUS, "%N not available to compute skeyid",
+								pseudo_random_function_names, prf_alg);
+		return FALSE;
+		}
+		free(st->st_skeyid.ptr);
+		prf->set_key(prf, *pss);
+		prf->allocate_bytes(prf, st->st_ni, NULL);
+		prf->allocate_bytes(prf, st->st_nr, &st->st_skeyid);
+		prf->destroy(prf);
 		return TRUE;
 	}
 }
@@ -1179,21 +1188,24 @@ static bool skeyid_preshared(struct state *st)
 static bool
 skeyid_digisig(struct state *st)
 {
-	struct hmac_ctx ctx;
 	chunk_t nir;
+	pseudo_random_function_t prf_alg;
+	prf_t *prf;
 
-	/* We need to hmac_init with the concatenation of Ni_b and Nr_b,
-	 * so we have to build a temporary concatentation.
-	 */
-	nir.len = st->st_ni.len + st->st_nr.len;
-	nir.ptr = malloc(nir.len);
-	memcpy(nir.ptr, st->st_ni.ptr, st->st_ni.len);
-	memcpy(nir.ptr+st->st_ni.len, st->st_nr.ptr, st->st_nr.len);
-	hmac_init_chunk(&ctx, st->st_oakley.hasher, nir);
+	prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+	if (prf == NULL)
+	{
+		loglog(RC_LOG_SERIOUS, "%N not available to compute skeyid",
+								pseudo_random_function_names, prf_alg);
+		return FALSE;
+	}
+	free(st->st_skeyid.ptr);
+	nir = chunk_cat("cc", st->st_ni, st->st_nr);
+	prf->set_key(prf, nir);
+	prf->allocate_bytes(prf, st->st_shared, &st->st_skeyid);
+	prf->destroy(prf);
 	free(nir.ptr);
-
-	hmac_update_chunk(&ctx, st->st_shared);
-	hmac_final_chunk(st->st_skeyid, "st_skeyid in skeyid_digisig()", &ctx);
 	return TRUE;
 }
 
@@ -1209,14 +1221,18 @@ static bool generate_skeyids_iv(struct state *st)
 		case XAUTHInitPreShared:
 		case XAUTHRespPreShared:
 			if (!skeyid_preshared(st))
+			{
 				return FALSE;
+			}
 			break;
 
 		case OAKLEY_RSA_SIG:
 		case XAUTHInitRSA:
 		case XAUTHRespRSA:
 			if (!skeyid_digisig(st))
+			{
 				return FALSE;
+			}
 			break;
 
 		case OAKLEY_DSS_SIG:
@@ -1234,52 +1250,65 @@ static bool generate_skeyids_iv(struct state *st)
 
 	/* generate SKEYID_* from SKEYID */
 	{
-		struct hmac_ctx ctx;
+		char buf_skeyid_d[] = { 0x00 };
+		char buf_skeyid_a[] = { 0x01 };
+		char buf_skeyid_e[] = { 0x02 };
+		chunk_t seed_skeyid_d = chunk_from_buf(buf_skeyid_d);
+		chunk_t seed_skeyid_a = chunk_from_buf(buf_skeyid_a);
+		chunk_t seed_skeyid_e = chunk_from_buf(buf_skeyid_e);
+		chunk_t icookie = { st->st_icookie, COOKIE_SIZE };
+		chunk_t rcookie = { st->st_rcookie, COOKIE_SIZE };
+		pseudo_random_function_t prf_alg;
+		prf_t *prf;
 
-		hmac_init_chunk(&ctx, st->st_oakley.hasher, st->st_skeyid);
+		prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+		prf->set_key(prf, st->st_skeyid);
 
 		/* SKEYID_D */
-		hmac_update_chunk(&ctx, st->st_shared);
-		hmac_update(&ctx, st->st_icookie, COOKIE_SIZE);
-		hmac_update(&ctx, st->st_rcookie, COOKIE_SIZE);
-		hmac_update(&ctx, "\0", 1);
-		hmac_final_chunk(st->st_skeyid_d, "st_skeyid_d in generate_skeyids_iv()", &ctx);
+		free(st->st_skeyid_d.ptr);
+		prf->allocate_bytes(prf, st->st_shared, NULL);
+		prf->allocate_bytes(prf, icookie, NULL);
+		prf->allocate_bytes(prf, rcookie, NULL);
+		prf->allocate_bytes(prf, seed_skeyid_d, &st->st_skeyid_d); 
 
 		/* SKEYID_A */
-		hmac_reinit(&ctx);
-		hmac_update_chunk(&ctx, st->st_skeyid_d);
-		hmac_update_chunk(&ctx, st->st_shared);
-		hmac_update(&ctx, st->st_icookie, COOKIE_SIZE);
-		hmac_update(&ctx, st->st_rcookie, COOKIE_SIZE);
-		hmac_update(&ctx, "\1", 1);
-		hmac_final_chunk(st->st_skeyid_a, "st_skeyid_a in generate_skeyids_iv()", &ctx);
+		free(st->st_skeyid_a.ptr);
+		prf->allocate_bytes(prf, st->st_skeyid_d, NULL);
+		prf->allocate_bytes(prf, st->st_shared, NULL);
+		prf->allocate_bytes(prf, icookie, NULL);
+		prf->allocate_bytes(prf, rcookie, NULL);
+		prf->allocate_bytes(prf, seed_skeyid_a, &st->st_skeyid_a); 
 
 		/* SKEYID_E */
-		hmac_reinit(&ctx);
-		hmac_update_chunk(&ctx, st->st_skeyid_a);
-		hmac_update_chunk(&ctx, st->st_shared);
-		hmac_update(&ctx, st->st_icookie, COOKIE_SIZE);
-		hmac_update(&ctx, st->st_rcookie, COOKIE_SIZE);
-		hmac_update(&ctx, "\2", 1);
-		hmac_final_chunk(st->st_skeyid_e, "st_skeyid_e in generate_skeyids_iv()", &ctx);
+		free(st->st_skeyid_e.ptr);
+		prf->allocate_bytes(prf, st->st_skeyid_a, NULL);
+		prf->allocate_bytes(prf, st->st_shared, NULL);
+		prf->allocate_bytes(prf, icookie, NULL);
+		prf->allocate_bytes(prf, rcookie, NULL);
+		prf->allocate_bytes(prf, seed_skeyid_e, &st->st_skeyid_e); 
+
+		prf->destroy(prf);
 	}
 
 	/* generate IV */
 	{
-		union hash_ctx hash_ctx;
-		const struct hash_desc *h = st->st_oakley.hasher;
+		hash_algorithm_t hash_alg;
+		hasher_t *hasher;
 
-		st->st_new_iv_len = h->hash_digest_size;
+		hash_alg = oakley_to_hash_algorithm(st->st_oakley.hasher->algo_id);
+		hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+		st->st_new_iv_len = hasher->get_hash_size(hasher);
 		passert(st->st_new_iv_len <= sizeof(st->st_new_iv));
 
 		DBG(DBG_CRYPT,
 			DBG_dump_chunk("DH_i:", st->st_gi);
 			DBG_dump_chunk("DH_r:", st->st_gr);
 		);
-		h->hash_init(&hash_ctx);
-		h->hash_update(&hash_ctx, st->st_gi.ptr, st->st_gi.len);
-		h->hash_update(&hash_ctx, st->st_gr.ptr, st->st_gr.len);
-		h->hash_final(st->st_new_iv, &hash_ctx);
+		
+		hasher->get_hash(hasher, st->st_gi, NULL);
+		hasher->get_hash(hasher, st->st_gr, st->st_new_iv);
+		hasher->destroy(hasher);
 	}
 
 	/* Oakley Keying Material

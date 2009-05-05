@@ -41,10 +41,7 @@
 #include "whack.h"
 #include "demux.h"      /* needs packet.h */
 #include "ipsec_doi.h"  /* needs demux.h and state.h */
-
-#include "sha1.h"
-#include "md5.h"
-#include "crypto.h" /* requires sha1.h and md5.h */
+#include "crypto.h"
 
 /*
  * Global variables: had to go somewhere, might as well be this file.

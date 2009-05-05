@@ -28,9 +28,7 @@
 #include "defs.h"
 #include "state.h"
 #include "log.h"
-#include "md5.h"
-#include "sha1.h"
-#include "crypto.h" /* requires sha1.h and md5.h */
+#include "crypto.h"
 #include "alg_info.h"
 #include "ike_alg.h"
 
@@ -451,8 +449,7 @@ static struct hash_desc crypto_hasher_sha1 =
 		hash_final: (void (*)(u_char *, void *)) SHA1Final
 };
 
-void
-init_crypto(void)
+void init_crypto(void)
 {
 	if (mpz_init_set_str(&groupgenerator, MODP_GENERATOR, 10) != 0
 	|| mpz_init_set_str(&modp1024_modulus, MODP1024_MODULUS, 16) != 0
@@ -471,8 +468,7 @@ init_crypto(void)
 	ike_alg_test();
 }
 
-void
-free_crypto(void)
+void free_crypto(void)
 {
 	mpz_clear(&groupgenerator);
 	mpz_clear(&modp1024_modulus);
@@ -503,8 +499,7 @@ const struct oakley_group_desc oakley_group[OAKLEY_GROUP_SIZE] = {
 #   undef BYTES
 };
 
-const struct oakley_group_desc *
-lookup_group(u_int16_t group)
+const struct oakley_group_desc *lookup_group(u_int16_t group)
 {
 	int i;
 
@@ -541,8 +536,8 @@ do_des(bool enc, void *buf, size_t buf_len, struct state *st)
 /* encrypt or decrypt part of an IKE message using 3DES
  * See RFC 2409 "IKE" Appendix B
  */
-static void
-do_3des(u_int8_t *buf, size_t buf_len, u_int8_t *key, size_t key_size, u_int8_t *iv, bool enc)
+static void do_3des(u_int8_t *buf, size_t buf_len, u_int8_t *key,
+					size_t key_size, u_int8_t *iv, bool enc)
 {
 	des_key_schedule ks[3];
 
@@ -557,8 +552,8 @@ do_3des(u_int8_t *buf, size_t buf_len, u_int8_t *key, size_t key_size, u_int8_t 
 }
 
 /* hash and prf routines */
-void
-crypto_cbc_encrypt(const struct encrypt_desc *e, bool enc, u_int8_t *buf, size_t size, struct state *st)
+void crypto_cbc_encrypt(const struct encrypt_desc *e, bool enc, u_int8_t *buf,
+						size_t size, struct state *st)
 {
 	passert(st->st_new_iv_len >= e->enc_blocksize);
 	st->st_new_iv_len = e->enc_blocksize;       /* truncate */
@@ -574,10 +569,8 @@ crypto_cbc_encrypt(const struct encrypt_desc *e, bool enc, u_int8_t *buf, size_t
  * rfc2104.txt specifies how HMAC works.
  */
 
-void
-hmac_init(struct hmac_ctx *ctx,
-	const struct hash_desc *h,
-	const u_char *key, size_t key_len)
+void hmac_init(struct hmac_ctx *ctx, const struct hash_desc *h,
+			   const u_char *key, size_t key_len)
 {
 	int k;
 
@@ -610,22 +603,19 @@ hmac_init(struct hmac_ctx *ctx,
 	hmac_reinit(ctx);
 }
 
-void
-hmac_reinit(struct hmac_ctx *ctx)
+void hmac_reinit(struct hmac_ctx *ctx)
 {
 	ctx->h->hash_init(&ctx->hash_ctx);
 	ctx->h->hash_update(&ctx->hash_ctx, ctx->buf1, ctx->h->hash_block_size);
 }
 
-void
-hmac_update(struct hmac_ctx *ctx,
+void hmac_update(struct hmac_ctx *ctx,
 	const u_char *data, size_t data_len)
 {
 	ctx->h->hash_update(&ctx->hash_ctx, data, data_len);
 }
 
-void
-hmac_final(u_char *output, struct hmac_ctx *ctx)
+void hmac_final(u_char *output, struct hmac_ctx *ctx)
 {
 	const struct hash_desc *h = ctx->h;
 
@@ -635,4 +625,42 @@ hmac_final(u_char *output, struct hmac_ctx *ctx)
 	h->hash_update(&ctx->hash_ctx, ctx->buf2, h->hash_block_size);
 	h->hash_update(&ctx->hash_ctx, output, h->hash_digest_size);
 	h->hash_final(output, &ctx->hash_ctx);
+}
+
+hash_algorithm_t oakley_to_hash_algorithm(int alg)
+{
+	switch (alg)
+	{
+		case OAKLEY_MD5:
+			return HASH_MD5;
+		case OAKLEY_SHA:
+			return HASH_SHA1;
+		case OAKLEY_SHA2_256:
+			return HASH_SHA256;
+		case OAKLEY_SHA2_384:
+			return HASH_SHA384;
+		case OAKLEY_SHA2_512:
+			return HASH_SHA512;
+		default:
+			return HASH_UNKNOWN;
+	}
+}
+
+pseudo_random_function_t oakley_to_prf(int alg)
+{
+	switch (alg)
+	{
+		case OAKLEY_MD5:
+			return PRF_HMAC_MD5;
+		case OAKLEY_SHA:
+			return PRF_HMAC_SHA1;
+		case OAKLEY_SHA2_256:
+			return PRF_HMAC_SHA2_256;
+		case OAKLEY_SHA2_384:
+			return PRF_HMAC_SHA2_384;
+		case OAKLEY_SHA2_512:
+			return PRF_HMAC_SHA2_512;
+		default:
+			return PRF_UNDEFINED;
+	}
 }

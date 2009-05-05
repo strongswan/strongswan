@@ -18,10 +18,12 @@
 #include <sys/queue.h>
 #include <freeswan.h>
 
+#include <library.h>
+#include <crypto/hashers/hasher.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
-#include "md5.h"
 #include "connections.h"
 #include "packet.h"
 #include "demux.h"
@@ -90,27 +92,24 @@ struct vid_struct {
 		unsigned short flags;
 		const char *data;
 		const char *descr;
-		char *vid;
-		u_int vid_len;
+		chunk_t vid;
 };
 
 #define DEC_MD5_VID_D(id,str,descr) \
-		{ VID_##id, VID_MD5HASH, str, descr, NULL, 0 },
+		{ VID_##id, VID_MD5HASH, str, descr, { NULL, 0 } },
 #define DEC_MD5_VID(id,str) \
-		{ VID_##id, VID_MD5HASH, str, NULL, NULL, 0 },
-#define DEC_FSWAN_VID(id,str,descr) \
-		{ VID_##id, VID_FSWAN_HASH, str, descr, NULL, 0 },
+		{ VID_##id, VID_MD5HASH, str, NULL, { NULL, 0 } },
 
 static struct vid_struct _vid_tab[] = {
 
 		/* Implementation names */
 
-		{ VID_OPENPGP, VID_STRING, "OpenPGP10171", "OpenPGP", NULL, 0 },
+		{ VID_OPENPGP, VID_STRING, "OpenPGP10171", "OpenPGP", { NULL, 0 } },
 
 		DEC_MD5_VID(KAME_RACOON, "KAME/racoon")
 
 		{ VID_MS_NT5, VID_MD5HASH | VID_SUBSTRING_DUMPHEXA,
-				"MS NT5 ISAKMPOAKLEY", NULL, NULL, 0 },
+				"MS NT5 ISAKMPOAKLEY", NULL, { NULL, 0 } },
 
 		DEC_MD5_VID(SSH_SENTINEL, "SSH Sentinel")
 		DEC_MD5_VID(SSH_SENTINEL_1_1, "SSH Sentinel 1.1")
@@ -153,14 +152,13 @@ static struct vid_struct _vid_tab[] = {
 
 		/* note: md5('CISCO-UNITY') = 12f5f28c457168a9702d9fe274cc02d4 */
 		{ VID_CISCO_UNITY, VID_KEEP, NULL, "Cisco-Unity",
-				"\x12\xf5\xf2\x8c\x45\x71\x68\xa9\x70\x2d\x9f\xe2\x74\xcc\x01\x00",
-				16 },
+		  { "\x12\xf5\xf2\x8c\x45\x71\x68\xa9\x70\x2d\x9f\xe2\x74\xcc\x01\x00", 16 } },
 
-		{ VID_CISCO3K, VID_KEEP | VID_SUBSTRING_MATCH,
-		  NULL, "Cisco VPN 3000 Series" , "\x1f\x07\xf7\x0e\xaa\x65\x14\xd3\xb0\xfa\x96\x54\x2a\x50", 14},
+		{ VID_CISCO3K, VID_KEEP | VID_SUBSTRING_MATCH, NULL, "Cisco VPN 3000 Series" ,
+		  { "\x1f\x07\xf7\x0e\xaa\x65\x14\xd3\xb0\xfa\x96\x54\x2a\x50", 14 } },
 
 		{ VID_CISCO_IOS, VID_KEEP | VID_SUBSTRING_MATCH, 
-		  NULL, "Cisco IOS Device", "\x3e\x98\x40\x48", 4},
+		  NULL, "Cisco IOS Device", { "\x3e\x98\x40\x48", 4 } },
 
 		/*
 		 * Timestep VID seen:
@@ -168,31 +166,25 @@ static struct vid_struct _vid_tab[] = {
 		 *     = 'TIMESTEP 1 SGW 1520 315 2.01E013'
 		 */
 		{ VID_TIMESTEP, VID_STRING | VID_SUBSTRING_DUMPASCII, "TIMESTEP",
-				NULL, NULL, 0 },
+				NULL, { NULL, 0 } },
 
 		/*
 		 * Netscreen:
 		 * 4865617274426561745f4e6f74696679386b0100  (HeartBeat_Notify + 386b0100)
 		 */
 		{ VID_MISC_HEARTBEAT_NOTIFY, VID_STRING | VID_SUBSTRING_DUMPHEXA,
-				"HeartBeat_Notify", "HeartBeat Notify", NULL, 0 },
-
+				"HeartBeat_Notify", "HeartBeat Notify", { NULL, 0 } },
 		/*
 		 * MacOS X
 		 */
 		{ VID_MACOSX, VID_STRING|VID_SUBSTRING_DUMPHEXA, "Mac OSX 10.x",
-		  "\x4d\xf3\x79\x28\xe9\xfc\x4f\xd1\xb3\x26\x21\x70\xd5\x15\xc6\x62", NULL, 0},
+		  "\x4d\xf3\x79\x28\xe9\xfc\x4f\xd1\xb3\x26\x21\x70\xd5\x15\xc6\x62", { NULL, 0 } },
 
-		/*
-		 * Openswan
-		 */
-		DEC_FSWAN_VID(OPENSWAN2, "Openswan 2.2.0", "Openswan 2.2.0")
-		
 		/* NCP */
 		{ VID_NCP_SERVER, VID_KEEP | VID_SUBSTRING_MATCH, NULL, "NCP Server",
-			"\xc6\xf5\x7a\xc3\x98\xf4\x93\x20\x81\x45\xb7\x58", 12},
+			{ "\xc6\xf5\x7a\xc3\x98\xf4\x93\x20\x81\x45\xb7\x58", 12 } },
 		{ VID_NCP_CLIENT, VID_KEEP | VID_SUBSTRING_MATCH, NULL, "NCP Client",
-			"\xeb\x4c\x1b\x78\x8a\xfd\x4a\x9c\xb7\x73\x0a\x68", 12},
+			{ "\xeb\x4c\x1b\x78\x8a\xfd\x4a\x9c\xb7\x73\x0a\x68", 12 } },
 
 		/*
 		 * Windows Vista (and Windows Server 2008?)
@@ -297,10 +289,10 @@ static struct vid_struct _vid_tab[] = {
 		/* misc */
 		
 		{ VID_MISC_XAUTH, VID_KEEP, NULL, "XAUTH",
-			"\x09\x00\x26\x89\xdf\xd6\xb7\x12", 8 },
+			{ "\x09\x00\x26\x89\xdf\xd6\xb7\x12", 8 } },
 
 		{ VID_MISC_DPD, VID_KEEP, NULL, "Dead Peer Detection",
-			"\xaf\xca\xd7\x13\x68\xa1\xf1\xc9\x6b\x86\x96\xfc\x77\x57\x01\x00", 16 },
+			{ "\xaf\xca\xd7\x13\x68\xa1\xf1\xc9\x6b\x86\x96\xfc\x77\x57\x01\x00", 16 } },
 
 		DEC_MD5_VID(MISC_FRAGMENTATION, "FRAGMENTATION")
 		
@@ -310,10 +302,10 @@ static struct vid_struct _vid_tab[] = {
 		 * Cisco VPN 3000
 		 */
 		{ VID_MISC_FRAGMENTATION, VID_MD5HASH | VID_SUBSTRING_DUMPHEXA,
-			"FRAGMENTATION", NULL, NULL, 0 },
+			"FRAGMENTATION", NULL, { NULL, 0 } },
 
 		/* -- */
-		{ 0, 0, NULL, NULL, NULL, 0 }
+		{ 0, 0, NULL, NULL, { NULL, 0 } }
 
 };
 
@@ -323,61 +315,23 @@ static int _vid_struct_init = 0;
 
 void init_vendorid(void)
 {
+	hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 	struct vid_struct *vid;
-	MD5_CTX ctx;
-	int i;
 
 	for (vid = _vid_tab; vid->id; vid++)
 	{
 		if (vid->flags & VID_STRING)
 		{
 			/** VendorID is a string **/
-			vid->vid = strdup(vid->data);
-			vid->vid_len = strlen(vid->data);
+			vid->vid = chunk_create((u_char *)vid->data, strlen(vid->data));
+			vid->vid = chunk_clone(vid->vid);
 		}
 		else if (vid->flags & VID_MD5HASH)
 		{
+			chunk_t vid_data = { (u_char *)vid->data, strlen(vid->data) };
+			
 			/** VendorID is a string to hash with MD5 **/
-			char *vidm =  malloc(MD5_DIGEST_SIZE);
-
-			vid->vid = vidm;
-			if (vidm)
-			{
-				MD5Init(&ctx);
-				MD5Update(&ctx, (const u_char *)vid->data, strlen(vid->data));
-				MD5Final(vidm, &ctx);
-				vid->vid_len = MD5_DIGEST_SIZE;
-			}
-		}
-		else if (vid->flags & VID_FSWAN_HASH)
-		{
-			/** FreeS/WAN 2.00+ specific hash **/
-#define FSWAN_VID_SIZE 12
-			unsigned char hash[MD5_DIGEST_SIZE];
-			char *vidm =  malloc(FSWAN_VID_SIZE);
-
-			vid->vid = vidm;
-			if (vidm)
-			{
-				MD5Init(&ctx);
-				MD5Update(&ctx, (const u_char *)vid->data, strlen(vid->data));
-				MD5Final(hash, &ctx);
-				vidm[0] = 'O';
-				vidm[1] = 'E';
-#if FSWAN_VID_SIZE - 2 <= MD5_DIGEST_SIZE
-				memcpy(vidm + 2, hash, FSWAN_VID_SIZE - 2);
-#else
-				memcpy(vidm + 2, hash, MD5_DIGEST_SIZE);
-				memset(vidm + 2 + MD5_DIGEST_SIZE, '\0',
-						FSWAN_VID_SIZE - 2 - MD5_DIGEST_SIZE);
-#endif
-				for (i = 2; i < FSWAN_VID_SIZE; i++)
-				{
-					vidm[i] &= 0x7f;
-					vidm[i] |= 0x40;
-				}
-				vid->vid_len = FSWAN_VID_SIZE;
-			}
+		 	hasher->allocate_hash(hasher, vid_data, &vid->vid);
 		}
 
 		if (vid->descr == NULL)
@@ -386,6 +340,7 @@ void init_vendorid(void)
 			vid->descr = vid->data;
 		}
 	}
+	hasher->destroy(hasher);
 	_vid_struct_init = 1;
 }
 
@@ -397,7 +352,7 @@ void free_vendorid(void)
 	{
 		if (vid->flags & (VID_STRING | VID_MD5HASH | VID_FSWAN_HASH))
 		{
-			free(vid->vid);
+			free(vid->vid.ptr);
 		}
 	}
 }
@@ -462,7 +417,7 @@ static void handle_known_vendorid (struct msg_digest *md, const char *vidstr,
 		memset(vid_dump, 0, sizeof(vid_dump));
 		snprintf(vid_dump, sizeof(vid_dump), "%s ",
 				 vid->descr ? vid->descr : "");
-		for (i = strlen(vid_dump), j = vid->vid_len;
+		for (i = strlen(vid_dump), j = vid->vid.len;
 			 j < len && i < sizeof(vid_dump) - 2;
 			 i += 2, j++)
 		{
@@ -502,19 +457,19 @@ void handle_vendorid (struct msg_digest *md, const char *vid, size_t len)
 	 */
 	for (pvid = _vid_tab; pvid->id; pvid++)
 	{
-		if (pvid->vid && vid && pvid->vid_len && len)
+		if (pvid->vid.ptr && vid && pvid->vid.len && len)
 		{
-			if (pvid->vid_len == len)
+			if (pvid->vid.len == len)
 			{
-				if (memeq(pvid->vid, vid, len))
+				if (memeq(pvid->vid.ptr, vid, len))
 				{
 					handle_known_vendorid(md, vid, len, pvid);
 					return;
 				}
 			}
-			else if ((pvid->vid_len < len) && (pvid->flags & VID_SUBSTRING))
+			else if ((pvid->vid.len < len) && (pvid->flags & VID_SUBSTRING))
 			{
-				if (memeq(pvid->vid, vid, pvid->vid_len))
+				if (memeq(pvid->vid.ptr, vid, pvid->vid.len))
 				{
 					handle_known_vendorid(md, vid, len, pvid);
 					return;
@@ -556,13 +511,13 @@ bool out_vendorid (u_int8_t np, pb_stream *outs, enum known_vendorid vid)
 
 	if (pvid->id != vid)
 		return STF_INTERNAL_ERROR; /* not found */
-	if (!pvid->vid)
+	if (!pvid->vid.ptr)
 		return STF_INTERNAL_ERROR; /* not initialized */
 
 	DBG(DBG_EMITTING,
 		DBG_log("out_vendorid(): sending [%s]", pvid->descr)
 	)
 	return out_generic_raw(np, &isakmp_vendor_id_desc, outs,
-				pvid->vid, pvid->vid_len, "V_ID");
+				pvid->vid.ptr, pvid->vid.len, "V_ID");
 }
 

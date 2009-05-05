@@ -26,15 +26,13 @@
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
 #include <crypto/rngs/rng.h>
+#include <crypto/hashers/hasher.h>
 
 #include "constants.h"
 #include "defs.h"
 #include "mp_defs.h"
 #include "log.h"
 #include "pkcs1.h"
-#include "md2.h"
-#include "md5.h"
-#include "sha1.h"
 
 const struct fld RSA_private_field[] =
 {
@@ -287,84 +285,27 @@ end:
 /**
  *  Compute a digest over a binary blob
  */
-bool compute_digest(chunk_t tbs, int alg, chunk_t *digest)
+bool compute_digest(chunk_t tbs, int oid, chunk_t *digest)
 {
-	switch (alg)
+	hasher_t *hasher;
+	hash_algorithm_t alg = hasher_algorithm_from_oid(oid);
+
+	if (alg == HASH_UNKNOWN)
 	{
-	case OID_MD2:
-	case OID_MD2_WITH_RSA:
-		{
-			MD2_CTX context;
-
-			MD2Init(&context);
-			MD2Update(&context, tbs.ptr, tbs.len);
-			MD2Final(digest->ptr, &context);
-			digest->len = MD2_DIGEST_SIZE;
-			return TRUE;
-		}
-	 case OID_MD5:
-	 case OID_MD5_WITH_RSA:
-		{
-			MD5_CTX context;
-
-			MD5Init(&context);
-			MD5Update(&context, tbs.ptr, tbs.len);
-			MD5Final(digest->ptr, &context);
-			digest->len = MD5_DIGEST_SIZE;
-			return TRUE;
-		}
-	 case OID_SHA1:
-	 case OID_SHA1_WITH_RSA:
-	 case OID_SHA1_WITH_RSA_OIW:
-		{
-			SHA1_CTX context;
-
-			SHA1Init(&context);
-			SHA1Update(&context, tbs.ptr, tbs.len);
-			SHA1Final(digest->ptr, &context);
-			digest->len = SHA1_DIGEST_SIZE;
-			return TRUE;
-		}
-	 case OID_SHA256:
-	 case OID_SHA256_WITH_RSA:
-		{
-			sha256_context context;
-
-			sha256_init(&context);
-			sha256_write(&context, tbs.ptr, tbs.len);
-			sha256_final(&context);
-			memcpy(digest->ptr, context.sha_out, SHA2_256_DIGEST_SIZE);
-			digest->len = SHA2_256_DIGEST_SIZE;
-			return TRUE;
-		}
-	 case OID_SHA384:
-	 case OID_SHA384_WITH_RSA:
-		{
-			sha512_context context;
-
-			sha384_init(&context);
-			sha512_write(&context, tbs.ptr, tbs.len);
-			sha512_final(&context);
-			memcpy(digest->ptr, context.sha_out, SHA2_384_DIGEST_SIZE);
-			digest->len = SHA2_384_DIGEST_SIZE;
-			return TRUE;
-		}
-	 case OID_SHA512:
-	 case OID_SHA512_WITH_RSA:
-		{
-			sha512_context context;
-
-			sha512_init(&context);
-			sha512_write(&context, tbs.ptr, tbs.len);
-			sha512_final(&context);
-			memcpy(digest->ptr, context.sha_out, SHA2_512_DIGEST_SIZE);
-			digest->len = SHA2_512_DIGEST_SIZE;
-			return TRUE;
-		}
-	 default:
 		digest->len = 0;
 		return FALSE;
 	}
+
+	hasher = lib->crypto->create_hasher(lib->crypto, alg);
+	if (hasher == NULL)
+	{
+		digest->len = 0;
+		return FALSE;
+	}
+	digest->len = hasher->get_hash_size(hasher);
+ 	hasher->get_hash(hasher, tbs, digest->ptr);
+	hasher->destroy(hasher);
+	return TRUE;
 }
 
 /**

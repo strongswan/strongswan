@@ -108,7 +108,7 @@ extern int dntoa_or_null(char *dst, size_t dstlen, chunk_t dn
 	, const char* null_dn);
 extern err_t atodn(char *src, chunk_t *dn);
 extern void gntoid(struct id *id, const generalName_t *gn);
-extern void compute_subjectKeyID(x509cert_t *cert, chunk_t subjectKeyID);
+extern bool compute_subjectKeyID(x509cert_t *cert, chunk_t subjectKeyID);
 extern void select_x509cert_id(x509cert_t *cert, struct id *end_id);
 extern bool parse_x509cert(chunk_t blob, u_int level0, x509cert_t *cert);
 extern time_t parse_time(chunk_t blob, int level0);

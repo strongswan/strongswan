@@ -19,6 +19,9 @@
 #include <freeswan.h>
 #include <ipsec_policy.h>
 
+#include <library.h>
+#include <crypto/hashers/hasher.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "mp_defs.h"
@@ -26,7 +29,6 @@
 #include "id.h"
 #include "pgp.h"
 #include "certs.h"
-#include "md5.h"
 #include "whack.h"
 #include "pkcs1.h"
 #include "keys.h"
@@ -246,12 +248,19 @@ parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 
 		if (version == 3)
 		{
+			hasher_t *hasher;
+
 			/* a V3 fingerprint is the MD5 hash of modulus and public exponent */
-			MD5_CTX context;
-			MD5Init(&context);
-			MD5Update(&context, cert->modulus.ptr, cert->modulus.len);
-			MD5Update(&context, cert->publicExponent.ptr, cert->publicExponent.len);
-			MD5Final(cert->fingerprint, &context);
+
+			hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);	
+			if (hasher == NULL)
+			{
+				plog("  computation of V3 key ID failed, no MD5 hasher is available");
+				return FALSE;
+			}
+		 	hasher->get_hash(hasher, cert->modulus, NULL);
+		 	hasher->get_hash(hasher, cert->publicExponent, cert->fingerprint);
+			hasher->destroy(hasher);
 		}
 		else
 		{

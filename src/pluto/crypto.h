@@ -14,6 +14,11 @@
 
 #include <gmp.h>    /* GNU MP library */
 
+#include <crypto/hashers/hasher.h>
+#include <crypto/prfs/prf.h>
+
+#include "md5.h"
+#include "sha1.h"
 #include "libsha2/sha2.h"
 #include "ike_alg.h"
 
@@ -104,4 +109,8 @@ extern void hmac_final(u_char *output, struct hmac_ctx *ctx);
 		(ch).ptr = malloc((ch).len); \
 		hmac_final((ch).ptr, (ctx)); \
 	}
+
+extern hash_algorithm_t oakley_to_hash_algorithm(int alg);
+extern pseudo_random_function_t oakley_to_prf(int alg);
+
 #endif

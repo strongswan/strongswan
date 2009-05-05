@@ -951,15 +951,18 @@ if test x$des = xtrue; then
 fi
 if test x$sha1 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha1"
+        pluto_plugins=${pluto_plugins}" sha1"
 fi
 if test x$sha2 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha2"
+        pluto_plugins=${pluto_plugins}" sha2"
 fi
 if test x$md4 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" md4"
 fi
 if test x$md5 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" md5"
+        pluto_plugins=${pluto_plugins}" md5"
 fi
 if test x$fips_prf = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
@@ -979,6 +982,7 @@ if test x$xcbc = xtrue; then
 fi
 if test x$hmac = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
+        pluto_plugins=${pluto_plugins}" hmac"
 fi
 if test x$mysql = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" mysql"

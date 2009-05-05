@@ -25,21 +25,23 @@
 #include <sys/types.h>
 
 #include <freeswan.h>
+
+#include <library.h>
+#include <crypto/hashers/hasher.h>
+
 #define HEADER_DES_LOCL_H   /* stupid trick to force prototype decl in <des.h> */
 #include <libdes/des.h>
 
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
-#include "md5.h"
 #include "whack.h"
 #include "pem.h"
 
-/*
- * check the presence of a pattern in a character string
+/**
+ * Check the presence of a pattern in a character string
  */
-static bool
-present(const char* pattern, chunk_t* ch)
+static bool present(const char* pattern, chunk_t* ch)
 {
 	u_int pattern_len = strlen(pattern);
 
@@ -52,29 +54,33 @@ present(const char* pattern, chunk_t* ch)
 	return FALSE;
 }
 
-/*
- * compare string with chunk
+/**
+ * Compare string with chunk
  */
-static bool
-match(const char *pattern, const chunk_t *ch)
+static bool match(const char *pattern, const chunk_t *ch)
 {
 	return ch->len == strlen(pattern) && strneq(pattern, ch->ptr, ch->len);
 }
 
-/*
- * find a boundary of the form -----tag name-----
+/**
+ * Find a boundary of the form -----tag name-----
  */
-static bool
-find_boundary(const char* tag, chunk_t *line)
+static bool find_boundary(const char* tag, chunk_t *line)
 {
 	chunk_t name = chunk_empty;
 
 	if (!present("-----", line))
+	{
 		return FALSE;
+	}
 	if (!present(tag, line))
+	{
 		return FALSE;
+	}
 	if (*line->ptr != ' ')
+	{
 		return FALSE;
+	}
 	line->ptr++;  line->len--;
 
 	/* extract name */
@@ -94,11 +100,10 @@ find_boundary(const char* tag, chunk_t *line)
 	return FALSE;
 }
 
-/*
- * eat whitespace
+/**
+ * Eat whitespace
  */
-static void
-eat_whitespace(chunk_t *src)
+static void eat_whitespace(chunk_t *src)
 {
 	while (src->len > 0 && (*src->ptr == ' ' || *src->ptr == '\t'))
 	{
@@ -106,11 +111,10 @@ eat_whitespace(chunk_t *src)
 	}
 }
 
-/*
- * extracts a token ending with a given termination symbol
+/**
+ * Extracts a token ending with a given termination symbol
  */
-static bool
-extract_token(chunk_t *token, char termination, chunk_t *src)
+static bool extract_token(chunk_t *token, char termination, chunk_t *src)
 {
 	u_char *eot = memchr(src->ptr, termination, src->len);
 
@@ -118,7 +122,9 @@ extract_token(chunk_t *token, char termination, chunk_t *src)
 	*token = chunk_empty;
 
 	if (eot == NULL) /* termination symbol not found */
+	{
 		return FALSE;
+	}
 
 	/* extract token */
 	token->ptr = src->ptr;
@@ -131,11 +137,10 @@ extract_token(chunk_t *token, char termination, chunk_t *src)
    return TRUE;
 }
 
-/*
- * extracts a name: value pair from the PEM header
+/**
+ * Extracts a name: value pair from the PEM header
  */
-static bool
-extract_parameter(chunk_t *name, chunk_t *value, chunk_t *line)
+static bool extract_parameter(chunk_t *name, chunk_t *value, chunk_t *line)
 {
 	DBG(DBG_PARSING,
 		DBG_log("  %.*s", (int)line->len, line->ptr);
@@ -143,8 +148,9 @@ extract_parameter(chunk_t *name, chunk_t *value, chunk_t *line)
 
 	/* extract name */
 	if (!extract_token(name,':', line))
+	{
 		return FALSE;
-
+	}
 	eat_whitespace(line);
 
 	/* extract value */
@@ -152,19 +158,21 @@ extract_parameter(chunk_t *name, chunk_t *value, chunk_t *line)
 	return TRUE;
 }
 
-/*
- *  fetches a new line terminated by \n or \r\n
+/**
+ * Fetches a new line terminated by \n or \r\n
  */
-static bool
-fetchline(chunk_t *src, chunk_t *line)
+static bool fetchline(chunk_t *src, chunk_t *line)
 {
 	if (src->len == 0) /* end of src reached */
+	{
 		return FALSE;
-
+	}
 	if (extract_token(line, '\n', src))
 	{
 		if (line->len > 0 && *(line->ptr + line->len -1) == '\r')
+		{
 			line->len--;  /* remove optional \r */
+		}	
 	}
 	else /*last line ends without newline */
 	{
@@ -175,35 +183,39 @@ fetchline(chunk_t *src, chunk_t *line)
 	return TRUE;
 }
 
-/*
- * decrypts a DES-EDE-CBC encrypted data block
+/**
+ * Decrypts a DES-EDE-CBC encrypted data block
  */
-static bool
-pem_decrypt_3des(chunk_t *blob, chunk_t *iv, const char *passphrase)
+static bool pem_decrypt_3des(chunk_t *blob, chunk_t *iv, char *passphrase)
 {
-	MD5_CTX context;
-	u_char digest[MD5_DIGEST_SIZE];
 	u_char des_iv[DES_CBC_BLOCK_SIZE];
 	u_char key[24];
 	des_cblock *deskey = (des_cblock *)key;
 	des_key_schedule ks[3];
 	u_char padding, *last_padding_pos, *first_padding_pos;
+	hasher_t *hasher;
+	chunk_t digest;
+	chunk_t passphrase_chunk = { passphrase, strlen(passphrase) };
 
 	/* Convert passphrase to 3des key */
-	MD5Init(&context);
-	MD5Update(&context, passphrase, strlen(passphrase));
-	MD5Update(&context, iv->ptr, iv->len);
-	MD5Final(digest, &context);
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
+	if (hasher == NULL)
+	{
+		plog("  passphrase could not be hashed, no MD5 hasher available");		
+		return FALSE;
+	}	
+ 	hasher->allocate_hash(hasher, passphrase_chunk, NULL);
+	hasher->allocate_hash(hasher, *iv, &digest);
 
-	memcpy(key, digest, MD5_DIGEST_SIZE);
+	memcpy(key, digest.ptr, digest.len);
 
-	MD5Init(&context);
-	MD5Update(&context, digest, MD5_DIGEST_SIZE);
-	MD5Update(&context, passphrase, strlen(passphrase));
-	MD5Update(&context, iv->ptr, iv->len);
-	MD5Final(digest, &context);
+	hasher->get_hash(hasher, digest, NULL);
+ 	hasher->get_hash(hasher, passphrase_chunk, NULL);
+	hasher->get_hash(hasher, *iv, digest.ptr);
+	hasher->destroy(hasher);
 
-	memcpy(key + MD5_DIGEST_SIZE, digest, 24 - MD5_DIGEST_SIZE);
+	memcpy(key + digest.len, digest.ptr, 24 - digest.len);
+	free(digest.ptr);
 
 	(void) des_set_key(&deskey[0], ks[0]);
 	(void) des_set_key(&deskey[1], ks[1]);
@@ -224,7 +236,9 @@ pem_decrypt_3des(chunk_t *blob, chunk_t *iv, const char *passphrase)
 	while (--last_padding_pos > first_padding_pos)
 	{
 		if (*last_padding_pos != padding)
+		{
 			return FALSE;
+		}
 	}
 
 	/* remove padding */
@@ -232,21 +246,24 @@ pem_decrypt_3des(chunk_t *blob, chunk_t *iv, const char *passphrase)
 	return TRUE;
 }
 
-/*
- * optionally prompts for a passphrase before decryption
+/**
+ * Optionally prompts for a passphrase before decryption
  * currently we support DES-EDE3-CBC, only
  */
-static err_t
-pem_decrypt(chunk_t *blob, chunk_t *iv, prompt_pass_t *pass, const char* label)
+static err_t pem_decrypt(chunk_t *blob, chunk_t *iv, prompt_pass_t *pass,
+						 const char* label)
 {
 	DBG(DBG_CRYPT,
 		DBG_log("  decrypting file using 'DES-EDE3-CBC'");
 	)
 	if (iv->len != DES_CBC_BLOCK_SIZE)
+	{
 		return "size of DES-EDE3-CBC IV is not 8 bytes";
-
+	}
 	if (pass == NULL)
+	{
 		return "no passphrase available";
+	}
 
 	/* do we prompt for the passphrase? */
 	if (pass->prompt && pass->fd != NULL_FD)
@@ -262,8 +279,9 @@ pem_decrypt(chunk_t *blob, chunk_t *iv, prompt_pass_t *pass, const char* label)
 			int n;
 
 			if (i > 0)
-			whack_log(RC_ENTERSECRET, "invalid passphrase, please try again");
-
+			{
+				whack_log(RC_ENTERSECRET, "invalid passphrase, please try again");
+			}
 			n = read(pass->fd, pass->secret, PROMPT_PASS_LEN);
 
 			if (n == -1)
@@ -303,9 +321,13 @@ pem_decrypt(chunk_t *blob, chunk_t *iv, prompt_pass_t *pass, const char* label)
 	else
 	{
 		if (pem_decrypt_3des(blob, iv, pass->secret))
+		{
 			return NULL;
+		}
 		else
+		{
 			return "invalid passphrase";
+		}
 	}
 }
 
@@ -314,8 +336,7 @@ pem_decrypt(chunk_t *blob, chunk_t *iv, prompt_pass_t *pass, const char* label)
  *  RFC 1421 Privacy Enhancement for Electronic Mail, February 1993
  *  RFC 934 Message Encapsulation, January 1985
  */
-err_t
-pemtobin(chunk_t *blob, prompt_pass_t *pass, const char* label, bool *pgp)
+err_t pemtobin(chunk_t *blob, prompt_pass_t *pass, const char* label, bool *pgp)
 {
 	typedef enum {
 		PEM_PRE    = 0,
@@ -381,10 +402,13 @@ pemtobin(chunk_t *blob, prompt_pass_t *pass, const char* label, bool *pgp)
 
 				/* we are looking for a name: value pair */
 				if (!extract_parameter(&name, &value, &line))
+				{
 					continue;
-
+				}
 				if (match("Proc-Type", &name) && *value.ptr == '4')
-						encrypted = TRUE;
+				{
+					encrypted = TRUE;
+				}
 				else if (match("DEK-Info", &name))
 				{
 					const char *ugh = NULL;
@@ -392,18 +416,22 @@ pemtobin(chunk_t *blob, prompt_pass_t *pass, const char* label, bool *pgp)
 					chunk_t dek;
 
 					if (!extract_token(&dek, ',', &value))
+					{
 						dek = value;
+					}
 
 					/* we support DES-EDE3-CBC encrypted files, only */
 					if (!match("DES-EDE3-CBC", &dek))
+					{
 						return "we support DES-EDE3-CBC encrypted files, only";
-
+					}
 					eat_whitespace(&value);
 					ugh = ttodata(value.ptr, value.len, 16,
 								  iv.ptr, MAX_DIGEST_LEN, &len);
 					if (ugh)
+					{
 						return "error in IV";
-
+					}
 					iv.len = len;
 				}
 			}
@@ -415,7 +443,9 @@ pemtobin(chunk_t *blob, prompt_pass_t *pass, const char* label, bool *pgp)
 
 				/* remove any trailing whitespace */
 				if (!extract_token(&data ,' ', &line))
+				{
 					data = line;
+				}
 
 				/* check for PGP armor checksum */
 				if (*data.ptr == '=')
@@ -451,10 +481,15 @@ pemtobin(chunk_t *blob, prompt_pass_t *pass, const char* label, bool *pgp)
 	blob->len = dst.len;
 
 	if (state != PEM_POST)
+	{
 		return "file coded in unknown format, discarded";
-
+	}
 	if (encrypted)
+	{
 		return pem_decrypt(blob, &iv, pass, label);
+	}
 	else
+	{	
 		return NULL;
+	}
 }

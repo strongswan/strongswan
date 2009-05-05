@@ -29,6 +29,7 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
+#include <crypto/hashers/hasher.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -44,7 +45,6 @@
 #include "whack.h"
 #include "fetch.h"
 #include "ocsp.h"
-#include "sha1.h"
 
 /**
  * Chained lists of X.509 end certificates
@@ -1488,16 +1488,18 @@ void gntoid(struct id *id, const generalName_t *gn)
  * Compute the subjectKeyIdentifier according to section 4.2.1.2 of RFC 3280
  * as the 160 bit SHA-1 hash of the public key
  */
-void compute_subjectKeyID(x509cert_t *cert, chunk_t subjectKeyID)
+bool compute_subjectKeyID(x509cert_t *cert, chunk_t subjectKeyID)
 {
-	SHA1_CTX context;
+	hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 
-	SHA1Init(&context);
-	SHA1Update(&context
-			  , cert->subjectPublicKey.ptr
-			  , cert->subjectPublicKey.len);
-	SHA1Final(subjectKeyID.ptr, &context);
-	subjectKeyID.len = SHA1_DIGEST_SIZE;
+	if (hasher == NULL)
+	{
+		plog("  no SHA-1 hasher available to compute subjectKeyID");
+		return FALSE;
+	}
+	hasher->get_hash(hasher, cert->subjectPublicKey, subjectKeyID.ptr);
+	hasher->destroy(hasher);
+	return TRUE;
 }
 
 /**

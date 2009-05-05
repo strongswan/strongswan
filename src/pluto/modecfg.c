@@ -33,8 +33,6 @@
 #include "timer.h"
 #include "ipsec_doi.h"
 #include "log.h"
-#include "md5.h"
-#include "sha1.h"
 #include "crypto.h"
 #include "modecfg.h"
 #include "whack.h"
