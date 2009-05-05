@@ -491,6 +491,7 @@ static status_t unroute_execute(interface_job_t *job)
 	interface_listener_t *listener = &job->listener;
 	ike_sa_t *ike_sa = listener->ike_sa;
 	
+	charon->bus->set_sa(charon->bus, ike_sa);
 	if (ike_sa->unroute(ike_sa, listener->id) != DESTROY_ME)
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
