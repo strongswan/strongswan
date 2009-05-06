@@ -21,3 +21,5 @@ lex.yy.c
 *keywords.c
 Doxyfile
 apidoc/
+*.~
+*.orig
