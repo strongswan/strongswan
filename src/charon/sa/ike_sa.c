@@ -1105,7 +1105,8 @@ static void resolve_hosts(private_ike_sa_t *this)
 /**
  * Initiates a CHILD_SA using the appropriate reqid
  */
-static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_cfg, u_int32_t reqid)
+static status_t initiate_with_reqid(private_ike_sa_t *this,
+									child_cfg_t *child_cfg, u_int32_t reqid)
 {
 	task_t *task;
 	
@@ -1199,168 +1200,6 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 }
 
 /**
- * Implementation of ike_sa_t.acquire.
- */
-static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
-{
-	child_cfg_t *child_cfg;
-	iterator_t *iterator;
-	child_sa_t *current, *child_sa = NULL;
-	
-	switch (this->state)
-	{
-		case IKE_DELETING:
-			DBG1(DBG_IKE, "acquiring CHILD_SA {reqid %d} failed: "
-				 "IKE_SA is deleting", reqid);
-			return FAILED;
-		case IKE_PASSIVE:
-			/* do not process acquires if passive */
-			return FAILED;
-		default:
-			break;
-	}
-	
-	/* find CHILD_SA */
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (current->get_reqid(current) == reqid)
-		{
-			child_sa = current;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	if (!child_sa)
-	{
-		DBG1(DBG_IKE, "acquiring CHILD_SA {reqid %d} failed: "
-			 "CHILD_SA not found", reqid);
-		return FAILED;
-	}
-	
-	child_cfg = child_sa->get_config(child_sa);
-	child_cfg->get_ref(child_cfg);
-	
-	return initiate_with_reqid(this, child_cfg, reqid);
-}
-
-/**
- * Implementation of ike_sa_t.route.
- */
-static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
-{
-	child_sa_t *child_sa;
-	iterator_t *iterator;
-	linked_list_t *my_ts, *other_ts;
-	host_t *me, *other;
-	status_t status;
-	
-	/* check if not already routed*/
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
-	{
-		if (child_sa->get_state(child_sa) == CHILD_ROUTED &&
-			streq(child_sa->get_name(child_sa), child_cfg->get_name(child_cfg)))
-		{
-			iterator->destroy(iterator);
-			DBG1(DBG_IKE, "routing CHILD_SA failed: already routed");
-			return FAILED;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	switch (this->state)
-	{
-		case IKE_DELETING:
-		case IKE_REKEYING:
-			DBG1(DBG_IKE, "routing CHILD_SA failed: IKE_SA is %N",
-				 ike_sa_state_names, this->state);
-			return FAILED;
-		case IKE_CREATED:
-		case IKE_CONNECTING:
-		case IKE_ESTABLISHED:
-		case IKE_PASSIVE:
-		default:
-			break;
-	}
-	
-	resolve_hosts(this);
-
-	/* install kernel policies */
-	child_sa = child_sa_create(this->my_host, this->other_host,
-							   child_cfg, 0, FALSE);
-	me = this->my_host;
-	if (this->my_virtual_ip)
-	{
-		me = this->my_virtual_ip;
-	}
-	other = this->other_host;
-	if (this->other_virtual_ip)
-	{
-		other = this->other_virtual_ip;
-	}
-	
-	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, me);
-	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, other);
-
-	child_sa->set_mode(child_sa, child_cfg->get_mode(child_cfg));
-	status = child_sa->add_policies(child_sa, my_ts, other_ts);
-
-	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
-	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
-	if (status == SUCCESS)
-	{
-		this->child_sas->insert_last(this->child_sas, child_sa);
-		DBG1(DBG_IKE, "CHILD_SA routed");
-	}
-	else
-	{
-		child_sa->destroy(child_sa);
-		DBG1(DBG_IKE, "routing CHILD_SA failed");
-	}
-	return status;
-}
-
-/**
- * Implementation of ike_sa_t.unroute.
- */
-static status_t unroute(private_ike_sa_t *this, u_int32_t reqid)
-{
-	iterator_t *iterator;
-	child_sa_t *child_sa;
-	bool found = FALSE;
-	
-	/* find CHILD_SA in ROUTED state */
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
-	{
-		if (child_sa->get_state(child_sa) == CHILD_ROUTED &&
-			child_sa->get_reqid(child_sa) == reqid)
-		{
-			iterator->remove(iterator);
-			DBG1(DBG_IKE, "CHILD_SA unrouted");
-			child_sa->destroy(child_sa);
-			found = TRUE;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	if (!found)
-	{
-		DBG1(DBG_IKE, "unrouting CHILD_SA failed: reqid %d not found", reqid);
-		return FAILED;
-	}
-	/* if we are not established, and we have no more routed childs, remove whole SA */
-	if (this->state == IKE_CREATED &&
-		this->child_sas->get_count(this->child_sas) == 0)
-	{
-		return DESTROY_ME;
-	}
-	return SUCCESS;
-}
-
-/**
  * Implementation of ike_sa_t.process_message.
  */
 static status_t process_message(private_ike_sa_t *this, message_t *message)
@@ -1434,14 +1273,10 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 	else
 	{
 		host_t *me, *other;
-		private_ike_sa_t *new;
-		iterator_t *iterator;
-		child_sa_t *child;
-		bool has_routed = FALSE;
 		
 		me = message->get_destination(message);
 		other = message->get_source(message);
-
+		
 		/* if this IKE_SA is virgin, we check for a config */
 		if (this->ike_cfg == NULL)
 		{
@@ -1471,51 +1306,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 				update_hosts(this, me, other);
 			}
 		}
-		status = this->task_manager->process_message(this->task_manager, message);
-		if (status != DESTROY_ME)
-		{
-			return status;
-		}
-		/* if IKE_SA gets closed for any reasons, reroute routed children */
-		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-		while (iterator->iterate(iterator, (void**)&child))
-		{
-			if (child->get_state(child) == CHILD_ROUTED)
-			{
-				has_routed = TRUE;
-				break;
-			}
-		}
-		iterator->destroy(iterator);
-		if (!has_routed)
-		{
-			return status;
-		}
-		/* move routed children to a new IKE_SA, apply connection info */
-		new = (private_ike_sa_t*)charon->ike_sa_manager->checkout_new(
-											charon->ike_sa_manager, TRUE);
-		set_peer_cfg(new, this->peer_cfg);
-		new->other_host->destroy(new->other_host);
-		new->other_host = this->other_host->clone(this->other_host);
-		if (!has_condition(this, COND_NAT_THERE))
-		{
-			new->other_host->set_port(new->other_host, IKEV2_UDP_PORT);
-		}
-		if (this->my_virtual_ip)
-		{
-			set_virtual_ip(new, TRUE, this->my_virtual_ip);
-		}
-		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-		while (iterator->iterate(iterator, (void**)&child))
-		{
-			if (child->get_state(child) == CHILD_ROUTED)
-			{
-				route(new, child->get_config(child));
-			}
-		}
-		iterator->destroy(iterator);
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, &new->public);
-		return status;
+		return this->task_manager->process_message(this->task_manager, message);
 	}
 }
 
@@ -1850,7 +1641,8 @@ static status_t reestablish(private_ike_sa_t *this)
 					status = new->initiate(new, child_cfg);
 					break;
 				case ACTION_ROUTE:
-					status = new->route(new, child_cfg);
+					charon->traps->install(charon->traps,
+										   this->peer_cfg, child_cfg);
 					break;
 				default:
 					continue;
@@ -2206,9 +1998,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_statistic = (u_int32_t(*)(ike_sa_t*, statistic_t kind))get_statistic;
 	this->public.process_message = (status_t (*)(ike_sa_t*, message_t*)) process_message;
 	this->public.initiate = (status_t (*)(ike_sa_t*,child_cfg_t*)) initiate;
-	this->public.route = (status_t (*)(ike_sa_t*,child_cfg_t*)) route;
-	this->public.unroute = (status_t (*)(ike_sa_t*,u_int32_t)) unroute;
-	this->public.acquire = (status_t (*)(ike_sa_t*,u_int32_t)) acquire;
 	this->public.get_ike_cfg = (ike_cfg_t* (*)(ike_sa_t*))get_ike_cfg;
 	this->public.set_ike_cfg = (void (*)(ike_sa_t*,ike_cfg_t*))set_ike_cfg;
 	this->public.get_peer_cfg = (peer_cfg_t* (*)(ike_sa_t*))get_peer_cfg;

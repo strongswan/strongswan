@@ -170,15 +170,12 @@ static bool listener_child_state(interface_listener_t *this, ike_sa_t *ike_sa,
 	{
 		switch (state)
 		{
-			case CHILD_ROUTED:
 			case CHILD_INSTALLED:
 				this->status = SUCCESS;
 				return FALSE;
 			case CHILD_DESTROYING:
 				switch (child_sa->get_state(child_sa))
 				{
-					case CHILD_ROUTED:
-						/* has been unrouted */
 					case CHILD_DELETING:
 						/* proper delete */
 						this->status = SUCCESS;
@@ -424,126 +421,6 @@ static status_t terminate_child(controller_t *this, u_int32_t reqid,
 }
 
 /**
- * execute function for route
- */
-static status_t route_execute(interface_job_t *job)
-{
-	interface_listener_t *listener = &job->listener;
-	ike_sa_t *ike_sa = listener->ike_sa;
-	
-	charon->bus->set_sa(charon->bus, ike_sa);
-	if (ike_sa->route(ike_sa, listener->child_cfg) != DESTROY_ME)
-	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		return SUCCESS;
-	}
-	charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
-	return FAILED;
-}
-
-/**
- * Implementation of controller_t.route.
- */
-static status_t route(controller_t *this,
-					  peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-					  controller_cb_t callback, void *param)
-{
-	ike_sa_t *ike_sa;
-	interface_job_t job = {
-		.listener = {
-			.public = {
-				.log = (void*)listener_log,
-				.ike_state_change = (void*)listener_ike_state,
-				.child_state_change = (void*)listener_child_state,
-			},
-			.callback = callback,
-			.param = param,
-			.status = FAILED,
-			.peer_cfg = peer_cfg,
-			.child_cfg = child_cfg,
-		},
-		.public = {
-			.execute = (void*)route_execute,
-			.destroy = (void*)recheckin,
-		},
-	};
-	
-	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
-														peer_cfg);
-	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
-	{
-		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-	}
-	job.listener.ike_sa = ike_sa;
-	if (callback == NULL)
-	{
-		return route_execute(&job);
-	}
-	charon->bus->listen(charon->bus, &job.listener.public, (job_t*)&job);
-	return job.listener.status;
-}
-
-/**
- * execute function for unroute
- */
-static status_t unroute_execute(interface_job_t *job)
-{
-	interface_listener_t *listener = &job->listener;
-	ike_sa_t *ike_sa = listener->ike_sa;
-	
-	charon->bus->set_sa(charon->bus, ike_sa);
-	if (ike_sa->unroute(ike_sa, listener->id) != DESTROY_ME)
-	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		return SUCCESS;
-	}
-	charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
-	return SUCCESS;
-}
-
-/**
- * Implementation of controller_t.unroute.
- */
-static status_t unroute(controller_t *this, u_int32_t reqid, 
-						controller_cb_t callback, void *param)
-{
-	ike_sa_t *ike_sa;
-	interface_job_t job = {
-		.listener = {
-			.public = {
-				.log = (void*)listener_log,
-				.ike_state_change = (void*)listener_ike_state,
-				.child_state_change = (void*)listener_child_state,
-			},
-			.callback = callback,
-			.param = param,
-			.status = FAILED,
-			.id = reqid,
-		},
-		.public = {
-			.execute = (void*)unroute_execute,
-			.destroy = (void*)recheckin,
-		},
-	};
-	
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													reqid, TRUE);
-	if (ike_sa == NULL)
-	{
-		DBG1(DBG_IKE, "unable to unroute, CHILD_SA with ID %d not found", reqid);
-		return NOT_FOUND;
-	}
-	job.listener.ike_sa = ike_sa;
-
-	if (callback == NULL)
-	{
-		return unroute_execute(&job);
-	}
-	charon->bus->listen(charon->bus, &job.listener.public, (job_t*)&job);	
-	return job.listener.status;
-}
-
-/**
  * See header
  */
 bool controller_cb_empty(void *param, debug_t group, level_t level,
@@ -571,8 +448,6 @@ controller_t *controller_create(void)
 	this->public.initiate = (status_t(*)(controller_t*,peer_cfg_t*,child_cfg_t*,controller_cb_t,void*))initiate;
 	this->public.terminate_ike = (status_t(*)(controller_t*,u_int32_t,controller_cb_t, void*))terminate_ike;
 	this->public.terminate_child = (status_t(*)(controller_t*,u_int32_t,controller_cb_t, void *param))terminate_child;
-	this->public.route = (status_t(*)(controller_t*,peer_cfg_t*, child_cfg_t*,controller_cb_t,void*))route;
-	this->public.unroute = (status_t(*)(controller_t*,u_int32_t,controller_cb_t,void*))unroute;
 	this->public.destroy = (void (*)(controller_t*))destroy;
 	
 	return &this->public;

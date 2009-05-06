@@ -608,43 +608,6 @@ struct ike_sa_t {
 	 * 						- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg);
-
-	/**
-	 * Route a policy in the kernel.
-	 *
-	 * Installs the policies in the kernel. If traffic matches,
-	 * the kernel requests connection setup from the IKE_SA via acquire().
-	 * 
-	 * @param child_cfg		child config to route
-	 * @return				
-	 * 						- SUCCESS if routed successfully
-	 * 						- FAILED if routing failed
-	 */
-	status_t (*route) (ike_sa_t *this, child_cfg_t *child_cfg);
-
-	/**
-	 * Unroute a policy in the kernel previously routed.
-	 *
-	 * @param reqid			reqid of CHILD_SA to unroute
-	 * @return				
-	 * 						- SUCCESS if route removed
-	 *						- NOT_FOUND if CHILD_SA not found
-	 * 						- DESTROY_ME if last CHILD_SA was unrouted
-	 */
-	status_t (*unroute) (ike_sa_t *this, u_int32_t reqid);
-	
-	/**
-	 * Acquire connection setup for an installed kernel policy.
-	 *
-	 * If an installed policy raises an acquire, the kernel calls
-	 * this function to establish the CHILD_SA (and maybe the IKE_SA).
-	 *
-	 * @param reqid			reqid of the CHILD_SA the policy belongs to.
-	 * @return				
-	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed
-	 */
-	status_t (*acquire) (ike_sa_t *this, u_int32_t reqid);
 	
 	/**
 	 * Initiates the deletion of an IKE_SA.

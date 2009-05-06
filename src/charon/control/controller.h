@@ -124,38 +124,6 @@ struct controller_t {
 								controller_cb_t callback, void *param);
 	
 	/**
-	 * Route a CHILD_SA (install triggering policies).
-	 *
-	 * @param peer_cfg		peer_cfg to use for IKE_SA setup, if triggered
-	 * @param child_cfg		child_cfg to route
-	 * @param cb			logging callback
-	 * @param param			parameter to include in each call of cb
-	 * @return
-	 *						- SUCCESS, if CHILD_SA routed
-	 *						- FAILED, if routing failed
-	 *						- NEED_MORE, if callback returned FALSE
-	 */
-	status_t (*route)(controller_t *this,
-					  peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-					  controller_cb_t callback, void *param);
-	
-	/**
-	 * Unroute a routed CHILD_SA (uninstall triggering policies).
-	 *
-	 * Only the route is removed, not the CHILD_SAs the route triggered.
-	 *
-	 * @param reqid			reqid of the CHILD_SA to unroute
-	 * @param cb			logging callback
-	 * @param param			parameter to include in each call of cb
-	 * @return
-	 *						- SUCCESS, if CHILD_SA terminated
-	 *						- NOT_FOUND, if no such CHILD_SA routed
-	 *						- NEED_MORE, if callback returned FALSE
-	 */
-	status_t (*unroute)(controller_t *this, u_int32_t reqid, 
-						controller_cb_t callback, void *param);
-	
-	/**
 	 * Destroy a controller_t instance.
 	 */
 	void (*destroy) (controller_t *this);
