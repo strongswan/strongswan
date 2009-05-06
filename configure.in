@@ -774,6 +774,7 @@ AC_SUBST(DLLIB)
 
 AC_CHECK_FUNCS(backtrace)
 AC_CHECK_FUNCS(prctl)
+AC_CHECK_FUNCS(gethostbyname_r)
 
 AC_MSG_CHECKING(for dladdr)
 AC_TRY_COMPILE(

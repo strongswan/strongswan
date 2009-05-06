@@ -32,7 +32,7 @@ typedef struct private_host_t private_host_t;
 /**
  * Private Data of a host object.
  */
-struct private_host_t { 	
+struct private_host_t {
 	/**
 	 * Public data
 	 */
@@ -79,7 +79,7 @@ static socklen_t *get_sockaddr_len(private_host_t *this)
  */
 static bool is_anyaddr(private_host_t *this)
 {
-	switch (this->address.sa_family) 
+	switch (this->address.sa_family)
 	{
 		case AF_INET:
 		{
@@ -98,7 +98,7 @@ static bool is_anyaddr(private_host_t *this)
 		default:
 		{
 			return FALSE;
-		}	
+		}
 	}
 }
 
@@ -169,7 +169,7 @@ static chunk_t get_address(private_host_t *this)
 {
 	chunk_t address = chunk_empty;
 	
-	switch (this->address.sa_family) 
+	switch (this->address.sa_family)
 	{
 		case AF_INET:
 		{
@@ -204,7 +204,7 @@ static int get_family(private_host_t *this)
  */
 static u_int16_t get_port(private_host_t *this)
 {
-	switch (this->address.sa_family) 
+	switch (this->address.sa_family)
 	{
 		case AF_INET:
 		{
@@ -340,7 +340,7 @@ static void destroy(private_host_t *this)
 }
 
 /**
- * Creates an empty host_t object 
+ * Creates an empty host_t object
  */
 static private_host_t *host_create_empty(void)
 {
@@ -436,9 +436,12 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 {
 	private_host_t *this;
-	struct hostent host, *ptr;
+	struct hostent *ptr;
+	int ret = 0, err;
+#ifdef HAVE_GETHOSTBYNAME_R
+	struct hostent host;
 	char buf[512];
-	int err, ret;
+#endif
 
 	if (streq(string, "%any"))
 	{
@@ -453,37 +456,49 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 		/* gethostbyname does not like IPv6 addresses - fallback */
 		return host_create_from_string(string, port);
 	}
-	
+
+#ifdef HAVE_GETHOSTBYNAME_R
 	if (af)
-	{	
+	{
 		ret = gethostbyname2_r(string, af, &host, buf, sizeof(buf), &ptr, &err);
 	}
 	else
 	{
 		ret = gethostbyname_r(string, &host, buf, sizeof(buf), &ptr, &err);
 	}
-	if (ret != 0)
+#else
+	/* Some systems (e.g. Mac OS X) do not support gethostbyname_r */
+	if (af)
+	{
+		ptr = gethostbyname2(string, af);
+	}
+	else
+	{
+		ptr = gethostbyname(string);
+	}
+	if (ptr == NULL)
+	{
+		err = h_errno;
+	}
+#endif
+	if (ret != 0 || ptr == NULL)
 	{
 		DBG1("resolving '%s' failed: %s", string, hstrerror(err));
 		return NULL;
 	}
-	if (ptr == NULL)
-	{
-		DBG1("resolving '%s' failed", string);
-	}
 	this = host_create_empty();
-	this->address.sa_family = host.h_addrtype;
+	this->address.sa_family = ptr->h_addrtype;
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
 			memcpy(&this->address4.sin_addr.s_addr,
-				   host.h_addr_list[0], host.h_length);
+				   ptr->h_addr_list[0], ptr->h_length);
 			this->address4.sin_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in);
 			break;
 		case AF_INET6:
 			memcpy(&this->address6.sin6_addr.s6_addr,
-				   host.h_addr_list[0], host.h_length);
+				   ptr->h_addr_list[0], ptr->h_length);
 			this->address6.sin6_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in6);
 			break;
