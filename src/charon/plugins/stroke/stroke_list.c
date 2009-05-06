@@ -354,6 +354,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	enumerator_t *enumerator, *children;
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
+	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
 	bool found = FALSE;
 	char *name = msg->status.name;
@@ -460,12 +461,19 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		enumerator->destroy(enumerator);
 	}
 	
+	fprintf(out, "Routed Connections:\n");
+	enumerator = charon->traps->create_enumerator(charon->traps);
+	while (enumerator->enumerate(enumerator, NULL, &child_sa))
+	{
+		log_child_sa(out, child_sa, all);
+	}
+	enumerator->destroy(enumerator);
+	
 	fprintf(out, "Security Associations:\n");
 	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		bool ike_printed = FALSE;
-		child_sa_t *child_sa;
 		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
 		
 		if (name == NULL || streq(name, ike_sa->get_name(ike_sa)))
