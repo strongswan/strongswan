@@ -116,12 +116,22 @@
 /**
  * General purpose boolean type.
  */
-typedef int bool;
+#ifdef HAVE_STDBOOL_H
+# include <stdbool.h>
+#else
+# ifndef HAVE__BOOL
+#  define _Bool signed char
+# endif /* HAVE__BOOL */
+# define bool _Bool
+# define false 0
+# define true 1
+# define __bool_true_false_are_defined 1
+#endif /* HAVE_STDBOOL_H */
 #ifndef FALSE
-# define FALSE 0
+# define FALSE false
 #endif /* FALSE */
 #ifndef TRUE
-# define TRUE  1
+# define TRUE  true
 #endif /* TRUE */
 
 typedef enum status_t status_t;

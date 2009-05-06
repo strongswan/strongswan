@@ -762,9 +762,11 @@ if test x$medcli = xtrue; then
 	me=true
 fi
 
-dnl ==========================================
+dnl ===========================================
 dnl  check required libraries and header files
-dnl ==========================================
+dnl ===========================================
+
+AC_HEADER_STDBOOL
 
 saved_LIBS=$LIBS
 LIBS=""
