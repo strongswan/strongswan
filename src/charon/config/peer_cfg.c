@@ -198,13 +198,39 @@ static void add_child_cfg(private_peer_cfg_t *this, child_cfg_t *child_cfg)
 }
 
 /**
+ * child_cfg enumerator
+ */
+typedef struct {
+	enumerator_t public;
+	enumerator_t *wrapped;
+	mutex_t *mutex;
+} child_cfg_enumerator_t;
+
+/**
  * Implementation of peer_cfg_t.remove_child_cfg.
  */
-static void remove_child_cfg(private_peer_cfg_t *this, enumerator_t *enumerator)
+static void remove_child_cfg(private_peer_cfg_t *this,
+							 child_cfg_enumerator_t *enumerator)
 {
-	this->mutex->lock(this->mutex);
-	this->child_cfgs->remove_at(this->child_cfgs, enumerator);
+	this->child_cfgs->remove_at(this->child_cfgs, enumerator->wrapped);
+}
+
+/**
+ * Implementation of child_cfg_enumerator_t.destroy
+ */
+static void child_cfg_enumerator_destroy(child_cfg_enumerator_t *this)
+{
 	this->mutex->unlock(this->mutex);
+	this->wrapped->destroy(this->wrapped);
+	free(this);
+}
+
+/**
+ * Implementation of child_cfg_enumerator_t.enumerate
+ */
+static bool child_cfg_enumerate(child_cfg_enumerator_t *this, child_cfg_t **chd)
+{
+	return this->wrapped->enumerate(this->wrapped, chd);
 }
 
 /**
@@ -212,12 +238,15 @@ static void remove_child_cfg(private_peer_cfg_t *this, enumerator_t *enumerator)
  */
 static enumerator_t* create_child_cfg_enumerator(private_peer_cfg_t *this)
 {
-	enumerator_t *enumerator;
-
+	child_cfg_enumerator_t *enumerator = malloc_thing(child_cfg_enumerator_t);
+	
+	enumerator->public.enumerate = (void*)child_cfg_enumerate;
+	enumerator->public.destroy = (void*)child_cfg_enumerator_destroy;
+	enumerator->mutex = this->mutex;
+	enumerator->wrapped = this->child_cfgs->create_enumerator(this->child_cfgs);
+	
 	this->mutex->lock(this->mutex);
-	enumerator = this->child_cfgs->create_enumerator(this->child_cfgs);
-	return enumerator_create_cleaner(enumerator,
-									 (void*)this->mutex->unlock, this->mutex);
+	return &enumerator->public;
 }
 
 /**
