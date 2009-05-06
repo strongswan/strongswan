@@ -78,6 +78,7 @@ sa/ike_sa_id.c sa/ike_sa_id.h \
 sa/ike_sa_manager.c sa/ike_sa_manager.h \
 sa/task_manager.c sa/task_manager.h \
 sa/keymat.c sa/keymat.h \
+sa/trap_manager.c sa/trap_manager.h \
 sa/tasks/child_create.c sa/tasks/child_create.h \
 sa/tasks/child_delete.c sa/tasks/child_delete.h \
 sa/tasks/child_rekey.c sa/tasks/child_rekey.h \
