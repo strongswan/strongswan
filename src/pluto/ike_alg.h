@@ -57,15 +57,9 @@ struct hash_desc {
 	u_int16_t algo_type;
 	u_int16_t algo_id;
 	struct ike_alg *algo_next;
-
-	size_t hash_ctx_size;
-	size_t hash_block_size;
 	size_t hash_digest_size;
 	const hash_testvector_t *hash_testvectors;
 	const hmac_testvector_t *hmac_testvectors;
-	void (*hash_init)(void *ctx);
-	void (*hash_update)(void *ctx, const u_int8_t *in, size_t datasize);
-	void (*hash_final)(u_int8_t *out, void *ctx);
 };
 
 #define IKE_ALG_ENCRYPT         0

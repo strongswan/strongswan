@@ -19,7 +19,6 @@
 #include <string.h>
 
 #include <freeswan.h>
-#include <libsha2/sha2.h>
 
 #include <library.h>
 #include <asn1/asn1.h>

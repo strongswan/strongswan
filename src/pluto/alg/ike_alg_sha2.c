@@ -4,33 +4,13 @@
 #include <sys/types.h>
 #include <freeswan.h>
 
+#include <crypto/hashers/hasher.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
-#include "libsha2/sha2.h"
 #include "alg_info.h"
 #include "ike_alg.h"
-
-static void
-sha256_hash_final(u_char *hash, sha256_context *ctx)
-{
-    sha256_final(ctx);
-    memcpy(hash, ctx->sha_out, SHA2_256_DIGEST_SIZE);
-}
-
-static void
-sha384_hash_final(u_char *hash, sha512_context *ctx)
-{
-    sha512_final(ctx);
-    memcpy(hash, ctx->sha_out, SHA2_384_DIGEST_SIZE);
-}
-
-static void
-sha512_hash_final(u_char *hash, sha512_context *ctx)
-{
-    sha512_final(ctx);
-    memcpy(hash, ctx->sha_out, SHA2_512_DIGEST_SIZE);
-}
 
 /* SHA-256 hash test vectors
  * from "The Secure Hash Algorithm Validation System (SHAVS)"
@@ -572,42 +552,27 @@ struct hash_desc hash_desc_sha2_256 = {
 	algo_type: IKE_ALG_HASH,
 	algo_id:   OAKLEY_SHA2_256,
 	algo_next: NULL,
-	hash_ctx_size:    sizeof(sha256_context),
-	hash_block_size:  SHA2_256_BLOCK_SIZE,
-	hash_digest_size: SHA2_256_DIGEST_SIZE,
+	hash_digest_size: HASH_SIZE_SHA256,
 	hash_testvectors: sha256_hash_testvectors,
-	hmac_testvectors: sha256_hmac_testvectors,
-	hash_init: (void (*)(void *))sha256_init,
-	hash_update: (void (*)(void *, const u_char *, size_t ))sha256_write,
-	hash_final:(void (*)(u_char *, void *))sha256_hash_final
+	hmac_testvectors: sha256_hmac_testvectors
 };
 
 struct hash_desc hash_desc_sha2_384 = {
 	algo_type: IKE_ALG_HASH,
 	algo_id:   OAKLEY_SHA2_384,
 	algo_next: NULL,
-	hash_ctx_size:    sizeof(sha512_context),
-	hash_block_size:  SHA2_384_BLOCK_SIZE,
-	hash_digest_size: SHA2_384_DIGEST_SIZE,
+	hash_digest_size: HASH_SIZE_SHA384,
 	hash_testvectors: sha384_hash_testvectors,
-	hmac_testvectors: sha384_hmac_testvectors,
-	hash_init: (void (*)(void *))sha384_init,
-	hash_update: (void (*)(void *, const u_char *, size_t ))sha512_write,
-	hash_final:(void (*)(u_char *, void *))sha384_hash_final
+	hmac_testvectors: sha384_hmac_testvectors
 };
 
 struct hash_desc hash_desc_sha2_512 = {
 	algo_type: IKE_ALG_HASH,
 	algo_id:   OAKLEY_SHA2_512,
 	algo_next: NULL,
-	hash_ctx_size:    sizeof(sha512_context),
-	hash_block_size:  SHA2_512_BLOCK_SIZE,
-	hash_digest_size: SHA2_512_DIGEST_SIZE,
+	hash_digest_size: HASH_SIZE_SHA512,
 	hash_testvectors: sha512_hash_testvectors,
-	hmac_testvectors: sha512_hmac_testvectors,
-	hash_init: (void (*)(void *))sha512_init,
-	hash_update: (void (*)(void *, const u_char *, size_t ))sha512_write,
-	hash_final:(void (*)(u_char *, void *))sha512_hash_final
+	hmac_testvectors: sha512_hmac_testvectors
 };
 
 int ike_alg_sha2_init(void);

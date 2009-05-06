@@ -29,8 +29,7 @@ LIBCRYPTOBUILDDIR=$(top_builddir)/src/libcrypto
 
 scepclient_LDADD = \
 ca.o crl.o certs.o constants.o defs.o fetch.o id.o keys.o lex.o \
-md2.o md5.o mp_defs.o ocsp.o pem.o pgp.o pkcs1.o pkcs7.o sha1.o \
-smartcard.o x509.o \
+mp_defs.o ocsp.o pem.o pgp.o pkcs1.o pkcs7.o smartcard.o x509.o \
 $(LIBSTRONGSWANBUILDDIR)/libstrongswan.la \
 $(LIBFREESWANBUILDDIR)/libfreeswan.a \
 $(LIBCRYPTOBUILDDIR)/libcrypto.a \
@@ -74,12 +73,6 @@ keys.o :	$(PLUTODIR)/keys.c $(PLUTODIR)/keys.h
 lex.o :		$(PLUTODIR)/lex.c $(PLUTODIR)/lex.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
-md2.o :		$(PLUTODIR)/md2.c $(PLUTODIR)/md2.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-md5.o :		$(PLUTODIR)/md5.c $(PLUTODIR)/md5.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
 ocsp.o :	$(PLUTODIR)/ocsp.c $(PLUTODIR)/ocsp.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
@@ -93,9 +86,6 @@ pkcs1.o :	$(PLUTODIR)/pkcs1.c $(PLUTODIR)/pkcs1.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 pkcs7.o :	$(PLUTODIR)/pkcs7.c $(PLUTODIR)/pkcs7.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-sha1.o :	$(PLUTODIR)/sha1.c $(PLUTODIR)/sha1.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 smartcard.o :	$(PLUTODIR)/smartcard.c $(PLUTODIR)/smartcard.h

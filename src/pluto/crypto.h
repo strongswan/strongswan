@@ -17,9 +17,6 @@
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
 
-#include "md5.h"
-#include "sha1.h"
-#include "libsha2/sha2.h"
 #include "ike_alg.h"
 
 extern void init_crypto(void);
@@ -63,54 +60,7 @@ void crypto_cbc_encrypt(const struct encrypt_desc *e, bool enc, u_int8_t *buf, s
 
 /* unification of cryptographic hashing mechanisms */
 
-#ifndef NO_HASH_CTX
-union hash_ctx {
-		MD5_CTX ctx_md5;
-		SHA1_CTX ctx_sha1;
-		sha256_context ctx_sha256;
-		sha512_context ctx_sha512;
-	};
-
-/* HMAC package
- * Note that hmac_ctx can be (and is) copied since there are
- * no persistent pointers into it.
- */
-
-struct hmac_ctx {
-	const struct hash_desc *h;  /* underlying hash function */
-	size_t hmac_digest_size;    /* copy of h->hash_digest_size */
-	union hash_ctx hash_ctx;    /* ctx for hash function */
-	u_char buf1[MAX_HASH_BLOCK_SIZE];
-	u_char buf2[MAX_HASH_BLOCK_SIZE];
-	};
-
-extern void hmac_init(
-	struct hmac_ctx *ctx,
-	const struct hash_desc *h,
-	const u_char *key,
-	size_t key_len);
-
-#define hmac_init_chunk(ctx, h, ch) hmac_init((ctx), (h), (ch).ptr, (ch).len)
-
-extern void hmac_reinit(struct hmac_ctx *ctx);  /* saves recreating pads */
-
-extern void hmac_update(
-	struct hmac_ctx *ctx,
-	const u_char *data,
-	size_t data_len);
-
-#define hmac_update_chunk(ctx, ch) hmac_update((ctx), (ch).ptr, (ch).len)
-
-extern void hmac_final(u_char *output, struct hmac_ctx *ctx);
-
-#define hmac_final_chunk(ch, name, ctx) { \
-		free((ch).ptr); \
-		(ch).len = (ctx)->hmac_digest_size; \
-		(ch).ptr = malloc((ch).len); \
-		hmac_final((ch).ptr, (ctx)); \
-	}
 
 extern hash_algorithm_t oakley_to_hash_algorithm(int alg);
 extern pseudo_random_function_t oakley_to_prf(int alg);
 
-#endif
