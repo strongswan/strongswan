@@ -853,34 +853,50 @@ static void del(private_stroke_config_t *this, stroke_msg_t *msg)
 	enumerator_t *enumerator, *children;
 	peer_cfg_t *peer;
 	child_cfg_t *child;
+	bool deleted = FALSE;
 	
 	this->mutex->lock(this->mutex);
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, (void**)&peer))
 	{
-		/* remove peer config with such a name */
-		if (streq(peer->get_name(peer), msg->del_conn.name))
-		{
-			this->list->remove_at(this->list, enumerator);
-			peer->destroy(peer);
-			continue;
-		}
+		bool keep = FALSE;
+		
 		/* remove any child with such a name */
 		children = peer->create_child_cfg_enumerator(peer);
 		while (children->enumerate(children, &child))
 		{
 			if (streq(child->get_name(child), msg->del_conn.name))
 			{
-				peer->remove_child_cfg(peer, enumerator);
+				peer->remove_child_cfg(peer, children);
 				child->destroy(child);
+				deleted = TRUE;
+			}
+			else
+			{
+				keep = TRUE;
 			}
 		}
 		children->destroy(children);
+		
+		/* if peer config matches, or has no children anymore, remove it */
+		if (!keep || streq(peer->get_name(peer), msg->del_conn.name))
+		{
+			this->list->remove_at(this->list, enumerator);
+			peer->destroy(peer);
+			deleted = TRUE;
+		}
 	}
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
 	
-	DBG1(DBG_CFG, "deleted connection '%s'", msg->del_conn.name);
+	if (deleted)
+	{
+		DBG1(DBG_CFG, "deleted connection '%s'", msg->del_conn.name);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "connection '%s' not found", msg->del_conn.name);
+	}
 }
 
 /**
