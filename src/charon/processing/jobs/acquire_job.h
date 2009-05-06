@@ -42,9 +42,7 @@ struct acquire_job_t {
 /**
  * Creates a job of type ACQUIRE.
  *
- * We use the reqid to find the routed CHILD_SA.
- *
- * @param reqid		reqid of the CHILD_SA to acquire
+ * @param reqid		reqid of the trapped CHILD_SA to acquire
  * @param src_ts	source traffic selector
  * @param dst_ts	destination traffic selector
  * @return			acquire_job_t object

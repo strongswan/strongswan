@@ -314,7 +314,6 @@ static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
-	stroke_log_info_t info;
 	
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 													  msg->route.name);
@@ -337,10 +336,14 @@ static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 		return;
 	}
 	
-	info.out = out;
-	info.level = msg->output_verbosity;
-	charon->controller->route(charon->controller, peer_cfg, child_cfg,
-							  (controller_cb_t)stroke_log, &info);
+	if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
+	{
+		fprintf(out, "configuration '%s' routed\n", msg->route.name);
+	}
+	else
+	{
+		fprintf(out, "routing configuration '%s' failed\n", msg->route.name);
+	}
 	peer_cfg->destroy(peer_cfg);
 	child_cfg->destroy(child_cfg);
 }
@@ -350,41 +353,24 @@ static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
  */
 static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
-	char *name;
-	ike_sa_t *ike_sa;
+	child_sa_t *child_sa;
 	enumerator_t *enumerator;
-	stroke_log_info_t info;
+	u_int32_t id;
 	
-	name = msg->terminate.name;
-	
-	info.out = out;
-	info.level = msg->output_verbosity;
-	
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
-	while (enumerator->enumerate(enumerator, &ike_sa))
+	enumerator = charon->traps->create_enumerator(charon->traps);
+	while (enumerator->enumerate(enumerator, NULL, &child_sa))
 	{
-		child_sa_t *child_sa;
-		iterator_t *children;
-		u_int32_t id;
-
-		children = ike_sa->create_child_sa_iterator(ike_sa);
-		while (children->iterate(children, (void**)&child_sa))
+		if (streq(msg->unroute.name, child_sa->get_name(child_sa)))
 		{
-			if (child_sa->get_state(child_sa) == CHILD_ROUTED &&
-				streq(name, child_sa->get_name(child_sa)))
-			{
-				id = child_sa->get_reqid(child_sa);
-				children->destroy(children);
-				enumerator->destroy(enumerator);
-				charon->controller->unroute(charon->controller, id,
-								(controller_cb_t)stroke_log, &info);
-				return;
-			}
+			id = child_sa->get_reqid(child_sa);
+			enumerator->destroy(enumerator);
+			charon->traps->uninstall(charon->traps, id);
+			fprintf(out, "configuration '%s' unrouted\n", msg->unroute.name);
+			return;
 		}
-		children->destroy(children);
 	}
 	enumerator->destroy(enumerator);
-	DBG1(DBG_CFG, "no such SA found");
+	fprintf(out, "configuration '%s' not found\n", msg->unroute.name);
 }
 
 /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -33,12 +33,12 @@ struct private_acquire_job_t {
 	 * reqid of the child to rekey
 	 */
 	u_int32_t reqid;
-
+	
 	/**
 	 * acquired source traffic selector
 	 */
 	traffic_selector_t *src_ts;
-
+	
 	/**
 	 * acquired destination traffic selector
 	 */
@@ -60,24 +60,8 @@ static void destroy(private_acquire_job_t *this)
  */
 static void execute(private_acquire_job_t *this)
 {
-	ike_sa_t *ike_sa = NULL;
-	
-	if (this->reqid)
-	{
-		ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-														this->reqid, TRUE);
-	}
-	if (ike_sa == NULL)
-	{
-		DBG1(DBG_JOB, "acquire job found no CHILD_SA with reqid {%d}",
-			 this->reqid);
-	}
-	else
-	{
-		ike_sa->acquire(ike_sa, this->reqid);
-		
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	}
+	charon->traps->acquire(charon->traps, this->reqid,
+						   this->src_ts, this->dst_ts);
 	destroy(this);
 }
 
@@ -90,14 +74,13 @@ acquire_job_t *acquire_job_create(u_int32_t reqid,
 {
 	private_acquire_job_t *this = malloc_thing(private_acquire_job_t);
 	
-	/* interface functions */
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
 	
-	/* private variables */
 	this->reqid = reqid;
 	this->src_ts = src_ts;
 	this->dst_ts = dst_ts;
 	
 	return &this->public;
 }
+

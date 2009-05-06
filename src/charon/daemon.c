@@ -1,7 +1,7 @@
 /* 
  * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -180,6 +180,7 @@ static void destroy(private_daemon_t *this)
 #ifdef CAPABILITIES
 	cap_free(this->caps);
 #endif /* CAPABILITIES */
+	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
@@ -507,6 +508,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	{
 		return FALSE;
 	}
+	this->public.traps = trap_manager_create();
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	if (this->public.receiver == NULL)
@@ -557,6 +559,7 @@ private_daemon_t *daemon_create(void)
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
 	this->public.ike_sa_manager = NULL;
+	this->public.traps = NULL;
 	this->public.credentials = NULL;
 	this->public.backends = NULL;
 	this->public.attributes = NULL;
