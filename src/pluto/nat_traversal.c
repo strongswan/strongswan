@@ -28,6 +28,9 @@
 #include <pfkeyv2.h>
 #include <pfkey.h>
 
+#include <library.h>
+#include <crypto/hashers/hasher.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
@@ -102,16 +105,18 @@ static void disable_nat_traversal (int type)
 			nat_traversal_enabled = FALSE;
 }
 
-static void _natd_hash(const struct hash_desc *hasher, char *hash,
+static void _natd_hash(const struct hash_desc *oakley_hasher, char *hash,
 		u_int8_t *icookie, u_int8_t *rcookie,
 		const ip_address *ip, u_int16_t port)
 {
-	union hash_ctx ctx;
-
 	if (is_zero_cookie(icookie))
+	{
 		DBG_log("_natd_hash: Warning, icookie is zero !!");
+	}
 	if (is_zero_cookie(rcookie))
+	{
 		DBG_log("_natd_hash: Warning, rcookie is zero !!");
+	}
 
 	/**
 	 * draft-ietf-ipsec-nat-t-ike-01.txt
@@ -120,36 +125,41 @@ static void _natd_hash(const struct hash_desc *hasher, char *hash,
 	 *
 	 * All values in network order
 	 */
-	hasher->hash_init(&ctx);
-	hasher->hash_update(&ctx, icookie, COOKIE_SIZE);
-	hasher->hash_update(&ctx, rcookie, COOKIE_SIZE);
-	switch (addrtypeof(ip)) {
-	case AF_INET:
-		hasher->hash_update(&ctx, (const u_char *)&ip->u.v4.sin_addr.s_addr
-				, sizeof(ip->u.v4.sin_addr.s_addr));
-		break;
-	case AF_INET6:
-		hasher->hash_update(&ctx, (const u_char *)&ip->u.v6.sin6_addr.s6_addr
-				, sizeof(ip->u.v6.sin6_addr.s6_addr));
-		break;
-	}
-	hasher->hash_update(&ctx, (const u_char *)&port, sizeof(u_int16_t));
-	hasher->hash_final(hash, &ctx);
-#ifdef NAT_D_DEBUG
-	DBG(DBG_NATT,
-		DBG_log("_natd_hash: hasher=%p(%d)", hasher, (int)hasher->hash_digest_len);
-		DBG_dump("_natd_hash: icookie=", icookie, COOKIE_SIZE);
-		DBG_dump("_natd_hash: rcookie=", rcookie, COOKIE_SIZE);
-		switch (addrtypeof(ip)) {
-		case AF_INET:
-			DBG_dump("_natd_hash: ip=", &ip->u.v4.sin_addr.s_addr
-				, sizeof(ip->u.v4.sin_addr.s_addr));
-			break;
+	{
+		chunk_t icookie_chunk = { icookie, COOKIE_SIZE };
+		chunk_t rcookie_chunk = { rcookie, COOKIE_SIZE };
+		chunk_t port_chunk = chunk_from_thing(port);
+		chunk_t addr_chunk;
+		hash_algorithm_t hash_alg;
+		hasher_t *hasher;
+		size_t hash_size;
+
+		hash_alg = oakley_to_hash_algorithm(oakley_hasher->algo_id);
+		hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+		hasher->get_hash(hasher, icookie_chunk, NULL);
+		hasher->get_hash(hasher, rcookie_chunk, NULL);
+		switch (addrtypeof(ip))
+		{
+			case AF_INET:
+				addr_chunk = chunk_from_thing(ip->u.v4.sin_addr.s_addr);
+				break;
+			case AF_INET6:
+				addr_chunk = chunk_from_thing(ip->u.v6.sin6_addr.s6_addr);
 		}
-		DBG_log("_natd_hash: port=%d", port);
-		DBG_dump("_natd_hash: hash=", hash, hasher->hash_digest_len);
-	);
+		hasher->get_hash(hasher, addr_chunk, NULL);
+		hasher->get_hash(hasher, port_chunk, hash);
+		hash_size = hasher->get_hash_size(hasher);
+		hasher->destroy(hasher);
+#ifdef NAT_D_DEBUG
+		DBG(DBG_NATT,
+			DBG_dump_chunk("_natd_hash: icookie=", icookie_chunk);
+			DBG_dump_chunk("_natd_hash: rcookie=", rcookie_chunk);
+			DBG_dump_chunk("_natd_hash: ip=", addr_chunk);
+			DBG_log("_natd_hash: port=%d", port);
+			DBG_dump("_natd_hash: hash=", hash, hash_size);
+		)
 #endif
+	}
 }
 
 /* Add NAT-Traversal VIDs (supported ones)

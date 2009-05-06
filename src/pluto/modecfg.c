@@ -24,7 +24,9 @@
 #include <string.h>
 
 #include <freeswan.h>
+
 #include <library.h>
+#include <crypto/prfs/prf.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -241,22 +243,28 @@ set_internal_addr(struct connection *c, internal_addr_t *ia)
 /*
  * Compute HASH of Mode Config.
  */
-static size_t
-modecfg_hash(u_char *dest, const u_char *start, const u_char *roof
-			, const struct state *st)
+static size_t modecfg_hash(u_char *dest, u_char *start, u_char *roof,
+						   const struct state *st)
 {
-	struct hmac_ctx ctx;
+	chunk_t msgid_chunk = chunk_from_thing(st->st_msgid);
+	chunk_t msg_chunk = { start, roof - start };
+	size_t prf_block_size;
+	pseudo_random_function_t prf_alg;
+	prf_t *prf;
 
-	hmac_init_chunk(&ctx, st->st_oakley.hasher, st->st_skeyid_a);
-	hmac_update(&ctx, (const u_char *) &st->st_msgid, sizeof(st->st_msgid));
-	hmac_update(&ctx, start, roof-start);
-	hmac_final(dest, &ctx);
+	prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+	prf->set_key(prf, st->st_skeyid_a);
+	prf->get_bytes(prf, msgid_chunk, NULL);
+	prf->get_bytes(prf, msg_chunk, dest);
+	prf_block_size = prf->get_block_size(prf);
+	prf->destroy(prf);
 
 	DBG(DBG_CRYPT,
 		DBG_log("ModeCfg HASH computed:");
-		DBG_dump("", dest, ctx.hmac_digest_size)
+		DBG_dump("", dest, prf_block_size)
 	) 
-	return ctx.hmac_digest_size;
+	return prf_block_size;
 }
 
 

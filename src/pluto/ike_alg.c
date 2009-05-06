@@ -21,6 +21,10 @@
 #include <freeswan.h>
 #include <ipsec_policy.h>
 
+#include <library.h>
+#include <crypto/hashers/hasher.h>
+#include <crypto/prfs/prf.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "crypto.h"
@@ -452,14 +456,16 @@ ike_hash_test(const struct hash_desc *desc)
 		for (i = 0; desc->hash_testvectors[i].msg_digest != NULL; i++)
 		{
 			u_char digest[MAX_DIGEST_LEN];
+			chunk_t msg = { desc->hash_testvectors[i].msg,
+							desc->hash_testvectors[i].msg_size };
+			hash_algorithm_t hash_alg;
+			hasher_t *hasher;
 			bool result;
 
-			union hash_ctx ctx;
-
-			desc->hash_init(&ctx);
-			desc->hash_update(&ctx, desc->hash_testvectors[i].msg
-								   ,desc->hash_testvectors[i].msg_size);
-			desc->hash_final(digest, &ctx);
+			hash_alg = oakley_to_hash_algorithm(desc->algo_id);
+			hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+			hasher->get_hash(hasher, msg, digest);
+			hasher->destroy(hasher);
 			result = memeq(digest, desc->hash_testvectors[i].msg_digest
 								  , desc->hash_digest_size);
 			DBG(DBG_CRYPT,
@@ -482,17 +488,21 @@ ike_hash_test(const struct hash_desc *desc)
 		for (i = 0; desc->hmac_testvectors[i].hmac != NULL; i++)
 		{
 			u_char digest[MAX_DIGEST_LEN];
+			chunk_t key = { desc->hmac_testvectors[i].key,
+							desc->hmac_testvectors[i].key_size };
+			chunk_t msg = { desc->hmac_testvectors[i].msg,
+							desc->hmac_testvectors[i].msg_size };
+			pseudo_random_function_t prf_alg;
+			prf_t *prf;
 			bool result;
 
-			struct hmac_ctx ctx;
-
-			hmac_init(&ctx, desc, desc->hmac_testvectors[i].key
-								, desc->hmac_testvectors[i].key_size);
-			hmac_update(&ctx, desc->hmac_testvectors[i].msg
-							 ,desc->hmac_testvectors[i].msg_size);
-			hmac_final(digest, &ctx);
-			result = memeq(digest, desc->hmac_testvectors[i].hmac
-								  , desc->hash_digest_size);
+			prf_alg = oakley_to_prf(desc->algo_id);
+			prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+			prf->set_key(prf, key);
+			prf->get_bytes(prf, msg, digest);
+			prf->destroy(prf);
+			result = memeq(digest, desc->hmac_testvectors[i].hmac,
+								   desc->hash_digest_size);
 			DBG(DBG_CRYPT,
 				DBG_log("  hmac testvector %d: %s", i, result ? "ok":"failed")
 			)

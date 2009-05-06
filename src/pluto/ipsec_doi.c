@@ -33,6 +33,7 @@
 #include <asn1/asn1.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
+#include <crypto/prf_plus.h>
 #include <crypto/rngs/rng.h>
 
 #include "constants.h"
@@ -397,16 +398,22 @@ static void send_notification(struct state *sndst, u_int16_t type,
 	/* calculate hash value and patch into Hash Payload */
 	if (encst)
 	{
-		struct hmac_ctx ctx;
-		hmac_init_chunk(&ctx, encst->st_oakley.hasher, encst->st_skeyid_a);
-		hmac_update(&ctx, (u_char *) &msgid, sizeof(msgid_t));
-		hmac_update(&ctx, r_hash_start, r_hdr_pbs.cur-r_hash_start);
-		hmac_final(r_hashval, &ctx);
+		chunk_t msgid_chunk = chunk_from_thing(msgid);
+		chunk_t msg_chunk = { r_hash_start, r_hdr_pbs.cur-r_hash_start };
+		pseudo_random_function_t prf_alg;
+		prf_t *prf;
+
+		prf_alg = oakley_to_prf(encst->st_oakley.hasher->algo_id);
+		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+		prf->set_key(prf, encst->st_skeyid_a);
+		prf->get_bytes(prf, msgid_chunk, NULL);
+		prf->get_bytes(prf, msg_chunk, r_hashval);
 
 		DBG(DBG_CRYPT,
 			DBG_log("HASH computed:");
-			DBG_dump("", r_hashval, ctx.hmac_digest_size);
+			DBG_dump("", r_hashval, prf->get_block_size(prf));
 		)
+		prf->destroy(prf);
 	}
 
 	/* Encrypt message (preserve st_iv and st_new_iv) */
@@ -648,16 +655,23 @@ void send_delete(struct state *st)
 
 	/* calculate hash value and patch into Hash Payload */
 	{
-		struct hmac_ctx ctx;
-		hmac_init_chunk(&ctx, p1st->st_oakley.hasher, p1st->st_skeyid_a);
-		hmac_update(&ctx, (u_char *) &msgid, sizeof(msgid_t));
-		hmac_update(&ctx, r_hash_start, r_hdr_pbs.cur-r_hash_start);
-		hmac_final(r_hashval, &ctx);
+		chunk_t msgid_chunk = chunk_from_thing(msgid);
+		chunk_t msg_chunk = { r_hash_start, r_hdr_pbs.cur-r_hash_start };
+		pseudo_random_function_t prf_alg;
+		prf_t *prf;
+
+		prf_alg = oakley_to_prf(p1st->st_oakley.hasher->algo_id);
+		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+		prf->set_key(prf, p1st->st_skeyid_a);
+		prf->get_bytes(prf, msgid_chunk, NULL);
+		prf->get_bytes(prf, msg_chunk, r_hashval);
 
 		DBG(DBG_CRYPT,
 			DBG_log("HASH(1) computed:");
-			DBG_dump("", r_hashval, ctx.hmac_digest_size);
+			DBG_dump("", r_hashval, prf->get_block_size(prf));
 		)
+
+		prf->destroy(prf);
 	}
 
 	/* Do a dance to avoid needing a new state object.
@@ -1172,8 +1186,8 @@ static bool skeyid_preshared(struct state *st)
 		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 		if (prf == NULL)
 		{
-		loglog(RC_LOG_SERIOUS, "%N not available to compute skeyid",
-								pseudo_random_function_names, prf_alg);
+			loglog(RC_LOG_SERIOUS, "%N not available to compute skeyid",
+									pseudo_random_function_names, prf_alg);
 		return FALSE;
 		}
 		free(st->st_skeyid.ptr);
@@ -1317,32 +1331,32 @@ static bool generate_skeyids_iv(struct state *st)
 	 * See RFC 2409 "IKE" Appendix B
 	 */
 	{
-		/* const size_t keysize = st->st_oakley.encrypter->keydeflen/BITS_PER_BYTE; */
-		const size_t keysize = st->st_oakley.enckeylen/BITS_PER_BYTE;
-		u_char keytemp[MAX_OAKLEY_KEY_LEN + MAX_DIGEST_LEN];
-		u_char *k = st->st_skeyid_e.ptr;
+		size_t keysize = st->st_oakley.enckeylen/BITS_PER_BYTE;
+
+		/* free any existing key */
+		free(st->st_enc_key.ptr);
 
 		if (keysize > st->st_skeyid_e.len)
 		{
-			struct hmac_ctx ctx;
-			size_t i = 0;
+			char seed_buf[] = { 0x00 };
+			chunk_t seed = chunk_from_buf(seed_buf);
+			pseudo_random_function_t prf_alg;
+			prf_plus_t *prf_plus;
+			prf_t *prf;
 
-			hmac_init_chunk(&ctx, st->st_oakley.hasher, st->st_skeyid_e);
-			hmac_update(&ctx, "\0", 1);
-			for (;;)
-			{
-				hmac_final(&keytemp[i], &ctx);
-				i += ctx.hmac_digest_size;
-				if (i >= keysize)
-					break;
-				hmac_reinit(&ctx);
-				hmac_update(&ctx, &keytemp[i - ctx.hmac_digest_size], ctx.hmac_digest_size);
-			}
-			k = keytemp;
+			prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+			prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+			prf->set_key(prf, st->st_skeyid_e);
+			prf_plus = prf_plus_create(prf, seed);
+			prf_plus->allocate_bytes(prf_plus, keysize, &st->st_enc_key);
+			prf_plus->destroy(prf_plus);
+			prf->destroy(prf);
 		}
-		free(st->st_enc_key.ptr);
-		st->st_enc_key = chunk_create(k, keysize);
-		st->st_enc_key = chunk_clone(st->st_enc_key);
+		else
+		{
+			st->st_enc_key = chunk_create(st->st_skeyid_e.ptr, keysize);
+			st->st_enc_key = chunk_clone(st->st_enc_key);
+		}			
 	}
 
 	DBG(DBG_CRYPT,
@@ -1361,95 +1375,55 @@ static bool generate_skeyids_iv(struct state *st)
  * If the hashi argument is TRUE, generate HASH_I; if FALSE generate HASH_R.
  * If hashus argument is TRUE, we're generating a hash for our end.
  * See RFC2409 IKE 5.
- *
- * Generating the SIG_I and SIG_R for DSS is an odd perversion of this:
- * Most of the logic is the same, but SHA-1 is used in place of HMAC-whatever.
- * The extensive common logic is embodied in main_mode_hash_body().
- * See draft-ietf-ipsec-ike-01.txt 4.1 and 6.1.1.2
  */
-
-typedef void (*hash_update_t)(union hash_ctx *, const u_char *, size_t) ;
-
-static void main_mode_hash_body(struct state *st, bool hashi,
-								const pb_stream *idpl, union hash_ctx *ctx,
-			void (*hash_update_void)(void *, const u_char *input, size_t))
+ static size_t main_mode_hash(struct state *st, u_char *hash_val, bool hashi,
+							 const pb_stream *idpl)
 {
-#define HASH_UPDATE_T (union hash_ctx *, const u_char *input, unsigned int len)
-	hash_update_t hash_update=(hash_update_t)  hash_update_void;
-#if 0   /* if desperate to debug hashing */
-#   define hash_update(ctx, input, len) { \
-		DBG_dump("hash input", input, len); \
-		(hash_update)(ctx, input, len); \
-		}
-#endif
+	chunk_t icookie = { st->st_icookie, COOKIE_SIZE };
+	chunk_t rcookie = { st->st_rcookie, COOKIE_SIZE };
+	chunk_t sa_body = { st->st_p1isa.ptr + sizeof(struct isakmp_generic),
+						st->st_p1isa.len - sizeof(struct isakmp_generic) };
+	chunk_t id_body = { idpl->start + sizeof(struct isakmp_generic),
+						pbs_offset(idpl) - sizeof(struct isakmp_generic) };
+	pseudo_random_function_t prf_alg;
+	prf_t *prf;
+	size_t prf_block_size;
 
-#   define hash_update_chunk(ctx, ch) hash_update((ctx), (ch).ptr, (ch).len)
+	prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+	prf->set_key(prf, st->st_skeyid);
 
 	if (hashi)
 	{
-		hash_update_chunk(ctx, st->st_gi);
-		hash_update_chunk(ctx, st->st_gr);
-		hash_update(ctx, st->st_icookie, COOKIE_SIZE);
-		hash_update(ctx, st->st_rcookie, COOKIE_SIZE);
+		prf->get_bytes(prf, st->st_gi, NULL);
+		prf->get_bytes(prf, st->st_gr, NULL);
+		prf->get_bytes(prf, icookie, NULL);
+		prf->get_bytes(prf, rcookie, NULL);
 	}
 	else
 	{
-		hash_update_chunk(ctx, st->st_gr);
-		hash_update_chunk(ctx, st->st_gi);
-		hash_update(ctx, st->st_rcookie, COOKIE_SIZE);
-		hash_update(ctx, st->st_icookie, COOKIE_SIZE);
+		prf->get_bytes(prf, st->st_gr, NULL);
+		prf->get_bytes(prf, st->st_gi, NULL);
+		prf->get_bytes(prf, rcookie, NULL);
+		prf->get_bytes(prf, icookie, NULL);
 	}
 
-	DBG(DBG_CRYPT, DBG_log("hashing %lu bytes of SA"
-		, (unsigned long) (st->st_p1isa.len - sizeof(struct isakmp_generic))));
-
-	/* SA_b */
-	hash_update(ctx, st->st_p1isa.ptr + sizeof(struct isakmp_generic)
-		, st->st_p1isa.len - sizeof(struct isakmp_generic));
+	DBG(DBG_CRYPT,
+		DBG_log("hashing %u bytes of SA", sa_body.len)
+	)
+	prf->get_bytes(prf, sa_body, NULL);
 
 	/* Hash identification payload, without generic payload header.
 	 * We used to reconstruct ID Payload for this purpose, but now
 	 * we use the bytes as they appear on the wire to avoid
 	 * "spelling problems".
 	 */
-	hash_update(ctx
-		, idpl->start + sizeof(struct isakmp_generic)
-		, pbs_offset(idpl) - sizeof(struct isakmp_generic));
+	prf->get_bytes(prf, id_body, hash_val);
+	prf_block_size = prf->get_block_size(prf);
+	prf->destroy(prf);
 
-#   undef hash_update_chunk
-#   undef hash_update
+	return prf_block_size;
 }
-
-static size_t   /* length of hash */
-main_mode_hash(struct state *st, u_char *hash_val, bool hashi,
-			   const pb_stream *idpl)
-{
-	struct hmac_ctx ctx;
-
-	hmac_init_chunk(&ctx, st->st_oakley.hasher, st->st_skeyid);
-	main_mode_hash_body(st, hashi, idpl, &ctx.hash_ctx, ctx.h->hash_update);
-	hmac_final(hash_val, &ctx);
-	return ctx.hmac_digest_size;
-}
-
-#if 0   /* only needed for DSS */
-static void
-main_mode_sha1(struct state *st
-, u_char *hash_val      /* resulting bytes */
-, size_t *hash_len      /* length of hash */
-, bool hashi    /* Initiator? */
-, const pb_stream *idpl)        /* ID payload, as PBS */
-{
-	union hash_ctx ctx;
-
-	SHA1Init(&ctx.ctx_sha1);
-	SHA1Update(&ctx.ctx_sha1, st->st_skeyid.ptr, st->st_skeyid.len);
-	*hash_len = SHA1_DIGEST_SIZE;
-	main_mode_hash_body(st, hashi, idpl, &ctx
-		, (void (*)(union hash_ctx *, const u_char *, unsigned int))&SHA1Update);
-	SHA1Final(hash_val, &ctx.ctx_sha1);
-}
-#endif
 
 /* Create an RSA signature of a hash.
  * Poorly specified in draft-ietf-ipsec-ike-01.txt 6.1.1.2.
@@ -1911,31 +1885,33 @@ encrypt_message(pb_stream *pbs, struct state *st)
  * Used by: quick_outI1, quick_inI1_outR1 (twice), quick_inR1_outI2
  * (see RFC 2409 "IKE" 5.5, pg. 18 or draft-ietf-ipsec-ike-01.txt 6.2 pg 25)
  */
-static size_t quick_mode_hash12(u_char *dest, const u_char *start,
-								const u_char *roof, const struct state *st,
-								const msgid_t *msgid, bool hash2)
+static size_t quick_mode_hash12(u_char *dest, u_char *start, u_char *roof,
+								const struct state *st,	const msgid_t *msgid,
+								bool hash2)
 {
-	struct hmac_ctx ctx;
+	chunk_t msgid_chunk = chunk_from_thing(*msgid);
+	chunk_t msg_chunk = { start, roof - start };
+	pseudo_random_function_t prf_alg;
+	prf_t *prf;
+	size_t prf_block_size;
 
-#if 0   /* if desperate to debug hashing */
-#   define hmac_update(ctx, ptr, len) { \
-		DBG_dump("hash input", (ptr), (len)); \
-		(hmac_update)((ctx), (ptr), (len)); \
-	}
-	DBG_dump("hash key", st->st_skeyid_a.ptr, st->st_skeyid_a.len);
-#endif
-	hmac_init_chunk(&ctx, st->st_oakley.hasher, st->st_skeyid_a);
-	hmac_update(&ctx, (const void *) msgid, sizeof(msgid_t));
+	prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+	prf->set_key(prf, st->st_skeyid_a);
+	prf->get_bytes(prf, msgid_chunk, NULL);
 	if (hash2)
-		hmac_update_chunk(&ctx, st->st_ni);     /* include Ni_b in the hash */
-	hmac_update(&ctx, start, roof-start);
-	hmac_final(dest, &ctx);
+	{
+		prf->get_bytes(prf, st->st_ni, NULL); /* include Ni_b in the hash */
+	}     
+	prf->get_bytes(prf, msg_chunk, dest);
+	prf_block_size = prf->get_block_size(prf);
+	prf->destroy(prf);
 
 	DBG(DBG_CRYPT,
 		DBG_log("HASH(%d) computed:", hash2 + 1);
-		DBG_dump("", dest, ctx.hmac_digest_size));
-	return ctx.hmac_digest_size;
-#   undef hmac_update
+		DBG_dump("", dest, prf_block_size)
+	)
+	return prf_block_size;
 }
 
 /* Compute HASH(3) in Quick Mode (part of Quick I2 message).
@@ -1946,16 +1922,25 @@ static size_t quick_mode_hash12(u_char *dest, const u_char *start,
  */
 static size_t quick_mode_hash3(u_char *dest, struct state *st)
 {
-	struct hmac_ctx ctx;
+	char seed_buf[] = { 0x00 };
+	chunk_t seed_chunk = chunk_from_buf(seed_buf);
+	chunk_t msgid_chunk = chunk_from_thing(st->st_msgid);
+	pseudo_random_function_t prf_alg;
+	prf_t *prf;
+	size_t prf_block_size;
+	
+	prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+	prf->set_key(prf, st->st_skeyid_a);
+	prf->get_bytes(prf, seed_chunk, NULL );
+	prf->get_bytes(prf, msgid_chunk, NULL);
+	prf->get_bytes(prf, st->st_ni, NULL);
+	prf->get_bytes(prf, st->st_nr, dest);
+	prf_block_size = prf->get_block_size(prf);
+	prf->destroy(prf);
 
-	hmac_init_chunk(&ctx, st->st_oakley.hasher, st->st_skeyid_a);
-	hmac_update(&ctx, "\0", 1);
-	hmac_update(&ctx, (u_char *) &st->st_msgid, sizeof(st->st_msgid));
-	hmac_update_chunk(&ctx, st->st_ni);
-	hmac_update_chunk(&ctx, st->st_nr);
-	hmac_final(dest, &ctx);
-	DBG_cond_dump(DBG_CRYPT, "HASH(3) computed:", dest, ctx.hmac_digest_size);
-	return ctx.hmac_digest_size;
+	DBG_cond_dump(DBG_CRYPT, "HASH(3) computed:", dest, prf_block_size);
+	return prf_block_size;
 }
 
 /* Compute Phase 2 IV.
@@ -1963,23 +1948,26 @@ static size_t quick_mode_hash3(u_char *dest, struct state *st)
  */
 void init_phase2_iv(struct state *st, const msgid_t *msgid)
 {
-	const struct hash_desc *h = st->st_oakley.hasher;
-	union hash_ctx ctx;
+	chunk_t iv_chunk = { st->st_ph1_iv, st->st_ph1_iv_len };
+	chunk_t msgid_chunk = chunk_from_thing(*msgid);
+	hash_algorithm_t hash_alg;
+	hasher_t *hasher;
 
-	DBG_cond_dump(DBG_CRYPT, "last Phase 1 IV:"
-		, st->st_ph1_iv, st->st_ph1_iv_len);
+	hash_alg = oakley_to_hash_algorithm(st->st_oakley.hasher->algo_id);
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 
-	st->st_new_iv_len = h->hash_digest_size;
+	DBG_cond_dump(DBG_CRYPT, "last Phase 1 IV:",
+				  st->st_ph1_iv, st->st_ph1_iv_len);
+
+	st->st_new_iv_len = hasher->get_hash_size(hasher);
 	passert(st->st_new_iv_len <= sizeof(st->st_new_iv));
+		
+	hasher->get_hash(hasher, iv_chunk, NULL);
+	hasher->get_hash(hasher, msgid_chunk, st->st_new_iv);
+	hasher->destroy(hasher);
 
-	h->hash_init(&ctx);
-	h->hash_update(&ctx, st->st_ph1_iv, st->st_ph1_iv_len);
-	passert(*msgid != 0);
-	h->hash_update(&ctx, (const u_char *)msgid, sizeof(*msgid));
-	h->hash_final(st->st_new_iv, &ctx);
-
-	DBG_cond_dump(DBG_CRYPT, "computed Phase 2 IV:"
-		, st->st_new_iv, st->st_new_iv_len);
+	DBG_cond_dump(DBG_CRYPT, "computed Phase 2 IV:",
+				  st->st_new_iv, st->st_new_iv_len);
 }
 
 /* Initiate quick mode.
@@ -2872,62 +2860,68 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 
 	pi->keymat_len = needed_len;
 
-	/* Allocate space for the keying material.
-	 * Although only needed_len bytes are desired, we
-	 * must round up to a multiple of ctx.hmac_digest_size
+	/* Allocate space for the keying material. Although only needed_len bytes
+	 * are desired, we must round up to a multiple of hash_size
 	 * so that our buffer isn't overrun.
 	 */
 	{
-		struct hmac_ctx ctx_me, ctx_peer;
-		size_t needed_space;    /* space needed for keying material (rounded up) */
-		size_t i;
+		size_t needed_space; /* space needed for keying material (rounded up) */
+		size_t i, prf_block_size;
+		chunk_t protoid_chunk = chunk_from_thing(protoid);
+		chunk_t spi_our =  chunk_from_thing(pi->our_spi);
+		chunk_t spi_peer = chunk_from_thing(pi->attrs.spi);
+		pseudo_random_function_t prf_alg;
+		prf_t *prf_our, *prf_peer;
 
-		hmac_init_chunk(&ctx_me, st->st_oakley.hasher, st->st_skeyid_d);
-		ctx_peer = ctx_me;      /* duplicate initial conditions */
+		prf_alg  = oakley_to_prf(st->st_oakley.hasher->algo_id);
+		prf_our  = lib->crypto->create_prf(lib->crypto, prf_alg);
+		prf_peer = lib->crypto->create_prf(lib->crypto, prf_alg);
+		prf_our->set_key(prf_our, st->st_skeyid_d);
+		prf_peer->set_key(prf_peer, st->st_skeyid_d);
+		prf_block_size = prf_our->get_block_size(prf_our);
 
-		needed_space = needed_len + pad_up(needed_len, ctx_me.hmac_digest_size);
+		needed_space = needed_len + pad_up(needed_len, prf_block_size);
 		replace(pi->our_keymat, malloc(needed_space));
 		replace(pi->peer_keymat, malloc(needed_space));
 
 		for (i = 0;; )
 		{
+			char *keymat_i_our  = pi->our_keymat + i;
+			char *keymat_i_peer = pi->peer_keymat + i;
+			chunk_t keymat_our  = { keymat_i_our,  prf_block_size };
+			chunk_t keymat_peer = { keymat_i_peer, prf_block_size };
+			
 			if (st->st_shared.ptr != NULL)
 			{
 				/* PFS: include the g^xy */
-				hmac_update_chunk(&ctx_me, st->st_shared);
-				hmac_update_chunk(&ctx_peer, st->st_shared);
+				prf_our->get_bytes(prf_our,   st->st_shared, NULL);
+				prf_peer->get_bytes(prf_peer, st->st_shared, NULL);
 			}
-			hmac_update(&ctx_me, &protoid, sizeof(protoid));
-			hmac_update(&ctx_peer, &protoid, sizeof(protoid));
+			prf_our->get_bytes(prf_our,   protoid_chunk, NULL);
+			prf_peer->get_bytes(prf_peer, protoid_chunk, NULL);
 
-			hmac_update(&ctx_me, (u_char *)&pi->our_spi, sizeof(pi->our_spi));
-			hmac_update(&ctx_peer, (u_char *)&pi->attrs.spi, sizeof(pi->attrs.spi));
+			prf_our->get_bytes(prf_our,   spi_our,  NULL);
+			prf_peer->get_bytes(prf_peer, spi_peer, NULL);
 
-			hmac_update_chunk(&ctx_me, st->st_ni);
-			hmac_update_chunk(&ctx_peer, st->st_ni);
+			prf_our->get_bytes(prf_our,   st->st_ni, NULL);
+			prf_peer->get_bytes(prf_peer, st->st_ni, NULL);
 
-			hmac_update_chunk(&ctx_me, st->st_nr);
-			hmac_update_chunk(&ctx_peer, st->st_nr);
+			prf_our->get_bytes(prf_our,   st->st_nr, keymat_i_our);
+			prf_peer->get_bytes(prf_peer, st->st_nr, keymat_i_peer);
 
-			hmac_final(pi->our_keymat + i, &ctx_me);
-			hmac_final(pi->peer_keymat + i, &ctx_peer);
-
-			i += ctx_me.hmac_digest_size;
+			i += prf_block_size;
 			if (i >= needed_space)
+			{
 				break;
+			}
 
 			/* more keying material needed: prepare to go around again */
-
-			hmac_reinit(&ctx_me);
-			hmac_reinit(&ctx_peer);
-
-			hmac_update(&ctx_me, pi->our_keymat + i - ctx_me.hmac_digest_size
-				, ctx_me.hmac_digest_size);
-			hmac_update(&ctx_peer, pi->peer_keymat + i - ctx_peer.hmac_digest_size
-				, ctx_peer.hmac_digest_size);
+			prf_our->get_bytes(prf_our,   keymat_our,  NULL);
+			prf_peer->get_bytes(prf_peer, keymat_peer, NULL);
 		}
+		prf_our->destroy(prf_our);
+		prf_peer->destroy(prf_peer);
 	}
-
 	DBG(DBG_CRYPT,
 		DBG_dump("KEYMAT computed:\n", pi->our_keymat, pi->keymat_len);
 		DBG_dump("Peer KEYMAT computed:\n", pi->peer_keymat, pi->keymat_len));
@@ -2963,8 +2957,7 @@ static void compute_keymats(struct state *st)
 /* Handle a Main Mode Oakley first packet (responder side).
  * HDR;SA --> HDR;SA
  */
-stf_status
-main_inI1_outR1(struct msg_digest *md)
+stf_status main_inI1_outR1(struct msg_digest *md)
 {
 	struct payload_digest *const sa_pd = md->chain[ISAKMP_NEXT_SA];
 	struct state *st;
@@ -5268,15 +5261,22 @@ static stf_status send_isakmp_notification(struct state *st, u_int16_t type,
 			
 	{
 		/* finish computing HASH */     
-		struct hmac_ctx ctx;
-		hmac_init_chunk(&ctx, st->st_oakley.hasher, st->st_skeyid_a);
-		hmac_update(&ctx, (const u_char *) &msgid, sizeof(msgid_t));
-		hmac_update(&ctx, r_hash_start, rbody.cur-r_hash_start);
-		hmac_final(r_hashval, &ctx);  
+		chunk_t msgid_chunk = chunk_from_thing(msgid);
+		chunk_t msg_chunk = { r_hash_start, rbody.cur-r_hash_start };
+		pseudo_random_function_t prf_alg;
+		prf_t *prf;
+
+		prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+		prf->set_key(prf, st->st_skeyid_a);
+		prf->get_bytes(prf, msgid_chunk, NULL);
+		prf->get_bytes(prf, msg_chunk, r_hashval);
 
 		DBG(DBG_CRYPT,
-				DBG_log("HASH computed:");
-				DBG_dump("", r_hashval, ctx.hmac_digest_size));
+			DBG_log("HASH computed:");
+			DBG_dump("", r_hashval, prf->get_block_size(prf));
+		)
+		prf->destroy(prf);
 	}
 
 	/* Encrypt message (preserve st_iv and st_new_iv) */
