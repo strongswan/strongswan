@@ -21,6 +21,10 @@
 #include <freeswan.h>
 #include <ipsec_policy.h>
 
+#include <library.h>
+#include <crypto/hashers/hasher.h>
+#include <crypto/prfs/prf.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "crypto.h"
@@ -144,22 +148,6 @@ ike_alg_register_hash(struct hash_desc *hash_desc)
 		return_on(ret,-EINVAL);
 	}
 
-	if (hash_desc->hash_ctx_size > sizeof (union hash_ctx))
-	{
-		plog ("ike_alg: hash alg=%d has ctx_size=%d > hash_ctx=%d"
-			  , hash_desc->algo_id
-			  , (int)hash_desc->hash_ctx_size
-			  , (int)sizeof (union hash_ctx));
-		return_on(ret,-EOVERFLOW);
-	}
-
-	if (!(hash_desc->hash_init && hash_desc->hash_update && hash_desc->hash_final))
-	{
-		plog ("ike_alg: hash alg=%d needs hash_init(), hash_update() and hash_final()"
-			  , hash_desc->algo_id);
-		return_on(ret,-EINVAL);
-	}
-		
 	alg_name = enum_name(&oakley_hash_names, hash_desc->algo_id);
 	if (!alg_name)
 	{
@@ -443,23 +431,32 @@ ike_hash_test(const struct hash_desc *desc)
 
 	if (desc->hash_testvectors == NULL)
 	{
-		plog("  %s hash self-test not available", enum_name(&oakley_hash_names, desc->algo_id));
+		plog("  %s hash self-test not available",
+			 enum_name(&oakley_hash_names, desc->algo_id));
 	}
 	else
 	{
 		int i;
+		hash_algorithm_t hash_alg;
+		hasher_t *hasher;
 
+		hash_alg = oakley_to_hash_algorithm(desc->algo_id);
+		hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+		if (hasher == NULL)
+		{
+			plog("  %s hash function not available",
+				 enum_name(&oakley_hash_names, desc->algo_id));
+			return FALSE;
+		}
+			
 		for (i = 0; desc->hash_testvectors[i].msg_digest != NULL; i++)
 		{
 			u_char digest[MAX_DIGEST_LEN];
+			chunk_t msg = { desc->hash_testvectors[i].msg,
+							desc->hash_testvectors[i].msg_size };
 			bool result;
 
-			union hash_ctx ctx;
-
-			desc->hash_init(&ctx);
-			desc->hash_update(&ctx, desc->hash_testvectors[i].msg
-								   ,desc->hash_testvectors[i].msg_size);
-			desc->hash_final(digest, &ctx);
+			hasher->get_hash(hasher, msg, digest);
 			result = memeq(digest, desc->hash_testvectors[i].msg_digest
 								  , desc->hash_digest_size);
 			DBG(DBG_CRYPT,
@@ -467,8 +464,9 @@ ike_hash_test(const struct hash_desc *desc)
 			)
 			hash_results &= result;
 		}
-		plog("  %s hash self-test %s", enum_name(&oakley_hash_names, desc->algo_id)
-								, hash_results ? "passed":"failed");
+		hasher->destroy(hasher);
+		plog("  %s hash self-test %s", enum_name(&oakley_hash_names, desc->algo_id),
+									   hash_results ? "passed":"failed");
 	}
 
 	if (desc->hmac_testvectors == NULL)
@@ -478,21 +476,32 @@ ike_hash_test(const struct hash_desc *desc)
 	else
 	{
 		int i;
+		pseudo_random_function_t prf_alg;
+
+		prf_alg = oakley_to_prf(desc->algo_id);
 
 		for (i = 0; desc->hmac_testvectors[i].hmac != NULL; i++)
 		{
 			u_char digest[MAX_DIGEST_LEN];
+			chunk_t key = { desc->hmac_testvectors[i].key,
+							desc->hmac_testvectors[i].key_size };
+			chunk_t msg = { desc->hmac_testvectors[i].msg,
+							desc->hmac_testvectors[i].msg_size };
+			prf_t *prf;
 			bool result;
 
-			struct hmac_ctx ctx;
-
-			hmac_init(&ctx, desc, desc->hmac_testvectors[i].key
-								, desc->hmac_testvectors[i].key_size);
-			hmac_update(&ctx, desc->hmac_testvectors[i].msg
-							 ,desc->hmac_testvectors[i].msg_size);
-			hmac_final(digest, &ctx);
-			result = memeq(digest, desc->hmac_testvectors[i].hmac
-								  , desc->hash_digest_size);
+			prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+			if (prf == NULL)
+			{
+				plog("  %s hmac function not available",
+					 enum_name(&oakley_hash_names, desc->algo_id));
+				return FALSE;
+			}
+			prf->set_key(prf, key);
+			prf->get_bytes(prf, msg, digest);
+			prf->destroy(prf);
+			result = memeq(digest, desc->hmac_testvectors[i].hmac,
+								   desc->hash_digest_size);
 			DBG(DBG_CRYPT,
 				DBG_log("  hmac testvector %d: %s", i, result ? "ok":"failed")
 			)

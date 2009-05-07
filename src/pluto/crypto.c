@@ -24,6 +24,8 @@
 
 #include <errno.h>
 
+#include <crypto/hashers/hasher.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "state.h"
@@ -298,14 +300,9 @@ static struct hash_desc crypto_hasher_md5 =
 		algo_type: IKE_ALG_HASH,
 		algo_id:   OAKLEY_MD5,
 		algo_next: NULL, 
-		hash_ctx_size:    sizeof(MD5_CTX),
-		hash_block_size:  MD5_BLOCK_SIZE,
-		hash_digest_size: MD5_DIGEST_SIZE,
+		hash_digest_size: HASH_SIZE_MD5,
 		hash_testvectors: md5_hash_testvectors,
 		hmac_testvectors: md5_hmac_testvectors,
-		hash_init: (void (*)(void *)) MD5Init,
-		hash_update: (void (*)(void *, const u_int8_t *, size_t)) MD5Update,
-		hash_final: (void (*)(u_char *, void *)) MD5Final
 };
 
 /* SHA-1 test vectors
@@ -439,14 +436,9 @@ static struct hash_desc crypto_hasher_sha1 =
 		algo_type: IKE_ALG_HASH,
 		algo_id:   OAKLEY_SHA,
 		algo_next: NULL, 
-		hash_ctx_size:    sizeof(SHA1_CTX),
-		hash_block_size:  SHA1_BLOCK_SIZE,
-		hash_digest_size: SHA1_DIGEST_SIZE,
+		hash_digest_size: HASH_SIZE_SHA1,
 		hash_testvectors: sha1_hash_testvectors,
-		hmac_testvectors: sha1_hmac_testvectors,
-		hash_init: (void (*)(void *)) SHA1Init,
-		hash_update: (void (*)(void *, const u_int8_t *, size_t)) SHA1Update,
-		hash_final: (void (*)(u_char *, void *)) SHA1Final
+		hmac_testvectors: sha1_hmac_testvectors
 };
 
 void init_crypto(void)
@@ -563,68 +555,6 @@ void crypto_cbc_encrypt(const struct encrypt_desc *e, bool enc, u_int8_t *buf,
 	e->set_key(&ctx, st->st_enc_key.ptr, st->st_enc_key.len);
 	e->cbc_crypt(&ctx, buf, size, st->st_new_iv, enc);
 	*/
-}
-
-/* HMAC package
- * rfc2104.txt specifies how HMAC works.
- */
-
-void hmac_init(struct hmac_ctx *ctx, const struct hash_desc *h,
-			   const u_char *key, size_t key_len)
-{
-	int k;
-
-	ctx->h = h;
-	ctx->hmac_digest_size = h->hash_digest_size;
-
-	/* Prepare the two pads for the HMAC */
-
-	memset(ctx->buf1, '\0', h->hash_block_size);
-
-	if (key_len <= h->hash_block_size)
-	{
-		memcpy(ctx->buf1, key, key_len);
-	}
-	else
-	{
-		h->hash_init(&ctx->hash_ctx);
-		h->hash_update(&ctx->hash_ctx, key, key_len);
-		h->hash_final(ctx->buf1, &ctx->hash_ctx);
-	}
-
-	memcpy(ctx->buf2, ctx->buf1, h->hash_block_size);
-
-	for (k = 0; k < h->hash_block_size; k++)
-	{
-		ctx->buf1[k] ^= HMAC_IPAD;
-		ctx->buf2[k] ^= HMAC_OPAD;
-	}
-
-	hmac_reinit(ctx);
-}
-
-void hmac_reinit(struct hmac_ctx *ctx)
-{
-	ctx->h->hash_init(&ctx->hash_ctx);
-	ctx->h->hash_update(&ctx->hash_ctx, ctx->buf1, ctx->h->hash_block_size);
-}
-
-void hmac_update(struct hmac_ctx *ctx,
-	const u_char *data, size_t data_len)
-{
-	ctx->h->hash_update(&ctx->hash_ctx, data, data_len);
-}
-
-void hmac_final(u_char *output, struct hmac_ctx *ctx)
-{
-	const struct hash_desc *h = ctx->h;
-
-	h->hash_final(output, &ctx->hash_ctx);
-
-	h->hash_init(&ctx->hash_ctx);
-	h->hash_update(&ctx->hash_ctx, ctx->buf2, h->hash_block_size);
-	h->hash_update(&ctx->hash_ctx, output, h->hash_digest_size);
-	h->hash_final(output, &ctx->hash_ctx);
 }
 
 hash_algorithm_t oakley_to_hash_algorithm(int alg)

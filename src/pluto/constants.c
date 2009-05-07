@@ -1364,6 +1364,6 @@ void init_constants(void)
 	happy(initsubnet(&ipv6_any, 0, '0', &ipv6_all));
 }
 
-u_char secret_of_the_day[SHA1_DIGEST_SIZE];
+u_char secret_of_the_day[HASH_SIZE_SHA1];
 
 

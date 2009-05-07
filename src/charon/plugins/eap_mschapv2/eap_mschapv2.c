@@ -585,8 +585,6 @@ static status_t initiate_server(private_eap_mschapv2_t *this, eap_payload_t **ou
 	const char *name = MSCHAPV2_HOST_NAME;
 	u_int16_t len = CHALLENGE_PAYLOAD_LEN + sizeof(MSCHAPV2_HOST_NAME) - 1;
 	
-	DBG1(DBG_IKE, "initiating EAP-MS-CHAPv2");
-	
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!rng)
 	{

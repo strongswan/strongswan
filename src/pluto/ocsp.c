@@ -29,6 +29,7 @@
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
 #include <crypto/rngs/rng.h>
+#include <crypto/hashers/hasher.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -293,7 +294,7 @@ static const asn1Object_t singleResponseObjects[] = {
  */
 static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *location)
 {
-	static u_char digest[SHA1_DIGEST_SIZE];  /* temporary storage */
+	static u_char digest[HASH_SIZE_SHA1];  /* temporary storage */
 
 	location->uri = cert->accessLocation;
 
@@ -311,7 +312,7 @@ static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *locatio
 		}
 	}
 	
-	location->authNameID = chunk_create(digest, SHA1_DIGEST_SIZE);
+	location->authNameID = chunk_create(digest, HASH_SIZE_SHA1);
 	compute_digest(cert->issuer, OID_SHA1, &location->authNameID);
 
 	location->next = NULL;

@@ -119,7 +119,7 @@ static void destroy_function(struct CRYPTO_dynlock_value *lock,
  */
 static unsigned long id_function(void)
 {
-	return pthread_self();
+	return (unsigned long)pthread_self();
 }
 
 /**

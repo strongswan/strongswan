@@ -32,8 +32,6 @@ kernel_pfkey.c kernel_pfkey.h \
 keys.c keys.h \
 lex.c lex.h \
 log.c log.h \
-md2.c md2.h \
-md5.c md5.h \
 modecfg.c modecfg.h \
 mp_defs.c mp_defs.h \
 nat_traversal.c nat_traversal.h \
@@ -46,7 +44,6 @@ pkcs7.c pkcs7.h \
 plutomain.c \
 rcv_whack.c rcv_whack.h \
 server.c server.h \
-sha1.c sha1.h \
 smartcard.c smartcard.h \
 spdb.c spdb.h \
 state.c state.h \
