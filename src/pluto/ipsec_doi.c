@@ -33,7 +33,6 @@
 #include <asn1/asn1.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
-#include <crypto/prf_plus.h>
 #include <crypto/rngs/rng.h>
 
 #include "constants.h"
@@ -1332,31 +1331,42 @@ static bool generate_skeyids_iv(struct state *st)
 	 */
 	{
 		size_t keysize = st->st_oakley.enckeylen/BITS_PER_BYTE;
-
+ 
 		/* free any existing key */
 		free(st->st_enc_key.ptr);
 
 		if (keysize > st->st_skeyid_e.len)
 		{
+			u_char keytemp[MAX_OAKLEY_KEY_LEN + MAX_DIGEST_LEN];
 			char seed_buf[] = { 0x00 };
 			chunk_t seed = chunk_from_buf(seed_buf);
+			size_t prf_block_size, i;
 			pseudo_random_function_t prf_alg;
-			prf_plus_t *prf_plus;
 			prf_t *prf;
 
 			prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
 			prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 			prf->set_key(prf, st->st_skeyid_e);
-			prf_plus = prf_plus_create(prf, seed);
-			prf_plus->allocate_bytes(prf_plus, keysize, &st->st_enc_key);
-			prf_plus->destroy(prf_plus);
+			prf_block_size = prf->get_block_size(prf);
+			
+			for (i = 0;;)
+			{
+				prf->get_bytes(prf, seed, &keytemp[i]);
+				i += prf_block_size;
+				if (i >= keysize)
+				{
+					break;
+				}
+				seed = chunk_create(&keytemp[i-prf_block_size], prf_block_size);
+			}
 			prf->destroy(prf);
+			st->st_enc_key = chunk_create(keytemp, keysize);
 		}
 		else
 		{
 			st->st_enc_key = chunk_create(st->st_skeyid_e.ptr, keysize);
-			st->st_enc_key = chunk_clone(st->st_enc_key);
 		}			
+		st->st_enc_key = chunk_clone(st->st_enc_key);
 	}
 
 	DBG(DBG_CRYPT,
