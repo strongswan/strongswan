@@ -26,7 +26,7 @@ char *src;		/* input string */
 size_t src_len;		/* length of input string, use strlen() if 0 */
 u_int8_t *proto;	/* extracted protocol number */
 u_int16_t *port;	/* extracted port number if it exists */
-int *has_port_wildcard;	/* set if port is %any */
+bool *has_port_wildcard;	/* set if port is %any */
 {
     char *end, *service_name;
     char proto_name[16];

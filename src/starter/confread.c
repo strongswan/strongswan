@@ -142,7 +142,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 {
 	err_t ugh = NULL;
 	bool assigned = FALSE;
-	int has_port_wildcard;        /* set if port is %any */
+	bool has_port_wildcard;        /* set if port is %any */
 
 	char *name  = kw->entry->name;
 	char *value = kw->value;
