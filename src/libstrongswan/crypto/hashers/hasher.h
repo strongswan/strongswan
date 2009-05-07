@@ -37,12 +37,12 @@ enum hash_algorithm_t {
 	/** preferred hash function, general purpose */
 	HASH_PREFERRED	 	= 1,
 	HASH_MD2 			= 2,
-	HASH_MD5 			= 3,
-	HASH_SHA1 			= 4,
-	HASH_SHA256 		= 5,
-	HASH_SHA384 		= 6,
-	HASH_SHA512 		= 7,
-	HASH_MD4			= 8,
+	HASH_MD4			= 3,
+	HASH_MD5 			= 4,
+	HASH_SHA1 			= 5,
+	HASH_SHA256 		= 6,
+	HASH_SHA384 		= 7,
+	HASH_SHA512 		= 8
 };
 
 #define HASH_SIZE_MD2		16
