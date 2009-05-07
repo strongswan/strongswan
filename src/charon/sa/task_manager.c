@@ -655,161 +655,162 @@ static status_t process_request(private_task_manager_t *this,
 	notify_payload_t *notify;
 	delete_payload_t *delete;
 	
-	/* create tasks depending on request type */
-	switch (message->get_exchange_type(message))
-	{
-		case IKE_SA_INIT:
+	if (this->passive_tasks->get_count(this->passive_tasks) == 0)
+	{	/* create tasks depending on request type, if not already some queued */
+		switch (message->get_exchange_type(message))
 		{
-			task = (task_t*)ike_init_create(this->ike_sa, FALSE, NULL);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_natd_create(this->ike_sa, FALSE);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_cert_pre_create(this->ike_sa, FALSE);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
+			case IKE_SA_INIT:
+			{
+				task = (task_t*)ike_init_create(this->ike_sa, FALSE, NULL);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)ike_natd_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)ike_cert_pre_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
 #ifdef ME			
-			task = (task_t*)ike_me_create(this->ike_sa, FALSE);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)ike_me_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
 #endif /* ME */
-			task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_cert_post_create(this->ike_sa, FALSE);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)child_create_create(this->ike_sa, NULL);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_auth_lifetime_create(this->ike_sa, FALSE);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_mobike_create(this->ike_sa, FALSE);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-			break;
-		}
-		case CREATE_CHILD_SA:
-		{	/* FIXME: we should prevent this on mediation connections */
-			bool notify_found = FALSE, ts_found = FALSE;
-			enumerator = message->create_payload_enumerator(message);
-			while (enumerator->enumerate(enumerator, &payload))
-			{
-				switch (payload->get_type(payload))
-				{
-					case NOTIFY:
-					{
-						/* if we find a rekey notify, its CHILD_SA rekeying */
-						notify = (notify_payload_t*)payload;
-						if (notify->get_notify_type(notify) == REKEY_SA &&
-							(notify->get_protocol_id(notify) == PROTO_AH ||
-							 notify->get_protocol_id(notify) == PROTO_ESP))
-						{
-							notify_found = TRUE;
-						}
-						break;
-					}
-					case TRAFFIC_SELECTOR_INITIATOR:
-					case TRAFFIC_SELECTOR_RESPONDER:
-					{
-						/* if we don't find a TS, its IKE rekeying */
-						ts_found = TRUE;
-						break;
-					}
-					default:
-						break;
-				}
+				task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)ike_cert_post_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)ike_config_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)child_create_create(this->ike_sa, NULL);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)ike_auth_lifetime_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)ike_mobike_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				break;
 			}
-			enumerator->destroy(enumerator);
-		
-			if (ts_found)
-			{
-				if (notify_found)
+			case CREATE_CHILD_SA:
+			{	/* FIXME: we should prevent this on mediation connections */
+				bool notify_found = FALSE, ts_found = FALSE;
+				enumerator = message->create_payload_enumerator(message);
+				while (enumerator->enumerate(enumerator, &payload))
 				{
-					task = (task_t*)child_rekey_create(this->ike_sa,
-													   PROTO_NONE, 0);
+					switch (payload->get_type(payload))
+					{
+						case NOTIFY:
+						{	/* if we find a rekey notify, its CHILD_SA rekeying */
+							notify = (notify_payload_t*)payload;
+							if (notify->get_notify_type(notify) == REKEY_SA &&
+								(notify->get_protocol_id(notify) == PROTO_AH ||
+								 notify->get_protocol_id(notify) == PROTO_ESP))
+							{
+								notify_found = TRUE;
+							}
+							break;
+						}
+						case TRAFFIC_SELECTOR_INITIATOR:
+						case TRAFFIC_SELECTOR_RESPONDER:
+						{	/* if we don't find a TS, its IKE rekeying */
+							ts_found = TRUE;
+							break;
+						}
+						default:
+							break;
+					}
+				}
+				enumerator->destroy(enumerator);
+				
+				if (ts_found)
+				{
+					if (notify_found)
+					{
+						task = (task_t*)child_rekey_create(this->ike_sa,
+														   PROTO_NONE, 0);
+					}
+					else
+					{
+						task = (task_t*)child_create_create(this->ike_sa, NULL);
+					}
 				}
 				else
 				{
-					task = (task_t*)child_create_create(this->ike_sa, NULL);
+					task = (task_t*)ike_rekey_create(this->ike_sa, FALSE);
 				}
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				break;
 			}
-			else
+			case INFORMATIONAL:
 			{
-				task = (task_t*)ike_rekey_create(this->ike_sa, FALSE);
-			}
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-			break;
-		}
-		case INFORMATIONAL:
-		{
-			enumerator = message->create_payload_enumerator(message);
-			while (enumerator->enumerate(enumerator, &payload))
-			{
-				switch (payload->get_type(payload))
+				enumerator = message->create_payload_enumerator(message);
+				while (enumerator->enumerate(enumerator, &payload))
 				{
-					case NOTIFY:
+					switch (payload->get_type(payload))
 					{
-						notify = (notify_payload_t*)payload;
-						switch (notify->get_notify_type(notify))
+						case NOTIFY:
 						{
-							case ADDITIONAL_IP4_ADDRESS:
-							case ADDITIONAL_IP6_ADDRESS:
-							case NO_ADDITIONAL_ADDRESSES:
-							case UPDATE_SA_ADDRESSES:
-							case NO_NATS_ALLOWED:
-							case UNACCEPTABLE_ADDRESSES:
-							case UNEXPECTED_NAT_DETECTED:
-							case COOKIE2:
-							case NAT_DETECTION_SOURCE_IP:
-							case NAT_DETECTION_DESTINATION_IP:
-								task = (task_t*)ike_mobike_create(
-														this->ike_sa, FALSE);
-								break;
-							case AUTH_LIFETIME:
-								task = (task_t*)ike_auth_lifetime_create(
-														this->ike_sa, FALSE);
-								break;
-							default:
-								break;
+							notify = (notify_payload_t*)payload;
+							switch (notify->get_notify_type(notify))
+							{
+								case ADDITIONAL_IP4_ADDRESS:
+								case ADDITIONAL_IP6_ADDRESS:
+								case NO_ADDITIONAL_ADDRESSES:
+								case UPDATE_SA_ADDRESSES:
+								case NO_NATS_ALLOWED:
+								case UNACCEPTABLE_ADDRESSES:
+								case UNEXPECTED_NAT_DETECTED:
+								case COOKIE2:
+								case NAT_DETECTION_SOURCE_IP:
+								case NAT_DETECTION_DESTINATION_IP:
+									task = (task_t*)ike_mobike_create(
+															this->ike_sa, FALSE);
+									break;
+								case AUTH_LIFETIME:
+									task = (task_t*)ike_auth_lifetime_create(
+															this->ike_sa, FALSE);
+									break;
+								default:
+									break;
+							}
+							break;
 						}
-						break;
-					}
-					case DELETE:
-					{
-						delete = (delete_payload_t*)payload;
-						if (delete->get_protocol_id(delete) == PROTO_IKE)
+						case DELETE:
 						{
-							task = (task_t*)ike_delete_create(this->ike_sa, FALSE);
-						}
-						else
-						{
-							task = (task_t*)child_delete_create(this->ike_sa,
+							delete = (delete_payload_t*)payload;
+							if (delete->get_protocol_id(delete) == PROTO_IKE)
+							{
+								task = (task_t*)ike_delete_create(this->ike_sa,
+																FALSE);
+							}
+							else
+							{
+								task = (task_t*)child_delete_create(this->ike_sa,
 																PROTO_NONE, 0);
+							}
+							break;
 						}
+						default:
+							break;
+					}
+					if (task)
+					{
 						break;
 					}
-					default:
-						break;
 				}
-				if (task)
-				{
-					break;
-				}
-			}
-			enumerator->destroy(enumerator);
+				enumerator->destroy(enumerator);
 			
-			if (task == NULL)
-			{
-				task = (task_t*)ike_dpd_create(FALSE);
+				if (task == NULL)
+				{
+					task = (task_t*)ike_dpd_create(FALSE);
+				}
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				break;
 			}
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-			break;
-		}
 #ifdef ME
-		case ME_CONNECT:
-		{
-			task = (task_t*)ike_me_create(this->ike_sa, FALSE);
-			this->passive_tasks->insert_last(this->passive_tasks, task);
-		}
+			case ME_CONNECT:
+			{
+				task = (task_t*)ike_me_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+			}
 #endif /* ME */
-		default:
-			break;
+			default:
+				break;
+		}
 	}
 	
 	/* let the tasks process the message */
