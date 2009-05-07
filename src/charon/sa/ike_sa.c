@@ -1438,6 +1438,11 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			 exchange_type_names, message->get_exchange_type(message),
 			 message->get_request(message) ? "request" : "response",
 			 message->get_message_id(message));
+		
+		if (this->state == IKE_CREATED)
+		{	/* invalid initiation attempt, close SA */
+			return DESTROY_ME;
+		}
 		return status;
 	}
 	else
