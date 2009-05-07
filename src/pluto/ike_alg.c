@@ -452,7 +452,7 @@ ike_hash_test(const struct hash_desc *desc)
 		for (i = 0; desc->hash_testvectors[i].msg_digest != NULL; i++)
 		{
 			u_char digest[MAX_DIGEST_LEN];
-			chunk_t msg = { desc->hash_testvectors[i].msg,
+			chunk_t msg = { (u_char*)desc->hash_testvectors[i].msg,
 							desc->hash_testvectors[i].msg_size };
 			bool result;
 
@@ -483,9 +483,9 @@ ike_hash_test(const struct hash_desc *desc)
 		for (i = 0; desc->hmac_testvectors[i].hmac != NULL; i++)
 		{
 			u_char digest[MAX_DIGEST_LEN];
-			chunk_t key = { desc->hmac_testvectors[i].key,
+			chunk_t key = { (u_char*)desc->hmac_testvectors[i].key,
 							desc->hmac_testvectors[i].key_size };
-			chunk_t msg = { desc->hmac_testvectors[i].msg,
+			chunk_t msg = { (u_char*)desc->hmac_testvectors[i].msg,
 							desc->hmac_testvectors[i].msg_size };
 			prf_t *prf;
 			bool result;
