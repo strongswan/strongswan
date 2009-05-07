@@ -15,11 +15,14 @@
 #ifndef _PGP_H
 #define _PGP_H
 
+#include <crypto/hashers/hasher.h>
+
 #include "pkcs1.h"
+
 /*
  * Length of PGP V3 fingerprint
  */
-#define PGP_FINGERPRINT_SIZE    MD5_DIGEST_SIZE
+#define PGP_FINGERPRINT_SIZE    HASH_SIZE_MD5
 
 typedef char fingerprint_t[PGP_FINGERPRINT_SIZE];
 

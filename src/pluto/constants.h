@@ -18,6 +18,7 @@
 #define _CONSTANTS_H
 
 #include <utils.h>
+#include <crypto/hashers/hasher.h>
 
 extern const char compile_time_interop_options[];
 
@@ -278,32 +279,16 @@ extern const char sparse_end[];
 #define COOKIE_SIZE 8
 #define MAX_ISAKMP_SPI_SIZE 16
 
-#define MD2_DIGEST_SIZE         (128 / BITS_PER_BYTE)
-#define MD5_DIGEST_SIZE         (128 / BITS_PER_BYTE)
-#define SHA1_DIGEST_SIZE        (160 / BITS_PER_BYTE)
-#define SHA2_256_DIGEST_SIZE    (256 / BITS_PER_BYTE)
-#define SHA2_384_DIGEST_SIZE    (384 / BITS_PER_BYTE)
-#define SHA2_512_DIGEST_SIZE    (512 / BITS_PER_BYTE)
-
-#define MD5_BLOCK_SIZE          (512 / BITS_PER_BYTE)
-#define SHA1_BLOCK_SIZE         (512 / BITS_PER_BYTE)
-#define SHA2_256_BLOCK_SIZE     (512 / BITS_PER_BYTE)
-#define SHA2_384_BLOCK_SIZE     (1024 / BITS_PER_BYTE)
-#define SHA2_512_BLOCK_SIZE     (1024 / BITS_PER_BYTE)
-
 #define DES_CBC_BLOCK_SIZE      (64 / BITS_PER_BYTE)
 
-#define DSS_QBITS       160     /* bits in DSS's "q" (FIPS 186-1) */
-
 /* Maximum is required for SHA2_512 */
-#define MAX_DIGEST_LEN          SHA2_512_DIGEST_SIZE
-#define MAX_HASH_BLOCK_SIZE     SHA2_512_BLOCK_SIZE
+#define MAX_DIGEST_LEN          HASH_SIZE_SHA512
 
 /* RFC 2404 "HMAC-SHA-1-96" section 3 */
-#define HMAC_SHA1_KEY_LEN    SHA1_DIGEST_SIZE
+#define HMAC_SHA1_KEY_LEN		HASH_SIZE_SHA1
 
 /* RFC 2403 "HMAC-MD5-96" section 3 */
-#define HMAC_MD5_KEY_LEN    MD5_DIGEST_SIZE
+#define HMAC_MD5_KEY_LEN   		HASH_SIZE_MD5
 
 #define IKE_UDP_PORT    500
 
@@ -1269,6 +1254,6 @@ enum dns_auth_level {
 extern const char *const natt_type_bitnames[];
 
 /* secret value for responder cookies */
-extern u_char secret_of_the_day[SHA1_DIGEST_SIZE];
+extern u_char secret_of_the_day[HASH_SIZE_SHA1];
 
 #endif /* _CONSTANTS_H */

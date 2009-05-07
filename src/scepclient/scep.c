@@ -30,6 +30,7 @@
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
 #include <crypto/rngs/rng.h>
+#include <crypto/hashers/hasher.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
@@ -267,7 +268,7 @@ end:
  */
 void scep_generate_pkcs10_fingerprint(chunk_t pkcs10, chunk_t *fingerprint)
 {
-	char buf[MD5_DIGEST_SIZE];
+	char buf[HASH_SIZE_MD5];
 	chunk_t digest = { buf, sizeof(buf) };
 
 	/* the fingerprint is the MD5 hash in hexadecimal format */
@@ -284,7 +285,7 @@ void scep_generate_pkcs10_fingerprint(chunk_t pkcs10, chunk_t *fingerprint)
 void scep_generate_transaction_id(const RSA_public_key_t *rsak,
 								  chunk_t *transID, chunk_t *serialNumber)
 {
-	char buf[MD5_DIGEST_SIZE];
+	char buf[HASH_SIZE_MD5];
 
 	chunk_t digest = { buf, sizeof(buf) };
 	chunk_t public_key = pkcs1_build_publicKeyInfo(rsak);
