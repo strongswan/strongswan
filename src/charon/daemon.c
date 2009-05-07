@@ -318,6 +318,7 @@ static void print_plugins()
 	int len = 0;
 	enumerator_t *enumerator;
 	
+	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin))
 	{
