@@ -365,15 +365,23 @@ assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
 		return FALSE;
 	case ARG_ENUM:
 		{
-			int *i = (int *)p;
-
 			if (index < 0)
 			{
 				plog("# bad enumeration value: %s=%s (%d)"
 					, kw->entry->name, kw->value, index);
 				return FALSE;
 			}
-			*i = index;
+
+			if (token_info[token].list == LST_bool)
+			{
+				bool *b = (bool *)p;
+				*b = (index > 0);
+			}
+			else
+			{
+				int *i = (int *)p;
+				*i = index;
+			}
 		}
 		break;
 
