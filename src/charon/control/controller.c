@@ -230,7 +230,7 @@ static status_t initiate_execute(interface_job_t *job)
 	}
 	peer_cfg->destroy(peer_cfg);
 	
-	if (ike_sa->initiate(ike_sa, listener->child_cfg) == SUCCESS)
+	if (ike_sa->initiate(ike_sa, listener->child_cfg, 0) == SUCCESS)
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		return SUCCESS;

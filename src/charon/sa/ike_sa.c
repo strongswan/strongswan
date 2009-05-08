@@ -1103,10 +1103,10 @@ static void resolve_hosts(private_ike_sa_t *this)
 }
 
 /**
- * Initiates a CHILD_SA using the appropriate reqid
+ * Implementation of ike_sa_t.initiate
  */
-static status_t initiate_with_reqid(private_ike_sa_t *this,
-									child_cfg_t *child_cfg, u_int32_t reqid)
+static status_t initiate(private_ike_sa_t *this,
+						 child_cfg_t *child_cfg, u_int32_t reqid)
 {
 	task_t *task;
 	
@@ -1189,14 +1189,6 @@ static status_t initiate_with_reqid(private_ike_sa_t *this,
 	}
 	
 	return this->task_manager->initiate(this->task_manager);
-}
-
-/**
- * Implementation of ike_sa_t.initiate.
- */
-static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
-{
-	return initiate_with_reqid(this, child_cfg, 0);
 }
 
 /**
@@ -1615,7 +1607,7 @@ static status_t reestablish(private_ike_sa_t *this)
 #ifdef ME
 	if (this->peer_cfg->is_mediation(this->peer_cfg))
 	{
-		status = new->initiate(new, NULL);
+		status = new->initiate(new, NULL, 0);
 	}
 	else
 #endif /* ME */
@@ -1638,7 +1630,7 @@ static status_t reestablish(private_ike_sa_t *this)
 					DBG1(DBG_IKE, "restarting CHILD_SA %s",
 						 child_cfg->get_name(child_cfg));
 					child_cfg->get_ref(child_cfg);
-					status = new->initiate(new, child_cfg);
+					status = new->initiate(new, child_cfg, 0);
 					break;
 				case ACTION_ROUTE:
 					charon->traps->install(charon->traps,
@@ -1997,7 +1989,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_name = (char* (*)(ike_sa_t*))get_name;
 	this->public.get_statistic = (u_int32_t(*)(ike_sa_t*, statistic_t kind))get_statistic;
 	this->public.process_message = (status_t (*)(ike_sa_t*, message_t*)) process_message;
-	this->public.initiate = (status_t (*)(ike_sa_t*,child_cfg_t*)) initiate;
+	this->public.initiate = (status_t (*)(ike_sa_t*,child_cfg_t*,u_int32_t)) initiate;
 	this->public.get_ike_cfg = (ike_cfg_t* (*)(ike_sa_t*))get_ike_cfg;
 	this->public.set_ike_cfg = (void (*)(ike_sa_t*,ike_cfg_t*))set_ike_cfg;
 	this->public.get_peer_cfg = (peer_cfg_t* (*)(ike_sa_t*))get_peer_cfg;

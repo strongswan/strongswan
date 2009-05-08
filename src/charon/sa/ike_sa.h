@@ -603,11 +603,13 @@ struct ike_sa_t {
 	 * The configs are owned by the IKE_SA after the call.
 	 * 
 	 * @param child_cfg		child config to create CHILD from
+	 * @param reqid			reqid to use for CHILD_SA, 0 assigne uniquely
 	 * @return				
 	 * 						- SUCCESS if initialization started
 	 * 						- DESTROY_ME if initialization failed
 	 */
-	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg);
+	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg,
+						  u_int32_t reqid);
 	
 	/**
 	 * Initiates the deletion of an IKE_SA.

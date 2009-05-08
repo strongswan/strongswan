@@ -66,7 +66,7 @@ static void destroy_entry(entry_t *entry)
 /**
  * Implementation of trap_manager_t.install
  */
-static u_int install(private_trap_manager_t *this, peer_cfg_t *peer,
+static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 					 child_cfg_t *child)
 {
 	entry_t *entry;
@@ -77,7 +77,7 @@ static u_int install(private_trap_manager_t *this, peer_cfg_t *peer,
 	enumerator_t *enumerator;
 	bool found = FALSE;
 	status_t status;
-	u_int reqid;
+	u_int32_t reqid;
 	
 	/* check if not already done */
 	this->mutex->lock(this->mutex);
@@ -158,7 +158,7 @@ static u_int install(private_trap_manager_t *this, peer_cfg_t *peer,
 /**
  * Implementation of trap_manager_t.uninstall
  */
-static bool uninstall(private_trap_manager_t *this, u_int reqid)
+static bool uninstall(private_trap_manager_t *this, u_int32_t reqid)
 {
 	enumerator_t *enumerator;
 	entry_t *entry, *found = NULL;
@@ -218,7 +218,7 @@ static enumerator_t* create_enumerator(private_trap_manager_t *this)
 /**
  * Implementation of trap_manager_t.acquire
  */
-static void acquire(private_trap_manager_t *this, u_int reqid,
+static void acquire(private_trap_manager_t *this, u_int32_t reqid,
 					traffic_selector_t *src, traffic_selector_t *dst)
 {
 	enumerator_t *enumerator;
@@ -255,7 +255,7 @@ static void acquire(private_trap_manager_t *this, u_int reqid,
 	}
 	child->get_ref(child);
 	this->mutex->unlock(this->mutex);
-	if (ike_sa->initiate(ike_sa, child) != DESTROY_ME)
+	if (ike_sa->initiate(ike_sa, child, reqid) != DESTROY_ME)
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		return;
@@ -281,10 +281,10 @@ trap_manager_t *trap_manager_create()
 {
 	private_trap_manager_t *this = malloc_thing(private_trap_manager_t);
 	
-	this->public.install = (u_int(*)(trap_manager_t*, peer_cfg_t *peer, child_cfg_t *child))install;
-	this->public.uninstall = (bool(*)(trap_manager_t*, u_int id))uninstall;
+	this->public.install = (u_int32_t(*)(trap_manager_t*, peer_cfg_t *peer, child_cfg_t *child))install;
+	this->public.uninstall = (bool(*)(trap_manager_t*, u_int32_t id))uninstall;
 	this->public.create_enumerator = (enumerator_t*(*)(trap_manager_t*))create_enumerator;
-	this->public.acquire = (void(*)(trap_manager_t*, u_int reqid, traffic_selector_t *src, traffic_selector_t *dst))acquire;
+	this->public.acquire = (void(*)(trap_manager_t*, u_int32_t reqid, traffic_selector_t *src, traffic_selector_t *dst))acquire;
 	this->public.destroy = (void(*)(trap_manager_t*))destroy;
 	
 	this->traps = linked_list_create();

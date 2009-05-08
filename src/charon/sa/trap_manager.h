@@ -39,7 +39,8 @@ struct trap_manager_t {
 	 * @param child 	child configuration to install as a trap
 	 * @return			reqid of installed CHILD_SA, 0 if failed
 	 */
-	u_int (*install)(trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child);
+	u_int32_t (*install)(trap_manager_t *this, peer_cfg_t *peer,
+						 child_cfg_t *child);
 	
 	/**
 	 * Uninstall a trap policy.
@@ -47,7 +48,7 @@ struct trap_manager_t {
 	 * @param id		reqid of CHILD_SA to uninstall, returned by install()
 	 * @return			TRUE if uninstalled successfully
 	 */
-	bool (*uninstall)(trap_manager_t *this, u_int reqid);
+	bool (*uninstall)(trap_manager_t *this, u_int32_t reqid);
 	
 	/**
 	 * Create an enumerator over all installed traps.
@@ -63,8 +64,8 @@ struct trap_manager_t {
 	 * @param src		source of the triggering packet
 	 * @param dst		destination of the triggering packet
 	 */
-	void (*acquire)(trap_manager_t *this, u_int reqid, traffic_selector_t *src,
-					traffic_selector_t *dst);
+	void (*acquire)(trap_manager_t *this, u_int32_t reqid,
+					traffic_selector_t *src, traffic_selector_t *dst);
 	
 	/**
 	 * Destroy a trap_manager_t.
