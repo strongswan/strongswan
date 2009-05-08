@@ -249,7 +249,8 @@ usage(const char *message)
 		" --password (-p) <pw>              challenge password\n"
 		"                                   - if pw is '%%prompt', password gets prompted for\n"
 		" --algorithm (-a) <algo>           use specified algorithm for PKCS#7 encryption\n"
-		"                                   <algo> = des-cbc | 3des-cbc (default: 3des-cbc)\n"
+		"                                   <algo> = des-cbc | 3des-cbc | aes128-cbc |\n"
+        "                                   aes192-cbc | aes256-cbc (default: 3des-cbc)\n"
 		"\n"
 		"Options for enrollment (cert):\n"
 		" --url (-u) <url>                  url of the SCEP server\n"
@@ -706,6 +707,18 @@ int main(int argc, char **argv)
 			else if (strcaseeq("3des-cbc", optarg))
 			{
 				pkcs7_symmetric_cipher = OID_3DES_EDE_CBC;
+			}
+			else if (strcaseeq("aes128-cbc", optarg))
+			{
+				pkcs7_symmetric_cipher = OID_AES128_CBC;
+			}
+			else if (strcaseeq("aes192-cbc", optarg))
+			{
+				pkcs7_symmetric_cipher = OID_AES192_CBC;
+			}
+			else if (strcaseeq("aes256-cbc", optarg))
+			{
+				pkcs7_symmetric_cipher = OID_AES256_CBC;
 			}
 			else
 			{

@@ -104,6 +104,18 @@ if USE_DES
   SUBDIRS += plugins/des
 endif
 
+if USE_BLOWFISH
+  SUBDIRS += plugins/blowfish
+endif
+
+if USE_SERPENT
+  SUBDIRS += plugins/serpent
+endif
+
+if USE_TWOFISH
+  SUBDIRS += plugins/twofish
+endif
+
 if USE_MD4
   SUBDIRS += plugins/md4
 endif

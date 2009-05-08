@@ -16,19 +16,19 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <libdes/des.h>
 
 #include <freeswan.h>
 
 #include <library.h>
+#include <debug.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
 #include <crypto/rngs/rng.h>
+#include <crypto/crypters/crypter.h>
 
 #include "constants.h"
 #include "defs.h"
-#include "log.h"
 #include "x509.h"
 #include "certs.h"
 #include "pkcs7.h"
@@ -42,12 +42,11 @@ const contentInfo_t empty_contentInfo = {
  * ASN.1 definition of the PKCS#7 ContentInfo type
  */
 static const asn1Object_t contentInfoObjects[] = {
-	{ 0, "contentInfo",                   ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
-	{ 1,   "contentType",                 ASN1_OID,          ASN1_BODY }, /*  1 */
-	{ 1,   "content",                     ASN1_CONTEXT_C_0,  ASN1_OPT |
-															 ASN1_BODY }, /*  2 */
-	{ 1,   "end opt",                     ASN1_EOC,          ASN1_END  }, /*  3 */
-	{ 0, "exit",                          ASN1_EOC,          ASN1_EXIT }
+	{ 0, "contentInfo",                     ASN1_SEQUENCE,     ASN1_NONE          }, /*  0 */
+	{ 1,   "contentType",                   ASN1_OID,          ASN1_BODY          }, /*  1 */
+	{ 1,   "content",                       ASN1_CONTEXT_C_0,  ASN1_OPT|ASN1_BODY }, /*  2 */
+	{ 1,   "end opt",                       ASN1_EOC,          ASN1_END           }, /*  3 */
+	{ 0, "exit",                            ASN1_EOC,          ASN1_EXIT          }
 };
 #define PKCS7_INFO_TYPE         1
 #define PKCS7_INFO_CONTENT      2
@@ -56,36 +55,33 @@ static const asn1Object_t contentInfoObjects[] = {
  * ASN.1 definition of the PKCS#7 signedData type
  */
 static const asn1Object_t signedDataObjects[] = {
-	{ 0, "signedData",                      ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
-	{ 1,   "version",                       ASN1_INTEGER,      ASN1_BODY }, /*  1 */
-	{ 1,   "digestAlgorithms",              ASN1_SET,          ASN1_LOOP }, /*  2 */
-	{ 2,     "algorithm",                   ASN1_EOC,          ASN1_RAW  }, /*  3 */
-	{ 1,   "end loop",                      ASN1_EOC,          ASN1_END  }, /*  4 */
-	{ 1,   "contentInfo",                   ASN1_EOC,          ASN1_RAW  }, /*  5 */
-	{ 1,   "certificates",                  ASN1_CONTEXT_C_0,  ASN1_OPT |
-															   ASN1_LOOP }, /*  6 */
-	{ 2,      "certificate",                ASN1_SEQUENCE,     ASN1_OBJ  }, /*  7 */
-	{ 1,   "end opt or loop",               ASN1_EOC,          ASN1_END  }, /*  8 */
-	{ 1,   "crls",                          ASN1_CONTEXT_C_1,  ASN1_OPT |
-															   ASN1_LOOP }, /*  9 */
-	{ 2,      "crl",                        ASN1_SEQUENCE,     ASN1_OBJ  }, /* 10 */
-	{ 1,   "end opt or loop",               ASN1_EOC,          ASN1_END  }, /* 11 */
-	{ 1,   "signerInfos",                   ASN1_SET,          ASN1_LOOP }, /* 12 */
-	{ 2,     "signerInfo",                  ASN1_SEQUENCE,     ASN1_NONE }, /* 13 */
-	{ 3,       "version",                   ASN1_INTEGER,      ASN1_BODY }, /* 14 */
-	{ 3,       "issuerAndSerialNumber",     ASN1_SEQUENCE,     ASN1_BODY }, /* 15 */
-	{ 4,         "issuer",                  ASN1_SEQUENCE,     ASN1_OBJ  }, /* 16 */
-	{ 4,         "serial",                  ASN1_INTEGER,      ASN1_BODY }, /* 17 */
-	{ 3,       "digestAlgorithm",           ASN1_EOC,          ASN1_RAW  }, /* 18 */
-	{ 3,       "authenticatedAttributes",   ASN1_CONTEXT_C_0,  ASN1_OPT |
-															   ASN1_OBJ  }, /* 19 */
-	{ 3,       "end opt",                   ASN1_EOC,          ASN1_END  }, /* 20 */
-	{ 3,       "digestEncryptionAlgorithm", ASN1_EOC,          ASN1_RAW  }, /* 21 */
-	{ 3,       "encryptedDigest",           ASN1_OCTET_STRING, ASN1_BODY }, /* 22 */
-	{ 3,       "unauthenticatedAttributes", ASN1_CONTEXT_C_1,  ASN1_OPT  }, /* 23 */
-	{ 3,       "end opt",                   ASN1_EOC,          ASN1_END  }, /* 24 */
-	{ 1,   "end loop",                      ASN1_EOC,          ASN1_END  }, /* 25 */
-	{ 0, "exit",                            ASN1_EOC,          ASN1_EXIT }
+	{ 0, "signedData",                      ASN1_SEQUENCE,     ASN1_NONE          }, /*  0 */
+	{ 1,   "version",                       ASN1_INTEGER,      ASN1_BODY          }, /*  1 */
+	{ 1,   "digestAlgorithms",              ASN1_SET,          ASN1_LOOP          }, /*  2 */
+	{ 2,     "algorithm",                   ASN1_EOC,          ASN1_RAW           }, /*  3 */
+	{ 1,   "end loop",                      ASN1_EOC,          ASN1_END           }, /*  4 */
+	{ 1,   "contentInfo",                   ASN1_EOC,          ASN1_RAW           }, /*  5 */
+	{ 1,   "certificates",                  ASN1_CONTEXT_C_0,  ASN1_OPT|ASN1_LOOP }, /*  6 */
+	{ 2,      "certificate",                ASN1_SEQUENCE,     ASN1_OBJ           }, /*  7 */
+	{ 1,   "end opt or loop",               ASN1_EOC,          ASN1_END           }, /*  8 */
+	{ 1,   "crls",                          ASN1_CONTEXT_C_1,  ASN1_OPT|ASN1_LOOP }, /*  9 */
+	{ 2,      "crl",                        ASN1_SEQUENCE,     ASN1_OBJ           }, /* 10 */
+	{ 1,   "end opt or loop",               ASN1_EOC,          ASN1_END           }, /* 11 */
+	{ 1,   "signerInfos",                   ASN1_SET,          ASN1_LOOP          }, /* 12 */
+	{ 2,     "signerInfo",                  ASN1_SEQUENCE,     ASN1_NONE          }, /* 13 */
+	{ 3,       "version",                   ASN1_INTEGER,      ASN1_BODY          }, /* 14 */
+	{ 3,       "issuerAndSerialNumber",     ASN1_SEQUENCE,     ASN1_BODY          }, /* 15 */
+	{ 4,         "issuer",                  ASN1_SEQUENCE,     ASN1_OBJ           }, /* 16 */
+	{ 4,         "serial",                  ASN1_INTEGER,      ASN1_BODY          }, /* 17 */
+	{ 3,       "digestAlgorithm",           ASN1_EOC,          ASN1_RAW           }, /* 18 */
+	{ 3,       "authenticatedAttributes",   ASN1_CONTEXT_C_0,  ASN1_OPT|ASN1_OBJ  }, /* 19 */
+	{ 3,       "end opt",                   ASN1_EOC,          ASN1_END           }, /* 20 */
+	{ 3,       "digestEncryptionAlgorithm", ASN1_EOC,          ASN1_RAW           }, /* 21 */
+	{ 3,       "encryptedDigest",           ASN1_OCTET_STRING, ASN1_BODY          }, /* 22 */
+	{ 3,       "unauthenticatedAttributes", ASN1_CONTEXT_C_1,  ASN1_OPT           }, /* 23 */
+	{ 3,       "end opt",                   ASN1_EOC,          ASN1_END           }, /* 24 */
+	{ 1,   "end loop",                      ASN1_EOC,          ASN1_END           }, /* 25 */
+	{ 0, "exit",                            ASN1_EOC,          ASN1_EXIT          }
 };
 #define PKCS7_DIGEST_ALG                 3
 #define PKCS7_SIGNED_CONTENT_INFO        5
@@ -226,7 +222,7 @@ bool pkcs7_parse_contentInfo(chunk_t blob, u_int level0, contentInfo_t *cInfo)
 			if (cInfo->type < OID_PKCS7_DATA
 			||  cInfo->type > OID_PKCS7_ENCRYPTED_DATA)
 			{
-				plog("unknown pkcs7 content type");
+				DBG1("unknown pkcs7 content type");
 				goto end;
 			}
 		}
@@ -266,7 +262,7 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 	}
 	if (cInfo.type != OID_PKCS7_SIGNED_DATA)
 	{
-		plog("pkcs7 content type is not signedData");
+		DBG1("pkcs7 content type is not signedData");
 		return FALSE;
 	}
 
@@ -296,9 +292,7 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 
 				*newcert = empty_x509cert;
 
-				DBG(DBG_CONTROL | DBG_PARSING,
-					DBG_log("parsing pkcs7-wrapped certificate")
-				)
+				DBG2("  parsing pkcs7-wrapped certificate");
 				if (parse_x509cert(cert_blob, level+1, newcert))
 				{
 					newcert->next = *cert;
@@ -312,15 +306,11 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 			break;
 		case PKCS7_SIGNER_INFO:
 			signerInfos++;
-			DBG(DBG_PARSING,
-				DBG_log("  signer #%d", signerInfos)
-			)
+			DBG2("  signer #%d", signerInfos);
 			break;      
 		case PKCS7_SIGNED_ISSUER:
-			DBG(DBG_PARSING,
-				dntoa(buf, BUF_LEN, object);
-				DBG_log("  '%s'",buf)
-			)
+			dntoa(buf, BUF_LEN, object);
+			DBG2("  '%s'",buf);
 			break;
 		case PKCS7_AUTH_ATTRIBUTES:
 			if (attributes != NULL)
@@ -351,30 +341,28 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 	{
 		if (signerInfos == 0)
 		{
-			plog("no signerInfo object found");
+			DBG1("no signerInfo object found");
 			return FALSE;
 		}
 		else if (signerInfos > 1)
 		{
-			plog("more than one signerInfo object found");
+			DBG1("more than one signerInfo object found");
 			return FALSE;
 		}
 		if (attributes->ptr == NULL)
 		{
-			plog("no authenticatedAttributes object found");
+			DBG1("no authenticatedAttributes object found");
 			return FALSE;
 		}
-		if (!check_signature(*attributes, encrypted_digest, digest_alg
-		   , enc_alg, cacert))
+		if (!check_signature(*attributes, encrypted_digest, digest_alg,
+							 enc_alg, cacert))
 		{
-			plog("invalid signature");
+			DBG1("invalid signature");
 			return FALSE;
 		}
 		else
 		{
-			DBG(DBG_CONTROL,
-				DBG_log("signature is valid")
-			)
+			DBG2("signature is valid");
 		}
 	}
 	return TRUE;
@@ -393,8 +381,9 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 	chunk_t symmetric_key     = chunk_empty;
 	chunk_t encrypted_content = chunk_empty;
 
+	crypter_t *crypter = NULL;
+
 	u_char buf[BUF_LEN];
-	u_int total_keys = 3;
 	int enc_alg         = OID_UNKNOWN;
 	int content_enc_alg = OID_UNKNOWN;
 	int objectID;
@@ -405,12 +394,12 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 
 	if (!pkcs7_parse_contentInfo(blob, 0, &cInfo))
 	{
-		goto end;
+		goto failed;
 	}
 	if (cInfo.type != OID_PKCS7_ENVELOPED_DATA)
 	{
-		plog("pkcs7 content type is not envelopedData");
-		goto end;
+		DBG1("pkcs7 content type is not envelopedData");
+		goto failed;
 	}
 
 	parser = asn1_parser_create(envelopedDataObjects, cInfo.content);
@@ -425,7 +414,7 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 		case PKCS7_ENVELOPED_VERSION:
 		if (*object.ptr != 0)
 		{
-			plog("envelopedData version is not 0");
+			DBG1("envelopedData version is not 0");
 			goto end;
 		}
 		break;
@@ -437,15 +426,13 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 			}
 			break;
 		case PKCS7_ISSUER:
-			DBG(DBG_PARSING,
-				dntoa(buf, BUF_LEN, object);
-				DBG_log("  '%s'", buf)
-			)
+			dntoa(buf, BUF_LEN, object);
+			DBG2("  '%s'", buf);
 			break;      
 		case PKCS7_SERIAL_NUMBER:
 			if (!chunk_equals(serialNumber, object))
 			{
-				plog("serial numbers do not match");
+				DBG1("serial numbers do not match");
 				goto end;
 			}   
 			break;      
@@ -453,55 +440,36 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 			enc_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 			if (enc_alg != OID_RSA_ENCRYPTION)
 			{
-				plog("only rsa encryption supported");
+				DBG1("only rsa encryption supported");
 				goto end;
 			} 
 			break;
 		case PKCS7_ENCRYPTED_KEY:
 			if (!RSA_decrypt(key, object, &symmetric_key))
 			{
-				plog("symmetric key could not be decrypted with rsa");
+				DBG1("symmetric key could not be decrypted with rsa");
 				goto end;
 			}
-			DBG(DBG_PRIVATE,
-				DBG_dump_chunk("symmetric key :", symmetric_key)
-			)
+			DBG4("symmetric key %B", &symmetric_key);
 			break;
 		case PKCS7_CONTENT_TYPE:
 			if (asn1_known_oid(object) != OID_PKCS7_DATA)
 			{
-				 plog("encrypted content not of type pkcs7 data");
+				 DBG1("encrypted content not of type pkcs7 data");
 				 goto end;
 			}
 			break;
 		case PKCS7_CONTENT_ENC_ALGORITHM:
 			content_enc_alg = asn1_parse_algorithmIdentifier(object, level, &iv);
-
-			switch (content_enc_alg)
+	
+			if (content_enc_alg == OID_UNKNOWN)
 			{
-			case OID_DES_CBC:
-				total_keys = 1;
-				break;
-			case OID_3DES_EDE_CBC:
-				total_keys = 3;
-				break;
-			default:
-				plog("Only DES and 3DES supported for symmetric encryption");
-				goto end;
-			}
-			if (symmetric_key.len != (total_keys * DES_CBC_BLOCK_SIZE))
-			{
-				plog("key length is not %d",(total_keys * DES_CBC_BLOCK_SIZE));
+				DBG1("unknown content encryption algorithm");
 				goto end;
 			}
 			if (!asn1_parse_simple_object(&iv, ASN1_OCTET_STRING, level+1, "IV"))
 			{
-				plog("IV could not be parsed");
-				goto end;
-			}
-			if (iv.len != DES_CBC_BLOCK_SIZE)
-			{
-				plog("IV has wrong length");
+				DBG1("IV could not be parsed");
 				goto end;
 			}
 			break;
@@ -510,49 +478,47 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 			break;
 		}
 	}
-;
-	if (!parser->success(parser))
+	success = parser->success(parser);
+
+end:
+	parser->destroy(parser);
+	if (!success)
 	{
-		goto end;
+		goto failed;
 	}
+	success = FALSE;
 
 	/* decrypt the content */
 	{
-		u_int i;
-		des_cblock des_key[3], des_iv;
-		des_key_schedule key_s[3];
+		encryption_algorithm_t alg;
+		size_t key_size;
+		crypter_t *crypter;
 
-		memcpy((char *)des_key, symmetric_key.ptr, symmetric_key.len);
-		memcpy((char *)des_iv, iv.ptr, iv.len);
-
-		for (i = 0; i < total_keys; i++)
+		alg = encryption_algorithm_from_oid(content_enc_alg, &key_size);
+		if (alg == ENCR_UNDEFINED)
 		{
-			if (des_set_key(&des_key[i], key_s[i]))
-			{
-				plog("des key schedule failed");
-				goto end;
-			}
+			DBG1("unsupported content encryption algorithm");
+			goto failed;
 		}
-
-		data->len = encrypted_content.len;
-		data->ptr = malloc(data->len);
-
-		switch (content_enc_alg)
+		crypter = lib->crypto->create_crypter(lib->crypto, alg, key_size);
+		if (crypter == NULL)
 		{
-		case OID_DES_CBC:
-			des_cbc_encrypt((des_cblock*)encrypted_content.ptr
-						  , (des_cblock*)data->ptr, data->len
-						  , key_s[0], &des_iv, DES_DECRYPT);
-			break;
-		case OID_3DES_EDE_CBC:
-			des_ede3_cbc_encrypt( (des_cblock*)encrypted_content.ptr
-								, (des_cblock*)data->ptr, data->len
-								, key_s[0], key_s[1], key_s[2]
-								, &des_iv, DES_DECRYPT);
+			DBG1("crypter %N not available", encryption_algorithm_names, alg);
+			goto failed;
 		}
-		DBG(DBG_PRIVATE,
-			DBG_dump_chunk("decrypted content with padding:\n", *data)
-		)
+		if (symmetric_key.len != crypter->get_key_size(crypter))
+		{
+			DBG1("symmetric key length %d is wrong", symmetric_key.len);
+			goto failed;
+		}
+		if (iv.len != crypter->get_block_size(crypter))
+		{
+			DBG1("IV length %d is wrong", iv.len);
+			goto failed;
+		}
+		crypter->set_key(crypter, symmetric_key);
+		crypter->decrypt(crypter, encrypted_content, iv, data);
+		DBG4("decrypted content with padding: %B", data);
 	}
 
 	/* remove the padding */
@@ -563,8 +529,8 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 
 		if (padding > data->len)
 		{
-			plog("padding greater than data length");
-			goto end;
+			DBG1("padding greater than data length");
+			goto failed;
 		}
 		data->len -= padding;
 
@@ -572,14 +538,15 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 		{
 			if (*pos-- != pattern)
 			{
-				plog("wrong padding pattern");
-				goto end;
+				DBG1("wrong padding pattern");
+				goto failed;
 			}
 		}
 	}
 	success = TRUE;
 
-end:
+failed:
+	DESTROY_IF(crypter);
 	chunk_clear(&symmetric_key);
 	if (!success)
 	{
@@ -654,7 +621,7 @@ static chunk_t pkcs7_build_contentInfo(contentInfo_t *cInfo)
 		break;
 	case OID_UNKNOWN:
 	default:
-		fprintf(stderr, "invalid pkcs7 contentInfo type");
+		DBG1("invalid pkcs7 contentInfo type");
 		return chunk_empty;
 	}
 
@@ -723,9 +690,7 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 				, asn1_wrap(ASN1_SET, "m", signerInfo));
 
 	cInfo = pkcs7_build_contentInfo(&signedData);
-	DBG(DBG_RAW,
-		DBG_dump_chunk("signedData:\n", cInfo)
-	)
+	DBG3("signedData %B", &cInfo);
 
 	free(pkcs7Data.content.ptr);
 	free(signedData.content.ptr);
@@ -735,110 +700,70 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 /**
  * create a symmetrically encrypted pkcs7 contentInfo object
  */
-chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int cipher)
+chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_alg)
 {
-	bool des_check_key_save;
-	des_key_schedule ks[3];
-	des_cblock key[3], des_iv, des_iv_buf;
-
-	chunk_t iv = { (u_char *)des_iv_buf, DES_CBC_BLOCK_SIZE };
-	chunk_t out;
-	chunk_t cipher_oid;
-
-	rng_t *rng;
-	u_int total_keys, i;
-	size_t padding = pad_up(data.len, DES_CBC_BLOCK_SIZE);
-
+	encryption_algorithm_t alg;
+	size_t alg_key_size;
 	RSA_public_key_t public_key;
+	chunk_t symmetricKey, iv, in, out;
+	crypter_t *crypter;
 
-	init_RSA_public_key(&public_key, cert->publicExponent
-								   , cert->modulus);
-
-	if (padding == 0)
-		padding += DES_CBC_BLOCK_SIZE;
-
-	out.len = data.len + padding;
-	out.ptr = malloc(out.len);
-
-	DBG(DBG_CONTROL,
-		DBG_log("padding %d bytes of data to multiple DES block size of %d bytes"
-				, (int)data.len, (int)out.len)
-	)
-
-	/* copy data */
-	memcpy(out.ptr, data.ptr, data.len);
-	/* append padding */
-	memset(out.ptr + data.len, padding, padding);
-
-	DBG(DBG_RAW,
-		DBG_dump_chunk("Padded unencrypted data:\n", out)
-	)
-
-	/* select OID and keylength for specified cipher */
-	switch (cipher)
+	alg = encryption_algorithm_from_oid(enc_alg, &alg_key_size);
+	crypter = lib->crypto->create_crypter(lib->crypto, alg,
+										  alg_key_size/BITS_PER_BYTE);
+	if (crypter == NULL)
 	{
-	case OID_DES_CBC:
-		 total_keys = 1;
-		 cipher_oid = ASN1_des_cbc_oid;
-		 break;
-	case OID_3DES_EDE_CBC:
-	default:
-		total_keys = 3;
-		cipher_oid = ASN1_3des_ede_cbc_oid;
+		DBG1("crypter for %N not available", encryption_algorithm_names, alg);
+		return chunk_empty;
 	}
-	DBG(DBG_CONTROLMORE,
-		DBG_log("pkcs7 encryption cipher: %s", oid_names[cipher].name)
-	)
 
-	/* generate a strong random key for DES/3DES */
-	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	des_check_key_save = des_check_key;
-	des_check_key = TRUE;
-	for (i = 0; i < total_keys;i++)
+	/* generate a true random symmetric encryption key and a pseudo-random iv */
 	{
-		for (;;)
-		{
-			rng->get_bytes(rng, DES_CBC_BLOCK_SIZE, (char*)key[i]);
-			des_set_odd_parity(&key[i]);
-			if (!des_set_key(&key[i], ks[i]))
-			{
-				break;
-			}
-			plog("weak DES key discarded - we try again");
-		}
-		DBG(DBG_PRIVATE,
-			DBG_dump("DES key:", key[i], 8)
-		)
-	}
-	des_check_key = des_check_key_save;
-
-	/* generate an iv for DES/3DES CBC */
-	rng->get_bytes(rng, DES_CBC_BLOCK_SIZE, des_iv);
-	memcpy(iv.ptr, des_iv, DES_CBC_BLOCK_SIZE);
-	DBG(DBG_RAW,
-		DBG_dump_chunk("DES IV :", iv)
-	)
-	rng->destroy(rng);
-
-	/* encryption using specified cipher */
-	switch (cipher)
-	{
-	case OID_DES_CBC:
-		des_cbc_encrypt((des_cblock*)out.ptr, (des_cblock*)out.ptr, out.len
-					   , ks[0], &des_iv, DES_ENCRYPT);
-		break;
-	case OID_3DES_EDE_CBC:
-	default:
-		des_ede3_cbc_encrypt((des_cblock*)out.ptr, (des_cblock*)out.ptr, out.len
-							, ks[0], ks[1], ks[2], &des_iv, DES_ENCRYPT);       
-	}
-	DBG(DBG_RAW,
-		DBG_dump_chunk("Encrypted data:\n", out));
+		rng_t *rng;
 		
+		rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
+		rng->allocate_bytes(rng, crypter->get_key_size(crypter), &symmetricKey);
+		DBG4("symmetric encryption key %B", &symmetricKey);
+		rng->destroy(rng);
+
+		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+		rng->allocate_bytes(rng, crypter->get_block_size(crypter), &iv);
+		DBG4("initialization vector: %B", &iv);
+		rng->destroy(rng);
+	}
+
+	/* pad the data to a multiple of the block size */
+	{
+		size_t block_size = crypter->get_block_size(crypter);
+		size_t padding = block_size - data.len % block_size;
+
+		in.len = data.len + padding;
+		in.ptr = malloc(in.len);
+
+		DBG2("padding %u bytes of data to multiple block size of %u bytes",
+		 	 data.len, in.len);
+
+		/* copy data */
+		memcpy(in.ptr, data.ptr, data.len);
+		/* append padding */
+		memset(in.ptr + data.len, padding, padding);
+	}
+	DBG3("padded unencrypted data %B", &in);
+
+	/* symmetric encryption of data object */
+	crypter->set_key(crypter, symmetricKey);
+	crypter->encrypt(crypter, in, iv, &out);
+	crypter->destroy(crypter);
+    DBG3("encrypted data %B", &out);
+	free(in.ptr);
+	free(iv.ptr);
+
+	init_RSA_public_key(&public_key, cert->publicExponent, cert->modulus);
+	
 	/* build pkcs7 enveloped data object */ 
 	{
-		chunk_t contentEncryptionAlgorithm = asn1_wrap(ASN1_SEQUENCE, "cm"
-					, cipher_oid
+		chunk_t contentEncryptionAlgorithm = asn1_wrap(ASN1_SEQUENCE, "mm"
+					, asn1_build_known_oid(enc_alg)
 					, asn1_simple_object(ASN1_OCTET_STRING, iv));
 		
 		chunk_t encryptedContentInfo = asn1_wrap(ASN1_SEQUENCE, "cmm"
@@ -846,10 +771,8 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int ciph
 					, contentEncryptionAlgorithm
 					, asn1_wrap(ASN1_CONTEXT_S_0, "m", out));
 
-		chunk_t plainKey = { (u_char *)key, DES_CBC_BLOCK_SIZE * total_keys };
-
 		chunk_t encryptedKey = asn1_wrap(ASN1_OCTET_STRING, "m"
-					, RSA_encrypt(&public_key, plainKey));
+					, RSA_encrypt(&public_key, symmetricKey));
 
 		chunk_t recipientInfo = asn1_wrap(ASN1_SEQUENCE, "cmcm"
 					, ASN1_INTEGER_0
@@ -867,12 +790,11 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int ciph
 					, encryptedContentInfo);
 
 		cInfo = pkcs7_build_contentInfo(&envelopedData);
-		DBG(DBG_RAW,
-			DBG_dump_chunk("envelopedData:\n", cInfo)
-		)
+		DBG3("envelopedData %B", &cInfo);
 
 		free_RSA_public_content(&public_key);
 		free(envelopedData.content.ptr);
+		free(symmetricKey.ptr);
 		return cInfo;
 	}
 }

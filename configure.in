@@ -184,6 +184,30 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[blowfish],
+	AS_HELP_STRING([--enable-blowfish],[enable Blowfish software implementation plugin (default is NO).]),
+	[if test x$enableval = xyes; then
+		blowfish=true
+	fi]
+)
+
+AC_ARG_ENABLE(
+	[serpent],
+	AS_HELP_STRING([--enable-serpent],[enable Serpent software implementation plugin (default is NO).]),
+	[if test x$enableval = xyes; then
+		serpent=true
+	fi]
+)
+
+AC_ARG_ENABLE(
+	[twofish],
+	AS_HELP_STRING([--enable-twofish],[enable Twofish software implementation plugin (default is NO).]),
+	[if test x$enableval = xyes; then
+		twofish=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[md4],
 	AS_HELP_STRING([--enable-md4],[enable MD4 software implementation plugin (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -978,24 +1002,36 @@ if test x$ldap = xtrue; then
 fi
 if test x$aes = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" aes"
+	pluto_plugins=${pluto_plugins}" aes"
 fi
 if test x$des = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" des"
+	pluto_plugins=${pluto_plugins}" des"
+fi
+if test x$blowfish = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" blowfish"
+	pluto_plugins=${pluto_plugins}" blowfish"
+fi
+if test x$serpent = xtrue; then
+	pluto_plugins=${pluto_plugins}" serpent"
+fi
+if test x$twofish = xtrue; then
+	pluto_plugins=${pluto_plugins}" twofish"
 fi
 if test x$sha1 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha1"
-        pluto_plugins=${pluto_plugins}" sha1"
+	pluto_plugins=${pluto_plugins}" sha1"
 fi
 if test x$sha2 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha2"
-        pluto_plugins=${pluto_plugins}" sha2"
+	pluto_plugins=${pluto_plugins}" sha2"
 fi
 if test x$md4 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" md4"
 fi
 if test x$md5 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" md5"
-        pluto_plugins=${pluto_plugins}" md5"
+	pluto_plugins=${pluto_plugins}" md5"
 fi
 if test x$fips_prf = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
@@ -1049,6 +1085,9 @@ AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
 AM_CONDITIONAL(USE_DES, test x$des = xtrue)
+AM_CONDITIONAL(USE_BLOWFISH, test x$blowfish = xtrue)
+AM_CONDITIONAL(USE_SERPENT, test x$serpent = xtrue)
+AM_CONDITIONAL(USE_TWOFISH, test x$twofish = xtrue)
 AM_CONDITIONAL(USE_MD4, test x$md4 = xtrue)
 AM_CONDITIONAL(USE_MD5, test x$md5 = xtrue)
 AM_CONDITIONAL(USE_SHA1, test x$sha1 = xtrue)
@@ -1139,6 +1178,9 @@ AC_OUTPUT(
 	src/libstrongswan/Makefile
 	src/libstrongswan/plugins/aes/Makefile
 	src/libstrongswan/plugins/des/Makefile
+	src/libstrongswan/plugins/blowfish/Makefile
+	src/libstrongswan/plugins/serpent/Makefile
+	src/libstrongswan/plugins/twofish/Makefile
 	src/libstrongswan/plugins/md4/Makefile
 	src/libstrongswan/plugins/md5/Makefile
 	src/libstrongswan/plugins/sha1/Makefile

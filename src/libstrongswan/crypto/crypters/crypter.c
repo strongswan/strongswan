@@ -14,6 +14,8 @@
  * for more details.
  */
 
+#include <asn1/oid.h>
+
 #include "crypter.h"
 
 ENUM_BEGIN(encryption_algorithm_names, ENCR_DES_IV64, ENCR_DES_IV32,
@@ -50,4 +52,83 @@ ENUM_NEXT(encryption_algorithm_names, ENCR_UNDEFINED, ENCR_TWOFISH, ENCR_CAMELLI
 	"SERPENT",
 	"TWOFISH");
 ENUM_END(encryption_algorithm_names, ENCR_TWOFISH);
+
+/*
+ * Described in header.
+ */
+encryption_algorithm_t encryption_algorithm_from_oid(int oid, size_t *key_size)
+{
+	encryption_algorithm_t alg;
+	size_t alg_key_size;
+
+	switch (oid)
+	{
+		case OID_DES_CBC:
+			alg = ENCR_DES;
+			alg_key_size = 0;
+			break;
+		case OID_3DES_EDE_CBC:
+			alg = ENCR_3DES;
+			alg_key_size = 0;
+			break;
+		case OID_AES128_CBC:
+			alg = ENCR_AES_CBC;
+			alg_key_size = 128;
+			break;
+		case OID_AES192_CBC:
+			alg = ENCR_AES_CBC;
+			alg_key_size = 192;
+			break;
+		case OID_AES256_CBC:
+			alg = ENCR_AES_CBC;
+			alg_key_size = 256;
+			break;
+		default:
+			alg = ENCR_UNDEFINED;
+			alg_key_size = 0;
+	}
+	if (key_size)
+	{
+			*key_size = alg_key_size;
+	}
+	return alg;
+}
+
+/*
+ * Described in header.
+ */
+int encryption_algorithm_to_oid(encryption_algorithm_t alg, size_t key_size)
+{
+	int oid;
+
+	switch(alg)
+	{
+		case ENCR_DES:
+			oid = OID_DES_CBC;
+			break;
+		case ENCR_3DES:
+			oid = OID_3DES_EDE_CBC;
+			break;
+		case ENCR_AES_CBC:
+			switch (key_size)
+			{
+				case 128:
+					oid = OID_AES128_CBC;
+					break;
+				case 192:
+					oid = OID_AES192_CBC;
+					break;
+				case 256:
+					oid = OID_AES256_CBC;
+					break;
+				default:
+					oid = OID_UNKNOWN;
+			}
+			break;
+		default:
+			oid = OID_UNKNOWN;
+	}
+	return oid;
+}
+
 

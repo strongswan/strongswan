@@ -128,4 +128,22 @@ struct crypter_t {
 	void (*destroy) (crypter_t *this);
 };
 
+/**
+ * Conversion of ASN.1 OID to encryption algorithm.
+ * 
+ * @param oid			ASN.1 OID
+ * @param key_size		returns size of encryption key in bits
+ * @return				encryption algorithm, ENCR_UNDEFINED if OID unsupported
+ */
+encryption_algorithm_t encryption_algorithm_from_oid(int oid, size_t *key_size);
+
+/**
+ * Conversion of encryption algorithm to ASN.1 OID.
+ * 
+ * @param alg			encryption algorithm
+ * @param key_size		size of encryption key in bits
+ * @return				ASN.1 OID, OID_UNKNOWN if OID is unknown
+ */
+int encryption_algorithm_to_oid(encryption_algorithm_t alg, size_t key_size);
+
 #endif /** CRYPTER_H_ @}*/
