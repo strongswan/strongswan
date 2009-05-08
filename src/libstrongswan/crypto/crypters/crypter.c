@@ -16,9 +16,7 @@
 
 #include "crypter.h"
 
-ENUM_BEGIN(encryption_algorithm_names, ENCR_UNDEFINED, ENCR_UNDEFINED,
-	"UNDEFINED");
-ENUM_NEXT(encryption_algorithm_names, ENCR_DES_IV64, ENCR_DES_IV32, ENCR_UNDEFINED,
+ENUM_BEGIN(encryption_algorithm_names, ENCR_DES_IV64, ENCR_DES_IV32,
 	"DES_IV64",
 	"DES",
 	"3DES",
@@ -46,7 +44,10 @@ ENUM_NEXT(encryption_algorithm_names, ENCR_CAMELLIA_CBC, ENCR_CAMELLIA_CCM_ICV16
 	"CAMELLIA_CCM_ICV8",
 	"CAMELLIA_CCM_ICV12",
 	"CAMELLIA_CCM_ICV16");
-ENUM_NEXT(encryption_algorithm_names, ENCR_DES_ECB, ENCR_DES_ECB, ENCR_CAMELLIA_CCM_ICV16,
-	"DES_ECB");
-ENUM_END(encryption_algorithm_names, ENCR_DES_ECB);
+ENUM_NEXT(encryption_algorithm_names, ENCR_UNDEFINED, ENCR_TWOFISH, ENCR_CAMELLIA_CCM_ICV16,
+	"UNDEFINED",
+	"DES_ECB",
+	"SERPENT",
+	"TWOFISH");
+ENUM_END(encryption_algorithm_names, ENCR_TWOFISH);
 

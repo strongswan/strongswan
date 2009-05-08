@@ -31,7 +31,6 @@ typedef struct crypter_t crypter_t;
  * Encryption algorithm, as in IKEv2 RFC 3.3.2.
  */
 enum encryption_algorithm_t {
-	ENCR_UNDEFINED =        1024,
 	ENCR_DES_IV64 =            1,
 	ENCR_DES =                 2,
 	ENCR_3DES =                3,
@@ -56,7 +55,10 @@ enum encryption_algorithm_t {
 	ENCR_CAMELLIA_CCM_ICV8 =  25,
 	ENCR_CAMELLIA_CCM_ICV12 = 26,
 	ENCR_CAMELLIA_CCM_ICV16 = 27,
-    ENCR_DES_ECB =          1025
+	ENCR_UNDEFINED =        1024,
+    ENCR_DES_ECB =          1025,
+	ENCR_SERPENT =          1026,
+    ENCR_TWOFISH =          1027
 };
 
 /**
