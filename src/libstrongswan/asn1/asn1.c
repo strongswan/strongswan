@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <pthread.h>
 
 #include <utils.h>
 #include <debug.h>
@@ -300,13 +301,26 @@ u_int asn1_length(chunk_t *blob)
 
 #define TIME_MAX	0x7fffffff
 
+#if !defined(HAVE_TIMEGM) && !defined(HAVE_VAR_TIMEZONE)
+pthread_once_t utc_offset_once = PTHREAD_ONCE_INIT;
+static time_t utc_offset;
+static void init_utc_offset()
+{
+	time_t now;
+	struct tm utc;
+	now = time(NULL);
+	gmtime_r(&now, &utc);
+	utc_offset = mktime(&utc) - now;
+}
+#endif
+
 /**
  * Converts ASN.1 UTCTIME or GENERALIZEDTIME into calender time
  */
 time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 {
-	struct tm t, local;
-	time_t tc, tz_offset, now;
+	struct tm t;
+	time_t tc, tz_offset;
 	u_char *eot = NULL;
 	
 	if ((eot = memchr(utctime->ptr, 'Z', utctime->len)) != NULL)
@@ -372,17 +386,26 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	t.tm_isdst = 0;
 	
 	/* convert to time_t */
+#ifdef HAVE_TIMEGM
+	tc = timegm(&t);
+#else
 	tc = mktime(&t);
-	
+#endif
 	if (tc == -1)
 	{
 		return TIME_MAX;
 	}
 
 	/* if no conversion overflow occurred, compensate timezone */
-	now = time(NULL);
-	localtime_r(&now, &local);
-	return tc - local.tm_gmtoff - tz_offset;
+#ifndef HAVE_TIMEGM
+#ifdef HAVE_VAR_TIMEZONE
+	tz_offset += timezone;
+#else
+	pthread_once(&utc_offset_once, init_utc_offset);
+	tz_offset += utc_offset;
+#endif
+#endif
+	return tc - tz_offset;
 }
 
 /**
