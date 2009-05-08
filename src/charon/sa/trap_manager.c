@@ -21,6 +21,23 @@
 
 
 typedef struct private_trap_manager_t private_trap_manager_t;
+typedef struct trap_listener_t trap_listener_t;
+
+/**
+ * listener to track acquires
+ */
+struct trap_listener_t {
+	
+	/**
+	 * Implements listener interface
+	 */
+	listener_t listener;
+	
+	/**
+	 * points to trap_manager
+	 */
+	private_trap_manager_t *traps;
+};
 
 /**
  * Private data of an trap_manager_t object.
@@ -41,6 +58,11 @@ struct private_trap_manager_t {
 	 * mutex to lock traps list
 	 */
 	mutex_t *mutex;
+	
+	/**
+	 * listener to track acquiring IKE_SAs
+	 */
+	trap_listener_t listener;
 };
 
 /**
@@ -51,6 +73,8 @@ typedef struct {
 	peer_cfg_t *peer_cfg;
 	/** ref to instanciated CHILD_SA */
 	child_sa_t *child_sa;
+	/** pending IKE_SA connecting upon acquire */
+	ike_sa_t *pending;
 } entry_t;
 
 /**
@@ -147,6 +171,7 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 	entry = malloc_thing(entry_t);
 	entry->child_sa = child_sa;
 	entry->peer_cfg = peer->get_ref(peer);
+	entry->pending = NULL;
 	
 	this->mutex->lock(this->mutex);
 	this->traps->insert_last(this->traps, entry);
@@ -242,25 +267,69 @@ static void acquire(private_trap_manager_t *this, u_int32_t reqid,
 	if (!found)
 	{
 		DBG1(DBG_CFG, "trap not found, unable to acquire reqid %d",reqid);
-		return;
+	}
+	else if (found->pending)
+	{
+		DBG1(DBG_CFG, "ignoring acquire, connection attempt pending");
+	}
+	else
+	{
+		child = found->child_sa->get_config(found->child_sa);
+		peer = found->peer_cfg;
+		ike_sa = charon->ike_sa_manager->checkout_by_config(
+												charon->ike_sa_manager, peer);
+		if (ike_sa->get_peer_cfg(ike_sa) == NULL)
+		{
+			ike_sa->set_peer_cfg(ike_sa, peer);
+		}
+		child->get_ref(child);
+		reqid = found->child_sa->get_reqid(found->child_sa);
+		if (ike_sa->initiate(ike_sa, child, reqid) != DESTROY_ME)
+		{
+			found->pending = ike_sa;
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		}
+		else
+		{
+			charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
+		}
+	}
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Implementation of listener_t.ike_state_change
+ */
+static bool ike_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
+							 ike_sa_state_t state)
+{
+	private_trap_manager_t *this;
+	enumerator_t *enumerator;
+	entry_t *entry;
+	
+	switch (state)
+	{
+		case IKE_ESTABLISHED:
+		case IKE_DESTROYING:
+			break;
+		default:
+			return TRUE;
 	}
 	
-	child = found->child_sa->get_config(found->child_sa);
-	peer = found->peer_cfg;
-	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,	
-														peer);
-	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
+	this = listener->traps;
+	this->mutex->lock(this->mutex);
+	enumerator = this->traps->create_enumerator(this->traps);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
-		ike_sa->set_peer_cfg(ike_sa, peer);
+		if (entry->pending == ike_sa)
+		{
+			entry->pending = NULL;
+		}
 	}
-	child->get_ref(child);
+	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
-	if (ike_sa->initiate(ike_sa, child, reqid) != DESTROY_ME)
-	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		return;
-	}
-	charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+	return TRUE;
 }
 
 /**
@@ -268,6 +337,7 @@ static void acquire(private_trap_manager_t *this, u_int32_t reqid,
  */
 static void destroy(private_trap_manager_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->listener.listener);
 	this->traps->invoke_function(this->traps, (void*)destroy_entry);
 	this->traps->destroy(this->traps);
 	this->mutex->destroy(this->mutex);
@@ -281,7 +351,7 @@ trap_manager_t *trap_manager_create()
 {
 	private_trap_manager_t *this = malloc_thing(private_trap_manager_t);
 	
-	this->public.install = (u_int32_t(*)(trap_manager_t*, peer_cfg_t *peer, child_cfg_t *child))install;
+	this->public.install = (u_int(*)(trap_manager_t*, peer_cfg_t *peer, child_cfg_t *child))install;
 	this->public.uninstall = (bool(*)(trap_manager_t*, u_int32_t id))uninstall;
 	this->public.create_enumerator = (enumerator_t*(*)(trap_manager_t*))create_enumerator;
 	this->public.acquire = (void(*)(trap_manager_t*, u_int32_t reqid, traffic_selector_t *src, traffic_selector_t *dst))acquire;
@@ -289,6 +359,12 @@ trap_manager_t *trap_manager_create()
 	
 	this->traps = linked_list_create();
 	this->mutex = mutex_create(MUTEX_DEFAULT);
+	
+	/* register listener for IKE state changes */
+	this->listener.traps = this;
+	memset(&this->listener.listener, 0, sizeof(listener_t));
+	this->listener.listener.ike_state_change = (void*)ike_state_change;
+	charon->bus->add_listener(charon->bus, &this->listener.listener);
 	
 	return &this->public;
 }
