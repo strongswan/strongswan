@@ -20,6 +20,7 @@
 #include <sa/ike_sa.h>
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/certreq_payload.h>
+#include <encoding/payloads/auth_payload.h>
 #include <credentials/certificates/x509.h>
 
 
@@ -101,15 +102,15 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this, certifi
 static void build_certs(private_ike_cert_post_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
-	auth_cfg_t *auth;
+	auth_payload_t *payload;
 	
+	payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	if (!peer_cfg ||
-		(uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS) != AUTH_CLASS_PUBKEY)
-	{
+	if (!peer_cfg || !payload || payload->get_auth_method(payload) == AUTH_PSK)
+	{	/* no CERT payload for EAP/PSK */
 		return;
 	}
+	
 	switch (peer_cfg->get_cert_policy(peer_cfg))
 	{
 		case CERT_NEVER_SEND:
@@ -126,6 +127,9 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 			enumerator_t *enumerator;
 			certificate_t *cert;
 			auth_rule_t type;
+			auth_cfg_t *auth;
+			
+			auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 			
 			/* get subject cert first, then issuing certificates */
 			cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
@@ -166,10 +170,8 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
  */
 static status_t build_i(private_ike_cert_post_t *this, message_t *message)
 {
-	if (message->get_payload(message, AUTHENTICATION))
-	{	/* CERT payloads are sended along AUTH payloads */
-		build_certs(this, message);
-	}
+	build_certs(this, message);
+	
 	return NEED_MORE;
 }
 
@@ -186,10 +188,8 @@ static status_t process_r(private_ike_cert_post_t *this, message_t *message)
  */
 static status_t build_r(private_ike_cert_post_t *this, message_t *message)
 {
-	if (message->get_payload(message, AUTHENTICATION))
-	{	/* CERT payloads are sended along AUTH payloads */
-		build_certs(this, message);
-	}
+	build_certs(this, message);
+	
 	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
 	{	/* stay alive, we might have additional rounds with certs */
 		return NEED_MORE;
