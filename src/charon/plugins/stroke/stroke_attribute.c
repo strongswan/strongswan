@@ -222,7 +222,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			id = pool->ids->get(pool->ids, id);
 			if (id)
 			{
-				DBG1(DBG_CFG, "reassigning offline lease to %Y", id);
+				DBG1(DBG_CFG, "reassigning offline lease to '%Y'", id);
 				pool->online->put(pool->online, id, (void*)offset);
 				break;
 			}
@@ -232,7 +232,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 		offset = (uintptr_t)pool->online->get(pool->online, id);
 		if (offset && offset == host2offset(pool, requested))
 		{
-			DBG1(DBG_CFG, "reassigning online lease to %Y", id);
+			DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
 			break;
 		}
 		
@@ -244,7 +244,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			id = id->clone(id);
 			pool->ids->put(pool->ids, id, id);
 			pool->online->put(pool->online, id, (void*)offset);
-			DBG1(DBG_CFG, "assigning new lease to %Y", id);
+			DBG1(DBG_CFG, "assigning new lease to '%Y'", id);
 			break;
 		}
 		/* no more addresses, replace the first found offline lease */
@@ -256,7 +256,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			{
 				/* destroy reference to old ID */
 				old_id = pool->ids->remove(pool->ids, old_id);
-				DBG1(DBG_CFG, "reassigning existing offline lease of %Y to %Y",
+				DBG1(DBG_CFG, "reassigning existing offline lease by '%Y' to '%Y'",
 					 old_id, id);
 				if (old_id)
 				{
