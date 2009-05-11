@@ -36,8 +36,8 @@
 #include "mconsole.h"
 #include "cowfs.h"
 
-#define PERME (S_IRWXU | S_IRWXG)
-#define PERM (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
+#define PERME (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
+#define PERM (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH)
 
 #define MASTER_DIR "master"
 #define DIFF_DIR "diff"
