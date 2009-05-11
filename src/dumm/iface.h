@@ -29,19 +29,19 @@ typedef struct iface_t iface_t;
 #include "guest.h"
 
 /**
- * @brief Interface in a guest, connected to a tap device on the host.
+ * Interface in a guest, connected to a tap device on the host.
  */
 struct iface_t {
 	
 	/**
-	 * @brief Get the interface name in the guest (e.g. eth0).
+	 * Get the interface name in the guest (e.g. eth0).
 	 *
 	 * @return			guest interface name
 	 */
 	char* (*get_guestif)(iface_t *this);
 	
 	/**
-	 * @brief Get the interface name at the host (e.g. tap0).
+	 * Get the interface name at the host (e.g. tap0).
 	 *
 	 * @return			host interface (tap device) name
 	 */
@@ -71,34 +71,34 @@ struct iface_t {
 	bool (*delete_address)(iface_t *this, host_t *addr);	
 	
 	/**
-	 * @brief Set the bridge this interface is attached to.
+	 * Set the bridge this interface is attached to.
 	 *
 	 * @param bridge	assigned bridge, or NULL for none
 	 */
 	void (*set_bridge)(iface_t *this, bridge_t *bridge);
 	
 	/**
-	 * @brief Get the bridge this iface is connected, or NULL.
+	 * Get the bridge this iface is connected, or NULL.
 	 *
 	 * @return			connected bridge, or NULL
 	 */
 	bridge_t* (*get_bridge)(iface_t *this);
 	
 	/**
-	 * @brief Get the guest this iface belongs to.
+	 * Get the guest this iface belongs to.
 	 *
 	 * @return			guest of this iface
 	 */
 	guest_t* (*get_guest)(iface_t *this);
 	
 	/**
-	 * @brief Destroy an interface
+	 * Destroy an interface
 	 */
 	void (*destroy) (iface_t *this);
 };
 
 /**
- * @brief Create a new interface for a guest
+ * Create a new interface for a guest
  *
  * @param name		name of the interface in the guest
  * @param guest		guest this iface is connecting

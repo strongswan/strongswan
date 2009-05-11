@@ -26,7 +26,7 @@ typedef struct guest_t guest_t;
 #include "iface.h"
 
 /**
- * @brief State of a guest (started, stopped, ...)
+ * State of a guest (started, stopped, ...)
  */
 enum guest_state_t {
 	/** guest kernel not running at all */
@@ -68,33 +68,33 @@ typedef pid_t (*invoke_function_t)(void *data, guest_t *guest,
 typedef void (*idle_function_t)(void);
 
 /**
- * @brief A guest is a UML instance running on the host.
+ * A guest is a UML instance running on the host.
  **/
 struct guest_t {
 	
 	/**
-	 * @brief Get the name of this guest.
+	 * Get the name of this guest.
 	 *
 	 * @return		name of the guest
 	 */
 	char* (*get_name) (guest_t *this);
 	
 	/**
-	 * @brief Get the process ID of the guest child process.
+	 * Get the process ID of the guest child process.
 	 *
 	 * @return		name of the guest
 	 */
 	pid_t (*get_pid) (guest_t *this);
 	
 	/**
-	 * @brief Get the state of the guest (stopped, started, etc.).
+	 * Get the state of the guest (stopped, started, etc.).
 	 *
 	 * @return		guests state
 	 */
 	guest_state_t (*get_state)(guest_t *this);	
 	
 	/**
-	 * @brief Start the guest.
+	 * Start the guest.
 	 *
 	 * @param invoke	UML guest invocation function
 	 * @param data		data to pass back to invoke function
@@ -105,14 +105,14 @@ struct guest_t {
 				   idle_function_t idle);
 	
 	/**
-	 * @brief Kill the guest.
+	 * Kill the guest.
 	 *
 	 * @param idle		idle function to call while waiting to termination
 	 */
 	void (*stop) (guest_t *this, idle_function_t idle);
 	
 	/**
-	 * @brief Create a new interface in the current scenario.
+	 * Create a new interface in the current scenario.
 	 *
 	 * @param name	name of the interface in the guest
 	 * @return		created interface, or NULL if failed
@@ -120,21 +120,21 @@ struct guest_t {
 	iface_t* (*create_iface)(guest_t *this, char *name);
 	
 	/**
-	 * @brief Destroy an interface on guest.
+	 * Destroy an interface on guest.
 	 *
 	 * @param iface	interface to destroy
 	 */
 	void (*destroy_iface)(guest_t *this, iface_t *iface);
 	
 	/**
-	 * @brief Create an enumerator over all guest interfaces.
+	 * Create an enumerator over all guest interfaces.
 	 *
 	 * @return		enumerator over iface_t's
 	 */
 	enumerator_t* (*create_iface_enumerator)(guest_t *this);
 	
 	/**
-	 * @brief Set the template COWFS overlay to use.
+	 * Set the template COWFS overlay to use.
 	 *
 	 * @param parent	parent directory where template diff should point to
 	 * @return			FALSE if failed
@@ -172,18 +172,18 @@ struct guest_t {
 					void *data, char *cmd, ...);
 	
 	/**
-	 * @brief Called whenever a SIGCHILD for the guests PID is received.
+	 * Called whenever a SIGCHILD for the guests PID is received.
 	 */
 	void (*sigchild)(guest_t *this);
 	
 	/**
-	 * @brief Close and destroy a guest with all interfaces
+	 * Close and destroy a guest with all interfaces
 	 */	
 	void (*destroy) (guest_t *this);
 };
 
 /**
- * @brief Create a new, unstarted guest.
+ * Create a new, unstarted guest.
  *
  * @param parent	parent directory to create the guest in
  * @param name		name of the guest to create
@@ -196,7 +196,7 @@ guest_t *guest_create(char *parent, char *name, char *kernel,
 					  char *master, char *args);
 
 /**
- * @brief Load a guest created with guest_create().
+ * Load a guest created with guest_create().
  *
  * @param parent	parent directory to look for a guest
  * @param name		name of the guest directory

@@ -21,12 +21,12 @@
 typedef struct mconsole_t mconsole_t;
 
 /**
- * @brief UML mconsole, change running UML configuration using mconsole.
+ * UML mconsole, change running UML configuration using mconsole.
  */
 struct mconsole_t {
 	
 	/**
-	 * @brief Create a guest interface and connect it to tap host interface.
+	 * Create a guest interface and connect it to tap host interface.
 	 *
 	 * @param guest			name of the interface to create in the guest
 	 * @param host			name of the tap device to connect guest to
@@ -35,7 +35,7 @@ struct mconsole_t {
 	bool (*add_iface)(mconsole_t *this, char *guest, char *host);
 	
 	/**
-	 * @brief Delete a guest interface.
+	 * Delete a guest interface.
 	 *
 	 * @param guest			name of the interface to delete on the guest
 	 * @return				TRUE if interface deleted
@@ -54,13 +54,13 @@ struct mconsole_t {
 				char *cmd);
 	
 	/**
-	 * @brief Destroy the mconsole instance
+	 * Destroy the mconsole instance
 	 */
 	void (*destroy) (mconsole_t *this);
 };
 
 /**
- * @brief Create a new mconsole connection to a guest.
+ * Create a new mconsole connection to a guest.
  *
  * Waits for a notification from the guest through the notify socket and tries
  * to connect to the mconsole socket supplied in the received notification.

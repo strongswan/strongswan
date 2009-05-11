@@ -24,19 +24,19 @@ typedef struct bridge_t bridge_t;
 #include "iface.h"
 
 /**
- * @brief Interface in a guest, connected to a tap device on the host.
+ * Interface in a guest, connected to a tap device on the host.
  */
 struct bridge_t {
 	
 	/**
-	 * @brief Get the name of the bridge.
+	 * Get the name of the bridge.
 	 *
 	 * @return			name of the bridge
 	 */
 	char* (*get_name)(bridge_t *this);
 	
 	/**
-	 * @brief Add an interface to a bridge.
+	 * Add an interface to a bridge.
 	 *
 	 * @param iface		interface to add
 	 * @return			TRUE if interface added
@@ -44,7 +44,7 @@ struct bridge_t {
 	bool (*connect_iface)(bridge_t *this, iface_t *iface);
 	
 	/**
-	 * @brief Remove an interface from a bridge.
+	 * Remove an interface from a bridge.
 	 *
 	 * @param iface		interface to remove
 	 * @return			TRUE if interface removed
@@ -52,20 +52,20 @@ struct bridge_t {
 	bool (*disconnect_iface)(bridge_t *this, iface_t *iface);
 	
 	/**
-	 * @brief Create an enumerator over all interfaces.
+	 * Create an enumerator over all interfaces.
 	 *
 	 * @return 			enumerator over iface_t's
 	 */
 	enumerator_t* (*create_iface_enumerator)(bridge_t *this);	
 	
 	/**
-	 * @brief Destroy a bridge
+	 * Destroy a bridge
 	 */
 	void (*destroy) (bridge_t *this);
 };
 
 /**
- * @brief Create a new bridge.
+ * Create a new bridge.
  *
  * @param name		name of the bridge to create
  * @return			bridge, NULL if failed

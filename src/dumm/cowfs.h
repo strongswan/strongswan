@@ -21,13 +21,13 @@
 typedef struct cowfs_t cowfs_t;
 
 /**
- * @brief cowfs - Copy on write FUSE filesystem.
+ * cowfs - Copy on write FUSE filesystem.
  *
  */
 struct cowfs_t {
 	
 	/**
-	 * @brief Set an additional copy on write overlay.
+	 * Set an additional copy on write overlay.
 	 *
 	 * @param path		path of the overlay
 	 * @return 			FALSE if failed
@@ -35,13 +35,13 @@ struct cowfs_t {
 	bool (*set_overlay)(cowfs_t *this, char *path);
 	
 	/**
-	 * @brief Stop, umount and destroy a cowfs FUSE filesystem.
+	 * Stop, umount and destroy a cowfs FUSE filesystem.
 	 */
 	void (*destroy) (cowfs_t *this);
 };
 
 /**
- * @brief Mount a cowfs FUSE filesystem.
+ * Mount a cowfs FUSE filesystem.
  *
  * @param master		read only master file system directory
  * @param host			copy on write host directory

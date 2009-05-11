@@ -28,14 +28,14 @@
 typedef struct dumm_t dumm_t;
 
 /**
- * @brief dumm - Dynamic Uml Mesh Modeler
+ * dumm - Dynamic Uml Mesh Modeler
  *
  * Controls a group of UML guests and their networks.
  */
 struct dumm_t {
 
 	/**
-	 * @brief Starts a new UML guest
+	 * Starts a new UML guest
 	 *
 	 * @param name		name of the guest
 	 * @param kernel	UML kernel to use for guest
@@ -47,21 +47,21 @@ struct dumm_t {
 							  char *master, char *args);
 	
 	/**
-	 * @brief Create an enumerator over all guests.
+	 * Create an enumerator over all guests.
 	 *
 	 * @return			enumerator over guest_t's
 	 */
 	enumerator_t* (*create_guest_enumerator) (dumm_t *this);
 	
 	/**
-	 * @brief Delete a guest from disk.
+	 * Delete a guest from disk.
 	 *
 	 * @param guest		guest to destroy
 	 */
 	void (*delete_guest) (dumm_t *this, guest_t *guest);
 	
 	/**
-	 * @brief Create a new bridge.
+	 * Create a new bridge.
 	 *
 	 * @param name		name of the bridge to create
 	 * @return			created bridge
@@ -69,21 +69,21 @@ struct dumm_t {
 	bridge_t* (*create_bridge)(dumm_t *this, char *name);
 	
 	/**
-	 * @brief Create an enumerator over all bridges.
+	 * Create an enumerator over all bridges.
 	 *
 	 * @return			enumerator over bridge_t's
 	 */
 	enumerator_t* (*create_bridge_enumerator)(dumm_t *this);
 	
 	/**
-	 * @brief Delete a bridge.
+	 * Delete a bridge.
 	 *
 	 * @param bridge	bridge to destroy
 	 */
 	void (*delete_bridge) (dumm_t *this, bridge_t *bridge);
 	
 	/**
-	 * @brief Loads a template, create a new one if it does not exist.
+	 * Loads a template, create a new one if it does not exist.
 	 *
 	 * @param name		dir to the template, NULL to close
 	 * @return			FALSE if load/create failed
@@ -91,20 +91,20 @@ struct dumm_t {
 	bool (*load_template)(dumm_t *this, char *dir);
 	
 	/**
-	 * @brief Create an enumerator over all available templates.
+	 * Create an enumerator over all available templates.
 	 *
 	 * @return			enumerator over char*
 	 */
 	enumerator_t* (*create_template_enumerator)(dumm_t *this);
 	
 	/**
-	 * @brief stop all guests and destroy the modeler
+	 * stop all guests and destroy the modeler
 	 */
 	void (*destroy) (dumm_t *this);
 };
 
 /**
- * @brief Create a group of UML hosts and networks.
+ * Create a group of UML hosts and networks.
  *
  * @param dir			directory to create guests/load from, NULL for cwd
  * @return				created UML group, or NULL if failed.
