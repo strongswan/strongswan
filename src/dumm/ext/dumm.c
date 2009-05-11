@@ -651,12 +651,31 @@ static VALUE template_unload(VALUE class)
 	return class;
 }
 
+static VALUE template_each(int argc, VALUE *argv, VALUE class)
+{
+	enumerator_t *enumerator;
+	char *template;
+	
+	if (!rb_block_given_p())
+	{
+		rb_raise(rb_eArgError, "must be called with a block");
+	}
+	enumerator = dumm->create_template_enumerator(dumm);
+	while (enumerator->enumerate(enumerator, &template))
+	{
+		rb_yield(rb_str_new2(template));
+	}
+	enumerator->destroy(enumerator);
+	return class;
+}
+
 static void template_init()
 {
 	rbc_template = rb_define_class_under(rbm_dumm , "Template", rb_cObject);
 	
 	rb_define_singleton_method(rbc_template, "load", template_load, 1);
 	rb_define_singleton_method(rbc_template, "unload", template_unload, 0);
+	rb_define_singleton_method(rbc_template, "each", template_each, -1);
 }
 
 /**
