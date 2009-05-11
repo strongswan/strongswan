@@ -194,6 +194,59 @@ static bool load_template(private_dumm_t *this, char *dir)
 }
 
 /**
+ * Template directory enumerator
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** directory enumerator */
+	enumerator_t *inner;
+} template_enumerator_t;
+
+/**
+ * Implementation of template_enumerator_t.enumerate
+ */
+static bool template_enumerate(template_enumerator_t *this, char **template)
+{
+	struct stat st;
+	char *rel;
+	
+	while (this->inner->enumerate(this->inner, &rel, NULL, &st))
+	{
+		if (S_ISDIR(st.st_mode) && *rel != '.')
+		{
+			*template = rel;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Implementation of template_enumerator_t.destroy
+ */
+static void template_enumerator_destroy(template_enumerator_t *this)
+{
+	this->inner->destroy(this->inner);
+	free(this);
+}
+
+/**
+ * Implementation of dumm_t.create_template_enumerator
+ */
+static enumerator_t* create_template_enumerator(private_dumm_t *this)
+{
+	template_enumerator_t *enumerator;
+	
+	enumerator = malloc_thing(template_enumerator_t);
+	enumerator->public.enumerate = (void*)template_enumerate;
+	enumerator->public.destroy = (void*)template_enumerator_destroy;
+	enumerator->inner = enumerator_create_directory(TEMPLATE_DIR);
+	
+	return &enumerator->public;
+}
+
+/**
  * Implementation of dumm_t.destroy
  */
 static void destroy(private_dumm_t *this)
@@ -270,6 +323,7 @@ dumm_t *dumm_create(char *dir)
 	this->public.create_bridge_enumerator = (enumerator_t*(*)(dumm_t*))create_bridge_enumerator;
 	this->public.delete_bridge = (void(*)(dumm_t*,bridge_t*))delete_bridge;
 	this->public.load_template = (bool(*)(dumm_t*, char *name))load_template;
+	this->public.create_template_enumerator = (enumerator_t*(*)(dumm_t*))create_template_enumerator;
 	this->public.destroy = (void(*)(dumm_t*))destroy;
 	
 	if (dir && *dir == '/')

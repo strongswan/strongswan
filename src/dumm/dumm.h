@@ -91,6 +91,13 @@ struct dumm_t {
 	bool (*load_template)(dumm_t *this, char *dir);
 	
 	/**
+	 * @brief Create an enumerator over all available templates.
+	 *
+	 * @return			enumerator over char*
+	 */
+	enumerator_t* (*create_template_enumerator)(dumm_t *this);
+	
+	/**
 	 * @brief stop all guests and destroy the modeler
 	 */
 	void (*destroy) (dumm_t *this);
