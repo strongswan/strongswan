@@ -1,5 +1,6 @@
-/*
- * Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
+/* crypto/bf/bf_skey.c */
+/* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
+ * All rights reserved.
  *
  * This package is an SSL implementation written
  * by Eric Young (eay@cryptsoft.com).
@@ -55,139 +56,67 @@
  * [including the GNU Public Licence.]
  */
 
+#ifdef __KERNEL__
+#include <linux/types.h>
+#include <linux/string.h>
+#else
+#include <stdio.h>
+#include <string.h>
+#endif
+
 #include "blowfish.h"
+#include "bf_locl.h"
+#include "bf_pi.h"
 
-/* Blowfish as implemented from 'Blowfish: Springer-Verlag paper'
- * (From LECTURE NOTES IN COMPUTER SCIENCE 809, FAST SOFTWARE ENCRYPTION,
- * CAMBRIDGE SECURITY WORKSHOP, CAMBRIDGE, U.K., DECEMBER 9-11, 1993)
- */
- 
-#include "blowfish_crypter.h"
-
-#define BLOWFISH_BLOCK_SIZE 16
-
-typedef struct private_blowfish_crypter_t private_blowfish_crypter_t;
-
-/**
- * Class implementing the Blowfish symmetric encryption algorithm.
- * 
- * @ingroup crypters
- */
-struct private_blowfish_crypter_t {
-	
-	/**
-	 * Public part of this class.
-	 */
-	blowfish_crypter_t public;
-	
-	/**
-	 * Blowfish key schedule
-	 */
-	BF_KEY schedule;
-
-	/**
-	* Key size of this AES cypher object.
-	*/
-	u_int32_t key_size;
-};
-
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void decrypt(private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
-					chunk_t *decrypted)
-{
-	u_int8_t *in, *out;
-	
-	if (decrypted)
+void BF_set_key(BF_KEY *key, int len, const unsigned char *data)
 	{
-		*decrypted = chunk_alloc(data.len);
-		out = decrypted->ptr;
+	int i;
+	BF_LONG *p,ri,in[2];
+	const unsigned char *d,*end;
+
+
+	memcpy((char *)key,(const char *)&bf_init,sizeof(BF_KEY));
+	p=key->P;
+
+	if (len > ((BF_ROUNDS+2)*4)) len=(BF_ROUNDS+2)*4;
+
+	d=data;
+	end= &(data[len]);
+	for (i=0; i<(BF_ROUNDS+2); i++)
+		{
+		ri= *(d++);
+		if (d >= end) d=data;
+
+		ri<<=8;
+		ri|= *(d++);
+		if (d >= end) d=data;
+
+		ri<<=8;
+		ri|= *(d++);
+		if (d >= end) d=data;
+
+		ri<<=8;
+		ri|= *(d++);
+		if (d >= end) d=data;
+
+		p[i]^=ri;
+		}
+
+	in[0]=0L;
+	in[1]=0L;
+	for (i=0; i<(BF_ROUNDS+2); i+=2)
+		{
+		BF_encrypt(in,key);
+		p[i  ]=in[0];
+		p[i+1]=in[1];
+		}
+
+	p=key->S;
+	for (i=0; i<4*256; i+=2)
+		{
+		BF_encrypt(in,key);
+		p[i  ]=in[0];
+		p[i+1]=in[1];
+		}
 	}
-	else
-	{
-		out = data.ptr;
-	}
-	in = data.ptr;
 
-   BF_cbc_encrypt(in, out, data.len, &this->schedule, iv.ptr, FALSE);
-}
-
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void encrypt (private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
-					 chunk_t *encrypted)
-{
-	u_int8_t *in, *out;
-	
-	if (encrypted)
-	{
-		*encrypted = chunk_alloc(data.len);
-		out = encrypted->ptr;
-	}
-	else
-	{
-		out = data.ptr;
-	}
-	in = data.ptr;
-
-   BF_cbc_encrypt(in, out, data.len, &this->schedule, iv.ptr, TRUE);
-}
-
-/**
- * Implementation of crypter_t.get_block_size.
- */
-static size_t get_block_size (private_blowfish_crypter_t *this)
-{
-	return BLOWFISH_BLOCK_SIZE;
-}
-
-/**
- * Implementation of crypter_t.get_key_size.
- */
-static size_t get_key_size (private_blowfish_crypter_t *this)
-{
-	return this->key_size;
-}
-
-/**
- * Implementation of crypter_t.set_key.
- */
-static void set_key (private_blowfish_crypter_t *this, chunk_t key)
-{
-	BF_set_key(&this->schedule, key.len , key.ptr);
-}
-
-/**
- * Implementation of crypter_t.destroy and blowfish_crypter_t.destroy.
- */
-static void destroy (private_blowfish_crypter_t *this)
-{
-	free(this);
-}
-
-/*
- * Described in header
- */
-blowfish_crypter_t *blowfish_crypter_create(encryption_algorithm_t algo, size_t key_size)
-{
-	private_blowfish_crypter_t *this;
-	
-	if (algo != ENCR_BLOWFISH)
-	{
-		return NULL;
-	}
-	
-	this = malloc_thing(private_blowfish_crypter_t);
-	
-	this->key_size = key_size;
-	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
-	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
-	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
-	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
-	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
-	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
-	
-	return &(this->public);
-}

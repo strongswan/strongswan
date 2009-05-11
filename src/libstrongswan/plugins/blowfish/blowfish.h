@@ -1,5 +1,6 @@
-/*
- * Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
+/* crypto/bf/blowfish.h */
+/* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
+ * All rights reserved.
  *
  * This package is an SSL implementation written
  * by Eric Young (eay@cryptsoft.com).
@@ -55,139 +56,78 @@
  * [including the GNU Public Licence.]
  */
 
-#include "blowfish.h"
+#ifndef HEADER_BLOWFISH_H
+#define HEADER_BLOWFISH_H
 
-/* Blowfish as implemented from 'Blowfish: Springer-Verlag paper'
- * (From LECTURE NOTES IN COMPUTER SCIENCE 809, FAST SOFTWARE ENCRYPTION,
- * CAMBRIDGE SECURITY WORKSHOP, CAMBRIDGE, U.K., DECEMBER 9-11, 1993)
- */
- 
-#include "blowfish_crypter.h"
+#ifdef  __cplusplus
+extern "C" {
+#endif
 
-#define BLOWFISH_BLOCK_SIZE 16
+#ifdef NO_BF
+#error BF is disabled.
+#endif
 
-typedef struct private_blowfish_crypter_t private_blowfish_crypter_t;
-
-/**
- * Class implementing the Blowfish symmetric encryption algorithm.
- * 
- * @ingroup crypters
- */
-struct private_blowfish_crypter_t {
-	
-	/**
-	 * Public part of this class.
-	 */
-	blowfish_crypter_t public;
-	
-	/**
-	 * Blowfish key schedule
-	 */
-	BF_KEY schedule;
-
-	/**
-	* Key size of this AES cypher object.
-	*/
-	u_int32_t key_size;
-};
-
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void decrypt(private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
-					chunk_t *decrypted)
-{
-	u_int8_t *in, *out;
-	
-	if (decrypted)
-	{
-		*decrypted = chunk_alloc(data.len);
-		out = decrypted->ptr;
-	}
-	else
-	{
-		out = data.ptr;
-	}
-	in = data.ptr;
-
-   BF_cbc_encrypt(in, out, data.len, &this->schedule, iv.ptr, FALSE);
-}
-
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void encrypt (private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
-					 chunk_t *encrypted)
-{
-	u_int8_t *in, *out;
-	
-	if (encrypted)
-	{
-		*encrypted = chunk_alloc(data.len);
-		out = encrypted->ptr;
-	}
-	else
-	{
-		out = data.ptr;
-	}
-	in = data.ptr;
-
-   BF_cbc_encrypt(in, out, data.len, &this->schedule, iv.ptr, TRUE);
-}
-
-/**
- * Implementation of crypter_t.get_block_size.
- */
-static size_t get_block_size (private_blowfish_crypter_t *this)
-{
-	return BLOWFISH_BLOCK_SIZE;
-}
-
-/**
- * Implementation of crypter_t.get_key_size.
- */
-static size_t get_key_size (private_blowfish_crypter_t *this)
-{
-	return this->key_size;
-}
-
-/**
- * Implementation of crypter_t.set_key.
- */
-static void set_key (private_blowfish_crypter_t *this, chunk_t key)
-{
-	BF_set_key(&this->schedule, key.len , key.ptr);
-}
-
-/**
- * Implementation of crypter_t.destroy and blowfish_crypter_t.destroy.
- */
-static void destroy (private_blowfish_crypter_t *this)
-{
-	free(this);
-}
+#define BF_ENCRYPT	1
+#define BF_DECRYPT	0
 
 /*
- * Described in header
+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ * ! BF_LONG has to be at least 32 bits wide. If it's wider, then !
+ * ! BF_LONG_LOG2 has to be defined along.                        !
+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  */
-blowfish_crypter_t *blowfish_crypter_create(encryption_algorithm_t algo, size_t key_size)
-{
-	private_blowfish_crypter_t *this;
+
+#if defined(WIN16) || defined(__LP32__)
+#define BF_LONG unsigned long
+#elif defined(_CRAY) || defined(__ILP64__)
+#define BF_LONG unsigned long
+#define BF_LONG_LOG2 3
+#endif
+/*
+ * _CRAY note. I could declare short, but I have no idea what impact
+ * does it have on performance on none-T3E machines. I could declare
+ * int, but at least on C90 sizeof(int) can be chosen at compile time.
+ * So I've chosen long...
+ *					<appro@fy.chalmers.se>
+ */
 	
-	if (algo != ENCR_BLOWFISH)
+/* des.h-like hack <jjo-ipsec@mendoza.gov.ar> */
+#ifndef BF_LONG
+#ifdef __KERNEL__
+#include <linux/types.h>
+#else
+#include <sys/types.h>
+#endif
+#define BF_LONG u_int32_t
+#endif
+
+#define BF_ROUNDS	16
+#define BF_BLOCK	8
+
+typedef struct bf_key_st
 	{
-		return NULL;
-	}
-	
-	this = malloc_thing(private_blowfish_crypter_t);
-	
-	this->key_size = key_size;
-	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
-	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
-	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
-	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
-	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
-	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
-	
-	return &(this->public);
+	BF_LONG P[BF_ROUNDS+2];
+	BF_LONG S[4*256];
+	} BF_KEY;
+
+ 
+void BF_set_key(BF_KEY *key, int len, const unsigned char *data);
+
+void BF_encrypt(BF_LONG *data,const BF_KEY *key);
+void BF_decrypt(BF_LONG *data,const BF_KEY *key);
+
+void BF_ecb_encrypt(const unsigned char *in, unsigned char *out,
+	const BF_KEY *key, int enc);
+void BF_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
+	const BF_KEY *schedule, unsigned char *ivec, int enc);
+void BF_cfb64_encrypt(const unsigned char *in, unsigned char *out, long length,
+	const BF_KEY *schedule, unsigned char *ivec, int *num, int enc);
+void BF_ofb64_encrypt(const unsigned char *in, unsigned char *out, long length,
+	const BF_KEY *schedule, unsigned char *ivec, int *num);
+const char *BF_options(void);
+
+#ifdef  __cplusplus
 }
+#endif
+
+#endif
