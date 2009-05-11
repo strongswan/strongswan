@@ -206,8 +206,9 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			this->mutex->unlock(this->mutex);
 			return requested->clone(requested);
 		}
-
-		if (requested->get_family(requested) !=
+		
+		if (!requested->is_anyaddr(requested) &&
+			requested->get_family(requested) !=
 			pool->base->get_family(pool->base))
 		{
 			DBG1(DBG_CFG, "IP pool address family mismatch");
