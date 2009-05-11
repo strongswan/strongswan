@@ -275,7 +275,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, vip);
 			
 			cp = cp_payload_create();
-			cp->set_config_type(cp, CFG_REQUEST);
+			cp->set_config_type(cp, CFG_REPLY);
 			
 			build_vip(this, vip, cp);
 			vip->destroy(vip);
