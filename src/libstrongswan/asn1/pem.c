@@ -354,7 +354,9 @@ bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
 		}
 
 		if (passphrase != NULL)
-			DBG4("  passphrase:", passphrase->ptr, passphrase->len);
+		{
+			DBG4("  passphrase: %#B", passphrase);
+		}
 
 		/* try PEM format */
 		if (pem_to_bin(blob, passphrase, pgp))
