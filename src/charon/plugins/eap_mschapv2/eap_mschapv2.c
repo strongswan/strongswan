@@ -456,7 +456,7 @@ static status_t GenerateMSK(chunk_t password_hash_hash,
 	hasher->allocate_hash(hasher, concat, &master_send_key);
 	master_send_key.len = 16;
 	
-	*msk = chunk_cat("cccc", master_receive_key, keypad, master_send_key, keypad);
+	*msk = chunk_cat("cccc", master_receive_key, master_send_key, keypad, keypad);
 	
 	hasher->destroy(hasher);
 	chunk_free(&master_key);
