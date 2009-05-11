@@ -38,14 +38,24 @@ struct private_eap_authenticator_t {
 	ike_sa_t *ike_sa;
 	
 	/**
-	 * nonce to include in AUTH calculation
+	 * others nonce to include in AUTH calculation
 	 */
-	chunk_t nonce;
+	chunk_t received_nonce;
 	
 	/**
-	 * IKE_SA_INIT message data to include in AUTH calculation
+	 * our nonce to include in AUTH calculation
 	 */
-	chunk_t ike_sa_init;
+	chunk_t sent_nonce;
+	
+	/**
+	 * others IKE_SA_INIT message data to include in AUTH calculation
+	 */
+	chunk_t received_init;
+	
+	/**
+	 * our IKE_SA_INIT message data to include in AUTH calculation
+	 */
+	chunk_t sent_init;
 	
 	/**
 	 * Current EAP method processing
@@ -349,7 +359,8 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 /**
  * Verify AUTH payload
  */
-static bool verify_auth(private_eap_authenticator_t *this, message_t *message)
+static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
+						chunk_t nonce, chunk_t init)
 {
 	auth_payload_t *auth_payload;
 	chunk_t auth_data, recv_auth_data;
@@ -366,8 +377,8 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message)
 	}
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = this->ike_sa->get_keymat(this->ike_sa);
-	auth_data = keymat->get_psk_sig(keymat, TRUE, this->ike_sa_init,
-									this->nonce, this->msk, other_id);
+	auth_data = keymat->get_psk_sig(keymat, TRUE, init, nonce,
+									this->msk, other_id);
 	recv_auth_data = auth_payload->get_data(auth_payload);
 	if (!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
 	{
@@ -389,7 +400,8 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message)
 /**
  * Build AUTH payload
  */
-static void build_auth(private_eap_authenticator_t *this, message_t *message)
+static void build_auth(private_eap_authenticator_t *this, message_t *message,
+					   chunk_t nonce, chunk_t init)
 {
 	auth_payload_t *auth_payload;
 	identification_t *my_id;
@@ -402,8 +414,7 @@ static void build_auth(private_eap_authenticator_t *this, message_t *message)
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);
 	
-	auth_data = keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init,
-									this->nonce, this->msk, my_id);
+	auth_data = keymat->get_psk_sig(keymat, FALSE, init, nonce, this->msk, my_id);
 	auth_payload = auth_payload_create();
 	auth_payload->set_auth_method(auth_payload, AUTH_PSK);
 	auth_payload->set_data(auth_payload, auth_data);
@@ -421,7 +432,7 @@ static status_t process_server(private_eap_authenticator_t *this,
 	
 	if (this->eap_complete)
 	{
-		if (!verify_auth(this, message))
+		if (!verify_auth(this, message, this->sent_nonce, this->received_init))
 		{
 			return FAILED;
 		}
@@ -466,7 +477,7 @@ static status_t build_server(private_eap_authenticator_t *this,
 	}
 	if (this->eap_complete && this->auth_complete)
 	{
-		build_auth(this, message);
+		build_auth(this, message, this->received_nonce, this->sent_init);
 		return SUCCESS;
 	}
 	return FAILED;
@@ -482,7 +493,7 @@ static status_t process_client(private_eap_authenticator_t *this,
 	
 	if (this->eap_complete)
 	{
-		if (!verify_auth(this, message))
+		if (!verify_auth(this, message, this->sent_nonce, this->received_init))
 		{
 			return FAILED;
 		}
@@ -557,7 +568,7 @@ static status_t build_client(private_eap_authenticator_t *this,
 	}
 	if (this->eap_complete)
 	{
-		build_auth(this, message);
+		build_auth(this, message, this->received_nonce, this->sent_init);
 		return NEED_MORE;
 	}
 	return NEED_MORE;
@@ -579,7 +590,8 @@ static void destroy(private_eap_authenticator_t *this)
  * Described in header.
  */
 eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
-									chunk_t received_nonce, chunk_t sent_init)
+									chunk_t received_nonce, chunk_t sent_nonce,
+									chunk_t received_init, chunk_t sent_init)
 {
 	private_eap_authenticator_t *this = malloc_thing(private_eap_authenticator_t);
 	
@@ -588,8 +600,10 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
 	
 	this->ike_sa = ike_sa;
-	this->ike_sa_init = sent_init;
-	this->nonce = received_nonce;
+	this->received_init = received_init;
+	this->received_nonce = received_nonce;
+	this->sent_init = sent_init;
+	this->sent_nonce = sent_nonce;
 	this->msk = chunk_empty;
 	this->method = NULL;
 	this->eap_payload = NULL;
@@ -604,7 +618,8 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
  * Described in header.
  */
 eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
-									chunk_t sent_nonce, chunk_t received_init)
+									chunk_t received_nonce, chunk_t sent_nonce,
+									chunk_t received_init, chunk_t sent_init)
 {
 	private_eap_authenticator_t *this = malloc_thing(private_eap_authenticator_t);
 	
@@ -613,8 +628,10 @@ eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
 	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
 	
 	this->ike_sa = ike_sa;
-	this->ike_sa_init = received_init;
-	this->nonce = sent_nonce;
+	this->received_init = received_init;
+	this->received_nonce = received_nonce;
+	this->sent_init = sent_init;
+	this->sent_nonce = sent_nonce;
 	this->msk = chunk_empty;
 	this->method = NULL;
 	this->eap_payload = NULL;

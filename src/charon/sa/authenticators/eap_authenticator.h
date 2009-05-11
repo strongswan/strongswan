@@ -72,21 +72,27 @@ struct eap_authenticator_t {
  *
  * @param ike_sa			associated ike_sa
  * @param received_nonce	nonce received in IKE_SA_INIT
+ * @param sent_nonce		nonce sent in IKE_SA_INIT
+ * @param received_init		received IKE_SA_INIT message data
  * @param sent_init			sent IKE_SA_INIT message data
  * @return					EAP authenticator
  */
 eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
-									chunk_t received_nonce, chunk_t sent_init);
+									chunk_t received_nonce, chunk_t sent_nonce,
+									chunk_t received_init, chunk_t sent_init);
 
 /**
  * Create an authenticator to authenticate EAP clients.
  * 
  * @param ike_sa			associated ike_sa
+ * @param received_nonce	nonce received in IKE_SA_INIT
  * @param sent_nonce		nonce sent in IKE_SA_INIT
  * @param received_init		received IKE_SA_INIT message data
+ * @param sent_init			sent IKE_SA_INIT message data
  * @return					EAP authenticator
  */
 eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
-									chunk_t sent_nonce, chunk_t received_init);
+									chunk_t received_nonce, chunk_t sent_nonce,
+									chunk_t received_init, chunk_t sent_init);
 
 #endif /** EAP_AUTHENTICATOR_H_ @}*/

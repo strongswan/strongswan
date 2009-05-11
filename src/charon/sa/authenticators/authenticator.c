@@ -44,9 +44,9 @@ ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_EAP,
 /**
  * Described in header.
  */
-authenticator_t *authenticator_create_builder(
-									ike_sa_t *ike_sa, auth_cfg_t *cfg,
-									chunk_t received_nonce, chunk_t sent_init)
+authenticator_t *authenticator_create_builder(ike_sa_t *ike_sa, auth_cfg_t *cfg,
+									chunk_t received_nonce, chunk_t sent_nonce,
+									chunk_t received_init, chunk_t sent_init)
 {
 	switch ((uintptr_t)cfg->get(cfg, AUTH_RULE_AUTH_CLASS))
 	{
@@ -60,7 +60,7 @@ authenticator_t *authenticator_create_builder(
 											received_nonce, sent_init);
 		case AUTH_CLASS_EAP:
 			return (authenticator_t*)eap_authenticator_create_builder(ike_sa,
-											received_nonce, sent_init);
+						received_nonce, sent_nonce, received_init, sent_init);
 		default:
 			return NULL;
 	}
@@ -71,7 +71,8 @@ authenticator_t *authenticator_create_builder(
  */
 authenticator_t *authenticator_create_verifier(
 									ike_sa_t *ike_sa, message_t *message,
-									chunk_t sent_nonce, chunk_t received_init)
+									chunk_t received_nonce, chunk_t sent_nonce,
+									chunk_t received_init, chunk_t sent_init)
 {
 	auth_payload_t *auth_payload;
 	
@@ -79,7 +80,7 @@ authenticator_t *authenticator_create_verifier(
 	if (auth_payload == NULL)
 	{
 		return (authenticator_t*)eap_authenticator_create_verifier(ike_sa,
-													sent_nonce, received_init);
+						received_nonce, sent_nonce, received_init, sent_init);
 	}
 	switch (auth_payload->get_auth_method(auth_payload))
 	{

@@ -412,9 +412,10 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 		message->add_payload(message, (payload_t*)id_payload);
 		
 		/* build authentication data */
-		this->my_auth = authenticator_create_builder(
-									this->ike_sa, cfg, this->other_nonce, 
-									this->my_packet->get_data(this->my_packet));
+		this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
+							this->other_nonce, this->my_nonce,
+							this->other_packet->get_data(this->other_packet),
+							this->my_packet->get_data(this->my_packet));
 		if (!this->my_auth)
 		{
 			return FAILED;
@@ -531,9 +532,10 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		}
 		
 		/* verify authentication data */
-		this->other_auth = authenticator_create_verifier(
-							this->ike_sa, message, this->my_nonce,
-							this->other_packet->get_data(this->other_packet));
+		this->other_auth = authenticator_create_verifier(this->ike_sa,
+							message, this->other_nonce, this->my_nonce,
+							this->other_packet->get_data(this->other_packet),
+							this->my_packet->get_data(this->my_packet));
 		if (!this->other_auth)
 		{
 			this->authentication_failed = TRUE;
@@ -651,9 +653,10 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		message->add_payload(message, (payload_t*)id_payload);
 		
 		/* build authentication data */
-		this->my_auth = authenticator_create_builder(
-								this->ike_sa, cfg, this->other_nonce, 
-								this->my_packet->get_data(this->my_packet));
+		this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
+							this->other_nonce, this->my_nonce,
+							this->other_packet->get_data(this->other_packet),
+							this->my_packet->get_data(this->my_packet));
 		if (!this->my_auth)
 		{
 			message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
@@ -856,9 +859,10 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 			cfg->add(cfg, AUTH_RULE_IDENTITY, id->clone(id));
 			
 			/* verify authentication data */
-			this->other_auth = authenticator_create_verifier(
-							this->ike_sa, message, this->my_nonce,
-							this->other_packet->get_data(this->other_packet));
+			this->other_auth = authenticator_create_verifier(this->ike_sa,
+							message, this->other_nonce, this->my_nonce,
+							this->other_packet->get_data(this->other_packet),
+							this->my_packet->get_data(this->my_packet));
 			if (!this->other_auth)
 			{
 				return FAILED;
