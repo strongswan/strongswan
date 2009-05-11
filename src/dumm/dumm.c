@@ -28,7 +28,7 @@
 
 #include "dumm.h"
 
-#define PERME (S_IRWXU | S_IRWXG)
+#define PERME (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
 #define GUEST_DIR "guests"
 #define TEMPLATE_DIR "templates"
 
@@ -134,10 +134,10 @@ static void clear_template(private_dumm_t *this)
 {
 	enumerator_t *enumerator;
 	guest_t *guest;
-
+	
 	free(this->template);
 	this->template = NULL;
-
+	
 	enumerator = this->guests->create_enumerator(this->guests);
 	while (enumerator->enumerate(enumerator, (void**)&guest))
 	{
@@ -253,7 +253,7 @@ static void destroy(private_dumm_t *this)
 {
 	enumerator_t *enumerator;
 	guest_t *guest;
-
+	
 	this->bridges->destroy_offset(this->bridges, offsetof(bridge_t, destroy));
 	
 	enumerator = this->guests->create_enumerator(this->guests);
@@ -332,11 +332,11 @@ dumm_t *dumm_create(char *dir)
 	}
 	else
 	{
-	 	if (getcwd(cwd, sizeof(cwd)) == NULL)
-	 	{
-	 		free(this);
-	 		return NULL;
-	 	}
+		if (getcwd(cwd, sizeof(cwd)) == NULL)
+		{
+			free(this);
+			return NULL;
+		}
 		if (dir)
 		{
 			if (asprintf(&this->dir, "%s/%s", cwd, dir) < 0)
