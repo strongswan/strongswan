@@ -278,6 +278,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			cp->set_config_type(cp, CFG_REQUEST);
 			
 			build_vip(this, vip, cp);
+			vip->destroy(vip);
 			
 			/* if we add an IP, we also look for other attributes */
 			enumerator = charon->attributes->create_attribute_enumerator(
