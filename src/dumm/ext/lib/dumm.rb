@@ -30,8 +30,12 @@ module Dumm
   end
   
   # shortcut for Template loading
-  def template(name)
-    Template.load name
+  def template(name = nil)
+    if name
+      Template.load name
+    else
+      Template.each {|t| puts t }
+    end
   end
   
   # unload templates, reset all guests and delete bridges
@@ -49,7 +53,7 @@ module Dumm
   # wait until all running guests have booted up
   def boot
     Guest.each {|g|
-	    g.boot if g.running?
+      g.boot if g.running?
     }
     return Dumm
   end
