@@ -62,6 +62,13 @@
 #define SOL_UDP IPPROTO_UDP
 #endif
 
+/* IPV6_RECVPKTINFO is defined in RFC 3542 which obsoletes RFC 2292 that
+ * previously defined IPV6_PKTINFO */
+#ifndef IPV6_RECVPKTINFO
+#define IPV6_RECVPKTINFO IPV6_PKTINFO;
+#endif
+
+
 typedef struct private_socket_t private_socket_t;
 
 /**
