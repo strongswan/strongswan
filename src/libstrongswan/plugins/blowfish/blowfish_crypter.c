@@ -64,7 +64,7 @@
  
 #include "blowfish_crypter.h"
 
-#define BLOWFISH_BLOCK_SIZE		16
+#define BLOWFISH_BLOCK_SIZE		8
 
 typedef struct private_blowfish_crypter_t private_blowfish_crypter_t;
 
