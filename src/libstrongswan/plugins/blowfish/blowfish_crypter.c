@@ -64,7 +64,7 @@
  
 #include "blowfish_crypter.h"
 
-#define BLOWFISH_BLOCK_SIZE 16
+#define BLOWFISH_BLOCK_SIZE		16
 
 typedef struct private_blowfish_crypter_t private_blowfish_crypter_t;
 
@@ -86,7 +86,7 @@ struct private_blowfish_crypter_t {
 	BF_KEY schedule;
 
 	/**
-	* Key size of this AES cypher object.
+	* Key size of this Blowfish cipher object.
 	*/
 	u_int32_t key_size;
 };
