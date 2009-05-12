@@ -1137,11 +1137,11 @@ static void destroy(private_child_create_t *this)
 {
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
-	if (this->tsi)
+	if (this->tsr)
 	{
 		this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
 	}
-	if (this->tsr)
+	if (this->tsi)
 	{
 		this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
 	}
