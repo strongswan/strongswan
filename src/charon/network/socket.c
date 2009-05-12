@@ -114,7 +114,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	int data_offset, oldstate;
 	fd_set rfds;
 	int max_fd = 0, selected = 0;
-	u_int16_t port;
+	u_int16_t port = 0;
 	
 	FD_ZERO(&rfds);
 	
