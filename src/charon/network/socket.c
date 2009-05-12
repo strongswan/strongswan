@@ -54,7 +54,11 @@
 /* these are not defined on some platforms */
 #ifndef SOL_IP
 #define SOL_IP IPPROTO_IP
+#endif
+#ifndef SOL_IPV6
 #define SOL_IPV6 IPPROTO_IPV6
+#endif
+#ifndef SOL_UDP
 #define SOL_UDP IPPROTO_UDP
 #endif
 
@@ -213,22 +217,24 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 				dest = host_create_from_sockaddr((sockaddr_t*)&dst);
 			}
 			if (cmsgptr->cmsg_level == SOL_IP &&
-#ifdef IP_RECVDSTADDR
+#ifdef IP_PKTINFO
+				cmsgptr->cmsg_type == IP_PKTINFO
+#elif defined(IP_RECVDSTADDR)
 				cmsgptr->cmsg_type == IP_RECVDSTADDR
 #else
-				cmsgptr->cmsg_type == IP_PKTINFO
+				FALSE
 #endif
 				)
 			{
 				struct in_addr *addr;
-				struct sockaddr_in dst;	
+				struct sockaddr_in dst;
 
-#ifdef IP_RECVDSTADDR
-				addr = (struct in_addr*)CMSG_DATA(cmsgptr);
-#else
+#ifdef IP_PKTINFO
 				struct in_pktinfo *pktinfo;
 				pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsgptr);
 				addr = &pktinfo->ipi_addr;
+#elif defined(IP_RECVDSTADDR)
+				addr = (struct in_addr*)CMSG_DATA(cmsgptr);
 #endif
 				memset(&dst, 0, sizeof(dst));
 				memcpy(&dst.sin_addr, addr, sizeof(dst.sin_addr));
@@ -355,31 +361,33 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	{
 		if (family == AF_INET)
 		{
+#if defined(IP_PKTINFO) || defined(IP_SENDSRCADDR)
 			struct in_addr *addr;
 			struct sockaddr_in *sin;
-#ifdef IP_SENDSRCADDR
-			char buf[CMSG_SPACE(sizeof(struct in_addr))];
-#else
+#ifdef IP_PKTINFO
 			char buf[CMSG_SPACE(sizeof(struct in_pktinfo))];
 			struct in_pktinfo *pktinfo;
+#elif defined(IP_SENDSRCADDR)
+			char buf[CMSG_SPACE(sizeof(struct in_addr))];
 #endif
 			msg.msg_control = buf;
 			msg.msg_controllen = sizeof(buf);
 			cmsg = CMSG_FIRSTHDR(&msg);
 			cmsg->cmsg_level = SOL_IP;
-#ifdef IP_SENDSRCADDR
-			cmsg->cmsg_type = IP_SENDSRCADDR;
-			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
-			addr = (struct in_addr*)CMSG_DATA(cmsg);
-#else
+#ifdef IP_PKTINFO
 			cmsg->cmsg_type = IP_PKTINFO;
 			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 			pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
 			memset(pktinfo, 0, sizeof(struct in_pktinfo));
 			addr = &pktinfo->ipi_spec_dst;
+#elif defined(IP_SENDSRCADDR)
+			cmsg->cmsg_type = IP_SENDSRCADDR;
+			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+			addr = (struct in_addr*)CMSG_DATA(cmsg);
 #endif
 			sin = (struct sockaddr_in*)src->get_sockaddr(src);
 			memcpy(addr, &sin->sin_addr, sizeof(struct in_addr));
+#endif /* IP_PKTINFO || IP_SENDSRCADDR */
 		}
 		else
 		{
@@ -419,7 +427,7 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 	int type = UDP_ENCAP_ESPINUDP;
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
-	u_int sol, pktinfo;
+	u_int sol, pktinfo = 0;
 	int skt;
 	
 	memset(&addr, 0, sizeof(addr));
@@ -434,10 +442,10 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 			sin->sin_port = htons(port);
 			addrlen = sizeof(struct sockaddr_in);
 			sol = SOL_IP;
-#ifdef IP_RECVDSTADDR
-			pktinfo = IP_RECVDSTADDR;
-#else
+#ifdef IP_PKTINFO
 			pktinfo = IP_PKTINFO;
+#elif defined(IP_RECVDSTADDR)
+			pktinfo = IP_RECVDSTADDR;
 #endif
 			break;
 		}
@@ -478,11 +486,14 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 	}
 	
 	/* get additional packet info on receive */
-	if (setsockopt(skt, sol, pktinfo, &on, sizeof(on)) < 0)
+	if (pktinfo > 0)
 	{
-		DBG1(DBG_NET, "unable to set IP_PKTINFO on socket: %s", strerror(errno));
-		close(skt);
-		return 0;
+		if (setsockopt(skt, sol, pktinfo, &on, sizeof(on)) < 0)
+		{
+			DBG1(DBG_NET, "unable to set IP_PKTINFO on socket: %s", strerror(errno));
+			close(skt);
+			return 0;
+		}
 	}
 	
 	/* enable UDP decapsulation globally, only for one socket needed */
