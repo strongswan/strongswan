@@ -49,6 +49,11 @@ struct private_ike_cert_pre_t {
 	 * Do we accept HTTP certificate lookup requests
 	 */
 	bool do_http_lookup;
+	
+	/**
+	 * wheter this is the final authentication round
+	 */
+	bool final;
 };
 
 /**
@@ -387,6 +392,37 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 }
 
 /**
+ * Check if this is the final authentication round
+ */
+static bool final_auth(message_t *message)
+{
+	enumerator_t *enumerator;
+	payload_t *payload;
+	notify_payload_t *notify;
+	
+	/* we check for an AUTH payload without a ANOTHER_AUTH_FOLLOWS notify */
+	if (message->get_payload(message, AUTHENTICATION) == NULL)
+	{
+		return FALSE;
+	}
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
+	{
+		if (payload->get_type(payload) == NOTIFY)
+		{
+			notify = (notify_payload_t*)payload;
+			if (notify->get_notify_type(notify) == ANOTHER_AUTH_FOLLOWS)
+			{
+				enumerator->destroy(enumerator);
+				return FALSE;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	return TRUE;
+}
+
+/**
  * Implementation of task_t.process for initiator
  */
 static status_t build_i(private_ike_cert_pre_t *this, message_t *message)
@@ -408,6 +444,7 @@ static status_t process_r(private_ike_cert_pre_t *this, message_t *message)
 		process_certreqs(this, message);
 		process_certs(this, message);
 	}
+	this->final = final_auth(message);
 	return NEED_MORE;
 }
 
@@ -420,7 +457,7 @@ static status_t build_r(private_ike_cert_pre_t *this, message_t *message)
 	{
 		build_certreqs(this, message);
 	}
-	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
+	if (this->final)
 	{
 		return SUCCESS;
 	}
@@ -438,33 +475,9 @@ static status_t process_i(private_ike_cert_pre_t *this, message_t *message)
 	}
 	process_certs(this, message);
 	
-	/* as ike_auth is not processed yet, we don't know if authentication
-	 * is complete (and we can return SUCCESS). Therefore we check for
-	 * an AUTH payload without a ANOTHER_AUTH_FOLLOWS notify. */
-	if (message->get_payload(message, AUTHENTICATION))
+	if (final_auth(message))
 	{
-		enumerator_t *enumerator;
-		payload_t *payload;
-		notify_payload_t *notify;
-		bool done = TRUE;
-		
-		enumerator = message->create_payload_enumerator(message);
-		while (enumerator->enumerate(enumerator, &payload))
-		{
-			if (payload->get_type(payload) == NOTIFY)
-			{
-				notify = (notify_payload_t*)payload;
-				if (notify->get_notify_type(notify) == ANOTHER_AUTH_FOLLOWS)
-				{
-					done = FALSE;
-				}
-			}
-		}
-		enumerator->destroy(enumerator);
-		if (done)
-		{
-			return SUCCESS;
-		}
+		return SUCCESS;
 	}
 	return NEED_MORE;
 }
@@ -518,6 +531,7 @@ ike_cert_pre_t *ike_cert_pre_create(ike_sa_t *ike_sa, bool initiator)
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
 	this->do_http_lookup = FALSE;
+	this->final = FALSE;
 	
 	return &this->public;
 }
