@@ -210,7 +210,14 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			rekey = child_sa->get_lifetime(child_sa, FALSE);
 			if (rekey)
 			{
-				fprintf(out, "in %V", &now, &rekey);
+				if (now > rekey)
+				{
+					fprintf(out, "active");
+				}
+				else
+				{
+					fprintf(out, "in %V", &now, &rekey);
+				}
 			}
 			else
 			{
