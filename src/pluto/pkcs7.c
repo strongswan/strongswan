@@ -421,7 +421,7 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 		case PKCS7_RECIPIENT_INFO_VERSION:
 			if (*object.ptr != 0)
 			{
-				plog("recipient info version is not 0");
+				DBG1("recipient info version is not 0");
 				goto end;
 			}
 			break;
