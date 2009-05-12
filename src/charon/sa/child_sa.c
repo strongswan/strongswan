@@ -502,8 +502,14 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 				this->mode, this->ipcomp, cpi, this->encap, update);
 	
 	now = time(NULL);
-	this->rekey_time = now + soft;
-	this->expire_time = now + hard;
+	if (soft)
+	{
+		this->rekey_time = now + soft;
+	}
+	if (hard)
+	{
+		this->expire_time = now + hard;
+	}
 	return status;
 }
 
@@ -814,6 +820,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
 	this->proposal = NULL;
+	this->rekey_time = 0;
+	this->expire_time = 0;
 	this->config = config;
 	config->get_ref(config);
 	
