@@ -624,6 +624,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	
 	/* message complete, send it */
 	DESTROY_IF(this->responding.packet);
+	this->responding.packet = NULL;
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->responding.packet);
 	charon->bus->message(charon->bus, message, FALSE);
