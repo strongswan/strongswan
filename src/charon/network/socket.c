@@ -71,27 +71,27 @@ struct private_socket_t {
 	/**
 	 * public functions
 	 */
-	 socket_t public;
+	socket_t public;
+	
+	/**
+	 * IPv4 socket (500)
+	 */
+	int ipv4;
 	 
-	 /**
-	  * IPv4 socket (500)
-	  */
-	 int ipv4;
-	 
-	 /**
-	  * IPv4 socket for NATT (4500)
-	  */
-	 int ipv4_natt;
-	 
-	 /**
-	  * IPv6 socket (500)
-	  */
-	 int ipv6;
-	 
-	 /**
-	  * IPv6 socket for NATT (4500)
-	  */
-	 int ipv6_natt;
+	/**
+	 * IPv4 socket for NATT (4500)
+	 */
+	int ipv4_natt;
+	
+	/**
+	 * IPv6 socket (500)
+	 */
+	int ipv6;
+	
+	/**
+	 * IPv6 socket for NATT (4500)
+	 */
+	int ipv6_natt;
 };
 
 /**
@@ -108,7 +108,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	fd_set rfds;
 	int max_fd = 0, selected = 0;
 	u_int16_t port;
-
+	
 	FD_ZERO(&rfds);
 	
 	if (this->ipv4)
@@ -618,7 +618,7 @@ socket_t *socket_create()
 			DBG1(DBG_NET, "could not open IPv4 NAT-T socket");
 		}
 	}
-
+	
 	this->ipv6 = open_socket(this, AF_INET6, IKEV2_UDP_PORT);
 	if (this->ipv6 == 0)
 	{
