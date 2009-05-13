@@ -55,56 +55,56 @@ struct private_receiver_t {
 	 * Threads job receiving packets
 	 */
 	callback_job_t *job;
-
+	
 	/**
 	 * Assigned thread.
 	 */
 	pthread_t assigned_thread;
 	 
- 	/**
- 	 * current secret to use for cookie calculation
- 	 */
- 	char secret[SECRET_LENGTH];
- 	
- 	/**
- 	 * previous secret used to verify older cookies
- 	 */
- 	char secret_old[SECRET_LENGTH];
- 	
- 	/**
- 	 * how many times we have used "secret" so far
- 	 */
- 	u_int32_t secret_used;
- 	
- 	/**
- 	 * time we did the cookie switch
- 	 */
- 	u_int32_t secret_switch;
- 	
- 	/**
- 	 * time offset to use, hides our system time
- 	 */
- 	u_int32_t secret_offset;
- 	
- 	/**
- 	 * the RNG to use for secret generation
- 	 */
- 	rng_t *rng;
- 	
- 	/**
- 	 * hasher to use for cookie calculation
- 	 */
- 	hasher_t *hasher;
- 	
- 	/**
- 	 * require cookies after this many half open IKE_SAs
- 	 */
- 	u_int32_t cookie_threshold;
- 	
- 	/**
- 	 * how many half open IKE_SAs per peer before blocking
- 	 */
- 	u_int32_t block_threshold;
+	/**
+	 * current secret to use for cookie calculation
+	 */
+	char secret[SECRET_LENGTH];
+	
+	/**
+	 * previous secret used to verify older cookies
+	 */
+	char secret_old[SECRET_LENGTH];
+	
+	/**
+	 * how many times we have used "secret" so far
+	 */
+	u_int32_t secret_used;
+	
+	/**
+	 * time we did the cookie switch
+	 */
+	u_int32_t secret_switch;
+	
+	/**
+	 * time offset to use, hides our system time
+	 */
+	u_int32_t secret_offset;
+	
+	/**
+	 * the RNG to use for secret generation
+	 */
+	rng_t *rng;
+	
+	/**
+	 * hasher to use for cookie calculation
+	 */
+	hasher_t *hasher;
+	
+	/**
+	 * require cookies after this many half open IKE_SAs
+	 */
+	u_int32_t cookie_threshold;
+	
+	/**
+	 * how many half open IKE_SAs per peer before blocking
+	 */
+	u_int32_t block_threshold;
 };
 
 /**
@@ -167,10 +167,10 @@ static bool cookie_verify(private_receiver_t *this, message_t *message,
 	u_int32_t t, now;
 	chunk_t reference;
 	chunk_t secret;
-
+	
 	now = time(NULL);
 	t = *(u_int32_t*)cookie.ptr;
-
+	
 	if (cookie.len != sizeof(u_int32_t) +
 			this->hasher->get_hash_size(this->hasher) || 
 		t < now - this->secret_offset - COOKIE_LIFETIME)
@@ -353,7 +353,7 @@ receiver_t *receiver_create()
 {
 	private_receiver_t *this = malloc_thing(private_receiver_t);
 	u_int32_t now = time(NULL);
-
+	
 	this->public.destroy = (void(*)(receiver_t*)) destroy;
 	
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
@@ -385,7 +385,7 @@ receiver_t *receiver_create()
 		this->cookie_threshold = 0;
 		this->block_threshold = 0;
 	}
-
+	
 	this->job = callback_job_create((callback_job_cb_t)receive_packets,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
