@@ -301,26 +301,18 @@ u_int asn1_length(chunk_t *blob)
 
 #define TIME_MAX	0x7fffffff
 
-#if !defined(HAVE_TIMEGM) && !defined(HAVE_VAR_TIMEZONE)
-pthread_once_t utc_offset_once = PTHREAD_ONCE_INIT;
-static time_t utc_offset;
-static void init_utc_offset()
-{
-	time_t now;
-	struct tm utc;
-	now = time(NULL);
-	gmtime_r(&now, &utc);
-	utc_offset = mktime(&utc) - now;
-}
-#endif
+static const int days[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
+static const int tm_leap_1970 = 477;
 
 /**
  * Converts ASN.1 UTCTIME or GENERALIZEDTIME into calender time
  */
 time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 {
-	struct tm t;
-	time_t tc, tz_offset;
+	int tm_year, tm_mon, tm_day, tm_days, tm_hour, tm_min, tm_sec;
+	int tm_leap_4, tm_leap_100, tm_leap_400, tm_leap;
+	int tz_hour, tz_min, tz_offset;
+	time_t tm_secs;
 	u_char *eot = NULL;
 	
 	if ((eot = memchr(utctime->ptr, 'Z', utctime->len)) != NULL)
@@ -329,15 +321,11 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	}
 	else if ((eot = memchr(utctime->ptr, '+', utctime->len)) != NULL)
 	{
-		int tz_hour, tz_min;
-	
 		sscanf(eot+1, "%2d%2d", &tz_hour, &tz_min);
 		tz_offset = 3600*tz_hour + 60*tz_min;  /* positive time zone offset */
 	}
 	else if ((eot = memchr(utctime->ptr, '-', utctime->len)) != NULL)
 	{
-		int tz_hour, tz_min;
-	
 		sscanf(eot+1, "%2d%2d", &tz_hour, &tz_min);
 		tz_offset = -3600*tz_hour - 60*tz_min;  /* negative time zone offset */
 	}
@@ -351,61 +339,58 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 		const char* format = (type == ASN1_UTCTIME)? "%2d%2d%2d%2d%2d":
 													 "%4d%2d%2d%2d%2d";
 	
-		sscanf(utctime->ptr, format, &t.tm_year, &t.tm_mon, &t.tm_mday,
-			   						 &t.tm_hour, &t.tm_min);
+		sscanf(utctime->ptr, format, &tm_year, &tm_mon, &tm_day, &tm_hour, &tm_min);
 	}
 	
 	/* is there a seconds field? */
 	if ((eot - utctime->ptr) == ((type == ASN1_UTCTIME)?12:14))
 	{
-		sscanf(eot-2, "%2d", &t.tm_sec);
+		sscanf(eot-2, "%2d", &tm_sec);
 	}
 	else
 	{
-		t.tm_sec = 0;
+		tm_sec = 0;
 	}
 	
-	/* representation of year */
-	if (t.tm_year >= 1900)
+	/* representation of two-digit years */
+	if (type == ASN1_UTCTIME)
 	{
-		t.tm_year -= 1900;
-	}
-	else if (t.tm_year >= 100)
-	{
-		return 0;
-	}
-	else if (t.tm_year < 50)
-	{
-		t.tm_year += 100;
+		tm_year += (tm_year < 50) ? 2000 : 1900;
 	}
 	
-	/* representation of month 0..11*/
-	t.tm_mon--;
-	
-	/* set daylight saving time to off */
-	t.tm_isdst = 0;
-	
-	/* convert to time_t */
-#ifdef HAVE_TIMEGM
-	tc = timegm(&t);
-#else
-	tc = mktime(&t);
-#endif
-	if (tc == -1)
+	/* prevent large 32 bit integer overflows */
+	if (sizeof(time_t) == 8 && tm_year > 1938)
 	{
 		return TIME_MAX;
 	}
 
-	/* if no conversion overflow occurred, compensate timezone */
-#ifndef HAVE_TIMEGM
-#ifdef HAVE_VAR_TIMEZONE
-	tz_offset += timezone;
-#else
-	pthread_once(&utc_offset_once, init_utc_offset);
-	tz_offset += utc_offset;
-#endif
-#endif
-	return tc - tz_offset;
+	/* representation of months as 0..11*/
+	if (tm_mon > 12)
+	{
+		return 0; /* error in time format */
+	}
+	tm_mon--;
+	
+	/* representation of days as 0..30 */
+	tm_day--;
+
+	/* number of leap years between last year and 1970? */
+	tm_leap_4 = (tm_year - 1) / 4;
+	tm_leap_100 = tm_leap_4 / 25;
+	tm_leap_400 = tm_leap_100 / 4;
+	tm_leap = tm_leap_4 - tm_leap_100 + tm_leap_400 - tm_leap_1970;
+
+	/* if date later then February, is the current year a leap year? */
+	if ((tm_mon > 1 && 4*(tm_leap_4 + 1) == tm_year) &&
+		(100*(tm_leap_100 + 1) != tm_year || 400*(tm_leap_400 + 1) == tm_year))
+	{
+		tm_leap++;
+	}	
+	tm_days = 365 * (tm_year - 1970) + days[tm_mon] + tm_day + tm_leap;
+	tm_secs = 60 * (60 * (24 * tm_days + tm_hour) + tm_min) + tm_sec - tz_offset;
+
+	/* has a 32 bit overflow occurred? */
+	return (tm_secs < 0) ? TIME_MAX : tm_secs;
 }
 
 /**
