@@ -110,7 +110,7 @@ static void decrypt(private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
 	}
 	in = data.ptr;
 
-   BF_cbc_encrypt(in, out, data.len, &this->schedule, iv.ptr, FALSE);
+   BF_cbc_encrypt(in, out, data.len, &this->schedule, iv.ptr, 0);
 }
 
 /**
@@ -132,7 +132,7 @@ static void encrypt (private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
 	}
 	in = data.ptr;
 
-   BF_cbc_encrypt(in, out, data.len, &this->schedule, iv.ptr, TRUE);
+   BF_cbc_encrypt(in, out, data.len, &this->schedule, iv.ptr, 1);
 }
 
 /**
