@@ -359,7 +359,7 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	}
 	
 	/* prevent large 32 bit integer overflows */
-	if (sizeof(time_t) == 8 && tm_year > 1938)
+	if (sizeof(time_t) == 4 && tm_year > 2038)
 	{
 		return TIME_MAX;
 	}
