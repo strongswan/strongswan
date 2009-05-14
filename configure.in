@@ -820,7 +820,7 @@ AC_CHECK_FUNCS(backtrace)
 AC_CHECK_FUNCS(prctl)
 AC_CHECK_FUNCS(gethostbyname_r)
 
-AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h)
+AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h)
 
 AC_CHECK_MEMBERS([struct sockaddr.sa_len], [], [],
 [

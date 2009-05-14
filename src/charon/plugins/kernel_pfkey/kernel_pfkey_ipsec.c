@@ -30,6 +30,8 @@
 
 #ifdef HAVE_NETIPSEC_IPSEC_H
 #include <netipsec/ipsec.h>
+#elif defined(HAVE_NETINET6_IPSEC_H)
+#include <netinet6/ipsec.h>
 #else
 #include <linux/ipsec.h>
 #endif
