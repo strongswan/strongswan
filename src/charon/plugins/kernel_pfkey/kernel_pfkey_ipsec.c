@@ -548,7 +548,9 @@ static kernel_algorithm_t integrity_algs[] = {
 	{AUTH_HMAC_SHA2_512_256,	SADB_X_AALG_SHA2_512HMAC	},
 /*	{AUTH_DES_MAC,				0,							}, */
 /*	{AUTH_KPDK_MD5,				0,							}, */
+#ifdef SADB_X_AALG_AES_XCBC_MAC
 	{AUTH_AES_XCBC_96,			SADB_X_AALG_AES_XCBC_MAC,	},
+#endif
 	{END_OF_LIST,				0,							},
 };
 
