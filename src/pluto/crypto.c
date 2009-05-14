@@ -17,12 +17,9 @@
 #include <string.h>
 #include <stddef.h>
 #include <sys/types.h>
+#include <errno.h>
 
 #include <freeswan.h>
-#define HEADER_DES_LOCL_H   /* stupid trick to force prototype decl in <des.h> */
-#include <libdes/des.h>
-
-#include <errno.h>
 
 #include "constants.h"
 #include "defs.h"
