@@ -42,9 +42,7 @@ typedef unsigned long so_serial_t;
 
 /* memory allocation */
 
-extern void *clone_bytes(const void *orig, size_t size);
-
-#define clone_thing(orig) clone_bytes((const void *)&(orig), sizeof(orig))
+#define clone_thing(orig) clalloc((void *)&(orig), sizeof(orig))
 
 #define clone_str(str) \
 	((str) == NULL? NULL : strdup(str))

@@ -38,14 +38,6 @@ all_zero(const unsigned char *m, size_t len)
 	return TRUE;
 }
 
-void *clone_bytes(const void *orig, size_t size)
-{
-	void *p = malloc(size);
-
-	memcpy(p, orig, size);
-	return p;
-}
-
 /*  Note that there may be as many as six IDs that are temporary at
  *  one time before unsharing the two ends of a connection. So we need
  *  at least six temporary buffers for DER_ASN1_DN IDs.
