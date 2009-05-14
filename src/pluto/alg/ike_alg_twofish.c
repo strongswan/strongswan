@@ -48,11 +48,12 @@ struct encrypt_desc encrypt_desc_twofish =
 	algo_id:   	OAKLEY_TWOFISH_CBC,
 	algo_next: 	NULL,
 	enc_ctxsize: 	sizeof(twofish_context),
-        enc_blocksize: 	TWOFISH_CBC_BLOCK_SIZE,
-        keydeflen: 	TWOFISH_KEY_MIN_LEN,
-        keyminlen: 	TWOFISH_KEY_DEF_LEN,
+	enc_blocksize: 	TWOFISH_CBC_BLOCK_SIZE,
+	keydeflen: 	TWOFISH_KEY_MIN_LEN,
+	keyminlen: 	TWOFISH_KEY_DEF_LEN,
 	keymaxlen: 	TWOFISH_KEY_MAX_LEN,
 	do_crypt: 	do_twofish,
+	enc_testvectors: NULL
 };
 
 struct encrypt_desc encrypt_desc_twofish_ssh =

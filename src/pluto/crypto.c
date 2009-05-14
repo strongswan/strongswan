@@ -61,6 +61,7 @@ static struct encrypt_desc crypto_encryptor_3des =
 		keyminlen:      DES_CBC_BLOCK_SIZE * 3 * BITS_PER_BYTE,
 		keymaxlen:      DES_CBC_BLOCK_SIZE * 3 * BITS_PER_BYTE,
 		do_crypt:       do_3des,
+		enc_testvectors: NULL
 };
 
 /* MD5 hash test vectors
@@ -297,12 +298,12 @@ static const hmac_testvector_t md5_hmac_testvectors[] = {
 
 static struct hash_desc crypto_hasher_md5 =
 {       
-		algo_type: IKE_ALG_HASH,
-		algo_id:   OAKLEY_MD5,
-		algo_next: NULL, 
-		hash_digest_size: HASH_SIZE_MD5,
-		hash_testvectors: md5_hash_testvectors,
-		hmac_testvectors: md5_hmac_testvectors,
+	algo_type: IKE_ALG_HASH,
+	algo_id:   OAKLEY_MD5,
+	algo_next: NULL, 
+	hash_digest_size: HASH_SIZE_MD5,
+	hash_testvectors: md5_hash_testvectors,
+	hmac_testvectors: md5_hmac_testvectors,
 };
 
 /* SHA-1 test vectors
@@ -433,12 +434,12 @@ static const hmac_testvector_t sha1_hmac_testvectors[] = {
 
 static struct hash_desc crypto_hasher_sha1 =
 {       
-		algo_type: IKE_ALG_HASH,
-		algo_id:   OAKLEY_SHA,
-		algo_next: NULL, 
-		hash_digest_size: HASH_SIZE_SHA1,
-		hash_testvectors: sha1_hash_testvectors,
-		hmac_testvectors: sha1_hmac_testvectors
+	algo_type: IKE_ALG_HASH,
+	algo_id:   OAKLEY_SHA,
+	algo_next: NULL, 
+	hash_digest_size: HASH_SIZE_SHA1,
+	hash_testvectors: sha1_hash_testvectors,
+	hmac_testvectors: sha1_hmac_testvectors
 };
 
 void init_crypto(void)
@@ -555,6 +556,34 @@ void crypto_cbc_encrypt(const struct encrypt_desc *e, bool enc, u_int8_t *buf,
 	e->set_key(&ctx, st->st_enc_key.ptr, st->st_enc_key.len);
 	e->cbc_crypt(&ctx, buf, size, st->st_new_iv, enc);
 	*/
+}
+
+encryption_algorithm_t oakley_to_encryption_algorithm(int alg)
+{
+	switch (alg)
+	{
+		case OAKLEY_DES_CBC:
+			return ENCR_DES;
+		case OAKLEY_IDEA_CBC:
+			return ENCR_IDEA; 
+		case OAKLEY_BLOWFISH_CBC:
+			return ENCR_BLOWFISH;
+		case OAKLEY_RC5_R16_B64_CBC:
+			return ENCR_RC5;
+		case OAKLEY_3DES_CBC:
+			return ENCR_3DES;
+		case OAKLEY_CAST_CBC:
+			return ENCR_CAST;
+		case OAKLEY_AES_CBC:
+			return ENCR_AES_CBC;
+		case OAKLEY_SERPENT_CBC:
+			return ENCR_SERPENT_CBC;
+		case OAKLEY_TWOFISH_CBC:
+		case OAKLEY_TWOFISH_CBC_SSH:
+			return ENCR_TWOFISH_CBC;
+		default:
+			return ENCR_UNDEFINED;
+	}
 }
 
 hash_algorithm_t oakley_to_hash_algorithm(int alg)

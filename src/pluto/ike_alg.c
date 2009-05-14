@@ -22,7 +22,9 @@
 #include <ipsec_policy.h>
 
 #include <library.h>
+#include <debug.h>
 #include <crypto/hashers/hasher.h>
+#include <crypto/crypters/crypter.h>
 #include <crypto/prfs/prf.h>
 
 #include "constants.h"
@@ -42,7 +44,7 @@
 
 #define return_on(var, val) do { var=val;goto return_out; } while(0);
 
-/*
+/**
  * IKE algorithm list handling - registration and lookup
  */
 
@@ -50,11 +52,11 @@
 
 static struct ike_alg *ike_alg_base[IKE_ALG_MAX+1] = {NULL, NULL};
 
-/*
- * return ike_algo object by {type, id}
+/**
+ * Return ike_algo object by {type, id}
  */
-static struct ike_alg *
-ike_alg_find(u_int algo_type, u_int algo_id, u_int keysize __attribute__((unused)))
+static struct ike_alg *ike_alg_find(u_int algo_type, u_int algo_id,
+									u_int keysize __attribute__((unused)))
 {
 	struct ike_alg *e = ike_alg_base[algo_type];
 
@@ -65,11 +67,10 @@ ike_alg_find(u_int algo_type, u_int algo_id, u_int keysize __attribute__((unused
 	return (e != NULL && e->algo_id == algo_id) ? e : NULL;
 }
 
-/*
+/**
  * "raw" ike_alg list adding function
  */
-int
-ike_alg_add(struct ike_alg* a)
+int ike_alg_add(struct ike_alg* a)
 {
 	if (a->algo_type > IKE_ALG_MAX)
 	{
@@ -98,45 +99,42 @@ ike_alg_add(struct ike_alg* a)
 	}
 }
 
-/*
- * get IKE hash algorithm
+/**
+ * Get IKE hash algorithm
  */
 struct hash_desc *ike_alg_get_hasher(u_int alg)
 {
 	return (struct hash_desc *) ike_alg_find(IKE_ALG_HASH, alg, 0);
 }
 
-/*
- * get IKE encryption algorithm
+/**
+ * Get IKE encryption algorithm
  */
 struct encrypt_desc *ike_alg_get_encrypter(u_int alg)
 {
 	return (struct encrypt_desc *) ike_alg_find(IKE_ALG_ENCRYPT, alg, 0);
 }
 
-/*
- * check if IKE hash algorithm is present
+/**
+ * Check if IKE hash algorithm is present
  */
-bool
-ike_alg_hash_present(u_int halg)
+bool ike_alg_hash_present(u_int halg)
 {
 	return ike_alg_get_hasher(halg) != NULL;
 }
 
-/*
+/**
  * check if IKE encryption algorithm is present
  */
-bool
-ike_alg_enc_present(u_int ealg)
+bool ike_alg_enc_present(u_int ealg)
 {
 	return ike_alg_get_encrypter(ealg) != NULL;
 }
 
-/*
+/**
  * Validate and register IKE hash algorithm object
  */
-int
-ike_alg_register_hash(struct hash_desc *hash_desc)
+int ike_alg_register_hash(struct hash_desc *hash_desc)
 {
 	const char *alg_name = NULL;
 	int ret = 0;
@@ -166,11 +164,10 @@ return_out:
 	return ret;
 }
 
-/*
+/**
  * Validate and register IKE encryption algorithm object
  */
-int
-ike_alg_register_enc(struct encrypt_desc *enc_desc)
+int ike_alg_register_enc(struct encrypt_desc *enc_desc)
 {
 	int ret = ike_alg_add((struct ike_alg *)enc_desc);
 
@@ -192,11 +189,10 @@ ike_alg_register_enc(struct encrypt_desc *enc_desc)
 	return ret;
 }
 
-/*
+/**
  * Get pfsgroup for this connection
  */
-const struct oakley_group_desc *
-ike_alg_pfsgroup(struct connection *c, lset_t policy)
+const struct oakley_group_desc *ike_alg_pfsgroup(struct connection *c, lset_t policy)
 {
 	const struct oakley_group_desc * ret = NULL;
 
@@ -207,11 +203,10 @@ ike_alg_pfsgroup(struct connection *c, lset_t policy)
 	return ret;
 }
 
-/*
+/**
  * Create an OAKLEY proposal based on alg_info and policy
  */
-struct db_context *
-ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
+struct db_context *ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
 {
 	struct db_context *db_ctx = NULL;
 	struct ike_info *ike_info;
@@ -318,11 +313,10 @@ fail:
 	return db_ctx;
 }
 
-/*
+/**
  * Show registered IKE algorithms
  */
-void
-ike_alg_list(void)
+void ike_alg_list(void)
 {
 	u_int i;
 	struct ike_alg *a;
@@ -374,14 +368,13 @@ ike_alg_list(void)
 	}
 }
 
-/*  Show IKE algorithms for
- *    - this connection (result from ike= string)
- *    - newest SA
+/**
+ * Show IKE algorithms for this connection (result from ike= string)
+ * and newest SA
  */
-void
-ike_alg_show_connection(struct connection *c, const char *instance)
+void ike_alg_show_connection(struct connection *c, const char *instance)
 {
-	char buf[256];
+	char buf[BUF_LEN];
 	struct state *st;
 
 	if (c->alg_info_ike)
@@ -420,11 +413,72 @@ ike_alg_show_connection(struct connection *c, const char *instance)
 		);
 }
 
-/*
+/**
+ * Apply a suite of testvectors to an encryption algorithm
+ */
+static bool ike_encrypt_test(const struct encrypt_desc *desc)
+{
+	bool encrypt_results = TRUE;
+
+	if (desc->enc_testvectors == NULL)
+	{
+		plog("  %s encryption self-test not available",
+			 enum_name(&oakley_enc_names, desc->algo_id));
+	}
+	else
+	{
+		int i;
+		encryption_algorithm_t enc_alg;
+
+		enc_alg = oakley_to_encryption_algorithm(desc->algo_id);
+	
+		for (i = 0; desc->enc_testvectors[i].key != NULL; i++)
+		{
+			bool result;
+			crypter_t *crypter;
+			chunk_t key =    { (u_char*)desc->enc_testvectors[i].key,
+									    desc->enc_testvectors[i].key_size };
+			chunk_t plain =  { (u_char*)desc->enc_testvectors[i].plain,
+									    desc->enc_testvectors[i].data_size};
+			chunk_t cipher = { (u_char*)desc->enc_testvectors[i].cipher,
+									    desc->enc_testvectors[i].data_size};
+			chunk_t encrypted = chunk_empty;
+			chunk_t decrypted = chunk_empty;
+			chunk_t iv;
+
+			crypter = lib->crypto->create_crypter(lib->crypto, enc_alg, key.len);
+			if (crypter == NULL)
+			{
+				plog("  %s encryption function not available",
+					 enum_name(&oakley_enc_names, desc->algo_id));
+				return FALSE;
+			}
+			iv = chunk_create((u_char*)desc->enc_testvectors[i].iv,
+							  crypter->get_block_size(crypter));
+			crypter->set_key(crypter, key);
+			crypter->decrypt(crypter, cipher, iv, &decrypted);
+			result = chunk_equals(decrypted, plain);
+			crypter->encrypt(crypter, plain, iv, &encrypted);
+			result &= chunk_equals(encrypted, cipher);
+			DBG(DBG_CRYPT,
+				DBG_log("  enc testvector %d: %s", i, result ? "ok":"failed")
+			)
+			encrypt_results &= result;
+			crypter->destroy(crypter);
+			free(encrypted.ptr);
+			free(decrypted.ptr);
+		}
+		plog("  %s encryption self-test %s",
+			 enum_name(&oakley_enc_names, desc->algo_id),
+			 encrypt_results ? "passed":"failed");
+	}
+	return encrypt_results;
+}
+
+/**
  * Apply a suite of testvectors to a hash algorithm
  */
-static bool
-ike_hash_test(const struct hash_desc *desc)
+static bool ike_hash_test(const struct hash_desc *desc)
 {
 	bool hash_results = TRUE;
 	bool hmac_results = TRUE;
@@ -513,23 +567,22 @@ ike_hash_test(const struct hash_desc *desc)
 	return hash_results && hmac_results;
 }
 
-/*
+/**
  * Apply test vectors to registered encryption and hash algorithms
  */
-bool
-ike_alg_test(void)
+bool ike_alg_test(void)
 {
 	bool all_results = TRUE;
 	struct ike_alg *a;
-
+	
 	plog("Testing registered IKE encryption algorithms:");
 
 	for (a = ike_alg_base[IKE_ALG_ENCRYPT]; a != NULL; a = a->algo_next)
 	{
-		plog("  %s self-test not available", enum_name(&oakley_enc_names, a->algo_id));
-	}
+		struct encrypt_desc *desc = (struct encrypt_desc*)a;
 
-	plog("Testing registered IKE hash algorithms:");
+		all_results &= ike_encrypt_test(desc);
+	}
 
 	for (a = ike_alg_base[IKE_ALG_HASH]; a != NULL; a = a->algo_next)
 	{
@@ -545,12 +598,11 @@ ike_alg_test(void)
 	return all_results;
 }
 
-/*
+/**
  * ML: make F_STRICT logic consider enc,hash/auth,modp algorithms
  */
-bool
-ike_alg_ok_final(u_int ealg, u_int key_len, u_int aalg, u_int group
-, struct alg_info_ike *alg_info_ike)
+bool ike_alg_ok_final(u_int ealg, u_int key_len, u_int aalg, u_int group,
+					  struct alg_info_ike *alg_info_ike)
 {
 	/*
 	 * simple test to discard low key_len, will accept it only

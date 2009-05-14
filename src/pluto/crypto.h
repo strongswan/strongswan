@@ -12,8 +12,7 @@
  * for more details.
  */
 
-#include <gmp.h>    /* GNU MP library */
-
+#include <crypto/hashers/hasher.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
 
@@ -60,7 +59,7 @@ void crypto_cbc_encrypt(const struct encrypt_desc *e, bool enc, u_int8_t *buf, s
 
 /* unification of cryptographic hashing mechanisms */
 
-
+extern encryption_algorithm_t oakley_to_encryption_algorithm(int alg);
 extern hash_algorithm_t oakley_to_hash_algorithm(int alg);
 extern pseudo_random_function_t oakley_to_prf(int alg);
 
