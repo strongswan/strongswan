@@ -21,7 +21,7 @@
 typedef struct private_serpent_crypter_t private_serpent_crypter_t;
 
 /**
- * Class implementing the AES symmetric encryption algorithm.
+ * Class implementing the Serpent symmetric encryption algorithm.
  * 
  * @ingroup crypters
  */

@@ -21,7 +21,7 @@
 typedef struct private_twofish_crypter_t private_twofish_crypter_t;
 
 /**
- * Class implementing the AES symmetric encryption algorithm.
+ * Class implementing the Twofish symmetric encryption algorithm.
  * 
  * @ingroup crypters
  */
