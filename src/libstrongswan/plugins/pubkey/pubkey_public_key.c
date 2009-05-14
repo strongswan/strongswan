@@ -145,7 +145,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 				va_start(args, part);
 				pem = va_arg(args, char *);
 				blob = chunk_clone(chunk_create(pem, strlen(pem)));
-				if (pem_to_bin(&blob, &chunk_empty, &pgp))
+				if (pem_to_bin(&blob, chunk_empty, &pgp) == SUCCESS)
 				{
 					this->key = pubkey_public_key_load(chunk_clone(blob));
 				}

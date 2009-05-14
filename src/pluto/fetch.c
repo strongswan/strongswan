@@ -28,6 +28,7 @@
 #include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
+#include <asn1/pem.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -263,8 +264,6 @@ static void free_fetch_request(fetch_req_t *req)
  */
 bool fetch_asn1_blob(char *url, chunk_t *blob)
 {
-	err_t ugh = NULL;
-
 	DBG1("  fetching crl from '%s' ...", url);
 	if (lib->fetcher->fetch(lib->fetcher, url, blob, FETCH_END) != SUCCESS)
 	{
@@ -280,12 +279,11 @@ bool fetch_asn1_blob(char *url, chunk_t *blob)
 	{
 		bool pgp = FALSE;
 
-		ugh = pemtobin(blob, NULL, "", &pgp);
-		if (ugh != NULL)
+		if (pem_to_bin(blob, chunk_empty, &pgp) != SUCCESS)
 		{
 			free(blob->ptr);
 			return FALSE;
-		};
+		}
 		if (is_asn1(*blob))
 		{
 			DBG2("  fetched blob coded in PEM format");

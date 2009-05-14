@@ -82,8 +82,8 @@ static bool find_boundary(const char* tag, chunk_t *line)
 /*
  * decrypts a passphrase protected encrypted data block
  */
-static bool pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_size,
-						 chunk_t *iv, chunk_t *passphrase)
+static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_size,
+							chunk_t *iv, chunk_t passphrase)
 {
 	hasher_t *hasher;
 	crypter_t *crypter;
@@ -93,10 +93,10 @@ static bool pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_si
 	chunk_t key = {alloca(key_size), key_size};
 	u_int8_t padding, *last_padding_pos, *first_padding_pos;
 	
-	if (passphrase == NULL || passphrase->len == 0)
+	if (passphrase.len == 0)
 	{
 		DBG1("  missing passphrase");
-		return FALSE;
+		return INVALID_ARG;
 	}
 
 	/* build key from passphrase and IV */
@@ -104,18 +104,18 @@ static bool pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_si
 	if (hasher == NULL)
 	{
 		DBG1("  MD5 hash algorithm not available");
-		return FALSE;
+		return NOT_SUPPORTED;
 	}
 	hash.len = hasher->get_hash_size(hasher);
 	hash.ptr = alloca(hash.len);
-	hasher->get_hash(hasher, *passphrase, NULL);
+	hasher->get_hash(hasher, passphrase, NULL);
 	hasher->get_hash(hasher, salt, hash.ptr);
 	memcpy(key.ptr, hash.ptr, hash.len);
 
 	if (key.len > hash.len)
 	{
 		hasher->get_hash(hasher, hash, NULL);
-		hasher->get_hash(hasher, *passphrase, NULL);
+		hasher->get_hash(hasher, passphrase, NULL);
 		hasher->get_hash(hasher, salt, hash.ptr);	
 		memcpy(key.ptr + hash.len, hash.ptr, key.len - hash.len);
 	}	
@@ -127,7 +127,7 @@ static bool pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_si
 	{
 		DBG1("  %N encryption algorithm not available",
 			 encryption_algorithm_names, alg);
-		return FALSE;
+		return NOT_SUPPORTED;
 	}
 	crypter->set_key(crypter, key);
 	
@@ -136,7 +136,7 @@ static bool pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_si
 	{
 		crypter->destroy(crypter);
 		DBG1("  data size is not multiple of block size");
-		return FALSE;
+		return PARSE_ERROR;
 	}
 	crypter->decrypt(crypter, *blob, *iv, &decrypted);
 	crypter->destroy(crypter);
@@ -154,12 +154,12 @@ static bool pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_si
 		if (*last_padding_pos != padding)
 		{
 			DBG1("  invalid passphrase");
-			return FALSE;
+			return INVALID_ARG;
 		}
 	}
 	/* remove padding */
 	blob->len -= padding;
-	return TRUE;
+	return SUCCESS;
 }
 
 /*  Converts a PEM encoded file into its binary form
@@ -167,7 +167,7 @@ static bool pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_si
  *  RFC 1421 Privacy Enhancement for Electronic Mail, February 1993
  *  RFC 934 Message Encapsulation, January 1985
  */
-bool pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
+status_t pem_to_bin(chunk_t *blob, chunk_t passphrase, bool *pgp)
 {
 	typedef enum {
 		PEM_PRE    = 0,
@@ -237,17 +237,21 @@ bool pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 				DBG2("  %.*s", (int)line.len, line.ptr);
 				ugh = extract_parameter_value(&name, &value, &line);
 				if (ugh != NULL)
+				{
 					continue;
-
+				}
 				if (match("Proc-Type", &name) && *value.ptr == '4')
+				{
 					encrypted = TRUE;
+				}
 				else if (match("DEK-Info", &name))
 				{
 					chunk_t dek;
 
 					if (!extract_token(&dek, ',', &value))
+					{
 						dek = value;
-
+					}
 					if (match("DES-EDE3-CBC", &dek))
 					{
 						alg = ENCR_3DES;
@@ -272,7 +276,7 @@ bool pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 					{
 						DBG1("  encryption algorithm '%.s' not supported",
 							 dek.len, dek.ptr);
-						return FALSE;
+						return NOT_SUPPORTED;
 					}
 					eat_whitespace(&value);
 					iv = chunk_from_hex(value, iv.ptr);
@@ -315,11 +319,11 @@ bool pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 	if (state != PEM_POST)
 	{
 		DBG1("  file coded in unknown format, discarded");
-		return FALSE;
+		return PARSE_ERROR;
 	}
 	if (!encrypted)
 	{
-		return TRUE;
+		return SUCCESS;
 	}
 	return pem_decrypt(blob, alg, key_size, &iv, passphrase);
 	
@@ -335,7 +339,9 @@ bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
 
 	if (fd)
 	{
+		chunk_t pass = chunk_empty;
 		int bytes;
+
 		fseek(fd, 0, SEEK_END );
 		blob->len = ftell(fd);
 		rewind(fd);
@@ -355,11 +361,12 @@ bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
 
 		if (passphrase != NULL)
 		{
+			pass = *passphrase;
 			DBG4("  passphrase: %#B", passphrase);
 		}
 
 		/* try PEM format */
-		if (pem_to_bin(blob, passphrase, pgp))
+		if (pem_to_bin(blob, pass, pgp) == SUCCESS)
 		{
 			if (*pgp)
 			{

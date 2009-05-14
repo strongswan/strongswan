@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#include <string.h>
+
 #include "xml.h"
 
 #include <libxml/parser.h>

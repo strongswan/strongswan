@@ -32,7 +32,6 @@ ca.o crl.o certs.o constants.o defs.o fetch.o id.o keys.o lex.o \
 mp_defs.o ocsp.o pem.o pgp.o pkcs1.o pkcs7.o smartcard.o x509.o \
 $(LIBSTRONGSWANBUILDDIR)/libstrongswan.la \
 $(LIBFREESWANBUILDDIR)/libfreeswan.a \
-$(LIBCRYPTOBUILDDIR)/libcrypto.a \
 -lgmp
 
 # This compile option activates smartcard support

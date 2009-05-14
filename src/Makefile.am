@@ -9,7 +9,7 @@ if USE_FILE_CONFIG
 endif
 
 if USE_PLUTO
-  SUBDIRS += libcrypto pluto whack
+  SUBDIRS += pluto whack
 endif
 
 if USE_CHARON
@@ -25,7 +25,7 @@ if USE_UPDOWN
 endif
 
 if USE_TOOLS
-  SUBDIRS += libcrypto openac scepclient
+  SUBDIRS += openac scepclient
 endif
 
 if USE_DUMM

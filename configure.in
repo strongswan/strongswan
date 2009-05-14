@@ -1184,7 +1184,6 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/fips/Makefile
-	src/libcrypto/Makefile
 	src/libfreeswan/Makefile
 	src/pluto/Makefile
 	src/whack/Makefile

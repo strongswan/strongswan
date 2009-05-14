@@ -11,7 +11,7 @@
  * subkeys, K[0] through K[7].	k holds the remaining, "round" subkeys.  Note
  * that k[i] corresponds to what the Twofish paper calls K[i+8].
  */
-typedef struct twofish_context {
+struct twofish_context {
 	u_int32_t s[4][256], w[8], k[32];
 };
 

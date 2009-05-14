@@ -575,7 +575,7 @@ static const u8 calc_sb_tbl[512] = {
 
 /* Perform the key setup. */
 
-int twofish_set_key (TWOFISH_context *ctx,
+int twofish_set_key (twofish_context *ctx,
 			    const unsigned char *key, int key_len)
 {
 
@@ -788,7 +788,7 @@ int twofish_set_key (TWOFISH_context *ctx,
 
 /* Encrypt one block.  in and out may be the same. */
 
-int twofish_encrypt (TWOFISH_context *ctx,
+int twofish_encrypt (twofish_context *ctx,
 			    const u8 *in, u8 *out)
 {
 	/* The four 32-bit chunks of the text. */
@@ -824,7 +824,7 @@ int twofish_encrypt (TWOFISH_context *ctx,
 
 /* Decrypt one block.  in and out may be the same. */
 
-int twofish_decrypt (TWOFISH_context *ctx,
+int twofish_decrypt (twofish_context *ctx,
 			    const u8 *in, u8 *out)
 {
 	/* The four 32-bit chunks of the text. */

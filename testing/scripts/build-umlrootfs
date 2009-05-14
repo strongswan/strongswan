@@ -185,6 +185,21 @@ then
     echo -n " --enable-openssl" >> $INSTALLSHELL
 fi
 
+if [ "$USE_BLOWFISH" = "yes" ]
+then
+    echo -n " --enable-blowfish" >> $INSTALLSHELL
+fi
+
+if [ "$USE_TWOFISH" = "yes" ]
+then
+    echo -n " --enable-twofish" >> $INSTALLSHELL
+fi
+
+if [ "$USE_SERPENT" = "yes" ]
+then
+    echo -n " --enable-serpent" >> $INSTALLSHELL
+fi
+
 if [ "$USE_KERNEL_PFKEY" = "yes" ]
 then
     echo -n " --enable-kernel-pfkey" >> $INSTALLSHELL

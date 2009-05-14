@@ -60,14 +60,11 @@ _pluto_adns_SOURCES = adns.c adns.h
 
 LIBSTRONGSWANDIR=$(top_builddir)/src/libstrongswan
 LIBFREESWANDIR=$(top_builddir)/src/libfreeswan
-LIBCRYPTODIR=$(top_builddir)/src/libcrypto
-
 
 INCLUDES = \
 -I${linuxdir} \
 -I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/libfreeswan \
--I$(top_srcdir)/src/libcrypto \
 -I$(top_srcdir)/src/whack
 
 AM_CFLAGS = \
@@ -85,7 +82,6 @@ AM_CFLAGS = \
 pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan.la \
 $(LIBFREESWANDIR)/libfreeswan.a \
-$(LIBCRYPTODIR)/libcrypto.a \
 -lgmp -lresolv -lpthread $(DLLIB)
 
 _pluto_adns_LDADD = \
