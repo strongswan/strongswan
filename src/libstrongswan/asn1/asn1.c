@@ -381,11 +381,11 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	tm_leap = tm_leap_4 - tm_leap_100 + tm_leap_400 - tm_leap_1970;
 
 	/* if date later then February, is the current year a leap year? */
-	if ((tm_mon > 1 && 4*(tm_leap_4 + 1) == tm_year) &&
-		(100*(tm_leap_100 + 1) != tm_year || 400*(tm_leap_400 + 1) == tm_year))
+	if (tm_mon > 1 && (tm_year % 4 == 0) &&
+		(tm_year % 100 != 0 || tm_year % 400 == 0))
 	{
 		tm_leap++;
-	}	
+	}
 	tm_days = 365 * (tm_year - 1970) + days[tm_mon] + tm_day + tm_leap;
 	tm_secs = 60 * (60 * (24 * tm_days + tm_hour) + tm_min) + tm_sec - tz_offset;
 
