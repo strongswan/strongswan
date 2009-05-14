@@ -70,7 +70,7 @@ to modify the code.
 #endif
 
 void BF_encrypt(BF_LONG *data, const BF_KEY *key)
-	{
+{
 #ifndef BF_PTR2
 	const BF_LONG *p,*s;
 	BF_LONG l,r;
@@ -142,12 +142,12 @@ void BF_encrypt(BF_LONG *data, const BF_KEY *key)
 	data[1]=l&0xffffffffL;
 	data[0]=r&0xffffffffL;
 #endif
-	}
+}
 
 #ifndef BF_DEFAULT_OPTIONS
 
 void BF_decrypt(BF_LONG *data, const BF_KEY *key)
-	{
+{
 #ifndef BF_PTR2
 	const BF_LONG *p,*s;
 	BF_LONG l,r;
@@ -219,23 +219,23 @@ void BF_decrypt(BF_LONG *data, const BF_KEY *key)
 	data[1]=l&0xffffffffL;
 	data[0]=r&0xffffffffL;
 #endif
-	}
+}
 
 void BF_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
-	     const BF_KEY *schedule, unsigned char *ivec, int encrypt)
-	{
+					const BF_KEY *schedule, unsigned char *ivec, int encrypt)
+{
 	BF_LONG tin0,tin1;
 	BF_LONG tout0,tout1,xor0,xor1;
 	long l=length;
 	BF_LONG tin[2];
 
 	if (encrypt)
-		{
+	{
 		n2l(ivec,tout0);
 		n2l(ivec,tout1);
 		ivec-=8;
 		for (l-=8; l>=0; l-=8)
-			{
+		{
 			n2l(in,tin0);
 			n2l(in,tin1);
 			tin0^=tout0;
@@ -247,9 +247,9 @@ void BF_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
 			tout1=tin[1];
 			l2n(tout0,out);
 			l2n(tout1,out);
-			}
+		}
 		if (l != -8)
-			{
+		{
 			n2ln(in,tin0,tin1,l+8);
 			tin0^=tout0;
 			tin1^=tout1;
@@ -260,17 +260,17 @@ void BF_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
 			tout1=tin[1];
 			l2n(tout0,out);
 			l2n(tout1,out);
-			}
+		}
 		l2n(tout0,ivec);
 		l2n(tout1,ivec);
-		}
+	}
 	else
-		{
+	{
 		n2l(ivec,xor0);
 		n2l(ivec,xor1);
 		ivec-=8;
 		for (l-=8; l>=0; l-=8)
-			{
+		{
 			n2l(in,tin0);
 			n2l(in,tin1);
 			tin[0]=tin0;
@@ -282,9 +282,9 @@ void BF_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
 			l2n(tout1,out);
 			xor0=tin0;
 			xor1=tin1;
-			}
+		}
 		if (l != -8)
-			{
+		{
 			n2l(in,tin0);
 			n2l(in,tin1);
 			tin[0]=tin0;
@@ -295,12 +295,12 @@ void BF_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
 			l2nn(tout0,tout1,out,l+8);
 			xor0=tin0;
 			xor1=tin1;
-			}
+		}
 		l2n(xor0,ivec);
 		l2n(xor1,ivec);
-		}
+	}
 	tin0=tin1=tout0=tout1=xor0=xor1=0;
 	tin[0]=tin[1]=0;
-	}
+}
 
 #endif
