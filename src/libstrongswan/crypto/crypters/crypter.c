@@ -46,12 +46,12 @@ ENUM_NEXT(encryption_algorithm_names, ENCR_CAMELLIA_CBC, ENCR_CAMELLIA_CCM_ICV16
 	"CAMELLIA_CCM_ICV8",
 	"CAMELLIA_CCM_ICV12",
 	"CAMELLIA_CCM_ICV16");
-ENUM_NEXT(encryption_algorithm_names, ENCR_UNDEFINED, ENCR_TWOFISH, ENCR_CAMELLIA_CCM_ICV16,
+ENUM_NEXT(encryption_algorithm_names, ENCR_UNDEFINED, ENCR_TWOFISH_CBC, ENCR_CAMELLIA_CCM_ICV16,
 	"UNDEFINED",
 	"DES_ECB",
-	"SERPENT",
-	"TWOFISH");
-ENUM_END(encryption_algorithm_names, ENCR_TWOFISH);
+	"SERPENT_CBC",
+	"TWOFISH_CBC");
+ENUM_END(encryption_algorithm_names, ENCR_TWOFISH_CBC);
 
 /*
  * Described in header.

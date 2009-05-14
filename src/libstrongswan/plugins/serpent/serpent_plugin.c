@@ -51,7 +51,7 @@ plugin_t *plugin_create()
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
-	lib->crypto->add_crypter(lib->crypto, ENCR_SERPENT,
+	lib->crypto->add_crypter(lib->crypto, ENCR_SERPENT_CBC,
 							 (crypter_constructor_t)serpent_crypter_create);
 	
 	return &this->public.plugin;

@@ -51,7 +51,7 @@ plugin_t *plugin_create()
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
-	lib->crypto->add_crypter(lib->crypto, ENCR_TWOFISH,
+	lib->crypto->add_crypter(lib->crypto, ENCR_TWOFISH_CBC,
 							 (crypter_constructor_t)twofish_crypter_create);
 	
 	return &this->public.plugin;
