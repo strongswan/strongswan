@@ -48,8 +48,6 @@ extern const struct oakley_group_desc oakley_group[OAKLEY_GROUP_SIZE];
 
 struct state;   /* forward declaration, dammit */
 
-void crypto_cbc_encrypt(const struct encrypt_desc *e, bool enc, u_int8_t *buf, size_t size, struct state *st);
-
 #define update_iv(st)   memcpy((st)->st_iv, (st)->st_new_iv \
 	, (st)->st_iv_len = (st)->st_new_iv_len)
 

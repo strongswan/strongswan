@@ -1780,9 +1780,17 @@ process_packet(struct msg_digest **mdp)
 		 * the last phase 1 block, not the last block sent.
 		 */
 		{
-			const struct encrypt_desc *e = st->st_oakley.encrypter;
+			size_t crypter_block_size;
+			encryption_algorithm_t enc_alg;
+			crypter_t *crypter;
+			chunk_t data, iv;
+		    char *new_iv;
 
-			if (pbs_left(&md->message_pbs) % e->enc_blocksize != 0)
+			enc_alg = oakley_to_encryption_algorithm(st->st_oakley.encrypt);
+			crypter = lib->crypto->create_crypter(lib->crypto, enc_alg, st->st_enc_key.len);
+			crypter_block_size = crypter->get_block_size(crypter);
+
+			if (pbs_left(&md->message_pbs) % crypter_block_size != 0)
 			{
 				loglog(RC_LOG_SERIOUS, "malformed message: not a multiple of encryption blocksize");
 				SEND_NOTIFICATION(PAYLOAD_MALFORMED);
@@ -1795,6 +1803,8 @@ process_packet(struct msg_digest **mdp)
 			md->raw_packet = chunk_create(md->packet_pbs.start, pbs_room(&md->packet_pbs));
 			md->raw_packet = chunk_clone(md->raw_packet);
 
+			data = chunk_create(md->message_pbs.cur, pbs_left(&md->message_pbs));
+
 			/* Decrypt everything after header */
 			if (!new_iv_set)
 			{
@@ -1803,8 +1813,19 @@ process_packet(struct msg_digest **mdp)
 				st->st_new_iv_len = st->st_iv_len;
 				memcpy(st->st_new_iv, st->st_iv, st->st_new_iv_len);
 			}
-			crypto_cbc_encrypt(e, FALSE, md->message_pbs.cur, 
-							pbs_left(&md->message_pbs) , st);
+
+			/* form iv by truncation */
+			st->st_new_iv_len = crypter_block_size;
+			iv = chunk_create(st->st_new_iv, st->st_new_iv_len);
+			new_iv = alloca(crypter_block_size);
+			memcpy(new_iv, data.ptr + data.len - crypter_block_size,
+				   crypter_block_size);
+
+			crypter->set_key(crypter, st->st_enc_key);	
+			crypter->decrypt(crypter, data, iv, NULL);
+			crypter->destroy(crypter);
+
+    		memcpy(st->st_new_iv, new_iv, crypter_block_size);
 			if (restore_iv)
 			{
 				memcpy(st->st_new_iv, new_iv, new_iv_len);

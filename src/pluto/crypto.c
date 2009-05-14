@@ -544,42 +544,6 @@ static void do_3des(u_int8_t *buf, size_t buf_len, u_int8_t *key,
 		(des_cblock *)iv, enc);
 }
 
-void crypto_cbc_encrypt(const struct encrypt_desc *e, bool enc, u_int8_t *buf,
-						size_t size, struct state *st)
-{
-	chunk_t data = { buf, size };
-	chunk_t iv;
-    char *new_iv;
-	size_t crypter_block_size;
-	encryption_algorithm_t enc_alg;
-	crypter_t *crypter;
-
-	enc_alg = oakley_to_encryption_algorithm(e->algo_id);
-	crypter = lib->crypto->create_crypter(lib->crypto, enc_alg, st->st_enc_key.len);
-	crypter->set_key(crypter, st->st_enc_key);
-	crypter_block_size = crypter->get_block_size(crypter);
-
-	/* form iv by truncation */
-	passert(st->st_new_iv_len >= crypter_block_size);
-	st->st_new_iv_len = crypter_block_size;
-	iv = chunk_create(st->st_new_iv, st->st_new_iv_len);
-
-	if (enc)
-	{
-		crypter->encrypt(crypter, data, iv, NULL);
-	    new_iv = data.ptr + data.len - crypter_block_size;
-	}
-	else
-	{
-		new_iv = alloca(crypter_block_size);
-	    memcpy(new_iv, data.ptr + data.len - crypter_block_size,
-			   crypter_block_size);
-		crypter->decrypt(crypter, data, iv, NULL);
-	}
-	crypter->destroy(crypter);
-    memcpy(st->st_new_iv, new_iv, crypter_block_size);
-}
-
 encryption_algorithm_t oakley_to_encryption_algorithm(int alg)
 {
 	switch (alg)

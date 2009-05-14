@@ -1857,18 +1857,25 @@ static notification_t accept_nonce(struct msg_digest *md, chunk_t *dest,
 bool
 encrypt_message(pb_stream *pbs, struct state *st)
 {
-	const struct encrypt_desc *e = st->st_oakley.encrypter;
 	u_int8_t *enc_start = pbs->start + sizeof(struct isakmp_hdr);
 	size_t enc_len = pbs_offset(pbs) - sizeof(struct isakmp_hdr);
+	chunk_t data, iv;
+    char *new_iv;
+	size_t crypter_block_size;
+	encryption_algorithm_t enc_alg;
+	crypter_t *crypter;
 
 	DBG_cond_dump(DBG_CRYPT | DBG_RAW, "encrypting:\n", enc_start, enc_len);
+	enc_alg = oakley_to_encryption_algorithm(st->st_oakley.encrypt);
+	crypter = lib->crypto->create_crypter(lib->crypto, enc_alg, st->st_enc_key.len);
+	crypter_block_size = crypter->get_block_size(crypter);
 
 	/* Pad up to multiple of encryption blocksize.
 	 * See the description associated with the definition of
 	 * struct isakmp_hdr in packet.h.
 	 */
 	{
-		size_t padding = pad_up(enc_len, e->enc_blocksize);
+		size_t padding = pad_up(enc_len, crypter_block_size);
 
 		if (padding != 0)
 		{
@@ -1879,10 +1886,18 @@ encrypt_message(pb_stream *pbs, struct state *st)
 	}
 
 	DBG(DBG_CRYPT, DBG_log("encrypting using %s", enum_show(&oakley_enc_names, st->st_oakley.encrypt)));
+	data = chunk_create(enc_start, enc_len);
 
-	/* e->crypt(TRUE, enc_start, enc_len, st); */
-	crypto_cbc_encrypt(e, TRUE, enc_start, enc_len, st);
+	/* form iv by truncation */
+	st->st_new_iv_len = crypter_block_size;
+	iv = chunk_create(st->st_new_iv, st->st_new_iv_len);
 
+	crypter->set_key(crypter, st->st_enc_key);
+	crypter->encrypt(crypter, data, iv, NULL);
+	crypter->destroy(crypter);
+ 
+	new_iv = data.ptr + data.len - crypter_block_size;
+	memcpy(st->st_new_iv, new_iv, crypter_block_size);
 	update_iv(st);
 	DBG_cond_dump(DBG_CRYPT, "next IV:", st->st_iv, st->st_iv_len);
 	close_message(pbs);
