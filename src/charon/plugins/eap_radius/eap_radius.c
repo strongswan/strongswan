@@ -20,7 +20,6 @@
 
 #include <daemon.h>
 
-
 typedef struct private_eap_radius_t private_eap_radius_t;
 
 /**
@@ -62,6 +61,11 @@ struct private_eap_radius_t {
 	 * RADIUS client instance
 	 */
 	radius_client_t *client;
+	
+	/**
+	 * TRUE to use EAP-Start, FALSE to send EAP-Identity Response directly
+	 */
+	bool eap_start;
 };
 
 /**
@@ -135,7 +139,16 @@ static status_t initiate(private_eap_radius_t *this, eap_payload_t **out)
 	
 	request = radius_message_create_request();
 	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
-	add_eap_identity(this, request);
+	
+	if (this->eap_start)
+	{
+		request->add(request, RAT_EAP_MESSAGE, chunk_empty);
+	}
+	else
+	{
+		add_eap_identity(this, request);
+	}
+	
 	response = this->client->request(this->client, request);
 	if (response)
 	{
@@ -268,6 +281,8 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	this->type = EAP_RADIUS;
 	this->vendor = 0;
 	this->msk = chunk_empty;
+	this->eap_start = lib->settings->get_bool(lib->settings, 
+								"charon.plugins.eap_radius.eap_start", FALSE);
 	
 	return &this->public;
 }
