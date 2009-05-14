@@ -880,22 +880,18 @@ daily_log_reset(void)
 void
 daily_log_event(void)
 {
-	struct tm *ltime;
-	time_t n, interval;
+	struct tm lt;
+	time_t t, interval;
 
 	/* attempt to schedule oneself to midnight, local time
 	 * do this by getting seconds in the day, and delaying
-	 * by 86400 - hour*3600+minutes*60+seconds.
+	 * by 86400 - 3600*hours - 60*minutes - seconds.
 	 */
-	time(&n);
-	ltime = localtime(&n);
-	interval = (24 * 60 * 60)
-	  - (ltime->tm_sec
-		 + ltime->tm_min  * 60
-		 + ltime->tm_hour * 3600);
+	time(&t);
+	localtime_r(&t, &lt);
+	interval = 3600 * (24 - lt.tm_hour) - 60 * lt.tm_min - lt.tm_sec;
 
 	event_schedule(EVENT_LOG_DAILY, interval, NULL);
-
 	daily_log_reset();
 }
 
