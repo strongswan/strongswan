@@ -39,12 +39,10 @@ struct encrypt_desc {
 	u_int16_t algo_id;
 	struct ike_alg *algo_next;
 
-	size_t enc_ctxsize;
 	size_t enc_blocksize;
 	u_int keydeflen;
 	u_int keymaxlen;
 	u_int keyminlen;
-	void (*do_crypt)(u_int8_t *dat, size_t datasize, u_int8_t *key, size_t key_size, u_int8_t *iv, bool enc);
 	const enc_testvector_t *enc_testvectors;
 };
 
@@ -69,6 +67,7 @@ struct hash_desc {
 	u_int16_t algo_type;
 	u_int16_t algo_id;
 	struct ike_alg *algo_next;
+
 	size_t hash_digest_size;
 	const hash_testvector_t *hash_testvectors;
 	const hmac_testvector_t *hmac_testvectors;

@@ -12,7 +12,7 @@
  * for more details.
  */
 
-#include <crypto/hashers/hasher.h>
+#include <crypto/crypters/crypter.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
 

@@ -18,8 +18,6 @@
 #include "twofish_crypter.h"
 #include "twofish.h"
 
-#define TWOFISH_BLOCK_SIZE 16
-
 typedef struct private_twofish_crypter_t private_twofish_crypter_t;
 
 /**

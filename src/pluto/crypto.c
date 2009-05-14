@@ -24,8 +24,6 @@
 
 #include <errno.h>
 
-#include <crypto/hashers/hasher.h>
-
 #include "constants.h"
 #include "defs.h"
 #include "state.h"
@@ -48,19 +46,16 @@ static MP_INT
 
 MP_INT groupgenerator;  /* MODP group generator (2) */
 
-static void do_3des(u_int8_t *buf, size_t buf_len, u_int8_t *key, size_t key_size, u_int8_t *iv, bool enc);
-
 static struct encrypt_desc crypto_encryptor_3des =
 {       
 		algo_type:      IKE_ALG_ENCRYPT,
 		algo_id:        OAKLEY_3DES_CBC, 
 		algo_next:      NULL,
-		enc_ctxsize:    sizeof(des_key_schedule) * 3,
-		enc_blocksize:  DES_CBC_BLOCK_SIZE, 
-		keydeflen:      DES_CBC_BLOCK_SIZE * 3 * BITS_PER_BYTE,
-		keyminlen:      DES_CBC_BLOCK_SIZE * 3 * BITS_PER_BYTE,
-		keymaxlen:      DES_CBC_BLOCK_SIZE * 3 * BITS_PER_BYTE,
-		do_crypt:       do_3des,
+
+		enc_blocksize:	DES_BLOCK_SIZE, 
+		keydeflen:		DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+		keyminlen:		DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+		keymaxlen:		DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
 		enc_testvectors: NULL
 };
 
@@ -507,42 +502,6 @@ const struct oakley_group_desc *lookup_group(u_int16_t group)
  * Each uses and updates the state object's st_new_iv.
  * This must already be initialized.
  */
-
-/* encrypt or decrypt part of an IKE message using DES
- * See RFC 2409 "IKE" Appendix B
- */
-static void __attribute__ ((unused))
-do_des(bool enc, void *buf, size_t buf_len, struct state *st)
-{
-	des_key_schedule ks;
-
-	(void) des_set_key((des_cblock *)st->st_enc_key.ptr, ks);
-
-	passert(st->st_new_iv_len >= DES_CBC_BLOCK_SIZE);
-	st->st_new_iv_len = DES_CBC_BLOCK_SIZE;     /* truncate */
-
-	des_ncbc_encrypt((des_cblock *)buf, (des_cblock *)buf, buf_len,
-		ks,
-		(des_cblock *)st->st_new_iv, enc);
-}
-
-/* encrypt or decrypt part of an IKE message using 3DES
- * See RFC 2409 "IKE" Appendix B
- */
-static void do_3des(u_int8_t *buf, size_t buf_len, u_int8_t *key,
-					size_t key_size, u_int8_t *iv, bool enc)
-{
-	des_key_schedule ks[3];
-
-	passert (!key_size || (key_size==(DES_CBC_BLOCK_SIZE * 3)))
-	(void) des_set_key((des_cblock *)key + 0, ks[0]);
-	(void) des_set_key((des_cblock *)key + 1, ks[1]);
-	(void) des_set_key((des_cblock *)key + 2, ks[2]);
-
-	des_ede3_cbc_encrypt((des_cblock *)buf, (des_cblock *)buf, buf_len,
-		ks[0], ks[1], ks[2],
-		(des_cblock *)iv, enc);
-}
 
 encryption_algorithm_t oakley_to_encryption_algorithm(int alg)
 {

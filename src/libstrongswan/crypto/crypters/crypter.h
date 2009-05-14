@@ -61,6 +61,12 @@ enum encryption_algorithm_t {
     ENCR_TWOFISH_CBC =      1027
 };
 
+#define DES_BLOCK_SIZE			 8
+#define BLOWFISH_BLOCK_SIZE		 8
+#define AES_BLOCK_SIZE			16
+#define SERPENT_BLOCK_SIZE		16
+#define TWOFISH_BLOCK_SIZE		16
+
 /**
  * enum name for encryption_algorithm_t.
  */

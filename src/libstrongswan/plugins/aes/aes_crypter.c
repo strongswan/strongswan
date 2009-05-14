@@ -32,8 +32,6 @@
 #define AES_KS_LENGTH   120
 #define AES_RC_LENGTH    29
 
-#define AES_BLOCK_SIZE 16
-
 typedef struct private_aes_crypter_t private_aes_crypter_t;
 
 /**

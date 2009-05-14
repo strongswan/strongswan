@@ -18,8 +18,6 @@
 #include "serpent_crypter.h"
 #include "serpent.h"
 
-#define SERPENT_BLOCK_SIZE 16
-
 typedef struct private_serpent_crypter_t private_serpent_crypter_t;
 
 /**

@@ -60,7 +60,7 @@
 
 #include "des_crypter.h"
 
-typedef u_char des_cblock[8];
+typedef u_char des_cblock[DES_BLOCK_SIZE];
 
 typedef struct des_ks_struct {
 	des_cblock _;
