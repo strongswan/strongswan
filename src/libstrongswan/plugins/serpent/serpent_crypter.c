@@ -162,7 +162,8 @@ serpent_crypter_t *serpent_crypter_create(encryption_algorithm_t algo, size_t ke
 {
 	private_serpent_crypter_t *this;
 	
-	if (algo != ENCR_SERPENT_CBC || !(key_size == 16 || key_size == 32))
+	if (algo != ENCR_SERPENT_CBC ||
+	  !(key_size == 16 || key_size = 24 || key_size == 32))
 	{
 		return NULL;
 	}
