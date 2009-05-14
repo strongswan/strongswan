@@ -410,26 +410,11 @@ static u_int32_t get_lifetime(private_child_sa_t *this, bool hard)
  */
 static u_int32_t alloc_spi(private_child_sa_t *this, protocol_id_t protocol)
 {
-	switch (protocol)
+	if (charon->kernel_interface->get_spi(charon->kernel_interface,
+							this->other_addr, this->my_addr, protocol,
+							this->reqid, &this->my_spi) == SUCCESS)
 	{
-		case PROTO_AH:
-			if (charon->kernel_interface->get_spi(charon->kernel_interface, 
-							this->other_addr, this->my_addr, PROTO_AH,
-							this->reqid, &this->my_spi) == SUCCESS)
-			{
-				return this->my_spi;
-			}
-			break;
-		case PROTO_ESP:
-			if (charon->kernel_interface->get_spi(charon->kernel_interface,
-							this->other_addr, this->my_addr, PROTO_ESP,
-							this->reqid, &this->my_spi) == SUCCESS)
-			{
-				return this->my_spi;
-			}
-			break;
-		default:
-			break;
+		return this->my_spi;
 	}
 	return 0;
 }
