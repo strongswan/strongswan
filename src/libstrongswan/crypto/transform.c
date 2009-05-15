@@ -1,6 +1,6 @@
-/* proposal keywords
- * Copyright (C) 2009 Andreas Steffen
- * Hochschule fuer Technik Rapperswil, Switzerland
+/*
+ * Copyright (C) 2006 Martin Willi
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,12 +13,15 @@
  * for more details.
  */
 
-#ifndef _PROPOSAL_KEYWORDS_H_
-#define _PROPOSAL_KEYWORDS_H_
+#include <crypto/transform.h>
 
-typedef struct proposal_token proposal_token_t;
-
-extern const proposal_token_t* in_word_set(register const char *str, register unsigned int len);
-
-#endif /* _PROPOSAL_KEYWORDS_H_ */
+ENUM_BEGIN(transform_type_names, UNDEFINED_TRANSFORM_TYPE, UNDEFINED_TRANSFORM_TYPE, 
+	"UNDEFINED_TRANSFORM_TYPE");
+ENUM_NEXT(transform_type_names, ENCRYPTION_ALGORITHM, EXTENDED_SEQUENCE_NUMBERS, UNDEFINED_TRANSFORM_TYPE,
+	"ENCRYPTION_ALGORITHM",
+	"PSEUDO_RANDOM_FUNCTION",
+	"INTEGRITY_ALGORITHM",
+	"DIFFIE_HELLMAN_GROUP",
+	"EXTENDED_SEQUENCE_NUMBERS");
+ENUM_END(transform_type_names, EXTENDED_SEQUENCE_NUMBERS);
 

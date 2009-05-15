@@ -8,7 +8,7 @@ config/backend_manager.c config/backend_manager.h config/backend.h \
 config/child_cfg.c config/child_cfg.h \
 config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
-config/proposal.c config/proposal.h config/proposal_keywords.c config/proposal_keywords.h \
+config/proposal.c config/proposal.h \
 config/auth_cfg.c config/auth_cfg.h \
 config/traffic_selector.c config/traffic_selector.h \
 config/attributes/attribute_provider.h \
@@ -108,13 +108,6 @@ AM_CFLAGS = -rdynamic \
   -DIPSEC_PLUGINDIR=\"${plugindir}\" \
   -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm $(DLLIB)
-
-EXTRA_DIST = config/proposal_keywords.txt
-BUILT_SOURCES = $(srcdir)/config/proposal_keywords.c
-MAINTAINERCLEANFILES = $(srcdir)/config/proposal_keywords.c
-
-$(srcdir)/config/proposal_keywords.c:	$(srcdir)/config/proposal_keywords.txt $(srcdir)/config/proposal_keywords.h
-		$(GPERF) -C -G -c -t -D < $(srcdir)/config/proposal_keywords.txt > $@
 
 # compile options
 #################

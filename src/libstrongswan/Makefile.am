@@ -22,12 +22,14 @@ asn1/pem.c asn1/pem.h \
 crypto/crypters/crypter.c crypto/crypters/crypter.h \
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
 crypto/pkcs9.c crypto/pkcs9.h \
+crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords.h \
 crypto/prfs/prf.c crypto/prfs/prf.h \
 crypto/rngs/rng.c crypto/rngs/rng.h \
 crypto/prf_plus.h crypto/prf_plus.c \
 crypto/signers/signer.c crypto/signers/signer.h \
-crypto/diffie_hellman.c crypto/diffie_hellman.h \
 crypto/crypto_factory.c crypto/crypto_factory.h \
+crypto/diffie_hellman.c crypto/diffie_hellman.h \
+crypto/transform.c crypto/transform.h \
 credentials/credential_factory.c credentials/credential_factory.h \
 credentials/builder.c credentials/builder.h \
 credentials/keys/private_key.c credentials/keys/private_key.h \
@@ -80,15 +82,28 @@ if USE_VSTR
   libstrongswan_la_LIBADD += -lvstr
 endif
 
-EXTRA_DIST = asn1/oid.txt asn1/oid.pl
-BUILT_SOURCES = $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h
-MAINTAINERCLEANFILES = $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h
+EXTRA_DIST = \
+asn1/oid.txt asn1/oid.pl \
+crypto/proposal/proposal_keywords.txt
+
+BUILT_SOURCES = \
+$(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
+$(srcdir)/crypto/proposal/proposal_keywords.c
+
+MAINTAINERCLEANFILES = \
+$(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
+$(srcdir)/crypto/proposal/proposal_keywords.c
 
 $(srcdir)/asn1/oid.c :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
 		(cd $(srcdir)/asn1/ && $(PERL) oid.pl)
 
 $(srcdir)/asn1/oid.h :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
 		(cd $(srcdir)/asn1/ && $(PERL) oid.pl)
+
+$(srcdir)/crypto/proposal/proposal_keywords.c:	$(srcdir)/crypto/proposal/proposal_keywords.txt \
+												$(srcdir)/crypto/proposal/proposal_keywords.h
+		$(GPERF) -N proposal_get_token -m 10 -C -G -c -t -D < \
+												$(srcdir)/crypto/proposal/proposal_keywords.txt > $@
 
 
 # build plugins with their own Makefile

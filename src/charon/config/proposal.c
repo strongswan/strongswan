@@ -17,16 +17,16 @@
 #include <string.h>
 
 #include "proposal.h"
-#include "proposal_keywords.h"
 
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 #include <utils/lexparser.h>
+#include <crypto/transform.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
-
+#include <crypto/proposal/proposal_keywords.h>
 
 ENUM(protocol_id_names, PROTO_NONE, PROTO_ESP,
 	"PROTO_NONE",
@@ -34,16 +34,6 @@ ENUM(protocol_id_names, PROTO_NONE, PROTO_ESP,
 	"AH",
 	"ESP",
 );
-
-ENUM_BEGIN(transform_type_names, UNDEFINED_TRANSFORM_TYPE, UNDEFINED_TRANSFORM_TYPE, 
-	"UNDEFINED_TRANSFORM_TYPE");
-ENUM_NEXT(transform_type_names, ENCRYPTION_ALGORITHM, EXTENDED_SEQUENCE_NUMBERS, UNDEFINED_TRANSFORM_TYPE,
-	"ENCRYPTION_ALGORITHM",
-	"PSEUDO_RANDOM_FUNCTION",
-	"INTEGRITY_ALGORITHM",
-	"DIFFIE_HELLMAN_GROUP",
-	"EXTENDED_SEQUENCE_NUMBERS");
-ENUM_END(transform_type_names, EXTENDED_SEQUENCE_NUMBERS);
 
 ENUM(extended_sequence_numbers_names, NO_EXT_SEQ_NUMBERS, EXT_SEQ_NUMBERS,
 	"NO_EXT_SEQ",
@@ -594,7 +584,7 @@ struct proposal_token {
  */
 static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 {
-	const proposal_token_t *token = in_word_set(alg.ptr, alg.len);
+	const proposal_token_t *token = proposal_get_token(alg.ptr, alg.len);
 
 	if (token == NULL)
 	{

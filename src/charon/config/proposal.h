@@ -22,7 +22,6 @@
 #define PROPOSAL_H_
 
 typedef enum protocol_id_t protocol_id_t;
-typedef enum transform_type_t transform_type_t;
 typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
 typedef struct proposal_t proposal_t;
 
@@ -30,6 +29,7 @@ typedef struct proposal_t proposal_t;
 #include <utils/identification.h>
 #include <utils/linked_list.h>
 #include <utils/host.h>
+#include <crypto/transform.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
 #include <crypto/diffie_hellman.h>
@@ -49,25 +49,6 @@ enum protocol_id_t {
  * enum names for protocol_id_t
  */
 extern enum_name_t *protocol_id_names;
-
-
-/**
- * Type of a transform, as in IKEv2 RFC 3.3.2.
- */
-enum transform_type_t {
-	UNDEFINED_TRANSFORM_TYPE = 241,
-	ENCRYPTION_ALGORITHM = 1,
-	PSEUDO_RANDOM_FUNCTION = 2,
-	INTEGRITY_ALGORITHM = 3,
-	DIFFIE_HELLMAN_GROUP = 4,
-	EXTENDED_SEQUENCE_NUMBERS = 5
-};
-
-/**
- * enum names for transform_type_t.
- */
-extern enum_name_t *transform_type_names;
-
 
 /**
  * Extended sequence numbers, as in IKEv2 RFC 3.3.2.
