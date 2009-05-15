@@ -1,15 +1,22 @@
-#include <stdio.h>
-#include <string.h>
-#include <stddef.h>
-#include <sys/types.h>
-#include <freeswan.h>
+/* IKE SHA-2 hash algorithm description
+ * Copyright (C) JuanJo Ciarlante <jjo-ipsec@mendoza.gov.ar>
+ * Copyright (C) 2009 Andreas Steffen
+ *
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
 
 #include <crypto/hashers/hasher.h>
 
-#include "constants.h"
-#include "defs.h"
-#include "log.h"
-#include "alg_info.h"
 #include "ike_alg.h"
 
 /* SHA-256 hash test vectors
@@ -575,25 +582,3 @@ struct hash_desc hash_desc_sha2_512 = {
 	hmac_testvectors: sha512_hmac_testvectors
 };
 
-int ike_alg_sha2_init(void);
-
-int
-ike_alg_sha2_init(void)
-{
-    int ret
-;
-    ret = ike_alg_register_hash(&hash_desc_sha2_256);
-    if (ret)
-	goto out;
-    ret = ike_alg_register_hash(&hash_desc_sha2_384);
-    if (ret)
-	goto out;
-    ret = ike_alg_register_hash(&hash_desc_sha2_512);
-
-out:
-	return ret;
-}
-
-/*
-IKE_ALG_INIT_NAME: ike_alg_sha2_init
-*/

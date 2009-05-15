@@ -1,5 +1,5 @@
-/* IKE AES encryption algorithm description
- * Copyright (C) JuanJo Ciarlante <jjo-ipsec@mendoza.gov.ar>
+/* IKE 3DES encryption algorithm description
+ * Copyright (C) 1998-2001 D. Hugh Redelmeier
  * Copyright (C) 2009 Andreas Steffen
  *
  * Hochschule fuer Technik Rapperswil
@@ -19,20 +19,17 @@
 
 #include "ike_alg.h"
 
-#define  AES_KEY_MIN_LEN	128
-#define  AES_KEY_DEF_LEN	128
-#define  AES_KEY_MAX_LEN	256
+struct encrypt_desc encrypt_desc_3des =
+{       
+		algo_type:      IKE_ALG_ENCRYPT,
+		algo_id:        OAKLEY_3DES_CBC, 
+		algo_next:      NULL,
 
-struct encrypt_desc encrypt_desc_aes =
-{
-	algo_type: 	IKE_ALG_ENCRYPT,
-	algo_id:   	OAKLEY_AES_CBC,
-	algo_next: 	NULL, 
-
-	enc_blocksize: 	AES_BLOCK_SIZE,
-	keyminlen: 		AES_KEY_MIN_LEN,
-	keydeflen: 		AES_KEY_DEF_LEN,
-	keymaxlen: 		AES_KEY_MAX_LEN,
-	enc_testvectors: NULL
+		enc_blocksize:	DES_BLOCK_SIZE, 
+		keydeflen:		DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+		keyminlen:		DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+		keymaxlen:		DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+		enc_testvectors: NULL
 };
+
 

@@ -1,9 +1,0 @@
-##
-## IKE algorithms config. for static linking into pluto
-## By now  3DES,MD5 and SHA1 are already present in pluto.
-##
-
-Optional building of algorithms has not been ported to the
-new build system with autotools. As all the crypto stuff
-will go into libstrongswan soon, we willll provide this
-possibility there...

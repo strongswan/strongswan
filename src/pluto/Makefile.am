@@ -52,8 +52,9 @@ vendor.c vendor.h \
 virtual.c virtual.h \
 xauth.c xauth.h \
 x509.c x509.h \
-alg/ike_alg_aes.c alg/ike_alg_blowfish.c alg/ike_alg_twofish.c \
-alg/ike_alg_serpent.c alg/ike_alg_sha2.c alg/ike_alginit.c \
+alg/ike_alg_3des.c alg/ike_alg_aes.c \
+alg/ike_alg_blowfish.c alg/ike_alg_twofish.c alg/ike_alg_serpent.c\
+alg/ike_alg_md5_sha1.c alg/ike_alg_sha2.c \
 rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
 _pluto_adns_SOURCES = adns.c adns.h

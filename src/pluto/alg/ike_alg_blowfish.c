@@ -1,13 +1,22 @@
-#include <stdio.h>
-#include <string.h>
-#include <stddef.h>
-#include <sys/types.h>
-#include <freeswan.h>
+/* IKE Blowfish encryption algorithm description
+ * Copyright (C) JuanJo Ciarlante <jjo-ipsec@mendoza.gov.ar>
+ * Copyright (C) 2009 Andreas Steffen
+ *
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
 
-#include "constants.h"
-#include "defs.h"
-#include "log.h"
-#include "alg_info.h"
+#include <crypto/crypters/crypter.h>
+
 #include "ike_alg.h"
 
 #define  BLOWFISH_KEY_MIN_LEN	128
@@ -89,7 +98,7 @@ static const enc_testvector_t bf_enc_testvectors[] = {
 	{ 0, NULL, NULL, 0, NULL, NULL }
 };
 
-struct encrypt_desc algo_blowfish =
+struct encrypt_desc encrypt_desc_blowfish =
 {
 	algo_type: IKE_ALG_ENCRYPT,
 	algo_id:   OAKLEY_BLOWFISH_CBC,
@@ -102,15 +111,3 @@ struct encrypt_desc algo_blowfish =
 	enc_testvectors: bf_enc_testvectors,
 };
 
-int ike_alg_blowfish_init(void);
-
-int
-ike_alg_blowfish_init(void)
-{
-    int ret = ike_alg_register_enc(&algo_blowfish);
-
-    return ret;
-}
-/*
-IKE_ALG_INIT_NAME: ike_alg_blowfish_init
-*/

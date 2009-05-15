@@ -15,6 +15,8 @@
 #ifndef _IKE_ALG_H
 #define _IKE_ALG_H
 
+#include <freeswan.h>
+
 #include "connections.h"
 
 struct ike_alg {
