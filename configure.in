@@ -1048,7 +1048,7 @@ if test x$padlock = xtrue; then
 fi
 if test x$openssl = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" openssl"
-	pluto_plugins=${pluto_plugins}" hmac"
+	pluto_plugins=${pluto_plugins}" openssl"
 fi
 if test x$agent = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" agent"
