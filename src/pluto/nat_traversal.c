@@ -134,7 +134,7 @@ static void _natd_hash(const struct hash_desc *oakley_hasher, char *hash,
 		hasher_t *hasher;
 		size_t hash_size;
 
-		hash_alg = oakley_to_hash_algorithm(oakley_hash);
+		hash_alg = oakley_to_hash_algorithm(oakley_hasher->algo_id);
 		hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 		hasher->get_hash(hasher, icookie_chunk, NULL);
 		hasher->get_hash(hasher, rcookie_chunk, NULL);
