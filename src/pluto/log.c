@@ -28,6 +28,7 @@
 #include <sys/types.h>
 
 #include <freeswan.h>
+#include <library.h>
 #include <debug.h>
 
 #include "constants.h"
@@ -828,13 +829,29 @@ DBG_dump(const char *label, const void *p, size_t len)
 
 #endif /* DEBUG */
 
-void
-show_status(bool all, const char *name)
+static void show_loaded_plugins()
+{
+	char buf[BUF_LEN], *plugin;
+	int len = 0;
+	enumerator_t *enumerator;
+	
+	buf[0] = '\0';	
+	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
+	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
+	{
+		len += snprintf(&buf[len], BUF_LEN-len, "%s ", plugin);
+	}
+	enumerator->destroy(enumerator);
+	whack_log(RC_COMMENT, "loaded plugins: %s", buf);
+}
+
+void show_status(bool all, const char *name)
 {
 	if (all)
 	{
 		show_ifaces_status();
 		show_myid_status();
+		show_loaded_plugins();
 		show_debug_status();
 		whack_log(RC_COMMENT, BLANK_FORMAT);    /* spacer */
 	}
