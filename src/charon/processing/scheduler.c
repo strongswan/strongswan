@@ -164,11 +164,12 @@ static event_t *remove_event(private_scheduler_t *this)
 			
 			if (timeval_cmp(&top->time, &this->heap[child]->time) <= 0)
 			{
-				/* the top event fires before the smaller of the two children, stop */
+				/* the top event fires before the smaller of the two children,
+				 * stop */
 				break;
 			}
 			
-			/* exchange with the smaller child */
+			/* swap with the smaller child */
 			this->heap[position] = this->heap[child];
 			position = child;
 		}
