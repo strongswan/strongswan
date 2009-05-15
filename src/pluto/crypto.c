@@ -144,7 +144,10 @@ void init_crypto(void)
 		exit_log("mpz_init_set_str() failed in init_crypto()");
 	}
 #ifdef SELF_TEST
-	ike_alg_test();
+	if (!ike_alg_test())
+	{
+		exit_log("pluto cannot run due to failed crypto self-test");
+	}
 #endif
 }
 
@@ -189,12 +192,9 @@ const struct oakley_group_desc *lookup_group(u_int16_t group)
 	return NULL;
 }
 
-/* Encryption Routines
- *
- * Each uses and updates the state object's st_new_iv.
- * This must already be initialized.
+/**
+ * Converts IKEv1 encryption algorithm name to crypter name
  */
-
 encryption_algorithm_t oakley_to_encryption_algorithm(int alg)
 {
 	switch (alg)
@@ -223,6 +223,9 @@ encryption_algorithm_t oakley_to_encryption_algorithm(int alg)
 	}
 }
 
+/**
+ * Converts IKEv1 hash algorithm name to hasher name
+ */
 hash_algorithm_t oakley_to_hash_algorithm(int alg)
 {
 	switch (alg)
@@ -242,6 +245,9 @@ hash_algorithm_t oakley_to_hash_algorithm(int alg)
 	}
 }
 
+/**
+ * Converts IKEv1 hash algorithm name to IKEv2 prf name
+ */
 pseudo_random_function_t oakley_to_prf(int alg)
 {
 	switch (alg)

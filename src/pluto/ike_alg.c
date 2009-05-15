@@ -575,7 +575,7 @@ bool ike_alg_test(void)
 	bool all_results = TRUE;
 	struct ike_alg *a;
 	
-	plog("Testing registered IKE encryption algorithms:");
+	plog("Testing registered IKE crypto algorithms:");
 
 	for (a = ike_alg_base[IKE_ALG_ENCRYPT]; a != NULL; a = a->algo_next)
 	{
