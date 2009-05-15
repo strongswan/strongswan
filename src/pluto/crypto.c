@@ -57,15 +57,15 @@ MP_INT groupgenerator;  /* MODP group generator (2) */
 void init_crypto(void)
 {
 	enumerator_t *enumerator;
-	encryption_algorithm_t encryption;
-	pseudo_random_function_t prf;
+	encryption_algorithm_t encryption_alg;
+	hash_algorithm_t hash_alg;
 
 	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &encryption))
+	while (enumerator->enumerate(enumerator, &encryption_alg))
 	{
 		const struct encrypt_desc *desc;
  
-		switch (encryption)
+		switch (encryption_alg)
 		{
 			case ENCR_3DES:
 				desc = &encrypt_desc_3des;
@@ -90,26 +90,26 @@ void init_crypto(void)
 	}
 	enumerator->destroy(enumerator);
 
-	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &prf))
+	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &hash_alg))
 	{
 		const struct hash_desc *desc;
 
-		switch (prf)
+		switch (hash_alg)
 		{
-			case PRF_HMAC_SHA1:
+			case HASH_SHA1:
 				desc = &hash_desc_sha1;
 				break;
-			case PRF_HMAC_SHA2_256:
+			case HASH_SHA256:
 				desc = &hash_desc_sha2_256;
 				break;
-			case PRF_HMAC_SHA2_384:
+			case HASH_SHA384:
 				desc = &hash_desc_sha2_384;
 				break;
-			case PRF_HMAC_SHA2_512:
+			case HASH_SHA512:
 				desc = &hash_desc_sha2_512;
 				break;
-			case PRF_HMAC_MD5:
+			case HASH_MD5:
 				desc = &hash_desc_md5;
 				break;
 			default:
