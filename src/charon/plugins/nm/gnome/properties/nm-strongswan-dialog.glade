@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--*- mode: xml -*-->
+<?xml version="1.0"?>
 <glade-interface>
+  <!-- interface-requires gtk+ 2.12 -->
+  <!-- interface-naming-policy project-wide -->
   <widget class="GtkWindow" id="strongswan-widget">
     <property name="title" translatable="yes">window1</property>
     <child>
@@ -23,6 +23,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
+                <property name="position">0</property>
               </packing>
             </child>
             <child>
@@ -54,7 +55,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip_text">An IP address or hostname the Gateway can be contacted.</property>
+                        <property name="tooltip">An IP address or hostname the Gateway can be contacted.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -80,7 +81,7 @@
                     <child>
                       <widget class="GtkFileChooserButton" id="certificate-button">
                         <property name="visible">True</property>
-                        <property name="tooltip_text">Gateway certificate to use for gateway authentication.</property>
+                        <property name="tooltip">Gateway certificate to use for gateway authentication.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -99,6 +100,7 @@
           </widget>
           <packing>
             <property name="expand">False</property>
+            <property name="position">0</property>
           </packing>
         </child>
         <child>
@@ -115,6 +117,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
+                <property name="position">0</property>
               </packing>
             </child>
             <child>
@@ -131,7 +134,7 @@
                     <child>
                       <widget class="GtkFileChooserButton" id="userkey-button">
                         <property name="visible">True</property>
-                        <property name="tooltip_text">Private key to use for client authentication. This key has to match the certificates public key and may be encrypted..</property>
+                        <property name="tooltip">Private key to use for client authentication. This key has to match the certificates public key and may be encrypted..</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -159,7 +162,7 @@
                       <widget class="GtkComboBox" id="method-combo">
                         <property name="visible">True</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip_text">Authentication Method to use for authentication against the Gateway. </property>
+                        <property name="tooltip">Authentication Method to use for authentication against the Gateway. </property>
                         <property name="items"></property>
                       </widget>
                       <packing>
@@ -200,7 +203,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip_text">The username (identity) to use for authentication against the gateway.</property>
+                        <property name="tooltip">The username (identity) to use for authentication against the gateway.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -228,7 +231,7 @@
                     <child>
                       <widget class="GtkFileChooserButton" id="usercert-button">
                         <property name="visible">True</property>
-                        <property name="tooltip_text">Client certificate to use for client authentication.</property>
+                        <property name="tooltip">Client certificate to use for client authentication.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -264,6 +267,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
+                <property name="position">0</property>
               </packing>
             </child>
             <child>
@@ -275,25 +279,28 @@
                     <property name="visible">True</property>
                     <child>
                       <widget class="GtkCheckButton" id="virtual-check">
+                        <property name="label" translatable="yes">Request an _inner IP address</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
+                        <property name="receives_default">False</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip_text">The Gateway may provide addresses from a pool to use for communication in the Gateways network. Check to request such an address.</property>
-                        <property name="label" translatable="yes">Request an _inner IP address</property>
+                        <property name="tooltip">The Gateway may provide addresses from a pool to use for communication in the Gateways network. Check to request such an address.</property>
                         <property name="use_underline">True</property>
-                        <property name="response_id">0</property>
                         <property name="draw_indicator">True</property>
                       </widget>
+                      <packing>
+                        <property name="position">0</property>
+                      </packing>
                     </child>
                     <child>
                       <widget class="GtkCheckButton" id="encap-check">
+                        <property name="label" translatable="yes">En_force UDP encapsulation</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
+                        <property name="receives_default">False</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip_text">Some firewalls block ESP traffic. Enforcing UDP capsulation even if no NAT situation is detected might help in such cases.</property>
-                        <property name="label" translatable="yes">En_force UDP encapsulation</property>
+                        <property name="tooltip">Some firewalls block ESP traffic. Enforcing UDP capsulation even if no NAT situation is detected might help in such cases.</property>
                         <property name="use_underline">True</property>
-                        <property name="response_id">0</property>
                         <property name="draw_indicator">True</property>
                       </widget>
                       <packing>
@@ -302,13 +309,13 @@
                     </child>
                     <child>
                       <widget class="GtkCheckButton" id="ipcomp-check">
+                        <property name="label" translatable="yes">Use IP c_ompression</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
+                        <property name="receives_default">False</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip_text">IPComp compresses raw IP packets before they get encrypted. This saves some bandwith, but uses more processing power.</property>
-                        <property name="label" translatable="yes">Use IP c_ompression</property>
+                        <property name="tooltip">IPComp compresses raw IP packets before they get encrypted. This saves some bandwith, but uses more processing power.</property>
                         <property name="use_underline">True</property>
-                        <property name="response_id">0</property>
                         <property name="draw_indicator">True</property>
                       </widget>
                       <packing>
