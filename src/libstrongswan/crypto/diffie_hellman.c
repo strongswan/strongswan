@@ -18,22 +18,22 @@
 
 ENUM_BEGIN(diffie_hellman_group_names, MODP_NONE, MODP_1024_BIT,
 	"MODP_NONE",
-	"MODP_768_BIT",
-	"MODP_1024_BIT");
+	"MODP_768",
+	"MODP_1024");
 ENUM_NEXT(diffie_hellman_group_names, MODP_1536_BIT, MODP_1536_BIT, MODP_1024_BIT,
-	"MODP_1536_BIT");
+	"MODP_1536");
 ENUM_NEXT(diffie_hellman_group_names, MODP_2048_BIT, ECP_521_BIT, MODP_1536_BIT,
-	"MODP_2048_BIT",
-	"MODP_3072_BIT",
-	"MODP_4096_BIT",
-	"MODP_6144_BIT",
-	"MODP_8192_BIT",
-	"ECP_256_BIT",
-	"ECP_384_BIT",
-	"ECP_521_BIT");
+	"MODP_2048",
+	"MODP_3072",
+	"MODP_4096",
+	"MODP_6144",
+	"MODP_8192",
+	"ECP_256",
+	"ECP_384",
+	"ECP_521");
 ENUM_NEXT(diffie_hellman_group_names, ECP_192_BIT, ECP_224_BIT, ECP_521_BIT,
-	"ECP_192_BIT",
-	"ECP_224_BIT");
+	"ECP_192",
+	"ECP_224");
 ENUM_NEXT(diffie_hellman_group_names, MODP_NULL, MODP_NULL, ECP_224_BIT,
 	"MODP_NULL");
 ENUM_END(diffie_hellman_group_names, MODP_NULL);
