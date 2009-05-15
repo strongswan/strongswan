@@ -59,7 +59,49 @@ void init_crypto(void)
 	enumerator_t *enumerator;
 	encryption_algorithm_t encryption_alg;
 	hash_algorithm_t hash_alg;
+	bool no_md5  = TRUE;
+	bool no_sha1 = TRUE;
 
+	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &hash_alg))
+	{
+		const struct hash_desc *desc;
+
+		switch (hash_alg)
+		{
+			case HASH_SHA1:
+				desc = &hash_desc_sha1;
+				no_sha1 = FALSE;
+				break;
+			case HASH_SHA256:
+				desc = &hash_desc_sha2_256;
+				break;
+			case HASH_SHA384:
+				desc = &hash_desc_sha2_384;
+				break;
+			case HASH_SHA512:
+				desc = &hash_desc_sha2_512;
+				break;
+			case HASH_MD5:
+				desc = &hash_desc_md5;
+				no_md5 = FALSE;
+				break;
+			default:
+				continue;
+		}
+		ike_alg_add((struct ike_alg *)desc);
+	}
+	enumerator->destroy(enumerator);
+
+	if (no_sha1)
+	{
+		exit_log("pluto cannot run without a SHA-1 hasher");
+	}
+	if (no_md5)
+	{
+		exit_log("pluto cannot run without an MD5 hasher");
+	}
+		
 	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &encryption_alg))
 	{
@@ -85,35 +127,6 @@ void init_crypto(void)
 				break;
 			default:
 				continue;			
-		}
-		ike_alg_add((struct ike_alg *)desc);
-	}
-	enumerator->destroy(enumerator);
-
-	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &hash_alg))
-	{
-		const struct hash_desc *desc;
-
-		switch (hash_alg)
-		{
-			case HASH_SHA1:
-				desc = &hash_desc_sha1;
-				break;
-			case HASH_SHA256:
-				desc = &hash_desc_sha2_256;
-				break;
-			case HASH_SHA384:
-				desc = &hash_desc_sha2_384;
-				break;
-			case HASH_SHA512:
-				desc = &hash_desc_sha2_512;
-				break;
-			case HASH_MD5:
-				desc = &hash_desc_md5;
-				break;
-			default:
-				continue;
 		}
 		ike_alg_add((struct ike_alg *)desc);
 	}
