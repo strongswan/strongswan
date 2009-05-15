@@ -804,11 +804,12 @@ static const char *const oakley_enc_name[] = {
 	"OAKLEY_3DES_CBC",
 	"OAKLEY_CAST_CBC",
 	"OAKLEY_AES_CBC",
+	"OAKLEY_CAMELLIA_CBC"
 };
 
 #ifdef NO_EXTRA_IKE
 enum_names oakley_enc_names =
-	{ OAKLEY_DES_CBC, OAKLEY_AES_CBC, oakley_enc_name, NULL };
+	{ OAKLEY_DES_CBC, OAKLEY_CAMELLIA_CBC, oakley_enc_name, NULL };
 #else
 static const char *const oakley_enc_name_draft_aes_cbc_02[] = {
 	"OAKLEY_MARS_CBC"       /*      65001   */,
@@ -831,7 +832,7 @@ enum_names oakley_enc_names_draft_aes_cbc_02 =
 		, &oakley_enc_names_ssh };
 
 enum_names oakley_enc_names =
-	{ OAKLEY_DES_CBC, OAKLEY_AES_CBC, oakley_enc_name
+	{ OAKLEY_DES_CBC, OAKLEY_CAMELLIA_CBC, oakley_enc_name
 		, &oakley_enc_names_draft_aes_cbc_02 };
 #endif
 

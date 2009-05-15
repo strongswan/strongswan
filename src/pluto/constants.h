@@ -1018,6 +1018,7 @@ extern enum_names oakley_enc_names;
 #define OAKLEY_3DES_CBC                 5
 #define OAKLEY_CAST_CBC                 6
 #define OAKLEY_AES_CBC                  7
+#define OAKLEY_CAMELLIA_CBC             8
 
 #define OAKLEY_MARS_CBC                 65001
 #define OAKLEY_RC6_CBC                  65002
