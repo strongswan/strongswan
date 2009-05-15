@@ -380,10 +380,18 @@ static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
 	cert = lib->creds->create(lib->creds,
 							  CRED_CERTIFICATE, CERT_X509,
 							  BUILD_FROM_FILE, path,
-							  BUILD_X509_FLAG, X509_CA,
 							  BUILD_END);
 	if (cert)
 	{
+		x509_t *x509 = (x509_t*)cert;
+		
+		if (!(x509->get_flags(x509) & X509_CA))
+		{
+			cert->destroy(cert);
+			DBG1(DBG_CFG, "  ca certificate must have ca basic constraint set, "
+				 "discarded");
+			return NULL;
+		}
 		return (certificate_t*)add_cert(this, cert);
 	}
 	return NULL;
@@ -522,11 +530,32 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 		switch (type)
 		{
 			case CERT_X509:
-				cert = lib->creds->create(lib->creds,
-										  CRED_CERTIFICATE, CERT_X509,
-										  BUILD_FROM_FILE, file,
-										  BUILD_X509_FLAG, flag,
-										  BUILD_END);
+				if (flag & X509_CA)
+				{	/* for CA certificates, we strictly require CA
+					 * basicconstraints to be set */
+					cert = lib->creds->create(lib->creds,
+										CRED_CERTIFICATE, CERT_X509,
+										BUILD_FROM_FILE, file, BUILD_END);
+					if (cert)
+					{
+						x509_t *x509 = (x509_t*)cert;
+						
+						if (!(x509->get_flags(x509) & X509_CA))
+						{
+							DBG1(DBG_CFG, "  ca certificate must have ca "
+								 "basic constraint set, discarded");
+							cert->destroy(cert);
+							cert = NULL;
+						}
+					}
+				}
+				else
+				{	/* for all other flags, we add them to the certificate. */
+					cert = lib->creds->create(lib->creds,
+										CRED_CERTIFICATE, CERT_X509,
+										BUILD_FROM_FILE, file,
+										BUILD_X509_FLAG, flag, BUILD_END);
+				}
 				if (cert)
 				{
 					add_cert(this, cert);

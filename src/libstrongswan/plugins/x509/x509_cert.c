@@ -1350,33 +1350,22 @@ static bool generate(private_builder_t *this)
 static private_x509_cert_t *build(private_builder_t *this)
 {
 	private_x509_cert_t *cert;
-	x509_flag_t flags;
 	
-	if (this->cert && !this->cert->encoding.ptr)
+	if (this->cert)
 	{
-		if (!this->sign_key || !this->cert ||
-			!generate(this))
-		{
-			destroy(this->cert);
-			free(this);
-			return NULL;
+		this->cert->flags |= this->flags;
+		if (!this->cert->encoding.ptr)
+		{	/* generate a new certificate */
+			if (!this->sign_key || !generate(this))
+			{
+				destroy(this->cert);
+				free(this);
+				return NULL;
+			}
 		}
 	}
 	cert = this->cert;
-	flags =  this->flags;
 	free(this);
-	if (cert == NULL)
-	{
-		return NULL;
-	}
-	
-	if ((flags & X509_CA) && !(cert->flags & X509_CA))
-	{
-		DBG1("  ca certificate must have ca basic constraint set, discarded");
-		destroy(cert);
-		return NULL;
-	}
-	cert->flags |= flags;
 	return cert;
 }
 
