@@ -48,6 +48,7 @@ typedef enum {
 	STROKE_REREAD_CRLS,
 	STROKE_REREAD_ALL,
 	STROKE_PURGE_OCSP,
+	STROKE_PURGE_IKE,
 	STROKE_LEASES
 } stroke_keyword_t;
 

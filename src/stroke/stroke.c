@@ -248,7 +248,8 @@ static int reread(stroke_keyword_t kw)
 }
 
 static int purge_flags[] = {
-	PURGE_OCSP
+	PURGE_OCSP,
+	PURGE_IKE,
 };
 
 static int purge(stroke_keyword_t kw)
@@ -332,6 +333,8 @@ static void exit_usage(char *error)
 	printf("    stroke rereadsecrets|rereadcrls|rereadall\n");
 	printf("  Purge ocsp cache entries:\n");
 	printf("    stroke purgeocsp\n");
+	printf("  Purge IKE_SAs without a CHILD_SA:\n");
+	printf("    stroke purgeike\n");
 	printf("  Show leases of a pool:\n");
 	printf("    stroke leases [POOL [ADDRESS]]\n");
 	exit_error(error);
@@ -443,6 +446,7 @@ int main(int argc, char *argv[])
 			res = reread(token->kw);
 			break;
 		case STROKE_PURGE_OCSP:
+		case STROKE_PURGE_IKE:
 			res = purge(token->kw);
 			break;
 		case STROKE_LEASES:

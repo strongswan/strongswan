@@ -55,4 +55,5 @@ rereadacerts,    STROKE_REREAD_ACERTS
 rereadcrls,      STROKE_REREAD_CRLS
 rereadall,       STROKE_REREAD_ALL
 purgeocsp,       STROKE_PURGE_OCSP
+purgeike,        STROKE_PURGE_IKE
 leases,          STROKE_LEASES

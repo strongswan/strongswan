@@ -358,6 +358,46 @@ static void terminate_srcip(private_stroke_control_t *this,
 }
 
 /**
+ * Implementation of stroke_control_t.purge_ike
+ */
+static void purge_ike(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+{
+	enumerator_t *enumerator;
+	iterator_t *iterator;
+	ike_sa_t *ike_sa;
+	child_sa_t *child_sa;
+	linked_list_t *list;
+	uintptr_t del;
+	stroke_log_info_t info;
+	
+	info.out = out;
+	info.level = msg->output_verbosity;
+	
+	list = linked_list_create();
+	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		iterator = ike_sa->create_child_sa_iterator(ike_sa);
+		if (!iterator->iterate(iterator, (void**)&child_sa))
+		{
+			list->insert_last(list,
+						(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
+		}
+		iterator->destroy(iterator);
+	}
+	enumerator->destroy(enumerator);
+	
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &del))
+	{
+		charon->controller->terminate_ike(charon->controller, del,
+									(controller_cb_t)stroke_log, &info);
+	}
+	enumerator->destroy(enumerator);
+	list->destroy(list);
+}
+
+/**
  * Implementation of stroke_control_t.route.
  */
 static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
@@ -441,6 +481,7 @@ stroke_control_t *stroke_control_create()
 	this->public.initiate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))initiate;
 	this->public.terminate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate;
 	this->public.terminate_srcip = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate_srcip;
+	this->public.purge_ike = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))purge_ike;
 	this->public.route = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))route;
 	this->public.unroute = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))unroute;
 	this->public.destroy = (void(*)(stroke_control_t*))destroy;

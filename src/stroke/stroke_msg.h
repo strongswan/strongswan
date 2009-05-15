@@ -103,6 +103,8 @@ enum purge_flag_t {
 	PURGE_NONE =		0x0000,
 	/** purge ocsp cache entries */
 	PURGE_OCSP =		0x0001,
+	/** purge IKE_SAs without a CHILD_SA */
+	PURGE_IKE =			0x0002,
 };
 
 /**

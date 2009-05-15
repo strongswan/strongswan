@@ -341,8 +341,15 @@ static void stroke_reread(private_stroke_socket_t *this,
 static void stroke_purge(private_stroke_socket_t *this,
 						 stroke_msg_t *msg, FILE *out)
 {
-	charon->credentials->flush_cache(charon->credentials,
-									 CERT_X509_OCSP_RESPONSE);
+	if (msg->purge.flags & PURGE_OCSP)
+	{
+		charon->credentials->flush_cache(charon->credentials,
+										 CERT_X509_OCSP_RESPONSE);
+	}
+	if (msg->purge.flags & PURGE_IKE)
+	{
+		this->control->purge_ike(this->control, msg, out);
+	}
 }
 
 /**
