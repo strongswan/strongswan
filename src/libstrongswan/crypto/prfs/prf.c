@@ -21,13 +21,14 @@ ENUM_BEGIN(pseudo_random_function_names, PRF_UNDEFINED, PRF_KEYED_SHA1,
 	"PRF_FIPS_SHA1_160",
 	"PRF_FIPS_DES",
 	"PRF_KEYED_SHA1");
-ENUM_NEXT(pseudo_random_function_names, PRF_HMAC_MD5, PRF_HMAC_SHA2_512, PRF_KEYED_SHA1,
+ENUM_NEXT(pseudo_random_function_names, PRF_HMAC_MD5, PRF_AES128_CMAC, PRF_KEYED_SHA1,
 	"PRF_HMAC_MD5",
 	"PRF_HMAC_SHA1",
 	"PRF_HMAC_TIGER",
 	"PRF_AES128_CBC",
 	"PRF_HMAC_SHA2_256",
 	"PRF_HMAC_SHA2_384",
-	"PRF_HMAC_SHA2_512");
-ENUM_END(pseudo_random_function_names, PRF_HMAC_SHA2_512);
+	"PRF_HMAC_SHA2_512",
+	"PRF_AES128_CMAC");
+ENUM_END(pseudo_random_function_names, PRF_AES128_CMAC);
 

@@ -35,21 +35,25 @@ typedef struct prf_t prf_t;
  */
 enum pseudo_random_function_t {
 	PRF_UNDEFINED = 1024,
-	/** Implemented via hmac_prf_t. */
+	/** RFC2104 */
 	PRF_HMAC_MD5 = 1,
-	/** Implemented via hmac_prf_t. */
+	/** RFC2104 */
 	PRF_HMAC_SHA1 = 2,
+	/** RFC2104 */
 	PRF_HMAC_TIGER = 3,
+	/** RFC4434 */
 	PRF_AES128_XCBC = 4,
-	/** Implemented via hmac_prf_t. */
+	/** RFC4868 */
 	PRF_HMAC_SHA2_256 = 5,
-	/** Implemented via hmac_prf_t. */
+	/** RFC4868. */
 	PRF_HMAC_SHA2_384 = 6,
-	/** Implemented via hmac_prf_t. */
+	/** RFC4868 */
 	PRF_HMAC_SHA2_512 = 7,
-	/** Implemented via fips_prf_t, other output sizes would be possible */
+	/** RFC4615 */
+	PRF_AES128_CMAC = 8,
+	/** FIPS 186-2-change1 */
 	PRF_FIPS_SHA1_160 = 1025,
-	/** Could be implemented via fips_prf_t, uses fixed output size of 160bit */
+	/** FIPS 186-2-change1, uses fixed output size of 160bit */
 	PRF_FIPS_DES = 1026,
 	/** 
 	 * Keyed hash algorithm using SHA1, used in EAP-AKA:
