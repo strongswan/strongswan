@@ -252,7 +252,7 @@ static size_t modecfg_hash(u_char *dest, u_char *start, u_char *roof,
 	pseudo_random_function_t prf_alg;
 	prf_t *prf;
 
-	prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+	prf_alg = oakley_to_prf(st->st_oakley.hash);
 	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 	prf->set_key(prf, st->st_skeyid_a);
 	prf->get_bytes(prf, msgid_chunk, NULL);

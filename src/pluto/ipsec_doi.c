@@ -402,7 +402,7 @@ static void send_notification(struct state *sndst, u_int16_t type,
 		pseudo_random_function_t prf_alg;
 		prf_t *prf;
 
-		prf_alg = oakley_to_prf(encst->st_oakley.hasher->algo_id);
+		prf_alg = oakley_to_prf(encst->st_oakley.hash);
 		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 		prf->set_key(prf, encst->st_skeyid_a);
 		prf->get_bytes(prf, msgid_chunk, NULL);
@@ -659,7 +659,7 @@ void send_delete(struct state *st)
 		pseudo_random_function_t prf_alg;
 		prf_t *prf;
 
-		prf_alg = oakley_to_prf(p1st->st_oakley.hasher->algo_id);
+		prf_alg = oakley_to_prf(p1st->st_oakley.hash);
 		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 		prf->set_key(prf, p1st->st_skeyid_a);
 		prf->get_bytes(prf, msgid_chunk, NULL);
@@ -1181,7 +1181,7 @@ static bool skeyid_preshared(struct state *st)
 		pseudo_random_function_t prf_alg;
 		prf_t *prf;
 
-		prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+		prf_alg = oakley_to_prf(st->st_oakley.hash);
 		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 		if (prf == NULL)
 		{
@@ -1205,7 +1205,7 @@ skeyid_digisig(struct state *st)
 	pseudo_random_function_t prf_alg;
 	prf_t *prf;
 
-	prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+	prf_alg = oakley_to_prf(st->st_oakley.hash);
 	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 	if (prf == NULL)
 	{
@@ -1274,7 +1274,7 @@ static bool generate_skeyids_iv(struct state *st)
 		pseudo_random_function_t prf_alg;
 		prf_t *prf;
 
-		prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+		prf_alg = oakley_to_prf(st->st_oakley.hash);
 		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 		prf->set_key(prf, st->st_skeyid);
 
@@ -1309,7 +1309,7 @@ static bool generate_skeyids_iv(struct state *st)
 		hash_algorithm_t hash_alg;
 		hasher_t *hasher;
 
-		hash_alg = oakley_to_hash_algorithm(st->st_oakley.hasher->algo_id);
+		hash_alg = oakley_to_hash_algorithm(st->st_oakley.hash);
 		hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 		st->st_new_iv_len = hasher->get_hash_size(hasher);
 		passert(st->st_new_iv_len <= sizeof(st->st_new_iv));
@@ -1344,7 +1344,7 @@ static bool generate_skeyids_iv(struct state *st)
 			pseudo_random_function_t prf_alg;
 			prf_t *prf;
 
-			prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+			prf_alg = oakley_to_prf(st->st_oakley.hash);
 			prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 			prf->set_key(prf, st->st_skeyid_e);
 			prf_block_size = prf->get_block_size(prf);
@@ -1399,7 +1399,7 @@ static bool generate_skeyids_iv(struct state *st)
 	prf_t *prf;
 	size_t prf_block_size;
 
-	prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+	prf_alg = oakley_to_prf(st->st_oakley.hash);
 	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 	prf->set_key(prf, st->st_skeyid);
 
@@ -1920,7 +1920,7 @@ static size_t quick_mode_hash12(u_char *dest, u_char *start, u_char *roof,
 	prf_t *prf;
 	size_t prf_block_size;
 
-	prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+	prf_alg = oakley_to_prf(st->st_oakley.hash);
 	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 	prf->set_key(prf, st->st_skeyid_a);
 	prf->get_bytes(prf, msgid_chunk, NULL);
@@ -1954,7 +1954,7 @@ static size_t quick_mode_hash3(u_char *dest, struct state *st)
 	prf_t *prf;
 	size_t prf_block_size;
 	
-	prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+	prf_alg = oakley_to_prf(st->st_oakley.hash);
 	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 	prf->set_key(prf, st->st_skeyid_a);
 	prf->get_bytes(prf, seed_chunk, NULL );
@@ -1978,7 +1978,7 @@ void init_phase2_iv(struct state *st, const msgid_t *msgid)
 	hash_algorithm_t hash_alg;
 	hasher_t *hasher;
 
-	hash_alg = oakley_to_hash_algorithm(st->st_oakley.hasher->algo_id);
+	hash_alg = oakley_to_hash_algorithm(st->st_oakley.hash);
 	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 
 	DBG_cond_dump(DBG_CRYPT, "last Phase 1 IV:",
@@ -2898,7 +2898,7 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 		pseudo_random_function_t prf_alg;
 		prf_t *prf_our, *prf_peer;
 
-		prf_alg  = oakley_to_prf(st->st_oakley.hasher->algo_id);
+		prf_alg  = oakley_to_prf(st->st_oakley.hash);
 		prf_our  = lib->crypto->create_prf(lib->crypto, prf_alg);
 		prf_peer = lib->crypto->create_prf(lib->crypto, prf_alg);
 		prf_our->set_key(prf_our, st->st_skeyid_d);
@@ -5291,7 +5291,7 @@ static stf_status send_isakmp_notification(struct state *st, u_int16_t type,
 		pseudo_random_function_t prf_alg;
 		prf_t *prf;
 
-		prf_alg = oakley_to_prf(st->st_oakley.hasher->algo_id);
+		prf_alg = oakley_to_prf(st->st_oakley.hash);
 		prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 		prf->set_key(prf, st->st_skeyid_a);
 		prf->get_bytes(prf, msgid_chunk, NULL);
