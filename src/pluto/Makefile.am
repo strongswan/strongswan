@@ -116,6 +116,11 @@ if USE_SMARTCARD
   AM_CFLAGS += -DSMARTCARD
 endif
 
+# This compile option activates the crypto self-test
+if USE_SELF_TEST
+  AM_CFLAGS += -DSELF_TEST
+endif
+
 if USE_CAPABILITIES
   pluto_LDADD += -lcap
 endif

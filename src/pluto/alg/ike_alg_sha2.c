@@ -19,6 +19,8 @@
 
 #include "ike_alg.h"
 
+#ifdef SELF_TEST
+
 /* SHA-256 hash test vectors
  * from "The Secure Hash Algorithm Validation System (SHAVS)"
  * July 22, 2004, Lawrence E. Bassham III, NIST
@@ -555,13 +557,31 @@ static const hmac_testvector_t sha512_hmac_testvectors[] = {
     { 0, NULL, 0, NULL, NULL }
 };
 
+#define SHA256_HASH_TESTVECTORS		sha256_hash_testvectors
+#define SHA256_HMAC_TESTVECTORS		sha256_hmac_testvectors
+#define SHA384_HASH_TESTVECTORS		sha384_hash_testvectors
+#define SHA384_HMAC_TESTVECTORS		sha384_hmac_testvectors
+#define SHA512_HASH_TESTVECTORS		sha512_hash_testvectors
+#define SHA512_HMAC_TESTVECTORS		sha512_hmac_testvectors
+
+#else
+
+#define SHA256_HASH_TESTVECTORS		NULL
+#define SHA256_HMAC_TESTVECTORS		NULL
+#define SHA384_HASH_TESTVECTORS		NULL
+#define SHA384_HMAC_TESTVECTORS		NULL
+#define SHA512_HASH_TESTVECTORS		NULL
+#define SHA512_HMAC_TESTVECTORS		NULL
+
+#endif
+
 struct hash_desc hash_desc_sha2_256 = {
 	algo_type: IKE_ALG_HASH,
 	algo_id:   OAKLEY_SHA2_256,
 	algo_next: NULL,
 	hash_digest_size: HASH_SIZE_SHA256,
-	hash_testvectors: sha256_hash_testvectors,
-	hmac_testvectors: sha256_hmac_testvectors
+	hash_testvectors: SHA256_HASH_TESTVECTORS,
+	hmac_testvectors: SHA256_HMAC_TESTVECTORS
 };
 
 struct hash_desc hash_desc_sha2_384 = {
@@ -569,8 +589,8 @@ struct hash_desc hash_desc_sha2_384 = {
 	algo_id:   OAKLEY_SHA2_384,
 	algo_next: NULL,
 	hash_digest_size: HASH_SIZE_SHA384,
-	hash_testvectors: sha384_hash_testvectors,
-	hmac_testvectors: sha384_hmac_testvectors
+	hash_testvectors: SHA384_HASH_TESTVECTORS,
+	hmac_testvectors: SHA384_HMAC_TESTVECTORS
 };
 
 struct hash_desc hash_desc_sha2_512 = {
@@ -578,7 +598,7 @@ struct hash_desc hash_desc_sha2_512 = {
 	algo_id:   OAKLEY_SHA2_512,
 	algo_next: NULL,
 	hash_digest_size: HASH_SIZE_SHA512,
-	hash_testvectors: sha512_hash_testvectors,
-	hmac_testvectors: sha512_hmac_testvectors
+	hash_testvectors: SHA512_HASH_TESTVECTORS,
+	hmac_testvectors: SHA512_HMAC_TESTVECTORS
 };
 

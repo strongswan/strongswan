@@ -22,6 +22,7 @@
 #define  BLOWFISH_KEY_MIN_LEN	128
 #define  BLOWFISH_KEY_MAX_LEN	448
 
+#ifdef SELF_TEST
 
 /**
  * Blowfish CBC encryption test vectors
@@ -98,6 +99,14 @@ static const enc_testvector_t bf_enc_testvectors[] = {
 	{ 0, NULL, NULL, 0, NULL, NULL }
 };
 
+#define BF_ENC_TESTVECTORS		bf_enc_testvectors
+
+#else
+
+#define BF_ENC_TESTVECTORS		NULL
+
+#endif
+
 struct encrypt_desc encrypt_desc_blowfish =
 {
 	algo_type: IKE_ALG_ENCRYPT,
@@ -108,6 +117,6 @@ struct encrypt_desc encrypt_desc_blowfish =
 	keyminlen:		BLOWFISH_KEY_MIN_LEN,
 	keydeflen:		BLOWFISH_KEY_MIN_LEN,
 	keymaxlen:		BLOWFISH_KEY_MAX_LEN,
-	enc_testvectors: bf_enc_testvectors,
+	enc_testvectors: BF_ENC_TESTVECTORS,
 };
 

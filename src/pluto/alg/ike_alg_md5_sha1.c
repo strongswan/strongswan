@@ -19,6 +19,8 @@
 
 #include "ike_alg.h"
 
+#ifdef SELF_TEST
+
 /* MD5 hash test vectors
  * from RFC 1321 "MD5 Message-Digest Algorithm"
  * April 1992, R. Rivest, RSA Data Security
@@ -251,15 +253,27 @@ static const hmac_testvector_t md5_hmac_testvectors[] = {
 	{ 0, NULL, 0, NULL, NULL }
 };
 
+#define MD5_HASH_TESTVECTORS		md5_hash_testvectors
+#define MD5_HMAC_TESTVECTORS		md5_hmac_testvectors
+
+#else
+
+#define MD5_HASH_TESTVECTORS		NULL
+#define MD5_HMAC_TESTVECTORS		NULL
+
+#endif
+
 struct hash_desc hash_desc_md5 =
 {       
 	algo_type: IKE_ALG_HASH,
 	algo_id:   OAKLEY_MD5,
 	algo_next: NULL, 
 	hash_digest_size: HASH_SIZE_MD5,
-	hash_testvectors: md5_hash_testvectors,
-	hmac_testvectors: md5_hmac_testvectors,
+	hash_testvectors: MD5_HASH_TESTVECTORS,
+	hmac_testvectors: MD5_HMAC_TESTVECTORS,
 };
+
+#ifdef SELF_TEST
 
 /* SHA-1 test vectors
  * from "The Secure Hash Algorithm Validation System (SHAVS)"
@@ -387,13 +401,23 @@ static const hmac_testvector_t sha1_hmac_testvectors[] = {
 	{ 0, NULL, 0, NULL, NULL }
 };
 
+#define SHA1_HASH_TESTVECTORS		sha1_hash_testvectors
+#define SHA1_HMAC_TESTVECTORS		sha1_hmac_testvectors
+
+#else
+
+#define SHA1_HASH_TESTVECTORS		NULL
+#define SHA1_HMAC_TESTVECTORS		NULL
+
+#endif
+
 struct hash_desc hash_desc_sha1 =
 {       
 	algo_type: IKE_ALG_HASH,
 	algo_id:   OAKLEY_SHA,
 	algo_next: NULL, 
 	hash_digest_size: HASH_SIZE_SHA1,
-	hash_testvectors: sha1_hash_testvectors,
-	hmac_testvectors: sha1_hmac_testvectors
+	hash_testvectors: SHA1_HASH_TESTVECTORS,
+	hmac_testvectors: SHA1_HMAC_TESTVECTORS
 };
 
