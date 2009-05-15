@@ -362,6 +362,14 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	return TRUE;
 }
 
+static gboolean
+save_secrets (NMVpnPluginUiWidgetInterface *iface,
+              NMConnection *connection, GError **error)
+{
+	/* no secrets to save */
+	return TRUE;
+}
+
 static NMVpnPluginUiWidgetInterface *
 nm_vpn_plugin_ui_widget_interface_new (NMConnection *connection, GError **error)
 {
@@ -443,6 +451,7 @@ strongswan_plugin_ui_widget_interface_init (NMVpnPluginUiWidgetInterface *iface_
 	/* interface implementation */
 	iface_class->get_widget = get_widget;
 	iface_class->update_connection = update_connection;
+	iface_class->save_secrets = save_secrets;
 }
 
 static guint32
