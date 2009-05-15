@@ -81,7 +81,7 @@
                     <child>
                       <widget class="GtkFileChooserButton" id="certificate-button">
                         <property name="visible">True</property>
-                        <property name="tooltip">Gateway certificate to use for gateway authentication.</property>
+                        <property name="tooltip">Gateway or CA certificate to use for gateway authentication.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>

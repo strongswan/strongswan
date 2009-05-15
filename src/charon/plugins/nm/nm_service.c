@@ -21,6 +21,7 @@
 #include <utils/host.h>
 #include <utils/identification.h>
 #include <config/peer_cfg.h>
+#include <credentials/certificates/x509.h>
 
 #include <stdio.h>
 
@@ -197,6 +198,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	auth_cfg_t *auth;
 	auth_class_t auth_class = AUTH_CLASS_EAP;
 	certificate_t *cert = NULL;
+	x509_t *x509;
 	bool agent = FALSE;
 	
 	/**
@@ -244,7 +246,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	creds = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->creds;
 	creds->clear(creds);
 	
-	/* gateway cert */
+	/* gateway/CA cert */
 	str = nm_setting_vpn_get_data_item(settings, "certificate");
 	if (str)
 	{
@@ -258,7 +260,21 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 				    "Loading gateway certificate failed.");
 		return FALSE;
 	}
-	gateway = cert->get_subject(cert);
+	x509 = (x509_t*)cert;
+	if (x509->get_flags(x509) & X509_CA)
+	{	/* If the user configured a CA certificate, we use the IP/DNS
+		 * of the gateway as its identity. This identity will be used for
+		 * certificate lookup and requires the configured IP/DNS to be
+		 * included in the gateway certificate. */
+		gateway = identification_create_from_string((char*)address);
+		DBG1(DBG_CFG, "using CA certificate, gateway identity '%Y'", gateway);
+	}
+	else
+	{	/* For a gateway certificate, we use the cert subject as identity. */
+		gateway = cert->get_subject(cert);
+		gateway = gateway->clone(gateway);
+		DBG1(DBG_CFG, "using gateway certificate, identity '%Y'", gateway);
+	}
 	
 	if (auth_class == AUTH_CLASS_EAP)
 	{
@@ -282,12 +298,13 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 			private_key_t *private = NULL;
 			
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-									  BUILD_FROM_FILE, str, BUILD_END);	
+									  BUILD_FROM_FILE, str, BUILD_END);
 			if (!cert)
 			{
 				g_set_error(err, NM_VPN_PLUGIN_ERROR,
 							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 							"Loading peer certificate failed.");
+				gateway->destroy(gateway);
 				return FALSE;
 			}
 			/* try agent */  
@@ -346,6 +363,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 			else
 			{
 				DESTROY_IF(cert);
+				gateway->destroy(gateway);
 				return FALSE;
 			}
 		}
@@ -355,6 +373,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	{
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 					"Configuration parameters missing.");
+		gateway->destroy(gateway);
 		return FALSE;
 	}
 	
@@ -376,7 +395,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
-	auth->add(auth, AUTH_RULE_IDENTITY, gateway->clone(gateway));
+	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 	
 	child_cfg = child_cfg_create(CONFIG_NAME,
