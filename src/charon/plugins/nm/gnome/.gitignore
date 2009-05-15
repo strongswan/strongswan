@@ -1,0 +1,8 @@
+compile
+config.h
+intltool-extract.in
+intltool-merge.in
+intltool-update.in
+mkinstalldirs
+nm-strongswan-service.name
+stamp-h1
