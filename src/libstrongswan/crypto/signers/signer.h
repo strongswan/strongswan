@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -34,24 +34,35 @@ typedef struct signer_t signer_t;
  */
 enum integrity_algorithm_t {
 	AUTH_UNDEFINED = 1024,
-	/** Implemented via hmac_signer_t */
+	/** RFC4306 */
 	AUTH_HMAC_MD5_96 = 1,
-	/** Implemented via hmac_signer_t */
+	/** RFC4306 */
 	AUTH_HMAC_SHA1_96 = 2,
+	/** RFC4306 */
 	AUTH_DES_MAC = 3,
+	/** RFC1826 */
 	AUTH_KPDK_MD5 = 4,
+	/** RFC4306 */
 	AUTH_AES_XCBC_96 = 5,
-	/** RFC4595, used for RADIUS */
+	/** RFC4595 */
 	AUTH_HMAC_MD5_128 = 6,
 	/** RFC4595 */
 	AUTH_HMAC_SHA1_160 = 7,
-	/** Implemented via hmac_signer_t */
+	/** RFC4494 */
+	AUTH_AES_CMAC_96 = 8,
+	/** RFC4543 */
+	AUTH_AES_128_GMAC = 9,
+	/** RFC4543 */
+	AUTH_AES_192_GMAC = 10,
+	/** RFC4543 */
+	AUTH_AES_256_GMAC = 11,
+	/** RFC4868 */
 	AUTH_HMAC_SHA2_256_128 = 12,
-	/** Implemented via hmac_signer_t */
+	/** RFC4868 */
 	AUTH_HMAC_SHA2_384_192 = 13,
-	/** Implemented via hmac_signer_t */
+	/** RFC4868 */
 	AUTH_HMAC_SHA2_512_256 = 14,
-	/** Implemented via hmac_signer_t */
+	/** private use */
 	AUTH_HMAC_SHA1_128 = 1025,
 };
 
