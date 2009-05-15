@@ -143,11 +143,13 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 {
 	char *string, *pos = NULL, *name = NULL;
 	u_int32_t id = 0;
-	bool child;
+	bool child, all = FALSE;
 	int len;
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
+	linked_list_t *ike_list, *child_list;
 	stroke_log_info_t info;
+	uintptr_t del;
 	
 	string = msg->terminate.name;
 	
@@ -183,19 +185,44 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 		name = string;
 	}
 	else
-	{	/* is name[123] or name{23} */
-		string[len-1] = '\0';
-		id = atoi(pos + 1);
-		if (id == 0)
-		{
-			DBG1(DBG_CFG, "error parsing string");
-			return;
+	{
+		if (*(pos + 1) == '*')
+		{	/* is name[*] */
+			all = TRUE;
+			*pos = '\0';
+			name = string;
+		}
+		else
+		{	/* is name[123] or name{23} */
+			id = atoi(pos + 1);
+			if (id == 0)
+			{
+				DBG1(DBG_CFG, "error parsing string");
+				return;
+			}
 		}
 	}
 	
 	info.out = out;
 	info.level = msg->output_verbosity;
 	
+	if (id)
+	{
+		if (child)
+		{
+			charon->controller->terminate_child(charon->controller, id,
+									(controller_cb_t)stroke_log, &info);
+		}
+		else
+		{
+			charon->controller->terminate_ike(charon->controller, id,
+									(controller_cb_t)stroke_log, &info);
+		}
+		return;
+	}
+	
+	ike_list = linked_list_create();
+	child_list = linked_list_create();
 	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
@@ -207,35 +234,58 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 			children = ike_sa->create_child_sa_iterator(ike_sa);
 			while (children->iterate(children, (void**)&child_sa))
 			{
-				if ((name && streq(name, child_sa->get_name(child_sa))) ||
-					(id && id == child_sa->get_reqid(child_sa)))
+				if (streq(name, child_sa->get_name(child_sa)))
 				{
-					id = child_sa->get_reqid(child_sa);
-					children->destroy(children);
-					enumerator->destroy(enumerator);
-					
-					charon->controller->terminate_child(charon->controller, id,
-									(controller_cb_t)stroke_log, &info);
-					return;
+					child_list->insert_last(child_list,
+							(void*)(uintptr_t)child_sa->get_reqid(child_sa));
+					if (!all)
+					{
+						break;
+					}
 				}
 			}
 			children->destroy(children);
+			if (child_list->get_count(child_list) && !all)
+			{
+				break;
+			}
 		}
-		else if ((name && streq(name, ike_sa->get_name(ike_sa))) ||
-				 (id && id == ike_sa->get_unique_id(ike_sa)))
+		else if (streq(name, ike_sa->get_name(ike_sa)))
 		{
-			id = ike_sa->get_unique_id(ike_sa);
-			/* unlock manager first */
-			enumerator->destroy(enumerator);
-			
-			charon->controller->terminate_ike(charon->controller, id,
-								 	(controller_cb_t)stroke_log, &info);
-			return;
+			ike_list->insert_last(ike_list,
+						(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
+			if (!all)
+			{
+				break;
+			}
 		}
-		
 	}
 	enumerator->destroy(enumerator);
-	DBG1(DBG_CFG, "no such SA found");
+	
+	enumerator = child_list->create_enumerator(child_list);
+	while (enumerator->enumerate(enumerator, &del))
+	{
+		charon->controller->terminate_child(charon->controller, del,
+									(controller_cb_t)stroke_log, &info);
+	}
+	enumerator->destroy(enumerator);
+	
+	enumerator = ike_list->create_enumerator(ike_list);
+	while (enumerator->enumerate(enumerator, &del))
+	{
+		charon->controller->terminate_ike(charon->controller, del,
+									(controller_cb_t)stroke_log, &info);
+	}
+	enumerator->destroy(enumerator);
+	
+	if (child_list->get_count(child_list) == 0 &&
+		ike_list->get_count(ike_list) == 0)
+	{
+		DBG1(DBG_CFG, "no %s_SA named '%s' found",
+			 child ? "CHILD" : "IKE", name);
+	}
+	ike_list->destroy(ike_list);
+	child_list->destroy(child_list);
 }
 
 /**
