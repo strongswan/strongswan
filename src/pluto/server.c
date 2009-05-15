@@ -762,7 +762,7 @@ void
 show_debug_status(void)
 {
 #ifdef DEBUG
-	whack_log(RC_COMMENT, "debug %s"
+	whack_log(RC_COMMENT, "debug options: %s"
 		, bitnamesof(debug_bit_names, cur_debugging));
 #endif
 }
