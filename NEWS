@@ -2,17 +2,16 @@ strongswan-4.3.1
 ----------------
 
 - The nm plugin now passes DNS/NBNS server information to NetworkManager,
-  allowing Gateway administrator to set DNS/NBNS configuration on clients
+  allowing a gateway administrator to set DNS/NBNS configuration on clients
   dynamically.
 
-- Instead of cofiguring the gateway certificate directly, the nm plugin
-  also accepts CA certificates. If a CA certificate is configured, strongSwan
-  uses the entered gateway address as its idenitity, requiring the gateways
-  certificate to contain the same as subjectAltName. This allows a gateway
-  administrator to deploy the same certificates to Windows 7 and NetworkManager
-  clients.
+- The nm plugin also accepts CA certificates for gateway authentication. If
+  a CA certificate is configured, strongSwan uses the entered gateway address
+  as its idenitity, requiring the gateways certificate to contain the same as
+  subjectAltName. This allows a gateway administrator to deploy the same
+  certificates to Windows 7 and NetworkManager clients.
 
-- Fixed a regression introduced in 4.3.0 where EAP authentication caluclated
+- Fixed a regression introduced in 4.3.0 where EAP authentication calculated
   the AUTH payload incorrectly. Further, the EAP-MSCHAPv2 MSK key derivation
   has been updated to be compatible with the Windows 7 Release Candidate.
 
