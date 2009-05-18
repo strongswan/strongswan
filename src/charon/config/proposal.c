@@ -572,13 +572,6 @@ static void check_proposal(private_proposal_t *this)
 	}
 }
 
-struct proposal_token {
-	char             *name;
-	transform_type_t  type;
-	u_int16_t         algorithm;
-	u_int16_t         keysize;  
-};
-
 /**
  * add a algorithm identified by a string to the proposal.
  */
