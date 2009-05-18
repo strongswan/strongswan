@@ -564,6 +564,14 @@ static chunk_t extract_username(identification_t* identification)
 	return id;
 }
 
+/**
+ * Set the ms_length field using aligned write
+ */
+static void set_ms_length(eap_mschapv2_header_t *eap, u_int16_t len)
+{
+	len = htons(len - 5);
+	memcpy(&eap->ms_length, &len, sizeof(u_int16_t));
+}
 
 /**
  * Implementation of eap_method_t.initiate for the peer
@@ -601,7 +609,7 @@ static status_t initiate_server(private_eap_mschapv2_t *this, eap_payload_t **ou
 	eap->type = EAP_MSCHAPV2;
 	eap->opcode = MSCHAPV2_CHALLENGE;
 	eap->ms_chapv2_id = this->mschapv2id;
-	eap->ms_length = htons(len - 5);
+	set_ms_length(eap, len);
 	
 	cha = (eap_mschapv2_challenge_t*)eap->data;
 	cha->value_size = CHALLENGE_LEN;
@@ -689,7 +697,7 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	eap->type = EAP_MSCHAPV2;
 	eap->opcode = MSCHAPV2_RESPONSE;
 	eap->ms_chapv2_id = this->mschapv2id;
-	eap->ms_length = htons(len - 5);
+	set_ms_length(eap, len);
 	
 	res = (eap_mschapv2_response_t*)eap->data;
 	res->value_size = RESPONSE_LEN;
@@ -972,7 +980,7 @@ static status_t process_server_retry(private_eap_mschapv2_t *this,
 	eap->type = EAP_MSCHAPV2;
 	eap->opcode = MSCHAPV2_FAILURE;
 	eap->ms_chapv2_id = this->mschapv2id++; /* increase for each retry */
-	eap->ms_length = htons(len - 5);
+	set_ms_length(eap, len);
 	
 	hex = chunk_to_hex(this->challenge, NULL, TRUE);
 	snprintf(msg, FAILURE_MESSAGE_LEN, "%s%s", FAILURE_MESSAGE, hex.ptr);
@@ -1061,7 +1069,7 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 		eap->type = EAP_MSCHAPV2;
 		eap->opcode = MSCHAPV2_SUCCESS;
 		eap->ms_chapv2_id = this->mschapv2id;
-		eap->ms_length = htons(len - 5);
+		set_ms_length(eap, len);
 		
 		hex = chunk_to_hex(this->auth_response, NULL, TRUE);
 		snprintf(msg, AUTH_RESPONSE_LEN + sizeof(SUCCESS_MESSAGE),
