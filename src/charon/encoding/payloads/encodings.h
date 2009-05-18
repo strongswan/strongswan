@@ -97,19 +97,6 @@ enum encoding_type_t {
 	U_INT_32,
 	
 	/**
-	 * Representing a 64 Bit unsigned int value.
-	 * 
-	 * When generating it must be changed from host to network order.
-	 * The value is read from the associated data struct.
-	 * The current write position is moved 64 bit forward afterwards.
-	 * 
-	 * When parsing it must be changed from network to host order.
-	 * The value is written to the associated data struct.
-	 * The current read pointer is moved 64 bit forward afterwards.
-	 */
-	U_INT_64,
-	
-	/**
 	 * represents a RESERVED_BIT used in FLAG-Bytes.
 	 * 
 	 * When generating, the next bit is set to zero and the current write 

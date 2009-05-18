@@ -244,31 +244,6 @@ static bool parse_uint32(private_parser_t *this, int rule_number,
 }
 
 /**
- * Parse a 64-Bit unsigned integer from the current parsing position.
- */
-static bool parse_uint64(private_parser_t *this, int rule_number,
-							 u_int64_t *output_pos)
-{
-	if (this->byte_pos + sizeof(u_int64_t) > this->input_roof)
-	{
-		return short_input(this, rule_number);
-	}
-	if (this->bit_pos)
-	{
-		return bad_bitpos(this, rule_number);
-	}
-	if (output_pos)
-	{
-		/* assuming little endian host order */
-		*(output_pos + 1) = ntohl(*((u_int32_t*)this->byte_pos));
-		*output_pos = ntohl(*(((u_int32_t*)this->byte_pos) + 1));
-		DBG3(DBG_ENC, "   => %b", output_pos, sizeof(u_int64_t));
-	}
-	this->byte_pos += sizeof(u_int64_t);
-	return TRUE;
-}
-
-/**
  * Parse a given amount of bytes and writes them to a specific location
  */
 static bool parse_bytes(private_parser_t *this, int rule_number,
@@ -453,15 +428,6 @@ static status_t parse_payload(private_parser_t *this,
 			case U_INT_32:
 			{
 				if (!parse_uint32(this, rule_number, output + rule->offset))
-				{
-					pld->destroy(pld);
-					return PARSE_ERROR;
-				}
-				break;
-			}
-			case U_INT_64:
-			{
-				if (!parse_uint64(this, rule_number, output + rule->offset))
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;

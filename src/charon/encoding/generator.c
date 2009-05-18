@@ -242,9 +242,6 @@ static void generate_u_int_type(private_generator_t *this,
 			case U_INT_32:
 				number_of_bits = 32;
 				break;
-			case U_INT_64:
-				number_of_bits = 64;
-				break;
 			case ATTRIBUTE_TYPE:
 				number_of_bits = 15;
 				break;
@@ -358,20 +355,6 @@ static void generate_u_int_type(private_generator_t *this,
 			write_bytes_to_buffer(this, &int32_val, sizeof(u_int32_t));
 			break;
 		}
-		case U_INT_64:
-		{
-			/* 64 bit integers are written as two 32 bit integers */
-			u_int32_t int32_val_low = htonl(*((u_int32_t*)(this->data_struct + offset)));
-			u_int32_t int32_val_high = htonl(*((u_int32_t*)(this->data_struct + offset) + 1));
-			DBG3(DBG_ENC, "   => %b %b",
-				 (void*)&int32_val_low, sizeof(int32_val_low),
-				 (void*)&int32_val_high, sizeof(int32_val_high));
-			/* TODO add support for big endian machines */
-			write_bytes_to_buffer(this, &int32_val_high, sizeof(u_int32_t));
-			write_bytes_to_buffer(this, &int32_val_low, sizeof(u_int32_t));
-			break;
-		}
-		
 		case IKE_SPI:
 		{
 			/* 64 bit are written as they come :-) */
@@ -548,7 +531,6 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			case U_INT_8:
 			case U_INT_16:
 			case U_INT_32:
-			case U_INT_64:
 			case IKE_SPI:
 			case TS_TYPE:
 			case ATTRIBUTE_TYPE:
