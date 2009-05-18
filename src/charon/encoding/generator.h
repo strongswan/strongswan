@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -65,10 +65,10 @@ struct generator_t {
 	/**
 	 * Writes all generated data of the generator to a chunk.
 	 *
- 	 * @param data 		chunk to write the data to
+	 * @param data 		chunk to write the data to
 	 */
 	void (*write_to_chunk) (generator_t *this,chunk_t *data);
-
+	
 	/**
 	 * Destroys a generator_t object.
 	 */
