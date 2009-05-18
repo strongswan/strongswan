@@ -71,7 +71,7 @@ typedef struct scheduler_t scheduler_t;
  * position. In a one-based array that position equals the number of elements
  * currently stored in the heap. Then the heap property has to be restored, i.e.
  * the new element has to be "bubbled up" the tree until the parent node's key
- * is smaller or new element got the new root of the tree.
+ * is smaller or the element got the new root of the tree.
  *
  * Removing the next event from the heap works similarly. The event itself is
  * the root node and stored at position 1 of the array. After removing it, the
