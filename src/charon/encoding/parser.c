@@ -187,10 +187,11 @@ static bool parse_uint15(private_parser_t *this, int rule_number,
 	}
 	if (output_pos)
 	{
-		*output_pos = ntohs(*((u_int16_t*)this->byte_pos)) & ~0x8000;
+		memcpy(output_pos, this->byte_pos, sizeof(u_int16_t));
+		*output_pos = ntohs(*output_pos) & ~0x8000;
 		DBG3(DBG_ENC, "   => %d", *output_pos);
 	}
-	this->byte_pos += 2;
+	this->byte_pos += sizeof(u_int16_t);
 	this->bit_pos = 0;
 	return TRUE;
 }
@@ -211,10 +212,11 @@ static bool parse_uint16(private_parser_t *this, int rule_number,
 	}
 	if (output_pos)
 	{
-		*output_pos = ntohs(*((u_int16_t*)this->byte_pos));
+		memcpy(output_pos, this->byte_pos, sizeof(u_int16_t));
+		*output_pos = ntohs(*output_pos);
 		DBG3(DBG_ENC, "   => %d", *output_pos);
 	}
-	this->byte_pos += 2;
+	this->byte_pos += sizeof(u_int16_t);
 	return TRUE;
 }
 /**
@@ -233,10 +235,11 @@ static bool parse_uint32(private_parser_t *this, int rule_number,
 	}
 	if (output_pos)
 	{
-		*output_pos = ntohl(*((u_int32_t*)this->byte_pos));
+		memcpy(output_pos, this->byte_pos, sizeof(u_int32_t));
+		*output_pos = ntohl(*output_pos);
 		DBG3(DBG_ENC, "   => %d", *output_pos);
 	}
-	this->byte_pos += 4;
+	this->byte_pos += sizeof(u_int32_t);
 	return TRUE;
 }
 
@@ -261,15 +264,15 @@ static bool parse_uint64(private_parser_t *this, int rule_number,
 		*output_pos = ntohl(*(((u_int32_t*)this->byte_pos) + 1));
 		DBG3(DBG_ENC, "   => %b", output_pos, sizeof(u_int64_t));
 	}
-	this->byte_pos += 8;
+	this->byte_pos += sizeof(u_int64_t);
 	return TRUE;
 }
 
 /**
  * Parse a given amount of bytes and writes them to a specific location
  */
-static bool parse_bytes (private_parser_t *this, int rule_number,
-						 u_int8_t *output_pos, size_t bytes)
+static bool parse_bytes(private_parser_t *this, int rule_number,
+						u_int8_t *output_pos, size_t bytes)
 {
 	if (this->byte_pos + bytes > this->input_roof)
 	{
@@ -281,7 +284,7 @@ static bool parse_bytes (private_parser_t *this, int rule_number,
 	}
 	if (output_pos)
 	{
-		memcpy(output_pos,this->byte_pos,bytes);
+		memcpy(output_pos, this->byte_pos, bytes);
 		DBG3(DBG_ENC, "   => %b", output_pos, bytes);
 	}
 	this->byte_pos += bytes;
@@ -400,7 +403,7 @@ static status_t parse_payload(private_parser_t *this,
 		 payload_type_names, payload_type, this->input_roof - this->byte_pos);
 	
 	DBG3(DBG_ENC, "parsing payload from %b",
-		 this->byte_pos, this->input_roof-this->byte_pos);
+		 this->byte_pos, this->input_roof - this->byte_pos);
 	
 	if (pld->get_type(pld) == UNKNOWN_PAYLOAD)
 	{
@@ -508,6 +511,7 @@ static status_t parse_payload(private_parser_t *this,
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
+				/* parsed u_int16 should be aligned */
 				payload_length = *(u_int16_t*)(output + rule->offset);
 				if (payload_length < UNKNOWN_PAYLOAD_HEADER_LENGTH)
 				{
