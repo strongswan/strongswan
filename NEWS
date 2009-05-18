@@ -5,6 +5,24 @@ strongswan-4.3.1
   allowing Gateway administrator to set DNS/NBNS configuration on clients
   dynamically.
 
+- Instead of cofiguring the gateway certificate directly, the nm plugin
+  also accepts CA certificates. If a CA certificate is configured, strongSwan
+  uses the entered gateway address as its idenitity, requiring the gateways
+  certificate to contain the same as subjectAltName. This allows a gateway
+  administrator to deploy the same certificates to Windows 7 and NetworkManager
+  clients.
+
+- Fixed a regression introduced in 4.3.0 where EAP authentication caluclated
+  the AUTH payload incorrectly. Further, the EAP-MSCHAPv2 MSK key derivation
+  has been updated to be compatible with the Windows 7 Release Candidate.
+
+- Refactored installation of triggering policies. Routed policies are handled
+  outside of IKE_SAs to keep them installed in any case. A tunnel gets
+  established only once, even if initiation is delayed due network outages.
+
+- Added support for AES counter mode in ESP in IKEv2 using the proposal
+  keywords aes128ctr, aes192ctr and aes256ctr.
+
 strongswan-4.3.0
 ----------------
 
