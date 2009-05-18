@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -106,7 +106,7 @@ static status_t parse_uint4(private_parser_t *this, int rule_number, u_int8_t *o
 			}
 			this->bit_pos = 4;
 			break;
-		case 4:	
+		case 4:
 			/* caller interested in result ? */
 			if (output_pos != NULL)
 			{
@@ -324,7 +324,7 @@ static status_t parse_bit(private_parser_t *this, int rule_number, bool *output_
 		u_int8_t mask;
 		mask = 0x01 << (7 - this->bit_pos);
 		*output_pos = *this->byte_pos & mask;
-	
+		
 		if (*output_pos)
 		{
 			/* set to a "clean", comparable true */
@@ -334,9 +334,9 @@ static status_t parse_bit(private_parser_t *this, int rule_number, bool *output_
 		DBG3(DBG_ENC, "   => %d", *output_pos);
 	}
 	this->bit_pos = (this->bit_pos + 1) % 8;
-	if (this->bit_pos == 0) 
+	if (this->bit_pos == 0)
 	{
-		this->byte_pos++;	
+		this->byte_pos++;
 	}
 	
 	return SUCCESS;
@@ -353,7 +353,7 @@ static status_t parse_list(private_parser_t *this, int rule_number, linked_list_
 	{
 		DBG1(DBG_ENC, "  invalid length for rule %d %N",
 			 rule_number, encoding_type_names, this->rules[rule_number].type);
-		return PARSE_ERROR;	
+		return PARSE_ERROR;
 	}
 	
 	if (this->bit_pos)
@@ -381,7 +381,7 @@ static status_t parse_list(private_parser_t *this, int rule_number, linked_list_
 		length -= this->byte_pos - pos_before;
 	}
 	*output_pos = list;
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 /**
@@ -455,7 +455,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 		{
 			case U_INT_4:
 			{
-				if (parse_uint4(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint4(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -464,7 +464,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case U_INT_8:
 			{
-				if (parse_uint8(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint8(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -473,7 +473,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case U_INT_16:
 			{
-				if (parse_uint16(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint16(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -482,7 +482,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case U_INT_32:
 			{
-				if (parse_uint32(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint32(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -491,7 +491,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case U_INT_64:
 			{
-				if (parse_uint64(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint64(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -500,7 +500,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case IKE_SPI:
 			{
-				if (parse_bytes(this, rule_number, output + rule->offset,8) != SUCCESS) 
+				if (parse_bytes(this, rule_number, output + rule->offset,8) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -509,7 +509,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case RESERVED_BIT:
 			{
-				if (parse_bit(this, rule_number, NULL) != SUCCESS) 
+				if (parse_bit(this, rule_number, NULL) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -518,7 +518,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case RESERVED_BYTE:
 			{
-				if (parse_uint8(this, rule_number, NULL) != SUCCESS) 
+				if (parse_uint8(this, rule_number, NULL) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -527,7 +527,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case FLAG:
 			{
-				if (parse_bit(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_bit(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -536,7 +536,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case PAYLOAD_LENGTH:
 			{
-				if (parse_uint16(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint16(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -551,7 +551,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case HEADER_LENGTH:
 			{
-				if (parse_uint32(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint32(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -560,7 +560,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case SPI_SIZE:
 			{
-				if (parse_uint8(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint8(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -570,7 +570,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case SPI:
 			{
-				if (parse_chunk(this, rule_number, output + rule->offset, spi_size) != SUCCESS) 
+				if (parse_chunk(this, rule_number, output + rule->offset, spi_size) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -623,7 +623,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case ATTRIBUTE_FORMAT:
 			{
-				if (parse_bit(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_bit(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -633,7 +633,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case ATTRIBUTE_TYPE:
 			{
-				if (parse_uint15(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint15(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -643,7 +643,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case CONFIGURATION_ATTRIBUTE_LENGTH:
 			{
-				if (parse_uint16(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint16(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -652,8 +652,8 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				break;
 			}
 			case ATTRIBUTE_LENGTH_OR_VALUE:
-			{	
-				if (parse_uint16(this, rule_number, output + rule->offset) != SUCCESS) 
+			{
+				if (parse_uint16(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -665,7 +665,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			{
 				if (attribute_format == FALSE)
 				{
-					if (parse_chunk(this, rule_number, output + rule->offset, attribute_length) != SUCCESS) 
+					if (parse_chunk(this, rule_number, output + rule->offset, attribute_length) != SUCCESS)
 					{
 						pld->destroy(pld);
 						return PARSE_ERROR;
@@ -676,12 +676,12 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			case NONCE_DATA:
 			{
 				if (payload_length < NONCE_PAYLOAD_HEADER_LENGTH ||
-					parse_chunk(this, rule_number, output + rule->offset, 
+					parse_chunk(this, rule_number, output + rule->offset,
 						payload_length - NONCE_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
+				}
 				break;
 			}
 			case ID_DATA:
@@ -692,14 +692,14 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}	
+				}
 				break;
 			}
 			case AUTH_DATA:
 			{
 				if (payload_length < AUTH_PAYLOAD_HEADER_LENGTH ||
 					parse_chunk(this, rule_number, output + rule->offset,
-						payload_length - AUTH_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
+						payload_length - AUTH_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -709,8 +709,8 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			case CERT_DATA:
 			{
 				if (payload_length < CERT_PAYLOAD_HEADER_LENGTH ||
-					parse_chunk(this, rule_number, output + rule->offset, 
-						payload_length - CERT_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
+					parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - CERT_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -720,8 +720,8 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			case CERTREQ_DATA:
 			{
 				if (payload_length < CERTREQ_PAYLOAD_HEADER_LENGTH ||
-					parse_chunk(this, rule_number, output + rule->offset, 
-						payload_length - CERTREQ_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
+					parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - CERTREQ_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -731,8 +731,8 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			case EAP_DATA:
 			{
 				if (payload_length < EAP_PAYLOAD_HEADER_LENGTH ||
-					parse_chunk(this, rule_number, output + rule->offset, 
-						payload_length - EAP_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
+					parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - EAP_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -743,86 +743,86 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			{
 				if (payload_length < DELETE_PAYLOAD_HEADER_LENGTH ||
 					parse_chunk(this, rule_number, output + rule->offset,
-						payload_length - DELETE_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
+						payload_length - DELETE_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
-				break;			
+				}
+				break;
 			}
 			case VID_DATA:
 			{
 				if (payload_length < VENDOR_ID_PAYLOAD_HEADER_LENGTH ||
 					parse_chunk(this, rule_number, output + rule->offset,
-						payload_length - VENDOR_ID_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
+						payload_length - VENDOR_ID_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
-				break;			
+				}
+				break;
 			}
 			case CONFIGURATION_ATTRIBUTE_VALUE:
 			{
 				size_t data_length = attribute_length;
-				if (parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				if (parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
-				break;			
+				}
+				break;
 			}
 			case KEY_EXCHANGE_DATA:
 			{
 				if (payload_length < KE_PAYLOAD_HEADER_LENGTH ||
 					parse_chunk(this, rule_number, output + rule->offset,
-						payload_length - KE_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
+						payload_length - KE_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
-				break;			
+				}
+				break;
 			}
 			case NOTIFICATION_DATA:
 			{
 				if (payload_length < NOTIFY_PAYLOAD_HEADER_LENGTH + spi_size ||
-					parse_chunk(this, rule_number, output + rule->offset, 
-						payload_length - NOTIFY_PAYLOAD_HEADER_LENGTH - spi_size) != SUCCESS) 
+					parse_chunk(this, rule_number, output + rule->offset,
+						payload_length - NOTIFY_PAYLOAD_HEADER_LENGTH - spi_size) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
-				break;			
+				}
+				break;
 			}
 			case ENCRYPTED_DATA:
-			{				
+			{
 				if (payload_length < ENCRYPTION_PAYLOAD_HEADER_LENGTH ||
 					parse_chunk(this, rule_number, output + rule->offset,
-						payload_length - ENCRYPTION_PAYLOAD_HEADER_LENGTH) != SUCCESS) 
+						payload_length - ENCRYPTION_PAYLOAD_HEADER_LENGTH) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
-				break;	
+				}
+				break;
 			}
 			case TS_TYPE:
 			{
-				if (parse_uint8(this, rule_number, output + rule->offset) != SUCCESS) 
+				if (parse_uint8(this, rule_number, output + rule->offset) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				ts_type = *(u_int8_t*)(output + rule->offset);
-				break;							
+				break;
 			}
 			case ADDRESS:
 			{
 				size_t address_length = (ts_type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
-				if (parse_chunk(this, rule_number, output + rule->offset,address_length) != SUCCESS) 
+				if (parse_chunk(this, rule_number, output + rule->offset,address_length) != SUCCESS)
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;							
+				break;
 			}
 			case TRAFFIC_SELECTORS:
 			{
@@ -833,7 +833,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;							
+				break;
 			}
 			case UNKNOWN_DATA:
 			{
@@ -844,7 +844,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				break;							
+				break;
 			}
 			default:
 			{
@@ -887,7 +887,7 @@ static void reset_context (private_parser_t *this)
  */
 static void destroy(private_parser_t *this)
 {
-	free(this);	
+	free(this);
 }
 
 /*
@@ -909,3 +909,4 @@ parser_t *parser_create(chunk_t data)
 	
 	return (parser_t*)this;
 }
+
