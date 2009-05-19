@@ -376,6 +376,8 @@ int esp_from_integrity_algorithm(integrity_algorithm_t alg)
 			return AUTH_ALGORITHM_HMAC_MD5;
 		case AUTH_HMAC_SHA1_96:
 			return AUTH_ALGORITHM_HMAC_SHA1;
+		case AUTH_AES_XCBC_96:
+			return AUTH_ALGORITHM_AES_XCBC_MAC;
 		case AUTH_HMAC_SHA2_256_128:
 			return AUTH_ALGORITHM_HMAC_SHA2_256;
 		case AUTH_HMAC_SHA2_384_192:

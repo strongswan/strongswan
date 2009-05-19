@@ -363,7 +363,7 @@ static const char *const ah_transform_name[] = {
 	"HMAC_SHA2_384",
 	"HMAC_SHA2_512",
 	"HMAC_RIPEMD",
-	"AES_XCBC_MAC",
+	"AES_XCBC_96",
 	"SIG_RSA"
 };
 
@@ -672,7 +672,7 @@ static const char *const auth_alg_name[] = {
 	"HMAC_SHA2_384",
 	"HMAC_SHA2_512",
 	"HMAC_RIPEMD",
-	"AES_XCBC_MAC",
+	"AES_XCBC_96",
 	"SIG_RSA"
 };
 
