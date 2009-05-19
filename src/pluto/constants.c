@@ -374,12 +374,12 @@ enum_names ah_transformid_names =
 
 static const char *const esp_transform_name[] = {
 	"DES_IV64",
-	"DES",
-	"3DES",
-	"RC5",
-	"IDEA",
-	"CAST",
-	"BLOWFISH",
+	"DES_CBC",
+	"3DES_CBC",
+	"RC5_CBC",
+	"IDEA_CBC",
+	"CAST_CBC",
+	"BLOWFISH_CBC",
 	"3IDEA",
 	"DES_IV32",
 	"RC4",
