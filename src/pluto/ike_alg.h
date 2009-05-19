@@ -84,8 +84,6 @@ extern struct hash_desc *ike_alg_get_hasher(u_int alg);
 extern struct encrypt_desc *ike_alg_get_encrypter(u_int alg);
 extern bool ike_alg_enc_present(u_int ealg);
 extern bool ike_alg_hash_present(u_int halg);
-extern int ike_alg_register_hash(struct hash_desc *a);
-extern int ike_alg_register_enc(struct encrypt_desc *e);
 extern const struct oakley_group_desc* ike_alg_pfsgroup(struct connection *c
 	, lset_t policy);
 extern struct db_context * ike_alg_db_new(struct alg_info_ike *ai, lset_t policy);

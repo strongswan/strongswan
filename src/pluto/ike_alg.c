@@ -132,64 +132,6 @@ bool ike_alg_enc_present(u_int ealg)
 }
 
 /**
- * Validate and register IKE hash algorithm object
- */
-int ike_alg_register_hash(struct hash_desc *hash_desc)
-{
-	const char *alg_name = NULL;
-	int ret = 0;
-
-	if (hash_desc->algo_id > OAKLEY_HASH_MAX)
-	{
-		plog ("ike_alg: hash alg=%d > max=%d"
-				, hash_desc->algo_id, OAKLEY_HASH_MAX);
-		return_on(ret,-EINVAL);
-	}
-
-	alg_name = enum_name(&oakley_hash_names, hash_desc->algo_id);
-	if (!alg_name)
-	{
-		plog ("ike_alg: hash alg=%d not found in constants.c:oakley_hash_names"
-			  , hash_desc->algo_id);
-		alg_name = "<NULL>";
-	}
-
-return_out:
-	if (ret == 0)
-		ret = ike_alg_add((struct ike_alg *)hash_desc);
-
-	plog("ike_alg: Activating %s hash: %s"
-		,alg_name, ret == 0 ? "Ok" : "FAILED");
-
-	return ret;
-}
-
-/**
- * Validate and register IKE encryption algorithm object
- */
-int ike_alg_register_enc(struct encrypt_desc *enc_desc)
-{
-	int ret = ike_alg_add((struct ike_alg *)enc_desc);
-
-	const char *alg_name = enum_name(&oakley_enc_names, enc_desc->algo_id);
-
-	char alg_number[20];
-	
-	/* algorithm is not listed in oakley_enc_names */
-	if (alg_name == NULL)
-	{
-		snprintf(alg_number, sizeof(alg_number), "OAKLEY_ID_%d"
-			, enc_desc->algo_id);
-		alg_name = alg_number;
-	}
-
-	plog("ike_alg: Activating %s encryption: %s"
-		, alg_name, ret == 0 ? "Ok" : "FAILED");
-
-	return ret;
-}
-
-/**
  * Get pfsgroup for this connection
  */
 const struct oakley_group_desc *ike_alg_pfsgroup(struct connection *c, lset_t policy)
