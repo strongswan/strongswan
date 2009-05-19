@@ -13,6 +13,7 @@
  */
 
 #include <crypto/crypters/crypter.h>
+#include <crypto/signers/signer.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
 
@@ -60,4 +61,8 @@ struct state;   /* forward declaration, dammit */
 extern encryption_algorithm_t oakley_to_encryption_algorithm(int alg);
 extern hash_algorithm_t oakley_to_hash_algorithm(int alg);
 extern pseudo_random_function_t oakley_to_prf(int alg);
+extern int oakley_from_encryption_algorithm(encryption_algorithm_t alg);
+extern int oakley_from_integrity_algorithm(integrity_algorithm_t alg);
+extern int esp_from_encryption_algorithm(encryption_algorithm_t alg);
+extern int esp_from_integrity_algorithm(integrity_algorithm_t alg);
 

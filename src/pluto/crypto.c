@@ -16,9 +16,7 @@
 #include <gmp.h>
 
 #include <freeswan.h>
-
-#include <crypto/crypters/crypter.h>
-#include <crypto/hashers/hasher.h>
+#include <ipsec_policy.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -264,5 +262,127 @@ pseudo_random_function_t oakley_to_prf(int alg)
 			return PRF_HMAC_SHA2_512;
 		default:
 			return PRF_UNDEFINED;
+	}
+}
+
+/**
+ * Converts IKEv2 encryption to IKEv1 encryption algorithm
+ */
+int oakley_from_encryption_algorithm(encryption_algorithm_t alg)
+{
+	switch (alg)
+	{
+		case ENCR_DES:
+			return OAKLEY_DES_CBC;
+		case ENCR_3DES:
+			return OAKLEY_3DES_CBC;
+		case ENCR_RC5:
+			return OAKLEY_RC5_R16_B64_CBC;
+		case ENCR_IDEA:
+			return OAKLEY_IDEA_CBC;
+		case ENCR_CAST:
+			return OAKLEY_CAST_CBC;
+		case ENCR_BLOWFISH:
+			return OAKLEY_BLOWFISH_CBC;
+		case ENCR_AES_CBC:
+			return OAKLEY_AES_CBC;
+		case ENCR_CAMELLIA_CBC:
+			return OAKLEY_CAMELLIA_CBC;
+		case ENCR_SERPENT_CBC:
+			return OAKLEY_SERPENT_CBC;
+    	case ENCR_TWOFISH_CBC:
+			return OAKLEY_TWOFISH_CBC;
+		default:
+			return 0;
+	}
+}
+
+/**
+ * Converts IKEv2 integrity to IKEv1 hash algorithm
+ */
+int oakley_from_integrity_algorithm(integrity_algorithm_t alg)
+{
+	switch (alg)
+	{
+		case AUTH_HMAC_MD5_96:
+			return OAKLEY_MD5;
+		case AUTH_HMAC_SHA1_96:
+			return OAKLEY_SHA;
+		case AUTH_HMAC_SHA2_256_128:
+			return OAKLEY_SHA2_256;
+		case AUTH_HMAC_SHA2_384_192:
+			return OAKLEY_SHA2_384;
+		case AUTH_HMAC_SHA2_512_256:
+			return OAKLEY_SHA2_512;
+		default:
+			return 0;
+	}
+}
+
+/**
+ * Converts IKEv2 encryption to IKEv1 ESP encryption algorithm
+ */
+int esp_from_encryption_algorithm(encryption_algorithm_t alg)
+{
+	switch (alg)
+	{
+		case ENCR_DES:
+			return ESP_DES;
+		case ENCR_3DES:
+			return ESP_3DES;
+		case ENCR_RC5:
+			return ESP_RC5;
+		case ENCR_IDEA:
+			return ESP_IDEA;
+		case ENCR_CAST:
+			return ESP_CAST;
+		case ENCR_BLOWFISH:
+			return ESP_BLOWFISH;
+		case ENCR_AES_CBC:
+			return OAKLEY_AES_CBC;
+		case ENCR_AES_CTR:
+			return ESP_AES_CTR;
+		case ENCR_AES_CCM_ICV8:
+			return ESP_AES_CCM_8;
+		case ENCR_AES_CCM_ICV12:
+			return ESP_AES_CCM_12;
+		case ENCR_AES_CCM_ICV16:
+			return ESP_AES_CCM_16;
+		case ENCR_AES_GCM_ICV8:
+			return ESP_AES_GCM_8;
+		case ENCR_AES_GCM_ICV12:
+			return ESP_AES_GCM_12;
+		case ENCR_AES_GCM_ICV16:
+			return ESP_AES_GCM_16;
+		case ENCR_CAMELLIA_CBC:
+			return ESP_CAMELLIA;
+		case ENCR_SERPENT_CBC:
+			return ESP_SERPENT;
+    	case ENCR_TWOFISH_CBC:
+			return ESP_TWOFISH;
+		default:
+			return 0;
+	}
+}
+
+/**
+ * Converts IKEv2 integrity to IKEv1 ESP authentication algorithm
+ */
+int esp_from_integrity_algorithm(integrity_algorithm_t alg)
+{
+	switch (alg)
+	{
+		case AUTH_HMAC_MD5_96:
+			return AUTH_ALGORITHM_HMAC_MD5;
+		case AUTH_HMAC_SHA1_96:
+			return AUTH_ALGORITHM_HMAC_SHA1;
+		case AUTH_HMAC_SHA2_256_128:
+			return AUTH_ALGORITHM_HMAC_SHA2_256;
+		case AUTH_HMAC_SHA2_384_192:
+			return AUTH_ALGORITHM_HMAC_SHA2_384;
+		case AUTH_HMAC_SHA2_512_256:
+			return AUTH_ALGORITHM_HMAC_SHA2_512;
+		default:
+			return 0;
 	}
 }

@@ -510,19 +510,16 @@ kernel_alg_show_connection(struct connection *c, const char *instance)
 	st = state_with_serialno(c->newest_ipsec_sa);
 	if (st && st->st_esp.present)
 		whack_log(RC_COMMENT
-				, "\"%s\"%s:   ESP algorithm newest: %s_%d-%s; pfsgroup=%s"
+				, "\"%s\"%s:   ESP algorithm newest: %s-%d/%s/%s"
 				, c->name
 				, instance
 				, enum_show(&esp_transformid_names, st->st_esp.attrs.transid)
-				+4 /* strlen("ESP_") */
 				, st->st_esp.attrs.key_len
-				, enum_show(&auth_alg_names, st->st_esp.attrs.auth)+
-				+15 /* strlen("AUTH_ALGORITHM_") */
+				, enum_show(&auth_alg_names, st->st_esp.attrs.auth)
 				, c->policy & POLICY_PFS ?
 						c->alg_info_esp->esp_pfsgroup ?
 										enum_show(&oakley_group_names, 
 												c->alg_info_esp->esp_pfsgroup)
-												+13 /*strlen("OAKLEY_GROUP_")*/
 								: "<Phase1>"
 						: "<N/A>"
 		);

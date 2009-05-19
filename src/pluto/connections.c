@@ -985,12 +985,10 @@ add_connection(const whack_message_t *wm)
 
 		if (wm->esp)
 		{
-			const char *ugh;
-
 			 DBG(DBG_CONTROL,
 				DBG_log("from whack: got --esp=%s", wm->esp ? wm->esp: "NULL")
 			)
-			c->alg_info_esp= alg_info_esp_create_from_str(wm->esp? wm->esp : "", &ugh);
+			c->alg_info_esp= alg_info_esp_create_from_str(wm->esp? wm->esp : "");
 
 			DBG(DBG_CRYPT|DBG_CONTROL,
 				static char buf[256]="<NULL>";
@@ -1008,19 +1006,16 @@ add_connection(const whack_message_t *wm)
 			}
 			else
 			{
-				loglog(RC_LOG_SERIOUS
-					   , "esp string error: %s", ugh? ugh : "Unknown");
+				loglog(RC_LOG_SERIOUS, "esp string error");
 			}
 		}
 		
 		if (wm->ike)
 		{
-			const char *ugh;
-
 			DBG(DBG_CONTROL,
 				DBG_log("from whack: got --ike=%s", wm->ike ? wm->ike: "NULL")
 			)
-			c->alg_info_ike= alg_info_ike_create_from_str(wm->ike? wm->ike : "", &ugh);
+			c->alg_info_ike= alg_info_ike_create_from_str(wm->ike? wm->ike : "");
 
 			DBG(DBG_CRYPT|DBG_CONTROL,
 				static char buf[256]="<NULL>";
@@ -1038,8 +1033,7 @@ add_connection(const whack_message_t *wm)
 			}
 			else
 			{
-				loglog(RC_LOG_SERIOUS
-					   , "ike string error: %s", ugh? ugh : "Unknown");
+				loglog(RC_LOG_SERIOUS, "ike string error:");
 			}
 		}
 		

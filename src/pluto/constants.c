@@ -373,37 +373,33 @@ enum_names ah_transformid_names =
 /* IPsec ESP transform values */
 
 static const char *const esp_transform_name[] = {
-	"ESP_DES_IV64",
-	"ESP_DES",
-	"ESP_3DES",
-	"ESP_RC5",
-	"ESP_IDEA",
-	"ESP_CAST",
-	"ESP_BLOWFISH",
-	"ESP_3IDEA",
-	"ESP_DES_IV32",
-	"ESP_RC4",
-	"ESP_NULL",
-	"ESP_AES",
-	"ESP_AES-CTR",
-	"ESP_AES-CCM_8",
-	"ESP_AES-CCM_12",
-	"ESP_AES-CCM_16",
-	"ESP_UNASSIGNED_17",
-	"ESP_AES_GCM_8",
-	"ESP_AES_GCM_12",
-	"ESP_AES_GCM_16",
-	"ESP_SEED_CBC",
-	"ESP_CAMELLIA"
+	"DES_IV64",
+	"DES",
+	"3DES",
+	"RC5",
+	"IDEA",
+	"CAST",
+	"BLOWFISH",
+	"3IDEA",
+	"DES_IV32",
+	"RC4",
+	"NULL",
+	"AES_CBC",
+	"AES_CTR",
+	"AES_CCM_8",
+	"AES_CCM_12",
+	"AES_CCM_16",
+	"UNASSIGNED_17",
+	"AES_GCM_8",
+	"AES_GCM_12",
+	"AES_GCM_16",
+	"SEED_CBC",
+	"CAMELLIA_CBC"
 };
 
-/*
- * ipsec drafts suggest "high" ESP ids values for testing,
- * assign generic ESP_ID<num> if not officially defined
- */
 static const char *const esp_transform_name_high[] = {
-	"ESP_SERPENT",
-	"ESP_TWOFISH"
+	"SERPENT_CBC",
+	"TWOFISH_CBC"
 };
 
 enum_names esp_transformid_names_high =
@@ -668,20 +664,20 @@ enum_names enc_mode_names =
 /* Auth Algorithm attribute */
 
 static const char *const auth_alg_name[] = {
-	"AUTH_ALGORITHM_HMAC_MD5",
-	"AUTH_ALGORITHM_HMAC_SHA1",
-	"AUTH_ALGORITHM_DES_MAC",
-	"AUTH_ALGORITHM_KPDK",
-	"AUTH_ALGORITHM_HMAC_SHA2_256",
-	"AUTH_ALGORITHM_HMAC_SHA2_384",
-	"AUTH_ALGORITHM_HMAC_SHA2_512",
-	"AUTH_ALGORITHM_HMAC_RIPEMD",
-	"AUTH_ALGORITHM_AES_XCBC_MAC",
-	"AUTH_ALGORITHM_SIG_RSA"
+	"HMAC_MD5",
+	"HMAC_SHA1",
+	"DES_MAC",
+	"KPDK",
+	"HMAC_SHA2_256",
+	"HMAC_SHA2_384",
+	"HMAC_SHA2_512",
+	"HMAC_RIPEMD",
+	"AES_XCBC_MAC",
+	"SIG_RSA"
 };
 
 static const char *const extended_auth_alg_name[] = {
-		"AUTH_ALGORITHM_NULL"
+	"NULL"
 	};
 
 enum_names extended_auth_alg_names =
@@ -797,14 +793,14 @@ enum_names oakley_prf_names =
 /* Oakley Encryption Algorithm attribute */
 
 static const char *const oakley_enc_name[] = {
-	"OAKLEY_DES_CBC",
-	"OAKLEY_IDEA_CBC",
-	"OAKLEY_BLOWFISH_CBC",
-	"OAKLEY_RC5_R16_B64_CBC",
-	"OAKLEY_3DES_CBC",
-	"OAKLEY_CAST_CBC",
-	"OAKLEY_AES_CBC",
-	"OAKLEY_CAMELLIA_CBC"
+	"DES_CBC",
+	"IDEA_CBC",
+	"BLOWFISH_CBC",
+	"RC5_R16_B64_CBC",
+	"3DES_CBC",
+	"CAST_CBC",
+	"AES_CBC",
+	"CAMELLIA_CBC"
 };
 
 #ifdef NO_EXTRA_IKE
@@ -812,15 +808,15 @@ enum_names oakley_enc_names =
 	{ OAKLEY_DES_CBC, OAKLEY_CAMELLIA_CBC, oakley_enc_name, NULL };
 #else
 static const char *const oakley_enc_name_draft_aes_cbc_02[] = {
-	"OAKLEY_MARS_CBC"       /*      65001   */,
-	"OAKLEY_RC6_CBC"        /*      65002   */,
-	"OAKLEY_ID_65003"       /*      65003   */,
-	"OAKLEY_SERPENT_CBC"    /*      65004   */,
-	"OAKLEY_TWOFISH_CBC"    /*      65005   */,
+	"MARS_CBC"       /*      65001   */,
+	"RC6_CBC"        /*      65002   */,
+	"ID_65003"       /*      65003   */,
+	"SERPENT_CBC"    /*      65004   */,
+	"TWOFISH_CBC"    /*      65005   */,
 };
 
 static const char *const oakley_enc_name_ssh[] = {
-		"OAKLEY_TWOFISH_CBC_SSH",
+	"TWOFISH_CBC_SSH",
 };
 
 enum_names oakley_enc_names_ssh =
@@ -839,12 +835,12 @@ enum_names oakley_enc_names =
 /* Oakley Hash Algorithm attribute */
 
 static const char *const oakley_hash_name[] = {
-	"OAKLEY_MD5",
-	"OAKLEY_SHA",
-	"OAKLEY_TIGER",
-	"OAKLEY_SHA2_256",
-	"OAKLEY_SHA2_384",
-	"OAKLEY_SHA2_512",
+	"HMAC_MD5",
+	"HMAC_SHA1",
+	"HMAC_TIGER",
+	"HMAC_SHA2_256",
+	"HMAC_SHA2_384",
+	"HMAC_SHA2_512",
 };
 
 enum_names oakley_hash_names =
@@ -897,19 +893,19 @@ enum_names oakley_auth_names =
 /* Oakley Group Description attribute */
 
 static const char *const oakley_group_name[] = {
-	"OAKLEY_GROUP_MODP768",
-	"OAKLEY_GROUP_MODP1024",
-	"OAKLEY_GROUP_GP155",
-	"OAKLEY_GROUP_GP185",
-	"OAKLEY_GROUP_MODP1536",
+	"MODP_768",
+	"MODP_1024",
+	"GP_155",
+	"GP_185",
+	"MODP_1536",
 };
 
 static const char *const oakley_group_name_rfc3526[] = {
-	"OAKLEY_GROUP_MODP2048",
-	"OAKLEY_GROUP_MODP3072",
-	"OAKLEY_GROUP_MODP4096",
-	"OAKLEY_GROUP_MODP6144",
-	"OAKLEY_GROUP_MODP8192"
+	"MODP_2048",
+	"MODP_3072",
+	"MODP_4096",
+	"MODP_6144",
+	"MODP_8192"
 };
 
 enum_names oakley_group_names_rfc3526 =
