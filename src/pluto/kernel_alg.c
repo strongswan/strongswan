@@ -55,8 +55,8 @@ static int esp_aalg_num = 0;
 		for (algo=SADB_AALG_MAX; algo >0 ; algo--) \
 				if (ESP_AALG_PRESENT(algo))
 
-static struct sadb_alg*
-sadb_alg_ptr (int satype, int exttype, int alg_id, int rw)
+static struct sadb_alg* sadb_alg_ptr (int satype, int exttype, int alg_id,
+									  int rw)
 {
 	struct sadb_alg *alg_p = NULL;
 
@@ -94,8 +94,8 @@ sadb_alg_ptr (int satype, int exttype, int alg_id, int rw)
 	return alg_p;
 }
 
-const struct sadb_alg *
-kernel_alg_sadb_alg_get(int satype, int exttype, int alg_id)
+const struct sadb_alg* kernel_alg_sadb_alg_get(int satype, int exttype,
+											   int alg_id)
 {
 	return sadb_alg_ptr(satype, exttype, alg_id, 0);
 }
@@ -103,8 +103,7 @@ kernel_alg_sadb_alg_get(int satype, int exttype, int alg_id)
 /*
  *      Forget previous registration
  */
-static void 
-kernel_alg_init(void)
+static void kernel_alg_init(void)
 {
 	DBG(DBG_KLIPS,
 		DBG_log("alg_init(): memset(%p, 0, %d) memset(%p, 0, %d)",
@@ -116,8 +115,8 @@ kernel_alg_init(void)
 	esp_ealg_num=esp_aalg_num = 0;
 }
 
-static int
-kernel_alg_add(int satype, int exttype, const struct sadb_alg *sadb_alg)
+static int kernel_alg_add(int satype, int exttype,
+						  const struct sadb_alg *sadb_alg)
 {
 	struct sadb_alg *alg_p = NULL;
 	int alg_id = sadb_alg->sadb_alg_id;
@@ -143,9 +142,8 @@ kernel_alg_add(int satype, int exttype, const struct sadb_alg *sadb_alg)
 	return 1;
 }
 
-bool
-kernel_alg_esp_enc_ok(u_int alg_id, u_int key_len,
-				struct alg_info_esp *alg_info __attribute__((unused)))
+bool kernel_alg_esp_enc_ok(u_int alg_id, u_int key_len,
+					struct alg_info_esp *alg_info __attribute__((unused)))
 {
 	struct sadb_alg *alg_p = NULL;
 
@@ -200,9 +198,8 @@ out:
 /* 
  * ML: make F_STRICT logic consider enc,auth algorithms 
  */
-#ifndef NO_PLUTO
-bool
-kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg, struct alg_info_esp *alg_info)
+bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg,
+							 struct alg_info_esp *alg_info)
 {
 	int ealg_insecure;
 
@@ -254,14 +251,11 @@ kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg, struct alg_info_e
 	}
 	return TRUE;
 }
-#endif /* NO_PLUTO */
 
-/*      
- *      Load kernel_alg arrays from /proc
- *      used in manual mode from klips/utils/spi.c
+/**      
+ * Load kernel_alg arrays from /proc used in manual mode from klips/utils/spi.c
  */
-int
-kernel_alg_proc_read(void)
+int kernel_alg_proc_read(void)
 {
 	int satype;
 	int supp_exttype;
@@ -318,13 +312,10 @@ kernel_alg_proc_read(void)
 	return 0;
 }
 
-/*      
- *      Load kernel_alg arrays pluto's SADB_REGISTER    
- *      user by pluto/kernel.c
+/**     
+ * Load kernel_alg arrays pluto's SADB_REGISTER user by pluto/kernel.c
  */
-
-void
-kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
+void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 {
 	/* Trick: one 'type-mangle-able' pointer to ease offset/assign */
 	union {
@@ -392,8 +383,7 @@ kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 	}
 }
 
-u_int
-kernel_alg_esp_enc_keylen(u_int alg_id)
+u_int kernel_alg_esp_enc_keylen(u_int alg_id)
 {
 	u_int keylen = 0;
 
@@ -424,8 +414,7 @@ none:
 	return keylen;
 }
 
-struct sadb_alg *
-kernel_alg_esp_sadb_alg(u_int alg_id)
+struct sadb_alg* kernel_alg_esp_sadb_alg(u_int alg_id)
 {
 	struct sadb_alg *sadb_alg = (ESP_EALG_PRESENT(alg_id))
 				? &esp_ealg[alg_id] : NULL;
@@ -437,7 +426,6 @@ kernel_alg_esp_sadb_alg(u_int alg_id)
 	return sadb_alg;
 }
 
-#ifndef NO_PLUTO
 void kernel_alg_list(void)
 {
 	u_int sadb_id;
@@ -483,21 +471,27 @@ void kernel_alg_list(void)
 	}
 }
 
-void
-kernel_alg_show_connection(struct connection *c, const char *instance)
+void kernel_alg_show_connection(struct connection *c, const char *instance)
 {
 	struct state *st = state_with_serialno(c->newest_ipsec_sa);
 
 	if (st && st->st_esp.present)
 	{
-		whack_log(RC_COMMENT
-				, "\"%s\"%s:   ESP proposal: %s_%d/%s/%s"
-				, c->name
-				, instance
-				, enum_show(&esp_transformid_names, st->st_esp.attrs.transid)
-				, st->st_esp.attrs.key_len
-				, enum_show(&auth_alg_names, st->st_esp.attrs.auth)
-				, c->policy & POLICY_PFS ?
+		const char *aalg_name;
+
+		aalg_name = (st->st_ah.present) ?
+					enum_show(&ah_transformid_names, st->st_ah.attrs.transid):
+					enum_show(&auth_alg_names, st->st_esp.attrs.transid);
+
+		whack_log(RC_COMMENT,
+				"\"%s\"%s:   ESP%s proposal: %s_%d/%s/%s",
+				c->name,
+				instance,
+				(st->st_ah.present) ? "/AH" : "",
+				enum_show(&esp_transformid_names, st->st_esp.attrs.transid),
+				st->st_esp.attrs.key_len,
+				aalg_name,
+				c->policy & POLICY_PFS ?
 						c->alg_info_esp->esp_pfsgroup ?
 								enum_show(&oakley_group_names, 
 										  c->alg_info_esp->esp_pfsgroup)
@@ -506,17 +500,14 @@ kernel_alg_show_connection(struct connection *c, const char *instance)
 		);
 	}
 }
-#endif /* NO_PLUTO */
 
-bool
-kernel_alg_esp_auth_ok(u_int auth,
-				struct alg_info_esp *alg_info __attribute__((unused)))
+bool kernel_alg_esp_auth_ok(u_int auth,
+					struct alg_info_esp *alg_info __attribute__((unused)))
 {
 	return ESP_AALG_PRESENT(alg_info_esp_aa2sadb(auth));
 }
 
-u_int
-kernel_alg_esp_auth_keylen(u_int auth)
+u_int kernel_alg_esp_auth_keylen(u_int auth)
 {
 	u_int sadb_aalg = alg_info_esp_aa2sadb(auth);
 
@@ -531,8 +522,7 @@ kernel_alg_esp_auth_keylen(u_int auth)
 	return a_keylen;
 }
 
-struct esp_info *
-kernel_alg_esp_info(int transid, int auth)
+struct esp_info* kernel_alg_esp_info(int transid, int auth)
 {
 	int sadb_aalg, sadb_ealg;
 	static struct esp_info ei_buf;
@@ -577,9 +567,7 @@ none:
 	return NULL;
 }
 
-#ifndef NO_PLUTO
-static void
-kernel_alg_policy_algorithms(struct esp_info *esp_info)
+static void kernel_alg_policy_algorithms(struct esp_info *esp_info)
 {
 	u_int ealg_id = esp_info->esp_ealg_id;
 
@@ -605,8 +593,8 @@ kernel_alg_policy_algorithms(struct esp_info *esp_info)
 	}
 }
 
-static bool 
-kernel_alg_db_add(struct db_context *db_ctx, struct esp_info *esp_info, lset_t policy)
+static bool kernel_alg_db_add(struct db_context *db_ctx,
+							  struct esp_info *esp_info, lset_t policy)
 {
 	u_int ealg_id, aalg_id;
 
@@ -654,8 +642,8 @@ kernel_alg_db_add(struct db_context *db_ctx, struct esp_info *esp_info, lset_t p
  *      for now this function does free() previous returned
  *      malloced pointer (this quirk allows easier spdb.c change)
  */
-struct db_context * 
-kernel_alg_db_new(struct alg_info_esp *alg_info, lset_t policy )
+struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
+									 lset_t policy )
 {
 	const struct esp_info *esp_info;
 	struct esp_info tmp_esp_info;
@@ -737,4 +725,4 @@ kernel_alg_db_new(struct alg_info_esp *alg_info, lset_t policy )
 	}
 	return ctx_new;
 }
-#endif /* NO_PLUTO */
+

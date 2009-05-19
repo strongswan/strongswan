@@ -356,15 +356,15 @@ enum_names isakmp_transformid_names =
 /* IPsec AH transform values */
 
 static const char *const ah_transform_name[] = {
-	"AH_MD5",
-	"AH_SHA",
-	"AH_DES",
-	"AH_SHA2_256",
-	"AH_SHA2_384",
-	"AH_SHA2_512",
-	"AH_RIPEMD",
-	"AH_AES_XCBC_MAC",
-	"AH_RSA"
+	"HMAC_MD5",
+	"HMAC_SHA1",
+	"DES_MAC",
+	"HMAC_SHA2_256",
+	"HMAC_SHA2_384",
+	"HMAC_SHA2_512",
+	"HMAC_RIPEMD",
+	"AES_XCBC_MAC",
+	"SIG_RSA"
 };
 
 enum_names ah_transformid_names =
