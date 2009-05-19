@@ -338,6 +338,8 @@ int esp_from_encryption_algorithm(encryption_algorithm_t alg)
 			return ESP_CAST;
 		case ENCR_BLOWFISH:
 			return ESP_BLOWFISH;
+		case ENCR_NULL:
+			return ESP_NULL;
 		case ENCR_AES_CBC:
 			return ESP_AES;
 		case ENCR_AES_CTR:
