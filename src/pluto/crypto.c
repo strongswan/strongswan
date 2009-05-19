@@ -339,7 +339,7 @@ int esp_from_encryption_algorithm(encryption_algorithm_t alg)
 		case ENCR_BLOWFISH:
 			return ESP_BLOWFISH;
 		case ENCR_AES_CBC:
-			return OAKLEY_AES_CBC;
+			return ESP_AES;
 		case ENCR_AES_CTR:
 			return ESP_AES_CTR;
 		case ENCR_AES_CCM_ICV8:
