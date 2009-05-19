@@ -1,0 +1,17 @@
+network-manager-strongswan (1.1.1-1) unstable; urgency=low
+
+  * New upstream release fixing a crasher when saving connections
+  * Fix "Wrong path to network-manager initscript in postinst"
+    Reload dbus instead of network-manager, as other VPN plugins do.
+    (Closes: #529189)
+  * Fix "FTBFS: No package 'libnm-util' found"
+    added dependencies to libnm-util-dev and libnm-glib-vpn-dev
+    (Closes: #528977)
+
+ -- Martin Willi <martin@strongswan.org>  Tue, 19 May 2009 13:16:51 +0200
+
+network-manager-strongswan (1.1.0-1) unstable; urgency=low
+
+  * Initial Debian packaging of NetworkManager plugin for strongSwan
+
+ -- Martin Willi <martin@strongswan.org>  Wed, 25 Mar 2009 09:07:05 +0100
