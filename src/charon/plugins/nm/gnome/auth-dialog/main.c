@@ -116,7 +116,6 @@ int main (int argc, char *argv[])
 	gchar *name = NULL, *uuid = NULL, *service = NULL, *keyring = NULL, *pass;
 	GOptionContext *context;
 	GnomeProgram *program = NULL;
-	int exit_status = 1;
 	char buf, *agent, *type;
 	guint32 itemid;
 	GtkWidget *dialog;
@@ -221,8 +220,6 @@ int main (int argc, char *argv[])
 		}
 		else
 		{
-			GtkWidget *dialog;
-			
 			dialog = gtk_message_dialog_new(NULL, 0, GTK_MESSAGE_ERROR,
 						  GTK_BUTTONS_OK, 
 						  _("Configuration uses ssh-agent for authentication, "
@@ -235,7 +232,7 @@ int main (int argc, char *argv[])
 	printf("\n\n");
 	/* flush output, wait for input */
 	fflush(stdout);
-	fread(&buf, 1, sizeof(buf), stdin);
+	if (fread(&buf, 1, sizeof(buf), stdin));
 	g_object_unref(program);
 	return 0;
 }
