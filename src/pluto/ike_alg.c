@@ -320,15 +320,27 @@ void ike_alg_show_connection(struct connection *c, const char *instance)
 
 	if (st)
 	{
-		whack_log(RC_COMMENT
-				, "\"%s\"%s:   IKE proposal: %s_%d/%s/%s"
-				, c->name
-				, instance
-				, enum_show(&oakley_enc_names, st->st_oakley.encrypt)
-				, st->st_oakley.enckeylen
-				, enum_show(&oakley_hash_names, st->st_oakley.hash)
-				, enum_show(&oakley_group_names, st->st_oakley.group->group)
-		);
+		if (st->st_oakley.encrypt == OAKLEY_3DES_CBC)
+		{
+			whack_log(RC_COMMENT,
+					"\"%s\"%s:   IKE proposal: %s/%s/%s",
+					c->name, instance,
+					enum_show(&oakley_enc_names, st->st_oakley.encrypt),
+					enum_show(&oakley_hash_names, st->st_oakley.hash),
+					enum_show(&oakley_group_names, st->st_oakley.group->group)
+			);
+		}
+		else
+		{
+			whack_log(RC_COMMENT,
+					"\"%s\"%s:   IKE proposal: %s_%u/%s/%s",
+					c->name, instance,
+					enum_show(&oakley_enc_names, st->st_oakley.encrypt),
+					st->st_oakley.enckeylen,
+					enum_show(&oakley_hash_names, st->st_oakley.hash),
+					enum_show(&oakley_group_names, st->st_oakley.group->group)
+			);
+		}
 	}
 }
 
