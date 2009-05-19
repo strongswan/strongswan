@@ -12,13 +12,15 @@ nmvpnservice_DATA = nm-strongswan-service.name
 
 nm-strongswan-service.name: $(srcdir)/nm-strongswan-service.name.in
 	sed -e 's|[@]LIBEXECDIR[@]|$(libexecdir)|' \
-		-e 's|[@]CHARON[@]|$(charon)|' $< >$@
+	    -e 's|[@]CHARON[@]|$(charon)|' $< >$@
 
 EXTRA_DIST = nm-strongswan-service.name.in \
-             $(dbusservice_DATA)  \
-             intltool-extract.in  \
-             intltool-merge.in    \
-             intltool-update.in
+    $(dbusservice_DATA)  \
+    intltool-extract.in  \
+    intltool-merge.in    \
+    intltool-update.in
 
 CLEANFILES = $(nmvpnservice_DATA) *~
 DISTCLEANFILES = intltool-extract intltool-merge intltool-update
+
+ACLOCAL_AMFLAGS = -I m4

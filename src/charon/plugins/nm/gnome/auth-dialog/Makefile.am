@@ -10,7 +10,6 @@ nm_strongswan_auth_dialog_CPPFLAGS = \
 	-DICONDIR=\""$(datadir)/pixmaps"\" \
 	-DGLADEDIR=\""$(gladedir)"\" \
 	-DBINDIR=\""$(bindir)"\" \
-	-DDBUS_API_SUBJECT_TO_CHANGE \
 	-DG_DISABLE_DEPRECATED \
 	-DGDK_DISABLE_DEPRECATED \
 	-DGNOME_DISABLE_DEPRECATED \
