@@ -182,7 +182,7 @@ static void __alg_info_ike_add (struct alg_info_ike *alg_info, int ealg_id,
 	passert(cnt < countof(alg_info->ike));
 
 	/* dont add duplicates */
-   for (i = 0;i < cnt; i++)
+   for (i = 0; i < cnt; i++)
    {
 		if (ike_info[i].ike_ealg == ealg_id
 		&& (!ek_bits || ike_info[i].ike_eklen == ek_bits)
@@ -200,7 +200,7 @@ static void __alg_info_ike_add (struct alg_info_ike *alg_info, int ealg_id,
 	alg_info->alg_info_cnt++;
 
 	DBG(DBG_CRYPT,
-		DBG_log("ikg alg added: %s_%d/%s/s, cnt=%d",
+		DBG_log("ikg alg added: %s_%d/%s/%s, cnt=%d",
 				enum_show(&oakley_enc_names, ealg_id), ek_bits,
 				enum_show(&oakley_hash_names, aalg_id),
 				enum_show(&oakley_group_names, modp_id),
@@ -516,9 +516,17 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 
 			ALG_INFO_ESP_FOREACH(alg_info_esp, esp_info, cnt)
 			{
-				np = snprintf(ptr, buflen, "%s_%d/%s, ",
-						enum_show(&esp_transformid_names, esp_info->esp_ealg_id),
-						(int)esp_info->esp_ealg_keylen,
+				np = snprintf(ptr, buflen, "%s",
+						enum_show(&esp_transformid_names, esp_info->esp_ealg_id));
+				ptr += np;
+				buflen -= np;
+				if (esp_info->esp_ealg_keylen)
+				{
+					np = snprintf(ptr, buflen, "_%u", esp_info->esp_ealg_keylen);
+					ptr += np;
+					buflen -= np;
+				}
+				np = snprintf(ptr, buflen, "/%s, ",
 						enum_show(&auth_alg_names, esp_info->esp_aalg_id));
 				ptr += np;
 				buflen -= np;
@@ -540,9 +548,17 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 	case PROTO_ISAKMP:
 		ALG_INFO_IKE_FOREACH((struct alg_info_ike *)alg_info, ike_info, cnt)
 		{
-			np = snprintf(ptr, buflen, "%s_%d/%s/%s, ",
-					enum_show(&oakley_enc_names, ike_info->ike_ealg),
-					(int)ike_info->ike_eklen,
+			np = snprintf(ptr, buflen, "%s",
+					enum_show(&oakley_enc_names, ike_info->ike_ealg));
+			ptr += np;
+			buflen -= np;
+			if (ike_info->ike_eklen)
+			{
+				np = snprintf(ptr, buflen, "_%u", ike_info->ike_eklen);
+				ptr += np;
+				buflen -= np;
+			}
+			np = snprintf(ptr, buflen, "/%s/%s, ",
 					enum_show(&oakley_hash_names, ike_info->ike_halg),
 					enum_show(&oakley_group_names, ike_info->ike_modp));
 			ptr += np;

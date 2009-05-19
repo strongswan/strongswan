@@ -477,27 +477,34 @@ void kernel_alg_show_connection(struct connection *c, const char *instance)
 
 	if (st && st->st_esp.present)
 	{
-		const char *aalg_name;
+		const char *aalg_name, *pfsgroup_name;
 
-		aalg_name = (st->st_ah.present) ?
+		aalg_name = (c->policy & POLICY_AUTHENTICATE) ?
 					enum_show(&ah_transformid_names, st->st_ah.attrs.transid):
-					enum_show(&auth_alg_names, st->st_esp.attrs.transid);
+					enum_show(&auth_alg_names, st->st_esp.attrs.auth);
 
-		whack_log(RC_COMMENT,
-				"\"%s\"%s:   ESP%s proposal: %s_%d/%s/%s",
-				c->name,
-				instance,
+		pfsgroup_name = (c->policy & POLICY_PFS) ?
+						(c->alg_info_esp->esp_pfsgroup) ?
+							enum_show(&oakley_group_names, 
+										  c->alg_info_esp->esp_pfsgroup) :
+							"<Phase1>" : "<N/A>";
+
+		if (st->st_esp.attrs.key_len)
+		{
+			whack_log(RC_COMMENT, "\"%s\"%s:   ESP%s proposal: %s_%u/%s/%s",
+				c->name, instance,
 				(st->st_ah.present) ? "/AH" : "",
 				enum_show(&esp_transformid_names, st->st_esp.attrs.transid),
-				st->st_esp.attrs.key_len,
-				aalg_name,
-				c->policy & POLICY_PFS ?
-						c->alg_info_esp->esp_pfsgroup ?
-								enum_show(&oakley_group_names, 
-										  c->alg_info_esp->esp_pfsgroup)
-								: "<Phase1>"
-						: "<N/A>"
-		);
+				st->st_esp.attrs.key_len, aalg_name, pfsgroup_name);
+		}
+		else
+		{
+			whack_log(RC_COMMENT, "\"%s\"%s:   ESP%s proposal: %s/%s/%s",
+				c->name, instance,
+				(st->st_ah.present) ? "/AH" : "",
+				enum_show(&esp_transformid_names, st->st_esp.attrs.transid),
+				aalg_name, pfsgroup_name);
+		}
 	}
 }
 
