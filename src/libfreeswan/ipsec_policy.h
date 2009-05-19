@@ -91,7 +91,7 @@ enum ipsec_authentication_algo {
  */
 
 enum ipsec_cipher_algo {
-  ESP_NONE	        = 0,
+  ESP_NONE          = 0,
   ESP_DES_IV64      = 1,
   ESP_DES           = 2,
   ESP_3DES          = 3,
