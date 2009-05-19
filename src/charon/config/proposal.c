@@ -645,7 +645,7 @@ static int print_alg(private_proposal_t *this, char **dst, size_t *len,
 		}
 		if (size)
 		{
-			written += print_in_hook(*dst, *len, "-%d", size);
+			written += print_in_hook(*dst, *len, "_%u", size);
 		}
 	}
 	enumerator->destroy(enumerator);

@@ -193,7 +193,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 					fprintf(out, "%N", encryption_algorithm_names, encr_alg);
 					if (encr_size)
 					{
-						fprintf(out, "-%d", encr_size);
+						fprintf(out, "_%u", encr_size);
 					}
 				}
 				if (int_alg != AUTH_UNDEFINED)
@@ -201,7 +201,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 					fprintf(out, "/%N", integrity_algorithm_names, int_alg);
 					if (int_size)
 					{
-						fprintf(out, "-%d", int_size);
+						fprintf(out, "_%u", int_size);
 					}
 				}
 			}
