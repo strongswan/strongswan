@@ -131,8 +131,10 @@ static void __alg_info_esp_add(struct alg_info_esp *alg_info, int ealg_id,
 	alg_info->alg_info_cnt++;
 
 	DBG(DBG_CRYPT,
-		DBG_log("__alg_info_esp_add() ealg=%d aalg=%d cnt=%d"
-			, ealg_id, aalg_id, alg_info->alg_info_cnt)
+		DBG_log("esp alg added: %s_%d/%s, cnt=%d",
+				enum_show(&esp_transformid_names, ealg_id), ek_bits,
+				enum_show(&auth_alg_names, aalg_id),
+				alg_info->alg_info_cnt)
 	)
 }
 
@@ -198,9 +200,11 @@ static void __alg_info_ike_add (struct alg_info_ike *alg_info, int ealg_id,
 	alg_info->alg_info_cnt++;
 
 	DBG(DBG_CRYPT,
-		DBG_log("__alg_info_ike_add() ealg=%d aalg=%d modp_id=%d, cnt=%d"
-				, ealg_id, aalg_id, modp_id
-				, alg_info->alg_info_cnt)
+		DBG_log("ikg alg added: %s_%d/%s/s, cnt=%d",
+				enum_show(&oakley_enc_names, ealg_id), ek_bits,
+				enum_show(&oakley_hash_names, aalg_id),
+				enum_show(&oakley_group_names, modp_id),
+				alg_info->alg_info_cnt)
 	)
 }
 
@@ -390,7 +394,7 @@ static status_t alg_info_parse_str(struct alg_info *alg_info, char *alg_str)
 struct alg_info_esp *alg_info_esp_create_from_str(char *alg_str)
 {
 	struct alg_info_esp *alg_info_esp;
-	char esp_buf[256];
+	char esp_buf[BUF_LEN];
 	char *pfs_name;
 	status_t status = SUCCESS;
 	/*
@@ -475,10 +479,6 @@ alg_info_addref(struct alg_info *alg_info)
 	if (alg_info != NULL)
 	{
 		alg_info->ref_cnt++;
-		DBG(DBG_CRYPT,
-			DBG_log("alg_info_addref() alg_info->ref_cnt=%d"
-				, alg_info->ref_cnt)
-		)
 	}
 }
 
@@ -491,15 +491,8 @@ alg_info_delref(struct alg_info **alg_info_p)
 	{
 		passert(alg_info->ref_cnt != 0);
 		alg_info->ref_cnt--;
-		DBG(DBG_CRYPT,
-			DBG_log("alg_info_delref() alg_info->ref_cnt=%d"
-				, alg_info->ref_cnt)
-		)
 		if (alg_info->ref_cnt == 0)
 		{
-			DBG(DBG_CRYPT,
-				DBG_log("alg_info_delref() freeing alg_info")
-			)
 			alg_info_free(alg_info);
 		}
 		*alg_info_p = NULL;
@@ -523,10 +516,10 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 
 			ALG_INFO_ESP_FOREACH(alg_info_esp, esp_info, cnt)
 			{
-				np = snprintf(ptr, buflen, "%d_%03d-%d, "
-						, esp_info->esp_ealg_id
-						, (int)esp_info->esp_ealg_keylen
-						, esp_info->esp_aalg_id);
+				np = snprintf(ptr, buflen, "%s_%d/%s, ",
+						enum_show(&esp_transformid_names, esp_info->esp_ealg_id),
+						(int)esp_info->esp_ealg_keylen,
+						enum_show(&auth_alg_names, esp_info->esp_aalg_id));
 				ptr += np;
 				buflen -= np;
 				if (buflen < 0)
@@ -534,8 +527,8 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 			}
 			if (alg_info_esp->esp_pfsgroup)
 			{
-				np = snprintf(ptr, buflen, "; pfsgroup=%d; "
-						, alg_info_esp->esp_pfsgroup);
+				np = snprintf(ptr, buflen, "; pfsgroup=%s; ",
+						enum_show(&oakley_group_names, alg_info_esp->esp_pfsgroup));
 				ptr += np;
 				buflen -= np;
 				if (buflen < 0)
@@ -547,11 +540,11 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 	case PROTO_ISAKMP:
 		ALG_INFO_IKE_FOREACH((struct alg_info_ike *)alg_info, ike_info, cnt)
 		{
-			np = snprintf(ptr, buflen, "%d_%03d-%d-%d, "
-					, ike_info->ike_ealg
-					, (int)ike_info->ike_eklen
-					, ike_info->ike_halg
-					, ike_info->ike_modp);
+			np = snprintf(ptr, buflen, "%s_%d/%s/%s, ",
+					enum_show(&oakley_enc_names, ike_info->ike_ealg),
+					(int)ike_info->ike_eklen,
+					enum_show(&oakley_hash_names, ike_info->ike_halg),
+					enum_show(&oakley_group_names, ike_info->ike_modp));
 			ptr += np;
 			buflen -= np;
 			if (buflen < 0)

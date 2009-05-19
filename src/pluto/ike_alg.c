@@ -374,32 +374,12 @@ void ike_alg_list(void)
  */
 void ike_alg_show_connection(struct connection *c, const char *instance)
 {
-	char buf[BUF_LEN];
-	struct state *st;
+	struct state *st = state_with_serialno(c->newest_isakmp_sa);
 
-	if (c->alg_info_ike)
-	{
-		alg_info_snprint(buf, sizeof(buf)-1, (struct alg_info *)c->alg_info_ike);
-		whack_log(RC_COMMENT
-				, "\"%s\"%s:   IKE algorithms wanted: %s"
-				, c->name
-				, instance
-				, buf
-		);
-
-		alg_info_snprint_ike(buf, sizeof(buf)-1, c->alg_info_ike);
-		whack_log(RC_COMMENT
-				, "\"%s\"%s:   IKE algorithms found:  %s"
-				, c->name
-				, instance
-				, buf
-		);
-	}
-
-	st = state_with_serialno(c->newest_isakmp_sa);
 	if (st)
+	{
 		whack_log(RC_COMMENT
-				, "\"%s\"%s:   IKE algorithm newest: %s-%d/%s/%s"
+				, "\"%s\"%s:   IKE proposal: %s_%d/%s/%s"
 				, c->name
 				, instance
 				, enum_show(&oakley_enc_names, st->st_oakley.encrypt)
@@ -407,6 +387,7 @@ void ike_alg_show_connection(struct connection *c, const char *instance)
 				, enum_show(&oakley_hash_names, st->st_oakley.hash)
 				, enum_show(&oakley_group_names, st->st_oakley.group->group)
 		);
+	}
 }
 
 /**

@@ -486,31 +486,12 @@ void kernel_alg_list(void)
 void
 kernel_alg_show_connection(struct connection *c, const char *instance)
 {
-	char buf[256];
-	struct state *st;
+	struct state *st = state_with_serialno(c->newest_ipsec_sa);
 
-	if (c->alg_info_esp)
-	{
-		alg_info_snprint(buf, sizeof(buf), (struct alg_info *)c->alg_info_esp);
-		whack_log(RC_COMMENT
-				, "\"%s\"%s:   ESP algorithms wanted: %s"
-				, c->name
-				, instance
-				, buf);
-	}
-	if (c->alg_info_esp)
-	{
-		alg_info_snprint_esp(buf, sizeof(buf), c->alg_info_esp);
-		whack_log(RC_COMMENT
-				, "\"%s\"%s:   ESP algorithms loaded: %s"
-				, c->name
-				, instance
-				, buf);
-	}
-	st = state_with_serialno(c->newest_ipsec_sa);
 	if (st && st->st_esp.present)
+	{
 		whack_log(RC_COMMENT
-				, "\"%s\"%s:   ESP algorithm newest: %s-%d/%s/%s"
+				, "\"%s\"%s:   ESP proposal: %s_%d/%s/%s"
 				, c->name
 				, instance
 				, enum_show(&esp_transformid_names, st->st_esp.attrs.transid)
@@ -518,11 +499,12 @@ kernel_alg_show_connection(struct connection *c, const char *instance)
 				, enum_show(&auth_alg_names, st->st_esp.attrs.auth)
 				, c->policy & POLICY_PFS ?
 						c->alg_info_esp->esp_pfsgroup ?
-										enum_show(&oakley_group_names, 
-												c->alg_info_esp->esp_pfsgroup)
+								enum_show(&oakley_group_names, 
+										  c->alg_info_esp->esp_pfsgroup)
 								: "<Phase1>"
 						: "<N/A>"
 		);
+	}
 }
 #endif /* NO_PLUTO */
 

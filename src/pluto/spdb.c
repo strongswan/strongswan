@@ -318,7 +318,7 @@ out_sa(pb_stream *outs
 				DBG(DBG_CONTROL | DBG_CRYPT,
 					if (st->st_connection->alg_info_esp)
 					{
-						static char buf[256]="";
+						static char buf[BUF_LEN]="";
 
 						alg_info_snprint(buf, sizeof (buf),
 								(struct alg_info *)st->st_connection->alg_info_esp);
@@ -342,7 +342,7 @@ out_sa(pb_stream *outs
 				DBG(DBG_CONTROL | DBG_CRYPT,
 					if (st->st_connection->alg_info_ike)
 					{
-						static char buf[256]="";
+						static char buf[BUF_LEN]="";
 
 						alg_info_snprint(buf, sizeof (buf),
 								(struct alg_info *)st->st_connection->alg_info_ike);

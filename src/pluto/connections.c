@@ -991,7 +991,7 @@ add_connection(const whack_message_t *wm)
 			c->alg_info_esp= alg_info_esp_create_from_str(wm->esp? wm->esp : "");
 
 			DBG(DBG_CRYPT|DBG_CONTROL,
-				static char buf[256]="<NULL>";
+				static char buf[BUF_LEN]="<NULL>";
 
 				if (c->alg_info_esp)
 					alg_info_snprint(buf, sizeof(buf)
@@ -1018,7 +1018,7 @@ add_connection(const whack_message_t *wm)
 			c->alg_info_ike= alg_info_ike_create_from_str(wm->ike? wm->ike : "");
 
 			DBG(DBG_CRYPT|DBG_CONTROL,
-				static char buf[256]="<NULL>";
+				static char buf[BUF_LEN]="<NULL>";
 
 				if (c->alg_info_ike)
 					alg_info_snprint(buf, sizeof(buf)
