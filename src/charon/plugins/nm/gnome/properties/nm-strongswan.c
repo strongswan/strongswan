@@ -21,10 +21,8 @@
 #include <config.h>
 #endif
 
-#include <errno.h>
-#include <stdlib.h>
+#include <glib.h>
 #include <glib/gi18n-lib.h>
-#include <string.h>
 #include <gtk/gtk.h>
 #include <glade/glade.h>
 
@@ -175,7 +173,6 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	NMSettingVPN *settings;
 	GtkWidget *widget;
 	const char *value;
-	gboolean active;
 	
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection, NM_TYPE_SETTING_VPN));
 	widget = glade_xml_get_widget (priv->xml, "address-entry");
@@ -205,13 +202,13 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("EAP"));
 	value = nm_setting_vpn_get_data_item (settings, "method");
 	if (value) {
-		if (g_strcasecmp (value, "key") == 0) {
+		if (g_strcmp0 (value, "key") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 		}
-		if (g_strcasecmp (value, "agent") == 0) {
+		if (g_strcmp0 (value, "agent") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 1);
 		}
-		if (g_strcasecmp (value, "eap") == 0) {
+		if (g_strcmp0 (value, "eap") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 2);
 		}
 	}
@@ -285,11 +282,8 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
 	NMSettingVPN *settings;
 	GtkWidget *widget;
-	GValue *value;
 	gboolean active;
 	char *str;
-	GtkTreeModel *model;
-	GtkTreeIter iter;
 
 	if (!check_validity (self, error))
 		return FALSE;
