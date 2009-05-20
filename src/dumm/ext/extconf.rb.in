@@ -5,6 +5,7 @@
 require 'mkmf'
 
 $defs << " @DEFS@"
+$CFLAGS << " -Wno-format"
 
 dir_config('dumm', '@top_srcdir@/src/dumm', '../.libs')
 dir_config('strongswan', '@top_srcdir@/src/libstrongswan', '../../libstrongswan/.libs')
