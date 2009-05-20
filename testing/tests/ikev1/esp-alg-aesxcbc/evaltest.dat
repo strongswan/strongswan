@@ -1,8 +1,8 @@
 
 carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
 moon::ipsec status::rw.*STATE_QUICK_R2.*IPsec SA established::YES
-carol::ipsec statusall::ESP algorithm newest: AES_256-AES_XCBC_MAC::YES
-moon::ipsec statusall::ESP algorithm newest: AES_256-AES_XCBC_MAC::YES
+carol::ipsec statusall::ESP proposal: AES_CBC_256/AES_XCBC_96::YES
+moon::ipsec statusall::ESP proposal: AES_CBC_256/AES_XCBC_96::YES
 carol::ip xfrm state::auth xcbc(aes)::YES
 moon::ip xfrm state::auth xcbc(aes)::YES
 carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES

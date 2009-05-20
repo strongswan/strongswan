@@ -1,7 +1,7 @@
-Roadwarrior <b>carol</b> proposes <b>3DES</b> encryption (together with
-SHA-1 authentication) in the first place and <b>AES-128</b> encryption in
+Roadwarrior <b>carol</b> proposes <b>3DES_CBC</b> encryption (together with
+HMAC_SHA1 authentication) in the first place and <b>AES_CBC_128</b> encryption in
 second place for both the ISAKMP and IPsec SAs. Gateway <b>moon</b> defines
-<b>ike=aes-128-sha</b> but will accept any other supported algorithm proposed
+<b>ike=aes128-sha1</b> but will accept any other supported algorithm proposed
 by the peer during Phase 1. But for ESP encryption <b>moon</b> enforces
-<b>esp=aes-128-sha1!</b> by applying the strict flag '!'.
+<b>esp=aes128-sha1!</b> by applying the strict flag '!'.
 
