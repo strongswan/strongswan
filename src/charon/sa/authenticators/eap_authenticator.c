@@ -509,7 +509,11 @@ static status_t process_client(private_eap_authenticator_t *this,
 			case EAP_REQUEST:
 			{
 				this->eap_payload = client_process_eap(this, eap_payload);
-				return NEED_MORE;
+				if (this->eap_payload)
+				{
+					return NEED_MORE;
+				}
+				return FAILED;
 			}
 			case EAP_SUCCESS:
 			{
