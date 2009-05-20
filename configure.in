@@ -904,6 +904,30 @@ if test x$dumm = xtrue; then
 	PKG_CHECK_MODULES(gtk, [gtk+-2.0 vte])
 	AC_SUBST(gtk_CFLAGS)
 	AC_SUBST(gtk_LIBS)
+	AC_CHECK_PROGS(RUBY, ruby)
+	AC_MSG_CHECKING([for Ruby header files])
+	if test -n "$RUBY"; then
+		RUBYDIR=`($RUBY -rmkmf -e 'print Config::CONFIG[["archdir"]] || $archdir') 2>/dev/null`
+		if test -n "$RUBYDIR"; then
+			dirs="$RUBYDIR"
+			RUBYINCLUDE=none
+			for i in $dirs; do
+				if test -r $i/ruby.h; then
+					AC_MSG_RESULT([$i])
+					RUBYINCLUDE="-I$i"
+					break;
+				fi
+			done
+			if test x"$RUBYINCLUDE" = xnone; then
+				AC_MSG_ERROR([ruby.h not found])
+			fi
+			AC_SUBST(RUBYINCLUDE)
+		else
+			AC_MSG_ERROR([unable to determine ruby configuration])
+		fi
+	else
+		AC_MSG_ERROR([don't know how to run ruby])
+	fi
 fi
 
 if test x$fast = xtrue; then
