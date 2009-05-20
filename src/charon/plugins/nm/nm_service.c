@@ -425,7 +425,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	{
 		peer_cfg->destroy(peer_cfg);
 	}
-	if (ike_sa->initiate(ike_sa, child_cfg, 0) != SUCCESS)
+	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
 	{
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 		

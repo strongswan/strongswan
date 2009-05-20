@@ -678,7 +678,7 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
-				task = (task_t*)child_create_create(this->ike_sa, NULL);
+				task = (task_t*)child_create_create(this->ike_sa, NULL, NULL, NULL);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t*)ike_auth_lifetime_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
@@ -726,7 +726,8 @@ static status_t process_request(private_task_manager_t *this,
 					}
 					else
 					{
-						task = (task_t*)child_create_create(this->ike_sa, NULL);
+						task = (task_t*)child_create_create(this->ike_sa,
+															NULL, NULL, NULL);
 					}
 				}
 				else

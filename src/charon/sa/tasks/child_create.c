@@ -85,6 +85,16 @@ struct private_child_create_t {
 	linked_list_t *tsr;
 	
 	/**
+	 * source of triggering packet
+	 */
+	traffic_selector_t *packet_tsi;
+	
+	/**
+	 * destination of triggering packet
+	 */
+	traffic_selector_t *packet_tsr;
+	
+	/**
 	 * optional diffie hellman exchange
 	 */
 	diffie_hellman_t *dh;
@@ -692,7 +702,17 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	}
 	this->tsr = this->config->get_traffic_selectors(this->config, FALSE, 
 													NULL, other);
-
+	
+	if (this->packet_tsi)
+	{
+		this->tsi->insert_first(this->tsi,
+								this->packet_tsi->clone(this->packet_tsi));
+	}
+	if (this->packet_tsr)
+	{
+		this->tsr->insert_first(this->tsr,
+								this->packet_tsr->clone(this->packet_tsr));
+	}
 	this->proposals = this->config->get_proposals(this->config,
 												  this->dh_group == MODP_NONE);
 	this->mode = this->config->get_mode(this->config);
@@ -1138,6 +1158,8 @@ static void destroy(private_child_create_t *this)
 	{
 		DESTROY_IF(this->child_sa);
 	}
+	DESTROY_IF(this->packet_tsi);
+	DESTROY_IF(this->packet_tsr);
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->dh);
 	if (this->proposals)
@@ -1152,7 +1174,8 @@ static void destroy(private_child_create_t *this)
 /*
  * Described in header.
  */
-child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config)
+child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config,
+							traffic_selector_t *tsi, traffic_selector_t *tsr)
 {
 	private_child_create_t *this = malloc_thing(private_child_create_t);
 
@@ -1184,6 +1207,8 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config)
 	this->proposal = NULL;
 	this->tsi = NULL;
 	this->tsr = NULL;
+	this->packet_tsi = tsi ? tsi->clone(tsi) : NULL;
+	this->packet_tsr = tsr ? tsr->clone(tsr) : NULL;
 	this->dh = NULL;
 	this->dh_group = MODP_NONE;
 	this->keymat = ike_sa->get_keymat(ike_sa);

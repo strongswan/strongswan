@@ -600,16 +600,21 @@ struct ike_sa_t {
 	/**
 	 * Initiate a new connection.
 	 *
-	 * The configs are owned by the IKE_SA after the call.
+	 * The configs are owned by the IKE_SA after the call. If the initiate
+	 * is triggered by a packet, traffic selectors of the packet can be added
+	 * to the CHILD_SA.
 	 * 
 	 * @param child_cfg		child config to create CHILD from
 	 * @param reqid			reqid to use for CHILD_SA, 0 assigne uniquely
+	 * @param tsi			source of triggering packet
+	 * @param tsr			destination of triggering packet.
 	 * @return				
 	 * 						- SUCCESS if initialization started
 	 * 						- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg,
-						  u_int32_t reqid);
+						  u_int32_t reqid, traffic_selector_t *tsi,
+						  traffic_selector_t *tsr);
 	
 	/**
 	 * Initiates the deletion of an IKE_SA.

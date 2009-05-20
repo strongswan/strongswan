@@ -71,8 +71,11 @@ struct child_create_t {
  *
  * @param ike_sa		IKE_SA this task works for
  * @param config		child_cfg if task initiator, NULL if responder
- * @return			 	child_create task to handle by the task_manager
+ * @param tsi			source of triggering packet, or NULL
+ * @param tsr			destination of triggering packet, or NULL
+ * @return				child_create task to handle by the task_manager
  */
-child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config);
+child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config,
+							traffic_selector_t *tsi, traffic_selector_t *tsr);
 
 #endif /** CHILD_CREATE_H_ @}*/

@@ -201,7 +201,8 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 			{
 				case ACTION_RESTART:
 					child_cfg->get_ref(child_cfg);
-					status = this->ike_sa->initiate(this->ike_sa, child_cfg, 0);
+					status = this->ike_sa->initiate(this->ike_sa, child_cfg, 0,
+													NULL, NULL);
 					break;
 				case ACTION_ROUTE:	
 					charon->traps->install(charon->traps,
