@@ -331,14 +331,14 @@ static void generate_u_int_type(private_generator_t *this,
 		case CONFIGURATION_ATTRIBUTE_LENGTH:
 		{
 			u_int16_t val = htons(*((u_int16_t*)(this->data_struct + offset)));
-			DBG3(DBG_ENC, "   => %b", val, sizeof(u_int16_t));
+			DBG3(DBG_ENC, "   => %b", &val, sizeof(u_int16_t));
 			write_bytes_to_buffer(this, &val, sizeof(u_int16_t));
 			break;
 		}
 		case U_INT_32:
 		{
 			u_int32_t val = htonl(*((u_int32_t*)(this->data_struct + offset)));
-			DBG3(DBG_ENC, "   => %b", val, sizeof(u_int32_t));
+			DBG3(DBG_ENC, "   => %b", &val, sizeof(u_int32_t));
 			write_bytes_to_buffer(this, &val, sizeof(u_int32_t));
 			break;
 		}
@@ -347,7 +347,7 @@ static void generate_u_int_type(private_generator_t *this,
 			/* 64 bit are written as-is, no host order conversion */
 			write_bytes_to_buffer(this, this->data_struct + offset,
 								  sizeof(u_int64_t));
-			DBG3(DBG_ENC, "   => %b", (void*)(this->data_struct + offset),
+			DBG3(DBG_ENC, "   => %b", this->data_struct + offset,
 				 sizeof(u_int64_t));
 			break;
 		}
