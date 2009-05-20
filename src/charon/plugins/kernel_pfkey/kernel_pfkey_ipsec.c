@@ -442,7 +442,7 @@ static u_int8_t mode2kernel(ipsec_mode_t mode)
 			return IPSEC_MODE_TRANSPORT;
 		case MODE_TUNNEL:
 			return IPSEC_MODE_TUNNEL;
-#ifdef IPSEC_MODE_BEET
+#ifdef HAVE_IPSEC_MODE_BEET
 		case MODE_BEET:
 			return IPSEC_MODE_BEET;
 #endif
@@ -462,7 +462,7 @@ static u_int8_t dir2kernel(policy_dir_t dir)
 			return IPSEC_DIR_INBOUND;
 		case POLICY_OUT:
 			return IPSEC_DIR_OUTBOUND;
-#ifdef IPSEC_DIR_FWD
+#ifdef HAVE_IPSEC_DIR_FWD
 		case POLICY_FWD:
 			return IPSEC_DIR_FWD;
 #endif
@@ -483,7 +483,7 @@ static policy_dir_t kernel2dir(u_int8_t  dir)
 			return POLICY_IN;
 		case IPSEC_DIR_OUTBOUND:
 			return POLICY_OUT;
-#ifdef IPSEC_DIR_FWD
+#ifdef HAVE_IPSEC_DIR_FWD
 		case IPSEC_DIR_FWD:
 			return POLICY_FWD;
 #endif

@@ -839,6 +839,36 @@ AC_CHECK_MEMBERS([struct sadb_x_policy.sadb_x_policy_priority], [], [],
 	#endif
 ])
 
+AC_MSG_CHECKING([for IPSEC_MODE_BEET])
+AC_TRY_COMPILE(
+	[#ifdef HAVE_NETIPSEC_IPSEC_H
+	#include <netipsec/ipsec.h>
+	#elif defined(HAVE_NETINET6_IPSEC_H)
+	#include <netinet6/ipsec.h>
+	#else
+	#include <linux/ipsec.h>
+	#endif],
+	[int mode = IPSEC_MODE_BEET;
+	 return mode;],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IPSEC_MODE_BEET])],
+	[AC_MSG_RESULT([no])]
+)
+
+AC_MSG_CHECKING([for IPSEC_DIR_FWD])
+AC_TRY_COMPILE(
+	[#ifdef HAVE_NETIPSEC_IPSEC_H
+	#include <netipsec/ipsec.h>
+	#elif defined(HAVE_NETINET6_IPSEC_H)
+	#include <netinet6/ipsec.h>
+	#else
+	#include <linux/ipsec.h>
+	#endif],
+	[int dir = IPSEC_DIR_FWD;
+	 return dir;],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IPSEC_DIR_FWD])],
+	[AC_MSG_RESULT([no])]
+)
+
 AC_MSG_CHECKING([for gcc atomic operations])
 AC_TRY_RUN(
 [
