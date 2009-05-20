@@ -1,4 +1,0 @@
-moon::ipsec statusall::rw.*ESTABLISHED::YES
-carol::ipsec statusall::home.*ESTABLISHED::YES
-moon::ipsec listcrls:: ok::YES
-carol::ipsec listcrls:: ok::YES

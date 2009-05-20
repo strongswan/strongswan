@@ -2,9 +2,9 @@ carol::cat /var/log/daemon.log::ECP_192.*ECP_224::YES
 dave::cat /var/log/daemon.log::ECP_192.*ECP_256::YES
 moon::ipsec statusall::rw.*ESTABLISHED::YES
 carol::ipsec statusall::home.*ESTABLISHED::YES
-carol::ipsec statusall::home.*AES_CBC-128/AUTH_HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/ECP_224::YES
+carol::ipsec statusall::home.*AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/ECP_224::YES
 dave::ipsec statusall::home.*ESTABLISHED::YES
-dave::ipsec statusall::home.*AES_CBC-128/AUTH_HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/ECP_256::YES
+dave::ipsec statusall::home.*AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/ECP_256::YES
 carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
 dave::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
 moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
