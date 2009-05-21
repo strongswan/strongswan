@@ -841,11 +841,13 @@ AC_CHECK_MEMBERS([struct sadb_x_policy.sadb_x_policy_priority], [], [],
 
 AC_MSG_CHECKING([for IPSEC_MODE_BEET])
 AC_TRY_COMPILE(
-	[#ifdef HAVE_NETIPSEC_IPSEC_H
+	[#include <sys/types.h>
+	#ifdef HAVE_NETIPSEC_IPSEC_H
 	#include <netipsec/ipsec.h>
 	#elif defined(HAVE_NETINET6_IPSEC_H)
 	#include <netinet6/ipsec.h>
 	#else
+	#include <stdint.h>
 	#include <linux/ipsec.h>
 	#endif],
 	[int mode = IPSEC_MODE_BEET;
@@ -856,11 +858,13 @@ AC_TRY_COMPILE(
 
 AC_MSG_CHECKING([for IPSEC_DIR_FWD])
 AC_TRY_COMPILE(
-	[#ifdef HAVE_NETIPSEC_IPSEC_H
+	[#include <sys/types.h>
+	#ifdef HAVE_NETIPSEC_IPSEC_H
 	#include <netipsec/ipsec.h>
 	#elif defined(HAVE_NETINET6_IPSEC_H)
 	#include <netinet6/ipsec.h>
 	#else
+	#include <stdint.h>
 	#include <linux/ipsec.h>
 	#endif],
 	[int dir = IPSEC_DIR_FWD;
