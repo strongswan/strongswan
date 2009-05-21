@@ -22,6 +22,12 @@ strongswan-4.3.1
 - Added support for AES counter mode in ESP in IKEv2 using the proposal
   keywords aes128ctr, aes192ctr and aes256ctr.
 
+- Further progress in refactoring pluto: Use of the curl and ldap plugins
+  for fetching crls and OCSP. Use of the openssl plugin as an alternative
+  to the aes, des, sha1, sha2, and md5 plugins. The blowfish, twofish, and
+  serpent plugins are now optional and are not enabled by default.
+
+
 strongswan-4.3.0
 ----------------
 
