@@ -145,6 +145,9 @@ static void _natd_hash(const struct hash_desc *oakley_hasher, char *hash,
 				break;
 			case AF_INET6:
 				addr_chunk = chunk_from_thing(ip->u.v6.sin6_addr.s6_addr);
+				break;
+			default:
+				addr_chunk = chunk_empty; /* should never occur */ 
 		}
 		hasher->get_hash(hasher, addr_chunk, NULL);
 		hasher->get_hash(hasher, port_chunk, hash);
