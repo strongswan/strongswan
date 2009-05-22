@@ -65,7 +65,7 @@ case "$1" in
 	echo "	rereadsecrets|rereadgroups"
 	echo "	rereadcacerts|rereadaacerts|rereadocspcerts"
 	echo "	rereadacerts|rereadcrls|rereadall"
-	echo "	purgeocsp"
+	echo "	purgeocsp|purgeike"
 	echo "	scencrypt|scdecrypt <value> [--inbase <base>] [--outbase <base>] [--keyid <id>]"
  	echo "	openac"
 	echo "	pluto"
@@ -178,6 +178,15 @@ rereadall|purgeocsp)
 	if [ -e $IPSEC_CHARON_PID ]
 	then
 		$IPSEC_STROKE "$op" "$@"
+		rc="$?"
+	fi
+	exit "$rc"
+	;;
+purgeike)
+	rc=7
+	if [ -e $IPSEC_CHARON_PID ]
+	then
+		$IPSEC_STROKE purgeike
 		rc="$?"
 	fi
 	exit "$rc"
