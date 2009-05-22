@@ -11,6 +11,13 @@ strongswan-4.3.1
   subjectAltName. This allows a gateway administrator to deploy the same
   certificates to Windows 7 and NetworkManager clients.
 
+- The command ipsec purgeike deletes IKEv2 SAs that don't have a CHILD SA.
+  The command ipsec down <conn>{n} deletes CHILD SA instance n of connection
+  <conn> whereas ipsec down <conn>{*} deletes all CHILD SA instances.
+  The command ipsec down <conn>[n] deletes IKE SA instance n of connection
+  <conn> plus dependent CHILD SAs whereas ipsec down <conn>[*] deletes all
+  IKE SA instances of connection <conn>.
+
 - Fixed a regression introduced in 4.3.0 where EAP authentication calculated
   the AUTH payload incorrectly. Further, the EAP-MSCHAPv2 MSK key derivation
   has been updated to be compatible with the Windows 7 Release Candidate.
@@ -19,13 +26,25 @@ strongswan-4.3.1
   outside of IKE_SAs to keep them installed in any case. A tunnel gets
   established only once, even if initiation is delayed due network outages.
 
+- Improved the handling of multiple acquire signals triggered by the kernel.
+
+- Fixed two DoS vulnerabilities in the charon daemon that were discovered by
+  fuzzing techniques: 1) Sending a malformed IKE_SA_INIT request leaved an
+  incomplete state which caused a null pointer dereference if a subsequent
+  CREATE_CHILD_SA request was sent. 2) Sending an IKE_AUTH request with either
+  a missing TSi or TSr payload caused a null pointer derefence because the
+  checks for TSi and TSr were interchanged. The IKEv2 fuzzer used was 
+  developped by the Orange Labs vulnerability research team. The tool was
+  initially written by Gabriel Campana and is now maintained by Laurent Butti.
+
 - Added support for AES counter mode in ESP in IKEv2 using the proposal
   keywords aes128ctr, aes192ctr and aes256ctr.
 
 - Further progress in refactoring pluto: Use of the curl and ldap plugins
-  for fetching crls and OCSP. Use of the openssl plugin as an alternative
+  for fetching crls and OCSP. Use of the random plugin to get keying material
+  from /dev/random or /dev/urandom. Use of the openssl plugin as an alternative
   to the aes, des, sha1, sha2, and md5 plugins. The blowfish, twofish, and
-  serpent plugins are now optional and are not enabled by default.
+  serpent encryption plugins are now optional and are not enabled by default.
 
 
 strongswan-4.3.0
