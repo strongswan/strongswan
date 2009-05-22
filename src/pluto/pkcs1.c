@@ -1,7 +1,8 @@
 /* Support of PKCS#1 private key data structures
  * Copyright (C) 2005 Jan Hutter, Martin Willi
- * Copyright (C) 2002-2005 Andreas Steffen
- * Hochschule fuer Technik Rapperswil, Switzerland
+ * Copyright (C) 2002-2009 Andreas Steffen
+ *
+ * HSR Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

@@ -2,7 +2,7 @@
  * Copyright (C) 2001-2002 Colubris Networks
  * Copyright (C) 2003 Sean Mathews - Nu Tech Software Solutions, inc.
  * Copyright (C) 2003-2004 Xelerance Corporation
- * Copyright (C) 2006-2007 Andreas Steffen - Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2006-2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

@@ -1,6 +1,6 @@
 /* Dynamic fetching of X.509 CRLs
  * Copyright (C) 2002 Stephane Laroche <stephane.laroche@colubris.com>
- * Copyright (C) 2002-2004 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2002-2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

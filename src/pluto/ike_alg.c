@@ -1,5 +1,6 @@
 /* IKE modular algorithm handling interface
- * Author: JuanJo Ciarlante <jjo-ipsec@mendoza.gov.ar>
+ * Copyright (C) JuanJo Ciarlante <jjo-ipsec@mendoza.gov.ar>
+ * Copyright (C) 2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

@@ -1,6 +1,6 @@
 /* crypto interfaces
- * Copyright (C) 1998-2001  D. Hugh Redelmeier
- * Copyright (C) 2007-2009 Andreas Steffen
+ * Copyright (C) 1998-2001 D. Hugh Redelmeier
+ * Copyright (C) 2007-2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
