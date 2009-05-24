@@ -34,8 +34,7 @@
 #include "defs.h"
 #include "whack.h"
 
-static void
-help(void)
+static void help(void)
 {
 	fprintf(stderr
 		, "Usage:\n\n"
@@ -238,8 +237,7 @@ static const char *label = NULL;        /* --label operand, saved for diagnostic
 static const char *name = NULL; /* --name operand, saved for diagnostics */
 
 /* print a string as a diagnostic, then exit whack unhappily */
-static void
-diag(const char *mess)
+static void diag(const char *mess)
 {
 	if (mess != NULL)
 	{
@@ -255,8 +253,7 @@ diag(const char *mess)
 }
 
 /* conditially calls diag; prints second arg, if non-NULL, as quoted string */
-static void
-diagq(err_t ugh, const char *this)
+static void diagq(err_t ugh, const char *this)
 {
 	if (ugh != NULL)
 	{
@@ -652,12 +649,9 @@ struct sockaddr_un ctl_addr = { AF_UNIX, DEFAULT_CTLBASE CTL_SUFFIX };
 
 /* helper variables and function to encode strings from whack message */
 
-static char
-	*next_str,
-	*str_roof;
+static char	*next_str,*str_roof;
 
-static bool
-pack_str(char **p)
+static bool pack_str(char **p)
 {
 	const char *s = *p == NULL? "" : *p;        /* note: NULL becomes ""! */
 	size_t len = strlen(s) + 1;
@@ -675,9 +669,8 @@ pack_str(char **p)
 	}
 }
 
-static void
-check_life_time(time_t life, time_t limit, const char *which
-, const whack_message_t *msg)
+static void check_life_time(time_t life, time_t limit, const char *which,
+							const whack_message_t *msg)
 {
 	time_t mint = msg->sa_rekey_margin * (100 + msg->sa_rekey_fuzz) / 100;
 
@@ -706,8 +699,7 @@ check_life_time(time_t life, time_t limit, const char *which
 	}
 }
 
-static void
-clear_end(whack_end_t *e)
+static void clear_end(whack_end_t *e)
 {
 	zero(e);
 	e->id = NULL;
@@ -717,8 +709,7 @@ clear_end(whack_end_t *e)
 	e->host_port = IKE_UDP_PORT;
 }
 
-static void
-update_ports(whack_message_t *m)
+static void update_ports(whack_message_t *m)
 {
 	int port;
 
@@ -734,9 +725,8 @@ update_ports(whack_message_t *m)
 	}
 }
 
-static void
-check_end(whack_end_t *this, whack_end_t *that
-, bool default_nexthop, sa_family_t caf, sa_family_t taf)
+static void check_end(whack_end_t *this, whack_end_t *that,
+					  bool default_nexthop, sa_family_t caf, sa_family_t taf)
 {
 	if (caf != addrtypeof(&this->host_addr))
 		diag("address family of host inconsistent");
@@ -774,8 +764,7 @@ check_end(whack_end_t *this, whack_end_t *that
 		diag("the protocol for leftprotoport and rightprotoport must be the same");
 }
 
-static void
-get_secret(int sock)
+static void get_secret(int sock)
 {
 	const char *buf, *secret;
 	int len;
@@ -798,8 +787,7 @@ get_secret(int sock)
 
 /* This is a hack for initiating ISAKMP exchanges. */
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	whack_message_t msg;
 	char esp_buf[256];  /* uses snprintf */
