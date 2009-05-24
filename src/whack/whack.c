@@ -30,6 +30,8 @@
 
 #include <freeswan.h>
 
+#include <utils/optionsfrom.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "whack.h"
@@ -236,20 +238,37 @@ static const char *label = NULL;        /* --label operand, saved for diagnostic
 
 static const char *name = NULL; /* --name operand, saved for diagnostics */
 
-/* print a string as a diagnostic, then exit whack unhappily */
+/* options read by optionsfrom */
+options_t *options;
+
+/**
+ * exit whack after cleaning up
+ */
+static void whack_exit(int status)
+{
+	options->destroy(options);
+	exit(status);
+}
+
+/**
+ * print a string as a diagnostic, then exit whack unhappily
+ */
 static void diag(const char *mess)
 {
 	if (mess != NULL)
 	{
 		fprintf(stderr, "whack error: ");
 		if (label != NULL)
+		{
 			fprintf(stderr, "%s ", label);
+		}
 		if (name != NULL)
+		{
 			fprintf(stderr, "\"%s\" ", name);
+		}
 		fprintf(stderr, "%s\n", mess);
 	}
-
-	exit(RC_WHACK_PROBLEM);
+	whack_exit(RC_WHACK_PROBLEM);
 }
 
 /* conditially calls diag; prints second arg, if non-NULL, as quoted string */
@@ -851,6 +870,8 @@ int main(int argc, char **argv)
 	msg.crluri2 = NULL;
 	msg.ocspuri = NULL;
 
+	options = options_create();
+
 	for (;;)
 	{
 		int long_index;
@@ -977,7 +998,7 @@ int main(int argc, char **argv)
 
 		case 'h' - OPTION_OFFSET:       /* --help */
 			help();
-			return 0;   /* GNU coding standards say to stop here */
+			whack_exit(0);              /* GNU coding standards say to stop here */
 
 		case 'v' - OPTION_OFFSET:       /* --version */
 			{
@@ -987,15 +1008,18 @@ int main(int argc, char **argv)
 				for (; *sp != NULL; sp++)
 					puts(*sp);
 			}
-			return 0;   /* GNU coding standards say to stop here */
+			whack_exit(0);   /* GNU coding standards say to stop here */
 
 		case 'l' - OPTION_OFFSET:       /* --label <string> */
-			label = optarg;     /* remember for diagnostics */
+			label = optarg;             /* remember for diagnostics */
 			continue;
 
 		case '+' - OPTION_OFFSET:       /* --optionsfrom <filename> */
-			optionsfrom(optarg, &argc, &argv, optind, stderr);
-			/* does not return on error */
+			if (!options->from(options, optarg, &argc, &argv, optind))
+			{
+				fprintf(stderr, "optionsfrom failed");
+				whack_exit(RC_WHACK_PROBLEM);				
+			}
 			continue;
 
 		/* the rest of the options combine in complex ways */
@@ -1778,7 +1802,7 @@ int main(int argc, char **argv)
 				, ctl_addr.sun_path, errno, strerror(e));
 			break;
 		}
-		exit(RC_WHACK_PROBLEM);
+		whack_exit(RC_WHACK_PROBLEM);
 	}
 	else
 	{
@@ -1791,7 +1815,7 @@ int main(int argc, char **argv)
 			int e = errno;
 
 			fprintf(stderr, "whack: socket() failed (%d %s)\n", e, strerror(e));
-			exit(RC_WHACK_PROBLEM);
+			whack_exit(RC_WHACK_PROBLEM);
 		}
 
 		if (connect(sock, (struct sockaddr *)&ctl_addr
@@ -1802,7 +1826,7 @@ int main(int argc, char **argv)
 			fprintf(stderr, "whack:%s connect() for \"%s\" failed (%d %s)\n"
 				, e == ECONNREFUSED? " is Pluto running? " : ""
 				, ctl_addr.sun_path, e, strerror(e));
-			exit(RC_WHACK_PROBLEM);
+			whack_exit(RC_WHACK_PROBLEM);
 		}
 
 		if (write(sock, &msg, len) != len)
@@ -1810,7 +1834,7 @@ int main(int argc, char **argv)
 			int e = errno;
 
 			fprintf(stderr, "whack: write() failed (%d %s)\n", e, strerror(e));
-			exit(RC_WHACK_PROBLEM);
+			whack_exit(RC_WHACK_PROBLEM);
 		}
 
 		/* for now, just copy reply back to stdout */
@@ -1829,7 +1853,7 @@ int main(int argc, char **argv)
 					int e = errno;
 
 					fprintf(stderr, "whack: read() failed (%d %s)\n", e, strerror(e));
-					exit(RC_WHACK_PROBLEM);
+					whack_exit(RC_WHACK_PROBLEM);
 				}
 				if (rl == 0)
 				{
@@ -1886,6 +1910,7 @@ int main(int argc, char **argv)
 				}
 			}
 		}
-		return exit_status;
+		whack_exit(exit_status);
 	}
+	return -1; /* should never be reached */
 }
