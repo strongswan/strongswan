@@ -1085,17 +1085,6 @@ extern enum_names oakley_auth_names;
  */
 extern enum_names oakley_group_names;
 
-#define OAKLEY_GROUP_MODP768       1
-#define OAKLEY_GROUP_MODP1024      2
-#define OAKLEY_GROUP_GP155         3
-#define OAKLEY_GROUP_GP185         4
-#define OAKLEY_GROUP_MODP1536      5
-
-#define OAKLEY_GROUP_MODP2048      14
-#define OAKLEY_GROUP_MODP3072      15
-#define OAKLEY_GROUP_MODP4096      16
-#define OAKLEY_GROUP_MODP6144      17
-#define OAKLEY_GROUP_MODP8192      18
 /*      you must also touch: constants.c, crypto.c */
 
 /* Oakley Group Type attribute

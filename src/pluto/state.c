@@ -344,8 +344,7 @@ void delete_state(struct state *st)
 
 	unreference_key(&st->st_peer_pubkey);
 
-	if (st->st_sec_in_use)
-		mpz_clear(&(st->st_sec));
+	DESTROY_IF(st->st_dh);
 
 	free(st->st_tpacket.ptr);
 	free(st->st_rpacket.ptr);

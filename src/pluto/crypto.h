@@ -22,20 +22,7 @@
 extern void init_crypto(void);
 extern void free_crypto(void);
 
-/* Oakley group descriptions */
-
-extern MP_INT groupgenerator;   /* MODP group generator (2) */
-
-struct oakley_group_desc {
-	u_int16_t group;
-	MP_INT *modulus;
-	size_t bytes;
-};
-
-extern const struct oakley_group_desc unset_group;      /* magic signifier */
-extern const struct oakley_group_desc *lookup_group(u_int16_t group);
-#define OAKLEY_GROUP_SIZE 7
-extern const struct oakley_group_desc oakley_group[OAKLEY_GROUP_SIZE];
+extern const struct dh_desc unset_group;      /* magic signifier */
 
 /* unification of cryptographic encoding/decoding algorithms
  * The IV is taken from and returned to st->st_new_iv.

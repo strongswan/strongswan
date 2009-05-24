@@ -909,12 +909,31 @@ static const char *const oakley_group_name_rfc3526[] = {
 	"MODP_8192"
 };
 
+static const char *const oakley_group_name_rfc4753[] = {
+	"ECP_256",
+	"ECP_384",
+	"ECP_521"
+};
+
+static const char *const oakley_group_name_rfc5114[] = {
+	"ECP_192",
+	"ECP_224"
+};
+
+enum_names oakley_group_names_rfc5114 =
+	{ ECP_192_BIT, ECP_224_BIT,
+			oakley_group_name_rfc5114, NULL };
+
+enum_names oakley_group_names_rfc4753 =
+	{ ECP_256_BIT, ECP_521_BIT,
+			oakley_group_name_rfc4753, &oakley_group_names_rfc5114 };
+
 enum_names oakley_group_names_rfc3526 =
-	{ OAKLEY_GROUP_MODP2048, OAKLEY_GROUP_MODP8192,
-			oakley_group_name_rfc3526, NULL };
+	{ MODP_2048_BIT, MODP_8192_BIT,
+			oakley_group_name_rfc3526, &oakley_group_names_rfc4753 };
 
 enum_names oakley_group_names =
-	{ OAKLEY_GROUP_MODP768, OAKLEY_GROUP_MODP1536, 
+	{ MODP_768_BIT, MODP_1536_BIT, 
 			oakley_group_name, &oakley_group_names_rfc3526 };
 
 /* Oakley Group Type attribute */

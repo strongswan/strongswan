@@ -75,17 +75,24 @@ struct hash_desc {
 	const hmac_testvector_t *hmac_testvectors;
 };
 
+struct dh_desc {
+	u_int16_t algo_type;
+	u_int16_t algo_id;
+	struct ike_alg *algo_next;
+
+	size_t modulus_size;
+};
+
 #define IKE_ALG_ENCRYPT         0
 #define IKE_ALG_HASH            1
-#define IKE_ALG_MAX             IKE_ALG_HASH
+#define IKE_ALG_DH_GROUP		2
+#define IKE_ALG_MAX             IKE_ALG_DH_GROUP
 
 extern int ike_alg_add(struct ike_alg *a);
 extern struct hash_desc *ike_alg_get_hasher(u_int alg);
-extern struct encrypt_desc *ike_alg_get_encrypter(u_int alg);
-extern bool ike_alg_enc_present(u_int ealg);
-extern bool ike_alg_hash_present(u_int halg);
-extern const struct oakley_group_desc* ike_alg_pfsgroup(struct connection *c
-	, lset_t policy);
+extern struct encrypt_desc *ike_alg_get_crypter(u_int alg);
+extern struct dh_desc *ike_alg_get_dh_group(u_int alg);
+extern const struct dh_desc* ike_alg_pfsgroup(struct connection *c, lset_t policy);
 extern struct db_context * ike_alg_db_new(struct alg_info_ike *ai, lset_t policy);
 extern void ike_alg_list(void);
 extern void ike_alg_show_connection(struct connection *c, const char *instance);

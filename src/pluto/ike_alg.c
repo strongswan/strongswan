@@ -111,38 +111,31 @@ struct hash_desc *ike_alg_get_hasher(u_int alg)
 /**
  * Get IKE encryption algorithm
  */
-struct encrypt_desc *ike_alg_get_encrypter(u_int alg)
+struct encrypt_desc *ike_alg_get_crypter(u_int alg)
 {
 	return (struct encrypt_desc *) ike_alg_find(IKE_ALG_ENCRYPT, alg, 0);
 }
 
 /**
- * Check if IKE hash algorithm is present
+ * Get IKE dh group
  */
-bool ike_alg_hash_present(u_int halg)
+struct dh_desc *ike_alg_get_dh_group(u_int alg)
 {
-	return ike_alg_get_hasher(halg) != NULL;
-}
-
-/**
- * check if IKE encryption algorithm is present
- */
-bool ike_alg_enc_present(u_int ealg)
-{
-	return ike_alg_get_encrypter(ealg) != NULL;
+	return (struct dh_desc *) ike_alg_find(IKE_ALG_DH_GROUP, alg, 0);
 }
 
 /**
  * Get pfsgroup for this connection
  */
-const struct oakley_group_desc *ike_alg_pfsgroup(struct connection *c, lset_t policy)
+const struct dh_desc *ike_alg_pfsgroup(struct connection *c, lset_t policy)
 {
-	const struct oakley_group_desc * ret = NULL;
+	const struct dh_desc *ret = NULL;
 
-	if ((policy & POLICY_PFS)
-	&& c->alg_info_esp
-	&& c->alg_info_esp->esp_pfsgroup)
-		ret = lookup_group(c->alg_info_esp->esp_pfsgroup);
+	if ((policy & POLICY_PFS) &&
+		c->alg_info_esp && c->alg_info_esp->esp_pfsgroup)
+	{
+		ret = ike_alg_get_dh_group(c->alg_info_esp->esp_pfsgroup);
+	}
 	return ret;
 }
 
@@ -177,34 +170,25 @@ struct db_context *ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
 		modp = ike_info->ike_modp;
 		eklen= ike_info->ike_eklen;
 
-		if (!ike_alg_enc_present(ealg))
+		if (!ike_alg_get_crypter(ealg))
 		{
-			DBG_log("ike_alg: ike enc ealg=%d not present"
-					, ealg);
+			DBG_log("ike_alg: ike crypter %s not present",
+					enum_show(&oakley_enc_names, ealg));
 			continue;
 		}
-
-		if (!ike_alg_hash_present(halg)) 
+		if (!ike_alg_get_hasher(halg)) 
 		{
-			DBG_log("ike_alg: ike hash halg=%d not present"
-					, halg);
+			DBG_log("ike_alg: ike hasher %s not present",
+					enum_show(&oakley_hash_names, halg));
 			continue;
 		}
-
-		enc_desc = ike_alg_get_encrypter(ealg);
-		passert(enc_desc != NULL);
-
-		if (eklen
-		&& (eklen < enc_desc->keyminlen || eklen >  enc_desc->keymaxlen))
+		if (!ike_alg_get_dh_group(modp)) 
 		{
-			DBG_log("ike_alg: ealg=%d (specified) keylen:%d, not valid min=%d, max=%d"
-					, ealg
-					, eklen
-					, enc_desc->keyminlen
-					, enc_desc->keymaxlen
-			);
+			DBG_log("ike_alg: ike dh group %s not present",
+					enum_show(&oakley_group_names, modp));
 			continue;
 		}
+		enc_desc = ike_alg_get_crypter(ealg);
 
 		if (policy & POLICY_RSASIG)
 		{
@@ -261,54 +245,59 @@ fail:
  */
 void ike_alg_list(void)
 {
-	u_int i;
+	char buf[BUF_LEN];
+	char *pos;
+	int n, len;
 	struct ike_alg *a;
 
 	whack_log(RC_COMMENT, " ");
-	whack_log(RC_COMMENT, "List of registered IKE Encryption Algorithms:");
+	whack_log(RC_COMMENT, "List of registered IKEv1 Algorithms:");
 	whack_log(RC_COMMENT, " ");
 
+	pos = buf;
+	*pos = '\0';
+	len = BUF_LEN;
 	for (a = ike_alg_base[IKE_ALG_ENCRYPT]; a != NULL; a = a->algo_next)
 	{
-		struct encrypt_desc *desc = (struct encrypt_desc*)a;
-
-		whack_log(RC_COMMENT, "#%-5d %s, blocksize: %d, keylen: %d-%d-%d"
-			, a->algo_id
-			, enum_name(&oakley_enc_names, a->algo_id)
-			, (int)desc->enc_blocksize*BITS_PER_BYTE
-			, desc->keyminlen
-			, desc->keydeflen
-			, desc->keymaxlen
-		);
+	    n = snprintf(pos, len, " %s", enum_name(&oakley_enc_names, a->algo_id));
+		pos += n;
+		len -= n;
+		if (len <= 0)
+		{
+			break;
+		}
 	}
+	whack_log(RC_COMMENT, "  encryption:%s", buf);
 
-	whack_log(RC_COMMENT, " ");
-	whack_log(RC_COMMENT, "List of registered IKE Hash Algorithms:");
-	whack_log(RC_COMMENT, " ");
-
+	pos = buf;
+	*pos = '\0';
+	len = BUF_LEN;
 	for (a = ike_alg_base[IKE_ALG_HASH]; a != NULL; a = a->algo_next)
 	{
-		whack_log(RC_COMMENT, "#%-5d %s, hashsize: %d"
-			, a->algo_id
-			, enum_name(&oakley_hash_names, a->algo_id)
-			, (int)((struct hash_desc *)a)->hash_digest_size*BITS_PER_BYTE
-		);
+	    n = snprintf(pos, len, " %s", enum_name(&oakley_hash_names, a->algo_id));
+		pos += n;
+		len -= n;
+		if (len <= 0)
+		{
+			break;
+		}
 	}
+	whack_log(RC_COMMENT, "  hasher:    %s", buf);
 
-	whack_log(RC_COMMENT, " ");
-	whack_log(RC_COMMENT, "List of registered IKE DH Groups:");
-	whack_log(RC_COMMENT, " ");
-
-	for (i = 0; i < countof(oakley_group); i++)
+	pos = buf;
+	*pos = '\0';
+	len = BUF_LEN;
+	for (a = ike_alg_base[IKE_ALG_DH_GROUP]; a != NULL; a = a->algo_next)
 	{
-		const struct oakley_group_desc *gdesc=oakley_group + i;
-
-		whack_log(RC_COMMENT, "#%-5d %s, groupsize: %d"
-			, gdesc->group
-			, enum_name(&oakley_group_names, gdesc->group)
-			, (int)gdesc->bytes*BITS_PER_BYTE
-		);
+	    n = snprintf(pos, len, " %s", enum_name(&oakley_group_names, a->algo_id));
+		pos += n;
+		len -= n;
+		if (len <= 0)
+		{
+			break;
+		}
 	}
+	whack_log(RC_COMMENT, "  dh-group:  %s", buf);
 }
 
 /**
@@ -328,7 +317,7 @@ void ike_alg_show_connection(struct connection *c, const char *instance)
 					c->name, instance,
 					enum_show(&oakley_enc_names, st->st_oakley.encrypt),
 					enum_show(&oakley_hash_names, st->st_oakley.hash),
-					enum_show(&oakley_group_names, st->st_oakley.group->group)
+					enum_show(&oakley_group_names, st->st_oakley.group->algo_id)
 			);
 		}
 		else
@@ -339,7 +328,7 @@ void ike_alg_show_connection(struct connection *c, const char *instance)
 					enum_show(&oakley_enc_names, st->st_oakley.encrypt),
 					st->st_oakley.enckeylen,
 					enum_show(&oakley_hash_names, st->st_oakley.hash),
-					enum_show(&oakley_group_names, st->st_oakley.group->group)
+					enum_show(&oakley_group_names, st->st_oakley.group->algo_id)
 			);
 		}
 	}

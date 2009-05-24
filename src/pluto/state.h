@@ -1,6 +1,7 @@
 /* state and event objects
  * Copyright (C) 1997 Angelos D. Keromytis.
  * Copyright (C) 1998-2001  D. Hugh Redelmeier.
+ * Copyright (C) 2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,7 +18,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <time.h>
-#include <gmp.h>    /* GNU MP library */
+
+#include <crypto/diffie_hellman.h>
 
 #include "connections.h"
 
@@ -54,11 +56,11 @@ extern msgid_t generate_msgid(struct state *isakmp_sa);
 struct oakley_trans_attrs {
 	u_int16_t encrypt;          /* Encryption algorithm */
 	u_int16_t enckeylen;        /* encryption key len (bits) */
-	const struct encrypt_desc *encrypter;       /* package of encryption routines */
+	const struct encrypt_desc *encrypter;   /* package of encryption routines */
 	u_int16_t hash;             /* Hash algorithm */
-	const struct hash_desc *hasher;     /* package of hashing routines */
+	const struct hash_desc *hasher;         /* package of hashing routines */
 	u_int16_t auth;             /* Authentication method */
-	const struct oakley_group_desc *group;      /* Oakley group */
+	const struct dh_desc *group;            /* Diffie-Hellman group */
 	time_t life_seconds;        /* When this SA expires (seconds) */
 	u_int32_t life_kilobytes;   /* When this SA is exhausted (kilobytes) */
 #if 0 /* not yet */
@@ -126,7 +128,7 @@ struct state
 	ipsec_spi_t        st_tunnel_out_spi;         /* KLUDGE */
 #endif
 
-	const struct oakley_group_desc *st_pfs_group;       /* group for Phase 2 PFS */
+	const struct dh_desc *st_pfs_group;        /* group for Phase 2 PFS */
 
 	u_int32_t          st_doi;                 /* Domain of Interpretation */
 	u_int32_t          st_situation;
@@ -169,9 +171,7 @@ struct state
 
 /* end of symmetric stuff */
 
-	u_int8_t           st_sec_in_use;          /* bool: does st_sec hold a value */
-	MP_INT             st_sec;                 /* Our local secret value */
-
+	diffie_hellman_t  *st_dh;                  /* Our local DH secret value */
 	chunk_t            st_shared;              /* Derived shared secret
 												* Note: during Quick Mode,
 												* presence indicates PFS

@@ -485,7 +485,7 @@ out_sa(pb_stream *outs
 				{
 					passert(!oakley_mode);
 					passert(st->st_pfs_group != &unset_group);
-					out_attr(GROUP_DESCRIPTION, st->st_pfs_group->group
+					out_attr(GROUP_DESCRIPTION, st->st_pfs_group->algo_id
 						, attr_desc, attr_val_descs
 						, &trans_pbs);
 				}
@@ -939,10 +939,10 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 			switch (a.isaat_af_type)
 			{
 			case OAKLEY_ENCRYPTION_ALGORITHM | ISAKMP_ATTR_AF_TV:
-				if (ike_alg_enc_present(val))
+				if (ike_alg_get_crypter(val))
 				{
 					ta.encrypt = val;
-					ta.encrypter = ike_alg_get_encrypter(val);
+					ta.encrypter = ike_alg_get_crypter(val);
 					ta.enckeylen = ta.encrypter->keydeflen;
 				}
 				else
@@ -953,7 +953,7 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 				break;
 
 			case OAKLEY_HASH_ALGORITHM | ISAKMP_ATTR_AF_TV:
-				if (ike_alg_hash_present(val))
+				if (ike_alg_get_hasher(val))
 				{
 					ta.hash = val;
 					ta.hasher = ike_alg_get_hasher(val);
@@ -1049,10 +1049,11 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 				break;
 
 			case OAKLEY_GROUP_DESCRIPTION | ISAKMP_ATTR_AF_TV:
-				ta.group = lookup_group(val);
+				ta.group = ike_alg_get_dh_group(val);
 				if (ta.group == NULL)
 				{
-					ugh = "only OAKLEY_GROUP_MODP1024 and OAKLEY_GROUP_MODP1536 supported";
+					ugh = builddiag("%s is not supported"
+							, enum_show(&oakley_group_names, val));
 				}
 				break;
 
@@ -1183,7 +1184,7 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 		if (ugh == NULL)
 		{
 			if (!ike_alg_ok_final(ta.encrypt, ta.enckeylen, ta.hash,
-				ta.group ? ta.group->group : -1, c->alg_info_ike))
+				ta.group ? ta.group->algo_id : -1, c->alg_info_ike))
 			{
 				ugh = "OAKLEY proposal refused";
 			}
@@ -1336,7 +1337,7 @@ parse_ipsec_transform(struct isakmp_transform *trans
 	lset_t seen_attrs = 0;
 	lset_t seen_durations = 0;
 	u_int16_t life_type = 0;
-	const struct oakley_group_desc *pfs_group = NULL;
+	const struct dh_desc *pfs_group = NULL;
 
 	if (!in_struct(trans, trans_desc, prop_pbs, trans_pbs))
 		return FALSE;
@@ -1462,7 +1463,7 @@ parse_ipsec_transform(struct isakmp_transform *trans
 						, "IPCA (IPcomp SA) contains GROUP_DESCRIPTION."
 						"  Ignoring inapproprate attribute.");
 				}
-				pfs_group = lookup_group(val);
+				pfs_group = ike_alg_get_dh_group(val);
 				if (pfs_group == NULL)
 				{
 					loglog(RC_LOG_SERIOUS, "only OAKLEY_GROUP_MODP1024 and OAKLEY_GROUP_MODP1536 supported for PFS");

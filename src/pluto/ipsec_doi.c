@@ -122,37 +122,11 @@ echo_hdr(struct msg_digest *md, bool enc, u_int8_t np)
  * We make the leap that the length should be that of the group
  * (see quoted passage at start of ACCEPT_KE).
  */
-static void compute_dh_shared(struct state *st, const chunk_t g,
-							  const struct oakley_group_desc *group)
+static void compute_dh_shared(struct state *st, const chunk_t g)
 {
-	MP_INT mp_g, mp_shared;
-	struct timeval tv0, tv1;
-	unsigned long tv_diff;
-
-	gettimeofday(&tv0, NULL);
-	passert(st->st_sec_in_use);
-	n_to_mpz(&mp_g, g.ptr, g.len);
-	mpz_init(&mp_shared);
-	mpz_powm(&mp_shared, &mp_g, &st->st_sec, group->modulus);
-	mpz_clear(&mp_g);
-	free(st->st_shared.ptr);    /* happens in odd error cases */
-	st->st_shared = mpz_to_n(&mp_shared, group->bytes);
-	mpz_clear(&mp_shared);
-	gettimeofday(&tv1, NULL);
-	tv_diff=(tv1.tv_sec  - tv0.tv_sec) * 1000000 + (tv1.tv_usec - tv0.tv_usec);
-	DBG(DBG_CRYPT, 
-		DBG_log("compute_dh_shared(): time elapsed (%s): %ld usec"
-				, enum_show(&oakley_group_names, st->st_oakley.group->group)
-				, tv_diff);
-	   );
-	/* if took more than 200 msec ... */
-	if (tv_diff > 200000) {
-		loglog(RC_LOG_SERIOUS, "WARNING: compute_dh_shared(): for %s took "
-						"%ld usec"
-				, enum_show(&oakley_group_names, st->st_oakley.group->group)
-				, tv_diff);
-	}
-
+	passert(st->st_dh);
+	st->st_dh->set_other_public_value(st->st_dh, g);
+	st->st_dh->get_shared_secret(st->st_dh, &st->st_shared);
 	DBG_cond_dump_chunk(DBG_CRYPT, "DH shared secret:\n", st->st_shared);
 }
 
@@ -160,30 +134,23 @@ static void compute_dh_shared(struct state *st, const chunk_t g,
  * the corresponding public value (g).  This is emitted as a KE payload.
  */
 static bool build_and_ship_KE(struct state *st, chunk_t *g,
-							  const struct oakley_group_desc *group,
+							  const struct dh_desc *group,
 							  pb_stream *outs, u_int8_t np)
 {
-	if (!st->st_sec_in_use)
+	if (st->st_dh == NULL)
 	{
-		u_char tmp[LOCALSECRETSIZE];
-		MP_INT mp_g;
-		rng_t *rng;
-		
-		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-		rng->get_bytes(rng, LOCALSECRETSIZE, tmp);
-		rng->destroy(rng);
-		st->st_sec_in_use = TRUE;
-		n_to_mpz(&st->st_sec, tmp, LOCALSECRETSIZE);
-
-		mpz_init(&mp_g);
-		mpz_powm(&mp_g, &groupgenerator, &st->st_sec, group->modulus);
-		free(g->ptr);   /* happens in odd error cases */
-		*g = mpz_to_n(&mp_g, group->bytes);
-		mpz_clear(&mp_g);
-		DBG(DBG_CRYPT,
-			DBG_dump("Local DH secret:\n", tmp, LOCALSECRETSIZE);
-			DBG_dump_chunk("Public DH value sent:\n", *g));
+		st->st_dh = lib->crypto->create_dh(lib->crypto, group->algo_id);
+		if (st->st_dh == NULL)
+		{
+			plog("Diffie Hellman group %N is not available",
+				 diffie_hellman_group_names, group->algo_id);
+			return FALSE;
+		}
 	}
+	st->st_dh->get_my_public_value(st->st_dh, g);
+	DBG(DBG_CRYPT,
+		DBG_dump_chunk("Public DH value sent:\n", *g)
+	)
 	return out_generic_chunk(np, &isakmp_keyex_desc, outs, *g, "keyex value");
 }
 
@@ -197,13 +164,13 @@ static bool build_and_ship_KE(struct state *st, chunk_t *g,
  *  value with zeros.
  */
 static notification_t accept_KE(chunk_t *dest, const char *val_name,
-								const struct oakley_group_desc *gr,
+								const struct dh_desc *gr,
 								pb_stream *pbs)
 {
-	if (pbs_left(pbs) != gr->bytes)
+	if (pbs_left(pbs) != gr->modulus_size)
 	{
 		loglog(RC_LOG_SERIOUS, "KE has %u byte DH public value; %u required"
-			, (unsigned) pbs_left(pbs), (unsigned) gr->bytes);
+			, (unsigned) pbs_left(pbs), gr->modulus_size);
 		/* XXX Could send notification back */
 		return INVALID_KEY_INFORMATION;
 	}
@@ -3473,7 +3440,7 @@ stf_status main_inI2_outR2(struct msg_digest *md)
 	/* next message will be encrypted, but not this one.
 	 * We could defer this calculation.
 	 */
-	compute_dh_shared(st, st->st_gi, st->st_oakley.group);
+	compute_dh_shared(st, st->st_gi);
 	if (!generate_skeyids_iv(st))
 		return STF_FAIL + AUTHENTICATION_FAILED;
 	update_iv(st);
@@ -3535,7 +3502,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	send_cr = !no_cr_send && send_cert && !has_preloaded_public_key(st);
 
 	/* done parsing; initialize crypto  */
-	compute_dh_shared(st, st->st_gr, st->st_oakley.group);
+	compute_dh_shared(st, st->st_gr);
 	if (!generate_skeyids_iv(st))
 		return STF_FAIL + AUTHENTICATION_FAILED;
 
@@ -4946,7 +4913,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					return STF_INTERNAL_ERROR;
 
 			/* MPZ-Operations might be done after sending the packet... */
-			compute_dh_shared(st, st->st_gi, st->st_pfs_group);
+			compute_dh_shared(st, st->st_gi);
 		}
 
 		/* [ IDci, IDcr ] out */
@@ -5061,7 +5028,7 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 	RETURN_STF_FAILURE(accept_PFS_KE(md, &st->st_gr, "Gr", "Quick Mode R1"));
 
 	if (st->st_pfs_group != NULL)
-		compute_dh_shared(st, st->st_gr, st->st_pfs_group);
+		compute_dh_shared(st, st->st_gr);
 
 	/* [ IDci, IDcr ] in; these must match what we sent */
 

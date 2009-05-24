@@ -31,9 +31,10 @@
 
 #include <utils.h>
 #include <utils/lexparser.h>
+#include <crypto/diffie_hellman.h>
 #include <crypto/transform.h>
 #include <crypto/proposal/proposal_keywords.h>
-#include <crypto/proposal/proposal_keywords.h>
+
 
 #include "alg_info.h"
 #include "constants.h"
@@ -215,8 +216,8 @@ static void __alg_info_ike_add (struct alg_info_ike *alg_info, int ealg_id,
  */
 
 static int default_ike_groups[] = { 
-	OAKLEY_GROUP_MODP1536,
-	OAKLEY_GROUP_MODP1024
+	MODP_1536_BIT,
+	MODP_1024_BIT
 };
 
 /*      
@@ -313,10 +314,6 @@ static status_t alg_info_add(chunk_t alg, unsigned protoid,
 			if (protoid == PROTO_ISAKMP)
 			{
 				if (*dh_group != 0)
-				{
-					return FAILED;
-				}
-				if (token->algorithm > OAKLEY_GROUP_MODP8192)
 				{
 					return FAILED;
 				}
@@ -636,11 +633,11 @@ int alg_info_snprint_ike(char *buf, int buflen, struct alg_info_ike *alg_info)
 
 	while (cnt--)
 	{
-		struct encrypt_desc *enc_desc = ike_alg_get_encrypter(ike_info->ike_ealg);
+		struct encrypt_desc *enc_desc = ike_alg_get_crypter(ike_info->ike_ealg);
 		struct hash_desc *hash_desc = ike_alg_get_hasher(ike_info->ike_halg);
+		struct dh_desc *dh_desc = ike_alg_get_dh_group(ike_info->ike_modp);
 
-		if (enc_desc != NULL &&  hash_desc != NULL
-		&& lookup_group(ike_info->ike_modp))
+		if (enc_desc &&  hash_desc && dh_desc)
 		{
 
 			u_int eklen = (ike_info->ike_eklen)

@@ -13,8 +13,6 @@
  * for more details.
  */
 
-#include <gmp.h>
-
 #include <freeswan.h>
 #include <ipsec_policy.h>
 
@@ -37,26 +35,26 @@ extern struct hash_desc hash_desc_sha2_256;
 extern struct hash_desc hash_desc_sha2_384;
 extern struct hash_desc hash_desc_sha2_512;
 
-/* moduli and generator. */
+extern struct dh_desc dh_desc_modp_1024;
+extern struct dh_desc dh_desc_modp_1536;
+extern struct dh_desc dh_desc_modp_2048;
+extern struct dh_desc dh_desc_modp_3072;
+extern struct dh_desc dh_desc_modp_4096;
+extern struct dh_desc dh_desc_modp_6144;
+extern struct dh_desc dh_desc_modp_8192;
 
-static MP_INT
-	modp1024_modulus,
-	modp1536_modulus,
-	modp2048_modulus,
-	modp3072_modulus,
-	modp4096_modulus,
-	modp6144_modulus,
-	modp8192_modulus;
-
-MP_INT groupgenerator;  /* MODP group generator (2) */
-
-
+extern struct dh_desc dh_desc_ecp_256;
+extern struct dh_desc dh_desc_ecp_384;
+extern struct dh_desc dh_desc_ecp_521;
+extern struct dh_desc dh_desc_ecp_192;
+extern struct dh_desc dh_desc_ecp_224;
 
 void init_crypto(void)
 {
 	enumerator_t *enumerator;
 	encryption_algorithm_t encryption_alg;
 	hash_algorithm_t hash_alg;
+	diffie_hellman_group_t dh_group;
 	bool no_md5  = TRUE;
 	bool no_sha1 = TRUE;
 
@@ -130,17 +128,56 @@ void init_crypto(void)
 	}
 	enumerator->destroy(enumerator);
 
-	if (mpz_init_set_str(&groupgenerator, MODP_GENERATOR, 10) != 0
-	 || mpz_init_set_str(&modp1024_modulus, MODP1024_MODULUS, 16) != 0
-	 || mpz_init_set_str(&modp1536_modulus, MODP1536_MODULUS, 16) != 0
-	 || mpz_init_set_str(&modp2048_modulus, MODP2048_MODULUS, 16) != 0
-	 || mpz_init_set_str(&modp3072_modulus, MODP3072_MODULUS, 16) != 0
-	 || mpz_init_set_str(&modp4096_modulus, MODP4096_MODULUS, 16) != 0
-	 || mpz_init_set_str(&modp6144_modulus, MODP6144_MODULUS, 16) != 0
-	 || mpz_init_set_str(&modp8192_modulus, MODP8192_MODULUS, 16) != 0)
+	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &dh_group))
 	{
-		exit_log("mpz_init_set_str() failed in init_crypto()");
+		const struct dh_desc *desc;
+
+		switch (dh_group)
+		{
+			case MODP_1024_BIT:
+				desc = &dh_desc_modp_1024;
+				break;
+			case MODP_1536_BIT:
+				desc = &dh_desc_modp_1536;
+				break;
+			case MODP_2048_BIT:
+				desc = &dh_desc_modp_2048;
+				break;
+			case MODP_3072_BIT:
+				desc = &dh_desc_modp_3072;
+				break;
+			case MODP_4096_BIT:
+				desc = &dh_desc_modp_4096;
+				break;
+			case MODP_6144_BIT:
+				desc = &dh_desc_modp_6144;
+				break;
+			case MODP_8192_BIT:
+				desc = &dh_desc_modp_8192;
+				break;
+			case ECP_256_BIT:
+				desc = &dh_desc_ecp_256;
+				break;
+			case ECP_384_BIT:
+				desc = &dh_desc_ecp_384;
+				break;
+			case ECP_521_BIT:
+				desc = &dh_desc_ecp_521;
+				break;
+			case ECP_192_BIT:
+				desc = &dh_desc_ecp_192;
+				break;
+			case ECP_224_BIT:
+				desc = &dh_desc_ecp_224;
+				break;
+			default:
+				continue;
+		}
+		ike_alg_add((struct ike_alg *)desc);
 	}
+	enumerator->destroy(enumerator);
+
 #ifdef SELF_TEST
 	if (!ike_alg_test())
 	{
@@ -151,43 +188,7 @@ void init_crypto(void)
 
 void free_crypto(void)
 {
-	mpz_clear(&groupgenerator);
-	mpz_clear(&modp1024_modulus);
-	mpz_clear(&modp1536_modulus);
-	mpz_clear(&modp2048_modulus);
-	mpz_clear(&modp3072_modulus);
-	mpz_clear(&modp4096_modulus);
-	mpz_clear(&modp6144_modulus);
-	mpz_clear(&modp8192_modulus);
-}
-
-/* Oakley group description
- *
- * See RFC2409 "The Internet key exchange (IKE)" 6.
- */
-
-const struct oakley_group_desc unset_group = {0, NULL, 0};      /* magic signifier */
-
-const struct oakley_group_desc oakley_group[OAKLEY_GROUP_SIZE] = {
-#   define BYTES(bits) (((bits) + BITS_PER_BYTE - 1) / BITS_PER_BYTE)
-	{ OAKLEY_GROUP_MODP1024, &modp1024_modulus, BYTES(1024) },
-	{ OAKLEY_GROUP_MODP1536, &modp1536_modulus, BYTES(1536) },
-	{ OAKLEY_GROUP_MODP2048, &modp2048_modulus, BYTES(2048) },
-	{ OAKLEY_GROUP_MODP3072, &modp3072_modulus, BYTES(3072) },
-	{ OAKLEY_GROUP_MODP4096, &modp4096_modulus, BYTES(4096) },
-	{ OAKLEY_GROUP_MODP6144, &modp6144_modulus, BYTES(6144) },
-	{ OAKLEY_GROUP_MODP8192, &modp8192_modulus, BYTES(8192) },
-#   undef BYTES
-};
-
-const struct oakley_group_desc *lookup_group(u_int16_t group)
-{
-	int i;
-
-	for (i = 0; i != countof(oakley_group); i++)
-		if (group == oakley_group[i].group)
-			return &oakley_group[i];
-	return NULL;
+	/* currently nothing to do */
 }
 
 /**
