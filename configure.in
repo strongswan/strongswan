@@ -1113,6 +1113,7 @@ if test x$agent = xtrue; then
 fi
 if test x$gmp = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
+	pluto_plugins=${pluto_plugins}" gmp"
 fi
 
 AC_SUBST(libstrongswan_plugins)
