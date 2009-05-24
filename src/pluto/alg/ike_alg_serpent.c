@@ -25,14 +25,14 @@
 
 struct encrypt_desc encrypt_desc_serpent =
 {
-	algo_type: 	IKE_ALG_ENCRYPT,
-	algo_id:   	OAKLEY_SERPENT_CBC,
-	algo_next: 	NULL,
+	algo_type: 	    IKE_ALG_ENCRYPT,
+	algo_id:   	    OAKLEY_SERPENT_CBC,
+	algo_next: 	    NULL,
 
-	enc_blocksize:	SERPENT_BLOCK_SIZE,
-	keyminlen:		SERPENT_KEY_MIN_LEN,
-	keydeflen:		SERPENT_KEY_DEF_LEN,
-	keymaxlen:		SERPENT_KEY_MAX_LEN,
+	enc_blocksize:   SERPENT_BLOCK_SIZE,
+	keyminlen:		 SERPENT_KEY_MIN_LEN,
+	keydeflen:		 SERPENT_KEY_DEF_LEN,
+	keymaxlen:		 SERPENT_KEY_MAX_LEN,
 	enc_testvectors: NULL		
 };
 

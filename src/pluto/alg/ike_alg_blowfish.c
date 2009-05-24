@@ -109,14 +109,14 @@ static const enc_testvector_t bf_enc_testvectors[] = {
 
 struct encrypt_desc encrypt_desc_blowfish =
 {
-	algo_type: IKE_ALG_ENCRYPT,
-	algo_id:   OAKLEY_BLOWFISH_CBC,
-	algo_next: NULL, 
+	algo_type:       IKE_ALG_ENCRYPT,
+	algo_id:         OAKLEY_BLOWFISH_CBC,
+	algo_next:       NULL, 
 
-	enc_blocksize:	BLOWFISH_BLOCK_SIZE,
-	keyminlen:		BLOWFISH_KEY_MIN_LEN,
-	keydeflen:		BLOWFISH_KEY_MIN_LEN,
-	keymaxlen:		BLOWFISH_KEY_MAX_LEN,
+	enc_blocksize:	 BLOWFISH_BLOCK_SIZE,
+	keyminlen:		 BLOWFISH_KEY_MIN_LEN,
+	keydeflen:		 BLOWFISH_KEY_MIN_LEN,
+	keymaxlen:		 BLOWFISH_KEY_MAX_LEN,
 	enc_testvectors: BF_ENC_TESTVECTORS,
 };
 

@@ -21,15 +21,15 @@
 
 struct encrypt_desc encrypt_desc_3des =
 {       
-		algo_type:      IKE_ALG_ENCRYPT,
-		algo_id:        OAKLEY_3DES_CBC, 
-		algo_next:      NULL,
+	algo_type:       IKE_ALG_ENCRYPT,
+	algo_id:         OAKLEY_3DES_CBC, 
+	algo_next:       NULL,
 
-		enc_blocksize:	DES_BLOCK_SIZE, 
-		keydeflen:		DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
-		keyminlen:		DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
-		keymaxlen:		DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
-		enc_testvectors: NULL
+	enc_blocksize:	 DES_BLOCK_SIZE, 
+	keydeflen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+	keyminlen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+	keymaxlen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+	enc_testvectors: NULL
 };
 
 

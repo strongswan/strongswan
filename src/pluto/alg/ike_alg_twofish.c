@@ -25,27 +25,27 @@
 
 struct encrypt_desc encrypt_desc_twofish = 
 {
-	algo_type: 	IKE_ALG_ENCRYPT,
-	algo_id:   	OAKLEY_TWOFISH_CBC,
-	algo_next: 	NULL,
+	algo_type: 	     IKE_ALG_ENCRYPT,
+	algo_id:   	     OAKLEY_TWOFISH_CBC,
+	algo_next: 	     NULL,
 
-	enc_blocksize:	TWOFISH_BLOCK_SIZE,
-	keydeflen:		TWOFISH_KEY_MIN_LEN,
-	keyminlen:		TWOFISH_KEY_DEF_LEN,
-	keymaxlen:		TWOFISH_KEY_MAX_LEN,
+	enc_blocksize:	 TWOFISH_BLOCK_SIZE,
+	keydeflen:		 TWOFISH_KEY_MIN_LEN,
+	keyminlen:		 TWOFISH_KEY_DEF_LEN,
+	keymaxlen:		 TWOFISH_KEY_MAX_LEN,
 	enc_testvectors: NULL
 };
 
 struct encrypt_desc encrypt_desc_twofish_ssh =
 {
-	algo_type: 	IKE_ALG_ENCRYPT,
-	algo_id:   	OAKLEY_TWOFISH_CBC_SSH,
-	algo_next: 	NULL,
+	algo_type: 	     IKE_ALG_ENCRYPT,
+	algo_id:   	     OAKLEY_TWOFISH_CBC_SSH,
+	algo_next: 	     NULL,
 
-	enc_blocksize:	TWOFISH_BLOCK_SIZE,
-	keydeflen:		TWOFISH_KEY_MIN_LEN,
-	keyminlen:		TWOFISH_KEY_DEF_LEN,
-	keymaxlen:		TWOFISH_KEY_MAX_LEN,
+	enc_blocksize:	 TWOFISH_BLOCK_SIZE,
+	keydeflen:		 TWOFISH_KEY_MIN_LEN,
+	keyminlen:		 TWOFISH_KEY_DEF_LEN,
+	keymaxlen:		 TWOFISH_KEY_MAX_LEN,
 	enc_testvectors: NULL
 };
 

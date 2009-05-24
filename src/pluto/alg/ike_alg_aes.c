@@ -25,14 +25,14 @@
 
 struct encrypt_desc encrypt_desc_aes =
 {
-	algo_type: 	IKE_ALG_ENCRYPT,
-	algo_id:   	OAKLEY_AES_CBC,
-	algo_next: 	NULL, 
+	algo_type: 	     IKE_ALG_ENCRYPT,
+	algo_id:   	     OAKLEY_AES_CBC,
+	algo_next: 	     NULL, 
 
-	enc_blocksize: 	AES_BLOCK_SIZE,
-	keyminlen: 		AES_KEY_MIN_LEN,
-	keydeflen: 		AES_KEY_DEF_LEN,
-	keymaxlen: 		AES_KEY_MAX_LEN,
+	enc_blocksize: 	 AES_BLOCK_SIZE,
+	keyminlen: 		 AES_KEY_MIN_LEN,
+	keydeflen: 		 AES_KEY_DEF_LEN,
+	keymaxlen: 		 AES_KEY_MAX_LEN,
 	enc_testvectors: NULL
 };
 
