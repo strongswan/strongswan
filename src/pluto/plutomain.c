@@ -37,9 +37,11 @@
 #endif /* CAPABILITIES */
 
 #include <freeswan.h>
+
 #include <library.h>
 #include <debug.h>
 #include <utils/enumerator.h>
+#include <utils/optionsfrom.h>
 
 #include <pfkeyv2.h>
 #include <pfkey.h>
@@ -221,6 +223,9 @@ bool pkcs11_proxy = FALSE;
  */
 static const char *pkcs11_init_args = NULL;
 
+/* options read by optionsfrom */
+options_t *options;
+
 /**
  * Log loaded plugins
  */
@@ -255,7 +260,9 @@ int main(int argc, char **argv)
 	int keep[] = { CAP_NET_ADMIN, CAP_NET_BIND_SERVICE };
 #endif /* CAPABILITIES */
 
+	/* initialize library and optionsfrom */
 	library_init(STRONGSWAN_CONF);
+	options = options_create();
 
 	/* handle arguments */
 	for (;;)
@@ -356,8 +363,10 @@ int main(int argc, char **argv)
 			break;      /* not actually reached */
 
 		case '+':       /* --optionsfrom <filename> */
-			optionsfrom(optarg, &argc, &argv, optind, stderr);
-			/* does not return on error */
+			if (!options->from(options, optarg, &argc, &argv, optind))
+			{
+				exit_pluto(1);
+			}
 			continue;
 
 		case 'd':       /* --nofork*/
@@ -734,6 +743,7 @@ void exit_pluto(int status)
 	free_events();              /* free remaining events */
 	free_vendorid();			/* free all vendor id records */
 	delete_lock();
+	options->destroy(options);
 	library_deinit();
 	close_log();
 	exit(status);
