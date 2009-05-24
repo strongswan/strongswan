@@ -363,7 +363,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	child_cfg_t *child_cfg;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
-	bool found = FALSE;
+	bool first, found = FALSE;
 	char *name = msg->status.name;
 	
 	if (all)
@@ -373,7 +373,6 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		host_t *host;
 		u_int32_t dpd;
 		time_t now = time(NULL);
-		bool first = TRUE;
 		u_int size, online, offline;
 		
 		fprintf(out, "Performance:\n");
@@ -394,6 +393,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		enumerator->destroy(enumerator);
 		fprintf(out, "\n");
 		
+		first = TRUE;
 		enumerator = this->attribute->create_pool_enumerator(this->attribute);
 		while (enumerator->enumerate(enumerator, &pool, &size, &online, &offline))
 		{
@@ -467,11 +467,16 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		}
 		enumerator->destroy(enumerator);
 	}
-	
-	fprintf(out, "Routed Connections:\n");
+
+	first = TRUE;	
 	enumerator = charon->traps->create_enumerator(charon->traps);
 	while (enumerator->enumerate(enumerator, NULL, &child_sa))
 	{
+		if (first)
+		{
+			fprintf(out, "Routed Connections:\n");
+			first = FALSE;
+		}
 		log_child_sa(out, child_sa, all);
 	}
 	enumerator->destroy(enumerator);
