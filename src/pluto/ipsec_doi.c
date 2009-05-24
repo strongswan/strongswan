@@ -167,10 +167,10 @@ static notification_t accept_KE(chunk_t *dest, const char *val_name,
 								const struct dh_desc *gr,
 								pb_stream *pbs)
 {
-	if (pbs_left(pbs) != gr->modulus_size)
+	if (pbs_left(pbs) != gr->ke_size)
 	{
 		loglog(RC_LOG_SERIOUS, "KE has %u byte DH public value; %u required"
-			, (unsigned) pbs_left(pbs), gr->modulus_size);
+			, (unsigned) pbs_left(pbs), gr->ke_size);
 		/* XXX Could send notification back */
 		return INVALID_KEY_INFORMATION;
 	}

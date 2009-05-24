@@ -80,7 +80,7 @@ struct dh_desc {
 	u_int16_t algo_id;
 	struct ike_alg *algo_next;
 
-	size_t modulus_size;
+	size_t ke_size;
 };
 
 #define IKE_ALG_ENCRYPT         0
