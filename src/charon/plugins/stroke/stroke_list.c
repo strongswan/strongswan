@@ -375,7 +375,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		time_t now = time(NULL);
 		u_int size, online, offline;
 		
-		fprintf(out, "Performance:\n");
+		fprintf(out, "Daemon status (charon "VERSION"):\n");
 		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &this->uptime, FALSE);
 		fprintf(out, "  worker threads: %d idle of %d,",
 				charon->processor->get_idle_threads(charon->processor),
