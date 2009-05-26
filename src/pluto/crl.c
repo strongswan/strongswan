@@ -23,7 +23,6 @@
 #include <sys/types.h>
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>

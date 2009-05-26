@@ -26,7 +26,6 @@
 
 #include <ctype.h>
 #include <freeswan.h>
-#include <ipsec_policy.h>
 #include <pfkeyv2.h>
 
 #include <utils.h>

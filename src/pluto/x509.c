@@ -24,7 +24,6 @@
 #include <sys/types.h>
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
@@ -1027,7 +1026,7 @@ void select_x509cert_id(x509cert_t *cert, struct id *end_id)
 {
 	bool copy_subject_dn = TRUE;         /* ID is subject DN */
 
-	if (end_id->kind != ID_NONE) /* check for matching subjectAltName */
+	if (end_id->kind != ID_ANY) /* check for matching subjectAltName */
 	{
 		generalName_t *gn = cert->subjectAltName;
 
@@ -1047,7 +1046,7 @@ void select_x509cert_id(x509cert_t *cert, struct id *end_id)
 
 	if (copy_subject_dn)
 	{
-		if (end_id->kind != ID_NONE && end_id->kind != ID_DER_ASN1_DN)
+		if (end_id->kind != ID_ANY && end_id->kind != ID_DER_ASN1_DN)
 		{
 			 char buf[BUF_LEN];
 
@@ -1479,7 +1478,7 @@ void gntoid(struct id *id, const generalName_t *gn)
 		id->name = gn->name;
 		break;
 	default:
-		id->kind = ID_NONE;
+		id->kind = ID_ANY;
 		id->name = chunk_empty;
 	}
 }

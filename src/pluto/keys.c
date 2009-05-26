@@ -32,7 +32,6 @@
 #endif
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -183,7 +182,7 @@ get_secret(const struct connection *c, enum PrivateKeyKind kind, bool asym)
 	}
 	else if (kind == PPK_PSK
 	&& (c->policy & (POLICY_PSK | POLICY_XAUTH_PSK))
-	&& ((c->kind == CK_TEMPLATE && c->spd.that.id.kind == ID_NONE) ||
+	&& ((c->kind == CK_TEMPLATE && c->spd.that.id.kind == ID_ANY) ||
 		(c->kind == CK_INSTANCE && id_is_ipaddr(&c->spd.that.id))))
 	{
 		/* roadwarrior: replace him with 0.0.0.0 */
@@ -1428,7 +1427,7 @@ add_x509_public_key(x509cert_t *cert , time_t until
 		struct id id = empty_id;
 
 		gntoid(&id, gn);
-		if (id.kind != ID_NONE)
+		if (id.kind != ID_ANY)
 		{
 			pk = allocate_RSA_public_key(c);
 			pk->id = id;

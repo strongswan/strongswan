@@ -25,7 +25,6 @@
 #include <sys/queue.h>
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 #include <pfkeyv2.h>
 #include <pfkey.h>
 

@@ -385,16 +385,6 @@ bitstomask(
 	int n
 );
 
-
-
-/*
- * general utilities
- */
-
-/* option pickup from files */
-const char *optionsfrom(const char *filename, int *argcp, char ***argvp,
-						int optind, FILE *errorreport);
-
 /*
  * Debugging levels for pfkey_lib_debug
  */

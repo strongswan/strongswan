@@ -17,7 +17,6 @@
 #include <string.h>
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include "asn1/asn1.h"
 

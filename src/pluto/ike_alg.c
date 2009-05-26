@@ -20,7 +20,6 @@
 #include <sys/queue.h>
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include <library.h>
 #include <debug.h>

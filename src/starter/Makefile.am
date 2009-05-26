@@ -13,7 +13,14 @@ INCLUDES = \
 -I$(top_srcdir)/src/whack \
 -I$(top_srcdir)/src/stroke
 
-AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_EAPDIR=\"${eapdir}\" -DDEBUG
+AM_CFLAGS = \
+-DIPSEC_DIR=\"${ipsecdir}\" \
+-DIPSEC_CONFDIR=\"${confdir}\" \
+-DIPSEC_PIDDIR=\"${piddir}\" \
+-DIPSEC_EAPDIR=\"${eapdir}\" \
+-DNO_CREDENTIAL_FACTORY \
+-DDEBUG
+
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la
 EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
 dist_man_MANS = ipsec.conf.5 starter.8

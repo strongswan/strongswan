@@ -17,7 +17,6 @@
 #include <time.h>
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include <library.h>
 #include <crypto/hashers/hasher.h>

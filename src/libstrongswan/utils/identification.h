@@ -79,7 +79,8 @@ enum id_type_t {
 	 * An example of an ID_RFC822_ADDR is "jsmith@example.com".
 	 * The string MUST NOT contain any terminators.
 	 */
-	ID_RFC822_ADDR = 3,
+	ID_USER_FQDN   = 3,    /* IKEv1 only */
+	ID_RFC822_ADDR = 3,    /* IKEv2 only */
 
 	/**
 	 * ID data is an IPv4 subnet (IKEv1 only)
@@ -147,6 +148,11 @@ enum id_type_t {
 	 * IETF Attribute Syntax String (RFC 3281)
 	 */
 	ID_IETF_ATTR_STRING = 205,
+
+	/**
+	 * Private ID used by the pluto daemon for opportunistic encryption
+	 */
+	ID_MYID = 206,
 };
 
 /**

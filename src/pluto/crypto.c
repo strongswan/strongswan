@@ -14,7 +14,6 @@
  */
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include "constants.h"
 #include "defs.h"

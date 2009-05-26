@@ -29,7 +29,6 @@
 #include <arpa/inet.h>
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include <library.h>
 #include <crypto/rngs/rng.h>

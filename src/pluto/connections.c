@@ -27,7 +27,6 @@
 #include <sys/queue.h>
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 #include "kameipsec.h"
 
 #include "constants.h"
@@ -499,7 +498,7 @@ default_end(struct end *e, ip_address *dflt_nexthop)
 		return "unknown address family in default_end";
 
 	/* default ID to IP (but only if not NO_IP -- WildCard) */
-	if (e->id.kind == ID_NONE && !isanyaddr(&e->host_addr))
+	if (e->id.kind == ID_ANY && !isanyaddr(&e->host_addr))
 	{
 		e->id.kind = afi->id_addr;
 		e->id.ip_addr = e->host_addr;
@@ -628,7 +627,7 @@ format_end(char *buf
 	{
 		strcpy(host_id, "[%myid]");
 	}
-	else if (!(this->id.kind == ID_NONE
+	else if (!(this->id.kind == ID_ANY
 	|| (id_is_ipaddr(&this->id) && sameaddr(&this->id.ip_addr, &this->host_addr))))
 	{
 		int len = idtoa(&this->id, host_id+1, sizeof(host_id)-2);
@@ -802,7 +801,7 @@ extract_end(struct end *dst, const whack_end_t *src, const char *which)
 	/* decode id, if any */
 	if (src->id == NULL)
 	{
-		dst->id.kind = ID_NONE;
+		dst->id.kind = ID_ANY;
 	}
 	else
 	{
@@ -1246,7 +1245,7 @@ remove_group_instance(const struct connection *group USED_BY_DEBUG
  * his_id can be used to carry over an ID discovered in Phase 1.
  * It must not disagree with the one in c, but if that is unspecified,
  * the new connection will use his_id.
- * If his_id is NULL, and c.that.id is uninstantiated (ID_NONE), the
+ * If his_id is NULL, and c.that.id is uninstantiated (ID_ANY), the
  * new connection will continue to have an uninstantiated that.id.
  * Note: instantiation does not affect port numbers.
  *
@@ -2076,7 +2075,7 @@ continue_oppo(struct adns_continuation *acr, err_t ugh)
 	bool was_held = cr->b.held;
 	int whackfd = cr->b.whackfd;
 
-	/* note: cr->id has no resources; cr->sgw_id is id_none:
+	/* note: cr->id has no resources; cr->sgw_id is ID_ANY:
 	 * neither need freeing.
 	 */
 	whack_log_fd = whackfd;

@@ -28,7 +28,6 @@
 #include <sys/time.h>           /* for gettimeofday */
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include <library.h>
 #include <asn1/asn1.h>
@@ -4379,7 +4378,7 @@ static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
 	 * legal).
 	 */
 	our_id = resolve_myid(&c->spd.this.id);
-	if (our_id->kind == ID_NONE)
+	if (our_id->kind == ID_ANY)
 	{
 		iptoid(&c->spd.this.host_addr, &our_id_space);
 		our_id = &our_id_space;

@@ -22,7 +22,6 @@
 #include <fcntl.h>
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include <library.h>
 #include <asn1/asn1.h>

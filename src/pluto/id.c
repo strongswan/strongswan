@@ -26,7 +26,6 @@
 #include <sys/queue.h>
 
 #include <freeswan.h>
-#include <ipsec_policy.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -36,7 +35,7 @@
 #include "packet.h"
 #include "whack.h"
 
-const struct id empty_id;       /* ID_NONE */
+const struct id empty_id;       /* ID_ANY */
 
 enum myid_state myid_state = MYID_UNKNOWN;
 struct id myids[MYID_SPECIFIED+1];      /* %myid */
@@ -48,7 +47,7 @@ char *myid_str[MYID_SPECIFIED+1];     /* string form of IDs */
 void
 init_id(void)
 {
-	passert(empty_id.kind == ID_NONE);
+	passert(empty_id.kind == ID_ANY);
 	myid_state = MYID_UNKNOWN;
 	{
 		enum myid_state s;
@@ -191,7 +190,7 @@ atoid(char *src, struct id *id, bool myid_ok)
 		if (streq(src, "%any") || streq(src, "0.0.0.0"))
 		{
 			/* any ID will be accepted */
-			id->kind = ID_NONE;
+			id->kind = ID_ANY;
 		}
 		else
 		{
@@ -287,7 +286,7 @@ idtoa(const struct id *id, char *dst, size_t dstlen)
 	id = resolve_myid(id);
 	switch (id->kind)
 	{
-	case ID_NONE:
+	case ID_ANY:
 		n = snprintf(dst, dstlen, "(none)");
 		break;
 	case ID_IPV4_ADDR:
@@ -368,7 +367,7 @@ unshare_id_content(struct id *id)
 		id->name = chunk_clone(id->name);
 		break;
 	case ID_MYID:
-	case ID_NONE:
+	case ID_ANY:
 	case ID_IPV4_ADDR:
 	case ID_IPV6_ADDR:
 		break;
@@ -389,7 +388,7 @@ free_id_content(struct id *id)
 		free(id->name.ptr);
 		break;
 	case ID_MYID:
-	case ID_NONE:
+	case ID_ANY:
 	case ID_IPV4_ADDR:
 	case ID_IPV6_ADDR:
 		break;
@@ -408,7 +407,7 @@ same_id(const struct id *a, const struct id *b)
 		return FALSE;
 	switch (a->kind)
 	{
-	case ID_NONE:
+	case ID_ANY:
 		return TRUE;    /* kind of vacuous */
 
 	case ID_IPV4_ADDR:
@@ -450,7 +449,7 @@ same_id(const struct id *a, const struct id *b)
 bool
 match_id(const struct id *a, const struct id *b, int *wildcards)
 {
-	if (b->kind == ID_NONE)
+	if (b->kind == ID_ANY)
 	{
 		*wildcards = MAX_WILDCARDS;
 		return TRUE;
@@ -472,7 +471,7 @@ id_count_wildcards(const struct id *id)
 {
 	switch (id->kind)
 	{
-	case ID_NONE:
+	case ID_ANY:
 		return MAX_WILDCARDS;
 	case ID_DER_ASN1_DN:
 		return dn_count_wildcards(id->name);
@@ -495,7 +494,7 @@ build_id_payload(struct isakmp_ipsec_id *hd, chunk_t *tl, struct end *end)
 	hd->isaiid_idtype = id->kind;
 	switch (id->kind)
 	{
-	case ID_NONE:
+	case ID_ANY:
 		hd->isaiid_idtype = aftoinfo(addrtypeof(&end->host_addr))->id_addr;
 		tl->len = addrbytesptr(&end->host_addr
 			, (const unsigned char **)&tl->ptr);        /* sets tl->ptr too */
