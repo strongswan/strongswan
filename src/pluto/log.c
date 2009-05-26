@@ -850,6 +850,7 @@ void show_status(bool all, const char *name)
 {
 	if (all)
 	{
+		whack_log(RC_COMMENT, "Daemon status (pluto "VERSION"):");
 		show_ifaces_status();
 		show_myid_status();
 		show_loaded_plugins();
