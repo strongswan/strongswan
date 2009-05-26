@@ -560,7 +560,7 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	}
 
 	ansi_x9_42 = lib->settings->get_int(lib->settings,
-					 "charon.dh_exponent_ansi_x9_42", TRUE);
+					 "libstrongswan.dh_exponent_ansi_x9_42", TRUE);
 	exponent_len = (ansi_x9_42) ? this->p_len : this->opt_exponent_len;	
 	rng->allocate_bytes(rng, exponent_len, &random);
 	rng->destroy(rng);
