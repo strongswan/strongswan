@@ -1,7 +1,7 @@
 noinst_LIBRARIES = libfreeswan.a
 libfreeswan_a_SOURCES = addrtoa.c addrtot.c addrtypeof.c anyaddr.c atoaddr.c atoasr.c \
 			atosa.c atosubnet.c atoul.c copyright.c datatot.c freeswan.h \
-			goodmask.c initaddr.c initsaid.c initsubnet.c internal.h \ ipsec_param.h \
+			goodmask.c initaddr.c initsaid.c initsubnet.c internal.h ipsec_param.h \
 			keyblobtoid.c pfkey_v2_build.c pfkey_v2_debug.c \
 			pfkey_v2_ext_bits.c pfkey_v2_parse.c portof.c prng.c rangetoa.c \
 			pfkey.h pfkeyv2.h rangetosubnet.c sameaddr.c satoa.c \
