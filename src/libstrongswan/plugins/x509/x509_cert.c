@@ -1176,6 +1176,7 @@ static private_x509_cert_t *create_from_chunk(chunk_t chunk)
 	private_x509_cert_t *this = create_empty();
 	
 	this->encoding = chunk;
+	this->parsed = TRUE;
 	if (!parse_certificate(this))
 	{
 		destroy(this);
@@ -1189,17 +1190,15 @@ static private_x509_cert_t *create_from_chunk(chunk_t chunk)
 	}
 	
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher != NULL)
+	if (hasher == NULL)
 	{
-		hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash);
-		hasher->destroy(hasher);
+		DBG1("  unable to create hash of certificate, SHA1 not supported");	
+		destroy(this);
+		return NULL;	
 	}
-	else
-	{
-		DBG1("  unable to create hash of certificate, SHA1 not supported");		
-	}
+	hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash);
+	hasher->destroy(hasher);
 	
-	this->parsed = TRUE;
 	return this;
 }
 
