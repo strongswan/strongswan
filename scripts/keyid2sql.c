@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <library.h>
 #include <debug.h>
+#include <utils/identification.h>
+#include <credentials/keys/private_key.h>
+#include <credentials/keys/public_key.h>
+
 
 /**
  * print the keyids of a private or public key in sql format
