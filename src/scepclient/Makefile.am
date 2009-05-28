@@ -20,7 +20,6 @@ AM_CFLAGS = \
 -DIPSEC_PLUGINDIR=\"${plugindir}\" \
 -DPLUGINS=\""${pluto_plugins}\"" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
--DNO_CREDENTIAL_FACTORY \
 -DDEBUG -DNO_PLUTO
 
 LIBSTRONGSWANBUILDDIR=$(top_builddir)/src/libstrongswan

@@ -18,7 +18,6 @@ AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${confdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DIPSEC_EAPDIR=\"${eapdir}\" \
--DNO_CREDENTIAL_FACTORY \
 -DDEBUG
 
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la

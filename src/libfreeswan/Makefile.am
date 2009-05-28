@@ -13,9 +13,6 @@ INCLUDES = \
 -I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/pluto
 
-AM_CFLAGS = \
--DNO_CREDENTIAL_FACTORY
-
 dist_man3_MANS = anyaddr.3 atoaddr.3 atoasr.3 atosa.3 atoul.3 goodmask.3 initaddr.3 initsubnet.3 \
                  keyblobtoid.3 portof.3 prng.3 rangetosubnet.3 sameaddr.3 subnetof.3 \
                  ttoaddr.3 ttodata.3 ttosa.3 ttoul.3 version.3
