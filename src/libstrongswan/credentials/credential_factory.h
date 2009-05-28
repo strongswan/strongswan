@@ -24,9 +24,6 @@
 typedef struct credential_factory_t credential_factory_t;
 typedef enum credential_type_t credential_type_t;
 
-#include <credentials/keys/private_key.h>
-#include <credentials/keys/public_key.h>
-#include <credentials/certificates/certificate.h>
 #include <credentials/builder.h>
 
 /**

@@ -23,6 +23,7 @@
 
 #include <library.h>
 #include <utils/host.h>
+#include <utils/identification.h>
 
 typedef struct attribute_provider_t attribute_provider_t;
 

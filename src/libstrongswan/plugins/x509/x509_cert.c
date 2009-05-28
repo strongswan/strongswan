@@ -35,6 +35,7 @@
 #include <asn1/asn1_parser.h>
 #include <asn1/pem.h>
 #include <crypto/hashers/hasher.h>
+#include <credentials/keys/private_key.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 

@@ -24,6 +24,7 @@
 #include <utils/linked_list.h>
 #include <debug.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/keys/private_key.h>
 
 #define NONCE_LEN		16
 

@@ -37,6 +37,7 @@
 #include <asn1/pem.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
+#include <credentials/keys/private_key.h>
 #include <utils/optionsfrom.h>
 
 #ifdef INTEGRITY_TEST

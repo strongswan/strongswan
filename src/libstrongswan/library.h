@@ -63,12 +63,7 @@
 #include <crypto/crypto_factory.h>
 #include <fetcher/fetcher_manager.h>
 #include <database/database_factory.h>
-
-#ifdef NO_CREDENTIAL_FACTORY
-	typedef struct credential_factory_t credential_factory_t;
-#else
-	#include <credentials/credential_factory.h>
-#endif
+#include <credentials/credential_factory.h>
 
 typedef struct library_t library_t;
 

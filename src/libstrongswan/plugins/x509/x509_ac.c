@@ -30,6 +30,7 @@
 #include <utils/identification.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/keys/private_key.h>
 
 extern identification_t* x509_parse_authorityKeyIdentifier(chunk_t blob,
 							 int level0, chunk_t *authKeySerialNumber);
