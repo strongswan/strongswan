@@ -68,6 +68,8 @@ plugin_t *plugin_create()
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_128, 
 							(signer_constructor_t)hmac_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_160, 
+							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_128, 
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_96, 
