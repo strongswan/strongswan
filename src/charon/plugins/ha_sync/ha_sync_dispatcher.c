@@ -228,9 +228,10 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 				ike_sa->set_other_host(ike_sa, value.host->clone(value.host));
 				break;
 			case HA_SYNC_LOCAL_VIP:
+				ike_sa->set_virtual_ip(ike_sa, TRUE, value.host);
+				break;
 			case HA_SYNC_REMOTE_VIP:
-				ike_sa->set_virtual_ip(ike_sa, attribute == HA_SYNC_LOCAL_VIP,
-									   value.host->clone(value.host));
+				ike_sa->set_virtual_ip(ike_sa, FALSE, value.host);
 				break;
 			case HA_SYNC_ADDITIONAL_ADDR:
 				ike_sa->add_additional_address(ike_sa,
