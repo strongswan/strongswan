@@ -199,15 +199,12 @@ doroute() {
 
 	if [ -z "$PLUTO_MY_SOURCEIP" ]
 	then
-	    if [ -f /etc/sysconfig/defaultsource ]
-	    then
-		. /etc/sysconfig/defaultsource
-	    fi
-
-	    if [ -f /etc/conf.d/defaultsource ]
-	    then
-		. /etc/conf.d/defaultsource
-	    fi
+            for dir in /etc/sysconfig /etc/conf.d; do
+                if [ -f "$dir/defaultsource" ]
+                then
+                    . "$dir/defaultsource"
+                fi
+            done
 
 	    if [ -n "$DEFAULTSOURCE" ]
 	    then
