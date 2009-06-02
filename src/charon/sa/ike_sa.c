@@ -1651,13 +1651,15 @@ static status_t reestablish(private_ike_sa_t *this)
 	if (status == DESTROY_ME)
 	{
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
-		return FAILED;
+		status = FAILED;
 	}
 	else
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
-		return SUCCESS;
+		status = SUCCESS;
 	}
+	charon->bus->set_sa(charon->bus, &this->public);
+	return status;
 }
 
 /**
