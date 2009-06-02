@@ -487,9 +487,6 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	
 	print_plugins();
 	
-	/* create the kernel interfaces */
-	this->public.kernel_interface->create_interfaces(this->public.kernel_interface);
-	
 #ifdef INTEGRITY_TEST
 	DBG1(DBG_DMN, "integrity test of libstrongswan code");
 	if (fips_verify_hmac_signature(hmac_key, hmac_signature))

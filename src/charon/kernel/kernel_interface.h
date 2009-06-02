@@ -363,11 +363,6 @@ struct kernel_interface_t {
 	void (*remove_net_interface)(kernel_interface_t *this, kernel_net_constructor_t create);
 	
 	/**
-	 * Create the kernel interfaces classes.
-	 */
-	void (*create_interfaces)(kernel_interface_t *this);
-	
-	/**
 	 * Destroys a kernel_interface_manager_t object.
 	 */
 	void (*destroy) (kernel_interface_t *this);
