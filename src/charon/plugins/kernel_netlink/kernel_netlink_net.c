@@ -161,7 +161,11 @@ struct private_kernel_netlink_net_t {
 	 * whether to react to RTM_NEWROUTE or RTM_DELROUTE events
 	 */
 	bool process_route;
-
+	
+	/**
+	 * whether to actually install virtual IPs
+	 */
+	bool install_virtual_ip;
 };
 
 /**
@@ -983,7 +987,12 @@ static status_t add_ip(private_kernel_netlink_net_t *this,
 	addr_entry_t *addr;
 	enumerator_t *addrs, *ifaces;
 	int ifindex;
-
+	
+	if (!this->install_virtual_ip)
+	{	/* disabled by config */
+		return SUCCESS;
+	}
+	
 	DBG2(DBG_KNL, "adding virtual IP %H", virtual_ip);
 	
 	this->mutex->lock(this->mutex);
@@ -1057,7 +1066,12 @@ static status_t del_ip(private_kernel_netlink_net_t *this, host_t *virtual_ip)
 	enumerator_t *addrs, *ifaces;
 	status_t status;
 	int ifindex;
-
+	
+	if (!this->install_virtual_ip)
+	{	/* disabled by config */
+		return SUCCESS;
+	}
+	
 	DBG2(DBG_KNL, "deleting virtual IP %H", virtual_ip);
 	
 	this->mutex->lock(this->mutex);
@@ -1365,6 +1379,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 					"charon.routing_table_prio", IPSEC_ROUTING_TABLE_PRIO);
 	this->process_route = lib->settings->get_bool(lib->settings,
 					"charon.process_route", TRUE);
+	this->install_virtual_ip = lib->settings->get_bool(lib->settings,
+					"charon.install_virtual_ip", TRUE);
 	
 	this->socket = netlink_socket_create(NETLINK_ROUTE);
 	
