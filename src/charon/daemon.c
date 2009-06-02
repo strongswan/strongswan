@@ -480,6 +480,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.attributes = attribute_manager_create();
 	this->public.kernel_interface = kernel_interface_create();
 	this->public.socket = socket_create();
+	this->public.traps = trap_manager_create();
 	
 	/* load plugins, further infrastructure may need it */
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
@@ -505,7 +506,6 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	{
 		return FALSE;
 	}
-	this->public.traps = trap_manager_create();
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	if (this->public.receiver == NULL)
