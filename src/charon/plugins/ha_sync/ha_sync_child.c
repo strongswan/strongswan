@@ -48,6 +48,11 @@ static bool child_keys(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
 
+	if (this->socket->is_sync_sa(this->socket, ike_sa))
+	{	/* do not sync SA between nodes */
+		return TRUE;
+	}
+
 	m = ha_sync_message_create(HA_SYNC_CHILD_ADD);
 
 	m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
@@ -96,7 +101,6 @@ static bool child_keys(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 	enumerator->destroy(enumerator);
 
 	this->socket->push(this->socket, m);
-	m->destroy(m);
 
 	return TRUE;
 }
@@ -111,6 +115,10 @@ static bool child_state_change(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 	{	/* only sync active IKE_SAs */
 		return TRUE;
 	}
+	if (this->socket->is_sync_sa(this->socket, ike_sa))
+	{	/* do not sync SA between nodes */
+		return TRUE;
+	}
 
 	if (state == CHILD_DESTROYING)
 	{
@@ -122,7 +130,6 @@ static bool child_state_change(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 		m->add_attribute(m, HA_SYNC_INBOUND_SPI,
 						 child_sa->get_spi(child_sa, TRUE));
 		this->socket->push(this->socket, m);
-		m->destroy(m);
 	}
 	return TRUE;
 }

@@ -23,6 +23,8 @@
 
 #include "ha_sync_message.h"
 
+#include <sa/ike_sa.h>
+
 /**
  * UDP port we use for communication
  */
@@ -38,7 +40,7 @@ struct ha_sync_socket_t {
 	/**
 	 * Push synchronization information to the responsible node.
 	 *
-	 * @param message	message to send
+	 * @param message	message to send, gets destroyed by push()
 	 */
 	void (*push)(ha_sync_socket_t *this, ha_sync_message_t *message);
 
@@ -48,6 +50,14 @@ struct ha_sync_socket_t {
 	 * @return			received message
 	 */
 	ha_sync_message_t *(*pull)(ha_sync_socket_t *this);
+
+	/**
+	 * Check if an IKE_SA is used for exchanging sync messages.
+	 *
+	 * @param ike_Sa	ike_sa to check
+	 * @return			TRUE if IKE_SA is used to secure sync messages
+	 */
+	bool (*is_sync_sa)(ha_sync_socket_t *this, ike_sa_t *ike_sa);
 
 	/**
 	 * Destroy a ha_sync_socket_t.

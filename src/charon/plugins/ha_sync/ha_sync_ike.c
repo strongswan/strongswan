@@ -69,6 +69,10 @@ static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 	proposal_t *proposal;
 	u_int16_t alg, len;
 
+	if (this->socket->is_sync_sa(this->socket, ike_sa))
+	{	/* do not sync SA between nodes */
+		return TRUE;
+	}
 	if (dh->get_shared_secret(dh, &secret) != SUCCESS)
 	{
 		return TRUE;
@@ -111,7 +115,6 @@ static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 	chunk_clear(&secret);
 
 	this->socket->push(this->socket, m);
-	m->destroy(m);
 
 	return TRUE;
 }
@@ -126,6 +129,10 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 
 	if (ike_sa->get_state(ike_sa) == IKE_PASSIVE)
 	{	/* only sync active IKE_SAs */
+		return TRUE;
+	}
+	if (this->socket->is_sync_sa(this->socket, ike_sa))
+	{	/* do not sync SA between nodes */
 		return TRUE;
 	}
 
@@ -188,7 +195,6 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 			return TRUE;
 	}
 	this->socket->push(this->socket, m);
-	m->destroy(m);
 	return TRUE;
 }
 
@@ -198,6 +204,11 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 static bool message_hook(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 						 message_t *message, bool incoming)
 {
+	if (this->socket->is_sync_sa(this->socket, ike_sa))
+	{	/* do not sync SA between nodes */
+		return TRUE;
+	}
+
 	if (message->get_exchange_type(message) != IKE_SA_INIT &&
 		message->get_request(message))
 	{	/* we sync on requests, but skip it on IKE_SA_INIT */
@@ -216,7 +227,6 @@ static bool message_hook(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 			m->add_attribute(m, HA_SYNC_INITIATE_MID, mid);
 		}
 		this->socket->push(this->socket, m);
-		m->destroy(m);
 	}
 	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
 		message->get_exchange_type(message) == IKE_AUTH &&
@@ -234,7 +244,6 @@ static bool message_hook(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 			m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
 			m->add_attribute(m, HA_SYNC_REMOTE_VIP, vip);
 			this->socket->push(this->socket, m);
-			m->destroy(m);
 		}
 	}
 	return TRUE;
