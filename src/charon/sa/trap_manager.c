@@ -55,9 +55,9 @@ struct private_trap_manager_t {
 	linked_list_t *traps;
 	
 	/**
-	 * mutex to lock traps list
+	 * read write lock for traps list
 	 */
-	mutex_t *mutex;
+	rwlock_t *lock;
 	
 	/**
 	 * listener to track acquiring IKE_SAs
@@ -104,7 +104,7 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 	u_int32_t reqid;
 	
 	/* check if not already done */
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -116,7 +116,7 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	if (found)
 	{
 		DBG1(DBG_CFG, "CHILD_SA named '%s' already routed",
@@ -173,9 +173,9 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 	entry->peer_cfg = peer->get_ref(peer);
 	entry->pending = NULL;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	this->traps->insert_last(this->traps, entry);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	
 	return reqid;
 }
@@ -188,7 +188,7 @@ static bool uninstall(private_trap_manager_t *this, u_int32_t reqid)
 	enumerator_t *enumerator;
 	entry_t *entry, *found = NULL;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -200,7 +200,7 @@ static bool uninstall(private_trap_manager_t *this, u_int32_t reqid)
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	
 	if (!found)
 	{
@@ -215,7 +215,7 @@ static bool uninstall(private_trap_manager_t *this, u_int32_t reqid)
 /**
  * convert enumerated entries to peer_cfg, child_sa
  */
-static bool trap_filter(mutex_t *mutex, entry_t **entry, peer_cfg_t **peer_cfg,
+static bool trap_filter(rwlock_t *lock, entry_t **entry, peer_cfg_t **peer_cfg,
 						void *none, child_sa_t **child_sa)
 {
 	if (peer_cfg)
@@ -234,10 +234,10 @@ static bool trap_filter(mutex_t *mutex, entry_t **entry, peer_cfg_t **peer_cfg,
  */
 static enumerator_t* create_enumerator(private_trap_manager_t *this)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->traps->create_enumerator(this->traps),
-									(void*)trap_filter, this->mutex,
-									(void*)this->mutex->unlock);
+									(void*)trap_filter, this->lock,
+									(void*)this->lock->unlock);
 }
 
 /**
@@ -252,7 +252,7 @@ static void acquire(private_trap_manager_t *this, u_int32_t reqid,
 	child_cfg_t *child;
 	ike_sa_t *ike_sa;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -295,7 +295,7 @@ static void acquire(private_trap_manager_t *this, u_int32_t reqid,
 												charon->ike_sa_manager, ike_sa);
 		}
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -318,7 +318,7 @@ static bool ike_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
 	}
 	
 	this = listener->traps;
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -328,7 +328,7 @@ static bool ike_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return TRUE;
 }
 
@@ -340,7 +340,7 @@ static void destroy(private_trap_manager_t *this)
 	charon->bus->remove_listener(charon->bus, &this->listener.listener);
 	this->traps->invoke_function(this->traps, (void*)destroy_entry);
 	this->traps->destroy(this->traps);
-	this->mutex->destroy(this->mutex);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -358,7 +358,7 @@ trap_manager_t *trap_manager_create()
 	this->public.destroy = (void(*)(trap_manager_t*))destroy;
 	
 	this->traps = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_DEFAULT);
 	
 	/* register listener for IKE state changes */
 	this->listener.traps = this;
