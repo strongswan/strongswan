@@ -203,6 +203,8 @@ char *whitelist[] = {
 	/* libgcrypt */
 	"gcry_control",
 	"gcry_check_version",
+	"gcry_randomize",
+	"gcry_create_nonce",
 };
 
 /**

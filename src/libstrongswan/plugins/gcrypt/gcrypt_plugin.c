@@ -17,6 +17,7 @@
 
 #include "gcrypt_hasher.h"
 #include "gcrypt_crypter.h"
+#include "gcrypt_rng.h"
 
 #include <library.h>
 #include <debug.h>
@@ -98,6 +99,8 @@ static void destroy(private_gcrypt_plugin_t *this)
 					(hasher_constructor_t)gcrypt_hasher_create);
 	lib->crypto->remove_crypter(lib->crypto,
 					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->remove_rng(lib->crypto,
+					(rng_constructor_t)gcrypt_rng_create);
 	free(this);
 }
 
@@ -161,6 +164,14 @@ plugin_t *plugin_create()
 					(crypter_constructor_t)gcrypt_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_TWOFISH_CBC,
 					(crypter_constructor_t)gcrypt_crypter_create);
+	
+	/* random numbers */
+	lib->crypto->add_rng(lib->crypto, RNG_WEAK, 
+						 (rng_constructor_t)gcrypt_rng_create);
+	lib->crypto->add_rng(lib->crypto, RNG_STRONG, 
+						 (rng_constructor_t)gcrypt_rng_create);
+	lib->crypto->add_rng(lib->crypto, RNG_TRUE, 
+						 (rng_constructor_t)gcrypt_rng_create);
 	
 	return &this->public.plugin;
 }
