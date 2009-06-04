@@ -15,6 +15,8 @@
 
 #include "gcrypt_plugin.h"
 
+#include "gcrypt_hasher.h"
+
 #include <library.h>
 #include <debug.h>
 
@@ -45,6 +47,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
  */
 static void destroy(private_gcrypt_plugin_t *this)
 {
+	lib->crypto->remove_hasher(lib->crypto,
+					(hasher_constructor_t)gcrypt_hasher_create);
 	free(this);
 }
 
@@ -70,6 +74,22 @@ plugin_t *plugin_create()
 	this = malloc_thing(private_gcrypt_plugin_t);
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	
+	/* hashers */
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+					(hasher_constructor_t)gcrypt_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_MD2,
+					(hasher_constructor_t)gcrypt_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
+					(hasher_constructor_t)gcrypt_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+					(hasher_constructor_t)gcrypt_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
+					(hasher_constructor_t)gcrypt_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
+					(hasher_constructor_t)gcrypt_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
+					(hasher_constructor_t)gcrypt_hasher_create);
 	
 	return &this->public.plugin;
 }
