@@ -90,13 +90,13 @@ static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 	if (e)
 	{
 		peer_cfg_t *peer_cfg;
+		auth_cfg_t *auth;
 		char *name;
 		
 		if (e->enumerate(e, &name))
 		{
 			peer_cfg = peer_cfg_create(
 				name, 2, this->ike->get_ref(this->ike),
-				me->clone(me), other->clone(other),
 				CERT_NEVER_SEND, UNIQUE_REPLACE,
 				1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 				this->rekey*5, this->rekey*3, 	/* jitter, overtime */
@@ -104,6 +104,16 @@ static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 				NULL, NULL, 					/* vip, pool */
 				TRUE, NULL, NULL); 				/* mediation, med by, peer id */
 			e->destroy(e);
+			
+			auth = auth_cfg_create();
+			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+			auth->add(auth, AUTH_RULE_IDENTITY, me->clone(me));
+			peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+			auth = auth_cfg_create();
+			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+			auth->add(auth, AUTH_RULE_IDENTITY, other->clone(other));
+			peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
+			
 			return enumerator_create_single(peer_cfg, (void*)peer_cfg->destroy);
 		}
 		e->destroy(e);

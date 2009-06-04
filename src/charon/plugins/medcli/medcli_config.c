@@ -95,6 +95,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 {
 	enumerator_t *e;
 	peer_cfg_t *peer_cfg, *med_cfg;
+	auth_cfg_t *auth;
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	chunk_t me, other;
@@ -116,8 +117,6 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	med_cfg = peer_cfg_create(
 		"mediation", 2, ike_cfg,
-		identification_create_from_encoding(ID_KEY_ID, me),
-		identification_create_from_encoding(ID_KEY_ID, other),
 		CERT_NEVER_SEND, UNIQUE_REPLACE, 
 		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
@@ -125,6 +124,17 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 		NULL, NULL, 					/* vip, pool */
 		TRUE, NULL, NULL); 				/* mediation, med by, peer id */
 	e->destroy(e);
+	
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	auth->add(auth, AUTH_RULE_IDENTITY,
+			  identification_create_from_encoding(ID_KEY_ID, me));
+	med_cfg->add_auth_cfg(med_cfg, auth, TRUE);
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	auth->add(auth, AUTH_RULE_IDENTITY,
+			  identification_create_from_encoding(ID_KEY_ID, other));
+	med_cfg->add_auth_cfg(med_cfg, auth, FALSE);
 	
 	/* query mediated config:
 	 * - use any-any ike_cfg
@@ -144,8 +154,6 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	}
 	peer_cfg = peer_cfg_create(
 		name, 2, this->ike->get_ref(this->ike),
-		identification_create_from_encoding(ID_KEY_ID, me),
-		identification_create_from_encoding(ID_KEY_ID, other),
 		CERT_NEVER_SEND, UNIQUE_REPLACE, 
 		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
@@ -153,6 +161,17 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 		NULL, NULL, 					/* vip, pool */
 		FALSE, med_cfg,				 	/* mediation, med by */
 		identification_create_from_encoding(ID_KEY_ID, other));
+	
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	auth->add(auth, AUTH_RULE_IDENTITY,
+			  identification_create_from_encoding(ID_KEY_ID, me));
+	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	auth->add(auth, AUTH_RULE_IDENTITY,
+			  identification_create_from_encoding(ID_KEY_ID, other));
+	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 	
 	child_cfg = child_cfg_create(name, this->rekey*60 + this->rekey,
 							  this->rekey*60, this->rekey, NULL, TRUE,
@@ -197,7 +216,8 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	char *name, *local_net, *remote_net;
 	chunk_t me, other;
 	child_cfg_t *child_cfg;
-
+	auth_cfg_t *auth;
+	
 	DESTROY_IF(this->current);
 	if (!this->inner->enumerate(this->inner, &name, &me, &other,
 								&local_net, &remote_net))
@@ -207,14 +227,24 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	}
 	this->current = peer_cfg_create(
 				name, 2, this->ike->get_ref(this->ike),
-				identification_create_from_encoding(ID_KEY_ID, me),
-				identification_create_from_encoding(ID_KEY_ID, other),
 				CERT_NEVER_SEND, UNIQUE_REPLACE, 
 				1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 				this->rekey*5, this->rekey*3, 	/* jitter, overtime */
 				TRUE, this->dpd, 				/* mobike, dpddelay */
 				NULL, NULL, 					/* vip, pool */
 				FALSE, NULL, NULL); 			/* mediation, med by, peer id */
+	
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	auth->add(auth, AUTH_RULE_IDENTITY,
+			  identification_create_from_encoding(ID_KEY_ID, me));
+	this->current->add_auth_cfg(this->current, auth, TRUE);
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	auth->add(auth, AUTH_RULE_IDENTITY,
+			  identification_create_from_encoding(ID_KEY_ID, other));
+	this->current->add_auth_cfg(this->current, auth, FALSE);
+	
 	child_cfg = child_cfg_create(
 				name, this->rekey*60 + this->rekey,
 				this->rekey*60, this->rekey, NULL, TRUE,
