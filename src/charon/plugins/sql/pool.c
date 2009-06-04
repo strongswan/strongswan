@@ -22,6 +22,7 @@
 #include <debug.h>
 #include <library.h>
 #include <utils/host.h>
+#include <utils/identification.h>
 
 /**
  * global database handle
