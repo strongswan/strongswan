@@ -200,6 +200,10 @@ if USE_OPENSSL
   SUBDIRS += plugins/openssl
 endif
 
+if USE_GCRYPT
+  SUBDIRS += plugins/gcrypt
+endif
+
 if USE_AGENT
   SUBDIRS += plugins/agent
 endif

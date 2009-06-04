@@ -711,6 +711,16 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[gcrypt],
+	AS_HELP_STRING([--enable-gcrypt],[enables the libgcrypt plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		gcrypt=true
+	 else
+		gcrypt=false
+	fi],
+)
+
+AC_ARG_ENABLE(
 	[agent],
 	AS_HELP_STRING([--enable-agent],[enables the ssh-agent signing plugin. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -1006,6 +1016,11 @@ if test x$openssl = xtrue; then
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
+if test x$gcrypt = xtrue; then
+	AC_HAVE_LIBRARY([gcrypt],[LIBS="$LIBS"],[AC_MSG_ERROR([libgcrypt library not found])])
+	AC_CHECK_HEADER([gcrypt.h],,[AC_MSG_ERROR([libgcrypt header gcrypt.h not found!])])
+fi
+
 if test x$uci = xtrue; then
 	AC_HAVE_LIBRARY([uci],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])])
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
@@ -1109,6 +1124,10 @@ if test x$openssl = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" openssl"
 	pluto_plugins=${pluto_plugins}" openssl"
 fi
+if test x$gcrypt = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" gcrypt"
+	pluto_plugins=${pluto_plugins}" gcrypt"
+fi
 if test x$agent = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" agent"
 fi
@@ -1148,6 +1167,7 @@ AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
+AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
 
 dnl charon plugins
@@ -1243,6 +1263,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/sqlite/Makefile
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
+	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/fips/Makefile
 	src/libfreeswan/Makefile
