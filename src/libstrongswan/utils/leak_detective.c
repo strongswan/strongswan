@@ -200,6 +200,9 @@ char *whitelist[] = {
 	"DH_new_method",
 	"ENGINE_load_builtin_engines",
 	"OPENSSL_config",
+	/* libgcrypt */
+	"gcry_control",
+	"gcry_check_version",
 };
 
 /**

@@ -16,6 +16,11 @@
 #include "gcrypt_plugin.h"
 
 #include <library.h>
+#include <debug.h>
+
+#include <errno.h>
+#include <gcrypt.h>
+#include <pthread.h>
 
 typedef struct private_gcrypt_plugin_t private_gcrypt_plugin_t;
 
@@ -31,6 +36,11 @@ struct private_gcrypt_plugin_t {
 };
 
 /**
+ * Thread callback implementations for pthread
+ */
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
+
+/**
  * Implementation of gcrypt_plugin_t.destroy
  */
 static void destroy(private_gcrypt_plugin_t *this)
@@ -43,7 +53,21 @@ static void destroy(private_gcrypt_plugin_t *this)
  */
 plugin_t *plugin_create()
 {
-	private_gcrypt_plugin_t *this = malloc_thing(private_gcrypt_plugin_t);
+	private_gcrypt_plugin_t *this;
+	
+	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	
+	if (!gcry_check_version(GCRYPT_VERSION))
+	{
+		DBG1("libgcrypt version mismatch");
+		return NULL;
+	}
+	
+	/* we currently do not use secure memory */
+	gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
+	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+	
+	this = malloc_thing(private_gcrypt_plugin_t);
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
