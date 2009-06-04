@@ -16,6 +16,7 @@
 #include "gcrypt_plugin.h"
 
 #include "gcrypt_hasher.h"
+#include "gcrypt_crypter.h"
 
 #include <library.h>
 #include <debug.h>
@@ -49,6 +50,8 @@ static void destroy(private_gcrypt_plugin_t *this)
 {
 	lib->crypto->remove_hasher(lib->crypto,
 					(hasher_constructor_t)gcrypt_hasher_create);
+	lib->crypto->remove_crypter(lib->crypto,
+					(crypter_constructor_t)gcrypt_crypter_create);
 	free(this);
 }
 
@@ -90,6 +93,28 @@ plugin_t *plugin_create()
 					(hasher_constructor_t)gcrypt_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
 					(hasher_constructor_t)gcrypt_hasher_create);
+	
+	/* crypters */
+	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
+					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_IDEA,
+					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAST,
+					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,
+					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
+					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB,
+					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
+					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CBC,
+					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_SERPENT_CBC,
+					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_TWOFISH_CBC,
+					(crypter_constructor_t)gcrypt_crypter_create);
 	
 	return &this->public.plugin;
 }
