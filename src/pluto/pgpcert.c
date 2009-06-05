@@ -40,56 +40,6 @@
 static pgpcert_t *pgpcerts   = NULL;
 
 /*
- * OpenPGP packet tags defined in section 4.3 of RFC 2440
- */
-#define PGP_PKT_RESERVED                 0
-#define PGP_PKT_PUBKEY_ENC_SESSION_KEY   1
-#define PGP_PKT_SIGNATURE                2
-#define PGP_PKT_SYMKEY_ENC_SESSION_KEY   3
-#define PGP_PKT_ONE_PASS_SIGNATURE_PKT   4
-#define PGP_PKT_SECRET_KEY               5
-#define PGP_PKT_PUBLIC_KEY               6
-#define PGP_PKT_SECRET_SUBKEY            7
-#define PGP_PKT_COMPRESSED_DATA          8
-#define PGP_PKT_SYMKEY_ENC_DATA          9
-#define PGP_PKT_MARKER                  10
-#define PGP_PKT_LITERAL_DATA            11
-#define PGP_PKT_TRUST                   12
-#define PGP_PKT_USER_ID                 13
-#define PGP_PKT_PUBLIC_SUBKEY           14
-#define PGP_PKT_ROOF                    15
-
-static const char *const pgp_packet_type_name[] = {
-	"Reserved",
-	"Public-Key Encrypted Session Key Packet",
-	"Signature Packet",
-	"Symmetric-Key Encrypted Session Key Packet",
-	"One-Pass Signature Packet",
-	"Secret Key Packet",
-	"Public Key Packet",
-	"Secret Subkey Packet",
-	"Compressed Data Packet",
-	"Symmetrically Encrypted Data Packet",
-	"Marker Packet",
-	"Literal Data Packet",
-	"Trust Packet",
-	"User ID Packet",
-	"Public Subkey Packet"
-};
-
-/*
- * OpenPGP public key algorithms defined in section 9.1 of RFC 2440
- */
-#define PGP_PUBKEY_ALG_RSA               1
-#define PGP_PUBKEY_ALG_RSA_ENC_ONLY      2
-#define PGP_PUBKEY_ALG_RSA_SIGN_ONLY     3
-#define PGP_PUBKEY_ALG_ELGAMAL_ENC_ONLY 16
-#define PGP_PUBKEY_ALG_DSA              17
-#define PGP_PUBKEY_ALG_ECC              18
-#define PGP_PUBKEY_ALG_ECDSA            19
-#define PGP_PUBKEY_ALG_ELGAMAL          20
-
-/*
  * Size of PGP Key ID
  */
 #define PGP_KEYID_SIZE          8
@@ -313,10 +263,9 @@ bool parse_pgp(chunk_t blob, pgpcert_t *cert, private_key_t **key)
 			blob.ptr += packet.len;
 			blob.len -= packet.len;
 			DBG(DBG_PARSING,
-				DBG_log("  %s (%d), old format, %d bytes",
-					(packet_type < PGP_PKT_ROOF) ?
-					pgp_packet_type_name[packet_type] :
-					"Undefined Packet Type", packet_type, (int)packet.len);
+				DBG_log("  %N (%d), old format, %u bytes",
+						pgp_packet_tag_names, packet_type,
+						packet_type, packet.len);
 				DBG_log("L2 - body:")
 			)
 			DBG_cond_dump_chunk(DBG_RAW, "", packet);

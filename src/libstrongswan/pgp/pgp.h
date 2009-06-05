@@ -22,13 +22,63 @@
 #ifndef PGP_H_
 #define PGP_H_
 
+typedef enum pgp_packet_tag_t pgp_packet_tag_t;
 typedef enum pgp_sym_alg_t pgp_sym_alg_t;
 
 #include <chunk.h>
 #include <enum.h>
 
 /**
- * OpenPGP symmetric key algorithms defined in section 9.2 of RFC 4880
+ * OpenPGP packet tags as defined in section 4.3 of RFC 4880
+ */
+enum pgp_packet_tag_t {
+	PGP_PKT_RESERVED               =  0,
+	PGP_PKT_PUBKEY_ENC_SESSION_KEY =  1,
+	PGP_PKT_SIGNATURE              =  2,
+	PGP_PKT_SYMKEY_ENC_SESSION_KEY =  3,
+	PGP_PKT_ONE_PASS_SIGNATURE_PKT =  4,
+	PGP_PKT_SECRET_KEY             =  5,
+	PGP_PKT_PUBLIC_KEY             =  6,
+	PGP_PKT_SECRET_SUBKEY          =  7,
+	PGP_PKT_COMPRESSED_DATA        =  8,
+	PGP_PKT_SYMKEY_ENC_DATA        =  9,
+	PGP_PKT_MARKER                 = 10,
+	PGP_PKT_LITERAL_DATA           = 11,
+	PGP_PKT_TRUST                  = 12,
+	PGP_PKT_USER_ID                = 13,
+	PGP_PKT_PUBLIC_SUBKEY          = 14,
+	PGP_PKT_USER_ATTRIBUTE         = 17,
+	PGP_PKT_SYM_ENC_INT_PROT_DATA  = 18,
+	PGP_PKT_MOD_DETECT_CODE        = 19
+};
+
+/**
+ * Enum names for pgp_packet_tag_t
+ */
+extern enum_name_t *pgp_packet_tag_names;
+
+/**
+ * OpenPGP public key algorithms as defined in section 9.1 of RFC 4880
+ */
+enum pgp_pubkey_alg_t {
+	PGP_PUBKEY_ALG_RSA              =  1,
+	PGP_PUBKEY_ALG_RSA_ENC_ONLY     =  2,
+	PGP_PUBKEY_ALG_RSA_SIGN_ONLY    =  3,
+	PGP_PUBKEY_ALG_ELGAMAL_ENC_ONLY = 16,
+	PGP_PUBKEY_ALG_DSA              = 17,
+	PGP_PUBKEY_ALG_ECC              = 18,
+	PGP_PUBKEY_ALG_ECDSA            = 19,
+	PGP_PUBKEY_ALG_ELGAMAL          = 20,
+	PGP_PUBKEY_ALG_DIFFIE_HELLMAN   = 21,
+};
+
+/**
+ * Enum names for pgp_pubkey_alg_t
+ */
+extern enum_name_t *pgp_pubkey_alg_names;
+
+/**
+ * OpenPGP symmetric key algorithms as defined in section 9.2 of RFC 4880
  */
 enum pgp_sym_alg_t {
 	PGP_SYM_ALG_PLAIN    =  0,
