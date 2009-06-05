@@ -18,6 +18,7 @@
 #include "gcrypt_hasher.h"
 #include "gcrypt_crypter.h"
 #include "gcrypt_rng.h"
+#include "gcrypt_dh.h"
 
 #include <library.h>
 #include <debug.h>
@@ -101,6 +102,8 @@ static void destroy(private_gcrypt_plugin_t *this)
 					(crypter_constructor_t)gcrypt_crypter_create);
 	lib->crypto->remove_rng(lib->crypto,
 					(rng_constructor_t)gcrypt_rng_create);
+	lib->crypto->remove_dh(lib->crypto,
+					(dh_constructor_t)gcrypt_dh_create);
 	free(this);
 }
 
@@ -172,6 +175,24 @@ plugin_t *plugin_create()
 						 (rng_constructor_t)gcrypt_rng_create);
 	lib->crypto->add_rng(lib->crypto, RNG_TRUE, 
 						 (rng_constructor_t)gcrypt_rng_create);
+	
+	/* diffie hellman groups, using modp */
+	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT, 
+					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT, 
+					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, 
+					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT, 
+					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, 
+					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, 
+					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT,
+					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, 
+					(dh_constructor_t)gcrypt_dh_create);
 	
 	return &this->public.plugin;
 }
