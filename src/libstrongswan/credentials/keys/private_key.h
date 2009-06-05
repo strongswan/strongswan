@@ -80,6 +80,14 @@ struct private_key_t {
 	public_key_t* (*get_public_key)(private_key_t *this);
 	
 	/**
+	 * Check if two private keys are equal.
+	 * 
+	 * @param other		other private key
+	 * @return			TRUE, if equality
+	 */
+	bool (*equals) (private_key_t *this, private_key_t *other);
+
+	/**
 	 * Check if a private key belongs to a public key.
 	 * 
 	 * @param public	public key

@@ -1,5 +1,7 @@
 /* Certificate support for IKE authentication
- * Copyright (C) 2002-2004 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2002-2009 Andreas Steffen
+ *
+ * HSR - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,9 +17,10 @@
 #ifndef _CERTS_H
 #define _CERTS_H
 
-#include "pkcs1.h"
+#include <credentials/keys/private_key.h>
+
 #include "x509.h"
-#include "pgp.h"
+#include "pgpcert.h"
 
 /* path definitions for private keys, end certs,
  * cacerts, attribute certs and crls
@@ -59,11 +62,11 @@ extern const cert_t empty_cert;
  */
 extern bool no_cr_send;
 
-extern err_t load_rsa_private_key(char* filename, prompt_pass_t *pass
-	, RSA_private_key_t *key);
+extern private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
+									   key_type_t type);
 extern chunk_t get_mycert(cert_t cert);
-extern bool load_coded_file(char *filename, prompt_pass_t *pass
-	, const char *type, chunk_t *blob, bool *pgp);
+extern bool load_coded_file(char *filename, prompt_pass_t *pass,
+							const char *type, chunk_t *blob, bool *pgp);
 extern bool load_cert(char *filename, const char *label, cert_t *cert);
 extern bool load_host_cert(char *filename, cert_t *cert);
 extern bool load_ca_cert(char *filename, cert_t *cert);

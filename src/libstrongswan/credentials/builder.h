@@ -38,14 +38,18 @@ typedef builder_t* (*builder_constructor_t)(int subtype);
  * Parts to build credentials from.
  */
 enum builder_part_t {
-	/** path to a file containing an ASN1 blob, char* */
+	/** path to a file containing an ASN.1 blob, char* */
 	BUILD_FROM_FILE,
 	/** unix socket of a ssh/pgp agent, char* */
 	BUILD_AGENT_SOCKET,
-	/** DER encoded ASN1 blob, chunk_t */
+	/** DER encoded ASN.1 blob, chunk_t */
 	BUILD_BLOB_ASN1_DER,
-	/** PEM encoded ASN1 blob, null terminated char* */
+	/** PEM encoded ASN.1 blob, null terminated char* */
 	BUILD_BLOB_ASN1_PEM,
+	/**  OpenPGP key blob, chunk_t */
+	BUILD_BLOB_PGP,
+	/** RFC 3110 DNS public key blob, chunk_t */
+	BUILD_BLOB_RFC_3110,
 	/** key size in bits, as used for key generation, u_int */
 	BUILD_KEY_SIZE,
 	/** private key to use for signing, private_key_t* */

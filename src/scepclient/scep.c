@@ -34,7 +34,6 @@
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
-#include "../pluto/pkcs1.h"
 #include "../pluto/fetch.h"
 #include "../pluto/log.h"
 
@@ -266,35 +265,43 @@ end:
  * Generates a unique fingerprint of the pkcs10 request 
  * by computing an MD5 hash over it
  */
-void scep_generate_pkcs10_fingerprint(chunk_t pkcs10, chunk_t *fingerprint)
+chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10)
 {
-	char buf[HASH_SIZE_MD5];
-	chunk_t digest = { buf, sizeof(buf) };
+	char digest_buf[HASH_SIZE_MD5];
+	chunk_t digest = chunk_from_buf(digest_buf);
+	hasher_t *hasher;
 
-	/* the fingerprint is the MD5 hash in hexadecimal format */
-	compute_digest(pkcs10, OID_MD5, &digest);
-	fingerprint->len = 2*digest.len;
-	fingerprint->ptr = malloc(fingerprint->len + 1);
-	datatot(digest.ptr, digest.len, 16, fingerprint->ptr, fingerprint->len + 1);
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
+	hasher->get_hash(hasher, pkcs10, digest_buf);
+	hasher->destroy(hasher);
+
+	return chunk_to_hex(digest, NULL, FALSE);
 }
 
 /**
  * Generate a transaction id as the MD5 hash of an public key
  * the transaction id is also used as a unique serial number
  */
-void scep_generate_transaction_id(const RSA_public_key_t *rsak,
-								  chunk_t *transID, chunk_t *serialNumber)
+void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
+								  chunk_t *serialNumber)
 {
-	char buf[HASH_SIZE_MD5];
-
-	chunk_t digest = { buf, sizeof(buf) };
-	chunk_t public_key = pkcs1_build_publicKeyInfo(rsak);
-
+	char digest_buf[HASH_SIZE_MD5];
+	chunk_t digest = chunk_from_buf(digest_buf);
+	chunk_t keyEncoding, keyInfo;
+	hasher_t *hasher;
 	bool msb_set;
 	u_char *pos;
+	
+	keyEncoding = key->get_encoding(key);
 
-	compute_digest(public_key, OID_MD5, &digest);
-	free(public_key.ptr);
+	keyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
+						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
+						asn1_bitstring("m", keyEncoding));	
+
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
+	hasher->get_hash(hasher, keyInfo, digest_buf);
+	hasher->destroy(hasher);
+	free(keyInfo.ptr);
 
 	/* is the most significant bit of the digest set? */
 	msb_set = (*digest.ptr & 0x80) == 0x80;
@@ -376,7 +383,7 @@ chunk_t scep_senderNonce_attribute(void)
 chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 						   const x509cert_t *enc_cert, int enc_alg,
 						   const x509cert_t *signer_cert, int digest_alg,
-						   const RSA_private_key_t *private_key)
+						   private_key_t *private_key)
 {
 	chunk_t envelopedData, attributes, request;
 

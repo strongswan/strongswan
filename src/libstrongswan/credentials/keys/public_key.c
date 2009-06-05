@@ -15,13 +15,15 @@
 
 #include "public_key.h"
 
-ENUM(key_type_names, KEY_RSA, KEY_ECDSA,
+ENUM(key_type_names, KEY_RSA, KEY_DSA,
 	"RSA",
-	"ECDSA"
+	"ECDSA",
+	"DSA"
 );
 
 ENUM(signature_scheme_names, SIGN_DEFAULT, SIGN_ECDSA_521,
 	"DEFAULT",
+	"RSA_EMSA_PKCS1_NULL",
 	"RSA_EMSA_PKCS1_MD5",
 	"RSA_EMSA_PKCS1_SHA1",
 	"RSA_EMSA_PKCS1_SHA256",

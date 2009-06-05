@@ -385,8 +385,8 @@ trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chain)
 			}
 		}
 
-		if (!check_signature(cert->tbsCertificate, cert->signature
-						   , cert->algorithm, cert->algorithm, authcert))
+		if (!x509_check_signature(cert->tbsCertificate, cert->signature,
+								  cert->algorithm, authcert))
 		{
 			plog("certificate signature is invalid");
 			unlock_authcert_list("trust_authcert_candidate");

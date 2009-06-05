@@ -136,7 +136,7 @@ error:
 }
 
 /**
- * Implementation of openssl_rsa_private_key.destroy.
+ * Implementation of openssl_rsa_private_key.get_type.
  */
 static key_type_t get_type(private_openssl_rsa_private_key_t *this)
 {
@@ -144,7 +144,7 @@ static key_type_t get_type(private_openssl_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of openssl_rsa_private_key.destroy.
+ * Implementation of openssl_rsa_private_key.sign.
  */
 static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t scheme, 
 				 chunk_t data, chunk_t *signature)
@@ -152,7 +152,6 @@ static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t sch
 	switch (scheme)
 	{
 		case SIGN_DEFAULT:
-			/* default is EMSA-PKCS1 using SHA1 */
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return build_emsa_pkcs1_signature(this, NID_sha1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:
@@ -171,7 +170,7 @@ static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t sch
 }
 
 /**
- * Implementation of openssl_rsa_private_key.destroy.
+ * Implementation of openssl_rsa_private_key.decrypt.
  */
 static bool decrypt(private_openssl_rsa_private_key_t *this,
 					chunk_t crypto, chunk_t *plain)
@@ -181,7 +180,7 @@ static bool decrypt(private_openssl_rsa_private_key_t *this,
 }
 
 /**
- * Implementation of openssl_rsa_private_key.destroy.
+ * Implementation of openssl_rsa_private_key.get_keysize.
  */
 static size_t get_keysize(private_openssl_rsa_private_key_t *this)
 {
@@ -189,7 +188,7 @@ static size_t get_keysize(private_openssl_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of openssl_rsa_private_key.destroy.
+ * Implementation of openssl_rsa_private_key.get_id.
  */
 static identification_t* get_id(private_openssl_rsa_private_key_t *this,
 								id_type_t type)
@@ -206,7 +205,7 @@ static identification_t* get_id(private_openssl_rsa_private_key_t *this,
 }
 
 /**
- * Implementation of openssl_rsa_private_key.destroy.
+ * Implementation of openssl_rsa_private_key.get_public_key.
  */
 static openssl_rsa_public_key_t* get_public_key(private_openssl_rsa_private_key_t *this)
 {
@@ -214,7 +213,35 @@ static openssl_rsa_public_key_t* get_public_key(private_openssl_rsa_private_key_
 }
 
 /**
- * Implementation of openssl_rsa_private_key.destroy.
+ * Implementation of openssl_rsa_private_key.equals.
+ */
+static bool equals(private_openssl_rsa_private_key_t *this, private_key_t *other)
+{
+	identification_t *keyid;
+
+	if (&this->public.interface == other)
+	{
+		return TRUE;
+	}
+	if (other->get_type(other) != KEY_RSA)
+	{
+		return FALSE;
+	}
+	keyid = other->get_id(other, ID_PUBKEY_SHA1);
+	if (keyid && keyid->equals(keyid, this->keyid))
+	{
+		return TRUE;
+	}
+	keyid = other->get_id(other, ID_PUBKEY_INFO_SHA1);
+	if (keyid && keyid->equals(keyid, this->keyid_info))
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Implementation of openssl_rsa_private_key.belongs_to.
  */
 static bool belongs_to(private_openssl_rsa_private_key_t *this, public_key_t *public)
 {
@@ -253,7 +280,7 @@ static chunk_t get_encoding(private_openssl_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of openssl_rsa_private_key.destroy.
+ * Implementation of openssl_rsa_private_key.get_ref.
  */
 static private_openssl_rsa_private_key_t* get_ref(private_openssl_rsa_private_key_t *this)
 {
@@ -286,16 +313,17 @@ static private_openssl_rsa_private_key_t *openssl_rsa_private_key_create_empty(v
 {
 	private_openssl_rsa_private_key_t *this = malloc_thing(private_openssl_rsa_private_key_t);
 	
-	this->public.interface.get_type = (key_type_t (*)(private_key_t *this))get_type;
-	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
-	this->public.interface.decrypt = (bool (*)(private_key_t *this, chunk_t crypto, chunk_t *plain))decrypt;
-	this->public.interface.get_keysize = (size_t (*) (private_key_t *this))get_keysize;
-	this->public.interface.get_id = (identification_t* (*) (private_key_t *this,id_type_t))get_id;
-	this->public.interface.get_public_key = (public_key_t* (*)(private_key_t *this))get_public_key;
-	this->public.interface.belongs_to = (bool (*) (private_key_t *this, public_key_t *public))belongs_to;
-	this->public.interface.get_encoding = (chunk_t(*)(private_key_t*))get_encoding;
-	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
-	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
+	this->public.interface.get_type = (key_type_t (*) (private_key_t*))get_type;
+	this->public.interface.sign = (bool (*) (private_key_t*, signature_scheme_t, chunk_t, chunk_t*))sign;
+	this->public.interface.decrypt = (bool (*) (private_key_t*, chunk_t, chunk_t*))decrypt;
+	this->public.interface.get_keysize = (size_t (*) (private_key_t*))get_keysize;
+	this->public.interface.get_id = (identification_t* (*) (private_key_t*, id_type_t))get_id;
+	this->public.interface.get_public_key = (public_key_t* (*) (private_key_t*))get_public_key;
+	this->public.interface.equals = (bool (*) (private_key_t*, private_key_t*))equals;
+	this->public.interface.belongs_to = (bool (*) (private_key_t*, public_key_t*))belongs_to;
+	this->public.interface.get_encoding = (chunk_t(*) (private_key_t*))get_encoding;
+	this->public.interface.get_ref = (private_key_t* (*) (private_key_t*))get_ref;
+	this->public.interface.destroy = (void (*) (private_key_t*))destroy;
 	
 	this->engine = FALSE;
 	this->keyid = NULL;

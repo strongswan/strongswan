@@ -42,15 +42,15 @@
 #include <asn1/oid.h>
 #include <utils/optionsfrom.h>
 #include <utils/enumerator.h>
+#include <credentials/keys/private_key.h>
+#include <credentials/keys/public_key.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/log.h"
-#include "../pluto/pkcs1.h"
 #include "../pluto/pkcs7.h"
 #include "../pluto/certs.h"
 
-#include "rsakey.h"
 #include "pkcs10.h"
 #include "scep.h"
 
@@ -120,7 +120,8 @@ options_t *options;
  * Global variables
  */
 
-RSA_private_key_t *private_key = NULL;
+private_key_t *private_key = NULL;
+public_key_t *public_key = NULL;
 
 chunk_t pkcs1;
 chunk_t pkcs7;
@@ -150,11 +151,8 @@ exit_scepclient(err_t message, ...)
 {
 	int status = 0;
 
-	if (private_key != NULL)
-	{
-		free_RSA_private_content(private_key);
-		free(private_key);
-	}
+	DESTROY_IF(private_key);
+	DESTROY_IF(public_key);
 	free(pkcs1.ptr);
 	free(pkcs7.ptr);
 	free(subject.ptr);
@@ -784,24 +782,27 @@ int main(int argc, char **argv)
 	/*
 	 * input of PKCS#1 file
 	 */
-	private_key = malloc_thing(RSA_private_key_t);
-
 	if (filetype_in & PKCS1)    /* load an RSA key pair from file */ 
 	{
 		prompt_pass_t pass = { "", FALSE, STDIN_FILENO };
 		char *path = concatenate_paths(PRIVATE_KEY_PATH, file_in_pkcs1);
 
-		ugh = load_rsa_private_key(path, &pass, private_key);
+		private_key = load_private_key(path, &pass, KEY_RSA);
 	}
 	else                                /* generate an RSA key pair */
 	{
-		ugh = generate_rsa_private_key(rsa_keylength, private_key);
+		private_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+										 BUILD_KEY_SIZE, rsa_keylength,
+ 										 BUILD_END);
 	}
-	if (ugh != NULL)
-		exit_scepclient(ugh);
+	if (private_key == NULL)
+	{
+		exit_scepclient("no RSA private key available");
+	}
+	public_key = private_key->get_public_key(private_key);
 
 	/* check for minimum key length */
-	if ((private_key->pub.k) < RSA_MIN_OCTETS)
+	if (private_key->get_keysize(private_key) < RSA_MIN_OCTETS)
 	{
 		exit_scepclient("length of RSA key has to be at least %d bits"
 			,RSA_MIN_OCTETS * BITS_PER_BYTE);
@@ -855,10 +856,11 @@ int main(int argc, char **argv)
 		DBG(DBG_CONTROL,
 			DBG_log("building pkcs10 object:")
 		)
-		pkcs10 = pkcs10_build(private_key, subject, challengePassword
-					, subjectAltNames, pkcs10_signature_alg);
-		scep_generate_pkcs10_fingerprint(pkcs10->request, &fingerprint);
-		plog("  fingerprint:    %.*s", (int)fingerprint.len, fingerprint.ptr);
+		pkcs10 = pkcs10_build(private_key, public_key, subject,
+							  challengePassword, subjectAltNames,
+							  pkcs10_signature_alg);
+		fingerprint = scep_generate_pkcs10_fingerprint(pkcs10->request);
+		plog("  fingerprint:    %s", fingerprint.ptr);
 	}
 
 	/* 
@@ -889,7 +891,7 @@ int main(int argc, char **argv)
 		DBG(DBG_CONTROL,
 			DBG_log("building pkcs1 object:")
 		)
-		pkcs1 = pkcs1_build_private_key(private_key);
+		pkcs1 = private_key->get_encoding(private_key);
 
 		if (!chunk_write(pkcs1, path, "pkcs1", 0066, force))
 			exit_scepclient("could not write pkcs1 file '%s'", path);
@@ -902,8 +904,7 @@ int main(int argc, char **argv)
 		exit_scepclient(NULL); /* no further output required */
 	}
 
-	scep_generate_transaction_id((const RSA_public_key_t *)private_key
-		, &transID, &serialNumber);
+	scep_generate_transaction_id(public_key, &transID, &serialNumber);
 	plog("  transaction ID: %.*s", (int)transID.len, transID.ptr);
 
 	/* generate a self-signed X.509 certificate */
@@ -918,9 +919,7 @@ int main(int argc, char **argv)
 									  : x509_signer->notBefore + validity;
 	x509_signer->subject = subject;
 	x509_signer->subjectAltName = subjectAltNames;
-
-	build_x509cert(x509_signer, (const RSA_public_key_t *)private_key
-				 , private_key);
+	build_x509cert(x509_signer, public_key, private_key);
 
 	/*
 	 * output of self-signed X.509 certificate file

@@ -39,7 +39,6 @@
 #include "certs.h"
 #include "smartcard.h"
 #include "whack.h"
-#include "pkcs1.h"
 #include "keys.h"
 #include "fetch.h"
 #include "ocsp.h"
@@ -159,7 +158,7 @@ static x509cert_t *ocsp_requestor_cert = NULL;
 
 static smartcard_t *ocsp_requestor_sc = NULL;
 
-static const struct RSA_private_key *ocsp_requestor_pri = NULL;
+static private_key_t *ocsp_requestor_key = NULL;
 
 /**
  * ASN.1 definition of ocspResponse
@@ -293,8 +292,9 @@ static const asn1Object_t singleResponseObjects[] = {
  */
 static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *location)
 {
+	hasher_t *hasher;
 	static u_char digest[HASH_SIZE_SHA1];  /* temporary storage */
-
+	
 	location->uri = cert->accessLocation;
 
 	if (location->uri.ptr == NULL)
@@ -311,8 +311,15 @@ static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *locatio
 		}
 	}
 	
+	/* compute authNameID from as SHA-1 hash of issuer DN */
 	location->authNameID = chunk_create(digest, HASH_SIZE_SHA1);
-	compute_digest(cert->issuer, OID_SHA1, &location->authNameID);
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (hasher == NULL)
+	{
+		return FALSE;
+	}
+ 	hasher->get_hash(hasher, cert->issuer, digest);
+	hasher->destroy(hasher);
 
 	location->next = NULL;
 	location->issuer = cert->issuer;
@@ -660,7 +667,7 @@ static bool get_ocsp_requestor_cert(ocsp_location_t *location)
 	/* initialize temporary static storage */
 	ocsp_requestor_cert = NULL;
 	ocsp_requestor_sc   = NULL;
-	ocsp_requestor_pri  = NULL;
+	ocsp_requestor_key  = NULL;
 
 	for (;;)
 	{
@@ -699,15 +706,15 @@ static bool get_ocsp_requestor_cert(ocsp_location_t *location)
 		else
 		{
 			/* look for a matching private key in the chained list */
-			const struct RSA_private_key *pri = get_x509_private_key(cert);
+			private_key_t *private = get_x509_private_key(cert);
 
-			if (pri != NULL)
+			if (private != NULL)
 			{
 				DBG(DBG_CONTROL,
 					DBG_log("matching private key found")
 				)
 				ocsp_requestor_cert = cert;
-				ocsp_requestor_pri = pri;
+				ocsp_requestor_key = private;
 				return TRUE;
 			}
 		}
@@ -715,50 +722,58 @@ static bool get_ocsp_requestor_cert(ocsp_location_t *location)
 	return FALSE;
 }
 
-static chunk_t generate_signature(chunk_t digest, smartcard_t *sc,
-								  const RSA_private_key_t *pri)
+static chunk_t sc_build_sha1_signature(chunk_t tbs, smartcard_t *sc)
 {
-	chunk_t sigdata;
+	hasher_t *hasher;
 	u_char *pos;
+	u_char digest_buf[HASH_SIZE_SHA1];
+	chunk_t digest = chunk_from_buf(digest_buf);
+	chunk_t digest_info, sigdata;
 	size_t siglen = 0;
 
-	if (sc != NULL)
+	if (!scx_establish_context(sc) || !scx_login(sc))
 	{
-		/* RSA signature is done on smartcard */
-
-		if (!scx_establish_context(sc) || !scx_login(sc))
-		{
-			scx_release_context(sc);
-			return chunk_empty;
-		}
-
-		siglen = scx_get_keylength(sc);
-
-		if (siglen == 0)
-		{
-			plog("failed to get keylength from smartcard");
-			scx_release_context(sc);
-			return chunk_empty;
-		}
-
-		DBG(DBG_CONTROL | DBG_CRYPT,
-			DBG_log("signing hash with RSA key from smartcard (slot: %d, id: %s)"
-				, (int)sc->slot, sc->id)
-		)
-
-		pos = asn1_build_object(&sigdata, ASN1_BIT_STRING, 1 + siglen);
-		*pos++ = 0x00;
-		scx_sign_hash(sc, digest.ptr, digest.len, pos, siglen);
-		if (!pkcs11_keep_state)
-			scx_release_context(sc);
+		scx_release_context(sc);
+		return chunk_empty;
 	}
-	else
+
+	siglen = scx_get_keylength(sc);
+
+	if (siglen == 0)
 	{
-		/* RSA signature is done in software */
-		siglen = pri->pub.k;
-		pos = asn1_build_object(&sigdata, ASN1_BIT_STRING, 1 + siglen);
-		*pos++ = 0x00;
-		sign_hash(pri, digest.ptr, digest.len, pos, siglen);
+		plog("failed to get keylength from smartcard");
+		scx_release_context(sc);
+		return chunk_empty;
+	}
+
+	DBG(DBG_CONTROL | DBG_CRYPT,
+		DBG_log("signing hash with RSA key from smartcard (slot: %d, id: %s)"
+			, (int)sc->slot, sc->id)
+	)
+
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (hasher == NULL)
+	{
+		return chunk_empty;
+	}
+ 	hasher->get_hash(hasher, tbs, digest_buf);
+	hasher->destroy(hasher);
+
+	/* according to PKCS#1 v2.1 digest must be packaged into
+	 * an ASN.1 structure for encryption
+	 */
+	digest_info = asn1_wrap(ASN1_SEQUENCE, "cm"
+		, asn1_algorithmIdentifier(OID_SHA1)
+		, asn1_simple_object(ASN1_OCTET_STRING, digest));
+
+	pos = asn1_build_object(&sigdata, ASN1_BIT_STRING, 1 + siglen);
+	*pos++ = 0x00;
+	scx_sign_hash(sc, digest_info.ptr, digest_info.len, pos, siglen);
+	free(digest_info.ptr);
+
+	if (!pkcs11_keep_state)
+	{
+		scx_release_context(sc);
 	}
 	return sigdata;
 }
@@ -770,30 +785,22 @@ static chunk_t generate_signature(chunk_t digest, smartcard_t *sc,
 static chunk_t build_signature(chunk_t tbsRequest)
 {
 	chunk_t sigdata, certs;
-	chunk_t digest_info;
 
-	u_char digest_buf[MAX_DIGEST_LEN];
-	chunk_t digest_raw = { digest_buf, MAX_DIGEST_LEN };
-
-	if (!compute_digest(tbsRequest, OID_SHA1, &digest_raw))
-		return chunk_empty;
-
-	/* according to PKCS#1 v2.1 digest must be packaged into
-	 * an ASN.1 structure for encryption
-	 */
-	digest_info = asn1_wrap(ASN1_SEQUENCE, "cm"
-		, asn1_algorithmIdentifier(OID_SHA1)
-		, asn1_simple_object(ASN1_OCTET_STRING, digest_raw));
-
-	/* generate the RSA signature */
-	sigdata = generate_signature(digest_info
-		, ocsp_requestor_sc
-		, ocsp_requestor_pri);
-	free(digest_info.ptr);
-
-	/* has the RSA signature generation been successful? */
+	if (ocsp_requestor_sc != NULL)
+	{
+		/* RSA signature is done on smartcard */
+		sigdata = sc_build_sha1_signature(tbsRequest, ocsp_requestor_sc);
+	}
+	else
+	{
+		/* RSA signature is done in software */
+		sigdata = x509_build_signature(tbsRequest, OID_SHA1, ocsp_requestor_key,
+									   TRUE);
+	}
 	if (sigdata.ptr == NULL)
+	{
 		return chunk_empty;
+	}
 
 	/* include our certificate */
 	certs = asn1_wrap(ASN1_CONTEXT_C_0, "m"
@@ -992,8 +999,7 @@ static bool valid_ocsp_response(response_t *res)
 		DBG_log("ocsp signer cert found")
 	)
 
-	if (!check_signature(res->tbs, res->signature, res->algorithm
-					   , res->algorithm, authcert))
+	if (!x509_check_signature(res->tbs, res->signature, res->algorithm, authcert))
 	{
 		plog("signature of ocsp response is invalid");
 		unlock_authcert_list("valid_ocsp_response");
@@ -1051,8 +1057,8 @@ static bool valid_ocsp_response(response_t *res)
 			DBG_log("issuer cacert found")
 		)
 
-		if (!check_signature(cert->tbsCertificate, cert->signature
-						   , cert->algorithm, cert->algorithm, authcert))
+		if (!x509_check_signature(cert->tbsCertificate, cert->signature,
+								  cert->algorithm, authcert))
 		{
 			plog("certificate signature is invalid");
 			unlock_authcert_list("valid_ocsp_response");

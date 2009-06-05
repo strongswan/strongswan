@@ -234,10 +234,11 @@ key_add_request(const whack_message_t *msg)
 		}
 		else
 		{
-			ugh = add_public_key(&keyid, DAL_LOCAL, msg->pubkey_alg
-				, &msg->keyval, &pubkeys);
-			if (ugh != NULL)
-				loglog(RC_LOG_SERIOUS, "%s", ugh);
+			if (!add_public_key(&keyid, DAL_LOCAL, msg->pubkey_alg, msg->keyval,
+				&pubkeys))
+			{
+				loglog(RC_LOG_SERIOUS, "failed to add public key");
+			}
 		}
 	}
 }

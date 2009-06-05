@@ -730,7 +730,6 @@ static bool parse_certificate(private_x509_cert_t *this)
 						KEY_ANY, BUILD_BLOB_ASN1_DER, object, BUILD_END);
 				if (this->public_key == NULL)
 				{
-					DBG1("could not create public key");
 					goto end;
 				}
 				break;
@@ -1123,19 +1122,19 @@ static private_x509_cert_t* create_empty(void)
 {
 	private_x509_cert_t *this = malloc_thing(private_x509_cert_t);
 	
-	this->public.interface.interface.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
-	this->public.interface.interface.get_subject = (identification_t* (*)(certificate_t *this))get_subject;
-	this->public.interface.interface.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.interface.interface.has_subject = (id_match_t (*)(certificate_t*, identification_t *subject))has_subject;
-	this->public.interface.interface.has_issuer = (id_match_t (*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.interface.interface.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
-	this->public.interface.interface.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
-	this->public.interface.interface.get_validity = (bool (*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.interface.interface.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
-	this->public.interface.interface.get_encoding = (chunk_t (*)(certificate_t*))get_encoding;
-	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t *other))equals;
-	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
-	this->public.interface.interface.destroy = (void (*)(certificate_t *this))destroy;
+	this->public.interface.interface.get_type = (certificate_type_t (*) (certificate_t*))get_type;
+	this->public.interface.interface.get_subject = (identification_t* (*) (certificate_t*))get_subject;
+	this->public.interface.interface.get_issuer = (identification_t* (*) (certificate_t*))get_issuer;
+	this->public.interface.interface.has_subject = (id_match_t (*) (certificate_t*, identification_t*))has_subject;
+	this->public.interface.interface.has_issuer = (id_match_t (*) (certificate_t*, identification_t*))has_issuer;
+	this->public.interface.interface.issued_by = (bool (*) (certificate_t*, certificate_t*))issued_by;
+	this->public.interface.interface.get_public_key = (public_key_t* (*) (certificate_t*))get_public_key;
+	this->public.interface.interface.get_validity = (bool (*) (certificate_t*, time_t*, time_t*, time_t*))get_validity;
+	this->public.interface.interface.is_newer = (bool (*) (certificate_t*,certificate_t*))is_newer;
+	this->public.interface.interface.get_encoding = (chunk_t (*) (certificate_t*))get_encoding;
+	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t*))equals;
+	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t*))get_ref;
+	this->public.interface.interface.destroy = (void (*)(certificate_t*))destroy;
 	this->public.interface.get_flags = (x509_flag_t (*)(x509_t*))get_flags;
 	this->public.interface.get_serial = (chunk_t (*)(x509_t*))get_serial;
 	this->public.interface.get_authKeyIdentifier = (identification_t* (*)(x509_t*))get_authKeyIdentifier;
@@ -1314,7 +1313,7 @@ static bool generate(private_builder_t *this)
 	
 	this->cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmccmcmm", 
 		asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2),
-		asn1_simple_object(ASN1_INTEGER, this->cert->serialNumber),
+		asn1_integer("c", this->cert->serialNumber),
 		asn1_algorithmIdentifier(this->cert->algorithm),
 		issuer->get_encoding(issuer),
 		asn1_wrap(ASN1_SEQUENCE, "mm",

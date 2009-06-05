@@ -1,5 +1,6 @@
 /* mechanisms for preshared keys (public, private, and preshared secrets)
  * Copyright (C) 1998-2002  D. Hugh Redelmeier.
+ * Copyright (C) 2009 Andreas Steffen, Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,9 +16,9 @@
 #ifndef _KEYS_H
 #define _KEYS_H
 
-#include <gmp.h>    /* GNU Multi-Precision library */
+#include <credentials/keys/private_key.h>
+#include <credentials/keys/public_key.h>
 
-#include "pkcs1.h"
 #include "certs.h"
 
 #ifndef SHARED_SECRETS_FILE
@@ -31,8 +32,7 @@ extern void free_preshared_secrets(void);
 
 enum PrivateKeyKind {
 	PPK_PSK,
- /* PPK_DSS, */ /* not implemented */
-	PPK_RSA,
+	PPK_PUBKEY,
 	PPK_XAUTH,
 	PPK_PIN
 };
@@ -43,9 +43,8 @@ extern void xauth_defaults(void);
 struct connection;
 
 extern const chunk_t *get_preshared_secret(const struct connection *c);
-extern err_t unpack_RSA_public_key(RSA_public_key_t *rsa, const chunk_t *pubkey);
-extern const RSA_private_key_t *get_RSA_private_key(const struct connection *c);
-extern const RSA_private_key_t *get_x509_private_key(const x509cert_t *cert);
+extern private_key_t *get_private_key(const struct connection *c);
+extern private_key_t *get_x509_private_key(const x509cert_t *cert);
 
 /* public key machinery  */
 
@@ -62,10 +61,7 @@ struct pubkey {
 		, until_time;
 	chunk_t issuer;
 	chunk_t serial;
-	enum pubkey_alg alg;
-	union {
-		RSA_public_key_t rsa;
-	} u;
+	public_key_t *public_key;
 };
 
 typedef struct pubkey_list pubkey_list_t;
@@ -77,21 +73,20 @@ struct pubkey_list {
 
 extern pubkey_list_t *pubkeys;  /* keys from ipsec.conf or from certs */
 
-extern pubkey_t *public_key_from_rsa(const RSA_public_key_t *k);
+extern pubkey_t *public_key_from_rsa(public_key_t *key);
 extern pubkey_list_t *free_public_keyentry(pubkey_list_t *p);
 extern void free_public_keys(pubkey_list_t **keys);
 extern void free_remembered_public_keys(void);
-extern void delete_public_keys(const struct id *id, enum pubkey_alg alg
-	, chunk_t issuer, chunk_t serial);
-
+extern void delete_public_keys(const struct id *id, key_type_t type,
+							   chunk_t issuer, chunk_t serial);
 extern pubkey_t *reference_key(pubkey_t *pk);
 extern void unreference_key(pubkey_t **pkp);
 
-extern err_t add_public_key(const struct id *id
-	, enum dns_auth_level dns_auth_level
-	, enum pubkey_alg alg
-	, const chunk_t *key
-	, pubkey_list_t **head);
+extern bool add_public_key(const struct id *id,
+						   enum dns_auth_level dns_auth_level,
+						   enum pubkey_alg alg,
+						   chunk_t rfc3110_key,
+						   pubkey_list_t **head);
 
 extern bool has_private_key(cert_t cert);
 extern void add_x509_public_key(x509cert_t *cert, time_t until

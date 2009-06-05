@@ -26,6 +26,7 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
+#include <pgp/pgp.h>
 
 /**
  *  Public exponent to use for key generation.
@@ -110,11 +111,12 @@ struct private_gmp_rsa_private_key_t {
 };
 
 /**
- * shared functions, implemented in gmp_rsa_public_key.c
+ * Shared functions defined in gmp_rsa_public_key.c
  */
-bool gmp_rsa_public_key_build_id(mpz_t n, mpz_t e, identification_t **keyid,
-								 identification_t **keyid_info);
-gmp_rsa_public_key_t *gmp_rsa_public_key_create_from_n_e(mpz_t n, mpz_t e);
+extern bool gmp_rsa_public_key_build_id(mpz_t n, mpz_t e, 
+										identification_t **keyid,
+										identification_t **keyid_info);
+extern gmp_rsa_public_key_t *gmp_rsa_public_key_create_from_n_e(mpz_t n, mpz_t e);
 
 /**
  * Auxiliary function overwriting private key material with zero bytes
@@ -215,32 +217,36 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 									   hash_algorithm_t hash_algorithm,
 									   chunk_t data, chunk_t *signature)
 {
-	hasher_t *hasher;
-	chunk_t em, digestInfo, hash;
-	int hash_oid = hasher_algorithm_to_oid(hash_algorithm);
-	
-	if (hash_oid == OID_UNKNOWN)
-	{
-		return FALSE;
-	}
+	chunk_t digestInfo = chunk_empty;
+	chunk_t em;
 
-	/* get hasher */
-	hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
-	if (hasher == NULL)
+	if (hash_algorithm != HASH_UNKNOWN)
 	{
-		return FALSE;
+		hasher_t *hasher;
+		chunk_t hash;
+		int hash_oid = hasher_algorithm_to_oid(hash_algorithm);
+	
+		if (hash_oid == OID_UNKNOWN)
+		{
+			return FALSE;
+		}
+
+		hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
+		if (hasher == NULL)
+		{
+			return FALSE;
+		}
+		hasher->allocate_hash(hasher, data, &hash);
+		hasher->destroy(hasher);
+	
+		/* build DER-encoded digestInfo */
+		digestInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
+						asn1_algorithmIdentifier(hash_oid),
+						asn1_simple_object(ASN1_OCTET_STRING, hash)
+					  );
+		chunk_free(&hash);
+		data = digestInfo;
 	}
-	
-	/* build hash */
-	hasher->allocate_hash(hasher, data, &hash);
-	hasher->destroy(hasher);
-	
-	/* build DER-encoded digestInfo */
-	digestInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
-					asn1_algorithmIdentifier(hash_oid),
-					asn1_simple_object(ASN1_OCTET_STRING, hash)
-				  );
-	chunk_free(&hash);
 
 	/* build chunk to rsa-decrypt:
 	 * EM = 0x00 || 0x01 || PS || 0x00 || T. 
@@ -255,9 +261,9 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 	/* set magic bytes */
 	*(em.ptr) = 0x00;
 	*(em.ptr+1) = 0x01;
-	*(em.ptr + em.len - digestInfo.len - 1) = 0x00;
+	*(em.ptr + em.len - data.len - 1) = 0x00;
 	/* set DER-encoded hash */
-	memcpy(em.ptr + em.len - digestInfo.len, digestInfo.ptr, digestInfo.len);
+	memcpy(em.ptr + em.len - data.len, data.ptr, data.len);
 
 	/* build signature */
 	*signature = rsasp1(this, em);
@@ -269,7 +275,7 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 }
 
 /**
- * Implementation of gmp_rsa_private_key.destroy.
+ * Implementation of gmp_rsa_private_key.get_type.
  */
 static key_type_t get_type(private_gmp_rsa_private_key_t *this)
 {
@@ -277,15 +283,16 @@ static key_type_t get_type(private_gmp_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of gmp_rsa_private_key.destroy.
+ * Implementation of gmp_rsa_private_key.sign.
  */
 static bool sign(private_gmp_rsa_private_key_t *this, signature_scheme_t scheme, 
 				 chunk_t data, chunk_t *signature)
 {
 	switch (scheme)
 	{
+		case SIGN_RSA_EMSA_PKCS1_NULL:
+			return build_emsa_pkcs1_signature(this, HASH_UNKNOWN, data, signature);
 		case SIGN_DEFAULT:
-			/* default is EMSA-PKCS1 using SHA1 */
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return build_emsa_pkcs1_signature(this, HASH_SHA1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:
@@ -304,7 +311,7 @@ static bool sign(private_gmp_rsa_private_key_t *this, signature_scheme_t scheme,
 }
 
 /**
- * Implementation of gmp_rsa_private_key.destroy.
+ * Implementation of gmp_rsa_private_key.decrypt.
  */
 static bool decrypt(private_gmp_rsa_private_key_t *this,
 					chunk_t crypto, chunk_t *plain)
@@ -314,7 +321,7 @@ static bool decrypt(private_gmp_rsa_private_key_t *this,
 }
 
 /**
- * Implementation of gmp_rsa_private_key.destroy.
+ * Implementation of gmp_rsa_private_key.get_keysize.
  */
 static size_t get_keysize(private_gmp_rsa_private_key_t *this)
 {
@@ -322,7 +329,7 @@ static size_t get_keysize(private_gmp_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of gmp_rsa_private_key.destroy.
+ * Implementation of gmp_rsa_private_key.get_id.
  */
 static identification_t* get_id(private_gmp_rsa_private_key_t *this,
 								id_type_t type)
@@ -347,7 +354,35 @@ static gmp_rsa_public_key_t* get_public_key(private_gmp_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of gmp_rsa_private_key.destroy.
+ * Implementation of gmp_rsa_private_key.equals.
+ */
+static bool equals(private_gmp_rsa_private_key_t *this, private_key_t *other)
+{
+	identification_t *keyid;
+
+	if (&this->public.interface == other)
+	{
+		return TRUE;
+	}
+	if (other->get_type(other) != KEY_RSA)
+	{
+		return FALSE;
+	}
+	keyid = other->get_id(other, ID_PUBKEY_SHA1);
+	if (keyid && keyid->equals(keyid, this->keyid))
+	{
+		return TRUE;
+	}
+	keyid = other->get_id(other, ID_PUBKEY_INFO_SHA1);
+	if (keyid && keyid->equals(keyid, this->keyid_info))
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Implementation of gmp_rsa_private_key.belongs_to.
  */
 static bool belongs_to(private_gmp_rsa_private_key_t *this, public_key_t *public)
 {
@@ -371,19 +406,27 @@ static bool belongs_to(private_gmp_rsa_private_key_t *this, public_key_t *public
 }
 
 /**
- * convert a MP integer into a DER coded ASN.1 object
+ * Convert a MP integer into a chunk_t
  */
-chunk_t gmp_mpz_to_asn1(const mpz_t value)
+chunk_t gmp_mpz_to_chunk(const mpz_t value)
 {
 	chunk_t n;
 	
-	n.len = 1 + mpz_sizeinbase(value, 2) / 8;  /* size in bytes */
+	n.len = 1 + mpz_sizeinbase(value, 2) / BITS_PER_BYTE;
 	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
 	if (n.ptr == NULL)
 	{	/* if we have zero in "value", gmp returns NULL */
 		n.len = 0;
 	}
-	return asn1_wrap(ASN1_INTEGER, "m", n);
+	return n;
+}
+
+/**
+ * Convert a MP integer into a DER coded ASN.1 object
+ */
+chunk_t gmp_mpz_to_asn1(const mpz_t value)
+{
+	return asn1_wrap(ASN1_INTEGER, "m", gmp_mpz_to_chunk(value));
 }
 
 /**
@@ -404,7 +447,7 @@ static chunk_t get_encoding(private_gmp_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of gmp_rsa_private_key.destroy.
+ * Implementation of gmp_rsa_private_key.get_ref.
  */
 static private_gmp_rsa_private_key_t* get_ref(private_gmp_rsa_private_key_t *this)
 {
@@ -445,14 +488,14 @@ static status_t check(private_gmp_rsa_private_key_t *this)
 	/* PKCS#1 1.5 section 6 requires modulus to have at least 12 octets.
 	 * We actually require more (for security).
 	 */
-	if (this->k < 512/8)
+	if (this->k < 512 / BITS_PER_BYTE)
 	{
 		DBG1("key shorter than 512 bits");
 		return FAILED;
 	}
 	
 	/* we picked a max modulus size to simplify buffer allocation */
-	if (this->k > 8192/8)
+	if (this->k > 8192 / BITS_PER_BYTE)
 	{
 		DBG1("key larger than 8192 bits");
 		return FAILED;
@@ -540,16 +583,17 @@ static private_gmp_rsa_private_key_t *gmp_rsa_private_key_create_empty(void)
 {
 	private_gmp_rsa_private_key_t *this = malloc_thing(private_gmp_rsa_private_key_t);
 	
-	this->public.interface.get_type = (key_type_t (*)(private_key_t *this))get_type;
-	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
-	this->public.interface.decrypt = (bool (*)(private_key_t *this, chunk_t crypto, chunk_t *plain))decrypt;
-	this->public.interface.get_keysize = (size_t (*) (private_key_t *this))get_keysize;
-	this->public.interface.get_id = (identification_t* (*) (private_key_t *this,id_type_t))get_id;
-	this->public.interface.get_public_key = (public_key_t* (*)(private_key_t *this))get_public_key;
-	this->public.interface.belongs_to = (bool (*) (private_key_t *this, public_key_t *public))belongs_to;
-	this->public.interface.get_encoding = (chunk_t(*)(private_key_t*))get_encoding;
-	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
-	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
+	this->public.interface.get_type = (key_type_t (*) (private_key_t*))get_type;
+	this->public.interface.sign = (bool (*) (private_key_t*, signature_scheme_t, chunk_t, chunk_t*))sign;
+	this->public.interface.decrypt = (bool (*) (private_key_t*, chunk_t, chunk_t*))decrypt;
+	this->public.interface.get_keysize = (size_t (*) (private_key_t*))get_keysize;
+	this->public.interface.get_id = (identification_t* (*) (private_key_t*, id_type_t))get_id;
+	this->public.interface.get_public_key = (public_key_t* (*) (private_key_t*))get_public_key;
+	this->public.interface.equals = (bool (*) (private_key_t*, private_key_t*))equals;
+	this->public.interface.belongs_to = (bool (*) (private_key_t*, public_key_t*))belongs_to;
+	this->public.interface.get_encoding = (chunk_t (*) (private_key_t*))get_encoding;
+	this->public.interface.get_ref = (private_key_t* (*) (private_key_t*))get_ref;
+	this->public.interface.destroy = (void (*) (private_key_t*))destroy;
 	
 	this->keyid = NULL;
 	this->keyid_info = NULL;
@@ -567,7 +611,7 @@ static gmp_rsa_private_key_t *generate(size_t key_size)
 	mpz_t m, q1, t;
 	private_gmp_rsa_private_key_t *this = gmp_rsa_private_key_create_empty();
 	
-	key_size = key_size / 8;
+	key_size = key_size / BITS_PER_BYTE;
 	
 	/* Get values of primes p and q  */
 	if (compute_prime(this, key_size/2, &p) != SUCCESS)
@@ -678,7 +722,7 @@ static const asn1Object_t privkeyObjects[] = {
 /**
  * load private key from a ASN1 encoded blob
  */
-static gmp_rsa_private_key_t *load(chunk_t blob)
+static gmp_rsa_private_key_t *load_asn1_der(chunk_t blob)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
@@ -706,6 +750,7 @@ static gmp_rsa_private_key_t *load(chunk_t blob)
 			case PRIV_KEY_VERSION:
 				if (object.len > 0 && *object.ptr != 0)
 				{
+					DBG1("PKCS#1 private key format is not version 1");
 					goto end;
 				}
 				break;
@@ -755,13 +800,131 @@ end:
 		destroy(this);
 		return NULL;
 	}
-
 	if (check(this) != SUCCESS)
 	{
 		destroy(this);
 		return NULL;
 	}
 	return &this->public;
+}
+
+/**
+ * load private key from an OpenPGP blob coded according to section 
+ */
+static gmp_rsa_private_key_t *load_pgp(chunk_t blob)
+{
+	mpz_t u;
+	int objectID;
+	pgp_sym_alg_t s2k;
+	chunk_t packet = blob;
+	private_gmp_rsa_private_key_t *this = gmp_rsa_private_key_create_empty();
+	
+	mpz_init(this->n);
+	mpz_init(this->e);
+	mpz_init(this->p);
+	mpz_init(this->q);
+	mpz_init(this->d);
+	mpz_init(this->exp1);
+	mpz_init(this->exp2);
+	mpz_init(this->coeff);
+
+	/* string-to-key usage */
+	s2k = pgp_length(&packet, 1);
+	DBG2("L3 - string-to-key:  %d", s2k);
+
+	if (s2k == 255 || s2k == 254)
+	{
+		DBG1("string-to-key specifiers not supported");
+		goto end;
+	}
+	DBG2("  %N", pgp_sym_alg_names, s2k);
+
+	if (s2k != PGP_SYM_ALG_PLAIN)
+	{
+		DBG1("%N encryption not supported",  pgp_sym_alg_names, s2k);
+		goto end;
+	}
+
+	for (objectID = PRIV_KEY_MODULUS; objectID <= PRIV_KEY_PRIME2; objectID++)
+	{
+		chunk_t object;	
+
+		object.len = pgp_length(&packet, 2);
+
+		if (object.len == PGP_INVALID_LENGTH)
+		{
+			DBG1("OpenPGP length is invalid");
+			goto end;
+		}
+		object.len = (object.len + 7) / BITS_PER_BYTE;
+		if (object.len > packet.len)
+		{
+			DBG1("OpenPGP field is too short");
+			goto end;
+		}
+		object.ptr = packet.ptr;
+		packet.ptr += object.len;
+		packet.len -= object.len;
+
+		switch (objectID)
+		{
+			case PRIV_KEY_MODULUS:
+				mpz_import(this->n, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_PUB_EXP:
+				mpz_import(this->e, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_PRIV_EXP:
+				mpz_import(this->d, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_PRIME1:
+				mpz_import(this->p, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_PRIME2:
+				mpz_import(this->q, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+		}
+	}
+
+	/* auxiliary variable */
+	mpz_init(u);
+
+	/* exp1 = d mod (p-1) */
+	mpz_sub_ui(u, this->p, 1);
+	mpz_mod(this->exp1, this->d, u);
+
+	/* exp2 = d mod (q-1) */
+	mpz_sub_ui(u, this->q, 1);
+	mpz_mod(this->exp2, this->d, u);
+
+	/* coeff = (q^-1) mod p */
+	mpz_invert(this->coeff, this->q, this->p);
+	if (mpz_cmp_ui(this->coeff, 0) < 0)
+	{
+		mpz_add(this->coeff, this->coeff, this->p);
+	}
+	mpz_clear(u);
+	chunk_clear(&blob);
+
+	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
+
+	if (!gmp_rsa_public_key_build_id(this->n, this->e,
+									 &this->keyid, &this->keyid_info))
+	{
+		destroy(this);
+		return NULL;
+	}
+	if (check(this) != SUCCESS)
+	{
+		destroy(this);
+		return NULL;
+	}
+	return &this->public;
+
+end:
+	chunk_clear(&blob);
+	destroy(this);
+	return NULL;
 }
 
 typedef struct private_builder_t private_builder_t;
@@ -802,7 +965,15 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			{
 				va_start(args, part);
 				chunk = va_arg(args, chunk_t);
-				this->key = load(chunk_clone(chunk));
+				this->key = load_asn1_der(chunk_clone(chunk));
+				va_end(args);
+				return;
+			}		
+			case BUILD_BLOB_PGP:
+			{
+				va_start(args, part);
+				chunk = va_arg(args, chunk_t);
+				this->key = load_pgp(chunk_clone(chunk));
 				va_end(args);
 				return;
 			}		

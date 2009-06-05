@@ -31,7 +31,6 @@
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
-#include "../pluto/pkcs1.h"
 #include "../pluto/log.h"
 #include "../pluto/x509.h"
 
@@ -158,21 +157,25 @@ build_req_info_attributes(pkcs10_t* pkcs10)
 static chunk_t
 pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
 {
-	RSA_public_key_t *rsak = (RSA_public_key_t *) pkcs10->private_key;
+	chunk_t key = pkcs10->public_key->get_encoding(pkcs10->public_key);
 
-	chunk_t cert_req_info = asn1_wrap(ASN1_SEQUENCE, "ccmm"
-				, ASN1_INTEGER_0
-				, pkcs10->subject
-				, pkcs1_build_publicKeyInfo(rsak)
-				, build_req_info_attributes(pkcs10));
+	chunk_t keyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
+							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
+							asn1_bitstring("m", key));	
 
-	chunk_t signature = pkcs1_build_signature(cert_req_info
-				, signature_alg, pkcs10->private_key, TRUE);
+	chunk_t cert_req_info = asn1_wrap(ASN1_SEQUENCE, "ccmm",
+								ASN1_INTEGER_0,
+								pkcs10->subject,
+								keyInfo,
+								build_req_info_attributes(pkcs10));
 
-	return asn1_wrap(ASN1_SEQUENCE, "mcm"
-				, cert_req_info
-				, asn1_algorithmIdentifier(signature_alg)
-				, signature);
+	chunk_t signature = x509_build_signature(cert_req_info, signature_alg,
+											 pkcs10->private_key, TRUE);
+
+	return asn1_wrap(ASN1_SEQUENCE, "mcm",
+				cert_req_info,
+				asn1_algorithmIdentifier(signature_alg),
+				signature);
 }
 
 /**
@@ -189,14 +192,15 @@ pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
  * @param[in]   subjectAltNames         linked list of subjectAltNames or NULL
  * @return                              pointer to a #pkcs10_t object
  */
-pkcs10_t*
-pkcs10_build(RSA_private_key_t *key, chunk_t subject, chunk_t challengePassword
-, generalName_t *subjectAltNames, int signature_alg)
+pkcs10_t* pkcs10_build(private_key_t *private, public_key_t *public,
+					   chunk_t subject, chunk_t challengePassword,
+					   generalName_t *subjectAltNames, int signature_alg)
 {
 	pkcs10_t *pkcs10 = malloc_thing(pkcs10_t);
 
 	pkcs10->subject = subject;
-	pkcs10->private_key = key;
+	pkcs10->private_key = private;
+	pkcs10->public_key = public;
 	pkcs10->challengePassword = challengePassword;
 	pkcs10->subjectAltNames = subjectAltNames;
 

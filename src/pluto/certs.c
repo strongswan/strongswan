@@ -1,5 +1,7 @@
 /* Certificate support for IKE authentication
- * Copyright (C) 2002-2004 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2002-2009 Andreas Steffen
+ *
+ * HSR - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,17 +20,15 @@
 
 #include <freeswan.h>
 
+#include "library.h"
 #include "asn1/asn1.h"
 
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
 #include "id.h"
-#include "x509.h"
-#include "pgp.h"
 #include "pem.h"
 #include "certs.h"
-#include "pkcs1.h"
 
 /**
  * used for initializatin of certs
@@ -118,14 +118,14 @@ bool load_coded_file(char *filename, prompt_pass_t *pass, const char *type,
 }
 
 /**
- *  Loads a PKCS#1 or PGP private RSA key file
+ *  Loads a PKCS#1 or PGP privatekey file
  */
-err_t load_rsa_private_key(char* filename, prompt_pass_t *pass,
-						   RSA_private_key_t *key)
+private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
+								key_type_t type)
 {
-	err_t ugh = NULL;
-	bool pgp = FALSE;
+	private_key_t *key = NULL;
 	chunk_t blob = chunk_empty;
+	bool pgp = FALSE;
 
 	char *path = concatenate_paths(PRIVATE_KEY_PATH, filename);
 
@@ -133,20 +133,24 @@ err_t load_rsa_private_key(char* filename, prompt_pass_t *pass,
 	{
 		if (pgp)
 		{
-			if (!parse_pgp(blob, NULL, key))
-				ugh = "syntax error in PGP private key file";
+ 			parse_pgp(blob, NULL, &key);
 		}
 		else
 		{
-			if (!pkcs1_parse_private_key(blob, key))
-				ugh = "syntax error in PKCS#1 private key file";
+			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 	 BUILD_BLOB_ASN1_DER, blob, BUILD_END);
 		}
+		if (key == NULL)
+		{
+			plog("syntax error in %s private key file", pgp ? "PGP":"PKCS#");
+		}			
 		free(blob.ptr);
 	}
 	else
-		ugh = "error loading RSA private key file";
-
-	return ugh;
+	{
+		plog("error loading RSA private key file");
+	}
+	return key;
 }
 
 /**

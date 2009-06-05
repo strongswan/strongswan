@@ -29,13 +29,15 @@
 #include <freeswan.h>
 #include "kameipsec.h"
 
+#include <credentials/keys/private_key.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "id.h"
 #include "x509.h"
 #include "ca.h"
 #include "crl.h"
-#include "pgp.h"
+#include "pgpcert.h"
 #include "certs.h"
 #include "ac.h"
 #include "smartcard.h"
@@ -2155,17 +2157,16 @@ check_key_recs(enum myid_state try_state
 	 * If so, treat as a kind of failure.
 	 */
 	enum myid_state old_myid_state = myid_state;
-	const struct RSA_private_key *our_RSA_pri;
+	private_key_t *private;
 	err_t ugh = NULL;
 
 	myid_state = try_state;
 
-	if (old_myid_state != myid_state
-	&& old_myid_state == MYID_SPECIFIED)
+	if (old_myid_state != myid_state && old_myid_state == MYID_SPECIFIED)
 	{
 		ugh = "%myid was specified while we were guessing";
 	}
-	else if ((our_RSA_pri = get_RSA_private_key(c)) == NULL)
+	else if ((private = get_private_key(c)) == NULL)
 	{
 		ugh = "we don't know our own RSA key";
 	}
@@ -2185,7 +2186,7 @@ check_key_recs(enum myid_state try_state
 		{
 			ugh = "all our KEY RRs have the wrong public key";
 			if (kr->key->alg == PUBKEY_ALG_RSA
-			&& same_RSA_public_key(&our_RSA_pri->pub, &kr->key->u.rsa))
+			&& private->belongs_to(private, &kr->key->public_key))
 			{
 				ugh = NULL;     /* good! */
 				break;
@@ -2198,10 +2199,9 @@ check_key_recs(enum myid_state try_state
 }
 #endif /* USE_KEYRR */
 
-static err_t
-check_txt_recs(enum myid_state try_state
-, const struct connection *c
-, struct adns_continuation *ac)
+static err_t check_txt_recs(enum myid_state try_state,
+							const struct connection *c,
+							struct adns_continuation *ac)
 {
 	/* Check if TXT lookup yielded good results.
 	 * Looking up based on our ID.  Used if
@@ -2211,7 +2211,7 @@ check_txt_recs(enum myid_state try_state
 	 * If so, treat as a kind of failure.
 	 */
 	enum myid_state old_myid_state = myid_state;
-	const struct RSA_private_key *our_RSA_pri;
+	private_key_t *private;
 	err_t ugh = NULL;
 
 	myid_state = try_state;
@@ -2221,7 +2221,7 @@ check_txt_recs(enum myid_state try_state
 	{
 		ugh = "%myid was specified while we were guessing";
 	}
-	else if ((our_RSA_pri = get_RSA_private_key(c)) == NULL)
+	else if ((private = get_private_key(c)) == NULL)
 	{
 		ugh = "we don't know our own RSA key";
 	}
@@ -2239,9 +2239,11 @@ check_txt_recs(enum myid_state try_state
 		ugh = "no TXT RR found for us";
 		for (gwp = ac->gateways_from_dns; gwp != NULL; gwp = gwp->next)
 		{
+			public_key_t *pub_key = gwp->key->public_key;
+
 			ugh = "all our TXT RRs have the wrong public key";
-			if (gwp->key->alg == PUBKEY_ALG_RSA
-			&& same_RSA_public_key(&our_RSA_pri->pub, &gwp->key->u.rsa))
+			if (pub_key->get_type(pub_key) == KEY_RSA &&
+			    private->belongs_to(private, pub_key))
 			{
 				ugh = NULL;     /* good! */
 				break;
@@ -2249,7 +2251,9 @@ check_txt_recs(enum myid_state try_state
 		}
 	}
 	if (ugh != NULL)
+	{
 		myid_state = old_myid_state;
+	}
 	return ugh;
 }
 
@@ -2513,13 +2517,13 @@ initiate_opportunistic_body(struct find_oppo_bundle *b
 				 * a chance that we did the wrong query.
 				 * If so, treat as a kind of failure.
 				 */
-				const struct RSA_private_key *our_RSA_pri = get_RSA_private_key(c);
+				private_key_t *private = get_private_key(c);
 
 				next_step = fos_his_client;     /* normal situation */
 
 				passert(sr != NULL);
 
-				if (our_RSA_pri == NULL)
+				if (private == NULL)
 				{
 					ugh = "we don't know our own RSA key";
 				}
@@ -2560,7 +2564,7 @@ initiate_opportunistic_body(struct find_oppo_bundle *b
 							ugh = NULL; /* good! */
 							break;
 						}
-						if (same_RSA_public_key(&our_RSA_pri->pub, &gwp->key->u.rsa))
+						if (private->belongs_to(private, gwp->key->public_key))
 						{
 							ugh = NULL; /* good! */
 							break;
@@ -2579,11 +2583,11 @@ initiate_opportunistic_body(struct find_oppo_bundle *b
 				 * a chance that we did the wrong query.
 				 * If so, treat as a kind of failure.
 				 */
-				const struct RSA_private_key *our_RSA_pri = get_RSA_private_key(c);
+				private_key_t *private = get_private_key(c);
 
 				next_step = fos_his_client;     /* unless we decide to look for KEY RR */
 
-				if (our_RSA_pri == NULL)
+				if (private == NULL)
 				{
 					ugh = "we don't know our own RSA key";
 				}
@@ -2604,8 +2608,8 @@ initiate_opportunistic_body(struct find_oppo_bundle *b
 						passert(same_id(&gwp->gw_id, &sr->this.id));
 
 						ugh = "TXT RR for us has wrong key";
-						if (gwp->gw_key_present
-						&& same_RSA_public_key(&our_RSA_pri->pub, &gwp->key->u.rsa))
+						if (gwp->gw_key_present &&
+							private->belongs_to(private, gwp->key->public_key))
 						{
 							DBG(DBG_CONTROL,
 								DBG_log("initiate on demand found TXT with right public key at: %s"
@@ -2639,11 +2643,11 @@ initiate_opportunistic_body(struct find_oppo_bundle *b
 				 * a chance that we did the wrong query.
 				 * If so, treat as a kind of failure.
 				 */
-				const struct RSA_private_key *our_RSA_pri = get_RSA_private_key(c);
+				private_key_t *private = get_private_key(c);
 
 				next_step = fos_his_client;     /* always */
 
-				if (our_RSA_pri == NULL)
+				if (private == NULL)
 				{
 					ugh = "we don't know our own RSA key";
 				}
@@ -2663,7 +2667,7 @@ initiate_opportunistic_body(struct find_oppo_bundle *b
 					{
 						ugh = "all our KEY RRs have the wrong public key (and no good TXT RR)";
 						if (kr->key->alg == PUBKEY_ALG_RSA
-						&& same_RSA_public_key(&our_RSA_pri->pub, &kr->key->u.rsa))
+						&& private->belongs_to(private, kr->key->public_key))
 						{
 							/* do this only once a day */
 							if (!logged_txt_warning)
@@ -3399,7 +3403,7 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 				 * We must at least be able to find our private key
 				.*/
 				if (d->spd.this.sc == NULL              /* no smartcard */
-				&& get_RSA_private_key(d) == NULL)      /* no private key */
+				&& get_private_key(d) == NULL)      /* no private key */
 					continue;
 				break;
 

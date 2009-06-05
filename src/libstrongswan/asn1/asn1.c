@@ -255,7 +255,7 @@ chunk_t asn1_build_known_oid(int n)
 /*
  * Defined in header.
  */
-u_int asn1_length(chunk_t *blob)
+size_t asn1_length(chunk_t *blob)
 {
 	u_char n;
 	size_t len;
@@ -675,7 +675,7 @@ chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
 }
 
 /**
- * Build an ASN.1 BITSTRING object
+ * Build an ASN.1 BIT_STRING object
  */
 chunk_t asn1_bitstring(const char *mode, chunk_t content)
 {
@@ -684,6 +684,41 @@ chunk_t asn1_bitstring(const char *mode, chunk_t content)
 
 	*pos++ = 0x00;
 	memcpy(pos, content.ptr, content.len);
+	if (*mode == 'm')
+	{
+		free(content.ptr);
+	}
+	return object;
+}
+
+/**
+ * Build an ASN.1 INTEGER object
+ */
+chunk_t asn1_integer(const char *mode, chunk_t content)
+{
+	chunk_t object;
+	size_t len;
+	u_char *pos;
+
+	if (content.len == 0 || (content.len == 1 && *content.ptr == 0x00))
+	{
+		/* a zero ASN.1 integer does not have a value field */
+		len = 0;
+	}
+	else
+	{
+		/* ASN.1 integers must be positive numbers in two's complement */
+		len = content.len + ((*content.ptr & 0x80) ? 1 : 0);
+	}
+	pos = asn1_build_object(&object, ASN1_INTEGER, len);
+	if (len > content.len)
+	{
+		*pos++ = 0x00;
+	}
+	if (len)
+	{
+		memcpy(pos, content.ptr, content.len);
+	}
 	if (*mode == 'm')
 	{
 		free(content.ptr);

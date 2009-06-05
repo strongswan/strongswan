@@ -34,12 +34,14 @@ typedef enum signature_scheme_t signature_scheme_t;
  */
 enum key_type_t {
 	/** key type wildcard */
-	KEY_ANY,
+	KEY_ANY   = 0,
 	/** RSA crypto system as in PKCS#1 */
-	KEY_RSA,
+	KEY_RSA   = 1,
 	/** ECDSA as in ANSI X9.62 */
-	KEY_ECDSA,
-	/** DSS, ElGamal, ... */
+	KEY_ECDSA = 2,
+	/** DSA */
+	KEY_DSA   = 3,
+	/** ElGamal, ... */
 };
 
 /**
@@ -50,29 +52,33 @@ extern enum_name_t *key_type_names;
 /**
  * Signature scheme for signature creation
  *
- * EMSA-PKCS1 signatures are from the PKCS#1 standard. They include
- * the ASN1-OID of the used hash algorithm.
+ * EMSA-PKCS1 signatures are defined in PKCS#1 standard.
+ * A prepended ASN.1 encoded digestInfo field contains the 
+ * OID of the used hash algorithm. The ASN.1 type of the PKCS#7
+ * variants is OCTET_STRING instead of the default BIT_STRING.
  */
 enum signature_scheme_t {
-	/** default scheme of that underlying crypto system */
+	/** Default scheme of the underlying crypto system                 */
 	SIGN_DEFAULT,
-	/** EMSA-PKCS1 with MD5  */
+	/** EMSA-PKCS1_v1.5 signature over digest without digestInfo       */
+	SIGN_RSA_EMSA_PKCS1_NULL,
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and MD5       */
 	SIGN_RSA_EMSA_PKCS1_MD5,
-	/** EMSA-PKCS1 signature as in PKCS#1 standard using SHA1 as hash.  */
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-1     */
 	SIGN_RSA_EMSA_PKCS1_SHA1,
-	/** EMSA-PKCS1 signature as in PKCS#1 standard using SHA256 as hash. */
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-256   */
 	SIGN_RSA_EMSA_PKCS1_SHA256,
-	/** EMSA-PKCS1 signature as in PKCS#1 standard using SHA384 as hash. */
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-384   */
 	SIGN_RSA_EMSA_PKCS1_SHA384,
-	/** EMSA-PKCS1 signature as in PKCS#1 standard using SHA512 as hash. */
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-512   */
 	SIGN_RSA_EMSA_PKCS1_SHA512,
-	/** ECDSA using SHA-1 as hash. */
+	/** ECDSA with SHA-1                                               */
 	SIGN_ECDSA_WITH_SHA1,
-	/** ECDSA with SHA-256 on the P-256 curve as in RFC 4754 */
+	/** ECDSA on the P-256 curve with SHA-256 as in RFC 4754           */
 	SIGN_ECDSA_256,
-	/** ECDSA with SHA-384 on the P-384 curve as in RFC 4754 */
+	/** ECDSA on the P-384 curve with SHA-384 as in RFC 4754           */
 	SIGN_ECDSA_384,
-	/** ECDSA with SHA-512 on the P-521 curve as in RFC 4754 */
+	/** ECDSA on the P-521 curve with SHA-512 as in RFC 4754           */
 	SIGN_ECDSA_521,
 };
 
@@ -107,12 +113,20 @@ struct public_key_t {
 	/**
 	 * Encrypt a chunk of data.
 	 *
-	 * @param crypto	chunk containing plaintext data
-	 * @param plain		where to allocate encrypted data
+	 * @param plain		chunk containing plaintext data
+	 * @param crypto	where to allocate encrypted data
 	 * @return 			TRUE if data successfully encrypted
 	 */
-	bool (*encrypt)(public_key_t *this, chunk_t crypto, chunk_t *plain);
+	bool (*encrypt)(public_key_t *this, chunk_t plain, chunk_t *crypto);
 	
+	/**
+	 * Check if two public keys are equal.
+	 * 
+	 * @param other		other public key
+	 * @return			TRUE, if equality
+	 */
+	bool (*equals)(public_key_t *this, public_key_t *other);
+
 	/**
 	 * Get the strength of the key in bytes.
 	 * 

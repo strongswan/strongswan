@@ -488,10 +488,11 @@ static bool do_command(struct connection *c, struct spd_route *sr,
 		for (p = pubkeys; p != NULL; p = p->next)
 		{
 			pubkey_t *key = p->key;
+			key_type_t type = key->public_key->get_type(key->public_key);
 			int pathlen;
 
-			if (key->alg == PUBKEY_ALG_RSA && same_id(&sr->that.id, &key->id)
-			&& trusted_ca(key->issuer, sr->that.ca, &pathlen))
+			if (type == KEY_RSA && same_id(&sr->that.id, &key->id) &&
+				trusted_ca(key->issuer, sr->that.ca, &pathlen))
 			{
 				dntoa_or_null(peerca_str, BUF_LEN, key->issuer, "");
 				escape_metachar(peerca_str, secure_peerca_str, sizeof(secure_peerca_str));

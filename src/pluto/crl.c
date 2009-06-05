@@ -238,8 +238,8 @@ bool insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl)
 		)
 
 		/* check the issuer's signature of the crl */
-		valid_sig = check_signature(crl->tbsCertList, crl->signature
-						, crl->algorithm, crl->algorithm, issuer_cert);
+		valid_sig = x509_check_signature(crl->tbsCertList, crl->signature,
+										 crl->algorithm, issuer_cert);
 		unlock_authcert_list("insert_crl");
 
 		if (!valid_sig)
@@ -656,8 +656,8 @@ verify_by_crl(const x509cert_t *cert, time_t *until, time_t *revocationDate
 
 		issuer_cert = get_authcert(crl->issuer, crl->authKeySerialNumber
 				, crl->authKeyID, AUTH_CA);
-		valid = check_signature(crl->tbsCertList, crl->signature
-				, crl->algorithm, crl->algorithm, issuer_cert);
+		valid = x509_check_signature(crl->tbsCertList, crl->signature,
+									 crl->algorithm, issuer_cert);
 		
 		unlock_authcert_list("verify_by_crl");
 

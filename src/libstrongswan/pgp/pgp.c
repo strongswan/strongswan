@@ -1,11 +1,6 @@
-/**
- * @file rsakey.h
- * @brief Functions for RSA key generation 
- */
-
-/* 
- * Copyright (C) 1999, 2000, 2001  Henry Spencer.
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+/*
+ * Copyright (C) 2002-2009 Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,12 +13,40 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+ 
+#include "pgp.h"
 
-#ifndef RSAKEY_H_
-#define RSAKEY_H_
+ENUM(pgp_sym_alg_names, PGP_SYM_ALG_PLAIN, PGP_SYM_ALG_TWOFISH,
+	"PLAINTEXT",
+	"IDEA",
+	"3DES",
+	"CAST5",
+	"BLOWFISH",
+	"SAFER",
+	"DES",
+	"AES_128",
+	"AES_192",
+	"AES_256",
+	"TWOFISH"
+);
 
-#include "../pluto/pkcs1.h"
+/*
+ * Defined in header.
+ */
+size_t pgp_length(chunk_t *blob, size_t len)
+{
+	size_t size = 0;
 
-extern err_t generate_rsa_private_key(int nbits, RSA_private_key_t *key);
+	if (len > blob->len)
+	{
+		return PGP_INVALID_LENGTH;
+	}
+	blob->len -= len;
 
-#endif // RSAKEY_H_
+	while (len-- > 0)
+	{
+		size = 256*size + *blob->ptr++;
+	}
+	return size;
+}
+

@@ -156,6 +156,8 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_END:
 					break;
 				case BUILD_BLOB_ASN1_DER:
+				case BUILD_BLOB_PGP:
+				case BUILD_BLOB_RFC_3110:
 				case BUILD_SERIAL:
 					builder->add(builder, part, va_arg(args, chunk_t));
 					continue;

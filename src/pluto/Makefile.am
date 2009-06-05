@@ -38,8 +38,7 @@ nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
 packet.c packet.h \
 pem.c pem.h \
-pgp.c pgp.h \
-pkcs1.c pkcs1.h \
+pgpcert.c pgpcert.h \
 pkcs7.c pkcs7.h \
 plutomain.c \
 rcv_whack.c rcv_whack.h \

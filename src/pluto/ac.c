@@ -783,8 +783,8 @@ bool verify_x509acert(x509acert_t *ac, bool strict)
 		DBG_log("issuer aacert found")
 	)
 
-	if (!check_signature(ac->certificateInfo, ac->signature
-						 , ac->algorithm, ac->algorithm, aacert))
+	if (!x509_check_signature(ac->certificateInfo, ac->signature, ac->algorithm,
+							  aacert))
 	{
 		plog("attribute certificate signature is invalid");
 		return FALSE;

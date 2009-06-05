@@ -120,7 +120,7 @@ chunk_t asn1_build_known_oid(int n);
  * @param blob		pointer to an ASN.1 coded blob
  * @return			length of ASN.1 object
  */
-u_int asn1_length(chunk_t *blob);
+size_t asn1_length(chunk_t *blob);
 
 /**
  * Parses an ASN.1 algorithmIdentifier object
@@ -226,6 +226,15 @@ chunk_t asn1_simple_object(asn1_t tag, chunk_t content);
  * @return			chunk containing the ASN.1 coded BITSTRING
  */
 chunk_t asn1_bitstring(const char *mode, chunk_t content);
+
+/**
+ * Build an ASN.1 INTEGER object
+ *
+ * @param mode		'c' for copy or 'm' for move
+ * @param content	content of the INTEGER
+ * @return			chunk containing the ASN.1 coded INTEGER
+ */
+chunk_t asn1_integer(const char *mode, chunk_t content);
 
 /**
  * Build an ASN.1 object from a variable number of individual chunks

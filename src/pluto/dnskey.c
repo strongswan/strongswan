@@ -29,6 +29,9 @@
 
 #include <freeswan.h>
 
+#include <utils/identification.h>
+#include <credentials/keys/public_key.h>
+
 #include "constants.h"
 #include "adns.h"       /* needs <resolv.h> */
 #include "defs.h"
@@ -83,7 +86,9 @@ init_adns(void)
 			{
 				strcpy(adns_path_space, helper_bin_dir);
 				if (n > 0 && adns_path_space[n -1] != '/')
+				{
 					adns_path_space[n++] = '/';
+				}
 			}
 		}
 		else
@@ -95,25 +100,33 @@ init_adns(void)
 			n = readlink("/proc/self/exe", adns_path_space, sizeof(adns_path_space));
 
 			if (n < 0)
+			{
 				exit_log_errno((e
 					, "readlink(\"/proc/self/exe\") failed in init_adns()"));
-
+			}
 		}
 
 		if ((size_t)n > sizeof(adns_path_space) - sizeof(adns_name))
+		{
 			exit_log("path to %s is too long", adns_name);
+		}
 
 		while (n > 0 && adns_path_space[n - 1] != '/')
+		{
 			n--;
-
+		}
 		strcpy(adns_path_space + n, adns_name);
 		adns_path = adns_path_space;
 	}
 	if (access(adns_path, X_OK) < 0)
+	{
 		exit_log_errno((e, "%s missing or not executable", adns_path));
+	}
 
 	if (pipe(qfds) != 0 || pipe(afds) != 0)
+	{
 		exit_log_errno((e, "pipe(2) failed in init_adns()"));
+	}
 
 	adns_pid = fork();
 	switch (adns_pid)
@@ -128,7 +141,9 @@ init_adns(void)
 			 * Take care to handle case where pipes already use these fds.
 			 */
 			if (afds[1] == 0)
+			{
 				afds[1] = dup(afds[1]); /* avoid being overwritten */
+			}
 			if (qfds[0] != 0)
 			{
 				dup2(qfds[0], 0);
@@ -140,16 +155,18 @@ init_adns(void)
 				close(qfds[1]);
 			}
 			if (afds[0] > 1)
+			{
 				close(afds[0]);
+			}
 			if (afds[1] > 1)
+			{
 				close(afds[1]);
-
+			}
 			DBG(DBG_DNS, execlp(adns_path, adns_name, "-d", NULL));
 
 			execlp(adns_path, adns_name, NULL);
 			exit_log_errno((e, "execlp of %s failed", adns_path));
 		}
-
 	default:
 		/* parent */
 		close(qfds[0]);
@@ -183,8 +200,10 @@ stop_adns(void)
 		else if (WIFEXITED(status))
 		{
 			if (WEXITSTATUS(status) != 0)
+			{
 				plog("ADNS process exited with status %d"
 					, (int) WEXITSTATUS(status));
+			}
 		}
 		else if (WIFSIGNALED(status))
 		{
@@ -227,8 +246,9 @@ decode_iii(u_char **pp, struct id *gw_id)
 	u_char under = *e;
 
 	if (p == e)
+	{
 		return "TXT " our_TXT_attr_string " badly formed (no gateway specified)";
-
+	}
 	*e = '\0';
 	if (*p == '@')
 	{
@@ -236,8 +256,10 @@ decode_iii(u_char **pp, struct id *gw_id)
 		err_t ugh = atoid(p, gw_id, FALSE);
 
 		if (ugh != NULL)
+		{
 			return builddiag("malformed FQDN in TXT " our_TXT_attr_string ": %s"
 				, ugh);
+		}
 	}
 	else
 	{
@@ -248,12 +270,14 @@ decode_iii(u_char **pp, struct id *gw_id)
 			, &ip);
 
 		if (ugh != NULL)
+		{
 			return builddiag("malformed IP address in TXT " our_TXT_attr_string ": %s"
 				, ugh);
-
+		}
 		if (isanyaddr(&ip))
+		{
 			return "gateway address must not be 0.0.0.0 or 0::0";
-
+		}
 		iptoid(&ip, gw_id);
 	}
 
@@ -278,14 +302,18 @@ process_txt_rr_body(u_char *str
 
 	/* is this for us? */
 	if (strncasecmp(p, our_TXT_attr, sizeof(our_TXT_attr)-1) != 0)
+	{
 		return NULL;    /* neither interesting nor bad */
+	}
 
 	p += sizeof(our_TXT_attr) - 1;      /* ignore our attribute name */
 	p += strspn(p, " \t");      /* ignore leading whitespace */
 
 	/* decode '(' nnn ')' */
 	if (*p != '(')
+	{
 		return "X-IPsec-Server missing '('";
+	}
 
 	{
 		char *e;
@@ -293,25 +321,30 @@ process_txt_rr_body(u_char *str
 		p++;
 		pref = strtoul(p, &e, 0);
 		if ((u_char *)e == p)
+		{
 			return "malformed X-IPsec-Server priority";
-
+		}
 		p = e + strspn(e, " \t");
 
 		if (*p != ')')
+		{
 			return "X-IPsec-Server priority missing ')'";
-
+		}
 		p++;
 		p += strspn(p, " \t");
 
 		if (pref > 0xFFFF)
+		{
 			return "X-IPsec-Server priority larger than 0xFFFF";
+		}
 	}
 
 	/* time for '=' */
 
 	if (*p != '=')
+	{
 		return "X-IPsec-Server priority missing '='";
-
+	}
 	p++;
 	p += strspn(p, " \t");
 
@@ -384,29 +417,34 @@ process_txt_rr_body(u_char *str
 			/* Decode base 64 encoding of key.
 			 * Similar code is in process_lwdnsq_key.
 			 */
-			u_char kb[RSA_MAX_ENCODING_BYTES];  /* plenty of space for binary form of public key */
-			chunk_t kbc;
-			struct RSA_public_key r;
+			u_char buf[RSA_MAX_ENCODING_BYTES];  /* plenty of space for binary form of public key */
+			size_t sz;
+			err_t ugh;
+			chunk_t rfc3110_chunk;
+			public_key_t *key;
 
-			err_t ugh = ttodatav(p, 0, 64, kb, sizeof(kb), &kbc.len
-				, diag_space, sizeof(diag_space), TTODATAV_SPACECOUNTS);
-
-			if (ugh != NULL)
+			ugh = ttodatav(p, 0, 64, buf, sizeof(buf), &sz,
+						diag_space, sizeof(diag_space), TTODATAV_SPACECOUNTS);
+			if (ugh)
+			{
 				return builddiag("malformed key data: %s", ugh);
-
-			if (kbc.len > sizeof(kb))
-				return builddiag("key data larger than %lu bytes"
-					, (unsigned long) sizeof(kb));
-
-			kbc.ptr = kb;
-			ugh = unpack_RSA_public_key(&r, &kbc);
-			if (ugh != NULL)
-				return builddiag("invalid key data: %s", ugh);
+			}
+			if (sz > sizeof(buf))
+			{
+				return builddiag("key data larger than %lu bytes",
+								 (unsigned long) sizeof(buf));
+			}
+			rfc3110_chunk = chunk_create(buf, sz);
+			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+										BUILD_BLOB_RFC_3110, rfc3110_chunk,
+										BUILD_END);
+			if (key == NULL)
+			{
+				return builddiag("invalid key data");
+			}
 
 			/* now find a key entry to put it in */
-			gi.key = public_key_from_rsa(&r);
-
-			free_RSA_public_content(&r);
+			gi.key = public_key_from_rsa(key);
 
 			unreference_key(&cr->last_info);
 			cr->last_info = reference_key(gi.key);
@@ -426,13 +464,18 @@ process_txt_rr_body(u_char *str
 			{
 				char cidb[BUF_LEN];
 				char gwidb[BUF_LEN];
+				identification_t *keyid;
+				public_key_t *pub_key;
 
 				idtoa(client_id, cidb, sizeof(cidb));
 				idtoa(&gi.gw_id, gwidb, sizeof(gwidb));
+				pub_key = gi.key->public_key;
+				keyid = pub_key->get_id(pub_key, ID_PUBKEY_SHA1);
+
 				if (gi.gw_key_present)
 				{
-					DBG_log("gateway for %s is %s with key %s"
-						, cidb, gwidb, gi.key->u.rsa.keyid);
+					DBG_log("gateway for %s is %s with key %Y"
+						, cidb, gwidb, keyid);
 				}
 				else
 				{

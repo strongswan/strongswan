@@ -1,5 +1,7 @@
 /* Support of OpenPGP certificates
- * Copyright (C) 2002-2004 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2002-2009 Andreas Steffen
+ *
+ * HSR - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -19,6 +21,7 @@
 #include <freeswan.h>
 
 #include <library.h>
+#include <pgp/pgp.h>
 #include <crypto/hashers/hasher.h>
 
 #include "constants.h"
@@ -26,10 +29,9 @@
 #include "mp_defs.h"
 #include "log.h"
 #include "id.h"
-#include "pgp.h"
+#include "pgpcert.h"
 #include "certs.h"
 #include "whack.h"
-#include "pkcs1.h"
 #include "keys.h"
 
 /*
@@ -88,36 +90,6 @@ static const char *const pgp_packet_type_name[] = {
 #define PGP_PUBKEY_ALG_ELGAMAL          20
 
 /*
- * OpenPGP symmetric key algorithms defined in section 9.2 of RFC 2440
-  */
-#define PGP_SYM_ALG_PLAIN        0
-#define PGP_SYM_ALG_IDEA         1
-#define PGP_SYM_ALG_3DES         2
-#define PGP_SYM_ALG_CAST5        3
-#define PGP_SYM_ALG_BLOWFISH     4
-#define PGP_SYM_ALG_SAFER        5
-#define PGP_SYM_ALG_DES          6
-#define PGP_SYM_ALG_AES          7
-#define PGP_SYM_ALG_AES_192      8
-#define PGP_SYM_ALG_AES_256      9
-#define PGP_SYM_ALG_TWOFISH     10
-#define PGP_SYM_ALG_ROOF        11
-
-static const char *const pgp_sym_alg_name[] = {
-	"Plaintext",
-	"IDEA",
-	"3DES",
-	"CAST5",
-	"Blowfish",
-	"SAFER",
-	"DES",
-	"AES",
-	"AES-192",
-	"AES-256",
-	"Twofish"
-};
-
-/*
  * Size of PGP Key ID
  */
 #define PGP_KEYID_SIZE          8
@@ -129,28 +101,15 @@ const pgpcert_t empty_pgpcert = {
 	{ NULL, 0 }, /* certificate */
 			0  , /* created */
 			0  , /* until */
-			0  , /* pubkeyAlgorithm */
-	{ NULL, 0 }, /* modulus */
-	{ NULL, 0 }, /* publicExponent */
-	   ""        /* fingerprint */
+	  NULL     , /* public key */
+	  NULL       /* fingerprint */
 };
 
-static size_t
-pgp_size(chunk_t *blob, int len)
-{
-	size_t size = 0;
-
-	blob->len -= len;
-	while (len-- > 0)
-		size = 256*size + *blob->ptr++;
-	return size;
-}
 
 /*
  * extracts the length of a PGP packet
  */
-static size_t
-pgp_old_packet_length(chunk_t *blob)
+static size_t pgp_old_packet_length(chunk_t *blob)
 {
 	/* bits 0 and 1 define the packet length type */
 	int len_type = 0x03 & *blob->ptr++;
@@ -158,14 +117,13 @@ pgp_old_packet_length(chunk_t *blob)
 	blob->len--;
 
 	/* len_type: 0 -> 1 byte, 1 -> 2 bytes, 2 -> 4 bytes */
-	return pgp_size(blob, (len_type == 0)? 1: len_type << 1);
+	return pgp_length(blob, (len_type == 0)? 1: len_type << 1);
 }
 
 /*
  * extracts PGP packet version (V3 or V4)
  */
-static u_char
-pgp_version(chunk_t *blob)
+static u_char pgp_version(chunk_t *blob)
 {
 	u_char version = *blob->ptr++;
 	blob->len--;
@@ -179,10 +137,10 @@ pgp_version(chunk_t *blob)
 /*
  * Parse OpenPGP public key packet defined in section 5.5.2 of RFC 2440
  */
-static bool
-parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
+static bool parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 {
 	u_char version = pgp_version(packet);
+	public_key_t *key;
 
 	if (version < 3 || version > 4)
 	{
@@ -191,7 +149,7 @@ parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 	}
 
 	/* creation date - 4 bytes */
-	cert->created = (time_t)pgp_size(packet, 4);
+	cert->created = (time_t)pgp_length(packet, 4);
 	DBG(DBG_PARSING,
 		DBG_log("L3 - created:");
 		DBG_log("  %T", &cert->created, TRUE)
@@ -200,12 +158,13 @@ parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 	if (version == 3)
 	{
 		/* validity in days - 2 bytes */
-		cert->until   = (time_t)pgp_size(packet, 2);
+		cert->until   = (time_t)pgp_length(packet, 2);
 
 		/* validity of 0 days means that the key never expires */
 		if (cert->until > 0)
+		{
 			cert->until = cert->created + 24*3600*cert->until;
-
+		}
 		DBG(DBG_PARSING,
 			DBG_log("L3 - until:");
 			DBG_log("  %T", &cert->until, TRUE);
@@ -217,49 +176,29 @@ parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 		DBG_log("L3 - public key algorithm:")
 	)
 
-	switch (pgp_size(packet, 1))
+	switch (pgp_length(packet, 1))
 	{
 	case PGP_PUBKEY_ALG_RSA:
 	case PGP_PUBKEY_ALG_RSA_SIGN_ONLY:
-		cert->pubkeyAlg = PUBKEY_ALG_RSA;
 		DBG(DBG_PARSING,
 			DBG_log("  RSA")
 		)
-		/* modulus n */
-		cert->modulus.len = (pgp_size(packet, 2)+7) / BITS_PER_BYTE;
-		cert->modulus.ptr = packet->ptr;
-		packet->ptr += cert->modulus.len;
-		packet->len -= cert->modulus.len;
-		DBG(DBG_PARSING,
-			DBG_log("L3 - modulus:")
-		)
-		DBG_cond_dump_chunk(DBG_RAW, "", cert->modulus);
-
-		/* public exponent e */
-		cert->publicExponent.len = (pgp_size(packet, 2)+7) / BITS_PER_BYTE;
-		cert->publicExponent.ptr = packet->ptr;
-		packet->ptr += cert->publicExponent.len;
-		packet->len -= cert->publicExponent.len;
-		DBG(DBG_PARSING,
-			DBG_log("L3 - public exponent:")
-		)
-		DBG_cond_dump_chunk(DBG_RAW, "", cert->publicExponent);
+		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+											 BUILD_BLOB_PGP, *packet,
+											 BUILD_END);
+		if (key == NULL)
+		{
+			return FALSE;
+		}
+		cert->public_key = key;
 
 		if (version == 3)
 		{
-			hasher_t *hasher;
-
-			/* a V3 fingerprint is the MD5 hash of modulus and public exponent */
-
-			hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);	
-			if (hasher == NULL)
+			cert->fingerprint = key->get_id(key, ID_KEY_ID);
+			if (cert->fingerprint == NULL)
 			{
-				plog("  computation of V3 key ID failed, no MD5 hasher is available");
 				return FALSE;
 			}
-		 	hasher->get_hash(hasher, cert->modulus, NULL);
-		 	hasher->get_hash(hasher, cert->publicExponent, cert->fingerprint);
-			hasher->destroy(hasher);
 		}
 		else
 		{
@@ -267,14 +206,12 @@ parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 		}
 		break;
 	case PGP_PUBKEY_ALG_DSA:
-		cert->pubkeyAlg = PUBKEY_ALG_DSA;
 		DBG(DBG_PARSING,
 			DBG_log("  DSA")
 		)
 		plog("  DSA public keys not supported");
 		return FALSE;
 	 default:
-		cert->pubkeyAlg = 0;
 		DBG(DBG_PARSING,
 			DBG_log("  other")
 		)
@@ -285,103 +222,9 @@ parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 }
 
 /*
- * Parse OpenPGP secret key packet defined in section 5.5.3 of RFC 2440
- */
-static bool
-parse_pgp_secretkey_packet(chunk_t *packet, RSA_private_key_t *key)
-{
-	int i, s2k;
-	pgpcert_t cert = empty_pgpcert;
-
-	if (!parse_pgp_pubkey_packet(packet, &cert))
-		return FALSE;
-
-	init_RSA_public_key((RSA_public_key_t *)key, cert.publicExponent
-											   , cert.modulus);
-
-	/* string-to-key usage */
-	s2k = pgp_size(packet, 1);
-
-	DBG(DBG_PARSING,
-		DBG_log("L3 - string-to-key:  %d", s2k)
-	)
-
-	if (s2k == 255)
-	{
-		plog("  string-to-key specifiers not supported");
-		return FALSE;
-	}
-
-	if (s2k >= PGP_SYM_ALG_ROOF)
-	{
-		plog("  undefined symmetric key algorithm");
-		return FALSE;
-	}
-
-	/* a known symmetric key algorithm is specified*/
-	DBG(DBG_PARSING,
-		DBG_log("  %s", pgp_sym_alg_name[s2k])
-	)
-
-	/* private key is unencrypted */
-	if (s2k == PGP_SYM_ALG_PLAIN)
-	{
-		for (i = 2; i < RSA_PRIVATE_FIELD_ELEMENTS; i++)
-		{
-			mpz_t u;  /* auxiliary variable */
-
-			/* compute offset to private key component i*/
-			MP_INT *n = (MP_INT*)((char *)key + RSA_private_field[i].offset);
-
-			switch (i)
-			{
-			case 2:
-			case 3:
-			case 4:
-				{
-					size_t len = (pgp_size(packet, 2)+7) / BITS_PER_BYTE;
-
-					n_to_mpz(n, packet->ptr, len);
-					DBG(DBG_PARSING,
-						DBG_log("L3 - %s:", RSA_private_field[i].name)
-					)
-					DBG_cond_dump(DBG_PRIVATE, "", packet->ptr, len);
-					packet->ptr += len;
-					packet->len -= len;
-				}
-				break;
-			case 5:             /* dP = d mod (p-1) */
-				mpz_init(u);
-				mpz_sub_ui(u, &key->p, 1);
-				mpz_mod(n, &key->d, u);
-				mpz_clear(u);
-				break;
-			case 6:             /* dQ = d mod (q-1) */
-				mpz_init(u);
-				mpz_sub_ui(u, &key->q, 1);
-				mpz_mod(n, &key->d, u);
-				mpz_clear(u);
-				break;
-			case 7:             /* qInv = (q^-1) mod p */
-				mpz_invert(n, &key->q, &key->p);
-				if (mpz_cmp_ui(n, 0) < 0)
-					mpz_add(n, n, &key->p);
-				passert(mpz_cmp(n, &key->p) < 0);
-				break;
-			}
-		}
-		return TRUE;
-	}
-
-	plog("  %s encryption not supported",  pgp_sym_alg_name[s2k]);
-	return FALSE;
-}
-
-/*
  * Parse OpenPGP signature packet defined in section 5.2.2 of RFC 2440
  */
-static bool
-parse_pgp_signature_packet(chunk_t *packet, pgpcert_t *cert)
+static bool parse_pgp_signature_packet(chunk_t *packet, pgpcert_t *cert)
 {
 	time_t created;
 	chunk_t keyid;
@@ -393,20 +236,20 @@ parse_pgp_signature_packet(chunk_t *packet, pgpcert_t *cert)
 		return TRUE;
 
 	/* size byte must have the value 5 */
-	if (pgp_size(packet, 1) != 5)
+	if (pgp_length(packet, 1) != 5)
 	{
 		plog(" size must be 5");
 		return FALSE;
 	}
 
 	/* signature type - 1 byte */
-	sig_type = (u_char)pgp_size(packet, 1);
+	sig_type = (u_char)pgp_length(packet, 1);
 	DBG(DBG_PARSING,
 		DBG_log("L3 - signature type:  0x%2x", sig_type)
 	)
 
 	/* creation date - 4 bytes */
-	created = (time_t)pgp_size(packet, 4);
+	created = (time_t)pgp_length(packet, 4);
 	DBG(DBG_PARSING,
 		DBG_log("L3 - created:");
 		DBG_log("  %T", &cert->created, TRUE)
@@ -420,8 +263,7 @@ parse_pgp_signature_packet(chunk_t *packet, pgpcert_t *cert)
    return TRUE;
 }
 
-bool
-parse_pgp(chunk_t blob, pgpcert_t *cert, RSA_private_key_t *key)
+bool parse_pgp(chunk_t blob, pgpcert_t *cert, private_key_t **key)
 {
 	DBG(DBG_PARSING,
 		DBG_log("L0 - PGP file:")
@@ -486,11 +328,15 @@ parse_pgp(chunk_t blob, pgpcert_t *cert, RSA_private_key_t *key)
 				{
 				case PGP_PKT_PUBLIC_KEY:
 					if (!parse_pgp_pubkey_packet(&packet, cert))
+					{
 						return FALSE;
+					}
 					break;
 				case PGP_PKT_SIGNATURE:
 					if (!parse_pgp_signature_packet(&packet, cert))
+					{
 						return FALSE;
+					}
 					break;
 				case PGP_PKT_USER_ID:
 					DBG(DBG_PARSING,
@@ -508,12 +354,18 @@ parse_pgp(chunk_t blob, pgpcert_t *cert, RSA_private_key_t *key)
 				switch (packet_type)
 				{
 				case PGP_PKT_SECRET_KEY:
-					if (!parse_pgp_secretkey_packet(&packet, key))
-						return FALSE;
+					*key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+											  BUILD_BLOB_PGP, packet,
+											  BUILD_END);
 					break;
 				default:
 					break;
 				}
+				if (*key == NULL)
+				{
+					return FALSE;
+				}
+
 			}
 		}
 	}
@@ -523,8 +375,7 @@ parse_pgp(chunk_t blob, pgpcert_t *cert, RSA_private_key_t *key)
 /*
  *  compare two OpenPGP certificates
  */
-static bool
-same_pgpcert(pgpcert_t *a, pgpcert_t *b)
+static bool same_pgpcert(pgpcert_t *a, pgpcert_t *b)
 {
 	return a->certificate.len == b->certificate.len &&
 		memeq(a->certificate.ptr, b->certificate.ptr, b->certificate.len);
@@ -533,8 +384,7 @@ same_pgpcert(pgpcert_t *a, pgpcert_t *b)
 /*
  * for each link pointing to the certificate increase the count by one
  */
-void
-share_pgpcert(pgpcert_t *cert)
+void share_pgpcert(pgpcert_t *cert)
 {
 	if (cert != NULL)
 	{
@@ -545,21 +395,17 @@ share_pgpcert(pgpcert_t *cert)
 /*
  * select the OpenPGP keyid as ID
  */
-void
-select_pgpcert_id(pgpcert_t *cert, struct id *end_id)
+void select_pgpcert_id(pgpcert_t *cert, struct id *end_id)
 {
 	end_id->kind = ID_KEY_ID;
-	end_id->name.len = PGP_FINGERPRINT_SIZE;
-	end_id->name.ptr = cert->fingerprint;
-	end_id->name.ptr = temporary_cyclic_buffer();
-	memcpy(end_id->name.ptr, cert->fingerprint, PGP_FINGERPRINT_SIZE);
+	end_id->name = cert->fingerprint->get_encoding(cert->fingerprint);
+	end_id->name = chunk_clone(end_id->name);
 }
 
 /*
  *  add an OpenPGP user/host certificate to the chained list
  */
-pgpcert_t*
-add_pgpcert(pgpcert_t *cert)
+pgpcert_t* add_pgpcert(pgpcert_t *cert)
 {
 	pgpcert_t *c = pgpcerts;
 
@@ -585,14 +431,15 @@ add_pgpcert(pgpcert_t *cert)
 /*  release of a certificate decreases the count by one
  "  the certificate is freed when the counter reaches zero
  */
-void
-release_pgpcert(pgpcert_t *cert)
+void release_pgpcert(pgpcert_t *cert)
 {
 	if (cert != NULL && --cert->count == 0)
 	{
 		pgpcert_t **pp = &pgpcerts;
 		while (*pp != cert)
+		{
 			pp = &(*pp)->next;
+		}
 		*pp = cert->next;
 		free_pgpcert(cert);
 	}
@@ -601,11 +448,12 @@ release_pgpcert(pgpcert_t *cert)
 /*
  *  free a PGP certificate
  */
-void
-free_pgpcert(pgpcert_t *cert)
+void free_pgpcert(pgpcert_t *cert)
 {
 	if (cert != NULL)
 	{
+		DESTROY_IF(cert->public_key);
+		DESTROY_IF(cert->fingerprint);
 		free(cert->certificate.ptr);
 		free(cert);
 	}
@@ -614,8 +462,7 @@ free_pgpcert(pgpcert_t *cert)
 /*
  *  list all PGP end certificates in a chained list
  */
-void
-list_pgp_end_certs(bool utc)
+void list_pgp_end_certs(bool utc)
 {
    pgpcert_t *cert = pgpcerts;
    time_t now;
@@ -632,19 +479,20 @@ list_pgp_end_certs(bool utc)
 
 	while (cert != NULL)
 	{
-		unsigned keysize;
-		char buf[BUF_LEN];
+		public_key_t *key = cert->public_key;
 		cert_t c;
 
 		c.type = CERT_PGP;
 		c.u.pgp = cert;
 
 		whack_log(RC_COMMENT, "%T, count: %d", &cert->installed, utc, cert->count);
-		datatot(cert->fingerprint, PGP_FINGERPRINT_SIZE, 'x', buf, BUF_LEN);
-		whack_log(RC_COMMENT, "       fingerprint:  %s", buf);
-		form_keyid(cert->publicExponent, cert->modulus, buf, &keysize);
-		whack_log(RC_COMMENT, "       pubkey:   %4d RSA Key %s%s", 8*keysize, buf,
-				(has_private_key(c))? ", has private key" : "");
+		whack_log(RC_COMMENT, "       fingerprint:  %Y", cert->fingerprint);
+		whack_log(RC_COMMENT, "       pubkey:   %N %4d bits%s",
+				key_type_names, key->get_type(key),
+				key->get_keysize(key) * BITS_PER_BYTE,				
+				has_private_key(c)? ", has private key" : "");
+		whack_log(RC_COMMENT, "       keyid:    %Y",
+				key->get_id(key, ID_PUBKEY_INFO_SHA1));
 		whack_log(RC_COMMENT, "       created:  %T", &cert->created, utc);
 		whack_log(RC_COMMENT, "       until:    %T %s", &cert->until, utc,
 				check_expiry(cert->until, CA_CERT_WARNING_INTERVAL, TRUE));

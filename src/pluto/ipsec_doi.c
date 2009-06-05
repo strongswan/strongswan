@@ -34,6 +34,8 @@
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/rngs/rng.h>
+#include <credentials/keys/private_key.h>
+#include <credentials/keys/public_key.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -1402,35 +1404,44 @@ static bool generate_skeyids_iv(struct state *st)
 	return prf_block_size;
 }
 
-/* Create an RSA signature of a hash.
+/* Create a public key signature of a hash.
  * Poorly specified in draft-ietf-ipsec-ike-01.txt 6.1.1.2.
  * Use PKCS#1 version 1.5 encryption of hash (called
  * RSAES-PKCS1-V1_5) in PKCS#2.
  */
-static size_t RSA_sign_hash(struct connection *c, u_char sig_val[RSA_MAX_OCTETS],
-							const u_char *hash_val, size_t hash_len)
+static size_t sign_hash(struct connection *c, u_char sig_val[RSA_MAX_OCTETS],
+						u_char *hash_val, size_t hash_len)
 {
 	size_t sz = 0;
 	smartcard_t *sc = c->spd.this.sc;
 
 	if (sc == NULL)             /* no smartcard */
 	{
-		const struct RSA_private_key *k = get_RSA_private_key(c);
+		chunk_t hash, sig;
+		private_key_t *private = get_private_key(c);
 
-		if (k == NULL)
+		if (private == NULL)
+		{
 			return 0;   /* failure: no key to use */
-
-		sz = k->pub.k;
+		}
+		sz = private->get_keysize(private);
 		passert(RSA_MIN_OCTETS <= sz && 4 + hash_len < sz && sz <= RSA_MAX_OCTETS);
-		sign_hash(k, hash_val, hash_len, sig_val, sz);
+		hash = chunk_create(hash_val, hash_len);
+		sig  = chunk_create(sig_val, sz);
+		if (!private->sign(private, SIGN_RSA_EMSA_PKCS1_NULL, hash, &sig))
+		{
+			return 0;
+		}
+		memcpy(sig_val, sig.ptr, sz);
+		free(sig.ptr);
 	}
 	else if (sc->valid) /* if valid pin then sign hash on the smartcard */
 	{
-		lock_certs_and_keys("RSA_sign_hash");
+		lock_certs_and_keys("sign_hash");
 		if (!scx_establish_context(sc) || !scx_login(sc))
 		{
 			scx_release_context(sc);
-			unlock_certs_and_keys("RSA_sign_hash");
+			unlock_certs_and_keys("sign_hash");
 			return 0;
 		}
 
@@ -1439,7 +1450,7 @@ static size_t RSA_sign_hash(struct connection *c, u_char sig_val[RSA_MAX_OCTETS]
 		{
 			plog("failed to get keylength from smartcard");
 			scx_release_context(sc);
-			unlock_certs_and_keys("RSA_sign_hash");
+			unlock_certs_and_keys("sign_hash");
 			return 0;
 		}
 
@@ -1450,140 +1461,9 @@ static size_t RSA_sign_hash(struct connection *c, u_char sig_val[RSA_MAX_OCTETS]
 		sz = scx_sign_hash(sc, hash_val, hash_len, sig_val, sz) ? sz : 0;
 		if (!pkcs11_keep_state)
 			scx_release_context(sc);
-		unlock_certs_and_keys("RSA_sign_hash");
+		unlock_certs_and_keys("sign_hash");
 	}
 	return sz;
-}
-
-/* Check a Main Mode RSA Signature against computed hash using RSA public key k.
- *
- * As a side effect, on success, the public key is copied into the
- * state object to record the authenticator.
- *
- * Can fail because wrong public key is used or because hash disagrees.
- * We distinguish because diagnostics should also.
- *
- * The result is NULL if the Signature checked out.
- * Otherwise, the first character of the result indicates
- * how far along failure occurred.  A greater character signifies
- * greater progress.
- *
- * Classes:
- * 0    reserved for caller
- * 1    SIG length doesn't match key length -- wrong key
- * 2-8  malformed ECB after decryption -- probably wrong key
- * 9    decrypted hash != computed hash -- probably correct key
- *
- * Although the math should be the same for generating and checking signatures,
- * it is not: the knowledge of the private key allows more efficient (i.e.
- * different) computation for encryption.
- */
-static err_t try_RSA_signature(const u_char hash_val[MAX_DIGEST_LEN],
-							   size_t hash_len, const pb_stream *sig_pbs,
-							   pubkey_t *kr, struct state *st)
-{
-	const u_char *sig_val = sig_pbs->cur;
-	size_t sig_len = pbs_left(sig_pbs);
-	u_char s[RSA_MAX_OCTETS];   /* for decrypted sig_val */
-	u_char *hash_in_s = &s[sig_len - hash_len];
-	const struct RSA_public_key *k = &kr->u.rsa;
-
-	/* decrypt the signature -- reversing RSA_sign_hash */
-	if (sig_len != k->k)
-	{
-		/* XXX notification: INVALID_KEY_INFORMATION */
-		return "1" "SIG length does not match public key length";
-	}
-
-	/* actual exponentiation; see PKCS#1 v2.0 5.1 */
-	{
-		chunk_t temp_s;
-		mpz_t c;
-
-		n_to_mpz(c, sig_val, sig_len);
-		mpz_powm(c, c, &k->e, &k->n);
-
-		temp_s = mpz_to_n(c, sig_len);  /* back to octets */
-		memcpy(s, temp_s.ptr, sig_len);
-		free(temp_s.ptr);
-		mpz_clear(c);
-	}
-
-	/* sanity check on signature: see if it matches
-	 * PKCS#1 v1.5 8.1 encryption-block formatting
-	 */
-	{
-		err_t ugh = NULL;
-
-		if (s[0] != 0x00)
-			ugh = "2" "no leading 00";
-		else if (hash_in_s[-1] != 0x00)
-			ugh = "3" "00 separator not present";
-		else if (s[1] == 0x01)
-		{
-			const u_char *p;
-
-			for (p = &s[2]; p != hash_in_s - 1; p++)
-			{
-				if (*p != 0xFF)
-				{
-					ugh = "4" "invalid Padding String";
-					break;
-				}
-			}
-		}
-		else if (s[1] == 0x02)
-		{
-			const u_char *p;
-
-			for (p = &s[2]; p != hash_in_s - 1; p++)
-			{
-				if (*p == 0x00)
-				{
-					ugh = "5" "invalid Padding String";
-					break;
-				}
-			}
-		}
-		else
-			ugh = "6" "Block Type not 01 or 02";
-
-		if (ugh != NULL)
-		{
-			/* note: it might be a good idea to make sure that
-			 * an observer cannot tell what kind of failure happened.
-			 * I don't know what this means in practice.
-			 */
-			/* We probably selected the wrong public key for peer:
-			 * SIG Payload decrypted into malformed ECB
-			 */
-			/* XXX notification: INVALID_KEY_INFORMATION */
-			return ugh;
-		}
-	}
-
-	/* We have the decoded hash: see if it matches. */
-	if (memcmp(hash_val, hash_in_s, hash_len) != 0)
-	{
-		/* good: header, hash, signature, and other payloads well-formed
-		 * good: we could find an RSA Sig key for the peer.
-		 * bad: hash doesn't match
-		 * Guess: sides disagree about key to be used.
-		 */
-		DBG_cond_dump(DBG_CRYPT, "decrypted SIG", s, sig_len);
-		DBG_cond_dump(DBG_CRYPT, "computed HASH", hash_val, hash_len);
-		/* XXX notification: INVALID_HASH_INFORMATION */
-		return "9" "authentication failure: received SIG does not match computed HASH, but message is well-formed";
-	}
-
-	/* Success: copy successful key into state.
-	 * There might be an old one if we previously aborted this
-	 * state transition.
-	 */
-	unreference_key(&st->st_peer_pubkey);
-	st->st_peer_pubkey = reference_key(kr);
-
-	return NULL;    /* happy happy */
 }
 
 /* Check signature against all RSA public keys we can find.
@@ -1597,54 +1477,39 @@ static err_t try_RSA_signature(const u_char hash_val[MAX_DIGEST_LEN],
  * If only we had coroutines.
  */
 struct tac_state {
-	/* RSA_check_signature's args that take_a_crack needs */
 	struct state *st;
-	const u_char *hash_val;
-	size_t hash_len;
-	const pb_stream *sig_pbs;
-
-	/* state carried between calls */
-	err_t best_ugh;     /* most successful failure */
+	chunk_t hash;	
+	chunk_t sig;
 	int tried_cnt;      /* number of keys tried */
-	char tried[50];     /* keyids of tried public keys */
-	char *tn;   /* roof of tried[] */
 };
 
-static bool take_a_crack(struct tac_state *s, pubkey_t *kr,
-						 const char *story USED_BY_DEBUG)
+static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 {
-	err_t ugh = try_RSA_signature(s->hash_val, s->hash_len, s->sig_pbs
-		, kr, s->st);
-	const struct RSA_public_key *k = &kr->u.rsa;
+	public_key_t *pub_key = kr->public_key;
+	identification_t *keyid = pub_key->get_id(pub_key, ID_PUBKEY_SHA1);
 
 	s->tried_cnt++;
-	if (ugh == NULL)
+
+	if (pub_key->verify(pub_key, SIGN_RSA_EMSA_PKCS1_NULL, s->hash, s->sig))
 	{
-		DBG(DBG_CRYPT | DBG_CONTROL
-			, DBG_log("an RSA Sig check passed with *%s [%s]"
-				, k->keyid, story));
+		DBG(DBG_CRYPT | DBG_CONTROL,
+			DBG_log("signature check passed with keyid %Y", keyid)
+		)
+		unreference_key(&s->st->st_peer_pubkey);
+		s->st->st_peer_pubkey = reference_key(kr);
 		return TRUE;
 	}
 	else
 	{
-		DBG(DBG_CRYPT
-			, DBG_log("an RSA Sig check failure %s with *%s [%s]"
-				, ugh + 1, k->keyid, story));
-		if (s->best_ugh == NULL || s->best_ugh[0] < ugh[0])
-			s->best_ugh = ugh;
-		if (ugh[0] > '0'
-		&& s->tn - s->tried + KEYID_BUF + 2 < (ptrdiff_t)sizeof(s->tried))
-		{
-			strcpy(s->tn, " *");
-			strcpy(s->tn + 2, k->keyid);
-			s->tn += strlen(s->tn);
-		}
+		DBG(DBG_CRYPT,
+			DBG_log("signature check failed with keyid %Y", keyid)
+		)
 		return FALSE;
 	}
 }
 
 static stf_status RSA_check_signature(const struct id* peer, struct state *st,
-									  const u_char hash_val[MAX_DIGEST_LEN],
+									  u_char hash_val[MAX_DIGEST_LEN],
 									  size_t hash_len, const pb_stream *sig_pbs,
 #ifdef USE_KEYRR
 									  const pubkey_list_t *keys_from_dns,
@@ -1653,16 +1518,11 @@ static stf_status RSA_check_signature(const struct id* peer, struct state *st,
 {
 	const struct connection *c = st->st_connection;
 	struct tac_state s;
-	err_t dns_ugh = NULL;
 
 	s.st = st;
-	s.hash_val = hash_val;
-	s.hash_len = hash_len;
-	s.sig_pbs = sig_pbs;
-
-	s.best_ugh = NULL;
+	s.hash = chunk_create(hash_val, hash_len);
+	s.sig  = chunk_create(sig_pbs->cur, pbs_left(sig_pbs));
 	s.tried_cnt = 0;
-	s.tn = s.tried;
 
 	/* try all gateway records hung off c */
 	if (c->policy & POLICY_OPPO)
@@ -1672,10 +1532,11 @@ static stf_status RSA_check_signature(const struct id* peer, struct state *st,
 		for (gw = c->gw_info; gw != NULL; gw = gw->next)
 		{
 			/* only consider entries that have a key and are for our peer */
-			if (gw->gw_key_present
-			&& same_id(&gw->gw_id, &c->spd.that.id)
-			&& take_a_crack(&s, gw->key, "key saved from DNS TXT"))
+			if (gw->gw_key_present && same_id(&gw->gw_id, &c->spd.that.id)&&
+				take_a_crack(&s, gw->key))
+			{
 				return STF_OK;
+			}
 		}
 	}
 
@@ -1688,8 +1549,9 @@ static stf_status RSA_check_signature(const struct id* peer, struct state *st,
 		for (p = pubkeys; p != NULL; p = *pp)
 		{
 			pubkey_t *key = p->key;
+			key_type_t type = key->public_key->get_type(key->public_key);
 
-			if (key->alg == PUBKEY_ALG_RSA && same_id(peer, &key->id))
+			if (type == KEY_RSA && same_id(peer, &key->id))
 			{
 				time_t now = time(NULL);
 
@@ -1702,18 +1564,19 @@ static stf_status RSA_check_signature(const struct id* peer, struct state *st,
 					continue; /* continue with next public key */
 				}
 
-				if (take_a_crack(&s, key, "preloaded key"))
-				return STF_OK;
+				if (take_a_crack(&s, key))
+				{
+					return STF_OK;
+				}
 			}
 			pp = &p->next;
 		}
    }
 
-	/* if no key was found (evidenced by best_ugh == NULL)
-	 * and that side of connection is key_from_DNS_on_demand
-	 * then go search DNS for keys for peer.
+	/* if no key was found and that side of connection is
+	 * key_from_DNS_on_demand then go search DNS for keys for peer.
 	 */
-	if (s.best_ugh == NULL && c->spd.that.key_from_DNS_on_demand)
+	if (s.tried_cnt == 0 && c->spd.that.key_from_DNS_on_demand)
 	{
 		if (gateways_from_dns != NULL)
 		{
@@ -1721,9 +1584,12 @@ static stf_status RSA_check_signature(const struct id* peer, struct state *st,
 			const struct gw_info *gwp;
 
 			for (gwp = gateways_from_dns; gwp != NULL; gwp = gwp->next)
-				if (gwp->gw_key_present
-				&& take_a_crack(&s, gwp->key, "key from DNS TXT"))
+			{
+				if (gwp->gw_key_present && take_a_crack(&s, gwp->key))
+				{
 					return STF_OK;
+				}
+			}
 		}
 #ifdef USE_KEYRR
 		else if (keys_from_dns != NULL)
@@ -1732,9 +1598,12 @@ static stf_status RSA_check_signature(const struct id* peer, struct state *st,
 			const pubkey_list_t *kr;
 
 			for (kr = keys_from_dns; kr != NULL; kr = kr->next)
-				if (kr->key->alg == PUBKEY_ALG_RSA
-				&& take_a_crack(&s, kr->key, "key from DNS KEY"))
+			{
+				if (kr->key->alg == PUBKEY_ALG_RSA && take_a_crack(&s, kr->key))
+				{
 					return STF_OK;
+				}
+			}
 		}
 #endif /* USE_KEYRR */
 		else
@@ -1748,53 +1617,32 @@ static stf_status RSA_check_signature(const struct id* peer, struct state *st,
 	{
 		char id_buf[BUF_LEN];   /* arbitrary limit on length of ID reported */
 
-		(void) idtoa(peer, id_buf, sizeof(id_buf));
+		idtoa(peer, id_buf, sizeof(id_buf));
 
-		if (s.best_ugh == NULL)
+		if (s.tried_cnt == 0)
 		{
-			if (dns_ugh == NULL)
-				loglog(RC_LOG_SERIOUS, "no RSA public key known for '%s'"
-					, id_buf);
-			else
-				loglog(RC_LOG_SERIOUS, "no RSA public key known for '%s'"
-					"; DNS search for KEY failed (%s)"
-					, id_buf, dns_ugh);
-
-			/* ??? is this the best code there is? */
-			return STF_FAIL + INVALID_KEY_INFORMATION;
+			loglog(RC_LOG_SERIOUS, "no public key known for '%s'", id_buf);
 		}
-
-		if (s.best_ugh[0] == '9')
+		else if (s.tried_cnt == 1)
 		{
-			loglog(RC_LOG_SERIOUS, "%s", s.best_ugh + 1);
-			/* XXX Could send notification back */
-			return STF_FAIL + INVALID_HASH_INFORMATION;
+			loglog(RC_LOG_SERIOUS, "signature check for '%s' failed: "
+					" wrong key?; tried %d", id_buf, s.tried_cnt);
+			DBG(DBG_CONTROL,
+				DBG_log("public key for '%s' failed: "
+						"decrypted SIG payload into a malformed ECB", id_buf)
+			)
 		}
 		else
 		{
-			if (s.tried_cnt == 1)
-			{
-				loglog(RC_LOG_SERIOUS
-					, "Signature check (on %s) failed (wrong key?); tried%s"
-					, id_buf, s.tried);
-				DBG(DBG_CONTROL,
-					DBG_log("public key for %s failed:"
-						" decrypted SIG payload into a malformed ECB (%s)"
-						, id_buf, s.best_ugh + 1));
-			}
-			else
-			{
-				loglog(RC_LOG_SERIOUS
-					, "Signature check (on %s) failed:"
-					  " tried%s keys but none worked."
-					, id_buf, s.tried);
-				DBG(DBG_CONTROL,
-					DBG_log("all %d public keys for %s failed:"
-						" best decrypted SIG payload into a malformed ECB (%s)"
-						, s.tried_cnt, id_buf, s.best_ugh + 1));
-			}
-			return STF_FAIL + INVALID_KEY_INFORMATION;
+			loglog(RC_LOG_SERIOUS, "signature check for '%s' failed: "
+					  "tried %d keys but none worked.", id_buf, s.tried_cnt);
+			DBG(DBG_CONTROL,
+				DBG_log("all %d public keys for '%s' failed: "
+						"best decrypted SIG payload into a malformed ECB",
+						s.tried_cnt, id_buf)
+			)
 		}
+		return STF_FAIL + INVALID_KEY_INFORMATION;
 	}
 }
 
@@ -2245,6 +2093,7 @@ static void decode_cert(struct msg_digest *md)
 				{
 					plog("X.509 certificate rejected");
 				}
+				DESTROY_IF(cert.public_key);
 				free_generalNames(cert.subjectAltName, FALSE);
 				free_generalNames(cert.crlDistributionPoints, FALSE);
 			}
@@ -2749,9 +2598,9 @@ static bool has_preloaded_public_key(struct state *st)
 		for (p = pubkeys; p != NULL; p = p->next)
 		{
 			pubkey_t *key = p->key;
+			key_type_t type = key->public_key->get_type(key->public_key);
 
-			if (key->alg == PUBKEY_ALG_RSA &&
-				same_id(&c->spd.that.id, &key->id) &&
+			if (type == KEY_RSA && same_id(&c->spd.that.id, &key->id) &&
 				key->until_time == UNDEFINED_TIME)
 			{
 				/* found a preloaded public key */
@@ -3595,12 +3444,12 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		{
 			/* SIG_I out */
 			u_char sig_val[RSA_MAX_OCTETS];
-			size_t sig_len = RSA_sign_hash(st->st_connection
-				, sig_val, hash_val, hash_len);
+			size_t sig_len = sign_hash(st->st_connection, sig_val, hash_val,
+									   hash_len);
 
 			if (sig_len == 0)
 			{
-				loglog(RC_LOG_SERIOUS, "unable to locate my private key for RSA Signature");
+				loglog(RC_LOG_SERIOUS, "unable to locate my private key for signature");
 				return STF_FAIL + AUTHENTICATION_FAILED;
 			}
 
@@ -3997,12 +3846,12 @@ main_inI3_outR3_tail(struct msg_digest *md
 		{
 			/* SIG_R out */
 			u_char sig_val[RSA_MAX_OCTETS];
-			size_t sig_len = RSA_sign_hash(st->st_connection
-				, sig_val, hash_val, hash_len);
+			size_t sig_len = sign_hash(st->st_connection, sig_val, hash_val,
+									   hash_len);
 
 			if (sig_len == 0)
 			{
-				loglog(RC_LOG_SERIOUS, "unable to locate my private key for RSA Signature");
+				loglog(RC_LOG_SERIOUS, "unable to locate my private key for signature");
 				return STF_FAIL + AUTHENTICATION_FAILED;
 			}
 
@@ -4479,10 +4328,10 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 	case vos_our_client:
 		next_step = vos_his_client;
 		{
-			const struct RSA_private_key *pri = get_RSA_private_key(c);
+			private_key_t *private = get_private_key(c);
 			struct gw_info *gwp;
 
-			if (pri == NULL)
+			if (private == NULL)
 			{
 				ugh = "we don't know our own key";
 				break;
@@ -4503,7 +4352,7 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 					ugh = NULL; /* good! */
 					break;
 				}
-				else if (same_RSA_public_key(&pri->pub, &gwp->key->u.rsa))
+				else if (private->belongs_to(private, gwp->key->public_key))
 				{
 					ugh = NULL; /* good! */
 					break;
@@ -4515,9 +4364,9 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 	case vos_our_txt:
 		next_step = vos_his_client;
 		{
-			const struct RSA_private_key *pri = get_RSA_private_key(c);
+			private_key_t *private = get_private_key(c);
 
-			if (pri == NULL)
+			if (private == NULL)
 			{
 				ugh = "we don't know our own key";
 				break;
@@ -4534,7 +4383,7 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 					ugh = "our client delegation depends on our " RRNAME " record, but it has the wrong public key";
 #endif
 					if (gwp->gw_key_present
-					&& same_RSA_public_key(&pri->pub, &gwp->key->u.rsa))
+					&& private->belongs_to(private, gwp->key->public_key))
 					{
 						ugh = NULL;     /* good! */
 						break;
@@ -4551,9 +4400,9 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 	case vos_our_key:
 		next_step = vos_his_client;
 		{
-			const struct RSA_private_key *pri = get_RSA_private_key(c);
+			private_key_t *private = get_private_key(c);
 
-			if (pri == NULL)
+			if (private == NULL)
 			{
 				ugh = "we don't know our own key";
 				break;
@@ -4565,7 +4414,7 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 				for (kp = ac->keys_from_dns; kp != NULL; kp = kp->next)
 				{
 					ugh = "our client delegation depends on our " RRNAME " record, but it has the wrong public key";
-					if (same_RSA_public_key(&pri->pub, &kp->key->u.rsa))
+					if (private->belongs_to(private, kp->key->public_key))
 					{
 						/* do this only once a day */
 						if (!logged_txt_warning)
@@ -4585,11 +4434,15 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 	case vos_his_client:
 		next_step = vos_done;
 		{
+			public_key_t *pub_key;
+			identification_t *p1st_keyid;
 			struct gw_info *gwp;
-
+		
 			/* check that the public key that authenticated
 			 * the ISAKMP SA (p1st) will do for this gateway.
 			 */
+			pub_key = p1st->st_peer_pubkey->public_key;
+			p1st_keyid = pub_key->get_id(pub_key, ID_PUBKEY_INFO_SHA1);
 
 			ugh = "peer's client does not delegate to peer";
 			for (gwp = ac->gateways_from_dns; gwp != NULL; gwp = gwp->next)
@@ -4601,9 +4454,10 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 				 * it implies fetching a KEY from the same
 				 * place we must have gotten it.
 				 */
-				if (!gwp->gw_key_present
-				|| same_RSA_public_key(&p1st->st_peer_pubkey->u.rsa
-				, &gwp->key->u.rsa))
+				if (!gwp->gw_key_present || p1st_keyid->equals(p1st_keyid,
+					 gwp->key->public_key->get_id(gwp->key->public_key,
+												  ID_PUBKEY_INFO_SHA1))
+				   )
 				{
 					ugh = NULL; /* good! */
 					break;

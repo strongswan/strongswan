@@ -1,5 +1,5 @@
 ipsec_PROGRAMS = scepclient
-scepclient_SOURCES = scepclient.c rsakey.c rsakey.h pkcs10.c pkcs10.h scep.c scep.h loglite.c 
+scepclient_SOURCES = scepclient.c pkcs10.c pkcs10.h scep.c scep.h loglite.c 
 
 PLUTODIR=$(top_srcdir)/src/pluto
 OPENACDIR=$(top_srcdir)/src/openac
@@ -28,7 +28,7 @@ LIBCRYPTOBUILDDIR=$(top_builddir)/src/libcrypto
 
 scepclient_LDADD = \
 ca.o crl.o certs.o constants.o defs.o fetch.o id.o keys.o lex.o \
-mp_defs.o ocsp.o pem.o pgp.o pkcs1.o pkcs7.o smartcard.o x509.o \
+mp_defs.o ocsp.o pem.o pgpcert.o pkcs7.o smartcard.o x509.o \
 $(LIBSTRONGSWANBUILDDIR)/libstrongswan.la \
 $(LIBFREESWANBUILDDIR)/libfreeswan.a \
 -lgmp
@@ -77,10 +77,7 @@ ocsp.o :	$(PLUTODIR)/ocsp.c $(PLUTODIR)/ocsp.h
 pem.o :		$(PLUTODIR)/pem.c $(PLUTODIR)/pem.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
-pgp.o :		$(PLUTODIR)/pgp.c $(PLUTODIR)/pgp.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-pkcs1.o :	$(PLUTODIR)/pkcs1.c $(PLUTODIR)/pkcs1.h
+pgpcert.o :		$(PLUTODIR)/pgpcert.c $(PLUTODIR)/pgpcert.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 pkcs7.o :	$(PLUTODIR)/pkcs7.c $(PLUTODIR)/pkcs7.h

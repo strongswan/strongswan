@@ -340,6 +340,9 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 	/* check the signature only if a cacert is available */
 	if (cacert != NULL)
 	{
+		public_key_t *key = cacert->public_key;
+		signature_scheme_t scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+
 		if (signerInfos == 0)
 		{
 			DBG1("no signerInfo object found");
@@ -355,15 +358,39 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 			DBG1("no authenticatedAttributes object found");
 			return FALSE;
 		}
-		if (!check_signature(*attributes, encrypted_digest, digest_alg,
-							 enc_alg, cacert))
+		if (enc_alg != OID_RSA_ENCRYPTION)
 		{
-			DBG1("invalid signature");
+			DBG1("only RSA digest encryption supported");
 			return FALSE;
+		}
+		switch (digest_alg)
+		{
+			case OID_MD5:
+				scheme = SIGN_RSA_EMSA_PKCS1_MD5;
+				break;
+			case OID_SHA1:
+				scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+				break;
+			case OID_SHA256:
+				scheme = SIGN_RSA_EMSA_PKCS1_SHA256;
+				break;
+			case OID_SHA384:
+				scheme = SIGN_RSA_EMSA_PKCS1_SHA384;
+				break;
+			case OID_SHA512:
+				scheme = SIGN_RSA_EMSA_PKCS1_SHA512;
+				break;
+			default:
+				return FALSE;
+		}
+		if (key->verify(key, scheme, *attributes, encrypted_digest))
+		{
+			DBG2("signature is valid");
 		}
 		else
 		{
-			DBG2("signature is valid");
+			DBG1("invalid signature");
+			return FALSE;
 		}
 	}
 	return TRUE;
@@ -374,7 +401,7 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
  */
 bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 							   chunk_t serialNumber,
-							   const RSA_private_key_t *key)
+							   private_key_t *key)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
@@ -446,7 +473,7 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 			} 
 			break;
 		case PKCS7_ENCRYPTED_KEY:
-			if (!RSA_decrypt(key, object, &symmetric_key))
+			if (!key->decrypt(key, object, &symmetric_key))
 			{
 				DBG1("symmetric key could not be decrypted with rsa");
 				goto end;
@@ -579,17 +606,20 @@ chunk_t pkcs7_contentType_attribute(void)
  */
 chunk_t pkcs7_messageDigest_attribute(chunk_t content, int digest_alg)
 {
-	u_char digest_buf[MAX_DIGEST_LEN];
-	chunk_t digest = { digest_buf, MAX_DIGEST_LEN };
+	chunk_t digest;
+	hash_algorithm_t hash_alg;
+	hasher_t *hasher;
 
-	compute_digest(content, digest_alg, &digest);
+	hash_alg = hasher_algorithm_from_oid(digest_alg);
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+	hasher->allocate_hash(hasher, content, &digest);
 
-	return asn1_wrap(ASN1_SEQUENCE, "cm"
-				, ASN1_messageDigest_oid
-				, asn1_wrap(ASN1_SET, "m"
-					, asn1_simple_object(ASN1_OCTET_STRING, digest)
-				  )
-		   );
+	return asn1_wrap(ASN1_SEQUENCE, "cm",
+				ASN1_messageDigest_oid,
+					asn1_wrap(ASN1_SET, "m",
+						asn1_wrap(ASN1_OCTET_STRING, "m", digest)
+					)
+				);
 }
 
 /**
@@ -649,7 +679,7 @@ chunk_t pkcs7_build_issuerAndSerialNumber(const x509cert_t *cert)
  */
 chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 							   const x509cert_t *cert, int digest_alg,
-							   const RSA_private_key_t *key)
+							   private_key_t *key)
 {
 	contentInfo_t pkcs7Data, signedData;
 	chunk_t authenticatedAttributes, encryptedDigest, signerInfo, cInfo;
@@ -658,15 +688,15 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 
 	if (attributes.ptr != NULL)
 	{
-		encryptedDigest = pkcs1_build_signature(attributes, digest_alg
-								, key, FALSE);
+		encryptedDigest = x509_build_signature(attributes, digest_alg, key,
+											   FALSE);
 		authenticatedAttributes = chunk_clone(attributes);
 		*authenticatedAttributes.ptr = ASN1_CONTEXT_C_0;
 	}
 	else
 	{
 		encryptedDigest = (data.ptr == NULL)? chunk_empty
-				: pkcs1_build_signature(data, digest_alg, key, FALSE);
+				: x509_build_signature(data, digest_alg, key, FALSE);
 		authenticatedAttributes = chunk_empty;
 	}
 
@@ -705,8 +735,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 {
 	encryption_algorithm_t alg;
 	size_t alg_key_size;
-	RSA_public_key_t public_key;
-	chunk_t symmetricKey, iv, in, out;
+	chunk_t symmetricKey, protectedKey, iv, in, out;
 	crypter_t *crypter;
 
 	alg = encryption_algorithm_from_oid(enc_alg, &alg_key_size);
@@ -759,10 +788,11 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 	free(in.ptr);
 	free(iv.ptr);
 
-	init_RSA_public_key(&public_key, cert->publicExponent, cert->modulus);
-	
+	cert->public_key->encrypt(cert->public_key, symmetricKey, &protectedKey);
+
 	/* build pkcs7 enveloped data object */ 
 	{
+		
 		chunk_t contentEncryptionAlgorithm = asn1_wrap(ASN1_SEQUENCE, "mm"
 					, asn1_build_known_oid(enc_alg)
 					, asn1_simple_object(ASN1_OCTET_STRING, iv));
@@ -773,7 +803,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 					, asn1_wrap(ASN1_CONTEXT_S_0, "m", out));
 
 		chunk_t encryptedKey = asn1_wrap(ASN1_OCTET_STRING, "m"
-					, RSA_encrypt(&public_key, symmetricKey));
+					, protectedKey);
 
 		chunk_t recipientInfo = asn1_wrap(ASN1_SEQUENCE, "cmcm"
 					, ASN1_INTEGER_0
@@ -793,7 +823,6 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 		cInfo = pkcs7_build_contentInfo(&envelopedData);
 		DBG3("envelopedData %B", &cInfo);
 
-		free_RSA_public_content(&public_key);
 		free(envelopedData.content.ptr);
 		free(symmetricKey.ptr);
 		return cInfo;
