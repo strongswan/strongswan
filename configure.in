@@ -1017,8 +1017,7 @@ if test x$openssl = xtrue; then
 fi
 
 if test x$gcrypt = xtrue; then
-	AC_HAVE_LIBRARY([gcrypt],[LIBS="$LIBS"],[AC_MSG_ERROR([libgcrypt library not found])])
-	AC_CHECK_HEADER([gcrypt.h],,[AC_MSG_ERROR([libgcrypt header gcrypt.h not found!])])
+	AM_PATH_LIBGCRYPT(,,[AC_MSG_ERROR([libgcrypt not found!])])
 fi
 
 if test x$uci = xtrue; then
