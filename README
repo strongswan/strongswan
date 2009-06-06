@@ -1505,12 +1505,16 @@ any certificates to the other end via the IKE Main Mode protocol. Especially
 if self-signed certificates are used which wouldn't be accepted any way by
 the other side. In these cases it is recommended to add
 
-          leftsendcert=never
+    leftsendcert=never
 
 to the connection definition[s] in order to avoid the sending of the host's
 own certificate. The default value is
 
-    leftsendcert=always.
+    leftsendcert=ifasked
+
+If a peer does not send a certificate request then use the setting
+
+    leftsendcert=always
 
 If a peer certificate contains a subjectAltName extension, then an alternative
 rightid type can be used, as the example "conn sun" shows. If no rightid
