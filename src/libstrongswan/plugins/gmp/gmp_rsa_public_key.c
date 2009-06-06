@@ -371,21 +371,33 @@ static size_t get_keysize(private_gmp_rsa_public_key_t *this)
 static identification_t* gmp_rsa_build_pgp_v3_keyid(mpz_t n, mpz_t e)
 {
 	identification_t *keyid;
-	chunk_t modulus, exponent, hash;
+	chunk_t modulus, mod, exponent, exp, hash;
 	hasher_t *hasher;
 	
 	hasher= lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 	if (hasher == NULL)
 	{
-		DBG1("computation of PGP V3 key ID failed, no MD5 hasher is available");
+		DBG1("computation of PGP V3 keyid failed, no MD5 hasher is available");
 		return NULL;
 	}
-	modulus  = gmp_mpz_to_chunk(n);
-	exponent = gmp_mpz_to_chunk(e);
-	hasher->allocate_hash(hasher, modulus, NULL);
-	hasher->allocate_hash(hasher, exponent, &hash);
+	mod = modulus  = gmp_mpz_to_chunk(n);
+	exp = exponent = gmp_mpz_to_chunk(e);
+
+	/* remove leading zero bytes before hashing modulus and exponent */
+	while (mod.len > 0 && *mod.ptr == 0x00)
+	{
+		mod.ptr++;
+		mod.len--;
+	} 
+	while (exp.len > 0 && *exp.ptr == 0x00)
+	{
+		exp.ptr++;
+		exp.len--;
+	} 
+	hasher->allocate_hash(hasher, mod, NULL);
+	hasher->allocate_hash(hasher, exp, &hash);
 	hasher->destroy(hasher);
-	keyid = identification_create_from_encoding(ID_PUBKEY_SHA1, hash);
+	keyid = identification_create_from_encoding(ID_KEY_ID, hash);
 	free(hash.ptr);
 	free(modulus.ptr);
 	free(exponent.ptr);
