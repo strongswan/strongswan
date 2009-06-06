@@ -55,16 +55,17 @@ typedef struct {
 } cert_t;
 
 /* used for initialization */
-extern const cert_t empty_cert;
+extern const cert_t cert_empty;
 
 /*  do not send certificate requests
  *  flag set in plutomain.c and used in ipsec_doi.c
  */
 extern bool no_cr_send;
 
+extern public_key_t* cert_get_public_key(const cert_t cert);
+extern chunk_t cert_get_encoding(cert_t cert);
 extern private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 									   key_type_t type);
-extern chunk_t get_mycert(cert_t cert);
 extern bool load_coded_file(char *filename, prompt_pass_t *pass,
 							const char *type, chunk_t *blob, bool *pgp);
 extern bool load_cert(char *filename, const char *label, cert_t *cert);

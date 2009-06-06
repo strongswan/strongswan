@@ -33,12 +33,12 @@
 /**
  * used for initializatin of certs
  */
-const cert_t empty_cert = {CERT_NONE, {NULL}};
+const cert_t cert_empty = {CERT_NONE, {NULL}};
 
 /**
  * extracts the certificate to be sent to the peer
  */
-chunk_t get_mycert(cert_t cert)
+chunk_t cert_get_encoding(cert_t cert)
 {
 	switch (cert.type)
 	{
@@ -48,6 +48,21 @@ chunk_t get_mycert(cert_t cert)
 		return cert.u.x509->certificate;
 	default:
 		return chunk_empty;
+	}
+}
+
+public_key_t* cert_get_public_key(const cert_t cert)
+{
+	switch (cert.type)
+	{
+		case CERT_PGP:
+			return cert.u.pgp->public_key;
+			break;
+		case CERT_X509_SIGNATURE:
+			return cert.u.x509->public_key;
+			break;
+		default:
+			return NULL;
 	}
 }
 
@@ -142,13 +157,13 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 		}
 		if (key == NULL)
 		{
-			plog("syntax error in %s private key file", pgp ? "PGP":"PKCS#");
+			plog("  syntax error in %s private key file", pgp ? "PGP":"PKCS#");
 		}			
 		free(blob.ptr);
 	}
 	else
 	{
-		plog("error loading RSA private key file");
+		plog("  error loading RSA private key file");
 	}
 	return key;
 }
@@ -170,7 +185,7 @@ bool load_cert(char *filename, const char *label, cert_t *cert)
 		if (pgp)
 		{
 			pgpcert_t *pgpcert = malloc_thing(pgpcert_t);
-			*pgpcert = empty_pgpcert;
+			*pgpcert = pgpcert_empty;
 			if (parse_pgp(blob, pgpcert, NULL))
 			{
 				cert->type = CERT_PGP;

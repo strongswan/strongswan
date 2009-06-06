@@ -23,6 +23,7 @@
 #define PGP_H_
 
 typedef enum pgp_packet_tag_t pgp_packet_tag_t;
+typedef enum pgp_pubkey_alg_t pgp_pubkey_alg_t;
 typedef enum pgp_sym_alg_t pgp_sym_alg_t;
 
 #include <chunk.h>

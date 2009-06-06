@@ -71,33 +71,13 @@ struct secret {
 	id_list_t *ids;
 	enum PrivateKeyKind kind;
 	union {
-		chunk_t preshared_secret;
-		xauth_t xauth_secret;
+		chunk_t        preshared_secret;
+		xauth_t        xauth_secret;
 		private_key_t *private_key;
-		smartcard_t *smartcard;
+		smartcard_t   *smartcard;
 	} u;
 	secret_t *next;
 };
-
-static public_key_t* get_public_key(const cert_t cert)
-{
-	switch (cert.type)
-	{
-		case CERT_PGP:
-		/*
-			e = cert.u.pgp->publicExponent;
-			n = cert.u.pgp->modulus;
-			init_RSA_public_key(&pk->public_key, e, n);
-		*/
-			return NULL;
-			break;
-		case CERT_X509_SIGNATURE:
-			return cert.u.x509->public_key;
-			break;
-		default:
-			return NULL;
-	}
-}
 
 /*
  * free a public key struct
@@ -121,9 +101,9 @@ static const secret_t* get_secret(const struct connection *c,
 								  enum PrivateKeyKind kind, bool asym)
 {
 	enum {      /* bits */
-		match_default = 01,
-		match_him = 02,
-		match_me = 04
+		match_default = 0x01,
+		match_him     = 0x02,
+		match_me      = 0x04
 	};
 
 	unsigned int best_match = 0;
@@ -136,7 +116,7 @@ static const secret_t* get_secret(const struct connection *c,
 	/* is there a certificate assigned to this connection? */
 	if (kind == PPK_PUBKEY && c->spd.this.cert.type != CERT_NONE)
 	{
-		public_key_t *pub_key = get_public_key(c->spd.this.cert);
+		public_key_t *pub_key = cert_get_public_key(c->spd.this.cert);
 
 		for (s = secrets; s != NULL; s = s->next)
 		{
@@ -190,10 +170,13 @@ static const secret_t* get_secret(const struct connection *c,
 				for (i = s->ids; i != NULL; i = i->next)
 				{
 					if (same_id(my_id, &i->id))
+					{
 						match |= match_me;
-
+					}
 					if (same_id(his_id, &i->id))
+					{
 						match |= match_him;
+					}
 				}
 
 				/* If our end matched the only id in the list,
@@ -214,7 +197,9 @@ static const secret_t* get_secret(const struct connection *c,
 				 * there are other ids in the list.
 				 */
 				if (!asym)
+				{
 					break;
+				}
 				/* FALLTHROUGH */
 			case match_default: /* default all */
 			case match_me | match_default:      /* default peer */
@@ -281,7 +266,7 @@ bool has_private_key(cert_t cert)
 {
 	secret_t *s;
 	bool has_key = FALSE;
-	public_key_t *pub_key = get_public_key(cert);
+	public_key_t *pub_key = cert_get_public_key(cert);
 
 	for (s = secrets; s != NULL; s = s->next)
 	{
@@ -396,7 +381,20 @@ static err_t process_psk_secret(chunk_t *psk)
 	return ugh;
 }
 
-const char *rsa_private_keywords[] = {
+typedef enum rsa_private_key_part_t rsa_private_key_part_t;
+
+enum rsa_private_key_part_t {
+	RSA_PART_MODULUS          = 0,
+	RSA_PART_PUBLIC_EXPONENT  = 1,
+	RSA_PART_PRIVATE_EXPONENT = 2,
+	RSA_PART_PRIME1           = 3,
+	RSA_PART_PRIME2           = 4,
+	RSA_PART_EXPONENT1        = 5,
+	RSA_PART_EXPONENT2        = 6,
+	RSA_PART_COEFFICIENT      = 7
+}; 
+
+const char *rsa_private_key_part_names[] = {
 	"Modulus",
 	"PublicExponent",
 	"PrivateExponent",
@@ -414,17 +412,17 @@ const char *rsa_private_keywords[] = {
  */
 static err_t process_rsa_secret(private_key_t **key)
 {
-	chunk_t asn1_chunks[countof(rsa_private_keywords)];
+	chunk_t asn1_chunk[countof(rsa_private_key_part_names)];
 	chunk_t pkcs1_chunk;
 	u_char buf[RSA_MAX_ENCODING_BYTES];   /* limit on size of binary representation of key */
-	err_t ugh;
-	int i, j;
+	rsa_private_key_part_t part, p;
 	size_t sz, len = 0;
+	err_t ugh;
 
-	for (i = 0; i < countof(rsa_private_keywords); i++)
+	for (part = RSA_PART_MODULUS; part <= RSA_PART_COEFFICIENT; part++)
 	{
-		chunk_t rsa_private_key_chunk;
-		const char *keyword = rsa_private_keywords[i];
+		chunk_t rsa_private_key_part;
+		const char *keyword = rsa_private_key_part_names[part];
 
 		if (!shift())
 		{
@@ -447,12 +445,12 @@ static err_t process_rsa_secret(private_key_t **key)
 		if (ugh)
 		{
 			ugh = builddiag("RSA data malformed (%s): %s", ugh, tok);
-			i++;
+			part++;
 			goto end;
 		}
-		rsa_private_key_chunk = chunk_create(buf, sz);
-		asn1_chunks[i] = asn1_integer("c", rsa_private_key_chunk);
-		len += asn1_chunks[i].len;
+		rsa_private_key_part = chunk_create(buf, sz);
+		asn1_chunk[part] = asn1_integer("c", rsa_private_key_part);
+		len += asn1_chunk[part].len;
 	}
 
 	/* We require an (indented) '}' and the end of the record.
@@ -472,14 +470,14 @@ static err_t process_rsa_secret(private_key_t **key)
 
 	pkcs1_chunk = asn1_wrap(ASN1_SEQUENCE, "ccccccccc",
 					 		ASN1_INTEGER_0,
-							asn1_chunks[0],
-							asn1_chunks[1],
-							asn1_chunks[2],
-							asn1_chunks[3],
-							asn1_chunks[4],
-							asn1_chunks[5],
-							asn1_chunks[6],
-							asn1_chunks[7]);
+							asn1_chunk[RSA_PART_MODULUS],
+							asn1_chunk[RSA_PART_PUBLIC_EXPONENT],
+							asn1_chunk[RSA_PART_PRIVATE_EXPONENT],
+							asn1_chunk[RSA_PART_PRIME1],
+							asn1_chunk[RSA_PART_PRIME2],
+							asn1_chunk[RSA_PART_EXPONENT1],
+							asn1_chunk[RSA_PART_EXPONENT2],
+							asn1_chunk[RSA_PART_COEFFICIENT]);
 
 	*key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 										  BUILD_BLOB_ASN1_DER, pkcs1_chunk,
@@ -491,9 +489,10 @@ static err_t process_rsa_secret(private_key_t **key)
 	}
 
 end:
-	for (j = 0 ; j < i; j++)
+	/* clean up and return */
+	for (p = RSA_PART_MODULUS ; p < part; p++)
 	{
-		free(asn1_chunks[j].ptr);
+		free(asn1_chunk[p].ptr);
 	}
 	return ugh;	
 }
@@ -867,8 +866,9 @@ static void process_secret_records(int whackfd)
 	{
 		(void)flushline(NULL);  /* silently ditch leftovers, if any */
 		if (flp->bdry == B_file)
+		{
 			break;
-
+		}
 		flp->bdry = B_none;     /* eat the Record Boundary */
 		(void)shift();  /* get real first token */
 
@@ -897,7 +897,9 @@ static void process_secret_records(int whackfd)
 				 * will be rediscovered and reported later.
 				 */
 				if (pl > sizeof(fn))
+				{
 					pl = sizeof(fn);
+				}
 				memcpy(fn, flp->filename, pl);
 				p += pl;
 			}
@@ -1138,7 +1140,9 @@ pubkey_list_t* free_public_keyentry(pubkey_list_t *p)
 	pubkey_list_t *nxt = p->next;
 
 	if (p->key != NULL)
+	{
 		unreference_key(&p->key);
+	}
 	free(p);
 	return nxt;
 }
@@ -1146,7 +1150,9 @@ pubkey_list_t* free_public_keyentry(pubkey_list_t *p)
 void free_public_keys(pubkey_list_t **keys)
 {
 	while (*keys != NULL)
+	{
 		*keys = free_public_keyentry(*keys);
+	}
 }
 
 /* root of chained public key list */
@@ -1186,7 +1192,9 @@ void transfer_to_public_keys(struct gw_info *gateways_from_dns
 		pubkey_list_t **pp = keys;
 
 		while (*pp != NULL)
+		{
 			pp = &(*pp)->next;
+		}
 		*pp = pubkeys;
 		pubkeys = *keys;
 		*keys = NULL;
@@ -1255,7 +1263,9 @@ unreference_key(pubkey_t **pkp)
 	char b[BUF_LEN];
 
 	if (pk == NULL)
+	{
 		return;
+	}
 
 	/* print stuff */
 	DBG(DBG_CONTROLMORE,
@@ -1269,7 +1279,9 @@ unreference_key(pubkey_t **pkp)
 	passert(pk->refcnt != 0);
 	pk->refcnt--;
 	if (pk->refcnt == 0)
+	{
 		free_public_key(pk);
+	}
 }
 
 bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
@@ -1369,7 +1381,6 @@ void add_pgp_public_key(pgpcert_t *cert , time_t until,
 	pk->public_key = cert->public_key->get_ref(cert->public_key);
 	pk->id.kind = ID_KEY_ID;
 	pk->id.name = cert->fingerprint->get_encoding(cert->fingerprint);
-	pk->id.name = chunk_clone(pk->id.name);
 	pk->dns_auth_level = dns_auth_level;
 	pk->until_time = until;
 	pk_type = pk->public_key->get_type(pk->public_key);
@@ -1394,8 +1405,7 @@ void remove_x509_public_key(const x509cert_t *cert)
 		{
 			/* remove p from list and free memory */
 			*pp = free_public_keyentry(p);
-			loglog(RC_LOG_SERIOUS,
-				"invalid RSA public key deleted");
+			loglog(RC_LOG_SERIOUS, "invalid public key deleted");
 		}
 		else
 		{

@@ -451,7 +451,7 @@ scx_find_cert_object(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE object
 	};
 
 	/* initialize the return argument */
-	*cert = empty_cert;
+	*cert = cert_empty;
 
 	/* get the length of the attributes first */
 	CK_RV rv = pkcs11_functions->C_GetAttributeValue(session, object, attr, 3);

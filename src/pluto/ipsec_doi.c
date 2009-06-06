@@ -3415,7 +3415,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 
 		if (!out_struct(&cert_hd, &isakmp_ipsec_certificate_desc, &md->rbody, &cert_pbs))
 			return STF_INTERNAL_ERROR;
-		if (!out_chunk(get_mycert(mycert), &cert_pbs, "CERT"))
+		if (!out_chunk(cert_get_encoding(mycert), &cert_pbs, "CERT"))
 			return STF_INTERNAL_ERROR;
 		close_output_pbs(&cert_pbs);
 	}
@@ -3825,7 +3825,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 
 		if (!out_struct(&cert_hd, &isakmp_ipsec_certificate_desc, &md->rbody, &cert_pbs))
 		return STF_INTERNAL_ERROR;
-		if (!out_chunk(get_mycert(mycert), &cert_pbs, "CERT"))
+		if (!out_chunk(cert_get_encoding(mycert), &cert_pbs, "CERT"))
 			return STF_INTERNAL_ERROR;
 		close_output_pbs(&cert_pbs);
 	}

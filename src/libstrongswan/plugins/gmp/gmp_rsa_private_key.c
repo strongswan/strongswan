@@ -815,7 +815,6 @@ static gmp_rsa_private_key_t *load_pgp(chunk_t blob)
 {
 	mpz_t u;
 	int objectID;
-	pgp_sym_alg_t s2k;
 	chunk_t packet = blob;
 	private_gmp_rsa_private_key_t *this = gmp_rsa_private_key_create_empty();
 	
@@ -828,27 +827,33 @@ static gmp_rsa_private_key_t *load_pgp(chunk_t blob)
 	mpz_init(this->exp2);
 	mpz_init(this->coeff);
 
-	/* string-to-key usage */
-	s2k = pgp_length(&packet, 1);
-	DBG2("L3 - string-to-key:  %d", s2k);
-
-	if (s2k == 255 || s2k == 254)
-	{
-		DBG1("string-to-key specifiers not supported");
-		goto end;
-	}
-	DBG2("  %N", pgp_sym_alg_names, s2k);
-
-	if (s2k != PGP_SYM_ALG_PLAIN)
-	{
-		DBG1("%N encryption not supported",  pgp_sym_alg_names, s2k);
-		goto end;
-	}
-
 	for (objectID = PRIV_KEY_MODULUS; objectID <= PRIV_KEY_PRIME2; objectID++)
 	{
 		chunk_t object;	
 
+		if (objectID == PRIV_KEY_PRIV_EXP)
+		{
+			pgp_sym_alg_t s2k;
+
+			/* string-to-key usage */
+			s2k = pgp_length(&packet, 1);
+			DBG2("L3 - string-to-key:  %d", s2k);
+
+			if (s2k == 255 || s2k == 254)
+			{
+				DBG1("string-to-key specifiers not supported");
+				goto end;
+			}
+			DBG2("  %N", pgp_sym_alg_names, s2k);
+
+			if (s2k != PGP_SYM_ALG_PLAIN)
+			{
+				DBG1("%N encryption not supported",  pgp_sym_alg_names, s2k);
+				goto end;
+			}
+		}
+
+		DBG2("L3 - %s:", privkeyObjects[objectID].name);
 		object.len = pgp_length(&packet, 2);
 
 		if (object.len == PGP_INVALID_LENGTH)
@@ -865,6 +870,7 @@ static gmp_rsa_private_key_t *load_pgp(chunk_t blob)
 		object.ptr = packet.ptr;
 		packet.ptr += object.len;
 		packet.len -= object.len;
+		DBG4("%B", &object);
 
 		switch (objectID)
 		{
