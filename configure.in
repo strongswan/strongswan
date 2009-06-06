@@ -1087,6 +1087,7 @@ if test x$x509 = xtrue; then
 fi
 if test x$pubkey = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
+	pluto_plugins=${pluto_plugins}" pubkey"
 fi
 if test x$xcbc = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
