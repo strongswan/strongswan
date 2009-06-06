@@ -827,31 +827,41 @@ static gmp_rsa_private_key_t *load_pgp(chunk_t blob)
 	mpz_init(this->exp2);
 	mpz_init(this->coeff);
 
-	for (objectID = PRIV_KEY_MODULUS; objectID <= PRIV_KEY_PRIME2; objectID++)
+	for (objectID = PRIV_KEY_MODULUS; objectID <= PRIV_KEY_COEFF; objectID++)
 	{
 		chunk_t object;	
 
-		if (objectID == PRIV_KEY_PRIV_EXP)
+		switch (objectID)
 		{
-			pgp_sym_alg_t s2k;
-
-			/* string-to-key usage */
-			s2k = pgp_length(&packet, 1);
-			DBG2("L3 - string-to-key:  %d", s2k);
-
-			if (s2k == 255 || s2k == 254)
+			case PRIV_KEY_PRIV_EXP:
 			{
-				DBG1("string-to-key specifiers not supported");
-				goto end;
-			}
-			DBG2("  %N", pgp_sym_alg_names, s2k);
+				pgp_sym_alg_t s2k;
 
-			if (s2k != PGP_SYM_ALG_PLAIN)
-			{
-				DBG1("%N encryption not supported",  pgp_sym_alg_names, s2k);
-				goto end;
+				/* string-to-key usage */
+				s2k = pgp_length(&packet, 1);
+				DBG2("L3 - string-to-key:  %d", s2k);
+
+				if (s2k == 255 || s2k == 254)
+				{
+					DBG1("string-to-key specifiers not supported");
+					goto end;
+				}
+				DBG2("  %N", pgp_sym_alg_names, s2k);
+
+				if (s2k != PGP_SYM_ALG_PLAIN)
+				{
+					DBG1("%N encryption not supported",  pgp_sym_alg_names, s2k);
+					goto end;
+				}
+				break;
 			}
-		}
+			case PRIV_KEY_EXP1:
+			case PRIV_KEY_EXP2:
+				/* not contained in OpenPGP secret key payload */
+				continue;
+			default:
+				break;
+		}		
 
 		DBG2("L3 - %s:", privkeyObjects[objectID].name);
 		object.len = pgp_length(&packet, 2);
@@ -884,10 +894,13 @@ static gmp_rsa_private_key_t *load_pgp(chunk_t blob)
 				mpz_import(this->d, object.len, 1, 1, 1, 0, object.ptr);
 				break;
 			case PRIV_KEY_PRIME1:
-				mpz_import(this->p, object.len, 1, 1, 1, 0, object.ptr);
+				mpz_import(this->q, object.len, 1, 1, 1, 0, object.ptr);
 				break;
 			case PRIV_KEY_PRIME2:
-				mpz_import(this->q, object.len, 1, 1, 1, 0, object.ptr);
+				mpz_import(this->p, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_COEFF:
+				mpz_import(this->coeff, object.len, 1, 1, 1, 0, object.ptr);
 				break;
 		}
 	}
@@ -903,12 +916,6 @@ static gmp_rsa_private_key_t *load_pgp(chunk_t blob)
 	mpz_sub_ui(u, this->q, 1);
 	mpz_mod(this->exp2, this->d, u);
 
-	/* coeff = (q^-1) mod p */
-	mpz_invert(this->coeff, this->q, this->p);
-	if (mpz_cmp_ui(this->coeff, 0) < 0)
-	{
-		mpz_add(this->coeff, this->coeff, this->p);
-	}
 	mpz_clear(u);
 	chunk_clear(&blob);
 
