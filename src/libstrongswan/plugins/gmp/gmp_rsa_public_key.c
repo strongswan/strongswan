@@ -605,39 +605,47 @@ static gmp_rsa_public_key_t *load_asn1_der(chunk_t blob)
  */
 static gmp_rsa_public_key_t* load_pgp(chunk_t blob)
 {
-	chunk_t exponent, modulus;
+	int objectID;
 	chunk_t packet = blob;
 	private_gmp_rsa_public_key_t *this = gmp_rsa_public_key_create_empty();
 
 	mpz_init(this->n);
 	mpz_init(this->e);
 	
-	/* modulus n */
-	modulus.len = (pgp_length(&packet, 2) + 7) / BITS_PER_BYTE;
-	modulus.ptr = packet.ptr;
-	if (modulus.len > packet.len)
+	for (objectID = PUB_KEY_MODULUS; objectID <= PUB_KEY_EXPONENT; objectID++)
 	{
-		DBG1("OpenPGP public key blob too short for modulus");
-		goto end;
-	}
-	packet.ptr += modulus.len;
-	packet.len -= modulus.len;
-	DBG2("L3 - modulus:");
-	DBG3("%B", &modulus);
+		chunk_t object;	
 
-	/* public exponent e */
-	exponent.len = (pgp_length(&packet, 2) + 7) /  BITS_PER_BYTE;
-	exponent.ptr = packet.ptr;
-	if (exponent.len > packet.len)
-	{
-		DBG1("OpenPGP public key blob too short for exponent");
-		goto end;
-	}
-	DBG2("L3 - public exponent:");
-	DBG3("%B", &exponent);
+		DBG2("L3 - %s:", pubkeyObjects[objectID].name);
+		object.len = pgp_length(&packet, 2);
 
-	mpz_import(this->n, modulus.len,  1, 1, 1, 0, modulus.ptr);
-	mpz_import(this->e, exponent.len, 1, 1, 1, 0, exponent.ptr);
+		if (object.len == PGP_INVALID_LENGTH)
+		{
+			DBG1("OpenPGP length is invalid");
+			goto end;
+		}
+		object.len = (object.len + 7) / BITS_PER_BYTE;
+		if (object.len > packet.len)
+		{
+			DBG1("OpenPGP field is too short");
+			goto end;
+		}
+		object.ptr = packet.ptr;
+		packet.ptr += object.len;
+		packet.len -= object.len;
+		DBG4("%B", &object);
+
+		switch (objectID)
+		{
+			case PUB_KEY_MODULUS:
+				mpz_import(this->n, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PUB_KEY_EXPONENT:
+				mpz_import(this->e, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+		}
+	}
+
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) /  BITS_PER_BYTE;
 	free(blob.ptr);
 
