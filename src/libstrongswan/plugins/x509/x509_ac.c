@@ -779,31 +779,11 @@ static bool issued_by(private_x509_ac_t *this, certificate_t *issuer)
 			return FALSE;
 		}
 	}
-	/* TODO: generic OID to scheme mapper? */
-	switch (this->algorithm)
-	{
-		case OID_MD5_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_MD5;
-			break;
-		case OID_SHA1_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-			break;
-		case OID_SHA256_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA256;
-			break;
-		case OID_SHA384_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA384;
-			break;
-		case OID_SHA512_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA512;
-			break;
-		case OID_ECDSA_WITH_SHA1:
-			scheme = SIGN_ECDSA_WITH_SHA1;
-			break;
-		default:
-			return FALSE;
-	}
-	if (key == NULL)
+
+	/* determine signature scheme */
+	scheme = signature_scheme_from_oid(this->algorithm);
+
+	if (scheme == SIGN_UNKNOWN || key == NULL)
 	{
 		return FALSE;
 	}

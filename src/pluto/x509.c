@@ -1322,30 +1322,11 @@ bool x509_check_signature(chunk_t tbs, chunk_t sig, int algorithm,
 						  const x509cert_t *issuer_cert)
 {
 	public_key_t *key = issuer_cert->public_key;
-	signature_scheme_t scheme = SIGN_DEFAULT;
+	signature_scheme_t scheme = signature_scheme_from_oid(algorithm);
 
-	switch (algorithm)
+	if (scheme == SIGN_UNKNOWN)
 	{
-		case OID_MD5_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_MD5;
-			break;
-		case OID_SHA1_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-			break;
-		case OID_SHA256_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA256;
-			break;
-		case OID_SHA384_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA384;
-			break;
-		case OID_SHA512_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA512;
-			break;
-		case OID_ECDSA_WITH_SHA1:
-			scheme = SIGN_ECDSA_WITH_SHA1;
-			break;
-		default:
-			return FALSE;
+		return FALSE;
 	}
 	return key->verify(key, scheme, tbs, sig); 
 }
@@ -1353,33 +1334,13 @@ bool x509_check_signature(chunk_t tbs, chunk_t sig, int algorithm,
 /**
  * Build an ASN.1 encoded PKCS#1 signature over a binary blob
  */
-chunk_t x509_build_signature(chunk_t tbs, int hash_alg, private_key_t *key,
+chunk_t x509_build_signature(chunk_t tbs, int algorithm, private_key_t *key,
 							 bool bit_string)
 {
-	signature_scheme_t scheme = SIGN_DEFAULT;
 	chunk_t signature;
+	signature_scheme_t scheme = signature_scheme_from_oid(algorithm);
 
-	switch (hash_alg)
-	{
-		case OID_MD5:
-			scheme = SIGN_RSA_EMSA_PKCS1_MD5;
-			break;
-		case OID_SHA1:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-			break;
-		case OID_SHA256:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA256;
-			break;
-		case OID_SHA384:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA384;
-			break;
-		case OID_SHA512:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA512;
-			break;
-		default:
-			return chunk_empty;
-	}
-	if (!key->sign(key, scheme, tbs, &signature))
+	if (scheme == SIGN_UNKNOWN || !key->sign(key, scheme, tbs, &signature))
 	{
 		return chunk_empty;
 	} 

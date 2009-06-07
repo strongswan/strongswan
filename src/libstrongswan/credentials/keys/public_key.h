@@ -58,6 +58,8 @@ extern enum_name_t *key_type_names;
  * variants is OCTET_STRING instead of the default BIT_STRING.
  */
 enum signature_scheme_t {
+	/** Unknown signature scheme                                       */
+	SIGN_UNKNOWN,
 	/** Default scheme of the underlying crypto system                 */
 	SIGN_DEFAULT,
 	/** EMSA-PKCS1_v1.5 signature over digest without digestInfo       */
@@ -163,5 +165,13 @@ struct public_key_t {
 	 */
 	void (*destroy)(public_key_t *this);
 };
+
+/**
+ * Conversion of ASN.1 signature or hash OID to signature scheme.
+ * 
+ * @param oid			ASN.1 OID
+ * @return				signature_scheme, SIGN_UNKNOWN if OID is unsupported
+ */
+signature_scheme_t signature_scheme_from_oid(int oid);
 
 #endif /** PUBLIC_KEY_H_ @}*/

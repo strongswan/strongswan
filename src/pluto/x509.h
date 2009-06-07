@@ -114,10 +114,12 @@ extern void parse_authorityKeyIdentifier(chunk_t blob, int level0
 	, chunk_t *authKeyID, chunk_t *authKeySerialNumber);
 extern chunk_t get_directoryName(chunk_t blob, int level, bool implicit);
 extern err_t check_validity(const x509cert_t *cert, time_t *until);
+
 extern bool x509_check_signature(chunk_t tbs, chunk_t sig, int algorithm,
 								 const x509cert_t *issuer_cert);
-extern chunk_t x509_build_signature(chunk_t tbs, int hash_alg, private_key_t *key,
-									bool bit_string);
+extern chunk_t x509_build_signature(chunk_t tbs, int algorithm,
+									private_key_t *key, bool bit_string);
+
 extern bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until);
 extern x509cert_t* add_x509cert(x509cert_t *cert);
 extern x509cert_t* get_x509cert(chunk_t issuer, chunk_t serial, chunk_t keyid,
