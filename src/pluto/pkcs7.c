@@ -601,6 +601,7 @@ chunk_t pkcs7_messageDigest_attribute(chunk_t content, int digest_alg)
 	hash_alg = hasher_algorithm_from_oid(digest_alg);
 	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 	hasher->allocate_hash(hasher, content, &digest);
+	hasher->destroy(hasher);
 
 	return asn1_wrap(ASN1_SEQUENCE, "cm",
 				ASN1_messageDigest_oid,
@@ -659,7 +660,7 @@ chunk_t pkcs7_build_issuerAndSerialNumber(const x509cert_t *cert)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "cm"
 				, cert->issuer
-				, asn1_simple_object(ASN1_INTEGER, cert->serialNumber));
+				, asn1_integer("c", cert->serialNumber));
 }
 
 /**
@@ -773,8 +774,6 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 	crypter->encrypt(crypter, in, iv, &out);
 	crypter->destroy(crypter);
     DBG3("encrypted data %B", &out);
-	free(in.ptr);
-	free(iv.ptr);
 
 	cert->public_key->encrypt(cert->public_key, symmetricKey, &protectedKey);
 
@@ -813,6 +812,8 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 
 		free(envelopedData.content.ptr);
 		free(symmetricKey.ptr);
+		free(in.ptr);
+		free(iv.ptr);
 		return cInfo;
 	}
 }
