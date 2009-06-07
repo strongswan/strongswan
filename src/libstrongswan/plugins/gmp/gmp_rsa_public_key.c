@@ -319,13 +319,68 @@ static bool verify(private_gmp_rsa_public_key_t *this, signature_scheme_t scheme
 	}
 }
 
+#define MIN_PS_PADDING		8	
+
 /**
- * Implementation of public_key_t.get_keysize.
+ * Implementation of public_key_t.encrypt.
  */
-static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t crypto, chunk_t *plain)
+static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t plain,
+					 chunk_t *crypto)
 {
-	DBG1("RSA public key encryption not implemented");
-	return FALSE;
+	chunk_t em;
+	u_char *pos;
+	int padding, i;
+ 	rng_t *rng;
+
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (rng == NULL)
+	{
+		DBG1("no random generator available");
+		return FALSE;
+	}
+
+	/* number of pseudo-random padding octets */
+	padding = this->k - plain.len - 3;
+ 	if (padding < MIN_PS_PADDING)
+	{
+		DBG1("pseudo-random padding must be at least %d octets", MIN_PS_PADDING);
+		return FALSE;
+	}
+
+	/* padding according to PKCS#1 7.2.1 (RSAES-PKCS1-v1.5-ENCRYPT) */
+	DBG2("padding %u bytes of data to the rsa modulus size of %u bytes",
+		 plain.len, this->k); 
+	em.len = this->k;
+	em.ptr = malloc(em.len); 
+	pos = em.ptr;
+	*pos++ = 0x00;
+	*pos++ = 0x02;
+
+	/* fill with pseudo random octets */
+	rng->get_bytes(rng, padding, pos);
+
+	/* replace zero-valued random octets */
+	for (i = 0; i < padding; i++)
+	{
+		while (*pos == 0)
+		{
+			rng->get_bytes(rng, 1, pos);
+		}
+		pos++;
+	}
+	rng->destroy(rng);
+
+	/* append the padding terminator */
+	*pos++ = 0x00;
+
+	/* now add the data */
+	memcpy(pos, plain.ptr, plain.len);
+	DBG3("padded data before rsa encryption: %B", &em);
+	
+	*crypto = rsaep(this, em);
+	DBG3("rsa encrypted data: %B", crypto);
+	chunk_clear(&em);
+	return TRUE;
 }
 
 /**
