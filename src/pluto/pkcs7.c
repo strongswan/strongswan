@@ -363,25 +363,13 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 			DBG1("only RSA digest encryption supported");
 			return FALSE;
 		}
-		switch (digest_alg)
+
+		/* determine signature scheme */
+		scheme = signature_scheme_from_oid(digest_alg);
+
+		if (scheme == SIGN_UNKNOWN)
 		{
-			case OID_MD5:
-				scheme = SIGN_RSA_EMSA_PKCS1_MD5;
-				break;
-			case OID_SHA1:
-				scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-				break;
-			case OID_SHA256:
-				scheme = SIGN_RSA_EMSA_PKCS1_SHA256;
-				break;
-			case OID_SHA384:
-				scheme = SIGN_RSA_EMSA_PKCS1_SHA384;
-				break;
-			case OID_SHA512:
-				scheme = SIGN_RSA_EMSA_PKCS1_SHA512;
-				break;
-			default:
-				return FALSE;
+			return FALSE;
 		}
 		if (key->verify(key, scheme, *attributes, encrypted_digest))
 		{
