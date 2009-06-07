@@ -32,7 +32,6 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <time.h>
-#include <gmp.h>
 
 #include <freeswan.h>
 

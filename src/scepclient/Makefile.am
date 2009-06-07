@@ -24,14 +24,12 @@ AM_CFLAGS = \
 
 LIBSTRONGSWANBUILDDIR=$(top_builddir)/src/libstrongswan
 LIBFREESWANBUILDDIR=$(top_builddir)/src/libfreeswan
-LIBCRYPTOBUILDDIR=$(top_builddir)/src/libcrypto
 
 scepclient_LDADD = \
 ca.o crl.o certs.o constants.o defs.o fetch.o id.o keys.o lex.o \
-mp_defs.o ocsp.o pem.o pgpcert.o pkcs7.o smartcard.o x509.o \
+ocsp.o pem.o pgpcert.o pkcs7.o smartcard.o x509.o \
 $(LIBSTRONGSWANBUILDDIR)/libstrongswan.la \
-$(LIBFREESWANBUILDDIR)/libfreeswan.a \
--lgmp
+$(LIBFREESWANBUILDDIR)/libfreeswan.a
 
 # This compile option activates smartcard support
 if USE_SMARTCARD
@@ -54,9 +52,6 @@ crl.o : 	$(PLUTODIR)/crl.c $(PLUTODIR)/crl.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 defs.o : 	$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-mp_defs.o :	$(PLUTODIR)/mp_defs.c $(PLUTODIR)/mp_defs.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 fetch.o : 	$(PLUTODIR)/fetch.c $(PLUTODIR)/fetch.h

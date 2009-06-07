@@ -38,7 +38,6 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "mp_defs.h"
 #include "id.h"
 #include "x509.h"
 #include "pgpcert.h"

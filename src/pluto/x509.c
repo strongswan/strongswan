@@ -32,7 +32,6 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "mp_defs.h"
 #include "log.h"
 #include "id.h"
 #include "x509.h"

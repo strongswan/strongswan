@@ -29,6 +29,9 @@
 
 #include <freeswan.h>
 
+#include <asn1/asn1.h>
+#include <credentials/keys/public_key.h>
+
 #include "constants.h"
 
 #ifdef SMARTCARD
@@ -37,7 +40,6 @@
 #endif
 
 #include "defs.h"
-#include "mp_defs.h"
 #include "log.h"
 #include "x509.h"
 #include "ca.h"
@@ -1438,9 +1440,9 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 	{
 		if (rv == CKR_FUNCTION_NOT_SUPPORTED)
 		{
-			RSA_public_key_t rsa;
+			public_key_t *key;
+			chunk_t rsa_modulus, rsa_exponent, rsa_key, cipher_text;
 			chunk_t plain_text = {(u_char*)in, inlen};
-			chunk_t cipher_text; 
 
 			DBG(DBG_CONTROL,
 				DBG_log("doing RSA encryption in software")
@@ -1458,19 +1460,30 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 				scx_release_context(sc);
 				return FALSE;
 			}
-			rsa.k = attr[0].ulValueLen;
-			n_to_mpz(&rsa.n, attr[0].pValue, attr[0].ulValueLen);
-			n_to_mpz(&rsa.e, attr[1].pValue, attr[1].ulValueLen);
-			free(attr[0].pValue);
-			free(attr[1].pValue);
+			rsa_modulus  = chunk_create((u_char*) attr[0].pValue,
+									    (size_t)  attr[0].ulValueLen);
+			rsa_exponent = chunk_create((u_char*) attr[1].pValue,
+									    (size_t)  attr[1].ulValueLen);
+			rsa_key = asn1_wrap(ASN1_SEQUENCE, "mm",
+								asn1_integer("m", rsa_modulus),
+								asn1_integer("m", rsa_exponent));
+			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,	
+								BUILD_BLOB_ASN1_DER, rsa_key, BUILD_END);
+			free(rsa_key.ptr);
+			if (key == NULL)
+			{
+				return FALSE;
+			}
+			key->encrypt(key, plain_text, &cipher_text);
+			key->destroy(key);
 
-			cipher_text = RSA_encrypt(&rsa, plain_text);
-			free_RSA_public_content(&rsa);
 			if (cipher_text.ptr == NULL)
 			{
 				plog("smartcard input data length is too large");
 				if (!pkcs11_keep_state)
+				{
 					scx_release_context(sc);
+				}
 				return FALSE;
 			}
 

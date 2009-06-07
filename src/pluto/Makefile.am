@@ -33,7 +33,6 @@ keys.c keys.h \
 lex.c lex.h \
 log.c log.h \
 modecfg.c modecfg.h \
-mp_defs.c mp_defs.h \
 nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
 packet.c packet.h \
@@ -82,7 +81,7 @@ AM_CFLAGS = \
 pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan.la \
 $(LIBFREESWANDIR)/libfreeswan.a \
--lgmp -lresolv -lpthread $(DLLIB)
+-lresolv -lpthread $(DLLIB)
 
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
