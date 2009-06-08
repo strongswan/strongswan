@@ -19,6 +19,7 @@
 #include "gcrypt_crypter.h"
 #include "gcrypt_rng.h"
 #include "gcrypt_dh.h"
+#include "gcrypt_rsa_private_key.h"
 
 #include <library.h>
 #include <debug.h>
@@ -104,6 +105,8 @@ static void destroy(private_gcrypt_plugin_t *this)
 					(rng_constructor_t)gcrypt_rng_create);
 	lib->crypto->remove_dh(lib->crypto,
 					(dh_constructor_t)gcrypt_dh_create);
+	lib->creds->remove_builder(lib->creds,
+					(builder_constructor_t)gcrypt_rsa_private_key_builder);
 	free(this);
 }
 
@@ -193,6 +196,10 @@ plugin_t *plugin_create()
 					(dh_constructor_t)gcrypt_dh_create);
 	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, 
 					(dh_constructor_t)gcrypt_dh_create);
+	
+	/* RSA */
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+					(builder_constructor_t)gcrypt_rsa_private_key_builder);
 	
 	return &this->public.plugin;
 }
