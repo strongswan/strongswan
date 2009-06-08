@@ -329,24 +329,6 @@ bool openssl_ec_public_key_build_id(EC_KEY *ec, identification_t **keyid,
 }
 
 /**
- * Create a public key from BIGNUM values, used in openssl_ec_private_key.c
- */
-openssl_ec_public_key_t *openssl_ec_public_key_create_from_private_key(EC_KEY *ec)
-{
-	private_openssl_ec_public_key_t *this = openssl_ec_public_key_create_empty();
-	
-	this->ec = EC_KEY_new();
-	EC_KEY_set_public_key(this->ec, EC_KEY_get0_public_key(ec));
-	
-	if (!openssl_ec_public_key_build_id(this->ec, &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
-	return &this->public;
-}
-
-/**
  * Load a public key from an ASN1 encoded blob
  */
 static openssl_ec_public_key_t *load(chunk_t blob)
@@ -370,6 +352,14 @@ static openssl_ec_public_key_t *load(chunk_t blob)
 		return NULL;
 	}
 	return &this->public;
+}
+
+/**
+ * Create a public key from BIGNUM values, used in openssl_ec_private_key.c
+ */
+openssl_ec_public_key_t *openssl_ec_public_key_create_from_private_key(EC_KEY *ec)
+{
+	return (openssl_ec_public_key_t*)load(get_encoding_full(ec));
 }
 
 typedef struct private_builder_t private_builder_t;
