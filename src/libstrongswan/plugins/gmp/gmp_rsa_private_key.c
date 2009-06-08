@@ -313,11 +313,40 @@ static bool sign(private_gmp_rsa_private_key_t *this, signature_scheme_t scheme,
 /**
  * Implementation of gmp_rsa_private_key.decrypt.
  */
-static bool decrypt(private_gmp_rsa_private_key_t *this,
-					chunk_t crypto, chunk_t *plain)
+static bool decrypt(private_gmp_rsa_private_key_t *this, chunk_t crypto,
+					chunk_t *plain)
 {
-	DBG1("RSA private key decryption not implemented");
-	return FALSE;
+	chunk_t em, stripped;
+	bool success = FALSE;
+	
+	/* rsa decryption using PKCS#1 RSADP */
+	stripped = em = rsadp(this, crypto);
+
+	/* PKCS#1 v1.5 8.1 encryption-block formatting (EB = 00 || 02 || PS || 00 || D) */
+
+	/* check for hex pattern 00 02 in decrypted message */
+	if ((*stripped.ptr++ != 0x00) || (*(stripped.ptr++) != 0x02))
+	{
+		DBG1("incorrect padding - probably wrong rsa key");
+		goto end;
+	}
+	stripped.len -= 2;
+
+	/* the plaintext data starts after first 0x00 byte */
+	while (stripped.len-- > 0 && *stripped.ptr++ != 0x00)
+
+	if (stripped.len == 0)
+	{
+		DBG1("no plaintext data");
+		goto end;
+	}
+
+	*plain = chunk_clone(stripped);
+	success = TRUE;
+
+end:
+	chunk_clear(&em);
+	return success;
 }
 
 /**

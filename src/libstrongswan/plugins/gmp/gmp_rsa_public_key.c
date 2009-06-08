@@ -377,6 +377,7 @@ static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t plain,
 	memcpy(pos, plain.ptr, plain.len);
 	DBG3("padded data before rsa encryption: %B", &em);
 	
+	/* rsa encryption using PKCS#1 RSAEP */
 	*crypto = rsaep(this, em);
 	DBG3("rsa encrypted data: %B", crypto);
 	chunk_clear(&em);
