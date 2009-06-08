@@ -43,6 +43,11 @@
 #include <utils/enumerator.h>
 #include <utils/optionsfrom.h>
 
+#ifdef INTEGRITY_TEST
+#include <fips/fips.h>
+#include <fips/fips_signature.h>
+#endif /* INTEGRITY_TEST */
+
 #include <pfkeyv2.h>
 #include <pfkey.h>
 
@@ -639,6 +644,19 @@ int main(int argc, char **argv)
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "pluto.load", PLUGINS));
 	print_plugins();
+
+#ifdef INTEGRITY_TEST
+	DBG1("integrity test of libstrongswan code");
+	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
+	{
+		DBG1("  integrity test passed");
+	}
+	else
+	{
+		DBG1("  integrity test failed");
+		abort();
+	}
+#endif /* INTEGRITY_TEST */
 
 	init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
 	init_virtual_ip(virtual_private);

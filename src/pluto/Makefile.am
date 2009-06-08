@@ -114,6 +114,11 @@ if USE_SMARTCARD
   AM_CFLAGS += -DSMARTCARD
 endif
 
+# This compile option activates the integrity test of libstrongswan
+if USE_INTEGRITY_TEST
+  AM_CFLAGS += -DINTEGRITY_TEST
+endif
+
 # This compile option activates the crypto self-test
 if USE_SELF_TEST
   AM_CFLAGS += -DSELF_TEST
