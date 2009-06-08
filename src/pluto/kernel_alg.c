@@ -428,47 +428,53 @@ struct sadb_alg* kernel_alg_esp_sadb_alg(u_int alg_id)
 
 void kernel_alg_list(void)
 {
+	char buf[BUF_LEN];
+	char *pos;
+	int n, len;
 	u_int sadb_id;
 
 	whack_log(RC_COMMENT, " ");
-	whack_log(RC_COMMENT, "List of registered ESP Encryption Algorithms:");
+	whack_log(RC_COMMENT, "List of registered ESP Algorithms:");
 	whack_log(RC_COMMENT, " ");
 
+	pos = buf;
+	*pos = '\0';
+	len = BUF_LEN;
 	for (sadb_id = 1; sadb_id <= SADB_EALG_MAX; sadb_id++)
 	{
 		if (ESP_EALG_PRESENT(sadb_id))
 		{
-			struct sadb_alg *alg_p = &esp_ealg[sadb_id];
-
-			whack_log(RC_COMMENT, "#%-5d %s, blocksize: %d, keylen: %d-%d"
-				, sadb_id
-				, enum_name(&esp_transformid_names, sadb_id)
-				, alg_p->sadb_alg_ivlen
-				, alg_p->sadb_alg_minbits
-				, alg_p->sadb_alg_maxbits
-			);
+			n = snprintf(pos, len, " %s",
+						 enum_name(&esp_transformid_names, sadb_id));
+			pos += n;
+			len -= n;
+			if (len <= 0)
+			{
+				break;
+			}
 		}
 	}
+	whack_log(RC_COMMENT, "  encryption:%s", buf);
 	
-	whack_log(RC_COMMENT, " ");
-	whack_log(RC_COMMENT, "List of registered ESP Authentication Algorithms:");
-	whack_log(RC_COMMENT, " ");
-
+	pos = buf;
+	*pos = '\0';
+	len = BUF_LEN;
 	for (sadb_id = 1; sadb_id <= SADB_AALG_MAX; sadb_id++)
 	{
 		if (ESP_AALG_PRESENT(sadb_id))
 		{
 			u_int aaid = alg_info_esp_sadb2aa(sadb_id);
-			struct sadb_alg *alg_p = &esp_aalg[sadb_id];
 
-			whack_log(RC_COMMENT, "#%-5d %s, keylen: %d-%d"
-				, aaid
-				, enum_name(&auth_alg_names, aaid)
-				, alg_p->sadb_alg_minbits
-				, alg_p->sadb_alg_maxbits
-			);
+			n = snprintf(pos, len, " %s", enum_name(&auth_alg_names, aaid));
+			pos += n;
+			len -= n;
+			if (len <= 0)
+			{
+				break;
+			}
 		}
 	}
+	whack_log(RC_COMMENT, "  integrity: %s", buf);
 }
 
 void kernel_alg_show_connection(struct connection *c, const char *instance)

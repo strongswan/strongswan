@@ -480,11 +480,6 @@ whack_handle(int whackctlfd)
 		free_ocsp_cache();
 	}
 
-	if (msg.whack_list & LIST_ALGS)
-	{
-		ike_alg_list();
-		kernel_alg_list();
-	}
    if (msg.whack_list & LIST_PUBKEYS)
 	{
 		list_public_keys(msg.whack_utc);
@@ -540,6 +535,12 @@ whack_handle(int whackctlfd)
 	if (msg.whack_list & LIST_CARDS)
 	{
 		scx_list(msg.whack_utc);
+	}
+
+	if (msg.whack_list & LIST_ALGS)
+	{
+		ike_alg_list();
+		kernel_alg_list();
 	}
 
 	if (msg.whack_key)
