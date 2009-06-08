@@ -56,9 +56,14 @@ struct private_gcrypt_rsa_private_key_t {
 };
 
 /**
+ * Implemented in gcrypt_rsa_public_key.c
+ */
+public_key_t *gcrypt_rsa_public_key_create_from_sexp(gcry_sexp_t key);
+
+/**
  * find a token in a S-expression
  */
-static chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name)
+chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name)
 {
 	gcry_sexp_t token;
 	chunk_t data = chunk_empty;
@@ -198,7 +203,7 @@ static identification_t* get_id(private_gcrypt_rsa_private_key_t *this,
  */
 static public_key_t* get_public_key(private_gcrypt_rsa_private_key_t *this)
 {
-	return NULL;
+	return gcrypt_rsa_public_key_create_from_sexp(this->key);
 }
 
 /**
@@ -375,8 +380,8 @@ static private_gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_create_empty()
 /**
  * build the keyids of a private/public key
  */
-static bool gcrypt_rsa_build_keyids(gcry_sexp_t key, identification_t **keyid,
-									identification_t **keyid_info)
+bool gcrypt_rsa_build_keyids(gcry_sexp_t key, identification_t **keyid,
+							 identification_t **keyid_info)
 {
 	chunk_t publicKeyInfo, publicKey, hash;
 	hasher_t *hasher;

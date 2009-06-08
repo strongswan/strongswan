@@ -20,6 +20,7 @@
 #include "gcrypt_rng.h"
 #include "gcrypt_dh.h"
 #include "gcrypt_rsa_private_key.h"
+#include "gcrypt_rsa_public_key.h"
 
 #include <library.h>
 #include <debug.h>
@@ -107,6 +108,8 @@ static void destroy(private_gcrypt_plugin_t *this)
 					(dh_constructor_t)gcrypt_dh_create);
 	lib->creds->remove_builder(lib->creds,
 					(builder_constructor_t)gcrypt_rsa_private_key_builder);
+	lib->creds->remove_builder(lib->creds,
+					(builder_constructor_t)gcrypt_rsa_public_key_builder);
 	free(this);
 }
 
@@ -200,6 +203,8 @@ plugin_t *plugin_create()
 	/* RSA */
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 					(builder_constructor_t)gcrypt_rsa_private_key_builder);
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+					(builder_constructor_t)gcrypt_rsa_public_key_builder);
 	
 	return &this->public.plugin;
 }
