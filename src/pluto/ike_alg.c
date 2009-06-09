@@ -281,7 +281,7 @@ void ike_alg_list(void)
 			break;
 		}
 	}
-	whack_log(RC_COMMENT, "  hasher:    %s", buf);
+	whack_log(RC_COMMENT, "  integrity: %s", buf);
 
 	pos = buf;
 	*pos = '\0';
