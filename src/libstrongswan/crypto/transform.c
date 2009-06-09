@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,9 +15,11 @@
 
 #include <crypto/transform.h>
 
-ENUM_BEGIN(transform_type_names, UNDEFINED_TRANSFORM_TYPE, UNDEFINED_TRANSFORM_TYPE, 
-	"UNDEFINED_TRANSFORM_TYPE");
-ENUM_NEXT(transform_type_names, ENCRYPTION_ALGORITHM, EXTENDED_SEQUENCE_NUMBERS, UNDEFINED_TRANSFORM_TYPE,
+ENUM_BEGIN(transform_type_names, UNDEFINED_TRANSFORM_TYPE, RANDOM_NUMBER_GENERATOR,
+	"UNDEFINED_TRANSFORM_TYPE",
+	"HASH_ALGORITHM",
+	"RANDOM_NUMBER_GENERATOR");
+ENUM_NEXT(transform_type_names, ENCRYPTION_ALGORITHM, EXTENDED_SEQUENCE_NUMBERS, RANDOM_NUMBER_GENERATOR,
 	"ENCRYPTION_ALGORITHM",
 	"PSEUDO_RANDOM_FUNCTION",
 	"INTEGRITY_ALGORITHM",

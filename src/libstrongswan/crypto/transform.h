@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -30,6 +30,8 @@ typedef enum transform_type_t transform_type_t;
  */
 enum transform_type_t {
 	UNDEFINED_TRANSFORM_TYPE = 241,
+	HASH_ALGORITHM = 242,
+	RANDOM_NUMBER_GENERATOR = 243,
 	ENCRYPTION_ALGORITHM = 1,
 	PSEUDO_RANDOM_FUNCTION = 2,
 	INTEGRITY_ALGORITHM = 3,
