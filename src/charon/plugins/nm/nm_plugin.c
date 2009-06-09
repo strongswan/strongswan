@@ -63,8 +63,6 @@ static job_requeue_t run(private_nm_plugin_t *this)
 {
 	this->loop = g_main_loop_new(NULL, FALSE);
 	g_main_loop_run(this->loop);
-	g_main_loop_unref(this->loop);
-	
 	return JOB_REQUEUE_NONE;
 }
 
@@ -75,7 +73,11 @@ static void destroy(private_nm_plugin_t *this)
 {
 	if (this->loop)
 	{
-		g_main_loop_quit(this->loop);
+		if (g_main_loop_is_running(this->loop))
+		{
+			g_main_loop_quit(this->loop);
+		}
+		g_main_loop_unref(this->loop);
 	}
 	if (this->plugin)
 	{
