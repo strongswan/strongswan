@@ -189,8 +189,8 @@ static bool matches_pubkey(chunk_t key, public_key_t *pubkey)
 		return FALSE;
 	}
 	pubkeydata = asn1_wrap(ASN1_SEQUENCE, "mm", 
-						asn1_wrap(ASN1_INTEGER, "c", n),
-						asn1_wrap(ASN1_INTEGER, "c", e));
+						asn1_integer("c", n),
+						asn1_integer("c", e));
 	hasher->allocate_hash(hasher, pubkeydata, &hash);
 	free(pubkeydata.ptr);
 	id = pubkey->get_id(pubkey, ID_PUBKEY_SHA1);
@@ -387,8 +387,8 @@ static public_key_t* get_public_key(private_agent_private_key_t *this)
 	e = read_string(&key);
 	n = read_string(&key);
 	encoded = asn1_wrap(ASN1_SEQUENCE, "mm", 
-					asn1_wrap(ASN1_INTEGER, "c", n),
-					asn1_wrap(ASN1_INTEGER, "c", e));
+					asn1_integer("c", n),
+					asn1_integer("c", e));
 
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, 
 								BUILD_BLOB_ASN1_DER, encoded, BUILD_END);
@@ -440,8 +440,8 @@ static bool build_ids(private_agent_private_key_t *this)
 		return FALSE;
 	}
 	publicKey = asn1_wrap(ASN1_SEQUENCE, "mm", 
-					asn1_wrap(ASN1_INTEGER, "c", n),
-					asn1_wrap(ASN1_INTEGER, "c", e));
+					asn1_integer("c", n),
+					asn1_integer("c", e));
 	hasher->allocate_hash(hasher, publicKey, &hash);
 	this->keyid = identification_create_from_encoding(ID_PUBKEY_SHA1, hash);
 	chunk_free(&hash);

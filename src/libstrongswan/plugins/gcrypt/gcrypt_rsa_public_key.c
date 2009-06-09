@@ -216,8 +216,8 @@ static identification_t *get_id(private_gcrypt_rsa_public_key_t *this,
 static chunk_t get_encoding(private_gcrypt_rsa_public_key_t *this)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "mm",
-			asn1_wrap(ASN1_INTEGER, "m", gcrypt_rsa_find_token(this->key, "n")),
-			asn1_wrap(ASN1_INTEGER, "m", gcrypt_rsa_find_token(this->key, "e")));
+			asn1_integer("m", gcrypt_rsa_find_token(this->key, "n")),
+			asn1_integer("m", gcrypt_rsa_find_token(this->key, "e")));
 }
 
 /**

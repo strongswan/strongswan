@@ -317,14 +317,14 @@ static chunk_t get_encoding(private_gcrypt_rsa_private_key_t *this)
 	}
 	
 	return asn1_wrap(ASN1_SEQUENCE, "cmmmmmmmm", ASN1_INTEGER_0,
-			asn1_wrap(ASN1_INTEGER, "m", gcrypt_rsa_find_token(this->key, "n")),
-			asn1_wrap(ASN1_INTEGER, "m", gcrypt_rsa_find_token(this->key, "e")),
-			asn1_wrap(ASN1_INTEGER, "m", cd),
-			asn1_wrap(ASN1_INTEGER, "m", cp),
-			asn1_wrap(ASN1_INTEGER, "m", cq),
-			asn1_wrap(ASN1_INTEGER, "m", cexp1),
-			asn1_wrap(ASN1_INTEGER, "m", cexp2),
-			asn1_wrap(ASN1_INTEGER, "m", gcrypt_rsa_find_token(this->key, "u")));
+			asn1_integer("m", gcrypt_rsa_find_token(this->key, "n")),
+			asn1_integer("m", gcrypt_rsa_find_token(this->key, "e")),
+			asn1_integer("m", cd),
+			asn1_integer("m", cp),
+			asn1_integer("m", cq),
+			asn1_integer("m", cexp1),
+			asn1_integer("m", cexp2),
+			asn1_integer("m", gcrypt_rsa_find_token(this->key, "u")));
 }
 
 /**
@@ -393,8 +393,8 @@ bool gcrypt_rsa_build_keyids(gcry_sexp_t key, identification_t **keyid,
 		return FALSE;
 	}
 	publicKey = asn1_wrap(ASN1_SEQUENCE, "mm",
-				 asn1_wrap(ASN1_INTEGER, "m", gcrypt_rsa_find_token(key, "n")),
-				 asn1_wrap(ASN1_INTEGER, "m", gcrypt_rsa_find_token(key, "e")));
+				 asn1_integer("m", gcrypt_rsa_find_token(key, "n")),
+				 asn1_integer("m", gcrypt_rsa_find_token(key, "e")));
 	hasher->allocate_hash(hasher, publicKey, &hash);
 	*keyid = identification_create_from_encoding(ID_PUBKEY_SHA1, hash);
 	chunk_free(&hash);
