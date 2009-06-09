@@ -296,6 +296,11 @@ size_t asn1_length(chunk_t *blob)
 		len = 256*len + *blob->ptr++;
 		blob->len--;
 	}
+	if (len > blob->len)
+	{
+		DBG2("length is larger than remaining blob size");
+		return ASN1_INVALID_LENGTH;
+	}
 	return len;
 }
 
