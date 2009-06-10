@@ -17,5 +17,5 @@ echo "testing openssl"
 sudo ./dh_speed "openssl" 400 modp768 modp768 modp1024 modp1536 modp2048 | tail -n 4
 sudo ./dh_speed "openssl" 100 modp1024 modp3072 modp4096 | tail -n 2
 sudo ./dh_speed "openssl" 5 modp2048 modp6144 modp8192 | tail -n 2
-sudo ./dh_speed "openssl" 300 ecp192 ecp192 ecp224 ecp256 ecp384 ecp256 | tail -n 5
+sudo ./dh_speed "openssl" 300 ecp192 ecp192 ecp224 ecp256 ecp384 ecp521 | tail -n 5
 
