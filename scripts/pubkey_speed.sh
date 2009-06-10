@@ -8,6 +8,7 @@ function rsatest {
 function rsatestall {
   echo "testing: $1"
   rsatest 512 "$1" 5000
+  rsatest 768 "$1" 5000
   rsatest 1024 "$1" 1000
   rsatest 1536 "$1" 500
   rsatest 2048 "$1" 100
