@@ -60,49 +60,65 @@ static bool verify_emsa_pkcs1_signature(private_openssl_rsa_public_key_t *this,
 										int type, chunk_t data, chunk_t signature)
 {
 	bool valid = FALSE;
-	const EVP_MD *hasher = EVP_get_digestbynid(type);
-	if (!hasher)
+	int rsa_size = RSA_size(this->rsa);
+
+	/* OpenSSL expects a signature of exactly RSA size (no leading 0x00) */
+	if (signature.len > rsa_size)
 	{
-		return FALSE;
+		signature = chunk_skip(signature, signature.len - rsa_size);
 	}
-	
-	EVP_MD_CTX *ctx = EVP_MD_CTX_create();
-	EVP_PKEY *key = EVP_PKEY_new();
-	if (!ctx || !key)
+
+	if (type == NID_undef)
 	{
-		goto error;
+		chunk_t hash = chunk_alloc(rsa_size);
+
+		hash.len = RSA_public_decrypt(signature.len, signature.ptr, hash.ptr,
+									  this->rsa, RSA_PKCS1_PADDING);
+		valid = chunk_equals(data, hash);
+		free(hash.ptr);
 	}
-	
-	if (!EVP_PKEY_set1_RSA(key, this->rsa))
+	else
 	{
-		goto error;
-	}
-	
-	if (!EVP_VerifyInit_ex(ctx, hasher, NULL))
-	{
-		goto error;
-	}
-	
-	if (!EVP_VerifyUpdate(ctx, data.ptr, data.len))
-	{
-		goto error;
-	}
-	
-	/* VerifyFinal expects a signature of exactly RSA size (no leading 0x00) */
-	if (signature.len > RSA_size(this->rsa))
-	{
-		signature = chunk_skip(signature, signature.len - RSA_size(this->rsa));
-	}
-	valid = (EVP_VerifyFinal(ctx, signature.ptr, signature.len, key) == 1);
+		EVP_MD_CTX *ctx;
+		EVP_PKEY *key;
+		const EVP_MD *hasher;
+
+		hasher = EVP_get_digestbynid(type);
+		if (!hasher)
+		{
+			return FALSE;
+		}
+
+		ctx = EVP_MD_CTX_create();
+		key = EVP_PKEY_new();
+
+		if (!ctx || !key)
+		{
+			goto error;
+		}
+		if (!EVP_PKEY_set1_RSA(key, this->rsa))
+		{
+			goto error;
+		}
+		if (!EVP_VerifyInit_ex(ctx, hasher, NULL))
+		{
+			goto error;
+		}
+		if (!EVP_VerifyUpdate(ctx, data.ptr, data.len))
+		{
+			goto error;
+		}
+		valid = (EVP_VerifyFinal(ctx, signature.ptr, signature.len, key) == 1);
 	
 error:
-	if (key)
-	{
-		EVP_PKEY_free(key);
-	}
-	if (ctx)
-	{
-		EVP_MD_CTX_destroy(ctx);
+		if (key)
+		{
+			EVP_PKEY_free(key);
+		}
+		if (ctx)
+		{
+			EVP_MD_CTX_destroy(ctx);
+		}
 	}
 	return valid;
 }
@@ -124,6 +140,8 @@ static bool verify(private_openssl_rsa_public_key_t *this, signature_scheme_t sc
 	switch (scheme)
 	{
 		case SIGN_DEFAULT:
+		case SIGN_RSA_EMSA_PKCS1_NULL:
+			return verify_emsa_pkcs1_signature(this, NID_undef, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return verify_emsa_pkcs1_signature(this, NID_sha1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:
