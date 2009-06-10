@@ -383,9 +383,9 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	}
 
 	/* representation of months as 0..11*/
-	if (tm_mon > 12)
+	if (tm_mon < 1 || tm_mon > 12)
 	{
-		return 0; /* error in time format */
+		return 0; /* error in month format */
 	}
 	tm_mon--;
 	
