@@ -353,7 +353,7 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 		if (sscanf(utctime->ptr, format, &tm_year, &tm_mon, &tm_day,
 										 &tm_hour, &tm_min) != 5)
 		{
-			return 0; /* error in time st [yy]yymmddhhmm time format */
+			return 0; /* error in [yy]yymmddhhmm time format */
 		}
 	}
 	
