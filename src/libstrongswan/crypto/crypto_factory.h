@@ -30,6 +30,7 @@ typedef struct crypto_factory_t crypto_factory_t;
 #include <crypto/prfs/prf.h>
 #include <crypto/rngs/rng.h>
 #include <crypto/diffie_hellman.h>
+#include <crypto/transform.h>
 
 /**
  * Constructor function for crypters
@@ -257,9 +258,17 @@ struct crypto_factory_t {
 	enumerator_t* (*create_dh_enumerator)(crypto_factory_t *this);
 	
 	/**
-     * Destroy a crypto_factory instance.
-     */
-    void (*destroy)(crypto_factory_t *this);
+	 * Add a test vector to the crypto factory.
+	 *
+	 * @param type			type of the test vector
+	 * @param ...			pointer to a test vector, defined in crypto_tester.h
+	 */
+	void (*add_test_vector)(crypto_factory_t *this, transform_type_t type, ...);
+	
+	/**
+	 * Destroy a crypto_factory instance.
+	 */
+	void (*destroy)(crypto_factory_t *this);
 };
 
 /**
