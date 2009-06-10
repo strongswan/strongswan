@@ -78,59 +78,68 @@ openssl_rsa_public_key_t *openssl_rsa_public_key_create_from_n_e(BIGNUM *n, BIGN
  * Build an EMPSA PKCS1 signature described in PKCS#1
  */
 static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
-									   int type, chunk_t data, chunk_t *out)
+									   int type, chunk_t data, chunk_t *sig)
 {
 	bool success = FALSE;
-	u_char *sig = NULL;
-	u_int len;
-	const EVP_MD *hasher = EVP_get_digestbynid(type);
-	if (!hasher)
+
+	*sig = chunk_alloc(RSA_size(this->rsa));
+
+	if (type == NID_undef)
 	{
-		return FALSE;
-	}
-	
-	EVP_MD_CTX *ctx = EVP_MD_CTX_create();
-	EVP_PKEY *key = EVP_PKEY_new();
-	if (!ctx || !key)
-	{
-		goto error;
-	}
-	
-	if (!EVP_PKEY_set1_RSA(key, this->rsa))
-	{
-		goto error;
-	}
-	
-	if (!EVP_SignInit_ex(ctx, hasher, NULL))
-	{
-		goto error;
-	}
-	
-	if (!EVP_SignUpdate(ctx, data.ptr, data.len))
-	{
-		goto error;
-	}
-	
-	sig = malloc(EVP_PKEY_size(key));
-	if (EVP_SignFinal(ctx, sig, &len, key))
-	{
-		out->ptr = sig;
-		out->len = len;
-		success = TRUE;
+		if (RSA_private_encrypt(data.len, data.ptr, sig->ptr, this->rsa,
+								RSA_PKCS1_PADDING) == sig->len)
+		{
+			success = TRUE;
+		}
 	}
 	else
 	{
-		free(sig);
-	}
+		EVP_MD_CTX *ctx;
+		EVP_PKEY *key;
+		const EVP_MD *hasher;
+
+		hasher = EVP_get_digestbynid(type);
+		if (!hasher)
+		{
+			return FALSE;
+		}
+	
+		ctx = EVP_MD_CTX_create();
+		key = EVP_PKEY_new();
+		if (!ctx || !key)
+		{
+			goto error;
+		}
+		if (!EVP_PKEY_set1_RSA(key, this->rsa))
+		{
+			goto error;
+		}
+		if (!EVP_SignInit_ex(ctx, hasher, NULL))
+		{
+			goto error;
+		}
+		if (!EVP_SignUpdate(ctx, data.ptr, data.len))
+		{
+			goto error;
+		}
+		if (EVP_SignFinal(ctx, sig->ptr, &sig->len, key))
+		{
+			success = TRUE;
+		}
 	
 error:
-	if (key)
-	{
-		EVP_PKEY_free(key);
+		if (key)
+		{
+			EVP_PKEY_free(key);
+		}
+		if (ctx)
+		{
+			EVP_MD_CTX_destroy(ctx);
+		}
 	}
-	if (ctx)
+	if (!success)
 	{
-		EVP_MD_CTX_destroy(ctx);
+		free(sig->ptr);
 	}
 	return success;
 }
@@ -151,6 +160,8 @@ static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t sch
 {
 	switch (scheme)
 	{
+		case SIGN_RSA_EMSA_PKCS1_NULL:
+			return build_emsa_pkcs1_signature(this, NID_undef, data, signature);
 		case SIGN_DEFAULT:
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return build_emsa_pkcs1_signature(this, NID_sha1, data, signature);
