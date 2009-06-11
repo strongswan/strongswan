@@ -611,17 +611,6 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
-	[self-test],
-	AS_HELP_STRING([--disable-self-test],[disable the self-test of the crypto library (default is NO).]),
-	[if test x$enableval = xyes; then
-		self_test=true
-	 else
-		self_test=false
-	fi],
-	self_test=true
-)
-
-AC_ARG_ENABLE(
 	[pluto],
 	AS_HELP_STRING([--disable-pluto],[disable the IKEv1 keying daemon pluto. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -1223,7 +1212,6 @@ AM_CONDITIONAL(USE_FAST, test x$fast = xtrue)
 AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 AM_CONDITIONAL(USE_ME, test x$me = xtrue)
 AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
-AM_CONDITIONAL(USE_SELF_TEST, test x$self_test = xtrue)
 AM_CONDITIONAL(USE_CAPABILITIES, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
 AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)

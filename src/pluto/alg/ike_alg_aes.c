@@ -33,6 +33,5 @@ struct encrypt_desc encrypt_desc_aes =
 	keyminlen: 		 AES_KEY_MIN_LEN,
 	keydeflen: 		 AES_KEY_DEF_LEN,
 	keymaxlen: 		 AES_KEY_MAX_LEN,
-	enc_testvectors: NULL
 };
 

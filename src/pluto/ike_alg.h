@@ -25,17 +25,6 @@ struct ike_alg {
 	struct ike_alg *algo_next;
 };
 
-typedef struct enc_testvector enc_testvector_t;
-
-struct enc_testvector {
-	const size_t  key_size;
-	const u_char *key;
-	const u_char *iv;
-	const size_t  data_size;
-	const u_char *plain;
-	const u_char *cipher;
-};
-
 struct encrypt_desc {
 	u_int16_t algo_type;
 	u_int16_t algo_id;
@@ -45,34 +34,14 @@ struct encrypt_desc {
 	u_int keydeflen;
 	u_int keymaxlen;
 	u_int keyminlen;
-	const enc_testvector_t *enc_testvectors;
 };
 
-typedef struct hash_testvector hash_testvector_t;
-
-struct hash_testvector {
-	const size_t  msg_size;
-	const u_char *msg;
-	const u_char *msg_digest;
-};
-
-typedef struct hmac_testvector hmac_testvector_t;
-
-struct hmac_testvector {
-	const size_t  key_size;
-	const u_char *key;
-	const size_t  msg_size;
-	const u_char *msg;
-	const u_char *hmac;
-};
 struct hash_desc {
 	u_int16_t algo_type;
 	u_int16_t algo_id;
 	struct ike_alg *algo_next;
 
 	size_t hash_digest_size;
-	const hash_testvector_t *hash_testvectors;
-	const hmac_testvector_t *hmac_testvectors;
 };
 
 struct dh_desc {
@@ -96,7 +65,6 @@ extern const struct dh_desc* ike_alg_pfsgroup(struct connection *c, lset_t polic
 extern struct db_context * ike_alg_db_new(struct alg_info_ike *ai, lset_t policy);
 extern void ike_alg_list(void);
 extern void ike_alg_show_connection(struct connection *c, const char *instance);
-extern bool ike_alg_test(void);
 extern bool ike_alg_ok_final(u_int ealg, u_int key_len, u_int aalg, u_int group
 	, struct alg_info_ike *alg_info_ike);
 extern int ike_alg_init(void);

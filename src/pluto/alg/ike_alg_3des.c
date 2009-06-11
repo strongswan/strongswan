@@ -29,7 +29,6 @@ struct encrypt_desc encrypt_desc_3des =
 	keydeflen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
 	keyminlen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
 	keymaxlen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
-	enc_testvectors: NULL
 };
 
 

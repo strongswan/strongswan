@@ -176,13 +176,6 @@ void init_crypto(void)
 		ike_alg_add((struct ike_alg *)desc);
 	}
 	enumerator->destroy(enumerator);
-
-#ifdef SELF_TEST
-	if (!ike_alg_test())
-	{
-		exit_log("pluto cannot run due to failed crypto self-test");
-	}
-#endif
 }
 
 void free_crypto(void)

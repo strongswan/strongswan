@@ -119,11 +119,6 @@ if USE_INTEGRITY_TEST
   AM_CFLAGS += -DINTEGRITY_TEST
 endif
 
-# This compile option activates the crypto self-test
-if USE_SELF_TEST
-  AM_CFLAGS += -DSELF_TEST
-endif
-
 if USE_CAPABILITIES
   pluto_LDADD += -lcap
 endif

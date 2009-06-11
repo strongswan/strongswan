@@ -33,7 +33,6 @@ struct encrypt_desc encrypt_desc_twofish =
 	keydeflen:		 TWOFISH_KEY_MIN_LEN,
 	keyminlen:		 TWOFISH_KEY_DEF_LEN,
 	keymaxlen:		 TWOFISH_KEY_MAX_LEN,
-	enc_testvectors: NULL
 };
 
 struct encrypt_desc encrypt_desc_twofish_ssh =
@@ -46,6 +45,5 @@ struct encrypt_desc encrypt_desc_twofish_ssh =
 	keydeflen:		 TWOFISH_KEY_MIN_LEN,
 	keyminlen:		 TWOFISH_KEY_DEF_LEN,
 	keymaxlen:		 TWOFISH_KEY_MAX_LEN,
-	enc_testvectors: NULL
 };
 

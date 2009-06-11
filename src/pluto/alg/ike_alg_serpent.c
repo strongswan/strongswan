@@ -33,6 +33,5 @@ struct encrypt_desc encrypt_desc_serpent =
 	keyminlen:		 SERPENT_KEY_MIN_LEN,
 	keydeflen:		 SERPENT_KEY_DEF_LEN,
 	keymaxlen:		 SERPENT_KEY_MAX_LEN,
-	enc_testvectors: NULL		
 };
 

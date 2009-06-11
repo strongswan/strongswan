@@ -132,10 +132,6 @@ if USE_INTEGRITY_TEST
   AM_CFLAGS += -DINTEGRITY_TEST
 endif
 
-if USE_SELF_TEST
-  AM_CFLAGS += -DSELF_TEST
-endif
-
 if USE_CAPABILITIES
   charon_LDADD += -lcap
 endif
