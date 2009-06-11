@@ -13,3 +13,6 @@
  * for more details.
  */
 
+TEST_VECTOR_CRYPTER(blowfish1)
+TEST_VECTOR_CRYPTER(blowfish2)
+
