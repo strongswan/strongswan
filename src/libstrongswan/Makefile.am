@@ -209,6 +209,10 @@ if USE_AGENT
   SUBDIRS += plugins/agent
 endif
 
+if USE_TEST_VECTORS
+  SUBDIRS += plugins/test_vectors
+endif
+
 if USE_INTEGRITY_TEST
   SUBDIRS += fips
 endif

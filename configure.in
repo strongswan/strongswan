@@ -326,6 +326,14 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[test-vectors],
+	AS_HELP_STRING([--enable-test-vectprs],[enable plugin providing crypto test vectors (default is NO).]),
+	[if test x$enableval = xyes; then
+		test_vectors=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[mysql],
 	AS_HELP_STRING([--enable-mysql],[enable MySQL database support (default is NO). Requires libmysqlclient_r.]),
 	[if test x$enableval = xyes; then
@@ -1048,6 +1056,10 @@ dnl ======================================
 libstrongswan_plugins=
 pluto_plugins=
 
+if test x$test_vectors = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" test-vectors"
+	pluto_plugins=${pluto_plugins}" test-vectors"
+fi
 if test x$curl = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" curl"
 	pluto_plugins=${pluto_plugins}" curl"
@@ -1144,6 +1156,7 @@ dnl =========================
 
 dnl libstrongswan plugins
 dnl =====================
+AM_CONDITIONAL(USE_TEST_VECTORS, test x$test_vectors = xtrue)
 AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
@@ -1264,6 +1277,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/agent/Makefile
+	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libstrongswan/fips/Makefile
 	src/libfreeswan/Makefile
 	src/pluto/Makefile

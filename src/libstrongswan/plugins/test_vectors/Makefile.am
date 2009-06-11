@@ -1,0 +1,11 @@
+
+INCLUDES = -I$(top_srcdir)/src/libstrongswan
+
+AM_CFLAGS = -rdynamic
+
+plugin_LTLIBRARIES = libstrongswan-test-vectors.la
+
+libstrongswan_test_vectors_la_SOURCES = \
+	test_vectors_plugin.h test_vectors_plugin.c
+libstrongswan_test_vectors_la_LDFLAGS = -module
+
