@@ -149,6 +149,10 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 			gcrypt_alg = GCRY_CIPHER_CAST5;
 			break;
 		case ENCR_BLOWFISH:
+			if (key_size != 16)
+			{	/* gcrypt currently supports 128 bit blowfish only */
+				return NULL;
+			}
 			gcrypt_alg = GCRY_CIPHER_BLOWFISH;
 			break;
 		/* case ENCR_AES_CTR:
