@@ -75,6 +75,8 @@ struct hasher_test_vector_t {
 struct prf_test_vector_t {
 	/** prf algorithm this test vector tests */
 	pseudo_random_function_t alg;
+	/** is this PRF stateful? */
+	bool stateful;
 	/** key length to use, in bytes */
 	size_t key_size;
 	/** key to use */

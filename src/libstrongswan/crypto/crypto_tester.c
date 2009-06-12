@@ -407,6 +407,10 @@ static bool test_prf(private_crypto_tester_t *this,
 		}
 		/* bytes to existing buffer */
 		memset(out.ptr, 0, out.len);
+		if (vector->stateful)
+		{
+			prf->set_key(prf, key);
+		}
 		prf->get_bytes(prf, seed, out.ptr);
 		if (!memeq(vector->out, out.ptr, out.len))
 		{
@@ -416,6 +420,10 @@ static bool test_prf(private_crypto_tester_t *this,
 		if (seed.len > 2)
 		{
 			memset(out.ptr, 0, out.len);
+			if (vector->stateful)
+			{
+				prf->set_key(prf, key);
+			}
 			prf->allocate_bytes(prf, chunk_create(seed.ptr, 1), NULL);
 			prf->get_bytes(prf, chunk_create(seed.ptr + 1, 1), NULL);
 			prf->get_bytes(prf, chunk_skip(seed, 2), out.ptr);
