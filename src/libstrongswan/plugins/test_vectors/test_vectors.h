@@ -92,6 +92,7 @@ TEST_VECTOR_PRF(sha512_hmac_p3)
 TEST_VECTOR_PRF(sha512_hmac_p4)
 TEST_VECTOR_PRF(sha512_hmac_p5)
 TEST_VECTOR_PRF(sha512_hmac_p6)
+TEST_VECTOR_PRF(fips_prf_1)
 
 TEST_VECTOR_RNG(rng_monobit_1)
 TEST_VECTOR_RNG(rng_monobit_2)
