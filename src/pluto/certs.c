@@ -163,7 +163,7 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 	}
 	else
 	{
-		plog("  error loading RSA private key file");
+		plog("  error loading private key file");
 	}
 	return key;
 }
