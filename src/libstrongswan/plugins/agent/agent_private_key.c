@@ -269,7 +269,7 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 	char buf[2048];
 	chunk_t blob = chunk_from_buf(buf);
 	
-	if (scheme != SIGN_DEFAULT && scheme != SIGN_RSA_EMSA_PKCS1_SHA1)
+	if (scheme != SIGN_RSA_EMSA_PKCS1_SHA1)
 	{
 		DBG1("signature scheme %N not supported by ssh-agent",
 			 signature_scheme_names, scheme);

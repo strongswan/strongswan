@@ -144,8 +144,6 @@ static bool sign(private_gcrypt_rsa_private_key_t *this, signature_scheme_t sche
 {
 	switch (scheme)
 	{
-		case SIGN_DEFAULT:
-			/* default is EMSA-PKCS1 using SHA1 */
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return sign_pkcs1(this, HASH_SHA1, "sha1", data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:

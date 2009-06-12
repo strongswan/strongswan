@@ -73,9 +73,16 @@ static bool verify_signature(private_openssl_ec_public_key_t *this,
 	ECDSA_SIG *sig;
 	bool valid = FALSE;
 	
-	if (!openssl_hash_chunk(hash_type, data, &hash))
+	if (hash_type == NID_undef)
 	{
-		return FALSE;
+		hash = data;
+	}
+	else
+	{
+		if (!openssl_hash_chunk(hash_type, data, &hash))
+		{
+			return FALSE;
+		}
 	}
 	
 	sig = ECDSA_SIG_new();
@@ -88,7 +95,6 @@ static bool verify_signature(private_openssl_ec_public_key_t *this,
 	{
 		goto error;
 	}
-	
 	valid = (ECDSA_do_verify(hash.ptr, hash.len, sig, this->ec) == 1);
 	
 error:
@@ -96,7 +102,10 @@ error:
 	{
 		ECDSA_SIG_free(sig);
 	}
-	chunk_free(&hash);
+	if (hash_type != NID_undef)
+	{
+		chunk_free(&hash);
+	}
 	return valid;
 }
 
@@ -158,6 +167,8 @@ static bool verify(private_openssl_ec_public_key_t *this, signature_scheme_t sch
 {
 	switch (scheme)
 	{
+		case SIGN_ECDSA_WITH_NULL:
+			return verify_signature(this, NID_undef, data, signature);
 		case SIGN_ECDSA_WITH_SHA1:
 			return verify_default_signature(this, data, signature);
 		case SIGN_ECDSA_256:

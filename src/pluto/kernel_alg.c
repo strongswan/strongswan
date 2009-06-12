@@ -660,20 +660,14 @@ struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
 {
 	const struct esp_info *esp_info;
 	struct esp_info tmp_esp_info;
-	struct db_context *ctx_new=NULL;
-	struct db_trans *t;
+	struct db_context *ctx_new = NULL;
 	struct db_prop  *prop;
-	u_int trans_cnt;
-	int tn = 0;
+	u_int trans_cnt = esp_ealg_num * esp_aalg_num;
 
 	if (!(policy & POLICY_ENCRYPT))     /* not possible, I think  */
+	{
 		return NULL;
-
-	trans_cnt = esp_ealg_num * esp_aalg_num;
-	DBG(DBG_EMITTING,
-		DBG_log("kernel_alg_db_prop_new() initial trans_cnt=%d"
-				, trans_cnt)
-	)
+	}
 
 	/* pass aprox. number of transforms and attributes */
 	ctx_new = db_prop_new(PROTO_IPSEC_ESP, trans_cnt, trans_cnt * 2);
@@ -716,26 +710,7 @@ struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
 			}
 		}
 	}
-
 	prop = db_prop_get(ctx_new);
-
-	DBG(DBG_CONTROL|DBG_EMITTING,
-		DBG_log("kernel_alg_db_prop_new() "
-				"will return p_new->protoid=%d, p_new->trans_cnt=%d"
-				, prop->protoid, prop->trans_cnt)
-	)
-
-	for (t = prop->trans, tn = 0; tn < prop->trans_cnt; tn++)
-	{
-		DBG(DBG_CONTROL|DBG_EMITTING,
-			DBG_log("kernel_alg_db_prop_new() "
-					"    trans[%d]: transid=%d, attr_cnt=%d, "
-					"attrs[0].type=%d, attrs[0].val=%d"
-					, tn
-					, t[tn].transid, t[tn].attr_cnt
-					, t[tn].attrs[0].type, t[tn].attrs[0].val)
-		)
-	}
 	return ctx_new;
 }
 

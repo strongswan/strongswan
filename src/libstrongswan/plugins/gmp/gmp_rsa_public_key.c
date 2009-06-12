@@ -299,7 +299,6 @@ static bool verify(private_gmp_rsa_public_key_t *this, signature_scheme_t scheme
 {
 	switch (scheme)
 	{
-		case SIGN_DEFAULT:
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return verify_emsa_pkcs1_signature(this, HASH_UNKNOWN, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:

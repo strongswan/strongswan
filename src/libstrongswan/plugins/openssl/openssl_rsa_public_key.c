@@ -139,7 +139,6 @@ static bool verify(private_openssl_rsa_public_key_t *this, signature_scheme_t sc
 {
 	switch (scheme)
 	{
-		case SIGN_DEFAULT:
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return verify_emsa_pkcs1_signature(this, NID_undef, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:

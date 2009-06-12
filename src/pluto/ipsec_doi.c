@@ -1208,6 +1208,9 @@ static bool generate_skeyids_iv(struct state *st)
 			break;
 
 		case OAKLEY_RSA_SIG:
+		case OAKLEY_ECDSA_256:
+		case OAKLEY_ECDSA_384:
+		case OAKLEY_ECDSA_512:
 		case XAUTHInitRSA:
 		case XAUTHRespRSA:
 			if (!skeyid_digisig(st))
@@ -1354,7 +1357,7 @@ static bool generate_skeyids_iv(struct state *st)
  * If hashus argument is TRUE, we're generating a hash for our end.
  * See RFC2409 IKE 5.
  */
- static size_t main_mode_hash(struct state *st, u_char *hash_val, bool hashi,
+ static void main_mode_hash(struct state *st, chunk_t *hash, bool hashi,
 							 const pb_stream *idpl)
 {
 	chunk_t icookie = { st->st_icookie, COOKIE_SIZE };
@@ -1365,9 +1368,21 @@ static bool generate_skeyids_iv(struct state *st)
 						pbs_offset(idpl) - sizeof(struct isakmp_generic) };
 	pseudo_random_function_t prf_alg;
 	prf_t *prf;
-	size_t prf_block_size;
 
-	prf_alg = oakley_to_prf(st->st_oakley.hash);
+	switch (st->st_oakley.auth)
+	{
+		case OAKLEY_ECDSA_256:
+			prf_alg = PRF_HMAC_SHA2_256;
+			break;
+		case OAKLEY_ECDSA_384:
+			prf_alg = PRF_HMAC_SHA2_384;
+			break;
+		case OAKLEY_ECDSA_512:
+			prf_alg = PRF_HMAC_SHA2_512;
+			break;
+		default:
+			prf_alg = oakley_to_prf(st->st_oakley.hash);
+	}
 	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 	prf->set_key(prf, st->st_skeyid);
 
@@ -1396,11 +1411,9 @@ static bool generate_skeyids_iv(struct state *st)
 	 * we use the bytes as they appear on the wire to avoid
 	 * "spelling problems".
 	 */
-	prf->get_bytes(prf, id_body, hash_val);
-	prf_block_size = prf->get_block_size(prf);
+	prf->get_bytes(prf, id_body, hash->ptr);
+	hash->len = prf->get_block_size(prf);
 	prf->destroy(prf);
-
-	return prf_block_size;
 }
 
 /* Create a public key signature of a hash.
@@ -1408,30 +1421,27 @@ static bool generate_skeyids_iv(struct state *st)
  * Use PKCS#1 version 1.5 encryption of hash (called
  * RSAES-PKCS1-V1_5) in PKCS#2.
  */
-static size_t sign_hash(struct connection *c, u_char sig_val[RSA_MAX_OCTETS],
-						u_char *hash_val, size_t hash_len)
+static size_t sign_hash(signature_scheme_t scheme, struct connection *c,
+						u_char sig_val[RSA_MAX_OCTETS], chunk_t hash)
 {
 	size_t sz = 0;
 	smartcard_t *sc = c->spd.this.sc;
 
 	if (sc == NULL)             /* no smartcard */
 	{
-		chunk_t hash, sig;
+		chunk_t sig;
 		private_key_t *private = get_private_key(c);
 
 		if (private == NULL)
 		{
 			return 0;   /* failure: no key to use */
 		}
-		sz = private->get_keysize(private);
-		passert(RSA_MIN_OCTETS <= sz && 4 + hash_len < sz && sz <= RSA_MAX_OCTETS);
-		hash = chunk_create(hash_val, hash_len);
-		sig  = chunk_create(sig_val, sz);
-		if (!private->sign(private, SIGN_RSA_EMSA_PKCS1_NULL, hash, &sig))
+		if (!private->sign(private, scheme, hash, &sig))
 		{
 			return 0;
 		}
-		memcpy(sig_val, sig.ptr, sz);
+		memcpy(sig_val, sig.ptr, sig.len);
+		sz = sig.len;
 		free(sig.ptr);
 	}
 	else if (sc->valid) /* if valid pin then sign hash on the smartcard */
@@ -1457,7 +1467,7 @@ static size_t sign_hash(struct connection *c, u_char sig_val[RSA_MAX_OCTETS],
 			DBG_log("signing hash with RSA key from smartcard (slot: %d, id: %s)"
 				, (int)sc->slot, sc->id)
 		)
-		sz = scx_sign_hash(sc, hash_val, hash_len, sig_val, sz) ? sz : 0;
+		sz = scx_sign_hash(sc, hash.ptr, hash.len, sig_val, sz) ? sz : 0;
 		if (!pkcs11_keep_state)
 			scx_release_context(sc);
 		unlock_certs_and_keys("sign_hash");
@@ -1485,14 +1495,18 @@ struct tac_state {
 static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 {
 	public_key_t *pub_key = kr->public_key;
-	identification_t *keyid = pub_key->get_id(pub_key, ID_PUBKEY_SHA1);
+	identification_t *keyid = pub_key->get_id(pub_key, ID_PUBKEY_INFO_SHA1);
+	signature_scheme_t scheme;
 
+	scheme = (s->st->st_oakley.auth == OAKLEY_RSA_SIG) ?
+					SIGN_RSA_EMSA_PKCS1_NULL : SIGN_ECDSA_WITH_NULL;
 	s->tried_cnt++;
 
-	if (pub_key->verify(pub_key, SIGN_RSA_EMSA_PKCS1_NULL, s->hash, s->sig))
+	if (pub_key->verify(pub_key, scheme, s->hash, s->sig))
 	{
 		DBG(DBG_CRYPT | DBG_CONTROL,
-			DBG_log("signature check passed with keyid %Y", keyid)
+			DBG_log("%s check passed with keyid %Y",
+					enum_show(&oakley_auth_names, s->st->st_oakley.auth), keyid)
 		)
 		unreference_key(&s->st->st_peer_pubkey);
 		s->st->st_peer_pubkey = reference_key(kr);
@@ -1501,25 +1515,26 @@ static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 	else
 	{
 		DBG(DBG_CRYPT,
-			DBG_log("signature check failed with keyid %Y", keyid)
+			DBG_log("%s check failed with keyid %Y",
+					enum_show(&oakley_auth_names, s->st->st_oakley.auth), keyid)
 		)
 		return FALSE;
 	}
 }
 
-static stf_status RSA_check_signature(const struct id* peer, struct state *st,
-									  u_char hash_val[MAX_DIGEST_LEN],
-									  size_t hash_len, const pb_stream *sig_pbs,
+static stf_status check_signature(key_type_t key_type, const struct id* peer,
+								  struct state *st, chunk_t hash,
+								  const pb_stream *sig_pbs,
 #ifdef USE_KEYRR
-									  const pubkey_list_t *keys_from_dns,
+								  const pubkey_list_t *keys_from_dns,
 #endif /* USE_KEYRR */
-									  const struct gw_info *gateways_from_dns)
+								  const struct gw_info *gateways_from_dns)
 {
 	const struct connection *c = st->st_connection;
 	struct tac_state s;
 
 	s.st = st;
-	s.hash = chunk_create(hash_val, hash_len);
+	s.hash = hash;
 	s.sig  = chunk_create(sig_pbs->cur, pbs_left(sig_pbs));
 	s.tried_cnt = 0;
 
@@ -1550,7 +1565,7 @@ static stf_status RSA_check_signature(const struct id* peer, struct state *st,
 			pubkey_t *key = p->key;
 			key_type_t type = key->public_key->get_type(key->public_key);
 
-			if (type == KEY_RSA && same_id(peer, &key->id))
+			if (type == key_type && same_id(peer, &key->id))
 			{
 				time_t now = time(NULL);
 
@@ -2775,6 +2790,23 @@ static void compute_keymats(struct state *st)
 		compute_proto_keymat(st, PROTO_IPSEC_ESP, &st->st_esp);
 }
 
+static bool uses_pubkey_auth(int auth)
+{
+	switch (auth)
+	{
+		case OAKLEY_RSA_SIG:
+		case OAKLEY_ECDSA_SIG:
+		case OAKLEY_ECDSA_256:
+		case OAKLEY_ECDSA_384:
+		case OAKLEY_ECDSA_512:
+		case XAUTHInitRSA:
+		case XAUTHRespRSA:
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
 /* State Transition Functions.
  *
  * The definition of state_microcode_table in demux.c is a good
@@ -3170,11 +3202,9 @@ stf_status main_inI2_outR2(struct msg_digest *md)
 	struct state *const st = md->st;
 	pb_stream *keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
 
-	/* send CR if auth is RSA and no preloaded RSA public key exists*/
-	bool RSA_auth = st->st_oakley.auth == OAKLEY_RSA_SIG
-				 || st->st_oakley.auth == XAUTHInitRSA
-				 || st->st_oakley.auth == XAUTHRespRSA;
-	bool send_cr = !no_cr_send && RSA_auth && !has_preloaded_public_key(st);
+	/* send CR if auth is RSA or ECDSA and no preloaded public key exists*/
+	bool pubkey_auth = uses_pubkey_auth(st->st_oakley.auth);
+	bool send_cr = !no_cr_send && pubkey_auth && !has_preloaded_public_key(st);
 
 	u_int8_t np = ISAKMP_NEXT_NONE;
 
@@ -3314,12 +3344,9 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	certpolicy_t cert_policy = st->st_connection->spd.this.sendcert;
 	cert_t mycert = st->st_connection->spd.this.cert;
 	bool requested, send_cert, send_cr;
+	bool pubkey_auth = uses_pubkey_auth(st->st_oakley.auth);
 
-	bool RSA_auth = st->st_oakley.auth == OAKLEY_RSA_SIG
-				 || st->st_oakley.auth == XAUTHInitRSA
-				 || st->st_oakley.auth == XAUTHRespRSA;
-
-	int auth_payload = RSA_auth ? ISAKMP_NEXT_SIG : ISAKMP_NEXT_HASH;
+	int auth_payload = pubkey_auth ? ISAKMP_NEXT_SIG : ISAKMP_NEXT_HASH;
 
 	/* KE in */
 	RETURN_STF_FAILURE(accept_KE(&st->st_gr, "Gr", st->st_oakley.group, keyex_pbs));
@@ -3342,7 +3369,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	 */
 	requested = cert_policy == CERT_SEND_IF_ASKED
 				&& st->st_connection->got_certrequest;
-	send_cert = RSA_auth && mycert.type != CERT_NONE
+	send_cert = pubkey_auth && mycert.type != CERT_NONE
 				&& (cert_policy == CERT_ALWAYS_SEND || requested);
 
 	/* send certificate request if we don't have a preloaded RSA public key */
@@ -3385,7 +3412,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	}
 
 	/* CERT out */
-	if (RSA_auth)
+	if (pubkey_auth)
 	{
 		DBG(DBG_CONTROL,
 			DBG_log("our certificate policy is %N", cert_policy_names, cert_policy)
@@ -3429,23 +3456,30 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 
    /* HASH_I or SIG_I out */
 	{
-		u_char hash_val[MAX_DIGEST_LEN];
-		size_t hash_len = main_mode_hash(st, hash_val, TRUE, &id_pbs);
+		u_char hash_buf[MAX_DIGEST_LEN];
+		chunk_t hash = chunk_from_buf(hash_buf);
+
+		main_mode_hash(st, &hash, TRUE, &id_pbs);
 
 		if (auth_payload == ISAKMP_NEXT_HASH)
 		{
 			/* HASH_I out */
-			if (!out_generic_raw(ISAKMP_NEXT_NONE, &isakmp_hash_desc, &md->rbody
-			, hash_val, hash_len, "HASH_I"))
+			if (!out_generic_raw(ISAKMP_NEXT_NONE, &isakmp_hash_desc, &md->rbody,
+								 hash.ptr, hash.len, "HASH_I"))
+			{
 				return STF_INTERNAL_ERROR;
+			}
 		}
 		else
 		{
 			/* SIG_I out */
 			u_char sig_val[RSA_MAX_OCTETS];
-			size_t sig_len = sign_hash(st->st_connection, sig_val, hash_val,
-									   hash_len);
+			signature_scheme_t scheme;
+			size_t sig_len;
 
+			scheme = (st->st_oakley.auth == OAKLEY_RSA_SIG) ?
+							SIGN_RSA_EMSA_PKCS1_NULL : SIGN_ECDSA_WITH_NULL;
+			sig_len = sign_hash(scheme, st->st_connection, sig_val, hash);
 			if (sig_len == 0)
 			{
 				loglog(RC_LOG_SERIOUS, "unable to locate my private key for signature");
@@ -3514,9 +3548,9 @@ main_id_and_auth(struct msg_digest *md
 				 , const struct key_continuation *kc    /* current state, can be NULL */
 )
 {
+	u_char hash_buf[MAX_DIGEST_LEN];
+	chunk_t hash = chunk_from_buf(hash_buf);
 	struct state *st = md->st;
-	u_char hash_val[MAX_DIGEST_LEN];
-	size_t hash_len;
 	struct id peer;
 	stf_status r = STF_OK;
 
@@ -3533,7 +3567,7 @@ main_id_and_auth(struct msg_digest *md
 		u_int8_t *old_cur = idpl->cur;
 
 		idpl->cur = idpl->roof;
-		hash_len = main_mode_hash(st, hash_val, !initiator, idpl);
+		main_mode_hash(st, &hash, !initiator, idpl);
 		idpl->cur = old_cur;
 	}
 
@@ -3545,8 +3579,8 @@ main_id_and_auth(struct msg_digest *md
 		{
 			pb_stream *const hash_pbs = &md->chain[ISAKMP_NEXT_HASH]->pbs;
 
-			if (pbs_left(hash_pbs) != hash_len
-			|| memcmp(hash_pbs->cur, hash_val, hash_len) != 0)
+			if (pbs_left(hash_pbs) != hash.len
+			|| memcmp(hash_pbs->cur, hash.ptr, hash.len) != 0)
 			{
 				DBG_cond_dump(DBG_CRYPT, "received HASH:"
 					, hash_pbs->cur, pbs_left(hash_pbs));
@@ -3560,14 +3594,14 @@ main_id_and_auth(struct msg_digest *md
 	case OAKLEY_RSA_SIG:
 	case XAUTHInitRSA:
 	case XAUTHRespRSA:
-		r = RSA_check_signature(&peer, st, hash_val, hash_len
-			, &md->chain[ISAKMP_NEXT_SIG]->pbs
+		r = check_signature(KEY_RSA, &peer, st, hash,
+				 &md->chain[ISAKMP_NEXT_SIG]->pbs,
 #ifdef USE_KEYRR
-			, kc == NULL? NULL : kc->ac.keys_from_dns
+				kc == NULL? NULL : kc->ac.keys_from_dns,
 #endif /* USE_KEYRR */
-			, kc == NULL? NULL : kc->ac.gateways_from_dns
+				kc == NULL? NULL : kc->ac.gateways_from_dns
 			);
-
+	
 		if (r == STF_SUSPEND)
 		{
 			/* initiate/resume asynchronous DNS lookup for key */
@@ -3620,6 +3654,17 @@ main_id_and_auth(struct msg_digest *md
 				r = STF_FAIL + INVALID_KEY_INFORMATION;
 			}
 		}
+		break;
+
+	case OAKLEY_ECDSA_256:
+	case OAKLEY_ECDSA_384:
+	case OAKLEY_ECDSA_512:
+		r = check_signature(KEY_ECDSA, &peer, st, hash,
+							&md->chain[ISAKMP_NEXT_SIG]->pbs,
+#ifdef USE_KEYRR
+							NULL,
+#endif /* USE_KEYRR */
+							NULL);
 		break;
 
 	default:
@@ -3732,9 +3777,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 	pb_stream r_id_pbs; /* ID Payload; also used for hash calculation */
 	certpolicy_t cert_policy;
 	cert_t mycert;
-	bool RSA_auth;
-	bool send_cert;
-	bool requested;
+	bool pubkey_auth, send_cert, requested;
 
 	/* ID and HASH_I or SIG_I in
 	 * Note: this may switch the connection being used!
@@ -3748,19 +3791,16 @@ main_inI3_outR3_tail(struct msg_digest *md
 			return r;
 	}
 
-	/* send certificate if auth is RSA, we have one and we want
-	 * or are requested to send it
+	/* send certificate if pubkey authentication is used, we have one
+	 * and we want or are requested to send it
 	 */
 	cert_policy = st->st_connection->spd.this.sendcert;
 	mycert = st->st_connection->spd.this.cert;
 	requested = cert_policy == CERT_SEND_IF_ASKED
 				&& st->st_connection->got_certrequest;
-	RSA_auth = st->st_oakley.auth == OAKLEY_RSA_SIG
-			|| st->st_oakley.auth == XAUTHInitRSA
-			|| st->st_oakley.auth == XAUTHRespRSA;
-	send_cert = RSA_auth
-				&& mycert.type != CERT_NONE
-				&& (cert_policy == CERT_ALWAYS_SEND || requested);
+	pubkey_auth = uses_pubkey_auth(st->st_oakley.auth);
+	send_cert = pubkey_auth	&& mycert.type != CERT_NONE &&
+				(cert_policy == CERT_ALWAYS_SEND || requested);
 
 	/*************** build output packet HDR*;IDir;HASH/SIG_R ***************/
 	/* proccess_packet() would automatically generate the HDR*
@@ -3776,7 +3816,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 	 */
 	echo_hdr(md, TRUE, ISAKMP_NEXT_ID);
 
-	auth_payload = RSA_auth ? ISAKMP_NEXT_SIG : ISAKMP_NEXT_HASH;
+	auth_payload = pubkey_auth ? ISAKMP_NEXT_SIG : ISAKMP_NEXT_HASH;
 
 	/* IDir out */
 	{
@@ -3795,7 +3835,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 	}
 
 	/* CERT out */
-	if (RSA_auth)
+	if (pubkey_auth)
 	{
 		DBG(DBG_CONTROL,
 			DBG_log("our certificate policy is %N", cert_policy_names, cert_policy)
@@ -3831,23 +3871,30 @@ main_inI3_outR3_tail(struct msg_digest *md
 
 	/* HASH_R or SIG_R out */
 	{
-		u_char hash_val[MAX_DIGEST_LEN];
-		size_t hash_len = main_mode_hash(st, hash_val, FALSE, &r_id_pbs);
+		u_char hash_buf[MAX_DIGEST_LEN];
+		chunk_t hash = chunk_from_buf(hash_buf);
+
+		main_mode_hash(st, &hash, FALSE, &r_id_pbs);
 
 		if (auth_payload == ISAKMP_NEXT_HASH)
 		{
 			/* HASH_R out */
-			if (!out_generic_raw(ISAKMP_NEXT_NONE, &isakmp_hash_desc, &md->rbody
-			, hash_val, hash_len, "HASH_R"))
+			if (!out_generic_raw(ISAKMP_NEXT_NONE, &isakmp_hash_desc, &md->rbody,
+								 hash.ptr, hash.len, "HASH_R"))
+			{
 				return STF_INTERNAL_ERROR;
+			}
 		}
 		else
 		{
 			/* SIG_R out */
 			u_char sig_val[RSA_MAX_OCTETS];
-			size_t sig_len = sign_hash(st->st_connection, sig_val, hash_val,
-									   hash_len);
+			signature_scheme_t scheme;
+			size_t sig_len;
 
+			scheme = (st->st_oakley.auth == OAKLEY_RSA_SIG) ?
+							SIGN_RSA_EMSA_PKCS1_NULL : SIGN_ECDSA_WITH_NULL;
+			sig_len = sign_hash(scheme, st->st_connection, sig_val, hash);
 			if (sig_len == 0)
 			{
 				loglog(RC_LOG_SERIOUS, "unable to locate my private key for signature");

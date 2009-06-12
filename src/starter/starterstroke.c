@@ -239,7 +239,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
 	
 	/* PUBKEY is preferred to PSK and EAP */
-	if (conn->policy & POLICY_RSASIG || conn->policy & POLICY_ECDSASIG)
+	if (conn->policy & POLICY_PUBKEY)
 	{
 		msg.add_conn.auth_method = AUTH_PUBKEY;
 	}

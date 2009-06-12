@@ -323,7 +323,7 @@ starter_whack_add_conn(starter_conn_t *conn)
 
 	r =  send_whack_msg(&msg);
 
-	if (r == 0 && (conn->policy & POLICY_RSASIG))
+	if (r == 0 && (conn->policy & POLICY_PUBKEY))
 	{
 		r += starter_whack_add_pubkey (conn, &conn->left, "left");
 		r += starter_whack_add_pubkey (conn, &conn->right, "right");

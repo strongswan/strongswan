@@ -321,7 +321,7 @@ out_sa(pb_stream *outs
 
 						alg_info_snprint(buf, sizeof (buf),
 								(struct alg_info *)st->st_connection->alg_info_esp);
-						DBG_log(buf);
+						DBG_log("esp proposal: %s", buf);
 					}
 				)
 				db_ctx = kernel_alg_db_new(st->st_connection->alg_info_esp, st->st_policy);
@@ -345,10 +345,10 @@ out_sa(pb_stream *outs
 
 						alg_info_snprint(buf, sizeof (buf),
 								(struct alg_info *)st->st_connection->alg_info_ike);
-						DBG_log(buf);
+						DBG_log("ike proposal: %s", buf);
 					}
 				)
-				db_ctx = ike_alg_db_new(st->st_connection->alg_info_ike, st->st_policy);
+				db_ctx = ike_alg_db_new(st->st_connection, st->st_policy);
 				p = db_prop_get(db_ctx);
 
 				if (!p || p->trans_cnt == 0)
@@ -794,7 +794,10 @@ parse_isakmp_policy(pb_stream *proposal_pbs
 					*policy |= POLICY_PSK;
 					break;
 				case OAKLEY_RSA_SIG:
-					*policy |= POLICY_RSASIG;
+				case OAKLEY_ECDSA_256:
+				case OAKLEY_ECDSA_384:
+				case OAKLEY_ECDSA_512:
+					*policy |= POLICY_PUBKEY;
 					break;
 				case XAUTHInitPreShared:
 					*policy |= POLICY_XAUTH_SERVER;
@@ -978,7 +981,7 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 					case OAKLEY_PRESHARED_KEY:
 						if ((iap & POLICY_PSK) == LEMPTY)
 						{
-							ugh = "policy does not allow OAKLEY_PRESHARED_KEY authentication";
+							ugh = "policy does not allow pre-shared key authentication";
 						}
 						else
 						{
@@ -1009,14 +1012,16 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 						}
 						break;
 					case OAKLEY_RSA_SIG:
-						/* Accept if policy specifies RSASIG or is default */
-						if ((iap & POLICY_RSASIG) == LEMPTY)
+					case OAKLEY_ECDSA_256:
+					case OAKLEY_ECDSA_384:
+					case OAKLEY_ECDSA_512:
+						if ((iap & POLICY_PUBKEY) == LEMPTY)
 						{
-							ugh = "policy does not allow OAKLEY_RSA_SIG authentication";
+							ugh = "policy does not allow public key authentication";
 						}
 						else
 						{
-							ta.auth = OAKLEY_RSA_SIG;
+							ta.auth = val;
 						}
 						break;
 					case XAUTHInitRSA:

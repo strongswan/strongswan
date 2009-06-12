@@ -1634,8 +1634,8 @@ int main(int argc, char **argv)
 
 		if (msg.policy & POLICY_OPPO)
 		{
-			if ((msg.policy & (POLICY_PSK | POLICY_RSASIG)) != POLICY_RSASIG)
-				diag("only RSASIG is supported for opportunism");
+			if ((msg.policy & (POLICY_PSK | POLICY_PUBKEY)) != POLICY_PUBKEY)
+				diag("only PUBKEY is supported for opportunism");
 			if ((msg.policy & POLICY_PFS) == 0)
 				diag("PFS required for opportunism");
 			if ((msg.policy & POLICY_ENCRYPT) == 0)

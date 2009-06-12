@@ -32,8 +32,8 @@
 /* strings containing a colon are interpreted as an IPv6 address */
 #define ip_version(string)	(strchr(string, '.') ? AF_INET : AF_INET6)
 
-static const char ike_defaults[] = "aes128-sha-modp2048";
-static const char esp_defaults[] = "aes128-sha1, 3des-md5";
+static const char ike_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
+static const char esp_defaults[] = "aes128-sha1,3des-sha1";
 
 static const char firewall_defaults[] = "ipsec _updown iptables";
 
@@ -70,7 +70,7 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.seen    = LEMPTY;
 	cfg->conn_default.startup = STARTUP_NO;
 	cfg->conn_default.state   = STATE_IGNORE;
-	cfg->conn_default.policy  = POLICY_ENCRYPT | POLICY_TUNNEL | POLICY_RSASIG |
+	cfg->conn_default.policy  = POLICY_ENCRYPT | POLICY_TUNNEL | POLICY_PUBKEY |
 								POLICY_PFS | POLICY_MOBIKE;
 
 	cfg->conn_default.ike                   = clone_str(ike_defaults);
@@ -555,17 +555,15 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 				/* also handles the cases secret|rsasig and rsasig|secret */
 				for (;;)
 				{
-					if (streq(value, "rsa") || streq(value, "rsasig"))
+					if (streq(value, "rsa")   || streq(value, "rsasig")   ||
+						streq(value, "ecdsa") || streq(value, "ecdsasig") ||
+						streq(value, "pubkey"))
 					{
-						conn->policy |= POLICY_RSASIG | POLICY_ENCRYPT;
+						conn->policy |= POLICY_PUBKEY | POLICY_ENCRYPT;
 					}
 					else if (streq(value, "secret") || streq(value, "psk"))
 					{
 						conn->policy |= POLICY_PSK | POLICY_ENCRYPT;
-					}
-					else if (streq(value, "ecdsa") || streq(value, "ecdsasig"))
-					{
-						conn->policy |= POLICY_ECDSASIG | POLICY_ENCRYPT;
 					}
 					else if (streq(value, "xauthrsasig"))
 					{

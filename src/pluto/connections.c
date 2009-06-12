@@ -997,7 +997,7 @@ add_connection(const whack_message_t *wm)
 				if (c->alg_info_esp)
 					alg_info_snprint(buf, sizeof(buf)
 							,(struct alg_info *)c->alg_info_esp);
-				DBG_log("esp string values: %s", buf);
+				DBG_log("esp proposal: %s", buf);
 			)
 			if (c->alg_info_esp)
 			{
@@ -1024,7 +1024,7 @@ add_connection(const whack_message_t *wm)
 				if (c->alg_info_ike)
 					alg_info_snprint(buf, sizeof(buf)
 							, (struct alg_info *)c->alg_info_ike);
-				DBG_log("ike string values: %s", buf);
+				DBG_log("ike proposal: %s", buf);
 			)
 			if (c->alg_info_ike)
 			{
@@ -3301,19 +3301,25 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 		 * we just used it to decode the current message!
 		 */
 		if (psk == NULL)
+		{
 			return NULL;        /* cannot determine PSK! */
+		}
 		break;
 	case XAUTHInitPreShared:
 	case XAUTHRespPreShared:
 		auth_policy = POLICY_XAUTH_PSK;
 		psk = get_preshared_secret(c);
 		if (psk == NULL)
+		{
 			return NULL;        /* cannot determine PSK! */
+		}
 		break;
 	case OAKLEY_RSA_SIG:
-		auth_policy = POLICY_RSASIG;
+	case OAKLEY_ECDSA_256:
+	case OAKLEY_ECDSA_384:
+	case OAKLEY_ECDSA_512:
+		auth_policy = POLICY_PUBKEY;
 		break;
-	case XAUTHInitRSA:
 	case XAUTHRespRSA:
 		auth_policy = POLICY_XAUTH_RSASIG;
 		break;
@@ -3397,6 +3403,9 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 				break;
 
 			case OAKLEY_RSA_SIG:
+			case OAKLEY_ECDSA_256:
+			case OAKLEY_ECDSA_384:
+			case OAKLEY_ECDSA_512:
 			case XAUTHInitRSA:
 			case XAUTHRespRSA:
 				/*

@@ -138,8 +138,6 @@ static bool verify(private_gcrypt_rsa_public_key_t *this,
 			return verify_pkcs1(this, HASH_SHA384, "sha384", data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA512:
 			return verify_pkcs1(this, HASH_SHA512, "sha512", data, signature);
-		case SIGN_DEFAULT:
-			/* parsing hash OID currently not supported by gcrypt, fall */
 		default:
 			DBG1("signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);

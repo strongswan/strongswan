@@ -162,7 +162,6 @@ static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t sch
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return build_emsa_pkcs1_signature(this, NID_undef, data, signature);
-		case SIGN_DEFAULT:
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return build_emsa_pkcs1_signature(this, NID_sha1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:

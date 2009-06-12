@@ -258,8 +258,8 @@ const chunk_t* get_preshared_secret(const struct connection *c)
 	return s == NULL? NULL : &s->u.preshared_secret;
 }
 
-/* check the existence of an RSA private key matching an RSA public
- * key contained in an X.509 or OpenPGP certificate
+/* check the existence of a private key matching a public key contained
+ * in an X.509 or OpenPGP certificate
  */
 bool has_private_key(cert_t cert)
 {
@@ -280,7 +280,7 @@ bool has_private_key(cert_t cert)
 }
 
 /*
- * get the matching RSA private key belonging to a given X.509 certificate
+ * get the matching private key belonging to a given X.509 certificate
  */
 private_key_t* get_x509_private_key(const x509cert_t *cert)
 {
@@ -297,7 +297,7 @@ private_key_t* get_x509_private_key(const x509cert_t *cert)
 	return NULL;
 }
 
-/* find the appropriate RSA private key (see get_secret).
+/* find the appropriate private key (see get_secret).
  * Failure is indicated by a NULL pointer.
  */
 private_key_t* get_private_key(const struct connection *c)

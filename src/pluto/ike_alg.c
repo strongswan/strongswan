@@ -30,9 +30,9 @@
 #include "constants.h"
 #include "defs.h"
 #include "crypto.h"
-
 #include "state.h"
 #include "packet.h"
+#include "keys.h"
 #include "log.h"
 #include "whack.h"
 #include "spdb.h"
@@ -141,8 +141,9 @@ const struct dh_desc *ike_alg_pfsgroup(struct connection *c, lset_t policy)
 /**
  * Create an OAKLEY proposal based on alg_info and policy
  */
-struct db_context *ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
+struct db_context *ike_alg_db_new(struct connection *c, lset_t policy)
 {
+	struct alg_info_ike *ai = c->alg_info_ike;
 	struct db_context *db_ctx = NULL;
 	struct ike_info *ike_info;
 	struct encrypt_desc *enc_desc;
@@ -189,14 +190,47 @@ struct db_context *ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
 		}
 		enc_desc = ike_alg_get_crypter(ealg);
 
-		if (policy & POLICY_RSASIG)
+		if (policy & POLICY_PUBKEY)
 		{
+			int auth_method = 0;
+			private_key_t *key = get_private_key(c);
+
+			if (key == NULL)
+			{
+				continue;
+			}
+			switch (key->get_type(key))
+			{
+				case KEY_RSA:
+					auth_method = OAKLEY_RSA_SIG;
+					break;
+				case KEY_ECDSA:
+					switch (key->get_keysize(key))
+					{
+						case 32:
+							auth_method = OAKLEY_ECDSA_256;
+							break;
+						case 48:
+							auth_method = OAKLEY_ECDSA_384;
+							break;
+						case 66:
+							auth_method = OAKLEY_ECDSA_512;
+							break;
+						default:
+							continue;
+					}
+					break;
+				default:
+					continue;
+			}
 			db_trans_add(db_ctx, KEY_IKE);
 			db_attr_add_values(db_ctx, OAKLEY_ENCRYPTION_ALGORITHM, ealg);
 			db_attr_add_values(db_ctx, OAKLEY_HASH_ALGORITHM, halg);
 			if (eklen)
+			{
 				db_attr_add_values(db_ctx, OAKLEY_KEY_LENGTH, eklen);
-			db_attr_add_values(db_ctx, OAKLEY_AUTHENTICATION_METHOD, OAKLEY_RSA_SIG);
+			}
+			db_attr_add_values(db_ctx, OAKLEY_AUTHENTICATION_METHOD, auth_method);
 			db_attr_add_values(db_ctx, OAKLEY_GROUP_DESCRIPTION, modp);
 		}
 
@@ -206,7 +240,9 @@ struct db_context *ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
 			db_attr_add_values(db_ctx, OAKLEY_ENCRYPTION_ALGORITHM, ealg);
 			db_attr_add_values(db_ctx, OAKLEY_HASH_ALGORITHM, halg);
 			if (eklen)
+			{
 				db_attr_add_values(db_ctx, OAKLEY_KEY_LENGTH, eklen);
+			}
 			db_attr_add_values(db_ctx, OAKLEY_AUTHENTICATION_METHOD, OAKLEY_PRESHARED_KEY);
 			db_attr_add_values(db_ctx, OAKLEY_GROUP_DESCRIPTION, modp);
 		}
@@ -217,7 +253,9 @@ struct db_context *ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
 			db_attr_add_values(db_ctx, OAKLEY_ENCRYPTION_ALGORITHM, ealg);
 			db_attr_add_values(db_ctx, OAKLEY_HASH_ALGORITHM, halg);
 			if (eklen)
+			{
 				db_attr_add_values(db_ctx, OAKLEY_KEY_LENGTH, eklen);
+			}
 			db_attr_add_values(db_ctx, OAKLEY_AUTHENTICATION_METHOD
 				, is_xauth_server ? XAUTHRespRSA : XAUTHInitRSA);
 			db_attr_add_values(db_ctx, OAKLEY_GROUP_DESCRIPTION, modp);
@@ -229,7 +267,9 @@ struct db_context *ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
 			db_attr_add_values(db_ctx, OAKLEY_ENCRYPTION_ALGORITHM, ealg);
 			db_attr_add_values(db_ctx, OAKLEY_HASH_ALGORITHM, halg);
 			if (eklen)
+			{
 				db_attr_add_values(db_ctx, OAKLEY_KEY_LENGTH, eklen);
+			}
 			db_attr_add_values(db_ctx, OAKLEY_AUTHENTICATION_METHOD
 				, is_xauth_server ? XAUTHRespPreShared : XAUTHInitPreShared);
 			db_attr_add_values(db_ctx, OAKLEY_GROUP_DESCRIPTION, modp);

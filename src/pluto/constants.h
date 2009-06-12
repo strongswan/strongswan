@@ -724,10 +724,10 @@ extern const char *prettypolicy(lset_t policy);
 
 /* ISAKMP auth techniques (none means never negotiate) */
 #define POLICY_PSK           LELEM(0)
-#define POLICY_RSASIG        LELEM(1)
+#define POLICY_PUBKEY        LELEM(1)
 
 #define POLICY_ISAKMP_SHIFT     0       /* log2(POLICY_PSK) */
-#define POLICY_ID_AUTH_MASK     (POLICY_PSK | POLICY_RSASIG | POLICY_XAUTH_PSK | POLICY_XAUTH_RSASIG)
+#define POLICY_ID_AUTH_MASK     (POLICY_PSK | POLICY_PUBKEY | POLICY_XAUTH_PSK | POLICY_XAUTH_RSASIG)
 #define POLICY_ISAKMP_MASK      POLICY_ID_AUTH_MASK     /* all so far */
 
 /* Quick Mode (IPSEC) attributes */
@@ -776,8 +776,7 @@ extern const char *prettypolicy(lset_t policy);
 #define POLICY_BEET             LELEM(22)       /* bound end2end tunnel, IKEv2 */
 #define POLICY_MOBIKE           LELEM(23)       /* enable MOBIKE for IKEv2  */
 #define POLICY_FORCE_ENCAP      LELEM(24)       /* force UDP encapsulation (IKEv2)  */
-#define POLICY_ECDSASIG         LELEM(25)       /* ECDSA signature (IKEv2) */
-#define POLICY_PROXY            LELEM(26)       /* proxy transport mode (MIPv6) */
+#define POLICY_PROXY            LELEM(25)       /* proxy transport mode (MIPv6) */
 
 /* Any IPsec policy?  If not, a connection description
  * is only for ISAKMP SA, not IPSEC SA.  (A pun, I admit.)
@@ -979,8 +978,12 @@ extern enum_names oakley_auth_names;
 #define OAKLEY_RSA_ENC_REV         5
 #define OAKLEY_ELGAMAL_ENC         6
 #define OAKLEY_ELGAMAL_ENC_REV     7
+#define OAKLEY_ECDSA_SIG           8
+#define OAKLEY_ECDSA_256           9
+#define OAKLEY_ECDSA_384          10
+#define OAKLEY_ECDSA_512          11
 
-#define OAKLEY_AUTH_ROOF           8    /* roof on auth values THAT WE SUPPORT */
+#define OAKLEY_AUTH_ROOF          12    /* roof on auth values THAT WE SUPPORT */
 
 #define HybridInitRSA                   64221
 #define HybridRespRSA                   64222

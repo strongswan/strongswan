@@ -60,8 +60,6 @@ extern enum_name_t *key_type_names;
 enum signature_scheme_t {
 	/** Unknown signature scheme                                       */
 	SIGN_UNKNOWN,
-	/** Default scheme of the underlying crypto system                 */
-	SIGN_DEFAULT,
 	/** EMSA-PKCS1_v1.5 signature over digest without digestInfo       */
 	SIGN_RSA_EMSA_PKCS1_NULL,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and MD5       */
@@ -74,6 +72,8 @@ enum signature_scheme_t {
 	SIGN_RSA_EMSA_PKCS1_SHA384,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-512   */
 	SIGN_RSA_EMSA_PKCS1_SHA512,
+	/** ECDSA over precomputed digest                                  */
+	SIGN_ECDSA_WITH_NULL,
 	/** ECDSA with SHA-1                                               */
 	SIGN_ECDSA_WITH_SHA1,
 	/** ECDSA on the P-256 curve with SHA-256 as in RFC 4754           */

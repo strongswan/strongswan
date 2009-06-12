@@ -472,7 +472,7 @@ ENUM(cert_policy_names, CERT_ALWAYS_SEND, CERT_NEVER_SEND,
 
 const char *const sa_policy_bit_names[] = {
 	"PSK",
-	"RSASIG",
+	"PUBKEY",
 	"ENCRYPT",
 	"AUTHENTICATE",
 	"COMPRESS",
@@ -495,7 +495,6 @@ const char *const sa_policy_bit_names[] = {
 	"DONTREAUTH",
 	"BEET",
 	"MOBIKE",
-	"ECDSA",
 	"PROXY",
 	NULL
 };
@@ -849,13 +848,17 @@ enum_names oakley_hash_names =
 /* Oakley Authentication Method attribute */
 
 static const char *const oakley_auth_name1[] = {
-	"OAKLEY_PRESHARED_KEY",
-	"OAKLEY_DSS_SIG",
-	"OAKLEY_RSA_SIG",
-	"OAKLEY_RSA_ENC",
-	"OAKLEY_RSA_ENC_REV",
-	"OAKLEY_ELGAMAL_ENC",
-	"OAKLEY_ELGAMAL_ENC_REV",
+	"PRESHARED_KEY",
+	"DSS_SIG",
+	"RSA_SIG",
+	"RSA_ENC",
+	"RSA_ENC_REV",
+	"ELGAMAL_ENC",
+	"ELGAMAL_ENC_REV",
+	"ECDSA_SIG",
+	"ECDSA_256_SIG",
+	"ECDSA_384_SIG",
+	"ECDSA_512_SIG",   
 };
 
 static const char *const oakley_auth_name2[] = {
@@ -879,7 +882,7 @@ static const char *const oakley_auth_name3[] = {
 };
 
 static enum_names oakley_auth_names1 =
-	{ OAKLEY_PRESHARED_KEY, OAKLEY_ELGAMAL_ENC_REV
+	{ OAKLEY_PRESHARED_KEY, OAKLEY_ECDSA_512
 		, oakley_auth_name1, NULL };
 
 static enum_names oakley_auth_names2 =
@@ -1079,8 +1082,7 @@ aftoinfo(int af)
 	}
 }
 
-bool
-subnetisnone(const ip_subnet *sn)
+bool subnetisnone(const ip_subnet *sn)
 {
 	ip_address base;
 
@@ -1174,8 +1176,7 @@ const char *const natt_type_bitnames[] = {
 
 /* look up enum names in an enum_names */
 
-const char *
-enum_name(enum_names *ed, unsigned long val)
+const char* enum_name(enum_names *ed, unsigned long val)
 {
 	enum_names  *p;
 
@@ -1237,8 +1238,7 @@ enum_search(enum_names *ed, const char *str)
  * Result may be in STATIC buffer!
  * Note: prettypolicy depends on internal details.
  */
-const char *
-bitnamesof(const char *const table[], lset_t val)
+const char* bitnamesof(const char *const table[], lset_t val)
 {
 	char *p = bitnamesbuf;
 	lset_t bit;
@@ -1285,8 +1285,7 @@ bitnamesof(const char *const table[], lset_t val)
 /* print a policy: like bitnamesof, but it also does the non-bitfields.
  * Suppress the shunt and fail fields if 0.
  */
-const char *
-prettypolicy(lset_t policy)
+const char* prettypolicy(lset_t policy)
 {
 	const char *bn = bitnamesof(sa_policy_bit_names
 		, policy & ~(POLICY_SHUNT_MASK | POLICY_FAIL_MASK));
@@ -1319,8 +1318,7 @@ prettypolicy(lset_t policy)
 
 /* test a set by seeing if all bits have names */
 
-bool
-testset(const char *const table[], lset_t val)
+bool testset(const char *const table[], lset_t val)
 {
 	lset_t bit;
 	const char *const *tp;
@@ -1353,8 +1351,7 @@ const char *sparse_name(sparse_names sd, unsigned long val)
 /* find or construct a string to describe an sparse value
  * Result may be in STATIC buffer!
  */
-const char *
-sparse_val_show(sparse_names sd, unsigned long val)
+const char* sparse_val_show(sparse_names sd, unsigned long val)
 {
 	const char *p = sparse_name(sd, val);
 
