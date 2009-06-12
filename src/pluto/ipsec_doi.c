@@ -1464,7 +1464,7 @@ static size_t sign_hash(signature_scheme_t scheme, struct connection *c,
 		}
 
 		DBG(DBG_CONTROL | DBG_CRYPT,
-			DBG_log("signing hash with RSA key from smartcard (slot: %d, id: %s)"
+			DBG_log("signing hash with private key from smartcard (slot: %d, id: %s)"
 				, (int)sc->slot, sc->id)
 		)
 		sz = scx_sign_hash(sc, hash.ptr, hash.len, sig_val, sz) ? sz : 0;
@@ -1475,7 +1475,7 @@ static size_t sign_hash(signature_scheme_t scheme, struct connection *c,
 	return sz;
 }
 
-/* Check signature against all RSA public keys we can find.
+/* Check signature against all public keys we can find.
  * If we need keys from DNS KEY records, and they haven't been fetched,
  * return STF_SUSPEND to ask for asynch DNS lookup.
  *
@@ -1573,7 +1573,7 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 				if (key->until_time != UNDEFINED_TIME && key->until_time < now)
 				{
 					loglog(RC_LOG_SERIOUS,
-						"cached RSA public key has expired and has been deleted");
+						"cached public key has expired and has been deleted");
 					*pp = free_public_keyentry(p);
 					continue; /* continue with next public key */
 				}
@@ -2183,7 +2183,7 @@ static void decode_cr(struct msg_digest *md, struct connection *c)
 /* Decode the ID payload of Phase 1 (main_inI3_outR3 and main_inR3)
  * Note: we may change connections as a result.
  * We must be called before SIG or HASH are decoded since we
- * may change the peer's RSA key or ID.
+ * may change the peer's public key or ID.
  */
 static bool decode_peer_id(struct msg_digest *md, struct id *peer)
 {
