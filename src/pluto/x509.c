@@ -180,19 +180,6 @@ static const asn1Object_t crlDistributionPointsObjects[] = {
 #define CRL_DIST_POINTS_FULLNAME	 3
 
 /**
- * ASN.1 definition of RSApublicKey
- */
-static const asn1Object_t pubkeyObjects[] = {
-	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,	ASN1_OBJ  }, /*  0 */
-	{ 1,   "modulus",			ASN1_INTEGER,	ASN1_BODY }, /*  1 */
-	{ 1,   "publicExponent",	ASN1_INTEGER,	ASN1_BODY }, /*  2 */
-	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
-};
-#define PUB_KEY_RSA_PUBLIC_KEY		0
-#define PUB_KEY_MODULUS				1
-#define PUB_KEY_EXPONENT			2
-
-/**
  * ASN.1 definition of an X.509v3 x509_cert
  */
 static const asn1Object_t certObjects[] = {
