@@ -1498,9 +1498,8 @@ static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 	identification_t *keyid = pub_key->get_id(pub_key, ID_PUBKEY_INFO_SHA1);
 	signature_scheme_t scheme;
 
-	scheme = (s->st->st_oakley.auth == OAKLEY_RSA_SIG) ?
-					SIGN_RSA_EMSA_PKCS1_NULL : SIGN_ECDSA_WITH_NULL;
 	s->tried_cnt++;
+	scheme = oakley_to_signature_scheme(s->st->st_oakley.auth);
 
 	if (pub_key->verify(pub_key, scheme, s->hash, s->sig))
 	{
@@ -2975,17 +2974,27 @@ stf_status main_inI1_outR1(struct msg_digest *md)
 
 	/* determine how many Vendor ID payloads we will be sending */
 	if (SEND_PLUTO_VID)
+	{
 		vids_to_send++;
+	}
 	if (SEND_CISCO_UNITY_VID)
+	{
 		vids_to_send++;
+	}
 	if (md->openpgp)
+	{
 		vids_to_send++;
+	}
 	if (SEND_XAUTH_VID)
+	{
 		vids_to_send++;
+	}
 	/* always send DPD Vendor ID */
 		vids_to_send++;
 	if (md->nat_traversal_vid && nat_traversal_enabled)
+	{
 		vids_to_send++;
+	}
 
 	/* HDR out.
 	 * We can't leave this to comm_handle() because we must
@@ -3477,8 +3486,8 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 			signature_scheme_t scheme;
 			size_t sig_len;
 
-			scheme = (st->st_oakley.auth == OAKLEY_RSA_SIG) ?
-							SIGN_RSA_EMSA_PKCS1_NULL : SIGN_ECDSA_WITH_NULL;
+			scheme = oakley_to_signature_scheme(st->st_oakley.auth);
+
 			sig_len = sign_hash(scheme, st->st_connection, sig_val, hash);
 			if (sig_len == 0)
 			{
@@ -3892,8 +3901,8 @@ main_inI3_outR3_tail(struct msg_digest *md
 			signature_scheme_t scheme;
 			size_t sig_len;
 
-			scheme = (st->st_oakley.auth == OAKLEY_RSA_SIG) ?
-							SIGN_RSA_EMSA_PKCS1_NULL : SIGN_ECDSA_WITH_NULL;
+			scheme = oakley_to_signature_scheme(st->st_oakley.auth);
+
 			sig_len = sign_hash(scheme, st->st_connection, sig_val, hash);
 			if (sig_len == 0)
 			{

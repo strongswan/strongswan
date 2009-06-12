@@ -3320,6 +3320,7 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 	case OAKLEY_ECDSA_512:
 		auth_policy = POLICY_PUBKEY;
 		break;
+	case XAUTHInitRSA:
 	case XAUTHRespRSA:
 		auth_policy = POLICY_XAUTH_RSASIG;
 		break;

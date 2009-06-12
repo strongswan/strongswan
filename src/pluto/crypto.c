@@ -259,6 +259,26 @@ pseudo_random_function_t oakley_to_prf(int alg)
 }
 
 /**
+ * Maps IKEv1 authentication method to IKEv2 signature scheme
+ */
+signature_scheme_t oakley_to_signature_scheme(int method)
+{
+	switch (method)
+	{
+		case OAKLEY_RSA_SIG:
+		case XAUTHInitRSA:
+		case XAUTHRespRSA:
+			return SIGN_RSA_EMSA_PKCS1_NULL;
+		case OAKLEY_ECDSA_256:
+		case OAKLEY_ECDSA_384:
+		case OAKLEY_ECDSA_512:
+			return SIGN_ECDSA_WITH_NULL;
+		default:
+			return SIGN_UNKNOWN;
+	}
+}
+
+/**
  * Converts IKEv2 encryption to IKEv1 encryption algorithm
  */
 int oakley_from_encryption_algorithm(encryption_algorithm_t alg)
