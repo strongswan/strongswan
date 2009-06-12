@@ -327,7 +327,7 @@ AC_ARG_ENABLE(
 
 AC_ARG_ENABLE(
 	[test-vectors],
-	AS_HELP_STRING([--enable-test-vectprs],[enable plugin providing crypto test vectors (default is NO).]),
+	AS_HELP_STRING([--enable-test-vectors],[enable plugin providing crypto test vectors (default is NO).]),
 	[if test x$enableval = xyes; then
 		test_vectors=true
 	fi]
