@@ -981,7 +981,7 @@ extern enum_names oakley_auth_names;
 #define OAKLEY_ECDSA_SIG           8
 #define OAKLEY_ECDSA_256           9
 #define OAKLEY_ECDSA_384          10
-#define OAKLEY_ECDSA_512          11
+#define OAKLEY_ECDSA_521          11
 
 #define OAKLEY_AUTH_ROOF          12    /* roof on auth values THAT WE SUPPORT */
 

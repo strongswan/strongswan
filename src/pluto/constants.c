@@ -848,17 +848,17 @@ enum_names oakley_hash_names =
 /* Oakley Authentication Method attribute */
 
 static const char *const oakley_auth_name1[] = {
-	"PRESHARED_KEY",
-	"DSS_SIG",
-	"RSA_SIG",
-	"RSA_ENC",
-	"RSA_ENC_REV",
-	"ELGAMAL_ENC",
-	"ELGAMAL_ENC_REV",
-	"ECDSA_SIG",
-	"ECDSA_256_SIG",
-	"ECDSA_384_SIG",
-	"ECDSA_512_SIG",   
+	"pre-shared key",
+	"DSS signature",
+	"RSA_signatue",
+	"RSA encryption",
+	"RSA encryption revised",
+	"ElGamal encryption",
+	"ELGamal encryption revised",
+	"ECDSA signature",
+	"ECDSA-256 signature",
+	"ECDSA-384 signature",
+	"ECDSA-521-signature",   
 };
 
 static const char *const oakley_auth_name2[] = {
@@ -882,7 +882,7 @@ static const char *const oakley_auth_name3[] = {
 };
 
 static enum_names oakley_auth_names1 =
-	{ OAKLEY_PRESHARED_KEY, OAKLEY_ECDSA_512
+	{ OAKLEY_PRESHARED_KEY, OAKLEY_ECDSA_521
 		, oakley_auth_name1, NULL };
 
 static enum_names oakley_auth_names2 =

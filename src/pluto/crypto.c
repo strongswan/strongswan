@@ -271,7 +271,7 @@ signature_scheme_t oakley_to_signature_scheme(int method)
 			return SIGN_RSA_EMSA_PKCS1_NULL;
 		case OAKLEY_ECDSA_256:
 		case OAKLEY_ECDSA_384:
-		case OAKLEY_ECDSA_512:
+		case OAKLEY_ECDSA_521:
 			return SIGN_ECDSA_WITH_NULL;
 		default:
 			return SIGN_UNKNOWN;

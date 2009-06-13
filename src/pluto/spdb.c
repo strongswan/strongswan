@@ -796,7 +796,7 @@ parse_isakmp_policy(pb_stream *proposal_pbs
 				case OAKLEY_RSA_SIG:
 				case OAKLEY_ECDSA_256:
 				case OAKLEY_ECDSA_384:
-				case OAKLEY_ECDSA_512:
+				case OAKLEY_ECDSA_521:
 					*policy |= POLICY_PUBKEY;
 					break;
 				case XAUTHInitPreShared:
@@ -1014,7 +1014,7 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 					case OAKLEY_RSA_SIG:
 					case OAKLEY_ECDSA_256:
 					case OAKLEY_ECDSA_384:
-					case OAKLEY_ECDSA_512:
+					case OAKLEY_ECDSA_521:
 						if ((iap & POLICY_PUBKEY) == LEMPTY)
 						{
 							ugh = "policy does not allow public key authentication";

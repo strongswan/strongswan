@@ -214,7 +214,7 @@ struct db_context *ike_alg_db_new(struct connection *c, lset_t policy)
 							auth_method = OAKLEY_ECDSA_384;
 							break;
 						case 66:
-							auth_method = OAKLEY_ECDSA_512;
+							auth_method = OAKLEY_ECDSA_521;
 							break;
 						default:
 							continue;

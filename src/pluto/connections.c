@@ -3317,7 +3317,7 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 	case OAKLEY_RSA_SIG:
 	case OAKLEY_ECDSA_256:
 	case OAKLEY_ECDSA_384:
-	case OAKLEY_ECDSA_512:
+	case OAKLEY_ECDSA_521:
 		auth_policy = POLICY_PUBKEY;
 		break;
 	case XAUTHInitRSA:
@@ -3406,7 +3406,7 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 			case OAKLEY_RSA_SIG:
 			case OAKLEY_ECDSA_256:
 			case OAKLEY_ECDSA_384:
-			case OAKLEY_ECDSA_512:
+			case OAKLEY_ECDSA_521:
 			case XAUTHInitRSA:
 			case XAUTHRespRSA:
 				/*

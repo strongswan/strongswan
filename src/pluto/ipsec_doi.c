@@ -1210,7 +1210,7 @@ static bool generate_skeyids_iv(struct state *st)
 		case OAKLEY_RSA_SIG:
 		case OAKLEY_ECDSA_256:
 		case OAKLEY_ECDSA_384:
-		case OAKLEY_ECDSA_512:
+		case OAKLEY_ECDSA_521:
 		case XAUTHInitRSA:
 		case XAUTHRespRSA:
 			if (!skeyid_digisig(st))
@@ -1377,7 +1377,7 @@ static bool generate_skeyids_iv(struct state *st)
 		case OAKLEY_ECDSA_384:
 			prf_alg = PRF_HMAC_SHA2_384;
 			break;
-		case OAKLEY_ECDSA_512:
+		case OAKLEY_ECDSA_521:
 			prf_alg = PRF_HMAC_SHA2_512;
 			break;
 		default:
@@ -2797,7 +2797,7 @@ static bool uses_pubkey_auth(int auth)
 		case OAKLEY_ECDSA_SIG:
 		case OAKLEY_ECDSA_256:
 		case OAKLEY_ECDSA_384:
-		case OAKLEY_ECDSA_512:
+		case OAKLEY_ECDSA_521:
 		case XAUTHInitRSA:
 		case XAUTHRespRSA:
 			return TRUE;
@@ -3667,7 +3667,7 @@ main_id_and_auth(struct msg_digest *md
 
 	case OAKLEY_ECDSA_256:
 	case OAKLEY_ECDSA_384:
-	case OAKLEY_ECDSA_512:
+	case OAKLEY_ECDSA_521:
 		r = check_signature(KEY_ECDSA, &peer, st, hash,
 							&md->chain[ISAKMP_NEXT_SIG]->pbs,
 #ifdef USE_KEYRR
