@@ -137,11 +137,10 @@ static void usage(const char *mess)
 			"[--nat_traversal] [--keep_alive <delay_sec>]"
 			" \\\n\t"
 			"[--force_keepalive] [--disable_port_floating]"
-		   " \\\n\t"
-		   "[--virtual_private <network_list>]"
+		    " \\\n\t"
+		    "[--virtual_private <network_list>]"
 			"\n"
-		"strongSwan %s\n"
-		, ipsec_version_code());
+		    "strongSwan "VERSION"\n");
 	exit_pluto(mess == NULL? 0 : 1);
 }
 
@@ -359,8 +358,7 @@ int main(int argc, char **argv)
 			{
 				const char **sp = ipsec_copyright_notice();
 
-				printf("%s%s\n", ipsec_version_string(),
-								 compile_time_interop_options);
+				printf("strongSwan "VERSION"%s\n", compile_time_interop_options);
 				for (; *sp != NULL; sp++)
 					puts(*sp);
 			}
@@ -636,9 +634,8 @@ int main(int argc, char **argv)
 	/* Note: some scripts may look for this exact message -- don't change
 	 * ipsec barf was one, but it no longer does.
 	 */
-	plog("Starting Pluto (strongSwan Version %s%s)"
-		, ipsec_version_code()
-		, compile_time_interop_options);
+	plog("Starting IKEv1 pluto daemon (strongSwan "VERSION")%s",
+		 compile_time_interop_options);
 
 	/* load plugins, further infrastructure may need it */
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 

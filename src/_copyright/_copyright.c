@@ -37,7 +37,6 @@ main(int argc, char *argv[])
 	int opt;
 	extern int optind;
 	int errflg = 0;
-	const char *version = ipsec_version_code();
 	const char **notice = ipsec_copyright_notice();
 	const char **co;
 
@@ -48,7 +47,7 @@ main(int argc, char *argv[])
 			exit(0);
 			break;
 		case 'v':	/* version */
-			printf("%s %s\n", me, version);
+			printf("%s strongSwan "VERSION"\n", me);
 			exit(0);
 			break;
 		case '?':

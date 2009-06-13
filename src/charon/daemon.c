@@ -467,7 +467,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	
 	initialize_loggers(this, !syslog, levels);
 	
-	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
+	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
 
 	/* load secrets, ca certificates and crls */
 	this->public.processor = processor_create();

@@ -275,7 +275,7 @@ int main (int argc, char **argv)
 	signal(SIGALRM, fsig);
 	signal(SIGUSR1, fsig);
 
-	plog("Starting strongSwan %s IPsec [starter]...", ipsec_version_code());
+	plog("Starting strongSwan "VERSION" IPsec [starter]...");
 
 	/* verify that we can start */
 	if (getuid() != 0)

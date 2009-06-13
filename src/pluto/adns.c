@@ -577,7 +577,7 @@ adns_usage(const char *fmt, const char *arg)
 	fprintf(stderr, "INTERNAL TO PLUTO: DO NOT EXECUTE\n");
 
 	fprintf(stderr, fmt, arg);
-	fprintf(stderr, "\n%s\n", ipsec_version_string());
+	fprintf(stderr, "\nstrongSwan "VERSION"\n");
 
 	for (; *sp != NULL; sp++)
 		fprintf(stderr, "%s\n", *sp);

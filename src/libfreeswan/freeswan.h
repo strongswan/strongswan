@@ -218,8 +218,6 @@ unsigned long prng_count(struct prng *prng);
 void prng_final(struct prng *prng);
 
 /* odds and ends */
-const char *ipsec_version_code(void);
-const char *ipsec_version_string(void);
 const char **ipsec_copyright_notice(void);
 
 const char *dns_string_rr(int rr, char *buf, int bufsize);

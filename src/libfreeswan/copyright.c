@@ -16,7 +16,7 @@
 #include "freeswan.h"
 
 static const char *co[] = {
- "Copyright (C) 1999-2008  Henry Spencer, Richard Guy Briggs,",
+ "Copyright (C) 1999-2009  Henry Spencer, Richard Guy Briggs,",
  "    D. Hugh Redelmeier, Sandy Harris, Claudia Schmeing,",
  "    Michael Richardson, Angelos D. Keromytis, John Ioannidis,",
  "",

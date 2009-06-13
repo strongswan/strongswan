@@ -230,8 +230,7 @@ static void help(void)
 		"shutdown: whack"
 			" --shutdown"
 			"\n\n"
-		"strongSwan %s\n"
-		, ipsec_version_code());
+		"strongSwan "VERSION"\n");
 }
 
 static const char *label = NULL;        /* --label operand, saved for diagnostics */
@@ -1004,7 +1003,7 @@ int main(int argc, char **argv)
 			{
 				const char **sp = ipsec_copyright_notice();
 
-				printf("%s\n", ipsec_version_string());
+				printf("strongSwan "VERSION"\n");
 				for (; *sp != NULL; sp++)
 					puts(*sp);
 			}
