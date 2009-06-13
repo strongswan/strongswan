@@ -1,7 +1,7 @@
-moon::cat /var/log/daemon.log::authentication of.*carol@strongswan.org.*with ECDSA-256 signature successful
-moon::cat /var/log/daemon.log::authentication of.*dave@strongswan.org.*with ECDSA-384 signature successful
-carol::cat /var/log/daemon.log::authentication of.*moon.strongswan.org.*with ECDSA-521 signature successful
-dave::cat /var/log/daemon.log::authentication of.*moon.strongswan.org.*with ECDSA-521 signature successful
+moon::cat /var/log/daemon.log::authentication of.*carol@strongswan.org.*with ECDSA-256 signature successful::YES
+moon::cat /var/log/daemon.log::authentication of.*dave@strongswan.org.*with ECDSA-384 signature successful::YES
+carol::cat /var/log/daemon.log::authentication of.*moon.strongswan.org.*with ECDSA-521 signature successful::YES
+dave::cat /var/log/daemon.log::authentication of.*moon.strongswan.org.*with ECDSA-521 signature successful::YES
 moon::ipsec statusall::rw.*ESTABLISHED::YES
 carol::ipsec statusall::home.*ESTABLISHED::YES
 dave::ipsec statusall::home.*ESTABLISHED::YES
