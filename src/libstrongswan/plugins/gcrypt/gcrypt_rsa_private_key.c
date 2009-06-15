@@ -83,7 +83,54 @@ chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name)
 }
 
 /**
- * Implementation of gcrypt_rsa_private_key_t.build_emsa_pkcs1_signature.
+ * Sign a chunk of data with direct PKCS#1 encoding, no hash OID
+ */
+static bool sign_raw(private_gcrypt_rsa_private_key_t *this,
+					 chunk_t data, chunk_t *signature)
+{
+	gcry_sexp_t in, out;
+	gcry_error_t err;
+	chunk_t em;
+	size_t k;
+	
+	/* EM = 0x00 || 0x01 || PS || 0x00 || T
+	 * PS = 0xFF padding, with length to fill em
+	 * T  = data
+	 */
+	k = gcry_pk_get_nbits(this->key) / 8;
+	if (data.len > k - 3)
+	{
+		return FALSE;
+	}
+	em = chunk_alloc(k);
+	memset(em.ptr, 0xFF, em.len);
+	em.ptr[0] = 0x00;
+	em.ptr[1] = 0x01;
+	em.ptr[em.len - data.len - 1] = 0x00;
+	memcpy(em.ptr + em.len - data.len, data.ptr, data.len);
+	
+	err = gcry_sexp_build(&in, NULL, "(data(flags raw)(value %b))",
+						  em.len, em.ptr);
+	chunk_free(&em);
+	if (err)
+	{
+		DBG1("building signature S-expression failed: %s", gpg_strerror(err));
+		return FALSE;
+	}
+	err = gcry_pk_sign(&out, in, this->key);
+	gcry_sexp_release(in);
+	if (err)
+	{
+		DBG1("creating pkcs1 signature failed: %s", gpg_strerror(err));
+		return FALSE;
+	}
+	*signature = gcrypt_rsa_find_token(out, "s");
+	gcry_sexp_release(out);
+	return !!signature->len;
+}
+
+/**
+ * Sign a chunk of data using hashing and PKCS#1 encoding
  */
 static bool sign_pkcs1(private_gcrypt_rsa_private_key_t *this,
 					   hash_algorithm_t hash_algorithm, char *hash_name,
@@ -144,6 +191,8 @@ static bool sign(private_gcrypt_rsa_private_key_t *this, signature_scheme_t sche
 {
 	switch (scheme)
 	{
+		case SIGN_RSA_EMSA_PKCS1_NULL:
+			return sign_raw(this, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return sign_pkcs1(this, HASH_SHA1, "sha1", data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:

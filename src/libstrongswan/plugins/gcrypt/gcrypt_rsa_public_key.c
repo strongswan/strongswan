@@ -65,7 +65,61 @@ bool gcrypt_rsa_build_keyids(gcry_sexp_t key, identification_t **keyid,
 							 identification_t **keyid_info);
 
 /**
- * Verification of an EMPSA PKCS1 signature described in PKCS#1
+ * verification of a padded PKCS1 signature without an OID
+ */
+static bool verify_raw(private_gcrypt_rsa_public_key_t *this,
+						 chunk_t data, chunk_t signature)
+{
+	gcry_sexp_t in, sig;
+	gcry_error_t err;
+	chunk_t em;
+	size_t k;
+	
+	/* EM = 0x00 || 0x01 || PS || 0x00 || T
+	 * PS = 0xFF padding, with length to fill em
+	 * T  = data
+	 */
+	k = gcry_pk_get_nbits(this->key) / 8;
+	if (data.len > k - 3)
+	{
+		return FALSE;
+	}
+	em = chunk_alloc(k);
+	memset(em.ptr, 0xFF, em.len);
+	em.ptr[0] = 0x00;
+	em.ptr[1] = 0x01;
+	em.ptr[em.len - data.len - 1] = 0x00;
+	memcpy(em.ptr + em.len - data.len, data.ptr, data.len);
+	
+	err = gcry_sexp_build(&in, NULL, "(data(flags raw)(value %b))",
+						  em.len, em.ptr);
+	chunk_free(&em);
+	if (err)
+	{
+		DBG1("building data S-expression failed: %s", gpg_strerror(err));
+		return FALSE;
+	}
+	err = gcry_sexp_build(&sig, NULL, "(sig-val(rsa(s %b)))",
+						  signature.len, signature.ptr);
+	if (err)
+	{
+		DBG1("building signature S-expression failed: %s", gpg_strerror(err));
+		gcry_sexp_release(in);
+		return FALSE;
+	}
+	err = gcry_pk_verify(sig, in, this->key);
+	gcry_sexp_release(in);
+	gcry_sexp_release(sig);
+	if (err)
+	{
+		DBG1("RSA signature verification failed: %s", gpg_strerror(err));
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
+ * Verification of an EMSA PKCS1 signature described in PKCS#1
  */
 static bool verify_pkcs1(private_gcrypt_rsa_public_key_t *this,
 						 hash_algorithm_t algorithm, char *hash_name,
@@ -128,6 +182,8 @@ static bool verify(private_gcrypt_rsa_public_key_t *this,
 {
 	switch (scheme)
 	{
+		case SIGN_RSA_EMSA_PKCS1_NULL:
+			return verify_raw(this, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return verify_pkcs1(this, HASH_MD5, "md5", data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
