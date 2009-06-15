@@ -202,13 +202,33 @@ static bool verify(private_gcrypt_rsa_public_key_t *this,
 }
 
 /**
- * Implementation of public_key_t.get_keysize.
+ * Implementation of public_key_t.encrypt.
  */
-static bool encrypt_(private_gcrypt_rsa_public_key_t *this, chunk_t crypto,
-					chunk_t *plain)
+static bool encrypt_(private_gcrypt_rsa_public_key_t *this, chunk_t plain,
+					 chunk_t *encrypted)
 {
-	DBG1("RSA public key encryption not implemented");
-	return FALSE;
+	gcry_sexp_t in, out;
+	gcry_error_t err;
+	
+	/* "pkcs1" uses PKCS 1.5 (section 8.1) block type 2 encryption:
+	 * 00 | 02 | RANDOM | 00 | DATA */
+	err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(value %b))",
+						  plain.len, plain.ptr);
+	if (err)
+	{
+		DBG1("building encryption S-expression failed: %s", gpg_strerror(err));
+		return FALSE;
+	}
+	err = gcry_pk_encrypt(&out, in, this->key);
+	gcry_sexp_release(in);
+	if (err)
+	{
+		DBG1("encrypting data using pkcs1 failed: %s", gpg_strerror(err));
+		return FALSE;
+	}
+	*encrypted = gcrypt_rsa_find_token(out, "a");
+	gcry_sexp_release(out);
+	return !!encrypted->len;
 }
 
 /**

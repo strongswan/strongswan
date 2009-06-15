@@ -214,10 +214,47 @@ static bool sign(private_gcrypt_rsa_private_key_t *this, signature_scheme_t sche
  * Implementation of gcrypt_rsa_private_key.destroy.
  */
 static bool decrypt(private_gcrypt_rsa_private_key_t *this,
-					chunk_t crypto, chunk_t *plain)
+					chunk_t encrypted, chunk_t *plain)
 {
-	DBG1("RSA private key decryption not implemented");
-	return FALSE;
+	gcry_error_t err;
+	gcry_sexp_t in, out;
+	chunk_t padded;
+	u_char *pos = NULL;;
+	
+	err = gcry_sexp_build(&in, NULL, "(enc-val(flags)(rsa(a %b)))",
+						  encrypted.len, encrypted.ptr);
+	if (err)
+	{
+		DBG1("building decryption S-expression failed: %s", gpg_strerror(err));
+		return FALSE;
+	}
+	err = gcry_pk_decrypt(&out, in, this->key);
+	gcry_sexp_release(in);
+	if (err)
+	{
+		DBG1("decrypting pkcs1 data failed: %s", gpg_strerror(err));
+		return FALSE;
+	}
+	padded.ptr = (u_char*)gcry_sexp_nth_data(out, 1, &padded.len);
+	/* result is padded, but gcrypt strips leading zero:
+	 *  00 | 02 | RANDOM | 00 | DATA */
+	if (padded.ptr && padded.len > 2 && padded.ptr[0] == 0x02)
+	{
+		pos = memchr(padded.ptr, 0x00, padded.len - 1);
+		if (pos)
+		{
+			pos++;
+			*plain = chunk_clone(chunk_create(
+										pos, padded.len - (pos - padded.ptr)));
+		}
+	}
+	gcry_sexp_release(out);
+	if (!pos)
+	{
+		DBG1("decrypted data has invalid pkcs1 padding");
+		return FALSE;
+	}
+	return TRUE;
 }
 
 /**
