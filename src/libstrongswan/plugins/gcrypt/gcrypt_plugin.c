@@ -160,8 +160,6 @@ plugin_t *plugin_create()
 	/* crypters */
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
 					(crypter_constructor_t)gcrypt_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_IDEA,
-					(crypter_constructor_t)gcrypt_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_CAST,
 					(crypter_constructor_t)gcrypt_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,

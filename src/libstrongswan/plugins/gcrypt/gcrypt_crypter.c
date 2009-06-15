@@ -143,8 +143,8 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 			gcrypt_alg = GCRY_CIPHER_3DES;
 			break;
 		case ENCR_IDEA:
-			gcrypt_alg = GCRY_CIPHER_IDEA;
-			break;
+			/* currently not implemented in gcrypt */
+			return NULL;
 		case ENCR_CAST:
 			gcrypt_alg = GCRY_CIPHER_CAST5;
 			break;
