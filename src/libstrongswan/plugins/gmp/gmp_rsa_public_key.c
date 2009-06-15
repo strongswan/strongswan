@@ -140,11 +140,10 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 	/* remove any preceding 0-bytes from signature */
 	while (signature.len && *(signature.ptr) == 0x00)
 	{
-		signature.len -= 1;
-		signature.ptr++;
+		signature = chunk_skip(signature, 1);
 	}
 	
-	if (signature.len > this->k)
+	if (signature.len == 0 || signature.len > this->k)
 	{
 		return INVALID_ARG;
 	}
@@ -163,8 +162,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 	{
 		goto end;
 	}
-	em.ptr += 2;
-	em.len -= 2;
+	em = chunk_skip(em, 2);
 	
 	/* find magic 0x00 */
 	while (em.len > 0)
@@ -172,8 +170,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 		if (*em.ptr == 0x00)
 		{
 			/* found magic byte, stop */
-			em.ptr++;
-			em.len--;
+			em = chunk_skip(em, 1);
 			break;
 		}
 		else if (*em.ptr != 0xFF)
@@ -181,8 +178,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 			/* bad padding, decryption failed ?!*/
 			goto end;
 		}
-		em.ptr++;
-		em.len--;
+		em = chunk_skip(em, 1);
 	}
 
 	if (em.len == 0)
