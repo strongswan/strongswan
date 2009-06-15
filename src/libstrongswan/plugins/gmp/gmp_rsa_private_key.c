@@ -248,6 +248,13 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 		data = digestInfo;
 	}
 
+	if (data.len > this->k - 3)
+	{
+		free(digestInfo.ptr);
+		DBG1("unable to sign %d bytes using a %dbit key", data.len, this->k * 8);
+		return FALSE;
+	}
+	
 	/* build chunk to rsa-decrypt:
 	 * EM = 0x00 || 0x01 || PS || 0x00 || T. 
 	 * PS = 0xFF padding, with length to fill em
