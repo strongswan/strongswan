@@ -22,7 +22,7 @@
 bool test_rsa_gen()
 {
 	char buf[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08};
-	chunk_t data = chunk_from_buf(buf), sig;
+	chunk_t data = chunk_from_buf(buf), sig, crypt, plain;
 	private_key_t *private;
 	public_key_t *public;
 	u_int key_size;
@@ -59,6 +59,24 @@ bool test_rsa_gen()
 			return FALSE;
 		}
 		free(sig.ptr);
+		if (!public->encrypt(public, data, &crypt))
+		{
+			DBG1(DBG_CFG, "encrypting data with RSA failed");
+			return FALSE;
+		}
+		if (!private->decrypt(private, crypt, &plain))
+		{
+			DBG1(DBG_CFG, "decrypting data with RSA failed");
+			return FALSE;
+		}
+		if (!chunk_equals(data, plain))
+		{
+			DBG1(DBG_CFG, "decrpyted data invalid, expected %B, got %B", &
+				 data, &plain);
+			return FALSE;
+		}
+		chunk_clear(&crypt);
+		chunk_clear(&plain);
 		public->destroy(public);
 		private->destroy(private);
 	}
