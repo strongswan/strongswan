@@ -776,6 +776,20 @@ dnl =========================
 dnl  dependency calculation
 dnl =========================
 
+if test x$eap_aka = xtrue; then
+	gmp=true;
+	fips_prf=true;
+	sha1=true;
+fi
+
+if test x$eap_sim = xtrue; then
+	fips_prf=true;
+fi
+
+if test x$fips_prf = xtrue; then
+	sha1=true;
+fi
+
 if test x$tools = xtrue; then
 	gmp=true;
 fi
