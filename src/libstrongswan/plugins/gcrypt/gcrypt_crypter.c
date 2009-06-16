@@ -180,6 +180,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 		case ENCR_CAMELLIA_CBC:
 			switch (key_size)
 			{
+#ifdef HAVE_GCRY_CIPHER_CAMELLIA
 				case 16:
 					gcrypt_alg = GCRY_CIPHER_CAMELLIA128;
 					break;
@@ -189,6 +190,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 				case 32:
 					gcrypt_alg = GCRY_CIPHER_CAMELLIA256;
 					break;
+#endif /* HAVE_GCRY_CIPHER_CAMELLIA */
 				default:
 					return NULL;
 			}

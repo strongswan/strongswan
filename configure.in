@@ -1015,6 +1015,13 @@ fi
 
 if test x$gcrypt = xtrue; then
 	AM_PATH_LIBGCRYPT(,,[AC_MSG_ERROR([libgcrypt not found!])])
+	AC_MSG_CHECKING([gcrypt CAMELLIA cipher])
+	AC_TRY_COMPILE(
+		[#include <gcrypt.h>],
+		[enum gcry_cipher_algos alg = GCRY_CIPHER_CAMELLIA128;],
+		[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_GCRY_CIPHER_CAMELLIA])],
+		[AC_MSG_RESULT([no])]
+	)
 fi
 
 if test x$uci = xtrue; then
