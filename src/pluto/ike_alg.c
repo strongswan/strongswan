@@ -172,19 +172,19 @@ struct db_context *ike_alg_db_new(struct connection *c, lset_t policy)
 
 		if (!ike_alg_get_crypter(ealg))
 		{
-			DBG_log("ike_alg: ike crypter %s not present",
+			plog("ike alg: crypter %s not present",
 					enum_show(&oakley_enc_names, ealg));
 			continue;
 		}
 		if (!ike_alg_get_hasher(halg)) 
 		{
-			DBG_log("ike_alg: ike hasher %s not present",
+			plog("ike alg: hasher %s not present",
 					enum_show(&oakley_hash_names, halg));
 			continue;
 		}
 		if (!ike_alg_get_dh_group(modp)) 
 		{
-			DBG_log("ike_alg: ike dh group %s not present",
+			plog("ike alg: dh group %s not present",
 					enum_show(&oakley_group_names, modp));
 			continue;
 		}
@@ -197,6 +197,7 @@ struct db_context *ike_alg_db_new(struct connection *c, lset_t policy)
 
 			if (key == NULL)
 			{
+				plog("ike alg: unable to locate my private key");
 				continue;
 			}
 			switch (key->get_type(key))
