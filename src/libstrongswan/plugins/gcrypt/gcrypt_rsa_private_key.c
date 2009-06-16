@@ -577,6 +577,8 @@ static gcrypt_rsa_private_key_t *load(chunk_t blob)
 	chunk_t n, e, d, u, p, q;
 	gcry_error_t err;
 	
+	n = e = d = u = p = q = chunk_empty;
+	
 	parser = asn1_parser_create(privkeyObjects, blob);
 	parser->set_flags(parser, FALSE, TRUE);
 	

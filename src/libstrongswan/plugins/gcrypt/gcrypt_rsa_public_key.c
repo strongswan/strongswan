@@ -398,6 +398,8 @@ static gcrypt_rsa_public_key_t *load(chunk_t blob)
 	bool success = FALSE;
 	gcry_error_t err;
 	
+	n = e = chunk_empty;
+	
 	parser = asn1_parser_create(pubkeyObjects, blob);
 	while (parser->iterate(parser, &objectID, &object))
 	{
