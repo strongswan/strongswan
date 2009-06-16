@@ -776,10 +776,6 @@ dnl =========================
 dnl  dependency calculation
 dnl =========================
 
-if test x$pluto = xtrue; then
-	gmp=true;
-fi
-
 if test x$tools = xtrue; then
 	gmp=true;
 fi
