@@ -1,3 +1,13 @@
+strongswan-4.3.2
+----------------
+
+- The new gcrypt plugin provides symmetric cipher, hasher, RNG, Diffie-Hellman
+  and RSA crypto primitives using the LGPL licensed GNU gcrypt library.
+
+- libstrongswan features an integrated crypto selftest framework for registered
+  algorithms. The test-vector plugin provides a first set of test vectors and
+  allows pluto and charon to rely on tested crypto algorithms.
+
 strongswan-4.3.1
 ----------------
 
