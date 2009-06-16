@@ -627,9 +627,9 @@ crypto_tester_t *crypto_tester_create()
 	this->rng = linked_list_create();
 	
 	this->required = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto.test.required", FALSE);
+								"libstrongswan.crypto_test.required", FALSE);
 	this->rng_true = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto.test.rng_true", FALSE);
+								"libstrongswan.crypto_test.rng_true", FALSE);
 	
 	return &this->public;
 }

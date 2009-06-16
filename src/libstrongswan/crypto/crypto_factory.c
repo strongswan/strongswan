@@ -749,9 +749,9 @@ crypto_factory_t *crypto_factory_create()
 	this->lock = rwlock_create(RWLOCK_DEFAULT);
 	this->tester = crypto_tester_create();
 	this->test_on_add = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto.test.on_add", FALSE);
+								"libstrongswan.crypto_test.on_add", FALSE);
 	this->test_on_create = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto.test.on_create", FALSE);
+								"libstrongswan.crypto_test.on_create", FALSE);
 	
 	return &this->public;
 }
