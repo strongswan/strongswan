@@ -220,6 +220,16 @@ then
     echo -n " --enable-load-tests" >> $INSTALLSHELL
 fi
 
+if [ "$USE_TEST_VECTORS" = "yes" ]
+then
+    echo -n " --enable-test-vectors" >> $INSTALLSHELL
+fi
+
+if [ "$USE_GCRYPT" = "yes" ]
+then
+    echo -n " --enable-gcrypt" >> $INSTALLSHELL
+fi
+
 echo "" >> $INSTALLSHELL
 echo "make" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
