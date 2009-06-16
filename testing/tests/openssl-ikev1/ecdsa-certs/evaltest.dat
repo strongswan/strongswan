@@ -1,7 +1,7 @@
-moon::cat /var/log/auth.log::ECDSA_256_SIG check passed::YES
-moon::cat /var/log/auth.log::ECDSA_384_SIG check passed::YES 
-carol::cat /var/log/auth.log::ECDSA_256_SIG check passed::YES
-dave::cat /var/log/auth.log::ECDSA_384_SIG check passed::YES 
+moon::cat /var/log/auth.log::ECDSA-256 signature check passed::YES
+moon::cat /var/log/auth.log::ECDSA-384 signature check passed::YES 
+carol::cat /var/log/auth.log::ECDSA-256 signature check passed::YES
+dave::cat /var/log/auth.log::ECDSA-384 signature check passed::YES 
 moon::ipsec statusall::carol.*IPsec SA established::YES
 moon::ipsec statusall::dave.*IPsec SA established::YES
 carol::ipsec statusall::home.*IPsec SA established::YES

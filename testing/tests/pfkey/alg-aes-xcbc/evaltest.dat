@@ -1,7 +1,7 @@
 moon::ipsec statusall::rw.*INSTALLED::YES
 carol::ipsec statusall::home.*INSTALLED::YES
-moon::ipsec statusall::rw.*IKE proposal.*AES_CBC_256/AES_XCBC_96/PRF_AES128_CBC/MODP_2048::YES
-carol::ipsec statusall::home.*IKE proposal.*AES_CBC_256/AES_XCBC_96/PRF_AES128_CBC/MODP_2048::YES
+moon::ipsec statusall::rw.*IKE proposal.*AES_CBC_256/AES_XCBC_96/PRF_AES128_XCBC/MODP_2048::YES
+carol::ipsec statusall::home.*IKE proposal.*AES_CBC_256/AES_XCBC_96/PRF_AES128_XCBC/MODP_2048::YES
 moon::ipsec statusall::rw.*AES_CBC_256/AES_XCBC_96,::YES
 carol::ipsec statusall::home.*AES_CBC_256/AES_XCBC_96,::YES
 moon::ip xfrm state::auth xcbc(aes)::YES
