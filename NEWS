@@ -8,6 +8,12 @@ strongswan-4.3.2
   algorithms. The test-vector plugin provides a first set of test vectors and
   allows pluto and charon to rely on tested crypto algorithms.
 
+- pluto can now use all libstrongswan plugins with the exception of x509 and xcbc.
+  Thanks to the openssl plugin, the ECP Diffie-Hellman groups 19, 20, 21, 25, and
+  26 as well as ECDSA-256, ECDSA-384, and ECDSA-521 authentication can be used
+  with IKEv1.
+  
+
 strongswan-4.3.1
 ----------------
 
