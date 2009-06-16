@@ -136,25 +136,23 @@ static bool test_crypter(private_crypto_tester_t *this,
 		crypter->destroy(crypter);
 		if (failed)
 		{
-			DBG1("test vector %d failed, %N disabled",
-				 tested, encryption_algorithm_names, alg);
+			DBG1("disabled %N: test vector %d failed",
+				 encryption_algorithm_names, alg, tested);
 			break;
 		}
-		DBG2("%N test vector %d successful",
-			 encryption_algorithm_names, alg, tested);
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("no test vectors found for %N%s",
-			 encryption_algorithm_names, alg, 
-			 this->required ? ", disabled" : "");
+		DBG1("%s %N: no test vectors found",
+			 this->required ? "disabled" : "enabled ",
+			 encryption_algorithm_names, alg);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1("successfully tested %d test vectors for %N",
-			 tested, encryption_algorithm_names, alg);
+		DBG1("enabled  %N: successfully passed %d test vectors",
+			 encryption_algorithm_names, alg, tested);
 	}
 	return !failed;
 }
@@ -185,7 +183,7 @@ static bool test_signer(private_crypto_tester_t *this,
 		signer = create(alg);
 		if (!signer)
 		{
-			DBG1("creating instance failed, %N disabled",
+			DBG1("disabled %N: creating instance failed",
 				 integrity_algorithm_names, alg);
 			failed = TRUE;
 			break;
@@ -242,25 +240,23 @@ static bool test_signer(private_crypto_tester_t *this,
 		signer->destroy(signer);
 		if (failed)
 		{
-			DBG1("test vector %d failed, %N disabled",
-				 tested, integrity_algorithm_names, alg);
+			DBG1("disabled %N: test vector %d failed",
+				 integrity_algorithm_names, alg, tested);
 			break;
 		}
-		DBG2(" %N test vector %d successful",
-			 integrity_algorithm_names, alg, tested);
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("no test vectors found for %N%s",
-			 integrity_algorithm_names, alg, 
-			 this->required ? ", disabled" : "");
+		DBG1("%s %N: no test vectors found%s",
+			 this->required ? "disabled" : "enabled ",
+			 integrity_algorithm_names, alg);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1("successfully tested %d test vectors for %N",
-			 tested, integrity_algorithm_names, alg);
+		DBG1("enabled  %N: successfully passed %d test vectors",
+			 integrity_algorithm_names, alg, tested);
 	}
 	return !failed;
 }
@@ -291,7 +287,7 @@ static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
 		hasher = create(alg);
 		if (!hasher)
 		{
-			DBG1("creating instance failed, %N disabled",
+			DBG1("disabled %N: creating instance failed",
 				 hash_algorithm_names, alg);
 			failed = TRUE;
 			break;
@@ -334,25 +330,23 @@ static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
 		hasher->destroy(hasher);
 		if (failed)
 		{
-			DBG1("test vector %d failed, %N disabled",
-				 tested, hash_algorithm_names, alg);
+			DBG1("disabled %N: test vector %d failed",
+				 hash_algorithm_names, alg), tested;
 			break;
 		}
-		DBG2("%N test vector %d successful",
-			 hash_algorithm_names, alg, tested);
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("no test vectors found for %N%s",
-			 hash_algorithm_names, alg, 
-			 this->required ? ", disabled" : "");
+		DBG1("%s %N: no test vectors found",
+			 this->required ? "disabled" : "enabled ",
+			 hash_algorithm_names, alg);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1("successfully tested %d test vectors for %N",
-			 tested, hash_algorithm_names, alg);
+		DBG1("enabled  %N: successfully passed %d test vectors",
+			 hash_algorithm_names, alg, tested);
 	}
 	return !failed;
 }
@@ -383,7 +377,7 @@ static bool test_prf(private_crypto_tester_t *this,
 		prf = create(alg);
 		if (!prf)
 		{
-			DBG1("creating instance failed, %N disabled",
+			DBG1("disabled %N: creating instance failed",
 				 pseudo_random_function_names, alg);
 			failed = TRUE;
 			break;
@@ -437,25 +431,23 @@ static bool test_prf(private_crypto_tester_t *this,
 		prf->destroy(prf);
 		if (failed)
 		{
-			DBG1("test vector %d failed, %N disabled",
-				 tested, pseudo_random_function_names, alg);
+			DBG1("disabled %N: test vector %d failed",
+				 pseudo_random_function_names, alg, tested);
 			break;
 		}
-		DBG2("%N test vector %d successful",
-			 pseudo_random_function_names, alg, tested);
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("no test vectors found for %N%s",
-			 pseudo_random_function_names, alg, 
-			 this->required ? ", disabled" : "");
+		DBG1("%s %N: no test vectors found",
+			 this->required ? "disabled" : "enabled ",
+			 pseudo_random_function_names, alg);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1("successfully tested %d testvectors for %N",
-			 tested, pseudo_random_function_names, alg);
+		DBG1("enabled  %N: successfully passed %d test vectors",
+			 pseudo_random_function_names, alg, tested);
 	}
 	return !failed;
 }
@@ -473,7 +465,8 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 	
 	if (!this->rng_true && quality == RNG_TRUE)
 	{
-		DBG1("skipping %N test, disabled by config", rng_quality_names, quality);
+		DBG1("enabled  %N: skipping test (disabled by config)",
+			 rng_quality_names, quality);
 		return TRUE;
 	}
 	
@@ -492,7 +485,7 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 		rng = create(quality);
 		if (!rng)
 		{
-			DBG1("creating instance failed, %N disabled",
+			DBG1("disabled %N: creating instance failed",
 				 rng_quality_names, quality);
 			failed = TRUE;
 			break;
@@ -522,23 +515,23 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 		rng->destroy(rng);
 		if (failed)
 		{
-			DBG1("test vector %d failed, %N disabled",
-				 tested, rng_quality_names, quality);
+			DBG1("disabled %N: test vector %d failed",
+				 rng_quality_names, quality, tested);
 			break;
 		}
-		DBG2("%N test vector %d successful", rng_quality_names, quality, tested);
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("no test vectors found for %N%s",
-			 rng_quality_names, quality, this->required ? ", disabled" : "");
+		DBG1("%s %N: no test vectors found",
+			 this->required ? ", disabled" : "enabled ",
+			 rng_quality_names, quality);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1("successfully tested %d testvectors for %N",
-			 tested, rng_quality_names, quality);
+		DBG1("enabled  %N: successfully passed %d test vectors",
+			 rng_quality_names, quality, tested);
 	}
 	return !failed;
 }
