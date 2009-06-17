@@ -72,12 +72,12 @@ struct private_generator_t {
 	/**
 	 * Current bit writing to in current byte (between 0 and 7).
 	 */
-	size_t current_bit;
+	u_int8_t current_bit;
 	
 	/**
 	 * Associated data struct to read informations from.
 	 */
-	void * data_struct;
+	void *data_struct;
 	
 	/*
 	 * Last payload length position offset in the buffer.
@@ -112,7 +112,7 @@ struct private_generator_t {
 /**
  * Get size of current buffer in bytes.
  */
-static size_t get_size(private_generator_t *this)
+static int get_size(private_generator_t *this)
 {
 	return this->roof_position - this->buffer;
 }
@@ -120,7 +120,7 @@ static size_t get_size(private_generator_t *this)
 /**
  * Get free space of current buffer in bytes.
  */
-static size_t get_space(private_generator_t *this)
+static int get_space(private_generator_t *this)
 {
 	return this->roof_position - this->out_position;
 }
@@ -128,7 +128,7 @@ static size_t get_space(private_generator_t *this)
 /**
  * Get length of data in buffer (in bytes).
  */
-static size_t get_length(private_generator_t *this)
+static int get_length(private_generator_t *this)
 {
 	return this->out_position - this->buffer;
 }
@@ -144,11 +144,11 @@ static u_int32_t get_offset(private_generator_t *this)
 /**
  * Makes sure enough space is available in buffer to store amount of bits.
  */
-static void make_space_available(private_generator_t *this, size_t bits)
+static void make_space_available(private_generator_t *this, int bits)
 {
 	while ((get_space(this) * 8 - this->current_bit) < bits)
 	{
-		size_t old_buffer_size, new_buffer_size, out_position_offset;
+		int old_buffer_size, new_buffer_size, out_position_offset;
 		
 		old_buffer_size = get_size(this);
 		new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
@@ -167,7 +167,7 @@ static void make_space_available(private_generator_t *this, size_t bits)
  * Writes a specific amount of byte into the buffer.
  */
 static void write_bytes_to_buffer(private_generator_t *this, void *bytes,
-								  size_t number_of_bytes)
+								  int number_of_bytes)
 {
 	int i;
 	u_int8_t *read_position = (u_int8_t *)bytes;
@@ -185,8 +185,8 @@ static void write_bytes_to_buffer(private_generator_t *this, void *bytes,
 /**
  * Writes a specific amount of byte into the buffer at a specific offset.
  */
-static void write_bytes_to_buffer_at_offset (private_generator_t *this,
-						void *bytes, size_t number_of_bytes, u_int32_t offset)
+static void write_bytes_to_buffer_at_offset(private_generator_t *this,
+						void *bytes, int number_of_bytes, u_int32_t offset)
 {
 	int i;
 	u_int8_t *read_position = (u_int8_t *)bytes;
@@ -215,7 +215,7 @@ static void write_bytes_to_buffer_at_offset (private_generator_t *this,
 static void generate_u_int_type(private_generator_t *this,
 								encoding_type_t int_type,u_int32_t offset)
 {
-	size_t number_of_bits = 0;
+	int number_of_bits = 0;
 	
 	/* find out number of bits of each U_INT type to check for enough space */
 	switch (int_type)
@@ -458,7 +458,7 @@ static void generate_from_chunk(private_generator_t *this, u_int32_t offset)
  */
 static void write_to_chunk(private_generator_t *this,chunk_t *data)
 {
-	size_t data_length = get_length(this);
+	int data_length = get_length(this);
 	u_int32_t header_length_field = data_length;
 	
 	/* write length into header length field */
@@ -486,7 +486,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 {
 	int i;
 	this->data_struct = payload;
-	size_t rule_count, offset_start;
+	int rule_count, offset_start;
 	encoding_rule_t *rules;
 	payload_type_t payload_type;
 	

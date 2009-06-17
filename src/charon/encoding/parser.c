@@ -247,7 +247,7 @@ static bool parse_uint32(private_parser_t *this, int rule_number,
  * Parse a given amount of bytes and writes them to a specific location
  */
 static bool parse_bytes(private_parser_t *this, int rule_number,
-						u_int8_t *output_pos, size_t bytes)
+						u_int8_t *output_pos, int bytes)
 {
 	if (this->byte_pos + bytes > this->input_roof)
 	{
@@ -300,7 +300,7 @@ static bool parse_bit(private_parser_t *this, int rule_number,
  * Parse substructures in a list.
  */
 static bool parse_list(private_parser_t *this, int rule_number,
-		linked_list_t **output_pos, payload_type_t payload_type, size_t length)
+			linked_list_t **output_pos, payload_type_t payload_type, int length)
 {
 	linked_list_t *list = *output_pos;
 	
@@ -337,7 +337,7 @@ static bool parse_list(private_parser_t *this, int rule_number,
  * Parse data from current parsing position in a chunk.
  */
 static bool parse_chunk(private_parser_t *this, int rule_number,
-							chunk_t *output_pos, size_t length)
+						chunk_t *output_pos, int length)
 {
 	if (this->byte_pos + length > this->input_roof)
 	{
@@ -365,7 +365,7 @@ static status_t parse_payload(private_parser_t *this,
 {
 	payload_t *pld;
 	void *output;
-	size_t rule_count, payload_length = 0, spi_size = 0, attribute_length = 0;
+	int rule_count, payload_length = 0, spi_size = 0, attribute_length = 0;
 	u_int16_t ts_type = 0;
 	bool attribute_format = FALSE;
 	int rule_number;
@@ -757,7 +757,7 @@ static status_t parse_payload(private_parser_t *this,
 			}
 			case ADDRESS:
 			{
-				size_t address_length = (ts_type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+				int address_length = (ts_type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
 				
 				if (!parse_chunk(this, rule_number, output + rule->offset,
 								 address_length))
