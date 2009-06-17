@@ -97,6 +97,7 @@ static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 		EVP_MD_CTX *ctx;
 		EVP_PKEY *key;
 		const EVP_MD *hasher;
+		u_int len;
 
 		hasher = EVP_get_digestbynid(type);
 		if (!hasher)
@@ -122,7 +123,7 @@ static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 		{
 			goto error;
 		}
-		if (EVP_SignFinal(ctx, sig->ptr, &sig->len, key))
+		if (EVP_SignFinal(ctx, sig->ptr, &len, key))
 		{
 			success = TRUE;
 		}
