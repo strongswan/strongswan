@@ -54,7 +54,7 @@
   0x83                       ""
     0x08                     "jp"
       0x8C                   ""
-        0x1A                 ""
+        0x9A                 ""
           0x4B               ""
             0x3D             ""
               0x01           "security"
