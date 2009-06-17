@@ -248,7 +248,7 @@ static bool test_signer(private_crypto_tester_t *this,
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("%s %N: no test vectors found%s",
+		DBG1("%s %N: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
 			 integrity_algorithm_names, alg);
 		return !this->required;
