@@ -8,9 +8,10 @@ plugin_LTLIBRARIES = libstrongswan-test-vectors.la
 libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors_plugin.h test_vectors_plugin.c test_vectors.h \
 	test_vectors/3des_cbc.c \
-	test_vectors/blowfish.c \
 	test_vectors/aes_cbc.c \
 	test_vectors/aes_xcbc.c \
+	test_vectors/blowfish.c \
+	test_vectors/camellia_cbc.c \
 	test_vectors/md5.c \
 	test_vectors/md5_hmac.c \
 	test_vectors/sha1.c \
