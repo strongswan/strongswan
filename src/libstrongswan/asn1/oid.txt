@@ -61,7 +61,7 @@
                 0x01         "algorithm"
                   0x01       "symm-encryption-alg"
                     0x02     "camellia128-cbc"			OID_CAMELLIA128_CBC
-                    0x03     "camellia192-cbc"       	OID_CAMELLIA192_CBC
+                    0x03     "camellia192-cbc"			OID_CAMELLIA192_CBC
                     0x04     "camellia256-cbc"			OID_CAMELLIA256_CBC
   0x86                       ""
     0x48                     "us"
