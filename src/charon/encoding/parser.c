@@ -581,7 +581,6 @@ static status_t parse_payload(private_parser_t *this,
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				attribute_format = *(bool*)(output + rule->offset);
 				break;
 			}
 			case CONFIGURATION_ATTRIBUTE_LENGTH:
