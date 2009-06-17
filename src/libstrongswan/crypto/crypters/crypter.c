@@ -83,6 +83,18 @@ encryption_algorithm_t encryption_algorithm_from_oid(int oid, size_t *key_size)
 			alg = ENCR_AES_CBC;
 			alg_key_size = 256;
 			break;
+		case OID_CAMELLIA128_CBC:
+			alg = ENCR_CAMELLIA_CBC;
+			alg_key_size = 128;
+			break;
+		case OID_CAMELLIA192_CBC:
+			alg = ENCR_CAMELLIA_CBC;
+			alg_key_size = 192;
+			break;
+		case OID_CAMELLIA256_CBC:
+			alg = ENCR_CAMELLIA_CBC;
+			alg_key_size = 256;
+			break;
 		default:
 			alg = ENCR_UNDEFINED;
 			alg_key_size = 0;
@@ -120,6 +132,22 @@ int encryption_algorithm_to_oid(encryption_algorithm_t alg, size_t key_size)
 					break;
 				case 256:
 					oid = OID_AES256_CBC;
+					break;
+				default:
+					oid = OID_UNKNOWN;
+			}
+			break;
+		case ENCR_CAMELLIA_CBC:
+			switch (key_size)
+			{
+				case 128:
+					oid = OID_CAMELLIA128_CBC;
+					break;
+				case 192:
+					oid = OID_CAMELLIA192_CBC;
+					break;
+				case 256:
+					oid = OID_CAMELLIA256_CBC;
 					break;
 				default:
 					oid = OID_UNKNOWN;
