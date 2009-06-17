@@ -329,6 +329,12 @@ static bool parse_list(private_parser_t *this, int rule_number,
 		list->insert_last(list, payload);
 		length -= this->byte_pos - pos_before;
 	}
+	if (length != 0)
+	{	/* must yield exactly to zero */
+		DBG1(DBG_ENC, "  length of %N substructure list invalid",
+			 payload_type_names, payload_type);
+		return FALSE;
+	}
 	*output_pos = list;
 	return TRUE;
 }
