@@ -246,8 +246,9 @@ usage(const char *message)
 		" --password (-p) <pw>              challenge password\n"
 		"                                   - if pw is '%%prompt', password gets prompted for\n"
 		" --algorithm (-a) <algo>           use specified algorithm for PKCS#7 encryption\n"
-		"                                   <algo> = des-cbc | 3des-cbc | aes128-cbc |\n"
-        "                                   aes192-cbc | aes256-cbc (default: 3des-cbc)\n"
+		"                                   <algo> = des-cbc | 3des-cbc (default) | \n"
+        "                                   aes128-cbc | aes192-cbc | aes256-cbc | \n"
+        "                                   camellia128-cbc | camellia192-cbc | camellia256-cbc\n"
 		"\n"
 		"Options for enrollment (cert):\n"
 		" --url (-u) <url>                  url of the SCEP server\n"
@@ -716,6 +717,18 @@ int main(int argc, char **argv)
 			else if (strcaseeq("aes256-cbc", optarg))
 			{
 				pkcs7_symmetric_cipher = OID_AES256_CBC;
+			}
+			else if (strcaseeq("camellia128-cbc", optarg))
+			{
+				pkcs7_symmetric_cipher = OID_CAMELLIA128_CBC;
+			}
+			else if (strcaseeq("camellia192-cbc", optarg))
+			{
+				pkcs7_symmetric_cipher = OID_CAMELLIA192_CBC;
+			}
+			else if (strcaseeq("camellia256-cbc", optarg))
+			{
+				pkcs7_symmetric_cipher = OID_CAMELLIA256_CBC;
 			}
 			else
 			{
