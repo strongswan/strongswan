@@ -12,6 +12,11 @@ strongswan-4.3.2
   Thanks to the openssl plugin, the ECP Diffie-Hellman groups 19, 20, 21, 25, and
   26 as well as ECDSA-256, ECDSA-384, and ECDSA-521 authentication can be used
   with IKEv1.
+
+- Applying their fuzzing tool, the Orange Labs vulnerability research team found
+  another two DoS vulnerabilities, one in the rather old ASN.1 parser of Relative
+  Distinguished Names (RDNs) and a second one in the conversion of ASN.1 UTCTIME
+  and GENERALIZEDTIME strings to a time_t value.
   
 
 strongswan-4.3.1
