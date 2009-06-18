@@ -20,8 +20,10 @@
 #include <dlfcn.h>
 #include <limits.h>
 #include <stdio.h>
+#include <link.h>
 
 #include <debug.h>
+#include <integrity_checker.h>
 #include <utils/linked_list.h>
 #include <plugins/plugin.h>
 
@@ -61,6 +63,12 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	
 	snprintf(file, sizeof(file), "%s/libstrongswan-%s.so", path, name);
 	
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, name, file))
+	{
+		DBG1("file integrity test of plugin '%s' failed", name);
+		return NULL;
+	}
 	handle = dlopen(file, RTLD_LAZY);
 	if (handle == NULL)
 	{
@@ -71,6 +79,13 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	if (constructor == NULL)
 	{
 		DBG1("loading plugin '%s' failed: no plugin_create() function", name);
+		dlclose(handle);
+		return NULL;
+	}
+	if (lib->integrity &&
+		!lib->integrity->check_segment(lib->integrity, name, constructor))
+	{
+		DBG1("segment integrity test of plugin '%s' failed", name);
 		dlclose(handle);
 		return NULL;
 	}

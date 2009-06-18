@@ -20,6 +20,7 @@
 
 #include <utils.h>
 #include <chunk.h>
+#include <debug.h>
 #include <utils/identification.h>
 #include <utils/host.h>
 #ifdef LEAK_DETECTIVE
@@ -65,6 +66,10 @@ void library_deinit()
 	this->public.fetcher->destroy(this->public.fetcher);
 	this->public.db->destroy(this->public.db);
 	this->public.printf_hook->destroy(this->public.printf_hook);
+	if (this->public.integrity)
+	{
+		this->public.integrity->destroy(this->public.integrity);
+	}
 	
 #ifdef LEAK_DETECTIVE
 	if (this->detective)
@@ -119,5 +124,12 @@ void library_init(char *settings)
 	this->public.fetcher = fetcher_manager_create();
 	this->public.db = database_factory_create();
 	this->public.plugins = plugin_loader_create();
+	this->public.integrity = NULL;
+	
+	if (lib->settings->get_bool(lib->settings,
+								"libstrongswan.integrity_test", FALSE))
+	{
+		this->public.integrity = integrity_checker_create();
+	}
 }
 

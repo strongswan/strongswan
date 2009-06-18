@@ -59,6 +59,7 @@
 #include <utils.h>
 #include <chunk.h>
 #include <settings.h>
+#include <integrity_checker.h>
 #include <plugins/plugin_loader.h>
 #include <crypto/crypto_factory.h>
 #include <fetcher/fetcher_manager.h>
@@ -106,6 +107,11 @@ struct library_t {
 	 * various settings loaded from settings file
 	 */
 	settings_t *settings;
+	
+	/**
+	 * integrity checker to verify code integrity
+	 */
+	integrity_checker_t *integrity;
 	
 	/**
 	 * is leak detective running?
