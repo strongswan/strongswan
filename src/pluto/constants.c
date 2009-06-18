@@ -850,7 +850,7 @@ enum_names oakley_hash_names =
 static const char *const oakley_auth_name1[] = {
 	"pre-shared key",
 	"DSS signature",
-	"RSA_signatue",
+	"RSA signature",
 	"RSA encryption",
 	"RSA encryption revised",
 	"ElGamal encryption",
