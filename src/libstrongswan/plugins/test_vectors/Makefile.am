@@ -13,6 +13,7 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/blowfish.c \
 	test_vectors/camellia_cbc.c \
 	test_vectors/cast.c \
+	test_vectors/des.c \
 	test_vectors/idea.c \
 	test_vectors/rc5.c \
 	test_vectors/serpent_cbc.c \
