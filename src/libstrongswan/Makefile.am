@@ -15,6 +15,7 @@ debug.c debug.h \
 enum.c enum.h \
 settings.h settings.c \
 printf_hook.c printf_hook.h \
+integrity_checker.c integrity_checker.h \
 asn1/asn1.c asn1/asn1.h \
 asn1/asn1_parser.c asn1/asn1_parser.h \
 asn1/oid.c asn1/oid.h \
