@@ -1,0 +1,9 @@
+moon::ipsec statusall::rw.*INSTALLED::YES
+carol::ipsec statusall::home.*INSTALLED::YES
+moon::ipsec statusall::IKE proposal: CAMELLIA_CBC_256/HMAC_SHA2_512_256/PRF_HMAC_SHA2_512/MODP_2048::YES
+carol::ipsec statusall::IKE proposal: CAMELLIA_CBC_256/HMAC_SHA2_512_256/PRF_HMAC_SHA2_512/MODP_2048::YES
+moon::ipsec statusall::CAMELLIA_CBC_192/HMAC_SHA1_96::YES
+carol::ipsec statusall::CAMELLIA_CBC_192/HMAC_SHA1_96::YES
+moon::ip xfrm state::enc cbc(camellia)::YES
+carol::ip xfrm state::enc cbc(camellia)::YES
+carol::ping -c 1 -s 120 -p deadbeef 10.1.0.10::128 bytes from 10.1.0.10: icmp_seq=1::YES
