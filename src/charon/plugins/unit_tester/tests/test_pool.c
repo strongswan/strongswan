@@ -34,7 +34,7 @@ static void* testing(void *thread)
 	{
 		char buf[256];
 		
-		snprintf(buf, sizeof(buf), "%d-%d@strongswan.org", (int)thread, i);
+		snprintf(buf, sizeof(buf), "%d-%d@strongswan.org", (uintptr_t)thread, i);
 		id[i] = identification_create_from_string(buf);
 	}
 	
@@ -70,7 +70,7 @@ static void* testing(void *thread)
  ******************************************************************************/
 bool test_pool()
 {
-	int i;
+	uintptr_t i;
 	void *res;
 	pthread_t thread[THREADS];
 	
