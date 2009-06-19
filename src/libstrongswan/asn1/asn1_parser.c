@@ -160,7 +160,7 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 	
 	blob1->len = asn1_length(blob);
 	
-	if (blob1->len == ASN1_INVALID_LENGTH || blob->len < blob1->len)
+	if (blob1->len == ASN1_INVALID_LENGTH)
 	{
 		DBG1("L%d - %s:  length of ASN.1 object invalid or too large", 
 					level, obj.name);
