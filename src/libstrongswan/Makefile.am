@@ -209,3 +209,5 @@ endif
 if USE_INTEGRITY_TEST
   SUBDIRS += fips
 endif
+
+SUBDIRS += checksum

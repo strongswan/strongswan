@@ -1234,6 +1234,7 @@ AC_OUTPUT(
 	src/Makefile
 	src/include/Makefile
 	src/libstrongswan/Makefile
+	src/libstrongswan/checksum/Makefile
 	src/libstrongswan/plugins/aes/Makefile
 	src/libstrongswan/plugins/des/Makefile
 	src/libstrongswan/plugins/blowfish/Makefile
