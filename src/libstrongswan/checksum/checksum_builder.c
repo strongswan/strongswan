@@ -19,9 +19,18 @@
 
 #include <library.h>
 
-
-/* we need some faked symbols to load charon plugins */
-char *charon = "adsf";
+/* we need to fake some charon symbols to dlopen() its plugins */
+void *eap_type_names, *auth_class_names, *charon, *protocol_id_names, 
+*action_names, *ipsec_mode_names, *ike_sa_state_names, *child_sa_state_names,
+*proposal_create_default, *peer_cfg_create, *ike_cfg_create, *child_cfg_create,
+*traffic_selector_create_dynamic, *callback_job_create, *delete_ike_sa_job_create,
+*eap_type_from_string, *auth_cfg_create, *proposal_create_from_string,
+*traffic_selector_create_from_subnet, *traffic_selector_create_from_bytes,
+*eap_payload_create_data, *ike_sa_create, *child_sa_create, *policy_dir_names,
+*controller_cb_empty, *proposal_create, *ipcomp_transform_names,
+*traffic_selector_create_from_string, *update_sa_job_create, *ike_sa_id_create,
+*rekey_child_sa_job_create, *roam_job_create, *migrate_job_create,
+*acquire_job_create, *delete_child_sa_job_create, *debug_names;
 
 int main(int argc, char* argv[])
 {
@@ -72,7 +81,7 @@ int main(int argc, char* argv[])
 		
 		fsum = integrity->build_file(integrity, path);
 		ssum = 0;
-		handle = dlopen(path, RTLD_GLOBAL|RTLD_NOW);
+		handle = dlopen(path, RTLD_LAZY);
 		if (handle)
 		{
 			symbol = dlsym(handle, sname);
