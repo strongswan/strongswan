@@ -35,8 +35,8 @@ int main(int argc, char *argv[])
 	struct timespec timing;
 	int round, rounds, read;
 	char buf[8096], *pos = buf;
-	key_type_t type;
-	signature_scheme_t scheme;
+	key_type_t type = KEY_ANY;
+	signature_scheme_t scheme = SIGN_UNKNOWN;
 	chunk_t keydata, *sigs, data = chunk_from_buf(data_buf);
 	
 	if (argc < 4)
