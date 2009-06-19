@@ -27,6 +27,8 @@
 #include <utils/leak_detective.h>
 #endif
 
+#define CHECKSUM_LIBRARY IPSEC_DIR"/libchecksum.so"
+
 typedef struct private_library_t private_library_t;
 
 /**
@@ -129,7 +131,7 @@ void library_init(char *settings)
 	if (lib->settings->get_bool(lib->settings,
 								"libstrongswan.integrity_test", FALSE))
 	{
-		this->public.integrity = integrity_checker_create();
+		this->public.integrity = integrity_checker_create(CHECKSUM_LIBRARY);
 		if (!lib->integrity->check_segment(lib->integrity,
 										  "libstrongswan", library_init))
 		{

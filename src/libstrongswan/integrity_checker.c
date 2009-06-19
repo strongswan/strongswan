@@ -29,8 +29,6 @@
 #include <debug.h>
 #include <library.h>
 
-#define CHECKSUM_LIBRARY IPSEC_DIR"/libchecksum.so"
-
 typedef struct private_integrity_checker_t private_integrity_checker_t;
 
 /**
@@ -239,7 +237,7 @@ static void destroy(private_integrity_checker_t *this)
 /**
  * See header
  */
-integrity_checker_t *integrity_checker_create()
+integrity_checker_t *integrity_checker_create(char *checksum_library)
 {
 	private_integrity_checker_t *this = malloc_thing(private_integrity_checker_t);
 	
@@ -250,25 +248,29 @@ integrity_checker_t *integrity_checker_create()
 	this->public.destroy = (void(*)(integrity_checker_t*))destroy;
 	
 	this->checksum_count = 0;
-	this->handle = dlopen(CHECKSUM_LIBRARY, RTLD_LAZY);
-	if (this->handle)
+	this->handle = NULL;
+	if (checksum_library)
 	{
-		int *checksum_count;
-		
-		this->checksums = dlsym(this->handle, "checksums");
-		checksum_count = dlsym(this->handle, "checksum_count");
-		if (this->checksums && checksum_count)
+		this->handle = dlopen(checksum_library, RTLD_LAZY);
+		if (this->handle)
 		{
-			this->checksum_count = *checksum_count;
+			int *checksum_count;
+		
+			this->checksums = dlsym(this->handle, "checksums");
+			checksum_count = dlsym(this->handle, "checksum_count");
+			if (this->checksums && checksum_count)
+			{
+				this->checksum_count = *checksum_count;
+			}
+			else
+			{
+				DBG1("checksum library '%s' invalid", checksum_library);
+			}
 		}
 		else
 		{
-			DBG1("checksum library '%s' invalid", CHECKSUM_LIBRARY);
+			DBG1("loading checksum library '%s' failed", checksum_library);
 		}
-	}
-	else
-	{
-		DBG1("loading checksum library '%s' failed", CHECKSUM_LIBRARY);
 	}
 	return &this->public;
 }

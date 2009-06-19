@@ -89,7 +89,9 @@ struct integrity_checker_t {
 
 /**
  * Create a integrity_checker instance.
+ *
+ * @param checksum_library		library containing checksums
  */
-integrity_checker_t *integrity_checker_create();
+integrity_checker_t *integrity_checker_create(char *checksum_library);
 
 #endif /* INTEGRITY_CHECKER_H_ @}*/
