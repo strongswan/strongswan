@@ -10,6 +10,7 @@ BUILT_SOURCES = checksum.c
 CLEANFILES = checksum.c checksum_builder
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
-checksum.c : checksum_builder
-		find $(top_builddir)/src/libstrongswan -name 'libstrongswan-*.so' \
-			| xargs ./checksum_builder > checksum.c
+libs = $(shell find $(top_builddir)/src/libstrongswan -name 'libstrongswan*.so')
+
+checksum.c : checksum_builder $(libs)
+		./checksum_builder $(libs) > checksum.c
