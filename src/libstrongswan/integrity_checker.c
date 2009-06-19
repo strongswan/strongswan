@@ -182,7 +182,6 @@ static bool check_file(private_integrity_checker_t *this,
 	cs = find_checksum(this, name);
 	if (!cs)
 	{
-		DBG1("file checksum of %s is %08x", name, build_file(this, file));
 		return FALSE;
 	}
 	sum = build_file(this, file);
@@ -192,7 +191,7 @@ static bool check_file(private_integrity_checker_t *this,
 			 name, file, sum, cs->file);
 		return FALSE;
 	}
-	DBG1("file checksum %s of '%s' tested successfully", name, file);
+	DBG2("file checksum %s tested successfully", name);
 	return TRUE;
 }
 
@@ -208,7 +207,6 @@ static bool check_segment(private_integrity_checker_t *this,
 	cs = find_checksum(this, name);
 	if (!cs)
 	{
-		DBG1("segment checksum of %s is %08x", name, build_segment(this, sym));
 		return FALSE;
 	}
 	sum = build_segment(this, sym);
@@ -218,7 +216,7 @@ static bool check_segment(private_integrity_checker_t *this,
 			 name, sum, cs->segment);
 		return FALSE;
 	}
-	DBG1("segment checksum %s tested successfully", name);
+	DBG2("segment checksum %s tested successfully", name);
 	return TRUE;
 }
 
