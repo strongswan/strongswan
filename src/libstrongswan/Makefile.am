@@ -7,7 +7,6 @@ debug.c debug.h \
 enum.c enum.h \
 settings.h settings.c \
 printf_hook.c printf_hook.h \
-integrity_checker.c integrity_checker.h \
 asn1/asn1.c asn1/asn1.h \
 asn1/asn1_parser.c asn1/asn1_parser.h \
 asn1/oid.c asn1/oid.h \
@@ -66,6 +65,12 @@ endif
 
 if USE_LOCK_PROFILER
   AM_CFLAGS += -DLOCK_PROFILER
+endif
+
+if USE_INTEGRITY_TEST
+  AM_CFLAGS += -DINTEGRITY_TEST
+  libstrongswan_la_SOURCES += \
+    integrity_checker.c integrity_checker.h
 endif
 
 if USE_VSTR
