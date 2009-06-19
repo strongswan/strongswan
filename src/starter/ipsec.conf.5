@@ -238,13 +238,16 @@ acceptable values are
 .B secret
 or
 .B psk
-for shared secrets,
+for pre-shared secrets,
+.B pubkey
+(the default) for public key signatures as well as the synonyms
 .B rsasig
-for RSA digital signatures (the default),
-.B secret|rsasig
-for either, and
+for RSA digital signatures and
+.B ecdsasig
+for Elliptic Curve DSA signatures.
 .B never
-if negotiation is never to be attempted or accepted (useful for shunt-only conns).
+can be used if negotiation is never to be attempted or accepted (useful for
+shunt-only conns).
 Digital signatures are superior in every way to shared secrets. 
 IKEv1 additionally supports the values
 .B xauthpsk
