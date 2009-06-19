@@ -86,7 +86,7 @@ void library_deinit()
 /*
  * see header file
  */
-void library_init(char *settings)
+bool library_init(char *settings)
 {
 	printf_hook_t *pfh;
 	private_library_t *this = malloc_thing(private_library_t);
@@ -136,7 +136,9 @@ void library_init(char *settings)
 										  "libstrongswan", library_init))
 		{
 			DBG1("integrity check of libstrongswan failed");
+			return FALSE;
 		}
 	}
+	return TRUE;
 }
 

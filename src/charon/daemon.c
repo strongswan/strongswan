@@ -686,7 +686,10 @@ int main(int argc, char *argv[])
 	dbg = dbg_stderr;
 	
 	/* initialize library */
-	library_init(STRONGSWAN_CONF);
+	if (!library_init(STRONGSWAN_CONF))
+	{
+		exit(-1);
+	}
 	lib->printf_hook->add_handler(lib->printf_hook, 'R',
 								  traffic_selector_printf_hook,
 								  PRINTF_HOOK_ARGTYPE_POINTER,

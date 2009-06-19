@@ -265,7 +265,10 @@ int main(int argc, char **argv)
 #endif /* CAPABILITIES */
 
 	/* initialize library and optionsfrom */
-	library_init(STRONGSWAN_CONF);
+	if (!library_init(STRONGSWAN_CONF))
+	{
+		abort();
+	}
 	options = options_create();
 
 	/* handle arguments */

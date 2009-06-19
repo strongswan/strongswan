@@ -123,8 +123,9 @@ struct library_t {
  * Initialize library, creates "lib" instance.
  *
  * @param settings		file to read settings from, may be NULL for none
+ * @return				FALSE if integrity check failed
  */
-void library_init(char *settings);
+bool library_init(char *settings);
 
 /**
  * Deinitialize library, destroys "lib" instance.
