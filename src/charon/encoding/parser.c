@@ -371,7 +371,8 @@ static status_t parse_payload(private_parser_t *this,
 {
 	payload_t *pld;
 	void *output;
-	int rule_count, payload_length = 0, spi_size = 0, attribute_length = 0;
+	size_t rule_count;
+	int payload_length = 0, spi_size = 0, attribute_length = 0;
 	u_int16_t ts_type = 0;
 	bool attribute_format = FALSE;
 	int rule_number;
@@ -396,7 +397,7 @@ static status_t parse_payload(private_parser_t *this,
 	output = pld;
 	
 	/* parse the payload with its own rulse */
-	pld->get_encoding_rules(pld, &(this->rules), &rule_count);
+	pld->get_encoding_rules(pld, &this->rules, &rule_count);
 	for (rule_number = 0; rule_number < rule_count; rule_number++)
 	{
 		rule = &(this->rules[rule_number]);

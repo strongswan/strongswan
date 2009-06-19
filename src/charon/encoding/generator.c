@@ -484,12 +484,12 @@ static void write_to_chunk(private_generator_t *this,chunk_t *data)
  */
 static void generate_payload (private_generator_t *this,payload_t *payload)
 {
-	int i;
-	this->data_struct = payload;
-	int rule_count, offset_start;
+	int i, offset_start;
+	size_t rule_count;
 	encoding_rule_t *rules;
 	payload_type_t payload_type;
 	
+	this->data_struct = payload;
 	payload_type = payload->get_type(payload);
 	/* spi size has to get reseted */
 	this->last_spi_size = 0;
@@ -500,7 +500,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 		 payload_type_names, payload_type);
 	
 	/* each payload has its own encoding rules */
-	payload->get_encoding_rules(payload,&rules,&rule_count);
+	payload->get_encoding_rules(payload, &rules, &rule_count);
 	
 	for (i = 0; i < rule_count;i++)
 	{
@@ -517,7 +517,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			case ATTRIBUTE_TYPE:
 			case CONFIGURATION_ATTRIBUTE_LENGTH:
 			{
-				generate_u_int_type(this, rules[i].type,rules[i].offset);
+				generate_u_int_type(this, rules[i].type, rules[i].offset);
 				break;
 			}
 			case RESERVED_BIT:
