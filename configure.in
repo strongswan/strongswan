@@ -1039,6 +1039,25 @@ if test x$capabilities = xlibcap; then
 	AC_CHECK_HEADER([sys/capability.h],,[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
 fi
 
+if test x$integrity_test = xtrue; then
+	AC_MSG_CHECKING([for dladdr()])
+	AC_TRY_COMPILE(
+		[#define _GNU_SOURCE
+		 #include <dlfcn.h>],
+		[Dl_info info; dladdr(main, &info);], 
+		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
+		 AC_MSG_ERROR([dladdr() not supported, required by integrity-test!])]
+	)
+	AC_MSG_CHECKING([for dl_iterate_phdr()])
+	AC_TRY_COMPILE(
+		[#define _GNU_SOURCE
+		 #include <link.h>],
+		[dl_iterate_phdr((void*)0, (void*)0);], 
+		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
+		 AC_MSG_ERROR([dl_iterate_phdr() not supported, required by integrity-test!])]
+	)
+fi
+
 dnl ======================================
 dnl  collect all plugins for libstrongswan
 dnl ======================================
