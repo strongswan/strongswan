@@ -110,11 +110,6 @@ if USE_SMARTCARD
   AM_CFLAGS += -DSMARTCARD
 endif
 
-# This compile option activates the integrity test of libstrongswan
-if USE_INTEGRITY_TEST
-  AM_CFLAGS += -DINTEGRITY_TEST
-endif
-
 if USE_CAPABILITIES
   pluto_LDADD += -lcap
 endif

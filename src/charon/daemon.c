@@ -42,11 +42,6 @@
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
 
-#ifdef INTEGRITY_TEST
-#include <fips/fips.h>
-#include <fips/fips_signature.h>
-#endif /* INTEGRITY_TEST */
-
 typedef struct private_daemon_t private_daemon_t;
 
 /**
@@ -487,19 +482,6 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
 	
 	print_plugins();
-	
-#ifdef INTEGRITY_TEST
-	DBG1(DBG_DMN, "integrity test of libstrongswan code");
-	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
-	{
-		DBG1(DBG_DMN, "  integrity test passed");
-	}
-	else
-	{
-		DBG1(DBG_DMN, "  integrity test failed");
-		return FALSE;
-	}
-#endif /* INTEGRITY_TEST */
 
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	if (this->public.ike_sa_manager == NULL)

@@ -1,14 +1,6 @@
 lib_LTLIBRARIES = libstrongswan.la
 
-if USE_INTEGRITY_TEST
-  libstrongswan_la_SOURCES = \
-  fips/fips_canister_start.c \
-  fips/fips.c fips/fips.h
-else
-  libstrongswan_la_SOURCES =
-endif
-
-libstrongswan_la_SOURCES += \
+libstrongswan_la_SOURCES = \
 library.c library.h \
 chunk.c chunk.h \
 debug.c debug.h \
@@ -74,11 +66,6 @@ endif
 
 if USE_LOCK_PROFILER
   AM_CFLAGS += -DLOCK_PROFILER
-endif
-
-if USE_INTEGRITY_TEST
-  libstrongswan_la_SOURCES += \
-  fips/fips_canister_end.c
 endif
 
 if USE_VSTR
@@ -207,7 +194,5 @@ if USE_TEST_VECTORS
 endif
 
 if USE_INTEGRITY_TEST
-  SUBDIRS += fips
+  SUBDIRS += checksum
 endif
-
-SUBDIRS += checksum

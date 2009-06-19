@@ -22,10 +22,5 @@ so they must include the following phrase: "RSA Security Inc. PKCS#11
 Cryptographic Token Interface (Cryptoki)". The headers are not under the GPL;
 see details in src/pluto/rsaref/pkcs11.h.
 
-The FIPS_canister code in src/libstrongswan/fips that is used to determine
-the start (fips_canister_start.c) and end (fips_canister_end.c) of the
-libstrongswan TEXT and RODATA segments is under the OpenSSL licence. It is
-not under the GPL; see www.openssl.org. 
-
 In addition to the terms set out under the GPL, permission is granted to
 link the software against the libdes, MD2, and MD5 libraries just mentioned.  

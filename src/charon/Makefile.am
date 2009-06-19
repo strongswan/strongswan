@@ -128,10 +128,6 @@ if USE_ME
     sa/tasks/ike_me.c sa/tasks/ike_me.h
 endif
 
-if USE_INTEGRITY_TEST
-  AM_CFLAGS += -DINTEGRITY_TEST
-endif
-
 if USE_CAPABILITIES
   charon_LDADD += -lcap
 endif

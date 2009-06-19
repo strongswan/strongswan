@@ -30,19 +30,16 @@
  *
  * @defgroup crypto crypto
  * @ingroup libstrongswan
- 
+ *
  * @defgroup database database
  * @ingroup libstrongswan
- 
+ *
  * @defgroup fetcher fetcher
  * @ingroup libstrongswan
- 
- * @defgroup fips fips
- * @ingroup libstrongswan
- 
+ *
  * @defgroup plugins plugins
  * @ingroup libstrongswan
- 
+ *
  * @defgroup utils utils
  * @ingroup libstrongswan
  */
