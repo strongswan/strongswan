@@ -82,6 +82,15 @@ struct integrity_checker_t {
 	u_int32_t (*build_segment)(integrity_checker_t *this, void *sym);
 	
 	/**
+	 * Check both, on disk file integrity and loaded segment.
+	 *
+	 * @param name		name to lookup checksum
+	 * @param sym		a symbol to look up library and segment
+	 * @return			TRUE if integrity tested successfully
+	 */
+	bool (*check)(integrity_checker_t *this, char *name, void *sym);
+	
+	/**
 	 * Destroy a integrity_checker_t.
 	 */
 	void (*destroy)(integrity_checker_t *this);

@@ -137,7 +137,7 @@ static u_int32_t build_segment(private_integrity_checker_t *this, void *sym)
 	
 	if (dladdr(sym, &dli) == 0)
 	{
-		DBG1("unable to locate symbol: %s", strerror(errno));
+		DBG1("unable to locate symbol: %s", dlerror());
 		return 0;
 	}
 	/* we reuse the Dl_info struct as in/out parameter */
@@ -221,6 +221,29 @@ static bool check_segment(private_integrity_checker_t *this,
 }
 
 /**
+ * Implementation of integrity_checker_t.check
+ */
+static bool check(private_integrity_checker_t *this, char *name, void *sym)
+{
+	Dl_info dli;
+	
+	if (dladdr(sym, &dli) == 0)
+	{
+		DBG1("unable to locate symbol: %s", dlerror());
+		return FALSE;
+	}
+	if (!check_file(this, name, (char*)dli.dli_fname))
+	{
+		return FALSE;
+	}
+	if (!check_segment(this, name, sym))
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Implementation of integrity_checker_t.destroy.
  */
 static void destroy(private_integrity_checker_t *this)
@@ -243,6 +266,7 @@ integrity_checker_t *integrity_checker_create(char *checksum_library)
 	this->public.build_file = (u_int32_t(*)(integrity_checker_t*, char *file))build_file;
 	this->public.check_segment = (bool(*)(integrity_checker_t*, char *name, void *sym))check_segment;
 	this->public.build_segment = (u_int32_t(*)(integrity_checker_t*, void *sym))build_segment;
+	this->public.check = (bool(*)(integrity_checker_t*, char *name, void *sym))check;
 	this->public.destroy = (void(*)(integrity_checker_t*))destroy;
 	
 	this->checksum_count = 0;
