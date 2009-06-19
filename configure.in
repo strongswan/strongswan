@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.3.2)
+AC_INIT(strongSwan,4.3.3)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_SUBST(confdir, '${sysconfdir}')
 PKG_PROG_PKG_CONFIG
