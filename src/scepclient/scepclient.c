@@ -41,6 +41,8 @@
 #include <asn1/oid.h>
 #include <utils/optionsfrom.h>
 #include <utils/enumerator.h>
+#include <crypto/crypters/crypter.h>
+#include <crypto/proposal/proposal_keywords.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/public_key.h>
 
@@ -246,9 +248,8 @@ usage(const char *message)
 		" --password (-p) <pw>              challenge password\n"
 		"                                   - if pw is '%%prompt', password gets prompted for\n"
 		" --algorithm (-a) <algo>           use specified algorithm for PKCS#7 encryption\n"
-		"                                   <algo> = des-cbc | 3des-cbc (default) | \n"
-        "                                   aes128-cbc | aes192-cbc | aes256-cbc | \n"
-        "                                   camellia128-cbc | camellia192-cbc | camellia256-cbc\n"
+		"                                   <algo> = des | 3des (default) | aes128| aes192 | \n"
+		"                                   aes256 | camellia128 | camellia192 | camellia256\n"
 		"\n"
 		"Options for enrollment (cert):\n"
 		" --url (-u) <url>                  url of the SCEP server\n"
@@ -698,43 +699,22 @@ int main(int argc, char **argv)
 			continue;
 
 		case 'a':       /*--algorithm */
-			if (strcaseeq("des-cbc", optarg))
+		{
+			const proposal_token_t *token;
+
+			token = proposal_get_token(optarg, strlen(optarg));
+			if (token == NULL || token->type != ENCRYPTION_ALGORITHM)
 			{
-				pkcs7_symmetric_cipher = OID_DES_CBC;
+				usage("invalid algorithm specified");
 			}
-			else if (strcaseeq("3des-cbc", optarg))
+			pkcs7_symmetric_cipher = encryption_algorithm_to_oid(
+										token->algorithm, token->keysize);
+			if (pkcs7_symmetric_cipher == OID_UNKNOWN)
 			{
-				pkcs7_symmetric_cipher = OID_3DES_EDE_CBC;
-			}
-			else if (strcaseeq("aes128-cbc", optarg))
-			{
-				pkcs7_symmetric_cipher = OID_AES128_CBC;
-			}
-			else if (strcaseeq("aes192-cbc", optarg))
-			{
-				pkcs7_symmetric_cipher = OID_AES192_CBC;
-			}
-			else if (strcaseeq("aes256-cbc", optarg))
-			{
-				pkcs7_symmetric_cipher = OID_AES256_CBC;
-			}
-			else if (strcaseeq("camellia128-cbc", optarg))
-			{
-				pkcs7_symmetric_cipher = OID_CAMELLIA128_CBC;
-			}
-			else if (strcaseeq("camellia192-cbc", optarg))
-			{
-				pkcs7_symmetric_cipher = OID_CAMELLIA192_CBC;
-			}
-			else if (strcaseeq("camellia256-cbc", optarg))
-			{
-				pkcs7_symmetric_cipher = OID_CAMELLIA256_CBC;
-			}
-			else
-			{
-				usage("invalid encryption algorithm specified");
+				usage("unsupported encryption algorithm specified");
 			}
 			continue;
+		}
 #ifdef DEBUG
 		case 'A':       /* --debug-all */
 			base_debugging |= DBG_ALL;
