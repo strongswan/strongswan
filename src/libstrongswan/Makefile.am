@@ -197,7 +197,3 @@ endif
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 endif
-
-if USE_INTEGRITY_TEST
-  SUBDIRS += checksum
-endif

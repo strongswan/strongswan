@@ -44,6 +44,10 @@ if USE_MEDSRV
   SUBDIRS += medsrv
 endif
 
+if USE_INTEGRITY_TEST
+  SUBDIRS += checksum
+endif
+
 EXTRA_DIST = strongswan.conf
 
 install-exec-local :	
