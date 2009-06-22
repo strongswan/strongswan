@@ -97,7 +97,7 @@ static padlock_feature_t get_padlock_features()
 			return d;
 		}
 	}
-	DBG1("Padlock not found, CPU is %s\n", vendor);
+	DBG1("Padlock not found, CPU is %s", vendor);
 	return 0;
 }
 
