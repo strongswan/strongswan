@@ -670,6 +670,7 @@ int main(int argc, char *argv[])
 	/* initialize library */
 	if (!library_init(STRONGSWAN_CONF))
 	{
+		library_deinit();
 		exit(-1);
 	}
 	

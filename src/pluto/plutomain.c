@@ -262,6 +262,7 @@ int main(int argc, char **argv)
 	/* initialize library and optionsfrom */
 	if (!library_init(STRONGSWAN_CONF))
 	{
+		library_deinit();
 		abort();
 	}
 	if (lib->integrity &&
