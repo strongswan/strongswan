@@ -10,6 +10,3 @@ Doxyfile :	Doxyfile.in
 
 apidoc :	Doxyfile
 		doxygen
-
-dist-hook :
-		rm -rf `find $(distdir)/testing -name .svn`
