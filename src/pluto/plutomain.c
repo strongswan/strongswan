@@ -264,6 +264,13 @@ int main(int argc, char **argv)
 	{
 		abort();
 	}
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, "pluto", argv[0]))
+	{
+		fprintf(stderr, "integrity check of pluto failed\n");
+		library_deinit();
+		abort();
+	}
 	options = options_create();
 
 	/* handle arguments */

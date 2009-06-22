@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 	printf("integrity_checksum_t checksums[] = {\n");
 	for (i = 1; i < argc; i++)
 	{
-		char *name, *path, *sname;
+		char *name, *path, *sname = NULL;
 		void *handle, *symbol;
 		u_int32_t fsum, ssum;
 		
@@ -65,6 +65,14 @@ int main(int argc, char* argv[])
 			name = strdup("libstrongswan\",");
 			sname = "library_init";
 		}
+		else if (strstr(path, "charon"))
+		{
+			name = strdup("charon\",");
+		}
+		else if (strstr(path, "pluto"))
+		{
+			name = strdup("pluto\",");
+		}
 		else
 		{
 			fprintf(stderr, "don't know how to handle '%s', ignored", path);
@@ -73,25 +81,27 @@ int main(int argc, char* argv[])
 		
 		fsum = integrity->build_file(integrity, path);
 		ssum = 0;
-		handle = dlopen(path, RTLD_LAZY);
-		if (handle)
+		if (sname)
 		{
-			symbol = dlsym(handle, sname);
-			if (symbol)
+			handle = dlopen(path, RTLD_LAZY);
+			if (handle)
 			{
-				ssum = integrity->build_segment(integrity, symbol);
+				symbol = dlsym(handle, sname);
+				if (symbol)
+				{
+					ssum = integrity->build_segment(integrity, symbol);
+				}
+				else
+				{
+					fprintf(stderr, "symbol lookup failed: %s\n", dlerror());
+				}
+				dlclose(handle);
 			}
 			else
 			{
-				fprintf(stderr, "symbol lookup failed: %s\n", dlerror());
+				fprintf(stderr, "dlopen failed: %s\n", dlerror());
 			}
-			dlclose(handle);
 		}
-		else
-		{
-			fprintf(stderr, "dlopen failed: %s\n", dlerror());
-		}
-		
 		printf("\t{\"%-20s0x%08x, 0x%08x},\n", name, fsum, ssum);
 		free(name);
 	}

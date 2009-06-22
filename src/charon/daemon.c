@@ -672,6 +672,15 @@ int main(int argc, char *argv[])
 	{
 		exit(-1);
 	}
+	
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, "charon", argv[0]))
+	{
+		dbg_stderr(1, "integrity check of charon failed");
+		library_deinit();
+		exit(-1);
+	}
+	
 	lib->printf_hook->add_handler(lib->printf_hook, 'R',
 								  traffic_selector_printf_hook,
 								  PRINTF_HOOK_ARGTYPE_POINTER,
