@@ -138,6 +138,7 @@ bool library_init(char *settings)
 			DBG1("integrity check of libstrongswan failed");
 			return FALSE;
 		}
+		DBG1("integrity test enabled");
 #else /* !INTEGRITY_TEST */
 		DBG1("integrity test enabled, but not supported");
 		return FALSE;
