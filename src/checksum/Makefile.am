@@ -12,9 +12,15 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -rdynamic
 
 libs =	$(shell find $(top_builddir)/src/libstrongswan $(top_builddir)/src/charon \
-			-name 'libstrongswan*.so') \
-		$(top_builddir)/src/charon/.libs/charon \
-		$(top_builddir)/src/pluto/.libs/pluto
+			-name 'libstrongswan*.so')
+
+if USE_CHARON
+  libs += $(top_builddir)/src/charon/.libs/charon
+endif
+
+if USE_PLUTO
+  libs += $(top_builddir)/src/pluto/.libs/pluto
+endif
 
 checksum.c : checksum_builder $(libs)
 		./checksum_builder $(libs) > checksum.c
