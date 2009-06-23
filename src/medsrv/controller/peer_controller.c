@@ -23,6 +23,8 @@
 #include <debug.h>
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
+#include <utils/identification.h>
+#include <credentials/keys/public_key.h>
 
 typedef struct private_peer_controller_t private_peer_controller_t;
 
