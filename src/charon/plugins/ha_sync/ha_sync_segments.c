@@ -80,7 +80,7 @@ static bool in_segment(private_ha_sync_segments_t *this,
 static void log_segments(private_ha_sync_segments_t *this, bool activated,
 						 u_int segment)
 {
-	char buf[64], *pos = buf;
+	char buf[64] = "none", *pos = buf;
 	int i;
 	bool first = TRUE;
 
