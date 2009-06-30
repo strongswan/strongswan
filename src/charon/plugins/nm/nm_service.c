@@ -121,14 +121,14 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 /**
  * signal failure to NM, connecting failed
  */
-static void signal_failure(NMVPNPlugin *plugin)
+static void signal_failure(NMVPNPlugin *plugin, NMVPNPluginFailure failure)
 {
 	nm_handler_t *handler = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->handler;
 	
 	handler->reset(handler);
 	
 	/* TODO: NM does not handle this failure!? */
-	nm_vpn_plugin_failure(plugin, NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED); 
+	nm_vpn_plugin_failure(plugin, failure); 
 	nm_vpn_plugin_set_state(plugin, NM_VPN_SERVICE_STATE_STOPPED);
 }
 
@@ -145,7 +145,12 @@ static bool ike_state_change(listener_t *listener, ike_sa_t *ike_sa,
 		switch (state)
 		{
 			case IKE_DESTROYING:
-				signal_failure(private->plugin);
+				signal_failure(private->plugin,
+							   NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED);
+				return FALSE;
+			case IKE_DELETING:
+				signal_failure(private->plugin,
+							   NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
 				return FALSE;
 			default:
 				break;
@@ -168,13 +173,29 @@ static bool child_state_change(listener_t *listener, ike_sa_t *ike_sa,
 		{
 			case CHILD_INSTALLED:
 				signal_ipv4_config(private->plugin, ike_sa, child_sa);
-				return FALSE;
+				break;
 			case CHILD_DESTROYING:
-				signal_failure(private->plugin);
+				signal_failure(private->plugin,
+							   NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
 				return FALSE;
 			default:
 				break;
 		}
+	}
+	return TRUE;
+}
+
+/**
+ * Implementation of listener_t.ike_keys
+ */
+static bool ike_keys(listener_t *listener, ike_sa_t *ike_sa, diffie_hellman_t *dh,
+					 chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey)
+{
+	NMStrongswanPluginPrivate *private = (NMStrongswanPluginPrivate*)listener;
+	
+	if (rekey && private->ike_sa == ike_sa)
+	{	/* follow a rekeyed IKE_SA */
+		private->ike_sa = rekey;
 	}
 	return TRUE;
 }
@@ -402,7 +423,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 								 10800, 10200, /* lifetime 3h, rekey 2h50min */
 								 300, /* jitter 5min */
 								 NULL, TRUE, MODE_TUNNEL, /* updown, hostaccess */
-								 ACTION_NONE, ACTION_RESTART, ipcomp);
+								 ACTION_NONE, ACTION_NONE, ipcomp);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
@@ -536,6 +557,7 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 	memset(&private->listener.log, 0, sizeof(listener_t));
 	private->listener.ike_state_change = ike_state_change;
 	private->listener.child_state_change = child_state_change;
+	private->listener.ike_keys = ike_keys;
 }
 
 /**
