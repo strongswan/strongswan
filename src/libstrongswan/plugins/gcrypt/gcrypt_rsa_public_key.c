@@ -60,7 +60,7 @@ struct private_gcrypt_rsa_public_key_t {
 /**
  * Implemented in gcrypt_rsa_private_key.c
  */
-chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name);
+chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name, gcry_sexp_t key);
 bool gcrypt_rsa_build_keyids(gcry_sexp_t key, identification_t **keyid,
 							 identification_t **keyid_info);
 
@@ -226,7 +226,7 @@ static bool encrypt_(private_gcrypt_rsa_public_key_t *this, chunk_t plain,
 		DBG1("encrypting data using pkcs1 failed: %s", gpg_strerror(err));
 		return FALSE;
 	}
-	*encrypted = gcrypt_rsa_find_token(out, "a");
+	*encrypted = gcrypt_rsa_find_token(out, "a", this->key);
 	gcry_sexp_release(out);
 	return !!encrypted->len;
 }
@@ -290,8 +290,8 @@ static identification_t *get_id(private_gcrypt_rsa_public_key_t *this,
 static chunk_t get_encoding(private_gcrypt_rsa_public_key_t *this)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "mm",
-			asn1_integer("m", gcrypt_rsa_find_token(this->key, "n")),
-			asn1_integer("m", gcrypt_rsa_find_token(this->key, "e")));
+			asn1_integer("m", gcrypt_rsa_find_token(this->key, "n", NULL)),
+			asn1_integer("m", gcrypt_rsa_find_token(this->key, "e", NULL)));
 }
 
 /**
@@ -352,8 +352,8 @@ public_key_t *gcrypt_rsa_public_key_create_from_sexp(gcry_sexp_t key)
 	chunk_t n, e;
 	
 	this = gcrypt_rsa_public_key_create_empty();
-	n = gcrypt_rsa_find_token(key, "n");
-	e = gcrypt_rsa_find_token(key, "e");
+	n = gcrypt_rsa_find_token(key, "n", NULL);
+	e = gcrypt_rsa_find_token(key, "e", NULL);
 	
 	err = gcry_sexp_build(&this->key, NULL, "(public-key(rsa(n %b)(e %b)))",
 						  n.len, n.ptr, e.len, e.ptr);
