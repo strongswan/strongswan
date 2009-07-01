@@ -1,6 +1,6 @@
 /* Support of the Online Certificate Status Protocol (OCSP)
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
- * Zuercher Hochschule Winterthur
+ * Copyright (C) 2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

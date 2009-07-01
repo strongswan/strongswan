@@ -1,5 +1,6 @@
 /* Loading of PEM encoded files with optional encryption
  * Copyright (C) 2001-2009 Andreas Steffen
+ *
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
