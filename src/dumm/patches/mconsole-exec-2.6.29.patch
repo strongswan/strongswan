@@ -1,0 +1,354 @@
+diff --git a/.gitignore b/.gitignore
+index 869e1a3..978e430 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -32,6 +32,7 @@
+ tags
+ TAGS
+ vmlinux
++linux
+ System.map
+ Module.markers
+ Module.symvers
+diff --git a/arch/um/drivers/line.c b/arch/um/drivers/line.c
+index 14a102e..0acfaeb 100644
+--- a/arch/um/drivers/line.c
++++ b/arch/um/drivers/line.c
+@@ -866,6 +866,6 @@ char *add_xterm_umid(char *base)
+ 		return base;
+ 	}
+ 
+-	snprintf(title, len, "%s (%s)", base, umid);
++	snprintf(title, len, "%s (%s)", umid, base);
+ 	return title;
+ }
+diff --git a/arch/um/drivers/mconsole_kern.c b/arch/um/drivers/mconsole_kern.c
+index e14629c..c488930 100644
+--- a/arch/um/drivers/mconsole_kern.c
++++ b/arch/um/drivers/mconsole_kern.c
+@@ -4,6 +4,7 @@
+  * Licensed under the GPL
+  */
+ 
++#include "linux/kmod.h"
+ #include <linux/console.h>
+ #include <linux/ctype.h>
+ #include <linux/interrupt.h>
+@@ -20,6 +21,8 @@
+ #include <linux/un.h>
+ #include <linux/workqueue.h>
+ #include <linux/mutex.h>
++#include <linux/completion.h>
++#include <linux/file.h>
+ #include <asm/uaccess.h>
+ 
+ #include "init.h"
+@@ -202,6 +205,65 @@ void mconsole_proc(struct mc_request *req)
+ }
+ #endif
+ 
++void mconsole_exec(struct mc_request *req)
++{
++	DECLARE_COMPLETION_ONSTACK(done);
++	struct subprocess_info *sub_info;
++	int res, len;
++	struct file *out;
++	char buf[MCONSOLE_MAX_DATA];
++
++	char *envp[] = {
++		"HOME=/", "TERM=linux",
++		"PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin",
++		NULL
++	};
++	char *argv[] = {
++		"/bin/sh", "-c",
++		req->request.data + strlen("exec "),
++		NULL
++	};
++
++	sub_info = call_usermodehelper_setup("/bin/sh", argv, envp, GFP_ATOMIC);
++	if (sub_info == NULL) {
++		mconsole_reply(req, "call_usermodehelper_setup failed", 1, 0);
++		return;
++	}
++	res = call_usermodehelper_stdoutpipe(sub_info, &out);
++	if (res < 0) {
++		call_usermodehelper_freeinfo(sub_info);
++		mconsole_reply(req, "call_usermodehelper_stdoutpipe failed", 1, 0);
++		return;
++	}
++
++	call_usermodehelper_setcomplete(sub_info, &done);
++
++	res = call_usermodehelper_exec(sub_info, UMH_WAIT_EXT);
++	if (res < 0) {
++		call_usermodehelper_freeinfo(sub_info);
++		mconsole_reply(req, "call_usermodehelper_exec failed", 1, 0);
++		return;
++	}
++
++	for (;;) {
++		len = out->f_op->read(out, buf, sizeof(buf), &out->f_pos);
++		if (len < 0) {
++			mconsole_reply(req, "reading output failed", 1, 0);
++			break;
++		}
++		if (len == 0)
++			break;
++		mconsole_reply_len(req, buf, len, 0, 1);
++	}
++	fput(out);
++
++	wait_for_completion(&done);
++	res = call_usermodehelper_getretval(sub_info) >> 8;
++	call_usermodehelper_freeinfo(sub_info);
++
++	mconsole_reply_len(req, buf, len, res, 0);
++}
++
+ void mconsole_proc(struct mc_request *req)
+ {
+ 	char path[64];
+@@ -273,6 +335,7 @@ void mconsole_proc(struct mc_request *req)
+     stop - pause the UML; it will do nothing until it receives a 'go' \n\
+     go - continue the UML after a 'stop' \n\
+     log <string> - make UML enter <string> into the kernel log\n\
++    exec <string> - pass <string> to /bin/sh -c synchronously\n\
+     proc <file> - returns the contents of the UML's /proc/<file>\n\
+     stack <pid> - returns the stack of the specified pid\n\
+ "
+diff --git a/arch/um/drivers/mconsole_user.c b/arch/um/drivers/mconsole_user.c
+index f8cf4c8..019d89f 100644
+--- a/arch/um/drivers/mconsole_user.c
++++ b/arch/um/drivers/mconsole_user.c
+@@ -32,6 +32,7 @@ static struct mconsole_command commands[] = {
+ 	{ "stop", mconsole_stop, MCONSOLE_PROC },
+ 	{ "go", mconsole_go, MCONSOLE_INTR },
+ 	{ "log", mconsole_log, MCONSOLE_INTR },
++	{ "exec", mconsole_exec, MCONSOLE_PROC },
+ 	{ "proc", mconsole_proc, MCONSOLE_PROC },
+ 	{ "stack", mconsole_stack, MCONSOLE_INTR },
+ };
+diff --git a/arch/um/include/.gitignore b/arch/um/include/.gitignore
+new file mode 100644
+index 0000000..4c14eba
+--- /dev/null
++++ b/arch/um/include/.gitignore
+@@ -0,0 +1,2 @@
++shared/kern_constants.h
++shared/user_constants.h
+diff --git a/arch/um/include/shared/mconsole.h b/arch/um/include/shared/mconsole.h
+index c139ae1..dfb83b1 100644
+--- a/arch/um/include/shared/mconsole.h
++++ b/arch/um/include/shared/mconsole.h
+@@ -85,6 +85,7 @@ extern void mconsole_cad(struct mc_request *req);
+ extern void mconsole_stop(struct mc_request *req);
+ extern void mconsole_go(struct mc_request *req);
+ extern void mconsole_log(struct mc_request *req);
++extern void mconsole_exec(struct mc_request *req);
+ extern void mconsole_proc(struct mc_request *req);
+ extern void mconsole_stack(struct mc_request *req);
+ 
+diff --git a/arch/um/kernel/.gitignore b/arch/um/kernel/.gitignore
+new file mode 100644
+index 0000000..803397e
+--- /dev/null
++++ b/arch/um/kernel/.gitignore
+@@ -0,0 +1,3 @@
++config.c
++config.tmp
++vmlinux.lds
+diff --git a/arch/um/os-Linux/file.c b/arch/um/os-Linux/file.c
+index b5afcfd..b598128 100644
+--- a/arch/um/os-Linux/file.c
++++ b/arch/um/os-Linux/file.c
+@@ -521,6 +521,8 @@ int os_create_unix_socket(const char *file, int len, int close_on_exec)
+ 
+ 	addr.sun_family = AF_UNIX;
+ 
++	if (len > sizeof(addr.sun_path))
++		len = sizeof(addr.sun_path);
+ 	snprintf(addr.sun_path, len, "%s", file);
+ 
+ 	err = bind(sock, (struct sockaddr *) &addr, sizeof(addr));
+diff --git a/include/linux/kmod.h b/include/linux/kmod.h
+index 92213a9..db07018 100644
+--- a/include/linux/kmod.h
++++ b/include/linux/kmod.h
+@@ -40,6 +40,7 @@ static inline int request_module(const char * name, ...) { return -ENOSYS; }
+ struct key;
+ struct file;
+ struct subprocess_info;
++struct completion;
+ 
+ /* Allocate a subprocess_info structure */
+ struct subprocess_info *call_usermodehelper_setup(char *path, char **argv,
+@@ -50,13 +51,20 @@ void call_usermodehelper_setkeys(struct subprocess_info *info,
+ 				 struct key *session_keyring);
+ int call_usermodehelper_stdinpipe(struct subprocess_info *sub_info,
+ 				  struct file **filp);
++int call_usermodehelper_stdoutpipe(struct subprocess_info *sub_info,
++				   struct file **filp);
++void call_usermodehelper_setcomplete(struct subprocess_info *sub_info,
++				     struct completion *complete);
+ void call_usermodehelper_setcleanup(struct subprocess_info *info,
+ 				    void (*cleanup)(char **argv, char **envp));
++int call_usermodehelper_getretval(struct subprocess_info *sub_info);
+ 
+ enum umh_wait {
+ 	UMH_NO_WAIT = -1,	/* don't wait at all */
+ 	UMH_WAIT_EXEC = 0,	/* wait for the exec, but not the process */
+ 	UMH_WAIT_PROC = 1,	/* wait for the process to complete */
++	UMH_WAIT_EXT = 2,	/* wait for the exec then return and signal
++				   when the process is complete */
+ };
+ 
+ /* Actually execute the sub-process */
+diff --git a/kernel/kmod.c b/kernel/kmod.c
+index a27a5f6..61479bf 100644
+--- a/kernel/kmod.c
++++ b/kernel/kmod.c
+@@ -119,12 +119,14 @@ struct subprocess_info {
+ 	struct work_struct work;
+ 	struct completion *complete;
+ 	struct cred *cred;
++	struct completion *executed;
+ 	char *path;
+ 	char **argv;
+ 	char **envp;
+ 	enum umh_wait wait;
+ 	int retval;
+ 	struct file *stdin;
++	struct file *stdout;
+ 	void (*cleanup)(char **argv, char **envp);
+ };
+ 
+@@ -161,8 +163,26 @@ static int ____call_usermodehelper(void *data)
+ 		FD_SET(0, fdt->open_fds);
+ 		FD_CLR(0, fdt->close_on_exec);
+ 		spin_unlock(&f->file_lock);
++	}
++	if (sub_info->stdout) {
++		struct files_struct *f = current->files;
++		struct fdtable *fdt;
+ 
+-		/* and disallow core files too */
++		sys_close(1);
++		sys_close(2);
++		get_file(sub_info->stdout);
++		fd_install(1, sub_info->stdout);
++		fd_install(2, sub_info->stdout);
++		spin_lock(&f->file_lock);
++		fdt = files_fdtable(f);
++		FD_SET(1, fdt->open_fds);
++		FD_CLR(1, fdt->close_on_exec);
++		FD_SET(2, fdt->open_fds);
++		FD_CLR(2, fdt->close_on_exec);
++		spin_unlock(&f->file_lock);
++	}
++	if (sub_info->stdin || sub_info->stdout) {
++		/* disallow core files */
+ 		current->signal->rlim[RLIMIT_CORE] = (struct rlimit){0, 0};
+ 	}
+ 
+@@ -248,7 +268,7 @@ static void __call_usermodehelper(struct work_struct *work)
+ 	/* CLONE_VFORK: wait until the usermode helper has execve'd
+ 	 * successfully We need the data structures to stay around
+ 	 * until that is done.  */
+-	if (wait == UMH_WAIT_PROC || wait == UMH_NO_WAIT)
++	if (wait == UMH_WAIT_PROC || wait == UMH_NO_WAIT || wait == UMH_WAIT_EXT)
+ 		pid = kernel_thread(wait_for_helper, sub_info,
+ 				    CLONE_FS | CLONE_FILES | SIGCHLD);
+ 	else
+@@ -259,6 +279,16 @@ static void __call_usermodehelper(struct work_struct *work)
+ 	case UMH_NO_WAIT:
+ 		break;
+ 
++	case UMH_WAIT_EXT:
++		if (pid > 0) {
++			complete(sub_info->executed);
++			break;
++		}
++		sub_info->retval = pid;
++		complete(sub_info->executed);
++		complete(sub_info->complete);
++		break;
++
+ 	case UMH_WAIT_PROC:
+ 		if (pid > 0)
+ 			break;
+@@ -411,6 +441,19 @@ void call_usermodehelper_setcleanup(struct subprocess_info *info,
+ }
+ EXPORT_SYMBOL(call_usermodehelper_setcleanup);
+ 
++void call_usermodehelper_setcomplete(struct subprocess_info *info,
++				    struct completion* complete)
++{
++	info->complete = complete;
++}
++EXPORT_SYMBOL(call_usermodehelper_setcomplete);
++
++int call_usermodehelper_getretval(struct subprocess_info *info)
++{
++	return info->retval;
++}
++EXPORT_SYMBOL(call_usermodehelper_getretval);
++
+ /**
+  * call_usermodehelper_stdinpipe - set up a pipe to be used for stdin
+  * @sub_info: a subprocess_info returned by call_usermodehelper_setup
+@@ -440,6 +483,29 @@ int call_usermodehelper_stdinpipe(struct subprocess_info *sub_info,
+ }
+ EXPORT_SYMBOL(call_usermodehelper_stdinpipe);
+ 
++int call_usermodehelper_stdoutpipe(struct subprocess_info *sub_info,
++				  struct file **filp)
++{
++	struct file *f;
++
++	f = create_write_pipe(0);
++	if (IS_ERR(f))
++		return PTR_ERR(f);
++	sub_info->stdout = f;
++
++	f = create_read_pipe(f, 0);
++	if (IS_ERR(f)) {
++		free_write_pipe(sub_info->stdout);
++		sub_info->stdout = NULL;
++		return PTR_ERR(f);
++	}
++	*filp = f;
++
++	return 0;
++}
++EXPORT_SYMBOL(call_usermodehelper_stdoutpipe);
++
++
+ /**
+  * call_usermodehelper_exec - start a usermode application
+  * @sub_info: information about the subprocessa
+@@ -469,15 +535,22 @@ int call_usermodehelper_exec(struct subprocess_info *sub_info,
+ 		goto out;
+ 	}
+ 
+-	sub_info->complete = &done;
++	if (wait == UMH_WAIT_EXT)
++		sub_info->executed = &done;
++	else
++		sub_info->complete = &done;
++
+ 	sub_info->wait = wait;
+ 
+ 	queue_work(khelper_wq, &sub_info->work);
+ 	if (wait == UMH_NO_WAIT)	/* task has freed sub_info */
+ 		goto unlock;
++
+ 	wait_for_completion(&done);
+-	retval = sub_info->retval;
+ 
++	retval = sub_info->retval;
++	if (wait == UMH_WAIT_EXT)	/* caller will free sub_info */
++		goto unlock;
+ out:
+ 	call_usermodehelper_freeinfo(sub_info);
+ unlock:
