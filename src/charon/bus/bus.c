@@ -374,7 +374,6 @@ static void ike_state_change(private_bus_t *this, ike_sa_t *ike_sa,
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -409,7 +408,6 @@ static void child_state_change(private_bus_t *this, child_sa_t *child_sa,
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -443,7 +441,6 @@ static void message(private_bus_t *this, message_t *message, bool incoming)
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -476,7 +473,6 @@ static void ike_keys(private_bus_t *this, ike_sa_t *ike_sa,
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -511,7 +507,6 @@ static void child_keys(private_bus_t *this, child_sa_t *child_sa,
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -545,7 +540,6 @@ static bool authorize(private_bus_t *this, linked_list_t *auth, bool final)
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 		if (!success)
 		{
