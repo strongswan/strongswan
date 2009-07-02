@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -83,6 +83,38 @@ static void sigchld_handler(int signal, siginfo_t *info, void* ptr)
 		}
 	}
 	enumerator->destroy(enumerator);
+}
+
+
+/**
+ * Global Dumm bindings
+ */
+static VALUE dumm_add_overlay(VALUE class, VALUE dir)
+{
+	if (!dumm->add_overlay(dumm, StringValuePtr(dir)))
+	{
+		rb_raise(rb_eRuntimeError, "loading overlay failed");
+	}
+	return class;
+}
+
+static VALUE dumm_del_overlay(VALUE class, VALUE dir)
+{
+	return dumm->del_overlay(dumm, StringValuePtr(dir)) ? Qtrue : Qfalse;
+}
+
+static VALUE dumm_pop_overlay(VALUE class)
+{
+	return dumm->pop_overlay(dumm) ? Qtrue : Qfalse;
+}
+
+static void dumm_init()
+{
+	rbm_dumm = rb_define_module("Dumm");
+
+	rb_define_module_function(rbm_dumm, "add_overlay", dumm_add_overlay, 1);
+	rb_define_module_function(rbm_dumm, "del_overlay", dumm_del_overlay, 1);
+	rb_define_module_function(rbm_dumm, "pop_overlay", dumm_pop_overlay, 0);
 }
 
 /**
@@ -330,6 +362,34 @@ static VALUE guest_delete(VALUE self)
 	return Qnil;
 }
 
+static VALUE guest_add_overlay(VALUE self, VALUE dir)
+{
+	guest_t *guest;
+
+	Data_Get_Struct(self, guest_t, guest);
+	if (!guest->add_overlay(guest, StringValuePtr(dir)))
+	{
+		rb_raise(rb_eRuntimeError, "loading overlay failed");
+	}
+	return self;
+}
+
+static VALUE guest_del_overlay(VALUE self, VALUE dir)
+{
+	guest_t *guest;
+
+	Data_Get_Struct(self, guest_t, guest);
+	return guest->del_overlay(guest, StringValuePtr(dir)) ? Qtrue : Qfalse;
+}
+
+static VALUE guest_pop_overlay(VALUE self)
+{
+	guest_t *guest;
+
+	Data_Get_Struct(self, guest_t, guest);
+	return guest->pop_overlay(guest) ? Qtrue : Qfalse;
+}
+
 static void guest_init()
 {
 	rbc_guest = rb_define_class_under(rbm_dumm , "Guest", rb_cObject);
@@ -354,6 +414,9 @@ static void guest_init()
 	rb_define_method(rbc_guest, "include?", guest_find_iface, 1);
 	rb_define_method(rbc_guest, "iface?", guest_find_iface, 1);
 	rb_define_method(rbc_guest, "delete", guest_delete, 0);
+	rb_define_method(rbc_guest, "add_overlay", guest_add_overlay, 1);
+	rb_define_method(rbc_guest, "del_overlay", guest_del_overlay, 1);
+	rb_define_method(rbc_guest, "pop_overlay", guest_pop_overlay, 0);
 }
 
 /**
@@ -711,8 +774,7 @@ void Init_dumm()
 
 	dumm = dumm_create(NULL);
 
-	rbm_dumm = rb_define_module("Dumm");
-
+	dumm_init();
 	guest_init();
 	bridge_init();
 	iface_init();

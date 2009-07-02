@@ -1,5 +1,5 @@
 =begin
-  Copyright (C) 2008 Tobias Brunner
+  Copyright (C) 2008-2009 Tobias Brunner
   Hochschule fuer Technik Rapperswil
 
   This program is free software; you can redistribute it and/or modify it
@@ -33,8 +33,9 @@ module Dumm
       self[id]
     end
     
-    # delete all interfaces
+    # remove all overlays, delete all interfaces
     def reset
+      while pop_overlay; end
       each {|i|
         i.delete
       }

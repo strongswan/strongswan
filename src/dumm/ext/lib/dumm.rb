@@ -1,5 +1,5 @@
 =begin
-  Copyright (C) 2008 Tobias Brunner
+  Copyright (C) 2008-2009 Tobias Brunner
   Hochschule fuer Technik Rapperswil
 
   This program is free software; you can redistribute it and/or modify it
@@ -38,11 +38,11 @@ module Dumm
     end
   end
   
-  # unload templates, reset all guests and delete bridges
+  # unload template/overlays, reset all guests and delete bridges
   def reset
     Template.unload
     Guest.each { |guest|
-      guest.reset if guest.running?
+      guest.reset
     }
     Bridge.each { |bridge|
       bridge.delete
