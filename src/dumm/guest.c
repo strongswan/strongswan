@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -297,37 +297,42 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 }
 
 /**
- * Implementation of guest_t.load_template.
+ * Implementation of guest_t.add_overlay.
  */
-static bool load_template(private_guest_t *this, char *path)
+static bool add_overlay(private_guest_t *this, char *path)
 {
-	char dir[PATH_MAX];
-	size_t len;
-
 	if (path == NULL)
-	{
-		return this->cowfs->set_overlay(this->cowfs, NULL);
-	}
-
-	len = snprintf(dir, sizeof(dir), "%s/%s", path, this->name);
-	if (len < 0 || len >= sizeof(dir))
 	{
 		return FALSE;
 	}
-	if (access(dir, F_OK) != 0)
+
+	if (access(path, F_OK) != 0)
 	{
-		if (!mkdir_p(dir, PERME))
+		if (!mkdir_p(path, PERME))
 		{
 			DBG1(DBG_LIB, "creating overlay for guest '%s' failed: %m",
 				 this->name);
 			return FALSE;
 		}
 	}
-	if (!this->cowfs->set_overlay(this->cowfs, dir))
-	{
-		return FALSE;
-	}
-	return TRUE;
+
+	return this->cowfs->add_overlay(this->cowfs, path);
+}
+
+/**
+ * Implementation of guest_t.del_overlay.
+ */
+static bool del_overlay(private_guest_t *this, char *path)
+{
+	return this->cowfs->del_overlay(this->cowfs, path);
+}
+
+/**
+ * Implementation of guest_t.pop_overlay.
+ */
+static bool pop_overlay(private_guest_t *this)
+{
+	return this->cowfs->pop_overlay(this->cowfs);
 }
 
 /**
@@ -567,7 +572,9 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->public.create_iface_enumerator = (enumerator_t*(*)(guest_t*))create_iface_enumerator;
 	this->public.start = (void*)start;
 	this->public.stop = (void*)stop;
-	this->public.load_template = (bool(*)(guest_t*, char *path))load_template;
+	this->public.add_overlay = (bool(*)(guest_t*,char*))add_overlay;
+	this->public.del_overlay = (bool(*)(guest_t*,char*))del_overlay;
+	this->public.pop_overlay = (bool(*)(guest_t*))pop_overlay;
 	this->public.exec = (int(*)(guest_t*, void(*cb)(void*,char*,size_t),void*,char*,...))exec;
 	this->public.exec_str = (int(*)(guest_t*, void(*cb)(void*,char*),bool,void*,char*,...))exec_str;
 	this->public.sigchild = (void(*)(guest_t*))sigchild;

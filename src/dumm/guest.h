@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -134,12 +134,27 @@ struct guest_t {
 	enumerator_t* (*create_iface_enumerator)(guest_t *this);
 
 	/**
-	 * Set the template COWFS overlay to use.
+	 * Adds a COWFS overlay. The directory is created if it does not exist.
 	 *
-	 * @param parent	parent directory where template diff should point to
-	 * @return			FALSE if failed
+	 * @param dir		directory where overlay diff should point to
+	 * @return			FALSE, if failed
 	 */
-	bool (*load_template)(guest_t *this, char *parent);
+	bool (*add_overlay)(guest_t *this, char *dir);
+
+	/**
+	 * Removes the specified COWFS overlay.
+	 *
+	 * @param dir		directory where overlay diff points to
+	 * @return			FALSE, if no found
+	 */
+	bool (*del_overlay)(guest_t *this, char *dir);
+
+	/**
+	 * Removes the latest COWFS overlay.
+	 *
+	 * @return			FALSE, if no overlay was found
+	 */
+	bool (*pop_overlay)(guest_t *this);
 
 	/**
 	 * Execute a command on the guests mconsole.
