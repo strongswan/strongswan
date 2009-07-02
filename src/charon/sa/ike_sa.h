@@ -127,6 +127,11 @@ enum ike_condition_t {
 	 * Local peer is the "original" IKE initiator. Unaffected from rekeying.
 	 */
 	COND_ORIGINAL_INITIATOR = (1<<6),
+	
+	/**
+	 * IKE_SA is stale, the peer is currently unreachable (MOBIKE)
+	 */
+	COND_STALE = (1<<7),
 };
 
 /**

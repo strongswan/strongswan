@@ -1747,6 +1747,7 @@ static status_t roam(private_ike_sa_t *this, bool address)
 	{
 		case IKE_CREATED:
 		case IKE_DELETING:
+		case IKE_DESTROYING:
 		case IKE_PASSIVE:
 			return SUCCESS;
 		default:
@@ -1775,10 +1776,46 @@ static status_t roam(private_ike_sa_t *this, bool address)
 			DBG2(DBG_IKE, "keeping connection path %H - %H",
 				 src, this->other_host);
 			src->destroy(src);
+			set_condition(this, COND_STALE, FALSE);
+			return SUCCESS;
+		}
+		src->destroy(src);
+		
+	}
+	else
+	{
+		/* check if we find a route at all */
+		enumerator_t *enumerator;
+		host_t *addr;
+		
+		src = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+														this->other_host, NULL);
+		if (!src)
+		{
+			enumerator = this->additional_addresses->create_enumerator(
+													this->additional_addresses);
+			while (enumerator->enumerate(enumerator, &addr))
+			{
+				DBG1(DBG_IKE, "looking for a route to %H ...", addr);
+				src = charon->kernel_interface->get_source_addr(
+										charon->kernel_interface, addr, NULL);
+				if (src)
+				{
+					break;
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+		if (!src)
+		{
+			DBG1(DBG_IKE, "no route found to reach %H, MOBIKE update deferred",
+				 this->other_host);
+			set_condition(this, COND_STALE, TRUE);
 			return SUCCESS;
 		}
 		src->destroy(src);
 	}
+	set_condition(this, COND_STALE, FALSE);
 	
 	/* update addresses with mobike, if supported ... */
 	if (supports_extension(this, EXT_MOBIKE))
