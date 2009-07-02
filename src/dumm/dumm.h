@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -83,12 +83,47 @@ struct dumm_t {
 	void (*delete_bridge) (dumm_t *this, bridge_t *bridge);
 
 	/**
+	 * Add an overlay to all guests.
+	 *
+	 * Directories named after the guests are created, if they do not exist
+	 * in the given overlay directory.
+	 *
+	 * If adding the overlay on at lest one guest fails, FALSE is returned and
+	 * the overlay is again removed from all guests.
+	 *
+	 * @param dir		dir to the overlay
+	 * @return			FALSE, on failure
+	 */
+	bool (*add_overlay)(dumm_t *this, char *dir);
+
+	/**
+	 * Removes an overlay from all guests.
+	 *
+	 * @param dir		dir to the overlay
+	 * @return			FALSE, if the overlay was not found on any guest
+	 */
+	bool (*del_overlay)(dumm_t *this, char *dir);
+
+	/**
+	 * Remove the latest overlay from all guests.
+	 *
+	 * @return			FALSE, if no overlay was found on any guest
+	 */
+	bool (*pop_overlay)(dumm_t *this);
+
+	/**
 	 * Loads a template, create a new one if it does not exist.
 	 *
-	 * @param name		dir to the template, NULL to close
+	 * This is basically a wrapper around add/del_overlay to simplify working
+	 * with overlays. Templates are located in a predefined directory, so that
+	 * only a name for the template has to be specified here. Only one template
+	 * can be loaded at any one time (but other overlays can be added on top or
+	 * below a template).
+	 *
+	 * @param name		name of the template to load, NULL to unload
 	 * @return			FALSE if load/create failed
 	 */
-	bool (*load_template)(dumm_t *this, char *dir);
+	bool (*load_template)(dumm_t *this, char *name);
 
 	/**
 	 * Create an enumerator over all available templates.

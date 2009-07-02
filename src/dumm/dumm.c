@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -128,33 +128,12 @@ static void delete_bridge(private_dumm_t *this, bridge_t *bridge)
 }
 
 /**
- * disable the currently enabled template
+ * Implementation of dumm_t.add_overlay.
  */
-static void clear_template(private_dumm_t *this)
+static bool add_overlay(private_dumm_t *this, char *dir)
 {
 	enumerator_t *enumerator;
 	guest_t *guest;
-
-	free(this->template);
-	this->template = NULL;
-
-	enumerator = this->guests->create_enumerator(this->guests);
-	while (enumerator->enumerate(enumerator, (void**)&guest))
-	{
-		guest->load_template(guest, NULL);
-	}
-	enumerator->destroy(enumerator);
-}
-
-/**
- * Implementation of dumm_t.load_template.
- */
-static bool load_template(private_dumm_t *this, char *dir)
-{
-	enumerator_t *enumerator;
-	guest_t *guest;
-
-	clear_template(this);
 
 	if (dir == NULL)
 	{
@@ -162,17 +141,132 @@ static bool load_template(private_dumm_t *this, char *dir)
 	}
 	if (strlen(dir) > PATH_MAX)
 	{
-		DBG1(DBG_LIB, "template directory string '%s' is too long", dir);
+		DBG1(DBG_LIB, "overlay directory string '%s' is too long", dir);
 		return FALSE;
 	}
+	if (access(dir, F_OK) != 0)
+	{
+		if (!mkdir_p(dir, PERME))
+		{
+			DBG1(DBG_LIB, "creating overlay directory '%s' failed: %m", dir);
+			return FALSE;
+		}
+	}
+	enumerator = this->guests->create_enumerator(this->guests);
+	while (enumerator->enumerate(enumerator, (void**)&guest))
+	{
+		char guest_dir[PATH_MAX];
+		int len = snprintf(guest_dir, sizeof(guest_dir), "%s/%s", dir,
+						   guest->get_name(guest));
+		if (len < 0 || len >= sizeof(guest_dir))
+		{
+			goto error;
+		}
+		if (access(guest_dir, F_OK) != 0)
+		{
+			if (!mkdir_p(guest_dir, PERME))
+			{
+				DBG1(DBG_LIB, "creating overlay directory for guest '%s' failed: %m",
+					 guest->get_name(guest));
+				goto error;
+			}
+		}
+		if (!guest->add_overlay(guest, guest_dir))
+		{
+			goto error;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return TRUE;
+error:
+	enumerator->destroy(enumerator);
+	this->public.del_overlay(&this->public, dir);
+	return FALSE;
+}
 
-	if (asprintf(&this->template, "%s/%s", TEMPLATE_DIR, dir) < 0)
+/**
+ * Implementation of dumm_t.del_overlay.
+ */
+static bool del_overlay(private_dumm_t *this, char *dir)
+{
+	bool ret = FALSE;
+	enumerator_t *enumerator;
+	guest_t *guest;
+
+	enumerator = this->guests->create_enumerator(this->guests);
+	while (enumerator->enumerate(enumerator, (void**)&guest))
+	{
+		char guest_dir[PATH_MAX];
+		int len = snprintf(guest_dir, sizeof(guest_dir), "%s/%s", dir,
+						   guest->get_name(guest));
+		if (len < 0 || len >= sizeof(guest_dir))
+		{
+			continue;
+		}
+		ret = guest->del_overlay(guest, guest_dir) || ret;
+	}
+	enumerator->destroy(enumerator);
+	return ret;
+}
+
+/**
+ * Implementation of dumm_t.pop_overlay.
+ */
+static bool pop_overlay(private_dumm_t *this)
+{
+	bool ret = FALSE;
+	enumerator_t *enumerator;
+	guest_t *guest;
+
+	enumerator = this->guests->create_enumerator(this->guests);
+	while (enumerator->enumerate(enumerator, (void**)&guest))
+	{
+		ret = guest->pop_overlay(guest) || ret;
+	}
+	enumerator->destroy(enumerator);
+	return ret;
+}
+
+/**
+ * disable the currently enabled template
+ */
+static void clear_template(private_dumm_t *this)
+{
+	if (this->template)
+	{
+		del_overlay(this, this->template);
+		free(this->template);
+		this->template = NULL;
+	}
+}
+
+/**
+ * Implementation of dumm_t.load_template.
+ */
+static bool load_template(private_dumm_t *this, char *name)
+{
+	clear_template(this);
+	if (name == NULL)
+	{
+		return TRUE;
+	}
+	if (strlen(name) > PATH_MAX)
+	{
+		DBG1(DBG_LIB, "template name '%s' is too long", name);
+		return FALSE;
+	}
+	if (strchr(name, '/') != NULL)
+	{
+		DBG1(DBG_LIB, "template name '%s' must not contain '/' characters", name);
+		return FALSE;
+	}
+	if (asprintf(&this->template, "%s/%s", TEMPLATE_DIR, name) < 0)
 	{
 		this->template = NULL;
 		return FALSE;
 	}
 	if (access(this->template, F_OK) != 0)
-	{	/* does not exist, create template */
+	{
 		if (!mkdir_p(this->template, PERME))
 		{
 			DBG1(DBG_LIB, "creating template directory '%s' failed: %m",
@@ -180,18 +274,7 @@ static bool load_template(private_dumm_t *this, char *dir)
 			return FALSE;
 		}
 	}
-	enumerator = this->guests->create_enumerator(this->guests);
-	while (enumerator->enumerate(enumerator, (void**)&guest))
-	{
-		if (!guest->load_template(guest, this->template))
-		{
-			enumerator->destroy(enumerator);
-			clear_template(this);
-			return FALSE;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return TRUE;
+	return add_overlay(this, this->template);
 }
 
 /**
@@ -205,7 +288,7 @@ typedef struct {
 } template_enumerator_t;
 
 /**
- * Implementation of template_enumerator_t.enumerate
+ * Implementation of template_enumerator_t.enumerate.
  */
 static bool template_enumerate(template_enumerator_t *this, char **template)
 {
@@ -224,7 +307,7 @@ static bool template_enumerate(template_enumerator_t *this, char **template)
 }
 
 /**
- * Implementation of template_enumerator_t.destroy
+ * Implementation of template_enumerator_t.destroy.
  */
 static void template_enumerator_destroy(template_enumerator_t *this)
 {
@@ -233,22 +316,25 @@ static void template_enumerator_destroy(template_enumerator_t *this)
 }
 
 /**
- * Implementation of dumm_t.create_template_enumerator
+ * Implementation of dumm_t.create_template_enumerator.
  */
 static enumerator_t* create_template_enumerator(private_dumm_t *this)
 {
 	template_enumerator_t *enumerator;
-
 	enumerator = malloc_thing(template_enumerator_t);
 	enumerator->public.enumerate = (void*)template_enumerate;
 	enumerator->public.destroy = (void*)template_enumerator_destroy;
 	enumerator->inner = enumerator_create_directory(TEMPLATE_DIR);
-
+	if (!enumerator->inner)
+	{
+		free(enumerator);
+		return enumerator_create_empty();
+	}
 	return &enumerator->public;
 }
 
 /**
- * Implementation of dumm_t.destroy
+ * Implementation of dumm_t.destroy.
  */
 static void destroy(private_dumm_t *this)
 {
@@ -324,7 +410,10 @@ dumm_t *dumm_create(char *dir)
 	this->public.create_bridge = (bridge_t*(*)(dumm_t*, char *name))create_bridge;
 	this->public.create_bridge_enumerator = (enumerator_t*(*)(dumm_t*))create_bridge_enumerator;
 	this->public.delete_bridge = (void(*)(dumm_t*,bridge_t*))delete_bridge;
-	this->public.load_template = (bool(*)(dumm_t*, char *name))load_template;
+	this->public.add_overlay = (bool(*)(dumm_t*,char*))add_overlay;
+	this->public.del_overlay = (bool(*)(dumm_t*,char*))del_overlay;
+	this->public.pop_overlay = (bool(*)(dumm_t*))pop_overlay;
+	this->public.load_template = (bool(*)(dumm_t*,char*))load_template;
 	this->public.create_template_enumerator = (enumerator_t*(*)(dumm_t*))create_template_enumerator;
 	this->public.destroy = (void(*)(dumm_t*))destroy;
 
