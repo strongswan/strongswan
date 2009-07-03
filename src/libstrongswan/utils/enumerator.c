@@ -408,7 +408,7 @@ typedef struct {
 /**
  * Implementation of enumerator_create_filter().destroy
  */
-void destroy_filter(filter_enumerator_t *this)
+static void destroy_filter(filter_enumerator_t *this)
 {
 	if (this->destructor)
 	{
@@ -421,8 +421,8 @@ void destroy_filter(filter_enumerator_t *this)
 /**
  * Implementation of enumerator_create_filter().enumerate
  */
-bool enumerate_filter(filter_enumerator_t *this, void *o1, void *o2,
-					  void *o3, void *o4, void *o5)
+static bool enumerate_filter(filter_enumerator_t *this, void *o1, void *o2,
+							 void *o3, void *o4, void *o5)
 {
 	void *i1, *i2, *i3, *i4, *i5;
 
