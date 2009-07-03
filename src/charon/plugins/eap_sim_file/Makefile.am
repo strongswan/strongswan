@@ -10,5 +10,5 @@ libstrongswan_eapsim_file_la_SOURCES = \
   eap_sim_file_card.h eap_sim_file_card.c \
   eap_sim_file_provider.h eap_sim_file_provider.c \
   eap_sim_file_triplets.h eap_sim_file_triplets.c
-libstrongswan_eapsim_file_la_LDFLAGS = -module
+libstrongswan_eapsim_file_la_LDFLAGS = -module -avoid-version
 

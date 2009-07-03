@@ -7,5 +7,5 @@ plugin_LTLIBRARIES = libstrongswan-eapsim.la
 
 libstrongswan_eapsim_la_SOURCES = eap_sim.h eap_sim.c \
   eap_sim_plugin.h eap_sim_plugin.c
-libstrongswan_eapsim_la_LDFLAGS = -module
+libstrongswan_eapsim_la_LDFLAGS = -module -avoid-version
 

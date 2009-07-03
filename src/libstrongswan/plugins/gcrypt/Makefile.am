@@ -13,5 +13,5 @@ libstrongswan_gcrypt_la_SOURCES = gcrypt_plugin.h gcrypt_plugin.c \
 	gcrypt_crypter.h gcrypt_crypter.c \
 	gcrypt_hasher.h gcrypt_hasher.c
 
-libstrongswan_gcrypt_la_LDFLAGS = -module
+libstrongswan_gcrypt_la_LDFLAGS = -module -avoid-version
 libstrongswan_gcrypt_la_LIBADD  = $(LIBGCRYPT_LIBS)

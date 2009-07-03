@@ -7,4 +7,4 @@ plugin_LTLIBRARIES = libstrongswan-kernel-pfroute.la
 
 libstrongswan_kernel_pfroute_la_SOURCES = kernel_pfroute_plugin.h kernel_pfroute_plugin.c \
 	kernel_pfroute_net.h kernel_pfroute_net.c
-libstrongswan_kernel_pfroute_la_LDFLAGS = -module
+libstrongswan_kernel_pfroute_la_LDFLAGS = -module -avoid-version

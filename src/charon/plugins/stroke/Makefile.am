@@ -18,5 +18,5 @@ libstrongswan_stroke_la_SOURCES = stroke_plugin.h stroke_plugin.c \
   stroke_list.h stroke_list.c \
   stroke_shared_key.h stroke_shared_key.c
 
-libstrongswan_stroke_la_LDFLAGS = -module
+libstrongswan_stroke_la_LDFLAGS = -module -avoid-version
 

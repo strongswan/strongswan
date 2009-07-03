@@ -10,6 +10,6 @@ libstrongswan_gmp_la_SOURCES = gmp_plugin.h gmp_plugin.c \
   gmp_rsa_private_key.c gmp_rsa_private_key.h \
   gmp_rsa_public_key.c gmp_rsa_public_key.h
 
-libstrongswan_gmp_la_LDFLAGS = -module
+libstrongswan_gmp_la_LDFLAGS = -module -avoid-version
 libstrongswan_gmp_la_LIBADD = -lgmp
 

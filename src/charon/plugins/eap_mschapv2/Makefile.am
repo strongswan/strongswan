@@ -8,5 +8,5 @@ plugin_LTLIBRARIES = libstrongswan-eapmschapv2.la
 libstrongswan_eapmschapv2_la_SOURCES = \
 	eap_mschapv2_plugin.h eap_mschapv2_plugin.c \
 	eap_mschapv2.h eap_mschapv2.c
-libstrongswan_eapmschapv2_la_LDFLAGS = -module
+libstrongswan_eapmschapv2_la_LDFLAGS = -module -avoid-version
 

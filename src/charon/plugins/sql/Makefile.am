@@ -10,7 +10,7 @@ plugin_LTLIBRARIES = libstrongswan-sql.la
 libstrongswan_sql_la_SOURCES = sql_plugin.h sql_plugin.c \
   sql_config.h sql_config.c sql_cred.h sql_cred.c \
   sql_attribute.h sql_attribute.c sql_logger.h sql_logger.c
-libstrongswan_sql_la_LDFLAGS = -module
+libstrongswan_sql_la_LDFLAGS = -module -avoid-version
 
 ipsec_PROGRAMS = pool
 pool_SOURCES = pool.c

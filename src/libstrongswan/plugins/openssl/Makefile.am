@@ -16,6 +16,6 @@ libstrongswan_openssl_la_SOURCES = openssl_plugin.h openssl_plugin.c \
 	openssl_ec_private_key.c openssl_ec_private_key.h \
 	openssl_ec_public_key.c openssl_ec_public_key.h
 
-libstrongswan_openssl_la_LDFLAGS = -module
+libstrongswan_openssl_la_LDFLAGS = -module -avoid-version
 libstrongswan_openssl_la_LIBADD  = -lcrypto
 

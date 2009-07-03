@@ -13,5 +13,5 @@ libstrongswan_load_tester_la_SOURCES = \
   load_tester_listener.c load_tester_listener.h \
   load_tester_diffie_hellman.c load_tester_diffie_hellman.h
 
-libstrongswan_load_tester_la_LDFLAGS = -module
+libstrongswan_load_tester_la_LDFLAGS = -module -avoid-version
 

@@ -7,6 +7,6 @@ plugin_LTLIBRARIES = libstrongswan-updown.la
 libstrongswan_updown_la_SOURCES = \
   updown_plugin.h updown_plugin.c \
   updown_listener.h updown_listener.c 
-libstrongswan_updown_la_LDFLAGS = -module
+libstrongswan_updown_la_LDFLAGS = -module -avoid-version
 
 

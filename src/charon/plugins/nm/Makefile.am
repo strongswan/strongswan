@@ -9,5 +9,5 @@ libstrongswan_nm_la_SOURCES = \
   nm_service.h nm_service.c \
   nm_creds.h nm_creds.c \
   nm_handler.h nm_handler.c
-libstrongswan_nm_la_LDFLAGS = -module
+libstrongswan_nm_la_LDFLAGS = -module -avoid-version
 libstrongswan_nm_la_LIBADD = ${nm_LIBS}
