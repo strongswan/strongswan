@@ -36,5 +36,6 @@ DEFINE_TEST("Base64 converter", test_chunk_base64, FALSE)
 DEFINE_TEST("IP pool", test_pool, FALSE)
 DEFINE_TEST("SSH agent", test_agent, FALSE)
 DEFINE_TEST("ID parts", test_id_parts, FALSE)
+DEFINE_TEST("ID wildcards", test_id_wildcards, FALSE)
 
 /** @}*/

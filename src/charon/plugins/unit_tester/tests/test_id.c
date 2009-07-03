@@ -67,3 +67,43 @@ bool test_id_parts()
 	return TRUE;
 }
 
+/*******************************************************************************
+ * identification contains_wildcards() test
+ ******************************************************************************/
+
+static bool test_id_wildcards_has(char *string)
+{
+	identification_t *id;
+	bool contains;
+	
+	id = identification_create_from_string(string);
+	contains = id->contains_wildcards(id);
+	id->destroy(id);
+	return contains;
+}
+
+bool test_id_wildcards()
+{
+	if (!test_id_wildcards_has("C=*, O=strongSwan, CN=gw"))
+	{
+		return FALSE;
+	}
+	if (!test_id_wildcards_has("C=CH, O=strongSwan, CN=*"))
+	{
+		return FALSE;
+	}
+	if (test_id_wildcards_has("C=**, O=a*, CN=*a"))
+	{
+		return FALSE;
+	}
+	if (!test_id_wildcards_has("*@strongswan.org"))
+	{
+		return FALSE;
+	}
+	if (!test_id_wildcards_has("*.strongswan.org"))
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+
