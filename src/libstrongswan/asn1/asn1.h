@@ -74,7 +74,9 @@ typedef enum {
     ASN1_CONTEXT_C_2 =		0xA2,
     ASN1_CONTEXT_C_3 =		0xA3,
     ASN1_CONTEXT_C_4 =		0xA4,
-    ASN1_CONTEXT_C_5 =		0xA5
+    ASN1_CONTEXT_C_5 =		0xA5,
+
+    ASN1_INVALID = 			0x100,
 } asn1_t;
 
 #define ASN1_INVALID_LENGTH	0xffffffff
@@ -121,6 +123,15 @@ chunk_t asn1_build_known_oid(int n);
  * @return			length of ASN.1 object
  */
 size_t asn1_length(chunk_t *blob);
+
+/**
+ * Unwrap the inner content of an ASN.1 type/length wrapped object.
+ *
+ * @param blob		blob to parse header from, moved behind parsed content
+ * @param content	inner content
+ * @return			parsed type, ASN1_INVALID if length parsing failed
+ */
+int asn1_unwrap(chunk_t *blob, chunk_t *content);
 
 /**
  * Parses an ASN.1 algorithmIdentifier object

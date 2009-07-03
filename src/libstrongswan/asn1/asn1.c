@@ -311,6 +311,53 @@ size_t asn1_length(chunk_t *blob)
 	return len;
 }
 
+/*
+ * See header.
+ */
+int asn1_unwrap(chunk_t *blob, chunk_t *inner)
+{
+	chunk_t res;
+	u_char len;
+	int type;
+	
+	if (blob->len < 2)
+	{
+		return ASN1_INVALID;
+	}
+	type = blob->ptr[0];
+	len = blob->ptr[1];
+	*blob = chunk_skip(*blob, 2);
+	
+	if ((len & 0x80) == 0)
+	{	/* single length octet */
+		res.len = len;
+	}
+	else
+	{	/* composite length, determine number of length octets */
+		len &= 0x7f;
+		if (len == 0 || len > sizeof(res.len))
+		{
+			return ASN1_INVALID;
+		}
+		res.len = 0;
+		while (len-- > 0)
+		{
+			res.len = 256 * res.len + blob->ptr[0];
+			*blob = chunk_skip(*blob, 1);
+		}
+	}
+	if (res.len > blob->len)
+	{
+		return ASN1_INVALID;
+	}
+	res.ptr = blob->ptr;
+	*blob = chunk_skip(*blob, res.len);
+	/* updating inner not before we are finished allows a caller to pass
+	 * blob = inner */
+	*inner = res;
+	return type;
+}
+
 #define TIME_MAX	0x7fffffff
 
 static const int days[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
