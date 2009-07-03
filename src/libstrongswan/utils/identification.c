@@ -795,30 +795,22 @@ static id_type_t get_type(private_identification_t *this)
  */
 static bool contains_wildcards_dn(private_identification_t *this)
 {
-	chunk_t rdn, attribute;
-	chunk_t oid, value;
-	asn1_t type;
-	bool next;
+	enumerator_t *enumerator;
+	bool contains = FALSE;
+	id_part_t type;
+	chunk_t data;
 	
-	if (!init_rdn(this->encoded, &rdn, &attribute, &next))
+	enumerator = create_part_enumerator(this);
+	while (enumerator->enumerate(enumerator, &type, &data))
 	{
-		return FALSE;
-	}	
-	/* fetch next RDN */
-	while (next)
-	{
-		/* parse next RDN and check for errors */
-		if (!get_next_rdn(&rdn, &attribute, &oid, &value, &type, &next))
+		if (data.len == 1 && data.ptr[0] == '*')
 		{
-			return FALSE;
-		}
-		/* check if RDN is a wildcard */
-		if (value.len == 1 && *value.ptr == '*')
-		{
-			return TRUE;
+			contains = TRUE;
+			break;
 		}
 	}
-	return FALSE;
+	enumerator->destroy(enumerator);
+	return contains;
 }
 
 /**
