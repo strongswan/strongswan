@@ -267,8 +267,6 @@ static enumerator_t* create_part_enumerator(private_identification_t *this)
 	}
 }
 
-static private_identification_t *identification_create(void);
-
 /**
  * updates a chunk (!????)
  * TODO: We should reconsider this stuff, its not really clear
@@ -1067,16 +1065,13 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
  */
 static identification_t *clone_(private_identification_t *this)
 {
-	private_identification_t *clone = identification_create();
+	private_identification_t *clone = malloc_thing(private_identification_t);
 	
-	clone->type = this->type;
+	memcpy(clone, this, sizeof(private_identification_t));
 	if (this->encoded.len)
 	{
 		clone->encoded = chunk_clone(this->encoded);
 	}
-	clone->public.equals = this->public.equals;
-	clone->public.matches = this->public.matches;
-	
 	return &clone->public;
 }
 
