@@ -417,7 +417,7 @@ static size_t get_keysize(private_gmp_rsa_public_key_t *this)
 
 /**
  * Build the PGP version 3 RSA key identifier from n and e using
- * MD5 hashed modulus and exponent. Also used in rsa_private_key.c.
+ * MD5 hashed modulus and exponent.
  */
 static identification_t* gmp_rsa_build_pgp_v3_keyid(mpz_t n, mpz_t e)
 {
