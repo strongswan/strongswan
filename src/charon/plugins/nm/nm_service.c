@@ -173,6 +173,7 @@ static bool child_state_change(listener_t *listener, ike_sa_t *ike_sa,
 		{
 			case CHILD_INSTALLED:
 				signal_ipv4_config(private->plugin, ike_sa, child_sa);
+				listener->child_state_change = NULL;
 				break;
 			case CHILD_DESTROYING:
 				signal_failure(private->plugin,
@@ -208,6 +209,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 {
 	nm_creds_t *creds;
 	NMSettingVPN *settings;
+	listener_t *listener;
 	identification_t *user = NULL, *gateway;
 	const char *address, *str;
 	bool virtual, encap, ipcomp;
@@ -459,8 +461,9 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	 * Register listener
 	 */
 	NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->ike_sa = ike_sa;
-	charon->bus->add_listener(charon->bus, 
-							&NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->listener);
+	listener = &NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->listener;
+	listener->child_state_change = child_state_change;
+	charon->bus->add_listener(charon->bus, listener);
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return TRUE;
 }
@@ -556,7 +559,6 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 	private->plugin = NM_VPN_PLUGIN(plugin);
 	memset(&private->listener.log, 0, sizeof(listener_t));
 	private->listener.ike_state_change = ike_state_change;
-	private->listener.child_state_change = child_state_change;
 	private->listener.ike_keys = ike_keys;
 }
 
