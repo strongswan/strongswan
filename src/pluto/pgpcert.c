@@ -85,7 +85,7 @@ static u_char pgp_version(chunk_t *blob)
 }
 
 /**
- * Parse OpenPGP signature packet defined in section 5.2.2 of RFC 2440
+ * Parse OpenPGP signature packet defined in section 5.2.2 of RFC 4880
  */
 static bool parse_pgp_signature_packet(chunk_t *packet, pgpcert_t *cert)
 {
@@ -171,8 +171,8 @@ static bool parse_pgp_pubkey_version_validity(chunk_t *packet, pgpcert_t *cert)
  */
 static bool parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 {
-	pgp_pubkey_alg_t pubkey_alg;
-	public_key_t *key;
+	chunk_t pubkey_packet = *packet;
+ 	pgp_pubkey_alg_t pubkey_alg;
 
 	if (!parse_pgp_pubkey_version_validity(packet, cert))
 	{
@@ -190,32 +190,50 @@ static bool parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 	{
 		case PGP_PUBKEY_ALG_RSA:
 		case PGP_PUBKEY_ALG_RSA_SIGN_ONLY:
-			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-												 BUILD_BLOB_PGP, *packet,
-												 BUILD_END);
-			if (key == NULL)
+			cert->public_key = lib->creds->create(lib->creds,
+									CRED_PUBLIC_KEY, KEY_RSA,
+									BUILD_BLOB_PGP, *packet,
+									BUILD_END);
+			if (cert->public_key == NULL)
 			{
-				return FALSE;
-			}
-			cert->public_key = key;
-
-			if (cert->version == 3)
-			{
-				cert->fingerprint = key->get_id(key, ID_KEY_ID);
-				if (cert->fingerprint == NULL)
-				{
-					return FALSE;
-				}
-			}
-			else
-			{
-				plog("  computation of V4 key ID not implemented yet");
 				return FALSE;
 			}
 			break;
 	 	default:
 			plog("  non RSA public keys not supported");
 			return FALSE;
+	}
+
+	/* compute V4 or V3 fingerprint according to section 12.2 of RFC 4880 */
+	if (cert->version == 4)
+	{
+		char pubkey_packet_header_buf[] = {
+				0x99, pubkey_packet.len / 256, pubkey_packet.len % 256
+			 };
+		chunk_t pubkey_packet_header = chunk_from_buf(pubkey_packet_header_buf);
+		chunk_t hash;
+		hasher_t *hasher;
+
+		hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+		if (hasher == NULL)
+		{
+			plog("no SHA-1 hasher available");
+			return FALSE;
+		}
+		hasher->allocate_hash(hasher, pubkey_packet_header, NULL);
+		hasher->allocate_hash(hasher, pubkey_packet, &hash);
+		hasher->destroy(hasher);
+		cert->fingerprint = identification_create_from_encoding(ID_KEY_ID, hash);
+		free(hash.ptr);
+	}
+	else
+	{
+		/* V3 fingerprint is computed by public_key_t class */
+		cert->fingerprint = cert->public_key->get_id(cert->public_key, ID_KEY_ID);
+		if (cert->fingerprint == NULL)
+		{
+			return FALSE;
+		}
 	}
 	return TRUE;
 }
