@@ -173,6 +173,7 @@ static enumerator_t* create_rdn_enumerator(chunk_t dn)
 	{
 		return &e->public;
 	}
+	free(e);
 	return enumerator_create_empty();
 }
 
