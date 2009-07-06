@@ -475,159 +475,6 @@ static bool dntoa(chunk_t dn, chunk_t *str)
 }
 
 /**
- * compare two distinguished names by
- * comparing the individual RDNs
- */
-static bool same_dn(chunk_t a, chunk_t b)
-{
-	chunk_t rdn_a, rdn_b, attribute_a, attribute_b;
-	chunk_t oid_a, oid_b, value_a, value_b;
-	asn1_t type_a, type_b;
-	bool next_a, next_b;
-	
-	/* same lengths for the DNs */
-	if (a.len != b.len)
-	{
-		return FALSE;
-	}
-	/* try a binary comparison first */
-	if (memeq(a.ptr, b.ptr, b.len))
-	{
-		return TRUE;
-	}
-	/* initialize DN parsing */
-	if (!init_rdn(a, &rdn_a, &attribute_a, &next_a) ||
-		!init_rdn(b, &rdn_b, &attribute_b, &next_b))
-	{
-		return FALSE;
-	}
-	
-	/* fetch next RDN pair */
-	while (next_a && next_b)
-	{
-		/* parse next RDNs and check for errors */
-		if (!get_next_rdn(&rdn_a, &attribute_a, &oid_a, &value_a, &type_a, &next_a) || 
-			!get_next_rdn(&rdn_b, &attribute_b, &oid_b, &value_b, &type_b, &next_b))
-		{
-			return FALSE;
-		}
-		
-		/* OIDs must agree */
-		if (oid_a.len != oid_b.len || !memeq(oid_a.ptr, oid_b.ptr, oid_b.len))
-		{
-			return FALSE;
-		}
-		
-		/* same lengths for values */
-		if (value_a.len != value_b.len)
-		{
-			return FALSE;
-		}
-		
-		/* printableStrings and email RDNs require uppercase comparison */
-		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
-			(type_a == ASN1_IA5STRING && asn1_known_oid(oid_a) == OID_PKCS9_EMAIL)))
-		{
-			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
-			{
-				return FALSE;
-			}
-		}
-		else
-		{
-			if (!strneq(value_a.ptr, value_b.ptr, value_b.len))
-			{
-				return FALSE;	
-			}
-		}
-	}
-	/* both DNs must have same number of RDNs */
-	if (next_a || next_b)
-	{
-		return FALSE;
-	}
-	/* the two DNs are equal! */
-	return TRUE;
-}
-
-
-/**
- * compare two distinguished names by comparing the individual RDNs.
- * A single'*' character designates a wildcard RDN in DN b.
- * TODO: Add support for different RDN order in DN !!
- */
-bool match_dn(chunk_t a, chunk_t b, int *wildcards)
-{
-	chunk_t rdn_a, rdn_b, attribute_a, attribute_b;
-	chunk_t oid_a, oid_b, value_a, value_b;
-	asn1_t type_a,  type_b;
-	bool next_a, next_b;
-	
-	/* initialize wildcard counter */
-	*wildcards = 0;
-	
-	/* initialize DN parsing */
-	if (!init_rdn(a, &rdn_a, &attribute_a, &next_a) ||
-		!init_rdn(b, &rdn_b, &attribute_b, &next_b))
-	{
-		return FALSE;
-	}
-	
-	/* fetch next RDN pair */
-	while (next_a && next_b)
-	{
-		/* parse next RDNs and check for errors */
-		if (!get_next_rdn(&rdn_a, &attribute_a, &oid_a, &value_a, &type_a, &next_a) ||
-			!get_next_rdn(&rdn_b, &attribute_b, &oid_b, &value_b, &type_b, &next_b))
-		{
-			return FALSE;
-		}
-		/* OIDs must agree */
-		if (oid_a.len != oid_b.len || memcmp(oid_a.ptr, oid_b.ptr, oid_b.len) != 0)
-		{
-			return FALSE;
-		}
-		
-		/* does rdn_b contain a wildcard? */
-		if (value_b.len == 1 && *value_b.ptr == '*')
-		{
-			(*wildcards)++;
-			continue;
-		}
-		/* same lengths for values */
-		if (value_a.len != value_b.len)
-		{
-			return FALSE;
-		}
-		
-		/* printableStrings and email RDNs require uppercase comparison */
-		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
-			(type_a == ASN1_IA5STRING && asn1_known_oid(oid_a) == OID_PKCS9_EMAIL)))
-		{
-			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
-			{
-				return FALSE;
-			}
-		}
-		else
-		{
-			if (!strneq(value_a.ptr, value_b.ptr, value_b.len))
-			{
-				return FALSE;
-			}
-		}
-	}
-	/* both DNs must have same number of RDNs */
-	if (next_a || next_b)
-	{
-		return FALSE;
-	}
-	/* the two DNs match! */
-	*wildcards = min(*wildcards, ID_MATCH_ONE_WILDCARD - ID_MATCH_MAX_WILDCARDS);
-	return TRUE;
-}
-
-/**
  * Converts an LDAP-style human-readable ASCII-encoded
  * ASN.1 distinguished name into binary DER-encoded format
  */
@@ -851,12 +698,101 @@ static bool equals_binary(private_identification_t *this, private_identification
 }
 
 /**
+ * Compare to DNs, for equality if wc == NULL, for match otherwise
+ */
+static bool compare_dn(chunk_t t_dn, chunk_t o_dn, int *wc)
+{
+	enumerator_t *t, *o;
+	chunk_t t_oid, o_oid, t_data, o_data;
+	u_char t_type, o_type;
+	bool t_next, o_next, finished = FALSE;
+	
+	if (wc)
+	{
+		*wc = 0;
+	}
+	else
+	{
+		if (t_dn.len != o_dn.len)
+		{
+			return FALSE;
+		}
+	}
+	/* try a binary compare */
+	if (memeq(t_dn.ptr, o_dn.ptr, t_dn.len))
+	{
+		return TRUE;
+	}
+	
+	t = create_rdn_enumerator(t_dn);
+	o = create_rdn_enumerator(o_dn);
+	while (TRUE)
+	{
+		t_next = t->enumerate(t, &t_oid, &t_type, &t_data);
+		o_next = o->enumerate(o, &o_oid, &o_type, &o_data);
+		
+		if (!o_next && !t_next)
+		{
+			break;
+		}
+		finished = FALSE;
+		if (o_next != t_next)
+		{
+			break;
+		}
+		if (!chunk_equals(t_oid, o_oid))
+		{
+			break;
+		}
+		if (wc && o_data.len == 1 && o_data.ptr[0] == '*')
+		{
+			(*wc)++;
+		}
+		else
+		{
+			if (t_data.len != o_data.len)
+			{
+				break;
+			}
+			if (t_type == o_type &&
+				(t_type == ASN1_PRINTABLESTRING ||
+				 (t_type == ASN1_IA5STRING &&
+				  (asn1_known_oid(t_oid) == OID_PKCS9_EMAIL ||
+				   asn1_known_oid(t_oid) == OID_EMAIL_ADDRESS))))
+			{	/* ignore case for printableStrings and email RDNs */
+				if (strncasecmp(t_data.ptr, o_data.ptr, t_data.len) != 0)
+				{
+					break;
+				}
+			}
+			else
+			{	/* respect case and length for everything else */
+				if (!memeq(t_data.ptr, o_data.ptr, t_data.len))
+				{
+					break;
+				}
+			}
+		}
+		/* the enumerator returns FALSE on parse error, we are finished
+		 * if we have reached the end of the DN only */
+		if ((t_data.ptr + t_data.len == t_dn.ptr + t_dn.len) &&
+			(o_data.ptr + o_data.len == o_dn.ptr + o_dn.len))
+		{
+			finished = TRUE;
+		}
+	}
+	t->destroy(t);
+	o->destroy(o);
+	return finished;
+}
+
+/**
  * Special implementation of identification_t.equals for ID_DER_ASN1_DN.
  */
 static bool equals_dn(private_identification_t *this,
 					  private_identification_t *other)
 {
-	return same_dn(this->encoded, other->encoded);
+	return compare_dn(this->encoded, other->encoded, NULL);
 }
 
 /**
@@ -960,7 +896,7 @@ static id_match_t matches_dn(private_identification_t *this,
 							 private_identification_t *other)
 {
 	int wc;
-
+	
 	if (other->type == ID_ANY)
 	{
 		return ID_MATCH_ANY;
@@ -968,8 +904,9 @@ static id_match_t matches_dn(private_identification_t *this,
 	
 	if (this->type == other->type)
 	{
-		if (match_dn(this->encoded, other->encoded, &wc))
+		if (compare_dn(this->encoded, other->encoded, &wc))
 		{
+			wc = min(wc, ID_MATCH_ONE_WILDCARD - ID_MATCH_MAX_WILDCARDS);
 			return ID_MATCH_PERFECT - wc;
 		}
 	}
