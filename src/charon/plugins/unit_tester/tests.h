@@ -38,5 +38,6 @@ DEFINE_TEST("SSH agent", test_agent, FALSE)
 DEFINE_TEST("ID parts", test_id_parts, FALSE)
 DEFINE_TEST("ID wildcards", test_id_wildcards, FALSE)
 DEFINE_TEST("ID equals", test_id_equals, FALSE)
+DEFINE_TEST("ID matches", test_id_matches, FALSE)
 
 /** @}*/
