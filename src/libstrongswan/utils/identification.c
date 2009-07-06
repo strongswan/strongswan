@@ -21,7 +21,6 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #include "identification.h"
 
@@ -269,38 +268,6 @@ static enumerator_t* create_part_enumerator(private_identification_t *this)
 }
 
 /**
- * updates a chunk (!????)
- * TODO: We should reconsider this stuff, its not really clear
- */
-static void update_chunk(chunk_t *ch, int n)
-{
-	n = (n > -1 && n < (int)ch->len)? n : (int)ch->len-1;
-	ch->ptr += n; ch->len -= n;
-}
-
-/**
- * Remove any malicious characters from a chunk. We are very restrictive, but
- * whe use these strings only to present it to the user.
- */
-static bool sanitize_chunk(chunk_t chunk, chunk_t *clone)
-{
-	char *pos;
-	bool all_printable = TRUE;
-	
-	*clone = chunk_clone(chunk);
-	
-	for (pos = clone->ptr; pos < (char*)(clone->ptr + clone->len); pos++)
-	{
-		if (!isprint(*pos))
-		{
-			*pos = '?';
-			all_printable = FALSE;
-		}
-	}
-	return all_printable;
-}
-
-/**
  * Pointer is set to the first RDN in a DN
  */
 static bool init_rdn(chunk_t dn, chunk_t *rdn, chunk_t *attribute, bool *next)
@@ -425,53 +392,60 @@ static bool get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid,
 }
 
 /**
- * Parses an ASN.1 distinguished name int its OID/value pairs
+ * Print a DN with all its RDN in a buffer to present it to the user
  */
-static bool dntoa(chunk_t dn, chunk_t *str)
+static void dntoa(chunk_t dn, char *buf, size_t len)
 {
-	chunk_t rdn, oid, attribute, value, proper;
-	asn1_t type;
-	int oid_code;
-	bool next;
-	bool first = TRUE;
+	enumerator_t *e;
+	chunk_t oid_data, data;
+	u_char type;
+	int oid, written;
+	bool finished = FALSE;
 	
-	if (!init_rdn(dn, &rdn, &attribute, &next))
+	e = create_rdn_enumerator(dn);
+	while (e->enumerate(e, &oid_data, &type, &data))
 	{
-		return FALSE;
-	}
-	
-	while (next)
-	{
-		if (!get_next_rdn(&rdn, &attribute, &oid, &value, &type, &next))
-		{
-			return FALSE;
-		}
+		oid = asn1_known_oid(oid_data);
 		
-		if (first) 
-		{ /* first OID/value pair */
-			first = FALSE;
-		}
-		else
-		{ /* separate OID/value pair by a comma */
-			update_chunk(str, snprintf(str->ptr,str->len,", "));
-		}
-		
-		/* print OID */
-		oid_code = asn1_known_oid(oid);
-		if (oid_code == OID_UNKNOWN)
+		if (oid == OID_UNKNOWN)
 		{
-			update_chunk(str, snprintf(str->ptr,str->len,"0x#B", &oid));
+			written = snprintf(buf, len, "%#B=", &oid_data);
 		}
 		else
 		{
-			update_chunk(str, snprintf(str->ptr,str->len,"%s", oid_names[oid_code].name));
+			written = snprintf(buf, len,"%s=", oid_names[oid].name);
 		}
-		/* print value */
-		sanitize_chunk(value, &proper);
-		update_chunk(str, snprintf(str->ptr,str->len,"=%.*s", (int)proper.len, proper.ptr));
-		chunk_free(&proper);
+		buf += written;
+		len -= written;
+		
+		if (chunk_printable(data, NULL, '?'))
+		{
+			written = snprintf(buf, len, "%.*s", data.len, data.ptr);
+		}
+		else
+		{
+			written = snprintf(buf, len, "%#B", &data);
+		}
+		buf += written;
+		len -= written;
+		
+		if (data.ptr + data.len != dn.ptr + dn.len)
+		{
+			written = snprintf(buf, len, " ");
+			buf += written;
+			len -= written;
+		}
+		else
+		{
+			finished = TRUE;
+			break;
+		}
 	}
-	return TRUE;
+	if (!finished)
+	{
+		snprintf(buf, len, "(invalid ID_DER_ASN1_DN)");
+	}
+	e->destroy(e);
 }
 
 /**
@@ -920,8 +894,8 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 							   const void *const *args)
 {
 	private_identification_t *this = *((private_identification_t**)(args[0]));
-	char buf[BUF_LEN];
-	chunk_t proper, buf_chunk = chunk_from_buf(buf);
+	chunk_t proper;
+	char buf[512];
 	
 	if (this == NULL)
 	{
@@ -951,23 +925,21 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 		case ID_RFC822_ADDR:
 		case ID_DER_ASN1_GN_URI:
 		case ID_IETF_ATTR_STRING:
-			sanitize_chunk(this->encoded, &proper);
+			chunk_printable(this->encoded, &proper, '?');
 			snprintf(buf, sizeof(buf), "%.*s", proper.len, proper.ptr);
 			chunk_free(&proper);
 			break;
 		case ID_DER_ASN1_DN:
-			if (!dntoa(this->encoded, &buf_chunk))
-			{
-				snprintf(buf, sizeof(buf), "(invalid ID_DER_ASN1_DN)");
-			}
+			dntoa(this->encoded, buf, sizeof(buf));
 			break;
 		case ID_DER_ASN1_GN:
 			snprintf(buf, sizeof(buf), "(ASN.1 general Name");
 			break;
 		case ID_KEY_ID:
-			if (sanitize_chunk(this->encoded, &proper))
+			if (chunk_printable(this->encoded, NULL, '?'))
 			{	/* fully printable, use ascii version */
-				snprintf(buf, sizeof(buf), "%.*s", proper.len, proper.ptr);
+				snprintf(buf, sizeof(buf), "%.*s",
+						 this->encoded.len, this->encoded.ptr);
 			}
 			else
 			{	/* not printable, hex dump */
