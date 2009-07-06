@@ -107,3 +107,90 @@ bool test_id_wildcards()
 	return TRUE;
 }
 
+/*******************************************************************************
+ * identification equals test
+ ******************************************************************************/
+
+static bool test_id_equals_one(identification_t *a, char *b_str)
+{
+	identification_t *b;
+	bool equals;
+	
+	b = identification_create_from_string(b_str);
+	equals = a->equals(a, b);
+	b->destroy(b);
+	return equals;
+}
+
+bool test_id_equals()
+{
+	identification_t *a;
+	chunk_t encoding, fuzzed;
+	int i;
+	
+	a = identification_create_from_string(
+							   "C=CH, E=martin@strongswan.org, CN=martin");
+	
+	if (!test_id_equals_one(a, "C=CH, E=martin@strongswan.org, CN=martin"))
+	{
+		return FALSE;
+	}
+	if (!test_id_equals_one(a, "C=ch, E=martin@STRONGSWAN.ORG, CN=Martin"))
+	{
+		return FALSE;
+	}
+	if (test_id_equals_one(a, "C=CN, E=martin@strongswan.org, CN=martin"))
+	{
+		return FALSE;
+	}
+	if (test_id_equals_one(a, "E=martin@strongswan.org, C=CH, CN=martin"))
+	{
+		return FALSE;
+	}
+	if (test_id_equals_one(a, "E=martin@strongswan.org, C=CH, CN=martin"))
+	{
+		return FALSE;
+	}
+	encoding = chunk_clone(a->get_encoding(a));
+	a->destroy(a);
+	
+	/* simple fuzzing, increment each byte of encoding */
+	for (i = 0; i < encoding.len; i++)
+	{
+		if (i == 11 || i == 30 || i == 62)
+		{	/* skip ASN.1 type fields, as equals() handles them graceful */
+			continue;
+		}
+		fuzzed = chunk_clone(encoding);
+		fuzzed.ptr[i]++;
+		a = identification_create_from_encoding(ID_DER_ASN1_DN, fuzzed);
+		if (test_id_equals_one(a, "C=CH, E=martin@strongswan.org, CN=martin"))
+		{
+			return FALSE;
+		}
+		a->destroy(a);
+		free(fuzzed.ptr);
+	}
+	
+	/* and decrement each byte of encoding */
+	for (i = 0; i < encoding.len; i++)
+	{
+		if (i == 11 || i == 30 || i == 62)
+		{
+			continue;
+		}
+		fuzzed = chunk_clone(encoding);
+		fuzzed.ptr[i]--;
+		a = identification_create_from_encoding(ID_DER_ASN1_DN, fuzzed);
+		if (test_id_equals_one(a, "C=CH, E=martin@strongswan.org, CN=martin"))
+		{
+			return FALSE;
+		}
+		a->destroy(a);
+		free(fuzzed.ptr);
+	}
+	free(encoding.ptr);
+	return TRUE;
+}
+
+
