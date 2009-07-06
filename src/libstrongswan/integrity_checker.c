@@ -110,7 +110,7 @@ static int callback(struct dl_phdr_info *dlpi, size_t size, Dl_info *dli)
 		
 		for (i = 0; i < dlpi->dlpi_phnum; i++)
 		{
-			const Elf32_Phdr *sgmt = &dlpi->dlpi_phdr[i];
+			const ElfW(Phdr) *sgmt = &dlpi->dlpi_phdr[i];
 			
 			/* we are interested in the executable LOAD segment */
 			if (sgmt->p_type == PT_LOAD &&
