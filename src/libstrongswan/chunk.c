@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include "chunk.h"
 
@@ -440,6 +441,32 @@ int chunk_compare(chunk_t a, chunk_t b)
 	}
 	return memcmp(a.ptr, b.ptr, len);
 };
+
+/**
+ * Remove non-printable characters from a chunk.
+ */
+bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace)
+{
+	bool printable = TRUE;
+	int i;
+	
+	if (sane)
+	{
+		*sane = chunk_clone(chunk);
+	}
+	for (i = 0; i < chunk.len; i++)
+	{
+		if (!isprint(chunk.ptr[i]))
+		{
+			if (sane)
+			{
+				sane->ptr[i] = replace;
+			}
+			printable = FALSE;
+		}
+	}
+	return printable;
+}
 
 /**
  * Described in header.

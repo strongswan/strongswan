@@ -232,6 +232,19 @@ static inline bool chunk_equals(chunk_t a, chunk_t b)
 }
 
 /**
+ * Check if a chunk has printable characters only.
+ *
+ * If sane is given, chunk is cloned into sane and all non printable characters
+ * get replaced by "replace".
+ *
+ * @param chunk			chunk to check for printability
+ * @param sane			pointer where sane version is allocated, or NULL
+ * @param replace		character to use for replaceing unprintable characters
+ * @return				TRUE if all characters in chunk are printable
+ */
+bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace);
+
+/**
  * Computes a 32 bit hash of the given chunk.
  * Note: This hash is only intended for hash tables not for cryptographic purposes.
  */
