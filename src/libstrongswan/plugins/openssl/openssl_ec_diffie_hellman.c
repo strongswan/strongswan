@@ -108,7 +108,8 @@ error:
  * Convert an EC_POINT to a chunk by concatenating the x and y coordinates of
  * the point. This function allocates memory for the chunk.
  */
-static bool ecp2chunk(const EC_GROUP *group, const EC_POINT *point, chunk_t *chunk)
+static bool ecp2chunk(const EC_GROUP *group, const EC_POINT *point,
+					  chunk_t *chunk, bool x_coordinate_only)
 {
 	BN_CTX *ctx;
 	BIGNUM *x, *y;
@@ -133,6 +134,10 @@ static bool ecp2chunk(const EC_GROUP *group, const EC_POINT *point, chunk_t *chu
 		goto error;
 	}
 	
+	if (x_coordinate_only)
+	{
+		y = NULL;
+	}
 	if (!openssl_bn_cat(EC_FIELD_ELEMENT_LEN(group), x, y, chunk))
 	{
 		goto error;
@@ -160,7 +165,7 @@ static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this, chunk_
 {
 	const BIGNUM *priv_key;
 	EC_POINT *secret = NULL;
-	bool ret = FALSE;
+	bool x_coordinate_only, ret = FALSE;
 	
 	priv_key = EC_KEY_get0_private_key(this->key);
 	if (!priv_key)
@@ -179,7 +184,12 @@ static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this, chunk_
 		goto error;
 	}
 	
-	if (!ecp2chunk(this->ec_group, secret, shared_secret))
+	/*
+	 * x_coordinate_only = TRUE applies errata for RFC 4753
+	 */
+	x_coordinate_only = lib->settings->get_bool(lib->settings,
+							"libstrongswan.ecp_x_coordinate_only", FALSE);
+	if (!ecp2chunk(this->ec_group, secret, shared_secret, x_coordinate_only))
 	{
 		goto error;
 	}
@@ -219,7 +229,7 @@ static void set_other_public_value(private_openssl_ec_diffie_hellman_t *this, ch
  */
 static void get_my_public_value(private_openssl_ec_diffie_hellman_t *this,chunk_t *value)
 {
-	ecp2chunk(this->ec_group, EC_KEY_get0_public_key(this->key), value);
+	ecp2chunk(this->ec_group, EC_KEY_get0_public_key(this->key), value, FALSE);
 }
 
 /**

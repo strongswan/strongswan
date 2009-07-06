@@ -71,21 +71,26 @@ bool openssl_bn_cat(int len, BIGNUM *a, BIGNUM *b, chunk_t *chunk)
 {
 	int offset;
 	
-	chunk->len = len * 2;
+	chunk->len = len + (b ? len : 0);
 	chunk->ptr = malloc(chunk->len);
 	memset(chunk->ptr, 0, chunk->len);
 	
+	/* convert a */
 	offset = len - BN_num_bytes(a);
 	if (!BN_bn2bin(a, chunk->ptr + offset))
 	{
 		goto error;
 	}
 	
-	offset = len - BN_num_bytes(b);
-	if (!BN_bn2bin(b, chunk->ptr + len + offset))
+	/* optionally convert and concatenate b */
+	if (b)
 	{
-		goto error;
-	}
+		offset = len - BN_num_bytes(b);
+		if (!BN_bn2bin(b, chunk->ptr + len + offset))
+		{
+			goto error;
+		}
+	}	
 	
 	return TRUE;
 error:
