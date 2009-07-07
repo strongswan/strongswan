@@ -250,22 +250,46 @@ static enumerator_t* create_child_cfg_enumerator(private_peer_cfg_t *this)
 }
 
 /**
- * Check if child_cfg contains traffic selectors
+ * Check how good a list of TS matches a given child config
  */
-static int contains_ts(child_cfg_t *child, bool mine, linked_list_t *ts,
-						host_t *host)
+static int get_ts_match(child_cfg_t *cfg, bool local,
+						linked_list_t *sup_list, host_t *host)
 {
-	linked_list_t *selected;
-	int prio;
+	linked_list_t *cfg_list;
+	enumerator_t *sup_enum, *cfg_enum;
+	traffic_selector_t *sup_ts, *cfg_ts;
+	int match = 0, round;
 	
-	if (child->equal_traffic_selectors(child, mine, ts, host))
+	/* fetch configured TS list, narrowing dynamic TS */
+	cfg_list = cfg->get_traffic_selectors(cfg, local, NULL, host);
+	
+	/* use a round counter to rate leading TS with higher priority */
+	round = sup_list->get_count(sup_list);
+	
+	sup_enum = sup_list->create_enumerator(sup_list);
+	while (sup_enum->enumerate(sup_enum, &sup_ts))
 	{
-		return 2;
+		cfg_enum = cfg_list->create_enumerator(cfg_list);
+		while (cfg_enum->enumerate(cfg_enum, &cfg_ts))
+		{
+			if (cfg_ts->equals(cfg_ts, sup_ts))
+			{	/* equality is honored better than matches */
+				match += round * 5;
+			}
+			else if (cfg_ts->is_contained_in(cfg_ts, sup_ts) ||
+					 sup_ts->is_contained_in(sup_ts, cfg_ts))
+			{
+				match += round * 1;
+			}
+		}
+		cfg_enum->destroy(cfg_enum);
+		round--;
 	}
-	selected = child->get_traffic_selectors(child, mine, ts, host);
-	prio = selected->get_count(selected) ? 1 : 0;
-	selected->destroy_offset(selected, offsetof(traffic_selector_t, destroy));
-	return prio;
+	sup_enum->destroy(sup_enum);
+	
+	cfg_list->destroy_offset(cfg_list, offsetof(traffic_selector_t, destroy));
+	
+	return match;
 }
 
 /**
@@ -279,21 +303,23 @@ static child_cfg_t* select_child_cfg(private_peer_cfg_t *this,
 	child_cfg_t *current, *found = NULL;
 	enumerator_t *enumerator;
 	int best = 0;
-
-	DBG2(DBG_CFG, "looking for a child config for %#R=== %#R", my_ts, other_ts);	
+	
+	DBG2(DBG_CFG, "looking for a child config for %#R=== %#R", my_ts, other_ts);
 	enumerator = create_child_cfg_enumerator(this);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		int prio = contains_ts(current, TRUE, my_ts, my_host) +
-				   contains_ts(current, FALSE, other_ts, other_host);
-
-		if (prio)
+		int my_prio, other_prio;
+		
+		my_prio = get_ts_match(current, TRUE, my_ts, my_host);
+		other_prio = get_ts_match(current, FALSE, other_ts, other_host);
+		
+		if (my_prio && other_prio)
 		{
-			DBG2(DBG_CFG, "  candidate \"%s\" with prio %d",
-				 current->get_name(current), prio);
-			if (prio > best)
+			DBG2(DBG_CFG, "  candidate \"%s\" with prio %d+%d",
+				 current->get_name(current), my_prio, other_prio);
+			if (my_prio + other_prio > best)
 			{
-				best = prio;
+				best = my_prio + other_prio;
 				DESTROY_IF(found);
 				found = current->get_ref(current);
 			}
