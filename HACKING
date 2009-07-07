@@ -2,29 +2,24 @@
                   strongSwan - Development
                  -------------------------
 
-Subversion repository
+Git repository
 ---------------------
 
 For interested developers, we have a public repository. To check out and 
 compile the code, you need the following tools:
 
-    - Subversion (1.3.1)
-    - a recent GNU C complier (gcc-3.4.6)
-    - recent autotools (autoconf-2.59, automake-1.9.6, libtool-1.5.22)
-    - the usual strongSwan dependencies (gmp >= 4.1.4, optional curl, ldap)
-    - perl (5.8.8)
-    - lex (flex-2.5.33)
-    - yacc (bison-2.1)
-    - gperf (3.0.1)
-    - Doxygen (1.4.6)
+    - Git
+    - a recent GNU C complier (>= 3.x)
+    - recent autotools
+    - perl
+    - lex/flex
+    - yacc/bison
+    - gperf
+    - optionally Doxygen
 
-The numbers in brackets represent the versions used on our development systems,
-other version MAY work, too. Not all tools are checked by the configure script,
-as they are not needed in the tarball distributions, so check them manually.
+To check out the master branch, use:
 
-To check out the trunk, use:
-
-    svn co http://www.strongswan.org/ikev2/trunk strongswan
+   git clone http://git.strongswan.org/strongswan.git
 
 After a successful check out, give the autotools a try:
 
@@ -40,20 +35,16 @@ Then you're in, start the build as usual:
 
 API documentation
 -----------------
+
 Charon and libstrongswan contain inline code documentation. These comments can 
 be extracted using doxygen. It is built using 'make apidoc', which creates an
 'apidoc' folder containing the HTML files.
 
+strongSwan wiki
+---------------
 
-uClibc support
---------------
+A wiki for users and developers, including ticket system and source browser
+is available at
 
-To run strongSwan on uClibc, you need at least:
+    http://wiki.strongswan.org
 
-String and Stdio Support --->
-  [*] Support glibc's register_printf_function()
-General Library Settings --->
-  [*] Support global constructors and destructors
-
-It is fairly untested yet, so don't except to get it running without
-further tweaks.
