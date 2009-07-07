@@ -533,7 +533,7 @@ static bool equals_binary(private_identification_t *this, private_identification
 		}
 		return chunk_equals(this->encoded, other->encoded);
 	}
-	return FALSE;						
+	return FALSE;
 }
 
 /**
@@ -868,6 +868,7 @@ static private_identification_t *identification_create(id_type_t type)
 	{
 		case ID_ANY:
 			this->public.matches = (id_match_t (*)(identification_t*,identification_t*))matches_any;
+			this->public.equals = (bool (*) (identification_t*,identification_t*))equals_binary;
 			this->public.contains_wildcards = (bool (*) (identification_t *this))return_true;
 			break;
 		case ID_FQDN:
