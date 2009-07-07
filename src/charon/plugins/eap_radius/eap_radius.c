@@ -66,6 +66,11 @@ struct private_eap_radius_t {
 	 * TRUE to use EAP-Start, FALSE to send EAP-Identity Response directly
 	 */
 	bool eap_start;
+	
+	/**
+	 * Prefix to prepend to EAP identity
+	 */
+	char *id_prefix;
 };
 
 /**
@@ -86,18 +91,20 @@ static void add_eap_identity(private_eap_radius_t *this,
 		/** identity data */
 		u_int8_t data[];
 	} __attribute__((__packed__)) *hdr;
-	chunk_t id;
+	chunk_t id, prefix;
 	size_t len;
 	
 	id = this->peer->get_encoding(this->peer);
-	len = sizeof(*hdr) + id.len;
+	prefix = chunk_create(this->id_prefix, strlen(this->id_prefix));
+	len = sizeof(*hdr) + prefix.len + id.len;
 	
 	hdr = alloca(len);
 	hdr->code = EAP_RESPONSE;
 	hdr->identifier = 0;
 	hdr->length = htons(len);
 	hdr->type = EAP_IDENTITY;
-	memcpy(hdr->data, id.ptr, id.len);
+	memcpy(hdr->data, prefix.ptr, prefix.len);
+	memcpy(hdr->data + prefix.len, id.ptr, id.len);
 	
 	request->add(request, RAT_EAP_MESSAGE, chunk_create((u_char*)hdr, len));
 }
@@ -136,9 +143,12 @@ static status_t initiate(private_eap_radius_t *this, eap_payload_t **out)
 {
 	radius_message_t *request, *response;
 	status_t status = FAILED;
+	chunk_t username;
 	
 	request = radius_message_create_request();
-	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
+	username = chunk_create(this->id_prefix, strlen(this->id_prefix));
+	username = chunk_cata("cc", username, this->peer->get_encoding(this->peer));
+	request->add(request, RAT_USER_NAME, username);
 	
 	if (this->eap_start)
 	{
@@ -283,7 +293,8 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	this->msk = chunk_empty;
 	this->eap_start = lib->settings->get_bool(lib->settings, 
 								"charon.plugins.eap_radius.eap_start", FALSE);
-	
+	this->id_prefix = lib->settings->get_str(lib->settings,
+								"charon.plugins.eap_radius.id_prefix", "");
 	return &this->public;
 }
 
