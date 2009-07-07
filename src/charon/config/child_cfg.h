@@ -150,18 +150,6 @@ struct child_cfg_t {
 	linked_list_t *(*get_traffic_selectors)(child_cfg_t *this, bool local,
 											linked_list_t *supplied,
 											host_t *host);
-
-	/**
-	 * Checks [single] traffic selectors for equality 
-	 *
-	 * @param local			TRUE for TS on local side, FALSE for remote
-	 * @param ts			list with single traffic selector to compare with
-	 * @param host			address to use for narrowing "dynamic" TS', or NULL
-	 * @return				TRUE if TS are equal, FALSE otherwise
-	 */ 
-	bool (*equal_traffic_selectors)(child_cfg_t *this, bool local,
-								   linked_list_t *ts_list, host_t *host);
-
 	/**
 	 * Get the updown script to run for the CHILD_SA.
 	 * 
