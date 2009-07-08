@@ -58,20 +58,43 @@ void *clalloc(void * pointer, size_t size)
 /**
  * Described in header.
  */
-void memxor(u_int8_t dest[], u_int8_t src[], size_t n)
+void memxor(u_int8_t dst[], u_int8_t src[], size_t n)
 {
-	int i = 0, m;
+	int m, i;
 	
-	m = n - sizeof(long);
-	while (i < m)
+	/* byte wise XOR until dst aligned */
+	for (i = 0; (int)&dst[i] % sizeof(long); i++)
 	{
-		*(long*)(dest + i) ^= *(long*)(src + i);
-		i += sizeof(long);
+		dst[i] ^= src[i];
 	}
-	while (i < n)
+	/* try to use words if src shares an aligment with dst */
+	switch (((int)&src[i] % sizeof(long)))
 	{
-		dest[i] ^= src[i];
-		i++;
+		case 0:
+			for (m = n - sizeof(long); i <= m; i += sizeof(long))
+			{
+				*(long*)&dst[i] ^= *(long*)&src[i];
+			}
+			break;
+		case sizeof(int):
+			for (m = n - sizeof(int); i <= m; i += sizeof(int))
+			{
+				*(int*)&dst[i] ^= *(int*)&src[i];
+			}
+			break;
+		case sizeof(short):
+			for (m = n - sizeof(short); i <= m; i += sizeof(short))
+			{
+				*(short*)&dst[i] ^= *(short*)&src[i];
+			}
+			break;
+		default:
+			break;
+	}
+	/* byte wise XOR of the rest */
+	for (; i < n; i++)
+	{
+		dst[i] ^= src[i];
 	}
 }
 
