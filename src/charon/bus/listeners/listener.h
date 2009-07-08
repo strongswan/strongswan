@@ -108,6 +108,46 @@ struct listener_t {
 					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
 	
 	/**
+	 * Hook called if an IKE_SA gets up or down.
+	 *
+	 * @param ike_sa	IKE_SA coming up/going down
+	 * @param up		TRUE for an up event, FALSE for a down event
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*ike_updown)(listener_t *this, ike_sa_t *ike_sa, bool up);
+	
+	/**
+	 * Hook called when an IKE_SA gets rekeyed.
+	 *
+	 * @param old		rekeyed IKE_SA getting obsolete
+	 * @param new		new IKE_SA replacing old
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*ike_rekey)(listener_t *this, ike_sa_t *old, ike_sa_t *new);
+	
+	/**
+	 * Hook called when a CHILD_SA gets up or down.
+	 *
+	 * @param ike_sa	IKE_SA containing the handled CHILD_SA
+	 * @param child_sa	CHILD_SA coming up/going down
+	 * @param up		TRUE for an up event, FALSE for a down event
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*child_updown)(listener_t *this, ike_sa_t *ike_sa,
+						 child_sa_t *child_sa, bool up);
+	
+	/**
+	 * Hook called when an CHILD_SA gets rekeyed.
+	 *
+	 * @param ike_sa	IKE_SA containing the rekeyed CHILD_SA
+	 * @param old		rekeyed CHILD_SA getting obsolete
+	 * @param new		new CHILD_SA replacing old
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*child_rekey)(listener_t *this, ike_sa_t *ike_sa,
+						child_sa_t *old, child_sa_t *new);
+	
+	/**
 	 * Hook called to invoke additional authorization rules.
 	 *
 	 * An authorization hook gets invoked several times: After each
