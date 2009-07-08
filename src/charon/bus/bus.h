@@ -260,6 +260,23 @@ struct bus_t {
 	 */
 	void (*child_keys)(bus_t *this, child_sa_t *child_sa, diffie_hellman_t *dh,
 					   chunk_t nonce_i, chunk_t nonce_r);
+	
+	/**
+	 * IKE_SA rekeying hook.
+	 *
+	 * @param old		rekeyed and obsolete IKE_SA
+	 * @param new		new IKE_SA replacing old
+	 */
+	void (*ike_rekey)(bus_t *this, ike_sa_t *old, ike_sa_t *new);
+	
+	/**
+	 * CHILD_SA rekeying hook.
+	 *
+	 * @param old		rekeyed and obsolete CHILD_SA
+	 * @param new		new CHILD_SA replacing old
+	 */
+	void (*child_rekey)(bus_t *this, child_sa_t *old, child_sa_t *new);
+	
 	/**
 	 * Destroy the event bus.
 	 */

@@ -207,6 +207,10 @@ static status_t build_r(private_child_rekey_t *this, message_t *message)
 	}
 	
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
+	
+	/* invoke rekey hook */
+	charon->bus->child_rekey(charon->bus, this->child_sa,
+							 this->child_create->get_child(this->child_create));
 	return SUCCESS;
 }
 
@@ -301,6 +305,12 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 				to_delete = this->child_sa;
 			}
 		}
+	}
+	
+	if (to_delete != this->child_create->get_child(this->child_create))
+	{	/* invoke rekey hook if rekeying successful */
+		charon->bus->child_rekey(charon->bus, this->child_sa,
+							this->child_create->get_child(this->child_create));
 	}
 	
 	spi = to_delete->get_spi(to_delete, TRUE);

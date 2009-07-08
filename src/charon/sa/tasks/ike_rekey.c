@@ -367,6 +367,8 @@ static void destroy(private_ike_rekey_t *this)
 		if (this->new_sa->get_state(this->new_sa) == IKE_ESTABLISHED &&
 			this->new_sa->inherit(this->new_sa, this->ike_sa) != DESTROY_ME)
 		{
+			/* invoke hook if rekeying was successful */
+			charon->bus->ike_rekey(charon->bus, this->ike_sa, this->new_sa);
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
 		}
 		else
