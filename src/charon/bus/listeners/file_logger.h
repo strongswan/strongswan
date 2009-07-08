@@ -21,9 +21,9 @@
 #ifndef FILE_LOGGER_H_
 #define FILE_LOGGER_H_
 
-typedef struct file_logger_t file_logger_t;
+#include <bus/listeners/listener.h>
 
-#include <bus/bus.h>
+typedef struct file_logger_t file_logger_t;
 
 /**
  * Logger to files which implements listener_t.

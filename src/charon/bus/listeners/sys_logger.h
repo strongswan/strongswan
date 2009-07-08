@@ -21,11 +21,11 @@
 #ifndef SYS_LOGGER_H_
 #define SYS_LOGGER_H_
 
-typedef struct sys_logger_t sys_logger_t;
-
 #include <syslog.h>
 
-#include <bus/bus.h>
+#include <bus/listeners/listener.h>
+
+typedef struct sys_logger_t sys_logger_t;
 
 /**
  * Logger for syslog which implements listener_t.
