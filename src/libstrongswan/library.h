@@ -19,6 +19,9 @@
  * @defgroup asn1 asn1
  * @ingroup libstrongswan
  *
+ * @defgroup pgp pgp
+ * @ingroup libstrongswan
+ *
  * @defgroup credentials credentials
  * @ingroup libstrongswan
  *
