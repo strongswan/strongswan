@@ -157,7 +157,8 @@ static status_t build_i(private_child_rekey_t *this, message_t *message)
 	
 	/* ... our CHILD_CREATE task does the hard work for us. */
 	reqid = this->child_sa->get_reqid(this->child_sa);
-	this->child_create = child_create_create(this->ike_sa, config, NULL, NULL);
+	this->child_create = child_create_create(this->ike_sa, config, TRUE,
+											 NULL, NULL);
 	this->child_create->use_reqid(this->child_create, reqid);
 	this->child_create->task.build(&this->child_create->task, message);
 	
@@ -426,7 +427,7 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 		this->initiator = FALSE;
-		this->child_create = child_create_create(ike_sa, NULL, NULL, NULL);
+		this->child_create = child_create_create(ike_sa, NULL, TRUE, NULL, NULL);
 	}
 	
 	this->ike_sa = ike_sa;

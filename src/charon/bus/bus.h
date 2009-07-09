@@ -270,6 +270,14 @@ struct bus_t {
 	void (*ike_rekey)(bus_t *this, ike_sa_t *old, ike_sa_t *new);
 	
 	/**
+	 * CHILD_SA up/down hook.
+	 *
+	 * @param child_sa	CHILD_SA coming up/going down
+	 * @param up		TRUE for an up event, FALSE for a down event
+	 */
+	void (*child_updown)(bus_t *this, child_sa_t *child_sa, bool up);
+	
+	/**
 	 * CHILD_SA rekeying hook.
 	 *
 	 * @param old		rekeyed and obsolete CHILD_SA

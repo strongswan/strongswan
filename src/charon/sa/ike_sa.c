@@ -1169,7 +1169,8 @@ static status_t initiate(private_ike_sa_t *this,
 #endif /* ME */
 	{
 		/* normal IKE_SA with CHILD_SA */
-		task = (task_t*)child_create_create(&this->public, child_cfg, tsi, tsr);
+		task = (task_t*)child_create_create(&this->public, child_cfg, FALSE,
+											tsi, tsr);
 		child_cfg->destroy(child_cfg);
 		if (reqid)
 		{

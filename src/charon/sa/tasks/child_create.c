@@ -158,6 +158,11 @@ struct private_child_create_t {
 	 * successfully established the CHILD?
 	 */
 	bool established;
+	
+	/**
+	 * whether the CHILD_SA rekeys an existing one
+	 */
+	bool rekey;
 };
 
 /**
@@ -939,7 +944,11 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)),
 		 this->child_sa->get_traffic_selectors(this->child_sa, TRUE),
 		 this->child_sa->get_traffic_selectors(this->child_sa, FALSE));
-
+	
+	if (!this->rekey)
+	{	/* invoke the child_up() hook if we are not rekeying */
+		charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
+	}
 	return SUCCESS;
 }
 
@@ -1052,6 +1061,11 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 			 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)),
 			 this->child_sa->get_traffic_selectors(this->child_sa, TRUE),
 			 this->child_sa->get_traffic_selectors(this->child_sa, FALSE));
+		
+		if (!this->rekey)
+		{	/* invoke the child_up() hook if we are not rekeying */
+			charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
+		}
 	}
 	else
 	{
@@ -1174,7 +1188,8 @@ static void destroy(private_child_create_t *this)
 /*
  * Described in header.
  */
-child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config,
+child_create_t *child_create_create(ike_sa_t *ike_sa,
+							child_cfg_t *config, bool rekey,
 							traffic_selector_t *tsi, traffic_selector_t *tsr)
 {
 	private_child_create_t *this = malloc_thing(private_child_create_t);
@@ -1222,6 +1237,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config,
 	this->other_cpi = 0;
 	this->reqid = 0;
 	this->established = FALSE;
+	this->rekey = rekey;
 	
 	return &this->public;
 }

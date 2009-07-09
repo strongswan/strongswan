@@ -543,6 +543,39 @@ static void ike_rekey(private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
 }
 
 /**
+ * Implementation of bus_t.child_updown
+ */
+static void child_updown(private_bus_t *this, child_sa_t *child_sa, bool up)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	bool keep;
+	
+	ike_sa = pthread_getspecific(this->thread_sa);
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->child_updown)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->child_updown(entry->listener,
+											 ike_sa, child_sa, up);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
  * Implementation of bus_t.child_rekey
  */
 static void child_rekey(private_bus_t *this, child_sa_t *old, child_sa_t *new)
@@ -641,6 +674,7 @@ bus_t *bus_create()
 	this->public.ike_keys = (void(*)(bus_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
 	this->public.child_keys = (void(*)(bus_t*, child_sa_t *child_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r))child_keys;
 	this->public.ike_rekey = (void(*)(bus_t*, ike_sa_t *old, ike_sa_t *new))ike_rekey;
+	this->public.child_updown = (void(*)(bus_t*, child_sa_t *child_sa, bool up))child_updown;
 	this->public.child_rekey = (void(*)(bus_t*, child_sa_t *old, child_sa_t *new))child_rekey;
 	this->public.authorize = (bool(*)(bus_t*, linked_list_t *auth, bool final))authorize;
 	this->public.destroy = (void(*)(bus_t*)) destroy;
