@@ -52,9 +52,14 @@ struct private_child_delete_t {
 	u_int32_t spi;
 	
 	/**
-	 * wheter to enforce delete action policy
+	 * whether to enforce delete action policy
 	 */
 	bool check_delete_action;
+	
+	/**
+	 * is this delete exchange following a rekey?
+	 */
+	bool rekeyed;
 	
 	/**
 	 * CHILD_SAs which get deleted
@@ -148,6 +153,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 				switch (child_sa->get_state(child_sa))
 				{
 					case CHILD_REKEYING:
+						this->rekeyed = TRUE;
 						/* we reply as usual, rekeying will fail */
 						break;
 					case CHILD_DELETING:
@@ -190,6 +196,11 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
+		/* signal child down event if we are not rekeying */
+		if (!this->rekeyed)
+		{
+			charon->bus->child_updown(charon->bus, child_sa, FALSE);
+		}
 		spi = child_sa->get_spi(child_sa, TRUE);
 		protocol = child_sa->get_protocol(child_sa);
 		child_cfg = child_sa->get_config(child_sa);
@@ -258,7 +269,10 @@ static status_t build_i(private_child_delete_t *this, message_t *message)
 		return SUCCESS;
 	}
 	this->child_sas->insert_last(this->child_sas, child_sa);
-	
+	if (child_sa->get_state(child_sa) == CHILD_REKEYING)
+	{
+		this->rekeyed = TRUE;
+	}
 	log_children(this);
 	build_payloads(this, message);
 	return NEED_MORE;
@@ -359,6 +373,7 @@ child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 	this->child_sas = linked_list_create();
 	this->protocol = protocol;
 	this->spi = spi;
+	this->rekeyed = FALSE;
 	
 	if (protocol != PROTO_NONE)
 	{
