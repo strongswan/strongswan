@@ -49,69 +49,69 @@ static int netlink_bcast_fd = NULL_FD;
 #define NE(x) { x, #x } /* Name Entry -- shorthand for sparse_names */
 
 static sparse_names xfrm_type_names = {
-		NE(NLMSG_NOOP),
-		NE(NLMSG_ERROR),
-		NE(NLMSG_DONE),
-		NE(NLMSG_OVERRUN),
+	NE(NLMSG_NOOP),
+	NE(NLMSG_ERROR),
+	NE(NLMSG_DONE),
+	NE(NLMSG_OVERRUN),
 
-		NE(XFRM_MSG_NEWSA),
-		NE(XFRM_MSG_DELSA),
-		NE(XFRM_MSG_GETSA),
+	NE(XFRM_MSG_NEWSA),
+	NE(XFRM_MSG_DELSA),
+	NE(XFRM_MSG_GETSA),
 
-		NE(XFRM_MSG_NEWPOLICY),
-		NE(XFRM_MSG_DELPOLICY),
-		NE(XFRM_MSG_GETPOLICY),
+	NE(XFRM_MSG_NEWPOLICY),
+	NE(XFRM_MSG_DELPOLICY),
+	NE(XFRM_MSG_GETPOLICY),
 
-		NE(XFRM_MSG_ALLOCSPI),
-		NE(XFRM_MSG_ACQUIRE),
-		NE(XFRM_MSG_EXPIRE),
+	NE(XFRM_MSG_ALLOCSPI),
+	NE(XFRM_MSG_ACQUIRE),
+	NE(XFRM_MSG_EXPIRE),
 
-		NE(XFRM_MSG_UPDPOLICY),
-		NE(XFRM_MSG_UPDSA),
+	NE(XFRM_MSG_UPDPOLICY),
+	NE(XFRM_MSG_UPDSA),
 
-		NE(XFRM_MSG_POLEXPIRE),
+	NE(XFRM_MSG_POLEXPIRE),
 
-		NE(XFRM_MSG_MAX),
+	NE(XFRM_MSG_MAX),
 
-		{ 0, sparse_end }
+	{ 0, sparse_end }
 };
 
 #undef NE
 
 /* Authentication algorithms */
 static sparse_names aalg_list = {
-		{ SADB_X_AALG_NULL, "digest_null" },
-		{ SADB_AALG_MD5HMAC, "md5" },
-		{ SADB_AALG_SHA1HMAC, "sha1" },
-		{ SADB_X_AALG_SHA2_256HMAC, "sha256" },
-		{ SADB_X_AALG_SHA2_384HMAC, "sha384" },
-		{ SADB_X_AALG_SHA2_512HMAC, "sha512" },
-		{ SADB_X_AALG_RIPEMD160HMAC, "ripemd160" },
-		{ SADB_X_AALG_AES_XCBC_MAC, "xcbc(aes)"},
-		{ SADB_X_AALG_NULL, "null" },
-		{ 0, sparse_end }
+	{ SADB_X_AALG_NULL, "digest_null" },
+	{ SADB_AALG_MD5HMAC, "md5" },
+	{ SADB_AALG_SHA1HMAC, "sha1" },
+	{ SADB_X_AALG_SHA2_256HMAC, "sha256" },
+	{ SADB_X_AALG_SHA2_384HMAC, "sha384" },
+	{ SADB_X_AALG_SHA2_512HMAC, "sha512" },
+	{ SADB_X_AALG_RIPEMD160HMAC, "ripemd160" },
+	{ SADB_X_AALG_AES_XCBC_MAC, "xcbc(aes)"},
+	{ SADB_X_AALG_NULL, "null" },
+	{ 0, sparse_end }
 };
 
 /* Encryption algorithms */
 static sparse_names ealg_list = {
-		{ SADB_EALG_NULL, "cipher_null" },
-		{ SADB_EALG_DESCBC, "des" },
-		{ SADB_EALG_3DESCBC, "des3_ede" },
-		{ SADB_X_EALG_CASTCBC, "cast128" },
-		{ SADB_X_EALG_BLOWFISHCBC, "blowfish" },
-		{ SADB_X_EALG_AESCBC, "aes" },
-		{ SADB_X_EALG_CAMELLIACBC, "cbc(camellia)" },
-		{ SADB_X_EALG_SERPENTCBC, "serpent" },
-		{ SADB_X_EALG_TWOFISHCBC, "twofish" },
-		{ 0, sparse_end }
+	{ SADB_EALG_NULL, "cipher_null" },
+	{ SADB_EALG_DESCBC, "des" },
+	{ SADB_EALG_3DESCBC, "des3_ede" },
+	{ SADB_X_EALG_CASTCBC, "cast128" },
+	{ SADB_X_EALG_BLOWFISHCBC, "blowfish" },
+	{ SADB_X_EALG_AESCBC, "aes" },
+	{ SADB_X_EALG_CAMELLIACBC, "cbc(camellia)" },
+	{ SADB_X_EALG_SERPENTCBC, "serpent" },
+	{ SADB_X_EALG_TWOFISHCBC, "twofish" },
+	{ 0, sparse_end }
 };
 
 /* Compression algorithms */
 static sparse_names calg_list = {
-		{ SADB_X_CALG_DEFLATE, "deflate" },
-		{ SADB_X_CALG_LZS, "lzs" },
-		{ SADB_X_CALG_LZJH, "lzjh" },
-		{ 0, sparse_end }
+	{ SADB_X_CALG_DEFLATE, "deflate" },
+	{ SADB_X_CALG_LZS, "lzs" },
+	{ SADB_X_CALG_LZJH, "lzjh" },
+	{ 0, sparse_end }
 };
 
 /** ip2xfrm - Take an IP address and convert to an xfrm.
@@ -119,8 +119,7 @@ static sparse_names calg_list = {
  * @param addr ip_address
  * @param xaddr xfrm_address_t - IPv[46] Address from addr is copied here.
  */
-static void
-ip2xfrm(const ip_address *addr, xfrm_address_t *xaddr)
+static void ip2xfrm(const ip_address *addr, xfrm_address_t *xaddr)
 {
 	if (addr->u.v4.sin_family == AF_INET)
 	{
@@ -135,35 +134,41 @@ ip2xfrm(const ip_address *addr, xfrm_address_t *xaddr)
 /** init_netlink - Initialize the netlink inferface.  Opens the sockets and
  * then binds to the broadcast socket.
  */
-static void
-init_netlink(void)
+static void init_netlink(void)
 {
 	struct sockaddr_nl addr;
 
 	netlinkfd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_XFRM);
 
 	if (netlinkfd < 0)
+	{
 		exit_log_errno((e, "socket() in init_netlink()"));
-
+	}
 	if (fcntl(netlinkfd, F_SETFD, FD_CLOEXEC) != 0)
+	{
 		exit_log_errno((e, "fcntl(FD_CLOEXEC) in init_netlink()"));
-
+	}
 	netlink_bcast_fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_XFRM);
 
 	if (netlink_bcast_fd < 0)
+	{
 		exit_log_errno((e, "socket() for bcast in init_netlink()"));
-
+	}
 	if (fcntl(netlink_bcast_fd, F_SETFD, FD_CLOEXEC) != 0)
+	{
 		exit_log_errno((e, "fcntl(FD_CLOEXEC) for bcast in init_netlink()"));
-
+	}
 	if (fcntl(netlink_bcast_fd, F_SETFL, O_NONBLOCK) != 0)
+	{
 		exit_log_errno((e, "fcntl(O_NONBLOCK) for bcast in init_netlink()"));
-
+	}
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid = getpid();
 	addr.nl_groups = XFRMGRP_ACQUIRE | XFRMGRP_EXPIRE;
 	if (bind(netlink_bcast_fd, (struct sockaddr *)&addr, sizeof(addr)) != 0)
+	{
 		exit_log_errno((e, "Failed to bind bcast socket in init_netlink()"));
+	}
 }
 
 /** send_netlink_msg
@@ -176,9 +181,9 @@ init_netlink(void)
  * @param text_said - String
  * @return bool True if the message was succesfully sent.
  */
-static bool
-send_netlink_msg(struct nlmsghdr *hdr, struct nlmsghdr *rbuf, size_t rbuf_len
-, const char *description, const char *text_said)
+static bool send_netlink_msg(struct nlmsghdr *hdr, struct nlmsghdr *rbuf,
+							 size_t rbuf_len, const char *description,
+							 const char *text_said)
 {
 	struct {
 		struct nlmsghdr n;
@@ -200,7 +205,9 @@ send_netlink_msg(struct nlmsghdr *hdr, struct nlmsghdr *rbuf, size_t rbuf_len
 	len = hdr->nlmsg_len;
 	do {
 		r = write(netlinkfd, hdr, len);
-	} while (r < 0 && errno == EINTR);
+	}
+	while (r < 0 && errno == EINTR);
+
 	if (r < 0)
 	{
 		log_errno((e
@@ -221,7 +228,8 @@ send_netlink_msg(struct nlmsghdr *hdr, struct nlmsghdr *rbuf, size_t rbuf_len
 		return FALSE;
 	}
 
-	for (;;) {
+	for (;;)
+	{
 		socklen_t alen;
 
 		alen = sizeof(addr);
@@ -322,8 +330,8 @@ send_netlink_msg(struct nlmsghdr *hdr, struct nlmsghdr *rbuf, size_t rbuf_len
  * @param text_said - String
  * @return boolean
  */
-static bool
-netlink_policy(struct nlmsghdr *hdr, bool enoent_ok, const char *text_said)
+static bool netlink_policy(struct nlmsghdr *hdr, bool enoent_ok,
+						   const char *text_said)
 {
 	struct {
 		struct nlmsghdr n;
@@ -372,18 +380,17 @@ netlink_policy(struct nlmsghdr *hdr, bool enoent_ok, const char *text_said)
  * @param ip int
  * @return boolean True if successful
  */
-static bool
-netlink_raw_eroute(const ip_address *this_host
-				 , const ip_subnet *this_client
-				 , const ip_address *that_host
-				 , const ip_subnet *that_client
-				 , ipsec_spi_t spi
-				 , unsigned int satype
-				 , unsigned int transport_proto
-				 , const struct pfkey_proto_info *proto_info
-				 , time_t use_lifetime UNUSED
-				 , unsigned int op
-				 , const char *text_said)
+static bool netlink_raw_eroute(const ip_address *this_host
+							 , const ip_subnet *this_client
+							 , const ip_address *that_host
+							 , const ip_subnet *that_client
+							 , ipsec_spi_t spi
+							 , unsigned int satype
+							 , unsigned int transport_proto
+							 , const struct pfkey_proto_info *proto_info
+							 , time_t use_lifetime UNUSED
+							 , unsigned int op
+							 , const char *text_said)
 {
 	struct {
 		struct nlmsghdr n;
@@ -568,8 +575,7 @@ netlink_raw_eroute(const ip_address *this_host
  * @param replace boolean - true if this replaces an existing SA
  * @return bool True if successfull
  */
-static bool
-netlink_add_sa(const struct kernel_sa *sa, bool replace)
+static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 {
 	struct {
 		struct nlmsghdr n;
@@ -606,7 +612,8 @@ netlink_add_sa(const struct kernel_sa *sa, bool replace)
 		const char *name;
 
 		name = sparse_name(aalg_list, sa->authalg);
-		if (!name) {
+		if (!name)
+		{
 			loglog(RC_LOG_SERIOUS, "unknown authentication algorithm: %u"
 				, sa->authalg);
 			return FALSE;
@@ -658,7 +665,8 @@ netlink_add_sa(const struct kernel_sa *sa, bool replace)
 		const char *name;
 
 		name = sparse_name(calg_list, sa->compalg);
-		if (!name) {
+		if (!name)
+		{
 			loglog(RC_LOG_SERIOUS, "unknown compression algorithm: %u"
 				, sa->compalg);
 			return FALSE;
@@ -702,8 +710,7 @@ netlink_add_sa(const struct kernel_sa *sa, bool replace)
  * @param sa Kernel SA to be deleted
  * @return bool True if successfull
  */
-static bool
-netlink_del_sa(const struct kernel_sa *sa)
+static bool netlink_del_sa(const struct kernel_sa *sa)
 {
 	struct {
 		struct nlmsghdr n;
@@ -726,9 +733,8 @@ netlink_del_sa(const struct kernel_sa *sa)
 	return send_netlink_msg(&req.n, NULL, 0, "Del SA", sa->text_said);
 }
 
-static bool
-netlink_error(const char *req_type, const struct nlmsghdr *n
-, const struct nlmsgerr *e, int rsp_size)
+static bool netlink_error(const char *req_type, const struct nlmsghdr *n,
+						  const struct nlmsgerr *e, int rsp_size)
 {
 	if (n->nlmsg_type == NLMSG_ERROR)
 	{
@@ -751,8 +757,8 @@ netlink_error(const char *req_type, const struct nlmsghdr *n
 	return FALSE;
 }
 
-static bool
-netlink_get_policy(const struct kernel_sa *sa, bool inbound, time_t *use_time)
+static bool netlink_get_policy(const struct kernel_sa *sa, bool inbound,
+							   time_t *use_time)
 {
 	struct {
 		struct nlmsghdr n;
@@ -789,11 +795,13 @@ netlink_get_policy(const struct kernel_sa *sa, bool inbound, time_t *use_time)
 	req.id.dir = (inbound)? XFRM_POLICY_IN:XFRM_POLICY_OUT;
 
 	if (!send_netlink_msg(&req.n, &rsp.n, sizeof(rsp), "Get policy", "?"))
+	{
 		return FALSE;
-
+	}
 	if (netlink_error("XFRM_MSG_GETPOLICY", &rsp.n, &rsp.u.e, sizeof(rsp.u.info)))
+	{
 		return FALSE;
-
+	}
 	*use_time = (time_t)rsp.u.info.curlft.use_time;
 
 	if (inbound && sa->encapsulation == ENCAPSULATION_MODE_TUNNEL)
@@ -803,11 +811,13 @@ netlink_get_policy(const struct kernel_sa *sa, bool inbound, time_t *use_time)
 		req.id.dir = XFRM_POLICY_FWD;
 
 		if (!send_netlink_msg(&req.n, &rsp.n, sizeof(rsp), "Get policy", "?"))
+		{
 			return FALSE;
-
+		}
 		if (netlink_error("XFRM_MSG_GETPOLICY", &rsp.n, &rsp.u.e, sizeof(rsp.u.info)))
+		{
 			return FALSE;
-
+		}
 		use_time_fwd = (time_t)rsp.u.info.curlft.use_time;
 		*use_time = (*use_time > use_time_fwd)? *use_time : use_time_fwd;
 	}
@@ -820,8 +830,7 @@ netlink_get_policy(const struct kernel_sa *sa, bool inbound, time_t *use_time)
  * @param sa Kernel SA to be queried
  * @return bool True if successfull
  */
-static bool
-netlink_get_sa(const struct kernel_sa *sa, u_int *bytes)
+static bool netlink_get_sa(const struct kernel_sa *sa, u_int *bytes)
 {
 	struct {
 		struct nlmsghdr n;
@@ -851,18 +860,18 @@ netlink_get_sa(const struct kernel_sa *sa, u_int *bytes)
 	rsp.n.nlmsg_type = XFRM_MSG_NEWSA;
 
 	if (!send_netlink_msg(&req.n, &rsp.n, sizeof(rsp), "Get SA", sa->text_said))
+	{
 		return FALSE;
-
+	}
 	if (netlink_error("XFRM_MSG_GETSA", &rsp.n, &rsp.u.e, sizeof(rsp.u.info)))
+	{
 		return FALSE;
-
+	}
 	*bytes = (u_int) rsp.u.info.curlft.bytes;
-
 	return TRUE;
 }
 
-static void
-linux_pfkey_register_response(const struct sadb_msg *msg)
+static void linux_pfkey_register_response(const struct sadb_msg *msg)
 {
 	switch (msg->sadb_msg_satype)
 	{
@@ -882,8 +891,7 @@ linux_pfkey_register_response(const struct sadb_msg *msg)
 /** linux_pfkey_register - Register via PFKEY our capabilities
  *
  */
-static void
-linux_pfkey_register(void)
+static void linux_pfkey_register(void)
 {
 	pfkey_register_proto(SADB_SATYPE_AH, "AH");
 	pfkey_register_proto(SADB_SATYPE_ESP, "ESP");
@@ -898,8 +906,8 @@ linux_pfkey_register(void)
  * @param dst ip_address formatted destination
  * @return err_t NULL if okay, otherwise an error
  */
-static err_t
-xfrm_to_ip_address(unsigned family, const xfrm_address_t *src, ip_address *dst)
+static err_t xfrm_to_ip_address(unsigned family, const xfrm_address_t *src,
+								ip_address *dst)
 {
 	switch (family)
 	{
@@ -922,10 +930,8 @@ xfrm_to_ip_address(unsigned family, const xfrm_address_t *src, ip_address *dst)
  * @param dst ip_address formatted destination
  * @return err_t NULL if okay, otherwise an error
  */
-static err_t
-xfrm_sel_to_ip_pair(const struct xfrm_selector *sel
-					, ip_address *src
-					, ip_address *dst)
+static err_t xfrm_sel_to_ip_pair(const struct xfrm_selector *sel,
+								 ip_address *src, ip_address *dst)
 {
 	int family;
 	err_t ugh;
@@ -934,7 +940,9 @@ xfrm_sel_to_ip_pair(const struct xfrm_selector *sel
 
 	if ((ugh = xfrm_to_ip_address(family, &sel->saddr, src))
 		|| (ugh = xfrm_to_ip_address(family, &sel->daddr, dst)))
+	{	
 		return ugh;
+	}
 
 	/* family has been verified in xfrm_to_ip_address. */
 	if (family == AF_INET)
@@ -951,8 +959,7 @@ xfrm_sel_to_ip_pair(const struct xfrm_selector *sel
    return NULL;
 }
 
-static void
-netlink_acquire(struct nlmsghdr *n)
+static void netlink_acquire(struct nlmsghdr *n)
 {
 	struct xfrm_user_acquire *acquire;
 	ip_address src, dst;
@@ -978,15 +985,17 @@ netlink_acquire(struct nlmsghdr *n)
 	if (!(ugh = xfrm_sel_to_ip_pair(&acquire->sel, &src, &dst))
 	&& !(ugh = addrtosubnet(&src, &ours))
 	&& !(ugh = addrtosubnet(&dst, &his)))
+	{
 		record_and_initiate_opportunistic(&ours, &his, transport_proto
 			, "%acquire-netlink");
-
+	}
 	if (ugh != NULL)
+	{
 		plog("XFRM_MSG_ACQUIRE message from kernel malformed: %s", ugh);
+	}
 }
 
-static void
-netlink_shunt_expire(struct xfrm_userpolicy_info *pol)
+static void netlink_shunt_expire(struct xfrm_userpolicy_info *pol)
 {
 	ip_address src, dst;
 	unsigned transport_proto;
@@ -1004,8 +1013,7 @@ netlink_shunt_expire(struct xfrm_userpolicy_info *pol)
 		, "delete expired bare shunt");
 }
 
-static void
-netlink_policy_expire(struct nlmsghdr *n)
+static void netlink_policy_expire(struct nlmsghdr *n)
 {
 	struct xfrm_user_polexpire *upe;
 	struct {
@@ -1040,11 +1048,13 @@ netlink_policy_expire(struct nlmsghdr *n)
 	rsp.n.nlmsg_type = XFRM_MSG_NEWPOLICY;
 
 	if (!send_netlink_msg(&req.n, &rsp.n, sizeof(rsp), "Get policy", "?"))
+	{
 		return;
-
+	}
 	if (netlink_error("XFRM_MSG_GETPOLICY", &rsp.n, &rsp.u.e, sizeof(rsp.u.pol)))
+	{
 		return;
-
+	}
 	if (req.id.index != rsp.u.pol.index)
 	{
 		DBG(DBG_KLIPS,
@@ -1072,8 +1082,7 @@ netlink_policy_expire(struct nlmsghdr *n)
 	}
 }
 
-static bool
-netlink_get(void)
+static bool netlink_get(void)
 {
 	struct {
 		struct nlmsghdr n;
@@ -1137,22 +1146,15 @@ netlink_get(void)
 	return TRUE;
 }
 
-static void
-netlink_process_msg(void)
+static void netlink_process_msg(void)
 {
-	while (netlink_get())
-		;
+	while (netlink_get());
 }
 
-static ipsec_spi_t
-netlink_get_spi(const ip_address *src
-, const ip_address *dst
-, int proto
-, bool tunnel_mode
-, unsigned reqid
-, ipsec_spi_t min
-, ipsec_spi_t max
-, const char *text_said)
+static ipsec_spi_t netlink_get_spi(const ip_address *src, const ip_address *dst,
+								  int proto, bool tunnel_mode, unsigned reqid,
+								  ipsec_spi_t min, ipsec_spi_t max,
+								  const char *text_said)
 {
 	struct {
 		struct nlmsghdr n;
@@ -1185,11 +1187,13 @@ netlink_get_spi(const ip_address *src
 	rsp.n.nlmsg_type = XFRM_MSG_NEWSA;
 
 	if (!send_netlink_msg(&req.n, &rsp.n, sizeof(rsp), "Get SPI", text_said))
+	{
 		return 0;
-
+	}
 	if (netlink_error("XFRM_MSG_ALLOCSPI", &rsp.n, &rsp.u.e, sizeof(rsp.u.sa)))
+	{
 		return 0;
-
+	}
 	DBG(DBG_KLIPS,
 		DBG_log("netlink_get_spi: allocated 0x%x for %s"
 			, ntohl(rsp.u.sa.id.spi), text_said));
