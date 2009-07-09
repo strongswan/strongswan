@@ -514,6 +514,35 @@ static void child_keys(private_bus_t *this, child_sa_t *child_sa,
 }
 
 /**
+ * Implementation of bus_t.ike_updown
+ */
+static void ike_updown(private_bus_t *this, ike_sa_t *ike_sa, bool up)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->ike_updown)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_updown(entry->listener, ike_sa, up);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
  * Implementation of bus_t.ike_rekey
  */
 static void ike_rekey(private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
@@ -673,6 +702,7 @@ bus_t *bus_create()
 	this->public.message = (void(*)(bus_t*, message_t *message, bool incoming))message;
 	this->public.ike_keys = (void(*)(bus_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
 	this->public.child_keys = (void(*)(bus_t*, child_sa_t *child_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r))child_keys;
+	this->public.ike_updown = (void(*)(bus_t*, ike_sa_t *ike_sa, bool up))ike_updown;
 	this->public.ike_rekey = (void(*)(bus_t*, ike_sa_t *old, ike_sa_t *new))ike_rekey;
 	this->public.child_updown = (void(*)(bus_t*, child_sa_t *child_sa, bool up))child_updown;
 	this->public.child_rekey = (void(*)(bus_t*, child_sa_t *old, child_sa_t *new))child_rekey;

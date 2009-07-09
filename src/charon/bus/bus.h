@@ -262,6 +262,14 @@ struct bus_t {
 					   chunk_t nonce_i, chunk_t nonce_r);
 	
 	/**
+	 * IKE_SA up/down hook.
+	 *
+	 * @param ike_sa	IKE_SA coming up/going down
+	 * @param up		TRUE for an up event, FALSE for a down event
+	 */
+	void (*ike_updown)(bus_t *this, ike_sa_t *ike_sa, bool up);
+	
+	/**
 	 * IKE_SA rekeying hook.
 	 *
 	 * @param old		rekeyed and obsolete IKE_SA

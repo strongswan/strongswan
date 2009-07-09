@@ -738,6 +738,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 			 this->ike_sa->get_my_id(this->ike_sa), 
 			 this->ike_sa->get_other_host(this->ike_sa),
 			 this->ike_sa->get_other_id(this->ike_sa));
+		charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -916,6 +917,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 			 this->ike_sa->get_my_id(this->ike_sa), 
 			 this->ike_sa->get_other_host(this->ike_sa),
 			 this->ike_sa->get_other_id(this->ike_sa));
+		charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
 		return SUCCESS;
 	}
 	return NEED_MORE;
