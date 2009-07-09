@@ -1554,6 +1554,17 @@ static void flush(private_ike_sa_manager_t *this)
 	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
 		charon->bus->set_sa(charon->bus, entry->ike_sa);
+		/* as the delete never gets processed, fire down events */
+		switch (entry->ike_sa->get_state(entry->ike_sa))
+		{
+			case IKE_ESTABLISHED:
+			case IKE_REKEYING:
+			case IKE_DELETING:
+				charon->bus->ike_updown(charon->bus, entry->ike_sa, FALSE);
+				break;
+			default:
+				break;
+		}
 		entry->ike_sa->delete(entry->ike_sa);
 	}
 	enumerator->destroy(enumerator);

@@ -514,64 +514,6 @@ static void child_keys(private_bus_t *this, child_sa_t *child_sa,
 }
 
 /**
- * Implementation of bus_t.ike_updown
- */
-static void ike_updown(private_bus_t *this, ike_sa_t *ike_sa, bool up)
-{
-	enumerator_t *enumerator;
-	entry_t *entry;
-	bool keep;
-	
-	this->mutex->lock(this->mutex);
-	enumerator = this->listeners->create_enumerator(this->listeners);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		if (entry->calling || !entry->listener->ike_updown)
-		{
-			continue;
-		}
-		entry->calling++;
-		keep = entry->listener->ike_updown(entry->listener, ike_sa, up);
-		entry->calling--;
-		if (!keep)
-		{
-			unregister_listener(this, entry, enumerator);
-		}
-	}
-	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
-}
-
-/**
- * Implementation of bus_t.ike_rekey
- */
-static void ike_rekey(private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
-{
-	enumerator_t *enumerator;
-	entry_t *entry;
-	bool keep;
-	
-	this->mutex->lock(this->mutex);
-	enumerator = this->listeners->create_enumerator(this->listeners);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		if (entry->calling || !entry->listener->ike_rekey)
-		{
-			continue;
-		}
-		entry->calling++;
-		keep = entry->listener->ike_rekey(entry->listener, old, new);
-		entry->calling--;
-		if (!keep)
-		{
-			unregister_listener(this, entry, enumerator);
-		}
-	}
-	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
-}
-
-/**
  * Implementation of bus_t.child_updown
  */
 static void child_updown(private_bus_t *this, child_sa_t *child_sa, bool up)
@@ -626,6 +568,78 @@ static void child_rekey(private_bus_t *this, child_sa_t *old, child_sa_t *new)
 		}
 		entry->calling++;
 		keep = entry->listener->child_rekey(entry->listener, ike_sa, old, new);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Implementation of bus_t.ike_updown
+ */
+static void ike_updown(private_bus_t *this, ike_sa_t *ike_sa, bool up)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->ike_updown)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_updown(entry->listener, ike_sa, up);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+	
+	/* a down event for IKE_SA implicitly downs all CHILD_SAs */
+	if (!up)
+	{
+		iterator_t *iterator;
+		child_sa_t *child_sa;
+		
+		iterator = ike_sa->create_child_sa_iterator(ike_sa);
+		while (iterator->iterate(iterator, (void**)&child_sa))
+		{
+			child_updown(this, child_sa, FALSE);
+		}
+		iterator->destroy(iterator);
+	}
+}
+
+/**
+ * Implementation of bus_t.ike_rekey
+ */
+static void ike_rekey(private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->ike_rekey)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_rekey(entry->listener, old, new);
 		entry->calling--;
 		if (!keep)
 		{

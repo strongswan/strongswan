@@ -21,7 +21,7 @@
 
 typedef struct private_ike_delete_t private_ike_delete_t;
 
-/**file
+/**
  * Private members of a ike_delete_t task.
  */
 struct private_ike_delete_t {
@@ -40,6 +40,11 @@ struct private_ike_delete_t {
 	 * Are we the initiator?
 	 */
 	bool initiator;
+	
+	/**
+	 * are we deleting a rekeyed SA?
+	 */
+	bool rekeyed;
 	
 	/**
 	 * are we responding to a delete, but have initated our own?
@@ -64,6 +69,11 @@ static status_t build_i(private_ike_delete_t *this, message_t *message)
 
 	delete_payload = delete_payload_create(PROTO_IKE);
 	message->add_payload(message, (payload_t*)delete_payload);
+	
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING)
+	{
+		this->rekeyed = TRUE;
+	}
 	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 
 	DBG1(DBG_IKE, "sending DELETE for IKE_SA %s[%d]",
@@ -79,8 +89,12 @@ static status_t build_i(private_ike_delete_t *this, message_t *message)
 static status_t process_i(private_ike_delete_t *this, message_t *message)
 {
 	DBG0(DBG_IKE, "IKE_SA deleted");
-	/* completed, delete IKE_SA by returning FAILED */
-	return FAILED;
+	if (!this->rekeyed)
+	{	/* invoke ike_down() hook if SA has not been rekeyed */
+		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+	}
+	/* completed, delete IKE_SA by returning DESTROY_ME */
+	return DESTROY_ME;
 }
 
 /**
@@ -106,14 +120,17 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
 		case IKE_ESTABLISHED:
 			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			this->ike_sa->reestablish(this->ike_sa);
+			return NEED_MORE;
+		case IKE_REKEYING:
+			this->rekeyed = TRUE;
 			break;
 		case IKE_DELETING:
 			this->simultaneous = TRUE;
-			/* FALL */
+			break;
 		default:
-			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			break;
 	}
+	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 	return NEED_MORE;
 }
 
@@ -129,8 +146,12 @@ static status_t build_r(private_ike_delete_t *this, message_t *message)
 		/* wait for peer's response for our delete request, but set a timeout */
 		return SUCCESS;
 	}
-	/* completed, delete IKE_SA by returning FAILED */
-	return FAILED;
+	if (!this->rekeyed)
+	{	/* invoke ike_down() hook if SA has not been rekeyed */
+		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+	}
+	/* completed, delete IKE_SA by returning DESTROY_ME */
+	return DESTROY_ME;
 }
 
 /**
@@ -182,6 +203,7 @@ ike_delete_t *ike_delete_create(ike_sa_t *ike_sa, bool initiator)
 	
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
+	this->rekeyed = FALSE;
 	this->simultaneous = FALSE;
 	
 	return &this->public;

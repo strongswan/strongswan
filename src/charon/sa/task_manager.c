@@ -220,6 +220,10 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 			{
 				DBG1(DBG_IKE, "giving up after %d retransmits",
 					 this->initiating.retransmitted - 1);
+				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
+				{
+					charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+				}
 				return DESTROY_ME;
 			}
 			
@@ -240,6 +244,7 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 			{
 				DBG1(DBG_IKE, "giving up after %d path probings",
 					 this->initiating.retransmitted - 1);
+				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 				return DESTROY_ME;
 			}
 			
@@ -431,6 +436,12 @@ static status_t build_request(private_task_manager_t *this)
 				break;
 			case FAILED:
 			default:
+				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
+				{
+					charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+				}
+				/* FALL */
+			case DESTROY_ME:
 				/* critical failure, destroy IKE_SA */
 				iterator->destroy(iterator);
 				message->destroy(message);
@@ -451,6 +462,7 @@ static status_t build_request(private_task_manager_t *this)
 		 * close the SA */
 		message->destroy(message);
 		flush(this);
+		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
 	
@@ -474,6 +486,7 @@ static status_t process_response(private_task_manager_t *this,
 		DBG1(DBG_IKE, "received %N response, but expected %N",
 			 exchange_type_names, message->get_exchange_type(message),
 			 exchange_type_names, this->initiating.type);
+		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
 	
@@ -494,6 +507,9 @@ static status_t process_response(private_task_manager_t *this,
 				break;
 			case FAILED:
 			default:
+				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+				/* FALL */
+			case DESTROY_ME:
 				/* critical failure, destroy IKE_SA */
 				iterator->remove(iterator);
 				iterator->destroy(iterator);
@@ -604,6 +620,9 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				break;
 			case FAILED:
 			default:
+				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+				/* FALL */
+			case DESTROY_ME:
 				/* destroy IKE_SA, but SEND response first */
 				delete = TRUE;
 				break;
@@ -631,6 +650,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	message->destroy(message);
 	if (status != SUCCESS)
 	{
+		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
 	
@@ -832,6 +852,9 @@ static status_t process_request(private_task_manager_t *this,
 				break;
 			case FAILED:
 			default:
+				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+				/* FALL */
+			case DESTROY_ME:
 				/* critical failure, destroy IKE_SA */
 				iterator->remove(iterator);
 				iterator->destroy(iterator);

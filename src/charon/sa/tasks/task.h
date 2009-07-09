@@ -100,7 +100,8 @@ struct task_t {
 	 * 
 	 * @param message		message to add payloads to
 	 * @return
-	 * 						- FAILED if a critical error occured
+	 *						- FAILED if a critical error occured
+	 *						- DESTROY_ME if IKE_SA has been properly deleted
 	 *						- NEED_MORE if another call to build/process needed
 	 *						- SUCCESS if task completed
 	 */
@@ -112,6 +113,7 @@ struct task_t {
 	 * @param message		message to read payloads from
 	 * @return
 	 * 						- FAILED if a critical error occured
+	 *						- DESTROY_ME if IKE_SA has been properly deleted
 	 *						- NEED_MORE if another call to build/process needed
 	 *						- SUCCESS if task completed
 	 */
