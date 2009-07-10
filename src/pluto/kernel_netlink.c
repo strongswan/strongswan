@@ -80,37 +80,44 @@ static sparse_names xfrm_type_names = {
 
 /* Authentication algorithms */
 static sparse_names aalg_list = {
-	{ SADB_X_AALG_NULL, "digest_null" },
-	{ SADB_AALG_MD5HMAC, "md5" },
-	{ SADB_AALG_SHA1HMAC, "sha1" },
-	{ SADB_X_AALG_SHA2_256HMAC, "sha256" },
-	{ SADB_X_AALG_SHA2_384HMAC, "sha384" },
-	{ SADB_X_AALG_SHA2_512HMAC, "sha512" },
+	{ SADB_X_AALG_NULL,          "digest_null" },
+	{ SADB_AALG_MD5HMAC,         "md5" },
+	{ SADB_AALG_SHA1HMAC,        "sha1" },
+	{ SADB_X_AALG_SHA2_256HMAC,  "sha256" },
+	{ SADB_X_AALG_SHA2_384HMAC,  "sha384" },
+	{ SADB_X_AALG_SHA2_512HMAC,  "sha512" },
 	{ SADB_X_AALG_RIPEMD160HMAC, "ripemd160" },
-	{ SADB_X_AALG_AES_XCBC_MAC, "xcbc(aes)"},
-	{ SADB_X_AALG_NULL, "null" },
+	{ SADB_X_AALG_AES_XCBC_MAC,  "xcbc(aes)"},
+	{ SADB_X_AALG_NULL,          "null" },
 	{ 0, sparse_end }
 };
 
 /* Encryption algorithms */
 static sparse_names ealg_list = {
-	{ SADB_EALG_NULL, "cipher_null" },
-	{ SADB_EALG_DESCBC, "des" },
-	{ SADB_EALG_3DESCBC, "des3_ede" },
-	{ SADB_X_EALG_CASTCBC, "cast128" },
-	{ SADB_X_EALG_BLOWFISHCBC, "blowfish" },
-	{ SADB_X_EALG_AESCBC, "aes" },
-	{ SADB_X_EALG_CAMELLIACBC, "cbc(camellia)" },
-	{ SADB_X_EALG_SERPENTCBC, "serpent" },
-	{ SADB_X_EALG_TWOFISHCBC, "twofish" },
+	{ SADB_EALG_NULL,            "cipher_null" },
+	{ SADB_EALG_DESCBC,          "des" },
+	{ SADB_EALG_3DESCBC,         "des3_ede" },
+	{ SADB_X_EALG_CASTCBC,       "cast128" },
+	{ SADB_X_EALG_BLOWFISHCBC,   "blowfish" },
+	{ SADB_X_EALG_AESCBC,        "aes" },
+	{ SADB_X_EALG_AESCTR,        "rfc3686(ctr(aes))" },
+	{ SADB_X_EALG_AES_CCM_ICV8,  "rfc4309(ccm(aes))" },
+	{ SADB_X_EALG_AES_CCM_ICV12, "rfc4309(ccm(aes))" },
+	{ SADB_X_EALG_AES_CCM_ICV16, "rfc4309(ccm(aes))" },
+	{ SADB_X_EALG_AES_GCM_ICV8,  "rfc4106(gcm(aes))" },
+	{ SADB_X_EALG_AES_GCM_ICV12, "rfc4106(gcm(aes))" },
+	{ SADB_X_EALG_AES_GCM_ICV16, "rfc4106(gcm(aes))" },
+	{ SADB_X_EALG_CAMELLIACBC,   "cbc(camellia)" },
+	{ SADB_X_EALG_SERPENTCBC,    "serpent" },
+	{ SADB_X_EALG_TWOFISHCBC,    "twofish" },
 	{ 0, sparse_end }
 };
 
 /* Compression algorithms */
 static sparse_names calg_list = {
 	{ SADB_X_CALG_DEFLATE, "deflate" },
-	{ SADB_X_CALG_LZS, "lzs" },
-	{ SADB_X_CALG_LZJH, "lzjh" },
+	{ SADB_X_CALG_LZS,     "lzs" },
+	{ SADB_X_CALG_LZJH,    "lzjh" },
 	{ 0, sparse_end }
 };
 
