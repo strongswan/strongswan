@@ -156,7 +156,7 @@ static bool child_state_change(listener_t *listener, ike_sa_t *ike_sa,
 {
 	NMStrongswanPluginPrivate *private = (NMStrongswanPluginPrivate*)listener;
 	
-	if (private->ike_sa == ike_sa && state == IKE_DESTROYING)
+	if (private->ike_sa == ike_sa && state == CHILD_DESTROYING)
 	{
 		signal_failure(private->plugin, NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
 		return FALSE;
