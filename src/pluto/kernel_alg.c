@@ -388,8 +388,9 @@ u_int kernel_alg_esp_enc_keylen(u_int alg_id)
 	u_int keylen = 0;
 
 	if (!ESP_EALG_PRESENT(alg_id))
+	{
 		goto none;
-
+	}
 	keylen = esp_ealg[alg_id].sadb_alg_maxbits/BITS_PER_BYTE;
 
 	switch (alg_id)
@@ -407,8 +408,7 @@ u_int kernel_alg_esp_enc_keylen(u_int alg_id)
 
 none:   
 	DBG(DBG_KLIPS,
-		DBG_log("kernel_alg_esp_enc_keylen():"
-				"alg_id=%d, keylen=%d",
+		DBG_log("kernel_alg_esp_enc_keylen(): alg_id=%d, keylen=%d",
 				alg_id, keylen)
 	)
 	return keylen;
