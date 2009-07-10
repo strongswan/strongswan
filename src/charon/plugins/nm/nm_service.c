@@ -140,21 +140,10 @@ static bool ike_state_change(listener_t *listener, ike_sa_t *ike_sa,
 {
 	NMStrongswanPluginPrivate *private = (NMStrongswanPluginPrivate*)listener;
 	
-	if (private->ike_sa == ike_sa)
+	if (private->ike_sa == ike_sa && state == IKE_DESTROYING)
 	{
-		switch (state)
-		{
-			case IKE_DESTROYING:
-				signal_failure(private->plugin,
-							   NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED);
-				return FALSE;
-			case IKE_DELETING:
-				signal_failure(private->plugin,
-							   NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
-				return FALSE;
-			default:
-				break;
-		}
+		signal_failure(private->plugin, NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED);
+		return FALSE;
 	}
 	return TRUE;
 }
@@ -166,37 +155,50 @@ static bool child_state_change(listener_t *listener, ike_sa_t *ike_sa,
 							   child_sa_t *child_sa, child_sa_state_t state)
 {
 	NMStrongswanPluginPrivate *private = (NMStrongswanPluginPrivate*)listener;
+	
+	if (private->ike_sa == ike_sa && state == IKE_DESTROYING)
+	{
+		signal_failure(private->plugin, NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
+		return FALSE;
+	}
+	return TRUE;
+}
 
+/**
+ * Implementation of listener_t.child_updown
+ */
+static bool child_updown(listener_t *listener, ike_sa_t *ike_sa,
+						 child_sa_t *child_sa, bool up)
+{
+	NMStrongswanPluginPrivate *private = (NMStrongswanPluginPrivate*)listener;
+	
 	if (private->ike_sa == ike_sa)
 	{
-		switch (state)
+		if (up)
+		{	/* disable initiate-failure-detection hooks */
+			private->listener.ike_state_change = NULL;
+			private->listener.child_state_change = NULL;
+			signal_ipv4_config(private->plugin, ike_sa, child_sa);
+		}
+		else
 		{
-			case CHILD_INSTALLED:
-				signal_ipv4_config(private->plugin, ike_sa, child_sa);
-				listener->child_state_change = NULL;
-				break;
-			case CHILD_DESTROYING:
-				signal_failure(private->plugin,
-							   NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
-				return FALSE;
-			default:
-				break;
+			signal_failure(private->plugin, NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
+			return FALSE;
 		}
 	}
 	return TRUE;
 }
 
 /**
- * Implementation of listener_t.ike_keys
+ * Implementation of listener_t.ike_rekey
  */
-static bool ike_keys(listener_t *listener, ike_sa_t *ike_sa, diffie_hellman_t *dh,
-					 chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey)
+static bool ike_rekey(listener_t *listener, ike_sa_t *old, ike_sa_t *new)
 {
 	NMStrongswanPluginPrivate *private = (NMStrongswanPluginPrivate*)listener;
 	
-	if (rekey && private->ike_sa == ike_sa)
+	if (private->ike_sa == old)
 	{	/* follow a rekeyed IKE_SA */
-		private->ike_sa = rekey;
+		private->ike_sa = new;
 	}
 	return TRUE;
 }
@@ -436,7 +438,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 	
 	/**
-	 * Start to initiate
+	 * Prepare IKE_SA
 	 */
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
@@ -448,22 +450,28 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	{
 		peer_cfg->destroy(peer_cfg);
 	}
+	
+	/**
+	 * Register listener, enable  initiate-failure-detection hooks
+	 */
+	NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->ike_sa = ike_sa;
+	listener = &NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->listener;
+	listener->ike_state_change = ike_state_change;
+	listener->child_state_change = child_state_change;
+	charon->bus->add_listener(charon->bus, listener);
+	
+	/**
+	 * Initiate
+	 */
 	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
 	{
+		charon->bus->remove_listener(charon->bus, listener);
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 		
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
 				    "Initiating failed.");
 		return FALSE;
 	}
-	
-	/**
-	 * Register listener
-	 */
-	NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->ike_sa = ike_sa;
-	listener = &NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->listener;
-	listener->child_state_change = child_state_change;
-	charon->bus->add_listener(charon->bus, listener);
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return TRUE;
 }
@@ -558,8 +566,8 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 	private = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
 	private->plugin = NM_VPN_PLUGIN(plugin);
 	memset(&private->listener.log, 0, sizeof(listener_t));
-	private->listener.ike_state_change = ike_state_change;
-	private->listener.ike_keys = ike_keys;
+	private->listener.child_updown = child_updown;
+	private->listener.ike_rekey = ike_rekey;
 }
 
 /**
