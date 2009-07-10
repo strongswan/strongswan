@@ -993,7 +993,8 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 		case ENCR_AES_CCM_ICV8:
 		case ENCR_AES_GCM_ICV8:
 		{
-			rthdr->rta_type = XFRMA_ALG_AEAD;
+			struct xfrm_algo_aead *algo;
+
 			alg_name = lookup_algorithm(encryption_algs, enc_alg);
 			if (alg_name == NULL)
 			{
@@ -1004,6 +1005,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 			
+			rthdr->rta_type = XFRMA_ALG_AEAD;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) + enc_key.len);
 			hdr->nlmsg_len += rthdr->rta_len;
 			if (hdr->nlmsg_len > sizeof(request))
@@ -1011,7 +1013,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 				return FAILED;
 			}
 			
-			struct xfrm_algo_aead* algo = (struct xfrm_algo_aead*)RTA_DATA(rthdr);
+			algo = (struct xfrm_algo_aead*)RTA_DATA(rthdr);
 			algo->alg_key_len = enc_key.len * 8;
 			algo->alg_icv_len = icv_size;
 			strcpy(algo->alg_name, alg_name);
@@ -1022,7 +1024,8 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 		}
 		default:
 		{
-			rthdr->rta_type = XFRMA_ALG_CRYPT;
+			struct xfrm_algo *algo;
+
 			alg_name = lookup_algorithm(encryption_algs, enc_alg);
 			if (alg_name == NULL)
 			{
@@ -1033,6 +1036,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 			
+			rthdr->rta_type = XFRMA_ALG_CRYPT;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + enc_key.len);
 			hdr->nlmsg_len += rthdr->rta_len;
 			if (hdr->nlmsg_len > sizeof(request))
@@ -1040,13 +1044,12 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 				return FAILED;
 			}
 			
-			struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
+			algo = (struct xfrm_algo*)RTA_DATA(rthdr);
 			algo->alg_key_len = enc_key.len * 8;
 			strcpy(algo->alg_name, alg_name);
 			memcpy(algo->alg_key, enc_key.ptr, enc_key.len);
 			
 			rthdr = XFRM_RTA_NEXT(rthdr);
-			break;
 		}
 	}
 		
