@@ -1850,7 +1850,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		if (st->nat_traversal & NAT_T_DETECTED)
 		{
 			natt_type = (st->nat_traversal & NAT_T_WITH_PORT_FLOATING) ?
-				ESPINUDP_WITH_NON_ESP : ESPINUDP_WITH_NON_IKE;
+						 ESPINUDP_WITH_NON_ESP : ESPINUDP_WITH_NON_IKE;
 			natt_sport = inbound? c->spd.that.host_port : c->spd.this.host_port;
 			natt_dport = inbound? c->spd.this.host_port : c->spd.that.host_port;
 			natt_oa = st->nat_oa;
@@ -1861,12 +1861,11 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 			if (ei == &esp_info[countof(esp_info)])
 			{
 				/* Check for additional kernel alg */
-#ifndef NO_KERNEL_ALG
 				if ((ei=kernel_alg_esp_info(st->st_esp.attrs.transid, 
-										st->st_esp.attrs.auth))!=NULL) {
-						break;
+										st->st_esp.attrs.auth))!=NULL)
+				{
+					break;
 				}
-#endif
 
 				/* note: enum_show may use a static buffer, so two
 				 * calls in one printf would be a mistake.
@@ -1879,9 +1878,11 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				goto fail;
 			}
 
-			if (st->st_esp.attrs.transid == ei->transid
-			&& st->st_esp.attrs.auth == ei->auth)
+			if (st->st_esp.attrs.transid == ei->transid &&
+				st->st_esp.attrs.auth == ei->auth)
+			{
 				break;
+			}
 		}
 
 		key_len = st->st_esp.attrs.key_len/8;
@@ -1900,40 +1901,52 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		{
 			key_len = ei->enckeylen;
 		}
-		/* Grrrrr.... f*cking 7 bits jurassic algos  */
 
-		/* 168 bits in kernel, need 192 bits for keymat_len */
-		if (ei->transid == ESP_3DES && key_len == 21) 
-			key_len = 24;
-
-		/* 56 bits in kernel, need 64 bits for keymat_len */
-		if (ei->transid == ESP_DES && key_len == 7) 
-			key_len = 8;
+		switch (ei->transid)
+		{
+			case ESP_3DES:
+				/* 168 bits in kernel, need 192 bits for keymat_len */
+				if (key_len == 21) 
+				{
+					key_len = 24;
+				}
+				break;
+			case ESP_DES:
+				/* 56 bits in kernel, need 64 bits for keymat_len */
+				if (key_len == 7)
+				{ 
+					key_len = 8;
+				}
+				break;
+			case ESP_AES_CCM_8:
+			case ESP_AES_CCM_12:
+			case ESP_AES_CCM_16:
+				key_len += 3;
+				break;
+			case ESP_AES_GCM_8:
+			case ESP_AES_GCM_12:
+			case ESP_AES_GCM_16:
+			case ESP_AES_CTR:
+				key_len += 4;
+				break;
+			default:
+				break;			
+		}
 
 		/* divide up keying material */
-		/* passert(st->st_esp.keymat_len == ei->enckeylen + ei->authkeylen); */
-		DBG(DBG_KLIPS|DBG_CONTROL|DBG_PARSING, 
-			if(st->st_esp.keymat_len != key_len + ei->authkeylen)
-				DBG_log("keymat_len=%d key_len=%d authkeylen=%d",
-						st->st_esp.keymat_len, (int)key_len, (int)ei->authkeylen);
-		)
-		passert(st->st_esp.keymat_len == key_len + ei->authkeylen);
-
 		set_text_said(text_said, &dst.addr, esp_spi, SA_ESP);
-
 		said_next->src = &src.addr;
 		said_next->dst = &dst.addr;
 		said_next->src_client = &src_client;
 		said_next->dst_client = &dst_client;
 		said_next->spi = esp_spi;
 		said_next->satype = SADB_SATYPE_ESP;
-		said_next->replay_window = (kernel_ops->type == KERNEL_TYPE_KLIPS) ? REPLAY_WINDOW : REPLAY_WINDOW_XFRM;
+		said_next->replay_window = (kernel_ops->type == KERNEL_TYPE_KLIPS) ?
+									REPLAY_WINDOW : REPLAY_WINDOW_XFRM;
 		said_next->authalg = ei->authalg;
 		said_next->authkeylen = ei->authkeylen;
-		/* said_next->authkey = esp_dst_keymat + ei->enckeylen; */
 		said_next->authkey = esp_dst_keymat + key_len;
 		said_next->encalg = ei->encryptalg;
-		/* said_next->enckeylen = ei->enckeylen; */
 		said_next->enckeylen = key_len;
 		said_next->enckey = esp_dst_keymat;
 		said_next->encapsulation = encapsulation;
@@ -1946,10 +1959,10 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		said_next->text_said = text_said;
 
 		if (!kernel_ops->add_sa(said_next, replace))
+		{
 			goto fail;
-
+		}
 		said_next++;
-
 		encapsulation = ENCAPSULATION_MODE_TRANSPORT;
 	}
 
@@ -1964,29 +1977,27 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 
 		switch (st->st_ah.attrs.auth)
 		{
-		case AUTH_ALGORITHM_HMAC_MD5:
-			authalg = SADB_AALG_MD5HMAC;
-			break;
-
-		case AUTH_ALGORITHM_HMAC_SHA1:
-			authalg = SADB_AALG_SHA1HMAC;
-			break;
-
-		default:
-			loglog(RC_LOG_SERIOUS, "%s not implemented yet"
-				, enum_show(&auth_alg_names, st->st_ah.attrs.auth));
+			case AUTH_ALGORITHM_HMAC_MD5:
+				authalg = SADB_AALG_MD5HMAC;
+				break;
+			case AUTH_ALGORITHM_HMAC_SHA1:
+				authalg = SADB_AALG_SHA1HMAC;
+				break;
+			default:
+				loglog(RC_LOG_SERIOUS, "%s not implemented yet",
+					   enum_show(&auth_alg_names, st->st_ah.attrs.auth));
 			goto fail;
 		}
 
 		set_text_said(text_said, &dst.addr, ah_spi, SA_AH);
-
 		said_next->src = &src.addr;
 		said_next->dst = &dst.addr;
 		said_next->src_client = &src_client;
 		said_next->dst_client = &dst_client;
 		said_next->spi = ah_spi;
 		said_next->satype = SADB_SATYPE_AH;
-		said_next->replay_window = (kernel_ops->type == KERNEL_TYPE_KLIPS) ? REPLAY_WINDOW : REPLAY_WINDOW_XFRM;
+		said_next->replay_window = (kernel_ops->type == KERNEL_TYPE_KLIPS) ?
+									REPLAY_WINDOW : REPLAY_WINDOW_XFRM;
 		said_next->authalg = authalg;
 		said_next->authkeylen = st->st_ah.keymat_len;
 		said_next->authkey = ah_dst_keymat;
@@ -1995,10 +2006,10 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		said_next->text_said = text_said;
 
 		if (!kernel_ops->add_sa(said_next, replace))
+		{
 			goto fail;
-
+		}
 		said_next++;
-
 		encapsulation = ENCAPSULATION_MODE_TRANSPORT;
 	}
 
@@ -2094,7 +2105,9 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 			s[1].text_said = text_said1;
 			
 			if (!kernel_ops->grp_sa(s + 1, s))
+			{
 				goto fail;
+			}
 		}
 		/* could update said, but it will not be used */
 	}
@@ -2105,8 +2118,10 @@ fail:
 	{
 		/* undo the done SPIs */
 		while (said_next-- != said)
-			(void) del_spi(said_next->spi, said_next->proto
-				, &src.addr, said_next->dst);
+		{
+			(void) del_spi(said_next->spi, said_next->proto, &src.addr,
+						   said_next->dst);
+		}
 		return FALSE;
 	}
 }
@@ -2217,8 +2232,9 @@ bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 	*use_time = UNDEFINED_TIME;
 
 	if (kernel_ops->get_sa == NULL || !st->st_esp.present)
+	{
 		return FALSE;
-
+	}
 	memset(&sa, 0, sizeof(sa));
 	sa.proto = SA_ESP;
 
@@ -2242,7 +2258,9 @@ bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 		DBG_log("get %s", text_said)
 	)
 	if (!kernel_ops->get_sa(&sa, bytes))
+	{
 		return FALSE;
+	}
 	DBG(DBG_KLIPS,
 		DBG_log("  current: %d bytes", *bytes)
 	)
@@ -2267,7 +2285,9 @@ bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 			sa.dst_client = &c->spd.that.client;
 		}
 		if (!kernel_ops->get_policy(&sa, inbound, use_time))
+		{
 			return FALSE;
+		}
 		DBG(DBG_KLIPS,
 			DBG_log("  use_time: %T", use_time, FALSE)
 		)
@@ -2350,15 +2370,21 @@ bool install_inbound_ipsec_sa(struct state *st)
 			struct connection *o = route_owner(c, &esr, NULL, NULL);
 
 			if (o == NULL)
+			{
 				break;  /* nobody has a route */
+			}
 
 			/* note: we ignore the client addresses at this end */
-			if (sameaddr(&o->spd.that.host_addr, &c->spd.that.host_addr)
-			&& o->interface == c->interface)
+			if (sameaddr(&o->spd.that.host_addr, &c->spd.that.host_addr) &&
+				o->interface == c->interface)
+			{
 				break;  /* existing route is compatible */
+			}
 
 			if (o->kind == CK_TEMPLATE && streq(o->name, c->name))
+			{
 				break;  /* ??? is this good enough?? */
+			}
 
 			loglog(RC_LOG_SERIOUS, "route to peer's client conflicts with \"%s\" %s; releasing old connection to free the route"
 				, o->name, ip_str(&o->spd.that.host_addr));
@@ -2370,12 +2396,11 @@ bool install_inbound_ipsec_sa(struct state *st)
 	/* check that we will be able to route and eroute */
 	switch (could_route(c))
 	{
-	case route_easy:
-	case route_nearconflict:
-		break;
-
-	default:
-		return FALSE;
+		case route_easy:
+		case route_nearconflict:
+			break;
+		default:
+			return FALSE;
 	}
 
 #ifdef KLIPS
@@ -2472,10 +2497,14 @@ bool route_and_eroute(struct connection *c USED_BY_KLIPS,
 
 		/* if no state provided, then install a shunt for later */
 		if (st == NULL)
+		{
 			eroute_installed = shunt_eroute(c, sr, RT_ROUTED_PROSPECTIVE
 											, ERO_ADD, "add");
+		}
 		else
+		{
 			eroute_installed = sag_eroute(st, sr, ERO_ADD, "add");
+		}
 	}
 
 	/* notify the firewall of a new tunnel */
@@ -2508,8 +2537,7 @@ bool route_and_eroute(struct connection *c USED_BY_KLIPS,
 		(void) do_command(c, sr, "prepare");    /* just in case; ignore failure */
 		route_installed = do_command(c, sr, "route");
 	}
-	else if (routed(sr->routing)
-	|| routes_agree(ro, c))
+	else if (routed(sr->routing) || routes_agree(ro, c))
 	{
 		route_installed = TRUE; /* nothing to be done */
 	}
@@ -2659,11 +2687,13 @@ bool route_and_eroute(struct connection *c USED_BY_KLIPS,
 			{
 				/* there was no previous eroute: delete whatever we installed */
 				if (st == NULL)
-					(void) shunt_eroute(c, sr
-										, sr->routing, ERO_DELETE, "delete");
+				{
+					(void) shunt_eroute(c, sr, sr->routing, ERO_DELETE, "delete");
+				}
 				else
-					(void) sag_eroute(st, sr
-									  , ERO_DELETE, "delete");
+				{
+					(void) sag_eroute(st, sr, ERO_DELETE, "delete");
+				}
 			}
 		}
 
@@ -2686,18 +2716,19 @@ bool install_ipsec_sa(struct state *st, bool inbound_also USED_BY_KLIPS)
 
 	switch (could_route(st->st_connection))
 	{
-	case route_easy:
-	case route_nearconflict:
-		break;
-
-	default:
-		return FALSE;
+		case route_easy:
+		case route_nearconflict:
+			break;
+		default:
+			return FALSE;
 	}
 
 	/* (attempt to) actually set up the SA group */
-	if ((inbound_also && !setup_half_ipsec_sa(st, TRUE))
-	|| !setup_half_ipsec_sa(st, FALSE))
+	if ((inbound_also && !setup_half_ipsec_sa(st, TRUE)) ||
+		!setup_half_ipsec_sa(st, FALSE))
+	{
 		return FALSE;
+	}
 
 	for (sr = &st->st_connection->spd; sr != NULL; sr = sr->next)
 	{
@@ -2731,12 +2762,11 @@ bool install_ipsec_sa(struct state *st, bool inbound_also USED_BY_KLIPS)
 
 	switch (could_route(st->st_connection))
 	{
-	case route_easy:
-	case route_nearconflict:
-		break;
-
-	default:
-		return FALSE;
+		case route_easy:
+		case route_nearconflict:
+			break;
+		default:
+			return FALSE;
 	}
 
 
@@ -2779,8 +2809,7 @@ void delete_ipsec_sa(struct state *st USED_BY_KLIPS,
 					? RT_ROUTED_PROSPECTIVE : RT_ROUTED_FAILURE;
 
 				(void) do_command(c, sr, "down");
-				if ((c->policy & POLICY_DONT_REKEY)
-				&& c->kind == CK_INSTANCE)
+				if ((c->policy & POLICY_DONT_REKEY)	&& c->kind == CK_INSTANCE)
 				{
 					/* in this special case, even if the connection
 					 * is still alive (due to an ISAKMP SA),
@@ -2889,8 +2918,7 @@ bool was_eroute_idle(struct state *st, time_t idle_max, time_t *idle_time)
 		/* Can't open the file, perhaps were are on 26sec? */
 		time_t use_time;
 
-		if (get_sa_info(st, TRUE, &bytes, &use_time)
-		&& use_time != UNDEFINED_TIME)
+		if (get_sa_info(st, TRUE, &bytes, &use_time) && use_time != UNDEFINED_TIME)
 		{
 			*idle_time = time(NULL) - use_time;
 			ret = *idle_time >= idle_max;

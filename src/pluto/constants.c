@@ -663,6 +663,7 @@ enum_names enc_mode_names =
 /* Auth Algorithm attribute */
 
 static const char *const auth_alg_name[] = {
+    "AUTH_NONE",
 	"HMAC_MD5",
 	"HMAC_SHA1",
 	"DES_MAC",
@@ -683,7 +684,7 @@ enum_names extended_auth_alg_names =
 	{ AUTH_ALGORITHM_NULL, AUTH_ALGORITHM_NULL, extended_auth_alg_name, NULL };
 
 enum_names auth_alg_names =
-	{ AUTH_ALGORITHM_HMAC_MD5, AUTH_ALGORITHM_SIG_RSA, auth_alg_name
+	{ AUTH_ALGORITHM_NONE, AUTH_ALGORITHM_SIG_RSA, auth_alg_name
 		, &extended_auth_alg_names };
 
 /* From draft-beaulieu-ike-xauth */

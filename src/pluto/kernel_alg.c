@@ -341,7 +341,7 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 
 	sadb.msg++;
 
-	while(msglen)
+	while (msglen)
 	{
 		int supp_exttype = sadb.supported->sadb_supported_exttype;
 		int supp_len = sadb.supported->sadb_supported_len*IPSEC_PFKEYv2_ALIGN;
@@ -361,14 +361,14 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 			 supp_len;
 			 supp_len -= sizeof(struct sadb_alg), sadb.alg++,i++)
 		{
-			int ret = kernel_alg_add(satype, supp_exttype, sadb.alg);
+			kernel_alg_add(satype, supp_exttype, sadb.alg);
 
 			DBG(DBG_KLIPS,
 				DBG_log("kernel_alg_register_pfkey(): SADB_SATYPE_%s: "
 						"alg[%d], exttype=%d, satype=%d, alg_id=%d, "
 						"alg_ivlen=%d, alg_minbits=%d, alg_maxbits=%d, "
-						"res=%d, ret=%d"
-						, satype==SADB_SATYPE_ESP? "ESP" : "AH"
+						"res=%d"
+						, satype == SADB_SATYPE_ESP? "ESP" : "AH"
 						, i
 						, supp_exttype
 						, satype
@@ -376,9 +376,25 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 						, sadb.alg->sadb_alg_ivlen
 						, sadb.alg->sadb_alg_minbits
 						, sadb.alg->sadb_alg_maxbits
-						, sadb.alg->sadb_alg_reserved
-						, ret)
+						, sadb.alg->sadb_alg_reserved)
 			)
+			/* if AES_CBC is registered then also register AES_CCM and AES_GCM */
+			if (satype == SADB_SATYPE_ESP &&
+				sadb.alg->sadb_alg_id == SADB_X_EALG_AESCBC)
+			{
+				struct sadb_alg alg = *sadb.alg;
+				int alg_id;
+
+				for (alg_id = SADB_X_EALG_AES_CCM_ICV8;
+					 alg_id <= SADB_X_EALG_AES_GCM_ICV16; alg_id++)
+				{
+					if (alg_id != ESP_UNASSIGNED_17)
+					{
+						alg.sadb_alg_id = alg_id;
+						kernel_alg_add(satype, supp_exttype, &alg);
+					}
+				}
+			}
 		}
 	}
 }
@@ -515,7 +531,7 @@ void kernel_alg_show_connection(struct connection *c, const char *instance)
 }
 
 bool kernel_alg_esp_auth_ok(u_int auth,
-					struct alg_info_esp *alg_info __attribute__((unused)))
+							struct alg_info_esp *alg_info __attribute__((unused)))
 {
 	return ESP_AALG_PRESENT(alg_info_esp_aa2sadb(auth));
 }
@@ -619,14 +635,15 @@ static bool kernel_alg_db_add(struct db_context *db_ctx,
 		return FALSE;
 	}
 	
-	if (!(policy & POLICY_AUTHENTICATE))    /* skip ESP auth attrs for AH */
+	if (!(policy & POLICY_AUTHENTICATE) &&    /* skip ESP auth attrs for AH */
+		esp_info->esp_aalg_id != AUTH_ALGORITHM_NONE)
 	{
 		aalg_id = alg_info_esp_aa2sadb(esp_info->esp_aalg_id);
 
 		if (!ESP_AALG_PRESENT(aalg_id))
 		{
-			DBG_log("kernel_alg_db_add() kernel auth "
-					"aalg_id=%d not present", aalg_id);
+			DBG_log("kernel_alg_db_add() kernel auth aalg_id=%d not present",
+					aalg_id);
 			return FALSE;
 		}
 	}
@@ -637,13 +654,18 @@ static bool kernel_alg_db_add(struct db_context *db_ctx,
 	/*  open new transformation */
 	db_trans_add(db_ctx, ealg_id);
 
-	/* add ESP auth attr */
-	if (!(policy & POLICY_AUTHENTICATE))
+	/* add ESP auth attr if not AH or AEAD */
+	if (!(policy & POLICY_AUTHENTICATE) &&
+		esp_info->esp_aalg_id != AUTH_ALGORITHM_NONE)
+	{
 		db_attr_add_values(db_ctx, AUTH_ALGORITHM, esp_info->esp_aalg_id);
+	}
 
-	/* add keylegth if specified in esp= string */
+	/* add keylength if specified in esp= string */
 	if (esp_info->esp_ealg_keylen)
+	{
 		db_attr_add_values(db_ctx, KEY_LENGTH, esp_info->esp_ealg_keylen);
+	}
 		
 	return TRUE;
 }

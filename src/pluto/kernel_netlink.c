@@ -590,6 +590,7 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 		char data[1024];
 	} req;
 	struct rtattr *attr;
+	u_int16_t icv_size = 64;	
 
 	memset(&req, 0, sizeof(req));
 	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -625,6 +626,11 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 				, sa->authalg);
 			return FALSE;
 		}
+		DBG(DBG_CRYPT,
+			DBG_log("configured authentication algorithm %s with key size %d",
+					enum_show(&auth_alg_names, sa->authalg),
+					sa->authkeylen * BITS_PER_BYTE)
+			)
 
 		strcpy(algo.alg_name, name);
 		algo.alg_key_len = sa->authkeylen * BITS_PER_BYTE;
@@ -640,30 +646,78 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 		attr = (struct rtattr *)((char *)attr + attr->rta_len);
 	}
 
-	if (sa->encalg)
+	switch (sa->encalg)
 	{
-		struct xfrm_algo algo;
-		const char *name;
+		case SADB_EALG_NONE:
+			/* no encryption */
+			break;
+		case SADB_X_EALG_AES_CCM_ICV16:
+		case SADB_X_EALG_AES_GCM_ICV16:
+			icv_size += 32;
+			/* FALL */
+		case SADB_X_EALG_AES_CCM_ICV12:
+		case SADB_X_EALG_AES_GCM_ICV12:
+			icv_size += 32;
+			/* FALL */
+		case SADB_X_EALG_AES_CCM_ICV8:
+		case SADB_X_EALG_AES_GCM_ICV8:
+		{
+			struct xfrm_algo_aead *algo;
+			const char *name;
 
-		name = sparse_name(ealg_list, sa->encalg);
-		if (!name) {
-			loglog(RC_LOG_SERIOUS, "unknown encryption algorithm: %u"
-				, sa->encalg);
-			return FALSE;
+			name = sparse_name(ealg_list, sa->encalg);
+			if (!name)
+			{
+				loglog(RC_LOG_SERIOUS, "unknown encryption algorithm: %u",
+					   sa->encalg);
+				return FALSE;
+			}
+			DBG(DBG_CRYPT,
+				DBG_log("configured esp encryption algorithm %s with key size %d",
+						enum_show(&esp_transformid_names, sa->encalg),
+						sa->enckeylen * BITS_PER_BYTE)
+			)
+			attr->rta_type = XFRMA_ALG_AEAD;
+			attr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) + sa->enckeylen);
+			req.n.nlmsg_len += attr->rta_len;
+			
+			algo = (struct xfrm_algo_aead*)RTA_DATA(attr);
+			algo->alg_key_len = sa->enckeylen * BITS_PER_BYTE;
+			algo->alg_icv_len = icv_size;
+			strcpy(algo->alg_name, name);
+			memcpy(algo->alg_key, sa->enckey, sa->enckeylen);
+			
+			attr = (struct rtattr *)((char *)attr + attr->rta_len);
+			break;
 		}
+		default:
+		{
+			struct xfrm_algo *algo;
+			const char *name;
 
-		strcpy(algo.alg_name, name);
-		algo.alg_key_len = sa->enckeylen * BITS_PER_BYTE;
+			name = sparse_name(ealg_list, sa->encalg);
+			if (!name)
+			{
+				loglog(RC_LOG_SERIOUS, "unknown encryption algorithm: %u",
+					   sa->encalg);
+				return FALSE;
+			}
+			DBG(DBG_CRYPT,
+				DBG_log("configured esp encryption algorithm %s with key size %d",
+						enum_show(&esp_transformid_names, sa->encalg),
+						sa->enckeylen * BITS_PER_BYTE)
+			)
+			attr->rta_type = XFRMA_ALG_CRYPT;
+			attr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + sa->enckeylen);
+			req.n.nlmsg_len += attr->rta_len;
 
-		attr->rta_type = XFRMA_ALG_CRYPT;
-		attr->rta_len = RTA_LENGTH(sizeof(algo) + sa->enckeylen);
+			algo = (struct xfrm_algo*)RTA_DATA(attr);
+			algo->alg_key_len = sa->enckeylen * BITS_PER_BYTE;
+			strcpy(algo->alg_name, name);
+			memcpy(algo->alg_key, sa->enckey, sa->enckeylen);
 
-		memcpy(RTA_DATA(attr), &algo, sizeof(algo));
-		memcpy((char *)RTA_DATA(attr) + sizeof(algo), sa->enckey
-			, sa->enckeylen);
-
-		req.n.nlmsg_len += attr->rta_len;
-		attr = (struct rtattr *)((char *)attr + attr->rta_len);
+			attr = (struct rtattr *)((char *)attr + attr->rta_len);
+		}
 	}
 
 	if (sa->compalg)

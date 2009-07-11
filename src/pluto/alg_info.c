@@ -139,6 +139,24 @@ static void __alg_info_esp_add(struct alg_info_esp *alg_info, int ealg_id,
 	)
 }
 
+/**
+ * Returns true if the given alg is an authenticated encryption algorithm
+ */
+static bool is_authenticated_encryption(int ealg_id)
+{
+	switch (ealg_id)
+	{
+		case ESP_AES_CCM_8:
+		case ESP_AES_CCM_12:
+		case ESP_AES_CCM_16:
+		case ESP_AES_GCM_8:
+		case ESP_AES_GCM_12:
+		case ESP_AES_GCM_16:
+			return TRUE;
+	}
+	return FALSE;
+}
+
 /*
  * Add ESP alg info _with_ logic (policy):
  */
@@ -152,7 +170,13 @@ static void alg_info_esp_add(struct alg_info *alg_info, int ealg_id,
 	}
 	if (ealg_id > 0)
 	{
-		if (aalg_id > 0)
+		if (is_authenticated_encryption(ealg_id))
+		{
+			__alg_info_esp_add((struct alg_info_esp *)alg_info,
+								ealg_id, ek_bits,
+								AUTH_ALGORITHM_NONE, 0);
+		}
+		else if (aalg_id > 0)
 		{
 			__alg_info_esp_add((struct alg_info_esp *)alg_info,
 								ealg_id, ek_bits,
@@ -160,13 +184,13 @@ static void alg_info_esp_add(struct alg_info *alg_info, int ealg_id,
 		}
 		else
 		{
-			/* Policy: default to MD5 and SHA1 */
-			__alg_info_esp_add((struct alg_info_esp *)alg_info,
-								ealg_id, ek_bits,
-								AUTH_ALGORITHM_HMAC_MD5, ak_bits);
+			/* Policy: default to SHA-1 and MD5 */
 			__alg_info_esp_add((struct alg_info_esp *)alg_info,
 								ealg_id, ek_bits,
 								AUTH_ALGORITHM_HMAC_SHA1, ak_bits);
+			__alg_info_esp_add((struct alg_info_esp *)alg_info,
+								ealg_id, ek_bits,
+								AUTH_ALGORITHM_HMAC_MD5, ak_bits);
 		}
 	}
 }

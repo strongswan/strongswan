@@ -2639,77 +2639,78 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 	 */
 	switch (protoid)
 	{
-	case PROTO_IPSEC_ESP:
+		case PROTO_IPSEC_ESP:
+		{
+			needed_len = kernel_alg_esp_enc_keylen(pi->attrs.transid);
+
+			if (needed_len && pi->attrs.key_len)
+			{
+				needed_len = pi->attrs.key_len / BITS_PER_BYTE;
+			}	
+
 			switch (pi->attrs.transid)
 			{
-			case ESP_NULL:
-				needed_len = 0;
-				break;
-			case ESP_DES:
-				needed_len = DES_CBC_BLOCK_SIZE;
-				break;
-			case ESP_3DES:
-				needed_len = DES_CBC_BLOCK_SIZE * 3;
-				break;
-			default:
-#ifndef NO_KERNEL_ALG
-				if((needed_len=kernel_alg_esp_enc_keylen(pi->attrs.transid))>0) {
-						/* XXX: check key_len "coupling with kernel.c's */
-						if (pi->attrs.key_len) {
-								needed_len=pi->attrs.key_len/8;
-								DBG(DBG_PARSING, DBG_log("compute_proto_keymat:"
-												"key_len=%d from peer",
-												(int)needed_len));
-						}
-						break;
-				}
-#endif
-				bad_case(pi->attrs.transid);
+				case ESP_NULL:
+					needed_len = 0;
+					break;
+				case ESP_AES_CCM_8:
+				case ESP_AES_CCM_12:
+				case ESP_AES_CCM_16:
+					needed_len += 3;
+					break;
+				case ESP_AES_GCM_8:
+				case ESP_AES_GCM_12:
+				case ESP_AES_GCM_16:
+				case ESP_AES_CTR:
+					needed_len += 4;
+					break;
+				default:
+					if (needed_len == 0)
+					{
+						bad_case(pi->attrs.transid);
+					}
 			}
 
-#ifndef NO_KERNEL_ALG
-			DBG(DBG_PARSING, DBG_log("compute_proto_keymat:"
-									"needed_len (after ESP enc)=%d",
-									(int)needed_len));
-			if (kernel_alg_esp_auth_ok(pi->attrs.auth, NULL)) {
+			if (kernel_alg_esp_auth_ok(pi->attrs.auth, NULL))
+			{
 				needed_len += kernel_alg_esp_auth_keylen(pi->attrs.auth);
-			} else
-#endif
-			switch (pi->attrs.auth)
-			{
-			case AUTH_ALGORITHM_NONE:
-				break;
-			case AUTH_ALGORITHM_HMAC_MD5:
-				needed_len += HMAC_MD5_KEY_LEN;
-				break;
-			case AUTH_ALGORITHM_HMAC_SHA1:
-				needed_len += HMAC_SHA1_KEY_LEN;
-				break;
-			case AUTH_ALGORITHM_DES_MAC:
-			default:
-				bad_case(pi->attrs.auth);
 			}
-			DBG(DBG_PARSING, DBG_log("compute_proto_keymat:"
-									"needed_len (after ESP auth)=%d",
-									(int)needed_len));
+			else
+			{
+				switch (pi->attrs.auth)
+				{
+					case AUTH_ALGORITHM_NONE:
+						break;
+					case AUTH_ALGORITHM_HMAC_MD5:
+						needed_len += HMAC_MD5_KEY_LEN;
+						break;
+					case AUTH_ALGORITHM_HMAC_SHA1:
+						needed_len += HMAC_SHA1_KEY_LEN;
+						break;
+					case AUTH_ALGORITHM_DES_MAC:
+					default:
+						bad_case(pi->attrs.auth);
+				}
+			}
 			break;
-
-	case PROTO_IPSEC_AH:
+		}
+		case PROTO_IPSEC_AH:
+		{
 			switch (pi->attrs.transid)
 			{
-			case AH_MD5:
-				needed_len = HMAC_MD5_KEY_LEN;
-				break;
-			case AH_SHA:
-				needed_len = HMAC_SHA1_KEY_LEN;
-				break;
-			default:
-				bad_case(pi->attrs.transid);
+				case AH_MD5:
+					needed_len = HMAC_MD5_KEY_LEN;
+					break;
+				case AH_SHA:
+					needed_len = HMAC_SHA1_KEY_LEN;
+					break;
+				default:
+					bad_case(pi->attrs.transid);
 			}
 			break;
-
-	default:
-		bad_case(protoid);
+		}
+		default:
+			bad_case(protoid);
 	}
 
 	pi->keymat_len = needed_len;

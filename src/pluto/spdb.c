@@ -473,14 +473,13 @@ out_sa(pb_stream *outs
 				if (!out_struct(&trans, trans_desc, &proposal_pbs, &trans_pbs))
 					return_on(ret, FALSE);
 
-				/* Within tranform: Attributes. */
+				/* Within transform: Attributes. */
 
 				/* For Phase 2 / Quick Mode, GROUP_DESCRIPTION is
 				 * automatically generated because it must be the same
 				 * in every transform.  Except IPCOMP.
 				 */
-				if (p->protoid != PROTO_IPCOMP
-				&& st->st_pfs_group != NULL)
+				if (p->protoid != PROTO_IPCOMP && st->st_pfs_group != NULL)
 				{
 					passert(!oakley_mode);
 					passert(st->st_pfs_group != &unset_group);
@@ -582,8 +581,7 @@ return_out:
  * The code is can only handle values that can fit in unsigned long.
  * "Clamping" is probably an acceptable way to impose this limitation.
  */
-static u_int32_t
-decode_long_duration(pb_stream *pbs)
+static u_int32_t decode_long_duration(pb_stream *pbs)
 {
 	u_int32_t val = 0;
 
@@ -631,8 +629,9 @@ preparse_isakmp_sa_body(const struct isakmp_sa *sa
 
 	/* Situation */
 	if (!in_struct(ipsecdoisit, &ipsec_sit_desc, sa_pbs, NULL))
+	{
 		return SITUATION_NOT_SUPPORTED;
-
+	}
 	if (*ipsecdoisit != SIT_IDENTITY_ONLY)
 	{
 		loglog(RC_LOG_SERIOUS, "unsupported IPsec DOI situation (%s)"
@@ -647,8 +646,9 @@ preparse_isakmp_sa_body(const struct isakmp_sa *sa
 	 * There may well be multiple transforms.
 	 */
 	if (!in_struct(proposal, &isakmp_proposal_desc, sa_pbs, proposal_pbs))
+	{
 		return PAYLOAD_MALFORMED;
-
+	}
 	if (proposal->isap_np != ISAKMP_NEXT_NONE)
 	{
 		loglog(RC_LOG_SERIOUS, "Proposal Payload must be alone in Oakley SA; found %s following Proposal"
@@ -711,35 +711,31 @@ static struct {
 	u_int8_t *roof;
 } backup;
 
-/*
- * backup the pointer into a pb_stream
+/**
+ * Backup the pointer into a pb_stream
  */
-void
-backup_pbs(pb_stream *pbs)
+void backup_pbs(pb_stream *pbs)
 {
 	backup.start = pbs->start;
 	backup.cur   = pbs->cur;
 	backup.roof  = pbs->roof;
 }
 
-/*
- * restore the pointer into a pb_stream
+/**
+ * Restore the pointer into a pb_stream
  */
-void
-restore_pbs(pb_stream *pbs)
+void restore_pbs(pb_stream *pbs)
 {
 	pbs->start = backup.start;
 	pbs->cur   = backup.cur;
 	pbs->roof  = backup.roof;
 }
 
-/*
+/**
  * Parse an ISAKMP Proposal Payload for RSA and PSK authentication policies
  */
-notification_t
-parse_isakmp_policy(pb_stream *proposal_pbs
-				  , u_int notrans
-				  , lset_t *policy)
+notification_t parse_isakmp_policy(pb_stream *proposal_pbs, u_int notrans,
+								   lset_t *policy)
 {
 	int last_transnum = -1;
 
@@ -753,8 +749,9 @@ parse_isakmp_policy(pb_stream *proposal_pbs
 		struct isakmp_transform trans;
 
 		if (!in_struct(&trans, &isakmp_isakmp_transform_desc, proposal_pbs, &trans_pbs))
+		{
 			return BAD_PROPOSAL_SYNTAX;
-
+		}
 		if (trans.isat_transnum <= last_transnum)
 		{
 			/* picky, picky, picky */
@@ -781,8 +778,9 @@ parse_isakmp_policy(pb_stream *proposal_pbs
 			pb_stream attr_pbs;
 
 			if (!in_struct(&a, &isakmp_oakley_attribute_desc, &trans_pbs, &attr_pbs))
+			{
 				return BAD_PROPOSAL_SYNTAX;
-
+			}
 			passert((a.isaat_af_type & ISAKMP_ATTR_RTYPE_MASK) < 32);
 
 			switch (a.isaat_af_type)
@@ -827,11 +825,10 @@ parse_isakmp_policy(pb_stream *proposal_pbs
 	return NOTHING_WRONG;
 }
 
-/* 
- * check that we can find a preshared secret
+/**
+ * Check that we can find a preshared secret
  */
-static err_t
-find_preshared_key(struct state* st)
+static err_t find_preshared_key(struct state* st)
 {
 	err_t ugh = NULL;
 	struct connection *c = st->st_connection;
@@ -842,9 +839,13 @@ find_preshared_key(struct state* st)
 
 		idtoa(&c->spd.this.id, my_id, sizeof(my_id));
 		if (his_id_was_instantiated(c))
+		{
 			strcpy(his_id, "%any");
+		}
 		else
+		{
 			idtoa(&c->spd.that.id, his_id, sizeof(his_id));
+		}
 		ugh = builddiag("Can't authenticate: no preshared key found for `%s' and `%s'"
 						, my_id, his_id);
 	}
@@ -860,13 +861,12 @@ find_preshared_key(struct state* st)
  *
  * This routine is used by main_inI1_outR1() and main_inR1_outI2().
  */
-notification_t
-parse_isakmp_sa_body(u_int32_t ipsecdoisit
-				   , pb_stream *proposal_pbs
-				   , struct isakmp_proposal *proposal
-				   , pb_stream *r_sa_pbs
-				   , struct state *st
-				   , bool initiator)
+notification_t parse_isakmp_sa_body(u_int32_t ipsecdoisit,
+									pb_stream *proposal_pbs,
+									struct isakmp_proposal *proposal,
+									pb_stream *r_sa_pbs,
+									struct state *st,
+									bool initiator)
 {
 	struct connection *c = st->st_connection;
 	unsigned no_trans_left;
@@ -1326,17 +1326,14 @@ static const struct ipsec_trans_attrs null_ipsec_trans_attrs = {
 	0,                                  /* key_rounds */
 };
 
-static bool
-parse_ipsec_transform(struct isakmp_transform *trans
-, struct ipsec_trans_attrs *attrs
-, pb_stream *prop_pbs
-, pb_stream *trans_pbs
-, struct_desc *trans_desc
-, int previous_transnum /* or -1 if none */
-, bool selection
-, bool is_last
-, bool is_ipcomp
-, struct state *st)     /* current state object */
+static bool parse_ipsec_transform(struct isakmp_transform *trans,
+								  struct ipsec_trans_attrs *attrs,
+								  pb_stream *prop_pbs,
+								  pb_stream *trans_pbs,
+								  struct_desc *trans_desc,
+								  int previous_transnum, /* or -1 if none */
+								  bool selection, bool is_last, bool is_ipcomp,
+								  struct state *st)  /* current state object */
 {
 	lset_t seen_attrs = 0;
 	lset_t seen_durations = 0;
@@ -1344,8 +1341,9 @@ parse_ipsec_transform(struct isakmp_transform *trans
 	const struct dh_desc *pfs_group = NULL;
 
 	if (!in_struct(trans, trans_desc, prop_pbs, trans_pbs))
+	{
 		return FALSE;
-
+	}
 	if (trans->isat_transnum <= previous_transnum)
 	{
 		loglog(RC_LOG_SERIOUS, "Transform Numbers in Proposal are not monotonically increasing");
