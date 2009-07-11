@@ -1,3 +1,13 @@
+strongswan-4.3.3
+----------------
+
+- The new default setting libstrongswan.ecp_x_coordinate_only=yes allows
+  IKEv1 interoperability with MS Windows using the ECP DH groups 19 and 20.
+
+- The IKEv1 pluto daemon now supports the AES-CCM and AES-GCM ESP
+  authenticated encryption algorithms.
+
+
 strongswan-4.3.2
 ----------------
 
