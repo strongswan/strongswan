@@ -307,7 +307,7 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 		
 		if (data.ptr + data.len != dn.ptr + dn.len)
 		{
-			written = snprintf(buf, len, " ");
+			written = snprintf(buf, len, ", ");
 			buf += written;
 			len -= written;
 		}
