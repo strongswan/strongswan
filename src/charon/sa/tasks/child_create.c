@@ -254,7 +254,7 @@ static bool allocate_spi(private_child_create_t *this)
  */
 static status_t select_and_install(private_child_create_t *this, bool no_dh)
 {
-	status_t status;
+	status_t status, status_i, status_o;
 	chunk_t nonce_i, nonce_r;
 	chunk_t encr_i = chunk_empty, encr_r = chunk_empty;
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
@@ -406,22 +406,22 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		this->my_cpi = this->other_cpi = 0;
 		this->ipcomp = IPCOMP_NONE;
 	}
-	status = FAILED;
+	status_i = status_o = FAILED;
 	if (this->keymat->derive_child_keys(this->keymat, this->proposal,
 			this->dh, nonce_i, nonce_r,	&encr_i, &integ_i, &encr_r, &integ_r))
 	{
 		if (this->initiator)
 		{
-			status = this->child_sa->install(this->child_sa, encr_r, integ_r,
+			status_i = this->child_sa->install(this->child_sa, encr_r, integ_r,
 										this->my_spi, this->my_cpi, TRUE);
-			status = this->child_sa->install(this->child_sa, encr_i, integ_i,
+			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
 										this->other_spi, this->other_cpi, FALSE);
 		}
 		else
 		{
-			status = this->child_sa->install(this->child_sa, encr_i, integ_i,
+			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
 										this->my_spi, this->my_cpi, TRUE);
-			status = this->child_sa->install(this->child_sa, encr_r, integ_r,
+			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
 										this->other_spi, this->other_cpi, FALSE);
 		}
 	}
@@ -430,9 +430,12 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	chunk_clear(&encr_i);
 	chunk_clear(&encr_r);
 	
-	if (status != SUCCESS)
+	if (status_i != SUCCESS || status_o != SUCCESS)
 	{
-		DBG1(DBG_IKE, "unable to install IPsec SA (SAD) in kernel");
+		DBG1(DBG_IKE, "unable to install %s%s%sIPsec SA (SAD) in kernel",
+			(status_i != SUCCESS) ? "inbound " : "",
+			(status_i != SUCCESS && status_o != SUCCESS) ? "and ": "",
+			(status_o != SUCCESS) ? "outbound " : "");
 		return FAILED;
 	}
 	
