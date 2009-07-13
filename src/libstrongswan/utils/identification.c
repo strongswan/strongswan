@@ -810,7 +810,6 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 			{	/* not printable, hex dump */
 				snprintf(buf, sizeof(buf), "%#B", &this->encoded);
 			}
-			chunk_free(&proper);
 			break;
 		case ID_PUBKEY_INFO_SHA1:
 		case ID_PUBKEY_SHA1:
