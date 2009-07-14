@@ -20,6 +20,7 @@ AC_INIT(strongSwan,4.3.3)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_SUBST(confdir, '${sysconfdir}')
 PKG_PROG_PKG_CONFIG
+AC_LIB_PREFIX
 
 dnl =================================
 dnl  check --enable-xxx & --with-xxx
