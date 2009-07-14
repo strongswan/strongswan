@@ -82,6 +82,7 @@
                 0x0B         "sha256WithRSAEncryption"	OID_SHA256_WITH_RSA
                 0x0C         "sha384WithRSAEncryption"	OID_SHA384_WITH_RSA
                 0x0D         "sha512WithRSAEncryption"	OID_SHA512_WITH_RSA
+                0x0E         "sha224WithRSAEncryption"	OID_SHA224_WITH_RSA
               0x07           "PKCS-7"
                 0x01         "data"						OID_PKCS7_DATA
                 0x02         "signedData"				OID_PKCS7_SIGNED_DATA
@@ -141,6 +142,11 @@
               0x07           "prime256v1"				OID_PRIME256V1
           0x04               "id-ecSigType"
             0x01             "ecdsa-with-SHA1"			OID_ECDSA_WITH_SHA1
+            0x03             "ecdsa-with-Specified"
+              0x01           "ecdsa-with-SHA224"		OID_ECDSA_WITH_SHA224
+              0x02           "ecdsa-with-SHA256"		OID_ECDSA_WITH_SHA256
+              0x03           "ecdsa-with-SHA384"		OID_ECDSA_WITH_SHA384
+              0x04           "ecdsa-with-SHA512"		OID_ECDSA_WITH_SHA512
 0x2B                         ""
   0x06                       "dod"
     0x01                     "internet"
