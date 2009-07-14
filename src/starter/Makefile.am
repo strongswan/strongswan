@@ -46,7 +46,7 @@ y.tab.h:	$(srcdir)/parser.y $(srcdir)/parser.l $(srcdir)/parser.h
 		$(YACC) -v -d $(srcdir)/parser.y
 
 keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
-		$(GPERF) -m 10 -C -G -D -t < $(srcdir)/keywords.txt > $@
+		$(GPERF) -C -G -D -t < $(srcdir)/keywords.txt > $@
 
 defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 		$(COMPILE) -c -o $@ $(PLUTODIR)/defs.c
