@@ -147,9 +147,10 @@ static bool rdn_enumerate(rdn_enumerator_t *this, chunk_t *oid,
 		if (asn1_unwrap(&rdn, oid) == ASN1_OID)
 		{
 			/* and a specific string type */
-			*type = asn1_unwrap(&rdn, data);
-			if (*type != ASN1_INVALID)
+			int t = asn1_unwrap(&rdn, data);
+			if (t != ASN1_INVALID)
 			{
+				*type = t;
 				return TRUE;
 			}
 		}
