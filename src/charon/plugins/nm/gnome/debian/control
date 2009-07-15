@@ -13,7 +13,7 @@ Build-Depends: cdbs,
 	libgnomeui-dev,
 	automake1.9,
 	gnome-common,
-Standards-Version: 3.8.0
+Standards-Version: 3.8.2
 
 Package: network-manager-strongswan
 Architecture: any
