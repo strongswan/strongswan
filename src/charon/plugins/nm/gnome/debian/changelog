@@ -1,3 +1,11 @@
+network-manager-strongswan (1.1.1-2) unstable; urgency=low
+
+  * Reload network-manager after installation, reloading dbus is insufficient.
+  * Fixed debhelper-but-no-misc-depends, out-of-date-standards-version and
+    copyright-without-copyright-notice lintian warnings
+
+ -- Martin Willi <martin@strongswan.org>  Wed, 15 Jul 2009 13:44:24 +0200
+
 network-manager-strongswan (1.1.1-1) unstable; urgency=low
 
   * New upstream release fixing a crasher when saving connections
