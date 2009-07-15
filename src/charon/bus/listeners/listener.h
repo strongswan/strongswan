@@ -38,7 +38,7 @@ struct listener_t {
 	 * Calling bus_t.log() inside of a registered listener is possible,
 	 * but the bus does not invoke listeners recursively.
 	 *
-	 * @param singal	kind of the signal (up, down, rekeyed, ...)
+	 * @param group		kind of the signal (up, down, rekeyed, ...)
 	 * @param level		verbosity level of the signal
 	 * @param thread	ID of the thread raised this signal
 	 * @param ike_sa	IKE_SA associated to the event
@@ -46,8 +46,19 @@ struct listener_t {
 	 * @param args		vprintf() style va_list argument list
 	 " @return			TRUE to stay registered, FALSE to unregister
 	 */
-	bool (*log) (listener_t *this, debug_t group, level_t level, int thread,
-				 ike_sa_t *ike_sa, char* format, va_list args);
+	bool (*log)(listener_t *this, debug_t group, level_t level, int thread,
+				ike_sa_t *ike_sa, char* format, va_list args);
+	
+	/**
+	 * Hook called if a critical alert is risen.
+	 *
+	 * @param ike_sa	IKE_SA associated to the alert, if any
+	 * @param alert		kind of alert
+	 * @param ...		alert specific argument list
+	 " @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*alert)(listener_t *this, ike_sa_t *ike_sa,
+				  alert_t alert, va_list args);
 	
 	/**
 	 * Handle state changes in an IKE_SA.

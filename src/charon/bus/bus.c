@@ -351,6 +351,41 @@ static void unregister_listener(private_bus_t *this, entry_t *entry,
 }
 
 /**
+ * Implementation of bus_t.alert
+ */
+static void alert(private_bus_t *this, alert_t alert, ...)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	va_list args;
+	bool keep;
+	
+	ike_sa = pthread_getspecific(this->thread_sa);
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->alert)
+		{
+			continue;
+		}
+		entry->calling++;
+		va_start(args, alert);
+		keep = entry->listener->alert(entry->listener, ike_sa, alert, args);
+		va_end(args);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
  * Implementation of bus_t.ike_state_change
  */
 static void ike_state_change(private_bus_t *this, ike_sa_t *ike_sa,
@@ -711,6 +746,7 @@ bus_t *bus_create()
 	this->public.set_sa = (void(*)(bus_t*,ike_sa_t*))set_sa;
 	this->public.log = (void(*)(bus_t*,debug_t,level_t,char*,...))log_;
 	this->public.vlog = (void(*)(bus_t*,debug_t,level_t,char*,va_list))vlog;
+	this->public.alert = (void(*)(bus_t*, alert_t alert, ...))alert;
 	this->public.ike_state_change = (void(*)(bus_t*,ike_sa_t*,ike_sa_state_t))ike_state_change;
 	this->public.child_state_change = (void(*)(bus_t*,child_sa_t*,child_sa_state_t))child_state_change;
 	this->public.message = (void(*)(bus_t*, message_t *message, bool incoming))message;

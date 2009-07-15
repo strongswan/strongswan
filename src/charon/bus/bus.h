@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -23,6 +23,7 @@
 
 typedef enum debug_t debug_t;
 typedef enum level_t level_t;
+typedef enum alert_t alert_t;
 typedef struct bus_t bus_t;
 
 #include <stdarg.h>
@@ -127,6 +128,12 @@ enum level_t {
 #endif /* DBG4 */
 
 /**
+ * Kind of alerts to raise.
+ */
+enum alert_t {
+};
+
+/**
  * The bus receives events and sends them to all registered listeners.
  *
  * Any events sent to are delivered to all registered listeners. Threads
@@ -206,6 +213,15 @@ struct bus_t {
 	 */
 	void (*vlog)(bus_t *this, debug_t group, level_t level,
 				 char* format, va_list args);
+	
+	/**
+	 * Raise an alert over the bus.
+	 *
+	 * @param alert		kind of alert
+	 * @param ...		alert specific attributes
+	 */
+	void (*alert)(bus_t *this, alert_t alert, ...);
+	
 	/**
 	 * Send a IKE_SA state change event to the bus.
 	 *
