@@ -20,7 +20,6 @@ AC_INIT(strongSwan,4.3.3)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_SUBST(confdir, '${sysconfdir}')
 PKG_PROG_PKG_CONFIG
-AC_LIB_PREFIX
 
 dnl =================================
 dnl  check --enable-xxx & --with-xxx
@@ -741,9 +740,10 @@ dnl  set up compiler and flags
 dnl =========================
 
 if test -z "$CFLAGS"; then
-	AC_SUBST(CFLAGS, "-g -O2 -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing")
+	CFLAGS="-g -O2 -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing"
 fi
 AC_PROG_CC
+AC_LIB_PREFIX
 AC_C_BIGENDIAN
 
 dnl =========================
