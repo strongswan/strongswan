@@ -63,6 +63,12 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 		case OID_ECDSA_WITH_SHA1:
 		case OID_EC_PUBLICKEY:
 			return SIGN_ECDSA_WITH_SHA1;
+		case OID_ECDSA_WITH_SHA256:
+			return SIGN_ECDSA_256;
+		case OID_ECDSA_WITH_SHA384:
+			return SIGN_ECDSA_384;
+		case OID_ECDSA_WITH_SHA512:
+			return SIGN_ECDSA_521;
 		default:
 			return SIGN_UNKNOWN;
 	}
