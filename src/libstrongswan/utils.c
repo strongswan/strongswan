@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <limits.h>
 #include <dirent.h>
 #include <time.h>
@@ -63,12 +64,12 @@ void memxor(u_int8_t dst[], u_int8_t src[], size_t n)
 	int m, i;
 	
 	/* byte wise XOR until dst aligned */
-	for (i = 0; (int)&dst[i] % sizeof(long); i++)
+	for (i = 0; (uintptr_t)&dst[i] % sizeof(long); i++)
 	{
 		dst[i] ^= src[i];
 	}
 	/* try to use words if src shares an aligment with dst */
-	switch (((int)&src[i] % sizeof(long)))
+	switch (((uintptr_t)&src[i] % sizeof(long)))
 	{
 		case 0:
 			for (m = n - sizeof(long); i <= m; i += sizeof(long))
