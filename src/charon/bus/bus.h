@@ -131,6 +131,8 @@ enum level_t {
  * Kind of alerts to raise.
  */
 enum alert_t {
+	/* a RADIUS server did not respond, no additional arguments */
+	ALERT_RADIUS_NOT_RESPONDING,
 };
 
 /**

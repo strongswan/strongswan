@@ -353,6 +353,7 @@ static radius_message_t* request(private_radius_client_t *this,
 	}
 	DBG1(DBG_CFG, "RADIUS server is not responding");
 	put_socket(socket);
+	charon->bus->alert(charon->bus, ALERT_RADIUS_NOT_RESPONDING);
 	return NULL;
 }
 
