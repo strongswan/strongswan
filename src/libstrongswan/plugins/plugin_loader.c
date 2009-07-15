@@ -20,7 +20,6 @@
 #include <dlfcn.h>
 #include <limits.h>
 #include <stdio.h>
-#include <link.h>
 
 #include <debug.h>
 #include <integrity_checker.h>
