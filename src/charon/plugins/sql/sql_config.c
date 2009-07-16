@@ -295,10 +295,10 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 					mediation, mediated_cfg, peer_id);
 			auth = auth_cfg_create();
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, auth_method);
-			auth->add(auth, AUTH_RULE_IDENTITY, local_id->clone(local_id));
+			auth->add(auth, AUTH_RULE_IDENTITY, local_id);
 			peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
 			auth = auth_cfg_create();
-			auth->add(auth, AUTH_RULE_IDENTITY, remote_id->clone(remote_id));
+			auth->add(auth, AUTH_RULE_IDENTITY, remote_id);
 			if (eap_type)
 			{
 				auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
