@@ -763,10 +763,23 @@ dnl =========================
 
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
+AC_PROG_AWK
 AC_PROG_LEX
 AC_PROG_YACC
-AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+
+dnl because gperf is not needed by end-users we just report it but do not abort on failure
+AC_MSG_CHECKING([gperf version >= 3.0.0])
+if test -x "$GPERF"; then
+	if test "`$GPERF --version | $AWK -F' ' '/^GNU gperf/ { print $3 }' | $AWK -F. '{ print $1 }'`" -ge "3"; then
+		AC_MSG_RESULT([yes])
+	else
+		AC_MSG_RESULT([no])
+	fi
+else
+	AC_MSG_RESULT([not found])
+fi
 
 dnl =========================
 dnl  dependency calculation
