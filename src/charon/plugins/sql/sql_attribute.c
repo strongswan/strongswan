@@ -137,13 +137,29 @@ static host_t *get_address(private_sql_attribute_t *this, char *name,
 		}
 	}
 	
-	/* check for an expired lease */
+	/* check for an available address */
 	while (TRUE)
 	{
-		e = this->db->query(this->db,
+		int hits;
+
+		if (timeout)
+		{
+			/* check for an expired lease */
+			e = this->db->query(this->db,
 				"SELECT id, address FROM addresses "
 				"WHERE pool = ? AND released != 0 AND released < ? LIMIT 1",
 				DB_UINT, pool, DB_UINT, now - timeout, DB_UINT, DB_BLOB);
+		}
+		else
+		{
+			/* with static leases, check for an unallocated address */
+			e = this->db->query(this->db,
+				"SELECT id, address FROM addresses "
+				"WHERE pool = ? AND identity = 0 LIMIT 1",
+				DB_UINT, pool, DB_UINT, DB_BLOB);
+
+		}
+
 		if (!e || !e->enumerate(e, &id, &address))
 		{
 			DESTROY_IF(e);
@@ -152,12 +168,24 @@ static host_t *get_address(private_sql_attribute_t *this, char *name,
 		address = chunk_clonea(address);
 		e->destroy(e);
 			
-		if (this->db->execute(this->db, NULL,
-				"UPDATE addresses SET "
-				"acquired = ?, released = 0, identity = ? "
-				"WHERE id = ? AND released != 0 AND released < ?",
-				DB_UINT, now, DB_UINT, identity,
-				DB_UINT, id, DB_UINT, now - timeout) > 0)
+		if (timeout)
+		{
+			hits = this->db->execute(this->db, NULL,
+						"UPDATE addresses SET "
+						"acquired = ?, released = 0, identity = ? "
+						"WHERE id = ? AND released != 0 AND released < ?",
+						DB_UINT, now, DB_UINT, identity,
+						DB_UINT, id, DB_UINT, now - timeout);
+		}
+		else
+		{
+			hits = this->db->execute(this->db, NULL,
+						"UPDATE addresses SET "
+						"acquired = ?, released = 0, identity = ? "
+						"WHERE id = ? AND identity = 0",
+						DB_UINT, now, DB_UINT, identity, DB_UINT, id);
+		}
+		if (hits > 0)
 		{
 			host = host_create_from_chunk(AF_UNSPEC, address, 0);
 			if (host)
