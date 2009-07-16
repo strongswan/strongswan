@@ -97,7 +97,7 @@ $(srcdir)/asn1/oid.h :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
 
 $(srcdir)/crypto/proposal/proposal_keywords.c:	$(srcdir)/crypto/proposal/proposal_keywords.txt \
 												$(srcdir)/crypto/proposal/proposal_keywords.h
-		$(GPERF) -N proposal_get_token -C -G -c -t -D < \
+		$(GPERF) -N proposal_get_token -m 10 -C -G -c -t -D < \
 												$(srcdir)/crypto/proposal/proposal_keywords.txt > $@
 
 
