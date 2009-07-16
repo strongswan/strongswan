@@ -1,13 +1,13 @@
 ipsec_LTLIBRARIES = libchecksum.la
 noinst_PROGRAMS = checksum_builder
 
-libchecksum_la_SOURCES = checksum.c
+nodist_libchecksum_la_SOURCES = checksum.c
 
 checksum_builder_SOURCES = checksum_builder.c
 checksum_builder_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 BUILT_SOURCES = checksum.c
-CLEANFILES = checksum.c checksum_builder
+CLEANFILES = checksum.c
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -rdynamic
 
