@@ -1,0 +1,7 @@
+moon::ipsec stop
+carol::ipsec stop
+dave::ipsec stop
+moon::rm /etc/ipsec.d/ipsec.*
+carol::rm /etc/ipsec.d/ipsec.*
+dave::rm /etc/ipsec.d/ipsec.*
+~
