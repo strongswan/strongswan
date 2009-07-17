@@ -464,6 +464,11 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	
 	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
 
+	if (lib->integrity)
+	{
+		DBG1(DBG_DMN, "integrity tests enabled:");
+	}
+
 	/* load secrets, ca certificates and crls */
 	this->public.processor = processor_create();
 	this->public.scheduler = scheduler_create();

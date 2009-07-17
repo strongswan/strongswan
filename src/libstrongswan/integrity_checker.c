@@ -166,7 +166,6 @@ static integrity_checksum_t *find_checksum(private_integrity_checker_t *this,
 			return &this->checksums[i];
 		}
 	}
-	DBG1("no checksum found for %s", name);
 	return NULL;
 }
 
@@ -182,16 +181,17 @@ static bool check_file(private_integrity_checker_t *this,
 	cs = find_checksum(this, name);
 	if (!cs)
 	{
+		DBG1("  '%s' file checksum not found", name);
 		return FALSE;
 	}
 	sum = build_file(this, file);
 	if (!sum || cs->file != sum)
 	{
-		DBG1("file checksum %s of '%s' invalid (got %08x, expected %08x)", 
-			 name, file, sum, cs->file);
+		DBG1("  invalid '%s' file checksum: %08x, expected %08x",
+			 name, sum, cs->file);
 		return FALSE;
 	}
-	DBG2("file checksum %s tested successfully", name);
+	DBG2("  valid '%s' file checksum: %08x", name, sum);
 	return TRUE;
 }
 
@@ -207,16 +207,17 @@ static bool check_segment(private_integrity_checker_t *this,
 	cs = find_checksum(this, name);
 	if (!cs)
 	{
+		DBG1("  '%s' segment checksum not found", name);
 		return FALSE;
 	}
 	sum = build_segment(this, sym);
 	if (!sum || cs->segment != sum)
 	{
-		DBG1("segment checksum %s invalid (got %08x, expected %08x)",
+		DBG1("  invalid '%s' segment checksum: %08x, expected %08x",
 			 name, sum, cs->segment);
 		return FALSE;
 	}
-	DBG2("segment checksum %s tested successfully", name);
+	DBG2("  valid '%s' segment checksum: %08x", name, sum);
 	return TRUE;
 }
 
