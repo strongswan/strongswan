@@ -151,7 +151,7 @@ static bool test_crypter(private_crypto_tester_t *this,
 	}
 	if (!failed)
 	{
-		DBG1("enabled  %N: successfully passed %d test vectors",
+		DBG1("enabled  %N: passed %d test vectors",
 			 encryption_algorithm_names, alg, tested);
 	}
 	return !failed;
@@ -255,7 +255,7 @@ static bool test_signer(private_crypto_tester_t *this,
 	}
 	if (!failed)
 	{
-		DBG1("enabled  %N: successfully passed %d test vectors",
+		DBG1("enabled  %N: passed %d test vectors",
 			 integrity_algorithm_names, alg, tested);
 	}
 	return !failed;
@@ -345,7 +345,7 @@ static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
 	}
 	if (!failed)
 	{
-		DBG1("enabled  %N: successfully passed %d test vectors",
+		DBG1("enabled  %N: passed %d test vectors",
 			 hash_algorithm_names, alg, tested);
 	}
 	return !failed;
@@ -446,7 +446,7 @@ static bool test_prf(private_crypto_tester_t *this,
 	}
 	if (!failed)
 	{
-		DBG1("enabled  %N: successfully passed %d test vectors",
+		DBG1("enabled  %N: passed %d test vectors",
 			 pseudo_random_function_names, alg, tested);
 	}
 	return !failed;
@@ -530,7 +530,7 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 	}
 	if (!failed)
 	{
-		DBG1("enabled  %N: successfully passed %d test vectors",
+		DBG1("enabled  %N: passed %d test vectors",
 			 rng_quality_names, quality, tested);
 	}
 	return !failed;
