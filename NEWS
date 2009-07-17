@@ -1,11 +1,23 @@
 strongswan-4.3.3
 ----------------
 
+- The configuration option --enable-integrity-test plus the strongswan.conf
+  option libstrongswan.integrity_test = yes activate integrity tests
+  of the IKE daemons charon and pluto, libstrongswan and all loaded
+  plugins. Thus dynamic library misconfigurations and non-malicious file
+  manipulations can be reliably detected.
+
 - The new default setting libstrongswan.ecp_x_coordinate_only=yes allows
   IKEv1 interoperability with MS Windows using the ECP DH groups 19 and 20.
 
 - The IKEv1 pluto daemon now supports the AES-CCM and AES-GCM ESP
   authenticated encryption algorithms.
+
+- The IKEv1 pluto daemon now supports V4 OpenPGP keys.
+
+- The RDN parser vulnerability discovered by Orange Labs research team
+  was not completely fixed in version 4.3.2. Some more modifications
+  had to be applied to the asn1_length() function to make it robust.
 
 
 strongswan-4.3.2
