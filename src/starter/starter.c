@@ -80,32 +80,48 @@ fsig(int signal)
 			while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
 			{
 				if (pid == starter_pluto_pid())
+				{
 					name = " (Pluto)";
+				}
 				if (pid == starter_charon_pid())
+				{
 					name = " (Charon)";
+				}
 				if (WIFSIGNALED(status))
+				{
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has been killed by sig %d\n",
 								pid, name?name:"", WTERMSIG(status))
 					   )
+				}
 				else if (WIFSTOPPED(status))
+				{
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has been stopped by sig %d\n",
 								pid, name?name:"", WSTOPSIG(status))
 					   )
+				}
 				else if (WIFEXITED(status))
+				{
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has quit (exit code %d)\n",
 								pid, name?name:"", WEXITSTATUS(status))
 					   )
+				}
 				else
+				{
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has quit", pid, name?name:"")
 					   )
+				}
 				if (pid == starter_pluto_pid())
+				{
 					starter_pluto_sigchild(pid);
+				}
 				if (pid == starter_charon_pid())
+				{
 					starter_charon_sigchild(pid);
+				}
 			}
 		}
 		break;
