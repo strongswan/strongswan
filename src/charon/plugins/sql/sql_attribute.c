@@ -92,25 +92,18 @@ static u_int get_pool(private_sql_attribute_t *this, char *name, u_int *timeout)
 }
 
 /**
- * Lookup a lease
+ * Look up an existing lease
  */
-static host_t *get_address(private_sql_attribute_t *this, char *name,
-						   u_int pool, u_int timeout, u_int identity)
+static host_t* check_lease(private_sql_attribute_t *this, char *name,
+						   u_int pool, u_int identity)
 {
-	enumerator_t *e;
-	u_int id;
-	chunk_t address;
-	host_t *host;
-	time_t now = time(NULL);
-	
-	/* We check for leases for that identity first and for other expired
-	 * leases afterwards. We select an address as a candidate, but double
-	 * check if it is still valid in the update. This allows us to work
-	 * without locking. */
-	
-	/* check for an existing lease for that identity  */
 	while (TRUE)
 	{
+		u_int id;
+		chunk_t address;
+		enumerator_t *e;
+		time_t now = time(NULL);
+
 		e = this->db->query(this->db,
 				"SELECT id, address FROM addresses "
 				"WHERE pool = ? AND identity = ? AND released != 0 LIMIT 1",
@@ -122,11 +115,14 @@ static host_t *get_address(private_sql_attribute_t *this, char *name,
 		}
 		address = chunk_clonea(address);
 		e->destroy(e);
+
 		if (this->db->execute(this->db, NULL,
 				"UPDATE addresses SET acquired = ?, released = 0 "
 				"WHERE id = ? AND identity = ? AND released != 0",
 				DB_UINT, now, DB_UINT, id, DB_UINT, identity) > 0)
 		{
+			host_t *host;
+
 			host = host_create_from_chunk(AF_UNSPEC, address, 0);
 			if (host)
 			{
@@ -136,10 +132,23 @@ static host_t *get_address(private_sql_attribute_t *this, char *name,
 			}
 		}
 	}
-	
-	/* check for an available address */
+	return NULL;
+}
+
+/**
+ * We check for unallocated addresses or expired leases. First we select an
+ * address as a candidate, but double check later on if it is still available
+ * during the update operation. This allows us to work without locking.
+ */
+static host_t* get_lease(private_sql_attribute_t *this, char *name,
+						 u_int pool, u_int timeout, u_int identity)
+{
 	while (TRUE)
 	{
+		u_int id;
+		chunk_t address;
+		enumerator_t *e;
+		time_t now = time(NULL);
 		int hits;
 
 		if (timeout)
@@ -187,6 +196,8 @@ static host_t *get_address(private_sql_attribute_t *this, char *name,
 		}
 		if (hits > 0)
 		{
+			host_t *host;
+
 			host = host_create_from_chunk(AF_UNSPEC, address, 0);
 			if (host)
 			{
@@ -197,30 +208,50 @@ static host_t *get_address(private_sql_attribute_t *this, char *name,
 		}
 	}
 	DBG1(DBG_CFG, "no available address found in pool '%s'", name);
-	return 0;
+	return NULL;
 }
 
 /**
  * Implementation of attribute_provider_t.acquire_address
  */
 static host_t* acquire_address(private_sql_attribute_t *this,
-							   char *name, identification_t *id,
+							   char *names, identification_t *id,
 							   host_t *requested)
 {
-	enumerator_t *enumerator;
-	u_int pool, timeout, identity;
 	host_t *address = NULL;
-	
+	u_int identity, pool, timeout;
+
 	identity = get_identity(this, id);
 	if (identity)
 	{
-		enumerator = enumerator_create_token(name, ",", " ");
+		char *name;
+		enumerator_t *enumerator;
+
+		/* in a first step check for an existing lease over all pools */
+		enumerator = enumerator_create_token(names, ",", " ");
 		while (enumerator->enumerate(enumerator, &name))
 		{
 			pool = get_pool(this, name, &timeout);
 			if (pool)
 			{
-				address = get_address(this, name, pool, timeout, identity);
+				address = check_lease(this, name, pool, identity);
+				if (address)
+				{
+					enumerator->destroy(enumerator);
+					return address;
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		/* in a second step get an unallocated address or expired lease */
+		enumerator = enumerator_create_token(names, ",", " ");
+		while (enumerator->enumerate(enumerator, &name))
+		{
+			pool = get_pool(this, name, &timeout);
+			if (pool)
+			{
+				address = get_lease(this, name, pool, timeout, identity);
 				if (address)
 				{
 					break;
