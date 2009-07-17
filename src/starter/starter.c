@@ -66,14 +66,13 @@
 
 static unsigned int _action_ = 0;
 
-static void
-fsig(int signal)
+static void fsig(int signal)
 {
 	switch (signal)
 	{
 		case SIGCHLD:
 		{
-			int status;
+			int status, exit_status = 0;
 			pid_t pid;
 			char *name = NULL;
 
@@ -103,9 +102,15 @@ fsig(int signal)
 				}
 				else if (WIFEXITED(status))
 				{
+					exit_status =  WEXITSTATUS(status);
+					if (exit_status == SS_RC_LIBSTRONGSWAN_INTEGRITY ||
+						exit_status == SS_RC_DAEMON_INTEGRITY)
+					{
+						_action_ =  FLAG_ACTION_QUIT;
+					}
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has quit (exit code %d)\n",
-								pid, name?name:"", WEXITSTATUS(status))
+								pid, name?name:"", exit_status)
 					   )
 				}
 				else
@@ -116,11 +121,11 @@ fsig(int signal)
 				}
 				if (pid == starter_pluto_pid())
 				{
-					starter_pluto_sigchild(pid);
+					starter_pluto_sigchild(pid, exit_status);
 				}
 				if (pid == starter_charon_pid())
 				{
-					starter_charon_sigchild(pid);
+					starter_charon_sigchild(pid, exit_status);
 				}
 			}
 		}
@@ -212,8 +217,7 @@ static void generate_selfcert()
 		}
 }
 
-static void
-usage(char *name)
+static void usage(char *name)
 {
 	fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>] "
 			"[--debug|--debug-more|--debug-all]\n");
@@ -408,9 +412,13 @@ int main (int argc, char **argv)
 		if (_action_ & FLAG_ACTION_QUIT)
 		{
 			if (starter_pluto_pid())
+			{
 				starter_stop_pluto();
+			}
 			if (starter_charon_pid())
+			{
 				starter_stop_charon();
+			}
 			starter_netkey_cleanup();
 			confread_free(cfg);
 			unlink(STARTER_PID_FILE);

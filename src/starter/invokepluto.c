@@ -42,11 +42,18 @@ starter_pluto_pid(void)
 }
 
 void
-starter_pluto_sigchild(pid_t pid)
+starter_pluto_sigchild(pid_t pid, int status)
 {
 	if (pid == _pluto_pid)
 	{
 		_pluto_pid = 0;
+		if (status == SS_RC_LIBSTRONGSWAN_INTEGRITY ||
+			status == SS_RC_DAEMON_INTEGRITY)
+		{
+			plog("pluto has quit: integrity test of %s failed",
+				  (status == 64) ? "libstrongswan" : "pluto");
+			_stop_requested = 1;
+		}
 		if (!_stop_requested)
 		{
 			plog("pluto has died -- restart scheduled (%dsec)"

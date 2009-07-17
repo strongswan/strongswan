@@ -29,6 +29,12 @@
 #include <enum.h>
 
 /**
+ * strongSwan program return codes
+ */
+#define SS_RC_LIBSTRONGSWAN_INTEGRITY	64
+#define SS_RC_DAEMON_INTEGRITY			65
+
+/**
  * Number of bits in a byte
  */
 #define BITS_PER_BYTE 8

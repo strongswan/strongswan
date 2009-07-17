@@ -263,14 +263,14 @@ int main(int argc, char **argv)
 	if (!library_init(STRONGSWAN_CONF))
 	{
 		library_deinit();
-		abort();
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
 	if (lib->integrity &&
 		!lib->integrity->check_file(lib->integrity, "pluto", argv[0]))
 	{
 		fprintf(stderr, "integrity check of pluto failed\n");
 		library_deinit();
-		abort();
+		exit(SS_RC_DAEMON_INTEGRITY);
 	}
 	options = options_create();
 

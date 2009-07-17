@@ -676,7 +676,7 @@ int main(int argc, char *argv[])
 	if (!library_init(STRONGSWAN_CONF))
 	{
 		library_deinit();
-		exit(-1);
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
 	
 	if (lib->integrity &&
@@ -684,7 +684,7 @@ int main(int argc, char *argv[])
 	{
 		dbg_stderr(1, "integrity check of charon failed");
 		library_deinit();
-		exit(-1);
+		exit(SS_RC_DAEMON_INTEGRITY);
 	}
 	
 	lib->printf_hook->add_handler(lib->printf_hook, 'R',

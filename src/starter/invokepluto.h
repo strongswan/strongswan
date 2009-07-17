@@ -17,7 +17,7 @@
 
 #define PLUTO_RESTART_DELAY    5
 
-extern void starter_pluto_sigchild (pid_t pid);
+extern void starter_pluto_sigchild (pid_t pid, int status);
 extern pid_t starter_pluto_pid (void);
 extern int starter_stop_pluto (void);
 extern int starter_start_pluto (struct starter_config *cfg, bool no_fork, bool attach_gdb);
