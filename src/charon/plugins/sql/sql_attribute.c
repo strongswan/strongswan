@@ -224,41 +224,59 @@ static host_t* acquire_address(private_sql_attribute_t *this,
 	identity = get_identity(this, id);
 	if (identity)
 	{
-		char *name;
-		enumerator_t *enumerator;
-
-		/* in a first step check for an existing lease over all pools */
-		enumerator = enumerator_create_token(names, ",", " ");
-		while (enumerator->enumerate(enumerator, &name))
+		/* check for a single pool first (no concatenation and enumeration) */
+		if (strchr(names, ',') == NULL)
 		{
-			pool = get_pool(this, name, &timeout);
+			pool = get_pool(this, names, &timeout);
 			if (pool)
 			{
-				address = check_lease(this, name, pool, identity);
-				if (address)
+				/* check for an existing lease */
+				address = check_lease(this, names, pool, identity);
+				if (address == NULL)
 				{
-					enumerator->destroy(enumerator);
-					return address;
+					/* get an unallocated address or expired lease */
+					address = get_lease(this, names, pool, timeout, identity);
 				}
 			}
 		}
-		enumerator->destroy(enumerator);
-
-		/* in a second step get an unallocated address or expired lease */
-		enumerator = enumerator_create_token(names, ",", " ");
-		while (enumerator->enumerate(enumerator, &name))
+		else
 		{
-			pool = get_pool(this, name, &timeout);
-			if (pool)
+			enumerator_t *enumerator;
+			char *name;
+
+			/* in a first step check for an existing lease over all pools */
+			enumerator = enumerator_create_token(names, ",", " ");
+			while (enumerator->enumerate(enumerator, &name))
 			{
-				address = get_lease(this, name, pool, timeout, identity);
-				if (address)
+				pool = get_pool(this, name, &timeout);
+				if (pool)
 				{
-					break;
+					address = check_lease(this, name, pool, identity);
+					if (address)
+					{
+						enumerator->destroy(enumerator);
+						return address;
+					}
 				}
 			}
+			enumerator->destroy(enumerator);
+
+			/* in a second step get an unallocated address or expired lease */
+			enumerator = enumerator_create_token(names, ",", " ");
+			while (enumerator->enumerate(enumerator, &name))
+			{
+				pool = get_pool(this, name, &timeout);
+				if (pool)
+				{
+					address = get_lease(this, name, pool, timeout, identity);
+					if (address)
+					{
+						break;
+					}
+				}
+			}
+			enumerator->destroy(enumerator);
 		}
-		enumerator->destroy(enumerator);
 	}
 	return address;
 }
