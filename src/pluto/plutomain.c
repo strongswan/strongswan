@@ -643,6 +643,11 @@ int main(int argc, char **argv)
 	plog("Starting IKEv1 pluto daemon (strongSwan "VERSION")%s",
 		 compile_time_interop_options);
 
+	if (lib->integrity)
+	{
+		plog("integrity tests enabled:");
+	}
+
 	/* load plugins, further infrastructure may need it */
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "pluto.load", PLUGINS));
