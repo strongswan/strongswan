@@ -66,12 +66,9 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	{
 		if (!lib->integrity->check_file(lib->integrity, name, file))
 		{
-			DBG1("plugin '%s': failed file integrity test of"
-				 " 'libstrongswan-%s.so'", name, name);
+			DBG1("plugin '%s': failed file integrity test of '%s'", name, file);
 			return NULL;
 		}
-		DBG1("plugin '%s': passed file integrity test of"
-			 " 'libstrongswan-%s.so'", name, name);
 	}
 	handle = dlopen(file, RTLD_LAZY);
 	if (handle == NULL)
@@ -94,7 +91,7 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 			dlclose(handle);
 			return NULL;
 		}
-		DBG1("plugin '%s': passed segment integrity test", name);
+		DBG1("plugin '%s': passed file and segment integrity tests", name);
 	}
 	plugin = constructor();
 	if (plugin == NULL)

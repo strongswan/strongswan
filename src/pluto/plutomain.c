@@ -646,6 +646,8 @@ int main(int argc, char **argv)
 	if (lib->integrity)
 	{
 		plog("integrity tests enabled:");
+		plog("lib    'libstrongswan': passed file and segment integrity tests");
+		plog("daemon 'pluto': passed file integrity test");
 	}
 
 	/* load plugins, further infrastructure may need it */

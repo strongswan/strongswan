@@ -467,6 +467,8 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	if (lib->integrity)
 	{
 		DBG1(DBG_DMN, "integrity tests enabled:");
+		DBG1(DBG_DMN, "lib    'libstrongswan': passed file and segment integrity tests");
+		DBG1(DBG_DMN, "daemon 'charon': passed file integrity test");
 	}
 
 	/* load secrets, ca certificates and crls */
