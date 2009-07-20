@@ -153,6 +153,14 @@ asn1_length(chunk_t *blob)
     u_char n;
     size_t len;
 
+    if (blob->len < 2)
+    {
+	DBG(DBG_PARSING,
+	    DBG_log("insufficient number of octets to parse ASN.1 length")
+	)
+	return ASN1_INVALID_LENGTH;
+    }
+
     /* advance from tag field on to length field */
     blob->ptr++;
     blob->len--;
@@ -161,16 +169,25 @@ asn1_length(chunk_t *blob)
     n = *blob->ptr++;
     blob->len--;
 
-    if ((n & 0x80) == 0) /* single length octet */
+    if ((n & 0x80) == 0) 
+    {	/* single length octet */
+	if (n > blob->len)
+	{
+	    DBG(DBG_PARSING,
+		DBG_log("length is larger than remaining blob size")
+	    )
+	    return ASN1_INVALID_LENGTH;
+	}
 	return n;
+    }
 
     /* composite length, determine number of length octets */
     n &= 0x7f;
 
-    if (n > blob->len)
+    if (n == 0 || n > blob->len)
     {
 	DBG(DBG_PARSING,
-	    DBG_log("number of length octets is larger than ASN.1 object")
+	    DBG_log("number of length octets invalid")
 	)
 	return ASN1_INVALID_LENGTH;
     }
