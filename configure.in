@@ -792,7 +792,7 @@ else
 	AC_MSG_ERROR([not found])
 fi
 AC_MSG_CHECKING([for gid of group "$ipsecgroup"])
-ipsecgid=`$EGREP "^$ipsecgroup" /etc/group | $AWK -F: '{ print $3 }'`
+ipsecgid=`$EGREP "^$ipsecgroup:" /etc/group | $AWK -F: '{ print $3 }'`
 if test -n "$ipsecgid"; then
 	AC_MSG_RESULT([$ipsecgid])
 	AC_SUBST(ipsecgid)
