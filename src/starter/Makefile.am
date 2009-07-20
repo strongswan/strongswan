@@ -61,5 +61,5 @@ install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/crls" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/crls" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/reqs" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/reqs" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/private" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d -m 750 "$(DESTDIR)$(sysconfdir)/ipsec.d/private" || true
-		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 644 ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf || true
+		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 644 $(srcdir)/ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf || true
 
