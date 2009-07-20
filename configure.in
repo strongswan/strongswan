@@ -763,6 +763,7 @@ dnl =========================
 
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
+AC_PROG_EGREP
 AC_PROG_AWK
 AC_PROG_LEX
 AC_PROG_YACC
@@ -779,6 +780,24 @@ if test -x "$GPERF"; then
 	fi
 else
 	AC_MSG_RESULT([not found])
+fi
+
+dnl translate user/group to numercial ids
+AC_MSG_CHECKING([for uid of user "$ipsecuser"])
+ipsecuid=`id -u $ipsecuser 2>/dev/null`
+if test -n "$ipsecuid"; then
+	AC_MSG_RESULT([$ipsecuid])
+	AC_SUBST(ipsecuid)
+else
+	AC_MSG_ERROR([not found])
+fi
+AC_MSG_CHECKING([for gid of group "$ipsecgroup"])
+ipsecgid=`$EGREP "^$ipsecgroup" /etc/group | $AWK -F: '{ print $3 }'`
+if test -n "$ipsecgid"; then
+	AC_MSG_RESULT([$ipsecgid])
+	AC_SUBST(ipsecgid)
+else
+	AC_MSG_ERROR([not found])
 fi
 
 dnl =========================
