@@ -104,7 +104,14 @@ static u_int32_t build_file(private_integrity_checker_t *this, char *file)
  */
 static int callback(struct dl_phdr_info *dlpi, size_t size, Dl_info *dli)
 {
-	if (dli->dli_fbase == (void*)dlpi->dlpi_addr)
+	/* We are looking for the dlpi_addr matching the address of our dladdr().
+	 * dl_iterate_phdr() returns such an address for other (unknown) objects
+	 * in very rare cases (e.g. in a chrooted gentoo, but only if
+	 * the checksum_builder is invoked by 'make'). As a workaround, we filter
+	 * objects by dlpi_name; valid objects have a library name.
+	 */
+	if (dli->dli_fbase == (void*)dlpi->dlpi_addr &&
+		dlpi->dlpi_name && *dlpi->dlpi_name)
 	{
 		int i;
 		
