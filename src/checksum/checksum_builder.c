@@ -44,12 +44,16 @@ int main(int argc, char* argv[])
 	printf("#include <library.h>\n");
 	printf("\n");
 	printf("integrity_checksum_t checksums[] = {\n");
+	fprintf(stderr, "integrity test data:\n");
+	fprintf(stderr, "module name,       file size / checksum   segment size / checksum\n");
 	for (i = 1; i < argc; i++)
 	{
 		char *name, *path, *sname = NULL;
 		void *handle, *symbol;
 		u_int32_t fsum, ssum;
-		
+		size_t fsize = 0;
+		size_t ssize = 0;
+
 		path = argv[i];
 		
 		if ((name = strstr(path, "libstrongswan-")))
@@ -79,7 +83,7 @@ int main(int argc, char* argv[])
 			continue;
 		}
 		
-		fsum = integrity->build_file(integrity, path);
+		fsum = integrity->build_file(integrity, path, &fsize);
 		ssum = 0;
 		if (sname)
 		{
@@ -89,7 +93,7 @@ int main(int argc, char* argv[])
 				symbol = dlsym(handle, sname);
 				if (symbol)
 				{
-					ssum = integrity->build_segment(integrity, symbol);
+					ssum = integrity->build_segment(integrity, symbol, &ssize);
 				}
 				else
 				{
@@ -102,7 +106,10 @@ int main(int argc, char* argv[])
 				fprintf(stderr, "dlopen failed: %s\n", dlerror());
 			}
 		}
-		printf("\t{\"%-20s0x%08x, 0x%08x},\n", name, fsum, ssum);
+		printf("\t{\"%-20s%7u, 0x%08x, %6u, 0x%08x},\n",
+			   name, fsize, fsum, ssize, ssum);
+		fprintf(stderr, "\"%-20s%7u / 0x%08x       %6u / 0x%08x\n", 
+				name, fsize, fsum, ssize, ssum);
 		free(name);
 	}
 	printf("};\n");

@@ -33,8 +33,12 @@ typedef struct integrity_checksum_t integrity_checksum_t;
 struct integrity_checksum_t {
 	/* name of the checksum */
 	char *name;
+	/* size in bytes of the file on disk */
+	size_t file_len; 
 	/* checksum of the file on disk */
 	u_int32_t file;
+	/* size in bytes of executable segment in memory */
+	size_t segment_len; 
 	/* checksum of the executable segment in memory */
 	u_int32_t segment;
 };
@@ -60,9 +64,10 @@ struct integrity_checker_t {
 	 * Build the integrity checksum of a file on disk.
 	 *
 	 * @param file		path to file
+	 * @param len		return length in bytes of file
 	 * @return			checksum, 0 on error
 	 */
-	u_int32_t (*build_file)(integrity_checker_t *this, char *file);
+	u_int32_t (*build_file)(integrity_checker_t *this, char *file, size_t *len);
 	
 	/**
 	 * Check the integrity of the code segment in memory.
@@ -72,14 +77,14 @@ struct integrity_checker_t {
 	 * @return			TRUE if integrity tested successfully
 	 */
 	bool (*check_segment)(integrity_checker_t *this, char *name, void *sym);
-	
 	/**
 	 * Build the integrity checksum of a code segment in memory.
 	 *
 	 * @param sym		a symbol in the segment to check
+	 * @param len		return length in bytes of code segment in memory
 	 * @return			checksum, 0 on error
 	 */
-	u_int32_t (*build_segment)(integrity_checker_t *this, void *sym);
+	u_int32_t (*build_segment)(integrity_checker_t *this, void *sym, size_t *len);
 	
 	/**
 	 * Check both, on disk file integrity and loaded segment.
