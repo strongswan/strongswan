@@ -113,8 +113,7 @@ static int callback(struct dl_phdr_info *dlpi, size_t size, Dl_info *dli)
 			const ElfW(Phdr) *sgmt = &dlpi->dlpi_phdr[i];
 			
 			/* we are interested in the executable LOAD segment */
-			if (sgmt->p_type == PT_LOAD &&
-				(sgmt->p_flags & (PF_X | PF_R)))
+			if (sgmt->p_type == PT_LOAD && (sgmt->p_flags & PF_X))
 			{
 				/* safe begin of segment in dli_fbase */
 				dli->dli_fbase = (void*)sgmt->p_vaddr + dlpi->dlpi_addr;
