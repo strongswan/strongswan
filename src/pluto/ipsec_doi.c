@@ -5445,7 +5445,8 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 	if (!st->st_dpd_expectseqno && seqno != st->st_dpd_expectseqno)
 	{
 		loglog(RC_LOG_SERIOUS
-			, "DPD: R_U_THERE_ACK has unexpected sequence number");
+			, "DPD: R_U_THERE_ACK has unexpected sequence number %u (expected %u)"
+			, seqno, st->st_dpd_expectseqno);
 		return STF_FAIL + PAYLOAD_MALFORMED;
 	}
 
