@@ -34,6 +34,9 @@
 #include <netinet/ip6.h>
 #include <netinet/udp.h>
 #include <net/if.h>
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#endif
 
 #include "socket.h"
 
@@ -611,6 +614,18 @@ socket_t *socket_create()
 	this->ipv6 = 0;
 	this->ipv4_natt = 0;
 	this->ipv6_natt = 0;
+
+#ifdef __APPLE__
+	{
+		int natt_port = IKEV2_NATT_PORT;
+		if (sysctlbyname("net.inet.ipsec.esp_port", NULL, NULL, &natt_port,
+						 sizeof(natt_port)) != 0)
+		{
+			DBG1(DBG_NET, "could not set net.inet.ipsec.esp_port to %d: %s",
+				 natt_port, strerror(errno));
+		}
+	}
+#endif
 	
 	this->ipv4 = open_socket(this, AF_INET, IKEV2_UDP_PORT);
 	if (this->ipv4 == 0)
