@@ -148,6 +148,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 {
 	u_int32_t rekey, now = time(NULL);
 	u_int32_t use_in, use_out;
+	u_int64_t bytes_in, bytes_out;
 	proposal_t *proposal;
 	child_cfg_t *config = child_sa->get_config(child_sa);
 	
@@ -205,6 +206,28 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 					}
 				}
 			}
+
+			bytes_in = child_sa->get_usebytes(child_sa, TRUE);
+			fprintf(out, ", %lu bytes_i", bytes_in);
+			if (bytes_in)
+			{
+				use_in = child_sa->get_usetime(child_sa, TRUE);
+				if (use_in)
+				{
+					fprintf(out, " (%ds ago)", now - use_in);
+				}
+			}
+
+			bytes_out = child_sa->get_usebytes(child_sa, FALSE);
+			fprintf(out, ", %lu bytes_o", bytes_out);
+			if (bytes_out)
+			{
+				use_out = child_sa->get_usetime(child_sa, FALSE);
+				if (use_out)
+				{
+					fprintf(out, " (%ds ago)", now - use_out);
+				}
+			}
 			fprintf(out, ", rekeying ");
 			
 			rekey = child_sa->get_lifetime(child_sa, FALSE);
@@ -224,25 +247,6 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 				fprintf(out, "disabled");
 			}
 			
-			fprintf(out, ", last use: ");
-			use_in = child_sa->get_usetime(child_sa, TRUE);
-			if (use_in)
-			{
-				fprintf(out, "%ds_i ", now - use_in);
-			}
-			else
-			{
-				fprintf(out, "no_i ");
-			}
-			use_out = child_sa->get_usetime(child_sa, FALSE);
-			if (use_out)
-			{
-				fprintf(out, "%ds_o ", now - use_out);
-			}
-			else
-			{
-				fprintf(out, "no_o ");
-			}
 		}
 	}
 	

@@ -398,6 +398,35 @@ static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
 }
 
 /**
+ * Implementation of child_sa_t.get_usebytes
+ */
+static u_int64_t get_usebytes(private_child_sa_t *this, bool inbound)
+{
+	status_t status = NOT_SUPPORTED;
+	u_int64_t bytes;
+
+	if (inbound) 
+	{
+		if (this->my_spi)
+		{
+			status = charon->kernel_interface->query_sa(charon->kernel_interface,
+									this->other_addr, this->my_addr,
+									this->my_spi, this->protocol, &bytes);
+		}
+	}
+	else
+	{
+		if (this->other_spi)
+		{
+			status = charon->kernel_interface->query_sa(charon->kernel_interface,
+									this->my_addr, this->other_addr,
+						 			this->other_spi, this->protocol, &bytes);
+		}
+	}
+	return (status == SUCCESS) ? bytes : 0;
+}
+
+/**
  * Implementation of child_sa_t.get_lifetime
  */
 static u_int32_t get_lifetime(private_child_sa_t *this, bool hard)
@@ -776,6 +805,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.set_proposal = (void(*)(child_sa_t*, proposal_t *proposal))set_proposal;
 	this->public.get_lifetime = (u_int32_t(*)(child_sa_t*, bool))get_lifetime;
 	this->public.get_usetime = (u_int32_t(*)(child_sa_t*, bool))get_usetime;
+	this->public.get_usebytes = (u_int64_t(*)(child_sa_t*, bool))get_usebytes;
 	this->public.has_encap = (bool(*)(child_sa_t*))has_encap;
 	this->public.get_ipcomp = (ipcomp_transform_t(*)(child_sa_t*))get_ipcomp;
 	this->public.set_ipcomp = (void(*)(child_sa_t*,ipcomp_transform_t))set_ipcomp;

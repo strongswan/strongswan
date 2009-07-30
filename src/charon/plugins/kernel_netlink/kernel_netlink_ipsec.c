@@ -1233,6 +1233,74 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 }
 
 /**
+ * Implementation of kernel_interface_t.query_sa.
+ */
+static status_t query_sa(private_kernel_netlink_ipsec_t *this, host_t *src,
+						 host_t *dst, u_int32_t spi, protocol_id_t protocol,
+						 u_int64_t *bytes)
+{
+	netlink_buf_t request;
+	struct nlmsghdr *out = NULL, *hdr;
+	struct xfrm_usersa_id *sa_id;
+	struct xfrm_usersa_info *sa = NULL;
+	size_t len;
+	
+	memset(&request, 0, sizeof(request));
+
+	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x", ntohl(spi));
+
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = XFRM_MSG_GETSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
+
+	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	host2xfrm(dst, &sa_id->daddr);
+	sa_id->spi = spi;
+	sa_id->proto = proto_ike2kernel(protocol);
+	sa_id->family = dst->get_family(dst);
+	
+	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
+	{
+		hdr = out;
+		while (NLMSG_OK(hdr, len))
+		{
+			switch (hdr->nlmsg_type)
+			{
+				case XFRM_MSG_NEWSA:
+				{
+					sa = (struct xfrm_usersa_info*)NLMSG_DATA(hdr);
+					break;
+				}
+				case NLMSG_ERROR:
+				{
+					struct nlmsgerr *err = NLMSG_DATA(hdr);
+					DBG1(DBG_KNL, "querying SAD entry with SPI %.8x failed: %s (%d)",
+						 ntohl(spi), strerror(-err->error), -err->error);
+					break;
+				}
+				default:
+					hdr = NLMSG_NEXT(hdr, len);
+					continue;
+				case NLMSG_DONE:
+					break;
+			}
+			break;
+		}
+	}
+	
+	if (sa == NULL)
+	{
+		DBG2(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
+		free(out);
+		return FAILED;
+	}
+	*bytes = sa->curlft.bytes;
+	
+	free(out);
+	return SUCCESS;
+}
+/**
  * Implementation of kernel_interface_t.del_sa.
  */
 static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *src,
@@ -1891,6 +1959,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
 	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
+	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
 	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;

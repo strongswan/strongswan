@@ -141,6 +141,19 @@ struct kernel_interface_t {
 						  bool encap, bool new_encap);
 	
 	/**
+	 * Query the number of bytes processed by an SA from the SAD.
+	 * 
+	 * @param src			source address for this SA
+	 * @param dst			destination address for this SA
+	 * @param spi			SPI allocated by us or remote peer
+	 * @param protocol		protocol for this SA (ESP/AH)
+	 * @param[out] bytes	the number of bytes processed by SA
+	 * @return				SUCCESS if operation completed
+	 */
+	status_t (*query_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
+						  u_int32_t spi, protocol_id_t protocol, u_int64_t *bytes);
+	
+	/**
 	 * Delete a previously installed SA from the SAD.
 	 * 
 	 * @param src			source address for this SA

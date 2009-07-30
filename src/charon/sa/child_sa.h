@@ -245,6 +245,14 @@ struct child_sa_t {
 	u_int32_t (*get_usetime)(child_sa_t *this, bool inbound);
 	
 	/**
+	 * Get number of bytes processed by CHILD_SA.
+	 *
+	 * @param inbound	TRUE for inbound traffic, FALSE for outbound
+	 * @return			number of processed bytes
+	 */
+	u_int64_t (*get_usebytes)(child_sa_t *this, bool inbound);
+
+	/**
 	 * Get the traffic selectors list added for one side.
 	 *
 	 * @param local		TRUE for own traffic selectors, FALSE for remote
