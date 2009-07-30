@@ -478,7 +478,7 @@ static u_int8_t dir2kernel(policy_dir_t dir)
 			return IPSEC_DIR_FWD;
 #endif
 		default:
-			return dir;
+			return IPSEC_DIR_INVALID;
 	}
 }
 
@@ -1558,6 +1558,12 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 	pfkey_msg_t response;
 	size_t len;
 	
+	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
+	{
+		/* FWD policies are not supported on all platforms */
+		return SUCCESS;
+	}
+	
 	/* create a policy */
 	policy = create_policy_entry(src_ts, dst_ts, direction, reqid);
 	
@@ -1740,6 +1746,12 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 	pfkey_msg_t response;
 	size_t len;
 	
+	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
+	{
+		/* FWD policies are not supported on all platforms */
+		return NOT_FOUND;
+	}
+	
 	DBG2(DBG_KNL, "querying policy %R === %R %N", src_ts, dst_ts,
 				   policy_dir_names, direction);
 
@@ -1826,6 +1838,12 @@ static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 	policy_entry_t *policy, *found = NULL;
 	route_entry_t *route;
 	size_t len;
+	
+	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
+	{
+		/* FWD policies are not supported on all platforms */
+		return SUCCESS;
+	}
 	
 	DBG2(DBG_KNL, "deleting policy %R === %R %N", src_ts, dst_ts,
 				   policy_dir_names, direction);
