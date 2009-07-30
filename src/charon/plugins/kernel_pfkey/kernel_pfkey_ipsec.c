@@ -89,7 +89,7 @@
 #define IP_IPSEC_POLICY 16
 #endif
 
-/* missing on uclibc */
+/** missing on uclibc */
 #ifndef IPV6_IPSEC_POLICY
 #define IPV6_IPSEC_POLICY 34
 #endif
@@ -97,6 +97,17 @@
 /** default priority of installed policies */
 #define PRIO_LOW 3000
 #define PRIO_HIGH 2000
+
+#ifdef __APPLE__
+/** from xnu/bsd/net/pfkeyv2.h */
+#define SADB_X_EXT_NATT 0x002
+	struct sadb_sa_2 {
+		struct sadb_sa	sa;
+		u_int16_t		sadb_sa_natt_port;
+		u_int16_t		sadb_reserved0;
+		u_int32_t		sadb_reserved1;
+	};
+#endif
 
 /** buffer size for PF_KEY messages */
 #define PFKEY_BUFFER_SIZE 4096
@@ -1223,10 +1234,25 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 	msg->sadb_msg_type = inbound ? SADB_UPDATE : SADB_ADD;
 	msg->sadb_msg_satype = proto_ike2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-	
-	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
+
+#ifdef __APPLE__
+	if (encap)
+	{
+		struct sadb_sa_2 *sa_2;
+		sa_2 = (struct sadb_sa_2*)PFKEY_EXT_ADD_NEXT(msg);
+		sa_2->sadb_sa_natt_port = dst->get_port(dst);
+		sa = &sa_2->sa;
+		sa->sadb_sa_flags |= SADB_X_EXT_NATT;
+		len = sizeof(struct sadb_sa_2);
+	}
+	else
+#endif
+	{
+		sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
+		len = sizeof(struct sadb_sa);
+	}
 	sa->sadb_sa_exttype = SADB_EXT_SA;
-	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
+	sa->sadb_sa_len = PFKEY_LEN(len);
 	sa->sadb_sa_spi = spi;
 	sa->sadb_sa_replay = (protocol == IPPROTO_COMP) ? 0 : 32;
 	sa->sadb_sa_auth = lookup_algorithm(integrity_algs, int_alg);
@@ -1403,7 +1429,21 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 	msg->sadb_msg_satype = proto_ike2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 	
+#ifdef __APPLE__
+	{
+		struct sadb_sa_2 *sa_2;
+		sa_2 = (struct sadb_sa_2*)PFKEY_EXT_ADD_NEXT(msg);
+		sa_2->sa.sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa_2));
+		memcpy(&sa_2->sa, response.sa, sizeof(struct sadb_sa));
+		if (encap)
+		{
+			sa_2->sadb_sa_natt_port = new_dst->get_port(new_dst);
+			sa_2->sa.sadb_sa_flags |= SADB_X_EXT_NATT;
+		}
+	}
+#else
 	PFKEY_EXT_COPY(msg, response.sa);
+#endif
 	PFKEY_EXT_COPY(msg, response.x_sa2);
 	
 	PFKEY_EXT_COPY(msg, response.src);
@@ -1421,7 +1461,7 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 	{
 		PFKEY_EXT_COPY(msg, response.key_auth);
 	}
-
+	
 #ifdef HAVE_NATT
 	if (new_encap)
 	{
