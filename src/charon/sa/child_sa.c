@@ -136,6 +136,26 @@ struct private_child_sa_t {
 	 * config used to create this child
 	 */
 	child_cfg_t *config;
+
+	/**
+	 * time of last use in seconds (inbound)
+	 */
+	u_int32_t my_usetime;
+
+	/**
+	 * time of last use in seconds (outbound)
+	 */
+	u_int32_t other_usetime;
+
+	/**
+	 * last number of inbound bytes
+	 */
+	u_int64_t my_usebytes;
+
+	/**
+	 * last number of outbound bytes
+	 */
+	u_int64_t other_usebytes;
 };
 
 /**
@@ -357,11 +377,16 @@ static enumerator_t* create_policy_enumerator(private_child_sa_t *this)
 /**
  * Implementation of child_sa_t.get_usetime
  */
-static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
+static u_int32_t get_usetime(private_child_sa_t *this, bool inbound, bool update)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
 	u_int32_t last_use = 0;
+
+	if (!update)
+	{
+		return (inbound) ? this->my_usetime : this->other_usetime;
+	}
 
 	enumerator = create_policy_enumerator(this);
 	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
@@ -394,17 +419,26 @@ static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
 		}
 	}
 	enumerator->destroy(enumerator);
+	if (inbound)
+	{
+		this->my_usetime = last_use;
+	}
+	else
+	{
+		this->other_usetime = last_use;
+	}
 	return last_use;
 }
 
 /**
  * Implementation of child_sa_t.get_usebytes
  */
-static u_int64_t get_usebytes(private_child_sa_t *this, bool inbound)
+static u_int64_t get_usebytes(private_child_sa_t *this, bool inbound, bool *change)
 {
-	status_t status = NOT_SUPPORTED;
+	status_t status;
 	u_int64_t bytes;
 
+	*change = FALSE;
 	if (inbound) 
 	{
 		if (this->my_spi)
@@ -412,7 +446,14 @@ static u_int64_t get_usebytes(private_child_sa_t *this, bool inbound)
 			status = charon->kernel_interface->query_sa(charon->kernel_interface,
 									this->other_addr, this->my_addr,
 									this->my_spi, this->protocol, &bytes);
+			if (status == SUCCESS && bytes > this->my_usebytes)
+			{
+				*change = TRUE;
+				this->my_usebytes = bytes;
+				return bytes;
+			}
 		}
+		return this->my_usebytes;
 	}
 	else
 	{
@@ -421,9 +462,15 @@ static u_int64_t get_usebytes(private_child_sa_t *this, bool inbound)
 			status = charon->kernel_interface->query_sa(charon->kernel_interface,
 									this->my_addr, this->other_addr,
 						 			this->other_spi, this->protocol, &bytes);
+			if (status == SUCCESS && bytes > this->other_usebytes)
+			{
+				*change = TRUE;
+				this->other_usebytes = bytes;
+				return bytes;
+			}
 		}
+		return this->other_usebytes;
 	}
-	return (status == SUCCESS) ? bytes : 0;
 }
 
 /**
@@ -805,7 +852,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.set_proposal = (void(*)(child_sa_t*, proposal_t *proposal))set_proposal;
 	this->public.get_lifetime = (u_int32_t(*)(child_sa_t*, bool))get_lifetime;
 	this->public.get_usetime = (u_int32_t(*)(child_sa_t*, bool))get_usetime;
-	this->public.get_usebytes = (u_int64_t(*)(child_sa_t*, bool))get_usebytes;
+	this->public.get_usebytes = (u_int64_t(*)(child_sa_t*, bool, bool*))get_usebytes;
 	this->public.has_encap = (bool(*)(child_sa_t*))has_encap;
 	this->public.get_ipcomp = (ipcomp_transform_t(*)(child_sa_t*))get_ipcomp;
 	this->public.set_ipcomp = (void(*)(child_sa_t*,ipcomp_transform_t))set_ipcomp;
@@ -828,6 +875,10 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->encap = encap;
 	this->ipcomp = IPCOMP_NONE;
 	this->state = CHILD_CREATED;
+	this->my_usetime = 0;
+	this->other_usetime = 0;
+	this->my_usebytes = 0;
+	this->other_usebytes = 0;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;
 	this->my_ts = linked_list_create();

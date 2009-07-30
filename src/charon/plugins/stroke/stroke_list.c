@@ -175,6 +175,8 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 		
 		if (all)
 		{
+			bool change;
+
 			fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa), 
 					child_sa->get_reqid(child_sa));
 			
@@ -207,22 +209,22 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 				}
 			}
 
-			bytes_in = child_sa->get_usebytes(child_sa, TRUE);
+			bytes_in = child_sa->get_usebytes(child_sa, TRUE, &change);
 			fprintf(out, ", %lu bytes_i", bytes_in);
 			if (bytes_in)
 			{
-				use_in = child_sa->get_usetime(child_sa, TRUE);
+				use_in = child_sa->get_usetime(child_sa, TRUE, change);
 				if (use_in)
 				{
 					fprintf(out, " (%ds ago)", now - use_in);
 				}
 			}
 
-			bytes_out = child_sa->get_usebytes(child_sa, FALSE);
+			bytes_out = child_sa->get_usebytes(child_sa, FALSE, &change);
 			fprintf(out, ", %lu bytes_o", bytes_out);
 			if (bytes_out)
 			{
-				use_out = child_sa->get_usetime(child_sa, FALSE);
+				use_out = child_sa->get_usetime(child_sa, FALSE, change);
 				if (use_out)
 				{
 					fprintf(out, " (%ds ago)", now - use_out);
