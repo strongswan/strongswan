@@ -751,6 +751,8 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 	
 	this->mutex_pfkey->lock(this->mutex_pfkey);
 
+	/* FIXME: our usage of sequence numbers is probably wrong. check RFC 2367,
+	 * in particular the behavior in response to an SADB_ACQUIRE. */
 	in->sadb_msg_seq = ++this->seq;
 	in->sadb_msg_pid = getpid();
 
@@ -812,14 +814,23 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 		}
 		if (msg->sadb_msg_seq != this->seq)
 		{
-			DBG1(DBG_KNL, "received PF_KEY message with invalid sequence number, "
-					"was %d expected %d", msg->sadb_msg_seq, this->seq);
-			if (msg->sadb_msg_seq < this->seq)
+			DBG1(DBG_KNL, "received PF_KEY message with unexpected sequence "
+				 "number, was %d expected %d", msg->sadb_msg_seq, this->seq);
+			if (msg->sadb_msg_seq == 0)
+			{
+				/* FreeBSD and Mac OS X do this for the response to
+				 * SADB_X_SPDGET (but not for the response to SADB_GET).
+				 * FreeBSD: 'key_spdget' in /usr/src/sys/netipsec/key.c. */
+			}
+			else if (msg->sadb_msg_seq < this->seq)
 			{
 				continue;
 			}
-			this->mutex_pfkey->unlock(this->mutex_pfkey);
-			return FAILED;
+			else
+			{
+				this->mutex_pfkey->unlock(this->mutex_pfkey);
+				return FAILED;
+			}
 		}
 		if (msg->sadb_msg_type != in->sadb_msg_type)
 		{
