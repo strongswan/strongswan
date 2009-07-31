@@ -851,7 +851,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_proposal = (proposal_t*(*)(child_sa_t*))get_proposal;
 	this->public.set_proposal = (void(*)(child_sa_t*, proposal_t *proposal))set_proposal;
 	this->public.get_lifetime = (u_int32_t(*)(child_sa_t*, bool))get_lifetime;
-	this->public.get_usetime = (u_int32_t(*)(child_sa_t*, bool))get_usetime;
+	this->public.get_usetime = (u_int32_t(*)(child_sa_t*, bool, bool))get_usetime;
 	this->public.get_usebytes = (u_int64_t(*)(child_sa_t*, bool, bool*))get_usebytes;
 	this->public.has_encap = (bool(*)(child_sa_t*))has_encap;
 	this->public.get_ipcomp = (ipcomp_transform_t(*)(child_sa_t*))get_ipcomp;
