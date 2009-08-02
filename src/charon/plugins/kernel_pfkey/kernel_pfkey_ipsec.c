@@ -1495,7 +1495,56 @@ static status_t query_sa(private_kernel_pfkey_ipsec_t *this, host_t *src,
 						 host_t *dst, u_int32_t spi, protocol_id_t protocol,
 						 u_int64_t *bytes)
 {
-	return NOT_SUPPORTED; /* TODO */
+	unsigned char request[PFKEY_BUFFER_SIZE];
+	struct sadb_msg *msg, *out;
+	struct sadb_sa *sa;
+	pfkey_msg_t response;
+	size_t len;
+	
+	memset(&request, 0, sizeof(request));
+	
+	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x", ntohl(spi));
+	
+	msg = (struct sadb_msg*)request;
+	msg->sadb_msg_version = PF_KEY_V2;
+	msg->sadb_msg_type = SADB_GET;
+	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
+	
+	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
+	sa->sadb_sa_exttype = SADB_EXT_SA;
+	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
+	sa->sadb_sa_spi = spi;
+	PFKEY_EXT_ADD(msg, sa);
+	
+	/* the Linux Kernel doesn't care for the src address, but other systems do
+	 * (e.g. FreeBSD)
+	 */
+	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
+	
+	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
+		return FAILED;
+	}
+	else if (out->sadb_msg_errno)
+	{
+		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x: %s (%d)",
+				ntohl(spi), strerror(out->sadb_msg_errno), out->sadb_msg_errno);
+		free(out);
+		return FAILED;
+	}
+	else if (parse_pfkey_message(out, &response) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
+		free(out);
+		return FAILED;
+	}
+	*bytes = response.lft_current->sadb_lifetime_bytes;
+
+	free(out);
+	return SUCCESS;
 }
 
 /**
@@ -1526,7 +1575,9 @@ static status_t del_sa(private_kernel_pfkey_ipsec_t *this, host_t *src,
 	sa->sadb_sa_spi = spi;
 	PFKEY_EXT_ADD(msg, sa);
 	
-	/* the Linux Kernel doesn't care for the src address, but other systems do (e.g. FreeBSD) */
+	/* the Linux Kernel doesn't care for the src address, but other systems do
+	 * (e.g. FreeBSD)
+	 */
 	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
 	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
 	
