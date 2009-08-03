@@ -127,8 +127,10 @@ struct private_identification_t {
 typedef struct {
 	/* implements enumerator interface */
 	enumerator_t public;
-	/* RDNs left to parse */
-	chunk_t left;
+	/* next set to parse, if any */
+	chunk_t sets;
+	/* next sequence in set, if any */
+	chunk_t seqs;
 } rdn_enumerator_t;
 
 /**
@@ -139,20 +141,25 @@ static bool rdn_enumerate(rdn_enumerator_t *this, chunk_t *oid,
 {
 	chunk_t rdn;
 	
-	/* a RDN is a SET of attribute-values, each is a SEQUENCE ... */
-	if (asn1_unwrap(&this->left, &rdn) == ASN1_SET &&
-		asn1_unwrap(&rdn, &rdn) == ASN1_SEQUENCE)
+	/* a DN contains one or more SET, each containing one or more SEQUENCES,
+	 * each containing a OID/value RDN */
+	if (!this->seqs.len)
 	{
-		/* ... of an OID */
-		if (asn1_unwrap(&rdn, oid) == ASN1_OID)
+		/* no SEQUENCEs in current SET, parse next SET */
+		if (asn1_unwrap(&this->sets, &this->seqs) != ASN1_SET)
 		{
-			/* and a specific string type */
-			int t = asn1_unwrap(&rdn, data);
-			if (t != ASN1_INVALID)
-			{
-				*type = t;
-				return TRUE;
-			}
+			return FALSE;
+		}
+	}
+	if (asn1_unwrap(&this->seqs, &rdn) == ASN1_SEQUENCE &&
+		asn1_unwrap(&rdn, oid) == ASN1_OID)
+	{
+		int t = asn1_unwrap(&rdn, data);
+		
+		if (t != ASN1_INVALID)
+		{
+			*type = t;
+			return TRUE;
 		}
 	}
 	return FALSE;
@@ -168,9 +175,10 @@ static enumerator_t* create_rdn_enumerator(chunk_t dn)
 	e->public.enumerate = (void*)rdn_enumerate;
 	e->public.destroy = (void*)free;
 	
-	/* a DN is a sequence of RDNs */
-	if (asn1_unwrap(&dn, &e->left) == ASN1_SEQUENCE)
+	/* a DN is a SEQUENCE, get the first SET of it */
+	if (asn1_unwrap(&dn, &e->sets) == ASN1_SEQUENCE)
 	{
+		e->seqs = chunk_empty;
 		return &e->public;
 	}
 	free(e);
