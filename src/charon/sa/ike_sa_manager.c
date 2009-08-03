@@ -1050,7 +1050,8 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	enumerator_t *enumerator;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
-	peer_cfg_t *current_cfg;
+	peer_cfg_t *current_peer;
+	ike_cfg_t *current_ike;
 	u_int segment;
 	
 	if (!this->reuse_ikesa)
@@ -1072,14 +1073,18 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 			continue;
 		}
 		
-		current_cfg = entry->ike_sa->get_peer_cfg(entry->ike_sa);
-		if (current_cfg && current_cfg->equals(current_cfg, peer_cfg))
+		current_peer = entry->ike_sa->get_peer_cfg(entry->ike_sa);
+		if (current_peer && current_peer->equals(current_peer, peer_cfg))
 		{
-			DBG2(DBG_MGR, "found an existing IKE_SA with a '%s' config",
-				 current_cfg->get_name(current_cfg));
-			entry->checked_out = TRUE;
-			ike_sa = entry->ike_sa;
-			break;
+			current_ike = current_peer->get_ike_cfg(current_peer);
+			if (current_ike->equals(current_ike, peer_cfg->get_ike_cfg(peer_cfg)))
+			{
+				DBG2(DBG_MGR, "found an existing IKE_SA with a '%s' config",
+					 current_peer->get_name(current_peer));
+				entry->checked_out = TRUE;
+				ike_sa = entry->ike_sa;
+				break;
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
