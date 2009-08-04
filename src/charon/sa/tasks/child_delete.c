@@ -244,11 +244,15 @@ static void log_children(private_child_delete_t *this)
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
+		bool change;
+
 		DBG0(DBG_IKE, "closing CHILD_SA %s{%d} "
-			 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
+			 "with SPIs %.8x_i (%lu bytes) %.8x_o (%lu bytes) and TS %#R=== %#R",
 			 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
 			 ntohl(child_sa->get_spi(child_sa, TRUE)),
+			 child_sa->get_usebytes(child_sa, TRUE,  &change),
 			 ntohl(child_sa->get_spi(child_sa, FALSE)),
+			 child_sa->get_usebytes(child_sa, FALSE, &change),
 			 child_sa->get_traffic_selectors(child_sa, TRUE),
 			 child_sa->get_traffic_selectors(child_sa, FALSE));
 	}
