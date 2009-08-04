@@ -1888,6 +1888,13 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 		free(out);
 		return FAILED;
 	}
+	else if (response.lft_current == NULL)
+	{
+		DBG1(DBG_KNL, "unable to query policy %R === %R %N: kernel reports no "
+			 "use time", src_ts, dst_ts, policy_dir_names, direction);
+		free(out);
+		return FAILED;
+	}
 	
 	*use_time = response.lft_current->sadb_lifetime_usetime;
 	
