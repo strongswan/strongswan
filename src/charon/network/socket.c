@@ -434,7 +434,6 @@ status_t sender(private_socket_t *this, packet_t *packet)
 static int open_socket(private_socket_t *this, int family, u_int16_t port)
 {
 	int on = TRUE;
-	int type = UDP_ENCAP_ESPINUDP;
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	u_int sol, pktinfo = 0;
@@ -505,13 +504,18 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 			return 0;
 		}
 	}
-	
-	/* enable UDP decapsulation globally, only for one socket needed */
-	if (family == AF_INET && port == IKEV2_NATT_PORT &&
-		setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+
+#ifndef __APPLE__
 	{
-		DBG1(DBG_NET, "unable to set UDP_ENCAP: %s", strerror(errno));
+		/* enable UDP decapsulation globally, only for one socket needed */
+		int type = UDP_ENCAP_ESPINUDP;
+		if (family == AF_INET && port == IKEV2_NATT_PORT &&
+			setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+		{
+			DBG1(DBG_NET, "unable to set UDP_ENCAP: %s", strerror(errno));
+		}
 	}
+#endif
 	return skt;
 }
 
