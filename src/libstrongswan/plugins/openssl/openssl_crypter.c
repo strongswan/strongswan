@@ -83,6 +83,7 @@ static openssl_algorithm_t encryption_algs[] = {
 /*	{ENCR_DES_IV32, 	"***",			0,	0}, */
 /*	{ENCR_NULL, 		"***",			0,	0}, */ /* handled separately */
 /*	{ENCR_AES_CBC, 		"***",			0,	0}, */ /* handled separately */
+/*	{ENCR_CAMELLIA_CBC,	"***",			0,	0}, */ /* handled separately */
 /*	{ENCR_AES_CTR, 		"***",			0,	0}, */ /* disabled in evp.h */
 	{END_OF_LIST, 		NULL,			0,	0},
 };
@@ -218,6 +219,23 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 					break;
 				case 32:        /* AES-256 */
 					this->cipher = EVP_get_cipherbyname("aes256"); 
+					break;
+				default:
+					free(this);
+					return NULL;
+			}
+			break;
+		case ENCR_CAMELLIA_CBC:
+			switch (key_size)
+			{
+				case 16:        /* CAMELLIA 128 */
+					this->cipher = EVP_get_cipherbyname("camellia128");
+					break;
+				case 24:        /* CAMELLIA 192 */
+					this->cipher = EVP_get_cipherbyname("camellia192");
+					break;
+				case 32:        /* CAMELLIA 256 */
+					this->cipher = EVP_get_cipherbyname("camellia256"); 
 					break;
 				default:
 					free(this);

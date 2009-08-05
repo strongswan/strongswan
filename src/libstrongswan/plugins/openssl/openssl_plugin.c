@@ -212,6 +212,8 @@ plugin_t *plugin_create()
 	/* crypter */
 	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
 					(crypter_constructor_t)openssl_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CBC,
+					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
 					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_RC5,
