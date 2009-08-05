@@ -58,6 +58,11 @@ struct private_sha256_hasher_t {
 };
 
 
+static const u_int32_t sha224_hashInit[8] = {
+	0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511,
+	0x64f98fa7, 0xbefa4fa4 
+};
+
 static const u_int32_t sha256_hashInit[8] = {
 	0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c,
 	0x1f83d9ab, 0x5be0cd19
@@ -422,6 +427,21 @@ static void sha512_final(private_sha512_hasher_t *ctx)
 }
 
 /**
+ * Implementation of hasher_t.get_hash for SHA224.
+ */
+static void get_hash224(private_sha256_hasher_t *this, 
+						chunk_t chunk, u_int8_t *buffer)
+{
+	sha256_write(this, chunk.ptr, chunk.len);
+	if (buffer != NULL)
+	{
+		sha256_final(this);
+		memcpy(buffer, this->sha_out, HASH_SIZE_SHA224);
+		this->public.hasher_interface.reset(&(this->public.hasher_interface));
+	}
+}
+
+/**
  * Implementation of hasher_t.get_hash for SHA256.
  */
 static void get_hash256(private_sha256_hasher_t *this, 
@@ -463,6 +483,25 @@ static void get_hash512(private_sha512_hasher_t *this,
 		sha512_final(this);
 		memcpy(buffer, this->sha_out, HASH_SIZE_SHA512);
 		this->public.hasher_interface.reset(&(this->public.hasher_interface));
+	}
+}
+
+/**
+ * Implementation of hasher_t.allocate_hash for SHA224.
+ */
+static void allocate_hash224(private_sha256_hasher_t *this, 
+							 chunk_t chunk, chunk_t *hash)
+{
+	chunk_t allocated_hash;
+	
+	sha256_write(this, chunk.ptr, chunk.len);
+	if (hash != NULL)
+	{
+		sha256_final(this);
+		allocated_hash = chunk_alloc(HASH_SIZE_SHA224);
+		memcpy(allocated_hash.ptr, this->sha_out, HASH_SIZE_SHA224);
+		this->public.hasher_interface.reset(&(this->public.hasher_interface));
+		*hash = allocated_hash;
 	}
 }
 
@@ -524,6 +563,14 @@ static void allocate_hash512(private_sha512_hasher_t *this,
 }
 
 /**
+ * Implementation of hasher_t.get_hash_size for SHA224.
+ */
+static size_t get_hash_size224(private_sha256_hasher_t *this)
+{
+	return HASH_SIZE_SHA224;
+}
+
+/**
  * Implementation of hasher_t.get_hash_size for SHA256.
  */
 static size_t get_hash_size256(private_sha256_hasher_t *this)
@@ -545,6 +592,16 @@ static size_t get_hash_size384(private_sha512_hasher_t *this)
 static size_t get_hash_size512(private_sha512_hasher_t *this)
 {
 	return HASH_SIZE_SHA512;
+}
+
+/**
+ * Implementation of hasher_t.reset for SHA224
+ */
+static void reset224(private_sha256_hasher_t *ctx)
+{
+	memcpy(&ctx->sha_H[0], &sha224_hashInit[0], sizeof(ctx->sha_H));
+	ctx->sha_blocks = 0;
+	ctx->sha_bufCnt = 0;
 }
 
 /**
@@ -596,6 +653,13 @@ sha2_hasher_t *sha2_hasher_create(hash_algorithm_t algorithm)
 	
 	switch (algorithm)
 	{
+		case HASH_SHA224:
+			this = (sha2_hasher_t*)malloc_thing(private_sha256_hasher_t);
+			this->hasher_interface.reset = (void(*)(hasher_t*))reset224;
+			this->hasher_interface.get_hash_size = (size_t(*)(hasher_t*))get_hash_size224;
+			this->hasher_interface.get_hash = (void(*)(hasher_t*,chunk_t,u_int8_t*))get_hash224;
+			this->hasher_interface.allocate_hash = (void(*)(hasher_t*,chunk_t,chunk_t*))allocate_hash224;
+			break;
 		case HASH_SHA256:
 			this = (sha2_hasher_t*)malloc_thing(private_sha256_hasher_t);
 			this->hasher_interface.reset = (void(*)(hasher_t*))reset256;

@@ -226,6 +226,8 @@ static bool sign(private_gcrypt_rsa_private_key_t *this, signature_scheme_t sche
 			return sign_raw(this, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return sign_pkcs1(this, HASH_SHA1, "sha1", data, sig);
+		case SIGN_RSA_EMSA_PKCS1_SHA224:
+			return sign_pkcs1(this, HASH_SHA224, "sha224", data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:
 			return sign_pkcs1(this, HASH_SHA256, "sha256", data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA384:

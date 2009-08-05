@@ -28,6 +28,7 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_ECDSA_521,
 	"RSA_EMSA_PKCS1_NULL",
 	"RSA_EMSA_PKCS1_MD5",
 	"RSA_EMSA_PKCS1_SHA1",
+	"RSA_EMSA_PKCS1_SHA224",
 	"RSA_EMSA_PKCS1_SHA256",
 	"RSA_EMSA_PKCS1_SHA384",
 	"RSA_EMSA_PKCS1_SHA512",
@@ -51,6 +52,9 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 		case OID_SHA1_WITH_RSA:
 		case OID_SHA1:
 			return SIGN_RSA_EMSA_PKCS1_SHA1;
+		case OID_SHA224_WITH_RSA:
+		case OID_SHA224:
+			return SIGN_RSA_EMSA_PKCS1_SHA224;
 		case OID_SHA256_WITH_RSA:
 		case OID_SHA256:
 			return SIGN_RSA_EMSA_PKCS1_SHA256;

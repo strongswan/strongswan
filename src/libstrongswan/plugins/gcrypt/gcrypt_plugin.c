@@ -148,6 +148,8 @@ plugin_t *plugin_create()
 					(hasher_constructor_t)gcrypt_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
 					(hasher_constructor_t)gcrypt_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA224,
+					(hasher_constructor_t)gcrypt_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
 					(hasher_constructor_t)gcrypt_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA384,

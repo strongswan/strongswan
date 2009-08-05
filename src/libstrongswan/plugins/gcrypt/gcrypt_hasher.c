@@ -116,6 +116,9 @@ gcrypt_hasher_t *gcrypt_hasher_create(hash_algorithm_t algo)
 		case HASH_SHA1:
 			gcrypt_alg = GCRY_MD_SHA1;
 			break;
+		case HASH_SHA224:
+			gcrypt_alg = GCRY_MD_SHA224;
+			break;
 		case HASH_SHA256:
 			gcrypt_alg = GCRY_MD_SHA256;
 			break;

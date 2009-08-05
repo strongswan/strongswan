@@ -188,6 +188,8 @@ static bool verify(private_gcrypt_rsa_public_key_t *this,
 			return verify_pkcs1(this, HASH_MD5, "md5", data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return verify_pkcs1(this, HASH_SHA1, "sha1", data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA224:
+			return verify_pkcs1(this, HASH_SHA224, "sha224", data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:
 			return verify_pkcs1(this, HASH_SHA256, "sha256", data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA384:

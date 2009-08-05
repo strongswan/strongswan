@@ -66,6 +66,8 @@ enum signature_scheme_t {
 	SIGN_RSA_EMSA_PKCS1_MD5,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-1     */
 	SIGN_RSA_EMSA_PKCS1_SHA1,
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-224   */
+	SIGN_RSA_EMSA_PKCS1_SHA224,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-256   */
 	SIGN_RSA_EMSA_PKCS1_SHA256,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-384   */

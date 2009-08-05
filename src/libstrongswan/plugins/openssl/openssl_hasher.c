@@ -65,6 +65,7 @@ static openssl_algorithm_t integrity_algs[] = {
 	{HASH_MD2,		"md2"},
 	{HASH_MD5,		"md5"},
 	{HASH_SHA1,		"sha1"},
+	{HASH_SHA224,	"sha224"},
 	{HASH_SHA256,	"sha256"},
 	{HASH_SHA384,	"sha384"},
 	{HASH_SHA512,	"sha512"},

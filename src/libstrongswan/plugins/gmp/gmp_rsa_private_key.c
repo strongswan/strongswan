@@ -301,6 +301,8 @@ static bool sign(private_gmp_rsa_private_key_t *this, signature_scheme_t scheme,
 			return build_emsa_pkcs1_signature(this, HASH_UNKNOWN, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return build_emsa_pkcs1_signature(this, HASH_SHA1, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA224:
+			return build_emsa_pkcs1_signature(this, HASH_SHA224, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:
 			return build_emsa_pkcs1_signature(this, HASH_SHA256, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA384:

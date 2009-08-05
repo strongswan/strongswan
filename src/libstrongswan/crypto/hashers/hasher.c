@@ -26,6 +26,7 @@ ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
 	"HASH_MD4",
 	"HASH_MD5",
 	"HASH_SHA1",
+	"HASH_SHA224",
 	"HASH_SHA256",
 	"HASH_SHA384",
 	"HASH_SHA512"
@@ -47,6 +48,9 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 		case OID_SHA1:
 		case OID_SHA1_WITH_RSA:
 			return HASH_SHA1;
+		case OID_SHA224:
+		case OID_SHA224_WITH_RSA:
+			return HASH_SHA224;
 		case OID_SHA256:
 		case OID_SHA256_WITH_RSA:
 			return HASH_SHA256;
@@ -78,6 +82,9 @@ int hasher_algorithm_to_oid(hash_algorithm_t alg)
 			break;
 		case HASH_SHA1:
 			oid = OID_SHA1;
+			break;
+		case HASH_SHA224:
+			oid = OID_SHA224;
 			break;
 		case HASH_SHA256:
 			oid = OID_SHA256;
@@ -111,6 +118,9 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg)
 			break;
 		case HASH_SHA1:
 			oid = OID_SHA1_WITH_RSA;
+			break;
+		case HASH_SHA224:
+			oid = OID_SHA224_WITH_RSA;
 			break;
 		case HASH_SHA256:
 			oid = OID_SHA256_WITH_RSA;
