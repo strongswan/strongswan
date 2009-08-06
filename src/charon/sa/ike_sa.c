@@ -273,11 +273,7 @@ static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, &child_sa))
 	{
-		u_int64_t use_bytes;
-		bool change;
-
-		use_bytes = child_sa->get_usebytes(child_sa, inbound, &change);
-		use_time = max(use_time, child_sa->get_usetime(child_sa, inbound, change));
+		use_time = max(use_time, child_sa->get_usetime(child_sa, inbound));
 	}
 	enumerator->destroy(enumerator);
 	

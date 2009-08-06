@@ -240,19 +240,17 @@ struct child_sa_t {
 	 * Get last use time of the CHILD_SA.
 	 *
 	 * @param inbound	TRUE for inbound traffic, FALSE for outbound
-	 * @param update	update time of last use via kernel query	
 	 * @return			time of last use in seconds
 	 */
-	u_int32_t (*get_usetime)(child_sa_t *this, bool inbound, bool update);
+	u_int32_t (*get_usetime)(child_sa_t *this, bool inbound);
 	
 	/**
 	 * Get number of bytes processed by CHILD_SA.
 	 *
 	 * @param inbound		TRUE for inbound traffic, FALSE for outbound
-	 * @param[out] change	TRUE if change since last query, FALSE else
 	 * @return				number of processed bytes
 	 */
-	u_int64_t (*get_usebytes)(child_sa_t *this, bool inbound, bool *change);
+	u_int64_t (*get_usebytes)(child_sa_t *this, bool inbound);
 
 	/**
 	 * Get the traffic selectors list added for one side.
