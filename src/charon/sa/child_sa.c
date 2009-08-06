@@ -375,6 +375,58 @@ static enumerator_t* create_policy_enumerator(private_child_sa_t *this)
 }
 
 /**
+ * update the cached usebytes
+ * returns SUCCESS if the usebytes have changed, FAILED if not or no SPIs
+ * are available, and NOT_SUPPORTED if the kernel interface does not support
+ * quering the usebytes.
+ */
+static bool update_usebytes(private_child_sa_t *this, bool inbound)
+{
+	status_t status = FAILED;
+	u_int64_t bytes;
+	
+	if (inbound)
+	{
+		if (this->my_spi)
+		{
+			status = charon->kernel_interface->query_sa(
+									charon->kernel_interface,
+									this->other_addr, this->my_addr,
+									this->my_spi, this->protocol, &bytes);
+			if (status == SUCCESS)
+			{
+				if (bytes > this->my_usebytes)
+				{
+					this->my_usebytes = bytes;
+					return SUCCESS;
+				}
+				return FAILED;
+			}
+		}
+	}
+	else
+	{
+		if (this->other_spi)
+		{
+			status = charon->kernel_interface->query_sa(
+									charon->kernel_interface,
+									this->my_addr, this->other_addr,
+									this->other_spi, this->protocol, &bytes);
+			if (status == SUCCESS)
+			{
+				if (bytes > this->other_usebytes)
+				{
+					this->other_usebytes = bytes;
+					return SUCCESS;
+				}
+				return FAILED;
+			}
+		}
+	}
+	return status;
+}
+
+/**
  * Implementation of child_sa_t.get_usetime
  */
 static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
@@ -383,12 +435,17 @@ static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
 	traffic_selector_t *my_ts, *other_ts;
 	u_int32_t last_use = 0;
 	
+	if (update_usebytes(this, inbound) == FAILED)
+	{	/* no SPI or no traffic since last update */
+		return inbound ? this->my_usetime : this->other_usetime;
+	}
+	
 	enumerator = create_policy_enumerator(this);
 	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
 		u_int32_t in, out, fwd;
 		
-		if (inbound) 
+		if (inbound)
 		{
 			if (charon->kernel_interface->query_policy(charon->kernel_interface,
 								other_ts, my_ts, POLICY_IN, &in) == SUCCESS)
@@ -430,37 +487,8 @@ static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
  */
 static u_int64_t get_usebytes(private_child_sa_t *this, bool inbound)
 {
-	status_t status;
-	u_int64_t bytes;
-
-	if (inbound)
-	{
-		if (this->my_spi)
-		{
-			status = charon->kernel_interface->query_sa(charon->kernel_interface,
-									this->other_addr, this->my_addr,
-									this->my_spi, this->protocol, &bytes);
-			if (status == SUCCESS && bytes > this->my_usebytes)
-			{
-				this->my_usebytes = bytes;
-			}
-		}
-		return this->my_usebytes;
-	}
-	else
-	{
-		if (this->other_spi)
-		{
-			status = charon->kernel_interface->query_sa(charon->kernel_interface,
-									this->my_addr, this->other_addr,
-						 			this->other_spi, this->protocol, &bytes);
-			if (status == SUCCESS && bytes > this->other_usebytes)
-			{
-				this->other_usebytes = bytes;
-			}
-		}
-		return this->other_usebytes;
-	}
+	update_usebytes(this, inbound);
+	return inbound ? this->my_usebytes : this->other_usebytes;
 }
 
 /**
@@ -632,13 +660,13 @@ static status_t add_policies(private_child_sa_t *this,
  * Implementation of child_sa_t.update.
  */
 static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
-					   host_t *vip, bool encap) 
+					   host_t *vip, bool encap)
 {
 	child_sa_state_t old;
 	bool transport_proxy_mode;
 	
 	/* anything changed at all? */
-	if (me->equals(me, this->my_addr) && 
+	if (me->equals(me, this->my_addr) &&
 		other->equals(other, this->other_addr) && this->encap == encap)
 	{
 		return SUCCESS;
@@ -727,7 +755,7 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 						me, other, my_ts, other_ts, POLICY_OUT, this->other_spi,
 						this->protocol, this->reqid, this->mode, this->ipcomp,
 						this->other_cpi, FALSE);
-				charon->kernel_interface->add_policy(charon->kernel_interface, 
+				charon->kernel_interface->add_policy(charon->kernel_interface,
 						other, me, other_ts, my_ts, POLICY_IN, this->my_spi,
 						this->protocol, this->reqid, this->mode, this->ipcomp,
 						this->my_cpi, FALSE);
@@ -881,7 +909,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->config = config;
 	config->get_ref(config);
 	
-	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */	
+	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */
 	if (config->get_mode(config) == MODE_TRANSPORT &&
 	    config->use_proxy_mode(config))
 	{
@@ -908,7 +936,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 				host = host_create_from_chunk(family, addr, 0);
 				free(addr.ptr);
 				DBG1(DBG_CHD, "my address: %H is a transport mode proxy for %H",
-							   this->my_addr, host); 
+							   this->my_addr, host);
 				this->my_addr->destroy(this->my_addr);
 				this->my_addr = host;
 			}
@@ -929,7 +957,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 				host = host_create_from_chunk(family, addr, 0);
 				free(addr.ptr);
 				DBG1(DBG_CHD, "other address: %H is a transport mode proxy for %H",
-							   this->other_addr, host); 
+							   this->other_addr, host);
 				this->other_addr->destroy(this->other_addr);
 				this->other_addr = host;
 			}
