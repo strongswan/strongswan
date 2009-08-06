@@ -16,6 +16,8 @@
 
 #include <sys/stat.h>
 #include <limits.h>
+#include <glob.h>
+#include <libgen.h>
 
 #include "stroke_cred.h"
 #include "stroke_shared_key.h"
@@ -40,6 +42,8 @@
 #define OCSP_CERTIFICATE_DIR IPSEC_D_DIR "/ocspcerts"
 #define CRL_DIR IPSEC_D_DIR "/crls"
 #define SECRETS_FILE CONFIG_DIR "/ipsec.secrets"
+
+#define MAX_SECRETS_RECURSION 10
 
 typedef struct private_stroke_cred_t private_stroke_cred_t;
 
@@ -691,7 +695,7 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 /**
  * reload ipsec.secrets
  */
-static void load_secrets(private_stroke_cred_t *this)
+static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 {
 	size_t bytes;
 	int line_nr = 0;
@@ -700,9 +704,9 @@ static void load_secrets(private_stroke_cred_t *this)
 	private_key_t *private;
 	shared_key_t *shared;
 
-	DBG1(DBG_CFG, "loading secrets from '%s'", SECRETS_FILE);
+	DBG1(DBG_CFG, "loading secrets from '%s'", file);
 
-	fd = fopen(SECRETS_FILE, "r");
+	fd = fopen(file, "r");
 	if (fd == NULL)
 	{
 		DBG1(DBG_CFG, "opening secrets file '%s' failed");
@@ -719,15 +723,19 @@ static void load_secrets(private_stroke_cred_t *this)
 	src = chunk;
 
 	this->lock->write_lock(this->lock);
-	while (this->shared->remove_last(this->shared,
-		 								   (void**)&shared) == SUCCESS)
+	if (level == 0)
 	{
-		shared->destroy(shared);
-	}
-	while (this->private->remove_last(this->private,
-		 								    (void**)&private) == SUCCESS)
-	{
-		private->destroy(private);
+		/* flush secrets on non-recursive invocation */
+		while (this->shared->remove_last(this->shared,
+										 (void**)&shared) == SUCCESS)
+		{
+			shared->destroy(shared);
+		}
+		while (this->private->remove_last(this->private,
+										  (void**)&private) == SUCCESS)
+		{
+			private->destroy(private);
+		}
 	}
 	
 	while (fetchline(&src, &line))
@@ -741,6 +749,66 @@ static void load_secrets(private_stroke_cred_t *this)
 		{
 			continue;
 		}
+		if (line.len > strlen("include ") &&
+			strneq(line.ptr, "include ", strlen("include ")))
+		{
+			glob_t buf;
+			char **expanded, *dir, pattern[PATH_MAX];
+			u_char *pos;
+			
+			if (level > MAX_SECRETS_RECURSION)
+			{
+				DBG1(DBG_CFG, "maximum level of %d includes reached, ignored",
+					 MAX_SECRETS_RECURSION);
+				continue;
+			}
+			/* terminate filename by space */
+			line = chunk_skip(line, strlen("include "));
+			pos = memchr(line.ptr, ' ', line.len);
+			if (pos)
+			{
+				line.len = pos - line.ptr;
+			}
+			if (line.len && line.ptr[0] == '/')
+			{
+				if (line.len + 1 > sizeof(pattern))
+				{
+					DBG1(DBG_CFG, "include pattern too long, ignored");
+					continue;
+				}
+				snprintf(pattern, sizeof(pattern), "%.*s", line.len, line.ptr);
+			}
+			else
+			{	/* use directory of current file if relative */
+				dir = strdup(file);
+				dir = dirname(dir);
+				
+				if (line.len + 1 + strlen(dir) + 1 > sizeof(pattern))
+				{
+					DBG1(DBG_CFG, "include pattern too long, ignored");
+					free(dir);
+					continue;
+				}
+				snprintf(pattern, sizeof(pattern), "%s/%.*s",
+						 dir, line.len, line.ptr);
+				free(dir);
+			}
+			if (glob(pattern, GLOB_ERR, NULL, &buf) != 0)
+			{
+				DBG1(DBG_CFG, "expanding file expression '%s' failed", pattern);
+				globfree(&buf);
+			}
+			else
+			{
+				for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
+				{
+					load_secrets(this, *expanded, level + 1);
+				}
+			}
+			globfree(&buf);
+			continue;
+		}
+		
 		if (line.len > 2 && strneq(": ", line.ptr, 2))
 		{
 			/* no ids, skip the ':' */
@@ -989,7 +1057,7 @@ static void reread(private_stroke_cred_t *this, stroke_msg_t *msg)
 	if (msg->reread.flags & REREAD_SECRETS)
 	{
 		DBG1(DBG_CFG, "rereading secrets");
-		load_secrets(this);
+		load_secrets(this, SECRETS_FILE, 0);
 	}
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
@@ -1060,7 +1128,7 @@ stroke_cred_t *stroke_cred_create()
 	this->lock = rwlock_create(RWLOCK_DEFAULT);
 
 	load_certs(this);
-	load_secrets(this);
+	load_secrets(this, SECRETS_FILE, 0);
 	
 	this->cachecrl = FALSE;
 	
