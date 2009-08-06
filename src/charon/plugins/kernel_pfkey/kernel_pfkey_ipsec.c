@@ -704,7 +704,7 @@ static status_t parse_pfkey_message(struct sadb_msg *msg, pfkey_msg_t *out)
 	
 	while (len >= PFKEY_LEN(sizeof(struct sadb_ext)))
 	{
-		DBG2(DBG_KNL, "  %N", sadb_ext_type_names, ext->sadb_ext_type);
+		DBG3(DBG_KNL, "  %N", sadb_ext_type_names, ext->sadb_ext_type);
 		if (ext->sadb_ext_len < PFKEY_LEN(sizeof(struct sadb_ext)) ||
 			ext->sadb_ext_len > len)
 		{
@@ -1711,6 +1711,18 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 				 policy->src.mask);
 	add_addr_ext(msg, policy->dst.net, SADB_EXT_ADDRESS_DST, policy->dst.proto,
 				 policy->dst.mask);
+	
+#ifdef __FreeBSD__
+	{	/* on FreeBSD a lifetime has to be defined to be able to later query
+		 * the current use time. */
+		struct sadb_lifetime *lft;
+		lft = (struct sadb_lifetime*)PFKEY_EXT_ADD_NEXT(msg);
+		lft->sadb_lifetime_exttype = SADB_EXT_LIFETIME_HARD;
+		lft->sadb_lifetime_len = PFKEY_LEN(sizeof(struct sadb_lifetime));
+		lft->sadb_lifetime_addtime = 0x7fffffff; /* kernel maps this to long */
+		PFKEY_EXT_ADD(msg, lft);
+	}
+#endif
 	
 	this->mutex->unlock(this->mutex);
 	
