@@ -240,17 +240,19 @@ static void log_children(private_child_delete_t *this)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
+	u_int64_t bytes_in, bytes_out;
 	
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
+		child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in);
+		child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out);
+		
 		DBG0(DBG_IKE, "closing CHILD_SA %s{%d} "
 			 "with SPIs %.8x_i (%lu bytes) %.8x_o (%lu bytes) and TS %#R=== %#R",
 			 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
-			 ntohl(child_sa->get_spi(child_sa, TRUE)),
-			 child_sa->get_usebytes(child_sa, TRUE),
-			 ntohl(child_sa->get_spi(child_sa, FALSE)),
-			 child_sa->get_usebytes(child_sa, FALSE),
+			 ntohl(child_sa->get_spi(child_sa, TRUE)), bytes_in,
+			 ntohl(child_sa->get_spi(child_sa, FALSE)), bytes_out,
 			 child_sa->get_traffic_selectors(child_sa, TRUE),
 			 child_sa->get_traffic_selectors(child_sa, FALSE));
 	}

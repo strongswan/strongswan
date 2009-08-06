@@ -85,11 +85,11 @@ extern enum_name_t *child_sa_state_names;
 
 /**
  * Represents an IPsec SAs between two hosts.
- * 
+ *
  * A child_sa_t contains two SAs. SAs for both
  * directions are managed in one child_sa_t object. Both
  * SAs and the policies have the same reqid.
- * 
+ *
  * The procedure for child sa setup is as follows:
  * - A gets SPIs for a all protocols in its proposals via child_sa_t.alloc
  * - A send the proposals with the allocated SPIs to B
@@ -98,7 +98,7 @@ extern enum_name_t *child_sa_state_names;
  * - B calls child_sa_t.install for both, the allocated and received SPI
  * - B sends the proposal with the allocated SPI to A
  * - A calls child_sa_t.install for both, the allocated and recevied SPI
- * 
+ *
  * Once SAs are set up, policies can be added using add_policies.
  */
 struct child_sa_t {
@@ -112,7 +112,7 @@ struct child_sa_t {
 	
 	/**
 	 * Get the reqid of the CHILD SA.
-	 * 
+	 *
 	 * Every CHILD_SA has a reqid. The kernel uses this ID to
 	 * identify it.
 	 *
@@ -131,19 +131,19 @@ struct child_sa_t {
 	 * Get the state of the CHILD_SA.
 	 *
 	 * @return 			CHILD_SA state
-	 */	
+	 */
 	child_sa_state_t (*get_state) (child_sa_t *this);
 	
 	/**
 	 * Set the state of the CHILD_SA.
 	 *
 	 * @param state		state to set on CHILD_SA
-	 */	
+	 */
 	void (*set_state) (child_sa_t *this, child_sa_state_t state);
 	
 	/**
 	 * Get the SPI of this CHILD_SA.
-	 * 
+	 *
 	 * Set the boolean parameter inbound to TRUE to
 	 * get the SPI for which we receive packets, use
 	 * FALSE to get those we use for sending packets.
@@ -155,7 +155,7 @@ struct child_sa_t {
 	
 	/**
 	 * Get the CPI of this CHILD_SA.
-	 * 
+	 *
 	 * Set the boolean parameter inbound to TRUE to
 	 * get the CPI for which we receive packets, use
 	 * FALSE to get those we use for sending packets.
@@ -202,7 +202,7 @@ struct child_sa_t {
 	
 	/**
 	 * Set the IPComp algorithm to use.
-	 * 
+	 *
 	 * @param ipcomp	the IPComp transform to use
 	 */
 	void (*set_ipcomp)(child_sa_t *this, ipcomp_transform_t ipcomp);
@@ -219,7 +219,7 @@ struct child_sa_t {
 	 *
 	 * @param proposal	selected proposal
 	 */
-	void (*set_proposal)(child_sa_t *this, proposal_t *proposal);	
+	void (*set_proposal)(child_sa_t *this, proposal_t *proposal);
 	
 	/**
 	 * Check if this CHILD_SA uses UDP encapsulation.
@@ -237,27 +237,21 @@ struct child_sa_t {
 	u_int32_t (*get_lifetime)(child_sa_t *this, bool hard);
 	
 	/**
-	 * Get last use time of the CHILD_SA.
-	 *
-	 * @param inbound	TRUE for inbound traffic, FALSE for outbound
-	 * @return			time of last use in seconds
-	 */
-	u_int32_t (*get_usetime)(child_sa_t *this, bool inbound);
-	
-	/**
-	 * Get number of bytes processed by CHILD_SA.
+	 * Get last use time and the number of bytes processed.
 	 *
 	 * @param inbound		TRUE for inbound traffic, FALSE for outbound
-	 * @return				number of processed bytes
+	 * @param[out] time		time of last use in seconds (NULL to ignore)
+	 * @param[out] bytes	number of processed bytes (NULL to ignore)
 	 */
-	u_int64_t (*get_usebytes)(child_sa_t *this, bool inbound);
-
+	void (*get_usestats)(child_sa_t *this, bool inbound, time_t *time,
+						 u_int64_t *bytes);
+	
 	/**
 	 * Get the traffic selectors list added for one side.
 	 *
 	 * @param local		TRUE for own traffic selectors, FALSE for remote
 	 * @return			list of traffic selectors
-	 */	
+	 */
 	linked_list_t* (*get_traffic_selectors) (child_sa_t *this, bool local);
 	
 	/**
@@ -304,7 +298,7 @@ struct child_sa_t {
 	 * @param my_ts		traffic selectors for local site
 	 * @param other_ts	traffic selectors for remote site
 	 * @return			SUCCESS or FAILED
-	 */	
+	 */
 	status_t (*add_policies)(child_sa_t *this, linked_list_t *my_ts_list,
 							 linked_list_t *other_ts_list);
 	/**

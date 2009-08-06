@@ -380,7 +380,7 @@ static enumerator_t* create_policy_enumerator(private_child_sa_t *this)
  * are available, and NOT_SUPPORTED if the kernel interface does not support
  * quering the usebytes.
  */
-static bool update_usebytes(private_child_sa_t *this, bool inbound)
+static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 {
 	status_t status = FAILED;
 	u_int64_t bytes;
@@ -427,18 +427,13 @@ static bool update_usebytes(private_child_sa_t *this, bool inbound)
 }
 
 /**
- * Implementation of child_sa_t.get_usetime
+ * updates the cached usetime
  */
-static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
+static void update_usetime(private_child_sa_t *this, bool inbound)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
 	u_int32_t last_use = 0;
-	
-	if (update_usebytes(this, inbound) == FAILED)
-	{	/* no SPI or no traffic since last update */
-		return inbound ? this->my_usetime : this->other_usetime;
-	}
 	
 	enumerator = create_policy_enumerator(this);
 	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
@@ -479,16 +474,26 @@ static u_int32_t get_usetime(private_child_sa_t *this, bool inbound)
 	{
 		this->other_usetime = last_use;
 	}
-	return last_use;
 }
 
 /**
- * Implementation of child_sa_t.get_usebytes
+ * Implementation of child_sa_t.get_usestats
  */
-static u_int64_t get_usebytes(private_child_sa_t *this, bool inbound)
+static void get_usestats(private_child_sa_t *this, bool inbound,
+						 time_t *time, u_int64_t *bytes)
 {
-	update_usebytes(this, inbound);
-	return inbound ? this->my_usebytes : this->other_usebytes;
+	if (update_usebytes(this, inbound) != FAILED)
+	{	/* there was traffic since last update or the KI does not support it */
+		update_usetime(this, inbound);
+	}
+	if (time)
+	{
+		*time = inbound ? this->my_usetime : this->other_usetime;
+	}
+	if (bytes)
+	{
+		*bytes = inbound ? this->my_usebytes : this->other_usebytes;
+	}
 }
 
 /**
@@ -869,8 +874,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_proposal = (proposal_t*(*)(child_sa_t*))get_proposal;
 	this->public.set_proposal = (void(*)(child_sa_t*, proposal_t *proposal))set_proposal;
 	this->public.get_lifetime = (u_int32_t(*)(child_sa_t*, bool))get_lifetime;
-	this->public.get_usetime = (u_int32_t(*)(child_sa_t*, bool))get_usetime;
-	this->public.get_usebytes = (u_int64_t(*)(child_sa_t*, bool))get_usebytes;
+	this->public.get_usestats = (void(*)(child_sa_t*,bool,time_t*,u_int64_t*))get_usestats;
 	this->public.has_encap = (bool(*)(child_sa_t*))has_encap;
 	this->public.get_ipcomp = (ipcomp_transform_t(*)(child_sa_t*))get_ipcomp;
 	this->public.set_ipcomp = (void(*)(child_sa_t*,ipcomp_transform_t))set_ipcomp;
