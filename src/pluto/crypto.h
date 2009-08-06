@@ -20,7 +20,7 @@
 
 #include "ike_alg.h"
 
-extern void init_crypto(void);
+extern bool init_crypto(void);
 extern void free_crypto(void);
 
 extern const struct dh_desc unset_group;      /* magic signifier */

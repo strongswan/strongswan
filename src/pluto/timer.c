@@ -140,14 +140,21 @@ void event_schedule(enum event_type type, time_t tm, struct state *st)
  * Generate the secret value for responder cookies, and
  * schedule an event for refresh.
  */
-void init_secret(void)
+bool init_secret(void)
 {
 	rng_t *rng;
 	 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+
+	if (rng == NULL)
+	{
+		plog("secret initialization failed, no RNG supported");
+		return FALSE;
+	}
 	rng->get_bytes(rng, sizeof(secret_of_the_day), secret_of_the_day);
 	rng->destroy(rng);
     event_schedule(EVENT_REINIT_SECRET, EVENT_REINIT_SECRET_DELAY, NULL);
+	return true;
 }
 
 /**

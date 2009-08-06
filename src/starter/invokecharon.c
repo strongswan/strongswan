@@ -53,6 +53,11 @@ void starter_charon_sigchild(pid_t pid, int status)
 				  (status == 64) ? "libstrongswan" : "charon");
 			_stop_requested = 1;
 		}
+		else if (status == SS_RC_INITIALIZATION_FAILED)
+		{
+			plog("charon has quit: initialization failed");
+			_stop_requested = 1;
+		}
 		if (!_stop_requested)
 		{
 			plog("charon has died -- restart scheduled (%dsec)"

@@ -655,13 +655,16 @@ int main(int argc, char **argv)
 		lib->settings->get_str(lib->settings, "pluto.load", PLUGINS));
 	print_plugins();
 
+	if (!init_secret() || !init_crypto())
+	{
+		plog("initialization failed - aborting pluto");
+		exit_pluto(SS_RC_INITIALIZATION_FAILED);
+	}
 	init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
 	init_virtual_ip(virtual_private);
 	scx_init(pkcs11_module_path, pkcs11_init_args);
 	xauth_init();
-	init_secret();
 	init_states();
-	init_crypto();
 	init_demux();
 	init_kernel();
 	init_adns();

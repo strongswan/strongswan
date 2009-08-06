@@ -759,7 +759,7 @@ int main(int argc, char *argv[])
 	{
 		DBG1(DBG_DMN, "initialization failed - aborting charon");
 		destroy(private_charon);
-		exit(-1);
+		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	
 	if (check_pidfile())

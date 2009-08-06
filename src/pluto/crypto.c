@@ -235,7 +235,7 @@ static struct dh_desc dh_desc_ecp_224 = {
 	ke_size:    2*224 / BITS_PER_BYTE
 };
 
-void init_crypto(void)
+bool init_crypto(void)
 {
 	enumerator_t *enumerator;
 	encryption_algorithm_t encryption_alg;
@@ -275,13 +275,13 @@ void init_crypto(void)
 	}
 	enumerator->destroy(enumerator);
 
-	if (no_sha1)
+	if (no_sha1 || no_md5)
 	{
-		exit_log("pluto cannot run without a SHA-1 hasher");
-	}
-	if (no_md5)
-	{
-		exit_log("pluto cannot run without an MD5 hasher");
+		plog("pluto cannot run without a %s%s%s hasher",
+			 (no_sha1) ? "SHA-1" : "",
+			 (no_sha1 && no_md5) ? " and " : "",
+			 (no_md5) ? "MD5" : "");
+		return FALSE;
 	}
 		
 	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
@@ -363,6 +363,7 @@ void init_crypto(void)
 		ike_alg_add((struct ike_alg *)desc);
 	}
 	enumerator->destroy(enumerator);
+	return TRUE;
 }
 
 void free_crypto(void)

@@ -33,6 +33,7 @@
  */
 #define SS_RC_LIBSTRONGSWAN_INTEGRITY	64
 #define SS_RC_DAEMON_INTEGRITY			65
+#define SS_RC_INITIALIZATION_FAILED		66
 
 /**
  * Number of bits in a byte

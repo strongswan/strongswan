@@ -31,4 +31,4 @@ extern void delete_event(struct state *st);
 extern void delete_dpd_event(struct state *st);
 extern void daily_log_event(void);
 extern void free_events(void);
-extern void init_secret(void);
+extern bool init_secret(void);

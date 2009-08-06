@@ -54,6 +54,11 @@ starter_pluto_sigchild(pid_t pid, int status)
 				  (status == 64) ? "libstrongswan" : "pluto");
 			_stop_requested = 1;
 		}
+		else if (status == SS_RC_INITIALIZATION_FAILED)
+		{
+			plog("pluto has quit: initialization failed");
+			_stop_requested = 1;
+		}
 		if (!_stop_requested)
 		{
 			plog("pluto has died -- restart scheduled (%dsec)"
