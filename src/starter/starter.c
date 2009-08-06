@@ -103,8 +103,7 @@ static void fsig(int signal)
 				else if (WIFEXITED(status))
 				{
 					exit_status =  WEXITSTATUS(status);
-					if (exit_status >= SS_RC_LIBSTRONGSWAN_INTEGRITY &&
-						exit_status <= SS_RC_INITIALIZATION_FAILED)
+					if (exit_status >= SS_RC_FIRST && exit_status <= SS_RC_LAST)
 					{
 						_action_ =  FLAG_ACTION_QUIT;
 					}
