@@ -37,11 +37,11 @@
 #endif
 
 #ifdef HAVE_NATT
-#ifdef HAVE_NETINET_UDP_H
-#include <netinet/udp.h>
-#else
+#ifdef HAVE_LINUX_UDP_H
 #include <linux/udp.h>
-#endif /*HAVE_NETINET_UDP_H*/
+#else
+#include <netinet/udp.h>
+#endif /*HAVE_LINUX_UDP_H*/
 #endif /*HAVE_NATT*/
 
 #include <unistd.h>
