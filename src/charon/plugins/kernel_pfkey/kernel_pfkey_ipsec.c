@@ -17,6 +17,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#ifdef __FreeBSD__
+#include <limits.h> /* for LONG_MAX */
+#endif
+
 #ifdef HAVE_NET_PFKEYV2_H
 #include <net/pfkeyv2.h>
 #else
@@ -1719,7 +1723,7 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 		lft = (struct sadb_lifetime*)PFKEY_EXT_ADD_NEXT(msg);
 		lft->sadb_lifetime_exttype = SADB_EXT_LIFETIME_HARD;
 		lft->sadb_lifetime_len = PFKEY_LEN(sizeof(struct sadb_lifetime));
-		lft->sadb_lifetime_addtime = 0x7fffffff; /* kernel maps this to long */
+		lft->sadb_lifetime_addtime = LONG_MAX;
 		PFKEY_EXT_ADD(msg, lft);
 	}
 #endif
