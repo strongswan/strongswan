@@ -207,14 +207,14 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			}
 
 			child_sa->get_usestats(child_sa, TRUE, &use_in, &bytes_in);
-			fprintf(out, ", %u bytes_i", (u_int)bytes_in);
+			fprintf(out, ", %llu bytes_i", bytes_in);
 			if (use_in)
 			{
 				fprintf(out, " (%ds ago)", now - use_in);
 			}
 
 			child_sa->get_usestats(child_sa, FALSE, &use_out, &bytes_out);
-			fprintf(out, ", %u bytes_o", (u_int)bytes_out);
+			fprintf(out, ", %llu bytes_o", bytes_out);
 			if (use_out)
 			{
 				fprintf(out, " (%ds ago)", now - use_out);

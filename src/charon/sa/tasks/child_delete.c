@@ -249,10 +249,10 @@ static void log_children(private_child_delete_t *this)
 		child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out);
 		
 		DBG0(DBG_IKE, "closing CHILD_SA %s{%d} "
-			 "with SPIs %.8x_i (%u bytes) %.8x_o (%u bytes) and TS %#R=== %#R",
+			 "with SPIs %.8x_i (%llu bytes) %.8x_o (%llu bytes) and TS %#R=== %#R",
 			 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
-			 ntohl(child_sa->get_spi(child_sa, TRUE)),  (u_int)bytes_in,
-			 ntohl(child_sa->get_spi(child_sa, FALSE)), (u_int)bytes_out,
+			 ntohl(child_sa->get_spi(child_sa, TRUE)), bytes_in,
+			 ntohl(child_sa->get_spi(child_sa, FALSE)), bytes_out,
 			 child_sa->get_traffic_selectors(child_sa, TRUE),
 			 child_sa->get_traffic_selectors(child_sa, FALSE));
 	}
