@@ -156,6 +156,10 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 	me->destroy(me);
 	other->destroy(other);
 	
+	/* while we don't know the finally negotiated protocol (ESP|AH), we
+	 * could iterate all proposals for a best guest (TODO). But as we
+	 * support ESP only for now, we set here. */
+	child_sa->set_protocol(child_sa, PROTO_ESP);
 	child_sa->set_mode(child_sa, child->get_mode(child));
 	status = child_sa->add_policies(child_sa, my_ts, other_ts);
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
