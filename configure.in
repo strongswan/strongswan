@@ -845,11 +845,23 @@ dnl ===========================================
 
 AC_HEADER_STDBOOL
 
+dnl libraries needed on some platforms but not on others
+dnl ====================================================
 saved_LIBS=$LIBS
+
+dnl FreeBSD has dlopen integrated in libc, Linux needs libdl
 LIBS=""
 AC_SEARCH_LIBS(dlopen, dl, [DLLIB=$LIBS])
-LIBS=$saved_LIBS
 AC_SUBST(DLLIB)
+
+dnl glibc's backtrace() can be replicated on FreeBSD with libexecinfo
+LIBS=""
+AC_SEARCH_LIBS(backtrace, execinfo, [BTLIB=$LIBS])
+AC_CHECK_FUNCS(backtrace)
+AC_SUBST(BTLIB)
+
+LIBS=$saved_LIBS
+dnl ======================
 
 AC_MSG_CHECKING(for dladdr)
 AC_TRY_COMPILE(
@@ -861,7 +873,6 @@ AC_TRY_COMPILE(
 	[AC_MSG_RESULT([no])]
 )
 
-AC_CHECK_FUNCS(backtrace)
 AC_CHECK_FUNCS(prctl)
 AC_CHECK_FUNCS(gethostbyname_r)
 
