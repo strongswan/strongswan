@@ -378,7 +378,7 @@ static enumerator_t* create_policy_enumerator(private_child_sa_t *this)
  * update the cached usebytes
  * returns SUCCESS if the usebytes have changed, FAILED if not or no SPIs
  * are available, and NOT_SUPPORTED if the kernel interface does not support
- * quering the usebytes.
+ * querying the usebytes.
  */
 static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 {
@@ -466,6 +466,11 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (last_use == 0)
+	{
+		return;
+	}
 	if (inbound)
 	{
 		this->my_usetime = last_use;
@@ -483,7 +488,10 @@ static void get_usestats(private_child_sa_t *this, bool inbound,
 						 time_t *time, u_int64_t *bytes)
 {
 	if (update_usebytes(this, inbound) != FAILED)
-	{	/* there was traffic since last update or the KI does not support it */
+	{
+		/* there was traffic since last update or the kernel interface
+		 * does not support querying the number of usebytes.
+		 */
 		update_usetime(this, inbound);
 	}
 	if (time)
