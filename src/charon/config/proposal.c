@@ -266,6 +266,9 @@ static bool is_authenticated_encryption(u_int16_t alg)
 		case ENCR_AES_GCM_ICV8:
 		case ENCR_AES_GCM_ICV12:
 		case ENCR_AES_GCM_ICV16:
+		case ENCR_CAMELLIA_CCM_ICV8:
+		case ENCR_CAMELLIA_CCM_ICV12:
+		case ENCR_CAMELLIA_CCM_ICV16:
 			return TRUE;
 	}
 	return FALSE;

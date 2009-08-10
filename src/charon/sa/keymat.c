@@ -419,6 +419,9 @@ static bool derive_child_keys(private_keymat_t *this,
 			case ENCR_AES_CCM_ICV8:
 			case ENCR_AES_CCM_ICV12:
 			case ENCR_AES_CCM_ICV16:
+			case ENCR_CAMELLIA_CCM_ICV8:
+			case ENCR_CAMELLIA_CCM_ICV12:
+			case ENCR_CAMELLIA_CCM_ICV16:
 				enc_size += 3;
 				break;
 			case ENCR_AES_GCM_ICV8:

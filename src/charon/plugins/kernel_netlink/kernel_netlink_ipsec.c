@@ -984,14 +984,17 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			break;
 		case ENCR_AES_CCM_ICV16:
 		case ENCR_AES_GCM_ICV16:
+		case ENCR_CAMELLIA_CCM_ICV16:
 			icv_size += 32;
 			/* FALL */
 		case ENCR_AES_CCM_ICV12:
 		case ENCR_AES_GCM_ICV12:
+		case ENCR_CAMELLIA_CCM_ICV12:
 			icv_size += 32;
 			/* FALL */
 		case ENCR_AES_CCM_ICV8:
 		case ENCR_AES_GCM_ICV8:
+		case ENCR_CAMELLIA_CCM_ICV8:
 		{
 			struct xfrm_algo_aead *algo;
 
