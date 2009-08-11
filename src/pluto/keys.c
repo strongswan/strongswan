@@ -552,7 +552,7 @@ static err_t process_keyfile(private_key_t **key, key_type_t type, int whackfd)
 	}
 	*key = load_private_key(filename, &pass, type);
 
-	return key ? NULL : "Private key file -- could not be loaded";
+	return *key ? NULL : "Private key file -- could not be loaded";
 }
 
 /**
