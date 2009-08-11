@@ -122,15 +122,18 @@ static bool parse_public_key(private_peer_controller_t *this,
 {
 	public_key_t *public;
 	identification_t *id;
+	chunk_t blob;
 		
 	if (!public_key || *public_key == '\0')
 	{
 		request->setf(request, "error=Public key is missing.");
 		return FALSE;
 	}
+	blob = chunk_clone(chunk_create(public_key, strlen(public_key)));
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-								BUILD_BLOB_ASN1_PEM, public_key,
+								BUILD_BLOB_PEM, blob,
 								BUILD_END);
+	chunk_free(&blob);
 	if (!public)
 	{
 		request->setf(request, "error=Parsing public key failed.");

@@ -288,6 +288,17 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[pem],
+	AS_HELP_STRING([--disable-pem],[disable PEM decoding plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		pem=true
+	 else
+		pem=false
+	fi],
+	pem=true
+)
+
+AC_ARG_ENABLE(
 	[hmac],
 	AS_HELP_STRING([--disable-hmac],[disable HMAC crypto implementation plugin. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -1181,6 +1192,10 @@ if test x$pubkey = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
 	pluto_plugins=${pluto_plugins}" pubkey"
 fi
+if test x$pem = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" pem"
+	pluto_plugins=${pluto_plugins}" pem"
+fi
 if test x$mysql = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" mysql"
 fi
@@ -1237,6 +1252,7 @@ AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
 AM_CONDITIONAL(USE_PUBKEY, test x$pubkey = xtrue)
+AM_CONDITIONAL(USE_PEM, test x$pem = xtrue)
 AM_CONDITIONAL(USE_HMAC, test x$hmac = xtrue)
 AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
 AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
@@ -1331,6 +1347,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/xcbc/Makefile
 	src/libstrongswan/plugins/x509/Makefile
 	src/libstrongswan/plugins/pubkey/Makefile
+	src/libstrongswan/plugins/pem/Makefile
 	src/libstrongswan/plugins/curl/Makefile
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile

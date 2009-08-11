@@ -44,12 +44,18 @@ enum builder_part_t {
 	BUILD_AGENT_SOCKET,
 	/** DER encoded ASN.1 blob, chunk_t */
 	BUILD_BLOB_ASN1_DER,
-	/** PEM encoded ASN.1 blob, null terminated char* */
-	BUILD_BLOB_ASN1_PEM,
+	/** PEM encoded ASN.1/PGP blob, chunk_t */
+	BUILD_BLOB_PEM,
 	/**  OpenPGP key blob, chunk_t */
 	BUILD_BLOB_PGP,
 	/** RFC 3110 DNS public key blob, chunk_t */
 	BUILD_BLOB_RFC_3110,
+	/** passphrase for e.g. PEM decryption, chunk_t */
+	BUILD_PASSPHRASE,
+	/** passphrase callback, chunk_t(*fn)(void *user, int try), void *user.
+	 *  The callback is invoked until the returned passphrase is accepted, or
+	 *  a zero-length passphrase is returned. Try starts at 1. */
+	BUILD_PASSPHRASE_CALLBACK,
 	/** key size in bits, as used for key generation, u_int */
 	BUILD_KEY_SIZE,
 	/** private key to use for signing, private_key_t* */

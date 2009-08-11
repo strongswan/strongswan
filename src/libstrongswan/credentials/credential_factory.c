@@ -142,7 +142,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 	builder_t *builder;
 	builder_part_t part;
 	va_list args;
-	void* construct = NULL;
+	void* construct = NULL, *fn, *data;
 	
 	enumerator = create_builder_enumerator(this, type, subtype);
 	while (enumerator->enumerate(enumerator, &builder))
@@ -155,9 +155,11 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 			{
 				case BUILD_END:
 					break;
+				case BUILD_BLOB_PEM:
 				case BUILD_BLOB_ASN1_DER:
 				case BUILD_BLOB_PGP:
 				case BUILD_BLOB_RFC_3110:
+				case BUILD_PASSPHRASE:
 				case BUILD_SERIAL:
 					builder->add(builder, part, va_arg(args, chunk_t));
 					continue;
@@ -171,7 +173,6 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_NOT_AFTER_TIME:
 					builder->add(builder, part, va_arg(args, time_t));
 					continue;
-				case BUILD_BLOB_ASN1_PEM:
 				case BUILD_FROM_FILE:
 				case BUILD_AGENT_SOCKET:
 				case BUILD_SIGNING_KEY:
@@ -187,6 +188,11 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_SMARTCARD_KEYID:
 				case BUILD_SMARTCARD_PIN:
 					builder->add(builder, part, va_arg(args, void*));
+					continue;
+				case BUILD_PASSPHRASE_CALLBACK:
+					fn = va_arg(args, void*);
+					data = va_arg(args, void*);
+					builder->add(builder, part, fn, data);
 					continue;
 				/* no default to get a compiler warning */
 			}

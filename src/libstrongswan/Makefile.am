@@ -162,6 +162,10 @@ if USE_PUBKEY
   SUBDIRS += plugins/pubkey
 endif
 
+if USE_PEM
+  SUBDIRS += plugins/pem
+endif
+
 if USE_CURL
   SUBDIRS += plugins/curl
 endif

@@ -137,14 +137,13 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 				va_end(args);
 				return;
 			}
-			case BUILD_BLOB_ASN1_PEM:
+			case BUILD_BLOB_PEM:
 			{
 				bool pgp;
-				char *pem;
-			
+				
 				va_start(args, part);
-				pem = va_arg(args, char *);
-				blob = chunk_clone(chunk_create(pem, strlen(pem)));
+				blob = va_arg(args, chunk_t);
+				blob = chunk_clone(blob);
 				if (pem_to_bin(&blob, chunk_empty, &pgp) == SUCCESS)
 				{
 					this->key = pubkey_public_key_load(chunk_clone(blob));
