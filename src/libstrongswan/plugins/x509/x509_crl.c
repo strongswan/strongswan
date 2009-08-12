@@ -25,7 +25,6 @@ typedef struct revoked_t revoked_t;
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
-#include <asn1/pem.h>
 #include <credentials/certificates/x509.h>
 #include <utils/linked_list.h>
 
@@ -605,47 +604,6 @@ static private_x509_crl_t* create_empty(void)
 	return this;
 }
 
-/**
- * create an X.509 crl from a chunk
- */
-static private_x509_crl_t* create_from_chunk(chunk_t chunk)
-{
-	private_x509_crl_t *this = create_empty();
-
-	this->encoding = chunk;
-	if (!parse(this))
-	{
-		destroy(this);
-		return NULL;
-	}
-	return this;
-}
-
-/**
- * create an X.509 crl from a file
- */
-static private_x509_crl_t* create_from_file(char *path)
-{
-	bool pgp = FALSE;
-	chunk_t chunk;
-	private_x509_crl_t *this;
-	
-	if (!pem_asn1_load_file(path, NULL, &chunk, &pgp))
-	{
-		return NULL;
-	}
-
-	this = create_from_chunk(chunk);
-
-	if (this == NULL)
-	{
-		DBG1("  could not parse loaded crl file '%s'",path);
-		return NULL;
-	}
-	DBG1("  loaded crl file '%s'",  path);
-	return this;
-}
-
 typedef struct private_builder_t private_builder_t;
 /**
  * Builder implementation for certificate loading
@@ -653,8 +611,8 @@ typedef struct private_builder_t private_builder_t;
 struct private_builder_t {
 	/** implements the builder interface */
 	builder_t public;
-	/** loaded CRL */
-	private_x509_crl_t *crl;
+	/** CRL chunk to build from */
+	chunk_t blob;
 };
 
 /**
@@ -662,8 +620,18 @@ struct private_builder_t {
  */
 static private_x509_crl_t *build(private_builder_t *this)
 {
-	private_x509_crl_t *crl = this->crl;
+	private_x509_crl_t *crl = NULL;
 	
+	if (this->blob.len && this->blob.ptr)
+	{
+		crl = create_empty();
+		crl->encoding = chunk_clone(this->blob);
+		if (!parse(crl))
+		{
+			destroy(crl);
+			crl = NULL;
+		}
+	}
 	free(this);
 	return crl;
 }
@@ -673,35 +641,19 @@ static private_x509_crl_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	if (!this->crl)
-	{
-		va_list args;
-		chunk_t chunk;
+	va_list args;
 	
-		switch (part)
-		{
-			case BUILD_FROM_FILE:
-			{
-				va_start(args, part);
-				this->crl = create_from_file(va_arg(args, char*));
-				va_end(args);
-				return;
-			}
-			case BUILD_BLOB_ASN1_DER:
-			{
-				va_start(args, part);
-				chunk = va_arg(args, chunk_t);
-				this->crl = create_from_chunk(chunk_clone(chunk));
-				va_end(args);
-				return;
-			}
-			default:
-				break;
-		}
-	}
-	if (this->crl)
+	switch (part)
 	{
-		destroy(this->crl);
+		case BUILD_BLOB_ASN1_DER:
+		{
+			va_start(args, part);
+			this->blob = va_arg(args, chunk_t);
+			va_end(args);
+			return;
+		}
+		default:
+			break;
 	}
 	builder_cancel(&this->public);
 }
@@ -717,12 +669,12 @@ builder_t *x509_crl_builder(certificate_type_t type)
 	{
 		return NULL;
 	}
-	
 	this = malloc_thing(private_builder_t);
 	
-	this->crl = NULL;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
+	
+	this->blob = chunk_empty;
 	
 	return &this->public;
 }

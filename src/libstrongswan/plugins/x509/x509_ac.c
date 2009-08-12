@@ -26,7 +26,6 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
-#include <asn1/pem.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
@@ -966,33 +965,8 @@ static private_x509_ac_t* create_from_chunk(chunk_t chunk)
 		return NULL;
 	}
 	return this;
-}	
-
-/**
- * create X.509 crl from a file
- */
-static private_x509_ac_t* create_from_file(char *path)
-{
-	bool pgp = FALSE;
-	chunk_t chunk;
-	private_x509_ac_t *this;
-	
-	if (!pem_asn1_load_file(path, NULL, &chunk, &pgp))
-	{
-		return NULL;
-	}
-
-	this = create_from_chunk(chunk);
-
-	if (this == NULL)
-	{
-		DBG1("  could not parse loaded attribute certificate file '%s'", path);
-		return NULL;
-	}
-	DBG1("  loaded attribute certificate file '%s'", path);
-	return this;
 }
-	
+
 typedef struct private_builder_t private_builder_t;
 /**
  * Builder implementation for certificate loading
@@ -1042,13 +1016,6 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	va_start(args, part);
 	switch (part)
 	{
-		case BUILD_FROM_FILE:
-			if (this->ac)
-			{
-				destroy(this->ac);
-			}
-			this->ac = create_from_file(va_arg(args, char*));
-			break;
 		case BUILD_BLOB_ASN1_DER:
 			if (this->ac)
 			{

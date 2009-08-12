@@ -1066,24 +1066,3 @@ pkcs7_t *pkcs7_create_from_data(chunk_t data)
 	return &this->public;
 }
 
-/*
- * Described in header.
- */
-pkcs7_t *pkcs7_create_from_file(const char *filename, const char *label)
-{
-	bool pgp = FALSE;
-	chunk_t chunk = chunk_empty;
-	char cert_label[BUF_LEN];
-	pkcs7_t *pkcs7;
-
-	snprintf(cert_label, BUF_LEN, "%s pkcs7", label);
-
-	if (!pem_asn1_load_file(filename, NULL, cert_label, &chunk, &pgp))
-	{
-		return NULL;
-	}
-
-	pkcs7 = pkcs7_create_from_chunk(chunk, 0);
-	free(chunk.ptr);
-	return pkcs7;
-}

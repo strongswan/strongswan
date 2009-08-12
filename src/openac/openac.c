@@ -34,7 +34,6 @@
 #include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
-#include <asn1/pem.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
 #include <credentials/keys/private_key.h>
@@ -171,32 +170,6 @@ static void write_serial(chunk_t serial)
 	{
 		DBG1("  could not open file '%s' for writing", OPENAC_SERIAL);
 	}
-}
-
-/**
- * Load and parse a private key file
- */
-static private_key_t* private_key_create_from_file(char *path, chunk_t *secret)
-{
-	bool pgp = FALSE;
-	chunk_t chunk = chunk_empty;
-	private_key_t *key = NULL;
-
-	if (!pem_asn1_load_file(path, secret, &chunk, &pgp))
-	{
-		DBG1("  could not load private key file '%s'", path);
-		return NULL;
-	}
-	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-							 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
-	free(chunk.ptr);
-	if (key == NULL)
-	{
-		DBG1("  could not parse loaded private key file '%s'", path);
-		return NULL;
-	}
-	DBG1("  loaded private key file '%s'", path);
-	return key;
 }
 
 /**
@@ -492,12 +465,15 @@ int main(int argc, char **argv)
 	/* load the signer's RSA private key */
 	if (keyfile != NULL)
 	{
-		signerKey = private_key_create_from_file(keyfile, &passphrase);
-
+		signerKey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+									   BUILD_FROM_FILE, keyfile,
+									   BUILD_PASSPHRASE, passphrase,
+									   BUILD_END);
 		if (signerKey == NULL)
 		{
 			goto end;
 		}
+		DBG1("  loaded private key file '%s'", keyfile);
 	}
 
 	/* load the signer's X.509 certificate */

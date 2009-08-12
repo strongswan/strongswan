@@ -18,7 +18,6 @@
 #include "nm_service.h"
 
 #include <daemon.h>
-#include <asn1/pem.h>
 #include <utils/host.h>
 #include <utils/identification.h>
 #include <config/peer_cfg.h>
@@ -366,20 +365,16 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 			str = nm_setting_vpn_get_data_item(vpn, "userkey");
 			if (!agent && str)
 			{
-				chunk_t secret, chunk;
-				bool pgp = FALSE;
+				chunk_t secret;
 				
 				secret.ptr = (char*)nm_setting_vpn_get_secret(vpn, "password");
 				if (secret.ptr)
 				{
 					secret.len = strlen(secret.ptr);
 				}
-				if (pem_asn1_load_file((char*)str, &secret, &chunk, &pgp))
-				{
-					private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								KEY_RSA, BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
-					free(chunk.ptr);
-				}
+				private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+								KEY_RSA, BUILD_FROM_FILE, str,
+								BUILD_PASSPHRASE, secret, BUILD_END);
 				if (!private)
 				{
 					g_set_error(err, NM_VPN_PLUGIN_ERROR,
@@ -491,8 +486,6 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 {
 	NMSettingVPN *settings;
 	const char *method, *path;
-	chunk_t secret = chunk_empty, key;
-	bool pgp = FALSE;
 	
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
 														NM_TYPE_SETTING_VPN));
@@ -518,14 +511,21 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 			path = nm_setting_vpn_get_data_item(settings, "userkey");
 			if (path)
 			{
+				private_key_t *key;
+				chunk_t secret;
+				
 				secret.ptr = (char*)nm_setting_vpn_get_secret(settings, "password");
 				if (secret.ptr)
 				{
 					secret.len = strlen(secret.ptr);
 				}
-				if (pem_asn1_load_file((char*)path, &secret, &key, &pgp))
+				/* try to load/decrypt the private key */
+				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+								KEY_RSA, BUILD_FROM_FILE, path,
+								BUILD_PASSPHRASE, secret, BUILD_END);
+				if (key)
 				{
-					free(key.ptr);
+					key->destroy(key);
 					return FALSE;
 				}
 			}

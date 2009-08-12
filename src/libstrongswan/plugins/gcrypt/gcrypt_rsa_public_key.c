@@ -21,7 +21,6 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
-#include <asn1/pem.h>
 #include <crypto/hashers/hasher.h>
 
 typedef struct private_gcrypt_rsa_public_key_t private_gcrypt_rsa_public_key_t;

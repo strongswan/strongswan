@@ -166,13 +166,4 @@ pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level);
  */
 pkcs7_t *pkcs7_create_from_data(chunk_t data);
 
-/**
- * Read a X.509 certificate from a DER encoded file.
- * 
- * @param filename 	file containing DER encoded data
- * @param label		label describing kind of PKCS#7 file
- * @return 			created pkcs7_t object, or NULL if invalid.
- */
-pkcs7_t *pkcs7_create_from_file(const char *filename, const char *label);
-
 #endif /** PKCS7_H_ @}*/

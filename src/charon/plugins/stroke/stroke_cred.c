@@ -28,7 +28,6 @@
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
 #include <utils/mutex.h>
-#include <asn1/pem.h>
 #include <daemon.h>
 
 /* configuration directories and files */
@@ -391,9 +390,9 @@ static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
 		
 		if (!(x509->get_flags(x509) & X509_CA))
 		{
+			DBG1(DBG_CFG, "  ca certificate '%Y' misses ca basic constraint, "
+				 "discarded", cert->get_subject(cert));
 			cert->destroy(cert);
-			DBG1(DBG_CFG, "  ca certificate must have ca basic constraint set, "
-				 "discarded");
 			return NULL;
 		}
 		return (certificate_t*)add_cert(this, cert);
@@ -500,8 +499,12 @@ static certificate_t* load_peer(private_stroke_cred_t *this, char *filename)
 	if (cert)
 	{
 		cert = add_cert(this, cert);
+		DBG1(DBG_CFG, "  loaded certificate '%Y' from "
+				 "file '%s'", cert->get_subject(cert), filename);
 		return cert->get_ref(cert);
 	}
+	DBG1(DBG_CFG, "  loading certificate from file "
+		 "'%s' failed", filename);
 	return NULL;
 }
 
@@ -546,11 +549,22 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 						
 						if (!(x509->get_flags(x509) & X509_CA))
 						{
-							DBG1(DBG_CFG, "  ca certificate must have ca "
-								 "basic constraint set, discarded");
+							DBG1(DBG_CFG, "  ca certificate '%Y' misses "
+								 "ca basic constraint, discarded",
+								 cert->get_subject(cert));
 							cert->destroy(cert);
 							cert = NULL;
 						}
+						else
+						{
+							DBG1(DBG_CFG, "  loaded CA certificate '%Y' from "
+								 "file '%s'", cert->get_subject(cert), file);
+						}
+					}
+					else
+					{
+						DBG1(DBG_CFG, "  loading CA certificate from file "
+							 "'%s' failed", file);
 					}
 				}
 				else
@@ -559,6 +573,16 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 										CRED_CERTIFICATE, CERT_X509,
 										BUILD_FROM_FILE, file,
 										BUILD_X509_FLAG, flag, BUILD_END);
+					if (cert)
+					{
+						DBG1(DBG_CFG, "  loaded certificate '%Y' from "
+								 "file '%s'", cert->get_subject(cert), file);
+					}
+					else
+					{
+						DBG1(DBG_CFG, "  loading certificate from file "
+							 "'%s' failed", file);
+					}
 				}
 				if (cert)
 				{
@@ -573,6 +597,11 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 				if (cert)
 				{
 					add_crl(this, (crl_t*)cert);
+					DBG1(DBG_CFG, "  loaded crl from file '%s'",  file);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "  loading crl from file '%s' failed", file);
 				}
 				break;
 			case CERT_X509_AC:
@@ -583,10 +612,17 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 				if (cert)
 				{
 					add_ac(this, (ac_t*)cert);
+					DBG1(DBG_CFG, "  loaded attribute certificate from "
+						 "file '%s'", file);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "  loading attribute certificate from "
+						 "file '%s' failed", file);
 				}
 				break;
 			default:
-				break;	
+				break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -838,8 +874,6 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			chunk_t filename;
 			chunk_t secret = chunk_empty;
 			private_key_t *key;
-			bool pgp = FALSE;
-			chunk_t chunk = chunk_empty;
 			key_type_t key_type = match("RSA", &token) ? KEY_RSA : KEY_ECDSA;
 
 			err_t ugh = extract_value(&filename, &line);
@@ -876,17 +910,14 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 					goto error;
 				}
 			}
-
-			if (pem_asn1_load_file(path, &secret, &chunk, &pgp))
+			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
+									 BUILD_FROM_FILE, path,
+									 BUILD_PASSPHRASE, secret,BUILD_END);
+			if (key)
 			{
-				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
-										 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
-				free(chunk.ptr);
-				if (key)
-				{
-					DBG1(DBG_CFG, "  loaded private key file '%s'", path);
-					this->private->insert_last(this->private, key);
-				}
+				DBG1(DBG_CFG, "  loaded %N private key file '%s'",
+					 key_type_names, key->get_type(key), path);
+				this->private->insert_last(this->private, key);
 			}
 			chunk_clear(&secret);
 		}

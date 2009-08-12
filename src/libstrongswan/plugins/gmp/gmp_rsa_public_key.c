@@ -26,7 +26,6 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
-#include <asn1/pem.h>
 #include <crypto/hashers/hasher.h>
 #include <pgp/pgp.h>
 
