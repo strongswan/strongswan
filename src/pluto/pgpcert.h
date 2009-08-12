@@ -45,7 +45,7 @@ struct pgpcert {
 };
 
 extern const pgpcert_t pgpcert_empty;
-extern bool parse_pgp(chunk_t blob, pgpcert_t *cert, private_key_t **key);
+extern bool parse_pgp(chunk_t blob, pgpcert_t *cert);
 extern void share_pgpcert(pgpcert_t *cert);
 extern void select_pgpcert_id(pgpcert_t *cert, struct id *end_id);
 extern pgpcert_t* add_pgpcert(pgpcert_t *cert);

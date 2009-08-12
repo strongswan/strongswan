@@ -238,59 +238,22 @@ static bool parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 	return TRUE;
 }
 
-/*
- * Parse OpenPGP secret key packet defined in section 5.5.3 of RFC 4880
- */
-static bool parse_pgp_secretkey_packet(chunk_t *packet, private_key_t **key)
-{
-	pgp_pubkey_alg_t pubkey_alg;
-	pgpcert_t cert = pgpcert_empty;
-
-	if (!parse_pgp_pubkey_version_validity(packet, &cert))
-	{
-		return FALSE;
-	}
-
-	/* public key algorithm - 1 byte */
-	pubkey_alg = pgp_length(packet, 1);
-	DBG(DBG_PARSING,
-		DBG_log("L3 - public key algorithm:");
-		DBG_log("  %N", pgp_pubkey_alg_names, pubkey_alg)
-	)
-	
-	switch (pubkey_alg)
-	{
-		case PGP_PUBKEY_ALG_RSA:
-		case PGP_PUBKEY_ALG_RSA_SIGN_ONLY:
-			*key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-												  BUILD_BLOB_PGP, *packet,
-												  BUILD_END);
-			break;
-	 	default:
-			plog("  non RSA private keys not supported");
-			return FALSE;
-	}
-	return (*key != NULL);
-}
-
-bool parse_pgp(chunk_t blob, pgpcert_t *cert, private_key_t **key)
+bool parse_pgp(chunk_t blob, pgpcert_t *cert)
 {
 	DBG(DBG_PARSING,
 		DBG_log("L0 - PGP file:")
 	)
 	DBG_cond_dump_chunk(DBG_RAW, "", blob);
 
-	if (cert != NULL)
-	{
-		/* parse a PGP certificate file */
-		cert->certificate = blob;
-		time(&cert->installed);
-	}
-	else if (key == NULL)
+	if (cert == NULL)
 	{
 		/* should not occur, nothing to parse */
 		return FALSE;
 	}
+	
+	/* parse a PGP certificate file */
+	cert->certificate = blob;
+	time(&cert->installed);
 
 	while (blob.len > 0)
 	{
@@ -330,54 +293,29 @@ bool parse_pgp(chunk_t blob, pgpcert_t *cert, private_key_t **key)
 			)
 			DBG_cond_dump_chunk(DBG_RAW, "", packet);
 
-			if (cert != NULL)
+			/* parse a PGP certificate */
+			switch (packet_type)
 			{
-				/* parse a PGP certificate */
-				switch (packet_type)
-				{
-					case PGP_PKT_PUBLIC_KEY:
-						if (!parse_pgp_pubkey_packet(&packet, cert))
-						{
-							return FALSE;
-						}
-						break;
-					case PGP_PKT_SIGNATURE:
-						if (!parse_pgp_signature_packet(&packet, cert))
-						{
-							return FALSE;
-						}
-						break;
-					case PGP_PKT_USER_ID:
-						DBG(DBG_PARSING,
-							DBG_log("L3 - user ID:");
-							DBG_log("  '%.*s'", (int)packet.len, packet.ptr)
-						)
-						break;
-					default:
-						break;
-				}
-			}
-			else
-			{
-				/* parse a PGP private key file */
-				switch (packet_type)
-				{
-					case PGP_PKT_SECRET_KEY:
-						if (!parse_pgp_secretkey_packet(&packet, key))
-						{
-							return FALSE;
-						}
-						break;
-					case PGP_PKT_USER_ID:
-						DBG(DBG_PARSING,
-							DBG_log("L3 - user ID:");
-							DBG_log("  '%.*s'", (int)packet.len, packet.ptr)
-						)
-						break;
-					default:
-						break;
-				}
-
+				case PGP_PKT_PUBLIC_KEY:
+					if (!parse_pgp_pubkey_packet(&packet, cert))
+					{
+						return FALSE;
+					}
+					break;
+				case PGP_PKT_SIGNATURE:
+					if (!parse_pgp_signature_packet(&packet, cert))
+					{
+						return FALSE;
+					}
+					break;
+				case PGP_PKT_USER_ID:
+					DBG(DBG_PARSING,
+						DBG_log("L3 - user ID:");
+						DBG_log("  '%.*s'", (int)packet.len, packet.ptr)
+					)
+					break;
+				default:
+					break;
 			}
 		}
 	}

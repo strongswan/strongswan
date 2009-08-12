@@ -232,7 +232,7 @@ bool load_cert(char *filename, const char *label, cert_t *cert)
 		{
 			pgpcert_t *pgpcert = malloc_thing(pgpcert_t);
 			*pgpcert = pgpcert_empty;
-			if (parse_pgp(blob, pgpcert, NULL))
+			if (parse_pgp(blob, pgpcert))
 			{
 				cert->type = CERT_PGP;
 				cert->u.pgp = pgpcert;
