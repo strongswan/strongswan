@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <freeswan.h>
 
@@ -29,6 +30,7 @@
 #include "id.h"
 #include "pem.h"
 #include "certs.h"
+#include "whack.h"
 
 /**
  * used for initializatin of certs
@@ -133,37 +135,81 @@ bool load_coded_file(char *filename, prompt_pass_t *pass, const char *type,
 }
 
 /**
+ * Passphrase callback to read from whack fd
+ */
+chunk_t whack_pass_cb(prompt_pass_t *pass, int try)
+{
+	int n;
+
+	if (try > MAX_PROMPT_PASS_TRIALS)
+	{
+		whack_log(RC_LOG_SERIOUS, "invalid passphrase, too many trials");
+		return chunk_empty;
+	}
+	if (try == 1)
+	{
+		whack_log(RC_ENTERSECRET, "need passphrase for 'private key'");
+	}
+	else
+	{
+		whack_log(RC_ENTERSECRET, "invalid passphrase, please try again");
+	}
+
+	n = read(pass->fd, pass->secret, PROMPT_PASS_LEN);
+
+	if (n == -1)
+	{
+		whack_log(RC_LOG_SERIOUS, "read(whackfd) failed");
+		return chunk_empty;
+	}
+
+	pass->secret[n-1] = '\0';
+
+	if (strlen(pass->secret) == 0)
+	{
+		whack_log(RC_LOG_SERIOUS, "no passphrase entered, aborted");
+		return chunk_empty;
+	}
+	return chunk_create(pass->secret, strlen(pass->secret));
+}
+
+/**
  *  Loads a PKCS#1 or PGP privatekey file
  */
 private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 								key_type_t type)
 {
 	private_key_t *key = NULL;
-	chunk_t blob = chunk_empty;
-	bool pgp = FALSE;
-
-	char *path = concatenate_paths(PRIVATE_KEY_PATH, filename);
-
-	if (load_coded_file(path, pass, "private key", &blob, &pgp))
-	{
-		if (pgp)
+	char *path;
+	
+	path = concatenate_paths(PRIVATE_KEY_PATH, filename);
+	if (pass && pass->prompt && pass->fd != NULL_FD)
+	{	/* use passphrase callback */
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 BUILD_FROM_FILE, path,
+								 BUILD_PASSPHRASE_CALLBACK, whack_pass_cb, pass,
+								 BUILD_END);
+		if (key)
 		{
- 			parse_pgp(blob, NULL, &key);
+			whack_log(RC_SUCCESS, "valid passphrase");
 		}
-		else
-		{
-			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-								 	 BUILD_BLOB_ASN1_DER, blob, BUILD_END);
-		}
-		if (key == NULL)
-		{
-			plog("  syntax error in %s private key file", pgp ? "PGP":"PKCS#");
-		}			
-		free(blob.ptr);
+	}
+	else if (pass)
+	{	/* use a given passphrase */
+		chunk_t password = chunk_create(pass->secret, strlen(pass->secret));
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 BUILD_FROM_FILE, path,
+								 BUILD_PASSPHRASE, password, BUILD_END);
 	}
 	else
+	{	/* no passphrase */
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 BUILD_FROM_FILE, path, BUILD_END);
+		
+	}
+	if (key == NULL)
 	{
-		plog("  error loading private key file");
+		plog("  syntax error in private key file");
 	}
 	return key;
 }
