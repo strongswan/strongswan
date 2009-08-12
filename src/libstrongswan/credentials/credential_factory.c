@@ -24,6 +24,7 @@ ENUM(credential_type_names, CRED_PRIVATE_KEY, CRED_CERTIFICATE,
 	"CRED_PRIVATE_KEY",
 	"CRED_PUBLIC_KEY",
 	"CRED_CERTIFICATE",
+	"CRED_PLUTO_CERT",
 );
 
 typedef struct private_credential_factory_t private_credential_factory_t;

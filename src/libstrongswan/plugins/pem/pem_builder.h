@@ -48,5 +48,13 @@ builder_t *public_key_pem_builder(key_type_t type);
  */
 builder_t *certificate_pem_builder(certificate_type_t type);
 
+/**
+ * Builder for PEM encoded pluto certificates of all kind.
+ *
+ * @param type		type of the key
+ * @return 			builder instance
+ */
+builder_t *pluto_pem_builder(certificate_type_t type);
+
 #endif /** PEM_PRIVATE_KEY_H_ @}*/
 

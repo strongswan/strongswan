@@ -42,6 +42,8 @@ static void destroy(private_pem_plugin_t *this)
 							   (builder_constructor_t)public_key_pem_builder);
 	lib->creds->remove_builder(lib->creds,
 							   (builder_constructor_t)certificate_pem_builder);
+	lib->creds->remove_builder(lib->creds,
+							   (builder_constructor_t)pluto_pem_builder);
 	free(this);
 }
 
@@ -91,6 +93,14 @@ plugin_t *plugin_create()
 							(builder_constructor_t)certificate_pem_builder);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PGP,
 							(builder_constructor_t)certificate_pem_builder);
+	
+	/* pluto specific credentials formats */
+	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, 0,
+							(builder_constructor_t)pluto_cert_pem_builder);
+	lib->creds->add_builder(lib->creds, CRED_PLUTO_CRL, 0,
+							(builder_constructor_t)pluto_crl_pem_builder);
+	lib->creds->add_builder(lib->creds, CRED_PLUTO_AC, 0,
+							(builder_constructor_t)pluto_ac_pem_builder);
 	
 	return &this->public.plugin;
 }

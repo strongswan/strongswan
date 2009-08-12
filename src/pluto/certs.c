@@ -215,53 +215,114 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 }
 
 /**
- *  Loads a X.509 or OpenPGP certificate
+ * currently building cert_t
  */
-bool load_cert(char *filename, const char *label, cert_t *cert)
+static cert_t *cert_builder_cert;
+
+/**
+ * builder add function
+ */
+static void add(builder_t *this, builder_part_t part, ...)
 {
-	bool pgp = FALSE;
-	chunk_t blob = chunk_empty;
+	chunk_t blob;
+	va_list args;
 
-	/* initialize cert struct */
-	cert->type = CERT_NONE;
-	cert->u.x509 = NULL;
+	va_start(args, part);
+	blob = va_arg(args, chunk_t);
+	va_end(args);
 
-	if (load_coded_file(filename, NULL, label, &blob, &pgp))
+	switch (part)
 	{
-		if (pgp)
+		case BUILD_BLOB_PGP:
 		{
 			pgpcert_t *pgpcert = malloc_thing(pgpcert_t);
 			*pgpcert = pgpcert_empty;
 			if (parse_pgp(blob, pgpcert))
 			{
-				cert->type = CERT_PGP;
-				cert->u.pgp = pgpcert;
-				return TRUE;
+				cert_builder_cert->type = CERT_PGP;
+				cert_builder_cert->u.pgp = pgpcert;
 			}
 			else
 			{
 				plog("  error in OpenPGP certificate");
 				free_pgpcert(pgpcert);
-				return FALSE;
 			}
+			break;
 		}
-		else
+		case BUILD_BLOB_ASN1_DER:
 		{
 			x509cert_t *x509cert = malloc_thing(x509cert_t);
 			*x509cert = empty_x509cert;
 			if (parse_x509cert(blob, 0, x509cert))
 			{
-				cert->type = CERT_X509_SIGNATURE;
-				cert->u.x509 = x509cert;
-				return TRUE;
+				cert_builder_cert->type = CERT_X509_SIGNATURE;
+				cert_builder_cert->u.x509 = x509cert;
 			}
 			else
 			{
 				plog("  error in X.509 certificate");
 				free_x509cert(x509cert);
-				return FALSE;
 			}
+			break;
 		}
+		default:
+			builder_cancel(this);
+			break;
+	}
+}
+
+/**
+ * builder build function
+ */
+static void *build(builder_t *this)
+{
+	free(this);
+	if (cert_builder_cert->type == CERT_NONE)
+	{
+		return NULL;
+	}
+	return cert_builder_cert;
+}
+
+/**
+ * certificate builder in cert_t format.
+ */
+static builder_t *cert_builder(credential_type_t type, int subtype)
+{
+	builder_t *this;
+	
+	if (subtype != 1)
+	{
+		return NULL;
+	}
+	this = malloc_thing(builder_t);
+	this->add = add;
+	this->build = build;
+
+	return this;
+}
+
+/**
+ *  Loads a X.509 or OpenPGP certificate
+ */
+bool load_cert(char *filename, const char *label, cert_t *cert)
+{
+	cert_builder_cert = cert;
+	
+	cert->type = CERT_NONE;
+	cert->u.x509 = NULL;
+	cert->u.pgp = NULL;
+
+	/* hook in builder functions to build pluto specific certificate format */
+	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, 1,
+							(builder_constructor_t)cert_builder);
+	cert = lib->creds->create(lib->creds, CRED_PLUTO_CERT, 1,
+							  BUILD_FROM_FILE, filename, BUILD_END);
+	lib->creds->remove_builder(lib->creds,
+							(builder_constructor_t)cert_builder);
+	if (cert)
+	{
+		return TRUE;
 	}
 	return FALSE;
 }

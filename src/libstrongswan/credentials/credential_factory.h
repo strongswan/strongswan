@@ -36,6 +36,8 @@ enum credential_type_t {
 	CRED_PUBLIC_KEY,
 	/** certificates, implemented in certificate_t */
 	CRED_CERTIFICATE,
+	/** deprecated pluto style certificates */
+	CRED_PLUTO_CERT,
 };
 
 /**
@@ -47,7 +49,7 @@ extern enum_name_t *credential_type_names;
  * Manages credential construction functions and creates instances.
  */
 struct credential_factory_t {
-						 
+	
 	/**
 	 * Create a credential using a list of builder_part_t's.
 	 *
@@ -96,9 +98,9 @@ struct credential_factory_t {
 						   builder_constructor_t constructor);
 	
 	/**
-     * Destroy a credential_factory instance.
-     */
-    void (*destroy)(credential_factory_t *this);
+	 * Destroy a credential_factory instance.
+	 */
+	void (*destroy)(credential_factory_t *this);
 };
 
 /**
