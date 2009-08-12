@@ -22,11 +22,15 @@
 #include <errno.h>
 #include <string.h>
 #include <stddef.h>
+#include <fcntl.h>
 #include <sys/types.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 #include <debug.h>
 #include <library.h>
 #include <utils/lexparser.h>
+#include <asn1/asn1.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
 
@@ -44,6 +48,8 @@ struct private_builder_t {
 	credential_type_t type;
 	/** subtype (keytype, certtype) of the credential we build */
 	int subtype;
+	/** path to file, if we are reading from a file */
+	char *file;
 	/** PEM encoding of the credential */
 	chunk_t pem;
 	/** PEM decryption passphrase, if given */
@@ -367,31 +373,83 @@ status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
 }
 
 /**
+ * build the credential from a blob
+ */
+static void *build_from_blob(private_builder_t *this, chunk_t blob)
+{
+	void *cred = NULL;
+	bool pgp = FALSE;
+	
+	blob = chunk_clone(blob);
+	if (!is_asn1(blob))
+	{
+		if (pem_to_bin(&blob, this, &pgp) != SUCCESS)
+		{
+			chunk_clear(&blob);
+			return NULL;
+		}
+	}
+	cred = lib->creds->create(lib->creds, this->type, this->subtype,
+							  pgp ? BUILD_BLOB_PGP : BUILD_BLOB_ASN1_DER, blob,
+							  BUILD_END);
+	chunk_clear(&blob);
+	return cred;
+}
+
+/**
+ * build the credential from a file
+ */
+static void *build_from_file(private_builder_t *this, char *file)
+{
+	void *cred = NULL;
+	struct stat sb;
+	void *addr;
+	int fd;
+	
+	fd = open(file, O_RDONLY);
+	if (fd == -1)
+	{
+		DBG1("  opening '%s' failed: %s", file, strerror(errno));
+		return NULL;
+	}
+	
+	if (fstat(fd, &sb) == -1)
+	{
+		DBG1("  getting file size of '%s' failed: %s", file, strerror(errno));
+		close(fd);
+		return NULL;
+	}
+	
+	addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	if (addr == MAP_FAILED)
+	{
+		DBG1("  mapping '%s' failed: %s", file, strerror(errno));
+		close(fd);
+		return NULL;
+	}
+	
+	cred = build_from_blob(this, chunk_create(addr, sb.st_size));
+	
+	munmap(addr, sb.st_size);
+	close(fd);
+	return cred;
+}
+
+/**
  * Implementation of builder_t.build
  */
 static void *build(private_builder_t *this)
 {
-	bool pgp = FALSE;
 	void *cred = NULL;
-	chunk_t blob;
-	builder_part_t part = BUILD_BLOB_ASN1_DER;
 	
-	if (!this->pem.ptr)
+	if (this->pem.ptr)
 	{
-		free(this);
-		return NULL;
+		cred = build_from_blob(this, this->pem);
 	}
-	blob = chunk_clone(this->pem);
-	if (pem_to_bin(&blob, this, &pgp) == SUCCESS)
+	else if (this->file)
 	{
-		if (pgp)
-		{
-			part = BUILD_BLOB_PGP;
-		}
-		cred = lib->creds->create(lib->creds, this->type, this->subtype,
-								  part, blob, BUILD_END);
+		cred = build_from_file(this, this->file);
 	}
-	chunk_clear(&blob);
 	free(this);
 	return cred;
 }
@@ -417,6 +475,11 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	
 	switch (part)
 	{
+		case BUILD_FROM_FILE:
+			va_start(args, part);
+			this->file = va_arg(args, char*);
+			va_end(args);
+			break;
 		case BUILD_BLOB_PEM:
 			va_start(args, part);
 			this->pem = va_arg(args, chunk_t);
@@ -456,6 +519,7 @@ static builder_t *pem_builder(credential_type_t type, int subtype)
 	
 	this->type = type;
 	this->subtype = subtype;
+	this->file = NULL;
 	this->pem = chunk_empty;
 	this->passphrase = chunk_empty;
 	this->cb = NULL;
