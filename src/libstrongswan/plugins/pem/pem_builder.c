@@ -58,6 +58,8 @@ struct private_builder_t {
 	chunk_t (*cb)(void *data, int try);
 	/** user data to callback */
 	void *data;
+	/** X509 flags to pass along */
+	int flags;
 };
 
 /**
@@ -296,7 +298,7 @@ status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
 					}
 					else
 					{
-						DBG1("  encryption algorithm '%.s' not supported",
+						DBG1("  encryption algorithm '%.*s' not supported",
 							 dek.len, dek.ptr);
 						return NOT_SUPPORTED;
 					}
@@ -391,7 +393,8 @@ static void *build_from_blob(private_builder_t *this, chunk_t blob)
 	}
 	cred = lib->creds->create(lib->creds, this->type, this->subtype,
 							  pgp ? BUILD_BLOB_PGP : BUILD_BLOB_ASN1_DER, blob,
-							  BUILD_END);
+							  this->flags ? BUILD_X509_FLAG : BUILD_END,
+							  this->flags, BUILD_END);
 	chunk_clear(&blob);
 	return cred;
 }
@@ -501,6 +504,11 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			this->data = va_arg(args, void*);
 			va_end(args);
 			break;
+		case BUILD_X509_FLAG:
+			va_start(args, part);
+			this->flags = va_arg(args, int);
+			va_end(args);
+			break;
 		default:
 			builder_cancel(&this->public);
 			break;
@@ -524,6 +532,7 @@ static builder_t *pem_builder(credential_type_t type, int subtype)
 	this->passphrase = chunk_empty;
 	this->cb = NULL;
 	this->data = NULL;
+	this->flags = 0;
 	
 	return &this->public;
 }
