@@ -59,16 +59,17 @@ static void cert_add(private_builder_t *this, builder_part_t part, ...)
 	va_start(args, part);
 	blob = va_arg(args, chunk_t);
 	va_end(args);
-
+	
 	switch (part)
 	{
 		case BUILD_BLOB_PGP:
 		{
 			pgpcert_t *pgpcert = malloc_thing(pgpcert_t);
 			*pgpcert = pgpcert_empty;
-			if (parse_pgp(blob, pgpcert))
+			if (parse_pgp(chunk_clone(blob), pgpcert))
 			{
 				this->cert = malloc_thing(cert_t);
+				*this->cert = cert_empty;
 				this->cert->type = CERT_PGP;
 				this->cert->u.pgp = pgpcert;
 			}
@@ -83,9 +84,10 @@ static void cert_add(private_builder_t *this, builder_part_t part, ...)
 		{
 			x509cert_t *x509cert = malloc_thing(x509cert_t);
 			*x509cert = empty_x509cert;
-			if (parse_x509cert(blob, 0, x509cert))
+			if (parse_x509cert(chunk_clone(blob), 0, x509cert))
 			{
 				this->cert = malloc_thing(cert_t);
+				*this->cert = cert_empty;
 				this->cert->type = CERT_X509_SIGNATURE;
 				this->cert->u.x509 = x509cert;
 			}
@@ -137,7 +139,8 @@ static void ac_add(private_builder_t *this, builder_part_t part, ...)
 
 			*this->ac = empty_ac;
 
-			if (!parse_ac(blob, this->ac) && !verify_x509acert(this->ac, FALSE))
+			if (!parse_ac(chunk_clone(blob), this->ac) &&
+				!verify_x509acert(this->ac, FALSE))
 			{
 				free_acert(this->ac);
 				this->ac = NULL;
@@ -145,7 +148,10 @@ static void ac_add(private_builder_t *this, builder_part_t part, ...)
 			break;
 		}
 		default:
-			free_acert(this->ac);
+			if (this->ac)
+			{
+				free_acert(this->ac);
+			}
 			builder_cancel(&this->public);
 			break;
 	}
@@ -170,7 +176,7 @@ static void crl_add(private_builder_t *this, builder_part_t part, ...)
 			this->crl = malloc_thing(x509crl_t);
 			*this->crl = empty_x509crl;
 
-			if (!parse_x509crl(blob, 0, this->crl))
+			if (!parse_x509crl(chunk_clone(blob), 0, this->crl))
 			{
 				plog("  error in X.509 crl");
 				free_crl(this->crl);
@@ -179,7 +185,10 @@ static void crl_add(private_builder_t *this, builder_part_t part, ...)
 			break;
 		}
 		default:
-			free_crl(this->crl);
+			if (this->crl)
+			{
+				free_crl(this->crl);
+			}
 			builder_cancel(&this->public);
 			break;
 	}
