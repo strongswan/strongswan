@@ -33,15 +33,24 @@
 #include "ac.h"
 #include "crl.h"
 
-/**
- * currently building cert_t
- */
-static cert_t *cert;
+typedef struct private_builder_t private_builder_t;
+
+struct private_builder_t {
+	/** implements builder interface */
+	builder_t public;
+	/** built credential */
+	union {
+		void *cred;
+		cert_t *cert;
+		x509crl_t *crl;
+		x509acert_t *ac;
+	};
+};
 
 /**
- * builder add function
+ * builder add function for certificates
  */
-static void cert_add(builder_t *this, builder_part_t part, ...)
+static void cert_add(private_builder_t *this, builder_part_t part, ...)
 {
 	chunk_t blob;
 	va_list args;
@@ -58,8 +67,9 @@ static void cert_add(builder_t *this, builder_part_t part, ...)
 			*pgpcert = pgpcert_empty;
 			if (parse_pgp(blob, pgpcert))
 			{
-				cert->type = CERT_PGP;
-				cert->u.pgp = pgpcert;
+				this->cert = malloc_thing(cert_t);
+				this->cert->type = CERT_PGP;
+				this->cert->u.pgp = pgpcert;
 			}
 			else
 			{
@@ -74,8 +84,9 @@ static void cert_add(builder_t *this, builder_part_t part, ...)
 			*x509cert = empty_x509cert;
 			if (parse_x509cert(blob, 0, x509cert))
 			{
-				cert->type = CERT_X509_SIGNATURE;
-				cert->u.x509 = x509cert;
+				this->cert = malloc_thing(cert_t);
+				this->cert->type = CERT_X509_SIGNATURE;
+				this->cert->u.x509 = x509cert;
 			}
 			else
 			{
@@ -85,55 +96,30 @@ static void cert_add(builder_t *this, builder_part_t part, ...)
 			break;
 		}
 		default:
-			builder_cancel(this);
+			if (this->cert)
+			{
+				switch (this->cert->type)
+				{
+					case CERT_X509_SIGNATURE:
+						free_x509cert(this->cert->u.x509);
+						break;
+					case CERT_PGP:
+						free_pgpcert(this->cert->u.pgp);
+						break;
+					default:
+						break;
+				}
+				free(this->cert);
+			}
+			builder_cancel(&this->public);
 			break;
 	}
 }
 
 /**
- * builder build function
+ * builder add function for attribute certificates
  */
-static void *cert_build(builder_t *this)
-{
-	free(this);
-	if (cert->type == CERT_NONE)
-	{
-		return NULL;
-	}
-	return cert;
-}
-
-/**
- * certificate builder in cert_t format.
- */
-static builder_t *cert_builder(credential_type_t type, int subtype)
-{
-	builder_t *this;
-	
-	if (subtype != CRED_TYPE_CERTIFICATE)
-	{
-		return NULL;
-	}
-	this = malloc_thing(builder_t);
-	this->add = cert_add;
-	this->build = cert_build;
-
-	cert->type = CERT_NONE;
-	cert->u.x509 = NULL;
-	cert->u.pgp = NULL;
-
-	return this;
-}
-
-/**
- * currently building x509ac_t
- */
-static x509acert_t *ac;
-
-/**
- * builder add function
- */
-static void ac_add(builder_t *this, builder_part_t part, ...)
+static void ac_add(private_builder_t *this, builder_part_t part, ...)
 {
 	chunk_t blob;
 	va_list args;
@@ -146,61 +132,28 @@ static void ac_add(builder_t *this, builder_part_t part, ...)
 			blob = va_arg(args, chunk_t);
 			va_end(args);
 	
-			ac = malloc_thing(x509acert_t);
+			this->ac = malloc_thing(x509acert_t);
 
-			*ac = empty_ac;
+			*this->ac = empty_ac;
 
-			if (!parse_ac(blob, ac) && !verify_x509acert(ac, FALSE))
+			if (!parse_ac(blob, this->ac) && !verify_x509acert(this->ac, FALSE))
 			{
-				free_acert(ac);
-				ac = NULL;
+				free_acert(this->ac);
+				this->ac = NULL;
 			}
 			break;
 		}
 		default:
-			builder_cancel(this);
+			free_acert(this->ac);
+			builder_cancel(&this->public);
 			break;
 	}
 }
 
 /**
- * builder build function
+ * builder add function for crls
  */
-static void *ac_build(builder_t *this)
-{
-	free(this);
-	return ac;
-}
-
-/**
- * certificate builder in x509ac_t format.
- */
-static builder_t *ac_builder(credential_type_t type, int subtype)
-{
-	builder_t *this;
-	
-	if (subtype != CRED_TYPE_AC)
-	{
-		return NULL;
-	}
-	this = malloc_thing(builder_t);
-	this->add = ac_add;
-	this->build = ac_build;
-	
-	ac = NULL;
-	
-	return this;
-}
-
-/**
- * currently building x509crl_t
- */
-static x509crl_t *crl;
-
-/**
- * builder add function
- */
-static void crl_add(builder_t *this, builder_part_t part, ...)
+static void crl_add(private_builder_t *this, builder_part_t part, ...)
 {
 	chunk_t blob;
 	va_list args;
@@ -213,19 +166,20 @@ static void crl_add(builder_t *this, builder_part_t part, ...)
 			blob = va_arg(args, chunk_t);
 			va_end(args);
 
-			crl = malloc_thing(x509crl_t);
-			*crl = empty_x509crl;
+			this->crl = malloc_thing(x509crl_t);
+			*this->crl = empty_x509crl;
 
-			if (!parse_x509crl(blob, 0, crl))
+			if (!parse_x509crl(blob, 0, this->crl))
 			{
 				plog("  error in X.509 crl");
-				free_crl(crl);
-				crl = NULL;
+				free_crl(this->crl);
+				this->crl = NULL;
 			}
 			break;
 		}
 		default:
-			builder_cancel(this);
+			free_crl(this->crl);
+			builder_cancel(&this->public);
 			break;
 	}
 }
@@ -233,47 +187,52 @@ static void crl_add(builder_t *this, builder_part_t part, ...)
 /**
  * builder build function
  */
-static void *crl_build(builder_t *this)
+static void *build(private_builder_t *this)
 {
+	void *cred;
+	
+	cred = this->cred;
 	free(this);
-	return crl;
+	
+	return cred;
 }
 
 /**
- * CRL builder in x509crl_t format.
+ * builder for pluto credentials
  */
-static builder_t *crl_builder(credential_type_t type, int subtype)
+static builder_t *builder(credential_type_t type, int subtype)
 {
-	builder_t *this;
+	private_builder_t *this = malloc_thing(private_builder_t);
 	
-	if (subtype != CRED_TYPE_CRL)
+	switch (subtype)
 	{
-		return NULL;
+		case CRED_TYPE_CERTIFICATE:
+			this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))cert_add;
+			break;
+		case CRED_TYPE_AC:
+			this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))ac_add;
+			break;
+		case CRED_TYPE_CRL:
+			this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))crl_add;
+			break;
+		default:
+			free(this);
+			return NULL;
 	}
-	this = malloc_thing(builder_t);
-	this->add = crl_add;
-	this->build = crl_build;
+	this->public.build = (void*(*)(builder_t*))build;
+	this->cred = NULL;
 	
-	crl = NULL;
-	
-	return this;
+	return &this->public;
 }
-
 
 void init_builder(void)
 {
-	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_CERTIFICATE,
-							(builder_constructor_t)cert_builder);
-	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_AC,
-							(builder_constructor_t)ac_builder);
-	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_CRL,
-							(builder_constructor_t)crl_builder);
+	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, 0,
+							(builder_constructor_t)builder);
 }
 
 void free_builder(void)
 {
-	lib->creds->remove_builder(lib->creds, (builder_constructor_t)cert_builder);
-	lib->creds->remove_builder(lib->creds, (builder_constructor_t)ac_builder);
-	lib->creds->remove_builder(lib->creds, (builder_constructor_t)crl_builder);
+	lib->creds->remove_builder(lib->creds, (builder_constructor_t)builder);
 }
 

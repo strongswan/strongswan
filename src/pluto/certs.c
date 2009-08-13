@@ -159,9 +159,9 @@ bool load_cert(char *filename, const char *label, cert_t *out)
 							  BUILD_FROM_FILE, filename, BUILD_END);
 	if (cert)
 	{
-		/* As the API passes an empty cert_t, the CRED_TYPE_CERTIFICATE 
-		 * returns a statically allocated cert to copy. */
+		/* the API passes an empty cert_t, we move over and free the built one */
 		*out = *cert;
+		free(cert);
 		return TRUE;
 	}
 	return FALSE;
