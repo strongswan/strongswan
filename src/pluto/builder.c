@@ -201,7 +201,7 @@ static void *build(private_builder_t *this)
 /**
  * builder for pluto credentials
  */
-static builder_t *builder(credential_type_t type, int subtype)
+static builder_t *builder(int subtype)
 {
 	private_builder_t *this = malloc_thing(private_builder_t);
 	
