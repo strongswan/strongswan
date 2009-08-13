@@ -4,7 +4,6 @@
 #include <library.h>
 #include <debug.h>
 #include <credentials/keys/private_key.h>
-#include <asn1/pem.h>
 
 void start_timing(struct timespec *start)
 {
@@ -70,14 +69,9 @@ int main(int argc, char *argv[])
 		pos += read;
 		keydata.len += read;
 	}
-	if (pem_to_bin(&keydata, chunk_empty, NULL) != SUCCESS)
-	{
-		printf("converting PEM private key failed.\n");
-		exit(1);
-	}
 	
 	private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-								 BUILD_BLOB_ASN1_DER, keydata, BUILD_END);
+								 BUILD_BLOB_PEM, keydata, BUILD_END);
 	if (!private)
 	{
 		printf("parsing private key failed.\n");
