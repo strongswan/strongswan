@@ -142,7 +142,11 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 								 BUILD_FROM_FILE, path, BUILD_END);
 		
 	}
-	if (key == NULL)
+	if (key)
+	{
+		plog("  loaded private key from file '%s'", filename);
+	}
+	else
 	{
 		plog("  syntax error in private key file");
 	}
@@ -161,6 +165,7 @@ bool load_cert(char *filename, const char *label, cert_t *out)
 	if (cert)
 	{
 		/* the API passes an empty cert_t, we move over and free the built one */
+		plog(" loaded '%s' certificate from '%s'", label, filename);
 		*out = *cert;
 		free(cert);
 		return TRUE;
