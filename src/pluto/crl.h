@@ -78,7 +78,7 @@ extern const x509crl_t  empty_x509crl;
 extern bool parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl);
 extern void load_crls(void);
 extern void check_crls(void);
-extern bool insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl);
+extern bool insert_crl(x509crl_t *crl, chunk_t crl_uri, bool cache_crl);
 extern cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until
 	, time_t *revocationDate, crl_reason_t *revocationReason);
 extern void list_crls(bool utc, bool strict);

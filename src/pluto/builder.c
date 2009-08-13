@@ -31,6 +31,7 @@
 #include "id.h"
 #include "certs.h"
 #include "ac.h"
+#include "crl.h"
 
 /**
  * currently building cert_t
@@ -191,17 +192,88 @@ static builder_t *ac_builder(credential_type_t type, int subtype)
 	return this;
 }
 
+/**
+ * currently building x509crl_t
+ */
+static x509crl_t *crl;
+
+/**
+ * builder add function
+ */
+static void crl_add(builder_t *this, builder_part_t part, ...)
+{
+	chunk_t blob;
+	va_list args;
+
+	switch (part)
+	{
+		case BUILD_BLOB_ASN1_DER:
+		{
+			va_start(args, part);
+			blob = va_arg(args, chunk_t);
+			va_end(args);
+
+			crl = malloc_thing(x509crl_t);
+			*crl = empty_x509crl;
+
+			if (!parse_x509crl(blob, 0, crl))
+			{
+				plog("  error in X.509 crl");
+				free_crl(crl);
+				crl = NULL;
+			}
+			break;
+		}
+		default:
+			builder_cancel(this);
+			break;
+	}
+}
+
+/**
+ * builder build function
+ */
+static void *crl_build(builder_t *this)
+{
+	free(this);
+	return crl;
+}
+
+/**
+ * CRL builder in x509crl_t format.
+ */
+static builder_t *crl_builder(credential_type_t type, int subtype)
+{
+	builder_t *this;
+	
+	if (subtype != CRED_TYPE_CRL)
+	{
+		return NULL;
+	}
+	this = malloc_thing(builder_t);
+	this->add = crl_add;
+	this->build = crl_build;
+	
+	crl = NULL;
+	
+	return this;
+}
+
+
 void init_builder(void)
 {
 	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_CERTIFICATE,
 							(builder_constructor_t)cert_builder);
 	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_AC,
 							(builder_constructor_t)ac_builder);
+	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_CRL,
+							(builder_constructor_t)crl_builder);
 }
 
 void free_builder(void)
 {
 	lib->creds->remove_builder(lib->creds, (builder_constructor_t)cert_builder);
 	lib->creds->remove_builder(lib->creds, (builder_constructor_t)ac_builder);
+	lib->creds->remove_builder(lib->creds, (builder_constructor_t)crl_builder);
 }
 

@@ -39,6 +39,7 @@
 #include "keys.h"
 #include "whack.h"
 #include "fetch.h"
+#include "builder.h"
 
 
 /* chained lists of X.509 crls */
@@ -202,127 +203,114 @@ void free_crls(void)
 /**
  * Insert X.509 CRL into chained list
  */
-bool insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl)
+bool insert_crl(x509crl_t *crl, chunk_t crl_uri, bool cache_crl)
 {
-	x509crl_t *crl = malloc_thing(x509crl_t);
+	x509cert_t *issuer_cert;
+	x509crl_t *oldcrl;
+	bool valid_sig;
+	generalName_t *gn;
 
-	*crl = empty_x509crl;
+	/* add distribution point */
+	gn = malloc_thing(generalName_t);
+	gn->kind = GN_URI;
+	gn->name = crl_uri;
+	gn->next = crl->distributionPoints;
+	crl->distributionPoints = gn;
 
-	if (parse_x509crl(blob, 0, crl))
+	lock_authcert_list("insert_crl");
+	/* get the issuer cacert */
+	issuer_cert = get_authcert(crl->issuer, crl->authKeySerialNumber,
+		crl->authKeyID, AUTH_CA);
+	if (issuer_cert == NULL)
 	{
-		x509cert_t *issuer_cert;
-		x509crl_t *oldcrl;
-		bool valid_sig;
-		generalName_t *gn;
-
-		/* add distribution point */
-		gn = malloc_thing(generalName_t);
-		gn->kind = GN_URI;
-		gn->name = crl_uri;
-		gn->next = crl->distributionPoints;
-		crl->distributionPoints = gn;
-
-		lock_authcert_list("insert_crl");
-		/* get the issuer cacert */
-		issuer_cert = get_authcert(crl->issuer, crl->authKeySerialNumber,
-			crl->authKeyID, AUTH_CA);
-		if (issuer_cert == NULL)
-		{
-			plog("crl issuer cacert not found");
-			free_crl(crl);
-			unlock_authcert_list("insert_crl");
-			return FALSE;
-		}
-		DBG(DBG_CONTROL,
-			DBG_log("crl issuer cacert found")
-		)
-
-		/* check the issuer's signature of the crl */
-		valid_sig = x509_check_signature(crl->tbsCertList, crl->signature,
-										 crl->algorithm, issuer_cert);
+		plog("crl issuer cacert not found");
+		free_crl(crl);
 		unlock_authcert_list("insert_crl");
-
-		if (!valid_sig)
-		{
-			free_crl(crl);
-			return FALSE;
-		}
-		DBG(DBG_CONTROL,
-			DBG_log("crl signature is valid")
-		)
-
-		lock_crl_list("insert_crl");
-		oldcrl = get_x509crl(crl->issuer, crl->authKeySerialNumber
-			, crl->authKeyID);
-
-		if (oldcrl != NULL)
-		{
-			if (crl->thisUpdate > oldcrl->thisUpdate)
-			{
-				/* keep any known CRL distribution points */
-				add_distribution_points(oldcrl->distributionPoints
-					, &crl->distributionPoints);
-
-				/* now delete the old CRL */
-				free_first_crl();
-				DBG(DBG_CONTROL,
-					DBG_log("thisUpdate is newer - existing crl deleted")
-				)
-			}
-			else
-			{
-				unlock_crl_list("insert_crls");
-				DBG(DBG_CONTROL,
-					DBG_log("thisUpdate is not newer - existing crl not replaced");
-				)
-				free_crl(crl);
-				return oldcrl->nextUpdate - time(NULL) > 2*crl_check_interval;
-			}
-		}
-
-		/* insert new CRL */
-		crl->next = x509crls;
-		x509crls = crl;
-
-		unlock_crl_list("insert_crl");
-
-		/* If crl caching is enabled then the crl is saved locally.
-		 * Only http or ldap URIs are cached but not local file URIs.
-		 * The issuer's subjectKeyID is used as a unique filename
-		 */
-		if (cache_crl && strncasecmp(crl_uri.ptr, "file", 4) != 0)
-		{
-			char path[BUF_LEN], buf[BUF_LEN];
-			char digest_buf[HASH_SIZE_SHA1];
-			chunk_t subjectKeyID = chunk_from_buf(digest_buf);
-			bool has_keyID;
-			
-			if (issuer_cert->subjectKeyID.ptr == NULL)
-			{
-				has_keyID = compute_subjectKeyID(issuer_cert, subjectKeyID);
-			}
-			else
-			{
-				subjectKeyID = issuer_cert->subjectKeyID;
-				has_keyID = TRUE;
-			}
-			if (has_keyID)
-			{
-				datatot(subjectKeyID.ptr, subjectKeyID.len, 16, buf, BUF_LEN);
-				snprintf(path, BUF_LEN, "%s/%s.crl", CRL_PATH, buf);
-				chunk_write(crl->certificateList, path, "crl",  0022, TRUE);
-			}
-		}
-
-		/* is the fetched crl valid? */
-		return crl->nextUpdate - time(NULL) > 2*crl_check_interval;
+		return FALSE;
 	}
-	else
+	DBG(DBG_CONTROL,
+		DBG_log("crl issuer cacert found")
+	)
+
+	/* check the issuer's signature of the crl */
+	valid_sig = x509_check_signature(crl->tbsCertList, crl->signature,
+									 crl->algorithm, issuer_cert);
+	unlock_authcert_list("insert_crl");
+
+	if (!valid_sig)
 	{
-		plog("  error in X.509 crl");
 		free_crl(crl);
 		return FALSE;
 	}
+	DBG(DBG_CONTROL,
+		DBG_log("crl signature is valid")
+	)
+
+	lock_crl_list("insert_crl");
+	oldcrl = get_x509crl(crl->issuer, crl->authKeySerialNumber
+		, crl->authKeyID);
+
+	if (oldcrl != NULL)
+	{
+		if (crl->thisUpdate > oldcrl->thisUpdate)
+		{
+			/* keep any known CRL distribution points */
+			add_distribution_points(oldcrl->distributionPoints
+				, &crl->distributionPoints);
+
+			/* now delete the old CRL */
+			free_first_crl();
+			DBG(DBG_CONTROL,
+				DBG_log("thisUpdate is newer - existing crl deleted")
+			)
+		}
+		else
+		{
+			unlock_crl_list("insert_crls");
+			DBG(DBG_CONTROL,
+				DBG_log("thisUpdate is not newer - existing crl not replaced");
+			)
+			free_crl(crl);
+			return oldcrl->nextUpdate - time(NULL) > 2*crl_check_interval;
+		}
+	}
+
+	/* insert new CRL */
+	crl->next = x509crls;
+	x509crls = crl;
+
+	unlock_crl_list("insert_crl");
+
+	/* If crl caching is enabled then the crl is saved locally.
+	 * Only http or ldap URIs are cached but not local file URIs.
+	 * The issuer's subjectKeyID is used as a unique filename
+	 */
+	if (cache_crl && strncasecmp(crl_uri.ptr, "file", 4) != 0)
+	{
+		char path[BUF_LEN], buf[BUF_LEN];
+		char digest_buf[HASH_SIZE_SHA1];
+		chunk_t subjectKeyID = chunk_from_buf(digest_buf);
+		bool has_keyID;
+		
+		if (issuer_cert->subjectKeyID.ptr == NULL)
+		{
+			has_keyID = compute_subjectKeyID(issuer_cert, subjectKeyID);
+		}
+		else
+		{
+			subjectKeyID = issuer_cert->subjectKeyID;
+			has_keyID = TRUE;
+		}
+		if (has_keyID)
+		{
+			datatot(subjectKeyID.ptr, subjectKeyID.len, 16, buf, BUF_LEN);
+			snprintf(path, BUF_LEN, "%s/%s.crl", CRL_PATH, buf);
+			chunk_write(crl->certificateList, path, "crl",  0022, TRUE);
+		}
+	}
+
+	/* is the fetched crl valid? */
+	return crl->nextUpdate - time(NULL) > 2*crl_check_interval;
 }
 
 /**
@@ -352,11 +340,12 @@ void load_crls(void)
 		{
 			while (n--)
 			{
-				bool pgp = FALSE;
-				chunk_t blob = chunk_empty;
 				char *filename = filelist[n]->d_name;
-
-				if (load_coded_file(filename, NULL, "crl", &blob, &pgp))
+				x509crl_t *crl;
+				
+				crl = lib->creds->create(lib->creds, CRED_PLUTO_CERT,
+							CRED_TYPE_CRL, BUILD_FROM_FILE, filename, BUILD_END);
+				if (crl)
 				{
 					chunk_t crl_uri;
 
@@ -367,7 +356,7 @@ void load_crls(void)
 					snprintf(crl_uri.ptr, crl_uri.len + 1, "file://%s/%s"
 						, CRL_PATH, filename);
 
-					insert_crl(blob, crl_uri, FALSE);
+					insert_crl(crl, crl_uri, FALSE);
 				}
 				free(filelist[n]);
 			}

@@ -41,6 +41,7 @@
 #include "ocsp.h"
 #include "crl.h"
 #include "fetch.h"
+#include "builder.h"
 
 fetch_req_t empty_fetch_req = {
 	NULL    , /* next */
@@ -262,40 +263,25 @@ static void free_fetch_request(fetch_req_t *req)
 /**
  * Fetch an ASN.1 blob coded in PEM or DER format from a URL
  */
-bool fetch_asn1_blob(char *url, chunk_t *blob)
+x509crl_t* fetch_crl(char *url)
 {
+	x509crl_t *crl;
+	chunk_t blob;
+
 	DBG1("  fetching crl from '%s' ...", url);
-	if (lib->fetcher->fetch(lib->fetcher, url, blob, FETCH_END) != SUCCESS)
+	if (lib->fetcher->fetch(lib->fetcher, url, &blob, FETCH_END) != SUCCESS)
 	{
 		DBG1("crl fetching failed");
 		return FALSE;
 	}
-
-	if (is_asn1(*blob))
+	crl = lib->creds->create(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_CRL,
+							 BUILD_BLOB_PEM, blob, BUILD_END);
+	free(blob.ptr);
+	if (!crl)
 	{
-		DBG2("  fetched blob coded in DER format");
+		DBG1("crl fetched successfully but data coded in unknown format");
 	}
-	else
-	{
-		bool pgp = FALSE;
-
-		if (pem_to_bin(blob, chunk_empty, &pgp) != SUCCESS)
-		{
-			free(blob->ptr);
-			return FALSE;
-		}
-		if (is_asn1(*blob))
-		{
-			DBG2("  fetched blob coded in PEM format");
-		}
-		else
-		{
-			DBG1("crl fetched successfully but data coded in unknown format");
-			free(blob->ptr);
-			return FALSE;
-		}
-	}
-	return TRUE;
+	return crl;
 }
 
 /**
@@ -359,7 +345,6 @@ static void fetch_crls(bool cache_crls)
 	while (req != NULL)
 	{
 		bool valid_crl = FALSE;
-		chunk_t blob = chunk_empty;
 		generalName_t *gn = req->distributionPoints;
 		const char *ldaphost;
 		ca_info_t *ca;
@@ -372,12 +357,14 @@ static void fetch_crls(bool cache_crls)
 		while (gn != NULL)
 		{
 			char *uri = complete_uri(gn->name, ldaphost);
-
-			if (fetch_asn1_blob(uri, &blob))
+			x509crl_t *crl;
+			
+			crl = fetch_crl(uri);
+			if (crl)
 			{
 				chunk_t crl_uri = chunk_clone(gn->name);
 
-				if (insert_crl(blob, crl_uri, cache_crls))
+				if (insert_crl(crl, crl_uri, cache_crls))
 				{
 					DBG(DBG_CONTROL,
 						DBG_log("we have a valid crl")
