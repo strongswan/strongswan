@@ -73,6 +73,7 @@
 #include "virtual.h"
 #include "timer.h"
 #include "vendor.h"
+#include "builder.h"
 
 static void usage(const char *mess)
 {
@@ -655,6 +656,7 @@ int main(int argc, char **argv)
 		lib->settings->get_str(lib->settings, "pluto.load", PLUGINS));
 	print_plugins();
 
+	init_builder();
 	if (!init_secret() || !init_crypto())
 	{
 		plog("initialization failed - aborting pluto");
@@ -760,6 +762,7 @@ void exit_pluto(int status)
 	free_id();                  /* free myids */
 	free_events();              /* free remaining events */
 	free_vendorid();			/* free all vendor id records */
+	free_builder();
 	delete_lock();
 	options->destroy(options);
 	library_deinit();

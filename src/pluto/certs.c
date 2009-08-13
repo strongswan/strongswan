@@ -31,6 +31,7 @@
 #include "pem.h"
 #include "certs.h"
 #include "whack.h"
+#include "builder.h"
 
 /**
  * used for initializatin of certs
@@ -215,113 +216,19 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 }
 
 /**
- * currently building cert_t
- */
-static cert_t *cert_builder_cert;
-
-/**
- * builder add function
- */
-static void add(builder_t *this, builder_part_t part, ...)
-{
-	chunk_t blob;
-	va_list args;
-
-	va_start(args, part);
-	blob = va_arg(args, chunk_t);
-	va_end(args);
-
-	switch (part)
-	{
-		case BUILD_BLOB_PGP:
-		{
-			pgpcert_t *pgpcert = malloc_thing(pgpcert_t);
-			*pgpcert = pgpcert_empty;
-			if (parse_pgp(blob, pgpcert))
-			{
-				cert_builder_cert->type = CERT_PGP;
-				cert_builder_cert->u.pgp = pgpcert;
-			}
-			else
-			{
-				plog("  error in OpenPGP certificate");
-				free_pgpcert(pgpcert);
-			}
-			break;
-		}
-		case BUILD_BLOB_ASN1_DER:
-		{
-			x509cert_t *x509cert = malloc_thing(x509cert_t);
-			*x509cert = empty_x509cert;
-			if (parse_x509cert(blob, 0, x509cert))
-			{
-				cert_builder_cert->type = CERT_X509_SIGNATURE;
-				cert_builder_cert->u.x509 = x509cert;
-			}
-			else
-			{
-				plog("  error in X.509 certificate");
-				free_x509cert(x509cert);
-			}
-			break;
-		}
-		default:
-			builder_cancel(this);
-			break;
-	}
-}
-
-/**
- * builder build function
- */
-static void *build(builder_t *this)
-{
-	free(this);
-	if (cert_builder_cert->type == CERT_NONE)
-	{
-		return NULL;
-	}
-	return cert_builder_cert;
-}
-
-/**
- * certificate builder in cert_t format.
- */
-static builder_t *cert_builder(credential_type_t type, int subtype)
-{
-	builder_t *this;
-	
-	if (subtype != 1)
-	{
-		return NULL;
-	}
-	this = malloc_thing(builder_t);
-	this->add = add;
-	this->build = build;
-
-	return this;
-}
-
-/**
  *  Loads a X.509 or OpenPGP certificate
  */
-bool load_cert(char *filename, const char *label, cert_t *cert)
+bool load_cert(char *filename, const char *label, cert_t *out)
 {
-	cert_builder_cert = cert;
-	
-	cert->type = CERT_NONE;
-	cert->u.x509 = NULL;
-	cert->u.pgp = NULL;
+	cert_t *cert;
 
-	/* hook in builder functions to build pluto specific certificate format */
-	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, 1,
-							(builder_constructor_t)cert_builder);
-	cert = lib->creds->create(lib->creds, CRED_PLUTO_CERT, 1,
+	cert = lib->creds->create(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_CERTIFICATE,
 							  BUILD_FROM_FILE, filename, BUILD_END);
-	lib->creds->remove_builder(lib->creds,
-							(builder_constructor_t)cert_builder);
 	if (cert)
 	{
+		/* As the API passes an empty cert_t, the CRED_TYPE_CERTIFICATE 
+		 * returns a statically allocated cert to copy. */
+		*out = *cert;
 		return TRUE;
 	}
 	return FALSE;
