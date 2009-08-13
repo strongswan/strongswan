@@ -36,6 +36,7 @@
 #include "log.h"
 #include "whack.h"
 #include "fetch.h"
+#include "builder.h"
 
 /**
  * Chained list of X.509 attribute certificates
@@ -818,20 +819,13 @@ void load_acerts(void)
 		{
 			while (n--)
 			{
-				chunk_t blob = chunk_empty;
-				bool pgp = FALSE;
-
-				if (load_coded_file(filelist[n]->d_name, NULL, "acert", &blob, &pgp))
+				x509acert_t *ac;
+				
+				ac = lib->creds->create(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_AC,
+							  BUILD_FROM_FILE, filelist[n]->d_name, BUILD_END);
+				if (ac)
 				{
-					x509acert_t *ac = malloc_thing(x509acert_t);
-					
-					*ac = empty_ac;
-
-					if (parse_ac(blob, ac)
-					&& verify_x509acert(ac, FALSE))
-						add_acert(ac);
-					else
-						free_acert(ac);
+					add_acert(ac);
 				}
 				free(filelist[n]);
 			}
