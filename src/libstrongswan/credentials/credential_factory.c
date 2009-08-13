@@ -65,11 +65,17 @@ struct entry_t {
  */
 static bool builder_filter(entry_t *data, entry_t **in, builder_t **out)
 {
+	builder_t *builder;
+	
 	if (data->type == (*in)->type &&
 		data->subtype == (*in)->subtype)
 	{
-		*out = (*in)->constructor(data->subtype);
-		return TRUE;
+		builder = (*in)->constructor(data->subtype);
+		if (builder)
+		{
+			*out = builder;
+			return TRUE;
+		}
 	}
 	return FALSE;
 }
