@@ -23,6 +23,7 @@
 
 #include "library.h"
 #include "asn1/asn1.h"
+#include "credentials/certificates/certificate.h"
 
 #include "constants.h"
 #include "defs.h"
@@ -155,7 +156,7 @@ bool load_cert(char *filename, const char *label, cert_t *out)
 {
 	cert_t *cert;
 
-	cert = lib->creds->create(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_CERTIFICATE,
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT,
 							  BUILD_FROM_FILE, filename, BUILD_END);
 	if (cert)
 	{

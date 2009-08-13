@@ -28,6 +28,7 @@
 #include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
+#include <credentials/certificates/certificate.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -272,7 +273,7 @@ x509crl_t* fetch_crl(char *url)
 		DBG1("crl fetching failed");
 		return FALSE;
 	}
-	crl = lib->creds->create(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_CRL,
+	crl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL,
 							 BUILD_BLOB_PEM, blob, BUILD_END);
 	free(blob.ptr);
 	if (!crl)

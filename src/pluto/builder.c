@@ -23,7 +23,8 @@
 
 #include <freeswan.h>
 
-#include "library.h"
+#include <library.h>
+#include <credentials/certificates/certificate.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -206,13 +207,13 @@ static builder_t *builder(credential_type_t type, int subtype)
 	
 	switch (subtype)
 	{
-		case CRED_TYPE_CERTIFICATE:
+		case CERT_PLUTO_CERT:
 			this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))cert_add;
 			break;
-		case CRED_TYPE_AC:
+		case CERT_PLUTO_AC:
 			this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))ac_add;
 			break;
-		case CRED_TYPE_CRL:
+		case CERT_PLUTO_CRL:
 			this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))crl_add;
 			break;
 		default:
@@ -227,7 +228,11 @@ static builder_t *builder(credential_type_t type, int subtype)
 
 void init_builder(void)
 {
-	lib->creds->add_builder(lib->creds, CRED_PLUTO_CERT, 0,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT,
+							(builder_constructor_t)builder);
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_AC,
+							(builder_constructor_t)builder);
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL,
 							(builder_constructor_t)builder);
 }
 

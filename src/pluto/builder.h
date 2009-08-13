@@ -16,16 +16,6 @@
 #ifndef _BUILDER_H
 #define _BUILDER_H
 
-/* types of pluto credentials */
-typedef enum {
-	/* cert_t certificate, either x509 or PGP */
-	CRED_TYPE_CERTIFICATE,
-	/* x509crl_t certificate revocation list */
-	CRED_TYPE_CRL,
-	/* x509acert_t attribute certificate */
-	CRED_TYPE_AC,
-} cred_type_t;
-
 /* register credential builder hooks */
 extern void init_builder();
 /* unregister credential builder hooks */

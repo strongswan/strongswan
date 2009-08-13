@@ -36,8 +36,6 @@ enum credential_type_t {
 	CRED_PUBLIC_KEY,
 	/** certificates, implemented in certificate_t */
 	CRED_CERTIFICATE,
-	/** deprecated pluto style certificates */
-	CRED_PLUTO_CERT,
 };
 
 /**

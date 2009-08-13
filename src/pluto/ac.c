@@ -27,6 +27,7 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
+#include <credentials/certificates/certificate.h>
 
 #include "ac.h"
 #include "x509.h"
@@ -821,8 +822,9 @@ void load_acerts(void)
 			{
 				x509acert_t *ac;
 				
-				ac = lib->creds->create(lib->creds, CRED_PLUTO_CERT, CRED_TYPE_AC,
-							  BUILD_FROM_FILE, filelist[n]->d_name, BUILD_END);
+				ac = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+							CERT_PLUTO_AC, BUILD_FROM_FILE, filelist[n]->d_name,
+							BUILD_END);
 				if (ac)
 				{
 					add_acert(ac);

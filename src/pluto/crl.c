@@ -28,6 +28,7 @@
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
 #include <crypto/hashers/hasher.h>
+#include <credentials/certificates/certificate.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -343,8 +344,8 @@ void load_crls(void)
 				char *filename = filelist[n]->d_name;
 				x509crl_t *crl;
 				
-				crl = lib->creds->create(lib->creds, CRED_PLUTO_CERT,
-							CRED_TYPE_CRL, BUILD_FROM_FILE, filename, BUILD_END);
+				crl = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+						CERT_PLUTO_CRL, BUILD_FROM_FILE, filename, BUILD_END);
 				if (crl)
 				{
 					chunk_t crl_uri;

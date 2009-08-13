@@ -561,11 +561,3 @@ builder_t *certificate_pem_builder(certificate_type_t type)
 	return pem_builder(CRED_CERTIFICATE, type);
 }
 
-/**
- * Pluto specific cert builder.
- */
-builder_t *pluto_pem_builder(certificate_type_t type)
-{
-	return pem_builder(CRED_PLUTO_CERT, type);
-}
-
