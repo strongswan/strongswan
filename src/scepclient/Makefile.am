@@ -27,7 +27,7 @@ LIBFREESWANBUILDDIR=$(top_builddir)/src/libfreeswan
 
 scepclient_LDADD = \
 ca.o crl.o certs.o constants.o defs.o fetch.o id.o keys.o lex.o \
-ocsp.o pem.o pgpcert.o pkcs7.o smartcard.o x509.o \
+ocsp.o pgpcert.o pkcs7.o smartcard.o x509.o \
 $(LIBSTRONGSWANBUILDDIR)/libstrongswan.la \
 $(LIBFREESWANBUILDDIR)/libfreeswan.a
 
@@ -67,9 +67,6 @@ lex.o :		$(PLUTODIR)/lex.c $(PLUTODIR)/lex.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 ocsp.o :	$(PLUTODIR)/ocsp.c $(PLUTODIR)/ocsp.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-pem.o :		$(PLUTODIR)/pem.c $(PLUTODIR)/pem.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 pgpcert.o :		$(PLUTODIR)/pgpcert.c $(PLUTODIR)/pgpcert.h

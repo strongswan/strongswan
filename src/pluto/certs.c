@@ -28,7 +28,6 @@
 #include "defs.h"
 #include "log.h"
 #include "id.h"
-#include "pem.h"
 #include "certs.h"
 #include "whack.h"
 #include "builder.h"
@@ -67,72 +66,6 @@ public_key_t* cert_get_public_key(const cert_t cert)
 		default:
 			return NULL;
 	}
-}
-
-/* load a coded key or certificate file with autodetection
- * of binary DER or base64 PEM ASN.1 formats and armored PGP format
- */
-bool load_coded_file(char *filename, prompt_pass_t *pass, const char *type,
-					 chunk_t *blob, bool *pgp)
-{
-	err_t ugh = NULL;
-
-	FILE *fd = fopen(filename, "r");
-
-	if (fd)
-	{
-		int bytes;
-		fseek(fd, 0, SEEK_END );
-		blob->len = ftell(fd);
-		rewind(fd);
-		blob->ptr = malloc(blob->len);
-		bytes = fread(blob->ptr, 1, blob->len, fd);
-		fclose(fd);
-		plog("  loaded %s file '%s' (%d bytes)", type, filename, bytes);
-
-		*pgp = FALSE;
-
-		/* try DER format */
-		if (is_asn1(*blob))
-		{
-			DBG(DBG_PARSING,
-				DBG_log("  file coded in DER format");
-			)
-			return TRUE;
-		}
-
-		/* try PEM format */
-		ugh = pemtobin(blob, pass, filename, pgp);
-
-		if (ugh == NULL)
-		{
-			if (*pgp)
-			{
-				DBG(DBG_PARSING,
-					DBG_log("  file coded in armored PGP format");
-				)
-				return TRUE;
-			}
-			if (is_asn1(*blob))
-			{
-				DBG(DBG_PARSING,
-					DBG_log("  file coded in PEM format");
-				)
-				return TRUE;
-			}
-			ugh = "file coded in unknown format, discarded";
-		}
-
-		/* a conversion error has occured */
-		plog("  %s", ugh);
-		free(blob->ptr);
-		*blob = chunk_empty;
-	}
-	else
-	{
-		plog("  could not open %s file '%s'", type, filename);
-	}
-	return FALSE;
 }
 
 /**

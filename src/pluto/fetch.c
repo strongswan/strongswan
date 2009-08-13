@@ -28,13 +28,11 @@
 #include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
-#include <asn1/pem.h>
 
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
 #include "id.h"
-#include "pem.h"
 #include "x509.h"
 #include "ca.h"
 #include "whack.h"

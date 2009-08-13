@@ -36,7 +36,6 @@ modecfg.c modecfg.h \
 nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
 packet.c packet.h \
-pem.c pem.h \
 pgpcert.c pgpcert.h \
 pkcs7.c pkcs7.h \
 plutomain.c \
