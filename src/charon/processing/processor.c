@@ -240,9 +240,9 @@ processor_t *processor_create(size_t pool_size)
 	this->public.destroy = (void(*)(processor_t*))destroy;
 	
 	this->list = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
-	this->job_added = condvar_create(CONDVAR_DEFAULT);
-	this->thread_terminated = condvar_create(CONDVAR_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->job_added = condvar_create(CONDVAR_TYPE_DEFAULT);
+	this->thread_terminated = condvar_create(CONDVAR_TYPE_DEFAULT);
 	this->total_threads = 0;
 	this->desired_threads = 0;
 	this->idle_threads = 0;

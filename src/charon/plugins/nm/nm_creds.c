@@ -322,7 +322,7 @@ nm_creds_t *nm_creds_create()
 	this->public.clear = (void(*)(nm_creds_t*))clear;
 	this->public.destroy = (void(*)(nm_creds_t*))destroy;
 	
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	
 	this->cert = NULL;
 	this->user = NULL;

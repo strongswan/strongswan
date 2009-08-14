@@ -234,7 +234,7 @@ credential_factory_t *credential_factory_create()
 	
 	this->constructors = linked_list_create();
 	
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	
 	return &this->public;
 }

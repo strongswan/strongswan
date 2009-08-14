@@ -139,9 +139,9 @@ sender_t * sender_create()
 	this->public.destroy = (void(*)(sender_t*)) destroy;
 	
 	this->list = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
-	this->got = condvar_create(CONDVAR_DEFAULT);
-	this->sent = condvar_create(CONDVAR_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->got = condvar_create(CONDVAR_TYPE_DEFAULT);
+	this->sent = condvar_create(CONDVAR_TYPE_DEFAULT);
 	
 	this->job = callback_job_create((callback_job_cb_t)send_packets,
 									this, NULL, NULL);

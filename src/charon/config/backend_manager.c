@@ -438,7 +438,7 @@ backend_manager_t *backend_manager_create()
 	this->public.destroy = (void (*)(backend_manager_t*))destroy;
 	
 	this->backends = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	
 	return &this->public;
 }

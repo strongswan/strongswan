@@ -924,7 +924,7 @@ stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred)
 	this->public.destroy = (void(*)(stroke_config_t*))destroy;
 	
 	this->list = linked_list_create();
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 	this->ca = ca;
 	this->cred = cred;
 	

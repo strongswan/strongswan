@@ -201,7 +201,7 @@ fetcher_manager_t *fetcher_manager_create()
 	this->public.destroy = (void(*)(fetcher_manager_t*))destroy;
 	
 	this->fetchers = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	
 	return &this->public;
 }

@@ -347,8 +347,8 @@ scheduler_t * scheduler_create()
 	this->heap_size = HEAP_SIZE_DEFAULT;
 	this->heap = (event_t**)calloc(this->heap_size + 1, sizeof(event_t*));
 	
-	this->mutex = mutex_create(MUTEX_DEFAULT);
-	this->condvar = condvar_create(CONDVAR_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	
 	this->job = callback_job_create((callback_job_cb_t)schedule, this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);

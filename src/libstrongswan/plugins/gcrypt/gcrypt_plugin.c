@@ -47,7 +47,7 @@ struct private_gcrypt_plugin_t {
  */
 static int mutex_init(void **lock)
 {
-	*lock = mutex_create(MUTEX_DEFAULT);
+	*lock = mutex_create(MUTEX_TYPE_DEFAULT);
 	return 0;
 }
 

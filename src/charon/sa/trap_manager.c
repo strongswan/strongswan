@@ -362,7 +362,7 @@ trap_manager_t *trap_manager_create()
 	this->public.destroy = (void(*)(trap_manager_t*))destroy;
 	
 	this->traps = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	
 	/* register listener for IKE state changes */
 	this->listener.traps = this;

@@ -202,8 +202,8 @@ plugin_t *plugin_create()
 		shutdown_on = this->iterations * this->initiators;
 	}
 	
-	this->mutex = mutex_create(MUTEX_DEFAULT);
-	this->condvar = condvar_create(CONDVAR_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	this->config = load_tester_config_create();
 	this->creds = load_tester_creds_create();
 	this->listener = load_tester_listener_create(shutdown_on);

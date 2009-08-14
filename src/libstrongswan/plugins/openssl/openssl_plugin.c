@@ -84,7 +84,7 @@ static struct CRYPTO_dynlock_value *create_function(const char *file, int line)
 	struct CRYPTO_dynlock_value *lock;
 	
 	lock = malloc_thing(struct CRYPTO_dynlock_value);
-	lock->mutex = mutex_create(MUTEX_DEFAULT);
+	lock->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	return lock;
 }
 
@@ -140,7 +140,7 @@ static void threading_init()
 	mutex = malloc(sizeof(mutex_t*) * num_locks);
 	for (i = 0; i < num_locks; i++)
 	{
-		mutex[i] = mutex_create(MUTEX_DEFAULT);
+		mutex[i] = mutex_create(MUTEX_TYPE_DEFAULT);
 	}
 }
 

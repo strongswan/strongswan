@@ -686,7 +686,7 @@ mysql_database_t *mysql_database_create(char *uri)
 		free(this);
 		return NULL;
 	}
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->pool = linked_list_create();
 	
 	/* check connectivity */

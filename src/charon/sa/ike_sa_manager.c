@@ -133,7 +133,7 @@ static entry_t *entry_create()
 	entry_t *this = malloc_thing(entry_t);
 	
 	this->waiting_threads = 0;
-	this->condvar = condvar_create(CONDVAR_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	
 	/* we set checkout flag when we really give it out */
 	this->checked_out = FALSE;
@@ -1711,7 +1711,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->segments = (segment_t*)calloc(this->segment_count, sizeof(segment_t));
 	for (i = 0; i < this->segment_count; ++i)
 	{
-		this->segments[i].mutex = mutex_create(MUTEX_RECURSIVE);
+		this->segments[i].mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 		this->segments[i].count = 0;
 	}
 	
@@ -1720,7 +1720,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->half_open_segments = calloc(this->segment_count, sizeof(shareable_segment_t));
 	for (i = 0; i < this->segment_count; ++i)
 	{
-		this->half_open_segments[i].lock = rwlock_create(RWLOCK_DEFAULT);
+		this->half_open_segments[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 		this->half_open_segments[i].count = 0;
 	}
 	
@@ -1729,7 +1729,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->connected_peers_segments = calloc(this->segment_count, sizeof(shareable_segment_t));
 	for (i = 0; i < this->segment_count; ++i)
 	{
-		this->connected_peers_segments[i].lock = rwlock_create(RWLOCK_DEFAULT);
+		this->connected_peers_segments[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 		this->connected_peers_segments[i].count = 0;
 	}
 	

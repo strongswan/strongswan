@@ -746,7 +746,7 @@ crypto_factory_t *crypto_factory_create()
 	this->prfs = linked_list_create();
 	this->rngs = linked_list_create();
 	this->dhs = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	this->tester = crypto_tester_create();
 	this->test_on_add = lib->settings->get_bool(lib->settings,
 								"libstrongswan.crypto_test.on_add", FALSE);

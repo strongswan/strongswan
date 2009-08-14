@@ -276,7 +276,7 @@ mutex_t *mutex_create(mutex_type_t type)
 {
 	switch (type)
 	{
-		case MUTEX_RECURSIVE:
+		case MUTEX_TYPE_RECURSIVE:
 		{
 			private_r_mutex_t *this = malloc_thing(private_r_mutex_t);
 			
@@ -292,7 +292,7 @@ mutex_t *mutex_create(mutex_type_t type)
 			
 			return &this->generic.public;
 		}
-		case MUTEX_DEFAULT:
+		case MUTEX_TYPE_DEFAULT:
 		default:
 		{
 			private_mutex_t *this = malloc_thing(private_mutex_t);
@@ -416,7 +416,7 @@ condvar_t *condvar_create(condvar_type_t type)
 {
 	switch (type)
 	{
-		case CONDVAR_DEFAULT:
+		case CONDVAR_TYPE_DEFAULT:
 		default:
 		{
 			private_condvar_t *this = malloc_thing(private_condvar_t);
@@ -488,7 +488,7 @@ rwlock_t *rwlock_create(rwlock_type_t type)
 {
 	switch (type)
 	{
-		case RWLOCK_DEFAULT:
+		case RWLOCK_TYPE_DEFAULT:
 		default:
 		{
 			private_rwlock_t *this = malloc_thing(private_rwlock_t);

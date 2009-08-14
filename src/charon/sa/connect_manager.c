@@ -1568,7 +1568,7 @@ connect_manager_t *connect_manager_create()
 	this->checklists = linked_list_create();
 	this->initiated = linked_list_create();
 	
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	
 	return (connect_manager_t*)this;
 }

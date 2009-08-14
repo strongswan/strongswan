@@ -161,8 +161,8 @@ bool radius_client_init()
 					"charon.plugins.eap_radius.sockets", 1);
 	
 	sockets = linked_list_create();
-	mutex = mutex_create(MUTEX_DEFAULT);
-	condvar = condvar_create(CONDVAR_DEFAULT);
+	mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	for (i = 0; i < count; i++)
 	{
 		fd = socket(host->get_family(host), SOCK_DGRAM, IPPROTO_UDP);

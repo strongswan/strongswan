@@ -182,7 +182,7 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 	this->public.cancel = (void(*)(callback_job_t*))cancel;
 
 	/* private variables */
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->callback = cb;
 	this->data = data;
 	this->cleanup = cleanup;

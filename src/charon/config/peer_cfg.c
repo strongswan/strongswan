@@ -663,7 +663,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->ike_version = ike_version;
 	this->ike_cfg = ike_cfg;
 	this->child_cfgs = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->cert_policy = cert_policy;
 	this->unique = unique;
 	this->keyingtries = keyingtries;

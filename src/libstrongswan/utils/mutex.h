@@ -63,9 +63,9 @@ static inline int cancellable_recvfrom(int socket, void *buffer, size_t length,
  */
 enum mutex_type_t {
 	/** default mutex */
-	MUTEX_DEFAULT	= 0,
+	MUTEX_TYPE_DEFAULT	= 0,
 	/** allow recursive locking of the mutex */
-	MUTEX_RECURSIVE	= 1,
+	MUTEX_TYPE_RECURSIVE	= 1,
 };
 
 /**
@@ -73,7 +73,7 @@ enum mutex_type_t {
  */
 enum condvar_type_t {
 	/** default condvar */
-	CONDVAR_DEFAULT	= 0,
+	CONDVAR_TYPE_DEFAULT	= 0,
 };
 
 /**
@@ -81,7 +81,7 @@ enum condvar_type_t {
  */
 enum rwlock_type_t {
 	/** default condvar */
-	RWLOCK_DEFAULT	= 0,
+	RWLOCK_TYPE_DEFAULT	= 0,
 };
 
 /**

@@ -681,8 +681,8 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 	
 	/* private members */
 	this->ifaces = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
-	this->mutex_pfroute = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->mutex_pfroute = mutex_create(MUTEX_TYPE_DEFAULT);
 	
 	this->seq = 0;
 	

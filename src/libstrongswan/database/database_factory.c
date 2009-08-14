@@ -110,7 +110,7 @@ database_factory_t *database_factory_create()
 	this->public.destroy = (void(*)(database_factory_t*))destroy;
 	
 	this->databases = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	
 	return &this->public;
 }

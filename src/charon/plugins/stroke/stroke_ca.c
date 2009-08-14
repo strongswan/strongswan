@@ -447,7 +447,7 @@ stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 	this->public.destroy = (void(*)(stroke_ca_t*))destroy;
 	
 	this->sections = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	this->cred = cred;
 	
 	return &this->public;

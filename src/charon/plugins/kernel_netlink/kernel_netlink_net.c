@@ -1370,8 +1370,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 
 	/* private members */
 	this->ifaces = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
-	this->condvar = condvar_create(CONDVAR_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	timerclear(&this->last_roam);
 	this->routing_table = lib->settings->get_int(lib->settings,
 					"charon.routing_table", IPSEC_ROUTING_TABLE);

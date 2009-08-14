@@ -1972,7 +1972,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	/* private members */
 	this->policies = hashtable_create((hashtable_hash_t)policy_hash,
 									  (hashtable_equals_t)policy_equals, 32);
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->install_routes = lib->settings->get_bool(lib->settings,
 					"charon.install_routes", TRUE);
 	

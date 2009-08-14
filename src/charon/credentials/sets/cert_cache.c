@@ -383,7 +383,7 @@ cert_cache_t *cert_cache_create()
 		this->relations[i].subject = NULL;
 		this->relations[i].issuer = NULL;
 		this->relations[i].hits = 0;
-		this->relations[i].lock = rwlock_create(RWLOCK_DEFAULT);
+		this->relations[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	}
 	return &this->public;
 }

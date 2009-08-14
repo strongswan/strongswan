@@ -117,7 +117,7 @@ static entry_t *entry_create(listener_t *listener, bool blocker)
 	this->listener = listener;
 	this->blocker = blocker;
 	this->calling = 0;
-	this->condvar = condvar_create(CONDVAR_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	
 	return this;
 }
@@ -760,7 +760,7 @@ bus_t *bus_create()
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 	pthread_key_create(&this->thread_id, NULL);
 	pthread_key_create(&this->thread_sa, NULL);
 	

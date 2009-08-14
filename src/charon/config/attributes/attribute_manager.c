@@ -260,7 +260,7 @@ attribute_manager_t *attribute_manager_create()
 	
 	this->providers = linked_list_create();
 	this->handlers = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	
 	return &this->public;
 }

@@ -65,7 +65,7 @@ bool test_mutex()
 	int i;
 	pthread_t threads[THREADS];
 	
-	mutex = mutex_create(MUTEX_RECURSIVE);
+	mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 	
 	for (i = 0; i < 10; i++)
 	{

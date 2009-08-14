@@ -1125,7 +1125,7 @@ stroke_cred_t *stroke_cred_create()
 	this->certs = linked_list_create();
 	this->shared = linked_list_create();
 	this->private = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
 	load_certs(this);
 	load_secrets(this, SECRETS_FILE, 0);

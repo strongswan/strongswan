@@ -331,7 +331,7 @@ mediation_manager_t *mediation_manager_create()
 	this->public.check_and_register = (ike_sa_id_t*(*)(mediation_manager_t*,identification_t*,identification_t*))check_and_register;
 	
 	this->peers = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	
 	return (mediation_manager_t*)this;
 }

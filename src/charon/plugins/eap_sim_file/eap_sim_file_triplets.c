@@ -251,7 +251,7 @@ eap_sim_file_triplets_t *eap_sim_file_triplets_create(char *file)
 	this->public.destroy = (void(*)(eap_sim_file_triplets_t*))destroy;
 	
 	this->triplets = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	
 	read_triplets(this, file);
 	

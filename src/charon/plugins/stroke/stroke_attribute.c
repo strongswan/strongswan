@@ -539,7 +539,7 @@ stroke_attribute_t *stroke_attribute_create()
 	this->public.destroy = (void(*)(stroke_attribute_t*))destroy;
 	
 	this->pools = linked_list_create();
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 	
 	return &this->public;
 }

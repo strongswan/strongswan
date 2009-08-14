@@ -1591,7 +1591,7 @@ credential_manager_t *credential_manager_create()
 	this->cache = cert_cache_create();
 	this->cache_queue = linked_list_create();
 	this->sets->insert_first(this->sets, this->cache);
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	
 	return &this->public;
 }

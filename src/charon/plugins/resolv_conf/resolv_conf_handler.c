@@ -183,7 +183,7 @@ resolv_conf_handler_t *resolv_conf_handler_create()
 	this->public.handler.release = (void(*)(attribute_handler_t*, ike_sa_t*, configuration_attribute_type_t, chunk_t))release;
 	this->public.destroy = (void(*)(resolv_conf_handler_t*))destroy;
 	
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->file = lib->settings->get_str(lib->settings,
 								"charon.plugins.resolv-conf.file", RESOLV_CONF);
 	

@@ -163,7 +163,7 @@ eap_manager_t *eap_manager_create()
 	this->public.destroy = (void(*)(eap_manager_t*))destroy;
 	
 	this->methods = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	
 	return &this->public;
 }

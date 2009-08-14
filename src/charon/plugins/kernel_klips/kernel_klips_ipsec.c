@@ -2632,8 +2632,8 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 	this->allocated_spis = linked_list_create();
 	this->installed_sas = linked_list_create();
 	this->ipsec_devices = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
-	this->mutex_pfkey = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->mutex_pfkey = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->install_routes = lib->settings->get_bool(lib->settings, "charon.install_routes", TRUE);
 	this->seq = 0;
 	

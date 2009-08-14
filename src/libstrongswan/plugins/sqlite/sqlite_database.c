@@ -333,7 +333,7 @@ sqlite_database_t *sqlite_database_create(char *uri)
 	this->public.db.get_driver = (db_driver_t(*)(database_t*))get_driver;
 	this->public.db.destroy = (void(*)(database_t*))destroy;
 	
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 	
 	if (sqlite3_open(file, &this->db) != SQLITE_OK)
 	{

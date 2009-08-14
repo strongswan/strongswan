@@ -255,7 +255,7 @@ netlink_socket_t *netlink_socket_create(int protocol) {
 
 	/* private members */
 	this->seq = 200;
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
