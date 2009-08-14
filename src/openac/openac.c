@@ -282,7 +282,11 @@ int main(int argc, char **argv)
 	openlog("openac", 0, LOG_AUTHPRIV);
 
 	/* initialize library */
-	library_init(STRONGSWAN_CONF);
+	if (!library_init(STRONGSWAN_CONF))
+	{
+		library_deinit();
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
+	}
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "openac.load", PLUGINS));
 

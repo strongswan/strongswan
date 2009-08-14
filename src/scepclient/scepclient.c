@@ -386,8 +386,14 @@ int main(int argc, char **argv)
 	scep_response     = chunk_empty;
 	log_to_stderr     = TRUE;
 
-	/* initialize library and optionsfrom */
-	library_init(STRONGSWAN_CONF);
+	/* initialize library */
+	if (!library_init(STRONGSWAN_CONF))
+	{
+		library_deinit();
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
+	}
+
+	/* initialize optionsfrom */
 	options = options_create();
 
 	for (;;)
