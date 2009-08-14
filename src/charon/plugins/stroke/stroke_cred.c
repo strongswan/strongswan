@@ -729,9 +729,54 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 }
 
 /**
+ * Data to pass to passphrase_cb
+ */
+typedef struct {
+	/** socket we use for prompting */
+	FILE *prompt;
+	/** private key file */
+	char *file;
+	/** buffer for passphrase */
+	char buf[256];
+} passphrase_cb_data_t;
+
+/**
+ * Passphrase callback to read from whack fd
+ */
+chunk_t passphrase_cb(passphrase_cb_data_t *data, int try)
+{
+	chunk_t secret = chunk_empty;;
+	
+	if (try > 5)
+	{
+		fprintf(data->prompt, "invalid passphrase, too many trials\n");
+		return chunk_empty;
+	}
+	if (try == 1)
+	{
+		fprintf(data->prompt, "Private key '%s' is encrypted\n", data->file);
+	}
+	else
+	{
+		fprintf(data->prompt, "invalid passphrase\n");
+	}
+	fprintf(data->prompt, "Passphrase:\n");
+	if (fgets(data->buf, sizeof(data->buf), data->prompt))
+	{
+		secret = chunk_create(data->buf, strlen(data->buf));
+		if (secret.len)
+		{	/* trim appended \n */
+			secret.len--;
+		}
+	}
+	return secret;
+}
+
+/**
  * reload ipsec.secrets
  */
-static void load_secrets(private_stroke_cred_t *this, char *file, int level)
+static void load_secrets(private_stroke_cred_t *this, char *file, int level,
+						 FILE *prompt)
 {
 	size_t bytes;
 	int line_nr = 0;
@@ -838,7 +883,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			{
 				for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
 				{
-					load_secrets(this, *expanded, level + 1);
+					load_secrets(this, *expanded, level + 1, prompt);
 				}
 			}
 			globfree(&buf);
@@ -873,7 +918,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			char path[PATH_MAX];
 			chunk_t filename;
 			chunk_t secret = chunk_empty;
-			private_key_t *key;
+			private_key_t *key = NULL;
 			key_type_t key_type = match("RSA", &token) ? KEY_RSA : KEY_ECDSA;
 
 			err_t ugh = extract_value(&filename, &line);
@@ -910,14 +955,35 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 					goto error;
 				}
 			}
-			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
-									 BUILD_FROM_FILE, path,
-									 BUILD_PASSPHRASE, secret,BUILD_END);
+			if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
+			{
+				if (prompt)
+				{
+					passphrase_cb_data_t data;
+					
+					data.prompt = prompt;
+					data.file = path;
+					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+											 key_type, BUILD_FROM_FILE, path,
+											 BUILD_PASSPHRASE_CALLBACK,
+											 passphrase_cb, &data, BUILD_END);
+				}
+			}
+			else
+			{
+				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
+										 BUILD_FROM_FILE, path,
+										 BUILD_PASSPHRASE, secret, BUILD_END);
+			}
 			if (key)
 			{
 				DBG1(DBG_CFG, "  loaded %N private key file '%s'",
 					 key_type_names, key->get_type(key), path);
 				this->private->insert_last(this->private, key);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "  skipped private key file '%s'", path);
 			}
 			chunk_clear(&secret);
 		}
@@ -1083,12 +1149,12 @@ static void load_certs(private_stroke_cred_t *this)
 /**
  * Implementation of stroke_cred_t.reread.
  */
-static void reread(private_stroke_cred_t *this, stroke_msg_t *msg)
+static void reread(private_stroke_cred_t *this, stroke_msg_t *msg, FILE *prompt)
 {
 	if (msg->reread.flags & REREAD_SECRETS)
 	{
 		DBG1(DBG_CFG, "rereading secrets");
-		load_secrets(this, SECRETS_FILE, 0);
+		load_secrets(this, SECRETS_FILE, 0, prompt);
 	}
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
@@ -1147,7 +1213,7 @@ stroke_cred_t *stroke_cred_create()
 	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.set.cache_cert = (void*)cache_cert;
-	this->public.reread = (void(*)(stroke_cred_t*, stroke_msg_t *msg))reread;
+	this->public.reread = (void(*)(stroke_cred_t*, stroke_msg_t *msg, FILE*))reread;
 	this->public.load_ca = (certificate_t*(*)(stroke_cred_t*, char *filename))load_ca;
 	this->public.load_peer = (certificate_t*(*)(stroke_cred_t*, char *filename))load_peer;
 	this->public.cachecrl = (void(*)(stroke_cred_t*, bool enabled))cachecrl;
@@ -1159,7 +1225,7 @@ stroke_cred_t *stroke_cred_create()
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
 	load_certs(this);
-	load_secrets(this, SECRETS_FILE, 0);
+	load_secrets(this, SECRETS_FILE, 0, NULL);
 	
 	this->cachecrl = FALSE;
 	

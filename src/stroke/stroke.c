@@ -55,7 +55,7 @@ static int send_stroke_msg (stroke_msg_t *msg)
 {
 	struct sockaddr_un ctl_addr;
 	int sock;
-	char buffer[64];
+	char buffer[512];
 	int byte_count;
 
 	ctl_addr.sun_family = AF_UNIX;
@@ -89,6 +89,16 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	{
 		buffer[byte_count] = '\0';
 		printf("%s", buffer);
+		
+		/* we prompt if we receive the "Passphrase:" magic keyword */
+		if (byte_count >= 12 &&
+			strcmp(buffer + byte_count - 12, "Passphrase:\n") == 0)
+		{
+			if (fgets(buffer, sizeof(buffer), stdin))
+			{
+				if (write(sock, buffer, strlen(buffer)));
+			}
+		}
 	}
 	if (byte_count < 0)
 	{

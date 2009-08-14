@@ -333,7 +333,7 @@ static void stroke_list(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *
 static void stroke_reread(private_stroke_socket_t *this,
 						  stroke_msg_t *msg, FILE *out)
 {
-	this->cred->reread(this->cred, msg);
+	this->cred->reread(this->cred, msg, out);
 }
 
 /**
@@ -467,7 +467,7 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 		return JOB_REQUEUE_NONE;
 	}
 	
-	out = fdopen(strokefd, "w");
+	out = fdopen(strokefd, "w+");
 	if (out == NULL)
 	{
 		DBG1(DBG_CFG, "opening stroke output channel failed: %s", strerror(errno));

@@ -21,6 +21,8 @@
 #ifndef STROKE_CRED_H_
 #define STROKE_CRED_H_
 
+#include <stdio.h>
+
 #include <stroke_msg.h>
 #include <credentials/credential_set.h>
 #include <credentials/certificates/certificate.h>
@@ -41,8 +43,9 @@ struct stroke_cred_t {
 	 * Reread secrets from config files.
 	 *
 	 * @param msg		stroke message
+	 * @param prompt	I/O channel to prompt for private key passhprase
 	 */
-	void (*reread)(stroke_cred_t *this, stroke_msg_t *msg);
+	void (*reread)(stroke_cred_t *this, stroke_msg_t *msg, FILE *prompt);
 	
 	/**
 	 * Load a CA certificate, and serve it through the credential_set.
@@ -68,9 +71,9 @@ struct stroke_cred_t {
 	void (*cachecrl)(stroke_cred_t *this, bool enabled);
 	
 	/**
-     * Destroy a stroke_cred instance.
-     */
-    void (*destroy)(stroke_cred_t *this);
+	 * Destroy a stroke_cred instance.
+	 */
+	void (*destroy)(stroke_cred_t *this);
 };
 
 /**
