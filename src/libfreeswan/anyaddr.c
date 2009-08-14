@@ -17,12 +17,13 @@
 #include "internal.h"
 #include "freeswan.h"
 
-/* these are mostly fallbacks for the no-IPv6-support-in-library case */
-#ifndef IN6ADDR_ANY_INIT
-#define	IN6ADDR_ANY_INIT	{{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 }}
-#endif
-#ifndef IN6ADDR_LOOPBACK_INIT
-#define	IN6ADDR_LOOPBACK_INIT	{{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }}
+/* OpenSolaris defines strange versions of these macros */
+#ifdef __sun
+#undef	IN6ADDR_ANY_INIT
+#define	IN6ADDR_ANY_INIT		{{{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 }}}
+
+#undef	IN6ADDR_LOOPBACK_INIT
+#define	IN6ADDR_LOOPBACK_INIT	{{{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }}}
 #endif
 
 static struct in6_addr v6any = IN6ADDR_ANY_INIT;
