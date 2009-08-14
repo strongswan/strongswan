@@ -33,6 +33,10 @@
 #include <log.h>
 #include <whack.h>
 
+#ifndef LOG_AUTHPRIV
+#define LOG_AUTHPRIV LOG_AUTH
+#endif
+
 bool
 	log_to_stderr = FALSE,      /* should log go to stderr? */
 	log_to_syslog = TRUE;       /* should log go to syslog? */

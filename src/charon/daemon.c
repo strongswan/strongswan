@@ -42,6 +42,10 @@
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
 
+#ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
+#define LOG_AUTHPRIV LOG_AUTH
+#endif
+
 typedef struct private_daemon_t private_daemon_t;
 
 /**
