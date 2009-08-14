@@ -144,6 +144,19 @@
 # define TRUE  true
 #endif /* TRUE */
 
+/**
+ * define some missing fixed width int types on OpenSolaris.
+ * TODO: since the uintXX_t types are defined by the C99 standard we should
+ * probably use those anyway
+ */
+#ifdef __sun
+        #include <stdint.h>
+        typedef uint8_t         u_int8_t;
+        typedef uint16_t        u_int16_t;
+        typedef uint32_t        u_int32_t;
+        typedef uint64_t        u_int64_t;
+#endif
+
 typedef enum status_t status_t;
 
 /**

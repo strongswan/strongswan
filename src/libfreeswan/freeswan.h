@@ -20,11 +20,6 @@
 #  include <stdio.h>
 #  include <netinet/in.h>
 
-#  define uint8_t u_int8_t
-#  define uint16_t u_int16_t 
-#  define uint32_t u_int32_t 
-#  define uint64_t u_int64_t 
-
 #  define DEBUG_NO_STATIC static
 
 #include <ipsec_param.h>

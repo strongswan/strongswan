@@ -25,6 +25,8 @@
 
 #include <sys/types.h>
 
+#include <library.h>
+
 /**
  * Socket which is used to communicate between charon and stroke
  */
