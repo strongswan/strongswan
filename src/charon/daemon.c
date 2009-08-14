@@ -20,7 +20,9 @@
 #ifdef HAVE_PRCTL
 #include <sys/prctl.h>
 #endif
+#define _POSIX_PTHREAD_SEMANTICS /* for two param sigwait on OpenSolaris */
 #include <signal.h>
+#undef _POSIX_PTHREAD_SEMANTICS
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
