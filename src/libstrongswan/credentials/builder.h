@@ -90,6 +90,22 @@ enum builder_part_t {
 	BUILD_SMARTCARD_KEYID,
 	/** pin to access a key on a smartcard, null terminated char* */
 	BUILD_SMARTCARD_PIN,
+	/** modulus (n) of a RSA key, chunk_t */
+	BUILD_RSA_MODULUS,
+	/** public exponent (e) of a RSA key, chunk_t */
+	BUILD_RSA_PUB_EXP,
+	/** private exponent (d) of a RSA key, chunk_t */
+	BUILD_RSA_PRIV_EXP,
+	/** prime 1 (p) of a RSA key, chunk_t */
+	BUILD_RSA_PRIME1,
+	/** prime 2 (q) of a RSA key, chunk_t */
+	BUILD_RSA_PRIME2,
+	/** exponent 1 (exp1) of a RSA key, chunk_t */
+	BUILD_RSA_EXP1,
+	/** exponent 2 (exp1) of a RSA key, chunk_t */
+	BUILD_RSA_EXP2,
+	/** coefficient (coeff) of a RSA key, chunk_t */
+	BUILD_RSA_COEFF,
 	/** end of variable argument builder list */
 	BUILD_END,
 };

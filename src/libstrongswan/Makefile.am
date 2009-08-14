@@ -161,6 +161,10 @@ if USE_PUBKEY
   SUBDIRS += plugins/pubkey
 endif
 
+if USE_PKCS1
+  SUBDIRS += plugins/pkcs1
+endif
+
 if USE_PEM
   SUBDIRS += plugins/pem
 endif

@@ -288,6 +288,17 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[pkcs1],
+	AS_HELP_STRING([--disable-pkcs],[disable PKCS1 key decoding plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		pkcs1=true
+	 else
+		pkcs1=false
+	fi],
+	pkcs1=true
+)
+
+AC_ARG_ENABLE(
 	[pem],
 	AS_HELP_STRING([--disable-pem],[disable PEM decoding plugin. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -1192,6 +1203,10 @@ if test x$pubkey = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
 	pluto_plugins=${pluto_plugins}" pubkey"
 fi
+if test x$pkcs1 = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" pkcs1"
+	pluto_plugins=${pluto_plugins}" pkcs1"
+fi
 if test x$pem = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pem"
 	pluto_plugins=${pluto_plugins}" pem"
@@ -1252,6 +1267,7 @@ AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
 AM_CONDITIONAL(USE_PUBKEY, test x$pubkey = xtrue)
+AM_CONDITIONAL(USE_PKCS1, test x$pkcs1 = xtrue)
 AM_CONDITIONAL(USE_PEM, test x$pem = xtrue)
 AM_CONDITIONAL(USE_HMAC, test x$hmac = xtrue)
 AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
@@ -1347,6 +1363,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/xcbc/Makefile
 	src/libstrongswan/plugins/x509/Makefile
 	src/libstrongswan/plugins/pubkey/Makefile
+	src/libstrongswan/plugins/pkcs1/Makefile
 	src/libstrongswan/plugins/pem/Makefile
 	src/libstrongswan/plugins/curl/Makefile
 	src/libstrongswan/plugins/ldap/Makefile

@@ -169,6 +169,14 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_BLOB_RFC_3110:
 				case BUILD_PASSPHRASE:
 				case BUILD_SERIAL:
+				case BUILD_RSA_MODULUS:
+				case BUILD_RSA_PUB_EXP:
+				case BUILD_RSA_PRIV_EXP:
+				case BUILD_RSA_PRIME1:
+				case BUILD_RSA_PRIME2:
+				case BUILD_RSA_EXP1:
+				case BUILD_RSA_EXP2:
+				case BUILD_RSA_COEFF:
 					builder->add(builder, part, va_arg(args, chunk_t));
 					continue;
 				case BUILD_X509_FLAG:
