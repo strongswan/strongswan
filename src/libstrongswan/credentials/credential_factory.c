@@ -150,6 +150,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 	builder_part_t part;
 	va_list args;
 	void* construct = NULL, *fn, *data;
+	int failures = 0;
 	
 	enumerator = create_builder_enumerator(this, type, subtype);
 	while (enumerator->enumerate(enumerator, &builder))
@@ -212,12 +213,19 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 		{
 			break;
 		}
+		failures++;
 	}
 	enumerator->destroy(enumerator);
 	if (!construct)
 	{
-		DBG1("failed to create a builder for credential type %N,"
-			 " subtype (%d)", credential_type_names, type, subtype);
+		enum_name_t *names = key_type_names;
+		
+		if (type == CRED_CERTIFICATE)
+		{
+			names = certificate_type_names;
+		}
+		DBG1("building %N - %N failed, tried %d builders",
+			 credential_type_names, type, names, subtype, failures);
 	}
 	return construct;
 }
