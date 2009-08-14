@@ -14,6 +14,10 @@
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#ifdef HAVE_SYS_SOCKIO_H
+#include <sys/sockio.h>
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
