@@ -850,7 +850,7 @@ dnl libraries needed on some platforms but not on others
 dnl ====================================================
 saved_LIBS=$LIBS
 
-dnl FreeBSD has dlopen integrated in libc, Linux needs libdl
+dnl FreeBSD and Mac OS X have dlopen integrated in libc, Linux needs libdl
 LIBS=""
 AC_SEARCH_LIBS(dlopen, dl, [DLLIB=$LIBS])
 AC_SUBST(DLLIB)
@@ -860,6 +860,13 @@ LIBS=""
 AC_SEARCH_LIBS(backtrace, execinfo, [BTLIB=$LIBS])
 AC_CHECK_FUNCS(backtrace)
 AC_SUBST(BTLIB)
+
+dnl OpenSolaris needs libsocket and libnsl for socket()
+LIBS=""
+AC_SEARCH_LIBS(socket, socket, [SOCKLIB=$LIBS],
+	[AC_CHECK_LIB(nsl, socket, [SOCKLIB="-lsocket -lnsl"], [], [-lsocket])]
+)
+AC_SUBST(SOCKLIB)
 
 LIBS=$saved_LIBS
 dnl ======================
