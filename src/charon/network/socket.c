@@ -18,6 +18,10 @@
 
 /* for struct in6_pktinfo */
 #define _GNU_SOURCE
+#ifdef __sun
+#define _XPG4_2
+#define __EXTENSIONS__
+#endif
 
 #include <pthread.h>
 #include <sys/types.h>
