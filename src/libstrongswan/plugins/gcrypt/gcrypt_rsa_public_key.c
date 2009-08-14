@@ -375,52 +375,12 @@ public_key_t *gcrypt_rsa_public_key_create_from_sexp(gcry_sexp_t key)
 }
 
 /**
- * ASN.1 definition of RSApublicKey
+ * Load a public key from components
  */
-static const asn1Object_t pubkeyObjects[] = {
-	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,	ASN1_OBJ  }, /*  0 */
-	{ 1,   "modulus",			ASN1_INTEGER,	ASN1_BODY }, /*  1 */
-	{ 1,   "publicExponent",	ASN1_INTEGER,	ASN1_BODY }, /*  2 */
-	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
-};
-#define PUB_KEY_RSA_PUBLIC_KEY		0
-#define PUB_KEY_MODULUS				1
-#define PUB_KEY_EXPONENT			2
-
-/**
- * Load a public key from an ASN1 encoded blob
- */
-static gcrypt_rsa_public_key_t *load(chunk_t blob)
+static gcrypt_rsa_public_key_t *load(chunk_t n, chunk_t e)
 {
 	private_gcrypt_rsa_public_key_t *this;
-	asn1_parser_t *parser;
-	chunk_t object, n, e;
-	int objectID;
-	bool success = FALSE;
 	gcry_error_t err;
-	
-	n = e = chunk_empty;
-	
-	parser = asn1_parser_create(pubkeyObjects, blob);
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		switch (objectID)
-		{
-			case PUB_KEY_MODULUS:
-				n = object;
-				break;
-			case PUB_KEY_EXPONENT:
-				e = object;
-				break;
-		}
-	}
-	success = parser->success(parser);
-	parser->destroy(parser);
-	
-	if (!success)
-	{
-		return NULL;
-	}
 	
 	this = gcrypt_rsa_public_key_create_empty();
 	err = gcry_sexp_build(&this->key, NULL, "(public-key(rsa(n %b)(e %b)))",
@@ -446,8 +406,8 @@ typedef struct private_builder_t private_builder_t;
 struct private_builder_t {
 	/** implements the builder interface */
 	builder_t public;
-	/** loaded public key */
-	gcrypt_rsa_public_key_t *key;
+	/** rsa key parameters */
+	chunk_t n, e;
 };
 
 /**
@@ -455,8 +415,9 @@ struct private_builder_t {
  */
 static gcrypt_rsa_public_key_t *build(private_builder_t *this)
 {
-	gcrypt_rsa_public_key_t *key = this->key;
+	gcrypt_rsa_public_key_t *key;
 	
+	key = load(this->n, this->e);
 	free(this);
 	return key;
 }
@@ -466,28 +427,22 @@ static gcrypt_rsa_public_key_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	if (!this->key)
+	va_list args;
+	
+	va_start(args, part);
+	switch (part)
 	{
-		va_list args;
-		
-		switch (part)
-		{
-			case BUILD_BLOB_ASN1_DER:
-			{
-				va_start(args, part);
-				this->key = load(va_arg(args, chunk_t));
-				va_end(args);
-				return;
-			}
-			default:
-				break;
-		}
+		case BUILD_RSA_MODULUS:
+			this->n = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_PUB_EXP:
+			this->e = va_arg(args, chunk_t);
+			break;
+		default:
+			builder_cancel(&this->public);
+			break;
 	}
-	if (this->key)
-	{
-		destroy((private_gcrypt_rsa_public_key_t*)this->key);
-	}
-	builder_cancel(&this->public);
+	va_end(args);
 }
 
 /**
@@ -504,7 +459,7 @@ builder_t *gcrypt_rsa_public_key_builder(key_type_t type)
 	
 	this = malloc_thing(private_builder_t);
 	
-	this->key = NULL;
+	this->n = this->e = chunk_empty;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
 	

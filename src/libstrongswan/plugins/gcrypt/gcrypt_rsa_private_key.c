@@ -565,101 +565,14 @@ static gcrypt_rsa_private_key_t *generate(size_t key_size)
 }
 
 /**
- * ASN.1 definition of a PKCS#1 RSA private key
+ * Load a private key from components
  */
-static const asn1Object_t privkeyObjects[] = {
-	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
-	{ 1,   "version",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
-	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  2 */
-	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  3 */
-	{ 1,   "privateExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  4 */
-	{ 1,   "prime1",			ASN1_INTEGER,      ASN1_BODY }, /*  5 */
-	{ 1,   "prime2",			ASN1_INTEGER,      ASN1_BODY }, /*  6 */
-	{ 1,   "exponent1",			ASN1_INTEGER,      ASN1_BODY }, /*  7 */
-	{ 1,   "exponent2",			ASN1_INTEGER,      ASN1_BODY }, /*  8 */
-	{ 1,   "coefficient",		ASN1_INTEGER,      ASN1_BODY }, /*  9 */
-	{ 1,   "otherPrimeInfos",	ASN1_SEQUENCE,     ASN1_OPT |
-												   ASN1_LOOP }, /* 10 */
-	{ 2,     "otherPrimeInfo",	ASN1_SEQUENCE,     ASN1_NONE }, /* 11 */
-	{ 3,       "prime",			ASN1_INTEGER,      ASN1_BODY }, /* 12 */
-	{ 3,       "exponent",		ASN1_INTEGER,      ASN1_BODY }, /* 13 */
-	{ 3,       "coefficient",	ASN1_INTEGER,      ASN1_BODY }, /* 14 */
-	{ 1,   "end opt or loop",	ASN1_EOC,          ASN1_END  }, /* 15 */
-	{ 0, "exit",				ASN1_EOC,          ASN1_EXIT }
-};
-#define PRIV_KEY_VERSION		 1
-#define PRIV_KEY_MODULUS		 2
-#define PRIV_KEY_PUB_EXP		 3
-#define PRIV_KEY_PRIV_EXP		 4
-#define PRIV_KEY_PRIME1			 5
-#define PRIV_KEY_PRIME2			 6
-#define PRIV_KEY_EXP1			 7
-#define PRIV_KEY_EXP2			 8
-#define PRIV_KEY_COEFF			 9
-
-/**
- * load private key from a ASN1 encoded blob
- */
-static gcrypt_rsa_private_key_t *load(chunk_t blob)
+static gcrypt_rsa_private_key_t *load(chunk_t n, chunk_t e, chunk_t d,
+									  chunk_t p, chunk_t q, chunk_t u)
 {
-	private_gcrypt_rsa_private_key_t *this;
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID ;
-	bool success = FALSE;
-	chunk_t n, e, d, u, p, q;
 	gcry_error_t err;
+	private_gcrypt_rsa_private_key_t *this = gcrypt_rsa_private_key_create_empty();
 	
-	n = e = d = u = p = q = chunk_empty;
-	
-	parser = asn1_parser_create(privkeyObjects, blob);
-	parser->set_flags(parser, FALSE, TRUE);
-	
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		switch (objectID)
-		{
-			case PRIV_KEY_VERSION:
-				if (object.len > 0 && *object.ptr != 0)
-				{
-					goto end;
-				}
-				break;
-			case PRIV_KEY_MODULUS:
-				n = object;
-				break;
-			case PRIV_KEY_PUB_EXP:
-				e = object;
-				break;
-			case PRIV_KEY_PRIV_EXP:
-				d = object;
-				break;
-			case PRIV_KEY_PRIME1:
-				/* p and q are swapped, as gcrypt expects p < q */
-				q = object;
-				break;
-			case PRIV_KEY_PRIME2:
-				p = object;
-				break;
-			case PRIV_KEY_EXP1:
-			case PRIV_KEY_EXP2:
-				break;
-			case PRIV_KEY_COEFF:
-				u = object;
-				break;
-		}
-	}
-	success = parser->success(parser);
-	
-end:
-	parser->destroy(parser);
-	
-	if (!success)
-	{
-		return NULL;
-	}
-	
-	this = gcrypt_rsa_private_key_create_empty();
 	err = gcry_sexp_build(&this->key, NULL,
 					"(private-key(rsa(n %b)(e %b)(d %b)(p %b)(q %b)(u %b)))",
 					n.len, n.ptr, e.len, e.ptr, d.len, d.ptr,
@@ -693,8 +606,10 @@ typedef struct private_builder_t private_builder_t;
 struct private_builder_t {
 	/** implements the builder interface */
 	builder_t public;
-	/** loaded/generated private key */
-	gcrypt_rsa_private_key_t *key;
+	/** key size, if generating */
+	u_int key_size;
+	/** rsa key parameters */
+	chunk_t n, e, d, p, q, u;
 };
 
 /**
@@ -702,8 +617,16 @@ struct private_builder_t {
  */
 static gcrypt_rsa_private_key_t *build(private_builder_t *this)
 {
-	gcrypt_rsa_private_key_t *key = this->key;
-	
+	gcrypt_rsa_private_key_t *key = NULL;
+
+	if (this->key_size)
+	{
+		key = generate(this->key_size);
+	}
+	else
+	{
+		key = load(this->n, this->e, this->d, this->p, this->q, this->u);
+	}
 	free(this);
 	return key;
 }
@@ -713,35 +636,42 @@ static gcrypt_rsa_private_key_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	if (!this->key)
+	va_list args;
+	
+	va_start(args, part);
+	switch (part)
 	{
-		va_list args;
-		
-		switch (part)
-		{
-			case BUILD_BLOB_ASN1_DER:
-			{
-				va_start(args, part);
-				this->key = load(va_arg(args, chunk_t));
-				va_end(args);
-				return;
-			}
-			case BUILD_KEY_SIZE:
-			{
-				va_start(args, part);
-				this->key = generate(va_arg(args, u_int));
-				va_end(args);
-				return;
-			}
-			default:
-				break;
-		}
+		case BUILD_KEY_SIZE:
+			this->key_size = va_arg(args, u_int);
+			return;
+		case BUILD_RSA_MODULUS:
+			this->n = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_PUB_EXP:
+			this->e = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_PRIV_EXP:
+			this->d = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_PRIME1:
+			/* swap p and q, gcrypt expects p < q */
+			this->q = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_PRIME2:
+			this->p = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_EXP1:
+		case BUILD_RSA_EXP2:
+			/* not required for gcrypt */
+			break;
+		case BUILD_RSA_COEFF:
+			this->u = va_arg(args, chunk_t);
+			break;
+		default:
+			builder_cancel(&this->public);
+			break;
 	}
-	if (this->key)
-	{
-		destroy((private_gcrypt_rsa_private_key_t*)this->key);
-	}
-	builder_cancel(&this->public);
+	va_end(args);
 }
 
 /**
@@ -758,7 +688,8 @@ builder_t *gcrypt_rsa_private_key_builder(key_type_t type)
 	
 	this = malloc_thing(private_builder_t);
 	
-	this->key = NULL;
+	this->key_size = 0;
+	this->n = this->e = this->d = this->p = this->q = this->u = chunk_empty;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
 	
