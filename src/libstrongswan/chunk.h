@@ -26,6 +26,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <sys/types.h>
+#ifdef HAVE_ALLOCA_H
+#include <alloca.h>
+#endif
 
 typedef struct chunk_t chunk_t;
 

@@ -844,6 +844,7 @@ dnl  check required libraries and header files
 dnl ===========================================
 
 AC_HEADER_STDBOOL
+AC_FUNC_ALLOCA
 
 dnl libraries needed on some platforms but not on others
 dnl ====================================================
