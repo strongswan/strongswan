@@ -12,6 +12,8 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  */
+#include <sys/socket.h>
+
 #include "internal.h"
 #include "freeswan.h"
 
@@ -41,7 +43,7 @@ const char *src;
 size_t srclen;			/* 0 means "apply strlen" */
 struct in_addr *addrp;
 {
-	struct hostent *h;
+	struct addrinfo hints, *res;
 	struct netent *ne = NULL;
 	const char *oops;
 #	define	HEXLEN	10	/* strlen("0x11223344") */
@@ -51,6 +53,7 @@ struct in_addr *addrp;
 	char namebuf[ATOADDRBUF];
 	char *p = namebuf;
 	char *q;
+	int error;
 
 	if (srclen == 0)
 		srclen = strlen(src);
@@ -87,18 +90,33 @@ struct in_addr *addrp;
 		return "illegal (non-DNS-name) character in name";
 
 	/* try as host name, failing that as /etc/networks network name */
-	h = gethostbyname(p);
-	if (h == NULL)
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	error = getaddrinfo(p, NULL, &hints, &res);
+	if (error != 0)
+	{
 		ne = getnetbyname(p);
-	if (p != namebuf)
-		FREE(p);
-	if (h == NULL && ne == NULL)
-		return "name lookup failed";
-
-	if (h != NULL)
-		memcpy(&addrp->s_addr, h->h_addr, sizeof(addrp->s_addr));
-	else
+		if (ne == NULL)
+		{
+			if (p != namebuf)
+			{
+				FREE(p);
+			}
+			return "name lookup failed";
+		}
 		addrp->s_addr = htonl(ne->n_net);
+	}
+	else
+	{
+		memcpy(&addrp->s_addr, res->ai_addr->sa_data, sizeof(addrp->s_addr));
+		freeaddrinfo(res);
+	}
+
+	if (p != namebuf)
+	{
+		FREE(p);
+	}
+
 	return NULL;
 }
 

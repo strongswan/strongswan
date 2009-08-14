@@ -157,12 +157,15 @@ int nultermd;			/* is it known to be NUL-terminated? */
 int af;
 ip_address *dst;
 {
-	struct hostent *h;
+	struct addrinfo hints, *res;
 	struct netent *ne = NULL;
 	char namebuf[100];	/* enough for most DNS names */
 	const char *cp;
 	char *p = namebuf;
+	unsigned char *addr = NULL;
 	size_t n;
+	int error;
+	err_t err = NULL;
 
 	for (cp = src, n = srclen; n > 0; cp++, n--)
 		if (ISASCII(*cp) && strchr(namechars, *cp) == NULL)
@@ -181,25 +184,40 @@ ip_address *dst;
 		cp = (const char *)p;
 	}
 
-	h = gethostbyname2(cp, af);
-	if (h == NULL && af == AF_INET)
-		ne = getnetbyname(cp);
-	if (p != namebuf)
-		FREE(p);
-	if (h == NULL && ne == NULL)
-		return "does not look numeric and name lookup failed";
-
-	if (h != NULL) {
-		if (h->h_addrtype != af)
-			return "address-type mismatch from gethostbyname2!!!";
-		return initaddr((unsigned char *)h->h_addr, h->h_length, af, dst);
-	} else {
-		if (ne->n_addrtype != af)
-			return "address-type mismatch from getnetbyname!!!";
-		ne->n_net = htonl(ne->n_net);
-		return initaddr((unsigned char *)&ne->n_net, sizeof(ne->n_net),
-								af, dst);
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = af;
+	error = getaddrinfo(cp, NULL, &hints, &res);
+	if (error != 0)
+	{	/* getaddrinfo failed, try getnetbyname */
+		if (af == AF_INET)
+		{
+			ne = getnetbyname(cp);
+			if (ne != NULL)
+			{
+				ne->n_net = htonl(ne->n_net);
+				addr = (unsigned char*)&ne->n_net;
+				err = initaddr(addr, sizeof(ne->n_net), af, dst);
+			}
+		}
 	}
+	else
+	{
+		addr = res->ai_addr->sa_data;
+		err = initaddr(addr, res->ai_addrlen, af, dst);
+		freeaddrinfo(res);
+	}
+
+	if (p != namebuf)
+	{
+		FREE(p);
+	}
+
+	if (addr == NULL)
+	{
+		return "does not look numeric and name lookup failed";
+	}
+
+	return err;
 }
 
 /*

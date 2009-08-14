@@ -59,7 +59,7 @@ on a big-endian host and
 .B 4.3.2.1
 on a little-endian host),
 a DNS name to be looked up via
-.IR gethostbyname (3),
+.IR getaddrinfo (3),
 or an old-style network name to be looked up via
 .IR getnetbyname (3).
 .PP
@@ -100,7 +100,7 @@ abbreviating at most one subsequence of multiple zeros (e.g.
 which is synonymous with
 .BR 99:ab:0:0:0:0:54:68 ),
 or a DNS name to be looked up via
-.IR gethostbyname (3).
+.IR getaddrinfo (3).
 The result of applying
 .I addrtot
 to an IPv6 address will use
@@ -115,10 +115,8 @@ DNS names may be complete (optionally terminated with a ``.'')
 or incomplete, and are looked up as specified by local system configuration
 (see
 .IR resolver (5)).
-The
-.I h_addr
-value returned by
-.IR gethostbyname2 (3)
+The first value returned by
+.IR getaddrinfo (3)
 is used,
 so with current DNS implementations,
 the result when the name corresponds to more than one address is
@@ -126,7 +124,7 @@ difficult to predict.
 IPv4 name lookup resorts to
 .IR getnetbyname (3)
 only if
-.IR gethostbyname2 (3)
+.IR getaddrinfo (3)
 fails.
 .PP
 A subnet specification is of the form \fInetwork\fB/\fImask\fR.
