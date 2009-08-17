@@ -1,3 +1,15 @@
+strongswan-4.3.4
+----------------
+
+- IKEv2 charon daemon ported to FreeBSD and Mac OS X. Installation details can
+  be found on wiki.strongswan.org.
+
+- ipsec statusall shows the number of bytes transmitted and received over
+  ESP connections configured by the IKEv2 charon daemon.
+
+- The IKEv2 charon daemon supports include files in ipsec.secrets.
+
+
 strongswan-4.3.3
 ----------------
 
