@@ -288,6 +288,13 @@ int main(int argc, char **argv)
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, "openac", argv[0]))
+	{
+		fprintf(stderr, "integrity check of openac failed\n");
+		library_deinit();
+		exit(SS_RC_DAEMON_INTEGRITY);
+	}
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "openac.load", PLUGINS));
 

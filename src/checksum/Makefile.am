@@ -23,5 +23,10 @@ if USE_PLUTO
   libs += $(top_builddir)/src/pluto/.libs/pluto
 endif
 
+if USE_TOOLS
+  libs += $(top_builddir)/src/openac/.libs/openac
+  libs += $(top_builddir)/src/scepclient/.libs/scepclient
+endif
+
 checksum.c : checksum_builder $(libs)
 		./checksum_builder $(libs) > checksum.c

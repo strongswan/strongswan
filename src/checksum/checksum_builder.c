@@ -77,6 +77,14 @@ int main(int argc, char* argv[])
 		{
 			name = strdup("pluto\",");
 		}
+		else if (strstr(path, "openac"))
+		{
+			name = strdup("openac\",");
+		}
+		else if (strstr(path, "scepclient"))
+		{
+			name = strdup("scepclient\",");
+		}
 		else
 		{
 			fprintf(stderr, "don't know how to handle '%s', ignored", path);

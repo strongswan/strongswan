@@ -392,6 +392,13 @@ int main(int argc, char **argv)
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, "scepclient", argv[0]))
+	{
+		fprintf(stderr, "integrity check of scepclient failed\n");
+		library_deinit();
+		exit(SS_RC_DAEMON_INTEGRITY);
+	}
 
 	/* initialize optionsfrom */
 	options = options_create();
