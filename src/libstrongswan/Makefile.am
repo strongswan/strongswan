@@ -169,6 +169,10 @@ if USE_PGP
   SUBDIRS += plugins/pgp
 endif
 
+if USE_DNSKEY
+  SUBDIRS += plugins/dnskey
+endif
+
 if USE_PEM
   SUBDIRS += plugins/pem
 endif
