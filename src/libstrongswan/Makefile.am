@@ -165,6 +165,10 @@ if USE_PKCS1
   SUBDIRS += plugins/pkcs1
 endif
 
+if USE_PGP
+  SUBDIRS += plugins/pgp
+endif
+
 if USE_PEM
   SUBDIRS += plugins/pem
 endif
