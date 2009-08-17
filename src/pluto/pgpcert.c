@@ -21,7 +21,7 @@
 #include <freeswan.h>
 
 #include <library.h>
-#include <pgp/pgp.h>
+#include <enum.h>
 #include <crypto/hashers/hasher.h>
 
 #include "constants.h"
@@ -32,6 +32,57 @@
 #include "certs.h"
 #include "whack.h"
 #include "keys.h"
+
+
+typedef enum pgp_packet_tag_t pgp_packet_tag_t;
+
+/**
+ * OpenPGP packet tags as defined in section 4.3 of RFC 4880
+ */
+enum pgp_packet_tag_t {
+	PGP_PKT_RESERVED               =  0,
+	PGP_PKT_PUBKEY_ENC_SESSION_KEY =  1,
+	PGP_PKT_SIGNATURE              =  2,
+	PGP_PKT_SYMKEY_ENC_SESSION_KEY =  3,
+	PGP_PKT_ONE_PASS_SIGNATURE_PKT =  4,
+	PGP_PKT_SECRET_KEY             =  5,
+	PGP_PKT_PUBLIC_KEY             =  6,
+	PGP_PKT_SECRET_SUBKEY          =  7,
+	PGP_PKT_COMPRESSED_DATA        =  8,
+	PGP_PKT_SYMKEY_ENC_DATA        =  9,
+	PGP_PKT_MARKER                 = 10,
+	PGP_PKT_LITERAL_DATA           = 11,
+	PGP_PKT_TRUST                  = 12,
+	PGP_PKT_USER_ID                = 13,
+	PGP_PKT_PUBLIC_SUBKEY          = 14,
+	PGP_PKT_USER_ATTRIBUTE         = 17,
+	PGP_PKT_SYM_ENC_INT_PROT_DATA  = 18,
+	PGP_PKT_MOD_DETECT_CODE        = 19
+};
+
+ENUM_BEGIN(pgp_packet_tag_names, PGP_PKT_RESERVED, PGP_PKT_PUBLIC_SUBKEY,
+	"Reserved",
+	"Public-Key Encrypted Session Key Packet",
+	"Signature Packet",
+	"Symmetric-Key Encrypted Session Key Packet",
+	"One-Pass Signature Packet",
+	"Secret Key Packet",
+	"Public Key Packet",
+	"Secret Subkey Packet",
+	"Compressed Data Packet",
+	"Symmetrically Encrypted Data Packet",
+	"Marker Packet",
+	"Literal Data Packet",
+	"Trust Packet",
+	"User ID Packet",
+	"Public Subkey Packet"
+);
+ENUM_NEXT(pgp_packet_tag_names, PGP_PKT_USER_ATTRIBUTE, PGP_PKT_MOD_DETECT_CODE, PGP_PKT_PUBLIC_SUBKEY,
+	"User Attribute Packet",
+	"Sym. Encrypted and Integrity Protected Data Packet",
+	"Modification Detection Code Packet"
+);
+ENUM_END(pgp_packet_tag_names, PGP_PKT_MOD_DETECT_CODE);
 
 /**
  * Chained list of OpenPGP end certificates
@@ -55,6 +106,28 @@ const pgpcert_t pgpcert_empty = {
 	  NULL       /* fingerprint */
 };
 
+#define PGP_INVALID_LENGTH	0xffffffff
+
+/**
+ * Returns the length of an OpenPGP (RFC 4880) packet
+ * The blob pointer is advanced past the length field.
+ */
+static size_t pgp_length(chunk_t *blob, size_t len)
+{
+	size_t size = 0;
+
+	if (len > blob->len)
+	{
+		return PGP_INVALID_LENGTH;
+	}
+	blob->len -= len;
+
+	while (len-- > 0)
+	{
+		size = 256*size + *blob->ptr++;
+	}
+	return size;
+}
 
 /**
  * Extracts the length of a PGP packet

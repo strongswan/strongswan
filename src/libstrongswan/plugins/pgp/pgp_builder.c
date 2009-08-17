@@ -16,33 +16,44 @@
 
 #include "pgp_builder.h"
 
+#include <enum.h>
 #include <debug.h>
 #include <credentials/keys/private_key.h>
 
+typedef enum pgp_pubkey_alg_t pgp_pubkey_alg_t;
+typedef enum pgp_sym_alg_t pgp_sym_alg_t;
 
-ENUM_BEGIN(pgp_packet_tag_names, PGP_PKT_RESERVED, PGP_PKT_PUBLIC_SUBKEY,
-	"Reserved",
-	"Public-Key Encrypted Session Key Packet",
-	"Signature Packet",
-	"Symmetric-Key Encrypted Session Key Packet",
-	"One-Pass Signature Packet",
-	"Secret Key Packet",
-	"Public Key Packet",
-	"Secret Subkey Packet",
-	"Compressed Data Packet",
-	"Symmetrically Encrypted Data Packet",
-	"Marker Packet",
-	"Literal Data Packet",
-	"Trust Packet",
-	"User ID Packet",
-	"Public Subkey Packet"
-);
-ENUM_NEXT(pgp_packet_tag_names, PGP_PKT_USER_ATTRIBUTE, PGP_PKT_MOD_DETECT_CODE, PGP_PKT_PUBLIC_SUBKEY,
-	"User Attribute Packet",
-	"Sym. Encrypted and Integrity Protected Data Packet",
-	"Modification Detection Code Packet"
-);
-ENUM_END(pgp_packet_tag_names, PGP_PKT_MOD_DETECT_CODE);
+/**
+ * OpenPGP public key algorithms as defined in section 9.1 of RFC 4880
+ */
+enum pgp_pubkey_alg_t {
+	PGP_PUBKEY_ALG_RSA              =  1,
+	PGP_PUBKEY_ALG_RSA_ENC_ONLY     =  2,
+	PGP_PUBKEY_ALG_RSA_SIGN_ONLY    =  3,
+	PGP_PUBKEY_ALG_ELGAMAL_ENC_ONLY = 16,
+	PGP_PUBKEY_ALG_DSA              = 17,
+	PGP_PUBKEY_ALG_ECC              = 18,
+	PGP_PUBKEY_ALG_ECDSA            = 19,
+	PGP_PUBKEY_ALG_ELGAMAL          = 20,
+	PGP_PUBKEY_ALG_DIFFIE_HELLMAN   = 21,
+};
+
+/**
+ * OpenPGP symmetric key algorithms as defined in section 9.2 of RFC 4880
+ */
+enum pgp_sym_alg_t {
+	PGP_SYM_ALG_PLAIN    =  0,
+	PGP_SYM_ALG_IDEA     =  1,
+	PGP_SYM_ALG_3DES     =  2,
+	PGP_SYM_ALG_CAST5    =  3,
+	PGP_SYM_ALG_BLOWFISH =  4,
+	PGP_SYM_ALG_SAFER    =  5,
+	PGP_SYM_ALG_DES      =  6,
+	PGP_SYM_ALG_AES_128  =  7,
+	PGP_SYM_ALG_AES_192  =  8,
+	PGP_SYM_ALG_AES_256  =  9,
+	PGP_SYM_ALG_TWOFISH  = 10
+};
 
 ENUM_BEGIN(pgp_pubkey_alg_names, PGP_PUBKEY_ALG_RSA, PGP_PUBKEY_ALG_RSA_SIGN_ONLY,
 	"RSA",
