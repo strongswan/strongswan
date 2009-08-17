@@ -166,7 +166,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_BLOB_PEM:
 				case BUILD_BLOB_ASN1_DER:
 				case BUILD_BLOB_PGP:
-				case BUILD_BLOB_RFC_3110:
+				case BUILD_BLOB_DNSKEY:
 				case BUILD_PASSPHRASE:
 				case BUILD_SERIAL:
 				case BUILD_RSA_MODULUS:

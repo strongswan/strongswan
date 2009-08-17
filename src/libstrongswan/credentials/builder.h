@@ -48,8 +48,8 @@ enum builder_part_t {
 	BUILD_BLOB_PEM,
 	/**  OpenPGP key blob, chunk_t */
 	BUILD_BLOB_PGP,
-	/** RFC 3110 DNS public key blob, chunk_t */
-	BUILD_BLOB_RFC_3110,
+	/** DNS public key blob (RFC 4034, RSA specifc RFC 3110), chunk_t */
+	BUILD_BLOB_DNSKEY,
 	/** passphrase for e.g. PEM decryption, chunk_t */
 	BUILD_PASSPHRASE,
 	/** passphrase callback, chunk_t(*fn)(void *user, int try), void *user.

@@ -1296,7 +1296,7 @@ bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
 	{
 		case PUBKEY_ALG_RSA:
 			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-										BUILD_BLOB_RFC_3110, rfc3110_key,
+										BUILD_BLOB_DNSKEY, rfc3110_key,
 										BUILD_END);
 			if (key == NULL)
 			{

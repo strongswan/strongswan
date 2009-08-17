@@ -829,7 +829,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 				va_end(args);
 				return;
 			}
-			case BUILD_BLOB_RFC_3110:
+			case BUILD_BLOB_DNSKEY:
 			{
 				va_start(args, part);
 				chunk = va_arg(args, chunk_t);

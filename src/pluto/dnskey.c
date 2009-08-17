@@ -436,7 +436,7 @@ process_txt_rr_body(u_char *str
 			}
 			rfc3110_chunk = chunk_create(buf, sz);
 			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-										BUILD_BLOB_RFC_3110, rfc3110_chunk,
+										BUILD_BLOB_DNSKEY, rfc3110_chunk,
 										BUILD_END);
 			if (key == NULL)
 			{
